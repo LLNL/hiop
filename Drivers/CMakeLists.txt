@@ -4,5 +4,5 @@ target_link_libraries(linalgTest.exe  hiopOptimization hiopLinAlg ${LAPACK_LIBRA
 add_executable(nlpDenseCons_ex1.exe nlpDenseCons_ex1.cpp)
 target_link_libraries(nlpDenseCons_ex1.exe hiopOptimization hiopLinAlg ${LAPACK_LIBRARIES})
 
-add_executable(nlpDenseCons_ex2.exe nlpDenseCons_ex2.cpp)
+add_executable(nlpDenseCons_ex2.exe nlpDenseCons_ex2.cpp nlpDenseCons_ex2_driver.cpp)
 target_link_libraries(nlpDenseCons_ex2.exe hiopOptimization hiopLinAlg ${LAPACK_LIBRARIES})
