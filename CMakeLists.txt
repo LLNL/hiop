@@ -2,7 +2,7 @@ cmake_minimum_required (VERSION 2.8.11)
 project (hippopde)
 
 option(WITH_MPI "Build with MPI support" ON)
-option(DEEP_CHECKING "Extra checks and asserts in the code with a high penalty on speed" ON)
+option(DEEP_CHECKING "Extra checks and asserts in the code with a high penalty on performance" ON)
 
 if(WITH_MPI)
     set(CMAKE_CXX_COMPILER "mpicxx")
