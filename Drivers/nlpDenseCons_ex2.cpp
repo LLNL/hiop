@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <cstring> //for memcpy
+#include <cstdio>
 
 Ex2::Ex2(int n)
   : n_vars(n), n_cons(4), comm(MPI_COMM_WORLD)
@@ -15,14 +16,14 @@ Ex2::Ex2(int n)
   // set up vector distribution for primal variables - easier to store it as a member in this simple example
   col_partition = new long long[comm_size];
   long long quotient=n_vars/comm_size, remainder=n_vars-comm_size*quotient;
-  if(my_rank==0) printf("reminder=%d quotient=%d\n", remainder, quotient);
+  if(my_rank==0) printf("reminder=%llu quotient=%llu\n", remainder, quotient);
   int i=0; col_partition[i]=0; i++;
   while(i<=remainder) { col_partition[i] = col_partition[i-1]+quotient+1; i++; }
   while(i<=comm_size) { col_partition[i] = col_partition[i-1]+quotient;   i++; }
   
   if(my_rank==0) {
     for(int i=0;i<=comm_size;i++) 
-      printf("%3d ", col_partition[i]);
+      printf("%3llu ", col_partition[i]);
     printf("\n");
   }
 }
@@ -37,8 +38,8 @@ bool Ex2::get_prob_sizes(long long& n, long long& m)
 
 bool Ex2::get_vars_info(const long long& n, double *xlow, double* xupp, NonlinearityType* type)
 {
-  int i_local;
-  for(int i=col_partition[my_rank]; i<col_partition[my_rank+1]; i++) {
+  long long i_local;
+  for(long long i=col_partition[my_rank]; i<col_partition[my_rank+1]; i++) {
     i_local=idx_global2local(n,i);
     if(i==0) { xlow[i_local]=-1e20; xupp[i_local]=1e20;type[i_local]=hiopNonlinear; continue; }
     if(i==1) { xlow[i_local]= 0.0;  xupp[i_local]=1e20;type[i_local]=hiopNonlinear; continue; }
@@ -59,7 +60,7 @@ bool Ex2::get_cons_info(const long long& m, double* clow, double* cupp, Nonlinea
 }
 bool Ex2::eval_f(const long long& n, const double* x, bool new_x, double& obj_value)
 {
-  int n_local=col_partition[my_rank+1]-col_partition[my_rank];
+  long long n_local=col_partition[my_rank+1]-col_partition[my_rank];
   obj_value=0.; 
   for(int i=0;i<n_local;i++) obj_value += 0.25*pow(x[i]-1., 4);
 #ifdef WITH_MPI
@@ -71,7 +72,7 @@ bool Ex2::eval_f(const long long& n, const double* x, bool new_x, double& obj_va
 }
 bool Ex2::eval_grad_f(const long long& n, const double* x, bool new_x, double* gradf)
 {
-  int n_local=col_partition[my_rank+1]-col_partition[my_rank];
+  long long n_local=col_partition[my_rank+1]-col_partition[my_rank];
   for(int i=0;i<n_local;i++) gradf[i] = pow(x[i]-1.,3);
   return true;
 }
@@ -92,7 +93,7 @@ bool Ex2::eval_cons(const long long& n, const long long& m,
     
     // --- constraint 1 body ---> sum x_i = n+1
     if(idx_cons[itcon]==0) {
-      int n_local=col_partition[my_rank+1]-col_partition[my_rank];
+      long long n_local=col_partition[my_rank+1]-col_partition[my_rank];
       //loop over x in local indexes and add its entries to the result
       for(int i=0;i<n_local;i++) cons[itcon] += x[i];
       continue; //done with this constraint
@@ -102,7 +103,7 @@ bool Ex2::eval_cons(const long long& n, const long long& m,
     if(idx_cons[itcon]==1) {
       int i_local;
       //loop over x in global indexes 
-      for(int i_global=col_partition[my_rank]; i_global<col_partition[my_rank+1]; i_global++) {
+      for(long long i_global=col_partition[my_rank]; i_global<col_partition[my_rank+1]; i_global++) {
 	i_local=idx_global2local(n,i_global);
 	//x_1 has a different contribution to constraint 2 than the rest
 	if(i_global==0) cons[itcon] += 2*x[i_local]; 
@@ -114,7 +115,7 @@ bool Ex2::eval_cons(const long long& n, const long long& m,
     if(idx_cons[itcon]==2) {
       int i_local;
       //loop over x in global indexes 
-      for(int i_global=col_partition[my_rank]; i_global<col_partition[my_rank+1]; i_global++) {
+      for(long long i_global=col_partition[my_rank]; i_global<col_partition[my_rank+1]; i_global++) {
 	i_local=idx_global2local(n,i_global);
 	//x_1 and x_2 have a different contributions to constraint 3 than the rest
 	if(i_global==0)   cons[itcon] += 2.0*x[i_local]; 
@@ -128,7 +129,7 @@ bool Ex2::eval_cons(const long long& n, const long long& m,
     if(idx_cons[itcon]==3) {
       int i_local;
       //loop over x in global indexes 
-      for(int i_global=col_partition[my_rank]; i_global<col_partition[my_rank+1]; i_global++) {
+      for(long long i_global=col_partition[my_rank]; i_global<col_partition[my_rank+1]; i_global++) {
 	i_local=idx_global2local(n,i_global);
 	//x_1, x_2, and x_3 have a different contributions to constraint 3 than the rest
 	if(i_global==0)                  cons[itcon] += 4*x[i_local]; 
@@ -154,7 +155,7 @@ bool Ex2::eval_Jac_cons(const long long& n, const long long& m,
 			const double* x, bool new_x, double** Jac) 
 {
   assert(n==n_vars); assert(m==n_cons); 
-  int n_local=col_partition[my_rank+1]-col_partition[my_rank];
+  long long n_local=col_partition[my_rank+1]-col_partition[my_rank];
   int i;
   //here we will iterate over the local indexes, however we still need to work with the
   //global indexes to correctly determine the entries in the Jacobian corresponding

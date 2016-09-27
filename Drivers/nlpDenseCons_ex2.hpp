@@ -49,19 +49,20 @@ private:
   int my_rank, comm_size;
   long long* col_partition;
 public:
-  inline int idx_local2global(long long global_n, int idx_local) 
+  inline long long idx_local2global(long long global_n, int idx_local) 
   { 
     assert(idx_local + col_partition[my_rank]<col_partition[my_rank+1]);
     if(global_n==n_vars)
       return idx_local + col_partition[my_rank]; 
     assert(false && "you shouldn't need global index for a vector of this size.");
+    return -1;
   }
   inline int idx_global2local(long long global_n, long long idx_global)
   {
     assert(idx_global>=col_partition[my_rank]   && "global index does not belong to this rank");
     assert(idx_global< col_partition[my_rank+1] && "global index does not belong to this rank");
     assert(global_n==n_vars && "your global_n does not match the number of variables?");
-    return idx_global-col_partition[my_rank];
+    return (int) (idx_global-col_partition[my_rank]);
   }
 };
 #endif
