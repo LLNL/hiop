@@ -83,6 +83,10 @@ public:
     return false; //defaults to serial 
   }
 
+  /* To provide a primal starting point. This point is subject to adjustments internally in hiOP.
+   * ToDo: provide API for a full, primal-dual restart. 
+   */
+  virtual bool get_starting_point(const long long&n, double* x0) = 0;
 private:
   hiopInterfaceBase(const hiopInterfaceBase& ) {};
   void operator=(const hiopInterfaceBase&) {};
