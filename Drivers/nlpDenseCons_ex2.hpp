@@ -43,6 +43,8 @@ public:
 			     const double* x, bool new_x, double** Jac);
   virtual bool get_vecdistrib_info(long long global_n, long long* cols);
 
+  virtual bool get_starting_point(const long long&n, double* x0);
+
 private:
   int n_vars, n_cons;
   MPI_Comm comm;

@@ -16,7 +16,7 @@ Ex2::Ex2(int n)
   // set up vector distribution for primal variables - easier to store it as a member in this simple example
   col_partition = new long long[comm_size];
   long long quotient=n_vars/comm_size, remainder=n_vars-comm_size*quotient;
-  if(my_rank==0) printf("reminder=%llu quotient=%llu\n", remainder, quotient);
+  //if(my_rank==0) printf("reminder=%llu quotient=%llu\n", remainder, quotient);
   int i=0; col_partition[i]=0; i++;
   while(i<=remainder) { col_partition[i] = col_partition[i-1]+quotient+1; i++; }
   while(i<=comm_size) { col_partition[i] = col_partition[i-1]+quotient;   i++; }
@@ -203,5 +203,15 @@ bool Ex2::get_vecdistrib_info(long long global_n, long long* cols)
     for(int i=0; i<=comm_size; i++) cols[i]=col_partition[i];
   else 
     assert(false && "You shouldn't need distrib info for this size.");
+  return true;
+}
+
+
+bool Ex2::get_starting_point(const long long& global_n, double* x0)
+{
+  assert(global_n==n_vars); 
+  long long n_local=col_partition[my_rank+1]-col_partition[my_rank];
+  for(int i=0; i<n_local; i++)
+    x0[i]=0.0;
   return true;
 }
