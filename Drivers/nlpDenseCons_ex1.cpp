@@ -113,6 +113,8 @@ public:
       assert(false && "You shouldn't need distrib info for this size.");
     return true;
   }
+
+  bool get_starting_point(const long long &glob_n, double* x0) {return false;}
 private:
   int n_vars, n_cons;
   MPI_Comm comm;
