@@ -74,7 +74,7 @@ int hiopResidual::update(const hiopIterate& it,
   //this is also the optimality error for the log-barrier problem
   nrmInf_bar_optim = nrmInf_nlp_optim;
   //ryc
-  ryc->setToConstant(0.0); 
+  ryc->copyFrom(nlp->get_crhs());
   ryc->axpy(-1.0,c);
   nrmInf_nlp_feasib = fmax(nrmInf_nlp_feasib, ryc->infnorm_local());
   //ryd

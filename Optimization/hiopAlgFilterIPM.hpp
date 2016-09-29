@@ -16,21 +16,23 @@ public:
   virtual int run();
   virtual int defaultStartingPoint(hiopIterate& it_ini);
 
-  /* internal helpers related to the error computation. call NlpAndLogBarrierErrors whenever both 
-   * both NLP and Log-Barrier are to be computed, since it is faster than two separate calls */
-  virtual bool nlpAndLogBarrierErrors(const hiopIterate& it, 
-				      const hiopResidual& resid, 
-				      const double& mu, 
-				      double& err_nlp, double& err_log);
-  virtual double nlpError(const hiopIterate& it, const hiopResidual& resid);
-  virtual double barrierError(const hiopIterate& it, const hiopResidual& resid, const double& mu);
+ 
+
 private:
-  virtual bool updateLogBarrierParameters(const hiopIterate& it, const double& mu_curr, const double& tau_curr,
-					  double& mu_new, double& tau_new);
-  virtual bool updateLogBarrierProblem(hiopIterate& it, double mu, double &f,  hiopVector& c, hiopVector& d, 
-				       hiopVector& grad,  hiopMatrixDense& Jac_c,  hiopMatrixDense& Jac_d);
+  bool updateLogBarrierProblem(hiopIterate& iter, double mu, 
+			       double &f, double& f_log, hiopVector& c_, hiopVector& d_, 
+			       hiopVector& grad_,  hiopMatrixDense& Jac_c,  hiopMatrixDense& Jac_d);
+
+ /* internal helper for error computation */
+  virtual bool evalNlpAndLogErrors(const hiopIterate& it, const hiopResidual& resid, const double& mu,
+				   double& nlpoptim, double& nlpfeas, double& nlpcomplem, double& nlpoverall,
+				   double& logoptim, double& logfeas, double& logcomplem, double& logoverall);
   virtual double thetaLogBarrier(const hiopIterate& it, const hiopResidual& resid, const double& mu);
 
+  bool updateLogBarrierParameters(const hiopIterate& it, const double& mu_curr, const double& tau_curr,
+				  double& mu_new, double& tau_new);
+
+  virtual void outputIteration();
 private:
   hiopNlpDenseConstraints* nlp;
   hiopFilter filter;
@@ -42,13 +44,18 @@ private:
 
   hiopResidual* resid, *resid_trial;
 
+  int iter_num;
+  double _err_nlp_optim, _err_nlp_feas, _err_nlp_complem;//not scaled by sd, sc, and sc
+  double _err_log_optim, _err_log_feas, _err_log_complem;//not scaled by sd, sc, and sc
+  double _err_nlp, _err_log; //max of the above (scaled)
+
   /* Log-barrier problem data 
    *  The algorithm manages these and updates them by calling the   
    *  problem formulation and then adding the contribution from the 
    *  log-barrier term(s). The data that is not iterate dependent,  
    *  such as lower or upper bounds, is in the NlpFormulation       
    */
-  double _f, _f_trial;
+  double _f_nlp, _f_log, _f_nlp_trial, _f_log_trial;
   hiopVector *_c,*_d, *_c_trial, *_d_trial;
   hiopVector* _grad_f, *_grad_f_trial; //gradient of the log-barrier objective function
   hiopMatrixDense* _Jac_c, *_Jac_c_trial; //Jacobian of c(x), the equality part
@@ -57,7 +64,7 @@ private:
   hiopHessianInvLowRank* _Hess;
 
   /** Algorithms's working quantities */  
-  double mu, tau;
+  double _mu, _tau, _alpha_primal, _alpha_dual;
   //initialized to 1e4*max{1,\theta(x_0)} and used in the filter as an upper acceptability limit for infeasibility
   double theta_max; 
   //1e-4*max{1,\theta(x_0)} used in the switching condition during the line search
@@ -70,7 +77,7 @@ private:
   double tau_min;      //min value for the fraction-to-the-boundary parameter: tau_k=max{tau_min,1-\mu_k}
   double kappa_eps;    //tolerance for the barrier problem, relative to mu: error<=kappa_eps*mu
   double kappa1,kappa2;//params for default starting point
-  double smax;         //threshold for the magnitude of the multipliers used in the error estimation
+  double p_smax;         //threshold for the magnitude of the multipliers used in the error estimation
 private:
   hiopAlgFilterIPM() {};
   hiopAlgFilterIPM(const hiopAlgFilterIPM& ) {};

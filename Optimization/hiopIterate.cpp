@@ -87,19 +87,21 @@ void hiopIterate::print()
 
 
 void hiopIterate::
-projectPrimalsIntoBounds(double kappa1, double kappa2)
+projectPrimalsXIntoBounds(double kappa1, double kappa2)
 {
   x->projectIntoBounds(nlp->get_xl(),nlp->get_ixl(),
 		       nlp->get_xu(),nlp->get_ixu(),
 		       kappa1,kappa2);
+}
+
+void hiopIterate::
+projectPrimalsDIntoBounds(double kappa1, double kappa2)
+{
   d->projectIntoBounds(nlp->get_dl(),nlp->get_idl(),
 		       nlp->get_du(),nlp->get_idu(),
 		       kappa1,kappa2);
-
-  printf("Ini pt: x:"); x->print();
-  printf("Ini pt: d:"); d->print();
-  
 }
+
 
 void hiopIterate::setBoundsDualsToConstant(const double& v)
 {

@@ -158,7 +158,12 @@ bool hiopNlpDenseConstraints::eval_d(const double*x, bool new_x, double* d)
 {
   return interface.eval_cons(n_vars,n_cons,n_cons_ineq,cons_ineq_mapping,x,new_x,d);
 }
-
+bool  hiopNlpDenseConstraints::eval_d(const hiopVector& x_, bool new_x, hiopVector& d_)
+{
+  const hiopVectorPar &x = dynamic_cast<const hiopVectorPar&>(x_);
+  hiopVectorPar &d = dynamic_cast<hiopVectorPar&>(d_);
+  return interface.eval_cons(n_vars,n_cons,n_cons_ineq,cons_ineq_mapping,x.local_data_const(),new_x,d.local_data());
+}
 hiopVector* hiopNlpDenseConstraints::alloc_primal_vec() const
 {
   return xl->alloc_clone();
@@ -233,3 +238,8 @@ hiopMatrixDense* hiopNlpDenseConstraints::alloc_multivector_primal(int nrows, in
   return M;
 }
 
+bool hiopNlpDenseConstraints::get_starting_point(hiopVector& x0_)
+{
+  hiopVectorPar &x0 = dynamic_cast<hiopVectorPar&>(x0_);
+  return interface.get_starting_point(n_vars,x0.local_data());
+}

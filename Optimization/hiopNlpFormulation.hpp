@@ -15,6 +15,8 @@ public:
   hiopNlpFormulation() {};
   virtual ~hiopNlpFormulation() {};
 
+  /* starting point */
+  virtual bool get_starting_point(hiopVector& x0)=0;
   /** linear algebra factory */
   virtual hiopVector* alloc_primal_vec() const=0;
   virtual hiopVector* alloc_dual_eq_vec() const=0;
@@ -38,8 +40,10 @@ public:
   virtual bool eval_grad_f(const double* x, bool new_x, double* gradf);
   virtual bool eval_c(const double*x, bool new_x, double* c);
   virtual bool eval_d(const double*x, bool new_x, double* d);
+  virtual bool eval_d(const hiopVector& x, bool new_x, hiopVector& d);
   virtual bool eval_Jac_c(const double* x, bool new_x, double** Jac_c);
   virtual bool eval_Jac_d(const double* x, bool new_x, double** Jac_d);
+  virtual bool get_starting_point(hiopVector& x0);
 
   /* linear algebra factory */
   virtual hiopVector* alloc_primal_vec() const;
@@ -55,14 +59,15 @@ public:
   virtual hiopMatrixDense* alloc_multivector_primal(int nrows, int max_rows=-1) const;
 
   /** const accessors */
-  inline const hiopVectorPar& get_xl () const { return *xl;  }
-  inline const hiopVectorPar& get_xu () const { return *xu;  }
-  inline const hiopVectorPar& get_ixl() const { return *ixl; }
-  inline const hiopVectorPar& get_ixu() const { return *ixu; }
-  inline const hiopVectorPar& get_dl () const { return *dl;  }
-  inline const hiopVectorPar& get_du () const { return *du;  }
-  inline const hiopVectorPar& get_idl() const { return *idl; }
-  inline const hiopVectorPar& get_idu() const { return *idu; }
+  inline const hiopVectorPar& get_xl ()  const { return *xl;   }
+  inline const hiopVectorPar& get_xu ()  const { return *xu;   }
+  inline const hiopVectorPar& get_ixl()  const { return *ixl;  }
+  inline const hiopVectorPar& get_ixu()  const { return *ixu;  }
+  inline const hiopVectorPar& get_dl ()  const { return *dl;   }
+  inline const hiopVectorPar& get_du ()  const { return *du;   }
+  inline const hiopVectorPar& get_idl()  const { return *idl;  }
+  inline const hiopVectorPar& get_idu()  const { return *idu;  }
+  inline const hiopVectorPar& get_crhs() const { return *c_rhs;}
   inline long long n() const      {return n_vars;}
   inline long long m() const      {return n_cons;}
   inline long long m_eq() const   {return n_cons_eq;}

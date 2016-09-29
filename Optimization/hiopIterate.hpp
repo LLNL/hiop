@@ -10,7 +10,9 @@ public:
   hiopIterate(const hiopNlpDenseConstraints* nlp);
   virtual ~hiopIterate();
 
-  virtual void projectPrimalsIntoBounds(double kappa1, double kappa2);
+  //virtual void projectPrimalsIntoBounds(double kappa1, double kappa2);
+  virtual void projectPrimalsXIntoBounds(double kappa1, double kappa2);
+  virtual void projectPrimalsDIntoBounds(double kappa1, double kappa2);
   virtual void setBoundsDualsToConstant(const double& v);
   virtual void setEqualityDualsToConstant(const double& v);
   /** computes the slacks given the primals: sxl=x-xl, sxu=xu-x, and similar 
@@ -38,8 +40,9 @@ public:
   void copyFrom(const hiopIterate& src);
 
   /* accessors */
-  inline const hiopVector* get_x()   const {return x;}
-  inline const hiopVector* get_sxl() const {return sxl;}
+  inline hiopVector* get_x()   const {return x;}
+  inline hiopVector* get_d()   const {return d;}
+  inline hiopVector* get_sxl() const {return sxl;}
 
   void print();
 
