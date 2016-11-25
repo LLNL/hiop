@@ -1,3 +1,20 @@
+/* Adapter that converts  HiOP interface to IPOPT TNLP interface.
+ * Can be easily used with existing IPOPT drivers (to solve problems in HiOP's input), for example
+ *    Ex2 hiop_interface(7);
+ *    // create a new instance of your nlp by using the adapter offered by hiOP.
+ *    SmartPtr<TNLP> mynlp = new hiop2IpoptTNLP(&hiop_interface);
+ *    // from now on everything is the usual IPOPT bussiness
+ * 
+ * An example IPOPT driver that solve HiOP NLPs using IPOPT is available upon request.
+ *
+ */
+ /*
+
+/*
+ * Author: Cosmin G. Petra, LLNL, 2016.
+ * License: internal use only
+ */
+
 #ifndef HIOP_IPOPT_ADAPTER
 #define HIOP_IPOPT_ADAPTER
 
