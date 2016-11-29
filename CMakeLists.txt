@@ -25,9 +25,11 @@ find_package(LAPACK REQUIRED)
 include_directories(Interface)
 include_directories(Optimization)
 include_directories(LinAlg)
+include_directories(Utils)
 
 add_subdirectory(Optimization)
 add_subdirectory(LinAlg)
 add_subdirectory(Drivers)
+add_subdirectory(Utils)
 
 

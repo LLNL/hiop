@@ -82,8 +82,8 @@ public:
   /** allocates a vector that mirrors this, and copies the values  */
   //virtual hiopVector* new_copy() const = 0;
 
-  /* prints up to max_elems (by defaults all), on rank 'rank' (by default on all) */
-  virtual void print(const char* message=NULL,int max_elems=-1, int rank=-1) const = 0;
+  /* prints up to max_elems (by default all), on rank 'rank' (by default on all) */
+  virtual void print(FILE*, const char* message=NULL,int max_elems=-1, int rank=-1) const = 0;
   
   inline long long get_size() const { return n; }
 protected:
@@ -142,7 +142,7 @@ public:
   virtual hiopVectorPar* alloc_clone() const;
   virtual hiopVectorPar* new_copy () const;
 
-  virtual void print(const char* withMessage=NULL, int max_elems=-1, int rank=-1) const;
+  virtual void print(FILE*, const char* withMessage=NULL, int max_elems=-1, int rank=-1) const;
 
   /* more accessers */
   inline long long get_local_size() const { return n_local; }

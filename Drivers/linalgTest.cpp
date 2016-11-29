@@ -66,7 +66,7 @@ int main(int argc, char **argv)
   A.timesVec(0., y, 1.0, v);
   if(0==rank) { 
     printf("timesVec time=%g sec\n", MPI_Wtime()-t);
-    y.print("y",10,0);
+    y.print(stdout, "y",10,0);
   }
 
   //v = beta*v + alpha*A'*y
@@ -74,7 +74,7 @@ int main(int argc, char **argv)
   t=MPI_Wtime();
   A.transTimesVec(0.5, v, 1.0, y);
   printf("transTimesVec time=%g sec\n", MPI_Wtime()-t);
-  v.print("v",10,0);
+  v.print(stdout, "v",10,0);
 
   //more testing 
   testMatMatProds(column_part);

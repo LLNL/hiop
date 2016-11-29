@@ -574,7 +574,7 @@ int hiopVectorPar::allPositive_w_patternSelect(const hiopVector& w_)
   return allPos;
 }
 
-void hiopVectorPar::print(const char* msg/*=NULL*/, int max_elems/*=-1*/, int rank/*=-1*/) const 
+void hiopVectorPar::print(FILE* file, const char* msg/*=NULL*/, int max_elems/*=-1*/, int rank/*=-1*/) const 
 {
   int myrank=0, numranks=1; 
 #ifdef WITH_MPI
@@ -588,14 +588,14 @@ void hiopVectorPar::print(const char* msg/*=NULL*/, int max_elems/*=-1*/, int ra
 
     if(NULL==msg) {
       if(numranks>1)
-	printf("vector of size %d, printing %d elems (on rank=%d)\n", n, max_elems, myrank);
+	fprintf(file, "vector of size %d, printing %d elems (on rank=%d)\n", n, max_elems, myrank);
       else
-	printf("vector of size %d, printing %d elems (serial)\n", n, max_elems);
+	fprintf(file, "vector of size %d, printing %d elems (serial)\n", n, max_elems);
     } else {
-      printf("%s: ", msg);
+      fprintf(file, "%s ", msg);
     }    
     max_elems = max_elems>=0?max_elems:n_local;
-    for(int it=0; it<max_elems; it++)  printf("%12.8e ", data[it]);
-    printf("\n");
+    for(int it=0; it<max_elems; it++)  fprintf(file, "%15.8e ", data[it]);
+    fprintf(file, "\n");
   }
 }
