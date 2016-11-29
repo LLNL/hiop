@@ -9,11 +9,13 @@
 #include "mpi.h"  
 #endif
 
+#include "hiopLogger.hpp"
+
 class hiopNlpFormulation
 {
 public:
-  hiopNlpFormulation() {};
-  virtual ~hiopNlpFormulation() {};
+  hiopNlpFormulation();
+  virtual ~hiopNlpFormulation();
 
   /* starting point */
   virtual bool get_starting_point(hiopVector& x0)=0;
@@ -22,6 +24,9 @@ public:
   virtual hiopVector* alloc_dual_eq_vec() const=0;
   virtual hiopVector* alloc_dual_ineq_vec() const=0;
   virtual hiopVector* alloc_dual_vec() const=0;
+
+  /* outputing and debug-related functionality*/
+  hiopLogger* log;
 private:
   hiopNlpFormulation(const hiopNlpFormulation&) {};
 };

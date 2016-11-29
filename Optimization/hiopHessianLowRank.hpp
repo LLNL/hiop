@@ -19,7 +19,7 @@ class hiopHessianLowRank
 {
 public:
   hiopHessianLowRank(const hiopNlpDenseConstraints* nlp_, int max_memory_length) 
-    : l_max(max_memory_length), l_curr(0), sigma(0.1), nlp(nlp_)  {}
+    : l_max(max_memory_length), l_curr(0), sigma(1.), nlp(nlp_)  {}
 
   virtual ~hiopHessianLowRank() {};
   /* return false if the update destroys hereditary positive definitness */

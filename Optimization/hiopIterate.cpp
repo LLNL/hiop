@@ -68,21 +68,23 @@ void  hiopIterate::copyFrom(const hiopIterate& src)
   vu->copyFrom(*src.vu);
 }
 
-void hiopIterate::print()
+void hiopIterate::print(FILE* f, const char* msg/*=NULL*/) const
 {
-  printf("x: "); x->print();
-  printf("d: "); d->print();
-  printf("yc: "); yc->print(); 
-  printf("yd: "); yd->print();
+  if(NULL==msg) fprintf(f, "hiopIterate:\n");
+  else fprintf(f, "%s\n", msg);
 
-  printf("sxl: "); sxl->print(); 
-  printf("sxu: "); sxu->print();
-  printf("sdl: "); sdl->print();
-  printf("sdu: "); sdu->print();
-  printf("zl: "); zl->print(); 
-  printf("zu: "); zu->print();
-  printf("vl: "); vl->print();
-  printf("vu: "); vu->print();
+  x->print(  f, "x:   ");
+  d->print(  f, "d:   ");
+  yc->print( f, "yc:  "); 
+  yd->print( f, "yd:  ");
+  sxl->print(f, "sxl: "); 
+  sxu->print(f, "sxu: ");
+  sdl->print(f, "sdl: ");
+  sdu->print(f, "sdu: ");
+  zl->print( f, "zl:  "); 
+  zu->print( f, "zu:  ");
+  vl->print( f, "vl:  ");
+  vu->print( f, "vu:  ");
 }
 
 

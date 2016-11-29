@@ -44,7 +44,7 @@ public:
   inline hiopVector* get_d()   const {return d;}
   inline hiopVector* get_sxl() const {return sxl;}
 
-  void print();
+  void print(FILE* f, const char* msg=NULL) const;
 
   friend class hiopResidual;
   friend class hiopKKTLinSysLowRank;

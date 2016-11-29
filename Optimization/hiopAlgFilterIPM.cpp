@@ -93,7 +93,7 @@ int hiopAlgFilterIPM::defaultStartingPoint(hiopIterate& it_ini)
   //for now set them to zero
   it_ini.setEqualityDualsToConstant(0.);
 
-  printf("Initial point:\n"); it_ini.print();
+  nlp->log->write("Initial point:", it_ini, hovIteration);
 
   return true;
 }
@@ -105,6 +105,7 @@ int hiopAlgFilterIPM::run()
   //update problem information and residuals
   updateLogBarrierProblem(*it_curr, _mu, _f_nlp, _f_log, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d);
   resid->update(*it_curr,_f_nlp, *_c, *_d,*_grad_f,*_Jac_c,*_Jac_d,_mu);
+  nlp->log->write("First residual:", *resid, hovIteration);
 
   iter_num=0;
 
@@ -124,7 +125,6 @@ int hiopAlgFilterIPM::run()
 
     outputIteration();
  
-    //printf("iter=%4d mu=%10.5e nlpErr=%10.5f logErr=%10.5f\n", num_iter,mu,err_nlp, err_log);
     if(_err_nlp<=eps_tol) { bStopAlg=1; nAlgStatus=1; break; }
     if(_err_log<=kappa_eps * _mu) {
       //update mu and tau (fraction-to-boundary)

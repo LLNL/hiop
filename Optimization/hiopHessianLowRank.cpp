@@ -40,6 +40,8 @@ hiopHessianInvLowRank::hiopHessianInvLowRank(const hiopNlpDenseConstraints* nlp_
   _n_vec1 = H0->alloc_clone();
 
   //H0->setToConstant(sigma);
+
+  nlp->log->printf(hovScalars, "Hessian Low Rank: initial sigma is %g\n", sigma);
 }
 hiopHessianInvLowRank::~hiopHessianInvLowRank()
 {
@@ -80,7 +82,7 @@ bool hiopHessianInvLowRank::updateDiagonal(const hiopVector& Dx)
   assert(H0->allPositive());
 #endif
   H0->invert();
-  H0->print("H0 InvHes");
+  nlp->log->write("H0 InvHes", *H0, hovMatrices);
   
 }
 

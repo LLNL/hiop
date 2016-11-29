@@ -1,5 +1,7 @@
 #include "hiopNlpFormulation.hpp"
 
+#include "hiopLogger.hpp"
+
 #ifdef WITH_MPI
 #include "mpi.h"
 #else 
@@ -7,6 +9,18 @@
 #endif
 
 #include <cassert>
+
+hiopNlpFormulation::hiopNlpFormulation()
+{
+//log = new hiopLogger(hovMaxVerbose,stdout);
+log = new hiopLogger(hovIteration,stdout);
+}
+
+hiopNlpFormulation::~hiopNlpFormulation()
+{
+  delete log; log=NULL;
+}
+
 
 hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& interface_)
   : interface(interface_)
