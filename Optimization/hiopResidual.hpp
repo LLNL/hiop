@@ -1,9 +1,10 @@
 #ifndef HIOP_RESIDUAL
 #define HIOP_RESIDUAL
 
+#include "hiopNlpFormulation.hpp"
 #include "hiopVector.hpp"
 #include "hiopIterate.hpp"
-#include "hiopNlpFormulation.hpp"
+
 
 class hiopResidual
 {
@@ -24,6 +25,10 @@ public:
   /* cloning and copying */
   //hiopResidual* alloc_clone() const;
   //hiopResidual* new_copy() const;
+
+  /* residual printing function - calls hiopVector::print 
+   * prints up to max_elems (by default all), on rank 'rank' (by default on all) */
+  virtual void print(FILE*, const char* msg=NULL, int max_elems=-1, int rank=-1) const;
 private:
   hiopVectorPar*rx;           // -\grad f - J_c^t y_c - J_d^t y_d + z_l - z_u
   hiopVectorPar*rd;           //  y_d + v_l - v_u

@@ -125,8 +125,8 @@ int hiopResidual::update(const hiopIterate& it,
   }
   //rszu = \mu e - sxu * zu
   if(nlp->n_upp_local()>0) {
-    rszu->setToConstant(mu);
-    rszl->axzpy(-1.0, *it.sxu, *it.zl);
+    rszu->setToZero();
+    rszu->axzpy(-1.0, *it.sxu, *it.zl);
     if(nlp->n_upp_local()<nx_loc)
       rszu->selectPattern(nlp->get_ixu());
     nrmInf_nlp_complem = fmax(nrmInf_nlp_complem, rszu->infnorm_local());
@@ -136,21 +136,23 @@ int hiopResidual::update(const hiopIterate& it,
   }
   //rsvl = \mu e - sdl * vl
   if(nlp->m_ineq_low()>0) {
-    rsvl->setToConstant(mu);
+    rsvl->setToZero();
     rsvl->axzpy(-1.0, *it.sdl, *it.vl);
-    rsvl->selectPattern(nlp->get_idl());
+    if(nlp->m_ineq_low()<nlp->m_ineq()) rsvl->selectPattern(nlp->get_idl());
     nrmInf_nlp_complem = fmax(nrmInf_nlp_complem, rsvl->infnorm_local());
 
+    //add mu
     rsvl->addConstant_w_patternSelect(mu,nlp->get_idl());
     nrmInf_bar_complem = fmax(nrmInf_bar_complem, rsvl->infnorm_local());
   }
   //rsvu = \mu e - sdu * vu
   if(nlp->m_ineq_upp()>0) {
-    rsvu->setToConstant(mu);
+    rsvu->setToZero();
     rsvu->axzpy(-1.0, *it.sdu, *it.vu);
-    rsvu->selectPattern(nlp->get_idu());
+    if(nlp->m_ineq_upp()<nlp->m_ineq()) rsvu->selectPattern(nlp->get_idu());
     nrmInf_nlp_complem = fmax(nrmInf_nlp_complem, rsvu->infnorm_local());
 
+    //add mu
     rsvu->addConstant_w_patternSelect(mu,nlp->get_idu());
     nrmInf_bar_complem = fmax(nrmInf_bar_complem, rsvu->infnorm_local());
   }
@@ -166,6 +168,28 @@ int hiopResidual::update(const hiopIterate& it,
   return true;
 }
 
+void hiopResidual::print(FILE* f, const char* msg/*=NULL*/, int max_elems/*=-1*/, int rank/*=-1*/) const
+{
+  if(NULL==msg) fprintf(f, "hiopResidual print\n");
+  else fprintf(f, "%s\n", msg);
+
+  rx->print(  f, "    rx:", max_elems, rank); 
+  rd->print(  f, "    rd:", max_elems, rank);   
+  ryc->print( f, "   ryc:", max_elems, rank); 
+  ryd->print( f, "   ryd:", max_elems, rank); 
+  rszl->print(f, "  rszl:", max_elems, rank); 
+  rszu->print(f, "  rszu:", max_elems, rank); 
+  rsvl->print(f, "  rsvl:", max_elems, rank); 
+  rsvu->print(f, "  rsvu:", max_elems, rank); 
+  rxl->print( f, "   rxl:", max_elems, rank);  
+  rxu->print( f, "   rxu:", max_elems, rank); 
+  rdl->print( f, "   rdl:", max_elems, rank); 
+  rdu->print( f, "   rdu:", max_elems, rank); 
+  printf(" errors (optim/feasib/complem) nlp    : %12.6e %12.6e %12.6e\n", 
+	 nrmInf_nlp_optim, nrmInf_nlp_feasib, nrmInf_nlp_complem);
+  printf(" errors (optim/feasib/complem) barrier: %12.6e %12.6e %12.6e\n", 
+	 nrmInf_bar_optim, nrmInf_bar_feasib, nrmInf_bar_complem);
+}
 
 // void hiopResidual::
 // projectPrimalsIntoBounds(double kappa1, double kappa2)
