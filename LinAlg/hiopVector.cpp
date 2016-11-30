@@ -6,6 +6,9 @@
 
 #include "blasdefs.hpp"
 
+#include <limits>
+#include <cstddef>
+
 hiopVectorPar::hiopVectorPar(const long long& glob_n, long long* col_part/*=NULL*/, MPI_Comm comm_/*=MPI_COMM_NULL*/)
   : comm(comm_)
 {
@@ -421,6 +424,23 @@ double hiopVectorPar::logBarrier(const hiopVector& select) const
       res += log(data[i]);
   return res;
 }
+double hiopVectorPar::linearDampingTerm(const hiopVector& ixleft, const hiopVector& ixright, 
+				   const double& mu, const double& kappa_d) const
+{
+  const double* ixl= (dynamic_cast<const hiopVectorPar&>(ixleft)).local_data_const();
+  const double* ixr= (dynamic_cast<const hiopVectorPar&>(ixright)).local_data_const();
+#ifdef DEEP_CHECKING
+  assert(n_local==(dynamic_cast<const hiopVectorPar&>(ixleft) ).n_local);
+  assert(n_local==(dynamic_cast<const hiopVectorPar&>(ixright) ).n_local);
+#endif
+  double term=0.0;
+  for(long long i=0; i<n_local; i++) {
+    if(ixl[i]==1. && ixr[i]==0.) term += data[i];
+  }
+  term *= mu; 
+  term *= kappa_d;
+  return term;
+}
 
 int hiopVectorPar::allPositive()
 {
@@ -452,10 +472,12 @@ void hiopVectorPar::projectIntoBounds(const hiopVector& xl_, const hiopVector& i
   const double* ixu= (dynamic_cast<const hiopVectorPar&>(ixu_)).local_data_const();
   double* x0=data; 
 
+  const double small_double = std::numeric_limits<double>::min() * 100;
+
   double aux, aux2;
   for(long long i=0; i<n_local; i++) {
     if(ixl[i]!=0 && ixu[i]!=0) {
-      aux=kappa2*(xu[i]-xl[i]);
+      aux=kappa2*(xu[i]-xl[i])-small_double;
       aux2=xl[i]+fmin(kappa1*fmax(1, fabs(xl[i])),aux);
       if(x0[i]<aux2) {
 	x0[i]=aux2;
@@ -470,10 +492,10 @@ void hiopVectorPar::projectIntoBounds(const hiopVector& xl_, const hiopVector& i
 #endif
     } else {
       if(ixl[i]!=0.)
-	x0[i] = fmax(x0[i], xl[i]+kappa1*fmax(1, fabs(xl[i])));
+	x0[i] = fmax(x0[i], xl[i]+kappa1*fmax(1, fabs(xl[i]))-small_double);
       else 
 	if(ixu[i]!=0)
-	  x0[i] = fmin(x0[i], xu[i]-kappa1*fmax(1, fabs(xu[i])));
+	  x0[i] = fmin(x0[i], xu[i]-kappa1*fmax(1, fabs(xu[i]))-small_double);
 	else { /*nothing for free vars  */ }
     }
   }
@@ -595,7 +617,7 @@ void hiopVectorPar::print(FILE* file, const char* msg/*=NULL*/, int max_elems/*=
       fprintf(file, "%s ", msg);
     }    
     max_elems = max_elems>=0?max_elems:n_local;
-    for(int it=0; it<max_elems; it++)  fprintf(file, "%15.8e ", data[it]);
+    for(int it=0; it<max_elems; it++)  fprintf(file, "%25.16e ", data[it]);
     fprintf(file, "\n");
   }
 }
