@@ -251,11 +251,128 @@ bool hiopIterate::updateDualsIneq(const hiopIterate& iter, const hiopIterate& di
 double hiopIterate::evalLogBarrier() const
 {
   double barrier;
-
   barrier = sxl->logBarrier(nlp->get_ixl());
   barrier+= sxu->logBarrier(nlp->get_ixu());
   barrier+= sdl->logBarrier(nlp->get_idl());
   barrier+= sdu->logBarrier(nlp->get_idu());
-
   return barrier;
 }
+
+double hiopIterate::linearDampingTerm(const double& mu, const double& kappa_d) const
+{
+  double term;
+  term  = sxl->linearDampingTerm(nlp->get_ixl(), nlp->get_ixu(), mu, kappa_d);
+  term += sxu->linearDampingTerm(nlp->get_ixu(), nlp->get_ixl(), mu, kappa_d);
+  term += sdl->linearDampingTerm(nlp->get_idl(), nlp->get_idu(), mu, kappa_d);
+  term += sdu->linearDampingTerm(nlp->get_idu(), nlp->get_idl(), mu, kappa_d);
+  return term;
+}
+
+void hiopIterate::addLinearDampingTermToGrad_x(const double& mu, const double& kappa_d, const double& beta, hiopVector& grad_x) const
+{
+  /*sxl->addLinearDampingTermToGrad(nlp->get_ixl(), nlp->get_ixu(), mu, kappa_d, grad_x);
+    sxu->addLinearDampingTermToGrad(nlp->get_ixu(), nlp->get_ixl(), mu, kappa_d, grad_x); */
+  //I'll do it in place, in one for loop, to be faster
+  const double* ixl=dynamic_cast<const hiopVectorPar&>(nlp->get_ixl()).local_data_const();
+  const double* ixu=dynamic_cast<const hiopVectorPar&>(nlp->get_ixu()).local_data_const();
+  const double*  xv=x->local_data_const();   long long n_local = x->get_local_size();
+  double* gv = dynamic_cast<hiopVectorPar&>(grad_x).local_data();
+#ifdef DEEP_CHECKING
+  assert(n_local==dynamic_cast<hiopVectorPar&>(grad_x).get_local_size());
+#endif
+  
+  const double ct=kappa_d*mu;
+  if(1.0==beta) {
+    for(long i=0; i<n_local; i++) {
+      //!opt -> can be streamlined with blas:  gv[i] += ct*(ixl[i]-ixu[i]);
+      if(ixl[i]==1.) {
+	if(ixu[i]==0.) gv[i] += ct;
+      } else {
+	if(ixu[i]==1.) gv[i] -= ct;
+#ifdef DEEP_CHECKING
+	else {assert(ixl[i]==0); assert(ixu[i]==0);}
+#endif
+      }
+    }
+  } else if(-1.==beta) {
+    for(long i=0; i<n_local; i++) {
+      //!opt -> can be streamlined with blas:  gv[i] += ct*(ixl[i]-ixu[i]);
+      if(ixl[i]==1.) {
+	if(ixu[i]==0.) gv[i] -= ct;
+      } else {
+	if(ixu[i]==1.) gv[i] += ct;
+#ifdef DEEP_CHECKING
+	else {assert(ixl[i]==0); assert(ixu[i]==0);}
+#endif
+      }
+    }
+  } else {
+    //beta is neither 1. nor -1.
+    for(long i=0; i<n_local; i++) {
+      //!opt -> can be streamlined with blas:  gv[i] += ct*(ixl[i]-ixu[i]);
+      if(ixl[i]==1.) {
+	if(ixu[i]==0.) gv[i] += beta*ct;
+      } else {
+	if(ixu[i]==1.) gv[i] -= beta*ct;
+#ifdef DEEP_CHECKING
+	else {assert(ixl[i]==0); assert(ixu[i]==0);}
+#endif
+      }
+    }
+  }
+}
+
+void hiopIterate::addLinearDampingTermToGrad_d(const double& mu, const double& kappa_d, const double& beta, hiopVector& grad_d) const
+{
+  /*sxl->addLinearDampingTermToGrad(nlp->get_ixl(), nlp->get_ixu(), mu, kappa_d, grad_x);
+    sxu->addLinearDampingTermToGrad(nlp->get_ixu(), nlp->get_ixl(), mu, kappa_d, grad_x); */
+  //I'll do it in place, in one for loop, to be faster
+  const double* idl=dynamic_cast<const hiopVectorPar&>(nlp->get_idl()).local_data_const();
+  const double* idu=dynamic_cast<const hiopVectorPar&>(nlp->get_idu()).local_data_const();
+  const double*  dv=d->local_data_const();   long long n_local = d->get_local_size();
+  double* gv = dynamic_cast<hiopVectorPar&>(grad_d).local_data();
+#ifdef DEEP_CHECKING
+  assert(n_local==dynamic_cast<hiopVectorPar&>(grad_d).get_local_size());
+#endif
+  
+  const double ct=kappa_d*mu;
+  if(beta==-1.0) {
+    for(long i=0; i<n_local; i++) {
+      //!opt -> can be streamlined with blas:  gv[i] += ct*(ixl[i]-ixu[i]);
+      if(idl[i]==1.) {
+	if(idu[i]==0.) gv[i] -= ct;
+      } else {
+	if(idu[i]==1.) gv[i] += ct;
+#ifdef DEEP_CHECKING
+	else {assert(idl[i]==0); assert(idu[i]==0);}
+#endif
+      }
+    }
+  } else if(1.0==beta) {
+    for(long i=0; i<n_local; i++) {
+      //!opt -> can be streamlined with blas:  gv[i] += ct*(ixl[i]-ixu[i]);
+      if(idl[i]==1.) {
+	if(idu[i]==0.) gv[i] += ct;
+      } else {
+	if(idu[i]==1.) gv[i] -= ct;
+#ifdef DEEP_CHECKING
+	else {assert(idl[i]==0); assert(idu[i]==0);}
+#endif
+      }
+    }
+  } else {
+    //beta is neither 1. nor -1.
+    for(long i=0; i<n_local; i++) {
+      //!opt -> can be streamlined with blas:  gv[i] += ct*(ixl[i]-ixu[i]);
+      if(idl[i]==1.) {
+	if(idu[i]==0.) gv[i] += beta*ct;
+      } else {
+	if(idu[i]==1.) gv[i] -= beta*ct;
+#ifdef DEEP_CHECKING
+	else {assert(idl[i]==0); assert(idu[i]==0);}
+#endif
+      }
+    }
+  }
+}
+

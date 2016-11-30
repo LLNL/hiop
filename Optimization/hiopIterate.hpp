@@ -30,6 +30,12 @@ public:
   /* compute the log-barrier term for the primal signed variables */
   virtual double evalLogBarrier() const;
 
+  /* computes the log barrier's linear damping term of the Filter-IPM method of WaectherBiegler (section 3.7) */
+  virtual double linearDampingTerm(const double& mu, const double& kappa_d) const;
+  /* adds the damping term to the gradient */
+  virtual void addLinearDampingTermToGrad_x(const double& mu, const double& kappa_d, const double& beta, hiopVector& grad_x) const;
+  virtual void addLinearDampingTermToGrad_d(const double& mu, const double& kappa_d, const double& beta, hiopVector& grad_d) const;
+
   /** norms for individual parts of the iterate (on demand computation) */
   virtual double normOneOfBoundDuals() const;
   virtual double normOneOfEqualityDuals() const;
