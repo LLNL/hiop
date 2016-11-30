@@ -1,5 +1,8 @@
 #include "hiopAlgFilterIPM.hpp"
 #include "hiopKKTLinSys.hpp"
+
+
+
 #include <cmath>
 
 #include <cassert>
@@ -10,6 +13,8 @@ hiopAlgFilterIPM::hiopAlgFilterIPM(hiopNlpDenseConstraints* nlp_)
   it_curr = new hiopIterate(nlp);
   it_trial= it_curr->alloc_clone();
   dir     = it_curr->alloc_clone();
+
+  logbar = new hiopLogBarProblem(nlp);
 
   _f_nlp = _f_log = 0; 
   _c = nlp->alloc_dual_eq_vec(); 
@@ -40,7 +45,7 @@ hiopAlgFilterIPM::hiopAlgFilterIPM(hiopNlpDenseConstraints* nlp_)
   eps_tol=1e-8; //absolute error for the nlp
   kappa_eps=10; //relative (to mu) error for the log barrier
   kappa1=kappa2=1e-2; //projection params for the starting point (default 1e-2)
-  p_smax=100; //theshold for the magnitude of the multipliers
+  p_smax=100; //threshold for the magnitude of the multipliers
 
   _tau=fmax(tau_min,1.0-_mu);
   theta_max = 1e7; //temporary - will be updated after ini pt is computed
@@ -69,6 +74,8 @@ hiopAlgFilterIPM::~hiopAlgFilterIPM()
   if(_Jac_d_trial)   delete _Jac_d;
 
   if(resid_trial)    delete resid_trial;
+
+  if(logbar) delete logbar;
 }
 
 int hiopAlgFilterIPM::defaultStartingPoint(hiopIterate& it_ini)
@@ -93,18 +100,21 @@ int hiopAlgFilterIPM::defaultStartingPoint(hiopIterate& it_ini)
   //for now set them to zero
   it_ini.setEqualityDualsToConstant(0.);
 
-  nlp->log->write("Initial point:", it_ini, hovIteration);
-
   return true;
 }
 
 int hiopAlgFilterIPM::run()
 {
   defaultStartingPoint(*it_curr);
+  nlp->log->write("Initial point:", *it_curr, hovIteration);
   _mu=mu0;
-  //update problem information and residuals
-  updateLogBarrierProblem(*it_curr, _mu, _f_nlp, _f_log, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d);
-  resid->update(*it_curr,_f_nlp, *_c, *_d,*_grad_f,*_Jac_c,*_Jac_d,_mu);
+  //update problem information 
+  this->updateNlpInfo(*it_curr, _mu, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d);
+  //update log bar
+  logbar->updateWithNlpInfo(*it_curr, _mu, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d);
+  //recompute the residuals
+  resid->update(*it_curr,_f_nlp, *_c, *_d,*_grad_f,*_Jac_c,*_Jac_d, *logbar);
+
   nlp->log->write("First residual:", *resid, hovIteration);
 
   iter_num=0;
@@ -130,9 +140,10 @@ int hiopAlgFilterIPM::run()
       //update mu and tau (fraction-to-boundary)
       bret = updateLogBarrierParameters(*it_curr, _mu, _tau, _mu, _tau);
 
-      //update problem information and residuals
-      updateLogBarrierProblem(*it_curr, _mu, _f_nlp, _f_log, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d);
-      resid->update(*it_curr,_f_nlp, *_c, *_d,*_grad_f,*_Jac_c,*_Jac_d,_mu);
+      //update nlp and logbar problem information and residuals
+      this->updateNlpInfo(*it_curr, _mu, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d);
+      logbar->updateWithNlpInfo(*it_curr, _mu, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d);
+      resid->update(*it_curr,_f_nlp, *_c, *_d,*_grad_f,*_Jac_c,*_Jac_d, *logbar);
 
       filter.reinitialize(theta_max);
       //recheck residuals for at the first iteration in case the starting pt is  very good
@@ -144,7 +155,7 @@ int hiopAlgFilterIPM::run()
     //first update kkt system
     kkt->update(it_curr,_grad_f,_Jac_c,_Jac_d, _Hess);
     bret = kkt->computeDirections(resid,dir); assert(bret==true);
-
+    nlp->log->write("Search direction", *dir, hovIteration);
     /***************************************************************
      * backtracking line search
      */
@@ -160,13 +171,13 @@ int hiopAlgFilterIPM::run()
 
       bret = it_trial->updatePrimals(*it_curr, *dir, _alpha_primal, _alpha_dual); assert(bret);
   
-     
+      assert(false);
 
       //it_curr->print();
       
       //update problem information and residuals
-      updateLogBarrierProblem(*it_trial, _mu, _f_nlp_trial, _f_log_trial, *_c_trial, *_d_trial, *_grad_f_trial, *_Jac_c_trial, *_Jac_d_trial);
-      resid_trial->update(*it_trial,_f_nlp_trial, *_c_trial, *_d_trial, *_grad_f_trial, *_Jac_c_trial, *_Jac_d_trial, _mu);
+      //updateLogBarrierProblem(*it_trial, _mu, _f_nlp_trial, _f_log_trial, *_c_trial, *_d_trial, *_grad_f_trial, *_Jac_c_trial, *_Jac_d_trial);
+      //resid_trial->update(*it_trial,_f_nlp_trial, *_c_trial, *_d_trial, *_grad_f_trial, *_Jac_c_trial, *_Jac_d_trial, _mu);
       
       //theta and phi
       double theta_plus=thetaLogBarrier(*it_trial,*resid_trial, _mu);
@@ -179,7 +190,7 @@ int hiopAlgFilterIPM::run()
     bret = it_trial->updateDualsEq(*it_curr, *dir, _alpha_primal, _alpha_dual); assert(bret);
     it_curr->copyFrom(*it_trial);
     //updateLogBarrierProblem(*it_curr, mu, _f, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d);
-    resid->update(*it_curr,_f_nlp, *_c, *_d,*_grad_f,*_Jac_c,*_Jac_d, _mu);
+    //resid->update(*it_curr,_f_nlp, *_c, *_d,*_grad_f,*_Jac_c,*_Jac_d, _mu);
     iter_num++;
   }
 
@@ -235,29 +246,27 @@ evalNlpAndLogErrors(const hiopIterate& it, const hiopResidual& resid, const doub
 
 
 bool hiopAlgFilterIPM::
-updateLogBarrierProblem(hiopIterate& iter, double mu, 
-			double &f, double& f_log, hiopVector& c_, hiopVector& d_, 
-			hiopVector& grad_,  hiopMatrixDense& Jac_c,  hiopMatrixDense& Jac_d)
+updateNlpInfo(hiopIterate& iter, double mu, 
+	      double &f, hiopVector& c_, hiopVector& d_, 
+	      hiopVector& gradf_,  hiopMatrixDense& Jac_c,  hiopMatrixDense& Jac_d)
 {
   bool new_x=true, bret; 
   const hiopVectorPar& it_x = dynamic_cast<const hiopVectorPar&>(*iter.get_x());
   hiopVectorPar 
     &c=dynamic_cast<hiopVectorPar&>(c_), 
     &d=dynamic_cast<hiopVectorPar&>(d_), 
-    &grad=dynamic_cast<hiopVectorPar&>(grad_);
+    &gradf=dynamic_cast<hiopVectorPar&>(gradf_);
   const double* x = it_x.local_data_const();//local_data_const();
   //f(x)
   bret = nlp->eval_f(x, new_x, f); assert(bret);
-  new_x=false; //same x for the rest
-  bret = nlp->eval_grad_f(x, new_x, grad.local_data());  assert(bret);
+  new_x= false; //same x for the rest
+  bret = nlp->eval_grad_f(x, new_x, gradf.local_data());  assert(bret);
+
   bret = nlp->eval_c     (x, new_x, c.local_data());     assert(bret);
   bret = nlp->eval_d     (x, new_x, d.local_data());     assert(bret);
   bret = nlp->eval_Jac_c (x, new_x, Jac_c.local_data()); assert(bret);
   bret = nlp->eval_Jac_d (x, new_x, Jac_d.local_data()); assert(bret);
 
-  //add the log barrier term
-  f_log = 0.0 - mu * iter.evalLogBarrier();
-  f_log += f;
   return true;
 }
 

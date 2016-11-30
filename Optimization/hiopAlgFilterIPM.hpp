@@ -6,6 +6,7 @@
 #include "hiopResidual.hpp"
 #include "hiopFilter.hpp"
 #include "hiopHessianLowRank.hpp"
+#include "hiopLogBarProblem.hpp"
 
 class hiopAlgFilterIPM
 {
@@ -19,8 +20,8 @@ public:
  
 
 private:
-  bool updateLogBarrierProblem(hiopIterate& iter, double mu, 
-			       double &f, double& f_log, hiopVector& c_, hiopVector& d_, 
+  bool updateNlpInfo(hiopIterate& iter, double mu, 
+			       double &f, hiopVector& c_, hiopVector& d_, 
 			       hiopVector& grad_,  hiopMatrixDense& Jac_c,  hiopMatrixDense& Jac_d);
 
  /* internal helper for error computation */
@@ -37,7 +38,9 @@ private:
   hiopNlpDenseConstraints* nlp;
   hiopFilter filter;
 
-  /* Iterate, search directions (managed by the algorithm) */
+  hiopLogBarProblem* logbar;
+
+  /* Iterate, search directions (managed by this (algorithm) class) */
   hiopIterate*it_curr;
   hiopIterate*it_trial;
   hiopIterate* dir;
