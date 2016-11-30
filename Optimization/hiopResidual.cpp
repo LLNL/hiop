@@ -44,35 +44,37 @@ hiopResidual::~hiopResidual()
 int hiopResidual::update(const hiopIterate& it, 
 			 const double& f, const hiopVector& c, const hiopVector& d,
 			 const hiopVector& grad, const hiopMatrix& jac_c, const hiopMatrix& jac_d, 
-			 const double& mu)
+			 const hiopLogBarProblem& logprob)
 {
   nrmInf_nlp_optim = nrmInf_nlp_feasib = nrmInf_nlp_complem = 0;
   nrmInf_bar_optim = nrmInf_bar_feasib = nrmInf_bar_complem = 0;
 
   long long nx_loc=rx->get_local_size();
-
+  const double&  mu=logprob.mu;
 #ifdef DEEP_CHECKING
   assert(it.zl->matchesPattern(nlp->get_ixl()));
   assert(it.zu->matchesPattern(nlp->get_ixu()));
   assert(it.sxl->matchesPattern(nlp->get_ixl()));
   assert(it.sxu->matchesPattern(nlp->get_ixu()));
 #endif
-
-  //rx = -grad_f - J_c^t*x - J_d^t*x+zl-zu
+  // rx = -grad_f - J_c^t*x - J_d^t*x+zl-zu - linear damping term in x
   rx->copyFrom(grad);
   jac_c.transTimesVec(1.0, *rx, 1.0, *it.yc);
   jac_d.transTimesVec(1.0, *rx, 1.0, *it.yd);
   rx->axpy(-1.0, *it.zl);
   rx->axpy( 1.0, *it.zu);
-  rx->negate();
   nrmInf_nlp_optim = fmax(nrmInf_nlp_optim, rx->infnorm_local());
-  //rd 
+  logprob.addLogBarTermsToGrad_x(1.0, *rx);
+  rx->negate();
+  nrmInf_bar_optim = fmax(nrmInf_bar_optim, rx->infnorm_local());
+  //~ done with rx
+  // rd 
   rd->copyFrom(*it.yd);
   rd->axpy( 1.0, *it.vl);
   rd->axpy(-1.0, *it.vu);
   nrmInf_nlp_optim = fmax(nrmInf_nlp_optim, rd->infnorm_local());
-  //this is also the optimality error for the log-barrier problem
-  nrmInf_bar_optim = nrmInf_nlp_optim;
+  logprob.addLogBarTermsToGrad_d(-1.0,*rd);
+  nrmInf_bar_optim = fmax(nrmInf_bar_optim, rd->infnorm_local());
   //ryc
   ryc->copyFrom(nlp->get_crhs());
   ryc->axpy(-1.0,c);
@@ -112,6 +114,7 @@ int hiopResidual::update(const hiopIterate& it,
   }
   //set the feasibility error for the log barrier problem
   nrmInf_bar_feasib = nrmInf_nlp_feasib;
+
   //rszl = \mu e - sxl * zl
   if(nlp->n_low_local()>0) {
     rszl->setToZero();
@@ -185,9 +188,9 @@ void hiopResidual::print(FILE* f, const char* msg/*=NULL*/, int max_elems/*=-1*/
   rxu->print( f, "   rxu:", max_elems, rank); 
   rdl->print( f, "   rdl:", max_elems, rank); 
   rdu->print( f, "   rdu:", max_elems, rank); 
-  printf(" errors (optim/feasib/complem) nlp    : %12.6e %12.6e %12.6e\n", 
+  printf(" errors (optim/feasib/complem) nlp    : %26.16e %25.16e %25.16e\n", 
 	 nrmInf_nlp_optim, nrmInf_nlp_feasib, nrmInf_nlp_complem);
-  printf(" errors (optim/feasib/complem) barrier: %12.6e %12.6e %12.6e\n", 
+  printf(" errors (optim/feasib/complem) barrier: %25.16e %25.16e %25.16e\n", 
 	 nrmInf_bar_optim, nrmInf_bar_feasib, nrmInf_bar_complem);
 }
 

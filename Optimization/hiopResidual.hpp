@@ -5,6 +5,7 @@
 #include "hiopVector.hpp"
 #include "hiopIterate.hpp"
 
+#include "hiopLogBarProblem.hpp"
 
 class hiopResidual
 {
@@ -12,8 +13,10 @@ public:
   hiopResidual(const hiopNlpDenseConstraints* nlp);
   virtual ~hiopResidual();
 
-  virtual int update(const hiopIterate& it, const double& f, const hiopVector& c, const hiopVector& d,
-		     const hiopVector& grad, const hiopMatrix& jac_c, const hiopMatrix& jac_d, const double& mu);
+  virtual int update(const hiopIterate& it, 
+		     const double& f, const hiopVector& c, const hiopVector& d,
+		     const hiopVector& gradf, const hiopMatrix& jac_c, const hiopMatrix& jac_d, 
+		     const hiopLogBarProblem& logbar);
 
   /** Return the Nlp and Log-bar errors computed at the previous update call. */ 
   inline void getNlpErrors(double& optim, double& feas, double& comple) const
