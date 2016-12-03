@@ -22,11 +22,15 @@ public:
   /* max{a\in(0,1]| x+ad >=(1-tau)x} */
   bool fractionToTheBdry(const hiopIterate& dir, const double& tau, double& alphaprimal, double& alphadual) const;
   
-  /* take the step */
-  virtual bool updatePrimals(const hiopIterate& iter, const hiopIterate& dir, double& alphaprimal, double& alphadual);
+  /* take the step: this = iter+alpha*dir */
+  virtual bool takeStep_primals(const hiopIterate& iter, const hiopIterate& dir, double& alphaprimal, double& alphadual);
+  virtual bool takeStep_duals(const hiopIterate& iter, const hiopIterate& dir, double& alphaprimal, double& alphadual);
   virtual bool updateDualsEq(const hiopIterate& iter, const hiopIterate& dir, double& alphaprimal, double& alphadual);
   virtual bool updateDualsIneq(const hiopIterate& iter, const hiopIterate& dir, double& alphaprimal, double& alphadual);
-
+  
+  /* Adjusts the signed duals to ensure the the logbar primal-dual Hessian is not arbitrarily 
+   * far away from the primal counterpart. This is eq. 16 in the filter IPM paper */
+  virtual bool adjustDuals_primalLogHessian(const double& mu, const double& kappa_Sigma);
   /* compute the log-barrier term for the primal signed variables */
   virtual double evalLogBarrier() const;
 

@@ -205,7 +205,7 @@ fractionToTheBdry(const hiopIterate& dir, const double& tau, double& alphaprimal
 }
 
 
-bool hiopIterate::updatePrimals(const hiopIterate& iter, const hiopIterate& dir, double& alphaprimal, double& alphadual)
+bool hiopIterate::takeStep_primals(const hiopIterate& iter, const hiopIterate& dir, double& alphaprimal, double& alphadual)
 {
   x->copyFrom(*iter.x); x->axpy(alphaprimal, *dir.x);
   d->copyFrom(*iter.d); d->axpy(alphaprimal, *dir.d);
@@ -218,14 +218,25 @@ bool hiopIterate::updatePrimals(const hiopIterate& iter, const hiopIterate& dir,
   assert(sxu->matchesPattern(nlp->get_ixu()));
   assert(sdl->matchesPattern(nlp->get_idl()));
   assert(sdu->matchesPattern(nlp->get_idu()));
-  //  assert(dir->zl->matchesPattern(nlp->get_ixl()));
-  //assert(dir->zu->matchesPattern(nlp->get_ixu()));
-  //assert(dir->vl->matchesPattern(nlp->get_idl()));
-  //assert(dir->vu->matchesPattern(nlp->get_idu()));
 #endif
   return true;
 }
-
+bool hiopIterate::takeStep_duals(const hiopIterate& iter, const hiopIterate& dir, double& alphaprimal, double& alphadual)
+{
+  yd->copyFrom(*iter.yd); yd->axpy(alphadual, *dir.yd);
+  yc->copyFrom(*iter.yc); yc->axpy(alphadual, *dir.yc);
+  zl->copyFrom(*iter.zl); zl->axpy(alphadual, *dir.zl);
+  zu->copyFrom(*iter.zu); zu->axpy(alphadual, *dir.zu);
+  vl->copyFrom(*iter.vl); vl->axpy(alphadual, *dir.vl);
+  vu->copyFrom(*iter.vu); vu->axpy(alphadual, *dir.vu);
+#ifdef DEEP_CHECKING
+  assert(zl->matchesPattern(nlp->get_ixl()));
+  assert(zu->matchesPattern(nlp->get_ixu()));
+  assert(vl->matchesPattern(nlp->get_idl()));
+  assert(vu->matchesPattern(nlp->get_idu()));
+#endif
+  return true;
+}
 bool hiopIterate::updateDualsEq(const hiopIterate& iter, const hiopIterate& dir, double& alphaprimal, double& alphadual)
 {
   yc->copyFrom(*iter.yc); yc->axpy(alphaprimal,*dir.yc);
@@ -239,6 +250,21 @@ bool hiopIterate::updateDualsIneq(const hiopIterate& iter, const hiopIterate& di
   zu->copyFrom(*iter.zu); zu->axpy(alphadual,*dir.zu);
   vl->copyFrom(*iter.vl); vl->axpy(alphadual,*dir.vl);
   vu->copyFrom(*iter.vu); vu->axpy(alphadual,*dir.vu);
+#ifdef DEEP_CHECKING
+  assert(zl->matchesPattern(nlp->get_ixl()));
+  assert(zu->matchesPattern(nlp->get_ixu()));
+  assert(vl->matchesPattern(nlp->get_idl()));
+  assert(vu->matchesPattern(nlp->get_idu()));
+#endif
+  return true;
+}
+
+bool hiopIterate::adjustDuals_primalLogHessian(const double& mu, const double& kappa_Sigma)
+{
+  zl->adjustDuals_plh(*sxl,nlp->get_ixl(),mu,kappa_Sigma);
+  zu->adjustDuals_plh(*sxu,nlp->get_ixu(),mu,kappa_Sigma);
+  vl->adjustDuals_plh(*sdl,nlp->get_idl(),mu,kappa_Sigma);
+  vu->adjustDuals_plh(*sdu,nlp->get_idu(),mu,kappa_Sigma);
 #ifdef DEEP_CHECKING
   assert(zl->matchesPattern(nlp->get_ixl()));
   assert(zu->matchesPattern(nlp->get_ixu()));
