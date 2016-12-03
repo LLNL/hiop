@@ -13,6 +13,7 @@ enum hiopOutVerbosity {
   hovSummary=0, //summary of the problem and each iteration
   hovScalars=1, //additional, usually scalars, such as norm of resids, nlp and log bar errors, etc
   hovFcnEval=2, //the above plus info about the number of function, gradient and Hessians
+  hovLinesearch=3, //linesearch info
   hovLinAlgScalars=4, //details on the linear algebra residuals
   hovIteration=7,
   hovMatrices=8,
