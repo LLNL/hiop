@@ -1,9 +1,7 @@
 #include "hiopResidual.hpp"
 
 #include <cmath>
-
 #include <cassert>
-
 hiopResidual::hiopResidual(const hiopNlpDenseConstraints* nlp_)
 {
   nlp = nlp_;
@@ -39,6 +37,60 @@ hiopResidual::~hiopResidual()
   if(rszu) delete rszu;
   if(rsvl) delete rsvl;
   if(rsvu) delete rsvu;
+}
+
+double hiopResidual::computeNlpInfeasInfNorm(const hiopIterate& it, 
+			       const hiopVector& c, 
+			       const hiopVector& d)
+{
+  double nrmInf_infeasib;
+  long long nx_loc=rx->get_local_size();
+  //ryc
+  ryc->copyFrom(nlp->get_crhs());
+  ryc->axpy(-1.0,c);
+  nrmInf_infeasib = ryc->infnorm_local();
+  //ryd
+  ryd->copyFrom(*it.d);
+  ryd->axpy(-1.0, d);
+  nrmInf_infeasib = fmax(nrmInf_infeasib, ryd->infnorm_local());
+  //rxl=x-sxl-xl
+  if(nlp->n_low_local()>0) {
+    rxl->copyFrom(*it.x);
+    rxl->axpy(-1.0,*it.sxl);
+    rxl->axpy(-1.0,nlp->get_xl());
+    //zero out entries in the resid that don't correspond to a finite low bound 
+    if(nlp->n_low_local()<nx_loc)
+      rxl->selectPattern(nlp->get_ixl());
+    nrmInf_infeasib = fmax(nrmInf_infeasib, rxl->infnorm_local());
+  }
+  //rxu=-x-sxu+xu
+  if(nlp->n_upp_local()>0) {
+    rxu->copyFrom(nlp->get_xu()); rxu->axpy(-1.0,*it.x); rxu->axpy(-1.0,*it.sxu);
+    if(nlp->n_upp_local()<nx_loc)
+      rxu->selectPattern(nlp->get_ixu());
+    nrmInf_infeasib = fmax(nrmInf_infeasib, rxu->infnorm_local());
+  }
+  //rdl=d-sdl-dl
+  if(nlp->m_ineq_low()>0) {
+    rdl->copyFrom(*it.d); rdl->axpy(-1.0,*it.sdl); rdl->axpy(-1.0,nlp->get_dl());
+    rdl->selectPattern(nlp->get_idl());
+    nrmInf_infeasib = fmax(nrmInf_infeasib, rdl->infnorm_local());
+  }
+  //rdu=-d-sdu+du
+  if(nlp->m_ineq_upp()>0) {
+    rdu->copyFrom(nlp->get_du()); rdu->axpy(-1.0,*it.sdu); rdu->axpy(-1.0,*it.d);
+    rdu->selectPattern(nlp->get_idu());
+    nrmInf_infeasib = fmax(nrmInf_infeasib, rdu->infnorm_local());
+  }
+
+#ifdef WITH_MPI
+  //here we reduce each of the norm together for a total cost of 1 Allreduce of 3 doubles
+  //otherwise, if calling infnorm() for each vector, there will be 12 Allreduce's, each of 1 double
+  double aux;
+  int ierr = MPI_Allreduce(&nrmInf_infeasib, &aux, 1, MPI_DOUBLE, MPI_MAX, nlp->get_comm()); assert(MPI_SUCCESS==ierr);
+  return aux;
+#endif
+  return nrmInf_infeasib;
 }
 
 int hiopResidual::update(const hiopIterate& it, 

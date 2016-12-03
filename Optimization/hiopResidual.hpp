@@ -18,16 +18,22 @@ public:
 		     const hiopVector& gradf, const hiopMatrix& jac_c, const hiopMatrix& jac_d, 
 		     const hiopLogBarProblem& logbar);
 
-  /** Return the Nlp and Log-bar errors computed at the previous update call. */ 
+  /* Return the Nlp and Log-bar errors computed at the previous update call. */ 
   inline void getNlpErrors(double& optim, double& feas, double& comple) const
   { optim=nrmInf_nlp_optim; feas=nrmInf_nlp_feasib; comple=nrmInf_nlp_complem;};
   inline void getBarrierErrors(double& optim, double& feas, double& comple) const
   { optim=nrmInf_bar_optim; feas=nrmInf_bar_feasib; comple=nrmInf_bar_complem;};
-
-  inline double getNlpInfeasInfNorm() const { return nrmInf_nlp_feasib;}
-  /* cloning and copying */
-  //hiopResidual* alloc_clone() const;
-  //hiopResidual* new_copy() const;
+  /* get the previously computed Infeasibility */
+  inline double getInfeasInfNorm() const { 
+    return nrmInf_nlp_feasib;
+  }
+  /* evaluate the Infeasibility at the new iterate, which has eq and ineq functions 
+   * computed in c_eval and d_eval, respectively. 
+   * The method modifies 'this', in particular ryd,ryc, rxl,rxu, rdl,rdu in an attempt
+   * to reuse storage/buffers, but does not update the cached nrmInf_XXX members. */
+  double computeNlpInfeasInfNorm(const hiopIterate& iter, 
+				 const hiopVector& c_eval, 
+				 const hiopVector& d_eval);
 
   /* residual printing function - calls hiopVector::print 
    * prints up to max_elems (by default all), on rank 'rank' (by default on all) */
