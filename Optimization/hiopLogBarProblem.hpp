@@ -4,50 +4,75 @@
 class hiopLogBarProblem
 {
 public:
-  hiopLogBarProblem(hiopNlpDenseConstraints* nlp_) : nlp(nlp_), kappa_d(1e-5) {};
-
+  hiopLogBarProblem(hiopNlpDenseConstraints* nlp_) : nlp(nlp_), kappa_d(1e-5) 
+  {
+    _grad_x_logbar = nlp->alloc_primal_vec();
+    _grad_d_logbar = nlp->alloc_dual_ineq_vec();
+  };
+  virtual ~hiopLogBarProblem()
+  {
+    delete _grad_x_logbar;
+    delete _grad_d_logbar;
+  };
+public: //members
   double mu;
-  //just a proxy: keeps pointers to the problem's data and updates LogBar func, grad and all that on the fly
-  const hiopVector *c,*d;
-  const hiopVector *grad_f;
-  const hiopMatrixDense* Jac_c;
-  const hiopMatrixDense* Jac_d;
+  double f_logbar, f_logbar_trial;
+  hiopVector *_grad_x_logbar, *_grad_d_logbar; //of the log barrier
+  //just proxies: keeps pointers to the problem's data and updates LogBar func, grad and all that on the fly
+  const hiopIterate *iter, *iter_trial;
+  const hiopVector *c_nlp,*d_nlp, *c_nlp_trial, *d_nlp_trial;
+  const hiopMatrixDense *Jac_c_nlp, *Jac_d_nlp;
 
-  //algorithm's parameters 
+    //algorithm's parameters 
   // factor in computing the linear damping terms used to control unboundness in the log-barrier problem (Section 3.7) */
   double kappa_d;      
 public:
   //update with the NLP problem data given by the parameters
   inline void 
-  updateWithNlpInfo(const hiopIterate& iter, const double& mu_, 
-		const double &f, const hiopVector& c_, const hiopVector& d_, 
-		const hiopVector& gradf_,  const hiopMatrixDense& Jac_c_,  const hiopMatrixDense& Jac_d_) 
+  updateWithNlpInfo(const hiopIterate& iter_, const double& mu_, 
+		    const double &f, const hiopVector& c_, const hiopVector& d_, 
+		    const hiopVector& gradf_,  const hiopMatrixDense& Jac_c_,  const hiopMatrixDense& Jac_d_) 
   {
-    mu=mu_; _f=f; c=&c_; d=&d_; grad_f=&gradf_; Jac_c=&Jac_c_; Jac_d=&Jac_d_; _iter=&iter;
+    mu=mu_; c_nlp=&c_; d_nlp=&d_; Jac_c_nlp=&Jac_c_; Jac_d_nlp=&Jac_d_; iter=&iter_;
+    _grad_x_logbar->copyFrom(gradf_);
+    _grad_d_logbar->setToZero();
+    f_logbar = f - mu * iter->evalLogBarrier();
+    if(kappa_d>0.) {
+      iter->addLinearDampingTermToGrad_x(mu,kappa_d,1.0,*_grad_x_logbar);
+      iter->addLinearDampingTermToGrad_d(mu,kappa_d,1.0,*_grad_d_logbar);
+
+      f_logbar += iter->linearDampingTerm(mu,kappa_d);
+    }
+  }
+  inline void 
+  updateWithNlpInfo_trial_funcOnly(const hiopIterate& iter_, 
+				   const double &f, const hiopVector& c_, const hiopVector& d_)
+  {
+    c_nlp_trial=&c_; d_nlp_trial=&d_; iter_trial=&iter_;
+    f_logbar_trial = f - mu * iter_trial->evalLogBarrier();
+    if(kappa_d>0.) f_logbar_trial += iter_trial->linearDampingTerm(mu,kappa_d);
   }
   /* gradx += beta*grad_x_logBar*/
   inline void addLogBarTermsToGrad_x(const double& beta, hiopVector& gradx) const
   {
-    if(kappa_d>0.) _iter->addLinearDampingTermToGrad_x(mu,kappa_d,beta,gradx);
+    if(kappa_d>0.) iter->addLinearDampingTermToGrad_x(mu,kappa_d,beta,gradx);
   }
   /* gradd += beta*grad_d_logBar*/
   inline void addLogBarTermsToGrad_d(const double& beta, hiopVector& gradd) const
   {
-    if(kappa_d>0.) _iter->addLinearDampingTermToGrad_d(mu,kappa_d,beta,gradd);
+    if(kappa_d>0.) iter->addLinearDampingTermToGrad_d(mu,kappa_d,beta,gradd);
   }
-  inline double f_logBar()
+  /* grad_log^T * [ dx ] =  grad_f^T * dx + grad_x_dampingTerm^T * dx + grad_d_dampingTerm^T *ds 
+                  [ dd ]   
+  */
+  inline double directionalDerivative(const hiopIterate& dir) 
   {
-    double f_log = mu * _iter->evalLogBarrier();
-    if(kappa_d>0.) 
-      f_log += _iter->linearDampingTerm(mu,kappa_d);
-    f_log += _f;
-    return f_log;
+    double tr = dir.get_x()->dotProductWith(*_grad_x_logbar);
+    tr       += dir.get_d()->dotProductWith(*_grad_d_logbar);
+    return tr;
   }
-
 
 protected:
-  const hiopIterate* _iter;
-  double _f;
   hiopNlpDenseConstraints* nlp;
 private:
   hiopLogBarProblem() {};
