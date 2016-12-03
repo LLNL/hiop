@@ -86,6 +86,9 @@ public:
   /** allocates a vector that mirrors this, and copies the values  */
   //virtual hiopVector* new_copy() const = 0;
 
+  /* dual adjustment -> see hiopIterate::adjustDuals_primalLogHessian */
+  virtual void adjustDuals_plh(const hiopVector& x, const hiopVector& ix, const double& mu, const double& kappa)=0;
+
   /* prints up to max_elems (by default all), on rank 'rank' (by default on all) */
   virtual void print(FILE*, const char* message=NULL,int max_elems=-1, int rank=-1) const = 0;
   
@@ -147,6 +150,8 @@ public:
 
   virtual hiopVectorPar* alloc_clone() const;
   virtual hiopVectorPar* new_copy () const;
+
+  virtual void adjustDuals_plh(const hiopVector& x, const hiopVector& ix, const double& mu, const double& kappa);
 
   virtual void print(FILE*, const char* withMessage=NULL, int max_elems=-1, int rank=-1) const;
 

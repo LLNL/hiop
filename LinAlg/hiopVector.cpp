@@ -596,6 +596,32 @@ int hiopVectorPar::allPositive_w_patternSelect(const hiopVector& w_)
   return allPos;
 }
 
+void hiopVectorPar::adjustDuals_plh(const hiopVector& x_, const hiopVector& ix_, const double& mu, const double& kappa)
+{
+#ifdef DEEP_CHECKING
+  assert((dynamic_cast<const hiopVectorPar&>(x_) ).n_local==n_local);
+  assert((dynamic_cast<const hiopVectorPar&>(ix_)).n_local==n_local);
+#endif
+  const double* x  = (dynamic_cast<const hiopVectorPar&>(x_ )).local_data_const();
+  const double* ix = (dynamic_cast<const hiopVectorPar&>(ix_)).local_data_const();
+  double* z=data; //the dual
+  double a,b;
+  for(long long i=0; i<n_local; i++) {
+    if(ix[i]==1.) {
+      a=mu/x[i]; b=a/kappa; a=a*kappa;
+      if(*z<b) 
+	*z=b;
+      else //z[i]>=b
+	if(a<=b) 
+	  *z=b;
+	else //a>b
+	  if(a<*z) *z=a;
+          //else a>=z[i] then *z=*z (z[i] does not need adjustment)
+    }
+    z++;
+  }
+}
+
 void hiopVectorPar::print(FILE* file, const char* msg/*=NULL*/, int max_elems/*=-1*/, int rank/*=-1*/) const 
 {
   int myrank=0, numranks=1; 
