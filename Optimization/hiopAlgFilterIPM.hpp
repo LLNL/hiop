@@ -20,10 +20,10 @@ public:
  
 
 private:
-  bool updateNlpInfo(hiopIterate& iter, double mu, 
-			       double &f, hiopVector& c_, hiopVector& d_, 
-			       hiopVector& grad_,  hiopMatrixDense& Jac_c,  hiopMatrixDense& Jac_d);
-
+  bool evalNlp(hiopIterate& iter,
+	       double &f, hiopVector& c_, hiopVector& d_, 
+	       hiopVector& grad_,  hiopMatrixDense& Jac_c,  hiopMatrixDense& Jac_d);
+  bool evalNlp_funcOnly(hiopIterate& iter, double& f, hiopVector& c_, hiopVector& d_);
  /* internal helper for error computation */
   virtual bool evalNlpAndLogErrors(const hiopIterate& it, const hiopResidual& resid, const double& mu,
 				   double& nlpoptim, double& nlpfeas, double& nlpcomplem, double& nlpoverall,
@@ -73,14 +73,20 @@ private:
   //1e-4*max{1,\theta(x_0)} used in the switching condition during the line search
   double theta_min;
   /*** Algorithm's parameters ***/
-  double mu0;          //intial mu
-  double kappa_mu;     //linear decrease factor in mu 
-  double theta_mu;     //exponent for a Mehtrotra-style decrease of mu
-  double eps_tol;      //solving tolerance for the NLP error
-  double tau_min;      //min value for the fraction-to-the-boundary parameter: tau_k=max{tau_min,1-\mu_k}
-  double kappa_eps;    //tolerance for the barrier problem, relative to mu: error<=kappa_eps*mu
-  double kappa1,kappa2;//params for default starting point
-  double p_smax;         //threshold for the magnitude of the multipliers used in the error estimation
+  double mu0;           //intial mu
+  double kappa_mu;      //linear decrease factor in mu 
+  double theta_mu;      //exponent for a Mehtrotra-style decrease of mu
+  double eps_tol;       //solving tolerance for the NLP error
+  double tau_min;       //min value for the fraction-to-the-boundary parameter: tau_k=max{tau_min,1-\mu_k}
+  double kappa_eps;     //tolerance for the barrier problem, relative to mu: error<=kappa_eps*mu
+  double kappa1,kappa2; //params for default starting point
+  double p_smax;        //threshold for the magnitude of the multipliers used in the error estimation
+  double gamma_theta,   //sufficient progress parameters for the feasibility violation
+    gamma_phi;          //and log barrier objective 
+  double s_theta,       //parameters in the switch condition of the linearsearch (eq 19)
+    s_phi, delta;
+  double eta_phi;       //parameter in the Armijo rule
+  double kappa_Sigma;   //parameter in resetting the duals to guarantee closedness of the primal-dual logbar Hessian to the primal logbar Hessian
 private:
   hiopAlgFilterIPM() {};
   hiopAlgFilterIPM(const hiopAlgFilterIPM& ) {};
