@@ -35,8 +35,8 @@ public:
   {
     mu=mu_; c_nlp=&c_; d_nlp=&d_; Jac_c_nlp=&Jac_c_; Jac_d_nlp=&Jac_d_; iter=&iter_;
     _grad_x_logbar->copyFrom(gradf_);
-    _grad_d_logbar->setToZero();
-    f_logbar = f - mu * iter->evalLogBarrier();
+    _grad_d_logbar->setToZero(); double aux=-mu * iter->evalLogBarrier();
+    f_logbar = f + aux;
     if(kappa_d>0.) {
       iter->addLinearDampingTermToGrad_x(mu,kappa_d,1.0,*_grad_x_logbar);
       iter->addLinearDampingTermToGrad_d(mu,kappa_d,1.0,*_grad_d_logbar);
