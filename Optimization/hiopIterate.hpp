@@ -25,8 +25,8 @@ public:
   /* take the step: this = iter+alpha*dir */
   virtual bool takeStep_primals(const hiopIterate& iter, const hiopIterate& dir, double& alphaprimal, double& alphadual);
   virtual bool takeStep_duals(const hiopIterate& iter, const hiopIterate& dir, double& alphaprimal, double& alphadual);
-  virtual bool updateDualsEq(const hiopIterate& iter, const hiopIterate& dir, double& alphaprimal, double& alphadual);
-  virtual bool updateDualsIneq(const hiopIterate& iter, const hiopIterate& dir, double& alphaprimal, double& alphadual);
+  //virtual bool updateDualsEq(const hiopIterate& iter, const hiopIterate& dir, double& alphaprimal, double& alphadual);
+  //virtual bool updateDualsIneq(const hiopIterate& iter, const hiopIterate& dir, double& alphaprimal, double& alphadual);
   
   /* Adjusts the signed duals to ensure the the logbar primal-dual Hessian is not arbitrarily 
    * far away from the primal counterpart. This is eq. 16 in the filter IPM paper */

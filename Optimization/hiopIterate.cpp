@@ -223,8 +223,8 @@ bool hiopIterate::takeStep_primals(const hiopIterate& iter, const hiopIterate& d
 }
 bool hiopIterate::takeStep_duals(const hiopIterate& iter, const hiopIterate& dir, double& alphaprimal, double& alphadual)
 {
-  yd->copyFrom(*iter.yd); yd->axpy(alphadual, *dir.yd);
-  yc->copyFrom(*iter.yc); yc->axpy(alphadual, *dir.yc);
+  yd->copyFrom(*iter.yd); yd->axpy(alphaprimal, *dir.yd);
+  yc->copyFrom(*iter.yc); yc->axpy(alphaprimal, *dir.yc);
   zl->copyFrom(*iter.zl); zl->axpy(alphadual, *dir.zl);
   zu->copyFrom(*iter.zu); zu->axpy(alphadual, *dir.zu);
   vl->copyFrom(*iter.vl); vl->axpy(alphadual, *dir.vl);
@@ -237,7 +237,7 @@ bool hiopIterate::takeStep_duals(const hiopIterate& iter, const hiopIterate& dir
 #endif
   return true;
 }
-bool hiopIterate::updateDualsEq(const hiopIterate& iter, const hiopIterate& dir, double& alphaprimal, double& alphadual)
+/*bool hiopIterate::updateDualsEq(const hiopIterate& iter, const hiopIterate& dir, double& alphaprimal, double& alphadual)
 {
   yc->copyFrom(*iter.yc); yc->axpy(alphaprimal,*dir.yc);
   yd->copyFrom(*iter.yd); yd->axpy(alphaprimal,*dir.yd);
@@ -258,6 +258,7 @@ bool hiopIterate::updateDualsIneq(const hiopIterate& iter, const hiopIterate& di
 #endif
   return true;
 }
+*/
 
 bool hiopIterate::adjustDuals_primalLogHessian(const double& mu, const double& kappa_Sigma)
 {
