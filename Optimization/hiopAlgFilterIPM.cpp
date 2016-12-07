@@ -121,7 +121,7 @@ int hiopAlgFilterIPM::run()
   //recompute the residuals
   resid->update(*it_curr,_f_nlp, *_c, *_d,*_grad_f,*_Jac_c,*_Jac_d, *logbar);
 
-  nlp->log->write("First residual:", *resid, hovIteration);
+  nlp->log->write("First residual-------------", *resid, hovIteration);
 
   iter_num=0;
 
@@ -134,13 +134,13 @@ int hiopAlgFilterIPM::run()
   
   bool bStopAlg=false; int nAlgStatus=0; bool bret=true;
   while(!bStopAlg) {
-    nlp->log->write("\n\nInitial point:", *it_curr, hovIteration);
+
     bret = evalNlpAndLogErrors(*it_curr, *resid, _mu, 
 			       _err_nlp_optim, _err_nlp_feas, _err_nlp_complem, _err_nlp, 
 			       _err_log_optim, _err_log_feas, _err_log_complem, _err_log); assert(bret);
-    nlp->log->printf(hovScalars, "Nlp    errors: primal infeas:%20.14e   dual infeas: %20.14e  complem: %20.14e  overall: %20.14e\n",
+    nlp->log->printf(hovScalars, "  Nlp    errs: pr-infeas:%20.14e   dual-infeas:%20.14e  comp:%20.14e  overall:%20.14e\n",
 		     _err_nlp_feas, _err_nlp_optim, _err_nlp_complem, _err_nlp);
-    nlp->log->printf(hovScalars, "LogBar errors: primal infeas:%20.14e   dual infeas: %20.14e  complem: %20.14e  overall: %25.16f\n",
+    nlp->log->printf(hovScalars, "  LogBar errs: pr-infeas:%20.14e   dual-infeas:%20.14e  comp:%20.14e  overall:%20.14f\n",
 		     _err_log_feas, _err_log_optim, _err_log_complem, _err_log);
 
     outputIteration();
@@ -149,24 +149,33 @@ int hiopAlgFilterIPM::run()
     if(_err_log<=kappa_eps * _mu) {
       //update mu and tau (fraction-to-boundary)
       bret = updateLogBarrierParameters(*it_curr, _mu, _tau, _mu, _tau);
+      nlp->log->printf(hovScalars, "Iter[%d] barrier params reduced: mu=%g tau=%g\n", iter_num, _mu, _tau);
 
-      //update nlp and logbar problem information and residuals
-      this->evalNlp(*it_curr, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d);
+      //update only logbar problem  and residual (the NLP didn't change)
+      //this->evalNlp(*it_curr, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d);
       logbar->updateWithNlpInfo(*it_curr, _mu, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d);
-      resid->update(*it_curr,_f_nlp, *_c, *_d,*_grad_f,*_Jac_c,*_Jac_d, *logbar);
-     
-
+      resid->update(*it_curr,_f_nlp, *_c, *_d,*_grad_f,*_Jac_c,*_Jac_d, *logbar); //! should perform only a partial update since NLP didn't change
+      bret = evalNlpAndLogErrors(*it_curr, *resid, _mu, 
+				 _err_nlp_optim, _err_nlp_feas, _err_nlp_complem, _err_nlp, 
+				 _err_log_optim, _err_log_feas, _err_log_complem, _err_log); assert(bret);
+      nlp->log->printf(hovScalars, "  Nlp    errs: pr-infeas:%20.14e   dual-infeas:%20.14e  comp:%20.14e  overall:%20.14e\n",
+		       _err_nlp_feas, _err_nlp_optim, _err_nlp_complem, _err_nlp);
+      nlp->log->printf(hovScalars, "  LogBar errs: pr-infeas:%20.14e   dual-infeas:%20.14e  comp:%20.14e  overall:%20.14e\n",
+		       _err_log_feas, _err_log_optim, _err_log_complem, _err_log);    
+      
       filter.reinitialize(theta_max);
       //recheck residuals for at the first iteration in case the starting pt is  very good
       if(iter_num==0) {
 	continue; 
       }
     }
+    nlp->log->printf(hovSummary, "Iter[%d] logbarObj=%20.14e (mu=%12.5e)\n", iter_num, logbar->f_logbar,_mu);
     // --- search direction calculation ---
     //first update kkt system
     kkt->update(it_curr,_grad_f,_Jac_c,_Jac_d, _Hess);
     bret = kkt->computeDirections(resid,dir); assert(bret==true);
-    nlp->log->write("Search direction", *dir, hovIteration);
+    nlp->log->printf(hovIteration, "Iter[%d] full search direction -------------\n"); nlp->log->write("", *dir, hovIteration);
+
     /***************************************************************
      * backtracking line search
      ****************************************************************/
@@ -192,7 +201,7 @@ int hiopAlgFilterIPM::run()
       //compute infeasibility theta at trial point.
       theta_trial = resid->computeNlpInfeasInfNorm(*it_trial, *_c_trial, *_d_trial);
 
-      nlp->log->printf(hovLinesearch, " trial point: alphaPrimal=%g barier:(%15.9e)>%15.9e theta:(%15.9e)>%15.9e\n",
+      nlp->log->printf(hovLinesearch, "  trial point: alphaPrimal=%14.8e barier:(%15.9e)>%15.9e theta:(%15.9e)>%15.9e\n",
 		       _alpha_primal, logbar->f_logbar, logbar->f_logbar_trial, theta, theta_trial);
 
       bool switchingCondTrue=false;
@@ -236,7 +245,8 @@ int hiopAlgFilterIPM::run()
 	//ok to go with  "sufficient progress" condition even when close to solution
 	//check the filter and the sufficient decrease condition (18)
 	if(!filter.contains(theta_trial,logbar->f_logbar_trial)) {
-	  if(theta_trial<=(1-gamma_theta)*theta || logbar->f_logbar_trial<=logbar->f_logbar - (1-gamma_phi)*theta) {
+	  //if(theta_trial<=(1-gamma_theta)*theta || logbar->f_logbar_trial<=logbar->f_logbar - (1-gamma_phi)*theta) {
+          if(logbar->f_logbar_trial<=logbar->f_logbar - (1-gamma_phi)*theta) {
 	    //trial good to go
 	    break;
 	  } else {
@@ -254,22 +264,31 @@ int hiopAlgFilterIPM::run()
       assert(false); //shouldn't get here
     }
     
+    
     //post line-search stuff: such as update filter
     // to be done
-
+    
+    nlp->log->printf(hovScalars, "Iter[%d] -> accepted step primal=[%17.11e] dual=[%17.11e]\n", iter_num, _alpha_primal, _alpha_dual);
+    iter_num++;
     //update and reset the duals
     bret = it_trial->takeStep_duals(*it_curr, *dir, _alpha_primal, _alpha_dual); assert(bret);
     bret = it_trial->adjustDuals_primalLogHessian(_mu,kappa_Sigma); assert(bret);
+    nlp->log->printf(hovIteration, "Iter[%d] -> full iterate -------------", iter_num); nlp->log->write("", *it_curr, hovIteration);
 
     //update current iterate (do a fast swap of the pointers)
-    hiopIterate* p=it_curr; it_curr=it_trial; it_trial=p;
-    iter_num++;
+    hiopIterate* pit=it_curr; it_curr=it_trial; it_trial=pit;
 
-    this->evalNlp(*it_curr, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d);
+
+    this->evalNlp_derivOnly(*it_curr, *_grad_f, *_Jac_c, *_Jac_d);
+    //reuse function values
+    _f_nlp=_f_nlp_trial; hiopVector* pvec=_c_trial; _c_trial=_c; _c=pvec; pvec=_d_trial; _d_trial=_d; _d=pvec;
+   
     logbar->updateWithNlpInfo(*it_curr, _mu, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d);
+    //update residual
     resid->update(*it_curr,_f_nlp, *_c, *_d,*_grad_f,*_Jac_c,*_Jac_d, *logbar);
+    nlp->log->printf(hovIteration, "Iter[%d] full residual:-------------\n", iter_num); nlp->log->write("", *resid, hovIteration);
 
-    if(iter_num>=4) break;
+    if(iter_num>=50) break;
   }
 
   delete kkt;
@@ -360,6 +379,19 @@ bool hiopAlgFilterIPM::evalNlp_funcOnly(hiopIterate& iter,
   new_x= false; //same x for the rest
   bret = nlp->eval_c(x, new_x, c.local_data());     assert(bret);
   bret = nlp->eval_d(x, new_x, d.local_data());     assert(bret);
+  return bret;
+}
+bool hiopAlgFilterIPM::evalNlp_derivOnly(hiopIterate& iter,
+					 hiopVector& gradf_,  hiopMatrixDense& Jac_c,  hiopMatrixDense& Jac_d)
+{
+  bool new_x=false; //functions were previously evaluated in the line search
+  bool bret;
+  const hiopVectorPar& it_x = dynamic_cast<const hiopVectorPar&>(*iter.get_x());
+  hiopVectorPar & gradf=dynamic_cast<hiopVectorPar&>(gradf_);
+  const double* x = it_x.local_data_const();
+  bret = nlp->eval_grad_f(x, new_x, gradf.local_data()); assert(bret);
+  bret = nlp->eval_Jac_c (x, new_x, Jac_c.local_data()); assert(bret);
+  bret = nlp->eval_Jac_d (x, new_x, Jac_d.local_data()); assert(bret);
   return bret;
 }
 

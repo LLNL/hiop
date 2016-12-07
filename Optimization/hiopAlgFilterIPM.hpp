@@ -24,6 +24,7 @@ private:
 	       double &f, hiopVector& c_, hiopVector& d_, 
 	       hiopVector& grad_,  hiopMatrixDense& Jac_c,  hiopMatrixDense& Jac_d);
   bool evalNlp_funcOnly(hiopIterate& iter, double& f, hiopVector& c_, hiopVector& d_);
+  bool evalNlp_derivOnly(hiopIterate& iter, hiopVector& gradf_,  hiopMatrixDense& Jac_c,  hiopMatrixDense& Jac_d);
  /* internal helper for error computation */
   virtual bool evalNlpAndLogErrors(const hiopIterate& it, const hiopResidual& resid, const double& mu,
 				   double& nlpoptim, double& nlpfeas, double& nlpcomplem, double& nlpoverall,
