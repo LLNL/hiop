@@ -96,8 +96,13 @@ public:
   virtual hiopMatrixDense* alloc_clone() const;
   virtual hiopMatrixDense* new_copy() const;
 
+  void appendRow(const hiopVectorPar& row);
   void copyRowsFrom(const hiopMatrixDense& src, int num_rows, int row_dest);
-
+  void copyBlockFromMatrix(const long i_block_start, const long j_block_start,
+			   const hiopMatrixDense& src);
+  /*  shift<0 -> up; shift>0 -> down  */
+  void shiftRows(long long shift);
+  void replaceRow(long long row, const hiopVectorPar& vec);
   inline long long get_local_size_n() const { return n_local; }
   inline long long get_local_size_m() const { return m_local; }
 
@@ -108,7 +113,7 @@ public:
   virtual long long n() const {return n_global;}
 
 
-  void appendRow(const hiopVectorPar& row);
+  
 
 #ifdef DEEP_CHECKING
   //do not use this unless you sure you know what you're doing

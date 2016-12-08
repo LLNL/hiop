@@ -84,7 +84,7 @@ void hiopMatrixDense::copyFrom(const double* buffer)
   memcpy(M[0], buffer, m_local*n_local*sizeof(double));
 }
 
-void  hiopMatrixDense::copyRowsFrom(const hiopMatrixDense& src, int num_rows, int row_dest)
+void hiopMatrixDense::copyRowsFrom(const hiopMatrixDense& src, int num_rows, int row_dest)
 {
 #ifdef DEEP_CHECKING
   assert(row_dest>=0);
@@ -94,6 +94,47 @@ void  hiopMatrixDense::copyRowsFrom(const hiopMatrixDense& src, int num_rows, in
   assert(num_rows<=src.m_local);
 #endif
   memcpy(M[row_dest], src.M[0], n_local*num_rows*sizeof(double));
+}
+void hiopMatrixDense::copyBlockFromMatrix(const long i_start, const long j_start,
+					  const hiopMatrixDense& src)
+{
+  assert(n_local==n_global && "this method should be used only in 'serial' mode");
+  assert(src.n_local==src.n_global && "this method should be used only in 'serial' mode");
+  assert(m_local>=i_start+src.m_local && "the matrix does not fit as a sublock in 'this' at specified coordinates");
+  assert(n_local>=j_start+src.n_local && "the matrix does not fit as a sublock in 'this' at specified coordinates");
+#ifdef DEEP_CHECKING
+  assert(i_start<src.m_local); assert(j_start<src.n_local); 
+  assert(i_start>=0); assert(j_start>=0);
+#endif
+  const size_t buffsize=src.n_local*sizeof(double);
+  for(long ii=i_start; ii<src.m_local; ii++)
+    memcpy(M[ii]+j_start, src.M[ii-i_start], buffsize);
+}
+void hiopMatrixDense::shiftRows(long long shift)
+{
+  if(shift==0) return;
+  assert(fabs(shift)<m_local);
+#ifdef DEEP_CHECKING
+  //not sure if memcpy is sequential on all systems and if the below code works correctly.
+  //let's at least check it
+  double test1=shift<0 ? M[-shift][0] : M[m_local-shift][0];
+  double test2=shift<0 ? M[-shift][n_local-1] : M[m_local-shift][n_local-1];
+#endif
+
+  //shift < 0 -> up; shift > 0 -> down
+  if(shift<0) memcpy(M[0], M[-shift], n_local*(m_local+shift));
+  else        memcpy(M[shift], M[0],  n_local*(m_local-shift));
+
+#ifdef DEEP_CHECKING
+  assert(test1==M[shift<0?0:m_local][0] && "a different copy technique than memcpy is needed on this system");
+  assert(test2==M[shift<0?0:m_local][n_local-1] && "a different copy technique than memcpy is needed on this system");
+#endif
+}
+void hiopMatrixDense::replaceRow(long long row, const hiopVectorPar& vec)
+{
+  assert(row>=0); assert(row<m_local);
+  long long vec_size=vec.get_size();
+  memcpy(M[row], vec.local_data_const(), vec_size>=n_local?n_local:vec_size);
 }
 
 hiopMatrixDense* hiopMatrixDense::alloc_clone() const
