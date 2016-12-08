@@ -12,8 +12,8 @@
 
 hiopNlpFormulation::hiopNlpFormulation()
 {
-//log = new hiopLogger(hovMaxVerbose,stdout);
-log = new hiopLogger(hovIteration,stdout);
+  log = new hiopLogger(hovMaxVerbose,stdout);
+  //log = new hiopLogger(hovLinesearch,stdout);
 }
 
 hiopNlpFormulation::~hiopNlpFormulation()
