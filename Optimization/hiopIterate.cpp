@@ -43,13 +43,13 @@ hiopIterate*  hiopIterate::alloc_clone() const
   return new hiopIterate(this->nlp);
 }
 
-/*
+
 hiopIterate* hiopIterate::new_copy() const
 {
   hiopIterate* copy = new hiopIterate(this->nlp);
   copy->x->copyFrom(*this->x);
-  }
-*/
+}
+
 void  hiopIterate::copyFrom(const hiopIterate& src)
 {
   x->copyFrom(*src.x);

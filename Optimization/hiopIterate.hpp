@@ -46,7 +46,7 @@ public:
 
   /* cloning and copying */
   hiopIterate* alloc_clone() const;
-  //hiopIterate* new_copy() const;
+  hiopIterate* new_copy() const;
   void copyFrom(const hiopIterate& src);
 
   /* accessors */
@@ -58,6 +58,7 @@ public:
 
   friend class hiopResidual;
   friend class hiopKKTLinSysLowRank;
+  friend class hiopHessianInvLowRank;
 private:
   /** Primal variables */
   hiopVectorPar*x;         //the original decision x
