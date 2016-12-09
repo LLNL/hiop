@@ -19,15 +19,17 @@ class hiopHessianLowRank
 {
 public:
   hiopHessianLowRank(const hiopNlpDenseConstraints* nlp_, int max_memory_length) 
-    : l_max(max_memory_length), l_curr(0), sigma(1.), nlp(nlp_)  {}
+    : l_max(max_memory_length), l_curr(0), sigma(1.), sigma0(1.), nlp(nlp_)  {}
 
   virtual ~hiopHessianLowRank() {};
-  /* return false if the update destroys hereditary positive definitness */
-  virtual bool update(const hiopIterate& x_prev, const hiopIterate& x_curr,
+  /* return false if the update destroys hereditary positive definitness and the BFGS update is not taken*/
+  virtual bool update(const hiopIterate& x_curr, const hiopVector& grad_f_curr,
+		      const hiopMatrix& Jac_c_curr, const hiopMatrix& Jac_d_curr) = 0;
+  /*virtual bool update(const hiopIterate& x_prev, const hiopIterate& x_curr,
 		      const hiopVector& grad_f_prev, const hiopVector& grad_f_curr,
 		      const hiopMatrix& Jac_c_prev, const hiopMatrix& Jac_c_curr,
 		      const hiopMatrix& Jac_d_prev, const hiopMatrix& Jac_d_curr) = 0;
-
+  */
   /* recomputes the diagonal of the representation from B0+Dx form, where B0=sigma*I */
   virtual bool updateDiagonal(const hiopVector& Dx) = 0;
   /* Y = beta*Y + alpha*this*X 
@@ -47,6 +49,7 @@ protected:
   int l_max; //max memory size
   int l_curr; //current memory
   double sigma; //initial scaling factor of identity
+  double sigma0; //initial/default scaling factor of identity
   const hiopNlpDenseConstraints* nlp;
 private:
   hiopHessianLowRank() {};
@@ -70,10 +73,9 @@ class hiopHessianInvLowRank : public hiopHessianLowRank
 {
 public:
   hiopHessianInvLowRank(const hiopNlpDenseConstraints* nlp, int max_memory_length);
-  bool update(const hiopIterate& x_prev, const hiopIterate& x_curr,
-	      const hiopVector& grad_f_prev, const hiopVector& grad_f_curr,
-	      const hiopMatrix& Jac_c_prev, const hiopMatrix& Jac_c_curr,
-	      const hiopMatrix& Jac_d_prev, const hiopMatrix& Jac_d_curr);
+  virtual bool update(const hiopIterate& x_curr, const hiopVector& grad_f_curr,
+		      const hiopMatrix& Jac_c_curr, const hiopMatrix& Jac_d_curr);
+
   virtual bool updateDiagonal(const hiopVector& Dx);
 
   /* ! these method uses quantities computed in symmetricTimesMat, thus they should be 
@@ -109,12 +111,26 @@ private: //internal methods
   static void triangularSolve(const hiopMatrixDense& R, hiopMatrixDense& rhs);
   static void triangularSolve(const hiopMatrixDense& R, hiopVectorPar& rhs);
   static void triangularSolveTrans(const hiopMatrixDense& R, hiopVectorPar& rhs);
+
+  //grows R when the number of BFGS updates is less than the max memory
+  void growR(const int& l_curr, const int& l_max, const hiopVectorPar& STy, const double& sTy);
+  void growD(const int& l_curr, const int& l_max, const double& sTy);
+  void updateR(const hiopVectorPar& STy, const double& sTy);
+  void updateD(const double& sTy);
 private:
   hiopVectorPar* H0;
   hiopMatrixDense *St,*Yt; //we store the transpose to easily access columns in S and T
   hiopMatrixDense *R;
   hiopVectorPar* D;
-  
+
+  int sigma_update_strategy;
+  double sigma_safe_min, sigma_safe_max;
+
+  //also stored are the iterate, gradient obj, and Jacobians at the previous iterations
+  hiopIterate *_it_prev;
+  hiopVectorPar *_grad_f_prev;
+  hiopMatrixDense *_Jac_c_prev, *_Jac_d_prev;
+
   //internals buffers
   double* _buff_kxk; // size = num_constraints^2 
   double* _buff_lxk; // size = q-Newton mem size x num_constraints
@@ -127,10 +143,25 @@ private:
   //similar for S3=DpYtH0Y*S2
   hiopMatrixDense *_S3;
   hiopMatrixDense& new_S3(const hiopMatrixDense& Left, const hiopMatrixDense& Right);
-  hiopVectorPar *_l_vec1, *_l_vec2, *_l_vec3, *_n_vec1;
+  hiopVectorPar *_l_vec1, *_l_vec2, *_l_vec3, *_n_vec1, *_n_vec2;
   hiopVectorPar& new_l_vec1(int l);
   hiopVectorPar& new_l_vec2(int l);
   hiopVectorPar& new_l_vec3(int l);
-  hiopVectorPar& new_n_vec1(long long n);
+  inline hiopVectorPar& new_n_vec1(long long n)
+  {
+#ifdef DEEP_CHECKING
+    assert(_n_vec1!=NULL);
+    assert(_n_vec1->get_size()==n);
+#endif
+    return *_n_vec1;
+  }
+  inline hiopVectorPar& new_n_vec2(long long n)
+  {
+#ifdef DEEP_CHECKING
+    assert(_n_vec2!=NULL);
+    assert(_n_vec2->get_size()==n);
+#endif
+    return *_n_vec2;
+  }
 };
 #endif
