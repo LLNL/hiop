@@ -181,7 +181,7 @@ int hiopResidual::update(const hiopIterate& it,
   //rszu = \mu e - sxu * zu
   if(nlp->n_upp_local()>0) {
     rszu->setToZero();
-    rszu->axzpy(-1.0, *it.sxu, *it.zl);
+    rszu->axzpy(-1.0, *it.sxu, *it.zu);
     if(nlp->n_upp_local()<nx_loc)
       rszu->selectPattern(nlp->get_ixu());
     nrmInf_nlp_complem = fmax(nrmInf_nlp_complem, rszu->infnorm_local());
