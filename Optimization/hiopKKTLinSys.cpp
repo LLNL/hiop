@@ -368,7 +368,7 @@ solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
 
   N->addSubDiagonal(nlp->m_eq(), *Dd_inv);
 #ifdef DEEP_CHECKING
-  N->assertSymmetry();
+  N->assertSymmetry(1e-14);
   Nmat->copyFrom(*N);
 #endif
   int ierr=factorizeMat(*N); assert(ierr==0);

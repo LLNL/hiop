@@ -101,12 +101,11 @@ update(const hiopIterate& it_curr, const hiopVector& grad_f_curr_,
   assert(it_curr.sxl->matchesPattern(nlp->get_ixl()));
   assert(it_curr.sxu->matchesPattern(nlp->get_ixu()));
 #endif
-  return true;//assert(false);
 
   if(l_curr>0) {
     long long n=grad_f_curr.get_size();
     //compute s_new = x_curr-x_prev
-    hiopVectorPar& s_new = new_n_vec1(n);  s_new.copyFrom(*_it_prev->x); s_new.axpy(-1.,*it_curr.x);
+    hiopVectorPar& s_new = new_n_vec1(n);  s_new.copyFrom(*it_curr.x); s_new.axpy(-1.,*_it_prev->x);
     double s_infnorm=s_new.infnorm();
     if(s_infnorm>=100*std::numeric_limits<double>::epsilon()) { //norm of s not too small
 
@@ -119,8 +118,8 @@ update(const hiopIterate& it_curr, const hiopVector& grad_f_curr_,
       _Jac_c_prev->transTimesVec(1.0, y_new,-1.0, *it_curr.yc); //!opt if nlp->Jac_c_isLinear no need for the multiplications
       Jac_d_curr.transTimesVec  (1.0, y_new, 1.0, *it_curr.yd); //!opt same here
       _Jac_d_prev->transTimesVec(1.0, y_new,-1.0, *it_curr.yd);
-      y_new.axzpy(-1.0, s_new, *it_curr.zl);
-      y_new.axzpy( 1.0, s_new, *it_curr.zu);
+      //y_new.axzpy(-1.0, s_new, *it_curr.zl);
+      //y_new.axzpy( 1.0, s_new, *it_curr.zu);
       
       double sTy = s_new.dotProductWith(y_new), s_nrm2=s_new.twonorm(), y_nrm2=y_new.twonorm();
       nlp->log->printf(hovLinAlgScalarsVerb, "hiopHessianInvLowRank: s^T*y=%20.14e ||s||=%20.14e ||y||=%20.14e\n", sTy, s_nrm2, y_nrm2);
@@ -170,7 +169,7 @@ update(const hiopIterate& it_curr, const hiopVector& grad_f_curr_,
 	  break;
 	} // else of the switch
 	//safe guard it
-	sigma=fmax(fmin(sigma_safe_min, sigma), sigma_safe_max);
+	sigma=fmax(fmin(sigma_safe_max, sigma), sigma_safe_min);
 	nlp->log->printf(hovLinAlgScalarsVerb, "hiopHessianInvLowRank: sigma was updated to %16.10e\n", sigma);
       } else { //sTy is too small or negative -> skip
 	 nlp->log->printf(hovLinAlgScalarsVerb, "hiopHessianInvLowRank: s^T*y=%12.6e not positive enough... skipping the Hessian update\n", sTy);
@@ -189,9 +188,9 @@ update(const hiopIterate& it_curr, const hiopVector& grad_f_curr_,
     if(NULL==_it_prev)     _it_prev     = it_curr.new_copy();
     if(NULL==_grad_f_prev) _grad_f_prev = grad_f_curr.new_copy();
     if(NULL==_Jac_c_prev)  _Jac_c_prev  = Jac_c_curr.new_copy();
-    if(NULL==_Jac_d_prev)  _Jac_d_prev  = Jac_c_curr.new_copy();
+    if(NULL==_Jac_d_prev)  _Jac_d_prev  = Jac_d_curr.new_copy();
 
-    nlp->log->printf(hovLinAlgScalarsVerb, "HessianInvLowRank on first update, just saving iteration");
+    nlp->log->printf(hovLinAlgScalarsVerb, "HessianInvLowRank on first update, just saving iteration\n");
 
     l_curr++;
   }
@@ -343,8 +342,8 @@ symmetricTimesMat(double beta, hiopMatrixDense& W,
 
   // -- done --
 #ifdef DEEP_CHECKING
-  //W.print();
-  assert(W.assertSymmetry());
+  W.print();
+  assert(W.assertSymmetry(1e-14));
 #endif
 
 }
@@ -602,7 +601,7 @@ hiopMatrixDense& hiopHessianInvLowRank::new_S3(const hiopMatrixDense& Left, cons
 #ifdef DEEP_CHECKING
   assert(Right.m()==l);
   assert(Left.n()==l);
-  if(_S3!=NULL) assert(_S3->m()==l);
+  if(_S3!=NULL) assert(_S3->m()<=l); //< when the representation grows, = when it doesn't
 #endif
   if(_S3!=NULL && _S3->m()!=l) { delete _S3; _S3=NULL;}
 

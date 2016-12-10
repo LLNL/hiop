@@ -140,7 +140,7 @@ int hiopAlgFilterIPM::run()
 			       _err_log_optim, _err_log_feas, _err_log_complem, _err_log); assert(bret);
     nlp->log->printf(hovScalars, "  Nlp    errs: pr-infeas:%20.14e   dual-infeas:%20.14e  comp:%20.14e  overall:%20.14e\n",
 		     _err_nlp_feas, _err_nlp_optim, _err_nlp_complem, _err_nlp);
-    nlp->log->printf(hovScalars, "  LogBar errs: pr-infeas:%20.14e   dual-infeas:%20.14e  comp:%20.14e  overall:%20.14f\n",
+    nlp->log->printf(hovScalars, "  LogBar errs: pr-infeas:%20.14e   dual-infeas:%20.14e  comp:%20.14e  overall:%20.14e\n",
 		     _err_log_feas, _err_log_optim, _err_log_complem, _err_log);
 
     outputIteration();
@@ -171,7 +171,8 @@ int hiopAlgFilterIPM::run()
     }
     nlp->log->printf(hovSummary, "Iter[%d] logbarObj=%20.14e (mu=%12.5e)\n", iter_num, logbar->f_logbar,_mu);
     // --- search direction calculation ---
-    //first update kkt system
+    //first update the Hessian and kkt system
+    _Hess->update(*it_curr,*_grad_f,*_Jac_c,*_Jac_d);
     kkt->update(it_curr,_grad_f,_Jac_c,_Jac_d, _Hess);
     bret = kkt->computeDirections(resid,dir); assert(bret==true);
     nlp->log->printf(hovIteration, "Iter[%d] full search direction -------------\n"); nlp->log->write("", *dir, hovIteration);

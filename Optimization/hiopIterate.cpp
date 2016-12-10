@@ -47,7 +47,8 @@ hiopIterate*  hiopIterate::alloc_clone() const
 hiopIterate* hiopIterate::new_copy() const
 {
   hiopIterate* copy = new hiopIterate(this->nlp);
-  copy->x->copyFrom(*this->x);
+  copy->copyFrom(*this);
+  return copy;
 }
 
 void  hiopIterate::copyFrom(const hiopIterate& src)

@@ -103,7 +103,8 @@ void hiopMatrixDense::copyBlockFromMatrix(const long i_start, const long j_start
   assert(m_local>=i_start+src.m_local && "the matrix does not fit as a sublock in 'this' at specified coordinates");
   assert(n_local>=j_start+src.n_local && "the matrix does not fit as a sublock in 'this' at specified coordinates");
 #ifdef DEEP_CHECKING
-  assert(i_start<src.m_local); assert(j_start<src.n_local); 
+  assert(i_start<src.m_local || !src.m_local); 
+  assert(j_start<src.n_local || !src.n_local); 
   assert(i_start>=0); assert(j_start>=0);
 #endif
   const size_t buffsize=src.n_local*sizeof(double);
@@ -432,8 +433,11 @@ bool hiopMatrixDense::assertSymmetry(double tol) const
 
   //symmetry
   for(int i=0; i<n_local; i++)
-    for(int j=0; j<n_local; j++)
-      if(fabs(M[i][j]-M[j][i])/(1+M[i][j]) > tol) assert(false);
+    for(int j=0; j<n_local; j++) {
+      double ij=M[i][j], ji=M[j][i];
+      double relerr= fabs(ij-ji)/(1+fabs(ij));
+      assert(relerr<tol);
+    }
   return true;
 }
 
