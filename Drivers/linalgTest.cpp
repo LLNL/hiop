@@ -56,7 +56,7 @@ int main(int argc, char **argv)
   printf("setToConstant time=%g sec\n", t);
 
   if(rank==0) {A.get_M()[0][1]=2.; A.get_M()[0][2]=3.;} 
-  A.print(4, 10, 1);
+  A.print(stdout, "A is:", 4, 10, 1);
   hiopVectorPar y(m);
   y.setToConstant(2.);
   v.setToConstant(1.);
