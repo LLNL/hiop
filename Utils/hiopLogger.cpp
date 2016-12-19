@@ -10,6 +10,12 @@ void hiopLogger::write(const char* msg, const hiopVector& vec, hiopOutVerbosity 
   vec.print(_f, msg);
 }
 
+void hiopLogger::write(const char* msg, const hiopMatrix& M, hiopOutVerbosity v, int loggerid/*=0*/) 
+{
+  if(v>_verb) return;
+  M.print(_f, msg);
+}
+
 void hiopLogger::write(const char* msg, const hiopResidual& r, hiopOutVerbosity v, int loggerid/*=0*/) 
 {
   if(v>_verb) return;

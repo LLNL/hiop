@@ -7,6 +7,7 @@
 class hiopVector;
 class hiopResidual;
 class hiopIterate;
+class hiopMatrix;
 
 /* Verbosity 0 to 9 */
 enum hiopOutVerbosity {
@@ -30,7 +31,7 @@ public:
   void write(const char* msg, const hiopResidual& r, hiopOutVerbosity v, int loggerid=0);
   void write(const char* msg, const hiopIterate& r, hiopOutVerbosity v, int loggerid=0);
   void write(const char* msg, hiopOutVerbosity v, int loggerid=0);
-  
+  void write(const char* msg, const hiopMatrix& M,  hiopOutVerbosity v, int loggerid=0);
   //only for loggerid=0 for now
   void printf(hiopOutVerbosity v, const char* format, ...); 
   
