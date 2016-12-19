@@ -110,6 +110,7 @@ public:
   virtual void setToConstant( double c );
   virtual void setToConstant_w_patternSelect(double c, const hiopVector& select);
   virtual void copyFrom(const hiopVector& v );
+  virtual void copyFrom(const double* v_local_data); //v should be of length at least n_local
   virtual void copyFromStarting(const hiopVector& v, int start_index);
   virtual void copyToStarting(hiopVector& v, int start_index);
   virtual double twonorm() const;

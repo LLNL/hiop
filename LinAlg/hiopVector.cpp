@@ -84,6 +84,13 @@ void hiopVectorPar::copyFrom(const hiopVector& v_ )
   memcpy(this->data, v.data, n_local*sizeof(double));
 }
 
+void hiopVectorPar::copyFrom(const double* v_local_data )
+{
+  if(v_local_data)
+    memcpy(this->data, v_local_data, n_local*sizeof(double));
+}
+
+
 void hiopVectorPar::copyFromStarting(const hiopVector& v_, int start_index)
 {
   const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_);
