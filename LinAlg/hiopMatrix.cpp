@@ -171,27 +171,34 @@ void hiopMatrixDense::setToConstant(double c)
   //memcpy has similar performance as dcopy_; both faster than a loop
 }
 
-void hiopMatrixDense::print(int maxRows, int maxCols, int rank) const
+void hiopMatrixDense::print(FILE* f, 
+			    const char* msg/*=NULL*/, 
+			    int maxRows/*=-1*/, 
+			    int maxCols/*=-1*/, 
+			    int rank/*=-1*/) const
 {
   int myrank=0; 
 #ifdef WITH_MPI
   if(rank>=0) assert(MPI_Comm_rank(comm, &myrank)==MPI_SUCCESS);
 #endif
   if(myrank==rank || rank==-1) {
+    if(NULL==f) f=stdout;
     if(maxRows>m_local) maxRows=m_local;
     if(maxCols>n_local) maxCols=n_local;
 
-    printf("hiopMatrixDense::printing max=[%d,%d] (local_dims=[%d,%d], on rank=%d)\n", 
-	   maxRows, maxCols, m_local,n_local,myrank);
+    if(msg) {
+      fprintf(f, "%s (local_dims=[%d,%d])\n", msg, m_local,n_local);
+    } else { 
+      fprintf(f, "hiopMatrixDense::printing max=[%d,%d] (local_dims=[%d,%d], on rank=%d)\n", 
+	      maxRows, maxCols, m_local,n_local,myrank);
+    }
     maxRows = maxRows>=0?maxRows:m_local;
     maxCols = maxCols>=0?maxCols:n_local;
-
-    //printf("[[%d %d]]\n", maxRows, maxCols);
     
     for(int i=0; i<maxRows; i++) {
       for(int j=0; j<maxCols; j++) 
-	printf("%22.16e ", M[i][j]);
-      printf(";\n");
+	fprintf(f, "%22.16e ", M[i][j]);
+      fprintf(f, ";\n");
     }
   }
 }

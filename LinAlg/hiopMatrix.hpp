@@ -46,7 +46,7 @@ public:
   /* call with -1 to print all rows, all columns, or on all ranks; otherwise will
   *  will print the first rows and/or columns on the specified rank.
   */
-  virtual void print(int maxRows=-1, int maxCols=-1, int rank=-1) const = 0;
+  virtual void print(FILE* f=NULL, const char* msg=NULL, int maxRows=-1, int maxCols=-1, int rank=-1) const = 0;
   /* number of rows */
   virtual long long m() const = 0;
   /* number of columns */
@@ -91,7 +91,8 @@ public:
   virtual void addMatrix(double alpah, const hiopMatrix& X);
   virtual double max_abs_value();
 
-  virtual void print(int maxRows=-1, int maxCols=-1, int rank=-1) const;
+  //virtual void print(int maxRows=-1, int maxCols=-1, int rank=-1) const;
+  virtual void print(FILE* f=NULL, const char* msg=NULL, int maxRows=-1, int maxCols=-1, int rank=-1) const;
 
   virtual hiopMatrixDense* alloc_clone() const;
   virtual hiopMatrixDense* new_copy() const;
