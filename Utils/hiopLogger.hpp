@@ -11,6 +11,8 @@ class hiopMatrix;
 
 /* Verbosity 0 to 9 */
 enum hiopOutVerbosity {
+  hovError=-2,
+  hovWarning=-1,
   hovSummary=0, //summary of the problem and each iteration
   hovScalars=1, //additional, usually scalars, such as norm of resids, nlp and log bar errors, etc
   hovFcnEval=2, //the above plus info about the number of function, gradient and Hessians
