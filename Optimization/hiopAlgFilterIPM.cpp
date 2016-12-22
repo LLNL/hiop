@@ -32,7 +32,7 @@ hiopAlgFilterIPM::hiopAlgFilterIPM(hiopNlpDenseConstraints* nlp_)
   _Jac_c_trial   = nlp->alloc_Jac_c();
   _Jac_d_trial   = nlp->alloc_Jac_d();
 
-  _Hess    = new hiopHessianInvLowRank(nlp,10);
+  _Hess    = new hiopHessianLowRank(nlp,10);
 
   resid = new hiopResidual(nlp);
   resid_trial = new hiopResidual(nlp);
@@ -274,11 +274,10 @@ int hiopAlgFilterIPM::run()
     //update and reset the duals
     bret = it_trial->takeStep_duals(*it_curr, *dir, _alpha_primal, _alpha_dual); assert(bret);
     bret = it_trial->adjustDuals_primalLogHessian(_mu,kappa_Sigma); assert(bret);
-    nlp->log->printf(hovIteration, "Iter[%d] -> full iterate -------------", iter_num); nlp->log->write("", *it_curr, hovIteration);
-
+    
     //update current iterate (do a fast swap of the pointers)
     hiopIterate* pit=it_curr; it_curr=it_trial; it_trial=pit;
-
+    nlp->log->printf(hovIteration, "Iter[%d] -> full iterate -------------", iter_num); nlp->log->write("", *it_curr, hovIteration);
 
     this->evalNlp_derivOnly(*it_curr, *_grad_f, *_Jac_c, *_Jac_d);
     //reuse function values

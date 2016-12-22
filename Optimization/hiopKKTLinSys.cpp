@@ -42,7 +42,8 @@ update(const hiopIterate* iter_,
   iter=iter_;
   grad_f = dynamic_cast<const hiopVectorPar*>(grad_f_);
   Jac_c = Jac_c_; Jac_d = Jac_d_;
-  Hess = dynamic_cast<hiopHessianInvLowRank*>(Hess_);
+  //Hess = dynamic_cast<hiopHessianInvLowRank*>(Hess_);
+  Hess=Hess_;
 
   //compute the diagonals
   //Dx=(Sxl)^{-1}Zl + (Sxu)^{-1}Zu
@@ -51,7 +52,7 @@ update(const hiopIterate* iter_,
   Dx->axdzpy_w_pattern(1.0, *iter->zu, *iter->sxu, nlp->get_ixu());
   nlp->log->write("Dx in KKT", *Dx, hovMatrices);
 
-  Hess->updateDiagonal(*Dx);
+  Hess->updateLogBarrierDiagonal(*Dx);
 
   //Dd=(Sdl)^{-1}Vu + (Sdu)^{-1}Vu
   Dd_inv->setToZero();
@@ -61,6 +62,8 @@ update(const hiopIterate* iter_,
   assert(true==Dd_inv->allPositive());
 #endif 
   Dd_inv->invert();
+
+  nlp->log->write("Dd_inv in KKT", *Dd_inv, hovMatrices);
   return true;
 }
 
@@ -209,8 +212,8 @@ double hiopKKTLinSysLowRank::errorKKT(const hiopResidual* resid, const hiopItera
 {
   double derr=1e20,aux;
   hiopVectorPar *RX=resid->rx->new_copy();
-  //RX=rx-H*dx-J'c*dyc-J'*dyd -dzl-dzu = rx
-  Hess->timesVec(1.0, *RX, -1.0, *sol->x);
+  //RX=rx-H*dx-J'c*dyc-J'*dyd +dzl-dzu = rx
+  Hess->timesVec_noLogBarrierTerm(1.0, *RX, -1.0, *sol->x);
   Jac_c->transTimesVec(1.0, *RX, -1.0, *sol->yc);
   Jac_d->transTimesVec(1.0, *RX, -1.0, *sol->yd);
   //sol->zl->print("zl");
@@ -313,9 +316,9 @@ errorCompressedLinsys(const hiopVectorPar& rx, const hiopVectorPar& ryc, const h
 {
   double derr=1e20, aux;
   hiopVectorPar *RX=rx.new_copy();
-  //RX=rx-H*dx-Dx*dx-J'c*dyc-J'*dyd
+  //RX=rx-H*dx-J'c*dyc-J'*dyd
   Hess->timesVec(1.0, *RX, -1.0, dx);
-  RX->axzpy(-1.0,*Dx,dx);
+  //RX->axzpy(-1.0,*Dx,dx);
   Jac_c->transTimesVec(1.0, *RX, -1.0, dyc);
   Jac_d->transTimesVec(1.0, *RX, -1.0, dyd);
   aux=RX->twonorm();
@@ -351,6 +354,8 @@ errorCompressedLinsys(const hiopVectorPar& rx, const hiopVectorPar& ryc, const h
    * [ Jd*(H+Dx)^{-1}*Jc^T   Jd*(H+Dx)^{-1}*Jd^T + Dd^{-1}] [dyd]   [ Jd(H+dx)^{-1} rx - ryd ]
    * and then solving for dx from
    *  dx = - (H+Dx)^{-1}*(Jc^T*dyc+Jd^T*dyd - rx)
+   * 
+   * Note that ops H+Dx are provided by hiopHessianLowRank
    */
 void hiopKKTLinSysLowRank::
 solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
@@ -359,12 +364,18 @@ solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
   //some outputing
   nlp->log->write("KKT Low rank: solve compressed RHS", hovIteration);
   nlp->log->write("  rx: ",  rx, hovIteration); nlp->log->write(" ryc: ", ryc, hovIteration); nlp->log->write(" ryd: ", ryd, hovIteration);
+  nlp->log->write("  Jc: ", *Jac_c, hovMatrices);
+  nlp->log->write("  Jd: ", *Jac_d, hovMatrices);
+  nlp->log->write("  Dd_inv: ", *Dd_inv, hovMatrices);
+
 
   hiopMatrixDense& J = *_kxn_mat;
   J.copyRowsFrom(*Jac_c, nlp->m_eq(), 0); //!opt
   J.copyRowsFrom(*Jac_d, nlp->m_ineq(), nlp->m_eq());//!opt
 
-  Hess->symmetricTimesMat(0.0, *N, 1.0, J);
+  //N =  J*(Hess\J')
+  //Hess->symmetricTimesMat(0.0, *N, 1.0, J);
+  Hess->symMatTimesInverseTimesMatTrans(0.0, *N, 1.0, J);
 
   N->addSubDiagonal(nlp->m_eq(), *Dd_inv);
 #ifdef DEEP_CHECKING
@@ -375,7 +386,7 @@ solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
 
   //compute the rhs of the lin sys involving N 
   //  first compute (H+Dx)^{-1} rx_tilde and store it temporarily in dx
-  Hess->apply(0.0, dx, 1.0, rx);
+  Hess->solve(rx, dx);
   // then rhs =   [ Jc(H+Dx)^{-1}*rx - ryc ]
   //              [ Jd(H+dx)^{-1}*rx - ryd ]
   hiopVectorPar& rhs=*_k_vec1;
@@ -407,7 +418,7 @@ solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
   //first rx = -(Jc^T*dyc+Jd^T*dyd - rx)
   J.transTimesVec(1.0, rx, -1.0, dyc_dyd);
   //then dx = (H+Dx)^{-1} rx
-  Hess->apply(0.0, dx, 1.0, rx);
+  Hess->solve(rx, dx);
 
   //some outputing
   nlp->log->write("KKT Low rank: solve compressed SOL", hovIteration);

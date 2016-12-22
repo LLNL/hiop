@@ -53,7 +53,7 @@ private:
   const hiopIterate* iter;
   const hiopVectorPar* grad_f;
   const hiopMatrixDense *Jac_c, *Jac_d;
-  hiopHessianInvLowRank* Hess;
+  hiopHessianLowRank* Hess;
 
   const hiopNlpDenseConstraints* nlp;
 

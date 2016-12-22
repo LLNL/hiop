@@ -65,7 +65,7 @@ private:
   hiopMatrixDense* _Jac_c, *_Jac_c_trial; //Jacobian of c(x), the equality part
   hiopMatrixDense* _Jac_d, *_Jac_d_trial; //Jacobian of d(x), the inequality part
 
-  hiopHessianInvLowRank* _Hess;
+  hiopHessianLowRank* _Hess;
 
   /** Algorithms's working quantities */  
   double _mu, _tau, _alpha_primal, _alpha_dual;

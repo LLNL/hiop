@@ -58,7 +58,8 @@ public:
 
   friend class hiopResidual;
   friend class hiopKKTLinSysLowRank;
-  friend class hiopHessianInvLowRank;
+  friend class hiopHessianLowRank;
+  friend class hiopHessianInvLowRank_obsolette;
 private:
   /** Primal variables */
   hiopVectorPar*x;         //the original decision x
