@@ -106,20 +106,18 @@ private:
   double* _buff_2lxk; // size = 2 x q-Newton mem size x num_constraints
   double *_buff1_lxlx3, *_buff2_lxlx3;
   //auxiliary objects
-  hiopMatrixDense *_S1, *_Y1, *_lxl_mat1, *_2lxk_mat1, *_lxk_mat1; //preallocated matrices 
-  hiopMatrixDense& new_S1(const hiopMatrixDense& St, const hiopMatrixDense& X);
-  hiopMatrixDense& new_Y1(const hiopMatrixDense& Yt, const hiopMatrixDense& X);
+  hiopMatrixDense *_S1, *_Y1, *_lxl_mat1, *_kx2l_mat1, *_kxl_mat1; //preallocated matrices 
+  //holds X*D*S
+  hiopMatrixDense& new_S1(const hiopMatrixDense& X, const hiopMatrixDense& St);
+  //holds X*D*Y
+  hiopMatrixDense& new_Y1(const hiopMatrixDense& X, const hiopMatrixDense& Yt);
   hiopMatrixDense& new_lxl_mat1 (int l);
-  hiopMatrixDense& new_lxk_mat1 (int l, int k);
-  hiopMatrixDense& new_2lxk_mat1(int l, int k);
+  hiopMatrixDense& new_kxl_mat1 (int k, int l);
+  hiopMatrixDense& new_kx2l_mat1(int k, int l);
   
-  //similar for S3=DpYtH0Y*S2
-  hiopMatrixDense *_S3;
-  hiopMatrixDense& new_S3(const hiopMatrixDense& Left, const hiopMatrixDense& Right);
-  hiopVectorPar *_l_vec1, *_l_vec2, *_l_vec3, *_n_vec1, *_n_vec2, *_2l_vec1;
+  hiopVectorPar *_l_vec1, *_l_vec2, *_n_vec1, *_n_vec2, *_2l_vec1;
   hiopVectorPar& new_l_vec1(int l);
   hiopVectorPar& new_l_vec2(int l);
-  hiopVectorPar& new_l_vec3(int l);
   inline hiopVectorPar& new_n_vec1(long long n)
   {
 #ifdef DEEP_CHECKING
@@ -152,7 +150,8 @@ private:
   static void matTimesDiagTimesMatTrans_local(hiopMatrixDense& W, const hiopMatrixDense& S, 
 					      const hiopVectorPar& d, const hiopMatrixDense& X);
   /* members and utilities related to V matrix: factorization and solve */
-  int *_V_ipiv, _V_lwork; double* _V_work;
+  hiopVectorPar *_V_work_vec;
+  int _V_ipiv_size; int* _V_ipiv_vec;
   void factorizeV();
   void solveWithV(hiopVectorPar& rhs_s, hiopVectorPar& rhs_y);
   void solveWithV(hiopMatrixDense& rhs);
