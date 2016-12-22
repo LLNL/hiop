@@ -103,13 +103,13 @@ void hiopMatrixDense::copyBlockFromMatrix(const long i_start, const long j_start
   assert(m_local>=i_start+src.m_local && "the matrix does not fit as a sublock in 'this' at specified coordinates");
   assert(n_local>=j_start+src.n_local && "the matrix does not fit as a sublock in 'this' at specified coordinates");
 #ifdef DEEP_CHECKING
-  assert(i_start<src.m_local || !src.m_local); 
-  assert(j_start<src.n_local || !src.n_local); 
+  assert(i_start<m_local || !m_local);
+  assert(j_start<n_local || !n_local);
   assert(i_start>=0); assert(j_start>=0);
 #endif
   const size_t buffsize=src.n_local*sizeof(double);
-  for(long ii=i_start; ii<src.m_local; ii++)
-    memcpy(M[ii]+j_start, src.M[ii-i_start], buffsize);
+  for(long ii=0; ii<src.m_local; ii++)
+    memcpy(M[ii+i_start]+j_start, src.M[ii], buffsize);
 }
 
 void hiopMatrixDense::copyFromMatrixBlock(const hiopMatrixDense& src, const int i_block, const int j_block)
@@ -379,7 +379,14 @@ void hiopMatrixDense::timesMatTrans_local(double beta, hiopMatrix& W_, double al
 #endif
   assert(W.n_local==W.n_global && "not intended for multiplication in parallel");
   if(W.m()==0) return;
-  
+
+  if(n_local==0) {
+    if(beta!=1.0) {
+      int one=1; int n=W.m()*W.n();
+      dscal_(&n, &beta, this->M[0], &one);
+    }
+    return;
+  }
 
   /* C = alpha*op(A)*op(B) + beta*C in our case is Wt= alpha* X  *Mt    + beta*Wt */
   char transX='T', transM='N';
