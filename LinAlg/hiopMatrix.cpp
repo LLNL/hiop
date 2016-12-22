@@ -111,6 +111,22 @@ void hiopMatrixDense::copyBlockFromMatrix(const long i_start, const long j_start
   for(long ii=i_start; ii<src.m_local; ii++)
     memcpy(M[ii]+j_start, src.M[ii-i_start], buffsize);
 }
+
+void hiopMatrixDense::copyFromMatrixBlock(const hiopMatrixDense& src, const int i_block, const int j_block)
+{
+  assert(n_local==n_global && "this method should be used only in 'serial' mode");
+  assert(src.n_local==src.n_global && "this method should be used only in 'serial' mode");
+  assert(m_local+i_block<=src.m_local && "the source does not enough rows to fill 'this'");
+  assert(n_local+j_block<=src.n_local && "the source does not enough cols to fill 'this'");
+
+  if(n_local==src.n_local) //and j_block=0
+    memcpy(M[0], src.M[i_block], n_local*m_local*sizeof(double));
+  else {
+    for(int i=0; i<m_local; i++)
+      memcpy(M[i], src.M[i_block]+j_block, n_local*sizeof(double));
+  }
+}
+
 void hiopMatrixDense::shiftRows(long long shift)
 {
   if(shift==0) return;

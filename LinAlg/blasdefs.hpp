@@ -47,5 +47,30 @@ extern "C" void   dpotrs_(char* uplo, int* N, int* NRHS,
 			  double*A, int* lda, 
 			  double* B, int* ldb,
 			  int* info);
+
+/*  DSYTRF computes the factorization of a real symmetric matrix A using
+ *  the Bunch-Kaufman diagonal pivoting method.  The form of the
+ *  factorization is
+ *     A = U*D*U**T  or  A = L*D*L**T
+ *  where U (or L) is a product of permutation and unit upper (lower)
+ *  triangular matrices, and D is symmetric and block diagonal with
+ *  1-by-1 and 2-by-2 diagonal blocks.
+ *
+ *  This is the blocked version of the algorithm, calling Level 3 BLAS.
+ */
+extern "C" void dsytrf_( char* UPLO, int* N, double* A, int* LDA, int* IPIV, double* WORK, int* LWORK, int* INFO );
+
+/* DSYTRS solves a system of linear equations A*X = B with a real
+ *  symmetric matrix A using the factorization A = U*D*U**T or
+ *  A = L*D*L**T computed by DSYTRF.
+ *
+ * To improve the solution using LAPACK one needs to use DSYRFS.
+ */
+extern "C" void dsytrs_( char* UPLO, int* N, int* NRHS, double* A, int* LDA, int* IPIV, double*B, int* LDB, int* INFO );
+
+/* returns the value of the one norm,  or the Frobenius norm, or
+ *  the  infinity norm,  or the  element of  largest absolute value  of a
+ *  real matrix A.
+ */
 extern "C" double   dlange_(char* norm, int* M, int* N, double*A, int* lda, double* work);
 #endif

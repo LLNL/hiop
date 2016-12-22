@@ -388,7 +388,7 @@ void hiopVectorPar::axdzpy_w_pattern( double alpha, const hiopVector& x_, const 
 
 void hiopVectorPar::addConstant( double c )
 {
-  assert(false && "not implemented");
+  for(long long i=0; i<n_local; i++) data[i]+=c;
 }
 
 void  hiopVectorPar::addConstant_w_patternSelect(double c, const hiopVector& ix_)
