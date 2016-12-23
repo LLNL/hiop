@@ -151,8 +151,26 @@ void hiopMatrixDense::replaceRow(long long row, const hiopVectorPar& vec)
 {
   assert(row>=0); assert(row<m_local);
   long long vec_size=vec.get_size();
-  memcpy(M[row], vec.local_data_const(), vec_size>=n_local?n_local:vec_size);
+  memcpy(M[row], vec.local_data_const(), (vec_size>=n_local?n_local:vec_size)*sizeof(double));
 }
+
+void hiopMatrixDense::getRow(long long irow, hiopVector& row_vec)
+{
+  assert(irow>=0); assert(irow<m_local);
+  hiopVectorPar& vec=dynamic_cast<hiopVectorPar&>(row_vec);
+  assert(n_local==vec.get_size());
+  memcpy(vec.local_data(), M[irow], n_local*sizeof(double));
+}
+
+#ifdef DEEP_CHECKING
+void hiopMatrixDense::overwriteUpperTriangleWithLower()
+{
+  assert(n_local==n_global && "Use only with local, non-distributed matrices");
+  for(int i=0; i<m_local; i++)
+    for(int j=i+1; j<n_local; j++)
+      M[i][j] = M[j][i];
+}
+#endif
 
 hiopMatrixDense* hiopMatrixDense::alloc_clone() const
 {
@@ -210,11 +228,15 @@ void hiopMatrixDense::print(FILE* f,
     }
     maxRows = maxRows>=0?maxRows:m_local;
     maxCols = maxCols>=0?maxCols:n_local;
-    
+    fprintf(f, "[");
     for(int i=0; i<maxRows; i++) {
+      fprintf(f, " ");
       for(int j=0; j<maxCols; j++) 
 	fprintf(f, "%22.16e ", M[i][j]);
-      fprintf(f, ";\n");
+      if(i<maxRows-1)
+	fprintf(f, "; ...\n");
+      else
+	fprintf(f, "];\n");
     }
   }
 }

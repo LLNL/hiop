@@ -110,6 +110,11 @@ public:
   /*  shift<0 -> up; shift>0 -> down  */
   void shiftRows(long long shift);
   void replaceRow(long long row, const hiopVectorPar& vec);
+  /* copies row 'irow' in the vector 'row_vec' (sizes should match) */
+  void getRow(long long irow, hiopVector& row_vec);
+#ifdef DEEP_CHECKING
+  void overwriteUpperTriangleWithLower();
+#endif
   inline long long get_local_size_n() const { return n_local; }
   inline long long get_local_size_m() const { return m_local; }
 
@@ -118,9 +123,7 @@ public:
 
   virtual long long m() const {return m_local;}
   virtual long long n() const {return n_global;}
-
-
-  
+ 
 
 #ifdef DEEP_CHECKING
   //do not use this unless you sure you know what you're doing

@@ -649,8 +649,9 @@ void hiopVectorPar::print(FILE* file, const char* msg/*=NULL*/, int max_elems/*=
     } else {
       fprintf(file, "%s ", msg);
     }    
+    fprintf(file, "=[");
     max_elems = max_elems>=0?max_elems:n_local;
-    for(int it=0; it<max_elems; it++)  fprintf(file, "%22.16e ", data[it]);
-    fprintf(file, "\n");
+    for(int it=0; it<max_elems; it++)  fprintf(file, "%22.16e ; ", data[it]);
+    fprintf(file, "];\n");
   }
 }
