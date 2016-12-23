@@ -130,10 +130,19 @@ void hiopHessianLowRank::print(FILE* f, hiopOutVerbosity v, const char* msg) con
 #else
   fprintf(f, "Dx is not stored in this class, but it can be computed from Dx=DhInv^(1)-sigma");
 #endif
-  nlp->log->printf(v, "sigma=%22.16f", sigma);
+  nlp->log->printf(v, "sigma=%22.16f;\n", sigma);
   nlp->log->write("DhInv", *DhInv, v);
   nlp->log->write("S_trans", *St, v);
   nlp->log->write("Y_trans", *Yt, v);
+
+  fprintf(f, " [[Internal representation]]\n");
+#ifdef DEEP_CHECKING
+  nlp->log->write("V", *_Vmat, v);
+#else
+  fprintf(f, "V matrix is available at this point (only its LAPACK factorization). Print it in updateInternalBFGSRepresentation() instead, before factorizeV()\n");
+#endif
+  nlp->log->write("L", *L, v);
+  nlp->log->write("D", *D, v);
 }
 
 #include <limits>
@@ -279,7 +288,7 @@ void hiopHessianLowRank::updateInternalBFGSRepresentation()
   V->copyBlockFromMatrix(l,l,DpYtDhInvY);
 #endif
 
-  //-- block (2,1)
+  //-- block (1,2)
   hiopMatrixDense& StB0DhInvYmL = DpYtDhInvY; //just a rename
   hiopVectorPar& B0DhInv = new_n_vec1(n);
   B0DhInv.copyFrom(*DhInv); B0DhInv.scale(sigma);
@@ -638,7 +647,7 @@ void hiopHessianLowRank::growD(const int& lmem_curr, const int& lmem_max, const 
 
   hiopVectorPar* Dnew=new hiopVectorPar(l+1);
   double* Dnew_vec=Dnew->local_data();
-  memcpy(Dnew_vec, D->local_data_const(), l);
+  memcpy(Dnew_vec, D->local_data_const(), l*sizeof(double));
   Dnew_vec[l]=sTy;
 
   delete D;
@@ -786,15 +795,15 @@ void hiopHessianLowRank::timesVecCmn(double beta, hiopVector& y, double alpha, c
   bool print=true;
   if(print) {
     nlp->log->printf(hovMatrices, "---hiopHessianLowRank::timesVec \n");
-    nlp->log->write("S':", *St, hovMatrices);
-    nlp->log->write("Y':", *Yt, hovMatrices);
-    nlp->log->write("DhInv:", *DhInv, hovMatrices);
-    nlp->log->printf(hovMatrices, "sigma=%22.16e  addLogTerm=%d\n", sigma, addLogTerm);
+    nlp->log->write("S=", *St, hovMatrices);
+    nlp->log->write("Y=", *Yt, hovMatrices);
+    nlp->log->write("DhInv=", *DhInv, hovMatrices);
+    nlp->log->printf(hovMatrices, "sigma=%22.16e;  addLogTerm=%d;\n", sigma, addLogTerm);
     if(addLogTerm)
-      nlp->log->write("Dx:", *_Dx, hovMatrices);
+      nlp->log->write("Dx=", *_Dx, hovMatrices);
     nlp->log->printf(hovMatrices, "y=beta*y + alpha*this*x : beta=%g alpha=%g\n", beta, alpha);
-    nlp->log->write("x_in:", x, hovMatrices);
-    nlp->log->write("y_in:", y, hovMatrices);
+    nlp->log->write("x_in=", x, hovMatrices);
+    nlp->log->write("y_in=", y, hovMatrices);
   }
 
   hiopVectorPar *yk=dynamic_cast<hiopVectorPar*>(nlp->alloc_primal_vec());
@@ -819,9 +828,9 @@ void hiopHessianLowRank::timesVecCmn(double beta, hiopVector& y, double alpha, c
 
     for(int i=0; i<k; i++) {
       double biTsk = b[i]->dotProductWith(*sk);
-      a[k]->axpy(biTsk, *b[i]);
+      a[k]->axpy(+biTsk, *b[i]);
       double aiTsk = a[i]->dotProductWith(*sk);
-      a[k]->axpy(aiTsk, *a[i]);
+      a[k]->axpy(-aiTsk, *a[i]);
     }
     double skTak = a[k]->dotProductWith(*sk);
     a[k]->scale(1/sqrt(skTak));
@@ -845,7 +854,7 @@ void hiopHessianLowRank::timesVecCmn(double beta, hiopVector& y, double alpha, c
   }
 
   if(print) {
-    nlp->log->write("y_out:", y, hovMatrices);
+    nlp->log->write("y_out=", y, hovMatrices);
   }
 
   for(vector<hiopVectorPar*>::iterator it=a.begin(); it!=a.end(); ++it) 
@@ -1439,7 +1448,7 @@ void hiopHessianInvLowRank_obsolette::growD(const int& lmem_curr, const int& lme
 
   hiopVectorPar* Dnew=new hiopVectorPar(l+1);
   double* Dnew_vec=Dnew->local_data();
-  memcpy(Dnew_vec, D->local_data_const(), l);
+  memcpy(Dnew_vec, D->local_data_const(), l*sizeof(double));
   Dnew_vec[l]=sTy;
 
   delete D;
