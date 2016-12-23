@@ -2,7 +2,7 @@
 
 #include "hiopVector.hpp"
 #include "hiopResidual.hpp"
-
+#include "hiopHessianLowRank.hpp"
 
 void hiopLogger::write(const char* msg, const hiopVector& vec, hiopOutVerbosity v, int loggerid/*=0*/) 
 {
@@ -31,6 +31,12 @@ void hiopLogger::write(const char* msg, const hiopIterate& it, hiopOutVerbosity 
 {
   if(v>_verb) return;
   it.print(_f, msg);
+}
+
+void  hiopLogger::write(const char* msg, const hiopHessianLowRank& Hess, hiopOutVerbosity v, int loggerid/*=0*/)
+{
+  if(v>_verb) return;
+  Hess.print(_f, v, msg);
 }
 
   //only for loggerid=0 for now

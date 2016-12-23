@@ -8,6 +8,7 @@ class hiopVector;
 class hiopResidual;
 class hiopIterate;
 class hiopMatrix;
+class hiopHessianLowRank;
 
 /* Verbosity 0 to 9 */
 enum hiopOutVerbosity {
@@ -29,11 +30,12 @@ class hiopLogger
 public:
   hiopLogger(hiopOutVerbosity max_desired, FILE* f) : _verb(max_desired), _f(f) {};
   /* outputs a vector. loggerid indicates which logger should be used, by default stdout*/
-  void write(const char* msg, const hiopVector& vec, hiopOutVerbosity v, int loggerid=0);
-  void write(const char* msg, const hiopResidual& r, hiopOutVerbosity v, int loggerid=0);
-  void write(const char* msg, const hiopIterate& r, hiopOutVerbosity v, int loggerid=0);
+  void write(const char* msg, const hiopVector& vec,          hiopOutVerbosity v, int loggerid=0);
+  void write(const char* msg, const hiopResidual& r,          hiopOutVerbosity v, int loggerid=0);
+  void write(const char* msg, const hiopIterate& r,           hiopOutVerbosity v, int loggerid=0);
+  void write(const char* msg, const hiopMatrix& M,            hiopOutVerbosity v, int loggerid=0);
+  void write(const char* msg, const hiopHessianLowRank& Hess, hiopOutVerbosity v, int loggerid=0);
   void write(const char* msg, hiopOutVerbosity v, int loggerid=0);
-  void write(const char* msg, const hiopMatrix& M,  hiopOutVerbosity v, int loggerid=0);
   //only for loggerid=0 for now
   void printf(hiopOutVerbosity v, const char* format, ...); 
   
