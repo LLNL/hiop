@@ -123,7 +123,7 @@ void hiopMatrixDense::copyFromMatrixBlock(const hiopMatrixDense& src, const int 
     memcpy(M[0], src.M[i_block], n_local*m_local*sizeof(double));
   else {
     for(int i=0; i<m_local; i++)
-      memcpy(M[i], src.M[i_block]+j_block, n_local*sizeof(double));
+      memcpy(M[i], src.M[i+i_block]+j_block, n_local*sizeof(double));
   }
 }
 
@@ -382,8 +382,8 @@ void hiopMatrixDense::timesMatTrans_local(double beta, hiopMatrix& W_, double al
 
   if(n_local==0) {
     if(beta!=1.0) {
-      int one=1; int n=W.m()*W.n();
-      dscal_(&n, &beta, this->M[0], &one);
+      int one=1; int mn=W.m()*W.n();
+      dscal_(&mn, &beta, W.M[0], &one);
     }
     return;
   }
