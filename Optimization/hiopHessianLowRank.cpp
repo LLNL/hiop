@@ -104,7 +104,7 @@ bool hiopHessianLowRank::updateLogBarrierDiagonal(const hiopVector& Dx)
   assert(DhInv->allPositive());
 #endif
   DhInv->invert();
-  nlp->log->write("hiopHessianLowRank: inverse diag:", *DhInv, hovMatrices);
+  nlp->log->write("hiopHessianLowRank: inverse diag DhInv:", *DhInv, hovMatrices);
   matrixChanged=true;
 }
 
@@ -223,16 +223,12 @@ bool hiopHessianLowRank::update(const hiopIterate& it_curr, const hiopVector& gr
 
 /* 
  * The dirty work to bring this^{-1} to the form
- * M = DhInv + DhInv*[B0*S Y] * V^{-1} * [ S^T*B0 ] *DhInv
+ * M = DhInv - DhInv*[B0*S Y] * V^{-1} * [ S^T*B0 ] *DhInv
  *                                       [ Y^T    ]
  * Namely it computes V, a symmetric 2lx2l given by
- *  [S'*B0*(DhInv*B0-I)*S    -L+S'*B0*DhInv*Y ]
- *  [-L'+Y'*Dhinv*B0*S       +D+Y'*Dhinv*Y    ]
- * Caution: an upside-down symmetric permutation of the above form is stored 
- * for numerical stability considerations (the p.d. matrix D+Y'*Dhinv*Y is in (1,1)), namely
- * V = [   D+Y'*Dhinv*Y         -L'+Y'*Dhinv*B0*S  ]
- *     [ -L+S'*B0*DhInv*Y    S'*B0*(DhInv*B0-I)*S  ]
- * In this function V is factorize and it will contain the factors
+ *  V =  [S'*B0*(DhInv*B0-I)*S    -L+S'*B0*DhInv*Y ]
+ *       [-L'+Y'*Dhinv*B0*S       +D+Y'*Dhinv*Y    ]
+ * In this function V is factorized and it will hold the factors at the end of the function
  * Note that L, D, S, and Y are from the BFGS secant representation and are updated/computed in 'update'
  */
 void hiopHessianLowRank::updateInternalBFGSRepresentation()
@@ -244,7 +240,7 @@ void hiopHessianLowRank::updateInternalBFGSRepresentation()
   if(D->get_size()!=l) { delete D; D=new hiopVectorPar(l); }
   if(V->m()!=2*l) {delete V; V=new hiopMatrixDense(2*l,2*l); }
 
-  //-- block (1,1)
+  //-- block (2,2)
   hiopMatrixDense& DpYtDhInvY = new_lxl_mat1(l);
   symmMatTimesDiagTimesMatTrans_local(0.0, DpYtDhInvY, 1.0,*Yt,*DhInv);
 #ifdef WITH_MPI
@@ -252,7 +248,7 @@ void hiopHessianLowRank::updateInternalBFGSRepresentation()
   memcpy(_buff1_lxlx3, DpYtDhInvY.local_buffer(), buffsize);
 #else
   DpYtDhInvY.addDiagonal(*D);
-  V->copyBlockFromMatrix(0,0,DpYtDhInvY);
+  V->copyBlockFromMatrix(l,l,DpYtDhInvY);
 #endif
 
   //-- block (2,1)
@@ -265,7 +261,7 @@ void hiopHessianLowRank::updateInternalBFGSRepresentation()
 #else
   //substract L
   StB0DhInvYmL.addMatrix(-1.0, *L);
-  // (2,1) in V
+  // (2,1) block in V
   V->copyBlockFromMatrix(l,0,StB0DhInvYmL);
 #endif
 
@@ -278,7 +274,7 @@ void hiopHessianLowRank::updateInternalBFGSRepresentation()
 #ifdef WITH_MPI
   memcpy(_buff1_lxlx3+2*l*l, DpYtDhInvY.local_buffer(), buffsize);
 #else
-  V->copyBlockFromMatrix(l,l,StDS);
+  V->copyBlockFromMatrix(0,0,StDS);
 #endif
 
 
@@ -286,19 +282,19 @@ void hiopHessianLowRank::updateInternalBFGSRepresentation()
   int ierr;
   ierr = MPI_Allreduce(_buff1_lxlx3, _buff2_lxlx3, 3*l*l, MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(ierr==MPI_SUCCESS);
 
-  // - block (1,1)
+  // - block (2,2)
   DpYtDhInvY.copyFrom(_buff2_lxlx3);
   DpYtDhInvY.addDiagonal(*D);
-  V->copyBlockFromMatrix(0,0,DpYtDhInvY);
+  V->copyBlockFromMatrix(l,l,DpYtDhInvY);
 
   // - block (2,1)
   StB0DhInvYmL.copyFrom(_buff2_lxlx3+l*l);
   StB0DhInvYmL.addMatrix(-1.0, *L);
   V->copyBlockFromMatrix(l,0,StB0DhInvYmL);
 
-  // - block (2,2)
+  // - block (1,1)
   StDS.copyFrom(_buff2_lxlx3+2*l*l);
-  V->copyBlockFromMatrix(l,l,StDS);
+  V->copyBlockFromMatrix(0,0,StDS);
 #endif
 
   //finally, factorize V
@@ -309,7 +305,7 @@ void hiopHessianLowRank::updateInternalBFGSRepresentation()
 
 /* Solves this*x = res as x = this^{-1}*res
  * where 'this^{-1}' is
- * M = DhInv + DhInv*[B0*S Y] * V^{-1} * [ S^T*B0 ] *DhInv
+ * M = DhInv - DhInv*[B0*S Y] * V^{-1} * [ S^T*B0 ] *DhInv
  *                                       [ Y^T    ]
  *
  * M is is nxn, S,Y are nxl, V is upper triangular 2lx2l, and x is nx1
@@ -353,8 +349,8 @@ void hiopHessianLowRank::solve(const hiopVector& rhs_, hiopVector& x_)
   Yt->transTimesVec(1.0, result, 1.0, ypart);
   result.componentMult(*DhInv);
 
-  //5. x = first term + second term = x_computed_in_1 + result 
-  x.axpy(1.0,result);
+  //5. x = first term - second term = x_computed_in_1 - result 
+  x.axpy(-1.0,result);
 }
 
 /* W = beta*W + alpha*X*inverse(this)*X^T (a more efficient version of solve)
@@ -374,6 +370,10 @@ symMatTimesInverseTimesMatTrans(double beta, hiopMatrixDense& W,
   long long k=W.m(); 
   assert(X.m()==k);
   assert(X.n()==n);
+
+#ifdef DEEP_CHECKING
+   nlp->log->write("symMatTimesInverseTimesMatTrans: X is: ", X, hovMatrices);
+#endif 
 
   //1. compute W=beta*W + alpha*X*DhInv*X'
 #ifdef WITH_MPI
@@ -397,15 +397,17 @@ symMatTimesInverseTimesMatTrans(double beta, hiopMatrixDense& W,
   //3. reduce W, S1, and Y1 (dimensions: kxk, kxl, kxl)
   hiopMatrixDense& S2Y2 = new_kx2l_mat1(k,l);  //Initialy S2Y2 = [Y1 S1]
   //order of Y1 and S1 is changed to match the permutation of V
-  S2Y2.copyBlockFromMatrix(0,0,Y1);
-  S2Y2.copyBlockFromMatrix(0,l,S1);
+  S2Y2.copyBlockFromMatrix(0,0,S1);
+  S2Y2.copyBlockFromMatrix(0,l,Y1);
 #ifdef WITH_MPI
   ierr=MPI_Allreduce(S2Y2.local_buffer(), _buff_2lxk, 2*l*k, MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(ierr==MPI_SUCCESS);
   ierr=MPI_Allreduce(W.local_buffer(),    _buff_kxk,  k*k,   MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(ierr==MPI_SUCCESS);
   S2Y2.copyFrom(_buff_2lxk);
   W.copyFrom(_buff_kxk);
 #endif
-
+#ifdef DEEP_CHECKING
+   nlp->log->write("symMatTimesInverseTimesMatTrans: W first term is: ", W, hovMatrices);
+#endif 
   //4. [S2] = V \ [S1^T]
   //   [Y2]       [Y1^T]
   //S2Y2 is exactly [S1^T] when Fortran Lapack looks at it
@@ -413,51 +415,29 @@ symMatTimesInverseTimesMatTrans(double beta, hiopMatrixDense& W,
   hiopMatrixDense& RHS_fortran = S2Y2; 
   solveWithV(RHS_fortran);
 
-  //5. W = W+alpha*[S1 Y1]*[S2^T] 
+  //5. W = W-alpha*[S1 Y1]*[S2^T] 
   //                       [Y2^T]
   S2Y2 = RHS_fortran;
+  alpha = 0-alpha;
   hiopMatrixDense& S2=new_kxl_mat1(k,l);
-  S2.copyFromMatrixBlock(S2Y2, 0, l);
+  S2.copyFromMatrixBlock(S2Y2, 0, 0);
   S1.timesMatTrans_local(1.0, W, alpha, S2);
+  nlp->log->write("symMatTimesInverseTimesMatTrans: S1 is : ", S1, hovMatrices);
+  nlp->log->write("symMatTimesInverseTimesMatTrans: S2 is : ", S2, hovMatrices);
+  nlp->log->write("symMatTimesInverseTimesMatTrans: W intermediary is : ", W, hovMatrices);
   hiopMatrixDense& Y2=S2;
-  Y2.copyFromMatrixBlock(S2Y2, 0,0);
+  Y2.copyFromMatrixBlock(S2Y2, 0, l);
   Y1.timesMatTrans_local(1.0, W, alpha, Y2);
+
+  nlp->log->write("symMatTimesInverseTimesMatTrans: Y1 is : ", Y1, hovMatrices);
+  nlp->log->write("symMatTimesInverseTimesMatTrans: Y2 is : ", Y2, hovMatrices);
+  nlp->log->write("symMatTimesInverseTimesMatTrans: W is : ", W, hovMatrices);
   //we're done here
- 
-  /*  
-  //2. compute S1= S^T*B0*DhInv*X^T and Y1= Y^T*DhInv*X^T
-  hiopMatrixDense& S1 = new_S1(*St,X);
-  hiopVectorPar& B0DhInv = new_n_vec1(n);
-  B0DhInv.copyFrom(*DhInv); B0DhInv.scale(sigma);
-  matTimesDiagTimesMatTrans_local(S1,*St, B0DhInv,X);
-  hiopMatrixDense& Y1 = new_Y1(*Yt,X);
-  matTimesDiagTimesMatTrans_local(Y1,*Yt,*DhInv,X);
 
-  //3. reduce W, S1, and Y1 (dimensions: kxk, lxk, lxk)
-  hiopMatrixDense& S2Y2 = new_2lxk_mat1(l,k);
-  //order of Y1 and S1 is inverted to match the permutation of V
-  S2Y2.copyRowsFrom(Y1, l, 0);
-  S2Y2.copyRowsFrom(S1, l, l);
-#ifdef WITH_MPI
-  ierr=MPI_Allreduce(S2Y2.local_buffer(), _buff_2lxk, 2*l*k, MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(ierr==MPI_SUCCESS);
-  ierr=MPI_Allreduce(W.local_buffer(),    _buff_kxk,  k*k,   MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(ierr==MPI_SUCCESS);
-  S2Y2.copyFrom(_buff_2lxk);
-  W.copyFrom(_buff_kxk);
-#endif
-  //4. [S2] = V\[S1]
-  //   [Y2]     [Y1]
-  solveWithV(S2Y2);
+#ifdef DEEP_CHECKING
+   nlp->log->write("symMatTimesInverseTimesMatTrans: final matrix is : ", W, hovMatrices);
+#endif 
 
-  //5. multiply S2Y2 at the left with S1' and Y1' (no communication, everything is local)
-  //5.1 W = W+alpha*S1'*S2
-  hiopMatrixDense& X2=new_lxk_mat1(l,k);
-  X2.copyFromMatrixBlock(S2Y2, l, 0);
-  S1.transTimesMat(1.0, W, alpha, X2);
-  //4.2 W = W+alpha*Y1'*Y2
-  hiopMatrixDense& Y2=X2;
-  Y2.copyFromMatrixBlock(S2Y2, 0, 0);
-  Y1.transTimesMat(1.0, W, alpha, Y2);
-  */
 }
 
 
@@ -516,9 +496,8 @@ void hiopHessianLowRank::solveWithV(hiopVectorPar& rhs_s, hiopVectorPar& rhs_y)
   assert(N==rhs_s.get_size()+rhs_y.get_size());
 #endif
   hiopVectorPar& rhs=new_2l_vec1(l);
-  //switch s and y to match the permutation of V
-  rhs.copyFromStarting(rhs_y,0);
-  rhs.copyFromStarting(rhs_s,l);
+  rhs.copyFromStarting(rhs_s,0);
+  rhs.copyFromStarting(rhs_y,l);
 
   dsytrs_(&uplo, &N, &one, V->local_buffer(), &lda, _V_ipiv_vec, rhs.local_data(), &N, &info);
 
@@ -526,8 +505,8 @@ void hiopHessianLowRank::solveWithV(hiopVectorPar& rhs_s, hiopVectorPar& rhs_y)
   assert(info==0);
 
   //copy back the solution
-  rhs.copyToStarting(rhs_y,0);
-  rhs.copyToStarting(rhs_s,l);
+  rhs.copyToStarting(rhs_s,0);
+  rhs.copyToStarting(rhs_y,l);
 
 #ifdef DEEP_CHECKING
   nlp->log->write("solveWithV: RHS OUT 's' part: ", rhs_s, hovMatrices);
@@ -772,10 +751,8 @@ void hiopHessianLowRank::timesVecCmn(double beta, hiopVector& y, double alpha, c
 
     //compute ak by an inner loop
     a[k]->copyFrom(*sk);
-    if(addLogTerm)
-      a[k]->componentDiv(*DhInv);
-    else
-      a[k]->scale(sigma);
+    a[k]->scale(sigma);
+
     for(int i=0; i<k; i++) {
       double biTsk = b[i]->dotProductWith(*sk);
       a[k]->axpy(biTsk, *b[i]);
@@ -786,9 +763,9 @@ void hiopHessianLowRank::timesVecCmn(double beta, hiopVector& y, double alpha, c
     a[k]->scale(1/sqrt(skTak));
   }
 
-  //new we have B= Dx+B_0 + sum{ bk bk' - ak ak' : k=0,1,...,l_curr-1} (H0=(Dx+B0)^{-1})
+  //new we have B= B_0 + sum{ bk bk' - ak ak' : k=0,1,...,l_curr-1} 
   //compute the product with x
-  //y = beta*y+alpha*H0_inv*x + alpha* sum { bk'x bk - ak'x ak : k=0,1,...,l_curr-1}
+  //y = beta*y+alpha*(B0+Dx)*x + alpha* sum { bk'x bk - ak'x ak : k=0,1,...,l_curr-1}
   y.scale(beta);
   if(addLogTerm) 
     y.axdzpy(alpha,x,*DhInv);

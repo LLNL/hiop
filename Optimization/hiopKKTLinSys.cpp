@@ -379,6 +379,7 @@ solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
 
   N->addSubDiagonal(nlp->m_eq(), *Dd_inv);
 #ifdef DEEP_CHECKING
+  nlp->log->write("solveCompressed: N is", *N, hovMatrices);
   N->assertSymmetry(1e-14);
   Nmat->copyFrom(*N);
 #endif
