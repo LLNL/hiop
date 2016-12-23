@@ -39,8 +39,8 @@ public:
   virtual void solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
 			       hiopVectorPar& dx, hiopVectorPar& dyc, hiopVectorPar& dyd);
 
-  static int factorizeMat(hiopMatrixDense& M);
-  static int solveWithFactors(hiopMatrixDense& M, hiopVectorPar& r);
+  int factorizeMat(hiopMatrixDense& M);
+  int solveWithFactors(hiopMatrixDense& M, hiopVectorPar& r);
 #ifdef DEEP_CHECKING
   static double solveError(const hiopMatrixDense& M,  const hiopVectorPar& x, hiopVectorPar& rhs);
 

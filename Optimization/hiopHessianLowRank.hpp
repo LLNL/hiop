@@ -67,6 +67,8 @@ public:
   virtual void timesVec_noLogBarrierTerm(double beta, hiopVector& y, double alpha, const hiopVector&x);
   /* code shared by the above two methods*/
   virtual void timesVecCmn(double beta, hiopVector& y, double alpha, const hiopVector&x, bool addLogBarTerm);
+
+  virtual void print(FILE* f, hiopOutVerbosity v, const char* msg) const;
 #endif
 
 protected:
@@ -93,7 +95,10 @@ private:
   hiopVectorPar* D;       //diag 
   //these are matrices from the representation of the inverse
   hiopMatrixDense* V;    
-
+#ifdef DEEP_CHECKING
+  //copy of the matrix - needed to check the residual
+   hiopMatrixDense* _Vmat; 
+#endif
   void growL(const int& lmem_curr, const int& lmem_max, const hiopVectorPar& YTs);
   void growD(const int& l_curr, const int& l_max, const double& sTy);
   void updateL(const hiopVectorPar& STy, const double& sTy);

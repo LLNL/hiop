@@ -60,7 +60,8 @@ hiopHessianLowRank::hiopHessianLowRank(const hiopNlpDenseConstraints* nlp_, int 
   nlp->log->printf(hovScalars, "Hessian Low Rank: initial sigma is %g\n", sigma);
 
 #ifdef DEEP_CHECKING
-  _Dx = DhInv->alloc_clone();
+  _Dx   = DhInv->alloc_clone();
+  _Vmat = V->alloc_clone();
 #endif
 
 }  
@@ -77,6 +78,10 @@ hiopHessianLowRank::~hiopHessianLowRank()
   if(L)  delete L;
   if(D)  delete D;
   if(V)  delete V;
+#ifdef DEEP_CHECKING
+  delete _Vmat;
+#endif
+
 
   if(_it_prev)    delete _it_prev;
   if(_grad_f_prev)delete _grad_f_prev;
@@ -117,6 +122,20 @@ bool hiopHessianLowRank::updateLogBarrierDiagonal(const hiopVector& Dx)
   matrixChanged=true;
 }
 
+void hiopHessianLowRank::print(FILE* f, hiopOutVerbosity v, const char* msg) const
+{
+  fprintf(f, "%s\n", msg);
+#ifdef DEEP_CHECKING
+  nlp->log->write("Dx", *_Dx, v);
+#else
+  fprintf(f, "Dx is not stored in this class, but it can be computed from Dx=DhInv^(1)-sigma");
+#endif
+  nlp->log->printf(v, "sigma=%22.16f", sigma);
+  nlp->log->write("DhInv", *DhInv, v);
+  nlp->log->write("S_trans", *St, v);
+  nlp->log->write("Y_trans", *Yt, v);
+}
+
 #include <limits>
 
 bool hiopHessianLowRank::update(const hiopIterate& it_curr, const hiopVector& grad_f_curr_,
@@ -153,9 +172,9 @@ bool hiopHessianLowRank::update(const hiopIterate& it_curr, const hiopVector& gr
       //y_new.axzpy( 1.0, s_new, *it_curr.zu);
       
       double sTy = s_new.dotProductWith(y_new), s_nrm2=s_new.twonorm(), y_nrm2=y_new.twonorm();
-      nlp->log->printf(hovLinAlgScalarsVerb, "hiopHessianInvLowRank_obsolette: s^T*y=%20.14e ||s||=%20.14e ||y||=%20.14e\n", sTy, s_nrm2, y_nrm2);
-      nlp->log->write("hiopHessianInvLowRank_obsolette s_new",s_new, hovIteration);
-      nlp->log->write("hiopHessianInvLowRank_obsolette y_new",y_new, hovIteration);
+      nlp->log->printf(hovLinAlgScalarsVerb, "hiopHessianLowRank: s^T*y=%20.14e ||s||=%20.14e ||y||=%20.14e\n", sTy, s_nrm2, y_nrm2);
+      nlp->log->write("hiopHessianLowRank s_new",s_new, hovIteration);
+      nlp->log->write("hiopHessianLowRank y_new",y_new, hovIteration);
 
       if(sTy>s_nrm2*y_nrm2*std::numeric_limits<double>::epsilon()) { //sTy far away from zero
 	//compute the new row in L, update S and Y (either augment them or shift cols and add s_new and y_new)
@@ -203,18 +222,18 @@ bool hiopHessianLowRank::update(const hiopIterate& it_curr, const hiopVector& gr
 	} // else of the switch
 	//safe guard it
 	sigma=fmax(fmin(sigma_safe_max, sigma), sigma_safe_min);
-	nlp->log->printf(hovLinAlgScalarsVerb, "hiopHessianInvLowRank_obsolette: sigma was updated to %16.10e\n", sigma);
+	nlp->log->printf(hovLinAlgScalars, "hiopHessianLowRank: sigma was updated to %22.16e\n", sigma);
       } else { //sTy is too small or negative -> skip
-	 nlp->log->printf(hovLinAlgScalarsVerb, "hiopHessianInvLowRank_obsolette: s^T*y=%12.6e not positive enough... skipping the Hessian update\n", sTy);
+	 nlp->log->printf(hovLinAlgScalars, "hiopHessianLowRank: s^T*y=%12.6e not positive enough... skipping the Hessian update\n", sTy);
       }
     } else {// norm of s_new is too small -> skip
-      nlp->log->printf(hovLinAlgScalarsVerb, "hiopHessianInvLowRank_obsolette: ||s_new||=%12.6e too small... skipping the Hessian update\n", s_infnorm);
+      nlp->log->printf(hovLinAlgScalars, "hiopHessianLowRank: ||s_new||=%12.6e too small... skipping the Hessian update\n", s_infnorm);
     }
 
     //save this stuff for next update
     _it_prev->copyFrom(it_curr);  _grad_f_prev->copyFrom(grad_f_curr); 
     _Jac_c_prev->copyFrom(Jac_c_curr); _Jac_d_prev->copyFrom(Jac_d_curr);
-    nlp->log->printf(hovLinAlgScalarsVerb, "hiopHessianInvLowRank_obsolette: storing the iteration info as 'previous'\n", s_infnorm);
+    nlp->log->printf(hovLinAlgScalarsVerb, "hiopHessianLowRank: storing the iteration info as 'previous'\n", s_infnorm);
 
   } else {
     //this is the first optimization iterate, just save the iterate and exit
@@ -223,7 +242,7 @@ bool hiopHessianLowRank::update(const hiopIterate& it_curr, const hiopVector& gr
     if(NULL==_Jac_c_prev)  _Jac_c_prev  = Jac_c_curr.new_copy();
     if(NULL==_Jac_d_prev)  _Jac_d_prev  = Jac_d_curr.new_copy();
 
-    nlp->log->printf(hovLinAlgScalarsVerb, "HessianInvLowRank on first update, just saving iteration\n");
+    nlp->log->printf(hovLinAlgScalarsVerb, "HessianLowRank on first update, just saving iteration\n");
 
     l_curr++;
   }
@@ -304,6 +323,11 @@ void hiopHessianLowRank::updateInternalBFGSRepresentation()
   // - block (1,1)
   StDS.copyFrom(_buff2_lxlx3+2*l*l);
   V->copyBlockFromMatrix(0,0,StDS);
+#endif
+#ifdef DEEP_CHECKING
+  delete _Vmat;
+  _Vmat = V->new_copy();
+  _Vmat->overwriteUpperTriangleWithLower();
 #endif
 
   //finally, factorize V
@@ -478,9 +502,9 @@ void hiopHessianLowRank::factorizeV()
   dsytrf_(&uplo, &N, V->local_buffer(), &lda, _V_ipiv_vec, _V_work_vec->local_data(), &lwork, &info);
   
   if(info<0)
-    nlp->log->printf(hovError, "error: %d argument to dsytrf has an illegal value\n", -info);
+    nlp->log->printf(hovError, "hiopHessianLowRank::factorizeV error: %d argument to dsytrf has an illegal value\n", -info);
   else if(info>0)
-    nlp->log->printf(hovError, "error: %d entry in the factorization's diagonal is exactly zero. Division by zero will occur if it a solve is attempted.\n", info);
+    nlp->log->printf(hovError, "hiopHessianLowRank::factorizeV error: %d entry in the factorization's diagonal is exactly zero. Division by zero will occur if it a solve is attempted.\n", info);
   assert(info==0);
 #ifdef DEEP_CHECKING
   nlp->log->write("factorizeV:  factors of V: ", *V, hovMatrices);
@@ -493,13 +517,17 @@ void hiopHessianLowRank::solveWithV(hiopVectorPar& rhs_s, hiopVectorPar& rhs_y)
   int N=V->n();
   if(N==0) return;
 
+  int l=rhs_s.get_size();
+
 #ifdef DEEP_CHECKING
-  nlp->log->write("solveWithV: RHS IN 's' part: ", rhs_s, hovMatrices);
-  nlp->log->write("solveWithV: RHS IN 'y' part: ", rhs_y, hovMatrices);
+  nlp->log->write("hiopHessianLowRank::solveWithV: RHS IN 's' part: ", rhs_s, hovMatrices);
+  nlp->log->write("hiopHessianLowRank::solveWithV: RHS IN 'y' part: ", rhs_y, hovMatrices);
+  hiopVectorPar* rhs_saved= new hiopVectorPar(rhs_s.get_size()+rhs_y.get_size());
+  rhs_saved->copyFromStarting(rhs_s,0);
+  rhs_saved->copyFromStarting(rhs_y,l);
 #endif
 
   int lda=N, one=1, info;
-  int l=rhs_s.get_size();
   char uplo='U'; 
 #ifdef DEEP_CHECKING
   assert(N==rhs_s.get_size()+rhs_y.get_size());
@@ -510,7 +538,7 @@ void hiopHessianLowRank::solveWithV(hiopVectorPar& rhs_s, hiopVectorPar& rhs_y)
 
   dsytrs_(&uplo, &N, &one, V->local_buffer(), &lda, _V_ipiv_vec, rhs.local_data(), &N, &info);
 
-  if(info<0) nlp->log->printf(hovError, "error: %d argument to dsytrf has an illegal value\n", -info);
+  if(info<0) nlp->log->printf(hovError, "hiopHessianLowRank::solveWithV error: %d argument to dsytrf has an illegal value\n", -info);
   assert(info==0);
 
   //copy back the solution
@@ -518,8 +546,15 @@ void hiopHessianLowRank::solveWithV(hiopVectorPar& rhs_s, hiopVectorPar& rhs_y)
   rhs.copyToStarting(rhs_y,l);
 
 #ifdef DEEP_CHECKING
-  nlp->log->write("solveWithV: RHS OUT 's' part: ", rhs_s, hovMatrices);
-  nlp->log->write("solveWithV: RHS OUT 'y' part: ", rhs_y, hovMatrices);
+  nlp->log->write("solveWithV: SOL OUT 's' part: ", rhs_s, hovMatrices);
+  nlp->log->write("solveWithV: SOL OUT 'y' part: ", rhs_y, hovMatrices);
+
+  //residual calculation
+  double nrmrhs=rhs_saved->twonorm();
+  _Vmat->timesVec(1.0, *rhs_saved, -1.0, rhs);
+  double nrmres=rhs_saved->twonorm();
+  nlp->log->printf(hovLinAlgScalars, "hiopHessianLowRank::solveWithV 1rhs: rel resid norm=%g\n", nrmres/(1+nrmrhs));
+  delete rhs_saved;
 #endif
 
 }
@@ -531,6 +566,7 @@ void hiopHessianLowRank::solveWithV(hiopMatrixDense& rhs)
 
 #ifdef DEEP_CHECKING
   nlp->log->write("solveWithV: RHS IN: ", rhs, hovMatrices);
+  hiopMatrixDense* rhs_saved = rhs.new_copy();
 #endif
 
   //rhs is transpose in C++
@@ -542,10 +578,27 @@ void hiopHessianLowRank::solveWithV(hiopMatrixDense& rhs)
 #endif
   dsytrs_(&uplo, &N, &nrhs, V->local_buffer(), &lda, _V_ipiv_vec, rhs.local_buffer(), &ldb, &info);
 
-  if(info<0) nlp->log->printf(hovError, "error: %d argument to dsytrf has an illegal value\n", -info);
+  if(info<0) nlp->log->printf(hovError, "hiopHessianLowRank::solveWithV error: %d argument to dsytrf has an illegal value\n", -info);
   assert(info==0);
 #ifdef DEEP_CHECKING
-  nlp->log->write("solveWithV: RHS OUT: ", rhs, hovMatrices);
+  nlp->log->write("solveWithV: SOL OUT: ", rhs, hovMatrices);
+  
+  hiopMatrixDense& sol = rhs;
+  hiopVectorPar x(rhs.n()); //again, keep in mind rhs is transposed
+  hiopVectorPar r(rhs.n());
+  double resnorm=0.0;
+  for(int k=0; k<rhs.m(); k++) {
+    rhs_saved->getRow(k, r);
+    sol.getRow(k,x);
+    double nrmrhs=r.twonorm();
+    _Vmat->timesVec(1.0, r, -1.0, x);
+    double nrmres=r.twonorm();
+    if(nrmres/(nrmrhs+1)>1e-8)
+      nlp->log->printf(hovWarning, "hiopHessianLowRank::solveWithV mult-rhs: rhs number %d has large rel resid norm=%g\n", k, nrmres/(1+nrmrhs));
+    if(nrmres/(nrmrhs+1)>resnorm) resnorm=nrmres/(nrmrhs+1);
+  }
+  nlp->log->printf(hovLinAlgScalars, "hiopHessianLowRank::solveWithV mult-rhs: rel resid norm=%g\n", resnorm);
+  delete rhs_saved;
 #endif
 
 }
