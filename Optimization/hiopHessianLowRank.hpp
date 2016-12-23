@@ -79,6 +79,11 @@ protected:
   const hiopNlpDenseConstraints* nlp;
 private:
   hiopVectorPar* DhInv; //(B0+Dk)^{-1}
+#ifdef DEEP_CHECKING
+  // needed in timesVec (for residual checking in solveCompressed, only DEEP_CHECKING mode).
+  // can be recomputed from DhInv decided to store it instead to avoid round-off errors
+  hiopVectorPar* _Dx; 
+#endif
   bool matrixChanged;
   //these are matrices from the compact representation; they are updated at each iteration.
   // more exactly Bk=B0-[B0*St' Yt']*[St*B0*St'  L]*[St*B0]

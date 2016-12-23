@@ -58,11 +58,19 @@ hiopHessianLowRank::hiopHessianLowRank(const hiopNlpDenseConstraints* nlp_, int 
   sigma_safe_min=1e-8;
   sigma_safe_max=1e+8;
   nlp->log->printf(hovScalars, "Hessian Low Rank: initial sigma is %g\n", sigma);
+
+#ifdef DEEP_CHECKING
+  _Dx = DhInv->alloc_clone();
+#endif
+
 }  
 
 hiopHessianLowRank::~hiopHessianLowRank()
 {
   if(DhInv) delete DhInv;
+#ifdef DEEP_CHECKING
+  delete _Dx;
+#endif
 
   if(St) delete St;
   if(Yt) delete Yt;
@@ -102,6 +110,7 @@ bool hiopHessianLowRank::updateLogBarrierDiagonal(const hiopVector& Dx)
   DhInv->axpy(1.0,Dx);
 #ifdef DEEP_CHECKING
   assert(DhInv->allPositive());
+  _Dx->copyFrom(Dx);
 #endif
   DhInv->invert();
   nlp->log->write("hiopHessianLowRank: inverse diag DhInv:", *DhInv, hovMatrices);
@@ -719,7 +728,7 @@ void hiopHessianLowRank::timesVecCmn(double beta, hiopVector& y, double alpha, c
   assert(l_curr-1==St->m());
   assert(y.get_size()==n);
   //we have B+=B-B*s*B*s'/(s'*B*s)+yy'/(y'*s)
-  //B0 is sigma*I (and is NOT this->H0, since this->H0=(B0+Dx)^{-1})
+  //B0 is sigma*I. There is an additional diagonal log-barrier term _Dx
 
   bool print=true;
   if(print) {
@@ -728,6 +737,8 @@ void hiopHessianLowRank::timesVecCmn(double beta, hiopVector& y, double alpha, c
     nlp->log->write("Y':", *Yt, hovMatrices);
     nlp->log->write("DhInv:", *DhInv, hovMatrices);
     nlp->log->printf(hovMatrices, "sigma=%22.16e  addLogTerm=%d\n", sigma, addLogTerm);
+    if(addLogTerm)
+      nlp->log->write("Dx:", *_Dx, hovMatrices);
     nlp->log->printf(hovMatrices, "y=beta*y + alpha*this*x : beta=%g alpha=%g\n", beta, alpha);
     nlp->log->write("x_in:", x, hovMatrices);
     nlp->log->write("y_in:", y, hovMatrices);
@@ -768,9 +779,10 @@ void hiopHessianLowRank::timesVecCmn(double beta, hiopVector& y, double alpha, c
   //y = beta*y+alpha*(B0+Dx)*x + alpha* sum { bk'x bk - ak'x ak : k=0,1,...,l_curr-1}
   y.scale(beta);
   if(addLogTerm) 
-    y.axdzpy(alpha,x,*DhInv);
-  else
-    y.axpy(alpha*sigma, x); 
+    y.axzpy(alpha,x,*_Dx);
+
+  y.axpy(alpha*sigma, x); 
+
   for(int k=0; k<l_curr-1; k++) {
     double bkTx = b[k]->dotProductWith(x);
     double akTx = a[k]->dotProductWith(x);
