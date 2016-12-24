@@ -114,6 +114,7 @@ public:
   void getRow(long long irow, hiopVector& row_vec);
 #ifdef DEEP_CHECKING
   void overwriteUpperTriangleWithLower();
+  void overwriteLowerTriangleWithUpper();
 #endif
   inline long long get_local_size_n() const { return n_local; }
   inline long long get_local_size_m() const { return m_local; }

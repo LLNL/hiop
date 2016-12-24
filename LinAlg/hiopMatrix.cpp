@@ -170,6 +170,13 @@ void hiopMatrixDense::overwriteUpperTriangleWithLower()
     for(int j=i+1; j<n_local; j++)
       M[i][j] = M[j][i];
 }
+void hiopMatrixDense::overwriteLowerTriangleWithUpper()
+{
+  assert(n_local==n_global && "Use only with local, non-distributed matrices");
+  for(int i=1; i<m_local; i++)
+    for(int j=0; j<i; j++)
+      M[i][j] = M[j][i];
+}
 #endif
 
 hiopMatrixDense* hiopMatrixDense::alloc_clone() const

@@ -298,8 +298,8 @@ void hiopHessianLowRank::updateInternalBFGSRepresentation()
 #else
   //substract L
   StB0DhInvYmL.addMatrix(-1.0, *L);
-  // (2,1) block in V
-  V->copyBlockFromMatrix(l,0,StB0DhInvYmL);
+  // (1,2) block in V
+  V->copyBlockFromMatrix(0,l,StB0DhInvYmL);
 #endif
 
   //-- block (2,2)
@@ -324,10 +324,10 @@ void hiopHessianLowRank::updateInternalBFGSRepresentation()
   DpYtDhInvY.addDiagonal(*D);
   V->copyBlockFromMatrix(l,l,DpYtDhInvY);
 
-  // - block (2,1)
+  // - block (1,2)
   StB0DhInvYmL.copyFrom(_buff2_lxlx3+l*l);
   StB0DhInvYmL.addMatrix(-1.0, *L);
-  V->copyBlockFromMatrix(l,0,StB0DhInvYmL);
+  V->copyBlockFromMatrix(0,l,StB0DhInvYmL);
 
   // - block (1,1)
   StDS.copyFrom(_buff2_lxlx3+2*l*l);
@@ -336,7 +336,7 @@ void hiopHessianLowRank::updateInternalBFGSRepresentation()
 #ifdef DEEP_CHECKING
   delete _Vmat;
   _Vmat = V->new_copy();
-  _Vmat->overwriteUpperTriangleWithLower();
+  _Vmat->overwriteLowerTriangleWithUpper();
 #endif
 
   //finally, factorize V
@@ -492,7 +492,7 @@ void hiopHessianLowRank::factorizeV()
   nlp->log->write("factorizeV:  V is ", *V, hovMatrices);
 #endif
 
-  char uplo='U'; //V is lower in C++ so it's upper in fortran
+  char uplo='L'; //V is upper in C++ so it's lower in fortran
 
   if(_V_ipiv_vec==NULL) _V_ipiv_vec=new int[N];
   else if(_V_ipiv_size!=N) { delete[] _V_ipiv_vec; _V_ipiv_vec=new int[N]; _V_ipiv_size=N; }
@@ -537,7 +537,7 @@ void hiopHessianLowRank::solveWithV(hiopVectorPar& rhs_s, hiopVectorPar& rhs_y)
 #endif
 
   int lda=N, one=1, info;
-  char uplo='U'; 
+  char uplo='L'; 
 #ifdef DEEP_CHECKING
   assert(N==rhs_s.get_size()+rhs_y.get_size());
 #endif
@@ -580,7 +580,7 @@ void hiopHessianLowRank::solveWithV(hiopMatrixDense& rhs)
 
   //rhs is transpose in C++
 
-  char uplo='U'; 
+  char uplo='L'; 
   int lda=N, ldb=N, nrhs=rhs.m(), info;
 #ifdef DEEP_CHECKING
   assert(N==rhs.n()); 
