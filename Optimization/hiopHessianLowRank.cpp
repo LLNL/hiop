@@ -17,7 +17,7 @@
 #define SIGMA_CONSTANT  5
 
 hiopHessianLowRank::hiopHessianLowRank(const hiopNlpDenseConstraints* nlp_, int max_mem_len)
-  : l_max(max_mem_len), l_curr(0), sigma(1.), sigma0(1.), nlp(nlp_), matrixChanged(false)
+  : l_max(max_mem_len), l_curr(-1), sigma(1.), sigma0(1.), nlp(nlp_), matrixChanged(false)
 {
   DhInv = dynamic_cast<hiopVectorPar*>(nlp->alloc_primal_vec());
   St = nlp->alloc_multivector_primal(0,l_max);
@@ -160,8 +160,8 @@ bool hiopHessianLowRank::update(const hiopIterate& it_curr, const hiopVector& gr
   assert(it_curr.sxl->matchesPattern(nlp->get_ixl()));
   assert(it_curr.sxu->matchesPattern(nlp->get_ixu()));
 #endif
-
-  if(l_curr>0) {
+  //on first call l_curr=-1
+  if(l_curr>=0) {
     long long n=grad_f_curr.get_size();
     //compute s_new = x_curr-x_prev
     hiopVectorPar& s_new = new_n_vec1(n);  s_new.copyFrom(*it_curr.x); s_new.axpy(-1.,*_it_prev->x);
@@ -187,7 +187,7 @@ bool hiopHessianLowRank::update(const hiopIterate& it_curr, const hiopVector& gr
 
       if(sTy>s_nrm2*y_nrm2*std::numeric_limits<double>::epsilon()) { //sTy far away from zero
 	//compute the new row in L, update S and Y (either augment them or shift cols and add s_new and y_new)
-	hiopVectorPar& YTs = new_l_vec1(l_curr-1);
+	hiopVectorPar& YTs = new_l_vec1(l_curr);
 	Yt->timesVec(0.0, YTs, 1.0, s_new);
 	//update representation
 	if(l_curr<l_max) {
@@ -203,11 +203,16 @@ bool hiopHessianLowRank::update(const hiopIterate& it_curr, const hiopVector& gr
 	  Yt->shiftRows(-1);
 	  St->replaceRow(l_max-1, s_new);
 	  Yt->replaceRow(l_max-1, y_new);
-	  //updateL(YTs,sTy);
+	  updateL(YTs,sTy);
 	  updateD(sTy);
 	  l_curr=l_max;
 	}
-
+#ifdef DEEP_CHECKING
+	nlp->log->printf(hovMatrices, "\nhiopHessianLowRank: these are L and D from the BFGS compact representation\n");
+	nlp->log->write("L", *L, hovMatrices);
+	nlp->log->write("D", *D, hovMatrices);
+	nlp->log->printf(hovMatrices, "\n");
+#endif
 	//update B0 (i.e., sigma)
 	switch (sigma_update_strategy ) {
 	case SIGMA_STRATEGY1:
@@ -617,8 +622,8 @@ void hiopHessianLowRank::growL(const int& lmem_curr, const int& lmem_max, const 
   int l=L->m();
 #ifdef DEEP_CHECKING
   assert(l==L->n());
-  assert(lmem_curr-1==l);
-  assert(lmem_max>l);
+  assert(lmem_curr==l);
+  assert(lmem_max>=l);
 #endif
   //newL = [   L     0]
   //       [ Y^T*s   0]
@@ -642,8 +647,8 @@ void hiopHessianLowRank::growL(const int& lmem_curr, const int& lmem_max, const 
 void hiopHessianLowRank::growD(const int& lmem_curr, const int& lmem_max, const double& sTy)
 {
   int l=D->get_size();
-  assert(l==lmem_curr-1);
-  assert(lmem_max>l);
+  assert(l==lmem_curr);
+  assert(lmem_max>=l);
 
   hiopVectorPar* Dnew=new hiopVectorPar(l+1);
   double* Dnew_vec=Dnew->local_data();
@@ -654,12 +659,17 @@ void hiopHessianLowRank::growD(const int& lmem_curr, const int& lmem_max, const 
   D=Dnew;
 }
 
+/* L_{ij} = s_{i-1}^T y_{j-1}, if i>j, otherwise zero. Here i,j = 0,1,...,l_curr-1
+ * L_new = lift and shift L to the left; replace last row with [Yts;0]
+ */
 void hiopHessianLowRank::updateL(const hiopVectorPar& YTs, const double& sTy)
 {
   int l=YTs.get_size();
 #ifdef DEEP_CHECKING
   assert(l==L->m());
   assert(l==L->n());
+  assert(l_curr==l);
+  assert(l_curr==l_max);
 #endif
   const int lm1=l-1;
   double** L_mat=L->local_data();
@@ -669,11 +679,12 @@ void hiopHessianLowRank::updateL(const hiopVectorPar& YTs, const double& sTy)
       L_mat[i][j] = L_mat[i+1][j+1];
 
   //is this really needed?
-  for(int i=0; i<lm1; i++)
-    L_mat[i][lm1]=0.0;
+  //for(int i=0; i<lm1; i++)
+  //  L_mat[i][lm1]=0.0;
 
+  //first entry in YTs corresponds to y_to_be_discarded_since_it_is_the_oldest'* s_new and is discarded
   for(int j=0; j<lm1; j++)
-    L_mat[lm1][j]=yts_vec[j];
+    L_mat[lm1][j]=yts_vec[j+1];
 
   L_mat[lm1][lm1]=0.0;
 }
@@ -787,7 +798,7 @@ using namespace std;
 void hiopHessianLowRank::timesVecCmn(double beta, hiopVector& y, double alpha, const hiopVector& x, bool addLogTerm) 
 {
   long long n=St->n();
-  assert(l_curr-1==St->m());
+  assert(l_curr==St->m());
   assert(y.get_size()==n);
   //we have B+=B-B*s*B*s'/(s'*B*s)+yy'/(y'*s)
   //B0 is sigma*I. There is an additional diagonal log-barrier term _Dx
@@ -810,7 +821,7 @@ void hiopHessianLowRank::timesVecCmn(double beta, hiopVector& y, double alpha, c
   hiopVectorPar *sk=dynamic_cast<hiopVectorPar*>(nlp->alloc_primal_vec());
   //allocate and compute a_k and b_k
   vector<hiopVectorPar*> a(l_curr),b(l_curr);
-  for(int k=0; k<l_curr-1; k++) {
+  for(int k=0; k<l_curr; k++) {
     //bk=yk/sqrt(yk'*sk)
     yk->copyFrom(Yt->local_data()[k]);
     sk->copyFrom(St->local_data()[k]);
@@ -836,7 +847,7 @@ void hiopHessianLowRank::timesVecCmn(double beta, hiopVector& y, double alpha, c
     a[k]->scale(1/sqrt(skTak));
   }
 
-  //new we have B= B_0 + sum{ bk bk' - ak ak' : k=0,1,...,l_curr-1} 
+  //now we have B= B_0 + sum{ bk bk' - ak ak' : k=0,1,...,l_curr-1} 
   //compute the product with x
   //y = beta*y+alpha*(B0+Dx)*x + alpha* sum { bk'x bk - ak'x ak : k=0,1,...,l_curr-1}
   y.scale(beta);
@@ -845,7 +856,7 @@ void hiopHessianLowRank::timesVecCmn(double beta, hiopVector& y, double alpha, c
 
   y.axpy(alpha*sigma, x); 
 
-  for(int k=0; k<l_curr-1; k++) {
+  for(int k=0; k<l_curr; k++) {
     double bkTx = b[k]->dotProductWith(x);
     double akTx = a[k]->dotProductWith(x);
     
@@ -1417,7 +1428,7 @@ void hiopHessianInvLowRank_obsolette::growR(const int& lmem_curr, const int& lme
   int l=R->m();
 #ifdef DEEP_CHECKING
   assert(l==R->n());
-  assert(lmem_curr-1==l);
+  assert(lmem_curr==l);
   assert(lmem_max>l);
 #endif
   //newR = [ R S^T*y ]
@@ -1443,7 +1454,7 @@ void hiopHessianInvLowRank_obsolette::growR(const int& lmem_curr, const int& lme
 void hiopHessianInvLowRank_obsolette::growD(const int& lmem_curr, const int& lmem_max, const double& sTy)
 {
   int l=D->get_size();
-  assert(l==lmem_curr-1);
+  assert(l==lmem_curr);
   assert(lmem_max>l);
 
   hiopVectorPar* Dnew=new hiopVectorPar(l+1);

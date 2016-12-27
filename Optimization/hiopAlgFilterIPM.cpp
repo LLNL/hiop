@@ -32,7 +32,7 @@ hiopAlgFilterIPM::hiopAlgFilterIPM(hiopNlpDenseConstraints* nlp_)
   _Jac_c_trial   = nlp->alloc_Jac_c();
   _Jac_d_trial   = nlp->alloc_Jac_d();
 
-  _Hess    = new hiopHessianLowRank(nlp,10);
+  _Hess    = new hiopHessianLowRank(nlp,6);
 
   resid = new hiopResidual(nlp);
   resid_trial = new hiopResidual(nlp);

@@ -73,7 +73,7 @@ public:
 
 protected:
   int l_max; //max memory size
-  int l_curr; //current memory
+  int l_curr; //number of pairs currently stored
   double sigma; //initial scaling factor of identity
   double sigma0; //default scaling factor of identity
   int sigma_update_strategy;
