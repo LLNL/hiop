@@ -32,7 +32,7 @@ hiopAlgFilterIPM::hiopAlgFilterIPM(hiopNlpDenseConstraints* nlp_)
   _Jac_c_trial   = nlp->alloc_Jac_c();
   _Jac_d_trial   = nlp->alloc_Jac_d();
 
-  _Hess    = new hiopHessianLowRank(nlp,6);
+  _Hess    = new hiopHessianLowRank(nlp,10);
 
   resid = new hiopResidual(nlp);
   resid_trial = new hiopResidual(nlp);
@@ -77,7 +77,7 @@ hiopAlgFilterIPM::~hiopAlgFilterIPM()
   if(_d_trial)       delete _d_trial;
   if(_grad_f_trial)  delete _grad_f_trial;
   if(_Jac_c_trial)   delete _Jac_c_trial;
-  if(_Jac_d_trial)   delete _Jac_d;
+  if(_Jac_d_trial)   delete _Jac_d_trial;
 
   if(resid_trial)    delete resid_trial;
 
@@ -117,7 +117,7 @@ int hiopAlgFilterIPM::run()
   this->evalNlp(*it_curr, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d);
   //update log bar
   logbar->updateWithNlpInfo(*it_curr, _mu, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d);
-  nlp->log->printf(hovSummary, "log bar obj: %g", logbar->f_logbar);
+  nlp->log->printf(hovScalars, "log bar obj: %g", logbar->f_logbar);
   //recompute the residuals
   resid->update(*it_curr,_f_nlp, *_c, *_d,*_grad_f,*_Jac_c,*_Jac_d, *logbar);
 
@@ -138,6 +138,7 @@ int hiopAlgFilterIPM::run()
     bret = evalNlpAndLogErrors(*it_curr, *resid, _mu, 
 			       _err_nlp_optim, _err_nlp_feas, _err_nlp_complem, _err_nlp, 
 			       _err_log_optim, _err_log_feas, _err_log_complem, _err_log); assert(bret);
+
     nlp->log->printf(hovScalars, "  Nlp    errs: pr-infeas:%20.14e   dual-infeas:%20.14e  comp:%20.14e  overall:%20.14e\n",
 		     _err_nlp_feas, _err_nlp_optim, _err_nlp_complem, _err_nlp);
     nlp->log->printf(hovScalars, "  LogBar errs: pr-infeas:%20.14e   dual-infeas:%20.14e  comp:%20.14e  overall:%20.14e\n",
@@ -169,7 +170,7 @@ int hiopAlgFilterIPM::run()
 	continue; 
       }
     }
-    nlp->log->printf(hovSummary, "Iter[%d] logbarObj=%20.14e (mu=%12.5e)\n", iter_num, logbar->f_logbar,_mu);
+    nlp->log->printf(hovScalars, "Iter[%d] logbarObj=%20.14e (mu=%12.5e)\n", iter_num, logbar->f_logbar,_mu);
     // --- search direction calculation ---
     //first update the Hessian and kkt system
     _Hess->update(*it_curr,*_grad_f,*_Jac_c,*_Jac_d);
@@ -211,7 +212,7 @@ int hiopAlgFilterIPM::run()
       if(theta_trial>=theta_min) {
 	//check the filter and the sufficient decrease condition (18)
 	if(!filter.contains(theta_trial,logbar->f_logbar_trial)) {
-	  if(theta_trial<=(1-gamma_theta)*theta || logbar->f_logbar_trial<=logbar->f_logbar - (1-gamma_phi)*theta) {
+	  if(theta_trial<=(1-gamma_theta)*theta || logbar->f_logbar_trial<=logbar->f_logbar - gamma_phi*theta) {
 	    //trial good to go
 	    break;
 	  } else {
@@ -246,8 +247,8 @@ int hiopAlgFilterIPM::run()
 	//ok to go with  "sufficient progress" condition even when close to solution
 	//check the filter and the sufficient decrease condition (18)
 	if(!filter.contains(theta_trial,logbar->f_logbar_trial)) {
-	  //if(theta_trial<=(1-gamma_theta)*theta || logbar->f_logbar_trial<=logbar->f_logbar - (1-gamma_phi)*theta) {
-          if(logbar->f_logbar_trial<=logbar->f_logbar - (1-gamma_phi)*theta) {
+	  //if(theta_trial<=(1-gamma_theta)*theta || logbar->f_logbar_trial<=logbar->f_logbar - gamma_phi*theta) {
+          if(logbar->f_logbar_trial<=logbar->f_logbar - gamma_phi*theta) {
 	    //trial good to go
 	    break;
 	  } else {
@@ -398,8 +399,8 @@ bool hiopAlgFilterIPM::evalNlp_derivOnly(hiopIterate& iter,
 void hiopAlgFilterIPM::outputIteration()
 {
   if(iter_num/10*10==iter_num) 
-    printf("iter    objective     inf_pr     inf_du    lg(mu)  ||d||    lg(rg)   alpha_du    alpha_pr  ls\n");
-  printf("%4d %14.7e %7.3e  %7.3e %6.2f  %7.3e     -     %7.3e   %7.3e  -\n",
-	 iter_num, _f_nlp, _err_nlp_feas, _err_nlp_optim, log10(_mu), 0.0, _alpha_dual, _alpha_primal); 
+    printf("iter    objective     inf_pr     inf_du   lg(mu)  alpha_du   alpha_pr\n");
+  printf("%4d %14.7e %7.3e  %7.3e %6.2f  %7.3e  %7.3e\n",
+	 iter_num, _f_nlp, _err_nlp_feas, _err_nlp_optim, log10(_mu), _alpha_dual, _alpha_primal); 
 
 }
