@@ -132,15 +132,15 @@ void hiopMatrixDense::shiftRows(long long shift)
   if(shift==0) return;
   assert(fabs(shift)<m_local);
 #ifdef DEEP_CHECKING
-  //not sure if memcpy is sequential on all systems and if the below code works correctly.
+  //not sure if memcpy is copying sequentially on all systems. we check this.
   //let's at least check it
   double test1=shift<0 ? M[-shift][0] : M[m_local-shift][0];
   double test2=shift<0 ? M[-shift][n_local-1] : M[m_local-shift][n_local-1];
 #endif
 
   //shift < 0 -> up; shift > 0 -> down
-  if(shift<0) memcpy(M[0], M[-shift], n_local*(m_local+shift));
-  else        memcpy(M[shift], M[0],  n_local*(m_local-shift));
+  if(shift<0) memcpy(M[0], M[-shift], n_local*(m_local+shift)*sizeof(double));
+  else        memcpy(M[shift], M[0],  n_local*(m_local-shift)*sizeof(double));
 
 #ifdef DEEP_CHECKING
   assert(test1==M[shift<0?0:m_local][0] && "a different copy technique than memcpy is needed on this system");
