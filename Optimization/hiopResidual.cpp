@@ -116,7 +116,7 @@ int hiopResidual::update(const hiopIterate& it,
   rx->axpy(-1.0, *it.zl);
   rx->axpy( 1.0, *it.zu);
   nrmInf_nlp_optim = fmax(nrmInf_nlp_optim, rx->infnorm_local());
-  logprob.addLogBarTermsToGrad_x(1.0, *rx);
+  logprob.addNonLogBarTermsToGrad_x(1.0, *rx);
   rx->negate();
   nrmInf_bar_optim = fmax(nrmInf_bar_optim, rx->infnorm_local());
   //~ done with rx
@@ -125,7 +125,7 @@ int hiopResidual::update(const hiopIterate& it,
   rd->axpy( 1.0, *it.vl);
   rd->axpy(-1.0, *it.vu);
   nrmInf_nlp_optim = fmax(nrmInf_nlp_optim, rd->infnorm_local());
-  logprob.addLogBarTermsToGrad_d(-1.0,*rd);
+  logprob.addNonLogBarTermsToGrad_d(-1.0,*rd);
   nrmInf_bar_optim = fmax(nrmInf_bar_optim, rd->infnorm_local());
   //ryc
   ryc->copyFrom(nlp->get_crhs());

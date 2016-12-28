@@ -35,13 +35,32 @@ public:
   {
     mu=mu_; c_nlp=&c_; d_nlp=&d_; Jac_c_nlp=&Jac_c_; Jac_d_nlp=&Jac_d_; iter=&iter_;
     _grad_x_logbar->copyFrom(gradf_);
-    _grad_d_logbar->setToZero(); double aux=-mu * iter->evalLogBarrier();
+    _grad_d_logbar->setToZero(); 
+    //add log terms to function
+    double aux=-mu * iter->evalLogBarrier();
     f_logbar = f + aux;
+
+#ifdef DEEP_CHECKING
+    nlp->log->write("gradx_log_bar grad_f:", *_grad_x_logbar, hovLinesearchVerb);
+#endif
+    //add log terms to gradient
+    iter->addLogBarGrad_x(mu, *_grad_x_logbar);
+    iter->addLogBarGrad_d(mu, *_grad_d_logbar);
+
+#ifdef DEEP_CHECKING
+    nlp->log->write("gradx_log_bar grad_log:", *_grad_x_logbar, hovLinesearchVerb);
+#endif
+
+    //add damping terms
     if(kappa_d>0.) {
       iter->addLinearDampingTermToGrad_x(mu,kappa_d,1.0,*_grad_x_logbar);
       iter->addLinearDampingTermToGrad_d(mu,kappa_d,1.0,*_grad_d_logbar);
 
       f_logbar += iter->linearDampingTerm(mu,kappa_d);
+#ifdef DEEP_CHECKING
+    nlp->log->write("gradx_log_bar final, with damping:", *_grad_x_logbar, hovLinesearchVerb);
+    nlp->log->write("gradd_log_bar final, with damping:", *_grad_d_logbar, hovLinesearchVerb);
+#endif
     }
   }
   inline void 
@@ -52,13 +71,13 @@ public:
     f_logbar_trial = f - mu * iter_trial->evalLogBarrier();
     if(kappa_d>0.) f_logbar_trial += iter_trial->linearDampingTerm(mu,kappa_d);
   }
-  /* gradx += beta*grad_x_logBar*/
-  inline void addLogBarTermsToGrad_x(const double& beta, hiopVector& gradx) const
+  /* adds non-log bar terms to the gradient, e.g., damping terms */
+  inline void addNonLogBarTermsToGrad_x(const double& beta, hiopVector& gradx) const
   {
     if(kappa_d>0.) iter->addLinearDampingTermToGrad_x(mu,kappa_d,beta,gradx);
   }
-  /* gradd += beta*grad_d_logBar*/
-  inline void addLogBarTermsToGrad_d(const double& beta, hiopVector& gradd) const
+  /* adds non-log bar terms to the gradient, e.g., damping terms */
+  inline void addNonLogBarTermsToGrad_d(const double& beta, hiopVector& gradd) const
   {
     if(kappa_d>0.) iter->addLinearDampingTermToGrad_d(mu,kappa_d,beta,gradd);
   }
