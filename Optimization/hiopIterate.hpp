@@ -33,6 +33,9 @@ public:
   virtual bool adjustDuals_primalLogHessian(const double& mu, const double& kappa_Sigma);
   /* compute the log-barrier term for the primal signed variables */
   virtual double evalLogBarrier() const;
+  /* add the derivative of the log-barier terms*/
+  virtual void addLogBarGrad_x(const double& mu, hiopVector& gradx) const;
+  virtual void addLogBarGrad_d(const double& mu, hiopVector& gradd) const;
 
   /* computes the log barrier's linear damping term of the Filter-IPM method of WaectherBiegler (section 3.7) */
   virtual double linearDampingTerm(const double& mu, const double& kappa_d) const;

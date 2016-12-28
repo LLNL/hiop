@@ -286,6 +286,20 @@ double hiopIterate::evalLogBarrier() const
   return barrier;
 }
 
+
+void  hiopIterate::addLogBarGrad_x(const double& mu, hiopVector& gradx) const
+{
+  // gradx = grad - mu / sxl = grad - mu * select/sxl
+  gradx.addLogBarrierGrad(-mu, *sxl, nlp->get_ixl());
+  gradx.addLogBarrierGrad( mu, *sxu, nlp->get_ixu());
+}
+
+void  hiopIterate::addLogBarGrad_d(const double& mu, hiopVector& gradd) const
+{
+  gradd.addLogBarrierGrad(-mu, *sdl, nlp->get_idl());
+  gradd.addLogBarrierGrad( mu, *sdu, nlp->get_idu());
+}
+
 double hiopIterate::linearDampingTerm(const double& mu, const double& kappa_d) const
 {
   double term;

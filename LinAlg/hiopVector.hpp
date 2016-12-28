@@ -59,6 +59,9 @@ public:
   virtual void invert() = 0;
   /* compute log barrier term, that is sum{ln(x_i):i=1,..,n} */
   virtual double logBarrier(const hiopVector& select) const = 0;
+  /* adds the gradient of the log barrier, namely this=this+alpha*1/select(x) */
+  virtual void addLogBarrierGrad(double alpha, const hiopVector& x, const hiopVector& select)=0;
+
   /* computes the log barrier's linear damping term of the Filter-IPM method of WaectherBiegler (see paper, section 3.7).
    * Essentially compute  kappa_d*mu* \sum { this[i] | ixleft[i]==1 and ixright[i]==0 } */
   virtual double linearDampingTerm(const hiopVector& ixleft, const hiopVector& ixright, 
@@ -137,6 +140,8 @@ public:
   virtual void negate();
   virtual void invert();
   virtual double logBarrier(const hiopVector& select) const;
+  virtual void addLogBarrierGrad(double alpha, const hiopVector& x, const hiopVector& select);
+
   virtual double linearDampingTerm(const hiopVector& ixl_select, const hiopVector& ixu_select, 
 				   const double& mu, const double& kappa_d) const;
   virtual int allPositive();

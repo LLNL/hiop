@@ -431,6 +431,23 @@ double hiopVectorPar::logBarrier(const hiopVector& select) const
       res += log(data[i]);
   return res;
 }
+
+/* adds the gradient of the log barrier, namely this=this+alpha*1/select(x) */
+void  hiopVectorPar::addLogBarrierGrad(double alpha, const hiopVector& x, const hiopVector& ix)
+{
+#ifdef DEEP_CHECKING
+  assert(this->n_local == dynamic_cast<const hiopVectorPar&>(ix).get_size());
+  assert(this->n_local == dynamic_cast<const hiopVectorPar&>( x).get_size());
+#endif
+  const double* ix_vec = dynamic_cast<const hiopVectorPar&>(ix).data;
+  const double*  x_vec = dynamic_cast<const hiopVectorPar&>( x).data;
+
+  for(int i=0; i<n_local; i++) 
+    if(ix_vec[i]==1.) 
+      data[i] += alpha/x_vec[i];
+}
+
+
 double hiopVectorPar::linearDampingTerm(const hiopVector& ixleft, const hiopVector& ixright, 
 				   const double& mu, const double& kappa_d) const
 {
