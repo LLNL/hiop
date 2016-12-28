@@ -34,7 +34,7 @@ private:
   bool updateLogBarrierParameters(const hiopIterate& it, const double& mu_curr, const double& tau_curr,
 				  double& mu_new, double& tau_new);
 
-  virtual void outputIteration();
+  virtual void outputIteration(int lsStatus, int lsNum);
 private:
   hiopNlpDenseConstraints* nlp;
   hiopFilter filter;

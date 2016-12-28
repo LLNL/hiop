@@ -1,10 +1,8 @@
 #include "hiopAlgFilterIPM.hpp"
 #include "hiopKKTLinSys.hpp"
 
-
-
 #include <cmath>
-
+#include <cstring>
 #include <cassert>
 
 hiopAlgFilterIPM::hiopAlgFilterIPM(hiopNlpDenseConstraints* nlp_)
@@ -87,7 +85,7 @@ hiopAlgFilterIPM::~hiopAlgFilterIPM()
 int hiopAlgFilterIPM::defaultStartingPoint(hiopIterate& it_ini)
 {
   if(!nlp->get_starting_point(*it_ini.get_x())) {
-    printf("error: in getting the user provided starting point");
+    printf("error: in getting the user provided starting point\n");
     assert(false); return false;
   }
   it_ini.projectPrimalsXIntoBounds(kappa1, kappa2);
@@ -105,6 +103,8 @@ int hiopAlgFilterIPM::defaultStartingPoint(hiopIterate& it_ini)
   //-- //! lsq for yd and yc
   //for now set them to zero
   it_ini.setEqualityDualsToConstant(0.);
+
+  nlp->log->write("Using initial point:", it_ini, hovIteration);
 
   return true;
 }
@@ -131,23 +131,34 @@ int hiopAlgFilterIPM::run()
   hiopKKTLinSysLowRank* kkt=new hiopKKTLinSysLowRank(nlp);
 
   _alpha_primal = _alpha_dual = 0;
-  
-  bool bStopAlg=false; int nAlgStatus=0; bool bret=true;
-  while(!bStopAlg) {
+
+  //algorithm status
+  //-1 couldn't solve the problem (most likely because small search step. Restauration phase likely needed)
+  //0 success
+  //1 max iter reached
+
+  int algStatus=0; bool bret=true; int lsStatus=-1, lsNum=-1;
+  while(true) {
 
     bret = evalNlpAndLogErrors(*it_curr, *resid, _mu, 
 			       _err_nlp_optim, _err_nlp_feas, _err_nlp_complem, _err_nlp, 
 			       _err_log_optim, _err_log_feas, _err_log_complem, _err_log); assert(bret);
-
     nlp->log->printf(hovScalars, "  Nlp    errs: pr-infeas:%20.14e   dual-infeas:%20.14e  comp:%20.14e  overall:%20.14e\n",
 		     _err_nlp_feas, _err_nlp_optim, _err_nlp_complem, _err_nlp);
     nlp->log->printf(hovScalars, "  LogBar errs: pr-infeas:%20.14e   dual-infeas:%20.14e  comp:%20.14e  overall:%20.14e\n",
 		     _err_log_feas, _err_log_optim, _err_log_complem, _err_log);
+    outputIteration(lsStatus, lsNum);
+    /*************************************************
+     * Termination checks
+     ************************************************/
+    if(_err_nlp<=eps_tol) { algStatus=0; break; }
+    if(iter_num>=500) { algStatus=1; break; }
+    if(algStatus!=0) break; //failure of the line search
 
-    outputIteration();
- 
-    if(_err_nlp<=eps_tol) { bStopAlg=1; nAlgStatus=1; break; }
-    if(_err_log<=kappa_eps * _mu) {
+    /************************************************
+     * update mu and other parameters
+     ************************************************/
+    while(_err_log<=kappa_eps * _mu) {
       //update mu and tau (fraction-to-boundary)
       bret = updateLogBarrierParameters(*it_curr, _mu, _tau, _mu, _tau);
       nlp->log->printf(hovScalars, "Iter[%d] barrier params reduced: mu=%g tau=%g\n", iter_num, _mu, _tau);
@@ -165,13 +176,15 @@ int hiopAlgFilterIPM::run()
 		       _err_log_feas, _err_log_optim, _err_log_complem, _err_log);    
       
       filter.reinitialize(theta_max);
-      //recheck residuals for at the first iteration in case the starting pt is  very good
-      if(iter_num==0) {
-	continue; 
-      }
+      //recheck residuals at the first iteration in case the starting pt is  very good
+      //if(iter_num==0) {
+      //	continue; 
+      //}
     }
     nlp->log->printf(hovScalars, "Iter[%d] logbarObj=%20.14e (mu=%12.5e)\n", iter_num, logbar->f_logbar,_mu);
-    // --- search direction calculation ---
+    /****************************************************
+     * Search direction calculation
+     ***************************************************/
     //first update the Hessian and kkt system
     _Hess->update(*it_curr,*_grad_f,*_Jac_c,*_Jac_d);
     kkt->update(it_curr,_grad_f,_Jac_c,_Jac_d, _Hess);
@@ -181,18 +194,28 @@ int hiopAlgFilterIPM::run()
     /***************************************************************
      * backtracking line search
      ****************************************************************/
-    //max step
+    //maximum  step
     bret = it_curr->fractionToTheBdry(*dir, _tau, _alpha_primal, _alpha_dual); assert(bret);
     double theta = resid->getInfeasInfNorm(); //at it_curr
     double theta_trial;
 
+    //line search status for the accepted trial point. Needed to update the filter
+    //-1 uninitialized (first iteration)
+    //0 unsuccessful (small step size)
+    //1 "sufficient decrease" when far away from solution (theta_trial>theta_min)
+    //2 close to solution but switching condition does not hold, so trial accepted based on "sufficient decrease"
+    //3 close to solution and switching condition is true; trial accepted based on Armijo
+    lsStatus=0; lsNum=0;
+
     bool grad_phi_dx_computed=false; double grad_phi_dx;
     
+    //this is the linesearch loop
     while(true) {
       //check the step against the minimum step size
       if(_alpha_primal<1e-16) {
-	nlp->log->write("Panic: minimum step size reached",hovSummary);
-	assert(false);
+	nlp->log->write("Panic: minimum step size reached. The problem may be infeasible. Restauration phase is needed, but not yet implemented. Will exit here.",hovError);
+	algStatus=-1;
+	break;
       }
 
       bret = it_trial->takeStep_primals(*it_curr, *dir, _alpha_primal, _alpha_dual); assert(bret);
@@ -203,10 +226,11 @@ int hiopAlgFilterIPM::run()
       //compute infeasibility theta at trial point.
       theta_trial = resid->computeNlpInfeasInfNorm(*it_trial, *_c_trial, *_d_trial);
 
-      nlp->log->printf(hovLinesearch, "  trial point: alphaPrimal=%14.8e barier:(%15.9e)>%15.9e theta:(%15.9e)>%15.9e\n",
-		       _alpha_primal, logbar->f_logbar, logbar->f_logbar_trial, theta, theta_trial);
+      lsNum++;
 
-      bool switchingCondTrue=false;
+      nlp->log->printf(hovLinesearch, "  trial point %d: alphaPrimal=%14.8e barier:(%22.16e)>%15.9e theta:(%22.16e)>%22.16e\n",
+		       lsNum, _alpha_primal, logbar->f_logbar, logbar->f_logbar_trial, theta, theta_trial);
+
       //let's do the cheap, "sufficient progress" test first, before more involved/expensive tests. 
       // This simple test is good enough when iterate is far away from solution
       if(theta_trial>=theta_min) {
@@ -214,6 +238,8 @@ int hiopAlgFilterIPM::run()
 	if(!filter.contains(theta_trial,logbar->f_logbar_trial)) {
 	  if(theta_trial<=(1-gamma_theta)*theta || logbar->f_logbar_trial<=logbar->f_logbar - gamma_phi*theta) {
 	    //trial good to go
+	    nlp->log->printf(hovLinesearchVerb, "Linesearch: accepting based on suff. decrease (far from solution)\n");
+	    lsStatus=1;
 	    break;
 	  } else {
 	    //there is no sufficient progress 
@@ -225,53 +251,85 @@ int hiopAlgFilterIPM::run()
 	  _alpha_primal *= 0.5;
 	  continue;
 	}  
+	nlp->log->write("Warning (close to panic): I got to a point where I wasn't supposed to be. (1)",hovWarning);
       } else {
-	if(theta_trial<=theta_min) { 
-	  // if(theta_trial<theta_min  then check the switching condition and Armijo rule
-	  // first compute grad_phi^T d_x if it hasn't already been computed
-	  if(!grad_phi_dx_computed) { grad_phi_dx = logbar->directionalDerivative(*dir); grad_phi_dx_computed=true; }
-	  //this is the actual switching condition
-	  if(grad_phi_dx<0 && _alpha_primal*pow(grad_phi_dx,s_phi)>delta*pow(theta,s_theta)) {
-	    switchingCondTrue=true;
-	    if(logbar->f_logbar_trial <= logbar->f_logbar + eta_phi*_alpha_primal*grad_phi_dx)
-	      break; //iterate good to go since it satisfies Armijo
-	    else {  //Armijo is not satisfied
-	      _alpha_primal *= 0.5; //reduce step and try again
-	      continue;
-	    }
-	  } // else: switching condition does not hold  and switchingCondTrue remains to false
-	}
-      }
+	// if(theta_trial<theta_min,  then check the switching condition and, if true, rely on Armijo rule
+	// first compute grad_phi^T d_x if it hasn't already been computed
+	if(!grad_phi_dx_computed) { grad_phi_dx = logbar->directionalDerivative(*dir); grad_phi_dx_computed=true; }
+	nlp->log->printf(hovLinesearch, "Linesearch: grad_phi_dx = %22.15e\n", grad_phi_dx);
 
-      if(!switchingCondTrue) {
-	//ok to go with  "sufficient progress" condition even when close to solution
-	//check the filter and the sufficient decrease condition (18)
-	if(!filter.contains(theta_trial,logbar->f_logbar_trial)) {
-	  //if(theta_trial<=(1-gamma_theta)*theta || logbar->f_logbar_trial<=logbar->f_logbar - gamma_phi*theta) {
-          if(logbar->f_logbar_trial<=logbar->f_logbar - gamma_phi*theta) {
-	    //trial good to go
-	    break;
-	  } else {
-	    //there is no sufficient progress 
-	    _alpha_primal *= 0.5;
+	//this is the actual switching condition
+	if(grad_phi_dx<0 && _alpha_primal*pow(-grad_phi_dx,s_phi)>delta*pow(theta,s_theta)) {
+
+	  if(logbar->f_logbar_trial <= logbar->f_logbar + eta_phi*_alpha_primal*grad_phi_dx) {
+	    lsStatus=3;
+	    nlp->log->printf(hovLinesearchVerb, "Linesearch: accepting based on Armijo (switch cond also passed)\n");
+	    break; //iterate good to go since it satisfies Armijo
+	  } else {  //Armijo is not satisfied
+	    _alpha_primal *= 0.5; //reduce step and try again
 	    continue;
 	  }
-	} else {
-	  //it is in the filter 
-	  _alpha_primal *= 0.5;
-	  continue;
-	} 
-      } 
+	} else {//switching condition does not hold  
+	  
+	  //ok to go with  "sufficient progress" condition even when close to solution, provided the switching condition is not satisfied
+	  //check the filter and the sufficient decrease condition (18)
+	  if(!filter.contains(theta_trial,logbar->f_logbar_trial)) {
+	    if(theta_trial<=(1-gamma_theta)*theta || logbar->f_logbar_trial<=logbar->f_logbar - gamma_phi*theta) {
+	    //if(logbar->f_logbar_trial<=logbar->f_logbar - gamma_phi*theta) {
+	      //trial good to go
+	      nlp->log->printf(hovLinesearchVerb, "Linesearch: accepting based on suff. decrease (switch cond also passed)\n");
+	      lsStatus=2;
+	      break;
+	    } else {
+	      //there is no sufficient progress 
+	      _alpha_primal *= 0.5;
+	      continue;
+	    }
+	  } else {
+	    //it is in the filter 
+	    _alpha_primal *= 0.5;
+	    continue;
+	  } 
+	} // end of else: switching condition does not hold
 
-      assert(false); //shouldn't get here
-    }
+	nlp->log->write("Warning (close to panic): I got to a point where I wasn't supposed to be. (2)", hovWarning);
+
+      } //end of else: theta_trial<theta_min
+    } //end of while for the linesearch loop
     
+    //post line-search stuff
     
-    //post line-search stuff: such as update filter
-    // to be done
-    
+    //filter is augmented whenever the switching condition or Armijo rule do not hold for the trial point that was just accepted
+    if(lsStatus==1) {
+      //need to check switching cond and Armijo to decide if filter is augmented
+      if(!grad_phi_dx_computed) { grad_phi_dx = logbar->directionalDerivative(*dir); grad_phi_dx_computed=true; }
+      
+      //this is the actual switching condition
+      if(grad_phi_dx<0 && _alpha_primal*pow(-grad_phi_dx,s_phi)>delta*pow(theta,s_theta)) {
+	//check armijo
+	if(logbar->f_logbar_trial <= logbar->f_logbar + eta_phi*_alpha_primal*grad_phi_dx) {
+	  //filter does not change
+	} else {
+	  //Armijo does not hold
+	  filter.add(logbar->f_logbar_trial, theta_trial);
+	}
+      } else { //switching condition does not hold
+	filter.add(logbar->f_logbar_trial, theta_trial);
+      }
+
+    } else if(lsStatus==2) {
+      //switching condition does not hold for the trial
+      filter.add(logbar->f_logbar_trial, theta_trial);
+    } else if(lsStatus==3) {
+      //Armijo (and switching condition) hold, nothing to do.
+    } else if(lsStatus==0) {
+      //small step; take the update; if the update doesn't pass the convergence test, the optimiz. loop will exit.
+    } else 
+      assert(false && "unrecognized value for lsStatus");
+
     nlp->log->printf(hovScalars, "Iter[%d] -> accepted step primal=[%17.11e] dual=[%17.11e]\n", iter_num, _alpha_primal, _alpha_dual);
     iter_num++;
+
     //update and reset the duals
     bret = it_trial->takeStep_duals(*it_curr, *dir, _alpha_primal, _alpha_dual); assert(bret);
     bret = it_trial->adjustDuals_primalLogHessian(_mu,kappa_Sigma); assert(bret);
@@ -288,10 +346,34 @@ int hiopAlgFilterIPM::run()
     //update residual
     resid->update(*it_curr,_f_nlp, *_c, *_d,*_grad_f,*_Jac_c,*_Jac_d, *logbar);
     nlp->log->printf(hovIteration, "Iter[%d] full residual:-------------\n", iter_num); nlp->log->write("", *resid, hovIteration);
-
-    if(iter_num>=50) break;
   }
 
+  /***** Termination message *****/
+  switch(algStatus) {
+  case 0:
+    {
+      nlp->log->printf(hovSummary, "Successfull termination.\n");
+      break;
+    }
+  case -1:
+    {
+      nlp->log->printf(hovSummary, "Couldn't solve the problem.");
+      if(0==lsStatus) nlp->log->printf(hovSummary, "Linesearch returned unsuccessfully (small step)");
+      nlp->log->printf(hovSummary, "\n");
+      break;
+    }
+  case 1:
+    {
+      nlp->log->printf(hovSummary, "Maximum number of iterations reached.\n");
+      break;
+    }
+  default:
+    assert(false);
+    break;
+  };
+
+
+  //printStatistics();
   delete kkt;
 
   return true;
@@ -396,11 +478,21 @@ bool hiopAlgFilterIPM::evalNlp_derivOnly(hiopIterate& iter,
   return bret;
 }
 
-void hiopAlgFilterIPM::outputIteration()
+void hiopAlgFilterIPM::outputIteration(int lsStatus, int lsNum)
 {
   if(iter_num/10*10==iter_num) 
-    printf("iter    objective     inf_pr     inf_du   lg(mu)  alpha_du   alpha_pr\n");
-  printf("%4d %14.7e %7.3e  %7.3e %6.2f  %7.3e  %7.3e\n",
-	 iter_num, _f_nlp, _err_nlp_feas, _err_nlp_optim, log10(_mu), _alpha_dual, _alpha_primal); 
+    printf("iter    objective     inf_pr     inf_du   lg(mu)  alpha_du   alpha_pr linesrch\n");
 
+  if(lsStatus==-1) 
+    printf("%4d %14.7e %7.3e  %7.3e %6.2f  %7.3e  %7.3e  -(-)\n",
+	   iter_num, _f_nlp, _err_nlp_feas, _err_nlp_optim, log10(_mu), _alpha_dual, _alpha_primal); 
+  else {
+    char stepType[1];
+    if(lsStatus==1) strcpy(stepType, "s");
+    else if(lsStatus==2) strcpy(stepType, "h");
+    else if(lsStatus==3) strcpy(stepType, "f");
+    else strcpy(stepType, "?");
+    printf("%4d %14.7e %7.3e  %7.3e %6.2f  %7.3e  %7.3e  %d(%s)\n",
+	   iter_num, _f_nlp, _err_nlp_feas, _err_nlp_optim, log10(_mu), _alpha_dual, _alpha_primal, lsNum, stepType); 
+  }
 }
