@@ -19,7 +19,8 @@ enum hiopOutVerbosity {
   hovFcnEval=2, //the above plus info about the number of function, gradient and Hessians
   hovLinesearch=3, //linesearch info
   hovLinAlgScalars=4, //print out various scalars: e.g., linear systems residuals
-  hovLinAlgScalarsVerb=5, //additional scalars, e.g., BFGS updating info
+  hovLinesearchVerb=5, //linesearch with more output
+  hovLinAlgScalarsVerb=6, //additional scalars, e.g., BFGS updating info
   hovIteration=7, //print out iteration
   hovMatrices=8,
   hovMaxVerbose=9
