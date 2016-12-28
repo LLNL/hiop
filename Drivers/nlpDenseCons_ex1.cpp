@@ -114,7 +114,14 @@ public:
     return true;
   }
 
-  bool get_starting_point(const long long &glob_n, double* x0) {return false;}
+  bool get_starting_point(const long long &global_n, double* x0)
+  {
+    assert(global_n==n_vars); 
+    long long n_local=col_partition[my_rank+1]-col_partition[my_rank];
+    for(int i=0; i<n_local; i++)
+      x0[i]=0.0;
+    return true;
+  }
 private:
   int n_vars, n_cons;
   MPI_Comm comm;
