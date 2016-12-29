@@ -12,8 +12,10 @@
 
 hiopNlpFormulation::hiopNlpFormulation()
 {
-  log = new hiopLogger(hovMaxVerbose,stdout);
+  //log = new hiopLogger(hovLinAlgScalarsVerb,stdout);
+  log = new hiopLogger(hovSummary,stdout);
   //log = new hiopLogger(hovLinesearch,stdout);
+  //log = new hiopLogger(hovIteration,stdout);
 }
 
 hiopNlpFormulation::~hiopNlpFormulation()
@@ -119,7 +121,7 @@ hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& 
   //compute the overall n_low and n_upp
 #ifdef WITH_MPI
   long long aux[2]={n_bnds_low_local, n_bnds_upp_local}, aux_g[2];
-  int err=MPI_Allreduce(aux_g, aux, 2, MPI_LONG_LONG, MPI_SUM, comm); assert(MPI_SUCCESS==ierr);
+  int err=MPI_Allreduce(aux, aux_g, 2, MPI_LONG_LONG, MPI_SUM, comm); assert(MPI_SUCCESS==ierr);
   n_bnds_low=aux_g[0]; n_bnds_upp=aux_g[1];
 #else
   n_bnds_low=n_bnds_low_local; n_bnds_upp=n_bnds_upp_local;
