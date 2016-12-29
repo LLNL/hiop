@@ -416,7 +416,7 @@ solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
     assert(false && "large error (%g) in linear solve (hiopKKTLinSys), equilibrating the matrix and/or iterative refinement are needed (see dposvx/x)");
   else 
     if(relErr>1e-7) 
-      nlp->log->printf(hovWarning, "considerable error (%g) in linear solver occured the Cholesky solve (hiopKKTLinSys)", relErr);
+      nlp->log->printf(hovWarning, "considerable rel. error (%g) in linear solver occured the Cholesky solve (hiopKKTLinSys)\n", relErr);
 
   nlp->log->printf(hovLinAlgScalars, "hiopKKTLinSysLowRank::solveCompressed: Cholesky solve: relative error %g\n", relErr);
   delete r;
