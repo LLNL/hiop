@@ -139,8 +139,16 @@ void hiopMatrixDense::shiftRows(long long shift)
 #endif
 
   //shift < 0 -> up; shift > 0 -> down
-  if(shift<0) memcpy(M[0], M[-shift], n_local*(m_local+shift)*sizeof(double));
-  else        memcpy(M[shift], M[0],  n_local*(m_local-shift)*sizeof(double));
+  //if(shift<0) memcpy(M[0], M[-shift], n_local*(m_local+shift)*sizeof(double));
+  //else        memcpy(M[shift], M[0],  n_local*(m_local-shift)*sizeof(double));
+  if(shift<0) {
+    for(int row=0; row<m_local+shift; row++)
+      memcpy(M[row], M[row-shift], n_local*sizeof(double));
+  } else {
+    for(int row=m_local-1; row>=shift; row--) {
+      memcpy(M[row], M[row-shift], n_local*sizeof(double));
+    }
+  }
 
 #ifdef DEEP_CHECKING
   assert(test1==M[shift<0?0:m_local][0] && "a different copy technique than memcpy is needed on this system");
