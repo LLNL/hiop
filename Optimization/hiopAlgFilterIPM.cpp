@@ -30,7 +30,7 @@ hiopAlgFilterIPM::hiopAlgFilterIPM(hiopNlpDenseConstraints* nlp_)
   _Jac_c_trial   = nlp->alloc_Jac_c();
   _Jac_d_trial   = nlp->alloc_Jac_d();
 
-  _Hess    = new hiopHessianLowRank(nlp,10);
+  _Hess    = new hiopHessianLowRank(nlp,1);
 
   resid = new hiopResidual(nlp);
   resid_trial = new hiopResidual(nlp);
@@ -40,7 +40,7 @@ hiopAlgFilterIPM::hiopAlgFilterIPM(hiopNlpDenseConstraints* nlp_)
   kappa_mu=0.2;       //linear decrease factor
   theta_mu=1.5;       //exponent for higher than linear decrease of mu
   tau_min=0.99;       //min value for the fraction-to-the-boundary
-  eps_tol=1e-8;       //absolute error for the nlp
+  eps_tol=1e-6;       //absolute error for the nlp
   kappa_eps=10;       //relative (to mu) error for the log barrier
   kappa1=kappa2=1e-2; //projection params for the starting point (default 1e-2)
   p_smax=100;         //threshold for the magnitude of the multipliers
@@ -233,7 +233,7 @@ int hiopAlgFilterIPM::run()
 
       //let's do the cheap, "sufficient progress" test first, before more involved/expensive tests. 
       // This simple test is good enough when iterate is far away from solution
-      if(theta_trial>=theta_min) {
+      if(theta>=theta_min) {
 	//check the filter and the sufficient decrease condition (18)
 	if(!filter.contains(theta_trial,logbar->f_logbar_trial)) {
 	  if(theta_trial<=(1-gamma_theta)*theta || logbar->f_logbar_trial<=logbar->f_logbar - gamma_phi*theta) {
@@ -253,7 +253,7 @@ int hiopAlgFilterIPM::run()
 	}  
 	nlp->log->write("Warning (close to panic): I got to a point where I wasn't supposed to be. (1)",hovWarning);
       } else {
-	// if(theta_trial<theta_min,  then check the switching condition and, if true, rely on Armijo rule
+	// if(theta<theta_min,  then check the switching condition and, if true, rely on Armijo rule
 	// first compute grad_phi^T d_x if it hasn't already been computed
 	if(!grad_phi_dx_computed) { grad_phi_dx = logbar->directionalDerivative(*dir); grad_phi_dx_computed=true; }
 	nlp->log->printf(hovLinesearch, "Linesearch: grad_phi_dx = %22.15e\n", grad_phi_dx);
@@ -403,8 +403,11 @@ evalNlpAndLogErrors(const hiopIterate& it, const hiopResidual& resid, const doub
 {
   long long n=nlp->n_complem(), m=nlp->m();
   //the one norms
-  double nrmDualBou=it.normOneOfBoundDuals();
-  double nrmDualEqu=it.normOneOfEqualityDuals();
+  //double nrmDualBou=it.normOneOfBoundDuals();
+  //double nrmDualEqu=it.normOneOfEqualityDuals();
+  double nrmDualBou, nrmDualEqu;
+  it.normOneOfDuals(nrmDualEqu, nrmDualBou);
+
   //scaling factors
   double sd = fmax(p_smax,(nrmDualBou+nrmDualEqu)/(n+m)) / p_smax;
   double sc = n==0?0:fmax(p_smax,nrmDualBou/n) / p_smax;

@@ -126,11 +126,6 @@ void hiopIterate::setEqualityDualsToConstant(const double& v)
 
 double hiopIterate::normOneOfBoundDuals() const
 {
-  return 0.0;
-}
-
-double hiopIterate::normOneOfEqualityDuals() const
-{
 #ifdef DEEP_CHECKING
   assert(zl->matchesPattern(nlp->get_ixl()));
   assert(zu->matchesPattern(nlp->get_ixu()));
@@ -146,6 +141,44 @@ double hiopIterate::normOneOfEqualityDuals() const
 #endif
   return nrm1;
 }
+
+double hiopIterate::normOneOfEqualityDuals() const
+{
+#ifdef DEEP_CHECKING
+  assert(zl->matchesPattern(nlp->get_ixl()));
+  assert(zu->matchesPattern(nlp->get_ixu()));
+  assert(vl->matchesPattern(nlp->get_idl()));
+  assert(vu->matchesPattern(nlp->get_idu()));
+#endif
+  //work locally with all the vectors. This will result in only one MPI_Allreduce call instead of six.
+  double nrm1=zl->onenorm_local() + zu->onenorm_local() + vl->onenorm_local() + vu->onenorm_local() + yc->onenorm_local() + yd->onenorm_local();
+#ifdef WITH_MPI
+  double nrm1_global;
+  int ierr=MPI_Allreduce(&nrm1, &nrm1_global, 1, MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(MPI_SUCCESS==ierr);
+  nrm1=nrm1_global;
+#endif
+  return nrm1;
+}
+
+void hiopIterate::normOneOfDuals(double& nrm1Eq, double& nrm1Bnd) const
+{
+#ifdef DEEP_CHECKING
+  assert(zl->matchesPattern(nlp->get_ixl()));
+  assert(zu->matchesPattern(nlp->get_ixu()));
+  assert(vl->matchesPattern(nlp->get_idl()));
+  assert(vu->matchesPattern(nlp->get_idu()));
+#endif
+  //work locally with all the vectors. This will result in only one MPI_Allreduce call
+  nrm1Bnd = zl->onenorm_local() + zu->onenorm_local() + vl->onenorm_local() + vu->onenorm_local();
+  nrm1Eq  = nrm1Bnd + yc->onenorm_local() + yd->onenorm_local();
+#ifdef WITH_MPI
+  double nrm1_global[2], buff[2];
+  buff[0]=nrm1Eq; buff[1]=nrm1Bnd;
+  int ierr=MPI_Allreduce(buff, nrm1_global, 1, MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(MPI_SUCCESS==ierr);
+  nrm1Eq =nrm1_global[0]; nrm1Bnd=nrm1_global[1];
+#endif
+}
+
 
 void hiopIterate::determineSlacks()
 {
