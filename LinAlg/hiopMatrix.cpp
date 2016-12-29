@@ -130,6 +130,7 @@ void hiopMatrixDense::copyFromMatrixBlock(const hiopMatrixDense& src, const int 
 void hiopMatrixDense::shiftRows(long long shift)
 {
   if(shift==0) return;
+  if(-shift==m_local) return; //nothing to shift
   assert(fabs(shift)<m_local);
 #ifdef DEEP_CHECKING
   //not sure if memcpy is copying sequentially on all systems. we check this.
