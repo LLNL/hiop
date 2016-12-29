@@ -132,13 +132,14 @@ double hiopIterate::normOneOfBoundDuals() const
   assert(vl->matchesPattern(nlp->get_idl()));
   assert(vu->matchesPattern(nlp->get_idu()));
 #endif
-  //work locally with all the vectors. This will result in only one MPI_Allreduce call instead of fours.
-  double nrm1=zl->onenorm_local() + zu->onenorm_local() + vl->onenorm_local() + vu->onenorm_local();
+  //work locally with all the vectors. This will result in only one MPI_Allreduce call instead of two.
+  double nrm1=zl->onenorm_local() + zu->onenorm_local();
 #ifdef WITH_MPI
   double nrm1_global;
   int ierr=MPI_Allreduce(&nrm1, &nrm1_global, 1, MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(MPI_SUCCESS==ierr);
   nrm1=nrm1_global;
 #endif
+  nrm1 += vl->onenorm_local() + vu->onenorm_local();
   return nrm1;
 }
 
@@ -150,13 +151,14 @@ double hiopIterate::normOneOfEqualityDuals() const
   assert(vl->matchesPattern(nlp->get_idl()));
   assert(vu->matchesPattern(nlp->get_idu()));
 #endif
-  //work locally with all the vectors. This will result in only one MPI_Allreduce call instead of six.
-  double nrm1=zl->onenorm_local() + zu->onenorm_local() + vl->onenorm_local() + vu->onenorm_local() + yc->onenorm_local() + yd->onenorm_local();
+  //work locally with all the vectors. This will result in only one MPI_Allreduce call instead of two.
+  double nrm1=zl->onenorm_local() + zu->onenorm_local();
 #ifdef WITH_MPI
   double nrm1_global;
   int ierr=MPI_Allreduce(&nrm1, &nrm1_global, 1, MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(MPI_SUCCESS==ierr);
   nrm1=nrm1_global;
 #endif
+  nrm1 += vl->onenorm_local() + vu->onenorm_local() + yc->onenorm_local() + yd->onenorm_local();
   return nrm1;
 }
 
@@ -169,14 +171,14 @@ void hiopIterate::normOneOfDuals(double& nrm1Eq, double& nrm1Bnd) const
   assert(vu->matchesPattern(nlp->get_idu()));
 #endif
   //work locally with all the vectors. This will result in only one MPI_Allreduce call
-  nrm1Bnd = zl->onenorm_local() + zu->onenorm_local() + vl->onenorm_local() + vu->onenorm_local();
-  nrm1Eq  = nrm1Bnd + yc->onenorm_local() + yd->onenorm_local();
+  nrm1Bnd = zl->onenorm_local() + zu->onenorm_local();
 #ifdef WITH_MPI
-  double nrm1_global[2], buff[2];
-  buff[0]=nrm1Eq; buff[1]=nrm1Bnd;
-  int ierr=MPI_Allreduce(buff, nrm1_global, 1, MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(MPI_SUCCESS==ierr);
-  nrm1Eq =nrm1_global[0]; nrm1Bnd=nrm1_global[1];
+  double nrm1_global;
+  int ierr=MPI_Allreduce(&nrm1Bnd, &nrm1_global, 1, MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(MPI_SUCCESS==ierr);
+  nrm1Bnd=nrm1_global;
 #endif
+  nrm1Bnd += vl->onenorm_local() + vu->onenorm_local();
+  nrm1Eq   = nrm1Bnd + yc->onenorm_local() + yd->onenorm_local();
 }
 
 
@@ -235,6 +237,12 @@ fractionToTheBdry(const hiopIterate& dir, const double& tau, double& alphaprimal
 
   alpha=vu->fractionToTheBdry_w_pattern(*dir.vu, tau, nlp->get_idu());
   alphadual=fmin(alphadual,alpha); 
+#ifdef WITH_MPI
+  double aux[2]={alphaprimal,alphadual}, aux_g[2];
+  int ierr=MPI_Allreduce(aux, aux_g, 2, MPI_DOUBLE, MPI_MIN, nlp->get_comm()); assert(MPI_SUCCESS==ierr);
+  alphaprimal=aux_g[0]; alphadual=aux_g[1];
+#endif
+
   return true;
 }
 
@@ -314,8 +322,14 @@ double hiopIterate::evalLogBarrier() const
   double barrier;
   barrier = sxl->logBarrier(nlp->get_ixl());
   barrier+= sxu->logBarrier(nlp->get_ixu());
+#ifdef WITH_MPI
+  double res;
+  int ierr = MPI_Allreduce(&barrier, &res, 1, MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(ierr==MPI_SUCCESS);
+  barrier=res;
+#endif
   barrier+= sdl->logBarrier(nlp->get_idl());
   barrier+= sdu->logBarrier(nlp->get_idu());
+
   return barrier;
 }
 
@@ -338,8 +352,14 @@ double hiopIterate::linearDampingTerm(const double& mu, const double& kappa_d) c
   double term;
   term  = sxl->linearDampingTerm(nlp->get_ixl(), nlp->get_ixu(), mu, kappa_d);
   term += sxu->linearDampingTerm(nlp->get_ixu(), nlp->get_ixl(), mu, kappa_d);
+#ifdef WITH_MPI
+  double res;
+  int ierr = MPI_Allreduce(&term, &res, 1, MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(ierr==MPI_SUCCESS);
+  term = res;
+#endif  
   term += sdl->linearDampingTerm(nlp->get_idl(), nlp->get_idu(), mu, kappa_d);
   term += sdu->linearDampingTerm(nlp->get_idu(), nlp->get_idl(), mu, kappa_d);
+
   return term;
 }
 
