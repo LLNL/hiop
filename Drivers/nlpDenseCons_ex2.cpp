@@ -52,10 +52,10 @@ bool Ex2::get_vars_info(const long long& n, double *xlow, double* xupp, Nonlinea
 bool Ex2::get_cons_info(const long long& m, double* clow, double* cupp, NonlinearityType* type)
 {
   assert(m==n_cons);
-  clow[0]= 5.0;  cupp[0]=  5.0;     type[0]=hiopInterfaceBase::hiopLinear;
-  clow[1]= 0.0;  cupp[1]= 1e20;     type[1]=hiopInterfaceBase::hiopLinear;
-  clow[2]= 1.0;  cupp[2]= 2*n_vars; type[2]=hiopInterfaceBase::hiopLinear;
-  clow[3]=-1e20; cupp[3]= 4*n_vars; type[3]=hiopInterfaceBase::hiopLinear;
+  clow[0]= n_vars+1; cupp[0]= n_vars+1;  type[0]=hiopInterfaceBase::hiopLinear;
+  clow[1]= 5.0;      cupp[1]= 1e20;      type[1]=hiopInterfaceBase::hiopLinear;
+  clow[2]= 1.0;      cupp[2]= 2*n_vars;  type[2]=hiopInterfaceBase::hiopLinear;
+  clow[3]=-1e20;     cupp[3]= 4*n_vars;  type[3]=hiopInterfaceBase::hiopLinear;
   return true;
 }
 bool Ex2::eval_f(const long long& n, const double* x, bool new_x, double& obj_value)
@@ -87,14 +87,13 @@ bool Ex2::eval_cons(const long long& n, const long long& m,
   //local contributions to the constraints in cons are reset
   for(int j=0;j<num_cons; j++) cons[j]=0.;
   
-  
   //compute the constraint one by one.
   for(int itcon=0; itcon<num_cons; itcon++) {
     
     // --- constraint 1 body ---> sum x_i = n+1
     if(idx_cons[itcon]==0) {
       long long n_local=col_partition[my_rank+1]-col_partition[my_rank];
-      //loop over x in local indexes and add its entries to the result
+      //loop over local x in local indexes and add its entries to the result
       for(int i=0;i<n_local;i++) cons[itcon] += x[i];
       continue; //done with this constraint
     }
@@ -102,7 +101,7 @@ bool Ex2::eval_cons(const long long& n, const long long& m,
     // --- constraint 2 body ---> 2*x_1 + sum {x_i : i=2,...,n} 
     if(idx_cons[itcon]==1) {
       int i_local;
-      //loop over x in global indexes 
+      //loop over local x in global indexes 
       for(long long i_global=col_partition[my_rank]; i_global<col_partition[my_rank+1]; i_global++) {
 	i_local=idx_global2local(n,i_global);
 	//x_1 has a different contribution to constraint 2 than the rest

@@ -14,7 +14,7 @@ int main(int argc, char **argv)
   if(0==rank) printf("Support for MPI is enabled\n");
 #endif
 
-  Ex2 nlp_interface(7);
+  Ex2 nlp_interface(5e4);
   if(rank==0) printf("interface created\n");
   hiopNlpDenseConstraints nlp(nlp_interface);
   if(rank==0) printf("nlp formulation created\n");

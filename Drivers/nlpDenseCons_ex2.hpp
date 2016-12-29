@@ -13,8 +13,9 @@
 #endif
 
 /* Test with bounds and constraints of all types. 
- *  min   sum { (x_{i}-1)^4 : i=1,...,n} / 4
- *  s.t.  sum x_i = n+1
+ *  min   sum 1/4* { (x_{i}-1)^4 : i=1,...,n}
+ *  s.t.  
+ *        sum x_i = n+1
  *        5<= 2*x_1 + sum {x_i : i=2,...,n} 
  *        1<= 2*x_1 + 0.5*x_2 + sum{x_i : i=3,...,n} <= 2*n
  *            4*x_1 + 2  *x_2 + 2*x_3 + sum{x_i : i=4,...,n} <=4*n
