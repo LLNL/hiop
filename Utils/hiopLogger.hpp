@@ -9,7 +9,7 @@ class hiopResidual;
 class hiopIterate;
 class hiopMatrix;
 class hiopHessianLowRank;
-
+class hiopNlpFormulation;
 /* Verbosity 0 to 9 */
 enum hiopOutVerbosity {
   hovError=-2,
@@ -29,7 +29,8 @@ enum hiopOutVerbosity {
 class hiopLogger
 {
 public:
-  hiopLogger(hiopOutVerbosity max_desired, FILE* f) : _verb(max_desired), _f(f) {};
+  hiopLogger(hiopNlpFormulation* nlp, hiopOutVerbosity max_desired, FILE* f) : _verb(max_desired), _f(f), _nlp(nlp) {};
+  virtual ~hiopLogger() {};
   /* outputs a vector. loggerid indicates which logger should be used, by default stdout*/
   void write(const char* msg, const hiopVector& vec,          hiopOutVerbosity v, int loggerid=0);
   void write(const char* msg, const hiopResidual& r,          hiopOutVerbosity v, int loggerid=0);
@@ -43,6 +44,7 @@ public:
 protected:
   FILE* _f;
   char _buff[1024];
+  hiopNlpFormulation* _nlp;
 private:
   hiopOutVerbosity _verb;
 };
