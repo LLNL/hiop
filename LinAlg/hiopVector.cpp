@@ -436,8 +436,8 @@ double hiopVectorPar::logBarrier(const hiopVector& select) const
 void  hiopVectorPar::addLogBarrierGrad(double alpha, const hiopVector& x, const hiopVector& ix)
 {
 #ifdef DEEP_CHECKING
-  assert(this->n_local == dynamic_cast<const hiopVectorPar&>(ix).get_size());
-  assert(this->n_local == dynamic_cast<const hiopVectorPar&>( x).get_size());
+  assert(this->n_local == dynamic_cast<const hiopVectorPar&>(ix).n_local);
+  assert(this->n_local == dynamic_cast<const hiopVectorPar&>( x).n_local);
 #endif
   const double* ix_vec = dynamic_cast<const hiopVectorPar&>(ix).data;
   const double*  x_vec = dynamic_cast<const hiopVectorPar&>( x).data;

@@ -63,7 +63,7 @@ hiopMatrixDense::hiopMatrixDense(const hiopMatrixDense& dm)
 void hiopMatrixDense::appendRow(const hiopVectorPar& row)
 {
 #ifdef DEEP_CHECKING  
-  assert(row.get_size()==n_local);
+  assert(row.get_local_size()==n_local);
   assert(m_local<max_rows && "no more space to append rows ... should have preallocated more rows.");
 #endif
   memcpy(M[m_local], row.local_data_const(), n_local*sizeof(double));
@@ -159,7 +159,7 @@ void hiopMatrixDense::shiftRows(long long shift)
 void hiopMatrixDense::replaceRow(long long row, const hiopVectorPar& vec)
 {
   assert(row>=0); assert(row<m_local);
-  long long vec_size=vec.get_size();
+  long long vec_size=vec.get_local_size();
   memcpy(M[row], vec.local_data_const(), (vec_size>=n_local?n_local:vec_size)*sizeof(double));
 }
 
@@ -167,7 +167,7 @@ void hiopMatrixDense::getRow(long long irow, hiopVector& row_vec)
 {
   assert(irow>=0); assert(irow<m_local);
   hiopVectorPar& vec=dynamic_cast<hiopVectorPar&>(row_vec);
-  assert(n_local==vec.get_size());
+  assert(n_local==vec.get_local_size());
   memcpy(vec.local_data(), M[irow], n_local*sizeof(double));
 }
 
