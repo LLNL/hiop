@@ -8,6 +8,8 @@
 #include "hiopHessianLowRank.hpp"
 #include "hiopLogBarProblem.hpp"
 
+#include "hiopTimer.hpp"
+
 class hiopAlgFilterIPM
 {
 public:
@@ -88,6 +90,9 @@ private:
     s_phi, delta;
   double eta_phi;       //parameter in the Armijo rule
   double kappa_Sigma;   //parameter in resetting the duals to guarantee closedness of the primal-dual logbar Hessian to the primal logbar Hessian
+
+  //timers
+  hiopTimer tmSol;
 private:
   hiopAlgFilterIPM() {};
   hiopAlgFilterIPM(const hiopAlgFilterIPM& ) {};

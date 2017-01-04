@@ -30,7 +30,7 @@ hiopAlgFilterIPM::hiopAlgFilterIPM(hiopNlpDenseConstraints* nlp_)
   _Jac_c_trial   = nlp->alloc_Jac_c();
   _Jac_d_trial   = nlp->alloc_Jac_d();
 
-  _Hess    = new hiopHessianLowRank(nlp,1);
+  _Hess    = new hiopHessianLowRank(nlp,6);
 
   resid = new hiopResidual(nlp);
   resid_trial = new hiopResidual(nlp);
@@ -111,6 +111,8 @@ int hiopAlgFilterIPM::defaultStartingPoint(hiopIterate& it_ini)
 
 int hiopAlgFilterIPM::run()
 {
+  tmSol.start();
+
   defaultStartingPoint(*it_curr);
   _mu=mu0;
   //update problem information 
@@ -198,6 +200,10 @@ int hiopAlgFilterIPM::run()
     bret = it_curr->fractionToTheBdry(*dir, _tau, _alpha_primal, _alpha_dual); assert(bret);
     double theta = resid->getInfeasInfNorm(); //at it_curr
     double theta_trial;
+
+    //!
+    //nlp->log->printf(hovSummary, "steps: pri %22.16e    dual %22.16e\n",  _alpha_primal, _alpha_dual);
+
 
     //line search status for the accepted trial point. Needed to update the filter
     //-1 uninitialized (first iteration)
@@ -348,23 +354,25 @@ int hiopAlgFilterIPM::run()
     nlp->log->printf(hovIteration, "Iter[%d] full residual:-------------\n", iter_num); nlp->log->write("", *resid, hovIteration);
   }
 
+  tmSol.stop();
+
   /***** Termination message *****/
   switch(algStatus) {
   case 0:
     {
-      nlp->log->printf(hovSummary, "Successfull termination.\n");
+      nlp->log->printf(hovSummary, "Successfull termination. Wallclock time: %.3f seconds.\n", tmSol.getElapsedTime());
       break;
     }
   case -1:
     {
-      nlp->log->printf(hovSummary, "Couldn't solve the problem.");
+      nlp->log->printf(hovSummary, "Couldn't solve the problem. Wallclock time: %.3f seconds.\n", tmSol.getElapsedTime());
       if(0==lsStatus) nlp->log->printf(hovSummary, "Linesearch returned unsuccessfully (small step)");
       nlp->log->printf(hovSummary, "\n");
       break;
     }
   case 1:
     {
-      nlp->log->printf(hovSummary, "Maximum number of iterations reached.\n");
+      nlp->log->printf(hovSummary, "Maximum number of iterations reached. Wallclock time: %.3f seconds.\n", tmSol.getElapsedTime());
       break;
     }
   default:
