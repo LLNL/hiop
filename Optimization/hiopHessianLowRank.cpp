@@ -6,6 +6,8 @@
 #include "mpi.h"
 #endif
 
+//#include <unistd.h> //!remove me
+
 #include <cassert>
 #include <cstring>
 #include <cmath>
@@ -181,10 +183,12 @@ bool hiopHessianLowRank::update(const hiopIterate& it_curr, const hiopVector& gr
       //y_new.axzpy( 1.0, s_new, *it_curr.zu);
       
       double sTy = s_new.dotProductWith(y_new), s_nrm2=s_new.twonorm(), y_nrm2=y_new.twonorm();
+
+#ifdef DEEP_CHECKING
       nlp->log->printf(hovLinAlgScalarsVerb, "hiopHessianLowRank: s^T*y=%20.14e ||s||=%20.14e ||y||=%20.14e\n", sTy, s_nrm2, y_nrm2);
       nlp->log->write("hiopHessianLowRank s_new",s_new, hovIteration);
       nlp->log->write("hiopHessianLowRank y_new",y_new, hovIteration);
-
+#endif
       if(sTy>s_nrm2*y_nrm2*std::numeric_limits<double>::epsilon()) { //sTy far away from zero
 	//compute the new row in L, update S and Y (either augment them or shift cols and add s_new and y_new)
 	hiopVectorPar& YTs = new_l_vec1(l_curr);
@@ -424,9 +428,7 @@ symMatTimesInverseTimesMatTrans(double beta, hiopMatrixDense& W,
 
   //1. compute W=beta*W + alpha*X*DhInv*X'
 #ifdef WITH_MPI
-  int myrank, ierr;
-  ierr=MPI_Comm_rank(nlp->get_comm(),&myrank); assert(MPI_SUCCESS==ierr);
-  if(0==myrank)
+  if(0==nlp->get_rank())
     symmMatTimesDiagTimesMatTrans_local(beta,W,alpha,X,*DhInv);
   else
     symmMatTimesDiagTimesMatTrans_local(0.0, W,alpha,X,*DhInv);
@@ -443,17 +445,20 @@ symMatTimesInverseTimesMatTrans(double beta, hiopMatrixDense& W,
 
   //3. reduce W, S1, and Y1 (dimensions: kxk, kxl, kxl)
   hiopMatrixDense& S2Y2 = new_kx2l_mat1(k,l);  //Initialy S2Y2 = [Y1 S1]
-  //order of Y1 and S1 is changed to match the permutation of V
   S2Y2.copyBlockFromMatrix(0,0,S1);
   S2Y2.copyBlockFromMatrix(0,l,Y1);
 #ifdef WITH_MPI
-  ierr=MPI_Allreduce(S2Y2.local_buffer(), _buff_2lxk, 2*l*k, MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(ierr==MPI_SUCCESS);
-  ierr=MPI_Allreduce(W.local_buffer(),    _buff_kxk,  k*k,   MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(ierr==MPI_SUCCESS);
+  int ierr;
+  ierr = MPI_Allreduce(S2Y2.local_buffer(), _buff_2lxk, 2*l*k, MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(ierr==MPI_SUCCESS);
+  ierr = MPI_Allreduce(W.local_buffer(),    _buff_kxk,  k*k,   MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(ierr==MPI_SUCCESS);
   S2Y2.copyFrom(_buff_2lxk);
   W.copyFrom(_buff_kxk);
+  //also copy S1 and Y1
+  S1.copyFromMatrixBlock(S2Y2, 0,0);
+  Y1.copyFromMatrixBlock(S2Y2, 0,l);
 #endif
 #ifdef DEEP_CHECKING
-   nlp->log->write("symMatTimesInverseTimesMatTrans: W first term is: ", W, hovMatrices);
+  nlp->log->write("symMatTimesInverseTimesMatTrans: W first term is: ", W, hovMatrices);
 #endif 
   //4. [S2] = V \ [S1^T]
   //   [Y2]       [Y1^T]
@@ -469,20 +474,19 @@ symMatTimesInverseTimesMatTrans(double beta, hiopMatrixDense& W,
   hiopMatrixDense& S2=new_kxl_mat1(k,l);
   S2.copyFromMatrixBlock(S2Y2, 0, 0);
   S1.timesMatTrans_local(1.0, W, alpha, S2);
-  nlp->log->write("symMatTimesInverseTimesMatTrans: S1 is : ", S1, hovMatrices);
-  nlp->log->write("symMatTimesInverseTimesMatTrans: S2 is : ", S2, hovMatrices);
-  nlp->log->write("symMatTimesInverseTimesMatTrans: W intermediary is : ", W, hovMatrices);
+
   hiopMatrixDense& Y2=S2;
   Y2.copyFromMatrixBlock(S2Y2, 0, l);
   Y1.timesMatTrans_local(1.0, W, alpha, Y2);
 
-  nlp->log->write("symMatTimesInverseTimesMatTrans: Y1 is : ", Y1, hovMatrices);
-  nlp->log->write("symMatTimesInverseTimesMatTrans: Y2 is : ", Y2, hovMatrices);
-  nlp->log->write("symMatTimesInverseTimesMatTrans: W is : ", W, hovMatrices);
+  //nlp->log->write("symMatTimesInverseTimesMatTrans: Y1 is : ", Y1, hovMatrices);
+  //nlp->log->write("symMatTimesInverseTimesMatTrans: Y2 is : ", Y2, hovMatrices);
+  //nlp->log->write("symMatTimesInverseTimesMatTrans: W is : ", W, hovMatrices);
+
   //we're done here
 
 #ifdef DEEP_CHECKING
-   nlp->log->write("symMatTimesInverseTimesMatTrans: final matrix is : ", W, hovMatrices);
+  nlp->log->write("symMatTimesInverseTimesMatTrans: final matrix is : ", W, hovMatrices);
 #endif 
 
 }
@@ -494,7 +498,7 @@ void hiopHessianLowRank::factorizeV()
   if(N==0) return;
 
 #ifdef DEEP_CHECKING
-  nlp->log->write("factorizeV:  V is ", *V, hovMatrices);
+    nlp->log->write("factorizeV:  V is ", *V, hovMatrices);
 #endif
 
   char uplo='L'; //V is upper in C++ so it's lower in fortran
