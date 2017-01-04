@@ -14,7 +14,7 @@
 class hiopNlpFormulation
 {
 public:
-  hiopNlpFormulation();
+  hiopNlpFormulation(hiopInterfaceBase& interface);
   virtual ~hiopNlpFormulation();
 
   /* starting point */
@@ -27,6 +27,16 @@ public:
 
   /* outputing and debug-related functionality*/
   hiopLogger* log;
+
+#ifdef WITH_MPI
+  inline MPI_Comm get_comm() const { return comm; }
+  inline int      get_rank() const { return rank; }
+#endif
+protected:
+#ifdef WITH_MPI
+  MPI_Comm comm;
+  int rank;
+#endif
 private:
   hiopNlpFormulation(const hiopNlpFormulation&) {};
 };
@@ -85,9 +95,7 @@ public:
   inline long long m_ineq_upp() const {return n_ineq_upp;}
   inline long long n_complem()  const {return m_ineq_low()+m_ineq_upp()+n_low()+n_upp();}
   //inline long long n_complem_local()  const {return m_ineq_low()+m_ineq_upp()+n_low_local()+n_upp_local();}
-#ifdef WITH_MPI
-  inline MPI_Comm get_comm() const { return comm; }
-#endif
+
 private:
   /* problem data */
   //various sizes
@@ -107,10 +115,6 @@ private:
 
   /* interface implemented and provided by the user */
   hiopInterfaceDenseConstraints& interface;
-
-#ifdef WITH_MPI
-  MPI_Comm comm;
-#endif
 };
 
 #endif

@@ -10,26 +10,31 @@
 
 #include <cassert>
 
-hiopNlpFormulation::hiopNlpFormulation()
+hiopNlpFormulation::hiopNlpFormulation(hiopInterfaceBase& interface)
 {
-  //log = new hiopLogger(hovLinAlgScalarsVerb,stdout);
-  log = new hiopLogger(hovSummary,stdout);
+  //log = new hiopLogger(hovLinAlgScalars,stdout);
+  log = new hiopLogger(this,hovSummary,stdout);
   //log = new hiopLogger(hovLinesearch,stdout);
-  //log = new hiopLogger(hovIteration,stdout);
+  //log = new hiopLogger(this,hovScalars,stdout);
+
+#ifdef WITH_MPI
+  assert(interface.get_MPI_comm(comm));
+  assert(MPI_SUCCESS==MPI_Comm_rank(comm, &rank));
+#endif
 }
 
 hiopNlpFormulation::~hiopNlpFormulation()
 {
-  delete log; log=NULL;
+  delete log;
 }
 
 
 hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& interface_)
-  : interface(interface_)
+  : hiopNlpFormulation(interface_), interface(interface_)
 {
   assert(interface.get_prob_sizes(n_vars, n_cons));
 #ifdef WITH_MPI
-  assert(interface.get_MPI_comm(comm));
+  
   int numRanks; 
   int ierr=MPI_Comm_size(comm, &numRanks); assert(MPI_SUCCESS==ierr);
   long long* columns_partitioning=new long long[numRanks+1];
