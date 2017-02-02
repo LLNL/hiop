@@ -247,7 +247,7 @@ fractionToTheBdry(const hiopIterate& dir, const double& tau, double& alphaprimal
 }
 
 
-bool hiopIterate::takeStep_primals(const hiopIterate& iter, const hiopIterate& dir, double& alphaprimal, double& alphadual)
+bool hiopIterate::takeStep_primals(const hiopIterate& iter, const hiopIterate& dir, const double& alphaprimal, const double& alphadual)
 {
   x->copyFrom(*iter.x); x->axpy(alphaprimal, *dir.x);
   d->copyFrom(*iter.d); d->axpy(alphaprimal, *dir.d);
@@ -263,7 +263,7 @@ bool hiopIterate::takeStep_primals(const hiopIterate& iter, const hiopIterate& d
 #endif
   return true;
 }
-bool hiopIterate::takeStep_duals(const hiopIterate& iter, const hiopIterate& dir, double& alphaprimal, double& alphadual)
+bool hiopIterate::takeStep_duals(const hiopIterate& iter, const hiopIterate& dir, const double& alphaprimal, const double& alphadual)
 {
   yd->copyFrom(*iter.yd); yd->axpy(alphaprimal, *dir.yd);
   yc->copyFrom(*iter.yc); yc->axpy(alphaprimal, *dir.yc);

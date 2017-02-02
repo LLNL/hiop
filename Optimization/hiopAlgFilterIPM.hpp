@@ -7,7 +7,7 @@
 #include "hiopFilter.hpp"
 #include "hiopHessianLowRank.hpp"
 #include "hiopLogBarProblem.hpp"
-
+#include "hiopDualsUpdater.hpp"
 #include "hiopTimer.hpp"
 
 class hiopAlgFilterIPM
@@ -55,6 +55,9 @@ private:
   double _err_log_optim, _err_log_feas, _err_log_complem;//not scaled by sd, sc, and sc
   double _err_nlp, _err_log; //max of the above (scaled)
 
+  //class for updating the duals multipliers
+  hiopDualsUpdater* dualsUpdate;
+
   /* Log-barrier problem data 
    *  The algorithm manages these and updates them by calling the   
    *  problem formulation and then adding the contribution from the 
@@ -75,6 +78,7 @@ private:
   double theta_max; 
   //1e-4*max{1,\theta(x_0)} used in the switching condition during the line search
   double theta_min;
+
   /*** Algorithm's parameters ***/
   double mu0;           //intial mu
   double kappa_mu;      //linear decrease factor in mu 
@@ -90,7 +94,7 @@ private:
     s_phi, delta;
   double eta_phi;       //parameter in the Armijo rule
   double kappa_Sigma;   //parameter in resetting the duals to guarantee closedness of the primal-dual logbar Hessian to the primal logbar Hessian
-
+  int dualUpdateType;   //type of the update for dual multipliers: 0 LSQ (default, recommended for quasi-Newton); 1 Newton
   //timers
   hiopTimer tmSol;
 private:

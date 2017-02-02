@@ -54,6 +54,13 @@ hiopAlgFilterIPM::hiopAlgFilterIPM(hiopNlpDenseConstraints* nlp_)
   _tau=fmax(tau_min,1.0-_mu);
   theta_max = 1e7; //temporary - will be updated after ini pt is computed
   theta_min = 1e7; //temporary - will be updated after ini pt is computed
+  dualUpdateType = 1;
+
+  //parameter based initialization
+  if(dualUpdateType==0) 
+    dualsUpdate = new hiopDualsLsqUpdate(nlp);
+  else if(dualUpdateType==1)
+    dualsUpdate = new hiopDualsNewtonLinearUpdate(nlp);
 }
 
 hiopAlgFilterIPM::~hiopAlgFilterIPM()
@@ -80,6 +87,8 @@ hiopAlgFilterIPM::~hiopAlgFilterIPM()
   if(resid_trial)    delete resid_trial;
 
   if(logbar) delete logbar;
+
+  if(dualsUpdate) delete dualsUpdate;
 }
 
 int hiopAlgFilterIPM::defaultStartingPoint(hiopIterate& it_ini)
@@ -336,18 +345,21 @@ int hiopAlgFilterIPM::run()
     nlp->log->printf(hovScalars, "Iter[%d] -> accepted step primal=[%17.11e] dual=[%17.11e]\n", iter_num, _alpha_primal, _alpha_dual);
     iter_num++;
 
-    //update and reset the duals
-    bret = it_trial->takeStep_duals(*it_curr, *dir, _alpha_primal, _alpha_dual); assert(bret);
+    //evaluate derivatives at the trial (and to be accepted) trial point
+    this->evalNlp_derivOnly(*it_trial, *_grad_f, *_Jac_c, *_Jac_d);
+    //reuse function values
+    _f_nlp=_f_nlp_trial; hiopVector* pvec=_c_trial; _c_trial=_c; _c=pvec; pvec=_d_trial; _d_trial=_d; _d=pvec;
+
+    //update and adjust the duals
+    //it_trial->takeStep_duals(*it_curr, *dir, _alpha_primal, _alpha_dual); assert(bret);
+    bret = dualsUpdate->go(*it_curr, *it_trial, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d, *dir,  _alpha_primal, _alpha_dual); assert(bret);
     bret = it_trial->adjustDuals_primalLogHessian(_mu,kappa_Sigma); assert(bret);
     
     //update current iterate (do a fast swap of the pointers)
     hiopIterate* pit=it_curr; it_curr=it_trial; it_trial=pit;
-    nlp->log->printf(hovIteration, "Iter[%d] -> full iterate -------------", iter_num); nlp->log->write("", *it_curr, hovIteration);
-
-    this->evalNlp_derivOnly(*it_curr, *_grad_f, *_Jac_c, *_Jac_d);
-    //reuse function values
-    _f_nlp=_f_nlp_trial; hiopVector* pvec=_c_trial; _c_trial=_c; _c=pvec; pvec=_d_trial; _d_trial=_d; _d=pvec;
+    nlp->log->printf(hovIteration, "Iter[%d] -> full iterate -------------", iter_num); nlp->log->write("", *it_curr, hovIteration); 
    
+    //notify logbar about the changes
     logbar->updateWithNlpInfo(*it_curr, _mu, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d);
     //update residual
     resid->update(*it_curr,_f_nlp, *_c, *_d,*_grad_f,*_Jac_c,*_Jac_d, *logbar);

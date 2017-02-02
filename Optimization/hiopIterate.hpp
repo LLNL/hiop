@@ -23,8 +23,8 @@ public:
   bool fractionToTheBdry(const hiopIterate& dir, const double& tau, double& alphaprimal, double& alphadual) const;
   
   /* take the step: this = iter+alpha*dir */
-  virtual bool takeStep_primals(const hiopIterate& iter, const hiopIterate& dir, double& alphaprimal, double& alphadual);
-  virtual bool takeStep_duals(const hiopIterate& iter, const hiopIterate& dir, double& alphaprimal, double& alphadual);
+  virtual bool takeStep_primals(const hiopIterate& iter, const hiopIterate& dir, const double& alphaprimal, const double& alphadual);
+  virtual bool takeStep_duals(const hiopIterate& iter, const hiopIterate& dir, const double& alphaprimal, const double& alphadual);
   //virtual bool updateDualsEq(const hiopIterate& iter, const hiopIterate& dir, double& alphaprimal, double& alphadual);
   //virtual bool updateDualsIneq(const hiopIterate& iter, const hiopIterate& dir, double& alphaprimal, double& alphadual);
   
