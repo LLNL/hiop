@@ -33,3 +33,6 @@ add_subdirectory(Drivers)
 add_subdirectory(Utils)
 
 
+add_library(hiop STATIC $<TARGET_OBJECTS:hiopOptimization>
+                        $<TARGET_OBJECTS:hiopLinAlg>
+			$<TARGET_OBJECTS:hiopUtils>)
