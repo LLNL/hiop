@@ -1,1 +1,1 @@
-add_library(hiopUtils hiopLogger.cpp)
+add_library(hiopUtils OBJECT hiopLogger.cpp)
