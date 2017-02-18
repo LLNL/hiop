@@ -168,7 +168,7 @@ private:
 private:
   hiopHessianLowRank() {};
   hiopHessianLowRank(const hiopHessianLowRank&) {};
-  hiopHessianLowRank& operator=(const hiopHessianLowRank&) {};
+  hiopHessianLowRank& operator=(const hiopHessianLowRank&) {return *this;};
 };
 
 /* Low-rank representation for the inverse of a low-rank matrix (Hessian).

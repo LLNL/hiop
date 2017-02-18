@@ -83,7 +83,7 @@ private:
 private:
   hiopIterate() {};
   hiopIterate(const hiopIterate&) {};
-  hiopIterate& operator=(const hiopIterate& o) {};
+  hiopIterate& operator=(const hiopIterate& o) {return *this;}
 };
 
 

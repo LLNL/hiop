@@ -63,7 +63,7 @@ private:
 private:
   hiopResidual() {};
   hiopResidual(const hiopResidual&) {};
-  hiopResidual& operator=(const hiopResidual& o) {};
+  hiopResidual& operator=(const hiopResidual& o) {return *this;};
   friend class hiopKKTLinSysLowRank;
 };
 

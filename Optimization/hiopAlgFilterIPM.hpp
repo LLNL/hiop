@@ -100,7 +100,7 @@ private:
 private:
   hiopAlgFilterIPM() {};
   hiopAlgFilterIPM(const hiopAlgFilterIPM& ) {};
-  hiopAlgFilterIPM& operator=(const hiopAlgFilterIPM&) {};
+  hiopAlgFilterIPM& operator=(const hiopAlgFilterIPM&) {return *this;};
 };
 
 #endif

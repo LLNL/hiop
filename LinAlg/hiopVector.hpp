@@ -83,7 +83,7 @@ public:
   virtual void selectPattern(const hiopVector& ix) = 0;
   /** checks whether entries in this matches pattern in ix */
   virtual bool matchesPattern(const hiopVector& ix) = 0;
-  /**
+
   /** allocates a vector that mirrors this, but doesn't copy the values  */
   //virtual hiopVector* new_alloc() const = 0;
   /** allocates a vector that mirrors this, and copies the values  */

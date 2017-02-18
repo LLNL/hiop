@@ -4,7 +4,8 @@
 class hiopLogBarProblem
 {
 public:
-  hiopLogBarProblem(hiopNlpDenseConstraints* nlp_) : nlp(nlp_), kappa_d(1e-5) 
+  hiopLogBarProblem(hiopNlpDenseConstraints* nlp_) 
+    : kappa_d(1e-5), nlp(nlp_) 
   {
     _grad_x_logbar = nlp->alloc_primal_vec();
     _grad_d_logbar = nlp->alloc_dual_ineq_vec();

@@ -29,7 +29,7 @@ enum hiopOutVerbosity {
 class hiopLogger
 {
 public:
-  hiopLogger(hiopNlpFormulation* nlp, hiopOutVerbosity max_desired, FILE* f) : _verb(max_desired), _f(f), _nlp(nlp) {};
+  hiopLogger(hiopNlpFormulation* nlp, hiopOutVerbosity max_desired, FILE* f) : _f(f), _nlp(nlp), _verb(max_desired) {};
   virtual ~hiopLogger() {};
   /* outputs a vector. loggerid indicates which logger should be used, by default stdout*/
   void write(const char* msg, const hiopVector& vec,          hiopOutVerbosity v, int loggerid=0);
