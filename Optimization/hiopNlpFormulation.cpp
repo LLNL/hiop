@@ -21,6 +21,7 @@ hiopNlpFormulation::hiopNlpFormulation(hiopInterfaceBase& interface)
   assert(interface.get_MPI_comm(comm));
   assert(MPI_SUCCESS==MPI_Comm_rank(comm, &rank));
 #endif
+  runStats = hiopRunStats(comm); //!
 }
 
 hiopNlpFormulation::~hiopNlpFormulation()
@@ -56,14 +57,18 @@ hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& 
   //allocate and build ixl(ow) and ix(upp) vectors
   ixl = xu->alloc_clone(); ixu = xu->alloc_clone();
   n_bnds_low_local = n_bnds_upp_local = 0;
+  n_bnds_lu = 0;
   double *ixl_vec=ixl->local_data(), *ixu_vec=ixu->local_data();
   for(int i=0;i<nlocal; i++) {
-    if(xl_vec[i]>-1e20){ ixl_vec[i]=1.; n_bnds_low_local++;}
-    else                 ixl_vec[i]=0.;
-    if(xu_vec[i]< 1e20){ ixu_vec[i]=1.; n_bnds_upp_local++;}
-    else                 ixu_vec[i]=0.;
-    //ixl_vec[i] = xl_vec[i]<=-1e20?0.:1.;
-    //ixu_vec[i] = xu_vec[i]>= 1e20?0.:1.;
+    if(xl_vec[i]>-1e20) { 
+      ixl_vec[i]=1.; n_bnds_low_local++;
+      if(xu_vec[i]< 1e20) n_bnds_lu++;
+    } else ixl_vec[i]=0.;
+
+    if(xu_vec[i]< 1e20) { 
+      ixu_vec[i]=1.; n_bnds_upp_local++;
+    }
+    else ixu_vec[i]=0.;
   }
 
   /* split the constraints */
@@ -108,28 +113,33 @@ hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& 
   }
   assert(it_eq==n_cons_eq); assert(it_ineq==n_cons_ineq);
   /* delete the temporary buffers */
-  delete gl,gu; delete[] cons_type;
+  delete gl; delete gu; delete[] cons_type;
 
   /* iterate over the inequalities and build the idl(ow) and idu(pp) vectors */
   idl = dl->alloc_clone(); idu=du->alloc_clone();
-  n_ineq_low=n_ineq_upp=0.;
+  n_ineq_low=n_ineq_upp=0; n_ineq_lu=0;
   double* idl_vec=idl->local_data(); double* idu_vec=idu->local_data();
   double* dl_vec = dl->local_data(); double* du_vec = du->local_data();
   for(int i=0; i<n_cons_ineq; i++) {
-    if(dl_vec[i]>-1e20) { idl_vec[i]=1.; n_ineq_low++; }
-    else                  idl_vec[i]=0.;
-    if(du_vec[i]< 1e20) { idu_vec[i]=1.; n_ineq_upp++; }
-    else                  idu_vec[i]=0.;
+    if(dl_vec[i]>-1e20) { 
+      idl_vec[i]=1.; n_ineq_low++; 
+      if(du_vec[i]< 1e20) n_ineq_lu++;
+    }
+    else idl_vec[i]=0.;
+
+    if(du_vec[i]< 1e20) { 
+      idu_vec[i]=1.; n_ineq_upp++; 
+    } else idu_vec[i]=0.;
     //idl_vec[i] = dl_vec[i]<=-1e20?0.:1.;
     //idu_vec[i] = du_vec[i]>= 1e20?0.:1.;
   }
   //compute the overall n_low and n_upp
 #ifdef WITH_MPI
-  long long aux[2]={n_bnds_low_local, n_bnds_upp_local}, aux_g[2];
-  int err=MPI_Allreduce(aux, aux_g, 2, MPI_LONG_LONG, MPI_SUM, comm); assert(MPI_SUCCESS==ierr);
-  n_bnds_low=aux_g[0]; n_bnds_upp=aux_g[1];
+  long long aux[3]={n_bnds_low_local, n_bnds_upp_local, n_bnds_lu}, aux_g[3];
+  int err=MPI_Allreduce(aux, aux_g, 3, MPI_LONG_LONG, MPI_SUM, comm); assert(MPI_SUCCESS==ierr);
+  n_bnds_low=aux_g[0]; n_bnds_upp=aux_g[1]; n_bnds_lu=aux_g[2];
 #else
-  n_bnds_low=n_bnds_low_local; n_bnds_upp=n_bnds_upp_local;
+  n_bnds_low=n_bnds_low_local; n_bnds_upp=n_bnds_upp_local; //n_bnds_lu is ok
 #endif
 
 }
@@ -157,33 +167,60 @@ hiopNlpDenseConstraints::~hiopNlpDenseConstraints()
 
 bool hiopNlpDenseConstraints::eval_f(const double* x, bool new_x, double& f)
 {
-  return interface.eval_f(n_vars,x,new_x,f);
+  runStats.tmEvalObj.start();
+  bool bret = interface.eval_f(n_vars,x,new_x,f);
+  runStats.tmEvalObj.stop(); runStats.nEvalObj++;
+  return bret;
 }
 bool hiopNlpDenseConstraints::eval_grad_f(const double* x, bool new_x, double* gradf)
 {
-  return interface.eval_grad_f(n_vars,x,new_x,gradf);
+  bool bret; 
+  runStats.tmEvalGrad_f.start();
+  bret = interface.eval_grad_f(n_vars,x,new_x,gradf);
+  runStats.tmEvalGrad_f.stop(); runStats.nEvalGrad_f++;
+  return bret;
 }
 bool hiopNlpDenseConstraints::eval_Jac_c(const double* x, bool new_x, double** Jac_c)
 {
-  return interface.eval_Jac_cons(n_vars,n_cons,n_cons_eq,cons_eq_mapping,x,new_x,Jac_c);
+  bool bret; 
+  runStats.tmEvalJac_con.start();
+  bret = interface.eval_Jac_cons(n_vars,n_cons,n_cons_eq,cons_eq_mapping,x,new_x,Jac_c);
+  runStats.tmEvalJac_con.stop(); runStats.nEvalJac_con_eq++;
+  return bret;
 }
 bool hiopNlpDenseConstraints::eval_Jac_d(const double* x, bool new_x, double** Jac_d)
 {
-  return interface.eval_Jac_cons(n_vars,n_cons,n_cons_ineq,cons_ineq_mapping,x,new_x,Jac_d);
+  bool bret; 
+  runStats.tmEvalJac_con.start();
+  bret = interface.eval_Jac_cons(n_vars,n_cons,n_cons_ineq,cons_ineq_mapping,x,new_x,Jac_d);
+  runStats.tmEvalJac_con.stop(); runStats.nEvalJac_con_ineq++;
+  return bret;
 }
 bool hiopNlpDenseConstraints::eval_c(const double*x, bool new_x, double* c)
 {
-  return interface.eval_cons(n_vars,n_cons,n_cons_eq,cons_eq_mapping,x,new_x,c);
+  bool bret; 
+  runStats.tmEvalCons.start();
+  bret = interface.eval_cons(n_vars,n_cons,n_cons_eq,cons_eq_mapping,x,new_x,c);
+  runStats.tmEvalCons.stop(); runStats.nEvalCons_eq++;
+  return bret;
 }
 bool hiopNlpDenseConstraints::eval_d(const double*x, bool new_x, double* d)
 {
-  return interface.eval_cons(n_vars,n_cons,n_cons_ineq,cons_ineq_mapping,x,new_x,d);
+  bool bret; 
+  runStats.tmEvalCons.start();
+  bret = interface.eval_cons(n_vars,n_cons,n_cons_ineq,cons_ineq_mapping,x,new_x,d);
+  runStats.tmEvalCons.stop(); runStats.nEvalCons_ineq++;
+  return bret;
 }
 bool  hiopNlpDenseConstraints::eval_d(const hiopVector& x_, bool new_x, hiopVector& d_)
 {
   const hiopVectorPar &x = dynamic_cast<const hiopVectorPar&>(x_);
   hiopVectorPar &d = dynamic_cast<hiopVectorPar&>(d_);
-  return interface.eval_cons(n_vars,n_cons,n_cons_ineq,cons_ineq_mapping,x.local_data_const(),new_x,d.local_data());
+  bool bret; 
+  runStats.tmEvalCons.start();
+  bret = interface.eval_cons(n_vars,n_cons,n_cons_ineq,cons_ineq_mapping,x.local_data_const(),new_x,d.local_data());
+  runStats.tmEvalCons.stop(); runStats.nEvalCons_ineq++;
+  return bret;
 }
 hiopVector* hiopNlpDenseConstraints::alloc_primal_vec() const
 {
@@ -262,5 +299,29 @@ hiopMatrixDense* hiopNlpDenseConstraints::alloc_multivector_primal(int nrows, in
 bool hiopNlpDenseConstraints::get_starting_point(hiopVector& x0_)
 {
   hiopVectorPar &x0 = dynamic_cast<hiopVectorPar&>(x0_);
-  return interface.get_starting_point(n_vars,x0.local_data());
+  bool bret; 
+  bret = interface.get_starting_point(n_vars,x0.local_data());
+  return bret;
+}
+
+void hiopNlpDenseConstraints::print(FILE* f, const char* msg, int rank) const
+{
+   int myrank=0; 
+#ifdef WITH_MPI
+  if(rank>=0) assert(MPI_Comm_rank(comm, &myrank)==MPI_SUCCESS);
+#endif
+  if(myrank==rank || rank==-1) {
+    if(NULL==f) f=stdout;
+
+    if(msg) {
+      fprintf(f, "%s\n", msg);
+    } else { 
+      fprintf(f, "NLP summary\n");
+    }
+    fprintf(f, "Total number of variables: %d\n", n_vars);
+    fprintf(f, "     lower/upper/lower_and_upper bounds: %d / %d / %d\n", n_bnds_low, n_bnds_upp, n_bnds_lu);
+    fprintf(f, "Total number of equality constraints: %d\n", n_cons_eq);
+    fprintf(f, "Total number of inequality constraints: %d\n", n_cons_ineq );
+    fprintf(f, "     lower/upper/lower_and_upper bounds: %d / %d / %d\n", n_ineq_low, n_ineq_upp, n_ineq_lu);
+  } 
 }

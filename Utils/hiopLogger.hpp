@@ -29,7 +29,8 @@ enum hiopOutVerbosity {
 class hiopLogger
 {
 public:
-  hiopLogger(hiopNlpFormulation* nlp, hiopOutVerbosity max_desired, FILE* f) : _f(f), _nlp(nlp), _verb(max_desired) {};
+  hiopLogger(hiopNlpFormulation* nlp, hiopOutVerbosity max_desired, FILE* f, int masterrank=0) 
+    : _f(f), _nlp(nlp), _verb(max_desired), _master_rank(masterrank) {};
   virtual ~hiopLogger() {};
   /* outputs a vector. loggerid indicates which logger should be used, by default stdout*/
   void write(const char* msg, const hiopVector& vec,          hiopOutVerbosity v, int loggerid=0);
@@ -37,7 +38,9 @@ public:
   void write(const char* msg, const hiopIterate& r,           hiopOutVerbosity v, int loggerid=0);
   void write(const char* msg, const hiopMatrix& M,            hiopOutVerbosity v, int loggerid=0);
   void write(const char* msg, const hiopHessianLowRank& Hess, hiopOutVerbosity v, int loggerid=0);
+  void write(const char* msg, const hiopNlpFormulation& nlp,  hiopOutVerbosity v, int loggerid=0);
   void write(const char* msg, hiopOutVerbosity v, int loggerid=0);
+
   //only for loggerid=0 for now
   void printf(hiopOutVerbosity v, const char* format, ...); 
   
@@ -47,6 +50,7 @@ protected:
   hiopNlpFormulation* _nlp;
 private:
   hiopOutVerbosity _verb;
+  int _master_rank;
 };
 
 #endif

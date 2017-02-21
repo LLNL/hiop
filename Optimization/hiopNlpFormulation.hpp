@@ -9,6 +9,7 @@
 #include "mpi.h"  
 #endif
 
+#include "hiopRunStats.hpp"
 #include "hiopLogger.hpp"
 
 class hiopNlpFormulation
@@ -27,7 +28,10 @@ public:
 
   /* outputing and debug-related functionality*/
   hiopLogger* log;
+  hiopRunStats runStats;
 
+  //prints a summary of the problem
+  virtual void print(FILE* f=NULL, const char* msg=NULL, int rank=-1) const = 0;
 #ifdef WITH_MPI
   inline MPI_Comm get_comm() const { return comm; }
   inline int      get_rank() const { return rank; }
@@ -95,12 +99,13 @@ public:
   inline long long m_ineq_upp() const {return n_ineq_upp;}
   inline long long n_complem()  const {return m_ineq_low()+m_ineq_upp()+n_low()+n_upp();}
   //inline long long n_complem_local()  const {return m_ineq_low()+m_ineq_upp()+n_low_local()+n_upp_local();}
-
+  virtual void print(FILE* f=NULL, const char* msg=NULL, int rank=-1) const;
 private:
   /* problem data */
   //various sizes
   long long n_vars, n_cons, n_cons_eq, n_cons_ineq;
   long long n_bnds_low, n_bnds_low_local, n_bnds_upp, n_bnds_upp_local, n_ineq_low, n_ineq_upp;
+  long long n_bnds_lu, n_ineq_lu;
   hiopVectorPar *xl, *xu, *ixu, *ixl; //these will be global, memory distributed
   hiopInterfaceBase::NonlinearityType* vars_type; //C array containing the types for local vars
 

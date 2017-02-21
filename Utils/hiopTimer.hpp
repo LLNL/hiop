@@ -7,6 +7,8 @@
 #include <sys/time.h>
 #endif
 
+#include <cassert>
+
 //to do: sys time: getrusage(RUSAGE_SELF,&usage);
 
 class hiopTimer
@@ -36,6 +38,16 @@ public:
     //gettimeofday(&tv, NULL);
     //return static_cast<double>(tv.tv_sec) + static_cast<double>(tv.tv_usec)/1000000.0;
 #endif
+  }
+
+  inline void reset() {
+    tmElapsed=0.0; tmStart=0.0;
+  }
+
+  inline hiopTimer& operator=(const double& zero) {
+    assert(0==zero);
+    this->reset(); 
+    return *this;
   }
 private:
   double tmElapsed; //in seconds
