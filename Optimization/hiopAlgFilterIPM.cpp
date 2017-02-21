@@ -6,8 +6,9 @@
 #include <cassert>
 
 hiopAlgFilterIPM::hiopAlgFilterIPM(hiopNlpDenseConstraints* nlp_)
-  : nlp(nlp_)
 {
+  nlp = nlp_;
+
   it_curr = new hiopIterate(nlp);
   it_trial= it_curr->alloc_clone();
   dir     = it_curr->alloc_clone();
@@ -55,6 +56,8 @@ hiopAlgFilterIPM::hiopAlgFilterIPM(hiopNlpDenseConstraints* nlp_)
   theta_max = 1e7; //temporary - will be updated after ini pt is computed
   theta_min = 1e7; //temporary - will be updated after ini pt is computed
   dualUpdateType = 1;
+  max_n_it = 200;
+  
 
   //parameter based initialization
   if(dualUpdateType==0) 
@@ -91,41 +94,86 @@ hiopAlgFilterIPM::~hiopAlgFilterIPM()
   if(dualsUpdate) delete dualsUpdate;
 }
 
-int hiopAlgFilterIPM::defaultStartingPoint(hiopIterate& it_ini)
+bool hiopAlgFilterIPM::evalNlp(hiopIterate& iter, 			       
+			       double &f, hiopVector& c_, hiopVector& d_, 
+			       hiopVector& gradf_,  hiopMatrixDense& Jac_c,  hiopMatrixDense& Jac_d)
+{
+  bool new_x=true, bret; 
+  const hiopVectorPar& it_x = dynamic_cast<const hiopVectorPar&>(*iter.get_x());
+  hiopVectorPar 
+    &c=dynamic_cast<hiopVectorPar&>(c_), 
+    &d=dynamic_cast<hiopVectorPar&>(d_), 
+    &gradf=dynamic_cast<hiopVectorPar&>(gradf_);
+  const double* x = it_x.local_data_const();//local_data_const();
+  //f(x)
+  bret = nlp->eval_f(x, new_x, f); assert(bret);
+  new_x= false; //same x for the rest
+  bret = nlp->eval_grad_f(x, new_x, gradf.local_data());  assert(bret);
+
+  bret = nlp->eval_c     (x, new_x, c.local_data());     assert(bret);
+  bret = nlp->eval_d     (x, new_x, d.local_data());     assert(bret);
+  bret = nlp->eval_Jac_c (x, new_x, Jac_c.local_data()); assert(bret);
+  bret = nlp->eval_Jac_d (x, new_x, Jac_d.local_data()); assert(bret);
+
+  return bret;
+}
+
+int hiopAlgFilterIPM::startingProcedure(hiopIterate& it_ini,			       
+					double &f, hiopVector& c, hiopVector& d, 
+					hiopVector& gradf,  hiopMatrixDense& Jac_c,  hiopMatrixDense& Jac_d)
 {
   if(!nlp->get_starting_point(*it_ini.get_x())) {
-    printf("error: in getting the user provided starting point\n");
+    nlp->log->printf(hovError, "error: in getting the user provided starting point\n");
     assert(false); return false;
   }
+
+
+  nlp->runStats.tmSolverInternal.start();
+  nlp->runStats.tmStartingPoint.start();
+
   it_ini.projectPrimalsXIntoBounds(kappa1, kappa2);
 
-  if(!nlp->eval_d(*it_ini.get_x(), true, *it_ini.get_d())) {
-    printf("error: in user provided constraint function");
-    assert(false); return false;
-  }
+  nlp->runStats.tmStartingPoint.stop();
+  nlp->runStats.tmSolverInternal.stop();
+
+  this->evalNlp(it_ini, f, c, d, gradf, Jac_c, Jac_d);
+  
+  // if(!nlp->eval_d(*it_ini.get_x(), true, *it_ini.get_d())) {
+  //   printf("error: in user provided constraint function");
+  //   assert(false); return false;
+  // }
+
+  nlp->runStats.tmSolverInternal.start();
+  nlp->runStats.tmStartingPoint.start();
+
+  it_ini.get_d()->copyFrom(d);
+
   it_ini.projectPrimalsDIntoBounds(kappa1, kappa2);
 
   it_ini.determineSlacks();
 
   it_ini.setBoundsDualsToConstant(1.);
 
+  
   //-- //! lsq for yd and yc
   //for now set them to zero
   it_ini.setEqualityDualsToConstant(0.);
 
   nlp->log->write("Using initial point:", it_ini, hovIteration);
-
+  nlp->runStats.tmStartingPoint.stop();
+  nlp->runStats.tmSolverInternal.stop();
   return true;
 }
 
 int hiopAlgFilterIPM::run()
 {
-  tmSol.start();
+  nlp->log->write("\nNLP SUMMARY\n==============", *nlp, hovSummary);
 
-  defaultStartingPoint(*it_curr);
+  nlp->runStats.tmOptimizTotal.start();
+
+  startingProcedure(*it_curr, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d); //this also evaluates the nlp
   _mu=mu0;
-  //update problem information 
-  this->evalNlp(*it_curr, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d);
+
   //update log bar
   logbar->updateWithNlpInfo(*it_curr, _mu, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d);
   nlp->log->printf(hovScalars, "log bar obj: %g", logbar->f_logbar);
@@ -134,7 +182,7 @@ int hiopAlgFilterIPM::run()
 
   nlp->log->write("First residual-------------", *resid, hovIteration);
 
-  iter_num=0;
+  iter_num=0; nlp->runStats.nIter=iter_num;
 
   theta_max=1e+4*fmax(1.0,resid->getInfeasInfNorm());
   theta_min=1e-4*fmax(1.0,resid->getInfeasInfNorm());
@@ -162,8 +210,8 @@ int hiopAlgFilterIPM::run()
     /*************************************************
      * Termination checks
      ************************************************/
-    if(_err_nlp<=eps_tol) { algStatus=0; break; }
-    if(iter_num>=500) { algStatus=1; break; }
+    if(_err_nlp<=eps_tol)  { algStatus=0; break; }
+    if(iter_num>=max_n_it) { algStatus=1; break; }
     if(algStatus!=0) break; //failure of the line search
 
     /************************************************
@@ -205,14 +253,13 @@ int hiopAlgFilterIPM::run()
     /***************************************************************
      * backtracking line search
      ****************************************************************/
+    nlp->runStats.tmSolverInternal.start();
+
     //maximum  step
     bret = it_curr->fractionToTheBdry(*dir, _tau, _alpha_primal, _alpha_dual); assert(bret);
     double theta = resid->getInfeasInfNorm(); //at it_curr
     double theta_trial;
-
-    //!
-    //nlp->log->printf(hovSummary, "steps: pri %22.16e    dual %22.16e\n",  _alpha_primal, _alpha_dual);
-
+    nlp->runStats.tmSolverInternal.stop();
 
     //line search status for the accepted trial point. Needed to update the filter
     //-1 uninitialized (first iteration)
@@ -226,18 +273,22 @@ int hiopAlgFilterIPM::run()
     
     //this is the linesearch loop
     while(true) {
+      nlp->runStats.tmSolverInternal.start(); //---
+
       //check the step against the minimum step size
       if(_alpha_primal<1e-16) {
 	nlp->log->write("Panic: minimum step size reached. The problem may be infeasible. Restauration phase is needed, but not yet implemented. Will exit here.",hovError);
 	algStatus=-1;
 	break;
       }
-
       bret = it_trial->takeStep_primals(*it_curr, *dir, _alpha_primal, _alpha_dual); assert(bret);
+      nlp->runStats.tmSolverInternal.stop(); //---
+
       //evaluate the problem at the trial iterate (functions only)
       this->evalNlp_funcOnly(*it_trial, _f_nlp_trial, *_c_trial, *_d_trial);
       logbar->updateWithNlpInfo_trial_funcOnly(*it_trial, _f_nlp_trial, *_c_trial, *_d_trial);
 
+      nlp->runStats.tmSolverInternal.start(); //---
       //compute infeasibility theta at trial point.
       theta_trial = resid->computeNlpInfeasInfNorm(*it_trial, *_c_trial, *_d_trial);
 
@@ -266,11 +317,16 @@ int hiopAlgFilterIPM::run()
 	  _alpha_primal *= 0.5;
 	  continue;
 	}  
-	nlp->log->write("Warning (close to panic): I got to a point where I wasn't supposed to be. (1)",hovWarning);
+	nlp->log->write("Warning (close to panic): I got to a point where I wasn't supposed to be. (1)", hovWarning);
       } else {
 	// if(theta<theta_min,  then check the switching condition and, if true, rely on Armijo rule
 	// first compute grad_phi^T d_x if it hasn't already been computed
-	if(!grad_phi_dx_computed) { grad_phi_dx = logbar->directionalDerivative(*dir); grad_phi_dx_computed=true; }
+	if(!grad_phi_dx_computed) { 
+	  nlp->runStats.tmSolverInternal.stop(); //---
+	  grad_phi_dx = logbar->directionalDerivative(*dir); 
+	  grad_phi_dx_computed=true; 
+	  nlp->runStats.tmSolverInternal.start(); //---
+	}
 	nlp->log->printf(hovLinesearch, "Linesearch: grad_phi_dx = %22.15e\n", grad_phi_dx);
 
 	//this is the actual switching condition
@@ -311,9 +367,9 @@ int hiopAlgFilterIPM::run()
 
       } //end of else: theta_trial<theta_min
     } //end of while for the linesearch loop
-    
-    //post line-search stuff
-    
+    nlp->runStats.tmSolverInternal.stop();
+
+    //post line-search stuff  
     //filter is augmented whenever the switching condition or Armijo rule do not hold for the trial point that was just accepted
     if(lsStatus==1) {
       //need to check switching cond and Armijo to decide if filter is augmented
@@ -343,10 +399,12 @@ int hiopAlgFilterIPM::run()
       assert(false && "unrecognized value for lsStatus");
 
     nlp->log->printf(hovScalars, "Iter[%d] -> accepted step primal=[%17.11e] dual=[%17.11e]\n", iter_num, _alpha_primal, _alpha_dual);
-    iter_num++;
+    iter_num++; nlp->runStats.nIter=iter_num;
 
     //evaluate derivatives at the trial (and to be accepted) trial point
     this->evalNlp_derivOnly(*it_trial, *_grad_f, *_Jac_c, *_Jac_d);
+
+    nlp->runStats.tmSolverInternal.start(); //-----
     //reuse function values
     _f_nlp=_f_nlp_trial; hiopVector* pvec=_c_trial; _c_trial=_c; _c=pvec; pvec=_d_trial; _d_trial=_d; _d=pvec;
 
@@ -358,7 +416,9 @@ int hiopAlgFilterIPM::run()
     //update current iterate (do a fast swap of the pointers)
     hiopIterate* pit=it_curr; it_curr=it_trial; it_trial=pit;
     nlp->log->printf(hovIteration, "Iter[%d] -> full iterate -------------", iter_num); nlp->log->write("", *it_curr, hovIteration); 
-   
+
+    nlp->runStats.tmSolverInternal.stop(); //-----
+
     //notify logbar about the changes
     logbar->updateWithNlpInfo(*it_curr, _mu, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d);
     //update residual
@@ -366,25 +426,25 @@ int hiopAlgFilterIPM::run()
     nlp->log->printf(hovIteration, "Iter[%d] full residual:-------------\n", iter_num); nlp->log->write("", *resid, hovIteration);
   }
 
-  tmSol.stop();
+  nlp->runStats.tmOptimizTotal.stop();
 
   /***** Termination message *****/
   switch(algStatus) {
   case 0:
     {
-      nlp->log->printf(hovSummary, "Successfull termination. Wallclock time: %.3f seconds.\n", tmSol.getElapsedTime());
+      nlp->log->printf(hovSummary, "Successfull termination.\n%s\n", nlp->runStats.getSummary().c_str());
       break;
     }
   case -1:
     {
-      nlp->log->printf(hovSummary, "Couldn't solve the problem. Wallclock time: %.3f seconds.\n", tmSol.getElapsedTime());
+      nlp->log->printf(hovSummary, "Couldn't solve the problem.\n%s\n", nlp->runStats.getSummary().c_str());
       if(0==lsStatus) nlp->log->printf(hovSummary, "Linesearch returned unsuccessfully (small step)");
       nlp->log->printf(hovSummary, "\n");
       break;
     }
   case 1:
     {
-      nlp->log->printf(hovSummary, "Maximum number of iterations reached. Wallclock time: %.3f seconds.\n", tmSol.getElapsedTime());
+      nlp->log->printf(hovSummary, "Maximum number of iterations reached.\n%s\n", nlp->runStats.getSummary().c_str());
       break;
     }
   default:
@@ -392,8 +452,6 @@ int hiopAlgFilterIPM::run()
     break;
   };
 
-
-  //printStatistics();
   delete kkt;
 
   return true;
@@ -421,6 +479,8 @@ evalNlpAndLogErrors(const hiopIterate& it, const hiopResidual& resid, const doub
 		    double& nlpoptim, double& nlpfeas, double& nlpcomplem, double& nlpoverall,
 		    double& logoptim, double& logfeas, double& logcomplem, double& logoverall)
 {
+  nlp->runStats.tmSolverInternal.start();
+
   long long n=nlp->n_complem(), m=nlp->m();
   //the one norms
   //double nrmDualBou=it.normOneOfBoundDuals();
@@ -442,35 +502,12 @@ evalNlpAndLogErrors(const hiopIterate& it, const hiopResidual& resid, const doub
 
   //finally, the scaled barrier error
   logoverall = fmax(logoptim/sd, fmax(logfeas, logcomplem/sc));
-
+  nlp->runStats.tmSolverInternal.start();
   return true;
 }
 
 
 
-bool hiopAlgFilterIPM::evalNlp(hiopIterate& iter, 			       
-			       double &f, hiopVector& c_, hiopVector& d_, 
-			       hiopVector& gradf_,  hiopMatrixDense& Jac_c,  hiopMatrixDense& Jac_d)
-{
-  bool new_x=true, bret; 
-  const hiopVectorPar& it_x = dynamic_cast<const hiopVectorPar&>(*iter.get_x());
-  hiopVectorPar 
-    &c=dynamic_cast<hiopVectorPar&>(c_), 
-    &d=dynamic_cast<hiopVectorPar&>(d_), 
-    &gradf=dynamic_cast<hiopVectorPar&>(gradf_);
-  const double* x = it_x.local_data_const();//local_data_const();
-  //f(x)
-  bret = nlp->eval_f(x, new_x, f); assert(bret);
-  new_x= false; //same x for the rest
-  bret = nlp->eval_grad_f(x, new_x, gradf.local_data());  assert(bret);
-
-  bret = nlp->eval_c     (x, new_x, c.local_data());     assert(bret);
-  bret = nlp->eval_d     (x, new_x, d.local_data());     assert(bret);
-  bret = nlp->eval_Jac_c (x, new_x, Jac_c.local_data()); assert(bret);
-  bret = nlp->eval_Jac_d (x, new_x, Jac_d.local_data()); assert(bret);
-
-  return bret;
-}
 
 bool hiopAlgFilterIPM::evalNlp_funcOnly(hiopIterate& iter,
 					double& f, hiopVector& c_, hiopVector& d_)
@@ -504,18 +541,18 @@ bool hiopAlgFilterIPM::evalNlp_derivOnly(hiopIterate& iter,
 void hiopAlgFilterIPM::outputIteration(int lsStatus, int lsNum)
 {
   if(iter_num/10*10==iter_num) 
-    printf("iter    objective     inf_pr     inf_du   lg(mu)  alpha_du   alpha_pr linesrch\n");
+    nlp->log->printf(hovSummary, "iter    objective     inf_pr     inf_du   lg(mu)  alpha_du   alpha_pr linesrch\n");
 
   if(lsStatus==-1) 
-    printf("%4d %14.7e %7.3e  %7.3e %6.2f  %7.3e  %7.3e  -(-)\n",
-	   iter_num, _f_nlp, _err_nlp_feas, _err_nlp_optim, log10(_mu), _alpha_dual, _alpha_primal); 
+    nlp->log->printf(hovSummary, "%4d %14.7e %7.3e  %7.3e %6.2f  %7.3e  %7.3e  -(-)\n",
+		     iter_num, _f_nlp, _err_nlp_feas, _err_nlp_optim, log10(_mu), _alpha_dual, _alpha_primal); 
   else {
     char stepType[1];
     if(lsStatus==1) strcpy(stepType, "s");
     else if(lsStatus==2) strcpy(stepType, "h");
     else if(lsStatus==3) strcpy(stepType, "f");
     else strcpy(stepType, "?");
-    printf("%4d %14.7e %7.3e  %7.3e %6.2f  %7.3e  %7.3e  %d(%s)\n",
-	   iter_num, _f_nlp, _err_nlp_feas, _err_nlp_optim, log10(_mu), _alpha_dual, _alpha_primal, lsNum, stepType); 
+    nlp->log->printf(hovSummary, "%4d %14.7e %7.3e  %7.3e %6.2f  %7.3e  %7.3e  %d(%s)\n",
+		     iter_num, _f_nlp, _err_nlp_feas, _err_nlp_optim, log10(_mu), _alpha_dual, _alpha_primal, lsNum, stepType); 
   }
 }

@@ -17,9 +17,11 @@ public:
   virtual ~hiopAlgFilterIPM();
 
   virtual int run();
-  virtual int defaultStartingPoint(hiopIterate& it_ini);
 
- 
+  /** computes primal-dual point and returns the evaluation of the problem at this point */
+  virtual int startingProcedure(hiopIterate& it_ini,
+	       double &f, hiopVector& c_, hiopVector& d_, 
+	       hiopVector& grad_,  hiopMatrixDense& Jac_c,  hiopMatrixDense& Jac_d);
 
 private:
   bool evalNlp(hiopIterate& iter,
@@ -95,6 +97,7 @@ private:
   double eta_phi;       //parameter in the Armijo rule
   double kappa_Sigma;   //parameter in resetting the duals to guarantee closedness of the primal-dual logbar Hessian to the primal logbar Hessian
   int dualUpdateType;   //type of the update for dual multipliers: 0 LSQ (default, recommended for quasi-Newton); 1 Newton
+  int max_n_it;
   //timers
   hiopTimer tmSol;
 private:
