@@ -14,7 +14,7 @@ Ex2::Ex2(int n)
 #endif
   
   // set up vector distribution for primal variables - easier to store it as a member in this simple example
-  col_partition = new long long[comm_size];
+  col_partition = new long long[comm_size+1];
   long long quotient=n_vars/comm_size, remainder=n_vars-comm_size*quotient;
   //if(my_rank==0) printf("reminder=%llu quotient=%llu\n", remainder, quotient);
   int i=0; col_partition[i]=0; i++;
