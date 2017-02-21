@@ -18,7 +18,7 @@
 #define SIGMA_STRATEGY4 4
 #define SIGMA_CONSTANT  5
 
-hiopHessianLowRank::hiopHessianLowRank(const hiopNlpDenseConstraints* nlp_, int max_mem_len)
+hiopHessianLowRank::hiopHessianLowRank(hiopNlpDenseConstraints* nlp_, int max_mem_len)
   : l_max(max_mem_len), l_curr(-1), sigma(1.), sigma0(1.), nlp(nlp_), matrixChanged(false)
 {
   DhInv = dynamic_cast<hiopVectorPar*>(nlp->alloc_primal_vec());
@@ -105,7 +105,7 @@ hiopHessianLowRank::~hiopHessianLowRank()
   if(_l_vec2) delete _l_vec2;
   if(_n_vec1) delete _n_vec1;
   if(_n_vec2) delete _n_vec2;
-
+  if(_2l_vec1) delete _2l_vec1;
   if(_V_ipiv_vec) delete[] _V_ipiv_vec;
   if(_V_work_vec) delete _V_work_vec;
 }
@@ -152,6 +152,8 @@ void hiopHessianLowRank::print(FILE* f, hiopOutVerbosity v, const char* msg) con
 bool hiopHessianLowRank::update(const hiopIterate& it_curr, const hiopVector& grad_f_curr_,
 				const hiopMatrix& Jac_c_curr_, const hiopMatrix& Jac_d_curr_)
 {
+  nlp->runStats.tmSolverInternal.start();
+
   const hiopVectorPar&   grad_f_curr= dynamic_cast<const hiopVectorPar&>(grad_f_curr_);
   const hiopMatrixDense& Jac_c_curr = dynamic_cast<const hiopMatrixDense&>(Jac_c_curr_);
   const hiopMatrixDense& Jac_d_curr = dynamic_cast<const hiopMatrixDense&>(Jac_d_curr_);
@@ -264,6 +266,8 @@ bool hiopHessianLowRank::update(const hiopIterate& it_curr, const hiopVector& gr
 
     l_curr++;
   }
+
+  nlp->runStats.tmSolverInternal.stop();
   return true;
 }
 
@@ -960,7 +964,7 @@ matTimesDiagTimesMatTrans_local(hiopMatrixDense& W, const hiopMatrixDense& S, co
 /**************************************************************************
  * this code is going to be removed
  *************************************************************************/
-hiopHessianInvLowRank_obsolette::hiopHessianInvLowRank_obsolette(const hiopNlpDenseConstraints* nlp_, int max_mem_len)
+hiopHessianInvLowRank_obsolette::hiopHessianInvLowRank_obsolette(hiopNlpDenseConstraints* nlp_, int max_mem_len)
   : hiopHessianLowRank(nlp_,max_mem_len)
 {
   const hiopNlpDenseConstraints* nlp = dynamic_cast<const hiopNlpDenseConstraints*>(nlp_);

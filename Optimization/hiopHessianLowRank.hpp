@@ -40,7 +40,7 @@
 class hiopHessianLowRank
 {
 public:
-  hiopHessianLowRank(const hiopNlpDenseConstraints* nlp_, int max_memory_length);
+  hiopHessianLowRank(hiopNlpDenseConstraints* nlp_, int max_memory_length);
   virtual ~hiopHessianLowRank();
 
   /* return false if the update destroys hereditary positive definitness and the BFGS update is not taken*/
@@ -78,7 +78,7 @@ protected:
   double sigma0; //default scaling factor of identity
   int sigma_update_strategy;
   double sigma_safe_min, sigma_safe_max; //min and max safety thresholds for sigma
-  const hiopNlpDenseConstraints* nlp;
+  hiopNlpDenseConstraints* nlp;
 private:
   hiopVectorPar* DhInv; //(B0+Dk)^{-1}
 #ifdef DEEP_CHECKING
@@ -186,7 +186,7 @@ private:
 class hiopHessianInvLowRank_obsolette : public hiopHessianLowRank
 {
 public:
-  hiopHessianInvLowRank_obsolette(const hiopNlpDenseConstraints* nlp, int max_memory_length);
+  hiopHessianInvLowRank_obsolette(hiopNlpDenseConstraints* nlp, int max_memory_length);
   virtual bool update(const hiopIterate& x_curr, const hiopVector& grad_f_curr,
 		      const hiopMatrix& Jac_c_curr, const hiopMatrix& Jac_d_curr);
 

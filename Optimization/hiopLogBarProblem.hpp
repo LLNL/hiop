@@ -34,6 +34,8 @@ public:
 		    const double &f, const hiopVector& c_, const hiopVector& d_, 
 		    const hiopVector& gradf_,  const hiopMatrixDense& Jac_c_,  const hiopMatrixDense& Jac_d_) 
   {
+    nlp->runStats.tmSolverInternal.start();
+
     mu=mu_; c_nlp=&c_; d_nlp=&d_; Jac_c_nlp=&Jac_c_; Jac_d_nlp=&Jac_d_; iter=&iter_;
     _grad_x_logbar->copyFrom(gradf_);
     _grad_d_logbar->setToZero(); 
@@ -59,18 +61,23 @@ public:
 
       f_logbar += iter->linearDampingTerm(mu,kappa_d);
 #ifdef DEEP_CHECKING
-    nlp->log->write("gradx_log_bar final, with damping:", *_grad_x_logbar, hovLinesearchVerb);
-    nlp->log->write("gradd_log_bar final, with damping:", *_grad_d_logbar, hovLinesearchVerb);
+      nlp->log->write("gradx_log_bar final, with damping:", *_grad_x_logbar, hovLinesearchVerb);
+      nlp->log->write("gradd_log_bar final, with damping:", *_grad_d_logbar, hovLinesearchVerb);
 #endif
+      nlp->runStats.tmSolverInternal.stop();
     }
   }
   inline void 
   updateWithNlpInfo_trial_funcOnly(const hiopIterate& iter_, 
 				   const double &f, const hiopVector& c_, const hiopVector& d_)
   {
+    nlp->runStats.tmSolverInternal.start();
+    
     c_nlp_trial=&c_; d_nlp_trial=&d_; iter_trial=&iter_;
     f_logbar_trial = f - mu * iter_trial->evalLogBarrier();
     if(kappa_d>0.) f_logbar_trial += iter_trial->linearDampingTerm(mu,kappa_d);
+
+    nlp->runStats.tmSolverInternal.stop();
   }
   /* adds non-log bar terms to the gradient, e.g., damping terms */
   inline void addNonLogBarTermsToGrad_x(const double& beta, hiopVector& gradx) const
@@ -87,8 +94,10 @@ public:
   */
   inline double directionalDerivative(const hiopIterate& dir) 
   {
+    nlp->runStats.tmSolverInternal.start();
     double tr = dir.get_x()->dotProductWith(*_grad_x_logbar);
     tr       += dir.get_d()->dotProductWith(*_grad_d_logbar);
+    nlp->runStats.tmSolverInternal.stop();
     return tr;
   }
 

@@ -22,7 +22,7 @@ public:
 class hiopKKTLinSysLowRank : public hiopKKTLinSys
 {
 public:
-  hiopKKTLinSysLowRank(const hiopNlpFormulation* nlp_);
+  hiopKKTLinSysLowRank(hiopNlpFormulation* nlp_);
   virtual ~hiopKKTLinSysLowRank();
 
   virtual bool update(const hiopIterate* iter, 
@@ -55,7 +55,7 @@ private:
   const hiopMatrixDense *Jac_c, *Jac_d;
   hiopHessianLowRank* Hess;
 
-  const hiopNlpDenseConstraints* nlp;
+  hiopNlpDenseConstraints* nlp;
 
   hiopMatrixDense* N; //the kxk reduced matrix
 #ifdef DEEP_CHECKING

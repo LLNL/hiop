@@ -10,7 +10,7 @@
 class hiopResidual
 {
 public:
-  hiopResidual(const hiopNlpDenseConstraints* nlp);
+  hiopResidual(hiopNlpDenseConstraints* nlp);
   virtual ~hiopResidual();
 
   virtual int update(const hiopIterate& it, 
@@ -59,7 +59,7 @@ private:
    */
   double nrmInf_bar_optim, nrmInf_bar_feasib, nrmInf_bar_complem; 
   // and associated info from problem formulation
-  const hiopNlpDenseConstraints * nlp;
+  hiopNlpDenseConstraints * nlp;
 private:
   hiopResidual() {};
   hiopResidual(const hiopResidual&) {};

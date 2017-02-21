@@ -2,7 +2,7 @@
 
 #include <cmath>
 #include <cassert>
-hiopResidual::hiopResidual(const hiopNlpDenseConstraints* nlp_)
+hiopResidual::hiopResidual(hiopNlpDenseConstraints* nlp_)
 {
   nlp = nlp_;
   rx = dynamic_cast<hiopVectorPar*>(nlp->alloc_primal_vec());
@@ -43,6 +43,8 @@ double hiopResidual::computeNlpInfeasInfNorm(const hiopIterate& it,
 			       const hiopVector& c, 
 			       const hiopVector& d)
 {
+  nlp->runStats.tmSolverInternal.start();
+  
   double nrmInf_infeasib;
   long long nx_loc=rx->get_local_size();
   //ryc
@@ -88,8 +90,9 @@ double hiopResidual::computeNlpInfeasInfNorm(const hiopIterate& it,
   //otherwise, if calling infnorm() for each vector, there will be 12 Allreduce's, each of 1 double
   double aux;
   int ierr = MPI_Allreduce(&nrmInf_infeasib, &aux, 1, MPI_DOUBLE, MPI_MAX, nlp->get_comm()); assert(MPI_SUCCESS==ierr);
-  return aux;
+  nrmInf_infeasib = aux;
 #endif
+  nlp->runStats.tmSolverInternal.stop();
   return nrmInf_infeasib;
 }
 
@@ -98,6 +101,8 @@ int hiopResidual::update(const hiopIterate& it,
 			 const hiopVector& grad, const hiopMatrix& jac_c, const hiopMatrix& jac_d, 
 			 const hiopLogBarProblem& logprob)
 {
+  nlp->runStats.tmSolverInternal.start();
+
   nrmInf_nlp_optim = nrmInf_nlp_feasib = nrmInf_nlp_complem = 0;
   nrmInf_bar_optim = nrmInf_bar_feasib = nrmInf_bar_complem = 0;
 
@@ -220,6 +225,7 @@ int hiopResidual::update(const hiopIterate& it,
   nrmInf_nlp_optim=aux_g[0]; nrmInf_nlp_feasib=aux_g[1]; nrmInf_nlp_complem=aux_g[2];
   nrmInf_bar_optim=aux_g[3]; nrmInf_bar_feasib=aux_g[4]; nrmInf_bar_complem=aux_g[5];
 #endif
+  nlp->runStats.tmSolverInternal.stop();
   return true;
 }
 

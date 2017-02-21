@@ -3,10 +3,10 @@
 
 #include <cmath>
 
-hiopKKTLinSysLowRank::hiopKKTLinSysLowRank(const hiopNlpFormulation* nlp_)
+hiopKKTLinSysLowRank::hiopKKTLinSysLowRank(hiopNlpFormulation* nlp_)
 {
   iter=NULL; grad_f=NULL; Jac_c=Jac_d=NULL; Hess=NULL;
-  nlp = dynamic_cast<const hiopNlpDenseConstraints*>(nlp_);
+  nlp = dynamic_cast<hiopNlpDenseConstraints*>(nlp_);
   rx_tilde  = dynamic_cast<hiopVectorPar*>(nlp->alloc_primal_vec());
   Dx = rx_tilde->alloc_clone();
   ryd_tilde = dynamic_cast<hiopVectorPar*>(nlp->alloc_dual_ineq_vec());
@@ -39,6 +39,8 @@ update(const hiopIterate* iter_,
        const hiopMatrixDense* Jac_c_, const hiopMatrixDense* Jac_d_, 
        hiopHessianLowRank* Hess_)
 {
+  nlp->runStats.tmSolverInternal.start();
+
   iter=iter_;
   grad_f = dynamic_cast<const hiopVectorPar*>(grad_f_);
   Jac_c = Jac_c_; Jac_d = Jac_d_;
@@ -63,6 +65,8 @@ update(const hiopIterate* iter_,
 #endif 
   Dd_inv->invert();
 
+  nlp->runStats.tmSolverInternal.stop();
+
   nlp->log->write("Dd_inv in KKT", *Dd_inv, hovMatrices);
   return true;
 }
@@ -70,6 +74,7 @@ update(const hiopIterate* iter_,
 bool hiopKKTLinSysLowRank::computeDirections(const hiopResidual* resid, 
 					     hiopIterate* dir)
 {
+  nlp->runStats.tmSolverInternal.start();
   const hiopResidual &r=*resid; 
 
   /***********************************************************************
@@ -203,7 +208,7 @@ bool hiopKKTLinSysLowRank::computeDirections(const hiopResidual* resid,
   //CHECK THE SOLUTION
   errorKKT(resid,dir);
 #endif
-
+  nlp->runStats.tmSolverInternal.stop();
   return true;
 }
 

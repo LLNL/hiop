@@ -34,6 +34,9 @@ hiopMatrixDense::hiopMatrixDense(const long long& m, const long long& glob_n, lo
   for(int i=1; i<max_rows; i++)
     M[i]=M[0]+i*n_local;
 
+  //! valgrind reports a shit load of errors without this; check this
+  for(int i=0; i<max_rows*n_local; i++) M[0][i]=0.0;
+
   //internal temporary buffers to follow
 }
 hiopMatrixDense::~hiopMatrixDense()

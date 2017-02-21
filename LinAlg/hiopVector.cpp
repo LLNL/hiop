@@ -593,7 +593,7 @@ bool hiopVectorPar::matchesPattern(const hiopVector& ix_)
     if(ix[i]==0.0 && x[i]!=0.0) bmatches=false; 
 
 #ifdef WITH_MPI
-  int bmatches_glob;
+  int bmatches_glob=bmatches;
   int ierr=MPI_Allreduce(&bmatches, &bmatches_glob, 1, MPI_C_BOOL, MPI_LAND, comm); assert(MPI_SUCCESS==ierr);
   return bmatches_glob;
 #endif
@@ -613,7 +613,7 @@ int hiopVectorPar::allPositive_w_patternSelect(const hiopVector& w_)
     if(w[i]!=0.0 && x[i]<=0.) allPos=0;
   
 #ifdef WITH_MPI
-  int allPosG;
+  int allPosG=allPos;
   int ierr = MPI_Allreduce(&allPos, &allPosG, 1, MPI_INT, MPI_MIN, comm); assert(MPI_SUCCESS==ierr);
   return allPosG;
 #endif  
