@@ -111,6 +111,12 @@ void hiopVectorPar::copyToStarting(hiopVector& v_, int start_index)
   memcpy(v.data, data+start_index, v.n_local*sizeof(double));
 }
 
+void hiopVectorPar::copyTo(double* dest) const
+{
+  memcpy(dest, this->data, n_local*sizeof(double));
+}
+
+
 double hiopVectorPar::twonorm() const 
 {
   int one=1; int n=n_local;

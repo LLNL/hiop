@@ -24,6 +24,8 @@ public:
   virtual void copyFrom(const hiopVector& v ) = 0;
   /* Copy v in 'this' starting at start_index in  'this'. */
   virtual void copyFromStarting(const hiopVector& v, int start_index) = 0;
+  /* Copy 'this' to double array, which is assumed to be at least of 'n_local' size.*/
+  virtual void copyTo(double* dest) const = 0;
   /* Copy 'this' to v starting at start_index in 'this'. */
   virtual void copyToStarting(hiopVector& v, int start_index) = 0;
   /** Return the two norm */
@@ -115,6 +117,7 @@ public:
   virtual void copyFrom(const hiopVector& v );
   virtual void copyFrom(const double* v_local_data); //v should be of length at least n_local
   virtual void copyFromStarting(const hiopVector& v, int start_index);
+  virtual void copyTo(double* dest) const;
   virtual void copyToStarting(hiopVector& v, int start_index);
   virtual double twonorm() const;
   virtual double dotProductWith( const hiopVector& v ) const;

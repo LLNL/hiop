@@ -64,6 +64,8 @@ hiopAlgFilterIPM::hiopAlgFilterIPM(hiopNlpDenseConstraints* nlp_)
     dualsUpdate = new hiopDualsLsqUpdate(nlp);
   else if(dualUpdateType==1)
     dualsUpdate = new hiopDualsNewtonLinearUpdate(nlp);
+
+  _solverStatus = NlpSolve_IncompleteInit;
 }
 
 hiopAlgFilterIPM::~hiopAlgFilterIPM()
@@ -162,10 +164,13 @@ int hiopAlgFilterIPM::startingProcedure(hiopIterate& it_ini,
   nlp->log->write("Using initial point:", it_ini, hovIteration);
   nlp->runStats.tmStartingPoint.stop();
   nlp->runStats.tmSolverInternal.stop();
+
+  _solverStatus = NlpSolve_SolveNotCalled;
+
   return true;
 }
 
-int hiopAlgFilterIPM::run()
+hiopSolveStatus hiopAlgFilterIPM::run()
 {
   nlp->log->write("\nNLP SUMMARY\n==============", *nlp, hovSummary);
 
@@ -197,6 +202,7 @@ int hiopAlgFilterIPM::run()
   //1 max iter reached
 
   int algStatus=0; bool bret=true; int lsStatus=-1, lsNum=-1;
+  _solverStatus = NlpSolve_Pending;
   while(true) {
 
     bret = evalNlpAndLogErrors(*it_curr, *resid, _mu, 
@@ -261,7 +267,7 @@ int hiopAlgFilterIPM::run()
     double theta_trial;
     nlp->runStats.tmSolverInternal.stop();
 
-    //line search status for the accepted trial point. Needed to update the filter
+    //algStatus: line search status for the accepted trial point. Needed to update the filter
     //-1 uninitialized (first iteration)
     //0 unsuccessful (small step size)
     //1 "sufficient decrease" when far away from solution (theta_trial>theta_min)
@@ -433,10 +439,12 @@ int hiopAlgFilterIPM::run()
   case 0:
     {
       nlp->log->printf(hovSummary, "Successfull termination.\n%s\n", nlp->runStats.getSummary().c_str());
+      _solverStatus = Solve_Success;
       break;
     }
   case -1:
     {
+      _solverStatus = Steplength_Too_Small;
       nlp->log->printf(hovSummary, "Couldn't solve the problem.\n%s\n", nlp->runStats.getSummary().c_str());
       if(0==lsStatus) nlp->log->printf(hovSummary, "Linesearch returned unsuccessfully (small step)");
       nlp->log->printf(hovSummary, "\n");
@@ -444,6 +452,7 @@ int hiopAlgFilterIPM::run()
     }
   case 1:
     {
+      _solverStatus = Max_Iter_Exceeded;
       nlp->log->printf(hovSummary, "Maximum number of iterations reached.\n%s\n", nlp->runStats.getSummary().c_str());
       break;
     }
@@ -454,7 +463,7 @@ int hiopAlgFilterIPM::run()
 
   delete kkt;
 
-  return true;
+  return _solverStatus;
 }
 
 bool hiopAlgFilterIPM::
@@ -555,4 +564,29 @@ void hiopAlgFilterIPM::outputIteration(int lsStatus, int lsNum)
     nlp->log->printf(hovSummary, "%4d %14.7e %7.3e  %7.3e %6.2f  %7.3e  %7.3e  %d(%s)\n",
 		     iter_num, _f_nlp, _err_nlp_feas, _err_nlp_optim, log10(_mu), _alpha_dual, _alpha_primal, lsNum, stepType); 
   }
+}
+
+/* returns the objective value; valid only after 'run' method has been called */
+double hiopAlgFilterIPM::getObjective() const
+{
+  if(_solverStatus==NlpSolve_IncompleteInit || _solverStatus == NlpSolve_SolveNotCalled)
+    nlp->log->printf(hovError, "getObjective: hiOp did not initialize entirely or the 'run' function was not called.");
+  if(_solverStatus==NlpSolve_Pending)
+    nlp->log->printf(hovWarning, "getObjective: hiOp does not seem to have completed yet. The objective value returned may not be optimal.");
+  return _f_nlp;
+}
+  /* returns the primal vector x; valid only after 'run' method has been called */
+void hiopAlgFilterIPM::getSolution(const double* x) const
+{
+  if(_solverStatus==NlpSolve_IncompleteInit || _solverStatus == NlpSolve_SolveNotCalled)
+    nlp->log->printf(hovError, "getSolution: hiOp did not initialize entirely or the 'run' function was not called.");
+  if(_solverStatus==NlpSolve_Pending)
+    nlp->log->printf(hovWarning, "getSolution: hiOp does not seem to have completed yet. The primal vector returned may not be optimal.");
+
+  //it_curr->get_x()->
+}
+
+hiopSolveStatus hiopAlgFilterIPM::getSolveStatus() const
+{
+  return _solverStatus;
 }
