@@ -66,7 +66,7 @@ int main(int argc, char **argv)
   //assert(MPI_SUCCESS==MPI_Comm_size(MPI_COMM_WORLD,&numRanks));
   if(0==rank) printf("Support for MPI is enabled\n");
 #endif
-  bool selfCheck=false; long long n = 4e4;
+  bool selfCheck; long long n;
   if(!parse_arguments(argc, argv, n, selfCheck)) { usage(argv[0]); return 1;}
 
   Ex2 nlp_interface(n);
@@ -84,7 +84,7 @@ int main(int argc, char **argv)
     return -1;
   }
 
-  //this is used for "regression" testing
+  //this is used for "regression" testing when the driver is called with -selfcheck
   if(selfCheck) {
     if(!self_check(n, obj_value))
       return -1;
@@ -117,6 +117,7 @@ static bool self_check(long long n, double objval)
       if(fabs( (objval_saved[it]-objval)/(1+objval_saved[it])) > relerr) {
 	printf("selfcheck failure. Objective (%18.12e) does not agree (%d digits) with the saved value (%18.12e) for n=%d.\n",
 	       objval, -(int)log10(relerr), objval_saved[it], n);
+	return false;
       } else {
 	printf("selfcheck success (%d digits)\n",  -(int)log10(relerr));
       }
