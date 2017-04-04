@@ -9,7 +9,14 @@
 
 #include "hiopVector.hpp"
 
-hiopMatrixDense::hiopMatrixDense(const long long& m, const long long& glob_n, long long* col_part/*=NULL*/, MPI_Comm comm_/*=MPI_COMM_SELF*/, const long long& m_max_alloc/*=-1*/)
+namespace hiop
+{
+
+hiopMatrixDense::hiopMatrixDense(const long long& m, 
+				 const long long& glob_n, 
+				 long long* col_part/*=NULL*/, 
+				 MPI_Comm comm_/*=MPI_COMM_SELF*/, 
+				 const long long& m_max_alloc/*=-1*/)
 {
   m_local=m; n_global=glob_n;
   comm=comm_;
@@ -512,4 +519,5 @@ bool hiopMatrixDense::assertSymmetry(double tol) const
   return true;
 }
 
+};
 #endif

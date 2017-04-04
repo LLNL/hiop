@@ -5,6 +5,9 @@
 #include <cstring>
 #include <cassert>
 
+namespace hiop
+{
+
 hiopAlgFilterIPM::hiopAlgFilterIPM(hiopNlpDenseConstraints* nlp_)
 {
   nlp = nlp_;
@@ -590,3 +593,6 @@ hiopSolveStatus hiopAlgFilterIPM::getSolveStatus() const
 {
   return _solverStatus;
 }
+
+
+};

@@ -5,6 +5,8 @@
 #include <cstdlib>
 #include <string>
 
+using namespace hiop;
+
 static bool self_check(long long n, double obj_value);
 
 static bool parse_arguments(int argc, char **argv, long long& n, bool& self_check)

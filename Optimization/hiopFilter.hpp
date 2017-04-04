@@ -4,6 +4,9 @@
 #include <list>
 #include <cassert>
 
+namespace hiop
+{
+
 class hiopFilter
 {
 public:
@@ -26,5 +29,5 @@ private:
   std::list<FilterEntry> entries;
 };
 
-
+};
 #endif

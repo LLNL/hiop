@@ -4,6 +4,8 @@
 #include <cstdio>
 #include <cstdarg>
 
+namespace hiop
+{
 class hiopVector;
 class hiopResidual;
 class hiopIterate;
@@ -52,5 +54,5 @@ private:
   hiopOutVerbosity _verb;
   int _master_rank;
 };
-
+};
 #endif

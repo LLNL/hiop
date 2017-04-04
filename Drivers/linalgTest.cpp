@@ -11,6 +11,8 @@
 #include <cmath>
 #include <cassert>
 
+using namespace hiop;
+
 bool testMatMatProds(long long* col_partion);
 
 int main(int argc, char **argv)

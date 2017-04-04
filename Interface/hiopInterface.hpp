@@ -8,6 +8,9 @@
 #define MPI_COMM_WORLD 0
 #endif
 
+namespace hiop
+{
+
 class hiopInterfaceBase
 {
   /** Base class for the solver's interface that has no assumptions how the 
@@ -111,8 +114,7 @@ public:
 			     const long long& num_cons, const long long* idx_cons,  
 			     const double* x, bool new_x,
 			     double** Jac) = 0;
-			 
-
 };
 
+};
 #endif

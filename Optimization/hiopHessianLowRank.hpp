@@ -6,6 +6,9 @@
 
 #include <cassert>
 
+namespace hiop
+{
+
 /* Class for storing and solving with the low-rank Hessian 
  *
  * Stores the Hessian wrt x as Hk=Dk+Bk, where 
@@ -273,4 +276,6 @@ private:
     return *_n_vec2;
   }
 };
+
+};//~namespace
 #endif

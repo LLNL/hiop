@@ -16,7 +16,7 @@
 
 /* Example 1: min sum{x_i^2 | i=1,..,n} s.t. x_2>=1 */
 
-class Ex1Interface : public hiopInterfaceDenseConstraints
+class Ex1Interface : public hiop::hiopInterfaceDenseConstraints
 {
 public: 
   Ex1Interface(int num_vars=4)
@@ -157,12 +157,14 @@ int main(int argc, char **argv)
   long long numVars=3;
   Ex1Interface problem(numVars);
   if(rank==0) printf("interface created\n");
-  hiopNlpDenseConstraints nlp(problem);
+  hiop::hiopNlpDenseConstraints nlp(problem);
   if(rank==0) printf("nlp formulation created\n");
   
-  hiopAlgFilterIPM solver(&nlp);
-  solver.run();
+  hiop::hiopAlgFilterIPM solver(&nlp);
+  hiop::hiopSolveStatus status = solver.run();
+  double objective = solver.getObjective();
 
+  printf("Objective: %18.12e\n", objective);
 #ifdef WITH_MPI
   MPI_Finalize();
 #endif

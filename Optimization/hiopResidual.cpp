@@ -2,6 +2,10 @@
 
 #include <cmath>
 #include <cassert>
+
+namespace hiop
+{
+
 hiopResidual::hiopResidual(hiopNlpDenseConstraints* nlp_)
 {
   nlp = nlp_;
@@ -251,6 +255,8 @@ void hiopResidual::print(FILE* f, const char* msg/*=NULL*/, int max_elems/*=-1*/
   printf(" errors (optim/feasib/complem) barrier: %25.16e %25.16e %25.16e\n", 
 	 nrmInf_bar_optim, nrmInf_bar_feasib, nrmInf_bar_complem);
 }
+
+};
 
 // void hiopResidual::
 // projectPrimalsIntoBounds(double kappa1, double kappa2)

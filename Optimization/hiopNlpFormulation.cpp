@@ -9,6 +9,8 @@
 #endif
 
 #include <cassert>
+namespace hiop
+{
 
 hiopNlpFormulation::hiopNlpFormulation(hiopInterfaceBase& interface)
 {
@@ -325,3 +327,6 @@ void hiopNlpDenseConstraints::print(FILE* f, const char* msg, int rank) const
     fprintf(f, "     lower/upper/lower_and_upper bounds: %d / %d / %d\n", n_ineq_low, n_ineq_upp, n_ineq_lu);
   } 
 }
+
+
+};

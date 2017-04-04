@@ -4,6 +4,9 @@
 #include "hiopVector.hpp"
 #include "hiopNlpFormulation.hpp"
 
+namespace hiop
+{
+
 class hiopIterate
 {
 public:
@@ -86,5 +89,5 @@ private:
   hiopIterate& operator=(const hiopIterate& o) {return *this;}
 };
 
-
+};
 #endif

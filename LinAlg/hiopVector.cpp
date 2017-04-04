@@ -9,6 +9,10 @@
 #include <limits>
 #include <cstddef>
 
+namespace hiop
+{
+
+
 hiopVectorPar::hiopVectorPar(const long long& glob_n, long long* col_part/*=NULL*/, MPI_Comm comm_/*=MPI_COMM_NULL*/)
   : comm(comm_)
 {
@@ -678,3 +682,5 @@ void hiopVectorPar::print(FILE* file, const char* msg/*=NULL*/, int max_elems/*=
     fprintf(file, "];\n");
   }
 }
+
+};

@@ -4,6 +4,9 @@
 #include "hiopResidual.hpp"
 #include "hiopHessianLowRank.hpp"
 
+namespace hiop
+{
+
 //hiopLogger::hiopLogger(hiopOutVerbosity max_desired, FILE* f) 
 //  : _verb(max_desired), _f(f)
 //{
@@ -87,3 +90,5 @@ void hiopLogger::printf(hiopOutVerbosity v, const char* format, ...)
   va_end (args);
 
 }
+
+};

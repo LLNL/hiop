@@ -24,7 +24,7 @@
  *        1.5 <= x_3 <= 10
  *        x_i >=0.5, i=4,...,n
  */
-class Ex2 : public hiopInterfaceDenseConstraints
+class Ex2 : public hiop::hiopInterfaceDenseConstraints
 {
 public: 
   Ex2(int n);

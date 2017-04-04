@@ -1,6 +1,9 @@
 #ifndef HIOP_LOGBARRPROB
 #define HIOP_LOGBARRPROB
 
+namespace hiop
+{
+
 class hiopLogBarProblem
 {
 public:
@@ -108,5 +111,5 @@ private:
   hiopLogBarProblem(const hiopLogBarProblem&) {};
   hiopLogBarProblem& operator=(const hiopLogBarProblem&) {return *this;};
 };
-
+};
 #endif

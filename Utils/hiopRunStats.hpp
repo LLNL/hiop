@@ -10,7 +10,8 @@
 #ifdef WITH_MPI
 #include "mpi.h"  
 #endif
-
+namespace hiop
+{
 class hiopRunStats
 {
 public:
@@ -87,5 +88,5 @@ private:
   MPI_Comm comm;
 
 };
-
+};
 #endif

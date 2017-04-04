@@ -11,6 +11,9 @@
 
 //to do: sys time: getrusage(RUSAGE_SELF,&usage);
 
+namespace hiop
+{
+
 class hiopTimer
 {
 public:
@@ -53,5 +56,5 @@ private:
   double tmElapsed; //in seconds
   double tmStart;
 };
-
+};
 #endif

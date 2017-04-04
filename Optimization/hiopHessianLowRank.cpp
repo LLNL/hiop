@@ -12,11 +12,17 @@
 #include <cstring>
 #include <cmath>
 
+#include <vector>
+using namespace std;
+
 #define SIGMA_STRATEGY1 1
 #define SIGMA_STRATEGY2 2
 #define SIGMA_STRATEGY3 3
 #define SIGMA_STRATEGY4 4
 #define SIGMA_CONSTANT  5
+
+namespace hiop
+{
 
 hiopHessianLowRank::hiopHessianLowRank(hiopNlpDenseConstraints* nlp_, int max_mem_len)
   : l_max(max_mem_len), l_curr(-1), sigma(1.), sigma0(1.), nlp(nlp_), matrixChanged(false)
@@ -801,8 +807,6 @@ hiopMatrixDense& hiopHessianLowRank::new_Y1(const hiopMatrixDense& X, const hiop
 }
 
 #ifdef DEEP_CHECKING
-#include <vector>
-using namespace std;
 void hiopHessianLowRank::timesVecCmn(double beta, hiopVector& y, double alpha, const hiopVector& x, bool addLogTerm) 
 {
   long long n=St->n();
@@ -1590,7 +1594,7 @@ hiopVectorPar&  hiopHessianInvLowRank_obsolette::new_l_vec3(int l)
   return *_l_vec3;
 }
 
-#ifdef DEEP_CHECKING
+  //#ifdef DEEP_CHECKING
 // #include <vector>
 // using namespace std;
 // void hiopHessianInvLowRank_obsolette::timesVecCmn(double beta, hiopVector& y, double alpha, const hiopVector& x, bool addLogTerm) 
@@ -1683,5 +1687,7 @@ hiopVectorPar&  hiopHessianInvLowRank_obsolette::new_l_vec3(int l)
 // {
 //   this->timesVecCmn(beta, y, alpha, x, false);
 // }
-#endif
 
+//#endif
+
+};

@@ -3,6 +3,9 @@
 
 #include <cmath>
 
+namespace hiop
+{
+
 hiopKKTLinSysLowRank::hiopKKTLinSysLowRank(hiopNlpFormulation* nlp_)
 {
   iter=NULL; grad_f=NULL; Jac_c=Jac_d=NULL; Hess=NULL;
@@ -486,4 +489,6 @@ double hiopKKTLinSysLowRank::solveError(const hiopMatrixDense& M,  const hiopVec
   relError=rnorm/(1+xnorm);
   return relError;
 }
+
+};
 #endif

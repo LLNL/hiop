@@ -9,6 +9,9 @@
 #include <cstddef>
 #endif 
 
+namespace hiop
+{
+
 class hiopVector;
 class hiopVectorPar;
 
@@ -145,5 +148,7 @@ private:
   hiopMatrixDense() {};
   /** copy constructor, for internal/private use only (it doesn't copy the values) */
   hiopMatrixDense(const hiopMatrixDense&);
+};
+
 };
 #endif

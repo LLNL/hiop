@@ -5,6 +5,9 @@
 #include "hiopResidual.hpp"
 #include "hiopHessianLowRank.hpp"
 
+namespace hiop
+{
+
 class hiopKKTLinSys 
 {
 public:
@@ -66,6 +69,8 @@ private:
   hiopVectorPar *rx_tilde, *ryd_tilde;
   hiopMatrixDense* _kxn_mat; //!opt (work directly with the Jacobian)
   hiopVectorPar* _k_vec1;
+};
+
 };
 
 #endif

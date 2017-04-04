@@ -7,6 +7,9 @@
 
 #include "hiopLogBarProblem.hpp"
 
+namespace hiop
+{
+
 class hiopResidual
 {
 public:
@@ -67,5 +70,5 @@ private:
   friend class hiopKKTLinSysLowRank;
 };
 
-
+};
 #endif

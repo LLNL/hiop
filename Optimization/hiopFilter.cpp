@@ -2,6 +2,9 @@
 
 using namespace std;
 
+namespace hiop
+{
+
 bool hiopFilter::contains(const double& theta, const double& phi) const
 {
   list<FilterEntry>::const_iterator it = entries.begin();
@@ -15,3 +18,5 @@ bool hiopFilter::contains(const double& theta, const double& phi) const
   }
   return bFound;
 }
+
+};

@@ -3,6 +3,9 @@
 #include <cmath>
 #include <cassert>
 
+namespace hiop
+{
+
 hiopIterate::hiopIterate(const hiopNlpDenseConstraints* nlp_)
 {
   nlp = nlp_;
@@ -471,3 +474,4 @@ void hiopIterate::addLinearDampingTermToGrad_d(const double& mu, const double& k
   }
 }
 
+};

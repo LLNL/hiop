@@ -1,6 +1,9 @@
 #ifndef HIOP_BLASDEFS
 #define HIOP_BLASDEFS
 
+namespace hiop
+{
+
 extern "C" double dnrm2_(int* n, double* x, int* incx);
 extern "C" double ddot_ (int* n, double* dx, int* incx, double* dy, int* incy);
 extern "C" void   dscal_(int* n, double* da, double* dx, int* incx);
@@ -73,4 +76,6 @@ extern "C" void dsytrs_( char* UPLO, int* N, int* NRHS, double* A, int* LDA, int
  *  real matrix A.
  */
 extern "C" double   dlange_(char* norm, int* M, int* N, double*A, int* lda, double* work);
+
+};
 #endif

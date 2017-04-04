@@ -10,6 +10,9 @@
 #include "hiopDualsUpdater.hpp"
 #include "hiopTimer.hpp"
 
+namespace hiop
+{
+
 enum hiopSolveStatus {
   //(partial) success 
   Solve_Success=0,
@@ -156,4 +159,5 @@ private:
   hiopAlgFilterIPM& operator=(const hiopAlgFilterIPM&) {return *this;};
 };
 
+};
 #endif

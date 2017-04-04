@@ -5,6 +5,9 @@
 #include "hiopIterate.hpp"
 #include "hiopResidual.hpp"
 
+namespace hiop
+{
+
 class hiopDualsUpdater
 {
 public:
@@ -87,5 +90,5 @@ private:
   
 };
 
-
+};
 #endif

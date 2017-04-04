@@ -12,6 +12,9 @@
 #include "hiopRunStats.hpp"
 #include "hiopLogger.hpp"
 
+namespace hiop
+{
+
 class hiopNlpFormulation
 {
 public:
@@ -122,4 +125,5 @@ private:
   hiopInterfaceDenseConstraints& interface;
 };
 
+};
 #endif

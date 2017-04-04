@@ -9,6 +9,9 @@
 #include <cstddef>
 #endif 
 
+namespace hiop
+{
+
 class hiopVector
 {
 public:
@@ -177,6 +180,8 @@ private:
 private:
   /** copy constructor, for internal/private use only (it doesn't copy the elements.) */
   hiopVectorPar(const hiopVectorPar&);
+
+};
 
 };
 #endif
