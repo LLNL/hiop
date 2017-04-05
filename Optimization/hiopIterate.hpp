@@ -61,6 +61,12 @@ public:
   inline hiopVector* get_x()   const {return x;}
   inline hiopVector* get_d()   const {return d;}
   inline hiopVector* get_sxl() const {return sxl;}
+  inline hiopVector* get_yc()  const {return yc;}
+  inline hiopVector* get_yd()  const {return yd;}
+  inline hiopVector* get_zl()  const {return zl;}
+  inline hiopVector* get_zu()  const {return zu;}
+  inline hiopVector* get_vl()  const {return vl;}
+  inline hiopVector* get_vu()  const {return vu;}
 
   void print(FILE* f, const char* msg=NULL) const;
 

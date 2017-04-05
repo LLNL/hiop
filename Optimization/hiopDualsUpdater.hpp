@@ -4,6 +4,7 @@
 #include "hiopNlpFormulation.hpp"
 #include "hiopIterate.hpp"
 #include "hiopResidual.hpp"
+#include "hiopMatrix.hpp"
 
 namespace hiop
 {
@@ -36,7 +37,7 @@ public:
 		  const double& f, const hiopVector& c, const hiopVector& d,
 		  const hiopVector& grad_f, const hiopMatrix& jac_c, const hiopMatrix& jac_d,
 		  const hiopIterate& search_dir, const double& alpha_primal, const double& alpha_dual)=0;
-private:
+protected:
   hiopNlpFormulation* _nlp;	  
 protected: 
   hiopDualsUpdater() {};
@@ -49,15 +50,38 @@ private:
 class hiopDualsLsqUpdate : public hiopDualsUpdater
 {
 public:
-  hiopDualsLsqUpdate(hiopNlpFormulation* nlp) : hiopDualsUpdater(nlp) {};
-  virtual ~hiopDualsLsqUpdate() {};
+  hiopDualsLsqUpdate(hiopNlpFormulation* nlp);
+  virtual ~hiopDualsLsqUpdate();
 
+  /** LSQ update of the constraints duals (yc and yd). Source file describe the math. */
   virtual bool go(const hiopIterate& iter,  hiopIterate& iter_plus,
 		  const double& f, const hiopVector& c, const hiopVector& d,
 		  const hiopVector& grad_f, const hiopMatrix& jac_c, const hiopMatrix& jac_d,
-		  const hiopIterate& search_dir, const double& alpha_primal, const double& alpha_dual) { assert(false); }
+		  const hiopIterate& search_dir, const double& alpha_primal, const double& alpha_dual);
 
+  /** LSQ-based initialization of the  constraints duals (yc and yd). Source file describe the math. */
+  virtual inline bool computeInitialDualsEq(hiopIterate& it_ini, const hiopVector& grad_f, const hiopMatrix& jac_c, const hiopMatrix& jac_d)
+  {
+    return  LSQUpdate(it_ini,grad_f,jac_c,jac_d);
+  }
+private: //common code 
+  virtual bool LSQUpdate(hiopIterate& it, const hiopVector& grad_f, const hiopMatrix& jac_c, const hiopMatrix& jac_d);
+private:
+  hiopMatrixDense *_mexme, *_mexmi, *_mixmi, *_mxm;
+  hiopMatrixDense *M;
+  
+  hiopVectorPar *rhs, *rhsc, *rhsd;
+  hiopVectorPar *_vec_n, *_vec_mi;
 
+#ifdef DEEP_CHECKING
+  hiopMatrixDense* M_copy;
+  hiopVectorPar *rhs_copy;
+  hiopMatrixDense* _mixme;
+#endif
+
+  //helpers
+  int factorizeMat(hiopMatrixDense& M);
+  int solveWithFactors(hiopMatrixDense& M, hiopVectorPar& r);
 private: 
   hiopDualsLsqUpdate() {};
   hiopDualsLsqUpdate(const hiopDualsLsqUpdate&) {};

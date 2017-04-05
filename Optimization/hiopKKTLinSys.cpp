@@ -396,7 +396,7 @@ solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
   N->addSubDiagonal(nlp->m_eq(), *Dd_inv);
 #ifdef DEEP_CHECKING
   nlp->log->write("solveCompressed: N is", *N, hovMatrices);
-  N->assertSymmetry(1e-14);
+  N->assertSymmetry(1e-10);
   Nmat->copyFrom(*N);
 #endif
   int ierr=factorizeMat(*N); assert(ierr==0);
@@ -412,7 +412,8 @@ solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
   J.timesVec(-1.0, rhs, 1.0, dx);
 
 #ifdef DEEP_CHECKING
-  hiopVectorPar* r=rhs.new_copy(); //save the rhs to check the residual
+  //nlp->log->write("solveCompressed: rhs for N is", rhs, hovSummary);
+  hiopVectorPar* r=rhs.new_copy(); //save the rhs to check the norm of the residual
 #endif
 
   //solve N * dyc_dyd = rhs

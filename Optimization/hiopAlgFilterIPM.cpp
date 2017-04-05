@@ -44,7 +44,7 @@ hiopAlgFilterIPM::hiopAlgFilterIPM(hiopNlpDenseConstraints* nlp_)
   kappa_mu=0.2;       //linear decrease factor
   theta_mu=1.5;       //exponent for higher than linear decrease of mu
   tau_min=0.99;       //min value for the fraction-to-the-boundary
-  eps_tol=1e-6;       //absolute error for the nlp
+  eps_tol=1e-8;       //absolute error for the nlp
   kappa_eps=10;       //relative (to mu) error for the log barrier
   kappa1=kappa2=1e-2; //projection params for the starting point (default 1e-2)
   p_smax=100;         //threshold for the magnitude of the multipliers
@@ -58,15 +58,16 @@ hiopAlgFilterIPM::hiopAlgFilterIPM(hiopNlpDenseConstraints* nlp_)
   _tau=fmax(tau_min,1.0-_mu);
   theta_max = 1e7; //temporary - will be updated after ini pt is computed
   theta_min = 1e7; //temporary - will be updated after ini pt is computed
-  dualUpdateType = 1;
+  dualsUpdateType = 0;
   max_n_it = 200;
-  
+  dualsInitializ = 0; //0 LSQ (default), 1 set to zero
 
   //parameter based initialization
-  if(dualUpdateType==0) 
+  if(dualsUpdateType==0) 
     dualsUpdate = new hiopDualsLsqUpdate(nlp);
-  else if(dualUpdateType==1)
+  else if(dualsUpdateType==1)
     dualsUpdate = new hiopDualsNewtonLinearUpdate(nlp);
+  else assert(false && "dualsUpdateType has an unrecognized value");
 
   _solverStatus = NlpSolve_IncompleteInit;
 }
@@ -132,7 +133,6 @@ int hiopAlgFilterIPM::startingProcedure(hiopIterate& it_ini,
     assert(false); return false;
   }
 
-
   nlp->runStats.tmSolverInternal.start();
   nlp->runStats.tmStartingPoint.start();
 
@@ -143,11 +143,6 @@ int hiopAlgFilterIPM::startingProcedure(hiopIterate& it_ini,
 
   this->evalNlp(it_ini, f, c, d, gradf, Jac_c, Jac_d);
   
-  // if(!nlp->eval_d(*it_ini.get_x(), true, *it_ini.get_d())) {
-  //   printf("error: in user provided constraint function");
-  //   assert(false); return false;
-  // }
-
   nlp->runStats.tmSolverInternal.start();
   nlp->runStats.tmStartingPoint.start();
 
@@ -159,12 +154,27 @@ int hiopAlgFilterIPM::startingProcedure(hiopIterate& it_ini,
 
   it_ini.setBoundsDualsToConstant(1.);
 
-  
-  //-- //! lsq for yd and yc
-  //for now set them to zero
-  it_ini.setEqualityDualsToConstant(0.);
+  if(0==dualsInitializ) {
+    //LSQ-based initialization of yc and yd
+
+    //is the dualsUpdate already the LSQ-based updater?
+    hiopDualsLsqUpdate* updater = dynamic_cast<hiopDualsLsqUpdate*>(dualsUpdate);
+    bool deleteUpdater = false;
+    if(updater==NULL) {
+      updater = new hiopDualsLsqUpdate(nlp);
+      deleteUpdater=true;
+    }
+
+    //this will update yc and yd in it_ini
+    updater->computeInitialDualsEq(it_ini, gradf, Jac_c, Jac_d);
+
+    if(deleteUpdater) delete updater;
+  } else {
+    it_ini.setEqualityDualsToConstant(0.);
+  }
 
   nlp->log->write("Using initial point:", it_ini, hovIteration);
+  //nlp->log->write("Using initial point:", it_ini, hovSummary);
   nlp->runStats.tmStartingPoint.stop();
   nlp->runStats.tmSolverInternal.stop();
 
@@ -189,6 +199,7 @@ hiopSolveStatus hiopAlgFilterIPM::run()
   resid->update(*it_curr,_f_nlp, *_c, *_d,*_grad_f,*_Jac_c,*_Jac_d, *logbar);
 
   nlp->log->write("First residual-------------", *resid, hovIteration);
+  //nlp->log->printf(hovSummary, "Iter[%d] -> full iterate -------------", iter_num); nlp->log->write("", *it_curr, hovSummary); 
 
   iter_num=0; nlp->runStats.nIter=iter_num;
 
@@ -258,6 +269,7 @@ hiopSolveStatus hiopAlgFilterIPM::run()
     kkt->update(it_curr,_grad_f,_Jac_c,_Jac_d, _Hess);
     bret = kkt->computeDirections(resid,dir); assert(bret==true);
     nlp->log->printf(hovIteration, "Iter[%d] full search direction -------------\n"); nlp->log->write("", *dir, hovIteration);
+
 
     /***************************************************************
      * backtracking line search
@@ -425,6 +437,7 @@ hiopSolveStatus hiopAlgFilterIPM::run()
     //update current iterate (do a fast swap of the pointers)
     hiopIterate* pit=it_curr; it_curr=it_trial; it_trial=pit;
     nlp->log->printf(hovIteration, "Iter[%d] -> full iterate -------------", iter_num); nlp->log->write("", *it_curr, hovIteration); 
+    //nlp->log->printf(hovSummary, "Iter[%d] -> full iterate -------------", iter_num); nlp->log->write("", *it_curr, hovSummary); 
 
     nlp->runStats.tmSolverInternal.stop(); //-----
 
