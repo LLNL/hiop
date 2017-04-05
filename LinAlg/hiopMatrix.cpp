@@ -422,10 +422,10 @@ void hiopMatrixDense::timesMatTrans_local(double beta, hiopMatrix& W_, double al
   hiopMatrixDense& W = dynamic_cast<hiopMatrixDense&>(W_);
 #ifdef DEEP_CHECKING
   assert(W.m()==m_local);
-  assert(X.n()==n_local);
+  //assert(X.n()==n_local);
   assert(W.n()==X.m());
 #endif
-  assert(W.n_local==W.n_global && "not intended for multiplication in parallel");
+  assert(W.n_local==W.n_global && "not intended for the case when the result matrix is distributed.");
   if(W.m()==0) return;
 
   if(n_local==0) {
@@ -438,20 +438,30 @@ void hiopMatrixDense::timesMatTrans_local(double beta, hiopMatrix& W_, double al
 
   /* C = alpha*op(A)*op(B) + beta*C in our case is Wt= alpha* X  *Mt    + beta*Wt */
   char transX='T', transM='N';
-  int ldx=X.n(), ldm=n_local, ldw=W.n();
+  int ldx=n_local;//=X.n(); (modified this to support the parallel case)
+  int ldm=n_local, ldw=W.n();
   int M=X.m(), N=m_local, K=n_local;
   double** XM=X.local_data(); double** WM=W.local_data();
-  
+
   dgemm_(&transX, &transM, &M,&N,&K, &alpha,XM[0],&ldx, this->M[0],&ldm, &beta,WM[0],&ldw);
 }
 void hiopMatrixDense::timesMatTrans(double beta, hiopMatrix& W_, double alpha, const hiopMatrix& X_) const
 {
 #ifdef DEEP_CHECKING
   const hiopMatrixDense& X = dynamic_cast<const hiopMatrixDense&>(X_);
-  hiopMatrixDense& W = dynamic_cast<hiopMatrixDense&>(W_);
-  assert(W.n_local==W.n_global && "not intended for parallel cases");
+  hiopMatrixDense& W = dynamic_cast<hiopMatrixDense&>(W_); double** WM=W.local_data();
+  assert(W.n_local==W.n_global && "not intended for the case when the result matrix is distributed.");
 #endif
-  timesMatTrans_local(beta,W_,alpha,X_);
+
+  int myrank, ierr;
+  ierr=MPI_Comm_rank(comm,&myrank); assert(ierr==MPI_SUCCESS);
+  if(0==myrank) timesMatTrans_local(beta,W_,alpha,X_);
+  else          timesMatTrans_local(0.,  W_,alpha,X_);
+
+  int n2Red=W.m()*W.n(); double* Wglob=new double[n2Red]; //!opt
+  ierr = MPI_Allreduce(WM[0], Wglob, n2Red, MPI_DOUBLE, MPI_SUM, comm); assert(ierr==MPI_SUCCESS);
+  memcpy(WM[0], Wglob, n2Red*sizeof(double));
+  delete[] Wglob;
 }
 void hiopMatrixDense::addDiagonal(const hiopVector& d_)
 {
@@ -465,7 +475,10 @@ void hiopMatrixDense::addDiagonal(const hiopVector& d_)
   const double* dd=d.local_data_const();
   for(int i=0; i<n_local; i++) M[i][i] += dd[i];
 }
-
+void hiopMatrixDense::addDiagonal(const double& value)
+{
+  for(int i=0; i<n_local; i++) M[i][i] += value;
+}
 void hiopMatrixDense::addSubDiagonal(long long start, const hiopVector& d_)
 {
   const hiopVectorPar& d = dynamic_cast<const hiopVectorPar&>(d_);
@@ -518,6 +531,5 @@ bool hiopMatrixDense::assertSymmetry(double tol) const
     }
   return true;
 }
-
 };
 #endif

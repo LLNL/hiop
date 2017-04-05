@@ -39,6 +39,7 @@ public:
   virtual void timesMatTrans(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const =0;
 
   virtual void addDiagonal(const hiopVector& d_) = 0;
+  virtual void addDiagonal(const double& value) = 0;
   virtual void addSubDiagonal(long long start, const hiopVector& d_) = 0;
 
   /* this += alpha*X */
@@ -89,6 +90,7 @@ public:
   virtual void timesMatTrans_local(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const;
 
   virtual void addDiagonal(const hiopVector& d_);
+  virtual void addDiagonal(const double& value);
   virtual void addSubDiagonal(long long start, const hiopVector& d_);
 
   virtual void addMatrix(double alpah, const hiopMatrix& X);
