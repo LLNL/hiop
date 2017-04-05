@@ -116,5 +116,5 @@ public:
 			     double** Jac) = 0;
 };
 
-};
+}
 #endif
