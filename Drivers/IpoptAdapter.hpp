@@ -8,7 +8,6 @@
  * An example IPOPT driver that solve HiOP NLPs using IPOPT is available upon request.
  *
  */
- /*
 
 /*
  * Author: Cosmin G. Petra, LLNL, 2016.
@@ -24,6 +23,7 @@
 #include <cassert>
 #include <cstring>
 using namespace Ipopt;
+using namespace hiop;
 
 /* "Converts" HiOP interface to Ipopt TNLP interface */
 
