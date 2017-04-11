@@ -25,6 +25,8 @@ hiopDualsLsqUpdate::hiopDualsLsqUpdate(hiopNlpFormulation* nlp)
   rhs_copy = rhs->alloc_clone();
   _mixme = new hiopMatrixDense(nlpd->m_ineq(), nlpd->m_eq());
 #endif
+  //user options
+  recalc_lsq_duals_tol = 1e-6;
 };
 
 hiopDualsLsqUpdate::~hiopDualsLsqUpdate()
@@ -45,7 +47,8 @@ bool hiopDualsLsqUpdate::
 go(const hiopIterate& iter,  hiopIterate& iter_plus,
    const double& f, const hiopVector& c, const hiopVector& d,
    const hiopVector& grad_f, const hiopMatrix& jac_c, const hiopMatrix& jac_d,
-   const hiopIterate& search_dir, const double& alpha_primal, const double& alpha_dual)
+   const hiopIterate& search_dir, const double& alpha_primal, const double& alpha_dual,
+   const double& mu, const double& kappa_sigma, const double& infeas_nrm_trial)
 {
   hiopNlpDenseConstraints* nlpd = dynamic_cast<hiopNlpDenseConstraints*>(_nlp);
   assert(nlpd!=NULL);
@@ -56,6 +59,17 @@ go(const hiopIterate& iter,  hiopIterate& iter_plus,
   if(!iter_plus.takeStep_duals(iter, search_dir, alpha_primal, alpha_dual)) {
     nlpd->log->printf(hovError, "dual lsq update: error in standard update of the duals");
     return false;
+  }
+  if(!iter_plus.adjustDuals_primalLogHessian(mu,kappa_sigma)) {
+    nlpd->log->printf(hovError, "dual lsq update: error in adjustDuals");
+    return false;
+  }
+
+
+  //return if the constraint violation (primal infeasibility) is not below the tol for the LSQ update
+  if(infeas_nrm_trial>recalc_lsq_duals_tol) {
+    nlpd->log->printf(hovScalars, "will not perform the dual lsq update since the primal infeasibility (%g) is not under the tolerance recalc_lsq_duals_tol=%g.\n", infeas_nrm_trial, recalc_lsq_duals_tol);
+    return true;
   }
 
   return LSQUpdate(iter_plus, grad_f, jac_c, jac_d);

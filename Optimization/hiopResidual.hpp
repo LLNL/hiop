@@ -32,7 +32,7 @@ public:
   }
   /* evaluate the Infeasibility at the new iterate, which has eq and ineq functions 
    * computed in c_eval and d_eval, respectively. 
-   * The method modifies 'this', in particular ryd,ryc, rxl,rxu, rdl,rdu in an attempt
+   * The method modifies 'this', in particular ryd,ryc, rxl,rxu, rdl, rdu in an attempt
    * to reuse storage/buffers, but does not update the cached nrmInf_XXX members. */
   double computeNlpInfeasInfNorm(const hiopIterate& iter, 
 				 const hiopVector& c_eval, 

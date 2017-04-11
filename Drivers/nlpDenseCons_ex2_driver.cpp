@@ -14,7 +14,7 @@ static bool parse_arguments(int argc, char **argv, long long& n, bool& self_chec
 
   //  printf("%s    %s \n", argv[1], argv[2]);
 
-  self_check=false; n = 5e4;
+  self_check=false; n = 8;
   switch(argc) {
   case 1:
     //no arguments
@@ -80,7 +80,7 @@ int main(int argc, char **argv)
   double obj_value = solver.getObjective();
   
   if(status<0) {
-    if(rank==0) printf("solver return a negative solve status of %d (returned objective is %18.12e)\n", status, obj_value);
+    if(rank==0) printf("solver returned negative solve status: %d (with objective is %18.12e)\n", status, obj_value);
     return -1;
   }
 

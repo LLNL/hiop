@@ -58,7 +58,7 @@ hiopAlgFilterIPM::hiopAlgFilterIPM(hiopNlpDenseConstraints* nlp_)
   _tau=fmax(tau_min,1.0-_mu);
   theta_max = 1e7; //temporary - will be updated after ini pt is computed
   theta_min = 1e7; //temporary - will be updated after ini pt is computed
-  dualsUpdateType = 0;
+  dualsUpdateType = 1;
   max_n_it = 200;
   dualsInitializ = 0; //0 LSQ (default), 1 set to zero
 
@@ -291,7 +291,7 @@ hiopSolveStatus hiopAlgFilterIPM::run()
     lsStatus=0; lsNum=0;
 
     bool grad_phi_dx_computed=false; double grad_phi_dx;
-    
+    double infeas_nrm_trial=-1.; //this will cache the primal infeasibility norm for (reuse)use in the dual updating
     //this is the linesearch loop
     while(true) {
       nlp->runStats.tmSolverInternal.start(); //---
@@ -311,7 +311,7 @@ hiopSolveStatus hiopAlgFilterIPM::run()
 
       nlp->runStats.tmSolverInternal.start(); //---
       //compute infeasibility theta at trial point.
-      theta_trial = resid->computeNlpInfeasInfNorm(*it_trial, *_c_trial, *_d_trial);
+      infeas_nrm_trial = theta_trial = resid->computeNlpInfeasInfNorm(*it_trial, *_c_trial, *_d_trial);
 
       lsNum++;
 
@@ -340,7 +340,7 @@ hiopSolveStatus hiopAlgFilterIPM::run()
 	}  
 	nlp->log->write("Warning (close to panic): I got to a point where I wasn't supposed to be. (1)", hovWarning);
       } else {
-	// if(theta<theta_min,  then check the switching condition and, if true, rely on Armijo rule
+	// if(theta<theta_min,  then check the switching condition and, if true, rely on Armijo rule.
 	// first compute grad_phi^T d_x if it hasn't already been computed
 	if(!grad_phi_dx_computed) { 
 	  nlp->runStats.tmSolverInternal.stop(); //---
@@ -349,7 +349,8 @@ hiopSolveStatus hiopAlgFilterIPM::run()
 	  nlp->runStats.tmSolverInternal.start(); //---
 	}
 	nlp->log->printf(hovLinesearch, "Linesearch: grad_phi_dx = %22.15e\n", grad_phi_dx);
-
+	//nlp->log->printf(hovSummary, "Linesearch: grad_phi_dx = %22.15e      %22.15e >   %22.15e  \n", grad_phi_dx, _alpha_primal*pow(-grad_phi_dx,s_phi), delta*pow(theta,s_theta));
+	//nlp->log->printf(hovSummary, "Linesearch: s_phi=%22.15e;   s_theta=%22.15e; theta=%22.15e; delta=%22.15e \n", s_phi, s_theta, theta, delta);
 	//this is the actual switching condition
 	if(grad_phi_dx<0 && _alpha_primal*pow(-grad_phi_dx,s_phi)>delta*pow(theta,s_theta)) {
 
@@ -431,13 +432,15 @@ hiopSolveStatus hiopAlgFilterIPM::run()
 
     //update and adjust the duals
     //it_trial->takeStep_duals(*it_curr, *dir, _alpha_primal, _alpha_dual); assert(bret);
-    bret = dualsUpdate->go(*it_curr, *it_trial, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d, *dir,  _alpha_primal, _alpha_dual); assert(bret);
-    bret = it_trial->adjustDuals_primalLogHessian(_mu,kappa_Sigma); assert(bret);
-    
+    //bret = it_trial->adjustDuals_primalLogHessian(_mu,kappa_Sigma); assert(bret);
+    assert(infeas_nrm_trial>=0 && "this should not happen");
+    bret = dualsUpdate->go(*it_curr, *it_trial, 
+			   _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d, *dir,  
+			   _alpha_primal, _alpha_dual, _mu, kappa_Sigma, infeas_nrm_trial); assert(bret);
+
     //update current iterate (do a fast swap of the pointers)
     hiopIterate* pit=it_curr; it_curr=it_trial; it_trial=pit;
-    nlp->log->printf(hovIteration, "Iter[%d] -> full iterate -------------", iter_num); nlp->log->write("", *it_curr, hovIteration); 
-    //nlp->log->printf(hovSummary, "Iter[%d] -> full iterate -------------", iter_num); nlp->log->write("", *it_curr, hovSummary); 
+    nlp->log->printf(hovIteration, "Iter[%d] -> full iterate:", iter_num); nlp->log->write("", *it_curr, hovIteration); 
 
     nlp->runStats.tmSolverInternal.stop(); //-----
 

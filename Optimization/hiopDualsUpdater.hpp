@@ -36,7 +36,8 @@ public:
   virtual bool go(const hiopIterate& iter,  hiopIterate& iter_plus,
 		  const double& f, const hiopVector& c, const hiopVector& d,
 		  const hiopVector& grad_f, const hiopMatrix& jac_c, const hiopMatrix& jac_d,
-		  const hiopIterate& search_dir, const double& alpha_primal, const double& alpha_dual)=0;
+		  const hiopIterate& search_dir, const double& alpha_primal, const double& alpha_dual,
+		  const double& mu, const double& kappa_sigma, const double& infeas_nrm_trial)=0;
 protected:
   hiopNlpFormulation* _nlp;	  
 protected: 
@@ -57,7 +58,8 @@ public:
   virtual bool go(const hiopIterate& iter,  hiopIterate& iter_plus,
 		  const double& f, const hiopVector& c, const hiopVector& d,
 		  const hiopVector& grad_f, const hiopMatrix& jac_c, const hiopMatrix& jac_d,
-		  const hiopIterate& search_dir, const double& alpha_primal, const double& alpha_dual);
+		  const hiopIterate& search_dir, const double& alpha_primal, const double& alpha_dual,
+		  const double& mu, const double& kappa_sigma, const double& infeas_nrm_trial);
 
   /** LSQ-based initialization of the  constraints duals (yc and yd). Source file describe the math. */
   virtual inline bool computeInitialDualsEq(hiopIterate& it_ini, const hiopVector& grad_f, const hiopMatrix& jac_c, const hiopMatrix& jac_d)
@@ -78,6 +80,10 @@ private:
   hiopVectorPar *rhs_copy;
   hiopMatrixDense* _mixme;
 #endif
+
+  //user options
+  double recalc_lsq_duals_tol;  //do not recompute duals using LSQ unless the primal infeasibilty or constraint violation 
+                                //is less than this tolerance; default 1e-6
 
   //helpers
   int factorizeMat(hiopMatrixDense& M);
@@ -102,8 +108,13 @@ public:
   virtual bool go(const hiopIterate& iter, hiopIterate& iter_plus,
 		  const double& f, const hiopVector& c, const hiopVector& d,
 		  const hiopVector& grad_f, const hiopMatrix& jac_c, const hiopMatrix& jac_d,
-		  const hiopIterate& search_dir, const double& alpha_primal, const double& alpha_dual) { 
-    return iter_plus.takeStep_duals(iter, search_dir, alpha_primal, alpha_dual); 
+		  const hiopIterate& search_dir, const double& alpha_primal, const double& alpha_dual,
+		  const double& mu, const double& kappa_sigma, const double& infeas_nrm_trial) { 
+    if(!iter_plus.takeStep_duals(iter, search_dir, alpha_primal, alpha_dual)) {
+      _nlp->log->printf(hovError, "dual Newton updater: error in standard update of the duals");
+      return false;
+    }
+    return iter_plus.adjustDuals_primalLogHessian(mu,kappa_sigma);
   }
 
 

@@ -140,10 +140,13 @@ int hiopResidual::update(const hiopIterate& it,
   ryc->copyFrom(nlp->get_crhs());
   ryc->axpy(-1.0,c);
   nrmInf_nlp_feasib = fmax(nrmInf_nlp_feasib, ryc->infnorm_local());
+  //printf("            %10.4e (c)", nrmInf_nlp_feasib);
+
   //ryd
   ryd->copyFrom(*it.d);
   ryd->axpy(-1.0, d);
   nrmInf_nlp_feasib = fmax(nrmInf_nlp_feasib, ryd->infnorm_local());
+  //printf("  %10.4e (d)", nrmInf_nlp_feasib);
   //rxl=x-sxl-xl
   if(nlp->n_low_local()>0) {
     rxl->copyFrom(*it.x);
@@ -154,25 +157,29 @@ int hiopResidual::update(const hiopIterate& it,
       rxl->selectPattern(nlp->get_ixl());
     nrmInf_nlp_feasib = fmax(nrmInf_nlp_feasib, rxl->infnorm_local());
   }
+  //printf("  %10.4e (xl)", nrmInf_nlp_feasib);
   //rxu=-x-sxu+xu
   if(nlp->n_upp_local()>0) {
     rxu->copyFrom(nlp->get_xu()); rxu->axpy(-1.0,*it.x); rxu->axpy(-1.0,*it.sxu);
     if(nlp->n_upp_local()<nx_loc)
       rxu->selectPattern(nlp->get_ixu());
     nrmInf_nlp_feasib = fmax(nrmInf_nlp_feasib, rxu->infnorm_local());
-  }
+  }  
+  //printf("  %10.4e (xu)", nrmInf_nlp_feasib);
   //rdl=d-sdl-dl
   if(nlp->m_ineq_low()>0) {
     rdl->copyFrom(*it.d); rdl->axpy(-1.0,*it.sdl); rdl->axpy(-1.0,nlp->get_dl());
     rdl->selectPattern(nlp->get_idl());
     nrmInf_nlp_feasib = fmax(nrmInf_nlp_feasib, rdl->infnorm_local());
   }
+  //printf("  %10.4e (dl)", nrmInf_nlp_feasib);
   //rdu=-d-sdu+du
   if(nlp->m_ineq_upp()>0) {
     rdu->copyFrom(nlp->get_du()); rdu->axpy(-1.0,*it.sdu); rdu->axpy(-1.0,*it.d);
     rdu->selectPattern(nlp->get_idu());
     nrmInf_nlp_feasib = fmax(nrmInf_nlp_feasib, rdu->infnorm_local());
   }
+  //printf("  %10.4e (du)\n", nrmInf_nlp_feasib);
   //set the feasibility error for the log barrier problem
   nrmInf_bar_feasib = nrmInf_nlp_feasib;
 
