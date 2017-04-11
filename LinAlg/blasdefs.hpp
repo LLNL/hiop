@@ -77,5 +77,57 @@ extern "C" void dsytrs_( char* UPLO, int* N, int* NRHS, double* A, int* LDA, int
  */
 extern "C" double   dlange_(char* norm, int* M, int* N, double*A, int* lda, double* work);
 
+/* DPOSVX uses the Cholesky factorization A = U**T*U or A = L*L**T to
+ compute the solution to a real system of linear equations
+    A * X = B,
+ where A is an N-by-N symmetric positive definite matrix and X and B
+ are N-by-NRHS matrices.
+
+ Error bounds on the solution and a condition estimate are also
+ provided.
+*/
+extern "C" void dposvx_(char* FACT, char* UPLO, int* N, int* NRHS,
+			double* A, int* LDA,
+			double*	AF, int* LDAF,
+			char* EQUED,
+			double*	S,
+			double* B, int* LDB,
+			double*	X, int* LDX,
+			double* RCOND, double* FERR, double* BERR, 
+			double* WORK, int* IWORK,
+			int* 	INFO); 
+/* DPOSVXX uses the Cholesky factorization A = U**T*U or A = L*L**T
+    to compute the solution to a double precision system of linear equations
+    A * X = B, where A is an N-by-N symmetric positive definite matrix
+    and X and B are N-by-NRHS matrices.
+
+    If requested, both normwise and maximum componentwise error bounds
+    are returned. DPOSVXX will return a solution with a tiny
+    guaranteed error (O(eps) where eps is the working machine
+    precision) unless the matrix is very ill-conditioned, in which
+    case a warning is returned. Relevant condition numbers also are
+    calculated and returned.
+
+    DPOSVXX accepts user-provided factorizations and equilibration
+    factors; see the definitions of the FACT and EQUED options.
+    Solving with refinement and using a factorization from a previous
+    DPOSVXX call will also produce a solution with either O(eps)
+    errors or warnings, but we cannot make that claim for general
+    user-provided factorizations and equilibration factors if they
+    differ from what DPOSVXX would itself produce.
+*/
+extern "C" void dposvxx_(char* FACT, char* UPLO, int* N, int* NRHS,
+			 double* A, int* LDA,
+			 double* AF, int* LDAF,
+			 char* EQUED,
+			 double* S,
+			 double* B, int* LDB,
+			 double* X, int* LDX,
+			 double* RCOND, double* RPVGRW, double* BERR,
+			 int* N_ERR_BNDS, double* ERR_BNDS_NORM, double* ERR_BNDS_COMP,
+			 int* NPARAMS, double* PARAMS,
+			 double* WORK, int* IWORK,
+			 int* INFO);	
+
 };
 #endif

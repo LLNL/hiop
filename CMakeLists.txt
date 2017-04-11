@@ -20,10 +20,10 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -fpermissive")
 
 find_package(OpenMP)
 find_package(LAPACK REQUIRED)
-#message(STATUS " LAPACK_LIBRARIES:  ${LAPACK_LIBRARIES}")
-#message(STATUS " CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES:  ${CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES}")
-#set(MATH_LIBS ${LAPACK_LIBRARIES}) #-ldl -l${CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES} ${OpenMP_CXX_FLAGS})
-
+#
+# extended precision lapack based on xblas testing example
+#
+#set(LAPACK_LIBRARIES "-lgfortran;/export/home/petra1/work/installs/xblas-1.0.248/libxblas.a;/home/petra1/work/installs/lapack-3.7.0/libblas.a;/home/petra1/work/installs/lapack-3.7.0/liblapack.a;/home/petra1/work/installs/lapack-3.7.0/liblapack.a;/home/petra1/work/installs/lapack-3.7.0/libblas.a;/export/home/petra1/work/installs/xblas-1.0.248/libxblas.a")
 
 include_directories(Interface)
 include_directories(Optimization)

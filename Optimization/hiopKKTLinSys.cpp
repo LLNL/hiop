@@ -397,10 +397,7 @@ solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
 #ifdef DEEP_CHECKING
   nlp->log->write("solveCompressed: N is", *N, hovMatrices);
   N->assertSymmetry(1e-10);
-  Nmat->copyFrom(*N);
 #endif
-  int ierr=factorizeMat(*N); assert(ierr==0);
-
   //compute the rhs of the lin sys involving N 
   //  first compute (H+Dx)^{-1} rx_tilde and store it temporarily in dx
   Hess->solve(rx, dx);
@@ -413,18 +410,31 @@ solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
 
 #ifdef DEEP_CHECKING
   //nlp->log->write("solveCompressed: rhs for N is", rhs, hovSummary);
+  Nmat->copyFrom(*N);
   hiopVectorPar* r=rhs.new_copy(); //save the rhs to check the norm of the residual
 #endif
 
+
   //solve N * dyc_dyd = rhs
-  ierr=solveWithFactors(*N,rhs); assert(ierr==0);
+  // int ierr=factorizeMat(*N); assert(ierr==0);
+  // ierr=solveWithFactors(*N,rhs); assert(ierr==0);
+  int ierr = solve(*N,rhs);
 
 #ifdef DEEP_CHECKING
+  hiopVectorPar sol(rhs.get_size());
+  hiopVectorPar rhss(rhs.get_size());
+  sol.copyFrom(rhs); rhss.copyFrom(*r);
   double relErr=solveError(*Nmat, rhs, *r);
-  if(relErr>1e-4) 
+  if(relErr>1e-8)  {
+    nlp->log->printf(hovWarning, "large rel. error (%g) in linear solver occured the Cholesky solve (hiopKKTLinSys)\n", relErr);
+
+    nlp->log->write("matrix N=", *Nmat, hovError);
+    nlp->log->write("rhs", rhss, hovError);
+    nlp->log->write("sol", sol, hovError);
+
     assert(false && "large error (%g) in linear solve (hiopKKTLinSys), equilibrating the matrix and/or iterative refinement are needed (see dposvx/x)");
-  else 
-    if(relErr>1e-7) 
+  } else 
+    if(relErr>1e-10) 
       nlp->log->printf(hovWarning, "considerable rel. error (%g) in linear solver occured the Cholesky solve (hiopKKTLinSys)\n", relErr);
 
   nlp->log->printf(hovLinAlgScalars, "hiopKKTLinSysLowRank::solveCompressed: Cholesky solve: relative error %g\n", relErr);
@@ -446,48 +456,170 @@ solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
   nlp->log->write("  dx: ",  dx, hovIteration); nlp->log->write(" dyc: ", dyc, hovIteration); nlp->log->write(" dyd: ", dyd, hovIteration);
 #endif
 }
-int hiopKKTLinSysLowRank::factorizeMat(hiopMatrixDense& M)
+
+
+// int hiopKKTLinSysLowRank::factorizeMat(hiopMatrixDense& M)
+// {
+// #ifdef DEEP_CHECKING
+//   assert(M.m()==M.n());
+// #endif
+//   if(M.m()==0) return 0;
+//   char uplo='L'; int N=M.n(), lda=N, info;
+//   dpotrf_(&uplo, &N, M.local_buffer(), &lda, &info);
+//   if(info>0)
+//     nlp->log->printf(hovError, "hiopKKTLinSysLowRank::factorizeMat: dpotrf (Chol fact) detected %d minor being indefinite.\n", info);
+//   else
+//     if(info<0) 
+//       nlp->log->printf(hovError, "hiopKKTLinSysLowRank::factorizeMat: dpotrf returned error %d\n", info);
+//   assert(info==0);
+//   return info;
+// }
+
+// int hiopKKTLinSysLowRank::solveWithFactors(hiopMatrixDense& M, hiopVectorPar& r)
+// {
+// #ifdef DEEP_CHECKING
+//   assert(M.m()==M.n());
+// #endif
+//   if(M.m()==0) return 0;
+//   char uplo='L'; //we have upper triangular in C++, but this is lower in fortran
+//   int N=M.n(), lda=N, nrhs=1, info;
+//   dpotrs_(&uplo,&N, &nrhs, M.local_buffer(), &lda, r.local_data(), &lda, &info);
+//   if(info<0) 
+//     nlp->log->printf(hovError, "hiopKKTLinSysLowRank::solveWithFactors: dpotrs returned error %d\n", info);
+// #ifdef DEEP_CHECKING
+//   assert(info<=0);
+// #endif
+//   return info;
+// }
+
+int hiopKKTLinSysLowRank::solve(hiopMatrixDense& M, hiopVectorPar& rhs)
 {
-#ifdef DEEP_CHECKING
-  assert(M.m()==M.n());
-#endif
-  if(M.m()==0) return 0;
-  char uplo='L'; int N=M.n(), lda=N, info;
-  dpotrf_(&uplo, &N, M.local_buffer(), &lda, &info);
-  if(info>0)
-    nlp->log->printf(hovError, "hiopKKTLinSysLowRank::factorizeMat: dpotrf (Chol fact) detected %d minor being indefinite.\n", info);
-  else
-    if(info<0) 
-      nlp->log->printf(hovError, "hiopKKTLinSysLowRank::factorizeMat: dpotrf returned error %d\n", info);
-  assert(info==0);
-  return info;
+  //return solveWithRefin(M, rhs);
+  char FACT='E'; 
+  char UPLO='L';
+  int N=M.n();
+  int NRHS=1;
+  double* A=M.local_buffer();
+  int LDA=N;
+  double* AF=new double[N*N];
+  int LDAF=N;
+  char EQUED='N'; //it is an output if FACT='E'
+  double* S = new double[N];
+  double* B = rhs.local_data();
+  int LDB=N;
+  double* X = new double[N];
+  int LDX = N;
+  double RCOND, FERR, BERR;
+  double* WORK = new double[3*N];
+  int* IWORK = new int[N];
+  int INFO; 
+
+  dposvx_(&FACT, &UPLO, &N, &NRHS,
+	  A, &LDA,
+	  AF, &LDAF,
+	  &EQUED,
+	  S,
+	  B, &LDB,
+	  X, &LDX,
+	  &RCOND, &FERR, &BERR, 
+	  WORK, IWORK,
+	  &INFO); 
+
+  //rhs.copyFrom(S);
+  //nlp->log->write("Scaling S", rhs, hovSummary);
+
+  //M.copyFrom(AF);
+  //nlp->log->write("Factoriz ", M, hovSummary);
+
+  //printf("INFO ===== %d  RCOND=%g  FERR=%g   BERR=%g  EQUED=%c\n", INFO, RCOND, FERR, BERR, EQUED);
+
+
+
+  rhs.copyFrom(X);
+  delete [] AF;
+  delete [] S;
+  delete [] X;
+  delete [] WORK;
+  delete [] IWORK;
+  return 0;
 }
 
-int hiopKKTLinSysLowRank::solveWithFactors(hiopMatrixDense& M, hiopVectorPar& r)
+/* this code works fine but requires xblas
+int hiopKKTLinSysLowRank::solveWithRefin(hiopMatrixDense& M, hiopVectorPar& rhs)
 {
-#ifdef DEEP_CHECKING
-  assert(M.m()==M.n());
-#endif
-  if(M.m()==0) return 0;
-  char uplo='L'; //we have upper triangular in C++, but this is lower in fortran
-  int N=M.n(), lda=N, nrhs=1, info;
-  dpotrs_(&uplo,&N, &nrhs, M.local_buffer(), &lda, r.local_data(), &lda, &info);
-  if(info<0) 
-    nlp->log->printf(hovError, "hiopKKTLinSysLowRank::solveWithFactors: dpotrs returned error %d\n", info);
-#ifdef DEEP_CHECKING
-  assert(info<=0);
-#endif
-  return info;
+  char FACT='E'; 
+  char UPLO='L';
+  int N=M.n();
+  int NRHS=1;
+  double* A=M.local_buffer();
+  int LDA=N;
+  double* AF=new double[N*N];
+  int LDAF=N;
+  char EQUED='N'; //it is an output if FACT='E'
+  double* S = new double[N];
+  double* B = rhs.local_data();
+  int LDB=N;
+  double* X = new double[N];
+  int LDX = N;
+  double RCOND, BERR;
+  double RPVGRW; //Reciprocal pivot growth
+  int N_ERR_BNDS=3;
+  double* ERR_BNDS_NORM = new double[NRHS*N_ERR_BNDS];
+  double* ERR_BNDS_COMP = new double[NRHS*N_ERR_BNDS];
+  int NPARAMS=3;
+  double PARAMS[NPARAMS];
+  PARAMS[0]=1.0;  //Use the extra-precise refinement algorithm
+  PARAMS[1]=3.0; //Maximum number of residual computations allowed for refinement
+  PARAMS[2]=1.0; //attempt to find a solution with small componentwise
+  double* WORK = new double[4*N];
+  int* IWORK = new int[N];
+  int INFO; 
+
+  dposvxx_(&FACT, &UPLO, &N, &NRHS,
+	   A, &LDA,
+	   AF, &LDAF,
+	   &EQUED,
+	   S,
+	   B, &LDB,
+	   X, &LDX,
+	   &RCOND, &RPVGRW, &BERR, 
+	   &N_ERR_BNDS, ERR_BNDS_NORM, ERR_BNDS_COMP,
+	   &NPARAMS, PARAMS,
+	   WORK, IWORK,
+	   &INFO); 
+
+  //rhs.copyFrom(S);
+  //nlp->log->write("Scaling S", rhs, hovSummary);
+
+  //M.copyFrom(AF);
+  //nlp->log->write("Factoriz ", M, hovSummary);
+
+  printf("INFO ===== %d  RCOND=%g  RPVGRW=%g   BERR=%g  EQUED=%c\n", INFO, RCOND, RPVGRW, BERR, EQUED);
+  printf("               ERR_BNDS_NORM=%g %g %g    ERR_BNDS_COMP=%g %g %g \n", ERR_BNDS_NORM[0], ERR_BNDS_NORM[1], ERR_BNDS_NORM[2], ERR_BNDS_COMP[0], ERR_BNDS_COMP[1], ERR_BNDS_COMP[2]);
+  printf("               PARAMS=%g %g %g \n", PARAMS[0], PARAMS[1], PARAMS[2]);
+
+
+  rhs.copyFrom(X);
+  delete [] AF;
+  delete [] S;
+  delete [] X;
+  delete [] ERR_BNDS_NORM;
+  delete [] ERR_BNDS_COMP;
+  delete [] WORK;
+  delete [] IWORK;
+  return 0;
 }
+*/
 
 #ifdef DEEP_CHECKING
 double hiopKKTLinSysLowRank::solveError(const hiopMatrixDense& M,  const hiopVectorPar& x, hiopVectorPar& rhs)
 {
   double relError;
+  double rhsnorm=rhs.twonorm();
   M.timesVec(1.0,rhs,-1.0,x);
-  double xnorm=x.twonorm();
-  double rnorm=rhs.twonorm();
-  relError=rnorm/(1+xnorm);
+  double resnorm=rhs.twonorm();
+  
+  relError=resnorm / (1+rhsnorm);
   return relError;
 }
 

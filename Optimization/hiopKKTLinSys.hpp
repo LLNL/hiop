@@ -42,8 +42,12 @@ public:
   virtual void solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
 			       hiopVectorPar& dx, hiopVectorPar& dyc, hiopVectorPar& dyd);
 
-  int factorizeMat(hiopMatrixDense& M);
-  int solveWithFactors(hiopMatrixDense& M, hiopVectorPar& r);
+  //int factorizeMat(hiopMatrixDense& M);
+  //int solveWithFactors(hiopMatrixDense& M, hiopVectorPar& r);
+
+  //LAPACK wrappers
+  int solve(hiopMatrixDense& M, hiopVectorPar& rhs);
+  int solveWithRefin(hiopMatrixDense& M, hiopVectorPar& rhs);
 #ifdef DEEP_CHECKING
   static double solveError(const hiopMatrixDense& M,  const hiopVectorPar& x, hiopVectorPar& rhs);
 
