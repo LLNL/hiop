@@ -236,7 +236,7 @@ double hiopKKTLinSysLowRank::errorKKT(const hiopResidual* resid, const hiopItera
 
   hiopVectorPar* RYC=resid->ryc->new_copy();
   Jac_c->timesVec(1.0, *RYC, -1.0, *sol->x);
-  aux=RYC->twonorm();
+  aux=RYC->infnorm();
   derr=fmax(aux,derr);
   nlp->log->printf(hovLinAlgScalars, "  --- ryc=%g\n", aux);
   delete RYC;
@@ -245,7 +245,7 @@ double hiopKKTLinSysLowRank::errorKKT(const hiopResidual* resid, const hiopItera
   hiopVectorPar* RYD=resid->ryd->new_copy();
   Jac_d->timesVec(1.0, *RYD, -1.0, *sol->x);
   RYD->axpy(1.0,*sol->d);
-  aux=RYD->twonorm();
+  aux=RYD->infnorm();
   derr=fmax(aux,derr);
   nlp->log->printf(hovLinAlgScalars, "  --- ryd=%g\n", aux);
   delete RYD; 
@@ -337,7 +337,7 @@ errorCompressedLinsys(const hiopVectorPar& rx, const hiopVectorPar& ryc, const h
   derr=fmax(derr,aux);
   nlp->log->printf(hovLinAlgScalars, "  >>>  rx=%g\n", aux);
   if(aux>1e-8) {
-    nlp->log->write("Low rank Hessian is:", *Hess, hovLinAlgScalars); 
+    //nlp->log->write("Low rank Hessian is:", *Hess, hovLinAlgScalars); 
   }
   delete RX; RX=NULL;
 
@@ -396,6 +396,7 @@ solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
   N->addSubDiagonal(nlp->m_eq(), *Dd_inv);
 #ifdef DEEP_CHECKING
   nlp->log->write("solveCompressed: N is", *N, hovMatrices);
+  nlp->log->printf(hovLinAlgScalars, "inf norm of Dd_inv is %g\n", Dd_inv->infnorm());
   N->assertSymmetry(1e-10);
 #endif
   //compute the rhs of the lin sys involving N 
@@ -414,32 +415,14 @@ solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
   hiopVectorPar* r=rhs.new_copy(); //save the rhs to check the norm of the residual
 #endif
 
-
+  //
   //solve N * dyc_dyd = rhs
-  // int ierr=factorizeMat(*N); assert(ierr==0);
-  // ierr=solveWithFactors(*N,rhs); assert(ierr==0);
-  int ierr = solve(*N,rhs);
+  //
+  int ierr = solveWithRefin(*N,rhs);
+  //int ierr = solve(*N,rhs);
 
-#ifdef DEEP_CHECKING
-  hiopVectorPar sol(rhs.get_size());
-  hiopVectorPar rhss(rhs.get_size());
-  sol.copyFrom(rhs); rhss.copyFrom(*r);
-  double relErr=solveError(*Nmat, rhs, *r);
-  if(relErr>1e-8)  {
-    nlp->log->printf(hovWarning, "large rel. error (%g) in linear solver occured the Cholesky solve (hiopKKTLinSys)\n", relErr);
 
-    nlp->log->write("matrix N=", *Nmat, hovError);
-    nlp->log->write("rhs", rhss, hovError);
-    nlp->log->write("sol", sol, hovError);
 
-    assert(false && "large error (%g) in linear solve (hiopKKTLinSys), equilibrating the matrix and/or iterative refinement are needed (see dposvx/x)");
-  } else 
-    if(relErr>1e-10) 
-      nlp->log->printf(hovWarning, "considerable rel. error (%g) in linear solver occured the Cholesky solve (hiopKKTLinSys)\n", relErr);
-
-  nlp->log->printf(hovLinAlgScalars, "hiopKKTLinSysLowRank::solveCompressed: Cholesky solve: relative error %g\n", relErr);
-  delete r;
-#endif
   hiopVector& dyc_dyd= rhs;
   dyc_dyd.copyToStarting(dyc,0);
   dyc_dyd.copyToStarting(dyd,nlp->m_eq());
@@ -492,6 +475,152 @@ solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
 //   return info;
 // }
 
+int hiopKKTLinSysLowRank::solveWithRefin(hiopMatrixDense& M, hiopVectorPar& rhs)
+{
+  // 1. Solve dposvx (solve + equilibrating + iterative refinement + forward and backward error estimates)
+  // 2. Check the residual norm
+  // 3. If residual norm is not small enough, then perform iterative refinement. This is because dposvx 
+  // does not always provide a small enough residual since it stops (possibly without refinement) based on
+  // the forward and backward estimates
+
+  hiopMatrixDense* Aref = M.new_copy();
+  hiopVectorPar* rhsref = rhs.new_copy();
+
+  char FACT='E'; 
+  char UPLO='L';
+  int N=M.n();
+  int NRHS=1;
+  double* A=M.local_buffer();
+  int LDA=N;
+  double* AF=new double[N*N];
+  int LDAF=N;
+  char EQUED='N'; //it is an output if FACT='E'
+  double* S = new double[N];
+  double* B = rhs.local_data();
+  int LDB=N;
+  double* X = new double[N];
+  int LDX = N;
+  double RCOND, FERR, BERR;
+  double* WORK = new double[3*N];
+  int* IWORK = new int[N];
+  int INFO; 
+
+  //
+  // 1. solve
+  //
+  dposvx_(&FACT, &UPLO, &N, &NRHS,
+	  A, &LDA,
+	  AF, &LDAF,
+	  &EQUED,
+	  S,
+	  B, &LDB,
+	  X, &LDX,
+	  &RCOND, &FERR, &BERR, 
+	  WORK, IWORK,
+	  &INFO); 
+  //printf("INFO ===== %d  RCOND=%g  FERR=%g   BERR=%g  EQUED=%c\n", INFO, RCOND, FERR, BERR, EQUED);
+  //
+  // 2. check residual
+  //
+  hiopVectorPar* x = rhs.alloc_clone(); 
+  hiopVectorPar dx(N);
+  hiopVectorPar resid(N); 
+  int nIterRefin=0;double nrmResid;
+  int info;
+  const int MAX_ITER_REFIN=3;
+  while(true) {
+    x->copyFrom(X);
+    resid.copyFrom(*rhsref);
+    Aref->timesVec(1.0, resid, -1.0, *x);
+
+    nlp->log->write("resid", resid, hovLinAlgScalars);
+
+    nrmResid= resid.infnorm();
+    nlp->log->printf(hovScalars, "hiopKKTLinSysLowRank::solveWithRefin iterrefin=%d  residual norm=%g\n", nIterRefin, nrmResid);
+
+    if(nrmResid<1e-8) break;
+
+    if(nIterRefin>=MAX_ITER_REFIN) {
+      nlp->log->write("N", *Aref, hovMatrices);
+      nlp->log->write("sol", *x, hovMatrices);
+      nlp->log->write("rhs", *rhsref, hovMatrices);
+
+      nlp->log->printf(hovWarning, "hiopKKTLinSysLowRank::solveWithRefin reduced residual to ONLY (inf-norm) %g after %d iterative refinements\n", nrmResid, nIterRefin);
+      break;
+      //assert(false && "too many refinements");
+    }
+    if(0) { //iter refin based on symmetric indefinite factorization+solve 
+      
+
+      int _V_ipiv_vec[1000]; double _V_work_vec[1000]; int lwork=1000;
+      M.copyFrom(*Aref);
+      dsytrf_(&UPLO, &N, M.local_buffer(), &LDA, _V_ipiv_vec, _V_work_vec, &lwork, &info);
+      assert(info==0);
+      dsytrs_(&UPLO, &N, &NRHS, M.local_buffer(), &LDA, _V_ipiv_vec, resid.local_data(), &LDB, &info);
+      assert(info==0);
+    } else { //iter refin based on symmetric positive definite factorization+solve 
+      M.copyFrom(*Aref);
+      //for(int i=0; i<4; i++) M.local_data()[i][i] +=1e-8;
+      dpotrf_(&UPLO, &N, M.local_buffer(), &LDA, &info);
+      if(info>0)
+	nlp->log->printf(hovError, "hiopKKTLinSysLowRank::factorizeMat: dpotrf (Chol fact) detected %d minor being indefinite.\n", info);
+      else
+	if(info<0) 
+	  nlp->log->printf(hovError, "hiopKKTLinSysLowRank::factorizeMat: dpotrf returned error %d\n", info);
+      
+      dpotrs_(&UPLO,&N, &NRHS, M.local_buffer(), &LDA, resid.local_data(), &LDA, &info);
+      if(info<0) 
+	nlp->log->printf(hovError, "hiopKKTLinSysLowRank::solveWithFactors: dpotrs returned error %d\n", info);
+    }
+
+   // //FACT='F'; EQUED='Y'; //reuse the factorization and the equilibration
+   //  M.copyFrom(*Aref);
+   //  A = M.local_buffer();
+   //  dposvx_(&FACT, &UPLO, &N, &NRHS,
+   // 	    A, &LDA,
+   // 	    AF, &LDAF,
+   // 	    &EQUED,
+   // 	    S,
+   // 	    resid.local_data(), &LDB,
+   // 	    X, &LDX,
+   // 	    &RCOND, &FERR, &BERR, 
+   // 	    WORK, IWORK,
+   // 	    &INFO); 
+   //  printf("INFO ===== %d  RCOND=%g  FERR=%g   BERR=%g  EQUED=%c\n", INFO, RCOND, FERR, BERR, EQUED);
+    
+    dx.copyFrom(resid);
+    x->axpy(1., dx);
+    
+    nIterRefin++;
+  }
+
+  rhs.copyFrom(*x);
+  delete Aref;
+  delete rhsref;
+  delete x;
+
+// #ifdef DEEP_CHECKING
+//   hiopVectorPar sol(rhs.get_size());
+//   hiopVectorPar rhss(rhs.get_size());
+//   sol.copyFrom(rhs); rhss.copyFrom(*r);
+//   double relErr=solveError(*Nmat, rhs, *r);
+//   if(relErr>1e-5)  {
+//     nlp->log->printf(hovWarning, "large rel. error (%g) in linear solver occured the Cholesky solve (hiopKKTLinSys)\n", relErr);
+
+//     nlp->log->write("matrix N=", *Nmat, hovError);
+//     nlp->log->write("rhs", rhss, hovError);
+//     nlp->log->write("sol", sol, hovError);
+
+//     assert(false && "large error (%g) in linear solve (hiopKKTLinSys), equilibrating the matrix and/or iterative refinement are needed (see dposvx/x)");
+//   } else 
+//     if(relErr>1e-16) 
+//       nlp->log->printf(hovWarning, "considerable rel. error (%g) in linear solver occured the Cholesky solve (hiopKKTLinSys)\n", relErr);
+
+//   nlp->log->printf(hovLinAlgScalars, "hiopKKTLinSysLowRank::solveCompressed: Cholesky solve: relative error %g\n", relErr);
+//   delete r;
+// #endif
+}
+
 int hiopKKTLinSysLowRank::solve(hiopMatrixDense& M, hiopVectorPar& rhs)
 {
   //return solveWithRefin(M, rhs);
@@ -525,15 +654,13 @@ int hiopKKTLinSysLowRank::solve(hiopMatrixDense& M, hiopVectorPar& rhs)
 	  WORK, IWORK,
 	  &INFO); 
 
-  //rhs.copyFrom(S);
-  //nlp->log->write("Scaling S", rhs, hovSummary);
+  rhs.copyFrom(S);
+  nlp->log->write("Scaling S", rhs, hovSummary);
 
   //M.copyFrom(AF);
   //nlp->log->write("Factoriz ", M, hovSummary);
 
   //printf("INFO ===== %d  RCOND=%g  FERR=%g   BERR=%g  EQUED=%c\n", INFO, RCOND, FERR, BERR, EQUED);
-
-
 
   rhs.copyFrom(X);
   delete [] AF;
@@ -615,11 +742,11 @@ int hiopKKTLinSysLowRank::solveWithRefin(hiopMatrixDense& M, hiopVectorPar& rhs)
 double hiopKKTLinSysLowRank::solveError(const hiopMatrixDense& M,  const hiopVectorPar& x, hiopVectorPar& rhs)
 {
   double relError;
-  double rhsnorm=rhs.twonorm();
+  double rhsnorm=rhs.infnorm();
   M.timesVec(1.0,rhs,-1.0,x);
-  double resnorm=rhs.twonorm();
+  double resnorm=rhs.infnorm();
   
-  relError=resnorm / (1+rhsnorm);
+  relError=resnorm;// / (1+rhsnorm);
   return relError;
 }
 

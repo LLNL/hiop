@@ -60,7 +60,7 @@ hiopAlgFilterIPM::hiopAlgFilterIPM(hiopNlpDenseConstraints* nlp_)
   theta_min = 1e7; //temporary - will be updated after ini pt is computed
   dualsUpdateType = 1;
   max_n_it = 200;
-  dualsInitializ = 0; //0 LSQ (default), 1 set to zero
+  dualsInitializ = 1; //0 LSQ (default), 1 set to zero
 
   //parameter based initialization
   if(dualsUpdateType==0) 

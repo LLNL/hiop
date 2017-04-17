@@ -578,10 +578,13 @@ void hiopHessianLowRank::solveWithV(hiopVectorPar& rhs_s, hiopVectorPar& rhs_y)
   nlp->log->write("solveWithV: SOL OUT 'y' part: ", rhs_y, hovMatrices);
 
   //residual calculation
-  double nrmrhs=rhs_saved->twonorm();
+  double nrmrhs=rhs_saved->infnorm();
   _Vmat->timesVec(1.0, *rhs_saved, -1.0, rhs);
-  double nrmres=rhs_saved->twonorm();
-  nlp->log->printf(hovLinAlgScalars, "hiopHessianLowRank::solveWithV 1rhs: rel resid norm=%g\n", nrmres/(1+nrmrhs));
+  double nrmres=rhs_saved->infnorm();
+  //nlp->log->printf(hovLinAlgScalars, "hiopHessianLowRank::solveWithV 1rhs: rel resid norm=%g\n", nrmres/(1+nrmrhs));
+  nlp->log->printf(hovScalars, "hiopHessianLowRank::solveWithV 1rhs: rel resid norm=%g\n", nrmres/(1+nrmrhs));
+  if(nrmres>1e-8)
+    nlp->log->printf(hovWarning, "hiopHessianLowRank::solveWithV large residual=%g\n", nrmres);
   delete rhs_saved;
 #endif
 
@@ -611,18 +614,18 @@ void hiopHessianLowRank::solveWithV(hiopMatrixDense& rhs)
 #ifdef DEEP_CHECKING
   nlp->log->write("solveWithV: SOL OUT: ", rhs, hovMatrices);
   
-  hiopMatrixDense& sol = rhs;
+  hiopMatrixDense& sol = rhs; //matrix of solutions
   hiopVectorPar x(rhs.n()); //again, keep in mind rhs is transposed
   hiopVectorPar r(rhs.n());
   double resnorm=0.0;
   for(int k=0; k<rhs.m(); k++) {
     rhs_saved->getRow(k, r);
     sol.getRow(k,x);
-    double nrmrhs=r.twonorm();
+    double nrmrhs=r.infnorm();//nrmrhs=.0;
     _Vmat->timesVec(1.0, r, -1.0, x);
-    double nrmres=r.twonorm();
-    if(nrmres/(nrmrhs+1)>1e-8)
-      nlp->log->printf(hovWarning, "hiopHessianLowRank::solveWithV mult-rhs: rhs number %d has large rel resid norm=%g\n", k, nrmres/(1+nrmrhs));
+    double nrmres=r.infnorm();
+    if(nrmres>1e-8)
+      nlp->log->printf(hovWarning, "hiopHessianLowRank::solveWithV mult-rhs: rhs number %d has large resid norm=%g\n", k, nrmres);
     if(nrmres/(nrmrhs+1)>resnorm) resnorm=nrmres/(nrmrhs+1);
   }
   nlp->log->printf(hovLinAlgScalars, "hiopHessianLowRank::solveWithV mult-rhs: rel resid norm=%g\n", resnorm);
