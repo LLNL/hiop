@@ -427,7 +427,7 @@ void hiopMatrixDense::timesMatTrans_local(double beta, hiopMatrix& W_, double al
 #endif
   assert(W.n_local==W.n_global && "not intended for the case when the result matrix is distributed.");
   if(W.m()==0) return;
-
+  if(W.n()==0) return;
   if(n_local==0) {
     if(beta!=1.0) {
       int one=1; int mn=W.m()*W.n();
@@ -438,7 +438,7 @@ void hiopMatrixDense::timesMatTrans_local(double beta, hiopMatrix& W_, double al
 
   /* C = alpha*op(A)*op(B) + beta*C in our case is Wt= alpha* X  *Mt    + beta*Wt */
   char transX='T', transM='N';
-  int ldx=n_local;//=X.n(); (modified this to support the parallel case)
+  int ldx=n_local;//=X.n(); (modified to support the parallel case)
   int ldm=n_local, ldw=W.n();
   int M=X.m(), N=m_local, K=n_local;
   double** XM=X.local_data(); double** WM=W.local_data();

@@ -44,7 +44,7 @@ hiopAlgFilterIPM::hiopAlgFilterIPM(hiopNlpDenseConstraints* nlp_)
   kappa_mu=0.2;       //linear decrease factor
   theta_mu=1.5;       //exponent for higher than linear decrease of mu
   tau_min=0.99;       //min value for the fraction-to-the-boundary
-  eps_tol=1e-8;       //absolute error for the nlp
+  eps_tol=1e-6;       //absolute error for the nlp
   kappa_eps=10;       //relative (to mu) error for the log barrier
   kappa1=kappa2=1e-2; //projection params for the starting point (default 1e-2)
   p_smax=100;         //threshold for the magnitude of the multipliers
@@ -58,7 +58,7 @@ hiopAlgFilterIPM::hiopAlgFilterIPM(hiopNlpDenseConstraints* nlp_)
   _tau=fmax(tau_min,1.0-_mu);
   theta_max = 1e7; //temporary - will be updated after ini pt is computed
   theta_min = 1e7; //temporary - will be updated after ini pt is computed
-  dualsUpdateType = 1;
+  dualsUpdateType = 1; //0 LSQ (default), 1 linear update (more stable)
   max_n_it = 200;
   dualsInitializ = 1; //0 LSQ (default), 1 set to zero
 
