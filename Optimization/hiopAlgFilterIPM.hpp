@@ -13,47 +13,6 @@
 namespace hiop
 {
 
-enum hiopSolveStatus {
-  //(partial) success 
-  Solve_Success=0,
-  Solve_Acceptable_Level=1,
-  Infeasible_Problem=2,
-  Iterates_Diverging=3,
-  Feasible_Not_Optimal = 4,
-  //solver stopped based on user-defined criteria that are not related to optimality
-  Max_Iter_Exceeded=10,
-  Max_CpuTime_Exceeded=11,
-  User_Stopped=12,
-
-  //NLP algorithm/solver reports issues in solving the problem and stops without being certain 
-  //that is solved the problem to optimality or that the problem is infeasible.
-  //Feasible_Point_Found, 
-  NlpAlgorithm_failure=-1, 
-  Diverging_Iterates=-2,
-  Search_Dir_Too_Small=-3,
-  Steplength_Too_Small=-4,
-  Err_Step_Computation=-5,
-  //errors related to user-provided data (e.g., inconsistent problem specification, 'nans' in the 
-  //function/sensitivity evaluations, invalid options)
-  Invalid_Problem_Definition=-11,
-  Invalid_Parallelization=-12,
-  Invalid_UserOption=-13,
-  Invalid_Number=-14,
-
-  //ungraceful errors and returns
-  Exception_Unrecoverable=-100,
-  Memory_Alloc_Problem=-101,
-  SolverInternal_Error=-199,
-
-  //unknown NLP solver errors or return codes
-  UnknownNLPSolveStatus=-1000,
-
-  //intermediary statuses for the solver
-  NlpSolve_IncompleteInit=-10001,
-  NlpSolve_SolveNotCalled=-10002,
-  NlpSolve_Pending=-10003
-};
-
 class hiopAlgFilterIPM
 {
 public:

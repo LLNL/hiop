@@ -10,7 +10,49 @@
 
 namespace hiop
 {
+  /** Solver status codes. */
+enum hiopSolveStatus {
+  //(partial) success 
+  Solve_Success=0,
+  Solve_Acceptable_Level=1,
+  Infeasible_Problem=2,
+  Iterates_Diverging=3,
+  Feasible_Not_Optimal = 4,
+  //solver stopped based on user-defined criteria that are not related to optimality
+  Max_Iter_Exceeded=10,
+  Max_CpuTime_Exceeded=11,
+  User_Stopped=12,
 
+  //NLP algorithm/solver reports issues in solving the problem and stops without being certain 
+  //that is solved the problem to optimality or that the problem is infeasible.
+  //Feasible_Point_Found, 
+  NlpAlgorithm_failure=-1, 
+  Diverging_Iterates=-2,
+  Search_Dir_Too_Small=-3,
+  Steplength_Too_Small=-4,
+  Err_Step_Computation=-5,
+  //errors related to user-provided data (e.g., inconsistent problem specification, 'nans' in the 
+  //function/sensitivity evaluations, invalid options)
+  Invalid_Problem_Definition=-11,
+  Invalid_Parallelization=-12,
+  Invalid_UserOption=-13,
+  Invalid_Number=-14,
+
+  //ungraceful errors and returns
+  Exception_Unrecoverable=-100,
+  Memory_Alloc_Problem=-101,
+  SolverInternal_Error=-199,
+
+  //unknown NLP solver errors or return codes
+  UnknownNLPSolveStatus=-1000,
+
+  //intermediary statuses for the solver
+  NlpSolve_IncompleteInit=-10001,
+  NlpSolve_SolveNotCalled=-10002,
+  NlpSolve_Pending=-10003
+};
+
+/** The base interface class */
 class hiopInterfaceBase
 {
   /** Base class for the solver's interface that has no assumptions how the 
@@ -90,6 +132,38 @@ public:
    * ToDo: provide API for a full, primal-dual restart. 
    */
   virtual bool get_starting_point(const long long&n, double* x0) = 0;
+
+  /** callback for the optimal solution.
+   *  Note that:
+   *   i. x, z_L, z_U contain only the array slice that is local to the calling process
+   *  ii. g, lambda are replicated across all processes, which means they can be used as-is, without reducing them.
+   * iii. all other scalar quantities are replicated across all processes, which means they can be used as-is, 
+   * without reducing them.
+   */
+  virtual void solution_callback(hiopSolveStatus status,
+				 int n, const double* x,
+				 const double* z_L,
+				 const double* z_U,
+				 int m, const double* g,
+				 const double* lambda,
+				 double obj_value) { };
+
+  /** Callback for the iteration: at the end of each iteration. This is NOT called during the line-searches.
+   * Note: all the notes for @solution_callback apply.
+   */
+  virtual bool iterate_callback(int iter, double obj_value,
+				int n, const double* x,
+				const double* z_L,
+				const double* z_U,
+				int m, const double* g,
+				const double* lambda,
+				double inf_pr, double inf_du,
+				double mu,
+				double alpha_du, double alpha_pr,
+				int ls_trials) {return true;}
+  
+
+
 private:
   hiopInterfaceBase(const hiopInterfaceBase& ) {};
   void operator=(const hiopInterfaceBase&) {};
