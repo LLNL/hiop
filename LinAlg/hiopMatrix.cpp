@@ -112,6 +112,10 @@ void hiopMatrixDense::copyBlockFromMatrix(const long i_start, const long j_start
   assert(src.n_local==src.n_global && "this method should be used only in 'serial' mode");
   assert(m_local>=i_start+src.m_local && "the matrix does not fit as a sublock in 'this' at specified coordinates");
   assert(n_local>=j_start+src.n_local && "the matrix does not fit as a sublock in 'this' at specified coordinates");
+
+  //quick returns for empty source matrices
+  if(src.n()==0) return;
+  if(src.m()==0) return;
 #ifdef DEEP_CHECKING
   assert(i_start<m_local || !m_local);
   assert(j_start<n_local || !n_local);
