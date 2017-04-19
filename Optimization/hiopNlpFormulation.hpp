@@ -29,6 +29,24 @@ public:
   virtual hiopVector* alloc_dual_ineq_vec() const=0;
   virtual hiopVector* alloc_dual_vec() const=0;
 
+  virtual void user_callback_solution(hiopSolveStatus status,
+				      const hiopVector& x,
+				      const hiopVector& z_L,
+				      const hiopVector& z_U,
+				      const hiopVector& c, const hiopVector& d,
+				      const hiopVector& yc, const hiopVector& yd,
+				      double obj_value)=0;
+  virtual bool user_callback_iterate(int iter, double obj_value,
+				     const hiopVector& x,
+				     const hiopVector& z_L,
+				     const hiopVector& z_U,
+				     const hiopVector& c, const hiopVector& d,
+				     const hiopVector& yc, const hiopVector& yd,
+				     double inf_pr, double inf_du,
+				     double mu,
+				     double alpha_du, double alpha_pr,
+				     int ls_trials)=0;
+
   /* outputing and debug-related functionality*/
   hiopLogger* log;
   hiopRunStats runStats;
@@ -80,6 +98,43 @@ public:
    */
   virtual hiopMatrixDense* alloc_multivector_primal(int nrows, int max_rows=-1) const;
 
+  virtual inline 
+  void user_callback_solution(hiopSolveStatus status,
+			      const hiopVector& x,
+			      const hiopVector& z_L,
+			      const hiopVector& z_U,
+			      const hiopVector& c, const hiopVector& d,
+			      const hiopVector& yc, const hiopVector& yd,
+			      double obj_value) {
+    const hiopVectorPar& xp = dynamic_cast<const hiopVectorPar&>(x);
+    const hiopVectorPar& zl = dynamic_cast<const hiopVectorPar&>(z_L);
+    const hiopVectorPar& zu = dynamic_cast<const hiopVectorPar&>(z_U);
+    assert(xp.get_size()==n_vars);
+    assert(c.get_size()+d.get_size()==n_cons);
+    //!petra: to do: assemble (c,d) into cons and (yc,yd) into lambda based on cons_eq_mapping and cons_ineq_mapping
+    interface.solution_callback(status, 
+				n_vars, xp.local_data_const(), zl.local_data_const(), zu.local_data_const(),
+				n_cons, NULL, //cons, 
+				NULL, //lambda,
+				obj_value);
+  };
+  virtual inline 
+  bool user_callback_iterate(int iter, double obj_value,
+			     const hiopVector& x, const hiopVector& z_L, const hiopVector& z_U,
+			     const hiopVector& c, const hiopVector& d, const hiopVector& yc, const hiopVector& yd,
+			     double inf_pr, double inf_du, double mu, double alpha_du, double alpha_pr, int ls_trials){
+    const hiopVectorPar& xp = dynamic_cast<const hiopVectorPar&>(x);
+    const hiopVectorPar& zl = dynamic_cast<const hiopVectorPar&>(z_L);
+    const hiopVectorPar& zu = dynamic_cast<const hiopVectorPar&>(z_U);
+    assert(xp.get_size()==n_vars);
+    assert(c.get_size()+d.get_size()==n_cons);
+    //!petra: to do: assemble (c,d) into cons and (yc,yd) into lambda based on cons_eq_mapping and cons_ineq_mapping
+    return interface.iterate_callback(iter, obj_value, 
+				      n_vars, xp.local_data_const(), zl.local_data_const(), zu.local_data_const(),
+				      n_cons, NULL, //cons, 
+				      NULL, //lambda,
+				      inf_pr, inf_du, mu, alpha_du, alpha_pr,  ls_trials);
+      }
   /** const accessors */
   inline const hiopVectorPar& get_xl ()  const { return *xl;   }
   inline const hiopVectorPar& get_xu ()  const { return *xu;   }

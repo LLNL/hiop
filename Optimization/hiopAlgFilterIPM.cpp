@@ -185,12 +185,14 @@ int hiopAlgFilterIPM::startingProcedure(hiopIterate& it_ini,
 
 hiopSolveStatus hiopAlgFilterIPM::run()
 {
-  nlp->log->write("\nNLP SUMMARY\n==============", *nlp, hovSummary);
+  nlp->log->write("===============\nHiop SOLVER\n===============\nProblem Summary\n---------------", *nlp, hovSummary);
 
   nlp->runStats.tmOptimizTotal.start();
 
   startingProcedure(*it_curr, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d); //this also evaluates the nlp
   _mu=mu0;
+
+
 
   //update log bar
   logbar->updateWithNlpInfo(*it_curr, _mu, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d);
@@ -210,12 +212,13 @@ hiopSolveStatus hiopAlgFilterIPM::run()
 
   _alpha_primal = _alpha_dual = 0;
 
-  //algorithm status
+  // --- Algorithm status 'algStatus ----
   //-1 couldn't solve the problem (most likely because small search step. Restauration phase likely needed)
-  //0 success
-  //1 max iter reached
+  // 0 success
+  // 1 max iter reached
+  // 2 user stop via the iteration callback
 
-  int algStatus=0; bool bret=true; int lsStatus=-1, lsNum=-1;
+  int algStatus=0; bool bret=true; int lsStatus=-1, lsNum=0; double aaa;
   _solverStatus = NlpSolve_Pending;
   while(true) {
 
@@ -227,12 +230,24 @@ hiopSolveStatus hiopAlgFilterIPM::run()
     nlp->log->printf(hovScalars, "  LogBar errs: pr-infeas:%20.14e   dual-infeas:%20.14e  comp:%20.14e  overall:%20.14e\n",
 		     _err_log_feas, _err_log_optim, _err_log_complem, _err_log);
     outputIteration(lsStatus, lsNum);
+    //user callback
+    if(!nlp->user_callback_iterate(iter_num, _f_nlp, 
+				   *it_curr->get_x(),
+				   *it_curr->get_zl(),
+				   *it_curr->get_zu(),
+				   *_c,*_d, 
+				   *it_curr->get_yc(),  *it_curr->get_yd(), //lambda,
+				   _err_nlp_feas, _err_nlp_optim,
+				   _mu,
+				   _alpha_dual, _alpha_primal,  lsNum)) {
+      algStatus=2; break;
+    }
     /*************************************************
      * Termination checks
      ************************************************/
     if(_err_nlp<=eps_tol)  { algStatus=0; break; }
     if(iter_num>=max_n_it) { algStatus=1; break; }
-    if(algStatus!=0) break; //failure of the line search
+    if(algStatus!=0) break; //failure of the line search or max iter reached. 
 
     /************************************************
      * update mu and other parameters
@@ -475,11 +490,25 @@ hiopSolveStatus hiopAlgFilterIPM::run()
       nlp->log->printf(hovSummary, "Maximum number of iterations reached.\n%s\n", nlp->runStats.getSummary().c_str());
       break;
     }
+  case 2:
+    {
+      _solverStatus = User_Stopped, 
+      nlp->log->printf(hovSummary, "Stopped by the user through the user provided iterate callback.\n%s\n", nlp->runStats.getSummary().c_str());
+      break;
+    }
   default:
     assert(false);
     break;
   };
 
+  //callback
+  nlp->user_callback_solution(_solverStatus,
+			      *it_curr->get_x(),
+			      *it_curr->get_zl(),
+			      *it_curr->get_zu(),
+			      *_c,*_d, 
+			      *it_curr->get_yc(),  *it_curr->get_yd(),
+			      _f_nlp);
   delete kkt;
 
   return _solverStatus;
@@ -601,8 +630,6 @@ void hiopAlgFilterIPM::getSolution(const double* x) const
     nlp->log->printf(hovError, "getSolution: hiOp did not initialize entirely or the 'run' function was not called.");
   if(_solverStatus==NlpSolve_Pending)
     nlp->log->printf(hovWarning, "getSolution: hiOp does not seem to have completed yet. The primal vector returned may not be optimal.");
-
-  //it_curr->get_x()->
 }
 
 hiopSolveStatus hiopAlgFilterIPM::getSolveStatus() const
