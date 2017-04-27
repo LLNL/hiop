@@ -63,16 +63,15 @@ int main(int argc, char **argv)
 #ifdef WITH_MPI
   MPI_Init(&argc, &argv);
   assert(MPI_SUCCESS==MPI_Comm_rank(MPI_COMM_WORLD,&rank));
-  //assert(MPI_SUCCESS==MPI_Comm_size(MPI_COMM_WORLD,&numRanks));
-  if(0==rank) printf("Support for MPI is enabled\n");
+  //if(0==rank) printf("Support for MPI is enabled\n");
 #endif
   bool selfCheck; long long n;
   if(!parse_arguments(argc, argv, n, selfCheck)) { usage(argv[0]); return 1;}
 
   Ex2 nlp_interface(n);
-  if(rank==0) printf("interface created\n");
+  //if(rank==0) printf("interface created\n");
   hiopNlpDenseConstraints nlp(nlp_interface);
-  if(rank==0) printf("nlp formulation created\n");
+  //if(rank==0) printf("nlp formulation created\n");
 
   hiopAlgFilterIPM solver(&nlp);
   hiopSolveStatus status = solver.run();

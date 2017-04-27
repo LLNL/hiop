@@ -46,6 +46,29 @@ public:
 
   virtual bool get_starting_point(const long long&n, double* x0);
 
+  /*
+    void solution_callback(hiop::hiopSolveStatus status,
+			 int n, const double* x,
+			 const double* z_L,
+			 const double* z_U,
+			 int m, const double* g,
+			 const double* lambda,
+			 double obj_value) { 
+    printf("solution_callback with optimal value: %g. Also x[1]=%22.14f\n", obj_value, x[1]);
+};
+  
+
+    virtual bool iterate_callback(int iter, double obj_value,
+				int n, const double* x,
+				const double* z_L,
+				const double* z_U,
+				int m, const double* g,
+				const double* lambda,
+				double inf_pr, double inf_du,
+				double mu,
+				double alpha_du, double alpha_pr,
+  				int ls_trials) {if(iter==3)return false;printf("%g %g\n", x[0], x[1]); return true;}
+  */
 private:
   int n_vars, n_cons;
   MPI_Comm comm;
