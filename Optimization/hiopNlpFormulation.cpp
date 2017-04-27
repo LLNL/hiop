@@ -23,12 +23,16 @@ hiopNlpFormulation::hiopNlpFormulation(hiopInterfaceBase& interface)
   assert(interface.get_MPI_comm(comm));
   assert(MPI_SUCCESS==MPI_Comm_rank(comm, &rank));
 #endif
+
+  options = new hiopOptions(log);
+
   runStats = hiopRunStats(comm); //!
 }
 
 hiopNlpFormulation::~hiopNlpFormulation()
 {
   delete log;
+  delete options;
 }
 
 

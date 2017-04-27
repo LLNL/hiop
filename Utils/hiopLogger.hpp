@@ -12,6 +12,8 @@ class hiopIterate;
 class hiopMatrix;
 class hiopHessianLowRank;
 class hiopNlpFormulation;
+class hiopOptions;
+
 /* Verbosity 0 to 9 */
 enum hiopOutVerbosity {
   hovError=-2,
@@ -41,6 +43,7 @@ public:
   void write(const char* msg, const hiopMatrix& M,            hiopOutVerbosity v, int loggerid=0);
   void write(const char* msg, const hiopHessianLowRank& Hess, hiopOutVerbosity v, int loggerid=0);
   void write(const char* msg, const hiopNlpFormulation& nlp,  hiopOutVerbosity v, int loggerid=0);
+  void write(const char* msg, const hiopOptions& options,     hiopOutVerbosity v, int loggerid=0);
   void write(const char* msg, hiopOutVerbosity v, int loggerid=0);
 
   //only for loggerid=0 for now

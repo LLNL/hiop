@@ -11,6 +11,7 @@
 
 #include "hiopRunStats.hpp"
 #include "hiopLogger.hpp"
+#include "hiopOptions.hpp"
 
 namespace hiop
 {
@@ -50,7 +51,7 @@ public:
   /* outputing and debug-related functionality*/
   hiopLogger* log;
   hiopRunStats runStats;
-
+  hiopOptions* options;
   //prints a summary of the problem
   virtual void print(FILE* f=NULL, const char* msg=NULL, int rank=-1) const = 0;
 #ifdef WITH_MPI

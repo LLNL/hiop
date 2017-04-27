@@ -67,6 +67,15 @@ void hiopLogger::write(const char* msg, const hiopHessianLowRank& Hess, hiopOutV
   Hess.print(_f, v, msg);
 }
 
+void hiopLogger::write(const char* msg, const hiopOptions& options,     hiopOutVerbosity v, int loggerid/*=0*/)
+{
+#ifdef WITH_MPI
+  if(_master_rank != _nlp->get_rank()) return;
+#endif
+  if(v>_verb) return;
+  options.print(_f, msg);
+}
+
 void hiopLogger::write(const char* msg, const hiopNlpFormulation& nlp,  hiopOutVerbosity v, int loggerid)
 {
 #ifdef WITH_MPI

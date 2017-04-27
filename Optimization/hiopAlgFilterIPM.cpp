@@ -39,16 +39,23 @@ hiopAlgFilterIPM::hiopAlgFilterIPM(hiopNlpDenseConstraints* nlp_)
   resid = new hiopResidual(nlp);
   resid_trial = new hiopResidual(nlp);
 
-  //default values for the parameters
-  mu0=_mu=0.1; 
-  kappa_mu=0.2;       //linear decrease factor
-  theta_mu=1.5;       //exponent for higher than linear decrease of mu
-  tau_min=0.99;       //min value for the fraction-to-the-boundary
-  eps_tol=1e-6;       //absolute error for the nlp
-  kappa_eps=10;       //relative (to mu) error for the log barrier
-  kappa1=kappa2=1e-2; //projection params for the starting point (default 1e-2)
-  p_smax=100;         //threshold for the magnitude of the multipliers
-  gamma_theta=1e-5;   //sufficient progress parameters for the feasibility violation
+  //algorithm parameters parameters
+  mu0=_mu  = nlp->options->GetNumeric("mu0"); 
+  kappa_mu = nlp->options->GetNumeric("kappa_mu");      //linear decrease factor
+  theta_mu = nlp->options->GetNumeric("theta_mu");      //exponent for higher than linear decrease of mu
+  tau_min  = nlp->options->GetNumeric("tau_min");       //min value for the fraction-to-the-boundary
+  eps_tol  = nlp->options->GetNumeric("tolerance");     //absolute error for the nlp
+  kappa_eps= nlp->options->GetNumeric("kappa_eps");     //relative (to mu) error for the log barrier
+
+  kappa1   = nlp->options->GetNumeric("kappa1");        //projection params for the starting point (default 1e-2)
+  kappa2   = nlp->options->GetNumeric("kappa2");
+  p_smax   = nlp->options->GetNumeric("smax");          //threshold for the magnitude of the multipliers
+  max_n_it = nlp->options->GetInteger("max_iter"); 
+
+  dualsUpdateType = nlp->options->GetString("dualsUpdateType")=="lsq"?0:1;     //0 LSQ (default), 1 linear update (more stable)
+  dualsInitializ = nlp->options->GetString("dualsInitialization")=="lsq"?0:1;  //0 LSQ (default), 1 set to zero
+
+  gamma_theta = 1e-5; //sufficient progress parameters for the feasibility violation
   gamma_phi=1e-5;     //and log barrier objective
   s_theta=1.1;        //parameters in the switch condition of 
   s_phi=2.3;          // the linearsearch (equation 19) in
@@ -58,9 +65,7 @@ hiopAlgFilterIPM::hiopAlgFilterIPM(hiopNlpDenseConstraints* nlp_)
   _tau=fmax(tau_min,1.0-_mu);
   theta_max = 1e7; //temporary - will be updated after ini pt is computed
   theta_min = 1e7; //temporary - will be updated after ini pt is computed
-  dualsUpdateType = 1; //0 LSQ (default), 1 linear update (more stable)
-  max_n_it = 200;
-  dualsInitializ = 1; //0 LSQ (default), 1 set to zero
+
 
   //parameter based initialization
   if(dualsUpdateType==0) 
