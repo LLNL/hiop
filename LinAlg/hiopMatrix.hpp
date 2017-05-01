@@ -9,6 +9,8 @@
 #include <cstddef>
 #endif 
 
+#include <cstdio>
+
 namespace hiop
 {
 

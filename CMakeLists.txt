@@ -8,7 +8,8 @@ option(DEEP_CHECKING "Extra checks and asserts in the code with a high penalty o
 option(WITH_MAKETEST "Enable 'make test'" ON)
 
 if(WITH_MPI)
-    set(CMAKE_CXX_COMPILER "mpicxx")
+    find_package(MPI REQUIRED)
+    set(CMAKE_CXX_COMPILER ${MPI_CXX_COMPILER})
     add_definitions(-DWITH_MPI)
 endif(WITH_MPI)
 

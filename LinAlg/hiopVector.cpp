@@ -604,7 +604,7 @@ bool hiopVectorPar::matchesPattern(const hiopVector& ix_)
 
 #ifdef WITH_MPI
   int bmatches_glob=bmatches;
-  int ierr=MPI_Allreduce(&bmatches, &bmatches_glob, 1, MPI_C_BOOL, MPI_LAND, comm); assert(MPI_SUCCESS==ierr);
+  int ierr=MPI_Allreduce(&bmatches, &bmatches_glob, 1, MPI_INT, MPI_LAND, comm); assert(MPI_SUCCESS==ierr);
   return bmatches_glob;
 #endif
 
