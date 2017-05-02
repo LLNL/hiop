@@ -451,9 +451,9 @@ void hiopMatrixDense::timesMatTrans_local(double beta, hiopMatrix& W_, double al
 }
 void hiopMatrixDense::timesMatTrans(double beta, hiopMatrix& W_, double alpha, const hiopMatrix& X_) const
 {
+  hiopMatrixDense& W = dynamic_cast<hiopMatrixDense&>(W_); 
 #ifdef DEEP_CHECKING
   const hiopMatrixDense& X = dynamic_cast<const hiopMatrixDense&>(X_);
-  hiopMatrixDense& W = dynamic_cast<hiopMatrixDense&>(W_); double** WM=W.local_data();
   assert(W.n_local==W.n_global && "not intended for the case when the result matrix is distributed.");
 #endif
 
@@ -466,6 +466,7 @@ void hiopMatrixDense::timesMatTrans(double beta, hiopMatrix& W_, double alpha, c
   else          timesMatTrans_local(0.,  W_,alpha,X_);
 
 #ifdef WITH_MPI
+  double** WM=W.local_data();
   int n2Red=W.m()*W.n(); double* Wglob=new double[n2Red]; //!opt
   ierr = MPI_Allreduce(WM[0], Wglob, n2Red, MPI_DOUBLE, MPI_SUM, comm); assert(ierr==MPI_SUCCESS);
   memcpy(WM[0], Wglob, n2Red*sizeof(double));

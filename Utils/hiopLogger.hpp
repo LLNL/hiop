@@ -16,18 +16,20 @@ class hiopOptions;
 
 /* Verbosity 0 to 9 */
 enum hiopOutVerbosity {
-  hovError=-2,
-  hovWarning=-1,
-  hovSummary=0, //summary of the problem and each iteration
-  hovScalars=1, //additional, usually scalars, such as norm of resids, nlp and log bar errors, etc
-  hovFcnEval=2, //the above plus info about the number of function, gradient and Hessians
-  hovLinesearch=3, //linesearch info
-  hovLinAlgScalars=4, //print out various scalars: e.g., linear systems residuals
-  hovLinesearchVerb=5, //linesearch with more output
-  hovLinAlgScalarsVerb=6, //additional scalars, e.g., BFGS updating info
-  hovIteration=7, //print out iteration
-  hovMatrices=8,
-  hovMaxVerbose=9
+  hovError=-1,
+  hovVerySilent=0,
+  hovWarning=1,
+  hovNoOutput=2,
+  hovSummary=3, //summary of the problem and each iteration
+  hovScalars=4, //additional, usually scalars, such as norm of resids, nlp and log bar errors, etc
+  hovFcnEval=5, //the above plus info about the number of function, gradient and Hessians
+  hovLinesearch=6, //linesearch info
+  hovLinAlgScalars=7, //print out various scalars: e.g., linear systems residuals
+  hovLinesearchVerb=8, //linesearch with more output
+  hovLinAlgScalarsVerb=9, //additional scalars, e.g., BFGS updating info
+  hovIteration=10, //print out iteration
+  hovMatrices=11,
+  hovMaxVerbose=12
 };
 
 class hiopLogger

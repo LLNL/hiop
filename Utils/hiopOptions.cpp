@@ -14,13 +14,12 @@ namespace hiop
 using namespace std;
 const char* szDefaultFilename = "hiop.options";
 
-hiopOptions::hiopOptions(hiopLogger* log_, const char* szOptionsFilename/*=NULL*/)
-  : log(log_)
+  hiopOptions::hiopOptions(const char* szOptionsFilename/*=NULL*/)
+  : log(NULL)
 {
   registerOptions();
   loadFromFile(szOptionsFilename==NULL?szDefaultFilename:szOptionsFilename);
   ensureConsistence();
-  log->write(NULL, *this, hovSummary);
 }
 
 hiopOptions::~hiopOptions()
@@ -81,6 +80,8 @@ void hiopOptions::registerOptions()
   }
 
   registerIntOption("max_iter", 1000, 1, 1e6, "Max number of iterations (default 1000)");
+  registerIntOption("secant_memory_len", 6, 0, 256, "Size of the memory of the Hessian secant approximation");
+  registerIntOption("verbosity_level", 3, 0, 12, "Verbosity level: 0 no output (only errors), 1=0+warnings, 2=1 (reserved), 3=2+optimization output, 4=3+scalars; larger values explained in hiopLogger.hpp"); 
 }
 
 void hiopOptions::registerNumOption(const std::string& name, double defaultValue, double low, double upp, const char* description)

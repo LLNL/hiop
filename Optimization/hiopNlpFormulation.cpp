@@ -14,11 +14,6 @@ namespace hiop
 
 hiopNlpFormulation::hiopNlpFormulation(hiopInterfaceBase& interface)
 {
-  //log = new hiopLogger(hovLinAlgScalars,stdout);
-  log = new hiopLogger(this,hovSummary,stdout);
-  //log = new hiopLogger(this, hovLinesearch,stdout);
-  //log = new hiopLogger(this,hovScalars,stdout);
-
 #ifdef WITH_MPI
   assert(interface.get_MPI_comm(comm));
   assert(MPI_SUCCESS==MPI_Comm_rank(comm, &rank));
@@ -27,7 +22,13 @@ hiopNlpFormulation::hiopNlpFormulation(hiopInterfaceBase& interface)
   MPI_Comm comm = MPI_COMM_SELF;
 #endif
 
-  options = new hiopOptions(log);
+  options = new hiopOptions(/*filename=NULL*/);
+
+  hiopOutVerbosity hov = (hiopOutVerbosity) options->GetInteger("verbosity_level");
+  log = new hiopLogger(this, hov, stdout);
+
+  options->SetLog(log);
+  log->write(NULL, *options, hovSummary);//! comment this at some point
 
   runStats = hiopRunStats(comm);
 }

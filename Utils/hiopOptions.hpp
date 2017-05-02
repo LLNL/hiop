@@ -14,7 +14,7 @@ class hiopLogger;
 class hiopOptions
 {
 public:
-  hiopOptions(hiopLogger* log_, const char* szOptionsFilename=NULL);
+  hiopOptions(const char* szOptionsFilename=NULL);
   virtual ~hiopOptions();
 
   virtual void SetNumericValue (const char* name, const double& value);
@@ -25,6 +25,7 @@ public:
   virtual int         GetInteger(const char* name) const;
   virtual std::string GetString (const char* name) const;
 
+  void SetLog(hiopLogger* log_) { log=log_; }
   virtual void print(FILE* file, const char* msg=NULL) const;
 protected:
   /* internal use only */
