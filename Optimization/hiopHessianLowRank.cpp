@@ -48,7 +48,7 @@ hiopHessianLowRank::hiopHessianLowRank(hiopNlpDenseConstraints* nlp_, int max_me
    //not needed in non-MPI mode
   _buff_kxk  = NULL;
   _buff_2lxk = NULL;
-  _buff1_lxlx3 = _buff2_lxlx3;
+  _buff1_lxlx3 = _buff2_lxlx3 = NULL;
 #endif
 
   //auxiliary objects/buffers
@@ -130,6 +130,7 @@ bool hiopHessianLowRank::updateLogBarrierDiagonal(const hiopVector& Dx)
   matrixChanged=true;
 }
 
+#ifdef DEEP_CHECKING
 void hiopHessianLowRank::print(FILE* f, hiopOutVerbosity v, const char* msg) const
 {
   fprintf(f, "%s\n", msg);
@@ -152,6 +153,7 @@ void hiopHessianLowRank::print(FILE* f, hiopOutVerbosity v, const char* msg) con
   nlp->log->write("L", *L, v);
   nlp->log->write("D", *D, v);
 }
+#endif
 
 #include <limits>
 

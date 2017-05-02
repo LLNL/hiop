@@ -597,7 +597,7 @@ bool hiopVectorPar::matchesPattern(const hiopVector& ix_)
   assert((dynamic_cast<const hiopVectorPar&>(ix_) ).n_local==n_local);
 #endif
   const double* ix = (dynamic_cast<const hiopVectorPar&>(ix_) ).local_data_const();
-  bool bmatches=true;
+  int bmatches=true;
   double* x=data;
   for(int i=0; (i<n_local) && bmatches; i++) 
     if(ix[i]==0.0 && x[i]!=0.0) bmatches=false; 
@@ -607,7 +607,6 @@ bool hiopVectorPar::matchesPattern(const hiopVector& ix_)
   int ierr=MPI_Allreduce(&bmatches, &bmatches_glob, 1, MPI_INT, MPI_LAND, comm); assert(MPI_SUCCESS==ierr);
   return bmatches_glob;
 #endif
-
   return bmatches;
 }
 

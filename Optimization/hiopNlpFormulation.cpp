@@ -16,17 +16,20 @@ hiopNlpFormulation::hiopNlpFormulation(hiopInterfaceBase& interface)
 {
   //log = new hiopLogger(hovLinAlgScalars,stdout);
   log = new hiopLogger(this,hovSummary,stdout);
-  //log = new hiopLogger(hovLinesearch,stdout);
+  //log = new hiopLogger(this, hovLinesearch,stdout);
   //log = new hiopLogger(this,hovScalars,stdout);
 
 #ifdef WITH_MPI
   assert(interface.get_MPI_comm(comm));
   assert(MPI_SUCCESS==MPI_Comm_rank(comm, &rank));
+#else
+  //fake communicator (defined by hiop)
+  MPI_Comm comm = MPI_COMM_SELF;
 #endif
 
   options = new hiopOptions(log);
 
-  runStats = hiopRunStats(comm); //!
+  runStats = hiopRunStats(comm);
 }
 
 hiopNlpFormulation::~hiopNlpFormulation()

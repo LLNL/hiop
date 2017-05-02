@@ -437,6 +437,7 @@ solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
   //some outputing
   nlp->log->write("KKT Low rank: solve compressed SOL", hovIteration);
   nlp->log->write("  dx: ",  dx, hovIteration); nlp->log->write(" dyc: ", dyc, hovIteration); nlp->log->write(" dyd: ", dyd, hovIteration);
+  delete r;
 #endif
 }
 
@@ -595,6 +596,11 @@ int hiopKKTLinSysLowRank::solveWithRefin(hiopMatrixDense& M, hiopVectorPar& rhs)
   }
 
   rhs.copyFrom(*x);
+  delete[] AF;
+  delete[] S;
+  delete[] X;
+  delete[] WORK;
+  delete[] IWORK;
   delete Aref;
   delete rhsref;
   delete x;
@@ -749,6 +755,6 @@ double hiopKKTLinSysLowRank::solveError(const hiopMatrixDense& M,  const hiopVec
   relError=resnorm;// / (1+rhsnorm);
   return relError;
 }
-
-};
 #endif
+};
+

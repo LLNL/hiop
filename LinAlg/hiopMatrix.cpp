@@ -457,15 +457,20 @@ void hiopMatrixDense::timesMatTrans(double beta, hiopMatrix& W_, double alpha, c
   assert(W.n_local==W.n_global && "not intended for the case when the result matrix is distributed.");
 #endif
 
-  int myrank, ierr;
-  ierr=MPI_Comm_rank(comm,&myrank); assert(ierr==MPI_SUCCESS);
+  int myrank=0;
+#ifdef WITH_MPI
+  int ierr=MPI_Comm_rank(comm,&myrank); assert(ierr==MPI_SUCCESS);
+#endif
+
   if(0==myrank) timesMatTrans_local(beta,W_,alpha,X_);
   else          timesMatTrans_local(0.,  W_,alpha,X_);
 
+#ifdef WITH_MPI
   int n2Red=W.m()*W.n(); double* Wglob=new double[n2Red]; //!opt
   ierr = MPI_Allreduce(WM[0], Wglob, n2Red, MPI_DOUBLE, MPI_SUM, comm); assert(ierr==MPI_SUCCESS);
   memcpy(WM[0], Wglob, n2Red*sizeof(double));
   delete[] Wglob;
+#endif
 }
 void hiopMatrixDense::addDiagonal(const hiopVector& d_)
 {
@@ -535,5 +540,6 @@ bool hiopMatrixDense::assertSymmetry(double tol) const
     }
   return true;
 }
-};
 #endif
+};
+

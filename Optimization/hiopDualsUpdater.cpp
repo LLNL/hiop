@@ -31,10 +31,16 @@ hiopDualsLsqUpdate::hiopDualsLsqUpdate(hiopNlpFormulation* nlp)
 
 hiopDualsLsqUpdate::~hiopDualsLsqUpdate()
 {
-  delete _mexme,_mexmi, _mixmi, _mxm;
+  delete _mexme;
+  delete _mexmi;
+  delete _mixmi;
+  delete _mxm;
   delete M;
-  delete rhs, rhsc, rhsd;
-  delete _vec_n, _vec_mi;
+  delete rhs;
+  delete rhsc; 
+  delete rhsd;
+  delete _vec_n;
+  delete _vec_mi;
 #ifdef DEEP_CHECKING
   delete M_copy;
   delete rhs_copy;

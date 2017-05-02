@@ -7,12 +7,6 @@
 namespace hiop
 {
 
-//hiopLogger::hiopLogger(hiopOutVerbosity max_desired, FILE* f) 
-//  : _verb(max_desired), _f(f)
-//{
-//}
-
-#define RANK_TO_PRINT 1
 
 void hiopLogger::write(const char* msg, const hiopVector& vec, hiopOutVerbosity v, int loggerid/*=0*/) 
 {
@@ -58,6 +52,7 @@ void hiopLogger::write(const char* msg, const hiopIterate& it, hiopOutVerbosity 
   it.print(_f, msg);
 }
 
+#ifdef DEEP_CHECKING
 void hiopLogger::write(const char* msg, const hiopHessianLowRank& Hess, hiopOutVerbosity v, int loggerid/*=0*/)
 {
 #ifdef WITH_MPI
@@ -66,6 +61,7 @@ void hiopLogger::write(const char* msg, const hiopHessianLowRank& Hess, hiopOutV
   if(v>_verb) return;
   Hess.print(_f, v, msg);
 }
+#endif
 
 void hiopLogger::write(const char* msg, const hiopOptions& options,     hiopOutVerbosity v, int loggerid/*=0*/)
 {

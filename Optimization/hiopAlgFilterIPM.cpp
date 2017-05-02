@@ -223,7 +223,7 @@ hiopSolveStatus hiopAlgFilterIPM::run()
   // 1 max iter reached
   // 2 user stop via the iteration callback
 
-  int algStatus=0; bool bret=true; int lsStatus=-1, lsNum=0; double aaa;
+  int algStatus=0; bool bret=true; int lsStatus=-1, lsNum=0;
   _solverStatus = NlpSolve_Pending;
   while(true) {
 
@@ -236,7 +236,7 @@ hiopSolveStatus hiopAlgFilterIPM::run()
 		     _err_log_feas, _err_log_optim, _err_log_complem, _err_log);
     outputIteration(lsStatus, lsNum);
     //user callback
-    if(!nlp->user_callback_iterate(iter_num, _f_nlp, 
+    /*    if(!nlp->user_callback_iterate(iter_num, _f_nlp, 
 				   *it_curr->get_x(),
 				   *it_curr->get_zl(),
 				   *it_curr->get_zu(),
@@ -246,7 +246,7 @@ hiopSolveStatus hiopAlgFilterIPM::run()
 				   _mu,
 				   _alpha_dual, _alpha_primal,  lsNum)) {
       algStatus=2; break;
-    }
+      }*/
     /*************************************************
      * Termination checks
      ************************************************/
@@ -461,7 +461,6 @@ hiopSolveStatus hiopAlgFilterIPM::run()
     //update current iterate (do a fast swap of the pointers)
     hiopIterate* pit=it_curr; it_curr=it_trial; it_trial=pit;
     nlp->log->printf(hovIteration, "Iter[%d] -> full iterate:", iter_num); nlp->log->write("", *it_curr, hovIteration); 
-
     nlp->runStats.tmSolverInternal.stop(); //-----
 
     //notify logbar about the changes
@@ -609,7 +608,7 @@ void hiopAlgFilterIPM::outputIteration(int lsStatus, int lsNum)
     nlp->log->printf(hovSummary, "%4d %14.7e %7.3e  %7.3e %6.2f  %7.3e  %7.3e  -(-)\n",
 		     iter_num, _f_nlp, _err_nlp_feas, _err_nlp_optim, log10(_mu), _alpha_dual, _alpha_primal); 
   else {
-    char stepType[1];
+    char stepType[2];
     if(lsStatus==1) strcpy(stepType, "s");
     else if(lsStatus==2) strcpy(stepType, "h");
     else if(lsStatus==3) strcpy(stepType, "f");

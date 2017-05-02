@@ -27,7 +27,8 @@ public:
 #ifdef WITH_MPI 
     tmStart = MPI_Wtime();
 #else
-    assert(false && "this was not tested");
+    gettimeofday(&tv, NULL);
+    tmStart = ( static_cast<double>(tv.tv_sec) + static_cast<double>(tv.tv_usec)/1000000.0 );
 #endif
   }
 
@@ -36,10 +37,8 @@ public:
 #ifdef WITH_MPI
     tmElapsed += ( MPI_Wtime()-tmStart );
 #else
-    assert(false);
-    //struct timeval tv;
-    //gettimeofday(&tv, NULL);
-    //return static_cast<double>(tv.tv_sec) + static_cast<double>(tv.tv_usec)/1000000.0;
+    gettimeofday(&tv, NULL);
+    tmElapsed += ( static_cast<double>(tv.tv_sec) + static_cast<double>(tv.tv_usec)/1000000.0  - tmStart );
 #endif
   }
 
@@ -55,6 +54,11 @@ public:
 private:
   double tmElapsed; //in seconds
   double tmStart;
+
+#ifdef WITH_MPI
+#else
+  struct timeval tv;
+#endif
 };
 };
 #endif
