@@ -23,7 +23,7 @@ int main(int argc, char **argv)
   assert(MPI_SUCCESS==MPI_Comm_rank(MPI_COMM_WORLD,&rank));
   assert(MPI_SUCCESS==MPI_Comm_size(MPI_COMM_WORLD,&numRanks));
   if(0==rank) printf("MPI is enabled\n");
-#endif
+
   //decide here the distribution
   long long n = 1024;
   long long* column_part = new long long[numRanks];
@@ -82,7 +82,7 @@ int main(int argc, char **argv)
   testMatMatProds(column_part);
 
   delete[] column_part;
-#ifdef WITH_MPI
+
   MPI_Finalize();
 #endif
   return 0;
