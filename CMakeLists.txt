@@ -21,6 +21,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -fpermissive")
 
 find_package(OpenMP)
 find_package(LAPACK REQUIRED)
+
 #
 # extended precision lapack based on xblas testing example
 #
@@ -37,9 +38,28 @@ add_subdirectory(Drivers)
 add_subdirectory(Utils)
 
 
+
+##########################################################
+#  INSTALATION
+##########################################################
+if("${CMAKE_BUILD_TYPE}" STREQUAL "")
+# set a name for the build type to make the output of the 'make install' look nice
+  set(CMAKE_BUILD_TYPE "default-build")
+endif("${CMAKE_BUILD_TYPE}" STREQUAL "")
+
+if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+  set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/_dist-${CMAKE_BUILD_TYPE}")
+endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+
 add_library(hiop STATIC $<TARGET_OBJECTS:hiopOptimization>
                         $<TARGET_OBJECTS:hiopLinAlg>
 			$<TARGET_OBJECTS:hiopUtils>)
+
+install(TARGETS hiop DESTINATION lib)
+install(FILES Interface/hiopInterface.hpp 
+	      Optimization/hiopNlpFormulation.hpp 
+	      Optimization/hiopAlgFilterIPM.hpp 
+        DESTINATION include)
 
 ##########################################################
 # CMake Tests
