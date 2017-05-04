@@ -27,17 +27,17 @@ find_package(LAPACK REQUIRED)
 #
 #set(LAPACK_LIBRARIES "-lgfortran;/export/home/petra1/work/installs/xblas-1.0.248/libxblas.a;/home/petra1/work/installs/lapack-3.7.0/libblas.a;/home/petra1/work/installs/lapack-3.7.0/liblapack.a;/home/petra1/work/installs/lapack-3.7.0/liblapack.a;/home/petra1/work/installs/lapack-3.7.0/libblas.a;/export/home/petra1/work/installs/xblas-1.0.248/libxblas.a")
 
-include_directories(Interface)
-include_directories(Optimization)
-include_directories(LinAlg)
-include_directories(Utils)
+include_directories(src/Interface)
+include_directories(src/Optimization)
+include_directories(src/LinAlg)
+include_directories(src/Utils)
 
-add_subdirectory(Optimization)
-add_subdirectory(LinAlg)
-add_subdirectory(Drivers)
-add_subdirectory(Utils)
+#add_subdirectory(src)
 
-
+add_subdirectory(src/Optimization)
+add_subdirectory(src/LinAlg)
+add_subdirectory(src/Drivers)
+add_subdirectory(src/Utils)
 
 ##########################################################
 #  INSTALATION
@@ -56,9 +56,9 @@ add_library(hiop STATIC $<TARGET_OBJECTS:hiopOptimization>
 			$<TARGET_OBJECTS:hiopUtils>)
 
 install(TARGETS hiop DESTINATION lib)
-install(FILES Interface/hiopInterface.hpp 
-	      Optimization/hiopNlpFormulation.hpp 
-	      Optimization/hiopAlgFilterIPM.hpp 
+install(FILES src/Interface/hiopInterface.hpp 
+	      src/Optimization/hiopNlpFormulation.hpp 
+	      src/Optimization/hiopAlgFilterIPM.hpp 
         DESTINATION include)
 
 ##########################################################
