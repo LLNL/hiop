@@ -14,7 +14,7 @@ static bool parse_arguments(int argc, char **argv, long long& n, bool& self_chec
 
   //  printf("%s    %s \n", argv[1], argv[2]);
 
-  self_check=false; n = 8;
+  self_check=false; n = 50000;
   switch(argc) {
   case 1:
     //no arguments

@@ -190,7 +190,11 @@ int hiopAlgFilterIPM::startingProcedure(hiopIterate& it_ini,
 
 hiopSolveStatus hiopAlgFilterIPM::run()
 {
-  nlp->log->write("===============\nHiop SOLVER\n===============\nProblem Summary\n---------------", *nlp, hovSummary);
+  nlp->log->printf(hovSummary, "===============\nHiop SOLVER\n===============\n");
+#ifdef WITH_MPI
+  nlp->log->printf(hovSummary, "Using %d MPI ranks.\n", nlp->get_num_ranks());
+#endif  
+  nlp->log->write("---------------\nProblem Summary\n---------------", *nlp, hovSummary);
 
   nlp->runStats.tmOptimizTotal.start();
 

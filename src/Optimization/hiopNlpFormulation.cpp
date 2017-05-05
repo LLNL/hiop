@@ -17,6 +17,7 @@ hiopNlpFormulation::hiopNlpFormulation(hiopInterfaceBase& interface)
 #ifdef WITH_MPI
   assert(interface.get_MPI_comm(comm));
   assert(MPI_SUCCESS==MPI_Comm_rank(comm, &rank));
+  assert(MPI_SUCCESS==MPI_Comm_size(comm, &num_ranks));
 #else
   //fake communicator (defined by hiop)
   MPI_Comm comm = MPI_COMM_SELF;
@@ -45,10 +46,8 @@ hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& 
 {
   assert(interface.get_prob_sizes(n_vars, n_cons));
 #ifdef WITH_MPI
-  
-  int numRanks; 
-  int ierr=MPI_Comm_size(comm, &numRanks); assert(MPI_SUCCESS==ierr);
-  long long* columns_partitioning=new long long[numRanks+1];
+
+  long long* columns_partitioning=new long long[num_ranks+1];
   if(true==interface.get_vecdistrib_info(n_vars,columns_partitioning)) {
     xl = new hiopVectorPar(n_vars, columns_partitioning, comm);
   } else {
@@ -146,7 +145,7 @@ hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& 
   //compute the overall n_low and n_upp
 #ifdef WITH_MPI
   long long aux[3]={n_bnds_low_local, n_bnds_upp_local, n_bnds_lu}, aux_g[3];
-  int err=MPI_Allreduce(aux, aux_g, 3, MPI_LONG_LONG, MPI_SUM, comm); assert(MPI_SUCCESS==ierr);
+  int ierr=MPI_Allreduce(aux, aux_g, 3, MPI_LONG_LONG, MPI_SUM, comm); assert(MPI_SUCCESS==ierr);
   n_bnds_low=aux_g[0]; n_bnds_upp=aux_g[1]; n_bnds_lu=aux_g[2];
 #else
   n_bnds_low=n_bnds_low_local; n_bnds_upp=n_bnds_upp_local; //n_bnds_lu is ok
@@ -283,9 +282,7 @@ hiopMatrixDense* hiopNlpDenseConstraints::alloc_multivector_primal(int nrows, in
 {
   hiopMatrixDense* M;
 #ifdef WITH_MPI
-  int numRanks; 
-  int ierr=MPI_Comm_size(comm, &numRanks); assert(MPI_SUCCESS==ierr);
-  long long* columns_partitioning=new long long[numRanks+1];
+  long long* columns_partitioning=new long long[num_ranks+1];
   if(true==interface.get_vecdistrib_info(n_vars,columns_partitioning)) {
     M = new hiopMatrixDense(nrows, n_vars, columns_partitioning, comm, maxrows);
   } else {

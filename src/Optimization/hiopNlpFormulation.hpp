@@ -57,11 +57,12 @@ public:
 #ifdef WITH_MPI
   inline MPI_Comm get_comm() const { return comm; }
   inline int      get_rank() const { return rank; }
+  inline int      get_num_ranks() const { return num_ranks; }
 #endif
 protected:
 #ifdef WITH_MPI
   MPI_Comm comm;
-  int rank;
+  int rank, num_ranks;
 #endif
 private:
   hiopNlpFormulation(const hiopNlpFormulation&) {};
