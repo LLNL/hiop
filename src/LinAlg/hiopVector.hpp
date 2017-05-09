@@ -185,5 +185,5 @@ private:
 
 };
 
-};
+}
 #endif

@@ -154,5 +154,5 @@ private:
   hiopMatrixDense(const hiopMatrixDense&);
 };
 
-};
+}
 #endif

@@ -61,5 +61,5 @@ private:
   hiopOutVerbosity _verb;
   int _master_rank;
 };
-};
+}
 #endif

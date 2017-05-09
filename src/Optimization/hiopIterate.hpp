@@ -95,5 +95,5 @@ private:
   hiopIterate& operator=(const hiopIterate& o) {return *this;}
 };
 
-};
+}
 #endif

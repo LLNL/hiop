@@ -115,8 +115,8 @@ public:
     assert(c.get_size()+d.get_size()==n_cons);
     //!petra: to do: assemble (c,d) into cons and (yc,yd) into lambda based on cons_eq_mapping and cons_ineq_mapping
     interface.solution_callback(status, 
-				n_vars, xp.local_data_const(), zl.local_data_const(), zu.local_data_const(),
-				n_cons, NULL, //cons, 
+				(int)n_vars, xp.local_data_const(), zl.local_data_const(), zu.local_data_const(),
+				(int)n_cons, NULL, //cons, 
 				NULL, //lambda,
 				obj_value);
   };
@@ -132,8 +132,8 @@ public:
     assert(c.get_size()+d.get_size()==n_cons);
     //!petra: to do: assemble (c,d) into cons and (yc,yd) into lambda based on cons_eq_mapping and cons_ineq_mapping
     return interface.iterate_callback(iter, obj_value, 
-				      n_vars, xp.local_data_const(), zl.local_data_const(), zu.local_data_const(),
-				      n_cons, NULL, //cons, 
+				      (int)n_vars, xp.local_data_const(), zl.local_data_const(), zu.local_data_const(),
+				      (int)n_cons, NULL, //cons, 
 				      NULL, //lambda,
 				      inf_pr, inf_du, mu, alpha_du, alpha_pr,  ls_trials);
       }
@@ -182,5 +182,5 @@ private:
   hiopInterfaceDenseConstraints& interface;
 };
 
-};
+}
 #endif

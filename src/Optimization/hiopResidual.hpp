@@ -70,5 +70,5 @@ private:
   friend class hiopKKTLinSysLowRank;
 };
 
-};
+}
 #endif

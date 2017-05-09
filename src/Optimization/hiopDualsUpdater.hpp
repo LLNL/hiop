@@ -125,5 +125,5 @@ private:
   
 };
 
-};
+}
 #endif

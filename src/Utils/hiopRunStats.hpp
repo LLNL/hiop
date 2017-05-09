@@ -47,8 +47,8 @@ public:
        << "    total=" << std::setprecision(3) << tmSolverInternal.getElapsedTime() << " sec "
        << "  average per iteration=" << (tmSolverInternal.getElapsedTime()/nIter) << " sec " << std::endl;
 #ifdef WITH_MPI
-    int nranks, ierr; 
-    ierr = MPI_Comm_size(comm, &nranks); assert(MPI_SUCCESS==ierr);
+    int nranks;
+    int ierr = MPI_Comm_size(comm, &nranks); assert(MPI_SUCCESS==ierr);
 
     double loc=tmSolverInternal.getElapsedTime(), mean;
     ierr = MPI_Allreduce(&loc, &mean, 1, MPI_DOUBLE, MPI_SUM, comm); assert(MPI_SUCCESS==ierr);
@@ -77,6 +77,7 @@ public:
     stddev = sqrt(stddev);
     stddev /= nranks;
     ss << "    Fcn/deriv total time std dev across ranks=" << (stddev/mean*100) << " percent"  << std::endl;
+
 #endif
     ss << "Fcn/deriv #: obj=" << nEvalObj <<  " grad=" << nEvalGrad_f 
        << " eq cons=" << nEvalCons_eq << " ineq cons=" << nEvalCons_ineq 
@@ -88,5 +89,5 @@ private:
   MPI_Comm comm;
 
 };
-};
+}
 #endif

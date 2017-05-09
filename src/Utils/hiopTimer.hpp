@@ -60,5 +60,5 @@ private:
   struct timeval tv;
 #endif
 };
-};
+}
 #endif

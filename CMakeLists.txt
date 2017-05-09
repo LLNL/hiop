@@ -59,6 +59,18 @@ install(TARGETS hiop DESTINATION lib)
 install(FILES src/Interface/hiopInterface.hpp 
 	      src/Optimization/hiopNlpFormulation.hpp 
 	      src/Optimization/hiopAlgFilterIPM.hpp 
+	      src/Optimization/hiopIterate.hpp 
+	      src/Optimization/hiopResidual.hpp 
+	      src/Optimization/hiopLogBarProblem.hpp
+	      src/Optimization/hiopFilter.hpp
+	      src/Optimization/hiopHessianLowRank.hpp
+	      src/Optimization/hiopDualsUpdater.hpp
+	      src/LinAlg/hiopVector.hpp
+	      src/LinAlg/hiopMatrix.hpp
+	      src/Utils/hiopRunStats.hpp
+	      src/Utils/hiopLogger.hpp
+	      src/Utils/hiopTimer.hpp
+	      src/Utils/hiopOptions.hpp
         DESTINATION include)
 
 ##########################################################

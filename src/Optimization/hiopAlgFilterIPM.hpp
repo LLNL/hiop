@@ -121,5 +121,5 @@ private:
   hiopAlgFilterIPM& operator=(const hiopAlgFilterIPM&) {return *this;};
 };
 
-};
+}
 #endif

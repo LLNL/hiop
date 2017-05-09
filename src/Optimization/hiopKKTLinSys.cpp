@@ -168,7 +168,10 @@ bool hiopKKTLinSysLowRank::computeDirections(const hiopResidual* resid,
 
     dir->zl->copyFrom(*r.rszl); dir->zl->axzpy(-1.0,*iter->zl,*dir->sxl); 
     dir->zl->componentDiv_p_selectPattern(*iter->sxl, nlp->get_ixl());
+  } else {
+    dir->sxl->setToZero(); dir->zl->setToZero();
   }
+
   //dir->sxl->print();
   //dir->zl->print();
   //dsxu = rxu - dx and dzu = [Sxu]^{-1} ( - Zu*dsxu + rszu)
@@ -177,7 +180,10 @@ bool hiopKKTLinSysLowRank::computeDirections(const hiopResidual* resid,
 
     dir->zu->copyFrom(*r.rszu); dir->zu->axzpy(-1.0,*iter->zu,*dir->sxu); dir->zu->selectPattern(nlp->get_ixu());
     dir->zu->componentDiv_p_selectPattern(*iter->sxu, nlp->get_ixu());
+  } else {
+    dir->sxu->setToZero(); dir->zu->setToZero();
   }
+
   //dir->sxu->print();
   //dir->zu->print();
   //dsdl = rdl + dd and dvl = [Sdl]^{-1} ( - Vl*dsdl + rsvl)
@@ -186,7 +192,10 @@ bool hiopKKTLinSysLowRank::computeDirections(const hiopResidual* resid,
 
     dir->vl->copyFrom(*r.rsvl); dir->vl->axzpy(-1.0,*iter->vl,*dir->sdl); dir->vl->selectPattern(nlp->get_idl());
     dir->vl->componentDiv_p_selectPattern(*iter->sdl, nlp->get_idl());
+  } else {
+    dir->sdl->setToZero(); dir->vl->setToZero();
   }
+
   //dir->sdl->print();
   // dir->vl->print();
   //dsdu = rdu - dd and dvu = [Sdu]^{-1} ( - Vu*dsdu + rsvu )
@@ -195,7 +204,10 @@ bool hiopKKTLinSysLowRank::computeDirections(const hiopResidual* resid,
     
     dir->vu->copyFrom(*r.rsvu); dir->vu->axzpy(-1.0,*iter->vu,*dir->sdu); dir->vu->selectPattern(nlp->get_idu());
     dir->vu->componentDiv_p_selectPattern(*iter->sdu, nlp->get_idu());
+  } else {
+    dir->sdu->setToZero(); dir->vu->setToZero();
   }
+
   //dir->sdu->print();
   //dir->vu->print();
 #ifdef DEEP_CHECKING

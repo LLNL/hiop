@@ -111,5 +111,5 @@ private:
   hiopLogBarProblem(const hiopLogBarProblem&) {};
   hiopLogBarProblem& operator=(const hiopLogBarProblem&) {return *this;};
 };
-};
+}
 #endif

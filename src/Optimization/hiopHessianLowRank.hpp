@@ -277,5 +277,5 @@ private:
   }
 };
 
-};//~namespace
+} //~namespace
 #endif

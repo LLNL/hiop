@@ -29,5 +29,5 @@ private:
   std::list<FilterEntry> entries;
 };
 
-};
+}
 #endif
