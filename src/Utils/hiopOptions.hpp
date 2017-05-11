@@ -25,7 +25,7 @@ public:
   virtual int         GetInteger(const char* name) const;
   virtual std::string GetString (const char* name) const;
 
-  void SetLog(hiopLogger* log_) { log=log_; }
+  void SetLog(hiopLogger* log_) { log=log_; ensureConsistence(); }
   virtual void print(FILE* file, const char* msg=NULL) const;
 protected:
   /* internal use only */

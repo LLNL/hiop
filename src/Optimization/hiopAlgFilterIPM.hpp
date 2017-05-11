@@ -48,6 +48,10 @@ private:
 				  double& mu_new, double& tau_new);
 
   virtual void outputIteration(int lsStatus, int lsNum);
+
+  //returns whether the algorithm should stop and set an appropriate solve status
+  bool checkTermination(const double& _err_nlp, const int& iter_num, hiopSolveStatus& status);
+  void displayTerminationMsg();
 private:
   hiopNlpDenseConstraints* nlp;
   hiopFilter filter;
@@ -108,13 +112,14 @@ private:
   int dualsUpdateType;  //type of the update for dual multipliers: 0 LSQ (default, recommended for quasi-Newton); 1 Newton
   int max_n_it;
   int dualsInitializ;  //type of initialization for the duals of constraints: 0 LSQ (default), 1 set to zero
-  
-
+  int accep_n_it;      //after how many iterations with acceptable tolerance should the alg. stop
+  double eps_tol_accep;//acceptable tolerance
   //timers
   hiopTimer tmSol;
 
   //internal flags related to the state of the solver
   hiopSolveStatus _solverStatus;
+  int _n_accep_iters;
 private:
   hiopAlgFilterIPM() {};
   hiopAlgFilterIPM(const hiopAlgFilterIPM& ) {};

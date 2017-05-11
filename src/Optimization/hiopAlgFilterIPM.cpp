@@ -50,7 +50,11 @@ hiopAlgFilterIPM::hiopAlgFilterIPM(hiopNlpDenseConstraints* nlp_)
   kappa1   = nlp->options->GetNumeric("kappa1");        //projection params for the starting point (default 1e-2)
   kappa2   = nlp->options->GetNumeric("kappa2");
   p_smax   = nlp->options->GetNumeric("smax");          //threshold for the magnitude of the multipliers
-  max_n_it = nlp->options->GetInteger("max_iter"); 
+
+  max_n_it  = nlp->options->GetInteger("max_iter"); 
+
+  accep_n_it    = nlp->options->GetInteger("acceptable_iterations");
+  eps_tol_accep = nlp->options->GetNumeric("acceptable_tolerance");
 
   dualsUpdateType = nlp->options->GetString("dualsUpdateType")=="lsq"?0:1;     //0 LSQ (default), 1 linear update (more stable)
   dualsInitializ = nlp->options->GetString("dualsInitialization")=="lsq"?0:1;  //0 LSQ (default), 1 set to zero
@@ -73,6 +77,9 @@ hiopAlgFilterIPM::hiopAlgFilterIPM(hiopNlpDenseConstraints* nlp_)
   else if(dualsUpdateType==1)
     dualsUpdate = new hiopDualsNewtonLinearUpdate(nlp);
   else assert(false && "dualsUpdateType has an unrecognized value");
+
+
+  _n_accep_iters = 0;
 
   _solverStatus = NlpSolve_IncompleteInit;
 }
@@ -223,11 +230,12 @@ hiopSolveStatus hiopAlgFilterIPM::run()
 
   // --- Algorithm status 'algStatus ----
   //-1 couldn't solve the problem (most likely because small search step. Restauration phase likely needed)
-  // 0 success
+  // 0 stopped due to tolerances, including acceptable tolerance
   // 1 max iter reached
   // 2 user stop via the iteration callback
 
-  int algStatus=0; bool bret=true; int lsStatus=-1, lsNum=0;
+  //int algStatus=0; 
+  bool bret=true; int lsStatus=-1, lsNum=0;
   _solverStatus = NlpSolve_Pending;
   while(true) {
 
@@ -240,7 +248,7 @@ hiopSolveStatus hiopAlgFilterIPM::run()
 		     _err_log_feas, _err_log_optim, _err_log_complem, _err_log);
     outputIteration(lsStatus, lsNum);
     //user callback
-    /*    if(!nlp->user_callback_iterate(iter_num, _f_nlp, 
+    if(!nlp->user_callback_iterate(iter_num, _f_nlp, 
 				   *it_curr->get_x(),
 				   *it_curr->get_zl(),
 				   *it_curr->get_zu(),
@@ -249,14 +257,16 @@ hiopSolveStatus hiopAlgFilterIPM::run()
 				   _err_nlp_feas, _err_nlp_optim,
 				   _mu,
 				   _alpha_dual, _alpha_primal,  lsNum)) {
-      algStatus=2; break;
-      }*/
+      _solverStatus = User_Stopped; break;
+    }
+
     /*************************************************
-     * Termination checks
+     * Termination check
      ************************************************/
-    if(_err_nlp<=eps_tol)  { algStatus=0; break; }
-    if(iter_num>=max_n_it) { algStatus=1; break; }
-    if(algStatus!=0) break; //failure of the line search or max iter reached. 
+    if(checkTermination(_err_nlp, iter_num, _solverStatus)) {
+      break;
+    }
+    if(NlpSolve_Pending!=_solverStatus) break; //failure of the line search or user stopped. 
 
     /************************************************
      * update mu and other parameters
@@ -264,6 +274,7 @@ hiopSolveStatus hiopAlgFilterIPM::run()
     while(_err_log<=kappa_eps * _mu) {
       //update mu and tau (fraction-to-boundary)
       bret = updateLogBarrierParameters(*it_curr, _mu, _tau, _mu, _tau);
+      if(!bret) break; //no update is necessary
       nlp->log->printf(hovScalars, "Iter[%d] barrier params reduced: mu=%g tau=%g\n", iter_num, _mu, _tau);
 
       //update only logbar problem  and residual (the NLP didn't change)
@@ -306,7 +317,7 @@ hiopSolveStatus hiopAlgFilterIPM::run()
     double theta_trial;
     nlp->runStats.tmSolverInternal.stop();
 
-    //algStatus: line search status for the accepted trial point. Needed to update the filter
+    //lsStatus: line search status for the accepted trial point. Needed to update the filter
     //-1 uninitialized (first iteration)
     //0 unsuccessful (small step size)
     //1 "sufficient decrease" when far away from solution (theta_trial>theta_min)
@@ -322,8 +333,8 @@ hiopSolveStatus hiopAlgFilterIPM::run()
 
       //check the step against the minimum step size
       if(_alpha_primal<1e-16) {
-	nlp->log->write("Panic: minimum step size reached. The problem may be infeasible. Restauration phase is needed, but not yet implemented. Will exit here.",hovError);
-	algStatus=-1;
+	nlp->log->write("Panic: minimum step size reached. The problem may be infeasible or the gradient inaccurate. Will exit here.",hovError);
+	_solverStatus = Steplength_Too_Small;
 	break;
       }
       bret = it_trial->takeStep_primals(*it_curr, *dir, _alpha_primal, _alpha_dual); assert(bret);
@@ -476,40 +487,10 @@ hiopSolveStatus hiopAlgFilterIPM::run()
 
   nlp->runStats.tmOptimizTotal.stop();
 
-  /***** Termination message *****/
-  switch(algStatus) {
-  case 0:
-    {
-      nlp->log->printf(hovSummary, "Successfull termination.\n%s\n", nlp->runStats.getSummary().c_str());
-      _solverStatus = Solve_Success;
-      break;
-    }
-  case -1:
-    {
-      _solverStatus = Steplength_Too_Small;
-      nlp->log->printf(hovSummary, "Couldn't solve the problem.\n%s\n", nlp->runStats.getSummary().c_str());
-      if(0==lsStatus) nlp->log->printf(hovSummary, "Linesearch returned unsuccessfully (small step)");
-      nlp->log->printf(hovSummary, "\n");
-      break;
-    }
-  case 1:
-    {
-      _solverStatus = Max_Iter_Exceeded;
-      nlp->log->printf(hovSummary, "Maximum number of iterations reached.\n%s\n", nlp->runStats.getSummary().c_str());
-      break;
-    }
-  case 2:
-    {
-      _solverStatus = User_Stopped, 
-      nlp->log->printf(hovSummary, "Stopped by the user through the user provided iterate callback.\n%s\n", nlp->runStats.getSummary().c_str());
-      break;
-    }
-  default:
-    assert(false);
-    break;
-  };
+  //_solverStatus contains the termination information
+  displayTerminationMsg();
 
-  //callback
+  //user callback
   nlp->user_callback_solution(_solverStatus,
 			      *it_curr->get_x(),
 			      *it_curr->get_zl(),
@@ -522,14 +503,71 @@ hiopSolveStatus hiopAlgFilterIPM::run()
   return _solverStatus;
 }
 
+
+bool hiopAlgFilterIPM::
+checkTermination(const double& err_nlp, const int& iter_num, hiopSolveStatus& status)
+{
+  if(err_nlp<=eps_tol)   { _solverStatus = Solve_Success;     return true; }
+  if(iter_num>=max_n_it) { _solverStatus = Max_Iter_Exceeded; return true; }
+
+  if(err_nlp<=eps_tol_accep) _n_accep_iters++;
+  else _n_accep_iters = 0;
+
+  if(_n_accep_iters>=accep_n_it) { _solverStatus = Solve_Acceptable_Level; return true; }
+
+  return false;
+}
+
+/***** Termination message *****/
+void hiopAlgFilterIPM::displayTerminationMsg() {
+
+  switch(_solverStatus) {
+  case Solve_Success: 
+    {
+      nlp->log->printf(hovSummary, "Successfull termination.\n%s\n", nlp->runStats.getSummary().c_str());
+      break;
+    }
+  case Solve_Acceptable_Level:
+    {
+      nlp->log->printf(hovSummary, "Solve to only to the acceptable tolerance(s).\n%s\n", nlp->runStats.getSummary().c_str());
+      break;
+    }
+  case Max_Iter_Exceeded:
+    {
+      nlp->log->printf(hovSummary, "Maximum number of iterations reached.\n%s\n", nlp->runStats.getSummary().c_str());
+      break;
+    }
+  case Steplength_Too_Small:
+    {
+      nlp->log->printf(hovSummary, "Couldn't solve the problem.\n%s\n", nlp->runStats.getSummary().c_str());
+      nlp->log->printf(hovSummary, "Linesearch returned unsuccessfully (small step). Probable cause: inaccurate gradients/Jacobians or infeasible problem.\n");
+      break;
+    }
+  case User_Stopped:
+    {
+      nlp->log->printf(hovSummary, "Stopped by the user through the user provided iterate callback.\n%s\n", nlp->runStats.getSummary().c_str());
+      break;
+    }
+  default:
+    {
+      nlp->log->printf(hovSummary, "Do not know why hiop stopped. This shouldn't happen. :)\n%s\n", nlp->runStats.getSummary().c_str());
+      assert(false && "Do not know why hiop stopped. This shouldn't happen.");
+      break;
+    }
+  };
+}
+
 bool hiopAlgFilterIPM::
 updateLogBarrierParameters(const hiopIterate& it, const double& mu_curr, const double& tau_curr,
 			   double& mu_new, double& tau_new)
 {
-  mu_new  = fmax(eps_tol/10, fmin(kappa_mu*mu_curr, pow(mu_curr,theta_mu)));
+  double new_mu = fmax(eps_tol/10, fmin(kappa_mu*mu_curr, pow(mu_curr,theta_mu)));
+  if(fabs(new_mu-mu_curr)<1e-16) return false;
+  mu_new  = new_mu;
   tau_new = fmax(tau_min,1.0-mu_new);
   return true;
 }
+
 double hiopAlgFilterIPM::thetaLogBarrier(const hiopIterate& it, const hiopResidual& resid, const double& mu)
 {
   //actual nlp errors
@@ -646,4 +684,4 @@ hiopSolveStatus hiopAlgFilterIPM::getSolveStatus() const
 }
 
 
-};
+}

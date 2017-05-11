@@ -19,7 +19,7 @@ const char* szDefaultFilename = "hiop.options";
 {
   registerOptions();
   loadFromFile(szOptionsFilename==NULL?szDefaultFilename:szOptionsFilename);
-  ensureConsistence();
+  //ensureConsistence();
 }
 
 hiopOptions::~hiopOptions()
@@ -63,7 +63,7 @@ void hiopOptions::registerOptions()
   registerNumOption("mu0", 1., 1e-6, 1000., "Initial log-barrier parameter mu (default 1.)");
   registerNumOption("kappa_mu", 0.2, 1e-8, 0.999, "Linear reduction coefficient for mu (default 0.2) (eqn (7) in Filt-IPM paper)");
   registerNumOption("theta_mu", 1.5,  1.0,   2.0, "Exponential reduction coefficient for mu (default 1.5) (eqn (7) in Filt-IPM paper)");
-  registerNumOption("tolerance", 1e-6, 1e-14, 1e-1, "Absolute error tolerance for the NLP (default 1e-6)");
+  registerNumOption("tolerance", 1e-8, 1e-14, 1e-1, "Absolute error tolerance for the NLP (default 1e-8)");
   registerNumOption("tau_min", 0.99, 0.9,  0.99999, "Fraction-to-the-boundary parameter used in the line-search to back-off a bit (default 0.99) (eqn (8) in the Filt-IPM paper");
   registerNumOption("kappa_eps", 10., 1e-6, 1e+3, "mu is reduced when when log-bar error is below kappa_eps*mu (default 10.)");
   registerNumOption("kappa1", 1e-2, 1e-8, 1e+0, "sufficiently-away-from-the-boundary projection parameter used in initialization (default 1e-2)");
@@ -79,8 +79,14 @@ void hiopOptions::registerOptions()
     registerStrOption("dualsInitialization", "lsq", range, "Type of update of the multipliers of the eq. cons. (default lsq)");
   }
 
-  registerIntOption("max_iter", 1000, 1, 1e6, "Max number of iterations (default 1000)");
+  registerIntOption("max_iter", 3000, 1, 1e6, "Max number of iterations (default 3000)");
+
+  registerNumOption("acceptable_tolerance", 1e-6, 1e-14, 1e-1, "HiOp will terminate if the NLP residuals are below for 'acceptable_iterations' many consecutive iterations (default 1e-6)");   
+  registerIntOption("acceptable_iterations", 10, 1, 1e6, "Number of iterations of acceptable tolerance after which HiOp terminates (default 10)");
+
+
   registerIntOption("secant_memory_len", 6, 0, 256, "Size of the memory of the Hessian secant approximation");
+
   registerIntOption("verbosity_level", 3, 0, 12, "Verbosity level: 0 no output (only errors), 1=0+warnings, 2=1 (reserved), 3=2+optimization output, 4=3+scalars; larger values explained in hiopLogger.hpp"); 
 }
 
@@ -103,6 +109,13 @@ void hiopOptions::ensureConsistence()
 {
   //check that the values of different options are consistent 
   //do not check is the values of a particular option is valid; this is done in the Set methods
+
+  double eps_tol_accep = GetNumeric("acceptable_tolerance");
+  double eps_tol  =      GetNumeric("tolerance");     
+  if(eps_tol_accep < eps_tol) {
+    log->printf(hovWarning, "There is no reason to set 'acceptable_tolerance' tighter than 'tolerance'. Will set the two to 'tolerance'.\n");
+    SetNumericValue("acceptable_tolerance", eps_tol);
+  }
 }
 
 static inline std::string &ltrim(std::string &s) {
