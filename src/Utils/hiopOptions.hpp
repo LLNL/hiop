@@ -17,9 +17,9 @@ public:
   hiopOptions(const char* szOptionsFilename=NULL);
   virtual ~hiopOptions();
 
-  virtual void SetNumericValue (const char* name, const double& value);
-  virtual void SetIntegerValue(const char* name, const int& value);
-  virtual void SetStringValue (const char* name,  const char* value);
+  virtual bool SetNumericValue (const char* name, const double& value);
+  virtual bool SetIntegerValue(const char* name, const int& value);
+  virtual bool SetStringValue (const char* name,  const char* value);
   
   virtual double      GetNumeric(const char* name) const;
   virtual int         GetInteger(const char* name) const;

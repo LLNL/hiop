@@ -194,60 +194,62 @@ void hiopOptions::loadFromFile(const char* filename)
   } //end of the for over the lines
 }
 
-void hiopOptions::SetNumericValue (const char* name, const double& value)
+bool hiopOptions::SetNumericValue (const char* name, const double& value)
 {
   map<string, _O*>::iterator it = mOptions.find(name);
   if(it!=mOptions.end()) {
     _ONum* option = dynamic_cast<_ONum*>(it->second);
     if(NULL==option) {
       log->printf(hovWarning, 
-		"Hiop does not know option '%s' as 'numeric'. Maybe it is an 'integer' value? .\n",
+		"Hiop does not know option '%s' as 'numeric'. Maybe it is an 'integer' or 'string' value? The option will be ignored.\n",
 		name);
     } else {
-      if(value<option->lb || value>option->ub)
+      if(value<option->lb || value>option->ub) {
 	log->printf(hovWarning, 
 		    "Hiop: option '%s' must be in [%g,%g]. Default value %g will be used.\n",
 		    name, option->lb, option->ub, option->val);
-      else option->val = value;
+      } else option->val = value;
     }
   } else {
     log->printf(hovWarning, 
 		"Hiop does not understand option '%s' and will ignore its value '%g'.\n",
 		name, value);
   }
+  return true;
 }
 
-void hiopOptions::SetIntegerValue(const char* name, const int& value)
+bool hiopOptions::SetIntegerValue(const char* name, const int& value)
 {
   map<string, _O*>::iterator it = mOptions.find(name);
   if(it!=mOptions.end()) {
     _OInt* option = dynamic_cast<_OInt*>(it->second);
     if(NULL==option) {
       log->printf(hovWarning, 
-		  "Hiop does not know option '%s' as 'integer'. Maybe it is an 'numeric' or a 'string' option? .\n",
+		  "Hiop does not know option '%s' as 'integer'. Maybe it is an 'numeric' or a 'string' option? The option will be ignored.\n",
 		  name);
     } else {
-      if(value<option->lb || value>option->ub)
+      if(value<option->lb || value>option->ub) {
 	log->printf(hovWarning, 
 		    "Hiop: option '%s' must be in [%d, %d]. Default value %d will be used.\n",
 		    name, option->lb, option->ub, option->val);
-      else option->val = value;
+      } else option->val = value;
     }
   } else {
     log->printf(hovWarning, 
 		"Hiop does not understand option '%s' and will ignore its value '%g'.\n",
 		name, value);
   }
+  return true;
 }
 
-void hiopOptions::SetStringValue (const char* name,  const char* value)
+bool hiopOptions::SetStringValue (const char* name,  const char* value)
 {
   map<string, _O*>::iterator it = mOptions.find(name);
   if(it!=mOptions.end()) {
     _OStr* option = dynamic_cast<_OStr*>(it->second);
     if(NULL==option) {
       log->printf(hovWarning, 
-		  "Hiop does not know option '%s' as 'string'. Maybe it is an 'integer' or a 'string' option? .\n",
+		  "Hiop does not know option '%s' as 'string'. Maybe it is an 'integer' or a 'string' option? The option will be ignored.\n",
 		  name);
     } else {
       string strValue(value);
@@ -271,6 +273,7 @@ void hiopOptions::SetStringValue (const char* name,  const char* value)
 		"Hiop does not understand option '%s' and will ignore its value '%g'.\n",
 		name, value);
   }
+  return true;
 }
 
 
