@@ -154,12 +154,16 @@ double hiopVectorPar::dotProductWith( const hiopVector& v_ ) const
 
 double hiopVectorPar::infnorm() const
 {
-  if(n_local<=0) return 0.;
-  double nrm=fabs(data[0]), aux;
+  assert(n_local>=0);
+  double nrm=0.;
+  if(n_local!=0) {
+    nrm=fabs(data[0]);
+    double aux;
   
-  for(int i=1; i<n_local; i++) {
-    aux=fabs(data[i]);
-    if(aux>nrm) nrm=aux;
+    for(int i=1; i<n_local; i++) {
+      aux=fabs(data[i]);
+      if(aux>nrm) nrm=aux;
+    }
   }
 #ifdef WITH_MPI
   double nrm_glob;
@@ -172,12 +176,16 @@ double hiopVectorPar::infnorm() const
 
 double hiopVectorPar::infnorm_local() const
 {
-  if(n_local<=0) return 0.;
-  double nrm=fabs(data[0]), aux;
-  
-  for(int i=1; i<n_local; i++) {
-    aux=fabs(data[i]);
-    if(aux>nrm) nrm=aux;
+  assert(n_local>=0);
+  double nrm=0.;
+  if(n_local>0) {
+    nrm = fabs(data[0]); 
+    double aux;
+    
+    for(int i=1; i<n_local; i++) {
+      aux=fabs(data[i]);
+      if(aux>nrm) nrm=aux;
+    }
   }
   return nrm;
 }

@@ -29,7 +29,7 @@ hiopNlpFormulation::hiopNlpFormulation(hiopInterfaceBase& interface)
   log = new hiopLogger(this, hov, stdout);
 
   options->SetLog(log);
-  log->write(NULL, *options, hovSummary);//! comment this at some point
+  //log->write(NULL, *options, hovSummary);//! comment this at some point
 
   runStats = hiopRunStats(comm);
 }

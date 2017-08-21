@@ -198,6 +198,8 @@ int hiopAlgFilterIPM::startingProcedure(hiopIterate& it_ini,
 hiopSolveStatus hiopAlgFilterIPM::run()
 {
   nlp->log->printf(hovSummary, "===============\nHiop SOLVER\n===============\n");
+  nlp->log->write(NULL, *nlp->options, hovSummary);
+
 #ifdef WITH_MPI
   nlp->log->printf(hovSummary, "Using %d MPI ranks.\n", nlp->get_num_ranks());
 #endif  
@@ -303,9 +305,8 @@ hiopSolveStatus hiopAlgFilterIPM::run()
     _Hess->update(*it_curr,*_grad_f,*_Jac_c,*_Jac_d);
     kkt->update(it_curr,_grad_f,_Jac_c,_Jac_d, _Hess);
     bret = kkt->computeDirections(resid,dir); assert(bret==true);
-    nlp->log->printf(hovIteration, "Iter[%d] full search direction -------------\n"); nlp->log->write("", *dir, hovIteration);
 
-
+    nlp->log->printf(hovIteration, "Iter[%d] full search direction -------------\n", iter_num); nlp->log->write("", *dir, hovIteration);
     /***************************************************************
      * backtracking line search
      ****************************************************************/

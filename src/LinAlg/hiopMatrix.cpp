@@ -271,6 +271,8 @@ void hiopMatrixDense::print(FILE* f,
   }
 }
 
+#include <unistd.h>
+
 /* y = beta * y + alpha * this * x */
 void hiopMatrixDense::timesVec(double beta, hiopVector& y_,
 			       double alpha, const hiopVector& x_) const
@@ -286,15 +288,15 @@ void hiopMatrixDense::timesVec(double beta, hiopVector& y_,
   char fortranTrans='T';
   int MM=m_local, NN=n_local, incx_y=1;
 
-  if( MM != 0 && NN != 0 ) {
-
 #ifdef WITH_MPI
-    //only add beta*y on one processor (rank 0)
-    int myrank;
-    int ierr=MPI_Comm_rank(comm, &myrank); assert(MPI_SUCCESS==ierr);
-    if(myrank!=0) beta=0.0; 
+  //only add beta*y on one processor (rank 0)
+  int myrank;
+  int ierr=MPI_Comm_rank(comm, &myrank); assert(MPI_SUCCESS==ierr);
+
+  if(myrank!=0) beta=0.0; 
 #endif
 
+  if( MM != 0 && NN != 0 ) {
     // the arguments seem reversed but so is trans='T' 
     // required since we keep the matrix row-wise, while the Fortran/BLAS expects them column-wise
     dgemv_( &fortranTrans, &NN, &MM, &alpha, &M[0][0], &NN,
@@ -304,8 +306,9 @@ void hiopMatrixDense::timesVec(double beta, hiopVector& y_,
   }
 #ifdef WITH_MPI
   double* yglob=new double[m_local]; //shouldn't be any performance issue here since m_local is small
-  int ierr=MPI_Allreduce(y.local_data(), yglob, m_local, MPI_DOUBLE, MPI_SUM, comm); assert(MPI_SUCCESS==ierr);
+  ierr=MPI_Allreduce(y.local_data(), yglob, m_local, MPI_DOUBLE, MPI_SUM, comm); assert(MPI_SUCCESS==ierr);
   memcpy(y.local_data(), yglob, m_local*sizeof(double));
+  //usleep(100000);
   delete[] yglob;
 #endif
   
