@@ -236,7 +236,7 @@ bool hiopOptions::SetIntegerValue(const char* name, const int& value)
     }
   } else {
     log->printf(hovWarning, 
-		"Hiop does not understand option '%s' and will ignore its value '%g'.\n",
+		"Hiop does not understand option '%s' and will ignore its value '%d'.\n",
 		name, value);
   }
   return true;
@@ -270,7 +270,7 @@ bool hiopOptions::SetStringValue (const char* name,  const char* value)
     }
   } else {
     log->printf(hovWarning, 
-		"Hiop does not understand option '%s' and will ignore its value '%g'.\n",
+		"Hiop does not understand option '%s' and will ignore its value '%s'.\n",
 		name, value);
   }
   return true;
