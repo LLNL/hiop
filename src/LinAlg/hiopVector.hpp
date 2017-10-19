@@ -174,7 +174,7 @@ public:
   inline double* local_data() { return data; }
   inline const double* local_data_const() const { return data; }
 
-private:
+protected:
   MPI_Comm comm;
   double* data;
   long long glob_il, glob_iu;

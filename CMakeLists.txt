@@ -78,6 +78,8 @@ install(FILES src/Interface/hiopInterface.hpp
 ##########################################################
 if (WITH_MAKETEST)
   enable_testing()
+  add_test(NAME NlpDenseCons1_5H COMMAND $<TARGET_FILE:nlpDenseCons_ex1.exe>   500 1.0 -selfcheck)
+  add_test(NAME NlpDenseCons1_5K COMMAND $<TARGET_FILE:nlpDenseCons_ex1.exe>  5000 1.0 -selfcheck)
   add_test(NAME NlpDenseCons2_5H COMMAND $<TARGET_FILE:nlpDenseCons_ex2.exe>   500 -selfcheck)
   add_test(NAME NlpDenseCons2_5K COMMAND $<TARGET_FILE:nlpDenseCons_ex2.exe>  5000 -selfcheck)
   add_test(NAME NlpDenseCons2_50K COMMAND $<TARGET_FILE:nlpDenseCons_ex2.exe> 50000 -selfcheck)

@@ -12,7 +12,8 @@
 #define MPI_Comm int
 #endif
 
-/* Test with bounds and constraints of all types. 
+/* Test with bounds and constraints of all types. For some reason this
+ *  example is not very well behaved numerically.
  *  min   sum 1/4* { (x_{i}-1)^4 : i=1,...,n}
  *  s.t.  
  *        sum x_i = n+1

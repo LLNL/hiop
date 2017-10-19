@@ -1,173 +1,197 @@
-#include "hiopVector.hpp"
-#include "hiopNlpFormulation.hpp"
-#include "hiopInterface.hpp"
-#include "hiopAlgFilterIPM.hpp"
-
-#ifdef WITH_MPI
-#include "mpi.h"
-#else
-#define MPI_COMM_WORLD 0
-#define MPI_Comm int
-#endif
+#include "nlpDenseCons_ex1.hpp"
 
 #include <cmath>
 #include <cstdio>
 #include <cassert>
 
-/* Example 1: min sum{x_i^2 | i=1,..,n} s.t. x_2>=1 */
+using namespace hiop;
 
-class Ex1Interface : public hiop::hiopInterfaceDenseConstraints
+Ex1Meshing1D::Ex1Meshing1D(double a, double b, 
+			   long long glob_n, double r, 
+			   MPI_Comm comm_)
 {
-public: 
-  Ex1Interface(int num_vars=4)
-    : n_vars(num_vars), n_cons(0), comm(MPI_COMM_WORLD)
-  {
-    comm_size=1; my_rank=0; 
+  _a=a; _b=b; _r=r;
+  comm=comm_;
+  comm_size=1; my_rank=0; 
 #ifdef WITH_MPI
-    int ierr = MPI_Comm_size(comm, &comm_size); assert(MPI_SUCCESS==ierr);
-    ierr = MPI_Comm_rank(comm, &my_rank); assert(MPI_SUCCESS==ierr);
+  int ierr = MPI_Comm_size(comm, &comm_size); assert(MPI_SUCCESS==ierr);
+  ierr = MPI_Comm_rank(comm, &my_rank); assert(MPI_SUCCESS==ierr);
 #endif
-    // set up vector distribution for primal variables - easier to store it as a member in this simple example
-    col_partition = new long long[comm_size];
-    long long quotient=n_vars/comm_size, remainder=n_vars-comm_size*quotient;
-    if(my_rank==0) printf("reminder=%d quotient=%d\n", remainder, quotient);
-    int i=0; col_partition[i]=0; i++;
-    while(i<=remainder) { col_partition[i] = col_partition[i-1]+quotient+1; i++; }
-    while(i<=comm_size) { col_partition[i] = col_partition[i-1]+quotient;   i++; }
+  // set up vector distribution for primal variables - easier to store it as a member in this simple example
+  col_partition = new long long[comm_size+1];
+  long long quotient=glob_n/comm_size, remainder=glob_n-comm_size*quotient;
+  
+  int i=0; col_partition[i]=0; i++;
+  while(i<=remainder) { col_partition[i] = col_partition[i-1]+quotient+1; i++; }
+  while(i<=comm_size) { col_partition[i] = col_partition[i-1]+quotient;   i++; }
 
-    if(my_rank==0) {
-      for(int i=0;i<=comm_size;i++) 
-        printf("%3d ", col_partition[i]);
-      printf("\n");
-    }
-  }
-  virtual ~Ex1Interface()
-  {
-    delete[] col_partition;
-  }
-  bool get_prob_sizes(long long& n, long long& m)
-  { n=n_vars; m=n_cons; return true; }
+  _mass = new hiopVectorPar(glob_n, col_partition, comm);
 
-  bool get_vars_info(const long long& n, double *xlow, double* xupp, NonlinearityType* type)
-  {
-    int i_local;
-    for(int i_global=col_partition[my_rank]; i_global<col_partition[my_rank+1]; i_global++) {
-      i_local=idx_global2local(n,i_global);
-      if(i_global==2) xlow[i_local]= 1.0;
-      else            xlow[i_local]=-1e20;
-      type[i_local] = hiopLinear;
-      xupp[i_local] = 1e20;
-    }
-    return true;
-  }
-  bool get_cons_info(const long long& m, double* clow, double* cupp, NonlinearityType* type)
-  {
-    assert(m==n_cons);
-    //no constraints
-    return true;
-  }
-  bool eval_f(const long long& n, const double* x, bool new_x, double& obj_value)
-  {
-    int n_local=col_partition[my_rank+1]-col_partition[my_rank];
-    obj_value=0.; 
-    for(int i=0;i<n_local;i++) obj_value += x[i]*x[i];
-#ifdef WITH_MPI
-    double obj_global;
-    int ierr=MPI_Allreduce(&obj_value, &obj_global, 1, MPI_DOUBLE, MPI_SUM, comm); assert(ierr==MPI_SUCCESS);
-    obj_value=obj_global;
-#endif
-    return true;
-  }
-  bool eval_grad_f(const long long& n, const double* x, bool new_x, double* gradf)
-  {
-    int n_local=col_partition[my_rank+1]-col_partition[my_rank];
-    for(int i=0;i<n_local;i++) gradf[i] = 2*x[i];
-    return true;
-  }
-  /** Sum(x[i])<=10 and sum(x[i])>= 1  (we pretend are different)
-   */
-  bool eval_cons(const long long& n, 
-		 const long long& m,  
-		 const long long& num_cons, const long long* idx_cons,
-		 const double* x, bool new_x, double* cons)
-  {
-    assert(n==n_vars); assert(m==n_cons);
-    //no constraints
-    return true;
+  //if(my_rank==0) printf("reminder=%d quotient=%d\n", remainder, quotient);
+  //printf("left=%d right=%d\n", col_partition[my_rank], col_partition[my_rank+1]);
+
+  //compute the mass
+  double m1=2*_r / ((1+_r)*glob_n);
+  double h =2*(1-_r) / (1+_r) / (glob_n-1) / glob_n;
+
+  long long glob_n_start=col_partition[my_rank], glob_n_end=col_partition[my_rank+1]-1;
+
+  double* mass = _mass->local_data(); //local slice
+  double rescale = _b-_a;
+  for(long long k=glob_n_start; k<=glob_n_end; k++) {
+    mass[k-glob_n_start] = (m1 + (k-glob_n_start)*h) * rescale;
+    //printf(" proc %d k=%d  mass[k]=%g\n", my_rank, k, mass[k-glob_n_start]);
   }
 
-  bool eval_Jac_cons(const long long& n, const long long& m, 
-		     const long long& num_cons, const long long* idx_cons,
-                     const double* x, bool new_x, double** Jac) 
-  {
-    assert(n==n_vars); assert(m==n_cons);
-    //no constraints
-    return true;
-  }
-
-  bool get_vecdistrib_info(long long global_n, long long* cols)
-  {
-    if(global_n==n_vars)
-      for(int i=0; i<=comm_size; i++) cols[i]=col_partition[i];
-    else 
-      assert(false && "You shouldn't need distrib info for this size.");
-    return true;
-  }
-
-  bool get_starting_point(const long long &global_n, double* x0)
-  {
-    assert(global_n==n_vars); 
-    long long n_local=col_partition[my_rank+1]-col_partition[my_rank];
-    for(int i=0; i<n_local; i++)
-      x0[i]=0.0;
-    return true;
-  }
-private:
-  int n_vars, n_cons;
-  MPI_Comm comm;
-  int my_rank, comm_size;
-  long long* col_partition;
-public:
-  inline int idx_local2global(long long global_n, int idx_local) 
-  { 
-    assert(idx_local + col_partition[my_rank]<col_partition[my_rank+1]);
-    if(global_n==n_vars)
-      return idx_local + col_partition[my_rank]; 
-    assert(false && "You shouldn't need global index for a vector of this size.");
-  }
-  inline int idx_global2local(long long global_n, long long idx_global)
-  {
-    assert(idx_global>=col_partition[my_rank]   && "global index does not belong to this rank");
-    assert(idx_global< col_partition[my_rank+1] && "global index does not belong to this rank");
-    assert(global_n==n_vars && "your global_n does not match the number of variables?");
-    return idx_global-col_partition[my_rank];
-  }
-};
-
-int main(int argc, char **argv)
+  //_mass->print(stdout, NULL);
+  //fflush(stdout);
+}
+Ex1Meshing1D::~Ex1Meshing1D()
 {
-  int rank=0, numRanks=1;
-#ifdef WITH_MPI
-  MPI_Init(&argc, &argv);
-  assert(MPI_SUCCESS==MPI_Comm_rank(MPI_COMM_WORLD,&rank));
-  assert(MPI_SUCCESS==MPI_Comm_size(MPI_COMM_WORLD,&numRanks));
-  if(0==rank) printf("Support for MPI is enabled\n");
-#endif
+  delete _mass;
+}
 
-  long long numVars=3;
-  Ex1Interface problem(numVars);
-  if(rank==0) printf("interface created\n");
-  hiop::hiopNlpDenseConstraints nlp(problem);
-  if(rank==0) printf("nlp formulation created\n");
-  
-  hiop::hiopAlgFilterIPM solver(&nlp);
-  hiop::hiopSolveStatus status = solver.run();
-  double objective = solver.getObjective();
+bool Ex1Meshing1D::get_vecdistrib_info(long long global_n, long long* cols)
+{
+  for(int i=0; i<=comm_size; i++) cols[i] = col_partition[i];
+}
+void Ex1Meshing1D::applyM(DiscretizedFunction& f)
+{
+  f.componentMult(*this->_mass);
+}
 
-  printf("Objective: %18.12e\n", objective);
-#ifdef WITH_MPI
-  MPI_Finalize();
-#endif
+//converts the local indexes to global indexes
+long long Ex1Meshing1D::getGlobalIndex(long long i_local) const
+{
+  assert(0<=i_local); 
+  assert(i_local < col_partition[my_rank+1]-col_partition[my_rank]);
+
+  return i_local+col_partition[my_rank];
+}
+
+long long Ex1Meshing1D::getLocalIndex(long long i_global) const
+{
+  assert(i_global >= col_partition[my_rank]);
+  assert(i_global <  col_partition[my_rank+1]);
+  return i_global-col_partition[my_rank];
+}
+
+//for a function c(t), for given global index in the discretization 
+// returns the corresponding continuous argument 't', which is in this 
+// case the middle of the discretization interval.
+double Ex1Meshing1D::getFunctionArgument(long long i_global) const
+{
+  assert(i_global >= col_partition[my_rank]);
+  assert(i_global <  col_partition[my_rank+1]);
+
+  const long & k = i_global;
+
+  long long glob_n = size();
+  double m1=2*_r / ((1+_r)*glob_n);
+  double h =2*(1-_r) / (1+_r) / (glob_n-1) / glob_n;
+
+  //t is the middle of [k*m1 + k(k-1)/2*h, (k+1)m1+ (k+1)k/2*h]
+  double t = 0.5*( (2*k+1)*m1 + k*k*h);
+  return t;
+}
+
+
+
+/* DiscretizedFunction implementation */
+
+DiscretizedFunction::DiscretizedFunction(Ex1Meshing1D* meshing)
+  : hiopVectorPar(meshing->size(), meshing->get_col_partition(), meshing->get_comm())
+{
+  _mesh = meshing;
+}
+
+// u'*v = u'*M*v, where u is 'this'
+double DiscretizedFunction::dotProductWith( const DiscretizedFunction& v_ ) const
+{
+  assert(v_._mesh->matches(this->_mesh));
+  double* M=_mesh->_mass->local_data();
+  double* u= this->data;
+  double* v= v_.data;
   
-  return 0;
+  double dot=0.;
+  for(int i=0; i<get_local_size(); i++)
+    dot += u[i]*M[i]*v[i];
+ 
+ #ifdef WITH_MPI
+  double dotprodG;
+  int ierr = MPI_Allreduce(&dot, &dotprodG, 1, MPI_DOUBLE, MPI_SUM, comm); assert(MPI_SUCCESS==ierr);
+  dot=dotprodG;
+#endif
+  return dot;
+}
+
+// computes integral of 'this', that is sum (this[elem]*m[elem])
+double DiscretizedFunction::integral() const
+{
+  //the base dotProductWith method would do it
+  return hiopVectorPar::dotProductWith(*_mesh->_mass);
+}
+
+// norm(u) as sum(M[elem]*u[elem]^2)
+double DiscretizedFunction::twonorm() const 
+{
+  double* M=_mesh->_mass->local_data();
+  double* u= this->data;
+
+  double nrm_square=0.;
+  for(int i=0; i<get_local_size(); i++)
+    nrm_square += u[i]*u[i]*M[i];
+
+#ifdef WITH_MPI
+  double nrm_squareG;
+  int ierr = MPI_Allreduce(&nrm_square, &nrm_squareG, 1, MPI_DOUBLE, MPI_SUM, comm); assert(MPI_SUCCESS==ierr);
+  nrm_square=nrm_squareG;
+#endif  
+  return sqrt(nrm_square);
+}
+
+
+//converts the local indexes to global indexes
+long long DiscretizedFunction::getGlobalIndex(long long i_local) const
+{
+  return _mesh->getGlobalIndex(i_local);
+}
+
+//for a function c(t), for given global index in the discretization 
+// returns the corresponding continuous argument 't', which is in this 
+// case the middle of the discretization interval.
+double DiscretizedFunction::getFunctionArgument(long long i_global) const
+{
+  return _mesh->getFunctionArgument(i_global);
+}
+
+//set the function value for a given global index
+void DiscretizedFunction::setFunctionValue(long long i_global, const double& value)
+{
+  long long i_local=_mesh->getLocalIndex(i_global);
+  this->data[i_local]=value;
+}
+
+
+
+/* Ex1Interface class implementation */
+
+/*set c to  
+ *    c(t) = 1-10*t, for 0<=t<=1/10,
+ *           0,      for 1/10<=t<=1.
+ */
+void Ex1Interface::set_c()
+{
+  for(int i_local=0; i_local<n_local; i_local++) {
+    //this will be based on 'my_rank', thus, different ranks get the appropriate global indexes
+    long long n_global = c->getGlobalIndex(i_local); 
+    double t = c->getFunctionArgument(n_global);
+    //if(t<=0.1) c->setFunctionValue(n_global, 1-10.*t);
+    double cval;
+    if(t<=0.1) cval = -1.+10.*t;
+    else       cval = 0.;
+
+    c->setFunctionValue(n_global, cval);
+    //printf("index %d  t=%g value %g\n", n_global, t, cval);
+  } 
 }
