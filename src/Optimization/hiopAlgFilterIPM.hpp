@@ -32,13 +32,13 @@ public:
   virtual void getSolution(const double* x) const;
   /* returns the status of the solver */
   virtual hiopSolveStatus getSolveStatus() const;
-private:
+protected:
   bool evalNlp(hiopIterate& iter,
 	       double &f, hiopVector& c_, hiopVector& d_, 
 	       hiopVector& grad_,  hiopMatrixDense& Jac_c,  hiopMatrixDense& Jac_d);
   bool evalNlp_funcOnly(hiopIterate& iter, double& f, hiopVector& c_, hiopVector& d_);
   bool evalNlp_derivOnly(hiopIterate& iter, hiopVector& gradf_,  hiopMatrixDense& Jac_c,  hiopMatrixDense& Jac_d);
- /* internal helper for error computation */
+  /* internal helper for error computation */
   virtual bool evalNlpAndLogErrors(const hiopIterate& it, const hiopResidual& resid, const double& mu,
 				   double& nlpoptim, double& nlpfeas, double& nlpcomplem, double& nlpoverall,
 				   double& logoptim, double& logfeas, double& logcomplem, double& logoverall);
@@ -52,7 +52,7 @@ private:
   //returns whether the algorithm should stop and set an appropriate solve status
   bool checkTermination(const double& _err_nlp, const int& iter_num, hiopSolveStatus& status);
   void displayTerminationMsg();
-private:
+protected:
   hiopNlpDenseConstraints* nlp;
   hiopFilter filter;
 
@@ -126,5 +126,19 @@ private:
   hiopAlgFilterIPM& operator=(const hiopAlgFilterIPM&) {return *this;};
 };
 
-}
+/** The finite-dimensional algorithm that uses prescribed finite-dimensional inner products.
+ *  With this class, Hiop behaves like Ipopt. */
+class hiopAlgFilterFiniteDimIPM : public hiopAlgFilterIPM
+{
+public:
+  hiopAlgFilterFiniteDimIPM(hiopNlpDenseConstraints* nlp) : hiopAlgFilterIPM(nlp) {} ;
+  virtual ~hiopAlgFilterFiniteDimIPM() {};
+protected:
+  /* internal helper for error computation */
+  virtual bool evalNlpAndLogErrors(const hiopIterate& it, const hiopResidual& resid, const double& mu,
+				   double& nlpoptim, double& nlpfeas, double& nlpcomplem, double& nlpoverall,
+				   double& logoptim, double& logfeas, double& logcomplem, double& logoverall);
+  //virtual double thetaLogBarrier(const hiopIterate& it, const hiopResidual& resid, const double& mu);
+};
+} //end of namespace
 #endif

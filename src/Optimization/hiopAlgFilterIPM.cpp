@@ -211,7 +211,6 @@ hiopSolveStatus hiopAlgFilterIPM::run()
   _mu=mu0;
 
 
-
   //update log bar
   logbar->updateWithNlpInfo(*it_curr, _mu, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d);
   nlp->log->printf(hovScalars, "log bar obj: %g", logbar->f_logbar);
@@ -587,8 +586,6 @@ evalNlpAndLogErrors(const hiopIterate& it, const hiopResidual& resid, const doub
 
   long long n=nlp->n_complem(), m=nlp->m();
   //the one norms
-  //double nrmDualBou=it.normOneOfBoundDuals();
-  //double nrmDualEqu=it.normOneOfEqualityDuals();
   double nrmDualBou, nrmDualEqu;
   it.normOneOfDuals(nrmDualEqu, nrmDualBou);
 
@@ -597,6 +594,8 @@ evalNlpAndLogErrors(const hiopIterate& it, const hiopResidual& resid, const doub
   double sc = n==0?0:fmax(p_smax,nrmDualBou/n) / p_smax;
   //actual nlp errors 
   resid.getNlpErrors(nlpoptim, nlpfeas, nlpcomplem);
+
+  printf("parent class: %g %g %g\n", nlpoptim, nlpfeas, nlpcomplem);
 
   //finally, the scaled nlp error
   nlpoverall = fmax(nlpoptim/sd, fmax(nlpfeas, nlpcomplem/sc));
@@ -684,5 +683,37 @@ hiopSolveStatus hiopAlgFilterIPM::getSolveStatus() const
   return _solverStatus;
 }
 
+/**** implementation of hiopAlgFilterFiniteDimIPM ****/
 
+bool hiopAlgFilterFiniteDimIPM::
+evalNlpAndLogErrors(const hiopIterate& it, const hiopResidual& resid, const double& mu,
+		    double& nlpoptim, double& nlpfeas, double& nlpcomplem, double& nlpoverall,
+		    double& logoptim, double& logfeas, double& logcomplem, double& logoverall)
+{
+  nlp->runStats.tmSolverInternal.start();
+
+  long long n=nlp->n_complem(), m=nlp->m();
+  //the one norms
+  double nrmDualBou, nrmDualEqu;
+  it.normOneOfDuals(nrmDualEqu, nrmDualBou);
+
+  //scaling factors
+  double sd = fmax(p_smax,(nrmDualBou+nrmDualEqu)/(n+m)) / p_smax;
+  double sc = n==0?0:fmax(p_smax,nrmDualBou/n) / p_smax;
+  //actual nlp errors 
+  resid.getNlpErrors(nlpoptim, nlpfeas, nlpcomplem);
+
+  printf("child class: %g %g %g\n", nlpoptim, nlpfeas, nlpcomplem);
+
+  //finally, the scaled nlp error
+  nlpoverall = fmax(nlpoptim/sd, fmax(nlpfeas, nlpcomplem/sc));
+
+  //actual log errors
+  resid.getBarrierErrors(logoptim, logfeas, logcomplem);
+
+  //finally, the scaled barrier error
+  logoverall = fmax(logoptim/sd, fmax(logfeas, logcomplem/sc));
+  nlp->runStats.tmSolverInternal.start();
+  return true;
+}
 }
