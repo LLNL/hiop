@@ -1,5 +1,5 @@
 #include "hiopNlpFormulation.hpp"
-
+#include "hiopInnerProdWeight.hpp"
 #include "hiopLogger.hpp"
 
 #ifdef WITH_MPI

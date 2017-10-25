@@ -587,7 +587,7 @@ evalNlpAndLogErrors(const hiopIterate& it, const hiopResidual& resid, const doub
   long long n=nlp->n_complem(), m=nlp->m();
   //the one norms
   double nrmDualBou, nrmDualEqu;
-  it.normOneOfDuals(nrmDualEqu, nrmDualBou);
+  it.norm_inf_H_OfDuals(nrmDualEqu, nrmDualBou);
 
   //scaling factors
   double sd = fmax(p_smax,(nrmDualBou+nrmDualEqu)/(n+m)) / p_smax;

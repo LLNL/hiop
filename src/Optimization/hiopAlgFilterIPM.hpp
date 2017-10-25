@@ -10,6 +10,8 @@
 #include "hiopDualsUpdater.hpp"
 #include "hiopTimer.hpp"
 
+#include "hiopInnerProdWeight.hpp"
+
 namespace hiop
 {
 

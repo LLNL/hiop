@@ -148,7 +148,8 @@ public:
 				 const double* lambda,
 				 double obj_value) { };
 
-  /** Callback for the iteration: at the end of each iteration. This is NOT called during the line-searches.
+  /** Callback for the iteration: at the end of each iteration. 
+   * This is NOT called during the line-searches.
    * Note: all the notes for @solution_callback apply.
    */
   virtual bool iterate_callback(int iter, double obj_value,
@@ -163,7 +164,15 @@ public:
 				int ls_trials) {return true;}
   
 
-
+  /** Apply the "weight" matrix (mass or stiffness) or its inverse. This
+   * matrix is used to compute the inner products that are consistent 
+   * with the infinite-dimensional problem.
+   * 
+   * The default implementation is for finite-dimensional problems that
+   * use the standard real vector space inner products.  
+   */
+  virtual inline bool applyH   (double *x) { return true;}
+  virtual inline bool applyHInv(double *x) { return true;}
 private:
   hiopInterfaceBase(const hiopInterfaceBase& ) {};
   void operator=(const hiopInterfaceBase&) {};

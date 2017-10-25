@@ -15,6 +15,8 @@
 
 namespace hiop
 {
+class hiopInnerProdWeight; 
+class hiopInnerProdMatrixFreeWeight;
 
 class hiopNlpFormulation
 {
@@ -47,7 +49,8 @@ public:
 				     double mu,
 				     double alpha_du, double alpha_pr,
 				     int ls_trials)=0;
-
+  virtual bool applyH(double* x) = 0;
+  virtual bool applyHInv(double* x) = 0;
   /* outputing and debug-related functionality*/
   hiopLogger* log;
   hiopRunStats runStats;
@@ -99,6 +102,9 @@ public:
    * matrix (pre)allocate.
    */
   virtual hiopMatrixDense* alloc_multivector_primal(int nrows, int max_rows=-1) const;
+
+  virtual bool applyH(double* x)    { return interface.applyH(x); };
+  virtual bool applyHInv(double* x) { return interface.applyHInv(x); };
 
   virtual inline 
   void user_callback_solution(hiopSolveStatus status,

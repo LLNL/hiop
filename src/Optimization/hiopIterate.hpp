@@ -51,6 +51,11 @@ public:
   virtual double normOneOfEqualityDuals() const;
   /* same as above but computed in one shot to save on communication and computation */
   virtual void   normOneOfDuals(double& nrm1Eq, double& nrm1Bnd) const;
+  /** for the infinite-dimensional case the H-norms and inf-norm for the eq.duals */
+  virtual double normHOfBoundDuals() const;
+  virtual double normInfOfEqualityDuals() const;
+  /* same as above but computed in one shot to save on communication and computation */
+  virtual void   norm_inf_H_OfDuals(double& nrm1Eq, double& nrm1Bnd) const;
 
   /* cloning and copying */
   hiopIterate* alloc_clone() const;
