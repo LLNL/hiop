@@ -32,12 +32,15 @@ hiopNlpFormulation::hiopNlpFormulation(hiopInterfaceBase& interface)
   //log->write(NULL, *options, hovSummary);//! comment this at some point
 
   runStats = hiopRunStats(comm);
+  //H = new hiopInnerProdWeight(); //this is non-weighted, for the finite-dim inner prod
+  H = new hiopInnerProdMatrixFreeWeight(this);
 }
 
 hiopNlpFormulation::~hiopNlpFormulation()
 {
   delete log;
   delete options;
+  delete H;
 }
 
 

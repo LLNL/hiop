@@ -1,12 +1,14 @@
 #include "hiopIterate.hpp"
 
+#include "hiopInnerProdWeight.hpp"
+
 #include <cmath>
 #include <cassert>
 
 namespace hiop
 {
 
-hiopIterate::hiopIterate(const hiopNlpDenseConstraints* nlp_)
+hiopIterate::hiopIterate(hiopNlpDenseConstraints* nlp_)
 {
   nlp = nlp_;
   x = dynamic_cast<hiopVectorPar*>(nlp->alloc_primal_vec());
@@ -184,29 +186,25 @@ void hiopIterate::normOneOfDuals(double& nrm1Eq, double& nrm1Bnd) const
   nrm1Eq   = nrm1Bnd + yc->onenorm_local() + yd->onenorm_local();
 }
 
-
 double hiopIterate::normHOfBoundDuals() const
 {
-#ifdef DEEP_CHECKING
-  assert(zl->matchesPattern(nlp->get_ixl()));
-  assert(zu->matchesPattern(nlp->get_ixu()));
-  assert(vl->matchesPattern(nlp->get_idl()));
-  assert(vu->matchesPattern(nlp->get_idu()));
-#endif
-  //work locally with all the vectors. This will result in only one MPI_Allreduce call instead of two.
-  double nrm1=zl->onenorm_local() + zu->onenorm_local();
+  //!opt - work locally with all the vectors. This will result in only one MPI_Allreduce call instead of two.
+  double nrm = nlp->H->norm(*zl) + nlp->H->norm(*zu);
+  nrm += vl->infnorm_local() + vu->infnorm_local();
+  return nrm;
+}
+double hiopIterate::normInfOfEqualityDuals() const
+{
+  assert(false);
+  //! opt work locally with all the vectors. This will result in only one MPI_Allreduce call instead of two.
+  double nrm1=zl->infnorm_local() + zu->infnorm_local();
 #ifdef WITH_MPI
   double nrm1_global;
   int ierr=MPI_Allreduce(&nrm1, &nrm1_global, 1, MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(MPI_SUCCESS==ierr);
   nrm1=nrm1_global;
 #endif
-  nrm1 += vl->onenorm_local() + vu->onenorm_local() + yc->onenorm_local() + yd->onenorm_local();
+  nrm1 += vl->infnorm_local() + vu->infnorm_local() + yc->onenorm_local() + yd->onenorm_local();
   return nrm1;
-  //aaa
-}
-double hiopIterate::normInfOfEqualityDuals() const
-{
-
 }
 void hiopIterate::norm_inf_H_OfDuals(double& nrm1Eq, double& nrm1Bnd) const
 {
@@ -216,7 +214,12 @@ void hiopIterate::norm_inf_H_OfDuals(double& nrm1Eq, double& nrm1Bnd) const
   assert(vl->matchesPattern(nlp->get_idl()));
   assert(vu->matchesPattern(nlp->get_idu()));
 #endif
+  //!opt - work locally with all the vectors. This will result in only one MPI_Allreduce call
+  nrm1Bnd = nlp->H->norm(*zl) + nlp->H->norm(*zu);
+  //these are fin-dim duals
+  nrm1Bnd += vl->infnorm_local() + vu->infnorm_local();
 
+  nrm1Eq   = nrm1Bnd + yc->onenorm_local() + yd->onenorm_local();
 }
 
 void hiopIterate::determineSlacks()

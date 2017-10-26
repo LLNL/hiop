@@ -1,5 +1,7 @@
 #include "hiopVector.hpp"
 
+#include "hiopInnerProdWeight.hpp"
+
 #include <cmath>
 #include <cstring> //for memcpy
 #include <cassert>
@@ -151,6 +153,7 @@ double hiopVectorPar::dotProductWith( const hiopVector& v_ ) const
 
   return dotprod;
 }
+
 
 double hiopVectorPar::infnorm() const
 {

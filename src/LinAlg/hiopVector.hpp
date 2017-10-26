@@ -9,10 +9,14 @@
 #include <cstddef>
 #endif 
 
+
 #include <cstdio>
 
 namespace hiop
 {
+
+//forward declarations
+class hiopInnerProdWeight;
 
 class hiopVector
 {
@@ -39,6 +43,8 @@ public:
   virtual double infnorm() const = 0;
   /** Return the one norm */
   virtual double onenorm() const = 0;
+  /** Return the weighted norm */
+  //virtual double Hnorm(const hiopInnerProdWeight& H) const = 0;
   /** Multiply the components of this by the components of v. */
   virtual void componentMult( const hiopVector& v ) = 0;
   /** Divide the components of this hiopVector by the components of v. */
@@ -130,6 +136,8 @@ public:
   virtual double infnorm_local() const;
   virtual double onenorm() const;
   virtual double onenorm_local() const; 
+  //virtual double Hnorm(const hiopInnerProdWeight& H) const;
+  //virtual double Hnorm_local(const hiopInnerProdWeight& H) const;
   virtual void componentMult( const hiopVector& v );
   virtual void componentDiv ( const hiopVector& v );
   virtual void componentDiv_p_selectPattern( const hiopVector& v, const hiopVector& ix);

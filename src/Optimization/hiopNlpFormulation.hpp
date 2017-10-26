@@ -51,7 +51,11 @@ public:
 				     int ls_trials)=0;
   virtual bool applyH(double* x) = 0;
   virtual bool applyHInv(double* x) = 0;
-  /* outputing and debug-related functionality*/
+
+  hiopInnerProdWeight* H;
+  //inline hiopInnerProdWeight& get_H() {return *H;}
+
+  /* outputing and debug-related functionality */
   hiopLogger* log;
   hiopRunStats runStats;
   hiopOptions* options;
@@ -63,6 +67,8 @@ public:
   inline int      get_num_ranks() const { return num_ranks; }
 #endif
 protected:
+  /* the weight operator/matrix */
+  
 #ifdef WITH_MPI
   MPI_Comm comm;
   int rank, num_ranks;
