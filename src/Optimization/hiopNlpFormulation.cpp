@@ -32,15 +32,19 @@ hiopNlpFormulation::hiopNlpFormulation(hiopInterfaceBase& interface)
   //log->write(NULL, *options, hovSummary);//! comment this at some point
 
   runStats = hiopRunStats(comm);
-  //H = new hiopInnerProdWeight(); //this is non-weighted, for the finite-dim inner prod
-  H = new hiopInnerProdMatrixFreeWeight(this);
+
+  //the weight operator H is going to be created by the implementers of this class because
+  //some implementations of H use hiop's vectors, which requires a concrete implementation
+  //of this class
+  H=NULL;
+
 }
 
 hiopNlpFormulation::~hiopNlpFormulation()
 {
   delete log;
   delete options;
-  delete H;
+  if(H) delete H;
 }
 
 
@@ -153,6 +157,14 @@ hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& 
 #else
   n_bnds_low=n_bnds_low_local; n_bnds_upp=n_bnds_upp_local; //n_bnds_lu is ok
 #endif
+
+  //create the weight operator H based on what the NLP interface returns
+
+  //this is the default  for H=Identity
+  //H = new hiopInnerProdWeight(); 
+
+  //this creates H in a matrix free form -> will call applyH() of the NLP interface
+  H = new hiopInnerProdMatrixFreeWeight(this); 
 
 }
 

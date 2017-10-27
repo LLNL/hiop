@@ -39,7 +39,8 @@ namespace hiop
     // x = This^{-1}*x; by default applies the identity, that is, it does nothing
     virtual void applyInverse(hiopVector& x) {};
 
-    virtual double norm(const hiopVectorPar& x) {return x.twonorm();}
+    virtual double primalnorm(const hiopVectorPar& x) {return x.twonorm();}
+    virtual double dualnorm(const hiopVectorPar& x) {return x.twonorm();}
     virtual double dotProd(const hiopVectorPar& u, const hiopVectorPar& v) { return u.dotProductWith(v); }
     virtual bool identityAsVec(hiopVectorPar& d) { assert(false && "not yet implemented."); return true;}
   };
@@ -60,7 +61,8 @@ namespace hiop
     // x = This^{-1}*x
     virtual void applyInverse(hiopVectorPar& x);
 
-    virtual double norm(const hiopVectorPar& x);
+    virtual double primalnorm(const hiopVectorPar& x);
+    virtual double dualnorm(const hiopVectorPar& x);
     virtual double dotProd(const hiopVectorPar& u, const hiopVectorPar& v); 
     virtual bool identityAsVec(hiopVectorPar& d) { assert(false && "not yet implemented."); return true;}
   protected:

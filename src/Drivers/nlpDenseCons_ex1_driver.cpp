@@ -74,6 +74,7 @@ int main(int argc, char **argv)
   hiop::hiopNlpDenseConstraints nlp(problem);
   //if(rank==0) printf("nlp formulation created\n");
   
+  //hiop::hiopAlgFilterFiniteDimIPM solver(&nlp);
   hiop::hiopAlgFilterIPM solver(&nlp);
   hiop::hiopSolveStatus status = solver.run();
   double objective = solver.getObjective();

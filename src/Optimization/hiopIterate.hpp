@@ -47,15 +47,16 @@ public:
   virtual void addLinearDampingTermToGrad_d(const double& mu, const double& kappa_d, const double& beta, hiopVector& grad_d) const;
 
   /** norms for individual parts of the iterate (on demand computation) */
-  virtual double normOneOfBoundDuals() const;
-  virtual double normOneOfEqualityDuals() const;
+  //virtual double normOneOfBoundDuals() const;
+  //virtual double normOneOfEqualityDuals() const;
   /* same as above but computed in one shot to save on communication and computation */
   virtual void   normOneOfDuals(double& nrm1Eq, double& nrm1Bnd) const;
-  /** for the infinite-dimensional case the H-norms and inf-norm for the eq.duals */
-  virtual double normHOfBoundDuals() const;
-  virtual double normInfOfEqualityDuals() const;
-  /* same as above but computed in one shot to save on communication and computation */
-  virtual void   norm_inf_H_OfDuals(double& nrm1Eq, double& nrm1Bnd) const;
+
+  /* compute a "total volume" "norm"/measure  for the duals; used in rescaling the conv. tolerances 
+   *  magEq  = ( ||yc||_inf + ||yd||_inf )   (--these are fin-dim norms)
+   *  magBnd = ( ||zl||_H + ||zu||_H + ||vl||_inf + ||vu||_inf )  
+   */
+  virtual void totalNormOfDuals(double& nrmEq, double& nrmBnd) const;
 
   /* cloning and copying */
   hiopIterate* alloc_clone() const;
@@ -76,6 +77,7 @@ public:
   void print(FILE* f, const char* msg=NULL) const;
 
   friend class hiopResidual;
+  friend class hiopResidualFinDimImpl; 
   friend class hiopKKTLinSysLowRank;
   friend class hiopHessianLowRank;
   friend class hiopHessianInvLowRank_obsolette;

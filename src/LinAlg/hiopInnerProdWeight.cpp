@@ -54,10 +54,18 @@ void hiopInnerProdMatrixFreeWeight::applyInverse(hiopVectorPar& x)
 }
 
 //x'*This*x
-double hiopInnerProdMatrixFreeWeight::norm(const hiopVectorPar& x)
+double hiopInnerProdMatrixFreeWeight::primalnorm(const hiopVectorPar& x)
 {
   vec_aux->copyFrom(x);
   nlp->applyH(vec_aux->local_data());
+
+  return sqrt(vec_aux->dotProductWith(x));
+}
+  //x'*This^{-1}*x
+double hiopInnerProdMatrixFreeWeight::dualnorm(const hiopVectorPar& x)
+{
+  vec_aux->copyFrom(x);
+  nlp->applyHInv(vec_aux->local_data());
   return sqrt(vec_aux->dotProductWith(x));
 }
 

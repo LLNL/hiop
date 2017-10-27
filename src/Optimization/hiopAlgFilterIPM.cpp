@@ -36,6 +36,8 @@ hiopAlgFilterIPM::hiopAlgFilterIPM(hiopNlpDenseConstraints* nlp_)
 
   _Hess    = new hiopHessianLowRank(nlp,nlp->options->GetInteger("secant_memory_len"));
 
+  //resid = new hiopResidualFinDimImpl(nlp);
+  //resid_trial = new hiopResidualFinDimImpl(nlp);
   resid = new hiopResidual(nlp);
   resid_trial = new hiopResidual(nlp);
 
@@ -222,8 +224,8 @@ hiopSolveStatus hiopAlgFilterIPM::run()
 
   iter_num=0; nlp->runStats.nIter=iter_num;
 
-  theta_max=1e+4*fmax(1.0,resid->getInfeasInfNorm());
-  theta_min=1e-4*fmax(1.0,resid->getInfeasInfNorm());
+  theta_max=1e+4*fmax(1.0,resid->getInfeasNorm());
+  theta_min=1e-4*fmax(1.0,resid->getInfeasNorm());
   
   hiopKKTLinSysLowRank* kkt=new hiopKKTLinSysLowRank(nlp);
 
@@ -313,7 +315,7 @@ hiopSolveStatus hiopAlgFilterIPM::run()
 
     //maximum  step
     bret = it_curr->fractionToTheBdry(*dir, _tau, _alpha_primal, _alpha_dual); assert(bret);
-    double theta = resid->getInfeasInfNorm(); //at it_curr
+    double theta = resid->getInfeasNorm(); //at it_curr
     double theta_trial;
     nlp->runStats.tmSolverInternal.stop();
 
@@ -585,17 +587,17 @@ evalNlpAndLogErrors(const hiopIterate& it, const hiopResidual& resid, const doub
   nlp->runStats.tmSolverInternal.start();
 
   long long n=nlp->n_complem(), m=nlp->m();
-  //the one norms
+  //the "total" norms of the duals
+  //  nrmDualEqu  = ( ||yc||_inf + ||yd||_inf )   
+  //  nrmDualBou  = ( ||zl||_H + ||zu||_H + ||vl||_inf + ||vu||_inf )  
   double nrmDualBou, nrmDualEqu;
-  it.norm_inf_H_OfDuals(nrmDualEqu, nrmDualBou);
+  it.totalNormOfDuals(nrmDualEqu, nrmDualBou);
 
   //scaling factors
-  double sd = fmax(p_smax,(nrmDualBou+nrmDualEqu)/(n+m)) / p_smax;
-  double sc = n==0?0:fmax(p_smax,nrmDualBou/n) / p_smax;
+  double sd = fmax(p_smax,(nrmDualBou/4+nrmDualEqu/2)/(n+m)) / p_smax;
+  double sc = n==0?0:fmax(p_smax,nrmDualBou/4) / p_smax;
   //actual nlp errors 
   resid.getNlpErrors(nlpoptim, nlpfeas, nlpcomplem);
-
-  printf("parent class: %g %g %g\n", nlpoptim, nlpfeas, nlpcomplem);
 
   //finally, the scaled nlp error
   nlpoverall = fmax(nlpoptim/sd, fmax(nlpfeas, nlpcomplem/sc));
