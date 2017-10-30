@@ -42,7 +42,6 @@ Ex1Meshing1D::Ex1Meshing1D(double a, double b,
     mass[k-glob_n_start] = (m1 + (k-glob_n_start)*h) * rescale;
     //printf(" proc %d k=%d  mass[k]=%g\n", my_rank, k, mass[k-glob_n_start]);
   }
-
   //_mass->print(stdout, NULL);
   //fflush(stdout);
 }
@@ -57,8 +56,15 @@ bool Ex1Meshing1D::get_vecdistrib_info(long long global_n, long long* cols)
 }
 void Ex1Meshing1D::applyM(DiscretizedFunction& f)
 {
+  //std::cout << "Ex1Meshing1D::applyM" << std::endl;
   f.componentMult(*this->_mass);
 }
+void Ex1Meshing1D::applyMInv(DiscretizedFunction& f)
+{
+  //std::cout << "Ex1Meshing1D::applyMInv" << std::endl;
+  f.componentDiv(*this->_mass);
+}
+
 
 //converts the local indexes to global indexes
 long long Ex1Meshing1D::getGlobalIndex(long long i_local) const
@@ -194,4 +200,17 @@ void Ex1Interface::set_c()
     c->setFunctionValue(n_global, cval);
     //printf("index %d  t=%g value %g\n", n_global, t, cval);
   } 
+}
+
+
+bool Ex1Interface::applyH(double* x_in)
+{
+  x->copyFrom(x_in); 
+  _mesh->applyM(*x);
+  x->copyTo(x_in);
+}
+
+bool Ex1Interface::applyHInv(double* x_in)
+{
+  x->copyFrom(x_in); _mesh->applyMInv(*x); x->copyTo(x_in);
 }

@@ -214,9 +214,12 @@ int hiopResidual::update(const hiopIterate& it,
     if(nlp->n_low_local()<nx_loc)
       rszl->selectPattern(nlp->get_ixl());
     //~! nrm_nlp_complem = fmax(nrm_nlp_complem, rszl->infnorm_local());
+
+    //nlp->log->write("rszl", *rszl, hovScalars);
+
     aux = nlp->H->primalnorm(*rszl);
     nrm_nlp_complem = fmax(nrm_nlp_complem, aux);
-
+    
     rszl->addConstant_w_patternSelect(mu,nlp->get_ixl());
     //~! nrm_bar_complem = fmax(nrm_bar_complem, rszl->infnorm_local());
     nrm_bar_complem = fmax(nrm_bar_complem, nlp->H->primalnorm(*rszl));
@@ -232,7 +235,7 @@ int hiopResidual::update(const hiopIterate& it,
     //~! nrm_nlp_complem = fmax(nrm_nlp_complem, rszu->infnorm_local());
     aux = nlp->H->primalnorm(*rszu);
     nrm_nlp_complem = fmax(nrm_nlp_complem, aux);
-    aux = rszu->infnorm();
+
     rszu->addConstant_w_patternSelect(mu,nlp->get_ixu());
     //~! nrm_bar_complem = fmax(nrm_bar_complem, rszu->infnorm_local());
     nrm_bar_complem = fmax(nrm_bar_complem, nlp->H->primalnorm(*rszu));

@@ -171,8 +171,8 @@ public:
    * The default implementation is for finite-dimensional problems that
    * use the standard real vector space inner products.  
    */
-  virtual inline bool applyH   (double *x) { return true;}
-  virtual inline bool applyHInv(double *x) { return true;}
+  virtual bool applyH   (double *x) { return true;}
+  virtual bool applyHInv(double *x) { return true;}
 private:
   hiopInterfaceBase(const hiopInterfaceBase& ) {};
   void operator=(const hiopInterfaceBase&) {};

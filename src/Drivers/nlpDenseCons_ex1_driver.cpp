@@ -13,7 +13,7 @@ static bool self_check(long long n, double obj_value);
 
 static bool parse_arguments(int argc, char **argv, long long& n, double& distortion_ratio, bool& self_check)
 {
-  n = 20000; distortion_ratio=1.; self_check=false; //default options
+  n = 10; distortion_ratio=1.; self_check=false; //default options
 
   switch(argc) {
   case 1:

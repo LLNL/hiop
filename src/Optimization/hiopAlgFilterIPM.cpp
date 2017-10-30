@@ -215,7 +215,7 @@ hiopSolveStatus hiopAlgFilterIPM::run()
 
   //update log bar
   logbar->updateWithNlpInfo(*it_curr, _mu, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d);
-  nlp->log->printf(hovScalars, "log bar obj: %g", logbar->f_logbar);
+  nlp->log->printf(hovScalars, "log bar obj: %g\n", logbar->f_logbar);
   //recompute the residuals
   resid->update(*it_curr,_f_nlp, *_c, *_d,*_grad_f,*_Jac_c,*_Jac_d, *logbar);
 

@@ -67,6 +67,7 @@ public:
   MPI_Comm get_comm() const { return comm; }
 
   virtual void applyM(DiscretizedFunction& f);
+  virtual void applyMInv(DiscretizedFunction& f);
 protected:
 
   hiop::hiopVectorPar* _mass; //the length or the mass of the elements
@@ -215,6 +216,11 @@ public:
     }
     return true;
   }
+
+
+  virtual bool applyH(double* x);
+  virtual bool applyHInv(double* x);
+
 private:
   int n_vars, n_cons;
   MPI_Comm comm;
