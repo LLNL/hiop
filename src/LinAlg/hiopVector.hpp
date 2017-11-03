@@ -70,7 +70,7 @@ public:
   virtual void negate() = 0;
   /** Invert (1/x) the elements of this */
   virtual void invert() = 0;
-  /* compute log barrier term, that is sum{ln(x_i):i=1,..,n} */
+  /* compute log barrier term, that is sum{ln(x_i):i=1,..,n}. !!!This is a "local" function. */
   virtual double logBarrier(const hiopVector& select) const = 0;
   /* adds the gradient of the log barrier, namely this=this+alpha*1/select(x) */
   virtual void addLogBarrierGrad(double alpha, const hiopVector& x, const hiopVector& select)=0;
@@ -95,7 +95,7 @@ public:
   /** Entries corresponding to zeros in ix are set to zero */
   virtual void selectPattern(const hiopVector& ix) = 0;
   /** checks whether entries in this matches pattern in ix */
-  virtual bool matchesPattern(const hiopVector& ix) = 0;
+  virtual bool matchesPattern(const hiopVector& ix) const = 0;
 
   /** allocates a vector that mirrors this, but doesn't copy the values  */
   //virtual hiopVector* new_alloc() const = 0;
@@ -168,7 +168,7 @@ public:
   virtual double fractionToTheBdry(const hiopVector& dx, const double& tau) const;
   virtual double fractionToTheBdry_w_pattern(const hiopVector& dx, const double& tau, const hiopVector& ix) const;
   virtual void selectPattern(const hiopVector& ix);
-  virtual bool matchesPattern(const hiopVector& ix);
+  virtual bool matchesPattern(const hiopVector& ix) const;
 
   virtual hiopVectorPar* alloc_clone() const;
   virtual hiopVectorPar* new_copy () const;

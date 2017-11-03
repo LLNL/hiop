@@ -201,6 +201,7 @@ bool hiopNlpDenseConstraints::eval_grad_f(const double* x, bool new_x, double* g
   bool bret; 
   runStats.tmEvalGrad_f.start();
   bret = interface.eval_grad_f(n_vars,x,new_x,gradf);
+  this->H->transformGradient(gradf);
   runStats.tmEvalGrad_f.stop(); runStats.nEvalGrad_f++;
   return bret;
 }
@@ -209,6 +210,7 @@ bool hiopNlpDenseConstraints::eval_Jac_c(const double* x, bool new_x, double** J
   bool bret; 
   runStats.tmEvalJac_con.start();
   bret = interface.eval_Jac_cons(n_vars,n_cons,n_cons_eq,cons_eq_mapping,x,new_x,Jac_c);
+  this->H->transformJacobian(n_cons_eq,n_vars,Jac_c);
   runStats.tmEvalJac_con.stop(); runStats.nEvalJac_con_eq++;
   return bret;
 }
@@ -217,6 +219,7 @@ bool hiopNlpDenseConstraints::eval_Jac_d(const double* x, bool new_x, double** J
   bool bret; 
   runStats.tmEvalJac_con.start();
   bret = interface.eval_Jac_cons(n_vars,n_cons,n_cons_ineq,cons_ineq_mapping,x,new_x,Jac_d);
+  this->H->transformJacobian(n_cons_ineq,n_vars,Jac_d);
   runStats.tmEvalJac_con.stop(); runStats.nEvalJac_con_ineq++;
   return bret;
 }

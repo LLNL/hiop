@@ -34,7 +34,7 @@ namespace hiop
      * computed in c_eval and d_eval, respectively. 
      * The method modifies 'this', in particular ryd,ryc, rxl,rxu, rdl, rdu in an attempt
      * to reuse storage/buffers, but does not update the cached nrm_XXX members. */
-    virtual double computeNlpInfeasInfNorm(const hiopIterate& iter, 
+    virtual double computeNlpInfeasNorm(const hiopIterate& iter, 
 					   const hiopVector& c_eval, 
 					   const hiopVector& d_eval);
     
@@ -87,9 +87,9 @@ namespace hiop
      * computed in c_eval and d_eval, respectively. 
      * The method modifies 'this', in particular ryd,ryc, rxl,rxu, rdl, rdu in an attempt
      * to reuse storage/buffers, but does not update the cached nrm_XXX members. */
-    virtual double computeNlpInfeasInfNorm(const hiopIterate& iter, 
-					   const hiopVector& c_eval, 
-					   const hiopVector& d_eval);
+    virtual double computeNlpInfeasNorm(const hiopIterate& iter, 
+					const hiopVector& c_eval, 
+					const hiopVector& d_eval);
   private:
     hiopResidualFinDimImpl & operator=(const hiopResidualFinDimImpl & o) { assert(false); return *this;};
   };

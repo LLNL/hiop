@@ -1,6 +1,8 @@
 #ifndef HIOP_LOGBARRPROB
 #define HIOP_LOGBARRPROB
 
+#include "hiopInnerProdWeight.hpp"
+
 namespace hiop
 {
 
@@ -41,13 +43,14 @@ public:
 
     mu=mu_; c_nlp=&c_; d_nlp=&d_; Jac_c_nlp=&Jac_c_; Jac_d_nlp=&Jac_d_; iter=&iter_;
     _grad_x_logbar->copyFrom(gradf_);
-    _grad_d_logbar->setToZero(); 
+
     //add log terms to function
     double aux=-mu * iter->evalLogBarrier();
     f_logbar = f + aux;
 
 #ifdef DEEP_CHECKING
     nlp->log->write("gradx_log_bar grad_f:", *_grad_x_logbar, hovLinesearchVerb);
+    //nlp->log->write("gradx_log_bar grad_f:", *_grad_x_logbar, hovScalars);
 #endif
     //add log terms to gradient
     iter->addLogBarGrad_x(mu, *_grad_x_logbar);
@@ -55,6 +58,7 @@ public:
 
 #ifdef DEEP_CHECKING
     nlp->log->write("gradx_log_bar grad_log:", *_grad_x_logbar, hovLinesearchVerb);
+    //nlp->log->write("gradx_log_bar grad_log:", *_grad_x_logbar, hovScalars);
 #endif
 
     //add damping terms
@@ -98,9 +102,14 @@ public:
   inline double directionalDerivative(const hiopIterate& dir) 
   {
     nlp->runStats.tmSolverInternal.start();
-    double tr = dir.get_x()->dotProductWith(*_grad_x_logbar);
-    tr       += dir.get_d()->dotProductWith(*_grad_d_logbar);
+    //double tr = dir.get_x()->dotProductWith(*_grad_x_logbar);
+    double tr  = nlp->H->dotProd(dynamic_cast<const hiopVectorPar&>(*dir.get_x()), dynamic_cast<const hiopVectorPar&>(*_grad_x_logbar));
+    tr        += dir.get_d()->dotProductWith(*_grad_d_logbar);
     nlp->runStats.tmSolverInternal.stop();
+
+    nlp->log->printf(hovScalars, "directional derivative %16.10f\n", tr);
+    //nlp->log->write(" x dir:", *dir.get_x(), hovScalars);
+    //nlp->log->write( "gradx:", *_grad_x_logbar, hovScalars);
     return tr;
   }
 

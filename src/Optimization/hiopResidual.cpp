@@ -44,7 +44,7 @@ hiopResidual::~hiopResidual()
   if(rsvu) delete rsvu;
 }
 
-double hiopResidual::computeNlpInfeasInfNorm(const hiopIterate& it, 
+double hiopResidual::computeNlpInfeasNorm(const hiopIterate& it, 
 			       const hiopVector& c, 
 			       const hiopVector& d)
 {
@@ -89,7 +89,7 @@ double hiopResidual::computeNlpInfeasInfNorm(const hiopIterate& it,
     rdu->selectPattern(nlp->get_idu());
     nrmInf_infeasib = fmax(nrmInf_infeasib, rdu->infnorm());
   }
-
+  //assert(false);
   nlp->runStats.tmSolverInternal.stop();
   return nrmInf_infeasib;
 }
@@ -112,21 +112,39 @@ int hiopResidual::update(const hiopIterate& it,
   assert(it.sxl->matchesPattern(nlp->get_ixl()));
   assert(it.sxu->matchesPattern(nlp->get_ixu()));
 #endif
+
+  
+
   // rx = -grad_f - J_c^t*x - J_d^t*x+zl-zu - linear damping term in x
   rx->copyFrom(grad);
+  //nlp->H->applyInverse(*rx);
+
   jac_c.transTimesVec(1.0, *rx, 1.0, *it.yc);
   jac_d.transTimesVec(1.0, *rx, 1.0, *it.yd);
+  //nlp->H->applyAdjoint( 1.0, *rx, jac_c, 1.0, *it.yc);
+  //nlp->H->applyAdjoint( 1.0, *rx, jac_d, 1.0, *it.yd);
+
   //apply inverse Riesz ( fin-dim is   rx->axpy(-1.0, *it.zl); )
-  nlp->H->applyInverse(1.0, *rx, -1.0, *it.zl);
+  //nlp->H->applyInverse(1.0, *rx, -1.0, *it.zl);
+  rx->axpy(-1.0, *it.zl);
   //apply inverse Riesz (fin-dim is rx->axpy( 1.0, *it.zu); )
-  nlp->H->applyInverse(1.0, *rx,  1.0, *it.zl);
+  //nlp->H->applyInverse(1.0, *rx,  1.0, *it.zl);
   //~nrm_nlp_optim = fmax(nrm_nlp_optim, rx->infnorm_local());
-  nrm_nlp_optim = nlp->H->dualnorm(*rx);
+  rx->axpy( 1.0, *it.zu);
+
+  aux = nlp->H->primalnorm(*rx);
+  nrm_nlp_optim =aux;
+
+  //nlp->log->write("*************** rx:", *rx, hovScalars);
+
   logprob.addNonLogBarTermsToGrad_x(1.0, *rx);
   rx->negate();
   //~nrm_bar_optim = fmax(nrm_bar_optim, rx->infnorm_local());
-  nrm_bar_optim = nlp->H->dualnorm(*rx);
+  nrm_bar_optim = nlp->H->primalnorm(*rx);
+
+  nlp->log->printf(hovScalars,"resid:update: infHinv norm rx=%18.10f  logbar=%18.10f\n", aux, nrm_bar_optim);
   //~ done with rx
+  //nlp->log->write("x", *it.x, hovScalars);
 
   //Notice: nrm_bar_optim should also incorporate the grad with respect to ineq-slack 
   //variables. We take the nrm_bar_optim = max( \|rx\|_{U^*}, \|rd\|_\infty ). This is
@@ -303,7 +321,7 @@ void hiopResidual::print(FILE* f, const char* msg/*=NULL*/, int max_elems/*=-1*/
 
 
 /***** Finite-dimensional implementation */
-double hiopResidualFinDimImpl::computeNlpInfeasInfNorm(const hiopIterate& it, 
+double hiopResidualFinDimImpl::computeNlpInfeasNorm(const hiopIterate& it, 
 			       const hiopVector& c, 
 			       const hiopVector& d)
 {

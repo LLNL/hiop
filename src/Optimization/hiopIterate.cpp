@@ -348,8 +348,10 @@ bool hiopIterate::adjustDuals_primalLogHessian(const double& mu, const double& k
 double hiopIterate::evalLogBarrier() const
 {
   double barrier;
-  barrier = sxl->logBarrier(nlp->get_ixl());
-  barrier+= sxu->logBarrier(nlp->get_ixu());
+  //barrier = sxl->logBarrier(nlp->get_ixl());
+  //barrier+= sxu->logBarrier(nlp->get_ixu());
+  barrier = nlp->H->logBarrier(*sxl, nlp->get_ixl());
+  barrier+= nlp->H->logBarrier(*sxu, nlp->get_ixu());
 #ifdef WITH_MPI
   double res;
   int ierr = MPI_Allreduce(&barrier, &res, 1, MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(ierr==MPI_SUCCESS);
@@ -365,8 +367,13 @@ double hiopIterate::evalLogBarrier() const
 void  hiopIterate::addLogBarGrad_x(const double& mu, hiopVector& gradx) const
 {
   // gradx = grad - mu / sxl = grad - mu * select/sxl
+  
   gradx.addLogBarrierGrad(-mu, *sxl, nlp->get_ixl());
   gradx.addLogBarrierGrad( mu, *sxu, nlp->get_ixu());
+
+  //hiopVectorPar& grad = dynamic_cast<hiopVectorPar&>(gradx);
+  //nlp->H->addLogBarGrad(*sxl,nlp->get_ixl(),-mu, grad);
+  //nlp->H->addLogBarGrad(*sxu,nlp->get_ixu(), mu, grad);
 }
 
 void  hiopIterate::addLogBarGrad_d(const double& mu, hiopVector& gradd) const
@@ -378,8 +385,11 @@ void  hiopIterate::addLogBarGrad_d(const double& mu, hiopVector& gradd) const
 double hiopIterate::linearDampingTerm(const double& mu, const double& kappa_d) const
 {
   double term;
-  term  = sxl->linearDampingTerm(nlp->get_ixl(), nlp->get_ixu(), mu, kappa_d);
-  term += sxu->linearDampingTerm(nlp->get_ixu(), nlp->get_ixl(), mu, kappa_d);
+  //! double check this when there only lower or upper bounds
+  //term  = sxl->linearDampingTerm(nlp->get_ixl(), nlp->get_ixu(), mu, kappa_d);
+  //term += sxu->linearDampingTerm(nlp->get_ixu(), nlp->get_ixl(), mu, kappa_d); 
+  term  = nlp->H->linearDampingTerm(*sxl, nlp->get_ixl(), nlp->get_ixu(), mu, kappa_d);
+  term += nlp->H->linearDampingTerm(*sxu, nlp->get_ixu(), nlp->get_ixl(), mu, kappa_d);
 #ifdef WITH_MPI
   double res;
   int ierr = MPI_Allreduce(&term, &res, 1, MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(ierr==MPI_SUCCESS);
@@ -395,6 +405,15 @@ void hiopIterate::addLinearDampingTermToGrad_x(const double& mu, const double& k
 {
   /*sxl->addLinearDampingTermToGrad(nlp->get_ixl(), nlp->get_ixu(), mu, kappa_d, grad_x);
     sxu->addLinearDampingTermToGrad(nlp->get_ixu(), nlp->get_ixl(), mu, kappa_d, grad_x); */
+  //hiopVectorPar& grad_x = dynamic_cast<hiopVectorPar&>(grad_x_);
+  //const double alpha=beta*kappa_d*mu;
+
+  //nlp->H->apply(1.0, grad_x, alpha, dynamic_cast<const hiopVectorPar&>(nlp->get_ixu()));
+  //nlp->H->apply(1.0, grad_x,-alpha, dynamic_cast<const hiopVectorPar&>(nlp->get_ixl()));
+
+  //
+  //!!!! - The code below is the original code -- finite-dimensional
+  //
   //I'll do it in place, in one for loop, to be faster
   const double* ixl=dynamic_cast<const hiopVectorPar&>(nlp->get_ixl()).local_data_const();
   const double* ixu=dynamic_cast<const hiopVectorPar&>(nlp->get_ixu()).local_data_const();
@@ -403,8 +422,9 @@ void hiopIterate::addLinearDampingTermToGrad_x(const double& mu, const double& k
 #ifdef DEEP_CHECKING
   assert(n_local==dynamic_cast<hiopVectorPar&>(grad_x).get_local_size());
 #endif
-  
+
   const double ct=kappa_d*mu;
+
   if(1.0==beta) {
     for(long i=0; i<n_local; i++) {
       //!opt -> can be streamlined with blas:  gv[i] += ct*(ixl[i]-ixu[i]);

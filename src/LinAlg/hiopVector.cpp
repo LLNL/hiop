@@ -437,7 +437,7 @@ void hiopVectorPar::invert()
 #ifdef DEEP_CHECKING
     if(fabs(data[i])<1e-35) assert(false);
 #endif
-    data[i]=1/data[i];
+    data[i]=1./data[i];
   }
 }
 
@@ -592,7 +592,7 @@ double hiopVectorPar::fractionToTheBdry_w_pattern(const hiopVector& dx, const do
   return alpha;
 }
 
-void hiopVectorPar::selectPattern(const hiopVector& ix_)
+void hiopVectorPar::selectPattern(const hiopVector& ix_) 
 {
 #ifdef DEEP_CHECKING
   assert((dynamic_cast<const hiopVectorPar&>(ix_) ).n_local==n_local);
@@ -602,14 +602,14 @@ void hiopVectorPar::selectPattern(const hiopVector& ix_)
   for(int i=0; i<n_local; i++) if(ix[i]==0.0) x[i]=0.0;
 }
 
-bool hiopVectorPar::matchesPattern(const hiopVector& ix_)
+bool hiopVectorPar::matchesPattern(const hiopVector& ix_) const
 {
 #ifdef DEEP_CHECKING
   assert((dynamic_cast<const hiopVectorPar&>(ix_) ).n_local==n_local);
 #endif
   const double* ix = (dynamic_cast<const hiopVectorPar&>(ix_) ).local_data_const();
   int bmatches=true;
-  double* x=data;
+  const double* x=data;
   for(int i=0; (i<n_local) && bmatches; i++) 
     if(ix[i]==0.0 && x[i]!=0.0) bmatches=false; 
 

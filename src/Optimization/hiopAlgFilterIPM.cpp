@@ -305,9 +305,12 @@ hiopSolveStatus hiopAlgFilterIPM::run()
     //first update the Hessian and kkt system
     _Hess->update(*it_curr,*_grad_f,*_Jac_c,*_Jac_d);
     kkt->update(it_curr,_grad_f,_Jac_c,_Jac_d, _Hess);
+
     bret = kkt->computeDirections(resid,dir); assert(bret==true);
 
-    nlp->log->printf(hovIteration, "Iter[%d] full search direction -------------\n", iter_num); nlp->log->write("", *dir, hovIteration);
+    //nlp->log->write("", *resid, hovScalars);
+    //nlp->log->printf(hovIteration, "Iter[%d] full search direction -------------\n", iter_num); nlp->log->write("", *dir, hovIteration);
+    //nlp->log->printf(hovScalars, "Iter[%d] full search direction -------------\n", iter_num); nlp->log->write("", *dir, hovScalars);
     /***************************************************************
      * backtracking line search
      ****************************************************************/
@@ -348,7 +351,7 @@ hiopSolveStatus hiopAlgFilterIPM::run()
 
       nlp->runStats.tmSolverInternal.start(); //---
       //compute infeasibility theta at trial point.
-      infeas_nrm_trial = theta_trial = resid->computeNlpInfeasInfNorm(*it_trial, *_c_trial, *_d_trial);
+      infeas_nrm_trial = theta_trial = resid->computeNlpInfeasNorm(*it_trial, *_c_trial, *_d_trial);
 
       lsNum++;
 

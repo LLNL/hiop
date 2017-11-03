@@ -67,7 +67,6 @@ public:
   inline int      get_num_ranks() const { return num_ranks; }
 #endif
 protected:
-  /* the weight operator/matrix */
   
 #ifdef WITH_MPI
   MPI_Comm comm;
