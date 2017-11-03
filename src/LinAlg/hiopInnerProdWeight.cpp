@@ -20,6 +20,7 @@ hiopInnerProdMatrixFreeWeight::~hiopInnerProdMatrixFreeWeight()
 
 void hiopInnerProdMatrixFreeWeight::apply(const double& beta, hiopVectorPar& y, const double& alpha, const hiopVectorPar& x)
 {
+  assert(false);
   if(1.0!=beta) 
     y.scale(beta);
 
@@ -33,11 +34,15 @@ void hiopInnerProdMatrixFreeWeight::apply(const double& beta, hiopVectorPar& y, 
 // x = This*x
 void hiopInnerProdMatrixFreeWeight::apply(hiopVectorPar& x)
 {
+  assert(false);
   nlp->applyH(x.local_data());
 }
 // y = beta*y + alpha*This^{-1}*x
 void hiopInnerProdMatrixFreeWeight::applyInverse(const double& beta, hiopVectorPar& y, const double& alpha, const hiopVectorPar& x)
 {
+
+  assert(false);
+
   if(1.0!=beta) 
     y.scale(beta);
 
@@ -50,6 +55,7 @@ void hiopInnerProdMatrixFreeWeight::applyInverse(const double& beta, hiopVectorP
 // x = This^{-1}*x
 void hiopInnerProdMatrixFreeWeight::applyInverse(hiopVectorPar& x)
 {
+  assert(false);
   nlp->applyHInv(x.local_data());
 }
 
@@ -57,6 +63,7 @@ void hiopInnerProdMatrixFreeWeight::applyInverse(hiopVectorPar& x)
 void hiopInnerProdMatrixFreeWeight::
 applyAdjoint(const double& beta, hiopVectorPar& y, const hiopMatrix& Ja, const double& alpha, const hiopVectorPar& x)
 {
+  assert(false);
   if(1.0!=beta) y.scale(beta);
 
   if(0.0!=alpha) {
@@ -78,6 +85,7 @@ double hiopInnerProdMatrixFreeWeight::primalnorm(const hiopVectorPar& x)
   //x'*This^{-1}*x
 double hiopInnerProdMatrixFreeWeight::dualnorm(const hiopVectorPar& x)
 {
+  assert(false);
   vec_aux->copyFrom(x);
   nlp->applyHInv(vec_aux->local_data());
   return sqrt(vec_aux->dotProductWith(x));
@@ -85,6 +93,7 @@ double hiopInnerProdMatrixFreeWeight::dualnorm(const hiopVectorPar& x)
 
 double hiopInnerProdMatrixFreeWeight::dotProd(const hiopVectorPar& u, const hiopVectorPar& v)
 {
+
   vec_aux->copyFrom(u);
   nlp->applyH(vec_aux->local_data());
   return vec_aux->dotProductWith(v);
@@ -93,6 +102,7 @@ double hiopInnerProdMatrixFreeWeight::dotProd(const hiopVectorPar& u, const hiop
 //!!! this is a "local" function: the code calling this function is responsible for MPI_sum_reducing !!!
 double hiopInnerProdMatrixFreeWeight::logBarrier(const hiopVectorPar& d, const hiopVectorPar& id)
 {
+
   const double* dd = d.local_data_const();
   const double* ii = id.local_data_const();
 
@@ -125,6 +135,7 @@ void hiopInnerProdMatrixFreeWeight::addLogBarGrad(const hiopVectorPar&x, const h
 						  const double& mu, 
 						  hiopVectorPar& grad)
 {
+  assert(false);
 #ifdef DEEP_CHECKING
   vec_aux->setToConstant(1.);
   bool allone = ix.matchesPattern(*vec_aux);
@@ -145,6 +156,7 @@ double hiopInnerProdMatrixFreeWeight::linearDampingTerm(const hiopVectorPar& d,
 						      const hiopVectorPar& dright,
 						      const double& mu, const double& kappa_d)
 {
+
 #ifdef DEEP_CHECKING
   //check dleft all zero || dleft all one 
   bool ok=true;
