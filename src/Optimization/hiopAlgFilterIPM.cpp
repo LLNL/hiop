@@ -168,6 +168,8 @@ int hiopAlgFilterIPM::startingProcedure(hiopIterate& it_ini,
 
   it_ini.setBoundsDualsToConstant(1.);
 
+
+
   if(0==dualsInitializ) {
     //LSQ-based initialization of yc and yd
 
@@ -305,10 +307,10 @@ hiopSolveStatus hiopAlgFilterIPM::run()
     //first update the Hessian and kkt system
     _Hess->update(*it_curr,*_grad_f,*_Jac_c,*_Jac_d);
     kkt->update(it_curr,_grad_f,_Jac_c,_Jac_d, _Hess);
-
+    //nlp->log->write("resid ppp -----------------", *resid, hovScalars);
     bret = kkt->computeDirections(resid,dir); assert(bret==true);
 
-    //nlp->log->write("", *resid, hovScalars);
+
     //nlp->log->printf(hovIteration, "Iter[%d] full search direction -------------\n", iter_num); nlp->log->write("", *dir, hovIteration);
     //nlp->log->printf(hovScalars, "Iter[%d] full search direction -------------\n", iter_num); nlp->log->write("", *dir, hovScalars);
     /***************************************************************

@@ -84,13 +84,13 @@ go(const hiopIterate& iter,  hiopIterate& iter_plus,
 /** Given xk, zk_l, zk_u, vk_l, and vk_u (contained in 'iter'), this method solves an LSQ problem 
  * corresponding to dual infeasibility equation
  *    min_{y_c,y_d} ||  \nabla f(xk) + J^T_c(xk) y_c + J_d^T(xk) y_d - zk_l+zk_u ||^2
- *                  || - y_d - vk_l + vk_u                                        ||_2,
+ *                  || - y_d - vk_l + vk_u                                       ||_U,R
  *  which is
- *   min_{y_c, y_d} || [ J_c^T  J_d^T ] [ y_c ]  -  [ -\nabla f(xk) + zk_l-zk_u ]  ||^2
- *                  || [  0       I   ] [ y_d ]     [ - vk_l + vk_u               ]  ||_2
+ *   min_{y_c, y_d} || [ J_c^T  J_d^T ] [ y_c ]  -  [ -\nabla f(xk) + zk_l-zk_u ]   ||^2
+ *                  || [  0       I   ] [ y_d ]     [ - vk_l + vk_u               ] ||_U,R
  *  We compute y_c and y_d by solving the linear system
- *   [ J_c J_c^T    J_c J_d^T     ] [ y_c ]  =  [ J_c   0 ] [ -\nabla f(xk) + zk_l-zk_u ] 
- *   [ J_d J_c^T    J_d J_d^T + I ] [ y_d ]     [ J_d   I ] [ - vk_l + vk_u              ]
+ *   [ J_c H J_c^T    J_c H J_d^T     ] [ y_c ]  =  [ J_c   0 ] * [ H 0 ] *  [ -\nabla f(xk) + zk_l-zk_u ) ] 
+ *   [ J_d H J_c^T    J_d H J_d^T + I ] [ y_d ]     [ J_d   I ]   [ 0 I ] *  [ - vk_l + vk_u              ]
  *
  * This linear system is small (of size m=m_E+m_I) (so it is replicated for all MPI ranks).
  * 
@@ -102,25 +102,39 @@ bool hiopDualsLsqUpdate::LSQUpdate(hiopIterate& iter, const hiopVector& grad_f, 
   hiopNlpDenseConstraints* nlpd = dynamic_cast<hiopNlpDenseConstraints*>(_nlp);
   assert(nlpd!=NULL);
 
-  //compute terms in M: Jc * Jc^T, J_c * J_d^T, and J_d * J_d^T
+  //compute terms in M: Jc * H * Jc^T, J_c * H * J_d^T, and J_d * H * J_d^T
   //! streamline the communication (use _mxm as a global buffer for the MPI_Allreduce)
-  jac_c.timesMatTrans(0.0, *_mexme, 1.0, jac_c);
-  jac_c.timesMatTrans(0.0, *_mexmi, 1.0, jac_d);
-  jac_d.timesMatTrans(0.0, *_mixmi, 1.0, jac_d);
+
+  hiopMatrixDense* jaccH = dynamic_cast<const hiopMatrixDense&>(jac_c).new_copy();
+  hiopMatrixDense* jacdH = dynamic_cast<const hiopMatrixDense&>(jac_d).new_copy();
+
+  for(int i=0; i<jaccH->m(); i++) 
+    nlpd->applyH(jaccH->local_data_nonconst()[i]);
+  for(int i=0; i<jacdH->m(); i++) nlpd->applyH(jacdH->local_data_nonconst()[i]);
+  
+  jaccH->timesMatTrans(0.0, *_mexme, 1.0, jac_c);
+  jaccH->timesMatTrans(0.0, *_mexmi, 1.0, jac_d);
+  jacdH->timesMatTrans(0.0, *_mixmi, 1.0, jac_d);
+  // ! original code
+  //jac_c.timesMatTrans(0.0, *_mexme, 1.0, jac_c);
+  //jac_c.timesMatTrans(0.0, *_mexmi, 1.0, jac_d);
+  //jac_d.timesMatTrans(0.0, *_mixmi, 1.0, jac_d);
   _mixmi->addDiagonal(1.0);
 
   M->copyBlockFromMatrix(0,0,*_mexme);
   M->copyBlockFromMatrix(0, nlpd->m_eq(), *_mexmi);
   M->copyBlockFromMatrix(nlpd->m_eq(),nlpd->m_eq(), *_mixmi);
 
-  //nlpd->log->write("aaa", *M, hovSummary);
 #ifdef DEEP_CHECKING
   M_copy->copyFrom(*M);
-  jac_d.timesMatTrans(0.0, *_mixme, 1.0, jac_c);
+  //! original code jac_d.timesMatTrans(0.0, *_mixme, 1.0, jac_c);
+  jacdH->timesMatTrans(0.0, *_mixme, 1.0, jac_c);
   M_copy->copyBlockFromMatrix(nlpd->m_eq(), 0, *_mixme);
   M_copy->assertSymmetry(1e-12);
 #endif
 
+  delete jaccH;
+  delete jacdH;
 
   //bailout in case there is an error in the Cholesky factorization
   int info;
@@ -130,17 +144,22 @@ bool hiopDualsLsqUpdate::LSQUpdate(hiopIterate& iter, const hiopVector& grad_f, 
   }
 
   // compute rhs=[rhsc,rhsd]. 
-  // [ rhsc ] = - [ J_c   0 ] [ vecx ] 
-  // [ rhsd ]     [ J_d   I ] [ vecd ]
+  // [ rhsc ] = - [ J_c   0 ] * H * [ vecx ] 
+  // [ rhsd ]     [ J_d   I ] * H * [ vecd ]
   // [vecx,vecd] = - [ -\nabla f(xk) + zk_l-zk_u, - vk_l + vk_u]. 
   hiopVectorPar& vecx = *_vec_n;
   vecx.copyFrom(grad_f);
   vecx.axpy(-1.0, *iter.get_zl());
   vecx.axpy( 1.0, *iter.get_zu());
+  nlpd->H->apply(dynamic_cast<const hiopVectorPar&>(vecx));
 
   hiopVector& vecd = *_vec_mi;
   vecd.copyFrom(*iter.get_vl());
   vecd.axpy(-1.0, *iter.get_vu());
+
+  //nlpd->log->write("rhsc duals -----------", *rhsc, hovScalars);
+  //rhsc->setToZero();
+  //nlpd->log->write("jac duals ------------", jac_c, hovScalars);
 
   jac_c.timesVec(0.0, *rhsc, -1.0, vecx);
   jac_d.timesVec(0.0, *rhsd, -1.0, vecx);
@@ -149,7 +168,7 @@ bool hiopDualsLsqUpdate::LSQUpdate(hiopIterate& iter, const hiopVector& grad_f, 
   rhs->copyFromStarting(*rhsc, 0);
   rhs->copyFromStarting(*rhsd, nlpd->m_eq());
 
-  //nlpd->log->write("rhs", *rhs, hovSummary);
+  //nlpd->log->write("rhs", *rhs, hovScalars);
 #ifdef DEEP_CHECKING
   rhs_copy->copyFrom(*rhs);
 #endif
@@ -159,11 +178,13 @@ bool hiopDualsLsqUpdate::LSQUpdate(hiopIterate& iter, const hiopVector& grad_f, 
     nlpd->log->printf(hovError, "dual lsq update: error %d in the solution process.\n", info);
     return false;
   }
-
+  
   //update yc and yd in iter_plus
   rhs->copyToStarting(*iter.get_yc(), 0);
   rhs->copyToStarting(*iter.get_yd(), nlpd->m_eq());
 
+  //nlpd->log->write("solution duals -----------", *rhs, hovScalars);
+  //assert(false);
 #ifdef DEEP_CHECKING
   double nrmrhs = rhs_copy->twonorm();
   M_copy->timesVec(-1.0,  *rhs_copy, 1.0, *rhs);

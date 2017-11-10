@@ -1,5 +1,5 @@
 #include "hiopHessianLowRank.hpp"
-
+#include "hiopInnerProdWeight.hpp"
 #include "blasdefs.hpp"
 
 #ifdef WITH_MPI
@@ -121,6 +121,12 @@ bool hiopHessianLowRank::updateLogBarrierDiagonal(const hiopVector& Dx)
 {
   DhInv->setToConstant(sigma);
   DhInv->axpy(1.0,Dx);
+
+  //! inf-dim
+  nlp->H->apply(*DhInv);
+  //~inf-dim
+
+
 #ifdef DEEP_CHECKING
   assert(DhInv->allPositive());
   _Dx->copyFrom(Dx);
@@ -173,7 +179,7 @@ bool hiopHessianLowRank::update(const hiopIterate& it_curr, const hiopVector& gr
   assert(it_curr.sxu->matchesPattern(nlp->get_ixu()));
 #endif
   //on first call l_curr=-1
-  if(l_curr>=0) {
+  if(l_curr>=0 && l_max>0) {
     long long n=grad_f_curr.get_size();
     //compute s_new = x_curr-x_prev
     hiopVectorPar& s_new = new_n_vec1(n);  s_new.copyFrom(*it_curr.x); s_new.axpy(-1.,*_it_prev->x);
@@ -272,7 +278,10 @@ bool hiopHessianLowRank::update(const hiopIterate& it_curr, const hiopVector& gr
 
     nlp->log->printf(hovLinAlgScalarsVerb, "HessianLowRank on first update, just saving iteration\n");
 
-    l_curr++;
+    if(l_max>0)
+      l_curr++;
+    else 
+      l_curr=0;
   }
 
   nlp->runStats.tmSolverInternal.stop();

@@ -119,8 +119,13 @@ int hiopResidual::update(const hiopIterate& it,
   rx->copyFrom(grad);
   //nlp->H->applyInverse(*rx);
 
+  
+
   jac_c.transTimesVec(1.0, *rx, 1.0, *it.yc);
   jac_d.transTimesVec(1.0, *rx, 1.0, *it.yd);
+
+nlp->log->write("it.yc asd ------", *it.yc, hovScalars);
+
   //nlp->H->applyAdjoint( 1.0, *rx, jac_c, 1.0, *it.yc);
   //nlp->H->applyAdjoint( 1.0, *rx, jac_d, 1.0, *it.yd);
 

@@ -34,7 +34,7 @@ void hiopInnerProdMatrixFreeWeight::apply(const double& beta, hiopVectorPar& y, 
 // x = This*x
 void hiopInnerProdMatrixFreeWeight::apply(hiopVectorPar& x)
 {
-  assert(false);
+  //!assert(false);
   nlp->applyH(x.local_data());
 }
 // y = beta*y + alpha*This^{-1}*x

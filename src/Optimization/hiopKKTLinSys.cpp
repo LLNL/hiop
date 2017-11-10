@@ -375,10 +375,18 @@ errorCompressedLinsys(const hiopVectorPar& rx, const hiopVectorPar& ryc, const h
    * [ H_BFGS + Dx   Jc^T  Jd^T   ] [ dx]   [ rx  ]
    * [    Jc          0     0     ] [dyc] = [ ryc ]
    * [    Jd          0   -Dd^{-1}] [dyd]   [ ryd ]
+  /* Solves the system corresponding to directions for x, yc, and yd, namely
+   * [ H_BFGS + Dx   Jc^T  Jd^T   ] [ dx]   [ rx  ]
+   * [    Jc*M        0     0     ] [dyc] = [ ryc ]
+   * [    Jd*M        0   -Dd^{-1}] [dyd]   [ ryd ]
    *
    * This is done by forming and solving
    * [ Jc*(H+Dx)^{-1}*Jc^T   Jc*(H+Dx)^{-1}*Jd^T          ] [dyc] = [ Jc(H+Dx)^{-1} rx - ryc ]
    * [ Jd*(H+Dx)^{-1}*Jc^T   Jd*(H+Dx)^{-1}*Jd^T + Dd^{-1}] [dyd]   [ Jd(H+dx)^{-1} rx - ryd ]
+   * This is done by forming and solving
+   * [ Jc*(H+Dx)^{-1}*Jc^T   Jc*(H+Dx)^{-1}*Jd^T          ] [dyc] = [ Jc(H+Dx)^{-1} rx - ryc ]
+   * [ Jd*(H+Dx)^{-1}*Jc^T   Jd*(H+Dx)^{-1}*Jd^T + Dd^{-1}] [dyd]   [ Jd(H+dx)^{-1} rx - ryd ]
+   *
    * and then solving for dx from
    *  dx = - (H+Dx)^{-1}*(Jc^T*dyc+Jd^T*dyd - rx)
    * 
@@ -391,15 +399,31 @@ solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
 #ifdef DEEP_CHECKING
   //some outputing
   nlp->log->write("KKT Low rank: solve compressed RHS", hovIteration);
-  nlp->log->write("  rx: ",  rx, hovIteration); nlp->log->write(" ryc: ", ryc, hovIteration); nlp->log->write(" ryd: ", ryd, hovIteration);
+  nlp->log->write("  rx: ",  rx, hovIteration); 
+  nlp->log->write(" ryc: ", ryc, hovIteration); 
+  nlp->log->write(" ryd: ", ryd, hovIteration);
   nlp->log->write("  Jc: ", *Jac_c, hovMatrices);
   nlp->log->write("  Jd: ", *Jac_d, hovMatrices);
   nlp->log->write("  Dd_inv: ", *Dd_inv, hovMatrices);
 #endif
 
+  nlp->log->write("  rx: ",  rx, hovScalars); 
+  //nlp->log->write(" ryc: ", ryc, hovScalars); 
+
+  
+  //Jac_c->timesVec(0.0,ryc,1.0,rx);
+  //nlp->log->write("aaaaa ", ryc, hovScalars);
+  //assert(false);
+
   hiopMatrixDense& J = *_kxn_mat;
   J.copyRowsFrom(*Jac_c, nlp->m_eq(), 0); //!opt
   J.copyRowsFrom(*Jac_d, nlp->m_ineq(), nlp->m_eq());//!opt
+
+  //inf-dim
+  for(int i=0; i<J.m(); i++)
+    nlp->applyH(J.local_data_nonconst()[i]);
+  nlp->H->apply(rx);
+  //~inf-dim
 
   //N =  J*(Hess\J')
   //Hess->symmetricTimesMat(0.0, *N, 1.0, J);
@@ -412,15 +436,20 @@ solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
   nlp->log->printf(hovLinAlgScalars, "inf norm of Dd_inv is %g\n", Dd_inv->infnorm());
   N->assertSymmetry(1e-10);
 #endif
+  nlp->log->write("solveCompressed: N is", *N, hovScalars);
+  nlp->log->write("solveCompressed lowrank H:", *Hess, hovScalars);
   //compute the rhs of the lin sys involving N 
   //  first compute (H+Dx)^{-1} rx_tilde and store it temporarily in dx
   Hess->solve(rx, dx);
   // then rhs =   [ Jc(H+Dx)^{-1}*rx - ryc ]
   //              [ Jd(H+dx)^{-1}*rx - ryd ]
+//nlp->log->write("solveCompressed: dxxxxxxxxxxx", dx, hovScalars);
+
   hiopVectorPar& rhs=*_k_vec1;
   rhs.copyFromStarting(ryc,0);
   rhs.copyFromStarting(ryd,nlp->m_eq());
   J.timesVec(-1.0, rhs, 1.0, dx);
+  //nlp->log->write("solveCompressed: rhs before is", rhs, hovScalars);
 
 #ifdef DEEP_CHECKING
   nlp->log->write("solveCompressed: dx sol is", dx, hovMatrices);
@@ -428,12 +457,17 @@ solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
   Nmat->copyFrom(*N);
   hiopVectorPar* r=rhs.new_copy(); //save the rhs to check the norm of the residual
 #endif
+  //nlp->log->write("solveCompressed: dx sol is", dx, hovScalars);
+
 
   //
   //solve N * dyc_dyd = rhs
   //
   int ierr = solveWithRefin(*N,rhs);
   //int ierr = solve(*N,rhs);
+
+
+nlp->log->write("solveCompressed: rhs after is", rhs, hovScalars);
 
   hiopVector& dyc_dyd= rhs;
   dyc_dyd.copyToStarting(dyc,0);
@@ -451,6 +485,8 @@ solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
   nlp->log->write("  dx: ",  dx, hovIteration); nlp->log->write(" dyc: ", dyc, hovIteration); nlp->log->write(" dyd: ", dyd, hovIteration);
   delete r;
 #endif
+
+nlp->log->write("  dx: ",  dx, hovScalars); nlp->log->write(" dyc: ", dyc, hovScalars); nlp->log->write(" dyd: ", dyd, hovScalars);
 }
 
 

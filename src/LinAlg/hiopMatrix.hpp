@@ -127,6 +127,7 @@ public:
   inline long long get_local_size_m() const { return m_local; }
 
   inline double** local_data() const {return M;}
+  inline double** local_data_nonconst() {return M;}
   inline double*  local_buffer() const {return M[0];}
 
   virtual long long m() const {return m_local;}
