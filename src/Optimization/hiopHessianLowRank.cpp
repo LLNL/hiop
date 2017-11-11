@@ -183,7 +183,11 @@ bool hiopHessianLowRank::update(const hiopIterate& it_curr, const hiopVector& gr
     long long n=grad_f_curr.get_size();
     //compute s_new = x_curr-x_prev
     hiopVectorPar& s_new = new_n_vec1(n);  s_new.copyFrom(*it_curr.x); s_new.axpy(-1.,*_it_prev->x);
-    double s_infnorm=s_new.infnorm();
+    //!inf-dim
+    double s_infnorm = nlp->H->primalnorm(s_new);
+    //double s_infnorm=s_new.infnorm();
+    //~inf-dim
+
     if(s_infnorm>=100*std::numeric_limits<double>::epsilon()) { //norm of s not too small
 
       //compute y_new = \grad J(x_curr,\lambda_curr) - \grad J(x_prev, \lambda_curr) (yes, J(x_prev, \lambda_curr))
@@ -195,11 +199,17 @@ bool hiopHessianLowRank::update(const hiopIterate& it_curr, const hiopVector& gr
       _Jac_c_prev->transTimesVec(1.0, y_new,-1.0, *it_curr.yc); //!opt if nlp->Jac_c_isLinear no need for the multiplications
       Jac_d_curr.transTimesVec  (1.0, y_new, 1.0, *it_curr.yd); //!opt same here
       _Jac_d_prev->transTimesVec(1.0, y_new,-1.0, *it_curr.yd);
-      //y_new.axzpy(-1.0, s_new, *it_curr.zl);
-      //y_new.axzpy( 1.0, s_new, *it_curr.zu);
-      
-      double sTy = s_new.dotProductWith(y_new), s_nrm2=s_new.twonorm(), y_nrm2=y_new.twonorm();
 
+       //y_new.axzpy(-1.0, s_new, *it_curr.zl);
+      //y_new.axzpy( 1.0, s_new, *it_curr.zu);
+ 
+      //!inf-dim
+      //double sTy = s_new.dotProductWith(y_new), s_nrm2=s_new.twonorm(), y_nrm2=y_new.twonorm();
+      double sTy = nlp->H->dotProd(s_new,y_new);
+      printf("sTy=%g\n", sTy);
+      double s_nrm2=nlp->H->primalnorm(s_new);
+      double y_nrm2=nlp->H->primalnorm(y_new);
+      //~inf-dim
 #ifdef DEEP_CHECKING
       nlp->log->printf(hovLinAlgScalarsVerb, "hiopHessianLowRank: s^T*y=%20.14e ||s||=%20.14e ||y||=%20.14e\n", sTy, s_nrm2, y_nrm2);
       nlp->log->write("hiopHessianLowRank s_new",s_new, hovIteration);
@@ -208,7 +218,20 @@ bool hiopHessianLowRank::update(const hiopIterate& it_curr, const hiopVector& gr
       if(sTy>s_nrm2*y_nrm2*std::numeric_limits<double>::epsilon()) { //sTy far away from zero
 	//compute the new row in L, update S and Y (either augment them or shift cols and add s_new and y_new)
 	hiopVectorPar& YTs = new_l_vec1(l_curr);
-	Yt->timesVec(0.0, YTs, 1.0, s_new);
+	
+	//! inf-dim
+
+	// !!! Y<- H*Y  therfore Yt = Yt*H
+	Yt->timesVec(0.0, YTs, 1.0, s_new); //original non-inf-dim code - should work for inf-dim as long as we scale Y->HY
+	// inf-dim for(int ii=0; ii<Yt->m(); ii++) {
+	// inf-dim hiopVectorPar* aux=s_new.alloc_clone();
+	// inf-dim aux->copyFrom(Yt->local_data_nonconst()[ii]);
+	// inf-dim YTs.local_data()[ii] = nlp->H->dotProd(*aux,s_new);
+	// inf-dim delete aux;
+	//}
+	nlp->H->apply(y_new);
+	//~ inf-dim
+
 	//update representation
 	if(l_curr<l_max) {
 	  //just grow/augment the matrices
@@ -321,7 +344,13 @@ void hiopHessianLowRank::updateInternalBFGSRepresentation()
   //-- block (1,2)
   hiopMatrixDense& StB0DhInvYmL = DpYtDhInvY; //just a rename
   hiopVectorPar& B0DhInv = new_n_vec1(n);
-  B0DhInv.copyFrom(*DhInv); B0DhInv.scale(sigma);
+  //! inf-dim
+  //B0DhInv.copyFrom(*DhInv); B0DhInv.scale(sigma);
+  B0DhInv.setToConstant(sigma);
+  nlp->H->apply(B0DhInv);
+  B0DhInv.componentMult(*DhInv);
+  //~inf-dim
+
   matTimesDiagTimesMatTrans_local(StB0DhInvYmL, *St, B0DhInv, *Yt);
 #ifdef WITH_MPI
   memcpy(_buff1_lxlx3+l*l, StB0DhInvYmL.local_buffer(), buffsize);
@@ -335,7 +364,11 @@ void hiopHessianLowRank::updateInternalBFGSRepresentation()
   //-- block (2,2)
   hiopVectorPar& theDiag = B0DhInv; //just a rename, also reuses values
   theDiag.addConstant(-1.0); //at this point theDiag=DhInv*B0-I
+  //! inf-dim
+  //theDiag.scale(sigma); //orig code
   theDiag.scale(sigma);
+  nlp->H->apply(theDiag);
+  //~inf-dim
   hiopMatrixDense& StDS = DpYtDhInvY; //a rename
   symmMatTimesDiagTimesMatTrans_local(0.0, StDS, 1.0, *St, theDiag);
 #ifdef WITH_MPI
@@ -406,7 +439,11 @@ void hiopHessianLowRank::solve(const hiopVector& rhs_, hiopVector& x_)
 
   hiopVectorPar& B0DhInvx = new_n_vec1(n);
   B0DhInvx.copyFrom(x); //it contains DhInv*res
-  B0DhInvx.scale(sigma); //B0*(DhInv*res) 
+  //! inf-dim
+  //B0DhInvx.scale(sigma); //B0*(DhInv*res)  (original code, including the comment)
+  B0DhInvx.scale(sigma);
+  nlp->H->apply(B0DhInvx);
+  //~inf-dim
   St->timesVec(0.0,stx,1.0,B0DhInvx);
 
   //3. solve with V
@@ -417,7 +454,11 @@ void hiopHessianLowRank::solve(const hiopVector& rhs_, hiopVector& x_)
   // result = DhInv*(B0*S*spart + Y*ypart)
   hiopVectorPar&  result = new_n_vec1(n);
   St->transTimesVec(0.0, result, 1.0, spart);
+  //! inf-dim
+  //result.scale(sigma); //original code
   result.scale(sigma);
+  nlp->H->apply(result); //H* B_0
+  //~ inf-dim
   Yt->transTimesVec(1.0, result, 1.0, ypart);
   result.componentMult(*DhInv);
 
@@ -460,7 +501,12 @@ symMatTimesInverseTimesMatTrans(double beta, hiopMatrixDense& W,
   //2. compute S1=X*DhInv*B0*S and Y1=X*DhInv*Y
   hiopMatrixDense &S1=new_S1(X,*St), &Y1=new_Y1(X,*Yt); //both are kxl
   hiopVectorPar& B0DhInv = new_n_vec1(n);
-  B0DhInv.copyFrom(*DhInv); B0DhInv.scale(sigma);
+  //! inf-dim
+  //B0DhInv.copyFrom(*DhInv); B0DhInv.scale(sigma); // original code
+  B0DhInv.copyFrom(*DhInv); 
+  nlp->H->apply(B0DhInv);
+  B0DhInv.scale(sigma);
+  //~ inf-dim
   matTimesDiagTimesMatTrans_local(S1, X, B0DhInv, *St);
   matTimesDiagTimesMatTrans_local(Y1, X, *DhInv,  *Yt);
 
