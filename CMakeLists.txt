@@ -67,6 +67,7 @@ install(FILES src/Interface/hiopInterface.hpp
 	      src/Optimization/hiopDualsUpdater.hpp
 	      src/LinAlg/hiopVector.hpp
 	      src/LinAlg/hiopMatrix.hpp
+	      src/LinAlg/hiopInnerProdWeight.hpp
 	      src/Utils/hiopRunStats.hpp
 	      src/Utils/hiopLogger.hpp
 	      src/Utils/hiopTimer.hpp

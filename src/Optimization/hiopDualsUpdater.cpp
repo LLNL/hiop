@@ -151,7 +151,7 @@ bool hiopDualsLsqUpdate::LSQUpdate(hiopIterate& iter, const hiopVector& grad_f, 
   vecx.copyFrom(grad_f);
   vecx.axpy(-1.0, *iter.get_zl());
   vecx.axpy( 1.0, *iter.get_zu());
-  nlpd->H->apply(dynamic_cast<const hiopVectorPar&>(vecx));
+  nlpd->H->apply(dynamic_cast<hiopVectorPar&>(vecx));
 
   hiopVector& vecd = *_vec_mi;
   vecd.copyFrom(*iter.get_vl());
