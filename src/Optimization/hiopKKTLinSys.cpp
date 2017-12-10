@@ -407,7 +407,7 @@ solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
   nlp->log->write("  Dd_inv: ", *Dd_inv, hovMatrices);
 #endif
 
-  nlp->log->write("  rx: ",  rx, hovScalars); 
+  //nlp->log->write("  rx: ",  rx, hovScalars); 
   //nlp->log->write(" ryc: ", ryc, hovScalars); 
 
   
@@ -436,8 +436,8 @@ solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
   nlp->log->printf(hovLinAlgScalars, "inf norm of Dd_inv is %g\n", Dd_inv->infnorm());
   N->assertSymmetry(1e-10);
 #endif
-  nlp->log->write("solveCompressed: N is", *N, hovScalars);
-  nlp->log->write("solveCompressed lowrank H:", *Hess, hovScalars);
+  //nlp->log->write("solveCompressed: N is", *N, hovScalars);
+  //nlp->log->write("solveCompressed lowrank H:", *Hess, hovScalars);
   //compute the rhs of the lin sys involving N 
   //  first compute (H+Dx)^{-1} rx_tilde and store it temporarily in dx
   Hess->solve(rx, dx);
@@ -467,7 +467,7 @@ solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
   //int ierr = solve(*N,rhs);
 
 
-nlp->log->write("solveCompressed: rhs after is", rhs, hovScalars);
+  //nlp->log->write("solveCompressed: rhs after is", rhs, hovScalars);
 
   hiopVector& dyc_dyd= rhs;
   dyc_dyd.copyToStarting(dyc,0);
@@ -486,7 +486,7 @@ nlp->log->write("solveCompressed: rhs after is", rhs, hovScalars);
   delete r;
 #endif
 
-nlp->log->write("  dx: ",  dx, hovScalars); nlp->log->write(" dyc: ", dyc, hovScalars); nlp->log->write(" dyd: ", dyd, hovScalars);
+  //nlp->log->write("  dx: ",  dx, hovScalars); nlp->log->write(" dyc: ", dyc, hovScalars); nlp->log->write(" dyd: ", dyd, hovScalars);
 }
 
 

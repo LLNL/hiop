@@ -162,7 +162,7 @@ nlp->log->write("it.yc asd ------", *it.yc, hovScalars);
   //~! nrm_nlp_optim = fmax(nrm_nlp_optim, rd->infnorm_local());
   aux = rd->infnorm();
   nrm_nlp_optim = fmax(nrm_nlp_optim, aux); 
-  nlp->log->printf(hovScalars,"resid:update: inf_Hinv norm rd=%g ; inf component of it is %g\n", rd->infnorm_local(), aux);
+  nlp->log->printf(hovScalars,"resid:update: inf norm rd=%g \n", aux);
   logprob.addNonLogBarTermsToGrad_d(-1.0,*rd);
   //~! nrm_bar_optim = fmax(nrm_bar_optim, rd->infnorm_local());
   nrm_bar_optim = fmax(nrm_bar_optim, rd->infnorm()); 
@@ -271,7 +271,8 @@ nlp->log->write("it.yc asd ------", *it.yc, hovScalars);
     rsvl->axzpy(-1.0, *it.sdl, *it.vl);
     if(nlp->m_ineq_low()<nlp->m_ineq()) rsvl->selectPattern(nlp->get_idl());
     //~! nrm_nlp_complem = fmax(nrm_nlp_complem, rsvl->infnorm_local());
-    aux = nlp->H->primalnorm(*rsvl);
+    //aux = nlp->H->primalnorm(*rsvl);
+    aux = rsvl->infnorm_local();
     nrm_nlp_complem = fmax(nrm_nlp_complem, aux);
     //aux = rsvl->infnorm();
     //add mu
@@ -287,7 +288,8 @@ nlp->log->write("it.yc asd ------", *it.yc, hovScalars);
     rsvu->axzpy(-1.0, *it.sdu, *it.vu);
     if(nlp->m_ineq_upp()<nlp->m_ineq()) rsvu->selectPattern(nlp->get_idu());
     //~! nrm_nlp_complem = fmax(nrm_nlp_complem, rsvu->infnorm_local());
-    aux = nlp->H->primalnorm(*rsvu);
+    //aux = nlp->H->primalnorm(*rsvu);
+    aux = rsvu->infnorm_local();
     nrm_nlp_complem = fmax(nrm_nlp_complem, aux);
 
     //add mu

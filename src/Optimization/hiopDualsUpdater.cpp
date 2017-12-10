@@ -26,7 +26,7 @@ hiopDualsLsqUpdate::hiopDualsLsqUpdate(hiopNlpFormulation* nlp)
   _mixme = new hiopMatrixDense(nlpd->m_ineq(), nlpd->m_eq());
 #endif
   //user options
-  recalc_lsq_duals_tol = 1e-6;
+  recalc_lsq_duals_tol = 1e-1;
 };
 
 hiopDualsLsqUpdate::~hiopDualsLsqUpdate()

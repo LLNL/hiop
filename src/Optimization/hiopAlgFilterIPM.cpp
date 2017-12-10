@@ -611,7 +611,7 @@ evalNlpAndLogErrors(const hiopIterate& it, const hiopResidual& resid, const doub
   resid.getBarrierErrors(logoptim, logfeas, logcomplem);
 
   //finally, the scaled barrier error
-  logoverall = fmax(logoptim/sd, fmax(logfeas, logcomplem/sc));
+  logoverall = fmax(logoptim/sd, fmax(logfeas, 0.0)); //;logcomplem/sc));
   nlp->runStats.tmSolverInternal.start();
   return true;
 }

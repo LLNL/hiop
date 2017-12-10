@@ -25,7 +25,7 @@ namespace hiop
 {
 
 hiopHessianLowRank::hiopHessianLowRank(hiopNlpDenseConstraints* nlp_, int max_mem_len)
-  : l_max(max_mem_len), l_curr(-1), sigma(1.), sigma0(1.), nlp(nlp_), matrixChanged(false)
+  : l_max(max_mem_len), l_curr(-1), sigma(1.), sigma0(5e2), nlp(nlp_), matrixChanged(false)
 {
   DhInv = dynamic_cast<hiopVectorPar*>(nlp->alloc_primal_vec());
   St = nlp->alloc_multivector_primal(0,l_max);
@@ -62,7 +62,7 @@ hiopHessianLowRank::hiopHessianLowRank(hiopNlpDenseConstraints* nlp_, int max_me
   _V_ipiv_vec=NULL; _V_ipiv_size=-1;
 
   sigma=sigma0;
-  sigma_update_strategy = SIGMA_STRATEGY1;
+  sigma_update_strategy = SIGMA_STRATEGY1;//SIGMA_CONSTANT;//SIGMA_STRATEGY1;
   sigma_safe_min=1e-8;
   sigma_safe_max=1e+8;
   nlp->log->printf(hovScalars, "Hessian Low Rank: initial sigma is %g\n", sigma);
@@ -206,7 +206,7 @@ bool hiopHessianLowRank::update(const hiopIterate& it_curr, const hiopVector& gr
       //!inf-dim
       //double sTy = s_new.dotProductWith(y_new), s_nrm2=s_new.twonorm(), y_nrm2=y_new.twonorm();
       double sTy = nlp->H->dotProd(s_new,y_new);
-      printf("sTy=%g\n", sTy);
+      nlp->log->printf(hovWarning, "sTy=%g sigma=%g\n", sTy,sigma);
       double s_nrm2=nlp->H->primalnorm(s_new);
       double y_nrm2=nlp->H->primalnorm(y_new);
       //~inf-dim
@@ -281,10 +281,12 @@ bool hiopHessianLowRank::update(const hiopIterate& it_curr, const hiopVector& gr
 	sigma=fmax(fmin(sigma_safe_max, sigma), sigma_safe_min);
 	nlp->log->printf(hovLinAlgScalars, "hiopHessianLowRank: sigma was updated to %22.16e\n", sigma);
       } else { //sTy is too small or negative -> skip
-	 nlp->log->printf(hovLinAlgScalars, "hiopHessianLowRank: s^T*y=%12.6e not positive enough... skipping the Hessian update\n", sTy);
+	 nlp->log->printf(hovWarning, "hiopHessianLowRank: s^T*y=%12.6e not positive enough... skipping the Hessian update\n", sTy);
+	 //nlp->log->printf(hovScalars, "hiopHessianLowRank: s^T*y=%12.6e not positive enough... skipping the Hessian update\n", sTy);
       }
     } else {// norm of s_new is too small -> skip
-      nlp->log->printf(hovLinAlgScalars, "hiopHessianLowRank: ||s_new||=%12.6e too small... skipping the Hessian update\n", s_infnorm);
+      //nlp->log->printf(hovLinAlgScalars, "hiopHessianLowRank: ||s_new||=%12.6e too small... skipping the Hessian update\n", s_infnorm);
+      nlp->log->printf(hovWarning, "hiopHessianLowRank: ||s_new||=%12.6e too small... skipping the Hessian update\n", s_infnorm);
     }
 
     //save this stuff for next update
