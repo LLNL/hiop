@@ -48,3 +48,10 @@ HiOp has been developed under the financial support of:
 - Lawrence Livermore National Laboratory, thorugh the LDRD program
 - Department of Energy, Office of Advanced Scientific Computing Research
 
+## Copywright
+Copyright (c) 2017, Lawrence Livermore National Security, LLC. LLNL-CODE-742473. All rights reserved.
+
+Produced at the Lawrence Livermore National Laboratory. Written by Cosmin G. Petra, petra1@llnl.gov. 
+
+See [COPYRIGHT](COPYWRIGHT) for complete copywright information.
+
