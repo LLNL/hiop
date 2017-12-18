@@ -1,6 +1,7 @@
 
 
 # HiOp - HPC solver for optimization
+HiOp is an optimization solver for solving certain mathematical optimization problems expressed as nonlinear programming problems. HiOp is a lightweight HPC solver that leverages application's existing data parallelism to parallelize the optimization iterations by using specialized linear algebra kernels.
 
 ## Build/install instructions
 HiOp uses a CMake-based build system. There are no customization made to CMake, hence, all the standard CMake options apply.
