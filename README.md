@@ -48,10 +48,9 @@ HiOp has been developed under the financial support of:
 - Lawrence Livermore National Laboratory, thorugh the LDRD program
 - Department of Energy, Office of Advanced Scientific Computing Research
 
-## Copywright
-Copyright (c) 2017, Lawrence Livermore National Security, LLC. LLNL-CODE-742473. All rights reserved.
+## Copyright
+Copyright (c) 2017, Lawrence Livermore National Security, LLC. All rights reserved. Produced at the Lawrence Livermore National Laboratory. LLNL-CODE-742473. Written by Cosmin G. Petra, petra1@llnl.gov. 
 
-Produced at the Lawrence Livermore National Laboratory. Written by Cosmin G. Petra, petra1@llnl.gov. 
-
-See [COPYRIGHT](COPYWRIGHT) for complete copywright information.
+HiOp is free software; you can modify it and/or redistribute it under the terms of the BSD 3-clause license. See [COPYRIGHT](/COPYRIGHT) and [LICENSE](/LICENSE) for complete copyright and license information.
+ 
 
