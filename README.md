@@ -24,7 +24,7 @@ $> cmake -DCMAKE_INSTALL_PREFIX=/usr/lib/hiop ..'
 
 ### HiOp-specific build options
 * Enable/disable MPI: *-DWITH_MPI=[ON/OFF]* (by default ON)
-* Ultra safety checks: *-DEEP_CHECKING=[ON/OFF]* (by default ON) used for increased robustness and self-diagnostication. Disabling DEEP_CHECKING usually provides 30-40% execution speedup in HiOp.
+* Ultra safety checks: *-DEEP_CHECKING=[ON/OFF]* (by default ON) used for increased robustness and self-diagnostics. Disabling DEEP_CHECKING usually provides 30-40% execution speedup in HiOp.
 
 For example:
 ```shell 
@@ -45,7 +45,7 @@ HiOp requires LAPACK and BLAS. MPI is optional. All these dependencies are autom
 ## Acknowledgments
 
 HiOp has been developed under the financial support of: 
-- Lawrence Livermore National Laboratory, thorugh the LDRD program
+- Lawrence Livermore National Laboratory, through the LDRD program
 - Department of Energy, Office of Advanced Scientific Computing Research
 
 ## Copyright
