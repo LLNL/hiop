@@ -247,9 +247,9 @@ hiopSolveStatus hiopAlgFilterIPM::run()
     bret = evalNlpAndLogErrors(*it_curr, *resid, _mu, 
 			       _err_nlp_optim, _err_nlp_feas, _err_nlp_complem, _err_nlp, 
 			       _err_log_optim, _err_log_feas, _err_log_complem, _err_log); assert(bret);
-    nlp->log->printf(hovScalars, "  Nlp    errs: pr-infeas:%20.14e   dual-infeas:%20.14e  comp:%20.14e  overall:%20.14e\n",
+    nlp->log->printf(hovSummary, "  Nlp    errs: pr-infeas:%20.14e   dual-infeas:%20.14e  comp:%20.14e  overall:%20.14e\n",
 		     _err_nlp_feas, _err_nlp_optim, _err_nlp_complem, _err_nlp);
-    nlp->log->printf(hovScalars, "  LogBar errs: pr-infeas:%20.14e   dual-infeas:%20.14e  comp:%20.14e  overall:%20.14e\n",
+    nlp->log->printf(hovSummary, "  LogBar errs: pr-infeas:%20.14e   dual-infeas:%20.14e  comp:%20.14e  overall:%20.14e\n",
 		     _err_log_feas, _err_log_optim, _err_log_complem, _err_log);
     outputIteration(lsStatus, lsNum);
     //user callback
@@ -289,7 +289,7 @@ hiopSolveStatus hiopAlgFilterIPM::run()
       bret = evalNlpAndLogErrors(*it_curr, *resid, _mu, 
 				 _err_nlp_optim, _err_nlp_feas, _err_nlp_complem, _err_nlp, 
 				 _err_log_optim, _err_log_feas, _err_log_complem, _err_log); assert(bret);
-      nlp->log->printf(hovScalars, "  Nlp    errs: pr-infeas:%20.14e   dual-infeas:%20.14e  comp:%20.14e  overall:%20.14e\n",
+      nlp->log->printf(hovScalars, "(-upd mu-)\n  Nlp    errs: pr-infeas:%20.14e   dual-infeas:%20.14e  comp:%20.14e  overall:%20.14e\n",
 		       _err_nlp_feas, _err_nlp_optim, _err_nlp_complem, _err_nlp);
       nlp->log->printf(hovScalars, "  LogBar errs: pr-infeas:%20.14e   dual-infeas:%20.14e  comp:%20.14e  overall:%20.14e\n",
 		       _err_log_feas, _err_log_optim, _err_log_complem, _err_log);    
@@ -372,11 +372,13 @@ hiopSolveStatus hiopAlgFilterIPM::run()
 	    break;
 	  } else {
 	    //there is no sufficient progress 
+	    printf("!!! insuff progr\n");
 	    _alpha_primal *= 0.5;
 	    continue;
 	  }
 	} else {
 	  //it is in the filter 
+	  printf("!!!  in filter\n");
 	  _alpha_primal *= 0.5;
 	  continue;
 	}  
@@ -391,6 +393,10 @@ hiopSolveStatus hiopAlgFilterIPM::run()
 	  nlp->runStats.tmSolverInternal.start(); //---
 	}
 	nlp->log->printf(hovLinesearch, "Linesearch: grad_phi_dx = %22.15e\n", grad_phi_dx);
+
+	nlp->log->printf(hovSummary, "dir_deriv %g  %.10f %.10f  %g\n",grad_phi_dx, logbar->f_logbar_trial, logbar->f_logbar, _alpha_primal);
+
+
 	//nlp->log->printf(hovSummary, "Linesearch: grad_phi_dx = %22.15e      %22.15e >   %22.15e  \n", grad_phi_dx, _alpha_primal*pow(-grad_phi_dx,s_phi), delta*pow(theta,s_theta));
 	//nlp->log->printf(hovSummary, "Linesearch: s_phi=%22.15e;   s_theta=%22.15e; theta=%22.15e; delta=%22.15e \n", s_phi, s_theta, theta, delta);
 	//this is the actual switching condition
@@ -401,7 +407,9 @@ hiopSolveStatus hiopAlgFilterIPM::run()
 	    nlp->log->printf(hovLinesearchVerb, "Linesearch: accepting based on Armijo (switch cond also passed)\n");
 	    break; //iterate good to go since it satisfies Armijo
 	  } else {  //Armijo is not satisfied
-	    _alpha_primal *= 0.5; //reduce step and try again
+	    nlp->log->printf(hovSummary, "!!! armijo not satisfied dir_deriv %g  %.10f %.10f  %g\n",grad_phi_dx, logbar->f_logbar_trial, logbar->f_logbar, _alpha_primal);
+	    _alpha_primal *= 0.25; //reduce step and try again
+	    lsStatus=3;break;
 	    continue;
 	  }
 	} else {//switching condition does not hold  
@@ -417,11 +425,13 @@ hiopSolveStatus hiopAlgFilterIPM::run()
 	      break;
 	    } else {
 	      //there is no sufficient progress 
+	      printf("!!! no sufficient progress - sqitch cond not satisf\n");
 	      _alpha_primal *= 0.5;
 	      continue;
 	    }
 	  } else {
 	    //it is in the filter 
+	    printf("!!! in the filter - sqitch cond not satisf\n");
 	    _alpha_primal *= 0.5;
 	    continue;
 	  } 
@@ -591,27 +601,39 @@ evalNlpAndLogErrors(const hiopIterate& it, const hiopResidual& resid, const doub
 {
   nlp->runStats.tmSolverInternal.start();
 
+  double normOfOne = sqrt(nlp->H->totalVolume());
+
   long long n=nlp->n_complem(), m=nlp->m();
   //the "total" norms of the duals
   //  nrmDualEqu  = ( ||yc||_inf + ||yd||_inf )   
   //  nrmDualBou  = ( ||zl||_H + ||zu||_H + ||vl||_inf + ||vu||_inf )  
   double nrmDualBou, nrmDualEqu;
-  it.totalNormOfDuals(nrmDualEqu, nrmDualBou);
+  //it.totalNormOfDuals(nrmDualEqu, nrmDualBou);
+  //  nrmDualBou /= (normOfOne+m); nrmDualEqu /= m; 
+
+  /*  magEq  = ( ||yc||_1 + ||yd||_1 ) / (2*m)   (--these are fin-dim norms)
+   *  magBnd = ( ||zl||_H / ||1||_H + ||zu||_H / ||1||_H + ||vl||_1/m + ||vu||_1/m )  */
+  it.totalNormOfDuals_scaled(normOfOne, nrmDualEqu, nrmDualBou);
 
   //scaling factors
-  double sd = fmax(p_smax,(nrmDualBou/4+nrmDualEqu/2)/(n+m)) / p_smax;
+  double sd = fmax(p_smax,(nrmDualBou/4+nrmDualEqu/2)) / p_smax;
   double sc = n==0?0:fmax(p_smax,nrmDualBou/4) / p_smax;
   //actual nlp errors 
   resid.getNlpErrors(nlpoptim, nlpfeas, nlpcomplem);
+  nlpcomplem /= normOfOne;
+
+  nlp->log->printf(hovSummary, "s_max=%g  sc=%g  sd=%g nrmDualBouScaled=%g nrmDualEquScaled=%g\n", p_smax, sc, sd, nrmDualBou, nrmDualEqu);
 
   //finally, the scaled nlp error
   nlpoverall = fmax(nlpoptim/sd, fmax(nlpfeas, nlpcomplem/sc));
 
   //actual log errors
   resid.getBarrierErrors(logoptim, logfeas, logcomplem);
+  logcomplem  /= normOfOne;
 
   //finally, the scaled barrier error
-  logoverall = fmax(logoptim/sd, fmax(logfeas, 0.0)); //;logcomplem/sc));
+  //logoverall = fmax(logoptim/sd, fmax(logfeas, 0.0)); //;logcomplem/sc));
+  logoverall = fmax(logoptim/sd, fmax(logfeas, logcomplem/sc));
   nlp->runStats.tmSolverInternal.start();
   return true;
 }
@@ -651,19 +673,19 @@ bool hiopAlgFilterIPM::evalNlp_derivOnly(hiopIterate& iter,
 void hiopAlgFilterIPM::outputIteration(int lsStatus, int lsNum)
 {
   if(iter_num/10*10==iter_num) 
-    nlp->log->printf(hovSummary, "iter    objective     inf_pr     inf_du   lg(mu)  alpha_du   alpha_pr linesrch\n");
+    nlp->log->printf(hovSummary, "iter    objective     inf_pr     inf_du    compl    lg(mu)  alpha_du   alpha_pr linesrch\n");
 
   if(lsStatus==-1) 
-    nlp->log->printf(hovSummary, "%4d %14.7e %7.3e  %7.3e %6.2f  %7.3e  %7.3e  -(-)\n",
-		     iter_num, _f_nlp, _err_nlp_feas, _err_nlp_optim, log10(_mu), _alpha_dual, _alpha_primal); 
+    nlp->log->printf(hovSummary, "%4d %14.7e %7.3e  %7.3e %7.3e %6.2f  %7.3e  %7.3e  -(-)\n",
+		     iter_num, _f_nlp, _err_nlp_feas, _err_nlp_optim, _err_nlp_complem, log10(_mu), _alpha_dual, _alpha_primal); 
   else {
     char stepType[2];
     if(lsStatus==1) strcpy(stepType, "s");
     else if(lsStatus==2) strcpy(stepType, "h");
     else if(lsStatus==3) strcpy(stepType, "f");
     else strcpy(stepType, "?");
-    nlp->log->printf(hovSummary, "%4d %14.7e %7.3e  %7.3e %6.2f  %7.3e  %7.3e  %d(%s)\n",
-		     iter_num, _f_nlp, _err_nlp_feas, _err_nlp_optim, log10(_mu), _alpha_dual, _alpha_primal, lsNum, stepType); 
+    nlp->log->printf(hovSummary, "%4d %14.7e %7.3e  %7.3e %7.3e %6.2f  %7.3e  %7.3e  %d(%s)\n",
+		     iter_num, _f_nlp, _err_nlp_feas, _err_nlp_optim, _err_nlp_complem, log10(_mu), _alpha_dual, _alpha_primal, lsNum, stepType); 
   }
 }
 

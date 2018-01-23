@@ -49,6 +49,7 @@ public:
     f_logbar = f + aux;
 
 #ifdef DEEP_CHECKING
+    nlp->log->printf(hovSummary, "log barrier part: %g\n", aux);
     nlp->log->write("gradx_log_bar grad_f:", *_grad_x_logbar, hovLinesearchVerb);
     //nlp->log->write("gradx_log_bar grad_f:", *_grad_x_logbar, hovScalars);
 #endif

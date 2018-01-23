@@ -37,6 +37,17 @@ void hiopInnerProdMatrixFreeWeight::apply(hiopVectorPar& x)
   //!assert(false);
   nlp->applyH(x.local_data());
 }
+
+/* return the Lebesque measure of the domain Omega */
+double hiopInnerProdMatrixFreeWeight::totalVolume()
+{
+  double vol;
+  vec_aux->setToConstant(1.);
+  nlp->applyH(vec_aux->local_data());
+  //take one norm which is  computing the sum of the elements in this case (since the elems are positive)
+  return vec_aux->onenorm();
+}
+
 // y = beta*y + alpha*This^{-1}*x
 void hiopInnerProdMatrixFreeWeight::applyInverse(const double& beta, hiopVectorPar& y, const double& alpha, const hiopVectorPar& x)
 {
@@ -117,7 +128,7 @@ double hiopInnerProdMatrixFreeWeight::logBarrier(const hiopVectorPar& d, const h
 #endif
   double logbar=0.0;
   for(int i=0; i<loc_n; i++) {
-    logbar += mm[i]*dd[i]*ii[i];
+    logbar += mm[i]*log(dd[i])*ii[i];
 #ifdef DEEP_CHECKING
     allNonzero = allNonzero && (ii[i]==1.0);
     //if(ii[i]!=1.) printf("-- %d %d\n", i, allNonzero);

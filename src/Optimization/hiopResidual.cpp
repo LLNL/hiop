@@ -278,7 +278,7 @@ nlp->log->write("it.yc asd ------", *it.yc, hovScalars);
     //add mu
     rsvl->addConstant_w_patternSelect(mu,nlp->get_idl());
     //~! nrm_bar_complem = fmax(nrm_bar_complem, rsvl->infnorm_local());
-    nrm_bar_complem = fmax(nrm_nlp_complem, rsvl->infnorm());
+    nrm_bar_complem = fmax(nrm_bar_complem, rsvl->infnorm());
     nlp->log->printf(hovScalars,"resid:update: H norm rsvl=%g\n", aux);
   }
 

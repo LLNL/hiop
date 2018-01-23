@@ -42,6 +42,11 @@ namespace hiop
     virtual double primalnorm(const hiopVectorPar& x) {return x.twonorm();}
     virtual double dualnorm(const hiopVectorPar& x) {return x.twonorm();}
     virtual double dotProd(const hiopVectorPar& u, const hiopVectorPar& v) { return u.dotProductWith(v); }
+
+    /* return the Lebesque measure of the domain Omega */
+    virtual double totalVolume() {assert(false); return 1.0; }
+
+
     virtual bool identityAsVec(hiopVectorPar& d) { assert(false && "not yet implemented."); return true;}
 
     /* applies an adjoint operator given by a finite dimensional matrix approximation 
@@ -99,6 +104,7 @@ namespace hiop
     virtual double primalnorm(const hiopVectorPar& x);
     virtual double dualnorm(const hiopVectorPar& x);
     virtual double dotProd(const hiopVectorPar& u, const hiopVectorPar& v); 
+    virtual double totalVolume();
     virtual bool identityAsVec(hiopVectorPar& d) { assert(false && "not yet implemented."); return true;}
     //compute integral d(t) dt = e'* H * d; considers only entries i such that id[i]==1
     //!!! this is a "local" function: the code calling this function is responsible for sum_reducing !!!

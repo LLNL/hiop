@@ -200,8 +200,11 @@ void hiopIterate::totalNormOfDuals(double& nrmEq, double& nrmBnd) const
   //!opt - work locally with all the vectors. This will result in only one MPI_Allreduce call
 
   //even though zl and zu are duals, they are mapped through the Riesz mapping and live in the primal space.
+  
   nrmBnd  = nlp->H->primalnorm(*zl);
+  nlp->log->printf(hovSummary, "nrmBnd1: %g\n", nrmBnd);
   nrmBnd += nlp->H->primalnorm(*zu);
+  nlp->log->printf(hovSummary, "nrmBnd2: %g\n", nrmBnd);
   //these are fin-dim duals and inf-dim-Hiop uses the R^n inf-norm for these
   nrmBnd += vl->infnorm();
   nrmBnd += vu->infnorm();
@@ -209,6 +212,41 @@ void hiopIterate::totalNormOfDuals(double& nrmEq, double& nrmBnd) const
   //inf-dim also here
   nrmEq = yc->infnorm() + yd->infnorm();
 }
+
+/* compute a "total volume" "norm"  for the duals scaled by norm of function 1 and number of variables for 
+ *  the finite dimensional multipliers; the function used in rescaling the conv. tolerances 
+ *  magEq  = ( ||yc||_1 + ||yd||_1 ) / (2*m)   (--these are fin-dim norms)
+ *  magBnd = ( ||zl||_H / ||1||_H + ||zu||_H / ||1||_H + ||vl||_1/m + ||vu||_1/m )  */
+void hiopIterate::totalNormOfDuals_scaled(const double& normOfOneFunc, double& nrmEq, double& nrmBnd) const
+{
+  long long n=nlp->n_complem(), m=nlp->m();
+  #ifdef DEEP_CHECKING
+  assert(zl->matchesPattern(nlp->get_ixl()));
+  assert(zu->matchesPattern(nlp->get_ixu()));
+  assert(vl->matchesPattern(nlp->get_idl()));
+  assert(vu->matchesPattern(nlp->get_idu()));
+#endif
+  //!opt - work locally with all the vectors. This will result in only one MPI_Allreduce call
+
+  //even though zl and zu are duals, they are mapped through the Riesz mapping and live in the primal space.
+  
+  nrmBnd  = nlp->H->primalnorm(*zl) / normOfOneFunc;
+  nlp->log->printf(hovSummary, "nrmBnd1: %g\n", nrmBnd);
+  nrmBnd += nlp->H->primalnorm(*zu) / normOfOneFunc;
+  nlp->log->printf(hovSummary, "nrmBnd2: %g\n", nrmBnd);
+  //these are fin-dim duals 
+  nrmBnd += vl->onenorm()/m;
+  nrmBnd += vu->onenorm()/m;
+
+  nlp->log->write("vl", *vl, hovSummary);
+  nlp->log->write("vu", *vu, hovSummary);
+  nlp->log->write("yc", *yc, hovSummary);
+  nlp->log->write("yd", *yd, hovSummary);
+
+  //inf-dim also here
+  nrmEq = yc->onenorm()/m + yd->onenorm()/m;
+}
+
 
 void hiopIterate::determineSlacks()
 {

@@ -54,9 +54,15 @@ public:
 
   /* compute a "total volume" "norm"/measure  for the duals; used in rescaling the conv. tolerances 
    *  magEq  = ( ||yc||_inf + ||yd||_inf )   (--these are fin-dim norms)
-   *  magBnd = ( ||zl||_H + ||zu||_H + ||vl||_inf + ||vu||_inf )  
-   */
+   *  magBnd = ( ||zl||_H + ||zu||_H + ||vl||_inf + ||vu||_inf )  */
   virtual void totalNormOfDuals(double& nrmEq, double& nrmBnd) const;
+
+  /* compute a "total volume" "norm"  for the duals scaled by norm of function 1 and number of variables for 
+   *  the finite dimensional multipliers; the function used in rescaling the conv. tolerances 
+   *  magEq  = ( ||yc||_1 + ||yd||_1 ) / (2*m)   (--these are fin-dim norms)
+   *  magBnd = ( ||zl||_H / ||1||_H + ||zu||_H / ||1||_H + ||vl||_1/m + ||vu||_inf/m )  */
+  virtual void totalNormOfDuals_scaled(const double& normOfOneFunc, double& nrmEq, double& nrmBnd) const;
+
 
   /* cloning and copying */
   hiopIterate* alloc_clone() const;
