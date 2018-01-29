@@ -569,16 +569,16 @@ int hiopKKTLinSysLowRank::solveWithRefin(hiopMatrixDense& M, hiopVectorPar& rhs)
   //
   // 1. solve
   //
-  dposvx_(&FACT, &UPLO, &N, &NRHS,
-	  A, &LDA,
-	  AF, &LDAF,
-	  &EQUED,
-	  S,
-	  B, &LDB,
-	  X, &LDX,
-	  &RCOND, &FERR, &BERR, 
-	  WORK, IWORK,
-	  &INFO); 
+  DPOSVX(&FACT, &UPLO, &N, &NRHS,
+	 A, &LDA,
+	 AF, &LDAF,
+	 &EQUED,
+	 S,
+	 B, &LDB,
+	 X, &LDX,
+	 &RCOND, &FERR, &BERR, 
+	 WORK, IWORK,
+	 &INFO); 
   //printf("INFO ===== %d  RCOND=%g  FERR=%g   BERR=%g  EQUED=%c\n", INFO, RCOND, FERR, BERR, EQUED);
   //
   // 2. check residual
@@ -615,21 +615,21 @@ int hiopKKTLinSysLowRank::solveWithRefin(hiopMatrixDense& M, hiopVectorPar& rhs)
 
       int _V_ipiv_vec[1000]; double _V_work_vec[1000]; int lwork=1000;
       M.copyFrom(*Aref);
-      dsytrf_(&UPLO, &N, M.local_buffer(), &LDA, _V_ipiv_vec, _V_work_vec, &lwork, &info);
+      DSYTRF(&UPLO, &N, M.local_buffer(), &LDA, _V_ipiv_vec, _V_work_vec, &lwork, &info);
       assert(info==0);
-      dsytrs_(&UPLO, &N, &NRHS, M.local_buffer(), &LDA, _V_ipiv_vec, resid.local_data(), &LDB, &info);
+      DSYTRS(&UPLO, &N, &NRHS, M.local_buffer(), &LDA, _V_ipiv_vec, resid.local_data(), &LDB, &info);
       assert(info==0);
     } else { //iter refin based on symmetric positive definite factorization+solve 
       M.copyFrom(*Aref);
       //for(int i=0; i<4; i++) M.local_data()[i][i] +=1e-8;
-      dpotrf_(&UPLO, &N, M.local_buffer(), &LDA, &info);
+      DPOTRF(&UPLO, &N, M.local_buffer(), &LDA, &info);
       if(info>0)
 	nlp->log->printf(hovError, "hiopKKTLinSysLowRank::factorizeMat: dpotrf (Chol fact) detected %d minor being indefinite.\n", info);
       else
 	if(info<0) 
 	  nlp->log->printf(hovError, "hiopKKTLinSysLowRank::factorizeMat: dpotrf returned error %d\n", info);
       
-      dpotrs_(&UPLO,&N, &NRHS, M.local_buffer(), &LDA, resid.local_data(), &LDA, &info);
+      DPOTRS(&UPLO,&N, &NRHS, M.local_buffer(), &LDA, resid.local_data(), &LDA, &info);
       if(info<0) 
 	nlp->log->printf(hovError, "hiopKKTLinSysLowRank::solveWithFactors: dpotrs returned error %d\n", info);
     }
@@ -709,16 +709,16 @@ int hiopKKTLinSysLowRank::solve(hiopMatrixDense& M, hiopVectorPar& rhs)
   int* IWORK = new int[N];
   int INFO; 
 
-  dposvx_(&FACT, &UPLO, &N, &NRHS,
-	  A, &LDA,
-	  AF, &LDAF,
-	  &EQUED,
-	  S,
-	  B, &LDB,
-	  X, &LDX,
-	  &RCOND, &FERR, &BERR, 
-	  WORK, IWORK,
-	  &INFO); 
+  DPOSVX(&FACT, &UPLO, &N, &NRHS,
+	 A, &LDA,
+	 AF, &LDAF,
+	 &EQUED,
+	 S,
+	 B, &LDB,
+	 X, &LDX,
+	 &RCOND, &FERR, &BERR, 
+	 WORK, IWORK,
+	 &INFO); 
 
   rhs.copyFrom(S);
   nlp->log->write("Scaling S", rhs, hovSummary);
