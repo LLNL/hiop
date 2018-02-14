@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.0.2)
+cmake_minimum_required (VERSION 2.8)
 project (hippopde)
 # enable Fortran for Fortran name mangling
 enable_language(Fortran)
