@@ -151,7 +151,8 @@ void hiopMatrixDense::copyRowsFrom(const hiopMatrixDense& src, int num_rows, int
   assert(row_dest+num_rows<=m_local);
   assert(num_rows<=src.m_local);
 #endif
-  memcpy(M[row_dest], src.M[0], n_local*num_rows*sizeof(double));
+  if(num_rows>0)
+    memcpy(M[row_dest], src.M[0], n_local*num_rows*sizeof(double));
 }
 void hiopMatrixDense::copyBlockFromMatrix(const long i_start, const long j_start,
 					  const hiopMatrixDense& src)

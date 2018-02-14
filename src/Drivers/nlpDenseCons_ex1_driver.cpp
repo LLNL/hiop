@@ -61,9 +61,10 @@ int main(int argc, char **argv)
 {
   int rank=0, numRanks=1;
 #ifdef WITH_MPI
-  MPI_Init(&argc, &argv);
-  assert(MPI_SUCCESS==MPI_Comm_rank(MPI_COMM_WORLD,&rank));
-  assert(MPI_SUCCESS==MPI_Comm_size(MPI_COMM_WORLD,&numRanks));
+  int err;
+  err = MPI_Init(&argc, &argv);                  assert(MPI_SUCCESS==err);
+  err = MPI_Comm_rank(MPI_COMM_WORLD,&rank);     assert(MPI_SUCCESS==err);
+  err = MPI_Comm_size(MPI_COMM_WORLD,&numRanks); assert(MPI_SUCCESS==err);
   if(0==rank) printf("Support for MPI is enabled\n");
 #endif
   bool selfCheck; long long mesh_size; double ratio;

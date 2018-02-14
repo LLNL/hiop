@@ -99,7 +99,7 @@ hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& 
   if(true==interface.get_vecdistrib_info(n_vars,columns_partitioning)) {
     xl = new hiopVectorPar(n_vars, columns_partitioning, comm);
   } else {
-    xu = new hiopVectorPar(n_vars);   
+    xl = new hiopVectorPar(n_vars);   
   }
   delete[] columns_partitioning;
 #else

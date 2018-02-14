@@ -48,6 +48,7 @@ Ex1Meshing1D::Ex1Meshing1D(double a, double b,
 }
 Ex1Meshing1D::~Ex1Meshing1D()
 {
+  delete[] col_partition;
   delete _mass;
 }
 
