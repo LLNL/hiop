@@ -172,7 +172,7 @@ void hiopVectorPar::copyTo(double* dest) const
 double hiopVectorPar::twonorm() const 
 {
   int one=1; int n=n_local;
-  double nrm = dnrm2_(&n,data,&one); 
+  double nrm = DNRM2(&n,data,&one); 
 
 #ifdef WITH_MPI
   nrm *= nrm;
@@ -189,7 +189,7 @@ double hiopVectorPar::dotProductWith( const hiopVector& v_ ) const
   int one=1; int n=n_local;
   assert(this->n_local==v.n_local);
 
-  double dotprod=ddot_(&n, this->data, &one, v.data, &one);
+  double dotprod=DDOT(&n, this->data, &one, v.data, &one);
 
 #ifdef WITH_MPI
   double dotprodG;
@@ -301,14 +301,14 @@ void hiopVectorPar::scale(double num)
 {
   if(1.0==num) return;
   int one=1; int n=n_local;
-  dscal_(&n, &num, data, &one);
+  DSCAL(&n, &num, data, &one);
 }
 
 void hiopVectorPar::axpy(double alpha, const hiopVector& x_)
 {
   const hiopVectorPar& x = dynamic_cast<const hiopVectorPar&>(x_);
   int one = 1; int n=n_local;
-  daxpy_( &n, &alpha, x.data, &one, data, &one );
+  DAXPY( &n, &alpha, x.data, &one, data, &one );
 }
 
 void hiopVectorPar::axzpy(double alpha, const hiopVector& x_, const hiopVector& z_)
@@ -473,7 +473,7 @@ void hiopVectorPar::min( double& m, int& index ) const
 void hiopVectorPar::negate()
 {
   double minusOne=-1.0; int one=1, n=n_local;
-  dscal_(&n, &minusOne, data, &one);
+  DSCAL(&n, &minusOne, data, &one);
 }
 
 void hiopVectorPar::invert()

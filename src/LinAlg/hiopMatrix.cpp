@@ -278,7 +278,7 @@ void hiopMatrixDense::setToConstant(double c)
   
   buf=M[0]; int inc=1;
   for(int i=1; i<m_local; i++)
-   dcopy_(&n_local, buf, &inc, M[i], &inc);
+   DCOPY(&n_local, buf, &inc, M[i], &inc);
   
   //memcpy(M[i], buf, sizeof(double)*n_local); 
   //memcpy has similar performance as dcopy_; both faster than a loop
@@ -348,7 +348,7 @@ void hiopMatrixDense::timesVec(double beta, hiopVector& y_,
   if( MM != 0 && NN != 0 ) {
     // the arguments seem reversed but so is trans='T' 
     // required since we keep the matrix row-wise, while the Fortran/BLAS expects them column-wise
-    dgemv_( &fortranTrans, &NN, &MM, &alpha, &M[0][0], &NN,
+    DGEMV( &fortranTrans, &NN, &MM, &alpha, &M[0][0], &NN,
 	    x.local_data_const(), &incx_y, &beta, y.local_data(), &incx_y );
   } else {
     if( MM != 0 ) y.scale( beta );
@@ -381,7 +381,7 @@ void hiopMatrixDense::transTimesVec(double beta, hiopVector& y_,
   if( MM!=0 && NN!=0 ) {
     // the arguments seem reversed but so is trans='T' 
     // required since we keep the matrix row-wise, while the Fortran/BLAS expects them column-wise
-    dgemv_( &fortranTrans, &NN, &MM, &alpha, &M[0][0], &NN,
+    DGEMV( &fortranTrans, &NN, &MM, &alpha, &M[0][0], &NN,
 	    x.local_data_const(), &incx_y, &beta, y.local_data(), &incx_y );
   } else {
     if( NN != 0 ) y.scale( beta );
@@ -433,7 +433,7 @@ void hiopMatrixDense::timesMat_local(double beta, hiopMatrix& W_, double alpha, 
   int ldx=X.n(), ldm=n_local, ldw=X.n();
 
   double** XM=X.local_data(); double** WM=W.local_data();
-  dgemm_(&trans,&trans, &M,&N,&K, &alpha,XM[0],&ldx, this->M[0],&ldm, &beta,WM[0],&ldw);
+  DGEMM(&trans,&trans, &M,&N,&K, &alpha,XM[0],&ldx, this->M[0],&ldm, &beta,WM[0],&ldw);
 
   /* C = alpha*op(A)*op(B) + beta*C in our case is
      Wt= alpha* Xt  *Mt    + beta*Wt */
@@ -442,7 +442,7 @@ void hiopMatrixDense::timesMat_local(double beta, hiopMatrix& W_, double alpha, 
   //int lda=X.m(), ldb=n_local, ldc=W.n();
   //int M=X.n(), N=this->m(), K=this->n_local;
 
-  //dgemm_(&trans,&trans, &M,&N,&K, &alpha,XM[0],&lda, this->M[0],&ldb, &beta,WM[0],&ldc);
+  //DGEMM(&trans,&trans, &M,&N,&K, &alpha,XM[0],&lda, this->M[0],&ldb, &beta,WM[0],&ldc);
   
 }
 
@@ -466,7 +466,7 @@ void hiopMatrixDense::transTimesMat(double beta, hiopMatrix& W_, double alpha, c
   int M=X.n(), N=n_local, K=X.m();
   double** XM=X.local_data(); double** WM=W.local_data();
   
-  dgemm_(&transX, &transM, &M,&N,&K, &alpha,XM[0],&ldx, this->M[0],&ldm, &beta,WM[0],&ldw);
+  DGEMM(&transX, &transM, &M,&N,&K, &alpha,XM[0],&ldx, this->M[0],&ldm, &beta,WM[0],&ldw);
 }
 
 /* W = beta*W + alpha*this*X^T
@@ -487,7 +487,7 @@ void hiopMatrixDense::timesMatTrans_local(double beta, hiopMatrix& W_, double al
   if(n_local==0) {
     if(beta!=1.0) {
       int one=1; int mn=W.m()*W.n();
-      dscal_(&mn, &beta, W.M[0], &one);
+      DSCAL(&mn, &beta, W.M[0], &one);
     }
     return;
   }
@@ -499,7 +499,7 @@ void hiopMatrixDense::timesMatTrans_local(double beta, hiopMatrix& W_, double al
   int M=X.m(), N=m_local, K=n_local;
   double** XM=X.local_data(); double** WM=W.local_data();
 
-  dgemm_(&transX, &transM, &M,&N,&K, &alpha,XM[0],&ldx, this->M[0],&ldm, &beta,WM[0],&ldw);
+  DGEMM(&transX, &transM, &M,&N,&K, &alpha,XM[0],&ldx, this->M[0],&ldm, &beta,WM[0],&ldw);
 }
 void hiopMatrixDense::timesMatTrans(double beta, hiopMatrix& W_, double alpha, const hiopMatrix& X_) const
 {
@@ -563,13 +563,13 @@ void hiopMatrixDense::addMatrix(double alpha, const hiopMatrix& X_)
 #endif
   //  extern "C" void   daxpy_(int* n, double* da, double* dx, int* incx, double* dy, int* incy );
   int N=m_local*n_local, inc=1;
-  daxpy_(&N, &alpha, X.M[0], &inc, M[0], &inc);
+  DAXPY(&N, &alpha, X.M[0], &inc, M[0], &inc);
 }
 
 double hiopMatrixDense::max_abs_value()
 {
   char norm='M';
-  double maxv = dlange_(&norm, &n_local, &m_local, M[0], &n_local, NULL);
+  double maxv = DLANGE(&norm, &n_local, &m_local, M[0], &n_local, NULL);
 #ifdef WITH_MPI
   double maxvg;
   int ierr=MPI_Allreduce(&maxv,&maxvg,1,MPI_DOUBLE,MPI_MAX,comm); assert(ierr==MPI_SUCCESS);

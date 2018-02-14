@@ -238,7 +238,7 @@ int hiopDualsLsqUpdate::factorizeMat(hiopMatrixDense& M)
 #endif
   if(M.m()==0) return 0;
   char uplo='L'; int N=M.n(), lda=N, info;
-  dpotrf_(&uplo, &N, M.local_buffer(), &lda, &info);
+  DPOTRF(&uplo, &N, M.local_buffer(), &lda, &info);
   if(info>0)
     _nlp->log->printf(hovError, "hiopKKTLinSysLowRank::factorizeMat: dpotrf (Chol fact) detected %d minor being indefinite.\n", info);
   else
@@ -256,7 +256,7 @@ int hiopDualsLsqUpdate::solveWithFactors(hiopMatrixDense& M, hiopVectorPar& r)
   if(M.m()==0) return 0;
   char uplo='L'; //we have upper triangular in C++, but this is lower in fortran
   int N=M.n(), lda=N, nrhs=1, info;
-  dpotrs_(&uplo,&N, &nrhs, M.local_buffer(), &lda, r.local_data(), &lda, &info);
+  DPOTRS(&uplo,&N, &nrhs, M.local_buffer(), &lda, r.local_data(), &lda, &info);
   if(info<0) 
     _nlp->log->printf(hovError, "hiopKKTLinSysLowRank::solveWithFactors: dpotrs returned error %d\n", info);
 #ifdef DEEP_CHECKING

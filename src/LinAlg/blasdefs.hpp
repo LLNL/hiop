@@ -1,20 +1,38 @@
 #ifndef HIOP_BLASDEFS
 #define HIOP_BLASDEFS
 
+#include "FortranCInterface.hpp"
+
+#define DDOT    FC_GLOBAL(ddot, DDOT)
+#define DNRM2   FC_GLOBAL(dnrm2, DNRM2)
+#define DSCAL   FC_GLOBAL(dscal, DSCAL)
+#define DAXPY   FC_GLOBAL(daxpy, DAXPY)
+#define DCOPY   FC_GLOBAL(dcopy, DCOPY)
+#define DGEMV   FC_GLOBAL(dgemv, DGEMV)
+#define DGEMM   FC_GLOBAL(dgemm, DGEMM)
+#define DTRSM   FC_GLOBAL(dtrsm, DTRSM)
+#define DPOTRF  FC_GLOBAL(dpotrf, DPOTRF)
+#define DPOTRS  FC_GLOBAL(dpotrs, DPOTRS)
+#define DSYTRF  FC_GLOBAL(dsytrf, DSYTRF)
+#define DSYTRS  FC_GLOBAL(dsytrs, DSYTRS)
+#define DLANGE  FC_GLOBAL(dlange, DLANGE)
+#define DPOSVX  FC_GLOBAL(dposvx, DPOSVC)
+#define DPOSVXX FC_GLOBAL(dposvxx, DPOSVXX)
+
 namespace hiop
 {
 
-extern "C" double dnrm2_(int* n, double* x, int* incx);
-extern "C" double ddot_ (int* n, double* dx, int* incx, double* dy, int* incy);
-extern "C" void   dscal_(int* n, double* da, double* dx, int* incx);
-extern "C" void   daxpy_(int* n, double* da, double* dx, int* incx, double* dy, int* incy );
-extern "C" void   dcopy_(int* n,  double* da, int* incx, double* dy, int* incy);
-extern "C" void   dgemv_(char* trans, int* m, int* n, double* alpha, double* a, int* lda,
+extern "C" double DNRM2(int* n, double* x, int* incx);
+extern "C" double DDOT(int* n, double* dx, int* incx, double* dy, int* incy);
+extern "C" void   DSCAL(int* n, double* da, double* dx, int* incx);
+extern "C" void   DAXPY(int* n, double* da, double* dx, int* incx, double* dy, int* incy );
+extern "C" void   DCOPY(int* n,  double* da, int* incx, double* dy, int* incy);
+extern "C" void   DGEMV(char* trans, int* m, int* n, double* alpha, double* a, int* lda,
 			 const double* x, int* incx, double* beta, double* y, int* incy );
 /* C := alpha*op( A )*op( B ) + beta*C
  * op( A ) an m by k matrix, op( B ) a  k by n matrix and C an m by n matrix
  */
-extern "C" void   dgemm_(char* transA, char* transB, int* m, int* n, int* k,
+extern "C" void   DGEMM(char* transA, char* transB, int* m, int* n, int* k,
 			 double* alpha, double* a, int* lda,
 			 double* b, int* ldb,
 			 double* beta, double* C, int*ldc);
@@ -28,9 +46,9 @@ extern "C" void   dgemm_(char* transA, char* transB, int* m, int* n, int* k,
  * The matrix X is overwritten on B.
  */
 //!opt DTPTRS packed format triangular solve
-extern "C" void   dtrsm_(char* side, char* uplo, char* transA, char* diag, 
-			 int* M, int* N, 
-			 double* alpha, 
+extern "C" void   DTRSM(char* side, char* uplo, char* transA, char* diag,
+			 int* M, int* N,
+			 double* alpha,
 			 const double* a, int* lda,
 			 double* b, int* ldb);
 
@@ -39,15 +57,15 @@ extern "C" void   dtrsm_(char* side, char* uplo, char* transA, char* diag,
  *   A = U**T * U,  if UPLO = 'U', or  A = L  * L**T,  if UPLO = 'L',
  * where U is an upper triangular matrix and L is lower triangular.
  */
-extern "C" void   dpotrf_(char* uplo, int* N, double* A, int* lda, int* info);
+extern "C" void   DPOTRF(char* uplo, int* N, double* A, int* lda, int* info);
 
 /* solves a system of linear equations A*X = B with a symmetric
  * positive definite matrix A using the Cholesky factorization
  * A = U**T*U or A = L*L**T computed by DPOTRF
- * A contains  the triangular factor U or L 
+ * A contains  the triangular factor U or L
 */
-extern "C" void   dpotrs_(char* uplo, int* N, int* NRHS, 
-			  double*A, int* lda, 
+extern "C" void   DPOTRS(char* uplo, int* N, int* NRHS,
+			  double*A, int* lda,
 			  double* B, int* ldb,
 			  int* info);
 
@@ -61,7 +79,7 @@ extern "C" void   dpotrs_(char* uplo, int* N, int* NRHS,
  *
  *  This is the blocked version of the algorithm, calling Level 3 BLAS.
  */
-extern "C" void dsytrf_( char* UPLO, int* N, double* A, int* LDA, int* IPIV, double* WORK, int* LWORK, int* INFO );
+extern "C" void DSYTRF( char* UPLO, int* N, double* A, int* LDA, int* IPIV, double* WORK, int* LWORK, int* INFO );
 
 /* DSYTRS solves a system of linear equations A*X = B with a real
  *  symmetric matrix A using the factorization A = U*D*U**T or
@@ -69,13 +87,13 @@ extern "C" void dsytrf_( char* UPLO, int* N, double* A, int* LDA, int* IPIV, dou
  *
  * To improve the solution using LAPACK one needs to use DSYRFS.
  */
-extern "C" void dsytrs_( char* UPLO, int* N, int* NRHS, double* A, int* LDA, int* IPIV, double*B, int* LDB, int* INFO );
+extern "C" void DSYTRS( char* UPLO, int* N, int* NRHS, double* A, int* LDA, int* IPIV, double*B, int* LDB, int* INFO );
 
 /* returns the value of the one norm,  or the Frobenius norm, or
  *  the  infinity norm,  or the  element of  largest absolute value  of a
  *  real matrix A.
  */
-extern "C" double   dlange_(char* norm, int* M, int* N, double*A, int* lda, double* work);
+extern "C" double   DLANGE(char* norm, int* M, int* N, double*A, int* lda, double* work);
 
 /* DPOSVX uses the Cholesky factorization A = U**T*U or A = L*L**T to
  compute the solution to a real system of linear equations
@@ -86,16 +104,16 @@ extern "C" double   dlange_(char* norm, int* M, int* N, double*A, int* lda, doub
  Error bounds on the solution and a condition estimate are also
  provided.
 */
-extern "C" void dposvx_(char* FACT, char* UPLO, int* N, int* NRHS,
+extern "C" void DPOSVX(char* FACT, char* UPLO, int* N, int* NRHS,
 			double* A, int* LDA,
 			double*	AF, int* LDAF,
 			char* EQUED,
 			double*	S,
 			double* B, int* LDB,
 			double*	X, int* LDX,
-			double* RCOND, double* FERR, double* BERR, 
+			double* RCOND, double* FERR, double* BERR,
 			double* WORK, int* IWORK,
-			int* 	INFO); 
+			int* 	INFO);
 /* DPOSVXX uses the Cholesky factorization A = U**T*U or A = L*L**T
     to compute the solution to a double precision system of linear equations
     A * X = B, where A is an N-by-N symmetric positive definite matrix
@@ -116,7 +134,7 @@ extern "C" void dposvx_(char* FACT, char* UPLO, int* N, int* NRHS,
     user-provided factorizations and equilibration factors if they
     differ from what DPOSVXX would itself produce.
 */
-extern "C" void dposvxx_(char* FACT, char* UPLO, int* N, int* NRHS,
+extern "C" void DPOSVXX(char* FACT, char* UPLO, int* N, int* NRHS,
 			 double* A, int* LDA,
 			 double* AF, int* LDAF,
 			 char* EQUED,
@@ -127,7 +145,7 @@ extern "C" void dposvxx_(char* FACT, char* UPLO, int* N, int* NRHS,
 			 int* N_ERR_BNDS, double* ERR_BNDS_NORM, double* ERR_BNDS_COMP,
 			 int* NPARAMS, double* PARAMS,
 			 double* WORK, int* IWORK,
-			 int* INFO);	
+			 int* INFO);
 
 };
 #endif

@@ -568,7 +568,7 @@ void hiopHessianLowRank::factorizeV()
 
   int lwork=-1;//inquire sizes
   double Vwork_tmp;
-  dsytrf_(&uplo, &N, V->local_buffer(), &lda, _V_ipiv_vec, &Vwork_tmp, &lwork, &info);
+  DSYTRF(&uplo, &N, V->local_buffer(), &lda, _V_ipiv_vec, &Vwork_tmp, &lwork, &info);
   assert(info==0);
 
   lwork=(int)Vwork_tmp;
@@ -577,7 +577,7 @@ void hiopHessianLowRank::factorizeV()
     _V_work_vec=new hiopVectorPar(lwork);
   } else assert(_V_work_vec);
 
-  dsytrf_(&uplo, &N, V->local_buffer(), &lda, _V_ipiv_vec, _V_work_vec->local_data(), &lwork, &info);
+  DSYTRF(&uplo, &N, V->local_buffer(), &lda, _V_ipiv_vec, _V_work_vec->local_data(), &lwork, &info);
   
   if(info<0)
     nlp->log->printf(hovError, "hiopHessianLowRank::factorizeV error: %d argument to dsytrf has an illegal value\n", -info);
@@ -614,7 +614,7 @@ void hiopHessianLowRank::solveWithV(hiopVectorPar& rhs_s, hiopVectorPar& rhs_y)
   rhs.copyFromStarting(rhs_s,0);
   rhs.copyFromStarting(rhs_y,l);
 
-  dsytrs_(&uplo, &N, &one, V->local_buffer(), &lda, _V_ipiv_vec, rhs.local_data(), &N, &info);
+  DSYTRS(&uplo, &N, &one, V->local_buffer(), &lda, _V_ipiv_vec, rhs.local_data(), &N, &info);
 
   if(info<0) nlp->log->printf(hovError, "hiopHessianLowRank::solveWithV error: %d argument to dsytrf has an illegal value\n", -info);
   assert(info==0);
@@ -657,7 +657,7 @@ void hiopHessianLowRank::solveWithV(hiopMatrixDense& rhs)
 #ifdef DEEP_CHECKING
   assert(N==rhs.n()); 
 #endif
-  dsytrs_(&uplo, &N, &nrhs, V->local_buffer(), &lda, _V_ipiv_vec, rhs.local_buffer(), &ldb, &info);
+  DSYTRS(&uplo, &N, &nrhs, V->local_buffer(), &lda, _V_ipiv_vec, rhs.local_buffer(), &ldb, &info);
 
   if(info<0) nlp->log->printf(hovError, "hiopHessianLowRank::solveWithV error: %d argument to dsytrf has an illegal value\n", -info);
   assert(info==0);
@@ -1433,12 +1433,12 @@ void hiopHessianInvLowRank_obsolette::triangularSolve(const hiopMatrixDense& R, 
   char transA='T'; //to solve with an upper triangular, we force fortran to solve a transpose lower (see above)
   char diag  ='N'; //not a unit triangular
   double one=1.0; int lda=l, ldb=l;
-  dtrsm_(&side,&uplo,&transA,&diag,
-	 &l, //rows of rhs
-	 &k, //columns of rhs
-	 &one,
-	 Rbuf,&lda,
-	 rhsbuf, &ldb);
+  DTRSM(&side,&uplo,&transA,&diag,
+	&l, //rows of rhs
+	&k, //columns of rhs
+	&one,
+	Rbuf,&lda,
+	rhsbuf, &ldb);
   
 }
 
@@ -1458,12 +1458,12 @@ void hiopHessianInvLowRank_obsolette::triangularSolve(const hiopMatrixDense& R, 
   char transA='T'; //to solve with an upper triangular, we ask fortran to solve a transpose lower (see above)
   char diag  ='N'; //not a unit triangular
   double one=1.0; int lda=l, ldb=l, k=1;
-  dtrsm_(&side,&uplo,&transA,&diag,
-	 &l, //rows of rhs
-	 &k, //columns of rhs
-	 &one,
-	 Rbuf,&lda,
-	 rhsbuf, &ldb);
+  DTRSM(&side,&uplo,&transA,&diag,
+	&l, //rows of rhs
+	&k, //columns of rhs
+	&one,
+	Rbuf,&lda,
+	rhsbuf, &ldb);
 }
 void hiopHessianInvLowRank_obsolette::triangularSolveTrans(const hiopMatrixDense& R, hiopVectorPar& rhs)
 {
@@ -1481,12 +1481,12 @@ void hiopHessianInvLowRank_obsolette::triangularSolveTrans(const hiopMatrixDense
   char transA='N'; //to transpose-solve with an upper triangular, we ask fortran to perform a simple lower triangular solve (see above)
   char diag  ='N'; //not a unit triangular
   double one=1.0; int lda=l, ldb=l, k=1;
-  dtrsm_(&side,&uplo,&transA,&diag,
-	 &l, //rows of rhs
-	 &k, //columns of rhs
-	 &one,
-	 Rbuf,&lda,
-	 rhsbuf, &ldb);
+  DTRSM(&side,&uplo,&transA,&diag,
+	&l, //rows of rhs
+	&k, //columns of rhs
+	&one,
+	Rbuf,&lda,
+	rhsbuf, &ldb);
 }
 void hiopHessianInvLowRank_obsolette::growR(const int& lmem_curr, const int& lmem_max, const hiopVectorPar& STy, const double& sTy)
 {
