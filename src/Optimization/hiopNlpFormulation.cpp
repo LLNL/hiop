@@ -47,6 +47,7 @@ hiopNlpFormulation::~hiopNlpFormulation()
   if(H) delete H;
 }
 
+static double eq_scale=1e+4;
 
 hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& interface_)
   : hiopNlpFormulation(interface_), interface(interface_)
@@ -66,16 +67,17 @@ hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& 
 #endif  
   xu = xl->alloc_clone();
 
-  int nlocal=xl->get_local_size();
+  n_vars_local = xl->get_local_size();
+
   double  *xl_vec= xl->local_data(),  *xu_vec= xu->local_data();
-  vars_type = new hiopInterfaceBase::NonlinearityType[nlocal];
+  vars_type = new hiopInterfaceBase::NonlinearityType[n_vars_local];
   bool bret=interface.get_vars_info(n_vars,xl_vec,xu_vec,vars_type); assert(bret);
   //allocate and build ixl(ow) and ix(upp) vectors
   ixl = xu->alloc_clone(); ixu = xu->alloc_clone();
   n_bnds_low_local = n_bnds_upp_local = 0;
   n_bnds_lu = 0;
   double *ixl_vec=ixl->local_data(), *ixu_vec=ixu->local_data();
-  for(int i=0;i<nlocal; i++) {
+  for(int i=0;i<n_vars_local; i++) {
     if(xl_vec[i]>-1e20) { 
       ixl_vec[i]=1.; n_bnds_low_local++;
       if(xu_vec[i]< 1e20) n_bnds_lu++;
@@ -118,6 +120,8 @@ hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& 
     if(gl_vec[i]==gu_vec[i]) {
       cons_eq_type[it_eq]=cons_type[i]; 
       c_rhsvec[it_eq] = gl_vec[i]; 
+      //!
+      c_rhsvec[it_eq] *= eq_scale;
       cons_eq_mapping[it_eq]=i;
       it_eq++;
     } else {
@@ -188,12 +192,19 @@ hiopNlpDenseConstraints::~hiopNlpDenseConstraints()
   if(cons_ineq_mapping) delete[] cons_ineq_mapping;
 }
 
-
+#define OBJ_SCALE 0.1
+static int obj_print=1;
 bool hiopNlpDenseConstraints::eval_f(const double* x, bool new_x, double& f)
 {
   runStats.tmEvalObj.start();
   bool bret = interface.eval_f(n_vars,x,new_x,f);
+  f = f * OBJ_SCALE;
   runStats.tmEvalObj.stop(); runStats.nEvalObj++;
+
+  if(obj_print==1 && OBJ_SCALE!=1) {
+    log->printf(hovSummary, "obj scale * =   %g\n", OBJ_SCALE);
+    obj_print=0;
+  }
   return bret;
 }
 bool hiopNlpDenseConstraints::eval_grad_f(const double* x, bool new_x, double* gradf)
@@ -202,9 +213,14 @@ bool hiopNlpDenseConstraints::eval_grad_f(const double* x, bool new_x, double* g
   runStats.tmEvalGrad_f.start();
   bret = interface.eval_grad_f(n_vars,x,new_x,gradf);
   this->H->transformGradient(gradf);
+
+  for(int i=0; i<n_vars_local; i++)
+    gradf[i] = OBJ_SCALE*gradf[i];
+
   runStats.tmEvalGrad_f.stop(); runStats.nEvalGrad_f++;
   return bret;
 }
+
 bool hiopNlpDenseConstraints::eval_Jac_c(const double* x, bool new_x, double** Jac_c)
 {
   bool bret; 
@@ -212,6 +228,11 @@ bool hiopNlpDenseConstraints::eval_Jac_c(const double* x, bool new_x, double** J
   bret = interface.eval_Jac_cons(n_vars,n_cons,n_cons_eq,cons_eq_mapping,x,new_x,Jac_c);
   this->H->transformJacobian(n_cons_eq,n_vars,Jac_c);
   runStats.tmEvalJac_con.stop(); runStats.nEvalJac_con_eq++;
+
+  //! 
+  for(int i=0; i<n_vars_local; i++)
+    Jac_c[0][i] *= eq_scale;
+
   return bret;
 }
 bool hiopNlpDenseConstraints::eval_Jac_d(const double* x, bool new_x, double** Jac_d)
@@ -229,6 +250,10 @@ bool hiopNlpDenseConstraints::eval_c(const double*x, bool new_x, double* c)
   runStats.tmEvalCons.start();
   bret = interface.eval_cons(n_vars,n_cons,n_cons_eq,cons_eq_mapping,x,new_x,c);
   runStats.tmEvalCons.stop(); runStats.nEvalCons_eq++;
+
+  //! 
+  c[0] *= eq_scale;
+
   return bret;
 }
 bool hiopNlpDenseConstraints::eval_d(const double*x, bool new_x, double* d)

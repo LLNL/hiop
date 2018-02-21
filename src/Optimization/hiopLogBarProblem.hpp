@@ -3,6 +3,8 @@
 
 #include "hiopInnerProdWeight.hpp"
 
+#define LOGBAR_SCALE 1000.
+
 namespace hiop
 {
 
@@ -45,17 +47,17 @@ public:
     _grad_x_logbar->copyFrom(gradf_);
 
     //add log terms to function
-    double aux=-mu * iter->evalLogBarrier();
+    double aux=-mu / LOGBAR_SCALE*iter->evalLogBarrier();
     f_logbar = f + aux;
 
 #ifdef DEEP_CHECKING
-    nlp->log->printf(hovSummary, "log barrier part: %g\n", aux);
+    nlp->log->printf(hovSummary, "log barrier part: %g  log barrier scale / %g\n", aux, LOGBAR_SCALE);
     nlp->log->write("gradx_log_bar grad_f:", *_grad_x_logbar, hovLinesearchVerb);
     //nlp->log->write("gradx_log_bar grad_f:", *_grad_x_logbar, hovScalars);
 #endif
     //add log terms to gradient
-    iter->addLogBarGrad_x(mu, *_grad_x_logbar);
-    iter->addLogBarGrad_d(mu, *_grad_d_logbar);
+    iter->addLogBarGrad_x(mu/ LOGBAR_SCALE, *_grad_x_logbar);
+    iter->addLogBarGrad_d(mu/ LOGBAR_SCALE, *_grad_d_logbar);
 
 #ifdef DEEP_CHECKING
     nlp->log->write("gradx_log_bar grad_log:", *_grad_x_logbar, hovLinesearchVerb);
@@ -82,9 +84,12 @@ public:
     nlp->runStats.tmSolverInternal.start();
     
     c_nlp_trial=&c_; d_nlp_trial=&d_; iter_trial=&iter_;
-    f_logbar_trial = f - mu * iter_trial->evalLogBarrier();
-    if(kappa_d>0.) f_logbar_trial += iter_trial->linearDampingTerm(mu,kappa_d);
+    
+    double aux= - mu / LOGBAR_SCALE* iter_trial->evalLogBarrier();
+    f_logbar_trial = f + aux;
 
+    if(kappa_d>0.) f_logbar_trial += iter_trial->linearDampingTerm(mu,kappa_d);
+    nlp->log->printf(hovSummary, "log barrier part (trial): %g\n", aux);
     nlp->runStats.tmSolverInternal.stop();
   }
   /* adds non-log bar terms to the gradient, e.g., damping terms */

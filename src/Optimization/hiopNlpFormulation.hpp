@@ -174,7 +174,7 @@ public:
 private:
   /* problem data */
   //various sizes
-  long long n_vars, n_cons, n_cons_eq, n_cons_ineq;
+  long long n_vars, n_vars_local, n_cons, n_cons_eq, n_cons_ineq;
   long long n_bnds_low, n_bnds_low_local, n_bnds_upp, n_bnds_upp_local, n_ineq_low, n_ineq_upp;
   long long n_bnds_lu, n_ineq_lu;
   hiopVectorPar *xl, *xu, *ixu, *ixl; //these will be global, memory distributed
