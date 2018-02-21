@@ -276,6 +276,7 @@ hiopSolveStatus hiopAlgFilterIPM::run()
     /************************************************
      * update mu and other parameters
      ************************************************/
+
     while(_err_log<=kappa_eps * _mu) {
       //update mu and tau (fraction-to-boundary)
       bret = updateLogBarrierParameters(*it_curr, _mu, _tau, _mu, _tau);
@@ -408,8 +409,8 @@ hiopSolveStatus hiopAlgFilterIPM::run()
 	    break; //iterate good to go since it satisfies Armijo
 	  } else {  //Armijo is not satisfied
 	    nlp->log->printf(hovSummary, "!!! armijo not satisfied dir_deriv %g  %.10f %.10f  %g\n",grad_phi_dx, logbar->f_logbar_trial, logbar->f_logbar, _alpha_primal);
-	    _alpha_primal *= 0.25; //reduce step and try again
-	    lsStatus=3;break;
+	    _alpha_primal *= 0.5; //reduce step and try again
+	    //lsStatus=3;break;
 	    continue;
 	  }
 	} else {//switching condition does not hold  
@@ -425,9 +426,14 @@ hiopSolveStatus hiopAlgFilterIPM::run()
 	      break;
 	    } else {
 	      //there is no sufficient progress 
-	      printf("!!! no sufficient progress - sqitch cond not satisf\n");
-	      _alpha_primal *= 0.5;
-	      continue;
+	      printf("!!! no sufficient progress - switch cond not satisf\n");
+	      if(theta<1e-8) {
+		lsStatus=2;
+		break;
+	      } else {
+		_alpha_primal *= 0.5;
+		continue;
+	      }
 	    }
 	  } else {
 	    //it is in the filter 
@@ -574,14 +580,26 @@ void hiopAlgFilterIPM::displayTerminationMsg() {
   };
 }
 
+
 bool hiopAlgFilterIPM::
 updateLogBarrierParameters(const hiopIterate& it, const double& mu_curr, const double& tau_curr,
 			   double& mu_new, double& tau_new)
 {
   double new_mu = fmax(eps_tol/10, fmin(kappa_mu*mu_curr, pow(mu_curr,theta_mu)));
   if(fabs(new_mu-mu_curr)<1e-16) return false;
+
+  if(log10(new_mu)<-4.0) new_mu=1e-6;
+
   mu_new  = new_mu;
+
+  //if(mu_new<=1e-3 && mu_new>1e-4) mu_new=1e-5;
+  //else if(mu_new<1e-5) mu_new=1e-7;
+
   tau_new = fmax(tau_min,1.0-mu_new);
+
+  //let's not be too agressive for small mu //!
+  tau_new = fmin(tau_new,0.99);
+
   return true;
 }
 
@@ -592,6 +610,7 @@ double hiopAlgFilterIPM::thetaLogBarrier(const hiopIterate& it, const hiopResidu
   resid.getNlpErrors(optim, feas, complem);
   return feas;
 }
+
 
 
 bool hiopAlgFilterIPM::
@@ -617,12 +636,16 @@ evalNlpAndLogErrors(const hiopIterate& it, const hiopResidual& resid, const doub
 
   //scaling factors
   double sd = fmax(p_smax,(nrmDualBou/4+nrmDualEqu/2)) / p_smax;
+  
+  //don't let sd be too big
+  sd = fmin(sd, 50.);
+
   double sc = n==0?0:fmax(p_smax,nrmDualBou/4) / p_smax;
   //actual nlp errors 
   resid.getNlpErrors(nlpoptim, nlpfeas, nlpcomplem);
   nlpcomplem /= normOfOne;
 
-  nlp->log->printf(hovSummary, "s_max=%g  sc=%g  sd=%g nrmDualBouScaled=%g nrmDualEquScaled=%g\n", p_smax, sc, sd, nrmDualBou, nrmDualEqu);
+  nlp->log->printf(hovSummary, "s_max=%g  sc=%g  sd=%g nrmDualBouScaled=%g nrmDualEquScaled=%g normOfOne=%g nlpoptim=%g\n", p_smax, sc, sd, nrmDualBou, nrmDualEqu, normOfOne, nlpoptim);
 
   //finally, the scaled nlp error
   nlpoverall = fmax(nlpoptim/sd, fmax(nlpfeas, nlpcomplem/sc));
