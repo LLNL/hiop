@@ -900,7 +900,8 @@ void hiopHessianLowRank::timesVecCmn(double beta, hiopVector& y, double alpha, c
     yk->copyFrom(Yt->local_data()[k]);
     sk->copyFrom(St->local_data()[k]);
     double skTyk=yk->dotProductWith(*sk);
-    assert(skTyk>0);
+    //double skTyk = nlp->H->dotProd(*sk,*yk);
+    //assert(skTyk >0);
     b[k]=dynamic_cast<hiopVectorPar*>(nlp->alloc_primal_vec());
     b[k]->copyFrom(*yk);
     b[k]->scale(1/sqrt(skTyk));
@@ -913,11 +914,14 @@ void hiopHessianLowRank::timesVecCmn(double beta, hiopVector& y, double alpha, c
 
     for(int i=0; i<k; i++) {
       double biTsk = b[i]->dotProductWith(*sk);
+      //double biTsk = nlp->H->dotProd(*(b[i]), *sk);
       a[k]->axpy(+biTsk, *b[i]);
       double aiTsk = a[i]->dotProductWith(*sk);
+      //double aiTsk = nlp->H->dotProd(*(a[i]), *sk);
       a[k]->axpy(-aiTsk, *a[i]);
     }
     double skTak = a[k]->dotProductWith(*sk);
+    //double skTak = nlp->H->dotProd(*(a[k]), *sk);
     a[k]->scale(1/sqrt(skTak));
   }
 
@@ -930,9 +934,13 @@ void hiopHessianLowRank::timesVecCmn(double beta, hiopVector& y, double alpha, c
 
   y.axpy(alpha*sigma, x); 
 
+  const hiopVectorPar& xx = dynamic_cast<const hiopVectorPar&>(x);
+
   for(int k=0; k<l_curr; k++) {
     double bkTx = b[k]->dotProductWith(x);
+    //double bkTx = nlp->H->dotProd(*(b[k]), xx);
     double akTx = a[k]->dotProductWith(x);
+    //double akTx = nlp->H->dotProd(*(a[k]), xx);
     
     y.axpy( alpha*bkTx, *b[k]);
     y.axpy(-alpha*akTx, *a[k]);
