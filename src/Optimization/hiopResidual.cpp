@@ -119,12 +119,15 @@ int hiopResidual::update(const hiopIterate& it,
   rx->copyFrom(grad);
   //nlp->H->applyInverse(*rx);
 
-  
+  nlp->log->printf(hovSummary,"resid:update:(Hnorm infnorm)grad_f %12.6e %12.6e  zl %12.6e %12.6e zu %12.6e %12.6e\n", 
+		   nlp->H->primalnorm(*rx), rx->infnorm(),
+		   nlp->H->primalnorm(*it.zl), it.zl->infnorm(),
+		   nlp->H->primalnorm(*it.zu), it.zu->infnorm());
 
   jac_c.transTimesVec(1.0, *rx, 1.0, *it.yc);
   jac_d.transTimesVec(1.0, *rx, 1.0, *it.yd);
 
-nlp->log->write("it.yc asd ------", *it.yc, hovScalars);
+  nlp->log->write("it.yc asd ------", *it.yc, hovScalars);
 
   //nlp->H->applyAdjoint( 1.0, *rx, jac_c, 1.0, *it.yc);
   //nlp->H->applyAdjoint( 1.0, *rx, jac_d, 1.0, *it.yd);

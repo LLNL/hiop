@@ -231,17 +231,17 @@ void hiopIterate::totalNormOfDuals_scaled(const double& normOfOneFunc, double& n
   //even though zl and zu are duals, they are mapped through the Riesz mapping and live in the primal space.
   
   nrmBnd  = nlp->H->primalnorm(*zl) / normOfOneFunc;
-  nlp->log->printf(hovSummary, "nrmBnd1: %g\n", nrmBnd);
+  //nlp->log->printf(hovSummary, "nrmBnd1: %g\n", nrmBnd);
   nrmBnd += nlp->H->primalnorm(*zu) / normOfOneFunc;
-  nlp->log->printf(hovSummary, "nrmBnd2: %g\n", nrmBnd);
+  //nlp->log->printf(hovSummary, "nrmBnd2: %g\n", nrmBnd);
   //these are fin-dim duals 
   nrmBnd += vl->onenorm()/m;
   nrmBnd += vu->onenorm()/m;
 
-  nlp->log->write("vl", *vl, hovSummary);
-  nlp->log->write("vu", *vu, hovSummary);
-  nlp->log->write("yc", *yc, hovSummary);
-  nlp->log->write("yd", *yd, hovSummary);
+  //nlp->log->write("vl", *vl, hovSummary);
+  //nlp->log->write("vu", *vu, hovSummary);
+  //nlp->log->write("yc", *yc, hovSummary);
+  //nlp->log->write("yd", *yd, hovSummary);
 
   //inf-dim also here
   nrmEq = yc->onenorm()/m + yd->onenorm()/m;
