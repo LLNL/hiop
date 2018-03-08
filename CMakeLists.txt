@@ -4,6 +4,15 @@ project (hippopde)
 enable_language(Fortran)
 
 # Create header for Fortran name mangling
+# Use custom mangling
+# Create header for Fortran name mangling\
+if (USING_CUSTOM_MANGLING)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.7.2)
+set(FortranCInterface_GLOBAL_SYMBOLS mysub)
+
+set(FortranCInterface_MODULE_SYMBOLS __mymodule_MOD_mysub __my_module_MOD_my_sub)
+endif()
+
 include(FortranCInterface)
 FortranCInterface_HEADER(FortranCInterface.hpp MACRO_NAMESPACE "FC_")
 
