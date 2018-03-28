@@ -17,10 +17,14 @@ if(DEEP_CHECKING)
     add_definitions(-DDEEP_CHECKING)
 endif(DEEP_CHECKING)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -fpermissive")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -fpermissive")
+#set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
 
 find_package(OpenMP)
-find_package(LAPACK REQUIRED)
+message("Found LAPACK: ${LAPACK_LIBRARIES} <")
+find_package(LAPACK)
+set(LAPACK_LIBRARIES "-L/usr/local/tools/lapack/3.8.0/GNU -lgfortran -llapack -lblas -lgfortran")
+message("Found LAPACK: ${LAPACK_LIBRARIES} <")
 
 #
 # extended precision lapack based on xblas testing example

@@ -588,7 +588,7 @@ updateLogBarrierParameters(const hiopIterate& it, const double& mu_curr, const d
   double new_mu = fmax(eps_tol/10, fmin(kappa_mu*mu_curr, pow(mu_curr,theta_mu)));
   if(fabs(new_mu-mu_curr)<1e-16) return false;
 
-  if(log10(new_mu)<-4.0) new_mu=1e-6;
+  //if(log10(new_mu)<-4.0) new_mu=1e-6;
 
   mu_new  = new_mu;
 
