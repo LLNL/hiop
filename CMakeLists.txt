@@ -1,5 +1,11 @@
 cmake_minimum_required (VERSION 2.8.11)
 project (hippopde)
+# enable Fortran for Fortran name mangling
+enable_language(Fortran)
+
+# Create header for Fortran name mangling
+include(FortranCInterface)
+FortranCInterface_HEADER(FortranCInterface.hpp MACRO_NAMESPACE "FC_")
 
 option(WITH_MPI "Build with MPI support" ON)
 option(DEEP_CHECKING "Extra checks and asserts in the code with a high penalty on performance" ON)
@@ -18,13 +24,14 @@ if(DEEP_CHECKING)
 endif(DEEP_CHECKING)
 
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -fpermissive")
-#set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
 
 find_package(OpenMP)
-message("Found LAPACK: ${LAPACK_LIBRARIES} <")
-find_package(LAPACK)
-set(LAPACK_LIBRARIES "-L/usr/local/tools/lapack/3.8.0/GNU -lgfortran -llapack -lblas -lgfortran")
-message("Found LAPACK: ${LAPACK_LIBRARIES} <")
+
+if(NOT DEFINED LAPACK_LIBRARIES)
+  # in case the toolchain defines them
+  find_package(LAPACK REQUIRED)
+endif(NOT DEFINED LAPACK_LIBRARIES)
+message("LAPACK/BLAS libs: ${LAPACK_LIBRARIES}")
 
 #
 # extended precision lapack based on xblas testing example
