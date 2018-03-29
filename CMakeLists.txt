@@ -14,19 +14,26 @@ option(DEEP_CHECKING "Extra checks and asserts in the code with a high penalty o
 option(WITH_MAKETEST "Enable 'make test'" ON)
 
 if(WITH_MPI)
+  if(NOT DEFINED MPI_CXX_COMPILER)
     find_package(MPI REQUIRED)
     set(CMAKE_CXX_COMPILER ${MPI_CXX_COMPILER})
-    add_definitions(-DWITH_MPI)
+  endif(NOT DEFINED MPI_CXX_COMPILER)
+  add_definitions(-DWITH_MPI)
 endif(WITH_MPI)
 
 if(DEEP_CHECKING)
     add_definitions(-DDEEP_CHECKING)
 endif(DEEP_CHECKING)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -fpermissive")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -fpermissive")
 
 find_package(OpenMP)
-find_package(LAPACK REQUIRED)
+
+if(NOT DEFINED LAPACK_LIBRARIES)
+  # in case the toolchain defines them
+  find_package(LAPACK REQUIRED)
+endif(NOT DEFINED LAPACK_LIBRARIES)
+message("LAPACK/BLAS libs: ${LAPACK_LIBRARIES}")
 
 #
 # extended precision lapack based on xblas testing example
