@@ -55,6 +55,7 @@ Ex1Meshing1D::~Ex1Meshing1D()
 bool Ex1Meshing1D::get_vecdistrib_info(long long global_n, long long* cols)
 {
   for(int i=0; i<=comm_size; i++) cols[i] = col_partition[i];
+  return true;
 }
 void Ex1Meshing1D::applyM(DiscretizedFunction& f)
 {

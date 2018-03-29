@@ -482,7 +482,7 @@ void hiopVectorPar::invert()
 #ifdef DEEP_CHECKING
     if(fabs(data[i])<1e-35) assert(false);
 #endif
-    data[i]=1/data[i];
+    data[i]=1./data[i];
   }
 }
 
@@ -549,7 +549,6 @@ void hiopVectorPar::projectIntoBounds(const hiopVector& xl_, const hiopVector& i
 				      const hiopVector& xu_, const hiopVector& ixu_,
 				      double kappa1, double kappa2)
 {
-
 #ifdef DEEP_CHECKING
   assert((dynamic_cast<const hiopVectorPar&>(xl_) ).n_local==n_local);
   assert((dynamic_cast<const hiopVectorPar&>(ixl_)).n_local==n_local);
@@ -568,17 +567,22 @@ void hiopVectorPar::projectIntoBounds(const hiopVector& xl_, const hiopVector& i
   for(long long i=0; i<n_local; i++) {
     if(ixl[i]!=0 && ixu[i]!=0) {
       aux=kappa2*(xu[i]-xl[i])-small_double;
-      aux2=xl[i]+fmin(kappa1*fmax(1, fabs(xl[i])),aux);
+      aux2=xl[i]+fmin(kappa1*fmax(1., fabs(xl[i])),aux);
       if(x0[i]<aux2) {
 	x0[i]=aux2;
       } else {
-	aux2=xu[i]-fmin(kappa1*fmax(1, fabs(xu[i])),aux);
+	aux2=xu[i]-fmin(kappa1*fmax(1., fabs(xu[i])),aux);
 	if(x0[i]>aux2) {
 	  x0[i]=aux2;
 	}
       }
 #ifdef DEEP_CHECKING
+      //if(x0[i]>xl[i] && x0[i]<xu[i]) {
+      //} else {
+      //printf("i=%d  x0=%g xl=%g xu=%g\n", i, x0[i], xl[i], xu[i]);
+      //}
       assert(x0[i]>xl[i] && x0[i]<xu[i]);
+      
 #endif
     } else {
       if(ixl[i]!=0.)

@@ -63,9 +63,10 @@ namespace hiop
 hiopNlpFormulation::hiopNlpFormulation(hiopInterfaceBase& interface)
 {
 #ifdef WITH_MPI
-  assert(interface.get_MPI_comm(comm));
-  assert(MPI_SUCCESS==MPI_Comm_rank(comm, &rank));
-  assert(MPI_SUCCESS==MPI_Comm_size(comm, &num_ranks));
+  bool bret = interface.get_MPI_comm(comm); assert(bret);
+  int nret;
+  nret=MPI_Comm_rank(comm, &rank); assert(MPI_SUCCESS==nret);
+  nret=MPI_Comm_size(comm, &num_ranks); assert(MPI_SUCCESS==nret);
 #else
   //fake communicator (defined by hiop)
   MPI_Comm comm = MPI_COMM_SELF;
@@ -92,7 +93,7 @@ hiopNlpFormulation::~hiopNlpFormulation()
 hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& interface_)
   : hiopNlpFormulation(interface_), interface(interface_)
 {
-  assert(interface.get_prob_sizes(n_vars, n_cons));
+  bool bret = interface.get_prob_sizes(n_vars, n_cons); assert(bret);
 #ifdef WITH_MPI
 
   long long* columns_partitioning=new long long[num_ranks+1];
@@ -110,7 +111,8 @@ hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& 
   int nlocal=xl->get_local_size();
   double  *xl_vec= xl->local_data(),  *xu_vec= xu->local_data();
   vars_type = new hiopInterfaceBase::NonlinearityType[nlocal];
-  bool bret=interface.get_vars_info(n_vars,xl_vec,xu_vec,vars_type); assert(bret);
+
+  bret=interface.get_vars_info(n_vars,xl_vec,xu_vec,vars_type); assert(bret);
   //allocate and build ixl(ow) and ix(upp) vectors
   ixl = xu->alloc_clone(); ixu = xu->alloc_clone();
   n_bnds_low_local = n_bnds_upp_local = 0;
@@ -127,7 +129,6 @@ hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& 
     }
     else ixu_vec[i]=0.;
   }
-
   /* split the constraints */
   hiopVectorPar* gl = new hiopVectorPar(n_cons); 
   hiopVectorPar* gu = new hiopVectorPar(n_cons);
@@ -363,7 +364,9 @@ void hiopNlpDenseConstraints::print(FILE* f, const char* msg, int rank) const
 {
    int myrank=0; 
 #ifdef WITH_MPI
-  if(rank>=0) assert(MPI_Comm_rank(comm, &myrank)==MPI_SUCCESS);
+   if(rank>=0) {
+     int ierr = MPI_Comm_rank(comm, &myrank); assert(ierr==MPI_SUCCESS); 
+   }
 #endif
   if(myrank==rank || rank==-1) {
     if(NULL==f) f=stdout;
