@@ -1,6 +1,7 @@
 
 
 # HiOp - HPC solver for optimization
+HiOp is an optimization solver for solving certain mathematical optimization problems expressed as nonlinear programming problems. HiOp is a lightweight HPC solver that leverages application's existing data parallelism to parallelize the optimization iterations by using specialized linear algebra kernels.
 
 ## Build/install instructions
 HiOp uses a CMake-based build system. There are no customization made to CMake, hence, all the standard CMake options apply.
@@ -23,7 +24,7 @@ $> cmake -DCMAKE_INSTALL_PREFIX=/usr/lib/hiop ..'
 
 ### HiOp-specific build options
 * Enable/disable MPI: *-DWITH_MPI=[ON/OFF]* (by default ON)
-* Ultra safety checks: *-DEEP_CHECKING=[ON/OFF]* (by default ON) used for increased robustness and self-diagnostication. Disabling DEEP_CHECKING usually provides 30-40% execution speedup in HiOp.
+* Ultra safety checks: *-DEEP_CHECKING=[ON/OFF]* (by default ON) used for increased robustness and self-diagnostics. Disabling DEEP_CHECKING usually provides 30-40% execution speedup in HiOp.
 
 For example:
 ```shell 
@@ -44,6 +45,12 @@ HiOp requires LAPACK and BLAS. MPI is optional. All these dependencies are autom
 ## Acknowledgments
 
 HiOp has been developed under the financial support of: 
-- Lawrence Livermore National Laboratory, thorugh the LDRD program
+- Lawrence Livermore National Laboratory, through the LDRD program
 - Department of Energy, Office of Advanced Scientific Computing Research
+
+## Copyright
+Copyright (c) 2017, Lawrence Livermore National Security, LLC. All rights reserved. Produced at the Lawrence Livermore National Laboratory. LLNL-CODE-742473. Written by Cosmin G. Petra, petra1@llnl.gov. 
+
+HiOp is free software; you can modify it and/or redistribute it under the terms of the BSD 3-clause license. See [COPYRIGHT](/COPYRIGHT) and [LICENSE](/LICENSE) for complete copyright and license information.
+ 
 

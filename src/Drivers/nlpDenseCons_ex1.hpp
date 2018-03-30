@@ -82,6 +82,7 @@ protected:
 
 private: 
   Ex1Meshing1D(const Ex1Meshing1D& other) { assert(false); }
+  Ex1Meshing1D() { assert(false); }
 };
 
 class DiscretizedFunction : public hiop::hiopVectorPar

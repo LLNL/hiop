@@ -1,3 +1,51 @@
+// Copyright (c) 2017, Lawrence Livermore National Security, LLC.
+// Produced at the Lawrence Livermore National Laboratory (LLNL).
+// Written by Cosmin G. Petra, petra1@llnl.gov.
+// LLNL-CODE-742473. All rights reserved.
+//
+// This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
+// is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause). 
+// Please also read “Additional BSD Notice” below.
+//
+// Redistribution and use in source and binary forms, with or without modification, 
+// are permitted provided that the following conditions are met:
+// i. Redistributions of source code must retain the above copyright notice, this list 
+// of conditions and the disclaimer below.
+// ii. Redistributions in binary form must reproduce the above copyright notice, 
+// this list of conditions and the disclaimer (as noted below) in the documentation and/or 
+// other materials provided with the distribution.
+// iii. Neither the name of the LLNS/LLNL nor the names of its contributors may be used to 
+// endorse or promote products derived from this software without specific prior written 
+// permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY 
+// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES 
+// OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT 
+// SHALL LAWRENCE LIVERMORE NATIONAL SECURITY, LLC, THE U.S. DEPARTMENT OF ENERGY OR 
+// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS 
+// OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED 
+// AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, 
+// EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
+// Additional BSD Notice
+// 1. This notice is required to be provided under our contract with the U.S. Department 
+// of Energy (DOE). This work was produced at Lawrence Livermore National Laboratory under 
+// Contract No. DE-AC52-07NA27344 with the DOE.
+// 2. Neither the United States Government nor Lawrence Livermore National Security, LLC 
+// nor any of their employees, makes any warranty, express or implied, or assumes any 
+// liability or responsibility for the accuracy, completeness, or usefulness of any 
+// information, apparatus, product, or process disclosed, or represents that its use would
+// not infringe privately-owned rights.
+// 3. Also, reference herein to any specific commercial products, process, or services by 
+// trade name, trademark, manufacturer or otherwise does not necessarily constitute or 
+// imply its endorsement, recommendation, or favoring by the United States Government or 
+// Lawrence Livermore National Security, LLC. The views and opinions of authors expressed 
+// herein do not necessarily state or reflect those of the United States Government or 
+// Lawrence Livermore National Security, LLC, and shall not be used for advertising or 
+// product endorsement purposes.
+
 #include "hiopNlpFormulation.hpp"
 #include "hiopInnerProdWeight.hpp"
 #include "hiopLogger.hpp"
@@ -15,9 +63,10 @@ namespace hiop
 hiopNlpFormulation::hiopNlpFormulation(hiopInterfaceBase& interface)
 {
 #ifdef WITH_MPI
-  assert(interface.get_MPI_comm(comm));
-  assert(MPI_SUCCESS==MPI_Comm_rank(comm, &rank));
-  assert(MPI_SUCCESS==MPI_Comm_size(comm, &num_ranks));
+  bool bret = interface.get_MPI_comm(comm); assert(bret);
+  int nret;
+  nret=MPI_Comm_rank(comm, &rank); assert(MPI_SUCCESS==nret);
+  nret=MPI_Comm_size(comm, &num_ranks); assert(MPI_SUCCESS==nret);
 #else
   //fake communicator (defined by hiop)
   MPI_Comm comm = MPI_COMM_SELF;
@@ -52,7 +101,7 @@ static double eq_scale=1e+4;
 hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& interface_)
   : hiopNlpFormulation(interface_), interface(interface_)
 {
-  assert(interface.get_prob_sizes(n_vars, n_cons));
+  bool bret = interface.get_prob_sizes(n_vars, n_cons); assert(bret);
 #ifdef WITH_MPI
 
   long long* columns_partitioning=new long long[num_ranks+1];
@@ -70,8 +119,9 @@ hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& 
   n_vars_local = xl->get_local_size();
 
   double  *xl_vec= xl->local_data(),  *xu_vec= xu->local_data();
+
   vars_type = new hiopInterfaceBase::NonlinearityType[n_vars_local];
-  bool bret=interface.get_vars_info(n_vars,xl_vec,xu_vec,vars_type); assert(bret);
+  bret=interface.get_vars_info(n_vars,xl_vec,xu_vec,vars_type); assert(bret);
   //allocate and build ixl(ow) and ix(upp) vectors
   ixl = xu->alloc_clone(); ixu = xu->alloc_clone();
   n_bnds_low_local = n_bnds_upp_local = 0;
@@ -88,7 +138,6 @@ hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& 
     }
     else ixu_vec[i]=0.;
   }
-
   /* split the constraints */
   hiopVectorPar* gl = new hiopVectorPar(n_cons); 
   hiopVectorPar* gu = new hiopVectorPar(n_cons);
@@ -358,7 +407,9 @@ void hiopNlpDenseConstraints::print(FILE* f, const char* msg, int rank) const
 {
    int myrank=0; 
 #ifdef WITH_MPI
-  if(rank>=0) assert(MPI_Comm_rank(comm, &myrank)==MPI_SUCCESS);
+   if(rank>=0) {
+     int ierr = MPI_Comm_rank(comm, &myrank); assert(ierr==MPI_SUCCESS); 
+   }
 #endif
   if(myrank==rank || rank==-1) {
     if(NULL==f) f=stdout;

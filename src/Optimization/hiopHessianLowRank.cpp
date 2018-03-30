@@ -1,3 +1,51 @@
+// Copyright (c) 2017, Lawrence Livermore National Security, LLC.
+// Produced at the Lawrence Livermore National Laboratory (LLNL).
+// Written by Cosmin G. Petra, petra1@llnl.gov.
+// LLNL-CODE-742473. All rights reserved.
+//
+// This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
+// is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause). 
+// Please also read “Additional BSD Notice” below.
+//
+// Redistribution and use in source and binary forms, with or without modification, 
+// are permitted provided that the following conditions are met:
+// i. Redistributions of source code must retain the above copyright notice, this list 
+// of conditions and the disclaimer below.
+// ii. Redistributions in binary form must reproduce the above copyright notice, 
+// this list of conditions and the disclaimer (as noted below) in the documentation and/or 
+// other materials provided with the distribution.
+// iii. Neither the name of the LLNS/LLNL nor the names of its contributors may be used to 
+// endorse or promote products derived from this software without specific prior written 
+// permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY 
+// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES 
+// OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT 
+// SHALL LAWRENCE LIVERMORE NATIONAL SECURITY, LLC, THE U.S. DEPARTMENT OF ENERGY OR 
+// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS 
+// OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED 
+// AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, 
+// EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
+// Additional BSD Notice
+// 1. This notice is required to be provided under our contract with the U.S. Department 
+// of Energy (DOE). This work was produced at Lawrence Livermore National Laboratory under 
+// Contract No. DE-AC52-07NA27344 with the DOE.
+// 2. Neither the United States Government nor Lawrence Livermore National Security, LLC 
+// nor any of their employees, makes any warranty, express or implied, or assumes any 
+// liability or responsibility for the accuracy, completeness, or usefulness of any 
+// information, apparatus, product, or process disclosed, or represents that its use would
+// not infringe privately-owned rights.
+// 3. Also, reference herein to any specific commercial products, process, or services by 
+// trade name, trademark, manufacturer or otherwise does not necessarily constitute or 
+// imply its endorsement, recommendation, or favoring by the United States Government or 
+// Lawrence Livermore National Security, LLC. The views and opinions of authors expressed 
+// herein do not necessarily state or reflect those of the United States Government or 
+// Lawrence Livermore National Security, LLC, and shall not be used for advertising or 
+// product endorsement purposes.
+
 #include "hiopHessianLowRank.hpp"
 #include "hiopInnerProdWeight.hpp"
 #include "blasdefs.hpp"
@@ -577,7 +625,7 @@ void hiopHessianLowRank::factorizeV()
 
   int lwork=-1;//inquire sizes
   double Vwork_tmp;
-  dsytrf_(&uplo, &N, V->local_buffer(), &lda, _V_ipiv_vec, &Vwork_tmp, &lwork, &info);
+  DSYTRF(&uplo, &N, V->local_buffer(), &lda, _V_ipiv_vec, &Vwork_tmp, &lwork, &info);
   assert(info==0);
 
   lwork=(int)Vwork_tmp;
@@ -586,7 +634,7 @@ void hiopHessianLowRank::factorizeV()
     _V_work_vec=new hiopVectorPar(lwork);
   } else assert(_V_work_vec);
 
-  dsytrf_(&uplo, &N, V->local_buffer(), &lda, _V_ipiv_vec, _V_work_vec->local_data(), &lwork, &info);
+  DSYTRF(&uplo, &N, V->local_buffer(), &lda, _V_ipiv_vec, _V_work_vec->local_data(), &lwork, &info);
   
   if(info<0)
     nlp->log->printf(hovError, "hiopHessianLowRank::factorizeV error: %d argument to dsytrf has an illegal value\n", -info);
@@ -623,7 +671,7 @@ void hiopHessianLowRank::solveWithV(hiopVectorPar& rhs_s, hiopVectorPar& rhs_y)
   rhs.copyFromStarting(rhs_s,0);
   rhs.copyFromStarting(rhs_y,l);
 
-  dsytrs_(&uplo, &N, &one, V->local_buffer(), &lda, _V_ipiv_vec, rhs.local_data(), &N, &info);
+  DSYTRS(&uplo, &N, &one, V->local_buffer(), &lda, _V_ipiv_vec, rhs.local_data(), &N, &info);
 
   if(info<0) nlp->log->printf(hovError, "hiopHessianLowRank::solveWithV error: %d argument to dsytrf has an illegal value\n", -info);
   assert(info==0);
@@ -666,7 +714,7 @@ void hiopHessianLowRank::solveWithV(hiopMatrixDense& rhs)
 #ifdef DEEP_CHECKING
   assert(N==rhs.n()); 
 #endif
-  dsytrs_(&uplo, &N, &nrhs, V->local_buffer(), &lda, _V_ipiv_vec, rhs.local_buffer(), &ldb, &info);
+  DSYTRS(&uplo, &N, &nrhs, V->local_buffer(), &lda, _V_ipiv_vec, rhs.local_buffer(), &ldb, &info);
 
   if(info<0) nlp->log->printf(hovError, "hiopHessianLowRank::solveWithV error: %d argument to dsytrf has an illegal value\n", -info);
   assert(info==0);
@@ -1450,12 +1498,12 @@ void hiopHessianInvLowRank_obsolette::triangularSolve(const hiopMatrixDense& R, 
   char transA='T'; //to solve with an upper triangular, we force fortran to solve a transpose lower (see above)
   char diag  ='N'; //not a unit triangular
   double one=1.0; int lda=l, ldb=l;
-  dtrsm_(&side,&uplo,&transA,&diag,
-	 &l, //rows of rhs
-	 &k, //columns of rhs
-	 &one,
-	 Rbuf,&lda,
-	 rhsbuf, &ldb);
+  DTRSM(&side,&uplo,&transA,&diag,
+	&l, //rows of rhs
+	&k, //columns of rhs
+	&one,
+	Rbuf,&lda,
+	rhsbuf, &ldb);
   
 }
 
@@ -1475,12 +1523,12 @@ void hiopHessianInvLowRank_obsolette::triangularSolve(const hiopMatrixDense& R, 
   char transA='T'; //to solve with an upper triangular, we ask fortran to solve a transpose lower (see above)
   char diag  ='N'; //not a unit triangular
   double one=1.0; int lda=l, ldb=l, k=1;
-  dtrsm_(&side,&uplo,&transA,&diag,
-	 &l, //rows of rhs
-	 &k, //columns of rhs
-	 &one,
-	 Rbuf,&lda,
-	 rhsbuf, &ldb);
+  DTRSM(&side,&uplo,&transA,&diag,
+	&l, //rows of rhs
+	&k, //columns of rhs
+	&one,
+	Rbuf,&lda,
+	rhsbuf, &ldb);
 }
 void hiopHessianInvLowRank_obsolette::triangularSolveTrans(const hiopMatrixDense& R, hiopVectorPar& rhs)
 {
@@ -1498,12 +1546,12 @@ void hiopHessianInvLowRank_obsolette::triangularSolveTrans(const hiopMatrixDense
   char transA='N'; //to transpose-solve with an upper triangular, we ask fortran to perform a simple lower triangular solve (see above)
   char diag  ='N'; //not a unit triangular
   double one=1.0; int lda=l, ldb=l, k=1;
-  dtrsm_(&side,&uplo,&transA,&diag,
-	 &l, //rows of rhs
-	 &k, //columns of rhs
-	 &one,
-	 Rbuf,&lda,
-	 rhsbuf, &ldb);
+  DTRSM(&side,&uplo,&transA,&diag,
+	&l, //rows of rhs
+	&k, //columns of rhs
+	&one,
+	Rbuf,&lda,
+	rhsbuf, &ldb);
 }
 void hiopHessianInvLowRank_obsolette::growR(const int& lmem_curr, const int& lmem_max, const hiopVectorPar& STy, const double& sTy)
 {

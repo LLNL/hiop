@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 2.8.11)
+cmake_minimum_required (VERSION 2.8)
 project (hippopde)
 # enable Fortran for Fortran name mangling
 enable_language(Fortran)
@@ -14,9 +14,11 @@ option(DEEP_CHECKING "Extra checks and asserts in the code with a high penalty o
 option(WITH_MAKETEST "Enable 'make test'" ON)
 
 if(WITH_MPI)
+  if(NOT DEFINED MPI_CXX_COMPILER)
     find_package(MPI REQUIRED)
     set(CMAKE_CXX_COMPILER ${MPI_CXX_COMPILER})
-    add_definitions(-DWITH_MPI)
+  endif(NOT DEFINED MPI_CXX_COMPILER)
+  add_definitions(-DWITH_MPI)
 endif(WITH_MPI)
 
 if(DEEP_CHECKING)
@@ -37,6 +39,9 @@ message("LAPACK/BLAS libs: ${LAPACK_LIBRARIES}")
 # extended precision lapack based on xblas testing example
 #
 #set(LAPACK_LIBRARIES "-lgfortran;/export/home/petra1/work/installs/xblas-1.0.248/libxblas.a;/home/petra1/work/installs/lapack-3.7.0/libblas.a;/home/petra1/work/installs/lapack-3.7.0/liblapack.a;/home/petra1/work/installs/lapack-3.7.0/liblapack.a;/home/petra1/work/installs/lapack-3.7.0/libblas.a;/export/home/petra1/work/installs/xblas-1.0.248/libxblas.a")
+
+# include build directory for Fortran name mangling header
+include_directories(${CMAKE_BINARY_DIR})
 
 include_directories(src/Interface)
 include_directories(src/Optimization)
@@ -67,11 +72,11 @@ add_library(hiop STATIC $<TARGET_OBJECTS:hiopOptimization>
 			$<TARGET_OBJECTS:hiopUtils>)
 
 install(TARGETS hiop DESTINATION lib)
-install(FILES src/Interface/hiopInterface.hpp 
-	      src/Optimization/hiopNlpFormulation.hpp 
-	      src/Optimization/hiopAlgFilterIPM.hpp 
-	      src/Optimization/hiopIterate.hpp 
-	      src/Optimization/hiopResidual.hpp 
+install(FILES src/Interface/hiopInterface.hpp
+	      src/Optimization/hiopNlpFormulation.hpp
+	      src/Optimization/hiopAlgFilterIPM.hpp
+	      src/Optimization/hiopIterate.hpp
+	      src/Optimization/hiopResidual.hpp
 	      src/Optimization/hiopLogBarProblem.hpp
 	      src/Optimization/hiopFilter.hpp
 	      src/Optimization/hiopHessianLowRank.hpp
@@ -97,5 +102,5 @@ if (WITH_MAKETEST)
   add_test(NAME NlpDenseCons2_50K COMMAND $<TARGET_FILE:nlpDenseCons_ex2.exe> 50000 -selfcheck)
   if(WITH_MPI)
     add_test(NAME NlpDenseCons2_50K_mpi COMMAND mpirun -np 2 $<TARGET_FILE:nlpDenseCons_ex2.exe> 50000 -selfcheck)
-  endif(WITH_MPI) 
+  endif(WITH_MPI)
 endif(WITH_MAKETEST)
