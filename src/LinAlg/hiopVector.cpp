@@ -582,9 +582,9 @@ void hiopVectorPar::projectIntoBounds(const hiopVector& xl_, const hiopVector& i
 #ifdef DEEP_CHECKING
       //if(x0[i]>xl[i] && x0[i]<xu[i]) {
       //} else {
-      //printf("i=%d  x0=%g xl=%g xu=%g\n", i, x0[i], xl[i], xu[i]);
+      //printf("i=%d n_local  x0=%g xl=%g xu=%g\n", i, x0[i], xl[i], xu[i]);
       //}
-      assert(x0[i]>xl[i] && x0[i]<xu[i]);
+      //assert(x0[i]>xl[i] && x0[i]<xu[i]);
       
 #endif
     } else {

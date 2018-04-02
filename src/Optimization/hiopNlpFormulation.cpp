@@ -103,7 +103,6 @@ hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& 
 {
   bool bret = interface.get_prob_sizes(n_vars, n_cons); assert(bret);
 #ifdef WITH_MPI
-
   long long* columns_partitioning=new long long[num_ranks+1];
   if(true==interface.get_vecdistrib_info(n_vars,columns_partitioning)) {
     xl = new hiopVectorPar(n_vars, columns_partitioning, comm);
@@ -124,12 +123,21 @@ hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& 
   bret=interface.get_vars_info(n_vars,xl_vec,xu_vec,vars_type); assert(bret);
   //allocate and build ixl(ow) and ix(upp) vectors
   ixl = xu->alloc_clone(); ixu = xu->alloc_clone();
-  n_bnds_low_local = n_bnds_upp_local = 0;
-  n_bnds_lu = 0;
+  n_bnds_low_local = n_bnds_upp_local = 0; n_bnds_lu = 0;
+  int fixed_vars_relaxed=0;
   double *ixl_vec=ixl->local_data(), *ixu_vec=ixu->local_data();
   for(int i=0;i<n_vars_local; i++) {
     if(xl_vec[i]>-1e20) { 
       ixl_vec[i]=1.; n_bnds_low_local++;
+
+      if(fabs(xl_vec[i]-xu_vec[i])<1e-16) {
+	fixed_vars_relaxed++;
+	if(fabs(xl_vec[i]-1.)<1e-16)
+	  xl_vec[i]=0.75; //let upper on 1 and decrease lower bound by 5% (for topopt)
+	else 
+	  xu_vec[i]= 0.01*(1+fabs(xl_vec[i])); //let lower to original value and increase upper by 1% or at least 0.01
+      }
+
       if(xu_vec[i]< 1e20) n_bnds_lu++;
     } else ixl_vec[i]=0.;
 
@@ -138,6 +146,8 @@ hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& 
     }
     else ixu_vec[i]=0.;
   }
+  if(fixed_vars_relaxed>0)
+    log->printf(hovWarning, "Warning! A number of %d fixed or almost fixed variables were detected and relaxed\n", fixed_vars_relaxed);
   /* split the constraints */
   hiopVectorPar* gl = new hiopVectorPar(n_cons); 
   hiopVectorPar* gu = new hiopVectorPar(n_cons);
@@ -218,7 +228,6 @@ hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& 
 
   //this creates H in a matrix free form -> will call applyH() of the NLP interface
   H = new hiopInnerProdMatrixFreeWeight(this); 
-
 }
 
 hiopNlpDenseConstraints::~hiopNlpDenseConstraints()
