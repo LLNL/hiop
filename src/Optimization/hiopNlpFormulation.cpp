@@ -133,7 +133,7 @@ hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& 
       if(fabs(xl_vec[i]-xu_vec[i])<1e-16) {
 	fixed_vars_relaxed++;
 	if(fabs(xl_vec[i]-1.)<1e-16)
-	  xl_vec[i]=0.75; //let upper on 1 and decrease lower bound by 5% (for topopt)
+	  xl_vec[i]=0.4; //let upper on 1 and decrease lower bound by 5% (for topopt)
 	else 
 	  xu_vec[i]= 0.01*(1+fabs(xl_vec[i])); //let lower to original value and increase upper by 1% or at least 0.01
       }
@@ -250,7 +250,7 @@ hiopNlpDenseConstraints::~hiopNlpDenseConstraints()
   if(cons_ineq_mapping) delete[] cons_ineq_mapping;
 }
 
-#define OBJ_SCALE 0.1
+#define OBJ_SCALE 1e-3
 static int obj_print=1;
 bool hiopNlpDenseConstraints::eval_f(const double* x, bool new_x, double& f)
 {
