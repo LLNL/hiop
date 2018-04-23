@@ -715,6 +715,24 @@ void hiopVectorPar::adjustDuals_plh(const hiopVector& x_, const hiopVector& ix_,
   }
 }
 
+bool hiopVectorPar::isnan() const
+{
+  for(long long i=0; i<n_local; i++) if(std::isnan(data[i])) return true;
+  return false;
+}
+
+bool hiopVectorPar::isinf() const
+{
+  for(long long i=0; i<n_local; i++) if(std::isinf(data[i])) return true;
+  return false;
+}
+
+bool hiopVectorPar::isfinite() const
+{
+  for(long long i=0; i<n_local; i++) if(0==std::isfinite(data[i])) return false;
+  return true;
+}
+
 void hiopVectorPar::print(FILE* file, const char* msg/*=NULL*/, int max_elems/*=-1*/, int rank/*=-1*/) const 
 {
   int myrank=0, numranks=1; 

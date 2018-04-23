@@ -147,6 +147,13 @@ public:
   /* dual adjustment -> see hiopIterate::adjustDuals_primalLogHessian */
   virtual void adjustDuals_plh(const hiopVector& x, const hiopVector& ix, const double& mu, const double& kappa)=0;
 
+  /* check for nans in the local vector */
+  virtual bool isnan() const = 0;
+  /* check for infs in the local vector */
+  virtual bool isinf() const = 0;
+  /* check if all values are finite /well-defined floats. Returns false is nan or infs are present. */
+  virtual bool isfinite() const = 0;
+  
   /* prints up to max_elems (by default all), on rank 'rank' (by default on all) */
   virtual void print(FILE*, const char* message=NULL,int max_elems=-1, int rank=-1) const = 0;
   
@@ -215,6 +222,10 @@ public:
 
   virtual void adjustDuals_plh(const hiopVector& x, const hiopVector& ix, const double& mu, const double& kappa);
 
+  virtual bool isnan() const;
+  virtual bool isinf() const;
+  virtual bool isfinite() const;
+  
   virtual void print(FILE*, const char* withMessage=NULL, int max_elems=-1, int rank=-1) const;
 
   /* more accessers */
