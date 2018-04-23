@@ -284,6 +284,14 @@ void hiopMatrixDense::setToConstant(double c)
   //memcpy has similar performance as dcopy_; both faster than a loop
 }
 
+bool hiopMatrixDense::isfinite() const
+{
+  for(int i=0; i<m_local; i++)
+    for(int j=0; j<n_local; j++)
+      if(false==std::isfinite(M[i][j])) return false;
+  return true;
+}
+
 void hiopMatrixDense::print(FILE* f, 
 			    const char* msg/*=NULL*/, 
 			    int maxRows/*=-1*/, 
@@ -322,7 +330,11 @@ void hiopMatrixDense::print(FILE* f,
 
 #include <unistd.h>
 
-/* y = beta * y + alpha * this * x */
+/*  y = beta * y + alpha * this * x  
+ *
+ * Sizes: y is m_local, x is n_local, the matrix is m_local x n_global, and the
+ * local chunck is m_local x n_local 
+*/
 void hiopMatrixDense::timesVec(double beta, hiopVector& y_,
 			       double alpha, const hiopVector& x_) const
 {
@@ -333,6 +345,8 @@ void hiopMatrixDense::timesVec(double beta, hiopVector& y_,
   assert(y.get_size() == m_local); //y should not be distributed
   assert(x.get_local_size() == n_local);
   assert(x.get_size() == n_global);
+  assert(y.isfinite());
+  assert(x.isfinite());
 #endif
   char fortranTrans='T';
   int MM=m_local, NN=n_local, incx_y=1;
@@ -360,7 +374,10 @@ void hiopMatrixDense::timesVec(double beta, hiopVector& y_,
   //usleep(100000);
   delete[] yglob;
 #endif
-  
+
+#ifdef DEEP_CHECKING  
+  assert(y.isfinite());
+#endif
 }
 
 /* y = beta * y + alpha * transpose(this) * x */
@@ -374,6 +391,8 @@ void hiopMatrixDense::transTimesVec(double beta, hiopVector& y_,
   assert(x.get_size() == m_local); //x should not be distributed
   assert(y.get_local_size() == n_local);
   assert(y.get_size() == n_global);
+  assert(y.isfinite());
+  assert(x.isfinite());
 #endif
   char fortranTrans='N';
   int MM=m_local, NN=n_local, incx_y=1;
@@ -422,6 +441,8 @@ void hiopMatrixDense::timesMat_local(double beta, hiopMatrix& W_, double alpha, 
   assert(W.m()==this->m());
   assert(X.m()==this->n());
   assert(W.n()==X.n());
+  assert(W.isfinite());
+  assert(X.isfinite());
 #endif
   assert(W.n_local==W.n_global && "requested multiplication should be done in parallel using timesMat");
   if(W.m()==0 || X.m()==0 || W.n()==0) return;
@@ -457,6 +478,8 @@ void hiopMatrixDense::transTimesMat(double beta, hiopMatrix& W_, double alpha, c
   assert(W.m()==n_local);
   assert(X.m()==m_local);
   assert(W.n()==X.n());
+  assert(W.isfinite());
+  assert(X.isfinite());
 #endif
   if(W.m()==0) return;
 
@@ -507,6 +530,8 @@ void hiopMatrixDense::timesMatTrans(double beta, hiopMatrix& W_, double alpha, c
 #ifdef DEEP_CHECKING
   const hiopMatrixDense& X = dynamic_cast<const hiopMatrixDense&>(X_);
   assert(W.n_local==W.n_global && "not intended for the case when the result matrix is distributed.");
+  assert(W.isfinite());
+  assert(X.isfinite());
 #endif
 
   int myrank=0;

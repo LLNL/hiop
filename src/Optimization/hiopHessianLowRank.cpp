@@ -433,6 +433,8 @@ void hiopHessianLowRank::solve(const hiopVector& rhs_, hiopVector& x_)
   assert(rhsx.get_size()==n);
   assert(x.get_size()==n);
   assert(DhInv->get_size()==n);
+  assert(DhInv->isfinite() && "inf or nan entry detected");
+  assert(rhsx.isfinite() && "inf or nan entry detected in rhs");
 #endif
 
   //1. x = DhInv*res
@@ -441,6 +443,7 @@ void hiopHessianLowRank::solve(const hiopVector& rhs_, hiopVector& x_)
 
   //2. stx= S^T*B0*DhInv*res and ytx=Y^T*DhInv*res
   hiopVectorPar &stx=new_l_vec1(l), &ytx=new_l_vec2(l);
+  stx.setToZero(); ytx.setToZero();
   Yt->timesVec(0.0,ytx,1.0,x);
 
   hiopVectorPar& B0DhInvx = new_n_vec1(n);
@@ -462,6 +465,10 @@ void hiopHessianLowRank::solve(const hiopVector& rhs_, hiopVector& x_)
 
   //5. x = first term - second term = x_computed_in_1 - result 
   x.axpy(-1.0,result);
+#ifdef DEEP_CHECKING
+  assert(x.isfinite() && "inf or nan entry detected in computed solution");
+#endif
+  
 }
 
 /* W = beta*W + alpha*X*inverse(this)*X^T (a more efficient version of solve)

@@ -97,6 +97,9 @@ public:
 
   virtual double max_abs_value() = 0;
 
+  /* return false is any of the entry is a nan, inf, or denormalized */
+  virtual bool isfinite() const = 0;
+  
   /* call with -1 to print all rows, all columns, or on all ranks; otherwise will
   *  will print the first rows and/or columns on the specified rank.
   */
@@ -146,6 +149,8 @@ public:
   virtual void addMatrix(double alpah, const hiopMatrix& X);
   virtual double max_abs_value();
 
+  virtual bool isfinite() const;
+  
   //virtual void print(int maxRows=-1, int maxCols=-1, int rank=-1) const;
   virtual void print(FILE* f=NULL, const char* msg=NULL, int maxRows=-1, int maxCols=-1, int rank=-1) const;
 

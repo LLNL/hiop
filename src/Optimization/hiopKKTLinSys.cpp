@@ -443,6 +443,7 @@ solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
   nlp->log->write("  Jc: ", *Jac_c, hovMatrices);
   nlp->log->write("  Jd: ", *Jac_d, hovMatrices);
   nlp->log->write("  Dd_inv: ", *Dd_inv, hovMatrices);
+  assert(Dd_inv->isfinite() && "Something bad happened: nan or inf value");
 #endif
 
   hiopMatrixDense& J = *_kxn_mat;
@@ -455,16 +456,23 @@ solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
 
   N->addSubDiagonal(nlp->m_eq(), *Dd_inv);
 #ifdef DEEP_CHECKING
+  assert(J.isfinite());
   nlp->log->write("solveCompressed: N is", *N, hovMatrices);
   nlp->log->write("solveCompressed: rx is", rx, hovMatrices);
   nlp->log->printf(hovLinAlgScalars, "inf norm of Dd_inv is %g\n", Dd_inv->infnorm());
   N->assertSymmetry(1e-10);
 #endif
+ 
   //compute the rhs of the lin sys involving N 
-  //  first compute (H+Dx)^{-1} rx_tilde and store it temporarily in dx
+  //  1. first compute (H+Dx)^{-1} rx_tilde and store it temporarily in dx
   Hess->solve(rx, dx);
-  // then rhs =   [ Jc(H+Dx)^{-1}*rx - ryc ]
-  //              [ Jd(H+dx)^{-1}*rx - ryd ]
+#ifdef DEEP_CHECKING
+  assert(rx.isfinite() && "Something bad happened: nan or inf value");
+  assert(dx.isfinite() && "Something bad happened: nan or inf value");
+#endif
+  
+  // 2 . then rhs =   [ Jc(H+Dx)^{-1}*rx - ryc ]
+  //                  [ Jd(H+dx)^{-1}*rx - ryd ]
   hiopVectorPar& rhs=*_k_vec1;
   rhs.copyFromStarting(ryc,0);
   rhs.copyFromStarting(ryd,nlp->m_eq());
