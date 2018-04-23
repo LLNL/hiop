@@ -142,6 +142,16 @@ void hiopLogger::printf(hiopOutVerbosity v, const char* format, ...)
   fprintf(_f,_buff);
   va_end (args);
 
-}
+};
+
+void hiopLogger::printf_error(hiopOutVerbosity v, const char* format, ...)
+{
+  char buff[1024];
+  va_list args;
+  va_start (args, format);
+  vsprintf (buff,format, args);
+  fprintf(stderr,buff);
+  va_end (args);
+};
 
 };

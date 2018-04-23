@@ -161,7 +161,7 @@ void hiopOptions::ensureConsistence()
   double eps_tol_accep = GetNumeric("acceptable_tolerance");
   double eps_tol  =      GetNumeric("tolerance");     
   if(eps_tol_accep < eps_tol) {
-    log->printf(hovWarning, "There is no reason to set 'acceptable_tolerance' tighter than 'tolerance'. Will set the two to 'tolerance'.\n");
+    log_printf(hovWarning, "There is no reason to set 'acceptable_tolerance' tighter than 'tolerance'. Will set the two to 'tolerance'.\n");
     SetNumericValue("acceptable_tolerance", eps_tol);
   }
 }
@@ -174,13 +174,16 @@ static inline std::string &ltrim(std::string &s) {
 
 void hiopOptions::loadFromFile(const char* filename)
 {
-  if(NULL==filename) { log->printf(hovError, "Option file name not valid"); return;}
+  if(NULL==filename) { 
+    log_printf(hovError, "Option file name not valid"); 
+    return;
+  }
 
   ifstream input( filename );
 
   if(input.fail()) 
     if(strcmp(szDefaultFilename, filename)) {
-      log->printf(hovError, "Failed to read option file '%s'. Hiop will use default options.\n", filename);
+      log_printf(hovError, "Failed to read option file '%s'. Hiop will use default options.\n", filename);
       return;
     }
 
@@ -194,7 +197,7 @@ void hiopOptions::loadFromFile(const char* filename)
 
     istringstream iss(line);
     if(!(iss >> name >> value)) {
-      log->printf(hovWarning, "Hiop could not parse and ignored line '%s' from the option file\n", line.c_str());
+      log_printf(hovWarning, "Hiop could not parse and ignored line '%s' from the option file\n", line.c_str());
       continue;
     }
     
@@ -209,7 +212,7 @@ void hiopOptions::loadFromFile(const char* filename)
 	stringstream ss(value); double val;
 	if(ss>>val) { SetNumericValue(name.c_str(), val); }
 	else 
-	  log->printf(hovWarning, 
+	  log_printf(hovWarning, 
 		      "Hiop could not parse value '%s' as double for option '%s' specified in the option file and will use default value '%g'\n", 
 		      value.c_str(), name.c_str(), on->val);
       } else {
@@ -222,7 +225,7 @@ void hiopOptions::loadFromFile(const char* filename)
 	    stringstream ss(value); int val;
 	    if(ss>>val) { SetIntegerValue(name.c_str(), val); }
 	    else {
-	      log->printf(hovWarning, 
+	      log_printf(hovWarning, 
 			  "Hiop could not parse value '%s' as int for option '%s' specified in the option file and will use default value '%d'\n",
 			  value.c_str(), name.c_str(), oi->val);
 	    }
@@ -235,7 +238,7 @@ void hiopOptions::loadFromFile(const char* filename)
 
     } else { // else from it!=mOptions.end()
       // option not recognized/found/registered
-      log->printf(hovWarning, 
+      log_printf(hovWarning, 
 		  "Hiop does not understand option '%s' specified in the option file and will ignore its value '%s'.\n",
 		  name.c_str(), value.c_str());
     }
@@ -248,18 +251,18 @@ bool hiopOptions::SetNumericValue (const char* name, const double& value)
   if(it!=mOptions.end()) {
     _ONum* option = dynamic_cast<_ONum*>(it->second);
     if(NULL==option) {
-      log->printf(hovWarning, 
+      log_printf(hovWarning, 
 		"Hiop does not know option '%s' as 'numeric'. Maybe it is an 'integer' or 'string' value? The option will be ignored.\n",
 		name);
     } else {
       if(value<option->lb || value>option->ub) {
-	log->printf(hovWarning, 
+	log_printf(hovWarning, 
 		    "Hiop: option '%s' must be in [%g,%g]. Default value %g will be used.\n",
 		    name, option->lb, option->ub, option->val);
       } else option->val = value;
     }
   } else {
-    log->printf(hovWarning, 
+    log_printf(hovWarning, 
 		"Hiop does not understand option '%s' and will ignore its value '%g'.\n",
 		name, value);
   }
@@ -272,18 +275,18 @@ bool hiopOptions::SetIntegerValue(const char* name, const int& value)
   if(it!=mOptions.end()) {
     _OInt* option = dynamic_cast<_OInt*>(it->second);
     if(NULL==option) {
-      log->printf(hovWarning, 
+      log_printf(hovWarning, 
 		  "Hiop does not know option '%s' as 'integer'. Maybe it is an 'numeric' or a 'string' option? The option will be ignored.\n",
 		  name);
     } else {
       if(value<option->lb || value>option->ub) {
-	log->printf(hovWarning, 
+	log_printf(hovWarning, 
 		    "Hiop: option '%s' must be in [%d, %d]. Default value %d will be used.\n",
 		    name, option->lb, option->ub, option->val);
       } else option->val = value;
     }
   } else {
-    log->printf(hovWarning, 
+    log_printf(hovWarning, 
 		"Hiop does not understand option '%s' and will ignore its value '%d'.\n",
 		name, value);
   }
@@ -296,7 +299,7 @@ bool hiopOptions::SetStringValue (const char* name,  const char* value)
   if(it!=mOptions.end()) {
     _OStr* option = dynamic_cast<_OStr*>(it->second);
     if(NULL==option) {
-      log->printf(hovWarning, 
+      log_printf(hovWarning, 
 		  "Hiop does not know option '%s' as 'string'. Maybe it is an 'integer' or a 'string' option? The option will be ignored.\n",
 		  name);
     } else {
@@ -310,20 +313,33 @@ bool hiopOptions::SetStringValue (const char* name,  const char* value)
 	stringstream ssRange; ssRange << " ";
 	for(int it=0; it<option->range.size(); it++) ssRange << option->range[it] << " ";
 
-	log->printf(hovWarning, 
+	log_printf(hovWarning, 
 		    "Hiop: value '%s' for option '%s' must be one of [%s]. Default value '%s' will be used.\n",
 		    value, name, ssRange.str().c_str(), option->val.c_str());
       }
       else option->val = value;
     }
   } else {
-    log->printf(hovWarning, 
+    log_printf(hovWarning, 
 		"Hiop does not understand option '%s' and will ignore its value '%s'.\n",
 		name, value);
   }
   return true;
 }
 
+void hiopOptions::log_printf(hiopOutVerbosity v, const char* format, ...)
+{
+  char buff[1024];
+  va_list args;
+  va_start (args, format);
+  vsprintf (buff,format, args);
+  if(log)
+    log->printf(v,buff);
+  else
+    hiopLogger::printf_error(v,buff);
+  //fprintf(stderr,buff);
+  va_end (args);
+}
 
 void hiopOptions::print(FILE* file, const char* msg) const
 {

@@ -92,6 +92,8 @@ protected:
 
   void ensureConsistence();
 
+  void log_printf(hiopOutVerbosity v, const char* format, ...);
+
   struct _O { // option entry
     _O(const char* description) : descr(description) {};
     virtual ~_O() {};

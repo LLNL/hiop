@@ -100,7 +100,12 @@ public:
 
   //only for loggerid=0 for now
   void printf(hiopOutVerbosity v, const char* format, ...); 
-  
+
+  /* This static method is to be used before NLP created its internal instance of hiopLogger. To be
+   * used for displaying errors (on stderr) that occur during initialization of the NLP class 
+   */
+  static void printf_error(hiopOutVerbosity v, const char* format, ...); 
+
 protected:
   FILE* _f;
   char _buff[1024];
