@@ -74,6 +74,11 @@ int main(int argc, char **argv)
   //if(rank==0) printf("interface created\n");
   hiop::hiopNlpDenseConstraints nlp(problem);
   //if(rank==0) printf("nlp formulation created\n");
+
+  //nlp.options->SetIntegerValue("verbosity_level", 4);
+  //nlp.options->SetNumericValue("tolerance", 1e-4);
+  //nlp.options->SetStringValue("dualsInitialization",  "zero");
+  //nlp.options->SetIntegerValue("max_iter", 2);
   
   hiop::hiopAlgFilterIPM solver(&nlp);
   hiop::hiopSolveStatus status = solver.run();
