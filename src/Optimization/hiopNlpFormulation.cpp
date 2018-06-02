@@ -75,7 +75,7 @@ hiopNlpFormulation::hiopNlpFormulation(hiopInterfaceBase& interface)
   options = new hiopOptions(/*filename=NULL*/);
 
   hiopOutVerbosity hov = (hiopOutVerbosity) options->GetInteger("verbosity_level");
-  log = new hiopLogger(this, hov, stdout);
+  log = new hiopLogger(this, stdout);
 
   options->SetLog(log);
   //log->write(NULL, *options, hovSummary);//! comment this at some point

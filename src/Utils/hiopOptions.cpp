@@ -210,7 +210,7 @@ void hiopOptions::loadFromFile(const char* filename)
       on = dynamic_cast<_ONum*>(option);
       if(on!=NULL) {
 	stringstream ss(value); double val;
-	if(ss>>val) { SetNumericValue(name.c_str(), val); }
+	if(ss>>val) { SetNumericValue(name.c_str(), val, true); }
 	else 
 	  log_printf(hovWarning, 
 		      "Hiop could not parse value '%s' as double for option '%s' specified in the option file and will use default value '%g'\n", 
@@ -218,19 +218,19 @@ void hiopOptions::loadFromFile(const char* filename)
       } else {
 	os = dynamic_cast<_OStr*>(option);
 	if(os!=NULL) {
-	  SetStringValue(name.c_str(), value.c_str());
+	  SetStringValue(name.c_str(), value.c_str(), true);
 	} else {
 	  oi = dynamic_cast<_OInt*>(option);
 	  if(oi!=NULL) {
 	    stringstream ss(value); int val;
-	    if(ss>>val) { SetIntegerValue(name.c_str(), val); }
+	    if(ss>>val) { SetIntegerValue(name.c_str(), val, true); }
 	    else {
 	      log_printf(hovWarning, 
 			  "Hiop could not parse value '%s' as int for option '%s' specified in the option file and will use default value '%d'\n",
 			  value.c_str(), name.c_str(), oi->val);
 	    }
 	  } else {
-	    // not any of the types? Can't happen
+	    // not one of the expected types? Can't happen
 	    assert(false);
 	  }
 	}
@@ -245,7 +245,7 @@ void hiopOptions::loadFromFile(const char* filename)
   } //end of the for over the lines
 }
 
-bool hiopOptions::SetNumericValue (const char* name, const double& value)
+bool hiopOptions::SetNumericValue (const char* name, const double& value, const bool& setFromFile/*=false*/)
 {
   map<string, _O*>::iterator it = mOptions.find(name);
   if(it!=mOptions.end()) {
@@ -255,6 +255,17 @@ bool hiopOptions::SetNumericValue (const char* name, const double& value)
 		"Hiop does not know option '%s' as 'numeric'. Maybe it is an 'integer' or 'string' value? The option will be ignored.\n",
 		name);
     } else {
+      if(true==option->specifiedInFile) {
+	if(false==setFromFile) {
+	  log_printf(hovWarning, 
+		     "Hiop will ignore value '%g' set for option '%s' since this option is already specified in an option file.\n", value, name);
+	  return true;
+	}
+      } 
+
+      if(setFromFile)
+	option->specifiedInFile=true;
+
       if(value<option->lb || value>option->ub) {
 	log_printf(hovWarning, 
 		    "Hiop: option '%s' must be in [%g,%g]. Default value %g will be used.\n",
@@ -269,7 +280,7 @@ bool hiopOptions::SetNumericValue (const char* name, const double& value)
   return true;
 }
 
-bool hiopOptions::SetIntegerValue(const char* name, const int& value)
+bool hiopOptions::SetIntegerValue(const char* name, const int& value, const bool& setFromFile/*=false*/)
 {
   map<string, _O*>::iterator it = mOptions.find(name);
   if(it!=mOptions.end()) {
@@ -279,6 +290,18 @@ bool hiopOptions::SetIntegerValue(const char* name, const int& value)
 		  "Hiop does not know option '%s' as 'integer'. Maybe it is an 'numeric' or a 'string' option? The option will be ignored.\n",
 		  name);
     } else {
+      if(true==option->specifiedInFile) {
+	if(false==setFromFile) {
+	  log_printf(hovWarning, 
+		     "Hiop will ignore value '%d' set for option '%s' since this option is already specified in an option file.\n", value, name);
+	  return true;
+	}
+      } 
+
+      if(setFromFile)
+	option->specifiedInFile=true;
+
+
       if(value<option->lb || value>option->ub) {
 	log_printf(hovWarning, 
 		    "Hiop: option '%s' must be in [%d, %d]. Default value %d will be used.\n",
@@ -293,7 +316,7 @@ bool hiopOptions::SetIntegerValue(const char* name, const int& value)
   return true;
 }
 
-bool hiopOptions::SetStringValue (const char* name,  const char* value)
+bool hiopOptions::SetStringValue (const char* name,  const char* value, const bool& setFromFile/*=false*/)
 {
   map<string, _O*>::iterator it = mOptions.find(name);
   if(it!=mOptions.end()) {
@@ -303,6 +326,17 @@ bool hiopOptions::SetStringValue (const char* name,  const char* value)
 		  "Hiop does not know option '%s' as 'string'. Maybe it is an 'integer' or a 'string' option? The option will be ignored.\n",
 		  name);
     } else {
+      if(true==option->specifiedInFile) {
+	if(false==setFromFile) {
+	  log_printf(hovWarning, 
+		     "Hiop will ignore value '%s' set for option '%s' since this option is already specified in an option file.\n", value, name);
+	  return true;
+	}
+      } 
+
+      if(setFromFile)
+	option->specifiedInFile=true;
+
       string strValue(value);
       transform(strValue.begin(), strValue.end(), strValue.begin(), ::tolower);
       //see if it is in the range (of supported values)

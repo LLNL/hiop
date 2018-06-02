@@ -65,9 +65,16 @@ public:
   hiopOptions(const char* szOptionsFilename=NULL);
   virtual ~hiopOptions();
 
-  virtual bool SetNumericValue (const char* name, const double& value);
-  virtual bool SetIntegerValue(const char* name, const int& value);
-  virtual bool SetStringValue (const char* name,  const char* value);
+  //Seters for options values that should be self explanatory with the exception of the last parameter.
+  //
+  //Passing 'setFromFile' with non-default, 'true' value is for expert use-only. It indicates that the option 
+  //value comes from the options file (hiop.options) and will overwrite any options set at runtime by the 
+  //user's code. However, passing 'setFromFile' with 'true' during runtime is perfectly fine and will 
+  //conviniently "overwrite the overwriting" file options  
+
+  virtual bool SetNumericValue (const char* name, const double& value, const bool& setFromFile=false);
+  virtual bool SetIntegerValue(const char* name, const int& value, const bool& setFromFile=false);
+  virtual bool SetStringValue (const char* name,  const char* value, const bool& setFromFile=false);
   
   virtual double      GetNumeric(const char* name) const;
   virtual int         GetInteger(const char* name) const;
@@ -95,9 +102,10 @@ protected:
   void log_printf(hiopOutVerbosity v, const char* format, ...);
 
   struct _O { // option entry
-    _O(const char* description) : descr(description) {};
+    _O(const char* description) : descr(description), specifiedInFile(false) {};
     virtual ~_O() {};
     std::string descr;
+    bool specifiedInFile;
     virtual void print(FILE* f) const =0;
   };
   struct _OInt : public _O { 
