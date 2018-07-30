@@ -177,7 +177,7 @@ void hiopIterate::setEqualityDualsToConstant(const double& v)
 
 double hiopIterate::normOneOfBoundDuals() const
 {
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   assert(zl->matchesPattern(nlp->get_ixl()));
   assert(zu->matchesPattern(nlp->get_ixu()));
   assert(vl->matchesPattern(nlp->get_idl()));
@@ -185,7 +185,7 @@ double hiopIterate::normOneOfBoundDuals() const
 #endif
   //work locally with all the vectors. This will result in only one MPI_Allreduce call instead of two.
   double nrm1=zl->onenorm_local() + zu->onenorm_local();
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
   double nrm1_global;
   int ierr=MPI_Allreduce(&nrm1, &nrm1_global, 1, MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(MPI_SUCCESS==ierr);
   nrm1=nrm1_global;
@@ -196,7 +196,7 @@ double hiopIterate::normOneOfBoundDuals() const
 
 double hiopIterate::normOneOfEqualityDuals() const
 {
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   assert(zl->matchesPattern(nlp->get_ixl()));
   assert(zu->matchesPattern(nlp->get_ixu()));
   assert(vl->matchesPattern(nlp->get_idl()));
@@ -204,7 +204,7 @@ double hiopIterate::normOneOfEqualityDuals() const
 #endif
   //work locally with all the vectors. This will result in only one MPI_Allreduce call instead of two.
   double nrm1=zl->onenorm_local() + zu->onenorm_local();
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
   double nrm1_global;
   int ierr=MPI_Allreduce(&nrm1, &nrm1_global, 1, MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(MPI_SUCCESS==ierr);
   nrm1=nrm1_global;
@@ -215,7 +215,7 @@ double hiopIterate::normOneOfEqualityDuals() const
 
 void hiopIterate::normOneOfDuals(double& nrm1Eq, double& nrm1Bnd) const
 {
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   assert(zl->matchesPattern(nlp->get_ixl()));
   assert(zu->matchesPattern(nlp->get_ixu()));
   assert(vl->matchesPattern(nlp->get_idl()));
@@ -223,7 +223,7 @@ void hiopIterate::normOneOfDuals(double& nrm1Eq, double& nrm1Bnd) const
 #endif
   //work locally with all the vectors. This will result in only one MPI_Allreduce call
   nrm1Bnd = zl->onenorm_local() + zu->onenorm_local();
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
   double nrm1_global;
   int ierr=MPI_Allreduce(&nrm1Bnd, &nrm1_global, 1, MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(MPI_SUCCESS==ierr);
   nrm1Bnd=nrm1_global;
@@ -251,7 +251,7 @@ void hiopIterate::determineSlacks()
   sdu->axpy(-1., *d); 
   sdu->selectPattern(nlp->get_idu());
 
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   assert(sxl->allPositive_w_patternSelect(nlp->get_ixl()));
   assert(sxu->allPositive_w_patternSelect(nlp->get_ixu()));
   assert(sdl->allPositive_w_patternSelect(nlp->get_idl()));
@@ -288,7 +288,7 @@ fractionToTheBdry(const hiopIterate& dir, const double& tau, double& alphaprimal
 
   alpha=vu->fractionToTheBdry_w_pattern(*dir.vu, tau, nlp->get_idu());
   alphadual=fmin(alphadual,alpha); 
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
   double aux[2]={alphaprimal,alphadual}, aux_g[2];
   int ierr=MPI_Allreduce(aux, aux_g, 2, MPI_DOUBLE, MPI_MIN, nlp->get_comm()); assert(MPI_SUCCESS==ierr);
   alphaprimal=aux_g[0]; alphadual=aux_g[1];
@@ -306,7 +306,7 @@ bool hiopIterate::takeStep_primals(const hiopIterate& iter, const hiopIterate& d
   sxu->copyFrom(*iter.sxu); sxu->axpy(alphaprimal,*dir.sxu);
   sdl->copyFrom(*iter.sdl); sdl->axpy(alphaprimal,*dir.sdl);
   sdu->copyFrom(*iter.sdu); sdu->axpy(alphaprimal,*dir.sdu);
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   assert(sxl->matchesPattern(nlp->get_ixl()));
   assert(sxu->matchesPattern(nlp->get_ixu()));
   assert(sdl->matchesPattern(nlp->get_idl()));
@@ -322,7 +322,7 @@ bool hiopIterate::takeStep_duals(const hiopIterate& iter, const hiopIterate& dir
   zu->copyFrom(*iter.zu); zu->axpy(alphadual, *dir.zu);
   vl->copyFrom(*iter.vl); vl->axpy(alphadual, *dir.vl);
   vu->copyFrom(*iter.vu); vu->axpy(alphadual, *dir.vu);
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   assert(zl->matchesPattern(nlp->get_ixl()));
   assert(zu->matchesPattern(nlp->get_ixu()));
   assert(vl->matchesPattern(nlp->get_idl()));
@@ -343,7 +343,7 @@ bool hiopIterate::updateDualsIneq(const hiopIterate& iter, const hiopIterate& di
   zu->copyFrom(*iter.zu); zu->axpy(alphadual,*dir.zu);
   vl->copyFrom(*iter.vl); vl->axpy(alphadual,*dir.vl);
   vu->copyFrom(*iter.vu); vu->axpy(alphadual,*dir.vu);
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   assert(zl->matchesPattern(nlp->get_ixl()));
   assert(zu->matchesPattern(nlp->get_ixu()));
   assert(vl->matchesPattern(nlp->get_idl()));
@@ -359,7 +359,7 @@ bool hiopIterate::adjustDuals_primalLogHessian(const double& mu, const double& k
   zu->adjustDuals_plh(*sxu,nlp->get_ixu(),mu,kappa_Sigma);
   vl->adjustDuals_plh(*sdl,nlp->get_idl(),mu,kappa_Sigma);
   vu->adjustDuals_plh(*sdu,nlp->get_idu(),mu,kappa_Sigma);
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   assert(zl->matchesPattern(nlp->get_ixl()));
   assert(zu->matchesPattern(nlp->get_ixu()));
   assert(vl->matchesPattern(nlp->get_idl()));
@@ -373,7 +373,7 @@ double hiopIterate::evalLogBarrier() const
   double barrier;
   barrier = sxl->logBarrier(nlp->get_ixl());
   barrier+= sxu->logBarrier(nlp->get_ixu());
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
   double res;
   int ierr = MPI_Allreduce(&barrier, &res, 1, MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(ierr==MPI_SUCCESS);
   barrier=res;
@@ -403,7 +403,7 @@ double hiopIterate::linearDampingTerm(const double& mu, const double& kappa_d) c
   double term;
   term  = sxl->linearDampingTerm(nlp->get_ixl(), nlp->get_ixu(), mu, kappa_d);
   term += sxu->linearDampingTerm(nlp->get_ixu(), nlp->get_ixl(), mu, kappa_d);
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
   double res;
   int ierr = MPI_Allreduce(&term, &res, 1, MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(ierr==MPI_SUCCESS);
   term = res;
@@ -423,7 +423,7 @@ void hiopIterate::addLinearDampingTermToGrad_x(const double& mu, const double& k
   const double* ixu=dynamic_cast<const hiopVectorPar&>(nlp->get_ixu()).local_data_const();
   const double*  xv=x->local_data_const();   long long n_local = x->get_local_size();
   double* gv = dynamic_cast<hiopVectorPar&>(grad_x).local_data();
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   assert(n_local==dynamic_cast<hiopVectorPar&>(grad_x).get_local_size());
 #endif
   
@@ -435,7 +435,7 @@ void hiopIterate::addLinearDampingTermToGrad_x(const double& mu, const double& k
 	if(ixu[i]==0.) gv[i] += ct;
       } else {
 	if(ixu[i]==1.) gv[i] -= ct;
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
 	else {assert(ixl[i]==0); assert(ixu[i]==0);}
 #endif
       }
@@ -447,7 +447,7 @@ void hiopIterate::addLinearDampingTermToGrad_x(const double& mu, const double& k
 	if(ixu[i]==0.) gv[i] -= ct;
       } else {
 	if(ixu[i]==1.) gv[i] += ct;
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
 	else {assert(ixl[i]==0); assert(ixu[i]==0);}
 #endif
       }
@@ -460,7 +460,7 @@ void hiopIterate::addLinearDampingTermToGrad_x(const double& mu, const double& k
 	if(ixu[i]==0.) gv[i] += beta*ct;
       } else {
 	if(ixu[i]==1.) gv[i] -= beta*ct;
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
 	else {assert(ixl[i]==0); assert(ixu[i]==0);}
 #endif
       }
@@ -477,7 +477,7 @@ void hiopIterate::addLinearDampingTermToGrad_d(const double& mu, const double& k
   const double* idu=dynamic_cast<const hiopVectorPar&>(nlp->get_idu()).local_data_const();
   const double*  dv=d->local_data_const();   long long n_local = d->get_local_size();
   double* gv = dynamic_cast<hiopVectorPar&>(grad_d).local_data();
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   assert(n_local==dynamic_cast<hiopVectorPar&>(grad_d).get_local_size());
 #endif
   
@@ -489,7 +489,7 @@ void hiopIterate::addLinearDampingTermToGrad_d(const double& mu, const double& k
 	if(idu[i]==0.) gv[i] -= ct;
       } else {
 	if(idu[i]==1.) gv[i] += ct;
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
 	else {assert(idl[i]==0); assert(idu[i]==0);}
 #endif
       }
@@ -501,7 +501,7 @@ void hiopIterate::addLinearDampingTermToGrad_d(const double& mu, const double& k
 	if(idu[i]==0.) gv[i] += ct;
       } else {
 	if(idu[i]==1.) gv[i] -= ct;
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
 	else {assert(idl[i]==0); assert(idu[i]==0);}
 #endif
       }
@@ -514,7 +514,7 @@ void hiopIterate::addLinearDampingTermToGrad_d(const double& mu, const double& k
 	if(idu[i]==0.) gv[i] += beta*ct;
       } else {
 	if(idu[i]==1.) gv[i] -= beta*ct;
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
 	else {assert(idl[i]==0); assert(idu[i]==0);}
 #endif
       }

@@ -70,7 +70,7 @@ hiopMatrixDense::hiopMatrixDense(const long long& m,
   comm=comm_;
   int P=0;
   if(col_part) {
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
     int ierr=MPI_Comm_rank(comm, &P); assert(ierr==MPI_SUCCESS);
 #endif
     glob_jl=col_part[P]; glob_ju=col_part[P+1];
@@ -120,7 +120,7 @@ hiopMatrixDense::hiopMatrixDense(const hiopMatrixDense& dm)
 
 void hiopMatrixDense::appendRow(const hiopVectorPar& row)
 {
-#ifdef DEEP_CHECKING  
+#ifdef HIOP_DEEPCHECKS  
   assert(row.get_local_size()==n_local);
   assert(m_local<max_rows && "no more space to append rows ... should have preallocated more rows.");
 #endif
@@ -144,7 +144,7 @@ void hiopMatrixDense::copyFrom(const double* buffer)
 
 void hiopMatrixDense::copyRowsFrom(const hiopMatrixDense& src, int num_rows, int row_dest)
 {
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   assert(row_dest>=0);
   assert(n_global==src.n_global);
   assert(n_local==src.n_local);
@@ -165,7 +165,7 @@ void hiopMatrixDense::copyBlockFromMatrix(const long i_start, const long j_start
   //quick returns for empty source matrices
   if(src.n()==0) return;
   if(src.m()==0) return;
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   assert(i_start<m_local || !m_local);
   assert(j_start<n_local || !n_local);
   assert(i_start>=0); assert(j_start>=0);
@@ -195,7 +195,7 @@ void hiopMatrixDense::shiftRows(long long shift)
   if(shift==0) return;
   if(-shift==m_local) return; //nothing to shift
   assert(fabs(shift)<m_local);
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   //not sure if memcpy is copying sequentially on all systems. we check this.
   //let's at least check it
   double test1=shift<0 ? M[-shift][0] : M[m_local-shift][0];
@@ -214,7 +214,7 @@ void hiopMatrixDense::shiftRows(long long shift)
     }
   }
 
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   assert(test1==M[shift<0?0:m_local][0] && "a different copy technique than memcpy is needed on this system");
   assert(test2==M[shift<0?0:m_local][n_local-1] && "a different copy technique than memcpy is needed on this system");
 #endif
@@ -234,7 +234,7 @@ void hiopMatrixDense::getRow(long long irow, hiopVector& row_vec)
   memcpy(vec.local_data(), M[irow], n_local*sizeof(double));
 }
 
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
 void hiopMatrixDense::overwriteUpperTriangleWithLower()
 {
   assert(n_local==n_global && "Use only with local, non-distributed matrices");
@@ -299,8 +299,11 @@ void hiopMatrixDense::print(FILE* f,
 			    int rank/*=-1*/) const
 {
   int myrank=0; 
-#ifdef WITH_MPI
-  if(rank>=0) assert(MPI_Comm_rank(comm, &myrank)==MPI_SUCCESS);
+#ifdef HIOP_USE_MPI
+  if(rank>=0) {
+    int ierr = MPI_Comm_rank(comm, &myrank);
+    assert(ierr==MPI_SUCCESS);
+  }
 #endif
   if(myrank==rank || rank==-1) {
     if(NULL==f) f=stdout;
@@ -340,7 +343,7 @@ void hiopMatrixDense::timesVec(double beta, hiopVector& y_,
 {
   hiopVectorPar& y = dynamic_cast<hiopVectorPar&>(y_);
   const hiopVectorPar& x = dynamic_cast<const hiopVectorPar&>(x_);
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   assert(y.get_local_size() == m_local);
   assert(y.get_size() == m_local); //y should not be distributed
   assert(x.get_local_size() == n_local);
@@ -351,7 +354,7 @@ void hiopMatrixDense::timesVec(double beta, hiopVector& y_,
   char fortranTrans='T';
   int MM=m_local, NN=n_local, incx_y=1;
 
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
   //only add beta*y on one processor (rank 0)
   int myrank;
   int ierr=MPI_Comm_rank(comm, &myrank); assert(MPI_SUCCESS==ierr);
@@ -367,7 +370,7 @@ void hiopMatrixDense::timesVec(double beta, hiopVector& y_,
   } else {
     if( MM != 0 ) y.scale( beta );
   }
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
   double* yglob=new double[m_local]; //shouldn't be any performance issue here since m_local is small
   ierr=MPI_Allreduce(y.local_data(), yglob, m_local, MPI_DOUBLE, MPI_SUM, comm); assert(MPI_SUCCESS==ierr);
   memcpy(y.local_data(), yglob, m_local*sizeof(double));
@@ -375,7 +378,7 @@ void hiopMatrixDense::timesVec(double beta, hiopVector& y_,
   delete[] yglob;
 #endif
 
-#ifdef DEEP_CHECKING  
+#ifdef HIOP_DEEPCHECKS  
   assert(y.isfinite());
 #endif
 }
@@ -386,7 +389,7 @@ void hiopMatrixDense::transTimesVec(double beta, hiopVector& y_,
 {
   hiopVectorPar& y = dynamic_cast<hiopVectorPar&>(y_);
   const hiopVectorPar& x = dynamic_cast<const hiopVectorPar&>(x_);
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   assert(x.get_local_size() == m_local);
   assert(x.get_size() == m_local); //x should not be distributed
   assert(y.get_local_size() == n_local);
@@ -412,7 +415,7 @@ void hiopMatrixDense::transTimesVec(double beta, hiopVector& y_,
  */
 void hiopMatrixDense::timesMat(double beta, hiopMatrix& W_, double alpha, const hiopMatrix& X_) const
 {
-#ifndef WITH_MPI
+#ifndef HIOP_USE_MPI
   timesMat_local(beta,W_,alpha,X_);
 #else
   hiopMatrixDense& W = dynamic_cast<hiopMatrixDense&>(W_); double** WM=W.local_data();
@@ -437,7 +440,7 @@ void hiopMatrixDense::timesMat_local(double beta, hiopMatrix& W_, double alpha, 
 {
   const hiopMatrixDense& X = dynamic_cast<const hiopMatrixDense&>(X_);
   hiopMatrixDense& W = dynamic_cast<hiopMatrixDense&>(W_);
-#ifdef DEEP_CHECKING  
+#ifdef HIOP_DEEPCHECKS  
   assert(W.m()==this->m());
   assert(X.m()==this->n());
   assert(W.n()==X.n());
@@ -474,7 +477,7 @@ void hiopMatrixDense::transTimesMat(double beta, hiopMatrix& W_, double alpha, c
 {
   const hiopMatrixDense& X = dynamic_cast<const hiopMatrixDense&>(X_);
   hiopMatrixDense& W = dynamic_cast<hiopMatrixDense&>(W_);
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   assert(W.m()==n_local);
   assert(X.m()==m_local);
   assert(W.n()==X.n());
@@ -499,7 +502,7 @@ void hiopMatrixDense::timesMatTrans_local(double beta, hiopMatrix& W_, double al
 {
   const hiopMatrixDense& X = dynamic_cast<const hiopMatrixDense&>(X_);
   hiopMatrixDense& W = dynamic_cast<hiopMatrixDense&>(W_);
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   assert(W.m()==m_local);
   //assert(X.n()==n_local);
   assert(W.n()==X.m());
@@ -527,7 +530,7 @@ void hiopMatrixDense::timesMatTrans_local(double beta, hiopMatrix& W_, double al
 void hiopMatrixDense::timesMatTrans(double beta, hiopMatrix& W_, double alpha, const hiopMatrix& X_) const
 {
   hiopMatrixDense& W = dynamic_cast<hiopMatrixDense&>(W_); 
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   const hiopMatrixDense& X = dynamic_cast<const hiopMatrixDense&>(X_);
   assert(W.n_local==W.n_global && "not intended for the case when the result matrix is distributed.");
   assert(W.isfinite());
@@ -535,14 +538,14 @@ void hiopMatrixDense::timesMatTrans(double beta, hiopMatrix& W_, double alpha, c
 #endif
 
   int myrank=0;
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
   int ierr=MPI_Comm_rank(comm,&myrank); assert(ierr==MPI_SUCCESS);
 #endif
 
   if(0==myrank) timesMatTrans_local(beta,W_,alpha,X_);
   else          timesMatTrans_local(0.,  W_,alpha,X_);
 
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
   double** WM=W.local_data();
   int n2Red=W.m()*W.n(); double* Wglob=new double[n2Red]; //!opt
   ierr = MPI_Allreduce(WM[0], Wglob, n2Red, MPI_DOUBLE, MPI_SUM, comm); assert(ierr==MPI_SUCCESS);
@@ -553,7 +556,7 @@ void hiopMatrixDense::timesMatTrans(double beta, hiopMatrix& W_, double alpha, c
 void hiopMatrixDense::addDiagonal(const hiopVector& d_)
 {
   const hiopVectorPar& d = dynamic_cast<const hiopVectorPar&>(d_);
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   assert(d.get_size()==n());
   assert(d.get_size()==m());
   assert(d.get_local_size()==m_local);
@@ -570,7 +573,7 @@ void hiopMatrixDense::addSubDiagonal(long long start, const hiopVector& d_)
 {
   const hiopVectorPar& d = dynamic_cast<const hiopVectorPar&>(d_);
   long long dlen=d.get_size();
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   assert(start>=0);
   assert(start+dlen<=n_local);
 #endif
@@ -582,7 +585,7 @@ void hiopMatrixDense::addSubDiagonal(long long start, const hiopVector& d_)
 void hiopMatrixDense::addMatrix(double alpha, const hiopMatrix& X_)
 {
   const hiopMatrixDense& X = dynamic_cast<const hiopMatrixDense&>(X_); 
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   assert(m_local==X.m_local);
   assert(n_local==X.n_local);
 #endif
@@ -595,7 +598,7 @@ double hiopMatrixDense::max_abs_value()
 {
   char norm='M';
   double maxv = DLANGE(&norm, &n_local, &m_local, M[0], &n_local, NULL);
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
   double maxvg;
   int ierr=MPI_Allreduce(&maxv,&maxvg,1,MPI_DOUBLE,MPI_MAX,comm); assert(ierr==MPI_SUCCESS);
   return maxvg;
@@ -603,7 +606,7 @@ double hiopMatrixDense::max_abs_value()
   return maxv;
 }
 
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
 bool hiopMatrixDense::assertSymmetry(double tol) const
 {
   //must be square

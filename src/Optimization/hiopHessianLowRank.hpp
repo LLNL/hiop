@@ -108,7 +108,7 @@ public:
    */ 
   virtual void symMatTimesInverseTimesMatTrans(double beta, hiopMatrixDense& W_, 
 					       double alpha, const hiopMatrixDense& X);
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   /* computes the product of the Hessian with a vector: y=beta*y+alpha*H*x.
    * The function is supposed to use the underlying ***recursive*** definition of the 
    * quasi-Newton Hessian and is used for checking/testing/error calculation.
@@ -132,8 +132,8 @@ protected:
   hiopNlpDenseConstraints* nlp;
 private:
   hiopVectorPar* DhInv; //(B0+Dk)^{-1}
-#ifdef DEEP_CHECKING
-  // needed in timesVec (for residual checking in solveCompressed, only DEEP_CHECKING mode).
+#ifdef HIOP_DEEPCHECKS
+  // needed in timesVec (for residual checking in solveCompressed, only HIOP_DEEPCHECKS mode).
   // can be recomputed from DhInv decided to store it instead to avoid round-off errors
   hiopVectorPar* _Dx; 
 #endif
@@ -146,7 +146,7 @@ private:
   hiopVectorPar* D;       //diag 
   //these are matrices from the representation of the inverse
   hiopMatrixDense* V;    
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   //copy of the matrix - needed to check the residual
    hiopMatrixDense* _Vmat; 
 #endif
@@ -181,7 +181,7 @@ private:
   hiopVectorPar& new_l_vec2(int l);
   inline hiopVectorPar& new_n_vec1(long long n)
   {
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
     assert(_n_vec1!=NULL);
     assert(_n_vec1->get_size()==n);
 #endif
@@ -189,7 +189,7 @@ private:
   }
   inline hiopVectorPar& new_n_vec2(long long n)
   {
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
     assert(_n_vec2!=NULL);
     assert(_n_vec2->get_size()==n);
 #endif
@@ -309,7 +309,7 @@ private:
   hiopVectorPar& new_l_vec3(int l);
   inline hiopVectorPar& new_n_vec1(long long n)
   {
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
     assert(_n_vec1!=NULL);
     assert(_n_vec1->get_size()==n);
 #endif
@@ -317,7 +317,7 @@ private:
   }
   inline hiopVectorPar& new_n_vec2(long long n)
   {
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
     assert(_n_vec2!=NULL);
     assert(_n_vec2->get_size()==n);
 #endif

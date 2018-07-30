@@ -137,7 +137,7 @@ double hiopResidual::computeNlpInfeasInfNorm(const hiopIterate& it,
     nrmInf_infeasib = fmax(nrmInf_infeasib, rdu->infnorm_local());
   }
 
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
   //here we reduce each of the norm together for a total cost of 1 Allreduce of 3 doubles
   //otherwise, if calling infnorm() for each vector, there will be 12 Allreduce's, each of 1 double
   double aux;
@@ -160,7 +160,7 @@ int hiopResidual::update(const hiopIterate& it,
 
   long long nx_loc=rx->get_local_size();
   const double&  mu=logprob.mu;
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   assert(it.zl->matchesPattern(nlp->get_ixl()));
   assert(it.zu->matchesPattern(nlp->get_ixu()));
   assert(it.sxl->matchesPattern(nlp->get_ixl()));
@@ -286,7 +286,7 @@ int hiopResidual::update(const hiopIterate& it,
     nlp->log->printf(hovScalars,"resid:update: inf norm rsvu=%g\n", rsvu->infnorm_local());
   }
 
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
   //here we reduce each of the norm together for a total cost of 1 Allreduce of 3 doubles
   //otherwise, if calling infnorm() for each vector, there will be 12 Allreduce's, each of 1 double
   double aux[6]={nrmInf_nlp_optim,nrmInf_nlp_feasib,nrmInf_nlp_complem,nrmInf_bar_optim,nrmInf_bar_feasib,nrmInf_bar_complem}, aux_g[6];
@@ -370,7 +370,7 @@ void hiopResidual::print(FILE* f, const char* msg/*=NULL*/, int max_elems/*=-1*/
 //   sdu->axpy(-1., *d); 
 //   sdu->selectPattern(nlp->get_idu());
 
-// #ifdef DEEP_CHECKING
+// #ifdef HIOP_DEEPCHECKS
 //   assert(sxl->allPositive_w_patternSelect(nlp->get_ixl()));
 //   assert(sxu->allPositive_w_patternSelect(nlp->get_ixu()));
 //   assert(sdl->allPositive_w_patternSelect(nlp->get_idl()));

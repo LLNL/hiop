@@ -70,7 +70,7 @@ private:
   struct FilterEntry { 
     FilterEntry(const double& t, const double& p) : theta(t), phi(p) {};
     double theta,phi; 
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
     FilterEntry() : theta(0.), phi(0.) { assert(true); }
 #endif
   };

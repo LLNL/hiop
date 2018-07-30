@@ -7,23 +7,23 @@ enable_language(Fortran)
 include(FortranCInterface)
 FortranCInterface_HEADER(FortranCInterface.hpp MACRO_NAMESPACE "FC_")
 
-option(WITH_MPI "Build with MPI support" ON)
-option(DEEP_CHECKING "Extra checks and asserts in the code with a high penalty on performance" ON)
+option(HIOP_USE_MPI "Build with MPI support" ON)
+option(HIOP_DEEPCHECKS "Extra checks and asserts in the code with a high penalty on performance" ON)
 
 #with testing drivers capable of 'selfchecking' (-selfcheck)
-option(WITH_MAKETEST "Enable 'make test'" ON)
+option(HIOP_WITH_MAKETEST "Enable 'make test'" ON)
 
-if(WITH_MPI)
+if(HIOP_USE_MPI)
   if(NOT DEFINED MPI_CXX_COMPILER)
     find_package(MPI REQUIRED)
     set(CMAKE_CXX_COMPILER ${MPI_CXX_COMPILER})
   endif(NOT DEFINED MPI_CXX_COMPILER)
-  add_definitions(-DWITH_MPI)
-endif(WITH_MPI)
+  add_definitions(-DHIOP_USE_MPI)
+endif(HIOP_USE_MPI)
 
-if(DEEP_CHECKING)
-    add_definitions(-DDEEP_CHECKING)
-endif(DEEP_CHECKING)
+if(HIOP_DEEPCHECKS)
+    add_definitions(-DHIOP_DEEPCHECKS)
+endif(HIOP_DEEPCHECKS)
 
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -fpermissive")
 
@@ -92,14 +92,14 @@ install(FILES src/Interface/hiopInterface.hpp
 ##########################################################
 # CMake Tests
 ##########################################################
-if (WITH_MAKETEST)
+if (HIOP_WITH_MAKETEST)
   enable_testing()
   add_test(NAME NlpDenseCons1_5H COMMAND $<TARGET_FILE:nlpDenseCons_ex1.exe>   500 1.0 -selfcheck)
   add_test(NAME NlpDenseCons1_5K COMMAND $<TARGET_FILE:nlpDenseCons_ex1.exe>  5000 1.0 -selfcheck)
   add_test(NAME NlpDenseCons2_5H COMMAND $<TARGET_FILE:nlpDenseCons_ex2.exe>   500 -selfcheck)
   add_test(NAME NlpDenseCons2_5K COMMAND $<TARGET_FILE:nlpDenseCons_ex2.exe>  5000 -selfcheck)
   add_test(NAME NlpDenseCons2_50K COMMAND $<TARGET_FILE:nlpDenseCons_ex2.exe> 50000 -selfcheck)
-  if(WITH_MPI)
+  if(HIOP_USE_MPI)
     add_test(NAME NlpDenseCons2_50K_mpi COMMAND mpirun -np 2 $<TARGET_FILE:nlpDenseCons_ex2.exe> 50000 -selfcheck)
-  endif(WITH_MPI)
-endif(WITH_MAKETEST)
+  endif(HIOP_USE_MPI)
+endif(HIOP_WITH_MAKETEST)

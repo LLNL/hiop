@@ -50,7 +50,7 @@
 
 #include "hiopLogger.hpp"
 
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
 #include "mpi.h"
 #else 
 #include <cstddef>
@@ -62,7 +62,7 @@ namespace hiop
 
 hiopNlpFormulation::hiopNlpFormulation(hiopInterfaceBase& interface)
 {
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
   bool bret = interface.get_MPI_comm(comm); assert(bret);
   int nret;
   nret=MPI_Comm_rank(comm, &rank); assert(MPI_SUCCESS==nret);
@@ -94,7 +94,7 @@ hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& 
   : hiopNlpFormulation(interface_), interface(interface_)
 {
   bool bret = interface.get_prob_sizes(n_vars, n_cons); assert(bret);
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
 
   long long* columns_partitioning=new long long[num_ranks+1];
   if(true==interface.get_vecdistrib_info(n_vars,columns_partitioning)) {
@@ -192,7 +192,7 @@ hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& 
     //idu_vec[i] = du_vec[i]>= 1e20?0.:1.;
   }
   //compute the overall n_low and n_upp
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
   long long aux[3]={n_bnds_low_local, n_bnds_upp_local, n_bnds_lu}, aux_g[3];
   int ierr=MPI_Allreduce(aux, aux_g, 3, MPI_LONG_LONG, MPI_SUM, comm); assert(MPI_SUCCESS==ierr);
   n_bnds_low=aux_g[0]; n_bnds_upp=aux_g[1]; n_bnds_lu=aux_g[2];
@@ -296,7 +296,7 @@ hiopVector* hiopNlpDenseConstraints::alloc_dual_ineq_vec() const
 hiopVector* hiopNlpDenseConstraints::alloc_dual_vec() const
 {
   hiopVectorPar* ret=new hiopVectorPar(n_cons);
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   assert(ret!=NULL);
 #endif
   return ret;
@@ -310,7 +310,7 @@ hiopMatrixDense* hiopNlpDenseConstraints::alloc_Jac_c() const
 hiopMatrixDense* hiopNlpDenseConstraints::alloc_Jac_d() const
 {
   /*  hiopMatrixDense* M;
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
   int numRanks; 
   int ierr=MPI_Comm_size(comm, &numRanks); assert(MPI_SUCCESS==ierr);
   long long* columns_partitioning=new long long[numRanks+1];
@@ -330,7 +330,7 @@ hiopMatrixDense* hiopNlpDenseConstraints::alloc_Jac_d() const
 hiopMatrixDense* hiopNlpDenseConstraints::alloc_multivector_primal(int nrows, int maxrows/*=-1*/) const
 {
   hiopMatrixDense* M;
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
   long long* columns_partitioning=new long long[num_ranks+1];
   if(true==interface.get_vecdistrib_info(n_vars,columns_partitioning)) {
     M = new hiopMatrixDense(nrows, n_vars, columns_partitioning, comm, maxrows);
@@ -363,7 +363,7 @@ bool hiopNlpDenseConstraints::get_starting_point(hiopVector& x0_)
 void hiopNlpDenseConstraints::print(FILE* f, const char* msg, int rank) const
 {
    int myrank=0; 
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
    if(rank>=0) {
      int ierr = MPI_Comm_rank(comm, &myrank); assert(ierr==MPI_SUCCESS); 
    }

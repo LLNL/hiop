@@ -49,7 +49,7 @@
 #ifndef  HIOP_TIMER
 #define HIOP_TIMER
 
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
 #include "mpi.h"
 #else
 #include <sys/time.h>
@@ -72,7 +72,7 @@ public:
 
   inline void start() 
   {
-#ifdef WITH_MPI 
+#ifdef HIOP_USE_MPI 
     tmStart = MPI_Wtime();
 #else
     gettimeofday(&tv, NULL);
@@ -82,7 +82,7 @@ public:
 
   inline void stop()
   {
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
     tmElapsed += ( MPI_Wtime()-tmStart );
 #else
     gettimeofday(&tv, NULL);
@@ -103,7 +103,7 @@ private:
   double tmElapsed; //in seconds
   double tmStart;
 
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
 #else
   struct timeval tv;
 #endif

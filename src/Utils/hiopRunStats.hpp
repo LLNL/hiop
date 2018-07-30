@@ -55,7 +55,7 @@
 #include <iomanip>
 #include <cmath>
 
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
 #include "mpi.h"  
 #endif
 namespace hiop
@@ -94,7 +94,7 @@ public:
     ss << "Hiop internal time: " << std::setprecision(3) 
        << "    total=" << std::setprecision(3) << tmSolverInternal.getElapsedTime() << " sec "
        << "  average per iteration=" << (tmSolverInternal.getElapsedTime()/nIter) << " sec " << std::endl;
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
     int nranks;
     int ierr = MPI_Comm_size(comm, &nranks); assert(MPI_SUCCESS==ierr);
 
@@ -113,7 +113,7 @@ public:
        << (tmEvalObj.getElapsedTime() + tmEvalGrad_f.getElapsedTime() + tmEvalCons.getElapsedTime() + tmEvalJac_con.getElapsedTime()) 
        << " sec  ( obj=" << tmEvalObj.getElapsedTime() << " grad=" << tmEvalGrad_f.getElapsedTime() 
        << " cons=" << tmEvalCons.getElapsedTime() << " Jac=" << tmEvalJac_con.getElapsedTime() << " ) " << std::endl;
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
     loc=tmEvalObj.getElapsedTime() + tmEvalGrad_f.getElapsedTime() + tmEvalCons.getElapsedTime() + tmEvalJac_con.getElapsedTime();
 
     ierr = MPI_Allreduce(&loc, &mean, 1, MPI_DOUBLE, MPI_SUM, comm); assert(MPI_SUCCESS==ierr);

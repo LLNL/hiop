@@ -8,7 +8,7 @@
 
 #include <cassert>
 
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
 #include "mpi.h"
 #else
 #define MPI_COMM_WORLD 0

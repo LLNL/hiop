@@ -123,7 +123,7 @@ private:
   hiopVectorPar *rhs, *rhsc, *rhsd;
   hiopVectorPar *_vec_n, *_vec_mi;
 
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   hiopMatrixDense* M_copy;
   hiopVectorPar *rhs_copy;
   hiopMatrixDense* _mixme;

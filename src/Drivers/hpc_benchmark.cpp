@@ -2,7 +2,7 @@
 #include <cstdio>
 #include <cassert>
 #include <cmath>
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
 #include "mpi.h"
 #endif
 
@@ -16,7 +16,7 @@ static const long long default_num_doubles_per_rank = 32768;
 int main(int argc, char **argv)
 {
   int nranks=1;
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
   MPI_Init(&argc, &argv);
   int err = MPI_Comm_size(MPI_COMM_WORLD, &nranks); assert(MPI_SUCCESS==err);
 #endif
@@ -25,7 +25,7 @@ int main(int argc, char **argv)
 
   net_benchmark(base_dim);
 
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
   MPI_Finalize();
 #endif
   return 0; 
@@ -37,7 +37,7 @@ const static int NUM_TESTS  =5;
 const static int TEST_X_SIZE=2; 
 void net_benchmark(const long long baseDim)
 {
-#ifndef WITH_MPI
+#ifndef HIOP_USE_MPI
   printf("non-MPI build, skipping network benchmark\n");
 #else
   

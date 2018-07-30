@@ -60,7 +60,7 @@ static void usage(const char* exeName)
 int main(int argc, char **argv)
 {
   int rank=0, numRanks=1;
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
   int err;
   err = MPI_Init(&argc, &argv);                  assert(MPI_SUCCESS==err);
   err = MPI_Comm_rank(MPI_COMM_WORLD,&rank);     assert(MPI_SUCCESS==err);
@@ -95,7 +95,7 @@ int main(int argc, char **argv)
   }
 
   printf("Objective: %18.12e\n", objective);
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
   MPI_Finalize();
 #endif
   

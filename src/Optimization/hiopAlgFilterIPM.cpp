@@ -248,7 +248,7 @@ hiopSolveStatus hiopAlgFilterIPM::run()
   nlp->log->printf(hovSummary, "===============\nHiop SOLVER\n===============\n");
   nlp->log->write(NULL, *nlp->options, hovSummary);
 
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
   nlp->log->printf(hovSummary, "Using %d MPI ranks.\n", nlp->get_num_ranks());
 #endif  
   nlp->log->write("---------------\nProblem Summary\n---------------", *nlp, hovSummary);

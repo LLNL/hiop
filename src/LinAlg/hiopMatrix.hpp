@@ -49,7 +49,7 @@
 #ifndef HIOP_MATRIX
 #define HIOP_MATRIX
 
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
 #include "mpi.h"
 #else 
 #define MPI_Comm int
@@ -108,7 +108,7 @@ public:
   virtual long long m() const = 0;
   /* number of columns */
   virtual long long n() const = 0;
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   /* check symmetry */
   virtual bool assertSymmetry(double tol=1e-16) const = 0;
 #endif
@@ -172,7 +172,7 @@ public:
   void replaceRow(long long row, const hiopVectorPar& vec);
   /* copies row 'irow' in the vector 'row_vec' (sizes should match) */
   void getRow(long long irow, hiopVector& row_vec);
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   void overwriteUpperTriangleWithLower();
   void overwriteLowerTriangleWithUpper();
 #endif
@@ -186,7 +186,7 @@ public:
   virtual long long n() const {return n_global;}
  
 
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   //do not use this unless you sure you know what you're doing
   double** get_M() { return M;}
 

@@ -94,14 +94,14 @@ public:
     double aux=-mu * iter->evalLogBarrier();
     f_logbar = f + aux;
 
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
     nlp->log->write("gradx_log_bar grad_f:", *_grad_x_logbar, hovLinesearchVerb);
 #endif
     //add log terms to gradient
     iter->addLogBarGrad_x(mu, *_grad_x_logbar);
     iter->addLogBarGrad_d(mu, *_grad_d_logbar);
 
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
     nlp->log->write("gradx_log_bar grad_log:", *_grad_x_logbar, hovLinesearchVerb);
 #endif
 
@@ -111,7 +111,7 @@ public:
       iter->addLinearDampingTermToGrad_d(mu,kappa_d,1.0,*_grad_d_logbar);
 
       f_logbar += iter->linearDampingTerm(mu,kappa_d);
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
       nlp->log->write("gradx_log_bar final, with damping:", *_grad_x_logbar, hovLinesearchVerb);
       nlp->log->write("gradd_log_bar final, with damping:", *_grad_d_logbar, hovLinesearchVerb);
 #endif

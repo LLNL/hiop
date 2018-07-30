@@ -66,14 +66,14 @@ hiopVectorPar::hiopVectorPar(const long long& glob_n, long long* col_part/*=NULL
 {
   n = glob_n;
 
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
   // if this is a serial vector, make sure it has a valid comm in the mpi case
   if(comm==MPI_COMM_NULL) comm=MPI_COMM_SELF;
 #endif
 
   int P=0; 
   if(col_part) {
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
     int ierr=MPI_Comm_rank(comm, &P);  assert(ierr==MPI_SUCCESS);
 #endif
     glob_il=col_part[P]; glob_iu=col_part[P+1];
@@ -146,7 +146,7 @@ void hiopVectorPar::copyFrom(const double* v_local_data )
 void hiopVectorPar::copyFromStarting(const hiopVector& v_, int start_index)
 {
   const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_);
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   assert(n_local==n && "are you sure you want to call this?");
 #endif
   assert(start_index+v.n_local <= n_local);
@@ -156,7 +156,7 @@ void hiopVectorPar::copyFromStarting(const hiopVector& v_, int start_index)
 void hiopVectorPar::copyToStarting(hiopVector& v_, int start_index)
 {
   const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_);
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   assert(n_local==n && "are you sure you want to call this?");
 #endif
   assert(start_index+v.n_local <= n_local);
@@ -174,7 +174,7 @@ double hiopVectorPar::twonorm() const
   int one=1; int n=n_local;
   double nrm = DNRM2(&n,data,&one); 
 
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
   nrm *= nrm;
   double nrmG;
   int ierr = MPI_Allreduce(&nrm, &nrmG, 1, MPI_DOUBLE, MPI_SUM, comm); assert(MPI_SUCCESS==ierr);
@@ -191,7 +191,7 @@ double hiopVectorPar::dotProductWith( const hiopVector& v_ ) const
 
   double dotprod=DDOT(&n, this->data, &one, v.data, &one);
 
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
   double dotprodG;
   int ierr = MPI_Allreduce(&dotprod, &dotprodG, 1, MPI_DOUBLE, MPI_SUM, comm); assert(MPI_SUCCESS==ierr);
   dotprod=dotprodG;
@@ -213,7 +213,7 @@ double hiopVectorPar::infnorm() const
       if(aux>nrm) nrm=aux;
     }
   }
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
   double nrm_glob;
   int ierr = MPI_Allreduce(&nrm, &nrm_glob, 1, MPI_DOUBLE, MPI_MAX, comm); assert(MPI_SUCCESS==ierr);
   return nrm_glob;
@@ -242,7 +242,7 @@ double hiopVectorPar::infnorm_local() const
 double hiopVectorPar::onenorm() const
 {
   double nrm1=0.; for(int i=0; i<n_local; i++) nrm1 += fabs(data[i]);
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
   double nrm1_global;
   int ierr = MPI_Allreduce(&nrm1, &nrm1_global, 1, MPI_DOUBLE, MPI_SUM, comm); assert(MPI_SUCCESS==ierr);
   return nrm1_global;
@@ -287,7 +287,7 @@ void hiopVectorPar::componentDiv_p_selectPattern( const hiopVector& v_, const hi
 {
   const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_);
   const hiopVectorPar& ix= dynamic_cast<const hiopVectorPar&>(ix_);
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   assert(v.n_local==n_local);
   assert(n_local==ix.n_local);
 #endif
@@ -315,7 +315,7 @@ void hiopVectorPar::axzpy(double alpha, const hiopVector& x_, const hiopVector& 
 {
   const hiopVectorPar& vx = dynamic_cast<const hiopVectorPar&>(x_);
   const hiopVectorPar& vz = dynamic_cast<const hiopVectorPar&>(z_);
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   assert(vx.n_local==vz.n_local);
   assert(   n_local==vz.n_local);
 #endif  
@@ -372,7 +372,7 @@ void hiopVectorPar::axdzpy( double alpha, const hiopVector& x_, const hiopVector
 {
   const hiopVectorPar& vx = dynamic_cast<const hiopVectorPar&>(x_);
   const hiopVectorPar& vz = dynamic_cast<const hiopVectorPar&>(z_);
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   assert(vx.n_local==vz.n_local);
   assert(   n_local==vz.n_local);
 #endif  
@@ -431,7 +431,7 @@ void hiopVectorPar::axdzpy_w_pattern( double alpha, const hiopVector& x_, const 
   const hiopVectorPar& vx = dynamic_cast<const hiopVectorPar&>(x_);
   const hiopVectorPar& vz = dynamic_cast<const hiopVectorPar&>(z_);
   const hiopVectorPar& sel= dynamic_cast<const hiopVectorPar&>(select);
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   assert(vx.n_local==vz.n_local);
   assert(   n_local==vz.n_local);
 #endif  
@@ -479,7 +479,7 @@ void hiopVectorPar::negate()
 void hiopVectorPar::invert()
 {
   for(int i=0; i<n_local; i++) {
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
     if(fabs(data[i])<1e-35) assert(false);
 #endif
     data[i]=1./data[i];
@@ -501,7 +501,7 @@ double hiopVectorPar::logBarrier(const hiopVector& select) const
 /* adds the gradient of the log barrier, namely this=this+alpha*1/select(x) */
 void  hiopVectorPar::addLogBarrierGrad(double alpha, const hiopVector& x, const hiopVector& ix)
 {
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   assert(this->n_local == dynamic_cast<const hiopVectorPar&>(ix).n_local);
   assert(this->n_local == dynamic_cast<const hiopVectorPar&>( x).n_local);
 #endif
@@ -519,7 +519,7 @@ double hiopVectorPar::linearDampingTerm(const hiopVector& ixleft, const hiopVect
 {
   const double* ixl= (dynamic_cast<const hiopVectorPar&>(ixleft)).local_data_const();
   const double* ixr= (dynamic_cast<const hiopVectorPar&>(ixright)).local_data_const();
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   assert(n_local==(dynamic_cast<const hiopVectorPar&>(ixleft) ).n_local);
   assert(n_local==(dynamic_cast<const hiopVectorPar&>(ixright) ).n_local);
 #endif
@@ -537,7 +537,7 @@ int hiopVectorPar::allPositive()
   int allPos=true, i=0;
   while(i<n_local && allPos) if(data[i++]<=0) allPos=false;
 
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
   int allPosG;
   int ierr=MPI_Allreduce(&allPos, &allPosG, 1, MPI_INT, MPI_MIN, comm); assert(MPI_SUCCESS==ierr);
   return allPosG;
@@ -549,7 +549,7 @@ void hiopVectorPar::projectIntoBounds(const hiopVector& xl_, const hiopVector& i
 				      const hiopVector& xu_, const hiopVector& ixu_,
 				      double kappa1, double kappa2)
 {
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   assert((dynamic_cast<const hiopVectorPar&>(xl_) ).n_local==n_local);
   assert((dynamic_cast<const hiopVectorPar&>(ixl_)).n_local==n_local);
   assert((dynamic_cast<const hiopVectorPar&>(xu_) ).n_local==n_local);
@@ -576,7 +576,7 @@ void hiopVectorPar::projectIntoBounds(const hiopVector& xl_, const hiopVector& i
 	  x0[i]=aux2;
 	}
       }
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
       //if(x0[i]>xl[i] && x0[i]<xu[i]) {
       //} else {
       //printf("i=%d  x0=%g xl=%g xu=%g\n", i, x0[i], xl[i], xu[i]);
@@ -598,7 +598,7 @@ void hiopVectorPar::projectIntoBounds(const hiopVector& xl_, const hiopVector& i
 /* max{a\in(0,1]| x+ad >=(1-tau)x} */
 double hiopVectorPar::fractionToTheBdry(const hiopVector& dx, const double& tau) const 
 {
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   assert((dynamic_cast<const hiopVectorPar&>(dx) ).n_local==n_local);
   assert(tau>0);
   assert(tau<1);
@@ -607,7 +607,7 @@ double hiopVectorPar::fractionToTheBdry(const hiopVector& dx, const double& tau)
   const double* d = (dynamic_cast<const hiopVectorPar&>(dx) ).local_data_const();
   const double* x = data;
   for(int i=0; i<n_local; i++) {
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
     assert(x[i]>0);
 #endif
     if(d[i]>=0) continue;
@@ -619,7 +619,7 @@ double hiopVectorPar::fractionToTheBdry(const hiopVector& dx, const double& tau)
 /* max{a\in(0,1]| x+ad >=(1-tau)x} */
 double hiopVectorPar::fractionToTheBdry_w_pattern(const hiopVector& dx, const double& tau, const hiopVector& ix) const 
 {
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   assert((dynamic_cast<const hiopVectorPar&>(dx) ).n_local==n_local);
   assert((dynamic_cast<const hiopVectorPar&>(ix) ).n_local==n_local);
   assert(tau>0);
@@ -632,7 +632,7 @@ double hiopVectorPar::fractionToTheBdry_w_pattern(const hiopVector& dx, const do
   for(int i=0; i<n_local; i++) {
     if(d[i]>=0) continue;
     if(pat[i]==0) continue;
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
     assert(x[i]>0);
 #endif
     aux = -tau*x[i]/d[i];
@@ -643,7 +643,7 @@ double hiopVectorPar::fractionToTheBdry_w_pattern(const hiopVector& dx, const do
 
 void hiopVectorPar::selectPattern(const hiopVector& ix_)
 {
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   assert((dynamic_cast<const hiopVectorPar&>(ix_) ).n_local==n_local);
 #endif
   const double* ix = (dynamic_cast<const hiopVectorPar&>(ix_) ).local_data_const();
@@ -653,7 +653,7 @@ void hiopVectorPar::selectPattern(const hiopVector& ix_)
 
 bool hiopVectorPar::matchesPattern(const hiopVector& ix_)
 {
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   assert((dynamic_cast<const hiopVectorPar&>(ix_) ).n_local==n_local);
 #endif
   const double* ix = (dynamic_cast<const hiopVectorPar&>(ix_) ).local_data_const();
@@ -662,7 +662,7 @@ bool hiopVectorPar::matchesPattern(const hiopVector& ix_)
   for(int i=0; (i<n_local) && bmatches; i++) 
     if(ix[i]==0.0 && x[i]!=0.0) bmatches=false; 
 
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
   int bmatches_glob=bmatches;
   int ierr=MPI_Allreduce(&bmatches, &bmatches_glob, 1, MPI_INT, MPI_LAND, comm); assert(MPI_SUCCESS==ierr);
   return bmatches_glob;
@@ -672,7 +672,7 @@ bool hiopVectorPar::matchesPattern(const hiopVector& ix_)
 
 int hiopVectorPar::allPositive_w_patternSelect(const hiopVector& w_)
 {
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   assert((dynamic_cast<const hiopVectorPar&>(w_) ).n_local==n_local);
 #endif 
   const double* w = (dynamic_cast<const hiopVectorPar&>(w_) ).local_data_const();
@@ -681,7 +681,7 @@ int hiopVectorPar::allPositive_w_patternSelect(const hiopVector& w_)
   for(int i=0; i<n_local && allPos; i++) 
     if(w[i]!=0.0 && x[i]<=0.) allPos=0;
   
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
   int allPosG=allPos;
   int ierr = MPI_Allreduce(&allPos, &allPosG, 1, MPI_INT, MPI_MIN, comm); assert(MPI_SUCCESS==ierr);
   return allPosG;
@@ -691,7 +691,7 @@ int hiopVectorPar::allPositive_w_patternSelect(const hiopVector& w_)
 
 void hiopVectorPar::adjustDuals_plh(const hiopVector& x_, const hiopVector& ix_, const double& mu, const double& kappa)
 {
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   assert((dynamic_cast<const hiopVectorPar&>(x_) ).n_local==n_local);
   assert((dynamic_cast<const hiopVectorPar&>(ix_)).n_local==n_local);
 #endif
@@ -736,7 +736,7 @@ bool hiopVectorPar::isfinite() const
 void hiopVectorPar::print(FILE* file, const char* msg/*=NULL*/, int max_elems/*=-1*/, int rank/*=-1*/) const 
 {
   int myrank=0, numranks=1; 
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
   if(rank>=0) {
     int err = MPI_Comm_rank(comm, &myrank); assert(err==MPI_SUCCESS);
     err = MPI_Comm_size(comm, &numranks); assert(err==MPI_SUCCESS);

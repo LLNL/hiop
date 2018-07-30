@@ -68,7 +68,7 @@ hiopDualsLsqUpdate::hiopDualsLsqUpdate(hiopNlpFormulation* nlp)
   rhsd   = dynamic_cast<hiopVectorPar*>(nlpd->alloc_dual_ineq_vec());
   _vec_n = dynamic_cast<hiopVectorPar*>(nlpd->alloc_primal_vec());
   _vec_mi= dynamic_cast<hiopVectorPar*>(nlpd->alloc_dual_ineq_vec());
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   M_copy = M->alloc_clone();
   rhs_copy = rhs->alloc_clone();
   _mixme = new hiopMatrixDense(nlpd->m_ineq(), nlpd->m_eq());
@@ -89,7 +89,7 @@ hiopDualsLsqUpdate::~hiopDualsLsqUpdate()
   delete rhsd;
   delete _vec_n;
   delete _vec_mi;
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   delete M_copy;
   delete rhs_copy;
   delete _mixme;
@@ -162,7 +162,7 @@ bool hiopDualsLsqUpdate::LSQUpdate(hiopIterate& iter, const hiopVector& grad_f, 
   M->copyBlockFromMatrix(nlpd->m_eq(),nlpd->m_eq(), *_mixmi);
 
   //nlpd->log->write("aaa", *M, hovSummary);
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   M_copy->copyFrom(*M);
   jac_d.timesMatTrans(0.0, *_mixme, 1.0, jac_c);
   M_copy->copyBlockFromMatrix(nlpd->m_eq(), 0, *_mixme);
@@ -198,7 +198,7 @@ bool hiopDualsLsqUpdate::LSQUpdate(hiopIterate& iter, const hiopVector& grad_f, 
   rhs->copyFromStarting(*rhsd, nlpd->m_eq());
 
   //nlpd->log->write("rhs", *rhs, hovSummary);
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   rhs_copy->copyFrom(*rhs);
 #endif
 
@@ -212,7 +212,7 @@ bool hiopDualsLsqUpdate::LSQUpdate(hiopIterate& iter, const hiopVector& grad_f, 
   rhs->copyToStarting(*iter.get_yc(), 0);
   rhs->copyToStarting(*iter.get_yd(), nlpd->m_eq());
 
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   double nrmrhs = rhs_copy->twonorm();
   M_copy->timesVec(-1.0,  *rhs_copy, 1.0, *rhs);
   double nrmres = rhs_copy->twonorm() / (1+nrmrhs);
@@ -233,7 +233,7 @@ bool hiopDualsLsqUpdate::LSQUpdate(hiopIterate& iter, const hiopVector& grad_f, 
 
 int hiopDualsLsqUpdate::factorizeMat(hiopMatrixDense& M)
 {
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   assert(M.m()==M.n());
 #endif
   if(M.m()==0) return 0;
@@ -250,7 +250,7 @@ int hiopDualsLsqUpdate::factorizeMat(hiopMatrixDense& M)
 
 int hiopDualsLsqUpdate::solveWithFactors(hiopMatrixDense& M, hiopVectorPar& r)
 {
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   assert(M.m()==M.n());
 #endif
   if(M.m()==0) return 0;
@@ -259,7 +259,7 @@ int hiopDualsLsqUpdate::solveWithFactors(hiopMatrixDense& M, hiopVectorPar& r)
   DPOTRS(&uplo,&N, &nrhs, M.local_buffer(), &lda, r.local_data(), &lda, &info);
   if(info<0) 
     _nlp->log->printf(hovError, "hiopKKTLinSysLowRank::solveWithFactors: dpotrs returned error %d\n", info);
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   assert(info<=0);
 #endif
   return info;

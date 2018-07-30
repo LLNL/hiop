@@ -60,9 +60,10 @@ static void usage(const char* exeName)
 int main(int argc, char **argv)
 {
   int rank=0;
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
   MPI_Init(&argc, &argv);
-  assert(MPI_SUCCESS==MPI_Comm_rank(MPI_COMM_WORLD,&rank));
+  int ierr = MPI_Comm_rank(MPI_COMM_WORLD,&rank);
+  assert(MPI_SUCCESS==ierr);
   //if(0==rank) printf("Support for MPI is enabled\n");
 #endif
   bool selfCheck; long long n;
@@ -93,7 +94,7 @@ int main(int argc, char **argv)
     }
   }
 
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
   MPI_Finalize();
 #endif
 

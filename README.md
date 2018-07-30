@@ -23,12 +23,12 @@ $> cmake -DCMAKE_INSTALL_PREFIX=/usr/lib/hiop ..'
 
 
 ### HiOp-specific build options
-* Enable/disable MPI: *-DWITH_MPI=[ON/OFF]* (by default ON)
-* Ultra safety checks: *-DEEP_CHECKING=[ON/OFF]* (by default ON) used for increased robustness and self-diagnostics. Disabling DEEP_CHECKING usually provides 30-40% execution speedup in HiOp.
+* Enable/disable MPI: *-DHIOP_USE_MPI=[ON/OFF]* (by default ON)
+* Additional checks and self-diagnostics inside HiOp meant to detect anormalities and help to detect bugs and/or troubleshoot problematic instances: *-DHIOP_DEEPCHECKS=[ON/OFF]* (by default ON). Disabling HIOP_DEEPCHECKS usually provides 30-40% execution speedup in HiOp. For full strength, it is recomended to use HIOP_DEEPCHECKS with debug builds. With non-debug builds, in particular the ones that disable the assert macro, HIOP_DEEPCHECKS does not perform all checks and, thus, may overlook potential issues.
 
 For example:
 ```shell 
-$> cmake -DWITH_MPI=ON -DEEP_CHECKING=ON ..
+$> cmake -DHIOP_USE_MPI=ON -DHIOP_DEEPCHECKS=ON ..
 $> make 
 $> make test
 $> make install

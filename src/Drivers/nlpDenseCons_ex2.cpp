@@ -8,7 +8,7 @@ Ex2::Ex2(int n)
   : n_vars(n), n_cons(4), comm(MPI_COMM_WORLD)
 {
   comm_size=1; my_rank=0; 
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
   int ierr = MPI_Comm_size(comm, &comm_size); assert(MPI_SUCCESS==ierr);
   ierr = MPI_Comm_rank(comm, &my_rank); assert(MPI_SUCCESS==ierr);
 #endif
@@ -63,7 +63,7 @@ bool Ex2::eval_f(const long long& n, const double* x, bool new_x, double& obj_va
   long long n_local=col_partition[my_rank+1]-col_partition[my_rank];
   obj_value=0.; 
   for(int i=0;i<n_local;i++) obj_value += 0.25*pow(x[i]-1., 4);
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
   double obj_global;
   int ierr=MPI_Allreduce(&obj_value, &obj_global, 1, MPI_DOUBLE, MPI_SUM, comm); assert(ierr==MPI_SUCCESS);
   obj_value=obj_global;
@@ -140,7 +140,7 @@ bool Ex2::eval_cons(const long long& n, const long long& m,
     }
   } //end for loop over constraints
   
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
   double* cons_global=new double[num_cons];
   int ierr=MPI_Allreduce(cons, cons_global, num_cons, MPI_DOUBLE, MPI_SUM, comm); assert(ierr==MPI_SUCCESS);
   memcpy(cons, cons_global, num_cons*sizeof(double));

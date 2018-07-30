@@ -13,7 +13,7 @@ Ex1Meshing1D::Ex1Meshing1D(double a, double b,
   _a=a; _b=b; _r=r;
   comm=comm_;
   comm_size=1; my_rank=0; 
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
   int ierr = MPI_Comm_size(comm, &comm_size); assert(MPI_SUCCESS==ierr);
   ierr = MPI_Comm_rank(comm, &my_rank); assert(MPI_SUCCESS==ierr);
 #endif
@@ -119,7 +119,7 @@ double DiscretizedFunction::dotProductWith( const DiscretizedFunction& v_ ) cons
   for(int i=0; i<get_local_size(); i++)
     dot += u[i]*M[i]*v[i];
  
- #ifdef WITH_MPI
+ #ifdef HIOP_USE_MPI
   double dotprodG;
   int ierr = MPI_Allreduce(&dot, &dotprodG, 1, MPI_DOUBLE, MPI_SUM, comm); assert(MPI_SUCCESS==ierr);
   dot=dotprodG;
@@ -144,7 +144,7 @@ double DiscretizedFunction::twonorm() const
   for(int i=0; i<get_local_size(); i++)
     nrm_square += u[i]*u[i]*M[i];
 
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
   double nrm_squareG;
   int ierr = MPI_Allreduce(&nrm_square, &nrm_squareG, 1, MPI_DOUBLE, MPI_SUM, comm); assert(MPI_SUCCESS==ierr);
   nrm_square=nrm_squareG;

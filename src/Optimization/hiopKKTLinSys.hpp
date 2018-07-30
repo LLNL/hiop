@@ -96,7 +96,7 @@ public:
   //LAPACK wrappers
   int solve(hiopMatrixDense& M, hiopVectorPar& rhs);
   int solveWithRefin(hiopMatrixDense& M, hiopVectorPar& rhs);
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   static double solveError(const hiopMatrixDense& M,  const hiopVectorPar& x, hiopVectorPar& rhs);
 
   //computes the solve error for the KKT Linear system; used only for correctness checking
@@ -113,7 +113,7 @@ private:
   hiopNlpDenseConstraints* nlp;
 
   hiopMatrixDense* N; //the kxk reduced matrix
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   hiopMatrixDense* Nmat; //a copy of the above to compute the residual
 #endif
   hiopVectorPar *Dx, *Dd_inv;

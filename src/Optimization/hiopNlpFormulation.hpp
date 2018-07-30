@@ -53,7 +53,7 @@
 #include "hiopVector.hpp"
 #include "hiopMatrix.hpp"
 
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
 #include "mpi.h"  
 #endif
 
@@ -102,13 +102,13 @@ public:
   hiopOptions* options;
   //prints a summary of the problem
   virtual void print(FILE* f=NULL, const char* msg=NULL, int rank=-1) const = 0;
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
   inline MPI_Comm get_comm() const { return comm; }
   inline int      get_rank() const { return rank; }
   inline int      get_num_ranks() const { return num_ranks; }
 #endif
 protected:
-#ifdef WITH_MPI
+#ifdef HIOP_USE_MPI
   MPI_Comm comm;
   int rank, num_ranks;
 #endif

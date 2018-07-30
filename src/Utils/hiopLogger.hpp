@@ -91,7 +91,7 @@ public:
   void write(const char* msg, const hiopResidual& r,          hiopOutVerbosity v, int loggerid=0);
   void write(const char* msg, const hiopIterate& r,           hiopOutVerbosity v, int loggerid=0);
   void write(const char* msg, const hiopMatrix& M,            hiopOutVerbosity v, int loggerid=0);
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   void write(const char* msg, const hiopHessianLowRank& Hess, hiopOutVerbosity v, int loggerid=0);
 #endif
   void write(const char* msg, const hiopNlpFormulation& nlp,  hiopOutVerbosity v, int loggerid=0);

@@ -64,7 +64,7 @@ hiopKKTLinSysLowRank::hiopKKTLinSysLowRank(hiopNlpFormulation* nlp_)
   Dd_inv = ryd_tilde->alloc_clone();
   _kxn_mat = nlp->alloc_multivector_primal(nlp->m()); //!opt
   N = new hiopMatrixDense(nlp->m(),nlp->m());
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   Nmat=N->alloc_clone();
 #endif
   _k_vec1 = dynamic_cast<hiopVectorPar*>(nlp->alloc_dual_vec());
@@ -75,7 +75,7 @@ hiopKKTLinSysLowRank::~hiopKKTLinSysLowRank()
   if(rx_tilde)  delete rx_tilde;
   if(ryd_tilde) delete ryd_tilde;
   if(N)         delete N;
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   if(Nmat)      delete Nmat;
 #endif
   if(Dx)        delete Dx;
@@ -111,7 +111,7 @@ update(const hiopIterate* iter_,
   Dd_inv->setToZero();
   Dd_inv->axdzpy_w_pattern(1.0, *iter->vl, *iter->sdl, nlp->get_idl());
   Dd_inv->axdzpy_w_pattern(1.0, *iter->vu, *iter->sdu, nlp->get_idu());
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   assert(true==Dd_inv->allPositive());
 #endif 
   Dd_inv->invert();
@@ -180,7 +180,7 @@ bool hiopKKTLinSysLowRank::computeDirections(const hiopResidual* resid,
   //now the final ryd_tilde += Dd^{-1}*ryd2
   ryd_tilde->axzpy(1.0, ryd2, *Dd_inv);
 
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   hiopVectorPar* rx_tilde_save=rx_tilde->new_copy();
   hiopVectorPar* ryc_save=r.ryc->new_copy();
   hiopVectorPar* ryd_tilde_save=ryd_tilde->new_copy();
@@ -199,7 +199,7 @@ bool hiopKKTLinSysLowRank::computeDirections(const hiopResidual* resid,
 
   //dir->d->print();
 
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   errorCompressedLinsys(*rx_tilde_save,*ryc_save,*ryd_tilde_save, *dir->x, *dir->yc, *dir->yd);
   delete rx_tilde_save;
   delete ryc_save;
@@ -258,7 +258,7 @@ bool hiopKKTLinSysLowRank::computeDirections(const hiopResidual* resid,
 
   //dir->sdu->print();
   //dir->vu->print();
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   assert(dir->sxl->matchesPattern(nlp->get_ixl()));
   assert(dir->sxu->matchesPattern(nlp->get_ixu()));
   assert(dir->sdl->matchesPattern(nlp->get_idl()));
@@ -275,7 +275,7 @@ bool hiopKKTLinSysLowRank::computeDirections(const hiopResidual* resid,
   return true;
 }
 
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
 double hiopKKTLinSysLowRank::errorKKT(const hiopResidual* resid, const hiopIterate* sol)
 {
 
@@ -436,7 +436,7 @@ void hiopKKTLinSysLowRank::
 solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
 		hiopVectorPar& dx, hiopVectorPar& dyc, hiopVectorPar& dyd)
 {
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   //some outputing
   nlp->log->write("KKT Low rank: solve compressed RHS", hovIteration);
   nlp->log->write("  rx: ",  rx, hovIteration); nlp->log->write(" ryc: ", ryc, hovIteration); nlp->log->write(" ryd: ", ryd, hovIteration);
@@ -455,7 +455,7 @@ solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
   Hess->symMatTimesInverseTimesMatTrans(0.0, *N, 1.0, J);
 
   N->addSubDiagonal(nlp->m_eq(), *Dd_inv);
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   assert(J.isfinite());
   nlp->log->write("solveCompressed: N is", *N, hovMatrices);
   nlp->log->write("solveCompressed: rx is", rx, hovMatrices);
@@ -466,7 +466,7 @@ solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
   //compute the rhs of the lin sys involving N 
   //  1. first compute (H+Dx)^{-1} rx_tilde and store it temporarily in dx
   Hess->solve(rx, dx);
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   assert(rx.isfinite() && "Something bad happened: nan or inf value");
   assert(dx.isfinite() && "Something bad happened: nan or inf value");
 #endif
@@ -478,7 +478,7 @@ solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
   rhs.copyFromStarting(ryd,nlp->m_eq());
   J.timesVec(-1.0, rhs, 1.0, dx);
 
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   nlp->log->write("solveCompressed: dx sol is", dx, hovMatrices);
   nlp->log->write("solveCompressed: rhs for N is", rhs, hovMatrices);
   Nmat->copyFrom(*N);
@@ -501,7 +501,7 @@ solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
   //then dx = (H+Dx)^{-1} rx
   Hess->solve(rx, dx);
 
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
   //some outputing
   nlp->log->write("KKT Low rank: solve compressed SOL", hovIteration);
   nlp->log->write("  dx: ",  dx, hovIteration); nlp->log->write(" dyc: ", dyc, hovIteration); nlp->log->write(" dyd: ", dyd, hovIteration);
@@ -512,7 +512,7 @@ solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
 
 // int hiopKKTLinSysLowRank::factorizeMat(hiopMatrixDense& M)
 // {
-// #ifdef DEEP_CHECKING
+// #ifdef HIOP_DEEPCHECKS
 //   assert(M.m()==M.n());
 // #endif
 //   if(M.m()==0) return 0;
@@ -529,7 +529,7 @@ solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
 
 // int hiopKKTLinSysLowRank::solveWithFactors(hiopMatrixDense& M, hiopVectorPar& r)
 // {
-// #ifdef DEEP_CHECKING
+// #ifdef HIOP_DEEPCHECKS
 //   assert(M.m()==M.n());
 // #endif
 //   if(M.m()==0) return 0;
@@ -538,7 +538,7 @@ solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
 //   dpotrs_(&uplo,&N, &nrhs, M.local_buffer(), &lda, r.local_data(), &lda, &info);
 //   if(info<0) 
 //     nlp->log->printf(hovError, "hiopKKTLinSysLowRank::solveWithFactors: dpotrs returned error %d\n", info);
-// #ifdef DEEP_CHECKING
+// #ifdef HIOP_DEEPCHECKS
 //   assert(info<=0);
 // #endif
 //   return info;
@@ -673,7 +673,7 @@ int hiopKKTLinSysLowRank::solveWithRefin(hiopMatrixDense& M, hiopVectorPar& rhs)
   delete rhsref;
   delete x;
 
-// #ifdef DEEP_CHECKING
+// #ifdef HIOP_DEEPCHECKS
 //   hiopVectorPar sol(rhs.get_size());
 //   hiopVectorPar rhss(rhs.get_size());
 //   sol.copyFrom(rhs); rhss.copyFrom(*r);
@@ -812,7 +812,7 @@ int hiopKKTLinSysLowRank::solveWithRefin(hiopMatrixDense& M, hiopVectorPar& rhs)
 }
 */
 
-#ifdef DEEP_CHECKING
+#ifdef HIOP_DEEPCHECKS
 double hiopKKTLinSysLowRank::solveError(const hiopMatrixDense& M,  const hiopVectorPar& x, hiopVectorPar& rhs)
 {
   double relError;
