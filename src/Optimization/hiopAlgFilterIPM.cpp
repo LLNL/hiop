@@ -189,8 +189,9 @@ int hiopAlgFilterIPM::startingProcedure(hiopIterate& it_ini,
 					hiopVector& gradf,  hiopMatrixDense& Jac_c,  hiopMatrixDense& Jac_d)
 {
   if(!nlp->get_starting_point(*it_ini.get_x())) {
-    nlp->log->printf(hovError, "error: in getting the user provided starting point\n");
-    assert(false); return false;
+    nlp->log->printf(hovWarning, "user did not provide a starting point; will be set to all zeros\n");
+    it_ini.get_x()->setToZero();
+    //assert(false); return false;
   }
 
   nlp->runStats.tmSolverInternal.start();

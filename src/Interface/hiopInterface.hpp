@@ -176,10 +176,13 @@ public:
     return false; //defaults to serial 
   }
 
-  /* To provide a primal starting point. This point is subject to adjustments internally in hiOP.
+  /* Method providing a primal starting point. This point is subject to internal adjustments in hiOP.
+   * The method returns true (and populate x0) or return false, in which case hiOP will use set 
+   * x0 to all zero (still subject to internal adjustement).
+   *
    * ToDo: provide API for a full, primal-dual restart. 
    */
-  virtual bool get_starting_point(const long long&n, double* x0) = 0;
+  virtual bool get_starting_point(const long long&n, double* x0) { return false; }
 
   /** callback for the optimal solution.
    *  Note that:
