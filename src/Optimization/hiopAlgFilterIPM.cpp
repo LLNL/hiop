@@ -720,12 +720,14 @@ double hiopAlgFilterIPM::getObjective() const
   return _f_nlp;
 }
   /* returns the primal vector x; valid only after 'run' method has been called */
-void hiopAlgFilterIPM::getSolution(const double* x) const
+void hiopAlgFilterIPM::getSolution(double* x) const
 {
   if(_solverStatus==NlpSolve_IncompleteInit || _solverStatus == NlpSolve_SolveNotCalled)
     nlp->log->printf(hovError, "getSolution: hiOp did not initialize entirely or the 'run' function was not called.");
   if(_solverStatus==NlpSolve_Pending)
     nlp->log->printf(hovWarning, "getSolution: hiOp does not seem to have completed yet. The primal vector returned may not be optimal.");
+
+  it_curr->get_x()->copyTo(x);
 }
 
 hiopSolveStatus hiopAlgFilterIPM::getSolveStatus() const

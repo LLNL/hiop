@@ -77,7 +77,7 @@ public:
   /* returns the objective value; valid only after 'run' method has been called */
   virtual double getObjective() const;
   /* returns the primal vector x; valid only after 'run' method has been called */
-  virtual void getSolution(const double* x) const;
+  virtual void getSolution(double* x) const;
   /* returns the status of the solver */
   virtual hiopSolveStatus getSolveStatus() const;
 private:
