@@ -61,10 +61,23 @@ namespace hiop
 {
 
 hiopNlpFormulation::hiopNlpFormulation(hiopInterfaceBase& interface)
+#ifdef HIOP_USE_MPI
+  : mpi_init_called(false)
+#endif
 {
 #ifdef HIOP_USE_MPI
   bool bret = interface.get_MPI_comm(comm); assert(bret);
+
   int nret;
+  //MPI may not be initialized: this occurs when a serial driver call HiOp built with MPI support on
+  int initialized;
+  nret = MPI_Initialized( &initialized );
+  if(!initialized) {
+    mpi_init_called=true;
+    nret = MPI_Init(NULL,NULL);
+    assert(MPI_SUCCESS==nret);
+  } 
+  
   nret=MPI_Comm_rank(comm, &rank); assert(MPI_SUCCESS==nret);
   nret=MPI_Comm_size(comm, &num_ranks); assert(MPI_SUCCESS==nret);
 #else
@@ -87,6 +100,14 @@ hiopNlpFormulation::~hiopNlpFormulation()
 {
   delete log;
   delete options;
+
+#ifdef HIOP_USE_MPI
+  //some (serial) drivers call (MPI) HiOp repeatedly in an outer loop
+  //if we finalize here, subsequent calls to MPI will fail and break this outer loop. So we don't finalize
+  //if(mpi_init_called) { 
+  //  int nret=MPI_Finalize(); assert(MPI_SUCCESS==nret);
+  //}
+#endif
 }
 
 

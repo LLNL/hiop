@@ -49,11 +49,19 @@
 #ifndef HIOP_INTERFACE_BASE
 #define HIOP_INTERFACE_BASE
 
+#include "hiop_defs.hpp"
+
 #ifdef HIOP_USE_MPI
 #include "mpi.h"
+
 #else
+#ifndef MPI_Comm
 #define MPI_Comm int
+#endif
+
+#ifndef MPI_COMM_WORLD
 #define MPI_COMM_WORLD 0
+#endif 
 #endif
 
 namespace hiop

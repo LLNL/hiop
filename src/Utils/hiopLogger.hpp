@@ -49,6 +49,8 @@
 #ifndef HIOP_LOGGER
 #define HIOP_LOGGER
 
+#include "hiop_defs.hpp"
+
 #include <cstdio>
 #include <cstdarg>
 

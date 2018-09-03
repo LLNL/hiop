@@ -7,6 +7,8 @@ enable_language(Fortran)
 include(FortranCInterface)
 FortranCInterface_HEADER(FortranCInterface.hpp MACRO_NAMESPACE "FC_")
 
+file(WRITE "src/Interface/hiop_defs.hpp" "")
+
 option(HIOP_USE_MPI "Build with MPI support" ON)
 option(HIOP_DEEPCHECKS "Extra checks and asserts in the code with a high penalty on performance" ON)
 
@@ -18,11 +20,15 @@ if(HIOP_USE_MPI)
     find_package(MPI REQUIRED)
     set(CMAKE_CXX_COMPILER ${MPI_CXX_COMPILER})
   endif(NOT DEFINED MPI_CXX_COMPILER)
-  add_definitions(-DHIOP_USE_MPI)
+  file(APPEND "src/Interface/hiop_defs.hpp" "#define HIOP_USE_MPI\n")
+else()
+  file(APPEND "src/Interface/hiop_defs.hpp" "#ifdef HIOP_USE_MPI\n#undef HIOP_USE_MPI\n#endif\n")
 endif(HIOP_USE_MPI)
 
 if(HIOP_DEEPCHECKS)
-    add_definitions(-DHIOP_DEEPCHECKS)
+  file(APPEND "src/Interface/hiop_defs.hpp" "#define HIOP_DEEPCHECKS\n")
+else()
+  file(APPEND "src/Interface/hiop_defs.hpp" "#ifdef HIOP_DEEPCHECKS\n#undef HIOP_DEEPCHECKS\n#endif\n")
 endif(HIOP_DEEPCHECKS)
 
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -fpermissive")
@@ -87,6 +93,7 @@ install(FILES src/Interface/hiopInterface.hpp
 	      src/Utils/hiopLogger.hpp
 	      src/Utils/hiopTimer.hpp
 	      src/Utils/hiopOptions.hpp
+	      src/Interface/hiop_defs.hpp
         DESTINATION include)
 
 ##########################################################

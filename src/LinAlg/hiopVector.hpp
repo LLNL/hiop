@@ -49,12 +49,20 @@
 #ifndef HIOP_VECTOR
 #define HIOP_VECTOR
 
+#include "hiop_defs.hpp"
+
 #ifdef HIOP_USE_MPI
 #include "mpi.h"
 #else 
+
+#ifndef MPI_COMM
 #define MPI_Comm int
+#endif
+#ifndef MPI_COMM_NULL
 #define MPI_COMM_NULL 0
+#endif
 #include <cstddef>
+
 #endif 
 
 #include <cstdio>

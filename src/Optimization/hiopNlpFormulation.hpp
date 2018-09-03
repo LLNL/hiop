@@ -111,6 +111,7 @@ protected:
 #ifdef HIOP_USE_MPI
   MPI_Comm comm;
   int rank, num_ranks;
+  bool mpi_init_called;
 #endif
 private:
   hiopNlpFormulation(const hiopNlpFormulation&) {};

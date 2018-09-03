@@ -194,6 +194,7 @@ void hiopMatrixDense::shiftRows(long long shift)
 {
   if(shift==0) return;
   if(-shift==m_local) return; //nothing to shift
+  if(m_local==0) return; //nothing to shift
   assert(fabs(shift)<m_local);
 #ifdef HIOP_DEEPCHECKS
   //not sure if memcpy is copying sequentially on all systems. we check this.
