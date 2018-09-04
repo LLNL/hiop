@@ -132,7 +132,11 @@ void hiopOptions::registerOptions()
   registerNumOption("acceptable_tolerance", 1e-6, 1e-14, 1e-1, "HiOp will terminate if the NLP residuals are below for 'acceptable_iterations' many consecutive iterations (default 1e-6)");   
   registerIntOption("acceptable_iterations", 10, 1, 1e6, "Number of iterations of acceptable tolerance after which HiOp terminates (default 10)");
 
-
+  registerNumOption("sigma0", 1., 0., 1e+7, "initial value of the initial multiplier of the identity in the secant approximation (default 1.)");
+  {
+    vector<string> range(5); range[0]="sigma0"; range[1]="sty"; range[2]="sty_inv"; range[3]="snrm_ynrm";  range[4]="sty_srnm_ynrm";
+    registerStrOption("sigma_update_strategy", range[1], range, "updating strategy for the multiplier of the identity in the secant approximation (default sty)");
+  }
   registerIntOption("secant_memory_len", 6, 0, 256, "Size of the memory of the Hessian secant approximation");
 
   registerIntOption("verbosity_level", 3, 0, 12, "Verbosity level: 0 no output (only errors), 1=0+warnings, 2=1 (reserved), 3=2+optimization output, 4=3+scalars; larger values explained in hiopLogger.hpp"); 
@@ -382,7 +386,7 @@ void hiopOptions::print(FILE* file, const char* msg) const
  
   map<string,_O*>::const_iterator it = mOptions.begin();
   for(; it!=mOptions.end(); it++) {
-    fprintf(file, "%s  ", it->first.c_str());
+    fprintf(file, "%s ", it->first.c_str());
     it->second->print(file);
     fprintf(file, "\n");
   }
@@ -391,18 +395,18 @@ void hiopOptions::print(FILE* file, const char* msg) const
 
 void hiopOptions::_ONum::print(FILE* f) const
 {
-  fprintf(f, "%e     \t # (numeric)  %g to %g   [%s]", val, lb, ub, descr.c_str());
+  fprintf(f, "%.3e \t# (numeric)  %g to %g   [%s]", val, lb, ub, descr.c_str());
 }
 void hiopOptions::_OInt::print(FILE* f) const
 {
-  fprintf(f, "%d     \t # (integer)  %d to %d   [%s]", val, lb, ub, descr.c_str());
+  fprintf(f, "%d \t# (integer)  %d to %d   [%s]", val, lb, ub, descr.c_str());
 }
 
 void hiopOptions::_OStr::print(FILE* f) const
 {
   stringstream ssRange; ssRange << " ";
   for(int i=0; i<range.size(); i++) ssRange << range[i] << " ";
-  fprintf(f, "%s     \t # (string) one of [%s]   [%s]", val.c_str(), ssRange.str().c_str(), descr.c_str());
+  fprintf(f, "%s \t# (string) one of [%s]   [%s]", val.c_str(), ssRange.str().c_str(), descr.c_str());
 }
 
 

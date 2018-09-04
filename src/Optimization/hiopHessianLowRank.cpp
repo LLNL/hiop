@@ -61,6 +61,7 @@
 #include <cmath>
 
 #include <vector>
+#include <algorithm>
 using namespace std;
 
 #define SIGMA_STRATEGY1 1
@@ -109,11 +110,29 @@ hiopHessianLowRank::hiopHessianLowRank(hiopNlpDenseConstraints* nlp_, int max_me
   _V_work_vec=new hiopVectorPar(0);
   _V_ipiv_vec=NULL; _V_ipiv_size=-1;
 
+  
+  sigma0 = nlp->options->GetNumeric("sigma0");
   sigma=sigma0;
-  sigma_update_strategy = SIGMA_STRATEGY1;
+
+  string sigma_strategy = nlp->options->GetString("sigma_update_strategy");
+  transform(sigma_strategy.begin(), sigma_strategy.end(), sigma_strategy.begin(), ::tolower);
+  sigma_update_strategy = SIGMA_STRATEGY3;
+  if(sigma_strategy=="sty")
+    sigma_update_strategy=SIGMA_STRATEGY1;
+  else if(sigma_strategy=="sty_inv")
+    sigma_update_strategy=SIGMA_STRATEGY2;
+  else if(sigma_strategy=="snrm_ynrm")
+    sigma_update_strategy=SIGMA_STRATEGY3;
+  else if(sigma_strategy=="sty_srnm_ynrm")
+    sigma_update_strategy=SIGMA_STRATEGY4;
+  else if(sigma_strategy=="sigma0")
+    sigma_update_strategy=SIGMA_CONSTANT;
+  else assert(false && "sigma_update_strategy option not recognized");
+
   sigma_safe_min=1e-8;
   sigma_safe_max=1e+8;
   nlp->log->printf(hovScalars, "Hessian Low Rank: initial sigma is %g\n", sigma);
+  nlp->log->printf(hovScalars, "Hessian Low Rank: sigma update strategy is %d [%s]\n", sigma_update_strategy, sigma_strategy.c_str());
 
 #ifdef HIOP_DEEPCHECKS
   _Dx   = DhInv->alloc_clone();
