@@ -349,7 +349,10 @@ void hiopMatrixDense::timesVec(double beta, hiopVector& y_,
   assert(y.get_size() == m_local); //y should not be distributed
   assert(x.get_local_size() == n_local);
   assert(x.get_size() == n_global);
-  assert(y.isfinite());
+
+  //we do the check to avoid "Conditional jump or move depends on uninitialised value(s)" reported by
+  //valgrind to occur during the first call to LSQUpdate
+  if(beta!=0) assert(y.isfinite()); 
   assert(x.isfinite());
 #endif
   char fortranTrans='T';
