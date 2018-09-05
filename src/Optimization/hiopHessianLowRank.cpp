@@ -256,8 +256,6 @@ bool hiopHessianLowRank::update(const hiopIterate& it_curr, const hiopVector& gr
       _Jac_c_prev->transTimesVec(1.0, y_new,-1.0, *it_curr.yc); //!opt if nlp->Jac_c_isLinear no need for the multiplications
       Jac_d_curr.transTimesVec  (1.0, y_new, 1.0, *it_curr.yd); //!opt same here
       _Jac_d_prev->transTimesVec(1.0, y_new,-1.0, *it_curr.yd);
-      //y_new.axzpy(-1.0, s_new, *it_curr.zl);
-      //y_new.axzpy( 1.0, s_new, *it_curr.zu);
       
       double sTy = s_new.dotProductWith(y_new), s_nrm2=s_new.twonorm(), y_nrm2=y_new.twonorm();
 
@@ -267,27 +265,30 @@ bool hiopHessianLowRank::update(const hiopIterate& it_curr, const hiopVector& gr
       nlp->log->write("hiopHessianLowRank y_new",y_new, hovIteration);
 #endif
       if(sTy>s_nrm2*y_nrm2*std::numeric_limits<double>::epsilon()) { //sTy far away from zero
-	//compute the new row in L, update S and Y (either augment them or shift cols and add s_new and y_new)
-	hiopVectorPar& YTs = new_l_vec1(l_curr);
-	Yt->timesVec(0.0, YTs, 1.0, s_new);
-	//update representation
-	if(l_curr<l_max) {
-	  //just grow/augment the matrices
-	  St->appendRow(s_new);
-	  Yt->appendRow(y_new);
-	  growL(l_curr, l_max, YTs);
-	  growD(l_curr, l_max, sTy);
-	  l_curr++;
-	} else {
-	  //shift
-	  St->shiftRows(-1);
-	  Yt->shiftRows(-1);
-	  St->replaceRow(l_max-1, s_new);
-	  Yt->replaceRow(l_max-1, y_new);
-	  updateL(YTs,sTy);
-	  updateD(sTy);
-	  l_curr=l_max;
-	}
+
+	if(l_max>0) {
+	  //compute the new row in L, update S and Y (either augment them or shift cols and add s_new and y_new)
+	  hiopVectorPar& YTs = new_l_vec1(l_curr);
+	  Yt->timesVec(0.0, YTs, 1.0, s_new);
+	  //update representation
+	  if(l_curr<l_max) {
+	    //just grow/augment the matrices
+	    St->appendRow(s_new);
+	    Yt->appendRow(y_new);
+	    growL(l_curr, l_max, YTs);
+	    growD(l_curr, l_max, sTy);
+	    l_curr++;
+	  } else {
+	    //shift
+	    St->shiftRows(-1);
+	    Yt->shiftRows(-1);
+	    St->replaceRow(l_max-1, s_new);
+	    Yt->replaceRow(l_max-1, y_new);
+	    updateL(YTs,sTy);
+	    updateD(sTy);
+	    l_curr=l_max;
+	  }
+	} //end of l_max>0
 #ifdef HIOP_DEEPCHECKS
 	nlp->log->printf(hovMatrices, "\nhiopHessianLowRank: these are L and D from the BFGS compact representation\n");
 	nlp->log->write("L", *L, hovMatrices);
