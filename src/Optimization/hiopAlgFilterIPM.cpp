@@ -165,12 +165,12 @@ bool hiopAlgFilterIPM::evalNlp(hiopIterate& iter,
 			       hiopVector& gradf_,  hiopMatrixDense& Jac_c,  hiopMatrixDense& Jac_d)
 {
   bool new_x=true, bret; 
-  const hiopVectorPar& it_x = dynamic_cast<const hiopVectorPar&>(*iter.get_x());
+  hiopVectorPar& it_x = dynamic_cast<hiopVectorPar&>(*iter.get_x());
   hiopVectorPar 
     &c=dynamic_cast<hiopVectorPar&>(c_), 
     &d=dynamic_cast<hiopVectorPar&>(d_), 
     &gradf=dynamic_cast<hiopVectorPar&>(gradf_);
-  const double* x = it_x.local_data_const();//local_data_const();
+  double* x = it_x.local_data();//local_data_const();
   //f(x)
   bret = nlp->eval_f(x, new_x, f); assert(bret);
   new_x= false; //same x for the rest
@@ -666,11 +666,11 @@ bool hiopAlgFilterIPM::evalNlp_funcOnly(hiopIterate& iter,
 					double& f, hiopVector& c_, hiopVector& d_)
 {
   bool new_x=true, bret; 
-  const hiopVectorPar& it_x = dynamic_cast<const hiopVectorPar&>(*iter.get_x());
+  hiopVectorPar& it_x = dynamic_cast<hiopVectorPar&>(*iter.get_x());
   hiopVectorPar 
     &c=dynamic_cast<hiopVectorPar&>(c_), 
     &d=dynamic_cast<hiopVectorPar&>(d_);
-  const double* x = it_x.local_data_const();
+  double* x = it_x.local_data();
   bret = nlp->eval_f(x, new_x, f); assert(bret);
   new_x= false; //same x for the rest
   bret = nlp->eval_c(x, new_x, c.local_data());     assert(bret);
@@ -682,9 +682,9 @@ bool hiopAlgFilterIPM::evalNlp_derivOnly(hiopIterate& iter,
 {
   bool new_x=false; //functions were previously evaluated in the line search
   bool bret;
-  const hiopVectorPar& it_x = dynamic_cast<const hiopVectorPar&>(*iter.get_x());
+  hiopVectorPar& it_x = dynamic_cast<hiopVectorPar&>(*iter.get_x());
   hiopVectorPar & gradf=dynamic_cast<hiopVectorPar&>(gradf_);
-  const double* x = it_x.local_data_const();
+  double* x = it_x.local_data();
   bret = nlp->eval_grad_f(x, new_x, gradf.local_data()); assert(bret);
   bret = nlp->eval_Jac_c (x, new_x, Jac_c.local_data()); assert(bret);
   bret = nlp->eval_Jac_d (x, new_x, Jac_d.local_data()); assert(bret);
