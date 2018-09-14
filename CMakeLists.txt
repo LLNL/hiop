@@ -80,6 +80,7 @@ add_library(hiop STATIC $<TARGET_OBJECTS:hiopOptimization>
 install(TARGETS hiop DESTINATION lib)
 install(FILES src/Interface/hiopInterface.hpp
 	      src/Optimization/hiopNlpFormulation.hpp
+	      src/Optimization/hiopNlpTransforms.hpp
 	      src/Optimization/hiopAlgFilterIPM.hpp
 	      src/Optimization/hiopIterate.hpp
 	      src/Optimization/hiopResidual.hpp

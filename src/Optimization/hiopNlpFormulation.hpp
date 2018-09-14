@@ -57,6 +57,8 @@
 #include "mpi.h"  
 #endif
 
+#include "hiopNlpTransforms.hpp"
+
 #include "hiopRunStats.hpp"
 #include "hiopLogger.hpp"
 #include "hiopOptions.hpp"
@@ -113,6 +115,9 @@ protected:
   int rank, num_ranks;
   bool mpi_init_called;
 #endif
+
+  hiopNlpTransformations nlp_transformations;
+
 private:
   hiopNlpFormulation(const hiopNlpFormulation&) {};
 };
@@ -127,13 +132,13 @@ public:
   virtual ~hiopNlpDenseConstraints();
 
   /* wrappers for the interface calls. Can be overridden for specialized formulations required by the algorithm */
-  virtual bool eval_f(const double* x, bool new_x, double& f);
-  virtual bool eval_grad_f(const double* x, bool new_x, double* gradf);
-  virtual bool eval_c(const double*x, bool new_x, double* c);
-  virtual bool eval_d(const double*x, bool new_x, double* d);
-  virtual bool eval_d(const hiopVector& x, bool new_x, hiopVector& d);
-  virtual bool eval_Jac_c(const double* x, bool new_x, double** Jac_c);
-  virtual bool eval_Jac_d(const double* x, bool new_x, double** Jac_d);
+  virtual bool eval_f(double* x, bool new_x, double& f);
+  virtual bool eval_grad_f(double* x, bool new_x, double* gradf);
+  virtual bool eval_c(double*x, bool new_x, double* c);
+  virtual bool eval_d(double*x, bool new_x, double* d);
+  virtual bool eval_d(hiopVector& x, bool new_x, hiopVector& d);
+  virtual bool eval_Jac_c(double* x, bool new_x, double** Jac_c);
+  virtual bool eval_Jac_d(double* x, bool new_x, double** Jac_d);
   virtual bool get_starting_point(hiopVector& x0);
 
   /* linear algebra factory */
@@ -225,6 +230,11 @@ private:
   hiopInterfaceBase::NonlinearityType* cons_ineq_type;
   // keep track of the constraints indexes in the original, user's formulation
   long long *cons_eq_mapping, *cons_ineq_mapping; 
+
+#ifdef HIOP_USE_MPI
+  //inter-process distribution of vectors
+  long long* vec_distrib;
+#endif
 private:
 
   /* interface implemented and provided by the user */
