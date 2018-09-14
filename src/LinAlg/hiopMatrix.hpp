@@ -187,17 +187,14 @@ public:
   inline long long get_local_size_n() const { return n_local; }
   inline long long get_local_size_m() const { return m_local; }
 
-  inline double** local_data() const {return M;}
-  inline double*  local_buffer() const {return M[0];}
+  inline double** local_data() const {return M; }
+  inline double*  local_buffer() const {return M[0]; }
+  //do not use this unless you sure you know what you're doing
+  inline double** get_M() { return M; }
 
   virtual long long m() const {return m_local;}
   virtual long long n() const {return n_global;}
- 
-
 #ifdef HIOP_DEEPCHECKS
-  //do not use this unless you sure you know what you're doing
-  double** get_M() { return M;}
-
   virtual bool assertSymmetry(double tol=1e-16) const;
 #endif
 private:
