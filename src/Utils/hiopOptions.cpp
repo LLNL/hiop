@@ -132,14 +132,20 @@ void hiopOptions::registerOptions()
   registerNumOption("acceptable_tolerance", 1e-6, 1e-14, 1e-1, "HiOp will terminate if the NLP residuals are below for 'acceptable_iterations' many consecutive iterations (default 1e-6)");   
   registerIntOption("acceptable_iterations", 10, 1, 1e6, "Number of iterations of acceptable tolerance after which HiOp terminates (default 10)");
 
-  registerNumOption("sigma0", 1., 0., 1e+7, "initial value of the initial multiplier of the identity in the secant approximation (default 1.)");
+  registerNumOption("sigma0", 1., 0., 1e+7, "Initial value of the initial multiplier of the identity in the secant approximation (default 1.)");
   {
     vector<string> range(5); range[0]="sigma0"; range[1]="sty"; range[2]="sty_inv"; range[3]="snrm_ynrm";  range[4]="sty_srnm_ynrm";
-    registerStrOption("sigma_update_strategy", range[1], range, "updating strategy for the multiplier of the identity in the secant approximation (default sty)");
+    registerStrOption("sigma_update_strategy", range[1], range, "Updating strategy for the multiplier of the identity in the secant approximation (default sty)");
   }
   registerIntOption("secant_memory_len", 6, 0, 256, "Size of the memory of the Hessian secant approximation");
 
   registerIntOption("verbosity_level", 3, 0, 12, "Verbosity level: 0 no output (only errors), 1=0+warnings, 2=1 (reserved), 3=2+optimization output, 4=3+scalars; larger values explained in hiopLogger.hpp"); 
+
+  {
+    vector<string> range(3); range[0]="remove"; range[1]="relax"; range[2]="none";
+    registerStrOption("fixed_var", "none", range, "Treatment of fixed variables: 'remove' from the problem, 'relax' bounds by 'fixed_var_perturb', or 'none', in which case the HiOp will terminate with an error message if fixed variables are detected (default 'none')");
+    registerNumOption("fixed_var_perturb", 1e-8, 1e-14, 0.1, "Perturbation of the upper bound for fixed variables relative to its magnitude: upper_bound+=max(abs(upper_bound),1)*fixed_var_perturb (default 1e-8)");
+  }
 }
 
 void hiopOptions::registerNumOption(const std::string& name, double defaultValue, double low, double upp, const char* description)
