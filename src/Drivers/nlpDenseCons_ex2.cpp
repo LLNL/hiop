@@ -20,12 +20,6 @@ Ex2::Ex2(int n)
   int i=0; col_partition[i]=0; i++;
   while(i<=remainder) { col_partition[i] = col_partition[i-1]+quotient+1; i++; }
   while(i<=comm_size) { col_partition[i] = col_partition[i-1]+quotient;   i++; }
-  
-  /*if(my_rank==0) {
-    for(int i=0;i<=comm_size;i++) 
-      printf("%3llu ", col_partition[i]);
-    printf("\n");
-    }*/
 }
 Ex2::~Ex2()
 {
