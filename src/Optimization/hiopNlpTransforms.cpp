@@ -55,9 +55,10 @@ namespace hiop
 hiopFixedVarsRemover::  
 hiopFixedVarsRemover(const hiopVectorPar& xl, 
 		     const hiopVectorPar& xu, 
+		     const double& fixedVarTol_,
 		     const long long& numFixedVars,
 		     const long long& numFixedVars_local)
-  : n_fixed_vars_local(numFixedVars_local), 
+  : n_fixed_vars_local(numFixedVars_local), fixedVarTol(fixedVarTol_),
     Jacc_fs(NULL), Jacd_fs(NULL),
     fs2rs_idx_map(xl.get_local_size()),
     x_rs_ref(NULL), Jacc_rs_ref(NULL), Jacd_rs_ref(NULL)
@@ -121,7 +122,8 @@ bool hiopFixedVarsRemover::setupDecisionVectorPart()
   /* build the map from full-space to reduced-space */
   int it_rs=0; 
   for(int i=0;i<n_fs_local; i++) {
-    if(xl_vec[i]==xu_vec[i]) {
+    //if(xl_vec[i]==xu_vec[i]) {
+    if(fabs(xl_vec[i]-xu_vec[i])<= fixedVarTol*fmax(1.,fabs(xu_vec[i]))) {
       fs2rs_idx_map[i]=-1;
     } else {
       fs2rs_idx_map[i]=it_rs;
@@ -145,11 +147,11 @@ bool hiopFixedVarsRemover::setupConstraintsPart(const int& neq, const int& nineq
     Jacd_fs = new hiopMatrixDense(nineq, n_fs, fs_vec_distrib.data(), comm);
   } else {
     Jacc_fs = new hiopMatrixDense(neq,   n_fs, NULL, comm);
-    Jacc_fs = new hiopMatrixDense(nineq, n_fs, NULL, comm);
+    Jacd_fs = new hiopMatrixDense(nineq, n_fs, NULL, comm);
   }
 #else
   Jacc_fs = new hiopMatrixDense(neq,   n_fs);
-  Jacc_fs = new hiopMatrixDense(nineq, n_fs);
+  Jacd_fs = new hiopMatrixDense(nineq, n_fs);
 #endif
   return true;
 }
@@ -224,7 +226,7 @@ void hiopFixedVarsRemover::applyInvToMatrix(const double*const* M_fs, const int&
   for(int i=0; i<m_in; i++) {
     for(int j=0; j<fs2rs_idx_map.size(); j++) {
       rs_idx = fs2rs_idx_map[j];
-      if(rs_idx>0) {
+      if(rs_idx>=0) {
   	M_rs[i][rs_idx] = M_fs[i][j];
       }
     }
@@ -247,16 +249,24 @@ hiopFixedVarsRelaxer::~hiopFixedVarsRelaxer()
   if(xu_copy) delete xu_copy;
 }
 
-void hiopFixedVarsRelaxer::relax(const double& fixed_var_perturb, hiopVectorPar& xl, hiopVectorPar& xu)
+void hiopFixedVarsRelaxer::
+relax(const double& fixed_var_tol, const double& fixed_var_perturb, hiopVectorPar& xl, hiopVectorPar& xu)
 {
   double *xla=xl.local_data(), *xua=xu.local_data(), *v;
   long long n=xl.get_local_size();
+  double xuabs;
   for(long long i=0; i<n; i++) {
-    if(xla[i]==xua[i]) {
+    xuabs = fabs(xua[i]);
+    if(fabs(xua[i]-xla[i])<= fixed_var_tol*fmax(1.,xuabs)) {
+
+      xua[i] += fixed_var_perturb*fmax(1.,xuabs);
+      xla[i] -= fixed_var_perturb*fmax(1.,xuabs);
+      //if(xla[i]==xua[i]) {
+      // this does not apply anymore
       //if fixed a zero or less,  increase upper bound
       //if fixed at positive val, decrease lower bound
-      if(xua[i]<=0.)      xua[i] += fixed_var_perturb*fmax(1.,fabs(xua[i]));
-      else                xla[i] -= fixed_var_perturb*fmax(1.,fabs(xla[i]));
+      //if(xua[i]<=0.)      xua[i] += fixed_var_perturb*fmax(1.,fabs(xua[i]));
+      //else                xla[i] -= fixed_var_perturb*fmax(1.,fabs(xla[i]));
     }
   }
 }

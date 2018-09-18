@@ -102,7 +102,7 @@ public:
   virtual inline double** applyToJacobEq      (double** Jac_in, const int& m_in) { return Jac_in; }
   virtual inline double** applyInvToJacobEq   (double** Jac_in, const int& m_in) { return Jac_in; }
   virtual inline double** applyToJacobIneq    (double** Jac_in, const int& m_in) { return Jac_in; }
-  virtual inline double** applyInvToJacobIneq(double** Jac_in, const int& m_in)  { return Jac_in; }
+  virtual inline double** applyInvToJacobIneq (double** Jac_in, const int& m_in)  { return Jac_in; }
 public:
   hiopNlpTransformation() {}; 
   virtual ~hiopNlpTransformation() {};
@@ -122,6 +122,7 @@ class hiopFixedVarsRemover : public hiopNlpTransformation
 public:
   hiopFixedVarsRemover(const hiopVectorPar& xl, 
 		       const hiopVectorPar& xu, 
+		       const double& fixedVarTol,
 		       const long long& numFixedVars,
 		       const long long& numFixedVars_local);
   ~hiopFixedVarsRemover();
@@ -231,6 +232,8 @@ protected:
   long long n_fixed_vars_local;
   long long n_fixed_vars;
 
+  double fixedVarTol;
+
   long long n_fs; //full-space n
   long long n_rs; //reduced-space n
 
@@ -270,7 +273,8 @@ public:
   virtual long long n_pre () { /*assert(xl_copy);*/ return n_vars; } //xl_copy->get_size(); }
   inline bool setup() { return true; }
 
-  void relax(const double& fixed_var_perturb, hiopVectorPar& xl, hiopVectorPar& xu);
+  void relax(const double& fixed_var_tol, const double& fixed_var_perturb, 
+	     hiopVectorPar& xl, hiopVectorPar& xu);
 private:
   hiopVectorPar *xl_copy, *xu_copy;
   long long  n_vars;
