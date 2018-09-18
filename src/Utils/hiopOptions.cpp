@@ -144,7 +144,12 @@ void hiopOptions::registerOptions()
   {
     vector<string> range(3); range[0]="remove"; range[1]="relax"; range[2]="none";
     registerStrOption("fixed_var", "none", range, "Treatment of fixed variables: 'remove' from the problem, 'relax' bounds by 'fixed_var_perturb', or 'none', in which case the HiOp will terminate with an error message if fixed variables are detected (default 'none')");
+
+    registerNumOption("fixed_var_tolerance", 1e-15, 1e-30, 0.01, "A variable is considered fixed if |upp_bnd-low_bnd| < fixed_var_tolerance * max(abs(upp_bnd),1) (default 1e-15)");
+
     registerNumOption("fixed_var_perturb", 1e-8, 1e-14, 0.1, "Perturbation of the upper bound for fixed variables relative to its magnitude: upper_bound+=max(abs(upper_bound),1)*fixed_var_perturb (default 1e-8)");
+
+    
   }
 }
 
