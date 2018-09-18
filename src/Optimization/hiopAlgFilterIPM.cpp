@@ -375,18 +375,20 @@ hiopSolveStatus hiopAlgFilterIPM::run()
     //3 close to solution and switching condition is true; trial accepted based on Armijo
     lsStatus=0; lsNum=0;
 
-    bool grad_phi_dx_computed=false; double grad_phi_dx;
+    bool grad_phi_dx_computed=false, iniStep=true; double grad_phi_dx;
     double infeas_nrm_trial=-1.; //this will cache the primal infeasibility norm for (reuse)use in the dual updating
     //this is the linesearch loop
     while(true) {
       nlp->runStats.tmSolverInternal.start(); //---
 
-      //check the step against the minimum step size
-      if(_alpha_primal<1e-16) {
+      // check the step against the minimum step size, but accept small 
+      // fractionToTheBdry since these may occur for tight bounds at the first iteration(s)
+      if(!iniStep && _alpha_primal<1e-16) {
 	nlp->log->write("Panic: minimum step size reached. The problem may be infeasible or the gradient inaccurate. Will exit here.",hovError);
 	_solverStatus = Steplength_Too_Small;
 	break;
       }
+      iniStep=false;
       bret = it_trial->takeStep_primals(*it_curr, *dir, _alpha_primal, _alpha_dual); assert(bret);
       nlp->runStats.tmSolverInternal.stop(); //---
 
@@ -641,14 +643,43 @@ evalNlpAndLogErrors(const hiopIterate& it, const hiopResidual& resid, const doub
   double nrmDualBou, nrmDualEqu;
   it.normOneOfDuals(nrmDualEqu, nrmDualBou);
 
+  nlp->log->printf(hovScalars, "nrmOneDualEqu %g   nrmOneDualBo %g\n", nrmDualEqu, nrmDualBou);
+  if(nrmDualBou>1e+10) {
+    nlp->log->printf(hovWarning, "Unusually large bound dual variables (norm1=%g) occured, "
+		     "which may cause numerical instabilities if it persists. Convergence "
+		     " issues or inacurate optimal solutions may be experienced. Possible causes: "
+		     " tight bounds or bad scaling of the optimization variables.\n",  
+		     nrmDualBou);
+    if(nlp->options->GetString("fixed_var")=="remove") {
+      nlp->log->printf(hovWarning, "For example, increase 'fixed_var_tolerance' to remove "
+		       "additional variables.\n");
+    } else {
+      if(nlp->options->GetString("fixed_var")=="relax") {
+	nlp->log->printf(hovWarning, "For example, increase 'fixed_var_tolerance' to relax "
+			 "additional (tight) variables and/or increase 'fixed_var_perturb' "
+			 "to decrease the tightness.\n");
+      } else
+	nlp->log->printf(hovWarning, "Potential fixes: fix or relax variables with tight bounds "
+			 "(see 'fixed_var' option) or rescale variables.\n");
+    }
+  }
+  
   //scaling factors
   double sd = fmax(p_smax,(nrmDualBou+nrmDualEqu)/(n+m)) / p_smax;
   double sc = n==0?0:fmax(p_smax,nrmDualBou/n) / p_smax;
+
+  sd = fmin(sd, 1e+8);
+  sc = fmin(sc, 1e+8);
+
   //actual nlp errors 
   resid.getNlpErrors(nlpoptim, nlpfeas, nlpcomplem);
 
   //finally, the scaled nlp error
   nlpoverall = fmax(nlpoptim/sd, fmax(nlpfeas, nlpcomplem/sc));
+
+  nlp->log->printf(hovScalars, 
+		   "nlpoverall %g  nloptim %g  sd %g  nlpfeas %g  nlpcomplem %g  sc %g\n", 
+		   nlpoverall, nlpoptim, sd, nlpfeas, nlpcomplem, sc);
 
   //actual log errors
   resid.getBarrierErrors(logoptim, logfeas, logcomplem);
@@ -717,7 +748,7 @@ double hiopAlgFilterIPM::getObjective() const
     nlp->log->printf(hovError, "getObjective: hiOp did not initialize entirely or the 'run' function was not called.");
   if(_solverStatus==NlpSolve_Pending)
     nlp->log->printf(hovWarning, "getObjective: hiOp does not seem to have completed yet. The objective value returned may not be optimal.");
-  return _f_nlp;
+  return nlp->user_obj(_f_nlp);
 }
   /* returns the primal vector x; valid only after 'run' method has been called */
 void hiopAlgFilterIPM::getSolution(double* x) const
@@ -725,9 +756,11 @@ void hiopAlgFilterIPM::getSolution(double* x) const
   if(_solverStatus==NlpSolve_IncompleteInit || _solverStatus == NlpSolve_SolveNotCalled)
     nlp->log->printf(hovError, "getSolution: hiOp did not initialize entirely or the 'run' function was not called.");
   if(_solverStatus==NlpSolve_Pending)
-    nlp->log->printf(hovWarning, "getSolution: hiOp does not seem to have completed yet. The primal vector returned may not be optimal.");
+    nlp->log->printf(hovWarning, "getSolution: hiOp have not completed yet. The primal vector returned may not be optimal.");
 
-  it_curr->get_x()->copyTo(x);
+  hiopVectorPar& it_x = dynamic_cast<hiopVectorPar&>(*it_curr->get_x());
+  //it_curr->get_x()->copyTo(x);
+  nlp->user_x(it_x, x);
 }
 
 hiopSolveStatus hiopAlgFilterIPM::getSolveStatus() const
