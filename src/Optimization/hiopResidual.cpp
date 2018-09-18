@@ -68,9 +68,13 @@ hiopResidual::hiopResidual(hiopNlpDenseConstraints* nlp_)
   ryd = rd->alloc_clone();
 
   rszl = rx->alloc_clone();
-  rszu = rx->alloc_clone();
+  rszl->setToZero();
+  rszu = rszl->new_copy();
+
   rsvl = rd->alloc_clone();
-  rsvu = rd->alloc_clone();
+  rsvl->setToZero();
+  rsvu = rsvl->new_copy();
+
   nrmInf_nlp_optim = nrmInf_nlp_feasib = nrmInf_nlp_complem = 1e6;
   nrmInf_bar_optim = nrmInf_bar_feasib = nrmInf_bar_complem = 1e6;
 }
