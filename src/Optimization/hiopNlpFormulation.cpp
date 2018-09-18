@@ -120,6 +120,8 @@ hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& 
 
   nlp_transformations.setUserNlpNumVars(n_vars);
 
+  const double fixedVarTol = options->GetNumeric("fixed_var_tolerance");
+
 #ifdef HIOP_USE_MPI
   vec_distrib=new long long[num_ranks+1];
   if(true==interface.get_vecdistrib_info(n_vars,vec_distrib)) {
@@ -146,6 +148,9 @@ hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& 
   n_bnds_lu = 0;
   long long nfixed_vars_local=0;
   double *ixl_vec=ixl->local_data(), *ixu_vec=ixu->local_data();
+#ifdef HIOP_DEEPCHECKS
+  const int maxBndsCloseMsgs=3; int nBndsClose=0;
+#endif
   for(int i=0;i<nlocal; i++) {
     if(xl_vec[i]>-1e20) { 
       ixl_vec[i]=1.; n_bnds_low_local++;
@@ -156,15 +161,27 @@ hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& 
       ixu_vec[i]=1.; n_bnds_upp_local++;
     } else ixu_vec[i]=0.;
 
-    if(xl_vec[i]==xu_vec[i]) {
+    //if(xl_vec[i]==xu_vec[i]) {
+    if(fabs(xl_vec[i]-xu_vec[i])<= fixedVarTol*fmax(1.,fabs(xu_vec[i]))) {
       nfixed_vars_local++;
     } else {
 #ifdef HIOP_DEEPCHECKS
-      //printf("%d %g\n", i, fabs(xl_vec[i]-xu_vec[i]));
-      if(fabs(xl_vec[i]-xu_vec[i]) / std::max(1.,fabs(xu_vec[i]))<1e-12)
-	log->printf(hovWarning, 
-		    "Lower and upper bound for variable %d are very close. Consider fixing this variable.\n",
-		    i);
+      #define min_dist 1e-8
+      if(fixedVarTol<min_dist) { 
+	if(nBndsClose<maxBndsCloseMsgs) {
+	  if(fabs(xl_vec[i]-xu_vec[i]) / std::max(1.,fabs(xu_vec[i]))<min_dist) {
+	    log->printf(hovWarning, 
+			"Lower (%g) and upper bound (%g) for variable %d are very close. "
+			"Consider fixing this variable or increase 'fixed_var_tolerance'.\n",
+			i, xl_vec[i], xu_vec[i]);
+	    nBndsClose++;
+	  }
+	} 
+	if(nBndsClose==maxBndsCloseMsgs) {
+	  log->printf(hovWarning, "[further messages were surpressed]\n");
+	  nBndsClose++;
+	}
+      }
 #endif
     }
   }
@@ -181,7 +198,7 @@ hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& 
     if(options->GetString("fixed_var")=="remove") {
       log->printf(hovWarning, "Fixed variables will be removed internally.\n");
 
-      fixedVarsRemover = new hiopFixedVarsRemover(*xl, *xu, nfixed_vars, nfixed_vars_local);
+      fixedVarsRemover = new hiopFixedVarsRemover(*xl, *xu, fixedVarTol, nfixed_vars, nfixed_vars_local);
       
 
 #ifdef HIOP_USE_MPI
@@ -235,7 +252,7 @@ hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& 
 	log->printf(hovWarning, "Fixed variables will be relaxed internally.\n");
 	hiopFixedVarsRelaxer* fixedVarsRelaxer = new hiopFixedVarsRelaxer(*xl, *xu, nfixed_vars, nfixed_vars_local);
 	fixedVarsRelaxer->setup();
-	fixedVarsRelaxer->relax(options->GetNumeric("fixed_var_perturb"), *xl, *xu);
+	fixedVarsRelaxer->relax(options->GetNumeric("fixed_var_tolerance"), options->GetNumeric("fixed_var_perturb"), *xl, *xu);
 
 	nlp_transformations.append(fixedVarsRelaxer);
 

@@ -63,6 +63,8 @@
 #include "hiopLogger.hpp"
 #include "hiopOptions.hpp"
 
+#include <cstring>
+
 namespace hiop
 {
 
@@ -214,6 +216,15 @@ public:
   inline long long n_complem()  const {return m_ineq_low()+m_ineq_upp()+n_low()+n_upp();}
   //inline long long n_complem_local()  const {return m_ineq_low()+m_ineq_upp()+n_low_local()+n_upp_local();}
   virtual void print(FILE* f=NULL, const char* msg=NULL, int rank=-1) const;
+
+  /* methods for transforming the internal objects to corresponding user objects */
+  inline double user_obj(double hiop_f) { return nlp_transformations.applyToObj(hiop_f); }
+  inline void   user_x(hiopVectorPar& hiop_x, double* user_x) 
+  { 
+    double *hiop_xa = hiop_x.local_data();
+    double *user_xa = nlp_transformations.applyTox(hiop_xa,/*new_x=*/true); 
+    memcpy(user_x, user_xa, n_vars*sizeof(double));
+  }
 private:
   /* problem data */
   //various sizes
