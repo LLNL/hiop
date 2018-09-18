@@ -208,7 +208,7 @@ public:
   inline long long m_eq() const   {return n_cons_eq;}
   inline long long m_ineq() const {return n_cons_ineq;}
   inline long long n_low() const  {return n_bnds_low;}
-  inline long long n_upp() const  {return n_bnds_upp_local;;}
+  inline long long n_upp() const  {return n_bnds_upp;}
   inline long long n_low_local() const {return n_bnds_low_local;}
   inline long long n_upp_local() const {return n_bnds_upp_local;}
   inline long long m_ineq_low() const {return n_ineq_low;}
