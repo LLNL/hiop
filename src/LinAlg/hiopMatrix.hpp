@@ -202,7 +202,8 @@ private:
   long long n_global; //total / global number of columns
   int m_local, n_local; //local number of rows and cols, respectively
   long long glob_jl, glob_ju;
-  MPI_Comm comm;
+  MPI_Comm comm; 
+  int myrank;
   
   //this is very private do not touch :)
   long long max_rows;

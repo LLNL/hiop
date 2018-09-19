@@ -78,7 +78,9 @@ hiopMatrixDense::hiopMatrixDense(const long long& m,
     glob_jl=0; glob_ju=n_global;
   }
   n_local=glob_ju-glob_jl;
-  
+
+  myrank = P;
+
   max_rows=m_max_alloc;
   if(max_rows==-1) max_rows=m_local;
   assert(max_rows>=m_local && "the requested extra allocation is smaller than the allocation needed by the matrix");
@@ -106,7 +108,7 @@ hiopMatrixDense::hiopMatrixDense(const hiopMatrixDense& dm)
 {
   n_local=dm.n_local; m_local=dm.m_local; n_global=dm.n_global;
   glob_jl=dm.glob_jl; glob_ju=dm.glob_ju;
-  comm=dm.comm;
+  comm=dm.comm; myrank=dm.myrank;
 
   //M=new double*[m_local==0?1:m_local];
   max_rows = dm.max_rows;
@@ -195,12 +197,16 @@ void hiopMatrixDense::shiftRows(long long shift)
   if(shift==0) return;
   if(-shift==m_local) return; //nothing to shift
   if(m_local==0) return; //nothing to shift
-  assert(fabs(shift)<m_local);
+  assert(fabs(shift)<m_local); 
+
 #ifdef HIOP_DEEPCHECKS
-  //not sure if memcpy is copying sequentially on all systems. we check this.
-  //let's at least check it
-  double test1=shift<0 ? M[-shift][0] : M[m_local-shift][0];
-  double test2=shift<0 ? M[-shift][n_local-1] : M[m_local-shift][n_local-1];
+  double test1=8.3, test2=-98.3;
+  if(n_local>0) {
+    //not sure if memcpy is copying sequentially on all systems. we check this.
+    //let's at least check it
+    test1=shift<0 ? M[-shift][0] : M[m_local-shift][0];
+    test2=shift<0 ? M[-shift][n_local-1] : M[m_local-shift][n_local-1];
+  }
 #endif
 
   //shift < 0 -> up; shift > 0 -> down
@@ -216,8 +222,10 @@ void hiopMatrixDense::shiftRows(long long shift)
   }
 
 #ifdef HIOP_DEEPCHECKS
-  assert(test1==M[shift<0?0:m_local][0] && "a different copy technique than memcpy is needed on this system");
-  assert(test2==M[shift<0?0:m_local][n_local-1] && "a different copy technique than memcpy is needed on this system");
+  if(n_local>0) {
+    assert(test1==M[shift<0?0:m_local][0] && "a different copy technique than memcpy is needed on this system");
+    assert(test2==M[shift<0?0:m_local][n_local-1] && "a different copy technique than memcpy is needed on this system");
+  }
 #endif
 }
 void hiopMatrixDense::replaceRow(long long row, const hiopVectorPar& vec)
@@ -299,13 +307,6 @@ void hiopMatrixDense::print(FILE* f,
 			    int maxCols/*=-1*/, 
 			    int rank/*=-1*/) const
 {
-  int myrank=0; 
-#ifdef HIOP_USE_MPI
-  if(rank>=0) {
-    int ierr = MPI_Comm_rank(comm, &myrank);
-    assert(ierr==MPI_SUCCESS);
-  }
-#endif
   if(myrank==rank || rank==-1) {
     if(NULL==f) f=stdout;
     if(maxRows>m_local) maxRows=m_local;
@@ -360,9 +361,6 @@ void hiopMatrixDense::timesVec(double beta, hiopVector& y_,
 
 #ifdef HIOP_USE_MPI
   //only add beta*y on one processor (rank 0)
-  int myrank;
-  int ierr=MPI_Comm_rank(comm, &myrank); assert(MPI_SUCCESS==ierr);
-
   if(myrank!=0) beta=0.0; 
 #endif
 
@@ -375,11 +373,9 @@ void hiopMatrixDense::timesVec(double beta, hiopVector& y_,
     if( MM != 0 ) y.scale( beta );
   }
 #ifdef HIOP_USE_MPI
-  double* yglob=new double[m_local]; //shouldn't be any performance issue here since m_local is small
-  ierr=MPI_Allreduce(y.local_data(), yglob, m_local, MPI_DOUBLE, MPI_SUM, comm); assert(MPI_SUCCESS==ierr);
+  double yglob[m_local]; //shouldn't be any performance issue here since m_local is small
+  int ierr=MPI_Allreduce(y.local_data(), yglob, m_local, MPI_DOUBLE, MPI_SUM, comm); assert(MPI_SUCCESS==ierr);
   memcpy(y.local_data(), yglob, m_local*sizeof(double));
-  //usleep(100000);
-  delete[] yglob;
 #endif
 
 #ifdef HIOP_DEEPCHECKS  
@@ -424,15 +420,12 @@ void hiopMatrixDense::timesMat(double beta, hiopMatrix& W_, double alpha, const 
 #else
   hiopMatrixDense& W = dynamic_cast<hiopMatrixDense&>(W_); double** WM=W.local_data();
   
-  int myrank, ierr;
-  ierr=MPI_Comm_rank(comm,&myrank); assert(ierr==MPI_SUCCESS);
   if(0==myrank) timesMat_local(beta,W_,alpha,X_);
   else          timesMat_local(0.,  W_,alpha,X_);
 
-  int n2Red=W.m()*W.n(); double* Wglob=new double[n2Red]; //!opt
-  ierr = MPI_Allreduce(WM[0], Wglob, n2Red, MPI_DOUBLE, MPI_SUM,comm); assert(ierr==MPI_SUCCESS);
+  int n2Red=W.m()*W.n(); double Wglob[n2Red]; //!opt
+  int ierr = MPI_Allreduce(WM[0], Wglob, n2Red, MPI_DOUBLE, MPI_SUM,comm); assert(ierr==MPI_SUCCESS);
   memcpy(WM[0], Wglob, n2Red*sizeof(double));
-  delete[] Wglob;
 #endif
 
 }
@@ -541,20 +534,14 @@ void hiopMatrixDense::timesMatTrans(double beta, hiopMatrix& W_, double alpha, c
   assert(X.isfinite());
 #endif
 
-  int myrank=0;
-#ifdef HIOP_USE_MPI
-  int ierr=MPI_Comm_rank(comm,&myrank); assert(ierr==MPI_SUCCESS);
-#endif
-
   if(0==myrank) timesMatTrans_local(beta,W_,alpha,X_);
   else          timesMatTrans_local(0.,  W_,alpha,X_);
 
 #ifdef HIOP_USE_MPI
   double** WM=W.local_data();
-  int n2Red=W.m()*W.n(); double* Wglob=new double[n2Red]; //!opt
-  ierr = MPI_Allreduce(WM[0], Wglob, n2Red, MPI_DOUBLE, MPI_SUM, comm); assert(ierr==MPI_SUCCESS);
+  int n2Red=W.m()*W.n(); double Wglob[n2Red]; //!opt
+  int ierr = MPI_Allreduce(WM[0], Wglob, n2Red, MPI_DOUBLE, MPI_SUM, comm); assert(ierr==MPI_SUCCESS);
   memcpy(WM[0], Wglob, n2Red*sizeof(double));
-  delete[] Wglob;
 #endif
 }
 void hiopMatrixDense::addDiagonal(const hiopVector& d_)
