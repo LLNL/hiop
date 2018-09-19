@@ -260,9 +260,9 @@ hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& 
 	nlp_transformations.append(fixedVarsRelaxer);
 
       } else {
-	assert(false && 
-	       "detected fixed variables but was not instructed "
-	       "how to deal with them (option 'fixed_var' is 'none')");
+	log->printf(hovError,  
+		    "detected fixed variables but was not instructed "
+		    "how to deal with them (option 'fixed_var' is 'none').");
 	exit(EXIT_FAILURE);
       }
     }

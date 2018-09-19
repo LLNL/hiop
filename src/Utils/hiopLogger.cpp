@@ -147,6 +147,12 @@ void hiopLogger::printf(hiopOutVerbosity v, const char* format, ...)
 #endif
   hiopOutVerbosity _verb = (hiopOutVerbosity) _nlp->options->GetInteger("verbosity_level");
   if(v>_verb) return;
+
+  char label[16];label[0]='\0';
+  if(v==hovError) strcpy(label, "[Error] ");
+  else if(v==hovWarning) strcpy(label, "[Warning] ");
+  fprintf(_f,label);
+
   va_list args;
   va_start (args, format);
   vsprintf (_buff,format, args);
