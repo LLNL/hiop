@@ -256,7 +256,7 @@ hiopFixedVarsRelaxer(const hiopVectorPar& xl,
 		     const hiopVectorPar& xu, 
 		     const long long& numFixedVars,
 		     const long long& numFixedVars_local)
-  : xl_copy(NULL), xu_copy(NULL), n_vars(xl.get_size())
+  : xl_copy(NULL), xu_copy(NULL), n_vars(xl.get_size()), n_vars_local(xl.get_local_size())
 {
   //xl_copy = xl.new_copy(); // no need to copy at this point
   //xu_copy = xu.new_copy(); // no need to copy at this point

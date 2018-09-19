@@ -74,9 +74,10 @@ public:
   /* proxy for internal setup */
   virtual bool setup() = 0;
 
-  /* number of vars in the NLP after the tranformation */
+  /* number of vars in the NLP after the transformation */
   virtual long long n_post()=0;
-  /* number of vars in the NLP to which the tranformation is to be applied */
+  virtual long long n_post_local()=0;
+  /* number of vars in the NLP to which the transformation is to be applied */
   virtual long long n_pre ()=0;
 
   /* transforms variable vector */
@@ -136,6 +137,8 @@ public:
   virtual inline long long n_post() { return fs_n(); }
   /* number of vars in the NLP to which the tranformation is to be applied */
   virtual inline long long n_pre () { return rs_n(); }
+
+  virtual inline long long n_post_local() { return fs_n_local(); }
 
   /* from reduced space to full space */
   inline double* applyTox(double* x, const bool& new_x) 
@@ -222,6 +225,7 @@ public:
   
   inline long long fs_n() const { return n_fs;}
   inline long long rs_n() const { return n_rs;}
+  inline long long fs_n_local() const { assert(xl_fs); return xl_fs->get_local_size();}
 protected: 
   void applyToArray   (const double* vec_rs, double* vec_fs);
   void applyInvToArray(const double* vec_fs, double* vec_rs);
@@ -242,9 +246,9 @@ protected:
   //working buffers for the full-space Jacobians
   hiopMatrixDense *Jacc_fs, *Jacd_fs;
 
-  //a copy of the lower and upper bounds n
+  //a copy of the lower and upper bounds provided by user
   hiopVectorPar *xl_fs, *xu_fs;
-  //indeces corresponding to fixed variables (local indexes)
+  //indexes corresponding to fixed variables (local indexes)
   std::vector<int> fs2rs_idx_map;
 
   //references to reduced-space buffers - returned in applyInvXXX
@@ -271,20 +275,23 @@ public:
   inline long long n_post()  { /*assert(xl_copy);*/ return n_vars; } //xl_copy->get_size(); }
   /* number of vars in the NLP to which the tranformation is to be applied */
   virtual long long n_pre () { /*assert(xl_copy);*/ return n_vars; } //xl_copy->get_size(); }
+
+  inline long long n_post_local()  { return n_vars_local; } //xl_copy->get_local_size(); }
+
   inline bool setup() { return true; }
 
   void relax(const double& fixed_var_tol, const double& fixed_var_perturb, 
 	     hiopVectorPar& xl, hiopVectorPar& xu);
 private:
   hiopVectorPar *xl_copy, *xu_copy;
-  long long  n_vars;
+  long long  n_vars; int n_vars_local;
 };
 
 
 class hiopNlpTransformations : public hiopNlpTransformation
 {
 public:
-  hiopNlpTransformations() : n_vars_usernlp(-1) { };
+  hiopNlpTransformations() : n_vars_usernlp(-1), n_vars_local_usernlp(-1) { };
   virtual ~hiopNlpTransformations() 
   {
     std::list<hiopNlpTransformation*>::iterator it;
@@ -294,6 +301,7 @@ public:
 
   inline bool setup() { return true; }
   inline void setUserNlpNumVars(const long long& n_vars) { n_vars_usernlp = n_vars; }
+  inline void setUserNlpNumLocalVars(const long long& n_vars) { n_vars_local_usernlp = n_vars; }
   inline void append(hiopNlpTransformation* t) { list_trans_.push_back(t); }
 
   /* number of vars in the NLP after the tranformation */
@@ -309,6 +317,21 @@ public:
       assert(n_vars_usernlp==list_trans_.back()->n_post());
 #endif 
       return list_trans_.back()->n_post(); 
+    }
+  }
+  inline virtual long long n_post_local() 
+  { 
+#ifdef HIOP_DEEPCHECKS
+      assert(n_vars_usernlp>0);
+#endif 
+    if(list_trans_.empty()) {
+      return n_vars_local_usernlp;
+    } else {
+#ifdef HIOP_DEEPCHECKS
+      assert(n_vars_usernlp==list_trans_.back()->n_post());
+      assert(n_vars_local_usernlp==list_trans_.back()->n_post_local());
+#endif 
+      return list_trans_.back()->n_post_local(); 
     }
   }
   /* number of vars in the NLP to which the tranformation is to be applied */
@@ -393,7 +416,7 @@ public:
 
 private:
   std::list<hiopNlpTransformation*> list_trans_;
-  long long  n_vars_usernlp;
+  long long  n_vars_usernlp, n_vars_local_usernlp;
 };
 
 }
