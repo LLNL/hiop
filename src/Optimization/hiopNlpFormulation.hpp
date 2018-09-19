@@ -223,7 +223,8 @@ public:
   { 
     double *hiop_xa = hiop_x.local_data();
     double *user_xa = nlp_transformations.applyTox(hiop_xa,/*new_x=*/true); 
-    memcpy(user_x, user_xa, hiop_x.get_local_size()*sizeof(double));
+    //memcpy(user_x, user_xa, hiop_x.get_local_size()*sizeof(double));
+    memcpy(user_x, user_xa, nlp_transformations.n_post_local()*sizeof(double));
   }
 private:
   /* problem data */

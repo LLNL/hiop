@@ -137,6 +137,9 @@ hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& 
   xu = xl->alloc_clone();
 
   int nlocal=xl->get_local_size();
+
+  nlp_transformations.setUserNlpNumLocalVars(nlocal);
+
   double  *xl_vec= xl->local_data(),  *xu_vec= xu->local_data();
   vars_type = new hiopInterfaceBase::NonlinearityType[nlocal];
 
