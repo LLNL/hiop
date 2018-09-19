@@ -65,7 +65,9 @@ hiopDualsLsqUpdate::hiopDualsLsqUpdate(hiopNlpFormulation* nlp)
   M      = new hiopMatrixDense(nlpd->m(), nlpd->m());
   rhs    = new hiopVectorPar(nlpd->m());
   rhsc   = dynamic_cast<hiopVectorPar*>(nlpd->alloc_dual_eq_vec());
+  rhsc->setToZero();
   rhsd   = dynamic_cast<hiopVectorPar*>(nlpd->alloc_dual_ineq_vec());
+  rhsd->setToZero();
   _vec_n = dynamic_cast<hiopVectorPar*>(nlpd->alloc_primal_vec());
   _vec_mi= dynamic_cast<hiopVectorPar*>(nlpd->alloc_dual_ineq_vec());
 #ifdef HIOP_DEEPCHECKS
