@@ -90,25 +90,43 @@ void hiopFixedVarsRemover::setFSVectorDistrib(long long* vec_distrib_in, int num
   fs_vec_distrib.resize(num_ranks+1);
   std::copy(vec_distrib_in, vec_distrib_in+num_ranks+1, fs_vec_distrib.begin());
 };
-/* allocates returns the reduced-space column partitioning to be used internally by HiOp */
-  long long* hiopFixedVarsRemover::allocRSVectorDistrib()
+/* allocates and returns the reduced-space column partitioning to be used internally by HiOp */
+long long* hiopFixedVarsRemover::allocRSVectorDistrib()
 {
-  int nlen = fs_vec_distrib.size();
+  int nlen = fs_vec_distrib.size(); //nlen==nranks+1
   assert(nlen>=1);
   long long* rsVecDistrib = new long long[nlen];
   rsVecDistrib[0]=0;
 #ifdef HIOP_DEEPCHECKS
   assert(fs_vec_distrib[0]==0);
+  assert(nlen>=1);
 #endif
-  for(int it=1; it<nlen; it++) {
-    rsVecDistrib[it] = fs_vec_distrib[it]-n_fixed_vars_local;
 
+#ifdef HIOP_USE_MPI
+  int ierr;
 #ifdef HIOP_DEEPCHECKS
-    assert(rsVecDistrib[it]>=rsVecDistrib[it-1]);
+  int nRanks=-1; 
+  ierr = MPI_Comm_size(comm, &nRanks);
+  assert(nRanks==nlen-1);
 #endif
-  };
+  //first gather on all ranks the number of variables fixed on each rank
+  ierr = MPI_Allgather(&n_fixed_vars_local, 1, MPI_LONG_LONG_INT, rsVecDistrib+1, 1, MPI_LONG_LONG_INT, comm);
+  assert(ierr==MPI_SUCCESS);
+#else
+  assert(nlen==1);
+#endif
+  assert(rsVecDistrib[0]==0);
+  //then accumulate these 
+  for(int r=1; r<nlen; r++)
+    rsVecDistrib[r] += rsVecDistrib[r-1];
+  
+  //finally substract these from the full-space index vector distribution 
+  for(int r=0; r<nlen; r++)
+    rsVecDistrib[r] = fs_vec_distrib[r]-rsVecDistrib[r];
+
+  assert(rsVecDistrib[0]==0);
 #ifdef HIOP_DEEPCHECKS
-    assert(rsVecDistrib[nlen-1]==n_rs);
+  assert(rsVecDistrib[nlen-1]==n_rs);
 #endif  
   return rsVecDistrib;
 };
@@ -159,7 +177,7 @@ bool hiopFixedVarsRemover::setupConstraintsPart(const int& neq, const int& nineq
 /* "copies" a full space vector/array to a reduced space vector/array */
 void hiopFixedVarsRemover::copyFsToRs(const hiopVectorPar& fsVec,  hiopVectorPar& rsVec)
 {
-  assert(fsVec.get_size()==fs2rs_idx_map.size());
+  assert(fsVec.get_local_size()==fs2rs_idx_map.size());
   applyInvToArray(fsVec.local_data_const(), rsVec.local_data());
 }
 

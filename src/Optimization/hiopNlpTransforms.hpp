@@ -212,7 +212,7 @@ public:
 #ifdef HIOP_USE_MPI
   /* saves the inter-process distribution of (primal) vectors distribution */
   void setFSVectorDistrib(long long* vec_distrib,int num_ranks);
-  /* allocates returns the reduced-space column partitioning to be used internally by HiOp */
+  /* allocates and returns the reduced-space column partitioning to be used internally by HiOp */
   long long* allocRSVectorDistrib();
   inline void setMPIComm(const MPI_Comm& commIn) { comm = commIn; }
 #endif
