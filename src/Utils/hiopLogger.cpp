@@ -60,9 +60,9 @@ namespace hiop
 
 void hiopLogger::write(const char* msg, const hiopVector& vec, hiopOutVerbosity v, int loggerid/*=0*/) 
 {
-#ifdef HIOP_USE_MPI
-  if(_master_rank != _nlp->get_rank()) return;
-#endif
+  //#ifdef HIOP_USE_MPI
+  //if(_master_rank != _nlp->get_rank()) return;
+  //#endif
   hiopOutVerbosity _verb = (hiopOutVerbosity) _nlp->options->GetInteger("verbosity_level");
   if(v>_verb) return;
   vec.print(_f, msg);
