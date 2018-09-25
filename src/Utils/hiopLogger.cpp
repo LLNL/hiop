@@ -151,12 +151,12 @@ void hiopLogger::printf(hiopOutVerbosity v, const char* format, ...)
   char label[16];label[0]='\0';
   if(v==hovError) strcpy(label, "[Error] ");
   else if(v==hovWarning) strcpy(label, "[Warning] ");
-  fprintf(_f,label);
+  fprintf(_f, "%s", label);
 
   va_list args;
   va_start (args, format);
   vsprintf (_buff,format, args);
-  fprintf(_f,_buff);
+  fprintf(_f,"%s",_buff);
   va_end (args);
 
 };
@@ -167,7 +167,7 @@ void hiopLogger::printf_error(hiopOutVerbosity v, const char* format, ...)
   va_list args;
   va_start (args, format);
   vsprintf (buff,format, args);
-  fprintf(stderr,buff);
+  fprintf(stderr,"%s",buff);
   va_end (args);
 };
 

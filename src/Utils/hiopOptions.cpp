@@ -147,7 +147,7 @@ void hiopOptions::registerOptions()
 
     registerNumOption("fixed_var_tolerance", 1e-15, 1e-30, 0.01, "A variable is considered fixed if |upp_bnd-low_bnd| < fixed_var_tolerance * max(abs(upp_bnd),1) (default 1e-15)");
 
-    registerNumOption("fixed_var_perturb", 1e-8, 1e-14, 0.1, "Perturbation of the upper bound for fixed variables relative to its magnitude: upper_bound+=max(abs(upper_bound),1)*fixed_var_perturb (default 1e-8)");
+    registerNumOption("fixed_var_perturb", 1e-8, 1e-14, 0.1, "Perturbation of the lower and upper bounds for fixed variables relative to its magnitude: lower/upper_bound -=/+= max(abs(upper_bound),1)*fixed_var_perturb (default 1e-8)");
 
     
   }

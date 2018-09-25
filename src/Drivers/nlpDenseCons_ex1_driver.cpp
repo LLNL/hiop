@@ -114,7 +114,7 @@ static bool self_check(long long n, double objval)
     if(n_saved[it]==n) {
       found=true;
       if(fabs( (objval_saved[it]-objval)/(1+objval_saved[it])) > relerr) {
-	printf("selfcheck failure. Objective (%18.12e) does not agree (%d digits) with the saved value (%18.12e) for n=%d.\n",
+	printf("selfcheck failure. Objective (%18.12e) does not agree (%d digits) with the saved value (%18.12e) for n=%lld.\n",
 	       objval, -(int)log10(relerr), objval_saved[it], n);
 	return false;
       } else {
@@ -125,7 +125,7 @@ static bool self_check(long long n, double objval)
   }
 
   if(!found) {
-    printf("selfcheck: driver does not have the objective for n=%d saved. BTW, obj=%18.12e was obtained for this n.\n", n, objval);
+    printf("selfcheck: driver does not have the objective for n=%lld saved. BTW, obj=%18.12e was obtained for this n.\n", n, objval);
     return false;
   }
 

@@ -196,7 +196,7 @@ hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& 
 #endif
   hiopFixedVarsRemover* fixedVarsRemover = NULL;
   if(nfixed_vars>0) {
-    log->printf(hovWarning, "Detected %d fixed variables out of a total of %d.\n", nfixed_vars, n_vars);
+    log->printf(hovWarning, "Detected %lld fixed variables out of a total of %lld.\n", nfixed_vars, n_vars);
 
     if(options->GetString("fixed_var")=="remove") {
       log->printf(hovWarning, "Fixed variables will be removed internally.\n");
@@ -543,11 +543,11 @@ void hiopNlpDenseConstraints::print(FILE* f, const char* msg, int rank) const
     } else { 
       fprintf(f, "NLP summary\n");
     }
-    fprintf(f, "Total number of variables: %d\n", n_vars);
-    fprintf(f, "     lower/upper/lower_and_upper bounds: %d / %d / %d\n", n_bnds_low, n_bnds_upp, n_bnds_lu);
-    fprintf(f, "Total number of equality constraints: %d\n", n_cons_eq);
-    fprintf(f, "Total number of inequality constraints: %d\n", n_cons_ineq );
-    fprintf(f, "     lower/upper/lower_and_upper bounds: %d / %d / %d\n", n_ineq_low, n_ineq_upp, n_ineq_lu);
+    fprintf(f, "Total number of variables: %lld\n", n_vars);
+    fprintf(f, "     lower/upper/lower_and_upper bounds: %lld / %lld / %lld\n", n_bnds_low, n_bnds_upp, n_bnds_lu);
+    fprintf(f, "Total number of equality constraints: %lld\n", n_cons_eq);
+    fprintf(f, "Total number of inequality constraints: %lld\n", n_cons_ineq );
+    fprintf(f, "     lower/upper/lower_and_upper bounds: %lld / %lld / %lld\n", n_ineq_low, n_ineq_upp, n_ineq_lu);
   } 
 }
 

@@ -174,7 +174,7 @@ bool hiopDualsLsqUpdate::LSQUpdate(hiopIterate& iter, const hiopVector& grad_f, 
 
   //bailout in case there is an error in the Cholesky factorization
   int info;
-  if(info=this->factorizeMat(*M)) {
+  if((info=this->factorizeMat(*M))) {
     nlpd->log->printf(hovError, "dual lsq update: error %d in the Cholesky factorization.\n", info);
     return false;
   }
@@ -205,7 +205,7 @@ bool hiopDualsLsqUpdate::LSQUpdate(hiopIterate& iter, const hiopVector& grad_f, 
 #endif
 
   //solve for this rhs
-  if(info=this->solveWithFactors(*M, *rhs)) {
+  if((info=this->solveWithFactors(*M, *rhs))) {
     nlpd->log->printf(hovError, "dual lsq update: error %d in the solution process.\n", info);
     return false;
   }

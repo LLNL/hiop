@@ -195,6 +195,7 @@ bool hiopHessianLowRank::updateLogBarrierDiagonal(const hiopVector& Dx)
   DhInv->invert();
   nlp->log->write("hiopHessianLowRank: inverse diag DhInv:", *DhInv, hovMatrices);
   matrixChanged=true;
+  return true;
 }
 
 #ifdef HIOP_DEEPCHECKS
@@ -815,13 +816,14 @@ hiopVectorPar&  hiopHessianLowRank::new_l_vec2(int l)
 
 hiopMatrixDense& hiopHessianLowRank::new_lxl_mat1(int l)
 {
-  if(_lxl_mat1!=NULL)
+  if(_lxl_mat1!=NULL) {
     if( l==_lxl_mat1->m() ) {
       return *_lxl_mat1;
     } else {
       delete _lxl_mat1; 
       _lxl_mat1=NULL;
     }
+  }
   _lxl_mat1 = new hiopMatrixDense(l,l);
   return *_lxl_mat1;
 }
@@ -1240,7 +1242,7 @@ bool hiopHessianInvLowRank_obsolette::updateLogBarrierDiagonal(const hiopVector&
 #endif
   H0->invert();
   nlp->log->write("H0 InvHes", *H0, hovMatrices);
-  
+  return true;
 }
 
 
