@@ -105,6 +105,8 @@ int main(int argc, char **argv)
 
 static bool self_check(long long n, double objval)
 {
+  assert(false && "feature not yet available");
+  return false;
 #define num_n_saved 3 //keep this is sync with n_saved and objval_saved
   const long long n_saved[] = {5e2, 5e3, 5e4}; 
   const double objval_saved[] = {1.56251020819349e-02, 1.56251019995139e-02, 1.56251028980352e-02};
