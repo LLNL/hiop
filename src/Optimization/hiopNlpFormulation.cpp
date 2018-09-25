@@ -262,7 +262,7 @@ hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& 
       } else {
 	log->printf(hovError,  
 		    "detected fixed variables but was not instructed "
-		    "how to deal with them (option 'fixed_var' is 'none').");
+		    "how to deal with them (option 'fixed_var' is 'none').\n");
 	exit(EXIT_FAILURE);
       }
     }
