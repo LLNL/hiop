@@ -204,13 +204,22 @@ private:
   long long glob_jl, glob_ju;
   MPI_Comm comm; 
   int myrank;
-  
+
+  mutable double* _buff_mxnlocal;  
+
   //this is very private do not touch :)
   long long max_rows;
 private:
   hiopMatrixDense() {};
   /** copy constructor, for internal/private use only (it doesn't copy the values) */
   hiopMatrixDense(const hiopMatrixDense&);
+
+  inline double* new_mxnlocal_buff() const {
+    if(_buff_mxnlocal==NULL) {
+      _buff_mxnlocal = new double[max_rows*n_local];
+    } 
+    return _buff_mxnlocal;
+  }
 };
 
 }

@@ -94,10 +94,13 @@ hiopMatrixDense::hiopMatrixDense(const long long& m,
   //! valgrind reports a shit load of errors without this; check this
   for(int i=0; i<max_rows*n_local; i++) M[0][i]=0.0;
 
-  //internal temporary buffers to follow
+  //internal buffers 
+  _buff_mxnlocal = NULL;//new double[max_rows*n_local];
 }
 hiopMatrixDense::~hiopMatrixDense()
 {
+  //printf("destructor constructor\n\n");
+  if(_buff_mxnlocal) delete[] _buff_mxnlocal;
   if(M) {
     if(M[0]) delete[] M[0];
     delete[] M;
@@ -118,6 +121,8 @@ hiopMatrixDense::hiopMatrixDense(const hiopMatrixDense& dm)
   //for(int i=1; i<m_local; i++)
   for(int i=1; i<max_rows; i++)
     M[i]=M[0]+i*n_local;
+
+  _buff_mxnlocal = NULL;
 }
 
 void hiopMatrixDense::appendRow(const hiopVectorPar& row)
@@ -338,7 +343,7 @@ void hiopMatrixDense::print(FILE* f,
 /*  y = beta * y + alpha * this * x  
  *
  * Sizes: y is m_local, x is n_local, the matrix is m_local x n_global, and the
- * local chunck is m_local x n_local 
+ * local chunk is m_local x n_local 
 */
 void hiopMatrixDense::timesVec(double beta, hiopVector& y_,
 			       double alpha, const hiopVector& x_) const
@@ -370,10 +375,15 @@ void hiopMatrixDense::timesVec(double beta, hiopVector& y_,
     DGEMV( &fortranTrans, &NN, &MM, &alpha, &M[0][0], &NN,
 	    x.local_data_const(), &incx_y, &beta, y.local_data(), &incx_y );
   } else {
-    if( MM != 0 ) y.scale( beta );
+    if( MM != 0 ) {
+      y.scale( beta );
+    } else {
+      assert(MM==0);
+      return;
+    }
   }
 #ifdef HIOP_USE_MPI
-  double yglob[m_local]; //shouldn't be any performance issue here since m_local is small
+  double yglob[m_local]; 
   int ierr=MPI_Allreduce(y.local_data(), yglob, m_local, MPI_DOUBLE, MPI_SUM, comm); assert(MPI_SUCCESS==ierr);
   memcpy(y.local_data(), yglob, m_local*sizeof(double));
 #endif
@@ -423,7 +433,8 @@ void hiopMatrixDense::timesMat(double beta, hiopMatrix& W_, double alpha, const 
   if(0==myrank) timesMat_local(beta,W_,alpha,X_);
   else          timesMat_local(0.,  W_,alpha,X_);
 
-  int n2Red=W.m()*W.n(); double Wglob[n2Red]; //!opt
+  int n2Red=W.m()*W.n(); 
+  double* Wglob = new_mxnlocal_buff(); //[n2Red];
   int ierr = MPI_Allreduce(WM[0], Wglob, n2Red, MPI_DOUBLE, MPI_SUM,comm); assert(ierr==MPI_SUCCESS);
   memcpy(WM[0], Wglob, n2Red*sizeof(double));
 #endif
@@ -524,22 +535,30 @@ void hiopMatrixDense::timesMatTrans_local(double beta, hiopMatrix& W_, double al
 
   DGEMM(&transX, &transM, &M,&N,&K, &alpha,XM[0],&ldx, this->M[0],&ldm, &beta,WM[0],&ldw);
 }
+/* W = beta*W + alpha*this*X^T */
 void hiopMatrixDense::timesMatTrans(double beta, hiopMatrix& W_, double alpha, const hiopMatrix& X_) const
 {
   hiopMatrixDense& W = dynamic_cast<hiopMatrixDense&>(W_); 
+  assert(W.n_local==W.n_global && "not intended for the case when the result matrix is distributed.");
 #ifdef HIOP_DEEPCHECKS
   const hiopMatrixDense& X = dynamic_cast<const hiopMatrixDense&>(X_);
-  assert(W.n_local==W.n_global && "not intended for the case when the result matrix is distributed.");
   assert(W.isfinite());
   assert(X.isfinite());
+  assert(this->n()==X.n());
+  assert(this->m()==W.m());
+  assert(X.m()==W.n());
 #endif
+
+  if(W.m()==0) return;
+  if(W.n()==0) return;
 
   if(0==myrank) timesMatTrans_local(beta,W_,alpha,X_);
   else          timesMatTrans_local(0.,  W_,alpha,X_);
 
 #ifdef HIOP_USE_MPI
+  int n2Red=W.m()*W.n(); 
   double** WM=W.local_data();
-  int n2Red=W.m()*W.n(); double Wglob[n2Red]; //!opt
+  double* Wglob= new_mxnlocal_buff(); //[n2Red];
   int ierr = MPI_Allreduce(WM[0], Wglob, n2Red, MPI_DOUBLE, MPI_SUM, comm); assert(ierr==MPI_SUCCESS);
   memcpy(WM[0], Wglob, n2Red*sizeof(double));
 #endif
