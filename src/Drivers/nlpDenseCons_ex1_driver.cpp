@@ -90,11 +90,12 @@ int main(int argc, char **argv)
       return -1;
   } else {
     if(rank==0) {
-      printf("Optimal objective: %22.14e. Solver status: %d\n", objective, status);
+      printf("Optimal objective: %22.14e. Solver status: %d. Number of iterations: %d\n", 
+	     objective, status, solver.getNumIterations());
     }
   }
 
-  printf("Objective: %18.12e\n", objective);
+  if(0==rank) printf("Objective: %18.12e\n", objective);
 #ifdef HIOP_USE_MPI
   MPI_Finalize();
 #endif

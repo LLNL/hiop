@@ -570,6 +570,8 @@ checkTermination(const double& err_nlp, const int& iter_num, hiopSolveStatus& st
   return false;
 }
 
+
+
 /***** Termination message *****/
 void hiopAlgFilterIPM::displayTerminationMsg() {
 
@@ -656,7 +658,7 @@ evalNlpAndLogErrors(const hiopIterate& it, const hiopResidual& resid, const doub
     } else {
       if(nlp->options->GetString("fixed_var")=="relax") {
 	nlp->log->printf(hovWarning, "For example, increase 'fixed_var_tolerance' to relax "
-			 "additional (tight) variables and/or increase 'fixed_var_perturb' "
+			 "aditional (tight) variables and/or increase 'fixed_var_perturb' "
 			 "to decrease the tightness.\n");
       } else
 	nlp->log->printf(hovWarning, "Potential fixes: fix or relax variables with tight bounds "
@@ -761,6 +763,15 @@ void hiopAlgFilterIPM::getSolution(double* x) const
   hiopVectorPar& it_x = dynamic_cast<hiopVectorPar&>(*it_curr->get_x());
   //it_curr->get_x()->copyTo(x);
   nlp->user_x(it_x, x);
+}
+
+int hiopAlgFilterIPM::getNumIterations() const
+{
+  if(_solverStatus==NlpSolve_IncompleteInit || _solverStatus == NlpSolve_SolveNotCalled)
+    nlp->log->printf(hovError, "getNumIterations: hiOp did not initialize entirely or the 'run' function was not called.");
+  if(_solverStatus==NlpSolve_Pending)
+    nlp->log->printf(hovWarning, "getNumIterations: hiOp does not seem to have completed yet. The objective value returned may not be optimal.");
+  return nlp->runStats.nIter;
 }
 
 hiopSolveStatus hiopAlgFilterIPM::getSolveStatus() const

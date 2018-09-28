@@ -80,6 +80,8 @@ public:
   virtual void getSolution(double* x) const;
   /* returns the status of the solver */
   virtual hiopSolveStatus getSolveStatus() const;
+  /* returns the number of iterations */
+  virtual int getNumIterations() const;
 private:
   bool evalNlp(hiopIterate& iter,
 	       double &f, hiopVector& c_, hiopVector& d_, 
