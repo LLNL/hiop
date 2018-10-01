@@ -66,6 +66,7 @@ public:
   inline void add(const double& theta, const double& phi) { entries.push_front(FilterEntry(theta,phi)); }
   bool contains(const double& theta, const double& phi) const;
 
+  inline void clear() { entries.clear(); }
 private:
   struct FilterEntry { 
     FilterEntry(const double& t, const double& p) : theta(t), phi(p) {};

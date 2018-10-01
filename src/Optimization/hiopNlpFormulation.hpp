@@ -74,6 +74,8 @@ public:
   hiopNlpFormulation(hiopInterfaceBase& interface);
   virtual ~hiopNlpFormulation();
 
+  virtual bool finalizeInitialization() { return true; };
+
   /* starting point */
   virtual bool get_starting_point(hiopVector& x0)=0;
   /** linear algebra factory */
@@ -118,6 +120,12 @@ protected:
   bool mpi_init_called;
 #endif
 
+
+  //options for which this class was setup
+  std::string strFixedVars; //"none", "fixed", "relax"
+  double dFixedVarsTol;
+
+  //internal NLP transformations (currently fixing/relaxing variables implemented)
   hiopNlpTransformations nlp_transformations;
 
 private:
@@ -132,6 +140,8 @@ class hiopNlpDenseConstraints : public hiopNlpFormulation
 public:
   hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& interface);
   virtual ~hiopNlpDenseConstraints();
+
+  virtual bool finalizeInitialization();
 
   /* wrappers for the interface calls. Can be overridden for specialized formulations required by the algorithm */
   virtual bool eval_f(double* x, bool new_x, double& f);
@@ -204,6 +214,7 @@ public:
   inline const hiopVectorPar& get_idu()  const { return *idu;  }
   inline const hiopVectorPar& get_crhs() const { return *c_rhs;}
   inline long long n() const      {return n_vars;}
+  inline long long n_local() const{return xl->get_local_size();}
   inline long long m() const      {return n_cons;}
   inline long long m_eq() const   {return n_cons_eq;}
   inline long long m_ineq() const {return n_cons_ineq;}

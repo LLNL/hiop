@@ -59,34 +59,114 @@ namespace hiop
 hiopAlgFilterIPM::hiopAlgFilterIPM(hiopNlpDenseConstraints* nlp_)
 {
   nlp = nlp_;
+  //force completion of the nlp's initialization
+  nlp->finalizeInitialization();
+
+  it_curr=NULL; 
+  it_trial=NULL;
+  dir=NULL;     
+
+  _c=NULL;      
+  _d=NULL;      
+  _grad_f=NULL; 
+  _Jac_c=NULL;  
+  _Jac_d=NULL;  
+  _Hess=NULL;   
+
+  resid=NULL;   
+
+  _c_trial=NULL;
+  _d_trial=NULL;
+  _grad_f_trial=NULL;
+  _Jac_c_trial=NULL; 
+  _Jac_d_trial=NULL; 
+
+  resid_trial=NULL;  
+
+  logbar=NULL; 
+
+  dualsUpdate=NULL; 
+
+  reloadOptions();
+  reInitializeNlpObjects();
+  resetSolverStatus();
+}
+
+hiopAlgFilterIPM::~hiopAlgFilterIPM()
+{
+  destructorPart();
+}
+void hiopAlgFilterIPM::destructorPart() 
+{
+  if(it_curr)  delete it_curr;
+  if(it_trial) delete it_trial;
+  if(dir)      delete dir;
+
+  if(_c)       delete _c;
+  if(_d)       delete _d;
+  if(_grad_f)  delete _grad_f;
+  if(_Jac_c)   delete _Jac_c;
+  if(_Jac_d)   delete _Jac_d;
+  if(_Hess)    delete _Hess;
+
+  if(resid)    delete resid;
+
+  if(_c_trial)       delete _c_trial;
+  if(_d_trial)       delete _d_trial;
+  if(_grad_f_trial)  delete _grad_f_trial;
+  if(_Jac_c_trial)   delete _Jac_c_trial;
+  if(_Jac_d_trial)   delete _Jac_d_trial;
+
+  if(resid_trial)    delete resid_trial;
+
+  if(logbar) delete logbar;
+
+  if(dualsUpdate) delete dualsUpdate;
+}
+
+void hiopAlgFilterIPM::reInitializeNlpObjects() 
+{
+  destructorPart();
 
   it_curr = new hiopIterate(nlp);
   it_trial= it_curr->alloc_clone();
   dir     = it_curr->alloc_clone();
-
+  
   logbar = new hiopLogBarProblem(nlp);
-
+  
   _f_nlp = _f_log = 0; 
   _c = nlp->alloc_dual_eq_vec(); 
   _d = nlp->alloc_dual_ineq_vec();
-
+  
   _grad_f  = nlp->alloc_primal_vec();
   _Jac_c   = nlp->alloc_Jac_c();
   _Jac_d   = nlp->alloc_Jac_d();
-
+  
   _f_nlp_trial = _f_log_trial = 0;
   _c_trial = nlp->alloc_dual_eq_vec(); 
   _d_trial = nlp->alloc_dual_ineq_vec();
-
+  
   _grad_f_trial  = nlp->alloc_primal_vec();
   _Jac_c_trial   = nlp->alloc_Jac_c();
   _Jac_d_trial   = nlp->alloc_Jac_d();
-
+  
   _Hess    = new hiopHessianLowRank(nlp,nlp->options->GetInteger("secant_memory_len"));
-
+  
   resid = new hiopResidual(nlp);
   resid_trial = new hiopResidual(nlp);
+  
+  dualsUpdateType = nlp->options->GetString("dualsUpdateType")=="lsq"?0:1;     //0 LSQ (default), 1 linear update (more stable)
+  dualsInitializ = nlp->options->GetString("dualsInitialization")=="lsq"?0:1;  //0 LSQ (default), 1 set to zero
+  //parameter based initialization
+  if(dualsUpdateType==0) 
+    dualsUpdate = new hiopDualsLsqUpdate(nlp);
+  else if(dualsUpdateType==1)
+    dualsUpdate = new hiopDualsNewtonLinearUpdate(nlp);
+  else assert(false && "dualsUpdateType has an unrecognized value");
+}
 
+void hiopAlgFilterIPM::reloadOptions()
+{
   //algorithm parameters parameters
   mu0=_mu  = nlp->options->GetNumeric("mu0"); 
   kappa_mu = nlp->options->GetNumeric("kappa_mu");      //linear decrease factor
@@ -117,48 +197,15 @@ hiopAlgFilterIPM::hiopAlgFilterIPM(hiopNlpDenseConstraints* nlp_)
   _tau=fmax(tau_min,1.0-_mu);
   theta_max = 1e7; //temporary - will be updated after ini pt is computed
   theta_min = 1e7; //temporary - will be updated after ini pt is computed
-
-
-  //parameter based initialization
-  if(dualsUpdateType==0) 
-    dualsUpdate = new hiopDualsLsqUpdate(nlp);
-  else if(dualsUpdateType==1)
-    dualsUpdate = new hiopDualsNewtonLinearUpdate(nlp);
-  else assert(false && "dualsUpdateType has an unrecognized value");
-
-
-  _n_accep_iters = 0;
-
-  _solverStatus = NlpSolve_IncompleteInit;
 }
 
-hiopAlgFilterIPM::~hiopAlgFilterIPM()
+void hiopAlgFilterIPM::resetSolverStatus() 
 {
-  if(it_curr)  delete it_curr;
-  if(it_trial) delete it_trial;
-  if(dir)      delete dir;
-
-  if(_c)       delete _c;
-  if(_d)       delete _d;
-  if(_grad_f)  delete _grad_f;
-  if(_Jac_c)   delete _Jac_c;
-  if(_Jac_d)   delete _Jac_d;
-  if(_Hess)    delete _Hess;
-
-  if(resid)    delete resid;
-
-  if(_c_trial)       delete _c_trial;
-  if(_d_trial)       delete _d_trial;
-  if(_grad_f_trial)  delete _grad_f_trial;
-  if(_Jac_c_trial)   delete _Jac_c_trial;
-  if(_Jac_d_trial)   delete _Jac_d_trial;
-
-  if(resid_trial)    delete resid_trial;
-
-  if(logbar) delete logbar;
-
-  if(dualsUpdate) delete dualsUpdate;
+  _n_accep_iters = 0;
+  _solverStatus = NlpSolve_IncompleteInit;
+  filter.clear();
 }
+
 
 bool hiopAlgFilterIPM::evalNlp(hiopIterate& iter, 			       
 			       double &f, hiopVector& c_, hiopVector& d_, 
@@ -246,6 +293,27 @@ int hiopAlgFilterIPM::startingProcedure(hiopIterate& it_ini,
 
 hiopSolveStatus hiopAlgFilterIPM::run()
 {
+  //hiopNlpFormulation nlp may need an update since user may have changed options and
+  //reruning with the same hiopAlgFilterIPM instance
+  nlp->finalizeInitialization();
+
+  //also reload options
+  reloadOptions();
+
+  //if nlp changed internally, we need to reinitialize 'this'
+  if(it_curr->get_x()->get_size()!=nlp->n() ||
+     _Jac_c->get_local_size_n()!=nlp->n_local()) {
+    //size of the nlp changed internally ->  reInitializeNlpObjects();
+    reInitializeNlpObjects();
+  }
+
+  resetSolverStatus();
+  nlp->runStats.initialize();
+
+  ////////////////////////////////////////////////////////////////////////////////////
+  // run baby run
+  ////////////////////////////////////////////////////////////////////////////////////
+
   nlp->log->printf(hovSummary, "===============\nHiop SOLVER\n===============\n");
   nlp->log->write(NULL, *nlp->options, hovSummary);
 
@@ -258,8 +326,6 @@ hiopSolveStatus hiopAlgFilterIPM::run()
 
   startingProcedure(*it_curr, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d); //this also evaluates the nlp
   _mu=mu0;
-
-
 
   //update log bar
   logbar->updateWithNlpInfo(*it_curr, _mu, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d);

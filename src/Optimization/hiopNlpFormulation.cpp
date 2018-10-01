@@ -66,6 +66,8 @@ hiopNlpFormulation::hiopNlpFormulation(hiopInterfaceBase& interface)
   : mpi_init_called(false)
 #endif
 {
+  strFixedVars = ""; //uninitialized
+  dFixedVarsTol=-1.; //uninitialized
 #ifdef HIOP_USE_MPI
   bool bret = interface.get_MPI_comm(comm); assert(bret);
 
@@ -111,18 +113,83 @@ hiopNlpFormulation::~hiopNlpFormulation()
 #endif
 }
 
-  //#include <unistd.h>
+//#include <unistd.h>
 
 hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& interface_)
   : hiopNlpFormulation(interface_), interface(interface_)
 {
+  xl=NULL;
+  xu=NULL;
+  vars_type=NULL;
+  ixl=NULL;
+  ixu=NULL;
+  c_rhs=NULL;
+  cons_eq_type=NULL;
+  dl=NULL;
+  du=NULL;
+  cons_ineq_type=NULL;
+  cons_eq_mapping=NULL;
+  cons_ineq_mapping=NULL;
+  idl=NULL;
+  idu=NULL;
+#ifdef HIOP_USE_MPI
+  vec_distrib=NULL;
+#endif
+
+  bool bret = interface.get_prob_sizes(n_vars, n_cons); assert(bret);
+}
+
+hiopNlpDenseConstraints::~hiopNlpDenseConstraints()
+{
+  if(xl)   delete xl;
+  if(xu)   delete xu;
+  if(ixl)  delete ixl;
+  if(ixu)  delete ixu;
+  if(c_rhs)delete c_rhs;
+  if(dl)   delete dl;
+  if(du)   delete du;
+  if(idl)  delete idl;
+  if(idu)  delete idu;
+
+  if(vars_type)      delete[] vars_type;
+  if(cons_ineq_type) delete[] cons_ineq_type;
+  if(cons_eq_type)   delete[] cons_eq_type;
+
+  if(cons_eq_mapping)   delete[] cons_eq_mapping;
+  if(cons_ineq_mapping) delete[] cons_ineq_mapping;
+#ifdef HIOP_USE_MPI
+  if(vec_distrib) delete[] vec_distrib;
+#endif
+}
+
+bool hiopNlpDenseConstraints::finalizeInitialization()
+{
+  //check if there was a change in the user options that requires reinitialization of 'this'
+  bool doinit = false; 
+  if(strFixedVars != options->GetString("fixed_var")) {
+    doinit=true;
+  }
+  const double fixedVarTol = options->GetNumeric("fixed_var_tolerance");
+  if(dFixedVarsTol != fixedVarTol) {
+    doinit=true;
+  }
+  //more tests here (for example change in the rescaling)
+  if(!doinit) {
+    return true;
+  } else {
+    
+  }
+
   bool bret = interface.get_prob_sizes(n_vars, n_cons); assert(bret);
 
+  nlp_transformations.clear();
   nlp_transformations.setUserNlpNumVars(n_vars);
 
-  const double fixedVarTol = options->GetNumeric("fixed_var_tolerance");
-
+  if(xl) delete xl;
+  if(xu) delete xu;
+  if(vars_type) delete[] vars_type;
 #ifdef HIOP_USE_MPI
+  if(vec_distrib) delete[] vec_distrib;
   vec_distrib=new long long[num_ranks+1];
   if(true==interface.get_vecdistrib_info(n_vars,vec_distrib)) {
     xl = new hiopVectorPar(n_vars, vec_distrib, comm);
@@ -146,6 +213,7 @@ hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& 
   bret=interface.get_vars_info(n_vars,xl_vec,xu_vec,vars_type); assert(bret);
 
   //allocate and build ixl(ow) and ix(upp) vectors
+  if(ixl) delete ixl; if(ixu) delete ixu;
   ixl = xu->alloc_clone(); ixu = xu->alloc_clone();
   n_bnds_low_local = n_bnds_upp_local = 0;
   n_bnds_lu = 0;
@@ -188,6 +256,8 @@ hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& 
 #endif
     }
   }
+
+  dFixedVarsTol = fixedVarTol;
   
   long long nfixed_vars=nfixed_vars_local;
 #ifdef HIOP_USE_MPI
@@ -267,7 +337,6 @@ hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& 
       }
     }
   }
-  //assert(false);
   /* split the constraints */
   hiopVectorPar* gl = new hiopVectorPar(n_cons); 
   hiopVectorPar* gu = new hiopVectorPar(n_cons);
@@ -283,6 +352,12 @@ hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& 
     else                     n_cons_ineq++;
   }
 
+  if(c_rhs) delete c_rhs; 
+  if(cons_eq_type) delete[] cons_eq_type;
+  if(dl) delete dl; if(du) delete du;
+  if(cons_ineq_type) delete[] cons_ineq_type;
+  if(cons_eq_mapping) delete[] cons_eq_mapping;
+  if(cons_ineq_mapping) delete[] cons_ineq_mapping;
   /* allocate c_rhs, dl, and du (all serial in this formulation) */
   c_rhs = new hiopVectorPar(n_cons_eq);
   cons_eq_type = new  hiopInterfaceBase::NonlinearityType[n_cons_eq];
@@ -312,6 +387,7 @@ hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& 
   /* delete the temporary buffers */
   delete gl; delete gu; delete[] cons_type;
 
+  if(idl) delete idl; if(idu) delete idu;
   /* iterate over the inequalities and build the idl(ow) and idu(pp) vectors */
   idl = dl->alloc_clone(); idu=du->alloc_clone();
   n_ineq_low=n_ineq_upp=0; n_ineq_lu=0;
@@ -331,7 +407,11 @@ hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& 
     //idu_vec[i] = du_vec[i]>= 1e20?0.:1.;
   }
 
-  if(fixedVarsRemover) fixedVarsRemover->setupConstraintsPart(n_cons_eq, n_cons_ineq);
+  if(fixedVarsRemover) {
+    fixedVarsRemover->setupConstraintsPart(n_cons_eq, n_cons_ineq);
+  }
+
+  strFixedVars = options->GetString("fixed_var");
 
   //compute the overall n_low and n_upp
 #ifdef HIOP_USE_MPI
@@ -342,31 +422,8 @@ hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& 
   n_bnds_low=n_bnds_low_local; n_bnds_upp=n_bnds_upp_local; //n_bnds_lu is ok
 #endif
 
+  return bret;
 }
-
-hiopNlpDenseConstraints::~hiopNlpDenseConstraints()
-{
-  if(xl)   delete xl;
-  if(xu)   delete xu;
-  if(ixl)  delete ixl;
-  if(ixu)  delete ixu;
-  if(c_rhs)delete c_rhs;
-  if(dl)   delete dl;
-  if(du)   delete du;
-  if(idl)  delete idl;
-  if(idu)  delete idu;
-
-  if(vars_type)      delete[] vars_type;
-  if(cons_ineq_type) delete[] cons_ineq_type;
-  if(cons_eq_type)   delete[] cons_eq_type;
-
-  if(cons_eq_mapping)   delete[] cons_eq_mapping;
-  if(cons_ineq_mapping) delete[] cons_ineq_mapping;
-#ifdef HIOP_USE_MPI
-  if(vec_distrib) delete[] vec_distrib;
-#endif
-}
-
 
 bool hiopNlpDenseConstraints::eval_f(double* x, bool new_x, double& f)
 {

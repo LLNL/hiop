@@ -102,6 +102,13 @@ private:
   //returns whether the algorithm should stop and set an appropriate solve status
   bool checkTermination(const double& _err_nlp, const int& iter_num, hiopSolveStatus& status);
   void displayTerminationMsg();
+
+  //
+  void resetSolverStatus();
+  void reInitializeNlpObjects();
+  void reloadOptions();
+  void destructorPart();
+  
 private:
   hiopNlpDenseConstraints* nlp;
   hiopFilter filter;

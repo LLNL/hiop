@@ -303,6 +303,12 @@ public:
   inline void setUserNlpNumVars(const long long& n_vars) { n_vars_usernlp = n_vars; }
   inline void setUserNlpNumLocalVars(const long long& n_vars) { n_vars_local_usernlp = n_vars; }
   inline void append(hiopNlpTransformation* t) { list_trans_.push_back(t); }
+  inline void clear() { 
+    std::list<hiopNlpTransformation*>::iterator it;
+    for(it=list_trans_.begin(); it!=list_trans_.end(); it++)
+      delete (*it);
+    list_trans_.clear(); 
+  }
 
   /* number of vars in the NLP after the tranformation */
   inline virtual long long n_post() 
