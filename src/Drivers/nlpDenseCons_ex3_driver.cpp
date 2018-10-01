@@ -11,9 +11,6 @@ static bool self_check(long long n, double obj_value);
 
 static bool parse_arguments(int argc, char **argv, long long& n, bool& self_check)
 {
-
-  //  printf("%s    %s \n", argv[1], argv[2]);
-
   self_check=false; n = 50000;
   switch(argc) {
   case 1:
@@ -69,16 +66,43 @@ int main(int argc, char **argv)
   bool selfCheck; long long n;
   if(!parse_arguments(argc, argv, n, selfCheck)) { usage(argv[0]); return 1;}
 
+  double obj_value;
+  hiopSolveStatus status;
+
   Ex3 nlp_interface(n);
-  //if(rank==0) printf("interface created\n");
+
   hiopNlpDenseConstraints nlp(nlp_interface);
-  //if(rank==0) printf("nlp formulation created\n");
 
-  hiopAlgFilterIPM solver(&nlp);
-  hiopSolveStatus status = solver.run();
+  //set options before the solver is even allocated
+  nlp.options->SetStringValue("fixed_var", "relax");
 
-  double obj_value = solver.getObjective();
-  
+  {
+    hiopAlgFilterIPM solver(&nlp);
+    status = solver.run();
+    obj_value = solver.getObjective();
+
+    //change options and resolve
+    nlp.options->SetStringValue("fixed_var", "remove");
+    status = solver.run();
+    obj_value = solver.getObjective();
+
+  }
+  //do the same as above but force deallocation of the solver 
+  {
+    {
+      hiopAlgFilterIPM solver(&nlp);
+      nlp.options->SetStringValue("fixed_var", "relax");
+      status = solver.run();
+      obj_value = solver.getObjective();
+    }
+    {
+      hiopAlgFilterIPM solver(&nlp);
+      nlp.options->SetStringValue("fixed_var", "remove");
+      status = solver.run();
+      obj_value = solver.getObjective();
+    }
+  }
+
   if(status<0) {
     if(rank==0) printf("solver returned negative solve status: %d (with objective is %18.12e)\n", status, obj_value);
     return -1;
@@ -98,18 +122,15 @@ int main(int argc, char **argv)
   MPI_Finalize();
 #endif
 
-
   return 0;
 }
 
 
 static bool self_check(long long n, double objval)
 {
-  assert(false && "feature not yet available");
-  return false;
 #define num_n_saved 3 //keep this is sync with n_saved and objval_saved
-  const long long n_saved[] = {5e2, 5e3, 5e4}; 
-  const double objval_saved[] = {1.56251020819349e-02, 1.56251019995139e-02, 1.56251028980352e-02};
+  const long long n_saved[] = {500, 5000, 50000}; 
+  const double objval_saved[] = {2.05788282767327e+00, 2.02870382737020e+01, 2.02578703828247e+02};
 
 #define relerr 1e-6
   bool found=false;
