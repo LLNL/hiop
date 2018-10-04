@@ -139,14 +139,20 @@ void hiopMatrixDense::copyFrom(const hiopMatrixDense& dm)
 {
   assert(n_local==dm.n_local); assert(m_local==dm.m_local); assert(n_global==dm.n_global);
   assert(glob_jl==dm.glob_jl); assert(glob_ju==dm.glob_ju);
-  memcpy(M[0], dm.M[0], m_local*n_local*sizeof(double));
-  //for(int i=1; i<m_local; i++)
-  //  M[i]=M[0]+i*n_local;
+  if(NULL==dm.M[0]) {
+    M[0] = NULL;
+  } else {
+    memcpy(M[0], dm.M[0], m_local*n_local*sizeof(double));
+  }
 }
 
 void hiopMatrixDense::copyFrom(const double* buffer)
 {
-  memcpy(M[0], buffer, m_local*n_local*sizeof(double));
+  if(NULL==buffer) {
+    M[0] = NULL;
+  } else {
+    memcpy(M[0], buffer, m_local*n_local*sizeof(double));
+  }
 }
 
 void hiopMatrixDense::copyRowsFrom(const hiopMatrixDense& src, int num_rows, int row_dest)
@@ -383,6 +389,7 @@ void hiopMatrixDense::timesVec(double beta, hiopVector& y_,
     }
   }
 #ifdef HIOP_USE_MPI
+  //here m_local is > 0
   double yglob[m_local]; 
   int ierr=MPI_Allreduce(y.local_data(), yglob, m_local, MPI_DOUBLE, MPI_SUM, comm); assert(MPI_SUCCESS==ierr);
   memcpy(y.local_data(), yglob, m_local*sizeof(double));
