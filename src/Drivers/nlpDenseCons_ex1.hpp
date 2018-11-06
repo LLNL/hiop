@@ -1,19 +1,19 @@
 #ifndef HIOP_EXAMPLE_EX1
 #define  HIOP_EXAMPLE_EX1
 
-#include "hiopVector.hpp"
-#include "hiopNlpFormulation.hpp"
-#include "hiopInterface.hpp"
-#include "hiopAlgFilterIPM.hpp"
-
-#include <cassert>
-
 #ifdef WITH_MPI
 #include "mpi.h"
 #else
 #define MPI_COMM_WORLD 0
 #define MPI_Comm int
 #endif
+
+#include "hiopVector.hpp"
+#include "hiopNlpFormulation.hpp"
+#include "hiopInterface.hpp"
+#include "hiopAlgFilterIPM.hpp"
+
+#include <cassert>
 
 #include <iostream>
 
@@ -68,6 +68,8 @@ public:
 
   virtual void applyM(DiscretizedFunction& f);
   virtual void applyMInv(DiscretizedFunction& f);
+  virtual void applySqrtM(DiscretizedFunction& f);
+  virtual void applySqrtMInv(DiscretizedFunction& f);
 protected:
 
   hiop::hiopVectorPar* _mass; //the length or the mass of the elements
@@ -118,7 +120,7 @@ public:
     c =  new DiscretizedFunction(_mesh);
     x =  new DiscretizedFunction(_mesh);
     //_aux=new DiscretizedFunction(_mesh); // used as a auxiliary variable
-    n_local = _mesh->local_size();
+    n_local = (long long) _mesh->local_size();
 
     set_c(); 
 
@@ -133,7 +135,7 @@ public:
   bool get_prob_sizes(long long& n, long long& m)
   { n=n_vars; m=1; return true; }
 
-  bool get_vars_info(const long long& n, double *xlow, double* xupp, NonlinearityType* type)
+  virtual bool get_vars_info(const long long& n, double *xlow, double* xupp, NonlinearityType* type)
   {
     for(int i_local=0; i_local<n_local; i_local++) {
       xlow[i_local]=0.1; xupp[i_local]=1.0; type[i_local]=hiopNonlinear;
@@ -147,17 +149,18 @@ public:
     clow[0]= 0.5; cupp[0]= 0.5; type[0]=hiopInterfaceBase::hiopLinear;
     return true;
   }
-  bool eval_f(const long long& n, const double* x_in, bool new_x, double& obj_value)
+  virtual bool eval_f(const long long& n, const double* x_in, bool new_x, double& obj_value)
   {
     x->copyFrom(x_in);
     obj_value  = c->dotProductWith(*x);
     double xnrm = x->twonorm();
-    //printf("c'x=%g   xnrm_sq=%g\n", obj_value, xnrm*xnrm);
+    printf("c'x=%g   xnrm_sq=%g\n", obj_value, xnrm*xnrm);
+    
     obj_value += 0.5 * xnrm*xnrm;
 
     return true;
   }
-  bool eval_grad_f(const long long& n, const double* x_in, bool new_x, double* gradf)
+  virtual bool eval_grad_f(const long long& n, const double* x_in, bool new_x, double* gradf)
   {
     //gradf = m.*(x + c)
     //use x as auxiliary variable
@@ -168,11 +171,12 @@ public:
 
     //x->copyFrom(x_in);
     //x->print(stdout);
+
     return true;
   }
   /** Sum(x[i])<=10 and sum(x[i])>= 1  (we pretend are different)
    */
-  bool eval_cons(const long long& n, 
+  virtual bool eval_cons(const long long& n, 
 		 const long long& m,  
 		 const long long& num_cons, const long long* idx_cons,
 		 const double* x_in, bool new_x, double* cons)
@@ -186,7 +190,7 @@ public:
     return true;
   }
 
-  bool eval_Jac_cons(const long long& n, const long long& m, 
+  virtual bool eval_Jac_cons(const long long& n, const long long& m, 
 		     const long long& num_cons, const long long* idx_cons,
                      const double* x_in, bool new_x, double** Jac) 
   {
@@ -209,20 +213,23 @@ public:
     return true;
   }
 
-  bool get_starting_point(const long long &global_n, double* x0)
+  virtual bool get_starting_point(const long long &global_n, double* x0)
   {
     assert(global_n==n_vars); 
     for(int i_local=0; i_local<n_local; i_local++) {
       x0[i_local]=0.5;
     }
+
+    x->copyFrom(x0);
+    //x->print(stdout);
+
     return true;
   }
-
 
   virtual bool applyH(double* x);
   virtual bool applyHInv(double* x);
 
-private:
+protected:
   int n_vars, n_cons;
   MPI_Comm comm;
   Ex1Meshing1D* _mesh;
@@ -252,4 +259,107 @@ public:
   // }
 };
 
+class Ex1InterfaceSqrtScaling : public Ex1Interface
+{
+public: 
+  Ex1InterfaceSqrtScaling(int n_mesh_elem=100, double mesh_ratio=1.0) 
+    : Ex1Interface(n_mesh_elem,mesh_ratio) 
+{ }
+  virtual ~Ex1InterfaceSqrtScaling() { };
+
+  bool eval_f(const long long& n, const double* x_in, bool new_x, double& obj_value)
+  {
+    x->copyFrom(x_in);
+    _mesh->applySqrtMInv(*x);
+
+    obj_value  = c->dotProductWith(*x);
+    double xnrm = x->twonorm();
+    printf("c'x=%g   xnrm_sq=%g\n", obj_value, xnrm*xnrm);
+
+    obj_value += 0.5 * xnrm*xnrm;
+
+    return true;
+  }
+  bool eval_grad_f(const long long& n, const double* x_in, bool new_x, double* gradf)
+  {
+    //gradf = m.*(x + c)
+    //use x as auxiliary variable
+    x->copyFrom(x_in);
+    _mesh->applySqrtMInv(*x);
+
+    x->axpy(1.0, *c);
+    _mesh->applyM(*x);
+
+    _mesh->applySqrtMInv(*x);
+    x->copyTo(gradf);
+
+    //x->copyFrom(x_in);
+    //x->print(stdout);
+    return true;
+  }
+  /** Sum(x[i])<=10 and sum(x[i])>= 1  (we pretend are different)
+   */
+  bool eval_cons(const long long& n, 
+		 const long long& m,  
+		 const long long& num_cons, const long long* idx_cons,
+		 const double* x_in, bool new_x, double* cons)
+  {
+    assert(n==n_vars); 
+    if(0==num_cons) return true; //this may happen when Hiop asks for inequalities, which we don't have in this example
+
+    assert(num_cons==1);
+    x->copyFrom(x_in);
+    _mesh->applySqrtMInv(*x);
+    cons[0] = x->integral();
+    return true;
+  }
+
+  bool eval_Jac_cons(const long long& n, const long long& m, 
+		     const long long& num_cons, const long long* idx_cons,
+                     const double* x_in, bool new_x, double** Jac) 
+  {
+
+    assert(n==n_vars); 
+    if(0==num_cons) return true; //this may happen when Hiop asks for inequalities, which we don't have in this example
+    assert(1==num_cons);
+    //use x as auxiliary
+    x->setToConstant(1.);
+    _mesh->applySqrtM(*x);
+    x->copyTo(Jac[0]);
+    return true;
+  }
+  bool get_starting_point(const long long &global_n, double* x0)
+  {
+    Ex1Interface::get_starting_point(global_n, x0);
+    x->copyFrom(x0);
+    _mesh->applySqrtM(*x);
+    x->copyTo(x0);
+    //x->print(stdout);
+    return true;
+  }
+
+  virtual bool get_vars_info(const long long& n, double *xlow, double* xupp, NonlinearityType* type)
+  {
+    Ex1Interface::get_vars_info(n, xlow, xupp, type);
+    x->copyFrom(xlow);
+    _mesh->applySqrtM(*x);
+    x->copyTo(xlow);
+
+    x->copyFrom(xupp);
+    _mesh->applySqrtM(*x);
+    x->copyTo(xupp);
+    return true;
+  }
+
+  virtual bool applyH(double* x)
+  {
+    return true;
+  };
+
+  virtual bool applyHInv(double* x)
+  {
+    return true;
+  };
+
+};
 #endif

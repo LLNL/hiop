@@ -66,7 +66,20 @@ void Ex1Meshing1D::applyMInv(DiscretizedFunction& f)
   //std::cout << "Ex1Meshing1D::applyMInv" << std::endl;
   f.componentDiv(*this->_mass);
 }
-
+void Ex1Meshing1D::applySqrtM(DiscretizedFunction& f_)
+{
+  double* M=this->_mass->local_data();
+  double* f= f_.local_data();
+  for(int i=0; i<f_.get_local_size(); i++)
+    f[i] *= sqrt(M[i]);
+}
+void Ex1Meshing1D::applySqrtMInv(DiscretizedFunction& f_)
+{
+  double* M=this->_mass->local_data();
+  double* f= f_.local_data();
+  for(int i=0; i<f_.get_local_size(); i++)
+    f[i] /= sqrt(M[i]);
+}
 
 //converts the local indexes to global indexes
 long long Ex1Meshing1D::getGlobalIndex(long long i_local) const
@@ -179,7 +192,6 @@ void DiscretizedFunction::setFunctionValue(long long i_global, const double& val
   long long i_local=_mesh->getLocalIndex(i_global);
   this->data[i_local]=value;
 }
-
 
 
 /* Ex1Interface class implementation */
