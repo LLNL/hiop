@@ -250,7 +250,7 @@ hiopNlpDenseConstraints::~hiopNlpDenseConstraints()
   if(cons_ineq_mapping) delete[] cons_ineq_mapping;
 }
 
-#define OBJ_SCALE 1e-3
+#define OBJ_SCALE 1.
 static int obj_print=1;
 bool hiopNlpDenseConstraints::eval_f(const double* x, bool new_x, double& f)
 {
