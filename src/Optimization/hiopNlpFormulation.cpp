@@ -232,6 +232,10 @@ bool hiopNlpDenseConstraints::finalizeInitialization()
       ixu_vec[i]=1.; n_bnds_upp_local++;
     } else ixu_vec[i]=0.;
 
+#ifdef HIOP_DEEPCHECKS
+    assert(xl_vec[i] <= xu_vec[i] && "please fix the inconsistent bounds, otherwise the problem is infeasible");
+#endif
+
     //if(xl_vec[i]==xu_vec[i]) {
     if(fabs(xl_vec[i]-xu_vec[i])<= fixedVarTol*fmax(1.,fabs(xu_vec[i]))) {
       nfixed_vars_local++;
@@ -377,6 +381,9 @@ bool hiopNlpDenseConstraints::finalizeInitialization()
       cons_eq_mapping[it_eq]=i;
       it_eq++;
     } else {
+#ifdef HIOP_DEEPCHECKS
+    assert(gl_vec[i] <= gu_vec[i] && "please fix the inconsistent inequality constraints, otherwise the problem is infeasible");
+#endif
       cons_ineq_type[it_ineq]=cons_type[i];
       dlvec[it_ineq]=gl_vec[i]; duvec[it_ineq]=gu_vec[i]; 
       cons_ineq_mapping[it_ineq]=i;

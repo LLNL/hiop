@@ -545,7 +545,7 @@ int hiopVectorPar::allPositive()
   return allPos;
 }
 
-void hiopVectorPar::projectIntoBounds(const hiopVector& xl_, const hiopVector& ixl_, 
+bool hiopVectorPar::projectIntoBounds(const hiopVector& xl_, const hiopVector& ixl_, 
 				      const hiopVector& xu_, const hiopVector& ixu_,
 				      double kappa1, double kappa2)
 {
@@ -566,6 +566,7 @@ void hiopVectorPar::projectIntoBounds(const hiopVector& xl_, const hiopVector& i
   double aux, aux2;
   for(long long i=0; i<n_local; i++) {
     if(ixl[i]!=0 && ixu[i]!=0) {
+      if(xl[i]>xu[i]) return false;
       aux=kappa2*(xu[i]-xl[i])-small_double;
       aux2=xl[i]+fmin(kappa1*fmax(1., fabs(xl[i])),aux);
       if(x0[i]<aux2) {
@@ -581,7 +582,7 @@ void hiopVectorPar::projectIntoBounds(const hiopVector& xl_, const hiopVector& i
       //} else {
       //printf("i=%d  x0=%g xl=%g xu=%g\n", i, x0[i], xl[i], xu[i]);
       //}
-      assert(x0[i]>xl[i] && x0[i]<xu[i]);
+      assert(x0[i]>xl[i] && x0[i]<xu[i] && "this should not happen -> HiOp bug");
       
 #endif
     } else {
@@ -593,6 +594,7 @@ void hiopVectorPar::projectIntoBounds(const hiopVector& xl_, const hiopVector& i
 	else { /*nothing for free vars  */ }
     }
   }
+  return true;
 }
 
 /* max{a\in(0,1]| x+ad >=(1-tau)x} */

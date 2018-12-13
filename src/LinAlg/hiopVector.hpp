@@ -136,7 +136,7 @@ public:
   /** Return the minimum value in this vector, and the index at which it occurs. */
   virtual void min( double& m, int& index ) const = 0;
   /** Project the vector into the bounds, used for shifting the ini pt in the bounds */
-  virtual void projectIntoBounds(const hiopVector& xl, const hiopVector& ixl, 
+  virtual bool projectIntoBounds(const hiopVector& xl, const hiopVector& ixl, 
 				 const hiopVector& xu, const hiopVector& ixu,
 				 double kappa1, double kappa2) = 0;
   /* max{a\in(0,1]| x+ad >=(1-tau)x} */
@@ -217,7 +217,7 @@ public:
 				   const double& mu, const double& kappa_d) const;
   virtual int allPositive();
   virtual int allPositive_w_patternSelect(const hiopVector& w);
-  virtual void projectIntoBounds(const hiopVector& xl, const hiopVector& ixl, 
+  virtual bool projectIntoBounds(const hiopVector& xl, const hiopVector& ixl, 
 				 const hiopVector& xu, const hiopVector& ixu,
 				 double kappa1, double kappa2);
   virtual double fractionToTheBdry(const hiopVector& dx, const double& tau) const;

@@ -50,7 +50,7 @@
 
 #include <cmath>
 #include <cassert>
-
+#include <cstdlib>
 namespace hiop
 {
 
@@ -143,17 +143,23 @@ void hiopIterate::print(FILE* f, const char* msg/*=NULL*/) const
 void hiopIterate::
 projectPrimalsXIntoBounds(double kappa1, double kappa2)
 {
-  x->projectIntoBounds(nlp->get_xl(),nlp->get_ixl(),
-		       nlp->get_xu(),nlp->get_ixu(),
-		       kappa1,kappa2);
+  if(!x->projectIntoBounds(nlp->get_xl(),nlp->get_ixl(),
+			   nlp->get_xu(),nlp->get_ixu(),
+			   kappa1,kappa2)) {
+    nlp->log->printf(hovError, "Problem is infeasible due to inconsistent bounds for the variables (lower>upper). Please fix this. In the meanwhile, HiOp will exit (ungracefully).\n");
+    exit(-1);
+  }
 }
 
 void hiopIterate::
 projectPrimalsDIntoBounds(double kappa1, double kappa2)
 {
-  d->projectIntoBounds(nlp->get_dl(),nlp->get_idl(),
+  if(!d->projectIntoBounds(nlp->get_dl(),nlp->get_idl(),
 		       nlp->get_du(),nlp->get_idu(),
-		       kappa1,kappa2);
+			   kappa1,kappa2)) {
+    nlp->log->printf(hovError, "Problem is infeasible due to inconsistent inequality constraints (lower>upper). Please fix this. In the meanwhile, HiOp will exit (ungracefully).\n");
+    exit(-1);
+  }
 }
 
 
