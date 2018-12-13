@@ -112,6 +112,7 @@ void hiopOptions::registerOptions()
   registerNumOption("kappa_mu", 0.2, 1e-8, 0.999, "Linear reduction coefficient for mu (default 0.2) (eqn (7) in Filt-IPM paper)");
   registerNumOption("theta_mu", 1.5,  1.0,   2.0, "Exponential reduction coefficient for mu (default 1.5) (eqn (7) in Filt-IPM paper)");
   registerNumOption("tolerance", 1e-8, 1e-14, 1e-1, "Absolute error tolerance for the NLP (default 1e-8)");
+  registerNumOption("rel_tolerance", 0., 0., 0.1, "Error tolerance for the NLP relative to errors at the initial point. A null value disables this option (default 0.)");
   registerNumOption("tau_min", 0.99, 0.9,  0.99999, "Fraction-to-the-boundary parameter used in the line-search to back-off a bit (default 0.99) (eqn (8) in the Filt-IPM paper");
   registerNumOption("kappa_eps", 10., 1e-6, 1e+3, "mu is reduced when when log-bar error is below kappa_eps*mu (default 10.)");
   registerNumOption("kappa1", 1e-2, 1e-8, 1e+0, "sufficiently-away-from-the-boundary projection parameter used in initialization (default 1e-2)");

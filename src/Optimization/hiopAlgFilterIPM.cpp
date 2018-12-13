@@ -169,15 +169,16 @@ void hiopAlgFilterIPM::reloadOptions()
 {
   //algorithm parameters parameters
   mu0=_mu  = nlp->options->GetNumeric("mu0"); 
-  kappa_mu = nlp->options->GetNumeric("kappa_mu");      //linear decrease factor
-  theta_mu = nlp->options->GetNumeric("theta_mu");      //exponent for higher than linear decrease of mu
-  tau_min  = nlp->options->GetNumeric("tau_min");       //min value for the fraction-to-the-boundary
-  eps_tol  = nlp->options->GetNumeric("tolerance");     //absolute error for the nlp
-  kappa_eps= nlp->options->GetNumeric("kappa_eps");     //relative (to mu) error for the log barrier
+  kappa_mu = nlp->options->GetNumeric("kappa_mu");         //linear decrease factor
+  theta_mu = nlp->options->GetNumeric("theta_mu");         //exponent for higher than linear decrease of mu
+  tau_min  = nlp->options->GetNumeric("tau_min");          //min value for the fraction-to-the-boundary
+  eps_tol  = nlp->options->GetNumeric("tolerance");        //absolute error for the nlp
+  eps_rtol = nlp->options->GetNumeric("rel_tolerance");    //relative error (to errors for the initial point) 
+  kappa_eps= nlp->options->GetNumeric("kappa_eps");        //relative (to mu) error for the log barrier
 
-  kappa1   = nlp->options->GetNumeric("kappa1");        //projection params for the starting point (default 1e-2)
+  kappa1   = nlp->options->GetNumeric("kappa1");          //projection params for the starting point (default 1e-2)
   kappa2   = nlp->options->GetNumeric("kappa2");
-  p_smax   = nlp->options->GetNumeric("smax");          //threshold for the magnitude of the multipliers
+  p_smax   = nlp->options->GetNumeric("smax");            //threshold for the magnitude of the multipliers
 
   max_n_it  = nlp->options->GetInteger("max_iter"); 
 
@@ -345,9 +346,11 @@ hiopSolveStatus hiopAlgFilterIPM::run()
 
   _alpha_primal = _alpha_dual = 0;
 
+  _err_nlp_optim0=-1.; _err_nlp_feas0=-1.; _err_nlp_complem0=-1;
+
   // --- Algorithm status 'algStatus ----
   //-1 couldn't solve the problem (most likely because small search step. Restauration phase likely needed)
-  // 0 stopped due to tolerances, including acceptable tolerance
+  // 0 stopped due to tolerances, including acceptable tolerance, or relative tolerance
   // 1 max iter reached
   // 2 user stop via the iteration callback
 
@@ -364,6 +367,11 @@ hiopSolveStatus hiopAlgFilterIPM::run()
     nlp->log->printf(hovScalars, "  LogBar errs: pr-infeas:%20.14e   dual-infeas:%20.14e  comp:%20.14e  overall:%20.14e\n",
 		     _err_log_feas, _err_log_optim, _err_log_complem, _err_log);
     outputIteration(lsStatus, lsNum);
+
+    if(_err_nlp_optim0<0) { // && _err_nlp_feas0<0 && _err_nlp_complem0<0 
+      _err_nlp_optim0=_err_nlp_optim; _err_nlp_feas0=_err_nlp_feas; _err_nlp_complem0=_err_nlp_complem;
+    }
+
     //user callback
     if(!nlp->user_callback_iterate(iter_num, _f_nlp, 
 				   *it_curr->get_x(),
@@ -628,6 +636,15 @@ checkTermination(const double& err_nlp, const int& iter_num, hiopSolveStatus& st
   if(err_nlp<=eps_tol)   { _solverStatus = Solve_Success;     return true; }
   if(iter_num>=max_n_it) { _solverStatus = Max_Iter_Exceeded; return true; }
 
+  if(eps_rtol>0) {
+    if(_err_nlp_optim   <= eps_rtol * _err_nlp_optim0 &&
+       _err_nlp_optim   <= eps_rtol * _err_nlp_optim0 &&
+       _err_nlp_complem <= std::max(eps_rtol,1e-6) * std::min(1.,_err_nlp_complem0)) {
+      _solverStatus = Solve_Success_RelTol;
+      return true; 
+    }
+  }
+
   if(err_nlp<=eps_tol_accep) _n_accep_iters++;
   else _n_accep_iters = 0;
 
@@ -645,6 +662,11 @@ void hiopAlgFilterIPM::displayTerminationMsg() {
   case Solve_Success: 
     {
       nlp->log->printf(hovSummary, "Successfull termination.\n%s\n", nlp->runStats.getSummary().c_str());
+      break;
+    }
+  case Solve_Success_RelTol: 
+    {
+      nlp->log->printf(hovSummary, "Successfull termination (error within the relative tolerance).\n%s\n", nlp->runStats.getSummary().c_str());
       break;
     }
   case Solve_Acceptable_Level:
@@ -844,6 +866,5 @@ hiopSolveStatus hiopAlgFilterIPM::getSolveStatus() const
 {
   return _solverStatus;
 }
-
 
 }

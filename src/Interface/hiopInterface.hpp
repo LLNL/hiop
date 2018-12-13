@@ -70,10 +70,11 @@ namespace hiop
 enum hiopSolveStatus {
   //(partial) success 
   Solve_Success=0,
-  Solve_Acceptable_Level=1,
-  Infeasible_Problem=2,
-  Iterates_Diverging=3,
-  Feasible_Not_Optimal = 4,
+  Solve_Success_RelTol=1,
+  Solve_Acceptable_Level=2,
+  Infeasible_Problem=5,
+  Iterates_Diverging=6,
+  Feasible_Not_Optimal = 7,
   //solver stopped based on user-defined criteria that are not related to optimality
   Max_Iter_Exceeded=10,
   Max_CpuTime_Exceeded=11,

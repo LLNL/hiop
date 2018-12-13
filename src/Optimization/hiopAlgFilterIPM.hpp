@@ -124,6 +124,7 @@ private:
 
   int iter_num;
   double _err_nlp_optim, _err_nlp_feas, _err_nlp_complem;//not scaled by sd, sc, and sc
+  double _err_nlp_optim0,_err_nlp_feas0,_err_nlp_complem0;//initial errors, not scaled by sd, sc, and sc
   double _err_log_optim, _err_log_feas, _err_log_complem;//not scaled by sd, sc, and sc
   double _err_nlp, _err_log; //max of the above (scaled)
 
@@ -155,7 +156,8 @@ private:
   double mu0;           //intial mu
   double kappa_mu;      //linear decrease factor in mu 
   double theta_mu;      //exponent for a Mehtrotra-style decrease of mu
-  double eps_tol;       //solving tolerance for the NLP error
+  double eps_tol;       //abs tolerance for the NLP error
+  double eps_rtol;      //rel tolerance for the NLP error
   double tau_min;       //min value for the fraction-to-the-boundary parameter: tau_k=max{tau_min,1-\mu_k}
   double kappa_eps;     //tolerance for the barrier problem, relative to mu: error<=kappa_eps*mu
   double kappa1,kappa2; //params for default starting point
