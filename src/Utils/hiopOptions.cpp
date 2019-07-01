@@ -132,6 +132,10 @@ void hiopOptions::registerOptions()
   registerNumOption("acceptable_tolerance", 1e-6, 1e-14, 1e-1, "HiOp will terminate if the NLP residuals are below for 'acceptable_iterations' many consecutive iterations (default 1e-6)");   
   registerIntOption("acceptable_iterations", 10, 1, 1e6, "Number of iterations of acceptable tolerance after which HiOp terminates (default 10)");
 
+  {
+    vector<string> range(2); range[0] = "no"; range[1] = "yes";
+    registerStrOption("accept_every_trial_step", "no", range, "Disable line-search and take close-to-boundary step");
+  }
 
   registerIntOption("secant_memory_len", 6, 0, 256, "Size of the memory of the Hessian secant approximation");
 

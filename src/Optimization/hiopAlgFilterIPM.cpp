@@ -274,6 +274,8 @@ hiopSolveStatus hiopAlgFilterIPM::run()
 
   iter_num=0; nlp->runStats.nIter=iter_num;
 
+  bool disableLS = nlp->options->GetString("accept_every_trial_step")=="yes";
+
   theta_max=1e+4*fmax(1.0,resid->getInfeasNorm());
   theta_min=1e-4*fmax(1.0,resid->getInfeasNorm());
   
@@ -409,6 +411,7 @@ hiopSolveStatus hiopAlgFilterIPM::run()
       nlp->log->printf(hovLinesearch, "  trial point %d: alphaPrimal=%14.8e barier:(%22.16e)>%15.9e theta:(%22.16e)>%22.16e\n",
 		       lsNum, _alpha_primal, logbar->f_logbar, logbar->f_logbar_trial, theta, theta_trial);
 
+      if(disableLS) break;
       //let's do the cheap, "sufficient progress" test first, before more involved/expensive tests. 
       // This simple test is good enough when iterate is far away from solution
       if(theta>=theta_min) {
