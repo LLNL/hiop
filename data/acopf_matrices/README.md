@@ -1,4 +1,4 @@
-# ACOPF (basecase) matrices/linear systems from the interior-point solver Ipopt
+# ACOPF (basecase) matrices/linear systems arising in interior-point methods
 
 ## Standard CSR Format ##
 
@@ -18,7 +18,10 @@
 
 2. net12 - larger but medium sized
 
+
 Both instances are relatively well behaved numerically. They do not require inertia correction (PARDISO linear solver was used).
+
+To be of use with interior-point solvers such as Ipopt and PIPS, the code that solves these linear systems should be also capable of returning the inertia of the matrix.
 
 ## References
 
