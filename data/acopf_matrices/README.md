@@ -2,7 +2,7 @@
 
 ## Standard CSR Format ##
 
-The matrix is assumed to symmetric and the indexes are Fortran style (1-based).
+The matrix is assumed to be symmetric and the indexes are Fortran style (1-based).
 
 The .iajaaa files contain
 
