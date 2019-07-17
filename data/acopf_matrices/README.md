@@ -2,15 +2,21 @@
 
 ## Standard CSR Format ##
 
-1. number of rows (nrows)
+The matrix is assumed to symmetric and the indexes are Fortran style (1-based).
 
-2. number of nonzeros (nnz)
+The .iajaaa files contain
 
-3. column indexes (nrows+1 entries)
+1. number of rows (nrows) [1 double]
 
-4. nonzero entries  (nnz entries)
+2. number of nonzeros (nnz) [1 double]
 
-5. right-hand side (nrows entries)
+3. array of pointers/offsets in 4. and 5. of the first nonzero of each row; first entry is 1 and the last entry is nnz+1 [nrows+1 ints]
+
+4. array of the column indexes of nonzeros [nnz ints]
+
+5. array of nonzero entries  [nnz doubles]
+
+6. right-hand side [nrows doubles]
 
 ## Instances
 
