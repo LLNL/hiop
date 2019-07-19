@@ -1,0 +1,125 @@
+#!/bin/bash
+#    Begin LSF directives
+#BSUB -P csc359
+#BSUB -W 00:59
+#BSUB -nnodes 1
+#BSUB -J spral_ssids
+#BSUB -o spral_ssids.%J
+#BSUB -e spral_ssids.%J
+#    End LSF directives and begin shell commands
+
+date
+pwd
+
+export OMP_PROC_BIND=true
+export OMP_CANCELLATION=true
+
+source $MODULESHOME/init/bash
+
+# jsrun commands will go here
+mkdir logs
+ln /gpfs/alpine/scratch/cpetra/csc359/ssids_runs/matrices/sparsine/sparsine.rb matrix.rb
+jsrun -n1 -a1 -c4 -bpacked:4 -g1 ./spral_ssids > logs/sparsine.rb.log
+unlink matrix.rb
+echo 'Done with sparsine.rb'
+
+ln /gpfs/alpine/scratch/cpetra/csc359/ssids_runs/matrices/H2O/H2O.rb matrix.rb
+jsrun -n1 -a1 -c4 -bpacked:4 -g1 ./spral_ssids > logs/H2O.rb.log
+unlink matrix.rb
+echo 'Done with H2O.rb'
+
+ln /gpfs/alpine/scratch/cpetra/csc359/ssids_runs/matrices/crystk03/crystk03.rb matrix.rb
+jsrun -n1 -a1 -c4 -bpacked:4 -g1 ./spral_ssids > logs/crystk03.rb.log
+unlink matrix.rb
+echo 'Done with crystk03.rb'
+
+ln /gpfs/alpine/scratch/cpetra/csc359/ssids_runs/matrices/Lin/Lin.rb matrix.rb
+jsrun -n1 -a1 -c4 -bpacked:4 -g1 ./spral_ssids > logs/Lin.rb.log
+unlink matrix.rb
+echo 'Done with Lin.rb'
+
+ln /gpfs/alpine/scratch/cpetra/csc359/ssids_runs/matrices/bcsstk39/bcsstk39.rb matrix.rb
+jsrun -n1 -a1 -c4 -bpacked:4 -g1 ./spral_ssids > logs/bcsstk39.rb.log
+unlink matrix.rb
+echo 'Done with bcsstk39.rb'
+
+ln /gpfs/alpine/scratch/cpetra/csc359/ssids_runs/matrices/helm2d03/helm2d03.rb matrix.rb
+jsrun -n1 -a1 -c4 -bpacked:4 -g1 ./spral_ssids > logs/helm2d03.rb.log
+unlink matrix.rb
+echo 'Done with helm2d03.rb'
+
+ln /gpfs/alpine/scratch/cpetra/csc359/ssids_runs/matrices/copter2/copter2.rb matrix.rb
+jsrun -n1 -a1 -c4 -bpacked:4 -g1 ./spral_ssids > logs/copter2.rb.log
+unlink matrix.rb
+echo 'Done with copter2.rb'
+
+ln /gpfs/alpine/scratch/cpetra/csc359/ssids_runs/matrices/t2dal/t2dal.rb matrix.rb
+jsrun -n1 -a1 -c4 -bpacked:4 -g1 ./spral_ssids > logs/t2dal.rb.log
+unlink matrix.rb
+echo 'Done with t2dal.rb'
+
+ln /gpfs/alpine/scratch/cpetra/csc359/ssids_runs/matrices/Ga10As10H30/Ga10As10H30.rb matrix.rb
+jsrun -n1 -a1 -c4 -bpacked:4 -g1 ./spral_ssids > logs/Ga10As10H30.rb.log
+unlink matrix.rb
+echo 'Done with Ga10As10H30.rb'
+
+ln /gpfs/alpine/scratch/cpetra/csc359/ssids_runs/matrices/F2/F2.rb matrix.rb
+jsrun -n1 -a1 -c4 -bpacked:4 -g1 ./spral_ssids > logs/F2.rb.log
+unlink matrix.rb
+echo 'Done with F2.rb'
+
+ln /gpfs/alpine/scratch/cpetra/csc359/ssids_runs/matrices/pct20stif/pct20stif.rb matrix.rb
+jsrun -n1 -a1 -c4 -bpacked:4 -g1 ./spral_ssids > logs/pct20stif.rb.log
+unlink matrix.rb
+echo 'Done with pct20stif.rb'
+
+ln /gpfs/alpine/scratch/cpetra/csc359/ssids_runs/matrices/Ga19As19H42/Ga19As19H42.rb matrix.rb
+jsrun -n1 -a1 -c4 -bpacked:4 -g1 ./spral_ssids > logs/Ga19As19H42.rb.log
+unlink matrix.rb
+echo 'Done with Ga19As19H42.rb'
+
+ln /gpfs/alpine/scratch/cpetra/csc359/ssids_runs/matrices/rail_79841/rail_79841.rb matrix.rb
+jsrun -n1 -a1 -c4 -bpacked:4 -g1 ./spral_ssids > logs/rail_79841.rb.log
+unlink matrix.rb
+echo 'Done with rail_79841.rb'
+
+ln /gpfs/alpine/scratch/cpetra/csc359/ssids_runs/matrices/qa8fk/qa8fk.rb matrix.rb
+jsrun -n1 -a1 -c4 -bpacked:4 -g1 ./spral_ssids > logs/qa8fk.rb.log
+unlink matrix.rb
+echo 'Done with qa8fk.rb'
+
+ln /gpfs/alpine/scratch/cpetra/csc359/ssids_runs/matrices/filter3D/filter3D.rb matrix.rb
+jsrun -n1 -a1 -c4 -bpacked:4 -g1 ./spral_ssids > logs/filter3D.rb.log
+unlink matrix.rb
+echo 'Done with filter3D.rb'
+
+ln /gpfs/alpine/scratch/cpetra/csc359/ssids_runs/matrices/dixmaanl/dixmaanl.rb matrix.rb
+jsrun -n1 -a1 -c4 -bpacked:4 -g1 ./spral_ssids > logs/dixmaanl.rb.log
+unlink matrix.rb
+echo 'Done with dixmaanl.rb'
+
+ln /gpfs/alpine/scratch/cpetra/csc359/ssids_runs/matrices/t3dh/t3dh.rb matrix.rb
+jsrun -n1 -a1 -c4 -bpacked:4 -g1 ./spral_ssids > logs/t3dh.rb.log
+unlink matrix.rb
+echo 'Done with t3dh.rb'
+
+ln /gpfs/alpine/scratch/cpetra/csc359/ssids_runs/matrices/ecology1/ecology1.rb matrix.rb
+jsrun -n1 -a1 -c4 -bpacked:4 -g1 ./spral_ssids > logs/ecology1.rb.log
+unlink matrix.rb
+echo 'Done with ecology1.rb'
+
+ln /gpfs/alpine/scratch/cpetra/csc359/ssids_runs/matrices/Ge99H100/Ge99H100.rb matrix.rb
+jsrun -n1 -a1 -c4 -bpacked:4 -g1 ./spral_ssids > logs/Ge99H100.rb.log
+unlink matrix.rb
+echo 'Done with Ge99H100.rb'
+
+ln /gpfs/alpine/scratch/cpetra/csc359/ssids_runs/matrices/gas_sensor/gas_sensor.rb matrix.rb
+jsrun -n1 -a1 -c4 -bpacked:4 -g1 ./spral_ssids > logs/gas_sensor.rb.log
+unlink matrix.rb
+echo 'Done with gas_sensor.rb'
+
+ln /gpfs/alpine/scratch/cpetra/csc359/ssids_runs/matrices/dawson5/dawson5.rb matrix.rb
+jsrun -n1 -a1 -c4 -bpacked:4 -g1 ./spral_ssids > logs/dawson5.rb.log
+unlink matrix.rb
+echo 'Done with dawson5.rb'
+

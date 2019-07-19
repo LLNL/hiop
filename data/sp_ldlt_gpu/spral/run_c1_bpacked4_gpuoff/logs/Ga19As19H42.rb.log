@@ -1,0 +1,38 @@
+Reading 'matrix.rb'...
+ok
+ Number of CUDA devices:            1
+ Forcing topology to           16
+ Using           0 GPUs
+ Input topology
+ Region            1  with           16  cores
+ [find_subtree_partition] load_balance =    1.00000000    
+ Used order            1
+ok
+ Analyse took    4.51300001    
+Predict nfact =   8.32E+08
+Predict nflop =   9.61E+12
+nparts         1
+cpu_fl  9.61E+12
+gpu_fl  0.00E+00
+Factorize...
+ok
+ Factor took    812.843994    
+Solve...
+ok
+ Solve took    2.32800007    
+ number bad cmp =            0
+ fwd error || ||_inf =    1.6887791165487442E-010
+ bwd error scaled =    2.0017621407097148E-013
+  cmp:     SMFCT
+ anal:      4.51
+ fact:    812.84
+afact:  8.32E+08
+aflop:  9.61E+12
+nfact:  8.32E+08
+nflop:  9.61E+12
+delay:         1
+inerti       147         0    132976
+2x2piv      6690
+maxfro     20350
+not_fi        66
+not_se         1

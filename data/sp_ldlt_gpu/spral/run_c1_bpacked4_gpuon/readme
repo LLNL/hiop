@@ -1,0 +1,9 @@
+
+#1. generate list of matrices
+find /gpfs/alpine/scratch/cpetra/csc359/ssids_runs/matrices/ ! -iname "*_?.rb" -name "*.rb" > list_matrices.txt
+
+#2. generate bsub job submission file -> this will create job.lsf
+bash generate_lsf_job_files.sh
+
+#3. submit job
+bsub job.lsf

@@ -1,0 +1,19 @@
+#!/bin/bash
+#    Begin LSF directives
+#BSUB -P csc359
+#BSUB -W 00:59
+#BSUB -nnodes 1
+#BSUB -J xxxname
+#BSUB -o xxxname.%J
+#BSUB -e xxxname.%J
+#    End LSF directives and begin shell commands
+
+date
+pwd
+
+export OMP_PROC_BIND=true
+export OMP_CANCELLATION=true
+
+source $MODULESHOME/init/bash
+
+# jsrun commands will go here
