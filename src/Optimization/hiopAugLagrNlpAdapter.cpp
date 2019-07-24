@@ -18,7 +18,7 @@ hiopAugLagrNlpAdapter::hiopAugLagrNlpAdapter(NLP_CLASS_IN* nlp_in_):
     nlp_in(nlp_in_),
     rho(100.0),
     lambda(nullptr),
-    x0_AugLagr(nullptr),
+    _startingPoint(nullptr),
     n_vars(0),
     n_slacks(0),
     m_cons(0),
@@ -32,8 +32,8 @@ hiopAugLagrNlpAdapter::hiopAugLagrNlpAdapter(NLP_CLASS_IN* nlp_in_):
     cons_eq_mapping(nullptr),
     cons_ineq_mapping(nullptr),
     c_rhs(nullptr),
-    penalty_fcn(nullptr),
-    penalty_fcn_jacobian(nullptr),
+    _penaltyFcn(nullptr),
+    _penaltyFcn_jacobian(nullptr),
     log(new hiopLogger(this, stdout)),
     runStats(MPI_COMM_SELF),
     options(new hiopOptions(/*filename=NULL*/))
@@ -56,9 +56,9 @@ hiopAugLagrNlpAdapter::~hiopAugLagrNlpAdapter()
     if(cons_ineq_mapping)     delete cons_ineq_mapping;
     if(c_rhs)                 delete c_rhs;
     if(lambda)                delete lambda;
-    if(x0_AugLagr)             delete x0_AugLagr;
-    if(penalty_fcn)              delete penalty_fcn;
-    if(penalty_fcn_jacobian)      delete penalty_fcn_jacobian;
+    if(_startingPoint)             delete _startingPoint;
+    if(_penaltyFcn)              delete _penaltyFcn;
+    if(_penaltyFcn_jacobian)      delete _penaltyFcn_jacobian;
     if(log)      delete log;
     if(options)  delete options;
 }
@@ -110,9 +110,9 @@ bool hiopAugLagrNlpAdapter::initialize()
 
     //allocate space 
     lambda = new hiopVectorPar(m_cons);
-    x0_AugLagr = new hiopVectorPar(n_vars+n_slacks);
-    penalty_fcn = new hiopVectorPar(m_cons);
-    penalty_fcn_jacobian = new hiopSparseMatrix(m_cons, n_vars, nnz_jac);
+    _startingPoint = new hiopVectorPar(n_vars+n_slacks);
+    _penaltyFcn = new hiopVectorPar(m_cons);
+    _penaltyFcn_jacobian = new hiopSparseMatrix(m_cons, n_vars, nnz_jac);
     sl = new hiopVectorPar(n_cons_ineq);
     su = new hiopVectorPar(n_cons_ineq);
 
@@ -234,13 +234,13 @@ bool hiopAugLagrNlpAdapter::eval_f(const long long& n, const double* x_in, bool 
     assert(bret);
 
     // evaluate and transform the constraints of the original NLP
-    eval_penalty(x_in, new_x, penalty_fcn);
+    eval_penalty(x_in, new_x, _penaltyFcn);
 
     // compute lam^t p(x)
-    const double lagr_term = lambda.dotProductWith(penalty_fcn);
+    const double lagr_term = lambda.dotProductWith(_penaltyFcn);
     
     // compute penalty term rho*||p(x)||^2
-    const double penalty_term = rho * penalty_fcn.dotProductWith(penalty_fcn);
+    const double penalty_term = rho * _penaltyFcn.dotProductWith(_penaltyFcn);
 
     //f(x) + lam^t p(x) + rho ||p(x)||^2
     obj_value = obj_nlp + lagr_term + penalty_term;
@@ -249,8 +249,8 @@ bool hiopAugLagrNlpAdapter::eval_f(const long long& n, const double* x_in, bool 
 }
 
 /** Gradient of the Lagrangian function L(x,s)
- *  d_La/d_x = df_x + J^T lam 
- *  d_La/d_s =  0   + (-I) lam[cons_ineq_mapping] 
+ *  d_L/d_x = df_x + J^T lam 
+ *  d_L/d_s =  0   + (-I) lam[cons_ineq_mapping] 
  *  where J is the Jacobian of the original NLP constraints.
  *
  * @param[in] n Number of variables in Augmented Lagrangian formulation
@@ -260,7 +260,7 @@ bool hiopAugLagrNlpAdapter::eval_f(const long long& n, const double* x_in, bool 
  * */
 bool hiopAugLagrNlpAdapter::eval_grad_Lagr(const long long& n, const double* x_in, bool new_x, double* gradLagr)
 {
-    assert(new_x == false); // we assume data in #penalty_fcn are up to date
+    assert(new_x == false); // we assume data in #_penaltyFcn are up to date
     
     /****************************************************/
     /** Add contribution of the NLP objective function **/
@@ -275,9 +275,9 @@ bool hiopAugLagrNlpAdapter::eval_grad_Lagr(const long long& n, const double* x_i
     /****************************************************/
     
     //TODO Ipopt uses type Index*, is it compatible with long long?
-    long long *iRow = penalty_fcn_jacobian->get_ia();
-    long long *icol = penalty_fcn_jacobian->get_ja();
-    double *values = penalty_fcn_jacobian->get_a();
+    long long *iRow = _penaltyFcn_jacobian->get_ia();
+    long long *icol = _penaltyFcn_jacobian->get_ja();
+    double *values = _penaltyFcn_jacobian->get_a();
     bret = nlp_in->eval_jac_g(n_vars, x_in, new_x, m_cons, iRow, jCol, values);
     assert(bret);
 
@@ -286,11 +286,11 @@ bool hiopAugLagrNlpAdapter::eval_grad_Lagr(const long long& n, const double* x_i
     /**************************************************/
     //y := alpha*A*x + beta*y sparse DGEMV
     //y := alpha*A'*x + beta*y sparse DGEMVt
-    //penalty_fcn_jacobian.DGEMVt(alpha, x, beta, y);
-    penalty_fcn_jacobian.DGEMVt(1.0, lam, 1.0, gradLagr);
+    //_penaltyFcn_jacobian.DGEMVt(alpha, x, beta, y);
+    _penaltyFcn_jacobian.DGEMVt(1.0, lam, 1.0, gradLagr);
 
     
-    //Add the Jacobian w.r.t the slack variables (penalty_fcn_jacobian contains
+    //Add the Jacobian w.r.t the slack variables (_penaltyFcn_jacobian contains
     //only the jacobian w.r.t original x, we need to add Jac w.r.t slacks)
     //The structure of the La Jacobian is following (Note that Je, Ji
     //might be interleaved and not listed in order as shown below)
@@ -317,7 +317,7 @@ bool hiopAugLagrNlpAdapter::eval_grad_Lagr(const long long& n, const double* x_i
  * */
 bool hiopAugLagrNlpAdapter::eval_grad_f(const long long& n, const double* x_in, bool new_x, double* gradf)
 {
-    assert(new_x == false); // we assume data in #penalty_fcn are up to date
+    assert(new_x == false); // we assume data in #_penaltyFcn are up to date
 
     /********************************************************/
     /** Add contribution of the gradient of the Lagrangian **/
@@ -329,11 +329,11 @@ bool hiopAugLagrNlpAdapter::eval_grad_f(const long long& n, const double* x_in, 
     /**************************************************/
     //y := alpha*A*x + beta*y sparse DGEMV
     //y := alpha*A'*x + beta*y sparse DGEMVt
-    const double *penalty_data = penalty_fcn->local_data_const();
-    //penalty_fcn_jacobian.DGEMVt(alpha, x, beta, y);
-    penalty_fcn_jacobian.DGEMVt(2*rho, penalty_data, 1.0, gradf);
+    const double *penalty_data = _penaltyFcn->local_data_const();
+    //_penaltyFcn_jacobian.DGEMVt(alpha, x, beta, y);
+    _penaltyFcn_jacobian.DGEMVt(2*rho, penalty_data, 1.0, gradf);
 
-    //Add the Jacobian w.r.t the slack variables (penalty_fcn_jacobian contains
+    //Add the Jacobian w.r.t the slack variables (_penaltyFcn_jacobian contains
     //only the jacobian w.r.t original x, we need to add Jac w.r.t slacks)
     //The structure of the La Jacobian is following (Note that Je, Ji
     //might be interleaved and not listed in order as shown below)
@@ -342,7 +342,7 @@ bool hiopAugLagrNlpAdapter::eval_grad_f(const long long& n, const double* x_in, 
     //       | Ji  -I |
     for (int i = 0; i<m_cons_ineq; i++)
     {
-        gradf[n_vars + i] -= 2*rho*penalty_fcn[cons_ineq_mapping[i]];
+        gradf[n_vars + i] -= 2*rho*_penaltyFcn[cons_ineq_mapping[i]];
     }
 
     return true;
@@ -350,25 +350,25 @@ bool hiopAugLagrNlpAdapter::eval_grad_f(const long long& n, const double* x_in, 
 
 /**
  * The get method returns the value of the starting point x0
- * which was set from outside by the Solver and stored in #x0_AugLagr.
+ * which was set from outside by the Solver and stored in #_startingPoint.
  * Motivation: every major iteration we want to reuse the previous
  * solution x_k, not start from the user point every time!!!
  */
 bool hiopAugLagrNlpAdapter::get_starting_point(const long long &global_n, double* x0)
 {
-    memcpy(x0, x0_AugLagr, global_n*sizeof(double));
+    memcpy(x0, _startingPoint->local_data_const(), global_n*sizeof(double));
     return true;
 }
 
 /**
  * The set method stores the provided starting point into the private
- * member #x0_AugLagr
+ * member #_startingPoint
  * Motivation: every major iteration we want to reuse the previous
  * solution x_k, not start from the user point every time!!!
  */
 bool hiopAugLagrNlpAdapter::set_starting_point(const long long &global_n, const double* x0_in)
 {
-    memcpy(x0_AugLagr, x0_in, global_n*sizeof(double));
+    memcpy(_startingPoint->local_data(), x0_in, global_n*sizeof(double));
     return true;
 }
 

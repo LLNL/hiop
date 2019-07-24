@@ -29,17 +29,19 @@ public:
   virtual int getNumIterations() const;
 
 private:
+  /** Evaluates termination criteria, i.e. feasibility and optimality */
   bool evalNlpErrors(const hiopVector *current_iterate, bool new_x,
                      hiopResidualAugLagr *resid);
+  /** Performs test whether the termination criteria are satisfied */
   bool checkTermination(const hiopResidualAugLagr *resid, const int iter_num,
                         hiopSolveStatus &status);
+  /** Update strategies for the multipliers and penalty */
   void updateLambda();
   void updateRho();
 
 protected:
   
-  hiopAugLagrNlpAdapter* nlp;
-  NLP_CLASS_IN* nlp_in;//TODO: probably not needed
+  hiopAugLagrNlpAdapter* nlp; ///< Representation of the Aug Lagr. problem
 
   //Augmented Lagrangian problem variables
   long long n; ///< number of variables
@@ -57,15 +59,15 @@ protected:
   //internal flags related to the state of the solver
   hiopSolveStatus _solverStatus;
   
-  int iter_num;
-  int max_n_it;
+  int iter_num;        ///< iteration number
+  int _n_accep_iters;  ///< number of encountered consecutive acceptable iterates
 
-  //options and parameters
+  //options and parameters //TODO use uppercase for the scalar constants
   double eps_tol;       ///< abs tolerance for the NLP error
   double eps_rtol;      ///< rel tolerance for the NLP error
   double eps_tol_accep; ///< acceptable tolerance (required at accep_n_it iterations)
   int accep_n_it;      ///< acceptable number of iterations
-  int _n_accep_iters;  ///< number of encountered consecutive acceptable iterates
+  int max_n_it;        ///< maximum number of iterations
 };
 
 }

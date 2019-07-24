@@ -9,7 +9,6 @@ namespace hiop
 
 hiopAugLagrSolver::hiopAugLagrSolver(NLP_CLASS_IN* nlp_in_) 
   : nlp(new hiopAugLagrNlpAdapter(nlp_in_)),
-    nlp_in(nlp_in_),
     n(0),
     m(0),
     _it_curr(nullptr),
@@ -30,17 +29,18 @@ hiopAugLagrSolver::hiopAugLagrSolver(NLP_CLASS_IN* nlp_in_)
   // get size of the problem and penalty term
   long long dum1;
   nlp->get_prob_sizes(n, dum1);
-  nlp->get_penalty_size(m); //TODO: add to Adapter
+  nlp->get_penalty_size(m);
   
   _it_curr = new hiopVectorPar(n);
   _lam_curr = new hiopVectorPar(m);
-
   residual = new hiopResidualAugLagr(n, m);
 }
 
 hiopAugLagrSolver::~hiopAugLagrSolver() 
 {
+    if(nlp)       delete nlp;
     if(_it_curr)  delete _it_curr;
+    if(_lam_eurr) delete _lam_curr;
     if(residual)     delete residual;
 }
 
@@ -216,7 +216,7 @@ bool hiopAugLagrSolver::evalNlpErrors(const hiopVector *current_iterate, bool ne
 
 
 /**
- * Test checking for stopping the augmented Lagrangian loop given the NLP errors in @resid, number of iterations iter_num. Sets the status if appropriate.
+ * Test checking for stopping the augmented Lagrangian loop given the NLP errors in @resid, number of iterations @iter_num. Sets the status if appropriate.
  */
 bool hiopAugLagrSolver::checkTermination(const hiopResidualAugLagr *resid, const int iter_num, hiopSolveStatus &status)
 {

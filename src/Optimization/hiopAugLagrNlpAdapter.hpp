@@ -54,10 +54,11 @@ public:
     /** Gradient of the augmented Lagrangian function 
      *  d_La/d_x = df_x + J^T lam + 2rho J^T p(x,s)
      *  d_La/d_s =  0   + (-I) lam[cons_ineq_mapping] + (-I)2rho*p[cons_ineq_mapping]
+     *  where p(x,s) is a penalty fcn and rho is the penalty param.
      * */
     bool eval_grad_f(const long long& n, const double* x_in, bool new_x, double* gradf);
 
-    /** Evaluation of the constraints, we have no constraints */
+    /** Evaluation of the constraints, we have no constraints (transformed into penalty fcn) */
     bool eval_cons(const long long& n, 
             const long long& m,  
             const long long& num_cons, const long long* idx_cons,
@@ -72,15 +73,15 @@ public:
 
     /**
      * The get method returns the value of the starting point x0
-     * which was set from outside by the Solver and stored in #x0_AugLagr.
+     * which was set from outside by the Solver and stored in #_startingPoint.
      * Motivation: every major iteration we want to reuse the previous
      * solution x_k, not start from the user point every time!!!
      */
-    bool get_starting_point(const long long& global_n, double* x0);
+    bool get_starting_point(const long long& global_n, double* x0) const;
 
     /**
-     * The set method stores the provided starting point into the private
-     * member #x0_AugLagr
+     * The set method stores the provided starting point by the solver
+     * into the private member #_startingPoint
      * Motivation: every major iteration we want to reuse the previous
      * solution x_k, not start from the user point every time!!!
      */
@@ -91,6 +92,11 @@ public:
      * or returns false, in which case hiOP will set x0 to all zero.
      */
     bool get_user_starting_point(const long long& global_n, double* x0);
+   
+    /**
+     * Returns size of the penalty function stored in member var #m_cons
+     */
+    bool get_penalty_size(long long& m) { m = m_cons; return true; }
 
     /**
      * The set method stores the provided penalty into the private
@@ -98,11 +104,6 @@ public:
      */
     inline void set_rho(const double& rho_in)
         { rho = rho_in; }
-   
-    /**
-     * Returns size of the penalty function stored in member var #m_cons
-     */
-    bool get_penalty_size(long long& m) { m = m_cons; return true; }
 
     /**
      * The set method stores the provided multipliers into the private
@@ -114,8 +115,9 @@ public:
      * Evaluates the penalty function residuals and gradient of the Lagrangian
      *
      * penalty  := [ce(x) - c_rhs; ci(x) - s] = 0
-     * gradLagr := d_L/d_x = df_x + J^T lam   = 0
-     *
+     * 
+     * gradLagr_x := d_L/d_x = df_x + J^T lam   = 0
+     * gradLagr_s := d_L/d_s =  0   + (-I) lam[cons_ineq_mapping] = 0
      */
     bool eval_residuals(const long long& n, const double* x_in,
                         bool new_x, double *penalty, double* gradLagr);
@@ -127,36 +129,35 @@ protected:
 
 protected:
     //general nlp to be "adapted" to Augmented Lagrangian form Ipopt::TNLP
-    //needed by HiOp's AugLagr solver
     NLP_CLASS_IN* nlp_in;
 
     //TODO adapt also from hiop::hiopInterfaceDenseConstraints
     //hiop::hiopInterfaceDenseConstraints* nlp;
     
     //specific variables of the augmented lagrangian formulation
-    double rho; ///< penalty parameter for the quadratic penalty term ||c(x)||^2
+    double rho; ///< penalty parameter for the quadratic penalty term ||p(x,s)||^2
     hiopVectorPar *lambda; ///< Lagrange multipliers
-    hiopVectorPar *x0_AugLagr; //< stored starting point (including slack)
+    hiopVectorPar *_startingPoint; //< stored initial guess (including slack)
 
     //various sizes and properties of the original NLP problem
     long long n_vars; ///< number of primal variables x (original NLP problem)
-    long long n_slacks; ///< number of slack variables (equal to #ineq constr in original NLP)
-    long long m_cons; ///< number of constraints (original NLP problem)
+    long long n_slacks; ///< number of slack variables s (equal to #ineq constr in original NLP)
+    long long m_cons; ///< number of overall constraints (original NLP problem)
     long long m_cons_eq; ///< number of equality constraints (original NLP problem)
     long long m_cons_ineq; ///< number of inequality constraints (original NLP problem)
-    long long nnz_jac; //< number of nonzeros in jacobian of constraints (original NLP problem)
-    hiopVectorPar *xl, *xu; ///< variables bounds (original NLP problem)
-    hiopVectorPar *sl, *su; ///< slack variables bounds (equal to ineq. cons. bounds in original NLP problem)
+    long long nnz_jac; //< number of nonzeros in Jacobian of constraints (original NLP problem)
+    hiopVectorPar *xl, *xu; ///< x variable bounds (original NLP problem)
+    hiopVectorPar *sl, *su; ///< slack variables bounds (equal to ineq. bounds in original NLP problem)
 
     //auxiliary arrays for handling the original NLP constraints
-    long long *cons_eq_mapping, *cons_ineq_mapping; 
+    long long *cons_eq_mapping, *cons_ineq_mapping; ///< indices of eq. and ineq. constraints
     hiopVectorPar *c_rhs; ///< rhs for the equality constraints
 
     //working memory for internal evaluations of the AL functions
     //motivation to have in on class level is to avoid alloc/dealloc
     //during each call of the evaluation routines
-    hiopVector *penalty_fcn; ///< original constraints transformed  AL penalty function p(x)=0
-    hiopSparseMatrix *penalty_fcn_jacobian; ///< Jacobian of the penalty w.r.t the primal variables x (excluding slacks), which is equivalent to the Jacobian of the original NLP constraints
+    hiopVector *_penaltyFcn; ///< original constraints transformed  AL penalty function p(x)=0
+    hiopSparseMatrix *_penaltyFcn_jacobian; ///< Jacobian of the penalty w.r.t the primal variables x (excluding slacks), which is equivalent to the Jacobian of the original NLP constraints
 
     /* outputing and debug-related functionality*/
     //TODO: do we need these? see NlpFormulation.hpp wrapper
