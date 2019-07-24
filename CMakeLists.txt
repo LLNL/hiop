@@ -46,6 +46,17 @@ message("LAPACK/BLAS libs: ${LAPACK_LIBRARIES}")
 #
 #set(LAPACK_LIBRARIES "-lgfortran;/export/home/petra1/work/installs/xblas-1.0.248/libxblas.a;/home/petra1/work/installs/lapack-3.7.0/libblas.a;/home/petra1/work/installs/lapack-3.7.0/liblapack.a;/home/petra1/work/installs/lapack-3.7.0/liblapack.a;/home/petra1/work/installs/lapack-3.7.0/libblas.a;/export/home/petra1/work/installs/xblas-1.0.248/libxblas.a")
 
+# "/home/petra1/work/installs/Ipopt-3.12.5/"
+# "/Users/Juraj/Documents/LLNL/Ipopt-3.12.13/myinstall"
+# "/opt/Ipopt/v3.12.12/"
+# "~/bin/COIN-OR/Ipopt/"
+set(IPOPT_DIR $ENV{IPOPT_3_12_13_GCC492_PATH} CACHE PATH "path to ipopt directory")
+message("Using Ipopt dir ${IPOPT_DIR}")
+include_directories("${IPOPT_DIR}/include/coin")
+link_directories("${IPOPT_DIR}/lib")
+#set (CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--rpath -Wl,${IPOPT_DIR}/lib")
+set(IPOPT_LIBS "-lgfortran -lipopt -lm  -ldl")
+
 # include build directory for Fortran name mangling header
 include_directories(${CMAKE_BINARY_DIR})
 
