@@ -33,17 +33,17 @@ hiopAugLagrNlpAdapter::hiopAugLagrNlpAdapter(NLP_CLASS_IN* nlp_in_):
     cons_ineq_mapping(nullptr),
     c_rhs(nullptr),
     _penaltyFcn(nullptr),
-    _penaltyFcn_jacobian(nullptr),
-    log(new hiopLogger(this, stdout)),
-    runStats(MPI_COMM_SELF),
-    options(new hiopOptions(/*filename=NULL*/))
+    _penaltyFcn_jacobian(nullptr)
+    //log(new hiopLogger(this, stdout)),
+    //runStats(MPI_COMM_SELF),
+    //options(new hiopOptions(/*filename=NULL*/))
 {
     //MPI_Comm comm = MPI_COMM_SELF;
-    hiopOutVerbosity hov = (hiopOutVerbosity) options->GetInteger("verbosity_level");
-    options->SetLog(log);
+    //hiopOutVerbosity hov = (hiopOutVerbosity) options->GetInteger("verbosity_level");
+    //options->SetLog(log);
    
     // initializes the member variables
-    initialize(); //TODO: Check if everything is allocated
+    initialize();
 }
 
 hiopAugLagrNlpAdapter::~hiopAugLagrNlpAdapter()
@@ -59,8 +59,8 @@ hiopAugLagrNlpAdapter::~hiopAugLagrNlpAdapter()
     if(_startingPoint)             delete _startingPoint;
     if(_penaltyFcn)              delete _penaltyFcn;
     if(_penaltyFcn_jacobian)      delete _penaltyFcn_jacobian;
-    if(log)      delete log;
-    if(options)  delete options;
+    //if(log)      delete log;
+    //if(options)  delete options;
 }
 
 /**
@@ -75,8 +75,7 @@ bool hiopAugLagrNlpAdapter::initialize()
     /**************************************************************************/
     //determine the original NLP problem size
     Ipopt::Index n_nlp, m_nlp, nnz_jac_nlp, dum1;
-    Ipopt::IndexStyleEnum index_style = C_STYLE;
-    //TODO Ipopt uses type Index*, is it compatible with long long?
+    TNLP::IndexStyleEnum index_style = TNLP::C_STYLE;
     bool bret = nlp_in->get_nlp_info(n_nlp, m_nlp, nnz_jac_nlp, dum1, index_style);
     assert(bret);
 
@@ -90,31 +89,30 @@ bool hiopAugLagrNlpAdapter::initialize()
     double *gl_nlp=gl->local_data(),  *gu_nlp=gu->local_data();
 
     //get the bounds of the original NLP problem
-    //TODO Ipopt uses type Index*, is it compatible with long long?
     bret = nlp_in->get_bounds_info(n_nlp, xl_nlp, xu_nlp, m_nlp, gl_nlp, gu_nlp);
     assert(bret);
     
     //analyze constraints to determine how many slacks are needed 
     //by splitting the constraints into equalies and inequalities
-    //n_cons_eq=n_cons_ineq=0;// by default set in the constructor
-    for(int i=0;i<m_nlp; i++) {
-    if(gl_nlp[i]==gu_nlp[i]) n_cons_eq++;
-    else                     n_cons_ineq++;
+    //m_cons_eq=m_cons_ineq=0;// by default set in the constructor
+    for(Ipopt::Index i=0; i<m_nlp; i++) {
+    if(gl_nlp[i]==gu_nlp[i]) m_cons_eq++;
+    else                     m_cons_ineq++;
     }
 
     //update member properties
     n_vars = n_nlp; ///< number of primal variables x (not including slacks)
     m_cons = m_nlp; ///< number of eq and ineq constraints
-    n_slacks = n_cons_ineq; ///< number of slack variables
+    n_slacks = m_cons_ineq; ///< number of slack variables
     nnz_jac = nnz_jac_nlp; //< number of nonzeros in Jacobian ( w.r.t variables of the original NLP variables x, not slacks)
 
     //allocate space 
     lambda = new hiopVectorPar(m_cons);
     _startingPoint = new hiopVectorPar(n_vars+n_slacks);
     _penaltyFcn = new hiopVectorPar(m_cons);
-    _penaltyFcn_jacobian = new hiopSparseMatrix(m_cons, n_vars, nnz_jac);
-    sl = new hiopVectorPar(n_cons_ineq);
-    su = new hiopVectorPar(n_cons_ineq);
+    _penaltyFcn_jacobian = new hiopMatrixSparse(m_cons, n_vars, nnz_jac);
+    sl = new hiopVectorPar(m_cons_ineq);
+    su = new hiopVectorPar(m_cons_ineq);
 
     /**************************************************************************/
     /*              Analyze the original NLP constraints                      */
@@ -126,28 +124,28 @@ bool hiopAugLagrNlpAdapter::initialize()
     //Constraint evaluations consist of:
     // ->  c(x) - c_rhs = 0 (eq. constr)
     // ->  c(x) - s     = 0 (ineq. constr)
-    c_rhs = new hiopVectorPar(n_cons_eq);
+    c_rhs = new hiopVectorPar(m_cons_eq);
     double *c_rhsvec=c_rhs->local_data();
-    cons_eq_mapping   = new long long[n_cons_eq];
-    cons_ineq_mapping = new long long[n_cons_ineq];
+    cons_eq_mapping   = new long long[m_cons_eq];
+    cons_ineq_mapping = new long long[m_cons_ineq];
   
     // copy lower and upper bounds of the constraints and get indices of eq/ineq constraints
     int it_eq=0, it_ineq=0;
-    for(int i=0;i<m_nlp; i++) {
-      if(gl_vec[i]==gu_vec[i]) {
-        c_rhsvec[it_eq] = gl_vec[i]; 
-        cons_eq_mapping[it_eq]=i;
+    for(Ipopt::Index i=0; i<m_nlp; i++) {
+      if(gl_nlp[i]==gu_nlp[i]) {
+        c_rhsvec[it_eq] = gl_nlp[i]; 
+        cons_eq_mapping[it_eq] = (long long) i;
         it_eq++;
       } else {
   #ifdef HIOP_DEEPCHECKS
-      assert(gl_vec[i] <= gu_vec[i] && "please fix the inconsistent inequality constraints, otherwise the problem is infeasible");
+      assert(gl_nlp[i] <= gu_nlp[i] && "please fix the inconsistent inequality constraints, otherwise the problem is infeasible");
   #endif
-        sl_nlp[it_ineq]=gl_vec[i]; su_nlp[it_ineq]=gu_vec[i]; 
-        cons_ineq_mapping[it_ineq]=i;
+        sl_nlp[it_ineq]=gl_nlp[i]; su_nlp[it_ineq]=gu_nlp[i]; 
+        cons_ineq_mapping[it_ineq] = (long long) i;
         it_ineq++;
       }
     }
-    assert(it_eq==n_cons_eq); assert(it_ineq==n_cons_ineq);
+    assert(it_eq==m_cons_eq); assert(it_ineq==m_cons_ineq);
 
     delete gl;
     delete gu;
@@ -166,14 +164,14 @@ bool hiopAugLagrNlpAdapter::get_vars_info(const long long& n, double *xlow, doub
     assert(n == n_vars + n_slacks);
 
     //fill in lower and upper bounds (including slack variables)
-    xl.copyTo(xlow);
-    xu.copyTo(xupp);
-    sl.copyTo(xlow + n_nlp);
-    su.copyTo(xupp + n_nlp);
+    xl->copyTo(xlow);
+    xu->copyTo(xupp);
+    sl->copyTo(xlow + n_vars);
+    su->copyTo(xupp + n_vars);
 
     //set variables type (x - nonlinear, s - linear)
-    for(int i=0 i<n_vars; i++)  type[i] = hiopNonlinear;
-    for(int i=n_vars; i<n; i++) type[i] = hiopLinear;
+    for(long long i=0; i<n_vars; i++)  type[i] = hiopNonlinear;
+    for(long long i=n_vars; i<n; i++)  type[i] = hiopLinear;
 
     //TODO: delete sl,xl here? not needed afterwards?
 
@@ -193,20 +191,20 @@ bool hiopAugLagrNlpAdapter::eval_penalty(const double *x_in, bool new_x, double 
     const double *slacks  = x_in + n_vars;
 
     //evaluate the original NLP constraints
-    //TODO Ipopt uses type Index*, is it compatible with long long?
-    bool bret = nlp_in->eval_g(n_vars, x_in, new_x, m_cons, penalty_data);
+    bool bret = nlp_in->eval_g((Ipopt::Index)n_vars, x_in, new_x,
+                               (Ipopt::Index)m_cons, penalty_data);
     assert(bret);
 
     //adjust equality constraints
     // c(x) - c_rhs
-    for (int i = 0; i<m_cons_eq; i++)
+    for (long long i = 0; i<m_cons_eq; i++)
     {
         penalty_data[cons_eq_mapping[i]] -= rhs_data[i]; 
     }
     
     //adjust inequality constraints
     // c(x) - s
-    for (int i = 0; i<m_cons_ineq; i++)
+    for (long long i = 0; i<m_cons_ineq; i++)
     {
         penalty_data[cons_ineq_mapping[i]] -= slacks[i]; 
         assert(slacks[i] >= 0);
@@ -230,17 +228,17 @@ bool hiopAugLagrNlpAdapter::eval_f(const long long& n, const double* x_in, bool 
 
     // evaluate the original NLP objective f(x), uses only firs n_vars entries of x_in
     double obj_nlp;
-    bool bret = nlp_in->eval_f(n_vars, x_in, new_x, obj_nlp); 
+    bool bret = nlp_in->eval_f((Ipopt::Index)n_vars, x_in, new_x, obj_nlp); 
     assert(bret);
 
     // evaluate and transform the constraints of the original NLP
-    eval_penalty(x_in, new_x, _penaltyFcn);
+    eval_penalty(x_in, new_x, _penaltyFcn->local_data());
 
     // compute lam^t p(x)
-    const double lagr_term = lambda.dotProductWith(_penaltyFcn);
+    const double lagr_term = lambda->dotProductWith(*_penaltyFcn);
     
     // compute penalty term rho*||p(x)||^2
-    const double penalty_term = rho * _penaltyFcn.dotProductWith(_penaltyFcn);
+    const double penalty_term = rho * _penaltyFcn->dotProductWith(*_penaltyFcn);
 
     //f(x) + lam^t p(x) + rho ||p(x)||^2
     obj_value = obj_nlp + lagr_term + penalty_term;
@@ -265,8 +263,7 @@ bool hiopAugLagrNlpAdapter::eval_grad_Lagr(const long long& n, const double* x_i
     /****************************************************/
     /** Add contribution of the NLP objective function **/
     /****************************************************/
-    //TODO Ipopt uses type Index*, is it compatible with long long?
-    bool bret = nlp_in->eval_grad_f(n_vars, x_in, new_x, gradLagr);
+    bool bret = nlp_in->eval_grad_f((Ipopt::Index)n_vars, x_in, new_x, gradLagr);
     assert(bret);
     std::fill(gradLagr+n_vars, gradLagr+n, 0.0); //clear grad w.r.t slacks
 
@@ -274,20 +271,19 @@ bool hiopAugLagrNlpAdapter::eval_grad_Lagr(const long long& n, const double* x_i
     /* Evaluate Jacobian of the original NLP problem */
     /****************************************************/
     
-    //TODO Ipopt uses type Index*, is it compatible with long long?
-    long long *iRow = _penaltyFcn_jacobian->get_ia();
-    long long *icol = _penaltyFcn_jacobian->get_ja();
-    double *values = _penaltyFcn_jacobian->get_a();
-    bret = nlp_in->eval_jac_g(n_vars, x_in, new_x, m_cons, iRow, jCol, values);
+    int *iRow = _penaltyFcn_jacobian->get_iRow();
+    int *jCol = _penaltyFcn_jacobian->get_jCol();
+    double *values = _penaltyFcn_jacobian->get_values();
+    bret = nlp_in->eval_jac_g((Ipopt::Index)n_vars, x_in, new_x,
+                              (Ipopt::Index)m_cons, nnz_jac, iRow, jCol, values);
     assert(bret);
 
+    const double *lambda_data = lambda->local_data_const();
     /**************************************************/
-    /**    Compute lagrangian term contribution       */
+    /**    Compute Lagrangian term contribution       */
     /**************************************************/
-    //y := alpha*A*x + beta*y sparse DGEMV
-    //y := alpha*A'*x + beta*y sparse DGEMVt
-    //_penaltyFcn_jacobian.DGEMVt(alpha, x, beta, y);
-    _penaltyFcn_jacobian.DGEMVt(1.0, lam, 1.0, gradLagr);
+    //_penaltyFcn_jacobian->transTimesVec(beta, y, alpha, x)
+    _penaltyFcn_jacobian->transTimesVec(1.0, gradLagr, 1.0, lambda_data);
 
     
     //Add the Jacobian w.r.t the slack variables (_penaltyFcn_jacobian contains
@@ -297,9 +293,9 @@ bool hiopAugLagrNlpAdapter::eval_grad_Lagr(const long long& n, const double* x_i
     //       | Je  0  |
     // Jac = |        |
     //       | Ji  -I |
-    for (int i = 0; i<m_cons_ineq; i++)
+    for (long long i = 0; i<m_cons_ineq; i++)
     {
-        gradLagr[n_vars + i] -= lambda[cons_ineq_mapping[i]];
+        gradLagr[n_vars + i] -= lambda_data[cons_ineq_mapping[i]];
     }
 
     return true;
@@ -324,14 +320,12 @@ bool hiopAugLagrNlpAdapter::eval_grad_f(const long long& n, const double* x_in, 
     /********************************************************/
     eval_grad_Lagr(n, x_in, new_x, gradf);
     
+    const double *_penaltyFcn_data = _penaltyFcn->local_data_const();
     /**************************************************/
     /**    Compute penalty term contribution          */
     /**************************************************/
-    //y := alpha*A*x + beta*y sparse DGEMV
-    //y := alpha*A'*x + beta*y sparse DGEMVt
-    const double *penalty_data = _penaltyFcn->local_data_const();
-    //_penaltyFcn_jacobian.DGEMVt(alpha, x, beta, y);
-    _penaltyFcn_jacobian.DGEMVt(2*rho, penalty_data, 1.0, gradf);
+    //_penaltyFcn_jacobian->transTimesVec(beta, y, alpha, x)
+    _penaltyFcn_jacobian->transTimesVec(1.0, gradf, 2*rho, _penaltyFcn_data);
 
     //Add the Jacobian w.r.t the slack variables (_penaltyFcn_jacobian contains
     //only the jacobian w.r.t original x, we need to add Jac w.r.t slacks)
@@ -340,9 +334,9 @@ bool hiopAugLagrNlpAdapter::eval_grad_f(const long long& n, const double* x_in, 
     //       | Je  0  |
     // Jac = |        |
     //       | Ji  -I |
-    for (int i = 0; i<m_cons_ineq; i++)
+    for (long long i = 0; i<m_cons_ineq; i++)
     {
-        gradf[n_vars + i] -= 2*rho*_penaltyFcn[cons_ineq_mapping[i]];
+        gradf[n_vars + i] -= 2*rho*_penaltyFcn_data[cons_ineq_mapping[i]];
     }
 
     return true;
@@ -354,7 +348,7 @@ bool hiopAugLagrNlpAdapter::eval_grad_f(const long long& n, const double* x_in, 
  * Motivation: every major iteration we want to reuse the previous
  * solution x_k, not start from the user point every time!!!
  */
-bool hiopAugLagrNlpAdapter::get_starting_point(const long long &global_n, double* x0)
+bool hiopAugLagrNlpAdapter::get_starting_point(const long long &global_n, double* x0) const
 {
     memcpy(x0, _startingPoint->local_data_const(), global_n*sizeof(double));
     return true;
@@ -373,7 +367,7 @@ bool hiopAugLagrNlpAdapter::set_starting_point(const long long &global_n, const 
 }
 
 
-void hiopAugLagrNlpAdapter::set_lambda(const hiopVector* lambda_in)
+void hiopAugLagrNlpAdapter::set_lambda(const hiopVectorPar* lambda_in)
 {
     memcpy(lambda->local_data(), lambda_in->local_data_const(), m_cons*sizeof(double));
 }
@@ -387,7 +381,9 @@ bool hiopAugLagrNlpAdapter::get_user_starting_point(const long long &global_n, d
     assert(global_n == n_vars + n_slacks);
 
     //call starting point from the adapted nlp
-    bool bret = nlp_in->get_starting_point(n_vars, x0);
+    bool bret = nlp_in->get_starting_point((Ipopt::Index)n_vars, true, x0,
+                                           false, nullptr, nullptr,
+                                           (Ipopt::Index)m_cons, false, nullptr);
     if (!bret) std::fill(x0, x0+n_vars, 0.);
   
     //zero out the slack variables

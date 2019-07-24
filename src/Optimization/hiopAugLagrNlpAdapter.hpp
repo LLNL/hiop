@@ -7,6 +7,7 @@
 #include "hiopRunStats.hpp"
 #include "hiopLogger.hpp"
 #include "hiopOptions.hpp"
+#include "hiopMatrixSparse.hpp"
 
 //TODO
 #define NLP_CLASS_IN Ipopt::TNLP
@@ -128,7 +129,10 @@ protected:
     bool eval_grad_Lagr(const long long& n, const double* x_in, bool new_x, double* gradLagr);
 
 protected:
-    //general nlp to be "adapted" to Augmented Lagrangian form Ipopt::TNLP
+    //general nlp to be "adapted" to Augmented Lagrangian form Ipopt::TNLP.
+    //Note that Ipopt uses type Index (aka int) and Number (aka double) in
+    //its interface, while we are using long long and double. We need to be
+    //careful about the former.
     NLP_CLASS_IN* nlp_in;
 
     //TODO adapt also from hiop::hiopInterfaceDenseConstraints
@@ -156,14 +160,13 @@ protected:
     //working memory for internal evaluations of the AL functions
     //motivation to have in on class level is to avoid alloc/dealloc
     //during each call of the evaluation routines
-    hiopVector *_penaltyFcn; ///< original constraints transformed  AL penalty function p(x)=0
-    hiopSparseMatrix *_penaltyFcn_jacobian; ///< Jacobian of the penalty w.r.t the primal variables x (excluding slacks), which is equivalent to the Jacobian of the original NLP constraints
+    hiopVectorPar *_penaltyFcn; ///< original constraints transformed  AL penalty function p(x)=0
+    hiopMatrixSparse *_penaltyFcn_jacobian; ///< Jacobian of the penalty w.r.t the primal variables x (excluding slacks), which is equivalent to the Jacobian of the original NLP constraints
 
     /* outputing and debug-related functionality*/
-    //TODO: do we need these? see NlpFormulation.hpp wrapper
-    hiopLogger* log;
-    hiopRunStats runStats; //times functionEvaluations
-    hiopOptions* options;
+    //hiopLogger* log;
+    //hiopRunStats runStats; //times functionEvaluations
+    //hiopOptions* options;
 };
 
 }

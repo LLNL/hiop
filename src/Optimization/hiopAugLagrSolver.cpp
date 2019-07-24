@@ -40,7 +40,7 @@ hiopAugLagrSolver::~hiopAugLagrSolver()
 {
     if(nlp)       delete nlp;
     if(_it_curr)  delete _it_curr;
-    if(_lam_eurr) delete _lam_curr;
+    if(_lam_curr) delete _lam_curr;
     if(residual)     delete residual;
 }
 
@@ -262,7 +262,7 @@ void hiopAugLagrSolver::updateLambda()
     const double *penaltyFcn = residual->getFeasibilityPtr();
 
     // compute new value of the multipliers
-    for (int i=0; i<m; i++)
+    for (long long i=0; i<m; i++)
         _lam_data[i] += penaltyFcn[i]/_rho_curr;
 
     //update the multipliers in the adapter class
