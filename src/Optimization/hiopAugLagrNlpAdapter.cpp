@@ -33,9 +33,9 @@ hiopAugLagrNlpAdapter::hiopAugLagrNlpAdapter(NLP_CLASS_IN* nlp_in_):
     cons_ineq_mapping(nullptr),
     c_rhs(nullptr),
     _penaltyFcn(nullptr),
-    _penaltyFcn_jacobian(nullptr)
+    _penaltyFcn_jacobian(nullptr),
     //log(new hiopLogger(this, stdout)),
-    //runStats(MPI_COMM_SELF),
+    runStats()
     //options(new hiopOptions(/*filename=NULL*/))
 {
     //MPI_Comm comm = MPI_COMM_SELF;
@@ -48,10 +48,14 @@ hiopAugLagrNlpAdapter::hiopAugLagrNlpAdapter(NLP_CLASS_IN* nlp_in_):
 
 hiopAugLagrNlpAdapter::~hiopAugLagrNlpAdapter()
 {
-    if(xl) delete xl; //TODO: can be deleted earlier, after get_vars_info?
+    //xl,xu,sl,su cannot be deleted earlier (e.g. after get_vars_info) because
+    //we call inner problem repeatedly, thus get_var_info is called
+    //multiple times
+    if(xl) delete xl; 
     if(xu) delete xu;
     if(sl) delete sl;
     if(su) delete su;
+
     if(cons_eq_mapping)       delete cons_eq_mapping;
     if(cons_ineq_mapping)     delete cons_ineq_mapping;
     if(c_rhs)                 delete c_rhs;
@@ -70,9 +74,6 @@ hiopAugLagrNlpAdapter::~hiopAugLagrNlpAdapter()
  * */
 bool hiopAugLagrNlpAdapter::initialize()
 {
-    /**************************************************************************/
-    /*  Analyze the original NLP variables and determine the new slack vars   */
-    /**************************************************************************/
     //determine the original NLP problem size
     Ipopt::Index n_nlp, m_nlp, nnz_jac_nlp, dum1;
     TNLP::IndexStyleEnum index_style = TNLP::C_STYLE;
@@ -92,19 +93,21 @@ bool hiopAugLagrNlpAdapter::initialize()
     bret = nlp_in->get_bounds_info(n_nlp, xl_nlp, xu_nlp, m_nlp, gl_nlp, gu_nlp);
     assert(bret);
     
-    //analyze constraints to determine how many slacks are needed 
-    //by splitting the constraints into equalies and inequalities
-    //m_cons_eq=m_cons_ineq=0;// by default set in the constructor
+    /****************************************************************/
+    /*  Analyze the original NLP and determine the slack vars count */
+    /****************************************************************/
     for(Ipopt::Index i=0; i<m_nlp; i++) {
     if(gl_nlp[i]==gu_nlp[i]) m_cons_eq++;
     else                     m_cons_ineq++;
     }
 
-    //update member properties
-    n_vars = n_nlp; ///< number of primal variables x (not including slacks)
-    m_cons = m_nlp; ///< number of eq and ineq constraints
-    n_slacks = m_cons_ineq; ///< number of slack variables
-    nnz_jac = nnz_jac_nlp; //< number of nonzeros in Jacobian ( w.r.t variables of the original NLP variables x, not slacks)
+    /****************************************************************/
+    /*  Update the member properties and allocate the vectors       */
+    /****************************************************************/
+    n_vars = n_nlp;
+    m_cons = m_nlp;
+    n_slacks = m_cons_ineq;
+    nnz_jac = nnz_jac_nlp;
 
     //allocate space 
     lambda = new hiopVectorPar(m_cons);
@@ -115,12 +118,12 @@ bool hiopAugLagrNlpAdapter::initialize()
     su = new hiopVectorPar(m_cons_ineq);
 
     /**************************************************************************/
-    /*              Analyze the original NLP constraints                      */
+    /*  Analyze the original NLP constraints and split them into eq/ineq      */
     /**************************************************************************/
     double *sl_nlp=sl->local_data(), *su_nlp=su->local_data();
     
     //We need to store the eq/ineq mapping
-    //because we need to evaluate c(x) in the eval_f()
+    //because we need to evaluate c(x) in eval_f()
     //Constraint evaluations consist of:
     // ->  c(x) - c_rhs = 0 (eq. constr)
     // ->  c(x) - s     = 0 (ineq. constr)
@@ -226,6 +229,8 @@ bool hiopAugLagrNlpAdapter::eval_f(const long long& n, const double* x_in, bool 
 {
     assert(n == n_vars + n_slacks);
 
+    runStats.tmEvalObj.start();
+
     // evaluate the original NLP objective f(x), uses only firs n_vars entries of x_in
     double obj_nlp;
     bool bret = nlp_in->eval_f((Ipopt::Index)n_vars, x_in, new_x, obj_nlp); 
@@ -242,6 +247,9 @@ bool hiopAugLagrNlpAdapter::eval_f(const long long& n, const double* x_in, bool 
 
     //f(x) + lam^t p(x) + rho ||p(x)||^2
     obj_value = obj_nlp + lagr_term + penalty_term;
+
+    runStats.tmEvalObj.stop();
+    runStats.nEvalObj++;
 
     return true;
 }
@@ -313,7 +321,10 @@ bool hiopAugLagrNlpAdapter::eval_grad_Lagr(const long long& n, const double* x_i
  * */
 bool hiopAugLagrNlpAdapter::eval_grad_f(const long long& n, const double* x_in, bool new_x, double* gradf)
 {
-    assert(new_x == false); // we assume data in #_penaltyFcn are up to date
+    assert(new_x==false); // we assume data in #_penaltyFcn have been already evaluated at x_in
+    //eval_penalty(x_in, new_x, _penaltyFcn->local_data());
+    
+    runStats.tmEvalGrad_f.start();
 
     /********************************************************/
     /** Add contribution of the gradient of the Lagrangian **/
@@ -339,6 +350,9 @@ bool hiopAugLagrNlpAdapter::eval_grad_f(const long long& n, const double* x_in, 
         gradf[n_vars + i] -= 2*rho*_penaltyFcn_data[cons_ineq_mapping[i]];
     }
 
+    runStats.tmEvalGrad_f.stop();
+    runStats.nEvalGrad_f++;
+
     return true;
 }
 
@@ -350,6 +364,8 @@ bool hiopAugLagrNlpAdapter::eval_grad_f(const long long& n, const double* x_in, 
  */
 bool hiopAugLagrNlpAdapter::get_starting_point(const long long &global_n, double* x0) const
 {
+    assert(global_n == n_vars+n_slacks);
+
     memcpy(x0, _startingPoint->local_data_const(), global_n*sizeof(double));
     return true;
 }
@@ -362,6 +378,8 @@ bool hiopAugLagrNlpAdapter::get_starting_point(const long long &global_n, double
  */
 bool hiopAugLagrNlpAdapter::set_starting_point(const long long &global_n, const double* x0_in)
 {
+    assert(global_n == n_vars+n_slacks);
+
     memcpy(_startingPoint->local_data(), x0_in, global_n*sizeof(double));
     return true;
 }
@@ -369,6 +387,9 @@ bool hiopAugLagrNlpAdapter::set_starting_point(const long long &global_n, const 
 
 void hiopAugLagrNlpAdapter::set_lambda(const hiopVectorPar* lambda_in)
 {
+    assert(lambda_in->get_size() == m_cons);
+    assert(lambda_in->get_size() == lambda->get_size());
+
     memcpy(lambda->local_data(), lambda_in->local_data_const(), m_cons*sizeof(double));
 }
 
@@ -397,7 +418,7 @@ bool hiopAugLagrNlpAdapter::get_user_starting_point(const long long &global_n, d
 //TODO: can we reuse the last jacobian instead of recomputing it? does hiop/ipopt evaluate the Jacobian in the last (xk + searchDir), a.k.a the solution? 
 bool hiopAugLagrNlpAdapter::eval_residuals(const long long& n, const double* x_in, bool new_x, double *penalty, double* gradLagr)
 {
-   assert(n == n_vars);
+   assert(n == n_vars+n_slacks);
    assert(new_x == false);
 
     /*****************************************/

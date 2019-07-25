@@ -68,6 +68,7 @@ protected:
   double eps_tol_accep; ///< acceptable tolerance (required at accep_n_it iterations)
   int accep_n_it;      ///< acceptable number of iterations
   int max_n_it;        ///< maximum number of iterations
+  double rho_max;      ///< max value of the penalty parameter
 };
 
 }

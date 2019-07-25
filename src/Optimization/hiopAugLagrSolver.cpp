@@ -3,6 +3,8 @@
 #include "hiopNlpFormulation.hpp"
 #include "hiopAlgFilterIPM.hpp"
 
+#include <algorithm>    // std::max
+
 
 namespace hiop
 {
@@ -24,16 +26,17 @@ hiopAugLagrSolver::hiopAugLagrSolver(NLP_CLASS_IN* nlp_in_)
     eps_rtol(1e-6),
     eps_tol_accep(1e-4),
     accep_n_it(5),
-    _n_accep_iters(0)
+    _n_accep_iters(0),
+    rho_max(1e7)
 {
-  // get size of the problem and penalty term
+  // get size of the problem and the penalty term
   long long dum1;
   nlp->get_prob_sizes(n, dum1);
   nlp->get_penalty_size(m);
   
-  _it_curr = new hiopVectorPar(n);
+  _it_curr  = new hiopVectorPar(n);
   _lam_curr = new hiopVectorPar(m);
-  residual = new hiopResidualAugLagr(n, m);
+  residual  = new hiopResidualAugLagr(n, m);
 }
 
 hiopAugLagrSolver::~hiopAugLagrSolver() 
@@ -59,8 +62,9 @@ hiopSolveStatus hiopAugLagrSolver::run()
 
   _solverStatus = NlpSolve_SolveNotCalled;
   
-  //TODO: implement timer and other runStats
-  //nlp->runStats.tmOptimizTotal.start();
+  nlp->runStats.initialize();
+  nlp->runStats.tmOptimizTotal.start();
+  nlp->runStats.tmStartingPoint.start();
 
   //initialize curr_iter by calling TNLP starting point + do something about slacks
   // and set starting point at the Adapter class for the first major AL iteration
@@ -71,6 +75,8 @@ hiopSolveStatus hiopAugLagrSolver::run()
   //TODO hot start for lambda
   _lam_curr->setToConstant(1.); nlp->set_lambda(_lam_curr);
   _rho_curr = 100.;             nlp->set_rho(_rho_curr);
+  
+  nlp->runStats.tmStartingPoint.stop();
 
   //evaluate the residuals
   bool new_x = true;
@@ -84,7 +90,7 @@ hiopSolveStatus hiopAugLagrSolver::run()
     }
 
   //additional initializations
-  iter_num=0; //nlp->runStats.nIter=iter_num;
+  iter_num=0; nlp->runStats.nIter=iter_num;
   _err_feas0 = residual->getFeasibilityNorm();
   _err_optim0 = residual->getOptimalityNorm();
 
@@ -100,7 +106,7 @@ hiopSolveStatus hiopAugLagrSolver::run()
   // 2 user stop via the iteration callback
 
   //int algStatus=0;
-  bool bret=true; int lsStatus=-1, lsNum=0;
+  bool bret=true;
   _solverStatus = NlpSolve_Pending;
   while(notConverged) {
 
@@ -127,6 +133,7 @@ hiopSolveStatus hiopAugLagrSolver::run()
     /****************************************************
      * Solve the AL subproblem by calling HiOP or Ipopt
      ***************************************************/
+    nlp->runStats.tmSolverInternal.start();  
     hiopNlpDenseConstraints subproblem(*nlp);
 
     //subproblem.options->SetIntegerValue("verbosity_level", 4);
@@ -136,7 +143,9 @@ hiopSolveStatus hiopAugLagrSolver::run()
 
     hiopAlgFilterIPM solver(&subproblem);
     hiopSolveStatus status = solver.run();
-    solver.getObjective();
+
+    nlp->runStats.tmSolverInternal.stop();
+    //solver.getObjective();
     
     // update the current iterate, used as x0 for the next subproblem
     solver.getSolution(_it_curr->local_data());
@@ -148,6 +157,8 @@ hiopSolveStatus hiopAugLagrSolver::run()
      * Error evalutaion & Termination check
      ************************************************/
     //evaluate the residuals and NLP errors
+    //TODO: new_x = false if hiop/IPOPT evaluates fcn/jac at the solution
+    //new_x = true if fcn/Jac is not evaluated at the solution
     evalNlpErrors(_it_curr, new_x, residual);
     //nlp->log->printf(hovIteration, "Iter[%d] full residual:-------------\n", iter_num); nlp->log->write("", *residual, hovIteration);
   
@@ -166,9 +177,11 @@ hiopSolveStatus hiopAugLagrSolver::run()
      ************************************************/
     updateLambda();
     updateRho();
+
+    iter_num++; nlp->runStats.nIter=iter_num;
   }
 
-  //nlp->runStats.tmOptimizTotal.stop();
+  nlp->runStats.tmOptimizTotal.stop();
 
   //_solverStatus contains the termination information
   //TODO: displayTerminationMsg();
@@ -202,10 +215,10 @@ bool hiopAugLagrSolver::evalNlpErrors(const hiopVector *current_iterate, bool ne
 
     double *penaltyFcn = resid->getFeasibilityPtr();
     double *gradLagr = resid->getOptimalityPtr();
-    const double *x = _it_curr->local_data_const();
+    const double *_it_curr_data = _it_curr->local_data_const();
 
     //evaluate the Adapter penalty fcn and gradient of the Lagrangian
-    bool bret = nlp->eval_residuals(n, x, new_x, penaltyFcn, gradLagr);
+    bool bret = nlp->eval_residuals(n, _it_curr_data, new_x, penaltyFcn, gradLagr);
     assert(bret);
   
     //recompute the residuals norms
@@ -276,7 +289,7 @@ void hiopAugLagrSolver::updateLambda()
 void hiopAugLagrSolver::updateRho()
 {
     //compute new value of the penalty parameter
-    _rho_curr = 10*_rho_curr; //TODO
+    _rho_curr = std::max(10*_rho_curr, rho_max); //TODO
 
     //update the penalty parameter in the adapter class
     nlp->set_rho(_rho_curr);

@@ -163,9 +163,10 @@ protected:
     hiopVectorPar *_penaltyFcn; ///< original constraints transformed  AL penalty function p(x)=0
     hiopMatrixSparse *_penaltyFcn_jacobian; ///< Jacobian of the penalty w.r.t the primal variables x (excluding slacks), which is equivalent to the Jacobian of the original NLP constraints
 
+public:
     /* outputing and debug-related functionality*/
     //hiopLogger* log;
-    //hiopRunStats runStats; //times functionEvaluations
+    hiopRunStats runStats; //times functionEvaluations
     //hiopOptions* options;
 };
 
