@@ -19,7 +19,7 @@ hiopAugLagrSolver::hiopAugLagrSolver(NLP_CLASS_IN* nlp_in_)
     residual(nullptr),
     _err_feas0(-1.),
     _err_optim0(-1.),
-    _solverStatus(NlpSolve_SolveNotCalled),
+    _solverStatus(NlpSolve_IncompleteInit),
     iter_num(0),
     max_n_it(1000),
     eps_tol(1e-6),
@@ -37,6 +37,10 @@ hiopAugLagrSolver::hiopAugLagrSolver(NLP_CLASS_IN* nlp_in_)
   _it_curr  = new hiopVectorPar(n);
   _lam_curr = new hiopVectorPar(m);
   residual  = new hiopResidualAugLagr(n, m);
+
+  reloadOptions();
+  reInitializeNlpObjects();
+  resetSolverStatus();
 }
 
 hiopAugLagrSolver::~hiopAugLagrSolver() 
@@ -57,8 +61,9 @@ hiopSolveStatus hiopAugLagrSolver::run()
     //TODO implement logging in log
   //nlp->log->printf(hovSummary, "===============\nHiop AugLagr SOLVER\n===============\n");
 
-   //initialize tolerances by user provided values
-   //TODO
+  reloadOptions();
+  reInitializeNlpObjects();
+  resetSolverStatus();
 
   _solverStatus = NlpSolve_SolveNotCalled;
   
@@ -295,5 +300,25 @@ void hiopAugLagrSolver::updateRho()
     nlp->set_rho(_rho_curr);
 }
 
+void hiopAugLagrSolver::reInitializeNlpObjects()
+{
+}
+
+void hiopAugLagrSolver::reloadOptions()
+{
+  //algorithm parameters parameters
+  eps_tol  = nlp->options->GetNumeric("tolerance");        //absolute error for the nlp
+  eps_rtol = nlp->options->GetNumeric("rel_tolerance");    //relative error (to errors for the initial point)
+  eps_tol_accep = nlp->options->GetNumeric("acceptable_tolerance");
+
+  max_n_it  = nlp->options->GetInteger("max_iter");
+  accep_n_it    = nlp->options->GetInteger("acceptable_iterations");
+}
+
+void hiopAugLagrSolver::resetSolverStatus()
+{
+  _n_accep_iters = 0;
+  _solverStatus = NlpSolve_IncompleteInit;
+}
 }
 

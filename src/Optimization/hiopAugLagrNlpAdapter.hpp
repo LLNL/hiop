@@ -166,8 +166,8 @@ protected:
 public:
     /* outputing and debug-related functionality*/
     //hiopLogger* log;
-    hiopRunStats runStats; //times functionEvaluations
-    //hiopOptions* options;
+    hiopRunStats runStats;
+    hiopOptions* options;
 };
 
 }

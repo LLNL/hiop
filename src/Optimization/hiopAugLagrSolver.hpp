@@ -39,6 +39,11 @@ private:
   void updateLambda();
   void updateRho();
 
+  /** Solver state management */
+  void reloadOptions();
+  void resetSolverStatus();
+  void reInitializeNlpObjects();
+
 protected:
   
   hiopAugLagrNlpAdapter* nlp; ///< Representation of the Aug Lagr. problem

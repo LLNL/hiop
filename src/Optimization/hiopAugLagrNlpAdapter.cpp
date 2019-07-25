@@ -35,8 +35,8 @@ hiopAugLagrNlpAdapter::hiopAugLagrNlpAdapter(NLP_CLASS_IN* nlp_in_):
     _penaltyFcn(nullptr),
     _penaltyFcn_jacobian(nullptr),
     //log(new hiopLogger(this, stdout)),
-    runStats()
-    //options(new hiopOptions(/*filename=NULL*/))
+    runStats(),
+    options(new hiopOptions(/*filename=NULL*/))
 {
     //MPI_Comm comm = MPI_COMM_SELF;
     //hiopOutVerbosity hov = (hiopOutVerbosity) options->GetInteger("verbosity_level");
@@ -44,6 +44,9 @@ hiopAugLagrNlpAdapter::hiopAugLagrNlpAdapter(NLP_CLASS_IN* nlp_in_):
    
     // initializes the member variables
     initialize();
+
+    //TODO: after we have figured out what to do with the hiopLogger class
+    //options->SetLog(log);
 }
 
 hiopAugLagrNlpAdapter::~hiopAugLagrNlpAdapter()
@@ -64,7 +67,7 @@ hiopAugLagrNlpAdapter::~hiopAugLagrNlpAdapter()
     if(_penaltyFcn)              delete _penaltyFcn;
     if(_penaltyFcn_jacobian)      delete _penaltyFcn_jacobian;
     //if(log)      delete log;
-    //if(options)  delete options;
+    if(options)  delete options;
 }
 
 /**
