@@ -1,2 +1,1 @@
 add_library(hiopOptimization OBJECT hiopNlpFormulation.cpp hiopIterate.cpp hiopResidual.cpp hiopFilter.cpp hiopAlgFilterIPM.cpp hiopKKTLinSys.cpp hiopHessianLowRank.cpp hiopDualsUpdater.cpp hiopNlpTransforms.cpp hiopAugLagrSolver.cpp hiopAugLagrNlpAdapter.cpp hiopResidualAugLagr.cpp)
-target_link_libraries(hiopOptimization ${IPOPT_LIBS})

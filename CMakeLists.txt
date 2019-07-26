@@ -99,12 +99,12 @@ install(FILES src/Interface/hiopInterface.hpp
 	      src/Optimization/hiopFilter.hpp
 	      src/Optimization/hiopHessianLowRank.hpp
 	      src/Optimization/hiopDualsUpdater.hpp
-          src/Optimization/hiopAugLagrNlpAdapter.hpp
-          src/Optimization/hiopAugLagrSolver.hpp
-          src/Optimization/hiopResidualAugLagr.hpp
+              src/Optimization/hiopAugLagrNlpAdapter.hpp
+              src/Optimization/hiopAugLagrSolver.hpp
+              src/Optimization/hiopResidualAugLagr.hpp
 	      src/LinAlg/hiopVector.hpp
 	      src/LinAlg/hiopMatrix.hpp
-          srs/linAlg/hiopMatrixSparse.hpp
+              src/LinAlg/hiopMatrixSparse.hpp
 	      src/Utils/hiopRunStats.hpp
 	      src/Utils/hiopLogger.hpp
 	      src/Utils/hiopTimer.hpp
