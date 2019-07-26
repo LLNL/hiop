@@ -269,7 +269,7 @@ bool hiopAugLagrNlpAdapter::eval_f(const long long& n, const double* x_in, bool 
  * */
 bool hiopAugLagrNlpAdapter::eval_grad_Lagr(const long long& n, const double* x_in, bool new_x, double* gradLagr)
 {
-    assert(new_x == false); // we assume data in #_penaltyFcn are up to date
+    if (new_x) eval_penalty(x_in, new_x, _penaltyFcn->local_data());
     
     /****************************************************/
     /** Add contribution of the NLP objective function **/
@@ -281,13 +281,23 @@ bool hiopAugLagrNlpAdapter::eval_grad_Lagr(const long long& n, const double* x_i
     /****************************************************/
     /* Evaluate Jacobian of the original NLP problem */
     /****************************************************/
-    
-    int *iRow = _penaltyFcn_jacobian->get_iRow();
-    int *jCol = _penaltyFcn_jacobian->get_jCol();
+    static bool initializedStructure = false;
+    if (!initializedStructure)
+    {
+      //initialize the structure during the first call, later update only the values
+      int *iRow = _penaltyFcn_jacobian->get_iRow();
+      int *jCol = _penaltyFcn_jacobian->get_jCol();
+      bret = nlp_in->eval_jac_g((Ipopt::Index)n_vars, nullptr, new_x,
+                              (Ipopt::Index)m_cons, nnz_jac, iRow, jCol, nullptr);
+      assert(bret);
+      initializedStructure = true;
+    }
+
     double *values = _penaltyFcn_jacobian->get_values();
     bret = nlp_in->eval_jac_g((Ipopt::Index)n_vars, x_in, new_x,
-                              (Ipopt::Index)m_cons, nnz_jac, iRow, jCol, values);
+                              (Ipopt::Index)m_cons, nnz_jac, nullptr, nullptr, values);
     assert(bret);
+
 
     const double *lambda_data = lambda->local_data_const();
     /**************************************************/
@@ -324,8 +334,6 @@ bool hiopAugLagrNlpAdapter::eval_grad_Lagr(const long long& n, const double* x_i
  * */
 bool hiopAugLagrNlpAdapter::eval_grad_f(const long long& n, const double* x_in, bool new_x, double* gradf)
 {
-    assert(new_x==false); // we assume data in #_penaltyFcn have been already evaluated at x_in
-    //eval_penalty(x_in, new_x, _penaltyFcn->local_data());
     
     runStats.tmEvalGrad_f.start();
 
@@ -422,7 +430,6 @@ bool hiopAugLagrNlpAdapter::get_user_starting_point(const long long &global_n, d
 bool hiopAugLagrNlpAdapter::eval_residuals(const long long& n, const double* x_in, bool new_x, double *penalty, double* gradLagr)
 {
    assert(n == n_vars+n_slacks);
-   assert(new_x == false);
 
     /*****************************************/
     /*          Penalty Function             */
@@ -435,6 +442,8 @@ bool hiopAugLagrNlpAdapter::eval_residuals(const long long& n, const double* x_i
     /**        Compute the Lagrangian term            */
     /**     gradLagr := d_L/d_x = df_x + J^T lam      */
     /**************************************************/
+    //TODO: we could use new_x = false here, since the penalty is already evaluated
+    //and cached in #_penaltyFcn
     bret = eval_grad_Lagr(n, x_in, new_x, gradLagr);
     assert(bret);
 
