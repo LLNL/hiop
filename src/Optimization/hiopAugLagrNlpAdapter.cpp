@@ -213,7 +213,6 @@ bool hiopAugLagrNlpAdapter::eval_penalty(const double *x_in, bool new_x, double 
     for (long long i = 0; i<m_cons_ineq; i++)
     {
         penalty_data[cons_ineq_mapping[i]] -= slacks[i]; 
-        assert(slacks[i] >= 0);
     }
 
     return true;
@@ -416,12 +415,45 @@ bool hiopAugLagrNlpAdapter::get_user_starting_point(const long long &global_n, d
     bool bret = nlp_in->get_starting_point((Ipopt::Index)n_vars, true, x0,
                                            false, nullptr, nullptr,
                                            (Ipopt::Index)m_cons, false, nullptr);
-    if (!bret) std::fill(x0, x0+n_vars, 0.);
+    
+    //if no user point provided, set it in between bounds,
+    //or close to the bound if bounded only from one side
+    const double* xl_ = xl->local_data_const();
+    const double* xu_ = xu->local_data_const();
+    for (long long i = 0; i < n_vars; i++)
+    {
+        if (xl_[i] < -1e20)
+            if(xu_[i] > 1e20)
+                x0[i] = 0.; //unbounded
+            else
+                x0[i] = xu_[i]-1e-4; //close to U
+        else
+            if(xu_[i] > 1e20)
+                x0[i] = xl_[i]+1e-4; //close to L
+            else
+                x0[i] = (xl_[i]+xu_[i])/2.; //in-between the bounds
+    }
+    //if (!bret) std::fill(x0, x0+n_vars, 0.); //probably not the best way
   
-    //zero out the slack variables
-    std::fill(x0+n_vars, x0+n_vars+n_slacks, 0.);
-    //TODO is initialization by zero the best way?
-    //can we set it at least within the bounds? or equal to c(x)?
+    //initialize slacks close to the bound or in the middle
+    const double* sl_ = sl->local_data_const();
+    const double* su_ = su->local_data_const();
+    for (long long i = 0; i < n_slacks; i++)
+    {
+        if (sl_[i] < -1e20)
+            if(su_[i] > 1e20)
+                x0[i+n_vars] = 0.; //unbounded
+            else
+                x0[i+n_vars] = su_[i]-1e-4; //close to U
+        else
+            if(su_[i] > 1e20)
+                x0[i+n_vars] = sl_[i]+1e-4; //close to L
+            else
+                x0[i+n_vars] = (sl_[i]+su_[i])/2.; //in-between the bounds
+    }
+    
+    //initialization by zero is probably not the best way
+    //std::fill(x0+n_vars, x0+n_vars+n_slacks, 0.);
 
     return bret;
 }
