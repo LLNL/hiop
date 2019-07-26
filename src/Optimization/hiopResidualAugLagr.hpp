@@ -11,12 +11,17 @@ namespace hiop
 class hiopResidualAugLagr
 {
 public:
-  ~hiopResidualAugLagr();
   hiopResidualAugLagr(long long n_vars, long long m_constraints) :
     _penaltyFcn(new hiopVectorPar(m_constraints)),
     _gradLagr(new hiopVectorPar(n_vars)),
     _nrmInfOptim(-1.),
     _nrmInfFeasib(-1.) {};
+  
+  ~hiopResidualAugLagr()
+  {
+      delete _penaltyFcn;
+      delete _gradLagr;
+  }
   
   //danger!!! accessor to private data, can make our object incnsistent,
   //user needs to call update() to recompute the norms after changing the
