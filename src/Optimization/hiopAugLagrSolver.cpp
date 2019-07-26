@@ -141,7 +141,8 @@ hiopSolveStatus hiopAugLagrSolver::run()
     nlp->runStats.tmSolverInternal.start();  
     hiopNlpDenseConstraints subproblem(*nlp);
 
-    //subproblem.options->SetIntegerValue("verbosity_level", 4);
+    subproblem.options->SetStringValue("fixed_var", "remove");
+    subproblem.options->SetIntegerValue("verbosity_level", 0);
     //subproblem.options->SetNumericValue("tolerance", 1e-4);
     //subproblem.options->SetStringValue("dualsInitialization",  "zero");
     //subproblem.options->SetIntegerValue("max_iter", 2);
