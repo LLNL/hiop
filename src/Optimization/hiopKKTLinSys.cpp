@@ -50,6 +50,8 @@
 #include "blasdefs.hpp"
 
 #include <cmath>
+#include <algorithm>    // std::max
+using std::max;
 
 namespace hiop
 {
@@ -560,15 +562,15 @@ int hiopKKTLinSysLowRank::solveWithRefin(hiopMatrixDense& M, hiopVectorPar& rhs)
   int N=M.n();
   int NRHS=1;
   double* A=M.local_buffer();
-  int LDA=N;
+  int LDA=max(1,N);
   double* AF=new double[N*N];
-  int LDAF=N;
+  int LDAF=max(1,N);
   char EQUED='N'; //it is an output if FACT='E'
   double* S = new double[N];
   double* B = rhs.local_data();
-  int LDB=N;
+  int LDB=max(1,N);
   double* X = new double[N];
-  int LDX = N;
+  int LDX = max(1,N);
   double RCOND, FERR, BERR;
   double* WORK = new double[3*N];
   int* IWORK = new int[N];
