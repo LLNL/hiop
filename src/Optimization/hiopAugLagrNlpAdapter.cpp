@@ -399,7 +399,7 @@ bool hiopAugLagrNlpAdapter::eval_grad_f(const long long& n, const double* x_in, 
  * Motivation: every major iteration we want to reuse the previous
  * solution x_k, not start from the user point every time!!!
  */
-bool hiopAugLagrNlpAdapter::get_starting_point(const long long &global_n, double* x0) const
+bool hiopAugLagrNlpAdapter::get_starting_point(const long long &global_n, double* x0)
 {
     assert(global_n == n_vars+n_slacks);
 
@@ -436,45 +436,45 @@ bool hiopAugLagrNlpAdapter::get_user_starting_point(const long long &global_n, d
     
     //if no user point provided, set it in between bounds,
     //or close to the bound if bounded only from one side
-    if (!bret)
-    {
-        const double* xl_ = xl->local_data_const();
-        const double* xu_ = xu->local_data_const();
-        for (long long i = 0; i < n_vars; i++)
-        {
-            if (xl_[i] < -1e20)
-                if(xu_[i] > 1e20)
-                    x0[i] = 0.; //unbounded
-                else
-                    x0[i] = xu_[i]-1e-4; //close to U
-            else
-                if(xu_[i] > 1e20)
-                    x0[i] = xl_[i]+1e-4; //close to L
-                else
-                    x0[i] = (xl_[i]+xu_[i])/2.; //in-between the bounds
-        }
-    }
-    //if (!bret) std::fill(x0, x0+n_vars, 0.); //probably not the best way
+    //if (!bret)
+    //{
+    //    const double* xl_ = xl->local_data_const();
+    //    const double* xu_ = xu->local_data_const();
+    //    for (long long i = 0; i < n_vars; i++)
+    //    {
+    //        if (xl_[i] < -1e20)
+    //            if(xu_[i] > 1e20)
+    //                x0[i] = 0.; //unbounded
+    //            else
+    //                x0[i] = xu_[i]-1e-4; //close to U
+    //        else
+    //            if(xu_[i] > 1e20)
+    //                x0[i] = xl_[i]+1e-4; //close to L
+    //            else
+    //                x0[i] = (xl_[i]+xu_[i])/2.; //in-between the bounds
+    //    }
+    //}
+    if (!bret) std::fill(x0, x0+n_vars, 0.); //probably not the best way
   
     //initialize slacks close to the bound or in the middle
-    const double* sl_ = sl->local_data_const();
-    const double* su_ = su->local_data_const();
-    for (long long i = 0; i < n_slacks; i++)
-    {
-        if (sl_[i] < -1e20)
-            if(su_[i] > 1e20)
-                x0[i+n_vars] = 0.; //unbounded
-            else
-                x0[i+n_vars] = su_[i]-1e-4; //close to U
-        else
-            if(su_[i] > 1e20)
-                x0[i+n_vars] = sl_[i]+1e-4; //close to L
-            else
-                x0[i+n_vars] = (sl_[i]+su_[i])/2.; //in-between the bounds
-    }
+    //const double* sl_ = sl->local_data_const();
+    //const double* su_ = su->local_data_const();
+    //for (long long i = 0; i < n_slacks; i++)
+    //{
+    //    if (sl_[i] < -1e20)
+    //        if(su_[i] > 1e20)
+    //            x0[i+n_vars] = 0.; //unbounded
+    //        else
+    //            x0[i+n_vars] = su_[i]-1e-4; //close to U
+    //    else
+    //        if(su_[i] > 1e20)
+    //            x0[i+n_vars] = sl_[i]+1e-4; //close to L
+    //        else
+    //            x0[i+n_vars] = (sl_[i]+su_[i])/2.; //in-between the bounds
+    //}
     
     //initialization by zero is probably not the best way
-    //std::fill(x0+n_vars, x0+n_vars+n_slacks, 0.);
+    std::fill(x0+n_vars, x0+n_vars+n_slacks, 0.);
 
     return bret;
 }

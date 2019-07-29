@@ -36,38 +36,38 @@ public:
     virtual ~hiopAugLagrNlpAdapter();
 
     /** problem dimensions: n number of variables, m number of constraints */
-    bool get_prob_sizes(long long& n, long long& m)
+    virtual bool get_prob_sizes(long long& n, long long& m)
         { n=n_vars+n_slacks; m=0; return true; }
 
     /** bounds on the variables 
      *  (xlow<=-1e20 means no lower bound, xupp>=1e20 means no upper bound) */
-    bool get_vars_info(const long long& n, double *xlow, double* xupp, NonlinearityType* type);
+    virtual bool get_vars_info(const long long& n, double *xlow, double* xupp, NonlinearityType* type);
 
     /** bounds on the constraints, we have no constraints */ 
-    bool get_cons_info(const long long& m, double* clow, double* cupp, NonlinearityType* type)
+    virtual bool get_cons_info(const long long& m, double* clow, double* cupp, NonlinearityType* type)
         { assert(m==0); return true; }
 
     /** Objective function evaluation, this is the augmented lagrangian function
      * La(x,lambda,rho) = f(x) + lam^t p(x,s) + rho ||p(x,s)||^2
      */
-    bool eval_f(const long long& n, const double* x_in, bool new_x, double& obj_value);
+    virtual bool eval_f(const long long& n, const double* x_in, bool new_x, double& obj_value);
 
     /** Gradient of the augmented Lagrangian function 
      *  d_La/d_x = df_x + J^T lam + 2rho J^T p(x,s)
      *  d_La/d_s =  0   + (-I) lam[cons_ineq_mapping] + (-I)2rho*p[cons_ineq_mapping]
      *  where p(x,s) is a penalty fcn and rho is the penalty param.
      * */
-    bool eval_grad_f(const long long& n, const double* x_in, bool new_x, double* gradf);
+    virtual bool eval_grad_f(const long long& n, const double* x_in, bool new_x, double* gradf);
 
     /** Evaluation of the constraints, we have no constraints (transformed into penalty fcn) */
-    bool eval_cons(const long long& n, 
+    virtual bool eval_cons(const long long& n, 
             const long long& m,  
             const long long& num_cons, const long long* idx_cons,
             const double* x_in, bool new_x, double* cons)
         { assert(m==0); assert(num_cons==0); return true; }
 
     /** Evaluation of the Jacobian, we have no constraints */
-    bool eval_Jac_cons(const long long& n, const long long& m, 
+    virtual bool eval_Jac_cons(const long long& n, const long long& m, 
             const long long& num_cons, const long long* idx_cons,
             const double* x_in, bool new_x, double** Jac) 
         { assert(m==0); assert(num_cons==0); return true; }
@@ -78,8 +78,9 @@ public:
      * Motivation: every major iteration we want to reuse the previous
      * solution x_k, not start from the user point every time!!!
      */
-    bool get_starting_point(const long long& global_n, double* x0) const;
+    virtual bool get_starting_point(const long long& global_n, double* x0);
 
+public:
     /**
      * The set method stores the provided starting point by the solver
      * into the private member #_startingPoint
