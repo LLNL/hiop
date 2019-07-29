@@ -21,12 +21,14 @@ hiopAugLagrSolver::hiopAugLagrSolver(NLP_CLASS_IN* nlp_in_)
     _err_optim0(-1.),
     _solverStatus(NlpSolve_IncompleteInit),
     iter_num(0),
-    max_n_it(1000),
+    _n_accep_iters(0),
+    _f_nlp(0.),
+    _err_feas(0.), _err_optim(0.),
     eps_tol(1e-6),
     eps_rtol(1e-6),
     eps_tol_accep(1e-4),
+    max_n_it(1000),
     accep_n_it(5),
-    _n_accep_iters(0),
     rho_max(1e7)
 {
   // get size of the problem and the penalty term
@@ -58,8 +60,7 @@ hiopAugLagrSolver::~hiopAugLagrSolver()
 hiopSolveStatus hiopAugLagrSolver::run()
 {
 
-    //TODO implement logging in log
-  //nlp->log->printf(hovSummary, "===============\nHiop AugLagr SOLVER\n===============\n");
+  nlp->log->printf(hovSummary, "==================\nHiop AugLagr SOLVER\n==================\n");
 
   reloadOptions();
   reInitializeNlpObjects();
@@ -82,22 +83,24 @@ hiopSolveStatus hiopAugLagrSolver::run()
   _rho_curr = 100.;             nlp->set_rho(_rho_curr);
   
   nlp->runStats.tmStartingPoint.stop();
+  
+  //initial evaluation of the problem
+  iter_num=0; nlp->runStats.nIter=iter_num;
 
-  //evaluate the residuals
-  bool new_x = true;
-  evalNlpErrors(_it_curr, new_x, residual);
-  //nlp->log->write("First residual-------------", *residual, hovIteration);
+  //evaluate the problem
+  evalNlp(_it_curr, _f_nlp);
+  evalNlpErrors(_it_curr, residual, _err_feas, _err_optim);
+  nlp->log->write("First residual-------------", *residual, hovIteration);
 
   //check termination conditions   
   bool notConverged = true;
-  if(checkTermination(residual, iter_num, _solverStatus)) {
+  if(checkTermination(_err_feas, _err_optim, iter_num, _solverStatus)) {
       notConverged = false;
     }
 
-  //additional initializations
-  iter_num=0; nlp->runStats.nIter=iter_num;
-  _err_feas0 = residual->getFeasibilityNorm();
-  _err_optim0 = residual->getOptimalityNorm();
+  //remember the initial error for rel. tol. test
+  _err_feas0 = _err_feas;
+  _err_optim0 = _err_optim;
 
 
   ////////////////////////////////////////////////////////////////////////////////////
@@ -116,9 +119,8 @@ hiopSolveStatus hiopAugLagrSolver::run()
   while(notConverged) {
 
 
-    //nlp->log->printf(hovScalars, "  Nlp    errs: pr-infeas:%20.14e   dual-infeas:%20.14e  comp:%20.14e  overall:%20.14e\n", _err_nlp_feas, _err_nlp_optim, _err_nlp_complem, _err_nlp);
-    //nlp->log->printf(hovScalars, "  LogBar errs: pr-infeas:%20.14e   dual-infeas:%20.14e  comp:%20.14e  overall:%20.14e\n",_err_log_feas, _err_log_optim, _err_log_complem, _err_log);
-    //outputIteration(lsStatus, lsNum);
+    nlp->log->printf(hovScalars, "  Nlp     errs: infeas:%20.14e   optimality:%20.14e\n", _err_feas, _err_optim);
+    outputIteration();
 
     //TODO: this signature does not make sense for the AL
     //user callback
@@ -141,7 +143,7 @@ hiopSolveStatus hiopAugLagrSolver::run()
     nlp->runStats.tmSolverInternal.start();  
     hiopNlpDenseConstraints subproblem(*nlp);
 
-    subproblem.options->SetStringValue("fixed_var", "remove");
+    subproblem.options->SetStringValue("fixed_var", "relax"); //remove fails
     subproblem.options->SetIntegerValue("verbosity_level", 0);
     //subproblem.options->SetNumericValue("tolerance", 1e-4);
     //subproblem.options->SetStringValue("dualsInitialization",  "zero");
@@ -151,25 +153,29 @@ hiopSolveStatus hiopAugLagrSolver::run()
     hiopSolveStatus status = solver.run();
 
     nlp->runStats.tmSolverInternal.stop();
-    //solver.getObjective();
+    //solver.getObjective(); //AL fcn, not user objective
     
     // update the current iterate, used as x0 for the next subproblem
     solver.getSolution(_it_curr->local_data());
     
     
-    //nlp->log->printf(hovIteration, "Iter[%d] -> full iterate:", iter_num); nlp->log->write("", *_it_curr, hovIteration);
+    nlp->log->printf(hovIteration, "Iter[%d] -> full iterate:", iter_num);
+    nlp->log->write("", *_it_curr, hovIteration);
+    nlp->log->write("", *_lam_curr, hovIteration);
 
     /*************************************************
      * Error evalutaion & Termination check
      ************************************************/
-    //evaluate the residuals and NLP errors
-    //TODO: new_x = false if hiop/IPOPT evaluates fcn/jac at the solution
-    //new_x = true if fcn/Jac is not evaluated at the solution
-    evalNlpErrors(_it_curr, new_x, residual);
-    //nlp->log->printf(hovIteration, "Iter[%d] full residual:-------------\n", iter_num); nlp->log->write("", *residual, hovIteration);
+    //evaluate the problem and NLP errors
+    //TODO: probably doesn't need to re-evaluate Ipopt's fcns
+    evalNlp(_it_curr, _f_nlp);
+    evalNlpErrors(_it_curr, residual, _err_feas, _err_optim);
+   
+    nlp->log->printf(hovIteration, "Iter[%d] full residual:-------------\n", iter_num);
+    nlp->log->write("", *residual, hovIteration);
   
     //check termination conditions   
-    if(checkTermination(residual, iter_num, _solverStatus)) {
+    if(checkTermination(_err_feas, _err_optim, iter_num, _solverStatus)) {
         break;
       }
 
@@ -205,43 +211,70 @@ hiopSolveStatus hiopAugLagrSolver::run()
   return _solverStatus;
 }
 
+//TODO: can be merged with evalNlpErrors()
+bool hiopAugLagrSolver::evalNlp(hiopVectorPar* iter,                              
+                               double &f/**, hiopVector& c_, hiopVector& d_, 
+                               hiopVector& gradf_,  hiopMatrixDense& Jac_c,  hiopMatrixDense& Jac_d*/)
+{
+  bool new_x=true, bret; 
+  double* x = iter->local_data();//local_data_const();
+  //hiopVectorPar 
+  //  &c=dynamic_cast<hiopVectorPar&>(c_), 
+  //  &d=dynamic_cast<hiopVectorPar&>(d_), 
+  //  &gradf=dynamic_cast<hiopVectorPar&>(gradf_);
+  
+  //TODO: do we want the original objective, not the AL!!
+  bret = nlp->eval_f_user(n, x, new_x, f); assert(bret);
+  new_x= false; //same x for the rest
+  //bret = nlp->eval_grad_f(x, new_x, gradf.local_data());  assert(bret);
+
+  //bret = nlp->eval_c     (x, new_x, c.local_data());     assert(bret);
+  //bret = nlp->eval_d     (x, new_x, d.local_data());     assert(bret);
+  //bret = nlp->eval_Jac_c (x, new_x, Jac_c.local_data()); assert(bret);
+  //bret = nlp->eval_Jac_d (x, new_x, Jac_d.local_data()); assert(bret);
+
+  return bret;
+}
+
+
 /**
- * Evaluates termination criteria of the Augmented lagrangian, namely
+ * Evaluates errors  of the Augmented lagrangian, namely
  * the feasibility error represented by the penalty function p(x,s)
  * and the optimality error represented by gradient of the Lagrangian
  * d_L = d_f(x) + J(x)^T lam
  *
  * @param[in] current_iterate The latest iterate in (x,s)
- * @param[in] new_x
  * @param[out] resid Residual class keeping information about the NLP errors
+ * @param[out} err_optim, err_feas Optimality and feasibility errors
  */
-bool hiopAugLagrSolver::evalNlpErrors(const hiopVector *current_iterate, bool new_x,
-                                                hiopResidualAugLagr *resid)
+bool hiopAugLagrSolver::evalNlpErrors(const hiopVector *current_iterate, 
+                                      hiopResidualAugLagr *resid, double& err_feas, double& err_optim)
 {
+  double *penaltyFcn = resid->getFeasibilityPtr();
+  double *gradLagr = resid->getOptimalityPtr();
+  const double *_it_curr_data = _it_curr->local_data_const();
+  bool new_x = true;
 
-    double *penaltyFcn = resid->getFeasibilityPtr();
-    double *gradLagr = resid->getOptimalityPtr();
-    const double *_it_curr_data = _it_curr->local_data_const();
+  //evaluate the Adapter penalty fcn and gradient of the Lagrangian
+  bool bret = nlp->eval_residuals(n, _it_curr_data, new_x, penaltyFcn, gradLagr);
+  assert(bret);
 
-    //evaluate the Adapter penalty fcn and gradient of the Lagrangian
-    bool bret = nlp->eval_residuals(n, _it_curr_data, new_x, penaltyFcn, gradLagr);
-    assert(bret);
+  //recompute the residuals norms
+  resid->update();
   
-    //recompute the residuals norms
-    resid->update();
+  //actual nlp errors 
+  err_feas  = resid->getFeasibilityNorm();
+  err_optim = resid->getOptimalityNorm();
 
-    return bret;
+  return bret;
 }
 
 
 /**
  * Test checking for stopping the augmented Lagrangian loop given the NLP errors in @resid, number of iterations @iter_num. Sets the status if appropriate.
  */
-bool hiopAugLagrSolver::checkTermination(const hiopResidualAugLagr *resid, const int iter_num, hiopSolveStatus &status)
+bool hiopAugLagrSolver::checkTermination(double err_feas, double err_optim, const int iter_num, hiopSolveStatus &status)
 {
-  const double err_feas = resid->getFeasibilityNorm();
-  const double err_optim = resid->getOptimalityNorm();
-
   if (err_feas<=eps_tol && err_optim<=eps_tol)
   {
       status = Solve_Success;
@@ -269,6 +302,15 @@ bool hiopAugLagrSolver::checkTermination(const hiopResidualAugLagr *resid, const
   if(_n_accep_iters>=accep_n_it) { status = Solve_Acceptable_Level; return true; }
 
   return false;
+}
+
+void hiopAugLagrSolver::outputIteration()
+{
+  if(iter_num/10*10==iter_num) 
+    nlp->log->printf(hovSummary, "iter    objective     inf_pr     inf_du   lg(rho)\n");
+
+    nlp->log->printf(hovSummary, "%4d %14.7e %7.3e  %7.3e %6.2f\n",
+                     iter_num, _f_nlp, _err_feas, _err_optim, log10(_rho_curr)); 
 }
 
 /**

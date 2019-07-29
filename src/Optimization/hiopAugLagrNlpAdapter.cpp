@@ -34,19 +34,16 @@ hiopAugLagrNlpAdapter::hiopAugLagrNlpAdapter(NLP_CLASS_IN* nlp_in_):
     c_rhs(nullptr),
     _penaltyFcn(nullptr),
     _penaltyFcn_jacobian(nullptr),
-    //log(new hiopLogger(this, stdout)),
     runStats(),
-    options(new hiopOptions(/*filename=NULL*/))
+    options(new hiopOptions(/*filename=NULL*/)),
+    log(new hiopLogger(options, stdout, 0))
 {
-    //MPI_Comm comm = MPI_COMM_SELF;
-    //hiopOutVerbosity hov = (hiopOutVerbosity) options->GetInteger("verbosity_level");
-    //options->SetLog(log);
+    options->SetLog(log);
+    //options->SetIntegerValue("verbosity_level", options->GetInteger("verbosity_level_major"));
+    options->SetIntegerValue("verbosity_level", 5);
    
     // initializes the member variables
     initialize();
-
-    //TODO: after we have figured out what to do with the hiopLogger class
-    //options->SetLog(log);
 }
 
 hiopAugLagrNlpAdapter::~hiopAugLagrNlpAdapter()
@@ -66,7 +63,7 @@ hiopAugLagrNlpAdapter::~hiopAugLagrNlpAdapter()
     if(_startingPoint)             delete _startingPoint;
     if(_penaltyFcn)              delete _penaltyFcn;
     if(_penaltyFcn_jacobian)      delete _penaltyFcn_jacobian;
-    //if(log)      delete log;
+    if(log)      delete log;
     if(options)  delete options;
 }
 
@@ -156,6 +153,14 @@ bool hiopAugLagrNlpAdapter::initialize()
     delete gl;
     delete gu;
 
+    //std::cout << "Initialized AugLagrNlpAdapter with the following values:" << std::endl;
+    //std::cout << "n_vars " << n_vars << std::endl;
+    //std::cout << "n_slacks " << n_slacks << std::endl;
+    //std::cout << "m_cons " << m_cons << std::endl;
+    //std::cout << "m_cons_eq " << m_cons_eq << std::endl;
+    //std::cout << "m_cons_ineq " << m_cons_ineq << std::endl;
+    //std::cout << "nnz_jac " << nnz_jac << std::endl;
+
     return true;
 }
 
@@ -175,11 +180,9 @@ bool hiopAugLagrNlpAdapter::get_vars_info(const long long& n, double *xlow, doub
     sl->copyTo(xlow + n_vars);
     su->copyTo(xupp + n_vars);
 
-    //set variables type (x - nonlinear, s - linear)
+    //set variable types (x - nonlinear, s - linear)
     for(long long i=0; i<n_vars; i++)  type[i] = hiopNonlinear;
     for(long long i=n_vars; i<n; i++)  type[i] = hiopLinear;
-
-    //TODO: delete sl,xl here? not needed afterwards?
 
     return true;
 }
@@ -253,7 +256,30 @@ bool hiopAugLagrNlpAdapter::eval_f(const long long& n, const double* x_in, bool 
     runStats.tmEvalObj.stop();
     runStats.nEvalObj++;
 
+    //std::cout << "Evaluating objective function:" << std::endl;
+    //std::cout << "nlp_f: " << obj_nlp << std::endl;
+    //std::cout << "lagr term: " << lagr_term << std::endl;
+    //std::cout << "penalty term: " << penalty_term <<  std::endl;
+    //std::cout << "penalty: " << rho <<  std::endl;
+    //std::cout << "final f(x): " << obj_value <<  std::endl;
+
+
     return true;
+}
+
+bool hiopAugLagrNlpAdapter::eval_f_user(const long long& n, const double* x_in, bool new_x, double& obj_value)
+{
+    assert(n == n_vars + n_slacks);
+
+    runStats.tmEvalObj.start();
+
+    // evaluate the original NLP objective f(x), uses only firs n_vars entries of x_in
+    bool bret = nlp_in->eval_f((Ipopt::Index)n_vars, x_in, new_x, obj_value); 
+    assert(bret);
+    
+    runStats.tmEvalObj.stop();
+
+    return bret;
 }
 
 /** Gradient of the Lagrangian function L(x,s)
@@ -268,7 +294,8 @@ bool hiopAugLagrNlpAdapter::eval_f(const long long& n, const double* x_in, bool 
  * */
 bool hiopAugLagrNlpAdapter::eval_grad_Lagr(const long long& n, const double* x_in, bool new_x, double* gradLagr)
 {
-    if (new_x) eval_penalty(x_in, new_x, _penaltyFcn->local_data());
+    //TODO new_x
+    if (true) eval_penalty(x_in, new_x, _penaltyFcn->local_data());
     
     /****************************************************/
     /** Add contribution of the NLP objective function **/
@@ -394,15 +421,6 @@ bool hiopAugLagrNlpAdapter::set_starting_point(const long long &global_n, const 
     return true;
 }
 
-
-void hiopAugLagrNlpAdapter::set_lambda(const hiopVectorPar* lambda_in)
-{
-    assert(lambda_in->get_size() == m_cons);
-    assert(lambda_in->get_size() == lambda->get_size());
-
-    memcpy(lambda->local_data(), lambda_in->local_data_const(), m_cons*sizeof(double));
-}
-
 /**
  * The method returns true (and populates x0 with user provided TNLP starting point)
  * or returns false, in which case hiOP will set x0 to all zero.
@@ -456,6 +474,14 @@ bool hiopAugLagrNlpAdapter::get_user_starting_point(const long long &global_n, d
     //std::fill(x0+n_vars, x0+n_vars+n_slacks, 0.);
 
     return bret;
+}
+
+void hiopAugLagrNlpAdapter::set_lambda(const hiopVectorPar* lambda_in)
+{
+    assert(lambda_in->get_size() == m_cons);
+    assert(lambda_in->get_size() == lambda->get_size());
+
+    memcpy(lambda->local_data(), lambda_in->local_data_const(), m_cons*sizeof(double));
 }
 
 //TODO: can we reuse the last jacobian instead of recomputing it? does hiop/ipopt evaluate the Jacobian in the last (xk + searchDir), a.k.a the solution? 

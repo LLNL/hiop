@@ -122,6 +122,9 @@ public:
      */
     bool eval_residuals(const long long& n, const double* x_in,
                         bool new_x, double *penalty, double* gradLagr);
+    
+    /** Returns value of the user objective in the given point */
+    bool eval_f_user(const long long& n, const double* x_in, bool new_x, double& obj_value);
 
 protected:
     bool initialize();
@@ -165,9 +168,9 @@ protected:
 
 public:
     /* outputing and debug-related functionality*/
-    //hiopLogger* log;
     hiopRunStats runStats;
     hiopOptions* options;
+    hiopLogger* log;
 };
 
 }

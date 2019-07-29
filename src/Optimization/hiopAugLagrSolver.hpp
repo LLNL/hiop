@@ -29,12 +29,20 @@ public:
   virtual int getNumIterations() const;
 
 private:
-  /** Evaluates termination criteria, i.e. feasibility and optimality */
-  bool evalNlpErrors(const hiopVector *current_iterate, bool new_x,
-                     hiopResidualAugLagr *resid);
+  bool evalNlp(hiopVectorPar* iter,                              
+        double &f /**, hiopVector& c_, hiopVector& d_, 
+        hiopVector& gradf_,  hiopMatrixDense& Jac_c,  hiopMatrixDense& Jac_d*/);
+ 
+  /** Evaluates  errors, i.e. feasibility and optimality */
+  bool evalNlpErrors(const hiopVector *current_iterate, 
+        hiopResidualAugLagr *resid, double& err_feas, double& err_optim);
+  
   /** Performs test whether the termination criteria are satisfied */
-  bool checkTermination(const hiopResidualAugLagr *resid, const int iter_num,
-                        hiopSolveStatus &status);
+  bool checkTermination(double err_feas, double err_optim,
+                const int iter_num, hiopSolveStatus &status);
+  
+  void outputIteration();
+  
   /** Update strategies for the multipliers and penalty */
   void updateLambda();
   void updateRho();
@@ -63,16 +71,19 @@ protected:
 
   //internal flags related to the state of the solver
   hiopSolveStatus _solverStatus;
-  
+ 
+  // current status of the solver 
   int iter_num;        ///< iteration number
   int _n_accep_iters;  ///< number of encountered consecutive acceptable iterates
+  double _f_nlp;       ///< current objective function value
+  double _err_feas, _err_optim; ///< current errors
 
   //options and parameters //TODO use uppercase for the scalar constants
   double eps_tol;       ///< abs tolerance for the NLP error
   double eps_rtol;      ///< rel tolerance for the NLP error
   double eps_tol_accep; ///< acceptable tolerance (required at accep_n_it iterations)
-  int accep_n_it;      ///< acceptable number of iterations
   int max_n_it;        ///< maximum number of iterations
+  int accep_n_it;      ///< acceptable number of iterations
   double rho_max;      ///< max value of the penalty parameter
 };
 
