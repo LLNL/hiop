@@ -436,20 +436,23 @@ bool hiopAugLagrNlpAdapter::get_user_starting_point(const long long &global_n, d
     
     //if no user point provided, set it in between bounds,
     //or close to the bound if bounded only from one side
-    const double* xl_ = xl->local_data_const();
-    const double* xu_ = xu->local_data_const();
-    for (long long i = 0; i < n_vars; i++)
+    if (!bret)
     {
-        if (xl_[i] < -1e20)
-            if(xu_[i] > 1e20)
-                x0[i] = 0.; //unbounded
+        const double* xl_ = xl->local_data_const();
+        const double* xu_ = xu->local_data_const();
+        for (long long i = 0; i < n_vars; i++)
+        {
+            if (xl_[i] < -1e20)
+                if(xu_[i] > 1e20)
+                    x0[i] = 0.; //unbounded
+                else
+                    x0[i] = xu_[i]-1e-4; //close to U
             else
-                x0[i] = xu_[i]-1e-4; //close to U
-        else
-            if(xu_[i] > 1e20)
-                x0[i] = xl_[i]+1e-4; //close to L
-            else
-                x0[i] = (xl_[i]+xu_[i])/2.; //in-between the bounds
+                if(xu_[i] > 1e20)
+                    x0[i] = xl_[i]+1e-4; //close to L
+                else
+                    x0[i] = (xl_[i]+xu_[i])/2.; //in-between the bounds
+        }
     }
     //if (!bret) std::fill(x0, x0+n_vars, 0.); //probably not the best way
   
