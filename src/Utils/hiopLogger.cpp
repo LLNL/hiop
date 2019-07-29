@@ -57,13 +57,17 @@
 namespace hiop
 {
 
+hiopLogger::hiopLogger(hiopNlpFormulation* nlp, FILE* f, int masterrank) 
+  : _f(f), _opt(nlp->options), _master_rank(masterrank), _my_rank(nlp->get_rank()) {};
+hiopLogger::hiopLogger(hiopOptions* opt, FILE* f, int my_rank, int masterrank) 
+  : _f(f), _opt(opt), _master_rank(masterrank), _my_rank(my_rank) {};
 
 void hiopLogger::write(const char* msg, const hiopVector& vec, hiopOutVerbosity v, int loggerid/*=0*/) 
 {
   //#ifdef HIOP_USE_MPI
-  //if(_master_rank != _nlp->get_rank()) return;
+  //if(_master_rank != _my_rank) return;
   //#endif
-  hiopOutVerbosity _verb = (hiopOutVerbosity) _nlp->options->GetInteger("verbosity_level");
+  hiopOutVerbosity _verb = (hiopOutVerbosity) _opt->GetInteger("verbosity_level");
   if(v>_verb) return;
   vec.print(_f, msg);
 }
@@ -71,9 +75,9 @@ void hiopLogger::write(const char* msg, const hiopVector& vec, hiopOutVerbosity 
 void hiopLogger::write(const char* msg, const hiopMatrix& M, hiopOutVerbosity v, int loggerid/*=0*/) 
 {
 #ifdef HIOP_USE_MPI
-  if(_master_rank != _nlp->get_rank()) return;
+  if(_master_rank != _my_rank) return;
 #endif
-  hiopOutVerbosity _verb = (hiopOutVerbosity) _nlp->options->GetInteger("verbosity_level");
+  hiopOutVerbosity _verb = (hiopOutVerbosity) _opt->GetInteger("verbosity_level");
   if(v>_verb) return;
   M.print(_f, msg);
 }
@@ -81,18 +85,18 @@ void hiopLogger::write(const char* msg, const hiopMatrix& M, hiopOutVerbosity v,
 void hiopLogger::write(const char* msg, const hiopResidual& r, hiopOutVerbosity v, int loggerid/*=0*/) 
 {
 #ifdef HIOP_USE_MPI
-  if(_master_rank != _nlp->get_rank()) return;
+  if(_master_rank != _my_rank) return;
 #endif
-  hiopOutVerbosity _verb = (hiopOutVerbosity) _nlp->options->GetInteger("verbosity_level");
+  hiopOutVerbosity _verb = (hiopOutVerbosity) _opt->GetInteger("verbosity_level");
   if(v>_verb) return;
   r.print(_f,msg);
 }
 void hiopLogger::write(const char* msg, hiopOutVerbosity v, int loggerid/*=0*/) 
 { 
 #ifdef HIOP_USE_MPI
-  if(_master_rank != _nlp->get_rank()) return;
+  if(_master_rank != _my_rank) return;
 #endif
-  hiopOutVerbosity _verb = (hiopOutVerbosity) _nlp->options->GetInteger("verbosity_level");
+  hiopOutVerbosity _verb = (hiopOutVerbosity) _opt->GetInteger("verbosity_level");
   if(v>_verb) return;
   fprintf(_f, "%s\n", msg); 
 }
@@ -100,9 +104,9 @@ void hiopLogger::write(const char* msg, hiopOutVerbosity v, int loggerid/*=0*/)
 void hiopLogger::write(const char* msg, const hiopIterate& it, hiopOutVerbosity v, int loggerid/*=0*/)
 {
 #ifdef HIOP_USE_MPI
-  if(_master_rank != _nlp->get_rank()) return;
+  if(_master_rank != _my_rank) return;
 #endif
-  hiopOutVerbosity _verb = (hiopOutVerbosity) _nlp->options->GetInteger("verbosity_level");
+  hiopOutVerbosity _verb = (hiopOutVerbosity) _opt->GetInteger("verbosity_level");
   if(v>_verb) return;
   it.print(_f, msg);
 }
@@ -111,9 +115,9 @@ void hiopLogger::write(const char* msg, const hiopIterate& it, hiopOutVerbosity 
 void hiopLogger::write(const char* msg, const hiopHessianLowRank& Hess, hiopOutVerbosity v, int loggerid/*=0*/)
 {
 #ifdef HIOP_USE_MPI
-  if(_master_rank != _nlp->get_rank()) return;
+  if(_master_rank != _my_rank) return;
 #endif
-  hiopOutVerbosity _verb = (hiopOutVerbosity) _nlp->options->GetInteger("verbosity_level");
+  hiopOutVerbosity _verb = (hiopOutVerbosity) _opt->GetInteger("verbosity_level");
   if(v>_verb) return;
   Hess.print(_f, v, msg);
 }
@@ -122,9 +126,9 @@ void hiopLogger::write(const char* msg, const hiopHessianLowRank& Hess, hiopOutV
 void hiopLogger::write(const char* msg, const hiopOptions& options,     hiopOutVerbosity v, int loggerid/*=0*/)
 {
 #ifdef HIOP_USE_MPI
-  if(_master_rank != _nlp->get_rank()) return;
+  if(_master_rank != _my_rank) return;
 #endif
-  hiopOutVerbosity _verb = (hiopOutVerbosity) _nlp->options->GetInteger("verbosity_level");
+  hiopOutVerbosity _verb = (hiopOutVerbosity) _opt->GetInteger("verbosity_level");
   if(v>_verb) return;
   options.print(_f, msg);
 }
@@ -132,9 +136,9 @@ void hiopLogger::write(const char* msg, const hiopOptions& options,     hiopOutV
 void hiopLogger::write(const char* msg, const hiopNlpFormulation& nlp,  hiopOutVerbosity v, int loggerid)
 {
 #ifdef HIOP_USE_MPI
-  if(_master_rank != _nlp->get_rank()) return;
+  if(_master_rank != _my_rank) return;
 #endif
-  hiopOutVerbosity _verb = (hiopOutVerbosity) _nlp->options->GetInteger("verbosity_level");
+  hiopOutVerbosity _verb = (hiopOutVerbosity) _opt->GetInteger("verbosity_level");
   if(v>_verb) return;
   nlp.print(_f, msg);
 }
@@ -143,9 +147,9 @@ void hiopLogger::write(const char* msg, const hiopNlpFormulation& nlp,  hiopOutV
 void hiopLogger::printf(hiopOutVerbosity v, const char* format, ...)
 {
 #ifdef HIOP_USE_MPI
-  if(_master_rank != _nlp->get_rank()) return;
+  if(_master_rank != _my_rank) return;
 #endif
-  hiopOutVerbosity _verb = (hiopOutVerbosity) _nlp->options->GetInteger("verbosity_level");
+  hiopOutVerbosity _verb = (hiopOutVerbosity) _opt->GetInteger("verbosity_level");
   if(v>_verb) return;
 
   char label[16];label[0]='\0';
