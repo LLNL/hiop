@@ -50,6 +50,7 @@
 
 #include "hiopVector.hpp"
 #include "hiopResidual.hpp"
+#include "hiopResidualAugLagr.hpp"
 #include "hiopHessianLowRank.hpp"
 
 #include "hiopOptions.hpp"
@@ -83,6 +84,15 @@ void hiopLogger::write(const char* msg, const hiopMatrix& M, hiopOutVerbosity v,
 }
 
 void hiopLogger::write(const char* msg, const hiopResidual& r, hiopOutVerbosity v, int loggerid/*=0*/) 
+{
+#ifdef HIOP_USE_MPI
+  if(_master_rank != _my_rank) return;
+#endif
+  hiopOutVerbosity _verb = (hiopOutVerbosity) _opt->GetInteger("verbosity_level");
+  if(v>_verb) return;
+  r.print(_f,msg);
+}
+void hiopLogger::write(const char* msg, const hiopResidualAugLagr& r, hiopOutVerbosity v, int loggerid/*=0*/) 
 {
 #ifdef HIOP_USE_MPI
   if(_master_rank != _my_rank) return;

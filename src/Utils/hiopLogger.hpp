@@ -58,6 +58,7 @@ namespace hiop
 {
 class hiopVector;
 class hiopResidual;
+class hiopResidualAugLagr;
 class hiopIterate;
 class hiopMatrix;
 class hiopHessianLowRank;
@@ -91,6 +92,7 @@ public:
   /* outputs a vector. loggerid indicates which logger should be used, by default stdout*/
   void write(const char* msg, const hiopVector& vec,          hiopOutVerbosity v, int loggerid=0);
   void write(const char* msg, const hiopResidual& r,          hiopOutVerbosity v, int loggerid=0);
+  void write(const char* msg, const hiopResidualAugLagr& r,          hiopOutVerbosity v, int loggerid=0);
   void write(const char* msg, const hiopIterate& r,           hiopOutVerbosity v, int loggerid=0);
   void write(const char* msg, const hiopMatrix& M,            hiopOutVerbosity v, int loggerid=0);
 #ifdef HIOP_DEEPCHECKS
