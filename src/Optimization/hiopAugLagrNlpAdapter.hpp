@@ -124,7 +124,7 @@ public:
     bool eval_residuals(const long long& n, const double* x_in,
                         bool new_x, double *penalty, double* gradLagr);
     
-    /** Returns value of the user objective in the given point */
+    /** Objective function evaluation, this is the user objective function f(x) */
     bool eval_f_user(const long long& n, const double* x_in, bool new_x, double& obj_value);
 
 protected:

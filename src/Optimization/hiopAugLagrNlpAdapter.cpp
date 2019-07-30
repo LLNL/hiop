@@ -245,6 +245,7 @@ bool hiopAugLagrNlpAdapter::eval_f(const long long& n, const double* x_in, bool 
     eval_penalty(x_in, new_x, _penaltyFcn->local_data());
 
     // compute lam^t p(x)
+    assert(lambda->get_size() == _penaltyFcn->get_size());
     const double lagr_term = lambda->dotProductWith(*_penaltyFcn);
     
     // compute penalty term rho*||p(x)||^2
@@ -256,17 +257,10 @@ bool hiopAugLagrNlpAdapter::eval_f(const long long& n, const double* x_in, bool 
     runStats.tmEvalObj.stop();
     runStats.nEvalObj++;
 
-    //std::cout << "Evaluating objective function:" << std::endl;
-    //std::cout << "nlp_f: " << obj_nlp << std::endl;
-    //std::cout << "lagr term: " << lagr_term << std::endl;
-    //std::cout << "penalty term: " << penalty_term <<  std::endl;
-    //std::cout << "penalty: " << rho <<  std::endl;
-    //std::cout << "final f(x): " << obj_value <<  std::endl;
-
-
     return true;
 }
 
+/** Objective function evaluation, this is the user objective function f(x) */
 bool hiopAugLagrNlpAdapter::eval_f_user(const long long& n, const double* x_in, bool new_x, double& obj_value)
 {
     assert(n == n_vars + n_slacks);
@@ -323,7 +317,6 @@ bool hiopAugLagrNlpAdapter::eval_grad_Lagr(const long long& n, const double* x_i
     bret = nlp_in->eval_jac_g((Ipopt::Index)n_vars, x_in, new_x,
                               (Ipopt::Index)m_cons, nnz_jac, nullptr, nullptr, values);
     assert(bret);
-
 
     const double *lambda_data = lambda->local_data_const();
     /**************************************************/

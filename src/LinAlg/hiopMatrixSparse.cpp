@@ -1,5 +1,7 @@
 #include "hiopMatrixSparse.hpp"
 
+#include <cassert>
+
 namespace hiop
 {
 
@@ -73,6 +75,8 @@ void hiopMatrixSparse::timesVec(double beta,  double* y,
     // y += alpha*this*x
     for (int i = 0; i < nonzeroes; i++)
     {
+        assert(iRow[i] < nrows);
+        assert(jCol[i] < ncols);
         y[iRow[i]] += alpha * x[jCol[i]] * values[i];
     }
 }
@@ -91,6 +95,8 @@ void hiopMatrixSparse::transTimesVec(double beta,   double* y,
     // y += alpha*this^T*x
     for (int i = 0; i < nonzeroes; i++)
     {
+        assert(iRow[i] < nrows);
+        assert(jCol[i] < ncols);
         y[jCol[i]] += alpha * x[iRow[i]] * values[i];
     }
 }
