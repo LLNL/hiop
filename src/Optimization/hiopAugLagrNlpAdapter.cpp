@@ -253,7 +253,7 @@ bool hiopAugLagrNlpAdapter::eval_f(const long long& n, const double* x_in, bool 
 
     //f(x) + lam^t p(x) + rho ||p(x)||^2
     obj_value = obj_nlp + lagr_term + penalty_term;
-
+    
     runStats.tmEvalObj.stop();
     runStats.nEvalObj++;
 
@@ -318,26 +318,26 @@ bool hiopAugLagrNlpAdapter::eval_grad_Lagr(const long long& n, const double* x_i
                               (Ipopt::Index)m_cons, nnz_jac, nullptr, nullptr, values);
     assert(bret);
 
-    const double *lambda_data = lambda->local_data_const();
     /**************************************************/
     /**    Compute Lagrangian term contribution       */
+    /**     gradLagr = gradLagr + Jac' * lambda       */ 
     /**************************************************/
+    const double *lambda_data = lambda->local_data_const();
     //_penaltyFcn_jacobian->transTimesVec(beta, y, alpha, x)
     _penaltyFcn_jacobian->transTimesVec(1.0, gradLagr, 1.0, lambda_data);
 
-    
     //Add the Jacobian w.r.t the slack variables (_penaltyFcn_jacobian contains
     //only the jacobian w.r.t original x, we need to add Jac w.r.t slacks)
     //The structure of the La Jacobian is following (Note that Je, Ji
     //might be interleaved and not listed in order as shown below)
-    //       | Je  0  |
-    // Jac = |        |
-    //       | Ji  -I |
+    //       | Je  0  |           | Je'  Ji' |
+    // Jac = |        |   Jac' =  |          |
+    //       | Ji  -I |           |  0   -I  |
     for (long long i = 0; i<m_cons_ineq; i++)
     {
         gradLagr[n_vars + i] -= lambda_data[cons_ineq_mapping[i]];
     }
-
+    
     return true;
 }
 
@@ -364,6 +364,7 @@ bool hiopAugLagrNlpAdapter::eval_grad_f(const long long& n, const double* x_in, 
     const double *_penaltyFcn_data = _penaltyFcn->local_data_const();
     /**************************************************/
     /**    Compute penalty term contribution          */
+    /**  gradf = gradf + 2rho * Jac' * _penaltyFcn    */ 
     /**************************************************/
     //_penaltyFcn_jacobian->transTimesVec(beta, y, alpha, x)
     _penaltyFcn_jacobian->transTimesVec(1.0, gradf, 2*rho, _penaltyFcn_data);
@@ -372,9 +373,9 @@ bool hiopAugLagrNlpAdapter::eval_grad_f(const long long& n, const double* x_in, 
     //only the jacobian w.r.t original x, we need to add Jac w.r.t slacks)
     //The structure of the La Jacobian is following (Note that Je, Ji
     //might be interleaved and not listed in order as shown below)
-    //       | Je  0  |
-    // Jac = |        |
-    //       | Ji  -I |
+    //       | Je  0  |           | Je'  Ji' |
+    // Jac = |        |   Jac' =  |          |
+    //       | Ji  -I |           |  0   -I  |
     for (long long i = 0; i<m_cons_ineq; i++)
     {
         gradf[n_vars + i] -= 2*rho*_penaltyFcn_data[cons_ineq_mapping[i]];
