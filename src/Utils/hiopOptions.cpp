@@ -152,6 +152,12 @@ void hiopOptions::registerOptions()
 
     
   }
+
+
+  {
+  registerNumOption("rho0", 100., 1e-2, 1e6, "Initial penalty parameter rho (default 100.)");
+  registerIntOption("verbosity_level_major", 3, 0, 12, "Verbosity level: 0 no output (only errors), 1=0+warnings, 2=1 (reserved), 3=2+optimization output, 4=3+scalars; larger values explained in hiopLogger.hpp"); 
+  }
 }
 
 void hiopOptions::registerNumOption(const std::string& name, double defaultValue, double low, double upp, const char* description)

@@ -79,8 +79,11 @@ hiopSolveStatus hiopAugLagrSolver::run()
 
   //set initial guess of the multipliers and the penalty parameter
   //TODO hot start for lambda
-  _lam_curr->setToConstant(1.); nlp->set_lambda(_lam_curr);
-  _rho_curr = 100.;             nlp->set_rho(_rho_curr);
+  _lam_curr->setToConstant(1.);
+  nlp->set_lambda(_lam_curr);
+  
+  _rho_curr = nlp->options->GetNumeric("rho0");
+  nlp->set_rho(_rho_curr);
   
   nlp->runStats.tmStartingPoint.stop();
   
@@ -337,7 +340,7 @@ void hiopAugLagrSolver::updateLambda()
 void hiopAugLagrSolver::updateRho()
 {
     //compute new value of the penalty parameter
-    _rho_curr = std::max(10*_rho_curr, rho_max); //TODO
+    _rho_curr = std::min(10*_rho_curr, rho_max); //TODO
 
     //update the penalty parameter in the adapter class
     nlp->set_rho(_rho_curr);
