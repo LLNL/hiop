@@ -100,4 +100,44 @@ void hiopMatrixSparse::transTimesVec(double beta,   double* y,
         y[jCol[i]] += alpha * x[iRow[i]] * values[i];
     }
 }
+
+void hiopMatrixSparse::print(FILE* file, const char* msg/*=NULL*/, int max_elems/*=-1*/, int rank/*=-1*/) const 
+{
+  int myrank=0, numranks=1; 
+//#ifdef HIOP_USE_MPI
+//  if(rank>=0) {
+//    auto comm = MPI_COM_WORLD;
+//    int err = MPI_Comm_rank(comm, &myrank); assert(err==MPI_SUCCESS);
+//    err = MPI_Comm_size(comm, &numranks); assert(err==MPI_SUCCESS);
+//  }
+//#endif
+  if(myrank==rank || rank==-1) {
+    if(max_elems>nonzeroes) max_elems=nonzeroes;
+
+    if(NULL==msg) {
+      if(numranks>1)
+        fprintf(file, "matrix of size %lld %lld and nonzeros %lld, printing %d elems (on rank=%d)\n", nrows, ncols, nonzeroes, max_elems, myrank);
+      else
+        fprintf(file, "matrix of size %lld %lld and nonzeros %lld, printing %d elems\n", nrows, ncols, nonzeroes, max_elems);
+    } else {
+      fprintf(file, "%s ", msg);
+    }    
+
+    max_elems = max_elems>=0?max_elems:nonzeroes;
+    // using matlab indices
+    fprintf(file, "iRow=[");
+    for(int it=0; it<max_elems; it++)  fprintf(file, "%d ; ", iRow[it]+1);
+    fprintf(file, "];\n");
+    
+    fprintf(file, "jCol=[");
+    for(int it=0; it<max_elems; it++)  fprintf(file, "%d ; ", jCol[it]+1);
+    fprintf(file, "];\n");
+    
+    fprintf(file, "v=[");
+    for(int it=0; it<max_elems; it++)  fprintf(file, "%22.16e ; ", values[it]);
+    fprintf(file, "];\n");
+  }
+}
+
+
 }

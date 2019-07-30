@@ -90,6 +90,8 @@ public:
   /* pointer to the values */
   double* get_values() {return values;}
 
+  void print(FILE* file, const char* msg=NULL, int max_elems=-1, int rank=-1) const; 
+
 
 #ifdef HIOP_DEEPCHECKS
   /* check symmetry */
