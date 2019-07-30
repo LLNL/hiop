@@ -223,7 +223,7 @@ bool hiopAugLagrNlpAdapter::eval_penalty(const double *x_in, bool new_x, double 
 
 /** 
  * Objective function evaluation, this is the augmented lagrangian function
- * La(x,lambda,rho) = f(x) + lam^t p(x) + rho ||p(x)||^2.
+ * La(x,lambda,rho) = f(x) - lam^t p(x) + rho ||p(x)||^2.
  *
  * @param[in] n Number of variables in Augmented Lagrangian formulation
  * @param[in] x_in Variables consisting of original NLP variables and additional slacks
@@ -251,8 +251,8 @@ bool hiopAugLagrNlpAdapter::eval_f(const long long& n, const double* x_in, bool 
     // compute penalty term rho*||p(x)||^2
     const double penalty_term = rho * _penaltyFcn->dotProductWith(*_penaltyFcn);
 
-    //f(x) + lam^t p(x) + rho ||p(x)||^2
-    obj_value = obj_nlp + lagr_term + penalty_term;
+    //f(x) - lam^t p(x) + rho ||p(x)||^2
+    obj_value = obj_nlp - lagr_term + penalty_term;
     
     runStats.tmEvalObj.stop();
     runStats.nEvalObj++;
@@ -276,9 +276,9 @@ bool hiopAugLagrNlpAdapter::eval_f_user(const long long& n, const double* x_in, 
     return bret;
 }
 
-/** Gradient of the Lagrangian function L(x,s)
- *  d_L/d_x = df_x + J^T lam 
- *  d_L/d_s =  0   + (-I) lam[cons_ineq_mapping] 
+/** Gradient of the Lagrangian function L(x,s) = f(x) - lam^t p(x)
+ *  d_L/d_x = df_x - J^T lam 
+ *  d_L/d_s =  0   - (-I) lam[cons_ineq_mapping] 
  *  where J is the Jacobian of the original NLP constraints.
  *
  * @param[in] n Number of variables in Augmented Lagrangian formulation
@@ -320,11 +320,11 @@ bool hiopAugLagrNlpAdapter::eval_grad_Lagr(const long long& n, const double* x_i
 
     /**************************************************/
     /**    Compute Lagrangian term contribution       */
-    /**     gradLagr = gradLagr + Jac' * lambda       */ 
+    /**     gradLagr = gradLagr - Jac' * lambda       */ 
     /**************************************************/
     const double *lambda_data = lambda->local_data_const();
     //_penaltyFcn_jacobian->transTimesVec(beta, y, alpha, x)
-    _penaltyFcn_jacobian->transTimesVec(1.0, gradLagr, 1.0, lambda_data);
+    _penaltyFcn_jacobian->transTimesVec(1.0, gradLagr, -1.0, lambda_data);
 
     //Add the Jacobian w.r.t the slack variables (_penaltyFcn_jacobian contains
     //only the jacobian w.r.t original x, we need to add Jac w.r.t slacks)
@@ -335,15 +335,15 @@ bool hiopAugLagrNlpAdapter::eval_grad_Lagr(const long long& n, const double* x_i
     //       | Ji  -I |           |  0   -I  |
     for (long long i = 0; i<m_cons_ineq; i++)
     {
-        gradLagr[n_vars + i] -= lambda_data[cons_ineq_mapping[i]];
+        gradLagr[n_vars + i] += lambda_data[cons_ineq_mapping[i]];
     }
     
     return true;
 }
 
 /** Gradient of the Augmented Lagrangian function La(x,s)
- *  d_La/d_x = df_x + J^T lam + 2rho J^T p(x,s)
- *  d_La/d_s =  0   + (-I) lam[cons_ineq_mapping] + (-I)2rho*p[cons_ineq_mapping]
+ *  d_La/d_x = df_x - J^T lam + 2rho J^T p(x,s)
+ *  d_La/d_s =  0   - (-I) lam[cons_ineq_mapping] + (-I)2rho*p[cons_ineq_mapping]
  *  where J is the Jacobian of the original NLP constraints.
  *
  * @param[in] n Number of variables in Augmented Lagrangian formulation
@@ -358,6 +358,7 @@ bool hiopAugLagrNlpAdapter::eval_grad_f(const long long& n, const double* x_in, 
 
     /********************************************************/
     /** Add contribution of the gradient of the Lagrangian **/
+    /**          gradf = df_x - Jac' *  lam                **/ 
     /********************************************************/
     eval_grad_Lagr(n, x_in, new_x, gradf);
     
@@ -495,7 +496,7 @@ bool hiopAugLagrNlpAdapter::eval_residuals(const long long& n, const double* x_i
    
     /**************************************************/
     /**        Compute the Lagrangian term            */
-    /**     gradLagr := d_L/d_x = df_x + J^T lam      */
+    /**     gradLagr := d_L/d_x = df_x - J^T lam      */
     /**************************************************/
     //TODO: we could use new_x = false here, since the penalty is already evaluated
     //and cached in #_penaltyFcn

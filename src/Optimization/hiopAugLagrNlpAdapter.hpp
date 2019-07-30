@@ -48,13 +48,13 @@ public:
         { assert(m==0); return true; }
 
     /** Objective function evaluation, this is the augmented lagrangian function
-     * La(x,lambda,rho) = f(x) + lam^t p(x,s) + rho ||p(x,s)||^2
+     * La(x,lambda,rho) = f(x) - lam^t p(x,s) + rho ||p(x,s)||^2
      */
     virtual bool eval_f(const long long& n, const double* x_in, bool new_x, double& obj_value);
 
     /** Gradient of the augmented Lagrangian function 
-     *  d_La/d_x = df_x + J^T lam + 2rho J^T p(x,s)
-     *  d_La/d_s =  0   + (-I) lam[cons_ineq_mapping] + (-I)2rho*p[cons_ineq_mapping]
+     *  d_La/d_x = df_x - J^T lam + 2rho J^T p(x,s)
+     *  d_La/d_s =  0   - (-I) lam[cons_ineq_mapping] + (-I)2rho*p[cons_ineq_mapping]
      *  where p(x,s) is a penalty fcn and rho is the penalty param.
      * */
     virtual bool eval_grad_f(const long long& n, const double* x_in, bool new_x, double* gradf);

@@ -244,7 +244,7 @@ bool hiopAugLagrSolver::evalNlp(hiopVectorPar* iter,
  * Evaluates errors  of the Augmented lagrangian, namely
  * the feasibility error represented by the penalty function p(x,s)
  * and the optimality error represented by gradient of the Lagrangian
- * d_L = d_f(x) + J(x)^T lam
+ * d_L = d_f(x) - J(x)^T lam
  *
  * @param[in] current_iterate The latest iterate in (x,s)
  * @param[out] resid Residual class keeping information about the NLP errors
@@ -258,7 +258,7 @@ bool hiopAugLagrSolver::evalNlpErrors(const hiopVector *current_iterate,
   const double *_it_curr_data = _it_curr->local_data_const();
   bool new_x = true;
 
-  //evaluate the Adapter penalty fcn and gradient of the Lagrangian
+  //evaluate the AugLagr penalty fcn and gradient of the Lagrangian
   bool bret = nlp->eval_residuals(n, _it_curr_data, new_x, penaltyFcn, gradLagr);
   assert(bret);
 
@@ -318,7 +318,7 @@ void hiopAugLagrSolver::outputIteration()
 
 /**
  * Computes new value of the lagrange multipliers estimate
- * lam_k+1 = lam_k + penaltyFcn_k/rho_k
+ * lam_k+1 = lam_k - penaltyFcn_k/rho_k
  */
 void hiopAugLagrSolver::updateLambda()
 {
@@ -327,7 +327,7 @@ void hiopAugLagrSolver::updateLambda()
 
     // compute new value of the multipliers
     for (long long i=0; i<m; i++)
-        _lam_data[i] += penaltyFcn[i]/_rho_curr;
+        _lam_data[i] -= penaltyFcn[i]/_rho_curr;
 
     //update the multipliers in the adapter class
     nlp->set_lambda(_lam_curr);
@@ -340,7 +340,7 @@ void hiopAugLagrSolver::updateLambda()
 void hiopAugLagrSolver::updateRho()
 {
     //compute new value of the penalty parameter
-    _rho_curr = std::min(10*_rho_curr, rho_max); //TODO
+    _rho_curr = std::min(1.0*_rho_curr, rho_max); //TODO
 
     //update the penalty parameter in the adapter class
     nlp->set_rho(_rho_curr);
