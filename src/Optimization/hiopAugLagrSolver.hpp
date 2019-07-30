@@ -66,25 +66,27 @@ protected:
   //feasibility and optimality residuals
   hiopResidualAugLagr *residual; ///< residual norms 
 
-  //errors
-  double _err_feas0, _err_optim0; ///< initial error
-
   //internal flags related to the state of the solver
   hiopSolveStatus _solverStatus;
- 
-  // current status of the solver 
   int iter_num;        ///< iteration number
   int _n_accep_iters;  ///< number of encountered consecutive acceptable iterates
   double _f_nlp;       ///< current objective function value
+  double _err_feas0, _err_optim0; ///< initial errors
   double _err_feas, _err_optim; ///< current errors
 
-  //options and parameters //TODO use uppercase for the scalar constants
-  double eps_tol;       ///< abs tolerance for the NLP error
-  double eps_rtol;      ///< rel tolerance for the NLP error
+  //user options and parameters //TODO use uppercase for the scalar constants
+  double lambda0;       ///< initial value of the multipliers
+  double rho0;          ///< initial value of the penalty parameter
+  double eps_tol;       ///< abs tolerance for the NLP error (same for feas and optim)
+  double eps_rtol;      ///< rel tolerance for the NLP error (same for feas and optim)
   double eps_tol_accep; ///< acceptable tolerance (required at accep_n_it iterations)
   int max_n_it;        ///< maximum number of iterations
   int accep_n_it;      ///< acceptable number of iterations
-  double rho_max;      ///< max value of the penalty parameter
+  
+  // internal algorithm options
+  double alpha; ///< positive constant
+  double tol_feas; ///< required feasibility of the subproblem
+  double tol_optim; ///< required optimality tolerance of the subproblem
 };
 
 }

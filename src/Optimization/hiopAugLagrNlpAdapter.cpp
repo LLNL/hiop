@@ -16,15 +16,11 @@ namespace hiop
 
 hiopAugLagrNlpAdapter::hiopAugLagrNlpAdapter(NLP_CLASS_IN* nlp_in_):
     nlp_in(nlp_in_),
-    rho(100.0),
-    lambda(nullptr),
+    rho(-1), lambda(nullptr),
     _startingPoint(nullptr),
-    n_vars(0),
-    n_slacks(0),
-    m_cons(0),
-    m_cons_eq(0),
-    m_cons_ineq(0),
-    nnz_jac(0),
+    n_vars(-1), n_slacks(-1), m_cons(-1),
+    m_cons_eq(-1), m_cons_ineq(-1),
+    nnz_jac(-1),
     xl(nullptr),
     xu(nullptr),
     sl(nullptr),
@@ -96,6 +92,7 @@ bool hiopAugLagrNlpAdapter::initialize()
     /****************************************************************/
     /*  Analyze the original NLP and determine the slack vars count */
     /****************************************************************/
+    m_cons_eq = m_cons_ineq = 0;
     for(Ipopt::Index i=0; i<m_nlp; i++) {
     if(gl_nlp[i]==gu_nlp[i]) m_cons_eq++;
     else                     m_cons_ineq++;
