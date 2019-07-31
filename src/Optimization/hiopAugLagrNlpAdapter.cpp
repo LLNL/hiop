@@ -17,7 +17,7 @@ namespace hiop
 hiopAugLagrNlpAdapter::hiopAugLagrNlpAdapter(NLP_CLASS_IN* nlp_in_):
     nlp_in(nlp_in_),
     rho(-1), lambda(nullptr),
-    _startingPoint(nullptr),
+    startingPoint(nullptr),
     n_vars(-1), n_slacks(-1), m_cons(-1),
     m_cons_eq(-1), m_cons_ineq(-1),
     nnz_jac(-1),
@@ -56,7 +56,7 @@ hiopAugLagrNlpAdapter::~hiopAugLagrNlpAdapter()
     if(cons_ineq_mapping)     delete cons_ineq_mapping;
     if(c_rhs)                 delete c_rhs;
     if(lambda)                delete lambda;
-    if(_startingPoint)             delete _startingPoint;
+    if(startingPoint)             delete startingPoint;
     if(_penaltyFcn)              delete _penaltyFcn;
     if(_penaltyFcn_jacobian)      delete _penaltyFcn_jacobian;
     if(log)      delete log;
@@ -108,7 +108,7 @@ bool hiopAugLagrNlpAdapter::initialize()
 
     //allocate space 
     lambda = new hiopVectorPar(m_cons);
-    _startingPoint = new hiopVectorPar(n_vars+n_slacks);
+    startingPoint = new hiopVectorPar(n_vars+n_slacks);
     _penaltyFcn = new hiopVectorPar(m_cons);
     _penaltyFcn_jacobian = new hiopMatrixSparse(m_cons, n_vars, nnz_jac);
     sl = new hiopVectorPar(m_cons_ineq);
@@ -387,7 +387,7 @@ bool hiopAugLagrNlpAdapter::eval_grad_f(const long long& n, const double* x_in, 
 
 /**
  * The get method returns the value of the starting point x0
- * which was set from outside by the Solver and stored in #_startingPoint.
+ * which was set from outside by the Solver and stored in #startingPoint.
  * Motivation: every major iteration we want to reuse the previous
  * solution x_k, not start from the user point every time!!!
  */
@@ -395,13 +395,13 @@ bool hiopAugLagrNlpAdapter::get_starting_point(const long long &global_n, double
 {
     assert(global_n == n_vars+n_slacks);
 
-    memcpy(x0, _startingPoint->local_data_const(), global_n*sizeof(double));
+    memcpy(x0, startingPoint->local_data_const(), global_n*sizeof(double));
     return true;
 }
 
 /**
  * The set method stores the provided starting point into the private
- * member #_startingPoint
+ * member #startingPoint
  * Motivation: every major iteration we want to reuse the previous
  * solution x_k, not start from the user point every time!!!
  */
@@ -409,7 +409,7 @@ bool hiopAugLagrNlpAdapter::set_starting_point(const long long &global_n, const 
 {
     assert(global_n == n_vars+n_slacks);
 
-    memcpy(_startingPoint->local_data(), x0_in, global_n*sizeof(double));
+    memcpy(startingPoint->local_data(), x0_in, global_n*sizeof(double));
     return true;
 }
 

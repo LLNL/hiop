@@ -74,7 +74,7 @@ public:
 
     /**
      * The get method returns the value of the starting point x0
-     * which was set from outside by the Solver and stored in #_startingPoint.
+     * which was set from outside by the Solver and stored in #startingPoint.
      * Motivation: every major iteration we want to reuse the previous
      * solution x_k, not start from the user point every time!!!
      */
@@ -83,7 +83,7 @@ public:
 public:
     /**
      * The set method stores the provided starting point by the solver
-     * into the private member #_startingPoint
+     * into the private member #startingPoint
      * Motivation: every major iteration we want to reuse the previous
      * solution x_k, not start from the user point every time!!!
      */
@@ -145,7 +145,7 @@ protected:
     //specific variables of the augmented lagrangian formulation
     double rho; ///< penalty parameter for the quadratic penalty term ||p(x,s)||^2
     hiopVectorPar *lambda; ///< Lagrange multipliers
-    hiopVectorPar *_startingPoint; //< stored initial guess (including slack)
+    hiopVectorPar *startingPoint; //< stored initial guess (including slack)
 
     //various sizes and properties of the original NLP problem
     long long n_vars; ///< number of primal variables x (original NLP problem)
