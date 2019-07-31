@@ -140,11 +140,20 @@ hiopSolveStatus hiopAugLagrSolver::run()
     nlp->runStats.tmSolverInternal.start();  
     hiopNlpDenseConstraints subproblem(*nlp);
 
+    //required tolerance for the subproblem, hiop evaluates error scaled by avg. norm of the duals
+    subproblem.options->SetNumericValue("tolerance", _eps_tol_optim); 
+    //subproblem.options->SetNumericValue("rel_tolerance", 1e-2);
+    //subproblem.options->SetNumericValue("acceptable_tolerance", 1e-4);
+    //subproblem.options->SetIntegerValue("acceptable_iterations", 10);
+    //subproblem.options->SetIntegerValue("max_iter", 500);
+    
     subproblem.options->SetStringValue("fixed_var", "relax"); //remove fails
     subproblem.options->SetIntegerValue("verbosity_level", 0);
-    subproblem.options->SetNumericValue("tolerance", _eps_tol_optim); //required tolerance for the subproblem
-    //subproblem.options->SetStringValue("dualsInitialization",  "zero");
-    //subproblem.options->SetIntegerValue("max_iter", 2);
+    
+    //subproblem.options->SetNumericValue("sigma0", 10);
+    //subproblem.options->SetStringValue("sigma_update_strategy",  "sigma0"); //sty, sty_inv, snrm_ynrm, sty_srnm_ynrm
+    subproblem.options->SetIntegerValue("secant_memory_len", 6);
+    //subproblem.options->SetStringValue("dualsInitialization",  "zero"); //lsq
 
     hiopAlgFilterIPM solver(&subproblem);
     hiopSolveStatus status = solver.run();
