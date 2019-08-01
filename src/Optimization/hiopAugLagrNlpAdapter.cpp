@@ -161,13 +161,23 @@ bool hiopAugLagrNlpAdapter::initialize()
     return true;
 }
 
+    /***********************************************************************
+     * HiOP Interface (overloaded from hip::hiopInterfaceDenseConstraints) *
+     ***********************************************************************/                        
+/**
+ * This function returns info about the Augmented Lagrangian
+ * */
+bool hiopAugLagrNlpAdapter::get_prob_sizes(long long& n, long long& m)
+{ n=n_vars+n_slacks; m=0; return true; }
 
 /**
- * This functions transforms the decision variables of the original NLP problem
- * into the variables of the Augmented lagrangian formulation, including the slacks.
- * The new variable vector is xlow <= x <= xup where x consists of [x_nlp, s]
+ * This function returns info about vables of the Augmented Lagrangian
+ * formulation, including the slacks.
+ * The new variable vector is xlow <= x <= xup where x consists of the
+ * original nlp variables and new slack variables x = [x_nlp, s]
  * */
-bool hiopAugLagrNlpAdapter::get_vars_info(const long long& n, double *xlow, double* xupp, NonlinearityType* type)
+bool hiopAugLagrNlpAdapter::get_vars_info(const long long& n, double *xlow,
+     double* xupp, NonlinearityType* type)
 {
     assert(n == n_vars + n_slacks);
 
@@ -227,7 +237,8 @@ bool hiopAugLagrNlpAdapter::eval_penalty(const double *x_in, bool new_x, double 
  * @param[in] new_x
  * @param[out] obj_value Returns Augmented lagrangian value La(x, lambda, rho)
  * */
-bool hiopAugLagrNlpAdapter::eval_f(const long long& n, const double* x_in, bool new_x, double& obj_value)
+bool hiopAugLagrNlpAdapter::eval_f(const long long& n, const double* x_in,
+     bool new_x, double& obj_value)
 {
     assert(n == n_vars + n_slacks);
 
@@ -258,7 +269,8 @@ bool hiopAugLagrNlpAdapter::eval_f(const long long& n, const double* x_in, bool 
 }
 
 /** Objective function evaluation, this is the user objective function f(x) */
-bool hiopAugLagrNlpAdapter::eval_f_user(const long long& n, const double* x_in, bool new_x, double& obj_value)
+bool hiopAugLagrNlpAdapter::eval_f_user(const long long& n, const double* x_in,
+     bool new_x, double& obj_value)
 {
     assert(n == n_vars + n_slacks);
 
@@ -283,7 +295,8 @@ bool hiopAugLagrNlpAdapter::eval_f_user(const long long& n, const double* x_in, 
  * @param[in] new_x
  * @param[out] gradLagr Returns gradient of the Lagrangian function L(x, lambda)
  * */
-bool hiopAugLagrNlpAdapter::eval_grad_Lagr(const long long& n, const double* x_in, bool new_x, double* gradLagr)
+bool hiopAugLagrNlpAdapter::eval_grad_Lagr(const long long& n, const double* x_in,
+     bool new_x, double* gradLagr)
 {
     //TODO new_x
     if (true) eval_penalty(x_in, new_x, _penaltyFcn->local_data());
@@ -341,14 +354,16 @@ bool hiopAugLagrNlpAdapter::eval_grad_Lagr(const long long& n, const double* x_i
 /** Gradient of the Augmented Lagrangian function La(x,s)
  *  d_La/d_x = df_x - J^T lam + 2rho J^T p(x,s)
  *  d_La/d_s =  0   - (-I) lam[cons_ineq_mapping] + (-I)2rho*p[cons_ineq_mapping]
- *  where J is the Jacobian of the original NLP constraints.
+ *  where p(x,s) is a penalty fcn and rho is the penalty param and
+ *  J is the Jacobian of the original NLP constraints.
  *
  * @param[in] n Number of variables in Augmented Lagrangian formulation
  * @param[in] x_in Variables consisting of original NLP variables and additional slacks
  * @param[in] new_x
  * @param[out] gradf Returns gradient of the Augmented Lagrangian function La(x, lambda, rho)
  * */
-bool hiopAugLagrNlpAdapter::eval_grad_f(const long long& n, const double* x_in, bool new_x, double* gradf)
+bool hiopAugLagrNlpAdapter::eval_grad_f(const long long& n, const double* x_in,
+     bool new_x, double* gradf)
 {
     
     runStats.tmEvalGrad_f.start();
@@ -399,6 +414,71 @@ bool hiopAugLagrNlpAdapter::get_starting_point(const long long &global_n, double
     return true;
 }
 
+    /***********************************************************************
+     *            IPOPT interface (overloaded from Ipopt::TNLP)            *
+     ***********************************************************************/                        
+bool hiopAugLagrNlpAdapter::get_nlp_info(Index& n, Index& m,
+     Index& nnz_jac_g, Index& nnz_h_lag, IndexStyleEnum& index_style)
+{
+    return true;
+}
+
+bool hiopAugLagrNlpAdapter::get_bounds_info(Index   n, Number* x_l, Number* x_u,
+     Index   m, Number* g_l, Number* g_u)
+{
+    return true;
+}
+
+bool hiopAugLagrNlpAdapter::get_starting_point( Index   n, bool    init_x, Number* x,
+     bool    init_z, Number* z_L, Number* z_U,
+     Index   m, bool    init_lambda, Number* lambda )
+{
+    return true;
+}
+
+bool hiopAugLagrNlpAdapter::eval_f(Index n, const Number* x,
+     bool new_x, Number& obj_value)
+{
+    return true;
+}
+
+bool hiopAugLagrNlpAdapter::eval_grad_f(Index n, const Number* x,
+     bool new_x, Number* grad_f)
+{
+    return true;
+}
+
+bool hiopAugLagrNlpAdapter::eval_g(Index n, const Number* x, bool new_x,
+     Index m, Number* g)
+{
+    return true;
+}
+
+bool hiopAugLagrNlpAdapter::eval_jac_g(Index n, const Number* x, bool new_x,
+     Index m, Index nele_jac,
+     Index* iRow, Index* jCol, Number* values)
+{
+    return true;
+}
+
+bool hiopAugLagrNlpAdapter::eval_h(Index n, const Number* x, bool new_x, Number obj_factor,
+     Index m, const Number* lambda, bool new_lambda,
+     Index nele_hess, Index* iRow, Index* jCol, Number* values)
+{
+    return true;
+}
+
+void hiopAugLagrNlpAdapter::finalize_solution(SolverReturn status, Index n,
+     const Number* x, const Number* z_L,
+     const Number* z_U, Index m, const Number* g,
+     const Number* lambda, Number obj_value,
+     const IpoptData* ip_data,
+     IpoptCalculatedQuantities* ip_cq)
+{
+}
+    /***********************************************************************
+     *     Other routines providing access to the internal data            *
+     ***********************************************************************/                        
 /**
  * The set method stores the provided starting point into the private
  * member #startingPoint
