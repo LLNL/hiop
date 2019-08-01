@@ -1,13 +1,11 @@
 #ifndef HIOP_AUGLAGRNLP_ADAPTER_HPP
 #define HIOP_AUGLAGRNLP_ADAPTER_HPP
 
-#include "hiopInterface.hpp"
 #include "hiopVector.hpp"
-
+#include "hiopMatrixSparse.hpp"
 #include "hiopRunStats.hpp"
 #include "hiopLogger.hpp"
 #include "hiopOptions.hpp"
-#include "hiopMatrixSparse.hpp"
 
 //TODO
 #define NLP_CLASS_IN Ipopt::TNLP
@@ -15,15 +13,9 @@
 //typedef Ipopt::TNLP NLP_CLASS_IN;
 //using NLP_CLASS_IN = IPOPT::TNLP;
 
-//TODO
-#include "IpIpoptCalculatedQuantities.hpp"
-#include "IpIpoptApplication.hpp"
-#include "IpTNLPAdapter.hpp"
-#include "IpOrigIpoptNLP.hpp"
+#include "hiopInterface.hpp"
 #include "IpTNLP.hpp"
-#include "IpIpoptData.hpp"
 
-//TODO
 using namespace Ipopt;
 
 namespace hiop

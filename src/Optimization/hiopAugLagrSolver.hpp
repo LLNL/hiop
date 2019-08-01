@@ -1,8 +1,8 @@
 #ifndef HIOP_AUGLAGR_SOLVER_HPP
 #define HIOP_AUGLAGR_SOLVER_HPP
 
-
-#include "hiopResidualAugLagr.hpp"
+#include "hiopAugLagrNlpAdapter.hpp"
+#include "hiopAugLagrSubproblem.hpp"
 
 namespace hiop
 {
@@ -55,6 +55,7 @@ private:
 protected:
   
   hiopAugLagrNlpAdapter* nlp; ///< Representation of the Aug Lagr. problem
+  hiopAugLagrSubproblem subproblemSolver; ///< Solver for the Aug. Lagr. subproblem
 
   //Augmented Lagrangian problem variables
   long long n_vars; ///< number of variables

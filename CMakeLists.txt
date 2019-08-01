@@ -102,6 +102,7 @@ install(FILES src/Interface/hiopInterface.hpp
               src/Optimization/hiopAugLagrNlpAdapter.hpp
               src/Optimization/hiopAugLagrSolver.hpp
               src/Optimization/hiopResidualAugLagr.hpp
+              src/Optimization/hiopAugLagrSubproblem.hpp
 	      src/LinAlg/hiopVector.hpp
 	      src/LinAlg/hiopMatrix.hpp
               src/LinAlg/hiopMatrixSparse.hpp

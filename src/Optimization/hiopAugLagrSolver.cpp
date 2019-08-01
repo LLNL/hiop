@@ -1,7 +1,5 @@
 #include "hiopAugLagrSolver.hpp"
-#include "hiopAugLagrNlpAdapter.hpp"
-#include "hiopNlpFormulation.hpp"
-#include "hiopAlgFilterIPM.hpp"
+#include "hiopResidualAugLagr.hpp"
 
 #include <algorithm>    // std::max
 
@@ -11,6 +9,7 @@ namespace hiop
 
 hiopAugLagrSolver::hiopAugLagrSolver(NLP_CLASS_IN* nlp_in_) 
   : nlp(new hiopAugLagrNlpAdapter(nlp_in_)),
+    subproblemSolver(nlp),
     n_vars(-1),m_cons(-1),
     _it_curr(nullptr),
     _lam_curr(nullptr),
@@ -61,6 +60,9 @@ hiopSolveStatus hiopAugLagrSolver::run()
   reloadOptions();
   reInitializeNlpObjects();
   resetSolverStatus();
+
+  nlp->options->SetStringValue("subproblem_solver", "hiop");
+  subproblemSolver.initialize();
 
   _solverStatus = NlpSolve_SolveNotCalled;
   
@@ -135,38 +137,17 @@ hiopSolveStatus hiopAugLagrSolver::run()
 
     
     /****************************************************
-     * Solve the AL subproblem by calling HiOP or Ipopt
+     * Solve the AL subproblem
      ***************************************************/
+    subproblemSolver.setTolerance(_eps_tol_optim);
+    
     nlp->runStats.tmSolverInternal.start();  
-    hiopNlpDenseConstraints subproblem(*nlp);
-
-    //required tolerance for the subproblem, hiop evaluates error scaled by avg. norm of the duals
-    subproblem.options->SetNumericValue("tolerance", _eps_tol_optim); 
-    //subproblem.options->SetNumericValue("rel_tolerance", 1e-2);
-    //subproblem.options->SetNumericValue("acceptable_tolerance", 1e-4);
-    //subproblem.options->SetIntegerValue("acceptable_iterations", 10);
-    //subproblem.options->SetIntegerValue("max_iter", 500);
-    
-    subproblem.options->SetStringValue("fixed_var", "relax"); //remove fails
-    subproblem.options->SetIntegerValue("verbosity_level", 0);
-    
-    //subproblem.options->SetNumericValue("sigma0", 10);
-    //subproblem.options->SetStringValue("sigma_update_strategy",  "sigma0"); //sty, sty_inv, snrm_ynrm, sty_srnm_ynrm
-    subproblem.options->SetIntegerValue("secant_memory_len", 6);
-    //subproblem.options->SetStringValue("dualsInitialization",  "zero"); //lsq
-
-    hiopAlgFilterIPM solver(&subproblem);
-    hiopSolveStatus status = solver.run();
-    std::cout << "Status " << status << " ";
-
+    subproblemSolver.run(); 
     nlp->runStats.tmSolverInternal.stop();
-    //solver.getObjective(); //AL fcn, not user objective
-    
-    // update the current iterate, used as x0 for the next subproblem
-    solver.getSolution(_it_curr->local_data());
-    //TODO: save also the IPM duals and do the warm start
-    
-    
+
+    subproblemSolver.getSolution(_it_curr->local_data());
+
+
     nlp->log->printf(hovIteration, "Iter[%d] -> full iterate:", _iter_num);
     nlp->log->write("", *_it_curr, hovIteration);
     nlp->log->write("", *_lam_curr, hovIteration);
@@ -238,6 +219,7 @@ hiopSolveStatus hiopAugLagrSolver::run()
 
   return _solverStatus;
 }
+
 
 void hiopAugLagrSolver::reloadOptions()
 {

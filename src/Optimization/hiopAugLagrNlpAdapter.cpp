@@ -1,5 +1,4 @@
 #include "hiopAugLagrNlpAdapter.hpp"
-#include "hiopLogger.hpp"
 
 #ifdef HIOP_USE_MPI
 #include "mpi.h"
@@ -188,8 +187,11 @@ bool hiopAugLagrNlpAdapter::get_vars_info(const long long& n, double *xlow,
     su->copyTo(xupp + n_vars);
 
     //set variable types (x - nonlinear, s - linear)
-    for(long long i=0; i<n_vars; i++)  type[i] = hiopNonlinear;
-    for(long long i=n_vars; i<n; i++)  type[i] = hiopLinear;
+    if (type != nullptr)
+    {
+      for(long long i=0; i<n_vars; i++)  type[i] = hiopNonlinear;
+      for(long long i=n_vars; i<n; i++)  type[i] = hiopLinear;
+    }
 
     return true;
 }
@@ -420,37 +422,69 @@ bool hiopAugLagrNlpAdapter::get_starting_point(const long long &global_n, double
 bool hiopAugLagrNlpAdapter::get_nlp_info(Index& n, Index& m,
      Index& nnz_jac_g, Index& nnz_h_lag, IndexStyleEnum& index_style)
 {
+    //If n,m are passed directly to get_prob_size() we get an error because
+    //the n,m are implicitly converted from Index (aka int) to long long,
+    //which exists only as a temporary rvalue.
+    //  error: invalid initialization of non-const reference of type 'long long int&'
+    //  from an rvalue of type 'long long int'
+    //       get_prob_sizes(n, m);
+         
+    //hiop::hiopInterfaceDenseConstraints
+    long long n_, m_;
+    get_prob_sizes(n_, m_);
+    n = n_; m = m_;
+
+    nnz_jac_g = 0;
+    nnz_h_lag = 0; //TODO full Hessian
+    index_style = TNLP::C_STYLE;
     return true;
 }
 
-bool hiopAugLagrNlpAdapter::get_bounds_info(Index   n, Number* x_l, Number* x_u,
+bool hiopAugLagrNlpAdapter::get_bounds_info(Index n, Number* x_l, Number* x_u,
      Index   m, Number* g_l, Number* g_u)
 {
+    //hiop::hiopInterfaceDenseConstraints
+    get_vars_info((long long)n, (double*) x_l, (double*) x_u, nullptr);
+
+    assert(m==0);
     return true;
 }
 
-bool hiopAugLagrNlpAdapter::get_starting_point( Index   n, bool    init_x, Number* x,
-     bool    init_z, Number* z_L, Number* z_U,
-     Index   m, bool    init_lambda, Number* lambda )
+bool hiopAugLagrNlpAdapter::get_starting_point( Index n, bool init_x, Number* x,
+     bool init_z, Number* z_L, Number* z_U,
+     Index m, bool init_lambda, Number* lambda )
 {
+    //hiop::hiopInterfaceDenseConstraints
+    get_starting_point((long long) n, (double*) x);
+
+    assert(init_z == false);
+    assert(init_lambda == false);
     return true;
 }
 
 bool hiopAugLagrNlpAdapter::eval_f(Index n, const Number* x,
      bool new_x, Number& obj_value)
 {
+    //hiop::hiopInterfaceDenseConstraints
+    eval_f((long long) n, (double*) x, new_x, obj_value);
+    //obj_value: this is ok because 'Number' is alias for 'double'
+
     return true;
 }
 
 bool hiopAugLagrNlpAdapter::eval_grad_f(Index n, const Number* x,
      bool new_x, Number* grad_f)
 {
+    //hiop::hiopInterfaceDenseConstraints
+    eval_grad_f((long long) n, (double *)x, new_x, (double *) grad_f);
+    
     return true;
 }
 
 bool hiopAugLagrNlpAdapter::eval_g(Index n, const Number* x, bool new_x,
      Index m, Number* g)
 {
+    assert(m == 0);
     return true;
 }
 
@@ -458,6 +492,7 @@ bool hiopAugLagrNlpAdapter::eval_jac_g(Index n, const Number* x, bool new_x,
      Index m, Index nele_jac,
      Index* iRow, Index* jCol, Number* values)
 {
+    assert(m == 0);
     return true;
 }
 
@@ -465,6 +500,7 @@ bool hiopAugLagrNlpAdapter::eval_h(Index n, const Number* x, bool new_x, Number 
      Index m, const Number* lambda, bool new_lambda,
      Index nele_hess, Index* iRow, Index* jCol, Number* values)
 {
+    //hiop::hiopInterfaceDenseConstraints
     return true;
 }
 
@@ -475,6 +511,7 @@ void hiopAugLagrNlpAdapter::finalize_solution(SolverReturn status, Index n,
      const IpoptData* ip_data,
      IpoptCalculatedQuantities* ip_cq)
 {
+    return;
 }
     /***********************************************************************
      *     Other routines providing access to the internal data            *
