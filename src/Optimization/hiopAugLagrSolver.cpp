@@ -61,7 +61,7 @@ hiopSolveStatus hiopAugLagrSolver::run()
   reInitializeNlpObjects();
   resetSolverStatus();
 
-  nlp->options->SetStringValue("subproblem_solver", "hiop");
+  nlp->options->SetStringValue("subproblem_solver", "ipopt");
   subproblemSolver.initialize();
 
   _solverStatus = NlpSolve_SolveNotCalled;
@@ -224,7 +224,7 @@ hiopSolveStatus hiopAugLagrSolver::run()
 void hiopAugLagrSolver::reloadOptions()
 {
   // initial value of the multipliers and the penalty
-  _LAMBDA0= 1.0; //TODO: nlp->options->GetNumeric("lambda0");
+  _LAMBDA0 = nlp->options->GetNumeric("lambda0");
   _RHO0 = nlp->options->GetNumeric("rho0");
 
   //user options

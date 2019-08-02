@@ -136,6 +136,9 @@ hiopSolveStatus hiopAugLagrSubproblem::run()
 {
   solverStatus = NlpSolve_Pending;
 
+
+  std::cout << "Tolerance set to " << _EPS_TOL_OPTIM << std::endl;
+
   if(subproblem->options->GetString("subproblem_solver")=="ipopt")
     solverStatus = solveSubproblem_ipopt();
   else if(subproblem->options->GetString("subproblem_solver")=="hiop")

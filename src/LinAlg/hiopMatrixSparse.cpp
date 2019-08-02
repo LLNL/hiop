@@ -101,6 +101,12 @@ void hiopMatrixSparse::transTimesVec(double beta,   double* y,
     }
 }
 
+///** this' * this */
+//void hiopMatrixSparse::transTimesMat()
+//{
+//
+//}
+
 void hiopMatrixSparse::print(FILE* file, const char* msg/*=NULL*/, int max_elems/*=-1*/, int rank/*=-1*/) const 
 {
   int myrank=0, numranks=1; 

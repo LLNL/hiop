@@ -155,7 +155,8 @@ void hiopOptions::registerOptions()
 
 
   {
-  registerNumOption("rho0", 100., 1e-2, 1e6, "Initial penalty parameter rho (default 100.)");
+  registerNumOption("rho0", 100., 0., 1e6, "Initial penalty parameter rho (default 100.)");
+  registerNumOption("lambda0", 1., 0., 1e6, "Initial value of the Lagrange multipliers (default 1.)");
   registerIntOption("verbosity_level_major", 3, 0, 12, "Verbosity level: 0 no output (only errors), 1=0+warnings, 2=1 (reserved), 3=2+optimization output, 4=3+scalars; larger values explained in hiopLogger.hpp"); 
   vector<string> range(2); range[0]="hiop"; range[1]="ipopt";
   registerStrOption("subproblem_solver", "hiop", range, "Solver used to solve the Augmented Lagrangian subproblem (default hiop)");

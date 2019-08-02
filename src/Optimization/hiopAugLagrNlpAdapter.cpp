@@ -9,6 +9,7 @@
 #include <stdlib.h>     /* exit, EXIT_FAILURE */
 #include <cstring>      // memcpy
 #include <cassert>
+#include <iostream>
 
 namespace hiop
 {
@@ -149,13 +150,13 @@ bool hiopAugLagrNlpAdapter::initialize()
     delete gl;
     delete gu;
 
-    //std::cout << "Initialized AugLagrNlpAdapter with the following values:" << std::endl;
-    //std::cout << "n_vars " << n_vars << std::endl;
-    //std::cout << "n_slacks " << n_slacks << std::endl;
-    //std::cout << "m_cons " << m_cons << std::endl;
-    //std::cout << "m_cons_eq " << m_cons_eq << std::endl;
-    //std::cout << "m_cons_ineq " << m_cons_ineq << std::endl;
-    //std::cout << "nnz_jac " << nnz_jac << std::endl;
+    std::cout << "Initialized AugLagrNlpAdapter with the following values:" << std::endl;
+    std::cout << "n_vars " << n_vars << std::endl;
+    std::cout << "n_slacks " << n_slacks << std::endl;
+    std::cout << "m_cons " << m_cons << std::endl;
+    std::cout << "m_cons_eq " << m_cons_eq << std::endl;
+    std::cout << "m_cons_ineq " << m_cons_ineq << std::endl;
+    std::cout << "nnz_jac " << nnz_jac << std::endl;
 
     return true;
 }
@@ -190,7 +191,7 @@ bool hiopAugLagrNlpAdapter::get_vars_info(const long long& n, double *xlow,
     if (type != nullptr)
     {
       for(long long i=0; i<n_vars; i++)  type[i] = hiopNonlinear;
-      for(long long i=n_vars; i<n; i++)  type[i] = hiopLinear;
+      for(long long i=n_vars; i<n; i++)  type[i] = hiopNonlinear;
     }
 
     return true;
@@ -206,7 +207,7 @@ bool hiopAugLagrNlpAdapter::get_vars_info(const long long& n, double *xlow,
 bool hiopAugLagrNlpAdapter::eval_penalty(const double *x_in, bool new_x, double *penalty_data)
 {
     const double *rhs_data = c_rhs->local_data_const();
-    const double *slacks  = x_in + n_vars;
+    const double *slacks  = &x_in[n_vars];
 
     //evaluate the original NLP constraints
     bool bret = nlp_in->eval_g((Ipopt::Index)n_vars, x_in, new_x,
@@ -222,6 +223,7 @@ bool hiopAugLagrNlpAdapter::eval_penalty(const double *x_in, bool new_x, double 
     
     //adjust inequality constraints
     // c(x) - s
+    assert(n_slacks == m_cons_ineq);
     for (long long i = 0; i<m_cons_ineq; i++)
     {
         penalty_data[cons_ineq_mapping[i]] -= slacks[i]; 
@@ -336,8 +338,11 @@ bool hiopAugLagrNlpAdapter::eval_grad_Lagr(const long long& n, const double* x_i
     /**************************************************/
     const double *lambda_data = lambda->local_data_const();
     //_penaltyFcn_jacobian->transTimesVec(beta, y, alpha, x)
-    _penaltyFcn_jacobian->transTimesVec(1.0, gradLagr, -1.0, lambda_data);
+    assert(_penaltyFcn_jacobian->m() == m_cons);
+    assert(_penaltyFcn_jacobian->n() == n_vars);
 
+    _penaltyFcn_jacobian->transTimesVec(1.0, gradLagr, -1.0, lambda_data);
+    
     //Add the Jacobian w.r.t the slack variables (_penaltyFcn_jacobian contains
     //only the jacobian w.r.t original x, we need to add Jac w.r.t slacks)
     //The structure of the La Jacobian is following (Note that Je, Ji
@@ -347,6 +352,7 @@ bool hiopAugLagrNlpAdapter::eval_grad_Lagr(const long long& n, const double* x_i
     //       | Ji  -I |           |  0   -I  |
     for (long long i = 0; i<m_cons_ineq; i++)
     {
+        // gradLagr(n_vars:end) = 0 - (-I) * lambda_ineq
         gradLagr[n_vars + i] += lambda_data[cons_ineq_mapping[i]];
     }
     
@@ -379,7 +385,7 @@ bool hiopAugLagrNlpAdapter::eval_grad_f(const long long& n, const double* x_in,
     const double *_penaltyFcn_data = _penaltyFcn->local_data_const();
     /**************************************************/
     /**    Compute penalty term contribution          */
-    /**  gradf = gradf + 2rho * Jac' * _penaltyFcn    */ 
+    /**  gradf = gradf + 2rho * Jac' * _penaltyFcn    */
     /**************************************************/
     //_penaltyFcn_jacobian->transTimesVec(beta, y, alpha, x)
     _penaltyFcn_jacobian->transTimesVec(1.0, gradf, 2*rho, _penaltyFcn_data);
@@ -393,7 +399,7 @@ bool hiopAugLagrNlpAdapter::eval_grad_f(const long long& n, const double* x_in,
     //       | Ji  -I |           |  0   -I  |
     for (long long i = 0; i<m_cons_ineq; i++)
     {
-        gradf[n_vars + i] -= 2*rho*_penaltyFcn_data[cons_ineq_mapping[i]];
+       gradf[n_vars + i] -= 2*rho*_penaltyFcn_data[cons_ineq_mapping[i]];
     }
 
     runStats.tmEvalGrad_f.stop();
@@ -459,6 +465,7 @@ bool hiopAugLagrNlpAdapter::get_starting_point( Index n, bool init_x, Number* x,
 
     assert(init_z == false);
     assert(init_lambda == false);
+    assert(m==0);
     return true;
 }
 
@@ -543,47 +550,10 @@ bool hiopAugLagrNlpAdapter::get_user_starting_point(const long long &global_n, d
                                            false, nullptr, nullptr,
                                            (Ipopt::Index)m_cons, false, nullptr);
     
-    //if no user point provided, set it in between bounds,
-    //or close to the bound if bounded only from one side
-    //if (!bret)
-    //{
-    //    const double* xl_ = xl->local_data_const();
-    //    const double* xu_ = xu->local_data_const();
-    //    for (long long i = 0; i < n_vars; i++)
-    //    {
-    //        if (xl_[i] < -1e20)
-    //            if(xu_[i] > 1e20)
-    //                x0[i] = 0.; //unbounded
-    //            else
-    //                x0[i] = xu_[i]-1e-4; //close to U
-    //        else
-    //            if(xu_[i] > 1e20)
-    //                x0[i] = xl_[i]+1e-4; //close to L
-    //            else
-    //                x0[i] = (xl_[i]+xu_[i])/2.; //in-between the bounds
-    //    }
-    //}
     if (!bret) std::fill(x0, x0+n_vars, 0.); //probably not the best way
   
-    //initialize slacks close to the bound or in the middle
-    //const double* sl_ = sl->local_data_const();
-    //const double* su_ = su->local_data_const();
-    //for (long long i = 0; i < n_slacks; i++)
-    //{
-    //    if (sl_[i] < -1e20)
-    //        if(su_[i] > 1e20)
-    //            x0[i+n_vars] = 0.; //unbounded
-    //        else
-    //            x0[i+n_vars] = su_[i]-1e-4; //close to U
-    //    else
-    //        if(su_[i] > 1e20)
-    //            x0[i+n_vars] = sl_[i]+1e-4; //close to L
-    //        else
-    //            x0[i+n_vars] = (sl_[i]+su_[i])/2.; //in-between the bounds
-    //}
-    
-    //initialization by zero is probably not the best way
-    std::fill(x0+n_vars, x0+n_vars+n_slacks, 0.);
+    //initialization by zero is probably not the best way, use s0 = g(x)
+    std::fill(x0+n_vars, x0+global_n, 0.);
 
     return bret;
 }
