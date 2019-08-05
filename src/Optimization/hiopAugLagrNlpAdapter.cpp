@@ -28,6 +28,7 @@ hiopAugLagrNlpAdapter::hiopAugLagrNlpAdapter(NLP_CLASS_IN* nlp_in_):
     cons_eq_mapping(nullptr),
     cons_ineq_mapping(nullptr),
     c_rhs(nullptr),
+    _solutionIpopt(nullptr),
     _penaltyFcn(nullptr),
     _penaltyFcn_jacobian(nullptr),
     runStats(),
@@ -59,6 +60,7 @@ hiopAugLagrNlpAdapter::~hiopAugLagrNlpAdapter()
     if(startingPoint)             delete startingPoint;
     if(_penaltyFcn)              delete _penaltyFcn;
     if(_penaltyFcn_jacobian)      delete _penaltyFcn_jacobian;
+    if(_solutionIpopt)            delete [] _solutionIpopt;
     if(log)      delete log;
     if(options)  delete options;
 }
@@ -113,6 +115,7 @@ bool hiopAugLagrNlpAdapter::initialize()
     _penaltyFcn_jacobian = new hiopMatrixSparse(m_cons, n_vars, nnz_jac);
     sl = new hiopVectorPar(m_cons_ineq);
     su = new hiopVectorPar(m_cons_ineq);
+    _solutionIpopt = new double[n_vars+n_slacks];
 
     /**************************************************************************/
     /*  Analyze the original NLP constraints and split them into eq/ineq      */
@@ -518,11 +521,48 @@ void hiopAugLagrNlpAdapter::finalize_solution(SolverReturn status, Index n,
      const IpoptData* ip_data,
      IpoptCalculatedQuantities* ip_cq)
 {
+    //SUCCESS         
+    //MAXITER_EXCEEDED        
+    //CPUTIME_EXCEEDED        
+    //STOP_AT_TINY_STEP       
+    //STOP_AT_ACCEPTABLE_POINT        
+    //LOCAL_INFEASIBILITY     
+    //USER_REQUESTED_STOP     
+    //FEASIBLE_POINT_FOUND    
+    //DIVERGING_ITERATES      
+    //RESTORATION_FAILURE     
+    //ERROR_IN_STEP_COMPUTATION       
+    //INVALID_NUMBER_DETECTED         
+    //TOO_FEW_DEGREES_OF_FREEDOM      
+    //INVALID_OPTION  
+    //OUT_OF_MEMORY   
+    //INTERNAL_ERROR  
+    //UNASSIGNED 
+    if(status != SUCCESS) log->printf(hovWarning, "hiopAugLagrNlpApadpter::finalize_solution was called but Ipopt status is different from SUCCESS. The solution might not be valid.\n");
+
+    //cache the Ipopt solution
+    assert(n == n_vars+n_slacks);
+    memcpy(_solutionIpopt, x, n*sizeof(double));
     return;
 }
     /***********************************************************************
      *     Other routines providing access to the internal data            *
-     ***********************************************************************/                        
+     ***********************************************************************/ 
+
+/**
+* IpoptApplication doesn't provide a method to access the solution.
+* The solution is passed to user in callback finalize_solution which
+* is implemented here in AugLagrNlpAdapter, where the solution is cached.
+* This method returns the cached solution. No Guarantee that the solution
+* is correct or has been initialized, the user calling this function needs
+* to make sure Ipopt has finished successfuly. Only then the valid solution
+* will be returned.
+*/
+void hiopAugLagrNlpAdapter::get_ipoptSolution(double *x) const
+{
+    memcpy(x, _solutionIpopt, (n_vars+n_slacks)*sizeof(double));
+}
+
 /**
  * The set method stores the provided starting point into the private
  * member #startingPoint

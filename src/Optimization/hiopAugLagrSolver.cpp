@@ -146,7 +146,6 @@ hiopSolveStatus hiopAugLagrSolver::run()
 
     subproblemSolver.getSolution(_it_curr->local_data());
 
-
     nlp->log->printf(hovIteration, "Iter[%d] -> full iterate:", _iter_num);
     nlp->log->write("", *_it_curr, hovIteration);
     nlp->log->write("", *_lam_curr, hovIteration);

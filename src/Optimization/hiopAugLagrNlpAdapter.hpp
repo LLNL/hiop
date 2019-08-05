@@ -242,6 +242,7 @@ public:
     
     /** Objective function evaluation, this is the user objective function f(x) */
     bool eval_f_user(const long long& n, const double* x_in, bool new_x, double& obj_value);
+    void get_ipoptSolution(double *x) const;
 
 protected:
     bool initialize();
@@ -276,6 +277,7 @@ protected:
     //auxiliary arrays for handling the original NLP constraints
     long long *cons_eq_mapping, *cons_ineq_mapping; ///< indices of eq. and ineq. constraints
     hiopVectorPar *c_rhs; ///< rhs for the equality constraints
+    double *_solutionIpopt; ///< cached Ipopt solution from finalize_solution()
 
     //working memory for internal evaluations of the AL functions
     //motivation to have in on class level is to avoid alloc/dealloc
