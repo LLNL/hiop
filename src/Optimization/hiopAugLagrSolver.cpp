@@ -61,7 +61,6 @@ hiopSolveStatus hiopAugLagrSolver::run()
   reInitializeNlpObjects();
   resetSolverStatus();
 
-  nlp->options->SetStringValue("subproblem_solver", "ipopt");
   subproblemSolver.initialize();
 
   _solverStatus = NlpSolve_SolveNotCalled;

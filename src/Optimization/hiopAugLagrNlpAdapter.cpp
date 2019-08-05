@@ -545,17 +545,31 @@ bool hiopAugLagrNlpAdapter::get_user_starting_point(const long long &global_n, d
 {
     assert(global_n == n_vars + n_slacks);
 
-    //call starting point from the adapted nlp
+    //get starting point from the adapted NLP
     bool bret = nlp_in->get_starting_point((Ipopt::Index)n_vars, true, x0,
                                            false, nullptr, nullptr,
                                            (Ipopt::Index)m_cons, false, nullptr);
     
-    if (!bret) std::fill(x0, x0+n_vars, 0.); //probably not the best way
+    // use alternative x0 if not provided by the user
+    if (!bret) std::fill(x0, x0+n_vars, 0.); // TODO: solve PF or similar
   
-    //initialization by zero is probably not the best way, use s0 = g(x)
-    std::fill(x0+n_vars, x0+global_n, 0.);
+    //slack initialization by zero is probably not the best way
+    //std::fill(x0+n_vars, x0+global_n, 0.);
 
-    return bret;
+    //initialize the slack variables by the ineq. constr. values
+    double *penalty_data = _penaltyFcn->local_data();
+    bret = nlp_in->eval_g((Ipopt::Index)n_vars, x0, true,
+                               (Ipopt::Index)m_cons, penalty_data);
+    assert(bret);
+
+    assert(n_slacks == m_cons_ineq);
+    double *s0 = &x0[n_vars];
+    for (long long i = 0; i<m_cons_ineq; i++)
+    {
+        s0[i] = penalty_data[cons_ineq_mapping[i]]; 
+    }
+
+    return true;
 }
 
 void hiopAugLagrNlpAdapter::set_lambda(const hiopVectorPar* lambda_in)
