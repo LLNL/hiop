@@ -53,6 +53,8 @@ private:
   hiopSolveStatus solveSubproblem_ipopt();
   hiopSolveStatus solveSubproblem_hiop();
   void checkConsistency();
+  void displayTerminationMsgHiop(hiopSolveStatus st);
+  void displayTerminationMsgIpopt(ApplicationReturnStatus st);
 
 
 private:
@@ -61,8 +63,8 @@ private:
   hiopAlgFilterIPM *hiopSolver;         ///< instance of hiop solver
   hiopNlpDenseConstraints *hiopWrapper; ///< wrapper of the subproblem for hiop
 
-  hiopSubproblemStatus subproblemStatus; ///< flag specifing which solver was initialized, if any
-  hiopSolveStatus solverStatus; ///< flag specifying if the solver was called or its return value
+  hiopSubproblemStatus _subproblemStatus; ///< flag specifing which solver was initialized, if any
+  hiopSolveStatus _solverStatus; ///< flag specifying if the solver was called or its return value
 
   double _EPS_TOL_OPTIM; ///< required tolerance
 };

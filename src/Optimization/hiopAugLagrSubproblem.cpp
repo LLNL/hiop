@@ -7,8 +7,8 @@ hiopAugLagrSubproblem::hiopAugLagrSubproblem(hiopAugLagrNlpAdapter *nlp_AugLagr_
   ipoptApp(nullptr),
   hiopSolver(nullptr),
   hiopWrapper(nullptr),
-  subproblemStatus(NotInitialized),
-  solverStatus(NlpSolve_IncompleteInit),
+  _subproblemStatus(NotInitialized),
+  _solverStatus(NlpSolve_IncompleteInit),
   _EPS_TOL_OPTIM(1e-6)
 {
 }
@@ -20,6 +20,9 @@ hiopAugLagrSubproblem::~hiopAugLagrSubproblem()
   if (hiopWrapper) delete hiopWrapper;
 }
 
+/** Tolerance set by the main Aug Lagr solver, the subproblem
+ * tolerance is gradually tightened as the solution is approached
+ * in outer AL iterations. */
 void hiopAugLagrSubproblem::setTolerance(double tol)
 {
   _EPS_TOL_OPTIM = tol;
@@ -39,7 +42,7 @@ void hiopAugLagrSubproblem::initialize()
   if(subproblem->options->GetString("subproblem_solver")=="ipopt")
   {
     // test if ipopt was initialized previously
-    if(subproblemStatus != IpoptInitialized &&  subproblemStatus != IpoptHiopInitialized)
+    if(_subproblemStatus != IpoptInitialized &&  _subproblemStatus != IpoptHiopInitialized)
     {
       //create IPOPT
       ipoptApp = IpoptApplicationFactory();
@@ -56,15 +59,15 @@ void hiopAugLagrSubproblem::initialize()
       }
       
       //update the Subproblem status 
-      subproblemStatus = static_cast<hiopSubproblemStatus>(
-         static_cast<int>(subproblemStatus) + 
+      _subproblemStatus = static_cast<hiopSubproblemStatus>(
+         static_cast<int>(_subproblemStatus) + 
          static_cast<int>(IpoptInitialized));
     }
   }
   else if(subproblem->options->GetString("subproblem_solver")=="hiop")
   {
     // test if hiop was initialized previously
-    if(subproblemStatus != HiopInitialized && subproblemStatus != IpoptHiopInitialized)
+    if(_subproblemStatus != HiopInitialized && _subproblemStatus != IpoptHiopInitialized)
     {
       //create HIOP wrapper of the problem
       hiopWrapper = new hiopNlpDenseConstraints(*subproblem); 
@@ -86,13 +89,13 @@ void hiopAugLagrSubproblem::initialize()
       hiopSolver = new hiopAlgFilterIPM(hiopWrapper);
 
       //update the Subproblem status 
-      subproblemStatus = static_cast<hiopSubproblemStatus>(
-         static_cast<int>(subproblemStatus) + 
+      _subproblemStatus = static_cast<hiopSubproblemStatus>(
+         static_cast<int>(_subproblemStatus) + 
          static_cast<int>(HiopInitialized));
     }
   }
   
-  solverStatus = NlpSolve_SolveNotCalled;
+  _solverStatus = NlpSolve_SolveNotCalled;
 }
 
 hiopSolveStatus hiopAugLagrSubproblem::solveSubproblem_ipopt()
@@ -101,16 +104,11 @@ hiopSolveStatus hiopAugLagrSubproblem::solveSubproblem_ipopt()
 
   // Ask Ipopt to solve the problem
   ApplicationReturnStatus st = ipoptApp->OptimizeTNLP(subproblem);
+  displayTerminationMsgIpopt(st);
 
-  if (st == Solve_Succeeded) {
-    printf("\n\n*** The subproblem solved!\n");
-  }
-  else {
-    printf("\n\n*** The subproblem FAILED!\nError %d\n", st);
-    exit(1);
-  }
+  if (st == Solve_Succeeded) { return Solve_Success; }
+  else { return UnknownNLPSolveStatus; }
 
- return Solve_Success;
 }
 
 hiopSolveStatus hiopAugLagrSubproblem::solveSubproblem_hiop()
@@ -119,14 +117,7 @@ hiopSolveStatus hiopAugLagrSubproblem::solveSubproblem_hiop()
 
   // Ask HiOP to solve the problem
   hiopSolveStatus st = hiopSolver->run();
-
-  if (st == Solve_Success) {
-    printf("\n\n*** The subproblem solved!\n");
-  }
-  else {
-    printf("\n\n*** The subproblem FAILED!\nError %d\n", st);
-    exit(1);
-  }
+  displayTerminationMsgHiop(st);
 
   return st;
 }
@@ -134,17 +125,17 @@ hiopSolveStatus hiopAugLagrSubproblem::solveSubproblem_hiop()
 /** Solves the subproblem using the specified solver */
 hiopSolveStatus hiopAugLagrSubproblem::run()
 {
-  solverStatus = NlpSolve_Pending;
+  _solverStatus = NlpSolve_Pending;
 
-
-  std::cout << "Tolerance set to " << _EPS_TOL_OPTIM << std::endl;
+  subproblem->log->printf(hovScalars, "Subproblem tolerance is set to %g\n", _EPS_TOL_OPTIM);
 
   if(subproblem->options->GetString("subproblem_solver")=="ipopt")
-    solverStatus = solveSubproblem_ipopt();
+    _solverStatus = solveSubproblem_ipopt();
   else if(subproblem->options->GetString("subproblem_solver")=="hiop")
-    solverStatus = solveSubproblem_hiop();
+    _solverStatus = solveSubproblem_hiop();
+  
 
-  return solverStatus;
+  return _solverStatus;
 }
 
 /** Check consistency of the current object state vs required options
@@ -153,18 +144,16 @@ void hiopAugLagrSubproblem::checkConsistency()
 {
   if(subproblem->options->GetString("subproblem_solver")=="ipopt")
   {
-    if (subproblemStatus != IpoptInitialized && subproblemStatus != IpoptHiopInitialized)
+    if (_subproblemStatus != IpoptInitialized && _subproblemStatus != IpoptHiopInitialized)
     {
-      printf("\n\n*** Ipopt solver not initialized, please call initialize() first!\n");
-      exit(1);
+      subproblem->log->printf(hovError, "hipAugLagrSubproblem consistency check: Ipopt solver not initialized, please call initialize() first!\n");
     }
   }
   else if(subproblem->options->GetString("subproblem_solver")=="hiop")
   {
-    if(subproblemStatus != HiopInitialized && subproblemStatus != IpoptHiopInitialized)
+    if(_subproblemStatus != HiopInitialized && _subproblemStatus != IpoptHiopInitialized)
     {
-      printf("\n\n*** Hiop solver not initialized, please call initialize() first!\n");
-      exit(1);
+      subproblem->log->printf(hovError, "hipAugLagrSubproblem consistency check: Hiop solver not initialized, please call initialize() first!\n");
     }
   }
 }
@@ -172,27 +161,36 @@ void hiopAugLagrSubproblem::checkConsistency()
 /* returns the objective value; valid only after 'run' method has been called */
 double hiopAugLagrSubproblem::getObjective() const
 {
-  if(solverStatus==NlpSolve_IncompleteInit || solverStatus == NlpSolve_SolveNotCalled)
-    subproblem->log->printf(hovError, "getObjective: hiOp did not initialize entirely or the 'run' function was not called.");
-  if(solverStatus==NlpSolve_Pending)
-    subproblem->log->printf(hovWarning, "getObjective: hiOp does not seem to have completed yet. The objective value returned may not be optimal.");
+  if(_solverStatus==NlpSolve_IncompleteInit || _solverStatus == NlpSolve_SolveNotCalled)
+    subproblem->log->printf(hovError, "getObjective: hiOp AugLagr subproblem did not initialize entirely or the 'run' function was not called.");
+  if(_solverStatus==NlpSolve_Pending)
+    subproblem->log->printf(hovWarning, "getObjective: hiOp AL subproblem does not seem to have completed yet. The objective value returned may not be optimal.");
   
-  return 100.;;
+  return 100.;
   //TODO
 }
 
 /* returns the primal vector x; valid only after 'run' method has been called */
 void hiopAugLagrSubproblem::getSolution(double* x) const
 {
-  if(solverStatus==NlpSolve_IncompleteInit || solverStatus == NlpSolve_SolveNotCalled)
-    subproblem->log->printf(hovError, "getSolution: hiOp did not initialize entirely or the 'run' function was not called.");
-  if(solverStatus==NlpSolve_Pending)
-    subproblem->log->printf(hovWarning, "getSolution: hiOp have not completed yet. The primal vector returned may not be optimal.");
+  if(_solverStatus==NlpSolve_IncompleteInit || _solverStatus == NlpSolve_SolveNotCalled)
+    subproblem->log->printf(hovError, "getSolution: hiOp AugLagr subproblem did not initialize entirely or the 'run' function was not called.");
+  if(_solverStatus==NlpSolve_Pending)
+    subproblem->log->printf(hovWarning, "getSolution: hiOp AugLagr subproblem have not completed yet. The primal vector returned may not be optimal.");
 
   if(subproblem->options->GetString("subproblem_solver")=="ipopt")
-    return;
+  {
+    //IpoptApplication doesn't provide a method to access the solution.
+    //The solution is passed to user in callback finalize_solution which
+    //is implemented in AugLagrNlpAdapter, the solution is thus cached there 
+    subproblem->get_ipoptSolution(x);
+  }
   else if(subproblem->options->GetString("subproblem_solver")=="hiop")
-    return;
+  {
+    hiopSolver->getSolution(x);
+  }
+
+  return;
   //TODO:
   // update the current iterate, used as x0 for the next subproblem
   //hiopSolver->getSolution();
@@ -202,17 +200,121 @@ void hiopAugLagrSubproblem::getSolution(double* x) const
 /* returns the status of the solver */
 hiopSolveStatus hiopAugLagrSubproblem::getSolveStatus() const
 {
-  return solverStatus;
+  return _solverStatus;
 }
 
 /* returns the number of iterations */
 int hiopAugLagrSubproblem::getNumIterations() const
 {
-  if(solverStatus==NlpSolve_IncompleteInit || solverStatus == NlpSolve_SolveNotCalled)
+  if(_solverStatus==NlpSolve_IncompleteInit || _solverStatus == NlpSolve_SolveNotCalled)
     subproblem->log->printf(hovError, "getNumIterations: hiOp did not initialize entirely or the 'run' function was not called.");
-  if(solverStatus==NlpSolve_Pending)
+  if(_solverStatus==NlpSolve_Pending)
     subproblem->log->printf(hovWarning, "getNumIterations: hiOp does not seem to have completed yet. The objective value returned may not be optimal.");
   
   return subproblem->runStats.nIter;
 }
+
+/***** Termination message *****/
+void hiopAugLagrSubproblem::displayTerminationMsgIpopt(ApplicationReturnStatus st) {
+   switch (st)  {
+    case Solve_Succeeded:
+      { subproblem->log->printf(hovSummary, "Successfull termination.\n%s\n", subproblem->runStats.getSummary().c_str());
+        break;
+      }
+    case Solved_To_Acceptable_Level:
+      { subproblem->log->printf(hovWarning, "hiopAugLagrSubproblem::run Ipopt return code was Solved_To_Acceptable_Level\n");
+        break;
+      }
+    case Infeasible_Problem_Detected:
+       { subproblem->log->printf(hovWarning, "hiopAugLagrSubproblem::run Ipopt return code was Infeasible_Problem_Detected\n");     
+        break;
+      }
+    case Search_Direction_Becomes_Too_Small:
+       { subproblem->log->printf(hovWarning, "hiopAugLagrSubproblem::run Ipopt return code was Search_Direction_Becomes_Too_Small\n");      
+        break;
+      }
+    case User_Requested_Stop:
+       { subproblem->log->printf(hovWarning, "hiopAugLagrSubproblem::run Ipopt return code was User_Requested_Stop\n");     
+        break;
+      }
+    case Feasible_Point_Found:
+       { subproblem->log->printf(hovWarning, "hiopAugLagrSubproblem::run Ipopt return code was Feasible_Point_Found\n");    
+        break;
+      }
+    case Maximum_Iterations_Exceeded:
+       { subproblem->log->printf(hovWarning, "hiopAugLagrSubproblem::run Ipopt return code was Maximum_Iterations_Exceeded\n");     
+        break;
+      }
+    case Restoration_Failed:
+       { subproblem->log->printf(hovWarning, "hiopAugLagrSubproblem::run Ipopt return code was Restoration_Failed\n");      
+        break;
+      }
+    case Error_In_Step_Computation:
+       { subproblem->log->printf(hovWarning, "hiopAugLagrSubproblem::run Ipopt return code was Error_In_step_Computation\n");       
+        break;
+      }
+    case Maximum_CpuTime_Exceeded:
+       { subproblem->log->printf(hovWarning, "hiopAugLagrSubproblem::run Ipopt return code was Maximum_CpuTime_Exceeded\n");        
+        break;
+      }
+    case Invalid_Option:
+       { subproblem->log->printf(hovWarning, "hiopAugLagrSubproblem::run Ipopt return code was Invalid_Options\n");  
+        break;
+      }
+    case Invalid_Number_Detected:
+       { subproblem->log->printf(hovWarning, "hiopAugLagrSubproblem::run Ipopt return code was Invalid_Number_Detected\n");         
+        break;
+      }
+    default:
+      { subproblem->log->printf(hovWarning, "hiopAugLagrSubproblem::run Ipopt return an iternal error %d\n", st); 
+        break;
+      }
+   }
+}
+
+
+
+void hiopAugLagrSubproblem::displayTerminationMsgHiop(hiopSolveStatus st) {
+
+  switch(st) {
+  case Solve_Success: 
+    {
+      subproblem->log->printf(hovSummary, "Successfull termination.\n%s\n", subproblem->runStats.getSummary().c_str());
+      break;
+    }
+  case Solve_Success_RelTol: 
+    {
+      subproblem->log->printf(hovSummary, "Successfull termination (error within the relative tolerance).\n%s\n", subproblem->runStats.getSummary().c_str());
+      break;
+    }
+  case Solve_Acceptable_Level:
+    {
+      subproblem->log->printf(hovSummary, "Solve to only to the acceptable tolerance(s).\n%s\n", subproblem->runStats.getSummary().c_str());
+      break;
+    }
+  case Max_Iter_Exceeded:
+    {
+      subproblem->log->printf(hovSummary, "Maximum number of iterations reached.\n%s\n", subproblem->runStats.getSummary().c_str());
+      break;
+    }
+  case Steplength_Too_Small:
+    {
+      subproblem->log->printf(hovSummary, "Couldn't solve the problem.\n%s\n", subproblem->runStats.getSummary().c_str());
+      subproblem->log->printf(hovSummary, "Linesearch returned unsuccessfully (small step). Probable cause: inaccurate gradients/Jacobians or infeasible problem.\n");
+      break;
+    }
+  case User_Stopped:
+    {
+      subproblem->log->printf(hovSummary, "Stopped by the user through the user provided iterate callback.\n%s\n", subproblem->runStats.getSummary().c_str());
+      break;
+    }
+  default:
+    {
+      subproblem->log->printf(hovSummary, "Do not know why hiop stopped. This shouldn't happen. :)\n%s\n", subproblem->runStats.getSummary().c_str());
+      assert(false && "Do not know why hiop stopped. This shouldn't happen.");
+      break;
+    }
+  };
+}
+
 }
