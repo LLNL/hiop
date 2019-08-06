@@ -246,7 +246,8 @@ public:
 
 protected:
     bool initialize();
-    bool eval_penalty(const double *x_in, bool new_x, double *penalty_data);
+    bool eval_penalty(const double *x_in, bool new_x, double *penalty_data);//TODO remove last param
+    bool eval_penalty_jac(const double *x_in, bool new_x);
     bool eval_grad_Lagr(const long long& n, const double* x_in, bool new_x, double* gradLagr);
 
 protected:
@@ -286,9 +287,10 @@ protected:
     //during each call of the evaluation routines
     hiopVectorPar *_penaltyFcn; ///< original constraints transformed  AL penalty function p(x)=0
     hiopMatrixSparse *_penaltyFcn_jacobian; ///< Jacobian of the the original NLP constraints, which is equivalent to the Jacobian of the penalty fcn. w.r.t the primal variables x (excluding slacks)
+    hiopVectorPar    *_lambdaForHessEval; ///< lambda + 2*rho*c(x), used during the Hessian eval
     hiopMatrixSparse *_hessianNlp; ///< Hessian of Lagrangian of the original NLP problem
     hiopMatrixSparse *_hessianAugLagr; ///< Hessian of Lagrangian of the AL problem
-    hiopVectorPar    *_lambdaExtra; ///<combined lambda and 2*rho*c(x) term used during the Hessian evaluation
+    hiopMatrixSparse *_termJTJ; ///< storage for 2*rho*J'*J used during the AL Hessian eval
 
 public:
     /* outputing and debug-related functionality*/

@@ -32,9 +32,9 @@ hiopAugLagrNlpAdapter::hiopAugLagrNlpAdapter(NLP_CLASS_IN* nlp_in_):
     _solutionIpopt(nullptr),
     _penaltyFcn(nullptr),
     _penaltyFcn_jacobian(nullptr),
+    _lambdaForHessEval(nullptr),
     _hessianNlp(nullptr),
     _hessianAugLagr(nullptr),
-    _lambdaExtra(nullptr),
     runStats(),
     options(new hiopOptions(/*filename=NULL*/)),
     log(new hiopLogger(options, stdout, 0))
@@ -63,7 +63,7 @@ hiopAugLagrNlpAdapter::~hiopAugLagrNlpAdapter()
     if(_penaltyFcn_jacobian)     delete _penaltyFcn_jacobian;
     if(_hessianNlp)              delete _hessianNlp;
     if(_hessianAugLagr)          delete _hessianAugLagr;
-    if(_lambdaExtra)             delete _lambdaExtra;
+    if(_lambdaForHessEval)             delete _lambdaForHessEval;
     if(cons_eq_mapping)       delete [] cons_eq_mapping;
     if(cons_ineq_mapping)     delete [] cons_ineq_mapping;
     if(c_rhs)                 delete [] c_rhs;
@@ -215,6 +215,8 @@ bool hiopAugLagrNlpAdapter::get_vars_info(const long long& n, double *xlow,
  * Equality constraints:  c(x) - c_rhs
  * Inequality constraints c(x) - s, where L <= s <= U
  */
+//TODO: the last parameter should be hiopVector*, not double* or even
+//TODO: there should be no parameter at all and implicitly update the private member _penaltyFcn
 bool hiopAugLagrNlpAdapter::eval_penalty(const double *x_in, bool new_x, double *penalty_data)
 {
     const double *slacks  = &x_in[n_vars];
@@ -240,6 +242,34 @@ bool hiopAugLagrNlpAdapter::eval_penalty(const double *x_in, bool new_x, double 
     }
 
     return true;
+}
+
+/**
+ *  Evaluates Jacobian of the penalty function. Jacobian is stored in the
+ *  member #_penaltyFcn_jacobian
+ */
+bool hiopAugLagrNlpAdapter::eval_penalty_jac(const double *x_in, bool new_x)
+{
+    //initialize the nonzero structure only during the first call
+    static bool initializedStructure = false;
+    if (!initializedStructure)
+    {
+      //initialize the structure during the first call, later update only the values
+      int *iRow = _penaltyFcn_jacobian->get_iRow();
+      int *jCol = _penaltyFcn_jacobian->get_jCol();
+      bool bret = nlp_in->eval_jac_g((Ipopt::Index)n_vars, nullptr, new_x,
+                              (Ipopt::Index)m_cons, nnz_jac, iRow, jCol, nullptr);
+      assert(bret);
+      initializedStructure = true;
+    }
+
+    // evaluate the nonzeros at the current x
+    double *values = _penaltyFcn_jacobian->get_values();
+    bool bret = nlp_in->eval_jac_g((Ipopt::Index)n_vars, x_in, new_x,
+                              (Ipopt::Index)m_cons, nnz_jac, nullptr, nullptr, values);
+    assert(bret);
+    
+    return bret;
 }
 
 /** 
@@ -325,22 +355,8 @@ bool hiopAugLagrNlpAdapter::eval_grad_Lagr(const long long& n, const double* x_i
     /****************************************************/
     /* Evaluate Jacobian of the original NLP problem */
     /****************************************************/
-    static bool initializedStructure = false;
-    if (!initializedStructure)
-    {
-      //initialize the structure during the first call, later update only the values
-      int *iRow = _penaltyFcn_jacobian->get_iRow();
-      int *jCol = _penaltyFcn_jacobian->get_jCol();
-      bret = nlp_in->eval_jac_g((Ipopt::Index)n_vars, nullptr, new_x,
-                              (Ipopt::Index)m_cons, nnz_jac, iRow, jCol, nullptr);
-      assert(bret);
-      initializedStructure = true;
-    }
-
-    double *values = _penaltyFcn_jacobian->get_values();
-    bret = nlp_in->eval_jac_g((Ipopt::Index)n_vars, x_in, new_x,
-                              (Ipopt::Index)m_cons, nnz_jac, nullptr, nullptr, values);
-    assert(bret);
+    //TODO new_x
+    if (true) eval_penalty_jac(x_in, new_x);
 
     /**************************************************/
     /**    Compute Lagrangian term contribution       */
@@ -451,8 +467,14 @@ bool hiopAugLagrNlpAdapter::get_nlp_info(Index& n, Index& m,
     n = n_; m = m_;
 
     nnz_jac_g = 0;
-    nnz_h_lag = 0; //TODO full Hessian
     index_style = TNLP::C_STYLE;
+
+    // need to call dummy evaluation of eval_h to determine structure and nnz count
+    // allocates and initializes _hessNlp and _hessAugLagr with structure
+    vector<double> x_tmp(n, 1.0);
+    eval_h(n, x_tmp.data(), true, 1.0, 0, nullptr, false, -1, nullptr, nullptr, nullptr);
+
+    nnz_h_lag = _hessianAugLagr->nnz();
     return true;
 }
 
@@ -518,25 +540,26 @@ bool hiopAugLagrNlpAdapter::eval_h(Index n, const Number* x, bool new_x, Number 
      Index nele_hess, Index* iRow, Index* jCol, Number* values)
 {
    assert(n == n_vars+n_slacks);
-   assert(obj_factor == 1.0);
+   assert(obj_factor == 1.0); // obj factor for the NLP objective vs. AL objective
    assert(m == 0);
    //assert(nele_hess == ??);
 
-    //initialize hessian matrix when first reached this point
-    static bool _hessianInitialized = false;
-    if (!_hessianInitialized)
-    {
-      _hessianNlp = new hiopMatrixSparse(n_vars, n_vars, nnz_hess);
-      _lambdaExtra = new hiopVectorPar(m_cons);
-      _hessianInitialized = true;
-    }
+   // dummy call from the get_nlp_info() to determine the nonzero count,
+   // we need to initialize the storage and perform a dummy evaluation
+   if (nele_hess == -1.0 && iRow == nullptr && jCol == nullptr && values == nullptr)
+   {
+     _lambdaForHessEval = new hiopVectorPar(m_cons);
+     _hessianNlp = new hiopMatrixSparse(n_vars, n_vars, nnz_hess);
+     _termJTJ = new hiopMatrixSparse(0,0,0);//we don't know nnz at this point
+     eval_penalty_jac(x, new_x);
+   } 
 
-    //  2*rho*p(x) - lambda
-    double *lambdaExtra = _lambdaExtra->local_data();
-    bool bret = eval_penalty(x, new_x, lambdaExtra);
+    // lambdaForHessEval =  2*rho*p(x) - lambda
+    double *lambdaForHessEval = _lambdaForHessEval->local_data();
+    bool bret = eval_penalty(x, new_x, lambdaForHessEval);
     assert(bret);
-    _lambdaExtra->scale(2*rho);
-    _lambdaExtra->axpy(-1.0, *lambda);
+    _lambdaForHessEval->scale(2*rho);
+    _lambdaForHessEval->axpy(-1.0, *lambda);
 
     int *iRow_nlp = _hessianNlp->get_iRow();
     int *jCol_nlp = _hessianNlp->get_jCol();
@@ -545,9 +568,29 @@ bool hiopAugLagrNlpAdapter::eval_h(Index n, const Number* x, bool new_x, Number 
     // Evaluate f(x)_hess + sum_i{ (2*rho*p_i(x) - lambda_i) * p_i(x)_hess}
     //hiop::hiopInterfaceDenseConstraints
     bret = nlp_in->eval_h(n_vars, x, new_x,
-                obj_factor, m_cons, lambdaExtra, true,
+                obj_factor, m_cons, lambdaForHessEval, true,
                 nnz_hess, iRow_nlp, jCol_nlp, values_nlp);
     assert(bret);
+
+    // termJTJ = 2*rho*J'*J
+    //_termJTJ is either empty matrix (dummy call) or only the values need to be updated
+    _penaltyFcn_jacobian->transTimesThis(2*rho, *_termJTJ); 
+
+    
+    //TODO
+    //termJTJ += hessianNlp
+    //_termJTJ->addMatrix(_hessianNlp);
+
+    //TODO
+    // add Hss and Hxs
+
+    if (iRow != NULL && jCol != NULL)
+    {
+      //TODO fill iRow, jCol
+    } else if (values != NULL)
+    {
+      //fill values
+    }
 
     return true;
 }
