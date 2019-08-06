@@ -18,6 +18,9 @@
 #endif 
 
 #include <cstdio>
+#include <vector> 
+
+using std::vector;
 
 namespace hiop
 {
@@ -70,10 +73,18 @@ public:
   void transTimesVec(double beta,   double* y,
 			     double alpha,  const double* x ) const;
 
+  /** res = alpha * this' * this 
+  */
+  void transTimesThis(double alpha, hiopMatrixSparse &res) const;
+
+  /** creates sparse matrix from the given values and structure */
+  void make(int nrows_, int ncols_, vector<vector<int>> &vvCols, vector<vector<double>> &vvValues);
+
   /* call with -1 to print all rows, all columns, or on all ranks; otherwise will
   *  will print the first rows and/or columns on the specified rank.
   */
-  //void print(FILE* f=NULL, const char* msg=NULL, int maxRows=-1, int maxCols=-1, int rank=-1) const;
+  void print(FILE* file, const char* msg=NULL, int max_elems=-1, int rank=-1) const; 
+
   
   /* number of rows */
   int m() const {return nrows;}
@@ -90,7 +101,6 @@ public:
   /* pointer to the values */
   double* get_values() {return values;}
 
-  void print(FILE* file, const char* msg=NULL, int max_elems=-1, int rank=-1) const; 
 
 
 #ifdef HIOP_DEEPCHECKS
