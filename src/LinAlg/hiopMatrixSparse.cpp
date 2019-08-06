@@ -146,7 +146,14 @@ void hiopMatrixSparse::transAAplusB(double alpha, const hiopMatrixSparse &A, dou
   // otherwise we can update directly #this.values
   int nnz_idx = 0;
 
-  // compute alpha*A'A
+  // properties and iterator in matrix B
+  const int *iRow_B      = B.get_iRow_const();
+  const int *jCol_B      = B.get_jCol_const();
+  const double *values_B = B.get_values_const();
+  int nonzeroes_B        = B.nnz();
+  int nnz_idx_B = 0;
+
+  // compute alpha*A'A + beta*B
   for (int c1 = 0; c1 < ncols_A; c1++)
   {
     for (int c2 = 0; c2 < ncols_A; c2++) //c2=c1..ncols
@@ -158,6 +165,7 @@ void hiopMatrixSparse::transAAplusB(double alpha, const hiopMatrixSparse &A, dou
       double dot = 0.;
       bool newNonzero = false;
 
+      //compute alpha * A' * A
       while ( rowIdx1 != vvRows_A[c1].end() && rowIdx2 != vvRows_A[c2].end())
       {
         if (*rowIdx1 == *rowIdx2) //nonzeros at the same row index in both columns
@@ -176,6 +184,16 @@ void hiopMatrixSparse::transAAplusB(double alpha, const hiopMatrixSparse &A, dou
         } 
       }
 
+      // add nonzeros from beta*B
+      if (nnz_idx_B < nonzeroes_B &&
+          iRow_B[nnz_idx_B] == c1 &&
+          jCol_B[nnz_idx_B] == c2)
+      {
+        dot += beta * values_B[nnz_idx_B];
+        newNonzero = true;
+        nnz_idx_B++;
+      }
+
       // process the new nonzero element
       if (newNonzero)
       {
@@ -185,7 +203,6 @@ void hiopMatrixSparse::transAAplusB(double alpha, const hiopMatrixSparse &A, dou
         {
           vvCols_Result[c1].push_back(c2);
           vvValues_Result[c1].push_back(dot);
-          std::cout << "c1 c2 v" << c1 << " " << c2 << " " << dot << std::endl;
         }
         //we can update directly #values
         else 

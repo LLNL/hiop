@@ -249,6 +249,7 @@ protected:
     bool eval_penalty(const double *x_in, bool new_x, double *penalty_data);//TODO remove last param
     bool eval_penalty_jac(const double *x_in, bool new_x);
     bool eval_grad_Lagr(const long long& n, const double* x_in, bool new_x, double* gradLagr);
+    bool eval_hess_nlp(const double *x_in, bool new_x);
 
 protected:
     //general nlp to be "adapted" to Augmented Lagrangian form Ipopt::TNLP.

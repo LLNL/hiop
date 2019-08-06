@@ -535,12 +535,59 @@ bool hiopAugLagrNlpAdapter::eval_jac_g(Index n, const Number* x, bool new_x,
     return true;
 }
 
+/**
+ *   Evaluates NLP Hessian #_hessianNlp.
+ *   We use lambda =  2*rho*p(x) - lambda to account for contribution
+ *   not only of the Lagrangian term but also the penalty.
+ */
+bool hiopAugLagrNlpAdapter::eval_hess_nlp(const double *x_in, bool new_x)
+{
+  double obj_factor = 1.0;
+
+  //initialize the nonzero structure only during the first call
+  static bool initializedStructure = false;
+  if (!initializedStructure)
+  {
+    int *iRow_nlp = _hessianNlp->get_iRow();
+    int *jCol_nlp = _hessianNlp->get_jCol();
+    double *values_nlp = _hessianNlp->get_values();
+
+    //hiop::hiopInterfaceDenseConstraints
+    bool bret = nlp_in->eval_h(n_vars, nullptr, new_x,
+                obj_factor, m_cons, nullptr, true,
+                nnz_hess, iRow_nlp, jCol_nlp, nullptr);
+    assert(bret);
+    initializedStructure = true;
+  }
+
+  // lambdaForHessEval =  2*rho*p(x) - lambda
+  double *lambdaForHessEval = _lambdaForHessEval->local_data();
+  bool bret = eval_penalty(x_in, new_x, lambdaForHessEval); //TODO new_x
+  assert(bret);
+  _lambdaForHessEval->scale(2*rho);
+  _lambdaForHessEval->axpy(-1.0, *lambda);
+
+  double *values_nlp = _hessianNlp->get_values();
+
+  // Evaluate f(x)_hess + sum_i{ (2*rho*p_i(x) - lambda_i) * p_i(x)_hess}
+  //hiop::hiopInterfaceDenseConstraints
+  bret = nlp_in->eval_h(n_vars, x_in, new_x,
+              obj_factor, m_cons, lambdaForHessEval, true,
+              nnz_hess, nullptr, nullptr, values_nlp);
+  assert(bret);
+
+  return bret;
+}
+
 bool hiopAugLagrNlpAdapter::eval_h(Index n, const Number* x, bool new_x, Number obj_factor,
      Index m, const Number* lambda_ipopt, bool new_lambda,
      Index nele_hess, Index* iRow, Index* jCol, Number* values)
 {
    assert(n == n_vars+n_slacks);
-   assert(obj_factor == 1.0); // obj factor for the NLP objective vs. AL objective
+   // obj factor for the AL objective, if different than 1.0 we need to compute
+   // the contribution of the Lagrangian hessian and penalty hessian in two calls
+   // to eval_hess_nlp()
+   assert(obj_factor == 1.0); 
    assert(m == 0);
    //assert(nele_hess == ??);
 
@@ -554,22 +601,9 @@ bool hiopAugLagrNlpAdapter::eval_h(Index n, const Number* x, bool new_x, Number 
      eval_penalty_jac(x, new_x);
    } 
 
+    // evaluates NLP hessian _hessianNlp using
     // lambdaForHessEval =  2*rho*p(x) - lambda
-    double *lambdaForHessEval = _lambdaForHessEval->local_data();
-    bool bret = eval_penalty(x, new_x, lambdaForHessEval);
-    assert(bret);
-    _lambdaForHessEval->scale(2*rho);
-    _lambdaForHessEval->axpy(-1.0, *lambda);
-
-    int *iRow_nlp = _hessianNlp->get_iRow();
-    int *jCol_nlp = _hessianNlp->get_jCol();
-    double *values_nlp = _hessianNlp->get_values();
-
-    // Evaluate f(x)_hess + sum_i{ (2*rho*p_i(x) - lambda_i) * p_i(x)_hess}
-    //hiop::hiopInterfaceDenseConstraints
-    bret = nlp_in->eval_h(n_vars, x, new_x,
-                obj_factor, m_cons, lambdaForHessEval, true,
-                nnz_hess, iRow_nlp, jCol_nlp, values_nlp);
+    bool bret = eval_hess_nlp(x, new_x);
     assert(bret);
 
     // _hessianAugLagr = 2*rho*J'J + _hessianNlp
@@ -578,11 +612,15 @@ bool hiopAugLagrNlpAdapter::eval_h(Index n, const Number* x, bool new_x, Number 
     _hessianAugLagr->transAAplusB(2*rho, *_penaltyFcn_jacobian,
                                   1.0,   *_hessianNlp);
 
+    FILE *f1=fopen("hessNLP.txt","w");
+    _hessianNlp->print(f1);
+     fclose(f1);
+
     FILE *f2=fopen("jac.txt","w");
     _penaltyFcn_jacobian->print(f2);
      fclose(f2);
     
-    FILE *f3=fopen("JTJ.txt","w");
+    FILE *f3=fopen("hess.txt","w");
     _hessianAugLagr->print(f3);
      fclose(f3);
 
