@@ -21,6 +21,7 @@ hiopAugLagrNlpAdapter::hiopAugLagrNlpAdapter(NLP_CLASS_IN* nlp_in_):
     n_vars(-1), n_slacks(-1), m_cons(-1),
     m_cons_eq(-1), m_cons_ineq(-1),
     nnz_jac(-1),
+    nnz_hess(-1),
     xl(nullptr),
     xu(nullptr),
     sl(nullptr),
@@ -31,6 +32,9 @@ hiopAugLagrNlpAdapter::hiopAugLagrNlpAdapter(NLP_CLASS_IN* nlp_in_):
     _solutionIpopt(nullptr),
     _penaltyFcn(nullptr),
     _penaltyFcn_jacobian(nullptr),
+    _hessianNlp(nullptr),
+    _hessianAugLagr(nullptr),
+    _lambdaExtra(nullptr),
     runStats(),
     options(new hiopOptions(/*filename=NULL*/)),
     log(new hiopLogger(options, stdout, 0))
@@ -53,14 +57,17 @@ hiopAugLagrNlpAdapter::~hiopAugLagrNlpAdapter()
     if(sl) delete sl;
     if(su) delete su;
 
-    if(cons_eq_mapping)       delete cons_eq_mapping;
-    if(cons_ineq_mapping)     delete cons_ineq_mapping;
-    if(c_rhs)                 delete c_rhs;
-    if(lambda)                delete lambda;
-    if(startingPoint)             delete startingPoint;
+    if(lambda)                   delete lambda;
+    if(startingPoint)            delete startingPoint;
     if(_penaltyFcn)              delete _penaltyFcn;
-    if(_penaltyFcn_jacobian)      delete _penaltyFcn_jacobian;
-    if(_solutionIpopt)            delete [] _solutionIpopt;
+    if(_penaltyFcn_jacobian)     delete _penaltyFcn_jacobian;
+    if(_hessianNlp)              delete _hessianNlp;
+    if(_hessianAugLagr)          delete _hessianAugLagr;
+    if(_lambdaExtra)             delete _lambdaExtra;
+    if(cons_eq_mapping)       delete [] cons_eq_mapping;
+    if(cons_ineq_mapping)     delete [] cons_ineq_mapping;
+    if(c_rhs)                 delete [] c_rhs;
+    if(_solutionIpopt)        delete [] _solutionIpopt;
     if(log)      delete log;
     if(options)  delete options;
 }
@@ -73,9 +80,9 @@ hiopAugLagrNlpAdapter::~hiopAugLagrNlpAdapter()
 bool hiopAugLagrNlpAdapter::initialize()
 {
     //determine the original NLP problem size
-    Ipopt::Index n_nlp, m_nlp, nnz_jac_nlp, dum1;
+    Ipopt::Index n_nlp, m_nlp, nnz_jac_nlp, nnz_hess_nlp;
     TNLP::IndexStyleEnum index_style = TNLP::C_STYLE;
-    bool bret = nlp_in->get_nlp_info(n_nlp, m_nlp, nnz_jac_nlp, dum1, index_style);
+    bool bret = nlp_in->get_nlp_info(n_nlp, m_nlp, nnz_jac_nlp, nnz_hess_nlp, index_style);
     assert(bret);
 
     //create storage for variable and constraint bounds of the original NLP
@@ -107,6 +114,7 @@ bool hiopAugLagrNlpAdapter::initialize()
     m_cons = m_nlp;
     n_slacks = m_cons_ineq;
     nnz_jac = nnz_jac_nlp;
+    nnz_hess = nnz_hess_nlp;
 
     //allocate space 
     lambda = new hiopVectorPar(m_cons);
@@ -127,8 +135,7 @@ bool hiopAugLagrNlpAdapter::initialize()
     //Constraint evaluations consist of:
     // ->  c(x) - c_rhs = 0 (eq. constr)
     // ->  c(x) - s     = 0 (ineq. constr)
-    c_rhs = new hiopVectorPar(m_cons_eq);
-    double *c_rhsvec=c_rhs->local_data();
+    c_rhs = new double[m_cons_eq];
     cons_eq_mapping   = new long long[m_cons_eq];
     cons_ineq_mapping = new long long[m_cons_ineq];
   
@@ -136,7 +143,7 @@ bool hiopAugLagrNlpAdapter::initialize()
     int it_eq=0, it_ineq=0;
     for(Ipopt::Index i=0; i<m_nlp; i++) {
       if(gl_nlp[i]==gu_nlp[i]) {
-        c_rhsvec[it_eq] = gl_nlp[i]; 
+        c_rhs[it_eq] = gl_nlp[i]; 
         cons_eq_mapping[it_eq] = (long long) i;
         it_eq++;
       } else {
@@ -160,6 +167,7 @@ bool hiopAugLagrNlpAdapter::initialize()
     std::cout << "m_cons_eq " << m_cons_eq << std::endl;
     std::cout << "m_cons_ineq " << m_cons_ineq << std::endl;
     std::cout << "nnz_jac " << nnz_jac << std::endl;
+    std::cout << "nnz_hess " << nnz_hess << std::endl;
 
     return true;
 }
@@ -209,7 +217,6 @@ bool hiopAugLagrNlpAdapter::get_vars_info(const long long& n, double *xlow,
  */
 bool hiopAugLagrNlpAdapter::eval_penalty(const double *x_in, bool new_x, double *penalty_data)
 {
-    const double *rhs_data = c_rhs->local_data_const();
     const double *slacks  = &x_in[n_vars];
 
     //evaluate the original NLP constraints
@@ -221,7 +228,7 @@ bool hiopAugLagrNlpAdapter::eval_penalty(const double *x_in, bool new_x, double 
     // c(x) - c_rhs
     for (long long i = 0; i<m_cons_eq; i++)
     {
-        penalty_data[cons_eq_mapping[i]] -= rhs_data[i]; 
+        penalty_data[cons_eq_mapping[i]] -= c_rhs[i]; 
     }
     
     //adjust inequality constraints
@@ -507,10 +514,41 @@ bool hiopAugLagrNlpAdapter::eval_jac_g(Index n, const Number* x, bool new_x,
 }
 
 bool hiopAugLagrNlpAdapter::eval_h(Index n, const Number* x, bool new_x, Number obj_factor,
-     Index m, const Number* lambda, bool new_lambda,
+     Index m, const Number* lambda_ipopt, bool new_lambda,
      Index nele_hess, Index* iRow, Index* jCol, Number* values)
 {
+   assert(n == n_vars+n_slacks);
+   assert(obj_factor == 1.0);
+   assert(m == 0);
+   //assert(nele_hess == ??);
+
+    //initialize hessian matrix when first reached this point
+    static bool _hessianInitialized = false;
+    if (!_hessianInitialized)
+    {
+      _hessianNlp = new hiopMatrixSparse(n_vars, n_vars, nnz_hess);
+      _lambdaExtra = new hiopVectorPar(m_cons);
+      _hessianInitialized = true;
+    }
+
+    //  2*rho*p(x) - lambda
+    double *lambdaExtra = _lambdaExtra->local_data();
+    bool bret = eval_penalty(x, new_x, lambdaExtra);
+    assert(bret);
+    _lambdaExtra->scale(2*rho);
+    _lambdaExtra->axpy(-1.0, *lambda);
+
+    int *iRow_nlp = _hessianNlp->get_iRow();
+    int *jCol_nlp = _hessianNlp->get_jCol();
+    double *values_nlp = _hessianNlp->get_values();
+
+    // Evaluate f(x)_hess + sum_i{ (2*rho*p_i(x) - lambda_i) * p_i(x)_hess}
     //hiop::hiopInterfaceDenseConstraints
+    bret = nlp_in->eval_h(n_vars, x, new_x,
+                obj_factor, m_cons, lambdaExtra, true,
+                nnz_hess, iRow_nlp, jCol_nlp, values_nlp);
+    assert(bret);
+
     return true;
 }
 

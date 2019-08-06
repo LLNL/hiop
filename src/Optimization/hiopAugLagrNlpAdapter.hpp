@@ -172,7 +172,7 @@ public:
        bool          new_x,
        Number        obj_factor,
        Index         m,
-       const Number* lambda,
+       const Number* lambda_ipopt,
        bool          new_lambda,
        Index         nele_hess,
        Index*        iRow,
@@ -271,19 +271,24 @@ protected:
     long long m_cons_eq; ///< number of equality constraints (original NLP problem)
     long long m_cons_ineq; ///< number of inequality constraints (original NLP problem)
     long long nnz_jac; //< number of nonzeros in Jacobian of constraints (original NLP problem)
+    long long nnz_hess; ///< number of nnz in Hessian of Lagrangian (original NLP prob)
     hiopVectorPar *xl, *xu; ///< x variable bounds (original NLP problem)
     hiopVectorPar *sl, *su; ///< slack variables bounds (equal to ineq. bounds in original NLP problem)
 
     //auxiliary arrays for handling the original NLP constraints
     long long *cons_eq_mapping, *cons_ineq_mapping; ///< indices of eq. and ineq. constraints
-    hiopVectorPar *c_rhs; ///< rhs for the equality constraints
+    double *c_rhs; ///< rhs for the equality constraints
+
     double *_solutionIpopt; ///< cached Ipopt solution from finalize_solution()
 
     //working memory for internal evaluations of the AL functions
     //motivation to have in on class level is to avoid alloc/dealloc
     //during each call of the evaluation routines
     hiopVectorPar *_penaltyFcn; ///< original constraints transformed  AL penalty function p(x)=0
-    hiopMatrixSparse *_penaltyFcn_jacobian; ///< Jacobian of the penalty w.r.t the primal variables x (excluding slacks), which is equivalent to the Jacobian of the original NLP constraints
+    hiopMatrixSparse *_penaltyFcn_jacobian; ///< Jacobian of the the original NLP constraints, which is equivalent to the Jacobian of the penalty fcn. w.r.t the primal variables x (excluding slacks)
+    hiopMatrixSparse *_hessianNlp; ///< Hessian of Lagrangian of the original NLP problem
+    hiopMatrixSparse *_hessianAugLagr; ///< Hessian of Lagrangian of the AL problem
+    hiopVectorPar    *_lambdaExtra; ///<combined lambda and 2*rho*c(x) term used during the Hessian evaluation
 
 public:
     /* outputing and debug-related functionality*/
