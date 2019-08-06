@@ -73,12 +73,12 @@ public:
   void transTimesVec(double beta,   double* y,
 			     double alpha,  const double* x ) const;
 
-  /** res = alpha * this' * this 
+  /** this = alpha * A' * A + beta*B
   */
-  void transTimesThis(double alpha, hiopMatrixSparse &res) const;
+  void transAAplusB(double alpha, const hiopMatrixSparse &A, double beta, const hiopMatrixSparse &B);
 
   /** creates sparse matrix from the given values and structure */
-  void make(int nrows_, int ncols_, vector<vector<int>> &vvCols, vector<vector<double>> &vvValues);
+  void make(int nrows_, int ncols_, const vector<vector<int>> &vvCols, const vector<vector<double>> &vvValues);
 
   /* call with -1 to print all rows, all columns, or on all ranks; otherwise will
   *  will print the first rows and/or columns on the specified rank.
@@ -101,6 +101,12 @@ public:
   /* pointer to the values */
   double* get_values() {return values;}
 
+  /* pointer to the iRow */
+  const int* get_iRow_const() const {return iRow;}
+  /* pointer to the jCol */
+  const int* get_jCol_const() const {return jCol;}
+  /* pointer to the values */
+  const double* get_values_const() const {return values;}
 
 
 #ifdef HIOP_DEEPCHECKS

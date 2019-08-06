@@ -1,6 +1,7 @@
 #include "hiopMatrixSparse.hpp"
 
 #include <cassert>
+#include <iostream>
 
 namespace hiop
 {
@@ -101,60 +102,67 @@ void hiopMatrixSparse::transTimesVec(double beta,   double* y,
     }
 }
 
-/** res = alpha * this' * this 
-* The method can work with @res being either an empty sparse matrix,
+/** this = alpha * A' * A + beta*B
+* The method can work with #this being either an empty sparse matrix,
   i.e. hiopMatrixSparse(0,0,0.), in which case the storage is allocated
-  and the sparse structure is created. In case @res already contains
+  and the sparse structure is created. In case #this already contains
   all the required storage space, we only update the numerical values
   of the nonzeros (assuming that the structure was set up previously)
 */
-void hiopMatrixSparse::transTimesThis(double alpha, hiopMatrixSparse &res) const
+void hiopMatrixSparse::transAAplusB(double alpha, const hiopMatrixSparse &A, double beta, const hiopMatrixSparse &B)
 {
-  //create column respresentation of the matrix
-  //TODO can be reused for all the subsequent calls
-  vector<vector<int>> vvRows(ncols); // list of nnz row indices in each column
-  vector<vector<double>> vvValues(ncols); // list of nnz values in each column
-
-  for (int i = 0; i < nonzeroes; i++)
-  {
-    vvRows[jCol[i]].push_back(iRow[i]);
-    vvValues[jCol[i]].push_back(values[i]);
-  }
-
-  // does the resulting sparse matrix needs to be initialized
-  // or can we fill directly @res.values with the new values?
-  bool resultNotInitialized = (res.nnz() == 0 && res.m()==0 && res.n()==0);
+  assert(B.m() == B.n());
+  assert(A.n() == B.m());
   
-  //storage of the result in case @res is not initialized
-  vector<vector<int>> vvRes_jCol(0);
-  vector<vector<double>> vvRes_values(0);
-  if (resultNotInitialized)
+  // test if the structure of this matrix is initialized?
+  // or can we fill directly #values with the new values?
+  bool structureNotInitialized = (this->nnz() == 0 && this->m()==0 && this->n()==0);
+
+  int nrows_A      = A.m();
+  int ncols_A      = A.n();
+  int nonzeroes_A  = A.nnz();
+  const int *iRow_A      = A.get_iRow_const();
+  const int *jCol_A      = A.get_jCol_const();
+  const double *values_A = A.get_values_const();
+  
+  //create column respresentation of the matrix A
+  //TODO can be reused for all the subsequent calls, except values_A
+  vector<vector<int>> vvRows_A(ncols_A); // list of nnz row indices in each column
+  vector<vector<double>> vvValues_A(ncols_A); // list of nnz values in each column
+  for (int i = 0; i < nonzeroes_A; i++)
   {
-    vvRes_jCol.resize(ncols);
-    vvRes_values.resize(ncols);
+    vvRows_A[jCol_A[i]].push_back(iRow_A[i]);
+    vvValues_A[jCol_A[i]].push_back(values_A[i]);
   }
-  // otherwise we can update directly @res
-  int *res_iRow = res.get_iRow();
-  int *res_jCol = res.get_jCol();
-  double *res_values = res.get_values();
+  
+  //storage of the result in case #this is not initialized
+  vector<vector<int>> vvCols_Result(0);
+  vector<vector<double>> vvValues_Result(0);
+  if (structureNotInitialized)
+  {
+    vvCols_Result.resize(ncols_A);
+    vvValues_Result.resize(ncols_A);
+  }
+  // otherwise we can update directly #this.values
   int nnz_idx = 0;
 
-  // compute dot product between columns c1 and c2
-  for (int c1 = 0; c1 < ncols; c1++)
+  // compute alpha*A'A
+  for (int c1 = 0; c1 < ncols_A; c1++)
   {
-    for (int c2 = 0; c2 < ncols; c2++) //c2=c1..ncols
+    for (int c2 = 0; c2 < ncols_A; c2++) //c2=c1..ncols
     {
-      auto rowIdx1 = vvRows[c1].begin();
-      auto rowIdx2 = vvRows[c2].begin();
-      auto value1  = vvValues[c1].begin();
-      auto value2  = vvValues[c2].begin();
+      auto rowIdx1 = vvRows_A[c1].begin();
+      auto rowIdx2 = vvRows_A[c2].begin();
+      auto value1  = vvValues_A[c1].begin();
+      auto value2  = vvValues_A[c2].begin();
       double dot = 0.;
       bool newNonzero = false;
 
-      while ( rowIdx1 != vvRows[c1].end() && rowIdx2 != vvRows[c2].end())
+      while ( rowIdx1 != vvRows_A[c1].end() && rowIdx2 != vvRows_A[c2].end())
       {
         if (*rowIdx1 == *rowIdx2) //nonzeros at the same row index in both columns
         {
+          // compute dot product between columns c1 and c2
           dot += alpha * (*value1) * (*value2);
           rowIdx1++; rowIdx2++;
           value1++; value2++; 
@@ -173,18 +181,19 @@ void hiopMatrixSparse::transTimesThis(double alpha, hiopMatrixSparse &res) const
       {
         //we need to use auxiliary storage
         //the actual sparse matrix is created later 
-        if (resultNotInitialized)
+        if (structureNotInitialized)
         {
-          vvRes_jCol[c1].push_back(c2);
-          vvRes_values[c1].push_back(dot);
+          vvCols_Result[c1].push_back(c2);
+          vvValues_Result[c1].push_back(dot);
+          std::cout << "c1 c2 v" << c1 << " " << c2 << " " << dot << std::endl;
         }
-        //we can update directly @res.values
+        //we can update directly #values
         else 
         {
-          assert(nnz_idx < res.nnz());
-          assert(res_iRow[nnz_idx] == c1);
-          assert(res_jCol[nnz_idx] == c2);
-          res_values[nnz_idx] = dot;
+          assert(nnz_idx < nonzeroes);
+          assert(iRow[nnz_idx] == c1);
+          assert(jCol[nnz_idx] == c2);
+          values[nnz_idx] = dot;
           nnz_idx++;
         }
       } 
@@ -192,11 +201,11 @@ void hiopMatrixSparse::transTimesThis(double alpha, hiopMatrixSparse &res) const
   }
 
   //construt the sparse matrix with the result if not done so previously
-  if (resultNotInitialized)
-    res.make(ncols, ncols, vvRes_jCol, vvRes_values);
+  if (structureNotInitialized)
+    this->make(ncols_A, ncols_A, vvCols_Result, vvValues_Result);
 }
 
-void hiopMatrixSparse::make(int nrows_, int ncols_, vector<vector<int>> &vvCols, vector<vector<double>> &vvValues)
+void hiopMatrixSparse::make(int nrows_, int ncols_, const vector<vector<int>> &vvCols, const vector<vector<double>> &vvValues)
 {
   assert(nonzeroes == 0);
   assert(nrows == 0);

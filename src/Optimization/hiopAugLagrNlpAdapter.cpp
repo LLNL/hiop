@@ -550,7 +550,7 @@ bool hiopAugLagrNlpAdapter::eval_h(Index n, const Number* x, bool new_x, Number 
    {
      _lambdaForHessEval = new hiopVectorPar(m_cons);
      _hessianNlp = new hiopMatrixSparse(n_vars, n_vars, nnz_hess);
-     _termJTJ = new hiopMatrixSparse(0,0,0);//we don't know nnz at this point
+     _hessianAugLagr = new hiopMatrixSparse(0,0,0);//we don't know nnz at this point
      eval_penalty_jac(x, new_x);
    } 
 
@@ -572,17 +572,28 @@ bool hiopAugLagrNlpAdapter::eval_h(Index n, const Number* x, bool new_x, Number 
                 nnz_hess, iRow_nlp, jCol_nlp, values_nlp);
     assert(bret);
 
-    // termJTJ = 2*rho*J'*J
-    //_termJTJ is either empty matrix (dummy call) or only the values need to be updated
-    _penaltyFcn_jacobian->transTimesThis(2*rho, *_termJTJ); 
+    // _hessianAugLagr = 2*rho*J'J + _hessianNlp
+    // _hessianAUgLagr is either an empty matrix (dummy call)
+    // or only the values need to be updated
+    _hessianAugLagr->transAAplusB(2*rho, *_penaltyFcn_jacobian,
+                                  1.0,   *_hessianNlp);
+
+    FILE *f2=fopen("jac.txt","w");
+    _penaltyFcn_jacobian->print(f2);
+     fclose(f2);
+    
+    FILE *f3=fopen("JTJ.txt","w");
+    _hessianAugLagr->print(f3);
+     fclose(f3);
+
+    log->printf(hovWarning, "m n nnz %d %d %d\n", _hessianAugLagr->m(), _hessianAugLagr->n(), _hessianAugLagr->nnz());
+    log->printf(hovWarning, "nele_hess %d\n", nele_hess);
+    log->printf(hovWarning, "2*rho %g\n", 2*rho);
+    assert(0);
 
     
     //TODO
-    //termJTJ += hessianNlp
-    //_termJTJ->addMatrix(_hessianNlp);
-
-    //TODO
-    // add Hss and Hxs
+    // add H_ss and H_xs
 
     if (iRow != NULL && jCol != NULL)
     {

@@ -290,7 +290,6 @@ protected:
     hiopVectorPar    *_lambdaForHessEval; ///< lambda + 2*rho*c(x), used during the Hessian eval
     hiopMatrixSparse *_hessianNlp; ///< Hessian of Lagrangian of the original NLP problem
     hiopMatrixSparse *_hessianAugLagr; ///< Hessian of Lagrangian of the AL problem
-    hiopMatrixSparse *_termJTJ; ///< storage for 2*rho*J'*J used during the AL Hessian eval
 
 public:
     /* outputing and debug-related functionality*/
