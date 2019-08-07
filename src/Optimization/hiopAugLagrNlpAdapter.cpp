@@ -122,7 +122,7 @@ bool hiopAugLagrNlpAdapter::initialize()
     startingPoint = new hiopVectorPar(n_vars+n_slacks);
     _penaltyFcn = new hiopVectorPar(m_cons);
     _penaltyFcn_jacobian = new hiopMatrixSparse(m_cons, n_vars, nnz_jac);
-    _hessian = new hiopAugLagrHessian(nlp_in, n_vars, m_cons, nnz_hess);
+    _hessian = new hiopAugLagrHessian(nlp_in, n_vars, n_slacks, m_cons, nnz_hess);
 
     _solutionIpopt = new double[n_vars+n_slacks];
 
@@ -478,7 +478,7 @@ bool hiopAugLagrNlpAdapter::get_nlp_info(Index& n, Index& m,
     eval_penalty_jac(startingPoint->local_data(), true);//need to init structure
     _hessian->assemble(startingPoint->local_data(), true,
                        *lambda, rho, *_penaltyFcn,
-                       *_penaltyFcn_jacobian);
+                       *_penaltyFcn_jacobian, cons_ineq_mapping);
 
     nnz_h_lag = _hessian->nnz();
     return true;
@@ -560,7 +560,8 @@ bool hiopAugLagrNlpAdapter::eval_h(Index n, const Number* x, bool new_x, Number 
     bret = eval_penalty_jac(x, new_x);//TODO: new_x
     assert(bret);
 
-    _hessian->assemble(x, new_x, *lambda, rho, *_penaltyFcn, *_penaltyFcn_jacobian);
+    _hessian->assemble(x, new_x, *lambda, rho, *_penaltyFcn,
+                       *_penaltyFcn_jacobian, cons_ineq_mapping);
 
     if (iRow != NULL && jCol != NULL)
     {

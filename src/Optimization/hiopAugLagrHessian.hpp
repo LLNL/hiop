@@ -35,12 +35,12 @@ class hiopVectorPar;
 class hiopAugLagrHessian //: public hiopMatrixSparse
 {
 public:
-  hiopAugLagrHessian(NLP_CLASS_IN *nlp_in_, int n_vars, int m_cons, int nnz);
+  hiopAugLagrHessian(NLP_CLASS_IN *nlp_in_, int n_vars, int n_slacks, int m_cons, int nnz);
   ~hiopAugLagrHessian();
  
   int nnz();
   void assemble(const double *x, bool new_x, const hiopVectorPar &lambda, const double rho,
-        const hiopVectorPar &penaltyFcn, const hiopMatrixSparse &penaltyFcn_jacobian);
+        const hiopVectorPar &penaltyFcn, const hiopMatrixSparse &penaltyFcn_jacobian, long long *cons_ineq_mapping);
 
 private:
   /**
@@ -54,9 +54,47 @@ private:
   bool eval_hess_nlp(const double *x_in, bool new_x, const hiopVectorPar &lambda, const double rho, const hiopVectorPar &penaltyFcn);
 
   /** C = alpha * A' * A + beta*B
+  * The method can work with #C being either an empty sparse matrix,
+    i.e. hiopMatrixSparse(0,0,0.), in which case the storage is allocated
+    and the sparse structure is created using vvCols and vvValues. In case
+    #C already contains all the required storage space, we only update the numerical values
+    of the nonzeros (assuming that the structure was set up previously).
+    
+    \param[out] C The method computes and returns only the lower triangular part of the symmetric result.
+    \param[out] vvCols, vvValues The method computes and returns only the lower triangular part of the symmetric result.
+    \param[in] structureNotInitialized Switch deciding which output will be updated, either C or vvCols+vvValues
+    \param[in] A is general nonsquare, nonsymmetric matrix
+    \param[in] B is square symmetric matrix, containing only lower triangular part
+    \param[in] alpha, beta are constants
+  
   */
-  void transAAplusB(hiopMatrixSparse &C, double alpha, const hiopMatrixSparse &A, double beta, const hiopMatrixSparse &B);
+  void transAAplusB(hiopMatrixSparse &C, vector<vector<int>> &vvCols_C, vector<vector<double>> &vvValues_C, bool structureNotInitialized, double alpha, const hiopMatrixSparse &A, double beta, const hiopMatrixSparse &B);
 
+  /** 
+   Append scaled jacobian and identity (blocks 2-1 and 2-2)
+   to the sparse matrix H containing only H_xx block
+    
+   H_xx = _hessianAugLagr
+   H_sx = -2*rho*Jineq'
+   H_ss = 2*rho*I
+       | Hxx   0  |
+   H = |          |
+       | Hsx  Hss |
+
+   The method can work with #H being either an empty sparse matrix,
+    i.e. hiopMatrixSparse(0,0,0.), in which case the storage is allocated
+    and the sparse structure is created using vvCols and vvValues.
+    In case #H already contains all the required storage space and sparse structure,
+    we only update the numerical values of the nonzeros.
+    
+    \param[out] H 
+    \param[out] vvCols, vvValues The method computes and returns only the lower triangular part of the symmetric result.
+    \param[in] structureNotInitialized Switch deciding which output will be updated, either H or vvCols+vvValues
+    \param[in] J is general nonsquare, nonsymmetric matrix
+    \param[in] alpha
+    \param[in] cons_ineq_mapping Specifies rows of J corresponding to Jineq
+  */
+  void appendScaledJacobian(hiopMatrixSparse &H, vector<vector<int>> &vvCols_H, vector<vector<double>> &vvValues_H, bool structureNotInitialized, double alpha, const hiopMatrixSparse &J, long long *cons_ineq_mapping);
 
 #ifdef HIOP_DEEPCHECKS
   /* check symmetry */
@@ -66,6 +104,7 @@ private:
 private:
     NLP_CLASS_IN     *nlp_in; ///< input NLP representation, neede to evaluate NLP hessian
     int nvars_nlp;  ///<property of the input NLP
+    int nslacks_nlp;  ///<property of the input NLP
     int mcons_nlp;  ///<property of the input NLP
     int nnz_nlp;   ///<property of the input NLP
     hiopVectorPar    *_lambdaForHessEval; ///< lambda + 2*rho*c(x), used during the NLP Hessian evaluation

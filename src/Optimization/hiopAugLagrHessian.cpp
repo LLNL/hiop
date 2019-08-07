@@ -6,9 +6,10 @@
 namespace hiop
 {
 
-hiopAugLagrHessian::hiopAugLagrHessian(NLP_CLASS_IN *nlp_in_, int n_vars, int m_cons, int nnz):
+hiopAugLagrHessian::hiopAugLagrHessian(NLP_CLASS_IN *nlp_in_, int n_vars, int n_slacks, int m_cons, int nnz):
     nlp_in(nlp_in_),
     nvars_nlp(n_vars),
+    nslacks_nlp(n_slacks),//TODO: use nlp->getXX() instead of introducing duplicates of variables?
     mcons_nlp(m_cons),
     nnz_nlp(nnz),
     _lambdaForHessEval(nullptr),
@@ -78,20 +79,54 @@ bool hiopAugLagrHessian::eval_hess_nlp(const double *x_in, bool new_x, const hio
 
 void hiopAugLagrHessian::assemble(const double *x, bool new_x, const hiopVectorPar &lambda,
         const double rho, const hiopVectorPar &penaltyFcn,
-        const hiopMatrixSparse &penaltyFcn_jacobian)
+        const hiopMatrixSparse &penaltyFcn_jacobian, long long *cons_ineq_mapping)
 {
     // evaluates NLP hessian #_hessianNlp using
     // lambdaForHessEval =  2*rho*p(x) - lambda
     bool bret = eval_hess_nlp(x, new_x, lambda, rho, penaltyFcn);
     assert(bret);
+    
+    // test if the structure of the Hessian matrix is initialized.
+    // If so we can update directly #.values with the new values
+    const bool structureNotInitialized = (_hessianAugLagr->nnz() == 0 &&
+                                          _hessianAugLagr->m()==0 &&
+                                          _hessianAugLagr->n()==0);
+
+    //tmp storage of the result in case #C is not initialized
+    // otherwise we can update directly #C.values
+    vector<vector<int>> vvCols(0);
+    vector<vector<double>> vvValues(0);
+    const int N = nvars_nlp + nslacks_nlp;
+    if (structureNotInitialized)
+    {
+      vvCols.resize(N);
+      vvValues.resize(N);
+    }
 
     // _hessianAugLagr = 2*rho*J'J + _hessianNlp
-    // _hessianAUgLagr is either an empty matrix (dummy call)
-    // or only the values need to be updated
-    transAAplusB(*_hessianAugLagr,
+    // _hessianAUgLagr is either an empty matrix (vvCols,vvValues are used)
+    // or the nnz values are updated directly in _hessianAugLagr
+    transAAplusB(*_hessianAugLagr, vvCols, vvValues, structureNotInitialized,
                  2*rho, penaltyFcn_jacobian,
                  1.0,   *_hessianNlp);
-    //TODO: needs to allocate extra space for scaled Jac and identity
+  
+    //append scaled jacobian and identity (blocks 2-1 and 2-2)
+    // H_xx = _hessianAugLagr
+    // H_sx = -2*rho*Jineq'
+    // H_ss = 2*rho*I
+    //     | Hxx   0  |
+    // H = |          |
+    //     | Hsx  Hss |
+    appendScaledJacobian(*_hessianAugLagr, vvCols, vvValues, structureNotInitialized,
+                         -2*rho, penaltyFcn_jacobian, cons_ineq_mapping);
+
+
+  //construt the sparse matrix with the result if not done so previously
+  if (structureNotInitialized)
+    _hessianAugLagr->make(N, N, vvCols, vvValues);
+
+
+
 
     FILE *f1=fopen("hessNLP.txt","w");
     _hessianNlp->print(f1);
@@ -121,20 +156,18 @@ void hiopAugLagrHessian::assemble(const double *x, bool new_x, const hiopVectorP
   of the nonzeros (assuming that the structure was set up previously).
   
   \param[out] C The method computes and returns only the lower triangular part of the symmetric result.
+  \param[out] vvCols, vvValues The method computes and returns only the lower triangular part of the symmetric result.
+  \param[in] structureNotInitialized Switch deciding which output will be updated, either C or vvCols+vvValues
   \param[in] A is general nonsquare, nonsymmetric matrix
   \param[in] B is square symmetric matrix, containing only lower triangular part
   \param[in] alpha, beta are constants
 
 */
-void hiopAugLagrHessian::transAAplusB(hiopMatrixSparse &C, double alpha, const hiopMatrixSparse &A, double beta, const hiopMatrixSparse &B)
+void hiopAugLagrHessian::transAAplusB(hiopMatrixSparse &C, vector<vector<int>> &vvCols_C, vector<vector<double>> &vvValues_C, bool structureNotInitialized, double alpha, const hiopMatrixSparse &A, double beta, const hiopMatrixSparse &B)
 {
   //check input dimensions
   assert(B.m() == B.n());
   assert(A.n() == B.m());
-  
-  // test if the structure of this matrix is initialized?
-  // or can we fill directly #C.values with the new values?
-  const bool structureNotInitialized = (C.nnz() == 0 && C.m()==0 && C.n()==0);
 
   //data of matrix A
   const int nrows_A      = A.m();
@@ -166,15 +199,6 @@ void hiopAugLagrHessian::transAAplusB(hiopMatrixSparse &C, double alpha, const h
     vvValues_A[jCol_A[i]].push_back(values_A[i]);
   }
   
-  //tmp storage of the result in case #C is not initialized
-  vector<vector<int>> vvCols_Result(0);
-  vector<vector<double>> vvValues_Result(0);
-  if (structureNotInitialized)
-  {
-    vvCols_Result.resize(ncols_A);
-    vvValues_Result.resize(ncols_A);
-  }
-  // otherwise we can update directly #C.values
   int nnz_idx_C = 0; //iterator in C
   int nnz_idx_B = 0; //iterator in B
 
@@ -183,7 +207,7 @@ void hiopAugLagrHessian::transAAplusB(hiopMatrixSparse &C, double alpha, const h
   {
     for (int c2 = 0; c2 <= c1; c2++) //compute only lower triangular part
     {
-      //TODO: skip empty 
+      //TODO: skip empty elements 
       //if (vvRows_A[c1].begin() == vvRows_A.end() && zero @B[c1,c2])
 
       auto rowIdx1 = vvRows_A[c1].begin();
@@ -229,10 +253,10 @@ void hiopAugLagrHessian::transAAplusB(hiopMatrixSparse &C, double alpha, const h
         //the actual sparse matrix is created later 
         if (structureNotInitialized)
         {
-          vvCols_Result[c1].push_back(c2);
-          vvValues_Result[c1].push_back(dot);
+          vvCols_C[c1].push_back(c2);
+          vvValues_C[c1].push_back(dot);
         }
-        //we can update directly #values
+        //we can update directly #C.values
         else 
         {
           assert(0); //did not test this path
@@ -243,20 +267,82 @@ void hiopAugLagrHessian::transAAplusB(hiopMatrixSparse &C, double alpha, const h
           nnz_idx_C++;
         }
       } 
-    }
+    }//end for c2
+  }//end for c1
+
+}
+
+void hiopAugLagrHessian::appendScaledJacobian(hiopMatrixSparse &H, vector<vector<int>> &vvCols_H, vector<vector<double>> &vvValues_H, bool structureNotInitialized, double alpha, const hiopMatrixSparse &J, long long *cons_ineq_mapping)
+{
+ 
+  const int *iRow_J = J.get_iRow_const();  
+  const int *jCol_J = J.get_jCol_const();  
+  const double *values_J = J.get_values_const();  
+
+  int *iRow_H = H.get_iRow();  
+  int *jCol_H = H.get_jCol();  
+  double *values_H = H.get_values();  
+
+  //iterators
+  int rowsAppended = 0;
+  int ineq_i = 0;
+
+  int previousRow = iRow_J[0];
+
+  // iterate over rows/cols in J
+  for (int i = 0; i < J.nnz(); i++)
+  {
+      const int row = iRow_J[i];
+      
+      //we have encountered new row in J
+      if (previousRow != row)
+      {
+          if (i!= 0 && previousRow == cons_ineq_mapping[ineq_i]) rowsAppended++;
+          if (i!= 0 && previousRow == cons_ineq_mapping[ineq_i]) ineq_i++;
+          previousRow = row;
+      }
+  
+      //append only Jacobian of inequality constraints (H_sx)
+      if (row == cons_ineq_mapping[ineq_i])
+      {
+         if (structureNotInitialized)
+         {
+            vvCols_H[rowsAppended + nvars_nlp].push_back(jCol_J[i]);
+            vvValues_H[rowsAppended + nvars_nlp].push_back(alpha * values_J[i]);
+         }
+         else
+         {
+            assert(0);
+            //iRow_H[] = rowsAppended + nvars_nlp;
+            //jCol_H[] = jCol_J[i];
+            //values_H[] = alpha * values_J[i];
+         }
+      
+         //append scaled identity (H_ss) when reaching end of the row
+         if ( i == J.nnz()-1 || row != iRow_J[i+1])
+         {
+           if (structureNotInitialized)
+           {
+              vvCols_H[rowsAppended + nvars_nlp].push_back(rowsAppended + nvars_nlp);
+              vvValues_H[rowsAppended + nvars_nlp].push_back(-alpha);
+           }
+           else
+           {
+              assert(0);
+              //iRow_H[] = rowsAppended + nvars_nlp;
+              //jCol_H[] = rowsAppended + nvars_nlp;
+              //values_H[] = -alpha;
+           }
+         }
+      }
+
   }
 
-  //update scaled jacobian and identity at blocks 2-1 and 2-2
-  // H_xx = _hessianAugLagr
-  // H_sx = -2*rho*J'_I
-  // H_ss = 2*rho*I
-  //     | Hxx   0  |
-  // H = |          |
-  //     | Hsx  Hss |
-
-  //construt the sparse matrix with the result if not done so previously
-  if (structureNotInitialized)
-    C.make(ncols_A, ncols_A, vvCols_Result, vvValues_Result);
+  std::cout << "\n\n\nineq = [";
+  for (int i = 0; i < nslacks_nlp; i++)
+      std::cout << cons_ineq_mapping[i] << ",";
+  std::cout << "];" << std::endl;
+  assert(rowsAppended+1 == nslacks_nlp);
 }
 
 }
