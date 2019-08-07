@@ -107,7 +107,13 @@ void hiopMatrixSparse::transTimesVec(double beta,   double* y,
   i.e. hiopMatrixSparse(0,0,0.), in which case the storage is allocated
   and the sparse structure is created. In case #this already contains
   all the required storage space, we only update the numerical values
-  of the nonzeros (assuming that the structure was set up previously)
+  of the nonzeros (assuming that the structure was set up previously).
+  
+  \param[in] A is general nonsquare, nonsymmetric matrix
+  \param[in] B is square symmetric matrix, containing only lower triangular part
+  \param[in] alpha, beta are constants
+
+  The method computes and returns only the lower triangular part of the symmetric result.
 */
 void hiopMatrixSparse::transAAplusB(double alpha, const hiopMatrixSparse &A, double beta, const hiopMatrixSparse &B)
 {
@@ -156,8 +162,11 @@ void hiopMatrixSparse::transAAplusB(double alpha, const hiopMatrixSparse &A, dou
   // compute alpha*A'A + beta*B
   for (int c1 = 0; c1 < ncols_A; c1++)
   {
-    for (int c2 = 0; c2 < ncols_A; c2++) //c2=c1..ncols
+    for (int c2 = c1; c2 < ncols_A; c2++) //compute only lower triangular part
     {
+      //TODO: skip empty 
+      //if (vvRows_A[c1].begin() == vvRows_A.end() && zero @B[c1,c2])
+
       auto rowIdx1 = vvRows_A[c1].begin();
       auto rowIdx2 = vvRows_A[c2].begin();
       auto value1  = vvValues_A[c1].begin();
@@ -184,7 +193,7 @@ void hiopMatrixSparse::transAAplusB(double alpha, const hiopMatrixSparse &A, dou
         } 
       }
 
-      // add nonzeros from beta*B
+      // add nonzeros from beta*B, B is lower triangular NLP hessian
       if (nnz_idx_B < nonzeroes_B &&
           iRow_B[nnz_idx_B] == c1 &&
           jCol_B[nnz_idx_B] == c2)
