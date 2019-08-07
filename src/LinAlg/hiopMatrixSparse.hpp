@@ -73,10 +73,6 @@ public:
   void transTimesVec(double beta,   double* y,
 			     double alpha,  const double* x ) const;
 
-  /** this = alpha * A' * A + beta*B
-  */
-  void transAAplusB(double alpha, const hiopMatrixSparse &A, double beta, const hiopMatrixSparse &B);
-
   /** creates sparse matrix from the given values and structure */
   void make(int nrows_, int ncols_, const vector<vector<int>> &vvCols, const vector<vector<double>> &vvValues);
 

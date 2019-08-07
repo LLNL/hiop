@@ -1,4 +1,7 @@
 #include "hiopAugLagrNlpAdapter.hpp"
+#include "hiopVector.hpp"
+#include "hiopMatrixSparse.hpp"
+#include "hiopAugLagrHessian.hpp"
 
 #ifdef HIOP_USE_MPI
 #include "mpi.h"
@@ -32,9 +35,7 @@ hiopAugLagrNlpAdapter::hiopAugLagrNlpAdapter(NLP_CLASS_IN* nlp_in_):
     _solutionIpopt(nullptr),
     _penaltyFcn(nullptr),
     _penaltyFcn_jacobian(nullptr),
-    _lambdaForHessEval(nullptr),
-    _hessianNlp(nullptr),
-    _hessianAugLagr(nullptr),
+    _hessian(nullptr),
     runStats(),
     options(new hiopOptions(/*filename=NULL*/)),
     log(new hiopLogger(options, stdout, 0))
@@ -61,9 +62,7 @@ hiopAugLagrNlpAdapter::~hiopAugLagrNlpAdapter()
     if(startingPoint)            delete startingPoint;
     if(_penaltyFcn)              delete _penaltyFcn;
     if(_penaltyFcn_jacobian)     delete _penaltyFcn_jacobian;
-    if(_hessianNlp)              delete _hessianNlp;
-    if(_hessianAugLagr)          delete _hessianAugLagr;
-    if(_lambdaForHessEval)             delete _lambdaForHessEval;
+    if(_hessian)                 delete _hessian;
     if(cons_eq_mapping)       delete [] cons_eq_mapping;
     if(cons_ineq_mapping)     delete [] cons_ineq_mapping;
     if(c_rhs)                 delete [] c_rhs;
@@ -117,12 +116,14 @@ bool hiopAugLagrNlpAdapter::initialize()
     nnz_hess = nnz_hess_nlp;
 
     //allocate space 
+    sl = new hiopVectorPar(m_cons_ineq);
+    su = new hiopVectorPar(m_cons_ineq);
     lambda = new hiopVectorPar(m_cons);
     startingPoint = new hiopVectorPar(n_vars+n_slacks);
     _penaltyFcn = new hiopVectorPar(m_cons);
     _penaltyFcn_jacobian = new hiopMatrixSparse(m_cons, n_vars, nnz_jac);
-    sl = new hiopVectorPar(m_cons_ineq);
-    su = new hiopVectorPar(m_cons_ineq);
+    _hessian = new hiopAugLagrHessian(nlp_in, n_vars, m_cons, nnz_hess);
+
     _solutionIpopt = new double[n_vars+n_slacks];
 
     /**************************************************************************/
@@ -445,7 +446,8 @@ bool hiopAugLagrNlpAdapter::get_starting_point(const long long &global_n, double
 {
     assert(global_n == n_vars+n_slacks);
 
-    memcpy(x0, startingPoint->local_data_const(), global_n*sizeof(double));
+    //memcpy(x0, startingPoint->local_data_const(), global_n*sizeof(double));
+    startingPoint->copyTo(x0);
     return true;
 }
 
@@ -470,12 +472,15 @@ bool hiopAugLagrNlpAdapter::get_nlp_info(Index& n, Index& m,
     nnz_jac_g = 0;
     index_style = TNLP::C_STYLE;
 
-    // need to call dummy evaluation of eval_h() to determine structure and nnz count
-    // allocates and initializes #_hessNlp and #_hessAugLagr with structure and dummy values
-    vector<double> x_tmp(n, 1.0);
-    eval_h(n, x_tmp.data(), true, 1.0, 0, nullptr, false, -1, nullptr, nullptr, nullptr);
+    
+    //TODO: this is not needed for Quasi-Newton
+    // need to call dummy hessian assembly to determine structure and nnz count
+    eval_penalty_jac(startingPoint->local_data(), true);//need to init structure
+    _hessian->assemble(startingPoint->local_data(), true,
+                       *lambda, rho, *_penaltyFcn,
+                       *_penaltyFcn_jacobian);
 
-    nnz_h_lag = _hessianAugLagr->nnz();
+    nnz_h_lag = _hessian->nnz();
     return true;
 }
 
@@ -536,52 +541,6 @@ bool hiopAugLagrNlpAdapter::eval_jac_g(Index n, const Number* x, bool new_x,
     return true;
 }
 
-/**
- *   Evaluates NLP Hessian and stores it in member #_hessianNlp.
- *   We use lambda =  2*rho*p(x) - lambda in order to account for
- *   contribution not only of the Lagrangian term but also the penalty term.
- *   _hessianNlp = hess_obj + sum_i lambda*H_i,
- *   where H_i are the penalty function Hessians.
- */
-bool hiopAugLagrNlpAdapter::eval_hess_nlp(const double *x_in, bool new_x)
-{
-  double obj_factor = 1.0;
-
-  //initialize the nonzero structure only during the first call
-  static bool initializedStructure = false;
-  if (!initializedStructure)
-  {
-    int *iRow_nlp = _hessianNlp->get_iRow();
-    int *jCol_nlp = _hessianNlp->get_jCol();
-    double *values_nlp = _hessianNlp->get_values();
-
-    //hiop::hiopInterfaceDenseConstraints
-    bool bret = nlp_in->eval_h(n_vars, nullptr, new_x,
-                obj_factor, m_cons, nullptr, true,
-                nnz_hess, iRow_nlp, jCol_nlp, nullptr);
-    assert(bret);
-    initializedStructure = true;
-  }
-
-  // lambdaForHessEval =  2*rho*p(x) - lambda
-  double *lambdaForHessEval = _lambdaForHessEval->local_data();
-  bool bret = eval_penalty(x_in, new_x);//TODO: new_x
-  assert(bret);
-  _lambdaForHessEval->copyFrom(*_penaltyFcn);
-  _lambdaForHessEval->scale(2*rho);
-  _lambdaForHessEval->axpy(-1.0, *lambda);
-
-  double *values_nlp = _hessianNlp->get_values();
-
-  // Evaluate f(x)_hess + sum_i{ (2*rho*p_i(x) - lambda_i) * p_i(x)_hess}
-  //hiop::hiopInterfaceDenseConstraints
-  bret = nlp_in->eval_h(n_vars, x_in, new_x,
-              obj_factor, m_cons, lambdaForHessEval, true,
-              nnz_hess, nullptr, nullptr, values_nlp);
-  assert(bret);
-
-  return bret;
-}
 
 bool hiopAugLagrNlpAdapter::eval_h(Index n, const Number* x, bool new_x, Number obj_factor,
      Index m, const Number* lambda_ipopt, bool new_lambda,
@@ -593,60 +552,24 @@ bool hiopAugLagrNlpAdapter::eval_h(Index n, const Number* x, bool new_x, Number 
    assert(obj_factor == 1.0); 
    assert(n == n_vars+n_slacks);
    assert(m == 0);
-   //assert(nele_hess == ??);
-
-   // this identifies the dummy call from the get_nlp_info() to determine the nonzero count,
-   // which is unknown. We need to initialize the storage and perform a dummy evaluation
-   // in order to force construction of the sparse structure
-   if (nele_hess == -1.0 && iRow == nullptr && jCol == nullptr && values == nullptr)
-   {
-     _lambdaForHessEval = new hiopVectorPar(m_cons);
-     _hessianNlp = new hiopMatrixSparse(n_vars, n_vars, nnz_hess);
-     _hessianAugLagr = new hiopMatrixSparse(0,0,0);//we don't know nnz at this point
-   } 
+   assert(nele_hess == _hessian->nnz());
 
     // Evaluates #_penaltyFcn_jacobian needed for J'*J operation
-    bool bret = eval_penalty_jac(x, new_x);//TODO: new_x
+    bool bret = eval_penalty(x, new_x);//TODO: new_x
+    assert(bret);
+    bret = eval_penalty_jac(x, new_x);//TODO: new_x
     assert(bret);
 
-    // evaluates NLP hessian #_hessianNlp using
-    // lambdaForHessEval =  2*rho*p(x) - lambda
-    bret = eval_hess_nlp(x, new_x);
-    assert(bret);
-
-    // _hessianAugLagr = 2*rho*J'J + _hessianNlp
-    // _hessianAUgLagr is either an empty matrix (dummy call)
-    // or only the values need to be updated
-    _hessianAugLagr->transAAplusB(2*rho, *_penaltyFcn_jacobian,
-                                  1.0,   *_hessianNlp);
-
-    FILE *f1=fopen("hessNLP.txt","w");
-    _hessianNlp->print(f1);
-     fclose(f1);
-
-    FILE *f2=fopen("jac.txt","w");
-    _penaltyFcn_jacobian->print(f2);
-     fclose(f2);
-    
-    FILE *f3=fopen("hess.txt","w");
-    _hessianAugLagr->print(f3);
-     fclose(f3);
-
-    log->printf(hovWarning, "m n nnz %d %d %d\n", _hessianAugLagr->m(), _hessianAugLagr->n(), _hessianAugLagr->nnz());
-    log->printf(hovWarning, "nele_hess %d\n", nele_hess);
-    log->printf(hovWarning, "2*rho %g\n", 2*rho);
-    assert(0);
-
-    
-    //TODO
-    // add H_ss and H_xs
+    _hessian->assemble(x, new_x, *lambda, rho, *_penaltyFcn, *_penaltyFcn_jacobian);
 
     if (iRow != NULL && jCol != NULL)
     {
-      //TODO fill iRow, jCol
+      //TODO copy from _hessian
+      //_hessian->getStructure(iRow, jCol);
     } else if (values != NULL)
     {
       //fill values
+      //_hessian->getValues(values);
     }
 
     return true;
@@ -752,7 +675,8 @@ void hiopAugLagrNlpAdapter::set_lambda(const hiopVectorPar* lambda_in)
     assert(lambda_in->get_size() == m_cons);
     assert(lambda_in->get_size() == lambda->get_size());
 
-    memcpy(lambda->local_data(), lambda_in->local_data_const(), m_cons*sizeof(double));
+    //memcpy(lambda->local_data(), lambda_in->local_data_const(), m_cons*sizeof(double));
+    lambda->copyFrom(*lambda_in);
 }
 
 //TODO: can we reuse the last jacobian instead of recomputing it? does hiop/ipopt evaluate the Jacobian in the last (xk + searchDir), a.k.a the solution? 

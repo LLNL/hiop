@@ -1,11 +1,8 @@
 #ifndef HIOP_AUGLAGRNLP_ADAPTER_HPP
 #define HIOP_AUGLAGRNLP_ADAPTER_HPP
 
-#include "hiopVector.hpp"
-#include "hiopMatrixSparse.hpp"
-#include "hiopRunStats.hpp"
-#include "hiopLogger.hpp"
-#include "hiopOptions.hpp"
+#include "hiopInterface.hpp"
+#include "IpTNLP.hpp"
 
 //TODO
 #define NLP_CLASS_IN Ipopt::TNLP
@@ -13,13 +10,17 @@
 //typedef Ipopt::TNLP NLP_CLASS_IN;
 //using NLP_CLASS_IN = IPOPT::TNLP;
 
-#include "hiopInterface.hpp"
-#include "IpTNLP.hpp"
+#include "hiopRunStats.hpp"
+#include "hiopLogger.hpp"
+#include "hiopOptions.hpp"
 
 using namespace Ipopt;
 
 namespace hiop
 {
+class hiopAugLagrHessian;
+class hiopMatrixSparse;
+class hiopVectorPar;
 
 class hiopAugLagrNlpAdapter : public hiop::hiopInterfaceDenseConstraints, public Ipopt::TNLP
 {
@@ -287,16 +288,6 @@ protected:
      * */
     bool eval_grad_Lagr(const long long& n, const double* x_in, bool new_x, double* gradLagr);
 
-    /**
-     *   Evaluates NLP Hessian and stores it in member #_hessianNlp.
-     *   We use lambda =  2*rho*p(x) - lambda in order to account for
-     *   contribution not only of the Lagrangian term but also the penalty term.
-     *   _hessianNlp = hess_obj + sum_i lambda*H_i,
-     *   where H_i are the penalty function Hessians.
-     *   The sparse structure is initialized during the first call
-     */
-    bool eval_hess_nlp(const double *x_in, bool new_x);
-
 protected:
     //general nlp to be "adapted" to Augmented Lagrangian form Ipopt::TNLP.
     //Note that Ipopt uses type Index (aka int) and Number (aka double) in
@@ -323,6 +314,7 @@ protected:
     hiopVectorPar *xl, *xu; ///< x variable bounds (original NLP problem)
     hiopVectorPar *sl, *su; ///< slack variables bounds (equal to ineq. bounds in original NLP problem)
 
+    //TODO: class for the constraints
     //auxiliary arrays for handling the original NLP constraints
     long long *cons_eq_mapping, *cons_ineq_mapping; ///< indices of eq. and ineq. constraints
     double *c_rhs; ///< rhs for the equality constraints
@@ -334,9 +326,8 @@ protected:
     //during each call of the evaluation routines
     hiopVectorPar *_penaltyFcn; ///< original constraints transformed  AL penalty function p(x)=0
     hiopMatrixSparse *_penaltyFcn_jacobian; ///< Jacobian of the the original NLP constraints, which is equivalent to the Jacobian of the penalty fcn. w.r.t the primal variables x (excluding slacks)
-    hiopVectorPar    *_lambdaForHessEval; ///< lambda + 2*rho*c(x), used during the NLP Hessian evaluation
-    hiopMatrixSparse *_hessianNlp; ///< Hessian of Lagrangian of the original NLP problem evaluated with extended #_lambdaForHessEval
-    hiopMatrixSparse *_hessianAugLagr; ///< Hessian of the AL problem
+   
+    hiopAugLagrHessian *_hessian; ///<hessian of the AL
 
 public:
     /* outputing and debug-related functionality*/
