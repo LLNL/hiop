@@ -214,12 +214,12 @@ bool hiopAugLagrNlpAdapter::get_vars_info(const long long& n, double *xlow,
  * The penalty terms consist of:
  * Equality constraints:  c(x) - c_rhs
  * Inequality constraints c(x) - s, where L <= s <= U
+ * The evaluated penalty function is stored in member #_penaltyFcn
  */
-//TODO: the last parameter should be hiopVector*, not double* or even
-//TODO: there should be no parameter at all and implicitly update the private member _penaltyFcn
-bool hiopAugLagrNlpAdapter::eval_penalty(const double *x_in, bool new_x, double *penalty_data)
+bool hiopAugLagrNlpAdapter::eval_penalty(const double *x_in, bool new_x)
 {
     const double *slacks  = &x_in[n_vars];
+    double *penalty_data = _penaltyFcn->local_data();
 
     //evaluate the original NLP constraints
     bool bret = nlp_in->eval_g((Ipopt::Index)n_vars, x_in, new_x,
@@ -246,7 +246,8 @@ bool hiopAugLagrNlpAdapter::eval_penalty(const double *x_in, bool new_x, double 
 
 /**
  *  Evaluates Jacobian of the penalty function. Jacobian is stored in the
- *  member #_penaltyFcn_jacobian
+ *  member #_penaltyFcn_jacobian. The sparse structure is initialized during
+ *  the first call.
  */
 bool hiopAugLagrNlpAdapter::eval_penalty_jac(const double *x_in, bool new_x)
 {
@@ -294,7 +295,7 @@ bool hiopAugLagrNlpAdapter::eval_f(const long long& n, const double* x_in,
     assert(bret);
 
     // evaluate and transform the constraints of the original NLP
-    eval_penalty(x_in, new_x, _penaltyFcn->local_data());
+    eval_penalty(x_in, new_x);//TODO: new_x
 
     // compute lam^t p(x)
     assert(lambda->get_size() == _penaltyFcn->get_size());
@@ -343,7 +344,7 @@ bool hiopAugLagrNlpAdapter::eval_grad_Lagr(const long long& n, const double* x_i
      bool new_x, double* gradLagr)
 {
     //TODO new_x
-    if (true) eval_penalty(x_in, new_x, _penaltyFcn->local_data());
+    if (true) eval_penalty(x_in, new_x);
     
     /****************************************************/
     /** Add contribution of the NLP objective function **/
@@ -406,7 +407,7 @@ bool hiopAugLagrNlpAdapter::eval_grad_f(const long long& n, const double* x_in,
     /** Add contribution of the gradient of the Lagrangian **/
     /**          gradf = df_x - Jac' *  lam                **/ 
     /********************************************************/
-    eval_grad_Lagr(n, x_in, new_x, gradf);
+    eval_grad_Lagr(n, x_in, new_x, gradf);//TODO: new_x
     
     const double *_penaltyFcn_data = _penaltyFcn->local_data_const();
     /**************************************************/
@@ -469,8 +470,8 @@ bool hiopAugLagrNlpAdapter::get_nlp_info(Index& n, Index& m,
     nnz_jac_g = 0;
     index_style = TNLP::C_STYLE;
 
-    // need to call dummy evaluation of eval_h to determine structure and nnz count
-    // allocates and initializes _hessNlp and _hessAugLagr with structure
+    // need to call dummy evaluation of eval_h() to determine structure and nnz count
+    // allocates and initializes #_hessNlp and #_hessAugLagr with structure and dummy values
     vector<double> x_tmp(n, 1.0);
     eval_h(n, x_tmp.data(), true, 1.0, 0, nullptr, false, -1, nullptr, nullptr, nullptr);
 
@@ -536,9 +537,11 @@ bool hiopAugLagrNlpAdapter::eval_jac_g(Index n, const Number* x, bool new_x,
 }
 
 /**
- *   Evaluates NLP Hessian #_hessianNlp.
- *   We use lambda =  2*rho*p(x) - lambda to account for contribution
- *   not only of the Lagrangian term but also the penalty.
+ *   Evaluates NLP Hessian and stores it in member #_hessianNlp.
+ *   We use lambda =  2*rho*p(x) - lambda in order to account for
+ *   contribution not only of the Lagrangian term but also the penalty term.
+ *   _hessianNlp = hess_obj + sum_i lambda*H_i,
+ *   where H_i are the penalty function Hessians.
  */
 bool hiopAugLagrNlpAdapter::eval_hess_nlp(const double *x_in, bool new_x)
 {
@@ -562,8 +565,9 @@ bool hiopAugLagrNlpAdapter::eval_hess_nlp(const double *x_in, bool new_x)
 
   // lambdaForHessEval =  2*rho*p(x) - lambda
   double *lambdaForHessEval = _lambdaForHessEval->local_data();
-  bool bret = eval_penalty(x_in, new_x, lambdaForHessEval); //TODO new_x
+  bool bret = eval_penalty(x_in, new_x);//TODO: new_x
   assert(bret);
+  _lambdaForHessEval->copyFrom(*_penaltyFcn);
   _lambdaForHessEval->scale(2*rho);
   _lambdaForHessEval->axpy(-1.0, *lambda);
 
@@ -583,27 +587,31 @@ bool hiopAugLagrNlpAdapter::eval_h(Index n, const Number* x, bool new_x, Number 
      Index m, const Number* lambda_ipopt, bool new_lambda,
      Index nele_hess, Index* iRow, Index* jCol, Number* values)
 {
-   assert(n == n_vars+n_slacks);
    // obj factor for the AL objective, if different than 1.0 we need to compute
    // the contribution of the Lagrangian hessian and penalty hessian in two calls
    // to eval_hess_nlp()
    assert(obj_factor == 1.0); 
+   assert(n == n_vars+n_slacks);
    assert(m == 0);
    //assert(nele_hess == ??);
 
-   // dummy call from the get_nlp_info() to determine the nonzero count,
-   // we need to initialize the storage and perform a dummy evaluation
+   // this identifies the dummy call from the get_nlp_info() to determine the nonzero count,
+   // which is unknown. We need to initialize the storage and perform a dummy evaluation
+   // in order to force construction of the sparse structure
    if (nele_hess == -1.0 && iRow == nullptr && jCol == nullptr && values == nullptr)
    {
      _lambdaForHessEval = new hiopVectorPar(m_cons);
      _hessianNlp = new hiopMatrixSparse(n_vars, n_vars, nnz_hess);
      _hessianAugLagr = new hiopMatrixSparse(0,0,0);//we don't know nnz at this point
-     eval_penalty_jac(x, new_x);
    } 
 
-    // evaluates NLP hessian _hessianNlp using
+    // Evaluates #_penaltyFcn_jacobian needed for J'*J operation
+    bool bret = eval_penalty_jac(x, new_x);//TODO: new_x
+    assert(bret);
+
+    // evaluates NLP hessian #_hessianNlp using
     // lambdaForHessEval =  2*rho*p(x) - lambda
-    bool bret = eval_hess_nlp(x, new_x);
+    bret = eval_hess_nlp(x, new_x);
     assert(bret);
 
     // _hessianAugLagr = 2*rho*J'J + _hessianNlp
@@ -680,10 +688,7 @@ void hiopAugLagrNlpAdapter::finalize_solution(SolverReturn status, Index n,
      ***********************************************************************/ 
 
 /**
-* IpoptApplication doesn't provide a method to access the solution.
-* The solution is passed to user in callback finalize_solution which
-* is implemented here in AugLagrNlpAdapter, where the solution is cached.
-* This method returns the cached solution. No Guarantee that the solution
+* This method returns the cached IPOPT solution. No Guarantee that the solution
 * is correct or has been initialized, the user calling this function needs
 * to make sure Ipopt has finished successfuly. Only then the valid solution
 * will be returned.
@@ -759,8 +764,9 @@ bool hiopAugLagrNlpAdapter::eval_residuals(const long long& n, const double* x_i
     /*          Penalty Function             */
     /*        [ce(x) - c_rhs; ci(x) - s]     */
     /*****************************************/
-    bool bret = eval_penalty(x_in, new_x, penalty);
+    bool bret = eval_penalty(x_in, new_x); //TODO: new_x
     assert(bret);
+    _penaltyFcn->copyTo(penalty);
    
     /**************************************************/
     /**        Compute the Lagrangian term            */
@@ -768,7 +774,7 @@ bool hiopAugLagrNlpAdapter::eval_residuals(const long long& n, const double* x_i
     /**************************************************/
     //TODO: we could use new_x = false here, since the penalty is already evaluated
     //and cached in #_penaltyFcn
-    bret = eval_grad_Lagr(n, x_in, new_x, gradLagr);
+    bret = eval_grad_Lagr(n, x_in, new_x, gradLagr); //TODO: new_x
     assert(bret);
 
     return bret;

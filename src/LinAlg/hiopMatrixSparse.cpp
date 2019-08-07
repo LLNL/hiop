@@ -207,6 +207,7 @@ void hiopMatrixSparse::transAAplusB(double alpha, const hiopMatrixSparse &A, dou
         //we can update directly #values
         else 
         {
+          assert(0); //did not test this path
           assert(nnz_idx < nonzeroes);
           assert(iRow[nnz_idx] == c1);
           assert(jCol[nnz_idx] == c2);

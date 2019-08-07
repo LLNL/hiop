@@ -242,13 +242,59 @@ public:
     
     /** Objective function evaluation, this is the user objective function f(x) */
     bool eval_f_user(const long long& n, const double* x_in, bool new_x, double& obj_value);
+    
+    /**
+    * IpoptApplication doesn't provide a method to access the solution.
+    * The solution is passed to user in a callback finalize_solution() which
+    * is implemented here in AugLagrNlpAdapter. The solution is cached in an.
+    * array #_solutionIpopt. Thare is no guarantee that the solution
+    * is correct or has been initialized, the user calling this function needs
+    * to make sure Ipopt has finished successfuly. Only then the valid solution
+    * will be returned.
+    */
     void get_ipoptSolution(double *x) const;
 
 protected:
+    /** Allocates space for internal variables */
     bool initialize();
-    bool eval_penalty(const double *x_in, bool new_x, double *penalty_data);//TODO remove last param
+
+    /**
+     * Evaluates the original NLP constraints L <= c(x) <= U and transforms the constraints 
+     * into the penalty form p(x) = 0 appropriate for Augmented Lagrangian formulation.
+     * The penalty terms consist of:
+     * Equality constraints:  c(x) - c_rhs
+     * Inequality constraints c(x) - s, where L <= s <= U
+     * The evaluated penalty function is stored in member #_penaltyFcn
+     */
+    bool eval_penalty(const double *x_in, bool new_x);
+
+    /**
+     *  Evaluates Jacobian of the penalty function. Jacobian is stored in the
+     *  member #_penaltyFcn_jacobian. The sparse structure is initialized during
+     *  the first call.
+     */
     bool eval_penalty_jac(const double *x_in, bool new_x);
+
+    /** Gradient of the Lagrangian function L(x,s) = f(x) - lam^t p(x)
+     *  d_L/d_x = df_x - J^T lam 
+     *  d_L/d_s =  0   - (-I) lam[cons_ineq_mapping] 
+     *  where J is the Jacobian of the original NLP constraints.
+     *
+     * @param[in] n Number of variables in Augmented Lagrangian formulation
+     * @param[in] x_in Variables consisting of original NLP variables and additional slacks
+     * @param[in] new_x
+     * @param[out] gradLagr Returns gradient of the Lagrangian function L(x, lambda)
+     * */
     bool eval_grad_Lagr(const long long& n, const double* x_in, bool new_x, double* gradLagr);
+
+    /**
+     *   Evaluates NLP Hessian and stores it in member #_hessianNlp.
+     *   We use lambda =  2*rho*p(x) - lambda in order to account for
+     *   contribution not only of the Lagrangian term but also the penalty term.
+     *   _hessianNlp = hess_obj + sum_i lambda*H_i,
+     *   where H_i are the penalty function Hessians.
+     *   The sparse structure is initialized during the first call
+     */
     bool eval_hess_nlp(const double *x_in, bool new_x);
 
 protected:
@@ -288,9 +334,9 @@ protected:
     //during each call of the evaluation routines
     hiopVectorPar *_penaltyFcn; ///< original constraints transformed  AL penalty function p(x)=0
     hiopMatrixSparse *_penaltyFcn_jacobian; ///< Jacobian of the the original NLP constraints, which is equivalent to the Jacobian of the penalty fcn. w.r.t the primal variables x (excluding slacks)
-    hiopVectorPar    *_lambdaForHessEval; ///< lambda + 2*rho*c(x), used during the Hessian eval
-    hiopMatrixSparse *_hessianNlp; ///< Hessian of Lagrangian of the original NLP problem
-    hiopMatrixSparse *_hessianAugLagr; ///< Hessian of Lagrangian of the AL problem
+    hiopVectorPar    *_lambdaForHessEval; ///< lambda + 2*rho*c(x), used during the NLP Hessian evaluation
+    hiopMatrixSparse *_hessianNlp; ///< Hessian of Lagrangian of the original NLP problem evaluated with extended #_lambdaForHessEval
+    hiopMatrixSparse *_hessianAugLagr; ///< Hessian of the AL problem
 
 public:
     /* outputing and debug-related functionality*/
