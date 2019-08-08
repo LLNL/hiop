@@ -476,7 +476,7 @@ bool hiopAugLagrNlpAdapter::get_nlp_info(Index& n, Index& m,
     //TODO: this is not needed for Quasi-Newton
     // need to call dummy hessian assembly to determine structure and nnz count
     eval_penalty_jac(startingPoint->local_data(), true);//need to init structure
-    _hessian->assemble(startingPoint->local_data(), true,
+    _hessian->assemble(startingPoint->local_data(), true, 1.0,
                        *lambda, rho, *_penaltyFcn,
                        *_penaltyFcn_jacobian, cons_ineq_mapping);
 
@@ -546,31 +546,27 @@ bool hiopAugLagrNlpAdapter::eval_h(Index n, const Number* x, bool new_x, Number 
      Index m, const Number* lambda_ipopt, bool new_lambda,
      Index nele_hess, Index* iRow, Index* jCol, Number* values)
 {
-   // obj factor for the AL objective, if different than 1.0 we need to compute
-   // the contribution of the Lagrangian hessian and penalty hessian in two calls
-   // to eval_hess_nlp()
-   assert(obj_factor == 1.0); 
-   assert(n == n_vars+n_slacks);
-   assert(m == 0);
-   assert(nele_hess == _hessian->nnz());
-
-    // Evaluates #_penaltyFcn_jacobian needed for J'*J operation
-    bool bret = eval_penalty(x, new_x);//TODO: new_x
-    assert(bret);
-    bret = eval_penalty_jac(x, new_x);//TODO: new_x
-    assert(bret);
-
-    _hessian->assemble(x, new_x, *lambda, rho, *_penaltyFcn,
-                       *_penaltyFcn_jacobian, cons_ineq_mapping);
+    assert(n == n_vars+n_slacks);
+    assert(m == 0);
+    assert(nele_hess == _hessian->nnz());
 
     if (iRow != NULL && jCol != NULL)
     {
-      //TODO copy from _hessian
-      //_hessian->getStructure(iRow, jCol);
-    } else if (values != NULL)
+      // copy structure from _hessian
+      _hessian->getStructure(iRow, jCol);
+    }
+    else if (values != NULL)
     {
+      // Evaluate #_penaltyFcn and  #_penaltyFcn_jacobian
+      bool bret = eval_penalty(x, new_x);//TODO: new_x
+      assert(bret);
+      bret = eval_penalty_jac(x, new_x);//TODO: new_x
+      assert(bret);
+
+      _hessian->assemble(x, new_x, obj_factor, *lambda, rho, *_penaltyFcn,
+                         *_penaltyFcn_jacobian, cons_ineq_mapping);
       //fill values
-      //_hessian->getValues(values);
+      _hessian->getValues(values);
     }
 
     return true;

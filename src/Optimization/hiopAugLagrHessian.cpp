@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <iostream>
+#include <cstring>      // memcpy
 
 namespace hiop
 {
@@ -14,7 +15,8 @@ hiopAugLagrHessian::hiopAugLagrHessian(NLP_CLASS_IN *nlp_in_, int n_vars, int n_
     nnz_nlp(nnz),
     _lambdaForHessEval(nullptr),
     _hessianNlp(nullptr),
-    _hessianAugLagr(nullptr)
+    _hessianAugLagr(nullptr),
+    _updateIterator(0)
 {
     _lambdaForHessEval = new hiopVectorPar(m_cons);
     _hessianNlp = new hiopMatrixSparse(nvars_nlp, nvars_nlp, nnz_nlp);
@@ -31,6 +33,24 @@ hiopAugLagrHessian::~hiopAugLagrHessian()
 int hiopAugLagrHessian::nnz()
 {
     return _hessianAugLagr->nnz();
+}
+
+void hiopAugLagrHessian::getStructure(int *iRow, int *jCol)
+{
+    const int *iRow_src = _hessianAugLagr->get_iRow_const();
+    const int *jCol_src = _hessianAugLagr->get_jCol_const();
+    const int nnz = _hessianAugLagr->nnz();
+    
+    memcpy(iRow, iRow_src, nnz*sizeof(int));
+    memcpy(jCol, jCol_src, nnz*sizeof(int));
+}
+
+void hiopAugLagrHessian::getValues(double*values)
+{
+    const double *values_src = _hessianAugLagr->get_values_const();
+    const int nnz = _hessianAugLagr->nnz();
+    
+    memcpy(values, values_src, nnz*sizeof(double));
 }
 
 /**
@@ -77,8 +97,8 @@ bool hiopAugLagrHessian::eval_hess_nlp(const double *x_in, bool new_x, const hio
   return bret;
 }
 
-void hiopAugLagrHessian::assemble(const double *x, bool new_x, const hiopVectorPar &lambda,
-        const double rho, const hiopVectorPar &penaltyFcn,
+void hiopAugLagrHessian::assemble(const double *x, bool new_x, double obj_factor,
+        const hiopVectorPar &lambda, const double rho, const hiopVectorPar &penaltyFcn,
         const hiopMatrixSparse &penaltyFcn_jacobian, long long *cons_ineq_mapping)
 {
     // evaluates NLP hessian #_hessianNlp using
@@ -107,8 +127,8 @@ void hiopAugLagrHessian::assemble(const double *x, bool new_x, const hiopVectorP
     // _hessianAUgLagr is either an empty matrix (vvCols,vvValues are used)
     // or the nnz values are updated directly in _hessianAugLagr
     transAAplusB(*_hessianAugLagr, vvCols, vvValues, structureNotInitialized,
-                 2*rho, penaltyFcn_jacobian,
-                 1.0,   *_hessianNlp);
+                 obj_factor*2*rho, penaltyFcn_jacobian,
+                 obj_factor,   *_hessianNlp);
   
     //append scaled jacobian and identity (blocks 2-1 and 2-2)
     // H_xx = _hessianAugLagr
@@ -118,33 +138,29 @@ void hiopAugLagrHessian::assemble(const double *x, bool new_x, const hiopVectorP
     // H = |          |
     //     | Hsx  Hss |
     appendScaledJacobian(*_hessianAugLagr, vvCols, vvValues, structureNotInitialized,
-                         -2*rho, penaltyFcn_jacobian, cons_ineq_mapping);
+                         -obj_factor*2*rho, penaltyFcn_jacobian, cons_ineq_mapping);
 
 
   //construt the sparse matrix with the result if not done so previously
   if (structureNotInitialized)
     _hessianAugLagr->make(N, N, vvCols, vvValues);
 
+    //FILE *f1=fopen("hessNLP.txt","w");
+    //_hessianNlp->print(f1);
+    // fclose(f1);
 
+    //FILE *f2=fopen("jac.txt","w");
+    //penaltyFcn_jacobian.print(f2);
+    // fclose(f2);
+    //
+    //FILE *f3=fopen("hess.txt","w");
+    //_hessianAugLagr->print(f3);
+    // fclose(f3);
 
-
-    FILE *f1=fopen("hessNLP.txt","w");
-    _hessianNlp->print(f1);
-     fclose(f1);
-
-    FILE *f2=fopen("jac.txt","w");
-    penaltyFcn_jacobian.print(f2);
-     fclose(f2);
-    
-    FILE *f3=fopen("hess.txt","w");
-    _hessianAugLagr->print(f3);
-     fclose(f3);
-
-    printf("m n nnz %d %d %d\n", _hessianAugLagr->m(), _hessianAugLagr->n(), _hessianAugLagr->nnz());
-    printf("2*rho %g\n", 2*rho);
-    assert(0);
-
-    
+    //printf("m n nnz %d %d %d\n", _hessianAugLagr->m(), _hessianAugLagr->n(), _hessianAugLagr->nnz());
+    //printf("2*rho %g\n", 2*rho);
+    //printf("obj_factor %g\n", obj_factor);
+    //if (!structureNotInitialized) assert(0);
 }
 
 
@@ -199,7 +215,7 @@ void hiopAugLagrHessian::transAAplusB(hiopMatrixSparse &C, vector<vector<int>> &
     vvValues_A[jCol_A[i]].push_back(values_A[i]);
   }
   
-  int nnz_idx_C = 0; //iterator in C
+  _updateIterator = 0; //iterator in C
   int nnz_idx_B = 0; //iterator in B
 
   // compute alpha*A'A + beta*B
@@ -250,7 +266,8 @@ void hiopAugLagrHessian::transAAplusB(hiopMatrixSparse &C, vector<vector<int>> &
       if (newNonzero)
       {
         //we need to use auxiliary storage
-        //the actual sparse matrix is created later 
+        //the actual sparse matrix is not assembled yet
+        //because structure and nnz is unknown
         if (structureNotInitialized)
         {
           vvCols_C[c1].push_back(c2);
@@ -259,12 +276,11 @@ void hiopAugLagrHessian::transAAplusB(hiopMatrixSparse &C, vector<vector<int>> &
         //we can update directly #C.values
         else 
         {
-          assert(0); //did not test this path
-          assert(nnz_idx_C < nonzeroes_C);
-          assert(iRow_C[nnz_idx_C] == c1);
-          assert(jCol_C[nnz_idx_C] == c2);
-          values_C[nnz_idx_C] = dot;
-          nnz_idx_C++;
+          assert(_updateIterator < nonzeroes_C);
+          assert(iRow_C[_updateIterator] == c1);
+          assert(jCol_C[_updateIterator] == c2);
+          values_C[_updateIterator] = dot;
+          _updateIterator++;
         }
       } 
     }//end for c2
@@ -312,10 +328,10 @@ void hiopAugLagrHessian::appendScaledJacobian(hiopMatrixSparse &H, vector<vector
          }
          else
          {
-            assert(0);
-            //iRow_H[] = rowsAppended + nvars_nlp;
-            //jCol_H[] = jCol_J[i];
-            //values_H[] = alpha * values_J[i];
+            assert(iRow_H[_updateIterator] == rowsAppended + nvars_nlp);
+            assert(jCol_H[_updateIterator] == jCol_J[i]);
+            values_H[_updateIterator] = alpha * values_J[i];
+            _updateIterator++;
          }
       
          //append scaled identity (H_ss) when reaching end of the row
@@ -328,21 +344,23 @@ void hiopAugLagrHessian::appendScaledJacobian(hiopMatrixSparse &H, vector<vector
            }
            else
            {
-              assert(0);
-              //iRow_H[] = rowsAppended + nvars_nlp;
-              //jCol_H[] = rowsAppended + nvars_nlp;
-              //values_H[] = -alpha;
+              assert(iRow_H[_updateIterator] == rowsAppended + nvars_nlp);
+              assert(jCol_H[_updateIterator] == rowsAppended + nvars_nlp);
+              values_H[_updateIterator] = -alpha;
+              _updateIterator++;
            }
          }
       }
 
   }
 
-  std::cout << "\n\n\nineq = [";
-  for (int i = 0; i < nslacks_nlp; i++)
-      std::cout << cons_ineq_mapping[i] << ",";
-  std::cout << "];" << std::endl;
+  //std::cout << "\n\n\nineq = [";
+  //for (int i = 0; i < nslacks_nlp; i++)
+  //    std::cout << cons_ineq_mapping[i]+1 << ",";
+  //std::cout << "];" << std::endl;
+
   assert(rowsAppended+1 == nslacks_nlp);
+  assert(_updateIterator == _hessianAugLagr->nnz());
 }
 
 }

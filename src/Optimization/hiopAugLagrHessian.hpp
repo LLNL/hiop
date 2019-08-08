@@ -39,8 +39,10 @@ public:
   ~hiopAugLagrHessian();
  
   int nnz();
-  void assemble(const double *x, bool new_x, const hiopVectorPar &lambda, const double rho,
+  void assemble(const double *x, bool new_x, double obj_factor, const hiopVectorPar &lambda, const double rho,
         const hiopVectorPar &penaltyFcn, const hiopMatrixSparse &penaltyFcn_jacobian, long long *cons_ineq_mapping);
+  void getStructure(int *iRow, int *jCol);
+  void getValues(double *values);
 
 private:
   /**
@@ -110,6 +112,8 @@ private:
     hiopVectorPar    *_lambdaForHessEval; ///< lambda + 2*rho*c(x), used during the NLP Hessian evaluation
     hiopMatrixSparse *_hessianNlp; ///< Hessian of Lagrangian of the original NLP problem evaluated with extended #_lambdaForHessEval
     hiopMatrixSparse *_hessianAugLagr; ///< Hessian of the AL problem
+
+    int _updateIterator; ///<iterator used when updating directly nonzeros in the #_hessianAugLagr
 };
 
 
