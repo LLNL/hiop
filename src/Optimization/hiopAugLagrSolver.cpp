@@ -20,7 +20,7 @@ hiopAugLagrSolver::hiopAugLagrSolver(NLP_CLASS_IN* nlp_in_)
     _f_nlp(-1.),
     _err_feas0(-1.), _err_optim0(-1.),
     _err_feas(-1.), _err_optim(-1.),
-    _LAMBDA0(-1.),_RHO0(-1.),
+    _LAMBDA0(-1.),_WARM_INIT_LAMBDA(false),_RHO0(-1.),
     _EPS_TOL(-1),_EPS_RTOL(-1),_EPS_TOL_ACCEP(-1),
     _MAX_N_IT(-1), _ACCEP_N_IT(-1),
     _alpha(-1.),
@@ -71,12 +71,14 @@ hiopSolveStatus hiopAugLagrSolver::run()
 
   //initialize curr_iter by calling TNLP starting point + do something about slacks
   // and set starting point at the Adapter class for the first major AL iteration
-  nlp->get_user_starting_point(n_vars, _it_curr->local_data());
+  nlp->get_user_starting_point(n_vars, _it_curr->local_data(), _WARM_INIT_LAMBDA , _lam_curr->local_data());
   nlp->set_starting_point(n_vars, _it_curr->local_data_const());
 
   //set initial guess of the multipliers and the penalty parameter
-  //TODO hot start for lambda
-  _lam_curr->setToConstant(_LAMBDA0);
+  if (!_WARM_INIT_LAMBDA )
+  {
+    _lam_curr->setToConstant(_LAMBDA0);
+  }
   nlp->set_lambda(_lam_curr);
   
   _rho_curr = _RHO0;
@@ -222,6 +224,7 @@ hiopSolveStatus hiopAugLagrSolver::run()
 void hiopAugLagrSolver::reloadOptions()
 {
   // initial value of the multipliers and the penalty
+  _WARM_INIT_LAMBDA = nlp->options->GetInteger("warm_start");
   _LAMBDA0 = nlp->options->GetNumeric("lambda0");
   _RHO0 = nlp->options->GetNumeric("rho0");
 

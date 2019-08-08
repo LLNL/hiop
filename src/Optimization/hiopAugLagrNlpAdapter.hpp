@@ -211,7 +211,7 @@ public:
      * The method returns true (and populates x0 with user provided TNLP starting point)
      * or returns false, in which case hiOP will set x0 to all zero.
      */
-    bool get_user_starting_point(const long long& global_n, double* x0);
+    bool get_user_starting_point(const long long& global_n, double* x0, bool init_lambda, double *lambda);
    
     /**
      * Returns size of the penalty function stored in member var #m_cons

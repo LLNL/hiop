@@ -633,17 +633,20 @@ bool hiopAugLagrNlpAdapter::set_starting_point(const long long &global_n, const 
 }
 
 /**
- * The method returns true (and populates x0 with user provided TNLP starting point)
+ * The method returns true (and populates x0 with user provided TNLP starting point, x0 and possibly lambda0)
  * or returns false, in which case hiOP will set x0 to all zero.
  */
-bool hiopAugLagrNlpAdapter::get_user_starting_point(const long long &global_n, double* x0)
+bool hiopAugLagrNlpAdapter::get_user_starting_point(const long long &global_n, double* x0, bool init_lambda, double* lambda)
 {
     assert(global_n == n_vars + n_slacks);
+    
+    if (init_lambda) log->printf(hovWarning, "get_user_starting_point: hiOp is asking also for the initial values of the multipliers.\n");
 
     //get starting point from the adapted NLP
     bool bret = nlp_in->get_starting_point((Ipopt::Index)n_vars, true, x0,
                                            false, nullptr, nullptr,
-                                           (Ipopt::Index)m_cons, false, nullptr);
+                                           (Ipopt::Index)m_cons, init_lambda, lambda);
+    assert(bret); //user might not provide lambda even though he promised to do so in the option file 
     
     // use alternative x0 if not provided by the user
     if (!bret) std::fill(x0, x0+n_vars, 0.); // TODO: solve PF or similar

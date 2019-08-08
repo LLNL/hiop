@@ -77,6 +77,7 @@ protected:
 
   //user options and parameters
   double _LAMBDA0;       ///< initial value of the multipliers
+  bool   _WARM_INIT_LAMBDA; ///< flag specifying to initialize lambda by user provided values
   double _RHO0;          ///< initial value of the penalty parameter
   double _EPS_TOL;       ///< abs tolerance for the NLP error (same for feas and optim)
   double _EPS_RTOL;      ///< rel tolerance for the NLP error (same for feas and optim)
