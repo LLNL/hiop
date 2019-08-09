@@ -80,7 +80,7 @@ void hiopAugLagrSubproblem::initialize()
       //hiopWrapper->options->SetIntegerValue("acceptable_iterations", 10);
       //hiopWrapper->options->SetIntegerValue("max_iter", 500);
       hiopWrapper->options->SetStringValue("fixed_var", "relax"); //remove fails
-      hiopWrapper->options->SetIntegerValue("verbosity_level", subproblem->options->GetInteger("verbosity_level_minor"));
+      hiopWrapper->options->SetIntegerValue("verbosity_level", subproblem->options->GetInteger("verbosity_level_subproblem"));
       //hiopWrapper->options->SetNumericValue("sigma0", 10);
       //hiopWrapper->options->SetStringValue("sigma_update_strategy",  "sigma0"); //sty, sty_inv, snrm_ynrm, sty_srnm_ynrm
       //hiopWrapper->options->SetIntegerValue("secant_memory_len", 6);

@@ -284,8 +284,8 @@ bool hiopOptions::SetNumericValue (const char* name, const double& value, const 
       if(true==option->specifiedInFile) {
 	if(false==setFromFile) {
 	  log_printf(hovWarning, 
-		     "Hiop will ignore value '%g' set for option '%s' since this option is already specified in an option file.\n", value, name);
-	  return true;
+		     "Hiop will use value '%g' set for option '%s' and overwrite the value previously specified in the option file.\n", value, name);
+	  //return true;
 	}
       } 
 
@@ -319,8 +319,8 @@ bool hiopOptions::SetIntegerValue(const char* name, const int& value, const bool
       if(true==option->specifiedInFile) {
 	if(false==setFromFile) {
 	  log_printf(hovWarning, 
-		     "Hiop will ignore value '%d' set for option '%s' since this option is already specified in an option file.\n", value, name);
-	  return true;
+		     "Hiop will use value '%d' set for option '%s' and overwrite the value previously specified in the option file.\n", value, name);
+	  //return true;
 	}
       } 
 
@@ -355,13 +355,13 @@ bool hiopOptions::SetStringValue (const char* name,  const char* value, const bo
       if(true==option->specifiedInFile) {
 	if(false==setFromFile) {
 	  log_printf(hovWarning, 
-		     "Hiop will ignore value '%s' set for option '%s' since this option is already specified in an option file.\n", value, name);
-	  return true;
+		     "Hiop will use value '%s' set for option '%s' and overwrite the value previously specified in the option file.\n", value, name);
+	  //return true;
 	}
       } 
 
-//      if(setFromFile)
-//	option->specifiedInFile=true;
+     if(setFromFile)
+	option->specifiedInFile=true;
 
       string strValue(value);
       transform(strValue.begin(), strValue.end(), strValue.begin(), ::tolower);
