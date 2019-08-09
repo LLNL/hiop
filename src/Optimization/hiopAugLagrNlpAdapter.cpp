@@ -41,8 +41,6 @@ hiopAugLagrNlpAdapter::hiopAugLagrNlpAdapter(NLP_CLASS_IN* nlp_in_):
     log(new hiopLogger(options, stdout, 0))
 {
     options->SetLog(log);
-    //options->SetIntegerValue("verbosity_level", options->GetInteger("verbosity_level_major"));
-    options->SetIntegerValue("verbosity_level", 5);
    
     // initializes the member variables
     initialize();
@@ -596,7 +594,7 @@ void hiopAugLagrNlpAdapter::finalize_solution(SolverReturn status, Index n,
     //OUT_OF_MEMORY   
     //INTERNAL_ERROR  
     //UNASSIGNED 
-    if(status != SUCCESS) log->printf(hovWarning, "hiopAugLagrNlpApadpter::finalize_solution was called but Ipopt status is different from SUCCESS. The solution might not be valid.\n");
+    if(status != SUCCESS) log->printf(hovMaxVerbose, "hiopAugLagrNlpApadpter::finalize_solution was called but Ipopt status is different from SUCCESS. The solution might not be valid.\n");
 
     //cache the Ipopt solution
     assert(n == n_vars+n_slacks);

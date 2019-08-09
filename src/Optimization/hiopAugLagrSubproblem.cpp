@@ -231,51 +231,51 @@ void hiopAugLagrSubproblem::displayTerminationMsgIpopt(ApplicationReturnStatus s
         break;
       }
     case Solved_To_Acceptable_Level:
-      { subproblem->log->printf(hovSummary, "Subproblem: Ipopt return code was Solved_To_Acceptable_Level\n");
+      { subproblem->log->printf(hovWarning, "Subproblem: Ipopt return code was Solved_To_Acceptable_Level\n");
         break;
       }
     case Infeasible_Problem_Detected:
-       { subproblem->log->printf(hovSummary, "Subproblem: Ipopt return code was Infeasible_Problem_Detected\n");     
+       { subproblem->log->printf(hovWarning, "Subproblem: Ipopt return code was Infeasible_Problem_Detected\n");     
         break;
       }
     case Search_Direction_Becomes_Too_Small:
-       { subproblem->log->printf(hovSummary, "Subproblem: Ipopt return code was Search_Direction_Becomes_Too_Small\n");      
+       { subproblem->log->printf(hovWarning, "Subproblem: Ipopt return code was Search_Direction_Becomes_Too_Small\n");      
         break;
       }
     case User_Requested_Stop:
-       { subproblem->log->printf(hovSummary, "Subproblem: Ipopt return code was User_Requested_Stop\n");     
+       { subproblem->log->printf(hovWarning, "Subproblem: Ipopt return code was User_Requested_Stop\n");     
         break;
       }
     case Feasible_Point_Found:
-       { subproblem->log->printf(hovSummary, "Subproblem: Ipopt return code was Feasible_Point_Found\n");    
+       { subproblem->log->printf(hovWarning, "Subproblem: Ipopt return code was Feasible_Point_Found\n");    
         break;
       }
     case Maximum_Iterations_Exceeded:
-       { subproblem->log->printf(hovSummary, "Subproblem: Ipopt return code was Maximum_Iterations_Exceeded\n");     
+       { subproblem->log->printf(hovWarning, "Subproblem: Ipopt return code was Maximum_Iterations_Exceeded\n");     
         break;
       }
     case Restoration_Failed:
-       { subproblem->log->printf(hovSummary, "Subproblem: Ipopt return code was Restoration_Failed\n");      
+       { subproblem->log->printf(hovWarning, "Subproblem: Ipopt return code was Restoration_Failed\n");      
         break;
       }
     case Error_In_Step_Computation:
-       { subproblem->log->printf(hovSummary, "Subproblem: Ipopt return code was Error_In_step_Computation\n");       
+       { subproblem->log->printf(hovWarning, "Subproblem: Ipopt return code was Error_In_step_Computation\n");       
         break;
       }
     case Maximum_CpuTime_Exceeded:
-       { subproblem->log->printf(hovSummary, "Subproblem: Ipopt return code was Maximum_CpuTime_Exceeded\n");        
+       { subproblem->log->printf(hovWarning, "Subproblem: Ipopt return code was Maximum_CpuTime_Exceeded\n");        
         break;
       }
     case Invalid_Option:
-       { subproblem->log->printf(hovSummary, "Subproblem: Ipopt return code was Invalid_Options\n");  
+       { subproblem->log->printf(hovWarning, "Subproblem: Ipopt return code was Invalid_Options\n");  
         break;
       }
     case Invalid_Number_Detected:
-       { subproblem->log->printf(hovSummary, "Subproblem: Ipopt return code was Invalid_Number_Detected\n");         
+       { subproblem->log->printf(hovWarning, "Subproblem: Ipopt return code was Invalid_Number_Detected\n");         
         break;
       }
     default:
-      { subproblem->log->printf(hovSummary, "Subproblem: Ipopt return an iternal error %d\n", st); 
+      { subproblem->log->printf(hovWarning, "Subproblem: Ipopt return an iternal error %d\n", st); 
         break;
       }
    }
@@ -293,33 +293,33 @@ void hiopAugLagrSubproblem::displayTerminationMsgHiop(hiopSolveStatus st) {
     }
   case Solve_Success_RelTol: 
     {
-      subproblem->log->printf(hovSummary, "Subproblem: Successfull termination (error within the relative tolerance).\n");
+      subproblem->log->printf(hovWarning, "Subproblem: Successfull termination (error within the relative tolerance).\n");
       break;
     }
   case Solve_Acceptable_Level:
     {
-      subproblem->log->printf(hovSummary, "Subproblem: Solve to only to the acceptable tolerance(s).\n");
+      subproblem->log->printf(hovWarning, "Subproblem: Solve to only to the acceptable tolerance(s).\n");
       break;
     }
   case Max_Iter_Exceeded:
     {
-      subproblem->log->printf(hovSummary, "Subproblem: Maximum number of iterations reached.\n");
+      subproblem->log->printf(hovWarning, "Subproblem: Maximum number of iterations reached.\n");
       break;
     }
   case Steplength_Too_Small:
     {
-      subproblem->log->printf(hovSummary, "Subproblem: Couldn't solve the problem.\n");
-      subproblem->log->printf(hovSummary, "Subproblem: Linesearch returned unsuccessfully (small step). Probable cause: inaccurate gradients/Jacobians or infeasible problem.\n");
+      subproblem->log->printf(hovWarning, "Subproblem: Couldn't solve the problem.\n");
+      subproblem->log->printf(hovWarning, "Subproblem: Linesearch returned unsuccessfully (small step). Probable cause: inaccurate gradients/Jacobians or infeasible problem.\n");
       break;
     }
   case User_Stopped:
     {
-      subproblem->log->printf(hovSummary, "Subproblem: Stopped by the user through the user provided iterate callback.\n");
+      subproblem->log->printf(hovWarning, "Subproblem: Stopped by the user through the user provided iterate callback.\n");
       break;
     }
   default:
     {
-      subproblem->log->printf(hovSummary, "Subproblem: Do not know why hiop stopped. This shouldn't happen. :)\n");
+      subproblem->log->printf(hovWarning, "Subproblem: Do not know why hiop stopped. This shouldn't happen. :)\n");
       assert(false && "Do not know why hiop stopped. This shouldn't happen.");
       break;
     }

@@ -87,8 +87,8 @@ protected:
   
   // internal algorithm options
   double _alpha; ///< positive constant
-  double _eps_tol_feas; ///< required feasibility of the subproblem
-  double _eps_tol_optim; ///< required optimality tolerance of the subproblem
+  double _eps_tol_feas0, _eps_tol_feas; ///< required feasibility of the subproblem
+  double _eps_tol_optim0, _eps_tol_optim; ///< required optimality tolerance of the subproblem
 };
 
 }
