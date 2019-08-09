@@ -137,8 +137,10 @@ void hiopAugLagrHessian::assemble(const double *x, bool new_x, double obj_factor
     //     | Hxx   0  |
     // H = |          |
     //     | Hsx  Hss |
-    appendScaledJacobian(*_hessianAugLagr, vvCols, vvValues, structureNotInitialized,
+    if (nslacks_nlp > 0) {
+      appendScaledJacobian(*_hessianAugLagr, vvCols, vvValues, structureNotInitialized,
                          -obj_factor*2*rho, penaltyFcn_jacobian, cons_ineq_mapping);
+    }
 
 
   //construt the sparse matrix with the result if not done so previously
