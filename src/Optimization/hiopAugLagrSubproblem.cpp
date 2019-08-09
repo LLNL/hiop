@@ -48,9 +48,10 @@ void hiopAugLagrSubproblem::initialize()
       ipoptApp = IpoptApplicationFactory();
 
       //set IPOPT options
-      //app->Options()->SetNumericValue("tol", 1e-9);
-      //app->Options()->SetStringValue("mu_strategy", "adaptive");
-      //app->Options()->SetStringValue("output_file", "ipopt.out");
+      //ipoptApp->Options()->SetNumericValue("tol", 1e-9);
+      //ipoptApp->Options()->SetStringValue("mu_strategy", "adaptive");
+      //ipoptApp->Options()->SetStringValue("output_file", "ipopt.out");
+      ipoptApp->Options()->SetIntegerValue("print_level", subproblem->options->GetInteger("verbosity_level_subproblem") );
 
       // Intialize the IpoptApplication and process the options
       ApplicationReturnStatus st = ipoptApp->Initialize();
@@ -79,10 +80,10 @@ void hiopAugLagrSubproblem::initialize()
       //hiopWrapper->options->SetIntegerValue("acceptable_iterations", 10);
       //hiopWrapper->options->SetIntegerValue("max_iter", 500);
       hiopWrapper->options->SetStringValue("fixed_var", "relax"); //remove fails
-      hiopWrapper->options->SetIntegerValue("verbosity_level", 0);
+      hiopWrapper->options->SetIntegerValue("verbosity_level", subproblem->options->GetInteger("verbosity_level_minor"));
       //hiopWrapper->options->SetNumericValue("sigma0", 10);
       //hiopWrapper->options->SetStringValue("sigma_update_strategy",  "sigma0"); //sty, sty_inv, snrm_ynrm, sty_srnm_ynrm
-      hiopWrapper->options->SetIntegerValue("secant_memory_len", 6);
+      //hiopWrapper->options->SetIntegerValue("secant_memory_len", 6);
       //hiopWrapper->options->SetStringValue("dualsInitialization",  "zero"); //lsq
 
       //create and initialize the HiopSolver
@@ -218,7 +219,7 @@ int hiopAugLagrSubproblem::getNumIterations() const
 void hiopAugLagrSubproblem::displayTerminationMsgIpopt(ApplicationReturnStatus st) {
    switch (st)  {
     case Solve_Succeeded:
-      { subproblem->log->printf(hovSummary, "Subproblem: Successfull termination.\n%s\n", subproblem->runStats.getSummary().c_str());
+      { subproblem->log->printf(hovSummary, "Subproblem: Successfull termination.\n"); //%s\n", subproblem->runStats.getSummary().c_str());
         break;
       }
     case Solved_To_Acceptable_Level:
@@ -279,38 +280,38 @@ void hiopAugLagrSubproblem::displayTerminationMsgHiop(hiopSolveStatus st) {
   switch(st) {
   case Solve_Success: 
     {
-      subproblem->log->printf(hovSummary, "Subproblem: Successfull termination.\n%s\n", subproblem->runStats.getSummary().c_str());
+      subproblem->log->printf(hovSummary, "Subproblem: Successfull termination.\n"); //%s\n", subproblem->runStats.getSummary().c_str());
       break;
     }
   case Solve_Success_RelTol: 
     {
-      subproblem->log->printf(hovSummary, "Subproblem: Successfull termination (error within the relative tolerance).\n%s\n", subproblem->runStats.getSummary().c_str());
+      subproblem->log->printf(hovSummary, "Subproblem: Successfull termination (error within the relative tolerance).\n");
       break;
     }
   case Solve_Acceptable_Level:
     {
-      subproblem->log->printf(hovSummary, "Subproblem: Solve to only to the acceptable tolerance(s).\n%s\n", subproblem->runStats.getSummary().c_str());
+      subproblem->log->printf(hovSummary, "Subproblem: Solve to only to the acceptable tolerance(s).\n");
       break;
     }
   case Max_Iter_Exceeded:
     {
-      subproblem->log->printf(hovSummary, "Subproblem: Maximum number of iterations reached.\n%s\n", subproblem->runStats.getSummary().c_str());
+      subproblem->log->printf(hovSummary, "Subproblem: Maximum number of iterations reached.\n");
       break;
     }
   case Steplength_Too_Small:
     {
-      subproblem->log->printf(hovSummary, "Subproblem: Couldn't solve the problem.\n%s\n", subproblem->runStats.getSummary().c_str());
+      subproblem->log->printf(hovSummary, "Subproblem: Couldn't solve the problem.\n");
       subproblem->log->printf(hovSummary, "Subproblem: Linesearch returned unsuccessfully (small step). Probable cause: inaccurate gradients/Jacobians or infeasible problem.\n");
       break;
     }
   case User_Stopped:
     {
-      subproblem->log->printf(hovSummary, "Subproblem: Stopped by the user through the user provided iterate callback.\n%s\n", subproblem->runStats.getSummary().c_str());
+      subproblem->log->printf(hovSummary, "Subproblem: Stopped by the user through the user provided iterate callback.\n");
       break;
     }
   default:
     {
-      subproblem->log->printf(hovSummary, "Subproblem: Do not know why hiop stopped. This shouldn't happen. :)\n%s\n", subproblem->runStats.getSummary().c_str());
+      subproblem->log->printf(hovSummary, "Subproblem: Do not know why hiop stopped. This shouldn't happen. :)\n");
       assert(false && "Do not know why hiop stopped. This shouldn't happen.");
       break;
     }

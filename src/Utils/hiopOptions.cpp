@@ -158,7 +158,7 @@ void hiopOptions::registerOptions()
   registerNumOption("rho0", 100., 0., 1e6, "Initial penalty parameter rho (default 100.)");
   registerNumOption("lambda0", 1., 0., 1e6, "Initial value of the Lagrange multipliers (default 1.)");
   registerIntOption("warm_start", 0, 0, 1, "Specifies how the Lagrange multipliers are initialized. 0 - set to a constant specified by lambda0. 1 - initialized by IPOPT in get_starting_point()"); 
-  registerIntOption("verbosity_level_major", 3, 0, 12, "Verbosity level: 0 no output (only errors), 1=0+warnings, 2=1 (reserved), 3=2+optimization output, 4=3+scalars; larger values explained in hiopLogger.hpp"); 
+  registerIntOption("verbosity_level_subproblem", 3, 0, 12, "Verbosity level: 0 no output (only errors), 1=0+warnings, 2=1 (reserved), 3=2+optimization output, 4=3+scalars; larger values explained in hiopLogger.hpp"); 
   vector<string> range(2); range[0]="hiop"; range[1]="ipopt";
   registerStrOption("subproblem_solver", "hiop", range, "Solver used to solve the Augmented Lagrangian subproblem (default hiop)");
   }
@@ -360,8 +360,8 @@ bool hiopOptions::SetStringValue (const char* name,  const char* value, const bo
 	}
       } 
 
-      if(setFromFile)
-	option->specifiedInFile=true;
+//      if(setFromFile)
+//	option->specifiedInFile=true;
 
       string strValue(value);
       transform(strValue.begin(), strValue.end(), strValue.begin(), ::tolower);
