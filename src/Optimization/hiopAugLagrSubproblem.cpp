@@ -56,7 +56,7 @@ void hiopAugLagrSubproblem::initialize()
       // Intialize the IpoptApplication and process the options
       ApplicationReturnStatus st = ipoptApp->Initialize();
       if (st != Solve_Succeeded) {
-        printf("\n\n*** Error during IPOPT initialization!\n Error %d\n", st);
+        subproblem->log->printf(hovError, "\n\n*** Error during IPOPT initialization!\n Error %d\n", st);
       }
       
       //update the Subproblem status 
@@ -103,6 +103,16 @@ hiopSolveStatus hiopAugLagrSubproblem::solveSubproblem_ipopt()
 {
   checkConsistency();
 
+  ////for the first N subproblems use exact hessian, then use only QN
+  //static int xx = 0;
+  //if (xx > 44) 
+  //{
+  //    subproblem->log->printf(hovWarning, "hipAugLagrSubproblem: switching to the Quasi-Newton mode!\n");
+  //    ipoptApp->Options()->SetStringValue("hessian_approximation", "limited-memory");
+  //    ipoptApp->Options()->SetIntegerValue("print_level", 5);
+  //}
+  //xx++;
+
   // Ask Ipopt to solve the problem
   ApplicationReturnStatus st = ipoptApp->OptimizeTNLP(subproblem);
   displayTerminationMsgIpopt(st);
@@ -127,8 +137,6 @@ hiopSolveStatus hiopAugLagrSubproblem::solveSubproblem_hiop()
 hiopSolveStatus hiopAugLagrSubproblem::run()
 {
   _solverStatus = NlpSolve_Pending;
-
-  subproblem->log->printf(hovScalars, "Subproblem tolerance is set to %g\n", _EPS_TOL_OPTIM);
 
   if(subproblem->options->GetString("subproblem_solver")=="ipopt")
     _solverStatus = solveSubproblem_ipopt();
