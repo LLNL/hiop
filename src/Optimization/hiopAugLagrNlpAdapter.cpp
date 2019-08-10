@@ -32,7 +32,7 @@ hiopAugLagrNlpAdapter::hiopAugLagrNlpAdapter(NLP_CLASS_IN* nlp_in_):
     cons_eq_mapping(nullptr),
     cons_ineq_mapping(nullptr),
     c_rhs(nullptr),
-    _solutionIpopt(nullptr),
+    _solutionIpopt(nullptr), _numItersIpopt(-1),
     _penaltyFcn(nullptr),
     _penaltyFcn_jacobian(nullptr),
     _hessian(nullptr),
@@ -599,6 +599,7 @@ void hiopAugLagrNlpAdapter::finalize_solution(SolverReturn status, Index n,
     //cache the Ipopt solution
     assert(n == n_vars+n_slacks);
     memcpy(_solutionIpopt, x, n*sizeof(double));
+    _numItersIpopt = ip_data->iter_count();
     return;
 }
     /***********************************************************************
@@ -614,6 +615,11 @@ void hiopAugLagrNlpAdapter::finalize_solution(SolverReturn status, Index n,
 void hiopAugLagrNlpAdapter::get_ipoptSolution(double *x) const
 {
     memcpy(x, _solutionIpopt, (n_vars+n_slacks)*sizeof(double));
+}
+
+int hiopAugLagrNlpAdapter::get_ipoptNumIters() const
+{
+    return _numItersIpopt;
 }
 
 /**

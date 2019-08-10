@@ -103,9 +103,9 @@ hiopSolveStatus hiopAugLagrSubproblem::solveSubproblem_ipopt()
 {
   checkConsistency();
 
-  ////for the first N subproblems use exact hessian, then use only QN
+  //for the first N subproblems use exact hessian, then use only QN
   //static int xx = 0;
-  //if (xx > 44) 
+  //if (xx > 25) 
   //{
   //    subproblem->log->printf(hovWarning, "hipAugLagrSubproblem: switching to the Quasi-Newton mode!\n");
   //    ipoptApp->Options()->SetStringValue("hessian_approximation", "limited-memory");
@@ -143,6 +143,7 @@ hiopSolveStatus hiopAugLagrSubproblem::run()
   else if(subproblem->options->GetString("subproblem_solver")=="hiop")
     _solverStatus = solveSubproblem_hiop();
   
+  subproblem->log->printf(hovSummary, "Subproblem: Converged in %d iterations.\n", getNumIterations());
 
   return _solverStatus;
 }
@@ -219,8 +220,19 @@ int hiopAugLagrSubproblem::getNumIterations() const
     subproblem->log->printf(hovError, "getNumIterations: hiOp did not initialize entirely or the 'run' function was not called.");
   if(_solverStatus==NlpSolve_Pending)
     subproblem->log->printf(hovWarning, "getNumIterations: hiOp does not seem to have completed yet. The objective value returned may not be optimal.");
-  
-  return subproblem->runStats.nIter;
+ 
+  if (_subproblemStatus == IpoptHiopInitialized)
+  {
+      assert(0);//cannot decide which num iters return, ipopt or hiop?
+  } else if (_subproblemStatus == HiopInitialized)
+  {
+      return hiopSolver->getNumIterations();
+  } else if (_subproblemStatus == IpoptInitialized)
+  {
+      return subproblem->get_ipoptNumIters(); 
+  }
+
+  return -1;
 }
 
 /***** Termination message *****/

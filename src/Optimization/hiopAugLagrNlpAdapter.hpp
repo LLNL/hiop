@@ -3,6 +3,7 @@
 
 #include "hiopInterface.hpp"
 #include "IpTNLP.hpp"
+#include "IpIpoptData.hpp"
 
 //TODO
 #define NLP_CLASS_IN Ipopt::TNLP
@@ -254,6 +255,7 @@ public:
     * will be returned.
     */
     void get_ipoptSolution(double *x) const;
+    int get_ipoptNumIters() const;
 
 protected:
     /** Allocates space for internal variables */
@@ -320,6 +322,7 @@ protected:
     double *c_rhs; ///< rhs for the equality constraints
 
     double *_solutionIpopt; ///< cached Ipopt solution from finalize_solution()
+    int _numItersIpopt;
 
     //working memory for internal evaluations of the AL functions
     //motivation to have in on class level is to avoid alloc/dealloc
