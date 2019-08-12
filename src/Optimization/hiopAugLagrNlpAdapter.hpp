@@ -234,13 +234,24 @@ public:
     /**
      * Evaluates the penalty function residuals and gradient of the Lagrangian
      *
-     * penalty  := [ce(x) - c_rhs; ci(x) - s] = 0
+     *  p(x,s)  := [ce(x) - c_rhs; ci(x) - s] = 0
      * 
-     * gradLagr_x := d_L/d_x = df_x + J^T lam   = 0
-     * gradLagr_s := d_L/d_s =  0   + (-I) lam[cons_ineq_mapping] = 0
+     *  d_La/d_x = df_x - J^T lam + 2rho J^T p(x,s)
+     *  d_La/d_s =  0   - (-I) lam[cons_ineq_mapping] + (-I)2rho*p[cons_ineq_mapping]
+     * 
+     *  where p(x,s) is a penalty fcn, rho is the penalty param and
+     *  J is the Jacobian of the original NLP constraints.
      */
     bool eval_residuals(const long long& n, const double* x_in,
-                        bool new_x, double *penalty, double* gradLagr);
+                        bool new_x, double *penalty, double* grad);
+
+    /**
+     * Projection of the gradient vector onto the rectangular box [l, u]
+     *             min(0,g)  iff x == xl 
+     * proj(g) =   g         iff x in (xl,xg) 
+     *             max(0,g)  iff x == xu 
+     */                    
+    bool project_gradient(const double* x_in, double* grad);                        
     
     /** Objective function evaluation, this is the user objective function f(x) */
     bool eval_f_user(const long long& n, const double* x_in, bool new_x, double& obj_value);

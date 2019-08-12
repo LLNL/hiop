@@ -684,7 +684,7 @@ void hiopAugLagrNlpAdapter::set_lambda(const hiopVectorPar* lambda_in)
 }
 
 //TODO: can we reuse the last jacobian instead of recomputing it? does hiop/ipopt evaluate the Jacobian in the last (xk + searchDir), a.k.a the solution? 
-bool hiopAugLagrNlpAdapter::eval_residuals(const long long& n, const double* x_in, bool new_x, double *penalty, double* gradLagr)
+bool hiopAugLagrNlpAdapter::eval_residuals(const long long& n, const double* x_in, bool new_x, double *penalty, double* grad)
 {
    assert(n == n_vars+n_slacks);
 
@@ -698,13 +698,52 @@ bool hiopAugLagrNlpAdapter::eval_residuals(const long long& n, const double* x_i
    
     /**************************************************/
     /**        Compute the Lagrangian term            */
-    /**     gradLagr := d_L/d_x = df_x - J^T lam      */
+    /*  d_La/d_x = df_x - J^T lam + 2rho J^T p(x,s)   */
+    /*  d_La/d_s =  0 - (-I) lam[cons_ineq_mapping]   */
+    /*                + (-I)2rho*p[cons_ineq_mapping] */
     /**************************************************/
     //TODO: we could use new_x = false here, since the penalty is already evaluated
     //and cached in #_penaltyFcn
-    bret = eval_grad_Lagr(n, x_in, new_x, gradLagr); //TODO: new_x
-    assert(bret);
+    bret = eval_grad_f(n, x_in, new_x, grad); assert(bret); //TODO: new_x 
+    project_gradient(x_in, grad);
 
     return bret;
+}
+
+bool hiopAugLagrNlpAdapter::project_gradient(const double* x_in, double* grad)
+{
+    const double EPS = 1e-8;
+
+    const double *x_low = xl->local_data_const();
+    const double *x_upp = xu->local_data_const();
+
+    for (int i=0; i<n_vars; i++)
+    {
+        if (fabs(x_in[i] - x_low[i]) < EPS) //x == lb
+        {
+            if (grad[i] > 0.) grad[i] = 0.; //min(0,g)
+        }
+        if (fabs(x_in[i] - x_upp[i]) < EPS) //x == ub
+        {
+            if (grad[i] < 0.) grad[i] = 0.; //max(0,g)
+        }
+    }
+
+    const double *s_in = &x_in[n_vars];
+    double *grad_s = &grad[n_vars];
+    const double *s_low = sl->local_data_const();
+    const double *s_upp = su->local_data_const();
+
+    for (int i=0; i<n_slacks; i++)
+    {
+        if (fabs(s_in[i] - s_low[i]) < EPS) //s == lb
+        {
+            if (grad_s[i] > 0.) grad_s[i] = 0.; //min(0,g)
+        }
+        if (fabs(s_in[i] - s_upp[i]) < EPS) //s == ub
+        {
+            if (grad_s[i] < 0.) grad_s[i] = 0.; //max(0,g)
+        }
+    }
 }
 }
