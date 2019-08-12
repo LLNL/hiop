@@ -266,7 +266,8 @@ public:
     * will be returned.
     */
     void get_ipoptSolution(double *x) const;
-    int get_ipoptNumIters() const;
+    void get_ipoptBoundMultipliers(double *z_L, double *z_U) const;
+    int  get_ipoptNumIters() const;
 
 protected:
     /** Allocates space for internal variables */
@@ -333,7 +334,8 @@ protected:
     double *c_rhs; ///< rhs for the equality constraints
 
     double *_solutionIpopt; ///< cached Ipopt solution from finalize_solution()
-    int _numItersIpopt;
+    double *_zLowIpopt, *_zUppIpopt; ///< cached Ipopt multipliers for the bounds
+    int _numItersIpopt; ///< cached number of Ipopt iterations
 
     //working memory for internal evaluations of the AL functions
     //motivation to have in on class level is to avoid alloc/dealloc

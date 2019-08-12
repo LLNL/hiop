@@ -32,7 +32,7 @@ hiopAugLagrNlpAdapter::hiopAugLagrNlpAdapter(NLP_CLASS_IN* nlp_in_):
     cons_eq_mapping(nullptr),
     cons_ineq_mapping(nullptr),
     c_rhs(nullptr),
-    _solutionIpopt(nullptr), _numItersIpopt(-1),
+    _solutionIpopt(nullptr), _zLowIpopt(nullptr), _zUppIpopt(nullptr), _numItersIpopt(-1),
     _penaltyFcn(nullptr),
     _penaltyFcn_jacobian(nullptr),
     _hessian(nullptr),
@@ -65,6 +65,8 @@ hiopAugLagrNlpAdapter::~hiopAugLagrNlpAdapter()
     if(cons_ineq_mapping)     delete [] cons_ineq_mapping;
     if(c_rhs)                 delete [] c_rhs;
     if(_solutionIpopt)        delete [] _solutionIpopt;
+    if(_zLowIpopt)            delete [] _zLowIpopt;
+    if(_zUppIpopt)            delete [] _zUppIpopt;
     if(log)      delete log;
     if(options)  delete options;
 }
@@ -123,6 +125,8 @@ bool hiopAugLagrNlpAdapter::initialize()
     _hessian = new hiopAugLagrHessian(nlp_in, n_vars, n_slacks, m_cons, nnz_hess);
 
     _solutionIpopt = new double[n_vars+n_slacks];
+    _zLowIpopt = new double[n_vars+n_slacks];
+    _zUppIpopt = new double[n_vars+n_slacks];
 
     /**************************************************************************/
     /*  Analyze the original NLP constraints and split them into eq/ineq      */
@@ -599,6 +603,12 @@ void hiopAugLagrNlpAdapter::finalize_solution(SolverReturn status, Index n,
     //cache the Ipopt solution
     assert(n == n_vars+n_slacks);
     memcpy(_solutionIpopt, x, n*sizeof(double));
+
+    //cache the multipliers for the bounds z_L, z_U
+    memcpy(_zLowIpopt, z_L, n*sizeof(double));
+    memcpy(_zUppIpopt, z_U, n*sizeof(double));
+
+    //cache the number of IPOPT iterations
     _numItersIpopt = ip_data->iter_count();
     return;
 }
@@ -615,6 +625,12 @@ void hiopAugLagrNlpAdapter::finalize_solution(SolverReturn status, Index n,
 void hiopAugLagrNlpAdapter::get_ipoptSolution(double *x) const
 {
     memcpy(x, _solutionIpopt, (n_vars+n_slacks)*sizeof(double));
+}
+
+void hiopAugLagrNlpAdapter::get_ipoptBoundMultipliers(double *z_L, double *z_U) const
+{
+    memcpy(z_L, _zLowIpopt, (n_vars+n_slacks)*sizeof(double));
+    memcpy(z_U, _zUppIpopt, (n_vars+n_slacks)*sizeof(double));
 }
 
 int hiopAugLagrNlpAdapter::get_ipoptNumIters() const
@@ -697,7 +713,7 @@ bool hiopAugLagrNlpAdapter::eval_residuals(const long long& n, const double* x_i
     _penaltyFcn->copyTo(penalty);
    
     /**************************************************/
-    /**        Compute the Lagrangian term            */
+    /**          Compute the AL gradient              */
     /*  d_La/d_x = df_x - J^T lam + 2rho J^T p(x,s)   */
     /*  d_La/d_s =  0 - (-I) lam[cons_ineq_mapping]   */
     /*                + (-I)2rho*p[cons_ineq_mapping] */
@@ -705,6 +721,16 @@ bool hiopAugLagrNlpAdapter::eval_residuals(const long long& n, const double* x_i
     //TODO: we could use new_x = false here, since the penalty is already evaluated
     //and cached in #_penaltyFcn
     bret = eval_grad_f(n, x_in, new_x, grad); assert(bret); //TODO: new_x 
+
+    //add multipliers for the l < x < u bound constraints
+    //assumes Ipopt solver and its successful convergence
+    //TODO: bounds are not ititialized during inital evaluation of the error at iteration 0
+    for (int i = 0; i < n; i++)
+    {
+        grad[i] -= _zLowIpopt[i] + _zUppIpopt[i];
+    }
+
+    //TODO: project gradient onto rectangular box [l,u]
     project_gradient(x_in, grad);
 
     return bret;
@@ -712,6 +738,7 @@ bool hiopAugLagrNlpAdapter::eval_residuals(const long long& n, const double* x_i
 
 bool hiopAugLagrNlpAdapter::project_gradient(const double* x_in, double* grad)
 {
+    //const double EPS = options->GetNumeric("fixed_var_tolerance");
     const double EPS = 1e-8;
 
     const double *x_low = xl->local_data_const();
@@ -721,11 +748,11 @@ bool hiopAugLagrNlpAdapter::project_gradient(const double* x_in, double* grad)
     {
         if (fabs(x_in[i] - x_low[i]) < EPS) //x == lb
         {
-            if (grad[i] > 0.) grad[i] = 0.; //min(0,g)
+            if (grad[i] > 0.) grad[i] = 0.; //g=min(0,g)
         }
-        if (fabs(x_in[i] - x_upp[i]) < EPS) //x == ub
+        else if (fabs(x_in[i] - x_upp[i]) < EPS) //x == ub
         {
-            if (grad[i] < 0.) grad[i] = 0.; //max(0,g)
+            if (grad[i] < 0.) grad[i] = 0.; //g=max(0,g)
         }
     }
 
@@ -738,11 +765,11 @@ bool hiopAugLagrNlpAdapter::project_gradient(const double* x_in, double* grad)
     {
         if (fabs(s_in[i] - s_low[i]) < EPS) //s == lb
         {
-            if (grad_s[i] > 0.) grad_s[i] = 0.; //min(0,g)
+            if (grad_s[i] > 0.) grad_s[i] = 0.; //g=min(0,g)
         }
-        if (fabs(s_in[i] - s_upp[i]) < EPS) //s == ub
+        else if (fabs(s_in[i] - s_upp[i]) < EPS) //s == ub
         {
-            if (grad_s[i] < 0.) grad_s[i] = 0.; //max(0,g)
+            if (grad_s[i] < 0.) grad_s[i] = 0.; //g=max(0,g)
         }
     }
 }
