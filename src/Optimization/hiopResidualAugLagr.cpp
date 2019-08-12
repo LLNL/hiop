@@ -11,7 +11,7 @@ void hiopResidualAugLagr::print(FILE* f, const char* msg, int max_elems, int ran
   else fprintf(f, "%s\n", msg);
 
   _penaltyFcn->print(  f, "  penalty:", max_elems, rank); 
-  _gradLagr->print(  f, " gradLagr:", max_elems, rank);   
+  _grad->print(  f, " gradLagr:", max_elems, rank);   
   //printf(" errors (optim/feasib) nlp    : %26.16e %25.16e\n", 
   //       _nrmInfOptim, _nrmInfFeasib);
 }

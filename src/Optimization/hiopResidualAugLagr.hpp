@@ -13,14 +13,14 @@ class hiopResidualAugLagr
 public:
   hiopResidualAugLagr(long long n_vars, long long m_constraints) :
     _penaltyFcn(new hiopVectorPar(m_constraints)),
-    _gradLagr(new hiopVectorPar(n_vars)),
+    _grad(new hiopVectorPar(n_vars)),
     _nrmInfOptim(-1.),
     _nrmInfFeasib(-1.) {};
   
   ~hiopResidualAugLagr()
   {
       delete _penaltyFcn;
-      delete _gradLagr;
+      delete _grad;
   }
   
   //danger!!! accessor to private data, can make our object incnsistent,
@@ -29,10 +29,10 @@ public:
   //We pass the pointer directly to the AugLagrAdapter in order to avoid
   //the additional copy of the residual vectors in-between
   inline double *getFeasibilityPtr() {return _penaltyFcn->local_data(); }
-  inline double *getOptimalityPtr()  {return _gradLagr->local_data(); }
+  inline double *getOptimalityPtr()  {return _grad->local_data(); }
 
   void update()
-  { _nrmInfOptim = _gradLagr->infnorm();
+  { _nrmInfOptim = _grad->infnorm();
     _nrmInfFeasib = _penaltyFcn->infnorm(); }
 
   /* Return the Nlp errors computed at the previous update call. */ 
@@ -47,9 +47,9 @@ public:
 
 private:
   hiopVectorPar *_penaltyFcn; ///< penalty function p(x,s) residuals
-  hiopVectorPar *_gradLagr;   ///< gradient of the Lagrangian d_L = d_f + J^T lam
+  hiopVectorPar *_grad;   ///< gradient; the first KKT optimality condition
 
-  double _nrmInfOptim;  // norm of the gradient of the Lagrangian 
+  double _nrmInfOptim;  // norm of the gradient
   double _nrmInfFeasib;  // norm of the penalty function
   
 private:
