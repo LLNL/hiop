@@ -74,6 +74,7 @@ protected:
   double _f_nlp;       ///< current objective function value
   double _err_feas0, _err_optim0; ///< initial errors
   double _err_feas, _err_optim; ///< current errors
+  double _nrm_dlam; ///< current norm of the Lagr. multipliers update
 
   //user options and parameters
   double _LAMBDA0;       ///< initial value of the multipliers

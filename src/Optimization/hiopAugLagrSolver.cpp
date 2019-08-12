@@ -21,6 +21,7 @@ hiopAugLagrSolver::hiopAugLagrSolver(NLP_CLASS_IN* nlp_in_)
     _f_nlp(-1.),
     _err_feas0(-1.), _err_optim0(-1.),
     _err_feas(-1.), _err_optim(-1.),
+    _nrm_dlam(0.),
     _LAMBDA0(-1.),_WARM_INIT_LAMBDA(false),_RHO0(-1.),
     _EPS_TOL(-1),_EPS_RTOL(-1),_EPS_TOL_ACCEP(-1),
     _MAX_N_IT(-1), _ACCEP_N_IT(-1),
@@ -50,7 +51,45 @@ hiopAugLagrSolver::~hiopAugLagrSolver()
     if(residual)     delete residual;
 }
 
+void hiopAugLagrSolver::reloadOptions()
+{
+  // initial value of the multipliers and the penalty
+  _WARM_INIT_LAMBDA = nlp->options->GetInteger("warm_start");
+  _LAMBDA0 = nlp->options->GetNumeric("lambda0");
+  _RHO0 = nlp->options->GetNumeric("rho0");
 
+  //user options
+  _EPS_TOL  = nlp->options->GetNumeric("tolerance");          ///< abs tolerance for the NLP error (same for feas and optim)
+  _EPS_RTOL = nlp->options->GetNumeric("rel_tolerance");      ///< rel tolerance for the NLP error (same for feas and optim)
+  _EPS_TOL_ACCEP = nlp->options->GetNumeric("acceptable_tolerance"); ///< acceptable tolerance (required at _ACCEP_N_IT iterations)
+  _MAX_N_IT   = nlp->options->GetInteger("max_iter");                ///< maximum number of iterations
+  _ACCEP_N_IT = nlp->options->GetInteger("acceptable_iterations");   ///< acceptable number of iterations
+
+  // internal algorithm parameters
+  _alpha = 1./_RHO0; ///< positive constants
+  //_eps_tol_feas0  = 1e-1 * _alpha; ///< required feasibility of the subproblem
+  //_eps_tol_optim0 = 1e-1 * pow(_alpha, 0.1); ///< required optimality tolerance of the subproblem
+  _eps_tol_feas0  = 1e-3;
+  _eps_tol_optim0 = 1e-3;
+  
+  _eps_tol_feas  = _eps_tol_feas0;
+  _eps_tol_optim = _eps_tol_optim0;
+}
+
+void hiopAugLagrSolver::resetSolverStatus()
+{
+  _iter_num = 0;
+  _n_accep_iters = 0;
+  _solverStatus = NlpSolve_IncompleteInit;
+  _err_feas0 = -1.;
+  _err_optim0 = -1;
+  _nrm_dlam = 0.;
+}
+
+void hiopAugLagrSolver::reInitializeNlpObjects()
+{
+    //TODO
+}
 
 /**
  */
@@ -259,45 +298,6 @@ hiopSolveStatus hiopAugLagrSolver::run()
 }
 
 
-void hiopAugLagrSolver::reloadOptions()
-{
-  // initial value of the multipliers and the penalty
-  _WARM_INIT_LAMBDA = nlp->options->GetInteger("warm_start");
-  _LAMBDA0 = nlp->options->GetNumeric("lambda0");
-  _RHO0 = nlp->options->GetNumeric("rho0");
-
-  //user options
-  _EPS_TOL  = nlp->options->GetNumeric("tolerance");          ///< abs tolerance for the NLP error (same for feas and optim)
-  _EPS_RTOL = nlp->options->GetNumeric("rel_tolerance");      ///< rel tolerance for the NLP error (same for feas and optim)
-  _EPS_TOL_ACCEP = nlp->options->GetNumeric("acceptable_tolerance"); ///< acceptable tolerance (required at _ACCEP_N_IT iterations)
-  _MAX_N_IT   = nlp->options->GetInteger("max_iter");                ///< maximum number of iterations
-  _ACCEP_N_IT = nlp->options->GetInteger("acceptable_iterations");   ///< acceptable number of iterations
-
-  // internal algorithm parameters
-  _alpha = 1./_RHO0; ///< positive constants
-  //_eps_tol_feas0  = 1e-1 * _alpha; ///< required feasibility of the subproblem
-  //_eps_tol_optim0 = 1e-1 * pow(_alpha, 0.1); ///< required optimality tolerance of the subproblem
-  _eps_tol_feas0  = 1e-3;
-  _eps_tol_optim0 = 1e-3;
-  
-  _eps_tol_feas  = _eps_tol_feas0;
-  _eps_tol_optim = _eps_tol_optim0;
-}
-
-void hiopAugLagrSolver::resetSolverStatus()
-{
-  _iter_num = 0;
-  _n_accep_iters = 0;
-  _solverStatus = NlpSolve_IncompleteInit;
-  _err_feas0 = -1.;
-  _err_optim0 = -1;
-}
-
-void hiopAugLagrSolver::reInitializeNlpObjects()
-{
-    //TODO
-}
-
 //TODO: can be merged with evalNlpErrors()
 bool hiopAugLagrSolver::evalNlp(hiopVectorPar* iter,                              
                                double &f/**, hiopVector& c_, hiopVector& d_, 
@@ -394,10 +394,14 @@ bool hiopAugLagrSolver::checkTermination(double err_feas, double err_optim, cons
 void hiopAugLagrSolver::outputIteration()
 {
   if(_iter_num/10*10==_iter_num) 
-    nlp->log->printf(hovSummary, "iter    objective     inf_pr     inf_du   lg(rho)\n");
+    nlp->log->printf(hovSummary, "iter    objective     inf_pr     inf_du  ||dLam||  lg(rho)  iter_inner\n");
 
-    nlp->log->printf(hovSummary, "%4d %14.7e %7.3e  %7.3e %6.2f\n",
-                     _iter_num, _f_nlp, _err_feas, _err_optim, log10(_rho_curr)); 
+    if (_iter_num > 0)
+    nlp->log->printf(hovSummary, "%4d %14.7e %7.3e %7.3e %7.3e %6.2f %8d\n",
+                     _iter_num, _f_nlp, _err_feas, _err_optim, _nrm_dlam, log10(_rho_curr), subproblemSolver.getNumIterations()); 
+    else
+    nlp->log->printf(hovSummary, "%4d %14.7e %7.3e %7.3e %7.3e %6.2f %s\n",
+                     _iter_num, _f_nlp, _err_feas, _err_optim, _nrm_dlam, log10(_rho_curr), "      --"); 
 }
 
 /**
@@ -410,11 +414,19 @@ void hiopAugLagrSolver::updateLambda()
     const double *penaltyFcn = residual->getFeasibilityPtr();
 
     // compute new value of the multipliers
+    double dlam2 = 0.;
     for (long long i=0; i<m_cons; i++)
-        _lam_data[i] -= penaltyFcn[i] * _rho_curr;
+    {
+       const double dlam = penaltyFcn[i] * _rho_curr;
+        _lam_data[i] -= dlam;
+        dlam2 += dlam*dlam;
+    }
 
     //update the multipliers in the adapter class
     nlp->set_lambda(_lam_curr);
+
+    //2-norm of the lambda update
+    _nrm_dlam = sqrt(dlam2);
 }
 
 
@@ -428,6 +440,8 @@ void hiopAugLagrSolver::updateRho()
 
     //update the penalty parameter in the adapter class
     nlp->set_rho(_rho_curr);
+
+    _nrm_dlam = 0.;
 }
 
 /* returns the objective value; valid only after 'run' method has been called */
