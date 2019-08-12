@@ -342,6 +342,7 @@ bool hiopAugLagrSolver::evalNlpErrors(const hiopVector *current_iterate,
   const double *_it_curr_data = _it_curr->local_data_const();
   bool new_x = true;
 
+  assert(nlp->options->GetString("subproblem_solver")=="ipopt");//how to get l<x<u bound multipliers from hiop?
   //evaluate the AugLagr penalty fcn and gradient of the Lagrangian
   bool bret = nlp->eval_residuals(n_vars, _it_curr_data, new_x, penaltyFcn, gradLagr);
   assert(bret);
@@ -406,7 +407,9 @@ void hiopAugLagrSolver::outputIteration()
 
 /**
  * Computes new value of the lagrange multipliers estimate
- * lam_k+1 = lam_k - penaltyFcn_k * rho_k
+ * lam_k+1 = lam_k - (penaltyFcn_k * rho_k)
+ * 
+ * saves the 2-norm of the update (penaltyFcn_k * rho_k) in #_nrm_dlam
  */
 void hiopAugLagrSolver::updateLambda()
 {
