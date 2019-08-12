@@ -52,6 +52,7 @@ void hiopAugLagrSubproblem::initialize()
       //ipoptApp->Options()->SetStringValue("mu_strategy", "adaptive");
       //ipoptApp->Options()->SetStringValue("output_file", "ipopt.out");
       ipoptApp->Options()->SetIntegerValue("print_level", subproblem->options->GetInteger("verbosity_level_subproblem") );
+      ipoptApp->Options()->SetStringValue("sb","yes"); //disables Ipopt welcome message
 
       // Intialize the IpoptApplication and process the options
       ApplicationReturnStatus st = ipoptApp->Initialize();
@@ -104,14 +105,15 @@ hiopSolveStatus hiopAugLagrSubproblem::solveSubproblem_ipopt()
   checkConsistency();
 
   //for the first N subproblems use exact hessian, then use only QN
-  //static int xx = 0;
-  //if (xx > 25) 
-  //{
-  //    subproblem->log->printf(hovWarning, "hipAugLagrSubproblem: switching to the Quasi-Newton mode!\n");
-  //    ipoptApp->Options()->SetStringValue("hessian_approximation", "limited-memory");
-  //    ipoptApp->Options()->SetIntegerValue("print_level", 5);
-  //}
-  //xx++;
+  // static int switchIteration = 0;
+  // if (switchIteration > 25) 
+  // {
+  //     subproblem->log->printf(hovWarning, "hipAugLagrSubproblem: switching to the Quasi-Newton mode!\n");
+  //     ipoptApp->Options()->SetStringValue("hessian_approximation", "limited-memory");
+  //     ipoptApp->Options()->SetIntegerValue("limited_memory_max_history", 200);
+  //     ipoptApp->Options()->SetIntegerValue("print_level", 5);
+  // }
+  // switchIteration++;
 
   // Ask Ipopt to solve the problem
   ApplicationReturnStatus st = ipoptApp->OptimizeTNLP(subproblem);
@@ -143,14 +145,14 @@ hiopSolveStatus hiopAugLagrSubproblem::run()
   else if(subproblem->options->GetString("subproblem_solver")=="hiop")
     _solverStatus = solveSubproblem_hiop();
   
-  subproblem->log->printf(hovSummary, "Subproblem: Converged in %d iterations.\n", getNumIterations());
+  // subproblem->log->printf(hovSummary, "Subproblem: Converged in %d iterations.\n", getNumIterations());
 
   return _solverStatus;
 }
 
 /** Check consistency of the current object state vs required options
  *  specified in the subproblem, i.e. if the required solver was initialized */
-void hiopAugLagrSubproblem::checkConsistency()
+void hiopAugLagrSubproblem::checkConsistency() const
 {
   if(subproblem->options->GetString("subproblem_solver")=="ipopt")
   {
@@ -176,8 +178,9 @@ double hiopAugLagrSubproblem::getObjective() const
   if(_solverStatus==NlpSolve_Pending)
     subproblem->log->printf(hovWarning, "getObjective: hiOp AL subproblem does not seem to have completed yet. The objective value returned may not be optimal.");
   
-  return 100.;
   //TODO
+  assert(0);
+  return 100.;
 }
 
 /* returns the primal vector x; valid only after 'run' method has been called */
@@ -188,6 +191,7 @@ void hiopAugLagrSubproblem::getSolution(double* x) const
   if(_solverStatus==NlpSolve_Pending)
     subproblem->log->printf(hovWarning, "getSolution: hiOp AugLagr subproblem have not completed yet. The primal vector returned may not be optimal.");
 
+  checkConsistency();
   if(subproblem->options->GetString("subproblem_solver")=="ipopt")
   {
     //IpoptApplication doesn't provide a method to access the solution.
@@ -201,9 +205,6 @@ void hiopAugLagrSubproblem::getSolution(double* x) const
   }
 
   return;
-  //TODO:
-  // update the current iterate, used as x0 for the next subproblem
-  //hiopSolver->getSolution();
   //TODO: save also the IPM duals and do the warm start
 }
 
@@ -221,13 +222,13 @@ int hiopAugLagrSubproblem::getNumIterations() const
   if(_solverStatus==NlpSolve_Pending)
     subproblem->log->printf(hovWarning, "getNumIterations: hiOp does not seem to have completed yet. The objective value returned may not be optimal.");
  
-  if (_subproblemStatus == IpoptHiopInitialized)
-  {
-      assert(0);//cannot decide which num iters return, ipopt or hiop?
-  } else if (_subproblemStatus == HiopInitialized)
+  checkConsistency();
+  if(subproblem->options->GetString("subproblem_solver")=="hiop")
   {
       return hiopSolver->getNumIterations();
-  } else if (_subproblemStatus == IpoptInitialized)
+  }
+  
+  if(subproblem->options->GetString("subproblem_solver")=="ipopt")
   {
       return subproblem->get_ipoptNumIters(); 
   }

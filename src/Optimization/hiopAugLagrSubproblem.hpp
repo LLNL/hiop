@@ -52,7 +52,7 @@ public:
 private:
   hiopSolveStatus solveSubproblem_ipopt();
   hiopSolveStatus solveSubproblem_hiop();
-  void checkConsistency();
+  void checkConsistency() const;
   void displayTerminationMsgHiop(hiopSolveStatus st);
   void displayTerminationMsgIpopt(ApplicationReturnStatus st);
 
