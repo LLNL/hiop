@@ -210,6 +210,18 @@ hiopSolveStatus hiopAugLagrSolver::run()
     nlp->log->write("", *_it_curr, hovIteration);
     nlp->log->write("", *_lam_curr, hovIteration);
 
+    //this code is here because we want to reuse lambda from previous iteration
+    //otherwise the QN switch is completely handled in the subproblem
+    //we need SWITCH_IT -1, we are setting things up for the next subproblem
+    // const int SWITCH_IT = nlp->options->GetInteger("quasi_newton_switch_it");
+    // if (SWITCH_IT > 0 && _iter_num > SWITCH_IT-1)
+    // {
+    //     nlp->log->printf(hovWarning, "Solver: switching to the Quasi-Newton mode in the next iteration!\n");
+    //     nlp->set_starting_point(n_vars, _it_curr->local_data_const());
+        
+    //     continue;//skip the lambda update
+    // }
+
     /*************************************************
      * NLP Problem and Error evalutaions
      ************************************************/
@@ -245,7 +257,6 @@ hiopSolveStatus hiopAugLagrSolver::run()
         //check termination conditions   
         if(checkTermination(_err_feas, _err_optim, _iter_num, _solverStatus)) {break;}
 
-        
         // update multipliers
         nlp->log->printf(hovScalars, "AugLagrSolver: Updating Lagrange multipliers.\n");
         updateLambda();

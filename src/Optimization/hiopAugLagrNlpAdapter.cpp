@@ -503,8 +503,10 @@ bool hiopAugLagrNlpAdapter::get_starting_point( Index n, bool init_x, Number* x,
     //hiop::hiopInterfaceDenseConstraints
     get_starting_point((long long) n, (double*) x);
 
-    assert(init_z == false);
-    assert(init_lambda == false);
+    // returned cached bound multipliers
+    if (init_z) get_ipoptBoundMultipliers(z_L, z_U);
+    if (init_z) log->printf(hovWarning, "Adapter: Initializing z_L, z_U!\n");
+
     assert(m==0);
     return true;
 }

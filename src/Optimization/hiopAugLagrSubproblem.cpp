@@ -76,16 +76,8 @@ void hiopAugLagrSubproblem::initialize()
 
       // set HIOP options
       hiopWrapper->options->SetNumericValue("tolerance", _EPS_TOL_OPTIM); 
-      //hiopWrapper->options->SetNumericValue("rel_tolerance", 1e-2);
-      //hiopWrapper->options->SetNumericValue("acceptable_tolerance", 1e-4);
-      //hiopWrapper->options->SetIntegerValue("acceptable_iterations", 10);
-      //hiopWrapper->options->SetIntegerValue("max_iter", 500);
       hiopWrapper->options->SetStringValue("fixed_var", "relax"); //remove fails
       hiopWrapper->options->SetIntegerValue("verbosity_level", subproblem->options->GetInteger("verbosity_level_subproblem"));
-      //hiopWrapper->options->SetNumericValue("sigma0", 10);
-      //hiopWrapper->options->SetStringValue("sigma_update_strategy",  "sigma0"); //sty, sty_inv, snrm_ynrm, sty_srnm_ynrm
-      //hiopWrapper->options->SetIntegerValue("secant_memory_len", 6);
-      //hiopWrapper->options->SetStringValue("dualsInitialization",  "zero"); //lsq
 
       //create and initialize the HiopSolver
       hiopSolver = new hiopAlgFilterIPM(hiopWrapper);
@@ -104,16 +96,28 @@ hiopSolveStatus hiopAugLagrSubproblem::solveSubproblem_ipopt()
 {
   checkConsistency();
 
+  //adaptive performs much better than monotone
+  ipoptApp->Options()->SetStringValue("mu_strategy", "adaptive");
+
   //for the first N subproblems use exact hessian, then use only QN
-  // static int switchIteration = 0;
-  // if (switchIteration > 25) 
-  // {
-  //     subproblem->log->printf(hovWarning, "hipAugLagrSubproblem: switching to the Quasi-Newton mode!\n");
-  //     ipoptApp->Options()->SetStringValue("hessian_approximation", "limited-memory");
-  //     ipoptApp->Options()->SetIntegerValue("limited_memory_max_history", 200);
-  //     ipoptApp->Options()->SetIntegerValue("print_level", 5);
-  // }
-  // switchIteration++;
+  static int subproblem_iter = 0;
+  const int SWITCH_IT = subproblem->options->GetInteger("quasi_newton_switch_iter");
+  //negative switch iter disables QN
+  if (SWITCH_IT >= 0 && subproblem_iter > SWITCH_IT) 
+  {
+      subproblem->log->printf(hovWarning, "hipAugLagrSubproblem: switching to the Quasi-Newton mode!\n");
+      ipoptApp->Options()->SetStringValue("hessian_approximation", "limited-memory");
+      ipoptApp->Options()->SetIntegerValue("limited_memory_max_history", 200);
+      ipoptApp->Options()->SetIntegerValue("print_level", 5);
+
+      //warm start the QN
+      ipoptApp->Options()->SetStringValue("warm_start_init_point", "yes");
+      //ipoptApp->Options()->SetNumericValue("bound_push", 1e-16);
+      //ipoptApp->Options()->SetNumericValue("bound_frac", 1e-16);
+      ipoptApp->Options()->SetNumericValue("mu_init", 1e-10);
+      ipoptApp->Options()->SetStringValue("mu_strategy", "monotone");
+  }
+  subproblem_iter++;
 
   // Ask Ipopt to solve the problem
   ApplicationReturnStatus st = ipoptApp->OptimizeTNLP(subproblem);
