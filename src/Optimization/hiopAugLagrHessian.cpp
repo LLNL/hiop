@@ -72,8 +72,8 @@ bool hiopAugLagrHessian::eval_hess_nlp(const double *x_in, bool new_x, const hio
     int *jCol_nlp = _hessianNlp->get_jCol();
 
     //hiop::hiopInterfaceDenseConstraints
-    bool bret = nlp_in->eval_h(nvars_nlp, nullptr, new_x,
-                obj_factor, mcons_nlp, nullptr, true,
+    bool bret = nlp_in->eval_h(nvars_nlp, nullptr, false,
+                obj_factor, mcons_nlp, nullptr, false,
                 nnz_nlp, iRow_nlp, jCol_nlp, nullptr);
     assert(bret);
     initializedStructure = true;
