@@ -36,7 +36,7 @@ hiopAugLagrSolver::hiopAugLagrSolver(NLP_CLASS_IN* nlp_in_)
   
   _it_curr  = new hiopVectorPar(n_vars);
   _lam_curr = new hiopVectorPar(m_cons);
-  residual  = new hiopResidualAugLagr(n_vars, m_cons);
+  residual  = new hiopResidualAugLagr(nlp, n_vars, m_cons);
 
   reloadOptions();
   reInitializeNlpObjects();

@@ -64,9 +64,9 @@ hiopAugLagrNlpAdapter::~hiopAugLagrNlpAdapter()
     if(cons_eq_mapping)       delete [] cons_eq_mapping;
     if(cons_ineq_mapping)     delete [] cons_ineq_mapping;
     if(c_rhs)                 delete [] c_rhs;
-    if(_solutionIpopt)        delete [] _solutionIpopt;
-    if(_zLowIpopt)            delete [] _zLowIpopt;
-    if(_zUppIpopt)            delete [] _zUppIpopt;
+    if(_solutionIpopt)        delete  _solutionIpopt;
+    if(_zLowIpopt)            delete  _zLowIpopt;
+    if(_zUppIpopt)            delete  _zUppIpopt;
     if(log)      delete log;
     if(options)  delete options;
 }
@@ -124,9 +124,9 @@ bool hiopAugLagrNlpAdapter::initialize()
     _penaltyFcn_jacobian = new hiopMatrixSparse(m_cons, n_vars, nnz_jac);
     _hessian = new hiopAugLagrHessian(nlp_in, n_vars, n_slacks, m_cons, nnz_hess);
 
-    _solutionIpopt = new double[n_vars+n_slacks];
-    _zLowIpopt = new double[n_vars+n_slacks];
-    _zUppIpopt = new double[n_vars+n_slacks];
+    _solutionIpopt = new hiopVectorPar(n_vars+n_slacks);
+    _zLowIpopt = new hiopVectorPar(n_vars+n_slacks);
+    _zUppIpopt = new hiopVectorPar(n_vars+n_slacks);
 
     /**************************************************************************/
     /*  Analyze the original NLP constraints and split them into eq/ineq      */
@@ -477,7 +477,7 @@ bool hiopAugLagrNlpAdapter::get_nlp_info(Index& n, Index& m,
     
     //TODO: this is not needed for Quasi-Newton
     // need to call dummy hessian assembly to determine structure and nnz count
-    eval_penalty_jac(startingPoint->local_data(), true);//need to init structure
+    eval_penalty_jac(startingPoint->local_data(), true);//need to init Jac. structure
     _hessian->assemble(startingPoint->local_data(), true, 1.0,
                        *lambda, rho, *_penaltyFcn,
                        *_penaltyFcn_jacobian, cons_ineq_mapping);
@@ -602,11 +602,12 @@ void hiopAugLagrNlpAdapter::finalize_solution(SolverReturn status, Index n,
 
     //cache the Ipopt solution
     assert(n == n_vars+n_slacks);
-    memcpy(_solutionIpopt, x, n*sizeof(double));
+    assert(m == 0);
+    memcpy(_solutionIpopt->local_data(), x, n*sizeof(double));
 
     //cache the multipliers for the bounds z_L, z_U
-    memcpy(_zLowIpopt, z_L, n*sizeof(double));
-    memcpy(_zUppIpopt, z_U, n*sizeof(double));
+    memcpy(_zLowIpopt->local_data(), z_L, n*sizeof(double));
+    memcpy(_zUppIpopt->local_data(), z_U, n*sizeof(double));
 
     //cache the number of IPOPT iterations
     _numItersIpopt = ip_data->iter_count();
@@ -624,13 +625,25 @@ void hiopAugLagrNlpAdapter::finalize_solution(SolverReturn status, Index n,
 */
 void hiopAugLagrNlpAdapter::get_ipoptSolution(double *x) const
 {
-    memcpy(x, _solutionIpopt, (n_vars+n_slacks)*sizeof(double));
+    memcpy(x, _solutionIpopt->local_data_const(), (n_vars+n_slacks)*sizeof(double));
 }
 
 void hiopAugLagrNlpAdapter::get_ipoptBoundMultipliers(double *z_L, double *z_U) const
 {
-    memcpy(z_L, _zLowIpopt, (n_vars+n_slacks)*sizeof(double));
-    memcpy(z_U, _zUppIpopt, (n_vars+n_slacks)*sizeof(double));
+    memcpy(z_L, _zLowIpopt->local_data_const(), (n_vars+n_slacks)*sizeof(double));
+    memcpy(z_U, _zUppIpopt->local_data_const(), (n_vars+n_slacks)*sizeof(double));
+}
+
+void hiopAugLagrNlpAdapter::get_dualScaling(double &sd)
+{
+    //sd = |lambda|_1 + |z_l|_1 + |z_u|+1 / (m+2n)
+    const double sLam = lambda->onenorm();
+    const double szL = _zLowIpopt->onenorm();
+    const double szU = _zUppIpopt->onenorm();
+    const double avgNorm = (sLam + szL + szU)/(m_cons+2*(n_vars+n_slacks));
+
+    //sd = max(100, sd)/100
+    sd = std::max(100., avgNorm)/100.;
 }
 
 int hiopAugLagrNlpAdapter::get_ipoptNumIters() const
@@ -722,12 +735,15 @@ bool hiopAugLagrNlpAdapter::eval_residuals(const long long& n, const double* x_i
     //and cached in #_penaltyFcn
     bret = eval_grad_f(n, x_in, new_x, grad); assert(bret); //TODO: new_x 
 
-    //add multipliers for the l < x < u bound constraints
-    //assumes Ipopt solver and its successful convergence
+    //add multipliers for the l < x < u bound constraints, z_L and z_U
+    
+    //TODO: assumes Ipopt solver and its successful convergence
     //TODO: bounds are not ititialized during inital evaluation of the error at iteration 0
+    const double *z_L = _zLowIpopt->local_data_const();
+    const double *z_U = _zUppIpopt->local_data_const();
     for (int i = 0; i < n; i++)
     {
-        grad[i] -= _zLowIpopt[i] + _zUppIpopt[i];
+        grad[i] -= z_L[i] + z_U[i];
     }
 
     //TODO: project gradient onto rectangular box [l,u]

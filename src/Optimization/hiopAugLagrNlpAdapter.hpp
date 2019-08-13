@@ -269,6 +269,13 @@ public:
     void get_ipoptBoundMultipliers(double *z_L, double *z_U) const;
     int  get_ipoptNumIters() const;
 
+   /**
+    * Returns scaling factor for dual infeasibility based on average norm of the dual variables
+    * sd = |lambda|_1 + |z_l|_1 + |z_u|+1 / (m+2n)
+    * sd = max(100, sd)/100
+    */
+    void get_dualScaling(double &sd);
+
 protected:
     /** Allocates space for internal variables */
     bool initialize();
@@ -333,8 +340,8 @@ protected:
     long long *cons_eq_mapping, *cons_ineq_mapping; ///< indices of eq. and ineq. constraints
     double *c_rhs; ///< rhs for the equality constraints
 
-    double *_solutionIpopt; ///< cached Ipopt solution from finalize_solution()
-    double *_zLowIpopt, *_zUppIpopt; ///< cached Ipopt multipliers for the bounds
+    hiopVectorPar *_solutionIpopt; ///< cached Ipopt solution from finalize_solution()
+    hiopVectorPar *_zLowIpopt, *_zUppIpopt; ///< cached Ipopt multipliers for the bounds
     int _numItersIpopt; ///< cached number of Ipopt iterations
 
     //working memory for internal evaluations of the AL functions

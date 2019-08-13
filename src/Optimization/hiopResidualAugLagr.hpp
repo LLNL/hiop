@@ -11,7 +11,8 @@ namespace hiop
 class hiopResidualAugLagr
 {
 public:
-  hiopResidualAugLagr(long long n_vars, long long m_constraints) :
+  hiopResidualAugLagr(hiopAugLagrNlpAdapter *nlp_in, long long n_vars, long long m_constraints) :
+    nlp(nlp_in),
     _penaltyFcn(new hiopVectorPar(m_constraints)),
     _grad(new hiopVectorPar(n_vars)),
     _nrmInfOptim(-1.),
@@ -32,8 +33,15 @@ public:
   inline double *getOptimalityPtr()  {return _grad->local_data(); }
 
   void update()
-  { _nrmInfOptim = _grad->infnorm();
-    _nrmInfFeasib = _penaltyFcn->infnorm(); }
+  { 
+    //update scaled norm of the duals
+    double sd;
+    nlp->get_dualScaling(sd);
+    _nrmInfOptim = _grad->infnorm() / sd;
+
+    //update feasibility norm
+    _nrmInfFeasib = _penaltyFcn->infnorm();
+  }
 
   /* Return the Nlp errors computed at the previous update call. */ 
   inline double getFeasibilityNorm() const {return _nrmInfFeasib; }
@@ -46,6 +54,7 @@ public:
   virtual void print(FILE*, const char* msg=NULL, int max_elems=-1, int rank=-1) const;
 
 private:
+  hiopAugLagrNlpAdapter *nlp; ///< representation of the problem
   hiopVectorPar *_penaltyFcn; ///< penalty function p(x,s) residuals
   hiopVectorPar *_grad;   ///< gradient; the first KKT optimality condition
 
