@@ -35,8 +35,8 @@ public:
   void update()
   { 
     //update scaled norm of the duals
-    double sd;
-    nlp->get_dualScaling(sd);
+    double sd = 1.;
+    //nlp->get_dualScaling(sd);
     _nrmInfOptim = _grad->infnorm() / sd;
 
     //update feasibility norm
