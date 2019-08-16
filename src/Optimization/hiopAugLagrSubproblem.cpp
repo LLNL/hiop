@@ -102,20 +102,30 @@ hiopSolveStatus hiopAugLagrSubproblem::solveSubproblem_ipopt()
   //for the first N subproblems use exact hessian, then use only QN
   static int subproblem_iter = 0;
   const int SWITCH_IT = subproblem->options->GetInteger("quasi_newton_switch_iter");
-  //negative switch iter disables QN
+  //negative switch_iter disables QN
   if (SWITCH_IT >= 0 && subproblem_iter > SWITCH_IT) 
   {
       subproblem->log->printf(hovWarning, "hipAugLagrSubproblem: switching to the Quasi-Newton mode!\n");
       ipoptApp->Options()->SetStringValue("hessian_approximation", "limited-memory");
-      ipoptApp->Options()->SetIntegerValue("limited_memory_max_history", 200);
+      ipoptApp->Options()->SetIntegerValue("limited_memory_max_history", 6);
+      ipoptApp->Options()->SetNumericValue("limited_memory_init_val", 1e6 );
+      ipoptApp->Options()->SetStringValue("limited_memory_initialization", "constant" );
       ipoptApp->Options()->SetIntegerValue("print_level", 5);
 
       //warm start the QN
       ipoptApp->Options()->SetStringValue("warm_start_init_point", "yes");
+      // warm starting with Cosmin
+      //bound_push 1e-8 or 1e-24
+      //bound_frac 1e-8
+      //slack_bound_push 1e-8
+      //slack_bound_frac 1e-8
+      //bound_relax_factor 0
       //ipoptApp->Options()->SetNumericValue("bound_push", 1e-16);
       //ipoptApp->Options()->SetNumericValue("bound_frac", 1e-16);
-      ipoptApp->Options()->SetNumericValue("mu_init", 1e-10);
+      ipoptApp->Options()->SetNumericValue("mu_init", 1e-8);
+      ipoptApp->Options()->SetNumericValue("mu_target", 1e-8);
       ipoptApp->Options()->SetStringValue("mu_strategy", "monotone");
+ 
   }
   subproblem_iter++;
 
