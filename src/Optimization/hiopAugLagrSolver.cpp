@@ -276,9 +276,9 @@ hiopSolveStatus hiopAugLagrSolver::run()
         updateRho();
 
         // tighten tolerances
-        _alpha = (1./_rho_curr);
-        _eps_tol_optim = _eps_tol_optim0 * _alpha;
-        _eps_tol_feas = _eps_tol_feas0 * pow(_alpha, 0.1);
+        //_alpha = (1./_rho_curr);
+        //_eps_tol_optim = _eps_tol_optim0 * _alpha;
+        //_eps_tol_feas = 0.9*_eps_tol_feas0;// * pow(_alpha, 0.1);
         
     }
 
@@ -450,7 +450,7 @@ void hiopAugLagrSolver::updateLambda()
 void hiopAugLagrSolver::updateRho()
 {
     //compute new value of the penalty parameter
-    _rho_curr = 10.0*_rho_curr;
+    _rho_curr = 5.0*_rho_curr;
 
     //update the penalty parameter in the adapter class
     nlp->set_rho(_rho_curr);
