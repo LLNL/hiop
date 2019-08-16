@@ -1,5 +1,8 @@
 cmake_minimum_required (VERSION 2.8)
 project (hippopde)
+
+add_compile_options("-std=c++11")
+
 # enable Fortran for Fortran name mangling
 enable_language(Fortran)
 
