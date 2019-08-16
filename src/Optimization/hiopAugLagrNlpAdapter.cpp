@@ -477,12 +477,13 @@ bool hiopAugLagrNlpAdapter::get_nlp_info(Index& n, Index& m,
     
     //TODO: this is not needed for Quasi-Newton
     // need to call dummy hessian assembly to determine structure and nnz count
-    eval_penalty_jac(startingPoint->local_data(), true);//need to init Jac. structure
-    _hessian->assemble(startingPoint->local_data(), true, 1.0,
-                       *lambda, rho, *_penaltyFcn,
-                       *_penaltyFcn_jacobian, cons_ineq_mapping);
+    //eval_penalty_jac(startingPoint->local_data(), true);//need to init Jac. structure
+    //_hessian->assemble(startingPoint->local_data(), true, 1.0,
+                    //    *lambda, rho, *_penaltyFcn,
+                    //    *_penaltyFcn_jacobian, cons_ineq_mapping);
 
-    nnz_h_lag = _hessian->nnz();
+    //nnz_h_lag = _hessian->nnz();
+    nnz_h_lag = 0;
     return true;
 }
 
@@ -550,6 +551,7 @@ bool hiopAugLagrNlpAdapter::eval_h(Index n, const Number* x, bool new_x, Number 
      Index m, const Number* lambda_ipopt, bool new_lambda,
      Index nele_hess, Index* iRow, Index* jCol, Number* values)
 {
+    return true;
     assert(n == n_vars+n_slacks);
     assert(m == 0);
     assert(nele_hess == _hessian->nnz());
