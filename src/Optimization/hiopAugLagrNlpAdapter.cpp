@@ -504,8 +504,8 @@ bool hiopAugLagrNlpAdapter::get_starting_point( Index n, bool init_x, Number* x,
     get_starting_point((long long) n, (double*) x);
 
     // returned cached bound multipliers
-    if (init_z) get_ipoptBoundMultipliers(z_L, z_U);
     if (init_z) log->printf(hovWarning, "Adapter: Initializing z_L, z_U!\n");
+    if (init_z) get_ipoptBoundMultipliers(z_L, z_U);
 
     assert(m==0);
     return true;
@@ -737,18 +737,42 @@ bool hiopAugLagrNlpAdapter::eval_residuals(const long long& n, const double* x_i
     //and cached in #_penaltyFcn
     bret = eval_grad_f(n, x_in, new_x, grad); assert(bret); //TODO: new_x 
 
+    /**************************************************/
+    /**          Compute the AL gradient              */
+    /*  d_La/d_x = df_x - J^T lam                     */
+    /*  d_La/d_s =  0 - (-I) lam[cons_ineq_mapping]   */
+    /**************************************************/
+    //TODO: we could use new_x = false here, since the penalty is already evaluated
+    //and cached in #_penaltyFcn
+     //eval_grad_Lagr(n, x_in, new_x, grad); //TODO: new_x
+
+    // std::cerr << "grad_f = [";
+    // for(int it=0; it<n_vars+n_slacks; it++)  fprintf(stderr, "%22.16e ; ", grad[it]);
+    // std::cerr << "];";
+
+
     //add multipliers for the l < x < u bound constraints, z_L and z_U
-    
     //TODO: assumes Ipopt solver and its successful convergence
     //TODO: bounds are not ititialized during inital evaluation of the error at iteration 0
     const double *z_L = _zLowIpopt->local_data_const();
     const double *z_U = _zUppIpopt->local_data_const();
     for (int i = 0; i < n; i++)
     {
-        grad[i] -= z_L[i] + z_U[i];
+        grad[i] += z_U[i] - z_L[i];
     }
 
-    //TODO: project gradient onto rectangular box [l,u]
+    std::string name = "z_L.txt";
+    FILE *f33=fopen(name.c_str(),"w");
+    _zLowIpopt->print(f33);
+    fclose(f33);
+
+    name = "z_u.txt";
+    FILE *f331=fopen(name.c_str(),"w");
+    _zUppIpopt->print(f331);
+    fclose(f331);
+
+    //project gradient onto rectangular box [l,u]
+    // remove gradient with respect to the fixed variables, such that l=u
     project_gradient(x_in, grad);
 
     return bret;
@@ -764,13 +788,9 @@ bool hiopAugLagrNlpAdapter::project_gradient(const double* x_in, double* grad)
 
     for (int i=0; i<n_vars; i++)
     {
-        if (fabs(x_in[i] - x_low[i]) < EPS) //x == lb
+        if (fabs(x_upp[i] - x_low[i]) < EPS) //x == lb
         {
-            if (grad[i] > 0.) grad[i] = 0.; //g=min(0,g)
-        }
-        else if (fabs(x_in[i] - x_upp[i]) < EPS) //x == ub
-        {
-            if (grad[i] < 0.) grad[i] = 0.; //g=max(0,g)
+            grad[i] = 0.;
         }
     }
 
@@ -781,13 +801,9 @@ bool hiopAugLagrNlpAdapter::project_gradient(const double* x_in, double* grad)
 
     for (int i=0; i<n_slacks; i++)
     {
-        if (fabs(s_in[i] - s_low[i]) < EPS) //s == lb
+        if (fabs(s_upp[i] - s_low[i]) < EPS) //s == lb
         {
-            if (grad_s[i] > 0.) grad_s[i] = 0.; //g=min(0,g)
-        }
-        else if (fabs(s_in[i] - s_upp[i]) < EPS) //s == ub
-        {
-            if (grad_s[i] < 0.) grad_s[i] = 0.; //g=max(0,g)
+            grad_s[i] = 0.;
         }
     }
 }
