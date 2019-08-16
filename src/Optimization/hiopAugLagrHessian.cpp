@@ -77,6 +77,7 @@ bool hiopAugLagrHessian::eval_hess_nlp(const double *x_in, bool new_x, const hio
                 nnz_nlp, iRow_nlp, jCol_nlp, nullptr);
     assert(bret);
     initializedStructure = true;
+    return true;
   }
 
   // lambdaForHessEval =  2*rho*p(x) - lambda
