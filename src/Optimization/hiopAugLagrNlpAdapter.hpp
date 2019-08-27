@@ -243,6 +243,7 @@ public:
      *  J is the Jacobian of the original NLP constraints.
      */
     bool eval_residuals(const long long& n, const double* x_in,
+                        const double *zL_in, const double *zU_in,
                         bool new_x, double *penalty, double* grad);
 
     /**

@@ -34,7 +34,7 @@ private:
         hiopVector& gradf_,  hiopMatrixDense& Jac_c,  hiopMatrixDense& Jac_d*/);
  
   /** Evaluates  errors, i.e. feasibility and optimality */
-  bool evalNlpErrors(const hiopVector *current_iterate, 
+  bool evalNlpErrors(const hiopVector *current_iterate, const hiopVector *zL, const hiopVector *zU,  
         hiopResidualAugLagr *resid, double& err_feas, double& err_optim);
   
   /** Performs test whether the termination criteria are satisfied */
@@ -66,6 +66,7 @@ protected:
 
   //feasibility and optimality residuals
   hiopResidualAugLagr *residual; ///< residual norms 
+  hiopVectorPar *_zL, *_zU; ///< bound multipliers (needed for dual infeasibility evaluation)
 
   //internal flags related to the state of the solver
   hiopSolveStatus _solverStatus;

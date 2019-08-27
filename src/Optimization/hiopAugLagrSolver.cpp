@@ -16,6 +16,7 @@ hiopAugLagrSolver::hiopAugLagrSolver(NLP_CLASS_IN* nlp_in_)
     _lam_curr(nullptr),
     _rho_curr(-1),
     residual(nullptr),
+    _zL(nullptr), _zU(nullptr),
     _solverStatus(NlpSolve_IncompleteInit),
     _iter_num(-1), _n_accep_iters(-1),
     _f_nlp(-1.),
@@ -37,6 +38,8 @@ hiopAugLagrSolver::hiopAugLagrSolver(NLP_CLASS_IN* nlp_in_)
   _it_curr  = new hiopVectorPar(n_vars);
   _lam_curr = new hiopVectorPar(m_cons);
   residual  = new hiopResidualAugLagr(nlp, n_vars, m_cons);
+  _zL  = new hiopVectorPar(n_vars);
+  _zU  = new hiopVectorPar(n_vars);
 
   reloadOptions();
   reInitializeNlpObjects();
@@ -48,7 +51,9 @@ hiopAugLagrSolver::~hiopAugLagrSolver()
     if(nlp)       delete nlp;
     if(_it_curr)  delete _it_curr;
     if(_lam_curr) delete _lam_curr;
-    if(residual)     delete residual;
+    if(residual)  delete residual;
+    if(_zL)       delete _zL;
+    if(_zU)       delete _zU;
 }
 
 void hiopAugLagrSolver::reloadOptions()
@@ -67,10 +72,10 @@ void hiopAugLagrSolver::reloadOptions()
 
   // internal algorithm parameters
   _alpha = 1./_RHO0; ///< positive constants
-  //_eps_tol_feas0  = 1e-1 * _alpha; ///< required feasibility of the subproblem
-  //_eps_tol_optim0 = 1e-1 * pow(_alpha, 0.1); ///< required optimality tolerance of the subproblem
-  _eps_tol_feas0  = 1e-3;
-  _eps_tol_optim0 = 1e-3;
+  _eps_tol_feas0  = 1e-1 * _alpha; ///< required feasibility of the subproblem
+  _eps_tol_optim0 = 1e-2 * pow(_alpha, 0.1); ///< required optimality tolerance of the subproblem
+  _eps_tol_feas0  = _eps_tol_feas0;  //1e-3;
+  _eps_tol_optim0 = _eps_tol_optim0; //1e-3;
   
   _eps_tol_feas  = _eps_tol_feas0;
   _eps_tol_optim = _eps_tol_optim0;
@@ -137,7 +142,11 @@ hiopSolveStatus hiopAugLagrSolver::run()
 
   //evaluate the problem
   evalNlp(_it_curr, _f_nlp);
-  evalNlpErrors(_it_curr, residual, _err_feas, _err_optim);
+
+  //evalate initial primal/dual infeasibility
+  _zL->setToConstant(0.);
+  _zU->setToConstant(0.); //how to initialize zL,zU? we need to solve the subproblem to get their values
+  evalNlpErrors(_it_curr, _zL, _zU, residual, _err_feas, _err_optim);
   nlp->log->write("First residual-------------", *residual, hovIteration);
    
   name = "resid" + std::to_string(_iter_num) + ".txt";
@@ -200,6 +209,7 @@ hiopSolveStatus hiopAugLagrSolver::run()
     nlp->runStats.tmSolverInternal.stop();
 
     subproblemSolver.getSolution(_it_curr->local_data());
+    subproblemSolver.getSolution_duals(_zL->local_data(), _zU->local_data());
 
     std::string name = "iter" + std::to_string(_iter_num+1) + ".txt";
     FILE *f3=fopen(name.c_str(),"w");
@@ -227,7 +237,7 @@ hiopSolveStatus hiopAugLagrSolver::run()
      ************************************************/
     //TODO: probably doesn't need to re-evaluate Ipopt's fcns
     evalNlp(_it_curr, _f_nlp);
-    evalNlpErrors(_it_curr, residual, _err_feas, _err_optim);
+    evalNlpErrors(_it_curr, _zL, _zU, residual, _err_feas, _err_optim);
     
     nlp->log->printf(hovScalars, "AugLagrSolver[%d]: Subproblem optimality error %.5e\n", _iter_num+1, _err_optim);
     nlp->log->printf(hovScalars, "AugLagrSolver[%d]: Subproblem feasibility error is %.5e\n", _iter_num+1, _err_feas);
@@ -266,7 +276,7 @@ hiopSolveStatus hiopAugLagrSolver::run()
         //_eps_tol_optim *= _alpha;
         //_eps_tol_feas *= pow(_alpha, 0.9);
         _eps_tol_optim *= 0.5;
-        _eps_tol_feas *= 0.8;
+        _eps_tol_feas *= 0.9;
         
     }
     else
@@ -276,10 +286,9 @@ hiopSolveStatus hiopAugLagrSolver::run()
         updateRho();
 
         // tighten tolerances
-        //_alpha = (1./_rho_curr);
-        //_eps_tol_optim = _eps_tol_optim0 * _alpha;
-        //_eps_tol_feas = 0.9*_eps_tol_feas0;// * pow(_alpha, 0.1);
-        
+        _alpha = (1./_rho_curr);
+        _eps_tol_optim = _eps_tol_optim0 * _alpha;
+        _eps_tol_feas = 0.9*_eps_tol_feas0 * pow(_alpha, 0.1);
     }
 
 
@@ -346,18 +355,20 @@ bool hiopAugLagrSolver::evalNlp(hiopVectorPar* iter,
  * @param[out} err_optim, err_feas Optimality and feasibility errors
  */
 bool hiopAugLagrSolver::evalNlpErrors(const hiopVector *current_iterate, 
-                                      hiopResidualAugLagr *resid, double& err_feas, double& err_optim)
+                                      const hiopVector *zL, const hiopVector *zU, hiopResidualAugLagr *resid, 
+                                      double& err_feas, double& err_optim)
 {
   double *penaltyFcn = resid->getFeasibilityPtr();
   double *gradLagr = resid->getOptimalityPtr();
   const double *_it_curr_data = _it_curr->local_data_const();
+  const double *_zL_data = _zL->local_data_const();
+  const double *_zU_data = _zU->local_data_const();
   bool new_x = true;
 
-  assert(nlp->options->GetString("subproblem_solver")=="ipopt");//how to get l<x<u bound multipliers from hiop?
   //evaluate the AugLagr penalty fcn and gradient of the Lagrangian
-  bool bret = nlp->eval_residuals(n_vars, _it_curr_data, new_x, penaltyFcn, gradLagr);
+  bool bret = nlp->eval_residuals(n_vars, _it_curr_data, _zL_data, _zU_data, new_x, penaltyFcn, gradLagr);
   assert(bret);
-
+  
   //recompute the residuals norms
   resid->update();
   
@@ -386,19 +397,19 @@ bool hiopAugLagrSolver::checkTermination(double err_feas, double err_optim, cons
       return true;
   }
 
-  if(_EPS_RTOL>0) {
-    if(err_optim   <= _EPS_RTOL * _err_optim0 &&
-       err_feas    <= _EPS_RTOL * _err_feas0)
-    {
-      status = Solve_Success_RelTol;
-      return true;
-    }
-  }
+  // if(_EPS_RTOL>0) {
+  //   if(err_optim   <= _EPS_RTOL * _err_optim0 &&
+  //      err_feas    <= _EPS_RTOL * _err_feas0)
+  //   {
+  //     status = Solve_Success_RelTol;
+  //     return true;
+  //   }
+  // }
 
-  if (err_feas<=_EPS_TOL_ACCEP && err_optim<=_EPS_TOL_ACCEP) _n_accep_iters++;
-  else _n_accep_iters = 0;
+  // if (err_feas<=_EPS_TOL_ACCEP && err_optim<=_EPS_TOL_ACCEP) _n_accep_iters++;
+  // else _n_accep_iters = 0;
 
-  if(_n_accep_iters>=_ACCEP_N_IT) { status = Solve_Acceptable_Level; return true; }
+  // if(_n_accep_iters>=_ACCEP_N_IT) { status = Solve_Acceptable_Level; return true; }
 
   return false;
 }
@@ -449,13 +460,14 @@ void hiopAugLagrSolver::updateLambda()
  */
 void hiopAugLagrSolver::updateRho()
 {
+    _nrm_dlam = 0.;
+    if (_rho_curr > 1e10) return;
+
     //compute new value of the penalty parameter
     _rho_curr = 5.0*_rho_curr;
 
     //update the penalty parameter in the adapter class
     nlp->set_rho(_rho_curr);
-
-    _nrm_dlam = 0.;
 }
 
 /* returns the objective value; valid only after 'run' method has been called */

@@ -41,6 +41,8 @@ public:
   virtual double getObjective() const;
   /* returns the primal vector x; valid only after 'run' method has been called */
   virtual void getSolution(double* x) const;
+  /* returns the duals vector zL and zU; valid only after 'run' method has been called */
+  void getSolution_duals(double* zL, double* zU) const;
   /* returns the status of the solver */
   virtual hiopSolveStatus getSolveStatus() const;
   /* returns the number of iterations */

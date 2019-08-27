@@ -717,7 +717,7 @@ void hiopAugLagrNlpAdapter::set_lambda(const hiopVectorPar* lambda_in)
 }
 
 //TODO: can we reuse the last jacobian instead of recomputing it? does hiop/ipopt evaluate the Jacobian in the last (xk + searchDir), a.k.a the solution? 
-bool hiopAugLagrNlpAdapter::eval_residuals(const long long& n, const double* x_in, bool new_x, double *penalty, double* grad)
+bool hiopAugLagrNlpAdapter::eval_residuals(const long long& n, const double* x_in, const double *zL_in, const double *zU_in, bool new_x, double *penalty, double* grad)
 {
    assert(n == n_vars+n_slacks);
 
@@ -754,13 +754,11 @@ bool hiopAugLagrNlpAdapter::eval_residuals(const long long& n, const double* x_i
 
 
     //add multipliers for the l < x < u bound constraints, z_L and z_U
-    //TODO: assumes Ipopt solver and its successful convergence
-    //TODO: bounds are not ititialized during inital evaluation of the error at iteration 0
-    const double *z_L = _zLowIpopt->local_data_const();
-    const double *z_U = _zUppIpopt->local_data_const();
+    //TODO: multipliers are not ititialized during the inital evaluation
+    //      of the error at iteration 0, they are obtain as a subproblem solution
     for (int i = 0; i < n; i++)
     {
-        grad[i] += z_U[i] - z_L[i];
+        grad[i] += zU_in[i] - zL_in[i];
     }
 
     std::string name = "z_L.txt";
@@ -808,5 +806,7 @@ bool hiopAugLagrNlpAdapter::project_gradient(const double* x_in, double* grad)
             grad_s[i] = 0.;
         }
     }
+
+    return true;
 }
 }

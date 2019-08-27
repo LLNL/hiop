@@ -96,6 +96,8 @@ hiopSolveStatus hiopAugLagrSubproblem::solveSubproblem_ipopt()
 {
   checkConsistency();
 
+  ipoptApp->Options()->SetNumericValue("tol", _EPS_TOL_OPTIM);
+
   //adaptive performs much better than monotone
   ipoptApp->Options()->SetStringValue("mu_strategy", "adaptive");
 
@@ -141,6 +143,8 @@ hiopSolveStatus hiopAugLagrSubproblem::solveSubproblem_ipopt()
 hiopSolveStatus hiopAugLagrSubproblem::solveSubproblem_hiop()
 {
   checkConsistency();
+
+  hiopWrapper->options->SetNumericValue("tolerance", _EPS_TOL_OPTIM);
 
   // Ask HiOP to solve the problem
   hiopSolveStatus st = hiopSolver->run();
@@ -219,7 +223,29 @@ void hiopAugLagrSubproblem::getSolution(double* x) const
   }
 
   return;
-  //TODO: save also the IPM duals and do the warm start
+}
+
+/* returns the primal vector x; valid only after 'run' method has been called */
+void hiopAugLagrSubproblem::getSolution_duals(double* zL, double* zU) const
+{
+  if(_solverStatus==NlpSolve_IncompleteInit || _solverStatus == NlpSolve_SolveNotCalled)
+    subproblem->log->printf(hovError, "getSolution: hiOp AugLagr subproblem did not initialize entirely or the 'run' function was not called.");
+  if(_solverStatus==NlpSolve_Pending)
+    subproblem->log->printf(hovWarning, "getSolution: hiOp AugLagr subproblem have not completed yet. The primal vector returned may not be optimal.");
+
+  checkConsistency();
+  if(subproblem->options->GetString("subproblem_solver")=="ipopt")
+  {
+    //IpoptApplication doesn't provide a method to access the solution.
+    //The solution is passed to user in callback finalize_solution which
+    //is implemented in AugLagrNlpAdapter, the solution is thus cached there 
+    subproblem->get_ipoptBoundMultipliers(zL, zU);
+  }
+  else if(subproblem->options->GetString("subproblem_solver")=="hiop")
+  {
+    hiopSolver->getSolution_duals(zL, zU);
+  }
+  return;
 }
 
 /* returns the status of the solver */
