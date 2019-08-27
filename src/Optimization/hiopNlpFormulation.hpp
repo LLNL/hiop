@@ -112,6 +112,10 @@ public:
   inline MPI_Comm get_comm() const { return comm; }
   inline int      get_rank() const { return rank; }
   inline int      get_num_ranks() const { return num_ranks; }
+#else  
+  inline int      get_comm() const { return -1; }
+  inline int      get_rank() const { return -1; }
+  inline int      get_num_ranks() const { return -1; }
 #endif
 protected:
 #ifdef HIOP_USE_MPI
