@@ -156,9 +156,12 @@ void hiopAugLagrHessian::assemble(const double *x, bool new_x, double obj_factor
     //penaltyFcn_jacobian.print(f2);
     // fclose(f2);
     //
-    //FILE *f3=fopen("hess.txt","w");
-    //_hessianAugLagr->print(f3);
-    // fclose(f3);
+    static int iter = 0;
+    std::string name = "hess" + std::to_string(iter) + ".txt";
+    FILE *f3=fopen(name.c_str(),"w");
+    _hessianAugLagr->print(f3);
+     fclose(f3);
+     iter++;
 
     //printf("m n nnz %d %d %d\n", _hessianAugLagr->m(), _hessianAugLagr->n(), _hessianAugLagr->nnz());
     //printf("2*rho %g\n", 2*rho);
