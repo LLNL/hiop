@@ -853,6 +853,21 @@ void hiopAlgFilterIPM::getSolution(double* x) const
   nlp->user_x(it_x, x);
 }
 
+/* returns the duals solution */
+void hiopAlgFilterIPM::getSolution_duals(double* zL, double *zU) const
+  {
+    if(_solverStatus==NlpSolve_IncompleteInit || _solverStatus == NlpSolve_SolveNotCalled)
+    nlp->log->printf(hovError, "getSolution: hiOp did not initialize entirely or the 'run' function was not called.");
+    if(_solverStatus==NlpSolve_Pending)
+      nlp->log->printf(hovWarning, "getSolution: hiOp have not completed yet. The primal vector returned may not be optimal.");
+
+    hiopVectorPar& it_zL = dynamic_cast<hiopVectorPar&>(*it_curr->get_zl());
+    hiopVectorPar& it_zU = dynamic_cast<hiopVectorPar&>(*it_curr->get_zu());
+    //it_curr->get_x()->copyTo(x);
+    nlp->user_x(it_zL, zL);
+    nlp->user_x(it_zU, zU);
+  }
+
 int hiopAlgFilterIPM::getNumIterations() const
 {
   if(_solverStatus==NlpSolve_IncompleteInit || _solverStatus == NlpSolve_SolveNotCalled)
