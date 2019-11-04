@@ -250,5 +250,56 @@ public:
 			     double** Jac) = 0;
 };
 
-}
+/** Specialized interface for NLPs having mixed DENSE and sparse (MDS) blocks in the 
+ * Jacobian and Hessian. 
+ * 
+ * More specifically, this interface is for specifying optimization problem in x
+ * split as (xs,xd), the rule of thumb being that xs have sparse derivatives and
+ * xd have dense derivatives
+ *
+ * min f(x) s.t. g(x) <= or = 0, lb<=x<=ub 
+ * 
+ * such that 
+ *  - Jacobian w.r.t. xs and LagrHessian w.r.t. (xs,xs) are sparse 
+ *  - Jacobian w.r.t. xd and LagrHessian w.r.t. (xd,xd) are dense 
+ *  - LagrHessian w.r.t (xs,xd) is zero (later this assumption will be relaxed)
+ *
+ * Note: this interface is 'local' in the sense that data is not assumed to be 
+ * distributed across MPI ranks ('get_vecdistrib_info' should return 'false')
+ *
+ */
+class hiopInterfaceMDS : public hiopInterfaceBase {
+  hiopInterfaceMDS() {};
+  virtual ~hiopInterfaceMDS() {};
+
+  /** Evaluates the Jacobian of constraints split in the sparse (triplet format) and 
+   * dense matrices (by rows storage)
+   *
+   *  Parameters: see eval_cons
+   */
+  virtual bool eval_Jac_cons(const long long& n, const long long& m, 
+			     const double* x, bool new_x,
+			     const long long& ns, const long long& nd, 
+			     int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
+			     const long long& nJacD, double** JacD) = 0;
+
+  /** Evaluates the Hessian of the Lagrangian function in 3 structural blocks
+   * - HSS is the Hessian w.r.t.(xs,xs)
+   * - HDD is the Hessian w.r.t.(xd,xd)
+   * - HSD is the Hessian w.r.t (xs,xd) 
+   *
+   * Note: HSD is for now assumed to be zero. The implementer should return nnzHSD=0
+   * during the first call to 'eval_Hess_Lagr'. On subsequent calls, the triplet arrays
+   * associated for HSD will be NULL. 
+   */
+  virtual bool eval_Hess_Lagr(const long long& n, const long long& m, 
+			      const double* x, bool new_x, const double& obj_factor,
+			      const double* lambda, bool new_lambda,
+			      const long long& ns, const long long& nd, 
+			      int& nnzHSS, int* iHSS, int* jHSS, double* MHSS, 
+			      double** HDD,
+			      int& nnzHSD, int* iHSD, int* jHSD, double* MHSD) = 0;
+
+};
+} //end of namespace
 #endif
