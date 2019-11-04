@@ -552,14 +552,14 @@ int hiopKKTLinSysLowRank::solveWithRefin(hiopMatrixDense& M, hiopVectorPar& rhs)
   // does not always provide a small enough residual since it stops (possibly without refinement) based on
   // the forward and backward estimates
 
+  int N=M.n();
+  if(N<=0) return 0;
+
   hiopMatrixDense* Aref = M.new_copy();
   hiopVectorPar* rhsref = rhs.new_copy();
 
   char FACT='E'; 
   char UPLO='L';
-  int N=M.n();
-
-  if(N<=0) return 0;
 
   int NRHS=1;
   double* A=M.local_buffer();
