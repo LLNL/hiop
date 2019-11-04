@@ -558,6 +558,9 @@ int hiopKKTLinSysLowRank::solveWithRefin(hiopMatrixDense& M, hiopVectorPar& rhs)
   char FACT='E'; 
   char UPLO='L';
   int N=M.n();
+
+  if(N<=0) return 0;
+
   int NRHS=1;
   double* A=M.local_buffer();
   int LDA=N;
@@ -698,7 +701,6 @@ int hiopKKTLinSysLowRank::solveWithRefin(hiopMatrixDense& M, hiopVectorPar& rhs)
 
 int hiopKKTLinSysLowRank::solve(hiopMatrixDense& M, hiopVectorPar& rhs)
 {
-  //return solveWithRefin(M, rhs);
   char FACT='E'; 
   char UPLO='L';
   int N=M.n();
@@ -731,9 +733,6 @@ int hiopKKTLinSysLowRank::solve(hiopMatrixDense& M, hiopVectorPar& rhs)
 
   rhs.copyFrom(S);
   nlp->log->write("Scaling S", rhs, hovSummary);
-
-  //M.copyFrom(AF);
-  //nlp->log->write("Factoriz ", M, hovSummary);
 
   //printf("INFO ===== %d  RCOND=%g  FERR=%g   BERR=%g  EQUED=%c\n", INFO, RCOND, FERR, BERR, EQUED);
 
