@@ -272,6 +272,8 @@ class hiopInterfaceMDS : public hiopInterfaceBase {
   hiopInterfaceMDS() {};
   virtual ~hiopInterfaceMDS() {};
 
+  virtual bool get_sparse_dense_blocks_info(int& nx_sparse, int& nx_dense); 
+
   /** Evaluates the Jacobian of constraints split in the sparse (triplet format) and 
    * dense matrices (by rows storage)
    *
@@ -289,8 +291,8 @@ class hiopInterfaceMDS : public hiopInterfaceBase {
    * - HSD is the Hessian w.r.t (xs,xd) 
    *
    * Note: HSD is for now assumed to be zero. The implementer should return nnzHSD=0
-   * during the first call to 'eval_Hess_Lagr'. On subsequent calls, the triplet arrays
-   * associated for HSD will be NULL. 
+   * during the first call to 'eval_Hess_Lagr'. On subsequent calls, HiOp will pass the 
+   * triplet arrays for HSD set to NULL and the implementer (obviously) should not use them.
    */
   virtual bool eval_Hess_Lagr(const long long& n, const long long& m, 
 			      const double* x, bool new_x, const double& obj_factor,
@@ -300,6 +302,14 @@ class hiopInterfaceMDS : public hiopInterfaceBase {
 			      double** HDD,
 			      int& nnzHSD, int* iHSD, int* jHSD, double* MHSD) = 0;
 
+  /** Constraints evaluator
+   * This is not specific to MDS and it is done so that the implementer does not have to 
+   * split constraints. 
+   *
+   */
+  virtual bool eval_cons(const long long& n, const long long& m, 
+			 const double* x, bool new_x, 
+			 double* cons)=0;
 };
 } //end of namespace
 #endif
