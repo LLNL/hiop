@@ -272,7 +272,8 @@ class hiopInterfaceMDS : public hiopInterfaceBase {
   hiopInterfaceMDS() {};
   virtual ~hiopInterfaceMDS() {};
 
-  virtual bool get_sparse_dense_blocks_info(int& nx_sparse, int& nx_dense); 
+  virtual bool get_sparse_dense_blocks_info(int& nx_sparse, int& nx_dense,
+					    int& nnz_sparse) = 0; 
 
   /** Evaluates the Jacobian of constraints split in the sparse (triplet format) and 
    * dense matrices (by rows storage)
