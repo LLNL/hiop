@@ -362,10 +362,21 @@ void hiopMatrixDense::timesVec(double beta, hiopVector& y_,
   assert(x.get_local_size() == n_local);
   assert(x.get_size() == n_global);
 
-  //we do the check to avoid "Conditional jump or move depends on uninitialised value(s)" reported by
-  //valgrind to occur during the first call to LSQUpdate
   if(beta!=0) assert(y.isfinite()); 
   assert(x.isfinite());
+
+  timesVec(beta, y.local_data(), alpha, x.local_data_const());
+
+#ifdef HIOP_DEEPCHECKS  
+  assert(y.isfinite());
+#endif
+}
+
+void hiopMatrixDense::timesVec(double beta,  double* ya,
+			       double alpha, const double* xa) const
+{
+  //we do the check to avoid "Conditional jump or move depends on uninitialised value(s)" reported by
+  //valgrind to occur during the first call to LSQUpdate
 #endif
   char fortranTrans='T';
   int MM=m_local, NN=n_local, incx_y=1;
@@ -379,10 +390,14 @@ void hiopMatrixDense::timesVec(double beta, hiopVector& y_,
     // the arguments seem reversed but so is trans='T' 
     // required since we keep the matrix row-wise, while the Fortran/BLAS expects them column-wise
     DGEMV( &fortranTrans, &NN, &MM, &alpha, &M[0][0], &NN,
-	    x.local_data_const(), &incx_y, &beta, y.local_data(), &incx_y );
+	    xa, &incx_y, &beta, ya, &incx_y );
   } else {
     if( MM != 0 ) {
-      y.scale( beta );
+      //y.scale( beta );
+      if(beta != 1.) {
+	int one=1; 
+	DSCAL(&NN, &beta, ya, &one);
+      }
     } else {
       assert(MM==0);
       return;
@@ -391,13 +406,10 @@ void hiopMatrixDense::timesVec(double beta, hiopVector& y_,
 #ifdef HIOP_USE_MPI
   //here m_local is > 0
   double yglob[m_local]; 
-  int ierr=MPI_Allreduce(y.local_data(), yglob, m_local, MPI_DOUBLE, MPI_SUM, comm); assert(MPI_SUCCESS==ierr);
-  memcpy(y.local_data(), yglob, m_local*sizeof(double));
+  int ierr=MPI_Allreduce(ya, yglob, m_local, MPI_DOUBLE, MPI_SUM, comm); assert(MPI_SUCCESS==ierr);
+  memcpy(ya, yglob, m_local*sizeof(double));
 #endif
 
-#ifdef HIOP_DEEPCHECKS  
-  assert(y.isfinite());
-#endif
 }
 
 /* y = beta * y + alpha * transpose(this) * x */
@@ -414,6 +426,12 @@ void hiopMatrixDense::transTimesVec(double beta, hiopVector& y_,
   assert(y.isfinite());
   assert(x.isfinite());
 #endif
+  transTimesVec(beta, y.local_data(), alpha, x.local_data_const());
+}
+
+void hiopMatrixDense::transTimesVec(double beta, double* ya,
+				    double alpha, const double* xa) const
+{
   char fortranTrans='N';
   int MM=m_local, NN=n_local, incx_y=1;
 
@@ -421,9 +439,13 @@ void hiopMatrixDense::transTimesVec(double beta, hiopVector& y_,
     // the arguments seem reversed but so is trans='T' 
     // required since we keep the matrix row-wise, while the Fortran/BLAS expects them column-wise
     DGEMV( &fortranTrans, &NN, &MM, &alpha, &M[0][0], &NN,
-	    x.local_data_const(), &incx_y, &beta, y.local_data(), &incx_y );
+	    xa, &incx_y, &beta, ya, &incx_y );
   } else {
-    if( NN != 0 ) y.scale( beta );
+    if( NN != 0 ) {
+      //y.scale( beta );
+      int one=1; 
+      DSCAL(&NN, &beta, ya, &one);
+    }
   }
 }
 
