@@ -159,6 +159,7 @@ public:
    *  Parameters:
    *   - n, m: the global number of variables and constraints
    *   - num_cons, idx_cons (array of size num_cons): the number and indexes of constraints to be evaluated
+   *   - idx_cons: indexes in {1,2,...,m} of the constraints to be evaluated
    *   - x: the point where the constraints are to be evaluated
    *   - new_x: whether x has been changed from the previous call to f, grad_f, or Jac
    *   - cons: array of size num_cons containing the value of the  constraints indicated by idx_cons
@@ -269,22 +270,24 @@ public:
  *
  */
 class hiopInterfaceMDS : public hiopInterfaceBase {
+public:
   hiopInterfaceMDS() {};
   virtual ~hiopInterfaceMDS() {};
 
   virtual bool get_sparse_dense_blocks_info(int& nx_sparse, int& nx_dense,
-					    int& nnz_sparse) = 0; 
+					    int& nnz_sparse_Jacc, int& nnz_sparse_Jacd) = 0; 
 
   /** Evaluates the Jacobian of constraints split in the sparse (triplet format) and 
-   * dense matrices (by rows storage)
+   * dense matrices (rows storage)
    *
    *  Parameters: see eval_cons
    */
   virtual bool eval_Jac_cons(const long long& n, const long long& m, 
+			     const long long& num_cons, const long long* idx_cons,
 			     const double* x, bool new_x,
 			     const long long& ns, const long long& nd, 
 			     int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
-			     const long long& nJacD, double** JacD) = 0;
+			     double** JacD) = 0;
 
   /** Evaluates the Hessian of the Lagrangian function in 3 structural blocks
    * - HSS is the Hessian w.r.t.(xs,xs)
