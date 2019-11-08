@@ -53,10 +53,14 @@ public:
   virtual long long m() const {return nrows;}
   virtual long long n() const {return ncols;}
   virtual long long nnz() const {return nonzeroes;}
+
+  inline int* i_row() { return iRow; }
+  inline int* j_col() { return jCol; }
+  inline double* M() { return values; }
 #ifdef HIOP_DEEPCHECKS
   virtual bool assertSymmetry(double tol=1e-16) const;
 #endif
-private:
+protected:
   int nrows; ///< number of rows
   int ncols; ///< number of columns
   int nonzeroes;  ///< number of nonzero entries
@@ -65,10 +69,43 @@ private:
   int* jCol; ///< column indices of the nonzero entries
   double* values; ///< values of the nonzero entries
 private:
-  hiopMatrixSparseTriplet() {};
-  /** copy constructor, for internal/private use only (it doesn't copy the values) */
+  hiopMatrixSparseTriplet() : nrows(0), ncols(0), nonzeroes(0), iRow(NULL), jCol(NULL), values(NULL)
+  {
+  };
   hiopMatrixSparseTriplet(const hiopMatrixSparseTriplet&) {};
 };
-}
+
+/** Sparse symmetric matrix in triplet format. Only the lower triangle is stored */
+class hiopMatrixSymSparseTriplet : public hiopMatrixSparseTriplet 
+{
+public: 
+  hiopMatrixSymSparseTriplet(int n, int nnz)
+    : hiopMatrixSparseTriplet(n, n, nnz)
+  {
+  }
+  virtual ~hiopMatrixSymSparseTriplet(); 
+
+  /** y = beta * y + alpha * this * x */
+  virtual void timesVec(double beta,  hiopVector& y,
+			double alpha, const hiopVector& x) const;
+  virtual void timesVec(double beta,  double* y,
+			double alpha, const double* x) const;
+
+  virtual void transTimesVec(double beta,   hiopVector& y,
+			     double alpha, const hiopVector& x) const
+  {
+    return timesVec(beta, y, alpha, x);
+  }
+  virtual void transTimesVec(double beta,   double* y,
+			     double alpha, const double* x) const
+  {
+    return timesVec(beta, y, alpha, x);
+  }
+
+  virtual hiopMatrix* alloc_clone() const;
+  virtual hiopMatrix* new_copy() const;
+};
+
+} //end of namespace
 
 #endif

@@ -1,6 +1,8 @@
 #include "hiopMatrixSparseTriplet.hpp"
 
 #include <algorithm> //for std::min
+#include <cstring>
+
 #include <cassert>
 
 namespace hiop
@@ -87,6 +89,19 @@ void hiopMatrixSparseTriplet::transTimesVec(double beta,   double* y,
   }
 }
 
+hiopMatrix* hiopMatrixSparseTriplet::alloc_clone() const
+{
+  return new hiopMatrixSparseTriplet(nrows, ncols, nonzeroes);
+}
+hiopMatrix* hiopMatrixSparseTriplet::new_copy() const
+{
+  hiopMatrixSparseTriplet* copy = new hiopMatrixSparseTriplet(nrows, ncols, nonzeroes);
+  memcpy(copy->iRow, iRow, nonzeroes*sizeof(int));
+  memcpy(copy->jCol, jCol, nonzeroes*sizeof(int));
+  memcpy(copy->values, values, nonzeroes*sizeof(double));
+  return copy;
+}
+
 // void hiopMatrixSparse::make(int nrows_, int ncols_, const vector<vector<int>> &vvCols, const vector<vector<double>> &vvValues)
 // {
 //   assert(nonzeroes == 0);
@@ -165,4 +180,59 @@ void hiopMatrixSparseTriplet::print(FILE* file, const char* msg/*=NULL*/,
     fprintf(file, "];\n");
   }
 }
- } //end of namespace
+
+/**********************************************************************************
+  * Sparse symmetric matrix in triplet format. Only the lower triangle is stored
+  *********************************************************************************
+*/
+void hiopMatrixSymSparseTriplet::timesVec(double beta,  hiopVector& y,
+					  double alpha, const hiopVector& x ) const
+{
+  assert(ncols == nrows);
+  assert(x.get_size() == ncols);
+  assert(y.get_size() == nrows);
+
+  hiopVectorPar& yy = dynamic_cast<hiopVectorPar&>(y);
+  const hiopVectorPar& xx = dynamic_cast<const hiopVectorPar&>(x);
+
+  double* y_data = yy.local_data();
+  const double* x_data = xx.local_data_const();
+
+  timesVec(beta, y_data, alpha, x_data);
+}
+ 
+/** y = beta * y + alpha * this * x */
+void hiopMatrixSymSparseTriplet::timesVec(double beta,  double* y,
+					  double alpha, const double* x ) const
+{
+  assert(ncols == nrows);
+  // y:= beta*y
+  for (int i = 0; i < nrows; i++) {
+    y[i] *= beta;
+  }
+
+  // y += alpha*this*x
+  for (int i = 0; i < nonzeroes; i++) {
+    assert(iRow[i] < nrows);
+    assert(jCol[i] < ncols);
+    y[iRow[i]] += alpha * x[jCol[i]] * values[i];
+    if(iRow[i]!=jCol[i])
+      y[jCol[i]] += alpha * x[iRow[i]] * values[i];
+  }
+}
+
+hiopMatrix* hiopMatrixSymSparseTriplet::alloc_clone() const
+{
+  assert(nrows == ncols);
+  return new hiopMatrixSymSparseTriplet(nrows, nonzeroes);
+}
+hiopMatrix* hiopMatrixSymSparseTriplet::new_copy() const
+{
+  assert(nrows == ncols);
+  hiopMatrixSymSparseTriplet* copy = new hiopMatrixSymSparseTriplet(nrows, nonzeroes);
+  memcpy(copy->iRow, iRow, nonzeroes*sizeof(int));
+  memcpy(copy->jCol, jCol, nonzeroes*sizeof(int));
+  memcpy(copy->values, values, nonzeroes*sizeof(double));
+  return copy;
+}
+} //end of namespace
