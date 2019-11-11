@@ -567,17 +567,19 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
   //also reload options
   reloadOptions();
 
-  //types of linear algebra objects are known now
-  hiopMatrixDense* Jac_c = dynamic_cast<hiopMatrixDense*>(_Jac_c);
-  hiopMatrixDense* Jac_d = dynamic_cast<hiopMatrixDense*>(_Jac_d);
-
   //if nlp changed internally, we need to reinitialize 'this'
   if(it_curr->get_x()->get_size()!=nlp->n() ||
-     Jac_c->get_local_size_n()!=nlpdc->n_local()) {
+     //Jac_c->get_local_size_n()!=nlpdc->n_local()) { <- this is prone to racing conditions
+     _Jac_c->n()!=nlpdc->n()) {
     //size of the nlp changed internally ->  reInitializeNlpObjects();
     reInitializeNlpObjects();
   }
   resetSolverStatus();
+
+  //types of linear algebra objects are known now
+  hiopMatrixDense* Jac_c = dynamic_cast<hiopMatrixDense*>(_Jac_c);
+  hiopMatrixDense* Jac_d = dynamic_cast<hiopMatrixDense*>(_Jac_d);
+
 
   nlp->runStats.initialize();
   ////////////////////////////////////////////////////////////////////////////////////
