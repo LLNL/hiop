@@ -128,7 +128,6 @@ public:
   /* check symmetry */
   virtual bool assertSymmetry(double tol=1e-16) const = 0;
 #endif
-private:
 };
 
 /** Dense matrix stored row-wise and distributed column-wise 

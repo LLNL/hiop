@@ -47,6 +47,7 @@
 // product endorsement purposes.
 
 #include "hiopNlpFormulation.hpp"
+#include "hiopHessianLowRank.hpp"
 #include "hiopLogger.hpp"
 
 #ifdef HIOP_USE_MPI
@@ -579,15 +580,21 @@ bool hiopNlpDenseConstraints::eval_Jac_d(double* x, bool new_x, double** Jac_d)
   return bret;
 }
 
-hiopMatrixDense* hiopNlpDenseConstraints::alloc_Jac_c() const
+hiopMatrixDense* hiopNlpDenseConstraints::alloc_Jac_c()
 {
   return alloc_multivector_primal(n_cons_eq);
 }
 
-hiopMatrixDense* hiopNlpDenseConstraints::alloc_Jac_d() const
+hiopMatrixDense* hiopNlpDenseConstraints::alloc_Jac_d()
 {
   return alloc_multivector_primal(n_cons_ineq);
 }
+
+hiopMatrix* hiopNlpDenseConstraints::alloc_Hess_Lagr()
+{
+  return new hiopHessianLowRank(this, this->options->GetInteger("secant_memory_len"));
+}
+
 hiopMatrixDense* hiopNlpDenseConstraints::alloc_multivector_primal(int nrows, int maxrows/*=-1*/) const
 {
   hiopMatrixDense* M;

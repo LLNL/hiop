@@ -141,7 +141,7 @@ protected:
   hiopVector* _grad_f, *_grad_f_trial; //gradient of the log-barrier objective function
   hiopMatrix* _Jac_c, *_Jac_c_trial; //Jacobian of c(x), the equality part
   hiopMatrix* _Jac_d, *_Jac_d_trial; //Jacobian of d(x), the inequality part
-  //hiopHessian* _Hess;
+  hiopMatrix* _Hess_Lagr;
 
   /** Algorithms's working quantities */  
   double _mu, _tau, _alpha_primal, _alpha_dual;
@@ -186,21 +186,34 @@ public:
   virtual ~hiopAlgFilterIPMQuasiNewton();
 
   virtual hiopSolveStatus run();
-
 private:
-
   virtual void outputIteration(int lsStatus, int lsNum);
-  virtual void reInitializeNlpObjects();
 private:
-  hiopHessianLowRank* _Hess;
   hiopNlpDenseConstraints* nlpdc;
 private:
   hiopAlgFilterIPMQuasiNewton() : hiopAlgFilterIPMBase(NULL) {};
   hiopAlgFilterIPMQuasiNewton(const hiopAlgFilterIPMQuasiNewton& ) : hiopAlgFilterIPMBase(NULL){};
   hiopAlgFilterIPMQuasiNewton& operator=(const hiopAlgFilterIPMQuasiNewton&) {return *this;};
 };
-//for backward compatibility we make 'hiopAlgFilterIPM' available
+//for backward compatibility we make 'hiopAlgFilterIPM' name available
 typedef hiopAlgFilterIPMQuasiNewton hiopAlgFilterIPM;
 
-}
+
+
+class hiopAlgFilterIPMNewton : public hiopAlgFilterIPMBase
+{
+public:
+  hiopAlgFilterIPMNewton(hiopNlpFormulation* nlp);
+  virtual ~hiopAlgFilterIPMNewton();
+
+  virtual hiopSolveStatus run();
+private:
+  virtual void outputIteration(int lsStatus, int lsNum);
+private:
+  hiopAlgFilterIPMNewton() : hiopAlgFilterIPMBase(NULL) {};
+  hiopAlgFilterIPMNewton(const hiopAlgFilterIPMNewton& ) : hiopAlgFilterIPMBase(NULL){};
+  hiopAlgFilterIPMNewton& operator=(const hiopAlgFilterIPMNewton&) {return *this;};
+};
+
+} //end of namespace
 #endif

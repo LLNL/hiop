@@ -887,7 +887,6 @@ hiopMatrixDense& hiopHessianLowRank::new_Y1(const hiopMatrixDense& X, const hiop
   if(NULL==_Y1) _Y1=new hiopMatrixDense(k,l);
   return *_Y1;
 }
-
 #ifdef HIOP_DEEPCHECKS
 void hiopHessianLowRank::timesVecCmn(double beta, hiopVector& y, double alpha, const hiopVector& x, bool addLogTerm) 
 {
@@ -970,17 +969,17 @@ void hiopHessianLowRank::timesVecCmn(double beta, hiopVector& y, double alpha, c
   delete yk;
   delete sk;
 }
+void hiopHessianLowRank::timesVec_noLogBarrierTerm(double beta, hiopVector& y, double alpha, const hiopVector&x)
+{
+  this->timesVecCmn(beta, y, alpha, x, false);
+}
+
 
 void hiopHessianLowRank::timesVec(double beta, hiopVector& y, double alpha, const hiopVector&x)
 {
   this->timesVecCmn(beta, y, alpha, x, true);
 }
-
-void hiopHessianLowRank::timesVec_noLogBarrierTerm(double beta, hiopVector& y, double alpha, const hiopVector&x)
-{
-  this->timesVecCmn(beta, y, alpha, x, false);
-}
-#endif
+#endif //HIOP_DEEPCHECKS
 
 /**************************************************************************
  * Internal helpers
@@ -1047,6 +1046,7 @@ matTimesDiagTimesMatTrans_local(hiopMatrixDense& W, const hiopMatrixDense& S, co
     }
   }
 }
+
 /**************************************************************************
  * this code is going to be removed
  *************************************************************************/

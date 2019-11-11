@@ -109,8 +109,10 @@ public:
   virtual hiopVector* alloc_dual_ineq_vec() const;
   virtual hiopVector* alloc_dual_vec() const;
   /* the implementation of the next two methods depends both on the interface and on the formulation */
-  virtual hiopMatrix* alloc_Jac_c() const=0;
-  virtual hiopMatrix* alloc_Jac_d() const=0;
+  virtual hiopMatrix* alloc_Jac_c() = 0;
+  virtual hiopMatrix* alloc_Jac_d() = 0;
+
+  virtual hiopMatrix* alloc_Hess_Lagr() = 0;
 
   virtual inline 
   void user_callback_solution(hiopSolveStatus status,
@@ -285,8 +287,10 @@ public:
   }
 
 
-  virtual hiopMatrixDense* alloc_Jac_c() const;
-  virtual hiopMatrixDense* alloc_Jac_d() const;
+  virtual hiopMatrixDense* alloc_Jac_c();
+  virtual hiopMatrixDense* alloc_Jac_d();
+  //returns hiopHessianLowRank which (fakely) inherits from hiopMatrix
+  virtual hiopMatrix* alloc_Hess_Lagr();
 
   /* this is in general for a dense matrix witn n_vars cols and a small number of 
    * 'nrows' rows. The second argument indicates how much total memory should the
