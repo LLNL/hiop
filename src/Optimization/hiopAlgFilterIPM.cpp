@@ -554,7 +554,8 @@ hiopAlgFilterIPMQuasiNewton::~hiopAlgFilterIPMQuasiNewton()
 void hiopAlgFilterIPMQuasiNewton::reInitializeNlpObjects() 
 {
   if(_Hess) delete _Hess;
-  hiopAlgFilterIPM::reInitializeNlpObjects();
+  _Hess = NULL;
+  hiopAlgFilterIPMBase::reInitializeNlpObjects();
   _Hess = new hiopHessianLowRank(nlpdc, nlpdc->options->GetInteger("secant_memory_len"));
 }
 

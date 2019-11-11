@@ -508,22 +508,6 @@ bool hiopNlpFormulation::eval_d(double*x, bool new_x, double* d)
   //d = nlp_transformations.applyInvToCons(d, n_cons_ineq); //not needed for now
   return bret;
 }
-// bool hiopNlpFormulation::eval_d(hiopVector& x_, bool new_x, hiopVector& d_)
-// {
-//   hiopVectorPar &xv = dynamic_cast<hiopVectorPar&>(x_);
-//   hiopVectorPar &dv = dynamic_cast<hiopVectorPar&>(d_);
-
-//   double* x = xv.local_data();
-//   double* xx = nlp_transformations.applyTox(x, new_x);
-//   double* dd = dv.local_data();//nlp_transformations.applyToCons(d, n_cons_ineq); //not needed for now
-
-//   runStats.tmEvalCons.start();
-//   bool bret = interface_base.eval_cons(nlp_transformations.n_post(),n_cons,n_cons_ineq,cons_ineq_mapping,xx,new_x,dd);
-//   runStats.tmEvalCons.stop(); runStats.nEvalCons_ineq++;
-
-//   //applyInvToCons(dd) //not needed for now
-//   return bret;
-// }
 
 void hiopNlpFormulation::print(FILE* f, const char* msg, int rank) const
 {
