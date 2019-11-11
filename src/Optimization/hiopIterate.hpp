@@ -58,7 +58,7 @@ namespace hiop
 class hiopIterate
 {
 public:
-  hiopIterate(const hiopNlpDenseConstraints* nlp);
+  hiopIterate(const hiopNlpFormulation* nlp);
   virtual ~hiopIterate();
 
   //virtual void projectPrimalsIntoBounds(double kappa1, double kappa2);
@@ -135,8 +135,8 @@ private:
   hiopVectorPar*zl,*zu;   //for slacks eq. in x: x-sxl=xl, x+sxu=xu
   hiopVectorPar*vl,*vu;   //for slack eq. in d, e.g., d-sdl=dl
 private:
-  // and associated info from problem formulation
-  const hiopNlpDenseConstraints * nlp;
+  //associated info from problem formulation
+  const hiopNlpFormulation * nlp;
 private:
   hiopIterate() {};
   hiopIterate(const hiopIterate&) {};

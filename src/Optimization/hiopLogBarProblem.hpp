@@ -55,7 +55,7 @@ namespace hiop
 class hiopLogBarProblem
 {
 public:
-  hiopLogBarProblem(hiopNlpDenseConstraints* nlp_) 
+  hiopLogBarProblem(hiopNlpFormulation* nlp_) 
     : kappa_d(1e-5), nlp(nlp_) 
   {
     _grad_x_logbar = nlp->alloc_primal_vec();
@@ -73,7 +73,7 @@ public: //members
   //just proxies: keeps pointers to the problem's data and updates LogBar func, grad and all that on the fly
   const hiopIterate *iter, *iter_trial;
   const hiopVector *c_nlp,*d_nlp, *c_nlp_trial, *d_nlp_trial;
-  const hiopMatrixDense *Jac_c_nlp, *Jac_d_nlp;
+  const hiopMatrix *Jac_c_nlp, *Jac_d_nlp;
 
     //algorithm's parameters 
   // factor in computing the linear damping terms used to control unboundness in the log-barrier problem (Section 3.7) */
@@ -83,7 +83,7 @@ public:
   inline void 
   updateWithNlpInfo(const hiopIterate& iter_, const double& mu_, 
 		    const double &f, const hiopVector& c_, const hiopVector& d_, 
-		    const hiopVector& gradf_,  const hiopMatrixDense& Jac_c_,  const hiopMatrixDense& Jac_d_) 
+		    const hiopVector& gradf_,  const hiopMatrix& Jac_c_,  const hiopMatrix& Jac_d_) 
   {
     nlp->runStats.tmSolverInternal.start();
 
@@ -153,7 +153,7 @@ public:
   }
 
 protected:
-  hiopNlpDenseConstraints* nlp;
+  hiopNlpFormulation* nlp;
 private:
   hiopLogBarProblem() {};
   hiopLogBarProblem(const hiopLogBarProblem&) {};
