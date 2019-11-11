@@ -56,47 +56,53 @@
 namespace hiop
 {
 
-hiopAlgFilterIPM::hiopAlgFilterIPM(hiopNlpDenseConstraints* nlp_)
+hiopAlgFilterIPMBase::hiopAlgFilterIPMBase(hiopNlpFormulation* nlp_)
 {
   nlp = nlp_;
   //force completion of the nlp's initialization
   nlp->finalizeInitialization();
 
-  it_curr=NULL; 
-  it_trial=NULL;
-  dir=NULL;     
-
-  _c=NULL;      
-  _d=NULL;      
-  _grad_f=NULL; 
-  _Jac_c=NULL;  
-  _Jac_d=NULL;  
-  _Hess=NULL;   
-
-  resid=NULL;   
-
-  _c_trial=NULL;
-  _d_trial=NULL;
-  _grad_f_trial=NULL;
-  _Jac_c_trial=NULL; 
-  _Jac_d_trial=NULL; 
-
-  resid_trial=NULL;  
-
-  logbar=NULL; 
-
-  dualsUpdate=NULL; 
-
   reloadOptions();
-  reInitializeNlpObjects();
+
+  it_curr = new hiopIterate(nlp);
+  it_trial= it_curr->alloc_clone();
+  dir     = it_curr->alloc_clone();
+  
+  logbar = new hiopLogBarProblem(nlp);
+  
+  _f_nlp = _f_log = 0; 
+  _c = nlp->alloc_dual_eq_vec(); 
+  _d = nlp->alloc_dual_ineq_vec();
+  
+  _grad_f  = nlp->alloc_primal_vec();
+  _Jac_c   = nlp->alloc_Jac_c();
+  _Jac_d   = nlp->alloc_Jac_d();
+  
+  _f_nlp_trial = _f_log_trial = 0;
+  _c_trial = nlp->alloc_dual_eq_vec(); 
+  _d_trial = nlp->alloc_dual_ineq_vec();
+  
+  _grad_f_trial  = nlp->alloc_primal_vec();
+  _Jac_c_trial   = nlp->alloc_Jac_c();
+  _Jac_d_trial   = nlp->alloc_Jac_d();
+  
+  //_Hess ->done in the derived class
+  
+  resid = new hiopResidual(nlp);
+  resid_trial = new hiopResidual(nlp);
+  
+  dualsUpdateType = nlp->options->GetString("dualsUpdateType")=="lsq"?0:1;     //0 LSQ (default), 1 linear update (more stable)
+  dualsInitializ = nlp->options->GetString("dualsInitialization")=="lsq"?0:1;  //0 LSQ (default), 1 set to zero
+  //parameter based initialization
+  if(dualsUpdateType==0) 
+    dualsUpdate = new hiopDualsLsqUpdate(nlp);
+  else if(dualsUpdateType==1)
+    dualsUpdate = new hiopDualsNewtonLinearUpdate(nlp);
+  else assert(false && "dualsUpdateType has an unrecognized value");
+
   resetSolverStatus();
 }
-
-hiopAlgFilterIPM::~hiopAlgFilterIPM()
-{
-  destructorPart();
-}
-void hiopAlgFilterIPM::destructorPart() 
+void hiopAlgFilterIPMBase::destructorPart() 
 {
   if(it_curr)  delete it_curr;
   if(it_trial) delete it_trial;
@@ -107,7 +113,32 @@ void hiopAlgFilterIPM::destructorPart()
   if(_grad_f)  delete _grad_f;
   if(_Jac_c)   delete _Jac_c;
   if(_Jac_d)   delete _Jac_d;
-  if(_Hess)    delete _Hess;
+
+  if(resid)    delete resid;
+
+  if(_c_trial)       delete _c_trial;
+  if(_d_trial)       delete _d_trial;
+  if(_grad_f_trial)  delete _grad_f_trial;
+  if(_Jac_c_trial)   delete _Jac_c_trial;
+  if(_Jac_d_trial)   delete _Jac_d_trial;
+
+  if(resid_trial)    delete resid_trial;
+
+  if(logbar) delete logbar;
+
+  if(dualsUpdate) delete dualsUpdate;
+}
+hiopAlgFilterIPMBase::~hiopAlgFilterIPMBase()
+{
+  if(it_curr)  delete it_curr;
+  if(it_trial) delete it_trial;
+  if(dir)      delete dir;
+
+  if(_c)       delete _c;
+  if(_d)       delete _d;
+  if(_grad_f)  delete _grad_f;
+  if(_Jac_c)   delete _Jac_c;
+  if(_Jac_d)   delete _Jac_d;
 
   if(resid)    delete resid;
 
@@ -124,7 +155,7 @@ void hiopAlgFilterIPM::destructorPart()
   if(dualsUpdate) delete dualsUpdate;
 }
 
-void hiopAlgFilterIPM::reInitializeNlpObjects() 
+void hiopAlgFilterIPMBase::reInitializeNlpObjects() 
 {
   destructorPart();
 
@@ -150,7 +181,7 @@ void hiopAlgFilterIPM::reInitializeNlpObjects()
   _Jac_c_trial   = nlp->alloc_Jac_c();
   _Jac_d_trial   = nlp->alloc_Jac_d();
   
-  _Hess    = new hiopHessianLowRank(nlp,nlp->options->GetInteger("secant_memory_len"));
+  //_Hess ->done in the derived class
   
   resid = new hiopResidual(nlp);
   resid_trial = new hiopResidual(nlp);
@@ -165,7 +196,7 @@ void hiopAlgFilterIPM::reInitializeNlpObjects()
   else assert(false && "dualsUpdateType has an unrecognized value");
 }
 
-void hiopAlgFilterIPM::reloadOptions()
+void hiopAlgFilterIPMBase::reloadOptions()
 {
   //algorithm parameters parameters
   mu0=_mu  = nlp->options->GetNumeric("mu0"); 
@@ -200,41 +231,17 @@ void hiopAlgFilterIPM::reloadOptions()
   theta_min = 1e7; //temporary - will be updated after ini pt is computed
 }
 
-void hiopAlgFilterIPM::resetSolverStatus() 
+void hiopAlgFilterIPMBase::resetSolverStatus() 
 {
   _n_accep_iters = 0;
   _solverStatus = NlpSolve_IncompleteInit;
   filter.clear();
 }
 
-
-bool hiopAlgFilterIPM::evalNlp(hiopIterate& iter, 			       
-			       double &f, hiopVector& c_, hiopVector& d_, 
-			       hiopVector& gradf_,  hiopMatrixDense& Jac_c,  hiopMatrixDense& Jac_d)
-{
-  bool new_x=true, bret; 
-  hiopVectorPar& it_x = dynamic_cast<hiopVectorPar&>(*iter.get_x());
-  hiopVectorPar 
-    &c=dynamic_cast<hiopVectorPar&>(c_), 
-    &d=dynamic_cast<hiopVectorPar&>(d_), 
-    &gradf=dynamic_cast<hiopVectorPar&>(gradf_);
-  double* x = it_x.local_data();//local_data_const();
-  //f(x)
-  bret = nlp->eval_f(x, new_x, f); assert(bret);
-  new_x= false; //same x for the rest
-  bret = nlp->eval_grad_f(x, new_x, gradf.local_data());  assert(bret);
-
-  bret = nlp->eval_c     (x, new_x, c.local_data());     assert(bret);
-  bret = nlp->eval_d     (x, new_x, d.local_data());     assert(bret);
-  bret = nlp->eval_Jac_c (x, new_x, Jac_c.local_data()); assert(bret);
-  bret = nlp->eval_Jac_d (x, new_x, Jac_d.local_data()); assert(bret);
-
-  return bret;
-}
-
-int hiopAlgFilterIPM::startingProcedure(hiopIterate& it_ini,			       
-					double &f, hiopVector& c, hiopVector& d, 
-					hiopVector& gradf,  hiopMatrixDense& Jac_c,  hiopMatrixDense& Jac_d)
+int hiopAlgFilterIPMBase::
+startingProcedure(hiopIterate& it_ini,			       
+		  double &f, hiopVector& c, hiopVector& d, 
+		  hiopVector& gradf,  hiopMatrix& Jac_c,  hiopMatrix& Jac_d)
 {
   if(!nlp->get_starting_point(*it_ini.get_x())) {
     nlp->log->printf(hovWarning, "user did not provide a starting point; will be set to all zeros\n");
@@ -291,26 +298,287 @@ int hiopAlgFilterIPM::startingProcedure(hiopIterate& it_ini,
 
   return true;
 }
+bool hiopAlgFilterIPMBase::
+evalNlp(hiopIterate& iter, 			       
+	double &f, hiopVector& c_, hiopVector& d_, 
+	hiopVector& gradf_,  hiopMatrix& Jac_c,  hiopMatrix& Jac_d)
+{
+  bool new_x=true, bret; 
+  hiopVectorPar& it_x = dynamic_cast<hiopVectorPar&>(*iter.get_x());
+  hiopVectorPar 
+    &c=dynamic_cast<hiopVectorPar&>(c_), 
+    &d=dynamic_cast<hiopVectorPar&>(d_), 
+    &gradf=dynamic_cast<hiopVectorPar&>(gradf_);
+  double* x = it_x.local_data();//local_data_const();
+  //f(x)
+  bret = nlp->eval_f(x, new_x, f); assert(bret);
+  new_x= false; //same x for the rest
+  bret = nlp->eval_grad_f(x, new_x, gradf.local_data());  assert(bret);
 
-hiopSolveStatus hiopAlgFilterIPM::run()
+  bret = nlp->eval_c     (x, new_x, c.local_data());     assert(bret);
+  bret = nlp->eval_d     (x, new_x, d.local_data());     assert(bret);
+  bret = nlp->eval_Jac_c (x, new_x, Jac_c); assert(bret);
+  bret = nlp->eval_Jac_d (x, new_x, Jac_d); assert(bret);
+
+  return bret;
+}
+bool hiopAlgFilterIPMBase::
+updateLogBarrierParameters(const hiopIterate& it, const double& mu_curr, const double& tau_curr,
+			   double& mu_new, double& tau_new)
+{
+  double new_mu = fmax(eps_tol/10, fmin(kappa_mu*mu_curr, pow(mu_curr,theta_mu)));
+  if(fabs(new_mu-mu_curr)<1e-16) return false;
+  mu_new  = new_mu;
+  tau_new = fmax(tau_min,1.0-mu_new);
+  return true;
+}
+
+double hiopAlgFilterIPMBase::thetaLogBarrier(const hiopIterate& it, const hiopResidual& resid, const double& mu)
+{
+  //actual nlp errors
+  double optim, feas, complem;
+  resid.getNlpErrors(optim, feas, complem);
+  return feas;
+}
+
+
+bool hiopAlgFilterIPMBase::
+evalNlpAndLogErrors(const hiopIterate& it, const hiopResidual& resid, const double& mu,
+		    double& nlpoptim, double& nlpfeas, double& nlpcomplem, double& nlpoverall,
+		    double& logoptim, double& logfeas, double& logcomplem, double& logoverall)
+{
+  nlp->runStats.tmSolverInternal.start();
+
+  long long n=nlp->n_complem(), m=nlp->m();
+  //the one norms
+  //double nrmDualBou=it.normOneOfBoundDuals();
+  //double nrmDualEqu=it.normOneOfEqualityDuals();
+  double nrmDualBou, nrmDualEqu;
+  it.normOneOfDuals(nrmDualEqu, nrmDualBou);
+
+  nlp->log->printf(hovScalars, "nrmOneDualEqu %g   nrmOneDualBo %g\n", nrmDualEqu, nrmDualBou);
+  if(nrmDualBou>1e+10) {
+    nlp->log->printf(hovWarning, "Unusually large bound dual variables (norm1=%g) occured, "
+		     "which may cause numerical instabilities if it persists. Convergence "
+		     " issues or inacurate optimal solutions may be experienced. Possible causes: "
+		     " tight bounds or bad scaling of the optimization variables.\n",  
+		     nrmDualBou);
+    if(nlp->options->GetString("fixed_var")=="remove") {
+      nlp->log->printf(hovWarning, "For example, increase 'fixed_var_tolerance' to remove "
+		       "additional variables.\n");
+    } else {
+      if(nlp->options->GetString("fixed_var")=="relax") {
+	nlp->log->printf(hovWarning, "For example, increase 'fixed_var_tolerance' to relax "
+			 "aditional (tight) variables and/or increase 'fixed_var_perturb' "
+			 "to decrease the tightness.\n");
+      } else
+	nlp->log->printf(hovWarning, "Potential fixes: fix or relax variables with tight bounds "
+			 "(see 'fixed_var' option) or rescale variables.\n");
+    }
+  }
+  
+  //scaling factors
+  double sd = fmax(p_smax,(nrmDualBou+nrmDualEqu)/(n+m)) / p_smax;
+  double sc = n==0?0:fmax(p_smax,nrmDualBou/n) / p_smax;
+
+  sd = fmin(sd, 1e+8);
+  sc = fmin(sc, 1e+8);
+
+  //actual nlp errors 
+  resid.getNlpErrors(nlpoptim, nlpfeas, nlpcomplem);
+
+  //finally, the scaled nlp error
+  nlpoverall = fmax(nlpoptim/sd, fmax(nlpfeas, nlpcomplem/sc));
+
+  nlp->log->printf(hovScalars, 
+		   "nlpoverall %g  nloptim %g  sd %g  nlpfeas %g  nlpcomplem %g  sc %g\n", 
+		   nlpoverall, nlpoptim, sd, nlpfeas, nlpcomplem, sc);
+
+  //actual log errors
+  resid.getBarrierErrors(logoptim, logfeas, logcomplem);
+
+  //finally, the scaled barrier error
+  logoverall = fmax(logoptim/sd, fmax(logfeas, logcomplem/sc));
+  nlp->runStats.tmSolverInternal.start();
+  return true;
+}
+
+bool hiopAlgFilterIPMBase::evalNlp_funcOnly(hiopIterate& iter,
+					    double& f, hiopVector& c_, hiopVector& d_)
+{
+  bool new_x=true, bret; 
+  hiopVectorPar& it_x = dynamic_cast<hiopVectorPar&>(*iter.get_x());
+  hiopVectorPar 
+    &c=dynamic_cast<hiopVectorPar&>(c_), 
+    &d=dynamic_cast<hiopVectorPar&>(d_);
+  double* x = it_x.local_data();
+  bret = nlp->eval_f(x, new_x, f); assert(bret);
+  new_x= false; //same x for the rest
+  bret = nlp->eval_c(x, new_x, c.local_data());     assert(bret);
+  bret = nlp->eval_d(x, new_x, d.local_data());     assert(bret);
+  return bret;
+}
+
+bool hiopAlgFilterIPMBase::evalNlp_derivOnly(hiopIterate& iter,
+					     hiopVector& gradf_, hiopMatrix& Jac_c, hiopMatrix& Jac_d)
+{
+  bool new_x=false; //functions were previously evaluated in the line search
+  bool bret;
+  hiopVectorPar& it_x = dynamic_cast<hiopVectorPar&>(*iter.get_x());
+  hiopVectorPar & gradf=dynamic_cast<hiopVectorPar&>(gradf_);
+  double* x = it_x.local_data();
+  bret = nlp->eval_grad_f(x, new_x, gradf.local_data()); assert(bret);
+  bret = nlp->eval_Jac_c (x, new_x, Jac_c); assert(bret);
+  bret = nlp->eval_Jac_d (x, new_x, Jac_d); assert(bret);
+  return bret;
+}
+
+/* returns the objective value; valid only after 'run' method has been called */
+double hiopAlgFilterIPMBase::getObjective() const
+{
+  if(_solverStatus==NlpSolve_IncompleteInit || _solverStatus == NlpSolve_SolveNotCalled)
+    nlp->log->printf(hovError, "getObjective: hiOp did not initialize entirely or the 'run' function was not called.");
+  if(_solverStatus==NlpSolve_Pending)
+    nlp->log->printf(hovWarning, "getObjective: hiOp does not seem to have completed yet. The objective value returned may not be optimal.");
+  return nlp->user_obj(_f_nlp);
+}
+/* returns the primal vector x; valid only after 'run' method has been called */
+void hiopAlgFilterIPMBase::getSolution(double* x) const
+{
+  if(_solverStatus==NlpSolve_IncompleteInit || _solverStatus == NlpSolve_SolveNotCalled)
+    nlp->log->printf(hovError, "getSolution: hiOp did not initialize entirely or the 'run' function was not called.");
+  if(_solverStatus==NlpSolve_Pending)
+    nlp->log->printf(hovWarning, "getSolution: hiOp have not completed yet. The primal vector returned may not be optimal.");
+
+  hiopVectorPar& it_x = dynamic_cast<hiopVectorPar&>(*it_curr->get_x());
+  //it_curr->get_x()->copyTo(x);
+  nlp->user_x(it_x, x);
+}
+
+int hiopAlgFilterIPMBase::getNumIterations() const
+{
+  if(_solverStatus==NlpSolve_IncompleteInit || _solverStatus == NlpSolve_SolveNotCalled)
+    nlp->log->printf(hovError, "getNumIterations: hiOp did not initialize entirely or the 'run' function was not called.");
+  if(_solverStatus==NlpSolve_Pending)
+    nlp->log->printf(hovWarning, "getNumIterations: hiOp does not seem to have completed yet. The objective value returned may not be optimal.");
+  return nlp->runStats.nIter;
+}
+
+
+bool hiopAlgFilterIPMBase::
+checkTermination(const double& err_nlp, const int& iter_num, hiopSolveStatus& status)
+{
+  if(err_nlp<=eps_tol)   { _solverStatus = Solve_Success;     return true; }
+  if(iter_num>=max_n_it) { _solverStatus = Max_Iter_Exceeded; return true; }
+
+  if(eps_rtol>0) {
+    if(_err_nlp_optim   <= eps_rtol * _err_nlp_optim0 &&
+       _err_nlp_optim   <= eps_rtol * _err_nlp_optim0 &&
+       _err_nlp_complem <= std::max(eps_rtol,1e-6) * std::min(1.,_err_nlp_complem0)) {
+      _solverStatus = Solve_Success_RelTol;
+      return true; 
+    }
+  }
+
+  if(err_nlp<=eps_tol_accep) _n_accep_iters++;
+  else _n_accep_iters = 0;
+
+  if(_n_accep_iters>=accep_n_it) { _solverStatus = Solve_Acceptable_Level; return true; }
+
+  return false;
+}
+/***** Termination message *****/
+void hiopAlgFilterIPMBase::displayTerminationMsg() {
+
+  switch(_solverStatus) {
+  case Solve_Success: 
+    {
+      nlp->log->printf(hovSummary, "Successfull termination.\n%s\n", nlp->runStats.getSummary().c_str());
+      break;
+    }
+  case Solve_Success_RelTol: 
+    {
+      nlp->log->printf(hovSummary, "Successfull termination (error within the relative tolerance).\n%s\n", nlp->runStats.getSummary().c_str());
+      break;
+    }
+  case Solve_Acceptable_Level:
+    {
+      nlp->log->printf(hovSummary, "Solve to only to the acceptable tolerance(s).\n%s\n", nlp->runStats.getSummary().c_str());
+      break;
+    }
+  case Max_Iter_Exceeded:
+    {
+      nlp->log->printf(hovSummary, "Maximum number of iterations reached.\n%s\n", nlp->runStats.getSummary().c_str());
+      break;
+    }
+  case Steplength_Too_Small:
+    {
+      nlp->log->printf(hovSummary, "Couldn't solve the problem.\n%s\n", nlp->runStats.getSummary().c_str());
+      nlp->log->printf(hovSummary, "Linesearch returned unsuccessfully (small step). Probable cause: inaccurate gradients/Jacobians or infeasible problem.\n");
+      break;
+    }
+  case User_Stopped:
+    {
+      nlp->log->printf(hovSummary, "Stopped by the user through the user provided iterate callback.\n%s\n", nlp->runStats.getSummary().c_str());
+      break;
+    }
+  default:
+    {
+      nlp->log->printf(hovSummary, "Do not know why HiOp stopped. This shouldn't happen. :)\n%s\n", nlp->runStats.getSummary().c_str());
+      assert(false && "Do not know why hiop stopped. This shouldn't happen.");
+      break;
+    }
+  };
+}
+
+
+
+
+
+
+
+
+hiopAlgFilterIPMQuasiNewton::hiopAlgFilterIPMQuasiNewton(hiopNlpDenseConstraints* nlp_)
+  : hiopAlgFilterIPMBase(nlp_)
+{
+  nlpdc = nlp_;
+
+  _Hess = new hiopHessianLowRank(nlpdc, nlpdc->options->GetInteger("secant_memory_len"));
+}
+
+hiopAlgFilterIPMQuasiNewton::~hiopAlgFilterIPMQuasiNewton()
+{
+  if(_Hess) delete _Hess;
+}
+
+void hiopAlgFilterIPMQuasiNewton::reInitializeNlpObjects() 
+{
+  if(_Hess) delete _Hess;
+  hiopAlgFilterIPM::reInitializeNlpObjects();
+  _Hess = new hiopHessianLowRank(nlpdc, nlpdc->options->GetInteger("secant_memory_len"));
+}
+
+hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
 {
   //hiopNlpFormulation nlp may need an update since user may have changed options and
-  //reruning with the same hiopAlgFilterIPM instance
+  //reruning with the same hiopAlgFilterIPMQuasiNewton instance
   nlp->finalizeInitialization();
-
   //also reload options
   reloadOptions();
 
+  //types of linear algebra objects are known now
+  hiopMatrixDense* Jac_c = dynamic_cast<hiopMatrixDense*>(_Jac_c);
+  hiopMatrixDense* Jac_d = dynamic_cast<hiopMatrixDense*>(_Jac_d);
+
   //if nlp changed internally, we need to reinitialize 'this'
   if(it_curr->get_x()->get_size()!=nlp->n() ||
-     _Jac_c->get_local_size_n()!=nlp->n_local()) {
+     Jac_c->get_local_size_n()!=nlpdc->n_local()) {
     //size of the nlp changed internally ->  reInitializeNlpObjects();
     reInitializeNlpObjects();
   }
-
   resetSolverStatus();
-  nlp->runStats.initialize();
 
+  nlp->runStats.initialize();
   ////////////////////////////////////////////////////////////////////////////////////
   // run baby run
   ////////////////////////////////////////////////////////////////////////////////////
@@ -426,7 +694,7 @@ hiopSolveStatus hiopAlgFilterIPM::run()
      ***************************************************/
     //first update the Hessian and kkt system
     _Hess->update(*it_curr,*_grad_f,*_Jac_c,*_Jac_d);
-    kkt->update(it_curr,_grad_f,_Jac_c,_Jac_d, _Hess);
+    kkt->update(it_curr, _grad_f, Jac_c, Jac_d, _Hess);
     bret = kkt->computeDirections(resid,dir); assert(bret==true);
 
     nlp->log->printf(hovIteration, "Iter[%d] full search direction -------------\n", iter_num); nlp->log->write("", *dir, hovIteration);
@@ -629,190 +897,7 @@ hiopSolveStatus hiopAlgFilterIPM::run()
   return _solverStatus;
 }
 
-
-bool hiopAlgFilterIPM::
-checkTermination(const double& err_nlp, const int& iter_num, hiopSolveStatus& status)
-{
-  if(err_nlp<=eps_tol)   { _solverStatus = Solve_Success;     return true; }
-  if(iter_num>=max_n_it) { _solverStatus = Max_Iter_Exceeded; return true; }
-
-  if(eps_rtol>0) {
-    if(_err_nlp_optim   <= eps_rtol * _err_nlp_optim0 &&
-       _err_nlp_optim   <= eps_rtol * _err_nlp_optim0 &&
-       _err_nlp_complem <= std::max(eps_rtol,1e-6) * std::min(1.,_err_nlp_complem0)) {
-      _solverStatus = Solve_Success_RelTol;
-      return true; 
-    }
-  }
-
-  if(err_nlp<=eps_tol_accep) _n_accep_iters++;
-  else _n_accep_iters = 0;
-
-  if(_n_accep_iters>=accep_n_it) { _solverStatus = Solve_Acceptable_Level; return true; }
-
-  return false;
-}
-
-
-
-/***** Termination message *****/
-void hiopAlgFilterIPM::displayTerminationMsg() {
-
-  switch(_solverStatus) {
-  case Solve_Success: 
-    {
-      nlp->log->printf(hovSummary, "Successfull termination.\n%s\n", nlp->runStats.getSummary().c_str());
-      break;
-    }
-  case Solve_Success_RelTol: 
-    {
-      nlp->log->printf(hovSummary, "Successfull termination (error within the relative tolerance).\n%s\n", nlp->runStats.getSummary().c_str());
-      break;
-    }
-  case Solve_Acceptable_Level:
-    {
-      nlp->log->printf(hovSummary, "Solve to only to the acceptable tolerance(s).\n%s\n", nlp->runStats.getSummary().c_str());
-      break;
-    }
-  case Max_Iter_Exceeded:
-    {
-      nlp->log->printf(hovSummary, "Maximum number of iterations reached.\n%s\n", nlp->runStats.getSummary().c_str());
-      break;
-    }
-  case Steplength_Too_Small:
-    {
-      nlp->log->printf(hovSummary, "Couldn't solve the problem.\n%s\n", nlp->runStats.getSummary().c_str());
-      nlp->log->printf(hovSummary, "Linesearch returned unsuccessfully (small step). Probable cause: inaccurate gradients/Jacobians or infeasible problem.\n");
-      break;
-    }
-  case User_Stopped:
-    {
-      nlp->log->printf(hovSummary, "Stopped by the user through the user provided iterate callback.\n%s\n", nlp->runStats.getSummary().c_str());
-      break;
-    }
-  default:
-    {
-      nlp->log->printf(hovSummary, "Do not know why hiop stopped. This shouldn't happen. :)\n%s\n", nlp->runStats.getSummary().c_str());
-      assert(false && "Do not know why hiop stopped. This shouldn't happen.");
-      break;
-    }
-  };
-}
-
-bool hiopAlgFilterIPM::
-updateLogBarrierParameters(const hiopIterate& it, const double& mu_curr, const double& tau_curr,
-			   double& mu_new, double& tau_new)
-{
-  double new_mu = fmax(eps_tol/10, fmin(kappa_mu*mu_curr, pow(mu_curr,theta_mu)));
-  if(fabs(new_mu-mu_curr)<1e-16) return false;
-  mu_new  = new_mu;
-  tau_new = fmax(tau_min,1.0-mu_new);
-  return true;
-}
-
-double hiopAlgFilterIPM::thetaLogBarrier(const hiopIterate& it, const hiopResidual& resid, const double& mu)
-{
-  //actual nlp errors
-  double optim, feas, complem;
-  resid.getNlpErrors(optim, feas, complem);
-  return feas;
-}
-
-
-bool hiopAlgFilterIPM::
-evalNlpAndLogErrors(const hiopIterate& it, const hiopResidual& resid, const double& mu,
-		    double& nlpoptim, double& nlpfeas, double& nlpcomplem, double& nlpoverall,
-		    double& logoptim, double& logfeas, double& logcomplem, double& logoverall)
-{
-  nlp->runStats.tmSolverInternal.start();
-
-  long long n=nlp->n_complem(), m=nlp->m();
-  //the one norms
-  //double nrmDualBou=it.normOneOfBoundDuals();
-  //double nrmDualEqu=it.normOneOfEqualityDuals();
-  double nrmDualBou, nrmDualEqu;
-  it.normOneOfDuals(nrmDualEqu, nrmDualBou);
-
-  nlp->log->printf(hovScalars, "nrmOneDualEqu %g   nrmOneDualBo %g\n", nrmDualEqu, nrmDualBou);
-  if(nrmDualBou>1e+10) {
-    nlp->log->printf(hovWarning, "Unusually large bound dual variables (norm1=%g) occured, "
-		     "which may cause numerical instabilities if it persists. Convergence "
-		     " issues or inacurate optimal solutions may be experienced. Possible causes: "
-		     " tight bounds or bad scaling of the optimization variables.\n",  
-		     nrmDualBou);
-    if(nlp->options->GetString("fixed_var")=="remove") {
-      nlp->log->printf(hovWarning, "For example, increase 'fixed_var_tolerance' to remove "
-		       "additional variables.\n");
-    } else {
-      if(nlp->options->GetString("fixed_var")=="relax") {
-	nlp->log->printf(hovWarning, "For example, increase 'fixed_var_tolerance' to relax "
-			 "aditional (tight) variables and/or increase 'fixed_var_perturb' "
-			 "to decrease the tightness.\n");
-      } else
-	nlp->log->printf(hovWarning, "Potential fixes: fix or relax variables with tight bounds "
-			 "(see 'fixed_var' option) or rescale variables.\n");
-    }
-  }
-  
-  //scaling factors
-  double sd = fmax(p_smax,(nrmDualBou+nrmDualEqu)/(n+m)) / p_smax;
-  double sc = n==0?0:fmax(p_smax,nrmDualBou/n) / p_smax;
-
-  sd = fmin(sd, 1e+8);
-  sc = fmin(sc, 1e+8);
-
-  //actual nlp errors 
-  resid.getNlpErrors(nlpoptim, nlpfeas, nlpcomplem);
-
-  //finally, the scaled nlp error
-  nlpoverall = fmax(nlpoptim/sd, fmax(nlpfeas, nlpcomplem/sc));
-
-  nlp->log->printf(hovScalars, 
-		   "nlpoverall %g  nloptim %g  sd %g  nlpfeas %g  nlpcomplem %g  sc %g\n", 
-		   nlpoverall, nlpoptim, sd, nlpfeas, nlpcomplem, sc);
-
-  //actual log errors
-  resid.getBarrierErrors(logoptim, logfeas, logcomplem);
-
-  //finally, the scaled barrier error
-  logoverall = fmax(logoptim/sd, fmax(logfeas, logcomplem/sc));
-  nlp->runStats.tmSolverInternal.start();
-  return true;
-}
-
-
-
-
-bool hiopAlgFilterIPM::evalNlp_funcOnly(hiopIterate& iter,
-					double& f, hiopVector& c_, hiopVector& d_)
-{
-  bool new_x=true, bret; 
-  hiopVectorPar& it_x = dynamic_cast<hiopVectorPar&>(*iter.get_x());
-  hiopVectorPar 
-    &c=dynamic_cast<hiopVectorPar&>(c_), 
-    &d=dynamic_cast<hiopVectorPar&>(d_);
-  double* x = it_x.local_data();
-  bret = nlp->eval_f(x, new_x, f); assert(bret);
-  new_x= false; //same x for the rest
-  bret = nlp->eval_c(x, new_x, c.local_data());     assert(bret);
-  bret = nlp->eval_d(x, new_x, d.local_data());     assert(bret);
-  return bret;
-}
-bool hiopAlgFilterIPM::evalNlp_derivOnly(hiopIterate& iter,
-					 hiopVector& gradf_,  hiopMatrixDense& Jac_c,  hiopMatrixDense& Jac_d)
-{
-  bool new_x=false; //functions were previously evaluated in the line search
-  bool bret;
-  hiopVectorPar& it_x = dynamic_cast<hiopVectorPar&>(*iter.get_x());
-  hiopVectorPar & gradf=dynamic_cast<hiopVectorPar&>(gradf_);
-  double* x = it_x.local_data();
-  bret = nlp->eval_grad_f(x, new_x, gradf.local_data()); assert(bret);
-  bret = nlp->eval_Jac_c (x, new_x, Jac_c.local_data()); assert(bret);
-  bret = nlp->eval_Jac_d (x, new_x, Jac_d.local_data()); assert(bret);
-  return bret;
-}
-
-void hiopAlgFilterIPM::outputIteration(int lsStatus, int lsNum)
+void hiopAlgFilterIPMQuasiNewton::outputIteration(int lsStatus, int lsNum)
 {
   if(iter_num/10*10==iter_num) 
     nlp->log->printf(hovSummary, "iter    objective     inf_pr     inf_du   lg(mu)  alpha_du   alpha_pr linesrch\n");
@@ -831,40 +916,6 @@ void hiopAlgFilterIPM::outputIteration(int lsStatus, int lsNum)
   }
 }
 
-/* returns the objective value; valid only after 'run' method has been called */
-double hiopAlgFilterIPM::getObjective() const
-{
-  if(_solverStatus==NlpSolve_IncompleteInit || _solverStatus == NlpSolve_SolveNotCalled)
-    nlp->log->printf(hovError, "getObjective: hiOp did not initialize entirely or the 'run' function was not called.");
-  if(_solverStatus==NlpSolve_Pending)
-    nlp->log->printf(hovWarning, "getObjective: hiOp does not seem to have completed yet. The objective value returned may not be optimal.");
-  return nlp->user_obj(_f_nlp);
-}
-  /* returns the primal vector x; valid only after 'run' method has been called */
-void hiopAlgFilterIPM::getSolution(double* x) const
-{
-  if(_solverStatus==NlpSolve_IncompleteInit || _solverStatus == NlpSolve_SolveNotCalled)
-    nlp->log->printf(hovError, "getSolution: hiOp did not initialize entirely or the 'run' function was not called.");
-  if(_solverStatus==NlpSolve_Pending)
-    nlp->log->printf(hovWarning, "getSolution: hiOp have not completed yet. The primal vector returned may not be optimal.");
 
-  hiopVectorPar& it_x = dynamic_cast<hiopVectorPar&>(*it_curr->get_x());
-  //it_curr->get_x()->copyTo(x);
-  nlp->user_x(it_x, x);
-}
-
-int hiopAlgFilterIPM::getNumIterations() const
-{
-  if(_solverStatus==NlpSolve_IncompleteInit || _solverStatus == NlpSolve_SolveNotCalled)
-    nlp->log->printf(hovError, "getNumIterations: hiOp did not initialize entirely or the 'run' function was not called.");
-  if(_solverStatus==NlpSolve_Pending)
-    nlp->log->printf(hovWarning, "getNumIterations: hiOp does not seem to have completed yet. The objective value returned may not be optimal.");
-  return nlp->runStats.nIter;
-}
-
-hiopSolveStatus hiopAlgFilterIPM::getSolveStatus() const
-{
-  return _solverStatus;
-}
 
 }
