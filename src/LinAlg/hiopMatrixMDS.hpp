@@ -286,7 +286,7 @@ public:
     return m;
   }
 
-  virtual inline long long m() const {return mSp->m();}
+  virtual inline long long m() const {return n();}
   virtual inline long long n() const {return mSp->n()+mDe->n();}
   inline long long n_sp() const {return mSp->n();}
   inline long long n_de() const {return  mDe->n();}
