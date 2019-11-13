@@ -10,5 +10,8 @@ target_link_libraries(nlpDenseCons_ex2.exe hiop ${LAPACK_LIBRARIES})
 add_executable(nlpDenseCons_ex3.exe nlpDenseCons_ex3_driver.cpp)
 target_link_libraries(nlpDenseCons_ex3.exe hiop ${LAPACK_LIBRARIES})
 
+add_executable(nlpMDS_ex4.exe nlpMDS_ex4_driver.cpp)
+target_link_libraries(nlpMDS_ex4.exe hiop ${LAPACK_LIBRARIES})
+
 #add_executable(hpc_benchmark.exe hpc_benchmark.cpp)
 #target_link_libraries(hpc_benchmark.exe ${LAPACK_LIBRARIES})
