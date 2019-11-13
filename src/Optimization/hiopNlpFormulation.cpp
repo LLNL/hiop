@@ -71,8 +71,9 @@ hiopNlpFormulation::hiopNlpFormulation(hiopInterfaceBase& interface_)
 {
   strFixedVars = ""; //uninitialized
   dFixedVarsTol=-1.; //uninitialized
+  bool bret;
 #ifdef HIOP_USE_MPI
-  bool bret = interface_base.get_MPI_comm(comm); assert(bret);
+  bret = interface_base.get_MPI_comm(comm); assert(bret);
 
   int nret;
   //MPI may not be initialized: this occurs when a serial driver call HiOp built with MPI support on
