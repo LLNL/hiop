@@ -150,15 +150,13 @@ public:
   virtual bool eval_grad_f(const long long& n, const double* x, bool new_x, double* gradf)=0;
 
   /** Evaluates a subset of the constraints cons(x) (where clow<=cons(x)<=cupp). The subset is of size
-   *  'num_cons' and is described by indexes in the 'idx_cons' array. The methods may be called 
-   *  multiple times, each time for a subset of the constraints, for example, for the 
-   *  subset containing the equalities and for the subset containing the inequalities. However, each 
-   *  constraint will be inquired EXACTLY once. This is done for performance considerations, to avoid 
-   *  temporary holders and memory copying.
+   *  'num_cons' and is described by indexes in the 'idx_cons' array. The method will be called at each
+   *  iteration separately for the equality constraints subset and for the inequality constraints subset.
+   *  This is done for performance considerations, to avoid auxiliary/temporary storage and copying.
    *
    *  Parameters:
    *   - n, m: the global number of variables and constraints
-   *   - num_cons, idx_cons (array of size num_cons): the number and indexes of constraints to be evaluated
+   *   - num_cons, the number constraints/size of subset to be evaluated
    *   - idx_cons: indexes in {1,2,...,m} of the constraints to be evaluated
    *   - x: the point where the constraints are to be evaluated
    *   - new_x: whether x has been changed from the previous call to f, grad_f, or Jac
@@ -170,13 +168,10 @@ public:
 			 const long long& num_cons, const long long* idx_cons,  
 			 const double* x, bool new_x, 
 			 double* cons)=0;
-  /** Jacobian of constraints is to be specified in a derived class since it can be sparse 
-   *  or dense+distributed
-  virtual bool eval_Jac_cons(const long long& n, const long long& m, const double* x, bool new_x, ...)
-  */
 
   /** pass the communicator, defaults to MPI_COMM_WORLD (dummy for non-MPI builds)  */
   virtual bool get_MPI_comm(MPI_Comm& comm_out) { comm_out=MPI_COMM_WORLD; return true;}
+
   /**  column partitioning specification for distributed memory vectors 
   *  Process P owns cols[P], cols[P]+1, ..., cols[P+1]-1, P={0,1,...,NumRanks}.
   *  Example: for a vector x of 6 elements on 3 ranks, the col partitioning is cols=[0,2,4,6].
@@ -275,18 +270,36 @@ public:
   virtual ~hiopInterfaceMDS() {};
 
   virtual bool get_sparse_dense_blocks_info(int& nx_sparse, int& nx_dense,
-					    int& nnz_sparse_Jacc, int& nnz_sparse_Jacd) = 0; 
+					    int& nnz_sparse_Jaceq, int& nnz_sparse_Jacineq,
+					    int& nnz_sparse_Hess_Lagr_SS, 
+					    int& nnz_sparse_Hess_Lagr_SD) = 0; 
 
   /** Evaluates the Jacobian of constraints split in the sparse (triplet format) and 
    * dense matrices (rows storage)
    *
-   *  Parameters: see eval_cons
+   * Parameters: 
+   *  - first six: see eval_cons (in parent class)
+   *  - nnzJacS, iJacS, jJacS, MJacS: number of nonzeros, (i,j) indexes, and values of 
+   * the sparse Jacobian
+   *  - JacD: dense Jacobian as a contiguous array storing the matrix by rows; array is
+   * "primed" to support double indexing JacD[i][j]
+   * 
+   * Notes for implementer of this method: 
+   * 1) 'JacD' parameter will be always non-null
+   * 2) When 'iJacS' and 'jJacS' are non-null, the implementer should provide the (i,j) 
+   * indexes. 
+   * 3) When 'MJacS' is non-null, the implementer should provide the values corresponding to 
+   * entries specified by 'iJacS' and 'jJacS'
+   * 4) 'iJacS' and 'jJacS' are both either non-null or null during a call.
+   * 5) Both 'iJacS'/'jJacS' and 'MJacS' can be non-null during the same call or only one of them 
+   * non-null; but they will not be both null.
+   * 
    */
   virtual bool eval_Jac_cons(const long long& n, const long long& m, 
 			     const long long& num_cons, const long long* idx_cons,
 			     const double* x, bool new_x,
 			     const long long& ns, const long long& nd, 
-			     int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
+			     const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
 			     double** JacD) = 0;
 
   /** Evaluates the Hessian of the Lagrangian function in 3 structural blocks
@@ -297,23 +310,17 @@ public:
    * Note: HSD is for now assumed to be zero. The implementer should return nnzHSD=0
    * during the first call to 'eval_Hess_Lagr'. On subsequent calls, HiOp will pass the 
    * triplet arrays for HSD set to NULL and the implementer (obviously) should not use them.
+   *
+   * Notes 1)-5) from 'eval_Jac_cons' applies to xxxHSS and HDD arrays
    */
   virtual bool eval_Hess_Lagr(const long long& n, const long long& m, 
 			      const double* x, bool new_x, const double& obj_factor,
 			      const double* lambda, bool new_lambda,
 			      const long long& ns, const long long& nd, 
-			      int& nnzHSS, int* iHSS, int* jHSS, double* MHSS, 
+			      const int& nnzHSS, int* iHSS, int* jHSS, double* MHSS, 
 			      double** HDD,
 			      int& nnzHSD, int* iHSD, int* jHSD, double* MHSD) = 0;
 
-  /** Constraints evaluator
-   * This is not specific to MDS and it is done so that the implementer does not have to 
-   * split constraints. 
-   *
-   */
-  virtual bool eval_cons(const long long& n, const long long& m, 
-			 const double* x, bool new_x, 
-			 double* cons)=0;
 };
 } //end of namespace
 #endif
