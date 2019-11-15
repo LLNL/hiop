@@ -298,7 +298,7 @@ public:
   virtual bool eval_Jac_cons(const long long& n, const long long& m, 
 			     const long long& num_cons, const long long* idx_cons,
 			     const double* x, bool new_x,
-			     const long long& ns, const long long& nd, 
+			     const long long& nsparse, const long long& ndense, 
 			     const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
 			     double** JacD) = 0;
 
@@ -316,7 +316,7 @@ public:
   virtual bool eval_Hess_Lagr(const long long& n, const long long& m, 
 			      const double* x, bool new_x, const double& obj_factor,
 			      const double* lambda, bool new_lambda,
-			      const long long& ns, const long long& nd, 
+			      const long long& nsparse, const long long& ndense, 
 			      const int& nnzHSS, int* iHSS, int* jHSS, double* MHSS, 
 			      double** HDD,
 			      int& nnzHSD, int* iHSD, int* jHSD, double* MHSD) = 0;
