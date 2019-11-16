@@ -3,7 +3,8 @@
 
 #include "hiopInterface.hpp"
 
-//this include is not needed in general; we use hiopMatrixDense in this particular example
+//this include is not needed in general
+//we use hiopMatrixDense in this particular example for convienience
 #include "hiopMatrix.hpp" 
 
 #ifdef HIOP_USE_MPI
@@ -20,7 +21,7 @@
 
 /* Problem test for the linear algebra of Mixed Dense-Sparse NLPs
  *  min   sum 0.5 {x_i*(x_{i}-1) : i=1,...,ns} + 0.5 y'*Qd*y + 0.5 s^T s
- *  s.t.  x+s - Md y = 0, i=1,...,ns
+ *  s.t.  x+s + Md y = 0, i=1,...,ns
  *        [-2  ]    [ x_1 + e^T s]   [e^T]      [ 2 ]
  *        [-inf] <= [ x_2        ] + [e^T] y <= [ 2 ]
  *        [-2  ]    [ x_3        ]   [e^T]      [inf]
@@ -31,7 +32,7 @@
  * The vector 'y' is of dimension nd = ns/4
  * Dense matrices Qd and Md are such that
  * Qd  = two on the diagonal, one on the first offdiagonals, zero elsewhere
- * Md  = one everywhere
+ * Md  = minus one everywhere
  * e   = vector of all ones
  *
  * Coding of the problem in MDS HiOp input: order of variables need to be [x,s,y] 
@@ -64,7 +65,7 @@ public:
     }
 
     Md = new hiop::hiopMatrixDense(ns,ns/4);
-    Md->setToConstant(1.0);
+    Md->setToConstant(-1.0);
 
     _buf_y = new double[ns/4];
   }
@@ -173,7 +174,7 @@ public:
 
     bool isEq=false;
     for(int irow=0; irow<num_cons; irow++) {
-      const int con_idx = idx_cons[irow];
+      const int con_idx = (int) idx_cons[irow];
       if(con_idx<ns) {
 	//equalities: x+s - Md y = 0
 	cons[con_idx] = x[con_idx] + s[con_idx];
@@ -181,22 +182,23 @@ public:
       } else {
 	assert(con_idx<ns+3);
 	//inequality
-	if(con_idx-ns==0) {
-	  cons[con_idx] = x[0];
-	  for(int i=0; i<ns; i++)   cons[con_idx] += s[i];
-	  for(int i=0; i<ns/4; i++) cons[con_idx] += y[i];
+	const int conineq_idx=con_idx-ns;
+	if(conineq_idx==0) {
+	  cons[conineq_idx] = x[0];
+	  for(int i=0; i<ns; i++)   cons[conineq_idx] += s[i];
+	  for(int i=0; i<ns/4; i++) cons[conineq_idx] += y[i];
 
-	} else if(con_idx-ns==1) {
-	  cons[con_idx] = x[1];
-	  for(int i=0; i<ns/4; i++) cons[con_idx] += y[i];
-	} else if(con_idx-ns==2) {
-	  cons[con_idx] = x[2];
-	  for(int i=0; i<ns/4; i++) cons[con_idx] += y[i];
+	} else if(conineq_idx==1) {
+	  cons[conineq_idx] = x[1];
+	  for(int i=0; i<ns/4; i++) cons[conineq_idx] += y[i];
+	} else if(conineq_idx==2) {
+	  cons[conineq_idx] = x[2];
+	  for(int i=0; i<ns/4; i++) cons[conineq_idx] += y[i];
 	} else { assert(false); }
       }  
     }
     if(isEq) {
-      Md->timesVec(1.0, cons, -1., y);
+      Md->timesVec(1.0, cons, 1.0, y);
     }
     return true;
   }
@@ -230,15 +232,15 @@ public:
 		     const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
 		     double** JacD)
   {
-    const double* s = x+ns;
-    const double* y = x+2*ns;
+    //const double* s = x+ns;
+    //const double* y = x+2*ns;
 
     assert(num_cons==ns || num_cons==3);
 
     if(iJacS!=NULL && jJacS!=NULL) {
       int nnzit=0;
       for(int itrow=0; itrow<num_cons; itrow++) {
-	const int con_idx = idx_cons[itrow];
+	const int con_idx = (int) idx_cons[itrow];
 	if(con_idx<ns) {
 	  //sparse Jacobian eq w.r.t. x and s
 	  //x
@@ -279,7 +281,7 @@ public:
     if(MJacS!=NULL) {
      int nnzit=0;
      for(int itrow=0; itrow<num_cons; itrow++) {
-       const int con_idx = idx_cons[itrow];
+       const int con_idx = (int) idx_cons[itrow];
        if(con_idx<ns) {
 	 //sparse Jacobian EQ w.r.t. x and s
 	 //x
@@ -316,7 +318,7 @@ public:
     if(JacD!=NULL) {
       bool isEq=false;
       for(int itrow=0; itrow<num_cons; itrow++) {
-	const int con_idx = idx_cons[itrow];
+	const int con_idx = (int) idx_cons[itrow];
 	if(con_idx<ns) {
 	  isEq=true;
 	  assert(num_cons==ns);
@@ -354,22 +356,19 @@ public:
     assert(iHSD==NULL); assert(jHSD==NULL); assert(MHSD==NULL);
 
     if(iHSS!=NULL && jHSS!=NULL) {
-      for(int i=0; i<ns; i++) {
-	iHSS[i] = jHSS[i] = i;
-      }
-      for(int i=0; i<ns; i++) {
-	const int is = i+ns;
-	iHSS[is] = i;
-	jHSS[is] = is;
-      }
+      for(int i=0; i<2*ns; i++) iHSS[i] = jHSS[i] = i;     
     }
 
     if(MHSS!=NULL) {
-      for(int i=0; i<2*ns; i++) MHSS[i] = 1.;
+      for(int i=0; i<2*ns; i++) MHSS[i] = obj_factor;
     }
 
     if(HDD!=NULL) {
-      memcpy(HDD[0], Q->local_buffer(), ns*ns/16*sizeof(double));
+      const int nx_dense_squared = ns*ns/16;
+      //memcpy(HDD[0], Q->local_buffer(), nx_dense_squared*sizeof(double));
+      const double* Qv = Q->local_buffer();
+      for(int i=0; i<nx_dense_squared; i++)
+	HDD[0][i] = obj_factor*Qv[i];
     }
     return true;
   }
