@@ -135,7 +135,11 @@ public:
 class hiopMatrixDense : public hiopMatrix
 {
 public:
-  hiopMatrixDense(const long long& m, const long long& glob_n, long long* col_part=NULL, MPI_Comm comm=MPI_COMM_SELF, const long long& m_max_alloc=-1);
+  hiopMatrixDense(const long long& m, 
+		  const long long& glob_n, 
+		  long long* col_part=NULL, 
+		  MPI_Comm comm=MPI_COMM_SELF, 
+		  const long long& m_max_alloc=-1);
   virtual ~hiopMatrixDense();
 
   virtual void setToZero();
