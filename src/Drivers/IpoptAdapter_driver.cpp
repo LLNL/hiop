@@ -14,7 +14,7 @@ using namespace Ipopt;
 int main(int    argv, char** argc)
 {
   //instantiate a HiOp problem 
-  Ex4 hiopNlp(12);
+  Ex4 hiopNlp(200);
   //create 
 
   // Create a new instance of the Ipopt nlp
@@ -33,7 +33,7 @@ int main(int    argv, char** argc)
   app->Options()->SetNumericValue("tol", 1e-7);
   app->Options()->SetStringValue("mu_strategy", "adaptive");
   app->Options()->SetStringValue("output_file", "ipopt.out");
-  
+  //app->Options()->SetStringValue("derivative_test", "second-order"); //"only-second-order"
   // Initialize the IpoptApplication and process the options
   ApplicationReturnStatus status;
   status = app->Initialize();

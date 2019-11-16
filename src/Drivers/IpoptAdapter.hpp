@@ -179,7 +179,11 @@ private:
 
 };
 
-/* From MixedDenseSparse NLP formulation to Ipopt's general TNLP */
+//we use hiopMatrixDense for the MDS adapter to enable double indexing, [i][j] on the double** 
+//buffers hiopInterfaceMDS implementations expect
+#include "hiopMatrix.hpp"
+
+/* Adapter from MixedDenseSparse NLP formulation to Ipopt's general TNLP */
 class hiopMDS2IpoptTNLP : public TNLP
 {
 public:
@@ -189,13 +193,15 @@ public:
     nx_sparse = nx_dense = nnz_sparse_Jaceq = nnz_sparse_Jacineq = 0;
     nnz_sparse_Hess_Lagr_SS = nnz_sparse_Hess_Lagr_SD = 0;
     cons_eq_idxs = cons_ineq_idxs = NULL;
-    _buf_Hess_or_Jac = NULL;
+    JacDeq = JacDineq = HessDL = NULL;
   };
   virtual ~hiopMDS2IpoptTNLP() 
   {
     delete [] cons_eq_idxs;
     delete [] cons_ineq_idxs;
-    delete [] _buf_Hess_or_Jac;
+    delete JacDeq;
+    delete JacDineq; 
+    delete HessDL;
   };
 
   /* Overloads from TNLP */
@@ -330,6 +336,7 @@ public:
 
     if(values==NULL) {
       int nnzit = 0;
+      //Sparse Jac for Eq
       {
 	long long num_cons = n_eq;
 	bret = hiopNLP->eval_Jac_cons(nll, mll, num_cons, cons_eq_idxs, 
@@ -341,12 +348,14 @@ public:
 	for(int i=0; i<n_eq; i++) {
 	  for(int j=0; j<nx_dense; j++) {
 	    assert(nnzit<nele_jac);
-	    iRow[nnzit] = cons_eq_idxs[i];
+	    iRow[nnzit] = (int)cons_eq_idxs[i];
 	    jCol[nnzit] = j+nx_sparse;
 	    nnzit++;
 	  }
 	}
       }
+
+      //Sparse Jac for Ineq
       {
 	long long num_cons = n_ineq;
 	bret = hiopNLP->eval_Jac_cons(nll, mll, num_cons, cons_ineq_idxs, 
@@ -354,52 +363,62 @@ public:
 				      nnz_sparse_Jacineq, iRow+nnzit, jCol+nnzit, NULL,
 				      NULL);
 	if(!bret) return false;
+	//in-place shift of iRow and jCol for Jacineq
+	for(int it=nnzit; it<nnzit+nnz_sparse_Jacineq; it++) 
+	  iRow[it] += n_eq;	
+
 	nnzit += nnz_sparse_Jacineq;
 	assert(nnzit<nele_jac);
 
 	for(int i=0; i<n_ineq; i++) {
 	  for(int j=0; j<nx_dense; j++) {
 	    assert(nnzit<nele_jac);
-	    iRow[nnzit] = cons_ineq_idxs[i];
+	    iRow[nnzit] = (int)cons_ineq_idxs[i];
 	    jCol[nnzit] = j+nx_sparse;
 	    nnzit++;
 	  }
 	}
       }
       assert(nnzit==nele_jac);
-      
+
     } else {
       assert(values!=NULL);
 
-      if(_buf_Hess_or_Jac==NULL) {
-	_buf_Hess_or_Jac = new double[std::max( nx_dense*nx_dense,std::max(n_eq,n_ineq)*nx_dense )];
+      if(JacDeq == NULL) {
+	JacDeq = new hiopMatrixDense(n_eq, nx_dense);
+	assert(JacDineq==NULL);
+      }
+      if(JacDineq == NULL) {
+	JacDineq = new hiopMatrixDense(n_ineq, nx_dense);
       }
 
       int nnzit = 0;
+      //sparse Jac Eq
       {
 	long long num_cons = n_eq;
 	bret = hiopNLP->eval_Jac_cons(nll, mll, num_cons, cons_eq_idxs, 
 				      x, new_x, nx_sparse, nx_dense, 
 				      nnz_sparse_Jaceq, NULL, NULL, values,
-				      &_buf_Hess_or_Jac);
+				      JacDeq->local_data());
 	if(!bret) return false;
 	nnzit += nnz_sparse_Jaceq; assert(nnzit<nele_jac);
 
 	//the dense part
-	memcpy(values+nnzit, _buf_Hess_or_Jac, n_eq*nx_dense*sizeof(double));
+	memcpy(values+nnzit, JacDeq->local_buffer(), n_eq*nx_dense*sizeof(double));
 	nnzit += n_eq*nx_dense; assert(nnzit<nele_jac);
       }
+      //sparse Jac Ineq
       {
 	long long num_cons = n_ineq;
 	bret = hiopNLP->eval_Jac_cons(nll, mll, num_cons, cons_ineq_idxs, 
 				      x, new_x, nx_sparse, nx_dense, 
 				      nnz_sparse_Jacineq, NULL, NULL, values+nnzit,
-				      &_buf_Hess_or_Jac);
+				      JacDineq->local_data());
 	if(!bret) return false;
 	nnzit += nnz_sparse_Jacineq; assert(nnzit<nele_jac);
 
 	//the dense part
-	memcpy(values+nnzit, _buf_Hess_or_Jac, n_ineq*nx_dense*sizeof(double));
+	memcpy(values+nnzit, JacDineq->local_buffer(), n_ineq*nx_dense*sizeof(double));
 	nnzit += n_ineq*nx_dense; 
       }
       assert(nnzit==nele_jac);
@@ -444,22 +463,23 @@ public:
       assert(values!=NULL);
 
       int nnzit = 0;
-      if(_buf_Hess_or_Jac==NULL) {
-	_buf_Hess_or_Jac = new double[std::max( nx_dense*nx_dense,std::max(n_eq,n_ineq)*nx_dense )];
+      if(HessDL==NULL) {
+	HessDL = new hiopMatrixDense(nx_dense, nx_dense);
       }
+      double** HessMat = HessDL->local_data();
 
       bret = hiopNLP->eval_Hess_Lagr(nll, mll, x, new_x, obj_factor, lambda, new_lambda,
-			    nx_sparse, nx_dense,
-			    nnz_sparse_Hess_Lagr_SS, NULL, NULL, values,
-			    &_buf_Hess_or_Jac,
-			    nnz_sparse_Hess_Lagr_SD,  NULL, NULL, NULL);
+				     nx_sparse, nx_dense,
+				     nnz_sparse_Hess_Lagr_SS, NULL, NULL, values,
+				     HessMat,
+				     nnz_sparse_Hess_Lagr_SD,  NULL, NULL, NULL);
       if(!bret) return false;
       nnzit += nnz_sparse_Hess_Lagr_SS;
       
       //dense part
       for(int i=0; i<nx_dense; ++i) {
 	for(int j=0; j<=i; ++j) {
-	  values[nnzit] = _buf_Hess_or_Jac[i*nx_dense+j];
+	  values[nnzit] = HessMat[i][j];
 	  nnzit++;
 	}
       }
@@ -488,8 +508,7 @@ private:
   int nnz_sparse_Hess_Lagr_SS, nnz_sparse_Hess_Lagr_SD;
   int n_eq, n_ineq;
   long long *cons_eq_idxs, *cons_ineq_idxs; 
-
-  double* _buf_Hess_or_Jac;
+  hiopMatrixDense *JacDeq, *JacDineq, *HessDL;
 
   /* Methods to block default compiler methods.
    * The compiler automatically generates the following three methods.

@@ -1,7 +1,15 @@
 #########################################################################
+# For TESTING HiOp only. Not intended for any kind of production use
+#
 # Makefile for HiOp's example driver for IpoptAddapter 
 # Based on IPOPT_DIR/Ipopt/examples/Cpp_example/Makefile
-# This file needs manual addaptations to your specific OS 
+# This file needs manual adaptations to your specific OS 
+#
+# Use as
+# > make -f Makefile_IpoptAddapter
+#
+# Remark that does not have 'clean' target :)
+# > rm IpoptAdapter_driver.o
 #########################################################################
 
 # Copyright (C) 2003, 2010 International Business Machines and others.
