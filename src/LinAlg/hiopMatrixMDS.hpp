@@ -146,14 +146,14 @@ public:
   inline long long n_sp() const {return mSp->n();}
   inline long long n_de() const {return  mDe->n();}
 
-  inline int sp_nnz() const { return mSp->nnz(); }
+  inline int sp_nnz() const { return mSp->numberOfNonzeros(); }
   inline int* sp_irow() { return mSp->i_row(); }
   inline int* sp_jcol() { return mSp->j_col(); }
   inline double* sp_M() { return mSp->M(); }
   inline double** de_local_data() { return mDe->local_data(); }
 
 #ifdef HIOP_DEEPCHECKS
-  virtual bool assertSymmetry(double tol=1e-16) const;
+  virtual bool assertSymmetry(double tol=1e-16) const { return false; }
 #endif
 private:
   hiopMatrixSparseTriplet* mSp;
@@ -291,14 +291,20 @@ public:
   inline long long n_sp() const {return mSp->n();}
   inline long long n_de() const {return  mDe->n();}
 
-  inline int sp_nnz() const { return mSp->nnz(); }
+  inline int sp_nnz() const { return mSp->numberOfNonzeros(); }
   inline int* sp_irow() { return mSp->i_row(); }
   inline int* sp_jcol() { return mSp->j_col(); }
   inline double* sp_M() { return mSp->M(); }
   inline double** de_local_data() { return mDe->local_data(); }
 
 #ifdef HIOP_DEEPCHECKS
-  virtual bool assertSymmetry(double tol=1e-16) const;
+  virtual bool assertSymmetry(double tol=1e-16) const
+  {
+    if(mSp->assertSymmetry(tol))
+      return mDe->assertSymmetry(tol);
+    else
+      return false;
+  }
 #endif
 private:
   hiopMatrixSymSparseTriplet* mSp;

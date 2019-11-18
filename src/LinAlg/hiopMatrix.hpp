@@ -76,7 +76,8 @@ class hiopVectorPar;
 class hiopMatrix
 {
 public:
-  virtual ~hiopMatrix() {};
+  hiopMatrix() {}
+  virtual ~hiopMatrix() {}
 
   virtual hiopMatrix* alloc_clone() const=0;
   virtual hiopMatrix* new_copy() const=0;

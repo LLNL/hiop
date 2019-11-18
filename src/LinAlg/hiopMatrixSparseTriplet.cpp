@@ -1,6 +1,9 @@
 #include "hiopMatrixSparseTriplet.hpp"
 
+#include "blasdefs.hpp"
+
 #include <algorithm> //for std::min
+#include <cmath> //for std::isfinite
 #include <cstring>
 
 #include <cassert>
@@ -8,8 +11,8 @@
 namespace hiop
 {
 
-hiopMatrixSparseTriplet::hiopMatrixSparseTriplet(int rows, int cols, int nnz)
-  : nrows(rows), ncols(cols), nonzeroes(nnz)
+hiopMatrixSparseTriplet::hiopMatrixSparseTriplet(int rows, int cols, int nnz_)
+  : nrows(rows), ncols(cols), nnz(nnz_)
 {
   iRow = new  int[nnz];
   jCol = new int[nnz];
@@ -22,6 +25,18 @@ hiopMatrixSparseTriplet::~hiopMatrixSparseTriplet()
   delete [] jCol;
   delete [] values;
 }
+
+void hiopMatrixSparseTriplet::setToZero()
+{
+  for(int i=0; i<nnz; i++)
+    values[i] = 0.;
+}
+void hiopMatrixSparseTriplet::setToConstant(double c)
+{
+  for(int i=0; i<nnz; i++)
+    values[i] = c;
+}
+
 
 /** y = beta * y + alpha * this * x */
 void hiopMatrixSparseTriplet::timesVec(double beta,  hiopVector& y,
@@ -49,7 +64,7 @@ void hiopMatrixSparseTriplet::timesVec(double beta,  double* y,
   }
 
   // y += alpha*this*x
-  for (int i = 0; i < nonzeroes; i++) {
+  for (int i = 0; i < nnz; i++) {
     assert(iRow[i] < nrows);
     assert(jCol[i] < ncols);
     y[iRow[i]] += alpha * x[jCol[i]] * values[i];
@@ -82,29 +97,104 @@ void hiopMatrixSparseTriplet::transTimesVec(double beta,   double* y,
   }
   
   // y += alpha*this^T*x
-  for (int i = 0; i < nonzeroes; i++) {
+  for (int i = 0; i < nnz; i++) {
     assert(iRow[i] < nrows);
     assert(jCol[i] < ncols);
     y[jCol[i]] += alpha * x[iRow[i]] * values[i];
   }
 }
 
+void hiopMatrixSparseTriplet::timesMat(double beta, hiopMatrix& W, 
+				       double alpha, const hiopMatrix& X) const
+{
+  assert(false && "not needed");
+}
+
+void hiopMatrixSparseTriplet::transTimesMat(double beta, hiopMatrix& W, 
+					    double alpha, const hiopMatrix& X) const
+{
+  assert(false && "not needed");
+}
+
+void hiopMatrixSparseTriplet::timesMatTrans(double beta, hiopMatrix& W, 
+					    double alpha, const hiopMatrix& X) const
+{
+  assert(false && "not needed");
+}
+void hiopMatrixSparseTriplet::addDiagonal(const hiopVector& d_)
+{
+  assert(false && "not needed");
+}
+void hiopMatrixSparseTriplet::addDiagonal(const double& value)
+{
+  assert(false && "not needed");
+}
+void hiopMatrixSparseTriplet::addSubDiagonal(long long start, const hiopVector& d_)
+{
+  assert(false && "not needed");
+}
+
+void hiopMatrixSparseTriplet::addMatrix(double alpha, const hiopMatrix& X)
+{
+  assert(false && "not needed");
+}
+
+double hiopMatrixSparseTriplet::max_abs_value()
+{
+  char norm='M'; int one=1;
+  double maxv = DLANGE(&norm, &one, &nnz, values, &one, NULL);
+  return maxv;
+}
+
+bool hiopMatrixSparseTriplet::isfinite() const
+{
+
+#ifdef HIOP_DEEPCHECKS
+  assert(this->checkIndexesAreOrdered());
+#endif
+  for(int i=0; i<nnz; i++)
+    if(false==std::isfinite(values[i])) return false;
+  return true;
+}
+
 hiopMatrix* hiopMatrixSparseTriplet::alloc_clone() const
 {
-  return new hiopMatrixSparseTriplet(nrows, ncols, nonzeroes);
+  return new hiopMatrixSparseTriplet(nrows, ncols, nnz);
 }
+
 hiopMatrix* hiopMatrixSparseTriplet::new_copy() const
 {
-  hiopMatrixSparseTriplet* copy = new hiopMatrixSparseTriplet(nrows, ncols, nonzeroes);
-  memcpy(copy->iRow, iRow, nonzeroes*sizeof(int));
-  memcpy(copy->jCol, jCol, nonzeroes*sizeof(int));
-  memcpy(copy->values, values, nonzeroes*sizeof(double));
+#ifdef HIOP_DEEPCHECKS
+  assert(this->checkIndexesAreOrdered());
+#endif
+  hiopMatrixSparseTriplet* copy = new hiopMatrixSparseTriplet(nrows, ncols, nnz);
+  memcpy(copy->iRow, iRow, nnz*sizeof(int));
+  memcpy(copy->jCol, jCol, nnz*sizeof(int));
+  memcpy(copy->values, values, nnz*sizeof(double));
   return copy;
 }
+void hiopMatrixSparseTriplet::copyFrom(const hiopMatrixSparseTriplet& dm)
+{
+  assert(false && "this is to be implemented - method def too vague for now");
+}
+
+#ifdef HIOP_DEEPCHECKS
+bool hiopMatrixSparseTriplet::checkIndexesAreOrdered() const
+{
+  if(nnz==0) return true;
+  for(int i=1; i<nnz; i++) {
+    if(iRow[i] < iRow[i-1]) return false;
+    /* else */
+    if(iRow[i] == iRow[i-1])
+      if(jCol[i] < jCol[i-1]) return false;
+  }
+  return true;
+}
+#endif
 
 // void hiopMatrixSparse::make(int nrows_, int ncols_, const vector<vector<int>> &vvCols, const vector<vector<double>> &vvValues)
 // {
-//   assert(nonzeroes == 0);
+//   assert(nnz == 0);
 //   assert(nrows == 0);
 //   assert(ncols == 0);
 
@@ -112,16 +202,16 @@ hiopMatrix* hiopMatrixSparseTriplet::new_copy() const
 //   ncols = ncols_;
 
 //   //count the number of nonzeros
-//   nonzeroes = 0;
+//   nnz = 0;
 //   for (int i = 0; i < nrows_; i++)
 //   {
-//       nonzeroes += vvCols[i].size();
+//       nnz += vvCols[i].size();
 //   }
 
 //   //allocate the space
-//   iRow   = new int[nonzeroes]; 
-//   jCol   = new int[nonzeroes]; 
-//   values = new double[nonzeroes]; 
+//   iRow   = new int[nnz]; 
+//   jCol   = new int[nnz]; 
+//   values = new double[nnz]; 
   
 //   //fill in the structure and values
 //   int nnz_idx = 0;
@@ -148,18 +238,18 @@ void hiopMatrixSparseTriplet::print(FILE* file, const char* msg/*=NULL*/,
 {
   int myrank=0, numranks=1; //this is a local object => always print
 
-    int max_elems = maxRows>=0 ? maxRows : nonzeroes;
-    max_elems = std::min(max_elems, nonzeroes);
+    int max_elems = maxRows>=0 ? maxRows : nnz;
+    max_elems = std::min(max_elems, nnz);
 
   if(myrank==rank || rank==-1) {
 
     if(NULL==msg) {
       if(numranks>1)
         fprintf(file, "matrix of size %lld %lld and nonzeros %lld, printing %d elems (on rank=%d)\n", 
-		nrows, ncols, nonzeroes, max_elems, myrank);
+		nrows, ncols, nnz, max_elems, myrank);
       else
         fprintf(file, "matrix of size %lld %lld and nonzeros %lld, printing %d elems\n", 
-		nrows, ncols, nonzeroes, max_elems);
+		nrows, ncols, nnz, max_elems);
     } else {
       fprintf(file, "%s ", msg);
     }    
@@ -212,7 +302,7 @@ void hiopMatrixSymSparseTriplet::timesVec(double beta,  double* y,
   }
 
   // y += alpha*this*x
-  for (int i = 0; i < nonzeroes; i++) {
+  for (int i = 0; i < nnz; i++) {
     assert(iRow[i] < nrows);
     assert(jCol[i] < ncols);
     y[iRow[i]] += alpha * x[jCol[i]] * values[i];
@@ -224,15 +314,16 @@ void hiopMatrixSymSparseTriplet::timesVec(double beta,  double* y,
 hiopMatrix* hiopMatrixSymSparseTriplet::alloc_clone() const
 {
   assert(nrows == ncols);
-  return new hiopMatrixSymSparseTriplet(nrows, nonzeroes);
+  return new hiopMatrixSymSparseTriplet(nrows, nnz);
 }
 hiopMatrix* hiopMatrixSymSparseTriplet::new_copy() const
 {
   assert(nrows == ncols);
-  hiopMatrixSymSparseTriplet* copy = new hiopMatrixSymSparseTriplet(nrows, nonzeroes);
-  memcpy(copy->iRow, iRow, nonzeroes*sizeof(int));
-  memcpy(copy->jCol, jCol, nonzeroes*sizeof(int));
-  memcpy(copy->values, values, nonzeroes*sizeof(double));
+  hiopMatrixSymSparseTriplet* copy = new hiopMatrixSymSparseTriplet(nrows, nnz);
+  memcpy(copy->iRow, iRow, nnz*sizeof(int));
+  memcpy(copy->jCol, jCol, nnz*sizeof(int));
+  memcpy(copy->values, values, nnz*sizeof(double));
   return copy;
 }
+
 } //end of namespace

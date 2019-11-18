@@ -4,10 +4,14 @@
 #include "hiopVector.hpp"
 #include "hiopMatrix.hpp"
 
+#include <cassert>
+
 namespace hiop
 {
 
 /** Sparse matrix in triplet format - it is not distributed
+ * 
+ * Note: for now (i,j) are expected ordered: first on rows 'i' and then on cols 'j'
  */
 class hiopMatrixSparseTriplet : public hiopMatrix
 {
@@ -39,7 +43,7 @@ public:
   virtual void addDiagonal(const double& value);
   virtual void addSubDiagonal(long long start, const hiopVector& d_);
 
-  virtual void addMatrix(double alpah, const hiopMatrix& X);
+  virtual void addMatrix(double alpha, const hiopMatrix& X);
   virtual double max_abs_value();
 
   virtual bool isfinite() const;
@@ -52,27 +56,33 @@ public:
 
   virtual long long m() const {return nrows;}
   virtual long long n() const {return ncols;}
-  virtual long long nnz() const {return nonzeroes;}
+  virtual long long numberOfNonzeros() const {return nnz;}
 
   inline int* i_row() { return iRow; }
   inline int* j_col() { return jCol; }
   inline double* M() { return values; }
 #ifdef HIOP_DEEPCHECKS
-  virtual bool assertSymmetry(double tol=1e-16) const;
+  virtual bool assertSymmetry(double tol=1e-16) const { return false; }
+  virtual bool checkIndexesAreOrdered() const;
 #endif
 protected:
   int nrows; ///< number of rows
   int ncols; ///< number of columns
-  int nonzeroes;  ///< number of nonzero entries
+  int nnz;  ///< number of nonzero entries
    
   int* iRow; ///< row indices of the nonzero entries
   int* jCol; ///< column indices of the nonzero entries
   double* values; ///< values of the nonzero entries
 private:
-  hiopMatrixSparseTriplet() : nrows(0), ncols(0), nonzeroes(0), iRow(NULL), jCol(NULL), values(NULL)
+  hiopMatrixSparseTriplet() 
+    : nrows(0), ncols(0), nnz(0), iRow(NULL), jCol(NULL), values(NULL)
   {
-  };
-  hiopMatrixSparseTriplet(const hiopMatrixSparseTriplet&) {};
+  }
+  hiopMatrixSparseTriplet(const hiopMatrixSparseTriplet&) 
+    : nrows(0), ncols(0), nnz(0), iRow(NULL), jCol(NULL), values(NULL)
+  {
+    assert(false);
+  }
 };
 
 /** Sparse symmetric matrix in triplet format. Only the lower triangle is stored */
@@ -83,7 +93,7 @@ public:
     : hiopMatrixSparseTriplet(n, n, nnz)
   {
   }
-  virtual ~hiopMatrixSymSparseTriplet(); 
+  virtual ~hiopMatrixSymSparseTriplet() {}  
 
   /** y = beta * y + alpha * this * x */
   virtual void timesVec(double beta,  hiopVector& y,
@@ -104,6 +114,10 @@ public:
 
   virtual hiopMatrix* alloc_clone() const;
   virtual hiopMatrix* new_copy() const;
+
+#ifdef HIOP_DEEPCHECKS
+  virtual bool assertSymmetry(double tol=1e-16) const { return true; }
+#endif
 };
 
 } //end of namespace
