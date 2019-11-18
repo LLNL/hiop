@@ -622,7 +622,10 @@ hiopMatrixDense* hiopNlpDenseConstraints::alloc_multivector_primal(int nrows, in
   return M;
 }
 
-
+/* ***********************************************************************************
+ *    hiopNlpMDS class implementation 
+ * ***********************************************************************************
+*/
 
 
 };

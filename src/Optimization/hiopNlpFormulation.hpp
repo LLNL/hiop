@@ -313,7 +313,11 @@ private:
 class hiopNlpMDS : public hiopNlpFormulation
 {
 public:
-  hiopNlpMDS(hiopInterfaceMDS& interface_);
+  hiopNlpMDS(hiopInterfaceMDS& interface_)
+    : hiopNlpFormulation(interface_), interface(interface_)
+  {
+
+  }
   virtual ~hiopNlpMDS() {};
   virtual bool eval_Jac_c(double* x, bool new_x, hiopMatrix& Jac_c)
   {
@@ -364,10 +368,26 @@ public:
       return false;
     }
   }
-  virtual hiopMatrix* alloc_Jac_c() const;
-  virtual hiopMatrix* alloc_Jac_d() const;
+  virtual hiopMatrix* alloc_Jac_c() 
+  {
+    assert(n_vars == nx_sparse+nx_dense);
+    return new hiopMatrixMDS(n_cons_eq, nx_sparse, nx_dense, nnz_sparse_Jaceq);
+  }
+  virtual hiopMatrix* alloc_Jac_d() 
+  {
+    assert(n_vars == nx_sparse+nx_dense);
+    return new hiopMatrixMDS(n_cons_ineq, nx_sparse, nx_dense, nnz_sparse_Jacineq);
+  }
+  virtual hiopMatrix* alloc_Hess_Lagr()
+  {
+    assert(0==nnz_sparse_Hess_Lagr_SD);
+    return new hiopMatrixSymBlockDiagMDS(nx_sparse, nx_dense, nnz_sparse_Hess_Lagr_SS);
+  }
 private:
   hiopInterfaceMDS& interface;
+  int nx_sparse, nx_dense;
+  int nnz_sparse_Jaceq, nnz_sparse_Jacineq;
+  int nnz_sparse_Hess_Lagr_SS, nnz_sparse_Hess_Lagr_SD;
 };
 
 }
