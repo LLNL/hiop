@@ -119,6 +119,7 @@ public:
   void print(FILE* f, const char* msg=NULL) const;
 
   friend class hiopResidual;
+  friend class hiopKKTLinSysCompressedXYcYd;
   friend class hiopKKTLinSysDense;
   friend class hiopKKTLinSysLowRank;
   friend class hiopHessianLowRank;

@@ -84,11 +84,13 @@ public:
   /** Copy the elements of v */
   virtual void copyFrom(const hiopVector& v ) = 0;
   /* Copy v in 'this' starting at start_index in  'this'. */
-  virtual void copyFromStarting(const hiopVector& v, int start_index) = 0;
+  virtual void copyFromStarting(int start_index_in_src, const hiopVector& v) = 0;
   /* Copy 'this' to double array, which is assumed to be at least of 'n_local' size.*/
   virtual void copyTo(double* dest) const = 0;
   /* Copy 'this' to v starting at start_index in 'this'. */
-  virtual void copyToStarting(hiopVector& v, int start_index) = 0;
+  virtual void copyToStarting(int start_index_in_src, hiopVector& v) = 0;
+  /* Copy 'this' to v starting at start_index in 'v'. */
+  virtual void copyToStarting(hiopVector& v, int start_index_in_dest) = 0;
   /** Return the two norm */
   virtual double twonorm() const = 0;
   /** Return the infinity norm */
@@ -184,9 +186,11 @@ public:
   virtual void setToConstant_w_patternSelect(double c, const hiopVector& select);
   virtual void copyFrom(const hiopVector& v );
   virtual void copyFrom(const double* v_local_data); //v should be of length at least n_local
-  virtual void copyFromStarting(const hiopVector& v, int start_index);
+  virtual void copyFromStarting(int start_index_in_src, const hiopVector& v);
   virtual void copyTo(double* dest) const;
-  virtual void copyToStarting(hiopVector& v, int start_index);
+  virtual void copyToStarting(int start_index_in_src, hiopVector& v);
+  /* Copy 'this' to v starting at start_index in 'v'. */
+  virtual void copyToStarting(hiopVector& v, int start_index_in_dest);
   virtual double twonorm() const;
   virtual double dotProductWith( const hiopVector& v ) const;
   virtual double infnorm() const;

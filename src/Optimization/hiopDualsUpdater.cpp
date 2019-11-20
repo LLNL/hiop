@@ -196,8 +196,8 @@ bool hiopDualsLsqUpdate::LSQUpdate(hiopIterate& iter, const hiopVector& grad_f, 
   jac_d.timesVec(0.0, *rhsd, -1.0, vecx);
   rhsd->axpy(-1.0, vecd);
 
-  rhs->copyFromStarting(*rhsc, 0);
-  rhs->copyFromStarting(*rhsd, nlpd->m_eq());
+  rhs->copyFromStarting(0, *rhsc);
+  rhs->copyFromStarting(nlpd->m_eq(), *rhsd);
 
   //nlpd->log->write("rhs", *rhs, hovSummary);
 #ifdef HIOP_DEEPCHECKS
@@ -211,8 +211,8 @@ bool hiopDualsLsqUpdate::LSQUpdate(hiopIterate& iter, const hiopVector& grad_f, 
   }
 
   //update yc and yd in iter_plus
-  rhs->copyToStarting(*iter.get_yc(), 0);
-  rhs->copyToStarting(*iter.get_yd(), nlpd->m_eq());
+  rhs->copyToStarting(0, *iter.get_yc());
+  rhs->copyToStarting(nlpd->m_eq(), *iter.get_yd());
 
 #ifdef HIOP_DEEPCHECKS
   double nrmrhs = rhs_copy->twonorm();

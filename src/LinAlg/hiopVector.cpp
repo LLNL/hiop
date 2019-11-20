@@ -143,7 +143,7 @@ void hiopVectorPar::copyFrom(const double* v_local_data )
 }
 
 
-void hiopVectorPar::copyFromStarting(const hiopVector& v_, int start_index)
+void hiopVectorPar::copyFromStarting(int start_index/*_in_src*/,const hiopVector& v_)
 {
   const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_);
 #ifdef HIOP_DEEPCHECKS
@@ -153,7 +153,7 @@ void hiopVectorPar::copyFromStarting(const hiopVector& v_, int start_index)
   memcpy(data+start_index, v.data, v.n_local*sizeof(double));
 }
 
-void hiopVectorPar::copyToStarting(hiopVector& v_, int start_index)
+void hiopVectorPar::copyToStarting(int start_index, hiopVector& v_)
 {
   const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_);
 #ifdef HIOP_DEEPCHECKS
@@ -162,12 +162,18 @@ void hiopVectorPar::copyToStarting(hiopVector& v_, int start_index)
   assert(start_index+v.n_local <= n_local);
   memcpy(v.data, data+start_index, v.n_local*sizeof(double));
 }
+/* Copy 'this' to v starting at start_index in 'v'. */
+void hiopVectorPar::copyToStarting(hiopVector& v_, int start_index/*_in_dest*/)
+{
+  const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_);
+  assert(start_index+n_local <= v.n_local);
+  memcpy(v.data+start_index, data, n_local*sizeof(double)); 
+}
 
 void hiopVectorPar::copyTo(double* dest) const
 {
   memcpy(dest, this->data, n_local*sizeof(double));
 }
-
 
 double hiopVectorPar::twonorm() const 
 {

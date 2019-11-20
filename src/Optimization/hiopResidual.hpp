@@ -115,6 +115,7 @@ private:
   hiopResidual() {};
   hiopResidual(const hiopResidual&) {};
   hiopResidual& operator=(const hiopResidual& o) {return *this;};
+  friend class hiopKKTLinSysCompressedXYcYd;
   friend class hiopKKTLinSysLowRank;
 };
 
