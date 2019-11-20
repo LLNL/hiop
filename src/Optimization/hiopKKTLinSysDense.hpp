@@ -62,11 +62,16 @@ public:
   hiopKKTLinSysDense(hiopNlpFormulation* nlp_)
     : nlp(nlp_), linSys(NULL)
   {
-
+    Dx = dynamic_cast<hiopVectorPar*>(nlp->alloc_primal_vec());
+    assert(Dx != NULL);
+    Dd_inv = dynamic_cast<hiopVectorPar*>(nlp->alloc_dual_ineq_vec());
+    assert(Dd_inv != NULL);
   }
   virtual ~hiopKKTLinSysDense()
   {
     delete linSys;
+    delete Dx;
+    delete Dd_inv;
   }
 
   /* updates the parts in KKT system that are dependent on the iterate. 
@@ -77,6 +82,8 @@ public:
 	      const hiopMatrix* Jac_c, const hiopMatrix* Jac_d, 
 	      hiopMatrix* Hess)
   {
+    nlp->runStats.tmSolverInternal.start();
+
     int nx  = Hess->m(); assert(nx==Hess->n()); assert(nx==Jac_c->n()); assert(nx==Jac_d->n()); 
     int neq = Jac_c->m(), nineq = Jac_d->m();
     
@@ -84,15 +91,41 @@ public:
       int n=Jac_c->m() + Jac_d->m() + Hess->m();
       linSys = new hiopLinSolverIndefDense(n, nlp);
     }
-    hiopMatrixDense& Msys = linSys->sysMatrix();
-    Msys.setToZero();
 
-    int alpha = 1.;
-    Hess->addToSymDenseMatrixUpperTriangle (0,      0, alpha, Msys);
+    //update linSys system matrix
+    {
+      hiopMatrixDense& Msys = linSys->sysMatrix();
+      Msys.setToZero();
+      
+      int alpha = 1.;
+      Hess->addUpperTriangleToSymDenseMatrixUpperTriangle(0, alpha, Msys);
+      
+      Jac_c->transAddToSymDenseMatrixUpperTriangle(0, nx,     alpha, Msys);
+      Jac_d->transAddToSymDenseMatrixUpperTriangle(0, nx+neq, alpha, Msys);
+      
+      //compute and put the barrier diagonals in
+      //Dx=(Sxl)^{-1}Zl + (Sxu)^{-1}Zu
+      Dx->setToZero();
+      Dx->axdzpy_w_pattern(1.0, *iter->zl, *iter->sxl, nlp->get_ixl());
+      Dx->axdzpy_w_pattern(1.0, *iter->zu, *iter->sxu, nlp->get_ixu());
+      nlp->log->write("Dx in KKT", *Dx, hovMatrices);
+      
+      //Dd=(Sdl)^{-1}Vu + (Sdu)^{-1}Vu
+      Dd_inv->setToZero();
+      Dd_inv->axdzpy_w_pattern(1.0, *iter->vl, *iter->sdl, nlp->get_idl());
+      Dd_inv->axdzpy_w_pattern(1.0, *iter->vu, *iter->sdu, nlp->get_idu());
+#ifdef HIOP_DEEPCHECKS
+      assert(true==Dd_inv->allPositive());
+#endif 
+      Dd_inv->invert();
 
-    Jac_c->transAddToSymDenseMatrixUpperTriangle(nx,     0, alpha, Msys);
-    Jac_d->transAddToSymDenseMatrixUpperTriangle(nx+neq, 0, alpha, Msys);
+      Msys.addSubDiagonal(0, *Dx);
+      Msys.addSubDiagonal(nx+neq, *Dd_inv);
+    }
+    
+    linSys->matrixChanged();
 
+    nlp->runStats.tmSolverInternal.stop();
     return true;
   }
 
@@ -104,6 +137,7 @@ protected:
   
   hiopNlpFormulation* nlp;
   hiopLinSolverIndefDense* linSys;
+  hiopVectorPar *Dx, *Dd_inv;
 private:
   hiopKKTLinSysDense() : nlp(NULL), linSys(NULL) { assert(false); }
 };

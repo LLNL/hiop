@@ -111,14 +111,35 @@ public:
   /* this += alpha*X */
   virtual void addMatrix(double alpha, const hiopMatrix& X) = 0;
 
-  /* block of W += alpha*this 
-  * For efficiency, only upper triangular matrix is updated since this will be eventually sent to LAPACK*/
+  /* block of W += alpha*this
+   * For efficiency, only upper triangular matrix is updated since this will be eventually sent to LAPACK
+   * Preconditions: 
+   *  1. 'this' has to fit in the upper triangle of W 
+   *  2. W.n() == W.m()
+   */
   virtual void addToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start, 
 						double alpha, hiopMatrixDense& W) const = 0;
   /* block of W += alpha*transpose(this)
-  * For efficiency, only upper triangular matrix is updated since this will be eventually sent to LAPACK*/
+   * For efficiency, only upper triangular matrix is updated since this will be eventually sent to LAPACK
+   * Preconditions: 
+   *  1. transpose of 'this' has to fit in the upper triangle of W 
+   *  2. W.n() == W.m()
+   */
   virtual void transAddToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start, 
-					double alpha, hiopMatrixDense& W) const = 0;
+						     double alpha, hiopMatrixDense& W) const = 0;
+
+  /* diagonal block of W += alpha*this with 'diag_start' indicating the diagonal entry of W where
+   * 'this' should start to contribute.
+   * 
+   * For efficiency, only upper triangle of W is updated since this will be eventually sent to LAPACK
+   * and only the upper triangle of 'this' is accessed
+   * 
+   * Preconditions: 
+   *  1. this->n()==this-m()
+   *  2. W.n() == W.m()
+   */
+  virtual void addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start, 
+							     double alpha, hiopMatrixDense& W) const = 0;
 
   virtual double max_abs_value() = 0;
 
@@ -188,13 +209,34 @@ public:
   virtual void addMatrix(double alpah, const hiopMatrix& X);
 
   /* block of W += alpha*this
-  * For efficiency, only upper triangular matrix is updated since this will be eventually sent to LAPACK*/
+   * For efficiency, only upper triangular matrix is updated since this will be eventually sent to LAPACK
+   * Preconditions: 
+   *  1. 'this' has to fit in the upper triangle of W 
+   *  2. W.n() == W.m()
+   */
   virtual void addToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start, 
 						double alpha, hiopMatrixDense& W) const;
   /* block of W += alpha*transpose(this)
-   * For efficiency, only upper triangular matrix is updated since this will be eventually sent to LAPACK*/
+   * For efficiency, only upper triangular matrix is updated since this will be eventually sent to LAPACK
+   * Preconditions: 
+   *  1. transpose of 'this' has to fit in the upper triangle of W 
+   *  2. W.n() == W.m()
+   */
   virtual void transAddToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start, 
 						     double alpha, hiopMatrixDense& W) const;
+
+  /* diagonal block of W += alpha*this with 'diag_start' indicating the diagonal entry of W where
+   * 'this' should start to contribute.
+   * 
+   * For efficiency, only upper triangle of W is updated since this will be eventually sent to LAPACK
+   * and only the upper triangle of 'this' is accessed
+   * 
+   * Preconditions: 
+   *  1. this->n()==this->m()
+   *  2. W.n() == W.m()
+   */
+  virtual void addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start, 
+							     double alpha, hiopMatrixDense& W) const;
 
   virtual double max_abs_value();
 

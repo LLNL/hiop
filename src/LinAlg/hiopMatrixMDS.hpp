@@ -121,6 +121,22 @@ public:
     mDe->transAddToSymDenseMatrixUpperTriangle(row_start+mSp->n(), col_start, alpha, W);
   }
 
+  /* diagonal block of W += alpha*this with 'diag_start' indicating the diagonal entry of W where
+   * 'this' should start to contribute.
+   * 
+   * For efficiency, only upper triangle of W is updated since this will be eventually sent to LAPACK
+   * and only the upper triangle of 'this' is accessed
+   * 
+   * Preconditions: 
+   *  1. this->n()==this-m()
+   *  2. W.n() == W.m()
+   */
+  virtual void addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start, 
+							     double alpha, hiopMatrixDense& W) const
+  {
+    assert(false && "not for general matrices; counterpart method from hiopMatrixSymBlockDiagMDS should be used instead");
+  }
+
   virtual double max_abs_value()
   {
     return std::max(mSp->max_abs_value(), mDe->max_abs_value());
@@ -272,14 +288,34 @@ public:
   /* block of W += alpha*this */
   virtual void addToSymDenseMatrixUpperTriangle(int row_start, int col_start, double alpha, hiopMatrixDense& W) const
   {
-    mSp->addToSymDenseMatrixUpperTriangle(row_start, col_start, alpha, W);
-    mDe->addToSymDenseMatrixUpperTriangle(row_start, col_start+mSp->n(), alpha, W);
+    assert(mSp->m() == mSp->n());
+    mSp->addToSymDenseMatrixUpperTriangle(row_start,          col_start,          alpha, W);
+    mDe->addToSymDenseMatrixUpperTriangle(row_start+mSp->n(), col_start+mSp->n(), alpha, W);
   }
   /* block of W += alpha*this */
   virtual void transAddToSymDenseMatrixUpperTriangle(int row_start, int col_start, double alpha, hiopMatrixDense& W) const
   {
-    mSp->transAddToSymDenseMatrixUpperTriangle(row_start,          col_start, alpha, W);
-    mDe->transAddToSymDenseMatrixUpperTriangle(row_start+mSp->n(), col_start, alpha, W);
+    assert(mSp->m() == mSp->n());
+    mSp->transAddToSymDenseMatrixUpperTriangle(row_start,          col_start,          alpha, W);
+    mDe->transAddToSymDenseMatrixUpperTriangle(row_start+mSp->n(), col_start+mSp->n(), alpha, W);
+  }
+
+  /* diagonal block of W += alpha*this with 'diag_start' indicating the diagonal entry of W where
+   * 'this' should start to contribute.
+   * 
+   * For efficiency, only upper triangle of W is updated since this will be eventually sent to LAPACK
+   * and only the upper triangle of 'this' is accessed
+   * 
+   * Preconditions: 
+   *  1. this->n()==this-m()
+   *  2. W.n() == W.m()
+   */
+  virtual void addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start, 
+							     double alpha, hiopMatrixDense& W) const
+  {
+    assert(mSp->m() == mSp->n());
+    mSp->addUpperTriangleToSymDenseMatrixUpperTriangle(diag_start,          alpha, W);
+    mDe->addUpperTriangleToSymDenseMatrixUpperTriangle(diag_start+mSp->m(), alpha, W);
   }
 
   virtual double max_abs_value()

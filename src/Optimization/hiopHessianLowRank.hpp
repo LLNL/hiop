@@ -295,7 +295,11 @@ public:
   {
     assert(false && "not needed; should not be used");
   }
-
+  void addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start, 
+						     double alpha, hiopMatrixDense& W) const
+  {
+    assert(false && "not needed; should not be used");
+  }
   virtual double max_abs_value()
   {
     assert(false && "not provided because it is not needed");

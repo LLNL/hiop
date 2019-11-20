@@ -144,8 +144,8 @@ void hiopMatrixSparseTriplet::addMatrix(double alpha, const hiopMatrix& X)
 void hiopMatrixSparseTriplet::addToSymDenseMatrixUpperTriangle(int row_start, int col_start, 
 							       double alpha, hiopMatrixDense& W) const
 {
-  assert(row_start>=0 && row_start+nrows<W.m());
-  assert(col_start>=0 && col_start+ncols<W.n());
+  assert(row_start>=0 && row_start+nrows<=W.m());
+  assert(col_start>=0 && col_start+ncols<=W.n());
   assert(W.n()==W.m());
 
   double** WM = W.get_M();
@@ -162,8 +162,8 @@ void hiopMatrixSparseTriplet::addToSymDenseMatrixUpperTriangle(int row_start, in
 void hiopMatrixSparseTriplet::transAddToSymDenseMatrixUpperTriangle(int row_start, int col_start, 
 								    double alpha, hiopMatrixDense& W) const
 {
-  assert(row_start>=0 && row_start+ncols<W.m());
-  assert(col_start>=0 && col_start+nrows<W.n());
+  assert(row_start>=0 && row_start+ncols<=W.m());
+  assert(col_start>=0 && col_start+nrows<=W.n());
   assert(W.n()==W.m());
 
   double** WM = W.get_M();
@@ -368,8 +368,8 @@ hiopMatrix* hiopMatrixSymSparseTriplet::new_copy() const
 void hiopMatrixSymSparseTriplet::addToSymDenseMatrixUpperTriangle(int row_start, int col_start, 
 						  double alpha, hiopMatrixDense& W) const
 {
-  assert(row_start>=0 && row_start+nrows<W.m());
-  assert(col_start>=0 && col_start+ncols<W.n());
+  assert(row_start>=0 && row_start+nrows<=W.m());
+  assert(col_start>=0 && col_start+ncols<=W.n());
   assert(W.n()==W.m());
 
   double** WM = W.get_M();
@@ -385,13 +385,13 @@ void hiopMatrixSymSparseTriplet::addToSymDenseMatrixUpperTriangle(int row_start,
 void hiopMatrixSymSparseTriplet::transAddToSymDenseMatrixUpperTriangle(int row_start, int col_start, 
 								       double alpha, hiopMatrixDense& W) const
 {
-  assert(row_start>=0 && row_start+ncols<W.m());
-  assert(col_start>=0 && col_start+nrows<W.n());
+  assert(row_start>=0 && row_start+ncols<=W.m());
+  assert(col_start>=0 && col_start+nrows<=W.n());
   assert(W.n()==W.m());
 
   double** WM = W.get_M();
   for(int it=0; it<nnz; it++) {
-    assert(iRow[it]<=jCol[it] && "sparse symmetric matrices should contain only upper triangular entries");
+    assert(iRow[it]<=jCol[it] && "sparse symmetric matrices should contain only upper triangle entries");
     const int i = jCol[it]+row_start;
     const int j = iRow[it]+col_start;
     assert(i<W.m() && j<W.n()); assert(i>=0 && j>=0);
@@ -399,6 +399,5 @@ void hiopMatrixSymSparseTriplet::transAddToSymDenseMatrixUpperTriangle(int row_s
     WM[i][j] += alpha*values[it];
   }
 }
-
 
 } //end of namespace

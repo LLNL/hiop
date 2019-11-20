@@ -638,8 +638,8 @@ void hiopMatrixDense::addMatrix(double alpha, const hiopMatrix& X_)
 void hiopMatrixDense::addToSymDenseMatrixUpperTriangle(int row_start, int col_start, 
 						       double alpha, hiopMatrixDense& W) const
 {
-  assert(row_start>=0 && m()+row_start<W.m());
-  assert(col_start>=0 && n()+col_start<W.n());
+  assert(row_start>=0 && m()+row_start<=W.m());
+  assert(col_start>=0 && n()+col_start<=W.n());
   assert(W.n()==W.m());
 
   double** WM = W.get_M();
@@ -653,21 +653,50 @@ void hiopMatrixDense::addToSymDenseMatrixUpperTriangle(int row_start, int col_st
   }
 }
 
-/* block of W += alpha*this */
+/* block of W += alpha*this' */
 void hiopMatrixDense::transAddToSymDenseMatrixUpperTriangle(int row_start, int col_start, 
-					  double alpha, hiopMatrixDense& W) const
+							    double alpha, hiopMatrixDense& W) const
 {
-  assert(row_start>=0 && n()+row_start<W.m());
-  assert(col_start>=0 && m()+col_start<W.n());
+  assert(row_start>=0 && n()+row_start<=W.m());
+  assert(col_start>=0 && m()+col_start<=W.n());
   assert(W.n()==W.m());
 
   double** WM = W.get_M();
-  for(int i=0; i<n_local; i++) {
-    const int iW = i+row_start;
-    for(int j=0; j<m_local; j++) {
-      const int jW = j+col_start;
+  for(int ir=0; ir<m_local; ir++) {
+    const int jW = ir+col_start;
+    for(int jc=0; jc<n_local; jc++) {
+      const int iW = jc+row_start;
       assert(iW<=jW && "source entries need to map inside the upper triangular part of destination");
-      WM[iW][jW] += alpha*this->M[j][i];
+      WM[iW][jW] += alpha*this->M[ir][jc];
+    }
+  }
+}
+
+  /* diagonal block of W += alpha*this with 'diag_start' indicating the diagonal entry of W where
+   * 'this' should start to contribute.
+   * 
+   * For efficiency, only upper triangle of W is updated since this will be eventually sent to LAPACK
+   * and only the upper triangle of 'this' is accessed
+   * 
+   * Preconditions: 
+   *  1. this->n()==this->m()
+   *  2. W.n() == W.m()
+   */
+void hiopMatrixDense::
+addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start, 
+					      double alpha, hiopMatrixDense& W) const
+{
+  assert(W.n()==W.m());
+  assert(this->n()==this->m());
+  assert(diag_start+this->n() <= W.n());
+  double** WM = W.get_M();
+  for(int i=0; i<n_local; i++) {
+    const int iW = i+diag_start;
+    for(int j=i; j<m_local; j++) {
+      const int jW = j+diag_start;
+      assert(iW<=jW && "source entries need to map inside the upper triangular part of destination");
+      assert(iW<W.n() && jW<W.m());
+      WM[iW][jW] += alpha*this->M[i][j];
     }
   }
 }

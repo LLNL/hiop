@@ -51,6 +51,11 @@ public:
   /* block of W += alpha*transpose(this) */
   virtual void transAddToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start, 
 						     double alpha, hiopMatrixDense& W) const;
+  virtual void addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start, 
+							     double alpha, hiopMatrixDense& W) const
+  {
+    assert(false && "counterpart method of hiopMatrixSymSparseTriplet should be used");
+  }
 
   virtual double max_abs_value();
 
@@ -126,6 +131,12 @@ public:
   void transAddToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start,                                                                           
 				     double alpha, hiopMatrixDense& W) const;
 
+  inline void addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start, 
+							    double alpha, hiopMatrixDense& W) const
+  {
+    assert(this->n()+diag_start < W.n());
+    addToSymDenseMatrixUpperTriangle(diag_start, diag_start, alpha, W);
+  }
   virtual hiopMatrix* alloc_clone() const;
   virtual hiopMatrix* new_copy() const;
 
