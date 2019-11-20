@@ -48,6 +48,7 @@
 
 #include "hiopAlgFilterIPM.hpp"
 #include "hiopKKTLinSys.hpp"
+#include "hiopKKTLinSysDense.hpp"
 
 #include <cmath>
 #include <cstring>
@@ -981,7 +982,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
   theta_max=1e+4*fmax(1.0,resid->getInfeasInfNorm());
   theta_min=1e-4*fmax(1.0,resid->getInfeasInfNorm());
   
-  hiopKKTLinSysLowRank* kkt=new hiopKKTLinSysLowRank(nlp);
+  hiopKKTLinSysDense* kkt=new hiopKKTLinSysDense(nlp);
 
   _alpha_primal = _alpha_dual = 0;
 

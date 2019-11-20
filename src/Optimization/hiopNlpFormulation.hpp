@@ -319,6 +319,19 @@ public:
 
   }
   virtual ~hiopNlpMDS() {};
+
+  virtual bool finalizeInitialization()
+  {
+    if(!interface.get_sparse_dense_blocks_info(nx_sparse, nx_dense,
+					       nnz_sparse_Jaceq, nnz_sparse_Jacineq,
+					       nnz_sparse_Hess_Lagr_SS, 
+					       nnz_sparse_Hess_Lagr_SD)) {
+      return false;
+    }
+    assert(0==nnz_sparse_Hess_Lagr_SD);
+    return hiopNlpFormulation::finalizeInitialization();
+  }
+
   virtual bool eval_Jac_c(double* x, bool new_x, hiopMatrix& Jac_c)
   {
     hiopMatrixMDS* pJac_c = dynamic_cast<hiopMatrixMDS*>(&Jac_c);

@@ -11,7 +11,7 @@ static bool self_check(long long n, double obj_value);
 
 static bool parse_arguments(int argc, char **argv, long long& n, bool& self_check)
 {
-  self_check=false; n = 50000;
+  self_check=false; n = 40;
   switch(argc) {
   case 1:
     //no arguments
@@ -76,11 +76,14 @@ int main(int argc, char **argv)
 
   Ex4 nlp_interface(n);
 
-  // hiopNlpDenseConstraints nlp(nlp_interface);
+  hiopNlpMDS nlp(nlp_interface);
 
-  // hiopAlgFilterIPM solver(&nlp);
-  // status = solver.run();
-  // obj_value = solver.getObjective();
+  nlp.options->SetStringValue("dualsUpdateType", "linear");
+  nlp.options->SetStringValue("dualsInitialization", "zero");
+
+  hiopAlgFilterIPMNewton solver(&nlp);
+  status = solver.run();
+  obj_value = solver.getObjective();
 
   // if(status<0) {
   //   if(rank==0) printf("solver returned negative solve status: %d (with objective is %18.12e)\n", status, obj_value);
