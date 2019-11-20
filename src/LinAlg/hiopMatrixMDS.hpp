@@ -104,7 +104,17 @@ public:
     if(pX==NULL) {
       assert(false && "operation only supported for hiopMatrixMDS left operand");
     }
+    mSp->addMatrix(alpha, *pX->mSp);
+    mDe->addMatrix(alpha, *pX->mDe);
   }
+
+  /* block of W += alpha*this */
+  virtual void addToSymDenseMatrix(int row_start, int col_start, double alpha, hiopMatrixDense& W) const
+  {
+    mSp->addToSymDenseMatrix(row_start, col_start, alpha, W);
+    mDe->addToSymDenseMatrix(row_start, col_start+mSp->n(), alpha, W);
+  }
+
   virtual double max_abs_value()
   {
     return std::max(mSp->max_abs_value(), mDe->max_abs_value());
@@ -248,8 +258,18 @@ public:
     const hiopMatrixSymBlockDiagMDS* pX=dynamic_cast<const hiopMatrixSymBlockDiagMDS*>(&X);
     if(pX==NULL) {
       assert(false && "operation only supported for hiopMatrixMDS left operand");
-    }
+    } 
+    mSp->addMatrix(alpha, *pX->mSp);
+    mDe->addMatrix(alpha, *pX->mDe);
   }
+
+  /* block of W += alpha*this */
+  virtual void addToSymDenseMatrix(int row_start, int col_start, double alpha, hiopMatrixDense& W) const
+  {
+    mSp->addToSymDenseMatrix(row_start, col_start, alpha, W);
+    mDe->addToSymDenseMatrix(row_start, col_start+mSp->n(), alpha, W);
+  }
+
   virtual double max_abs_value()
   {
     return std::max(mSp->max_abs_value(), mDe->max_abs_value());

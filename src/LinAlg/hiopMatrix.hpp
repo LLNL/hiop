@@ -72,7 +72,9 @@ namespace hiop
 
 class hiopVector;
 class hiopVectorPar;
+  class hiopMatrixDense;
 
+/* See readme.md for some conventions on matrices */ 
 class hiopMatrix
 {
 public:
@@ -101,12 +103,16 @@ public:
   /* W = beta*W + alpha*this*X^T */
   virtual void timesMatTrans(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const =0;
 
+  /* this += alpha * (sub)diag */
   virtual void addDiagonal(const hiopVector& d_) = 0;
   virtual void addDiagonal(const double& value) = 0;
   virtual void addSubDiagonal(long long start, const hiopVector& d_) = 0;
 
   /* this += alpha*X */
-  virtual void addMatrix(double alpah, const hiopMatrix& X) = 0;
+  virtual void addMatrix(double alpha, const hiopMatrix& X) = 0;
+
+  /* block of W += alpha*this */
+  virtual void addToSymDenseMatrix(int row_block_start, int col_block_start, double alpha, hiopMatrixDense& W) const = 0;
 
   virtual double max_abs_value() = 0;
 
@@ -174,6 +180,10 @@ public:
   virtual void addSubDiagonal(long long start, const hiopVector& d_);
 
   virtual void addMatrix(double alpah, const hiopMatrix& X);
+
+  /* block of W += alpha*this */
+  virtual void addToSymDenseMatrix(int row_block_start, int col_block_start, double alpha, hiopMatrixDense& W) const;
+ 
   virtual double max_abs_value();
 
   virtual bool isfinite() const;

@@ -286,6 +286,12 @@ public:
   {
     assert(false && "not provided because it is not needed");
   }
+
+  void addToSymDenseMatrix(int row_start, int col_start, double alpha, hiopMatrixDense& W) const
+  {
+    assert(false && "not needed; should not be used");
+  }
+
   virtual double max_abs_value()
   {
     assert(false && "not provided because it is not needed");

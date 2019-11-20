@@ -628,10 +628,30 @@ void hiopMatrixDense::addMatrix(double alpha, const hiopMatrix& X_)
   assert(m_local==X.m_local);
   assert(n_local==X.n_local);
 #endif
-  //  extern "C" void   daxpy_(int* n, double* da, double* dx, int* incx, double* dy, int* incy );
+
   int N=m_local*n_local, inc=1;
   DAXPY(&N, &alpha, X.M[0], &inc, M[0], &inc);
 }
+
+  /* block of W += alpha*this */
+void hiopMatrixDense::addToSymDenseMatrix(int row_start, int col_start, 
+					  double alpha, hiopMatrixDense& W) const
+{
+  assert(row_start>=0 && m()+row_start<W.m());
+  assert(col_start>=0 && n()+col_start<W.n());
+  assert(W.n()==W.m());
+
+  double** WM = W.get_M();
+  for(int i=0; i<m_local; i++) {
+    const int iW = i+row_start;
+    for(int j=0; j<n_local; j++) {
+      const int jW = i+col_start;
+      assert(iW<=jW && "source entries need to map inside the upper triangular part of destination");
+      WM[iW][jW] = this->M[i][j];
+    }
+  }
+}
+
 
 double hiopMatrixDense::max_abs_value()
 {
