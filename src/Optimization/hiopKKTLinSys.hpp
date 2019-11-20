@@ -64,8 +64,8 @@ public:
    * anything, for example, LowRank linear system */
   virtual bool update(const hiopIterate* iter, 
 		      const hiopVector* grad_f, 
-		      const hiopMatrixDense* Jac_c, const hiopMatrixDense* Jac_d, 
-		      hiopHessianLowRank* Hess)=0;
+		      const hiopMatrix* Jac_c, const hiopMatrix* Jac_d, 
+		      hiopMatrix* Hess)=0;
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction)=0;
   virtual ~hiopKKTLinSys() {}
 };
@@ -75,6 +75,21 @@ class hiopKKTLinSysLowRank : public hiopKKTLinSys
 public:
   hiopKKTLinSysLowRank(hiopNlpFormulation* nlp_);
   virtual ~hiopKKTLinSysLowRank();
+
+  bool update(const hiopIterate* iter, 
+	      const hiopVector* grad_f, 
+	      const hiopMatrix* Jac_c_, const hiopMatrix* Jac_d_, 
+	      hiopMatrix* Hess_)
+  {
+    const hiopMatrixDense* Jac_c = dynamic_cast<const hiopMatrixDense*>(Jac_c_);
+    const hiopMatrixDense* Jac_d = dynamic_cast<const hiopMatrixDense*>(Jac_d_);
+    hiopHessianLowRank* Hess = dynamic_cast<hiopHessianLowRank*>(Hess_);
+    if(Jac_c==NULL || Jac_d==NULL || Hess==NULL) {
+      assert(false);
+      return false;
+    }
+    return update(iter, grad_f, Jac_c, Jac_d, Hess);
+  }
 
   virtual bool update(const hiopIterate* iter, 
 		      const hiopVector* grad_f, 
