@@ -633,9 +633,10 @@ void hiopMatrixDense::addMatrix(double alpha, const hiopMatrix& X_)
   DAXPY(&N, &alpha, X.M[0], &inc, M[0], &inc);
 }
 
-  /* block of W += alpha*this */
-void hiopMatrixDense::addToSymDenseMatrix(int row_start, int col_start, 
-					  double alpha, hiopMatrixDense& W) const
+/* block of W += alpha*this 
+ * starts are in destination */
+void hiopMatrixDense::addToSymDenseMatrixUpperTriangle(int row_start, int col_start, 
+						       double alpha, hiopMatrixDense& W) const
 {
   assert(row_start>=0 && m()+row_start<W.m());
   assert(col_start>=0 && n()+col_start<W.n());
@@ -645,9 +646,28 @@ void hiopMatrixDense::addToSymDenseMatrix(int row_start, int col_start,
   for(int i=0; i<m_local; i++) {
     const int iW = i+row_start;
     for(int j=0; j<n_local; j++) {
-      const int jW = i+col_start;
+      const int jW = j+col_start;
       assert(iW<=jW && "source entries need to map inside the upper triangular part of destination");
-      WM[iW][jW] = this->M[i][j];
+      WM[iW][jW] += alpha*this->M[i][j];
+    }
+  }
+}
+
+/* block of W += alpha*this */
+void hiopMatrixDense::transAddToSymDenseMatrixUpperTriangle(int row_start, int col_start, 
+					  double alpha, hiopMatrixDense& W) const
+{
+  assert(row_start>=0 && n()+row_start<W.m());
+  assert(col_start>=0 && m()+col_start<W.n());
+  assert(W.n()==W.m());
+
+  double** WM = W.get_M();
+  for(int i=0; i<n_local; i++) {
+    const int iW = i+row_start;
+    for(int j=0; j<m_local; j++) {
+      const int jW = j+col_start;
+      assert(iW<=jW && "source entries need to map inside the upper triangular part of destination");
+      WM[iW][jW] += alpha*this->M[j][i];
     }
   }
 }

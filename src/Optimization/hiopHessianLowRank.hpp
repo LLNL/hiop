@@ -287,7 +287,11 @@ public:
     assert(false && "not provided because it is not needed");
   }
 
-  void addToSymDenseMatrix(int row_start, int col_start, double alpha, hiopMatrixDense& W) const
+  void addToSymDenseMatrixUpperTriangle(int row_start, int col_start, double alpha, hiopMatrixDense& W) const
+  {
+    assert(false && "not needed; should not be used");
+  }
+  void transAddToSymDenseMatrixUpperTriangle(int row_start, int col_start, double alpha, hiopMatrixDense& W) const
   {
     assert(false && "not needed; should not be used");
   }

@@ -109,10 +109,16 @@ public:
   }
 
   /* block of W += alpha*this */
-  virtual void addToSymDenseMatrix(int row_start, int col_start, double alpha, hiopMatrixDense& W) const
+  virtual void addToSymDenseMatrixUpperTriangle(int row_start, int col_start, double alpha, hiopMatrixDense& W) const
   {
-    mSp->addToSymDenseMatrix(row_start, col_start, alpha, W);
-    mDe->addToSymDenseMatrix(row_start, col_start+mSp->n(), alpha, W);
+    mSp->addToSymDenseMatrixUpperTriangle(row_start, col_start, alpha, W);
+    mDe->addToSymDenseMatrixUpperTriangle(row_start, col_start+mSp->n(), alpha, W);
+  }
+  /* block of W += alpha*this */
+  virtual void transAddToSymDenseMatrixUpperTriangle(int row_start, int col_start, double alpha, hiopMatrixDense& W) const
+  {
+    mSp->transAddToSymDenseMatrixUpperTriangle(row_start,          col_start, alpha, W);
+    mDe->transAddToSymDenseMatrixUpperTriangle(row_start+mSp->n(), col_start, alpha, W);
   }
 
   virtual double max_abs_value()
@@ -264,10 +270,16 @@ public:
   }
 
   /* block of W += alpha*this */
-  virtual void addToSymDenseMatrix(int row_start, int col_start, double alpha, hiopMatrixDense& W) const
+  virtual void addToSymDenseMatrixUpperTriangle(int row_start, int col_start, double alpha, hiopMatrixDense& W) const
   {
-    mSp->addToSymDenseMatrix(row_start, col_start, alpha, W);
-    mDe->addToSymDenseMatrix(row_start, col_start+mSp->n(), alpha, W);
+    mSp->addToSymDenseMatrixUpperTriangle(row_start, col_start, alpha, W);
+    mDe->addToSymDenseMatrixUpperTriangle(row_start, col_start+mSp->n(), alpha, W);
+  }
+  /* block of W += alpha*this */
+  virtual void transAddToSymDenseMatrixUpperTriangle(int row_start, int col_start, double alpha, hiopMatrixDense& W) const
+  {
+    mSp->transAddToSymDenseMatrixUpperTriangle(row_start,          col_start, alpha, W);
+    mDe->transAddToSymDenseMatrixUpperTriangle(row_start+mSp->n(), col_start, alpha, W);
   }
 
   virtual double max_abs_value()

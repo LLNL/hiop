@@ -46,7 +46,11 @@ public:
   virtual void addMatrix(double alpha, const hiopMatrix& X);
 
   /* block of W += alpha*this */
-  virtual void addToSymDenseMatrix(int row_block_start, int col_block_start, double alpha, hiopMatrixDense& W) const;
+  virtual void addToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start, 
+						double alpha, hiopMatrixDense& W) const;
+  /* block of W += alpha*transpose(this) */
+  virtual void transAddToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start, 
+						     double alpha, hiopMatrixDense& W) const;
 
   virtual double max_abs_value();
 
@@ -116,8 +120,11 @@ public:
     return timesVec(beta, y, alpha, x);
   }
 
-  void addToSymDenseMatrix(int row_start, int col_start,                                                                           
-			   double alpha, hiopMatrixDense& W) const;
+  void addToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start,                                                                           
+				double alpha, hiopMatrixDense& W) const;
+  
+  void transAddToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start,                                                                           
+				     double alpha, hiopMatrixDense& W) const;
 
   virtual hiopMatrix* alloc_clone() const;
   virtual hiopMatrix* new_copy() const;

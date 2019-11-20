@@ -111,8 +111,14 @@ public:
   /* this += alpha*X */
   virtual void addMatrix(double alpha, const hiopMatrix& X) = 0;
 
-  /* block of W += alpha*this */
-  virtual void addToSymDenseMatrix(int row_block_start, int col_block_start, double alpha, hiopMatrixDense& W) const = 0;
+  /* block of W += alpha*this 
+  * For efficiency, only upper triangular matrix is updated since this will be eventually sent to LAPACK*/
+  virtual void addToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start, 
+						double alpha, hiopMatrixDense& W) const = 0;
+  /* block of W += alpha*transpose(this)
+  * For efficiency, only upper triangular matrix is updated since this will be eventually sent to LAPACK*/
+  virtual void transAddToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start, 
+					double alpha, hiopMatrixDense& W) const = 0;
 
   virtual double max_abs_value() = 0;
 
@@ -181,9 +187,15 @@ public:
 
   virtual void addMatrix(double alpah, const hiopMatrix& X);
 
-  /* block of W += alpha*this */
-  virtual void addToSymDenseMatrix(int row_block_start, int col_block_start, double alpha, hiopMatrixDense& W) const;
- 
+  /* block of W += alpha*this
+  * For efficiency, only upper triangular matrix is updated since this will be eventually sent to LAPACK*/
+  virtual void addToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start, 
+						double alpha, hiopMatrixDense& W) const;
+  /* block of W += alpha*transpose(this)
+   * For efficiency, only upper triangular matrix is updated since this will be eventually sent to LAPACK*/
+  virtual void transAddToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start, 
+						     double alpha, hiopMatrixDense& W) const;
+
   virtual double max_abs_value();
 
   virtual bool isfinite() const;
@@ -250,6 +262,8 @@ private:
     return _buff_mxnlocal;
   }
 };
+
+
 
 }
 #endif

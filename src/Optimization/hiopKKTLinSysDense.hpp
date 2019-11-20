@@ -88,10 +88,10 @@ public:
     Msys.setToZero();
 
     int alpha = 1.;
-    Hess->addToSymDenseMatrix (0,      0, alpha, Msys);
-    Jac_c->addToSymDenseMatrix(nx,     0, alpha, Msys);
-    Jac_d->addToSymDenseMatrix(nx+neq, 0, alpha, Msys);
+    Hess->addToSymDenseMatrixUpperTriangle (0,      0, alpha, Msys);
 
+    Jac_c->transAddToSymDenseMatrixUpperTriangle(nx,     0, alpha, Msys);
+    Jac_d->transAddToSymDenseMatrixUpperTriangle(nx+neq, 0, alpha, Msys);
 
     return true;
   }
