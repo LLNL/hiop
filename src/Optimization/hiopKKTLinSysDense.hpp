@@ -56,33 +56,34 @@ namespace hiop
 {
 
 /** KKT system treated as dense; used for developement/testing purposes mainly */
-class hiopKKTLinSysDense : public hiopKKTLinSys
+class hiopKKTLinSysDense : public hiopKKTLinSysCompressedXYcYd
 {
 public:
   hiopKKTLinSysDense(hiopNlpFormulation* nlp_)
-    : nlp(nlp_), linSys(NULL)
+    : hiopKKTLinSysCompressedXYcYd(nlp_), linSys(NULL), rhsXYcYd(NULL)
   {
-    Dx = dynamic_cast<hiopVectorPar*>(nlp->alloc_primal_vec());
-    assert(Dx != NULL);
-    Dd_inv = dynamic_cast<hiopVectorPar*>(nlp->alloc_dual_ineq_vec());
-    assert(Dd_inv != NULL);
   }
   virtual ~hiopKKTLinSysDense()
   {
     delete linSys;
-    delete Dx;
-    delete Dd_inv;
+    delete rhsXYcYd;
   }
 
   /* updates the parts in KKT system that are dependent on the iterate. 
    * Triggers a refactorization for the dense linear system */
 
-  bool update(const hiopIterate* iter, 
-	      const hiopVector* grad_f, 
-	      const hiopMatrix* Jac_c, const hiopMatrix* Jac_d, 
-	      hiopMatrix* Hess)
+  bool update(const hiopIterate* iter_, 
+	      const hiopVector* grad_f_, 
+	      const hiopMatrix* Jac_c_, const hiopMatrix* Jac_d_, 
+	      hiopMatrix* Hess_)
   {
     nlp->runStats.tmSolverInternal.start();
+
+    iter = iter_;   
+    grad_f = dynamic_cast<const hiopVectorPar*>(grad_f_);
+    Jac_c = Jac_c_; Jac_d = Jac_d_;
+
+    Hess=Hess_;
 
     int nx  = Hess->m(); assert(nx==Hess->n()); assert(nx==Jac_c->n()); assert(nx==Jac_d->n()); 
     int neq = Jac_c->m(), nineq = Jac_d->m();
@@ -129,17 +130,66 @@ public:
     return true;
   }
 
-  bool computeDirections(const hiopResidual* resid, hiopIterate* direction)
+  virtual void solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
+			       hiopVectorPar& dx, hiopVectorPar& dyc, hiopVectorPar& dyd)
   {
-    return true;
+    int nx=rx.get_size(), nyc=ryc.get_size(), nyd=ryd.get_size();
+    if(rhsXYcYd == NULL) rhsXYcYd = new hiopVectorPar(nx+nyc+nyd);
+
+    rx. copyToStarting(*rhsXYcYd, 0);
+    ryc.copyToStarting(*rhsXYcYd, nx);
+    ryd.copyToStarting(*rhsXYcYd, nx+nyc);
+    
+    linSys->solve(*rhsXYcYd);
+
+    rhsXYcYd->copyToStarting(0,      dx);
+    rhsXYcYd->copyToStarting(nx,     dyc);
+    rhsXYcYd->copyToStarting(nx+nyc, dyd);
   }
+
+#ifdef HIOP_DEEPCHECKS
+  double errorCompressedLinsys(const hiopVectorPar& rx, const hiopVectorPar& ryc, const hiopVectorPar& ryd,
+			       const hiopVectorPar& dx, const hiopVectorPar& dyc, const hiopVectorPar& dyd)
+  {
+    nlp->log->printf(hovLinAlgScalars, "hiopKKTLinSysLowRank::errorCompressedLinsys residuals norm:\n");
+    
+    double derr=1e20, aux;
+    hiopVectorPar *RX=rx.new_copy();
+    //RX=rx-H*dx-J'c*dyc-J'*dyd
+    Hess->timesVec(1.0, *RX, -1.0, dx);
+    RX->axzpy(-1.0,*Dx,dx);
+
+    Jac_c->transTimesVec(1.0, *RX, -1.0, dyc);
+    Jac_d->transTimesVec(1.0, *RX, -1.0, dyd);
+    aux=RX->twonorm();
+    derr=fmax(derr,aux);
+    nlp->log->printf(hovLinAlgScalars, "  >>>  rx=%g\n", aux);
+    delete RX; RX=NULL;
+
+    hiopVectorPar* RC=ryc.new_copy();
+    Jac_c->timesVec(1.0,*RC, -1.0,dx);
+    aux = RC->twonorm();
+    derr=fmax(derr,aux);
+    nlp->log->printf(hovLinAlgScalars, "  >>> ryc=%g\n", aux);
+    delete RC; RC=NULL;
+    
+    hiopVectorPar* RD=ryd.new_copy();
+    Jac_d->timesVec(1.0,*RD, -1.0, dx);
+    RD->axzpy(1.0, *Dd_inv, dyd);
+    aux = RD->twonorm();
+    derr=fmax(derr,aux);
+    nlp->log->printf(hovLinAlgScalars, "  >>> ryd=%g\n", aux);
+    delete RD; RD=NULL;
+    
+    return derr;
+  }
+#endif
+
 protected:
-  
-  hiopNlpFormulation* nlp;
   hiopLinSolverIndefDense* linSys;
-  hiopVectorPar *Dx, *Dd_inv;
+  hiopVectorPar* rhsXYcYd;
 private:
-  hiopKKTLinSysDense() : nlp(NULL), linSys(NULL) { assert(false); }
+  hiopKKTLinSysDense() :  hiopKKTLinSysCompressedXYcYd(NULL), linSys(NULL) { assert(false); }
 };
 
 
