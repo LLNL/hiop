@@ -243,6 +243,7 @@ public:
   {
     assert(false && "not provided because it is not needed");
   }
+
   void timesVec(double beta, hiopVector& y, double alpha, const hiopVector&x) const
   {
     assert(false && "not provided because it is not needed");

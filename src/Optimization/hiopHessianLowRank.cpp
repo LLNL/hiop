@@ -629,8 +629,8 @@ void hiopHessianLowRank::solveWithV(hiopVectorPar& rhs_s, hiopVectorPar& rhs_y)
   nlp->log->write("hiopHessianLowRank::solveWithV: RHS IN 's' part: ", rhs_s, hovMatrices);
   nlp->log->write("hiopHessianLowRank::solveWithV: RHS IN 'y' part: ", rhs_y, hovMatrices);
   hiopVectorPar* rhs_saved= new hiopVectorPar(rhs_s.get_size()+rhs_y.get_size());
-  rhs_saved->copyFromStarting(rhs_s,0);
-  rhs_saved->copyFromStarting(rhs_y,l);
+  rhs_saved->copyFromStarting(0, rhs_s);
+  rhs_saved->copyFromStarting(l, rhs_y);
 #endif
 
   int lda=N, one=1, info;
@@ -639,8 +639,8 @@ void hiopHessianLowRank::solveWithV(hiopVectorPar& rhs_s, hiopVectorPar& rhs_y)
   assert(N==rhs_s.get_size()+rhs_y.get_size());
 #endif
   hiopVectorPar& rhs=new_2l_vec1(l);
-  rhs.copyFromStarting(rhs_s,0);
-  rhs.copyFromStarting(rhs_y,l);
+  rhs.copyFromStarting(0, rhs_s);
+  rhs.copyFromStarting(l, rhs_y);
 
   DSYTRS(&uplo, &N, &one, V->local_buffer(), &lda, _V_ipiv_vec, rhs.local_data(), &N, &info);
 
@@ -648,8 +648,8 @@ void hiopHessianLowRank::solveWithV(hiopVectorPar& rhs_s, hiopVectorPar& rhs_y)
   assert(info==0);
 
   //copy back the solution
-  rhs.copyToStarting(rhs_s,0);
-  rhs.copyToStarting(rhs_y,l);
+  rhs.copyToStarting(0,rhs_s);
+  rhs.copyToStarting(l,rhs_y);
 
 #ifdef HIOP_DEEPCHECKS
   nlp->log->write("solveWithV: SOL OUT 's' part: ", rhs_s, hovMatrices);
