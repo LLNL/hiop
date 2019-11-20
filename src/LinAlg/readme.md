@@ -15,7 +15,7 @@ This is done to allow double indexing specific to matrices, for example
 hiopMatrixDense W(10,10);
 double** WM = W.get_M();
 //set entry (7,10) to -17
-WM[7][10] = -17.;
+WM[6][9] = -17.;
 ```
 ### *Symmetric* dense matrices 
 `hiopMatrixDense` is also used for symmetric dense matrices by enforcing `n()==m()`. The general rule is to store, update, and maintain the matrix such that `M(i,j)==M(j,i)`. This will allow the methods of  `hiopMatrixDense` to work for symmetric matrices as well.
