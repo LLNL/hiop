@@ -54,7 +54,7 @@
 namespace hiop
 {
 
-hiopIterate::hiopIterate(const hiopNlpDenseConstraints* nlp_)
+hiopIterate::hiopIterate(const hiopNlpFormulation* nlp_)
 {
   nlp = nlp_;
   x = dynamic_cast<hiopVectorPar*>(nlp->alloc_primal_vec());

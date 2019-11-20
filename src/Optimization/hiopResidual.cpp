@@ -54,7 +54,7 @@
 namespace hiop
 {
 
-hiopResidual::hiopResidual(hiopNlpDenseConstraints* nlp_)
+hiopResidual::hiopResidual(hiopNlpFormulation* nlp_)
 {
   nlp = nlp_;
   rx = dynamic_cast<hiopVectorPar*>(nlp->alloc_primal_vec());

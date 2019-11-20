@@ -1,6 +1,6 @@
 // Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
-// Written by Cosmin G. Petra, petra1@llnl.gov.
+// Written by Cosmin G. Petra, petra1@llnl.gov and Juraj Kardos
 // LLNL-CODE-742473. All rights reserved.
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
@@ -77,6 +77,10 @@ class hiopMatrix
 {
 public:
   virtual ~hiopMatrix() {};
+
+  virtual hiopMatrix* alloc_clone() const=0;
+  virtual hiopMatrix* new_copy() const=0;
+
   virtual void setToZero()=0;
   virtual void setToConstant(double c)=0;
 
@@ -110,6 +114,10 @@ public:
   
   /* call with -1 to print all rows, all columns, or on all ranks; otherwise will
   *  will print the first rows and/or columns on the specified rank.
+  * 
+  * If the underlying matrix is sparse, maxCols is ignored and a max number elements 
+  * given by the value of 'maxRows' will be printed. If this value is negative, all
+  * elements will be printed.
   */
   virtual void print(FILE* f=NULL, const char* msg=NULL, int maxRows=-1, int maxCols=-1, int rank=-1) const = 0;
   /* number of rows */
@@ -120,7 +128,6 @@ public:
   /* check symmetry */
   virtual bool assertSymmetry(double tol=1e-16) const = 0;
 #endif
-private:
 };
 
 /** Dense matrix stored row-wise and distributed column-wise 
@@ -128,7 +135,11 @@ private:
 class hiopMatrixDense : public hiopMatrix
 {
 public:
-  hiopMatrixDense(const long long& m, const long long& glob_n, long long* col_part=NULL, MPI_Comm comm=MPI_COMM_SELF, const long long& m_max_alloc=-1);
+  hiopMatrixDense(const long long& m, 
+		  const long long& glob_n, 
+		  long long* col_part=NULL, 
+		  MPI_Comm comm=MPI_COMM_SELF, 
+		  const long long& m_max_alloc=-1);
   virtual ~hiopMatrixDense();
 
   virtual void setToZero();
@@ -138,9 +149,16 @@ public:
 
   virtual void timesVec(double beta,  hiopVector& y,
 			double alpha, const hiopVector& x) const;
+  /* same as above for mostly for internal use - avoid using it */
+  virtual void timesVec(double beta,  double* y,
+			double alpha, const double* x) const;
+
   virtual void transTimesVec(double beta,   hiopVector& y,
 			     double alpha, const hiopVector& x) const;
-
+  /* same as above for mostly for internal use - avoid using it */
+  virtual void transTimesVec(double beta,   double* y,
+			     double alpha, const double* x) const;
+  
   virtual void timesMat(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const;
   virtual void timesMat_local(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const;
 

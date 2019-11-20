@@ -47,6 +47,7 @@
 // product endorsement purposes.
 
 #include "hiopNlpFormulation.hpp"
+#include "hiopHessianLowRank.hpp"
 #include "hiopLogger.hpp"
 
 #ifdef HIOP_USE_MPI
@@ -61,15 +62,18 @@
 namespace hiop
 {
 
-hiopNlpFormulation::hiopNlpFormulation(hiopInterfaceBase& interface)
+hiopNlpFormulation::hiopNlpFormulation(hiopInterfaceBase& interface_)
 #ifdef HIOP_USE_MPI
-  : mpi_init_called(false)
+  : mpi_init_called(false), interface_base(interface_)
+#else 
+  : interface_base(interface_)
 #endif
 {
   strFixedVars = ""; //uninitialized
   dFixedVarsTol=-1.; //uninitialized
+  bool bret;
 #ifdef HIOP_USE_MPI
-  bool bret = interface.get_MPI_comm(comm); assert(bret);
+  bret = interface_base.get_MPI_comm(comm); assert(bret);
 
   int nret;
   //MPI may not be initialized: this occurs when a serial driver call HiOp built with MPI support on
@@ -97,27 +101,10 @@ hiopNlpFormulation::hiopNlpFormulation(hiopInterfaceBase& interface)
   //log->write(NULL, *options, hovSummary);//! comment this at some point
 
   runStats = hiopRunStats(comm);
-}
 
-hiopNlpFormulation::~hiopNlpFormulation()
-{
-  delete log;
-  delete options;
 
-#ifdef HIOP_USE_MPI
-  //some (serial) drivers call (MPI) HiOp repeatedly in an outer loop
-  //if we finalize here, subsequent calls to MPI will fail and break this outer loop. So we don't finalize
-  //if(mpi_init_called) { 
-  //  int nret=MPI_Finalize(); assert(MPI_SUCCESS==nret);
-  //}
-#endif
-}
-
-//#include <unistd.h>
-
-hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& interface_)
-  : hiopNlpFormulation(interface_), interface(interface_)
-{
+  /* NLP members intialization */
+  bret = interface_base.get_prob_sizes(n_vars, n_cons); assert(bret);
   xl=NULL;
   xu=NULL;
   vars_type=NULL;
@@ -136,11 +123,10 @@ hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& 
   vec_distrib=NULL;
 #endif
 
-  bool bret = interface.get_prob_sizes(n_vars, n_cons); assert(bret);
 }
 
-hiopNlpDenseConstraints::~hiopNlpDenseConstraints()
-{
+hiopNlpFormulation::~hiopNlpFormulation()
+{  
   if(xl)   delete xl;
   if(xu)   delete xu;
   if(ixl)  delete ixl;
@@ -160,9 +146,19 @@ hiopNlpDenseConstraints::~hiopNlpDenseConstraints()
 #ifdef HIOP_USE_MPI
   if(vec_distrib) delete[] vec_distrib;
 #endif
+  delete log;
+  delete options;
+
+#ifdef HIOP_USE_MPI
+  //some (serial) drivers call (MPI) HiOp repeatedly in an outer loop
+  //if we finalize here, subsequent calls to MPI will fail and break this outer loop. So we don't finalize
+  //if(mpi_init_called) { 
+  //  int nret=MPI_Finalize(); assert(MPI_SUCCESS==nret);
+  //}
+#endif
 }
 
-bool hiopNlpDenseConstraints::finalizeInitialization()
+bool hiopNlpFormulation::finalizeInitialization()
 {
   //check if there was a change in the user options that requires reinitialization of 'this'
   bool doinit = false; 
@@ -180,7 +176,7 @@ bool hiopNlpDenseConstraints::finalizeInitialization()
     
   }
 
-  bool bret = interface.get_prob_sizes(n_vars, n_cons); assert(bret);
+  bool bret = interface_base.get_prob_sizes(n_vars, n_cons); assert(bret);
 
   nlp_transformations.clear();
   nlp_transformations.setUserNlpNumVars(n_vars);
@@ -191,7 +187,7 @@ bool hiopNlpDenseConstraints::finalizeInitialization()
 #ifdef HIOP_USE_MPI
   if(vec_distrib) delete[] vec_distrib;
   vec_distrib=new long long[num_ranks+1];
-  if(true==interface.get_vecdistrib_info(n_vars,vec_distrib)) {
+  if(true==interface_base.get_vecdistrib_info(n_vars,vec_distrib)) {
     xl = new hiopVectorPar(n_vars, vec_distrib, comm);
   } else {
     xl = new hiopVectorPar(n_vars);   
@@ -210,7 +206,7 @@ bool hiopNlpDenseConstraints::finalizeInitialization()
   double  *xl_vec= xl->local_data(),  *xu_vec= xu->local_data();
   vars_type = new hiopInterfaceBase::NonlinearityType[nlocal];
 
-  bret=interface.get_vars_info(n_vars,xl_vec,xu_vec,vars_type); assert(bret);
+  bret=interface_base.get_vars_info(n_vars,xl_vec,xu_vec,vars_type); assert(bret);
 
   //allocate and build ixl(ow) and ix(upp) vectors
   if(ixl) delete ixl; if(ixu) delete ixu;
@@ -346,7 +342,7 @@ bool hiopNlpDenseConstraints::finalizeInitialization()
   hiopVectorPar* gu = new hiopVectorPar(n_cons);
   double *gl_vec=gl->local_data(), *gu_vec=gu->local_data();
   hiopInterfaceBase::NonlinearityType* cons_type = new hiopInterfaceBase::NonlinearityType[n_cons];
-  bret = interface.get_cons_info(n_cons, gl_vec, gu_vec, cons_type); assert(bret);
+  bret = interface_base.get_cons_info(n_cons, gl_vec, gu_vec, cons_type); assert(bret);
 
   assert(gl->get_local_size()==n_cons);
   assert(gl->get_local_size()==n_cons);
@@ -417,7 +413,6 @@ bool hiopNlpDenseConstraints::finalizeInitialization()
   if(fixedVarsRemover) {
     fixedVarsRemover->setupConstraintsPart(n_cons_eq, n_cons_ineq);
   }
-
   strFixedVars = options->GetString("fixed_var");
 
   //compute the overall n_low and n_upp
@@ -428,33 +423,137 @@ bool hiopNlpDenseConstraints::finalizeInitialization()
 #else
   n_bnds_low=n_bnds_low_local; n_bnds_upp=n_bnds_upp_local; //n_bnds_lu is ok
 #endif
-
   return bret;
 }
 
-bool hiopNlpDenseConstraints::eval_f(double* x, bool new_x, double& f)
+
+hiopVector* hiopNlpFormulation::alloc_primal_vec() const
+{
+  return xl->alloc_clone();
+}
+
+hiopVector* hiopNlpFormulation::alloc_dual_eq_vec() const
+{
+  return c_rhs->alloc_clone();
+}
+hiopVector* hiopNlpFormulation::alloc_dual_ineq_vec() const
+{
+  return dl->alloc_clone();
+}
+hiopVector* hiopNlpFormulation::alloc_dual_vec() const
+{
+  hiopVectorPar* ret=new hiopVectorPar(n_cons);
+#ifdef HIOP_DEEPCHECKS
+  assert(ret!=NULL);
+#endif
+  return ret;
+}
+
+bool hiopNlpFormulation::eval_f(double* x, bool new_x, double& f)
 {
   double* xx = nlp_transformations.applyTox(x, new_x);
 
   runStats.tmEvalObj.start();
-  bool bret = interface.eval_f(nlp_transformations.n_post(),xx,new_x,f);
+  bool bret = interface_base.eval_f(nlp_transformations.n_post(),xx,new_x,f);
   runStats.tmEvalObj.stop(); runStats.nEvalObj++;
 
   f = nlp_transformations.applyToObj(f);
   return bret;
 }
-bool hiopNlpDenseConstraints::eval_grad_f(double* x, bool new_x, double* gradf)
+bool hiopNlpFormulation::eval_grad_f(double* x, bool new_x, double* gradf)
 {
   double* xx     = nlp_transformations.applyTox(x, new_x);
   double* gradff = nlp_transformations.applyToGradObj(gradf);
   bool bret; 
   runStats.tmEvalGrad_f.start();
-  bret = interface.eval_grad_f(nlp_transformations.n_post(),xx,new_x,gradff);
+  bret = interface_base.eval_grad_f(nlp_transformations.n_post(),xx,new_x,gradff);
   runStats.tmEvalGrad_f.stop(); runStats.nEvalGrad_f++;
 
   gradf = nlp_transformations.applyInvToGradObj(gradff);
   return bret;
 }
+
+bool hiopNlpFormulation::get_starting_point(hiopVector& x0_)
+{
+  hiopVectorPar &x0_for_hiop = dynamic_cast<hiopVectorPar&>(x0_);
+  bool bret; 
+
+  double* x0_for_user = nlp_transformations.applyTox(x0_for_hiop.local_data(),true);
+
+  bret = interface_base.get_starting_point(nlp_transformations.n_post(), x0_for_user);
+
+  nlp_transformations.applyInvTox(x0_for_user, x0_for_hiop);
+  return bret;
+}
+
+bool hiopNlpFormulation::eval_c(double*x, bool new_x, double* c)
+{
+  double* xx = nlp_transformations.applyTox(x, new_x);
+  double* cc = c;//nlp_transformations.applyToCons(c, n_cons_eq); //not needed for now
+
+  runStats.tmEvalCons.start();
+  bool bret = interface_base.eval_cons(nlp_transformations.n_post(),n_cons,n_cons_eq,cons_eq_mapping,xx,new_x,cc);
+  runStats.tmEvalCons.stop(); runStats.nEvalCons_eq++;
+
+  //c = nlp_transformations.applyInvToCons(c, n_cons_eq); //not needed for now
+  return bret;
+}
+bool hiopNlpFormulation::eval_d(double*x, bool new_x, double* d)
+{
+  double* xx = nlp_transformations.applyTox(x, new_x);
+  double* dd = d;//nlp_transformations.applyToCons(d, n_cons_ineq); //not needed for now
+
+  runStats.tmEvalCons.start();
+  bool bret = interface_base.eval_cons(nlp_transformations.n_post(),n_cons,n_cons_ineq,cons_ineq_mapping,xx,new_x,dd);
+  runStats.tmEvalCons.stop(); runStats.nEvalCons_ineq++;
+
+  //d = nlp_transformations.applyInvToCons(d, n_cons_ineq); //not needed for now
+  return bret;
+}
+
+void hiopNlpFormulation::print(FILE* f, const char* msg, int rank) const
+{
+   int myrank=0; 
+#ifdef HIOP_USE_MPI
+   if(rank>=0) {
+     int ierr = MPI_Comm_rank(comm, &myrank); assert(ierr==MPI_SUCCESS); 
+   }
+#endif
+  if(myrank==rank || rank==-1) {
+    if(NULL==f) f=stdout;
+
+    if(msg) {
+      fprintf(f, "%s\n", msg);
+    } else { 
+      fprintf(f, "NLP summary\n");
+    }
+    fprintf(f, "Total number of variables: %lld\n", n_vars);
+    fprintf(f, "     lower/upper/lower_and_upper bounds: %lld / %lld / %lld\n", n_bnds_low, n_bnds_upp, n_bnds_lu);
+    fprintf(f, "Total number of equality constraints: %lld\n", n_cons_eq);
+    fprintf(f, "Total number of inequality constraints: %lld\n", n_cons_ineq );
+    fprintf(f, "     lower/upper/lower_and_upper bounds: %lld / %lld / %lld\n", n_ineq_low, n_ineq_upp, n_ineq_lu);
+  } 
+}
+
+/* ***********************************************************************************
+ *    hiopNlpDenseConstraints class implementation 
+ * ***********************************************************************************
+*/
+
+hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& interface_)
+  : hiopNlpFormulation(interface_), interface(interface_)
+{
+}
+
+hiopNlpDenseConstraints::~hiopNlpDenseConstraints()
+{
+}
+
+bool hiopNlpDenseConstraints::finalizeInitialization()
+{
+  return hiopNlpFormulation::finalizeInitialization();
+}
+
 bool hiopNlpDenseConstraints::eval_Jac_c(double* x, bool new_x, double** Jac_c)
 {
   double*  x_user      = nlp_transformations.applyTox(x, new_x);
@@ -481,77 +580,22 @@ bool hiopNlpDenseConstraints::eval_Jac_d(double* x, bool new_x, double** Jac_d)
   Jac_d = nlp_transformations.applyInvToJacobIneq(Jac_d_user, n_cons_ineq);
   return bret;
 }
-bool hiopNlpDenseConstraints::eval_c(double*x, bool new_x, double* c)
-{
-  double* xx = nlp_transformations.applyTox(x, new_x);
-  double* cc = c;//nlp_transformations.applyToCons(c, n_cons_eq); //not needed for now
 
-  runStats.tmEvalCons.start();
-  bool bret = interface.eval_cons(nlp_transformations.n_post(),n_cons,n_cons_eq,cons_eq_mapping,xx,new_x,cc);
-  runStats.tmEvalCons.stop(); runStats.nEvalCons_eq++;
-
-  //c = nlp_transformations.applyInvToCons(c, n_cons_eq); //not needed for now
-  return bret;
-}
-bool hiopNlpDenseConstraints::eval_d(double*x, bool new_x, double* d)
-{
-  double* xx = nlp_transformations.applyTox(x, new_x);
-  double* dd = d;//nlp_transformations.applyToCons(d, n_cons_ineq); //not needed for now
-
-  runStats.tmEvalCons.start();
-  bool bret = interface.eval_cons(nlp_transformations.n_post(),n_cons,n_cons_ineq,cons_ineq_mapping,xx,new_x,dd);
-  runStats.tmEvalCons.stop(); runStats.nEvalCons_ineq++;
-
-  //d = nlp_transformations.applyInvToCons(d, n_cons_ineq); //not needed for now
-  return bret;
-}
-bool hiopNlpDenseConstraints::eval_d(hiopVector& x_, bool new_x, hiopVector& d_)
-{
-  hiopVectorPar &xv = dynamic_cast<hiopVectorPar&>(x_);
-  hiopVectorPar &dv = dynamic_cast<hiopVectorPar&>(d_);
-
-  double* x = xv.local_data();
-  double* xx = nlp_transformations.applyTox(x, new_x);
-  double* dd = dv.local_data();//nlp_transformations.applyToCons(d, n_cons_ineq); //not needed for now
-
-  runStats.tmEvalCons.start();
-  bool bret = interface.eval_cons(nlp_transformations.n_post(),n_cons,n_cons_ineq,cons_ineq_mapping,xx,new_x,dd);
-  runStats.tmEvalCons.stop(); runStats.nEvalCons_ineq++;
-
-  //applyInvToCons(dd) //not needed for now
-  return bret;
-}
-hiopVector* hiopNlpDenseConstraints::alloc_primal_vec() const
-{
-  return xl->alloc_clone();
-}
-
-hiopVector* hiopNlpDenseConstraints::alloc_dual_eq_vec() const
-{
-  return c_rhs->alloc_clone();
-}
-hiopVector* hiopNlpDenseConstraints::alloc_dual_ineq_vec() const
-{
-  return dl->alloc_clone();
-}
-hiopVector* hiopNlpDenseConstraints::alloc_dual_vec() const
-{
-  hiopVectorPar* ret=new hiopVectorPar(n_cons);
-#ifdef HIOP_DEEPCHECKS
-  assert(ret!=NULL);
-#endif
-  return ret;
-
-}
-hiopMatrixDense* hiopNlpDenseConstraints::alloc_Jac_c() const
+hiopMatrixDense* hiopNlpDenseConstraints::alloc_Jac_c()
 {
   return alloc_multivector_primal(n_cons_eq);
 }
 
-hiopMatrixDense* hiopNlpDenseConstraints::alloc_Jac_d() const
+hiopMatrixDense* hiopNlpDenseConstraints::alloc_Jac_d()
 {
   return alloc_multivector_primal(n_cons_ineq);
 }
+
+hiopMatrix* hiopNlpDenseConstraints::alloc_Hess_Lagr()
+{
+  return new hiopHessianLowRank(this, this->options->GetInteger("secant_memory_len"));
+}
+
 hiopMatrixDense* hiopNlpDenseConstraints::alloc_multivector_primal(int nrows, int maxrows/*=-1*/) const
 {
   hiopMatrixDense* M;
@@ -578,42 +622,7 @@ hiopMatrixDense* hiopNlpDenseConstraints::alloc_multivector_primal(int nrows, in
   return M;
 }
 
-bool hiopNlpDenseConstraints::get_starting_point(hiopVector& x0_)
-{
-  hiopVectorPar &x0_for_hiop = dynamic_cast<hiopVectorPar&>(x0_);
-  bool bret; 
 
-  double* x0_for_user = nlp_transformations.applyTox(x0_for_hiop.local_data(),true);
-
-  bret = interface.get_starting_point(nlp_transformations.n_post(),x0_for_user);
-
-  nlp_transformations.applyInvTox(x0_for_user, x0_for_hiop);
-  return bret;
-}
-
-void hiopNlpDenseConstraints::print(FILE* f, const char* msg, int rank) const
-{
-   int myrank=0; 
-#ifdef HIOP_USE_MPI
-   if(rank>=0) {
-     int ierr = MPI_Comm_rank(comm, &myrank); assert(ierr==MPI_SUCCESS); 
-   }
-#endif
-  if(myrank==rank || rank==-1) {
-    if(NULL==f) f=stdout;
-
-    if(msg) {
-      fprintf(f, "%s\n", msg);
-    } else { 
-      fprintf(f, "NLP summary\n");
-    }
-    fprintf(f, "Total number of variables: %lld\n", n_vars);
-    fprintf(f, "     lower/upper/lower_and_upper bounds: %lld / %lld / %lld\n", n_bnds_low, n_bnds_upp, n_bnds_lu);
-    fprintf(f, "Total number of equality constraints: %lld\n", n_cons_eq);
-    fprintf(f, "Total number of inequality constraints: %lld\n", n_cons_ineq );
-    fprintf(f, "     lower/upper/lower_and_upper bounds: %lld / %lld / %lld\n", n_ineq_low, n_ineq_upp, n_ineq_lu);
-  } 
-}
 
 
 };

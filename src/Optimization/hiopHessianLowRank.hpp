@@ -88,7 +88,7 @@ namespace hiop
  * Parallel computations: Dk, B0 are distributed vectors, M is distributed 
  * column-wise, and N is local (stored on all processors).
  */
-class hiopHessianLowRank
+class hiopHessianLowRank : public hiopMatrix
 {
 public:
   hiopHessianLowRank(hiopNlpDenseConstraints* nlp_, int max_memory_length);
@@ -108,12 +108,13 @@ public:
    */ 
   virtual void symMatTimesInverseTimesMatTrans(double beta, hiopMatrixDense& W_, 
 					       double alpha, const hiopMatrixDense& X);
-#ifdef HIOP_DEEPCHECKS
+
   /* computes the product of the Hessian with a vector: y=beta*y+alpha*H*x.
    * The function is supposed to use the underlying ***recursive*** definition of the 
    * quasi-Newton Hessian and is used for checking/testing/error calculation.
    */
   virtual void timesVec(double beta, hiopVector& y, double alpha, const hiopVector&x);
+#ifdef HIOP_DEEPCHECKS
   /* same as above but without the Dx term in H */
   virtual void timesVec_noLogBarrierTerm(double beta, hiopVector& y, double alpha, const hiopVector&x);
   /* code shared by the above two methods*/
@@ -220,6 +221,102 @@ private:
   hiopHessianLowRank() {};
   hiopHessianLowRank(const hiopHessianLowRank&) {};
   hiopHessianLowRank& operator=(const hiopHessianLowRank&) {return *this;};
+public:
+  /* methods that need to be implemented as the class inherits from hiopMatrix*/
+public:
+  virtual hiopMatrix* alloc_clone() const
+  {
+    assert(false && "not provided because it is not needed");
+    return NULL;
+  }
+  virtual hiopMatrix* new_copy() const
+  {
+    assert(false && "not provided because it is not needed");
+    return NULL;
+  }
+
+  virtual void setToZero()
+  {
+    assert(false && "not provided because it is not needed");
+  }
+  virtual void setToConstant(double c)
+  {
+    assert(false && "not provided because it is not needed");
+  }
+  void timesVec(double beta, hiopVector& y, double alpha, const hiopVector&x) const
+  {
+    assert(false && "not provided because it is not needed");
+  }
+  /** y = beta * y + alpha * this^T * x */
+  virtual void transTimesVec(double beta,   hiopVector& y,
+			     double alpha,  const hiopVector& x ) const
+  {
+    assert(false && "not provided because it is not needed");
+  }
+
+  /* W = beta*W + alpha*this*X */  
+  virtual void timesMat(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const
+  {
+    assert(false && "not provided because it is not needed");
+  }
+  /* W = beta*W + alpha*this^T*X */
+  virtual void transTimesMat(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const
+  {
+    assert(false && "not provided because it is not needed");
+  }
+  /* W = beta*W + alpha*this*X^T */
+  virtual void timesMatTrans(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const
+  {
+    assert(false && "not provided because it is not needed");
+  }
+  virtual void addDiagonal(const hiopVector& d_)
+  {
+    assert(false && "not provided because it is not needed");
+  }
+  virtual void addDiagonal(const double& value)
+  {
+    assert(false && "not provided because it is not needed");
+  }
+  virtual void addSubDiagonal(long long start, const hiopVector& d_)
+  {
+    assert(false && "not provided because it is not needed");
+  }
+  /* this += alpha*X */
+  virtual void addMatrix(double alpah, const hiopMatrix& X)
+  {
+    assert(false && "not provided because it is not needed");
+  }
+  virtual double max_abs_value()
+  {
+    assert(false && "not provided because it is not needed");
+  }
+  /* return false is any of the entry is a nan, inf, or denormalized */
+  virtual bool isfinite() const
+  {
+    assert(false && "not provided because it is not needed");
+  }
+  
+  /* call with -1 to print all rows, all columns, or on all ranks; otherwise will
+  *  will print the first rows and/or columns on the specified rank.
+  * 
+  * If the underlying matrix is sparse, maxCols is ignored and a max number elements 
+  * given by the value of 'maxRows' will be printed. If this value is negative, all
+  * elements will be printed.
+  */
+  virtual void print(FILE* f=NULL, const char* msg=NULL, int maxRows=-1, int maxCols=-1, int rank=-1) const
+  {
+    assert(false && "not provided because it is not needed");
+  }
+
+  /* number of rows */
+  virtual long long m() const { assert(false && "not provided because it is not needed"); }
+  /* number of columns */
+  virtual long long n() const { assert(false && "not provided because it is not needed"); }
+#ifdef HIOP_DEEPCHECKS
+  /* check symmetry */
+  virtual bool assertSymmetry(double tol=1e-16) const { return true; }
+#endif
+
 };
 
 /* Low-rank representation for the inverse of a low-rank matrix (Hessian).

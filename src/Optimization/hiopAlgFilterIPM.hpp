@@ -61,33 +61,33 @@
 namespace hiop
 {
 
-class hiopAlgFilterIPM
-{
+class hiopAlgFilterIPMBase {
 public:
-  hiopAlgFilterIPM(hiopNlpDenseConstraints* nlp);
-  virtual ~hiopAlgFilterIPM();
+  hiopAlgFilterIPMBase(hiopNlpFormulation* nlp_);
+  virtual ~hiopAlgFilterIPMBase();
 
-  virtual hiopSolveStatus run();
+  /** numerical optimization */
+  virtual hiopSolveStatus run() = 0;
 
   /** computes primal-dual point and returns the evaluation of the problem at this point */
   virtual int startingProcedure(hiopIterate& it_ini,
 	       double &f, hiopVector& c_, hiopVector& d_, 
-	       hiopVector& grad_,  hiopMatrixDense& Jac_c,  hiopMatrixDense& Jac_d);
-
+	       hiopVector& grad_,  hiopMatrix& Jac_c,  hiopMatrix& Jac_d);
   /* returns the objective value; valid only after 'run' method has been called */
-  virtual double getObjective() const;
+  double getObjective() const;
   /* returns the primal vector x; valid only after 'run' method has been called */
-  virtual void getSolution(double* x) const;
+  void getSolution(double* x) const;
   /* returns the status of the solver */
-  virtual hiopSolveStatus getSolveStatus() const;
+  /* returns the status of the solver */
+  inline hiopSolveStatus getSolveStatus() const { return _solverStatus; }
   /* returns the number of iterations */
-  virtual int getNumIterations() const;
-private:
+  int getNumIterations() const;
+protected:
   bool evalNlp(hiopIterate& iter,
 	       double &f, hiopVector& c_, hiopVector& d_, 
-	       hiopVector& grad_,  hiopMatrixDense& Jac_c,  hiopMatrixDense& Jac_d);
+	       hiopVector& grad_,  hiopMatrix& Jac_c,  hiopMatrix& Jac_d);
   bool evalNlp_funcOnly(hiopIterate& iter, double& f, hiopVector& c_, hiopVector& d_);
-  bool evalNlp_derivOnly(hiopIterate& iter, hiopVector& gradf_,  hiopMatrixDense& Jac_c,  hiopMatrixDense& Jac_d);
+  bool evalNlp_derivOnly(hiopIterate& iter, hiopVector& gradf_,  hiopMatrix& Jac_c,  hiopMatrix& Jac_d);
  /* internal helper for error computation */
   virtual bool evalNlpAndLogErrors(const hiopIterate& it, const hiopResidual& resid, const double& mu,
 				   double& nlpoptim, double& nlpfeas, double& nlpcomplem, double& nlpoverall,
@@ -97,20 +97,19 @@ private:
   bool updateLogBarrierParameters(const hiopIterate& it, const double& mu_curr, const double& tau_curr,
 				  double& mu_new, double& tau_new);
 
-  virtual void outputIteration(int lsStatus, int lsNum);
+  virtual void outputIteration(int lsStatus, int lsNum) = 0;
 
   //returns whether the algorithm should stop and set an appropriate solve status
   bool checkTermination(const double& _err_nlp, const int& iter_num, hiopSolveStatus& status);
   void displayTerminationMsg();
 
-  //
   void resetSolverStatus();
-  void reInitializeNlpObjects();
-  void reloadOptions();
-  void destructorPart();
-  
+  virtual void reInitializeNlpObjects();
+  virtual void reloadOptions();
 private:
-  hiopNlpDenseConstraints* nlp;
+  void destructorPart();
+protected:
+  hiopNlpFormulation* nlp;
   hiopFilter filter;
 
   hiopLogBarProblem* logbar;
@@ -140,10 +139,9 @@ private:
   double _f_nlp, _f_log, _f_nlp_trial, _f_log_trial;
   hiopVector *_c,*_d, *_c_trial, *_d_trial;
   hiopVector* _grad_f, *_grad_f_trial; //gradient of the log-barrier objective function
-  hiopMatrixDense* _Jac_c, *_Jac_c_trial; //Jacobian of c(x), the equality part
-  hiopMatrixDense* _Jac_d, *_Jac_d_trial; //Jacobian of d(x), the inequality part
-
-  hiopHessianLowRank* _Hess;
+  hiopMatrix* _Jac_c, *_Jac_c_trial; //Jacobian of c(x), the equality part
+  hiopMatrix* _Jac_d, *_Jac_d_trial; //Jacobian of d(x), the inequality part
+  hiopMatrix* _Hess_Lagr;
 
   /** Algorithms's working quantities */  
   double _mu, _tau, _alpha_primal, _alpha_dual;
@@ -179,11 +177,43 @@ private:
   //internal flags related to the state of the solver
   hiopSolveStatus _solverStatus;
   int _n_accep_iters;
-private:
-  hiopAlgFilterIPM() {};
-  hiopAlgFilterIPM(const hiopAlgFilterIPM& ) {};
-  hiopAlgFilterIPM& operator=(const hiopAlgFilterIPM&) {return *this;};
 };
 
-}
+class hiopAlgFilterIPMQuasiNewton : public hiopAlgFilterIPMBase
+{
+public:
+  hiopAlgFilterIPMQuasiNewton(hiopNlpDenseConstraints* nlp);
+  virtual ~hiopAlgFilterIPMQuasiNewton();
+
+  virtual hiopSolveStatus run();
+private:
+  virtual void outputIteration(int lsStatus, int lsNum);
+private:
+  hiopNlpDenseConstraints* nlpdc;
+private:
+  hiopAlgFilterIPMQuasiNewton() : hiopAlgFilterIPMBase(NULL) {};
+  hiopAlgFilterIPMQuasiNewton(const hiopAlgFilterIPMQuasiNewton& ) : hiopAlgFilterIPMBase(NULL){};
+  hiopAlgFilterIPMQuasiNewton& operator=(const hiopAlgFilterIPMQuasiNewton&) {return *this;};
+};
+//for backward compatibility we make 'hiopAlgFilterIPM' name available
+typedef hiopAlgFilterIPMQuasiNewton hiopAlgFilterIPM;
+
+
+
+class hiopAlgFilterIPMNewton : public hiopAlgFilterIPMBase
+{
+public:
+  hiopAlgFilterIPMNewton(hiopNlpFormulation* nlp);
+  virtual ~hiopAlgFilterIPMNewton();
+
+  virtual hiopSolveStatus run();
+private:
+  virtual void outputIteration(int lsStatus, int lsNum);
+private:
+  hiopAlgFilterIPMNewton() : hiopAlgFilterIPMBase(NULL) {};
+  hiopAlgFilterIPMNewton(const hiopAlgFilterIPMNewton& ) : hiopAlgFilterIPMBase(NULL){};
+  hiopAlgFilterIPMNewton& operator=(const hiopAlgFilterIPMNewton&) {return *this;};
+};
+
+} //end of namespace
 #endif
