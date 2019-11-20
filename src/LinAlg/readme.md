@@ -20,7 +20,7 @@ WM[6][9] = -17.;
 ### *Symmetric* dense matrices 
 `hiopMatrixDense` is also used for symmetric dense matrices by enforcing `n()==m()`. The general rule is to store, update, and maintain the matrix such that `M(i,j)==M(j,i)`. This will allow the methods of  `hiopMatrixDense` to work for symmetric matrices as well.
 
-However, `hiopMatrixDense` storing a symmetric dense matrix is also used as a storage for the matrix of symmetric linear systems. In this case, only the **upper triangle** is updated and maintained via the following methods in `hiopMatrix` (the abstract/interface inherited by all matrix classes)
+However, `hiopMatrixDense` is also used as storage for the matrix of symmetric linear systems. In this case, for efficiency purposes only the **upper triangle** is updated and maintained via the following methods in `hiopMatrix` (the abstract/interface inherited by all matrix classes)
 ```cpp
 /* block of W += alpha*this
  * For efficiency, only upper triangular matrix is updated since this will be eventually sent to LAPACK
@@ -37,9 +37,9 @@ However, `hiopMatrixDense` storing a symmetric dense matrix is also used as a st
  */
  virtual void transAddToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start, double alpha, hiopMatrixDense& W) const;
 ```
-If `this` contributes to `W`'s elements both in the upper and lower triangle, it would be unclear whether a symmetric update of `W` should be enforced or not (that is, when `this` contributes to `(i,j), i>j` one should or should not update `(j,i)` in `W`). To keep things simple and avoid confusion, the two methods require (precondition) that *`this` matrix fits inside the upper triangle of `W`*. This precondition is always satisfied the off-diagonal blocks (Jacobians or their transposes) of the (KKT) symmetric linear system are updated.
+If `this` contributes to `W`'s elements both in the upper and lower triangle, it would be unclear whether a symmetric update of `W` should be enforced or not (that is, when `this` contributes to `(i,j), i>j` one should or should not update `(j,i)` in `W`). To keep things simple and to avoid confusion, the two methods require (precondition) that *`this` matrix fits inside the upper triangle of `W`*. This precondition is always satisfied the off-diagonal blocks (Jacobians or their transposes) of the (KKT) symmetric linear system are updated.
 
-For the diagonal blocks of symmetric linear system, the update is done from a (source) symmetric matrix and, hence, efficiency can be achieved by only accessing the upper triangular of the source (and, as before, updating the upper triangular of the destination). The following method in `hiopMatrix` interface should be used
+For the diagonal blocks of symmetric linear system, the update is done from a (source) symmetric matrix and, hence, increased efficiency can be achieved by accessing only the upper triangle of the source (and, as before, updating only the upper triangle of the destination). The following method in `hiopMatrix` interface should be used/implemented
 ```cpp
 /* diagonal block of W += alpha*this with 'diag_start' indicating the diagonal entry of W where
  * 'this' should start to contribute.
