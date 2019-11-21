@@ -110,6 +110,7 @@ public:
       Dx->axdzpy_w_pattern(1.0, *iter->zl, *iter->sxl, nlp->get_ixl());
       Dx->axdzpy_w_pattern(1.0, *iter->zu, *iter->sxu, nlp->get_ixu());
       nlp->log->write("Dx in KKT", *Dx, hovMatrices);
+      Msys.addSubDiagonal(alpha, 0, *Dx);
       
       //Dd=(Sdl)^{-1}Vu + (Sdu)^{-1}Vu
       Dd_inv->setToZero();
@@ -120,8 +121,8 @@ public:
 #endif 
       Dd_inv->invert();
 
-      Msys.addSubDiagonal(0, *Dx);
-      Msys.addSubDiagonal(nx+neq, *Dd_inv);
+      alpha=-1.;
+      Msys.addSubDiagonal(alpha, nx+neq, *Dd_inv);
 
       nlp->log->write("KKT Linsys:", Msys, hovSummary);
     }

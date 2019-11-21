@@ -442,7 +442,8 @@ solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
   //Hess->symmetricTimesMat(0.0, *N, 1.0, J);
   HessLowRank->symMatTimesInverseTimesMatTrans(0.0, *N, 1.0, J);
 
-  N->addSubDiagonal(nlp->m_eq(), *Dd_inv);
+  //subdiag of N += 1., Dd_inv
+  N->addSubDiagonal(1., nlp->m_eq(), *Dd_inv);
 #ifdef HIOP_DEEPCHECKS
   assert(J.isfinite());
   nlp->log->write("solveCompressed: N is", *N, hovMatrices);
