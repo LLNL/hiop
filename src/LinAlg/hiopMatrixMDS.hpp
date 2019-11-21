@@ -54,7 +54,7 @@ public:
     assert(xp);
     assert(xp->get_size() == mSp->n()+mDe->n());
     mSp->timesVec(beta, yp->local_data(), alpha, xp->local_data_const());
-    mDe->timesVec(0.,   yp->local_data(), alpha, xp->local_data_const()+mSp->n());
+    mDe->timesVec(1.,   yp->local_data(), alpha, xp->local_data_const()+mSp->n());
   }
   virtual void transTimesVec(double beta,   hiopVector& y,
 			     double alpha, const hiopVector& x) const
@@ -114,7 +114,7 @@ public:
     mSp->addToSymDenseMatrixUpperTriangle(row_start, col_start, alpha, W);
     mDe->addToSymDenseMatrixUpperTriangle(row_start, col_start+mSp->n(), alpha, W);
   }
-  /* block of W += alpha*this */
+  /* block of W += alpha*this' */
   virtual void transAddToSymDenseMatrixUpperTriangle(int row_start, int col_start, double alpha, hiopMatrixDense& W) const
   {
     mSp->transAddToSymDenseMatrixUpperTriangle(row_start,          col_start, alpha, W);

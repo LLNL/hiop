@@ -122,6 +122,8 @@ public:
 
       Msys.addSubDiagonal(0, *Dx);
       Msys.addSubDiagonal(nx+neq, *Dd_inv);
+
+      nlp->log->write("KKT Linsys:", Msys, hovSummary);
     }
     
     linSys->matrixChanged();
@@ -151,34 +153,34 @@ public:
   double errorCompressedLinsys(const hiopVectorPar& rx, const hiopVectorPar& ryc, const hiopVectorPar& ryd,
 			       const hiopVectorPar& dx, const hiopVectorPar& dyc, const hiopVectorPar& dyd)
   {
-    nlp->log->printf(hovLinAlgScalars, "hiopKKTLinSysLowRank::errorCompressedLinsys residuals norm:\n");
+    nlp->log->printf(hovLinAlgScalars, "hiopKKTLinSysDense::errorCompressedLinsys residuals norm:\n");
     
     double derr=1e20, aux;
     hiopVectorPar *RX=rx.new_copy();
     //RX=rx-H*dx-J'c*dyc-J'*dyd
     Hess->timesVec(1.0, *RX, -1.0, dx);
-    RX->axzpy(-1.0,*Dx,dx);
+    RX->axzpy(-1.0, *Dx, dx);
 
     Jac_c->transTimesVec(1.0, *RX, -1.0, dyc);
     Jac_d->transTimesVec(1.0, *RX, -1.0, dyd);
     aux=RX->twonorm();
     derr=fmax(derr,aux);
-    nlp->log->printf(hovLinAlgScalars, "  >>>  rx=%g\n", aux);
+    nlp->log->printf(hovLinAlgScalars, " >>  rx=%g\n", aux);
     delete RX; RX=NULL;
 
     hiopVectorPar* RC=ryc.new_copy();
-    Jac_c->timesVec(1.0,*RC, -1.0,dx);
+    Jac_c->timesVec(1.0, *RC, -1.0, dx);
     aux = RC->twonorm();
     derr=fmax(derr,aux);
-    nlp->log->printf(hovLinAlgScalars, "  >>> ryc=%g\n", aux);
+    nlp->log->printf(hovLinAlgScalars, " >> ryc=%g\n", aux);
     delete RC; RC=NULL;
     
     hiopVectorPar* RD=ryd.new_copy();
-    Jac_d->timesVec(1.0,*RD, -1.0, dx);
+    Jac_d->timesVec(1.0, *RD, -1.0, dx);
     RD->axzpy(1.0, *Dd_inv, dyd);
     aux = RD->twonorm();
     derr=fmax(derr,aux);
-    nlp->log->printf(hovLinAlgScalars, "  >>> ryd=%g\n", aux);
+    nlp->log->printf(hovLinAlgScalars, " >> ryd=%g\n", aux);
     delete RD; RD=NULL;
     
     return derr;
