@@ -295,7 +295,6 @@ startingProcedure(hiopIterate& it_ini,
   }
 
   nlp->log->write("Using initial point:", it_ini, hovIteration);
-  //nlp->log->write("Using initial point:", it_ini, hovSummary);
   nlp->runStats.tmStartingPoint.stop();
   nlp->runStats.tmSolverInternal.stop();
 
@@ -945,11 +944,6 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
   }
   resetSolverStatus();
 
-  //types of linear algebra objects are known now
-  //hiopMatrixDense* Jac_c = dynamic_cast<hiopMatrixMDS*>(_Jac_c);
-  //hiopMatrixDense* Jac_d = dynamic_cast<hiopMatrixMDS*>(_Jac_d);
-
-
   nlp->runStats.initialize();
   ////////////////////////////////////////////////////////////////////////////////////
   // run baby run
@@ -1065,7 +1059,6 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
      * Search direction calculation
      ***************************************************/
     //first update the Hessian and kkt system
-    //_Hess->update(*it_curr,*_grad_f,*_Jac_c,*_Jac_d);
     kkt->update(it_curr, _grad_f, _Jac_c, _Jac_d, _Hess_Lagr);
     bret = kkt->computeDirections(resid,dir); assert(bret==true);
 

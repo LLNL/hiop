@@ -1,12 +1,12 @@
 #########################################################################
 # For TESTING HiOp only. Not intended for any kind of production use
 #
-# Makefile for HiOp's example driver for IpoptAddapter 
+# Makefile for HiOp's example driver for IpoptAdapter 
 # Based on IPOPT_DIR/Ipopt/examples/Cpp_example/Makefile
 # This file needs manual adaptations to your specific OS 
 #
 # Use as
-# > make -f Makefile_IpoptAddapter
+# > make -f Makefile_IpoptAdapter
 #
 # Remark that does not have 'clean' target :)
 # > rm IpoptAdapter_driver.o
@@ -24,7 +24,7 @@
 ##########################################################################
 
 # CHANGEME: This should be the name of your executable
-EXE = IpoptAddapter_driver.exe
+EXE = IpoptAdapter_driver.exe
 
 # CHANGEME: Here is the name of all object files corresponding to the source
 #           code that you wrote in order to define the problem statement
