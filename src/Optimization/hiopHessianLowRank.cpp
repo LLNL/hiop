@@ -374,7 +374,7 @@ void hiopHessianLowRank::updateInternalBFGSRepresentation()
   const size_t buffsize=l*l*sizeof(double);
   memcpy(_buff1_lxlx3, DpYtDhInvY.local_buffer(), buffsize);
 #else
-  DpYtDhInvY.addDiagonal(*D);
+  DpYtDhInvY.addDiagonal(1., *D);
   V->copyBlockFromMatrix(l,l,DpYtDhInvY);
 #endif
 
@@ -411,7 +411,7 @@ void hiopHessianLowRank::updateInternalBFGSRepresentation()
 
   // - block (2,2)
   DpYtDhInvY.copyFrom(_buff2_lxlx3);
-  DpYtDhInvY.addDiagonal(*D);
+  DpYtDhInvY.addDiagonal(1., *D);
   V->copyBlockFromMatrix(l,l,DpYtDhInvY);
 
   // - block (1,2)
@@ -1351,7 +1351,7 @@ symmetricTimesMat(double beta, hiopMatrixDense& W,
   DpYtH0Y.copyFrom(_buff_lxl);
 #endif
  //add D to finish calculating D+Y^T*H0*Y
-  DpYtH0Y.addDiagonal(*D);
+  DpYtH0Y.addDiagonal(1., *D);
 
   //now we have W = beta*W+alpha*X*HO*X^T and the remaining term in the form
   // [S1^T Y1^T] [ R^{-T}*DpYtH0Y*R^{-1}  -R^{-T} ] [ S1 ]

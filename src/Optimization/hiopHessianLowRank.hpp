@@ -270,7 +270,7 @@ public:
   {
     assert(false && "not provided because it is not needed");
   }
-  virtual void addDiagonal(const hiopVector& d_)
+  virtual void addDiagonal(const double& alpha, const hiopVector& d_)
   {
     assert(false && "not provided because it is not needed");
   }
@@ -278,7 +278,7 @@ public:
   {
     assert(false && "not provided because it is not needed");
   }
-  virtual void addSubDiagonal(long long start, const hiopVector& d_)
+  virtual void addSubDiagonal(const double& alpha, long long start, const hiopVector& d_)
   {
     assert(false && "not provided because it is not needed");
   }

@@ -121,7 +121,7 @@ void hiopMatrixSparseTriplet::timesMatTrans(double beta, hiopMatrix& W,
 {
   assert(false && "not needed");
 }
-void hiopMatrixSparseTriplet::addDiagonal(const hiopVector& d_)
+void hiopMatrixSparseTriplet::addDiagonal(const double& alpha, const hiopVector& d_)
 {
   assert(false && "not needed");
 }
@@ -129,7 +129,7 @@ void hiopMatrixSparseTriplet::addDiagonal(const double& value)
 {
   assert(false && "not needed");
 }
-void hiopMatrixSparseTriplet::addSubDiagonal(long long start, const hiopVector& d_)
+void hiopMatrixSparseTriplet::addSubDiagonal(const double& alpha, long long start, const hiopVector& d_)
 {
   assert(false && "not needed");
 }

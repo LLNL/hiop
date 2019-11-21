@@ -99,7 +99,6 @@ hiopMatrixDense::hiopMatrixDense(const long long& m,
 }
 hiopMatrixDense::~hiopMatrixDense()
 {
-  //printf("destructor constructor\n\n");
   if(_buff_mxnlocal) delete[] _buff_mxnlocal;
   if(M) {
     if(M[0]) delete[] M[0];
@@ -333,9 +332,9 @@ void hiopMatrixDense::print(FILE* f,
     maxCols = maxCols>=0?maxCols:n_local;
     fprintf(f, "[");
     for(int i=0; i<maxRows; i++) {
-      fprintf(f, " ");
+      if(i>0) fprintf(f, " ");
       for(int j=0; j<maxCols; j++) 
-	fprintf(f, "%22.16e ", M[i][j]);
+	fprintf(f, "%20.12e ", M[i][j]);
       if(i<maxRows-1)
 	fprintf(f, "; ...\n");
       else
@@ -592,7 +591,7 @@ void hiopMatrixDense::timesMatTrans(double beta, hiopMatrix& W_, double alpha, c
   memcpy(WM[0], Wglob, n2Red*sizeof(double));
 #endif
 }
-void hiopMatrixDense::addDiagonal(const hiopVector& d_)
+void hiopMatrixDense::addDiagonal(const double& alpha, const hiopVector& d_)
 {
   const hiopVectorPar& d = dynamic_cast<const hiopVectorPar&>(d_);
 #ifdef HIOP_DEEPCHECKS
@@ -602,13 +601,13 @@ void hiopMatrixDense::addDiagonal(const hiopVector& d_)
   assert(d.get_local_size()==n_local);
 #endif
   const double* dd=d.local_data_const();
-  for(int i=0; i<n_local; i++) M[i][i] += dd[i];
+  for(int i=0; i<n_local; i++) M[i][i] += alpha*dd[i];
 }
 void hiopMatrixDense::addDiagonal(const double& value)
 {
   for(int i=0; i<n_local; i++) M[i][i] += value;
 }
-void hiopMatrixDense::addSubDiagonal(long long start, const hiopVector& d_)
+void hiopMatrixDense::addSubDiagonal(const double& alpha, long long start, const hiopVector& d_)
 {
   const hiopVectorPar& d = dynamic_cast<const hiopVectorPar&>(d_);
   long long dlen=d.get_size();
@@ -618,7 +617,7 @@ void hiopMatrixDense::addSubDiagonal(long long start, const hiopVector& d_)
 #endif
 
   const double* dd=d.local_data_const();
-  for(int i=start; i<start+dlen; i++) M[i][i] += dd[i-start];
+  for(int i=start; i<start+dlen; i++) M[i][i] += alpha*dd[i-start];
 }
 
 void hiopMatrixDense::addMatrix(double alpha, const hiopMatrix& X_)
