@@ -54,23 +54,146 @@
 namespace hiop
 {
 
-hiopKKTLinSysCompressedXYcYd::hiopKKTLinSysCompressedXYcYd(hiopNlpFormulation* nlp_)
-  : nlp(nlp_), grad_f(NULL), iter(NULL), Jac_c(NULL), Jac_d(NULL), Hess(NULL)
+#ifdef HIOP_DEEPCHECKS
+//computes the solve error for the KKT Linear system; used only for correctness checking
+double hiopKKTLinSys::errorKKT(const hiopResidual* resid, const hiopIterate* sol)
 {
-  Dx = dynamic_cast<hiopVectorPar*>(nlp->alloc_primal_vec());
-  assert(Dx != NULL);
+
+  nlp->log->printf(hovLinAlgScalars, "KKT LinSys::errorKKT KKT_large residuals norm:\n");
+  double derr=1e20,aux;
+  hiopVectorPar *RX=resid->rx->new_copy();
+  //RX=rx-H*dx-J'c*dyc-J'*dyd +dzl-dzu = rx
+  //Hess->timesVec_noLogBarrierTerm(1.0, *RX, -1.0, *sol->x);
+  HessianTimesVec_noLogBarrierTerm(1.0, *RX, -1.0, *sol->x);
+
+  Jac_c->transTimesVec(1.0, *RX, -1.0, *sol->yc);
+  Jac_d->transTimesVec(1.0, *RX, -1.0, *sol->yd);
+  //sol->zl->print("zl");
+  //sol->zu->print("zu");
+  RX->axpy( 1.0,*sol->zl);
+  RX->axpy(-1.0,*sol->zu);
+  aux=RX->twonorm();
+  derr=fmax(aux,derr);
+  nlp->log->printf(hovLinAlgScalars, "  --- rx=%g\n", aux);
+
+  hiopVectorPar* RYC=resid->ryc->new_copy();
+  Jac_c->timesVec(1.0, *RYC, -1.0, *sol->x);
+  aux=RYC->infnorm();
+  derr=fmax(aux,derr);
+  nlp->log->printf(hovLinAlgScalars, "  --- ryc=%g\n", aux);
+  delete RYC;
+
+  //RYD=ryd-Jd*dx+dd
+  hiopVectorPar* RYD=resid->ryd->new_copy();
+  Jac_d->timesVec(1.0, *RYD, -1.0, *sol->x);
+  RYD->axpy(1.0,*sol->d);
+  aux=RYD->infnorm();
+  derr=fmax(aux,derr);
+  nlp->log->printf(hovLinAlgScalars, "  --- ryd=%g\n", aux);
+  delete RYD; 
+
+  //RXL=rxl+x-sxl
+  RX->copyFrom(*resid->rxl);
+  RX->axpy( 1.0, *sol->x);
+  RX->axpy(-1.0, *sol->sxl);
+  RX->selectPattern(nlp->get_ixl());
+  aux=RX->twonorm();
+  derr=fmax(aux,derr);
+  nlp->log->printf(hovLinAlgScalars, "  --- rxl=%g\n", aux);
+  //RXU=rxu-x-sxu
+  RX->copyFrom(*resid->rxu);
+  RX->axpy(-1.0, *sol->x);
+  RX->axpy(-1.0, *sol->sxu);
+  RX->selectPattern(nlp->get_ixu());
+  aux=RX->twonorm();
+  derr=fmax(aux,derr);
+  nlp->log->printf(hovLinAlgScalars, "  --- rxu=%g\n", aux);
+ 
+
+  //RDL=rdl+d-sdl
+  hiopVectorPar* RD=resid->rdl->new_copy();
+  RD->axpy( 1.0, *sol->d);
+  RD->axpy(-1.0, *sol->sdl);
+  RD->selectPattern(nlp->get_idl());
+  aux=RD->twonorm();
+  derr=fmax(aux,derr);
+  nlp->log->printf(hovLinAlgScalars, "  --- rdl=%g\n", aux);
+  //RDU=rdu-d-sdu
+  RD->copyFrom(*resid->rdu);
+  RD->axpy(-1.0, *sol->d);
+  RD->axpy(-1.0, *sol->sdu);
+  RD->selectPattern(nlp->get_idu());
+  aux=RD->twonorm();
+  derr=fmax(aux,derr);
+  nlp->log->printf(hovLinAlgScalars, "  --- rdu=%g\n", aux);
+
+  
+  //complementarity residuals checks: rszl - Sxl dzxl - Zxl dsxl
+  RX->copyFrom(*resid->rszl);
+  RX->axzpy(-1.0,*iter->sxl,*sol->zl);
+  RX->axzpy(-1.0,*iter->zl, *sol->sxl);
+  aux=RX->twonorm();
+  derr=fmax(aux,derr);
+  nlp->log->printf(hovLinAlgScalars, "  --- rszl=%g\n", aux);
+  //rszl - Sxl dzxl - Zxl dsxl
+  RX->copyFrom(*resid->rszu);
+  RX->axzpy(-1.0,*iter->sxu,*sol->zu);
+  RX->axzpy(-1.0,*iter->zu, *sol->sxu);
+  aux=RX->twonorm();
+  derr=fmax(aux,derr);
+  nlp->log->printf(hovLinAlgScalars, "  --- rszu=%g\n", aux);
+  delete RX; RX=NULL;
+ 
+  //complementarity residuals checks: rsvl - Sdl dvl - Vl dsdl
+  RD->copyFrom(*resid->rsvl);
+  RD->axzpy(-1.0,*iter->sdl,*sol->vl);
+  RD->axzpy(-1.0,*iter->vl, *sol->sdl);
+  aux=RD->twonorm();
+  derr=fmax(aux,derr);
+  nlp->log->printf(hovLinAlgScalars, "  --- rsvl=%g\n", aux);
+  //complementarity residuals checks: rsvu - Sdu dvu - Vu dsdu
+  RD->copyFrom(*resid->rsvu);
+  RD->axzpy(-1.0,*iter->sdu,*sol->vu);
+  RD->axzpy(-1.0,*iter->vu, *sol->sdu);
+  aux=RD->twonorm();
+  derr=fmax(aux,derr);
+  nlp->log->printf(hovLinAlgScalars, "  --- rsvu=%g\n", aux);
+
+  delete RD; RD=NULL;
+  return derr;
+}
+
+#endif
+
+////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+// hiopKKTLinSysCompressedXYcYd
+////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+/* Provides the functionality for reducing the KKT linear system system to the 
+ * compressed linear below in dx, dd, dyc, and dyd variables and then to perform 
+ * the basic ops needed to compute the remaining directions. 
+ *
+ * Relies on the pure virtual 'solveCompressed' to form and solve the compressed 
+ * linear system
+ * [  H  +  Dx    0    Jc^T  Jd^T   ] [ dx]   [ rx_tilde ]
+ * [    0         Dd    0     -I    ] [ dd]   [ rd_tilde ]
+ * [    Jc        0     0      0    ] [dyc] = [   ryc    ]
+ * [    Jd       -I     0      0    ] [dyd]   [   ryd    ]   
+ * and then to compute the rest of the search directions
+ */
+hiopKKTLinSysCompressedXYcYd::hiopKKTLinSysCompressedXYcYd(hiopNlpFormulation* nlp_)
+  : hiopKKTLinSysCompressed(nlp_)
+{
   Dd_inv = dynamic_cast<hiopVectorPar*>(nlp->alloc_dual_ineq_vec());
   assert(Dd_inv != NULL);
 
-  rx_tilde  = Dx->alloc_clone(); 
   ryd_tilde = Dd_inv->alloc_clone(); 
 }
 
 hiopKKTLinSysCompressedXYcYd::~hiopKKTLinSysCompressedXYcYd()
 {
-  delete Dx;
   delete Dd_inv;  
-  delete rx_tilde;
   delete ryd_tilde;
 }
 
@@ -228,114 +351,264 @@ bool hiopKKTLinSysCompressedXYcYd::computeDirections(const hiopResidual* resid,
 }
 
 #ifdef HIOP_DEEPCHECKS
-double hiopKKTLinSysCompressedXYcYd::errorKKT(const hiopResidual* resid, const hiopIterate* sol)
+double hiopKKTLinSysCompressedXYcYd::
+errorCompressedLinsys(const hiopVectorPar& rx, const hiopVectorPar& ryc, const hiopVectorPar& ryd,
+		      const hiopVectorPar& dx, const hiopVectorPar& dyc, const hiopVectorPar& dyd)
 {
-
-  nlp->log->printf(hovLinAlgScalars, "hiopKKTLinSysLowRank::errorKKT KKT_large residuals norm:\n");
-  double derr=1e20,aux;
-  hiopVectorPar *RX=resid->rx->new_copy();
-  //RX=rx-H*dx-J'c*dyc-J'*dyd +dzl-dzu = rx
-  //Hess->timesVec_noLogBarrierTerm(1.0, *RX, -1.0, *sol->x);
-  HessianTimesVec_noLogBarrierTerm(1.0, *RX, -1.0, *sol->x);
-
-  Jac_c->transTimesVec(1.0, *RX, -1.0, *sol->yc);
-  Jac_d->transTimesVec(1.0, *RX, -1.0, *sol->yd);
-  //sol->zl->print("zl");
-  //sol->zu->print("zu");
-  RX->axpy( 1.0,*sol->zl);
-  RX->axpy(-1.0,*sol->zu);
-  aux=RX->twonorm();
-  derr=fmax(aux,derr);
-  nlp->log->printf(hovLinAlgScalars, "  --- rx=%g\n", aux);
-
-  hiopVectorPar* RYC=resid->ryc->new_copy();
-  Jac_c->timesVec(1.0, *RYC, -1.0, *sol->x);
-  aux=RYC->infnorm();
-  derr=fmax(aux,derr);
-  nlp->log->printf(hovLinAlgScalars, "  --- ryc=%g\n", aux);
-  delete RYC;
-
-  //RYD=ryd-Jd*dx+dd
-  hiopVectorPar* RYD=resid->ryd->new_copy();
-  Jac_d->timesVec(1.0, *RYD, -1.0, *sol->x);
-  RYD->axpy(1.0,*sol->d);
-  aux=RYD->infnorm();
-  derr=fmax(aux,derr);
-  nlp->log->printf(hovLinAlgScalars, "  --- ryd=%g\n", aux);
-  delete RYD; 
-
-  //RXL=rxl+x-sxl
-  RX->copyFrom(*resid->rxl);
-  RX->axpy( 1.0, *sol->x);
-  RX->axpy(-1.0, *sol->sxl);
-  RX->selectPattern(nlp->get_ixl());
-  aux=RX->twonorm();
-  derr=fmax(aux,derr);
-  nlp->log->printf(hovLinAlgScalars, "  --- rxl=%g\n", aux);
-  //RXU=rxu-x-sxu
-  RX->copyFrom(*resid->rxu);
-  RX->axpy(-1.0, *sol->x);
-  RX->axpy(-1.0, *sol->sxu);
-  RX->selectPattern(nlp->get_ixu());
-  aux=RX->twonorm();
-  derr=fmax(aux,derr);
-  nlp->log->printf(hovLinAlgScalars, "  --- rxu=%g\n", aux);
- 
-
-  //RDL=rdl+d-sdl
-  hiopVectorPar* RD=resid->rdl->new_copy();
-  RD->axpy( 1.0, *sol->d);
-  RD->axpy(-1.0, *sol->sdl);
-  RD->selectPattern(nlp->get_idl());
-  aux=RD->twonorm();
-  derr=fmax(aux,derr);
-  nlp->log->printf(hovLinAlgScalars, "  --- rdl=%g\n", aux);
-  //RDU=rdu-d-sdu
-  RD->copyFrom(*resid->rdu);
-  RD->axpy(-1.0, *sol->d);
-  RD->axpy(-1.0, *sol->sdu);
-  RD->selectPattern(nlp->get_idu());
-  aux=RD->twonorm();
-  derr=fmax(aux,derr);
-  nlp->log->printf(hovLinAlgScalars, "  --- rdu=%g\n", aux);
-
+  nlp->log->printf(hovLinAlgScalars, "hiopKKTLinSysDenseXYcYd::errorCompressedLinsys residuals norm:\n");
   
-  //complementarity residuals checks: rszl - Sxl dzxl - Zxl dsxl
-  RX->copyFrom(*resid->rszl);
-  RX->axzpy(-1.0,*iter->sxl,*sol->zl);
-  RX->axzpy(-1.0,*iter->zl, *sol->sxl);
+  double derr=1e20, aux;
+  hiopVectorPar *RX=rx.new_copy();
+  //RX=rx-H*dx-J'c*dyc-J'*dyd
+  Hess->timesVec(1.0, *RX, -1.0, dx);
+  RX->axzpy(-1.0, *Dx, dx);
+  
+  Jac_c->transTimesVec(1.0, *RX, -1.0, dyc);
+  Jac_d->transTimesVec(1.0, *RX, -1.0, dyd);
   aux=RX->twonorm();
-  derr=fmax(aux,derr);
-  nlp->log->printf(hovLinAlgScalars, "  --- rszl=%g\n", aux);
-  //rszl - Sxl dzxl - Zxl dsxl
-  RX->copyFrom(*resid->rszu);
-  RX->axzpy(-1.0,*iter->sxu,*sol->zu);
-  RX->axzpy(-1.0,*iter->zu, *sol->sxu);
-  aux=RX->twonorm();
-  derr=fmax(aux,derr);
-  nlp->log->printf(hovLinAlgScalars, "  --- rszu=%g\n", aux);
+  derr=fmax(derr,aux);
+  nlp->log->printf(hovLinAlgScalars, " >>  rx=%g\n", aux);
   delete RX; RX=NULL;
- 
-  //complementarity residuals checks: rsvl - Sdl dvl - Vl dsdl
-  RD->copyFrom(*resid->rsvl);
-  RD->axzpy(-1.0,*iter->sdl,*sol->vl);
-  RD->axzpy(-1.0,*iter->vl, *sol->sdl);
-  aux=RD->twonorm();
-  derr=fmax(aux,derr);
-  nlp->log->printf(hovLinAlgScalars, "  --- rsvl=%g\n", aux);
-  //complementarity residuals checks: rsvu - Sdu dvu - Vu dsdu
-  RD->copyFrom(*resid->rsvu);
-  RD->axzpy(-1.0,*iter->sdu,*sol->vu);
-  RD->axzpy(-1.0,*iter->vu, *sol->sdu);
-  aux=RD->twonorm();
-  derr=fmax(aux,derr);
-  nlp->log->printf(hovLinAlgScalars, "  --- rsvu=%g\n", aux);
-
+  
+  hiopVectorPar* RC=ryc.new_copy();
+  Jac_c->timesVec(1.0, *RC, -1.0, dx);
+  aux = RC->twonorm();
+  derr=fmax(derr,aux);
+  nlp->log->printf(hovLinAlgScalars, " >> ryc=%g\n", aux);
+  delete RC; RC=NULL;
+  
+  hiopVectorPar* RD=ryd.new_copy();
+  Jac_d->timesVec(1.0, *RD, -1.0, dx);
+  RD->axzpy(1.0, *Dd_inv, dyd);
+  aux = RD->twonorm();
+  derr=fmax(derr,aux);
+  nlp->log->printf(hovLinAlgScalars, " >> ryd=%g\n", aux);
   delete RD; RD=NULL;
+  
   return derr;
 }
-
 #endif
+  
+////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+// hiopKKTLinSysCompressedXDYcYd
+////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+
+/* Provides the functionality for reducing the KKT linear system system to the 
+ * compressed linear below in dx, dd, dyc, and dyd variables and then to perform 
+ * the basic ops needed to compute the remaining directions. 
+ *
+ * Relies on the pure virtual 'solveCompressed' to form and solve the compressed 
+ * linear system
+ * [  H  +  Dx    0    Jc^T  Jd^T   ] [ dx]   [ rx_tilde ]
+ * [    0         Dd    0     -I    ] [ dd]   [ rd_tilde ]
+ * [    Jc        0     0      0    ] [dyc] = [   ryc    ]
+ * [    Jd       -I     0      0    ] [dyd]   [   ryd    ]   
+ * and then to compute the rest of the search directions
+ */
+hiopKKTLinSysCompressedXDYcYd::hiopKKTLinSysCompressedXDYcYd(hiopNlpFormulation* nlp_)
+  : hiopKKTLinSysCompressed(nlp_)
+{
+  Dd = dynamic_cast<hiopVectorPar*>(nlp->alloc_dual_ineq_vec());
+  assert(Dd != NULL);
+
+  rd_tilde = Dd->alloc_clone(); 
+}
+
+hiopKKTLinSysCompressedXDYcYd::~hiopKKTLinSysCompressedXDYcYd()
+{
+  delete Dd;  
+  delete rd_tilde;
+}
+
+bool hiopKKTLinSysCompressedXDYcYd::computeDirections(const hiopResidual* resid, 
+						      hiopIterate* dir)
+{
+  nlp->runStats.tmSolverInternal.start();
+  const hiopResidual &r=*resid; 
+
+  /***********************************************************************
+   * perform the reduction to the compressed linear system
+   * rx_tilde = rx+Sxl^{-1}*[rszl-Zl*rxl] - Sxu^{-1}*(rszu-Zu*rxu)
+   * rd_tilde = rd + Sdl^{-1}*(rsvl-Vl*rdl)-Sdu^{-1}(rsvu-Vu*rdu)
+   *
+   * rd_tilde = ryd + [(Sdl^{-1}Vl+Sdu^{-1}Vu)]^{-1}*
+   *                     [rd + Sdl^{-1}*(rsvl-Vl*rdl)-Sdu^{-1}(rsvu-Vu*rdu)]
+   */
+  rx_tilde->copyFrom(*r.rx); 
+  if(nlp->n_low_local()) {
+    // rl:=rszl-Zl*rxl (using dir->x as working buffer)
+    hiopVectorPar &rl=*(dir->x);//temporary working buffer
+    rl.copyFrom(*r.rszl);
+    rl.axzpy(-1.0, *iter->zl, *r.rxl);
+    //rx_tilde = rx+Sxl^{-1}*rl
+    rx_tilde->axdzpy_w_pattern( 1.0, rl, *iter->sxl, nlp->get_ixl());
+  }
+  if(nlp->n_upp_local()) {
+    //ru:=rszu-Zu*rxu (using dir->x as working buffer)
+    hiopVectorPar &ru=*(dir->x);//temporary working buffer
+    ru.copyFrom(*r.rszu); ru.axzpy(-1.0,*iter->zu, *r.rxu);
+    //rx_tilde = rx_tilde - Sxu^{-1}*ru
+    rx_tilde->axdzpy_w_pattern(-1.0, ru, *iter->sxu, nlp->get_ixu());
+  }
+  
+  //for rd_tilde = rd + Sdl^{-1}*(rsvl-Vl*rdl)-Sdu^{-1}(rsvu-Vu*rdu)
+  rd_tilde->copyFrom(*r.rd);
+  if(nlp->m_ineq_low()) {
+    hiopVector& rd2=*dir->sdu;
+    //rd2=rsvl-Vl*rdl
+    rd2.copyFrom(*r.rsvl); 
+    rd2.axzpy(-1.0, *iter->vl, *r.rdl);
+    //rd_tilde +=  Sdl^{-1}*(rsvl-Vl*rdl)
+    rd_tilde->axdzpy_w_pattern(1.0, rd2, *iter->sdl, nlp->get_idl());
+  }
+  if(nlp->m_ineq_upp()>0) {
+    hiopVector& rd2=*dir->sdu;
+    //rd2=rsvu-Vu*rdu
+    rd2.copyFrom(*r.rsvu); 
+    rd2.axzpy(-1.0, *iter->vu, *r.rdu);
+    //rd_tilde += -Sdu^{-1}(rsvu-Vu*rdu)
+    rd_tilde->axdzpy_w_pattern(-1.0, rd2, *iter->sdu, nlp->get_idu());
+  }
+  nlp->log->write("Dd (in computeDirections)", *Dd, hovMatrices);
+
+#ifdef HIOP_DEEPCHECKS
+  hiopVectorPar* rx_tilde_save = rx_tilde->new_copy();
+  hiopVectorPar* ryc_save = r.ryc->new_copy();
+  hiopVectorPar* rd_tilde_save = rd_tilde->new_copy();
+  hiopVectorPar* ryd_save = r.ryd->new_copy();
+#endif
+
+
+  /***********************************************************************
+   * solve the compressed system
+   * (be aware that rx_tilde is reused/modified inside this function) 
+   ***********************************************************************/
+  solveCompressed(*rx_tilde, *rd_tilde , *r.ryc, *r.ryd, *dir->x, *dir->d, *dir->yc, *dir->yd);
+
+#ifdef HIOP_DEEPCHECKS
+  errorCompressedLinsys(*rx_tilde_save, *ryc_save, *rd_tilde_save, *ryd_save, 
+			*dir->x, *dir->d, *dir->yc, *dir->yd);
+  delete rx_tilde_save;
+  delete ryc_save;
+  delete rd_tilde_save;
+  delete ryd_save;
+#endif
+
+  /***********************************************************************
+   * compute the rest of the directions
+   *
+   */
+  //dsxl = rxl + dx  and dzl= [Sxl]^{-1} ( - Zl*dsxl + rszl)
+  if(nlp->n_low_local()) { 
+    dir->sxl->copyFrom(*r.rxl); dir->sxl->axpy( 1.0,*dir->x); dir->sxl->selectPattern(nlp->get_ixl()); 
+
+    dir->zl->copyFrom(*r.rszl); dir->zl->axzpy(-1.0,*iter->zl,*dir->sxl); 
+    dir->zl->componentDiv_p_selectPattern(*iter->sxl, nlp->get_ixl());
+  } else {
+    dir->sxl->setToZero(); dir->zl->setToZero();
+  }
+
+  //dir->sxl->print();
+  //dir->zl->print();
+  //dsxu = rxu - dx and dzu = [Sxu]^{-1} ( - Zu*dsxu + rszu)
+  if(nlp->n_upp_local()) { 
+    dir->sxu->copyFrom(*r.rxu); dir->sxu->axpy(-1.0,*dir->x); dir->sxu->selectPattern(nlp->get_ixu()); 
+
+    dir->zu->copyFrom(*r.rszu); dir->zu->axzpy(-1.0,*iter->zu,*dir->sxu); dir->zu->selectPattern(nlp->get_ixu());
+    dir->zu->componentDiv_p_selectPattern(*iter->sxu, nlp->get_ixu());
+  } else {
+    dir->sxu->setToZero(); dir->zu->setToZero();
+  }
+
+  //dir->sxu->print();
+  //dir->zu->print();
+  //dsdl = rdl + dd and dvl = [Sdl]^{-1} ( - Vl*dsdl + rsvl)
+  if(nlp->m_ineq_low()) {
+    dir->sdl->copyFrom(*r.rdl); dir->sdl->axpy( 1.0,*dir->d); dir->sdl->selectPattern(nlp->get_idl());
+
+    dir->vl->copyFrom(*r.rsvl); dir->vl->axzpy(-1.0,*iter->vl,*dir->sdl); dir->vl->selectPattern(nlp->get_idl());
+    dir->vl->componentDiv_p_selectPattern(*iter->sdl, nlp->get_idl());
+  } else {
+    dir->sdl->setToZero(); dir->vl->setToZero();
+  }
+
+  //dsdu = rdu - dd and dvu = [Sdu]^{-1} ( - Vu*dsdu + rsvu )
+  if(nlp->m_ineq_upp()>0) {
+    dir->sdu->copyFrom(*r.rdu); dir->sdu->axpy(-1.0,*dir->d); dir->sdu->selectPattern(nlp->get_idu());
+    
+    dir->vu->copyFrom(*r.rsvu); dir->vu->axzpy(-1.0,*iter->vu,*dir->sdu); dir->vu->selectPattern(nlp->get_idu());
+    dir->vu->componentDiv_p_selectPattern(*iter->sdu, nlp->get_idu());
+  } else {
+    dir->sdu->setToZero(); dir->vu->setToZero();
+  }
+
+#ifdef HIOP_DEEPCHECKS
+  assert(dir->sxl->matchesPattern(nlp->get_ixl()));
+  assert(dir->sxu->matchesPattern(nlp->get_ixu()));
+  assert(dir->sdl->matchesPattern(nlp->get_idl()));
+  assert(dir->sdu->matchesPattern(nlp->get_idu()));
+  assert(dir->zl->matchesPattern(nlp->get_ixl()));
+  assert(dir->zu->matchesPattern(nlp->get_ixu()));
+  assert(dir->vl->matchesPattern(nlp->get_idl()));
+  assert(dir->vu->matchesPattern(nlp->get_idu()));
+
+  //CHECK THE SOLUTION
+  errorKKT(resid,dir);
+#endif
+  nlp->runStats.tmSolverInternal.stop();
+  return true;
+}
+
+#ifdef HIOP_DEEPCHECKS
+double hiopKKTLinSysCompressedXDYcYd::
+errorCompressedLinsys(const hiopVectorPar& rx, const hiopVectorPar& rd, const hiopVectorPar& ryc, const hiopVectorPar& ryd,
+		      const hiopVectorPar& dx, const hiopVectorPar& dd, const hiopVectorPar& dyc, const hiopVectorPar& dyd)
+{
+  nlp->log->printf(hovLinAlgScalars, "hiopKKTLinSysDenseXDYcYd::errorCompressedLinsys residuals norm:\n");
+  
+  double derr=1e20, aux;
+  hiopVectorPar *RX=rx.new_copy();
+  //RX=rx-H*dx-J'c*dyc-J'*dyd
+  Hess->timesVec(1.0, *RX, -1.0, dx);
+  RX->axzpy(-1.0, *Dx, dx);
+
+  Jac_c->transTimesVec(1.0, *RX, -1.0, dyc);
+  Jac_d->transTimesVec(1.0, *RX, -1.0, dyd);
+  aux=RX->twonorm();
+  derr=fmax(derr,aux);
+  nlp->log->printf(hovLinAlgScalars, " >>  rx=%g\n", aux);
+  delete RX; RX=NULL;
+
+  //RD = rd + dyd - Dd*dx
+  hiopVectorPar* RD=rd.new_copy();
+  RD->axpy( 1., dyd);
+  RD->axzpy(-1., *Dd, dx);
+  aux=RD->twonorm();
+  derr=fmax(derr,aux);
+  nlp->log->printf(hovLinAlgScalars, " >>  rd=%g\n", aux);
+
+  hiopVectorPar* RC=ryc.new_copy();
+  Jac_c->timesVec(1.0, *RC, -1.0, dx);
+  aux = RC->twonorm();
+  derr=fmax(derr,aux);
+  nlp->log->printf(hovLinAlgScalars, " >> ryc=%g\n", aux);
+  delete RC; RC=NULL;
+  
+  //RYD = ryd+dyd - Jd*dx
+  hiopVectorPar* RYD=ryd.new_copy();
+  Jac_d->timesVec(1.0, *RYD, -1.0, dx);
+  RYD->axpy(1.0, dyd);
+  aux = RYD->twonorm();
+  derr=fmax(derr,aux);
+  nlp->log->printf(hovLinAlgScalars, " >> ryd=%g\n", aux);
+  delete RYD; RYD=NULL;
+  
+  return derr;
+}
+#endif
+
 
 ////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
@@ -405,19 +678,19 @@ update(const hiopIterate* iter_,
 }
 
 
-  /* Solves the system corresponding to directions for x, yc, and yd, namely
-   * [ H_BFGS + Dx   Jc^T  Jd^T   ] [ dx]   [ rx  ]
-   * [    Jc          0     0     ] [dyc] = [ ryc ]
-   * [    Jd          0   -Dd^{-1}] [dyd]   [ ryd ]
-   *
-   * This is done by forming and solving
-   * [ Jc*(H+Dx)^{-1}*Jc^T   Jc*(H+Dx)^{-1}*Jd^T          ] [dyc] = [ Jc(H+Dx)^{-1} rx - ryc ]
-   * [ Jd*(H+Dx)^{-1}*Jc^T   Jd*(H+Dx)^{-1}*Jd^T + Dd^{-1}] [dyd]   [ Jd(H+dx)^{-1} rx - ryd ]
-   * and then solving for dx from
-   *  dx = - (H+Dx)^{-1}*(Jc^T*dyc+Jd^T*dyd - rx)
-   * 
-   * Note that ops H+Dx are provided by hiopHessianLowRank
-   */
+/* Solves the system corresponding to directions for x, yc, and yd, namely
+ * [ H_BFGS + Dx   Jc^T  Jd^T   ] [ dx]   [ rx  ]
+ * [    Jc          0     0     ] [dyc] = [ ryc ]
+ * [    Jd          0   -Dd^{-1}] [dyd]   [ ryd ]
+ *
+ * This is done by forming and solving
+ * [ Jc*(H+Dx)^{-1}*Jc^T   Jc*(H+Dx)^{-1}*Jd^T          ] [dyc] = [ Jc(H+Dx)^{-1} rx - ryc ]
+ * [ Jd*(H+Dx)^{-1}*Jc^T   Jd*(H+Dx)^{-1}*Jd^T + Dd^{-1}] [dyd]   [ Jd(H+dx)^{-1} rx - ryd ]
+ * and then solving for dx from
+ *  dx = - (H+Dx)^{-1}*(Jc^T*dyc+Jd^T*dyd - rx)
+ * 
+ * Note that ops H+Dx are provided by hiopHessianLowRank
+ */
 void hiopKKTLinSysLowRank::
 solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
 		hiopVectorPar& dx, hiopVectorPar& dyc, hiopVectorPar& dyd)
@@ -497,41 +770,6 @@ solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
   delete r;
 #endif
 }
-
-
-// int hiopKKTLinSysLowRank::factorizeMat(hiopMatrixDense& M)
-// {
-// #ifdef HIOP_DEEPCHECKS
-//   assert(M.m()==M.n());
-// #endif
-//   if(M.m()==0) return 0;
-//   char uplo='L'; int N=M.n(), lda=N, info;
-//   dpotrf_(&uplo, &N, M.local_buffer(), &lda, &info);
-//   if(info>0)
-//     nlp->log->printf(hovError, "hiopKKTLinSysLowRank::factorizeMat: dpotrf (Chol fact) detected %d minor being indefinite.\n", info);
-//   else
-//     if(info<0) 
-//       nlp->log->printf(hovError, "hiopKKTLinSysLowRank::factorizeMat: dpotrf returned error %d\n", info);
-//   assert(info==0);
-//   return info;
-// }
-
-// int hiopKKTLinSysLowRank::solveWithFactors(hiopMatrixDense& M, hiopVectorPar& r)
-// {
-// #ifdef HIOP_DEEPCHECKS
-//   assert(M.m()==M.n());
-// #endif
-//   if(M.m()==0) return 0;
-//   char uplo='L'; //we have upper triangular in C++, but this is lower in fortran
-//   int N=M.n(), lda=N, nrhs=1, info;
-//   dpotrs_(&uplo,&N, &nrhs, M.local_buffer(), &lda, r.local_data(), &lda, &info);
-//   if(info<0) 
-//     nlp->log->printf(hovError, "hiopKKTLinSysLowRank::solveWithFactors: dpotrs returned error %d\n", info);
-// #ifdef HIOP_DEEPCHECKS
-//   assert(info<=0);
-// #endif
-//   return info;
-// }
 
 int hiopKKTLinSysLowRank::solveWithRefin(hiopMatrixDense& M, hiopVectorPar& rhs)
 {
