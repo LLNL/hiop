@@ -311,7 +311,9 @@ public:
    * during the first call to 'eval_Hess_Lagr'. On subsequent calls, HiOp will pass the 
    * triplet arrays for HSD set to NULL and the implementer (obviously) should not use them.
    *
-   * Notes 1)-5) from 'eval_Jac_cons' applies to xxxHSS and HDD arrays
+   * Notes 
+   * 1)-5) from 'eval_Jac_cons' applies to xxxHSS and HDD arrays
+   * 6) The order is multipliers is: lambda=[lambda_eq, lambda_ineq]
    */
   virtual bool eval_Hess_Lagr(const long long& n, const long long& m, 
 			      const double* x, bool new_x, const double& obj_factor,
