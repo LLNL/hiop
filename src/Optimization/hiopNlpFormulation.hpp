@@ -98,8 +98,12 @@ public:
   /* the implementation of the next two methods depends both on the interface and on the formulation */
   virtual bool eval_Jac_c(double* x, bool new_x, hiopMatrix& Jac_c)=0;
   virtual bool eval_Jac_d(double* x, bool new_x, hiopMatrix& Jac_d)=0;
-  virtual bool eval_Hess_Lagr(double* x, bool new_x, const double& obj_factor, 
-			      double* lambda, bool new_lambda, hiopMatrix& Hess_L)=0;
+  virtual bool eval_Hess_Lagr(const double* x, bool new_x, 
+			      const double& obj_factor,  
+			      const double* lambda_eq, 
+			      const double* lambda_ineq, 
+			      bool new_lambdas, 
+			      hiopMatrix& Hess_L)=0;
   /* starting point */
   virtual bool get_starting_point(hiopVector& x0);
 
@@ -279,20 +283,23 @@ public:
   /* specialized evals to avoid overhead of dynamic cast. Generic variants available above. */
   virtual bool eval_Jac_c(double* x, bool new_x, double** Jac_c);
   virtual bool eval_Jac_d(double* x, bool new_x, double** Jac_d);
-  virtual bool eval_Hess_Lagr(double* x, bool new_x, const double& obj_factor, 
-			      double* lambda, bool new_lambda, hiopMatrix& Hess_L)
+
+
+  virtual bool eval_Hess_Lagr(const double* x, bool new_x, const double& obj_factor, 
+			      const double* lambda_eq, const double* lambda_ineq, bool new_lambda, 
+			      hiopMatrix& Hess_L)
   {
-    assert(false && "this NLP formulation is only for Quasi-Newton");
+    //silently ignore the call since we're in the quasi-Newton case
+    //assert(false && "this NLP formulation is only for Quasi-Newton");
     return true;
   }
-
 
   virtual hiopMatrixDense* alloc_Jac_c();
   virtual hiopMatrixDense* alloc_Jac_d();
   //returns hiopHessianLowRank which (fakely) inherits from hiopMatrix
   virtual hiopMatrix* alloc_Hess_Lagr();
 
-  /* this is in general for a dense matrix witn n_vars cols and a small number of 
+  /* this is in general for a dense matrix with n_vars cols and a small number of 
    * 'nrows' rows. The second argument indicates how much total memory should the
    * matrix (pre)allocate.
    */
@@ -316,9 +323,12 @@ public:
   hiopNlpMDS(hiopInterfaceMDS& interface_)
     : hiopNlpFormulation(interface_), interface(interface_)
   {
-
+    _buf_lambda = new hiopVectorPar(0);
   }
-  virtual ~hiopNlpMDS() {};
+  virtual ~hiopNlpMDS() 
+  {
+    delete _buf_lambda;
+  }
 
   virtual bool finalizeInitialization()
   {
@@ -362,18 +372,29 @@ public:
       return false;
     }
   }
-  virtual bool eval_Hess_Lagr(double* x, bool new_x, const double& obj_factor, 
-			      double* lambda, bool new_lambda, hiopMatrix& Hess_L)
+  virtual bool eval_Hess_Lagr(const double* x, bool new_x, const double& obj_factor, 
+			      const double* lambda_eq, const double* lambda_ineq, bool new_lambdas, hiopMatrix& Hess_L)
   {
     hiopMatrixSymBlockDiagMDS* pHessL = dynamic_cast<hiopMatrixSymBlockDiagMDS*>(&Hess_L);
     assert(pHessL);
     if(pHessL) {
+
+      if(n_cons_eq + n_cons_ineq != _buf_lambda->get_size()) {
+	delete _buf_lambda;
+	_buf_lambda = NULL;
+	_buf_lambda = new hiopVectorPar(n_cons_eq + n_cons_ineq);
+      }
+      assert(_buf_lambda);
+      _buf_lambda->copyFromStarting(0,         lambda_eq,   n_cons_eq);
+      _buf_lambda->copyFromStarting(n_cons_eq, lambda_ineq, n_cons_ineq);
+
       int nnzHSS = pHessL->sp_nnz(), nnzHSD = 0;
-      bool bret = interface.eval_Hess_Lagr(n_vars, n_cons, x, new_x, obj_factor, lambda, new_lambda, 
-				      pHessL->n_sp(), pHessL->n_de(),
-				      nnzHSS, pHessL->sp_irow(), pHessL->sp_jcol(), pHessL->sp_M(),
-				      pHessL->de_local_data(),
-				      nnzHSD, NULL, NULL, NULL);
+      bool bret = interface.eval_Hess_Lagr(n_vars, n_cons, x, new_x, 
+					   obj_factor, _buf_lambda->local_data(), new_lambdas, 
+					   pHessL->n_sp(), pHessL->n_de(),
+					   nnzHSS, pHessL->sp_irow(), pHessL->sp_jcol(), pHessL->sp_M(),
+					   pHessL->de_local_data(),
+					   nnzHSD, NULL, NULL, NULL);
       assert(nnzHSD==0);
       assert(nnzHSS==pHessL->sp_nnz());
       return bret;
@@ -401,6 +422,8 @@ private:
   int nx_sparse, nx_dense;
   int nnz_sparse_Jaceq, nnz_sparse_Jacineq;
   int nnz_sparse_Hess_Lagr_SS, nnz_sparse_Hess_Lagr_SD;
+
+  hiopVectorPar* _buf_lambda;
 };
 
 }

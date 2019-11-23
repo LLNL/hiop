@@ -262,7 +262,7 @@ startingProcedure(hiopIterate& it_ini,
   nlp->runStats.tmStartingPoint.stop();
   nlp->runStats.tmSolverInternal.stop();
 
-  this->evalNlp(it_ini, f, c, d, gradf, Jac_c, Jac_d);
+  this->evalNlp(it_ini, f, c, d, gradf, Jac_c, Jac_d, *_Hess_Lagr);
   
   nlp->runStats.tmSolverInternal.start();
   nlp->runStats.tmStartingPoint.start();
@@ -305,7 +305,8 @@ startingProcedure(hiopIterate& it_ini,
 bool hiopAlgFilterIPMBase::
 evalNlp(hiopIterate& iter, 			       
 	double &f, hiopVector& c_, hiopVector& d_, 
-	hiopVector& gradf_,  hiopMatrix& Jac_c,  hiopMatrix& Jac_d)
+	hiopVector& gradf_,  hiopMatrix& Jac_c,  hiopMatrix& Jac_d,
+	hiopMatrix& Hess_L)
 {
   bool new_x=true, bret; 
   hiopVectorPar& it_x = dynamic_cast<hiopVectorPar&>(*iter.get_x());
@@ -317,13 +318,20 @@ evalNlp(hiopIterate& iter,
   //f(x)
   bret = nlp->eval_f(x, new_x, f); assert(bret);
   new_x= false; //same x for the rest
-  bret = nlp->eval_grad_f(x, new_x, gradf.local_data());  assert(bret);
+  bret = nlp->eval_grad_f(x, new_x, gradf.local_data()); assert(bret);
 
-  bret = nlp->eval_c     (x, new_x, c.local_data());     assert(bret);
-  bret = nlp->eval_d     (x, new_x, d.local_data());     assert(bret);
-  bret = nlp->eval_Jac_c (x, new_x, Jac_c); assert(bret);
-  bret = nlp->eval_Jac_d (x, new_x, Jac_d); assert(bret);
+  bret = nlp->eval_c        (x, new_x, c.local_data());  assert(bret);
+  bret = nlp->eval_d        (x, new_x, d.local_data());  assert(bret);
+  bret = nlp->eval_Jac_c    (x, new_x, Jac_c);           assert(bret);
+  bret = nlp->eval_Jac_d    (x, new_x, Jac_d);           assert(bret);
 
+  const hiopVectorPar* yc = dynamic_cast<const hiopVectorPar*>(iter.get_yc()); assert(yc);
+  const hiopVectorPar* yd = dynamic_cast<const hiopVectorPar*>(iter.get_yd()); assert(yd);
+  const int new_lambda = true;
+  bret = nlp->eval_Hess_Lagr(x, new_x, 
+			     1., yc->local_data_const(), yd->local_data_const(), new_lambda,
+			     Hess_L);    
+  assert(bret);
   return bret;
 }
 bool hiopAlgFilterIPMBase::
@@ -424,7 +432,8 @@ bool hiopAlgFilterIPMBase::evalNlp_funcOnly(hiopIterate& iter,
 }
 
 bool hiopAlgFilterIPMBase::evalNlp_derivOnly(hiopIterate& iter,
-					     hiopVector& gradf_, hiopMatrix& Jac_c, hiopMatrix& Jac_d)
+					     hiopVector& gradf_, hiopMatrix& Jac_c, hiopMatrix& Jac_d,
+					     hiopMatrix& Hess_L)
 {
   bool new_x=false; //functions were previously evaluated in the line search
   bool bret;
@@ -434,6 +443,14 @@ bool hiopAlgFilterIPMBase::evalNlp_derivOnly(hiopIterate& iter,
   bret = nlp->eval_grad_f(x, new_x, gradf.local_data()); assert(bret);
   bret = nlp->eval_Jac_c (x, new_x, Jac_c); assert(bret);
   bret = nlp->eval_Jac_d (x, new_x, Jac_d); assert(bret);
+
+  const hiopVectorPar* yc = dynamic_cast<const hiopVectorPar*>(iter.get_yc()); assert(yc);
+  const hiopVectorPar* yd = dynamic_cast<const hiopVectorPar*>(iter.get_yd()); assert(yd);
+  const int new_lambda = true;
+  bret = nlp->eval_Hess_Lagr(x, new_x, 
+			     1., yc->local_data_const(), yd->local_data_const(), new_lambda,
+			     Hess_L);    
+  assert(bret);
   return bret;
 }
 
@@ -851,7 +868,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
     iter_num++; nlp->runStats.nIter=iter_num;
 
     //evaluate derivatives at the trial (and to be accepted) trial point
-    this->evalNlp_derivOnly(*it_trial, *_grad_f, *_Jac_c, *_Jac_d);
+    this->evalNlp_derivOnly(*it_trial, *_grad_f, *_Jac_c, *_Jac_d, *_Hess_Lagr);
 
     nlp->runStats.tmSolverInternal.start(); //-----
     //reuse function values
@@ -976,7 +993,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
   theta_max=1e+4*fmax(1.0,resid->getInfeasInfNorm());
   theta_min=1e-4*fmax(1.0,resid->getInfeasInfNorm());
   
-  hiopKKTLinSysDense* kkt=new hiopKKTLinSysDense(nlp);
+  hiopKKTLinSysDenseXDYcYd* kkt=new hiopKKTLinSysDenseXDYcYd(nlp);
 
   _alpha_primal = _alpha_dual = 0;
 
@@ -1218,7 +1235,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
     iter_num++; nlp->runStats.nIter=iter_num;
 
     //evaluate derivatives at the trial (and to be accepted) trial point
-    this->evalNlp_derivOnly(*it_trial, *_grad_f, *_Jac_c, *_Jac_d);
+    this->evalNlp_derivOnly(*it_trial, *_grad_f, *_Jac_c, *_Jac_d, *_Hess_Lagr);
 
     nlp->runStats.tmSolverInternal.start(); //-----
     //reuse function values

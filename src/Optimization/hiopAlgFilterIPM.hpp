@@ -85,9 +85,13 @@ public:
 protected:
   bool evalNlp(hiopIterate& iter,
 	       double &f, hiopVector& c_, hiopVector& d_, 
-	       hiopVector& grad_,  hiopMatrix& Jac_c,  hiopMatrix& Jac_d);
-  bool evalNlp_funcOnly(hiopIterate& iter, double& f, hiopVector& c_, hiopVector& d_);
-  bool evalNlp_derivOnly(hiopIterate& iter, hiopVector& gradf_,  hiopMatrix& Jac_c,  hiopMatrix& Jac_d);
+	       hiopVector& grad_,  hiopMatrix& Jac_c,  hiopMatrix& Jac_d, 
+	       hiopMatrix& Hess_L);
+  bool evalNlp_funcOnly(hiopIterate& iter, 
+			double& f, hiopVector& c_, hiopVector& d_);
+  bool evalNlp_derivOnly(hiopIterate& iter, 
+			 hiopVector& gradf_,  hiopMatrix& Jac_c,  hiopMatrix& Jac_d,
+			  hiopMatrix& Hess_L);
  /* internal helper for error computation */
   virtual bool evalNlpAndLogErrors(const hiopIterate& it, const hiopResidual& resid, const double& mu,
 				   double& nlpoptim, double& nlpfeas, double& nlpcomplem, double& nlpoverall,
