@@ -81,10 +81,12 @@ public:
   virtual void setToConstant( double c ) = 0;
   /** Set all elements that are not zero in ix to  c, and the rest to 0 */
   virtual void setToConstant_w_patternSelect( double c, const hiopVector& ix)=0;
+  //TO DO: names of copyTo/FromStarting methods are quite confusing 
+  //maybe startingAtCopyFromStartingAt startingAtCopyToStartingAt ?
   /** Copy the elements of v */
   virtual void copyFrom(const hiopVector& v ) = 0;
-  /** Copy the 'n' elements of v starting at 'start_index_in_src' in 'this' */
-  virtual void copyFromStarting(int start_index_in_src, const double* v, int n) = 0;
+  /** Copy the 'n' elements of v starting at 'start_index_in_dest' in 'this' */
+  virtual void copyFromStarting(int start_index_in_dest, const double* v, int n) = 0;
   /* Copy v in 'this' starting at start_index_in_src in  'this'. */
   virtual void copyFromStarting(int start_index_in_src, const hiopVector& v) = 0;
   /* Copy 'this' to double array, which is assumed to be at least of 'n_local' size.*/
