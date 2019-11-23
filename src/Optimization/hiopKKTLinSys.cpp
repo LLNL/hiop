@@ -475,8 +475,8 @@ bool hiopKKTLinSysCompressedXDYcYd::computeDirections(const hiopResidual* resid,
 
 #ifdef HIOP_DEEPCHECKS
   hiopVectorPar* rx_tilde_save = rx_tilde->new_copy();
-  hiopVectorPar* ryc_save = r.ryc->new_copy();
   hiopVectorPar* rd_tilde_save = rd_tilde->new_copy();
+  hiopVectorPar* ryc_save = r.ryc->new_copy();
   hiopVectorPar* ryd_save = r.ryd->new_copy();
 #endif
 
@@ -488,7 +488,7 @@ bool hiopKKTLinSysCompressedXDYcYd::computeDirections(const hiopResidual* resid,
   solveCompressed(*rx_tilde, *rd_tilde , *r.ryc, *r.ryd, *dir->x, *dir->d, *dir->yc, *dir->yd);
 
 #ifdef HIOP_DEEPCHECKS
-  errorCompressedLinsys(*rx_tilde_save, *ryc_save, *rd_tilde_save, *ryd_save, 
+  errorCompressedLinsys(*rx_tilde_save, *rd_tilde_save, *ryc_save, *ryd_save, 
 			*dir->x, *dir->d, *dir->yc, *dir->yd);
   delete rx_tilde_save;
   delete ryc_save;
@@ -581,10 +581,10 @@ errorCompressedLinsys(const hiopVectorPar& rx, const hiopVectorPar& rd, const hi
   nlp->log->printf(hovLinAlgScalars, " >>  rx=%g\n", aux);
   delete RX; RX=NULL;
 
-  //RD = rd + dyd - Dd*dx
+  //RD = rd + dyd - Dd*dd
   hiopVectorPar* RD=rd.new_copy();
   RD->axpy( 1., dyd);
-  RD->axzpy(-1., *Dd, dx);
+  RD->axzpy(-1., *Dd, dd);
   aux=RD->twonorm();
   derr=fmax(derr,aux);
   nlp->log->printf(hovLinAlgScalars, " >>  rd=%g\n", aux);
