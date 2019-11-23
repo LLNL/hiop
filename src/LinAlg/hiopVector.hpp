@@ -83,7 +83,9 @@ public:
   virtual void setToConstant_w_patternSelect( double c, const hiopVector& ix)=0;
   /** Copy the elements of v */
   virtual void copyFrom(const hiopVector& v ) = 0;
-  /* Copy v in 'this' starting at start_index in  'this'. */
+  /** Copy the 'n' elements of v starting at 'start_index_in_src' in 'this' */
+  virtual void copyFromStarting(int start_index_in_src, const double* v, int n) = 0;
+  /* Copy v in 'this' starting at start_index_in_src in  'this'. */
   virtual void copyFromStarting(int start_index_in_src, const hiopVector& v) = 0;
   /* Copy 'this' to double array, which is assumed to be at least of 'n_local' size.*/
   virtual void copyTo(double* dest) const = 0;
@@ -186,6 +188,8 @@ public:
   virtual void setToConstant_w_patternSelect(double c, const hiopVector& select);
   virtual void copyFrom(const hiopVector& v );
   virtual void copyFrom(const double* v_local_data); //v should be of length at least n_local
+  /** Copy the 'n' elements of v starting at 'start_index_in_src' in 'this' */
+  virtual void copyFromStarting(int start_index_in_src, const double* v, int n);
   virtual void copyFromStarting(int start_index_in_src, const hiopVector& v);
   virtual void copyTo(double* dest) const;
   virtual void copyToStarting(int start_index_in_src, hiopVector& v);

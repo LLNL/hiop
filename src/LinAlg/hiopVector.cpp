@@ -142,6 +142,11 @@ void hiopVectorPar::copyFrom(const double* v_local_data )
     memcpy(this->data, v_local_data, n_local*sizeof(double));
 }
 
+void hiopVectorPar::copyFromStarting(int start_index_in_this, const double* v, int nv)
+{
+  assert(start_index_in_this+nv <= n_local);
+  memcpy(data+start_index_in_this, v, nv*sizeof(double));
+}
 
 void hiopVectorPar::copyFromStarting(int start_index/*_in_src*/,const hiopVector& v_)
 {
