@@ -80,8 +80,8 @@ int main(int argc, char **argv)
 
   nlp.options->SetStringValue("dualsUpdateType", "linear");
   nlp.options->SetStringValue("dualsInitialization", "zero");
-  nlp.options->SetIntegerValue("verbosity_level", 10);
-
+  nlp.options->SetIntegerValue("verbosity_level", 12);
+  nlp.options->SetNumericValue("mu0", 1e-1);
   hiopAlgFilterIPMNewton solver(&nlp);
   status = solver.run();
   obj_value = solver.getObjective();
