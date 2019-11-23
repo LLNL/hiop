@@ -172,8 +172,13 @@ public:
   }
 
   /* updates the parts in KKT system that are dependent on the iterate. 
-   * Triggers a refactorization for the dense linear system */
-
+   * Triggers a refactorization for the dense linear system 
+   * Forms the linear system
+   * [  H  +  Dx    0    Jc^T  Jd^T   ] [ dx]   [ rx_tilde ]
+   * [    0         Dd    0     -I    ] [ dd]   [ rd_tilde ]
+   * [    Jc        0     0      0    ] [dyc] = [   ryc    ]
+   * [    Jd       -I     0      0    ] [dyd]   [   ryd    ]  
+   */ 
   bool update(const hiopIterate* iter_, 
 	      const hiopVector* grad_f_, 
 	      const hiopMatrix* Jac_c_, const hiopMatrix* Jac_d_, 
@@ -191,7 +196,7 @@ public:
     int neq = Jac_c->m(), nineq = Jac_d->m();
     
     if(NULL==linSys) {
-      int n=Jac_c->m() + Jac_d->m() + Hess->m();
+      int n=nx+neq+2*nineq;
       linSys = new hiopLinSolverIndefDense(n, nlp);
     }
 
@@ -200,11 +205,11 @@ public:
       hiopMatrixDense& Msys = linSys->sysMatrix();
       Msys.setToZero();
       
-      int alpha = 1.;
+      const int alpha = 1.;
       Hess->addUpperTriangleToSymDenseMatrixUpperTriangle(0, alpha, Msys);
       
-      Jac_c->transAddToSymDenseMatrixUpperTriangle(0, nx+ineq,     alpha, Msys);
-      Jac_d->transAddToSymDenseMatrixUpperTriangle(0, nx+ineq+neq, alpha, Msys);
+      Jac_c->transAddToSymDenseMatrixUpperTriangle(0, nx+nineq,     alpha, Msys);
+      Jac_d->transAddToSymDenseMatrixUpperTriangle(0, nx+nineq+neq, alpha, Msys);
       
       //compute and put the barrier diagonals in
       //Dx=(Sxl)^{-1}Zl + (Sxu)^{-1}Zu
@@ -221,10 +226,18 @@ public:
 #ifdef HIOP_DEEPCHECKS
       assert(true==Dd->allPositive());
 #endif 
-      alpha=-1.;
-      Msys.addSubDiagonal(alpha, nx+neq, *Dd);
 
-      nlp->log->write("KKT XDycYd Linsys:", Msys, hovMatrices);
+      Msys.addSubDiagonal(alpha, nx, *Dd);
+
+
+      //add -I (of size nineq) starting at index (nx, nx+nineq+neq)
+      {
+	int col_start = nx+nineq+neq;
+	double** MsysM = Msys.local_data();
+	for(int i=nx; i<nx+nineq; i++) MsysM[i][col_start++] -= 1.;
+      }
+
+      nlp->log->write("KKT XDYcYd Linsys:", Msys, hovMatrices);
     }
     
     linSys->matrixChanged();
