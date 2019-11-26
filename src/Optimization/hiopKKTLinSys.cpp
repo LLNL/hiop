@@ -266,7 +266,7 @@ bool hiopKKTLinSysCompressedXYcYd::computeDirections(const hiopResidual* resid,
    * solve the compressed system
    * (be aware that rx_tilde is reused/modified inside this function) 
    ***********************************************************************/
-  solveCompressed(*rx_tilde,*r.ryc,*ryd_tilde, *dir->x, *dir->yc, *dir->yd);
+  solveCompressed(*rx_tilde, *r.ryc, *ryd_tilde, *dir->x, *dir->yc, *dir->yd);
   //recover dir->d = (D)^{-1}*(dir->yd + ryd2)
   dir->d->copyFrom(ryd2);
   dir->d->axpy(1.0,*dir->yd);
@@ -485,11 +485,14 @@ bool hiopKKTLinSysCompressedXDYcYd::computeDirections(const hiopResidual* resid,
    * solve the compressed system
    * (be aware that rx_tilde is reused/modified inside this function) 
    ***********************************************************************/
-  solveCompressed(*rx_tilde, *rd_tilde , *r.ryc, *r.ryd, *dir->x, *dir->d, *dir->yc, *dir->yd);
+  solveCompressed(*rx_tilde, *rd_tilde, *r.ryc, *r.ryd, *dir->x, *dir->d, *dir->yc, *dir->yd);
 
 #ifdef HIOP_DEEPCHECKS
-  errorCompressedLinsys(*rx_tilde_save, *rd_tilde_save, *ryc_save, *ryd_save, 
-			*dir->x, *dir->d, *dir->yc, *dir->yd);
+  double derr = 
+    errorCompressedLinsys(*rx_tilde_save, *rd_tilde_save, *ryc_save, *ryd_save, 
+			  *dir->x, *dir->d, *dir->yc, *dir->yd);
+  if(derr>1e-8)
+    nlp->log->printf(hovWarning, "solve compressed high absolute resid norm (=%12.5e)\n", derr);
   delete rx_tilde_save;
   delete ryc_save;
   delete rd_tilde_save;
@@ -568,7 +571,7 @@ errorCompressedLinsys(const hiopVectorPar& rx, const hiopVectorPar& rd, const hi
 {
   nlp->log->printf(hovLinAlgScalars, "hiopKKTLinSysDenseXDYcYd::errorCompressedLinsys residuals norm:\n");
   
-  double derr=1e20, aux;
+  double derr=-1., aux;
   hiopVectorPar *RX=rx.new_copy();
   //RX=rx-H*dx-J'c*dyc-J'*dyd
   Hess->timesVec(1.0, *RX, -1.0, dx);
@@ -588,6 +591,7 @@ errorCompressedLinsys(const hiopVectorPar& rx, const hiopVectorPar& rd, const hi
   aux=RD->twonorm();
   derr=fmax(derr,aux);
   nlp->log->printf(hovLinAlgScalars, " >>  rd=%g\n", aux);
+  delete RD; RD=NULL;
 
   hiopVectorPar* RC=ryc.new_copy();
   Jac_c->timesVec(1.0, *RC, -1.0, dx);
@@ -599,7 +603,7 @@ errorCompressedLinsys(const hiopVectorPar& rx, const hiopVectorPar& rd, const hi
   //RYD = ryd+dyd - Jd*dx
   hiopVectorPar* RYD=ryd.new_copy();
   Jac_d->timesVec(1.0, *RYD, -1.0, dx);
-  RYD->axpy(1.0, dyd);
+  RYD->axpy(1.0, dd);
   aux = RYD->twonorm();
   derr=fmax(derr,aux);
   nlp->log->printf(hovLinAlgScalars, " >> ryd=%g\n", aux);
@@ -1047,7 +1051,7 @@ errorCompressedLinsys(const hiopVectorPar& rx, const hiopVectorPar& ryc, const h
 {
   nlp->log->printf(hovLinAlgScalars, "hiopKKTLinSysLowRank::errorCompressedLinsys residuals norm:\n");
 
-  double derr=1e20, aux;
+  double derr=-1., aux;
   hiopVectorPar *RX=rx.new_copy();
   //RX=rx-H*dx-J'c*dyc-J'*dyd
   HessLowRank->timesVec(1.0, *RX, -1.0, dx);
@@ -1057,9 +1061,9 @@ errorCompressedLinsys(const hiopVectorPar& rx, const hiopVectorPar& ryc, const h
   aux=RX->twonorm();
   derr=fmax(derr,aux);
   nlp->log->printf(hovLinAlgScalars, "  >>>  rx=%g\n", aux);
-  if(aux>1e-8) {
-    //nlp->log->write("Low rank Hessian is:", *Hess, hovLinAlgScalars); 
-  }
+  //if(aux>1e-8) {
+  //nlp->log->write("Low rank Hessian is:", *Hess, hovLinAlgScalars); 
+  //}
   delete RX; RX=NULL;
 
   hiopVectorPar* RC=ryc.new_copy();
