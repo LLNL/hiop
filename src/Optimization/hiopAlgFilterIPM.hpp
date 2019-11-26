@@ -54,6 +54,7 @@
 #include "hiopResidual.hpp"
 #include "hiopFilter.hpp"
 #include "hiopHessianLowRank.hpp"
+#include "hiopKKTLinSys.hpp"
 #include "hiopLogBarProblem.hpp"
 #include "hiopDualsUpdater.hpp"
 #include "hiopTimer.hpp"
@@ -213,6 +214,7 @@ public:
   virtual hiopSolveStatus run();
 private:
   virtual void outputIteration(int lsStatus, int lsNum);
+  virtual hiopKKTLinSysCompressed* decideAndCreateLinearSystem(hiopNlpFormulation* nlp);
 private:
   hiopAlgFilterIPMNewton() : hiopAlgFilterIPMBase(NULL) {};
   hiopAlgFilterIPMNewton(const hiopAlgFilterIPMNewton& ) : hiopAlgFilterIPMBase(NULL){};

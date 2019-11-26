@@ -67,7 +67,7 @@ const char* szDefaultFilename = "hiop.options";
 {
   registerOptions();
   loadFromFile(szOptionsFilename==NULL?szDefaultFilename:szOptionsFilename);
-  //ensureConsistence();
+  ensureConsistence();
 }
 
 hiopOptions::~hiopOptions()
@@ -152,6 +152,17 @@ void hiopOptions::registerOptions()
 
     
   }
+
+  //optimization method used
+  {
+    vector<string> range(2); range[0]="quasinewton_approx"; range[1]="analytical_exact"; 
+    registerStrOption("Hessian", "quasinewton_approx", range, "Type of Hessian to be used with the filter IPM: 'quasinewton_approx' built internally by HiOp (default option) or 'analytical_exact' provided by the user");
+  }
+  //linear algebra
+  {
+    vector<string> range(3); range[0] = "auto"; range[1]="xycyd"; range[2]="xdycyd"; 
+    registerStrOption("KKTLinsys", "auto", range, "Type of KKT linear system used internally: decided by HiOp 'auto' (default option), the more compact 'XYcYd' or the more stable 'XDYcYd'. The last two are only available with Hessian=analyticalExact");
+  }
 }
 
 void hiopOptions::registerNumOption(const std::string& name, double defaultValue, double low, double upp, const char* description)
@@ -180,6 +191,15 @@ void hiopOptions::ensureConsistence()
     log_printf(hovWarning, "There is no reason to set 'acceptable_tolerance' tighter than 'tolerance'. Will set the two to 'tolerance'.\n");
     SetNumericValue("acceptable_tolerance", eps_tol);
   }
+
+  if(GetString("Hessian")=="quasinewton_approx") {
+    string strKKT = GetString("KKTLinsys");
+    if(strKKT=="xycyd" || strKKT=="xdycyd")
+      log_printf(hovWarning, "Passed option 'KKTLinsys=%s' not valid for "
+		 "'Hessian=quasiNewtonApprox'. Will use 'KKTLinsys=auto'\n",
+		 strKKT.c_str());
+  }
+
 }
 
 static inline std::string &ltrim(std::string &s) {
@@ -366,8 +386,7 @@ bool hiopOptions::SetStringValue (const char* name,  const char* value, const bo
 	log_printf(hovWarning, 
 		    "Hiop: value '%s' for option '%s' must be one of [%s]. Default value '%s' will be used.\n",
 		    value, name, ssRange.str().c_str(), option->val.c_str());
-      }
-      else option->val = value;
+      } else option->val = strValue;
     }
   } else {
     log_printf(hovWarning, 

@@ -944,6 +944,17 @@ hiopAlgFilterIPMNewton::~hiopAlgFilterIPMNewton()
 {
 }
 
+
+hiopKKTLinSysCompressed* hiopAlgFilterIPMNewton::decideAndCreateLinearSystem(hiopNlpFormulation* nlp)
+{
+  std::string strKKT = nlp->options->GetString("KKTLinsys");
+  printf("00000000000  [%s]", strKKT.c_str());
+  if(strKKT == "xdycyd")
+    return new hiopKKTLinSysDenseXDYcYd(nlp);
+  else //'auto' or 'XYcYd'
+    return new hiopKKTLinSysDenseXYcYd(nlp);
+}
+
 hiopSolveStatus hiopAlgFilterIPMNewton::run()
 {
   //hiopNlpFormulation nlp may need an update since user may have changed options and
@@ -993,8 +1004,10 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
   theta_max=1e+4*fmax(1.0,resid->getInfeasInfNorm());
   theta_min=1e-4*fmax(1.0,resid->getInfeasInfNorm());
   
-  //hiopKKTLinSysDenseXDYcYd* kkt=new hiopKKTLinSysDenseXDYcYd(nlp);
-  hiopKKTLinSysDenseXYcYd* kkt=new hiopKKTLinSysDenseXYcYd(nlp);
+  hiopKKTLinSysCompressed* kkt = decideAndCreateLinearSystem(nlp);
+
+
+  assert(kkt != NULL);
 
   _alpha_primal = _alpha_dual = 0;
 
