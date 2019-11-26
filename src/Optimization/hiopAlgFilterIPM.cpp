@@ -993,7 +993,8 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
   theta_max=1e+4*fmax(1.0,resid->getInfeasInfNorm());
   theta_min=1e-4*fmax(1.0,resid->getInfeasInfNorm());
   
-  hiopKKTLinSysDenseXDYcYd* kkt=new hiopKKTLinSysDenseXDYcYd(nlp);
+  //hiopKKTLinSysDenseXDYcYd* kkt=new hiopKKTLinSysDenseXDYcYd(nlp);
+  hiopKKTLinSysDenseXYcYd* kkt=new hiopKKTLinSysDenseXYcYd(nlp);
 
   _alpha_primal = _alpha_dual = 0;
 

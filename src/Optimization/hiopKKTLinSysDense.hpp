@@ -55,7 +55,14 @@
 namespace hiop
 {
 
-/** KKT system treated as dense; used for developement/testing purposes mainly */
+/* KKT system treated as dense; used for developement/testing purposes mainly 
+ * updates the parts in KKT system that are dependent on the iterate. 
+ * Triggers a refactorization for the dense linear system 
+ * Forms the linear system
+ * [  H  +  Dx   Jc^T   Jd^T   ] [ dx]   [ rx_tilde ]
+ * [    Jc        0       0    ] [dyc] = [   ryc    ]
+ * [    Jd        0   -Dd^{-1} ] [dyd]   [   ryd    ]  
+ */ 
 class hiopKKTLinSysDenseXYcYd : public hiopKKTLinSysCompressedXYcYd
 {
 public:
@@ -148,6 +155,10 @@ public:
     rhsXYcYd->copyToStarting(0,      dx);
     rhsXYcYd->copyToStarting(nx,     dyc);
     rhsXYcYd->copyToStarting(nx+nyc, dyd);
+
+    nlp->log->write("SOL KKT XYcYd dx: ", dx,  hovMatrices);
+    nlp->log->write("SOL KKT XYcYd dyc:", dyc, hovMatrices);
+    nlp->log->write("SOL KKT XYcYd dyd:", dyd, hovMatrices);
   }
 
 protected:
@@ -269,10 +280,10 @@ public:
     rhsXDYcYd->copyToStarting(nx+nyd,     dyc);
     rhsXDYcYd->copyToStarting(nx+nyd+nyc, dyd);
 
-    nlp->log->write("SOL KKT XDycYd rx: ", dx,  hovMatrices);
-    nlp->log->write("SOL KKT XDycYd rd: ", dd,  hovMatrices);
-    nlp->log->write("SOL KKT XDycYd ryc:", dyc, hovMatrices);
-    nlp->log->write("SOL KKT XDycYd ryd:", dyd, hovMatrices);
+    nlp->log->write("SOL KKT XDYcYd dx: ", dx,  hovMatrices);
+    nlp->log->write("SOL KKT XDYcYd dd: ", dd,  hovMatrices);
+    nlp->log->write("SOL KKT XDYcYd dyc:", dyc, hovMatrices);
+    nlp->log->write("SOL KKT XDYcYd dyd:", dyd, hovMatrices);
 
   }
 
