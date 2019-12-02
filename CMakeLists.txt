@@ -10,6 +10,7 @@ FortranCInterface_HEADER(FortranCInterface.hpp MACRO_NAMESPACE "FC_")
 file(WRITE "src/Interface/hiop_defs.hpp" "")
 
 option(HIOP_USE_MPI "Build with MPI support" ON)
+option(HIOP_USE_GPU "Build with support for GPUs - Magma and cuda libraries" ON)
 option(HIOP_DEEPCHECKS "Extra checks and asserts in the code with a high penalty on performance" ON)
 
 #with testing drivers capable of 'selfchecking' (-selfcheck)
@@ -25,6 +26,41 @@ else()
   file(APPEND "src/Interface/hiop_defs.hpp" "#ifdef HIOP_USE_MPI\n#undef HIOP_USE_MPI\n#endif\n")
 endif(HIOP_USE_MPI)
 
+if(HIOP_USE_GPU)
+  # for now we rely on MAGMA for GPUs computations
+  set(MAGMA_LIBRARIES "-lmagma")
+  if(HIOP_MAGMA_DIR)
+    set(MAGMA_LIBRARIES "-L${HIOP_MAGMA_DIR}/lib ${MAGMA_LIBRARIES}")
+    set(MAGMA_INCLUDE "-I${HIOP_MAGMA_DIR}/include")
+  endif(HIOP_MAGMA_DIR)
+
+
+  set(HIOP_CUDA_LIBRARIES "-lculibos -lcublas -lcublasLt -lnvblas -lcusparse -lcudart -lcudadevrt")
+  find_package(CUDA)
+  
+  if(HIOP_CUDA_LIB_DIR)
+    set(HIOP_CUDA_LIBRARIES "-L${HIOP_CUDA_LIB_DIR} ${HIOP_CUDA_LIBRARIES}")
+  else()
+    set(HIOP_CUDA_LIBRARIES "-L${CUDA_TOOLKIT_ROOT_DIR}/lib64 ${HIOP_CUDA_LIBRARIES}")
+  endif(HIOP_CUDA_LIB_DIR)
+
+  # on some systems RHEL Nvidia toolkit puts cuBlas in different locations
+  # user can setup/overwrite the lib directory
+  if(HIOP_CUBLAS_LIB_DIR)
+    set(HIOP_CUDA_LIBRARIES "-L${HIOP_CUBLAS_LIB_DIR} ${HIOP_CUDA_LIBRARIES}")
+  endif(HIOP_CUBLAS_LIB_DIR)
+
+  if(HIOP_CUDA_INCLUDE_DIR)
+    set(HIOP_CUDA_INCLUDE "-I${HIOP_CUDA_INCLUDE_DIR}")
+  else()
+    set(HIOP_CUDA_INCLUDE "-I${CUDA_INCLUDE_DIRS}")
+  endif(HIOP_CUDA_INCLUDE_DIR)
+
+  message("HiOp support for GPUs is on")
+  message("HiOp GPU libs: '${MAGMA_LIBRARIES} ${HIOP_CUDA_LIBRARIES}'") 
+  message("HiOp GPU includes: '${MAGMA_INCLUDE} ${HIOP_CUDA_INCLUDE}'") 
+endif(HIOP_USE_GPU)
+
 if(HIOP_DEEPCHECKS)
   file(APPEND "src/Interface/hiop_defs.hpp" "#define HIOP_DEEPCHECKS\n")
 else()
@@ -39,12 +75,17 @@ if(NOT DEFINED LAPACK_LIBRARIES)
   # in case the toolchain defines them
   find_package(LAPACK REQUIRED)
 endif(NOT DEFINED LAPACK_LIBRARIES)
-message("LAPACK/BLAS libs: ${LAPACK_LIBRARIES}")
 
 #
 # extended precision lapack based on xblas testing example
 #
 #set(LAPACK_LIBRARIES "-lgfortran;/export/home/petra1/work/installs/xblas-1.0.248/libxblas.a;/home/petra1/work/installs/lapack-3.7.0/libblas.a;/home/petra1/work/installs/lapack-3.7.0/liblapack.a;/home/petra1/work/installs/lapack-3.7.0/liblapack.a;/home/petra1/work/installs/lapack-3.7.0/libblas.a;/export/home/petra1/work/installs/xblas-1.0.248/libxblas.a")
+
+message("HiOp will use LAPACK/BLAS libs: ${LAPACK_LIBRARIES}")
+
+set(HIOP_MATH_LIBRARIES "${MAGMA_LIBRARIES} ${LAPACK_LIBRARIES} ${HIOP_CUDA_LIBRARIES}")
+
+message("HiOp: the so-called math libraries are: '${HIOP_MATH_LIBRARIES}'")
 
 # include build directory for Fortran name mangling header
 include_directories(${CMAKE_BINARY_DIR})
@@ -53,8 +94,6 @@ include_directories(src/Interface)
 include_directories(src/Optimization)
 include_directories(src/LinAlg)
 include_directories(src/Utils)
-
-#add_subdirectory(src)
 
 add_subdirectory(src/Optimization)
 add_subdirectory(src/LinAlg)

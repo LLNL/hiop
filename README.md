@@ -21,7 +21,6 @@ $> cmake -DCMAKE_INSTALL_PREFIX=/usr/lib/hiop ..'
 ```
 
 
-
 ### HiOp-specific build options
 * Enable/disable MPI: *-DHIOP_USE_MPI=[ON/OFF]* (by default ON)
 * Additional checks and self-diagnostics inside HiOp meant to detect anormalities and help to detect bugs and/or troubleshoot problematic instances: *-DHIOP_DEEPCHECKS=[ON/OFF]* (by default ON). Disabling HIOP_DEEPCHECKS usually provides 30-40% execution speedup in HiOp. For full strength, it is recomended to use HIOP_DEEPCHECKS with debug builds. With non-debug builds, in particular the ones that disable the assert macro, HIOP_DEEPCHECKS does not perform all checks and, thus, may overlook potential issues.
@@ -34,13 +33,24 @@ $> make test
 $> make install
 ```
 
+
 ### Other useful options to use with CMake
 * *-DCMAKE_BUILD_TYPE=Release* will build the code with the optimization flags on
 * *-DCMAKE_CXX_FLAGS="-O3"* will enable a high level of compiler code optimization
 
 ## Dependencies
-HiOp requires LAPACK and BLAS. MPI is optional. All these dependencies are automatically detected by the build system.
+HiOp requires LAPACK and BLAS. These dependencies are automatically detected by the build system. MPI is optional and by default enabled. To disable use cmake option '-DHIOP_USE_MPI=OFF'.
 
+HiOp has some support for NVIDIA **GPU-based computations** via CUDA and Magma. To enable the use of GPUs,  use cmake with '-DHIOP_USE_GPU=ON'. The build system will automatically search for CUDA Toolkit. For non-standard CUDA Toolkit installations, use '-DHIOP_CUDA_LIB_DIR=/path' and '-DHIOP_CUDA_INCLUDE_DIR=/path'. For "very" non-standard CUDA Toolkit installations, one can specify the directory of cuBlas libraries as well with '-DHIOP_CUBLAS_LIB_DIR=/path'.
+
+When GPU support is on, HiOp also requires the specifciation of the path to Magma installation directory using '-DHIOP_MAGMA_DIR=/path'. The typical cmake command to enable GPU support in HiOp is
+```shell 
+$> cmake -DHIOP_USE_GPU=ON -DHIOP_MAGMA_DIR=/home/petra1/work/installs/magma-2.5.2/lib ..
+```
+For custom CUDA Toolkit installations, an example of the cmake command would be
+```shell 
+$> cmake -DHIOP_USE_GPU=ON -DHIOP_MAGMA_DIR=/home/petra1/work/installs/magma-2.5.2/lib -DHIOP_CUDA_INCLUDE_DIR=/usr/local/cuda-10.2/include/ -DHIOP_CUDA_LIB_DIR=/usr/local/cuda-10.2/lib64 -DHIOP_CUBLAS_LIB_DIR=/usr/local/cuda-10.2/targets/x86_64-linux/lib/lib64 ..
+```
 
 ## Acknowledgments
 
