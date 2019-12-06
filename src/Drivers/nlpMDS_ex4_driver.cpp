@@ -74,13 +74,14 @@ int main(int argc, char **argv)
   double obj_value=-1e+20;
   hiopSolveStatus status;
 
-  Ex4 nlp_interface(4);
+  Ex4 nlp_interface(2000);
 
   hiopNlpMDS nlp(nlp_interface);
 
   nlp.options->SetStringValue("dualsUpdateType", "linear");
   nlp.options->SetStringValue("dualsInitialization", "zero");
-  nlp.options->SetIntegerValue("verbosity_level", 12);
+  nlp.options->SetStringValue("KKTLinsys", "xycyd");
+  nlp.options->SetIntegerValue("verbosity_level", 3);
   nlp.options->SetNumericValue("mu0", 1e-1);
   hiopAlgFilterIPMNewton solver(&nlp);
   status = solver.run();
