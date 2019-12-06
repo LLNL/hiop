@@ -31,7 +31,7 @@ if(HIOP_USE_GPU)
   set(MAGMA_LIBRARIES "-lmagma")
   if(HIOP_MAGMA_DIR)
     set(MAGMA_LIBRARIES "-L${HIOP_MAGMA_DIR}/lib ${MAGMA_LIBRARIES}")
-    set(MAGMA_INCLUDE "-I${HIOP_MAGMA_DIR}/include")
+    set(MAGMA_INCLUDE "${HIOP_MAGMA_DIR}/include")
   endif(HIOP_MAGMA_DIR)
 
 
@@ -51,14 +51,15 @@ if(HIOP_USE_GPU)
   endif(HIOP_CUBLAS_LIB_DIR)
 
   if(HIOP_CUDA_INCLUDE_DIR)
-    set(HIOP_CUDA_INCLUDE "-I${HIOP_CUDA_INCLUDE_DIR}")
+    set(HIOP_CUDA_INCLUDE "${HIOP_CUDA_INCLUDE_DIR}")
   else()
-    set(HIOP_CUDA_INCLUDE "-I${CUDA_INCLUDE_DIRS}")
+    set(HIOP_CUDA_INCLUDE "${CUDA_INCLUDE_DIRS}")
   endif(HIOP_CUDA_INCLUDE_DIR)
 
   message("HiOp support for GPUs is on")
   message("HiOp GPU libs: '${MAGMA_LIBRARIES} ${HIOP_CUDA_LIBRARIES}'") 
   message("HiOp GPU includes: '${MAGMA_INCLUDE} ${HIOP_CUDA_INCLUDE}'") 
+  include_directories(${MAGMA_INCLUDE} ${HIOP_CUDA_INCLUDE})
 endif(HIOP_USE_GPU)
 
 if(HIOP_DEEPCHECKS)
