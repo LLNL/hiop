@@ -187,7 +187,6 @@ void hiopOptions::ensureConsistence()
 {
   //check that the values of different options are consistent 
   //do not check is the values of a particular option is valid; this is done in the Set methods
-
   double eps_tol_accep = GetNumeric("acceptable_tolerance");
   double eps_tol  =      GetNumeric("tolerance");     
   if(eps_tol_accep < eps_tol) {
@@ -202,7 +201,12 @@ void hiopOptions::ensureConsistence()
 		 "'Hessian=quasiNewtonApprox'. Will use 'KKTLinsys=auto'\n",
 		 strKKT.c_str());
   }
-
+#ifndef HIOP_USE_MAGMA
+  if(GetString("compute_mode")=="hybrid") {
+    log_printf(hovWarning, "option compute_mode=hybrid was changed to 'cpu' since HiOp was built without GPU support/Magma.\n");
+    SetStringValue("compute_mode", "cpu");
+  }
+#endif
 }
 
 static inline std::string &ltrim(std::string &s) {
@@ -316,6 +320,7 @@ bool hiopOptions::SetNumericValue (const char* name, const double& value, const 
 		"Hiop does not understand option '%s' and will ignore its value '%g'.\n",
 		name, value);
   }
+  ensureConsistence();
   return true;
 }
 
@@ -352,6 +357,7 @@ bool hiopOptions::SetIntegerValue(const char* name, const int& value, const bool
 		"Hiop does not understand option '%s' and will ignore its value '%d'.\n",
 		name, value);
   }
+  ensureConsistence();
   return true;
 }
 
@@ -396,6 +402,7 @@ bool hiopOptions::SetStringValue (const char* name,  const char* value, const bo
 		"Hiop does not understand option '%s' and will ignore its value '%s'.\n",
 		name, value);
   }
+  ensureConsistence();
   return true;
 }
 

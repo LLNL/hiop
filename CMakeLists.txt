@@ -10,7 +10,7 @@ FortranCInterface_HEADER(FortranCInterface.hpp MACRO_NAMESPACE "FC_")
 file(WRITE "src/Interface/hiop_defs.hpp" "")
 
 option(HIOP_USE_MPI "Build with MPI support" ON)
-option(HIOP_USE_GPU "Build with support for GPUs - Magma and cuda libraries" ON)
+option(HIOP_USE_GPU "Build with support for GPUs - Magma and cuda libraries" OFF)
 option(HIOP_DEEPCHECKS "Extra checks and asserts in the code with a high penalty on performance" ON)
 
 #with testing drivers capable of 'selfchecking' (-selfcheck)
@@ -60,6 +60,13 @@ if(HIOP_USE_GPU)
   message("HiOp GPU libs: '${MAGMA_LIBRARIES} ${HIOP_CUDA_LIBRARIES}'") 
   message("HiOp GPU includes: '${MAGMA_INCLUDE} ${HIOP_CUDA_INCLUDE}'") 
   include_directories(${MAGMA_INCLUDE} ${HIOP_CUDA_INCLUDE})
+  set(HIOP_MATH_LIBRARIES "${MAGMA_LIBRARIES} ${HIOP_CUDA_LIBRARIES} ${HIOP_MATH_LIBRARIES}")
+endif(HIOP_USE_GPU)
+
+if(HIOP_USE_GPU)
+  file(APPEND "src/Interface/hiop_defs.hpp" "#define HIOP_USE_MAGMA\n")
+else()
+  file(APPEND "src/Interface/hiop_defs.hpp" "#ifdef HIOP_USE_MAGMA\n#undef HIOP_USE_MAGMA\n#endif\n")
 endif(HIOP_USE_GPU)
 
 if(HIOP_DEEPCHECKS)
@@ -75,7 +82,9 @@ find_package(OpenMP)
 if(NOT DEFINED LAPACK_LIBRARIES)
   # in case the toolchain defines them
   find_package(LAPACK REQUIRED)
+  set(HIOP_MATH_LIBRARIES "${LAPACK_LIBRARIES} ${HIOP_MATH_LIBRARIES}")
 endif(NOT DEFINED LAPACK_LIBRARIES)
+string(STRIP "${HIOP_MATH_LIBRARIES}" HIOP_MATH_LIBRARIES)
 
 #
 # extended precision lapack based on xblas testing example
@@ -83,9 +92,6 @@ endif(NOT DEFINED LAPACK_LIBRARIES)
 #set(LAPACK_LIBRARIES "-lgfortran;/export/home/petra1/work/installs/xblas-1.0.248/libxblas.a;/home/petra1/work/installs/lapack-3.7.0/libblas.a;/home/petra1/work/installs/lapack-3.7.0/liblapack.a;/home/petra1/work/installs/lapack-3.7.0/liblapack.a;/home/petra1/work/installs/lapack-3.7.0/libblas.a;/export/home/petra1/work/installs/xblas-1.0.248/libxblas.a")
 
 message("HiOp will use LAPACK/BLAS libs: ${LAPACK_LIBRARIES}")
-
-set(HIOP_MATH_LIBRARIES "${MAGMA_LIBRARIES} ${LAPACK_LIBRARIES} ${HIOP_CUDA_LIBRARIES}")
-
 message("HiOp: the so-called math libraries are: '${HIOP_MATH_LIBRARIES}'")
 
 # include build directory for Fortran name mangling header

@@ -2,6 +2,10 @@
 #include "hiopNlpFormulation.hpp"
 #include "hiopAlgFilterIPM.hpp"
 
+#ifdef HIOP_USE_MAGMA
+#include "magma_v2.h"
+#endif
+
 #include <cstdlib>
 #include <string>
 
@@ -68,19 +72,26 @@ int main(int argc, char **argv)
     return 1;
   }
 #endif
+
+#ifdef HIOP_USE_MAGMA
+  magma_init();
+#endif
+
   bool selfCheck; long long n;
   if(!parse_arguments(argc, argv, n, selfCheck)) { usage(argv[0]); return 1;}
 
   double obj_value=-1e+20;
   hiopSolveStatus status;
 
-  Ex4 nlp_interface(2000);
+  Ex4 nlp_interface(4000);
 
   hiopNlpMDS nlp(nlp_interface);
 
   nlp.options->SetStringValue("dualsUpdateType", "linear");
   nlp.options->SetStringValue("dualsInitialization", "zero");
-  nlp.options->SetStringValue("KKTLinsys", "xycyd");
+
+  nlp.options->SetStringValue("Hessian", "analytical_exact");
+  nlp.options->SetStringValue("KKTLinsys", "xdycyd");
   nlp.options->SetStringValue("compute_mode", "hybrid");
 
   nlp.options->SetIntegerValue("verbosity_level", 3);
@@ -103,7 +114,9 @@ int main(int argc, char **argv)
   //     printf("Optimal objective: %22.14e. Solver status: %d\n", obj_value, status);
   //   }
   // }
-
+#ifdef HIOP_USE_MAGMA
+magma_finalize();
+#endif
 #ifdef HIOP_USE_MPI
   MPI_Finalize();
 #endif

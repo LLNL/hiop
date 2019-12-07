@@ -218,6 +218,7 @@ private:
   hiopLinSolverIndefDenseLapack() : ipiv(NULL), dwork(NULL) { assert(false); }
 };
 
+#ifdef HIOP_USE_MAGMA
 #include "magma_v2.h"
 class hiopLinSolverIndefDenseMagma : public hiopLinSolverIndefDense
 {
@@ -226,7 +227,6 @@ public:
     : hiopLinSolverIndefDense(n, nlp_)
   {
 
-    magma_init();
     magma_int_t ndevices;
     magma_device_t devices[ MagmaMaxGPUs ];
     magma_getdevices( devices, MagmaMaxGPUs, &ndevices );
@@ -248,7 +248,6 @@ public:
     magma_free(device_rhs);
     magma_queue_destroy(magma_device_queue);
     magma_device_queue = NULL;
-    magma_finalize();
   }
 
   /** Triggers a refactorization of the matrix, if necessary. */
@@ -304,7 +303,6 @@ public:
       nlp->log->printf(hovError, "hiopLinSolverIndefDenseMagma: DSYTRS returned error %d\n", info);
       assert(false);
     }
-
     magma_dgetmatrix( N, NRHS, device_rhs, LDDB, x->local_data(), LDDB, magma_device_queue );
     
   }
@@ -317,7 +315,7 @@ protected:
 private:
   hiopLinSolverIndefDenseMagma() { assert(false); }
 };
-
+#endif//def HIOP_USE_MAGMA
 } //end namespace
 
 #endif
