@@ -163,6 +163,9 @@ void hiopOptions::registerOptions()
     vector<string> range(3); range[0] = "auto"; range[1]="xycyd"; range[2]="xdycyd"; 
     registerStrOption("KKTLinsys", "auto", range, "Type of KKT linear system used internally: decided by HiOp 'auto' (default option), the more compact 'XYcYd' or the more stable 'XDYcYd'. The last two are only available with Hessian=analyticalExact");
   }
+  //computations
+  vector<string> range(3); range[0] = "auto"; range[1]="cpu"; range[2]="hybrid"; 
+  registerStrOption("compute_mode", "auto", range, "'auto', 'cpu', 'hybrid'; 'hybrid'=cpu+gpu; 'auto' will decide between 'cpu' and 'hybrid' based on the other options passed");
 }
 
 void hiopOptions::registerNumOption(const std::string& name, double defaultValue, double low, double upp, const char* description)

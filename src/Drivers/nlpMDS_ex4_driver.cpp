@@ -81,6 +81,8 @@ int main(int argc, char **argv)
   nlp.options->SetStringValue("dualsUpdateType", "linear");
   nlp.options->SetStringValue("dualsInitialization", "zero");
   nlp.options->SetStringValue("KKTLinsys", "xycyd");
+  nlp.options->SetStringValue("compute_mode", "hybrid");
+
   nlp.options->SetIntegerValue("verbosity_level", 3);
   nlp.options->SetNumericValue("mu0", 1e-1);
   hiopAlgFilterIPMNewton solver(&nlp);

@@ -97,7 +97,11 @@ public:
     
     if(NULL==linSys) {
       int n=Jac_c->m() + Jac_d->m() + Hess->m();
-      linSys = new hiopLinSolverIndefDense(n, nlp);
+
+      if(nlp->options->GetString("compute_mode")=="hybrid")
+	linSys = new hiopLinSolverIndefDenseMagma(n, nlp);
+      else
+	linSys = new hiopLinSolverIndefDenseLapack(n, nlp);
     }
 
     //update linSys system matrix
@@ -208,7 +212,11 @@ public:
     
     if(NULL==linSys) {
       int n=nx+neq+2*nineq;
-      linSys = new hiopLinSolverIndefDense(n, nlp);
+
+      if(nlp->options->GetString("compute_mode")=="hybrid")
+	linSys = new hiopLinSolverIndefDenseMagma(n, nlp);
+      else
+	linSys = new hiopLinSolverIndefDenseLapack(n, nlp);
     }
 
     //update linSys system matrix

@@ -87,8 +87,7 @@ public:
   hiopNlpFormulation* nlp;
 };
 
-
-/** Wrapper for LAPACK's DSYTRF */
+  /** Base class for Indefinite Dense Solvers */
 class hiopLinSolverIndefDense : public hiopLinSolver
 {
 public:
@@ -96,10 +95,29 @@ public:
     : M(n,n)
   {
     nlp = nlp_;
+  }
+  virtual ~hiopLinSolverIndefDense()
+  { 
+  }
+
+  hiopMatrixDense& sysMatrix() { return M; }
+protected:
+  hiopMatrixDense M;
+protected:
+  hiopLinSolverIndefDense() : M(0,0) { assert(false); }
+};
+
+/** Wrapper for LAPACK's DSYTRF */
+class hiopLinSolverIndefDenseLapack : public hiopLinSolverIndefDense
+{
+public:
+  hiopLinSolverIndefDenseLapack(int n, hiopNlpFormulation* nlp_)
+    : hiopLinSolverIndefDense(n, nlp_)
+  {
     ipiv = new int[n];
     dwork = new hiopVectorPar(0);
   }
-  virtual ~hiopLinSolverIndefDense()
+  virtual ~hiopLinSolverIndefDenseLapack()
   {
     delete [] ipiv;
     delete dwork;
@@ -186,32 +204,27 @@ public:
     int NRHS=1, LDB=N;
     DSYTRS(&uplo, &N, &NRHS, M.local_buffer(), &LDA, ipiv, x->local_data(), &LDB, &info);
     if(info<0) {
-      nlp->log->printf(hovError, "hiopLinSolverIndefDense: DSYTRS returned error %d\n", info);
+      nlp->log->printf(hovError, "hiopLinSolverIndefDenseLapack: DSYTRS returned error %d\n", info);
       assert(false);
     }
     
   }
   void solve ( hiopMatrix& x ) { assert(false && "not needed; see the other solve method for implementation"); }
 
-  hiopMatrixDense& sysMatrix() { return M; }
 protected:
-  hiopMatrixDense M;
   int* ipiv;
   hiopVectorPar* dwork;
 private:
-  hiopLinSolverIndefDense() : M(0,0), ipiv(NULL), dwork(NULL) { assert(false); }
+  hiopLinSolverIndefDenseLapack() : ipiv(NULL), dwork(NULL) { assert(false); }
 };
 
 #include "magma_v2.h"
-class hiopLinSolverIndefDenseMagma : public hiopLinSolver
+class hiopLinSolverIndefDenseMagma : public hiopLinSolverIndefDense
 {
 public:
   hiopLinSolverIndefDenseMagma(int n, hiopNlpFormulation* nlp_)
-    : M(n,n)
+    : hiopLinSolverIndefDense(n, nlp_)
   {
-    nlp = nlp_;
-    ipiv = new int[n];
-    dwork = new hiopVectorPar(0);
 
     magma_init();
     magma_int_t ndevices;
@@ -236,79 +249,12 @@ public:
     magma_queue_destroy(magma_device_queue);
     magma_device_queue = NULL;
     magma_finalize();
-
-    delete[] ipiv;
-    delete dwork;
   }
 
   /** Triggers a refactorization of the matrix, if necessary. */
   int matrixChanged()
   {
-    assert(M.n() == M.m());
-    magma_int_t N=M.n(), lda = N, info;
-    if(N==0) return 0;
-
-    double dwork_tmp;
-    magma_uplo_t uplo=MagmaLower; // M is upper in C++ so it's lower in fortran
-
-    //
-    //query sizes
-    //
-    magma_int_t lwork=-1;
-    if(false) {    
-      //!DSYTRF(&uplo, &N, M.local_buffer(), &lda, ipiv, &dwork_tmp, &lwork, &info );
-      assert(info==0);
-      
-      lwork=(int)dwork_tmp;
-      if(lwork != dwork->get_size()) {
-	delete dwork;
-	dwork = NULL;
-	dwork = new hiopVectorPar(lwork);
-      }
-    }
-
-    //
-    // factorization
-    //
-    //DSYTRF(&uplo, &N, M.local_buffer(), &lda, ipiv, dwork->local_data(), &lwork, &info );
-
-    //magma_dsytrf_nopiv(uplo, N, M.local_buffer(), lda, &info);
-    info=0;
-    if(info<0)
-      nlp->log->printf(hovError, "hiopLinSolverIndefDenseMagma error: %d argument to dsytrf has an"
-		       " illegal value\n", -info);
-    else if(info>0)
-      nlp->log->printf(hovError, "hiopLinSolverIndefDenseMagma error: %d entry in the factorization's "
-		       "diagonal is exactly zero. Division by zero will occur if it a solve is attempted.\n", info);
-    assert(info==0);
-    //assert(false);
-    //
-    // Compute the inertia. Only negative eigenvalues are returned.
-    // Code originally written by M. Schanen, ANL for PIPS based on
-    // LINPACK's dsidi Fortran routine (http://www.netlib.org/linpack/dsidi.f)
-    //
-    if(false) {
-      int negEigVal=0;
-      double t=0;
-      double** MM = M.get_M();
-      for(int k=0; k<N; k++) {
-	double d = MM[k][k];
-	if(ipiv[k] < 0) {
-	  if(t==0) {
-	    t=fabs(MM[k+1][k]);
-	    d=(d/t) * MM[k+1][k+1]-t;
-	  } else {
-	    d=t;
-	    t=0;
-	  }
-	}
-	if(d<0) negEigVal++;
-	if(d==0) {
-	  negEigVal=-1;
-	  break;
-	}
-      }
-    }
+    //TO DO: factorization done in 'solve' for now
     int negEigVal=0;
     return negEigVal;
   }
@@ -336,9 +282,6 @@ public:
     const int align=32;
     magma_int_t LDDA=N;//magma_roundup( N, align );  // multiple of 32 by default
     magma_int_t LDDB=LDA;
-
-
-
 
 
     printf("gpu stuff starts \n");
@@ -369,14 +312,10 @@ public:
 
   hiopMatrixDense& sysMatrix() { return M; }
 protected:
-  hiopMatrixDense M;
-  int* ipiv;
-  hiopVectorPar* dwork;
-  
   magma_queue_t magma_device_queue;
   magmaDouble_ptr device_M, device_rhs;
 private:
-  hiopLinSolverIndefDenseMagma() : M(0,0), ipiv(NULL), dwork(NULL) { assert(false); }
+  hiopLinSolverIndefDenseMagma() { assert(false); }
 };
 
 } //end namespace
