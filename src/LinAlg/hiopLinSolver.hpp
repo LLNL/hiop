@@ -220,6 +220,19 @@ private:
 
 #ifdef HIOP_USE_MAGMA
 #include "magma_v2.h"
+
+#define FADDS_POTRF(n_) ((n_) * (((1. / 6.) * (n_)      ) * (n_) - (1. / 6.)))
+#define FADDS_POTRI(n_) ( (n_) * ((1. / 6.) + (n_) * ((1. / 3.) * (n_) - 0.5)) )
+#define FADDS_POTRS(n_, nrhs_) ((nrhs_) * (n_) * ((n_) - 1 ))
+#define FMULS_POTRF(n_) ((n_) * (((1. / 6.) * (n_) + 0.5) * (n_) + (1. / 3.)))
+#define FMULS_POTRI(n_) ( (n_) * ((2. / 3.) + (n_) * ((1. / 3.) * (n_) + 1. )) )
+#define FMULS_POTRS(n_, nrhs_) ((nrhs_) * (n_) * ((n_) + 1 ))
+#define FLOPS_DPOTRF(n_) (     FMULS_POTRF((double)(n_)) +       FADDS_POTRF((double)(n_)) )
+#define FLOPS_DPOTRI(n_) (     FMULS_POTRI((double)(n_)) +       FADDS_POTRI((double)(n_)) )
+#define FLOPS_DPOTRS(n_, nrhs_) (     FMULS_POTRS((double)(n_), (double)(nrhs_)) +       FADDS_POTRS((double)(n_), (double)(nrhs_)) )
+
+
+
 class hiopLinSolverIndefDenseMagma : public hiopLinSolverIndefDense
 {
 public:
@@ -258,17 +271,20 @@ public:
     return negEigVal;
   }
     
+
+
+
   /** solves a linear system.
    * param 'x' is on entry the right hand side(s) of the system to be solved. On
    * exit is contains the solution(s).  */
   void solve ( hiopVector& x_ )
   {
-    printf("Solve starts\n");
-
     assert(M.n() == M.m());
     assert(x_.get_size()==M.n());
     int N=M.n(), LDA = N, LDB=N;
     if(N==0) return;
+
+    printf("Solve starts on a matrix %d x %d\n", N, N);
 
     magma_int_t info; 
 
@@ -282,17 +298,21 @@ public:
     magma_int_t LDDA=N;//magma_roundup( N, align );  // multiple of 32 by default
     magma_int_t LDDB=LDA;
 
+    double gflops = ( FLOPS_DPOTRF( N ) + FLOPS_DPOTRS( N, NRHS ) ) / 1e9;
 
-    printf("gpu stuff starts \n");
+    hiopTimer t_glob; t_glob.start();
+    hiopTimer t; t.start();
     magma_dsetmatrix( N, N,    M.local_buffer(), LDA, device_M,   LDDA, magma_device_queue );
     magma_dsetmatrix( N, NRHS, x->local_data(),  LDB, device_rhs, LDDB, magma_device_queue );
-    printf("data transfered\n");
+    t.stop();
+    printf("cpu->gpu data transfer in %g sec\n", t.getElapsedTime());
     fflush(stdout);
 
     //DSYTRS(&uplo, &N, &NRHS, M.local_buffer(), &LDA, ipiv, x->local_data(), &LDB, &info);
+    t.reset(); t.start();
     magma_dsysv_nopiv_gpu(uplo, N, NRHS, device_M, LDDA, device_rhs, LDDB, &info);
-
-    printf("solve ended \n");
+    t.stop();
+    printf("gpu solve in %g sec  TFlops: %g\n", t.getElapsedTime(), gflops / t.getElapsedTime() / 1000.);
 
     if(0 != info) {
       printf("dsysv_nopiv returned %d [%s]\n", info, magma_strerror( info ));
@@ -303,8 +323,11 @@ public:
       nlp->log->printf(hovError, "hiopLinSolverIndefDenseMagma: DSYTRS returned error %d\n", info);
       assert(false);
     }
+    t.reset(); t.start();
     magma_dgetmatrix( N, NRHS, device_rhs, LDDB, x->local_data(), LDDB, magma_device_queue );
-    
+    t.stop(); t_glob.stop();
+    printf("gpu->cpu solution transfer in %g sec\n", t.getElapsedTime());
+    printf("including tranfer time -> TFlops: %g\n", gflops / t_glob.getElapsedTime() / 1000.);
   }
   void solve ( hiopMatrix& x ) { assert(false && "not needed; see the other solve method for implementation"); }
 
