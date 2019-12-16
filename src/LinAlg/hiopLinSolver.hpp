@@ -231,8 +231,6 @@ private:
 #define FLOPS_DPOTRI(n_) (     FMULS_POTRI((double)(n_)) +       FADDS_POTRI((double)(n_)) )
 #define FLOPS_DPOTRS(n_, nrhs_) (     FMULS_POTRS((double)(n_), (double)(nrhs_)) +       FADDS_POTRS((double)(n_), (double)(nrhs_)) )
 
-
-
 class hiopLinSolverIndefDenseMagma : public hiopLinSolverIndefDense
 {
 public:

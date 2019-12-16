@@ -948,7 +948,7 @@ hiopAlgFilterIPMNewton::~hiopAlgFilterIPMNewton()
 hiopKKTLinSysCompressed* hiopAlgFilterIPMNewton::decideAndCreateLinearSystem(hiopNlpFormulation* nlp)
 {
   std::string strKKT = nlp->options->GetString("KKTLinsys");
-  printf("00000000000  [%s]", strKKT.c_str());
+  //printf("00000000000  [%s]", strKKT.c_str());
   if(strKKT == "xdycyd")
     return new hiopKKTLinSysDenseXDYcYd(nlp);
   else //'auto' or 'XYcYd'

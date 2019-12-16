@@ -83,7 +83,7 @@ int main(int argc, char **argv)
   double obj_value=-1e+20;
   hiopSolveStatus status;
 
-  Ex4 nlp_interface(6000);
+  Ex4 nlp_interface(8000);
 
   hiopNlpMDS nlp(nlp_interface);
 
