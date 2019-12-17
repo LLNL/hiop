@@ -170,17 +170,16 @@ double hiopKKTLinSys::errorKKT(const hiopResidual* resid, const hiopIterate* sol
 // hiopKKTLinSysCompressedXYcYd
 ////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
-/* Provides the functionality for reducing the KKT linear system system to the 
+/* Provides the functionality for reducing the KKT linear system to the 
  * compressed linear below in dx, dd, dyc, and dyd variables and then to perform 
  * the basic ops needed to compute the remaining directions. 
  *
  * Relies on the pure virtual 'solveCompressed' to form and solve the compressed 
  * linear system
- * [  H  +  Dx    0    Jc^T  Jd^T   ] [ dx]   [ rx_tilde ]
- * [    0         Dd    0     -I    ] [ dd]   [ rd_tilde ]
- * [    Jc        0     0      0    ] [dyc] = [   ryc    ]
- * [    Jd       -I     0      0    ] [dyd]   [   ryd    ]   
- * and then to compute the rest of the search directions
+ * Relies on the pure virtual 'solveCompressed' to solve the compressed linear system
+ * [  H  +  Dx     Jc^T  Jd^T   ] [ dx]   [ rx_tilde ]
+ * [    Jc          0     0     ] [dyc] = [   ryc    ]
+ * [    Jd          0   -Dd^{-1}] [dyd]   [ ryd_tilde]
  */
 hiopKKTLinSysCompressedXYcYd::hiopKKTLinSysCompressedXYcYd(hiopNlpFormulation* nlp_)
   : hiopKKTLinSysCompressed(nlp_)

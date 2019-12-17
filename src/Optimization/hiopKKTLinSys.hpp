@@ -122,7 +122,7 @@ protected:
   hiopVectorPar *rx_tilde;
 };
 
-/* Provides the functionality for reducing the KKT linear system system to the 
+/* Provides the functionality for reducing the KKT linear system to the 
  * compressed linear below in dx, dyc, and dyd variables and then to perform 
  * the basic ops needed to compute the remaining directions. 
  *
@@ -161,7 +161,7 @@ protected:
   hiopVectorPar *ryd_tilde;
 };
 
-/* Provides the functionality for reducing the KKT linear system system to the 
+/* Provides the functionality for reducing the KKT linear system to the 
  * compressed linear below in dx, dd, dyc, and dyd variables and then to perform 
  * the basic ops needed to compute the remaining directions. 
  *
