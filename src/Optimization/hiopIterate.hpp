@@ -126,6 +126,7 @@ public:
   friend class hiopKKTLinSysDenseXDYcYd;
   friend class hiopKKTLinSysLowRank;
   friend class hiopHessianLowRank;
+  friend class hiopKKTLinSysCompressedMDSXYcYd;
   friend class hiopHessianInvLowRank_obsolette;
 private:
   /** Primal variables */

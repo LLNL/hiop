@@ -45,10 +45,11 @@
 // herein do not necessarily state or reflect those of the United States Government or 
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or 
 // product endorsement purposes.
-
 #include "hiopAlgFilterIPM.hpp"
+
 #include "hiopKKTLinSys.hpp"
 #include "hiopKKTLinSysDense.hpp"
+#include "hiopKKTLinSysMDS.hpp"
 
 #include <cmath>
 #include <cstring>
@@ -947,12 +948,17 @@ hiopAlgFilterIPMNewton::~hiopAlgFilterIPMNewton()
 
 hiopKKTLinSysCompressed* hiopAlgFilterIPMNewton::decideAndCreateLinearSystem(hiopNlpFormulation* nlp)
 {
-  std::string strKKT = nlp->options->GetString("KKTLinsys");
-  //printf("00000000000  [%s]", strKKT.c_str());
-  if(strKKT == "xdycyd")
-    return new hiopKKTLinSysDenseXDYcYd(nlp);
-  else //'auto' or 'XYcYd'
-    return new hiopKKTLinSysDenseXYcYd(nlp);
+  hiopNlpMDS* nlpMDS = dynamic_cast<hiopNlpMDS*>(nlp);
+
+  if(NULL == nlpMDS) {
+    std::string strKKT = nlp->options->GetString("KKTLinsys");
+    if(strKKT == "xdycyd")
+      return new hiopKKTLinSysDenseXDYcYd(nlp);
+    else //'auto' or 'XYcYd'
+      return new hiopKKTLinSysDenseXYcYd(nlp);
+  } else {
+    return new hiopKKTLinSysCompressedMDSXYcYd(nlp);
+  }
 }
 
 hiopSolveStatus hiopAlgFilterIPMNewton::run()

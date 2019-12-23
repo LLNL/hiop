@@ -12,11 +12,12 @@ namespace hiop
 {
 
 hiopMatrixSparseTriplet::hiopMatrixSparseTriplet(int rows, int cols, int nnz_)
-  : nrows(rows), ncols(cols), nnz(nnz_)
+  : nrows(rows), ncols(cols), nnz(nnz_), row_starts(NULL)
 {
   iRow = new  int[nnz];
   jCol = new int[nnz];
   values = new double[nnz];
+
 }
 
 hiopMatrixSparseTriplet::~hiopMatrixSparseTriplet()
@@ -24,6 +25,7 @@ hiopMatrixSparseTriplet::~hiopMatrixSparseTriplet()
   delete [] iRow;
   delete [] jCol;
   delete [] values;
+  delete row_starts;
 }
 
 void hiopMatrixSparseTriplet::setToZero()
@@ -36,7 +38,6 @@ void hiopMatrixSparseTriplet::setToConstant(double c)
   for(int i=0; i<nnz; i++)
     values[i] = c;
 }
-
 
 /** y = beta * y + alpha * this * x */
 void hiopMatrixSparseTriplet::timesVec(double beta,  hiopVector& y,
@@ -229,6 +230,85 @@ bool hiopMatrixSparseTriplet::checkIndexesAreOrdered() const
 }
 #endif
 
+void hiopMatrixSparseTriplet::
+addMatTimesDinvTimesMatTransToDiagBlockOfSymDenseMatrixUpperTriangle(int rowAndCol_dest_start,
+							  double alpha, 
+							  hiopVectorPar& D, hiopMatrixDense& W)
+{
+  const int row_dest_start = rowAndCol_dest_start, col_dest_start = rowAndCol_dest_start;
+  int n = this->nrows;
+  assert(row_dest_start>=0 && row_dest_start+n<=W.m());
+  assert(col_dest_start>=0 && col_dest_start+nrows<=W.n());
+  assert(D.get_size() == this->ncols);
+  double** WM = W.get_M();
+  double* DM = D.local_data();
+
+  if(row_starts==NULL) row_starts = allocAndBuildRowStarts();
+  assert(row_starts);
+
+  double acc;
+
+  for(int i=0; i<this->nrows; i++) {
+    //j==i
+    acc = 0.;
+    for(int k=row_starts->idx_start[i]; k<row_starts->idx_start[i+1]; k++)
+      acc += this->values[k] / DM[this->jCol[k]] * this->values[k];
+    WM[i+row_dest_start][i+col_dest_start] += alpha*acc;
+
+    //j>i
+    for(int j=i+1; j<this->nrows; j++) {
+      //dest[i,j] = weigthed_dotprod(this_row_i,this_row_j)
+      acc = 0.;
+
+      int ki=row_starts->idx_start[i], kj=row_starts->idx_start[j];
+      while(ki<row_starts->idx_start[i+1] && kj<row_starts->idx_start[j+1]) {
+	assert(ki<this->nnz); 
+	assert(kj<this->nnz);
+	if(this->jCol[ki] == this->jCol[kj]) { 
+	  acc += this->values[ki] / DM[this->jCol[ki]] * this->values[kj];
+	  ki++;
+	  kj++;
+	} else 
+	  if(this->jCol[ki]<this->jCol[kj]) ki++;
+	  else                              kj++;
+      } //end of loop over ki and kj
+
+      WM[i+row_dest_start][j+col_dest_start] += alpha*acc;
+
+    } //end j
+  } // end i
+
+}
+
+// //assumes triplets are ordered
+hiopMatrixSparseTriplet::RowStartsInfo* 
+hiopMatrixSparseTriplet::allocAndBuildRowStarts()
+{
+  RowStartsInfo* rsi = new RowStartsInfo(nrows); assert(rsi);
+  int it_triplet=0;
+  rsi->idx_start[0]=0;
+  for(int i=1; i<=this->nrows; i++) {
+    
+    rsi->idx_start[i]=rsi->idx_start[i-1];
+    
+    while(this->iRow[it_triplet] == i-1) {
+#ifdef HIOP_DEEPCHECKS
+      if(it_triplet>=1) {
+	assert(iRow[it_triplet-1]<=iRow[it_triplet] && "row indexes are not sorted");
+	//assert(iCol[it_triplet-1]<=iCol[it_triplet]);
+	if(iRow[it_triplet-1]==iRow[it_triplet])
+	  assert(jCol[it_triplet-1] < jCol[it_triplet] && "col indexes are not sorted");
+      }
+#endif
+      rsi->idx_start[i]++;
+      it_triplet++;
+    }
+    assert(rsi->idx_start[i] == it_triplet);
+  }
+  assert(it_triplet==this->nnz);
+  return rsi;
+}
+
 // void hiopMatrixSparse::make(int nrows_, int ncols_, const vector<vector<int>> &vvCols, const vector<vector<double>> &vvValues)
 // {
 //   assert(nnz == 0);
@@ -397,6 +477,32 @@ void hiopMatrixSymSparseTriplet::transAddToSymDenseMatrixUpperTriangle(int row_s
     assert(i<W.m() && j<W.n()); assert(i>=0 && j>=0);
     assert(i<=j && "symMatrices not aligned; source entries need to map inside the upper triangular part of destination");
     WM[i][j] += alpha*values[it];
+  }
+}
+
+/* extract subdiagonal from 'this' (source) and adds the entries to 'vec_dest' starting at
+ * index 'vec_start'. If num_elems>=0, 'num_elems' are copied; otherwise copies as many as
+ * are available in 'vec_dest' starting at 'vec_start'
+ */
+void hiopMatrixSymSparseTriplet::
+startingAtAddSubDiagonalToStartingAt(int diag_src_start, const double& alpha, 
+				     hiopVector& vec_dest, int vec_start, int num_elems/*=-1*/) const
+{
+  hiopVectorPar& vd = dynamic_cast<hiopVectorPar&>(vec_dest);
+  if(num_elems<0) num_elems = vd.get_size();
+  assert(num_elems<=vd.get_size());
+
+  assert(diag_src_start>=0 && diag_src_start+num_elems<=this->nrows);
+  double* v = vd.local_data();
+
+  for(int itnz=0; itnz<nnz; itnz++) {
+    const int row = iRow[itnz];
+    if(row==jCol[itnz]) {
+      if(row>=diag_src_start && row<diag_src_start+num_elems) {
+	assert(row+vec_start<vd.get_size());
+	v[vec_start+row] += alpha * this->values[itnz];
+      }
+    }
   }
 }
 
