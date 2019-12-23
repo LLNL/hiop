@@ -49,7 +49,8 @@
 #ifndef HIOP_KKTLINSYSMDS
 #define HIOP_KKTLINSYSMDS
 
-#include "hiopKKTLinsSys.hpp"
+#include "hiopKKTLinSys.hpp"
+#include "hiopLinSolver.hpp"
 
 namespace hiop
 {
@@ -97,20 +98,22 @@ public:
   virtual void solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
 			       hiopVectorPar& dx, hiopVectorPar& dyc, hiopVectorPar& dyd);
 
-#ifdef HIOP_DEEPCHECKS
-  virtual double errorCompressedLinsys(const hiopVectorPar& rx, 
-				       const hiopVectorPar& ryc, 
-				       const hiopVectorPar& ryd,
-				       const hiopVectorPar& dx, 
-				       const hiopVectorPar& dyc, 
-				       const hiopVectorPar& dyd);
-#endif
-
 protected:
-  //hiopVectorPar *Dd_inv;
-  //hiopVectorPar *ryd_tilde;
   hiopLinSolverIndefDense* linSys;
   hiopVectorPar* rhs; //[rxdense, ryc, ryd]
+
+  //from the parent class we also use
+  //  hiopVectorPar *Dd_inv;
+  //  hiopVectorPar *ryd_tilde;
+
+  //from the parent's parent class (hiopKKTLinSysCompressed) we also use
+  //  hiopVectorPar *Dx;
+  //  hiopVectorPar *rx_tilde;
+
+  //Hxs = HessMDS->sp_mat() + Dxs (Dx=log-barrier diagonal for xs)
+  hiopVectorPar *Hxs; 
+
+  hiopNlpMDS* nlpMDS;
 };
 
 } // end of namespace
