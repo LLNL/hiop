@@ -1,1 +1,1 @@
-add_library(hiopOptimization OBJECT hiopNlpFormulation.cpp hiopIterate.cpp hiopResidual.cpp hiopFilter.cpp hiopAlgFilterIPM.cpp hiopKKTLinSys.cpp hiopKKTLinSys.cpp hiopHessianLowRank.cpp hiopDualsUpdater.cpp hiopNlpTransforms.cpp)
+add_library(hiopOptimization OBJECT hiopNlpFormulation.cpp hiopIterate.cpp hiopResidual.cpp hiopFilter.cpp hiopAlgFilterIPM.cpp hiopKKTLinSys.cpp hiopKKTLinSysMDS.cpp hiopHessianLowRank.cpp hiopDualsUpdater.cpp hiopNlpTransforms.cpp)
