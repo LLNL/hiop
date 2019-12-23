@@ -85,10 +85,14 @@ public:
   //maybe startingAtCopyFromStartingAt startingAtCopyToStartingAt ?
   /** Copy the elements of v */
   virtual void copyFrom(const hiopVector& v ) = 0;
-  /** Copy the 'n' elements of v starting at 'start_index_in_dest' in 'this' */
-  virtual void copyFromStarting(int start_index_in_dest, const double* v, int n) = 0;
+  /** Copy the 'n' elements of v starting at 'start_index_in_src' in 'this' */
+  virtual void copyFromStarting(int start_index_in_src, const double* v, int n) = 0;
   /* Copy v in 'this' starting at start_index_in_src in  'this'. */
   virtual void copyFromStarting(int start_index_in_src, const hiopVector& v) = 0;
+
+  /* copy 'dest' starting at 'start_idx_dest' to 'this' starting at 'start_idx_src' */
+  virtual void startingAtCopyFromStartingAt(int start_idx_src, const hiopVector& v, int start_idx_dest) = 0;
+
   /* Copy 'this' to double array, which is assumed to be at least of 'n_local' size.*/
   virtual void copyTo(double* dest) const = 0;
   /* Copy 'this' to v starting at start_index in 'this'. */
@@ -193,6 +197,10 @@ public:
   /** Copy the 'n' elements of v starting at 'start_index_in_src' in 'this' */
   virtual void copyFromStarting(int start_index_in_src, const double* v, int n);
   virtual void copyFromStarting(int start_index_in_src, const hiopVector& v);
+  /* copy 'dest' starting at 'start_idx_dest' to 'this' starting at 'start_idx_src' */
+  virtual void startingAtCopyFromStartingAt(int start_idx_src, const hiopVector& v, int start_idx_dest);
+
+
   virtual void copyTo(double* dest) const;
   virtual void copyToStarting(int start_index_in_src, hiopVector& v);
   /* Copy 'this' to v starting at start_index in 'v'. */

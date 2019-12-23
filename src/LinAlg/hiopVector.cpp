@@ -150,12 +150,30 @@ void hiopVectorPar::copyFromStarting(int start_index_in_this, const double* v, i
 
 void hiopVectorPar::copyFromStarting(int start_index/*_in_src*/,const hiopVector& v_)
 {
-  const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_);
 #ifdef HIOP_DEEPCHECKS
   assert(n_local==n && "are you sure you want to call this?");
 #endif
+  const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_);
   assert(start_index+v.n_local <= n_local);
   memcpy(data+start_index, v.data, v.n_local*sizeof(double));
+}
+
+void hiopVectorPar::startingAtCopyFromStartingAt(int start_idx_src, 
+						 const hiopVector& v_, 
+						 int start_idx_dest)
+{
+#ifdef HIOP_DEEPCHECKS
+  assert(n_local==n && "are you sure you want to call this?");
+#endif
+  assert(start_idx_src>=0 && start_idx_src<this->n_local);
+  const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_);
+  assert(start_idx_dest>=0 && start_idx_dest<v.n_local);
+
+  int howManyToCopy = this->n_local - start_idx_src;
+  
+  assert(howManyToCopy <= v.n_local-start_idx_dest);
+  howManyToCopy = howManyToCopy <= v.n_local-start_idx_dest ? howManyToCopy : v.n_local-start_idx_dest;
+  memcpy(data+start_idx_src, v.data+start_idx_dest, howManyToCopy*sizeof(double));
 }
 
 void hiopVectorPar::copyToStarting(int start_index, hiopVector& v_)
