@@ -51,6 +51,7 @@
 #include <cstdio>
 #include <cstring> //for memcpy
 #include <cmath>
+#include <algorithm>
 #include <cassert>
 
 #include "blasdefs.hpp"
@@ -618,6 +619,27 @@ void hiopMatrixDense::addSubDiagonal(const double& alpha, long long start, const
 
   const double* dd=d.local_data_const();
   for(int i=start; i<start+dlen; i++) M[i][i] += alpha*dd[i-start];
+}
+
+/* add to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements of
+ * 'd_' (source) starting at index 'start_on_src_vec'. The number of elements added is 'num_elems' 
+ * when num_elems>=0, or the remaining elems on 'd_' starting at 'start_on_src_vec'. */
+void hiopMatrixDense::addSubDiagonal(int start_on_dest_diag, const double& alpha, 
+				     const hiopVector& d_, int start_on_src_vec, int num_elems/*=-1*/)
+{
+  const hiopVectorPar& d = dynamic_cast<const hiopVectorPar&>(d_);
+  if(num_elems<0) num_elems = d.get_size()-start_on_src_vec;
+  assert(num_elems <= d.get_size());
+  assert(n_local == n_global && "method supported only for non-distributed matrices");
+  assert(n_local == m_local  && "method supported only for symmetric matrices");
+
+  assert(start_on_dest_diag>=0 && start_on_dest_diag<m_local);
+  num_elems = std::min(num_elems, m_local-start_on_dest_diag);
+
+  const double* dd=d.local_data_const();
+  const int nend = start_on_dest_diag+num_elems;
+  for(int i=0; i<num_elems; i++)
+    M[i+start_on_dest_diag][i+start_on_dest_diag] = alpha*dd[start_on_src_vec+i];
 }
 
 void hiopMatrixDense::addMatrix(double alpha, const hiopMatrix& X_)

@@ -106,7 +106,12 @@ public:
   /* this += alpha * (sub)diag */
   virtual void addDiagonal(const double& alpha, const hiopVector& d_) = 0;
   virtual void addDiagonal(const double& value) = 0;
-  virtual void addSubDiagonal(const double& alpha, long long start_on_diag, const hiopVector& d_) = 0;
+  virtual void addSubDiagonal(const double& alpha, long long start_on_dest_diag, const hiopVector& d_) = 0;
+  /* add to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements of
+   * 'd_' (source) starting at index 'start_on_src_vec'. The number of elements added is 'num_elems' 
+   * when num_elems>=0, or the remaining elems on 'd_' starting at 'start_on_src_vec'. */
+  virtual void addSubDiagonal(int start_on_dest_diag, const double& alpha, 
+			      const hiopVector& d_, int start_on_src_vec, int num_elems=-1) = 0;
 
   /* this += alpha*X */
   virtual void addMatrix(double alpha, const hiopMatrix& X) = 0;
@@ -124,6 +129,7 @@ public:
    * Preconditions: 
    *  1. transpose of 'this' has to fit in the upper triangle of W 
    *  2. W.n() == W.m()
+   * 
    */
   virtual void transAddToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start, 
 						     double alpha, hiopMatrixDense& W) const = 0;
@@ -204,7 +210,12 @@ public:
 
   virtual void addDiagonal(const double& alpha, const hiopVector& d_);
   virtual void addDiagonal(const double& value);
-  virtual void addSubDiagonal(const double& alpha, long long start, const hiopVector& d_);
+  virtual void addSubDiagonal(const double& alpha, long long start_on_dest_diag, const hiopVector& d_);
+  /* add to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements of
+   * 'd_' (source) starting at index 'start_on_src_vec'. The number of elements added is 'num_elems' 
+   * when num_elems>=0, or the remaining elems on 'd_' starting at 'start_on_src_vec'. */
+  virtual void addSubDiagonal(int start_on_dest_diag, const double& alpha, 
+			      const hiopVector& d_, int start_on_src_vec, int num_elems=-1);
 
   virtual void addMatrix(double alpah, const hiopMatrix& X);
 
