@@ -282,6 +282,14 @@ public:
   {
     assert(false && "not provided because it is not needed");
   }
+  /* add to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements of
+   * 'd_' (source) starting at index 'start_on_src_vec'. The number of elements added is 'num_elems' 
+   * when num_elems>=0, or the remaining elems on 'd_' starting at 'start_on_src_vec'. */
+  virtual void addSubDiagonal(int start_on_dest_diag, const double& alpha, 
+			      const hiopVector& d_, int start_on_src_vec, int num_elems=-1)
+  {
+    assert(false && "not needed / implemented");
+  }
   /* this += alpha*X */
   virtual void addMatrix(double alpah, const hiopMatrix& X)
   {

@@ -97,6 +97,14 @@ public:
   {
     assert(false && "not supported");
   }
+  /* add to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements of
+   * 'd_' (source) starting at index 'start_on_src_vec'. The number of elements added is 'num_elems' 
+   * when num_elems>=0, or the remaining elems on 'd_' starting at 'start_on_src_vec'. */
+  virtual void addSubDiagonal(int start_on_dest_diag, const double& alpha, 
+			      const hiopVector& d_, int start_on_src_vec, int num_elems=-1)
+  {
+    assert(false && "not needed / implemented");
+  }
 
   virtual void addMatrix(double alpha, const hiopMatrix& X)
   {
@@ -177,6 +185,9 @@ public:
   virtual inline long long n() const {return mSp->n()+mDe->n();}
   inline long long n_sp() const {return mSp->n();}
   inline long long n_de() const {return  mDe->n();}
+
+  inline const hiopMatrixSparseTriplet* sp_mat() const { return mSp; }
+  inline const hiopMatrixDense* de_mat() const { return mDe; }
 
   inline int sp_nnz() const { return mSp->numberOfNonzeros(); }
   inline int* sp_irow() { return mSp->i_row(); }
@@ -275,6 +286,15 @@ public:
     assert(false && "not supported");
   }
 
+  /* add to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements of
+   * 'd_' (source) starting at index 'start_on_src_vec'. The number of elements added is 'num_elems' 
+   * when num_elems>=0, or the remaining elems on 'd_' starting at 'start_on_src_vec'. */
+  virtual void addSubDiagonal(int start_on_dest_diag, const double& alpha, 
+			      const hiopVector& d_, int start_on_src_vec, int num_elems=-1)
+  {
+    assert(false && "not needed / implemented");
+  }
+
   virtual void addMatrix(double alpha, const hiopMatrix& X)
   {
     const hiopMatrixSymBlockDiagMDS* pX=dynamic_cast<const hiopMatrixSymBlockDiagMDS*>(&X);
@@ -358,6 +378,9 @@ public:
   virtual inline long long n() const {return mSp->n()+mDe->n();}
   inline long long n_sp() const {return mSp->n();}
   inline long long n_de() const {return  mDe->n();}
+
+  inline const hiopMatrixSymSparseTriplet* sp_mat() const { return mSp; }
+  inline const hiopMatrixDense* de_mat() const { return mDe; }
 
   inline int sp_nnz() const { return mSp->numberOfNonzeros(); }
   inline int* sp_irow() { return mSp->i_row(); }
