@@ -50,6 +50,7 @@
 
 #include <cmath>
 #include <cstring> //for memcpy
+#include <algorithm>
 #include <cassert>
 
 #include "blasdefs.hpp"
@@ -191,6 +192,28 @@ void hiopVectorPar::copyToStarting(hiopVector& v_, int start_index/*_in_dest*/)
   const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_);
   assert(start_index+n_local <= v.n_local);
   memcpy(v.data+start_index, data, n_local*sizeof(double)); 
+}
+
+/* copy 'this' (source) starting at 'start_idx_in_src' to 'dest' starting at index 'int start_idx_dest' 
+ * If num_elems>=0, 'num_elems' will be copied; if num_elems<0, elements will be copied till the end of
+ * either source ('this') or destination ('dest') is reached */
+void hiopVectorPar::
+startingAtCopyToStartingAt(int start_idx_in_src, hiopVector& dest_, int start_idx_dest, int num_elems/*=-1*/) const
+{
+  assert(start_idx_in_src>=0 && start_idx_in_src<this->n_local);
+  const hiopVectorPar& dest = dynamic_cast<hiopVectorPar&>(dest_);
+  assert(start_idx_dest>=0 && start_idx_dest<dest.n_local);
+  if(num_elems<0) {
+    num_elems = std::min(this->n_local-start_idx_in_src, dest.n_local-start_idx_dest);
+  } else {
+    assert(num_elems+start_idx_in_src <= this->n_local);
+    assert(num_elems+start_idx_dest   <= dest.n_local);
+    //make sure everything stays within bounds (in release)
+    num_elems = std::min(num_elems, (int)this->n_local-start_idx_in_src);
+    num_elems = std::min(num_elems, (int)dest.n_local-start_idx_dest);
+  }
+
+  memcpy(dest.data+start_idx_dest, this->data+start_idx_in_src, num_elems*sizeof(double));
 }
 
 void hiopVectorPar::copyTo(double* dest) const
