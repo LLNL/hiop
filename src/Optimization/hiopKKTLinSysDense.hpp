@@ -155,6 +155,10 @@ public:
     int nx=rx.get_size(), nyc=ryc.get_size(), nyd=ryd.get_size();
     if(rhsXYcYd == NULL) rhsXYcYd = new hiopVectorPar(nx+nyc+nyd);
 
+    nlp->log->write("RHS KKT XDycYd rx: ", rx,  hovIteration);
+    nlp->log->write("RHS KKT XDycYd ryc:", ryc, hovIteration);
+    nlp->log->write("RHS KKT XDycYd ryd:", ryd, hovIteration);
+
     rx. copyToStarting(*rhsXYcYd, 0);
     ryc.copyToStarting(*rhsXYcYd, nx);
     ryd.copyToStarting(*rhsXYcYd, nx+nyc);

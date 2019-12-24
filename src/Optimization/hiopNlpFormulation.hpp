@@ -417,6 +417,8 @@ public:
     assert(0==nnz_sparse_Hess_Lagr_SD);
     return new hiopMatrixSymBlockDiagMDS(nx_sparse, nx_dense, nnz_sparse_Hess_Lagr_SS);
   }
+  virtual long long nx_sp() const { return nx_sparse; }
+  virtual long long nx_de() const { return nx_dense; }
 private:
   hiopInterfaceMDS& interface;
   int nx_sparse, nx_dense;
