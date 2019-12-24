@@ -268,9 +268,10 @@ addMatTimesDinvTimesMatTransToDiagBlockOfSymDenseMatrixUpperTriangle(int rowAndC
 	  acc += this->values[ki] / DM[this->jCol[ki]] * this->values[kj];
 	  ki++;
 	  kj++;
-	} else 
+	} else {
 	  if(this->jCol[ki]<this->jCol[kj]) ki++;
 	  else                              kj++;
+	}
       } //end of loop over ki and kj
 
       WM[i+row_dest_start][j+col_dest_start] += alpha*acc;
@@ -308,46 +309,6 @@ hiopMatrixSparseTriplet::allocAndBuildRowStarts()
   assert(it_triplet==this->nnz);
   return rsi;
 }
-
-// void hiopMatrixSparse::make(int nrows_, int ncols_, const vector<vector<int>> &vvCols, const vector<vector<double>> &vvValues)
-// {
-//   assert(nnz == 0);
-//   assert(nrows == 0);
-//   assert(ncols == 0);
-
-//   nrows = nrows_;
-//   ncols = ncols_;
-
-//   //count the number of nonzeros
-//   nnz = 0;
-//   for (int i = 0; i < nrows_; i++)
-//   {
-//       nnz += vvCols[i].size();
-//   }
-
-//   //allocate the space
-//   iRow   = new int[nnz]; 
-//   jCol   = new int[nnz]; 
-//   values = new double[nnz]; 
-  
-//   //fill in the structure and values
-//   int nnz_idx = 0;
-//   for (int i = 0; i < nrows_; i++)
-//   {
-//     auto itCols = vvCols[i].begin();
-//     auto itValues = vvValues[i].begin();
- 
-//     while (itCols != vvCols[i].end())
-//     {
-//       iRow[nnz_idx] = i;
-//       jCol[nnz_idx] = *itCols;
-//       values[nnz_idx] = *itValues;
-//       nnz_idx++;
-//       itCols++;
-//       itValues++;
-//     }
-//   }
-// }
 
 void hiopMatrixSparseTriplet::print(FILE* file, const char* msg/*=NULL*/, 
 				    int maxRows/*=-1*/, int maxCols/*=-1*/, 
