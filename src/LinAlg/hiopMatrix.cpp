@@ -639,7 +639,7 @@ void hiopMatrixDense::addSubDiagonal(int start_on_dest_diag, const double& alpha
   const double* dd=d.local_data_const();
   const int nend = start_on_dest_diag+num_elems;
   for(int i=0; i<num_elems; i++)
-    M[i+start_on_dest_diag][i+start_on_dest_diag] = alpha*dd[start_on_src_vec+i];
+    M[i+start_on_dest_diag][i+start_on_dest_diag] += alpha*dd[start_on_src_vec+i];
 }
 
 void hiopMatrixDense::addMatrix(double alpha, const hiopMatrix& X_)
