@@ -231,9 +231,9 @@ bool hiopMatrixSparseTriplet::checkIndexesAreOrdered() const
 #endif
 
 void hiopMatrixSparseTriplet::
-addMatTimesDinvTimesMatTransToDiagBlockOfSymDenseMatrixUpperTriangle(int rowAndCol_dest_start,
-							  const double& alpha, 
-							  const hiopVectorPar& D, hiopMatrixDense& W) const
+addMDinvMtransToDiagBlockOfSymDeMatUTri(int rowAndCol_dest_start,
+					const double& alpha, 
+					const hiopVectorPar& D, hiopMatrixDense& W) const
 {
   const int row_dest_start = rowAndCol_dest_start, col_dest_start = rowAndCol_dest_start;
   int n = this->nrows;
@@ -280,6 +280,73 @@ addMatTimesDinvTimesMatTransToDiagBlockOfSymDenseMatrixUpperTriangle(int rowAndC
   } // end i
 
 }
+
+/*
+ * block of W += alpha * M1 * D^{-1} * transpose(M2), where M1=this 
+ *  Sizes: M1 is (m1 x nx);  D is vector of len nx, M2 is  (m2, nx)
+ */
+void hiopMatrixSparseTriplet::
+addMDinvNtransToSymDeMatUTri(int row_dest_start, int col_dest_start,
+			     const double& alpha, 
+			     const hiopVectorPar& D, const hiopMatrixSparseTriplet& M2,
+			     hiopMatrixDense& W) const
+{
+  const hiopMatrixSparseTriplet& M1 = *this;
+  const int m1 = M1.nrows, nx = M1.ncols, m2 = M2.nrows;
+  assert(nx==M1.ncols);
+  assert(nx==M2.ncols);
+  assert(D.get_size() == nx);
+  assert(M2.ncols == nx);
+
+  //does it fit in W ?
+  assert(row_dest_start>=0 && row_dest_start+m1<=W.m());
+  assert(col_dest_start>=0 && col_dest_start+m2<=W.n());
+
+  double** WM = W.get_M();
+  const double* DM = D.local_data_const();
+
+  // TODO: allocAndBuildRowStarts -> should create row_starts internally (name='prepareRowStarts' ?)
+  if(M1.row_starts==NULL) M1.row_starts = M1.allocAndBuildRowStarts();
+  assert(M1.row_starts);
+
+  if(M2.row_starts==NULL) M2.row_starts = M2.allocAndBuildRowStarts();
+  assert(M2.row_starts);
+
+  double acc;
+
+  for(int i=0; i<m1; i++) {
+    // j>=i
+    for(int j=0; j<m2; j++) {
+
+      // dest[i,j] = weigthed_dotprod(M1_row_i,M2_row_j)
+      acc = 0.;
+      int ki=M1.row_starts->idx_start[i], kj=M2.row_starts->idx_start[j];
+      while(ki<M1.row_starts->idx_start[i+1] && kj<M2.row_starts->idx_start[j+1]) {
+   	assert(ki<M1.nnz); 
+   	assert(kj<M2.nnz);
+   	if(M1.jCol[ki] == M2.jCol[kj]) { 
+	  acc += M1.values[ki] / DM[this->jCol[ki]] * M2.values[kj];
+   	  ki++;
+   	  kj++;
+   	} else {
+   	  if(this->jCol[ki]<this->jCol[kj]) ki++;
+   	  else                              kj++;
+   	}
+      } //end of loop over ki and kj
+
+#ifdef HIOP_DEEPCHECKS
+      if(i+row_dest_start > j+col_dest_start)
+	printf("[warning] lower triangular element updated in addMDinvNtransToSymDeMatUTri\n");
+#endif
+      assert(i+row_dest_start <= j+col_dest_start);
+
+      WM[i+row_dest_start][j+col_dest_start] += alpha*acc;
+
+    } //end j
+  } // end i
+
+}
+
 
 // //assumes triplets are ordered
 hiopMatrixSparseTriplet::RowStartsInfo* 
