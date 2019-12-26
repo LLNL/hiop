@@ -75,12 +75,8 @@ namespace hiop
     Dx->axdzpy_w_pattern(1.0, *iter->zu, *iter->sxu, nlp->get_ixu());
     nlp->log->write("Dx in KKT", *Dx, hovMatrices);
 
-nlp->log->write("KKT XdenseDYcYd Linsys:", Msys, hovMatrices);
-
     //update -> add Dxd to (1,1) block of KKT matrix (Hd = HessMDS->de_mat already added above)
     Msys.addSubDiagonal(0, alpha, *Dx, nxs, nxd);
-
-nlp->log->write("KKT XdenseDYcYd Linsys:", Msys, hovMatrices);
 
     //build the diagonal Hxs = Hsparse+Dxs
     if(NULL == Hxs) Hxs = new hiopVectorPar(nxs); assert(Hxs);
@@ -89,18 +85,15 @@ nlp->log->write("KKT XdenseDYcYd Linsys:", Msys, hovMatrices);
     nlp->log->write("Hxs in KKT", *Hxs, hovMatrices);
 
     //add - Jac_c_sp * (Hxs)^{-1} Jac_c_sp^T to diagonal block linSys starting at (nxd, nxd)
-    alpha = -1;
-    Jac_cMDS->sp_mat()->addMatTimesDinvTimesMatTransToDiagBlockOfSymDenseMatrixUpperTriangle(nxd, alpha, *Hxs, Msys); 
+    alpha = -1.;
+    Jac_cMDS->sp_mat()->addMDinvMtransToDiagBlockOfSymDeMatUTri(nxd, alpha, *Hxs, Msys); 
 
-nlp->log->write("KKT XdenseDYcYd Linsys:", Msys, hovMatrices);
-nlp->log->write("Jac_c:", *Jac_cMDS, hovMatrices);
-
-    alpha = -1;
+    alpha = -1.;
     //add - Jac_d_sp * (Hxs)^{-1} Jac_d_sp^T to diagonal block linSys starting at (nxd+neq, nxd+neq)
-    Jac_dMDS->sp_mat()->addMatTimesDinvTimesMatTransToDiagBlockOfSymDenseMatrixUpperTriangle(nxd+neq, alpha, *Hxs, Msys); 
+    Jac_dMDS->sp_mat()->addMDinvMtransToDiagBlockOfSymDeMatUTri(nxd+neq, alpha, *Hxs, Msys); 
 
-nlp->log->write("Jac_d:", *Jac_dMDS, hovMatrices);
-nlp->log->write("KKT XdenseDYcYd Linsys:", Msys, hovMatrices);
+    alpha = -1.;
+    Jac_cMDS->sp_mat()->addMDinvNtransToSymDeMatUTri(nxd, nxd+neq, alpha, *Hxs, *Jac_dMDS->sp_mat(), Msys);
 
     //add -{Dd}^{-1}
     //Dd=(Sdl)^{-1}Vu + (Sdu)^{-1}Vu
@@ -114,7 +107,6 @@ nlp->log->write("KKT XdenseDYcYd Linsys:", Msys, hovMatrices);
     
     alpha=-1.;
     Msys.addSubDiagonal(alpha, nxd+neq, *Dd_inv);
-
 
 
     nlp->log->write("KKT XdenseDYcYd Linsys:", Msys, hovMatrices);
@@ -150,29 +142,33 @@ nlp->log->write("KKT XdenseDYcYd Linsys:", Msys, hovMatrices);
     rxs.componentDiv(*Hxs);
 
     //ryc = ryc - Jac_c_sp * Hxs^{-1} * rxs
-    Jac_cMDS->sp_mat()->timesVec(1.0, ryc, -1., rxs);
+    //use dyc as working buffer to avoid altering ryc, which refers directly in the hiopResidual class
+    assert(dyc.get_size()==ryc.get_size());
+    dyc.copyFrom(ryc);
+    Jac_cMDS->sp_mat()->timesVec(1.0, dyc, -1., rxs);
+
     //ryd = ryd - Jac_d_sp * Hxs^{-1} * rxs
     Jac_dMDS->sp_mat()->timesVec(1.0, ryd, -1., rxs);
 
     //
-    // for the rhs for the MDS linSys
+    // form the rhs for the MDS linSys
     //
     //rhs[0:nxde-1] = rx[nxs:(nxsp+nxde-1)]
     rx.startingAtCopyToStartingAt(nxsp, *rhs, 0, nxde);
     //rhs[nxde:nxde+nyc-1] = ryc
-    ryc.copyToStarting(*rhs, nxde);
+    dyc.copyToStarting(*rhs, nxde);
     //ths[nxde+nyc:nxde+nyc+nyd-1] = ryd
     ryd.copyToStarting(*rhs, nxde+nyc);
 
     //
-    // the solve
+    // solve
     //
     linSys->solve(*rhs);
 
     //
     // unpack 
     //
-    rhs->startingAtCopyToStartingAt(0,        dx,  nxde);
+    rhs->startingAtCopyToStartingAt(0,        dx,  nxsp, nxde);
     rhs->startingAtCopyToStartingAt(nxde,     dyc, 0);   
     rhs->startingAtCopyToStartingAt(nxde+nyc, dyd, 0);
 
