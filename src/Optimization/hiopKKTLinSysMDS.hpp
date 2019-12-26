@@ -100,8 +100,8 @@ public:
 
 protected:
   hiopLinSolverIndefDense* linSys;
-  hiopVectorPar* rhs; //[rxdense, ryc, ryd]
-
+  hiopVectorPar *rhs; //[rxdense, ryc, ryd]
+  hiopVectorPar *_buff_xs; //an auxiliary buffer 
   //from the parent class we also use
   //  hiopVectorPar *Dd_inv;
   //  hiopVectorPar *ryd_tilde;
@@ -113,7 +113,11 @@ protected:
   //Hxs = HessMDS->sp_mat() + Dxs (Dx=log-barrier diagonal for xs)
   hiopVectorPar *Hxs; 
 
+  //just dynamic_cast-ed pointers
   hiopNlpMDS* nlpMDS;
+  hiopMatrixSymBlockDiagMDS* HessMDS;
+  const hiopMatrixMDS* Jac_cMDS;
+  const hiopMatrixMDS* Jac_dMDS;
 };
 
 } // end of namespace
