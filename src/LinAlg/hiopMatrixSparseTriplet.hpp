@@ -67,8 +67,8 @@ public:
 
   /* block of W += alpha * this * D{-1} * this' */
   virtual void addMatTimesDinvTimesMatTransToDiagBlockOfSymDenseMatrixUpperTriangle(int rowAndCol_dest_start,
-										    double alpha, 
-										    hiopVectorPar& D, hiopMatrixDense& W);
+										    const double& alpha, 
+										    const hiopVectorPar& D, hiopMatrixDense& W) const;
 
   virtual double max_abs_value();
 
@@ -107,9 +107,9 @@ protected:
     RowStartsInfo() : idx_start(NULL), num_rows(0) {}
     RowStartsInfo(int n_rows) : idx_start(new int[n_rows+1]), num_rows(n_rows) {}
   };
-  RowStartsInfo* row_starts;
+  mutable RowStartsInfo* row_starts;
 private:
-  RowStartsInfo* allocAndBuildRowStarts();
+  RowStartsInfo* allocAndBuildRowStarts() const; 
 private:
   hiopMatrixSparseTriplet() 
     : nrows(0), ncols(0), nnz(0), iRow(NULL), jCol(NULL), values(NULL)
@@ -176,6 +176,11 @@ public:
 #ifdef HIOP_DEEPCHECKS
   virtual bool assertSymmetry(double tol=1e-16) const { return true; }
 #endif
+  virtual bool isDiagonal() const 
+  {
+    for(int itnnz=0; itnnz<nnz; itnnz++) if(iRow[itnnz]!=jCol[itnnz]) return false;
+    return true;
+  }
 };
 
 } //end of namespace

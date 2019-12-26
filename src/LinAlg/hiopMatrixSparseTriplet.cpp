@@ -232,8 +232,8 @@ bool hiopMatrixSparseTriplet::checkIndexesAreOrdered() const
 
 void hiopMatrixSparseTriplet::
 addMatTimesDinvTimesMatTransToDiagBlockOfSymDenseMatrixUpperTriangle(int rowAndCol_dest_start,
-							  double alpha, 
-							  hiopVectorPar& D, hiopMatrixDense& W)
+							  const double& alpha, 
+							  const hiopVectorPar& D, hiopMatrixDense& W) const
 {
   const int row_dest_start = rowAndCol_dest_start, col_dest_start = rowAndCol_dest_start;
   int n = this->nrows;
@@ -241,7 +241,7 @@ addMatTimesDinvTimesMatTransToDiagBlockOfSymDenseMatrixUpperTriangle(int rowAndC
   assert(col_dest_start>=0 && col_dest_start+nrows<=W.n());
   assert(D.get_size() == this->ncols);
   double** WM = W.get_M();
-  double* DM = D.local_data();
+  const double* DM = D.local_data_const();
 
   if(row_starts==NULL) row_starts = allocAndBuildRowStarts();
   assert(row_starts);
@@ -283,7 +283,7 @@ addMatTimesDinvTimesMatTransToDiagBlockOfSymDenseMatrixUpperTriangle(int rowAndC
 
 // //assumes triplets are ordered
 hiopMatrixSparseTriplet::RowStartsInfo* 
-hiopMatrixSparseTriplet::allocAndBuildRowStarts()
+hiopMatrixSparseTriplet::allocAndBuildRowStarts() const
 {
   RowStartsInfo* rsi = new RowStartsInfo(nrows); assert(rsi);
   int it_triplet=0;

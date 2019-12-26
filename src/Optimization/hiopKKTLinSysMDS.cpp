@@ -89,20 +89,17 @@ nlp->log->write("KKT XdenseDYcYd Linsys:", Msys, hovMatrices);
     nlp->log->write("Hxs in KKT", *Hxs, hovMatrices);
 
     //add - Jac_c_sp * (Hxs)^{-1} Jac_c_sp^T to diagonal block linSys starting at (nxd, nxd)
-    alpha=-1;
-    //need to remove const since Jac_cMDS->sp_mat() needs to build some index arrays internaly (for fast multiplication)
-    hiopMatrixSparseTriplet* Jac_cMDS_spmat = const_cast<hiopMatrixSparseTriplet*>(Jac_cMDS->sp_mat()); assert(Jac_cMDS_spmat);
-    Jac_cMDS_spmat->addMatTimesDinvTimesMatTransToDiagBlockOfSymDenseMatrixUpperTriangle(nxd, alpha, *Hxs, Msys); 
+    alpha = -1;
+    Jac_cMDS->sp_mat()->addMatTimesDinvTimesMatTransToDiagBlockOfSymDenseMatrixUpperTriangle(nxd, alpha, *Hxs, Msys); 
 
 nlp->log->write("KKT XdenseDYcYd Linsys:", Msys, hovMatrices);
 nlp->log->write("Jac_c:", *Jac_cMDS, hovMatrices);
+
+    alpha = -1;
     //add - Jac_d_sp * (Hxs)^{-1} Jac_d_sp^T to diagonal block linSys starting at (nxd+neq, nxd+neq)
-    //as above, remove const-ness
-    hiopMatrixSparseTriplet* Jac_dMDS_spmat = const_cast<hiopMatrixSparseTriplet*>(Jac_dMDS->sp_mat()); assert(Jac_dMDS_spmat);
-    Jac_dMDS_spmat->addMatTimesDinvTimesMatTransToDiagBlockOfSymDenseMatrixUpperTriangle(nxd+neq, alpha, *Hxs, Msys); 
+    Jac_dMDS->sp_mat()->addMatTimesDinvTimesMatTransToDiagBlockOfSymDenseMatrixUpperTriangle(nxd+neq, alpha, *Hxs, Msys); 
 
 nlp->log->write("Jac_d:", *Jac_dMDS, hovMatrices);
-
 nlp->log->write("KKT XdenseDYcYd Linsys:", Msys, hovMatrices);
 
     //add -{Dd}^{-1}
