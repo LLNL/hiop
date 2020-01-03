@@ -58,4 +58,10 @@ virtual void addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start, doubl
 Triplet format is momentarily used for sparse matrices. 
 
 ### *Symmetric* sparse matrices 
-Only upper triangular nonzero entries should be specified, accessed and maintained.
+Only upper triangular nonzero entries should be specified, accessed, and maintained.
+
+## Obtaining matrices from HiOp
+
+One can instruct HiOp to save the KKT linear systems solved internally during the optimization by setting 'write_kkt' string option to 'yes'. Which linear system is saved depends on the configuration of HiOp's internal linear algebra via the option 'KKTLinsys' (possible values 'xycyd' and 'xdycyd').
+
+The output format is based on compressed sparse row (CSR) described here. A Matlab script that loads and solves such linear systems is provided here.
