@@ -109,76 +109,124 @@ string hiopOptions::GetString (const char* name) const
 void hiopOptions::registerOptions()
 {
   registerNumOption("mu0", 1., 1e-6, 1000., "Initial log-barrier parameter mu (default 1.)");
-  registerNumOption("kappa_mu", 0.2, 1e-8, 0.999, "Linear reduction coefficient for mu (default 0.2) (eqn (7) in Filt-IPM paper)");
-  registerNumOption("theta_mu", 1.5,  1.0,   2.0, "Exponential reduction coefficient for mu (default 1.5) (eqn (7) in Filt-IPM paper)");
-  registerNumOption("tolerance", 1e-8, 1e-14, 1e-1, "Absolute error tolerance for the NLP (default 1e-8)");
-  registerNumOption("rel_tolerance", 0., 0., 0.1, "Error tolerance for the NLP relative to errors at the initial point. A null value disables this option (default 0.)");
-  registerNumOption("tau_min", 0.99, 0.9,  0.99999, "Fraction-to-the-boundary parameter used in the line-search to back-off a bit (default 0.99) (eqn (8) in the Filt-IPM paper");
-  registerNumOption("kappa_eps", 10., 1e-6, 1e+3, "mu is reduced when when log-bar error is below kappa_eps*mu (default 10.)");
-  registerNumOption("kappa1", 1e-2, 1e-8, 1e+0, "sufficiently-away-from-the-boundary projection parameter used in initialization (default 1e-2)");
-  registerNumOption("kappa2", 1e-2, 1e-8, 0.49999, "shift projection parameter used in initialization for double-bounded variables (default 1e-2)");
-  registerNumOption("smax", 100., 1., 1e+7, "multiplier threshold used in computing the scaling factors for the optimality error (default 100.)"); 
+  registerNumOption("kappa_mu", 0.2, 1e-8, 0.999, 
+		    "Linear reduction coefficient for mu (default 0.2) (eqn (7) in Filt-IPM paper)");
+  registerNumOption("theta_mu", 1.5,  1.0,   2.0, 
+		    "Exponential reduction coefficient for mu (default 1.5) (eqn (7) in Filt-IPM paper)");
+  registerNumOption("tolerance", 1e-8, 1e-14, 1e-1, 
+		    "Absolute error tolerance for the NLP (default 1e-8)");
+  registerNumOption("rel_tolerance", 0., 0., 0.1, 
+		    "Error tolerance for the NLP relative to errors at the initial point. A null "
+		    "value disables this option (default 0.)");
+  registerNumOption("tau_min", 0.99, 0.9,  0.99999, 
+		    "Fraction-to-the-boundary parameter used in the line-search to back-off a bit "
+		    "(see eqn (8) in the Filt-IPM paper) (default 0.99)");
+  registerNumOption("kappa_eps", 10., 1e-6, 1e+3, 
+		    "mu is reduced when when log-bar error is below kappa_eps*mu (default 10.)");
+  registerNumOption("kappa1", 1e-2, 1e-8, 1e+0, 
+		    "sufficiently-away-from-the-boundary projection parameter used in initialization (default 1e-2)");
+  registerNumOption("kappa2", 1e-2, 1e-8, 0.49999, 
+		    "shift projection parameter used in initialization for double-bounded variables (default 1e-2)");
+  registerNumOption("smax", 100., 1., 1e+7, 
+		    "multiplier threshold used in computing the scaling factors for the optimality error (default 100.)"); 
 
   {
     vector<string> range(2); range[0]="lsq"; range[1]="linear";
-    registerStrOption("dualsUpdateType", "lsq", range, "Type of update of the multipliers of the eq. cons. (default lsq)"); //
+    registerStrOption("dualsUpdateType", "lsq", range, 
+		      "Type of update of the multipliers of the eq. cons. (default lsq)"); //
   }
   {
     vector<string> range(2); range[0]="lsq"; range[1]="zero";
-    registerStrOption("dualsInitialization", "lsq", range, "Type of update of the multipliers of the eq. cons. (default lsq)");
+    registerStrOption("dualsInitialization", "lsq", range, 
+		      "Type of update of the multipliers of the eq. cons. (default lsq)");
   }
 
   registerIntOption("max_iter", 3000, 1, 1e6, "Max number of iterations (default 3000)");
 
-  registerNumOption("acceptable_tolerance", 1e-6, 1e-14, 1e-1, "HiOp will terminate if the NLP residuals are below for 'acceptable_iterations' many consecutive iterations (default 1e-6)");   
-  registerIntOption("acceptable_iterations", 10, 1, 1e6, "Number of iterations of acceptable tolerance after which HiOp terminates (default 10)");
+  registerNumOption("acceptable_tolerance", 1e-6, 1e-14, 1e-1, 
+		    "HiOp will terminate if the NLP residuals are below for 'acceptable_iterations' "
+		    "many consecutive iterations (default 1e-6)");   
+  registerIntOption("acceptable_iterations", 10, 1, 1e6, 
+		    "Number of iterations of acceptable tolerance after which HiOp terminates (default 10)");
 
-  registerNumOption("sigma0", 1., 0., 1e+7, "Initial value of the initial multiplier of the identity in the secant approximation (default 1.)");
+  registerNumOption("sigma0", 1., 0., 1e+7, 
+		    "Initial value of the initial multiplier of the identity in the secant "
+		    "approximation (default 1.)");
   {
-    vector<string> range(5); range[0]="sigma0"; range[1]="sty"; range[2]="sty_inv"; range[3]="snrm_ynrm";  range[4]="sty_srnm_ynrm";
-    registerStrOption("sigma_update_strategy", range[1], range, "Updating strategy for the multiplier of the identity in the secant approximation (default sty)");
+    vector<string> range(5); 
+    range[0]="sigma0"; range[1]="sty"; range[2]="sty_inv"; 
+    range[3]="snrm_ynrm";  range[4]="sty_srnm_ynrm";
+    registerStrOption("sigma_update_strategy", range[1], range, 
+		      "Updating strategy for the multiplier of the identity in the secant "
+		      "approximation (default sty)");
   }
-  registerIntOption("secant_memory_len", 6, 0, 256, "Size of the memory of the Hessian secant approximation");
+  registerIntOption("secant_memory_len", 6, 0, 256, 
+		    "Size of the memory of the Hessian secant approximation");
 
-  registerIntOption("verbosity_level", 3, 0, 12, "Verbosity level: 0 no output (only errors), 1=0+warnings, 2=1 (reserved), 3=2+optimization output, 4=3+scalars; larger values explained in hiopLogger.hpp"); 
+  registerIntOption("verbosity_level", 3, 0, 12, 
+		    "Verbosity level: 0 no output (only errors), 1=0+warnings, 2=1 (reserved), "
+		    "3=2+optimization output, 4=3+scalars; larger values explained in hiopLogger.hpp"); 
 
   {
     vector<string> range(3); range[0]="remove"; range[1]="relax"; range[2]="none";
-    registerStrOption("fixed_var", "none", range, "Treatment of fixed variables: 'remove' from the problem, 'relax' bounds by 'fixed_var_perturb', or 'none', in which case the HiOp will terminate with an error message if fixed variables are detected (default 'none')");
+    registerStrOption("fixed_var", "none", range, 
+		      "Treatment of fixed variables: 'remove' from the problem, 'relax' bounds "
+		      "by 'fixed_var_perturb', or 'none', in which case the HiOp will terminate "
+		      "with an error message if fixed variables are detected (default 'none')");
 
-    registerNumOption("fixed_var_tolerance", 1e-15, 1e-30, 0.01, "A variable is considered fixed if |upp_bnd-low_bnd| < fixed_var_tolerance * max(abs(upp_bnd),1) (default 1e-15)");
+    registerNumOption("fixed_var_tolerance", 1e-15, 1e-30, 0.01, 
+		      "A variable is considered fixed if |upp_bnd-low_bnd| < fixed_var_tolerance * "
+		      "max(abs(upp_bnd),1) (default 1e-15)");
 
-    registerNumOption("fixed_var_perturb", 1e-8, 1e-14, 0.1, "Perturbation of the lower and upper bounds for fixed variables relative to its magnitude: lower/upper_bound -=/+= max(abs(upper_bound),1)*fixed_var_perturb (default 1e-8)");
-
-    
+    registerNumOption("fixed_var_perturb", 1e-8, 1e-14, 0.1, 
+		      "Perturbation of the lower and upper bounds for fixed variables relative "
+		      "to its magnitude: lower/upper_bound -=/+= max(abs(upper_bound),1)*"
+		      "fixed_var_perturb (default 1e-8)");
   }
 
   //optimization method used
   {
     vector<string> range(2); range[0]="quasinewton_approx"; range[1]="analytical_exact"; 
-    registerStrOption("Hessian", "quasinewton_approx", range, "Type of Hessian to be used with the filter IPM: 'quasinewton_approx' built internally by HiOp (default option) or 'analytical_exact' provided by the user");
+    registerStrOption("Hessian", "quasinewton_approx", range, 
+		      "Type of Hessian used with the filter IPM: 'quasinewton_approx' built internally "
+		      "by HiOp (default option) or 'analytical_exact' provided by the user");
   }
   //linear algebra
   {
     vector<string> range(3); range[0] = "auto"; range[1]="xycyd"; range[2]="xdycyd"; 
-    registerStrOption("KKTLinsys", "auto", range, "Type of KKT linear system used internally: decided by HiOp 'auto' (default option), the more compact 'XYcYd' or the more stable 'XDYcYd'. The last two are only available with Hessian=analyticalExact");
+    registerStrOption("KKTLinsys", "auto", range, 
+		      "Type of KKT linear system used internally: decided by HiOp 'auto' "
+		      "(default option), the more compact 'XYcYd' or the more stable 'XDYcYd'. "
+		      "The last two are only available with Hessian=analyticalExact");
   }
   //computations
-  vector<string> range(3); range[0] = "auto"; range[1]="cpu"; range[2]="hybrid"; 
-  registerStrOption("compute_mode", "auto", range, "'auto', 'cpu', 'hybrid'; 'hybrid'=cpu+gpu; 'auto' will decide between 'cpu' and 'hybrid' based on the other options passed");
+  {
+    vector<string> range(3); range[0] = "auto"; range[1]="cpu"; range[2]="hybrid"; 
+    registerStrOption("compute_mode", "auto", range, 
+		      "'auto', 'cpu', 'hybrid'; 'hybrid'=cpu+gpu; 'auto' will decide between "
+		      "'cpu' and 'hybrid' based on the other options passed");
+  }
+  //other options
+  {
+    vector<string> range(2); range[0]="no"; range[1]="yes";
+    registerStrOption("write_kkt", range[0], range, 
+		      "write internal KKT linear system (matrix, rhs, sol) to file (default 'no')");
+  }
 }
 
-void hiopOptions::registerNumOption(const std::string& name, double defaultValue, double low, double upp, const char* description)
+void hiopOptions::registerNumOption(const std::string& name, double defaultValue, 
+				    double low, double upp, const char* description)
 {
   mOptions[name]=new _ONum(defaultValue, low, upp, description);
 }
 
-void hiopOptions::registerStrOption(const std::string& name, const std::string& defaultValue, const std::vector<std::string>& range, const char* description)
+void hiopOptions::registerStrOption(const std::string& name, const std::string& defaultValue, 
+				    const std::vector<std::string>& range, const char* description)
 {
   mOptions[name]=new _OStr(defaultValue, range, description);
 }
 
-void hiopOptions::registerIntOption(const std::string& name, int    defaultValue, int low, int upp, const char* description)
+void hiopOptions::registerIntOption(const std::string& name, int defaultValue, int low, int upp, const char* description)
 {
   mOptions[name]=new _OInt(defaultValue, low, upp, description);
 }
@@ -190,20 +238,24 @@ void hiopOptions::ensureConsistence()
   double eps_tol_accep = GetNumeric("acceptable_tolerance");
   double eps_tol  =      GetNumeric("tolerance");     
   if(eps_tol_accep < eps_tol) {
-    log_printf(hovWarning, "There is no reason to set 'acceptable_tolerance' tighter than 'tolerance'. Will set the two to 'tolerance'.\n");
+    log_printf(hovWarning, 
+	       "There is no reason to set 'acceptable_tolerance' tighter than 'tolerance'. "
+	       "Will set the two to 'tolerance'.\n");
     SetNumericValue("acceptable_tolerance", eps_tol);
   }
 
   if(GetString("Hessian")=="quasinewton_approx") {
     string strKKT = GetString("KKTLinsys");
     if(strKKT=="xycyd" || strKKT=="xdycyd")
-      log_printf(hovWarning, "Passed option 'KKTLinsys=%s' not valid for "
-		 "'Hessian=quasiNewtonApprox'. Will use 'KKTLinsys=auto'\n",
-		 strKKT.c_str());
+      log_printf(hovWarning, 
+		 "The option 'KKTLinsys=%s' not valid with 'Hessian=quasiNewtonApprox'. "
+		 "Will use 'KKTLinsys=auto'\n", strKKT.c_str());
   }
 #ifndef HIOP_USE_MAGMA
   if(GetString("compute_mode")=="hybrid") {
-    log_printf(hovWarning, "option compute_mode=hybrid was changed to 'cpu' since HiOp was built without GPU support/Magma.\n");
+    log_printf(hovWarning, 
+	       "option compute_mode=hybrid was changed to 'cpu' since HiOp was built without "
+	       "GPU support/Magma.\n");
     SetStringValue("compute_mode", "cpu");
   }
 #endif
@@ -226,7 +278,9 @@ void hiopOptions::loadFromFile(const char* filename)
 
   if(input.fail()) 
     if(strcmp(szDefaultFilename, filename)) {
-      log_printf(hovError, "Failed to read option file '%s'. Hiop will use default options.\n", filename);
+      log_printf(hovError, 
+		 "Failed to read option file '%s'. Hiop will use default options.\n", 
+		 filename);
       return;
     }
 
@@ -240,7 +294,9 @@ void hiopOptions::loadFromFile(const char* filename)
 
     istringstream iss(line);
     if(!(iss >> name >> value)) {
-      log_printf(hovWarning, "Hiop could not parse and ignored line '%s' from the option file\n", line.c_str());
+      log_printf(hovWarning, 
+		 "Hiop could not parse and ignored line '%s' from the option file\n", 
+		 line.c_str());
       continue;
     }
     
@@ -256,7 +312,8 @@ void hiopOptions::loadFromFile(const char* filename)
 	if(ss>>val) { SetNumericValue(name.c_str(), val, true); }
 	else 
 	  log_printf(hovWarning, 
-		      "Hiop could not parse value '%s' as double for option '%s' specified in the option file and will use default value '%g'\n", 
+		      "Hiop could not parse value '%s' as double for option '%s' specified in "
+		     "the option file and will use default value '%g'\n", 
 		      value.c_str(), name.c_str(), on->val);
       } else {
 	os = dynamic_cast<_OStr*>(option);
@@ -269,7 +326,8 @@ void hiopOptions::loadFromFile(const char* filename)
 	    if(ss>>val) { SetIntegerValue(name.c_str(), val, true); }
 	    else {
 	      log_printf(hovWarning, 
-			  "Hiop could not parse value '%s' as int for option '%s' specified in the option file and will use default value '%d'\n",
+			  "Hiop could not parse value '%s' as int for option '%s' specified in "
+			 "the option file and will use default value '%d'\n",
 			  value.c_str(), name.c_str(), oi->val);
 	    }
 	  } else {
@@ -282,8 +340,8 @@ void hiopOptions::loadFromFile(const char* filename)
     } else { // else from it!=mOptions.end()
       // option not recognized/found/registered
       log_printf(hovWarning, 
-		  "Hiop does not understand option '%s' specified in the option file and will ignore its value '%s'.\n",
-		  name.c_str(), value.c_str());
+		 "Hiop does not understand option '%s' specified in the option file and will "
+		 "ignore its value '%s'.\n", name.c_str(), value.c_str());
     }
   } //end of the for over the lines
 }
@@ -295,13 +353,14 @@ bool hiopOptions::SetNumericValue (const char* name, const double& value, const 
     _ONum* option = dynamic_cast<_ONum*>(it->second);
     if(NULL==option) {
       log_printf(hovWarning, 
-		"Hiop does not know option '%s' as 'numeric'. Maybe it is an 'integer' or 'string' value? The option will be ignored.\n",
-		name);
+		"Hiop does not know option '%s' as 'numeric'. Maybe it is an 'integer' or 'string' "
+		 "value? The option will be ignored.\n", name);
     } else {
       if(true==option->specifiedInFile) {
 	if(false==setFromFile) {
 	  log_printf(hovWarning, 
-		     "Hiop will ignore value '%g' set for option '%s' since this option is already specified in an option file.\n", value, name);
+		     "Hiop will ignore value '%g' set for option '%s' at runtime since this option is "
+		     "already specified in the option file.\n", value, name);
 	  return true;
 	}
       } 
@@ -311,8 +370,8 @@ bool hiopOptions::SetNumericValue (const char* name, const double& value, const 
 
       if(value<option->lb || value>option->ub) {
 	log_printf(hovWarning, 
-		    "Hiop: option '%s' must be in [%g,%g]. Default value %g will be used.\n",
-		    name, option->lb, option->ub, option->val);
+		   "Hiop: option '%s' must be in [%g,%g]. Default value %g will be used.\n",
+		   name, option->lb, option->ub, option->val);
       } else option->val = value;
     }
   } else {
@@ -331,13 +390,15 @@ bool hiopOptions::SetIntegerValue(const char* name, const int& value, const bool
     _OInt* option = dynamic_cast<_OInt*>(it->second);
     if(NULL==option) {
       log_printf(hovWarning, 
-		  "Hiop does not know option '%s' as 'integer'. Maybe it is an 'numeric' or a 'string' option? The option will be ignored.\n",
+		 "Hiop does not know option '%s' as 'integer'. Maybe it is an 'numeric' "
+		 "or a 'string' option? The option will be ignored.\n",
 		  name);
     } else {
       if(true==option->specifiedInFile) {
 	if(false==setFromFile) {
 	  log_printf(hovWarning, 
-		     "Hiop will ignore value '%d' set for option '%s' since this option is already specified in an option file.\n", value, name);
+		     "Hiop will ignore value '%d' set for option '%s' at runtime since this "
+		     "option is already specified in the option file.\n", value, name);
 	  return true;
 	}
       } 
@@ -345,11 +406,10 @@ bool hiopOptions::SetIntegerValue(const char* name, const int& value, const bool
       if(setFromFile)
 	option->specifiedInFile=true;
 
-
       if(value<option->lb || value>option->ub) {
 	log_printf(hovWarning, 
-		    "Hiop: option '%s' must be in [%d, %d]. Default value %d will be used.\n",
-		    name, option->lb, option->ub, option->val);
+		   "Hiop: option '%s' must be in [%d, %d]. Default value %d will be used.\n",
+		   name, option->lb, option->ub, option->val);
       } else option->val = value;
     }
   } else {
@@ -368,13 +428,14 @@ bool hiopOptions::SetStringValue (const char* name,  const char* value, const bo
     _OStr* option = dynamic_cast<_OStr*>(it->second);
     if(NULL==option) {
       log_printf(hovWarning, 
-		  "Hiop does not know option '%s' as 'string'. Maybe it is an 'integer' or a 'string' option? The option will be ignored.\n",
-		  name);
+		  "Hiop does not know option '%s' as 'string'. Maybe it is an 'integer' or a "
+		 "'string' option? The option will be ignored.\n", name);
     } else {
       if(true==option->specifiedInFile) {
 	if(false==setFromFile) {
 	  log_printf(hovWarning, 
-		     "Hiop will ignore value '%s' set for option '%s' since this option is already specified in an option file.\n", value, name);
+		     "Hiop will ignore value '%s' set for option '%s' at runtime since this option "
+		     "is already specified in the option file.\n", value, name);
 	  return true;
 	}
       } 
@@ -393,8 +454,8 @@ bool hiopOptions::SetStringValue (const char* name,  const char* value, const bo
 	for(int it=0; it<option->range.size(); it++) ssRange << option->range[it] << " ";
 
 	log_printf(hovWarning, 
-		    "Hiop: value '%s' for option '%s' must be one of [%s]. Default value '%s' will be used.\n",
-		    value, name, ssRange.str().c_str(), option->val.c_str());
+		    "Hiop: value '%s' for option '%s' must be one of [%s]. Default value "
+		   "'%s' will be used.\n", value, name, ssRange.str().c_str(), option->val.c_str());
       } else option->val = strValue;
     }
   } else {
@@ -436,18 +497,18 @@ void hiopOptions::print(FILE* file, const char* msg) const
 
 void hiopOptions::_ONum::print(FILE* f) const
 {
-  fprintf(f, "%.3e \t# (numeric)  %g to %g   [%s]", val, lb, ub, descr.c_str());
+  fprintf(f, "%.3e \t# (numeric) %g to %g [%s]", val, lb, ub, descr.c_str());
 }
 void hiopOptions::_OInt::print(FILE* f) const
 {
-  fprintf(f, "%d \t# (integer)  %d to %d   [%s]", val, lb, ub, descr.c_str());
+  fprintf(f, "%d \t# (integer)  %d to %d [%s]", val, lb, ub, descr.c_str());
 }
 
 void hiopOptions::_OStr::print(FILE* f) const
 {
   stringstream ssRange; ssRange << " ";
   for(int i=0; i<range.size(); i++) ssRange << range[i] << " ";
-  fprintf(f, "%s \t# (string) one of [%s]   [%s]", val.c_str(), ssRange.str().c_str(), descr.c_str());
+  fprintf(f, "%s \t# (string) one of [%s] [%s]", val.c_str(), ssRange.str().c_str(), descr.c_str());
 }
 
 
