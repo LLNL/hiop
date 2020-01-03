@@ -142,6 +142,7 @@ install(FILES src/Interface/hiopInterface.hpp
 	      src/LinAlg/hiopMatrix.hpp
 	      src/Utils/hiopRunStats.hpp
 	      src/Utils/hiopLogger.hpp
+	      src/Utils/hiopCSR_IO.hpp
 	      src/Utils/hiopTimer.hpp
 	      src/Utils/hiopOptions.hpp
 	      src/Interface/hiop_defs.hpp

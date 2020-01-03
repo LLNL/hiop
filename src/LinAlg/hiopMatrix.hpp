@@ -281,6 +281,7 @@ public:
   inline long long get_local_size_n() const { return n_local; }
   inline long long get_local_size_m() const { return m_local; }
 
+  //TODO: this is not kosher!
   inline double** local_data() const {return M; }
   inline double*  local_buffer() const {return M[0]; }
   //do not use this unless you sure you know what you're doing
