@@ -52,6 +52,8 @@
 #include "hiopKKTLinSys.hpp"
 #include "hiopLinSolver.hpp"
 
+#include "hiopCSR_IO.hpp"
+
 namespace hiop
 {
 
@@ -67,7 +69,8 @@ class hiopKKTLinSysDenseXYcYd : public hiopKKTLinSysCompressedXYcYd
 {
 public:
   hiopKKTLinSysDenseXYcYd(hiopNlpFormulation* nlp_)
-    : hiopKKTLinSysCompressedXYcYd(nlp_), linSys(NULL), rhsXYcYd(NULL)
+    : hiopKKTLinSysCompressedXYcYd(nlp_), linSys(NULL), rhsXYcYd(NULL), 
+      write_linsys_counter(-1), csr_writer(nlp_)
   {
   }
   virtual ~hiopKKTLinSysDenseXYcYd()
@@ -101,17 +104,20 @@ public:
       if(nlp->options->GetString("compute_mode")=="hybrid") {
 #ifdef HIOP_USE_MAGMA
 	linSys = new hiopLinSolverIndefDenseMagma(n, nlp);
+	nlp->log->printf(hovScalars, "LinSysDenseXYcYd creating Magma solver for a matrix of size %d\n", n);
 #else
 	linSys = new hiopLinSolverIndefDenseLapack(n, nlp);
+	nlp->log->printf(hovScalars, "LinSysDenseXYcYd creating Lapack solver for a matrix of size %d\n", n);
 #endif
       } else {
 	linSys = new hiopLinSolverIndefDenseLapack(n, nlp);
+	nlp->log->printf(hovScalars, "LinSysDenseXYcYd creating Lapack solver for a matrix of size %d\n", n);
       }
     }
-
+    
+    hiopMatrixDense& Msys = linSys->sysMatrix();
     //update linSys system matrix
     {
-      hiopMatrixDense& Msys = linSys->sysMatrix();
       Msys.setToZero();
       
       int alpha = 1.;
@@ -142,7 +148,12 @@ public:
 
       nlp->log->write("KKT Linsys:", Msys, hovMatrices);
     }
-    
+
+    //write matrix to file if requested
+    if(nlp->options->GetString("write_kkt") == "yes") write_linsys_counter++;
+    if(write_linsys_counter>=0) csr_writer.writeMatToFile(Msys, write_linsys_counter); 
+
+    //factorize the matrix
     linSys->matrixChanged();
 
     nlp->runStats.tmSolverInternal.stop();
@@ -162,8 +173,11 @@ public:
     rx. copyToStarting(*rhsXYcYd, 0);
     ryc.copyToStarting(*rhsXYcYd, nx);
     ryd.copyToStarting(*rhsXYcYd, nx+nyc);
-    
+
+    if(write_linsys_counter>=0) csr_writer.writeRhsToFile(*rhsXYcYd, write_linsys_counter);
     linSys->solve(*rhsXYcYd);
+
+    if(write_linsys_counter>=0) csr_writer.writeSolToFile(*rhsXYcYd, write_linsys_counter);
 
     rhsXYcYd->copyToStarting(0,      dx);
     rhsXYcYd->copyToStarting(nx,     dyc);
@@ -177,8 +191,17 @@ public:
 protected:
   hiopLinSolverIndefDense* linSys;
   hiopVectorPar* rhsXYcYd;
+  //-1 when disabled; otherwise acts like a counter, 0,1,... incremented each time 'solveCompressed' is called
+  //depends on the 'write_kkt' option
+  int write_linsys_counter; 
+  hiopCSR_IO csr_writer;
 private:
-  hiopKKTLinSysDenseXYcYd() :  hiopKKTLinSysCompressedXYcYd(NULL), linSys(NULL) { assert(false); }
+  hiopKKTLinSysDenseXYcYd() 
+    :  hiopKKTLinSysCompressedXYcYd(NULL), linSys(NULL), 
+       write_linsys_counter(-1), csr_writer(NULL)
+  { 
+    assert(false); 
+  }
 };
 
 /** KKT system treated as dense; used for developement/testing purposes mainly */
@@ -186,7 +209,8 @@ class hiopKKTLinSysDenseXDYcYd : public hiopKKTLinSysCompressedXDYcYd
 {
 public:
   hiopKKTLinSysDenseXDYcYd(hiopNlpFormulation* nlp_)
-    : hiopKKTLinSysCompressedXDYcYd(nlp_), linSys(NULL), rhsXDYcYd(NULL)
+    : hiopKKTLinSysCompressedXDYcYd(nlp_), linSys(NULL), rhsXDYcYd(NULL),
+      write_linsys_counter(-1), csr_writer(nlp_)
   {
   }
   virtual ~hiopKKTLinSysDenseXDYcYd()
@@ -224,17 +248,20 @@ public:
 
       if(nlp->options->GetString("compute_mode")=="hybrid") {
 #ifdef HIOP_USE_MAGMA
+	nlp->log->printf(hovScalars, "LinSysDenseXYcYd creating Magma solver for a matrix of size %d\n", n);
 	linSys = new hiopLinSolverIndefDenseMagma(n, nlp);
 #else
+	nlp->log->printf(hovScalars, "LinSysDenseXYcYd creating Lapack solver for a matrix of size %d\n", n);
 	linSys = new hiopLinSolverIndefDenseLapack(n, nlp);
 #endif
       } else {
+	nlp->log->printf(hovScalars, "LinSysDenseXYcYd creating Lapack solver for a matrix of size %d\n", n);
 	linSys = new hiopLinSolverIndefDenseLapack(n, nlp);
       }	
     }
+    hiopMatrixDense& Msys = linSys->sysMatrix();
     //update linSys system matrix
     {
-      hiopMatrixDense& Msys = linSys->sysMatrix();
       Msys.setToZero();
       
       const int alpha = 1.;
@@ -271,7 +298,12 @@ public:
 
       nlp->log->write("KKT XDYcYd Linsys:", Msys, hovMatrices);
     }
-    
+
+    //write matrix to file if requested
+    if(nlp->options->GetString("write_kkt") == "yes") write_linsys_counter++;
+    if(write_linsys_counter>=0) csr_writer.writeMatToFile(Msys, write_linsys_counter); 
+
+    //factorize
     linSys->matrixChanged();
 
     nlp->runStats.tmSolverInternal.stop();
@@ -289,12 +321,18 @@ public:
     nlp->log->write("RHS KKT XDycYd ryc:", ryc, hovMatrices);
     nlp->log->write("RHS KKT XDycYd ryd:", ryd, hovMatrices);
 
+    
+
     rx. copyToStarting(*rhsXDYcYd, 0);
     rd. copyToStarting(*rhsXDYcYd, nx);
     ryc.copyToStarting(*rhsXDYcYd, nx+nyd);
     ryd.copyToStarting(*rhsXDYcYd, nx+nyd+nyc);
-    
+
+    if(write_linsys_counter>=0) csr_writer.writeRhsToFile(*rhsXDYcYd, write_linsys_counter);
+
     linSys->solve(*rhsXDYcYd);
+
+    if(write_linsys_counter>=0) csr_writer.writeSolToFile(*rhsXDYcYd, write_linsys_counter);
 
     rhsXDYcYd->copyToStarting(0,          dx);
     rhsXDYcYd->copyToStarting(nx,         dd);
@@ -305,14 +343,22 @@ public:
     nlp->log->write("SOL KKT XDYcYd dd: ", dd,  hovMatrices);
     nlp->log->write("SOL KKT XDYcYd dyc:", dyc, hovMatrices);
     nlp->log->write("SOL KKT XDYcYd dyd:", dyd, hovMatrices);
-
   }
 
 protected:
   hiopLinSolverIndefDense* linSys;
   hiopVectorPar* rhsXDYcYd;
+  //-1 when disabled; otherwise acts like a counter, 0,1,... incremented each time 'solveCompressed' is called
+  //depends on the 'write_kkt' option
+  int write_linsys_counter; 
+  hiopCSR_IO csr_writer;
 private:
-  hiopKKTLinSysDenseXDYcYd() :  hiopKKTLinSysCompressedXDYcYd(NULL), linSys(NULL) { assert(false); }
+  hiopKKTLinSysDenseXDYcYd() 
+    : hiopKKTLinSysCompressedXDYcYd(NULL), linSys(NULL), 
+      write_linsys_counter(-1), csr_writer(NULL)
+  { 
+    assert(false && "not intended to be used"); 
+  }
 };
 
 
