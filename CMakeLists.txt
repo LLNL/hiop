@@ -9,6 +9,9 @@ FortranCInterface_HEADER(FortranCInterface.hpp MACRO_NAMESPACE "FC_")
 
 file(WRITE "src/Interface/hiop_defs.hpp" "")
 
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 option(HIOP_USE_MPI "Build with MPI support" ON)
 option(HIOP_USE_GPU "Build with support for GPUs - Magma and cuda libraries" OFF)
 option(HIOP_DEEPCHECKS "Extra checks and asserts in the code with a high penalty on performance" ON)
@@ -75,7 +78,8 @@ else()
   file(APPEND "src/Interface/hiop_defs.hpp" "#ifdef HIOP_DEEPCHECKS\n#undef HIOP_DEEPCHECKS\n#endif\n")
 endif(HIOP_DEEPCHECKS)
 
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -fpermissive")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+
 
 find_package(OpenMP)
 
