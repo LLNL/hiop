@@ -1,6 +1,6 @@
-# (Modified) CSR Format used by HiOp to save linear systems
+# CSR Format used by HiOp to save linear systems
 
-The saved linear system consists of the matrix, right-hand side (rhs), and solution. The matrix is assumed to be symmetric and the indexes are Fortran style (1-based). A Matlab script that loads and solves such linear systems is provided here. This is a slight variation  of the .iajaaa format used by Ipopt (more exactly by Pardiso from within Ipopt). The only differences are that i. HiOp's also saves the solution, see 7. below and multiple rhs and solution pair can be present at the end of the output files.
+Each of the linear systems saved by HiOp in a .iajaaa file (see [this](readme.md) for more information) consists of the systems's matrix, the right-hand side(s) (rhs), and the solution(s). The matrix is assumed to be symmetric and the indexes are Fortran style (1-based). An example Matlab script that loads and solves such linear systems is provided [here](load_kkt_mat.m). 
 
 The .iajaaa files contain
 
@@ -16,4 +16,10 @@ The .iajaaa files contain
 
 6. rhs [nrows doubles]
 
-7. solution [nrow doubles]
+7. solution [nrows doubles]
+
+8. more rhs-solution pairs (repetitions of 6-7 above)
+
+Please remark that there is a slight variation  of the .iajaaa format used by Ipopt (more exactly by Pardiso from within Ipopt), namely,
++ HiOp's also saves the solution, see 7. below;
++ multiple rhs-solution pairs can be present (*i.e.*,6-7 can repeat) at the end of the output files
