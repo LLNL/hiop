@@ -1,1 +1,1 @@
-add_library(hiopLinAlg OBJECT hiopVector.cpp hiopMatrix.cpp hiopMatrixSparseTriplet.cpp)
+add_library(hiopLinAlg OBJECT hiopVector.cpp hiopMatrix.cpp hiopMatrixSparseTripletStorage.cpp hiopMatrixSparseTriplet.cpp)
