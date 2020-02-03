@@ -7,6 +7,8 @@
 #include <numeric>
 #include <algorithm>
 
+#include <cassert>
+
 //container for sparse matrices in triplet format; implements minimal functionality for matrix ops
 template <class Tidx, class Tval>
 class hiopMatrixSparseTripletStorage
