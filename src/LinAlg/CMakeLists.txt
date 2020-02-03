@@ -1,1 +1,4 @@
-add_library(hiopLinAlg OBJECT hiopVector.cpp hiopMatrix.cpp hiopMatrixSparseTripletStorage.cpp hiopMatrixSparseTriplet.cpp)
+add_library(hiopLinAlg OBJECT hiopVector.cpp hiopMatrix.cpp hiopMatrixSparseTripletStorage.cpp hiopMatrixSparseTriplet.cpp hiopMatrixComplexSparseTriplet.cpp)
+
+add_executable(test_hiopLinAlgComplex.exe test_hiopLinalgComplex.cpp)
+target_link_libraries(test_hiopLinAlgComplex.exe hiopLinAlg ${HIOP_MATH_LIBRARIES})
