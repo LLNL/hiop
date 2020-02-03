@@ -17,7 +17,6 @@ hiopMatrixSparseTriplet::hiopMatrixSparseTriplet(int rows, int cols, int nnz_)
   iRow = new  int[nnz];
   jCol = new int[nnz];
   values = new double[nnz];
-
 }
 
 hiopMatrixSparseTriplet::~hiopMatrixSparseTriplet()

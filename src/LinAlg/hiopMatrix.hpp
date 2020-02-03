@@ -72,7 +72,7 @@ namespace hiop
 
 class hiopVector;
 class hiopVectorPar;
-  class hiopMatrixDense;
+class hiopMatrixDense;
 
 /* See readme.md for some conventions on matrices */ 
 class hiopMatrix
