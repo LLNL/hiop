@@ -117,7 +117,6 @@ namespace hiop
     {
       assert(false && "not yet implemented");
     }
-
     
     /* diagonal block of W += alpha*this with 'diag_start' indicating the diagonal entry of W where
      * 'this' should start to contribute.
@@ -150,14 +149,11 @@ namespace hiop
      * given by the value of 'maxRows' will be printed. If this value is negative, all
      * elements will be printed.
      */
-    virtual void print(FILE* f=NULL, const char* msg=NULL, int maxRows=-1, int maxCols=-1, int rank=-1) const
-    {
-      assert(false && "not yet implemented");
-    }
+    virtual void print(FILE* f=NULL, const char* msg=NULL,
+		       int maxRows=-1, int maxCols=-1, int rank=-1) const;
 
     /* number of rows */
     virtual long long m() const { return stM->m(); }
-
     /* number of columns */
     virtual long long n() const { return stM->n(); }
 
@@ -167,9 +163,14 @@ namespace hiop
     {
       assert(false && "not yet implemented");
     }
-
 #endif
-    
+    // these are not part of the hiopMatrix
+    inline void copyFrom(const int* irow_, const int* jcol_, const std::complex<double>* values_)
+    {
+      stM->copyFrom(irow_, jcol_, values_);
+    }
+    inline long long numberOfNonzeros() const { return stM->numberOfNonzeros(); }
+    inline hiopMatrixSparseTripletStorage<int, std::complex<double> >* storage() { return stM; }
   private:
     hiopMatrixSparseTripletStorage<int, std::complex<double> > *stM;
   };

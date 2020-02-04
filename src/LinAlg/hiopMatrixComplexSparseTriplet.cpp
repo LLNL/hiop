@@ -47,16 +47,51 @@ namespace hiop
   double hiopMatrixComplexSparseTriplet::max_abs_value()
   {
     char norm='M'; int one=1, nnz=stM->numberOfNonzeros();
-    dcomplex* M = new dcomplex[nnz];
-    for(int it=0; it<nnz; it++) {
-      M[it].re = stM->M()[it].real();
-      M[it].im = stM->M()[it].imag();
-    }
-      
+    hiop::dcomplex* M = reinterpret_cast<dcomplex*>(stM->M());
+    
     double maxv = ZLANGE(&norm, &one, &nnz, M, &one, NULL);
-
-    delete[] M;
     return maxv;
   }
-  
+
+  void hiopMatrixComplexSparseTriplet::print(FILE* file, const char* msg/*=NULL*/, 
+					     int maxRows/*=-1*/, int maxCols/*=-1*/, 
+					     int rank/*=-1*/) const 
+  {
+    int myrank=0, numranks=1; //this is a local object => always print
+    
+    int max_elems = maxRows>=0 ? maxRows : stM->numberOfNonzeros();
+    max_elems = std::min(max_elems, stM->numberOfNonzeros());
+
+    if(file==NULL) file=stdout;
+    
+    if(myrank==rank || rank==-1) {
+      
+      if(NULL==msg) {
+	if(numranks>1)
+	  fprintf(file, "matrix of size %lld %lld and nonzeros %lld, printing %d elems (on rank=%d)\n", 
+		  m(), n(), numberOfNonzeros(), max_elems, myrank);
+	else
+	  fprintf(file, "matrix of size %lld %lld and nonzeros %lld, printing %d elems\n", 
+		  m(), n(), numberOfNonzeros(), max_elems);
+      } else {
+	fprintf(file, "%s ", msg);
+      }    
+      
+    // output matlab indices and input format
+    fprintf(file, "iRow=[");
+    for(int it=0; it<max_elems; it++)  fprintf(file, "%d; ", stM->irow[it]+1);
+    fprintf(file, "];\n");
+    
+    fprintf(file, "jCol=[");
+    for(int it=0; it<max_elems; it++)  fprintf(file, "%d; ", stM->jcol[it]+1);
+    fprintf(file, "];\n");
+    
+    fprintf(file, "v=[");
+    for(int it=0; it<max_elems; it++)
+      //fprintf(file, "%22.16e+%22.16ei; ", stM->values[it].real(), stM->values[it].imag());
+      fprintf(file, "%.6g+%.6gi; ", stM->values[it].real(), stM->values[it].imag());
+    fprintf(file, "];\n");
+  }
+}
+
 }//end namespace
