@@ -1,5 +1,7 @@
 #include "hiopMatrixComplexDense.hpp"
 
+#include "blasdefs.hpp"
+
 #include <cstring>
 
 namespace hiop
@@ -138,7 +140,7 @@ namespace hiop
       for(int i=0; i<maxRows; i++) {
 	if(i>0) fprintf(f, " ");
 	for(int j=0; j<maxCols; j++) 
-	  fprintf(f, "%20.12e+%20.12ei; ", M[i][j].real(), M[i][j].imag());
+	  fprintf(f, "%8.5e+%8.5ei; ", M[i][j].real(), M[i][j].imag());
 	if(i<maxRows-1)
 	  fprintf(f, "; ...\n");
 	else
@@ -159,5 +161,30 @@ namespace hiop
     c->copyFrom(*this);
     return c;
   }
-  
+  double hiopMatrixComplexDense::max_abs_value()
+  {
+    char norm='M'; int one=1; int N=get_local_size_n() * get_local_size_m();
+    hiop::dcomplex* MM = reinterpret_cast<dcomplex*>(M[0]);
+    
+    double maxv = ZLANGE(&norm, &one, &N, MM, &one, NULL);
+    return maxv;
+  }
+
+  void hiopMatrixComplexDense::addMatrix(double alpha, const hiopMatrix& X_)
+  {
+    const hiopMatrixComplexDense& X = dynamic_cast<const hiopMatrixComplexDense&>(X_); 
+    addMatrix(std::complex<double>(alpha,0), X);    
+  }
+  void hiopMatrixComplexDense::addMatrix(const std::complex<double>& alpha, const hiopMatrixComplexDense& X)
+  {
+#ifdef HIOP_DEEPCHECKS
+    assert(m_local==X.m_local);
+    assert(n_local==X.n_local);
+#endif
+    hiop::dcomplex* Mdest= reinterpret_cast<dcomplex*>(M[0]);
+    hiop::dcomplex* Msrc = reinterpret_cast<dcomplex*>(X.M[0]);
+    hiop::dcomplex a; a.re=alpha.real(); a.im=alpha.imag();
+    int N=m_local*n_local, inc=1;
+    ZAXPY(&N, &a, Msrc, &inc, Mdest, &inc);
+  }
 } //end namespace

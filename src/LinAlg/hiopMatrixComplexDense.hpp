@@ -65,11 +65,19 @@ namespace hiop
     }
 
     //to be used only locally
-    virtual void transTimesMat(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const;
+    virtual void transTimesMat(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const
+    {
+      assert(false && "not yet implemented");
+    }
     //to be used only locally
-    virtual void timesMatTrans(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const;
-    virtual void timesMatTrans_local(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const;
-
+    virtual void timesMatTrans(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const 
+    {
+      assert(false && "not yet implemented");
+    }
+    virtual void timesMatTrans_local(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const
+    {
+      assert(false && "not yet implemented");
+    }
     virtual void addDiagonal(const double& alpha, const hiopVector& d_)
     {
       assert(false && "not yet supported");
@@ -92,6 +100,7 @@ namespace hiop
     }
     
     virtual void addMatrix(double alpha, const hiopMatrix& X);
+    virtual void addMatrix(const std::complex<double>& alpha, const hiopMatrixComplexDense& X);
 
     /* block of W += alpha*this
      * For efficiency, only upper triangular matrix is updated since this will be eventually sent to LAPACK
@@ -147,17 +156,26 @@ namespace hiop
     
     
     /* copy 'num_rows' rows from 'src' in this starting at 'row_dest' */
-    void copyRowsFrom(const hiopMatrixComplexDense& src, int num_rows, int row_dest);
+    void copyRowsFrom(const hiopMatrixComplexDense& src, int num_rows, int row_dest)
+    {
+      assert(false && "not yet implemented");
+    }
     /* copies 'src' into this as a block starting at (i_block_start,j_block_start) */
     /* copyMatrixAsBlock */
     void copyBlockFromMatrix(const long i_block_start, const long j_block_start,
-			     const hiopMatrixComplexDense& src);
+			     const hiopMatrixComplexDense& src)      
+    {
+      assert(false && "not yet implemented");
+    }
     
     /* overwrites 'this' with 'src''s block starting at (i_src_block_start,j_src_block_start) 
      * and dimensions of this */
     void copyFromMatrixBlock(const hiopMatrixComplexDense& src,
 			     const int i_src_block_start,
-			     const int j_src_block_start);
+			     const int j_src_block_start)
+    {
+      assert(false && "not yet implemented");
+    }
     
     inline long long get_local_size_n() const { return n_local; }
     inline long long get_local_size_m() const { return m_local; } 

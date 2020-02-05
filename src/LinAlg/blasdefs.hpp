@@ -7,6 +7,7 @@
 #define DNRM2   FC_GLOBAL(dnrm2, DNRM2)
 #define DSCAL   FC_GLOBAL(dscal, DSCAL)
 #define DAXPY   FC_GLOBAL(daxpy, DAXPY)
+#define ZAXPY   FC_GLOBAL(zaxpy, ZAXPY)
 #define DCOPY   FC_GLOBAL(dcopy, DCOPY)
 #define DGEMV   FC_GLOBAL(dgemv, DGEMV)
 #define DGEMM   FC_GLOBAL(dgemm, DGEMM)
@@ -38,6 +39,7 @@ extern "C" double DNRM2(int* n, double* x, int* incx);
 extern "C" double DDOT(int* n, double* dx, int* incx, double* dy, int* incy);
 extern "C" void   DSCAL(int* n, double* da, double* dx, int* incx);
 extern "C" void   DAXPY(int* n, double* da, double* dx, int* incx, double* dy, int* incy );
+extern "C" void   ZAXPY(int* n, dcomplex* da, dcomplex* dx, int* incx, dcomplex* dy, int* incy );
 extern "C" void   DCOPY(int* n,  double* da, int* incx, double* dy, int* incy);
 extern "C" void   DGEMV(char* trans, int* m, int* n, double* alpha, double* a, int* lda,
 			 const double* x, int* incx, double* beta, double* y, int* incy );
