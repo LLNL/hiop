@@ -44,6 +44,8 @@ HiOp requires LAPACK and BLAS. These dependencies are automatically detected by 
 
 HiOp has some support for NVIDIA **GPU-based computations** via CUDA and Magma. To enable the use of GPUs,  use cmake with '-DHIOP_USE_GPU=ON'. The build system will automatically search for CUDA Toolkit. For non-standard CUDA Toolkit installations, use '-DHIOP_CUDA_LIB_DIR=/path' and '-DHIOP_CUDA_INCLUDE_DIR=/path'. For "very" non-standard CUDA Toolkit installations, one can specify the directory of cuBlas libraries as well with '-DHIOP_CUBLAS_LIB_DIR=/path'.
 
+### Support for GPU computations
+
 When GPU support is on, HiOp also requires the specifciation of the path to Magma installation directory using '-DHIOP_MAGMA_DIR=/path'. The typical cmake command to enable GPU support in HiOp is
 ```shell 
 $> cmake -DHIOP_USE_GPU=ON -DHIOP_MAGMA_DIR=/home/petra1/work/installs/magma-2.5.2/lib ..
@@ -52,6 +54,14 @@ For custom CUDA Toolkit installations, an example of the cmake command would be
 ```shell 
 $> cmake -DHIOP_USE_GPU=ON -DHIOP_MAGMA_DIR=/home/petra1/work/installs/magma-2.5.2/lib -DHIOP_CUDA_INCLUDE_DIR=/usr/local/cuda-10.2/include/ -DHIOP_CUDA_LIB_DIR=/usr/local/cuda-10.2/lib64 -DHIOP_CUBLAS_LIB_DIR=/usr/local/cuda-10.2/targets/x86_64-linux/lib/lib64 ..
 ```
+
+## Kron reduction
+
+Kron reduction capability of HiOp is disabled by default. One can enable it using 
+```shell
+$> cmake -DHIOP_WITH_KRON_REDUCTION=ON -DMA86_DIR=/home/petra1/work/installs/hsl_ma86-1.6.0/_install/ ..
+```
+
 
 ## Acknowledgments
 

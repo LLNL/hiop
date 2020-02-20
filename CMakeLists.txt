@@ -15,6 +15,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 option(HIOP_USE_MPI "Build with MPI support" ON)
 option(HIOP_USE_GPU "Build with support for GPUs - Magma and cuda libraries" OFF)
 option(HIOP_DEEPCHECKS "Extra checks and asserts in the code with a high penalty on performance" ON)
+option(HIOP_WITH_KRON_REDUCTION "Build Kron Reduction code (requires MA86)" OFF)
 
 #with testing drivers capable of 'selfchecking' (-selfcheck)
 option(HIOP_WITH_MAKETEST "Enable 'make test'" ON)
@@ -36,7 +37,6 @@ if(HIOP_USE_GPU)
     set(MAGMA_LIBRARIES "-L${HIOP_MAGMA_DIR}/lib ${MAGMA_LIBRARIES}")
     set(MAGMA_INCLUDE "${HIOP_MAGMA_DIR}/include")
   endif(HIOP_MAGMA_DIR)
-
 
   set(HIOP_CUDA_LIBRARIES "-lculibos -lcublas -lcublasLt -lnvblas -lcusparse -lcudart -lcudadevrt")
   find_package(CUDA)
@@ -80,6 +80,15 @@ endif(HIOP_DEEPCHECKS)
 
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
+#set(MA86_DIR "/home/petra1/work/installs/hsl_ma86-1.6.0")
+if(HIOP_WITH_KRON_REDUCTION)
+  find_library(MA86_LIB NAMES hsl_ma86 ma86 HINTS ${MA86_DIR} "${MA86_DIR}/lib" )
+  if(MA86_LIB)
+    message("Using HSL MA86 lib ${MA86_LIB}")
+  else()
+    message(FATAL_ERROR "Could not find HSL MA86 needed by kron reduction. Please cmake with '-DMA86_DIR=/path/to/me86_dir'; currently, MA86_DIR='${MA86_DIR}'")
+  endif(MA86_LIB)
+endif(HIOP_WITH_KRON_REDUCTION)
 
 find_package(OpenMP)
 
