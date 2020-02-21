@@ -1,10 +1,13 @@
-#include "hiopLinearSolverMA86.hpp"
+#include "hiopLinSolverMA86Z.hpp"
+
+#include "blasdefs.hpp"
 
 namespace hiop
 {
   hiopLinSolverMA86Z::hiopLinSolverMA86Z(int n_, hiopNlpFormulation* nlp_/*=NULL*/)
-    : n(n_), nlp(nlp_)
+    : hiopLinSolver(), n(n_)
   {
+    nlp = nlp_;
   }
   
   hiopLinSolverMA86Z::~hiopLinSolverMA86Z()
@@ -14,6 +17,7 @@ namespace hiop
 
   int hiopLinSolverMA86Z::matrixChanged()
   {
+    return -1;
   }
 
   void hiopLinSolverMA86Z::solve(hiopVector& x)

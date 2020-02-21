@@ -49,16 +49,16 @@
 #ifndef HIOP_LINSOLVER_MA86Z
 #define HIOP_LINSOLVER_MA86Z
 
-#include "hiopLinSolver.hpp"
+#include "hiopNlpFormulation.hpp"
 
-#include "blasdefs.hpp"
+#include "hiopLinSolver.hpp"
 
 namespace hiop
 {
   class hiopLinSolverMA86Z : public hiopLinSolver
   {
     hiopLinSolverMA86Z(int n_, hiopNlpFormulation* nlp_=NULL);
-    virtual ~hiopLinSolver() {}
+    virtual ~hiopLinSolverMA86Z();
     
     /** Triggers a refactorization of the matrix, if necessary. 
      * Returns number of negative eigenvalues or -1 if null eigenvalues 
@@ -71,7 +71,6 @@ namespace hiop
     virtual void solve(hiopVector& x);
     virtual void solve(hiopMatrix& X);// { assert(false && "not yet supported"); }
   public: 
-    hiopNlpFormulation* nlp;
     int n;
   };
 } //end namespace hiop

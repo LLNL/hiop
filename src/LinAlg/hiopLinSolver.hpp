@@ -60,8 +60,8 @@ namespace hiop
 /**
  * Abstract class for Linear Solvers used by HiOp
  * Specifies interface for linear solver arising in Interior-Point methods, thus,
- * the underlying assumptions are that the system's matrix is symmetric positive
- * definite or symmetric indefinite.
+ * the underlying assumptions are that the system's matrix is symmetric (positive
+ * definite or indefinite).
  *
  * Implementations of this abstract class have the purpose of serving as wrappers
  * of existing CPU and GPU libraries for linear systems. 
