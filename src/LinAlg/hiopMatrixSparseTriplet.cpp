@@ -17,7 +17,6 @@ hiopMatrixSparseTriplet::hiopMatrixSparseTriplet(int rows, int cols, int nnz_)
   iRow = new  int[nnz];
   jCol = new int[nnz];
   values = new double[nnz];
-
 }
 
 hiopMatrixSparseTriplet::~hiopMatrixSparseTriplet()
@@ -397,10 +396,10 @@ void hiopMatrixSparseTriplet::print(FILE* file, const char* msg/*=NULL*/,
     if(NULL==msg) {
       if(numranks>1)
         fprintf(file, "matrix of size %lld %lld and nonzeros %lld, printing %d elems (on rank=%d)\n", 
-		nrows, ncols, nnz, max_elems, myrank);
+		m(), n(), numberOfNonzeros(), max_elems, myrank);
       else
         fprintf(file, "matrix of size %lld %lld and nonzeros %lld, printing %d elems\n", 
-		nrows, ncols, nnz, max_elems);
+		m(), n(), numberOfNonzeros(), max_elems);
     } else {
       fprintf(file, "%s ", msg);
     }    

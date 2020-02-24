@@ -16,12 +16,24 @@
 #define DSYTRF  FC_GLOBAL(dsytrf, DSYTRF)
 #define DSYTRS  FC_GLOBAL(dsytrs, DSYTRS)
 #define DLANGE  FC_GLOBAL(dlange, DLANGE)
+#define ZLANGE  FC_GLOBAL(zlange, ZLANGE)
 #define DPOSVX  FC_GLOBAL(dposvx, DPOSVC)
 #define DPOSVXX FC_GLOBAL(dposvxx, DPOSVXX)
 
 namespace hiop
 {
 
+//#ifdef  __cplusplus
+extern "C" {
+//#endif
+  typedef struct {
+    double re,  im;
+  } dcomplex;
+//#ifdef  __cplusplus
+}
+//#endif
+
+  
 extern "C" double DNRM2(int* n, double* x, int* incx);
 extern "C" double DDOT(int* n, double* dx, int* incx, double* dy, int* incy);
 extern "C" void   DSCAL(int* n, double* da, double* dx, int* incx);
@@ -93,7 +105,8 @@ extern "C" void DSYTRS( char* UPLO, int* N, int* NRHS, double* A, int* LDA, int*
  *  the  infinity norm,  or the  element of  largest absolute value  of a
  *  real matrix A.
  */
-extern "C" double   DLANGE(char* norm, int* M, int* N, double*A, int* lda, double* work);
+extern "C" double DLANGE(char* norm, int* M, int* N, double* A, int* lda, double* work);
+extern "C" double ZLANGE(char* norm,  int* M, int* N, dcomplex* A, int* lda, double* work);
 
 /* DPOSVX uses the Cholesky factorization A = U**T*U or A = L*L**T to
  compute the solution to a real system of linear equations

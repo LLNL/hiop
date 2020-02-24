@@ -9,7 +9,7 @@
 namespace hiop
 {
 
-/** Sparse matrix in triplet format - it is not distributed
+/** Sparse matrix of doubles in triplet format - it is not distributed
  * 
  * Note: for now (i,j) are expected ordered: first on rows 'i' and then on cols 'j'
  */
@@ -136,7 +136,7 @@ private:
   }
 };
 
-/** Sparse symmetric matrix in triplet format. Only the lower triangle is stored */
+/** Sparse symmetric matrix in triplet format. Only the upper triangle is stored */
 class hiopMatrixSymSparseTriplet : public hiopMatrixSparseTriplet 
 {
 public: 
