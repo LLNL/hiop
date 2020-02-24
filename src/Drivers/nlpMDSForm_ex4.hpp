@@ -29,7 +29,7 @@
  *        s>=0
  *        -4 <=y_1 <=4, the rest of y are free
  *        
- * The vector 'y' is of dimension nd = ns/4
+ * The vector 'y' is of dimension nd = ns (can be changed in the constructor)
  * Dense matrices Qd and Md are such that
  * Qd  = two on the diagonal, one on the first offdiagonals, zero elsewhere
  * Md  = minus one everywhere
@@ -53,21 +53,21 @@ public:
 	       ns_, ns); 
       }
     }
-    
-    const int n = ns/4;
-    Q  = new hiop::hiopMatrixDense(n,n);
-    Q->setToZero();
+    nd = ns;
+
+    Q  = new hiop::hiopMatrixDense(nd,nd);
+    Q->setToConstant(1e-8);
     Q->addDiagonal(2.);
     double** Qa = Q->get_M();
-    for(int i=1; i<n-1; i++) {
+    for(int i=1; i<nd-1; i++) {
       Qa[i][i+1] = 1.;
       Qa[i+1][i] = 1.;
     }
 
-    Md = new hiop::hiopMatrixDense(ns,ns/4);
+    Md = new hiop::hiopMatrixDense(ns,nd);
     Md->setToConstant(-1.0);
 
-    _buf_y = new double[ns/4];
+    _buf_y = new double[nd];
   }
 
   virtual ~Ex4()
@@ -79,7 +79,7 @@ public:
   
   bool get_prob_sizes(long long& n, long long& m)
   { 
-    n=2*ns+ns/4;
+    n=2*ns+nd;
     m=ns+3; 
     return true; 
   }
@@ -87,7 +87,7 @@ public:
   bool get_vars_info(const long long& n, double *xlow, double* xupp, NonlinearityType* type)
   {
     assert(n>=4 && "number of variables should be greater than 4 for this example");
-    assert(n==2*ns+ns/4);
+    assert(n==2*ns+nd);
 
     //x
     for(int i=0; i<ns; ++i) xlow[i] = -1e+20;
@@ -133,7 +133,7 @@ public:
 				    int& nnz_sparse_Hess_Lagr_SS, int& nnz_sparse_Hess_Lagr_SD)
   {
     nx_sparse = 2*ns;
-    nx_dense = ns/4;
+    nx_dense = nd;
     nnz_sparse_Jace = 2*ns;
     nnz_sparse_Jaci = 1+ns+1+1;
     nnz_sparse_Hess_Lagr_SS = 2*ns;
@@ -143,7 +143,7 @@ public:
 
   bool eval_f(const long long& n, const double* x, bool new_x, double& obj_value)
   {
-    assert(ns>=4); assert(Q->n()==ns/4); assert(Q->m()==ns/4);
+    assert(ns>=4); assert(Q->n()==nd); assert(Q->m()==nd);
     obj_value=x[0]*(x[0]-1.);
     //sum 0.5 {x_i*(x_{i}-1) : i=1,...,ns} + 0.5 y'*Qd*y + 0.5 s^T s
     for(int i=1; i<ns; i++) obj_value += x[i]*(x[i]-1.);
@@ -152,7 +152,7 @@ public:
     double term2=0.;
     const double* y = x+2*ns;
     Q->timesVec(0.0, _buf_y, 1., y);
-    for(int i=0; i<ns/4; i++) term2 += _buf_y[i] * y[i];
+    for(int i=0; i<nd; i++) term2 += _buf_y[i] * y[i];
     obj_value += 0.5*term2;
     
     const double* s=x+ns;
@@ -186,14 +186,14 @@ public:
 	if(conineq_idx==0) {
 	  cons[conineq_idx] = x[0];
 	  for(int i=0; i<ns; i++)   cons[conineq_idx] += s[i];
-	  for(int i=0; i<ns/4; i++) cons[conineq_idx] += y[i];
+	  for(int i=0; i<nd; i++) cons[conineq_idx] += y[i];
 
 	} else if(conineq_idx==1) {
 	  cons[conineq_idx] = x[1];
-	  for(int i=0; i<ns/4; i++) cons[conineq_idx] += y[i];
+	  for(int i=0; i<nd; i++) cons[conineq_idx] += y[i];
 	} else if(conineq_idx==2) {
 	  cons[conineq_idx] = x[2];
-	  for(int i=0; i<ns/4; i++) cons[conineq_idx] += y[i];
+	  for(int i=0; i<nd; i++) cons[conineq_idx] += y[i];
 	} else { assert(false); }
       }  
     }
@@ -206,11 +206,10 @@ public:
   //sum 0.5 {x_i*(x_{i}-1) : i=1,...,ns} + 0.5 y'*Qd*y + 0.5 s^T s
   bool eval_grad_f(const long long& n, const double* x, bool new_x, double* gradf)
   {
-    assert(ns>=4); assert(Q->n()==ns/4); assert(Q->m()==ns/4);
+    //! assert(ns>=4); assert(Q->n()==ns/4); assert(Q->m()==ns/4);
     //x_i - 0.5 
     for(int i=0; i<ns; i++) 
       gradf[i] = x[i]-0.5;
-
 
     //Qd*y
     const double* y = x+2*ns;
@@ -327,13 +326,13 @@ public:
 	  //do an in place fill-in for the ineq Jacobian corresponding to e^T
 	  assert(con_idx-ns==0 || con_idx-ns==1 || con_idx-ns==2);
 	  assert(num_cons==3);
-	  for(int i=0; i<ns/4; i++) {
+	  for(int i=0; i<nd; i++) {
 	    JacD[con_idx-ns][i] = 1.;
 	  }
 	}
       }
       if(isEq) {
-	memcpy(JacD[0], Md->local_buffer(), ns*(ns/4)*sizeof(double));
+	memcpy(JacD[0], Md->local_buffer(), ns*nd*sizeof(double));
       }
     }
 
@@ -364,7 +363,7 @@ public:
     }
 
     if(HDD!=NULL) {
-      const int nx_dense_squared = ns*ns/16;
+      const int nx_dense_squared = nd*nd;
       //memcpy(HDD[0], Q->local_buffer(), nx_dense_squared*sizeof(double));
       const double* Qv = Q->local_buffer();
       for(int i=0; i<nx_dense_squared; i++)
@@ -376,13 +375,13 @@ public:
   bool get_starting_point(const long long& global_n, double* x0)
   {
     
-    assert(global_n==2*ns+ns/4); 
+    assert(global_n==2*ns+nd); 
     for(int i=0; i<global_n; i++) x0[i]=0.;
     return true;
   }
 
 private:
-  int ns;
+  int ns, nd;
   hiop::hiopMatrixDense *Q, *Md;
   double* _buf_y;
 };
