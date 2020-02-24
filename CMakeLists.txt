@@ -88,7 +88,7 @@ if(HIOP_WITH_KRON_REDUCTION)
   if(MA86_LIB)
     message("Using HSL MA86 lib ${MA86_LIB}")
   else()
-    message(FATAL_ERROR "Could not find HSL MA86 needed by kron reduction. Please cmake with '-DMA86_DIR=/path/to/me86_dir'; currently, MA86_DIR='${MA86_DIR}'")
+    message(FATAL_ERROR "Could not find HSL MA86 needed by kron reduction. Please cmake with '-DMA86_DIR=/path/to/ma86_dir'; currently, MA86_DIR='${MA86_DIR}'")
   endif(MA86_LIB)
 endif(HIOP_WITH_KRON_REDUCTION)
 
@@ -137,6 +137,9 @@ endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 add_library(hiop STATIC $<TARGET_OBJECTS:hiopOptimization>
                         $<TARGET_OBJECTS:hiopLinAlg>
 			$<TARGET_OBJECTS:hiopUtils>)
+if(HIOP_WITH_KRON_REDUCTION)
+  target_link_libraries(hiop PUBLIC hiopKronRed)
+endif(HIOP_WITH_KRON_REDUCTION)
 
 install(TARGETS hiop DESTINATION lib)
 install(FILES src/Interface/hiopInterface.hpp
@@ -153,11 +156,14 @@ install(FILES src/Interface/hiopInterface.hpp
 	      src/LinAlg/hiopMatrix.hpp
 	      src/LinAlg/hiopMatrixSparseTriplet.hpp
 	      src/LinAlg/hiopMatrixSparseTripletStorage.hpp
+              src/LinAlg/hiopMatrixComplexSparseTriplet.hpp
+	      src/LinAlg/hiopMatrixComplexDense.hpp
 	      src/Utils/hiopRunStats.hpp
 	      src/Utils/hiopLogger.hpp
 	      src/Utils/hiopCSR_IO.hpp
 	      src/Utils/hiopTimer.hpp
 	      src/Utils/hiopOptions.hpp
+              src/Utils/hiopKronReduction.hpp
 	      src/Interface/hiop_defs.hpp
         DESTINATION include)
 
