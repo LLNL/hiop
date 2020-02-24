@@ -54,7 +54,7 @@
 #include <algorithm>
 #include <cassert>
 
-#include "blasdefs.hpp"
+#include "hiop_blasdefs.hpp"
 
 #include "hiopVector.hpp"
 

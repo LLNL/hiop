@@ -48,7 +48,7 @@
 
 #include "hiopDualsUpdater.hpp"
 
-#include "blasdefs.hpp"
+#include "hiop_blasdefs.hpp"
 
 namespace hiop
 {

@@ -165,6 +165,7 @@ install(FILES src/Interface/hiopInterface.hpp
 	      src/Utils/hiopOptions.hpp
               src/Utils/hiopKronReduction.hpp
 	      src/Interface/hiop_defs.hpp
+	      src/LinAlg/hiop_blasdefs.hpp
         DESTINATION include)
 
 ##########################################################

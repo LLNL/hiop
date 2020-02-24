@@ -1,6 +1,6 @@
 #include "hiopMatrixComplexDense.hpp"
 
-#include "blasdefs.hpp"
+#include "hiop_blasdefs.hpp"
 
 #include <cstring>
 

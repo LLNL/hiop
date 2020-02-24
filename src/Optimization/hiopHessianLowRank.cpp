@@ -48,7 +48,7 @@
 
 #include "hiopHessianLowRank.hpp"
 
-#include "blasdefs.hpp"
+#include "hiop_blasdefs.hpp"
 
 #ifdef HIOP_USE_MPI
 #include "mpi.h"

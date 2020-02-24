@@ -1,6 +1,6 @@
 #include "hiopMatrixSparseTriplet.hpp"
 
-#include "blasdefs.hpp"
+#include "hiop_blasdefs.hpp"
 
 #include <algorithm> //for std::min
 #include <cmath> //for std::isfinite

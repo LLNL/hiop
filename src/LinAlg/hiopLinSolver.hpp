@@ -52,7 +52,7 @@
 #include "hiopMatrix.hpp"
 #include "hiopVector.hpp"
 
-#include "blasdefs.hpp"
+#include "hiop_blasdefs.hpp"
 
 namespace hiop
 {

@@ -47,7 +47,7 @@
 // product endorsement purposes.
 
 #include "hiopKKTLinSys.hpp"
-#include "blasdefs.hpp"
+#include "hiop_blasdefs.hpp"
 
 #include <cmath>
 
