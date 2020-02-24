@@ -352,6 +352,7 @@ addMDinvNtransToSymDeMatUTri(int row_dest_start, int col_dest_start,
 hiopMatrixSparseTriplet::RowStartsInfo* 
 hiopMatrixSparseTriplet::allocAndBuildRowStarts() const
 {
+
   RowStartsInfo* rsi = new RowStartsInfo(nrows); assert(rsi);
   int it_triplet=0;
   rsi->idx_start[0]=0;
@@ -370,6 +371,9 @@ hiopMatrixSparseTriplet::allocAndBuildRowStarts() const
 #endif
       rsi->idx_start[i]++;
       it_triplet++;
+
+      if(it_triplet==this->nnz)
+	break;
     }
     assert(rsi->idx_start[i] == it_triplet);
   }
@@ -383,8 +387,10 @@ void hiopMatrixSparseTriplet::print(FILE* file, const char* msg/*=NULL*/,
 {
   int myrank=0, numranks=1; //this is a local object => always print
 
-    int max_elems = maxRows>=0 ? maxRows : nnz;
-    max_elems = std::min(max_elems, nnz);
+  if(file==NULL) file = stdout;
+
+  int max_elems = maxRows>=0 ? maxRows : nnz;
+  max_elems = std::min(max_elems, nnz);
 
   if(myrank==rank || rank==-1) {
 
@@ -403,15 +409,15 @@ void hiopMatrixSparseTriplet::print(FILE* file, const char* msg/*=NULL*/,
 
     // using matlab indices
     fprintf(file, "iRow=[");
-    for(int it=0; it<max_elems; it++)  fprintf(file, "%d ; ", iRow[it]+1);
+    for(int it=0; it<max_elems; it++)  fprintf(file, "%d; ", iRow[it]+1);
     fprintf(file, "];\n");
     
     fprintf(file, "jCol=[");
-    for(int it=0; it<max_elems; it++)  fprintf(file, "%d ; ", jCol[it]+1);
+    for(int it=0; it<max_elems; it++)  fprintf(file, "%d; ", jCol[it]+1);
     fprintf(file, "];\n");
     
     fprintf(file, "v=[");
-    for(int it=0; it<max_elems; it++)  fprintf(file, "%22.16e ; ", values[it]);
+    for(int it=0; it<max_elems; it++)  fprintf(file, "%22.16e; ", values[it]);
     fprintf(file, "];\n");
   }
 }
