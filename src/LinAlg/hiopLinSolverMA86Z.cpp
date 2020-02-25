@@ -8,16 +8,19 @@ namespace hiop
     : hiopLinSolver(), n(n_)
   {
     nlp = nlp_;
+
+
   }
   
   hiopLinSolverMA86Z::~hiopLinSolverMA86Z()
   {
-
   }
 
   int hiopLinSolverMA86Z::matrixChanged()
   {
-    return -1;
+    ma86_default_control_z(&control);
+
+    return -1; 
   }
 
   void hiopLinSolverMA86Z::solve(hiopVector& x)

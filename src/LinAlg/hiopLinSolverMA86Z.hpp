@@ -49,8 +49,12 @@
 #ifndef HIOP_LINSOLVER_MA86Z
 #define HIOP_LINSOLVER_MA86Z
 
-#include "hiopNlpFormulation.hpp"
+extern "C" {
+#include "hsl_mc69z.h"
+#include "hsl_ma86z.h"
+}
 
+#include "hiopNlpFormulation.hpp"
 #include "hiopLinSolver.hpp"
 
 namespace hiop
@@ -70,8 +74,11 @@ namespace hiop
      * exit is contains the solution(s).  */
     virtual void solve(hiopVector& x);
     virtual void solve(hiopMatrix& X);// { assert(false && "not yet supported"); }
-  public: 
+  private: 
     int n;
+    void* keep;
+    ma86_control_z control;
+    ma86_info_z info;
   };
 } //end namespace hiop
 
