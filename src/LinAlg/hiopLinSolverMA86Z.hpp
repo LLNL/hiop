@@ -67,17 +67,17 @@
 
 #include "hiopNlpFormulation.hpp"
 #include "hiopLinSolver.hpp"
+#include "hiopMatrixComplexSparseTriplet.hpp"
 
 namespace hiop
 {
   class hiopLinSolverMA86Z : public hiopLinSolver
   {
-    hiopLinSolverMA86Z(int n_, hiopNlpFormulation* nlp_=NULL);
+    hiopLinSolverMA86Z(hiopMatrixComplexSparseTriplet& sysmat , hiopNlpFormulation* nlp_=NULL);
     virtual ~hiopLinSolverMA86Z();
     
     /** Triggers a refactorization of the matrix, if necessary. 
-     * Returns number of negative eigenvalues or -1 if null eigenvalues 
-     * are encountered. */
+     * Returns -1 if trouble in factorization is encountered. */
     virtual int matrixChanged();
     
     /** solves a linear system.
@@ -85,11 +85,16 @@ namespace hiop
      * exit is contains the solution(s).  */
     virtual void solve(hiopVector& x);
     virtual void solve(hiopMatrix& X);// { assert(false && "not yet supported"); }
+
   private: 
-    int n;
     void* keep;
     ma86_control_z control;
     ma86_info_z info;
+
+    int *ptr, *row, *order;
+    double _Complex *vals;
+    const hiopMatrixComplexSparseTriplet& sys_mat;
+    int n, nnz;
   };
 } //end namespace hiop
 

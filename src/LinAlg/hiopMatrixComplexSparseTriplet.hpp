@@ -170,7 +170,7 @@ namespace hiop
       stM->copyFrom(irow_, jcol_, values_);
     }
     inline long long numberOfNonzeros() const { return stM->numberOfNonzeros(); }
-    inline hiopMatrixSparseTripletStorage<int, std::complex<double> >* storage() { return stM; }
+    inline hiopMatrixSparseTripletStorage<int, std::complex<double> >* storage() const { return stM; }
   private:
     hiopMatrixSparseTripletStorage<int, std::complex<double> > *stM;
   };
