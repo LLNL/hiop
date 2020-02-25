@@ -132,6 +132,8 @@ include_directories(src/Interface)
 include_directories(src/Optimization)
 include_directories(src/LinAlg)
 include_directories(src/Utils)
+#!!!this include needs to ALWAYS be the last!!!
+include_directories(src/_Internals)
 
 add_subdirectory(src/Optimization)
 add_subdirectory(src/LinAlg)

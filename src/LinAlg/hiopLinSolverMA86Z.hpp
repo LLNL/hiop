@@ -49,10 +49,21 @@
 #ifndef HIOP_LINSOLVER_MA86Z
 #define HIOP_LINSOLVER_MA86Z
 
-extern "C" {
-#include "hsl_mc69z.h"
-#include "hsl_ma86z.h"
-}
+#include "hsl_mc69z.hpp"
+#include "hsl_ma86z.hpp"
+
+#ifdef HSL_MC69Z_HEADER_NOT_CPP_READY
+#pragma message("hsl_mc69z.h file needs additional instrumentation to work with C++. " \
+		"See issue #15 on github.com/llnl/hiop")
+//#pragma message("See issue #17 on github.com/llnl/hiop")
+#endif
+
+#ifdef HSL_MA86Z_HEADER_NOT_CPP_READY
+#pragma message("hsl_ma86z.h file needs additional instrumentation to work with C++." \
+		"See issue #15 on github.com/llnl/hiop")
+//#error compilation aborted
+#endif
+
 
 #include "hiopNlpFormulation.hpp"
 #include "hiopLinSolver.hpp"

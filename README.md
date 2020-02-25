@@ -57,17 +57,20 @@ $> cmake -DHIOP_USE_GPU=ON -DHIOP_MAGMA_DIR=/home/petra1/work/installs/magma-2.5
 
 ## Kron reduction
 
-Kron reduction capability of HiOp is disabled by default. One can enable it using 
+Kron reduction functionality of HiOp is disabled by default. One can enable it using 
 ```shell
-$> cmake -DHIOP_WITH_KRON_REDUCTION=ON -DMA86_DIR=/home/petra1/work/installs/hsl_ma86-1.6.0/_install/ ..
+$> cmake -DHIOP_WITH_KRON_REDUCTION=ON -DMA86_DIR=/home/petra1/work/installs/hsl_ma86-1.6.0/_install/ -DMETIS_DIR=/home/petra1/work/installs/metis-4.0 ..
 ```
+
+MA86 and METIS need to be provided. The C "Z" (double complex) headers of MA86 are not properly working with C++ when std::complex (<complex>) is included. The required modifications are simple and documented in issue #15.
 
 
 ## Acknowledgments
 
 HiOp has been developed under the financial support of: 
+- Department of Energy, Office of Advanced Scientific Computing Research (ASCR)
+- Department of Energy, Advanced Research Projects Agency-Energy (ARPA‑E)
 - Lawrence Livermore National Laboratory, through the LDRD program
-- Department of Energy, Office of Advanced Scientific Computing Research
 
 ## Copyright
 Copyright (c) 2017, Lawrence Livermore National Security, LLC. All rights reserved. Produced at the Lawrence Livermore National Laboratory. LLNL-CODE-742473. Written by Cosmin G. Petra, petra1@llnl.gov. 
