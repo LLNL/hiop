@@ -11,6 +11,11 @@ namespace hiop
    * 
    * Note: most methods expect (i,j) ordered: first on rows 'i' and then on cols 'j'. The
    * class hiopMatrixSparseTripletStorage offers this functionality.
+   *
+   * Existing limitations: this class is mostly used as storage both for symmetric and 
+   * rectangular matrices. Some of the ("not yet implemented") methods are ambiguous
+   * or simply cannot be implemented without i. having this class specialized for 
+   * rectangular matrices and ii. derive a new specialization for symmetric matrices.
    */
   class hiopMatrixComplexSparseTriplet : public hiopMatrix
   {
@@ -165,6 +170,21 @@ namespace hiop
     }
 #endif
     // these are not part of the hiopMatrix
+
+    //Builds/extracts submatrix nrows x ncols with rows and cols specified by row_idxs and cols_idx
+    //Assumes 
+    // - 'this' is symmetric (only upper triangle is stored)
+    // - 'row_idxs' and 'col_idxs' are ordered
+    hiopMatrixComplexSparseTriplet* new_sliceFromSym(const int* row_idxs, int nrows, 
+						     const int* col_idxs, int ncols) const;
+
+    //Extracts a symmetric matrix (for which only the upper triangle is stored)
+    //Assumes 
+    // - 'this' is symmetric (only upper triangle is stored)
+    // - 'row_col_idxs' is ordered
+    hiopMatrixComplexSparseTriplet* new_sliceFromSymToSym(const int* row_col_idxs, int ndim) const;
+
+
     inline void copyFrom(const int* irow_, const int* jcol_, const std::complex<double>* values_)
     {
       stM->copyFrom(irow_, jcol_, values_);
