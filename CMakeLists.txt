@@ -156,7 +156,7 @@ add_library(hiop STATIC $<TARGET_OBJECTS:hiopOptimization>
                         $<TARGET_OBJECTS:hiopLinAlg>
 			$<TARGET_OBJECTS:hiopUtils>)
 if(HIOP_WITH_KRON_REDUCTION)
-  target_link_libraries(hiop PUBLIC hiopKronRed)
+  target_link_libraries(hiop PUBLIC hiopKronRed hiopLinAlgZ)
 endif(HIOP_WITH_KRON_REDUCTION)
 
 install(TARGETS hiop DESTINATION lib)
