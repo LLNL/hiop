@@ -73,7 +73,8 @@ namespace hiop
 {
   class hiopLinSolverMA86Z : public hiopLinSolver
   {
-    hiopLinSolverMA86Z(hiopMatrixComplexSparseTriplet& sysmat , hiopNlpFormulation* nlp_=NULL);
+  public:
+    hiopLinSolverMA86Z(hiopMatrixComplexSparseTriplet& sysmat, hiopNlpFormulation* nlp_=NULL);
     virtual ~hiopLinSolverMA86Z();
     
     /** Triggers a refactorization of the matrix, if necessary. 

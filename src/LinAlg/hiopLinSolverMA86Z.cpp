@@ -98,7 +98,7 @@ namespace hiop
 
   void hiopLinSolverMA86Z::solve(hiopVector& x)
   {
-    assert(false && "not yet implemented");
+    assert(false && "not yet implemented"); //not needed; also there is no complex vector at this point
   }
 
   void hiopLinSolverMA86Z::solve(hiopMatrix& X)
