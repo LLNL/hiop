@@ -119,7 +119,7 @@ namespace hiop {
 	itleft++;
 	assert(itleft<=nnz);
 	assert(itleft<itright);
-	printf("-- itright=%d\n", itright);
+	//printf("-- itright=%d\n", itright);
       }
     
       nnz = itleft;
