@@ -68,6 +68,7 @@
 #include "hiopNlpFormulation.hpp"
 #include "hiopLinSolver.hpp"
 #include "hiopMatrixComplexSparseTriplet.hpp"
+#include "hiopMatrixComplexDense.hpp"
 
 namespace hiop
 {
@@ -85,7 +86,8 @@ namespace hiop
      * param 'x' is on entry the right hand side(s) of the system to be solved. On
      * exit is contains the solution(s).  */
     virtual void solve(hiopVector& x);
-    virtual void solve(hiopMatrix& X);// { assert(false && "not yet supported"); }
+    virtual void solve(hiopMatrix& X);
+    virtual void solve(const hiopMatrixComplexSparseTriplet& B, hiopMatrixComplexDense& X);
 
   private: 
     void* keep;

@@ -103,7 +103,57 @@ namespace hiop
 
   void hiopLinSolverMA86Z::solve(hiopMatrix& X)
   {
+        assert(false && "not yet implemented"); //not needed; 
+  }
+  
+  void hiopLinSolverMA86Z::solve(const hiopMatrixComplexSparseTriplet& B, hiopMatrixComplexDense& X)
+  {
+    assert(X.n()==B.n());
+    assert(n==B.m()); 
+    assert(n==X.m()); 
+
+    int ldx = n;
+    int nrhs = X.n();
+
+    X.setToZero();
+
+    //copy from B to X. !!! 
+    const int* B_irow = B.storage()->i_row();
+    const int* B_jcol = B.storage()->j_col();
+    const auto*B_M    = B.storage()->M();
+    const int B_nnz = B.numberOfNonzeros();
+
+
+    //this is messy - MA86 expects X column oriented 
+    //  "x is a rank-2 array with size x[nrhs][ldx]. On entry, x[j][i] must hold the ith component 
+    //   of the jth right-hand side; on exit, it holds the corresponding solution" (MA86 user manual)
+    // but our hiopMatrixComplexDense X is row oriented
+    //
+    // We use an auxiliary buffer nrhs x ldx of _Complex double
+    _Complex double* X_buf = new _Complex double[n*nrhs];
+
+    // TODO: solve only for a smaller number of rhs (64, 128) at once (requires calling ma86_solve in a loop)
+    // this would also reduce the buffer storage
+
+    for(int itnz=0; itnz<B_nnz; itnz++) {
+
+      assert(B_jcol[itnz]>=0 && B_jcol[itnz]<X.n());
+      assert(B_irow[itnz]>=0 && B_irow[itnz]<X.m());
+
+      X_buf[ B_jcol[itnz]*n + B_irow[itnz] ] = B_M[itnz].real() + I*B_M[itnz].imag();
+    }
     
+    ma86_solve(0, nrhs, ldx, X_buf, order, &keep, &control, &info, NULL);
+    if(info.flag < 0) {
+      printf("Failure during solve with info.flag = %i\n", info.flag);
+    }
+    //copy from X_buf to X
+    auto** X_M = X.get_M();
+    for(int i=0; i<n; i++)
+      for(int j=0; i<nrhs; j++)
+	X_M[i][j] = X_buf[j*n+i];
+
+    delete[] X_buf;
   }
 
 } //end namespace hiop
