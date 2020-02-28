@@ -5,7 +5,8 @@ namespace hiop
 
   hiopKKTLinSysCompressedMDSXYcYd::hiopKKTLinSysCompressedMDSXYcYd(hiopNlpFormulation* nlp_)
     : hiopKKTLinSysCompressedXYcYd(nlp_), linSys(NULL), rhs(NULL), _buff_xs(NULL),
-      Hxs(NULL), HessMDS(NULL), Jac_cMDS(NULL), Jac_dMDS(NULL)
+      Hxs(NULL), HessMDS(NULL), Jac_cMDS(NULL), Jac_dMDS(NULL),
+      write_linsys_counter(-1), csr_writer(nlp_)
   {
     nlpMDS = dynamic_cast<hiopNlpMDS*>(nlp);
     assert(nlpMDS);
@@ -49,11 +50,14 @@ namespace hiop
 
       if(nlp->options->GetString("compute_mode")=="hybrid") {
 #ifdef HIOP_USE_MAGMA
+	nlp->log->printf(hovScalars, "LinSysMDSXYcYd: Magma for a matrix of size %d\n", n);
 	linSys = new hiopLinSolverIndefDenseMagma(n, nlp);
 #else
+	nlp->log->printf(hovScalars, "LinSysMDSXYcYd: Lapack for a matrix of size %d\n", n);
 	linSys = new hiopLinSolverIndefDenseLapack(n, nlp);
 #endif
       } else {
+	nlp->log->printf(hovScalars, "LinSysMDSXYcYd: Lapack for a matrix of size %d\n", n);
 	linSys = new hiopLinSolverIndefDenseLapack(n, nlp);
       }
     }
@@ -108,9 +112,13 @@ namespace hiop
     alpha=-1.;
     Msys.addSubDiagonal(alpha, nxd+neq, *Dd_inv);
 
+    nlp->log->write("KKT MDS XdenseDYcYd Linsys:", Msys, hovMatrices);
 
-    nlp->log->write("KKT XdenseDYcYd Linsys:", Msys, hovMatrices);
+        //write matrix to file if requested
+    if(nlp->options->GetString("write_kkt") == "yes") write_linsys_counter++;
+    if(write_linsys_counter>=0) csr_writer.writeMatToFile(Msys, write_linsys_counter); 
 
+    //factorization
     linSys->matrixChanged();
 
     nlp->runStats.tmSolverInternal.stop();
@@ -132,9 +140,9 @@ namespace hiop
     if(this->rhs == NULL) rhs = new hiopVectorPar(nxde+nyc+nyd);
     if(this->_buff_xs==NULL) _buff_xs = new hiopVectorPar(nxsp);
 
-    nlp->log->write("RHS KKT XDycYd rx: ", rx,  hovIteration);
-    nlp->log->write("RHS KKT XDycYd ryc:", ryc, hovIteration);
-    nlp->log->write("RHS KKT XDycYd ryd:", ryd, hovIteration);
+    nlp->log->write("RHS KKT MDS XDycYd rx: ", rx,  hovIteration);
+    nlp->log->write("RHS KKT MDS XDycYd ryc:", ryc, hovIteration);
+    nlp->log->write("RHS KKT MDS XDycYd ryd:", ryd, hovIteration);
 
     hiopVectorPar& rxs = *_buff_xs;
     //rxs = Hxs^{-1} * rx_sparse 
@@ -160,10 +168,14 @@ namespace hiop
     //ths[nxde+nyc:nxde+nyc+nyd-1] = ryd
     ryd.copyToStarting(*rhs, nxde+nyc);
 
+    if(write_linsys_counter>=0) csr_writer.writeRhsToFile(*rhs, write_linsys_counter);
+
     //
     // solve
     //
     linSys->solve(*rhs);
+
+    if(write_linsys_counter>=0) csr_writer.writeSolToFile(*rhs, write_linsys_counter);
 
     //
     // unpack 
@@ -184,9 +196,9 @@ namespace hiop
     //copy to dx
     dxs.startingAtCopyToStartingAt(0, dx, 0);
 
-    nlp->log->write("SOL KKT XYcYd dx: ", dx,  hovMatrices);
-    nlp->log->write("SOL KKT XYcYd dyc:", dyc, hovMatrices);
-    nlp->log->write("SOL KKT XYcYd dyd:", dyd, hovMatrices);
+    nlp->log->write("SOL KKT MDS XYcYd dx: ", dx,  hovMatrices);
+    nlp->log->write("SOL KKT MDS XYcYd dyc:", dyc, hovMatrices);
+    nlp->log->write("SOL KKT MDS XYcYd dyd:", dyd, hovMatrices);
   
   }
 } // end of namespace

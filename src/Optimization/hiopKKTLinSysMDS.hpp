@@ -52,6 +52,8 @@
 #include "hiopKKTLinSys.hpp"
 #include "hiopLinSolver.hpp"
 
+#include "hiopCSR_IO.hpp"
+
 namespace hiop
 {
 
@@ -110,7 +112,7 @@ protected:
   //  hiopVectorPar *Dx;
   //  hiopVectorPar *rx_tilde;
 
-  //Hxs = HessMDS->sp_mat() + Dxs (Dx=log-barrier diagonal for xs)
+  //keep Hxs = HessMDS->sp_mat() + Dxs (Dx=log-barrier diagonal for xs)
   hiopVectorPar *Hxs; 
 
   //just dynamic_cast-ed pointers
@@ -118,6 +120,11 @@ protected:
   hiopMatrixSymBlockDiagMDS* HessMDS;
   const hiopMatrixMDS* Jac_cMDS;
   const hiopMatrixMDS* Jac_dMDS;
+
+    //-1 when disabled; otherwise acts like a counter, 0,1,... incremented each time 'solveCompressed' is called
+  //depends on the 'write_kkt' option
+  int write_linsys_counter; 
+  hiopCSR_IO csr_writer;
 };
 
 } // end of namespace

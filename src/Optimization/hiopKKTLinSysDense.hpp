@@ -104,14 +104,14 @@ public:
       if(nlp->options->GetString("compute_mode")=="hybrid") {
 #ifdef HIOP_USE_MAGMA
 	linSys = new hiopLinSolverIndefDenseMagma(n, nlp);
-	nlp->log->printf(hovScalars, "LinSysDenseXYcYd creating Magma solver for a matrix of size %d\n", n);
+	nlp->log->printf(hovScalars, "LinSysDenseXYcYd: Magma for a matrix of size %d\n", n);
 #else
 	linSys = new hiopLinSolverIndefDenseLapack(n, nlp);
-	nlp->log->printf(hovScalars, "LinSysDenseXYcYd creating Lapack solver for a matrix of size %d\n", n);
+	nlp->log->printf(hovScalars, "LinSysDenseXYcYd: Lapack for a matrix of size %d\n", n);
 #endif
       } else {
 	linSys = new hiopLinSolverIndefDenseLapack(n, nlp);
-	nlp->log->printf(hovScalars, "LinSysDenseXYcYd creating Lapack solver for a matrix of size %d\n", n);
+	nlp->log->printf(hovScalars, "LinSysDenseXYcYd: Lapack for a matrix of size %d\n", n);
       }
     }
     
@@ -248,14 +248,14 @@ public:
 
       if(nlp->options->GetString("compute_mode")=="hybrid") {
 #ifdef HIOP_USE_MAGMA
-	nlp->log->printf(hovScalars, "LinSysDenseXYcYd creating Magma solver for a matrix of size %d\n", n);
+	nlp->log->printf(hovScalars, "LinSysDenseDXYcYd: Magma for a matrix of size %d\n", n);
 	linSys = new hiopLinSolverIndefDenseMagma(n, nlp);
 #else
-	nlp->log->printf(hovScalars, "LinSysDenseXYcYd creating Lapack solver for a matrix of size %d\n", n);
+	nlp->log->printf(hovScalars, "LinSysDenseXDYcYd: Lapack for a matrix of size %d\n", n);
 	linSys = new hiopLinSolverIndefDenseLapack(n, nlp);
 #endif
       } else {
-	nlp->log->printf(hovScalars, "LinSysDenseXYcYd creating Lapack solver for a matrix of size %d\n", n);
+	nlp->log->printf(hovScalars, "LinSysDenseXDYcYd Lapack for a matrix of size %d\n", n);
 	linSys = new hiopLinSolverIndefDenseLapack(n, nlp);
       }	
     }

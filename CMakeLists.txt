@@ -1,5 +1,9 @@
-cmake_minimum_required (VERSION 2.8)
-project (hippopde)
+cmake_minimum_required (VERSION 3.1)
+
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+project (hiop)
 # enable Fortran for Fortran name mangling
 enable_language(Fortran)
 
@@ -9,8 +13,6 @@ FortranCInterface_HEADER(FortranCInterface.hpp MACRO_NAMESPACE "FC_")
 
 file(WRITE "src/Interface/hiop_defs.hpp" "")
 
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(HIOP_USE_MPI "Build with MPI support" ON)
 option(HIOP_USE_GPU "Build with support for GPUs - Magma and cuda libraries" OFF)
