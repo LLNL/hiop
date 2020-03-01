@@ -3,21 +3,35 @@
 
 namespace hiop::tests {
 
-/// Method to set vector _x_ element _i_ to _value_.
-/// First need to retrieve hiopVectorPar from the abstract interface
-// void VectorTestsPar::setElement(hiop::hiopVector* x, int i, double value)
-// {
-//     hiop::hiopVectorPar* xvec = dynamic_cast<hiop::hiopVectorPar*>(x);
-//     double* xdat = xvec->local_data();
-//     xdat[i] = value;
-// }
-//
-// /// Returns element _i_ of vector _x_.
-// /// First need to retrieve hiopVectorPar from the abstract interface
-// double VectorTestsPar::getElement(const hiop::hiopVector* x, int i)
-// {
-//     const hiop::hiopVectorPar* xvec = dynamic_cast<const hiop::hiopVectorPar*>(x);
-//     return xvec->local_data_const()[i];
-// }
+/// Method to set matrix _A_ element (i,j) to _val_.
+/// First need to retrieve hiopMatrixDense from the abstract interface
+void MatrixTestsDense::setElement(hiop::hiopMatrix* A, int i, int j, double val)
+{
+    hiop::hiopMatrixDense* amat = dynamic_cast<hiop::hiopMatrixDense*>(A);
+    double** data = amat->get_M();
+    data[i][j] = val;
+}
+
+/// Returns element (i,j) of matrix _A_.
+/// First need to retrieve hiopMatrixDense from the abstract interface
+double MatrixTestsDense::getElement(hiop::hiopMatrix* A, int i, int j)
+{
+    hiop::hiopMatrixDense* amat = dynamic_cast<hiop::hiopMatrixDense*>(A);
+    return amat->local_data()[i][j];
+}
+
+int MatrixTestsDense::getNumLocRows(hiop::hiopMatrix* A)
+{
+    hiop::hiopMatrixDense* amat = dynamic_cast<hiop::hiopMatrixDense*>(A);
+    return amat->get_local_size_m();
+    //                         ^^^
+}
+
+int MatrixTestsDense::getNumLocCols(hiop::hiopMatrix* A)
+{
+    hiop::hiopMatrixDense* amat = dynamic_cast<hiop::hiopMatrixDense*>(A);
+    return amat->get_local_size_n();
+    //                         ^^^
+}
 
 } // namespace hiop::tests
