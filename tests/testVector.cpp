@@ -1,7 +1,7 @@
 #include <iostream>
 #include <hiopVector.hpp>
 
-#include "vectorTestsPar.hpp"
+#include "LinAlg/vectorTestsPar.hpp"
 
 int main()
 {
@@ -12,6 +12,7 @@ int main()
     hiopTest::VectorTestsPar* test = new hiopTest::VectorTestsPar();
 
     fail += test->testGetSize(*x, N);
+    fail += test->testSetToConstant(*x);
 
     delete x;
 
