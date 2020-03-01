@@ -127,7 +127,9 @@ endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 
 add_library(hiop STATIC $<TARGET_OBJECTS:hiopOptimization>
                         $<TARGET_OBJECTS:hiopLinAlg>
-			$<TARGET_OBJECTS:hiopUtils>)
+                        $<TARGET_OBJECTS:hiopUtils>)
+
+add_subdirectory(tests)
 
 install(TARGETS hiop DESTINATION lib)
 install(FILES src/Interface/hiopInterface.hpp
