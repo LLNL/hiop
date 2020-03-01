@@ -1,19 +1,21 @@
 #include <iostream>
 #include <hiopMatrix.hpp>
 
-#include "LinAlg/matrixTestsPar.hpp"
+#include "LinAlg/matrixTestsDense.hpp"
 
 int main()
 {
-    int N = 100;
+    long long M = 10;  // rows
+    long long N = 100; // columns
     int fail = 0;
 
     // Test dense matrix
     {
-        hiop::hiopMatrix* m = new hiop::hiopMatrixDense(N, N);
-        hiopTest::MatrixTestsDense test;
+        hiop::hiopMatrixDense A(M, N);
+        hiop::tests::MatrixTestsDense test;
 
-        delete x;
+        fail += test.matrixNumRows(A, M);
+        fail += test.matrixNumCols(A, N);
     }
 
     // Test RAJA matrix
@@ -25,9 +27,9 @@ int main()
 
 
     if(fail)
-        std::cout << "Tests failed\n";
+        std::cout << "Matrix tests failed\n";
     else
-        std::cout << "Tests passed\n";
+        std::cout << "Matrix tests passed\n";
 
     return fail;
 }

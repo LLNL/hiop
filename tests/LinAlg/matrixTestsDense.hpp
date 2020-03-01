@@ -2,7 +2,7 @@
 
 #include "matrixTests.hpp"
 
-namespace hiopTest {
+namespace hiop::tests {
 
 class MatrixTestsDense : public MatrixTests
 {
@@ -15,4 +15,4 @@ private:
 
 };
 
-} // namespace hiopTest
+} // namespace hiop::tests
