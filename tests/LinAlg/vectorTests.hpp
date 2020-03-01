@@ -1,20 +1,30 @@
 #pragma once
 
 
-namespace hiopTest {
+namespace hiop::tests {
 
+/**
+ * @brief Collection of tests for abstract hiopVector implementations.
+ *
+ * This class contains implementation of all vector unit tests and abstract
+ * interface for testing utility functions, which are specific to vector
+ * implementation.
+ *
+ */
 class VectorTests
 {
 public:
     VectorTests(){}
     virtual ~VectorTests(){}
 
-    int testGetSize(hiop::hiopVector& x, int N)
+    /// Test get_size() method of hiop vector implementation
+    int vectorGetSize(hiop::hiopVector& x, int N)
     {
         return x.get_size() == N ? 0 : 1;
     }
 
-    int testSetToConstant(hiop::hiopVector& x)
+    /// Test setToConstant method of hiop vector implementation
+    int vectorSetToConstant(hiop::hiopVector& x)
     {
         int N = x.get_size();
 
@@ -40,4 +50,4 @@ protected:
 
 };
 
-} // namespace hiopTest
+} // namespace hiop::tests

@@ -2,8 +2,14 @@
 
 #include "vectorTests.hpp"
 
-namespace hiopTest {
+namespace hiop::tests {
 
+/**
+ * @brief Utilities for testing hiopVectorPar class
+ *
+ * @todo In addition to set and get element ass set and get buffer methods.
+ *
+ */
 class VectorTestsPar : public VectorTests
 {
 public:
@@ -11,7 +17,6 @@ public:
     virtual ~VectorTestsPar(){}
 
 private:
-
     virtual void setElement(hiop::hiopVector* x, int i, double value);
     virtual double getElement(const hiop::hiopVector* x, int i);
 };

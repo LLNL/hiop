@@ -1,9 +1,10 @@
 #include <hiopVector.hpp>
 #include "vectorTestsPar.hpp"
 
-namespace hiopTest {
+namespace hiop::tests {
 
-
+/// Method to set vector _x_ element _i_ to _value_.
+/// First need to retrieve hiopVectorPar from the abstract interface
 void VectorTestsPar::setElement(hiop::hiopVector* x, int i, double value)
 {
     hiop::hiopVectorPar* xvec = dynamic_cast<hiop::hiopVectorPar*>(x);
@@ -11,10 +12,12 @@ void VectorTestsPar::setElement(hiop::hiopVector* x, int i, double value)
     xdat[i] = value;
 }
 
+/// Returns element _i_ of vector _x_.
+/// First need to retrieve hiopVectorPar from the abstract interface
 double VectorTestsPar::getElement(const hiop::hiopVector* x, int i)
 {
     const hiop::hiopVectorPar* xvec = dynamic_cast<const hiop::hiopVectorPar*>(x);
     return xvec->local_data_const()[i];
 }
 
-} // namespace hiopTest
+} // namespace hiop::tests
