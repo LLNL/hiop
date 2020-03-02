@@ -311,22 +311,28 @@ namespace hiop
       } else {
 	fprintf(file, "%s ", msg);
       }    
+
+#ifdef AAAAA      
+      // output matlab indices and input format
+      fprintf(file, "iRow=[");
+      for(int it=0; it<max_elems; it++)  fprintf(file, "%d; ", stM->irow[it]+1);
+      fprintf(file, "];\n");
       
-    // output matlab indices and input format
-    fprintf(file, "iRow=[");
-    for(int it=0; it<max_elems; it++)  fprintf(file, "%d; ", stM->irow[it]+1);
-    fprintf(file, "];\n");
+      fprintf(file, "jCol=[");
+      for(int it=0; it<max_elems; it++)  fprintf(file, "%d; ", stM->jcol[it]+1);
+      fprintf(file, "];\n");
+      
+      fprintf(file, "v=[");
+      for(int it=0; it<max_elems; it++)
+	//fprintf(file, "%22.16e+%22.16ei; ", stM->values[it].real(), stM->values[it].imag());
+	fprintf(file, "%.6g+%.6gi; ", stM->values[it].real(), stM->values[it].imag());
+      fprintf(file, "];\n");
     
-    fprintf(file, "jCol=[");
-    for(int it=0; it<max_elems; it++)  fprintf(file, "%d; ", stM->jcol[it]+1);
-    fprintf(file, "];\n");
-    
-    fprintf(file, "v=[");
-    for(int it=0; it<max_elems; it++)
-      //fprintf(file, "%22.16e+%22.16ei; ", stM->values[it].real(), stM->values[it].imag());
-      fprintf(file, "%.6g+%.6gi; ", stM->values[it].real(), stM->values[it].imag());
-    fprintf(file, "];\n");
-  }
+#else
+      for(int it=0; it<max_elems; it++)  
+	fprintf(file, "[%3d,%3d] = %.6g+%.6gi\n", stM->irow[it]+1, stM->jcol[it]+1, stM->values[it].real(), stM->values[it].imag());
+#endif
+    }
 }
 
 }//end namespace
