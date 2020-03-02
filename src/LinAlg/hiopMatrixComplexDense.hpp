@@ -6,6 +6,8 @@
 #include <cassert>
 #include <complex>
 
+#include "hiopMatrixComplexSparseTriplet.hpp"
+
 namespace hiop
 {
 
@@ -101,6 +103,11 @@ namespace hiop
     
     virtual void addMatrix(double alpha, const hiopMatrix& X);
     virtual void addMatrix(const std::complex<double>& alpha, const hiopMatrixComplexDense& X);
+
+    /* uppertriangle(this) += uppertriangle(X)
+     * where X is a sparse matrix stored in triplet format holding only upper triangle elements*/
+    void addSparseSymUpperTriangleToSymDenseMatrixUpperTriangle(const std::complex<double>& alpha,
+								const hiopMatrixComplexSparseTriplet& X);
 
     /* block of W += alpha*this
      * For efficiency, only upper triangular matrix is updated since this will be eventually sent to LAPACK
