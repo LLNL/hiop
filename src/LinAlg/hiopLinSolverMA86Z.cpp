@@ -124,34 +124,42 @@ namespace hiop
     const int B_nnz = B.numberOfNonzeros();
 
 
-    //this is messy - MA86 expects X column oriented 
+    // This is messy - MA86 expects X column oriented 
+    // MA86 user manual
     //  "x is a rank-2 array with size x[nrhs][ldx]. On entry, x[j][i] must hold the ith component 
-    //   of the jth right-hand side; on exit, it holds the corresponding solution" (MA86 user manual)
-    // but our hiopMatrixComplexDense X is row oriented
+    //   of the jth right-hand side; on exit, it holds the corresponding solution"
+    // hiopMatrixComplexDense X is row oriented
     //
-    // We use an auxiliary buffer nrhs x ldx of _Complex double
-    _Complex double* X_buf = new _Complex double[n*nrhs];
+    // We use an auxiliary buffer nrhs x ldx of _Complex double that stores X / RHS column oriented
+    // 
+    const int dimM=n; int dimN=nrhs;
+    _Complex double* X_buf = new _Complex double[dimM*dimN];
 
     // TODO: solve only for a smaller number of rhs (64, 128) at once (requires calling ma86_solve in a loop)
     // this would also reduce the buffer storage
+
+    for(int i=0; i<dimM*dimN; i++)
+      X_buf[i]=0.;
 
     for(int itnz=0; itnz<B_nnz; itnz++) {
 
       assert(B_jcol[itnz]>=0 && B_jcol[itnz]<X.n());
       assert(B_irow[itnz]>=0 && B_irow[itnz]<X.m());
 
-      X_buf[ B_jcol[itnz]*n + B_irow[itnz] ] = B_M[itnz].real() + I*B_M[itnz].imag();
+      X_buf[ B_jcol[itnz]*dimM + B_irow[itnz] ] = B_M[itnz].real() + I*B_M[itnz].imag();
     }
     
-    ma86_solve(0, nrhs, ldx, X_buf, order, &keep, &control, &info, NULL);
+    ma86_solve(0, dimN, ldx, X_buf, order, &keep, &control, &info, NULL);
     if(info.flag < 0) {
       printf("Failure during solve with info.flag = %i\n", info.flag);
     }
     //copy from X_buf to X
     auto** X_M = X.get_M();
-    for(int i=0; i<n; i++)
-      for(int j=0; i<nrhs; j++)
-	X_M[i][j] = X_buf[j*n+i];
+    for(int i=0; i<dimM; i++) {
+      for(int j=0; j<dimN; j++) {
+	X_M[i][j] = X_buf[j*dimM+i];       
+      }
+    }
 
     delete[] X_buf;
   }
