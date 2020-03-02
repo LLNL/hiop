@@ -125,8 +125,8 @@ namespace hiop {
       nnz = itleft;
     }
   
-    inline Tidx n() const { return nrows; }
-    inline Tidx m() const { return ncols; }
+    inline Tidx m() const { return nrows; }
+    inline Tidx n() const { return ncols; }
     inline Tidx numberOfNonzeros() const { return nnz; }
     inline Tidx* i_row() const { return irow; }
     inline Tidx* j_col() const { return jcol; }
