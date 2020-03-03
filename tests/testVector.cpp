@@ -38,38 +38,10 @@ int main(int argc, char** argv)
 
         fail += test.vectorGetSize(x, N);
         fail += test.vectorSetToConstant(x);
-    }
-
-    // Test setToZero
-    {
-        hiop::hiopVectorPar x(N);
-        hiop::tests::VectorTestsPar test;
-
-        fail += test.vectorSetToZero(x);
-    }
-
-    // Test copyTo
-    {
-        hiop::hiopVectorPar x(N);
-        hiop::tests::VectorTestsPar test;
-
-        fail += test.vectorCopyTo(x);
-    }
-
-    // Test copyFrom
-    {
-        hiop::hiopVectorPar x(N);
-        hiop::tests::VectorTestsPar test;
-
-        fail += test.vectorCopyFrom(x);
-    }
-
-    // test select pattern
-    {
-        hiop::hiopVectorPar x(N);
-        hiop::tests::VectorTestsPar test;
-
         fail += test.vectorSelectPattern(x);
+        fail += test.vectorSetToZero(x);
+        fail += test.vectorCopyTo(x);
+        fail += test.vectorCopyFrom(x);
     }
 
     // Test RAJA vector
