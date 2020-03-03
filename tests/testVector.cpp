@@ -45,6 +45,8 @@ int main(int argc, char** argv)
         fail += test.vectorSelectPattern(x, other);
         fail += test.vectorCopyTo(x, other);
         fail += test.vectorCopyFrom(x, other);
+        fail += test.vectorComponentDiv(x, other);
+        fail += test.vectorComponentMult(x, other);
     }
 
     // Test RAJA vector

@@ -106,6 +106,8 @@ public:
 
     int vectorSelectPattern(hiop::hiopVector& v, hiop::hiopVector& ix)
     {
+        assert(v.get_size() == ix.get_size());
+
         const int N = v.get_size();
         const int n_rand = 10;
         assert(N > n_rand);
@@ -143,13 +145,51 @@ public:
     int vectorScale(hiop::hiopVector& v)
     {
         const int N = v.get_size();
-        const int C = 0.5;
-        const int alpha = 2.0;
+        const double C = 0.5;
+        const double alpha = 2.0;
         v.setToConstant(C);
         v.scale(alpha);
 
         for (int i=0; i<N; i++)
             if (getElement(&v, i) != C*alpha)
+                return 1;
+
+        return 0;
+    }
+
+    int vectorComponentMult(hiop::hiopVector& v, hiop::hiopVector& other)
+    {
+        assert(v.get_size() == other.get_size());
+
+        const int N = v.get_size();
+        const double C1 = 2.0;
+        const double C2 = 3.0;
+        v.setToConstant(C1);
+        other.setToConstant(C2);
+
+        v.componentMult(other);
+
+        for (int i=0; i<N; i++)
+            if (getElement(&v, i) != C1*C2)
+                return 1;
+
+        return 0;
+    }
+
+    int vectorComponentDiv(hiop::hiopVector& v, hiop::hiopVector& other)
+    {
+        assert(v.get_size() == other.get_size());
+
+        const int N = v.get_size();
+        const double C1 = 2.0;
+        const double C2 = 3.0;
+        v.setToConstant(C1);
+        other.setToConstant(C2);
+
+        v.componentDiv(other);
+
+        for (int i=0; i<N; i++)
+            if (getElement(&v, i) != C1/C2)
                 return 1;
 
         return 0;
