@@ -65,11 +65,17 @@ public:
 
         v.copyTo(to);
 
+        int ret_code = 0;
+
         for (int i=0; i<N; i++)
             if (getElement(&v, i) != to[i])
-                return 1;
+            {
+                ret_code = 1;
+                break;
+            }
 
-        return 0;
+        delete[] to;
+        return ret_code;
     }
 
     int vectorCopyFrom(hiop::hiopVector& v)
