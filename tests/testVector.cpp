@@ -1,4 +1,6 @@
 #include <iostream>
+#include <assert.h>
+#include <mpi.h>
 #include <hiopVector.hpp>
 
 #include "LinAlg/vectorTestsPar.hpp"
@@ -13,6 +15,16 @@
  */
 int main(int argc, char** argv)
 {
+    int rank=0, numRanks=1;
+#ifdef HIOP_USE_MPI
+    int err;
+    err = MPI_Init(&argc, &argv);                  assert(MPI_SUCCESS==err);
+    err = MPI_Comm_rank(MPI_COMM_WORLD,&rank);     assert(MPI_SUCCESS==err);
+    err = MPI_Comm_size(MPI_COMM_WORLD,&numRanks); assert(MPI_SUCCESS==err);
+    if(0 == rank)
+        printf("Support for MPI is enabled\n");
+#endif
+
     int N = 1000;
     int fail = 0;
 
@@ -25,6 +37,30 @@ int main(int argc, char** argv)
         fail += test.vectorSetToConstant(x);
     }
 
+    // Test setToZero
+    {
+        hiop::hiopVectorPar x(N);
+        hiop::tests::VectorTestsPar test;
+
+        fail += test.vectorSetToZero(x);
+    }
+
+    // Test copyTo
+    {
+        hiop::hiopVectorPar x(N);
+        hiop::tests::VectorTestsPar test;
+
+        fail += test.vectorCopyTo(x);
+    }
+
+    // Test copyFrom
+    {
+        hiop::hiopVectorPar x(N);
+        hiop::tests::VectorTestsPar test;
+
+        fail += test.vectorCopyFrom(x);
+    }
+
     // Test RAJA vector
     {
         //         hiop::hiopVectorRAJA x(N);
@@ -34,10 +70,17 @@ int main(int argc, char** argv)
         //         fail += test.testSetToConstant(x);
     }
 
-    if(fail)
-        std::cout << "Tests failed\n";
-    else
-        std::cout << "Tests passed\n";
+    if (rank == 0)
+    {
+        if(fail)
+            std::cout << "Tests failed\n";
+        else
+            std::cout << "Tests passed\n";
+    }
+
+#ifdef HIOP_USE_MPI
+    MPI_Finalize();
+#endif
 
     return fail;
 }

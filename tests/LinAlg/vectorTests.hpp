@@ -44,6 +44,50 @@ public:
         return 0;
     }
 
+    int vectorSetToZero(hiop::hiopVector& v)
+    {
+        int N = v.get_size();
+        v.setToZero();
+
+        for(int i=0; i<N; ++i)
+        {
+            if (getElement(&v, i) != 0.0)
+                return 1;
+        }
+
+        return 0;
+    }
+
+    int vectorCopyTo(hiop::hiopVector& v)
+    {
+        int N = v.get_size();
+        auto to = new double[N];
+
+        v.copyTo(to);
+
+        for (int i=0; i<N; i++)
+            if (getElement(&v, i) != to[i])
+                return 1;
+
+        return 0;
+    }
+
+    int vectorCopyFrom(hiop::hiopVector& v)
+    {
+        // TODO: test with other implementations of hiopVector,
+        // such that we do not miss any implementation specific
+        // errors by only testing copying from a hiopVectorPar
+        hiop::hiopVectorPar from(v.get_size());
+
+        v.copyFrom(from);
+
+        for (int i=0; i<v.get_size(); i++)
+            if (getElement(&v, i) != getElement(&from, i))
+                return 1;
+
+        return 0;
+    }
+
 protected:
     virtual void   setElement(hiop::hiopVector* x, int i, double val) = 0;
     virtual double getElement(const hiop::hiopVector* x, int i) = 0;
