@@ -1,11 +1,11 @@
 #include <iostream>
 #include <assert.h>
-#include <hiopVector.hpp>
 
 #ifdef HIOP_USE_MPI
 #include <mpi.h>
 #endif
 
+#include <hiopVector.hpp>
 #include "LinAlg/vectorTestsPar.hpp"
 // #include "LinAlg/vectorTestsRAJA.hpp"
 
