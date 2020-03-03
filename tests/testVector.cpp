@@ -64,6 +64,14 @@ int main(int argc, char** argv)
         fail += test.vectorCopyFrom(x);
     }
 
+    // test select pattern
+    {
+        hiop::hiopVectorPar x(N);
+        hiop::tests::VectorTestsPar test;
+
+        fail += test.vectorSelectPattern(x);
+    }
+
     // Test RAJA vector
     {
         //         hiop::hiopVectorRAJA x(N);

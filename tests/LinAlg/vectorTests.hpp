@@ -1,5 +1,11 @@
 #pragma once
 
+#include <random>
+#include <cstdlib>
+#include <algorithm>
+#include <iostream>
+#include <assert.h>
+#include <time.h>
 
 namespace hiop::tests {
 
@@ -60,35 +66,74 @@ public:
 
     int vectorCopyTo(hiop::hiopVector& v)
     {
+        const int C = 3.0f;
+        v.setToConstant(C);
         int N = v.get_size();
         auto to = new double[N];
 
         v.copyTo(to);
 
-        int ret_code = 0;
-
+        int _r = 0;
         for (int i=0; i<N; i++)
-            if (getElement(&v, i) != to[i])
-            {
-                ret_code = 1;
-                break;
-            }
+            if (getElement(&v, i) != C || to[i] != C)
+                _r = 1;
 
         delete[] to;
-        return ret_code;
+        return _r;
     }
 
     int vectorCopyFrom(hiop::hiopVector& v)
     {
+        const int C = 3.0f;
+        int N = v.get_size();
+
         // TODO: test with other implementations of hiopVector,
         // such that we do not miss any implementation specific
         // errors by only testing copying from a hiopVectorPar
-        hiop::hiopVectorPar from(v.get_size());
+        hiop::hiopVectorPar from(N);
+        from.setToConstant(C);
 
         v.copyFrom(from);
 
-        for (int i=0; i<v.get_size(); i++)
-            if (getElement(&v, i) != getElement(&from, i))
+        for (int i=0; i<N; i++)
+            if (getElement(&v, i) != C || getElement(&from, i) != C)
+                return 1;
+
+        return 0;
+    }
+
+    int vectorSelectPattern(hiop::hiopVector& v)
+    {
+        const int N = v.get_size();
+        const int n_rand = 10;
+        assert(N > n_rand);
+        const int C = 3.0f;
+        std::vector<int> randoms;
+        srand( time(NULL) );
+
+        int i=0;
+        while (i < n_rand)
+        {
+            int rand_idx = rand() % N;
+            auto found = std::find(randoms.begin(), randoms.end(), rand_idx);
+            if (found == randoms.end())
+            {
+                randoms.push_back(rand_idx);
+                i += 1;
+            }
+        }
+
+        hiop::hiopVectorPar ix(N);
+        ix.setToConstant(C);
+        v.setToConstant(C);
+
+        for (auto& i : randoms)
+            setElement(&ix, i, 0);
+
+        v.selectPattern(ix);
+
+        for (auto& i : randoms)
+            if (getElement(&v, i) != 0)
                 return 1;
 
         return 0;
