@@ -68,8 +68,8 @@ public:
     {
         assert(v.get_size() == _to.get_size());
 
-        const int C1 = 3.0f;
-        const int C2 = 2.0f;
+        const double C1 = 3.0f;
+        const double C2 = 2.0f;
         int N = v.get_size();
 
         _to.setToConstant(C1);
@@ -89,8 +89,8 @@ public:
     {
         assert(v.get_size() == from.get_size());
 
-        const int C1 = 3.0f;
-        const int C2 = 2.0f;
+        const double C1 = 3.0f;
+        const double C2 = 2.0f;
         int N = v.get_size();
 
         from.setToConstant(C1);
@@ -111,31 +111,20 @@ public:
         const int N = v.get_size();
         const int n_rand = 10;
         assert(N > n_rand);
-        const int C = 3.0f;
-        std::vector<int> randoms;
-        srand( time(NULL) );
+        const std::vector<int> idxs = randoms(n_rand, N);
 
-        int i=0;
-        while (i < n_rand)
-        {
-            int rand_idx = rand() % N;
-            auto found = std::find(randoms.begin(), randoms.end(), rand_idx);
-            if (found == randoms.end())
-            {
-                randoms.push_back(rand_idx);
-                i += 1;
-            }
-        }
+        const double C = 3.0f;
+        srand( time(NULL) );
 
         ix.setToConstant(C);
         v.setToConstant(C);
 
-        for (auto& i : randoms)
+        for (auto& i : idxs)
             setElement(&ix, i, 0);
 
         v.selectPattern(ix);
 
-        for (auto& i : randoms)
+        for (auto& i : idxs)
             if (getElement(&v, i) != 0)
                 return 1;
 
@@ -193,6 +182,76 @@ public:
                 return 1;
 
         return 0;
+    }
+
+    int vectorComponentDiv_p_selectPattern(
+            hiop::hiopVector& v,
+            hiop::hiopVector& component,
+            hiop::hiopVector& pattern)
+    {
+        assert(v.get_size() == component.get_size());
+        assert(v.get_size() == pattern.get_size());
+
+        const int N = v.get_size();
+        const int n_rand = 10;
+        assert(N > n_rand);
+        const std::vector<int> idxs = randoms(n_rand, N);
+
+        const double C1 = 2.0f;
+        const double C2 = 3.0f;
+
+        // just has to be nonzero
+        pattern.setToConstant(0.0);
+
+        component.setToConstant(C1);
+        v.setToConstant(C2);
+
+        for (auto& i : idxs)
+            setElement(&pattern, i, 1.0);
+
+        v.componentDiv_p_selectPattern(component, pattern);
+
+        for (int i=0; i<N; i++)
+        {
+            /* 
+             * index is not in idxs, and we should therefore
+             * check this == this_prev / C1
+             */
+            if (std::find(idxs.begin(), idxs.end(), i) != idxs.end())
+            {
+                if (getElement(&v, i) != (C2/C1))
+                    return 1;
+            }
+
+            // Otherwise, this == 0
+            else
+            {
+                if (getElement(&v, i) != 0)
+                    return 1;
+            }
+        }
+
+        return 0;
+    }
+
+private:
+    auto randoms(const int& length, const int& max)
+        const -> std::vector<int>
+    {
+        assert(max > 0);
+        srand( time(NULL) );
+        std::vector<int> idxs (length);
+
+        int i=0;
+        while (i < length)
+        {
+            int rand_idx = rand() % max;
+            auto found = std::find(idxs.begin(), idxs.end(), rand_idx);
+            if (found == idxs.end())
+                idxs[i++] = rand_idx;
+        }
+
+        return idxs;
     }
 
 protected:
