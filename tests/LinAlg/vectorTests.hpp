@@ -140,6 +140,21 @@ public:
         return 0;
     }
 
+    int vectorScale(hiop::hiopVector& v)
+    {
+        const int N = v.get_size();
+        const int C = 0.5;
+        const int alpha = 2.0;
+        v.setToConstant(C);
+        v.scale(alpha);
+
+        for (int i=0; i<N; i++)
+            if (getElement(&v, i) != C*alpha)
+                return 1;
+
+        return 0;
+    }
+
 protected:
     virtual void   setElement(hiop::hiopVector* x, int i, double val) = 0;
     virtual double getElement(const hiop::hiopVector* x, int i) = 0;

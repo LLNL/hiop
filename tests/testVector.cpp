@@ -39,6 +39,7 @@ int main(int argc, char** argv)
         fail += test.vectorGetSize(x, N);
         fail += test.vectorSetToConstant(x);
         fail += test.vectorSetToZero(x);
+        fail += test.vectorScale(x);
 
         hiop::hiopVectorPar other(N);
         fail += test.vectorSelectPattern(x, other);
