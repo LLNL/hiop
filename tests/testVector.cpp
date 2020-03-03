@@ -18,13 +18,18 @@
  */
 int main(int argc, char** argv)
 {
-    int rank=0, numRanks=1;
+    int rank = 0;
+    int numRanks = 1;
+    MPI_Comm comm = MPI_COMM_NULL;
+
 #ifdef HIOP_USE_MPI
     int err;
-    err = MPI_Init(&argc, &argv);                  assert(MPI_SUCCESS==err);
-    err = MPI_Comm_rank(MPI_COMM_WORLD,&rank);     assert(MPI_SUCCESS==err);
-    err = MPI_Comm_size(MPI_COMM_WORLD,&numRanks); assert(MPI_SUCCESS==err);
-    if(0 == rank)
+    comm = MPI_COMM_WORLD;
+    err = MPI_Init(&argc, &argv);           assert(MPI_SUCCESS == err);
+    err = MPI_Comm_rank(comm,&rank);        assert(MPI_SUCCESS == err);
+    err = MPI_Comm_size(comm,&numRanks);    assert(MPI_SUCCESS == err);
+
+    if (0 == rank)
         printf("Support for MPI is enabled\n");
 #endif
 
@@ -33,7 +38,9 @@ int main(int argc, char** argv)
 
     // Test parallel vector
     {
-        hiop::hiopVectorPar x(N), y(N), z(N);
+        hiop::hiopVectorPar x(N, nullptr, comm),
+            y(N, nullptr, comm),
+            z(N, nullptr, comm);
         hiop::tests::VectorTestsPar test;
 
         fail += test.vectorGetSize(x, N);
@@ -46,7 +53,7 @@ int main(int argc, char** argv)
         fail += test.vectorCopyFrom(x, y);
         fail += test.vectorComponentDiv(x, y);
         fail += test.vectorComponentMult(x, y);
-        // fail += test.vectorComponentDiv_p_selectPattern(x, y, z);
+        fail += test.vectorComponentDiv_p_selectPattern(x, y, z);
     }
 
     // Test RAJA vector

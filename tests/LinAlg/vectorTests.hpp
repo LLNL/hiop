@@ -68,8 +68,8 @@ public:
     {
         assert(v.get_size() == _to.get_size());
 
-        const double C1 = 3.0f;
-        const double C2 = 2.0f;
+        const double C1 = 3.0;
+        const double C2 = 2.0;
         int N = v.get_size();
 
         _to.setToConstant(C1);
@@ -89,8 +89,8 @@ public:
     {
         assert(v.get_size() == from.get_size());
 
-        const double C1 = 3.0f;
-        const double C2 = 2.0f;
+        const double C1 = 3.0;
+        const double C2 = 2.0;
         int N = v.get_size();
 
         from.setToConstant(C1);
@@ -113,7 +113,7 @@ public:
         assert(N > n_rand);
         const std::vector<int> idxs = randoms(n_rand, N);
 
-        const double C = 3.0f;
+        const double C = 3.0;
         srand( time(NULL) );
 
         ix.setToConstant(C);
@@ -197,8 +197,8 @@ public:
         assert(N > n_rand);
         const std::vector<int> idxs = randoms(n_rand, N);
 
-        const double C1 = 2.0f;
-        const double C2 = 3.0f;
+        const double C1 = 2.0;
+        const double C2 = 3.0;
 
         // just has to be nonzero
         pattern.setToConstant(0.0);
