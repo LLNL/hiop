@@ -20,4 +20,10 @@ double VectorTestsPar::getElement(const hiop::hiopVector* x, int i)
     return xvec->local_data_const()[i];
 }
 
+double* VectorTestsPar::getData(hiop::hiopVector* x)
+{
+    hiop::hiopVectorPar* xvec = dynamic_cast<hiop::hiopVectorPar*>(x);
+    return xvec->local_data();
+}
+
 } // namespace hiop::tests

@@ -64,36 +64,36 @@ public:
         return 0;
     }
 
-    int vectorCopyTo(hiop::hiopVector& v)
+    int vectorCopyTo(hiop::hiopVector& v, hiop::hiopVector& _to)
     {
-        const int C = 3.0f;
-        v.setToConstant(C);
-        int N = v.get_size();
-        auto to = new double[N];
+        assert(v.get_size() == _to.get_size());
 
-        v.copyTo(to);
-
-        int _r = 0;
-        for (int i=0; i<N; i++)
-            if (getElement(&v, i) != C || to[i] != C)
-                _r = 1;
-
-        delete[] to;
-        return _r;
-    }
-
-    int vectorCopyFrom(hiop::hiopVector& v)
-    {
         const int C1 = 3.0f;
         const int C2 = 2.0f;
         int N = v.get_size();
 
-        // TODO: test with other implementations of hiopVector,
-        // such that we do not miss any implementation specific
-        // errors by only testing copying from a hiopVectorPar
-        hiop::hiopVectorPar from(N);
-        from.setToConstant(C1);
+        _to.setToConstant(C1);
+        v.setToConstant(C2);
 
+        auto to = getData(&_to);
+        v.copyTo(to);
+
+        for (int i=0; i<N; i++)
+            if (getElement(&v, i) != C2 || to[i] != C2)
+                return 1;
+
+        return 0;
+    }
+
+    int vectorCopyFrom(hiop::hiopVector& v, hiop::hiopVector& from)
+    {
+        assert(v.get_size() == from.get_size());
+
+        const int C1 = 3.0f;
+        const int C2 = 2.0f;
+        int N = v.get_size();
+
+        from.setToConstant(C1);
         v.setToConstant(C2);
         v.copyFrom(from);
 
@@ -104,7 +104,7 @@ public:
         return 0;
     }
 
-    int vectorSelectPattern(hiop::hiopVector& v)
+    int vectorSelectPattern(hiop::hiopVector& v, hiop::hiopVector& ix)
     {
         const int N = v.get_size();
         const int n_rand = 10;
@@ -125,7 +125,6 @@ public:
             }
         }
 
-        hiop::hiopVectorPar ix(N);
         ix.setToConstant(C);
         v.setToConstant(C);
 
@@ -144,7 +143,7 @@ public:
 protected:
     virtual void   setElement(hiop::hiopVector* x, int i, double val) = 0;
     virtual double getElement(const hiop::hiopVector* x, int i) = 0;
-
+    virtual double* getData(hiop::hiopVector* x) = 0;
 };
 
 } // namespace hiop::tests
