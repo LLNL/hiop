@@ -52,12 +52,11 @@ namespace hiop
       assert(false && "not yet implemented");
     }
 
-    
-    /* W = beta*W + alpha*this^T*X */
-    virtual void transTimesMat(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const 
-    {
-      assert(false && "not yet implemented");
-    }
+    /* W = beta*W + alpha*this^T*X 
+     *
+     * Only supports W and X of the type 'hiopMatrixComplexDense'
+     */
+    virtual void transTimesMat(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const;
     
     /* W = beta*W + alpha*this*X^T */
     virtual void timesMatTrans(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const 

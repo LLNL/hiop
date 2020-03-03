@@ -2,6 +2,10 @@
 
 #include "hiop_blasdefs.hpp"
 
+#include "hiopMatrixComplexDense.hpp"
+
+#include <iostream>
+
 namespace hiop
 {
   hiopMatrixComplexSparseTriplet::hiopMatrixComplexSparseTriplet(int rows, int cols, int nnz)
@@ -51,6 +55,54 @@ namespace hiop
     
     double maxv = ZLANGE(&norm, &one, &nnz, M, &one, NULL);
     return maxv;
+  }
+
+  /* W = beta*W + alpha*this^T*X 
+   *
+   * Only supports W and X of the type 'hiopMatrixComplexDense'
+   */
+  void hiopMatrixComplexSparseTriplet::transTimesMat(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const
+  {
+    assert(m()==X.m());
+    assert(n()==W.m());
+    assert(W.n()==X.n());
+
+    hiopMatrixComplexDense* Wd = dynamic_cast<hiopMatrixComplexDense*>(&W);
+    if(Wd==NULL) {
+      std::cerr << "hiopMatrixComplexSparseTriplet::transTimesMat received an unsuported type (1)\n";
+      return;
+    }
+
+    const hiopMatrixComplexDense* Xd = dynamic_cast<const hiopMatrixComplexDense*>(&X);
+    if(Xd==NULL) {
+      std::cerr << "hiopMatrixComplexSparseTriplet::transTimesMat received an unsuported type (2)\n";
+      return;
+    }
+
+    auto* W_M = Wd->get_M(); 
+    const auto* X_M = Xd->local_data(); //same as get_M but with has const qualifier
+
+    if(beta==0.) {
+      Wd->setToZero();
+    } else {
+      int N = W.m()*W.n();
+      dcomplex zalpha; zalpha.re=alpha; zalpha.im=0.;
+      int one = 1;
+      ZSCAL(&N, &zalpha, reinterpret_cast<dcomplex*>(*W_M), &one);
+    }
+      
+
+    int* this_irow = storage()->i_row();
+    int* this_jcol = storage()->j_col();
+    std::complex<double>* this_M = storage()->M();
+    int nnz = numberOfNonzeros();
+
+    for(int it=0; it<nnz; it++) {
+      const std::complex<double> aux = alpha*this_M[it];
+      for(int j=0; j<X.n(); j++) {
+	W_M[this_jcol[it]][j] += aux * X_M[this_irow[it]][j];
+      }
+    }
   }
 
   //builds submatrix nrows x ncols with rows and cols specified by row_idxs and cols_idx
