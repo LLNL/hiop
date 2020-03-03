@@ -52,7 +52,7 @@ namespace hiop
       Yba->transTimesMat(-1.0, Ybbinv_Yba, 0.0, Ybus_red);
       delete Yba;
 
-      Ybus_red.addMatrix(1.0, *Yaa);
+      Ybus_red.addSparseSymUpperTriangleToSymDenseMatrixUpperTriangle(1.0, *Yaa);
       delete Yaa;
 
     } else {
