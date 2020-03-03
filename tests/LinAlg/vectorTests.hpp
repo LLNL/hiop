@@ -84,19 +84,21 @@ public:
 
     int vectorCopyFrom(hiop::hiopVector& v)
     {
-        const int C = 3.0f;
+        const int C1 = 3.0f;
+        const int C2 = 2.0f;
         int N = v.get_size();
 
         // TODO: test with other implementations of hiopVector,
         // such that we do not miss any implementation specific
         // errors by only testing copying from a hiopVectorPar
         hiop::hiopVectorPar from(N);
-        from.setToConstant(C);
+        from.setToConstant(C1);
 
+        v.setToConstant(C2);
         v.copyFrom(from);
 
         for (int i=0; i<N; i++)
-            if (getElement(&v, i) != C || getElement(&from, i) != C)
+            if (getElement(&v, i) != C1 || getElement(&from, i) != C1)
                 return 1;
 
         return 0;

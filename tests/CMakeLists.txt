@@ -6,7 +6,7 @@ set_target_properties(testVector PROPERTIES
     CXX_STANDARD 11
     CXX_STANDARD_REQUIRED YES
     )
-add_compile_options(-Wall -Wextra -pedantic -Werror)
+add_compile_options(-Wall -Wextra -pedantic)
 
 # Build matrix test
 add_executable(testMatrix testMatrix.cpp LinAlg/matrixTestsDense.cpp)
