@@ -20,4 +20,11 @@ double VectorTestsPar::getElement(const hiop::hiopVector* x, int i)
     return xvec->local_data_const()[i];
 }
 
+/// Returns size of local data array for vector _x_
+long long VectorTestsPar::getLocalSize(const hiop::hiopVector* x)
+{
+    const hiop::hiopVectorPar* xvec = dynamic_cast<const hiop::hiopVectorPar*>(x);
+    return xvec->get_local_size();
+}
+
 } // namespace hiop::tests
