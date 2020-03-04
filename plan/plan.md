@@ -40,14 +40,18 @@ C.2: preliminary results: HiOp + magma_dsysv_nopiv_gpu capable of up to 4.1 TFlo
 
 ## D. Kron reduction of sparse ACOPF to MDS ACOPF
 
-*In progress*
+1 and 2 below done [HiOp branch dev/kronNeMDS](https://github.com/LLNL/hiop/tree/dev/kronNeMDS)
 
-1. Interface in-out design
+1. Interface in-out design (done)
 2. Implementation of the reduction
 3. Instantiation of the interface for in=gollnlp and out=hiop_mds
-4. Revisit B.2. - likely additional algorithmic features will be needed to ensure robustness of solver
+
+### Nlp IPM filter line-search 
+Essentially revisit B.2. as needed by the GPU solver for MDS ACOPF - likely additional algorithmic features will be needed to ensure robustness of solver
 
 ## E. Summit runs and profiling of ACOPF
+
+
 
 ## F. Final adjustments
 Expected to need adjustments of A.1. to support advanced primal-dual restarts for binding lines
