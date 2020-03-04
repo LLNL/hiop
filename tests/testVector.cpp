@@ -4,6 +4,7 @@
 // This header contains HiOp's MPI definitions
 #include <hiopVector.hpp>
 
+#include <hiopVector.hpp>
 #include "LinAlg/vectorTestsPar.hpp"
 // #include "LinAlg/vectorTestsRAJA.hpp"
 
@@ -44,10 +45,27 @@ int main(int argc, char** argv)
     // Test parallel vector
     {
         hiop::hiopVectorPar x(Nglobal, partition, comm);
+        auto y = x.alloc_clone();
+        auto z = x.alloc_clone();
+
         hiop::tests::VectorTestsPar test;
 
         fail += test.vectorGetSize(x, Nglobal, rank);
         fail += test.vectorSetToConstant(x, rank);
+
+        // Below have not been configured to use MPI correctly
+        fail += test.vectorSetToZero(x);
+        fail += test.vectorScale(x);
+        fail += test.vectorOnenorm(x);
+        fail += test.vectorTwonorm(x);
+        fail += test.vectorInfnorm(x);
+
+        fail += test.vectorSelectPattern(x, *y);
+        fail += test.vectorCopyTo(x, *y);
+        fail += test.vectorCopyFrom(x, *y);
+        fail += test.vectorComponentDiv(x, *y);
+        fail += test.vectorComponentMult(x, *y);
+        fail += test.vectorComponentDiv_p_selectPattern(x, *y, *z);
     }
 
     // Test RAJA vector
