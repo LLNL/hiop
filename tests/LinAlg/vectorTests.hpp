@@ -25,15 +25,15 @@ public:
     virtual ~VectorTests(){}
 
     /// Test get_size() method of hiop vector implementation
-    int vectorGetSize(hiop::hiopVector& x, int N)
+    int vectorGetSize(hiop::hiopVector& x, long long N, int)
     {
         return x.get_size() == N ? 0 : 1;
     }
 
     /// Test setToConstant method of hiop vector implementation
-    int vectorSetToConstant(hiop::hiopVector& x)
+    int vectorSetToConstant(hiop::hiopVector& x, int)
     {
-        int N = x.get_size();
+        int N = getLocalSize(&x);
 
         for(int i=0; i<N; ++i)
         {
@@ -323,6 +323,7 @@ protected:
     virtual void   setElement(hiop::hiopVector* x, int i, double val) = 0;
     virtual double getElement(const hiop::hiopVector* x, int i) = 0;
     virtual double* getData(hiop::hiopVector* x) = 0;
+    virtual long long getLocalSize(const hiop::hiopVector* x) = 0;
 };
 
 } // namespace hiop::tests
