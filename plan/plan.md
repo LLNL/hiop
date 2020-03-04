@@ -43,11 +43,16 @@ C.2: preliminary results: HiOp + magma_dsysv_nopiv_gpu capable of up to 4.1 TFlo
 1 and 2 below done [HiOp branch dev/kronNeMDS](https://github.com/LLNL/hiop/tree/dev/kronNeMDS)
 
 1. Interface in-out design (done)
-2. Implementation of the reduction
-3. Instantiation of the interface for in=gollnlp and out=hiop_mds
+2. Implementation of the kron reduction (done)
+3. Instantiation of the interface for in=gollnlp and out=hiop_mds (in progress, done outside hiop, in gollnlp modeling framework)
 
-### Nlp IPM filter line-search 
-Essentially revisit B.2. as needed by the GPU solver for MDS ACOPF - likely additional algorithmic features will be needed to ensure robustness of solver
+### Revisiting NLP IPM filter line-search  to ensure robustness
+Essentially revisit B.2. as needed by the GPU solver for MDS ACOPF - likely additional algorithmic features will be needed to ensure robustness of HIOP GPU solver and "workarounds" for inertia calculation
+i. Ipopt Adapter of HiOp MDS interface for easier testing
+ii. run and evaluate performance
+iii. implement the required algorithmic features, repeat ii.
+
+Likely will be done in conjunction with E. below
 
 ## E. Summit runs and profiling of ACOPF
 
