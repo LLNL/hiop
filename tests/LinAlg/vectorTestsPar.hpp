@@ -19,6 +19,7 @@ public:
 private:
     virtual void setElement(hiop::hiopVector* x, int i, double value);
     virtual double getElement(const hiop::hiopVector* x, int i);
+    virtual long long getLocalSize(const hiop::hiopVector* x);
 };
 
 } // namespace hiopTest

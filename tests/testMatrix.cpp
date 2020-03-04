@@ -1,10 +1,21 @@
 #include <iostream>
-#include <hiopMatrix.hpp>
+// #include <mpi.h>
 
+#include <hiopMatrix.hpp>
 #include "LinAlg/matrixTestsDense.hpp"
 
 int main()
 {
+    int rank=0, numRanks=1;
+// #ifdef HIOP_USE_MPI
+//     int err;
+//     err = MPI_Init(&argc, &argv);                  assert(MPI_SUCCESS==err);
+//     err = MPI_Comm_rank(MPI_COMM_WORLD,&rank);     assert(MPI_SUCCESS==err);
+//     err = MPI_Comm_size(MPI_COMM_WORLD,&numRanks); assert(MPI_SUCCESS==err);
+//     if(0 == rank)
+//         printf("Support for MPI is enabled\n");
+// #endif
+
     long long M = 10;  // rows
     long long N = 100; // columns
     int fail = 0;
@@ -32,13 +43,15 @@ int main()
         // Code here ...
     }
 
+    if (rank == 0)
+        if(fail)
+            std::cout << "Matrix tests failed\n";
+        else
+            std::cout << "Matrix tests passed\n";
 
-
-
-    if(fail)
-        std::cout << "Matrix tests failed\n";
-    else
-        std::cout << "Matrix tests passed\n";
+// #ifdef HIOP_USE_MPI
+//     MPI_Finalize();
+// #endif
 
     return fail;
 }
