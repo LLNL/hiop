@@ -48,11 +48,11 @@ C.2: preliminary results: HiOp + magma_dsysv_nopiv_gpu capable of up to 4.1 TFlo
 
 ### Revisiting NLP IPM filter line-search  to ensure robustness
 Essentially revisit B.2. as needed by the GPU solver for MDS ACOPF - likely additional algorithmic features will be needed to ensure robustness of HIOP GPU solver and "workarounds" for inertia calculation
-i. Ipopt Adapter of HiOp MDS interface for easier testing
-ii. run and evaluate performance
-iii. implement the required algorithmic features, repeat ii.
+1. Ipopt Adapter of HiOp MDS interface for easier testing
+2. run and evaluate performance
+3. implement the required algorithmic features, repeat ii.
 
-Likely will be done in conjunction with E. below
+Likely will be done in conjunction with E. below.
 
 ## E. Summit runs and profiling of ACOPF
 
