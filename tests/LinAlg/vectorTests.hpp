@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <algorithm>
 #include <iostream>
+#include <cmath>
 #include <assert.h>
 #include <time.h>
 
@@ -231,6 +232,47 @@ public:
             }
         }
 
+        return 0;
+    }
+
+    int vectorOnenorm(hiop::hiopVector& v)
+    {
+        const int N = v.get_size();
+        std::vector<double> testCases = { 0.0, 1.0, 2.0 };
+
+        for (auto& tcase : testCases)
+        {
+            v.setToConstant(tcase);
+            auto actual = v.onenorm();
+
+            double expected = 0;
+            for (int i=0; i < N; i++)
+                expected += abs(tcase);
+
+            if (expected != actual)
+                return 1;
+        }
+        return 0;
+    }
+
+    int vectorTwonorm(hiop::hiopVector& v)
+    {
+        const int N = v.get_size();
+        std::vector<double> testCases = { 0.0, 1.0, 2.0 };
+
+        for (auto& tcase : testCases)
+        {
+            v.setToConstant(tcase);
+            auto actual = v.twonorm();
+
+            double expected = 0;
+            for (int i=0; i < N; i++)
+                expected += pow(tcase, 2);
+            expected = sqrt(expected);
+
+            if (expected != actual)
+                return 1;
+        }
         return 0;
     }
 

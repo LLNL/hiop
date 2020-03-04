@@ -48,6 +48,8 @@ int main(int argc, char** argv)
         fail += test.vectorSetToConstant(x);
         fail += test.vectorSetToZero(x);
         fail += test.vectorScale(x);
+        fail += test.vectorOnenorm(x);
+        fail += test.vectorTwonorm(x);
 
         fail += test.vectorSelectPattern(x, *y);
         fail += test.vectorCopyTo(x, *y);
