@@ -38,9 +38,10 @@ int main(int argc, char** argv)
 
     // Test parallel vector
     {
-        hiop::hiopVectorPar x(N, nullptr, comm),
-            y(N, nullptr, comm),
-            z(N, nullptr, comm);
+        hiop::hiopVectorPar x(N, nullptr, comm);
+        auto y = x.alloc_clone();
+        auto z = x.alloc_clone();
+
         hiop::tests::VectorTestsPar test;
 
         fail += test.vectorGetSize(x, N);
@@ -48,12 +49,12 @@ int main(int argc, char** argv)
         fail += test.vectorSetToZero(x);
         fail += test.vectorScale(x);
 
-        fail += test.vectorSelectPattern(x, y);
-        fail += test.vectorCopyTo(x, y);
-        fail += test.vectorCopyFrom(x, y);
-        fail += test.vectorComponentDiv(x, y);
-        fail += test.vectorComponentMult(x, y);
-        fail += test.vectorComponentDiv_p_selectPattern(x, y, z);
+        fail += test.vectorSelectPattern(x, *y);
+        fail += test.vectorCopyTo(x, *y);
+        fail += test.vectorCopyFrom(x, *y);
+        fail += test.vectorComponentDiv(x, *y);
+        fail += test.vectorComponentMult(x, *y);
+        fail += test.vectorComponentDiv_p_selectPattern(x, *y, *z);
     }
 
     // Test RAJA vector
