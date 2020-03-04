@@ -12,10 +12,9 @@ namespace hiop
 			     const hiopMatrixComplexSparseTriplet& Ybus, 
 			     hiopMatrixComplexDense& Ybus_red)
   {
-    printvec(idx_aux_buses, "aux=");
-    printvec(idx_nonaux_buses, "nonaux=");
+    //printvec(idx_aux_buses, "aux=");
+    //printvec(idx_nonaux_buses, "nonaux=");
     
-
     //Yaa = Matrix(Ybus[nonaux, nonaux])
     auto* Yaa = Ybus.new_sliceFromSymToSym(idx_nonaux_buses.data(),
 					   idx_nonaux_buses.size());
@@ -28,7 +27,7 @@ namespace hiop
 				      idx_nonaux_buses.data(),
 				      idx_nonaux_buses.size());
 
-    Yba->print();
+    //Yba->print();
 
     hiopLinSolverMA86Z* linsolver = new hiopLinSolverMA86Z(*Ybb);
 
@@ -42,18 +41,18 @@ namespace hiop
       //Ybb\Yba
       hiopMatrixComplexDense Ybbinv_Yba(Yba->m(), Yba->n());
       linsolver->solve(*Yba, Ybbinv_Yba);
-
-      Ybbinv_Yba.print();
+      //Ybbinv_Yba.print();
       
       delete Ybb;
       delete linsolver;
 
       //Ybus_red = - Yab*(Ybb\Yba)
-      Yba->transTimesMat(-1.0, Ybbinv_Yba, 0.0, Ybus_red);
+      Yba->transTimesMat(0.0, Ybus_red, -1.0, Ybbinv_Yba);
       delete Yba;
 
       Ybus_red.addSparseSymUpperTriangleToSymDenseMatrixUpperTriangle(1.0, *Yaa);
       delete Yaa;
+      //Ybus_red.print();
 
     } else {
       printf("Error occured while performing the Kron reduction (factorization issue)\n");

@@ -86,7 +86,7 @@ namespace hiop
       Wd->setToZero();
     } else {
       int N = W.m()*W.n();
-      dcomplex zalpha; zalpha.re=alpha; zalpha.im=0.;
+      dcomplex zalpha; zalpha.re=beta; zalpha.im=0.;
       int one = 1;
       ZSCAL(&N, &zalpha, reinterpret_cast<dcomplex*>(*W_M), &one);
     }
