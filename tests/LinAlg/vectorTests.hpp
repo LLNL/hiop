@@ -112,7 +112,7 @@ public:
         const int N = v.get_size();
         const int n_rand = 10;
         assert(N > n_rand);
-        const std::vector<int> idxs = randoms(n_rand, N);
+        const std::vector<int> idxs = randoms(n_rand, 0, N);
 
         const double C = 3.0;
         srand( time(NULL) );
@@ -196,7 +196,7 @@ public:
         const int N = v.get_size();
         const int n_rand = 10;
         assert(N > n_rand);
-        const std::vector<int> idxs = randoms(n_rand, N);
+        const std::vector<int> idxs = randoms(n_rand, 0, N);
 
         const double C1 = 2.0;
         const double C2 = 3.0;
@@ -252,6 +252,7 @@ public:
             if (expected != actual)
                 return 1;
         }
+
         return 0;
     }
 
@@ -276,8 +277,30 @@ public:
         return 0;
     }
 
+    int vectorInfnorm(hiop::hiopVector& v)
+    {
+        const int N = v.get_size();
+        auto values = randoms(N, -100, 100);
+        int i = 0;
+        for (auto& val : values)
+            setElement(&v, i++, val);
+
+        double expected = abs(getElement(&v, 0));
+        for (int i=1; i<N; i++)
+        {
+            double aux = abs(getElement(&v, i));
+            if (expected < aux)
+                expected = aux;
+        }
+
+        if (expected != v.infnorm())
+            return 1;
+                
+        return 0;
+    }
+
 private:
-    auto randoms(const int& length, const int& max)
+    auto randoms(const int& length, const int& min, const int& max)
         const -> std::vector<int>
     {
         assert(max > 0);
@@ -287,7 +310,7 @@ private:
         int i=0;
         while (i < length)
         {
-            int rand_idx = rand() % max;
+            int rand_idx = (rand() % (max+min)) - min;
             auto found = std::find(idxs.begin(), idxs.end(), rand_idx);
             if (found == idxs.end())
                 idxs[i++] = rand_idx;
