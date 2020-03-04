@@ -1,5 +1,3 @@
 # Ignore files that are generated from the repository sources
 build
 _dist-default-build
-*swo
-*swp
