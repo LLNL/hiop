@@ -166,6 +166,7 @@ install(FILES src/Interface/hiopInterface.hpp
 	      src/Optimization/hiopAlgFilterIPM.hpp
 	      src/Optimization/hiopIterate.hpp
 	      src/Optimization/hiopResidual.hpp
+              src/Optimization/hiopKKTLinSys.hpp
 	      src/Optimization/hiopLogBarProblem.hpp
 	      src/Optimization/hiopFilter.hpp
 	      src/Optimization/hiopHessianLowRank.hpp
@@ -174,6 +175,7 @@ install(FILES src/Interface/hiopInterface.hpp
 	      src/LinAlg/hiopMatrix.hpp
 	      src/LinAlg/hiopMatrixSparseTriplet.hpp
 	      src/LinAlg/hiopMatrixSparseTripletStorage.hpp
+	      src/LinAlg/hiopMatrixMDS.hpp
               src/LinAlg/hiopMatrixComplexSparseTriplet.hpp
 	      src/LinAlg/hiopMatrixComplexDense.hpp
 	      src/Utils/hiopRunStats.hpp
