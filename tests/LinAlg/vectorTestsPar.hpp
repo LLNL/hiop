@@ -19,7 +19,14 @@ public:
 private:
     virtual void setElement(hiop::hiopVector* x, int i, double value);
     virtual double getElement(const hiop::hiopVector* x, int i);
-    virtual long long getLocalSize(const hiop::hiopVector* x);
+    virtual int getLocalSize(const hiop::hiopVector* x);
+    virtual double* getLocalData(hiop::hiopVector* x);
+    virtual int verifyAnswer(hiop::hiopVector* x, double answer);
+    virtual bool reduceReturn(int failures, hiop::hiopVector* x);
+
+#ifdef HIOP_USE_MPI
+    MPI_Comm getMPIComm(hiop::hiopVector* x);
+#endif
 };
 
 } // namespace hiopTest
