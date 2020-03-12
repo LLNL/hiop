@@ -11,8 +11,9 @@
 /**
  * @brief Main body of vector implementation testing code.
  *
- * @todo The code should support MPI tests when appropriate input is passed
- * on the command line.
+ * @todo The size of the vector should be passed on the command line.
+ *
+ * @pre All test functions should return the same boolean value on all ranks.
  *
  */
 int main(int argc, char** argv)
@@ -29,7 +30,7 @@ int main(int argc, char** argv)
     err = MPI_Comm_rank(comm, &rank);     assert(MPI_SUCCESS == err);
     err = MPI_Comm_size(comm, &numRanks); assert(MPI_SUCCESS == err);
     if(0 == rank)
-        std::cout << "Support for MPI is enabled\n";
+        std::cout << "Running MPI enabled tests ...\n";
 #endif
 
     long long Nlocal = 1000;
@@ -44,10 +45,30 @@ int main(int argc, char** argv)
     // Test parallel vector
     {
         hiop::hiopVectorPar x(Nglobal, partition, comm);
+        hiop::hiopVectorPar* y = x.alloc_clone();
+        hiop::hiopVectorPar* z = x.alloc_clone();
         hiop::tests::VectorTestsPar test;
 
         fail += test.vectorGetSize(x, Nglobal, rank);
         fail += test.vectorSetToConstant(x, rank);
+        fail += test.vectorCopyTo(x, *y, rank);
+        fail += test.vectorCopyFrom(x, *y, rank);
+
+        fail += test.vectorSetToZero(x, rank);
+        fail += test.vectorScale(x, rank);
+
+        fail += test.vectorComponentDiv(x, *y, rank);
+        fail += test.vectorComponentMult(x, *y, rank);
+        fail += test.vectorSelectPattern(x, *y, rank);
+        fail += test.vectorComponentDiv_p_selectPattern(x, *y, *z, rank);
+
+        fail += test.vectorOnenorm(x, rank);
+        fail += test.vectorTwonorm(x, rank);
+        fail += test.vectorInfnorm(x, rank);
+
+        fail += test.vectorAxpy(x, *y, rank);
+        fail += test.vectorAxzpy(x, *y, *z, rank);
+        fail += test.vectorAxdzpy(x, *y, *z, rank);
     }
 
     // Test RAJA vector
@@ -59,13 +80,13 @@ int main(int argc, char** argv)
         //         fail += test.testSetToConstant(x);
     }
 
+
     if (rank == 0)
-    {
         if(fail)
             std::cout << fail << " tests failed\n";
         else
-            std::cout << "Tests passed\n";
-    }
+            std::cout << "All tests passed\n";
+
 
 #ifdef HIOP_USE_MPI
     MPI_Finalize();
