@@ -59,7 +59,7 @@
 #endif
 
 #ifdef HSL_MA86Z_HEADER_NOT_CPP_READY
-#pragma message("hsl_ma86z.h file needs additional instrumentation to work with C++." \
+#pragma message("hsl_ma86z.h file needs additional instrumentation to work with C++. " \
 		"See issue #15 on github.com/llnl/hiop")
 //#error compilation aborted
 #endif
