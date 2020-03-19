@@ -244,7 +244,7 @@ public:
     {
         v.setToConstant(-one);
         double actual = v.onenorm();
-        double expected = v.get_size();
+        double expected = static_cast<double>(v.get_size());
 
         int fail = (actual != expected);
         printMessage(fail, __func__, rank);
@@ -260,7 +260,7 @@ public:
     {
         v.setToConstant(-one);
         double actual = v.twonorm();
-        const double expected = sqrt(v.get_size());
+        const double expected = sqrt(static_cast<double>(v.get_size()));
 
         int fail = !isEqual(expected, actual);
         printMessage(fail, __func__, rank);

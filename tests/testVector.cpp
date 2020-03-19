@@ -82,11 +82,12 @@ int main(int argc, char** argv)
 
 
     if (rank == 0)
+    {
         if(fail)
             std::cout << fail << " tests failed\n";
         else
             std::cout << "All tests passed\n";
-
+    }
 
 #ifdef HIOP_USE_MPI
     MPI_Finalize();

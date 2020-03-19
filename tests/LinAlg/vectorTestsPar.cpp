@@ -31,7 +31,7 @@ double* VectorTestsPar::getLocalData(hiop::hiopVector* x)
 int VectorTestsPar::getLocalSize(const hiop::hiopVector* x)
 {
     const hiop::hiopVectorPar* xvec = dynamic_cast<const hiop::hiopVectorPar*>(x);
-    return xvec->get_local_size();
+    return static_cast<int>(xvec->get_local_size());
 }
 
 #ifdef HIOP_USE_MPI
