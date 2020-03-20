@@ -67,9 +67,16 @@ namespace hiop
     //ii.
     memcpy(row, jcol, sizeof(int)*nnz);
 
+    double buffer[2];
     //iii.
     for(int it=0; it<nnz; it++) {
-      vals[it] = M[it].real() + M[it].imag()*I;
+      //vals[it] = M[it].real() + M[it].imag()*I;
+
+      //! hackish but standard (C99) compliant to go around the fact that clang++ does not work with complex.h
+#pragma message("revisit this code (MA86z class complex numbers handling) for performance considerations")
+      buffer[0] = M[it].real();
+      buffer[1] = M[it].imag();
+      memcpy(vals+it, buffer, sizeof vals[0]);
     }
 
     //
@@ -141,12 +148,17 @@ namespace hiop
     for(int i=0; i<dimM*dimN; i++)
       X_buf[i]=0.;
 
+    double buffer[2];
+    
     for(int itnz=0; itnz<B_nnz; itnz++) {
-
       assert(B_jcol[itnz]>=0 && B_jcol[itnz]<X.n());
       assert(B_irow[itnz]>=0 && B_irow[itnz]<X.m());
-
-      X_buf[ B_jcol[itnz]*dimM + B_irow[itnz] ] = B_M[itnz].real() + I*B_M[itnz].imag();
+      //X_buf[ B_jcol[itnz]*dimM + B_irow[itnz] ] = B_M[itnz].real() + I*B_M[itnz].imag();
+      //!
+#pragma message("revisit this code (MA86z class complex numbers handling) for performance considerations")      
+      buffer[0] = B_M[itnz].real();
+      buffer[1] = B_M[itnz].imag();
+      memcpy(X_buf + B_jcol[itnz]*dimM + B_irow[itnz], buffer, sizeof X_buf[0]);
     }
     
     ma86_solve(0, dimN, ldx, X_buf, order, &keep, &control, &info, NULL);
@@ -154,10 +166,13 @@ namespace hiop
       printf("Failure during solve with info.flag = %i\n", info.flag);
     }
     //copy from X_buf to X
-    auto** X_M = X.get_M();
+    std::complex<double>** X_M = X.get_M();
     for(int i=0; i<dimM; i++) {
       for(int j=0; j<dimN; j++) {
-	X_M[i][j] = X_buf[j*dimM+i];       
+	//X_M[i][j] = X_buf[j*dimM+i];
+#pragma message("revisit this code (MA86z class complex numbers handling) for performance considerations")
+	memcpy(buffer, X_buf+j*dimM+i, sizeof X_buf[0]);
+	X_M[i][j] = std::complex<double>(buffer[0], buffer[1]);
       }
     }
 
