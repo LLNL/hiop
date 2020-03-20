@@ -312,11 +312,13 @@ public:
   virtual double max_abs_value()
   {
     assert(false && "not provided because it is not needed");
+    return 0.;
   }
   /* return false is any of the entry is a nan, inf, or denormalized */
   virtual bool isfinite() const
   {
     assert(false && "not provided because it is not needed");
+    return false;
   }
   
   /* call with -1 to print all rows, all columns, or on all ranks; otherwise will
@@ -332,9 +334,9 @@ public:
   }
 
   /* number of rows */
-  virtual long long m() const { assert(false && "not provided because it is not needed"); }
+  virtual long long m() const { assert(false && "not provided because it is not needed"); return 0; }
   /* number of columns */
-  virtual long long n() const { assert(false && "not provided because it is not needed"); }
+  virtual long long n() const { assert(false && "not provided because it is not needed"); return 0; }
 #ifdef HIOP_DEEPCHECKS
   /* check symmetry */
   virtual bool assertSymmetry(double tol=1e-16) const { return true; }

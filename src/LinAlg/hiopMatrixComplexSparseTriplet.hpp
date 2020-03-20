@@ -144,6 +144,7 @@ namespace hiop
     virtual bool isfinite() const
     {
       assert(false && "not yet implemented");
+      return false;
     }
     
     /* call with -1 to print all rows, all columns, or on all ranks; otherwise will
@@ -166,6 +167,7 @@ namespace hiop
     virtual bool assertSymmetry(double tol=1e-16) const
     {
       assert(false && "not yet implemented");
+      return false;
     }
 #endif
     // these are not part of the hiopMatrix

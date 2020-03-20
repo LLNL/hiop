@@ -199,6 +199,7 @@ namespace hiop
     virtual bool assertSymmetry(double tol=1e-16) const
     {
       assert(false && "not yet implemented");
+      return false;
     }
 #endif
   private:
