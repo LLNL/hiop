@@ -1,6 +1,6 @@
 #include "hiopKronReduction.hpp"
 
-#include "hiopLinSolverMA86Z.hpp"
+#include "hiopLinSolverUMFPACKZ.hpp"
 #include "hiopCppStdUtils.hpp"
 
 
@@ -29,7 +29,7 @@ namespace hiop
 
     //Yba->print();
 
-    hiopLinSolverMA86Z* linsolver = new hiopLinSolverMA86Z(*Ybb);
+    hiopLinSolverUMFPACKZ* linsolver = new hiopLinSolverUMFPACKZ(*Ybb);
 
     int nret = linsolver->matrixChanged();
     if(nret>=0) {
