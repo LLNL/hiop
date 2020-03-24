@@ -105,6 +105,97 @@ namespace hiop
     }
   }
 
+  hiopMatrixComplexSparseTriplet*
+  hiopMatrixComplexSparseTriplet::new_slice(const int* row_idxs, int nrows, 
+					    const int* col_idxs, int ncols) const
+  {
+    int* src_i = this->storage()->i_row();
+    int* src_j = this->storage()->j_col();
+    //
+    //count nnz first
+    //
+    int dest_nnz=0, src_itnz=0, src_nnz=this->stM->numberOfNonzeros();
+    for(int ki=0; ki<nrows; ki++) {
+      const int& row = row_idxs[ki];
+      assert(row<m());
+#ifdef DEBUG
+      if(ki>0) {
+	assert(row_idxs[ki]>row_idxs[ki-1] && "slice row indexes need to be increasingly ordered");
+      }
+#endif
+      
+      while(src_itnz<src_nnz && src_i[src_itnz]<row) 
+	src_itnz++;
+      
+      for(int kj=0; kj<ncols; kj++) {
+	const int& col = col_idxs[kj];
+	assert(col<n());
+
+#ifdef DEBUG
+	if(kj>0) {
+	  assert(col_idxs[kj]>col_idxs[kj-1] && "slice column indexes need to be increasingly ordered");
+	}
+#endif
+	while(src_itnz<src_nnz && src_i[src_itnz]==row && src_j[src_itnz]<col) {
+	  src_itnz++;
+	}
+	
+	if(src_itnz<src_nnz && src_i[src_itnz]==row && src_j[src_itnz]==col) {
+	  //std::complex<double>* src_M  = this->storage()->M();
+	  //printf("[%d,%d] -> %g+%g*i  (1)\n", ki, kj, src_M[src_itnz].real(), src_M[src_itnz].imag());
+	  dest_nnz++;
+	  src_itnz++;
+	}
+      }
+    }
+    assert(src_itnz <= src_nnz);
+    assert(src_itnz >= dest_nnz);
+
+    const int dest_nnz2 = dest_nnz;
+    hiopMatrixComplexSparseTriplet* newMat = new hiopMatrixComplexSparseTriplet(nrows, ncols, dest_nnz2);
+    //
+    //populate the new slice matrix
+    //
+    //first pass -> populate with elements on the upper triangle of 'this'
+    int* dest_i = newMat->storage()->i_row();
+    int* dest_j = newMat->storage()->j_col();
+    std::complex<double>* dest_M = newMat->storage()->M();
+    std::complex<double>* src_M  = this->storage()->M();
+
+    dest_nnz=0; src_itnz=0;
+    for(int ki=0; ki<nrows; ki++) {
+      const int& row = row_idxs[ki];
+
+      while(src_itnz<src_nnz && src_i[src_itnz]<row) 
+	src_itnz++;
+
+      for(int kj=0; kj<ncols; kj++) {
+	const int& col= col_idxs[kj];
+
+	while(src_itnz<src_nnz && src_i[src_itnz]==row && src_j[src_itnz]<col) {
+	  src_itnz++;
+	}
+	if(src_itnz<src_nnz && src_i[src_itnz]==row && src_j[src_itnz]==col) {
+	  dest_i[dest_nnz] = ki; 
+	  dest_j[dest_nnz] = kj;
+	  dest_M[dest_nnz] = src_M[src_itnz];
+
+	  //printf("[%d,%d] -> %g+%g*i  (2)\n", ki, kj, src_M[src_itnz].real(), src_M[src_itnz].imag());
+	  
+	  dest_nnz++;
+	  src_itnz++;
+	  assert(dest_nnz<=dest_nnz2);
+	}
+      }
+    }
+    assert(src_itnz <= src_nnz);
+    assert(dest_nnz == dest_nnz2);
+    
+    newMat->storage()->sort_indexes();
+    return newMat;    
+  }
+
+  
   //builds submatrix nrows x ncols with rows and cols specified by row_idxs and cols_idx
   //assumes the 'this' is symmetric
   hiopMatrixComplexSparseTriplet* 

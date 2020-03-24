@@ -172,6 +172,14 @@ namespace hiop
 #endif
     // these are not part of the hiopMatrix
 
+        //Builds/extracts submatrix nrows x ncols with rows and cols specified by row_idxs and cols_idx
+    //Assumes 
+    // - 'this' is unsymmetric
+    // - 'row_idxs' and 'col_idxs' are ordered
+    hiopMatrixComplexSparseTriplet* new_slice(const int* row_idxs, int nrows, 
+					      const int* col_idxs, int ncols) const;
+
+    
     //Builds/extracts submatrix nrows x ncols with rows and cols specified by row_idxs and cols_idx
     //Assumes 
     // - 'this' is symmetric (only upper triangle is stored)
