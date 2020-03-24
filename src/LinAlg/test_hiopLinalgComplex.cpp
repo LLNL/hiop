@@ -9,7 +9,11 @@ int main()
 {
   bool all_tests_ok = true;
   { //TEST sparse complex matrix
-    //this is the rectangular matrix to test with
+    //this is a rectangular matrix to test with
+    // [ 1+i      0      0      1-i        0     ]
+    // [  0       0      i       0         1     ]
+    // [ 2-i      0      0    1.5-0.5i  0.5-0.5i ]    
+    //
     int m=3, n=5;
     int Mrow[] = {0, 0, 1, 1, 2, 2, 2};
     int Mcol[] = {0, 3, 2, 4, 0, 3, 4};
@@ -27,23 +31,41 @@ int main()
     double diff = std::fabs(abs_nrm-2.23606797749979);
     if(diff>1e-12) {
       printf("error: max_abs_value did not return the correct value. Difference: %6.3e\n", diff);
-      return -1;
+      all_tests_ok=false;
     }
-    
     //mat.print();
     
     mat.storage()->sort_indexes();
     //mat.print();
     
     mat.storage()->sum_up_duplicates();
-    //mat.print();
     double abs_nrm2 = mat.max_abs_value();
     diff = std::fabs(abs_nrm2-abs_nrm);
     if(diff>1e-15) {
       printf("error: postprocessing check failed\n");
-      return -1;
+      all_tests_ok=false;
     }
-  
+
+    //slicing -> row and cols idxs need to be sorted
+    std::vector<int> rows = {1}, cols = {1, 2};
+    auto* subMat = mat.new_slice(rows.data(), rows.size(), cols.data(), cols.size());
+    //subMat->print();
+    if(subMat->numberOfNonzeros() != 1) {
+      printf("error: new_slice did not return the correct nnz.\n");
+      all_tests_ok=false;
+    }
+    delete subMat;
+
+    rows = {1}; cols = {1, 2};
+    subMat = mat.new_slice(rows.data(), rows.size(), cols.data(), cols.size());
+    abs_nrm = subMat->max_abs_value();
+    diff = std::fabs(abs_nrm-1.0);
+    if(diff>1e-12) {
+      printf("error: check of 'new_slice' failed. Difference: %6.3e [should be %20.16e]\n", 
+	     diff, abs_nrm);
+      all_tests_ok=false;
+    }
+    delete subMat;
   }
 
   { //TEST dense complex matrix
