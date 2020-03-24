@@ -132,21 +132,77 @@ namespace hiop
   
   void hiopLinSolverUMFPACKZ::solve(const hiopMatrixComplexSparseTriplet& B, hiopMatrixComplexDense& X)
   {
-    if(n==0) return;
-    int status;
+    assert(X.n()==B.n());
+    assert(n==B.m()); 
+    assert(n==X.m()); 
     
-    //    status = umfpack_zi_solve(UMFPACK_A, m_colptr, m_rowidx, m_valsre, m_valsim, XXa, xz, b, bz,
-  // 	Numeric, Control, Info) ;
-  //   umfpack_zi_report_info (Control, Info) ;
-  //   umfpack_zi_report_status (Control, status) ;
-  //   if (status < 0)
-  //   {
-  // 	error ("umfpack_zi_solve failed") ;
-  //   }
-  //   printf ("\nx (solution of Ax=b): ") ;
-  //   (void) umfpack_zi_report_vector (n, x, xz, Control) ;
-  //   rnorm = resid (FALSE, Ap, Ai, Ax, Az) ;
-  //   printf ("maxnorm of residual: %g\n\n", rnorm) ;
+    if(n==0) return;
+
+    int nrhs = X.n();
+    if(0==nrhs) return;
+
+    const int* B_irow = B.storage()->i_row();
+    const int* B_jcol = B.storage()->j_col();
+    const auto*B_M    = B.storage()->M();
+    const int B_nnz = B.numberOfNonzeros();
+    std::complex<double>** X_M = X.get_M();
+
+    double rhs[2*n];
+    double sol[2*n];
+    
+    // Columns of B need to be copied into the rhs array.
+    // B is triplet format, ordered after rows then after cols.
+    // To avoid scanning B for each rhs / column of B, we keep indexes (array
+    // of size n) of each of (i, col) of the last seen column 'col' in B_irow and B_jcol
+    
+    int idxsB_col[n];
+    idxsB_col[0]=0;
+    
+    int status;
+    for(int col_current=0; col_current<nrhs; col_current++) {
+      //update idxB_col
+      for(int row=0; row<n; row++) {
+	
+	if(row!=0) idxsB_col[row] = idxsB_col[row-1];
+      
+	assert(idxsB_col[row]<=B_nnz);
+	while(idxsB_col[row]<B_nnz &&
+	      B_irow[idxsB_col[row]]<=row &&
+	      B_jcol[idxsB_col[row]]<col_current) {
+	  idxsB_col[row]++;
+	}
+	assert(idxsB_col[row]<=B_nnz);
+
+	if(idxsB_col[row]<B_nnz &&
+	   B_irow[idxsB_col[row]]==row &&
+	   B_jcol[idxsB_col[row]]==col_current) {
+	  rhs[2*row]   = B_M[idxsB_col[row]].real();
+	  rhs[2*row+1] = B_M[idxsB_col[row]].imag();
+	} else {
+	  rhs[2*row] = rhs[2*row+1] = 0.;
+	}
+      }
+
+      //solve for rhs
+      status = umfpack_zi_solve(UMFPACK_A, m_colptr, m_rowidx, m_vals, (double*) NULL,
+				sol, (double*) NULL,
+				rhs, (double*) NULL,
+				m_numeric, m_control, m_info);
+      umfpack_zi_report_info(m_control, m_info);
+      if(status<0) {
+	umfpack_zi_report_status(m_control, status);
+	printf("umfpack_zi_solve failed for rhs=%d", col_current);
+      }
+
+      //copy to X 
+      for(int row=0; row<n; row++) {
+	X_M[row][col_current] = std::complex<double>(sol[2*row], sol[2*row+1]);
+      }
+    }
+    //   printf ("\nx (solution of Ax=b): ") ;
+    //   (void) umfpack_zi_report_vector (n, x, xz, Control) ;
+    //   rnorm = resid (FALSE, Ap, Ai, Ax, Az) ;
+    //   printf ("maxnorm of residual: %g\n\n", rnorm) ;
   }
   
 } //end namespace hiop
