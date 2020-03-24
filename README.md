@@ -57,12 +57,12 @@ $> cmake -DHIOP_USE_GPU=ON -DHIOP_MAGMA_DIR=/home/petra1/work/installs/magma-2.5
 
 ## Kron reduction
 
-Kron reduction functionality of HiOp is disabled by default. One can enable it using 
+Kron reduction functionality of HiOp is disabled by default. One can enable it by using 
 ```shell
-$> cmake -DHIOP_WITH_KRON_REDUCTION=ON -DMA86_DIR=/home/petra1/work/installs/hsl_ma86-1.6.0/_install/ -DMETIS_DIR=/home/petra1/work/installs/metis-4.0 ..
+$> rm -rf *; cmake -DHIOP_WITH_KRON_REDUCTION=ON -DUMFPACK_DIR=/Users/petra1/work/installs/SuiteSparse-5.7.1 -DMETIS_DIR=/Users/petra1/work/installs/metis-4.0.3 .. && make -j && make install
 ```
 
-MA86 and METIS need to be provided. The C "Z" (double complex) headers of MA86 are not properly working with C++ when std::complex (<complex>) is included. The required modifications are simple and documented in issue #15.
+UMFPACK (part of SuiteSparse) and METIS need to be provided as shown above.
 
 
 ## Acknowledgments
