@@ -104,8 +104,14 @@ namespace hiop
     virtual void addMatrix(double alpha, const hiopMatrix& X);
     virtual void addMatrix(const std::complex<double>& alpha, const hiopMatrixComplexDense& X);
 
-    /* uppertriangle(this) += uppertriangle(X)
-     * where X is a sparse matrix stored in triplet format holding only upper triangle elements*/
+    /* this = this + alpha*X 
+     * X is a general sparse matrix in triplet format (rows and cols indexes are assumed to be ordered)
+     */
+    void addSparseMatrix(const std::complex<double>& alpha,
+			 const hiopMatrixComplexSparseTriplet& X);
+    
+    /* uppertriangle(this) += alpha*uppertriangle(X)
+     * where X is a sparse matrix stored in triplet format holding only upper triangle elements */
     void addSparseSymUpperTriangleToSymDenseMatrixUpperTriangle(const std::complex<double>& alpha,
 								const hiopMatrixComplexSparseTriplet& X);
 

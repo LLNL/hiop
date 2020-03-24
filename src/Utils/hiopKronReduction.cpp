@@ -16,16 +16,20 @@ namespace hiop
     //printvec(idx_nonaux_buses, "nonaux=");
     
     //Yaa = Matrix(Ybus[nonaux, nonaux])
-    auto* Yaa = Ybus.new_sliceFromSymToSym(idx_nonaux_buses.data(),
-					   idx_nonaux_buses.size());
+    auto* Yaa = Ybus.new_slice(idx_nonaux_buses.data(),
+			       idx_nonaux_buses.size(),
+			       idx_nonaux_buses.data(),
+			       idx_nonaux_buses.size());
 
-    auto* Ybb = Ybus.new_sliceFromSymToSym(idx_aux_buses.data(),
-					   idx_aux_buses.size());
-
-    auto* Yba = Ybus.new_sliceFromSym(idx_aux_buses.data(),
-				      idx_aux_buses.size(),
-				      idx_nonaux_buses.data(),
-				      idx_nonaux_buses.size());
+    auto* Ybb = Ybus.new_slice(idx_aux_buses.data(),
+			       idx_aux_buses.size(),
+			       idx_aux_buses.data(),
+			       idx_aux_buses.size());
+    
+    auto* Yba = Ybus.new_slice(idx_aux_buses.data(),
+			       idx_aux_buses.size(),
+			       idx_nonaux_buses.data(),
+			       idx_nonaux_buses.size());
 
     //Yba->print();
 
@@ -50,7 +54,8 @@ namespace hiop
       Yba->transTimesMat(0.0, Ybus_red, -1.0, Ybbinv_Yba);
       delete Yba;
 
-      Ybus_red.addSparseSymUpperTriangleToSymDenseMatrixUpperTriangle(1.0, *Yaa);
+      //Ybus_red.addSparseSymUpperTriangleToSymDenseMatrixUpperTriangle(1.0, *Yaa);
+      Ybus_red.addSparseMatrix(std::complex<double>(1.0, 0.0), *Yaa);
       delete Yaa;
       //Ybus_red.print();
 

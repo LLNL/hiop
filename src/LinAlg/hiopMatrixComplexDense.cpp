@@ -188,6 +188,31 @@ namespace hiop
     ZAXPY(&N, &a, Msrc, &inc, Mdest, &inc);
   }
 
+  /* this = this + alpha*X 
+   * X is a general sparse matrix in triplet format (rows and cols indexes are assumed to be ordered)
+   */
+  void hiopMatrixComplexDense::addSparseMatrix(const std::complex<double>& alpha,
+					       const hiopMatrixComplexSparseTriplet& X)
+  {
+    assert(m()==n());
+    assert(X.m()==X.n());
+    assert(m()==X.m());
+    
+    if(alpha==0.) return;
+
+    const int* X_irow = X.storage()->i_row();
+    const int* X_jcol =  X.storage()->j_col();
+    const std::complex<double>* X_M = X.storage()->M();
+    
+    int nnz = X.numberOfNonzeros();
+
+    for(int it=0; it<nnz; it++) {
+      assert(X_irow[it] < m());
+      assert(X_jcol[it] < n());
+      M[X_irow[it]][X_jcol[it]] += alpha*X_M[it];
+    }
+  }
+  
   /* uppertriangle(this) += uppertriangle(X)
    * where X is a sparse matrix stored in triplet format holding only upper triangle elements*/
   void hiopMatrixComplexDense::
