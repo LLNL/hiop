@@ -236,4 +236,19 @@ namespace hiop
       M[X_irow[it]][X_jcol[it]] += alpha*X_M[it];
     }
   }
+
+#ifdef HIOP_DEEPCHECKS    
+  bool hiopMatrixComplexDense::assertSymmetry(double tol/*=1e-16*/) const
+  {
+    assert(n_global==n_local && "not yet implemented for distributed matrices");
+    if(n_global!=n_local) return false;
+    if(n_global!=m_local) return false;
+
+    for(int i=0; i<m_local; i++)
+      for(int j=i+1; i<n_local; j++)
+	if(std::abs(M[i][j]-M[j][i])>tol)
+	  return false;
+    return true;
+  }
+#endif
 } //end namespace

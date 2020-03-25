@@ -202,11 +202,7 @@ namespace hiop
     virtual long long m() const {return m_local;}
     virtual long long n() const {return n_global;}
 #ifdef HIOP_DEEPCHECKS
-    virtual bool assertSymmetry(double tol=1e-16) const
-    {
-      assert(false && "not yet implemented");
-      return false;
-    }
+    virtual bool assertSymmetry(double tol=1e-16) const;
 #endif
   private:
     std::complex<double>** M; //local storage
