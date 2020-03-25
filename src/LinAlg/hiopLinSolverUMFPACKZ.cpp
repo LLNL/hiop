@@ -216,8 +216,8 @@ namespace hiop
       }
 
       //norm of residual
-      double resnrm = resid_abs_norm(n, m_colptr, m_rowidx, m_vals, sol, rhs);
-      printf("solve %d -> abs resid abs nrm: %g\n", col_current, resnrm);
+      //double resnrm = resid_abs_norm(n, m_colptr, m_rowidx, m_vals, sol, rhs);
+      //printf("solve %d -> abs resid abs nrm: %g\n", col_current, resnrm);
       
       //copy to X 
       for(int row=0; row<n; row++) {

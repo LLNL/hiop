@@ -3,7 +3,6 @@
 #include "hiopLinSolverUMFPACKZ.hpp"
 #include "hiopCppStdUtils.hpp"
 
-
 namespace hiop
 {
 
@@ -14,6 +13,10 @@ namespace hiop
   {
     //printvec(idx_aux_buses, "aux=");
     //printvec(idx_nonaux_buses, "nonaux=");
+
+    //Ybus.print(); 
+    //int nnz = Ybus.numberOfNonzeros();
+    //printf("Ybus has %d nnz\n", nnz);
     
     //Yaa = Matrix(Ybus[nonaux, nonaux])
     auto* Yaa = Ybus.new_slice(idx_nonaux_buses.data(),
@@ -30,9 +33,9 @@ namespace hiop
 			       idx_aux_buses.size(),
 			       idx_nonaux_buses.data(),
 			       idx_nonaux_buses.size());
-
     //Yba->print();
-
+    //Ybb->print();
+    //fflush(stdout);
     hiopLinSolverUMFPACKZ* linsolver = new hiopLinSolverUMFPACKZ(*Ybb);
 
     int nret = linsolver->matrixChanged();
@@ -67,11 +70,6 @@ namespace hiop
       delete Yba;
       return false;
     }
-
-    //delete linsolver;
-    //delete Yaa;
-    //delete Ybb;
-    //delete Yba;
     return true;
   }
 }//end namespace

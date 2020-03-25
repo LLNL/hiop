@@ -61,7 +61,8 @@ namespace hiop
    *
    * Only supports W and X of the type 'hiopMatrixComplexDense'
    */
-  void hiopMatrixComplexSparseTriplet::transTimesMat(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const
+  void hiopMatrixComplexSparseTriplet::
+  transTimesMat(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const
   {
     assert(m()==X.m());
     assert(n()==W.m());
