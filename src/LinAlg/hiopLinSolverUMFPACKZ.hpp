@@ -88,6 +88,12 @@ namespace hiop
     int n, nnz;
 
     double m_control [UMFPACK_CONTROL], m_info [UMFPACK_INFO];
+
+  private:
+    //returns the "abs" norm of the residual A*x-b
+    double resid_abs_norm(int n, int* Ap, int* Ai, double* Ax/*packed*/,
+			  double* x/*packed*/,
+			  double* b/*packed*/); 
   };
 } //end namespace hiop
 
