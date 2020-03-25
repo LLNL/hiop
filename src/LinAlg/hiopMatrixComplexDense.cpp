@@ -242,10 +242,10 @@ namespace hiop
   {
     assert(n_global==n_local && "not yet implemented for distributed matrices");
     if(n_global!=n_local) return false;
-    if(n_global!=m_local) return false;
+    if(n_local!=m_local) return false;
 
     for(int i=0; i<m_local; i++)
-      for(int j=i+1; i<n_local; j++)
+      for(int j=i+1; j<n_local; j++)
 	if(std::abs(M[i][j]-M[j][i])>tol)
 	  return false;
     return true;
