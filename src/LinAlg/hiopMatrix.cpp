@@ -364,7 +364,8 @@ void hiopMatrixDense::timesVec(double beta, hiopVector& y_,
 
   if(beta!=0) assert(y.isfinite()); 
   assert(x.isfinite());
-
+#endif
+  
   timesVec(beta, y.local_data(), alpha, x.local_data_const());
 
 #ifdef HIOP_DEEPCHECKS  
@@ -375,9 +376,6 @@ void hiopMatrixDense::timesVec(double beta, hiopVector& y_,
 void hiopMatrixDense::timesVec(double beta,  double* ya,
 			       double alpha, const double* xa) const
 {
-  //we do the check to avoid "Conditional jump or move depends on uninitialised value(s)" reported by
-  //valgrind to occur during the first call to LSQUpdate
-#endif
   char fortranTrans='T';
   int MM=m_local, NN=n_local, incx_y=1;
 
