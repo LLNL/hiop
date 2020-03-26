@@ -1,0 +1,58 @@
+.script_template: &script_definition
+  script:
+    - |
+      #
+      #  NOTES:  WORKDIR is on constance/marianas/newell
+      #          ./      is only on the Kubernetes instance
+      #
+      export WORKDIR="$HOME/gitlab/$CI_JOB_ID/"
+      mkdir -p "$WORKDIR"
+      cp -a ./ "$WORKDIR"
+      cd "$WORKDIR"
+      # touch output
+      # tail -f output &
+      # echo submitting batch job
+      # Follow job output
+      touch output
+      # tail -f output &
+      sbatch -A EXASGD -p $SLURM_Q --wait -o output -e output $WORKDIR/BUILD.sh
+      res=$?
+      echo "finished batch job: $res"
+      # cat output
+      #
+      #  NOTE:  If the job fails, comment out the line below and cd to
+      #         $HOME/gitlab/$CI_JOB_ID and run ./build.sh by hand to
+      #         figure out what went wrong.
+      # cd $WORKDIR
+      # ./BUILD.sh
+      #
+      rm -rf "$WORKDIR"
+      exit $res
+
+
+.tags_template: &tags_definition
+  tags:
+    - k8s
+    - ikp
+    - exasgd
+    - marianas
+
+
+build_on_marianas:
+  stage: build
+  variables:
+    SLURM_Q: "dl"
+  <<: *tags_definition
+  <<: *script_definition
+  only:
+    - branches@exasgd/solvers/hiop
+
+
+build_on_newell:
+  stage: build
+  variables:
+    SLURM_Q: "newell"
+  <<: *tags_definition
+  <<: *script_definition
+  only:
+    - branches@exasgd/solvers/hiop
