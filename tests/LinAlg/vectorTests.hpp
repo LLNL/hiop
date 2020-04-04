@@ -1,9 +1,10 @@
-#pragma once
-
 #include <iostream>
 #include <cmath>
+#include <cfloat>
 #include <assert.h>
 #include <limits>
+
+#include "testBase.hpp"
 
 namespace hiop::tests {
 
@@ -21,23 +22,31 @@ namespace hiop::tests {
  * and return `false` otherwise.
  *
  */
-class VectorTests
+class VectorTests : public TestBase
 {
 public:
     using real_type = double;
     using local_ordinal_type = int;
     using global_ordinal_type = long long;
 
-private:
-    static constexpr double eps = 10*std::numeric_limits<double>::epsilon();
-    static constexpr double zero = 0.0;
-    static constexpr double half = 0.5;
-    static constexpr double one  = 1.0;
-    static constexpr double two  = 2.0;
-
 public:
     VectorTests(){}
     virtual ~VectorTests(){}
+
+    /*
+     * this[i] = 0
+     */
+    bool vectorSetToZero(hiop::hiopVector& v, int& rank)
+    {
+        v.setToConstant(one);
+
+        v.setToZero();
+
+        int fail = verifyAnswer(&v, zero);
+        printMessage(fail, __func__, rank);
+
+        return reduceReturn(fail, &v);
+    }
 
     /// Test get_size() method of hiop vector implementation
     bool vectorGetSize(hiop::hiopVector& x, long long answer, int rank)
@@ -67,38 +76,35 @@ public:
     }
 
     /*
-     * this[i] = 0
+     * \forall n in n_local if (pattern[n] != 0.0) this[n] = C
      */
-    bool vectorSetToZero(hiop::hiopVector& v, int& rank)
+    bool vectorSetToConstant_w_patternSelect(
+            hiop::hiopVector& x,
+            hiop::hiopVector& pattern,
+            const int rank)
     {
-        v.setToConstant(one);
+        const int N = getLocalSize(&x);
+        assert(N == getLocalSize(&pattern));
+        static constexpr double C = two;
+        for (int i=0; i<N; i++)
+        {
+            setElement(&x, i, zero);
+            setElement(&pattern, i, one);
+        }
+        if (rank == 0)
+            setElement(&pattern, N-1, zero);
 
-        v.setToZero();
+        x.setToConstant_w_patternSelect(C, pattern);
 
-        int fail = verifyAnswer(&v, zero);
+        int fail = 0;
+        for (int i=0; i<N; i++)
+        {
+            const double val = getElement(&x, i);
+            if (val != C && !(rank == 0 && i == N-1)) fail++;
+        }
+
         printMessage(fail, __func__, rank);
-
-        return reduceReturn(fail, &v);
-    }
-
-    /*
-     * Test for function that copies data from this to x.
-     */
-    bool vectorCopyTo(hiop::hiopVector& v, hiop::hiopVector& to, int rank)
-    {
-        assert(v.get_size() == to.get_size());
-        assert(getLocalSize(&v) == getLocalSize(&to));
-
-        to.setToConstant(one);
-        v.setToConstant(two);
-
-        auto todata = getLocalData(&to);
-        v.copyTo(todata);
-
-        int fail = verifyAnswer(&to, two);
-        printMessage(fail, __func__, rank);
-
-        return reduceReturn(fail, &v);
+        return reduceReturn(fail, &x);
     }
 
     /*
@@ -117,6 +123,138 @@ public:
         printMessage(fail, __func__, rank);
 
         return reduceReturn(fail, &v);
+    }
+
+    bool vectorCopyFromStarting(
+            hiop::hiopVector& x,
+            hiop::hiopVector& from,
+            int rank)
+    {
+        int fail = 0;
+        const int N = getLocalSize(&x);
+        assert(N == x.get_size() && "This test cannot be ran with distributed vectors");
+        assert(N == getLocalSize(&from));
+        x.setToConstant(two);
+
+        double* _from = (double*)malloc(sizeof(double) * N);
+        for (int i=0; i<N; i++)
+            _from[i] = one;
+
+        if (rank == 0)
+        {
+            x.copyFromStarting(1, _from, N-1);
+        }
+        else
+        {
+            x.copyFromStarting(0, _from, N);
+        }
+
+        for (int i=0; i<N; i++)
+        {
+            if (getElement(&x, i) != one && !(i == 0 && rank == 0))
+                fail++;
+        }
+
+        x.setToConstant(two);
+        from.setToConstant(one);
+        x.copyFromStarting(0, from);
+        fail += verifyAnswer(&x, one);
+
+        printMessage(fail, __func__, rank);
+        return reduceReturn(fail, &x);
+    }
+
+    bool vectorStartingAtCopyFromStartingAt(
+            hiop::hiopVector& x,
+            hiop::hiopVector& from,
+            const int rank)
+    {
+        int fail = 0;
+        const int N = getLocalSize(&x);
+        assert(N == x.get_size() && "This test cannot be ran with distributed vectors");
+        assert(N == getLocalSize(&from));
+
+        x.setToConstant(one);
+        from.setToConstant(two);
+
+        x.startingAtCopyFromStartingAt(1, from, 0);
+        for (int i=0; i<N; i++)
+        {
+            if (getElement(&x, i) != two && i != 0)
+                fail++;
+        }
+
+        printMessage(fail, __func__, rank);
+        return reduceReturn(fail, &x);
+    }
+
+    /*
+     * Test for function that copies data from this to x.
+     */
+    bool vectorCopyTo(hiop::hiopVector& v, hiop::hiopVector& to, int rank)
+    {
+        assert(v.get_size() == to.get_size());
+        assert(getLocalSize(&v) == getLocalSize(&to));
+
+        to.setToConstant(one);
+        v.setToConstant(two);
+
+        double* todata = getLocalData(&to);
+        v.copyTo(todata);
+
+        int fail = verifyAnswer(&to, two);
+        printMessage(fail, __func__, rank);
+
+        return reduceReturn(fail, &v);
+    }
+
+    bool vectorCopyToStarting(
+            hiop::hiopVector& x,
+            hiop::hiopVector& to,
+            const int rank)
+    {
+        const int N = getLocalSize(&x);
+        assert(N == x.get_size() && "This test cannot be ran with distributed vectors");
+        assert(N == getLocalSize(&to));
+        int fail = 0;
+
+        x.setToConstant(one);
+        to.setToConstant(two);
+
+        x.copyToStarting(to, 0);
+        fail += verifyAnswer(&to, one);
+
+        x.setToConstant(one);
+        to.setToConstant(two);
+        x.copyToStarting(0, to);
+        fail += verifyAnswer(&to, one);
+
+        printMessage(fail, __func__, rank);
+        return reduceReturn(fail, &x);
+    }
+    
+    bool vectorStartingAtCopyToStartingAt(
+            hiop::hiopVector& x,
+            hiop::hiopVector& to,
+            const int rank)
+    {
+        int fail = 0;
+        const int N = getLocalSize(&x);
+        assert(N == x.get_size() && "This test cannot be ran with distributed vectors");
+        assert(N == getLocalSize(&to));
+
+        x.setToConstant(one);
+        to.setToConstant(two);
+        x.startingAtCopyToStartingAt(0, to, 1, N-1);
+
+        for (int i=0; i<N; i++)
+        {
+            if (getElement(&to, i) != one && i != 0)
+                fail++;
+        }
+
+        printMessage(fail, __func__, rank);
+        return reduceReturn(fail, &x);
     }
 
     /*
@@ -214,7 +352,6 @@ public:
         assert(v.get_size() == pattern.get_size());
         assert(N == getLocalSize(&x));
         assert(N == getLocalSize(&pattern));
-
 
         v.setToConstant(one);
         x.setToConstant(two);
@@ -361,6 +498,624 @@ public:
         return reduceReturn(fail, &v);
     }
 
+    /*
+     * this += C
+     */
+    bool vectorAddConstant(hiop::hiopVector& x, int rank)
+    {
+        int fail = 0;
+
+        x.setToConstant(zero);
+        x.addConstant(two);
+
+        fail = verifyAnswer(&x, two);
+        printMessage(fail, __func__, rank);
+
+        return reduceReturn(fail, &x);
+    }
+
+    /*
+     * if (pattern[i] > 0.0) this[i] += C
+     */
+    bool vectorAddConstant_w_patternSelect(
+            hiop::hiopVector& x, 
+            hiop::hiopVector& pattern,
+            int rank)
+    {
+        const int N = getLocalSize(&x);
+        assert(pattern.get_size() == x.get_size());
+        assert(N == getLocalSize(&pattern));
+
+        x.setToConstant(zero);
+        x.addConstant(half);
+
+        if (rank== 0)
+            setElement(&x, N - 1, zero);
+
+        int fail = 0;
+        for (int i=0; i<N; ++i)
+        {
+            double val = getElement(&x, i);
+            if ((val != half) && !((rank==0) && (i == N-1) && (val == zero)))
+                fail++;
+        }
+
+        printMessage(fail, __func__, rank);
+
+        return reduceReturn(fail, &x);
+    }
+
+    /*
+     * Dot product == \sum{this[i] * other[i]}
+     */
+    bool vectorDotProductWith(
+            hiop::hiopVector& x,
+            hiop::hiopVector& y,
+            const int rank)
+    {
+        // Must use global size, as every rank will get global
+        const long long N = x.get_size(); 
+        assert(getLocalSize(&x) == getLocalSize(&y));
+
+        x.setToConstant(one);
+        y.setToConstant(two);
+
+        const double expected = two * (double)N;
+        const double actual = x.dotProductWith(y);
+        const bool fail = !isEqual(actual, expected);
+
+        printMessage(fail, __func__, rank);
+        return reduceReturn(fail, &x);
+    }
+
+    /* 
+     * this[i] == -this_prev[i]
+     */
+    bool vectorNegate(hiop::hiopVector& x, int rank)
+    {
+        x.setToConstant(one);
+        x.negate();
+        const bool fail = verifyAnswer(&x, -one);
+        printMessage(fail, __func__, rank);
+        return reduceReturn(fail, &x);
+    }
+
+    bool vectorInvert(hiop::hiopVector& x, int rank)
+    {
+        x.setToConstant(two);
+        x.invert();
+        const bool fail = verifyAnswer(&x, half);
+        printMessage(fail, __func__, rank);
+        return reduceReturn(fail, &x);
+    }
+
+    /* 
+     * sum{ln(x_i):i=1,..,n}
+     */
+    bool vectorLogBarrier(
+            hiop::hiopVector& x,
+            hiop::hiopVector& select,
+            int rank)
+    {
+        const int N = getLocalSize(&x);
+        assert(N == getLocalSize(&select));
+        select.setToConstant(one);
+        x.setToConstant(two);
+
+        setElement(&select, N-1, 0.0);
+
+        double expected = 0.0;
+        for (int i=0; i<N-1; ++i) expected += log(two);
+        const double res = x.logBarrier(select);
+
+        const bool fail = !isEqual(res, expected);
+        printMessage(fail, __func__, rank);
+
+        return reduceReturn(fail, &x);
+    }
+
+    /*
+     * this += alpha / select(x)
+     */
+    bool vectorAddLogBarrierGrad(
+            hiop::hiopVector& x,
+            hiop::hiopVector& y,
+            hiop::hiopVector& select,
+            const int rank)
+    {
+        const int N = getLocalSize(&x);
+        assert(N == getLocalSize(&select));
+        assert(N == getLocalSize(&y));
+        static constexpr double alpha = half;
+
+        select.setToConstant(one);
+        x.setToConstant(one);
+        y.setToConstant(two);
+
+        if (rank == 0)
+            setElement(&select, N-1, 0.0);
+
+        static constexpr double expected = one + (alpha / two);
+        x.addLogBarrierGrad(alpha, y, select);
+
+        int fail = 0;
+        for (int i=0; i<N; ++i)
+        {
+            double val = getElement(&x, i);
+            if ((val != expected) && !((rank==0) && (i == N-1) && (val == one)))
+                fail++;
+        }
+
+        printMessage(fail, __func__, rank);
+
+        return reduceReturn(fail, &x);
+    }
+
+    /*
+     * term := 0.0
+     * \forall n \in n_local
+     *     if left[n] == 1.0 \land right[n] == 0.0
+     *         term += this[n]
+     * term *= mu * kappa
+     * return term
+     */
+    bool vectorLinearDampingTerm(
+            hiop::hiopVector& x,
+            hiop::hiopVector& left,
+            hiop::hiopVector& right,
+            const int rank)
+    {
+        const int N = getLocalSize(&x);
+        assert(N == getLocalSize(&left));
+        assert(N == getLocalSize(&right));
+        static constexpr double mu = two;
+        static constexpr double kappa_d = two;
+
+        x.setToConstant(one);
+        left.setToConstant(one);
+        right.setToConstant(zero);
+
+        if (rank == 0)
+        {
+            setElement(&left, N-1, two);
+            setElement(&right, N-1, two);
+        }
+
+        double expected = 0.0;
+        for (int i=0; i<N-1; ++i)
+        {
+            expected += one;
+        }
+        if (rank != 0) expected += one;
+        expected *= mu;
+        expected *= kappa_d;
+
+        const double term = x.linearDampingTerm(left, right, mu, kappa_d);
+
+        const int fail = !isEqual(term, expected);
+
+        printMessage(fail, __func__, rank);
+        return reduceReturn(fail, &x);
+    }
+
+    /*
+     * this[i] > 0
+     */
+    bool vectorAllPositive(hiop::hiopVector& x, const int rank)
+    {
+        const int N = getLocalSize(&x);
+        int fail = 0;
+        x.setToConstant(one);
+        if (!x.allPositive())
+            fail++;
+
+        x.setToConstant(one);
+        if (rank == 0)
+            setElement(&x, N-1, -one);
+        if (x.allPositive())
+            fail++;
+
+        printMessage(fail, __func__, rank);
+        return fail;
+    }
+
+    /*
+     * this[i] > 0 \lor pattern[i] != 1.0
+     */
+    bool vectorAllPositive_w_patternSelect(
+            hiop::hiopVector& x,
+            hiop::hiopVector& pattern,
+            const int rank)
+    {
+        const int N = getLocalSize(&x);
+        assert(N == getLocalSize(&pattern));
+
+        int fail = 0;
+
+        x.setToConstant(one);
+        pattern.setToConstant(one);
+        if (!x.allPositive_w_patternSelect(pattern))
+            fail++;
+
+        x.setToConstant(-one);
+        if (x.allPositive_w_patternSelect(pattern))
+            fail++;
+
+        x.setToConstant(one);
+        if (rank == 0)
+            setElement(&x, N-1, -one);
+        if (x.allPositive_w_patternSelect(pattern))
+            fail++;
+
+        printMessage(fail, __func__, rank);
+        return reduceReturn(fail, &x);
+    }
+
+    /*
+     * This method is not yet implemented in HIOP
+    bool vectorMin(const hiop::hiopVector& x, const int rank)
+    {
+        (void)x;
+        printMessage(SKIP_TEST, __func__, rank);
+        return 0;
+    }
+    */
+
+    /*
+     * Project vector into bounds
+     */
+    bool vectorProjectIntoBounds(
+            hiop::hiopVector& x,
+            hiop::hiopVector& lower,
+            hiop::hiopVector& upper,
+            hiop::hiopVector& lower_pattern,
+            hiop::hiopVector& upper_pattern,
+            const int rank)
+    {
+        // setup constants and make assertions
+        const int N = getLocalSize(&x);
+        assert(N == getLocalSize(&lower));
+        assert(N == getLocalSize(&upper));
+        assert(N == getLocalSize(&lower_pattern));
+        assert(N == getLocalSize(&upper_pattern));
+        static constexpr double kappa1 = half;
+        static constexpr double kappa2 = half;
+        int fail = 0;
+
+        // Check that lower > upper returns false
+        x.setToConstant(one);
+        lower.setToConstant(one);
+        upper.setToConstant(-one);
+        lower_pattern.setToConstant(one);
+        upper_pattern.setToConstant(one);
+        if (x.projectIntoBounds(
+                    lower, lower_pattern,
+                    upper, upper_pattern,
+                    kappa1, kappa2))
+            fail++;
+
+        // check that patterns are correctly applied and
+        // x[0] is left at 1
+        x.setToConstant(one);
+        lower.setToConstant(-one);
+        upper.setToConstant(one);
+        lower_pattern.setToConstant(one);
+        setElement(&lower_pattern, 0, zero);
+        upper_pattern.setToConstant(one);
+        setElement(&upper_pattern, 0, zero);
+
+        // Call should return true
+        fail += !x.projectIntoBounds(
+                lower, lower_pattern, upper,
+                upper_pattern, kappa1, kappa2);
+
+        // First element should be one
+        fail += !isEqual(getElement(&x, 0), one);
+
+        // Testing when x is on a boundary:
+        // Check that projection of 1 into (-1, 1)
+        // returns `true' and x == half
+        x.setToConstant(one);
+        lower.setToConstant(-one);
+        upper.setToConstant(one);
+        lower_pattern.setToConstant(one);
+        upper_pattern.setToConstant(one);
+        x.projectIntoBounds(
+                lower, lower_pattern, upper,
+                upper_pattern, kappa1, kappa2);
+
+        // x[i] == 1/2 \forall i \in [1, N)
+        fail += verifyAnswer(&x, half);
+
+        // testing when x is below boundaries
+        // check that projection of -2 into (0, 2)
+        // returns `true' and x == half
+        x.setToConstant(-two);
+        lower.setToConstant(zero);
+        upper.setToConstant(two);
+        lower_pattern.setToConstant(one);
+        upper_pattern.setToConstant(one);
+
+        // Call should return true
+        fail += !x.projectIntoBounds(
+                lower, lower_pattern, upper,
+                upper_pattern, kappa1, kappa2);
+
+        // x[i] == 1/2 \forall i \in [1, N)
+        fail += verifyAnswer(&x, half);
+
+        // testing when x is above boundaries
+        // check that projection of -2 into (0, 2)
+        // returns `true' and x == half
+        x.setToConstant(two);
+        lower.setToConstant(-two);
+        upper.setToConstant(zero);
+        lower_pattern.setToConstant(one);
+        upper_pattern.setToConstant(one);
+
+        // Call should return true
+        fail += !x.projectIntoBounds(
+                lower, lower_pattern, upper,
+                upper_pattern, kappa1, kappa2);
+
+        // x[i] == -1/2 \forall i \in [1, N)
+        fail += verifyAnswer(&x, -half);
+
+        printMessage(fail, __func__, rank);
+        return 0;
+    }
+
+    /*
+     * fractionToTheBdry psuedocode:
+     *
+     * \forall dxi \in dx, dxi >= 0 \implies
+     *     return 1.0
+     *
+     * \exists dxi \in dx s.t. dxi < 0 \implies
+     *     return_value := 1.0
+     *     auxilary := 0.0
+     *     \forall n \in n_local
+     *         auxilary = compute_step_to_boundary(x[n], dx[n])
+     *         if auxilary < return_value
+     *             return_value = auxilary
+     *     return auxilary
+     */
+    bool vectorFractionToTheBdry(
+            hiop::hiopVector& x,
+            hiop::hiopVector& dx,
+            const int rank)
+    {
+        const int N = getLocalSize(&x);
+        assert(N == getLocalSize(&dx));
+        static constexpr double tau = half;
+        int fail = 0;
+
+        x.setToConstant(one);
+
+        dx.setToConstant(one);
+        double result = x.fractionToTheBdry(dx, tau);
+
+        double expected = one;
+        fail += !isEqual(result, expected);
+
+        dx.setToConstant(-one);
+        result = x.fractionToTheBdry(dx, tau);
+        double aux;
+        expected = one;
+        for (int i=0; i<N; i++)
+        {
+            aux = -tau * getElement(&x, i) / getElement(&dx, i);
+            if (aux<expected) expected=aux;
+        }
+        fail += !isEqual(result, expected);
+
+        printMessage(fail, __func__, rank);
+        return reduceReturn(fail, &x);
+    }
+
+    /*
+     * Same as fractionToTheBdry, except that
+     * no x[i] where pattern[i]==0 will be calculated
+     */
+    bool vectorFractionToTheBdry_w_pattern(
+            hiop::hiopVector& x,
+            hiop::hiopVector& dx,
+            hiop::hiopVector& pattern,
+            const int rank)
+    {
+        const int N = getLocalSize(&x);
+        assert(N == getLocalSize(&dx));
+        assert(N == getLocalSize(&pattern));
+        static constexpr double tau = half;
+        int fail = 0;
+
+        // Fraction to boundary is const, so no need to reset x after each test
+        x.setToConstant(one);
+
+        // Pattern all ones, X all ones, result should be
+        // default (alpha == one)
+        pattern.setToConstant(one);
+        dx.setToConstant(one);
+        double result = x.fractionToTheBdry_w_pattern(dx, tau, pattern);
+        double expected = one;  // default value if dx >= 0
+        fail += !isEqual(result, expected);
+
+        // Pattern all ones except for one value, should still be default
+        // value of one
+        pattern.setToConstant(one);
+        if (rank == 0)
+            setElement(&pattern, N-1, 0);
+        dx.setToConstant(one);
+        result = x.fractionToTheBdry_w_pattern(dx, tau, pattern);
+        expected = one;  // default value if dx >= 0
+        fail += !isEqual(result, expected);
+
+        // Pattern all ones, dx will be <0
+        pattern.setToConstant(one);
+        dx.setToConstant(-one);
+        result = x.fractionToTheBdry_w_pattern(dx, tau, pattern);
+        double aux;
+        expected = one;
+        for (int i=0; i<N; i++)
+        {
+            if (rank == 0 && i == N-1) continue;
+            aux = -tau * getElement(&x, i) / getElement(&dx, i);
+            if (aux<expected) expected=aux;
+        }
+        fail += !isEqual(result, expected);
+
+        printMessage(fail, __func__, rank);
+        return reduceReturn(fail, &x);
+    }
+
+    /*
+     *  pattern != 0 \lor this == 0
+     */
+    bool vectorMatchesPattern(
+            hiop::hiopVector& x,
+            hiop::hiopVector& pattern,
+            const int rank)
+    {
+        const int N = getLocalSize(&x);
+        assert(N == getLocalSize(&pattern));
+        int fail = 0;
+
+        x.setToConstant(one);
+        pattern.setToConstant(one);
+        if (!x.matchesPattern(pattern)) fail++;
+
+        x.setToConstant(one);
+        pattern.setToConstant(one);
+        if (rank == 0) setElement(&pattern, N-1, 0);
+        if (x.matchesPattern(pattern)) fail++;
+
+        x.setToConstant(one);
+        pattern.setToConstant(one);
+        if (rank == 0) setElement(&x, N-1, 0);
+        if (!x.matchesPattern(pattern)) fail++;
+
+        printMessage(fail, __func__, rank);
+        return reduceReturn(fail, &x);
+    }
+
+    /*
+     * Checks that hiop correctly adjusts based on the
+     * hessian of the duals function
+     */
+    bool vectorAdjustDuals_plh(
+            hiop::hiopVector& z1,
+            hiop::hiopVector& z2,
+            hiop::hiopVector& x,
+            hiop::hiopVector& pattern,
+            const int rank)
+    {
+        const int N = getLocalSize(&z1);
+        assert(N == getLocalSize(&z2));
+        assert(N == getLocalSize(&x));
+        assert(N == getLocalSize(&pattern));
+
+        // z1 will adjust duals with it's method
+        z1.setToConstant(one);
+
+        // z2's duals will be adjusted by hand
+        z2.setToConstant(one);
+
+        x.setToConstant(two);
+        pattern.setToConstant(one);
+
+        static constexpr double mu = half;
+        static constexpr double kappa = half;
+        z1.adjustDuals_plh(
+                x,
+                pattern,
+                mu,
+                kappa);
+
+        double a, b;
+        for (int i=0; i<N; i++)
+        {
+            a = mu / getElement(&x, i);
+            b = a / kappa;
+            a *= kappa;
+            if      (getElement(&x, i) < b)     setElement(&z2, i, b);
+            else if (a <= b)                    setElement(&z2, i, b);
+            else if (a < getElement(&x, i))     setElement(&z2, i, a);
+        }
+
+        // the method's adjustDuals_plh should yield
+        // the same result as computing by hand
+        int fail = 0;
+        for (int i=0; i<N; i++)
+        {
+            fail += !isEqual(
+                    getElement(&z1, i),     // expected
+                    getElement(&z2, i));    // actual
+        }
+
+        printMessage(fail, __func__, rank);
+        return reduceReturn(fail, &x);
+    }
+
+    /*
+     * \exists e \in this s.t. isnan(e)
+     */
+    bool vectorIsnan(hiop::hiopVector& x, const int rank)
+    {
+        const int N = getLocalSize(&x);
+        int fail = 0;
+        x.setToConstant(zero);
+        if (x.isnan())
+            fail++;
+
+        if (rank == 0)
+            setElement(&x, N-1, NAN);
+        if (x.isnan() && rank != 0)
+            fail++;
+
+        printMessage(fail, __func__, rank);
+        return reduceReturn(fail, &x);
+    }
+
+    /*
+     * \exists e \in this s.t. isinf(e)
+     */
+    bool vectorIsinf(hiop::hiopVector& x, const int rank)
+    {
+        const int N = getLocalSize(&x);
+        int fail = 0;
+        x.setToConstant(zero);
+        if (x.isinf())
+            fail++;
+
+        if (rank == 0)
+            setElement(&x, N-1, INFINITY);
+        if (x.isinf() && rank != 0)
+            fail++;
+
+        printMessage(fail, __func__, rank);
+        return reduceReturn(fail, &x);
+    }
+
+    /*
+     * \forall e \in this, isfinite(e)
+     */
+    bool vectorIsfinite(hiop::hiopVector& x, const int rank)
+    {
+        const int N = getLocalSize(&x);
+        int fail = 0;
+        x.setToConstant(zero);
+        if (!x.isfinite())
+            fail++;
+
+        if (rank == 0)
+            setElement(&x, N-1, INFINITY);
+        if (!x.isfinite() && rank != 0)
+            fail++;
+
+        printMessage(fail, __func__, rank);
+        return reduceReturn(fail, &x);
+    }
+
 protected:
     // Interface to methods specific to vector implementation
     virtual void   setElement(hiop::hiopVector* x, int i, double val) = 0;
@@ -369,30 +1124,6 @@ protected:
     virtual double* getLocalData(hiop::hiopVector* x) = 0;
     virtual int verifyAnswer(hiop::hiopVector* x, double answer) = 0;
     virtual bool reduceReturn(int failures, hiop::hiopVector* x) = 0;
-
-    /// Returns true if two real numbers are equal within tolerance
-    bool isEqual(double a, double b)
-    {
-        return (std::abs(a - b) < eps);
-    }
-
-    /// Prints error output for each rank
-    void printMessage(int fail, const char* funcname, int rank)
-    {
-        if(fail != 0)
-        {
-            std::cout << "--- FAIL: Test " << funcname << " on rank " << rank << "\n";
-        }
-        else
-        {
-            if(rank == 0)
-            {
-                std::cout << "--- PASS: Test " << funcname << "\n";
-            }
-        }
-    }
-
 };
 
 } // namespace hiop::tests
-
