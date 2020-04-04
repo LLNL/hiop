@@ -63,7 +63,6 @@ hiopAlgFilterIPMBase::hiopAlgFilterIPMBase(hiopNlpFormulation* nlp_)
   nlp = nlp_;
   //force completion of the nlp's initialization
   nlp->finalizeInitialization();
-
   reloadOptions();
 
   it_curr = new hiopIterate(nlp);
@@ -95,13 +94,27 @@ hiopAlgFilterIPMBase::hiopAlgFilterIPMBase(hiopNlpFormulation* nlp_)
   
   dualsUpdateType = nlp->options->GetString("dualsUpdateType")=="lsq"?0:1;     //0 LSQ (default), 1 linear update (more stable)
   dualsInitializ = nlp->options->GetString("dualsInitialization")=="lsq"?0:1;  //0 LSQ (default), 1 set to zero
-  //parameter based initialization
-  if(dualsUpdateType==0) 
-    dualsUpdate = new hiopDualsLsqUpdate(nlp);
-  else if(dualsUpdateType==1)
-    dualsUpdate = new hiopDualsNewtonLinearUpdate(nlp);
-  else assert(false && "dualsUpdateType has an unrecognized value");
 
+  //check whether the nlp matches the dualsUpdateType value
+  
+  //parameter based initialization
+  if(dualsUpdateType==0) {
+    hiopNlpDenseConstraints* nlpd = dynamic_cast<hiopNlpDenseConstraints*>(nlp);
+    if(NULL==nlpd) {
+      dualsUpdateType = 1;
+      dualsInitializ = 1;
+      nlp->log->printf(hovWarning, "Option dualsUpdateType=lsq not compatible with the requested NLP formulation and will "
+		       "be set to dualsUpdateType=linear together with dualsInitialization=zero\n");
+    }
+  }
+  if(dualsUpdateType==0) {
+    dualsUpdate = new hiopDualsLsqUpdate(nlp);
+  } else if(dualsUpdateType==1) {
+    dualsUpdate = new hiopDualsNewtonLinearUpdate(nlp);
+  } else {
+    assert(false && "dualsUpdateType has an unrecognized value");
+  }
+  
   resetSolverStatus();
 }
 void hiopAlgFilterIPMBase::destructorPart() 
@@ -194,6 +207,17 @@ void hiopAlgFilterIPMBase::reInitializeNlpObjects()
   
   dualsUpdateType = nlp->options->GetString("dualsUpdateType")=="lsq"?0:1;     //0 LSQ (default), 1 linear update (more stable)
   dualsInitializ = nlp->options->GetString("dualsInitialization")=="lsq"?0:1;  //0 LSQ (default), 1 set to zero
+
+  if(dualsUpdateType==0) {
+    hiopNlpDenseConstraints* nlpd = dynamic_cast<hiopNlpDenseConstraints*>(nlp);
+    if(NULL==nlpd) {
+      dualsUpdateType = 1;
+      dualsInitializ = 1;
+      nlp->log->printf(hovWarning, "Option dualsUpdateType=lsq not compatible with the requested NLP formulation and will "
+		       "be set to dualsUpdateType=linear together with dualsInitialization=zero\n");
+    }
+  }
+  
   //parameter based initialization
   if(dualsUpdateType==0) 
     dualsUpdate = new hiopDualsLsqUpdate(nlp);
@@ -254,7 +278,7 @@ startingProcedure(hiopIterate& it_ini,
     it_ini.get_x()->setToZero();
     //assert(false); return false;
   }
-
+  
   nlp->runStats.tmSolverInternal.start();
   nlp->runStats.tmStartingPoint.start();
 
@@ -966,6 +990,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
   //hiopNlpFormulation nlp may need an update since user may have changed options and
   //reruning with the same hiopAlgFilterIPMNewton instance
   nlp->finalizeInitialization();
+
   //also reload options
   reloadOptions();
 
