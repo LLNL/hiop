@@ -91,22 +91,8 @@ hiopAlgFilterIPMBase::hiopAlgFilterIPMBase(hiopNlpFormulation* nlp_)
   
   resid = new hiopResidual(nlp);
   resid_trial = new hiopResidual(nlp);
-  
-  dualsUpdateType = nlp->options->GetString("dualsUpdateType")=="lsq"?0:1;     //0 LSQ (default), 1 linear update (more stable)
-  dualsInitializ = nlp->options->GetString("dualsInitialization")=="lsq"?0:1;  //0 LSQ (default), 1 set to zero
 
-  //check whether the nlp matches the dualsUpdateType value
-  
   //parameter based initialization
-  if(dualsUpdateType==0) {
-    hiopNlpDenseConstraints* nlpd = dynamic_cast<hiopNlpDenseConstraints*>(nlp);
-    if(NULL==nlpd) {
-      dualsUpdateType = 1;
-      dualsInitializ = 1;
-      nlp->log->printf(hovWarning, "Option dualsUpdateType=lsq not compatible with the requested NLP formulation and will "
-		       "be set to dualsUpdateType=linear together with dualsInitialization=zero\n");
-    }
-  }
   if(dualsUpdateType==0) {
     dualsUpdate = new hiopDualsLsqUpdate(nlp);
   } else if(dualsUpdateType==1) {
@@ -249,6 +235,17 @@ void hiopAlgFilterIPMBase::reloadOptions()
   dualsUpdateType = nlp->options->GetString("dualsUpdateType")=="lsq"?0:1;     //0 LSQ (default), 1 linear update (more stable)
   dualsInitializ = nlp->options->GetString("dualsInitialization")=="lsq"?0:1;  //0 LSQ (default), 1 set to zero
 
+  if(dualsUpdateType==0) {
+    hiopNlpDenseConstraints* nlpd = dynamic_cast<hiopNlpDenseConstraints*>(nlp);
+    if(NULL==nlpd) {
+      dualsUpdateType = 1;
+      dualsInitializ = 1;
+      //if(warnOnInconsistencies)
+      nlp->log->printf(hovWarning, "Option dualsUpdateType=lsq not compatible with the requested NLP formulation and will "
+		       "be set to dualsUpdateType=linear together with dualsInitialization=zero\n");
+    }
+  }
+  
   gamma_theta = 1e-5; //sufficient progress parameters for the feasibility violation
   gamma_phi=1e-5;     //and log barrier objective
   s_theta=1.1;        //parameters in the switch condition of 
