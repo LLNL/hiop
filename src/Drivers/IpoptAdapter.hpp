@@ -22,7 +22,8 @@
 #include <cassert>
 #include <cstring>
 using namespace Ipopt;
-using namespace hiop;
+
+namespace hiop {
 
 /* Addapts HiOp DenseConstraints interface to Ipopt TNLP interface */
 //TO DO: call eval_cons (and Jacob) separately for Eq and Ineq as per documentation of these methods
@@ -61,7 +62,7 @@ public:
     if(bSuccess) {
       types=new hiopInterfaceBase::NonlinearityType[m];
       bSuccess = hiopNLP->get_cons_info(mll, g_l, g_u, types);
-      delete types;
+      delete[] types;
     }
     return bSuccess;
   }
@@ -368,7 +369,7 @@ public:
 	  iRow[it] += n_eq;	
 
 	nnzit += nnz_sparse_Jacineq;
-	assert(nnzit<nele_jac);
+	assert(nnzit<=nele_jac);
 
 	for(int i=0; i<n_ineq; i++) {
 	  for(int j=0; j<nx_dense; j++) {
@@ -401,11 +402,11 @@ public:
 				      nnz_sparse_Jaceq, NULL, NULL, values,
 				      JacDeq->local_data());
 	if(!bret) return false;
-	nnzit += nnz_sparse_Jaceq; assert(nnzit<nele_jac);
+	nnzit += nnz_sparse_Jaceq; assert(nnzit<=nele_jac);
 
 	//the dense part
 	memcpy(values+nnzit, JacDeq->local_buffer(), n_eq*nx_dense*sizeof(double));
-	nnzit += n_eq*nx_dense; assert(nnzit<nele_jac);
+	nnzit += n_eq*nx_dense; assert(nnzit<=nele_jac);
       }
       //sparse Jac Ineq
       {
@@ -415,7 +416,7 @@ public:
 				      nnz_sparse_Jacineq, NULL, NULL, values+nnzit,
 				      JacDineq->local_data());
 	if(!bret) return false;
-	nnzit += nnz_sparse_Jacineq; assert(nnzit<nele_jac);
+	nnzit += nnz_sparse_Jacineq; assert(nnzit<=nele_jac);
 
 	//the dense part
 	memcpy(values+nnzit, JacDineq->local_buffer(), n_ineq*nx_dense*sizeof(double));
@@ -455,7 +456,7 @@ public:
 	}
       }
 #ifdef DEBUG
-      nnzit += nx_dense*nx_dense;
+      //nnzit += nx_dense*nx_dense;
       assert(nnzit==nele_hess);
 #endif
 
@@ -484,7 +485,7 @@ public:
 	}
       }
 #ifdef DEBUG
-      nnzit += nx_dense*nx_dense;
+      //nnzit += nx_dense*nx_dense;
       assert(nnzit==nele_hess);
 #endif
 
@@ -524,7 +525,7 @@ private:
   hiopMDS2IpoptTNLP(const hiopMDS2IpoptTNLP&) {};
   hiopMDS2IpoptTNLP& operator=(const hiopMDS2IpoptTNLP&);
   //@}
-
 };
 
+} //end of namespace hiop
 #endif
