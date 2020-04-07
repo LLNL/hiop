@@ -133,6 +133,10 @@ void hiopOptions::registerOptions()
   registerNumOption("acceptable_tolerance", 1e-6, 1e-14, 1e-1, "HiOp will terminate if the NLP residuals are below for 'acceptable_iterations' many consecutive iterations (default 1e-6)");   
   registerIntOption("acceptable_iterations", 10, 1, 1e6, "Number of iterations of acceptable tolerance after which HiOp terminates (default 10)");
 
+  {
+    vector<string> range(2); range[0] = "no"; range[1] = "yes";
+    registerStrOption("accept_every_trial_step", "no", range, "Disable line-search and take close-to-boundary step");
+  }
   registerNumOption("sigma0", 1., 0., 1e+7, "Initial value of the initial multiplier of the identity in the secant approximation (default 1.)");
   {
     vector<string> range(5); range[0]="sigma0"; range[1]="sty"; range[2]="sty_inv"; range[3]="snrm_ynrm";  range[4]="sty_srnm_ynrm";
@@ -149,8 +153,6 @@ void hiopOptions::registerOptions()
     registerNumOption("fixed_var_tolerance", 1e-15, 1e-30, 0.01, "A variable is considered fixed if |upp_bnd-low_bnd| < fixed_var_tolerance * max(abs(upp_bnd),1) (default 1e-15)");
 
     registerNumOption("fixed_var_perturb", 1e-8, 1e-14, 0.1, "Perturbation of the lower and upper bounds for fixed variables relative to its magnitude: lower/upper_bound -=/+= max(abs(upper_bound),1)*fixed_var_perturb (default 1e-8)");
-
-    
   }
 }
 

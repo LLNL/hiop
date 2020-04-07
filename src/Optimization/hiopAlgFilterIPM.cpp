@@ -977,6 +977,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
   //nlp->log->printf(hovSummary, "Iter[%d] -> full iterate -------------", iter_num); nlp->log->write("", *it_curr, hovSummary); 
 
   iter_num=0; nlp->runStats.nIter=iter_num;
+  bool disableLS = nlp->options->GetString("accept_every_trial_step")=="yes";
 
   theta_max=1e+4*fmax(1.0,resid->getInfeasInfNorm());
   theta_min=1e-4*fmax(1.0,resid->getInfeasInfNorm());
@@ -1090,8 +1091,10 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 
     bool grad_phi_dx_computed=false, iniStep=true; double grad_phi_dx;
     double infeas_nrm_trial=-1.; //this will cache the primal infeasibility norm for (reuse)use in the dual updating
-    //this is the linesearch loop
-    while(true) {
+    //
+    // linesearch loop
+    //
+    while(true) { 
       nlp->runStats.tmSolverInternal.start(); //---
 
       // check the step against the minimum step size, but accept small 
@@ -1118,6 +1121,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
       nlp->log->printf(hovLinesearch, "  trial point %d: alphaPrimal=%14.8e barier:(%22.16e)>%15.9e theta:(%22.16e)>%22.16e\n",
 		       lsNum, _alpha_primal, logbar->f_logbar, logbar->f_logbar_trial, theta, theta_trial);
 
+      if(disableLS) break;
       //let's do the cheap, "sufficient progress" test first, before more involved/expensive tests. 
       // This simple test is good enough when iterate is far away from solution
       if(theta>=theta_min) {
