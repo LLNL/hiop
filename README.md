@@ -68,9 +68,9 @@ If your NLP is structured, it may be beneficial to use HiOp. If your NLP is unst
 
 HiOp supports two input formats: `hiopInterfaceDenseConstraints` and `hiopInterfaceMDS`. Both formats are in the form of C++ interfaces (e.g., abstract classes), see [hiopInterface.hpp](src/Interface/hiopInterface.hpp) file, that the user must instantiate/implement and provide to HiOp.
 
-*`hiopInterfaceDenseConstraints` interface* supports NLPs with **billions** of variables with and without bounds but only limited number (<100) of general, equality and inequality constraints. The underlying algorithm is a limited-memory quasi-Newton interior-point method and generally scales well computationally (but it may not algorithmically) on thousands of core. This interface uses MPI for parallelization
+*`hiopInterfaceDenseConstraints` interface* supports NLPs with **billions** of variables with and without bounds but only limited number (<100) of general, equality and inequality constraints. The underlying algorithm is a limited-memory quasi-Newton interior-point method and generally scales well computationally (but it may not algorithmically) on thousands of cores. This interface uses MPI for parallelization
 
-*`hiopInterfaceMDS` interface* supports mixed dense-sparse NLPs and achive parallelization using GPUs. Limited speed-up can be obtained on multi-cores CPUs via multithreaded MKL. 
+*`hiopInterfaceMDS` interface* supports mixed dense-sparse NLPs and achives parallelization using GPUs. Limited speed-up can be obtained on multi-cores CPUs via multithreaded MKL. 
 
 More information on the HiOp interfaces are [here](src/Interface/README.md).
 
