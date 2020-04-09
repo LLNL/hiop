@@ -20,7 +20,7 @@ int main(int argc, char** argv)
 {
     int rank=0;
     int numRanks=1;
-    long long* partition = nullptr;
+    global_ordinal_type* partition = nullptr;
     MPI_Comm comm = MPI_COMM_NULL;
 
 #ifdef HIOP_USE_MPI
@@ -33,9 +33,9 @@ int main(int argc, char** argv)
         std::cout << "Running MPI enabled tests ...\n";
 #endif
 
-    long long Nlocal = 1000;
-    long long Nglobal = Nlocal*numRanks;
-    partition = new long long [numRanks + 1];
+    global_ordinal_type Nlocal = 1000;
+    global_ordinal_type Nglobal = Nlocal*numRanks;
+    partition = new global_ordinal_type [numRanks + 1];
     partition[0] = 0;
     for(int i = 1; i < numRanks + 1; ++i)
         partition[i] = i*Nlocal;

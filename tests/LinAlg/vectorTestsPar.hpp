@@ -17,11 +17,11 @@ public:
     virtual ~VectorTestsPar(){}
 
 private:
-    virtual void setElement(hiop::hiopVector* x, int i, double value);
-    virtual double getElement(const hiop::hiopVector* x, int i);
-    virtual int getLocalSize(const hiop::hiopVector* x);
-    virtual double* getLocalData(hiop::hiopVector* x);
-    virtual int verifyAnswer(hiop::hiopVector* x, double answer);
+    virtual void setElement(hiop::hiopVector* x, local_ordinal_type i, real_type value);
+    virtual real_type getElement(const hiop::hiopVector* x, local_ordinal_type i);
+    virtual local_ordinal_type getLocalSize(const hiop::hiopVector* x);
+    virtual real_type* getLocalData(hiop::hiopVector* x);
+    virtual int verifyAnswer(hiop::hiopVector* x, real_type answer);
     virtual bool reduceReturn(int failures, hiop::hiopVector* x);
 
 #ifdef HIOP_USE_MPI

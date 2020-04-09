@@ -11,10 +11,10 @@ public:
     virtual ~MatrixTestsDense(){}
 
 private:
-    virtual void setElement(hiop::hiopMatrix* a, int i, int j, double val);
-    virtual double getElement(hiop::hiopMatrix* a, int i, int j);
-    virtual int getNumLocRows(hiop::hiopMatrix* a);
-    virtual int getNumLocCols(hiop::hiopMatrix* a);
+    virtual void setElement(hiop::hiopMatrix* a, local_ordinal_type i, local_ordinal_type j, real_type val);
+    virtual real_type getElement(hiop::hiopMatrix* a, local_ordinal_type i, local_ordinal_type j);
+    virtual local_ordinal_type getNumLocRows(hiop::hiopMatrix* a);
+    virtual local_ordinal_type getNumLocCols(hiop::hiopMatrix* a);
 
 };
 
