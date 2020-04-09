@@ -140,10 +140,12 @@ install(FILES src/Interface/hiopInterface.hpp
 	      src/Optimization/hiopFilter.hpp
 	      src/Optimization/hiopHessianLowRank.hpp
 	      src/Optimization/hiopDualsUpdater.hpp
+	      src/Optimization/hiopKKTLinSys.hpp
 	      src/LinAlg/hiopVector.hpp
 	      src/LinAlg/hiopMatrix.hpp
 	      src/LinAlg/hiopMatrixSparseTriplet.hpp
 	      src/LinAlg/hiopMatrixSparseTripletStorage.hpp
+	      src/LinAlg/hiopMatrixMDS.hpp
 	      src/Utils/hiopRunStats.hpp
 	      src/Utils/hiopLogger.hpp
 	      src/Utils/hiopCSR_IO.hpp
