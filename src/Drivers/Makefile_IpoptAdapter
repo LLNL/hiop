@@ -3,8 +3,13 @@
 #
 # Makefile for HiOp's example driver for IpoptAdapter 
 # Based on IPOPT_DIR/Ipopt/examples/Cpp_example/Makefile
-# This file needs manual adaptations to your specific OS 
 #
+# This file needs manual adaptations to your specific OS 
+# The easiest way to do this is to copy Makefile generated
+# by Ipopt on your system and update the CHANGEME entries
+# HiOp include/ and lib/ directories need to be appended
+# to ADDINCFLAGS and LIBS, see below
+
 # Use as
 # > make -f Makefile_IpoptAdapter
 #
@@ -35,6 +40,7 @@ ADDLIBS =
 
 # CHANGEME: Additional flags for compilation (e.g., include flags)
 ADDINCFLAGS = -I/home/petra1/work/projects/hiop/_dist-DEBUG/include/
+#ADDINCFLAGS = -I/Users/petra1/work/projects/hiop/_dist-DEBUG/include/
 
 ##########################################################################
 #  Usually, you don't have to change anything below.  Note that if you   #
@@ -45,19 +51,24 @@ ADDINCFLAGS = -I/home/petra1/work/projects/hiop/_dist-DEBUG/include/
 CXX = g++
 
 # C++ Compiler options
-CXXFLAGS = -g -pipe -Wparentheses -Wreturn-type -Wcast-qual -Wall -Wpointer-arith -Wwrite-strings -Wconversion -Wno-unknown-pragmas -Wno-long-long -m64 -I/home/petra1/intel_mkl2019/compilers_and_libraries_2019.2.187/linux/mkl/include -fopenmp -fPIC -lgomp  -DIPOPT_BUILD 
+CXXFLAGS = -g -pipe -Wparentheses -Wreturn-type -Wcast-qual -Wall -Wpointer-arith -Wwrite-strings -Wconversion -Wno-unknown-pragmas -Wno-long-long -m64 -I/home/petra1/intel_mkl2019/compilers_and_libraries_2019.2.187/linux/mkl/include -fopenmp -fPIC -lgomp  -DIPOPT_BUILD
+# mac
+#CXXFLAGS = -g -pipe -Wparentheses -Wreturn-type -Wcast-qual -Wall -Wpointer-arith -Wwrite-strings -Wconversion -Wno-unknown-pragmas -Wno-long-long -m64 -I/home/petra1/intel_mkl2019/compilers_and_libraries_2019.2.187/linux/mkl/include -fPIC -DIPOPT_BUILD 
 
 # additional C++ Compiler options for linking
 CXXLINKFLAGS =  -Wl,--rpath -Wl,/home/petra1/work/projects/gocompet/Ipopt-gollnlp/build/lib
+#mac
+#CXXLINKFLAGS =  -Wl,-rpath -Wl,/Users/petra1/work/projects/go-compet/Ipopt-gollnlp/build/lib/
 
 # Include directories (we use the CYGPATH_W variables to allow compilation with Windows compilers)
 INCL = `PKG_CONFIG_PATH=/home/petra1/work/projects/gocompet/Ipopt-gollnlp/build/lib64/pkgconfig:/home/petra1/work/projects/gocompet/Ipopt-gollnlp/build/lib/pkgconfig:/home/petra1/work/projects/gocompet/Ipopt-gollnlp/build/share/pkgconfig:/home/petra1/intel_mkl2019/compilers_and_libraries_2019.2.187/linux/mkl/bin/pkgconfig:/home/petra1/intel_mkl2019/compilers_and_libraries_2019.2.187/linux/mkl/bin/pkgconfig pkg-config --cflags ipopt` $(ADDINCFLAGS)
-#INCL = -I`$(CYGPATH_W) /home/petra1/work/projects/gocompet/Ipopt-gollnlp/build/include/coin`  $(ADDINCFLAGS)
+#mac
+#INCL = -I`$(CYGPATH_W) /Users/petra1/work/projects/go-compet/Ipopt-gollnlp/build/include/coin`  -I/Users/petra1/work/projects/go-compet/Ipopt-gollnlp/build/include/coin/ThirdParty  -I/Users/petra1/work/projects/go-compet/Ipopt-gollnlp/build/include/coin/ThirdParty   $(ADDINCFLAGS)
 
 # Linker flags
 LIBS = `PKG_CONFIG_PATH=/home/petra1/work/projects/gocompet/Ipopt-gollnlp/build/lib64/pkgconfig:/home/petra1/work/projects/gocompet/Ipopt-gollnlp/build/lib/pkgconfig:/home/petra1/work/projects/gocompet/Ipopt-gollnlp/build/share/pkgconfig:/home/petra1/intel_mkl2019/compilers_and_libraries_2019.2.187/linux/mkl/bin/pkgconfig:/home/petra1/intel_mkl2019/compilers_and_libraries_2019.2.187/linux/mkl/bin/pkgconfig pkg-config --libs ipopt` -ldl /home/petra1/work/projects/hiop/_dist-DEBUG/lib/libhiop.a
-##LIBS = -link -libpath:`$(CYGPATH_W) /home/petra1/work/projects/gocompet/Ipopt-gollnlp/build/lib` libipopt.lib  -L/home/petra1/intel_mkl2019/compilers_and_libraries_2019.2.187/linux/mkl/lib/intel64 -Wl,--no-as-needed -lmkl_intel_lp64 -lmkl_gnu_thread -lmkl_core -lgomp -lpthread -lm -ldl -L/home/petra1/intel_mkl2019/compilers_and_libraries_2019.2.187/linux/mkl/lib/intel64 -Wl,--no-as-needed -lmkl_intel_lp64 -lmkl_gnu_thread -lmkl_core -lgomp -lpthread -lm -ldl  -L/usr/lib/gcc/x86_64-redhat-linux/4.8.5 -L/usr/lib/gcc/x86_64-redhat-linux/4.8.5/../../../../lib64 -L/lib/../lib64 -L/usr/lib/../lib64 -L/home/petra1/work/installs/intelmpi_install/compilers_and_libraries_2019.3.199/linux/mpi/intel64/libfabric/lib -L/home/petra1/intel_mkl2019/compilers_and_libraries_2019.2.187/linux/tbb/lib/intel64_lin/gcc4.7 -L/home/petra1/intel_mkl2019/compilers_and_libraries_2019.2.187/linux/compiler/lib/intel64_lin -L/home/petra1/intel_mkl2019/compilers_and_libraries_2019.2.187/linux/mkl/lib/intel64_lin -L/usr/lib/gcc/x86_64-redhat-linux/4.8.5/../../.. -lgfortran -lm -lgomp -lquadmath -lpthread -L/home/petra1/intel_mkl2019/compilers_and_libraries_2019.2.187/linux/mkl/lib/intel64 -Wl,--no-as-needed -lmkl_intel_lp64 -lmkl_gnu_thread -lmkl_core -lgomp -lpthread -lm -ldl  -L/usr/lib/gcc/x86_64-redhat-linux/4.8.5 -L/usr/lib/gcc/x86_64-redhat-linux/4.8.5/../../../../lib64 -L/lib/../lib64 -L/usr/lib/../lib64 -L/home/petra1/work/installs/intelmpi_install/compilers_and_libraries_2019.3.199/linux/mpi/intel64/libfabric/lib -L/home/petra1/intel_mkl2019/compilers_and_libraries_2019.2.187/linux/tbb/lib/intel64_lin/gcc4.7 -L/home/petra1/intel_mkl2019/compilers_and_libraries_2019.2.187/linux/compiler/lib/intel64_lin -L/home/petra1/intel_mkl2019/compilers_and_libraries_2019.2.187/linux/mkl/lib/intel64_lin -L/usr/lib/gcc/x86_64-redhat-linux/4.8.5/../../.. -lgfortran -lm -lgomp -lquadmath -lpthread -lm  
-#LIBS = -L/home/petra1/work/projects/gocompet/Ipopt-gollnlp/build/lib -lipopt  -L/home/petra1/intel_mkl2019/compilers_and_libraries_2019.2.187/linux/mkl/lib/intel64 -Wl,--no-as-needed -lmkl_intel_lp64 -lmkl_gnu_thread -lmkl_core -lgomp -lpthread -lm -ldl -L/home/petra1/intel_mkl2019/compilers_and_libraries_2019.2.187/linux/mkl/lib/intel64 -Wl,--no-as-needed -lmkl_intel_lp64 -lmkl_gnu_thread -lmkl_core -lgomp -lpthread -lm -ldl  -L/usr/lib/gcc/x86_64-redhat-linux/4.8.5 -L/usr/lib/gcc/x86_64-redhat-linux/4.8.5/../../../../lib64 -L/lib/../lib64 -L/usr/lib/../lib64 -L/home/petra1/work/installs/intelmpi_install/compilers_and_libraries_2019.3.199/linux/mpi/intel64/libfabric/lib -L/home/petra1/intel_mkl2019/compilers_and_libraries_2019.2.187/linux/tbb/lib/intel64_lin/gcc4.7 -L/home/petra1/intel_mkl2019/compilers_and_libraries_2019.2.187/linux/compiler/lib/intel64_lin -L/home/petra1/intel_mkl2019/compilers_and_libraries_2019.2.187/linux/mkl/lib/intel64_lin -L/usr/lib/gcc/x86_64-redhat-linux/4.8.5/../../.. -lgfortran -lm -lgomp -lquadmath -lpthread -L/home/petra1/intel_mkl2019/compilers_and_libraries_2019.2.187/linux/mkl/lib/intel64 -Wl,--no-as-needed -lmkl_intel_lp64 -lmkl_gnu_thread -lmkl_core -lgomp -lpthread -lm -ldl  -L/usr/lib/gcc/x86_64-redhat-linux/4.8.5 -L/usr/lib/gcc/x86_64-redhat-linux/4.8.5/../../../../lib64 -L/lib/../lib64 -L/usr/lib/../lib64 -L/home/petra1/work/installs/intelmpi_install/compilers_and_libraries_2019.3.199/linux/mpi/intel64/libfabric/lib -L/home/petra1/intel_mkl2019/compilers_and_libraries_2019.2.187/linux/tbb/lib/intel64_lin/gcc4.7 -L/home/petra1/intel_mkl2019/compilers_and_libraries_2019.2.187/linux/compiler/lib/intel64_lin -L/home/petra1/intel_mkl2019/compilers_and_libraries_2019.2.187/linux/mkl/lib/intel64_lin -L/usr/lib/gcc/x86_64-redhat-linux/4.8.5/../../.. -lgfortran -lm -lgomp -lquadmath -lpthread -lm  -ldl
+#mac
+#LIBS = -L/Users/petra1/work/projects/go-compet/Ipopt-gollnlp/build/lib -lipopt  -L/Users/petra1/work/projects/go-compet/Ipopt-gollnlp/build/lib -lcoinhsl -framework Accelerate -framework Accelerate -L/usr/local/Cellar/gcc/9.2.0_1/lib/gcc/9/gcc/x86_64-apple-darwin18/9.2.0 -L/usr/local/Cellar/gcc/9.2.0_1/lib/gcc/9/gcc/x86_64-apple-darwin18/9.2.0/../../.. -lgfortran -lSystem -lquadmath -lm  -L/Users/petra1/work/projects/go-compet/Ipopt-gollnlp/build/lib -lcoinmetis  -framework Accelerate -framework Accelerate -lm  -ldl /Users/petra1/work/projects/hiop/_dist-DEBUG/lib/libhiop.a
 
 # The following is necessary under cygwin, if native compilers are used
 CYGPATH_W = echo
