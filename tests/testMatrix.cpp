@@ -16,8 +16,8 @@ int main()
 //         printf("Support for MPI is enabled\n");
 // #endif
 
-    long long M = 10;  // rows
-    long long N = 100; // columns
+    global_ordinal_type M = 10;  // rows
+    global_ordinal_type N = 100; // columns
     int fail = 0;
 
     // Test dense matrix
@@ -28,9 +28,9 @@ int main()
         // Fill in dense matrix A with ones
         /// @warning m() in hiopMatrixDense() is shadowing m() in hiopMatrix!
         /// This is a temporary solution and needs to be rewritten!
-        double** data = A.local_data();
-        for(int i=0; i<A.m(); ++i)
-            for(int j=0; j<A.n(); ++j)
+        real_type** data = A.local_data();
+        for(global_ordinal_type i=0; i<A.m(); ++i)
+            for(global_ordinal_type j=0; j<A.n(); ++j)
                 data[i][j] = 1.0;
 
         fail += test.matrixNumRows(A, M);

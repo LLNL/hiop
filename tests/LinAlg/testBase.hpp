@@ -4,6 +4,10 @@
 #include <limits>
 #include <cmath>
 
+using real_type             = double;
+using local_ordinal_type    = int;
+using global_ordinal_type   = long long;
+
 namespace hiop::tests
 {
 
@@ -11,12 +15,13 @@ class TestBase
 {
 
 protected:
-    static constexpr double zero      = 0.0;
-    static constexpr double half      = 0.5;
-    static constexpr double one       = 1.0;
-    static constexpr double two       = 2.0;
-    static constexpr double eps       = 10*std::numeric_limits<double>::epsilon();
-    static constexpr int    SKIP_TEST = -1;
+    static constexpr real_type zero      = 0.0;
+    static constexpr real_type half      = 0.5;
+    static constexpr real_type one       = 1.0;
+    static constexpr real_type two       = 2.0;
+    static constexpr real_type eps =
+        10*std::numeric_limits<real_type>::epsilon();
+    static constexpr int SKIP_TEST = -1;
 
     // must be const pointer and const dest for
     // const string declarations to pass
@@ -29,7 +34,7 @@ protected:
 protected:
     /// Returns true if two real numbers are equal within tolerance
     [[nodiscard]] constexpr
-    bool isEqual(const double a, const double b)
+    bool isEqual(const real_type a, const real_type b)
     {
         return (std::abs(a - b) < eps);
     }
