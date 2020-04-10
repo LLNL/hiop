@@ -19,6 +19,8 @@
 #include "IpTNLP.hpp"
 #include "hiopInterface.hpp"
 
+#include "hiopMatrix.hpp"
+
 #include <cassert>
 #include <cstring>
 using namespace Ipopt;
@@ -330,11 +332,11 @@ public:
    *   2) The values of the jacobian (if "values" is not NULL)
    */
   bool eval_jac_g(Index n, const Number* x, bool new_x,
-                          Index m, Index nele_jac, Index* iRow, Index *jCol,
-                          Number* values) 
+		  Index m, Index nele_jac, Index* iRow, Index *jCol,
+		  Number* values) 
   {
     bool bret=true; long long nll=n, mll=m;
-
+    
     if(values==NULL) {
       int nnzit = 0;
       //Sparse Jac for Eq
@@ -447,9 +449,9 @@ public:
       nnzit += nnz_sparse_Hess_Lagr_SS;
       
       //dense part
-      for(int i=0; i<nx_dense; ++i) {
+      for(int i=0; i<nx_dense; i++) {
 	const int row = nx_sparse+i;
-	for(int j=0; j<=i; ++j) {
+	for(int j=i; j<nx_dense; j++) {
 	  iRow[nnzit] = row;
 	  jCol[nnzit] = nx_sparse+j;
 	  nnzit++;
@@ -479,7 +481,7 @@ public:
       
       //dense part
       for(int i=0; i<nx_dense; ++i) {
-	for(int j=0; j<=i; ++j) {
+	for(int j=i; j<nx_dense; ++j) {
 	  values[nnzit] = HessMat[i][j];
 	  nnzit++;
 	}
