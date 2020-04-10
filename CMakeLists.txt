@@ -209,6 +209,7 @@ install(FILES src/Interface/hiopInterface.hpp
               src/Utils/hiopKronReduction.hpp
 	      src/Interface/hiop_defs.hpp
 	      src/LinAlg/hiop_blasdefs.hpp
+	      src/Drivers/IpoptAdapter.hpp
         DESTINATION include)
 
 ##########################################################
