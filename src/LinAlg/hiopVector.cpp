@@ -152,7 +152,7 @@ void hiopVectorPar::copyFromStarting(int start_index_in_this, const double* v, i
 void hiopVectorPar::copyFromStarting(int start_index/*_in_src*/,const hiopVector& v_)
 {
 #ifdef HIOP_DEEPCHECKS
-  assert(n_local==n && "are you sure you want to call this?");
+  assert(n_local==n && "only for local/non-distributed vectors");
 #endif
   const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_);
   assert(start_index+v.n_local <= n_local);
@@ -164,7 +164,7 @@ void hiopVectorPar::startingAtCopyFromStartingAt(int start_idx_src,
 						 int start_idx_dest)
 {
 #ifdef HIOP_DEEPCHECKS
-  assert(n_local==n && "are you sure you want to call this?");
+  assert(n_local==n && "only for local/non-distributed vectors");
 #endif
   assert(start_idx_src>=0 && start_idx_src<this->n_local);
   const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_);
@@ -189,6 +189,9 @@ void hiopVectorPar::copyToStarting(int start_index, hiopVector& v_)
 /* Copy 'this' to v starting at start_index in 'v'. */
 void hiopVectorPar::copyToStarting(hiopVector& v_, int start_index/*_in_dest*/)
 {
+#ifdef HIOP_DEEPCHECKS
+  assert(n_local==n && "only for local/non-distributed vectors");
+#endif
   const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_);
   assert(start_index+n_local <= v.n_local);
   memcpy(v.data+start_index, data, n_local*sizeof(double)); 
@@ -200,9 +203,18 @@ void hiopVectorPar::copyToStarting(hiopVector& v_, int start_index/*_in_dest*/)
 void hiopVectorPar::
 startingAtCopyToStartingAt(int start_idx_in_src, hiopVector& dest_, int start_idx_dest, int num_elems/*=-1*/) const
 {
-  assert(start_idx_in_src>=0 && start_idx_in_src<this->n_local);
+#ifdef HIOP_DEEPCHECKS
+  assert(n_local==n && "only for local/non-distributed vectors");
+#endif  
+  assert(start_idx_in_src>=0 && start_idx_in_src<=this->n_local);
+#ifdef DEBUG  
+  if(start_idx_in_src==this->n_local) assert((num_elems==-1 || num_elems==0));
+#endif
   const hiopVectorPar& dest = dynamic_cast<hiopVectorPar&>(dest_);
-  assert(start_idx_dest>=0 && start_idx_dest<dest.n_local);
+  assert(start_idx_dest>=0 && start_idx_dest<=dest.n_local);
+#ifdef DEBUG  
+  if(start_idx_dest==dest.n_local) assert((num_elems==-1 || num_elems==0));
+#endif
   if(num_elems<0) {
     num_elems = std::min(this->n_local-start_idx_in_src, dest.n_local-start_idx_dest);
   } else {
