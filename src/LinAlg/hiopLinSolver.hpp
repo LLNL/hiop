@@ -161,21 +161,29 @@ public:
 
     //
     // Compute the inertia. Only negative eigenvalues are returned.
-    // Code originally written by M. Schanen, ANL for PIPS based on
+    // Code originally written by M. Schanenfor PIPS based on
     // LINPACK's dsidi Fortran routine (http://www.netlib.org/linpack/dsidi.f)
-    //
+    // 04/08/2020 - petra: fixed the test for non-positive pivots (was only for negative pivots)
     int negEigVal=0;
     double t=0;
     double** MM = M.get_M();
     for(int k=0; k<N; k++) {
+      //c       2 by 2 block
+      //c       use det (d  s)  =  (d/t * c - t) * t  ,  t = dabs(s)
+      //c               (s  c)
+      //c       to avoid underflow/overflow troubles.
+      //c       take two passes through scaling.  use  t  for flag.
       double d = MM[k][k];
-      if(ipiv[k] < 0) {
+      if(ipiv[k] <= 0) {
 	if(t==0) {
-	  t=fabs(MM[k+1][k]);
-	  d=(d/t) * MM[k+1][k+1]-t;
+	  assert(k+1<N);
+	  if(k+1<N) {
+	    t=fabs(MM[k][k+1]);
+	    d=(d/t) * MM[k+1][k+1]-t;
+	  }
 	} else {
 	  d=t;
-	  t=0;
+	  t=0.;
 	}
       }
       if(d<0) negEigVal++;
