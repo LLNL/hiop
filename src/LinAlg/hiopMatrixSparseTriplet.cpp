@@ -14,6 +14,11 @@ namespace hiop
 hiopMatrixSparseTriplet::hiopMatrixSparseTriplet(int rows, int cols, int nnz_)
   : nrows(rows), ncols(cols), nnz(nnz_), row_starts(NULL)
 {
+  if(rows==0 || cols==0) {
+    assert(nnz==0 && "number of nonzeros must be zero when any of the dimensions are 0");
+    nnz = 0;
+  }
+  
   iRow = new  int[nnz];
   jCol = new int[nnz];
   values = new double[nnz];
@@ -73,7 +78,7 @@ void hiopMatrixSparseTriplet::timesVec(double beta,  double* y,
  
 /** y = beta * y + alpha * this^T * x */
 void hiopMatrixSparseTriplet::transTimesVec(double beta,   hiopVector& y,
-                             	     double alpha,  const hiopVector& x ) const
+					    double alpha,  const hiopVector& x ) const
 {
   assert(x.get_size() == nrows);
   assert(y.get_size() == ncols);
@@ -351,15 +356,19 @@ addMDinvNtransToSymDeMatUTri(int row_dest_start, int col_dest_start,
 hiopMatrixSparseTriplet::RowStartsInfo* 
 hiopMatrixSparseTriplet::allocAndBuildRowStarts() const
 {
+  assert(nrows>=0);
 
   RowStartsInfo* rsi = new RowStartsInfo(nrows); assert(rsi);
+
+  if(nrows<=0) return rsi;
+  
   int it_triplet=0;
   rsi->idx_start[0]=0;
   for(int i=1; i<=this->nrows; i++) {
     
     rsi->idx_start[i]=rsi->idx_start[i-1];
     
-    while(this->iRow[it_triplet] == i-1) {
+    while(it_triplet<this->nnz && this->iRow[it_triplet]==i-1) {
 #ifdef HIOP_DEEPCHECKS
       if(it_triplet>=1) {
 	assert(iRow[it_triplet-1]<=iRow[it_triplet] && "row indexes are not sorted");
@@ -370,9 +379,6 @@ hiopMatrixSparseTriplet::allocAndBuildRowStarts() const
 #endif
       rsi->idx_start[i]++;
       it_triplet++;
-
-      if(it_triplet==this->nnz)
-	break;
     }
     assert(rsi->idx_start[i] == it_triplet);
   }
