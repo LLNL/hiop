@@ -66,7 +66,7 @@ hiopVectorPar::hiopVectorPar(const long long& glob_n, long long* col_part/*=NULL
   : comm(comm_)
 {
   n = glob_n;
-
+  assert(n>=0);
 #ifdef HIOP_USE_MPI
   // if this is a serial vector, make sure it has a valid comm in the mpi case
   if(comm==MPI_COMM_NULL) comm=MPI_COMM_SELF;
@@ -166,14 +166,17 @@ void hiopVectorPar::startingAtCopyFromStartingAt(int start_idx_src,
 #ifdef HIOP_DEEPCHECKS
   assert(n_local==n && "only for local/non-distributed vectors");
 #endif
-  assert(start_idx_src>=0 && start_idx_src<this->n_local);
+  assert((start_idx_src>=0 && start_idx_src<this->n_local) || this->n_local==0);
   const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_);
-  assert(start_idx_dest>=0 && start_idx_dest<v.n_local);
+  assert((start_idx_dest>=0 && start_idx_dest<v.n_local) || v.n_local==0);
 
   int howManyToCopy = this->n_local - start_idx_src;
-  
-  assert(howManyToCopy <= v.n_local-start_idx_dest);
-  howManyToCopy = howManyToCopy <= v.n_local-start_idx_dest ? howManyToCopy : v.n_local-start_idx_dest;
+  const int howManyToCopyDest = v.n_local-start_idx_dest;
+  assert(howManyToCopy <= howManyToCopyDest);
+  //howManyToCopy = howManyToCopy <= v.n_local-start_idx_dest ? howManyToCopy : v.n_local-start_idx_dest;
+  if(howManyToCopy > howManyToCopyDest) howManyToCopy = howManyToCopyDest;
+
+  assert(howManyToCopy>=0);
   memcpy(data+start_idx_src, v.data+start_idx_dest, howManyToCopy*sizeof(double));
 }
 
