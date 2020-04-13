@@ -75,6 +75,8 @@ public:
     Md->setToConstant(-1.0);
 
     _buf_y = new double[nd];
+
+    haveIneq = false;
   }
 
   virtual ~Ex4()
@@ -87,7 +89,7 @@ public:
   bool get_prob_sizes(long long& n, long long& m)
   { 
     n=2*ns+nd;
-    m=ns+3; 
+    m=ns+3*haveIneq; 
     return true; 
   }
 
@@ -118,17 +120,19 @@ public:
 
   bool get_cons_info(const long long& m, double* clow, double* cupp, NonlinearityType* type)
   {
-    assert(m==ns+3);
+    assert(m==ns+3*haveIneq);
     int i;
     //x+s - Md y = 0, i=1,...,ns
     for(i=0; i<ns; i++) clow[i] = cupp[i] = 0.;
 
-    // [-2  ]    [ x_1 + e^T s]   [e^T]      [ 2 ]
-    clow[i] = -2; cupp[i++] = 2.;
-    // [-inf] <= [ x_2        ] + [e^T] y <= [ 2 ]
-    clow[i] = -1e+20; cupp[i++] = 2.;
-    // [-2  ]    [ x_3        ]   [e^T]      [inf]
-    clow[i] = -2; cupp[i++] = 1e+20;
+    if(haveIneq) {
+      // [-2  ]    [ x_1 + e^T s]   [e^T]      [ 2 ]
+      clow[i] = -2; cupp[i++] = 2.;
+      // [-inf] <= [ x_2        ] + [e^T] y <= [ 2 ]
+      clow[i] = -1e+20; cupp[i++] = 2.;
+      // [-2  ]    [ x_3        ]   [e^T]      [inf]
+      clow[i] = -2; cupp[i++] = 1e+20;
+    }
     assert(i==m);
 
     for(i=0; i<m; ++i) type[i]=hiopNonlinear;
@@ -142,7 +146,7 @@ public:
     nx_sparse = 2*ns;
     nx_dense = nd;
     nnz_sparse_Jace = 2*ns;
-    nnz_sparse_Jaci = ns==0 ? 0 : 3+ns;
+    nnz_sparse_Jaci = (ns==0 || !haveIneq) ? 0 : 3+ns;
     nnz_sparse_Hess_Lagr_SS = 2*ns;
     nnz_sparse_Hess_Lagr_SD = 0.;
     return true;
@@ -178,7 +182,7 @@ public:
     const double* s = x+ns;
     const double* y = x+2*ns;
 
-    assert(num_cons==ns || num_cons==3);
+    assert(num_cons==ns || num_cons==3*haveIneq);
 
     bool isEq=false;
     for(int irow=0; irow<num_cons; irow++) {
@@ -187,7 +191,7 @@ public:
 	//equalities: x+s - Md y = 0
 	cons[con_idx] = x[con_idx] + s[con_idx];
 	isEq=true;
-      } else {
+      } else if(haveIneq) {
 	assert(con_idx<ns+3);
 	//inequality
 	const int conineq_idx=con_idx-ns;
@@ -239,10 +243,7 @@ public:
 		     const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
 		     double** JacD)
   {
-    //const double* s = x+ns;
-    //const double* y = x+2*ns;
-
-    assert(num_cons==ns || num_cons==3);
+    assert(num_cons==ns || num_cons==3*haveIneq);
 
     if(iJacS!=NULL && jJacS!=NULL) {
       int nnzit=0;
@@ -260,7 +261,7 @@ public:
 	  jJacS[nnzit] = con_idx+ns;
 	  nnzit++;
 
-	} else {
+	} else if(haveIneq) {
 	  //sparse Jacobian ineq w.r.t x and s
 	  if(con_idx-ns==0 && ns>0) {
 	    //w.r.t x_1
@@ -300,7 +301,7 @@ public:
 	 MJacS[nnzit] = 1.;
 	 nnzit++;
 	 
-       } else {
+       } else if(haveIneq) {
 	 //sparse Jacobian INEQ w.r.t x and s
 	 if(con_idx-ns==0 && ns>0) {
 	   //w.r.t x_1
@@ -332,7 +333,7 @@ public:
 	  isEq=true;
 	  assert(num_cons==ns);
 	  continue;
-	} else {
+	} else if(haveIneq) {
 	  //do an in place fill-in for the ineq Jacobian corresponding to e^T
 	  assert(con_idx-ns==0 || con_idx-ns==1 || con_idx-ns==2);
 	  assert(num_cons==3);
@@ -386,7 +387,7 @@ public:
   {
     
     assert(global_n==2*ns+nd); 
-    for(int i=0; i<global_n; i++) x0[i]=0.;
+    for(int i=0; i<global_n; i++) x0[i]=1.;
     return true;
   }
 
@@ -394,5 +395,6 @@ private:
   int ns, nd;
   hiop::hiopMatrixDense *Q, *Md;
   double* _buf_y;
+  bool haveIneq;
 };
 #endif
