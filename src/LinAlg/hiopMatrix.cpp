@@ -286,13 +286,14 @@ hiopMatrixDense* hiopMatrixDense::new_copy() const
 
 void hiopMatrixDense::setToZero()
 {
-  //for(int i=0; i<m_local; i++)
-  //  for(int j=0; j<n_local; j++)
-  //    M[i][j]=0.0;
   setToConstant(0.0);
 }
 void hiopMatrixDense::setToConstant(double c)
 {
+  if(!M[0]) {
+    assert(m_local==0);
+    return;
+  }
   double* buf=M[0]; 
   for(int j=0; j<n_local; j++) *(buf++)=c;
   
