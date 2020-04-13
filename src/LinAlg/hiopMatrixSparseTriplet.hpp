@@ -74,11 +74,12 @@ public:
 
   /* block of W += alpha * M * D^{-1} * transpose(N), where M=this 
    *
-   * Warning: The product matrix M * D^{-1} * transpose(N) with start offsets 'row_dest_start' and 'col_dest_start'
-   * needs to fit completely in the upper triangle of W. If this is NOT the case, the method will assert(false) 
-   * in debug; in release, the method will issue a warning with HIOP_DEEPCHECKS (otherwise NO warning will be issue)
-   * and will silently update the (strictly) lower triangular  elements (these are ignored later on 
-   * since only the upper triangular part of W will be accessed)
+   * Warning: The product matrix M * D^{-1} * transpose(N) with start offsets 'row_dest_start' and 
+   * 'col_dest_start' needs to fit completely in the upper triangle of W. If this is NOT the 
+   * case, the method will assert(false) in debug; in release, the method will issue a 
+   * warning with HIOP_DEEPCHECKS (otherwise NO warning will be issue) and will silently update 
+   * the (strictly) lower triangular  elements (these are ignored later on since only the upper 
+   * triangular part of W will be accessed)
    */
   virtual void addMDinvNtransToSymDeMatUTri(int row_dest_start, int col_dest_start, const double& alpha,
 					    const hiopVectorPar& D, const hiopMatrixSparseTriplet& N,
