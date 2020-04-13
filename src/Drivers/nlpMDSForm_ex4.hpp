@@ -40,12 +40,17 @@
  */
 class Ex4 : public hiop::hiopInterfaceMDS
 {
-public: 
+public:
   Ex4(int ns_)
+    : Ex4(ns_, ns_)
+  {
+  }
+  
+  Ex4(int ns_, int nd_)
     : ns(ns_)
   {
-    if(ns<=0) {
-      ns = 4;
+    if(ns<0) {
+      ns = 0;
     } else {
       if(4*(ns/4) != ns) {
 	ns = 4*((4+ns)/4);
@@ -53,7 +58,9 @@ public:
 	       ns_, ns); 
       }
     }
-    nd = ns;
+
+    if(nd_<0) nd=0;
+    else nd = nd_;
 
     Q  = new hiop::hiopMatrixDense(nd,nd);
     Q->setToConstant(1e-8);
@@ -86,7 +93,7 @@ public:
 
   bool get_vars_info(const long long& n, double *xlow, double* xupp, NonlinearityType* type)
   {
-    assert(n>=4 && "number of variables should be greater than 4 for this example");
+    //assert(n>=4 && "number of variables should be greater than 4 for this example");
     assert(n==2*ns+nd);
 
     //x
@@ -135,7 +142,7 @@ public:
     nx_sparse = 2*ns;
     nx_dense = nd;
     nnz_sparse_Jace = 2*ns;
-    nnz_sparse_Jaci = 1+ns+1+1;
+    nnz_sparse_Jaci = ns==0 ? 0 : 3+ns;
     nnz_sparse_Hess_Lagr_SS = 2*ns;
     nnz_sparse_Hess_Lagr_SD = 0.;
     return true;
@@ -143,10 +150,11 @@ public:
 
   bool eval_f(const long long& n, const double* x, bool new_x, double& obj_value)
   {
-    assert(ns>=4); assert(Q->n()==nd); assert(Q->m()==nd);
-    obj_value=x[0]*(x[0]-1.);
+    //assert(ns>=4);
+    assert(Q->n()==nd); assert(Q->m()==nd);
+    obj_value=0.;//x[0]*(x[0]-1.);
     //sum 0.5 {x_i*(x_{i}-1) : i=1,...,ns} + 0.5 y'*Qd*y + 0.5 s^T s
-    for(int i=1; i<ns; i++) obj_value += x[i]*(x[i]-1.);
+    for(int i=0; i<ns; i++) obj_value += x[i]*(x[i]-1.);
     obj_value *= 0.5;
 
     double term2=0.;
@@ -156,8 +164,8 @@ public:
     obj_value += 0.5*term2;
     
     const double* s=x+ns;
-    double term3=s[0]*s[0];
-    for(int i=1; i<ns; i++) term3 += s[i]*s[i];
+    double term3=0.;//s[0]*s[0];
+    for(int i=0; i<ns; i++) term3 += s[i]*s[i];
     obj_value += 0.5*term3;
 
     return true;
@@ -240,7 +248,7 @@ public:
       int nnzit=0;
       for(int itrow=0; itrow<num_cons; itrow++) {
 	const int con_idx = (int) idx_cons[itrow];
-	if(con_idx<ns) {
+	if(con_idx<ns && ns>0) {
 	  //sparse Jacobian eq w.r.t. x and s
 	  //x
 	  iJacS[nnzit] = con_idx;
@@ -254,7 +262,7 @@ public:
 
 	} else {
 	  //sparse Jacobian ineq w.r.t x and s
-	  if(con_idx-ns==0) {
+	  if(con_idx-ns==0 && ns>0) {
 	    //w.r.t x_1
 	    iJacS[nnzit] = 0;
 	    jJacS[nnzit] = 0;
@@ -266,11 +274,12 @@ public:
 	      nnzit++;
 	    }
 	  } else {
-	    assert(con_idx-ns==1 || con_idx-ns==2);
-	    //w.r.t x_2 or x_3
-	    iJacS[nnzit] = con_idx-ns;
-	    jJacS[nnzit] = con_idx-ns;
-	    nnzit++;
+	    if( (con_idx-ns==1 || con_idx-ns==2) && ns>0 ) {
+	      //w.r.t x_2 or x_3
+	      iJacS[nnzit] = con_idx-ns;
+	      jJacS[nnzit] = con_idx-ns;
+	      nnzit++;
+	    }
 	  }
 	}
       }
@@ -281,7 +290,7 @@ public:
      int nnzit=0;
      for(int itrow=0; itrow<num_cons; itrow++) {
        const int con_idx = (int) idx_cons[itrow];
-       if(con_idx<ns) {
+       if(con_idx<ns && ns>0) {
 	 //sparse Jacobian EQ w.r.t. x and s
 	 //x
 	 MJacS[nnzit] = 1.;
@@ -293,7 +302,7 @@ public:
 	 
        } else {
 	 //sparse Jacobian INEQ w.r.t x and s
-	 if(con_idx-ns==0) {
+	 if(con_idx-ns==0 && ns>0) {
 	   //w.r.t x_1
 	   MJacS[nnzit] = 1.;
 	   nnzit++;
@@ -303,10 +312,11 @@ public:
 	     nnzit++;
 	   }
 	 } else {
-	   assert(con_idx-ns==1 || con_idx-ns==2);
-	   //w.r.t x_2 or x_3
-	   MJacS[nnzit] = 1.;
-	   nnzit++;
+	   if( (con_idx-ns==1 || con_idx-ns==2) && ns>0) {
+	     //w.r.t x_2 or x_3
+	     MJacS[nnzit] = 1.;
+	     nnzit++;
+	   }
 	 }
        }
      }
