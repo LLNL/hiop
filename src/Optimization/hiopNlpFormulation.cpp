@@ -758,27 +758,27 @@ bool hiopNlpDenseConstraints::eval_Jac_c_d_interface_impl(double* x, bool new_x,
     log->printf(hovError, "[internal error] hiopNlpDenseConstraints NLP received an unexpected matrix\n");
     return false;
   }
-  
+
   double* x_user = nlp_transformations.applyTox(x, new_x);
   double** Jac_consde = cons_Jac_de->local_data();
-  double** Jac_user = nlp_transformations.applyToJacobIneq(Jac_consde, n_cons);
-  //!-^
+  double** Jac_user = nlp_transformations.applyToJacobCons(Jac_consde, n_cons);
+
   runStats.tmEvalJac_con.start();
-  bool bret = interface.eval_Jac_cons(nlp_transformations.n_post(),
-				      n_cons,
-				      x_user,
-				      new_x,
+  bool bret = interface.eval_Jac_cons(nlp_transformations.n_post(), n_cons,
+				      x_user, new_x,
 				      Jac_user);
-  runStats.tmEvalJac_con.stop();
-  runStats.nEvalJac_con_eq++;
-  runStats.nEvalJac_con_ineq++;
-  //!
-  Jac_consde = nlp_transformations.applyInvToJacobIneq(Jac_user, n_cons);
+  
+  Jac_consde = nlp_transformations.applyInvToJacobCons(Jac_user, n_cons);
   assert(cons_Jac_de->local_data() == Jac_consde &&
 	 "mismatch between Jacobian mem adress pre- and post-transformations should not happen");
 
+  Jac_cde->copyRowsFrom(*cons_Jac_, cons_eq_mapping, n_cons_eq);
+  Jac_dde->copyRowsFrom(*cons_Jac_, cons_ineq_mapping, n_cons_ineq);
   
-  
+  runStats.tmEvalJac_con.stop();
+  runStats.nEvalJac_con_eq++;
+  runStats.nEvalJac_con_ineq++;
+
   return bret;
 }
 
@@ -860,6 +860,7 @@ bool hiopNlpMDS::eval_Jac_c(double* x, bool new_x, hiopMatrix& Jac_c)
   assert(pJac_c);
   if(pJac_c) {
     double* x_user = nlp_transformations.applyTox(x, new_x);
+    //! todo -> need hiopNlpTransformation::applyToJacobXXX to work with MDS Jacobian
     //double** Jac_c_user = nlp_transformations.applyToJacobEq(Jac_c, n_cons_eq); //!
     
     runStats.tmEvalJac_con.start();
@@ -867,12 +868,15 @@ bool hiopNlpMDS::eval_Jac_c(double* x, bool new_x, hiopMatrix& Jac_c)
     int nnz = pJac_c->sp_nnz();
     bool bret = interface.eval_Jac_cons(n_vars, n_cons, 
 					n_cons_eq, cons_eq_mapping, 
-					x_user, new_x, pJac_c->n_sp(), pJac_c->n_de(), 
+					x_user, new_x,
+					pJac_c->n_sp(), pJac_c->n_de(), 
 					nnz, pJac_c->sp_irow(), pJac_c->sp_jcol(), pJac_c->sp_M(),
 					pJac_c->de_local_data());
 
-    runStats.tmEvalJac_con.stop(); runStats.nEvalJac_con_eq++;
+    //! todo -> need hiopNlpTransformation::applyInvToJacobXXX to work with MDS Jacobian
     //Jac_c = nlp_transformations.applyInvToJacobEq(Jac_c_user, n_cons_eq); //!
+    runStats.tmEvalJac_con.stop();
+    runStats.nEvalJac_con_eq++;
     return bret;
   } else {
     return false;
@@ -884,6 +888,7 @@ bool hiopNlpMDS::eval_Jac_d(double* x, bool new_x, hiopMatrix& Jac_d)
   assert(pJac_d);
   if(pJac_d) {
     double* x_user      = nlp_transformations.applyTox(x, new_x);
+    //! todo -> need hiopNlpTransformation::applyToJacobXXX to work with MDS Jacobian
     //double** Jac_d_user = nlp_transformations.applyToJacobIneq(Jac_d, n_cons_ineq);
     
     runStats.tmEvalJac_con.start();
@@ -891,14 +896,15 @@ bool hiopNlpMDS::eval_Jac_d(double* x, bool new_x, hiopMatrix& Jac_d)
     int nnz = pJac_d->sp_nnz();
     bool bret =  interface.eval_Jac_cons(n_vars, n_cons, 
 					 n_cons_ineq, cons_ineq_mapping, 
-					 x_user, new_x, pJac_d->n_sp(), pJac_d->n_de(), 
+					 x_user, new_x,
+					 pJac_d->n_sp(), pJac_d->n_de(), 
 					 nnz, pJac_d->sp_irow(), pJac_d->sp_jcol(), pJac_d->sp_M(),
 					 pJac_d->de_local_data());
 
-    runStats.tmEvalJac_con.stop(); runStats.nEvalJac_con_ineq++;
-    
+    //! todo -> need hiopNlpTransformation::applyInvToJacobXXX to work with MDS Jacobian
     //Jac_d = nlp_transformations.applyInvToJacobIneq(Jac_d_user, n_cons_ineq);
-
+    runStats.tmEvalJac_con.stop();
+    runStats.nEvalJac_con_ineq++;
     return bret;
   } else {
     return false;
@@ -918,25 +924,28 @@ bool hiopNlpMDS::eval_Jac_c_d_interface_impl(double* x,
       return false;
     
     double* x_user      = nlp_transformations.applyTox(x, new_x);
+    //! todo -> need hiopNlpTransformation::applyInvToJacobIneq to work with MDS Jacobian
     //double** Jac_d_user = nlp_transformations.applyToJacobIneq(Jac_d, n_cons_ineq);
     
     runStats.tmEvalJac_con.start();
   
     int nnz = pJac_d->sp_nnz();
     bool bret = interface.eval_Jac_cons(n_vars, n_cons, 
-				   x_user, new_x, pJac_d->n_sp(), pJac_d->n_de(), 
-				   nnz, cons_Jac->sp_irow(), cons_Jac->sp_jcol(), cons_Jac->sp_M(),
-				   cons_Jac->de_local_data());
-
+					x_user, new_x,
+					pJac_d->n_sp(), pJac_d->n_de(), 
+					nnz, cons_Jac->sp_irow(), cons_Jac->sp_jcol(), cons_Jac->sp_M(),
+					cons_Jac->de_local_data());
+    //! todo -> need hiopNlpTransformation::applyInvToJacobIneq to work with MDS Jacobian
+    //Jac_d = nlp_transformations.applyInvToJacobIneq(Jac_d_user, n_cons_ineq);
+    
     //copy back to Jac_c and Jac_d
-    //pJac_c->copyRowsFrom(*cons_Jac, cons_eq_mapping, n_cons_ineq);
+    pJac_c->copyRowsFrom(*cons_Jac, cons_eq_mapping, n_cons_eq);
+    pJac_d->copyRowsFrom(*cons_Jac, cons_ineq_mapping, n_cons_ineq);
     
     runStats.tmEvalJac_con.stop();
     runStats.nEvalJac_con_eq++;
     runStats.nEvalJac_con_ineq++;
     
-    //Jac_d = nlp_transformations.applyInvToJacobIneq(Jac_d_user, n_cons_ineq);
-
     return bret;
   } else {
     return false;
