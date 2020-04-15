@@ -260,15 +260,19 @@ public:
   virtual bool eval_Jac_c(double* x, bool new_x, double** Jac_c);
   virtual bool eval_Jac_d(double* x, bool new_x, double** Jac_d);
 protected:
-  //calls specific hiopInterfaceXXX::eval_Jac_cons and deals with specializations of hiopMatrix arguments
+  //calls specific hiopInterfaceXXX::eval_Jac_cons and deals with specializations of
+  //hiopMatrix arguments
   virtual bool eval_Jac_c_d_interface_impl(double* x, bool new_x, hiopMatrix& Jac_c, hiopMatrix& Jac_d);
 public:
-  virtual bool eval_Hess_Lagr(const double* x, bool new_x, const double& obj_factor, 
-			      const double* lambda_eq, const double* lambda_ineq, bool new_lambda, 
+  virtual bool eval_Hess_Lagr(const double* x,
+			      bool new_x,
+			      const double& obj_factor, 
+			      const double* lambda_eq,
+			      const double* lambda_ineq,
+			      bool new_lambda, 
 			      hiopMatrix& Hess_L)
   {
     //silently ignore the call since we're in the quasi-Newton case
-    //assert(false && "this NLP formulation is only for Quasi-Newton");
     return true;
   }
 
@@ -309,56 +313,23 @@ public:
     delete _buf_lambda;
   }
 
-  virtual bool finalizeInitialization()
-  {
-    if(!interface.get_sparse_dense_blocks_info(nx_sparse, nx_dense,
-					       nnz_sparse_Jaceq, nnz_sparse_Jacineq,
-					       nnz_sparse_Hess_Lagr_SS, 
-					       nnz_sparse_Hess_Lagr_SD)) {
-      return false;
-    }
-    assert(0==nnz_sparse_Hess_Lagr_SD);
-    return hiopNlpFormulation::finalizeInitialization();
-  }
+  virtual bool finalizeInitialization();
 
-  virtual bool eval_Jac_c(double* x, bool new_x, hiopMatrix& Jac_c)
-  {
-    hiopMatrixMDS* pJac_c = dynamic_cast<hiopMatrixMDS*>(&Jac_c);
-    assert(pJac_c);
-    if(pJac_c) {
-      int nnz = pJac_c->sp_nnz();
-      return interface.eval_Jac_cons(n_vars, n_cons, 
-				     n_cons_eq, cons_eq_mapping, 
-				     x, new_x, pJac_c->n_sp(), pJac_c->n_de(), 
-				     nnz, pJac_c->sp_irow(), pJac_c->sp_jcol(), pJac_c->sp_M(),
-				     pJac_c->de_local_data());
-    } else {
-      return false;
-    }
-  }
-  virtual bool eval_Jac_d(double* x, bool new_x, hiopMatrix& Jac_d)
-  {
-    hiopMatrixMDS* pJac_d = dynamic_cast<hiopMatrixMDS*>(&Jac_d);
-    assert(pJac_d);
-    if(pJac_d) {
-      int nnz = pJac_d->sp_nnz();
-      return interface.eval_Jac_cons(n_vars, n_cons, 
-				     n_cons_ineq, cons_ineq_mapping, 
-				     x, new_x, pJac_d->n_sp(), pJac_d->n_de(), 
-				     nnz, pJac_d->sp_irow(), pJac_d->sp_jcol(), pJac_d->sp_M(),
-				     pJac_d->de_local_data());
-    } else {
-      return false;
-    }
-  }
+  virtual bool eval_Jac_c(double* x, bool new_x, hiopMatrix& Jac_c);
+  virtual bool eval_Jac_d(double* x, bool new_x, hiopMatrix& Jac_d);
+
 
 protected:
   //calls specific hiopInterfaceXXX::eval_Jac_cons and deals with specializations of hiopMatrix arguments
   virtual bool eval_Jac_c_d_interface_impl(double* x, bool new_x, hiopMatrix& Jac_c, hiopMatrix& Jac_d);
 public:
-  virtual bool eval_Hess_Lagr(const double* x, bool new_x, const double& obj_factor,
-		      const double* lambda_eq, const double* lambda_ineq, bool new_lambdas,
-		      hiopMatrix& Hess_L);
+  virtual bool eval_Hess_Lagr(const double* x,
+			      bool new_x,
+			      const double& obj_factor,
+			      const double* lambda_eq,
+			      const double* lambda_ineq,
+			      bool new_lambdas,
+			      hiopMatrix& Hess_L);
   
   virtual hiopMatrix* alloc_Jac_c() 
   {
