@@ -175,7 +175,7 @@ public:
     return true;
   }
 
-  bool eval_cons(const long long& n, const long long& m, 
+  virtual bool eval_cons(const long long& n, const long long& m, 
 			 const long long& num_cons, const long long* idx_cons,  
 			 const double* x, bool new_x, double* cons)
   {
@@ -236,12 +236,13 @@ public:
     return true;
   }
  
-  bool eval_Jac_cons(const long long& n, const long long& m, 
-		     const long long& num_cons, const long long* idx_cons,
-		     const double* x, bool new_x,
-		     const long long& nsparse, const long long& ndense, 
-		     const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
-		     double** JacD)
+  virtual bool
+  eval_Jac_cons(const long long& n, const long long& m, 
+		const long long& num_cons, const long long* idx_cons,
+		const double* x, bool new_x,
+		const long long& nsparse, const long long& ndense, 
+		const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
+		double** JacD)
   {
     assert(num_cons==ns || num_cons==3*haveIneq);
 
@@ -385,16 +386,188 @@ public:
   
   bool get_starting_point(const long long& global_n, double* x0)
   {
-    
     assert(global_n==2*ns+nd); 
     for(int i=0; i<global_n; i++) x0[i]=1.;
     return true;
   }
 
-private:
+protected:
   int ns, nd;
   hiop::hiopMatrixDense *Q, *Md;
   double* _buf_y;
   bool haveIneq;
 };
+
+class Ex4OneCallCons : public Ex4
+{
+public:
+  Ex4OneCallCons(int ns_in)
+    : Ex4(ns_in)
+  {
+  }
+  
+  Ex4OneCallCons(int ns_in, int nd_in)
+    : Ex4(ns_in, nd_in)
+  {
+  }
+  
+  virtual ~Ex4OneCallCons()
+  {
+  }
+
+  bool eval_cons(const long long& n, const long long& m, 
+		 const long long& num_cons, const long long* idx_cons,  
+		 const double* x, bool new_x, double* cons)
+  {
+    //return false so that HiOp will rely on the on-call constraint evaluator defined below
+    return false;
+  }
+  /** all constraints evaluated in here */
+  bool eval_cons(const long long& n, const long long& m, 
+		 const double* x, bool new_x, double* cons)
+  {
+    assert(3*haveIneq+ns == m);
+    const double* s = x+ns;
+    const double* y = x+2*ns;
+
+    for(int con_idx=0; con_idx<m; ++con_idx) {
+      if(con_idx<ns) {
+	//equalities
+	cons[con_idx] = x[con_idx]+s[con_idx];
+      } else if(haveIneq) {
+	//inequalties
+	assert(con_idx<ns+3);
+	if(con_idx==ns) {
+	  cons[con_idx] = x[0];
+	  for(int i=0; i<ns; i++) cons[con_idx] += s[i];
+	  for(int i=0; i<nd; i++) cons[con_idx] += y[i];
+
+	} else if(con_idx==ns+1) {
+	  cons[con_idx] = x[1];
+	  for(int i=0; i<nd; i++) cons[con_idx] += y[i];
+	} else if(con_idx==ns+2) {
+	  cons[con_idx] = x[2];
+	  for(int i=0; i<nd; i++) cons[con_idx] += y[i];
+	} else { assert(false); }
+      }
+    }
+    return true;
+  }
+
+  virtual bool
+  eval_Jac_cons(const long long& n, const long long& m, 
+		const long long& num_cons, const long long* idx_cons,
+		const double* x, bool new_x,
+		const long long& nsparse, const long long& ndense, 
+		const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
+		double** JacD)
+  {
+    return false; // so that HiOp will call the one-call full-Jacob function below
+  }
+
+  virtual bool
+  eval_Jac_cons(const long long& n, const long long& m, 
+		const double* x, bool new_x,
+		const long long& nsparse, const long long& ndense, 
+		const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
+		double** JacD)
+  {
+    assert(m==ns+3*haveIneq);
+
+    if(iJacS!=NULL && jJacS!=NULL) {
+      int nnzit=0;
+      for(int con_idx=0; con_idx<ns; ++con_idx) {
+	//sparse Jacobian eq w.r.t. x and s
+	//x
+	iJacS[nnzit] = con_idx;
+	jJacS[nnzit] = con_idx;
+	nnzit++;
+	
+	//s
+	iJacS[nnzit] = con_idx;
+	jJacS[nnzit] = con_idx+ns;
+	nnzit++;
+      }
+      if(haveIneq) {
+	for(int con_idx=ns; con_idx<m; ++con_idx) {
+
+	  //sparse Jacobian ineq w.r.t x and s
+	  if(con_idx==ns) {
+	    //w.r.t x_1
+	    iJacS[nnzit] = 0;
+	    jJacS[nnzit] = 0;
+	    nnzit++;
+	    //w.r.t s
+	    for(int i=0; i<ns; i++) {
+	      iJacS[nnzit] = 0;
+	      jJacS[nnzit] = ns+i;
+	      nnzit++;
+	    }
+	  } else {
+	    if(con_idx-ns==1 || con_idx-ns==2) {
+	      //w.r.t x_2 or x_3
+	      iJacS[nnzit] = con_idx-ns;
+	      jJacS[nnzit] = con_idx-ns;
+	      nnzit++;
+	    } else { assert(false); }
+	  }
+	}
+      }
+      assert(nnzit==nnzJacS);
+    }
+    //values for sparse Jacobian if requested by the solver
+    if(MJacS!=NULL) {
+      int nnzit=0;
+      for(int con_idx=0; con_idx<ns; ++con_idx) {
+	//sparse Jacobian EQ w.r.t. x and s
+	//x
+	MJacS[nnzit] = 1.;
+	nnzit++;
+	
+	//s
+	MJacS[nnzit] = 1.;
+	nnzit++;
+	
+      }
+      
+      if(haveIneq) {
+	for(int con_idx=ns; con_idx<m; ++con_idx) {
+	  //sparse Jacobian INEQ w.r.t x and s
+	  if(con_idx-ns==0) {
+	    //w.r.t x_1
+	    MJacS[nnzit] = 1.;
+	    nnzit++;
+	    //w.r.t s
+	    for(int i=0; i<ns; i++) {
+	      MJacS[nnzit] = 1.;
+	      nnzit++;
+	    }
+	  } else {
+	    if(con_idx-ns==1 || con_idx-ns==2) {
+	      //w.r.t x_2 or x_3
+	      MJacS[nnzit] = 1.;
+	      nnzit++;
+	    } else { assert(false); }
+	  }
+	}
+      }
+      assert(nnzit==nnzJacS);
+    }
+    
+    //dense Jacobian w.r.t y
+    if(JacD!=NULL) {
+      //just copy the dense Jacobian corresponding to equalities
+      memcpy(JacD[0], Md->local_buffer(), ns*nd*sizeof(double));
+      
+      if(haveIneq) {
+	assert(ns+3 == m);
+	//do an in place fill-in for the ineq Jacobian corresponding to e^T
+	for(int i=0; i<3*nd; ++i)
+	  JacD[ns][i] = 1.;
+      }
+    }
+    return true;
+  }
+};
+
 #endif
