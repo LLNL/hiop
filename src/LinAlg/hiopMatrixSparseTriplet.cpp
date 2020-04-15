@@ -386,7 +386,9 @@ hiopMatrixSparseTriplet::allocAndBuildRowStarts() const
   return rsi;
 }
 
-void hiopMatrixSparseTriplet::copyRowsFrom(const hiopMatrix& src_gen, const int* rows_idxs, int n_rows)
+void hiopMatrixSparseTriplet::copyRowsFrom(const hiopMatrix& src_gen,
+					   const long long* rows_idxs,
+					   long long n_rows)
 {
   auto src = dynamic_cast<const hiopMatrixSparseTriplet&>(src_gen);
   assert(this->m() == n_rows);
@@ -400,6 +402,7 @@ void hiopMatrixSparseTriplet::copyRowsFrom(const hiopMatrix& src_gen, const int*
   int nnz_src = src.numberOfNonzeros();
   int itnz_src=0;
   int itnz_dest=0;
+  //int iterators should suffice
   for(int row_dest=0; row_dest<n_rows; ++row_dest) {
     const int& row_src = rows_idxs[row_dest];
 

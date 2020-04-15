@@ -90,7 +90,9 @@ namespace hiop
     }
   }
 
-  void hiopMatrixComplexDense::copyRowsFrom(const hiopMatrix& src_gen, const int* rows_idxs, int n_rows)
+  void hiopMatrixComplexDense::copyRowsFrom(const hiopMatrix& src_gen,
+					    const long long* rows_idxs,
+					    long long n_rows)
   {
     const hiopMatrixComplexDense& src = dynamic_cast<const hiopMatrixComplexDense&>(src_gen);
     assert(n_global==src.n_global);
@@ -99,6 +101,8 @@ namespace hiop
     assert(n_rows == m_local);
     
     // todo //! opt - copy multiple consecutive rows at once ?!?
+
+    //int i should suffice for this container
     for(int i=0; i<n_rows; ++i) {
       memcpy(M[i], src.M[rows_idxs[i]], n_local*sizeof(std::complex<double>));
     }

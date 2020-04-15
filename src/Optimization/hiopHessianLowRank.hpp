@@ -315,7 +315,7 @@ public:
     return 0.;
   }
 
-  void copyRowsFrom(const hiopMatrix& src_in, const int* rows_idxs, int n_rows)
+  void copyRowsFrom(const hiopMatrix& src_in, const long long* rows_idxs, long long n_rows)
   {
     assert(false && "not needed / should not be used");
   }

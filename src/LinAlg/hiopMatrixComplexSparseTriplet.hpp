@@ -30,7 +30,7 @@ namespace hiop
     virtual void setToConstant(double c);
     virtual void setToConstant(std::complex<double> c);
 
-    void copyRowsFrom(const hiopMatrix& src, const int* rows_idxs, int n_rows)
+    void copyRowsFrom(const hiopMatrix& src, const long long* rows_idxs, long long n_rows)
     {
       assert(false && "not yet implemented");
     }

@@ -155,7 +155,7 @@ public:
    * 2. 'src' and 'this' must have same number of columns
    * 3. number of rows in 'src' must be at least the number of rows in 'this'
    */
-  virtual void copyRowsFrom(const hiopMatrix& src, const int* rows_idxs, int n_rows) = 0;
+  virtual void copyRowsFrom(const hiopMatrix& src, const long long* rows_idxs, long long n_rows) = 0;
  
   virtual double max_abs_value() = 0;
 
@@ -280,7 +280,7 @@ public:
    * 2. 'src' and 'this' must have same number of columns
    * 3. number of rows in 'src' must be at least the number of rows in 'this'
    */
-  void copyRowsFrom(const hiopMatrix& src_gen, const int* rows_idxs, int n_rows);
+  void copyRowsFrom(const hiopMatrix& src_gen, const long long* rows_idxs, long long n_rows);
   
   /* copies 'src' into this as a block starting at (i_block_start,j_block_start) */
   void copyBlockFromMatrix(const long i_block_start, const long j_block_start,

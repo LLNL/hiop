@@ -168,7 +168,7 @@ void hiopMatrixDense::copyRowsFrom(const hiopMatrixDense& src, int num_rows, int
     memcpy(M[row_dest], src.M[0], n_local*num_rows*sizeof(double));
 }
 
-void hiopMatrixDense::copyRowsFrom(const hiopMatrix& src_gen, const int* rows_idxs, int n_rows)
+void hiopMatrixDense::copyRowsFrom(const hiopMatrix& src_gen, const long long* rows_idxs, long long n_rows)
 {
   const hiopMatrixDense& src = dynamic_cast<const hiopMatrixDense&>(src_gen);
   assert(n_global==src.n_global);
@@ -176,7 +176,10 @@ void hiopMatrixDense::copyRowsFrom(const hiopMatrix& src_gen, const int* rows_id
   assert(n_rows<=src.m_local);
   assert(n_rows == m_local);
 
-  // todo //! opt
+  // todo //! opt -> copy multiple (consecutive rows at the time -> maybe keep blocks of eq and ineq,
+  //instead of indexes)
+
+  //int i should suffice for dense matrices
   for(int i=0; i<n_rows; ++i) {
     memcpy(M[i], src.M[rows_idxs[i]], n_local*sizeof(double));
   }

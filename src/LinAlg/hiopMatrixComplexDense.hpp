@@ -34,7 +34,7 @@ namespace hiop
      * 2. 'src' and 'this' must have same number of columns
      * 3. number of rows in 'src' must be at least the number of rows in 'this'
      */
-    void copyRowsFrom(const hiopMatrix& src, const int* rows_idxs, int n_rows);
+    void copyRowsFrom(const hiopMatrix& src, const long long* rows_idxs, long long n_rows);
     
     virtual void timesVec(double beta,  hiopVector& y,
 			  double alpha, const hiopVector& x) const
