@@ -260,6 +260,17 @@ public:
 			     const long long& num_cons, const long long* idx_cons,  
 			     const double* x, bool new_x,
 			     double** Jac) = 0;
+  /** Evaluates the Jacobian of equality and inequality constraints in one call. 
+   *
+   * The main difference from the above 'eval_Jac_cons' is that the implementer/user of this 
+   * method does not have to split the constraints into equalities and inequalities; instead,
+   * HiOp does this internally.
+   */
+  virtual bool eval_Jac_cons(const long long& n, const long long& m, 
+			     const double* x, bool new_x,
+			     double** Jac) { return false; }
+
+  
 };
 
 /** Specialized interface for NLPs having mixed DENSE and sparse (MDS) blocks in the 
