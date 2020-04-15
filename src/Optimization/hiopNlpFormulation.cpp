@@ -122,7 +122,8 @@ hiopNlpFormulation::hiopNlpFormulation(hiopInterfaceBase& interface_)
 #ifdef HIOP_USE_MPI
   vec_distrib=NULL;
 #endif
-
+  cons_eval_type_ = -1;
+  cons_body_ = NULL;
 }
 
 hiopNlpFormulation::~hiopNlpFormulation()
@@ -156,6 +157,7 @@ hiopNlpFormulation::~hiopNlpFormulation()
   //  int nret=MPI_Finalize(); assert(MPI_SUCCESS==nret);
   //}
 #endif
+  delete[] cons_body_;
 }
 
 bool hiopNlpFormulation::finalizeInitialization()
@@ -504,13 +506,64 @@ bool hiopNlpFormulation::eval_d(double*x, bool new_x, double* d)
   double* dd = d;//nlp_transformations.applyToCons(d, n_cons_ineq); //not needed for now
 
   runStats.tmEvalCons.start();
-  bool bret = interface_base.eval_cons(nlp_transformations.n_post(),n_cons,n_cons_ineq,cons_ineq_mapping,xx,new_x,dd);
+  bool bret = interface_base.eval_cons(nlp_transformations.n_post(),
+				       n_cons, n_cons_ineq, cons_ineq_mapping,
+				       xx, new_x, dd);
   runStats.tmEvalCons.stop(); runStats.nEvalCons_ineq++;
 
   //d = nlp_transformations.applyInvToCons(d, n_cons_ineq); //not needed for now
   return bret;
 }
 
+bool hiopNlpFormulation::eval_c_d(double*x, bool new_x, double* c, double* d)
+{
+  bool do_eval_c = true;
+  if(-1 == cons_eval_type_) {
+    assert(cons_body_ == NULL);
+    if(!eval_c(x, new_x, c)) {
+      //test if eval_d also fails; this means we should use one-call constraints/Jacobian evaluation
+      if(!eval_d(x, new_x, d)) {
+	cons_eval_type_ = 1;
+	cons_body_ = new double[n_cons];
+      } else {
+	cons_eval_type_ = 0;
+	return false;
+      }
+    } else {
+      cons_eval_type_ = 0;
+      do_eval_c = false;
+    }
+  }
+
+  if(0 == cons_eval_type_) {
+    if(do_eval_c) if(!eval_c(x, new_x, c)) { return false; }
+    if(!eval_d(x, new_x, d)) { return false; }
+    return true;
+  } else {
+    assert(1 == cons_eval_type_);
+    assert(cons_body_ != NULL);
+
+    double* xx = nlp_transformations.applyTox(x, new_x);
+    double* body = cons_body_;//nlp_transformations.applyToCons(d, n_cons_ineq); //not needed for now
+
+    runStats.tmEvalCons.start();
+    bool bret = interface_base.eval_cons(nlp_transformations.n_post(),
+					 n_cons, 
+					 xx, new_x, body);
+    //copy back to c and d
+    for(int i=0; i<n_cons_eq; ++i) {
+      c[i] = body[cons_eq_mapping[i]];
+    }
+    for(int i=0; i<n_cons_ineq; ++i) {
+      d[i] = body[cons_ineq_mapping[i]];
+    }
+    
+    runStats.tmEvalCons.stop(); runStats.nEvalCons_ineq++;
+    
+    //d = nlp_transformations.applyInvToCons(d, n_cons_ineq); //not needed for now
+    return bret;
+  }
+}
 void hiopNlpFormulation::print(FILE* f, const char* msg, int rank) const
 {
    int myrank=0; 

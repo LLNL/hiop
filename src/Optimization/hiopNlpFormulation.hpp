@@ -90,14 +90,20 @@ public:
 
   virtual bool finalizeInitialization();
 
-  /* wrappers for the interface calls. Can be overridden for specialized formulations required by the algorithm */
+  /* wrappers for the interface calls. Can be overridden for specialized formulations required 
+   * by the algorithm 
+   */
   virtual bool eval_f(double* x, bool new_x, double& f);
   virtual bool eval_grad_f(double* x, bool new_x, double* gradf);
+  
   virtual bool eval_c(double* x, bool new_x, double* c);
   virtual bool eval_d(double* x, bool new_x, double* d);
+  virtual bool eval_c_d(double* x, bool new_x, double* c, double* d);
   /* the implementation of the next two methods depends both on the interface and on the formulation */
   virtual bool eval_Jac_c(double* x, bool new_x, hiopMatrix& Jac_c)=0;
   virtual bool eval_Jac_d(double* x, bool new_x, hiopMatrix& Jac_d)=0;
+  virtual bool eval_Jac_c_d(double* x, bool new_x, hiopMatrix& Jac_c, hiopMatrix& Jac_d);
+  
   virtual bool eval_Hess_Lagr(const double* x, bool new_x, 
 			      const double& obj_factor,  
 			      const double* lambda_eq, 
@@ -132,9 +138,11 @@ public:
     const hiopVectorPar& zu = dynamic_cast<const hiopVectorPar&>(z_U);
     assert(xp.get_size()==n_vars);
     assert(c.get_size()+d.get_size()==n_cons);
-    //!petra: to do: assemble (c,d) into cons and (yc,yd) into lambda based on cons_eq_mapping and cons_ineq_mapping
+    //!petra: to do: assemble (c,d) into cons and (yc,yd) into lambda based on cons_eq_mapping
+    // and cons_ineq_mapping
     interface_base.solution_callback(status, 
-				     (int)n_vars, xp.local_data_const(), zl.local_data_const(), zu.local_data_const(),
+				     (int)n_vars, xp.local_data_const(),
+				     zl.local_data_const(), zu.local_data_const(),
 				     (int)n_cons, NULL, //cons, 
 				     NULL, //lambda,
 				     obj_value);
@@ -151,9 +159,11 @@ public:
     const hiopVectorPar& zu = dynamic_cast<const hiopVectorPar&>(z_U);
     assert(xp.get_size()==n_vars);
     assert(c.get_size()+d.get_size()==n_cons);
-    //!petra: to do: assemble (c,d) into cons and (yc,yd) into lambda based on cons_eq_mapping and cons_ineq_mapping
+    //!petra: to do: assemble (c,d) into cons and (yc,yd) into lambda based on cons_eq_mapping
+    //and cons_ineq_mapping
     return interface_base.iterate_callback(iter, obj_value, 
-					   (int)n_vars, xp.local_data_const(), zl.local_data_const(), zu.local_data_const(),
+					   (int)n_vars, xp.local_data_const(),
+					   zl.local_data_const(), zu.local_data_const(),
 					   (int)n_cons, NULL, //cons, 
 					   NULL, //lambda,
 					   inf_pr, inf_du, mu, alpha_du, alpha_pr,  ls_trials);
@@ -243,6 +253,15 @@ protected:
 
   hiopInterfaceBase& interface_base;
 
+  /* Flag to indicate whether to use evaluate all constraints once or separately for equalities
+   * or inequalities. Possible values
+   * -1 : not initialized/not decided
+   *  0 : separately
+   *  1 : at once
+   */
+  int cons_eval_type_;
+  /* used only when constraints and Jacobian are evaluated at once (cons_eval_type_==1) */
+  double* cons_body_;
 private:
   hiopNlpFormulation(const hiopNlpFormulation& s) : interface_base(s.interface_base) {};
 };
