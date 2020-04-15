@@ -90,6 +90,20 @@ namespace hiop
     }
   }
 
+  void hiopMatrixComplexDense::copyRowsFrom(const hiopMatrix& src_gen, const int* rows_idxs, int n_rows)
+  {
+    const hiopMatrixComplexDense& src = dynamic_cast<const hiopMatrixComplexDense&>(src_gen);
+    assert(n_global==src.n_global);
+    assert(n_local==src.n_local);
+    assert(n_rows<=src.m_local);
+    assert(n_rows == m_local);
+    
+    // todo //! opt - copy multiple consecutive rows at once ?!?
+    for(int i=0; i<n_rows; ++i) {
+      memcpy(M[i], src.M[rows_idxs[i]], n_local*sizeof(std::complex<double>));
+    }
+  }
+
   void hiopMatrixComplexDense::setToZero()
   {
     setToConstant(0.0);
