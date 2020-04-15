@@ -386,6 +386,40 @@ hiopMatrixSparseTriplet::allocAndBuildRowStarts() const
   return rsi;
 }
 
+void hiopMatrixSparseTriplet::copyRowsFrom(const hiopMatrix& src_gen, const int* rows_idxs, int n_rows)
+{
+  auto src = dynamic_cast<const hiopMatrixSparseTriplet&>(src_gen);
+  assert(this->m() == n_rows);
+  assert(this->numberOfNonzeros() <= src.numberOfNonzeros());
+  assert(this->n() == src.n());
+  assert(n_rows <= src.n());
+
+  auto iRow_src = src.i_row();
+  auto jCol_src = src.j_col();
+  double* values_src = src.M();
+  int nnz_src = src.numberOfNonzeros();
+  int itnz_src=0;
+  int itnz_dest=0;
+  for(int row_dest=0; row_dest<n_rows; ++row_dest) {
+    const int& row_src = rows_idxs[row_dest];
+
+    while(itnz_src<nnz_src && iRow_src[itnz_src]<row_src)
+      ++itnz_src;
+
+    while(itnz_src<nnz_src && iRow_src[itnz_src]==row_src) {
+      assert(itnz_dest<nnz);
+      
+      iRow[itnz_dest] = row_dest;//iRow_src[itnz_src];
+      jCol[itnz_dest] = jCol_src[itnz_src];
+      values[itnz_dest++] = values_src[itnz_src++];
+      
+      assert(itnz_dest<=nnz);
+    }
+  }
+  assert(itnz_dest == nnz);
+}
+  
+  
 void hiopMatrixSparseTriplet::print(FILE* file, const char* msg/*=NULL*/, 
 				    int maxRows/*=-1*/, int maxCols/*=-1*/, 
 				    int rank/*=-1*/) const 

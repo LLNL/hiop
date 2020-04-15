@@ -23,6 +23,8 @@ public:
   virtual void setToConstant(double c);
   virtual void copyFrom(const hiopMatrixSparseTriplet& dm);
 
+  virtual void copyRowsFrom(const hiopMatrix& src, const int* rows_idxs, int n_rows);
+  
   virtual void timesVec(double beta,  hiopVector& y,
 			double alpha, const hiopVector& x) const;
   virtual void timesVec(double beta,  double* y,
