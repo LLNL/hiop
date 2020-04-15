@@ -103,7 +103,10 @@ public:
   virtual bool eval_Jac_c(double* x, bool new_x, hiopMatrix& Jac_c)=0;
   virtual bool eval_Jac_d(double* x, bool new_x, hiopMatrix& Jac_d)=0;
   virtual bool eval_Jac_c_d(double* x, bool new_x, hiopMatrix& Jac_c, hiopMatrix& Jac_d);
-  
+protected:
+  //calls specific hiopInterfaceXXX::eval_Jac_cons and deals with specializations of hiopMatrix arguments
+  virtual bool eval_Jac_c_d_interface_impl(double* x, bool new_x, hiopMatrix& Jac_c, hiopMatrix& Jac_d) = 0;
+public:
   virtual bool eval_Hess_Lagr(const double* x, bool new_x, 
 			      const double& obj_factor,  
 			      const double* lambda_eq, 
@@ -121,7 +124,7 @@ public:
   /* the implementation of the next two methods depends both on the interface and on the formulation */
   virtual hiopMatrix* alloc_Jac_c() = 0;
   virtual hiopMatrix* alloc_Jac_d() = 0;
-
+  virtual hiopMatrix* alloc_Jac_cons() = 0;
   virtual hiopMatrix* alloc_Hess_Lagr() = 0;
 
   virtual
@@ -251,31 +254,15 @@ public:
 
   virtual bool finalizeInitialization();
 
-  virtual bool eval_Jac_c(double* x, bool new_x, hiopMatrix& Jac_c)
-  {
-    hiopMatrixDense* Jac_cde = dynamic_cast<hiopMatrixDense*>(&Jac_c);
-    if(Jac_cde==NULL) {
-      log->printf(hovError, "[internal error] hiopNlpDenseConstraints NLP works only with dense matrices\n");
-      return false;
-    } else {
-      return this->eval_Jac_c(x, new_x, Jac_cde->local_data());
-    }
-  }
-  virtual bool eval_Jac_d(double* x, bool new_x, hiopMatrix& Jac_d)
-  {
-    hiopMatrixDense* Jac_dde = dynamic_cast<hiopMatrixDense*>(&Jac_d);
-    if(Jac_dde==NULL) {
-      log->printf(hovError, "[internal error] hiopNlpDenseConstraints NLP works only with dense matrices\n");
-      return false;
-    } else {
-      return this->eval_Jac_d(x, new_x, Jac_dde->local_data());
-    }
-  }
+  virtual bool eval_Jac_c(double* x, bool new_x, hiopMatrix& Jac_c);
+  virtual bool eval_Jac_d(double* x, bool new_x, hiopMatrix& Jac_d);
   /* specialized evals to avoid overhead of dynamic cast. Generic variants available above. */
   virtual bool eval_Jac_c(double* x, bool new_x, double** Jac_c);
   virtual bool eval_Jac_d(double* x, bool new_x, double** Jac_d);
-
-
+protected:
+  //calls specific hiopInterfaceXXX::eval_Jac_cons and deals with specializations of hiopMatrix arguments
+  virtual bool eval_Jac_c_d_interface_impl(double* x, bool new_x, hiopMatrix& Jac_c, hiopMatrix& Jac_d);
+public:
   virtual bool eval_Hess_Lagr(const double* x, bool new_x, const double& obj_factor, 
 			      const double* lambda_eq, const double* lambda_ineq, bool new_lambda, 
 			      hiopMatrix& Hess_L)
@@ -287,6 +274,7 @@ public:
 
   virtual hiopMatrixDense* alloc_Jac_c();
   virtual hiopMatrixDense* alloc_Jac_d();
+  virtual hiopMatrixDense* alloc_Jac_cons();
   //returns hiopHessianLowRank which (fakely) inherits from hiopMatrix
   virtual hiopMatrix* alloc_Hess_Lagr();
 
@@ -363,36 +351,15 @@ public:
       return false;
     }
   }
-  virtual bool eval_Hess_Lagr(const double* x, bool new_x, const double& obj_factor, 
-			      const double* lambda_eq, const double* lambda_ineq, bool new_lambdas, hiopMatrix& Hess_L)
-  {
-    hiopMatrixSymBlockDiagMDS* pHessL = dynamic_cast<hiopMatrixSymBlockDiagMDS*>(&Hess_L);
-    assert(pHessL);
-    if(pHessL) {
 
-      if(n_cons_eq + n_cons_ineq != _buf_lambda->get_size()) {
-	delete _buf_lambda;
-	_buf_lambda = NULL;
-	_buf_lambda = new hiopVectorPar(n_cons_eq + n_cons_ineq);
-      }
-      assert(_buf_lambda);
-      _buf_lambda->copyFromStarting(0,         lambda_eq,   n_cons_eq);
-      _buf_lambda->copyFromStarting(n_cons_eq, lambda_ineq, n_cons_ineq);
-
-      int nnzHSS = pHessL->sp_nnz(), nnzHSD = 0;
-      bool bret = interface.eval_Hess_Lagr(n_vars, n_cons, x, new_x, 
-					   obj_factor, _buf_lambda->local_data(), new_lambdas, 
-					   pHessL->n_sp(), pHessL->n_de(),
-					   nnzHSS, pHessL->sp_irow(), pHessL->sp_jcol(), pHessL->sp_M(),
-					   pHessL->de_local_data(),
-					   nnzHSD, NULL, NULL, NULL);
-      assert(nnzHSD==0);
-      assert(nnzHSS==pHessL->sp_nnz());
-      return bret;
-    } else {
-      return false;
-    }
-  }
+protected:
+  //calls specific hiopInterfaceXXX::eval_Jac_cons and deals with specializations of hiopMatrix arguments
+  virtual bool eval_Jac_c_d_interface_impl(double* x, bool new_x, hiopMatrix& Jac_c, hiopMatrix& Jac_d);
+public:
+  virtual bool eval_Hess_Lagr(const double* x, bool new_x, const double& obj_factor,
+		      const double* lambda_eq, const double* lambda_ineq, bool new_lambdas,
+		      hiopMatrix& Hess_L);
+  
   virtual hiopMatrix* alloc_Jac_c() 
   {
     assert(n_vars == nx_sparse+nx_dense);
@@ -402,6 +369,11 @@ public:
   {
     assert(n_vars == nx_sparse+nx_dense);
     return new hiopMatrixMDS(n_cons_ineq, nx_sparse, nx_dense, nnz_sparse_Jacineq);
+  }
+  virtual hiopMatrix* alloc_Jac_cons()
+  {
+    assert(n_vars == nx_sparse+nx_dense);
+    return new hiopMatrixMDS(n_cons, nx_sparse, nx_dense, nnz_sparse_Jaceq+nnz_sparse_Jacineq);
   }
   virtual hiopMatrix* alloc_Hess_Lagr()
   {
