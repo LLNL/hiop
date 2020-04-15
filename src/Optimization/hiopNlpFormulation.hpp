@@ -124,50 +124,21 @@ public:
 
   virtual hiopMatrix* alloc_Hess_Lagr() = 0;
 
-  virtual inline 
+  virtual
   void user_callback_solution(hiopSolveStatus status,
-			      const hiopVector& x,
-			      const hiopVector& z_L,
-			      const hiopVector& z_U,
+			      const hiopVector& x, const hiopVector& z_L, const hiopVector& z_U,
 			      const hiopVector& c, const hiopVector& d,
 			      const hiopVector& yc, const hiopVector& yd,
-			      double obj_value) 
-  {
-    const hiopVectorPar& xp = dynamic_cast<const hiopVectorPar&>(x);
-    const hiopVectorPar& zl = dynamic_cast<const hiopVectorPar&>(z_L);
-    const hiopVectorPar& zu = dynamic_cast<const hiopVectorPar&>(z_U);
-    assert(xp.get_size()==n_vars);
-    assert(c.get_size()+d.get_size()==n_cons);
-    //!petra: to do: assemble (c,d) into cons and (yc,yd) into lambda based on cons_eq_mapping
-    // and cons_ineq_mapping
-    interface_base.solution_callback(status, 
-				     (int)n_vars, xp.local_data_const(),
-				     zl.local_data_const(), zu.local_data_const(),
-				     (int)n_cons, NULL, //cons, 
-				     NULL, //lambda,
-				     obj_value);
-  }
+			      double obj_value);
 
-  virtual inline 
-  bool user_callback_iterate(int iter, double obj_value,
+  virtual
+  bool user_callback_iterate(int iter,
+			     double obj_value,
 			     const hiopVector& x, const hiopVector& z_L, const hiopVector& z_U,
-			     const hiopVector& c, const hiopVector& d, const hiopVector& yc, const hiopVector& yd,
-			     double inf_pr, double inf_du, double mu, double alpha_du, double alpha_pr, int ls_trials)
-  {
-    const hiopVectorPar& xp = dynamic_cast<const hiopVectorPar&>(x);
-    const hiopVectorPar& zl = dynamic_cast<const hiopVectorPar&>(z_L);
-    const hiopVectorPar& zu = dynamic_cast<const hiopVectorPar&>(z_U);
-    assert(xp.get_size()==n_vars);
-    assert(c.get_size()+d.get_size()==n_cons);
-    //!petra: to do: assemble (c,d) into cons and (yc,yd) into lambda based on cons_eq_mapping
-    //and cons_ineq_mapping
-    return interface_base.iterate_callback(iter, obj_value, 
-					   (int)n_vars, xp.local_data_const(),
-					   zl.local_data_const(), zu.local_data_const(),
-					   (int)n_cons, NULL, //cons, 
-					   NULL, //lambda,
-					   inf_pr, inf_du, mu, alpha_du, alpha_pr,  ls_trials);
-  }
+			     const hiopVector& c, const hiopVector& d,
+			     const hiopVector& yc, const hiopVector& yd,
+			     double inf_pr, double inf_du, double mu,
+			     double alpha_du, double alpha_pr, int ls_trials);
   
   /** const accessors */
   inline const hiopVectorPar& get_xl ()  const { return *xl;   }
@@ -262,6 +233,7 @@ protected:
   int cons_eval_type_;
   /* used only when constraints and Jacobian are evaluated at once (cons_eval_type_==1) */
   double* cons_body_;
+  hiopMatrix* cons_Jac_;
 private:
   hiopNlpFormulation(const hiopNlpFormulation& s) : interface_base(s.interface_base) {};
 };

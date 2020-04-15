@@ -558,12 +558,71 @@ bool hiopNlpFormulation::eval_c_d(double*x, bool new_x, double* c, double* d)
       d[i] = body[cons_ineq_mapping[i]];
     }
     
-    runStats.tmEvalCons.stop(); runStats.nEvalCons_ineq++;
+    runStats.tmEvalCons.stop();
+    runStats.nEvalCons_eq++;
+    runStats.nEvalCons_ineq++;
     
     //d = nlp_transformations.applyInvToCons(d, n_cons_ineq); //not needed for now
     return bret;
   }
 }
+
+void hiopNlpFormulation::user_callback_solution(hiopSolveStatus status,
+						const hiopVector& x,
+						const hiopVector& z_L,
+						const hiopVector& z_U,
+						const hiopVector& c,
+						const hiopVector& d,
+						const hiopVector& yc,
+						const hiopVector& yd,
+						double obj_value) 
+{
+  const hiopVectorPar& xp = dynamic_cast<const hiopVectorPar&>(x);
+  const hiopVectorPar& zl = dynamic_cast<const hiopVectorPar&>(z_L);
+  const hiopVectorPar& zu = dynamic_cast<const hiopVectorPar&>(z_U);
+  assert(xp.get_size()==n_vars);
+  assert(c.get_size()+d.get_size()==n_cons);
+  //!petra: to do: assemble (c,d) into cons and (yc,yd) into lambda based on cons_eq_mapping
+  // and cons_ineq_mapping
+  interface_base.solution_callback(status, 
+				   (int)n_vars, xp.local_data_const(),
+				   zl.local_data_const(), zu.local_data_const(),
+				   (int)n_cons, NULL, //cons, 
+				   NULL, //lambda,
+				   obj_value);
+}
+
+bool hiopNlpFormulation::user_callback_iterate(int iter,
+					       double obj_value,
+					       const hiopVector& x,
+					       const hiopVector& z_L,
+					       const hiopVector& z_U,
+					       const hiopVector& c,
+					       const hiopVector& d,
+					       const hiopVector& yc,
+					       const hiopVector& yd,
+					       double inf_pr,
+					       double inf_du,
+					       double mu,
+					       double alpha_du,
+					       double alpha_pr,
+					       int ls_trials)
+{
+  const hiopVectorPar& xp = dynamic_cast<const hiopVectorPar&>(x);
+  const hiopVectorPar& zl = dynamic_cast<const hiopVectorPar&>(z_L);
+  const hiopVectorPar& zu = dynamic_cast<const hiopVectorPar&>(z_U);
+  assert(xp.get_size()==n_vars);
+  assert(c.get_size()+d.get_size()==n_cons);
+  //!petra: to do: assemble (c,d) into cons and (yc,yd) into lambda based on cons_eq_mapping
+  //and cons_ineq_mapping
+  return interface_base.iterate_callback(iter, obj_value, 
+					 (int)n_vars, xp.local_data_const(),
+					 zl.local_data_const(), zu.local_data_const(),
+					 (int)n_cons, NULL, //cons, 
+					 NULL, //lambda,
+					 inf_pr, inf_du, mu, alpha_du, alpha_pr,  ls_trials);
+}
+
 void hiopNlpFormulation::print(FILE* f, const char* msg, int rank) const
 {
    int myrank=0; 
@@ -581,10 +640,12 @@ void hiopNlpFormulation::print(FILE* f, const char* msg, int rank) const
       fprintf(f, "NLP summary\n");
     }
     fprintf(f, "Total number of variables: %lld\n", n_vars);
-    fprintf(f, "     lower/upper/lower_and_upper bounds: %lld / %lld / %lld\n", n_bnds_low, n_bnds_upp, n_bnds_lu);
+    fprintf(f, "     lower/upper/lower_and_upper bounds: %lld / %lld / %lld\n",
+	    n_bnds_low, n_bnds_upp, n_bnds_lu);
     fprintf(f, "Total number of equality constraints: %lld\n", n_cons_eq);
     fprintf(f, "Total number of inequality constraints: %lld\n", n_cons_ineq );
-    fprintf(f, "     lower/upper/lower_and_upper bounds: %lld / %lld / %lld\n", n_ineq_low, n_ineq_upp, n_ineq_lu);
+    fprintf(f, "     lower/upper/lower_and_upper bounds: %lld / %lld / %lld\n",
+	    n_ineq_low, n_ineq_upp, n_ineq_lu);
   } 
 }
 
