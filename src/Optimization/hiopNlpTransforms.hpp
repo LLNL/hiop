@@ -99,11 +99,22 @@ public:
   virtual inline double* applyInvToConsEq(double* c_in, const int& m_in) { return c_in; }
   virtual inline double* applyToConsIneq(double* c_in, const int& m_in) { return c_in; }
   virtual inline double* applyInvToConsIneq(double* c_in, const int& m_in) { return c_in; }
+  //the following two are for when the underlying NLP formulation works with full body constraints,
+  //that is, evaluates both equalities and inequalities at once (a.k.a. one-call constraints and
+  //and Jacobian evaluations)
+  virtual inline double* applyToCons(double* cons_in, const int* m_in) { return cons_in; }
+  virtual inline double* applyInvToCons(double* cons_in, const int* m_in) { return cons_in; }
 
+  //! todo -> abstractize the below methods to work with other Jacobian types: sparse and MDS
   virtual inline double** applyToJacobEq      (double** Jac_in, const int& m_in) { return Jac_in; }
   virtual inline double** applyInvToJacobEq   (double** Jac_in, const int& m_in) { return Jac_in; }
   virtual inline double** applyToJacobIneq    (double** Jac_in, const int& m_in) { return Jac_in; }
-  virtual inline double** applyInvToJacobIneq (double** Jac_in, const int& m_in)  { return Jac_in; }
+  virtual inline double** applyInvToJacobIneq (double** Jac_in, const int& m_in) { return Jac_in; }
+  virtual inline double** applyToJacobCons    (double** Jac_in, const int& m_in) { return Jac_in; }
+  //the following two are for when the underlying NLP formulation works with full body constraints
+  virtual inline double** applyInvToJacobCons (double** Jac_in, const int& m_in) { return Jac_in; }
+
+  //! todo -> transformations for Hessian ?!?
 public:
   hiopNlpTransformation() {}; 
   virtual ~hiopNlpTransformation() {};
