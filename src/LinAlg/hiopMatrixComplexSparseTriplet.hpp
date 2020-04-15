@@ -30,6 +30,10 @@ namespace hiop
     virtual void setToConstant(double c);
     virtual void setToConstant(std::complex<double> c);
 
+    void copyRowsFrom(const hiopMatrix& src, const int* rows_idxs, int n_rows)
+    {
+      assert(false && "not yet implemented");
+    }
 
     /** y = beta * y + alpha * this * x */
     virtual void timesVec(double beta,  hiopVector& y,

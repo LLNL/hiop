@@ -145,8 +145,18 @@ public:
    *  2. W.n() == W.m()
    */
   virtual void addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start, 
-							     double alpha, hiopMatrixDense& W) const = 0;
+							     double alpha,
+							     hiopMatrixDense& W) const = 0;
 
+  /* Copy 'n_rows' rows specified by 'rows_idxs' (array of size 'n_rows') from 'src' to 'this'
+   * 
+   * Preconditions
+   * 1. 'this' has exactly 'n_rows' rows
+   * 2. 'src' and 'this' must have same number of columns
+   * 3. number of rows in 'src' must be at least the number of rows in 'this'
+   */
+  virtual void copyRowsFrom(const hiopMatrix& src, const int* rows_idxs, int n_rows) = 0;
+ 
   virtual double max_abs_value() = 0;
 
   /* return false is any of the entry is a nan, inf, or denormalized */
@@ -260,14 +270,24 @@ public:
   virtual hiopMatrixDense* new_copy() const;
 
   void appendRow(const hiopVectorPar& row);
-  /*copy 'num_rows' rows from 'src' in this starting at 'row_dest' */
+  /*copies the first 'num_rows' rows from 'src' to 'this' starting at 'row_dest' */
   void copyRowsFrom(const hiopMatrixDense& src, int num_rows, int row_dest);
+  
+  /* Copy 'n_rows' rows specified by 'rows_idxs' (array of size 'n_rows') from 'src' to 'this'
+   * 
+   * Preconditions
+   * 1. 'this' has exactly 'n_rows' rows
+   * 2. 'src' and 'this' must have same number of columns
+   * 3. number of rows in 'src' must be at least the number of rows in 'this'
+   */
+  void copyRowsFrom(const hiopMatrix& src_gen, const int* rows_idxs, int n_rows);
+  
   /* copies 'src' into this as a block starting at (i_block_start,j_block_start) */
-  /*copyMatrixAsBlock */
   void copyBlockFromMatrix(const long i_block_start, const long j_block_start,
 			   const hiopMatrixDense& src);
   
-  /* overwrites 'this' with 'src''s block starting at (i_src_block_start,j_src_block_start) and dimensions of this */
+  /* overwrites 'this' with 'src''s block that starts at (i_src_block_start,j_src_block_start) 
+   * and has dimensions of 'this' */
   void copyFromMatrixBlock(const hiopMatrixDense& src, const int i_src_block_start, const int j_src_block_start);
   /*  shift<0 -> up; shift>0 -> down  */
   void shiftRows(long long shift);

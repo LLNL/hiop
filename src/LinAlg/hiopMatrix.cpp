@@ -167,6 +167,22 @@ void hiopMatrixDense::copyRowsFrom(const hiopMatrixDense& src, int num_rows, int
   if(num_rows>0)
     memcpy(M[row_dest], src.M[0], n_local*num_rows*sizeof(double));
 }
+
+void hiopMatrixDense::copyRowsFrom(const hiopMatrix& src_gen, const int* rows_idxs, int n_rows)
+{
+  const hiopMatrixDense& src = dynamic_cast<const hiopMatrixDense&>(src_gen);
+  assert(n_global==src.n_global);
+  assert(n_local==src.n_local);
+  assert(n_rows<=src.m_local);
+  assert(n_rows == m_local);
+
+  // todo //! opt
+  for(int i=0; i<n_rows; ++i) {
+    memcpy(M[i], src.M[rows_idxs[i]], n_local*sizeof(double));
+  }
+}
+
+  
 void hiopMatrixDense::copyBlockFromMatrix(const long i_start, const long j_start,
 					  const hiopMatrixDense& src)
 {

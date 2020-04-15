@@ -314,6 +314,12 @@ public:
     assert(false && "not provided because it is not needed");
     return 0.;
   }
+
+  void copyRowsFrom(const hiopMatrix& src_in, const int* rows_idxs, int n_rows)
+  {
+    assert(false && "not needed / should not be used");
+  }
+  
   /* return false is any of the entry is a nan, inf, or denormalized */
   virtual bool isfinite() const
   {
