@@ -922,6 +922,10 @@ bool hiopNlpMDS::eval_Jac_c_d_interface_impl(double* x,
     assert(cons_Jac);
     if(NULL == cons_Jac)
       return false;
+
+    assert(cons_Jac->n_de() == pJac_d->n_de());
+    assert(cons_Jac->n_sp() == pJac_d->n_sp());
+    assert(cons_Jac->sp_nnz() == pJac_c->sp_nnz() + pJac_d->sp_nnz());
     
     double* x_user      = nlp_transformations.applyTox(x, new_x);
     //! todo -> need hiopNlpTransformation::applyInvToJacobIneq to work with MDS Jacobian
@@ -929,7 +933,7 @@ bool hiopNlpMDS::eval_Jac_c_d_interface_impl(double* x,
     
     runStats.tmEvalJac_con.start();
   
-    int nnz = pJac_d->sp_nnz();
+    int nnz = cons_Jac->sp_nnz();
     bool bret = interface.eval_Jac_cons(n_vars, n_cons, 
 					x_user, new_x,
 					pJac_d->n_sp(), pJac_d->n_de(), 

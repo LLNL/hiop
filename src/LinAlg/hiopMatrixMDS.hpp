@@ -48,8 +48,8 @@ public:
   virtual void copyRowsFrom(const hiopMatrix& src_in, const long long* rows_idxs, long long n_rows)
   {
     const hiopMatrixMDS& src = dynamic_cast<const hiopMatrixMDS&>(src_in);
-    mSp->copyRowsFrom(src, rows_idxs, n_rows);
-    mDe->copyRowsFrom(src, rows_idxs, n_rows);
+    mSp->copyRowsFrom(*src.mSp, rows_idxs, n_rows);
+    mDe->copyRowsFrom(*src.mDe, rows_idxs, n_rows);
   }
   
   virtual void timesVec(double beta,  hiopVector& y,
