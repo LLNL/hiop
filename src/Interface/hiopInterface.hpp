@@ -94,7 +94,8 @@ enum hiopSolveStatus {
   Invalid_Parallelization=-12,
   Invalid_UserOption=-13,
   Invalid_Number=-14,
-
+  Error_In_User_Function=-15,
+  
   //ungraceful errors and returns
   Exception_Unrecoverable=-100,
   Memory_Alloc_Problem=-101,

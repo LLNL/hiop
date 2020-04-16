@@ -190,9 +190,11 @@ void hiopAlgFilterIPMBase::reInitializeNlpObjects()
   
   resid = new hiopResidual(nlp);
   resid_trial = new hiopResidual(nlp);
-  
-  dualsUpdateType = nlp->options->GetString("dualsUpdateType")=="lsq"?0:1;     //0 LSQ (default), 1 linear update (more stable)
-  dualsInitializ = nlp->options->GetString("dualsInitialization")=="lsq"?0:1;  //0 LSQ (default), 1 set to zero
+
+  //0 LSQ (default), 1 linear update (more stable)
+  dualsUpdateType = nlp->options->GetString("dualsUpdateType")=="lsq"?0:1;
+  //0 LSQ (default), 1 set to zero
+  dualsInitializ = nlp->options->GetString("dualsInitialization")=="lsq"?0:1;  
 
   if(dualsUpdateType==0) {
     hiopNlpDenseConstraints* nlpd = dynamic_cast<hiopNlpDenseConstraints*>(nlp);
@@ -223,7 +225,7 @@ void hiopAlgFilterIPMBase::reloadOptions()
   eps_rtol = nlp->options->GetNumeric("rel_tolerance");    //relative error (to errors for the initial point) 
   kappa_eps= nlp->options->GetNumeric("kappa_eps");        //relative (to mu) error for the log barrier
 
-  kappa1   = nlp->options->GetNumeric("kappa1");          //projection params for the starting point (default 1e-2)
+  kappa1   = nlp->options->GetNumeric("kappa1");          //projection params for starting point (default 1e-2)
   kappa2   = nlp->options->GetNumeric("kappa2");
   p_smax   = nlp->options->GetNumeric("smax");            //threshold for the magnitude of the multipliers
 
@@ -232,8 +234,10 @@ void hiopAlgFilterIPMBase::reloadOptions()
   accep_n_it    = nlp->options->GetInteger("acceptable_iterations");
   eps_tol_accep = nlp->options->GetNumeric("acceptable_tolerance");
 
-  dualsUpdateType = nlp->options->GetString("dualsUpdateType")=="lsq"?0:1;     //0 LSQ (default), 1 linear update (more stable)
-  dualsInitializ = nlp->options->GetString("dualsInitialization")=="lsq"?0:1;  //0 LSQ (default), 1 set to zero
+  //0 LSQ (default), 1 linear update (more stable)
+  dualsUpdateType = nlp->options->GetString("dualsUpdateType")=="lsq"?0:1;
+  //0 LSQ (default), 1 set to zero
+  dualsInitializ = nlp->options->GetString("dualsInitialization")=="lsq"?0:1;  
 
   if(dualsUpdateType==0) {
     hiopNlpDenseConstraints* nlpd = dynamic_cast<hiopNlpDenseConstraints*>(nlp);
@@ -284,7 +288,8 @@ startingProcedure(hiopIterate& it_ini,
   nlp->runStats.tmStartingPoint.stop();
   nlp->runStats.tmSolverInternal.stop();
 
-  this->evalNlp(it_ini, f, c, d, gradf, Jac_c, Jac_d, *_Hess_Lagr);
+  if(!this->evalNlp(it_ini, f, c, d, gradf, Jac_c, Jac_d, *_Hess_Lagr))
+    return false;
   
   nlp->runStats.tmSolverInternal.start();
   nlp->runStats.tmStartingPoint.start();
@@ -330,31 +335,47 @@ evalNlp(hiopIterate& iter,
 	hiopVector& gradf_,  hiopMatrix& Jac_c,  hiopMatrix& Jac_d,
 	hiopMatrix& Hess_L)
 {
-  bool new_x=true, bret; 
+  bool new_x=true; 
   hiopVectorPar& it_x = dynamic_cast<hiopVectorPar&>(*iter.get_x());
-  hiopVectorPar 
-    &c=dynamic_cast<hiopVectorPar&>(c_), 
-    &d=dynamic_cast<hiopVectorPar&>(d_), 
-    &gradf=dynamic_cast<hiopVectorPar&>(gradf_);
+  hiopVectorPar& c=dynamic_cast<hiopVectorPar&>(c_);
+  hiopVectorPar& d=dynamic_cast<hiopVectorPar&>(d_);
+  hiopVectorPar& gradf=dynamic_cast<hiopVectorPar&>(gradf_);
   double* x = it_x.local_data();//local_data_const();
   //f(x)
-  bret = nlp->eval_f(x, new_x, f); assert(bret);
+  if(!nlp->eval_f(x, new_x, f)) {
+    nlp->log->printf(hovError, "Error occured in user objective evaluation\n");
+    return false;
+  }
   new_x= false; //same x for the rest
-  bret = nlp->eval_grad_f(x, new_x, gradf.local_data()); assert(bret);
-
-  bret = nlp->eval_c        (x, new_x, c.local_data());  assert(bret);
-  bret = nlp->eval_d        (x, new_x, d.local_data());  assert(bret);
-  bret = nlp->eval_Jac_c    (x, new_x, Jac_c);           assert(bret);
-  bret = nlp->eval_Jac_d    (x, new_x, Jac_d);           assert(bret);
-
+  
+  if(!nlp->eval_grad_f(x, new_x, gradf.local_data())) {
+    nlp->log->printf(hovError, "Error occured in user gradient evaluation\n");
+    return false;
+  }
+  
+  //bret = nlp->eval_c        (x, new_x, c.local_data());  assert(bret);
+  //bret = nlp->eval_d        (x, new_x, d.local_data());  assert(bret);
+  if(!nlp->eval_c_d(x, new_x, c.local_data(), d.local_data())) {
+    nlp->log->printf(hovError, "Error occured in user constraint(s) function evaluation\n");
+    return false;
+  }
+  
+  //bret = nlp->eval_Jac_c    (x, new_x, Jac_c);           assert(bret);
+  //bret = nlp->eval_Jac_d    (x, new_x, Jac_d);           assert(bret);
+  if(!nlp->eval_Jac_c_d(x, new_x, Jac_c, Jac_d)) {
+    nlp->log->printf(hovError, "Error occured in user Jacobian function evaluation\n");
+    return false; 
+  }
   const hiopVectorPar* yc = dynamic_cast<const hiopVectorPar*>(iter.get_yc()); assert(yc);
   const hiopVectorPar* yd = dynamic_cast<const hiopVectorPar*>(iter.get_yd()); assert(yd);
   const int new_lambda = true;
-  bret = nlp->eval_Hess_Lagr(x, new_x, 
-			     1., yc->local_data_const(), yd->local_data_const(), new_lambda,
-			     Hess_L);    
-  assert(bret);
-  return bret;
+  if(!nlp->eval_Hess_Lagr(x, new_x, 
+			  1., yc->local_data_const(), yd->local_data_const(), new_lambda,
+			  Hess_L)) {
+    nlp->log->printf(hovError, "Error occured in user Hessian function evaluation\n");
+    return false;
+  }
+  return true;
 }
 bool hiopAlgFilterIPMBase::
 updateLogBarrierParameters(const hiopIterate& it, const double& mu_curr, const double& tau_curr,
@@ -440,40 +461,53 @@ evalNlpAndLogErrors(const hiopIterate& it, const hiopResidual& resid, const doub
 bool hiopAlgFilterIPMBase::evalNlp_funcOnly(hiopIterate& iter,
 					    double& f, hiopVector& c_, hiopVector& d_)
 {
-  bool new_x=true, bret; 
+  bool new_x=true; 
   hiopVectorPar& it_x = dynamic_cast<hiopVectorPar&>(*iter.get_x());
-  hiopVectorPar 
-    &c=dynamic_cast<hiopVectorPar&>(c_), 
-    &d=dynamic_cast<hiopVectorPar&>(d_);
+  hiopVectorPar& c=dynamic_cast<hiopVectorPar&>(c_);
+  hiopVectorPar& d=dynamic_cast<hiopVectorPar&>(d_);
   double* x = it_x.local_data();
-  bret = nlp->eval_f(x, new_x, f); assert(bret);
+  if(!nlp->eval_f(x, new_x, f)) {
+    nlp->log->printf(hovError, "Error occured in user objective evaluation\n");
+    return false;
+  }
   new_x= false; //same x for the rest
-  bret = nlp->eval_c(x, new_x, c.local_data());     assert(bret);
-  bret = nlp->eval_d(x, new_x, d.local_data());     assert(bret);
-  return bret;
+  if(!nlp->eval_c_d(x, new_x, c.local_data(), d.local_data())) {
+    nlp->log->printf(hovError, "Error occured in user constraint(s) function evaluation\n");
+    return false;
+  } 
+  return true;
 }
 
 bool hiopAlgFilterIPMBase::evalNlp_derivOnly(hiopIterate& iter,
-					     hiopVector& gradf_, hiopMatrix& Jac_c, hiopMatrix& Jac_d,
+					     hiopVector& gradf_,
+					     hiopMatrix& Jac_c,
+					     hiopMatrix& Jac_d,
 					     hiopMatrix& Hess_L)
 {
   bool new_x=false; //functions were previously evaluated in the line search
-  bool bret;
   hiopVectorPar& it_x = dynamic_cast<hiopVectorPar&>(*iter.get_x());
   hiopVectorPar & gradf=dynamic_cast<hiopVectorPar&>(gradf_);
   double* x = it_x.local_data();
-  bret = nlp->eval_grad_f(x, new_x, gradf.local_data()); assert(bret);
-  bret = nlp->eval_Jac_c (x, new_x, Jac_c); assert(bret);
-  bret = nlp->eval_Jac_d (x, new_x, Jac_d); assert(bret);
+  if(!nlp->eval_grad_f(x, new_x, gradf.local_data())) {
+    nlp->log->printf(hovError, "Error occured in user gradient evaluation\n");
+    return false;
+  }
+  if(!nlp->eval_Jac_c_d(x, new_x, Jac_c, Jac_d)) {
+    nlp->log->printf(hovError, "Error occured in user Jacobian function evaluation\n");
+    return false; 
+  }
+
 
   const hiopVectorPar* yc = dynamic_cast<const hiopVectorPar*>(iter.get_yc()); assert(yc);
   const hiopVectorPar* yd = dynamic_cast<const hiopVectorPar*>(iter.get_yd()); assert(yd);
   const int new_lambda = true;
-  bret = nlp->eval_Hess_Lagr(x, new_x, 
-			     1., yc->local_data_const(), yd->local_data_const(), new_lambda,
-			     Hess_L);    
-  assert(bret);
-  return bret;
+  if(!nlp->eval_Hess_Lagr(x, new_x, 
+			  1., yc->local_data_const(), yd->local_data_const(), new_lambda,
+			  Hess_L)) {
+    nlp->log->printf(hovError, "Error occured in user Hessian function evaluation\n");
+    return false;
+  }
+  return true;
 }
 
 /* returns the objective value; valid only after 'run' method has been called */
@@ -640,7 +674,6 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
   resid->update(*it_curr,_f_nlp, *_c, *_d,*_grad_f,*_Jac_c,*_Jac_d, *logbar);
 
   nlp->log->write("First residual-------------", *resid, hovIteration);
-  //nlp->log->printf(hovSummary, "Iter[%d] -> full iterate -------------", iter_num); nlp->log->write("", *it_curr, hovSummary); 
 
   iter_num=0; nlp->runStats.nIter=iter_num;
 
@@ -666,10 +699,17 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
 
     bret = evalNlpAndLogErrors(*it_curr, *resid, _mu, 
 			       _err_nlp_optim, _err_nlp_feas, _err_nlp_complem, _err_nlp, 
-			       _err_log_optim, _err_log_feas, _err_log_complem, _err_log); assert(bret);
-    nlp->log->printf(hovScalars, "  Nlp    errs: pr-infeas:%20.14e   dual-infeas:%20.14e  comp:%20.14e  overall:%20.14e\n",
+			       _err_log_optim, _err_log_feas, _err_log_complem, _err_log);
+    if(!bret) {
+      _solverStatus = Error_In_User_Function;
+      return Error_In_User_Function;
+    }
+    
+    nlp->log->printf(hovScalars,
+		     "  Nlp    errs: pr-infeas:%20.14e   dual-infeas:%20.14e  comp:%20.14e  overall:%20.14e\n",
 		     _err_nlp_feas, _err_nlp_optim, _err_nlp_complem, _err_nlp);
-    nlp->log->printf(hovScalars, "  LogBar errs: pr-infeas:%20.14e   dual-infeas:%20.14e  comp:%20.14e  overall:%20.14e\n",
+    nlp->log->printf(hovScalars,
+		     "  LogBar errs: pr-infeas:%20.14e   dual-infeas:%20.14e  comp:%20.14e  overall:%20.14e\n",
 		     _err_log_feas, _err_log_optim, _err_log_complem, _err_log);
     outputIteration(lsStatus, lsNum);
 
@@ -708,15 +748,22 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
       nlp->log->printf(hovScalars, "Iter[%d] barrier params reduced: mu=%g tau=%g\n", iter_num, _mu, _tau);
 
       //update only logbar problem  and residual (the NLP didn't change)
-      //this->evalNlp(*it_curr, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d);
       logbar->updateWithNlpInfo(*it_curr, _mu, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d);
-      resid->update(*it_curr,_f_nlp, *_c, *_d,*_grad_f,*_Jac_c,*_Jac_d, *logbar); //! should perform only a partial update since NLP didn't change
+
+      //! should perform only a partial update since NLP didn't change
+      resid->update(*it_curr,_f_nlp, *_c, *_d,*_grad_f,*_Jac_c,*_Jac_d, *logbar); 
       bret = evalNlpAndLogErrors(*it_curr, *resid, _mu, 
 				 _err_nlp_optim, _err_nlp_feas, _err_nlp_complem, _err_nlp, 
-				 _err_log_optim, _err_log_feas, _err_log_complem, _err_log); assert(bret);
-      nlp->log->printf(hovScalars, "  Nlp    errs: pr-infeas:%20.14e   dual-infeas:%20.14e  comp:%20.14e  overall:%20.14e\n",
+				 _err_log_optim, _err_log_feas, _err_log_complem, _err_log);
+      if(!bret) {
+	_solverStatus = Error_In_User_Function;
+	return Error_In_User_Function;
+      }
+      nlp->log->printf(hovScalars,
+		       "  Nlp    errs: pr-infeas:%20.14e   dual-infeas:%20.14e  comp:%20.14e  overall:%20.14e\n",
 		       _err_nlp_feas, _err_nlp_optim, _err_nlp_complem, _err_nlp);
-      nlp->log->printf(hovScalars, "  LogBar errs: pr-infeas:%20.14e   dual-infeas:%20.14e  comp:%20.14e  overall:%20.14e\n",
+      nlp->log->printf(hovScalars,
+		       "  LogBar errs: pr-infeas:%20.14e   dual-infeas:%20.14e  comp:%20.14e  overall:%20.14e\n",
 		       _err_log_feas, _err_log_optim, _err_log_complem, _err_log);    
       
       filter.reinitialize(theta_max);
@@ -772,7 +819,11 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
       nlp->runStats.tmSolverInternal.stop(); //---
 
       //evaluate the problem at the trial iterate (functions only)
-      this->evalNlp_funcOnly(*it_trial, _f_nlp_trial, *_c_trial, *_d_trial);
+      if(!this->evalNlp_funcOnly(*it_trial, _f_nlp_trial, *_c_trial, *_d_trial)) {
+	_solverStatus = Error_In_User_Function;
+	return Error_In_User_Function;
+      }
+      
       logbar->updateWithNlpInfo_trial_funcOnly(*it_trial, _f_nlp_trial, *_c_trial, *_d_trial);
 
       nlp->runStats.tmSolverInternal.start(); //---
@@ -890,7 +941,10 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
     iter_num++; nlp->runStats.nIter=iter_num;
 
     //evaluate derivatives at the trial (and to be accepted) trial point
-    this->evalNlp_derivOnly(*it_trial, *_grad_f, *_Jac_c, *_Jac_d, *_Hess_Lagr);
+    if(!this->evalNlp_derivOnly(*it_trial, *_grad_f, *_Jac_c, *_Jac_d, *_Hess_Lagr)){
+	_solverStatus = Error_In_User_Function;
+	return Error_In_User_Function;
+      }
 
     nlp->runStats.tmSolverInternal.start(); //-----
     //reuse function values
@@ -1054,7 +1108,12 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 
     bret = evalNlpAndLogErrors(*it_curr, *resid, _mu, 
 			       _err_nlp_optim, _err_nlp_feas, _err_nlp_complem, _err_nlp, 
-			       _err_log_optim, _err_log_feas, _err_log_complem, _err_log); assert(bret);
+			       _err_log_optim, _err_log_feas, _err_log_complem, _err_log);
+    if(!bret) {
+      _solverStatus = Error_In_User_Function;
+      return Error_In_User_Function;
+    }
+    
     nlp->log->printf(hovScalars, "  Nlp    errs: pr-infeas:%20.14e   dual-infeas:%20.14e  comp:%20.14e  overall:%20.14e\n",
 		     _err_nlp_feas, _err_nlp_optim, _err_nlp_complem, _err_nlp);
     nlp->log->printf(hovScalars, "  LogBar errs: pr-infeas:%20.14e   dual-infeas:%20.14e  comp:%20.14e  overall:%20.14e\n",
@@ -1101,7 +1160,11 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
       resid->update(*it_curr,_f_nlp, *_c, *_d,*_grad_f,*_Jac_c,*_Jac_d, *logbar); //! should perform only a partial update since NLP didn't change
       bret = evalNlpAndLogErrors(*it_curr, *resid, _mu, 
 				 _err_nlp_optim, _err_nlp_feas, _err_nlp_complem, _err_nlp, 
-				 _err_log_optim, _err_log_feas, _err_log_complem, _err_log); assert(bret);
+				 _err_log_optim, _err_log_feas, _err_log_complem, _err_log);
+      if(!bret) {
+	_solverStatus = Error_In_User_Function;
+	return Error_In_User_Function;
+      }
       nlp->log->printf(hovScalars, "  Nlp    errs: pr-infeas:%20.14e   dual-infeas:%20.14e  comp:%20.14e  overall:%20.14e\n",
 		       _err_nlp_feas, _err_nlp_optim, _err_nlp_complem, _err_nlp);
       nlp->log->printf(hovScalars, "  LogBar errs: pr-infeas:%20.14e   dual-infeas:%20.14e  comp:%20.14e  overall:%20.14e\n",
@@ -1159,7 +1222,11 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
       nlp->runStats.tmSolverInternal.stop(); //---
 
       //evaluate the problem at the trial iterate (functions only)
-      this->evalNlp_funcOnly(*it_trial, _f_nlp_trial, *_c_trial, *_d_trial);
+      if(!this->evalNlp_funcOnly(*it_trial, _f_nlp_trial, *_c_trial, *_d_trial)) {
+	_solverStatus = Error_In_User_Function;
+	return Error_In_User_Function;
+      }
+
       logbar->updateWithNlpInfo_trial_funcOnly(*it_trial, _f_nlp_trial, *_c_trial, *_d_trial);
 
       nlp->runStats.tmSolverInternal.start(); //---
@@ -1277,7 +1344,10 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
     iter_num++; nlp->runStats.nIter=iter_num;
 
     //evaluate derivatives at the trial (and to be accepted) trial point
-    this->evalNlp_derivOnly(*it_trial, *_grad_f, *_Jac_c, *_Jac_d, *_Hess_Lagr);
+    if(!this->evalNlp_derivOnly(*it_trial, *_grad_f, *_Jac_c, *_Jac_d, *_Hess_Lagr)) {
+      _solverStatus = Error_In_User_Function;
+      return Error_In_User_Function;
+    }
 
     nlp->runStats.tmSolverInternal.start(); //-----
     //reuse function values
