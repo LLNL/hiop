@@ -202,7 +202,7 @@ public:
    * The method returns true (and populate x0) or return false, in which case hiOP will use set 
    * x0 to all zero (still subject to internal adjustement).
    *
-   * ToDo: provide API for a full, primal-dual restart. 
+   * TODO: provide API for a full, primal-dual restart. 
    */
   virtual bool get_starting_point(const long long&n, double* x0) { return false; }
 
@@ -261,15 +261,19 @@ public:
 			     const long long& num_cons, const long long* idx_cons,  
 			     const double* x, bool new_x,
 			     double** Jac) = 0;
+  
   /** Evaluates the Jacobian of equality and inequality constraints in one call. 
    *
    * The main difference from the above 'eval_Jac_cons' is that the implementer/user of this 
    * method does not have to split the constraints into equalities and inequalities; instead,
    * HiOp does this internally.
+   *
+   * TODO: build an example (new one-call Nlp formulation derived from ex2) to illustrate this 
+   * feature and to test HiOp's internal implementation of eq.-ineq. spliting.
    */
-  virtual bool eval_Jac_cons(const long long& n, const long long& m, 
-			     const double* x, bool new_x,
-			     double** Jac) { return false; }
+  virtual bool eval_Jac_cons(const long long& n, const long long& m,
+  			     const double* x, bool new_x,
+  			     double** Jac) { return false; }
 
   
 };
