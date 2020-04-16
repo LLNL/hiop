@@ -125,8 +125,16 @@ protected:
   {
     int *idx_start; //size num_rows+1
     int num_rows;
-    RowStartsInfo() : idx_start(NULL), num_rows(0) {}
-    RowStartsInfo(int n_rows) : idx_start(new int[n_rows+1]), num_rows(n_rows) {}
+    RowStartsInfo()
+      : idx_start(NULL), num_rows(0)
+    {}
+    RowStartsInfo(int n_rows)
+      : idx_start(new int[n_rows+1]), num_rows(n_rows)
+    {}
+    virtual ~RowStartsInfo()
+    {
+      delete[] idx_start;
+    }
   };
   mutable RowStartsInfo* row_starts;
 private:
