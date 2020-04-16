@@ -390,15 +390,15 @@ void hiopMatrixSparseTriplet::copyRowsFrom(const hiopMatrix& src_gen,
 					   const long long* rows_idxs,
 					   long long n_rows)
 {
-  auto src = dynamic_cast<const hiopMatrixSparseTriplet&>(src_gen);
+  const hiopMatrixSparseTriplet& src = dynamic_cast<const hiopMatrixSparseTriplet&>(src_gen);
   assert(this->m() == n_rows);
   assert(this->numberOfNonzeros() <= src.numberOfNonzeros());
   assert(this->n() == src.n());
   assert(n_rows <= src.n());
 
-  auto iRow_src = src.i_row();
-  auto jCol_src = src.j_col();
-  double* values_src = src.M();
+  const int* iRow_src = src.i_row();
+  const int* jCol_src = src.j_col();
+  const double* values_src = src.M();
   int nnz_src = src.numberOfNonzeros();
   int itnz_src=0;
   int itnz_dest=0;

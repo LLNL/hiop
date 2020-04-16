@@ -104,6 +104,10 @@ public:
   inline int* i_row() { return iRow; }
   inline int* j_col() { return jCol; }
   inline double* M() { return values; }
+
+  inline const int* i_row() const { return iRow; }
+  inline const int* j_col() const { return jCol; }
+  inline const double* M() const { return values; }
 #ifdef HIOP_DEEPCHECKS
   virtual bool assertSymmetry(double tol=1e-16) const { return false; }
   virtual bool checkIndexesAreOrdered() const;
