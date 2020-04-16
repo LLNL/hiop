@@ -96,7 +96,10 @@ int main(int argc, char **argv)
 
   bool selfCheck, one_call_cons;
   long long n_sp, n_de;
-  if(!parse_arguments(argc, argv, selfCheck, n_sp, n_de, one_call_cons)) { usage(argv[0]); return 1;}
+  if(!parse_arguments(argc, argv, selfCheck, n_sp, n_de, one_call_cons)) {
+    usage(argv[0]);
+    return 1;
+  }
 
   double obj_value=-1e+20;
   hiopSolveStatus status;

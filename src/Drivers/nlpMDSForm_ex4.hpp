@@ -76,7 +76,7 @@ public:
 
     _buf_y = new double[nd];
 
-    haveIneq = false;
+    haveIneq = true;
   }
 
   virtual ~Ex4()
@@ -493,25 +493,25 @@ public:
 	jJacS[nnzit] = con_idx+ns;
 	nnzit++;
       }
-      if(haveIneq) {
+      if(haveIneq && ns>0) {
 	for(int con_idx=ns; con_idx<m; ++con_idx) {
 
 	  //sparse Jacobian ineq w.r.t x and s
 	  if(con_idx==ns) {
 	    //w.r.t x_1
-	    iJacS[nnzit] = 0;
+	    iJacS[nnzit] = con_idx;
 	    jJacS[nnzit] = 0;
 	    nnzit++;
 	    //w.r.t s
 	    for(int i=0; i<ns; i++) {
-	      iJacS[nnzit] = 0;
+	      iJacS[nnzit] = con_idx;
 	      jJacS[nnzit] = ns+i;
 	      nnzit++;
 	    }
 	  } else {
 	    if(con_idx-ns==1 || con_idx-ns==2) {
 	      //w.r.t x_2 or x_3
-	      iJacS[nnzit] = con_idx-ns;
+	      iJacS[nnzit] = con_idx;
 	      jJacS[nnzit] = con_idx-ns;
 	      nnzit++;
 	    } else { assert(false); }
@@ -535,7 +535,7 @@ public:
 	
       }
       
-      if(haveIneq) {
+      if(haveIneq && ns>0) {
 	for(int con_idx=ns; con_idx<m; ++con_idx) {
 	  //sparse Jacobian INEQ w.r.t x and s
 	  if(con_idx-ns==0) {
