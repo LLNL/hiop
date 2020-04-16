@@ -197,7 +197,7 @@ public:
 	const int conineq_idx=con_idx-ns;
 	if(conineq_idx==0) {
 	  cons[conineq_idx] = x[0];
-	  for(int i=0; i<ns; i++)   cons[conineq_idx] += s[i];
+	  for(int i=0; i<ns; i++) cons[conineq_idx] += s[i];
 	  for(int i=0; i<nd; i++) cons[conineq_idx] += y[i];
 
 	} else if(conineq_idx==1) {
@@ -451,6 +451,11 @@ public:
 	} else { assert(false); }
       }
     }
+
+    // apply Md to y and add the result to equality part of 'cons'
+
+    //we know that equalities are the first ns constraints so this should work
+    Md->timesVec(1.0, cons, 1.0, y);
     return true;
   }
 
