@@ -223,6 +223,8 @@ public:
 
   /** W = beta*W + alpha*this^T*X 
    * Precondition: 'this' should be local/non-distributed. 'X' (and 'W') can be distributed.
+   *
+   * Note: no inter-process communication occurs in the parallel case
    */
   virtual void transTimesMat(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const;
 
@@ -239,7 +241,7 @@ public:
   virtual void addSubDiagonal(int start_on_dest_diag, const double& alpha, 
 			      const hiopVector& d_, int start_on_src_vec, int num_elems=-1);
 
-  virtual void addMatrix(double alpah, const hiopMatrix& X);
+  virtual void addMatrix(double alpha, const hiopMatrix& X);
 
   /* block of W += alpha*this
    * For efficiency, only upper triangular matrix is updated since this will be eventually sent to LAPACK

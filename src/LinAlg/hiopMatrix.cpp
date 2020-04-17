@@ -544,7 +544,6 @@ void hiopMatrixDense::timesMat_local(double beta, hiopMatrix& W_, double alpha, 
   //int M=X.n(), N=this->m(), K=this->n_local;
 
   //DGEMM(&trans,&trans, &M,&N,&K, &alpha,XM[0],&lda, this->M[0],&ldb, &beta,WM[0],&ldc);
-  
 }
 
 /* W = beta*W + alpha*this^T*X 
@@ -554,19 +553,22 @@ void hiopMatrixDense::transTimesMat(double beta, hiopMatrix& W_, double alpha, c
 {
   const hiopMatrixDense& X = dynamic_cast<const hiopMatrixDense&>(X_);
   hiopMatrixDense& W = dynamic_cast<hiopMatrixDense&>(W_);
-#ifdef HIOP_DEEPCHECKS
+
   assert(W.m()==n_local);
   assert(X.m()==m_local);
   assert(W.n()==X.n());
+#ifdef HIOP_DEEPCHECKS
   assert(W.isfinite());
   assert(X.isfinite());
 #endif
   if(W.m()==0) return;
 
+  assert(this->n_global==this->n_local && "requested parallel multiplication is not supported");
+  
   /* C = alpha*op(A)*op(B) + beta*C in our case is Wt= alpha* Xt  *M    + beta*Wt */
   char transX='N', transM='T';
-  int ldx=X.n(), ldm=n_local, ldw=W.n();
-  int M=X.n(), N=n_local, K=X.m();
+  int ldx=X.n_local, ldm=n_local, ldw=W.n_local;
+  int M=X.n_local, N=n_local, K=X.m();
   double** XM=X.local_data(); double** WM=W.local_data();
   
   DGEMM(&transX, &transM, &M,&N,&K, &alpha,XM[0],&ldx, this->M[0],&ldm, &beta,WM[0],&ldw);
