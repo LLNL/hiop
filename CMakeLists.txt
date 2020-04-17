@@ -196,6 +196,7 @@ install(FILES src/Interface/hiopInterface.hpp
 	      src/Optimization/hiopDualsUpdater.hpp
 	      src/LinAlg/hiopVector.hpp
 	      src/LinAlg/hiopMatrix.hpp
+	      src/LinAlg/hiopMatrixMDS.hpp
 	      src/LinAlg/hiopMatrixSparseTriplet.hpp
 	      src/LinAlg/hiopMatrixSparseTripletStorage.hpp
 	      src/LinAlg/hiopMatrixMDS.hpp
