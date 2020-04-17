@@ -199,7 +199,7 @@ public:
 
   virtual void timesVec(double beta,  hiopVector& y,
 			double alpha, const hiopVector& x) const;
-  /* same as above for mostly for internal use - avoid using it */
+  /* same as above for mostly internal use - avoid using it */
   virtual void timesVec(double beta,  double* y,
 			double alpha, const double* x) const;
 
@@ -208,13 +208,25 @@ public:
   /* same as above for mostly for internal use - avoid using it */
   virtual void transTimesVec(double beta,   double* y,
 			     double alpha, const double* x) const;
-  
+  /** W = beta*W + alpha*this*X 
+   *
+   * Precondition: W, 'this', and 'X' need to be local matrices (not distributed). All multiplications 
+   * of distributed matrices needed by HiOp internally can be done efficiently in parallel using the 
+   * 'timesMatTrans' and 'transTimesMat' methods below.
+   */ 
   virtual void timesMat(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const;
+  
+  /** W = beta*W + alpha*this*X 
+   * Contains the implementation internals of the above; can be used on its own.
+   */
   virtual void timesMat_local(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const;
 
-  //to be used only locally
+  /** W = beta*W + alpha*this^T*X 
+   * Precondition: 'this' should be local/non-distributed. 'X' (and 'W') can be distributed.
+   */
   virtual void transTimesMat(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const;
-  //to be used only locally
+
+
   virtual void timesMatTrans(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const;
   virtual void timesMatTrans_local(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const;
 
