@@ -8,13 +8,13 @@
 #include <iostream>
 
 using namespace Ipopt;
-
+using namespace hiop;
 // Example of how to use IpoptAdapter to solve HiOP-specified problems with Ipopt
 
 int main(int    argv, char** argc)
 {
   //instantiate a HiOp problem 
-  Ex4 hiopNlp(200);
+  Ex4 hiopNlp(500);
   //create 
 
   // Create a new instance of the Ipopt nlp
@@ -30,9 +30,16 @@ int main(int    argv, char** argc)
   // Change some options
   // Note: The following choices are only examples, they might not be
   //       suitable for your optimization problem.
-  app->Options()->SetNumericValue("tol", 1e-7);
-  app->Options()->SetStringValue("mu_strategy", "adaptive");
-  app->Options()->SetStringValue("output_file", "ipopt.out");
+  //app->Options()->SetNumericValue("tol", 1e-7);
+  app->Options()->SetStringValue("recalc_y", "no");
+  //app->Options()->SetIntegerValue("print_level", 11);
+  app->Options()->SetStringValue("mu_strategy", "monotone");
+  app->Options()->SetNumericValue("bound_push", 1e-2);
+  app->Options()->SetNumericValue("slack_bound_push", 1e-24);
+  app->Options()->SetNumericValue("bound_relax_factor", 0.);
+  app->Options()->SetNumericValue("constr_mult_init_max", 0.001);
+  
+  //app->Options()->SetStringValue("output_file", "ipopt.out");
   //app->Options()->SetStringValue("derivative_test", "second-order"); //"only-second-order"
   // Initialize the IpoptApplication and process the options
   ApplicationReturnStatus status;

@@ -108,13 +108,13 @@ public:
    */ 
   virtual void symMatTimesInverseTimesMatTrans(double beta, hiopMatrixDense& W_, 
 					       double alpha, const hiopMatrixDense& X);
-
+#ifdef HIOP_DEEPCHECKS
   /* computes the product of the Hessian with a vector: y=beta*y+alpha*H*x.
    * The function is supposed to use the underlying ***recursive*** definition of the 
    * quasi-Newton Hessian and is used for checking/testing/error calculation.
    */
   virtual void timesVec(double beta, hiopVector& y, double alpha, const hiopVector&x);
-#ifdef HIOP_DEEPCHECKS
+
   /* same as above but without the Dx term in H */
   virtual void timesVec_noLogBarrierTerm(double beta, hiopVector& y, double alpha, const hiopVector&x);
   /* code shared by the above two methods*/
@@ -243,6 +243,7 @@ public:
   {
     assert(false && "not provided because it is not needed");
   }
+
   void timesVec(double beta, hiopVector& y, double alpha, const hiopVector&x) const
   {
     assert(false && "not provided because it is not needed");
@@ -269,7 +270,7 @@ public:
   {
     assert(false && "not provided because it is not needed");
   }
-  virtual void addDiagonal(const hiopVector& d_)
+  virtual void addDiagonal(const double& alpha, const hiopVector& d_)
   {
     assert(false && "not provided because it is not needed");
   }
@@ -277,23 +278,53 @@ public:
   {
     assert(false && "not provided because it is not needed");
   }
-  virtual void addSubDiagonal(long long start, const hiopVector& d_)
+  virtual void addSubDiagonal(const double& alpha, long long start, const hiopVector& d_)
   {
     assert(false && "not provided because it is not needed");
+  }
+  /* add to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements of
+   * 'd_' (source) starting at index 'start_on_src_vec'. The number of elements added is 'num_elems' 
+   * when num_elems>=0, or the remaining elems on 'd_' starting at 'start_on_src_vec'. */
+  virtual void addSubDiagonal(int start_on_dest_diag, const double& alpha, 
+			      const hiopVector& d_, int start_on_src_vec, int num_elems=-1)
+  {
+    assert(false && "not needed / implemented");
   }
   /* this += alpha*X */
   virtual void addMatrix(double alpah, const hiopMatrix& X)
   {
     assert(false && "not provided because it is not needed");
   }
+
+  void addToSymDenseMatrixUpperTriangle(int row_start, int col_start, double alpha, hiopMatrixDense& W) const
+  {
+    assert(false && "not needed; should not be used");
+  }
+  void transAddToSymDenseMatrixUpperTriangle(int row_start, int col_start, double alpha, hiopMatrixDense& W) const
+  {
+    assert(false && "not needed; should not be used");
+  }
+  void addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start, 
+						     double alpha, hiopMatrixDense& W) const
+  {
+    assert(false && "not needed; should not be used");
+  }
   virtual double max_abs_value()
   {
     assert(false && "not provided because it is not needed");
+    return 0.;
   }
+
+  void copyRowsFrom(const hiopMatrix& src_in, const long long* rows_idxs, long long n_rows)
+  {
+    assert(false && "not needed / should not be used");
+  }
+  
   /* return false is any of the entry is a nan, inf, or denormalized */
   virtual bool isfinite() const
   {
     assert(false && "not provided because it is not needed");
+    return false;
   }
   
   /* call with -1 to print all rows, all columns, or on all ranks; otherwise will
@@ -309,9 +340,9 @@ public:
   }
 
   /* number of rows */
-  virtual long long m() const { assert(false && "not provided because it is not needed"); }
+  virtual long long m() const { assert(false && "not provided because it is not needed"); return 0; }
   /* number of columns */
-  virtual long long n() const { assert(false && "not provided because it is not needed"); }
+  virtual long long n() const { assert(false && "not provided because it is not needed"); return 0; }
 #ifdef HIOP_DEEPCHECKS
   /* check symmetry */
   virtual bool assertSymmetry(double tol=1e-16) const { return true; }

@@ -19,10 +19,13 @@
 #include "IpTNLP.hpp"
 #include "hiopInterface.hpp"
 
+#include "hiopMatrix.hpp"
+
 #include <cassert>
 #include <cstring>
 using namespace Ipopt;
-using namespace hiop;
+
+namespace hiop {
 
 /* Addapts HiOp DenseConstraints interface to Ipopt TNLP interface */
 //TO DO: call eval_cons (and Jacob) separately for Eq and Ineq as per documentation of these methods
@@ -61,7 +64,7 @@ public:
     if(bSuccess) {
       types=new hiopInterfaceBase::NonlinearityType[m];
       bSuccess = hiopNLP->get_cons_info(mll, g_l, g_u, types);
-      delete types;
+      delete[] types;
     }
     return bSuccess;
   }
@@ -329,11 +332,11 @@ public:
    *   2) The values of the jacobian (if "values" is not NULL)
    */
   bool eval_jac_g(Index n, const Number* x, bool new_x,
-                          Index m, Index nele_jac, Index* iRow, Index *jCol,
-                          Number* values) 
+		  Index m, Index nele_jac, Index* iRow, Index *jCol,
+		  Number* values) 
   {
     bool bret=true; long long nll=n, mll=m;
-
+    
     if(values==NULL) {
       int nnzit = 0;
       //Sparse Jac for Eq
@@ -368,7 +371,7 @@ public:
 	  iRow[it] += n_eq;	
 
 	nnzit += nnz_sparse_Jacineq;
-	assert(nnzit<nele_jac);
+	assert(nnzit<=nele_jac);
 
 	for(int i=0; i<n_ineq; i++) {
 	  for(int j=0; j<nx_dense; j++) {
@@ -401,11 +404,11 @@ public:
 				      nnz_sparse_Jaceq, NULL, NULL, values,
 				      JacDeq->local_data());
 	if(!bret) return false;
-	nnzit += nnz_sparse_Jaceq; assert(nnzit<nele_jac);
+	nnzit += nnz_sparse_Jaceq; assert(nnzit<=nele_jac);
 
 	//the dense part
 	memcpy(values+nnzit, JacDeq->local_buffer(), n_eq*nx_dense*sizeof(double));
-	nnzit += n_eq*nx_dense; assert(nnzit<nele_jac);
+	nnzit += n_eq*nx_dense; assert(nnzit<=nele_jac);
       }
       //sparse Jac Ineq
       {
@@ -415,7 +418,7 @@ public:
 				      nnz_sparse_Jacineq, NULL, NULL, values+nnzit,
 				      JacDineq->local_data());
 	if(!bret) return false;
-	nnzit += nnz_sparse_Jacineq; assert(nnzit<nele_jac);
+	nnzit += nnz_sparse_Jacineq; assert(nnzit<=nele_jac);
 
 	//the dense part
 	memcpy(values+nnzit, JacDineq->local_buffer(), n_ineq*nx_dense*sizeof(double));
@@ -446,16 +449,16 @@ public:
       nnzit += nnz_sparse_Hess_Lagr_SS;
       
       //dense part
-      for(int i=0; i<nx_dense; ++i) {
+      for(int i=0; i<nx_dense; i++) {
 	const int row = nx_sparse+i;
-	for(int j=0; j<=i; ++j) {
+	for(int j=i; j<nx_dense; j++) {
 	  iRow[nnzit] = row;
 	  jCol[nnzit] = nx_sparse+j;
 	  nnzit++;
 	}
       }
 #ifdef DEBUG
-      nnzit += nx_dense*nx_dense;
+      //nnzit += nx_dense*nx_dense;
       assert(nnzit==nele_hess);
 #endif
 
@@ -478,13 +481,13 @@ public:
       
       //dense part
       for(int i=0; i<nx_dense; ++i) {
-	for(int j=0; j<=i; ++j) {
+	for(int j=i; j<nx_dense; ++j) {
 	  values[nnzit] = HessMat[i][j];
 	  nnzit++;
 	}
       }
 #ifdef DEBUG
-      nnzit += nx_dense*nx_dense;
+      //nnzit += nx_dense*nx_dense;
       assert(nnzit==nele_hess);
 #endif
 
@@ -524,7 +527,7 @@ private:
   hiopMDS2IpoptTNLP(const hiopMDS2IpoptTNLP&) {};
   hiopMDS2IpoptTNLP& operator=(const hiopMDS2IpoptTNLP&);
   //@}
-
 };
 
+} //end of namespace hiop
 #endif

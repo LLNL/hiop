@@ -46,80 +46,56 @@
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or 
 // product endorsement purposes.
 
-#ifndef HIOP_RESIDUAL
-#define HIOP_RESIDUAL
+#ifndef HIOP_LINSOLVER_UMFPACKZ
+#define HIOP_LINSOLVER_UMFPACKZ
+
+#include "umfpack.h"
 
 #include "hiopNlpFormulation.hpp"
-#include "hiopVector.hpp"
-#include "hiopIterate.hpp"
-
-#include "hiopLogBarProblem.hpp"
+#include "hiopLinSolver.hpp"
+#include "hiopMatrixComplexSparseTriplet.hpp"
+#include "hiopMatrixComplexDense.hpp"
 
 namespace hiop
 {
+  class hiopLinSolverUMFPACKZ : public hiopLinSolver
+  {
+  public:
+    hiopLinSolverUMFPACKZ(hiopMatrixComplexSparseTriplet& sysmat, hiopNlpFormulation* nlp_=NULL);
+    virtual ~hiopLinSolverUMFPACKZ();
+    
+    /** Triggers a refactorization of the matrix, if necessary. 
+     * Returns -1 if trouble in factorization is encountered. */
+    virtual int matrixChanged();
+    
+    /** solves a linear system.
+     * param 'x' is on entry the right hand side(s) of the system to be solved. On
+     * exit is contains the solution(s).  */
+    virtual void solve(hiopVector& x);
+    virtual void solve(hiopMatrix& X);
+    virtual void solve(const hiopMatrixComplexSparseTriplet& B, hiopMatrixComplexDense& X);
 
-class hiopResidual
-{
-public:
-  hiopResidual(hiopNlpFormulation* nlp);
-  virtual ~hiopResidual();
+  private: 
+    void* m_symbolic;
+    void* m_numeric;
+    double* m_null;
 
-  virtual int update(const hiopIterate& it, 
-		     const double& f, const hiopVector& c, const hiopVector& d,
-		     const hiopVector& gradf, const hiopMatrix& jac_c, const hiopMatrix& jac_d, 
-		     const hiopLogBarProblem& logbar);
+    hiopNlpFormulation* nlp;
+    
+    int *m_colptr, *m_rowidx;
+    double *m_vals; //size 2*nnz !!!
+    const hiopMatrixComplexSparseTriplet& sys_mat;
+    int n, nnz;
 
-  /* Return the Nlp and Log-bar errors computed at the previous update call. */ 
-  inline void getNlpErrors(double& optim, double& feas, double& comple) const
-  { optim=nrmInf_nlp_optim; feas=nrmInf_nlp_feasib; comple=nrmInf_nlp_complem;};
-  inline void getBarrierErrors(double& optim, double& feas, double& comple) const
-  { optim=nrmInf_bar_optim; feas=nrmInf_bar_feasib; comple=nrmInf_bar_complem;};
-  /* get the previously computed Infeasibility */
-  inline double getInfeasInfNorm() const { 
-    return nrmInf_nlp_feasib;
-  }
-  /* evaluate the Infeasibility at the new iterate, which has eq and ineq functions 
-   * computed in c_eval and d_eval, respectively. 
-   * The method modifies 'this', in particular ryd,ryc, rxl,rxu, rdl, rdu in an attempt
-   * to reuse storage/buffers, but does not update the cached nrmInf_XXX members. */
-  double computeNlpInfeasInfNorm(const hiopIterate& iter, 
-				 const hiopVector& c_eval, 
-				 const hiopVector& d_eval);
+    double m_control [UMFPACK_CONTROL], m_info [UMFPACK_INFO];
 
-  /* residual printing function - calls hiopVector::print 
-   * prints up to max_elems (by default all), on rank 'rank' (by default on all) */
-  virtual void print(FILE*, const char* msg=NULL, int max_elems=-1, int rank=-1) const;
-private:
-  hiopVectorPar*rx;           // -\grad f - J_c^t y_c - J_d^t y_d + z_l - z_u
-  hiopVectorPar*rd;           //  y_d + v_l - v_u
-  hiopVectorPar*rxl,*rxu;     //  x - sxl-xl, -x-sxu+xu
-  hiopVectorPar*rdl,*rdu;     //  as above but for d
+  private:
+    //returns the "abs" norm of the residual A*x-b
+    double resid_abs_norm(int n, int* Ap, int* Ai, double* Ax/*packed*/,
+			  double* x/*packed*/,
+			  double* b/*packed*/); 
+  };
+} //end namespace hiop
 
-  hiopVectorPar*ryc;          // -c(x)   (c(x)=0!//!)
-  hiopVectorPar*ryd;          //for d- d(x)
-
-  hiopVectorPar*rszl,*rszu;   // \mu e-sxl zl, \mu e - sxu zu
-  hiopVectorPar*rsvl,*rsvu;   // \mu e-sdl vl, \mu e - sdu vu
-
-  /** storage for the norm of [rx,rd], [rxl,...,rdu,ryc,ryd], and [rszl,...,rsvu]  
-   *  for the nlp (\mu=0)
-   */
-  double nrmInf_nlp_optim, nrmInf_nlp_feasib, nrmInf_nlp_complem; 
-  /** storage for the norm of [rx,rd], [rxl,...,rdu,ryc,ryd], and [rszl,...,rsvu]  
-   *  for the barrier subproblem
-   */
-  double nrmInf_bar_optim, nrmInf_bar_feasib, nrmInf_bar_complem; 
-  // and associated info from problem formulation
-  hiopNlpFormulation * nlp;
-private:
-  hiopResidual() {};
-  hiopResidual(const hiopResidual&) {};
-  hiopResidual& operator=(const hiopResidual& o) {return *this;};
-  friend class hiopKKTLinSysCompressedXYcYd;
-  friend class hiopKKTLinSysCompressedXDYcYd;
-  friend class hiopKKTLinSysLowRank;
-  friend class hiopKKTLinSys;
-};
-
-}
 #endif
+

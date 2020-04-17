@@ -46,80 +46,43 @@
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or 
 // product endorsement purposes.
 
-#ifndef HIOP_RESIDUAL
-#define HIOP_RESIDUAL
+#ifndef HIOP_KRONRED
+#define HIOP_KRONRED
 
-#include "hiopNlpFormulation.hpp"
-#include "hiopVector.hpp"
-#include "hiopIterate.hpp"
+#include "hiop_blasdefs.hpp"
+#include "hiopMatrixComplexSparseTriplet.hpp"
+#include "hiopMatrixComplexDense.hpp"
 
-#include "hiopLogBarProblem.hpp"
+#include <string>
+#include <vector>
+#include <map>
 
 namespace hiop
 {
-
-class hiopResidual
-{
-public:
-  hiopResidual(hiopNlpFormulation* nlp);
-  virtual ~hiopResidual();
-
-  virtual int update(const hiopIterate& it, 
-		     const double& f, const hiopVector& c, const hiopVector& d,
-		     const hiopVector& gradf, const hiopMatrix& jac_c, const hiopMatrix& jac_d, 
-		     const hiopLogBarProblem& logbar);
-
-  /* Return the Nlp and Log-bar errors computed at the previous update call. */ 
-  inline void getNlpErrors(double& optim, double& feas, double& comple) const
-  { optim=nrmInf_nlp_optim; feas=nrmInf_nlp_feasib; comple=nrmInf_nlp_complem;};
-  inline void getBarrierErrors(double& optim, double& feas, double& comple) const
-  { optim=nrmInf_bar_optim; feas=nrmInf_bar_feasib; comple=nrmInf_bar_complem;};
-  /* get the previously computed Infeasibility */
-  inline double getInfeasInfNorm() const { 
-    return nrmInf_nlp_feasib;
-  }
-  /* evaluate the Infeasibility at the new iterate, which has eq and ineq functions 
-   * computed in c_eval and d_eval, respectively. 
-   * The method modifies 'this', in particular ryd,ryc, rxl,rxu, rdl, rdu in an attempt
-   * to reuse storage/buffers, but does not update the cached nrmInf_XXX members. */
-  double computeNlpInfeasInfNorm(const hiopIterate& iter, 
-				 const hiopVector& c_eval, 
-				 const hiopVector& d_eval);
-
-  /* residual printing function - calls hiopVector::print 
-   * prints up to max_elems (by default all), on rank 'rank' (by default on all) */
-  virtual void print(FILE*, const char* msg=NULL, int max_elems=-1, int rank=-1) const;
-private:
-  hiopVectorPar*rx;           // -\grad f - J_c^t y_c - J_d^t y_d + z_l - z_u
-  hiopVectorPar*rd;           //  y_d + v_l - v_u
-  hiopVectorPar*rxl,*rxu;     //  x - sxl-xl, -x-sxu+xu
-  hiopVectorPar*rdl,*rdu;     //  as above but for d
-
-  hiopVectorPar*ryc;          // -c(x)   (c(x)=0!//!)
-  hiopVectorPar*ryd;          //for d- d(x)
-
-  hiopVectorPar*rszl,*rszu;   // \mu e-sxl zl, \mu e - sxu zu
-  hiopVectorPar*rsvl,*rsvu;   // \mu e-sdl vl, \mu e - sdu vu
-
-  /** storage for the norm of [rx,rd], [rxl,...,rdu,ryc,ryd], and [rszl,...,rsvu]  
-   *  for the nlp (\mu=0)
+  /* Utility to perform the Kron reduction of the Ybus matrix (sparse symmetric complex)
+   * into the reduced Ybus (dense symmetric complex) matrix
    */
-  double nrmInf_nlp_optim, nrmInf_nlp_feasib, nrmInf_nlp_complem; 
-  /** storage for the norm of [rx,rd], [rxl,...,rdu,ryc,ryd], and [rszl,...,rsvu]  
-   *  for the barrier subproblem
-   */
-  double nrmInf_bar_optim, nrmInf_bar_feasib, nrmInf_bar_complem; 
-  // and associated info from problem formulation
-  hiopNlpFormulation * nlp;
-private:
-  hiopResidual() {};
-  hiopResidual(const hiopResidual&) {};
-  hiopResidual& operator=(const hiopResidual& o) {return *this;};
-  friend class hiopKKTLinSysCompressedXYcYd;
-  friend class hiopKKTLinSysCompressedXDYcYd;
-  friend class hiopKKTLinSysLowRank;
-  friend class hiopKKTLinSys;
-};
+  class hiopKronReduction
+  {
+  public:
+    hiopKronReduction() {};
+    virtual ~hiopKronReduction() {};
 
-}
+    /* Performs the Kron reduction (computes Schur complement)
+     * In parameters
+     *  - idx_nonaux_buses, idx_aux_buses: indexes of the auxiliary and non-auxiliary 
+     * buses (in the rows/cols of Ybus)
+     *  - Ybus
+     * Out parameters
+     *  - Ybus_red: reduced Ybus of size (nonaux,nonaux)
+     */
+    bool go(const std::vector<int>& idx_nonaux_buses, const std::vector<int>& idx_aux_buses,
+	    const hiopMatrixComplexSparseTriplet& Ybus, 
+	    hiopMatrixComplexDense& Ybus_red);
+	    
+  private:
+    
+  };
+
+} //end namespace
 #endif
