@@ -228,14 +228,20 @@ public:
    */
   virtual void transTimesMat(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const;
 
-
+  /** W = beta*W + alpha*this*X^T 
+   * Precondition: 'W' need to be local/non-distributed.
+   *
+   * 'this' and 'X' can be distributed, in which case communication will occur.
+   */
   virtual void timesMatTrans(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const;
+  /* Contains dgemm wrapper needed by the above */
   virtual void timesMatTrans_local(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const;
 
   virtual void addDiagonal(const double& alpha, const hiopVector& d_);
   virtual void addDiagonal(const double& value);
   virtual void addSubDiagonal(const double& alpha, long long start_on_dest_diag, const hiopVector& d_);
-  /* add to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements of
+  
+  /** add to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements of
    * 'd_' (source) starting at index 'start_on_src_vec'. The number of elements added is 'num_elems' 
    * when num_elems>=0, or the remaining elems on 'd_' starting at 'start_on_src_vec'. */
   virtual void addSubDiagonal(int start_on_dest_diag, const double& alpha, 
