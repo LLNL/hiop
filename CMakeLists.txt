@@ -40,7 +40,7 @@ if(HIOP_USE_GPU)
   endif(HIOP_MAGMA_DIR)
 
   set(HIOP_CUDA_LIBRARIES "-lculibos -lcublas -lcublasLt -lnvblas -lcusparse -lcudart -lcudadevrt")
-  find_package(CUDA)
+  find_package(CUDA 10.1)
   
   if(HIOP_CUDA_LIB_DIR)
     set(HIOP_CUDA_LIBRARIES "-L${HIOP_CUDA_LIB_DIR} ${HIOP_CUDA_LIBRARIES}")
