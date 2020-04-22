@@ -46,80 +46,87 @@
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or 
 // product endorsement purposes.
 
-#ifndef HIOP_RESIDUAL
-#define HIOP_RESIDUAL
+#ifndef HIOP_KKTLINSYSMDS
+#define HIOP_KKTLINSYSMDS
 
-#include "hiopNlpFormulation.hpp"
-#include "hiopVector.hpp"
-#include "hiopIterate.hpp"
+#include "hiopKKTLinSys.hpp"
+#include "hiopLinSolver.hpp"
 
-#include "hiopLogBarProblem.hpp"
+#include "hiopCSR_IO.hpp"
 
 namespace hiop
 {
 
-class hiopResidual
+
+/* 
+ * Solves KKTLinSysCompressedXYcYd by exploiting the mixed dense-sparse (MDS)
+ * structure of the problem
+ *
+ * In general, the so-called XYcYd system has the form
+ * [  H  +  Dx     Jc^T  Jd^T   ] [ dx]   [ rx_tilde ]
+ * [    Jc          0     0     ] [dyc] = [   ryc    ]
+ * [    Jd          0   -Dd^{-1}] [dyd]   [ ryd_tilde]
+ *
+ * For MDS structure, the above linear system is exactly
+ * [  Hs  +  Dxs    0       Jcs^T   Jds^T   ] [dxs]   [ rxs_tilde ]
+ * [     0        Hd+Dxd    Jcd^T   Jdd^T   ] [dxd]   [ rxd_tilde ]
+ * [    Jcs        Jcd        0       0     ] [dyc] = [   ryc    ]
+ * [    Jds        Jdd        0    -Dd^{-1} ] [dyd]   [ ryd_tilde]
+ * where 
+ *  - Jcs and Jds contain the sparse columns of the Jacobians Jc and Jd
+ *  - Jcd and Jdd contain the dense  columns of the Jacobians Jc and Jd
+ *  - Hs is a diagonal matrix (sparse part of the Hessian)
+ *  - Hd is the dense part of the Hessian
+ *  - Dxs and Dxd are diagonals corresponding to sparse (xs) and dense (xd) 
+ * variables in the log-barrier diagonal Dx, respectively
+ *
+ * 'solveCompressed' performs a reduction to
+ * [ Hd+Dxd               Jcd^T                          Jdd^T              ] [dxd]   [ rxd_tilde                             ]
+ * [  Jcd       -Jcs(Hs+Dxs)^{-1}Jcs^T - Drd               0                ] [dyc] = [ ryc       - Jcs(Hs+Dxs)^{-1}rxs_tilde ]
+ * [  Jdd                   0                 Jds(Hs+Dxs)^{-1}Jds^T-Dd^{-1} ] [dyd]   [ ryd_tilde - Jds(Hs+Dxs)^{-1}rxs_tilde ]
+ * 
+ * dxs = (Hs+Dxs)^{-1}[rxs_tilde - Jcs^T dyc - Jds^T dyd]
+ */
+class hiopKKTLinSysCompressedMDSXYcYd : public hiopKKTLinSysCompressedXYcYd
 {
 public:
-  hiopResidual(hiopNlpFormulation* nlp);
-  virtual ~hiopResidual();
+  hiopKKTLinSysCompressedMDSXYcYd(hiopNlpFormulation* nlp_);
+  virtual ~hiopKKTLinSysCompressedMDSXYcYd();
 
-  virtual int update(const hiopIterate& it, 
-		     const double& f, const hiopVector& c, const hiopVector& d,
-		     const hiopVector& gradf, const hiopMatrix& jac_c, const hiopMatrix& jac_d, 
-		     const hiopLogBarProblem& logbar);
+  virtual bool update(const hiopIterate* iter, 
+		      const hiopVector* grad_f, 
+		      const hiopMatrix* Jac_c, const hiopMatrix* Jac_d, hiopMatrix* Hess);
 
-  /* Return the Nlp and Log-bar errors computed at the previous update call. */ 
-  inline void getNlpErrors(double& optim, double& feas, double& comple) const
-  { optim=nrmInf_nlp_optim; feas=nrmInf_nlp_feasib; comple=nrmInf_nlp_complem;};
-  inline void getBarrierErrors(double& optim, double& feas, double& comple) const
-  { optim=nrmInf_bar_optim; feas=nrmInf_bar_feasib; comple=nrmInf_bar_complem;};
-  /* get the previously computed Infeasibility */
-  inline double getInfeasInfNorm() const { 
-    return nrmInf_nlp_feasib;
-  }
-  /* evaluate the Infeasibility at the new iterate, which has eq and ineq functions 
-   * computed in c_eval and d_eval, respectively. 
-   * The method modifies 'this', in particular ryd,ryc, rxl,rxu, rdl, rdu in an attempt
-   * to reuse storage/buffers, but does not update the cached nrmInf_XXX members. */
-  double computeNlpInfeasInfNorm(const hiopIterate& iter, 
-				 const hiopVector& c_eval, 
-				 const hiopVector& d_eval);
+  virtual void solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
+			       hiopVectorPar& dx, hiopVectorPar& dyc, hiopVectorPar& dyd);
 
-  /* residual printing function - calls hiopVector::print 
-   * prints up to max_elems (by default all), on rank 'rank' (by default on all) */
-  virtual void print(FILE*, const char* msg=NULL, int max_elems=-1, int rank=-1) const;
-private:
-  hiopVectorPar*rx;           // -\grad f - J_c^t y_c - J_d^t y_d + z_l - z_u
-  hiopVectorPar*rd;           //  y_d + v_l - v_u
-  hiopVectorPar*rxl,*rxu;     //  x - sxl-xl, -x-sxu+xu
-  hiopVectorPar*rdl,*rdu;     //  as above but for d
+protected:
+  hiopLinSolverIndefDense* linSys;
+  hiopVectorPar *rhs; //[rxdense, ryc, ryd]
+  hiopVectorPar *_buff_xs; //an auxiliary buffer 
+  //from the parent class we also use
+  //  hiopVectorPar *Dd_inv;
+  //  hiopVectorPar *ryd_tilde;
 
-  hiopVectorPar*ryc;          // -c(x)   (c(x)=0!//!)
-  hiopVectorPar*ryd;          //for d- d(x)
+  //from the parent's parent class (hiopKKTLinSysCompressed) we also use
+  //  hiopVectorPar *Dx;
+  //  hiopVectorPar *rx_tilde;
 
-  hiopVectorPar*rszl,*rszu;   // \mu e-sxl zl, \mu e - sxu zu
-  hiopVectorPar*rsvl,*rsvu;   // \mu e-sdl vl, \mu e - sdu vu
+  //keep Hxs = HessMDS->sp_mat() + Dxs (Dx=log-barrier diagonal for xs)
+  hiopVectorPar *Hxs; 
 
-  /** storage for the norm of [rx,rd], [rxl,...,rdu,ryc,ryd], and [rszl,...,rsvu]  
-   *  for the nlp (\mu=0)
-   */
-  double nrmInf_nlp_optim, nrmInf_nlp_feasib, nrmInf_nlp_complem; 
-  /** storage for the norm of [rx,rd], [rxl,...,rdu,ryc,ryd], and [rszl,...,rsvu]  
-   *  for the barrier subproblem
-   */
-  double nrmInf_bar_optim, nrmInf_bar_feasib, nrmInf_bar_complem; 
-  // and associated info from problem formulation
-  hiopNlpFormulation * nlp;
-private:
-  hiopResidual() {};
-  hiopResidual(const hiopResidual&) {};
-  hiopResidual& operator=(const hiopResidual& o) {return *this;};
-  friend class hiopKKTLinSysCompressedXYcYd;
-  friend class hiopKKTLinSysCompressedXDYcYd;
-  friend class hiopKKTLinSysLowRank;
-  friend class hiopKKTLinSys;
+  //just dynamic_cast-ed pointers
+  hiopNlpMDS* nlpMDS;
+  hiopMatrixSymBlockDiagMDS* HessMDS;
+  const hiopMatrixMDS* Jac_cMDS;
+  const hiopMatrixMDS* Jac_dMDS;
+
+    //-1 when disabled; otherwise acts like a counter, 0,1,... incremented each time 'solveCompressed' is called
+  //depends on the 'write_kkt' option
+  int write_linsys_counter; 
+  hiopCSR_IO csr_writer;
 };
 
-}
+} // end of namespace
+
 #endif

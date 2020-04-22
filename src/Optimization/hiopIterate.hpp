@@ -119,8 +119,14 @@ public:
   void print(FILE* f, const char* msg=NULL) const;
 
   friend class hiopResidual;
+  friend class hiopKKTLinSys;
+  friend class hiopKKTLinSysCompressedXYcYd;
+  friend class hiopKKTLinSysCompressedXDYcYd;
+  friend class hiopKKTLinSysDenseXYcYd;
+  friend class hiopKKTLinSysDenseXDYcYd;
   friend class hiopKKTLinSysLowRank;
   friend class hiopHessianLowRank;
+  friend class hiopKKTLinSysCompressedMDSXYcYd;
   friend class hiopHessianInvLowRank_obsolette;
 private:
   /** Primal variables */

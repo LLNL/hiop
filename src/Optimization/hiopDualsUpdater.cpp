@@ -48,7 +48,7 @@
 
 #include "hiopDualsUpdater.hpp"
 
-#include "blasdefs.hpp"
+#include "hiop_blasdefs.hpp"
 
 namespace hiop
 {
@@ -57,6 +57,7 @@ hiopDualsLsqUpdate::hiopDualsLsqUpdate(hiopNlpFormulation* nlp)
   : hiopDualsUpdater(nlp) 
 {
   hiopNlpDenseConstraints* nlpd = dynamic_cast<hiopNlpDenseConstraints*>(_nlp);
+  assert(NULL!=nlpd);
   _mexme = new hiopMatrixDense(nlpd->m_eq(),   nlpd->m_eq());
   _mexmi = new hiopMatrixDense(nlpd->m_eq(),   nlpd->m_ineq());
   _mixmi = new hiopMatrixDense(nlpd->m_ineq(), nlpd->m_ineq());
@@ -124,7 +125,9 @@ go(const hiopIterate& iter,  hiopIterate& iter_plus,
 
   //return if the constraint violation (primal infeasibility) is not below the tol for the LSQ update
   if(infeas_nrm_trial>recalc_lsq_duals_tol) {
-    nlpd->log->printf(hovScalars, "will not perform the dual lsq update since the primal infeasibility (%g) is not under the tolerance recalc_lsq_duals_tol=%g.\n", infeas_nrm_trial, recalc_lsq_duals_tol);
+    nlpd->log->printf(hovScalars, "will not perform the dual lsq update since the primal infeasibility (%g) "
+		      "is not under the tolerance recalc_lsq_duals_tol=%g.\n",
+		      infeas_nrm_trial, recalc_lsq_duals_tol);
     return true;
   }
 
@@ -196,8 +199,8 @@ bool hiopDualsLsqUpdate::LSQUpdate(hiopIterate& iter, const hiopVector& grad_f, 
   jac_d.timesVec(0.0, *rhsd, -1.0, vecx);
   rhsd->axpy(-1.0, vecd);
 
-  rhs->copyFromStarting(*rhsc, 0);
-  rhs->copyFromStarting(*rhsd, nlpd->m_eq());
+  rhs->copyFromStarting(0, *rhsc);
+  rhs->copyFromStarting(nlpd->m_eq(), *rhsd);
 
   //nlpd->log->write("rhs", *rhs, hovSummary);
 #ifdef HIOP_DEEPCHECKS
@@ -211,8 +214,8 @@ bool hiopDualsLsqUpdate::LSQUpdate(hiopIterate& iter, const hiopVector& grad_f, 
   }
 
   //update yc and yd in iter_plus
-  rhs->copyToStarting(*iter.get_yc(), 0);
-  rhs->copyToStarting(*iter.get_yd(), nlpd->m_eq());
+  rhs->copyToStarting(0, *iter.get_yc());
+  rhs->copyToStarting(nlpd->m_eq(), *iter.get_yd());
 
 #ifdef HIOP_DEEPCHECKS
   double nrmrhs = rhs_copy->twonorm();

@@ -45,6 +45,13 @@ public:
     mDe->copyFrom(*m.mDe);
   }
 
+  virtual void copyRowsFrom(const hiopMatrix& src_in, const long long* rows_idxs, long long n_rows)
+  {
+    const hiopMatrixMDS& src = dynamic_cast<const hiopMatrixMDS&>(src_in);
+    mSp->copyRowsFrom(*src.mSp, rows_idxs, n_rows);
+    mDe->copyRowsFrom(*src.mDe, rows_idxs, n_rows);
+  }
+  
   virtual void timesVec(double beta,  hiopVector& y,
 			double alpha, const hiopVector& x) const
   {
@@ -54,7 +61,7 @@ public:
     assert(xp);
     assert(xp->get_size() == mSp->n()+mDe->n());
     mSp->timesVec(beta, yp->local_data(), alpha, xp->local_data_const());
-    mDe->timesVec(0.,   yp->local_data(), alpha, xp->local_data_const()+mSp->n());
+    mDe->timesVec(1.,   yp->local_data(), alpha, xp->local_data_const()+mSp->n());
   }
   virtual void transTimesVec(double beta,   hiopVector& y,
 			     double alpha, const hiopVector& x) const
@@ -85,7 +92,7 @@ public:
   }
 
 
-  virtual void addDiagonal(const hiopVector& d_)
+  virtual void addDiagonal(const double& alpha, const hiopVector& d_)
   {
     assert(false && "not supported");
   }
@@ -93,9 +100,17 @@ public:
   {
     assert(false && "not supported");
   }
-  virtual void addSubDiagonal(long long start, const hiopVector& d_)
+  virtual void addSubDiagonal(const double& alpha, long long start, const hiopVector& d_)
   {
     assert(false && "not supported");
+  }
+  /* add to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements of
+   * 'd_' (source) starting at index 'start_on_src_vec'. The number of elements added is 'num_elems' 
+   * when num_elems>=0, or the remaining elems on 'd_' starting at 'start_on_src_vec'. */
+  virtual void addSubDiagonal(int start_on_dest_diag, const double& alpha, 
+			      const hiopVector& d_, int start_on_src_vec, int num_elems=-1)
+  {
+    assert(false && "not needed / implemented");
   }
 
   virtual void addMatrix(double alpha, const hiopMatrix& X)
@@ -104,7 +119,39 @@ public:
     if(pX==NULL) {
       assert(false && "operation only supported for hiopMatrixMDS left operand");
     }
+    mSp->addMatrix(alpha, *pX->mSp);
+    mDe->addMatrix(alpha, *pX->mDe);
   }
+
+  /* block of W += alpha*this */
+  virtual void addToSymDenseMatrixUpperTriangle(int row_start, int col_start, double alpha, hiopMatrixDense& W) const
+  {
+    mSp->addToSymDenseMatrixUpperTriangle(row_start, col_start, alpha, W);
+    mDe->addToSymDenseMatrixUpperTriangle(row_start, col_start+mSp->n(), alpha, W);
+  }
+  /* block of W += alpha*this' */
+  virtual void transAddToSymDenseMatrixUpperTriangle(int row_start, int col_start, double alpha, hiopMatrixDense& W) const
+  {
+    mSp->transAddToSymDenseMatrixUpperTriangle(row_start,          col_start, alpha, W);
+    mDe->transAddToSymDenseMatrixUpperTriangle(row_start+mSp->n(), col_start, alpha, W);
+  }
+
+  /* diagonal block of W += alpha*this with 'diag_start' indicating the diagonal entry of W where
+   * 'this' should start to contribute.
+   * 
+   * For efficiency, only upper triangle of W is updated since this will be eventually sent to LAPACK
+   * and only the upper triangle of 'this' is accessed
+   * 
+   * Preconditions: 
+   *  1. this->n()==this-m()
+   *  2. W.n() == W.m()
+   */
+  virtual void addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start, 
+							     double alpha, hiopMatrixDense& W) const
+  {
+    assert(false && "not for general matrices; counterpart method from hiopMatrixSymBlockDiagMDS should be used instead");
+  }
+
   virtual double max_abs_value()
   {
     return std::max(mSp->max_abs_value(), mDe->max_abs_value());
@@ -146,14 +193,17 @@ public:
   inline long long n_sp() const {return mSp->n();}
   inline long long n_de() const {return  mDe->n();}
 
-  inline int sp_nnz() const { return mSp->nnz(); }
+  inline const hiopMatrixSparseTriplet* sp_mat() const { return mSp; }
+  inline const hiopMatrixDense* de_mat() const { return mDe; }
+
+  inline int sp_nnz() const { return mSp->numberOfNonzeros(); }
   inline int* sp_irow() { return mSp->i_row(); }
   inline int* sp_jcol() { return mSp->j_col(); }
   inline double* sp_M() { return mSp->M(); }
   inline double** de_local_data() { return mDe->local_data(); }
 
 #ifdef HIOP_DEEPCHECKS
-  virtual bool assertSymmetry(double tol=1e-16) const;
+  virtual bool assertSymmetry(double tol=1e-16) const { return false; }
 #endif
 private:
   hiopMatrixSparseTriplet* mSp;
@@ -193,6 +243,13 @@ public:
     mDe->copyFrom(*m.mDe);
   }
 
+  virtual void copyRowsFrom(const hiopMatrix& src_in, const long long* rows_idxs, long long n_rows)
+  {
+    const hiopMatrixSymBlockDiagMDS& src = dynamic_cast<const hiopMatrixSymBlockDiagMDS&>(src_in);
+    mSp->copyRowsFrom(src, rows_idxs, n_rows);
+    mDe->copyRowsFrom(src, rows_idxs, n_rows);
+  }
+  
   virtual void timesVec(double beta,  hiopVector& y,
 			double alpha, const hiopVector& x) const
   {
@@ -230,7 +287,7 @@ public:
   }
 
 
-  virtual void addDiagonal(const hiopVector& d_)
+  virtual void addDiagonal(const double& alpha, const hiopVector& d_)
   {
     assert(false && "not supported");
   }
@@ -238,9 +295,18 @@ public:
   {
     assert(false && "not supported");
   }
-  virtual void addSubDiagonal(long long start, const hiopVector& d_)
+  virtual void addSubDiagonal(const double& alpha, long long start, const hiopVector& d_)
   {
     assert(false && "not supported");
+  }
+
+  /* add to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements of
+   * 'd_' (source) starting at index 'start_on_src_vec'. The number of elements added is 'num_elems' 
+   * when num_elems>=0, or the remaining elems on 'd_' starting at 'start_on_src_vec'. */
+  virtual void addSubDiagonal(int start_on_dest_diag, const double& alpha, 
+			      const hiopVector& d_, int start_on_src_vec, int num_elems=-1)
+  {
+    assert(false && "not needed / implemented");
   }
 
   virtual void addMatrix(double alpha, const hiopMatrix& X)
@@ -248,8 +314,44 @@ public:
     const hiopMatrixSymBlockDiagMDS* pX=dynamic_cast<const hiopMatrixSymBlockDiagMDS*>(&X);
     if(pX==NULL) {
       assert(false && "operation only supported for hiopMatrixMDS left operand");
-    }
+    } 
+    mSp->addMatrix(alpha, *pX->mSp);
+    mDe->addMatrix(alpha, *pX->mDe);
   }
+
+  /* block of W += alpha*this */
+  virtual void addToSymDenseMatrixUpperTriangle(int row_start, int col_start, double alpha, hiopMatrixDense& W) const
+  {
+    assert(mSp->m() == mSp->n());
+    mSp->addToSymDenseMatrixUpperTriangle(row_start,          col_start,          alpha, W);
+    mDe->addToSymDenseMatrixUpperTriangle(row_start+mSp->n(), col_start+mSp->n(), alpha, W);
+  }
+  /* block of W += alpha*this */
+  virtual void transAddToSymDenseMatrixUpperTriangle(int row_start, int col_start, double alpha, hiopMatrixDense& W) const
+  {
+    assert(mSp->m() == mSp->n());
+    mSp->transAddToSymDenseMatrixUpperTriangle(row_start,          col_start,          alpha, W);
+    mDe->transAddToSymDenseMatrixUpperTriangle(row_start+mSp->n(), col_start+mSp->n(), alpha, W);
+  }
+
+  /* diagonal block of W += alpha*this with 'diag_start' indicating the diagonal entry of W where
+   * 'this' should start to contribute.
+   * 
+   * For efficiency, only upper triangle of W is updated since this will be eventually sent to LAPACK
+   * and only the upper triangle of 'this' is accessed
+   * 
+   * Preconditions: 
+   *  1. this->n()==this-m()
+   *  2. W.n() == W.m()
+   */
+  virtual void addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start, 
+							     double alpha, hiopMatrixDense& W) const
+  {
+    assert(mSp->m() == mSp->n());
+    mSp->addUpperTriangleToSymDenseMatrixUpperTriangle(diag_start,          alpha, W);
+    mDe->addUpperTriangleToSymDenseMatrixUpperTriangle(diag_start+mSp->m(), alpha, W);
+  }
+
   virtual double max_abs_value()
   {
     return std::max(mSp->max_abs_value(), mDe->max_abs_value());
@@ -291,14 +393,23 @@ public:
   inline long long n_sp() const {return mSp->n();}
   inline long long n_de() const {return  mDe->n();}
 
-  inline int sp_nnz() const { return mSp->nnz(); }
+  inline const hiopMatrixSymSparseTriplet* sp_mat() const { return mSp; }
+  inline const hiopMatrixDense* de_mat() const { return mDe; }
+
+  inline int sp_nnz() const { return mSp->numberOfNonzeros(); }
   inline int* sp_irow() { return mSp->i_row(); }
   inline int* sp_jcol() { return mSp->j_col(); }
   inline double* sp_M() { return mSp->M(); }
   inline double** de_local_data() { return mDe->local_data(); }
 
 #ifdef HIOP_DEEPCHECKS
-  virtual bool assertSymmetry(double tol=1e-16) const;
+  virtual bool assertSymmetry(double tol=1e-16) const
+  {
+    if(mSp->assertSymmetry(tol))
+      return mDe->assertSymmetry(tol);
+    else
+      return false;
+  }
 #endif
 private:
   hiopMatrixSymSparseTriplet* mSp;

@@ -59,33 +59,195 @@ namespace hiop
 class hiopKKTLinSys 
 {
 public:
+  hiopKKTLinSys(hiopNlpFormulation* nlp_) 
+    : nlp(nlp_), iter(NULL), grad_f(NULL), Jac_c(NULL), Jac_d(NULL), Hess(NULL)
+  { }
+  virtual ~hiopKKTLinSys() 
+  { }
   /* updates the parts in KKT system that are dependent on the iterate. 
    * It may trigger a refactorization for direct linear systems, or it may not do 
    * anything, for example, LowRank linear system */
   virtual bool update(const hiopIterate* iter, 
 		      const hiopVector* grad_f, 
-		      const hiopMatrixDense* Jac_c, const hiopMatrixDense* Jac_d, 
-		      hiopHessianLowRank* Hess)=0;
-  virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction)=0;
-  virtual ~hiopKKTLinSys() {}
+		      const hiopMatrix* Jac_c, const hiopMatrix* Jac_d, hiopMatrix* Hess) = 0;
+
+  /* forms the residual of the underlying linear system, uses the factorization
+   * computed by 'update' to compute the "reduced-space" search directions by solving
+   * with the factors, then computes the "full-space" directions */
+  virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction) = 0;
+
+#ifdef HIOP_DEEPCHECKS
+  //computes the solve error for the KKT Linear system; used only for correctness checking
+  virtual double errorKKT(const hiopResidual* resid, const hiopIterate* sol);
+
+protected:
+  //y=beta*y+alpha*H*x
+  virtual void HessianTimesVec_noLogBarrierTerm(double beta, hiopVector& y, 
+						double alpha, const hiopVector&x)
+  {
+    Hess->timesVec(beta, y, alpha, x);
+  }
+#endif
+protected:
+  hiopNlpFormulation* nlp;
+  const hiopIterate* iter;
+  const hiopVectorPar* grad_f;
+  const hiopMatrix *Jac_c, *Jac_d;
+  hiopMatrix* Hess;
 };
 
-class hiopKKTLinSysLowRank : public hiopKKTLinSys
+class hiopKKTLinSysCompressed : public hiopKKTLinSys
+{
+public:
+  hiopKKTLinSysCompressed(hiopNlpFormulation* nlp_)
+    : hiopKKTLinSys(nlp_), Dx(NULL), rx_tilde(NULL)
+  {
+    Dx = dynamic_cast<hiopVectorPar*>(nlp->alloc_primal_vec());
+    assert(Dx != NULL);
+    rx_tilde  = Dx->alloc_clone(); 
+  }
+  virtual ~hiopKKTLinSysCompressed() 
+  {
+    delete Dx;
+    delete rx_tilde;
+  }
+  virtual bool update(const hiopIterate* iter, 
+		      const hiopVector* grad_f, 
+		      const hiopMatrix* Jac_c, const hiopMatrix* Jac_d, hiopMatrix* Hess) = 0;
+
+  virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction) = 0;
+
+protected:
+  hiopVectorPar *Dx;
+  hiopVectorPar *rx_tilde;
+};
+
+/* Provides the functionality for reducing the KKT linear system to the 
+ * compressed linear below in dx, dyc, and dyd variables and then to perform 
+ * the basic ops needed to compute the remaining directions. 
+ *
+ * Relies on the pure virtual 'solveCompressed' to solve the compressed linear system
+ * [  H  +  Dx     Jc^T  Jd^T   ] [ dx]   [ rx_tilde ]
+ * [    Jc          0     0     ] [dyc] = [   ryc    ]
+ * [    Jd          0   -Dd^{-1}] [dyd]   [ ryd_tilde]
+ */
+class hiopKKTLinSysCompressedXYcYd : public hiopKKTLinSysCompressed
+{
+public:
+  hiopKKTLinSysCompressedXYcYd(hiopNlpFormulation* nlp_);
+  virtual ~hiopKKTLinSysCompressedXYcYd();
+
+  virtual bool update(const hiopIterate* iter, 
+		      const hiopVector* grad_f, 
+		      const hiopMatrix* Jac_c, const hiopMatrix* Jac_d, hiopMatrix* Hess) = 0;
+
+
+  virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction);
+
+  virtual void solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
+			       hiopVectorPar& dx, hiopVectorPar& dyc, hiopVectorPar& dyd) = 0;
+
+#ifdef HIOP_DEEPCHECKS
+  virtual double errorCompressedLinsys(const hiopVectorPar& rx, 
+				       const hiopVectorPar& ryc, 
+				       const hiopVectorPar& ryd,
+				       const hiopVectorPar& dx, 
+				       const hiopVectorPar& dyc, 
+				       const hiopVectorPar& dyd);
+#endif
+
+protected:
+  hiopVectorPar *Dd_inv;
+  hiopVectorPar *ryd_tilde;
+};
+
+/* Provides the functionality for reducing the KKT linear system to the 
+ * compressed linear below in dx, dd, dyc, and dyd variables and then to perform 
+ * the basic ops needed to compute the remaining directions. 
+ *
+ * Relies on the pure virtual 'solveCompressed' to form and solve the compressed 
+ * linear system
+ * [  H  +  Dx    0    Jc^T  Jd^T   ] [ dx]   [ rx_tilde ]
+ * [    0         Dd    0     -I    ] [ dd]   [ rd_tilde ]
+ * [    Jc        0     0      0    ] [dyc] = [   ryc    ]
+ * [    Jd       -I     0      0    ] [dyd]   [   ryd    ]   
+ * and then to compute the rest of the search directions
+ */
+class hiopKKTLinSysCompressedXDYcYd : public hiopKKTLinSysCompressed
+{
+public:
+  hiopKKTLinSysCompressedXDYcYd(hiopNlpFormulation* nlp_);
+  virtual ~hiopKKTLinSysCompressedXDYcYd();
+
+  virtual bool update(const hiopIterate* iter, 
+		      const hiopVector* grad_f, 
+		      const hiopMatrix* Jac_c, const hiopMatrix* Jac_d, hiopMatrix* Hess) = 0;
+
+  virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction);
+
+  virtual void solveCompressed(hiopVectorPar& rx, hiopVectorPar& rd, 
+			       hiopVectorPar& ryc, hiopVectorPar& ryd,
+			       hiopVectorPar& dx, hiopVectorPar& dd, 
+			       hiopVectorPar& dyc, hiopVectorPar& dyd) = 0;
+
+#ifdef HIOP_DEEPCHECKS
+  virtual double errorCompressedLinsys(const hiopVectorPar& rx,  const hiopVectorPar& rd, 
+				       const hiopVectorPar& ryc, const hiopVectorPar& ryd,
+				       const hiopVectorPar& dx,  const hiopVectorPar& dd, 
+				       const hiopVectorPar& dyc, const hiopVectorPar& dyd);
+#endif
+
+protected:
+  hiopVectorPar *Dd;
+  hiopVectorPar *rd_tilde;
+protected: 
+#ifdef HIOP_DEEPCHECKS
+  //y=beta*y+alpha*H*x
+  virtual void HessianTimesVec_noLogBarrierTerm(double beta, hiopVector& y, 
+						double alpha, const hiopVector&x)
+  {
+    Hess->timesVec(beta, y, alpha, x);
+  }
+#endif
+};
+
+class hiopKKTLinSysLowRank : public hiopKKTLinSysCompressedXYcYd
 {
 public:
   hiopKKTLinSysLowRank(hiopNlpFormulation* nlp_);
   virtual ~hiopKKTLinSysLowRank();
 
+  bool update(const hiopIterate* iter, 
+	      const hiopVector* grad_f, 
+	      const hiopMatrix* Jac_c_, const hiopMatrix* Jac_d_, 
+	      hiopMatrix* Hess_)
+  {
+    const hiopMatrixDense* Jac_c = dynamic_cast<const hiopMatrixDense*>(Jac_c_);
+    const hiopMatrixDense* Jac_d = dynamic_cast<const hiopMatrixDense*>(Jac_d_);
+    hiopHessianLowRank* Hess = dynamic_cast<hiopHessianLowRank*>(Hess_);
+    if(Jac_c==NULL || Jac_d==NULL || Hess==NULL) {
+      assert(false);
+      return false;
+    }
+    return update(iter, grad_f, Jac_c, Jac_d, Hess);
+  }
+
   virtual bool update(const hiopIterate* iter, 
 		      const hiopVector* grad_f, 
 		      const hiopMatrixDense* Jac_c, const hiopMatrixDense* Jac_d, 
 		      hiopHessianLowRank* Hess);
-  virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction);
 
   /* Solves the system corresponding to directions for x, yc, and yd, namely
    * [ H_BFGS + Dx   Jc^T  Jd^T   ] [ dx]   [ rx_tilde ]
    * [    Jc          0     0     ] [dyc] = [   ryc    ]
    * [    Jd          0   -Dd^{-1}] [dyd]   [ ryd_tilde]
+   *
+   * This is done by forming and solving
+   * [ Jc*(H+Dx)^{-1}*Jc^T   Jc*(H+Dx)^{-1}*Jd^T          ] [dyc] = [ Jc(H+Dx)^{-1} rx - ryc ]
+   * [ Jd*(H+Dx)^{-1}*Jc^T   Jd*(H+Dx)^{-1}*Jd^T + Dd^{-1}] [dyd]   [ Jd(H+dx)^{-1} rx - ryd ]
+   * and then solving for dx from
+   *  dx = - (H+Dx)^{-1}*(Jc^T*dyc+Jd^T*dyd - rx)
+   * 
    */
   virtual void solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
 			       hiopVectorPar& dx, hiopVectorPar& dyc, hiopVectorPar& dyd);
@@ -98,27 +260,27 @@ public:
   int solveWithRefin(hiopMatrixDense& M, hiopVectorPar& rhs);
 #ifdef HIOP_DEEPCHECKS
   static double solveError(const hiopMatrixDense& M,  const hiopVectorPar& x, hiopVectorPar& rhs);
-
-  //computes the solve error for the KKT Linear system; used only for correctness checking
-  double errorKKT(const hiopResidual* resid, const hiopIterate* sol);
   double errorCompressedLinsys(const hiopVectorPar& rx, const hiopVectorPar& ryc, const hiopVectorPar& ryd,
 			       const hiopVectorPar& dx, const hiopVectorPar& dyc, const hiopVectorPar& dyd);
+protected:
+  //y=beta*y+alpha*H*x
+  void HessianTimesVec_noLogBarrierTerm(double beta, hiopVector& y, double alpha, const hiopVector& x)
+  {
+    hiopHessianLowRank* HessLowR = dynamic_cast<hiopHessianLowRank*>(Hess);
+    assert(NULL != HessLowR);
+    if(HessLowR) HessLowR->timesVec_noLogBarrierTerm(beta, y, alpha, x);
+  }
 #endif
-private:
-  const hiopIterate* iter;
-  const hiopVectorPar* grad_f;
-  const hiopMatrixDense *Jac_c, *Jac_d;
-  hiopHessianLowRank* Hess;
 
-  hiopNlpDenseConstraints* nlp;
+private:
+  hiopNlpDenseConstraints* nlpD;
+  hiopHessianLowRank* HessLowRank;
 
   hiopMatrixDense* N; //the kxk reduced matrix
 #ifdef HIOP_DEEPCHECKS
   hiopMatrixDense* Nmat; //a copy of the above to compute the residual
 #endif
-  hiopVectorPar *Dx, *Dd_inv;
   //internal buffers
-  hiopVectorPar *rx_tilde, *ryd_tilde;
   hiopMatrixDense* _kxn_mat; //!opt (work directly with the Jacobian)
   hiopVectorPar* _k_vec1;
 };
