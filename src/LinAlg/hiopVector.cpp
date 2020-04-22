@@ -50,9 +50,10 @@
 
 #include <cmath>
 #include <cstring> //for memcpy
+#include <algorithm>
 #include <cassert>
 
-#include "blasdefs.hpp"
+#include "hiop_blasdefs.hpp"
 
 #include <limits>
 #include <cstddef>
@@ -65,7 +66,7 @@ hiopVectorPar::hiopVectorPar(const long long& glob_n, long long* col_part/*=NULL
   : comm(comm_)
 {
   n = glob_n;
-
+  assert(n>=0);
 #ifdef HIOP_USE_MPI
   // if this is a serial vector, make sure it has a valid comm in the mpi case
   if(comm==MPI_COMM_NULL) comm=MPI_COMM_SELF;
@@ -142,18 +143,44 @@ void hiopVectorPar::copyFrom(const double* v_local_data )
     memcpy(this->data, v_local_data, n_local*sizeof(double));
 }
 
-
-void hiopVectorPar::copyFromStarting(const hiopVector& v_, int start_index)
+void hiopVectorPar::copyFromStarting(int start_index_in_this, const double* v, int nv)
 {
-  const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_);
+  assert(start_index_in_this+nv <= n_local);
+  memcpy(data+start_index_in_this, v, nv*sizeof(double));
+}
+
+void hiopVectorPar::copyFromStarting(int start_index/*_in_src*/,const hiopVector& v_)
+{
 #ifdef HIOP_DEEPCHECKS
-  assert(n_local==n && "are you sure you want to call this?");
+  assert(n_local==n && "only for local/non-distributed vectors");
 #endif
+  const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_);
   assert(start_index+v.n_local <= n_local);
   memcpy(data+start_index, v.data, v.n_local*sizeof(double));
 }
 
-void hiopVectorPar::copyToStarting(hiopVector& v_, int start_index)
+void hiopVectorPar::startingAtCopyFromStartingAt(int start_idx_src, 
+						 const hiopVector& v_, 
+						 int start_idx_dest)
+{
+#ifdef HIOP_DEEPCHECKS
+  assert(n_local==n && "only for local/non-distributed vectors");
+#endif
+  assert((start_idx_src>=0 && start_idx_src<this->n_local) || this->n_local==0);
+  const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_);
+  assert((start_idx_dest>=0 && start_idx_dest<v.n_local) || v.n_local==0);
+
+  int howManyToCopy = this->n_local - start_idx_src;
+  const int howManyToCopyDest = v.n_local-start_idx_dest;
+  assert(howManyToCopy <= howManyToCopyDest);
+  //howManyToCopy = howManyToCopy <= v.n_local-start_idx_dest ? howManyToCopy : v.n_local-start_idx_dest;
+  if(howManyToCopy > howManyToCopyDest) howManyToCopy = howManyToCopyDest;
+
+  assert(howManyToCopy>=0);
+  memcpy(data+start_idx_src, v.data+start_idx_dest, howManyToCopy*sizeof(double));
+}
+
+void hiopVectorPar::copyToStarting(int start_index, hiopVector& v_)
 {
   const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_);
 #ifdef HIOP_DEEPCHECKS
@@ -162,12 +189,52 @@ void hiopVectorPar::copyToStarting(hiopVector& v_, int start_index)
   assert(start_index+v.n_local <= n_local);
   memcpy(v.data, data+start_index, v.n_local*sizeof(double));
 }
+/* Copy 'this' to v starting at start_index in 'v'. */
+void hiopVectorPar::copyToStarting(hiopVector& v_, int start_index/*_in_dest*/)
+{
+#ifdef HIOP_DEEPCHECKS
+  assert(n_local==n && "only for local/non-distributed vectors");
+#endif
+  const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_);
+  assert(start_index+n_local <= v.n_local);
+  memcpy(v.data+start_index, data, n_local*sizeof(double)); 
+}
+
+/* copy 'this' (source) starting at 'start_idx_in_src' to 'dest' starting at index 'int start_idx_dest' 
+ * If num_elems>=0, 'num_elems' will be copied; if num_elems<0, elements will be copied till the end of
+ * either source ('this') or destination ('dest') is reached */
+void hiopVectorPar::
+startingAtCopyToStartingAt(int start_idx_in_src, hiopVector& dest_, int start_idx_dest, int num_elems/*=-1*/) const
+{
+#ifdef HIOP_DEEPCHECKS
+  assert(n_local==n && "only for local/non-distributed vectors");
+#endif  
+  assert(start_idx_in_src>=0 && start_idx_in_src<=this->n_local);
+#ifdef DEBUG  
+  if(start_idx_in_src==this->n_local) assert((num_elems==-1 || num_elems==0));
+#endif
+  const hiopVectorPar& dest = dynamic_cast<hiopVectorPar&>(dest_);
+  assert(start_idx_dest>=0 && start_idx_dest<=dest.n_local);
+#ifdef DEBUG  
+  if(start_idx_dest==dest.n_local) assert((num_elems==-1 || num_elems==0));
+#endif
+  if(num_elems<0) {
+    num_elems = std::min(this->n_local-start_idx_in_src, dest.n_local-start_idx_dest);
+  } else {
+    assert(num_elems+start_idx_in_src <= this->n_local);
+    assert(num_elems+start_idx_dest   <= dest.n_local);
+    //make sure everything stays within bounds (in release)
+    num_elems = std::min(num_elems, (int)this->n_local-start_idx_in_src);
+    num_elems = std::min(num_elems, (int)dest.n_local-start_idx_dest);
+  }
+
+  memcpy(dest.data+start_idx_dest, this->data+start_idx_in_src, num_elems*sizeof(double));
+}
 
 void hiopVectorPar::copyTo(double* dest) const
 {
   memcpy(dest, this->data, n_local*sizeof(double));
 }
-
 
 double hiopVectorPar::twonorm() const 
 {
