@@ -33,9 +33,66 @@ configure_file(
   "${CMAKE_SOURCE_DIR}/src/Interface/hiop_defs.hpp.in"
   "${CMAKE_BINARY_DIR}/hiop_defs.hpp")
 
-add_library(HiopMAGMA INTERFACE)
-add_library(HiopMATH INTERFACE)
-add_library(HiopCUDA INTERFACE)
+add_library(hiop_MAGMA INTERFACE)
+add_library(hiop_MATH INTERFACE)
+add_library(hiop_CUDA INTERFACE)
+add_library(hiop_options INTERFACE)
+add_library(hiop_warnings INTERFACE)
+
+target_compile_features(hiop_options
+    INTERFACE
+        cxx_std_11
+        cxx_alignas
+        cxx_alignof
+        cxx_attributes
+        cxx_auto_type
+        cxx_constexpr
+        cxx_defaulted_functions
+        cxx_deleted_functions
+        cxx_final
+        cxx_lambdas
+        cxx_noexcept
+        cxx_override
+        cxx_range_for
+        cxx_rvalue_references
+        cxx_static_assert
+        cxx_strong_enums
+        cxx_trailing_return_types
+        cxx_unicode_literals
+        cxx_user_literals
+        cxx_variadic_macros
+)
+
+target_compile_options(hiop_warnings
+    INTERFACE
+        -Wall
+        -Wextra
+        -Wshadow            # warn the user if a variable
+                            # declaration shadows one from a
+                            # parent context
+        -Wpedantic          # Warn on nonstandard C++
+        -Wunused
+        -Wconversion        # Warn on lossy conversions
+        -Wnull-dereference
+        -Wdouble-promotion  # Warn on implicit conversion from
+                            # float to double
+)
+
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    message("Using extra GNU-specific compiler warnings...")
+    target_compile_options(hiop_warnings
+        INTERFACE
+            -Wmisleading-indentation    # Warn on indented blocks
+                                        # that are not really blocks
+            -Wduplicated-cond           # Warn on if/else chain with
+                                        # duplicated conditions
+            -Wduplicated-branches       # Warn on if/else chains with
+                                        # duplicated code
+            -Wuseless-cast              # Warn when casting to the same type
+    )
+endif()
+
+target_link_libraries(hiop_MATH INTERFACE hiop_options hiop_options)
 
 if(HIOP_USE_GPU)
   include(CheckLanguage)
@@ -55,70 +112,39 @@ if(HIOP_USE_GPU)
   endif()
 
   # for now we rely on MAGMA for GPUs computations
-  target_link_libraries(HiopMAGMA INTERFACE "-lmagma")
-  # set(MAGMA_LIBRARIES "-lmagma")
+  target_link_libraries(hiop_MAGMA INTERFACE "-lmagma")
   if(HIOP_MAGMA_DIR)
-    target_link_libraries(HiopMAGMA INTERFACE "-L${HIOP_MAGMA_DIR}/lib")
-      # set(MAGMA_LIBRARIES "-L${HIOP_MAGMA_DIR}/lib ${MAGMA_LIBRARIES}")
-    target_include_directories(HiopMAGMA INTERFACE "${HIOP_MAGMA_DIR}/include")
-    # set(MAGMA_INCLUDE "${HIOP_MAGMA_DIR}/include")
+    target_link_libraries(hiop_MAGMA INTERFACE "-L${HIOP_MAGMA_DIR}/lib")
+    target_include_directories(hiop_MAGMA INTERFACE "${HIOP_MAGMA_DIR}/include")
   endif(HIOP_MAGMA_DIR)
 
-  # set(HIOP_CUDA_LIBRARIES "-lculibos -lcublas -lcublasLt -lnvblas -lcusparse -lcudart -lcudadevrt")
-#   target_link_libraries(HiopCUDA INTERFACE
-#       -lculibos 
-#       -lcublas 
-#       -lcublasLt 
-#       -lnvblas 
-#       -lcusparse 
-#       -lcudart 
-#       -lcudadevrt)
-# find_package(CUDA 10.1)
-  
   if(HIOP_CUDA_LIB_DIR)
-      # set(HIOP_CUDA_LIBRARIES "-L${HIOP_CUDA_LIB_DIR} ${HIOP_CUDA_LIBRARIES}")
-    target_link_libraries(HiopCUDA INTERFACE "-L${HIOP_CUDA_LIB_DIR}")
+    target_link_libraries(hiop_CUDA INTERFACE "-L${HIOP_CUDA_LIB_DIR}")
   else()
-      # set(HIOP_CUDA_LIBRARIES "-L${CUDA_TOOLKIT_ROOT_DIR}/lib64 ${HIOP_CUDA_LIBRARIES}")
-    target_link_libraries(HiopCUDA INTERFACE "-L${CUDA_TOOLKIT_ROOT_DIR}")
+    target_link_libraries(hiop_CUDA INTERFACE "-L${CUDA_TOOLKIT_ROOT_DIR}")
   endif(HIOP_CUDA_LIB_DIR)
 
   # on some systems RHEL Nvidia toolkit puts cuBlas in different locations
   # user can setup/overwrite the lib directory
   if(HIOP_CUBLAS_LIB_DIR)
-      # set(HIOP_CUDA_LIBRARIES "-L${HIOP_CUBLAS_LIB_DIR} ${HIOP_CUDA_LIBRARIES}")
-    target_link_libraries(HiopCUDA INTERFACE "-L${HIOP_CUBLAS_LIB_DIR}")
+    target_link_libraries(hiop_CUDA INTERFACE "-L${HIOP_CUBLAS_LIB_DIR}")
   endif(HIOP_CUBLAS_LIB_DIR)
 
   if(HIOP_CUDA_INCLUDE_DIR)
-      # set(HIOP_CUDA_INCLUDE "${HIOP_CUDA_INCLUDE_DIR}")
-    target_include_directories(HiopCUDA INTERFACE "${HIOP_CUDA_INCLUDE_DIR}")
+    target_include_directories(hiop_CUDA INTERFACE "${HIOP_CUDA_INCLUDE_DIR}")
   else()
-      # set(HIOP_CUDA_INCLUDE "${CUDA_INCLUDE_DIRS}")
-    target_include_directories(HiopCUDA INTERFACE "${CUDA_INCLUDE_DIR}")
+    target_include_directories(hiop_CUDA INTERFACE "${CUDA_INCLUDE_DIR}")
   endif(HIOP_CUDA_INCLUDE_DIR)
 
+  target_link_libraries(hiop_MATH INTERFACE hiop_MAGMA hiop_CUDA)
   message("HiOp support for GPUs is on")
-#   message("HiOp GPU libs: '${MAGMA_LIBRARIES} ${HIOP_CUDA_LIBRARIES}'") 
-#   message("HiOp GPU includes: '${MAGMA_INCLUDE} ${HIOP_CUDA_INCLUDE}'") 
-  # include_directories(${MAGMA_INCLUDE} ${HIOP_CUDA_INCLUDE})
-  # set(HIOP_MATH_LIBRARIES ${MAGMA_LIBRARIES} ${HIOP_CUDA_LIBRARIES} ${HIOP_MATH_LIBRARIES})
-  target_link_libraries(HiopMATH INTERFACE HiopMAGMA HiopCUDA)
+  get_target_property(cuda_includes hiop_CUDA INTERFACE_INCLUDE_DIRECTORIES)
+  get_target_property(magma_includes hiop_MAGMA INTERFACE_INCLUDE_DIRECTORIES)
+  message("CUDA include directories: ${cuda_includes} ${magma_includes}")
+  get_target_property(cuda_libraries hiop_CUDA INTERFACE_LINK_LIBRARIES)
+  get_target_property(magma_libraries hiop_MAGMA INTERFACE_LINK_LIBRARIES)
+  message("CUDA linked libraries: ${cuda_libraries} ${magma_libraries}")
 endif(HIOP_USE_GPU)
-
-# if(HIOP_USE_GPU)
-#   file(APPEND "src/Interface/hiop_defs.hpp" "#define HIOP_USE_MAGMA\n")
-# else()
-#   file(APPEND "src/Interface/hiop_defs.hpp" "#ifdef HIOP_USE_MAGMA\n#undef HIOP_USE_MAGMA\n#endif\n")
-# endif(HIOP_USE_GPU)
-# 
-# if(HIOP_DEEPCHECKS)
-#   file(APPEND "src/Interface/hiop_defs.hpp" "#define HIOP_DEEPCHECKS\n")
-# else()
-#   file(APPEND "src/Interface/hiop_defs.hpp" "#ifdef HIOP_DEEPCHECKS\n#undef HIOP_DEEPCHECKS\n#endif\n")
-# endif(HIOP_DEEPCHECKS)
-
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 #set(MA86_DIR "/home/petra1/work/installs/hsl_ma86-1.6.0")
 if(HIOP_WITH_KRON_REDUCTION)
@@ -171,27 +197,20 @@ if(HIOP_WITH_KRON_REDUCTION)
 endif(HIOP_WITH_KRON_REDUCTION)
 
 find_package(OpenMP)
-target_link_libraries(HiopMATH INTERFACE OpenMP::OpenMP_CXX)
+target_link_libraries(hiop_MATH INTERFACE OpenMP::OpenMP_CXX)
 
 if(NOT DEFINED LAPACK_LIBRARIES)
   # in case the toolchain defines them
   find_package(LAPACK REQUIRED)
-  # set(HIOP_MATH_LIBRARIES ${LAPACK_LIBRARIES} ${HIOP_MATH_LIBRARIES})
-  target_link_libraries(HiopMATH INTERFACE "${LAPACK_LIBRARIES}")
+  target_link_libraries(hiop_MATH INTERFACE "${LAPACK_LIBRARIES}")
 endif(NOT DEFINED LAPACK_LIBRARIES)
-# string(STRIP "${HIOP_MATH_LIBRARIES}" HIOP_MATH_LIBRARIES)
+
+message("Using LAPACK libraries: ${LAPACK_LIBRARIES}")
 
 #
 # extended precision lapack based on xblas testing example
 #
 #set(LAPACK_LIBRARIES "-lgfortran;/export/home/petra1/work/installs/xblas-1.0.248/libxblas.a;/home/petra1/work/installs/lapack-3.7.0/libblas.a;/home/petra1/work/installs/lapack-3.7.0/liblapack.a;/home/petra1/work/installs/lapack-3.7.0/liblapack.a;/home/petra1/work/installs/lapack-3.7.0/libblas.a;/export/home/petra1/work/installs/xblas-1.0.248/libxblas.a")
-
-# message("HiOp will use LAPACK/BLAS libs: ${LAPACK_LIBRARIES}")
-# message("HiOp: the so-called math libraries are: '${HIOP_MATH_LIBRARIES}'")
-get_target_property(includes HiopMATH INTERFACE_INCLUDE_DIRECTORIES)
-message("HiopMATH include directories: ${includes}")
-get_target_property(libraries HiopMATH INTERFACE_LINK_LIBRARIES)
-message("HiopMATH linked libraries: ${libraries}")
 
 # include build directory for Fortran name mangling header
 include_directories(${CMAKE_BINARY_DIR})
@@ -224,7 +243,7 @@ add_library(hiop STATIC $<TARGET_OBJECTS:hiopOptimization>
                         $<TARGET_OBJECTS:hiopLinAlg>
 			$<TARGET_OBJECTS:hiopUtils>)
 
-target_link_libraries(hiop PUBLIC HiopMATH)
+target_link_libraries(hiop PUBLIC hiop_MATH)
 if(HIOP_WITH_KRON_REDUCTION)
   target_link_libraries(hiop PUBLIC hiopKronRed hiopLinAlgZ)
 endif(HIOP_WITH_KRON_REDUCTION)
@@ -255,7 +274,6 @@ install(FILES src/Interface/hiopInterface.hpp
 	      src/Utils/hiopTimer.hpp
 	      src/Utils/hiopOptions.hpp
               src/Utils/hiopKronReduction.hpp
-              # src/Interface/hiop_defs.hpp
 	      src/LinAlg/hiop_blasdefs.hpp
 	      src/Drivers/IpoptAdapter.hpp
         DESTINATION include)
