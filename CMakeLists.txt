@@ -11,8 +11,6 @@ enable_language(Fortran)
 include(FortranCInterface)
 FortranCInterface_HEADER(FortranCInterface.hpp MACRO_NAMESPACE "FC_")
 
-# file(WRITE "src/Interface/hiop_defs.hpp" "")
-
 option(HIOP_USE_MPI "Build with MPI support" ON)
 option(HIOP_USE_GPU "Build with support for GPUs - Magma and cuda libraries" OFF)
 option(HIOP_DEEPCHECKS "Extra checks and asserts in the code with a high penalty on performance" ON)
@@ -33,9 +31,9 @@ configure_file(
   "${CMAKE_SOURCE_DIR}/src/Interface/hiop_defs.hpp.in"
   "${CMAKE_BINARY_DIR}/hiop_defs.hpp")
 
-add_library(hiop_MAGMA INTERFACE)
-add_library(hiop_MATH INTERFACE)
-add_library(hiop_CUDA INTERFACE)
+add_library(hiop_magma INTERFACE)
+add_library(hiop_math INTERFACE)
+add_library(hiop_cuda INTERFACE)
 add_library(hiop_options INTERFACE)
 add_library(hiop_warnings INTERFACE)
 
@@ -92,7 +90,7 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     )
 endif()
 
-target_link_libraries(hiop_MATH INTERFACE hiop_options hiop_options)
+target_link_libraries(hiop_math INTERFACE hiop_options hiop_options)
 
 if(HIOP_USE_GPU)
   include(CheckLanguage)
@@ -112,37 +110,37 @@ if(HIOP_USE_GPU)
   endif()
 
   # for now we rely on MAGMA for GPUs computations
-  target_link_libraries(hiop_MAGMA INTERFACE "-lmagma")
+  target_link_libraries(hiop_magma INTERFACE "-lmagma")
   if(HIOP_MAGMA_DIR)
-    target_link_libraries(hiop_MAGMA INTERFACE "-L${HIOP_MAGMA_DIR}/lib")
-    target_include_directories(hiop_MAGMA INTERFACE "${HIOP_MAGMA_DIR}/include")
+    target_link_libraries(hiop_magma INTERFACE "-L${HIOP_MAGMA_DIR}/lib")
+    target_include_directories(hiop_magma INTERFACE "${HIOP_MAGMA_DIR}/include")
   endif(HIOP_MAGMA_DIR)
 
   if(HIOP_CUDA_LIB_DIR)
-    target_link_libraries(hiop_CUDA INTERFACE "-L${HIOP_CUDA_LIB_DIR}")
+    target_link_libraries(hiop_cuda INTERFACE "-L${HIOP_CUDA_LIB_DIR}")
   else()
-    target_link_libraries(hiop_CUDA INTERFACE "-L${CUDA_TOOLKIT_ROOT_DIR}")
+    target_link_libraries(hiop_cuda INTERFACE "-L${CUDA_TOOLKIT_ROOT_DIR}")
   endif(HIOP_CUDA_LIB_DIR)
 
   # on some systems RHEL Nvidia toolkit puts cuBlas in different locations
   # user can setup/overwrite the lib directory
   if(HIOP_CUBLAS_LIB_DIR)
-    target_link_libraries(hiop_CUDA INTERFACE "-L${HIOP_CUBLAS_LIB_DIR}")
+    target_link_libraries(hiop_cuda INTERFACE "-L${HIOP_CUBLAS_LIB_DIR}")
   endif(HIOP_CUBLAS_LIB_DIR)
 
   if(HIOP_CUDA_INCLUDE_DIR)
-    target_include_directories(hiop_CUDA INTERFACE "${HIOP_CUDA_INCLUDE_DIR}")
+    target_include_directories(hiop_cuda INTERFACE "${HIOP_CUDA_INCLUDE_DIR}")
   else()
-    target_include_directories(hiop_CUDA INTERFACE "${CUDA_INCLUDE_DIR}")
+    target_include_directories(hiop_cuda INTERFACE "${CUDA_INCLUDE_DIR}")
   endif(HIOP_CUDA_INCLUDE_DIR)
 
-  target_link_libraries(hiop_MATH INTERFACE hiop_MAGMA hiop_CUDA)
+  target_link_libraries(hiop_math INTERFACE hiop_magma hiop_cuda)
   message("HiOp support for GPUs is on")
-  get_target_property(cuda_includes hiop_CUDA INTERFACE_INCLUDE_DIRECTORIES)
-  get_target_property(magma_includes hiop_MAGMA INTERFACE_INCLUDE_DIRECTORIES)
+  get_target_property(cuda_includes hiop_cuda INTERFACE_INCLUDE_DIRECTORIES)
+  get_target_property(magma_includes hiop_magma INTERFACE_INCLUDE_DIRECTORIES)
   message("CUDA include directories: ${cuda_includes} ${magma_includes}")
-  get_target_property(cuda_libraries hiop_CUDA INTERFACE_LINK_LIBRARIES)
-  get_target_property(magma_libraries hiop_MAGMA INTERFACE_LINK_LIBRARIES)
+  get_target_property(cuda_libraries hiop_cuda INTERFACE_LINK_LIBRARIES)
+  get_target_property(magma_libraries hiop_magma INTERFACE_LINK_LIBRARIES)
   message("CUDA linked libraries: ${cuda_libraries} ${magma_libraries}")
 endif(HIOP_USE_GPU)
 
@@ -197,12 +195,12 @@ if(HIOP_WITH_KRON_REDUCTION)
 endif(HIOP_WITH_KRON_REDUCTION)
 
 find_package(OpenMP)
-target_link_libraries(hiop_MATH INTERFACE OpenMP::OpenMP_CXX)
+target_link_libraries(hiop_math INTERFACE OpenMP::OpenMP_CXX)
 
 if(NOT DEFINED LAPACK_LIBRARIES)
   # in case the toolchain defines them
   find_package(LAPACK REQUIRED)
-  target_link_libraries(hiop_MATH INTERFACE "${LAPACK_LIBRARIES}")
+  target_link_libraries(hiop_math INTERFACE "${LAPACK_LIBRARIES}")
 endif(NOT DEFINED LAPACK_LIBRARIES)
 
 message("Using LAPACK libraries: ${LAPACK_LIBRARIES}")
@@ -243,7 +241,7 @@ add_library(hiop STATIC $<TARGET_OBJECTS:hiopOptimization>
                         $<TARGET_OBJECTS:hiopLinAlg>
 			$<TARGET_OBJECTS:hiopUtils>)
 
-target_link_libraries(hiop PUBLIC hiop_MATH)
+target_link_libraries(hiop PUBLIC hiop_math)
 if(HIOP_WITH_KRON_REDUCTION)
   target_link_libraries(hiop PUBLIC hiopKronRed hiopLinAlgZ)
 endif(HIOP_WITH_KRON_REDUCTION)
