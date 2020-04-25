@@ -90,7 +90,7 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     )
 endif()
 
-target_link_libraries(hiop_math INTERFACE hiop_options hiop_options)
+target_link_libraries(hiop_math INTERFACE hiop_options hiop_warnings)
 
 if(HIOP_USE_GPU)
   include(CheckLanguage)
