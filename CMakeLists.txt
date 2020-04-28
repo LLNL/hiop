@@ -143,6 +143,20 @@ endif(HIOP_USE_GPU)
 
 #set(MA86_DIR "/home/petra1/work/installs/hsl_ma86-1.6.0")
 if(HIOP_WITH_KRON_REDUCTION)
+  find_library(UMFPACK_LIB
+    NAMES umfpack
+    PATHS
+      ${UMFPACK_DIR}/lib
+      $ENV{UMFPACKDIR}/lib
+      ${LIB_INSTALL_DIR})
+
+  if(UMFPACK_LIB)
+    message("Using UMFPACK lib '${UMFPACK_LIB}'")
+    target_link_libraries(hiop_math INTERFACE ${UMFPACK_LIB})
+  else()
+    message(FATAL_ERROR "Could not find UMFPACK needed by HiOp's kron reduction. Please cmake with '-DUMFPACK_DIR=/path/to/umfpack_dir'; currently, UMFPACK_DIR='${UMFPACK_DIR}'")
+  endif(UMFPACK_LIB)
+
   find_path(UMFPACK_INCL
     NAMES
       umfpack.h
@@ -154,26 +168,12 @@ if(HIOP_WITH_KRON_REDUCTION)
       suitesparse
       ufsparse)
 
-  find_library(UMFPACK_LIB
-    NAMES umfpack
-    PATHS
-      ${UMFPACK_DIR}/lib
-      $ENV{UMFPACKDIR}/lib
-      ${LIB_INSTALL_DIR})
-
-  if(UMFPACK_LIB)
-    message("Using UMFPACK lib '${UMFPACK_LIB}'")
-    target_link_libraries(hiop_math INTERFACE ${UMFPACK_LIB})
-
-    if(UMFPACK_INCL)
-      target_include_directories(hiop_math INTERFACE ${UMFPACK_INCL})
-      message("Using UMFPACK include '${UMFPACK_INCL}'")
-    else() 
-      message(FATAL_ERROR "Could not find UMFPACK header needed by HiOp's kron reduction. Please cmake with '-DUMFPACK_DIR=/path/to/umfpack_dir'; currently, UMFPACK_DIR='${UMFPACK_DIR}'")
-    endif(UMFPACK_INCL)
+  if(UMFPACK_INCL)
+    target_include_directories(hiop_math INTERFACE ${UMFPACK_INCL})
+    message("Using UMFPACK include '${UMFPACK_INCL}'")
   else()
-    message(FATAL_ERROR "Could not find UMFPACK needed by HiOp's kron reduction. Please cmake with '-DUMFPACK_DIR=/path/to/umfpack_dir'; currently, UMFPACK_DIR='${UMFPACK_DIR}'")
-  endif(UMFPACK_LIB)
+    message(FATAL_ERROR "Could not find UMFPACK header needed by HiOp's kron reduction. Please cmake with '-DUMFPACK_DIR=/path/to/umfpack_dir'; currently, UMFPACK_DIR='${UMFPACK_DIR}'")
+  endif(UMFPACK_INCL)
 
   # metis needed (5.x needed by umfpack)
   find_library(METIS_LIB NAMES metis HINTS ${METIS_DIR} "${METIS_DIR}/lib" "${METIS_DIR}/src/")
@@ -193,7 +193,7 @@ if(HIOP_WITH_KRON_REDUCTION)
   #   if(MA86_INCL)
   #     include_directories(${MA86_INCL})
   #     message("Using HSL MA86 include '${MA86_INCL}'")
-  #   else() 
+  #   else()
   #     message(FATAL_ERROR "Could not find HSL MA86 headers needed by kron reduction. Please cmake with '-DMA86_DIR=/path/to/ma86_dir'; currently, MA86_DIR='${MA86_DIR}'")
   #   endif(MA86_INCL)
   # else()
@@ -289,6 +289,7 @@ install(FILES src/Interface/hiopInterface.hpp
               src/Utils/hiopKronReduction.hpp
 	      src/LinAlg/hiop_blasdefs.hpp
 	      src/Drivers/IpoptAdapter.hpp
+          ${CMAKE_BINARY_DIR}/hiop_defs.hpp
         DESTINATION include)
 
 ##########################################################
