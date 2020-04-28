@@ -68,9 +68,6 @@ target_compile_options(hiop_warnings
         -Wshadow            # warn the user if a variable
                             # declaration shadows one from a
                             # parent context
-        -Wpedantic          # Warn on nonstandard C++
-        -Wunused
-        -Wconversion        # Warn on lossy conversions
         -Wnull-dereference
         -Wdouble-promotion  # Warn on implicit conversion from
                             # float to double
@@ -146,13 +143,30 @@ endif(HIOP_USE_GPU)
 
 #set(MA86_DIR "/home/petra1/work/installs/hsl_ma86-1.6.0")
 if(HIOP_WITH_KRON_REDUCTION)
-  find_library(UMFPACK_LIB NAMES umfpack HINTS ${UMFPACK_DIR} "${UMFPACK_DIR}/lib" )
+  find_path(UMFPACK_INCL
+    NAMES
+      umfpack.h
+    PATHS
+      ${UMFPACK_DIR}/include
+      $ENV{UMFPACKDIR}/include
+      ${INCLUDE_INSTALL_DIR}
+    PATH_SUFFIXES
+      suitesparse
+      ufsparse)
+
+  find_library(UMFPACK_LIB
+    NAMES umfpack
+    PATHS
+      ${UMFPACK_DIR}/lib
+      $ENV{UMFPACKDIR}/lib
+      ${LIB_INSTALL_DIR})
+
   if(UMFPACK_LIB)
     message("Using UMFPACK lib '${UMFPACK_LIB}'")
+    target_link_libraries(hiop_math INTERFACE ${UMFPACK_LIB})
 
-    find_path(UMFPACK_INCL NAMES "umfpack.h" HINTS ${UMFPACK_DIR} "${UMFPACK_DIR}/include")
     if(UMFPACK_INCL)
-      include_directories(${UMFPACK_INCL})
+      target_include_directories(hiop_math INTERFACE ${UMFPACK_INCL})
       message("Using UMFPACK include '${UMFPACK_INCL}'")
     else() 
       message(FATAL_ERROR "Could not find UMFPACK header needed by HiOp's kron reduction. Please cmake with '-DUMFPACK_DIR=/path/to/umfpack_dir'; currently, UMFPACK_DIR='${UMFPACK_DIR}'")
@@ -165,6 +179,7 @@ if(HIOP_WITH_KRON_REDUCTION)
   find_library(METIS_LIB NAMES metis HINTS ${METIS_DIR} "${METIS_DIR}/lib" "${METIS_DIR}/src/")
   if(METIS_LIB)
     message("Using METIS lib '${METIS_LIB}'")
+    target_link_libraries(hiop_math INTERFACE ${METIS_LIB})
   else()
     message(FATAL_ERROR "Could not find METIS lib needed by UMFPACK. Please cmake with '-DMETIS_DIR=/path/to/metis/lib'; currently, METIS_DIR='${METIS_DIR}'")
   endif(METIS_LIB)
