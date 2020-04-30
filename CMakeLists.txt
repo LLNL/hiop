@@ -15,7 +15,7 @@ option(HIOP_USE_MPI "Build with MPI support" ON)
 option(HIOP_USE_GPU "Build with support for GPUs - Magma and cuda libraries" OFF)
 option(HIOP_DEEPCHECKS "Extra checks and asserts in the code with a high penalty on performance" ON)
 option(HIOP_WITH_KRON_REDUCTION "Build Kron Reduction code (requires MA86)" OFF)
-
+option(HIOP_DEVELOPER_MODE "Build with extended warnings and options" OFF)
 #with testing drivers capable of 'selfchecking' (-selfcheck)
 option(HIOP_WITH_MAKETEST "Enable 'make test'" ON)
 
@@ -87,7 +87,9 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     )
 endif()
 
-target_link_libraries(hiop_math INTERFACE hiop_options hiop_warnings)
+if(HIOP_DEVELOPER_MODE)
+    target_link_libraries(hiop_math INTERFACE hiop_options hiop_warnings)
+endif()
 
 if(HIOP_USE_GPU)
   include(CheckLanguage)
@@ -99,12 +101,13 @@ if(HIOP_USE_GPU)
   endif()
 
   if(HIOP_NVCC_ARCH)
-      set(CMAKE_CUDA_FLAGS "-arch=${HIOP_NVCC_ARCH} --expt-extended-lambda")
+      set(CMAKE_CUDA_FLAGS "-arch=${HIOP_NVCC_ARCH}")
       message(STATUS "Using CUDA arch ${HIOP_NVCC_ARCH}")
   else()
-      set(CMAKE_CUDA_FLAGS "-arch=sm_35 --expt-extended-lambda")
+      set(CMAKE_CUDA_FLAGS "-arch=sm_35")
       message(STATUS "Using CUDA arch sm_35")
   endif()
+  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-extended-lambda")
 
   # for now we rely on MAGMA for GPUs computations
   target_link_libraries(hiop_magma INTERFACE "-lmagma")
