@@ -6,7 +6,7 @@ Developement action items needed to enable solving ACOPF on GPUs (Phase1) and th
 
 An MDS nonlinear programming (NLP) formulation means Jacobian is split in a sparse left block and dense right block (of columns/variables). The MDS Hessian is expected as a diagonal sparse block and a diagonal dense block (in other words the objective and constraints are separable in the sparse and dense variables).
 
-## A. Mixed Dense-Sparse Interface
+### A. Mixed Dense-Sparse Interface
 
 1. Design of the HiOp (abstract) C++ interface to support problems with mixed dense-sparse derivatives (Jacobian and Hessian)
 2. Implementation of linear algebra objects to support the above
@@ -18,7 +18,7 @@ Code [HiOp branch](https://github.com/LLNL/hiop/tree/dev/block_interface) -> [PR
 
 *Completed and merged in the master*
  
-## B. Revisit the IPM filter line-search algorithm
+### B. Revisit the IPM filter line-search algorithm
 
 1. Refactor existing quasi-Newton IPM filter line-search solver class to share baseline code with the new full-Hessians IPM solver class
 2. Implement (a minimal set of) additional algorithm features needed by full Newton IPM line-search (will follow [Ipopt](http://cepac.cheme.cmu.edu/pasilectures/biegler/ipopt.pdf))
@@ -38,7 +38,7 @@ Driver for hybrid GPU-CPU driver: HiOp's Drivers/nlpMDS_ex4.exe
 
 C.2: preliminary results: HiOp + magma_dsysv_nopiv_gpu capable of up to 4.1 TFlops and 2.9 TFlops counting CPU-to-GPU-to-CPU data transfer time. Tests done on a Nvidia Quadro GV100 with double-precision performance of 7.4 Tflops. Evaluation on Summit will be done at a later time.
 
-## D. Kron reduction of sparse ACOPF to MDS ACOPF
+### D. Kron reduction of sparse ACOPF to MDS ACOPF
 
 *Completed.* All HiOp code in the master. Developed in [HiOp branch dev/kronNeMDS](https://github.com/LLNL/hiop/tree/dev/kronNeMDS)
 
@@ -46,10 +46,10 @@ C.2: preliminary results: HiOp + magma_dsysv_nopiv_gpu capable of up to 4.1 TFlo
 2. Implementation of the kron reduction (done) (and redone)
 3. Instantiation of the interface for in=gollnlp and out=hiop_mds (in progress, done outside hiop, in gollnlp modeling framework)
 
-## E. Revisiting NLP IPM filter line-search  to ensure robustness
+### E. Revisiting NLP IPM filter line-search  to ensure robustness
 
 Essentially revisit B.2. as needed by the GPU solver for MDS ACOPF - likely additional algorithmic features will be needed to ensure robustness of HIOP GPU solver and "workarounds" for inertia calculation
-1. Ipopt Adapter of HiOp MDS interface for easier testing (done, in the HiOp github master)
+1. Ipopt Adapter of HiOp MDS interface for easier testing (*done*, in the HiOp github master)
 2. run and evaluate performance
 3. implement the required algorithmic features, repeat ii.
 
@@ -57,8 +57,11 @@ Essentially revisit B.2. as needed by the GPU solver for MDS ACOPF - likely addi
 2 and 3. in progress [HiOp branch dev/GlobalConv](https://github.com/LLNL/hiop/tree/dev/GlobalConv)
 
 
-## F. Summit runs and profiling of ACOPF
+### F. Summit runs and profiling of ACOPF
 
-## G. Final adjustments
+### G. Final adjustments
 Expected to need adjustments of A.1. to support advanced primal-dual restarts for binding lines in HiOp
 
+## Phase 2 - Parallel SC-ACOPF solve capabilities
+
+The idea is to transfer the *gollnlp* parallel MPI-based SC-ACOPF engine in HiOp. Detailed plan to follow as we approach this phase.
