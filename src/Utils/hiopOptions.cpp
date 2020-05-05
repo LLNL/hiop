@@ -210,6 +210,28 @@ void hiopOptions::registerOptions()
 		      "'auto', 'cpu', 'hybrid'; 'hybrid'=cpu+gpu; 'auto' will decide between "
 		      "'cpu' and 'hybrid' based on the other options passed");
   }
+  //inertia correction
+  {
+    //Hessian related
+    registerNumOption("delta_w_min_bar", 1e-20, 0, 1000., 
+		      "Smallest perturbation of the Hessian block for inertia correction");
+    registerNumOption("delta_w_max_bar", 1e+20, 1e-40, 1e+40, 
+		      "Largest perturbation of the Hessian block for inertia correction");
+    registerNumOption("delta_0_bar", 1e-4, 0, 1e+40, 
+		      "First perturbation of the Hessian block for inertia correction");
+    registerNumOption("kappa_w_minus", 1/3, 1e-20, 1-1e-20, 
+		      "Factor to decrease the most recent successful perturbation for inertia correction");
+    registerNumOption("kappa_w_plus", 8., 1+1e-20, 1e+40, 
+		      "Factor to increase perturbation when it did not provide correct "
+		      "inertia correction (not first iteration)");
+    registerNumOption("kappa_w_plus_bar", 100., 1+1e-20, 1e+40, 
+		      "Factor to increase perturbation when it did not provide correct "
+		      "inertia correction (first iteration when scale not known)");
+    //Jacobian related
+    registerNumOption("delta_c_bar", 1e-8, 1e-20, 1e+40, 
+		      "Size of the regularization for potentially rank-deficient Jacobian");
+
+  }
   //other options
   {
     vector<string> range(2); range[0]="no"; range[1]="yes";
