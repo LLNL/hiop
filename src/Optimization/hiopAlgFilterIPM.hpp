@@ -57,6 +57,8 @@
 #include "hiopKKTLinSys.hpp"
 #include "hiopLogBarProblem.hpp"
 #include "hiopDualsUpdater.hpp"
+#include "hiopPDPerturbation.hpp"
+
 #include "hiopTimer.hpp"
 
 namespace hiop
@@ -212,9 +214,12 @@ public:
   virtual ~hiopAlgFilterIPMNewton();
 
   virtual hiopSolveStatus run();
+
 private:
   virtual void outputIteration(int lsStatus, int lsNum);
   virtual hiopKKTLinSysCompressed* decideAndCreateLinearSystem(hiopNlpFormulation* nlp);
+
+  hiopPDPerturbation pd_perturb_;
 private:
   hiopAlgFilterIPMNewton() : hiopAlgFilterIPMBase(NULL) {};
   hiopAlgFilterIPMNewton(const hiopAlgFilterIPMNewton& ) : hiopAlgFilterIPMBase(NULL){};

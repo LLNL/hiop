@@ -1,0 +1,69 @@
+#ifndef HIOP_PERTURB_PD_LINSSYS
+#define HIOP_PERTURB_PD_LINSSYS
+
+namespace hiop
+{
+
+class hiopPDPerturbation
+{
+public:
+  /** Default constructor 
+   * Provides complete initialization, but uses algorithmic parameters from the Ipopt
+   * implementation paper. \ref initialize(hiopNlpFormulation*) should be used to initialize
+   * this class based on HiOp option file or HiOp user-supplied runtime options.
+   */
+  hiopPDPerturbation()
+    : delta_w_min_bar_(1e-20),
+      delta_w_max_bar_(1e+40),
+      delta_0_bar_(1e-4),
+      kappa_w_minus_(1./3),
+      kappa_w_plus_bar_(100),
+      kappa_w_plus_(8),
+      delta_c_bar_(1e-8),
+      kappa_c_(0.25)
+  {
+  }
+
+  /** Initializes and reinitializes object based on the 'options' parameters of the
+   * 'nlp_' object.
+   * Returns 'false' if something goes wrong, otherwise 'true'
+   */
+  bool initialize(hiopNlpFormulation* nlp)
+  {
+    delta_w_min_bar_ = nlp->options->GetNumeric("delta_w_min_bar");
+    delta_w_max_bar_ = nlp->options->GetNumeric("delta_w_max_bar");
+    delta_0_bar_     = nlp->options->GetNumeric("delta_0_bar");
+    kappa_w_minus_   = nlp->options->GetNumeric("kappa_w_minus");
+    kappa_w_plus_bar_= nlp->options->GetNumeric("kappa_w_plus_bar");
+    kappa_w_plus_    = nlp->options->GetNumeric("kappa_w_plus");
+    delta_c_bar_     = nlp->options->GetNumeric("delta_c_bar");
+    kappa_c_         = nlp->options->GetNumeric("kappa_c");
+    return true;
+  }
+private:
+
+  /** Algorithmic parameters. */
+
+  /** Smallest possible perturbation for Hessian ( for primal 'x' and 's' variables). */
+  double delta_w_min_bar_;
+  /** Maximal perturbation for for Hessian (for primal 'x' and 's' variables). */
+  double delta_w_max_bar_;
+  /** First trial value for delta_w perturbation. */
+  double delta_0_bar_;
+  /** Decrease factor for delta_w. */
+  double kappa_w_minus_;
+  /** Increase factor for delta_w for first required perturbation. */
+  double kappa_w_plus_bar_;
+  /** Increase factor for delta_w for later perturbations. */
+  double kappa_w_plus_;
+  
+  /** Factor for regularization for potentially rank-deficient Jacobian. */
+  double delta_c_bar_;
+  /** Exponent of mu when computing regularization for Jacobian. */
+  double kappa_c_;
+private:
+
+};
+
+} //end of namespace
+#endif

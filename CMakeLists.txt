@@ -190,6 +190,7 @@ install(FILES src/Interface/hiopInterface.hpp
 	      src/Optimization/hiopIterate.hpp
 	      src/Optimization/hiopResidual.hpp
               src/Optimization/hiopKKTLinSys.hpp
+	      src/Optimization/hiopPDPerturbation.hpp
 	      src/Optimization/hiopLogBarProblem.hpp
 	      src/Optimization/hiopFilter.hpp
 	      src/Optimization/hiopHessianLowRank.hpp

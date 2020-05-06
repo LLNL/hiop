@@ -229,7 +229,11 @@ void hiopOptions::registerOptions()
 		      "inertia correction (first iteration when scale not known)");
     //Jacobian related
     registerNumOption("delta_c_bar", 1e-8, 1e-20, 1e+40, 
-		      "Size of the regularization for potentially rank-deficient Jacobian");
+		      "Factor for regularization for potentially rank-deficient Jacobian "
+		      "(delta_c=delta_c_bar*mu^kappa_c");
+    registerNumOption("kappa_c", 0.25, 0., 1e+40, 
+		      "Exponent of mu when computing regularization for potentially rank-deficient "
+		      "Jacobian (delta_c=delta_c_bar*mu^kappa_c)");
 
   }
   //other options
