@@ -158,6 +158,7 @@ include_directories(src/Utils)
 #!!!this include needs to ALWAYS be the last!!!
 include_directories(src/_Internals)
 
+add_subdirectory(src/Interface)
 add_subdirectory(src/Optimization)
 add_subdirectory(src/LinAlg)
 add_subdirectory(src/Drivers)
@@ -179,13 +180,16 @@ endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 set_property(TARGET hiopOptimization PROPERTY POSITION_INDEPENDENT_CODE 1)
 set_property(TARGET hiopLinAlg PROPERTY POSITION_INDEPENDENT_CODE 1)
 set_property(TARGET hiopUtils PROPERTY POSITION_INDEPENDENT_CODE 1)
+set_property(TARGET chiopInterface PROPERTY POSITION_INDEPENDENT_CODE 1)
 
 add_library(hiop STATIC $<TARGET_OBJECTS:hiopOptimization>
                         $<TARGET_OBJECTS:hiopLinAlg>
-			$<TARGET_OBJECTS:hiopUtils>)
+			                  $<TARGET_OBJECTS:hiopUtils>
+			                  $<TARGET_OBJECTS:chiopInterface>)
 add_library(hiopshared SHARED $<TARGET_OBJECTS:hiopOptimization>
                         $<TARGET_OBJECTS:hiopLinAlg>
-			$<TARGET_OBJECTS:hiopUtils>)
+			                  $<TARGET_OBJECTS:hiopUtils>
+			                  $<TARGET_OBJECTS:chiopInterface>)
 set_target_properties(hiopshared PROPERTIES OUTPUT_NAME hiop)
 
 if(HIOP_WITH_KRON_REDUCTION)
@@ -195,6 +199,8 @@ endif(HIOP_WITH_KRON_REDUCTION)
 install(TARGETS hiop DESTINATION lib)
 install(TARGETS hiopshared DESTINATION lib)
 install(FILES src/Interface/hiopInterface.hpp
+        src/Interface/chiopInterface.hpp
+        src/Interface/hiopInterface.h
 	      src/Optimization/hiopNlpFormulation.hpp
 	      src/Optimization/hiopNlpTransforms.hpp
 	      src/Optimization/hiopAlgFilterIPM.hpp
