@@ -123,7 +123,8 @@ public:
     delete dwork;
   }
 
-  /** Triggers a refactorization of the matrix, if necessary. */
+  /** Triggers a refactorization of the matrix, if necessary. 
+   * Overload from base class. */
   int matrixChanged()
   {
     assert(M.n() == M.m());
@@ -147,16 +148,25 @@ public:
       dwork = new hiopVectorPar(lwork);
     }
 
+    bool rank_deficient=false;
     //
     // factorization
     //
     DSYTRF(&uplo, &N, M.local_buffer(), &lda, ipiv, dwork->local_data(), &lwork, &info );
-    if(info<0)
-      nlp->log->printf(hovError, "hiopLinSolverIndefDense error: %d argument to dsytrf has an"
-		       " illegal value\n", -info);
-    else if(info>0)
-      nlp->log->printf(hovError, "hiopLinSolverIndefDense error: %d entry in the factorization's "
-		       "diagonal is exactly zero. Division by zero will occur if it a solve is attempted.\n", info);
+    if(info<0) {
+      nlp->log->printf(hovError,
+		       "hiopLinSolverIndefDense error: %d argument to dsytrf has an illegal value.\n",
+		       -info);
+      return -1;
+    } else {
+      if(info>0)
+      nlp->log->printf(hovWarning,
+		       "hiopLinSolverIndefDense error: %d entry in the factorization's diagonal "
+		       "is exactly zero. Division by zero will occur if it a solve is attempted.\n",
+		       info);
+      //matrix is singular
+      return -1;
+    }
     assert(info==0);
 
     //

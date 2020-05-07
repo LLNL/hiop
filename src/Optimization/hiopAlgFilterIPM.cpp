@@ -264,8 +264,8 @@ void hiopAlgFilterIPMBase::reloadOptions()
 
 void hiopAlgFilterIPMBase::resetSolverStatus() 
 {
-  _n_accep_iters = 0;
-  _solverStatus = NlpSolve_IncompleteInit;
+  n_accep_iters_ = 0;
+  solver_status_ = NlpSolve_IncompleteInit;
   filter.clear();
 }
 
@@ -325,7 +325,7 @@ startingProcedure(hiopIterate& it_ini,
   nlp->runStats.tmStartingPoint.stop();
   nlp->runStats.tmSolverInternal.stop();
 
-  _solverStatus = NlpSolve_SolveNotCalled;
+  solver_status_ = NlpSolve_SolveNotCalled;
 
   return true;
 }
@@ -513,18 +513,18 @@ bool hiopAlgFilterIPMBase::evalNlp_derivOnly(hiopIterate& iter,
 /* returns the objective value; valid only after 'run' method has been called */
 double hiopAlgFilterIPMBase::getObjective() const
 {
-  if(_solverStatus==NlpSolve_IncompleteInit || _solverStatus == NlpSolve_SolveNotCalled)
+  if(solver_status_==NlpSolve_IncompleteInit || solver_status_ == NlpSolve_SolveNotCalled)
     nlp->log->printf(hovError, "getObjective: hiOp did not initialize entirely or the 'run' function was not called.");
-  if(_solverStatus==NlpSolve_Pending)
+  if(solver_status_==NlpSolve_Pending)
     nlp->log->printf(hovWarning, "getObjective: hiOp does not seem to have completed yet. The objective value returned may not be optimal.");
   return nlp->user_obj(_f_nlp);
 }
 /* returns the primal vector x; valid only after 'run' method has been called */
 void hiopAlgFilterIPMBase::getSolution(double* x) const
 {
-  if(_solverStatus==NlpSolve_IncompleteInit || _solverStatus == NlpSolve_SolveNotCalled)
+  if(solver_status_==NlpSolve_IncompleteInit || solver_status_ == NlpSolve_SolveNotCalled)
     nlp->log->printf(hovError, "getSolution: hiOp did not initialize entirely or the 'run' function was not called.");
-  if(_solverStatus==NlpSolve_Pending)
+  if(solver_status_==NlpSolve_Pending)
     nlp->log->printf(hovWarning, "getSolution: hiOp have not completed yet. The primal vector returned may not be optimal.");
 
   hiopVectorPar& it_x = dynamic_cast<hiopVectorPar&>(*it_curr->get_x());
@@ -534,9 +534,9 @@ void hiopAlgFilterIPMBase::getSolution(double* x) const
 
 int hiopAlgFilterIPMBase::getNumIterations() const
 {
-  if(_solverStatus==NlpSolve_IncompleteInit || _solverStatus == NlpSolve_SolveNotCalled)
+  if(solver_status_==NlpSolve_IncompleteInit || solver_status_ == NlpSolve_SolveNotCalled)
     nlp->log->printf(hovError, "getNumIterations: hiOp did not initialize entirely or the 'run' function was not called.");
-  if(_solverStatus==NlpSolve_Pending)
+  if(solver_status_==NlpSolve_Pending)
     nlp->log->printf(hovWarning, "getNumIterations: hiOp does not seem to have completed yet. The objective value returned may not be optimal.");
   return nlp->runStats.nIter;
 }
@@ -545,29 +545,29 @@ int hiopAlgFilterIPMBase::getNumIterations() const
 bool hiopAlgFilterIPMBase::
 checkTermination(const double& err_nlp, const int& iter_num, hiopSolveStatus& status)
 {
-  if(err_nlp<=eps_tol)   { _solverStatus = Solve_Success;     return true; }
-  if(iter_num>=max_n_it) { _solverStatus = Max_Iter_Exceeded; return true; }
+  if(err_nlp<=eps_tol)   { solver_status_ = Solve_Success;     return true; }
+  if(iter_num>=max_n_it) { solver_status_ = Max_Iter_Exceeded; return true; }
 
   if(eps_rtol>0) {
     if(_err_nlp_optim   <= eps_rtol * _err_nlp_optim0 &&
        _err_nlp_optim   <= eps_rtol * _err_nlp_optim0 &&
        _err_nlp_complem <= std::max(eps_rtol,1e-6) * std::min(1.,_err_nlp_complem0)) {
-      _solverStatus = Solve_Success_RelTol;
+      solver_status_ = Solve_Success_RelTol;
       return true; 
     }
   }
 
-  if(err_nlp<=eps_tol_accep) _n_accep_iters++;
-  else _n_accep_iters = 0;
+  if(err_nlp<=eps_tol_accep) n_accep_iters_++;
+  else n_accep_iters_ = 0;
 
-  if(_n_accep_iters>=accep_n_it) { _solverStatus = Solve_Acceptable_Level; return true; }
+  if(n_accep_iters_>=accep_n_it) { solver_status_ = Solve_Acceptable_Level; return true; }
 
   return false;
 }
 /***** Termination message *****/
 void hiopAlgFilterIPMBase::displayTerminationMsg() {
 
-  switch(_solverStatus) {
+  switch(solver_status_) {
   case Solve_Success: 
     {
       nlp->log->printf(hovSummary, "Successfull termination.\n%s\n", nlp->runStats.getSummary().c_str());
@@ -694,14 +694,14 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
 
   //int algStatus=0; 
   bool bret=true; int lsStatus=-1, lsNum=0;
-  _solverStatus = NlpSolve_Pending;
+  solver_status_ = NlpSolve_Pending;
   while(true) {
 
     bret = evalNlpAndLogErrors(*it_curr, *resid, _mu, 
 			       _err_nlp_optim, _err_nlp_feas, _err_nlp_complem, _err_nlp, 
 			       _err_log_optim, _err_log_feas, _err_log_complem, _err_log);
     if(!bret) {
-      _solverStatus = Error_In_User_Function;
+      solver_status_ = Error_In_User_Function;
       return Error_In_User_Function;
     }
     
@@ -727,16 +727,16 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
 				   _err_nlp_feas, _err_nlp_optim,
 				   _mu,
 				   _alpha_dual, _alpha_primal,  lsNum)) {
-      _solverStatus = User_Stopped; break;
+      solver_status_ = User_Stopped; break;
     }
 
     /*************************************************
      * Termination check
      ************************************************/
-    if(checkTermination(_err_nlp, iter_num, _solverStatus)) {
+    if(checkTermination(_err_nlp, iter_num, solver_status_)) {
       break;
     }
-    if(NlpSolve_Pending!=_solverStatus) break; //failure of the line search or user stopped. 
+    if(NlpSolve_Pending!=solver_status_) break; //failure of the line search or user stopped. 
 
     /************************************************
      * update mu and other parameters
@@ -756,7 +756,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
 				 _err_nlp_optim, _err_nlp_feas, _err_nlp_complem, _err_nlp, 
 				 _err_log_optim, _err_log_feas, _err_log_complem, _err_log);
       if(!bret) {
-	_solverStatus = Error_In_User_Function;
+	solver_status_ = Error_In_User_Function;
 	return Error_In_User_Function;
       }
       nlp->log->printf(hovScalars,
@@ -781,7 +781,8 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
     kkt->update(it_curr, _grad_f, Jac_c, Jac_d, Hess);
     bret = kkt->computeDirections(resid,dir); assert(bret==true);
 
-    nlp->log->printf(hovIteration, "Iter[%d] full search direction -------------\n", iter_num); nlp->log->write("", *dir, hovIteration);
+    nlp->log->printf(hovIteration, "Iter[%d] full search direction -------------\n", iter_num);
+    nlp->log->write("", *dir, hovIteration);
     /***************************************************************
      * backtracking line search
      ****************************************************************/
@@ -811,7 +812,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
       // fractionToTheBdry since these may occur for tight bounds at the first iteration(s)
       if(!iniStep && _alpha_primal<1e-16) {
 	nlp->log->write("Panic: minimum step size reached. The problem may be infeasible or the gradient inaccurate. Will exit here.",hovError);
-	_solverStatus = Steplength_Too_Small;
+	solver_status_ = Steplength_Too_Small;
 	break;
       }
       iniStep=false;
@@ -820,7 +821,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
 
       //evaluate the problem at the trial iterate (functions only)
       if(!this->evalNlp_funcOnly(*it_trial, _f_nlp_trial, *_c_trial, *_d_trial)) {
-	_solverStatus = Error_In_User_Function;
+	solver_status_ = Error_In_User_Function;
 	return Error_In_User_Function;
       }
       
@@ -912,7 +913,10 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
     //filter is augmented whenever the switching condition or Armijo rule do not hold for the trial point that was just accepted
     if(lsStatus==1) {
       //need to check switching cond and Armijo to decide if filter is augmented
-      if(!grad_phi_dx_computed) { grad_phi_dx = logbar->directionalDerivative(*dir); grad_phi_dx_computed=true; }
+      if(!grad_phi_dx_computed) {
+	grad_phi_dx = logbar->directionalDerivative(*dir);
+	grad_phi_dx_computed=true;
+      }
       
       //this is the actual switching condition
       if(grad_phi_dx<0 && _alpha_primal*pow(-grad_phi_dx,s_phi)>delta*pow(theta,s_theta)) {
@@ -942,7 +946,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
 
     //evaluate derivatives at the trial (and to be accepted) trial point
     if(!this->evalNlp_derivOnly(*it_trial, *_grad_f, *_Jac_c, *_Jac_d, *_Hess_Lagr)){
-	_solverStatus = Error_In_User_Function;
+	solver_status_ = Error_In_User_Function;
 	return Error_In_User_Function;
       }
 
@@ -972,11 +976,11 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
 
   nlp->runStats.tmOptimizTotal.stop();
 
-  //_solverStatus contains the termination information
+  //solver_status_ contains the termination information
   displayTerminationMsg();
 
   //user callback
-  nlp->user_callback_solution(_solverStatus,
+  nlp->user_callback_solution(solver_status_,
 			      *it_curr->get_x(),
 			      *it_curr->get_zl(),
 			      *it_curr->get_zu(),
@@ -985,7 +989,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
 			      _f_nlp);
   delete kkt;
 
-  return _solverStatus;
+  return solver_status_;
 }
 
 void hiopAlgFilterIPMQuasiNewton::outputIteration(int lsStatus, int lsNum)
@@ -1109,14 +1113,14 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 
   //int algStatus=0; 
   bool bret=true; int lsStatus=-1, lsNum=0;
-  _solverStatus = NlpSolve_Pending;
+  solver_status_ = NlpSolve_Pending;
   while(true) {
 
     bret = evalNlpAndLogErrors(*it_curr, *resid, _mu, 
 			       _err_nlp_optim, _err_nlp_feas, _err_nlp_complem, _err_nlp, 
 			       _err_log_optim, _err_log_feas, _err_log_complem, _err_log);
     if(!bret) {
-      _solverStatus = Error_In_User_Function;
+      solver_status_ = Error_In_User_Function;
       return Error_In_User_Function;
     }
     
@@ -1140,16 +1144,16 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 				   _err_nlp_feas, _err_nlp_optim,
 				   _mu,
 				   _alpha_dual, _alpha_primal,  lsNum)) {
-      _solverStatus = User_Stopped; break;
+      solver_status_ = User_Stopped; break;
     }
 
     /*************************************************
      * Termination check
      ************************************************/
-    if(checkTermination(_err_nlp, iter_num, _solverStatus)) {
+    if(checkTermination(_err_nlp, iter_num, solver_status_)) {
       break;
     }
-    if(NlpSolve_Pending!=_solverStatus) break; //failure of the line search or user stopped. 
+    if(NlpSolve_Pending!=solver_status_) break; //failure of the line search or user stopped. 
 
     /************************************************
      * update mu and other parameters
@@ -1168,7 +1172,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 				 _err_nlp_optim, _err_nlp_feas, _err_nlp_complem, _err_nlp, 
 				 _err_log_optim, _err_log_feas, _err_log_complem, _err_log);
       if(!bret) {
-	_solverStatus = Error_In_User_Function;
+	solver_status_ = Error_In_User_Function;
 	return Error_In_User_Function;
       }
       nlp->log->printf(hovScalars, "  Nlp    errs: pr-infeas:%20.14e   dual-infeas:%20.14e  comp:%20.14e  overall:%20.14e\n",
@@ -1186,11 +1190,18 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
     /****************************************************
      * Search direction calculation
      ***************************************************/
-    //first update the Hessian and kkt system
-    kkt->update(it_curr, _grad_f, _Jac_c, _Jac_d, _Hess_Lagr);
-    bret = kkt->computeDirections(resid,dir); assert(bret==true);
+    //update the Hessian and kkt system
+    if(!kkt->update(it_curr, _grad_f, _Jac_c, _Jac_d, _Hess_Lagr)) {
+      nlp->log->write("Unrecoverable error in step computation (factorization). Will exit here.", hovError);
+      return solver_status_ = Err_Step_Computation;
+    }
 
-    nlp->log->printf(hovIteration, "Iter[%d] full search direction -------------\n", iter_num); nlp->log->write("", *dir, hovIteration);
+    if(!kkt->computeDirections(resid,dir)) {
+      nlp->log->write("Unrecoverable error in step computation (solve). Will exit here.", hovError);
+      return solver_status_ = Err_Step_Computation;
+    }
+    nlp->log->printf(hovIteration, "Iter[%d] full search direction -------------\n", iter_num);
+    nlp->log->write("", *dir, hovIteration);
     /***************************************************************
      * backtracking line search
      ****************************************************************/
@@ -1222,7 +1233,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
       // fractionToTheBdry since these may occur for tight bounds at the first iteration(s)
       if(!iniStep && _alpha_primal<1e-16) {
 	nlp->log->write("Panic: minimum step size reached. The problem may be infeasible or the gradient inaccurate. Will exit here.",hovError);
-	_solverStatus = Steplength_Too_Small;
+	solver_status_ = Steplength_Too_Small;
 	break;
       }
       iniStep=false;
@@ -1231,7 +1242,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 
       //evaluate the problem at the trial iterate (functions only)
       if(!this->evalNlp_funcOnly(*it_trial, _f_nlp_trial, *_c_trial, *_d_trial)) {
-	_solverStatus = Error_In_User_Function;
+	solver_status_ = Error_In_User_Function;
 	return Error_In_User_Function;
       }
 
@@ -1243,7 +1254,8 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 
       lsNum++;
 
-      nlp->log->printf(hovLinesearch, "  trial point %d: alphaPrimal=%14.8e barier:(%22.16e)>%15.9e theta:(%22.16e)>%22.16e\n",
+      nlp->log->printf(hovLinesearch, "  trial point %d: alphaPrimal=%14.8e barier:(%22.16e)>%15.9e "
+		       "theta:(%22.16e)>%22.16e\n", 
 		       lsNum, _alpha_primal, logbar->f_logbar, logbar->f_logbar_trial, theta, theta_trial);
 
       if(disableLS) break;
@@ -1254,7 +1266,8 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 	if(!filter.contains(theta_trial,logbar->f_logbar_trial)) {
 	  if(theta_trial<=(1-gamma_theta)*theta || logbar->f_logbar_trial<=logbar->f_logbar - gamma_phi*theta) {
 	    //trial good to go
-	    nlp->log->printf(hovLinesearchVerb, "Linesearch: accepting based on suff. decrease (far from solution)\n");
+	    nlp->log->printf(hovLinesearchVerb, "Linesearch: accepting based on suff. decrease "
+			     "(far from solution)\n");
 	    lsStatus=1;
 	    break;
 	  } else {
@@ -1285,7 +1298,8 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 
 	  if(logbar->f_logbar_trial <= logbar->f_logbar + eta_phi*_alpha_primal*grad_phi_dx) {
 	    lsStatus=3;
-	    nlp->log->printf(hovLinesearchVerb, "Linesearch: accepting based on Armijo (switch cond also passed)\n");
+	    nlp->log->printf(hovLinesearchVerb, "Linesearch: accepting based on Armijo (switch cond "
+			     "also passed)\n");
 	    break; //iterate good to go since it satisfies Armijo
 	  } else {  //Armijo is not satisfied
 	    _alpha_primal *= 0.5; //reduce step and try again
@@ -1354,7 +1368,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 
     //evaluate derivatives at the trial (and to be accepted) trial point
     if(!this->evalNlp_derivOnly(*it_trial, *_grad_f, *_Jac_c, *_Jac_d, *_Hess_Lagr)) {
-      _solverStatus = Error_In_User_Function;
+      solver_status_ = Error_In_User_Function;
       return Error_In_User_Function;
     }
 
@@ -1384,11 +1398,11 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 
   nlp->runStats.tmOptimizTotal.stop();
 
-  //_solverStatus contains the termination information
+  //solver_status_ contains the termination information
   displayTerminationMsg();
 
   //user callback
-  nlp->user_callback_solution(_solverStatus,
+  nlp->user_callback_solution(solver_status_,
 			      *it_curr->get_x(),
 			      *it_curr->get_zl(),
 			      *it_curr->get_zu(),
@@ -1397,7 +1411,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 			      _f_nlp);
   delete kkt;
 
-  return _solverStatus;
+  return solver_status_;
 }
 
 void hiopAlgFilterIPMNewton::outputIteration(int lsStatus, int lsNum)

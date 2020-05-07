@@ -84,7 +84,8 @@ public:
 
   bool update(const hiopIterate* iter_, 
 	      const hiopVector* grad_f_, 
-	      const hiopMatrix* Jac_c_, const hiopMatrix* Jac_d_, 
+	      const hiopMatrix* Jac_c_,
+	      const hiopMatrix* Jac_d_, 
 	      hiopMatrix* Hess_)
   {
     nlp->runStats.tmSolverInternal.start();
@@ -153,9 +154,50 @@ public:
     if(nlp->options->GetString("write_kkt") == "yes") write_linsys_counter++;
     if(write_linsys_counter>=0) csr_writer.writeMatToFile(Msys, write_linsys_counter); 
 
-    //factorize the matrix
-    linSys->matrixChanged();
-
+    //
+    //factorization + inertia correction if needed
+    //
+    const size_t max_ic_cor = 10;
+    size_t num_ic_cor = 0;
+    while(num_ic_cor<=max_ic_cor) {
+      //factorize the matrix
+      int n_neg_eig = linSys->matrixChanged();
+      
+      if(Jac_c->m()+Jac_d->m()>0) {
+	if(n_neg_eig < 0) {
+	  //matrix singular
+	  nlp->log->printf(hovScalars, "XDycYd linsys is singular.\n");
+	  
+	} else if(n_neg_eig != Jac_c->m()+Jac_d->m()) {
+	  //wrong inertia
+	  nlp->log->printf(hovScalars,
+			   "XDycYd linsys negative eigs mismatch: has %d expected %d.\n",
+			   Jac_c->m()+Jac_d->m(), n_neg_eig);
+	  
+	} else {
+	  //all is good
+	  break;
+	}
+      } else if(n_neg_eig != 0) {
+	//correct for wrong intertia
+	nlp->log->printf(hovScalars,
+			 "XDycYd linsys has wrong inertia (no constraints): factoriz ret code %d\n.",
+			 n_neg_eig);
+      } else {
+	//all is good
+	break;
+      }
+   
+      //will do an inertia correction
+      num_ic_cor++;
+    }
+    if(num_ic_cor>max_ic_cor) {
+      
+      nlp->log->printf(hovError,
+		       "Reached max number (%d) of inertia corrections within an outer iteration.\n",
+		       max_ic_cor);
+      return false;
+    }
     nlp->runStats.tmSolverInternal.stop();
     return true;
   }
@@ -175,6 +217,8 @@ public:
     ryd.copyToStarting(*rhsXYcYd, nx+nyc);
 
     if(write_linsys_counter>=0) csr_writer.writeRhsToFile(*rhsXYcYd, write_linsys_counter);
+
+    //to do: iterative refinement
     linSys->solve(*rhsXYcYd);
 
     if(write_linsys_counter>=0) csr_writer.writeSolToFile(*rhsXYcYd, write_linsys_counter);

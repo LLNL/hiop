@@ -82,7 +82,7 @@ public:
   void getSolution(double* x) const;
   /* returns the status of the solver */
   /* returns the status of the solver */
-  inline hiopSolveStatus getSolveStatus() const { return _solverStatus; }
+  inline hiopSolveStatus getSolveStatus() const { return solver_status_; }
   /* returns the number of iterations */
   int getNumIterations() const;
 protected:
@@ -182,8 +182,8 @@ protected:
   hiopTimer tmSol;
 
   //internal flags related to the state of the solver
-  hiopSolveStatus _solverStatus;
-  int _n_accep_iters;
+  hiopSolveStatus solver_status_;
+  int n_accep_iters_;
 };
 
 class hiopAlgFilterIPMQuasiNewton : public hiopAlgFilterIPMBase
