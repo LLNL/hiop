@@ -1097,10 +1097,9 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
   theta_min=1e-4*fmax(1.0,resid->getInfeasInfNorm());
   
   hiopKKTLinSysCompressed* kkt = decideAndCreateLinearSystem(nlp);
-
-
   assert(kkt != NULL);
-
+  kkt->set_PD_perturb_calc(&pd_perturb_);
+  
   _alpha_primal = _alpha_dual = 0;
 
   _err_nlp_optim0=-1.; _err_nlp_feas0=-1.; _err_nlp_complem0=-1;

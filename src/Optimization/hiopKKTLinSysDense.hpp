@@ -157,6 +157,7 @@ public:
     //
     //factorization + inertia correction if needed
     //
+    perturb_calc_->initialize(nlp);
     const size_t max_ic_cor = 10;
     size_t num_ic_cor = 0;
     while(num_ic_cor<=max_ic_cor) {

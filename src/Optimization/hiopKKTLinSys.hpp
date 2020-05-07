@@ -52,6 +52,7 @@
 #include "hiopIterate.hpp"
 #include "hiopResidual.hpp"
 #include "hiopHessianLowRank.hpp"
+#include "hiopPDPerturbation.hpp"
 
 namespace hiop
 {
@@ -100,7 +101,7 @@ class hiopKKTLinSysCompressed : public hiopKKTLinSys
 {
 public:
   hiopKKTLinSysCompressed(hiopNlpFormulation* nlp_)
-    : hiopKKTLinSys(nlp_), Dx(NULL), rx_tilde(NULL)
+    : hiopKKTLinSys(nlp_), Dx(NULL), rx_tilde(NULL), perturb_calc_(NULL)
   {
     Dx = dynamic_cast<hiopVectorPar*>(nlp->alloc_primal_vec());
     assert(Dx != NULL);
@@ -117,9 +118,14 @@ public:
 
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction) = 0;
 
+  virtual void set_PD_perturb_calc(hiopPDPerturbation* p)
+  {
+    perturb_calc_ = p;
+  }
 protected:
-  hiopVectorPar *Dx;
-  hiopVectorPar *rx_tilde;
+  hiopVectorPar* Dx;
+  hiopVectorPar* rx_tilde;
+  hiopPDPerturbation* perturb_calc_;
 };
 
 /* Provides the functionality for reducing the KKT linear system to the 
@@ -251,9 +257,6 @@ public:
    */
   virtual void solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
 			       hiopVectorPar& dx, hiopVectorPar& dyc, hiopVectorPar& dyd);
-
-  //int factorizeMat(hiopMatrixDense& M);
-  //int solveWithFactors(hiopMatrixDense& M, hiopVectorPar& r);
 
   //LAPACK wrappers
   int solve(hiopMatrixDense& M, hiopVectorPar& rhs);
