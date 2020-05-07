@@ -175,14 +175,25 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
   set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/_dist-${CMAKE_BUILD_TYPE}")
 endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 
+# Shared library should be position independent
+set_property(TARGET hiopOptimization PROPERTY POSITION_INDEPENDENT_CODE 1)
+set_property(TARGET hiopLinAlg PROPERTY POSITION_INDEPENDENT_CODE 1)
+set_property(TARGET hiopUtils PROPERTY POSITION_INDEPENDENT_CODE 1)
+
 add_library(hiop STATIC $<TARGET_OBJECTS:hiopOptimization>
                         $<TARGET_OBJECTS:hiopLinAlg>
 			$<TARGET_OBJECTS:hiopUtils>)
+add_library(hiopshared SHARED $<TARGET_OBJECTS:hiopOptimization>
+                        $<TARGET_OBJECTS:hiopLinAlg>
+			$<TARGET_OBJECTS:hiopUtils>)
+set_target_properties(hiopshared PROPERTIES OUTPUT_NAME hiop)
+
 if(HIOP_WITH_KRON_REDUCTION)
   target_link_libraries(hiop PUBLIC hiopKronRed hiopLinAlgZ)
 endif(HIOP_WITH_KRON_REDUCTION)
 
 install(TARGETS hiop DESTINATION lib)
+install(TARGETS hiopshared DESTINATION lib)
 install(FILES src/Interface/hiopInterface.hpp
 	      src/Optimization/hiopNlpFormulation.hpp
 	      src/Optimization/hiopNlpTransforms.hpp
