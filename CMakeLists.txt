@@ -31,9 +31,9 @@ configure_file(
   "${CMAKE_SOURCE_DIR}/src/Interface/hiop_defs.hpp.in"
   "${CMAKE_BINARY_DIR}/hiop_defs.hpp")
 
-add_library(hiop_magma INTERFACE)
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
+
 add_library(hiop_math INTERFACE)
-add_library(hiop_cuda INTERFACE)
 add_library(hiop_options INTERFACE)
 add_library(hiop_warnings INTERFACE)
 
@@ -92,124 +92,17 @@ if(HIOP_DEVELOPER_MODE)
 endif()
 
 if(HIOP_USE_GPU)
-  include(CheckLanguage)
-  enable_language(CUDA)
-  check_language(CUDA)
-  if(NOT DEFINED CMAKE_CUDA_STANDARD)
-    set(CMAKE_CUDA_STANDARD 11)
-    set(CMAKE_CUDA_STANDARD_REQUIRED ON)
-  endif()
-
-  if(HIOP_NVCC_ARCH)
-      set(CMAKE_CUDA_FLAGS "-arch=${HIOP_NVCC_ARCH}")
-      message(STATUS "Using CUDA arch ${HIOP_NVCC_ARCH}")
-  else()
-      set(CMAKE_CUDA_FLAGS "-arch=sm_35")
-      message(STATUS "Using CUDA arch sm_35")
-  endif()
-  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-extended-lambda")
-
-  # for now we rely on MAGMA for GPUs computations
-  target_link_libraries(hiop_magma INTERFACE "-lmagma")
-  if(HIOP_MAGMA_DIR)
-    target_link_libraries(hiop_magma INTERFACE "-L${HIOP_MAGMA_DIR}/lib")
-    target_include_directories(hiop_magma INTERFACE "${HIOP_MAGMA_DIR}/include")
-  endif(HIOP_MAGMA_DIR)
-
-  if(HIOP_CUDA_LIB_DIR)
-    target_link_libraries(hiop_cuda INTERFACE "-L${HIOP_CUDA_LIB_DIR}")
-  else()
-    target_link_libraries(hiop_cuda INTERFACE "-L${CUDA_TOOLKIT_ROOT_DIR}")
-  endif(HIOP_CUDA_LIB_DIR)
-
-  # on some systems RHEL Nvidia toolkit puts cuBlas in different locations
-  # user can setup/overwrite the lib directory
-  if(HIOP_CUBLAS_LIB_DIR)
-    target_link_libraries(hiop_cuda INTERFACE "-L${HIOP_CUBLAS_LIB_DIR}")
-  endif(HIOP_CUBLAS_LIB_DIR)
-
-  if(HIOP_CUDA_INCLUDE_DIR)
-    target_include_directories(hiop_cuda INTERFACE "${HIOP_CUDA_INCLUDE_DIR}")
-  else()
-    target_include_directories(hiop_cuda INTERFACE "${CUDA_INCLUDE_DIR}")
-  endif(HIOP_CUDA_INCLUDE_DIR)
-
-  target_link_libraries(hiop_math INTERFACE hiop_magma hiop_cuda)
-  message("HiOp support for GPUs is on")
-  get_target_property(cuda_includes hiop_cuda INTERFACE_INCLUDE_DIRECTORIES)
-  get_target_property(magma_includes hiop_magma INTERFACE_INCLUDE_DIRECTORIES)
-  message("CUDA include directories: ${cuda_includes} ${magma_includes}")
-  get_target_property(cuda_libraries hiop_cuda INTERFACE_LINK_LIBRARIES)
-  get_target_property(magma_libraries hiop_magma INTERFACE_LINK_LIBRARIES)
-  message("CUDA linked libraries: ${cuda_libraries} ${magma_libraries}")
+  include(FindHiopCudaLibraries)
+  target_link_libraries(hiop_math INTERFACE hiop_cuda)
 endif(HIOP_USE_GPU)
 
-#set(MA86_DIR "/home/petra1/work/installs/hsl_ma86-1.6.0")
 if(HIOP_WITH_KRON_REDUCTION)
-  find_library(UMFPACK_LIB
-    NAMES umfpack
-    PATHS
-      ${UMFPACK_DIR}/lib
-      $ENV{UMFPACKDIR}/lib
-      ${LIB_INSTALL_DIR})
-
-  if(UMFPACK_LIB)
-    message("Using UMFPACK lib '${UMFPACK_LIB}'")
-    target_link_libraries(hiop_math INTERFACE ${UMFPACK_LIB})
-  else()
-    message(FATAL_ERROR "Could not find UMFPACK needed by HiOp's kron reduction. Please cmake with '-DUMFPACK_DIR=/path/to/umfpack_dir'; currently, UMFPACK_DIR='${UMFPACK_DIR}'")
-  endif(UMFPACK_LIB)
-
-  find_path(UMFPACK_INCL
-    NAMES
-      umfpack.h
-    PATHS
-      ${UMFPACK_DIR}/include
-      $ENV{UMFPACKDIR}/include
-      ${INCLUDE_INSTALL_DIR}
-    PATH_SUFFIXES
-      suitesparse
-      ufsparse)
-
-  if(UMFPACK_INCL)
-    target_include_directories(hiop_math INTERFACE ${UMFPACK_INCL})
-    message("Using UMFPACK include '${UMFPACK_INCL}'")
-  else()
-    message(FATAL_ERROR "Could not find UMFPACK header needed by HiOp's kron reduction. Please cmake with '-DUMFPACK_DIR=/path/to/umfpack_dir'; currently, UMFPACK_DIR='${UMFPACK_DIR}'")
-  endif(UMFPACK_INCL)
+  include(FindUMFPACK)
+  target_link_libraries(hiop_math INTERFACE UMFPACK)
 
   # metis needed (5.x needed by umfpack)
-  find_library(METIS_LIB NAMES metis HINTS ${METIS_DIR} "${METIS_DIR}/lib" "${METIS_DIR}/src/")
-  if(METIS_LIB)
-    message("Using METIS lib '${METIS_LIB}'")
-    target_link_libraries(hiop_math INTERFACE ${METIS_LIB})
-  else()
-    message(FATAL_ERROR "Could not find METIS lib needed by UMFPACK. Please cmake with '-DMETIS_DIR=/path/to/metis/lib'; currently, METIS_DIR='${METIS_DIR}'")
-  endif(METIS_LIB)
-
-
-  # find_library(MA86_LIB NAMES hsl_ma86 ma86 HINTS ${MA86_DIR} "${MA86_DIR}/lib" )
-  # if(MA86_LIB)
-  #   message("Using HSL MA86 lib '${MA86_LIB}'")
-
-  #   find_path(MA86_INCL NAMES "hsl_ma86z.h" HINTS ${MA86_DIR} "${MA86_DIR}/include")
-  #   if(MA86_INCL)
-  #     include_directories(${MA86_INCL})
-  #     message("Using HSL MA86 include '${MA86_INCL}'")
-  #   else()
-  #     message(FATAL_ERROR "Could not find HSL MA86 headers needed by kron reduction. Please cmake with '-DMA86_DIR=/path/to/ma86_dir'; currently, MA86_DIR='${MA86_DIR}'")
-  #   endif(MA86_INCL)
-  # else()
-  #   message(FATAL_ERROR "Could not find HSL MA86 needed by kron reduction. Please cmake with '-DMA86_DIR=/path/to/ma86_dir'; currently, MA86_DIR='${MA86_DIR}'")
-  # endif(MA86_LIB)
-
-  # # metis needed (4.x works)
-  # find_library(METIS_LIB NAMES metis HINTS ${METIS_DIR} "${METIS_DIR}/lib" "${METIS_DIR}/src/")
-  # if(METIS_LIB)
-  #   message("Using METIS lib '${METIS_LIB}'")
-  # else()
-  #   message(FATAL_ERROR "Could not find METIS lib needed by MA86. Please cmake with '-DMETIS_DIR=/path/to/metis/lib'; currently, METIS_DIR='${METIS_DIR}'")
-  # endif(METIS_LIB)
+  include(FindMETIS)
+  target_link_libraries(hiop_math INTERFACE METIS)
 endif(HIOP_WITH_KRON_REDUCTION)
 
 find_package(OpenMP)
@@ -218,7 +111,7 @@ target_link_libraries(hiop_math INTERFACE OpenMP::OpenMP_CXX)
 if(NOT DEFINED LAPACK_LIBRARIES)
   # in case the toolchain defines them
   find_package(LAPACK REQUIRED)
-  target_link_libraries(hiop_math INTERFACE "${LAPACK_LIBRARIES}")
+  target_link_libraries(hiop_math INTERFACE ${LAPACK_LIBRARIES})
 endif(NOT DEFINED LAPACK_LIBRARIES)
 
 message("Using LAPACK libraries: ${LAPACK_LIBRARIES}")
