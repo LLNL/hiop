@@ -112,6 +112,10 @@ public:
   {
     assert(false && "not needed / implemented");
   }
+  virtual void addSubDiagonal(int start_on_dest_diag, int num_elems, const double& c)
+  {
+    assert(false && "not needed / implemented");
+  }
 
   virtual void addMatrix(double alpha, const hiopMatrix& X)
   {
@@ -305,6 +309,10 @@ public:
    * when num_elems>=0, or the remaining elems on 'd_' starting at 'start_on_src_vec'. */
   virtual void addSubDiagonal(int start_on_dest_diag, const double& alpha, 
 			      const hiopVector& d_, int start_on_src_vec, int num_elems=-1)
+  {
+    assert(false && "not needed / implemented");
+  }
+  virtual void addSubDiagonal(int start_on_dest_diag, int num_elems, const double& c)
   {
     assert(false && "not needed / implemented");
   }

@@ -92,6 +92,10 @@ namespace hiop
     {
       assert(false && "not yet implemented");
     }
+    virtual void addSubDiagonal(int start_on_dest_diag, int num_elems, const double& c) 
+    {
+      assert(false && "not yet implemented");
+    }
 
     
     /* this += alpha*X */

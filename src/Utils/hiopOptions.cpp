@@ -210,7 +210,7 @@ void hiopOptions::registerOptions()
 		      "'auto', 'cpu', 'hybrid'; 'hybrid'=cpu+gpu; 'auto' will decide between "
 		      "'cpu' and 'hybrid' based on the other options passed");
   }
-  //inertia correction
+  //inertia correction and Jacobian regularization
   {
     //Hessian related
     registerNumOption("delta_w_min_bar", 1e-20, 0, 1000., 
