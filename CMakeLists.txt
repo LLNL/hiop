@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.1)
+cmake_minimum_required (VERSION 3.8)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -92,15 +92,37 @@ if(HIOP_DEVELOPER_MODE)
 endif()
 
 if(HIOP_USE_GPU)
+  include(CheckLanguage)
+  enable_language(CUDA)
+  check_language(CUDA)
+
+  if(NOT DEFINED CMAKE_CUDA_STANDARD)
+    set(CMAKE_CUDA_STANDARD 11)
+    set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+  endif()
+
+  if(HIOP_NVCC_ARCH)
+    set(CMAKE_CUDA_FLAGS "-arch=${HIOP_NVCC_ARCH}")
+    message(STATUS "Using CUDA arch ${HIOP_NVCC_ARCH}")
+  else()
+    set(CMAKE_CUDA_FLAGS "-arch=sm_35")
+    message(STATUS "Using CUDA arch sm_35")
+  endif()
+  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-extended-lambda")
+
+  set(HIOP_MAGMA_DIR CACHE PATH "Path to Magma directory")
+
   include(FindHiopCudaLibraries)
   target_link_libraries(hiop_math INTERFACE hiop_cuda)
 endif(HIOP_USE_GPU)
 
 if(HIOP_WITH_KRON_REDUCTION)
+  set(HIOP_UMFPACK_DIR CACHE PATH "Path to UMFPACK directory")
   include(FindUMFPACK)
   target_link_libraries(hiop_math INTERFACE UMFPACK)
 
   # metis needed (5.x needed by umfpack)
+  set(HIOP_METIS_DIR CACHE PATH "Path to METIS directory")
   include(FindMETIS)
   target_link_libraries(hiop_math INTERFACE METIS)
 endif(HIOP_WITH_KRON_REDUCTION)
@@ -164,7 +186,7 @@ install(FILES src/Interface/hiopInterface.hpp
 	      src/Optimization/hiopAlgFilterIPM.hpp
 	      src/Optimization/hiopIterate.hpp
 	      src/Optimization/hiopResidual.hpp
-              src/Optimization/hiopKKTLinSys.hpp
+        src/Optimization/hiopKKTLinSys.hpp
 	      src/Optimization/hiopLogBarProblem.hpp
 	      src/Optimization/hiopFilter.hpp
 	      src/Optimization/hiopHessianLowRank.hpp
@@ -175,17 +197,17 @@ install(FILES src/Interface/hiopInterface.hpp
 	      src/LinAlg/hiopMatrixSparseTriplet.hpp
 	      src/LinAlg/hiopMatrixSparseTripletStorage.hpp
 	      src/LinAlg/hiopMatrixMDS.hpp
-              src/LinAlg/hiopMatrixComplexSparseTriplet.hpp
+        src/LinAlg/hiopMatrixComplexSparseTriplet.hpp
 	      src/LinAlg/hiopMatrixComplexDense.hpp
 	      src/Utils/hiopRunStats.hpp
 	      src/Utils/hiopLogger.hpp
 	      src/Utils/hiopCSR_IO.hpp
 	      src/Utils/hiopTimer.hpp
 	      src/Utils/hiopOptions.hpp
-              src/Utils/hiopKronReduction.hpp
+        src/Utils/hiopKronReduction.hpp
 	      src/LinAlg/hiop_blasdefs.hpp
 	      src/Drivers/IpoptAdapter.hpp
-          ${CMAKE_BINARY_DIR}/hiop_defs.hpp
+        ${CMAKE_BINARY_DIR}/hiop_defs.hpp
         DESTINATION include)
 
 ##########################################################
