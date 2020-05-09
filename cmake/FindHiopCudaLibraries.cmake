@@ -13,16 +13,21 @@ Users may set the following variables:
 
 add_library(hiop_cuda INTERFACE)
 
-if( ("${CMAKE_VERSION}" VERSION_EQUAL 3.8) OR ("${CMAKE_VERSION}" VERSION_GREATER 3.8) )
-  include(CheckLanguage)
-  enable_language(CUDA)
-  check_language(CUDA)
-else()
-  find_package(CUDA REQUIRED)
-endif()
+include(CheckLanguage)
+enable_language(CUDA)
+check_language(CUDA)
+find_package(CUDA REQUIRED)
 
 target_link_libraries(hiop_cuda INTERFACE
   culibos cublas cublasLt nvblas cusparse cudart cudadevrt)
+
+if (${CMAKE_VERSION} VERSION_GREATER_EQUAL 3.17)
+  target_link_libraries(hiop_cuda INTERFACE 
+    CUDA_CUDART_LIBRARY
+    CUDA_cudadevrt_LIBRARY
+    CUDA_cublas_LIBRARY
+    CUDA_cusparse_LIBRARY)
+endif()
 
 if(NOT DEFINED CMAKE_CUDA_STANDARD)
   set(CMAKE_CUDA_STANDARD 11)
@@ -50,6 +55,8 @@ endif(HIOP_CUBLAS_LIB_DIR)
 
 if(HIOP_CUDA_INCLUDE_DIR)
   target_include_directories(hiop_cuda INTERFACE ${HIOP_CUDA_INCLUDE_DIR})
+else()
+  target_include_directories(hiop_cuda INTERFACE ${CUDA_TOOLKIT_INCLUDE})
 endif()
 
 # for now we rely on MAGMA for GPUs computations

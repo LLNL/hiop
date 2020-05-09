@@ -30,10 +30,12 @@ find_path(UMFPACK_INCLUDE_DIR
   suitesparse
   ufsparse)
 
-set(UMFPACK_INCLUDE_DIR ${UMFPACK_INCLUDE_DIR} CACHE PATH "Path to umfpack.h")
-set(UMFPACK_LIBRARY ${UMFPACK_LIBRARY} CACHE PATH "Path to umfpack library")
+set(UMFPACK_INCLUDE_DIR "${UMFPACK_INCLUDE_DIR}" CACHE PATH "Path to umfpack.h")
+set(UMFPACK_LIBRARY "${UMFPACK_LIBRARY}" CACHE PATH "Path to umfpack library")
 
 if(UMFPACK_LIBRARY)
+  message(STATUS "Found umfpack include: ${UMFPACK_INCLUDE_DIR}")
+  message(STATUS "Found umfpack library: ${UMFPACK_LIBRARY}")
   add_library(UMFPACK INTERFACE)
   target_link_libraries(UMFPACK INTERFACE ${UMFPACK_LIBRARY})
   target_include_directories(UMFPACK INTERFACE ${UMFPACK_INCLUDE_DIR})

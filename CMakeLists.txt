@@ -1,7 +1,9 @@
-cmake_minimum_required (VERSION 3.1)
+cmake_minimum_required (VERSION 3.8)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+cmake_policy(SET CMP0074 NEW)
 
 project (hiop)
 # enable Fortran for Fortran name mangling
@@ -18,6 +20,12 @@ option(HIOP_WITH_KRON_REDUCTION "Build Kron Reduction code (requires MA86)" OFF)
 option(HIOP_DEVELOPER_MODE "Build with extended warnings and options" OFF)
 #with testing drivers capable of 'selfchecking' (-selfcheck)
 option(HIOP_WITH_MAKETEST "Enable 'make test'" ON)
+
+if(HIOP_USE_GPU)
+  set(HIOP_USE_MAGMA ON)
+else()
+  set(HIOP_USE_MAGMA OFF)
+endif()
 
 if(HIOP_USE_MPI)
   if(NOT DEFINED MPI_CXX_COMPILER)
@@ -74,7 +82,7 @@ target_compile_options(hiop_warnings
 )
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    message("Using extra GNU-specific compiler warnings...")
+  message(STATUS "Found extra GNU compiler warnings")
     target_compile_options(hiop_warnings
         INTERFACE
             -Wmisleading-indentation    # Warn on indented blocks
@@ -112,9 +120,8 @@ if(NOT DEFINED LAPACK_LIBRARIES)
   # in case the toolchain defines them
   find_package(LAPACK REQUIRED)
   target_link_libraries(hiop_math INTERFACE ${LAPACK_LIBRARIES})
+  message(STATUS "Found LAPACK libraries: ${LAPACK_LIBRARIES}")
 endif(NOT DEFINED LAPACK_LIBRARIES)
-
-message("Using LAPACK libraries: ${LAPACK_LIBRARIES}")
 
 #
 # extended precision lapack based on xblas testing example

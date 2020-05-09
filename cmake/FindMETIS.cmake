@@ -25,10 +25,12 @@ find_path(METIS_INCLUDE_DIR
   PATH_SUFFIXES
   include)
 
-set(METIS_INCLUDE_DIR ${METIS_INCLUDE_DIR} CACHE PATH "Path to metis.h")
-set(METIS_LIBRARY ${METIS_LIBRARY} CACHE PATH "Path to metis library")
+set(METIS_INCLUDE_DIR "${METIS_INCLUDE_DIR}" CACHE PATH "Path to metis.h")
+set(METIS_LIBRARY "${METIS_LIBRARY}" CACHE PATH "Path to metis library")
 
 if(METIS_LIBRARY)
+  message(STATUS "Found metis include: ${METIS_INCLUDE_DIR}")
+  message(STATUS "Found metis library: ${METIS_LIBRARY}")
   add_library(METIS INTERFACE)
   target_link_libraries(METIS INTERFACE ${METIS_LIBRARY})
   target_include_directories(METIS INTERFACE ${METIS_INCLUDE_DIR})
