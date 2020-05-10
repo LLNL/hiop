@@ -14,14 +14,19 @@ find_library(METIS_LIBRARY
   metis
   PATHS
   ${METIS_DIR} $ENV{METIS_DIR} ${HIOP_METIS_DIR}
+  ENV LD_LIBRARY_PATH ENV DYLD_LIBRARY_PATH
   PATH_SUFFIXES
-  lib)
+  lib64 lib)
+
+if(METIS_LIBRARY)
+  get_filename_component(METIS_LIBRARY_DIR ${METIS_LIBRARY} DIRECTORY)
+endif()
 
 find_path(METIS_INCLUDE_DIR
   NAMES
   metis.h
   PATHS
-  ${METIS_DIR} $ENV{METIS_DIR} ${HIOP_METIS_DIR}
+  ${METIS_DIR} $ENV{METIS_DIR} ${HIOP_METIS_DIR} ${METIS_LIBRARY_DIR}/..
   PATH_SUFFIXES
   include)
 
@@ -34,6 +39,7 @@ if(METIS_LIBRARY)
   add_library(METIS INTERFACE)
   target_link_libraries(METIS INTERFACE ${METIS_LIBRARY})
   target_include_directories(METIS INTERFACE ${METIS_INCLUDE_DIR})
+  message(STATUS "Found METIS library: ${METIS_LIBRARY}")
 else()
   message(STATUS "METIS was not found.")
 endif()
