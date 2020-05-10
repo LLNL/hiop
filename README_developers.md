@@ -54,3 +54,110 @@ $> mpiexec -np 2 ./src/Drivers/nlpDenseCons_ex2.exe
 $> mpiexec -np 2 ./src/Drivers/nlpDenseCons_ex3.exe 
 ```
 
+# Style Guide
+
+## Contributing
+
+- Submit issue for discussion before submitting a pull request
+- Always branch from master
+- Name your branch <feature>-dev for a feature and <fix>-fix for fixing an issue
+- Separate with the dash (`-`) character
+- Provide extended description in pull request
+- Reference the issue in the description
+- Squash all commits on merge
+
+For example:
+```console
+$ # For a feature
+$ git checkout master
+$ git checkout -b my-feature-dev
+$ # For a fix
+$ git checkout master
+$ git checkout -b my-bug-fix
+```
+
+## Indentation and Braces
+
+- Use two spaces for indentation, absolutely no tab characters.
+- No spaces between `if` and `(`
+- Avoid condition and loop bodies in the same line of code
+- Allman style braces
+- Prefer braces for every block
+- Prefer no indentation for `private`, `public`, and `protected` statements
+
+For example:
+
+```cpp
+// Good
+if(some_condition)
+{
+  value += 1;
+}
+
+// Not preferred
+if(some_condition) {
+  value += 1;
+}
+
+// Not preferred
+if (some_condition)
+{
+  value += 1;
+}
+
+// Not preferred
+if(some_condition)
+  value += 1;
+
+// Bad!
+if(some_condition) value += 1;
+```
+
+## Naming Conventions
+
+- Classes
+  - Pascal case (upper and lower case, no underscores)
+- Data members
+  - Snake case
+    - lower case only
+    - use _ to separate
+  - Ending in _
+- Member methods
+  - Snake case
+    - lower case only
+    - use _ to separate
+- Avoid encoding type information in names
+
+For example:
+```cpp
+// Bad, prefer polymorphism
+void print_double(double val);
+void print_str(std::string_view val);
+
+// Good
+void print(double val);
+void print(std::string_view val);
+
+// Good
+class FooBar
+{
+private:
+  double* data_device_;
+public:
+  void to_device();
+}
+
+// Bad
+class Foo_bar {
+  private:
+    double* dataDevice;
+  public:
+    void toDevice();
+}
+```
+
+## Comments
+
+- Don't comment what can be expressed in code
+- Comment intent, not implementation
+- Block comments (`/* comment */`) are preferred for comments three lines or longer
