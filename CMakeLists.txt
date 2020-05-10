@@ -46,57 +46,57 @@ add_library(hiop_options INTERFACE)
 add_library(hiop_warnings INTERFACE)
 
 target_compile_features(hiop_options
-    INTERFACE
-        cxx_std_11
-        cxx_alignas
-        cxx_alignof
-        cxx_attributes
-        cxx_auto_type
-        cxx_constexpr
-        cxx_defaulted_functions
-        cxx_deleted_functions
-        cxx_final
-        cxx_lambdas
-        cxx_noexcept
-        cxx_override
-        cxx_range_for
-        cxx_rvalue_references
-        cxx_static_assert
-        cxx_strong_enums
-        cxx_trailing_return_types
-        cxx_unicode_literals
-        cxx_user_literals
-        cxx_variadic_macros
-)
+  INTERFACE
+  cxx_std_11
+  cxx_alignas
+  cxx_alignof
+  cxx_attributes
+  cxx_auto_type
+  cxx_constexpr
+  cxx_defaulted_functions
+  cxx_deleted_functions
+  cxx_final
+  cxx_lambdas
+  cxx_noexcept
+  cxx_override
+  cxx_range_for
+  cxx_rvalue_references
+  cxx_static_assert
+  cxx_strong_enums
+  cxx_trailing_return_types
+  cxx_unicode_literals
+  cxx_user_literals
+  cxx_variadic_macros
+  )
 
 target_compile_options(hiop_warnings
-    INTERFACE
-        -Wall
-        -Wextra
-        -Wshadow            # warn the user if a variable
-                            # declaration shadows one from a
-                            # parent context
-        -Wnull-dereference
-        -Wdouble-promotion  # Warn on implicit conversion from
-                            # float to double
-)
+  INTERFACE
+  -Wall
+  -Wextra
+  -Wshadow            # warn the user if a variable
+                      # declaration shadows one from a
+                      # parent context
+  -Wnull-dereference
+  -Wdouble-promotion  # Warn on implicit conversion from
+                      # float to double
+  )
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
   message(STATUS "Found extra GNU compiler warnings")
-    target_compile_options(hiop_warnings
-        INTERFACE
-            -Wmisleading-indentation    # Warn on indented blocks
-                                        # that are not really blocks
-            -Wduplicated-cond           # Warn on if/else chain with
-                                        # duplicated conditions
-            -Wduplicated-branches       # Warn on if/else chains with
-                                        # duplicated code
-            -Wuseless-cast              # Warn when casting to the same type
+  target_compile_options(hiop_warnings
+    INTERFACE
+    -Wmisleading-indentation    # Warn on indented blocks
+                                # that are not really blocks
+    -Wduplicated-cond           # Warn on if/else chain with
+                                # duplicated conditions
+    -Wduplicated-branches       # Warn on if/else chains with
+                                # duplicated code
+    -Wuseless-cast              # Warn when casting to the same type
     )
 endif()
 
 if(HIOP_DEVELOPER_MODE)
-    target_link_libraries(hiop_math INTERFACE hiop_options hiop_warnings)
+  target_link_libraries(hiop_math INTERFACE hiop_options hiop_warnings)
 endif()
 
 if(HIOP_USE_GPU)
@@ -169,7 +169,7 @@ add_subdirectory(src/Utils)
 #  INSTALATION
 ##########################################################
 if("${CMAKE_BUILD_TYPE}" STREQUAL "")
-# set a name for the build type to make the output of the 'make install' look nice
+  # set a name for the build type to make the output of the 'make install' look nice
   set(CMAKE_BUILD_TYPE "default-build")
 endif("${CMAKE_BUILD_TYPE}" STREQUAL "")
 
@@ -178,8 +178,8 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 
 add_library(hiop STATIC $<TARGET_OBJECTS:hiopOptimization>
-                        $<TARGET_OBJECTS:hiopLinAlg>
-			$<TARGET_OBJECTS:hiopUtils>)
+  $<TARGET_OBJECTS:hiopLinAlg>
+  $<TARGET_OBJECTS:hiopUtils>)
 
 target_link_libraries(hiop PUBLIC hiop_math)
 if(HIOP_WITH_KRON_REDUCTION)
@@ -188,34 +188,34 @@ endif(HIOP_WITH_KRON_REDUCTION)
 
 install(TARGETS hiop DESTINATION lib)
 install(FILES src/Interface/hiopInterface.hpp
-	      src/Optimization/hiopNlpFormulation.hpp
-	      src/Optimization/hiopNlpTransforms.hpp
-	      src/Optimization/hiopAlgFilterIPM.hpp
-	      src/Optimization/hiopIterate.hpp
-	      src/Optimization/hiopResidual.hpp
-        src/Optimization/hiopKKTLinSys.hpp
-	      src/Optimization/hiopLogBarProblem.hpp
-	      src/Optimization/hiopFilter.hpp
-	      src/Optimization/hiopHessianLowRank.hpp
-	      src/Optimization/hiopDualsUpdater.hpp
-	      src/LinAlg/hiopVector.hpp
-	      src/LinAlg/hiopMatrix.hpp
-	      src/LinAlg/hiopMatrixMDS.hpp
-	      src/LinAlg/hiopMatrixSparseTriplet.hpp
-	      src/LinAlg/hiopMatrixSparseTripletStorage.hpp
-	      src/LinAlg/hiopMatrixMDS.hpp
-        src/LinAlg/hiopMatrixComplexSparseTriplet.hpp
-	      src/LinAlg/hiopMatrixComplexDense.hpp
-	      src/Utils/hiopRunStats.hpp
-	      src/Utils/hiopLogger.hpp
-	      src/Utils/hiopCSR_IO.hpp
-	      src/Utils/hiopTimer.hpp
-	      src/Utils/hiopOptions.hpp
-        src/Utils/hiopKronReduction.hpp
-	      src/LinAlg/hiop_blasdefs.hpp
-	      src/Drivers/IpoptAdapter.hpp
-        ${CMAKE_BINARY_DIR}/hiop_defs.hpp
-        DESTINATION include)
+  src/Optimization/hiopNlpFormulation.hpp
+  src/Optimization/hiopNlpTransforms.hpp
+  src/Optimization/hiopAlgFilterIPM.hpp
+  src/Optimization/hiopIterate.hpp
+  src/Optimization/hiopResidual.hpp
+  src/Optimization/hiopKKTLinSys.hpp
+  src/Optimization/hiopLogBarProblem.hpp
+  src/Optimization/hiopFilter.hpp
+  src/Optimization/hiopHessianLowRank.hpp
+  src/Optimization/hiopDualsUpdater.hpp
+  src/LinAlg/hiopVector.hpp
+  src/LinAlg/hiopMatrix.hpp
+  src/LinAlg/hiopMatrixMDS.hpp
+  src/LinAlg/hiopMatrixSparseTriplet.hpp
+  src/LinAlg/hiopMatrixSparseTripletStorage.hpp
+  src/LinAlg/hiopMatrixMDS.hpp
+  src/LinAlg/hiopMatrixComplexSparseTriplet.hpp
+  src/LinAlg/hiopMatrixComplexDense.hpp
+  src/Utils/hiopRunStats.hpp
+  src/Utils/hiopLogger.hpp
+  src/Utils/hiopCSR_IO.hpp
+  src/Utils/hiopTimer.hpp
+  src/Utils/hiopOptions.hpp
+  src/Utils/hiopKronReduction.hpp
+  src/LinAlg/hiop_blasdefs.hpp
+  src/Drivers/IpoptAdapter.hpp
+  ${CMAKE_BINARY_DIR}/hiop_defs.hpp
+  DESTINATION include)
 
 ##########################################################
 # CMake Tests
