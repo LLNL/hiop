@@ -84,6 +84,16 @@ public:
   virtual hiopMatrix* alloc_clone() const=0;
   virtual hiopMatrix* new_copy() const=0;
 
+  virtual void copyFrom(const hiopMatrix& matrix) = 0;
+  virtual void copyFrom(const double* buffer) = 0;
+
+  /* copies 'src' into this as a block starting at (i_block_start,j_block_start) */
+  void copyBlockFromMatrix(const long i_block_start, const long j_block_start, const hiopMatrix& src) = 0;
+
+  /* overwrites 'this' with 'src''s block that starts at (i_src_block_start,j_src_block_start) 
+   * and has dimensions of 'this' */
+  void copyFromMatrixBlock(const hiopMatrix& src, const int i_src_block_start, const int j_src_block_start) = 0;
+
   virtual void setToZero()=0;
   virtual void setToConstant(double c)=0;
 
