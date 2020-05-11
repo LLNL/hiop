@@ -5,14 +5,21 @@
 #include "hiopNlpFormulation.hpp"
 #include "hiopAlgFilterIPM.hpp"
 
+/** Light C interface that wraps around the mixed-dense nlp class in HiOp. Its initial motivation
+ * was to serve as an interface to Julia
+ */
+
 using namespace hiop;
 extern "C" {
+  // C struct with HiOp function callbacks
   typedef struct cHiopProblem {
     hiopNlpMDS * refcppHiop;
     // user_data similar to the Ipopt interface. In case of Julia pointer to the Julia problem object.
     void *user_data;
+    // Used by hiop_solveProblem() to store the final state. The duals should be added here.
     double *solution;
     double obj_value;
+    // HiOp callback function wrappers
     int (*get_starting_point)(long long n_, double* x0, void* user_data); 
     int (*get_prob_sizes)(long long* n_, long long* m_, void* user_data); 
     int (*get_vars_info)(long long n, double *xlow_, double* xupp_, void* user_data);
@@ -42,6 +49,7 @@ extern "C" {
 }
 
 
+// The cpp object used in the C interface
 class cppUserProblem : public hiopInterfaceMDS
 {
   public:
@@ -53,7 +61,7 @@ class cppUserProblem : public hiopInterfaceMDS
     virtual ~cppUserProblem()
     {
     }
-
+    // HiOp callbacks calling the C wrappers
     bool get_prob_sizes(long long& n_, long long& m_) 
     {
       cprob->get_prob_sizes(&n_, &m_, cprob->user_data);
@@ -82,7 +90,6 @@ class cppUserProblem : public hiopInterfaceMDS
       return true;
     };
 
-    //sum 0.5 {x_i*(x_{i}-1) : i=1,...,ns} + 0.5 y'*Qd*y + 0.5 s^T s
     bool eval_grad_f(const long long& n, const double* x, bool new_x, double* gradf)
     {
       cprob->eval_grad_f(n, (double *) x, 0, gradf, cprob->user_data);
@@ -147,9 +154,13 @@ class cppUserProblem : public hiopInterfaceMDS
       return true;
     };
 private:
+  // Storing the C struct in the CPP object
   cHiopProblem *cprob;
 };
 
+/** The 3 essential function calls to create and destroy a problem object in addition to solve a problem.
+ * Some option setters will be added in the future.
+ */
 extern "C" int hiop_createProblem(cHiopProblem *problem);
 extern "C" int hiop_solveProblem(cHiopProblem *problem);
 extern "C" int hiop_destroyProblem(cHiopProblem *problem);

@@ -3,7 +3,7 @@ extern "C" {
 
 using namespace hiop;
 
-// These are default options for the C interface for now. Changing options from C will be added.
+// These are default options for the C interface for now. Setting options from C will be added in the future.
 int hiop_createProblem(cHiopProblem *prob) {
   cppUserProblem * cppproblem = new cppUserProblem(prob);
   hiopNlpMDS *nlp = new hiopNlpMDS(*cppproblem);
