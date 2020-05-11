@@ -159,13 +159,14 @@ public:
 		       -info);
       return -1;
     } else {
-      if(info>0)
-      nlp->log->printf(hovWarning,
-		       "hiopLinSolverIndefDense error: %d entry in the factorization's diagonal "
-		       "is exactly zero. Division by zero will occur if it a solve is attempted.\n",
-		       info);
-      //matrix is singular
-      return -1;
+      if(info>0) {
+	nlp->log->printf(hovWarning,
+			 "hiopLinSolverIndefDense error: %d entry in the factorization's diagonal "
+			 "is exactly zero. Division by zero will occur if it a solve is attempted.\n",
+			 info);
+	//matrix is singular
+	return -1;
+      }
     }
     assert(info==0);
 

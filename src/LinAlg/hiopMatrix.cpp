@@ -691,7 +691,7 @@ void hiopMatrixDense::addSubDiagonal(int start_on_dest_diag, int num_elems, cons
   assert(n_local == n_global && "method supported only for non-distributed matrices");
   assert(n_local == m_local  && "method supported only for symmetric matrices");
 
-  assert(start_on_dest_diag+num_elems<n_local);
+  assert(start_on_dest_diag+num_elems<=n_local);
   for(int i=0; i<num_elems; i++)
     M[i+start_on_dest_diag][i+start_on_dest_diag] += c;  
 }
