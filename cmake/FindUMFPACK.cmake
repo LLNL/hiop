@@ -35,9 +35,6 @@ find_path(UMFPACK_INCLUDE_DIR
   include/suitesparse
   include/ufsparse)
 
-set(UMFPACK_INCLUDE_DIR "${UMFPACK_INCLUDE_DIR}" CACHE PATH "Path to umfpack.h")
-set(UMFPACK_LIBRARY "${UMFPACK_LIBRARY}" CACHE PATH "Path to umfpack library")
-
 if(UMFPACK_LIBRARY)
   message(STATUS "Found umfpack include: ${UMFPACK_INCLUDE_DIR}")
   message(STATUS "Found umfpack library: ${UMFPACK_LIBRARY}")
@@ -49,3 +46,5 @@ else()
   message(STATUS "UMFPACK was not found.")
 endif()
 
+set(UMFPACK_INCLUDE_DIR CACHE PATH "Path to umfpack.h")
+set(UMFPACK_LIBRARY CACHE PATH "Path to umfpack library")

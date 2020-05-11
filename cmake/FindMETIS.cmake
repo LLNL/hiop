@@ -30,9 +30,6 @@ find_path(METIS_INCLUDE_DIR
   PATH_SUFFIXES
   include)
 
-set(METIS_INCLUDE_DIR "${METIS_INCLUDE_DIR}" CACHE PATH "Path to metis.h")
-set(METIS_LIBRARY "${METIS_LIBRARY}" CACHE PATH "Path to metis library")
-
 if(METIS_LIBRARY)
   message(STATUS "Found metis include: ${METIS_INCLUDE_DIR}")
   message(STATUS "Found metis library: ${METIS_LIBRARY}")
@@ -43,3 +40,6 @@ if(METIS_LIBRARY)
 else()
   message(STATUS "METIS was not found.")
 endif()
+
+set(METIS_INCLUDE_DIR CACHE PATH "Path to metis.h")
+set(METIS_LIBRARY CACHE PATH "Path to metis library")

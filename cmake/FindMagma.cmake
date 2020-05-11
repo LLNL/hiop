@@ -30,9 +30,6 @@ find_path(MAGMA_INCLUDE_DIR
   PATH_SUFFIXES
   include)
 
-set(MAGMA_INCLUDE_DIR "${MAGMA_INCLUDE_DIR}" CACHE PATH "Path to magma.h")
-set(MAGMA_LIBRARY "${MAGMA_LIBRARY}" CACHE PATH "Path to magma library")
-
 if(MAGMA_LIBRARY)
   add_library(Magma INTERFACE)
   target_link_libraries(Magma INTERFACE ${MAGMA_LIBRARY})
@@ -42,3 +39,6 @@ if(MAGMA_LIBRARY)
 else()
   message(STATUS "Magma was not found.")
 endif()
+
+set(MAGMA_INCLUDE_DIR CACHE PATH "Path to magma.h")
+set(MAGMA_LIBRARY CACHE PATH "Path to magma library")
