@@ -381,12 +381,19 @@ errorCompressedLinsys(const hiopVectorPar& rx, const hiopVectorPar& ryc, const h
 		      const hiopVectorPar& dx, const hiopVectorPar& dyc, const hiopVectorPar& dyd)
 {
   nlp_->log->printf(hovLinAlgScalars, "hiopKKTLinSysDenseXYcYd::errorCompressedLinsys residuals norm:\n");
+
+  double delta_wx, delta_wd, delta_cc, delta_cd;
+  delta_wx = delta_wd = delta_cc = delta_cd = 0.;
+  if(perturb_calc_) {
+    perturb_calc_->get_curr_perturbations(delta_wx, delta_wd, delta_cc, delta_cd);
+  }
   
   double derr=1e20, aux;
   hiopVectorPar *RX=rx.new_copy();
   //RX=rx-H*dx-J'c*dyc-J'*dyd
   Hess_->timesVec(1.0, *RX, -1.0, dx);
   RX->axzpy(-1.0, *Dx_, dx);
+  RX->axpy(-delta_wx, dx);
   
   Jac_c_->transTimesVec(1.0, *RX, -1.0, dyc);
   Jac_d_->transTimesVec(1.0, *RX, -1.0, dyd);
@@ -597,40 +604,49 @@ errorCompressedLinsys(const hiopVectorPar& rx, const hiopVectorPar& rd,
 		      const hiopVectorPar& dyc, const hiopVectorPar& dyd)
 {
   nlp_->log->printf(hovLinAlgScalars, "hiopKKTLinSysDenseXDYcYd::errorCompressedLinsys residuals norm:\n");
+
+  double delta_wx, delta_wd, delta_cc, delta_cd;
+  delta_wx = delta_wd = delta_cc = delta_cd = 0.;
+  if(perturb_calc_) {
+    perturb_calc_->get_curr_perturbations(delta_wx, delta_wd, delta_cc, delta_cd);
+  }
   
   double derr=-1., aux;
   hiopVectorPar *RX=rx.new_copy();
   //RX=rx-H*dx-J'c*dyc-J'*dyd
   Hess_->timesVec(1.0, *RX, -1.0, dx);
   RX->axzpy(-1.0, *Dx_, dx);
-
+  RX->axpy(-delta_wx, dx);
   Jac_c_->transTimesVec(1.0, *RX, -1.0, dyc);
   Jac_d_->transTimesVec(1.0, *RX, -1.0, dyd);
   aux=RX->twonorm();
   derr=fmax(derr,aux);
   nlp_->log->printf(hovLinAlgScalars, " >>  rx=%g\n", aux);
-  delete RX; RX=NULL;
+  delete RX; 
 
   //RD = rd + dyd - Dd*dd
   hiopVectorPar* RD=rd.new_copy();
   RD->axpy( 1., dyd);
   RD->axzpy(-1., *Dd_, dd);
+  RD->axpy(-delta_wd, dd);
   aux=RD->twonorm();
   derr=fmax(derr,aux);
   nlp_->log->printf(hovLinAlgScalars, " >>  rd=%g\n", aux);
-  delete RD; RD=NULL;
+  delete RD; 
 
   hiopVectorPar* RC=ryc.new_copy();
   Jac_c_->timesVec(1.0, *RC, -1.0, dx);
+  RC->axpy(delta_cc, dyc);
   aux = RC->twonorm();
   derr=fmax(derr,aux);
   nlp_->log->printf(hovLinAlgScalars, " >> ryc=%g\n", aux);
-  delete RC; RC=NULL;
+  delete RC; 
   
   //RYD = ryd+dyd - Jd*dx
   hiopVectorPar* RYD=ryd.new_copy();
   Jac_d_->timesVec(1.0, *RYD, -1.0, dx);
   RYD->axpy(1.0, dd);
+  RYD->axpy(delta_cd, dyd);
   aux = RYD->twonorm();
   derr=fmax(derr,aux);
   nlp_->log->printf(hovLinAlgScalars, " >> ryd=%g\n", aux);
