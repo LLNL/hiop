@@ -360,7 +360,7 @@ public:
 	} else if(n_neg_eig != Jac_c_->m()+Jac_d_->m()) {
 	  //wrong inertia
 	  nlp_->log->printf(hovScalars, "XDycYd linsys negative eigs mismatch: has %d expected %d.\n",
-			   Jac_c_->m()+Jac_d_->m(), n_neg_eig);
+			    n_neg_eig,  Jac_c_->m()+Jac_d_->m());
 	  
 	  if(!perturb_calc_->compute_perturb_wrong_inertia(delta_wx, delta_wd, delta_cc, delta_cd)) {
 	    nlp_->log->printf(hovWarning, "XDycYd linsys: computing inertia perturbation failed.\n");

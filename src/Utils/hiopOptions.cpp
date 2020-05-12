@@ -219,7 +219,7 @@ void hiopOptions::registerOptions()
 		      "Largest perturbation of the Hessian block for inertia correction");
     registerNumOption("delta_0_bar", 1e-4, 0, 1e+40, 
 		      "First perturbation of the Hessian block for inertia correction");
-    registerNumOption("kappa_w_minus", 1/3, 1e-20, 1-1e-20, 
+    registerNumOption("kappa_w_minus", 1./3, 1e-20, 1-1e-20, 
 		      "Factor to decrease the most recent successful perturbation for inertia correction");
     registerNumOption("kappa_w_plus", 8., 1+1e-20, 1e+40, 
 		      "Factor to increase perturbation when it did not provide correct "
