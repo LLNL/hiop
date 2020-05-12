@@ -44,13 +44,26 @@ HiOp has some support for NVIDIA **GPU-based computations** via CUDA and Magma. 
 
 ### Support for GPU computations
 
-When GPU support is on, HiOp also requires the specifciation of the path to Magma installation directory using '-DHIOP_MAGMA_DIR=/path'. The typical cmake command to enable GPU support in HiOp is
+When GPU support is on, HiOp requires Magma and CUDA Toolkit. Both are detected automatically in most normal use. The typical cmake command to enable GPU support in HiOp is
 ```shell 
-$> cmake -DHIOP_USE_GPU=ON -DHIOP_MAGMA_DIR=/home/petra1/work/installs/magma-2.5.2/lib ..
+$> cmake -DHIOP_USE_GPU=ON ..
 ```
-For custom CUDA Toolkit installations, an example of the cmake command would be
+
+When Magma is not detected, one can specify its location by passing `-DHIOP_MAGMA_DIR=/path/to/magma/dir` to cmake.
+
+For custom CUDA Toolkit installations, the locations to the (missing/not found) CUDA libraries can be specified to cmake via `-DNAME=/path/cuda/directory/lib`, where `NAME` can be any of  
+```
+CUDA_cublas_LIBRARY
+CUDA_CUDART_LIBRARY
+CUDA_cudadevrt_LIBRARY
+CUDA_cusparse_LIBRARY
+CUDA_cublasLt_LIBRARY
+CUDA_nvblas_LIBRARY
+CUDA_culibos_LIBRARY
+ ```
+Below is an example for specifiying `cuBlas`, `cuBlasLt`, and `nvblas` libraries, which were `NOT_FOUND` because of a non-standard CUDA Toolkit instalation:
 ```shell 
-$> cmake -DHIOP_USE_GPU=ON -DHIOP_MAGMA_DIR=/home/petra1/work/installs/magma-2.5.2/lib -DHIOP_CUDA_INCLUDE_DIR=/usr/local/cuda-10.2/include/ -DHIOP_CUDA_LIB_DIR=/usr/local/cuda-10.2/lib64 -DHIOP_CUBLAS_LIB_DIR=/usr/local/cuda-10.2/targets/x86_64-linux/lib/lib64 ..
+$> cmake -DHIOP_USE_GPU=ON -DCUDA_cublas_LIBRARY=/usr/local/cuda-10.2/targets/x86_64-linux/lib/lib64 -DCUDA_cublasLt_LIBRARY=/export/home/petra1/work/installs/cuda10.2.89/targets/x86_64-linux/lib/ -DCUDA_nvblas_LIBRARY=/export/home/petra1/work/installs/cuda10.2.89/targets/x86_64-linux/lib/ .. && make -j && make install
 ```
 
 ### Kron reduction
@@ -59,6 +72,7 @@ Kron reduction functionality of HiOp is disabled by default. One can enable it b
 ```shell
 $> rm -rf *; cmake -DHIOP_WITH_KRON_REDUCTION=ON -DUMFPACK_DIR=/Users/petra1/work/installs/SuiteSparse-5.7.1 -DMETIS_DIR=/Users/petra1/work/installs/metis-4.0.3 .. && make -j && make install
 ```
+Metis is usually detected automatically and needs not be specified under normal circumstances.
 
 UMFPACK (part of SuiteSparse) and METIS need to be provided as shown above.
 
