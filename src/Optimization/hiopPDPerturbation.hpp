@@ -18,8 +18,8 @@ public:
       delta_w_max_bar_(1e+40),
       delta_w_0_bar_(1e-4),
       kappa_w_minus_(1./3),
-      kappa_w_plus_bar_(100),
-      kappa_w_plus_(8),
+      kappa_w_plus_bar_(100.),
+      kappa_w_plus_(8.),
       delta_c_bar_(1e-8),
       kappa_c_(0.25),
       delta_wx_curr_(0.),
@@ -212,6 +212,16 @@ public:
     delta_cc = delta_cc_curr_;
     delta_cd = delta_cd_curr_;
     
+    return true;
+  }
+
+  inline bool get_curr_perturbations(double& delta_wx, double& delta_wd,
+				     double& delta_cc, double& delta_cd)
+  {
+    delta_wx = delta_wx_curr_;
+    delta_wd = delta_wd_curr_;
+    delta_cc = delta_cc_curr_;
+    delta_cd = delta_cd_curr_;
     return true;
   }
 private:
