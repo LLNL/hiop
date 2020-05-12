@@ -90,7 +90,7 @@ namespace hiop
 class hiopKKTLinSysCompressedMDSXYcYd : public hiopKKTLinSysCompressedXYcYd
 {
 public:
-  hiopKKTLinSysCompressedMDSXYcYd(hiopNlpFormulation* nlp_);
+  hiopKKTLinSysCompressedMDSXYcYd(hiopNlpFormulation* nlp);
   virtual ~hiopKKTLinSysCompressedMDSXYcYd();
 
   virtual bool update(const hiopIterate* iter, 
@@ -101,9 +101,9 @@ public:
 			       hiopVectorPar& dx, hiopVectorPar& dyc, hiopVectorPar& dyd);
 
 protected:
-  hiopLinSolverIndefDense* linSys;
-  hiopVectorPar *rhs; //[rxdense, ryc, ryd]
-  hiopVectorPar *_buff_xs; //an auxiliary buffer 
+  hiopLinSolverIndefDense* linSys_;
+  hiopVectorPar *rhs_; //[rxdense, ryc, ryd]
+  hiopVectorPar *_buff_xs_; //an auxiliary buffer 
   //from the parent class we also use
   //  hiopVectorPar *Dd_inv;
   //  hiopVectorPar *ryd_tilde;
@@ -113,18 +113,18 @@ protected:
   //  hiopVectorPar *rx_tilde;
 
   //keep Hxs = HessMDS->sp_mat() + Dxs (Dx=log-barrier diagonal for xs)
-  hiopVectorPar *Hxs; 
+  hiopVectorPar *Hxs_; 
 
   //just dynamic_cast-ed pointers
-  hiopNlpMDS* nlpMDS;
-  hiopMatrixSymBlockDiagMDS* HessMDS;
-  const hiopMatrixMDS* Jac_cMDS;
-  const hiopMatrixMDS* Jac_dMDS;
+  hiopNlpMDS* nlpMDS_;
+  hiopMatrixSymBlockDiagMDS* HessMDS_;
+  const hiopMatrixMDS* Jac_cMDS_;
+  const hiopMatrixMDS* Jac_dMDS_;
 
     //-1 when disabled; otherwise acts like a counter, 0,1,... incremented each time 'solveCompressed' is called
   //depends on the 'write_kkt' option
-  int write_linsys_counter; 
-  hiopCSR_IO csr_writer;
+  int write_linsys_counter_; 
+  hiopCSR_IO csr_writer_;
 };
 
 } // end of namespace

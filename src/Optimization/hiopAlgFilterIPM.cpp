@@ -669,7 +669,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
 
   //update log bar
   logbar->updateWithNlpInfo(*it_curr, _mu, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d);
-  nlp->log->printf(hovScalars, "log bar obj: %g", logbar->f_logbar);
+  nlp->log->printf(hovScalars, "log bar obj: %g\n", logbar->f_logbar);
   //recompute the residuals
   resid->update(*it_curr,_f_nlp, *_c, *_d,*_grad_f,*_Jac_c,*_Jac_d, *logbar);
 
@@ -1027,7 +1027,7 @@ hiopAlgFilterIPMNewton::~hiopAlgFilterIPMNewton()
 
 hiopKKTLinSysCompressed* hiopAlgFilterIPMNewton::decideAndCreateLinearSystem(hiopNlpFormulation* nlp)
 {
-  hiopNlpMDS* nlpMDS = dynamic_cast<hiopNlpMDS*>(nlp);
+  hiopNlpMDS* nlpMDS = NULL;//!dynamic_cast<hiopNlpMDS*>(nlp);
 
   if(NULL == nlpMDS) {
     std::string strKKT = nlp->options->GetString("KKTLinsys");
@@ -1088,7 +1088,8 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
   resid->update(*it_curr,_f_nlp, *_c, *_d,*_grad_f,*_Jac_c,*_Jac_d, *logbar);
 
   nlp->log->write("First residual-------------", *resid, hovIteration);
-  //nlp->log->printf(hovSummary, "Iter[%d] -> full iterate -------------", iter_num); nlp->log->write("", *it_curr, hovSummary); 
+  //nlp->log->printf(hovSummary, "Iter[%d] -> full iterate -------------", iter_num);
+  //nlp->log->write("", *it_curr, hovSummary); 
 
   iter_num=0; nlp->runStats.nIter=iter_num;
   bool disableLS = nlp->options->GetString("accept_every_trial_step")=="yes";

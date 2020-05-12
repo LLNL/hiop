@@ -123,7 +123,7 @@ void hiopOptions::registerOptions()
 		    "(see eqn (8) in the Filt-IPM paper) (default 0.99)");
   registerNumOption("kappa_eps", 10., 1e-6, 1e+3, 
 		    "mu is reduced when when log-bar error is below kappa_eps*mu (default 10.)");
-  registerNumOption("kappa1", 1e-2, 1e-8, 1e+0, 
+  registerNumOption("kappa1", 1e-2, 1e-14, 1e+0, 
 		    "sufficiently-away-from-the-boundary projection parameter used in initialization (default 1e-2)");
   registerNumOption("kappa2", 1e-2, 1e-8, 0.49999, 
 		    "shift projection parameter used in initialization for double-bounded variables (default 1e-2)");
