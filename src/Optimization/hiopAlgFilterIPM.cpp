@@ -245,8 +245,9 @@ void hiopAlgFilterIPMBase::reloadOptions()
       dualsUpdateType = 1;
       dualsInitializ = 1;
       //if(warnOnInconsistencies)
-      nlp->log->printf(hovWarning, "Option dualsUpdateType=lsq not compatible with the requested NLP formulation and will "
-		       "be set to dualsUpdateType=linear together with dualsInitialization=zero\n");
+      nlp->log->printf(hovWarning,
+		       "Option dualsUpdateType=lsq not compatible with the requested NLP formulation. "
+		       " Will use dualsUpdateType=linear together with dualsInitialization=zero\n");
     }
   }
   
@@ -255,7 +256,8 @@ void hiopAlgFilterIPMBase::reloadOptions()
   s_theta=1.1;        //parameters in the switch condition of 
   s_phi=2.3;          // the linearsearch (equation 19) in
   delta=1.;           // the WachterBiegler paper
-  eta_phi=1e-4;       // parameter in the Armijo rule
+  // parameter in the Armijo rule
+  eta_phi=nlp->options->GetNumeric("eta_phi");     
   kappa_Sigma = 1e10; //parameter in resetting the duals to guarantee closedness of the primal-dual logbar Hessian to the primal logbar Hessian
   _tau=fmax(tau_min,1.0-_mu);
   theta_max = 1e7; //temporary - will be updated after ini pt is computed
@@ -359,6 +361,9 @@ evalNlp(hiopIterate& iter,
     nlp->log->printf(hovError, "Error occured in user constraint(s) function evaluation\n");
     return false;
   }
+
+  nlp->log->write("Eq   body c:", c, hovFcnEval);
+  nlp->log->write("Ineq body d:", d, hovFcnEval);
   
   //bret = nlp->eval_Jac_c    (x, new_x, Jac_c);           assert(bret);
   //bret = nlp->eval_Jac_d    (x, new_x, Jac_d);           assert(bret);
@@ -706,10 +711,10 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
     }
     
     nlp->log->printf(hovScalars,
-		     "  Nlp    errs: pr-infeas:%20.14e   dual-infeas:%20.14e  comp:%20.14e  overall:%20.14e\n",
+		     "  Nlp    errs: pr-infeas:%23.17e   dual-infeas:%23.17e  comp:%23.17e  overall:%23.17e\n",
 		     _err_nlp_feas, _err_nlp_optim, _err_nlp_complem, _err_nlp);
     nlp->log->printf(hovScalars,
-		     "  LogBar errs: pr-infeas:%20.14e   dual-infeas:%20.14e  comp:%20.14e  overall:%20.14e\n",
+		     "  LogBar errs: pr-infeas:%23.17e   dual-infeas:%23.17e  comp:%23.17e  overall:%23.17e\n",
 		     _err_log_feas, _err_log_optim, _err_log_complem, _err_log);
     outputIteration(lsStatus, lsNum);
 
@@ -760,10 +765,10 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
 	return Error_In_User_Function;
       }
       nlp->log->printf(hovScalars,
-		       "  Nlp    errs: pr-infeas:%20.14e   dual-infeas:%20.14e  comp:%20.14e  overall:%20.14e\n",
+		       "  Nlp    errs: pr-infeas:%23.17e   dual-infeas:%23.17e  comp:%23.17e  overall:%23.17e\n",
 		       _err_nlp_feas, _err_nlp_optim, _err_nlp_complem, _err_nlp);
       nlp->log->printf(hovScalars,
-		       "  LogBar errs: pr-infeas:%20.14e   dual-infeas:%20.14e  comp:%20.14e  overall:%20.14e\n",
+		       "  LogBar errs: pr-infeas:%23.17e   dual-infeas:%23.17e  comp:%23.17e  overall:%23.17e\n",
 		       _err_log_feas, _err_log_optim, _err_log_complem, _err_log);    
       
       filter.reinitialize(theta_max);
@@ -772,7 +777,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
       //	continue; 
       //}
     }
-    nlp->log->printf(hovScalars, "Iter[%d] logbarObj=%20.14e (mu=%12.5e)\n", iter_num, logbar->f_logbar,_mu);
+    nlp->log->printf(hovScalars, "Iter[%d] logbarObj=%23.17e (mu=%12.5e)\n", iter_num, logbar->f_logbar,_mu);
     /****************************************************
      * Search direction calculation
      ***************************************************/
@@ -1124,9 +1129,9 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
       return Error_In_User_Function;
     }
     
-    nlp->log->printf(hovScalars, "  Nlp    errs: pr-infeas:%20.14e   dual-infeas:%20.14e  comp:%20.14e  overall:%20.14e\n",
+    nlp->log->printf(hovScalars, "  Nlp    errs: pr-infeas:%23.17e   dual-infeas:%23.17e  comp:%23.17e  overall:%23.17e\n",
 		     _err_nlp_feas, _err_nlp_optim, _err_nlp_complem, _err_nlp);
-    nlp->log->printf(hovScalars, "  LogBar errs: pr-infeas:%20.14e   dual-infeas:%20.14e  comp:%20.14e  overall:%20.14e\n",
+    nlp->log->printf(hovScalars, "  LogBar errs: pr-infeas:%23.17e   dual-infeas:%23.17e  comp:%23.17e  overall:%23.17e\n",
 		     _err_log_feas, _err_log_optim, _err_log_complem, _err_log);
     outputIteration(lsStatus, lsNum);
 
@@ -1175,9 +1180,9 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 	solver_status_ = Error_In_User_Function;
 	return Error_In_User_Function;
       }
-      nlp->log->printf(hovScalars, "  Nlp    errs: pr-infeas:%20.14e   dual-infeas:%20.14e  comp:%20.14e  overall:%20.14e\n",
+      nlp->log->printf(hovScalars, "  Nlp    errs: pr-infeas:%23.17e   dual-infeas:%23.17e  comp:%23.17e  overall:%23.17e\n",
 		       _err_nlp_feas, _err_nlp_optim, _err_nlp_complem, _err_nlp);
-      nlp->log->printf(hovScalars, "  LogBar errs: pr-infeas:%20.14e   dual-infeas:%20.14e  comp:%20.14e  overall:%20.14e\n",
+      nlp->log->printf(hovScalars, "  LogBar errs: pr-infeas:%23.17e   dual-infeas:%23.17e  comp:%23.17e  overall:%23.17e\n",
 		       _err_log_feas, _err_log_optim, _err_log_complem, _err_log);    
       
       filter.reinitialize(theta_max);
@@ -1186,7 +1191,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
       //	continue; 
       //}
     }
-    nlp->log->printf(hovScalars, "Iter[%d] logbarObj=%20.14e (mu=%12.5e)\n", iter_num, logbar->f_logbar,_mu);
+    nlp->log->printf(hovScalars, "Iter[%d] logbarObj=%23.17e (mu=%12.5e)\n", iter_num, logbar->f_logbar,_mu);
     /****************************************************
      * Search direction calculation
      ***************************************************/
