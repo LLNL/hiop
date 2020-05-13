@@ -930,15 +930,15 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
 	  //filter does not change
 	} else {
 	  //Armijo does not hold
-	  filter.add(logbar->f_logbar_trial, theta_trial);
+	  filter.add(theta_trial, logbar->f_logbar_trial);
 	}
       } else { //switching condition does not hold
-	filter.add(logbar->f_logbar_trial, theta_trial);
+	filter.add(theta_trial, logbar->f_logbar_trial);
       }
 
     } else if(lsStatus==2) {
       //switching condition does not hold for the trial
-      filter.add(logbar->f_logbar_trial, theta_trial);
+      filter.add(theta_trial, logbar->f_logbar_trial);
     } else if(lsStatus==3) {
       //Armijo (and switching condition) hold, nothing to do.
     } else if(lsStatus==0) {
@@ -1264,6 +1264,9 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 		       lsNum, _alpha_primal, logbar->f_logbar, logbar->f_logbar_trial, theta, theta_trial);
 
       if(disableLS) break;
+
+      nlp->log->write("Filter IPM: ", filter, hovLinesearch);
+      
       //let's do the cheap, "sufficient progress" test first, before more involved/expensive tests. 
       // This simple test is good enough when iterate is far away from solution
       if(theta>=theta_min) {
@@ -1285,7 +1288,8 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 	  _alpha_primal *= 0.5;
 	  continue;
 	}  
-	nlp->log->write("Warning (close to panic): I got to a point where I wasn't supposed to be. (1)", hovWarning);
+	nlp->log->write("Warning (close to panic): got to a point I wasn't supposed reach. (1)",
+			hovWarning);
       } else {
 	// if(theta<theta_min,  then check the switching condition and, if true, rely on Armijo rule.
 	// first compute grad_phi^T d_x if it hasn't already been computed
@@ -1312,13 +1316,17 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 	  }
 	} else {//switching condition does not hold  
 	  
-	  //ok to go with  "sufficient progress" condition even when close to solution, provided the switching condition is not satisfied
+	  //ok to go with  "sufficient progress" condition even when close to solution, provided the
+	  //switching condition is not satisfied
+	  
 	  //check the filter and the sufficient decrease condition (18)
 	  if(!filter.contains(theta_trial,logbar->f_logbar_trial)) {
-	    if(theta_trial<=(1-gamma_theta)*theta || logbar->f_logbar_trial<=logbar->f_logbar - gamma_phi*theta) {
-	    //if(logbar->f_logbar_trial<=logbar->f_logbar - gamma_phi*theta) {
+	    if(theta_trial<=(1-gamma_theta)*theta ||
+	       logbar->f_logbar_trial <= logbar->f_logbar - gamma_phi*theta) {
+
 	      //trial good to go
-	      nlp->log->printf(hovLinesearchVerb, "Linesearch: accepting based on suff. decrease (switch cond also passed)\n");
+	      nlp->log->printf(hovLinesearchVerb,
+			       "Linesearch: accepting based on suff. decrease (switch cond also passed)\n");
 	      lsStatus=2;
 	      break;
 	    } else {
@@ -1333,17 +1341,22 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 	  } 
 	} // end of else: switching condition does not hold
 
-	nlp->log->write("Warning (close to panic): I got to a point where I wasn't supposed to be. (2)", hovWarning);
+	nlp->log->write("Warning (close to panic): got to a point I wasn't supposed to reach. (2)",
+			hovWarning);
 
       } //end of else: theta_trial<theta_min
     } //end of while for the linesearch loop
     nlp->runStats.tmSolverInternal.stop();
 
-    //post line-search stuff  
-    //filter is augmented whenever the switching condition or Armijo rule do not hold for the trial point that was just accepted
+    // post line-search: filter is augmented whenever the switching condition or Armijo rule do not
+    // hold for the trial point that was just accepted
     if(lsStatus==1) {
+      
       //need to check switching cond and Armijo to decide if filter is augmented
-      if(!grad_phi_dx_computed) { grad_phi_dx = logbar->directionalDerivative(*dir); grad_phi_dx_computed=true; }
+      if(!grad_phi_dx_computed) {
+	grad_phi_dx = logbar->directionalDerivative(*dir);
+	grad_phi_dx_computed=true;
+      }
       
       //this is the actual switching condition
       if(grad_phi_dx<0 && _alpha_primal*pow(-grad_phi_dx,s_phi)>delta*pow(theta,s_theta)) {
@@ -1352,15 +1365,15 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 	  //filter does not change
 	} else {
 	  //Armijo does not hold
-	  filter.add(logbar->f_logbar_trial, theta_trial);
+	  filter.add(theta_trial, logbar->f_logbar_trial);
 	}
       } else { //switching condition does not hold
-	filter.add(logbar->f_logbar_trial, theta_trial);
+	filter.add(theta_trial, logbar->f_logbar_trial);
       }
 
     } else if(lsStatus==2) {
       //switching condition does not hold for the trial
-      filter.add(logbar->f_logbar_trial, theta_trial);
+      filter.add(theta_trial, logbar->f_logbar_trial);
     } else if(lsStatus==3) {
       //Armijo (and switching condition) hold, nothing to do.
     } else if(lsStatus==0) {

@@ -51,7 +51,7 @@
 #include "hiopVector.hpp"
 #include "hiopResidual.hpp"
 #include "hiopHessianLowRank.hpp"
-
+#include "hiopFilter.hpp"
 #include "hiopOptions.hpp"
 
 namespace hiop
@@ -137,6 +137,16 @@ void hiopLogger::write(const char* msg, const hiopNlpFormulation& nlp,  hiopOutV
   hiopOutVerbosity _verb = (hiopOutVerbosity) _nlp->options->GetInteger("verbosity_level");
   if(v>_verb) return;
   nlp.print(_f, msg);
+}
+
+void hiopLogger::write(const char* msg, const hiopFilter& filt, hiopOutVerbosity v, int loggerid/*=0*/)
+{
+#ifdef HIOP_USE_MPI
+  if(_master_rank != _nlp->get_rank()) return;
+#endif
+  hiopOutVerbosity _verb = (hiopOutVerbosity) _nlp->options->GetInteger("verbosity_level");
+  if(v>_verb) return;
+  filt.print(_f, msg);
 }
 
   //only for loggerid=0 for now

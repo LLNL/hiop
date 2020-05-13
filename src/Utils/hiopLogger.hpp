@@ -63,6 +63,7 @@ class hiopMatrix;
 class hiopHessianLowRank;
 class hiopNlpFormulation;
 class hiopOptions;
+class hiopFilter;
 
 /* Verbosity 0 to 9 */
 enum hiopOutVerbosity {
@@ -98,8 +99,8 @@ public:
 #endif
   void write(const char* msg, const hiopNlpFormulation& nlp,  hiopOutVerbosity v, int loggerid=0);
   void write(const char* msg, const hiopOptions& options,     hiopOutVerbosity v, int loggerid=0);
+  void write(const char* msg, const hiopFilter& filt,         hiopOutVerbosity v, int loggerid=0);
   void write(const char* msg, hiopOutVerbosity v, int loggerid=0);
-
   //only for loggerid=0 for now
   void printf(hiopOutVerbosity v, const char* format, ...); 
 
