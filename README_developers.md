@@ -60,7 +60,7 @@ $> mpiexec -np 2 ./src/Drivers/nlpDenseCons_ex3.exe
 
 - Submit issue for discussion before submitting a pull request
 - Always branch from master
-- Name your branch <feature name>-dev for a feature and <fix name>-fix for fixing an issue
+- Name your branch `<feature name>-dev` for a feature and `<fix name>-fix` for fixing an issue
 - Separate with the dash (`-`) character
 - Provide extended description in pull request
 - Reference the issue in the description
@@ -86,7 +86,7 @@ $ git checkout -b my-bug-fix
   - Indent two spaces above surrounding scope
   - No spaces around template parameter
   - Line break before range segment
-  - Use `RAJA_LAMBDA` in favor of using __device__ directly
+  - Use `RAJA_LAMBDA` in favor of using `__device__` directly
   - Use `hiop_*_policy` over directly using cuda or omp policies
   - Prefer `RAJA::Index_type` over `int` or anything else
 - Prefer braces for every block
