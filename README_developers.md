@@ -142,7 +142,7 @@ RAJA::forall<hiop_raja_exec>(
   {
     if(svec[i]==1.)
     {
-      local_data_dev[i]=c;
+      local_data_dev[i] = c;
     }
     else
     {
