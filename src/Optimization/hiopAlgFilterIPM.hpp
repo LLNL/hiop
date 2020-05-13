@@ -95,10 +95,20 @@ protected:
   bool evalNlp_derivOnly(hiopIterate& iter, 
 			 hiopVector& gradf_,  hiopMatrix& Jac_c,  hiopMatrix& Jac_d,
 			  hiopMatrix& Hess_L);
- /* internal helper for error computation */
+  
+  /** Internal helper for NLP error/residuals computation.
+   * TODO: add support for the 'true' infeasibility measure and propagate this downstream in
+   * i.  the iteration output 
+   * ii. the 'theta' part of the filter's pairs 'theta' entries.
+   * Instead, we currently use the inf-norm of d-d(x)=0, d-sdl=dl, d-sdu+du=0, c(x)-c=0
+   *
+   * The 'true' infeasibility (also used by Ipopt) would be the max of the inf norm of the 
+   * violation of d_l <= d(x) <= d_u and the inf norm of the residual of c(x)-c=0.
+   */
   virtual bool evalNlpAndLogErrors(const hiopIterate& it, const hiopResidual& resid, const double& mu,
 				   double& nlpoptim, double& nlpfeas, double& nlpcomplem, double& nlpoverall,
 				   double& logoptim, double& logfeas, double& logcomplem, double& logoverall);
+  
   virtual double thetaLogBarrier(const hiopIterate& it, const hiopResidual& resid, const double& mu);
 
   bool updateLogBarrierParameters(const hiopIterate& it, const double& mu_curr, const double& tau_curr,

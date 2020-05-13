@@ -369,7 +369,7 @@ public:
 
 	} else {
 	  //all is good
-	  printf("!!!!! all is good\n");
+	  //printf("!!!!! all is good\n");
 	  break;
 	}
       } else if(n_neg_eig != 0) {
