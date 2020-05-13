@@ -60,7 +60,7 @@ $> mpiexec -np 2 ./src/Drivers/nlpDenseCons_ex3.exe
 
 - Submit issue for discussion before submitting a pull request
 - Always branch from master
-- Name your branch <feature>-dev for a feature and <fix>-fix for fixing an issue
+- Name your branch <feature name>-dev for a feature and <fix name>-fix for fixing an issue
 - Separate with the dash (`-`) character
 - Provide extended description in pull request
 - Reference the issue in the description
@@ -82,6 +82,13 @@ $ git checkout -b my-bug-fix
 - No spaces between `if` and `(`
 - Avoid condition and loop bodies in the same line of code
 - Allman style braces
+- RAJA Lambdas
+  - Indent two spaces above surrounding scope
+  - No spaces around template parameter
+  - Line break before range segment
+  - Use `RAJA_LAMBDA` in favor of using __device__ directly
+  - Use `hiop_*_policy` over directly using cuda or omp policies
+  - Prefer `RAJA::Index_type` over `int` or anything else
 - Prefer braces for every block
 - Prefer no indentation for `private`, `public`, and `protected` statements
 
@@ -111,6 +118,18 @@ if(some_condition)
 
 // Bad!
 if(some_condition) value += 1;
+
+// RAJA Lambdas
+RAJA::forall<hiop_raja_exec>(
+  RAJA::RangeSegment(0, 10),
+  RAJA_LAMBDA(RAJA::Index_type i)
+  {
+    if(svec[i]==1.)
+      local_data_dev[i]=c;
+    else
+      local_data_dev[i]=0.;
+  });
+
 ```
 
 ## Naming Conventions
