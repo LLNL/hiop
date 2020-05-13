@@ -76,7 +76,7 @@ $ git checkout master
 $ git checkout -b my-bug-fix
 ```
 
-## Indentation and Braces
+## Indentation, Braces, and Declarations
 
 - Use two spaces for indentation, absolutely no tab characters.
 - No spaces between `if` and `(`
@@ -91,28 +91,44 @@ $ git checkout -b my-bug-fix
   - Prefer `RAJA::Index_type` over `int` or anything else
 - Prefer braces for every block
 - Prefer no indentation for `private`, `public`, and `protected` statements
+- Each variable declaration should have it's own type declaration
 
 For example:
 
 ```cpp
 // Good
+int a;
+int b;
+int c;
+
+// Bad
+// this causes confusion when working with pointers, and if you
+// must change a type in the future, we will have a larger diff.
+int a, b, c;
+
+// Good
+// uses allman braces
+// no space between if and ()
 if(some_condition)
 {
   value += 1;
 }
 
 // Not preferred
+// use allman braces
 if(some_condition) {
   value += 1;
 }
 
 // Not preferred
+// space in between if and ()
 if (some_condition)
 {
   value += 1;
 }
 
 // Not preferred
+// please use braces
 if(some_condition)
   value += 1;
 
@@ -125,9 +141,13 @@ RAJA::forall<hiop_raja_exec>(
   RAJA_LAMBDA(RAJA::Index_type i)
   {
     if(svec[i]==1.)
+    {
       local_data_dev[i]=c;
+    }
     else
+    {
       local_data_dev[i]=0.;
+    }
   });
 
 ```
