@@ -1,7 +1,9 @@
-cmake_minimum_required (VERSION 3.1)
+cmake_minimum_required (VERSION 3.8)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+cmake_policy(SET CMP0074 NEW)
 
 project (hiop)
 # enable Fortran for Fortran name mangling
@@ -11,15 +13,19 @@ enable_language(Fortran)
 include(FortranCInterface)
 FortranCInterface_HEADER(FortranCInterface.hpp MACRO_NAMESPACE "FC_")
 
-file(WRITE "src/Interface/hiop_defs.hpp" "")
-
 option(HIOP_USE_MPI "Build with MPI support" ON)
 option(HIOP_USE_GPU "Build with support for GPUs - Magma and cuda libraries" OFF)
 option(HIOP_DEEPCHECKS "Extra checks and asserts in the code with a high penalty on performance" ON)
 option(HIOP_WITH_KRON_REDUCTION "Build Kron Reduction code (requires MA86)" OFF)
-
+option(HIOP_DEVELOPER_MODE "Build with extended warnings and options" OFF)
 #with testing drivers capable of 'selfchecking' (-selfcheck)
 option(HIOP_WITH_MAKETEST "Enable 'make test'" ON)
+
+if(HIOP_USE_GPU)
+  set(HIOP_USE_MAGMA ON)
+else()
+  set(HIOP_USE_MAGMA OFF)
+endif()
 
 if(HIOP_USE_MPI)
   if(NOT DEFINED MPI_CXX_COMPILER)
@@ -27,127 +33,123 @@ if(HIOP_USE_MPI)
     set(CMAKE_CXX_COMPILER ${MPI_CXX_COMPILER})
     set(CMAKE_C_COMPILER ${MPI_C_COMPILER})
   endif(NOT DEFINED MPI_CXX_COMPILER)
-  file(APPEND "src/Interface/hiop_defs.hpp" "#define HIOP_USE_MPI\n")
-else()
-  file(APPEND "src/Interface/hiop_defs.hpp" "#ifdef HIOP_USE_MPI\n#undef HIOP_USE_MPI\n#endif\n")
 endif(HIOP_USE_MPI)
 
+# The binary dir is already a global include directory
+configure_file(
+  "${CMAKE_SOURCE_DIR}/src/Interface/hiop_defs.hpp.in"
+  "${CMAKE_BINARY_DIR}/hiop_defs.hpp")
+
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
+
+add_library(hiop_math INTERFACE)
+add_library(hiop_options INTERFACE)
+add_library(hiop_warnings INTERFACE)
+
+target_compile_features(hiop_options
+  INTERFACE
+  cxx_std_11
+  cxx_alignas
+  cxx_alignof
+  cxx_attributes
+  cxx_auto_type
+  cxx_constexpr
+  cxx_defaulted_functions
+  cxx_deleted_functions
+  cxx_final
+  cxx_lambdas
+  cxx_noexcept
+  cxx_override
+  cxx_range_for
+  cxx_rvalue_references
+  cxx_static_assert
+  cxx_strong_enums
+  cxx_trailing_return_types
+  cxx_unicode_literals
+  cxx_user_literals
+  cxx_variadic_macros
+  )
+
+target_compile_options(hiop_warnings
+  INTERFACE
+  -Wall
+  -Wextra
+  -Wshadow            # warn the user if a variable
+                      # declaration shadows one from a
+                      # parent context
+  -Wnull-dereference
+  -Wdouble-promotion  # Warn on implicit conversion from
+                      # float to double
+  )
+
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+  message(STATUS "Found extra GNU compiler warnings")
+  target_compile_options(hiop_warnings
+    INTERFACE
+    -Wmisleading-indentation    # Warn on indented blocks
+                                # that are not really blocks
+    -Wduplicated-cond           # Warn on if/else chain with
+                                # duplicated conditions
+    -Wduplicated-branches       # Warn on if/else chains with
+                                # duplicated code
+    -Wuseless-cast              # Warn when casting to the same type
+    )
+endif()
+
+if(HIOP_DEVELOPER_MODE)
+  target_link_libraries(hiop_math INTERFACE hiop_options hiop_warnings)
+endif()
+
 if(HIOP_USE_GPU)
-  # for now we rely on MAGMA for GPUs computations
-  set(MAGMA_LIBRARIES "-lmagma")
-  if(HIOP_MAGMA_DIR)
-    set(MAGMA_LIBRARIES "-L${HIOP_MAGMA_DIR}/lib ${MAGMA_LIBRARIES}")
-    set(MAGMA_INCLUDE "${HIOP_MAGMA_DIR}/include")
-  endif(HIOP_MAGMA_DIR)
+  include(CheckLanguage)
+  enable_language(CUDA)
+  check_language(CUDA)
 
-  set(HIOP_CUDA_LIBRARIES "-lculibos -lcublas -lcublasLt -lnvblas -lcusparse -lcudart -lcudadevrt")
-  find_package(CUDA 10.1)
-  
-  if(HIOP_CUDA_LIB_DIR)
-    set(HIOP_CUDA_LIBRARIES "-L${HIOP_CUDA_LIB_DIR} ${HIOP_CUDA_LIBRARIES}")
+  if(NOT DEFINED CMAKE_CUDA_STANDARD)
+    set(CMAKE_CUDA_STANDARD 11)
+    set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+  endif()
+
+  if(HIOP_NVCC_ARCH)
+    set(CMAKE_CUDA_FLAGS "-arch=${HIOP_NVCC_ARCH}")
+    message(STATUS "Using CUDA arch ${HIOP_NVCC_ARCH}")
   else()
-    set(HIOP_CUDA_LIBRARIES "-L${CUDA_TOOLKIT_ROOT_DIR}/lib64 ${HIOP_CUDA_LIBRARIES}")
-  endif(HIOP_CUDA_LIB_DIR)
+    set(CMAKE_CUDA_FLAGS "-arch=sm_35")
+    message(STATUS "Using CUDA arch sm_35")
+  endif()
+  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-extended-lambda")
 
-  # on some systems RHEL Nvidia toolkit puts cuBlas in different locations
-  # user can setup/overwrite the lib directory
-  if(HIOP_CUBLAS_LIB_DIR)
-    set(HIOP_CUDA_LIBRARIES "-L${HIOP_CUBLAS_LIB_DIR} ${HIOP_CUDA_LIBRARIES}")
-  endif(HIOP_CUBLAS_LIB_DIR)
+  set(HIOP_MAGMA_DIR CACHE PATH "Path to Magma directory")
 
-  if(HIOP_CUDA_INCLUDE_DIR)
-    set(HIOP_CUDA_INCLUDE "${HIOP_CUDA_INCLUDE_DIR}")
-  else()
-    set(HIOP_CUDA_INCLUDE "${CUDA_INCLUDE_DIRS}")
-  endif(HIOP_CUDA_INCLUDE_DIR)
-
-  message("HiOp support for GPUs is on")
-  message("HiOp GPU libs: '${MAGMA_LIBRARIES} ${HIOP_CUDA_LIBRARIES}'") 
-  message("HiOp GPU includes: '${MAGMA_INCLUDE} ${HIOP_CUDA_INCLUDE}'") 
-  include_directories(${MAGMA_INCLUDE} ${HIOP_CUDA_INCLUDE})
-  set(HIOP_MATH_LIBRARIES ${MAGMA_LIBRARIES} ${HIOP_CUDA_LIBRARIES} ${HIOP_MATH_LIBRARIES})
+  include(FindHiopCudaLibraries)
+  target_link_libraries(hiop_math INTERFACE hiop_cuda)
 endif(HIOP_USE_GPU)
 
-if(HIOP_USE_GPU)
-  file(APPEND "src/Interface/hiop_defs.hpp" "#define HIOP_USE_MAGMA\n")
-else()
-  file(APPEND "src/Interface/hiop_defs.hpp" "#ifdef HIOP_USE_MAGMA\n#undef HIOP_USE_MAGMA\n#endif\n")
-endif(HIOP_USE_GPU)
-
-if(HIOP_DEEPCHECKS)
-  file(APPEND "src/Interface/hiop_defs.hpp" "#define HIOP_DEEPCHECKS\n")
-else()
-  file(APPEND "src/Interface/hiop_defs.hpp" "#ifdef HIOP_DEEPCHECKS\n#undef HIOP_DEEPCHECKS\n#endif\n")
-endif(HIOP_DEEPCHECKS)
-
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-
-#set(MA86_DIR "/home/petra1/work/installs/hsl_ma86-1.6.0")
 if(HIOP_WITH_KRON_REDUCTION)
-  find_library(UMFPACK_LIB NAMES umfpack HINTS ${UMFPACK_DIR} "${UMFPACK_DIR}/lib" )
-  if(UMFPACK_LIB)
-    message("Using UMFPACK lib '${UMFPACK_LIB}'")
-
-    find_path(UMFPACK_INCL NAMES "umfpack.h" HINTS ${UMFPACK_DIR} "${UMFPACK_DIR}/include")
-    if(UMFPACK_INCL)
-      include_directories(${UMFPACK_INCL})
-      message("Using UMFPACK include '${UMFPACK_INCL}'")
-    else() 
-      message(FATAL_ERROR "Could not find UMFPACK header needed by HiOp's kron reduction. Please cmake with '-DUMFPACK_DIR=/path/to/umfpack_dir'; currently, UMFPACK_DIR='${UMFPACK_DIR}'")
-    endif(UMFPACK_INCL)
-  else()
-    message(FATAL_ERROR "Could not find UMFPACK needed by HiOp's kron reduction. Please cmake with '-DUMFPACK_DIR=/path/to/umfpack_dir'; currently, UMFPACK_DIR='${UMFPACK_DIR}'")
-  endif(UMFPACK_LIB)
+  set(HIOP_UMFPACK_DIR CACHE PATH "Path to UMFPACK directory")
+  include(FindUMFPACK)
+  target_link_libraries(hiop_math INTERFACE UMFPACK)
 
   # metis needed (5.x needed by umfpack)
-  find_library(METIS_LIB NAMES metis HINTS ${METIS_DIR} "${METIS_DIR}/lib" "${METIS_DIR}/src/")
-  if(METIS_LIB)
-    message("Using METIS lib '${METIS_LIB}'")
-  else()
-    message(FATAL_ERROR "Could not find METIS lib needed by UMFPACK. Please cmake with '-DMETIS_DIR=/path/to/metis/lib'; currently, METIS_DIR='${METIS_DIR}'")
-  endif(METIS_LIB)
-
-
-  # find_library(MA86_LIB NAMES hsl_ma86 ma86 HINTS ${MA86_DIR} "${MA86_DIR}/lib" )
-  # if(MA86_LIB)
-  #   message("Using HSL MA86 lib '${MA86_LIB}'")
-
-  #   find_path(MA86_INCL NAMES "hsl_ma86z.h" HINTS ${MA86_DIR} "${MA86_DIR}/include")
-  #   if(MA86_INCL)
-  #     include_directories(${MA86_INCL})
-  #     message("Using HSL MA86 include '${MA86_INCL}'")
-  #   else() 
-  #     message(FATAL_ERROR "Could not find HSL MA86 headers needed by kron reduction. Please cmake with '-DMA86_DIR=/path/to/ma86_dir'; currently, MA86_DIR='${MA86_DIR}'")
-  #   endif(MA86_INCL)
-  # else()
-  #   message(FATAL_ERROR "Could not find HSL MA86 needed by kron reduction. Please cmake with '-DMA86_DIR=/path/to/ma86_dir'; currently, MA86_DIR='${MA86_DIR}'")
-  # endif(MA86_LIB)
-
-  # # metis needed (4.x works)
-  # find_library(METIS_LIB NAMES metis HINTS ${METIS_DIR} "${METIS_DIR}/lib" "${METIS_DIR}/src/")
-  # if(METIS_LIB)
-  #   message("Using METIS lib '${METIS_LIB}'")
-  # else()
-  #   message(FATAL_ERROR "Could not find METIS lib needed by MA86. Please cmake with '-DMETIS_DIR=/path/to/metis/lib'; currently, METIS_DIR='${METIS_DIR}'")
-  # endif(METIS_LIB)
+  set(HIOP_METIS_DIR CACHE PATH "Path to METIS directory")
+  include(FindMETIS)
+  target_link_libraries(hiop_math INTERFACE METIS)
 endif(HIOP_WITH_KRON_REDUCTION)
 
 find_package(OpenMP)
+target_link_libraries(hiop_math INTERFACE OpenMP::OpenMP_CXX)
 
 if(NOT DEFINED LAPACK_LIBRARIES)
   # in case the toolchain defines them
   find_package(LAPACK REQUIRED)
-  set(HIOP_MATH_LIBRARIES ${LAPACK_LIBRARIES} ${HIOP_MATH_LIBRARIES})
+  target_link_libraries(hiop_math INTERFACE ${LAPACK_LIBRARIES})
+  message(STATUS "Found LAPACK libraries: ${LAPACK_LIBRARIES}")
 endif(NOT DEFINED LAPACK_LIBRARIES)
-string(STRIP "${HIOP_MATH_LIBRARIES}" HIOP_MATH_LIBRARIES)
 
 #
 # extended precision lapack based on xblas testing example
 #
 #set(LAPACK_LIBRARIES "-lgfortran;/export/home/petra1/work/installs/xblas-1.0.248/libxblas.a;/home/petra1/work/installs/lapack-3.7.0/libblas.a;/home/petra1/work/installs/lapack-3.7.0/liblapack.a;/home/petra1/work/installs/lapack-3.7.0/liblapack.a;/home/petra1/work/installs/lapack-3.7.0/libblas.a;/export/home/petra1/work/installs/xblas-1.0.248/libxblas.a")
-
-message("HiOp will use LAPACK/BLAS libs: ${LAPACK_LIBRARIES}")
-message("HiOp: the so-called math libraries are: '${HIOP_MATH_LIBRARIES}'")
 
 # include build directory for Fortran name mangling header
 include_directories(${CMAKE_BINARY_DIR})
@@ -169,7 +171,7 @@ add_subdirectory(src/Utils)
 #  INSTALLATION
 ##########################################################
 if("${CMAKE_BUILD_TYPE}" STREQUAL "")
-# set a name for the build type to make the output of the 'make install' look nice
+  # set a name for the build type to make the output of the 'make install' look nice
   set(CMAKE_BUILD_TYPE "default-build")
 endif("${CMAKE_BUILD_TYPE}" STREQUAL "")
 
@@ -184,15 +186,19 @@ set_property(TARGET hiopUtils PROPERTY POSITION_INDEPENDENT_CODE 1)
 set_property(TARGET chiopInterface PROPERTY POSITION_INDEPENDENT_CODE 1)
 
 add_library(hiop STATIC $<TARGET_OBJECTS:hiopOptimization>
-                        $<TARGET_OBJECTS:hiopLinAlg>
-			                  $<TARGET_OBJECTS:hiopUtils>
-			                  $<TARGET_OBJECTS:chiopInterface>)
+  $<TARGET_OBJECTS:hiopLinAlg>
+  $<TARGET_OBJECTS:hiopUtils>
+  $<TARGET_OBJECTS:chiopInterface>)
 add_library(hiopshared SHARED $<TARGET_OBJECTS:hiopOptimization>
-                        $<TARGET_OBJECTS:hiopLinAlg>
-			                  $<TARGET_OBJECTS:hiopUtils>
-			                  $<TARGET_OBJECTS:chiopInterface>)
+  $<TARGET_OBJECTS:hiopLinAlg>
+  $<TARGET_OBJECTS:hiopUtils>
+  $<TARGET_OBJECTS:chiopInterface>)
 set_target_properties(hiopshared PROPERTIES OUTPUT_NAME hiop)
 
+  $<TARGET_OBJECTS:hiopLinAlg>
+  $<TARGET_OBJECTS:hiopUtils>)
+
+target_link_libraries(hiop PUBLIC hiop_math)
 if(HIOP_WITH_KRON_REDUCTION)
   target_link_libraries(hiop PUBLIC hiopKronRed hiopLinAlgZ)
 endif(HIOP_WITH_KRON_REDUCTION)
@@ -200,36 +206,36 @@ endif(HIOP_WITH_KRON_REDUCTION)
 install(TARGETS hiop DESTINATION lib)
 install(TARGETS hiopshared DESTINATION lib)
 install(FILES src/Interface/hiopInterface.hpp
-        src/Interface/chiopInterface.hpp
-        src/Interface/hiopInterface.h
-	      src/Optimization/hiopNlpFormulation.hpp
-	      src/Optimization/hiopNlpTransforms.hpp
-	      src/Optimization/hiopAlgFilterIPM.hpp
-	      src/Optimization/hiopIterate.hpp
-	      src/Optimization/hiopResidual.hpp
-              src/Optimization/hiopKKTLinSys.hpp
-	      src/Optimization/hiopLogBarProblem.hpp
-	      src/Optimization/hiopFilter.hpp
-	      src/Optimization/hiopHessianLowRank.hpp
-	      src/Optimization/hiopDualsUpdater.hpp
-	      src/LinAlg/hiopVector.hpp
-	      src/LinAlg/hiopMatrix.hpp
-	      src/LinAlg/hiopMatrixMDS.hpp
-	      src/LinAlg/hiopMatrixSparseTriplet.hpp
-	      src/LinAlg/hiopMatrixSparseTripletStorage.hpp
-	      src/LinAlg/hiopMatrixMDS.hpp
-              src/LinAlg/hiopMatrixComplexSparseTriplet.hpp
-	      src/LinAlg/hiopMatrixComplexDense.hpp
-	      src/Utils/hiopRunStats.hpp
-	      src/Utils/hiopLogger.hpp
-	      src/Utils/hiopCSR_IO.hpp
-	      src/Utils/hiopTimer.hpp
-	      src/Utils/hiopOptions.hpp
-              src/Utils/hiopKronReduction.hpp
-	      src/Interface/hiop_defs.hpp
-	      src/LinAlg/hiop_blasdefs.hpp
-	      src/Drivers/IpoptAdapter.hpp
-        DESTINATION include)
+  src/Interface/chiopInterface.hpp
+  src/Interface/hiopInterface.h
+  src/Optimization/hiopNlpFormulation.hpp
+  src/Optimization/hiopNlpTransforms.hpp
+  src/Optimization/hiopAlgFilterIPM.hpp
+  src/Optimization/hiopIterate.hpp
+  src/Optimization/hiopResidual.hpp
+  src/Optimization/hiopKKTLinSys.hpp
+  src/Optimization/hiopLogBarProblem.hpp
+  src/Optimization/hiopFilter.hpp
+  src/Optimization/hiopHessianLowRank.hpp
+  src/Optimization/hiopDualsUpdater.hpp
+  src/LinAlg/hiopVector.hpp
+  src/LinAlg/hiopMatrix.hpp
+  src/LinAlg/hiopMatrixMDS.hpp
+  src/LinAlg/hiopMatrixSparseTriplet.hpp
+  src/LinAlg/hiopMatrixSparseTripletStorage.hpp
+  src/LinAlg/hiopMatrixMDS.hpp
+  src/LinAlg/hiopMatrixComplexSparseTriplet.hpp
+  src/LinAlg/hiopMatrixComplexDense.hpp
+  src/Utils/hiopRunStats.hpp
+  src/Utils/hiopLogger.hpp
+  src/Utils/hiopCSR_IO.hpp
+  src/Utils/hiopTimer.hpp
+  src/Utils/hiopOptions.hpp
+  src/Utils/hiopKronReduction.hpp
+  src/LinAlg/hiop_blasdefs.hpp
+  src/Drivers/IpoptAdapter.hpp
+  ${CMAKE_BINARY_DIR}/hiop_defs.hpp
+  DESTINATION include)
 
 ##########################################################
 # CMake Tests
