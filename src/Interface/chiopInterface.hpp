@@ -10,10 +10,12 @@
  */
 
 using namespace hiop;
+class cppUserProblem;
 extern "C" {
   // C struct with HiOp function callbacks
   typedef struct cHiopProblem {
-    hiopNlpMDS * refcppHiop;
+    hiopNlpMDS *refcppHiop;
+    cppUserProblem *hiopinterface;
     // user_data similar to the Ipopt interface. In case of Julia pointer to the Julia problem object.
     void *user_data;
     // Used by hiop_solveProblem() to store the final state. The duals should be added here.
@@ -74,13 +76,13 @@ class cppUserProblem : public hiopInterfaceMDS
     };
     bool get_vars_info(const long long& n, double *xlow_, double* xupp_, NonlinearityType* type)
     {
-      for(int i=0; i<n; ++i) type[i]=hiopNonlinear;
+      for(long long i=0; i<n; ++i) type[i]=hiopNonlinear;
       cprob->get_vars_info(n, xlow_, xupp_, cprob->user_data);
       return true;
     };
     bool get_cons_info(const long long& m, double* clow, double* cupp, NonlinearityType* type)
     {
-      for(int i=0; i<m; ++i) type[i]=hiopNonlinear;
+      for(long long i=0; i<m; ++i) type[i]=hiopNonlinear;
       cprob->get_cons_info(m, clow, cupp, cprob->user_data);
       return true;
     };

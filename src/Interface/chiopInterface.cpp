@@ -17,6 +17,7 @@ int hiop_createProblem(cHiopProblem *prob) {
   nlp->options->SetIntegerValue("verbosity_level", 3);
   nlp->options->SetNumericValue("mu0", 1e-1);
   prob->refcppHiop = nlp;
+  prob->hiopinterface = cppproblem;
   return 0;
 } 
 
@@ -31,6 +32,7 @@ int hiop_solveProblem(cHiopProblem *prob) {
 
 int hiop_destroyProblem(cHiopProblem *prob) {
   delete prob->refcppHiop;
+  delete prob->hiopinterface;
   return 0;
 }
 } // extern C

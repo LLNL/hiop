@@ -2,6 +2,7 @@ cmake_minimum_required (VERSION 3.8)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 cmake_policy(SET CMP0074 NEW)
 
@@ -180,10 +181,6 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 
 # Shared library should be position independent
-set_property(TARGET hiopOptimization PROPERTY POSITION_INDEPENDENT_CODE 1)
-set_property(TARGET hiopLinAlg PROPERTY POSITION_INDEPENDENT_CODE 1)
-set_property(TARGET hiopUtils PROPERTY POSITION_INDEPENDENT_CODE 1)
-set_property(TARGET chiopInterface PROPERTY POSITION_INDEPENDENT_CODE 1)
 
 add_library(hiop STATIC $<TARGET_OBJECTS:hiopOptimization>
   $<TARGET_OBJECTS:hiopLinAlg>
@@ -195,12 +192,11 @@ add_library(hiopshared SHARED $<TARGET_OBJECTS:hiopOptimization>
   $<TARGET_OBJECTS:chiopInterface>)
 set_target_properties(hiopshared PROPERTIES OUTPUT_NAME hiop)
 
-  $<TARGET_OBJECTS:hiopLinAlg>
-  $<TARGET_OBJECTS:hiopUtils>)
-
 target_link_libraries(hiop PUBLIC hiop_math)
+target_link_libraries(hiopshared PUBLIC hiop_math)
 if(HIOP_WITH_KRON_REDUCTION)
   target_link_libraries(hiop PUBLIC hiopKronRed hiopLinAlgZ)
+  target_link_libraries(hiopshared PUBLIC hiopKronRed hiopLinAlgZ)
 endif(HIOP_WITH_KRON_REDUCTION)
 
 install(TARGETS hiop DESTINATION lib)

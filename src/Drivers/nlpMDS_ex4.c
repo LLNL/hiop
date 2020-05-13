@@ -84,6 +84,7 @@ int eval_grad_f(long long n, double* x, int new_x, double* gradf, void* user_dat
   settings* user_data = (settings*) user_data_;
   int i = 0;
   //x_i - 0.5 
+  for(long long  i=0; i<n; ++i) gradf[i]=0.0;
   for(i=0; i<user_data->ns; i=i+1) gradf[i] = x[i]-0.5;
 
   //Qd*y
@@ -146,10 +147,6 @@ int get_sparse_dense_blocks_info(int* nx_sparse, int* nx_dense,
   *nnz_sparse_Jacineq = user_data->nnz_sparse_Jacineq;
   *nnz_sparse_Hess_Lagr_SS = user_data->nnz_sparse_Hess_Lagr_SS;
   *nnz_sparse_Hess_Lagr_SD = user_data->nnz_sparse_Hess_Lagr_SD;
-  printf("nx_sparse: %d, nx_dense: %d\n", *nx_sparse, *nx_dense);
-  printf("nnz_sparse_Jaceq: %d, nnz_sparse_Jacineq: %d\n", *nnz_sparse_Jaceq, *nnz_sparse_Jacineq);
-  printf("nnz_sparse_Hess_Lagr_SS: %d, nnz_sparse_Hess_Lagr_SD: %d\n", *nnz_sparse_Hess_Lagr_SS, *nnz_sparse_Hess_Lagr_SD);
-
   return 0;
 }
 
@@ -314,6 +311,7 @@ int main(int argc, char **argv) {
   double* Md = malloc(ns*nd*sizeof(double));
   for(i=0; i<ns*nd; i=i+1) Md[i] = -1.0;
   double* buf_y = malloc(nd*sizeof(double));
+  for(i=0; i<nd; i=i+1) buf_y[i] = 0.0;
 
   long long n = 2*ns + nd;
   long long m = ns+3;
@@ -333,15 +331,15 @@ int main(int argc, char **argv) {
   for(i=0; i<ns; i=i+1) xlow[i] = -1e+20;
   for(i=ns; i<2*ns; i=i+1) xlow[i] = 0.;
   xlow[2*ns] = -4.;
-  for(int i=2*ns+1; i<n; ++i) xlow[i] = -1e+20;
+  for(i=2*ns+1; i<n; ++i) xlow[i] = -1e+20;
 
-  for(int i=0; i<ns; ++i) xupp[i] = 3.;
-  for(int i=ns; i<2*ns; ++i) xupp[i] = +1e+20;
+  for(i=0; i<ns; ++i) xupp[i] = 3.;
+  for(i=ns; i<2*ns; ++i) xupp[i] = +1e+20;
   xupp[2*ns] = 4.;
-  for(int i=2*ns+1; i<n; ++i) xupp[i] = +1e+20;
+  for(i=2*ns+1; i<n; ++i) xupp[i] = +1e+20;
 
-  for(int i=0; i<m; i=i+1) clow[i] = 0.0;
-  for(int i=0; i<m; i=i+1) cupp[i] = 0.0;
+  for(i=0; i<m; i=i+1) clow[i] = 0.0;
+  for(i=0; i<m; i=i+1) cupp[i] = 0.0;
   clow[m-3] = -2.;    cupp[m-3] = 2.;
   clow[m-2] = -1e+20; cupp[m-2] = 2.;
   clow[m-1] = -2.;    cupp[m-1] = 1e+20;
@@ -365,6 +363,7 @@ int main(int argc, char **argv) {
   problem.eval_Jac_cons = eval_Jac_cons;
   problem.eval_Hess_Lagr = eval_Hess_Lagr;
   problem.solution = malloc(n * sizeof(double));
+  for(int i=0; i<n; i++) problem.solution[i] = 0.0;
   
   hiop_createProblem(&problem);
   hiop_solveProblem(&problem);
@@ -374,6 +373,10 @@ int main(int argc, char **argv) {
       return -1;
   }
   hiop_destroyProblem(&problem);
+  free(problem.solution);
+  free(xlow); free(xupp);
+  free(clow); free(cupp);
+  free(Q); free(Md); free(buf_y);
 #ifdef HIOP_USE_MAGMA
   magma_finalize();
 #endif
