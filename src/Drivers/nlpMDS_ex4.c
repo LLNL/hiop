@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "hiopInterface.h"
+#include <math.h>
 
 typedef struct settings {
   long long n; long long m; int ns; int nd;
@@ -130,7 +131,7 @@ int eval_cons(long long n, long long m,
     // apply Md to y and add the result to equality part of 'cons'
 
     //we know that equalities are the first ns constraints so this should work
-    timesVec(user_data->Md, 1.0, cons, 1.0, y, user_data->ns, user_data->nd );
+    timesVec(user_data->Md, 1.0, cons, 1.0, y, user_data->nd, user_data->ns );
     return 0;
 
 }
@@ -244,7 +245,7 @@ int eval_Jac_cons(long long n, long long m,
     
     assert(user_data->ns+3 == m);
     //do an in place fill-in for the ineq Jacobian corresponding to e^T
-    for(int i=0; i<3*user_data->nd; ++i) JacD[user_data->ns*user_data->ns+i] = 1.;
+    for(int i=0; i<3*user_data->nd; ++i) JacD[i+user_data->nd*user_data->ns] = 1.;
   }
   return 0;
 }
@@ -296,8 +297,8 @@ int main(int argc, char **argv) {
   }
 #endif
 
-  int ns = 12;
-  int nd = 12;
+  int ns = 400;
+  int nd = 100;
   int i,j;
 
   // println("ns: $ns, nd: $nd")
@@ -367,6 +368,11 @@ int main(int argc, char **argv) {
   
   hiop_createProblem(&problem);
   hiop_solveProblem(&problem);
+  if(fabs(problem.obj_value-(-4.999509728895e+01))>1e-6) {
+    printf("objective mismatch for Ex4 MDS C interface problem with 400 sparse variables and 100 "
+      "dense variables did. BTW, obj=%18.12e was returned by HiOp.\n", problem.obj_value);
+      return -1;
+  }
   hiop_destroyProblem(&problem);
 #ifdef HIOP_USE_MAGMA
   magma_finalize();
