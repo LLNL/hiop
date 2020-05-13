@@ -195,12 +195,11 @@ add_library(hiopshared SHARED $<TARGET_OBJECTS:hiopOptimization>
   $<TARGET_OBJECTS:chiopInterface>)
 set_target_properties(hiopshared PROPERTIES OUTPUT_NAME hiop)
 
-  $<TARGET_OBJECTS:hiopLinAlg>
-  $<TARGET_OBJECTS:hiopUtils>)
-
 target_link_libraries(hiop PUBLIC hiop_math)
+target_link_libraries(hiopshared PUBLIC hiop_math)
 if(HIOP_WITH_KRON_REDUCTION)
   target_link_libraries(hiop PUBLIC hiopKronRed hiopLinAlgZ)
+  target_link_libraries(hiopshared PUBLIC hiopKronRed hiopLinAlgZ)
 endif(HIOP_WITH_KRON_REDUCTION)
 
 install(TARGETS hiop DESTINATION lib)
