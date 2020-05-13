@@ -25,6 +25,7 @@ if(HIOP_USE_MPI)
   if(NOT DEFINED MPI_CXX_COMPILER)
     find_package(MPI REQUIRED)
     set(CMAKE_CXX_COMPILER ${MPI_CXX_COMPILER})
+    set(CMAKE_C_COMPILER ${MPI_C_COMPILER})
   endif(NOT DEFINED MPI_CXX_COMPILER)
   file(APPEND "src/Interface/hiop_defs.hpp" "#define HIOP_USE_MPI\n")
 else()
@@ -165,7 +166,7 @@ add_subdirectory(src/Drivers)
 add_subdirectory(src/Utils)
 
 ##########################################################
-#  INSTALATION
+#  INSTALLATION
 ##########################################################
 if("${CMAKE_BUILD_TYPE}" STREQUAL "")
 # set a name for the build type to make the output of the 'make install' look nice

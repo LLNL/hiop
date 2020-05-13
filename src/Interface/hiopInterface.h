@@ -20,7 +20,6 @@ typedef struct cHiopProblem {
     int* nnz_sparse_Hess_Lagr_SS, 
     int* nnz_sparse_Hess_Lagr_SD, void* jprob);
   int (*eval_Jac_cons)(long long n, long long m,
-    long long num_cons, long long* idx_cons,
     double* x, int new_x,
     long long nsparse, long long ndense, 
     int nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
