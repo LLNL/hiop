@@ -95,8 +95,8 @@ public:
   
   bool get_prob_sizes(long long& n, long long& m)
   { 
-    n=2*ns_ + nd_;
-    m=ns_ + 3 + 2*rankdefic_ineq_ + ns_*rankdefic_eq_;
+    n = 2*ns_ + nd_;
+    m = ns_ + 3 + 2*rankdefic_ineq_ + ns_*rankdefic_eq_;
     return true; 
   }
 
@@ -142,15 +142,16 @@ public:
     }
     if(rankdefic_ineq_) {
       // [-inf] <= [ x_1 + e^T s + x_2 + 2e^T y] <= [ 4 ]
-      clow[i] = -1e+20; cupp[++i] = 4.;
+      clow[i] = -1e+20; cupp[i++] = 4.;
       // [ -4 ] <= [ x_1 + e^T s + x_3 + 2e^T y] <= [inf]
-      clow[i] = -4; cupp[++i] = 1e+20;
+      clow[i] = -4; cupp[i++] = 1e+20;
     }
 
     if(rankdefic_eq_) {
-      for(; i<m; ++i) {
+      for(; i<m; ) {
 	assert(i>=ns_ + 3 + 2*rankdefic_ineq_);
-	clow[i] = cupp[i] = 0.;
+	clow[i] = 0.;
+	cupp[i++] = 0.;
       }
     }
     assert(i==m);

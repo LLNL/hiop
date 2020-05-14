@@ -30,6 +30,8 @@ public:
       delta_wd_last_(0.), 
       delta_cc_last_(0.), 
       delta_cd_last_(0.),
+      hess_degenerate_(dtNotEstablished),
+      jac_degenerate_(dtNotEstablished),
       num_degen_iters_(0),
       num_degen_max_iters_(3)
       

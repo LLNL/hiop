@@ -20,8 +20,8 @@ static bool parse_arguments(int argc, char **argv,
 			    bool& one_call_cons)
 {
   self_check=false;
-  n_sp = 200;
-  n_de = 200;
+  n_sp = 8;
+  n_de = 2;
   one_call_cons = false;
   switch(argc) {
   case 1:

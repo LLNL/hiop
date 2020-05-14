@@ -49,6 +49,7 @@
 #ifndef HIOP_FILTER
 #define HIOP_FILTER
 
+#include <cstdio>
 #include <list>
 #include <cassert>
 

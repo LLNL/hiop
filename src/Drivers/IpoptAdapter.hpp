@@ -58,7 +58,7 @@ public:
     bool bSuccess=true;
     long long nll=n, mll=m;
     hiopInterfaceBase::NonlinearityType* types=new hiopInterfaceBase::NonlinearityType[n];
-    bSuccess = hiopNLP->get_vars_info(nll,x_l,x_u, types);
+    bSuccess = hiopNLP->get_vars_info(nll, x_l, x_u, types);
     delete[] types;
     
     if(bSuccess) {
@@ -245,7 +245,7 @@ public:
     bool bSuccess=true;
     long long nll=n, mll=m;
     hiopInterfaceBase::NonlinearityType* types=new hiopInterfaceBase::NonlinearityType[n];
-    bSuccess = hiopNLP->get_vars_info(nll,x_l,x_u, types);
+    bSuccess = hiopNLP->get_vars_info(nll, x_l, x_u, types);
     delete[] types;
     
     if(bSuccess) {
@@ -343,7 +343,7 @@ public:
 
     if(try_onecall_Jac) {
       bret = hiopNLP->eval_cons(nll, mll, x, new_x, g);
-      for(int i=0; i<mll; i++) printf("%.6e ", g[i]); printf("\n");
+      //for(int i=0; i<mll; i++) printf("%.6e ", g[i]); printf("\n");
     }
     
 
@@ -502,7 +502,7 @@ public:
       //try one call Jacobian
       if(try_onecall_Jac) {
 	if(JacDeqineq == NULL) {
-	  JacDeqineq = new hiopMatrixDense(n, nx_dense);
+	  JacDeqineq = new hiopMatrixDense(m, nx_dense);
 	  assert(JacDeq == NULL);
 	  assert(JacDineq == NULL);
 	}
