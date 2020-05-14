@@ -2,6 +2,7 @@ cmake_minimum_required (VERSION 3.8)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 cmake_policy(SET CMP0074 NEW)
 
@@ -180,7 +181,6 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 
 # Shared library should be position independent
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 add_library(hiop STATIC $<TARGET_OBJECTS:hiopOptimization>
   $<TARGET_OBJECTS:hiopLinAlg>
