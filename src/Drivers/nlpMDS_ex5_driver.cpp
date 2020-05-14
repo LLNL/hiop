@@ -20,8 +20,8 @@ static bool parse_arguments(int argc, char **argv,
 			    bool& one_call_cons)
 {
   self_check=false;
-  n_sp = 12;
-  n_de = 10;
+  n_sp = 200;
+  n_de = 200;
   one_call_cons = false;
   switch(argc) {
   case 1:
@@ -60,8 +60,8 @@ static bool parse_arguments(int argc, char **argv,
 
 static void usage(const char* exeName)
 {
-  printf("HiOp driver %s that solves a synthetic problem of variable size in the "
-	 "mixed dense-sparse formulation.\n", exeName);
+  printf("HiOp driver %s that solves a nonconvex synthetic problem with rank-deficient Jacobian "
+	 "of variable size in the mixed dense-sparse formulation.\n", exeName);
   printf("Usage: \n");
   printf("  '$ %s sp_vars_size de_vars_size eq_ineq_combined_nlp -selfcheck'\n", exeName);
   printf("Arguments, all integers, excepting string '-selfcheck'\n");
@@ -69,8 +69,8 @@ static void usage(const char* exeName)
   printf("  'de_vars_size': # of dense variables [default 100, optional]\n");
   printf("  '-selfcheck': compares the optimal objective with sp_vars_size being 400 and "
 	 "de_vars_size being 100 (these two exact values must be passed as arguments). [optional]\n");
-  printf("  'eq_ineq_combined_nlp': 0 or 1, specifying whether the NLP formulation with split "
-	 "constraints should be used (0) or not (1) [default 0, optional]\n");
+  //printf("  'eq_ineq_combined_nlp': 0 or 1, specifying whether the NLP formulation with split "
+  //	 "constraints should be used (0) or not (1) [default 0, optional]\n");
 }
 
 
@@ -104,12 +104,10 @@ int main(int argc, char **argv)
   double obj_value=-1e+20;
   hiopSolveStatus status;
 
-  hiopInterfaceMDS* nlp_interface;
-  if(one_call_cons) {
-    nlp_interface = new Ex4OneCallCons(n_sp, n_de);
-  } else {
-    nlp_interface = new Ex5(n_sp, n_de);
-  }
+  bool rankdefic_Jac_eq = true;
+  bool rankdefic_Jac_ineq = true;
+  
+  hiopInterfaceMDS* nlp_interface = new Ex5(n_sp, n_de, rankdefic_Jac_eq, rankdefic_Jac_ineq);
 
   hiopNlpMDS nlp(*nlp_interface);
 
