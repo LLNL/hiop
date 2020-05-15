@@ -146,10 +146,6 @@ int get_sparse_dense_blocks_info(int* nx_sparse, int* nx_dense,
   *nnz_sparse_Jacineq = user_data->nnz_sparse_Jacineq;
   *nnz_sparse_Hess_Lagr_SS = user_data->nnz_sparse_Hess_Lagr_SS;
   *nnz_sparse_Hess_Lagr_SD = user_data->nnz_sparse_Hess_Lagr_SD;
-  printf("nx_sparse: %d, nx_dense: %d\n", *nx_sparse, *nx_dense);
-  printf("nnz_sparse_Jaceq: %d, nnz_sparse_Jacineq: %d\n", *nnz_sparse_Jaceq, *nnz_sparse_Jacineq);
-  printf("nnz_sparse_Hess_Lagr_SS: %d, nnz_sparse_Hess_Lagr_SD: %d\n", *nnz_sparse_Hess_Lagr_SS, *nnz_sparse_Hess_Lagr_SD);
-
   return 0;
 }
 
@@ -314,6 +310,7 @@ int main(int argc, char **argv) {
   double* Md = malloc(ns*nd*sizeof(double));
   for(i=0; i<ns*nd; i=i+1) Md[i] = -1.0;
   double* buf_y = malloc(nd*sizeof(double));
+  for(i=0; i<nd; i=i+1) buf_y[i] = 0.0;
 
   long long n = 2*ns + nd;
   long long m = ns+3;
@@ -365,6 +362,7 @@ int main(int argc, char **argv) {
   problem.eval_Jac_cons = eval_Jac_cons;
   problem.eval_Hess_Lagr = eval_Hess_Lagr;
   problem.solution = malloc(n * sizeof(double));
+  for(int i=0; i<n; i++) problem.solution[i] = 0.0;
   
   hiop_createProblem(&problem);
   hiop_solveProblem(&problem);
