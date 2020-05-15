@@ -84,6 +84,7 @@ int eval_grad_f(long long n, double* x, int new_x, double* gradf, void* user_dat
   settings* user_data = (settings*) user_data_;
   int i = 0;
   //x_i - 0.5 
+  for(long long  i=0; i<n; ++i) gradf[i]=0.0;
   for(i=0; i<user_data->ns; i=i+1) gradf[i] = x[i]-0.5;
 
   //Qd*y
@@ -330,15 +331,15 @@ int main(int argc, char **argv) {
   for(i=0; i<ns; i=i+1) xlow[i] = -1e+20;
   for(i=ns; i<2*ns; i=i+1) xlow[i] = 0.;
   xlow[2*ns] = -4.;
-  for(int i=2*ns+1; i<n; ++i) xlow[i] = -1e+20;
+  for(i=2*ns+1; i<n; ++i) xlow[i] = -1e+20;
 
-  for(int i=0; i<ns; ++i) xupp[i] = 3.;
-  for(int i=ns; i<2*ns; ++i) xupp[i] = +1e+20;
+  for(i=0; i<ns; ++i) xupp[i] = 3.;
+  for(i=ns; i<2*ns; ++i) xupp[i] = +1e+20;
   xupp[2*ns] = 4.;
-  for(int i=2*ns+1; i<n; ++i) xupp[i] = +1e+20;
+  for(i=2*ns+1; i<n; ++i) xupp[i] = +1e+20;
 
-  for(int i=0; i<m; i=i+1) clow[i] = 0.0;
-  for(int i=0; i<m; i=i+1) cupp[i] = 0.0;
+  for(i=0; i<m; i=i+1) clow[i] = 0.0;
+  for(i=0; i<m; i=i+1) cupp[i] = 0.0;
   clow[m-3] = -2.;    cupp[m-3] = 2.;
   clow[m-2] = -1e+20; cupp[m-2] = 2.;
   clow[m-1] = -2.;    cupp[m-1] = 1e+20;

@@ -74,13 +74,13 @@ class cppUserProblem : public hiopInterfaceMDS
     };
     bool get_vars_info(const long long& n, double *xlow_, double* xupp_, NonlinearityType* type)
     {
-      for(int i=0; i<n; ++i) type[i]=hiopNonlinear;
+      for(long long i=0; i<n; ++i) type[i]=hiopNonlinear;
       cprob->get_vars_info(n, xlow_, xupp_, cprob->user_data);
       return true;
     };
     bool get_cons_info(const long long& m, double* clow, double* cupp, NonlinearityType* type)
     {
-      for(int i=0; i<m; ++i) type[i]=hiopNonlinear;
+      for(long long i=0; i<m; ++i) type[i]=hiopNonlinear;
       cprob->get_cons_info(m, clow, cupp, cprob->user_data);
       return true;
     };
