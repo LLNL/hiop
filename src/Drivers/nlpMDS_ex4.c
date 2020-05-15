@@ -373,6 +373,10 @@ int main(int argc, char **argv) {
       return -1;
   }
   hiop_destroyProblem(&problem);
+  free(problem.solution);
+  free(xlow); free(xupp);
+  free(clow); free(cupp);
+  free(Q); free(Md); free(buf_y);
 #ifdef HIOP_USE_MAGMA
   magma_finalize();
 #endif
