@@ -20,6 +20,15 @@ option(HIOP_WITH_KRON_REDUCTION "Build Kron Reduction code (requires MA86)" OFF)
 option(HIOP_DEVELOPER_MODE "Build with extended warnings and options" OFF)
 #with testing drivers capable of 'selfchecking' (-selfcheck)
 option(HIOP_WITH_MAKETEST "Enable 'make test'" ON)
+option(HIOP_BUILD_SHARED "Build shared library" OFF)
+option(HIOP_BUILD_STATIC "Build static library" ON)
+
+set(HIOP_BUILD_SHARED CACHE BOOL "Build shared library")
+set(HIOP_BUILD_STATIC CACHE BOOL "Build static library")
+
+if(HIOP_BUILD_SHARED)
+  set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+endif()
 
 if(HIOP_USE_GPU)
   set(HIOP_USE_MAGMA ON)
@@ -177,16 +186,33 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
   set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/_dist-${CMAKE_BUILD_TYPE}")
 endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 
-add_library(hiop STATIC $<TARGET_OBJECTS:hiopOptimization>
-  $<TARGET_OBJECTS:hiopLinAlg>
-  $<TARGET_OBJECTS:hiopUtils>)
+if(HIOP_BUILD_STATIC)
+  add_library(hiop STATIC $<TARGET_OBJECTS:hiopOptimization>
+    $<TARGET_OBJECTS:hiopLinAlg>
+    $<TARGET_OBJECTS:hiopUtils>)
+  target_link_libraries(hiop PUBLIC hiop_math)
+  if(HIOP_WITH_KRON_REDUCTION)
+    target_link_libraries(hiop PUBLIC hiopKronRed hiopLinAlgZ)
+  endif(HIOP_WITH_KRON_REDUCTION)
+endif()
 
-target_link_libraries(hiop PUBLIC hiop_math)
-if(HIOP_WITH_KRON_REDUCTION)
-  target_link_libraries(hiop PUBLIC hiopKronRed hiopLinAlgZ)
-endif(HIOP_WITH_KRON_REDUCTION)
+if(HIOP_BUILD_SHARED)
+  add_library(hiop_shared SHARED $<TARGET_OBJECTS:hiopOptimization>
+    $<TARGET_OBJECTS:hiopLinAlg>
+    $<TARGET_OBJECTS:hiopUtils>)
+  set_target_properties(hiop_shared PROPERTIES OUTPUT_NAME hiop)
+  target_link_libraries(hiop_shared PUBLIC hiop_math)
+  if(HIOP_WITH_KRON_REDUCTION)
+    target_link_libraries(hiop_shared PUBLIC hiopKronRed hiopLinAlgZ)
+  endif(HIOP_WITH_KRON_REDUCTION)
+endif()
 
-install(TARGETS hiop DESTINATION lib)
+if(HIOP_BUILD_STATIC)
+  install(TARGETS hiop DESTINATION lib)
+endif()
+if(HIOP_BUILD_SHARED)
+  install(TARGETS hiop_shared DESTINATION lib)
+endif()
 install(FILES src/Interface/hiopInterface.hpp
   src/Optimization/hiopNlpFormulation.hpp
   src/Optimization/hiopNlpTransforms.hpp
