@@ -7,7 +7,6 @@ namespace hiop
 class hiopPDPerturbation
 {
 public:
-  double mu;
   /** Default constructor 
    * Provides complete initialization, but uses algorithmic parameters from the Ipopt
    * implementation paper. \ref initialize(hiopNlpFormulation*) should be used to initialize
@@ -33,10 +32,11 @@ public:
       hess_degenerate_(dtNotEstablished),
       jac_degenerate_(dtNotEstablished),
       num_degen_iters_(0),
-      num_degen_max_iters_(3)
+      num_degen_max_iters_(3),
+      deltas_test_type_(dttNoTest),
+      mu_(1e-8)
       
   {
-    mu = 1e-8;
   }
 
   /** Initializes and reinitializes object based on the 'options' parameters of the
@@ -66,11 +66,19 @@ public:
     return true;
   }
 
+  /** Set log-barrier mu. */
+  inline void set_mu(const double& mu)
+  {
+    mu_ = mu;
+  }
+
   /** Called when a new linear system is attempted to be factorized 
    */
   bool compute_initial_deltas(double& delta_wx, double& delta_wd,
 			      double& delta_cc, double& delta_cd)
   {
+    update_degeneracy_type();
+      
     if(delta_wx_curr_>0.)
       delta_wx_last_ = delta_wx_curr_;
     if(delta_wd_curr_>0.)
@@ -88,7 +96,7 @@ public:
     }
 
     if(jac_degenerate_ == dtDegenerate) {
-      delta_cc = delta_cd = compute_delta_c(mu);
+      delta_cc = delta_cd = compute_delta_c(mu_);
     } else {
       delta_cc = delta_cd = 0.;
     }
@@ -125,7 +133,7 @@ public:
     bool ret = guts_of_compute_perturb_wrong_inertia(delta_wx, delta_wd);
     if(!ret && delta_cc==0.) {
       delta_wx_curr_ = delta_wd_curr_ = 0.;
-      delta_cc_curr_ = delta_cd_curr_ = delta_c_bar_ * pow(1e-8/*mu*/, kappa_c_);
+      delta_cc_curr_ = delta_cd_curr_ = delta_c_bar_ * pow(mu_, kappa_c_);
       deltas_test_type_ = dttNoTest;
       if(hess_degenerate_ == dtDegenerate) {
         hess_degenerate_ = dtNotEstablished;
@@ -145,11 +153,8 @@ public:
   bool compute_perturb_singularity(double& delta_wx, double& delta_wd,
 				     double& delta_cc, double& delta_cd)
   {    
-    update_degeneracy_type();
-
     assert(delta_wx_curr_ == delta_wd_curr_);
     assert(delta_cc_curr_ == delta_cd_curr_);
-
     
     if (hess_degenerate_ == dtNotEstablished ||
         jac_degenerate_ == dtNotEstablished) {
@@ -157,7 +162,7 @@ public:
       case dttDeltac0Deltaw0:
 	//this is the first call
         if (jac_degenerate_ == dtNotEstablished) {
-          delta_cc_curr_ = delta_cd_curr_ = compute_delta_c(mu);
+          delta_cc_curr_ = delta_cd_curr_ = compute_delta_c(mu_);
           deltas_test_type_ = dttDeltacposDeltaw0;
         }
         else {
@@ -181,7 +186,7 @@ public:
         break;
       case dttDeltac0Deltawpos:
         assert(delta_wx_curr_ > 0. && delta_cc_curr_ == 0.);
-        delta_cc_curr_ = delta_cd_curr_ = compute_delta_c(mu);
+        delta_cc_curr_ = delta_cd_curr_ = compute_delta_c(mu_);
         if(!guts_of_compute_perturb_wrong_inertia(delta_wx, delta_wd)) {
           return false;
         }
@@ -205,7 +210,7 @@ public:
 	}
       } else {
         // Otherwise we now perturb the Jacobian part 
-        delta_cd_curr_ = delta_cc_curr_ = compute_delta_c(mu);
+        delta_cd_curr_ = delta_cc_curr_ = compute_delta_c(mu_);
       }
     }
 
@@ -286,6 +291,9 @@ private:
 
   /** Current status */
   DeltasTestType deltas_test_type_;
+  
+  /** Log barrier mu in the outer loop. */
+  double mu_;
 private: //methods
   /** Decides degeneracy @hess_degenerate_ and @jac_degenerate_ based on @deltas_test_type_ 
    *  when the @num_degen_iters_ > @num_degen_max_iters_
@@ -373,7 +381,6 @@ private: //methods
     delta_wd = delta_wd_curr_;
 
     return true;
-    
   }
 
   inline double compute_delta_c(const double& mu) const

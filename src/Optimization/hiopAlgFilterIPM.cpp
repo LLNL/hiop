@@ -310,9 +310,9 @@ startingProcedure(hiopIterate& it_ini,
     //is the dualsUpdate already the LSQ-based updater?
     hiopDualsLsqUpdate* updater = dynamic_cast<hiopDualsLsqUpdate*>(dualsUpdate);
     bool deleteUpdater = false;
-    if(updater==NULL) {
+    if(updater == NULL) {
       updater = new hiopDualsLsqUpdate(nlp);
-      deleteUpdater=true;
+      deleteUpdater = true;
     }
 
     //this will update yc and yd in it_ini
@@ -1034,8 +1034,8 @@ hiopAlgFilterIPMNewton::~hiopAlgFilterIPMNewton()
 {
 }
 
-
-hiopKKTLinSysCompressed* hiopAlgFilterIPMNewton::decideAndCreateLinearSystem(hiopNlpFormulation* nlp)
+hiopKKTLinSysCompressed* hiopAlgFilterIPMNewton::
+decideAndCreateLinearSystem(hiopNlpFormulation* nlp)
 {
   hiopNlpMDS* nlpMDS = NULL;//!dynamic_cast<hiopNlpMDS*>(nlp);
 
@@ -1210,6 +1210,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
     /****************************************************
      * Search direction calculation
      ***************************************************/
+    pd_perturb_.set_mu(_mu);
     //update the Hessian and kkt system
     if(!kkt->update(it_curr, _grad_f, _Jac_c, _Jac_d, _Hess_Lagr)) {
       nlp->log->write("Unrecoverable error in step computation (factorization). Will exit here.", hovError);

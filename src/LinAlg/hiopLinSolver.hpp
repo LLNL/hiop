@@ -161,7 +161,7 @@ public:
     } else {
       if(info>0) {
 	nlp->log->printf(hovWarning,
-			 "hiopLinSolverIndefDense error: %d entry in the factorization's diagonal "
+			 "hiopLinSolverIndefDense error: %d entry in the factorization's diagonal\n"
 			 "is exactly zero. Division by zero will occur if it a solve is attempted.\n",
 			 info);
 	//matrix is singular
@@ -197,8 +197,11 @@ public:
 	  t=0.;
 	}
       }
-      if(d<0) negEigVal++;
-      if(d==0) {
+      //printf("d = %22.14e \n", d);
+      //if(d<0) negEigVal++;
+      if(d < -1e-24) {
+	negEigVal++;
+      } else if(d < 1e-14) {
 	negEigVal=-1;
 	break;
       }
@@ -228,13 +231,20 @@ public:
     }
     
   }
-  void solve ( hiopMatrix& x ) { assert(false && "not needed; see the other solve method for implementation"); }
+  void solve ( hiopMatrix& x )
+  {
+    assert(false && "not needed; see the other solve method for implementation");
+  }
 
 protected:
   int* ipiv;
   hiopVectorPar* dwork;
 private:
-  hiopLinSolverIndefDenseLapack() : ipiv(NULL), dwork(NULL) { assert(false); }
+  hiopLinSolverIndefDenseLapack()
+    : ipiv(NULL), dwork(NULL)
+  {
+    assert(false);
+  }
 };
 
 #ifdef HIOP_USE_MAGMA
