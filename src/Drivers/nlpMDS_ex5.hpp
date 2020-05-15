@@ -56,7 +56,10 @@ public:
   }
   
   Ex5(int ns, int nd, bool rankdefic_Jac_eq, bool rankdefic_Jac_ineq)
-    : ns_(ns), rankdefic_eq_(rankdefic_Jac_eq), rankdefic_ineq_(rankdefic_Jac_ineq)
+    : ns_(ns),
+      rankdefic_eq_(rankdefic_Jac_eq),
+      rankdefic_ineq_(rankdefic_Jac_ineq),
+      convex_obj_(true)
   {
     if(ns_<0) {
       ns_ = 0;
@@ -73,7 +76,7 @@ public:
 
     Q_  = new hiop::hiopMatrixDense(nd_,nd_);
     Q_->setToConstant(0.);
-    Q_->addDiagonal(-2.);
+    Q_->addDiagonal(2. * (2*convex_obj_-1)); //-2 or 2
     double** Qa = Q_->get_M();
     for(int i=1; i<nd-1; i++) {
       Qa[i][i+1] = 1.;
@@ -179,8 +182,9 @@ public:
     assert(Q_->n()==nd_); assert(Q_->m()==nd_);
     obj_value=0.;//x[0]*(x[0]-1.);
     //sum 0.5 {x_i*(x_{i}-1) : i=1,...,ns} + 0.5 y'*Qd*y + 0.5 s^T s
-    for(int i=0; i<ns_; i++) obj_value -= x[i]*(x[i]-1.);
+    for(int i=0; i<ns_; i++) obj_value += x[i]*(x[i]-1.);
     obj_value *= 0.5;
+    obj_value *= (2*convex_obj_-1); //switch sign if non-convex problem is desired
 
     double term2=0.;
     const double* y = x+2*ns_;
@@ -277,7 +281,7 @@ public:
     //! assert(ns>=4); assert(Q->n()==ns/4); assert(Q->m()==ns/4);
     //x_i - 0.5 
     for(int i=0; i<ns_; i++) 
-      gradf[i] = -x[i]+0.5;
+      gradf[i] = (x[i]-0.5) * (2*convex_obj_-1);
 
     //Qd*y
     const double* y = x + 2*ns_;
@@ -483,8 +487,9 @@ public:
       
       if(rankdefic_eq_) {
 	memcpy(JacD[con_idx], Md_->local_buffer(), ns_*nd_*sizeof(double));
+	con_idx += ns_;
       }
-      con_idx += ns_;
+
       assert(con_idx == m);
     }
     
@@ -511,7 +516,7 @@ public:
     }
 
     if(MHSS!=NULL) {
-      for(int i=0; i<ns_; i++) MHSS[i] = -obj_factor;
+      for(int i=0; i<ns_; i++) MHSS[i] = obj_factor * (2*convex_obj_-1);
       for(int i=ns_; i<2*ns_; i++) MHSS[i] = obj_factor;
     }
 
@@ -537,6 +542,7 @@ protected:
   hiop::hiopMatrixDense *Q_, *Md_;
   double* _buf_y_;
   bool rankdefic_eq_, rankdefic_ineq_;
+  bool convex_obj_; 
 };
 
 #endif
