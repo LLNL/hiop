@@ -16,7 +16,7 @@ int main(int argv, char** argc)
 {
   //instantiate a HiOp problem
   //
-  Ex5 hiopNlp(8,2,true,true);
+  Ex5 hiopNlp(300,100,true,true);
   //
   //create 
 

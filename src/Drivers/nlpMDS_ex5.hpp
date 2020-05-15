@@ -59,7 +59,7 @@ public:
     : ns_(ns),
       rankdefic_eq_(rankdefic_Jac_eq),
       rankdefic_ineq_(rankdefic_Jac_ineq),
-      convex_obj_(true)
+      convex_obj_(false)
   {
     if(ns_<0) {
       ns_ = 0;
