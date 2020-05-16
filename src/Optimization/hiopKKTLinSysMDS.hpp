@@ -81,10 +81,15 @@ namespace hiop
  * variables in the log-barrier diagonal Dx, respectively
  *
  * 'solveCompressed' performs a reduction to
- * [ Hd+Dxd               Jcd^T                          Jdd^T              ] [dxd]   [ rxd_tilde                             ]
- * [  Jcd       -Jcs(Hs+Dxs)^{-1}Jcs^T - Drd               0                ] [dyc] = [ ryc       - Jcs(Hs+Dxs)^{-1}rxs_tilde ]
- * [  Jdd                   0                 Jds(Hs+Dxs)^{-1}Jds^T-Dd^{-1} ] [dyd]   [ ryd_tilde - Jds(Hs+Dxs)^{-1}rxs_tilde ]
+ * [ Hd+Dxd               Jcd^T                          Jdd^T              ] [dxd]   
+ * [  Jcd       -Jcs(Hs+Dxs)^{-1}Jcs^T - Drd               0                ] [dyc] = 
+ * [  Jdd                   0                 Jds(Hs+Dxs)^{-1}Jds^T-Dd^{-1} ] [dyd]   
+ *     
+ *                                              [ rxd_tilde                             ]
+ *                                          =   [ ryc       - Jcs(Hs+Dxs)^{-1}rxs_tilde ]
+ *                                              [ ryd_tilde - Jds(Hs+Dxs)^{-1}rxs_tilde ]
  * 
+ * and then get dxs from
  * dxs = (Hs+Dxs)^{-1}[rxs_tilde - Jcs^T dyc - Jds^T dyd]
  */
 class hiopKKTLinSysCompressedMDSXYcYd : public hiopKKTLinSysCompressedXYcYd
@@ -95,7 +100,8 @@ public:
 
   virtual bool update(const hiopIterate* iter, 
 		      const hiopVector* grad_f, 
-		      const hiopMatrix* Jac_c, const hiopMatrix* Jac_d, hiopMatrix* Hess);
+		      const hiopMatrix* Jac_c, const hiopMatrix* Jac_d,
+		      hiopMatrix* Hess);
 
   virtual void solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
 			       hiopVectorPar& dx, hiopVectorPar& dyc, hiopVectorPar& dyd);
@@ -121,8 +127,8 @@ protected:
   const hiopMatrixMDS* Jac_cMDS_;
   const hiopMatrixMDS* Jac_dMDS_;
 
-    //-1 when disabled; otherwise acts like a counter, 0,1,... incremented each time 'solveCompressed' is called
-  //depends on the 'write_kkt' option
+  // -1 when disabled; otherwise acts like a counter, 0,1,... incremented each time
+  // 'solveCompressed' is called; activated by the 'write_kkt' option
   int write_linsys_counter_; 
   hiopCSR_IO csr_writer_;
 };

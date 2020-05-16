@@ -129,10 +129,8 @@ public:
     Dx_->axdzpy_w_pattern(1.0, *iter_->zu, *iter_->sxu, nlp_->get_ixu());
     nlp_->log->write("Dx in KKT", *Dx_, hovMatrices);
     
-      
     // Dd=(Sdl)^{-1}Vu + (Sdu)^{-1}Vu is computed in the IC loop since we need to
     // add delta_wd and then invert
- 
     
     hiopMatrixDense& Msys = linSys->sysMatrix();
 
