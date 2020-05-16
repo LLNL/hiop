@@ -376,6 +376,7 @@ bool hiopKKTLinSysCompressedXYcYd::computeDirections(const hiopResidual* resid,
 }
 
 #ifdef HIOP_DEEPCHECKS
+//this method needs a bit of revisiting if becomes critical (mainly avoid dynamic allocations)
 double hiopKKTLinSysCompressedXYcYd::
 errorCompressedLinsys(const hiopVectorPar& rx, const hiopVectorPar& ryc, const hiopVectorPar& ryd,
 		      const hiopVectorPar& dx, const hiopVectorPar& dyc, const hiopVectorPar& dyd)
@@ -404,6 +405,7 @@ errorCompressedLinsys(const hiopVectorPar& rx, const hiopVectorPar& ryc, const h
   
   hiopVectorPar* RC=ryc.new_copy();
   Jac_c_->timesVec(1.0, *RC, -1.0, dx);
+  RC->axpy(delta_cc, dyc);
   aux = RC->twonorm();
   derr=fmax(derr,aux);
   nlp_->log->printf(hovLinAlgScalars, " >> ryc=%g\n", aux);
@@ -411,11 +413,15 @@ errorCompressedLinsys(const hiopVectorPar& rx, const hiopVectorPar& ryc, const h
   
   hiopVectorPar* RD=ryd.new_copy();
   Jac_d_->timesVec(1.0, *RD, -1.0, dx);
+
+  // normally we would do: RD->axzpy(1.0, *Dd_inv_, dyd);
+  // but a 1./delta_cd may have squeeze in Dd_inv; we recalculate
   RD->axzpy(1.0, *Dd_inv_, dyd);
+  RD->axpy(delta_cd, dyd);
   aux = RD->twonorm();
   derr=fmax(derr,aux);
   nlp_->log->printf(hovLinAlgScalars, " >> ryd=%g\n", aux);
-  delete RD; RD=NULL;
+  delete RD; 
   
   return derr;
 }

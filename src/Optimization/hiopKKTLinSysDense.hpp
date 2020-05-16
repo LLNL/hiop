@@ -137,8 +137,8 @@ public:
     //
     //factorization + inertia correction if needed
     //
+    
     //update linSys system matrix
-
     const size_t max_ic_cor = 10;
     size_t num_ic_cor = 0;
 
