@@ -1,7 +1,8 @@
 // The C interface header used by the user. This needs a detailed user documentation.
 
 typedef struct cHiopProblem {
-  void * refcppHiop; // Pointer to the cpp object
+  void *refcppHiop; // Pointer to the cpp object
+  void *hiopinterface;
   // user_data similar to the Ipopt interface. In case of Julia pointer to the Julia problem object.
   void *user_data; 
   double *solution;

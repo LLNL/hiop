@@ -10,10 +10,12 @@
  */
 
 using namespace hiop;
+class cppUserProblem;
 extern "C" {
   // C struct with HiOp function callbacks
   typedef struct cHiopProblem {
-    hiopNlpMDS * refcppHiop;
+    hiopNlpMDS *refcppHiop;
+    cppUserProblem *hiopinterface;
     // user_data similar to the Ipopt interface. In case of Julia pointer to the Julia problem object.
     void *user_data;
     // Used by hiop_solveProblem() to store the final state. The duals should be added here.
