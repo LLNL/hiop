@@ -105,20 +105,63 @@ public:
       if(nlp_->options->GetString("compute_mode")=="hybrid") {
 #ifdef HIOP_USE_MAGMA
 	linSys = new hiopLinSolverIndefDenseMagma(n, nlp_);
-	nlp_->log->printf(hovScalars, "LinSysDenseXYcYd: instantiating Magma for a matrix of size %d\n", n);
+	nlp_->log->printf(hovScalars,
+			  "LinSysDenseXYcYd: instantiating Magma for a matrix of size %d\n",
+			  n);
 #else
 	linSys = new hiopLinSolverIndefDenseLapack(n, nlp_);
-	nlp_->log->printf(hovScalars, "LinSysDenseXYcYd: instantiating Lapack for a matrix of size %d\n", n);
+	nlp_->log->printf(hovScalars,
+			  "LinSysDenseXYcYd: instantiating Lapack for a matrix of size %d\n",
+			  n);
 #endif
       } else {
 	linSys = new hiopLinSolverIndefDenseLapack(n, nlp_);
-	nlp_->log->printf(hovScalars, "LinSysDenseXYcYd: instantiating Lapack for a matrix of size %d\n", n);
+	nlp_->log->printf(hovScalars,
+			  "LinSysDenseXYcYd: instantiating Lapack for a matrix of size %d\n",
+			  n);
       }
     }
+
+    //compute and put the barrier diagonals in
+    //Dx=(Sxl)^{-1}Zl + (Sxu)^{-1}Zu
+    Dx_->setToZero();
+    Dx_->axdzpy_w_pattern(1.0, *iter_->zl, *iter_->sxl, nlp_->get_ixl());
+    Dx_->axdzpy_w_pattern(1.0, *iter_->zu, *iter_->sxu, nlp_->get_ixu());
+    nlp_->log->write("Dx in KKT", *Dx_, hovMatrices);
+    
+      
+    // Dd=(Sdl)^{-1}Vu + (Sdu)^{-1}Vu is computed in the IC loop since we need to
+    // add delta_wd and then invert
+ 
     
     hiopMatrixDense& Msys = linSys->sysMatrix();
+
+    //
+    //factorization + inertia correction if needed
+    //
     //update linSys system matrix
-    {
+
+    const size_t max_ic_cor = 10;
+    size_t num_ic_cor = 0;
+
+    //nlp_->log->write("KKT XDYcYd Linsys (no perturb):", Msys, hovMatrices);
+    
+    double delta_wx, delta_wd, delta_cc, delta_cd;
+    if(!perturb_calc_->compute_initial_deltas(delta_wx, delta_wd, delta_cc, delta_cd)) {
+      nlp_->log->printf(hovWarning, "XDycYd linsys: IC perturbation on new linsys failed.\n");
+      return false;
+    }
+    
+    while(num_ic_cor<=max_ic_cor) {
+
+      assert(delta_wx == delta_wd && "something went wrong with IC");
+      assert(delta_cc == delta_cd && "something went wrong with IC");
+      nlp_->log->printf(hovScalars, "XYcYd linsys: delta_w=%12.5e delta_c=%12.5e (ic %d)\n",
+			delta_wx, delta_cc, num_ic_cor);
+      
+      //
+      // update linSys system matrix, including IC perturbations
+      //
       Msys.setToZero();
       
       int alpha = 1.;
@@ -127,35 +170,84 @@ public:
       Jac_c_->transAddToSymDenseMatrixUpperTriangle(0, nx,     alpha, Msys);
       Jac_d_->transAddToSymDenseMatrixUpperTriangle(0, nx+neq, alpha, Msys);
       
-      //compute and put the barrier diagonals in
-      //Dx=(Sxl)^{-1}Zl + (Sxu)^{-1}Zu
-      Dx_->setToZero();
-      Dx_->axdzpy_w_pattern(1.0, *iter_->zl, *iter_->sxl, nlp_->get_ixl());
-      Dx_->axdzpy_w_pattern(1.0, *iter_->zu, *iter_->sxu, nlp_->get_ixu());
-      nlp_->log->write("Dx in KKT", *Dx_, hovMatrices);
       Msys.addSubDiagonal(alpha, 0, *Dx_);
-      
-      //Dd=(Sdl)^{-1}Vu + (Sdu)^{-1}Vu
-      Dd_inv_->setToZero();
+      Msys.addSubDiagonal(0, nx, delta_wx);
+
+      //Dd=(Sdl)^{-1}Vu + (Sdu)^{-1}Vu + delta_wd*I
+      Dd_inv_->setToConstant(delta_wd);
       Dd_inv_->axdzpy_w_pattern(1.0, *iter_->vl, *iter_->sdl, nlp_->get_idl());
       Dd_inv_->axdzpy_w_pattern(1.0, *iter_->vu, *iter_->sdu, nlp_->get_idu());
 #ifdef HIOP_DEEPCHECKS
       assert(true==Dd_inv_->allPositive());
-#endif 
+#endif
       Dd_inv_->invert();
-
+      
       alpha=-1.;
       Msys.addSubDiagonal(alpha, nx+neq, *Dd_inv_);
 
+      assert(delta_cc == delta_cd);
+      //Msys.addSubDiagonal(nx+nineq, neq, -delta_cc);
+      //Msys.addSubDiagonal(nx+nineq+neq, nineq, -delta_cd);
+      Msys.addSubDiagonal(nx, neq+nineq, -delta_cd);
+
       nlp_->log->write("KKT Linsys:", Msys, hovMatrices);
+
+      //write matrix to file if requested
+      if(nlp_->options->GetString("write_kkt") == "yes") write_linsys_counter++;
+      if(write_linsys_counter>=0) csr_writer.writeMatToFile(Msys, write_linsys_counter); 
+
+      int n_neg_eig = linSys->matrixChanged();
+      
+      if(Jac_c_->m()+Jac_d_->m()>0) {
+	if(n_neg_eig < 0) {
+	  //matrix singular
+	  nlp_->log->printf(hovScalars, "XYcYd linsys is singular.\n");
+
+	  if(!perturb_calc_->compute_perturb_singularity(delta_wx, delta_wd, delta_cc, delta_cd)) {
+	    nlp_->log->printf(hovWarning, "XYcYd linsys: computing singularity perturbation failed.\n");
+	    return false;
+	  }
+	  
+	} else if(n_neg_eig != Jac_c_->m()+Jac_d_->m()) {
+	  //wrong inertia
+	  nlp_->log->printf(hovScalars, "XYcYd linsys negative eigs mismatch: has %d expected %d.\n",
+			    n_neg_eig,  Jac_c_->m()+Jac_d_->m());
+	  
+	  if(!perturb_calc_->compute_perturb_wrong_inertia(delta_wx, delta_wd, delta_cc, delta_cd)) {
+	    nlp_->log->printf(hovWarning, "XYcYd linsys: computing inertia perturbation failed.\n");
+	    return false;
+	  }
+
+	} else {
+	  //all is good
+	  break;
+	}
+      } else if(n_neg_eig != 0) {
+	//correct for wrong intertia
+	nlp_->log->printf(hovScalars,  "XYcYd linsys has wrong inertia (no constraints): factoriz "
+			 "ret code %d\n.", n_neg_eig);
+	if(!perturb_calc_->compute_perturb_wrong_inertia(delta_wx, delta_wd, delta_cc, delta_cd)) {
+	  nlp_->log->printf(hovWarning, "XYcYd linsys: computing inertia perturbation failed (2).\n");
+	  return false;
+	}
+	
+      } else {
+	//all is good
+	break;
+      }
+   
+      //will do an inertia correction
+      num_ic_cor++;
+    } // end of IC loop
+
+    if(num_ic_cor>max_ic_cor) {
+      
+      nlp_->log->printf(hovError,
+		       "Reached max number (%d) of inertia corrections within an outer iteration.\n",
+		       max_ic_cor);
+      return false;
     }
 
-    //write matrix to file if requested
-    if(nlp_->options->GetString("write_kkt") == "yes") write_linsys_counter++;
-    if(write_linsys_counter>=0) csr_writer.writeMatToFile(Msys, write_linsys_counter); 
-
-    linSys->matrixChanged();
-    
     nlp_->runStats.tmSolverInternal.stop();
     return true;
   }
@@ -389,6 +481,7 @@ public:
       //will do an inertia correction
       num_ic_cor++;
     }
+    
     if(num_ic_cor>max_ic_cor) {
       
       nlp_->log->printf(hovError,
