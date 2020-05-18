@@ -64,7 +64,7 @@ cmake_args+=(
   "-DHIOP_USE_MPI=ON -DHIOP_DEEPCHECKS=ON -DCMAKE_BUILD_TYPE=DEBUG"
 )
 
-for i in $(seq 0 ${#cmake_args})
+for i in $(seq 0 ${#cmake_args[@]})
 do
   build=${cmake_args[i]}
   echo
@@ -82,7 +82,9 @@ do
   set +x
 
   echo
-  echo Build successful.
+  echo - - - - - - - - - - - - - - -
+  echo "Build $[1 + i] / ${#cmake_args[@]} successful."
+  echo - - - - - - - - - - - - - - -
   echo
 
   cd ..
