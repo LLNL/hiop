@@ -69,6 +69,7 @@ cmake_args+=(
   "-DHIOP_USE_MPI=ON -DHIOP_DEEPCHECKS=ON -DCMAKE_BUILD_TYPE=DEBUG"
 )
 
+builddir=build
 for i in $(seq 0 ${#cmake_args[@]})
 do
   build=${cmake_args[i]}
