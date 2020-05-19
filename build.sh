@@ -4,8 +4,6 @@
   source /etc/profile.d/modules.sh
 
 declare -a cmake_args
-builddir=build
-[ -d $builddir ] && rm -rf $builddir; mkdir $builddir
 
 if type module
 then
@@ -13,43 +11,50 @@ then
   mod_dir=/share/apps
   cluster=$(uname -n | cut -d'.' -f1 | sed -E 's/[[:digit:]]//g')
   module purge
-  if [ "$cluster" == "newell" ]
-  then
-    gcc=7.4.0
-    cmake=3.16.4
-    openmpi=3.1.5
-    cuda=10.2
-    magma=2.5.2_cuda10.2
-    metis=5.1.0
-    cmake_args+=("-DHIOP_USE_GPU=ON -DHIOP_MAGMA_DIR=$mod_dir/magma/2.5.2/cuda10.2/ \
-      -DHIOP_USE_MPI=ON -DHIOP_WITH_KRON_REDUCTION=ON \
-      -DHIOP_UMFPACK_DIR=$proj_dir/$cluster/suitesparse \
-      -DHIOP_METIS_DIR=$mod_dir/metis/5.1.0")
-    export NVBLAS_CONFIG_FILE=$proj_dir/newell/nvblas.conf
-  elif [ "$cluster" == "marianas" ]
-  then
-    gcc=7.3.0
-    cmake=3.15.3
-    openmpi=3.1.3
-    cuda=10.1.243
-    magma=2.5.2_cuda10.2
-    metis=5.1.0
-    cmake_args+=("-DHIOP_USE_GPU=ON -DHIOP_MAGMA_DIR=$mod_dir/magma/2.5.2/cuda10.2/ \
-      -DHIOP_USE_MPI=ON -DHIOP_WITH_KRON_REDUCTION=ON \
-      -DHIOP_UMFPACK_DIR=$proj_dir/$cluster/suitesparse \
-      -DHIOP_METIS_DIR=$mod_dir/metis/5.1.0")
-    export NVBLAS_CONFIG_FILE=$proj_dir/newell/nvblas.conf
-  else
-    echo Generic Build
-    echo Note: NVBLAS_CONFIG_FILE will not be set.
-  fi
-
-  module load gcc/$gcc
-  module load cmake/$cmake
-  module load openmpi/$openmpi
-  module load cuda/$cuda
-  module load magma/$magma
-  module load metis/$metis
+  case $cluster in
+    newell)
+      gcc=7.4.0
+      cmake=3.16.4
+      openmpi=3.1.5
+      cuda=10.2
+      magma=2.5.2_cuda10.2
+      metis=5.1.0
+      module load gcc/$gcc
+      module load cmake/$cmake
+      module load openmpi/$openmpi
+      module load cuda/$cuda
+      module load magma/$magma
+      module load metis/$metis
+      cmake_args+=("-DHIOP_USE_GPU=ON -DHIOP_MAGMA_DIR=$mod_dir/magma/2.5.2/cuda10.2/ \
+        -DHIOP_USE_MPI=ON -DHIOP_WITH_KRON_REDUCTION=ON \
+        -DHIOP_UMFPACK_DIR=$proj_dir/$cluster/suitesparse \
+        -DHIOP_METIS_DIR=$mod_dir/metis/$metis")
+      export NVBLAS_CONFIG_FILE=$proj_dir/newell/nvblas.conf
+      ;;
+    marianas)
+      gcc=7.3.0
+      cmake=3.15.3
+      openmpi=3.1.3
+      cuda=10.1.243
+      magma=2.5.2_cuda10.2
+      metis=5.1.0
+      module load gcc/$gcc
+      module load cmake/$cmake
+      module load openmpi/$openmpi
+      module load cuda/$cuda
+      module load magma/$magma
+      module load metis/$metis
+      cmake_args+=("-DHIOP_USE_GPU=ON -DHIOP_MAGMA_DIR=$mod_dir/magma/2.5.2/cuda10.2/ \
+        -DHIOP_USE_MPI=ON -DHIOP_WITH_KRON_REDUCTION=ON \
+        -DHIOP_UMFPACK_DIR=$proj_dir/$cluster/suitesparse \
+        -DHIOP_METIS_DIR=$mod_dir/metis/$metis")
+      export NVBLAS_CONFIG_FILE=$proj_dir/marianas/nvblas.conf
+      ;;
+    *)
+      echo Generic Build
+      echo Note: NVBLAS_CONFIG_FILE will not be set.
+      ;;
+  esac
 fi
 
 make_flags="-j 8"
