@@ -137,8 +137,6 @@ public:
     //
     //factorization + inertia correction if needed
     //
-    
-    //update linSys system matrix
     const size_t max_ic_cor = 10;
     size_t num_ic_cor = 0;
 
@@ -241,8 +239,8 @@ public:
     if(num_ic_cor>max_ic_cor) {
       
       nlp_->log->printf(hovError,
-		       "Reached max number (%d) of inertia corrections within an outer iteration.\n",
-		       max_ic_cor);
+			"Reached max number (%d) of inertia corrections within an outer iteration.\n",
+			max_ic_cor);
       return false;
     }
 

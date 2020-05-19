@@ -414,8 +414,6 @@ errorCompressedLinsys(const hiopVectorPar& rx, const hiopVectorPar& ryc, const h
   hiopVectorPar* RD=ryd.new_copy();
   Jac_d_->timesVec(1.0, *RD, -1.0, dx);
 
-  // normally we would do: RD->axzpy(1.0, *Dd_inv_, dyd);
-  // but a 1./delta_cd may have squeeze in Dd_inv; we recalculate
   RD->axzpy(1.0, *Dd_inv_, dyd);
   RD->axpy(delta_cd, dyd);
   aux = RD->twonorm();

@@ -82,14 +82,16 @@ namespace hiop
  *
  * 'solveCompressed' performs a reduction to
  * [ Hd+Dxd               Jcd^T                          Jdd^T              ] [dxd]   
- * [  Jcd       -Jcs(Hs+Dxs)^{-1}Jcs^T - Drd               0                ] [dyc] = 
- * [  Jdd                   0                 Jds(Hs+Dxs)^{-1}Jds^T-Dd^{-1} ] [dyd]   
+ * [  Jcd       -Jcs(Hs+Dxs)^{-1}Jcs^T                   K_21               ] [dyc] = 
+ * [  Jdd                 K_21^T             -Jds(Hs+Dxs)^{-1}Jds^T-Dd^{-1} ] [dyd]   
  *     
  *                                              [ rxd_tilde                             ]
  *                                          =   [ ryc       - Jcs(Hs+Dxs)^{-1}rxs_tilde ]
  *                                              [ ryd_tilde - Jds(Hs+Dxs)^{-1}rxs_tilde ]
- * 
- * and then get dxs from
+ * where
+ * K_21 = - Jcs * (Hs+Dxs)^{-1} * Jds^T
+ *
+ * Then get dxs from
  * dxs = (Hs+Dxs)^{-1}[rxs_tilde - Jcs^T dyc - Jds^T dyd]
  */
 class hiopKKTLinSysCompressedMDSXYcYd : public hiopKKTLinSysCompressedXYcYd

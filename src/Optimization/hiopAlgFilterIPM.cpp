@@ -1037,7 +1037,8 @@ hiopAlgFilterIPMNewton::~hiopAlgFilterIPMNewton()
 hiopKKTLinSysCompressed* hiopAlgFilterIPMNewton::
 decideAndCreateLinearSystem(hiopNlpFormulation* nlp)
 {
-  hiopNlpMDS* nlpMDS = NULL;//!dynamic_cast<hiopNlpMDS*>(nlp);
+  //hiopNlpMDS* nlpMDS = NULL;
+  hiopNlpMDS* nlpMDS = dynamic_cast<hiopNlpMDS*>(nlp);
 
   if(NULL == nlpMDS) {
     std::string strKKT = nlp->options->GetString("KKTLinsys");
