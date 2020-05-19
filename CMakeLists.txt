@@ -2,6 +2,7 @@ cmake_minimum_required (VERSION 3.8)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 cmake_policy(SET CMP0074 NEW)
 
@@ -40,6 +41,7 @@ if(HIOP_USE_MPI)
   if(NOT DEFINED MPI_CXX_COMPILER)
     find_package(MPI REQUIRED)
     set(CMAKE_CXX_COMPILER ${MPI_CXX_COMPILER})
+    set(CMAKE_C_COMPILER ${MPI_C_COMPILER})
   endif(NOT DEFINED MPI_CXX_COMPILER)
 endif(HIOP_USE_MPI)
 
@@ -169,13 +171,14 @@ include_directories(src/Utils)
 #!!!this include needs to ALWAYS be the last!!!
 include_directories(src/_Internals)
 
+add_subdirectory(src/Interface)
 add_subdirectory(src/Optimization)
 add_subdirectory(src/LinAlg)
 add_subdirectory(src/Drivers)
 add_subdirectory(src/Utils)
 
 ##########################################################
-#  INSTALATION
+#  INSTALLATION
 ##########################################################
 if("${CMAKE_BUILD_TYPE}" STREQUAL "")
   # set a name for the build type to make the output of the 'make install' look nice
@@ -194,6 +197,7 @@ if(HIOP_BUILD_STATIC)
   if(HIOP_WITH_KRON_REDUCTION)
     target_link_libraries(hiop PUBLIC hiopKronRed hiopLinAlgZ)
   endif(HIOP_WITH_KRON_REDUCTION)
+  install(TARGETS hiop DESTINATION lib)
 endif()
 
 if(HIOP_BUILD_SHARED)
@@ -205,15 +209,12 @@ if(HIOP_BUILD_SHARED)
   if(HIOP_WITH_KRON_REDUCTION)
     target_link_libraries(hiop_shared PUBLIC hiopKronRed hiopLinAlgZ)
   endif(HIOP_WITH_KRON_REDUCTION)
-endif()
-
-if(HIOP_BUILD_STATIC)
-  install(TARGETS hiop DESTINATION lib)
-endif()
-if(HIOP_BUILD_SHARED)
   install(TARGETS hiop_shared DESTINATION lib)
 endif()
+
 install(FILES src/Interface/hiopInterface.hpp
+  src/Interface/chiopInterface.hpp
+  src/Interface/hiopInterface.h
   src/Optimization/hiopNlpFormulation.hpp
   src/Optimization/hiopNlpTransforms.hpp
   src/Optimization/hiopAlgFilterIPM.hpp
@@ -264,4 +265,5 @@ if (HIOP_WITH_MAKETEST)
   endif(HIOP_USE_MPI)
   add_test(NAME NlpMixedDenseSparse_1 COMMAND $<TARGET_FILE:nlpMDS_ex4.exe> 400 100 0 -selfcheck)
   add_test(NAME NlpMixedDenseSparse_2 COMMAND $<TARGET_FILE:nlpMDS_ex4.exe> 400 100 1 -selfcheck)
+  add_test(NAME NlpMixedDenseSparseCinterface COMMAND $<TARGET_FILE:nlpMDS_cex4.exe>)
 endif(HIOP_WITH_MAKETEST)

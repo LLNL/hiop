@@ -13,5 +13,8 @@ target_link_libraries(nlpDenseCons_ex3.exe hiop_math hiopLinAlg hiopOptimization
 add_executable(nlpMDS_ex4.exe nlpMDS_ex4_driver.cpp)
 target_link_libraries(nlpMDS_ex4.exe hiop_math hiopLinAlg hiopOptimization hiopUtils)
 
+add_executable(nlpMDS_cex4.exe nlpMDS_ex4.c)
+target_link_libraries(nlpMDS_cex4.exe hiop ${HIOP_MATH_LIBRARIES})
+
 #add_executable(hpc_benchmark.exe hpc_benchmark.cpp)
 #target_link_libraries(hpc_benchmark.exe ${HIOP_MATH_LIBRARIES})
