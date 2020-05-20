@@ -54,7 +54,7 @@
 #include <algorithm>
 #include <cassert>
 
-#include "blasdefs.hpp"
+#include "hiop_blasdefs.hpp"
 
 #include "hiopVector.hpp"
 
@@ -167,6 +167,25 @@ void hiopMatrixDense::copyRowsFrom(const hiopMatrixDense& src, int num_rows, int
   if(num_rows>0)
     memcpy(M[row_dest], src.M[0], n_local*num_rows*sizeof(double));
 }
+
+void hiopMatrixDense::copyRowsFrom(const hiopMatrix& src_gen, const long long* rows_idxs, long long n_rows)
+{
+  const hiopMatrixDense& src = dynamic_cast<const hiopMatrixDense&>(src_gen);
+  assert(n_global==src.n_global);
+  assert(n_local==src.n_local);
+  assert(n_rows<=src.m_local);
+  assert(n_rows == m_local);
+
+  // todo //! opt -> copy multiple (consecutive rows at the time -> maybe keep blocks of eq and ineq,
+  //instead of indexes)
+
+  //int i should suffice for dense matrices
+  for(int i=0; i<n_rows; ++i) {
+    memcpy(M[i], src.M[rows_idxs[i]], n_local*sizeof(double));
+  }
+}
+
+  
 void hiopMatrixDense::copyBlockFromMatrix(const long i_start, const long j_start,
 					  const hiopMatrixDense& src)
 {
@@ -286,13 +305,14 @@ hiopMatrixDense* hiopMatrixDense::new_copy() const
 
 void hiopMatrixDense::setToZero()
 {
-  //for(int i=0; i<m_local; i++)
-  //  for(int j=0; j<n_local; j++)
-  //    M[i][j]=0.0;
   setToConstant(0.0);
 }
 void hiopMatrixDense::setToConstant(double c)
 {
+  if(!M[0]) {
+    assert(m_local==0);
+    return;
+  }
   double* buf=M[0]; 
   for(int j=0; j<n_local; j++) *(buf++)=c;
   
@@ -364,7 +384,8 @@ void hiopMatrixDense::timesVec(double beta, hiopVector& y_,
 
   if(beta!=0) assert(y.isfinite()); 
   assert(x.isfinite());
-
+#endif
+  
   timesVec(beta, y.local_data(), alpha, x.local_data_const());
 
 #ifdef HIOP_DEEPCHECKS  
@@ -375,9 +396,6 @@ void hiopMatrixDense::timesVec(double beta, hiopVector& y_,
 void hiopMatrixDense::timesVec(double beta,  double* ya,
 			       double alpha, const double* xa) const
 {
-  //we do the check to avoid "Conditional jump or move depends on uninitialised value(s)" reported by
-  //valgrind to occur during the first call to LSQUpdate
-#endif
   char fortranTrans='T';
   int MM=m_local, NN=n_local, incx_y=1;
 
@@ -451,6 +469,10 @@ void hiopMatrixDense::transTimesVec(double beta, double* ya,
 
 /* W = beta*W + alpha*this*X 
  * -- this is 'M' mxn, X is nxk, W is mxk
+ *
+ * Precondition:
+ * - W, this, and X need to be local matrices (not distributed). All multiplications of distributed 
+ * matrices needed by HiOp can be done efficiently in parallel using 'transTimesMat'
  */
 void hiopMatrixDense::timesMat(double beta, hiopMatrix& W_, double alpha, const hiopMatrix& X_) const
 {
@@ -458,14 +480,33 @@ void hiopMatrixDense::timesMat(double beta, hiopMatrix& W_, double alpha, const 
   timesMat_local(beta,W_,alpha,X_);
 #else
   hiopMatrixDense& W = dynamic_cast<hiopMatrixDense&>(W_); double** WM=W.local_data();
+  const hiopMatrixDense& X =  dynamic_cast<const hiopMatrixDense&>(X_);
   
-  if(0==myrank) timesMat_local(beta,W_,alpha,X_);
-  else          timesMat_local(0.,  W_,alpha,X_);
+  assert(W.m()==this->m());
+  assert(X.m()==this->n());
+  assert(W.n()==X.n());
 
-  int n2Red=W.m()*W.n(); 
-  double* Wglob = new_mxnlocal_buff(); //[n2Red];
-  int ierr = MPI_Allreduce(WM[0], Wglob, n2Red, MPI_DOUBLE, MPI_SUM,comm); assert(ierr==MPI_SUCCESS);
-  memcpy(WM[0], Wglob, n2Red*sizeof(double));
+  if(W.m()==0 || X.m()==0 || W.n()==0) return;
+#ifdef HIOP_DEEPCHECKS  
+  assert(W.isfinite());
+  assert(X.isfinite());
+#endif
+
+  if(X.n_local!=X.n_global || this->n_local!=this->n_global) {
+    assert(false && "'timesMat' involving distributed matrices is not needed/supported" &&
+	   "also, it cannot be performed efficiently with the data distribution used by this class");
+    W.setToConstant(beta);
+    return;
+  }
+  timesMat_local(beta,W_,alpha,X_);
+  // if(0==myrank) timesMat_local(beta,W_,alpha,X_);
+  // else          timesMat_local(0.,  W_,alpha,X_);
+
+  // int n2Red=W.m()*W.n(); 
+  // double* Wglob = new_mxnlocal_buff(); //[n2Red];
+  // int ierr = MPI_Allreduce(WM[0], Wglob, n2Red, MPI_DOUBLE, MPI_SUM,comm); assert(ierr==MPI_SUCCESS);
+  // memcpy(WM[0], Wglob, n2Red*sizeof(double));
+ 
 #endif
 
 }
@@ -484,9 +525,8 @@ void hiopMatrixDense::timesMat_local(double beta, hiopMatrix& W_, double alpha, 
   assert(W.isfinite());
   assert(X.isfinite());
 #endif
-  assert(W.n_local==W.n_global && "requested multiplication should be done in parallel using timesMat");
-  if(W.m()==0 || X.m()==0 || W.n()==0) return;
-
+  assert(W.n_local==W.n_global && "requested multiplication is not supported, see timesMat");
+  
   /* C = alpha*op(A)*op(B) + beta*C in our case is
      Wt= alpha* Xt  *Mt    + beta*Wt */
   char trans='N'; 
@@ -504,7 +544,6 @@ void hiopMatrixDense::timesMat_local(double beta, hiopMatrix& W_, double alpha, 
   //int M=X.n(), N=this->m(), K=this->n_local;
 
   //DGEMM(&trans,&trans, &M,&N,&K, &alpha,XM[0],&lda, this->M[0],&ldb, &beta,WM[0],&ldc);
-  
 }
 
 /* W = beta*W + alpha*this^T*X 
@@ -514,19 +553,22 @@ void hiopMatrixDense::transTimesMat(double beta, hiopMatrix& W_, double alpha, c
 {
   const hiopMatrixDense& X = dynamic_cast<const hiopMatrixDense&>(X_);
   hiopMatrixDense& W = dynamic_cast<hiopMatrixDense&>(W_);
-#ifdef HIOP_DEEPCHECKS
+
   assert(W.m()==n_local);
   assert(X.m()==m_local);
   assert(W.n()==X.n());
+#ifdef HIOP_DEEPCHECKS
   assert(W.isfinite());
   assert(X.isfinite());
 #endif
   if(W.m()==0) return;
 
+  assert(this->n_global==this->n_local && "requested parallel multiplication is not supported");
+  
   /* C = alpha*op(A)*op(B) + beta*C in our case is Wt= alpha* Xt  *M    + beta*Wt */
   char transX='N', transM='T';
-  int ldx=X.n(), ldm=n_local, ldw=W.n();
-  int M=X.n(), N=n_local, K=X.m();
+  int ldx=X.n_local, ldm=n_local, ldw=W.n_local;
+  int M=X.n_local, N=n_local, K=X.m();
   double** XM=X.local_data(); double** WM=W.local_data();
   
   DGEMM(&transX, &transM, &M,&N,&K, &alpha,XM[0],&ldx, this->M[0],&ldm, &beta,WM[0],&ldw);

@@ -94,7 +94,8 @@ enum hiopSolveStatus {
   Invalid_Parallelization=-12,
   Invalid_UserOption=-13,
   Invalid_Number=-14,
-
+  Error_In_User_Function=-15,
+  
   //ungraceful errors and returns
   Exception_Unrecoverable=-100,
   Memory_Alloc_Problem=-101,
@@ -137,8 +138,6 @@ public:
    *  (clow<=-1e20 means no lower bound, cupp>=1e20 means no upper bound) */
   virtual bool get_cons_info(const long long& m, double* clow, double* cupp, NonlinearityType* type)=0;
 
-  //! initial point specification
-
   /** Objective function evaluation
    *  When MPI enabled, each rank returns the obj. value. Also, x points to the local entries and 
    *  the function is responsible for knowing the local buffer size.
@@ -168,7 +167,25 @@ public:
 			 const long long& num_cons, const long long* idx_cons,  
 			 const double* x, bool new_x, 
 			 double* cons)=0;
-
+  /** Evaluates the constraints cons(x), both equalities and inequalities in one call. 
+   *
+   *  Parameters:
+   *   - n, m: the global number of variables and constraints
+   *   - x: the point where the constraints are to be evaluated
+   *   - new_x: whether x has been changed from the previous call to f, grad_f, or Jac
+   *   - cons: array of size num_cons containing the value of the  constraints indicated by idx_cons
+   *  
+   *  When MPI enabled, every rank populates 'cons' since the constraints are not distributed.
+   *
+   * HiOp will first call 'eval_cons' above (twice). If the implementer/user wants the functionality 
+   * of the one-call 'eval_cons' below, he should return false from 'eval_cons' above; then HiOp will
+   * call the method below.
+   * 
+   */
+  virtual bool eval_cons(const long long& n, const long long& m, 
+			 const double* x, bool new_x, 
+			 double* cons) { return false; }
+  
   /** pass the communicator, defaults to MPI_COMM_WORLD (dummy for non-MPI builds)  */
   virtual bool get_MPI_comm(MPI_Comm& comm_out) { comm_out=MPI_COMM_WORLD; return true;}
 
@@ -185,7 +202,7 @@ public:
    * The method returns true (and populate x0) or return false, in which case hiOP will use set 
    * x0 to all zero (still subject to internal adjustement).
    *
-   * ToDo: provide API for a full, primal-dual restart. 
+   * TODO: provide API for a full, primal-dual restart. 
    */
   virtual bool get_starting_point(const long long&n, double* x0) { return false; }
 
@@ -244,6 +261,21 @@ public:
 			     const long long& num_cons, const long long* idx_cons,  
 			     const double* x, bool new_x,
 			     double** Jac) = 0;
+  
+  /** Evaluates the Jacobian of equality and inequality constraints in one call. 
+   *
+   * The main difference from the above 'eval_Jac_cons' is that the implementer/user of this 
+   * method does not have to split the constraints into equalities and inequalities; instead,
+   * HiOp does this internally.
+   *
+   * TODO: build an example (new one-call Nlp formulation derived from ex2) to illustrate this 
+   * feature and to test HiOp's internal implementation of eq.-ineq. spliting.
+   */
+  virtual bool eval_Jac_cons(const long long& n, const long long& m,
+  			     const double* x, bool new_x,
+  			     double** Jac) { return false; }
+
+  
 };
 
 /** Specialized interface for NLPs having mixed DENSE and sparse (MDS) blocks in the 
@@ -260,7 +292,11 @@ public:
  *  - Jacobian w.r.t. xd and LagrHessian w.r.t. (xd,xd) are dense 
  *  - LagrHessian w.r.t (xs,xd) is zero (later this assumption will be relaxed)
  *
- * Note: this interface is 'local' in the sense that data is not assumed to be 
+ * Notes
+ * 1) HiOp expects the sparse variables first and then the dense variables. In many cases,
+ * the implementer has to (inconviniently) keep a map between his internal variables 
+ * indexes and the indexes HiOp  
+ * 2) this interface is 'local' in the sense that data is not assumed to be 
  * distributed across MPI ranks ('get_vecdistrib_info' should return 'false')
  *
  */
@@ -276,6 +312,11 @@ public:
 
   /** Evaluates the Jacobian of constraints split in the sparse (triplet format) and 
    * dense matrices (rows storage)
+   *
+   * This method is called twice per Jacobian evaluation, once for equalities and once for
+   * inequalities (see 'eval_cons' for more information). It is advantageous to provide
+   * this method when the underlying NLP's constraints come naturally split in equalities
+   * and inequalities. When it is not convinient to do so, use 'eval_Jac_cons' below.
    *
    * Parameters: 
    *  - first six: see eval_cons (in parent class)
@@ -301,7 +342,47 @@ public:
 			     const long long& nsparse, const long long& ndense, 
 			     const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
 			     double** JacD) = 0;
+  
+  /** Evaluates the Jacobian of equality and inequality constraints in one call. This Jacobian is
+   * mixed dense-sparse (MDS), which means is structurally split in the sparse (triplet format) and 
+   * dense matrices (rows storage)
+   *
+   * The main difference from the above 'eval_Jac_cons' is that the implementer/user of this 
+   * method does not have to split the constraints into equalities and inequalities; instead,
+   * HiOp does this internally.
+   *
+   * Parameters: 
+   *  - first four: number of variables, number of constraints, (primal) variables at which the
+   * Jacobian should be evaluated, and boolean flag indicating whether the variables 'x' have
+   * changed since a previous call to ny of the function and derivative evaluations.
+   *  - nsparse and ndense: number of sparse and dense variables, respectively; must add 
+   * up to 'n'
+   *  - nnzJacS, iJacS, jJacS, MJacS: number of nonzeros, (i,j) indexes, and values of 
+   * the sparse Jacobian block; indexes are within the sparse Jacobian block (not within 
+   * the entire Jacobian)
+   *  - JacD: dense Jacobian block as a contiguous array storing the matrix by rows; array is
+   * "primed" to support double indexing JacD[i][j]
+   * 
+   * Notes for implementer of this method: 
+   * 1) 'JacD' parameter will be always non-null
+   * 2) When 'iJacS' and 'jJacS' are non-null, the implementer should provide the (i,j) 
+   * indexes. 
+   * 3) When 'MJacS' is non-null, the implementer should provide the values corresponding to 
+   * entries specified by 'iJacS' and 'jJacS'
+   * 4) 'iJacS' and 'jJacS' are both either non-null or null during a call.
+   * 5) Both 'iJacS'/'jJacS' and 'MJacS' can be non-null during the same call or only one of them 
+   * non-null; but they will not be both null.
+   * 
+   * HiOp will call this method whenever the implementer/user returns false from the 'eval_Jac_cons'
+   * (which is called for equalities and inequalities separately) above.
+   */
+  virtual bool eval_Jac_cons(const long long& n, const long long& m, 
+			     const double* x, bool new_x,
+			     const long long& nsparse, const long long& ndense, 
+			     const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
+			     double** JacD){ return false; }
 
+  
   /** Evaluates the Hessian of the Lagrangian function in 3 structural blocks
    * - HSS is the Hessian w.r.t.(xs,xs)
    * - HDD is the Hessian w.r.t.(xd,xd)

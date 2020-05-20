@@ -1,6 +1,10 @@
 #include "hiopMatrixComplexSparseTriplet.hpp"
 
-#include "blasdefs.hpp"
+#include "hiop_blasdefs.hpp"
+
+#include "hiopMatrixComplexDense.hpp"
+
+#include <iostream>
 
 namespace hiop
 {
@@ -53,6 +57,381 @@ namespace hiop
     return maxv;
   }
 
+  /* W = beta*W + alpha*this^T*X 
+   *
+   * Only supports W and X of the type 'hiopMatrixComplexDense'
+   */
+  void hiopMatrixComplexSparseTriplet::
+  transTimesMat(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const
+  {
+    assert(m()==X.m());
+    assert(n()==W.m());
+    assert(W.n()==X.n());
+
+    hiopMatrixComplexDense* Wd = dynamic_cast<hiopMatrixComplexDense*>(&W);
+    if(Wd==NULL) {
+      std::cerr << "hiopMatrixComplexSparseTriplet::transTimesMat received an unsuported type (1)\n";
+      return;
+    }
+
+    const hiopMatrixComplexDense* Xd = dynamic_cast<const hiopMatrixComplexDense*>(&X);
+    if(Xd==NULL) {
+      std::cerr << "hiopMatrixComplexSparseTriplet::transTimesMat received an unsuported type (2)\n";
+      return;
+    }
+
+    auto* W_M = Wd->get_M(); 
+    const auto* X_M = Xd->local_data(); //same as get_M but with has const qualifier
+
+    if(beta==0.) {
+      Wd->setToZero();
+    } else {
+      int N = W.m()*W.n();
+      dcomplex zalpha; zalpha.re=beta; zalpha.im=0.;
+      int one = 1;
+      ZSCAL(&N, &zalpha, reinterpret_cast<dcomplex*>(*W_M), &one);
+    }
+      
+
+    int* this_irow = storage()->i_row();
+    int* this_jcol = storage()->j_col();
+    std::complex<double>* this_M = storage()->M();
+    int nnz = numberOfNonzeros();
+
+    for(int it=0; it<nnz; it++) {
+      const std::complex<double> aux = alpha*this_M[it];
+      for(int j=0; j<X.n(); j++) {
+	W_M[this_jcol[it]][j] += aux * X_M[this_irow[it]][j];
+      }
+    }
+  }
+
+  hiopMatrixComplexSparseTriplet*
+  hiopMatrixComplexSparseTriplet::new_slice(const int* row_idxs, int nrows, 
+					    const int* col_idxs, int ncols) const
+  {
+    int* src_i = this->storage()->i_row();
+    int* src_j = this->storage()->j_col();
+    //
+    //count nnz first
+    //
+    int dest_nnz=0, src_itnz=0, src_nnz=this->stM->numberOfNonzeros();
+    for(int ki=0; ki<nrows; ki++) {
+      const int& row = row_idxs[ki];
+      assert(row<m());
+#ifdef DEBUG
+      if(ki>0) {
+	assert(row_idxs[ki]>row_idxs[ki-1] && "slice row indexes need to be increasingly ordered");
+      }
+#endif
+      
+      while(src_itnz<src_nnz && src_i[src_itnz]<row) 
+	src_itnz++;
+      
+      for(int kj=0; kj<ncols; kj++) {
+	const int& col = col_idxs[kj];
+	assert(col<n());
+
+#ifdef DEBUG
+	if(kj>0) {
+	  assert(col_idxs[kj]>col_idxs[kj-1] && "slice column indexes need to be increasingly ordered");
+	}
+#endif
+	while(src_itnz<src_nnz && src_i[src_itnz]==row && src_j[src_itnz]<col) {
+	  src_itnz++;
+	}
+	
+	if(src_itnz<src_nnz && src_i[src_itnz]==row && src_j[src_itnz]==col) {
+	  //std::complex<double>* src_M  = this->storage()->M();
+	  //printf("[%d,%d] -> %g+%g*i  (1)\n", ki, kj, src_M[src_itnz].real(), src_M[src_itnz].imag());
+	  dest_nnz++;
+	  src_itnz++;
+	}
+      }
+    }
+    assert(src_itnz <= src_nnz);
+    assert(src_itnz >= dest_nnz);
+
+    const int dest_nnz2 = dest_nnz;
+    hiopMatrixComplexSparseTriplet* newMat = new hiopMatrixComplexSparseTriplet(nrows, ncols, dest_nnz2);
+    //
+    //populate the new slice matrix
+    //
+    //first pass -> populate with elements on the upper triangle of 'this'
+    int* dest_i = newMat->storage()->i_row();
+    int* dest_j = newMat->storage()->j_col();
+    std::complex<double>* dest_M = newMat->storage()->M();
+    std::complex<double>* src_M  = this->storage()->M();
+
+    dest_nnz=0; src_itnz=0;
+    for(int ki=0; ki<nrows; ki++) {
+      const int& row = row_idxs[ki];
+
+      while(src_itnz<src_nnz && src_i[src_itnz]<row) 
+	src_itnz++;
+
+      for(int kj=0; kj<ncols; kj++) {
+	const int& col= col_idxs[kj];
+
+	while(src_itnz<src_nnz && src_i[src_itnz]==row && src_j[src_itnz]<col) {
+	  src_itnz++;
+	}
+	if(src_itnz<src_nnz && src_i[src_itnz]==row && src_j[src_itnz]==col) {
+	  dest_i[dest_nnz] = ki; 
+	  dest_j[dest_nnz] = kj;
+	  dest_M[dest_nnz] = src_M[src_itnz];
+
+	  //printf("[%d,%d] -> %g+%g*i  (2)\n", ki, kj, src_M[src_itnz].real(), src_M[src_itnz].imag());
+	  
+	  dest_nnz++;
+	  src_itnz++;
+	  assert(dest_nnz<=dest_nnz2);
+	}
+      }
+    }
+    assert(src_itnz <= src_nnz);
+    assert(dest_nnz == dest_nnz2);
+    
+    newMat->storage()->sort_indexes();
+    return newMat;    
+  }
+
+  
+  //builds submatrix nrows x ncols with rows and cols specified by row_idxs and cols_idx
+  //assumes the 'this' is symmetric
+  hiopMatrixComplexSparseTriplet* 
+  hiopMatrixComplexSparseTriplet::new_sliceFromSym(const int* row_idxs, int nrows, 
+						   const int* col_idxs, int ncols) const
+  {
+    int* src_i = this->storage()->i_row();
+    int* src_j = this->storage()->j_col();
+
+    //count nnz first
+    int dest_nnz=0, src_itnz=0, src_nnz=this->stM->numberOfNonzeros();
+    for(int ki=0; ki<nrows; ki++) {
+      const int& row = row_idxs[ki];
+      assert(row<m());
+#ifdef DEBUG
+      if(ki>0) {
+	assert(row_idxs[ki]>row_idxs[ki-1] && "slice row indexes need to be increasingly ordered");
+      }
+#endif
+      
+      while(src_itnz<src_nnz && src_i[src_itnz]<row) 
+	src_itnz++;
+      
+      for(int kj=0; kj<ncols; kj++) {
+	const int& col = col_idxs[kj];
+	assert(col<n());
+
+#ifdef DEBUG
+	if(kj>0) {
+	  assert(col_idxs[kj]>col_idxs[kj-1] && "slice column indexes need to be increasingly ordered");
+	}
+#endif
+	//we won't have entry (row, col) with row>col since 'this' is upper triangular. Avoid the extra 
+	//checks below and continue the for loop
+	if(col<row) continue;
+
+	while(src_itnz<src_nnz && src_i[src_itnz]==row && src_j[src_itnz]<col) {
+	  src_itnz++;
+	}
+	
+	if(src_itnz<src_nnz && src_i[src_itnz]==row && src_j[src_itnz]==col) {
+	  assert(row<=col);
+	  dest_nnz++;
+	  src_itnz++;
+	}
+      }
+    }
+    assert(src_itnz <= src_nnz);
+    assert(src_itnz >= dest_nnz);
+
+    //one more iteration over, like above looking in the lower triangular this time
+    //this can be done by changing the order of the for(ki) and for(kj) loops
+    src_itnz=0; //reinitialize
+    for(int kj=0; kj<ncols; kj++) {
+      const int& row = col_idxs[kj]; 
+      assert(row<m());
+
+      while(src_itnz<src_nnz && src_i[src_itnz]<row) 
+	src_itnz++;
+
+      for(int ki=0; ki<nrows; ki++) {
+	const int& col = row_idxs[ki];
+	assert(col<n());
+
+	//we won't have entry (row, col) with row>col since 'this' is upper triangular
+	//also entries for which row==col were already counted in the above loop
+	//so avoid the extra checks below and continue the for loop
+	if(col<=row) continue;
+
+	while(src_itnz<src_nnz && src_i[src_itnz]==row && src_j[src_itnz]<col) {
+	  src_itnz++;
+	}
+	
+	if(src_itnz<src_nnz && src_i[src_itnz]==row && src_j[src_itnz]==col) {
+	  //only lower triangle elements; the others were added in the previous loop
+	  assert(row<col);
+	  dest_nnz++;
+	  //step one elem further
+	  src_itnz++;
+	}
+      }
+    }
+    assert(src_itnz <= src_nnz);
+
+    const int dest_nnz2 = dest_nnz;
+    hiopMatrixComplexSparseTriplet* newMat = new hiopMatrixComplexSparseTriplet(nrows, ncols, dest_nnz2);
+
+    //populate the new slice matrix
+
+    //first pass -> populate with elements on the upper triangle of 'this'
+    int* dest_i = newMat->storage()->i_row();
+    int* dest_j = newMat->storage()->j_col();
+    std::complex<double>* dest_M = newMat->storage()->M();
+    std::complex<double>* src_M  = this->storage()->M();
+
+    dest_nnz=0; src_itnz=0;
+    for(int ki=0; ki<nrows; ki++) {
+      const int& row = row_idxs[ki];
+
+      while(src_itnz<src_nnz && src_i[src_itnz]<row) 
+	src_itnz++;
+
+      for(int kj=ki; kj<ncols; kj++) {
+	const int& col= col_idxs[kj];
+
+	if(col<row) continue;
+
+	while(src_itnz<src_nnz && src_i[src_itnz]==row && src_j[src_itnz]<col) {
+	  src_itnz++;
+	}
+	if(src_itnz<src_nnz && src_i[src_itnz]==row && src_j[src_itnz]==col) {
+	  assert(row<=col);
+	  dest_i[dest_nnz] = ki; 
+	  dest_j[dest_nnz] = kj;
+	  dest_M[dest_nnz] = src_M[src_itnz];
+
+	  dest_nnz++;
+	  src_itnz++;
+	  assert(dest_nnz<=dest_nnz2);
+	}
+      }
+    }
+    assert(src_itnz <= src_nnz);
+
+    //second pass -> populate with elements on the upper triangle of 'this'
+    src_itnz=0;
+    for(int kj=0; kj<ncols; kj++) {
+      const int& row = col_idxs[kj]; 
+
+      while(src_itnz<src_nnz && src_i[src_itnz]<row) 
+	src_itnz++;
+
+      for(int ki=0; ki<nrows; ki++) {
+	const int& col = row_idxs[ki];
+
+	if(col<=row) continue;
+
+	while(src_itnz<src_nnz && src_i[src_itnz]==row && src_j[src_itnz]<col) {
+	  src_itnz++;
+	}
+
+	if(src_itnz<src_nnz && src_i[src_itnz]==row && src_j[src_itnz]==col) {
+	  assert(row<col);
+	  dest_i[dest_nnz] = ki; 
+	  dest_j[dest_nnz] = kj;
+	  dest_M[dest_nnz] = src_M[src_itnz];
+
+	  dest_nnz++;
+	  src_itnz++;
+	  assert(dest_nnz<=dest_nnz2);
+	}
+      }
+    }
+    assert(src_itnz <= src_nnz);
+
+    newMat->storage()->sort_indexes();
+
+    return newMat;
+  }
+  
+  //extract a symmetric matrix (only upper triangle is stored)
+  hiopMatrixComplexSparseTriplet* 
+  hiopMatrixComplexSparseTriplet::new_sliceFromSymToSym(const int* row_col_idxs, int ndim) const
+  {
+    int* src_i = this->storage()->i_row();
+    int* src_j = this->storage()->j_col();
+
+    int dest_nnz=0, src_itnz=0, src_nnz=this->stM->numberOfNonzeros();
+    for(int ki=0; ki<ndim; ki++) {
+      const int& row = row_col_idxs[ki];
+      assert(row<m());
+#ifdef DEBUG
+      if(ki>0) {
+	assert(row_col_idxs[ki]>row_col_idxs[ki-1] && "slice indexes need to be increasingly ordered");
+      }
+#endif
+
+      while(src_itnz<src_nnz && src_i[src_itnz]<row) 
+	src_itnz++;
+
+      
+      for(int kj=ki; kj<ndim; kj++) {
+	const int& col = row_col_idxs[kj];
+	assert(col<n());
+
+	while(src_itnz<src_nnz && src_i[src_itnz]==row && src_j[src_itnz]<col) {
+	  src_itnz++;
+	}
+
+	if(src_itnz<src_nnz && src_i[src_itnz]==row && src_j[src_itnz]==col) {
+	  dest_nnz++;
+	  src_itnz++;
+	}
+      }
+    }
+    assert(src_itnz <= src_nnz);
+    assert(src_itnz >= dest_nnz);
+
+    hiopMatrixComplexSparseTriplet* newMat = new hiopMatrixComplexSparseTriplet(ndim, ndim, dest_nnz);
+
+    int* dest_i = newMat->storage()->i_row();
+    int* dest_j = newMat->storage()->j_col();
+    std::complex<double>* dest_M = newMat->storage()->M();
+    std::complex<double>* src_M  = this->storage()->M();
+
+    dest_nnz=0; src_itnz=0;
+    for(int ki=0; ki<ndim; ki++) {
+      const int& row = row_col_idxs[ki];
+
+      while(src_itnz<src_nnz && src_i[src_itnz]<row) 
+	src_itnz++;
+
+      for(int kj=ki; kj<ndim; kj++) {
+	const int& col= row_col_idxs[kj];
+
+	while(src_itnz<src_nnz && src_i[src_itnz]==row && src_j[src_itnz]<col) {
+	  src_itnz++;
+	}
+	if(src_itnz<src_nnz && src_i[src_itnz]==row && src_j[src_itnz]==col) {
+	  dest_i[dest_nnz] = ki; 
+	  dest_j[dest_nnz] = kj;
+	  assert(dest_i[dest_nnz] <= dest_j[dest_nnz]);
+	  dest_M[dest_nnz] = src_M[src_itnz];
+	  dest_nnz++;
+	  src_itnz++;
+	}
+      }
+    }
+    assert(src_itnz <= src_nnz);
+    assert(src_itnz >= dest_nnz);
+
+    return newMat;
+  }
+  
+
   void hiopMatrixComplexSparseTriplet::print(FILE* file, const char* msg/*=NULL*/, 
 					     int maxRows/*=-1*/, int maxCols/*=-1*/, 
 					     int rank/*=-1*/) const 
@@ -76,22 +455,28 @@ namespace hiop
       } else {
 	fprintf(file, "%s ", msg);
       }    
+
+#ifdef AAAAA      
+      // output matlab indices and input format
+      fprintf(file, "iRow=[");
+      for(int it=0; it<max_elems; it++)  fprintf(file, "%d; ", stM->irow[it]+1);
+      fprintf(file, "];\n");
       
-    // output matlab indices and input format
-    fprintf(file, "iRow=[");
-    for(int it=0; it<max_elems; it++)  fprintf(file, "%d; ", stM->irow[it]+1);
-    fprintf(file, "];\n");
+      fprintf(file, "jCol=[");
+      for(int it=0; it<max_elems; it++)  fprintf(file, "%d; ", stM->jcol[it]+1);
+      fprintf(file, "];\n");
+      
+      fprintf(file, "v=[");
+      for(int it=0; it<max_elems; it++)
+	//fprintf(file, "%22.16e+%22.16ei; ", stM->values[it].real(), stM->values[it].imag());
+	fprintf(file, "%.6g+%.6gi; ", stM->values[it].real(), stM->values[it].imag());
+      fprintf(file, "];\n");
     
-    fprintf(file, "jCol=[");
-    for(int it=0; it<max_elems; it++)  fprintf(file, "%d; ", stM->jcol[it]+1);
-    fprintf(file, "];\n");
-    
-    fprintf(file, "v=[");
-    for(int it=0; it<max_elems; it++)
-      //fprintf(file, "%22.16e+%22.16ei; ", stM->values[it].real(), stM->values[it].imag());
-      fprintf(file, "%.6g+%.6gi; ", stM->values[it].real(), stM->values[it].imag());
-    fprintf(file, "];\n");
-  }
+#else
+      for(int it=0; it<max_elems; it++)  
+	fprintf(file, "[%3d,%3d] = %.6g+%.6gi\n", stM->irow[it]+1, stM->jcol[it]+1, stM->values[it].real(), stM->values[it].imag());
+#endif
+    }
 }
 
 }//end namespace

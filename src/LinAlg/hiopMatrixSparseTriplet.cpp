@@ -1,6 +1,6 @@
 #include "hiopMatrixSparseTriplet.hpp"
 
-#include "blasdefs.hpp"
+#include "hiop_blasdefs.hpp"
 
 #include <algorithm> //for std::min
 #include <cmath> //for std::isfinite
@@ -14,6 +14,11 @@ namespace hiop
 hiopMatrixSparseTriplet::hiopMatrixSparseTriplet(int rows, int cols, int nnz_)
   : nrows(rows), ncols(cols), nnz(nnz_), row_starts(NULL)
 {
+  if(rows==0 || cols==0) {
+    assert(nnz==0 && "number of nonzeros must be zero when any of the dimensions are 0");
+    nnz = 0;
+  }
+  
   iRow = new  int[nnz];
   jCol = new int[nnz];
   values = new double[nnz];
@@ -73,7 +78,7 @@ void hiopMatrixSparseTriplet::timesVec(double beta,  double* y,
  
 /** y = beta * y + alpha * this^T * x */
 void hiopMatrixSparseTriplet::transTimesVec(double beta,   hiopVector& y,
-                             	     double alpha,  const hiopVector& x ) const
+					    double alpha,  const hiopVector& x ) const
 {
   assert(x.get_size() == nrows);
   assert(y.get_size() == ncols);
@@ -351,15 +356,19 @@ addMDinvNtransToSymDeMatUTri(int row_dest_start, int col_dest_start,
 hiopMatrixSparseTriplet::RowStartsInfo* 
 hiopMatrixSparseTriplet::allocAndBuildRowStarts() const
 {
+  assert(nrows>=0);
 
   RowStartsInfo* rsi = new RowStartsInfo(nrows); assert(rsi);
+
+  if(nrows<=0) return rsi;
+  
   int it_triplet=0;
   rsi->idx_start[0]=0;
   for(int i=1; i<=this->nrows; i++) {
     
     rsi->idx_start[i]=rsi->idx_start[i-1];
     
-    while(this->iRow[it_triplet] == i-1) {
+    while(it_triplet<this->nnz && this->iRow[it_triplet]==i-1) {
 #ifdef HIOP_DEEPCHECKS
       if(it_triplet>=1) {
 	assert(iRow[it_triplet-1]<=iRow[it_triplet] && "row indexes are not sorted");
@@ -370,9 +379,6 @@ hiopMatrixSparseTriplet::allocAndBuildRowStarts() const
 #endif
       rsi->idx_start[i]++;
       it_triplet++;
-
-      if(it_triplet==this->nnz)
-	break;
     }
     assert(rsi->idx_start[i] == it_triplet);
   }
@@ -380,6 +386,57 @@ hiopMatrixSparseTriplet::allocAndBuildRowStarts() const
   return rsi;
 }
 
+void hiopMatrixSparseTriplet::copyRowsFrom(const hiopMatrix& src_gen,
+					   const long long* rows_idxs,
+					   long long n_rows)
+{
+  const hiopMatrixSparseTriplet& src = dynamic_cast<const hiopMatrixSparseTriplet&>(src_gen);
+  assert(this->m() == n_rows);
+  assert(this->numberOfNonzeros() <= src.numberOfNonzeros());
+  assert(this->n() == src.n());
+  assert(n_rows <= src.m());
+
+  const int* iRow_src = src.i_row();
+  const int* jCol_src = src.j_col();
+  const double* values_src = src.M();
+  int nnz_src = src.numberOfNonzeros();
+  int itnz_src=0;
+  int itnz_dest=0;
+  //int iterators should suffice
+  for(int row_dest=0; row_dest<n_rows; ++row_dest) {
+    const int& row_src = rows_idxs[row_dest];
+
+    while(itnz_src<nnz_src && iRow_src[itnz_src]<row_src) {
+#ifdef HIOP_DEEPCHECKS
+      if(itnz_src>0) {
+	assert(iRow_src[itnz_src]>=iRow_src[itnz_src-1] && "row indexes are not sorted");
+	if(iRow_src[itnz_src]==iRow_src[itnz_src-1])
+	  assert(jCol_src[itnz_src] >= jCol_src[itnz_src-1] && "col indexes are not sorted");
+      }
+#endif
+      ++itnz_src;
+    }
+
+    while(itnz_src<nnz_src && iRow_src[itnz_src]==row_src) {
+      assert(itnz_dest<nnz);
+#ifdef HIOP_DEEPCHECKS
+      if(itnz_src>0) {
+	assert(iRow_src[itnz_src]>=iRow_src[itnz_src-1] && "row indexes are not sorted");
+	if(iRow_src[itnz_src]==iRow_src[itnz_src-1])
+	  assert(jCol_src[itnz_src] >= jCol_src[itnz_src-1] && "col indexes are not sorted");
+      }
+#endif
+      iRow[itnz_dest] = row_dest;//iRow_src[itnz_src];
+      jCol[itnz_dest] = jCol_src[itnz_src];
+      values[itnz_dest++] = values_src[itnz_src++];
+      
+      assert(itnz_dest<=nnz);
+    }
+  }
+  assert(itnz_dest == nnz);
+}
+  
+  
 void hiopMatrixSparseTriplet::print(FILE* file, const char* msg/*=NULL*/, 
 				    int maxRows/*=-1*/, int maxCols/*=-1*/, 
 				    int rank/*=-1*/) const 

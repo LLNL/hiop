@@ -153,6 +153,10 @@ void hiopOptions::registerOptions()
 		    "Initial value of the initial multiplier of the identity in the secant "
 		    "approximation (default 1.)");
   {
+    vector<string> range(2); range[0] = "no"; range[1] = "yes";
+    registerStrOption("accept_every_trial_step", "no", range, "Disable line-search and take close-to-boundary step");
+  }
+  {
     vector<string> range(5); 
     range[0]="sigma0"; range[1]="sty"; range[2]="sty_inv"; 
     range[3]="snrm_ynrm";  range[4]="sty_srnm_ynrm";
@@ -262,8 +266,14 @@ void hiopOptions::ensureConsistence()
 }
 
 static inline std::string &ltrim(std::string &s) {
-    s.erase(s.begin(), std::find_if(s.begin(), s.end(),
-            std::not1(std::ptr_fun<int, int>(std::isspace))));
+  //s.erase(s.begin(), std::find_if(s.begin(), s.end(),
+  //          std::not1(std::ptr_fun<int, int>(std::isspace))));
+  s.erase(s.begin(),
+	  std::find_if(s.begin(),
+		       s.end(),
+		       [](int c) {return !std::isspace(c);}
+		       )
+	  );
     return s;
 }
 

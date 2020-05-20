@@ -23,6 +23,8 @@ public:
   virtual void setToConstant(double c);
   virtual void copyFrom(const hiopMatrixSparseTriplet& dm);
 
+  virtual void copyRowsFrom(const hiopMatrix& src, const long long* rows_idxs, long long n_rows);
+  
   virtual void timesVec(double beta,  hiopVector& y,
 			double alpha, const hiopVector& x) const;
   virtual void timesVec(double beta,  double* y,
@@ -74,11 +76,12 @@ public:
 
   /* block of W += alpha * M * D^{-1} * transpose(N), where M=this 
    *
-   * Warning: The product matrix M * D^{-1} * transpose(N) with start offsets 'row_dest_start' and 'col_dest_start'
-   * needs to fit completely in the upper triangle of W. If this is NOT the case, the method will assert(false) 
-   * in debug; in release, the method will issue a warning with HIOP_DEEPCHECKS (otherwise NO warning will be issue)
-   * and will silently update the (strictly) lower triangular  elements (these are ignored later on 
-   * since only the upper triangular part of W will be accessed)
+   * Warning: The product matrix M * D^{-1} * transpose(N) with start offsets 'row_dest_start' and 
+   * 'col_dest_start' needs to fit completely in the upper triangle of W. If this is NOT the 
+   * case, the method will assert(false) in debug; in release, the method will issue a 
+   * warning with HIOP_DEEPCHECKS (otherwise NO warning will be issue) and will silently update 
+   * the (strictly) lower triangular  elements (these are ignored later on since only the upper 
+   * triangular part of W will be accessed)
    */
   virtual void addMDinvNtransToSymDeMatUTri(int row_dest_start, int col_dest_start, const double& alpha,
 					    const hiopVectorPar& D, const hiopMatrixSparseTriplet& N,
@@ -101,6 +104,10 @@ public:
   inline int* i_row() { return iRow; }
   inline int* j_col() { return jCol; }
   inline double* M() { return values; }
+
+  inline const int* i_row() const { return iRow; }
+  inline const int* j_col() const { return jCol; }
+  inline const double* M() const { return values; }
 #ifdef HIOP_DEEPCHECKS
   virtual bool assertSymmetry(double tol=1e-16) const { return false; }
   virtual bool checkIndexesAreOrdered() const;
@@ -118,8 +125,16 @@ protected:
   {
     int *idx_start; //size num_rows+1
     int num_rows;
-    RowStartsInfo() : idx_start(NULL), num_rows(0) {}
-    RowStartsInfo(int n_rows) : idx_start(new int[n_rows+1]), num_rows(n_rows) {}
+    RowStartsInfo()
+      : idx_start(NULL), num_rows(0)
+    {}
+    RowStartsInfo(int n_rows)
+      : idx_start(new int[n_rows+1]), num_rows(n_rows)
+    {}
+    virtual ~RowStartsInfo()
+    {
+      delete[] idx_start;
+    }
   };
   mutable RowStartsInfo* row_starts;
 private:

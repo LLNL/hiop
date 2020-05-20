@@ -48,7 +48,7 @@
 
 #include "hiopDualsUpdater.hpp"
 
-#include "blasdefs.hpp"
+#include "hiop_blasdefs.hpp"
 
 namespace hiop
 {
@@ -57,6 +57,7 @@ hiopDualsLsqUpdate::hiopDualsLsqUpdate(hiopNlpFormulation* nlp)
   : hiopDualsUpdater(nlp) 
 {
   hiopNlpDenseConstraints* nlpd = dynamic_cast<hiopNlpDenseConstraints*>(_nlp);
+  assert(NULL!=nlpd);
   _mexme = new hiopMatrixDense(nlpd->m_eq(),   nlpd->m_eq());
   _mexmi = new hiopMatrixDense(nlpd->m_eq(),   nlpd->m_ineq());
   _mixmi = new hiopMatrixDense(nlpd->m_ineq(), nlpd->m_ineq());
@@ -124,7 +125,9 @@ go(const hiopIterate& iter,  hiopIterate& iter_plus,
 
   //return if the constraint violation (primal infeasibility) is not below the tol for the LSQ update
   if(infeas_nrm_trial>recalc_lsq_duals_tol) {
-    nlpd->log->printf(hovScalars, "will not perform the dual lsq update since the primal infeasibility (%g) is not under the tolerance recalc_lsq_duals_tol=%g.\n", infeas_nrm_trial, recalc_lsq_duals_tol);
+    nlpd->log->printf(hovScalars, "will not perform the dual lsq update since the primal infeasibility (%g) "
+		      "is not under the tolerance recalc_lsq_duals_tol=%g.\n",
+		      infeas_nrm_trial, recalc_lsq_duals_tol);
     return true;
   }
 

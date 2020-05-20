@@ -73,7 +73,7 @@ namespace hiop
       }
       
       //count nnz
-      const int zero_tol = 1e-25;
+      const double zero_tol = 1e-25;
       int nnz=0;
       double** M = Msys.local_data();
       for(int i=0; i<m; i++) for(int j=i; j<m; j++) if(fabs(M[i][j])>zero_tol) nnz++;

@@ -108,13 +108,13 @@ public:
    */ 
   virtual void symMatTimesInverseTimesMatTrans(double beta, hiopMatrixDense& W_, 
 					       double alpha, const hiopMatrixDense& X);
-
+#ifdef HIOP_DEEPCHECKS
   /* computes the product of the Hessian with a vector: y=beta*y+alpha*H*x.
    * The function is supposed to use the underlying ***recursive*** definition of the 
    * quasi-Newton Hessian and is used for checking/testing/error calculation.
    */
   virtual void timesVec(double beta, hiopVector& y, double alpha, const hiopVector&x);
-#ifdef HIOP_DEEPCHECKS
+
   /* same as above but without the Dx term in H */
   virtual void timesVec_noLogBarrierTerm(double beta, hiopVector& y, double alpha, const hiopVector&x);
   /* code shared by the above two methods*/
@@ -312,11 +312,19 @@ public:
   virtual double max_abs_value()
   {
     assert(false && "not provided because it is not needed");
+    return 0.;
   }
+
+  void copyRowsFrom(const hiopMatrix& src_in, const long long* rows_idxs, long long n_rows)
+  {
+    assert(false && "not needed / should not be used");
+  }
+  
   /* return false is any of the entry is a nan, inf, or denormalized */
   virtual bool isfinite() const
   {
     assert(false && "not provided because it is not needed");
+    return false;
   }
   
   /* call with -1 to print all rows, all columns, or on all ranks; otherwise will
@@ -332,9 +340,9 @@ public:
   }
 
   /* number of rows */
-  virtual long long m() const { assert(false && "not provided because it is not needed"); }
+  virtual long long m() const { assert(false && "not provided because it is not needed"); return 0; }
   /* number of columns */
-  virtual long long n() const { assert(false && "not provided because it is not needed"); }
+  virtual long long n() const { assert(false && "not provided because it is not needed"); return 0; }
 #ifdef HIOP_DEEPCHECKS
   /* check symmetry */
   virtual bool assertSymmetry(double tol=1e-16) const { return true; }

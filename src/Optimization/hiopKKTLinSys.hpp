@@ -60,7 +60,7 @@ class hiopKKTLinSys
 {
 public:
   hiopKKTLinSys(hiopNlpFormulation* nlp_) 
-    : nlp(nlp_), grad_f(NULL), iter(NULL), Jac_c(NULL), Jac_d(NULL), Hess(NULL)
+    : nlp(nlp_), iter(NULL), grad_f(NULL), Jac_c(NULL), Jac_d(NULL), Hess(NULL)
   { }
   virtual ~hiopKKTLinSys() 
   { }
