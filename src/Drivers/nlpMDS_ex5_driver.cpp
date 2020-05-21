@@ -16,40 +16,34 @@ static bool self_check(long long n, double obj_value);
 static bool parse_arguments(int argc, char **argv,
 			    bool& self_check,
 			    long long& n_sp,
-			    long long& n_de,
-			    bool& one_call_cons)
+			    long long& n_de)
 {
   self_check=false;
-  n_sp = 300;
+  n_sp = 400;
   n_de = 100;
-  one_call_cons = false;
   switch(argc) {
   case 1:
     //no arguments
     return true;
     break;
-  case 5: // 4 arguments
-    {
-      if(std::string(argv[4]) == "-selfcheck")
-	self_check=true;
-    }
   case 4: // 3 arguments
     {
-      one_call_cons = (bool) atoi(argv[3]);
+      if(std::string(argv[3]) == "-selfcheck")
+	self_check=true;
     }
   case 3: //2 arguments
     {
       n_de = atoi(argv[2]);
-      if(n_de<0) n_de = 0;
+      if(n_de<0) n_de = 2;
     }
   case 2: //1 argument
     {
       n_sp = atoi(argv[1]);
-      if(n_sp<0) n_sp = 0;
+      if(n_sp<0) n_sp = 4;
     }
     break;
   default: 
-    return false; //5 or more arguments
+    return false; //4 or more arguments
   }
 
   if(self_check && n_sp!=400 && n_de!=100)
@@ -64,13 +58,11 @@ static void usage(const char* exeName)
 	 "of variable size in the mixed dense-sparse formulation.\n", exeName);
   printf("Usage: \n");
   printf("  '$ %s sp_vars_size de_vars_size eq_ineq_combined_nlp -selfcheck'\n", exeName);
-  printf("Arguments, all integers, excepting string '-selfcheck'\n");
+  printf("Arguments, all integers, excepting string '-selfcheck'; should specified in the order below.\n");
   printf("  'sp_vars_size': # of sparse variables [default 400, optional]\n");
   printf("  'de_vars_size': # of dense variables [default 100, optional]\n");
   printf("  '-selfcheck': compares the optimal objective with sp_vars_size being 400 and "
 	 "de_vars_size being 100 (these two exact values must be passed as arguments). [optional]\n");
-  //printf("  'eq_ineq_combined_nlp': 0 or 1, specifying whether the NLP formulation with split "
-  //	 "constraints should be used (0) or not (1) [default 0, optional]\n");
 }
 
 
@@ -94,55 +86,187 @@ int main(int argc, char **argv)
   magma_init();
 #endif
 
-  bool selfCheck, one_call_cons;
+  bool selfCheck;
   long long n_sp, n_de;
-  if(!parse_arguments(argc, argv, selfCheck, n_sp, n_de, one_call_cons)) {
+  if(!parse_arguments(argc, argv, selfCheck, n_sp, n_de)) {
     usage(argv[0]);
     return 1;
   }
 
-  double obj_value=-1e+20;
-  hiopSolveStatus status;
+  hiopSolveStatus status1, status2, status3, status4;
 
-  bool rankdefic_Jac_eq = true;
-  bool rankdefic_Jac_ineq = true;
-  
-  hiopInterfaceMDS* nlp_interface = new Ex5(n_sp, n_de, rankdefic_Jac_eq, rankdefic_Jac_ineq);
+  // we'll do four tests
+  // 1. convex obj, rank deficient Jacobian of eq, full rank Jacobian of ineq
+  // 2. convex obj, full rank Jacobian of eq, rank deficient Jacobian of ineq
+  // 3. nonconvex obj, full rank Jacobian of eq, full rank Jacobian of ineq
+  // 3. nonconvex obj, rank deficient Jacobian of eq,  rank deficient Jacobian of ineq
 
-  hiopNlpMDS nlp(*nlp_interface);
+  double obj_value1, obj_value2, obj_value3, obj_value4;
 
-  nlp.options->SetStringValue("dualsUpdateType", "linear");
-  nlp.options->SetStringValue("dualsInitialization", "zero");
-
-  nlp.options->SetStringValue("Hessian", "analytical_exact");
-  nlp.options->SetStringValue("KKTLinsys", "xdycyd");
-  nlp.options->SetStringValue("compute_mode", "hybrid");
-
-  nlp.options->SetIntegerValue("verbosity_level", 3);
-  nlp.options->SetNumericValue("mu0", 1e-1);
-  hiopAlgFilterIPMNewton solver(&nlp);
-  status = solver.run();
-  obj_value = solver.getObjective();
-
-  delete nlp_interface;
-  
-  if(status<0) {
-    if(rank==0)
-      printf("solver returned negative solve status: %d (with objective is %18.12e)\n",
-	     status, obj_value);
-    return -1;
-  }
-
-  // this is used for testing when the driver is in '-selfcheck' mode
-  if(selfCheck) {
-    if(fabs(obj_value-(-4.999509728895e+01))>1e-6) {
-      printf("selfcheck: objective mismatch for Ex4 MDS problem with 400 sparse variables and 100 "
-	     "dense variables did. BTW, obj=%18.12e was returned by HiOp.\n", obj_value);
+  //test 1
+  {
+    bool convex_obj = true;
+    bool rankdefic_Jac_eq = true;
+    bool rankdefic_Jac_ineq = false;
+    
+    hiopInterfaceMDS* nlp_interface = new Ex5(n_sp, n_de, convex_obj, rankdefic_Jac_eq, rankdefic_Jac_ineq);
+    
+    hiopNlpMDS nlp(*nlp_interface);
+    
+    nlp.options->SetStringValue("dualsUpdateType", "linear");
+    nlp.options->SetStringValue("dualsInitialization", "zero");
+    
+    nlp.options->SetStringValue("Hessian", "analytical_exact");
+    //nlp.options->SetStringValue("KKTLinsys", "xdycyd");
+    nlp.options->SetStringValue("compute_mode", "hybrid");
+    
+    nlp.options->SetIntegerValue("verbosity_level", 3);
+    nlp.options->SetNumericValue("mu0", 1e-1);
+    hiopAlgFilterIPMNewton solver(&nlp);
+    status1 = solver.run();
+    obj_value1 = solver.getObjective();
+    
+    delete nlp_interface;
+    
+    if(status1<0) {
+      if(rank==0)
+	printf("solve1 trouble: returned %d (with objective is %18.12e)\n",
+	       status1, obj_value1);
       return -1;
     }
+  } //end of test 1
+
+  //test 2
+  {
+    bool convex_obj = true;
+    bool rankdefic_Jac_eq = false;
+    bool rankdefic_Jac_ineq = true;
+    
+    hiopInterfaceMDS* nlp_interface = new Ex5(n_sp, n_de, convex_obj, rankdefic_Jac_eq, rankdefic_Jac_ineq);
+    
+    hiopNlpMDS nlp(*nlp_interface);
+    
+    nlp.options->SetStringValue("dualsUpdateType", "linear");
+    nlp.options->SetStringValue("dualsInitialization", "zero");
+    
+    nlp.options->SetStringValue("Hessian", "analytical_exact");
+    //nlp.options->SetStringValue("KKTLinsys", "xdycyd");
+    nlp.options->SetStringValue("compute_mode", "hybrid");
+    
+    nlp.options->SetIntegerValue("verbosity_level", 3);
+    nlp.options->SetNumericValue("mu0", 1e-1);
+    hiopAlgFilterIPMNewton solver(&nlp);
+    status2 = solver.run();
+    obj_value2 = solver.getObjective();
+    
+    delete nlp_interface;
+    
+    if(status2<0) {
+      if(rank==0)
+	printf("solve2 trouble: returned %d (with objective is %18.12e)\n",
+	       status2, obj_value2);
+      return -1;
+    }
+  } //end of test 2
+
+  //test 3
+  {
+    bool convex_obj = false;
+    bool rankdefic_Jac_eq = false;
+    bool rankdefic_Jac_ineq = false;
+    
+    hiopInterfaceMDS* nlp_interface = new Ex5(n_sp, n_de, convex_obj, rankdefic_Jac_eq, rankdefic_Jac_ineq);
+    
+    hiopNlpMDS nlp(*nlp_interface);
+    
+    nlp.options->SetStringValue("dualsUpdateType", "linear");
+    nlp.options->SetStringValue("dualsInitialization", "zero");
+    
+    nlp.options->SetStringValue("Hessian", "analytical_exact");
+    //nlp.options->SetStringValue("KKTLinsys", "xdycyd");
+    nlp.options->SetStringValue("compute_mode", "hybrid");
+    
+    nlp.options->SetIntegerValue("verbosity_level", 3);
+    nlp.options->SetNumericValue("mu0", 1e-1);
+    hiopAlgFilterIPMNewton solver(&nlp);
+    status3 = solver.run();
+    obj_value3 = solver.getObjective();
+    
+    delete nlp_interface;
+    
+    if(status3<0) {
+      if(rank==0)
+	printf("solve3 trouble: returned %d (with objective is %18.12e)\n",
+	       status3, obj_value3);
+      return -1;
+    }
+  } //end of test 3
+
+  //test 4
+  {
+    bool convex_obj = false;
+    bool rankdefic_Jac_eq = true;
+    bool rankdefic_Jac_ineq = true;
+    
+    hiopInterfaceMDS* nlp_interface = new Ex5(n_sp, n_de, convex_obj, rankdefic_Jac_eq, rankdefic_Jac_ineq);
+    
+    hiopNlpMDS nlp(*nlp_interface);
+    
+    nlp.options->SetStringValue("dualsUpdateType", "linear");
+    nlp.options->SetStringValue("dualsInitialization", "zero");
+    
+    nlp.options->SetStringValue("Hessian", "analytical_exact");
+    //nlp.options->SetStringValue("KKTLinsys", "xdycyd");
+    nlp.options->SetStringValue("compute_mode", "hybrid");
+    
+    nlp.options->SetIntegerValue("verbosity_level", 3);
+    nlp.options->SetNumericValue("mu0", 1e-1);
+    hiopAlgFilterIPMNewton solver(&nlp);
+    status4 = solver.run();
+    obj_value4 = solver.getObjective();
+    
+    delete nlp_interface;
+    
+    if(status4<0) {
+      if(rank==0)
+	printf("solve4 trouble: returned %d (with objective is %18.12e)\n",
+	       status4, obj_value4);
+      return -1;
+    }
+  } //end of test 4
+
+  bool selfcheck_ok=true;
+  // this is used for testing when the driver is in '-selfcheck' mode
+  if(selfCheck) {
+    if(fabs(obj_value1-(-4.999509728895e+01))>1e-6) {
+      printf("selfcheck1: objective mismatch for Ex5 MDS problem with 400 sparse variables and 100 "
+	     "dense variables did. BTW, obj=%18.12e was returned by HiOp.\n", obj_value1);
+      selfcheck_ok = false;
+    }
+    if(fabs(obj_value2-(-4.999509728895e+01))>1e-6) {
+      printf("selfcheck2: objective mismatch for Ex5 MDS problem with 400 sparse variables and 100 "
+	     "dense variables did. BTW, obj=%18.12e was returned by HiOp.\n", obj_value2);
+      selfcheck_ok = false;
+    }
+    if(fabs(obj_value3-(-3.160999998751e+03))>1e-6) {
+      printf("selfcheck3: objective mismatch for Ex5 MDS problem with 400 sparse variables and 100 "
+	     "dense variables did. BTW, obj=%18.12e was returned by HiOp.\n", obj_value3);
+      selfcheck_ok = false;
+    }
+    if(fabs(obj_value4-(-3.160999998751e+03))>1e-6) {
+      printf("selfcheck4: objective mismatch for Ex5 MDS problem with 400 sparse variables and 100 "
+	     "dense variables did. BTW, obj=%18.12e was returned by HiOp.\n", obj_value4);
+      selfcheck_ok = false;
+    }
+
+    if(false == selfcheck_ok)
+      return -1;
   } else {
     if(rank==0) {
-      printf("Optimal objective: %22.14e. Solver status: %d\n", obj_value, status);
+      printf("Optimal objective 1: %22.14e. Solver status: %d\n", obj_value1, status1);
+      printf("Optimal objective 2: %22.14e. Solver status: %d\n", obj_value2, status2);
+      printf("Optimal objective 3: %22.14e. Solver status: %d\n", obj_value3, status3);
+      printf("Optimal objective 4: %22.14e. Solver status: %d\n", obj_value4, status4);
     }
   }
 #ifdef HIOP_USE_MAGMA
