@@ -193,7 +193,7 @@ namespace hiop
 	 */
 	
 	alpha = -1.;
-	// add - Jac_d_sp * (Hxs+Dxs+delta_wx*I)^{-1} Jac_d_sp^T to diagonal block
+	// add   - Jac_d_sp * (Hxs+Dxs+delta_wx*I)^{-1} * Jac_d_sp^T   to diagonal block
 	// linSys starting at (nxd+neq, nxd+neq)
 	Jac_dMDS_->sp_mat()->
 	  addMDinvMtransToDiagBlockOfSymDeMatUTri(nxd+neq, alpha, *Hxs_, Msys); 
@@ -202,7 +202,7 @@ namespace hiop
 	alpha = -1.;
 	Jac_cMDS_->sp_mat()->
 	  addMDinvNtransToSymDeMatUTri(nxd, nxd+neq, alpha, *Hxs_, *Jac_dMDS_->sp_mat(), Msys);
-	
+
 	// add -{Dd}^{-1}
 	// Dd=(Sdl)^{-1}Vu + (Sdu)^{-1}Vu + delta_wd * I
 	Dd_inv_->setToConstant(delta_wd);
@@ -227,6 +227,7 @@ namespace hiop
       //factorization
       int n_neg_eig = linSys_->matrixChanged();
 
+      int n_neg_eig_11 = 0;
       if(n_neg_eig>=0) {
 	// 'n_neg_eig' is the number of negative eigenvalues of the "dense" (reduced) KKT
 	//
@@ -235,16 +236,22 @@ namespace hiop
 	// count the negative eigenvalues of the sparse Hessian block.
 	const double* Hxsarr = Hxs_->local_data_const();
 	for(int itxs=0; itxs<nxs; ++itxs) {
-	  if(Hxsarr[itxs] <= -1e-24) {
-	    n_neg_eig++;
-	  } else if(Hxsarr[itxs] <=1e-15) {
-	    n_neg_eig = -1;
+	  if(Hxsarr[itxs] <= -1e-14) {
+	    n_neg_eig_11++;
+	  } else if(Hxsarr[itxs] <= 1e-14) {
+	    n_neg_eig_11 = -1;
 	    break;
 	  }
-	  
 	}
-	
-	
+      }
+
+      if(n_neg_eig_11 < 0) {
+	nlp_->log->printf(hovScalars, "Detected null eigenvalues in (1,1) sparse block.\n");
+	assert(n_neg_eig_11 == -1);
+	n_neg_eig = -1;
+      } else if(n_neg_eig_11 > 0) {
+	n_neg_eig += n_neg_eig_11;
+	nlp_->log->printf(hovScalars, "Detected negative eigenvalues in (1,1) sparse block.\n");
       }
 
      if(Jac_cMDS_->m()+Jac_dMDS_->m()>0) {
@@ -261,34 +268,39 @@ namespace hiop
 	  //wrong inertia
 	  nlp_->log->printf(hovScalars, "XYcYdMDS linsys negative eigs mismatch: has %d expected %d.\n",
 			    n_neg_eig,  Jac_cMDS_->m()+Jac_dMDS_->m());
+
 	  
+	  if(n_neg_eig < Jac_cMDS_->m()+Jac_dMDS_->m())
+	    nlp_->log->printf(hovWarning, "XYcYdMDS linsys negative eigs abnormality\n");
+
+
 	  if(!perturb_calc_->compute_perturb_wrong_inertia(delta_wx, delta_wd, delta_cc, delta_cd)) {
 	    nlp_->log->printf(hovWarning, "XYcYdMDS linsys: computing inertia perturbation failed.\n");
 	    return false;
 	  }
-
+	  
 	} else {
 	  //all is good
 	  break;
 	}
-      } else if(n_neg_eig != 0) {
-	//correct for wrong intertia
-	nlp_->log->printf(hovScalars,  "XYcYdMDS linsys has wrong inertia (no constraints): factoriz "
-			 "ret code %d\n.", n_neg_eig);
-	if(!perturb_calc_->compute_perturb_wrong_inertia(delta_wx, delta_wd, delta_cc, delta_cd)) {
-	  nlp_->log->printf(hovWarning, "XYcYdMDS linsys: computing inertia perturbation failed (2).\n");
-	  return false;
-	}
-	
-      } else {
-	//all is good
-	break;
-      }
-      
-      //will do an inertia correction
-      num_ic_cor++;
+     } else if(n_neg_eig != 0) {
+       //correct for wrong intertia
+       nlp_->log->printf(hovScalars,  "XYcYdMDS linsys has wrong inertia (no constraints): factoriz "
+			 "ret code/num negative eigs %d\n.", n_neg_eig);
+       if(!perturb_calc_->compute_perturb_wrong_inertia(delta_wx, delta_wd, delta_cc, delta_cd)) {
+	 nlp_->log->printf(hovWarning, "XYcYdMDS linsys: computing inertia perturbation failed (2).\n");
+	 return false;
+       }
+       
+     } else {
+       //all is good
+       break;
+     }
+     
+     //will do an inertia correction
+     num_ic_cor++;
     } // end of ic while
-
+    
     if(num_ic_cor>max_ic_cor) {
       
       nlp_->log->printf(hovError,

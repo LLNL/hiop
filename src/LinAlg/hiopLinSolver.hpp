@@ -176,6 +176,8 @@ public:
     // LINPACK's dsidi Fortran routine (http://www.netlib.org/linpack/dsidi.f)
     // 04/08/2020 - petra: fixed the test for non-positive pivots (was only for negative pivots)
     int negEigVal=0;
+    int posEigVal=0;
+    int nullEigVal=0;
     double t=0;
     double** MM = M.get_M();
     for(int k=0; k<N; k++) {
@@ -199,13 +201,18 @@ public:
       }
       //printf("d = %22.14e \n", d);
       //if(d<0) negEigVal++;
-      if(d < -1e-24) {
+      if(d < -1e-14) {
 	negEigVal++;
       } else if(d < 1e-14) {
-	negEigVal=-1;
-	break;
+	nullEigVal++;
+	//break;
+      } else {
+	posEigVal++;
       }
     }
+    //printf("(pos,null,neg)=(%d,%d,%d)\n", posEigVal, nullEigVal, negEigVal);
+    
+    if(nullEigVal>0) return -1;
     return negEigVal;
   }
     
@@ -228,6 +235,8 @@ public:
     if(info<0) {
       nlp->log->printf(hovError, "hiopLinSolverIndefDenseLapack: DSYTRS returned error %d\n", info);
       assert(false);
+    } else if(info>0) {
+      nlp->log->printf(hovError, "hiopLinSolverIndefDenseLapack: DSYTRS returned error %d\n", info);
     }
     
   }
