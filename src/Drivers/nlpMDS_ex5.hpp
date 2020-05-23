@@ -51,15 +51,15 @@ class Ex5 : public hiop::hiopInterfaceMDS
 {
 public:
   Ex5(int ns)
-    : Ex5(ns, ns, true, true)
+    : Ex5(ns, ns, true, true, true)
   {
   }
   
-  Ex5(int ns, int nd, bool rankdefic_Jac_eq, bool rankdefic_Jac_ineq)
+  Ex5(int ns, int nd, bool convex_obj, bool rankdefic_Jac_eq, bool rankdefic_Jac_ineq)
     : ns_(ns),
       rankdefic_eq_(rankdefic_Jac_eq),
       rankdefic_ineq_(rankdefic_Jac_ineq),
-      convex_obj_(false)
+      convex_obj_(convex_obj)
   {
     if(ns_<0) {
       ns_ = 0;
@@ -357,9 +357,9 @@ public:
 	jJacS[nnzit++] = 2;
 	con_idx++;
       } // end of if(ns>0)
-      assert(nnzit == 2*ns_+3+ns_);
+      assert(nnzit == 2*ns_ + 3*(ns_>0) + ns_);
       
-      if(rankdefic_ineq_) {
+      if(rankdefic_ineq_ && ns_>0) {
 	// [-inf] <= [ x_1 + e^T s + x_2 + 2e^T y] <= [ 4 ]
 	iJacS[nnzit] = con_idx;
 	jJacS[nnzit++] = 0; //x1
@@ -386,7 +386,7 @@ public:
 	}
 	con_idx++;
       }
-      assert(nnzit == 2*ns_+3+ns_ + rankdefic_ineq_*2*(2+ns_));
+      assert(nnzit == 2*ns_ + 3*(ns_>0) + ns_ + rankdefic_ineq_*2*(2+ns_)*(ns_>0));
 
       if(rankdefic_eq_) {
 	// x+s - Md y = 0, i=1,...,ns
@@ -434,7 +434,7 @@ public:
        assert(nnzit == 2*ns_ + 3*(ns_>0) + ns_);
        assert(con_idx == ns_ + 3*(ns_>0));
 
-       if(rankdefic_ineq_) {
+       if(rankdefic_ineq_ && ns_>0) {
 	 // [-inf] <= [ x_1 + e^T s + x_2 + 2e^T y] <= [ 4 ]
 	 MJacS[nnzit++] = 1.; //x1
 	 MJacS[nnzit++] = 1.; //x2
@@ -451,7 +451,7 @@ public:
 	 }
 	 con_idx++;
        }
-       assert(nnzit == 2*ns_ + 3*(ns_>0) + ns_ + rankdefic_ineq_*2*(2+ns_));
+       assert(nnzit == 2*ns_ + 3*(ns_>0) + ns_ + rankdefic_ineq_*2*(2+ns_)*(ns_>0));
 
        // x+s - Md y = 0, i=1,...,ns
        if(rankdefic_eq_) {

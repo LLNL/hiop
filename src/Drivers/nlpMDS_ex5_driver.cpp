@@ -104,7 +104,7 @@ int main(int argc, char **argv)
   double obj_value1, obj_value2, obj_value3, obj_value4;
 
   //test 1
-  {
+  if(false){
     bool convex_obj = true;
     bool rankdefic_Jac_eq = true;
     bool rankdefic_Jac_ineq = false;
