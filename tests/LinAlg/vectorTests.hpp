@@ -32,7 +32,7 @@ public:
     /*
      * this[i] = 0
      */
-    bool vectorSetToZero(hiop::hiopVector& v, int& rank)
+    bool vectorSetToZero(hiop::hiopVector& v, const int rank)
     {
         v.setToConstant(one);
 
@@ -45,7 +45,7 @@ public:
     }
 
     /// Test get_size() method of hiop vector implementation
-    bool vectorGetSize(hiop::hiopVector& x, global_ordinal_type answer, int rank)
+    bool vectorGetSize(hiop::hiopVector& x, global_ordinal_type answer, const int rank)
     {
         bool fail = (x.get_size() != answer);
         printMessage(fail, __func__, rank);
@@ -53,14 +53,14 @@ public:
     }
 
     /// Test setToConstant method of hiop vector implementation
-    bool vectorSetToConstant(hiop::hiopVector& x, int& rank)
+    bool vectorSetToConstant(hiop::hiopVector& x, const int rank)
     {
         int fail = 0;
         local_ordinal_type N = getLocalSize(&x);
 
         for(local_ordinal_type i=0; i<N; ++i)
         {
-            setElement(&x, i, zero);
+            setLocalElement(&x, i, zero);
         }
 
         x.setToConstant(one);
@@ -84,18 +84,18 @@ public:
         static constexpr real_type C = two;
         for (local_ordinal_type i=0; i<N; i++)
         {
-            setElement(&x, i, zero);
-            setElement(&pattern, i, one);
+            setLocalElement(&x, i, zero);
+            setLocalElement(&pattern, i, one);
         }
         if (rank == 0)
-            setElement(&pattern, N-1, zero);
+            setLocalElement(&pattern, N-1, zero);
 
         x.setToConstant_w_patternSelect(C, pattern);
 
         int fail = 0;
         for (local_ordinal_type i=0; i<N; i++)
         {
-            const real_type val = getElement(&x, i);
+            const real_type val = getLocalElement(&x, i);
             if (val != C && !(rank == 0 && i == N-1)) fail++;
         }
 
@@ -106,7 +106,7 @@ public:
     /*
      * Test for function that copies data from x to this.
      */
-    bool vectorCopyFrom(hiop::hiopVector& v, hiop::hiopVector& from, int rank)
+    bool vectorCopyFrom(hiop::hiopVector& v, hiop::hiopVector& from, const int rank)
     {
         assert(v.get_size() == from.get_size());
         assert(getLocalSize(&v) == getLocalSize(&from));
@@ -124,7 +124,7 @@ public:
     bool vectorCopyFromStarting(
             hiop::hiopVector& x,
             hiop::hiopVector& from,
-            int rank)
+            const int rank)
     {
         int fail = 0;
         const local_ordinal_type N = getLocalSize(&x);
@@ -147,7 +147,7 @@ public:
 
         for (local_ordinal_type i=0; i<N; i++)
         {
-            if (getElement(&x, i) != one && !(i == 0 && rank == 0))
+            if (getLocalElement(&x, i) != one && !(i == 0 && rank == 0))
                 fail++;
         }
 
@@ -176,7 +176,7 @@ public:
         x.startingAtCopyFromStartingAt(1, from, 0);
         for (local_ordinal_type i=0; i<N; i++)
         {
-            if (getElement(&x, i) != two && i != 0)
+            if (getLocalElement(&x, i) != two && i != 0)
                 fail++;
         }
 
@@ -187,7 +187,7 @@ public:
     /*
      * Test for function that copies data from this to x.
      */
-    bool vectorCopyTo(hiop::hiopVector& v, hiop::hiopVector& to, int rank)
+    bool vectorCopyTo(hiop::hiopVector& v, hiop::hiopVector& to, const int rank)
     {
         assert(v.get_size() == to.get_size());
         assert(getLocalSize(&v) == getLocalSize(&to));
@@ -245,7 +245,7 @@ public:
 
         for (local_ordinal_type i=0; i<N; i++)
         {
-            if (getElement(&to, i) != one && i != 0)
+            if (getLocalElement(&to, i) != one && i != 0)
                 fail++;
         }
 
@@ -256,7 +256,7 @@ public:
     /*
      * this[i] = (pattern[i] == 0 ? 0 : this[i])
      */
-    bool vectorSelectPattern(hiop::hiopVector& v, hiop::hiopVector& ix, int rank)
+    bool vectorSelectPattern(hiop::hiopVector& v, hiop::hiopVector& ix, const int rank)
     {
         const local_ordinal_type N = getLocalSize(&v);
         // verify partitioning of test vectors is correct
@@ -266,14 +266,14 @@ public:
         v.setToConstant(two);
         ix.setToConstant(one);
         if (rank== 0)
-            setElement(&ix, N - 1, zero);
+            setLocalElement(&ix, N - 1, zero);
 
         v.selectPattern(ix);
 
         int fail = 0;
         for (local_ordinal_type i=0; i<N; ++i)
         {
-            real_type val = getElement(&v, i);
+            real_type val = getLocalElement(&v, i);
             if ((val != two) && !((rank== 0) && (i == N-1) && (val == zero)))
                 fail++;
         }
@@ -285,7 +285,7 @@ public:
     /*
      * this[i] *= alpha
      */
-    bool vectorScale(hiop::hiopVector& v, int rank)
+    bool vectorScale(hiop::hiopVector& v, const int rank)
     {
         v.setToConstant(half);
         v.scale(two);
@@ -299,7 +299,7 @@ public:
     /*
      * this[i] *= x[i]
      */
-    bool vectorComponentMult(hiop::hiopVector& v, hiop::hiopVector& x, int& rank)
+    bool vectorComponentMult(hiop::hiopVector& v, hiop::hiopVector& x, const int rank)
     {
         assert(v.get_size() == x.get_size());
         assert(getLocalSize(&v) == getLocalSize(&x));
@@ -318,7 +318,7 @@ public:
     /*
      * this[i] /= x[i]
      */
-    bool vectorComponentDiv(hiop::hiopVector& v, hiop::hiopVector& x, int rank)
+    bool vectorComponentDiv(hiop::hiopVector& v, hiop::hiopVector& x, const int rank)
     {
         assert(v.get_size() == x.get_size());
         assert(getLocalSize(&v) == getLocalSize(&x));
@@ -341,7 +341,7 @@ public:
             hiop::hiopVector& v,
             hiop::hiopVector& x,
             hiop::hiopVector& pattern,
-            int rank)
+            const int rank)
     {
         const local_ordinal_type N = getLocalSize(&v);
         assert(v.get_size() == x.get_size());
@@ -353,14 +353,14 @@ public:
         x.setToConstant(two);
         pattern.setToConstant(one);
         if (rank== 0)
-            setElement(&v, N - 1, zero);
+            setLocalElement(&v, N - 1, zero);
 
         v.componentDiv_p_selectPattern(x, pattern);
 
         int fail = 0;
         for (local_ordinal_type i=0; i<N; ++i)
         {
-            real_type val = getElement(&v, i);
+            real_type val = getLocalElement(&v, i);
             if ((val != half) && !((rank== 0) && (i == N-1) && (val == zero)))
                 fail++;
         }
@@ -373,7 +373,7 @@ public:
      * Test computing 1-norm ||v||  of vector v
      *                            1
      */
-    bool vectorOnenorm(hiop::hiopVector& v, int rank)
+    bool vectorOnenorm(hiop::hiopVector& v, const int rank)
     {
         v.setToConstant(-one);
         real_type actual = v.onenorm();
@@ -389,7 +389,7 @@ public:
      * Test computing 2-norm ||v||  of vector v
      *                            2
      */
-    bool vectorTwonorm(hiop::hiopVector& v, int rank)
+    bool vectorTwonorm(hiop::hiopVector& v, const int rank)
     {
         v.setToConstant(-one);
         real_type actual = v.twonorm();
@@ -405,14 +405,14 @@ public:
      * Test infinity-norm = max(abs(this[i]))
      *                       i
      */
-    bool vectorInfnorm(hiop::hiopVector& v, int rank)
+    bool vectorInfnorm(hiop::hiopVector& v, const int rank)
     {
         const local_ordinal_type N = getLocalSize(&v);
         const real_type expected = two;
 
         v.setToConstant(one);
         if (rank== 0)
-            setElement(&v, N-1, -two);
+            setLocalElement(&v, N-1, -two);
         real_type actual = v.infnorm();
 
         int fail = (expected != actual);
@@ -424,7 +424,7 @@ public:
     /*
      * this[i] += alpha * x[i]
      */
-    bool vectorAxpy(hiop::hiopVector& v, hiop::hiopVector& x, int rank)
+    bool vectorAxpy(hiop::hiopVector& v, hiop::hiopVector& x, const int rank)
     {
         const local_ordinal_type N = getLocalSize(&v);
         assert(v.get_size() == x.get_size());
@@ -449,7 +449,7 @@ public:
             hiop::hiopVector& v,
             hiop::hiopVector& x,
             hiop::hiopVector& z,
-            int rank)
+            const int rank)
     {
         const local_ordinal_type N = getLocalSize(&v);
         assert(v.get_size() == x.get_size());
@@ -475,13 +475,13 @@ public:
             hiop::hiopVector& v,
             hiop::hiopVector& x,
             hiop::hiopVector& z,
-            int rank)
+            const int rank)
     {
         const local_ordinal_type N = getLocalSize(&v);
         assert(v.get_size() == x.get_size());
         assert(N == getLocalSize(&x));
 
-        const int alpha = two;
+        const real_type alpha = two;
         x.setToConstant(-one);
         z.setToConstant(half);
         v.setToConstant(two);
@@ -497,7 +497,7 @@ public:
     /*
      * this += C
      */
-    bool vectorAddConstant(hiop::hiopVector& x, int rank)
+    bool vectorAddConstant(hiop::hiopVector& x, const int rank)
     {
         int fail = 0;
 
@@ -516,7 +516,7 @@ public:
     bool vectorAddConstant_w_patternSelect(
             hiop::hiopVector& x, 
             hiop::hiopVector& pattern,
-            int rank)
+            const int rank)
     {
         const local_ordinal_type N = getLocalSize(&x);
         assert(pattern.get_size() == x.get_size());
@@ -526,12 +526,12 @@ public:
         x.addConstant(half);
 
         if (rank== 0)
-            setElement(&x, N - 1, zero);
+            setLocalElement(&x, N - 1, zero);
 
         int fail = 0;
         for (local_ordinal_type i=0; i<N; ++i)
         {
-            real_type val = getElement(&x, i);
+            real_type val = getLocalElement(&x, i);
             if ((val != half) && !((rank==0) && (i == N-1) && (val == zero)))
                 fail++;
         }
@@ -567,7 +567,7 @@ public:
     /* 
      * this[i] == -this_prev[i]
      */
-    bool vectorNegate(hiop::hiopVector& x, int rank)
+    bool vectorNegate(hiop::hiopVector& x, const int rank)
     {
         x.setToConstant(one);
         x.negate();
@@ -576,7 +576,7 @@ public:
         return reduceReturn(fail, &x);
     }
 
-    bool vectorInvert(hiop::hiopVector& x, int rank)
+    bool vectorInvert(hiop::hiopVector& x, const int rank)
     {
         x.setToConstant(two);
         x.invert();
@@ -591,14 +591,14 @@ public:
     bool vectorLogBarrier(
             hiop::hiopVector& x,
             hiop::hiopVector& select,
-            int rank)
+            const int rank)
     {
         const local_ordinal_type N = getLocalSize(&x);
         assert(N == getLocalSize(&select));
         select.setToConstant(one);
         x.setToConstant(two);
 
-        setElement(&select, N-1, 0.0);
+        setLocalElement(&select, N-1, 0.0);
 
         real_type expected = 0.0;
         for (local_ordinal_type i=0; i<N-1; ++i) expected += log(two);
@@ -629,7 +629,7 @@ public:
         y.setToConstant(two);
 
         if (rank == 0)
-            setElement(&select, N-1, 0.0);
+            setLocalElement(&select, N-1, 0.0);
 
         static constexpr real_type expected = one + (alpha / two);
         x.addLogBarrierGrad(alpha, y, select);
@@ -637,7 +637,7 @@ public:
         int fail = 0;
         for (local_ordinal_type i=0; i<N; ++i)
         {
-            real_type val = getElement(&x, i);
+            real_type val = getLocalElement(&x, i);
             if ((val != expected) && !((rank==0) && (i == N-1) && (val == one)))
                 fail++;
         }
@@ -673,8 +673,8 @@ public:
 
         if (rank == 0)
         {
-            setElement(&left, N-1, two);
-            setElement(&right, N-1, two);
+            setLocalElement(&left, N-1, two);
+            setLocalElement(&right, N-1, two);
         }
 
         real_type expected = 0.0;
@@ -707,7 +707,7 @@ public:
 
         x.setToConstant(one);
         if (rank == 0)
-            setElement(&x, N-1, -one);
+            setLocalElement(&x, N-1, -one);
         if (x.allPositive())
             fail++;
 
@@ -739,7 +739,7 @@ public:
 
         x.setToConstant(one);
         if (rank == 0)
-            setElement(&x, N-1, -one);
+            setLocalElement(&x, N-1, -one);
         if (x.allPositive_w_patternSelect(pattern))
             fail++;
 
@@ -796,9 +796,9 @@ public:
         lower.setToConstant(-one);
         upper.setToConstant(one);
         lower_pattern.setToConstant(one);
-        setElement(&lower_pattern, 0, zero);
+        setLocalElement(&lower_pattern, 0, zero);
         upper_pattern.setToConstant(one);
-        setElement(&upper_pattern, 0, zero);
+        setLocalElement(&upper_pattern, 0, zero);
 
         // Call should return true
         fail += !x.projectIntoBounds(
@@ -806,7 +806,7 @@ public:
                 upper_pattern, kappa1, kappa2);
 
         // First element should be one
-        fail += !isEqual(getElement(&x, 0), one);
+        fail += !isEqual(getLocalElement(&x, 0), one);
 
         // Testing when x is on a boundary:
         // Check that projection of 1 into (-1, 1)
@@ -900,7 +900,7 @@ public:
         expected = one;
         for (local_ordinal_type i=0; i<N; i++)
         {
-            aux = -tau * getElement(&x, i) / getElement(&dx, i);
+            aux = -tau * getLocalElement(&x, i) / getLocalElement(&dx, i);
             if (aux<expected) expected=aux;
         }
         fail += !isEqual(result, expected);
@@ -940,7 +940,7 @@ public:
         // value of one
         pattern.setToConstant(one);
         if (rank == 0)
-            setElement(&pattern, N-1, 0);
+            setLocalElement(&pattern, N-1, 0);
         dx.setToConstant(one);
         result = x.fractionToTheBdry_w_pattern(dx, tau, pattern);
         expected = one;  // default value if dx >= 0
@@ -952,10 +952,10 @@ public:
         result = x.fractionToTheBdry_w_pattern(dx, tau, pattern);
         real_type aux;
         expected = one;
-        for (int i=0; i<N; i++)
+        for (local_ordinal_type i=0; i<N; i++)
         {
             if (rank == 0 && i == N-1) continue;
-            aux = -tau * getElement(&x, i) / getElement(&dx, i);
+            aux = -tau * getLocalElement(&x, i) / getLocalElement(&dx, i);
             if (aux<expected) expected=aux;
         }
         fail += !isEqual(result, expected);
@@ -972,7 +972,7 @@ public:
             hiop::hiopVector& pattern,
             const int rank)
     {
-        const int N = getLocalSize(&x);
+        const local_ordinal_type N = getLocalSize(&x);
         assert(N == getLocalSize(&pattern));
         int fail = 0;
 
@@ -982,12 +982,12 @@ public:
 
         x.setToConstant(one);
         pattern.setToConstant(one);
-        if (rank == 0) setElement(&pattern, N-1, 0);
+        if (rank == 0) setLocalElement(&pattern, N-1, 0);
         if (x.matchesPattern(pattern)) fail++;
 
         x.setToConstant(one);
         pattern.setToConstant(one);
-        if (rank == 0) setElement(&x, N-1, 0);
+        if (rank == 0) setLocalElement(&x, N-1, 0);
         if (!x.matchesPattern(pattern)) fail++;
 
         printMessage(fail, __func__, rank);
@@ -1005,7 +1005,7 @@ public:
             hiop::hiopVector& pattern,
             const int rank)
     {
-        const int N = getLocalSize(&z1);
+        const local_ordinal_type N = getLocalSize(&z1);
         assert(N == getLocalSize(&z2));
         assert(N == getLocalSize(&x));
         assert(N == getLocalSize(&pattern));
@@ -1028,24 +1028,24 @@ public:
                 kappa);
 
         real_type a, b;
-        for (int i=0; i<N; i++)
+        for (local_ordinal_type i=0; i<N; i++)
         {
-            a = mu / getElement(&x, i);
+            a = mu / getLocalElement(&x, i);
             b = a / kappa;
             a *= kappa;
-            if      (getElement(&x, i) < b)     setElement(&z2, i, b);
-            else if (a <= b)                    setElement(&z2, i, b);
-            else if (a < getElement(&x, i))     setElement(&z2, i, a);
+            if      (getLocalElement(&x, i) < b)     setLocalElement(&z2, i, b);
+            else if (a <= b)                    setLocalElement(&z2, i, b);
+            else if (a < getLocalElement(&x, i))     setLocalElement(&z2, i, a);
         }
 
         // the method's adjustDuals_plh should yield
         // the same result as computing by hand
         int fail = 0;
-        for (int i=0; i<N; i++)
+        for (local_ordinal_type i=0; i<N; i++)
         {
             fail += !isEqual(
-                    getElement(&z1, i),     // expected
-                    getElement(&z2, i));    // actual
+                    getLocalElement(&z1, i),     // expected
+                    getLocalElement(&z2, i));    // actual
         }
 
         printMessage(fail, __func__, rank);
@@ -1057,14 +1057,14 @@ public:
      */
     bool vectorIsnan(hiop::hiopVector& x, const int rank)
     {
-        const int N = getLocalSize(&x);
+        const local_ordinal_type N = getLocalSize(&x);
         int fail = 0;
         x.setToConstant(zero);
         if (x.isnan())
             fail++;
 
         if (rank == 0)
-            setElement(&x, N-1, NAN);
+            setLocalElement(&x, N-1, NAN);
         if (x.isnan() && rank != 0)
             fail++;
 
@@ -1077,14 +1077,14 @@ public:
      */
     bool vectorIsinf(hiop::hiopVector& x, const int rank)
     {
-        const int N = getLocalSize(&x);
+        const local_ordinal_type N = getLocalSize(&x);
         int fail = 0;
         x.setToConstant(zero);
         if (x.isinf())
             fail++;
 
         if (rank == 0)
-            setElement(&x, N-1, INFINITY);
+            setLocalElement(&x, N-1, INFINITY);
         if (x.isinf() && rank != 0)
             fail++;
 
@@ -1104,7 +1104,7 @@ public:
             fail++;
 
         if (rank == 0)
-            setElement(&x, N-1, INFINITY);
+            setLocalElement(&x, N-1, INFINITY);
         if (!x.isfinite() && rank != 0)
             fail++;
 
@@ -1114,8 +1114,8 @@ public:
 
 protected:
     // Interface to methods specific to vector implementation
-    virtual void setElement(hiop::hiopVector* x, int i, real_type val) = 0;
-    virtual real_type getElement(const hiop::hiopVector* x, int i) = 0;
+    virtual void   setLocalElement(hiop::hiopVector* x, local_ordinal_type i, real_type val) = 0;
+    virtual real_type getLocalElement(const hiop::hiopVector* x, local_ordinal_type i) = 0;
     virtual local_ordinal_type getLocalSize(const hiop::hiopVector* x) = 0;
     virtual real_type* getLocalData(hiop::hiopVector* x) = 0;
     virtual int verifyAnswer(hiop::hiopVector* x, real_type answer) = 0;

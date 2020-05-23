@@ -17,8 +17,8 @@ public:
     virtual ~VectorTestsPar(){}
 
 private:
-    virtual void setElement(hiop::hiopVector* x, local_ordinal_type i, real_type value);
-    virtual real_type getElement(const hiop::hiopVector* x, local_ordinal_type i);
+    virtual void setLocalElement(hiop::hiopVector* x, local_ordinal_type i, real_type value);
+    virtual real_type getLocalElement(const hiop::hiopVector* x, local_ordinal_type i);
     virtual local_ordinal_type getLocalSize(const hiop::hiopVector* x);
     virtual real_type* getLocalData(hiop::hiopVector* x);
     virtual int verifyAnswer(hiop::hiopVector* x, real_type answer);

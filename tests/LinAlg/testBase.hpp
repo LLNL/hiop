@@ -8,29 +8,29 @@ using real_type             = double;
 using local_ordinal_type    = int;
 using global_ordinal_type   = long long;
 
+static constexpr real_type zero = 0.0;
+static constexpr real_type quarter = 0.25;
+static constexpr real_type half = 0.5;
+static constexpr real_type one = 1.0;
+static constexpr real_type two = 2.0;
+static constexpr real_type three = 3.0;
+static constexpr real_type eps =
+    10*std::numeric_limits<real_type>::epsilon();
+static constexpr int SKIP_TEST = -1;
+
+// must be const pointer and const dest for
+// const string declarations to pass
+// -Wwrite-strings
+static constexpr const char * const  RED       = "\033[1;31m";
+static constexpr const char * const  GREEN     = "\033[1;32m";
+static constexpr const char * const  YELLOW    = "\033[1;33m";
+static constexpr const char * const  CLEAR     = "\033[0m";
+
 namespace hiop::tests
 {
 
 class TestBase
 {
-
-protected:
-    static constexpr real_type zero      = 0.0;
-    static constexpr real_type half      = 0.5;
-    static constexpr real_type one       = 1.0;
-    static constexpr real_type two       = 2.0;
-    static constexpr real_type eps =
-        10*std::numeric_limits<real_type>::epsilon();
-    static constexpr int SKIP_TEST = -1;
-
-    // must be const pointer and const dest for
-    // const string declarations to pass
-    // -Wwrite-strings
-    static constexpr const char * const  RED       = "\033[1;31m";
-    static constexpr const char * const  GREEN     = "\033[1;32m";
-    static constexpr const char * const  YELLOW    = "\033[1;33m";
-    static constexpr const char * const  CLEAR     = "\033[0m";
-
 protected:
     /// Returns true if two real numbers are equal within tolerance
     [[nodiscard]] constexpr
