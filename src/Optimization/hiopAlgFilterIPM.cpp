@@ -290,8 +290,20 @@ startingProcedure(hiopIterate& it_ini,
   nlp->runStats.tmStartingPoint.stop();
   nlp->runStats.tmSolverInternal.stop();
 
-  if(!this->evalNlp(it_ini, f, c, d, gradf, Jac_c, Jac_d, *_Hess_Lagr))
+  // before evaluating the NLP, make sure that iterate, including dual variables are initialized
+  // to zero; many of these will be updated later in this method, but we want to make sure
+  // the user's NLP evaluator functions, in particular Hessian of the Lagrangian, receives
+  // initialized arrays
+  // initialization for zl, zu, vl, vu
+  it_ini.setBoundsDualsToConstant(1.);
+  // initialization for yc and yd
+  it_ini.setEqualityDualsToConstant(0.);
+  
+  if(!this->evalNlp(it_ini, f, c, d, gradf, Jac_c, Jac_d, *_Hess_Lagr)) {
+    nlp->log->printf(hovError, "Failure in evaluating user provided NLP functions.");
+    assert(false);
     return false;
+  }
   
   nlp->runStats.tmSolverInternal.start();
   nlp->runStats.tmStartingPoint.start();
@@ -375,6 +387,7 @@ evalNlp(hiopIterate& iter,
   const hiopVectorPar* yc = dynamic_cast<const hiopVectorPar*>(iter.get_yc()); assert(yc);
   const hiopVectorPar* yd = dynamic_cast<const hiopVectorPar*>(iter.get_yd()); assert(yd);
   const int new_lambda = true;
+  
   if(!nlp->eval_Hess_Lagr(x, new_x, 
 			  1., yc->local_data_const(), yd->local_data_const(), new_lambda,
 			  Hess_L)) {
@@ -1417,6 +1430,15 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
     iter_num++;
     nlp->runStats.nIter=iter_num;
 
+    // update and adjust the duals
+    // this needs to be done before evalNlp_derivOnly so that the user's NLP functions
+    // get the updated duals
+    assert(infeas_nrm_trial>=0 && "this should not happen");
+    bret = dualsUpdate->go(*it_curr, *it_trial, 
+			   _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d, *dir,  
+			   _alpha_primal, _alpha_dual, _mu, kappa_Sigma, infeas_nrm_trial); assert(bret);
+
+    
     //evaluate derivatives at the trial (and to be accepted) trial point
     if(!this->evalNlp_derivOnly(*it_trial, *_grad_f, *_Jac_c, *_Jac_d, *_Hess_Lagr)) {
       solver_status_ = Error_In_User_Function;
@@ -1427,12 +1449,6 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
     //reuse function values
     _f_nlp=_f_nlp_trial;
     hiopVector* pvec=_c_trial; _c_trial=_c; _c=pvec; pvec=_d_trial; _d_trial=_d; _d=pvec;
-
-    //update and adjust the duals
-    assert(infeas_nrm_trial>=0 && "this should not happen");
-    bret = dualsUpdate->go(*it_curr, *it_trial, 
-			   _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d, *dir,  
-			   _alpha_primal, _alpha_dual, _mu, kappa_Sigma, infeas_nrm_trial); assert(bret);
 
     //update current iterate (do a fast swap of the pointers)
     hiopIterate* pit=it_curr; it_curr=it_trial; it_trial=pit;
