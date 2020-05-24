@@ -83,11 +83,11 @@ endif(HIOP_DEEPCHECKS)
 
 #set(MA86_DIR "/home/petra1/work/installs/hsl_ma86-1.6.0")
 if(HIOP_WITH_KRON_REDUCTION)
-  find_library(UMFPACK_LIB NAMES umfpack HINTS ${UMFPACK_DIR} "${UMFPACK_DIR}/lib" )
+  find_library(UMFPACK_LIB NAMES umfpack HINTS ${UMFPACK_DIR} "${UMFPACK_DIR}/lib" "${UMFPACK_DIR}/Lib")
   if(UMFPACK_LIB)
     message("Using UMFPACK lib '${UMFPACK_LIB}'")
 
-    find_path(UMFPACK_INCL NAMES "umfpack.h" HINTS ${UMFPACK_DIR} "${UMFPACK_DIR}/include")
+    find_path(UMFPACK_INCL NAMES "umfpack.h" HINTS ${UMFPACK_DIR} "${UMFPACK_DIR}/include" "${UMFPACK_DIR}/Include")
     if(UMFPACK_INCL)
       include_directories(${UMFPACK_INCL})
       message("Using UMFPACK include '${UMFPACK_INCL}'")
