@@ -123,7 +123,8 @@ public:
     delete dwork;
   }
 
-  /** Triggers a refactorization of the matrix, if necessary. */
+  /** Triggers a refactorization of the matrix, if necessary. 
+   * Overload from base class. */
   int matrixChanged()
   {
     assert(M.n() == M.m());
@@ -147,16 +148,26 @@ public:
       dwork = new hiopVectorPar(lwork);
     }
 
+    bool rank_deficient=false;
     //
     // factorization
     //
     DSYTRF(&uplo, &N, M.local_buffer(), &lda, ipiv, dwork->local_data(), &lwork, &info );
-    if(info<0)
-      nlp->log->printf(hovError, "hiopLinSolverIndefDense error: %d argument to dsytrf has an"
-		       " illegal value\n", -info);
-    else if(info>0)
-      nlp->log->printf(hovError, "hiopLinSolverIndefDense error: %d entry in the factorization's "
-		       "diagonal is exactly zero. Division by zero will occur if it a solve is attempted.\n", info);
+    if(info<0) {
+      nlp->log->printf(hovError,
+		       "hiopLinSolverIndefDense error: %d argument to dsytrf has an illegal value.\n",
+		       -info);
+      return -1;
+    } else {
+      if(info>0) {
+	nlp->log->printf(hovWarning,
+			 "hiopLinSolverIndefDense error: %d entry in the factorization's diagonal\n"
+			 "is exactly zero. Division by zero will occur if it a solve is attempted.\n",
+			 info);
+	//matrix is singular
+	return -1;
+      }
+    }
     assert(info==0);
 
     //
@@ -165,6 +176,8 @@ public:
     // LINPACK's dsidi Fortran routine (http://www.netlib.org/linpack/dsidi.f)
     // 04/08/2020 - petra: fixed the test for non-positive pivots (was only for negative pivots)
     int negEigVal=0;
+    int posEigVal=0;
+    int nullEigVal=0;
     double t=0;
     double** MM = M.get_M();
     for(int k=0; k<N; k++) {
@@ -186,12 +199,20 @@ public:
 	  t=0.;
 	}
       }
-      if(d<0) negEigVal++;
-      if(d==0) {
-	negEigVal=-1;
-	break;
+      //printf("d = %22.14e \n", d);
+      //if(d<0) negEigVal++;
+      if(d < -1e-14) {
+	negEigVal++;
+      } else if(d < 1e-14) {
+	nullEigVal++;
+	//break;
+      } else {
+	posEigVal++;
       }
     }
+    //printf("(pos,null,neg)=(%d,%d,%d)\n", posEigVal, nullEigVal, negEigVal);
+    
+    if(nullEigVal>0) return -1;
     return negEigVal;
   }
     
@@ -214,16 +235,25 @@ public:
     if(info<0) {
       nlp->log->printf(hovError, "hiopLinSolverIndefDenseLapack: DSYTRS returned error %d\n", info);
       assert(false);
+    } else if(info>0) {
+      nlp->log->printf(hovError, "hiopLinSolverIndefDenseLapack: DSYTRS returned error %d\n", info);
     }
     
   }
-  void solve ( hiopMatrix& x ) { assert(false && "not needed; see the other solve method for implementation"); }
+  void solve ( hiopMatrix& x )
+  {
+    assert(false && "not needed; see the other solve method for implementation");
+  }
 
 protected:
   int* ipiv;
   hiopVectorPar* dwork;
 private:
-  hiopLinSolverIndefDenseLapack() : ipiv(NULL), dwork(NULL) { assert(false); }
+  hiopLinSolverIndefDenseLapack()
+    : ipiv(NULL), dwork(NULL)
+  {
+    assert(false);
+  }
 };
 
 #ifdef HIOP_USE_MAGMA

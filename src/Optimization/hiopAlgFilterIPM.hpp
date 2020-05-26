@@ -57,6 +57,8 @@
 #include "hiopKKTLinSys.hpp"
 #include "hiopLogBarProblem.hpp"
 #include "hiopDualsUpdater.hpp"
+#include "hiopPDPerturbation.hpp"
+
 #include "hiopTimer.hpp"
 
 namespace hiop
@@ -80,7 +82,7 @@ public:
   void getSolution(double* x) const;
   /* returns the status of the solver */
   /* returns the status of the solver */
-  inline hiopSolveStatus getSolveStatus() const { return _solverStatus; }
+  inline hiopSolveStatus getSolveStatus() const { return solver_status_; }
   /* returns the number of iterations */
   int getNumIterations() const;
 protected:
@@ -93,10 +95,20 @@ protected:
   bool evalNlp_derivOnly(hiopIterate& iter, 
 			 hiopVector& gradf_,  hiopMatrix& Jac_c,  hiopMatrix& Jac_d,
 			  hiopMatrix& Hess_L);
- /* internal helper for error computation */
+  
+  /** Internal helper for NLP error/residuals computation.
+   * TODO: add support for the 'true' infeasibility measure and propagate this downstream in
+   * i.  the iteration output 
+   * ii. the 'theta' part of the filter's pairs 'theta' entries.
+   * Instead, we currently use the inf-norm of d-d(x)=0, d-sdl=dl, d-sdu+du=0, c(x)-c=0
+   *
+   * The 'true' infeasibility (also used by Ipopt) would be the max of the inf norm of the 
+   * violation of d_l <= d(x) <= d_u and the inf norm of the residual of c(x)-c=0.
+   */
   virtual bool evalNlpAndLogErrors(const hiopIterate& it, const hiopResidual& resid, const double& mu,
 				   double& nlpoptim, double& nlpfeas, double& nlpcomplem, double& nlpoverall,
 				   double& logoptim, double& logfeas, double& logcomplem, double& logoverall);
+  
   virtual double thetaLogBarrier(const hiopIterate& it, const hiopResidual& resid, const double& mu);
 
   bool updateLogBarrierParameters(const hiopIterate& it, const double& mu_curr, const double& tau_curr,
@@ -170,8 +182,10 @@ protected:
   double s_theta,       //parameters in the switch condition of the linearsearch (eq 19)
     s_phi, delta;
   double eta_phi;       //parameter in the Armijo rule
-  double kappa_Sigma;   //parameter in resetting the duals to guarantee closedness of the primal-dual logbar Hessian to the primal logbar Hessian
-  int dualsUpdateType;  //type of the update for dual multipliers: 0 LSQ (default, recommended for quasi-Newton); 1 Newton
+  double kappa_Sigma;   //parameter in resetting the duals to guarantee closedness of the
+                        //primal-dual logbar Hessian to the primal logbar Hessian
+  int dualsUpdateType;  //type of the update for dual multipliers: 0 LSQ (default, recommended
+                        //for quasi-Newton); 1 Newton
   int max_n_it;
   int dualsInitializ;  //type of initialization for the duals of constraints: 0 LSQ (default), 1 set to zero
   int accep_n_it;      //after how many iterations with acceptable tolerance should the alg. stop
@@ -180,8 +194,8 @@ protected:
   hiopTimer tmSol;
 
   //internal flags related to the state of the solver
-  hiopSolveStatus _solverStatus;
-  int _n_accep_iters;
+  hiopSolveStatus solver_status_;
+  int n_accep_iters_;
 };
 
 class hiopAlgFilterIPMQuasiNewton : public hiopAlgFilterIPMBase
@@ -212,9 +226,12 @@ public:
   virtual ~hiopAlgFilterIPMNewton();
 
   virtual hiopSolveStatus run();
+
 private:
   virtual void outputIteration(int lsStatus, int lsNum);
   virtual hiopKKTLinSysCompressed* decideAndCreateLinearSystem(hiopNlpFormulation* nlp);
+
+  hiopPDPerturbation pd_perturb_;
 private:
   hiopAlgFilterIPMNewton() : hiopAlgFilterIPMBase(NULL) {};
   hiopAlgFilterIPMNewton(const hiopAlgFilterIPMNewton& ) : hiopAlgFilterIPMBase(NULL){};

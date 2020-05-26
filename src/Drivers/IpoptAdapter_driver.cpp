@@ -4,6 +4,7 @@
 
 //use HiOp's Example4 - mixed dense-sparse QP
 #include "nlpMDSForm_ex4.hpp"
+#include "nlpMDS_ex5.hpp"
 
 #include <iostream>
 
@@ -11,12 +12,17 @@ using namespace Ipopt;
 using namespace hiop;
 // Example of how to use IpoptAdapter to solve HiOP-specified problems with Ipopt
 
-int main(int    argv, char** argc)
+int main(int argv, char** argc)
 {
-  //instantiate a HiOp problem 
-  Ex4 hiopNlp(500);
+  //instantiate a HiOp problem
+  //
+  Ex5 hiopNlp(300,100,true,true);
+  //
   //create 
 
+  //int n_sp = 12, n_de = 10;
+  //Ex5 hiopNlp(n_sp, n_de);
+  
   // Create a new instance of the Ipopt nlp
   //  (use a SmartPtr, not raw)
   SmartPtr<TNLP> mynlp = new hiopMDS2IpoptTNLP(&hiopNlp);
@@ -27,17 +33,26 @@ int main(int    argv, char** argc)
   // example with an Ipopt Windows DLL
   SmartPtr<IpoptApplication> app = IpoptApplicationFactory();
 
-  // Change some options
-  // Note: The following choices are only examples, they might not be
-  //       suitable for your optimization problem.
+  //
+  // HiOp-compatible Ipopt Options (Ipopt behaves or should behave like HiOp) 
+  //
+  // app->Options()->SetStringValue("recalc_y", "no");
+  // app->Options()->SetStringValue("mu_strategy", "monotone");
+  // app->Options()->SetNumericValue("bound_push", 1e-2);
+  // app->Options()->SetNumericValue("bound_relax_factor", 0.);
+  // app->Options()->SetNumericValue("constr_mult_init_max", 0.001);
+  
+
   //app->Options()->SetNumericValue("tol", 1e-7);
   app->Options()->SetStringValue("recalc_y", "no");
   //app->Options()->SetIntegerValue("print_level", 11);
   app->Options()->SetStringValue("mu_strategy", "monotone");
-  app->Options()->SetNumericValue("bound_push", 1e-2);
-  app->Options()->SetNumericValue("slack_bound_push", 1e-24);
+  app->Options()->SetNumericValue("bound_frac", 1e-8);
+  app->Options()->SetNumericValue("bound_push", 1e-8);
+  //app->Options()->SetNumericValue("slack_bound_push", 1e-24);
   app->Options()->SetNumericValue("bound_relax_factor", 0.);
   app->Options()->SetNumericValue("constr_mult_init_max", 0.001);
+  
   
   //app->Options()->SetStringValue("output_file", "ipopt.out");
   //app->Options()->SetStringValue("derivative_test", "second-order"); //"only-second-order"

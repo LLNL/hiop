@@ -58,7 +58,7 @@ public:
     bool bSuccess=true;
     long long nll=n, mll=m;
     hiopInterfaceBase::NonlinearityType* types=new hiopInterfaceBase::NonlinearityType[n];
-    bSuccess = hiopNLP->get_vars_info(nll,x_l,x_u, types);
+    bSuccess = hiopNLP->get_vars_info(nll, x_l, x_u, types);
     delete[] types;
     
     if(bSuccess) {
@@ -127,8 +127,8 @@ public:
       if(values) {
 	bret=hiopNLP->eval_Jac_cons(nll, mll, onell, &i, x, new_x, &constraint);
 	if(!bret) break;
-	
-	memcpy(values+i*n, constraint, n*sizeof(double));
+
+	memcpy(values+i*n, constraint, ((size_t)n)*sizeof(double));
 
       } else { //this is only for iRow and jCol
 
@@ -196,7 +196,7 @@ public:
     nx_sparse = nx_dense = nnz_sparse_Jaceq = nnz_sparse_Jacineq = 0;
     nnz_sparse_Hess_Lagr_SS = nnz_sparse_Hess_Lagr_SD = 0;
     cons_eq_idxs = cons_ineq_idxs = NULL;
-    JacDeq = JacDineq = HessDL = NULL;
+    JacDeq = JacDineq = HessDL = JacDeqineq = NULL;
   };
   virtual ~hiopMDS2IpoptTNLP() 
   {
@@ -205,6 +205,7 @@ public:
     delete JacDeq;
     delete JacDineq; 
     delete HessDL;
+    delete JacDeqineq;
   };
 
   /* Overloads from TNLP */
@@ -244,7 +245,7 @@ public:
     bool bSuccess=true;
     long long nll=n, mll=m;
     hiopInterfaceBase::NonlinearityType* types=new hiopInterfaceBase::NonlinearityType[n];
-    bSuccess = hiopNLP->get_vars_info(nll,x_l,x_u, types);
+    bSuccess = hiopNLP->get_vars_info(nll, x_l, x_u, types);
     delete[] types;
     
     if(bSuccess) {
@@ -310,18 +311,41 @@ public:
   // mimic it
   bool eval_g(Index n, const Number* x, bool new_x, Index m, Number* g) 
   {
-    long long nll=n, mll=m; bool bret=false;
+    long long nll=n, mll=m;
+    bool bret=false;
+    bool eq_call_failed = false;
+    bool try_onecall_Jac = false;
+    {
+      double g_eq[n_eq];
+      long long num_cons = n_eq;
+      bret = hiopNLP->eval_cons(nll, mll, num_cons, cons_eq_idxs, x, new_x,g_eq);
+      if(bret) {
+	for(int i=0; i<n_eq; i++)
+	  g[cons_eq_idxs[i]] = g_eq[i];
+      } else {
+	eq_call_failed = true;
+      }
+    }
+    {
+      double g_ineq[n_ineq];
+      long long num_cons = n_ineq;
+      bret = hiopNLP->eval_cons(nll, mll, num_cons, cons_ineq_idxs, x, new_x,g_ineq);
+      if(bret) {
+	for(int i=0; i<n_ineq; i++)
+	  g[cons_ineq_idxs[i]] = g_ineq[i];
+      } else {
+	if(!eq_call_failed)
+	  return false;
+	else
+	  try_onecall_Jac = true;
+      }
+    }
 
-    {
-      double g_eq[n_eq]; long long num_cons = n_eq;
-      bret = hiopNLP->eval_cons(nll,mll,num_cons,cons_eq_idxs,x,new_x,g_eq);
-      for(int i=0; i<n_eq; i++) g[cons_eq_idxs[i]] = g_eq[i];
+    if(try_onecall_Jac) {
+      bret = hiopNLP->eval_cons(nll, mll, x, new_x, g);
+      //for(int i=0; i<mll; i++) printf("%.6e ", g[i]); printf("\n");
     }
-    {
-      double g_ineq[n_ineq]; long long num_cons = n_ineq;
-      bret = hiopNLP->eval_cons(nll,mll,num_cons,cons_ineq_idxs,x,new_x,g_ineq);
-      for(int i=0; i<n_ineq; i++) g[cons_ineq_idxs[i]] = g_ineq[i];
-    }
+    
 
     return bret;
   }
@@ -335,8 +359,10 @@ public:
 		  Index m, Index nele_jac, Index* iRow, Index *jCol,
 		  Number* values) 
   {
-    bool bret=true; long long nll=n, mll=m;
-    
+    bool bret = true;
+    long long nll = n, mll = m;
+    bool eq_call_failed = false;
+    bool try_onecall_Jac = false;
     if(values==NULL) {
       int nnzit = 0;
       //Sparse Jac for Eq
@@ -346,15 +372,18 @@ public:
 				      x, new_x, nx_sparse, nx_dense, 
 				      nnz_sparse_Jaceq, iRow, jCol, NULL,
 				      NULL);
-	if(!bret) return false;
-	nnzit += nnz_sparse_Jaceq;
-	for(int i=0; i<n_eq; i++) {
-	  for(int j=0; j<nx_dense; j++) {
-	    assert(nnzit<nele_jac);
-	    iRow[nnzit] = (int)cons_eq_idxs[i];
-	    jCol[nnzit] = j+nx_sparse;
-	    nnzit++;
+	if(bret) {
+	  nnzit += nnz_sparse_Jaceq;
+	  for(int i=0; i<n_eq; i++) {
+	    for(int j=0; j<nx_dense; j++) {
+	      assert(nnzit<nele_jac);
+	      iRow[nnzit] = (int)cons_eq_idxs[i];
+	      jCol[nnzit] = j+nx_sparse;
+	      nnzit++;
+	    }
 	  }
+	} else {
+	  eq_call_failed = true;
 	}
       }
 
@@ -365,36 +394,64 @@ public:
 				      x, new_x, nx_sparse, nx_dense, 
 				      nnz_sparse_Jacineq, iRow+nnzit, jCol+nnzit, NULL,
 				      NULL);
-	if(!bret) return false;
-	//in-place shift of iRow and jCol for Jacineq
-	for(int it=nnzit; it<nnzit+nnz_sparse_Jacineq; it++) 
-	  iRow[it] += n_eq;	
+	if(bret) {
+	  //in-place shift of iRow and jCol for Jacineq
+	  for(int it=nnzit; it<nnzit+nnz_sparse_Jacineq; it++) 
+	    iRow[it] += n_eq;	
+	  
+	  nnzit += nnz_sparse_Jacineq;
+	  assert(nnzit<=nele_jac);
+	  
+	  for(int i=0; i<n_ineq; i++) {
+	    for(int j=0; j<nx_dense; j++) {
+	      assert(nnzit<nele_jac);
+	      iRow[nnzit] = (int)cons_ineq_idxs[i];
+	      jCol[nnzit] = j+nx_sparse;
+	      nnzit++;
+	    }
+	  }
+	} else {
+	  if(eq_call_failed)
+	    try_onecall_Jac = true;
+	  else
+	    return false;
+	}
+      }
+      assert(try_onecall_Jac || nnzit==nele_jac);
 
-	nnzit += nnz_sparse_Jacineq;
-	assert(nnzit<=nele_jac);
+      if(try_onecall_Jac) {
+	bret = hiopNLP->eval_Jac_cons(nll, mll, x, new_x, nx_sparse, nx_dense,
+				      nnz_sparse_Jaceq+nnz_sparse_Jacineq, iRow, jCol, values,
+				      NULL);
+	if(!bret)
+	  return false;
 
-	for(int i=0; i<n_ineq; i++) {
+	nnzit = nnz_sparse_Jaceq+nnz_sparse_Jacineq;
+	//put the dense part of the MDS in the Ipopt sparse Jac matrix
+	for(int i=0; i<m; i++) {
 	  for(int j=0; j<nx_dense; j++) {
 	    assert(nnzit<nele_jac);
-	    iRow[nnzit] = (int)cons_ineq_idxs[i];
+	    iRow[nnzit] = i;
 	    jCol[nnzit] = j+nx_sparse;
 	    nnzit++;
 	  }
 	}
+	assert(nnzit == nele_jac);
       }
-      assert(nnzit==nele_jac);
-
+      
     } else {
       assert(values!=NULL);
 
       if(JacDeq == NULL) {
 	JacDeq = new hiopMatrixDense(n_eq, nx_dense);
-	assert(JacDineq==NULL);
+	assert(JacDineq == NULL);
       }
       if(JacDineq == NULL) {
 	JacDineq = new hiopMatrixDense(n_ineq, nx_dense);
       }
-
+      //eq_call_failed = false;
+      //bool try_onecall_Jac
+      
       int nnzit = 0;
       //sparse Jac Eq
       {
@@ -403,12 +460,19 @@ public:
 				      x, new_x, nx_sparse, nx_dense, 
 				      nnz_sparse_Jaceq, NULL, NULL, values,
 				      JacDeq->local_data());
-	if(!bret) return false;
-	nnzit += nnz_sparse_Jaceq; assert(nnzit<=nele_jac);
+	if(bret) {
+	  nnzit += nnz_sparse_Jaceq; assert(nnzit<=nele_jac);
+	  
+	  //the dense part
+	  const size_t len = (size_t)(n_eq*nx_dense);
+	  memcpy(values+nnzit, JacDeq->local_buffer(), len*sizeof(double));
 
-	//the dense part
-	memcpy(values+nnzit, JacDeq->local_buffer(), n_eq*nx_dense*sizeof(double));
-	nnzit += n_eq*nx_dense; assert(nnzit<=nele_jac);
+	  nnzit += n_eq*nx_dense; assert(nnzit<=nele_jac);
+	} else {
+	  eq_call_failed = true;
+	  delete JacDeq;
+	  JacDeq = NULL;
+	}
       }
       //sparse Jac Ineq
       {
@@ -417,16 +481,47 @@ public:
 				      x, new_x, nx_sparse, nx_dense, 
 				      nnz_sparse_Jacineq, NULL, NULL, values+nnzit,
 				      JacDineq->local_data());
-	if(!bret) return false;
-	nnzit += nnz_sparse_Jacineq; assert(nnzit<=nele_jac);
+	if(bret) {
+	  nnzit += nnz_sparse_Jacineq; assert(nnzit<=nele_jac);
 
-	//the dense part
-	memcpy(values+nnzit, JacDineq->local_buffer(), n_ineq*nx_dense*sizeof(double));
-	nnzit += n_ineq*nx_dense; 
+	  const size_t len = (size_t)(n_ineq*nx_dense);
+	  //the dense part
+	  memcpy(values+nnzit, JacDineq->local_buffer(), len*sizeof(double));
+	  nnzit += n_ineq*nx_dense;
+	  assert(nnzit==nele_jac);
+	} else {
+	  delete JacDineq;
+	  JacDineq = NULL;
+	  if(!eq_call_failed)
+	    return false;
+	  else
+	    try_onecall_Jac = true;
+	}
       }
-      assert(nnzit==nele_jac);
+
+      //try one call Jacobian
+      if(try_onecall_Jac) {
+	if(JacDeqineq == NULL) {
+	  JacDeqineq = new hiopMatrixDense(m, nx_dense);
+	  assert(JacDeq == NULL);
+	  assert(JacDineq == NULL);
+	}
+	
+	bret = hiopNLP->eval_Jac_cons(nll, mll, x, new_x, nx_sparse, nx_dense,
+				      nnz_sparse_Jaceq+nnz_sparse_Jacineq, NULL, NULL, values,
+				      JacDeqineq->local_data());
+	if(!bret)
+	  return false; 
+
+	nnzit = nnz_sparse_Jaceq+nnz_sparse_Jacineq;
+	//put the dense part of the MDS in the Ipopt sparse Jac matrix
+	memcpy(values+nnzit, JacDeqineq->local_buffer(), ((size_t)m*nx_dense)*sizeof(double));
+	nnzit += m*nx_dense;
+	
+	assert(nnzit == nele_jac);
+      }
     }
-    return bret;
+    return true;
   }
 
   bool eval_h(Index n, const Number* x, bool new_x,
@@ -512,6 +607,7 @@ private:
   int n_eq, n_ineq;
   long long *cons_eq_idxs, *cons_ineq_idxs; 
   hiopMatrixDense *JacDeq, *JacDineq, *HessDL;
+  hiopMatrixDense *JacDeqineq; //this holds the full Jacobian when one-call Jacobian is activated
 
   /* Methods to block default compiler methods.
    * The compiler automatically generates the following three methods.

@@ -109,6 +109,10 @@ namespace hiop
     {
       assert(false && "not yet supported");
     }
+    virtual void addSubDiagonal(int start_on_dest_diag, int num_elems, const double& c)
+    {
+      assert(false && "not yet supported");
+    }
     
     virtual void addMatrix(double alpha, const hiopMatrix& X);
     virtual void addMatrix(const std::complex<double>& alpha, const hiopMatrixComplexDense& X);

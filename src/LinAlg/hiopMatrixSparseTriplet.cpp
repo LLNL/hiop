@@ -324,17 +324,21 @@ addMDinvNtransToSymDeMatUTri(int row_dest_start, int col_dest_start,
 
       // dest[i,j] = weigthed_dotprod(M1_row_i,M2_row_j)
       acc = 0.;
-      int ki=M1.row_starts->idx_start[i], kj=M2.row_starts->idx_start[j];
+      int ki=M1.row_starts->idx_start[i];
+      int kj=M2.row_starts->idx_start[j];
+      
       while(ki<M1.row_starts->idx_start[i+1] && kj<M2.row_starts->idx_start[j+1]) {
-   	assert(ki<M1.nnz); 
+	assert(ki<M1.nnz);
    	assert(kj<M2.nnz);
-   	if(M1.jCol[ki] == M2.jCol[kj]) { 
+
+        if(M1.jCol[ki] == M2.jCol[kj]) {
+
 	  acc += M1.values[ki] / DM[this->jCol[ki]] * M2.values[kj];
    	  ki++;
    	  kj++;
    	} else {
-   	  if(this->jCol[ki]<this->jCol[kj]) ki++;
-   	  else                              kj++;
+   	  if(M1.jCol[ki]<M2.jCol[kj]) ki++;
+   	  else                      kj++;
    	}
       } //end of loop over ki and kj
 
@@ -343,7 +347,6 @@ addMDinvNtransToSymDeMatUTri(int row_dest_start, int col_dest_start,
 	printf("[warning] lower triangular element updated in addMDinvNtransToSymDeMatUTri\n");
 #endif
       assert(i+row_dest_start <= j+col_dest_start);
-
       WM[i+row_dest_start][j+col_dest_start] += alpha*acc;
 
     } //end j
