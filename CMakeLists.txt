@@ -203,7 +203,8 @@ endif()
 if(HIOP_BUILD_SHARED)
   add_library(hiop_shared SHARED $<TARGET_OBJECTS:hiopOptimization>
     $<TARGET_OBJECTS:hiopLinAlg>
-    $<TARGET_OBJECTS:hiopUtils>)
+    $<TARGET_OBJECTS:hiopUtils>
+    $<TARGET_OBJECTS:chiopInterface>)
   set_target_properties(hiop_shared PROPERTIES OUTPUT_NAME hiop)
   target_link_libraries(hiop_shared PUBLIC hiop_math)
   if(HIOP_WITH_KRON_REDUCTION)
@@ -265,5 +266,7 @@ if (HIOP_WITH_MAKETEST)
   endif(HIOP_USE_MPI)
   add_test(NAME NlpMixedDenseSparse_1 COMMAND $<TARGET_FILE:nlpMDS_ex4.exe> 400 100 0 -selfcheck)
   add_test(NAME NlpMixedDenseSparse_2 COMMAND $<TARGET_FILE:nlpMDS_ex4.exe> 400 100 1 -selfcheck)
-  add_test(NAME NlpMixedDenseSparseCinterface COMMAND $<TARGET_FILE:nlpMDS_cex4.exe>)
+  if(HIOP_BUILD_SHARED)
+    add_test(NAME NlpMixedDenseSparseCinterface COMMAND $<TARGET_FILE:nlpMDS_cex4.exe>)
+  endif()
 endif(HIOP_WITH_MAKETEST)
