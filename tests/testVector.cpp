@@ -35,20 +35,32 @@ int main(int argc, char** argv)
 
     global_ordinal_type Nlocal = 1000;
     global_ordinal_type Nglobal = Nlocal*numRanks;
-    partition = new global_ordinal_type [numRanks + 1];
-    partition[0] = 0;
+
+    auto n_partition = new global_ordinal_type [numRanks + 1];
+    n_partition[0] = 0;
     for(int i = 1; i < numRanks + 1; ++i)
-        partition[i] = i*Nlocal;
+        n_partition[i] = i*Nlocal;
+
+    global_ordinal_type Mlocal = 500;
+    global_ordinal_type Mglobal = Mlocal*numRanks;
+
+    auto m_partition = new global_ordinal_type [numRanks + 1];
+    m_partition[0] = 0;
+    for(int i = 1; i < numRanks + 1; ++i)
+        m_partition[i] = i*Mlocal;
 
     int fail = 0;
 
     // Test parallel vector
     {
-        hiop::hiopVectorPar x(Nglobal, partition, comm);
+        hiop::hiopVectorPar x(Nglobal, n_partition, comm);
         hiop::hiopVectorPar* y = x.alloc_clone();
         hiop::hiopVectorPar* z = x.alloc_clone();
         hiop::hiopVectorPar* a = x.alloc_clone();
         hiop::hiopVectorPar* b = x.alloc_clone();
+
+        // Allocate a vector smaller than x for testing copying operations
+        hiop::hiopVectorPar x_smaller(Mglobal, m_partition, comm);
         hiop::tests::VectorTestsPar test;
 
         fail += test.vectorGetSize(x, Nglobal, rank);
@@ -62,8 +74,8 @@ int main(int argc, char** argv)
         {
             fail += test.vectorCopyFromStarting(x, *y, rank);
             fail += test.vectorStartingAtCopyFromStartingAt(x, *y, rank);
-            fail += test.vectorCopyToStarting(x, *y, rank);
-            fail += test.vectorStartingAtCopyToStartingAt(x, *y, rank);
+            fail += test.vectorCopyToStarting(x, x_smaller, rank);
+            fail += test.vectorStartingAtCopyToStartingAt(x, x_smaller, rank);
         }
 
         fail += test.vectorTwonorm(x, rank);

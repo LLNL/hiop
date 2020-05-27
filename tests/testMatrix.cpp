@@ -20,11 +20,6 @@ int main(int argc, char** argv)
         printf("Support for MPI is enabled\n");
 #endif
 
-    /*
-    global_ordinal_type M_local = 10;
-    global_ordinal_type K_local = 15;
-    global_ordinal_type N_local = 100;
-    */
     global_ordinal_type M_local = 5 * numRanks;
     global_ordinal_type K_local = 2 * M_local;
     global_ordinal_type N_local = 10 * M_local;
@@ -104,6 +99,9 @@ int main(int argc, char** argv)
             fail += test.matrixTimesMat(A_mxk_local, A_kxn_local, A_mxn_local, rank);
             fail += test.matrixAddDiagonal(A_nxn, x_n_nodist, rank);
             fail += test.matrixAddSubDiagonal(A_nxn, x_m_nodist, rank);
+            fail += test.matrixAddToSymDenseMatrixUpperTriangle(A_nxn, A_mlxk, rank);
+            fail += test.matrixTransAddToSymDenseMatrixUpperTriangle(A_nxn, A_klxm, rank);
+            fail += test.matrixAddUpperTriangleToSymDenseMatrixUpperTriangle(A_nxn, A_mxm, rank);
 #ifdef HIOP_DEEPCHECKS
             fail += test.matrixAssertSymmetry(A_nxn, rank);
 #endif
@@ -112,9 +110,6 @@ int main(int argc, char** argv)
         fail += test.matrixTransTimesMat(A_mxk_local, A_kxn, A_mxn, rank);
         fail += test.matrixTimesMatTrans(A_kxm, A_kxn_local, A_nxm, rank);
         fail += test.matrixAddMatrix(A_mxn, B_mxn, rank);
-        fail += test.matrixAddToSymDenseMatrixUpperTriangle(A_nxn, A_mlxk, rank);
-        fail += test.matrixTransAddToSymDenseMatrixUpperTriangle(A_nxn, A_klxm, rank);
-        fail += test.matrixAddUpperTriangleToSymDenseMatrixUpperTriangle(A_nxn, A_mxm, rank);
         fail += test.matrixMaxAbsValue(A_mxn, rank);
         fail += test.matrixIsFinite(A_mxn, rank);
         fail += test.matrixNumRows(A_mxn, M_global, rank);
@@ -123,19 +118,19 @@ int main(int argc, char** argv)
 
     // Test RAJA matrix
     {
-        // Code here ...
+      // Code here ...
     }
 
     if (rank == 0)
     {
-        if(fail)
-        {
-            std::cout << "Matrix tests failed\n";
-        }
-        else
-        {
-            std::cout << "Matrix tests passed\n";
-        }
+      if(fail)
+      {
+        std::cout << "Matrix tests failed\n";
+      }
+      else
+      {
+        std::cout << "Matrix tests passed\n";
+      }
     }
 
 #ifdef HIOP_USE_MPI

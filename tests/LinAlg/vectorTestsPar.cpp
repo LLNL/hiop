@@ -72,6 +72,25 @@ int VectorTestsPar::verifyAnswer(hiop::hiopVector* x, real_type answer)
     return local_fail;
 }
 
+/*
+ * Ensures that the vector's elements match the return value of
+ * the function.
+ */
+int VectorTestsPar::verifyAnswer(
+    hiop::hiopVector* x,
+    std::function<real_type(local_ordinal_type)> expect)
+{
+    const local_ordinal_type N = getLocalSize(x);
 
+    int local_fail = 0;
+    for (int i=0; i<N; i++)
+    {
+        if(!isEqual(getLocalElement(x, i), expect(i)))
+        {
+            ++local_fail;
+        }
+    }
+    return local_fail;
+}
 
 } // namespace hiop::tests

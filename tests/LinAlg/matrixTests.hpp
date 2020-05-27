@@ -396,8 +396,6 @@ public:
             hiop::hiopMatrix& A,
             const int rank)
     {
-        printMessage(SKIP_TEST, __func__, rank); return 0;
-
         // This method only takes hiopMatrixDense
         auto W = dynamic_cast<hiop::hiopMatrixDense*>(&_W);
         const local_ordinal_type M = getNumLocRows(W);
@@ -445,7 +443,6 @@ public:
             hiop::hiopMatrix& A,
             const int rank)
     {
-        printMessage(SKIP_TEST, __func__, rank); return 0;
         // This method only takes hiopMatrixDense
         auto W = dynamic_cast<hiop::hiopMatrixDense*>(&_W);
         const local_ordinal_type M = getNumLocRows(W);
@@ -492,7 +489,6 @@ public:
             hiop::hiopMatrix& A,
             const int rank)
     {
-        printMessage(SKIP_TEST, __func__, rank); return 0;
         const local_ordinal_type A_M = getNumLocRows(&A);
         const local_ordinal_type A_N = getNumLocCols(&A);
         assert(_W.m() == _W.n());
