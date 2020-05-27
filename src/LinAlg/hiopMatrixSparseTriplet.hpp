@@ -52,6 +52,10 @@ public:
   {
     assert(false && "not needed / implemented");
   }
+  virtual void addSubDiagonal(int start_on_dest_diag, int num_elems, const double& c) 
+  {
+    assert(false && "not needed / implemented");
+  }
 
   virtual void addMatrix(double alpha, const hiopMatrix& X);
 

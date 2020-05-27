@@ -107,12 +107,21 @@ public:
   virtual void addDiagonal(const double& alpha, const hiopVector& d_) = 0;
   virtual void addDiagonal(const double& value) = 0;
   virtual void addSubDiagonal(const double& alpha, long long start_on_dest_diag, const hiopVector& d_) = 0;
-  /* add to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements of
+  
+  /** subdigonal(this) += alpha*d 
+   * Adds to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements of
    * 'd_' (source) starting at index 'start_on_src_vec'. The number of elements added is 'num_elems' 
-   * when num_elems>=0, or the remaining elems on 'd_' starting at 'start_on_src_vec'. */
-  virtual void addSubDiagonal(int start_on_dest_diag, const double& alpha, 
-			      const hiopVector& d_, int start_on_src_vec, int num_elems=-1) = 0;
-
+   * if num_elems>=0, otherwise the remaining elems in 'd_' starting at 'start_on_src_vec'. */
+  virtual void addSubDiagonal(int start_on_dest_diag,
+			      const double& alpha, const hiopVector& d_,
+			      int start_on_src_vec, int num_elems=-1) = 0;
+  /** subdiagonal(this) += c
+   * Adds the constant @param c to the diagonal starting at @param start_on_dest_diag
+   * and updating @param num_elems in the diagonal
+   */
+  virtual void addSubDiagonal(int start_on_dest_diag, int num_elems,
+			      const double& c) = 0;
+			      
   /* this += alpha*X */
   virtual void addMatrix(double alpha, const hiopMatrix& X) = 0;
 
@@ -246,7 +255,8 @@ public:
    * when num_elems>=0, or the remaining elems on 'd_' starting at 'start_on_src_vec'. */
   virtual void addSubDiagonal(int start_on_dest_diag, const double& alpha, 
 			      const hiopVector& d_, int start_on_src_vec, int num_elems=-1);
-
+  virtual void addSubDiagonal(int start_on_dest_diag, int num_elems, const double& c);
+  
   virtual void addMatrix(double alpha, const hiopMatrix& X);
 
   /* block of W += alpha*this

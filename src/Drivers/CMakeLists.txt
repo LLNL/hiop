@@ -18,5 +18,8 @@ if(HIOP_BUILD_SHARED)
   target_link_libraries(nlpMDS_cex4.exe hiop_shared ${HIOP_MATH_LIBRARIES})
 endif()
 
+add_executable(nlpMDS_ex5.exe nlpMDS_ex5_driver.cpp)
+target_link_libraries(nlpMDS_ex5.exe hiop ${HIOP_MATH_LIBRARIES})
+
 #add_executable(hpc_benchmark.exe hpc_benchmark.cpp)
 #target_link_libraries(hpc_benchmark.exe ${HIOP_MATH_LIBRARIES})

@@ -222,6 +222,7 @@ install(FILES src/Interface/hiopInterface.hpp
   src/Optimization/hiopIterate.hpp
   src/Optimization/hiopResidual.hpp
   src/Optimization/hiopKKTLinSys.hpp
+  src/Optimization/hiopPDPerturbation.hpp
   src/Optimization/hiopLogBarProblem.hpp
   src/Optimization/hiopFilter.hpp
   src/Optimization/hiopHessianLowRank.hpp
@@ -264,8 +265,9 @@ if (HIOP_WITH_MAKETEST)
   if(HIOP_USE_MPI)
     add_test(NAME NlpDenseCons3_50K_mpi COMMAND mpirun -np 2 $<TARGET_FILE:nlpDenseCons_ex3.exe> 50000 -selfcheck)
   endif(HIOP_USE_MPI)
-  add_test(NAME NlpMixedDenseSparse_1 COMMAND $<TARGET_FILE:nlpMDS_ex4.exe> 400 100 0 -selfcheck)
-  add_test(NAME NlpMixedDenseSparse_2 COMMAND $<TARGET_FILE:nlpMDS_ex4.exe> 400 100 1 -selfcheck)
+  add_test(NAME NlpMixedDenseSparse4_1 COMMAND $<TARGET_FILE:nlpMDS_ex4.exe> 400 100 0 -selfcheck)
+  add_test(NAME NlpMixedDenseSparse4_2 COMMAND $<TARGET_FILE:nlpMDS_ex4.exe> 400 100 1 -selfcheck)
+  add_test(NAME NlpMixedDenseSparse5_1 COMMAND $<TARGET_FILE:nlpMDS_ex5.exe> 400 100 -selfcheck)
   if(HIOP_BUILD_SHARED)
     add_test(NAME NlpMixedDenseSparseCinterface COMMAND $<TARGET_FILE:nlpMDS_cex4.exe>)
   endif()
