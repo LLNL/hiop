@@ -110,12 +110,18 @@ public:
 		  const double& mu, const double& kappa_sigma, const double& infeas_nrm_trial);
 
   /** LSQ-based initialization of the  constraints duals (yc and yd). Source file describe the math. */
-  virtual inline bool computeInitialDualsEq(hiopIterate& it_ini, const hiopVector& grad_f, const hiopMatrix& jac_c, const hiopMatrix& jac_d)
+  virtual inline bool computeInitialDualsEq(hiopIterate& it_ini,
+					    const hiopVector& grad_f,
+					    const hiopMatrix& jac_c,
+					    const hiopMatrix& jac_d)
   {
-    return  LSQUpdate(it_ini,grad_f,jac_c,jac_d);
+    return LSQUpdate(it_ini,grad_f,jac_c,jac_d);
   }
 private: //common code 
-  virtual bool LSQUpdate(hiopIterate& it, const hiopVector& grad_f, const hiopMatrix& jac_c, const hiopMatrix& jac_d);
+  virtual bool LSQUpdate(hiopIterate& it,
+			 const hiopVector& grad_f,
+			 const hiopMatrix& jac_c,
+			 const hiopMatrix& jac_d);
 private:
   hiopMatrixDense *_mexme, *_mexmi, *_mixmi, *_mxm;
   hiopMatrixDense *M;
@@ -130,9 +136,12 @@ private:
 #endif
 
   //user options
-  double recalc_lsq_duals_tol;  //do not recompute duals using LSQ unless the primal infeasibilty or constraint violation 
-                                //is less than this tolerance; default 1e-6
 
+  /** Do not recompute duals using LSQ unless the primal infeasibilty or constraint violation 
+   * is less than this tolerance; default 1e-6
+   */
+  double recalc_lsq_duals_tol;  
+                                
   //helpers
   int factorizeMat(hiopMatrixDense& M);
   int solveWithFactors(hiopMatrixDense& M, hiopVectorPar& r);
@@ -157,7 +166,8 @@ public:
 		  const double& f, const hiopVector& c, const hiopVector& d,
 		  const hiopVector& grad_f, const hiopMatrix& jac_c, const hiopMatrix& jac_d,
 		  const hiopIterate& search_dir, const double& alpha_primal, const double& alpha_dual,
-		  const double& mu, const double& kappa_sigma, const double& infeas_nrm_trial) { 
+		  const double& mu, const double& kappa_sigma, const double& infeas_nrm_trial)
+  { 
     if(!iter_plus.takeStep_duals(iter, search_dir, alpha_primal, alpha_dual)) {
       _nlp->log->printf(hovError, "dual Newton updater: error in standard update of the duals");
       return false;

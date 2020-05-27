@@ -136,7 +136,7 @@ go(const hiopIterate& iter,  hiopIterate& iter_plus,
 
 /** Given xk, zk_l, zk_u, vk_l, and vk_u (contained in 'iter'), this method solves an LSQ problem 
  * corresponding to dual infeasibility equation
- *    min_{y_c,y_d} ||  \nabla f(xk) + J^T_c(xk) y_c + J_d^T(xk) y_d - zk_l+zk_u ||^2
+ *    min_{y_c,y_d} ||  \nabla f(xk) + J^T_c(xk) y_c + J_d^T(xk) y_d - zk_l+zk_u  ||^2
  *                  || - y_d - vk_l + vk_u                                        ||_2,
  *  which is
  *   min_{y_c, y_d} || [ J_c^T  J_d^T ] [ y_c ]  -  [ -\nabla f(xk) + zk_l-zk_u ]  ||^2
@@ -150,7 +150,8 @@ go(const hiopIterate& iter,  hiopIterate& iter_plus,
  * The matrix of the above system is stored in the member variable M of this class and the
  *  right-hand side in 'rhs'
  */
-bool hiopDualsLsqUpdate::LSQUpdate(hiopIterate& iter, const hiopVector& grad_f, const hiopMatrix& jac_c, const hiopMatrix& jac_d)
+bool hiopDualsLsqUpdate::
+LSQUpdate(hiopIterate& iter, const hiopVector& grad_f, const hiopMatrix& jac_c, const hiopMatrix& jac_d)
 {
   hiopNlpDenseConstraints* nlpd = dynamic_cast<hiopNlpDenseConstraints*>(_nlp);
   assert(nlpd!=NULL);
@@ -166,14 +167,12 @@ bool hiopDualsLsqUpdate::LSQUpdate(hiopIterate& iter, const hiopVector& grad_f, 
   M->copyBlockFromMatrix(0, nlpd->m_eq(), *_mexmi);
   M->copyBlockFromMatrix(nlpd->m_eq(),nlpd->m_eq(), *_mixmi);
 
-  //nlpd->log->write("aaa", *M, hovSummary);
 #ifdef HIOP_DEEPCHECKS
   M_copy->copyFrom(*M);
   jac_d.timesMatTrans(0.0, *_mixme, 1.0, jac_c);
   M_copy->copyBlockFromMatrix(nlpd->m_eq(), 0, *_mixme);
   M_copy->assertSymmetry(1e-12);
 #endif
-
 
   //bailout in case there is an error in the Cholesky factorization
   int info;
@@ -222,12 +221,14 @@ bool hiopDualsLsqUpdate::LSQUpdate(hiopIterate& iter, const hiopVector& grad_f, 
   M_copy->timesVec(-1.0,  *rhs_copy, 1.0, *rhs);
   double nrmres = rhs_copy->twonorm() / (1+nrmrhs);
   if(nrmres>1e-4) {
-    nlpd->log->printf(hovError, "hiopDualsLsqUpdate::LSQUpdate linear system residual is dangerously high: %g\n", nrmres);
+    nlpd->log->printf(hovError,
+		      "hiopDualsLsqUpdate::LSQUpdate linear system residual is dangerously high: %g\n", nrmres);
     assert(false && "hiopDualsLsqUpdate::LSQUpdate linear system residual is dangerously high");
     return false;
   } else {
     if(nrmres>1e-6)
-      nlpd->log->printf(hovWarning, "hiopDualsLsqUpdate::LSQUpdate linear system residual is dangerously high: %g\n", nrmres);
+      nlpd->log->printf(hovWarning,
+			"hiopDualsLsqUpdate::LSQUpdate linear system residual is dangerously high: %g\n", nrmres);
   }
 #endif
 

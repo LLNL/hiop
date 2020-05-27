@@ -113,6 +113,7 @@ void hiopOptions::registerOptions()
 		    "Linear reduction coefficient for mu (default 0.2) (eqn (7) in Filt-IPM paper)");
   registerNumOption("theta_mu", 1.5,  1.0,   2.0, 
 		    "Exponential reduction coefficient for mu (default 1.5) (eqn (7) in Filt-IPM paper)");
+  registerNumOption("eta_phi", 1e-8, 0, 0.01, "Parameter of (suff. decrease) in Armijo Rule");
   registerNumOption("tolerance", 1e-8, 1e-14, 1e-1, 
 		    "Absolute error tolerance for the NLP (default 1e-8)");
   registerNumOption("rel_tolerance", 0., 0., 0.1, 
@@ -123,9 +124,9 @@ void hiopOptions::registerOptions()
 		    "(see eqn (8) in the Filt-IPM paper) (default 0.99)");
   registerNumOption("kappa_eps", 10., 1e-6, 1e+3, 
 		    "mu is reduced when when log-bar error is below kappa_eps*mu (default 10.)");
-  registerNumOption("kappa1", 1e-2, 1e-8, 1e+0, 
+  registerNumOption("kappa1", 1e-2, 1e-16, 1e+0, 
 		    "sufficiently-away-from-the-boundary projection parameter used in initialization (default 1e-2)");
-  registerNumOption("kappa2", 1e-2, 1e-8, 0.49999, 
+  registerNumOption("kappa2", 1e-2, 1e-16, 0.49999, 
 		    "shift projection parameter used in initialization for double-bounded variables (default 1e-2)");
   registerNumOption("smax", 100., 1., 1e+7, 
 		    "multiplier threshold used in computing the scaling factors for the optimality error (default 100.)"); 
@@ -209,6 +210,32 @@ void hiopOptions::registerOptions()
     registerStrOption("compute_mode", "auto", range, 
 		      "'auto', 'cpu', 'hybrid'; 'hybrid'=cpu+gpu; 'auto' will decide between "
 		      "'cpu' and 'hybrid' based on the other options passed");
+  }
+  //inertia correction and Jacobian regularization
+  {
+    //Hessian related
+    registerNumOption("delta_w_min_bar", 1e-20, 0, 1000., 
+		      "Smallest perturbation of the Hessian block for inertia correction");
+    registerNumOption("delta_w_max_bar", 1e+20, 1e-40, 1e+40, 
+		      "Largest perturbation of the Hessian block for inertia correction");
+    registerNumOption("delta_0_bar", 1e-4, 0, 1e+40, 
+		      "First perturbation of the Hessian block for inertia correction");
+    registerNumOption("kappa_w_minus", 1./3, 1e-20, 1-1e-20, 
+		      "Factor to decrease the most recent successful perturbation for inertia correction");
+    registerNumOption("kappa_w_plus", 8., 1+1e-20, 1e+40, 
+		      "Factor to increase perturbation when it did not provide correct "
+		      "inertia correction (not first iteration)");
+    registerNumOption("kappa_w_plus_bar", 100., 1+1e-20, 1e+40, 
+		      "Factor to increase perturbation when it did not provide correct "
+		      "inertia correction (first iteration when scale not known)");
+    //Jacobian related
+    registerNumOption("delta_c_bar", 1e-8, 1e-20, 1e+40, 
+		      "Factor for regularization for potentially rank-deficient Jacobian "
+		      "(delta_c=delta_c_bar*mu^kappa_c");
+    registerNumOption("kappa_c", 0.25, 0., 1e+40, 
+		      "Exponent of mu when computing regularization for potentially rank-deficient "
+		      "Jacobian (delta_c=delta_c_bar*mu^kappa_c)");
+
   }
   //other options
   {
