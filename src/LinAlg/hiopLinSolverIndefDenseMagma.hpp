@@ -18,6 +18,14 @@
  *magma_int_t magma_dsytrf_nopiv_gpu (magma_uplo_t uplo, magma_int_t n, magmaDouble_ptr dA, magma_int_t ldda, magma_int_t *info)
  * Guidelines on when to use _gpu ?
  *
+ *
+ *  Forward and backsolves
+ *  magma_int_t magma_dsytrs_nopiv_gpu(magma_uplo_t uplo, magma_int_t n, magma_int_t nrhs, magmaDouble_ptr dA, magma_int_t ldda, magmaDouble_ptr dB, magma_int_t lddb, magma_int_t * info)
+ *
+ * How about when use (cpu) magma_dsytrf? What dsytrs function to use? 
+ * In the example, the (triu) solves are done with blas blasf77_dsymv
+ * 
+ *
  */
 
 namespace hiop {
@@ -71,12 +79,67 @@ public:
     //
     //query sizes
     //
-
     magma_dsytrf(uplo, N, M.local_buffer(), lda, ipiv, &info );
+
+    if(info<0) {
+      nlp->log->printf(hovError,
+		       "hiopLinSolverMagma error: %d argument to dsytrf has an illegal value.\n",
+		       -info);
+      return -1;
+    } else {
+      if(info>0) {
+	nlp->log->printf(hovWarning,
+			 "hiopLinSolverMagma error: %d entry in the factorization's diagonal\n"
+			 "is exactly zero. Division by zero will occur if it a solve is attempted.\n",
+			 info);
+	//matrix is singular
+	return -1;
+      }
+    }
     assert(info==0);
-
-
+    //
+    // Compute the inertia. Only negative eigenvalues are returned.
+    // Code originally written by M. Schanenfor PIPS based on
+    // LINPACK's dsidi Fortran routine (http://www.netlib.org/linpack/dsidi.f)
+    // 04/08/2020 - petra: fixed the test for non-positive pivots (was only for negative pivots)
     int negEigVal=0;
+    int posEigVal=0;
+    int nullEigVal=0;
+    double t=0;
+    double** MM = M.get_M();
+    for(int k=0; k<N; k++) {
+      //c       2 by 2 block
+      //c       use det (d  s)  =  (d/t * c - t) * t  ,  t = dabs(s)
+      //c               (s  c)
+      //c       to avoid underflow/overflow troubles.
+      //c       take two passes through scaling.  use  t  for flag.
+      double d = MM[k][k];
+      if(ipiv[k] <= 0) {
+	if(t==0) {
+	  assert(k+1<N);
+	  if(k+1<N) {
+	    t=fabs(MM[k][k+1]);
+	    d=(d/t) * MM[k+1][k+1]-t;
+	  }
+	} else {
+	  d=t;
+	  t=0.;
+	}
+      }
+      //printf("d = %22.14e \n", d);
+      //if(d<0) negEigVal++;
+      if(d < -1e-14) {
+	negEigVal++;
+      } else if(d < 1e-14) {
+	nullEigVal++;
+	//break;
+      } else {
+	posEigVal++;
+      }
+    }
+    //printf("(pos,null,neg)=(%d,%d,%d)\n", posEigVal, nullEigVal, negEigVal);
+    
+    if(nullEigVal>0) return -1;
     return negEigVal;
   }
     
