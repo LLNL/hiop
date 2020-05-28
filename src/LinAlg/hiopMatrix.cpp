@@ -226,8 +226,9 @@ void hiopMatrixDense::shiftRows(long long shift)
 {
   shift=-shift; // To preserve shift>0 -> up and shift<0 -> down
   if(shift==0) return;
-  if(-shift==m_local) return; //nothing to shift
-  if(m_local==0) return; //nothing to shift
+  if(fabs(shift)==m_local) return; //nothing to shift
+  if(m_local<=1) return; //nothing to shift
+  
   assert(fabs(shift)<m_local); 
 
   //at this point m_local should be >=2
