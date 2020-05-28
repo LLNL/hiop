@@ -46,9 +46,8 @@
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or 
 // product endorsement purposes.
 
-
 #include "hiopKKTLinSysMDS.hpp"
-
+#include "hiopLinSolverIndefDenseMagma.hpp"
 namespace hiop
 {
 
@@ -104,7 +103,7 @@ namespace hiop
       if(nlp_->options->GetString("compute_mode")=="hybrid") {
 #ifdef HIOP_USE_MAGMA
 	nlp_->log->printf(hovScalars, "LinSysMDSXYcYd: Magma for a matrix of size %d\n", n);
-	linSys_ = new hiopLinSolverIndefDenseMagma(n, nlp_);
+	linSys_ = new hiopLinSolverIndefDenseMagmaDev(n, nlp_);
 #else
 	nlp_->log->printf(hovScalars, "LinSysMDSXYcYd: Lapack for a matrix of size %d\n", n);
 	linSys_ = new hiopLinSolverIndefDenseLapack(n, nlp_);
