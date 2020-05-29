@@ -73,13 +73,24 @@ public:
     int N=M.n(), lda = N, info;
     if(N==0) return 0;
 
-    double dwork_tmp;
+    hiopTimer tm_glob; 
+    tm_glob.start();
+    hiopTimer tm; 
+    tm.start();
+
+
+    double gflops = FLOPS_DPOTRF( N )  / 1e9;
+
     magma_uplo_t uplo=MagmaLower; // M is upper in C++ so it's lower in fortran
 
     //
     //query sizes
     //
     magma_dsytrf(uplo, N, M.local_buffer(), lda, ipiv, &info );
+
+    tm.stop();
+    printf("GPU FACT in %g sec at TFlops: %g\n", tm.getElapsedTime(), gflops / tm.getElapsedTime() / 1000.);
+
 
     if(info<0) {
       nlp->log->printf(hovError,
@@ -152,10 +163,28 @@ public:
   void solve ( hiopVector& x_ )
   {
     assert(M.n() == M.m());
-    assert(x_.get_size()==M.n());
-    int N=M.n(), LDA = N, LDB=N;
-    if(N==0) return;
+    assert(x_.get_size() == M.n());
+    int N = M.n();
+    int LDA = N;
+    int LDB = N;
+    int NRHS = 1;
+    if(N == 0) return;
 
+    hiopVectorPar* x = dynamic_cast<hiopVectorPar*>(&x_);
+    assert(x != NULL);
+
+    char uplo='L'; // M is upper in C++ so it's lower in fortran
+    int info;
+    DSYTRS(&uplo, &N, &NRHS, M.local_buffer(), &LDA, ipiv, x->local_data(), &LDB, &info);
+    if(info<0) {
+      nlp->log->printf(hovError, "hiopLinSolverMAGMA: (LAPACK) DSYTRS returned error %d\n", info);
+      assert(false);
+    } else if(info>0) {
+      nlp->log->printf(hovError, "hiopLinSolverMAGMA: (LAPACK) DSYTRS returned error %d\n", info);
+    }
+
+
+    /*
     printf("Solve starts on a matrix %d x %d\n", N, N);
 
     magma_int_t info; 
@@ -200,6 +229,7 @@ public:
     t.stop(); t_glob.stop();
     printf("gpu->cpu solution transfer in %g sec\n", t.getElapsedTime());
     printf("including tranfer time -> TFlops: %g\n", gflops / t_glob.getElapsedTime() / 1000.);
+    */
   }
   void solve ( hiopMatrix& x ) { assert(false && "not needed; see the other solve method for implementation"); }
 
