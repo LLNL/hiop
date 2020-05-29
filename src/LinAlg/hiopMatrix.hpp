@@ -184,7 +184,11 @@ public:
   /* number of columns */
   virtual long long n() const = 0;
 #ifdef HIOP_DEEPCHECKS
-  /* check symmetry */
+  /** Checks symmetry for locally/non-distributed matrices: returns true if the absolute difference
+   * (i,j) and  (j,i) entries is less than @param tol, otherwise return false and assert(false)
+   *
+   * For distributed matrices, this function returns false (and assert(false)).
+   * */
   virtual bool assertSymmetry(double tol=1e-16) const = 0;
 #endif
 };

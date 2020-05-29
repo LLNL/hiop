@@ -796,8 +796,15 @@ double hiopMatrixDense::max_abs_value()
 #ifdef HIOP_DEEPCHECKS
 bool hiopMatrixDense::assertSymmetry(double tol) const
 {
+  if(n_local!=n_global) {
+    assert(false && "should be used only for local matrices");
+    return false;
+  }
   //must be square
-  if(m_local!=n_global) assert(false);
+  if(m_local!=n_global) {
+    assert(false);
+    return false;
+  }
 
   //symmetry
   for(int i=0; i<n_local; i++)
@@ -805,6 +812,9 @@ bool hiopMatrixDense::assertSymmetry(double tol) const
       double ij=M[i][j], ji=M[j][i];
       double relerr= fabs(ij-ji)/(1+fabs(ij));
       assert(relerr<tol);
+      if(relerr>=tol) {
+	return false;
+      }
     }
   return true;
 }
