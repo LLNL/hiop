@@ -225,17 +225,22 @@ void hiopMatrixDense::copyFromMatrixBlock(const hiopMatrixDense& src, const int 
 void hiopMatrixDense::shiftRows(long long shift)
 {
   if(shift==0) return;
-  if(-shift==m_local) return; //nothing to shift
-  if(m_local==0) return; //nothing to shift
+  if(fabs(shift)==m_local) return; //nothing to shift
+  if(m_local<=1) return; //nothing to shift
+  
   assert(fabs(shift)<m_local); 
 
+  //at this point m_local should be >=2
+  assert(m_local>=2);
+  //and
+  assert(m_local-fabs(shift)>=1);
 #ifdef HIOP_DEEPCHECKS
   double test1=8.3, test2=-98.3;
   if(n_local>0) {
     //not sure if memcpy is copying sequentially on all systems. we check this.
     //let's at least check it
-    test1=shift<0 ? M[-shift][0] : M[m_local-shift][0];
-    test2=shift<0 ? M[-shift][n_local-1] : M[m_local-shift][n_local-1];
+    test1=shift<0 ? M[-shift][0] : M[m_local-shift-1][0];
+    test2=shift<0 ? M[-shift][n_local-1] : M[m_local-shift-1][n_local-1];
   }
 #endif
 
@@ -250,11 +255,11 @@ void hiopMatrixDense::shiftRows(long long shift)
       memcpy(M[row], M[row-shift], n_local*sizeof(double));
     }
   }
-
+ 
 #ifdef HIOP_DEEPCHECKS
   if(n_local>0) {
-    assert(test1==M[shift<0?0:m_local][0] && "a different copy technique than memcpy is needed on this system");
-    assert(test2==M[shift<0?0:m_local][n_local-1] && "a different copy technique than memcpy is needed on this system");
+    assert(test1==M[shift<0?0:m_local-1][0] && "a different copy technique than memcpy is needed on this system");
+    assert(test2==M[shift<0?0:m_local-1][n_local-1] && "a different copy technique than memcpy is needed on this system");
   }
 #endif
 }
@@ -684,6 +689,17 @@ void hiopMatrixDense::addSubDiagonal(int start_on_dest_diag, const double& alpha
     M[i+start_on_dest_diag][i+start_on_dest_diag] += alpha*dd[start_on_src_vec+i];
 }
 
+void hiopMatrixDense::addSubDiagonal(int start_on_dest_diag, int num_elems, const double& c)
+{
+  assert(num_elems>=0);
+  assert(start_on_dest_diag>=0 && start_on_dest_diag+num_elems<=n_local);
+  assert(n_local == n_global && "method supported only for non-distributed matrices");
+  assert(n_local == m_local  && "method supported only for symmetric matrices");
+
+  for(int i=0; i<num_elems; i++)
+    M[i+start_on_dest_diag][i+start_on_dest_diag] += c;  
+}
+
 void hiopMatrixDense::addMatrix(double alpha, const hiopMatrix& X_)
 {
   const hiopMatrixDense& X = dynamic_cast<const hiopMatrixDense&>(X_); 
@@ -780,8 +796,15 @@ double hiopMatrixDense::max_abs_value()
 #ifdef HIOP_DEEPCHECKS
 bool hiopMatrixDense::assertSymmetry(double tol) const
 {
+  if(n_local!=n_global) {
+    assert(false && "should be used only for local matrices");
+    return false;
+  }
   //must be square
-  if(m_local!=n_global) assert(false);
+  if(m_local!=n_global) {
+    assert(false);
+    return false;
+  }
 
   //symmetry
   for(int i=0; i<n_local; i++)
@@ -789,6 +812,9 @@ bool hiopMatrixDense::assertSymmetry(double tol) const
       double ij=M[i][j], ji=M[j][i];
       double relerr= fabs(ij-ji)/(1+fabs(ij));
       assert(relerr<tol);
+      if(relerr>=tol) {
+	return false;
+      }
     }
   return true;
 }

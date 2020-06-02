@@ -103,6 +103,7 @@ enum hiopSolveStatus {
 
   //unknown NLP solver errors or return codes
   UnknownNLPSolveStatus=-1000,
+  SolveInitializationError=-1001,
 
   //intermediary statuses for the solver
   NlpSolve_IncompleteInit=-10001,

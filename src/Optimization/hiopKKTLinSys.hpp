@@ -52,6 +52,7 @@
 #include "hiopIterate.hpp"
 #include "hiopResidual.hpp"
 #include "hiopHessianLowRank.hpp"
+#include "hiopPDPerturbation.hpp"
 
 namespace hiop
 {
@@ -59,8 +60,9 @@ namespace hiop
 class hiopKKTLinSys 
 {
 public:
-  hiopKKTLinSys(hiopNlpFormulation* nlp_) 
-    : nlp(nlp_), iter(NULL), grad_f(NULL), Jac_c(NULL), Jac_d(NULL), Hess(NULL)
+  hiopKKTLinSys(hiopNlpFormulation* nlp) 
+    : nlp_(nlp), iter_(NULL), grad_f_(NULL), Jac_c_(NULL), Jac_d_(NULL), Hess_(NULL),
+      perturb_calc_(NULL)
   { }
   virtual ~hiopKKTLinSys() 
   { }
@@ -76,40 +78,52 @@ public:
    * with the factors, then computes the "full-space" directions */
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction) = 0;
 
+  virtual void set_PD_perturb_calc(hiopPDPerturbation* p)
+  {
+    perturb_calc_ = p;
+  }
 #ifdef HIOP_DEEPCHECKS
   //computes the solve error for the KKT Linear system; used only for correctness checking
   virtual double errorKKT(const hiopResidual* resid, const hiopIterate* sol);
-
+  
 protected:
-  //y=beta*y+alpha*H*x
+  /** y=beta*y+alpha*H*x
+   * Should not include log barrier diagonal terms
+   * Should not include IC perturbations
+   *
+   * A default implementation is below
+   */
   virtual void HessianTimesVec_noLogBarrierTerm(double beta, hiopVector& y, 
 						double alpha, const hiopVector&x)
   {
-    Hess->timesVec(beta, y, alpha, x);
+    Hess_->timesVec(beta, y, alpha, x);
   }
+
+
 #endif
 protected:
-  hiopNlpFormulation* nlp;
-  const hiopIterate* iter;
-  const hiopVectorPar* grad_f;
-  const hiopMatrix *Jac_c, *Jac_d;
-  hiopMatrix* Hess;
+  hiopNlpFormulation* nlp_;
+  const hiopIterate* iter_;
+  const hiopVectorPar* grad_f_;
+  const hiopMatrix *Jac_c_, *Jac_d_;
+  hiopMatrix* Hess_;
+  hiopPDPerturbation* perturb_calc_;
 };
 
 class hiopKKTLinSysCompressed : public hiopKKTLinSys
 {
 public:
-  hiopKKTLinSysCompressed(hiopNlpFormulation* nlp_)
-    : hiopKKTLinSys(nlp_), Dx(NULL), rx_tilde(NULL)
+  hiopKKTLinSysCompressed(hiopNlpFormulation* nlp)
+    : hiopKKTLinSys(nlp), Dx_(NULL), rx_tilde_(NULL)
   {
-    Dx = dynamic_cast<hiopVectorPar*>(nlp->alloc_primal_vec());
-    assert(Dx != NULL);
-    rx_tilde  = Dx->alloc_clone(); 
+    Dx_ = dynamic_cast<hiopVectorPar*>(nlp->alloc_primal_vec());
+    assert(Dx_ != NULL);
+    rx_tilde_  = Dx_->alloc_clone(); 
   }
   virtual ~hiopKKTLinSysCompressed() 
   {
-    delete Dx;
-    delete rx_tilde;
+    delete Dx_;
+    delete rx_tilde_;
   }
   virtual bool update(const hiopIterate* iter, 
 		      const hiopVector* grad_f, 
@@ -118,8 +132,8 @@ public:
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction) = 0;
 
 protected:
-  hiopVectorPar *Dx;
-  hiopVectorPar *rx_tilde;
+  hiopVectorPar* Dx_;
+  hiopVectorPar* rx_tilde_;
 };
 
 /* Provides the functionality for reducing the KKT linear system to the 
@@ -134,7 +148,7 @@ protected:
 class hiopKKTLinSysCompressedXYcYd : public hiopKKTLinSysCompressed
 {
 public:
-  hiopKKTLinSysCompressedXYcYd(hiopNlpFormulation* nlp_);
+  hiopKKTLinSysCompressedXYcYd(hiopNlpFormulation* nlp);
   virtual ~hiopKKTLinSysCompressedXYcYd();
 
   virtual bool update(const hiopIterate* iter, 
@@ -157,8 +171,8 @@ public:
 #endif
 
 protected:
-  hiopVectorPar *Dd_inv;
-  hiopVectorPar *ryd_tilde;
+  hiopVectorPar *Dd_inv_;
+  hiopVectorPar *ryd_tilde_;
 };
 
 /* Provides the functionality for reducing the KKT linear system to the 
@@ -176,7 +190,7 @@ protected:
 class hiopKKTLinSysCompressedXDYcYd : public hiopKKTLinSysCompressed
 {
 public:
-  hiopKKTLinSysCompressedXDYcYd(hiopNlpFormulation* nlp_);
+  hiopKKTLinSysCompressedXDYcYd(hiopNlpFormulation* nlp);
   virtual ~hiopKKTLinSysCompressedXDYcYd();
 
   virtual bool update(const hiopIterate* iter, 
@@ -198,15 +212,15 @@ public:
 #endif
 
 protected:
-  hiopVectorPar *Dd;
-  hiopVectorPar *rd_tilde;
+  hiopVectorPar *Dd_;
+  hiopVectorPar *rd_tilde_;
 protected: 
 #ifdef HIOP_DEEPCHECKS
   //y=beta*y+alpha*H*x
   virtual void HessianTimesVec_noLogBarrierTerm(double beta, hiopVector& y, 
 						double alpha, const hiopVector&x)
   {
-    Hess->timesVec(beta, y, alpha, x);
+    Hess_->timesVec(beta, y, alpha, x);
   }
 #endif
 };
@@ -214,22 +228,22 @@ protected:
 class hiopKKTLinSysLowRank : public hiopKKTLinSysCompressedXYcYd
 {
 public:
-  hiopKKTLinSysLowRank(hiopNlpFormulation* nlp_);
+  hiopKKTLinSysLowRank(hiopNlpFormulation* nlp);
   virtual ~hiopKKTLinSysLowRank();
 
   bool update(const hiopIterate* iter, 
 	      const hiopVector* grad_f, 
-	      const hiopMatrix* Jac_c_, const hiopMatrix* Jac_d_, 
-	      hiopMatrix* Hess_)
+	      const hiopMatrix* Jac_c, const hiopMatrix* Jac_d, 
+	      hiopMatrix* Hess)
   {
-    const hiopMatrixDense* Jac_c = dynamic_cast<const hiopMatrixDense*>(Jac_c_);
-    const hiopMatrixDense* Jac_d = dynamic_cast<const hiopMatrixDense*>(Jac_d_);
-    hiopHessianLowRank* Hess = dynamic_cast<hiopHessianLowRank*>(Hess_);
-    if(Jac_c==NULL || Jac_d==NULL || Hess==NULL) {
+    const hiopMatrixDense* Jac_c_ = dynamic_cast<const hiopMatrixDense*>(Jac_c);
+    const hiopMatrixDense* Jac_d_ = dynamic_cast<const hiopMatrixDense*>(Jac_d);
+    hiopHessianLowRank* Hess_ = dynamic_cast<hiopHessianLowRank*>(Hess);
+    if(Jac_c_==NULL || Jac_d_==NULL || Hess_==NULL) {
       assert(false);
       return false;
     }
-    return update(iter, grad_f, Jac_c, Jac_d, Hess);
+    return update(iter, grad_f_, Jac_c_, Jac_d_, Hess_);
   }
 
   virtual bool update(const hiopIterate* iter, 
@@ -252,9 +266,6 @@ public:
   virtual void solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
 			       hiopVectorPar& dx, hiopVectorPar& dyc, hiopVectorPar& dyd);
 
-  //int factorizeMat(hiopMatrixDense& M);
-  //int solveWithFactors(hiopMatrixDense& M, hiopVectorPar& r);
-
   //LAPACK wrappers
   int solve(hiopMatrixDense& M, hiopVectorPar& rhs);
   int solveWithRefin(hiopMatrixDense& M, hiopVectorPar& rhs);
@@ -266,7 +277,7 @@ protected:
   //y=beta*y+alpha*H*x
   void HessianTimesVec_noLogBarrierTerm(double beta, hiopVector& y, double alpha, const hiopVector& x)
   {
-    hiopHessianLowRank* HessLowR = dynamic_cast<hiopHessianLowRank*>(Hess);
+    hiopHessianLowRank* HessLowR = dynamic_cast<hiopHessianLowRank*>(Hess_);
     assert(NULL != HessLowR);
     if(HessLowR) HessLowR->timesVec_noLogBarrierTerm(beta, y, alpha, x);
   }

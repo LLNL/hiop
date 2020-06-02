@@ -67,4 +67,20 @@ bool hiopFilter::contains(const double& theta, const double& phi) const
   return bFound;
 }
 
+void hiopFilter::print(FILE* file, const char* msg) const
+{
+  if(msg) fprintf(file, "%s", msg);
+  fprintf(file, " (theta, phi) pairs: ");
+
+  for(auto& fe : entries) {
+    fprintf(file, "(%22.16e, %22.16e) ", fe.theta, fe.phi);
+  }
+
+  if(entries.size()==0) {
+    fprintf(file, "filter is empty");
+  }
+  fprintf(file, "\n");
+}
+
+  
 };

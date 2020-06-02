@@ -128,6 +128,8 @@ public:
   virtual void axzpy ( double alpha, const hiopVector& x, const hiopVector& z ) = 0;
   /** this += alpha * x / z */
   virtual void axdzpy( double alpha, const hiopVector& x, const hiopVector& z ) = 0;
+  /** this += alpha * x / z on entries 'i' for which select[i]==1. */
+  virtual void axdzpy_w_pattern( double alpha, const hiopVector& x, const hiopVector& z, const hiopVector& select ) = 0; 
   /** Add c to the elements of this */
   virtual void addConstant( double c ) = 0;
   virtual void addConstant_w_patternSelect(double c, const hiopVector& ix) = 0;
