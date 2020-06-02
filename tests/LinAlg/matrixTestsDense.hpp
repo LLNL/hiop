@@ -312,7 +312,6 @@ public:
       hiopMatrixDense &A,
       const int rank)
   {
-    printMessage(SKIP_TEST, __func__, rank); return 0;
     const local_ordinal_type M = getNumLocRows(&A);
     local_ordinal_type uniq_row_idx = 0;
     local_ordinal_type shift = M - 1;

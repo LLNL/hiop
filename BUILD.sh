@@ -33,9 +33,8 @@ if [ -z "$SLURM_SUBMIT_DIR" ]; then
     cd $base_path          || exit 1
 fi
 
-#export MAKEFLAGS="-j 8"
-#export CMAKE_OPTIONS="-GNinja -DCMAKE_BUILD_TYPE=Debug -DENABLE_TESTS=ON"
 export CMAKE_OPTIONS="-DCMAKE_BUILD_TYPE=Debug -DHIOP_WITH_MAKETEST=ON -DHIOP_USE_MPI=ON -DHIOP_DEEPCHECKS=ON"
+export NVBLAS_CONFIG_FILE=$base_path/nvblas.conf
 
 BUILDDIR="build"
 rm -rf $BUILDDIR                || exit 1
