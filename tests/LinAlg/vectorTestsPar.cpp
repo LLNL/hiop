@@ -62,69 +62,69 @@ namespace hiop::tests {
 /// First need to retrieve hiopVectorPar from the abstract interface
 void VectorTestsPar::setLocalElement(hiop::hiopVector* x, local_ordinal_type i, real_type value)
 {
-    hiop::hiopVectorPar* xvec = dynamic_cast<hiop::hiopVectorPar*>(x);
-    real_type* xdat = xvec->local_data();
-    xdat[i] = value;
+  hiop::hiopVectorPar* xvec = dynamic_cast<hiop::hiopVectorPar*>(x);
+  real_type* xdat = xvec->local_data();
+  xdat[i] = value;
 }
 
 /// Returns element _i_ of vector _x_.
 /// First need to retrieve hiopVectorPar from the abstract interface
 real_type VectorTestsPar::getLocalElement(const hiop::hiopVector* x, local_ordinal_type i)
 {
-    const hiop::hiopVectorPar* xvec = dynamic_cast<const hiop::hiopVectorPar*>(x);
-    return xvec->local_data_const()[i];
+  const hiop::hiopVectorPar* xvec = dynamic_cast<const hiop::hiopVectorPar*>(x);
+  return xvec->local_data_const()[i];
 }
 
 /// Returns pointer to local ector data
 real_type* VectorTestsPar::getLocalData(hiop::hiopVector* x)
 {
-    hiop::hiopVectorPar* xvec = dynamic_cast<hiop::hiopVectorPar*>(x);
-    return xvec->local_data();
+  hiop::hiopVectorPar* xvec = dynamic_cast<hiop::hiopVectorPar*>(x);
+  return xvec->local_data();
 }
 
 /// Returns size of local data array for vector _x_
 local_ordinal_type VectorTestsPar::getLocalSize(const hiop::hiopVector* x)
 {
-    const hiop::hiopVectorPar* xvec = dynamic_cast<const hiop::hiopVectorPar*>(x);
-    return static_cast<local_ordinal_type>(xvec->get_local_size());
+  const hiop::hiopVectorPar* xvec = dynamic_cast<const hiop::hiopVectorPar*>(x);
+  return static_cast<local_ordinal_type>(xvec->get_local_size());
 }
 
 #ifdef HIOP_USE_MPI
 /// Get communicator
 MPI_Comm VectorTestsPar::getMPIComm(hiop::hiopVector* x)
 {
-    const hiop::hiopVectorPar* xvec = dynamic_cast<const hiop::hiopVectorPar*>(x);
-    return xvec->get_mpi_comm();
+  const hiop::hiopVectorPar* xvec = dynamic_cast<const hiop::hiopVectorPar*>(x);
+  return xvec->get_mpi_comm();
 }
 #endif
 
 /// If test fails on any rank set fail flag on all ranks
 bool VectorTestsPar::reduceReturn(int failures, hiop::hiopVector* x)
 {
-    int fail = 0;
+  int fail = 0;
 
 #ifdef HIOP_USE_MPI
-    MPI_Allreduce(&failures, &fail, 1, MPI_INT, MPI_SUM, getMPIComm(x));
+  MPI_Allreduce(&failures, &fail, 1, MPI_INT, MPI_SUM, getMPIComm(x));
 #else
-    fail = failures;
+  fail = failures;
 #endif
 
-    return (fail != 0);
+  return (fail != 0);
 }
 
 
 /// Checks if _local_ vector elements are set to `answer`.
 int VectorTestsPar::verifyAnswer(hiop::hiopVector* x, real_type answer)
 {
-    const local_ordinal_type N = getLocalSize(x);
-    const real_type* xdata = getLocalData(x);
+  const local_ordinal_type N = getLocalSize(x);
+  const real_type* xdata = getLocalData(x);
 
-    int local_fail = 0;
-    for(local_ordinal_type i=0; i<N; ++i)
-        if(!isEqual(xdata[i], answer))
-            ++local_fail;
+  int local_fail = 0;
+  for(local_ordinal_type i=0; i<N; ++i)
+    if(!isEqual(xdata[i], answer))
+      ++local_fail;
 
-    return local_fail;
+  return local_fail;
 }
 
 /*
@@ -135,17 +135,17 @@ int VectorTestsPar::verifyAnswer(
     hiop::hiopVector* x,
     std::function<real_type(local_ordinal_type)> expect)
 {
-    const local_ordinal_type N = getLocalSize(x);
+  const local_ordinal_type N = getLocalSize(x);
 
-    int local_fail = 0;
-    for (int i=0; i<N; i++)
+  int local_fail = 0;
+  for (int i=0; i<N; i++)
+  {
+    if(!isEqual(getLocalElement(x, i), expect(i)))
     {
-        if(!isEqual(getLocalElement(x, i), expect(i)))
-        {
-            ++local_fail;
-        }
+      ++local_fail;
     }
-    return local_fail;
+  }
+  return local_fail;
 }
 
 } // namespace hiop::tests

@@ -86,35 +86,35 @@ namespace hiop::tests
 class TestBase
 {
 protected:
-    /// Returns true if two real numbers are equal within tolerance
-    [[nodiscard]] constexpr
-    bool isEqual(const real_type a, const real_type b)
-    {
-        return (std::abs(a - b) < eps);
-    }
+  /// Returns true if two real numbers are equal within tolerance
+  [[nodiscard]] constexpr
+  bool isEqual(const real_type a, const real_type b)
+  {
+    return (std::abs(a - b) < eps);
+  }
 
-    /// Prints error output for each rank
-    void printMessage(const int fail, const char* funcname, const int rank)
+  /// Prints error output for each rank
+  void printMessage(const int fail, const char* funcname, const int rank)
+  {
+    if(fail > 0)
     {
-        if(fail > 0)
-        {
-            std::cout << RED << "--- FAIL: Test " << funcname << " on rank " << rank << CLEAR << "\n";
-        }
-        else if (fail == SKIP_TEST)
-        {
-            if(rank == 0)
-            {
-                std::cout << YELLOW << "--- SKIP: Test " << funcname << CLEAR << "\n";
-            }
-        }
-        else
-        {
-            if(rank == 0)
-            {
-                std::cout << GREEN << "--- PASS: Test " << funcname << CLEAR << "\n";
-            }
-        }
+      std::cout << RED << "--- FAIL: Test " << funcname << " on rank " << rank << CLEAR << "\n";
     }
+    else if (fail == SKIP_TEST)
+    {
+      if(rank == 0)
+      {
+        std::cout << YELLOW << "--- SKIP: Test " << funcname << CLEAR << "\n";
+      }
+    }
+    else
+    {
+      if(rank == 0)
+      {
+        std::cout << GREEN << "--- PASS: Test " << funcname << CLEAR << "\n";
+      }
+    }
+  }
 
 };
 
