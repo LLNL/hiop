@@ -103,28 +103,15 @@ int main(int argc, char** argv)
     m_partition[i] = i*Mlocal;
   }
 
-  // auto n_partition = new global_ordinal_type [numRanks + 1];
-  // n_partition[0] = 0;
-  // for(int i = 1; i < numRanks + 1; ++i)
-  //     n_partition[i] = i*Nlocal;
-
-  // global_ordinal_type Mlocal = 500;
-  // global_ordinal_type Mglobal = Mlocal*numRanks;
-
-  // auto m_partition = new global_ordinal_type [numRanks + 1];
-  // m_partition[0] = 0;
-  // for(int i = 1; i < numRanks + 1; ++i)
-  //     m_partition[i] = i*Mlocal;
-
   int fail = 0;
 
   // Test parallel vector
   {
     hiop::hiopVectorPar x(Nglobal, n_partition, comm);
-    hiop::hiopVectorPar* y = x.alloc_clone();
-    hiop::hiopVectorPar* z = x.alloc_clone();
-    hiop::hiopVectorPar* a = x.alloc_clone();
-    hiop::hiopVectorPar* b = x.alloc_clone();
+    hiop::hiopVectorPar y(Nglobal, n_partition, comm);
+    hiop::hiopVectorPar z(Nglobal, n_partition, comm);
+    hiop::hiopVectorPar a(Nglobal, n_partition, comm);
+    hiop::hiopVectorPar b(Nglobal, n_partition, comm);
 
     // Allocate a vector smaller than x for testing copying operations
     hiop::hiopVectorPar x_smaller(Mglobal, m_partition, comm);
@@ -133,14 +120,14 @@ int main(int argc, char** argv)
     fail += test.vectorGetSize(x, Nglobal, rank);
     fail += test.vectorSetToZero(x, rank);
     fail += test.vectorSetToConstant(x, rank);
-    fail += test.vectorSetToConstant_w_patternSelect(x, *y, rank);
-    fail += test.vectorCopyFrom(x, *y, rank);
-    fail += test.vectorCopyTo(x, *y, rank);
+    fail += test.vectorSetToConstant_w_patternSelect(x, y, rank);
+    fail += test.vectorCopyFrom(x, y, rank);
+    fail += test.vectorCopyTo(x, y, rank);
 
     if (numRanks == 1)
     {
-      fail += test.vectorCopyFromStarting(x, *y, rank);
-      fail += test.vectorStartingAtCopyFromStartingAt(x, *y, rank);
+      fail += test.vectorCopyFromStarting(x, y, rank);
+      fail += test.vectorStartingAtCopyFromStartingAt(x, y, rank);
       fail += test.vectorCopyToStarting(x, x_smaller, rank);
       fail += test.vectorStartingAtCopyToStartingAt(x, x_smaller, rank);
     }
@@ -148,35 +135,35 @@ int main(int argc, char** argv)
     fail += test.vectorTwonorm(x, rank);
     fail += test.vectorInfnorm(x, rank);
     fail += test.vectorOnenorm(x, rank);
-    fail += test.vectorComponentMult(x, *y, rank);
-    fail += test.vectorComponentDiv(x, *y, rank);
-    fail += test.vectorComponentDiv_p_selectPattern(x, *y, *z, rank);
+    fail += test.vectorComponentMult(x, y, rank);
+    fail += test.vectorComponentDiv(x, y, rank);
+    fail += test.vectorComponentDiv_p_selectPattern(x, y, z, rank);
     fail += test.vectorScale(x, rank);
 
-    fail += test.vectorAxpy(x, *y, rank);
-    fail += test.vectorAxzpy(x, *y, *z, rank);
-    fail += test.vectorAxdzpy(x, *y, *z, rank);
+    fail += test.vectorAxpy(x, y, rank);
+    fail += test.vectorAxzpy(x, y, z, rank);
+    fail += test.vectorAxdzpy(x, y, z, rank);
 
     fail += test.vectorAddConstant(x, rank);
-    fail += test.vectorAddConstant_w_patternSelect(x, *y, rank);
-    fail += test.vectorDotProductWith(x, *y, rank);
+    fail += test.vectorAddConstant_w_patternSelect(x, y, rank);
+    fail += test.vectorDotProductWith(x, y, rank);
     fail += test.vectorNegate(x, rank);
     fail += test.vectorInvert(x, rank);
-    fail += test.vectorLogBarrier(x, *y, rank);
-    fail += test.vectorAddLogBarrierGrad(x, *y, *z, rank);
-    fail += test.vectorLinearDampingTerm(x, *y, *z, rank);
+    fail += test.vectorLogBarrier(x, y, rank);
+    fail += test.vectorAddLogBarrierGrad(x, y, z, rank);
+    fail += test.vectorLinearDampingTerm(x, y, z, rank);
 
     fail += test.vectorAllPositive(x, rank);
-    fail += test.vectorAllPositive_w_patternSelect(x, *y, rank);
+    fail += test.vectorAllPositive_w_patternSelect(x, y, rank);
 
     fail += test.vectorMin(x, rank);
-    fail += test.vectorProjectIntoBounds(x, *y, *z, *a, *b, rank);
-    fail += test.vectorFractionToTheBdry(x, *y, rank);
-    fail += test.vectorFractionToTheBdry_w_pattern(x, *y, *z, rank);
+    fail += test.vectorProjectIntoBounds(x, y, z, a, b, rank);
+    fail += test.vectorFractionToTheBdry(x, y, rank);
+    fail += test.vectorFractionToTheBdry_w_pattern(x, y, z, rank);
 
-    fail += test.vectorSelectPattern(x, *y, rank);
-    fail += test.vectorMatchesPattern(x, *y, rank);
-    fail += test.vectorAdjustDuals_plh(x, *y, *z, *a, rank);
+    fail += test.vectorSelectPattern(x, y, rank);
+    fail += test.vectorMatchesPattern(x, y, rank);
+    fail += test.vectorAdjustDuals_plh(x, y, z, a, rank);
     fail += test.vectorIsnan(x, rank);
     fail += test.vectorIsinf(x, rank);
     fail += test.vectorIsfinite(x, rank);
