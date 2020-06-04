@@ -713,7 +713,7 @@ public:
   {
     printMessage(SKIP_TEST, __func__, rank);
     return 0;
-
+    
     const local_ordinal_type N = getLocalSize(&x);
     assert(N == getLocalSize(&pattern));
 
@@ -768,7 +768,7 @@ public:
       [=] (local_ordinal_type i) -> real_type
       {
         const bool isLastElementOnRank0 = (i == N-1 && rank == 0);
-        return isLastElementOnRank0 ? x_val : x_val + (alpha / y_val);
+        return isLastElementOnRank0 ? x_val : logBarrierGradVal;
       });
 
     printMessage(fail, __func__, rank);
