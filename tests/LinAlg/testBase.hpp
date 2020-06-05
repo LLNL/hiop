@@ -55,6 +55,8 @@
  */
 #pragma once
 
+#define THROW_NULL_DEREF throw std::runtime_error("error")
+
 #include <limits>
 #include <cmath>
 

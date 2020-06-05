@@ -68,8 +68,12 @@ void MatrixTestsDense::setLocalElement(
     real_type val)
 {
   hiop::hiopMatrixDense* amat = dynamic_cast<hiop::hiopMatrixDense*>(A);
-  real_type** data = amat->get_M();
-  data[i][j] = val;
+  if(amat != nullptr)
+  {
+    real_type** data = amat->get_M();
+    data[i][j] = val;
+  }
+  else THROW_NULL_DEREF;
 }
 
 void MatrixTestsDense::setLocalElement(
@@ -78,8 +82,12 @@ void MatrixTestsDense::setLocalElement(
     const real_type val)
 {
   auto x = dynamic_cast<hiop::hiopVectorPar*>(_x);
-  real_type* data = x->local_data();
-  data[i] = val;
+  if(x != nullptr)
+  {
+    real_type* data = x->local_data();
+    data[i] = val;
+  }
+  else THROW_NULL_DEREF;
 }
 
 /// Method to set a single row of matrix to a constant value
@@ -103,7 +111,9 @@ real_type MatrixTestsDense::getLocalElement(
     local_ordinal_type j)
 {
   const hiop::hiopMatrixDense* amat = dynamic_cast<const hiop::hiopMatrixDense*>(A);
-  return amat->local_data()[i][j];
+  if(amat != nullptr)
+    return amat->local_data()[i][j];
+  else THROW_NULL_DEREF;
 }
 
 /// Returns element _i_ of vector _x_.
@@ -113,28 +123,36 @@ real_type MatrixTestsDense::getLocalElement(
     local_ordinal_type i)
 {
   const hiop::hiopVectorPar* xvec = dynamic_cast<const hiop::hiopVectorPar*>(x);
-  return xvec->local_data_const()[i];
+  if(xvec != nullptr)
+    return xvec->local_data_const()[i];
+  else THROW_NULL_DEREF;
 }
 
 local_ordinal_type MatrixTestsDense::getNumLocRows(hiop::hiopMatrix* A)
 {
   hiop::hiopMatrixDense* amat = dynamic_cast<hiop::hiopMatrixDense*>(A);
-  return amat->get_local_size_m();
-  //                         ^^^
+  if(amat != nullptr)
+    return amat->get_local_size_m();
+    //                         ^^^
+  else THROW_NULL_DEREF;
 }
 
 local_ordinal_type MatrixTestsDense::getNumLocCols(hiop::hiopMatrix* A)
 {
   hiop::hiopMatrixDense* amat = dynamic_cast<hiop::hiopMatrixDense*>(A);
-  return amat->get_local_size_n();
-  //                         ^^^
+  if(amat != nullptr)
+    return amat->get_local_size_n();
+    //                         ^^^
+  else THROW_NULL_DEREF;
 }
 
 /// Returns size of local data array for vector _x_
 int MatrixTestsDense::getLocalSize(const hiop::hiopVector* x)
 {
   const hiop::hiopVectorPar* xvec = dynamic_cast<const hiop::hiopVectorPar*>(x);
-  return static_cast<int>(xvec->get_local_size());
+  if(xvec != nullptr)
+    return static_cast<int>(xvec->get_local_size());
+  else THROW_NULL_DEREF;
 }
 
 #ifdef HIOP_USE_MPI
@@ -142,7 +160,9 @@ int MatrixTestsDense::getLocalSize(const hiop::hiopVector* x)
 MPI_Comm MatrixTestsDense::getMPIComm(hiop::hiopMatrix* _A)
 {
   const hiop::hiopMatrixDense* A = dynamic_cast<const hiop::hiopMatrixDense*>(_A);
-  return A->get_mpi_comm();
+  if(A != nullptr)
+    return A->get_mpi_comm();
+  else THROW_NULL_DEREF;
 }
 #endif
 
