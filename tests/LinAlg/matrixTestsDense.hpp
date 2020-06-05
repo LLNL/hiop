@@ -190,8 +190,7 @@ public:
     const real_type dst_val = one;
     const real_type src_val = two;
     const local_ordinal_type num_rows_to_copy = dst.m();
-    const local_ordinal_type src_num_rows = src.m();
-    assert(num_rows_to_copy <= src_num_rows);
+    assert(num_rows_to_copy <= src.m());
 
     // Test copying continuous rows from matrix
     dst.setToConstant(dst_val);
@@ -361,9 +360,8 @@ public:
       hiopVectorPar &vec,
       const int rank)
   {
-    const local_ordinal_type N = getNumLocCols(&A);
     const local_ordinal_type M = getNumLocRows(&A);
-    assert(N == vec.get_local_size() && "Did you pass a vector and matrix of compatible lengths?");
+    assert(getNumLocCols(&A) == vec.get_local_size() && "Did you pass a vector and matrix of compatible lengths?");
     assert(A.n() == vec.get_size() && "Did you pass a vector and matrix of compatible lengths?");
 
     const local_ordinal_type row_idx = M - 1;
