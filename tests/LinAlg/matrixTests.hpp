@@ -103,18 +103,15 @@ public:
       hiop::hiopVector& x,
       const int rank)
   {
-    int fail = 0;
-    A.setToConstant(one);
-    const local_ordinal_type M = getNumLocRows(&A);
-    const local_ordinal_type N = getNumLocCols(&A);
     const global_ordinal_type N_glob = A.n();
-    assert(getLocalSize(&y) == M && "Did you pass in vectors of the correct sizes?");
-    assert(getLocalSize(&x) == N && "Did you pass in vectors of the correct sizes?");
+    assert(getLocalSize(&y) == getNumLocRows(&A) && "Did you pass in vectors of the correct sizes?");
+    assert(getLocalSize(&x) == getNumLocCols(&A) && "Did you pass in vectors of the correct sizes?");
     const real_type alpha = one,
           beta  = one,
           A_val = one,
           y_val = three,
           x_val = three;
+    int fail = 0;
 
     y.setToConstant(y_val);
     x.setToConstant(x_val);
@@ -145,8 +142,8 @@ public:
 
     // Take m() because A will be transposed
     const global_ordinal_type N_glob = A.m();
-    assert(getLocalSize(&x) == M && "Did you pass in vectors of the correct sizes?");
-    assert(getLocalSize(&y) == N && "Did you pass in vectors of the correct sizes?");
+    assert(getLocalSize(&x) == getNumLocRows(&A) && "Did you pass in vectors of the correct sizes?");
+    assert(getLocalSize(&y) == getNumLocCols(&A) && "Did you pass in vectors of the correct sizes?");
     const real_type alpha = one,
           beta  = one,
           A_val = one,
@@ -201,14 +198,12 @@ public:
       hiop::hiopMatrix& W,
       const int rank)
   {
-    const local_ordinal_type M = getNumLocRows(&A);
     const local_ordinal_type K = getNumLocCols(&A);
-    const local_ordinal_type N = getNumLocCols(&X);
     assert(K == A.n());
-    assert(N == X.n());
+    assert(getNumLocCols(&X) == X.n());
     assert(K == getNumLocRows(&X));
-    assert(M == getNumLocRows(&W));
-    assert(N == getNumLocCols(&W));
+    assert(getNumLocRows(&A) == getNumLocRows(&W));
+    assert(getNumLocCols(&X) == getNumLocCols(&W));
     const real_type A_val = two,
           X_val = three,
           W_val = two,
@@ -242,11 +237,9 @@ public:
       const int rank)
   {
     const local_ordinal_type K = getNumLocRows(&A_local);
-    const local_ordinal_type M = getNumLocCols(&A_local);
     const global_ordinal_type N_loc = getNumLocCols(&X);
-    const global_ordinal_type N = X.n();
-    assert(M == getNumLocRows(&W) && "Matrices have mismatched shapes");
-    assert(N == W.n() && "Matrices have mismatched shapes");
+    assert(getNumLocCols(&A_local) == getNumLocRows(&W) && "Matrices have mismatched shapes");
+    assert(X.n() == W.n() && "Matrices have mismatched shapes");
     assert(N_loc == getNumLocCols(&W) && "Matrices have mismatched shapes");
     assert(K == getNumLocRows(&X) && "Matrices have mismatched shapes");
     const real_type A_val = two,
@@ -298,11 +291,9 @@ public:
     // Skip for now - undetermined error in timeMatTrans call
     printMessage(SKIP_TEST, __func__, rank); return 0;
 
-    const local_ordinal_type K = getNumLocRows(&A);
     const local_ordinal_type M = getNumLocCols(&A);
-    const global_ordinal_type N = getNumLocRows(&X);
-    assert(K == getNumLocRows(&W_local) && "Matrices have mismatched shapes");
-    assert(N == getNumLocCols(&W_local) && "Matrices have mismatched shapes");
+    assert(getNumLocRows(&A) == getNumLocRows(&W_local) && "Matrices have mismatched shapes");
+    assert(getNumLocRows(&X) == getNumLocCols(&W_local) && "Matrices have mismatched shapes");
     assert(M == getNumLocCols(&X) && "Matrices have mismatched shapes");
     const real_type A_val = two,
           X_val = three,
@@ -331,11 +322,9 @@ public:
       const int rank)
   {
     int fail = 0;
-    const local_ordinal_type M = getNumLocRows(&A);
-    const local_ordinal_type N = getNumLocCols(&A);
-    assert(N == getLocalSize(&x));
-    assert(M == getLocalSize(&x));
-    assert(M == A.n());
+    assert(getNumLocCols(&A) == getLocalSize(&x));
+    assert(getNumLocRows(&A) == getLocalSize(&x));
+    assert(getNumLocRows(&A) == A.n());
     assert(A.n() == x.get_size());
     assert(A.m() == x.get_size());
     constexpr real_type alpha = two,
@@ -424,10 +413,8 @@ public:
       hiop::hiopMatrix& B,
       const int rank)
   {
-    const local_ordinal_type M = getNumLocRows(&A);
-    const local_ordinal_type N = getNumLocCols(&A);
-    assert(M == getNumLocRows(&B));
-    assert(N == getNumLocCols(&B));
+    assert(getNumLocRows(&A) == getNumLocRows(&B));
+    assert(getNumLocCols(&A) == getNumLocCols(&B));
     const real_type alpha = half,
           A_val = half,
           B_val = one;
@@ -453,12 +440,11 @@ public:
   {
     // This method only takes hiopMatrixDense
     auto W = dynamic_cast<hiop::hiopMatrixDense*>(&_W);
-    const local_ordinal_type M = getNumLocRows(W);
     const local_ordinal_type N_loc = getNumLocCols(W);
     const local_ordinal_type A_M = getNumLocRows(&A);
     const local_ordinal_type A_N_loc = getNumLocCols(&A);
     assert(W->m() == W->n());
-    assert(M >= getNumLocRows(&A));
+    assert(getNumLocRows(W) >= getNumLocRows(&A));
     assert(W->n() >= A.n());
 
     const local_ordinal_type start_idx_row = 0;
@@ -500,12 +486,11 @@ public:
   {
     // This method only takes hiopMatrixDense
     auto W = dynamic_cast<hiop::hiopMatrixDense*>(&_W);
-    const local_ordinal_type M = getNumLocRows(W);
     const local_ordinal_type N_loc = getNumLocCols(W);
     const local_ordinal_type A_M = getNumLocRows(&A);
     const local_ordinal_type A_N_loc = getNumLocCols(&A);
     assert(W->m() == W->n());
-    assert(M >= getNumLocRows(&A));
+    assert(getNumLocRows(W) >= getNumLocRows(&A));
     assert(W->n() >= A.n());
 
     const local_ordinal_type start_idx_row = 0;

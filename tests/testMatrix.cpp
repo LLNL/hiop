@@ -71,6 +71,7 @@ int main(int argc, char** argv)
   comm = MPI_COMM_WORLD;
   err = MPI_Comm_rank(comm,&rank);     assert(MPI_SUCCESS==err);
   err = MPI_Comm_size(comm,&numRanks); assert(MPI_SUCCESS==err);
+  (void)err; // Resolves -Wunused-but-set-variable
   if(0 == rank)
     printf("Support for MPI is enabled\n");
 #endif
