@@ -327,20 +327,8 @@ void hiopVectorPar::componentMult( const hiopVector& v_ )
 {
   const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_);
   assert(n_local==v.n_local);
-  //for(int i=0; i<n_local; i++) data[i] *= v.data[i];
-  double*s = data,*x=v.data; 
-  int n2=(n_local/8)*8; double *send2=s+n2, *send=s+n_local;
-  while(s<send2) {
-    *s *= *x; s++; x++; //s[i] *= x[i]; i++;      
-    *s *= *x; s++; x++;
-    *s *= *x; s++; x++;
-    *s *= *x; s++; x++;
-    *s *= *x; s++; x++;
-    *s *= *x; s++; x++;
-    *s *= *x; s++; x++;
-    *s *= *x; s++; x++;
-  }
-  while(s<send) { *s *= *x; s++; x++; }
+  for(int i=0; i<n_local; ++i)
+    data[i] *= v.data[i];
 }
 
 void hiopVectorPar::componentDiv ( const hiopVector& v_ )
@@ -386,110 +374,52 @@ void hiopVectorPar::axzpy(double alpha, const hiopVector& x_, const hiopVector& 
   assert(vx.n_local==vz.n_local);
   assert(   n_local==vz.n_local);
 #endif  
-  // this += alpha * x * z   (s+=alpha*x*z)
-  double*s = data;
+  // this += alpha * x * z   (data+=alpha*x*z)
   const double *x = vx.local_data_const(), *z=vz.local_data_const();
 
-  //unroll loops to save on comparison; hopefully the compiler will take it from here
-  int nn=(n_local/8)*8; double *send1=s+nn, *send2=s+n_local;
-
-  if(alpha== 1.0) { 
-    while(s<send1) {
-      *s += *x * *z; s++; x++; z++; //s[i] += x[i]*z[i]; i++;      
-      *s += *x * *z; s++; x++; z++; 
-      *s += *x * *z; s++; x++; z++;
-      *s += *x * *z; s++; x++; z++;
-      *s += *x * *z; s++; x++; z++; 
-      *s += *x * *z; s++; x++; z++;
-      *s += *x * *z; s++; x++; z++;
-      *s += *x * *z; s++; x++; z++;
+  if(alpha==1.0) { 
+    for(int i=0; i<n_local; ++i) {
+      data[i] += x[i]*z[i];
     }
-    while(s<send2) { *s += *x * *z; s++; x++; z++; }
-
   } else if(alpha==-1.0) { 
-    while(s<send1) {
-      *s -= *x * *z; s++; x++; z++; //s[i] += x[i]*z[i]; i++;      
-      *s -= *x * *z; s++; x++; z++; 
-      *s -= *x * *z; s++; x++; z++;
-      *s -= *x * *z; s++; x++; z++;
-      *s -= *x * *z; s++; x++; z++; 
-      *s -= *x * *z; s++; x++; z++;
-      *s -= *x * *z; s++; x++; z++;
-      *s -= *x * *z; s++; x++; z++;
-    }
-    while(s<send2) { 
-      *s -= *x * *z; s++; x++; z++; 
-    }    
-
-  } else { // alpha is neither 1.0 nor -1.0
-    while(s<send1) {
-      *s += *x * *z * alpha; s++; x++; z++; //s[i] += x[i]*z[i]; i++;      
-      *s += *x * *z * alpha; s++; x++; z++; 
-      *s += *x * *z * alpha; s++; x++; z++; 
-      *s += *x * *z * alpha; s++; x++; z++; 
-      *s += *x * *z * alpha; s++; x++; z++; 
-      *s += *x * *z * alpha; s++; x++; z++; 
-      *s += *x * *z * alpha; s++; x++; z++; 
-    }
-    while(s<send2) { *s += *x * *z * alpha; s++; x++; z++; }
+    for(int i=0; i<n_local; ++i) {
+      data[i] -= x[i]*z[i];
+    }   
+  } else if(alpha!=0.) { // alpha is not 1.0 nor -1.0 nor 0.0
+    for(int i=0; i<n_local; ++i) {
+      data[i] += alpha*x[i]*z[i];
+    } 
   }
 }
 
 void hiopVectorPar::axdzpy( double alpha, const hiopVector& x_, const hiopVector& z_)
 {
+  if(alpha==0.) return;
   const hiopVectorPar& vx = dynamic_cast<const hiopVectorPar&>(x_);
   const hiopVectorPar& vz = dynamic_cast<const hiopVectorPar&>(z_);
 #ifdef HIOP_DEEPCHECKS
   assert(vx.n_local==vz.n_local);
   assert(   n_local==vz.n_local);
 #endif  
-  // this += alpha * x / z   (s+=alpha*x/z)
-  double*s = data;
+  // this += alpha * x / z  
   const double *x = vx.local_data_const(), *z=vz.local_data_const();
 
-  //unroll loops to save on comparison; hopefully the compiler will take it from here
-  int nn=(n_local/3)*3; double *send1=s+nn, *send2=s+n_local;
+  if(alpha == 1.0) {
 
-  if(alpha== 1.0) { 
-    while(s<send1) {
-      *s += *x / *z; s++; x++; z++; //s[i] += x[i]*z[i]; i++;      
-      *s += *x / *z; s++; x++; z++; 
-      *s += *x / *z; s++; x++; z++;
-      //*s += *x / *z; s++; x++; z++;
-      //*s += *x / *z; s++; x++; z++; 
-      //*s += *x / *z; s++; x++; z++;
-      //*s += *x / *z; s++; x++; z++;
-      //*s += *x / *z; s++; x++; z++;
+    for(int i=0; i<n_local; ++i) {
+      data[i] += x[i] / z[i];
     }
-    while(s<send2) { *s += *x * *z; s++; x++; z++; }
 
   } else if(alpha==-1.0) { 
-    while(s<send1) {
-      *s -= *x / *z; s++; x++; z++; //s[i] += x[i]*z[i]; i++;      
-      *s -= *x / *z; s++; x++; z++; 
-      *s -= *x / *z; s++; x++; z++;
-      //*s -= *x / *z; s++; x++; z++;
-      //*s -= *x / *z; s++; x++; z++; 
-      //*s -= *x / *z; s++; x++; z++;
-      //*s -= *x / *z; s++; x++; z++;
-      //*s -= *x / *z; s++; x++; z++;
+
+    for(int i=0; i<n_local; ++i) {
+      data[i] -= x[i] / z[i];
     }
-    while(s<send2) { 
-      *s -= *x / *z; s++; x++; z++; 
-    }    
 
   } else { // alpha is neither 1.0 nor -1.0
-    while(s<send1) {
-      *s += *x / *z * alpha; s++; x++; z++; //s[i] += x[i]*z[i]; i++;      
-      *s += *x / *z * alpha; s++; x++; z++; 
-      *s += *x / *z * alpha; s++; x++; z++; 
-      //!opt *s += *x / *z * alpha; s++; x++; z++; 
-      //*s += *x / *z * alpha; s++; x++; z++; 
-      //*s += *x / *z * alpha; s++; x++; z++; 
-      //*s += *x / *z * alpha; s++; x++; z++; 
-      //*s += *x / *z * alpha; s++; x++; z++; 
+    for(int i=0; i<n_local; ++i) {
+      data[i] += x[i] / z[i] * alpha;
     }
-    while(s<send2) { *s += *x / *z * alpha; s++; x++; z++; }
   }
 }
 
