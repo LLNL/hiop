@@ -106,14 +106,26 @@ public:
   /* this += alpha * (sub)diag */
   virtual void addDiagonal(const double& alpha, const hiopVector& d_) = 0;
   virtual void addDiagonal(const double& value) = 0;
-  virtual void addSubDiagonal(const double& alpha, long long start_on_dest_diag, const hiopVector& d_) = 0;
   
-  /** subdigonal(this) += alpha*d 
-   * Adds to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements of
-   * 'd_' (source) starting at index 'start_on_src_vec'. The number of elements added is 'num_elems' 
-   * if num_elems>=0, otherwise the remaining elems in 'd_' starting at 'start_on_src_vec'. */
+  /**
+   * subdigonal(this) += alpha*d 
+   *
+   * Adds elements of 'd' to the diagonal of 'this' starting at 'start_on_dest_diag'. 
+   * Precondition:  start_on_dest_diag + length(d) <= n_local
+   * 
+   * This method should be used  only for local/non-distributed matrices.
+   */
+  virtual void addSubDiagonal(const double& alpha, long long start_on_dest_diag, const hiopVector& d) = 0;
+  
+  /** 
+  *  subdigonal(this) += alpha*d 
+  *
+  * Adds to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements of
+  * 'd' (source) starting at index 'start_on_src_vec'. The number of elements added is 'num_elems' 
+  * if num_elems>=0, otherwise the remaining elems in 'd' starting at 'start_on_src_vec'. 
+  */
   virtual void addSubDiagonal(int start_on_dest_diag,
-			      const double& alpha, const hiopVector& d_,
+			      const double& alpha, const hiopVector& d,
 			      int start_on_src_vec, int num_elems=-1) = 0;
   /** subdiagonal(this) += c
    * Adds the constant @param c to the diagonal starting at @param start_on_dest_diag

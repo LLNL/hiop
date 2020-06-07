@@ -109,12 +109,6 @@ hiopVectorPar* hiopVectorPar::new_copy () const
   return v;
 }
 
-//hiopVector* hiopVectorPar::new_alloc() const
-//{ }
-//hiopVector* hiopVectorPar::new_copy() const
-//{ }
-
-
 void hiopVectorPar::setToZero()
 {
   for(int i=0; i<n_local; i++) data[i]=0.0;
