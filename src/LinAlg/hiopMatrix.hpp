@@ -113,23 +113,29 @@ public:
    * Adds elements of 'd' to the diagonal of 'this' starting at 'start_on_dest_diag'. 
    * Precondition:  start_on_dest_diag + length(d) <= n_local
    * 
-   * This method should be used  only for local/non-distributed matrices.
+   * This method should be used only for local/non-distributed matrices.
    */
   virtual void addSubDiagonal(const double& alpha, long long start_on_dest_diag, const hiopVector& d) = 0;
   
   /** 
-  *  subdigonal(this) += alpha*d 
-  *
-  * Adds to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements of
-  * 'd' (source) starting at index 'start_on_src_vec'. The number of elements added is 'num_elems' 
-  * if num_elems>=0, otherwise the remaining elems in 'd' starting at 'start_on_src_vec'. 
+   *  subdigonal(this) += alpha*d 
+   *
+   * Adds to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements of
+   * 'd' (source) starting at index 'start_on_src_vec'. The number of elements added is 'num_elems' 
+   * if num_elems>=0, otherwise the remaining elems in 'd' starting at 'start_on_src_vec'.
+   *
+   * This method should be used  only for local/non-distributed matrices. 
   */
   virtual void addSubDiagonal(int start_on_dest_diag,
 			      const double& alpha, const hiopVector& d,
 			      int start_on_src_vec, int num_elems=-1) = 0;
-  /** subdiagonal(this) += c
+  /** 
+   * subdiagonal(this) += c
+   *
    * Adds the constant @param c to the diagonal starting at @param start_on_dest_diag
    * and updating @param num_elems in the diagonal
+   *
+   * This method should be used only for local/non-distributed matrices. 
    */
   virtual void addSubDiagonal(int start_on_dest_diag, int num_elems,
 			      const double& c) = 0;
@@ -140,17 +146,18 @@ public:
   /* block of W += alpha*this
    * For efficiency, only upper triangular matrix is updated since this will be eventually sent to LAPACK
    * Preconditions: 
-   *  1. 'this' has to fit in the upper triangle of W 
+   *  1. 'this' fits in the upper triangle of W 
    *  2. W.n() == W.m()
+   *  3. 'this' and W are local/non-distributed matrices
    */
   virtual void addToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start, 
 						double alpha, hiopMatrixDense& W) const = 0;
   /* block of W += alpha*transpose(this)
    * For efficiency, only upper triangular matrix is updated since this will be eventually sent to LAPACK
    * Preconditions: 
-   *  1. transpose of 'this' has to fit in the upper triangle of W 
+   *  1. transpose of 'this' fits in the upper triangle of W 
    *  2. W.n() == W.m()
-   * 
+   *  3. 'this' and W are local/non-distributed matrices
    */
   virtual void transAddToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start, 
 						     double alpha, hiopMatrixDense& W) const = 0;
@@ -164,6 +171,7 @@ public:
    * Preconditions: 
    *  1. this->n()==this-m()
    *  2. W.n() == W.m()
+   *  3. 'this' and W are local/non-distributed matrices
    */
   virtual void addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start, 
 							     double alpha,
