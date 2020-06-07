@@ -213,6 +213,8 @@ if(HIOP_BUILD_SHARED)
   install(TARGETS hiop_shared DESTINATION lib)
 endif()
 
+add_subdirectory(tests)
+
 install(FILES src/Interface/hiopInterface.hpp
   src/Interface/chiopInterface.hpp
   src/Interface/hiopInterface.h
@@ -251,6 +253,14 @@ install(FILES src/Interface/hiopInterface.hpp
 ##########################################################
 if (HIOP_WITH_MAKETEST)
   enable_testing()
+  add_test(NAME VectorTest        COMMAND $<TARGET_FILE:testVector> -selfcheck)
+  if(HIOP_USE_MPI)
+    add_test(NAME VectorTest_mpi COMMAND mpirun -np 2 $<TARGET_FILE:testVector>)
+  endif(HIOP_USE_MPI)
+  add_test(NAME MatrixTest        COMMAND $<TARGET_FILE:testMatrix> -selfcheck)
+  if(HIOP_USE_MPI)
+    add_test(NAME MatrixTest_mpi COMMAND mpirun -np 2 $<TARGET_FILE:testMatrix>)
+  endif(HIOP_USE_MPI)
   add_test(NAME NlpDenseCons1_5H  COMMAND $<TARGET_FILE:nlpDenseCons_ex1.exe>   500 1.0 -selfcheck)
   add_test(NAME NlpDenseCons1_5K  COMMAND $<TARGET_FILE:nlpDenseCons_ex1.exe>  5000 1.0 -selfcheck)
   add_test(NAME NlpDenseCons1_50K COMMAND $<TARGET_FILE:nlpDenseCons_ex1.exe> 50000 1.0 -selfcheck)

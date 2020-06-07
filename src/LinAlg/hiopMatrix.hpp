@@ -334,6 +334,7 @@ public:
 #endif
   inline long long get_local_size_n() const { return n_local; }
   inline long long get_local_size_m() const { return m_local; }
+  inline MPI_Comm get_mpi_comm() const { return comm; }
 
   //TODO: this is not kosher!
   inline double** local_data() const {return M; }

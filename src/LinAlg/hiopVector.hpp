@@ -271,6 +271,7 @@ public:
   inline long long get_local_size() const { return n_local; }
   inline double* local_data() { return data; }
   inline const double* local_data_const() const { return data; }
+  inline MPI_Comm get_mpi_comm() const { return comm; }
 
 protected:
   MPI_Comm comm;
