@@ -19,8 +19,8 @@ static bool parse_arguments(int argc, char **argv,
 			    long long& n_de)
 {
   self_check=false;
-  n_sp = 400;
-  n_de = 100;
+  n_sp = 100;
+  n_de = 40;
   switch(argc) {
   case 1:
     //no arguments
@@ -46,7 +46,7 @@ static bool parse_arguments(int argc, char **argv,
     return false; //4 or more arguments
   }
 
-  if(self_check && n_sp!=400 && n_de!=100)
+  if(self_check && n_sp!=100 && n_de!=40)
     return false;
   
   return true;
@@ -238,22 +238,22 @@ int main(int argc, char **argv)
   bool selfcheck_ok=true;
   // this is used for testing when the driver is in '-selfcheck' mode
   if(selfCheck) {
-    if(fabs(obj_value1-(-4.999509728895e+01))>1e-6) {
+    if(fabs(obj_value1-(-1.24881064528112e+01))>1e-6) {
       printf("selfcheck1: objective mismatch for Ex5 MDS problem with 400 sparse variables and 100 "
 	     "dense variables did. BTW, obj=%18.12e was returned by HiOp.\n", obj_value1);
       selfcheck_ok = false;
     }
-    if(fabs(obj_value2-(-4.999509728895e+01))>1e-6) {
+    if(fabs(obj_value2-(-1.24881064633628e+01))>1e-6) {
       printf("selfcheck2: objective mismatch for Ex5 MDS problem with 400 sparse variables and 100 "
 	     "dense variables did. BTW, obj=%18.12e was returned by HiOp.\n", obj_value2);
       selfcheck_ok = false;
     }
-    if(fabs(obj_value3-(-3.160999998751e+03))>1e-6) {
+    if(fabs(obj_value3-(-1.24099999964871e+03))>1e-6) {
       printf("selfcheck3: objective mismatch for Ex5 MDS problem with 400 sparse variables and 100 "
 	     "dense variables did. BTW, obj=%18.12e was returned by HiOp.\n", obj_value3);
       selfcheck_ok = false;
     }
-    if(fabs(obj_value4-(-3.160999998751e+03))>1e-6) {
+    if(fabs(obj_value4-(-1.35649999989221e+03))>1e-6) {
       printf("selfcheck4: objective mismatch for Ex5 MDS problem with 400 sparse variables and 100 "
 	     "dense variables did. BTW, obj=%18.12e was returned by HiOp.\n", obj_value4);
       selfcheck_ok = false;
