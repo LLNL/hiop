@@ -190,7 +190,8 @@ public:
   /** pass the communicator, defaults to MPI_COMM_WORLD (dummy for non-MPI builds)  */
   virtual bool get_MPI_comm(MPI_Comm& comm_out) { comm_out=MPI_COMM_WORLD; return true;}
 
-  /**  column partitioning specification for distributed memory vectors 
+  /**  
+   * Column partitioning specification for distributed memory vectors 
   *  Process P owns cols[P], cols[P]+1, ..., cols[P+1]-1, P={0,1,...,NumRanks}.
   *  Example: for a vector x of 6 elements on 3 ranks, the col partitioning is cols=[0,2,4,6].
   *  The caller manages memory associated with 'cols', array of size NumRanks+1 
@@ -199,13 +200,26 @@ public:
     return false; //defaults to serial 
   }
 
-  /* Method providing a primal starting point. This point is subject to internal adjustments in hiOP.
-   * The method returns true (and populate x0) or return false, in which case hiOP will use set 
-   * x0 to all zero (still subject to internal adjustement).
+  /**
+   * Method providing a primal or primal-dual starting point. This point is subject to internal adjustments 
+   * in HiOp.
+   * The method returns true (and populates x0) or returns false, in which case HiOp will internally set 
+   * x0 to all zero (still subject to internal adjustements).
    *
-   * TODO: provide API for a full, primal-dual restart. 
+   * If the user (implementer of this method) has good estimates of the duals of bound constraints and 
+   * inequality and equality constraints, the 'duals_avail' should be set to true and the duals should
+   * be provided in 'zL0', 'zU0', and 'lambda', respectively. 
+   * 
+   * TODO: how to set/enable primal-dual restart ?
    */
-  virtual bool get_starting_point(const long long&n, double* x0) { return false; }
+  virtual bool get_starting_point(const long long& n, const long long& m,
+				  double* x0,
+				  bool duals_avail,
+				  double* zL0, double* zU0,
+				  bool lambdas_avail, double* lambda)
+  {
+    return false;
+  }
 
   /** callback for the optimal solution.
    *  Note that:
@@ -222,7 +236,8 @@ public:
 				 const double* lambda,
 				 double obj_value) { };
 
-  /** Callback for the iteration: at the end of each iteration. This is NOT called during the line-searches.
+  /** 
+   * Callback for the (end of) iteration. This is not called during the line-searches.
    * Note: all the notes for @solution_callback apply.
    */
   virtual bool iterate_callback(int iter, double obj_value,
