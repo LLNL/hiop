@@ -56,7 +56,7 @@
 #include <hiopVector.hpp>
 #include "vectorTestsPar.hpp"
 
-namespace hiop::tests {
+namespace hiop { namespace tests {
 
 /// Method to set vector _x_ element _i_ to _value_.
 /// First need to retrieve hiopVectorPar from the abstract interface
@@ -148,4 +148,4 @@ int VectorTestsPar::verifyAnswer(
   return local_fail;
 }
 
-} // namespace hiop::tests
+}} // namespace hiop::tests

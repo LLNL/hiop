@@ -58,7 +58,7 @@
 
 #include "matrixTests.hpp"
 
-namespace hiop::tests {
+namespace hiop { namespace tests {
 
 class MatrixTestsDense : public MatrixTests
 {
@@ -471,4 +471,4 @@ private:
 #endif
 };
 
-} // namespace hiop::tests
+}} // namespace hiop::tests
