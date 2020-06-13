@@ -60,7 +60,6 @@
 #include <functional>
 #include <cassert>
 #include <utility>
-#include <optional>
 #include <hiopVector.hpp>
 #include <hiopMatrix.hpp>
 #include "testBase.hpp"
