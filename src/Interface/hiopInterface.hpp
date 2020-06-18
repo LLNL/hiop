@@ -201,31 +201,66 @@ public:
   }
 
   /**
-   * Method providing a primal or primal-dual starting point. This point is subject to internal adjustments 
-   * in HiOp.
-   * The method returns true (and populates x0) or returns false, in which case HiOp will internally set 
-   * x0 to all zero (still subject to internal adjustements).
+   * Method provides a primal or starting point. This point is subject to internal adjustments.
    *
-   * If the user (implementer of this method) has good estimates of the duals of bound constraints and 
-   * inequality and equality constraints, the 'duals_avail' should be set to true and the duals should
-   * be provided in 'zL0', 'zU0', and 'lambda', respectively. 
+   * Note: Avoid using this method since it will removed in a future release and replaced with
+   * the same-name method below.
+   *
+   * The method returns true (and populates x0) or returns false, in which case HiOp will 
+   * internally set x0 to all zero (still subject to internal adjustements).
+   *
+   * By default, HiOp first calls the overloaded primal-dual starting point specification
+   * method 
+   * @get_starting_point(const long long&, const long long&, double*, 
+   *                     bool, double*, double*, double*)
+   * If the above returns 'false', HiOp will then call this method.
+   *
+   */
+  virtual bool get_starting_point(const long long&n, double* x0)
+  {
+    return false;
+  }
+  
+  /**
+   * Method provides a primal or a primal-dual primal-dual starting point This point is subject 
+   * to internal adjustments in HiOp.
+   *
+   * If the user (implementer of this method) has good estimates only of the primal variables,
+   * the method should populates 'x0' with these values and return true. The 'duals_avail' 
+   * should be set to false; internally, HiOp will not access 'z_bndL0', 'z_bndU0', and 
+   * 'lambda0'.
+   *
+   * If the user (implementer of this method) has good estimates of the duals of bound constraints 
+   * and of inequality and equality constraints, 'duals_avail' boolean argument should 
+   * be set to true and the respective duals should be provided (in 'z_bndL0' and 'z_bndU0' and 
+   * 'lambda0', respectively). In this case, the user should also set 'x0' to his/her estimate 
+   * of primal variables and return 'true'.
+   *
+   * If user does not have high-quality (primal or primal-dual) starting points, the method should 
+   * return false (see note below).
+   *
+   * Note: when this method returns false, HiOp will call the overload
+   * @get_starting_point(long long&, double*)
+   * This behaviour is for backward compatibility and will be removed in a future release.
    * 
-   * TODO: how to set/enable primal-dual restart ?
    */
   virtual bool get_starting_point(const long long& n, const long long& m,
 				  double* x0,
 				  bool duals_avail,
-				  double* zL0, double* zU0,
-				  bool lambdas_avail, double* lambda)
+				  double* z_bndL0, double* z_bndU0,
+				  double* lambda0)
   {
     return false;
   }
 
-  /** callback for the optimal solution.
-   *  Note that:
+  /** 
+   * Callback method called by HiOp when the optimal solution is reached. User should use it
+   * to retrieve primal-dual optimal solution. 
+   * 
    *   i. x, z_L, z_U contain only the array slice that is local to the calling process
-   *  ii. g, lambda are replicated across all processes, which means they can be used as-is, without reducing them.
-   * iii. all other scalar quantities are replicated across all processes, which means they can be used as-is, 
+   *  ii. g, lambda are replicated across all processes, which means they can be used as-is, 
+   * without reducing them.
+   * iii. all other scalars are replicated across all processes, thus, they can be used as-is, 
    * without reducing them.
    */
   virtual void solution_callback(hiopSolveStatus status,

@@ -483,16 +483,59 @@ bool hiopNlpFormulation::eval_grad_f(double* x, bool new_x, double* gradf)
   return bret;
 }
 
-bool hiopNlpFormulation::get_starting_point(hiopVector& x0_)
+bool hiopNlpFormulation::get_starting_point(hiopVector& x0,
+					    bool& duals_avail,
+					    hiopVector& zL0, hiopVector& zU0,
+					    hiopVector& yc0, hiopVector& yd0)
 {
-  hiopVectorPar &x0_for_hiop = dynamic_cast<hiopVectorPar&>(x0_);
+  //aaa
+  hiopVectorPar &x0_for_hiop = dynamic_cast<hiopVectorPar&>(x0);
+  
+  hiopVectorPar& zL0_for_hiop = dynamic_cast<hiopVectorPar&>(zL0);
+  hiopVectorPar& zU0_for_hiop = dynamic_cast<hiopVectorPar&>(zU0);
+  hiopVectorPar& yc0_for_hiop = dynamic_cast<hiopVectorPar&>(yc0);
+  hiopVectorPar& yd0_for_hiop = dynamic_cast<hiopVectorPar&>(yd0);
+  
   bool bret; 
 
+  hiopVectorPar lambdas(yc0.get_size() + yd0.get_size());
+  
   double* x0_for_user = nlp_transformations.applyTox(x0_for_hiop.local_data(),true);
+  double* zL0_for_user = zL0_for_hiop.local_data();
+  double* zU0_for_user = zU0_for_hiop.local_data();
+  double* lambda_for_user = lambdas.local_data();
+  
+  bret = interface_base.get_starting_point(nlp_transformations.n_post(), n_cons,
+					   x0_for_user,
+					   duals_avail,
+					   zL0_for_user,
+					   zU0_for_user,
+					   lambda_for_user);
+  if(duals_avail) {
+    double* yc0d = yc0_for_hiop.local_data();
+    double* yd0d = yd0_for_hiop.local_data();
 
-  bret = interface_base.get_starting_point(nlp_transformations.n_post(), x0_for_user);
-
-  nlp_transformations.applyInvTox(x0_for_user, x0_for_hiop);
+    assert(n_cons_eq   == yc0.get_size() && "when did the cons change?");
+    assert(n_cons_ineq == yd0.get_size() && "when did the cons change?");
+    assert(n_cons_eq+n_cons_ineq == n_cons);
+    
+    //copy back 
+    for(int i=0; i<n_cons_eq; ++i) {
+      yc0d[i] = lambda_for_user[cons_eq_mapping[i]];
+    }
+    for(int i=0; i<n_cons_ineq; ++i) {
+      yd0d[i] = lambda_for_user[cons_ineq_mapping[i]];
+    }
+  }
+  
+  if(!bret) {
+    bret = interface_base.get_starting_point(nlp_transformations.n_post(), x0_for_user);
+  }
+  
+  if(bret) {
+    nlp_transformations.applyInvTox(x0_for_user, x0_for_hiop);
+  }
+  
   return bret;
 }
 
@@ -502,7 +545,11 @@ bool hiopNlpFormulation::eval_c(double*x, bool new_x, double* c)
   double* cc = c;//nlp_transformations.applyToCons(c, n_cons_eq); //not needed for now
 
   runStats.tmEvalCons.start();
-  bool bret = interface_base.eval_cons(nlp_transformations.n_post(),n_cons,n_cons_eq,cons_eq_mapping,xx,new_x,cc);
+  bool bret = interface_base.eval_cons(nlp_transformations.n_post(),
+				       n_cons,n_cons_eq,
+				       cons_eq_mapping,
+				       xx,new_x,
+				       cc);
   runStats.tmEvalCons.stop(); runStats.nEvalCons_eq++;
 
   //c = nlp_transformations.applyInvToCons(c, n_cons_eq); //not needed for now

@@ -201,7 +201,8 @@ void hiopAlgFilterIPMBase::reInitializeNlpObjects()
     if(NULL==nlpd) {
       dualsUpdateType = 1;
       dualsInitializ = 1;
-      nlp->log->printf(hovWarning, "Option dualsUpdateType=lsq not compatible with the requested NLP formulation and will "
+      nlp->log->printf(hovWarning,
+		       "Option dualsUpdateType=lsq not compatible with the requested NLP formulation and will "
 		       "be set to dualsUpdateType=linear together with dualsInitialization=zero\n");
     }
   }
@@ -276,10 +277,16 @@ startingProcedure(hiopIterate& it_ini,
 		  double &f, hiopVector& c, hiopVector& d, 
 		  hiopVector& gradf,  hiopMatrix& Jac_c,  hiopMatrix& Jac_d)
 {
-  if(!nlp->get_starting_point(*it_ini.get_x())) {
+  bool duals_avail = false;  
+  if(!nlp->get_starting_point(*it_ini.get_x(),
+			      duals_avail,
+			      *it_ini.get_zl(), *it_ini.get_zu(),
+			      *it_ini.get_yc(), *it_ini.get_yd())) {
+
     nlp->log->printf(hovWarning, "user did not provide a starting point; will be set to all zeros\n");
     it_ini.get_x()->setToZero();
-    //assert(false); return false;
+    //in case user wrongly set this to true when he/she returned false
+    duals_avail = false;
   }
   
   nlp->runStats.tmSolverInternal.start();
@@ -292,12 +299,16 @@ startingProcedure(hiopIterate& it_ini,
 
   // before evaluating the NLP, make sure that iterate, including dual variables are initialized
   // to zero; many of these will be updated later in this method, but we want to make sure
-  // the user's NLP evaluator functions, in particular Hessian of the Lagrangian, receives
-  // initialized arrays
-  // initialization for zl, zu, vl, vu
-  it_ini.setBoundsDualsToConstant(1.);
-  // initialization for yc and yd
-  it_ini.setEqualityDualsToConstant(0.);
+  // that the user's NLP evaluator functions, in particular the Hessian of the Lagrangian,
+  // receives initialized arrays
+
+  
+  if(!duals_avail) {
+    // initialization for yc and yd
+    it_ini.setEqualityDualsToConstant(0.);
+  } else {
+    // yc and yd were provided by the user
+  }
   
   if(!this->evalNlp(it_ini, f, c, d, gradf, Jac_c, Jac_d, *_Hess_Lagr)) {
     nlp->log->printf(hovError, "Failure in evaluating user provided NLP functions.");
@@ -314,9 +325,20 @@ startingProcedure(hiopIterate& it_ini,
 
   it_ini.determineSlacks();
 
-  it_ini.setBoundsDualsToConstant(1.);
+  if(!duals_avail) {
+    // initialization for zl, zu, vl, vu
+    it_ini.setBoundsDualsToConstant(1.);
+  } else {
+    // zl and zu were provided by the user
 
-  if(0==dualsInitializ) {
+    // compute vl and vu from vl = mu e ./ sdl and vu = mu e ./ sdu
+    // sdl and sdu were initialized above in 'determineSlacks'
+    
+    it_ini.determineDualsBounds_d(mu0);
+  }
+
+  if(!duals_avail) {
+    if(0==dualsInitializ) {
     //LSQ-based initialization of yc and yd
 
     //is the dualsUpdate already the LSQ-based updater?
@@ -331,10 +353,14 @@ startingProcedure(hiopIterate& it_ini,
     updater->computeInitialDualsEq(it_ini, gradf, Jac_c, Jac_d);
 
     if(deleteUpdater) delete updater;
-  } else {
-    it_ini.setEqualityDualsToConstant(0.);
+    } else {
+      it_ini.setEqualityDualsToConstant(0.);
+    }
+  } // end of if(!duals_avail)
+  else {
+    // duals eq ('yc' and 'yd') were provided by the user 
   }
-
+  
   nlp->log->write("Using initial point:", it_ini, hovIteration);
   nlp->runStats.tmStartingPoint.stop();
   nlp->runStats.tmSolverInternal.stop();

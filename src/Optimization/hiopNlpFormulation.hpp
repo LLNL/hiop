@@ -114,7 +114,10 @@ public:
 			      bool new_lambdas, 
 			      hiopMatrix& Hess_L)=0;
   /* starting point */
-  virtual bool get_starting_point(hiopVector& x0);
+  virtual bool get_starting_point(hiopVector& x0,
+				  bool& duals_avail,
+				  hiopVector& zL0, hiopVector& zU0,
+				  hiopVector& yc0, hiopVector& yd0);
 
   /** linear algebra factory */
   virtual hiopVector* alloc_primal_vec() const;

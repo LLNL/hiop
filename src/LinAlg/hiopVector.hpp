@@ -119,7 +119,7 @@ public:
   /* Elements of this that corespond to nonzeros in ix are divided by elements of v.
    * The rest of elements of this are set to zero.
    */
-  virtual void componentDiv_p_selectPattern( const hiopVector& v, const hiopVector& ix) = 0;
+  virtual void componentDiv_w_selectPattern( const hiopVector& v, const hiopVector& ix) = 0;
   /** Scale each element of this  by the constant alpha */
   virtual void scale( double alpha ) = 0;
   /** this += alpha * x */
@@ -160,7 +160,9 @@ public:
 				 double kappa1, double kappa2) = 0;
   /* max{a\in(0,1]| x+ad >=(1-tau)x} */
   virtual double fractionToTheBdry(const hiopVector& dx, const double& tau) const = 0;
-  virtual double fractionToTheBdry_w_pattern(const hiopVector& dx, const double& tau, const hiopVector& ix) const = 0;
+  virtual double fractionToTheBdry_w_pattern(const hiopVector& dx,
+					     const double& tau,
+					     const hiopVector& ix) const = 0;
   /** Entries corresponding to zeros in ix are set to zero */
   virtual void selectPattern(const hiopVector& ix) = 0;
   /** checks whether entries in this matches pattern in ix */
@@ -172,7 +174,8 @@ public:
   //virtual hiopVector* new_copy() const = 0;
 
   /* dual adjustment -> see hiopIterate::adjustDuals_primalLogHessian */
-  virtual void adjustDuals_plh(const hiopVector& x, const hiopVector& ix, const double& mu, const double& kappa)=0;
+  virtual void adjustDuals_plh(const hiopVector& x, const hiopVector& ix,
+			       const double& mu, const double& kappa)=0;
 
   /* check for nans in the local vector */
   virtual bool isnan() const = 0;
@@ -226,7 +229,7 @@ public:
   virtual double onenorm_local() const; 
   virtual void componentMult( const hiopVector& v );
   virtual void componentDiv ( const hiopVector& v );
-  virtual void componentDiv_p_selectPattern( const hiopVector& v, const hiopVector& ix);
+  virtual void componentDiv_w_selectPattern( const hiopVector& v, const hiopVector& ix);
   virtual void scale( double alpha );
   /** this += alpha * x */
   virtual void axpy  ( double alpha, const hiopVector& x );

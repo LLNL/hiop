@@ -309,7 +309,7 @@ bool hiopKKTLinSysCompressedXYcYd::computeDirections(const hiopResidual* resid,
     dir->sxl->copyFrom(*r.rxl); dir->sxl->axpy( 1.0,*dir->x); dir->sxl->selectPattern(nlp_->get_ixl()); 
 
     dir->zl->copyFrom(*r.rszl); dir->zl->axzpy(-1.0,*iter_->zl,*dir->sxl); 
-    dir->zl->componentDiv_p_selectPattern(*iter_->sxl, nlp_->get_ixl());
+    dir->zl->componentDiv_w_selectPattern(*iter_->sxl, nlp_->get_ixl());
   } else {
     dir->sxl->setToZero(); dir->zl->setToZero();
   }
@@ -323,7 +323,7 @@ bool hiopKKTLinSysCompressedXYcYd::computeDirections(const hiopResidual* resid,
 
     dir->zu->copyFrom(*r.rszu); dir->zu->axzpy(-1.0,*iter_->zu,*dir->sxu);
     dir->zu->selectPattern(nlp_->get_ixu());
-    dir->zu->componentDiv_p_selectPattern(*iter_->sxu, nlp_->get_ixu());
+    dir->zu->componentDiv_w_selectPattern(*iter_->sxu, nlp_->get_ixu());
   } else {
     dir->sxu->setToZero(); dir->zu->setToZero();
   }
@@ -337,7 +337,7 @@ bool hiopKKTLinSysCompressedXYcYd::computeDirections(const hiopResidual* resid,
 
     dir->vl->copyFrom(*r.rsvl); dir->vl->axzpy(-1.0,*iter_->vl,*dir->sdl);
     dir->vl->selectPattern(nlp_->get_idl());
-    dir->vl->componentDiv_p_selectPattern(*iter_->sdl, nlp_->get_idl());
+    dir->vl->componentDiv_w_selectPattern(*iter_->sdl, nlp_->get_idl());
   } else {
     dir->sdl->setToZero(); dir->vl->setToZero();
   }
@@ -351,7 +351,7 @@ bool hiopKKTLinSysCompressedXYcYd::computeDirections(const hiopResidual* resid,
     
     dir->vu->copyFrom(*r.rsvu); dir->vu->axzpy(-1.0,*iter_->vu,*dir->sdu);
     dir->vu->selectPattern(nlp_->get_idu());
-    dir->vu->componentDiv_p_selectPattern(*iter_->sdu, nlp_->get_idu());
+    dir->vu->componentDiv_w_selectPattern(*iter_->sdu, nlp_->get_idu());
   } else {
     dir->sdu->setToZero(); dir->vu->setToZero();
   }
@@ -544,7 +544,7 @@ bool hiopKKTLinSysCompressedXDYcYd::computeDirections(const hiopResidual* resid,
     dir->sxl->copyFrom(*r.rxl); dir->sxl->axpy( 1.0,*dir->x); dir->sxl->selectPattern(nlp_->get_ixl()); 
 
     dir->zl->copyFrom(*r.rszl); dir->zl->axzpy(-1.0,*iter_->zl,*dir->sxl); 
-    dir->zl->componentDiv_p_selectPattern(*iter_->sxl, nlp_->get_ixl());
+    dir->zl->componentDiv_w_selectPattern(*iter_->sxl, nlp_->get_ixl());
   } else {
     dir->sxl->setToZero(); dir->zl->setToZero();
   }
@@ -553,10 +553,14 @@ bool hiopKKTLinSysCompressedXDYcYd::computeDirections(const hiopResidual* resid,
   //dir->zl->print();
   //dsxu = rxu - dx and dzu = [Sxu]^{-1} ( - Zu*dsxu + rszu)
   if(nlp_->n_upp_local()) { 
-    dir->sxu->copyFrom(*r.rxu); dir->sxu->axpy(-1.0,*dir->x); dir->sxu->selectPattern(nlp_->get_ixu()); 
+    dir->sxu->copyFrom(*r.rxu);
+    dir->sxu->axpy(-1.0,*dir->x);
+    dir->sxu->selectPattern(nlp_->get_ixu()); 
 
-    dir->zu->copyFrom(*r.rszu); dir->zu->axzpy(-1.0,*iter_->zu,*dir->sxu); dir->zu->selectPattern(nlp_->get_ixu());
-    dir->zu->componentDiv_p_selectPattern(*iter_->sxu, nlp_->get_ixu());
+    dir->zu->copyFrom(*r.rszu);
+    dir->zu->axzpy(-1.0,*iter_->zu,*dir->sxu);
+    dir->zu->selectPattern(nlp_->get_ixu());
+    dir->zu->componentDiv_w_selectPattern(*iter_->sxu, nlp_->get_ixu());
   } else {
     dir->sxu->setToZero(); dir->zu->setToZero();
   }
@@ -565,20 +569,28 @@ bool hiopKKTLinSysCompressedXDYcYd::computeDirections(const hiopResidual* resid,
   //dir->zu->print();
   //dsdl = rdl + dd and dvl = [Sdl]^{-1} ( - Vl*dsdl + rsvl)
   if(nlp_->m_ineq_low()) {
-    dir->sdl->copyFrom(*r.rdl); dir->sdl->axpy( 1.0,*dir->d); dir->sdl->selectPattern(nlp_->get_idl());
+    dir->sdl->copyFrom(*r.rdl);
+    dir->sdl->axpy( 1.0,*dir->d);
+    dir->sdl->selectPattern(nlp_->get_idl());
 
-    dir->vl->copyFrom(*r.rsvl); dir->vl->axzpy(-1.0,*iter_->vl,*dir->sdl); dir->vl->selectPattern(nlp_->get_idl());
-    dir->vl->componentDiv_p_selectPattern(*iter_->sdl, nlp_->get_idl());
+    dir->vl->copyFrom(*r.rsvl);
+    dir->vl->axzpy(-1.0,*iter_->vl,*dir->sdl);
+    dir->vl->selectPattern(nlp_->get_idl());
+    dir->vl->componentDiv_w_selectPattern(*iter_->sdl, nlp_->get_idl());
   } else {
     dir->sdl->setToZero(); dir->vl->setToZero();
   }
 
   //dsdu = rdu - dd and dvu = [Sdu]^{-1} ( - Vu*dsdu + rsvu )
   if(nlp_->m_ineq_upp()>0) {
-    dir->sdu->copyFrom(*r.rdu); dir->sdu->axpy(-1.0,*dir->d); dir->sdu->selectPattern(nlp_->get_idu());
+    dir->sdu->copyFrom(*r.rdu);
+    dir->sdu->axpy(-1.0,*dir->d);
+    dir->sdu->selectPattern(nlp_->get_idu());
     
-    dir->vu->copyFrom(*r.rsvu); dir->vu->axzpy(-1.0,*iter_->vu,*dir->sdu); dir->vu->selectPattern(nlp_->get_idu());
-    dir->vu->componentDiv_p_selectPattern(*iter_->sdu, nlp_->get_idu());
+    dir->vu->copyFrom(*r.rsvu);
+    dir->vu->axzpy(-1.0,*iter_->vu,*dir->sdu);
+    dir->vu->selectPattern(nlp_->get_idu());
+    dir->vu->componentDiv_w_selectPattern(*iter_->sdu, nlp_->get_idu());
   } else {
     dir->sdu->setToZero(); dir->vu->setToZero();
   }
