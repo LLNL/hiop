@@ -558,31 +558,58 @@ bool hiopAlgFilterIPMBase::evalNlp_derivOnly(hiopIterate& iter,
 /* returns the objective value; valid only after 'run' method has been called */
 double hiopAlgFilterIPMBase::getObjective() const
 {
-  if(solver_status_==NlpSolve_IncompleteInit || solver_status_ == NlpSolve_SolveNotCalled)
-    nlp->log->printf(hovError, "getObjective: hiOp did not initialize entirely or the 'run' function was not called.");
-  if(solver_status_==NlpSolve_Pending)
-    nlp->log->printf(hovWarning, "getObjective: hiOp does not seem to have completed yet. The objective value returned may not be optimal.");
+  if(solver_status_==NlpSolve_IncompleteInit || solver_status_ == NlpSolve_SolveNotCalled) {
+    nlp->log->
+      printf(hovError, "getObjective: HiOp did not initialize entirely or the 'run' function was not called.");
+  }
+  if(solver_status_==NlpSolve_Pending) {
+    nlp->log->
+      printf(hovWarning, "getObjective: HiOp has not completed and objective value may not be optimal.");
+  }
   return nlp->user_obj(_f_nlp);
 }
 /* returns the primal vector x; valid only after 'run' method has been called */
 void hiopAlgFilterIPMBase::getSolution(double* x) const
 {
-  if(solver_status_==NlpSolve_IncompleteInit || solver_status_ == NlpSolve_SolveNotCalled)
-    nlp->log->printf(hovError, "getSolution: hiOp did not initialize entirely or the 'run' function was not called.");
-  if(solver_status_==NlpSolve_Pending)
-    nlp->log->printf(hovWarning, "getSolution: hiOp have not completed yet. The primal vector returned may not be optimal.");
-
+  if(solver_status_==NlpSolve_IncompleteInit || solver_status_ == NlpSolve_SolveNotCalled) {
+    nlp->log->
+      printf(hovError, "getSolution: HiOp did not initialize entirely or the 'run' function was not called.");
+  }
+  if(solver_status_==NlpSolve_Pending) {
+    nlp->log->
+      printf(hovWarning, "getSolution: HiOp has not completed yet and solution returned may not be optimal.");
+  }
   hiopVectorPar& it_x = dynamic_cast<hiopVectorPar&>(*it_curr->get_x());
   //it_curr->get_x()->copyTo(x);
   nlp->user_x(it_x, x);
 }
 
+void hiopAlgFilterIPMBase::getDualSolutions(double* zl_a, double* zu_a, double* lambda_a)
+{
+  if(solver_status_==NlpSolve_IncompleteInit || solver_status_ == NlpSolve_SolveNotCalled) {
+    nlp->log->
+      printf(hovError,
+	     "getDualSolutions: HiOp did not initialize entirely or the 'run' function was not called.");
+  }
+  if(solver_status_==NlpSolve_Pending) {
+    nlp->log->
+      printf(hovWarning,
+	     "getSolution: HiOp has not completed yet and solution returned may not be optimal.");
+  }
+  hiopVectorPar& zl = dynamic_cast<hiopVectorPar&>(*it_curr->get_zl());
+  hiopVectorPar& zu = dynamic_cast<hiopVectorPar&>(*it_curr->get_zu());
+
+  nlp->get_dual_solutions(*it_curr, zl_a, zu_a, lambda_a);  
+}
+  
 int hiopAlgFilterIPMBase::getNumIterations() const
 {
   if(solver_status_==NlpSolve_IncompleteInit || solver_status_ == NlpSolve_SolveNotCalled)
-    nlp->log->printf(hovError, "getNumIterations: hiOp did not initialize entirely or the 'run' function was not called.");
+    nlp->log->
+      printf(hovError, "getNumIterations: HiOp did not initialize or the 'run' function was not called.");
   if(solver_status_==NlpSolve_Pending)
-    nlp->log->printf(hovWarning, "getNumIterations: hiOp does not seem to have completed yet. The objective value returned may not be optimal.");
+    nlp->log->
+      printf(hovWarning, "getNumIterations: HiOp has not completed upon this call of 'getNumIterations'");
   return nlp->runStats.nIter;
 }
 
