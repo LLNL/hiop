@@ -80,7 +80,8 @@ public:
   double getObjective() const;
   /* returns the primal vector x; valid only after 'run' method has been called */
   void getSolution(double* x) const;
-  /* returns the status of the solver */
+  /* returns dual solutions; valid only after 'run' method has been called */
+  void getDualSolutions(double* zl, double* zu, double* lambda);
   /* returns the status of the solver */
   inline hiopSolveStatus getSolveStatus() const { return solver_status_; }
   /* returns the number of iterations */
@@ -162,7 +163,8 @@ protected:
 
   /** Algorithms's working quantities */  
   double _mu, _tau, _alpha_primal, _alpha_dual;
-  //initialized to 1e4*max{1,\theta(x_0)} and used in the filter as an upper acceptability limit for infeasibility
+  //initialized to 1e4*max{1,\theta(x_0)} and used in the filter as an upper acceptability
+  //limit for infeasibility
   double theta_max; 
   //1e-4*max{1,\theta(x_0)} used in the switching condition during the line search
   double theta_min;

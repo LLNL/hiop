@@ -104,14 +104,15 @@ int main(int argc, char **argv)
   double obj_value=-1e+20;
   hiopSolveStatus status;
 
-  hiopInterfaceMDS* nlp_interface;
+  //user's NLP -> implementation of hiop::hiopInterfaceMDS
+  Ex4* my_nlp;
   if(one_call_cons) {
-    nlp_interface = new Ex4OneCallCons(n_sp, n_de);
+    my_nlp = new Ex4OneCallCons(n_sp, n_de);
   } else {
-    nlp_interface = new Ex4(n_sp, n_de);
+    my_nlp = new Ex4(n_sp, n_de);
   }
 
-  hiopNlpMDS nlp(*nlp_interface);
+  hiopNlpMDS nlp(*my_nlp);
 
   nlp.options->SetStringValue("dualsUpdateType", "linear");
   nlp.options->SetStringValue("dualsInitialization", "zero");
@@ -122,11 +123,11 @@ int main(int argc, char **argv)
 
   nlp.options->SetIntegerValue("verbosity_level", 3);
   nlp.options->SetNumericValue("mu0", 1e-1);
+  nlp.options->SetNumericValue("tolerance", 1e-5);
+
   hiopAlgFilterIPMNewton solver(&nlp);
   status = solver.run();
   obj_value = solver.getObjective();
-
-  delete nlp_interface;
   
   if(status<0) {
     if(rank==0)
@@ -134,7 +135,53 @@ int main(int argc, char **argv)
     return -1;
   }
 
-  // this is used for testing when the driver is in '-selfcheck' mode
+  ////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Reoptimize
+  // -----------
+  // 1. get solution from previous solve
+  // 2. give it to the (user's) nlp, which will provide HiOp a full primal-dual restart via
+  // 'get_starting_point' callback
+  // Normally, the user would also change her nlp between steps 1 and 2 above, for example, different
+  // bounds on variables or on inequalities
+  ////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  long long n_vars, n_cons;
+  my_nlp->get_prob_sizes(n_vars, n_cons);
+
+  double x[n_vars];
+  double zl[n_vars];
+  double zu[n_vars];
+  double lambdas[n_cons];
+
+  solver.getSolution(x);
+  solver.getDualSolutions(zl, zu, lambdas);
+
+  my_nlp->set_solution_primal(x);
+  my_nlp->set_solution_duals(zl, zu, lambdas);
+
+  //
+  // set options for solver re-optimization
+  //
+  
+  //less agressive log-barrier parameter is always a safe bet
+  nlp.options->SetNumericValue("mu0", 1e-6);
+  nlp.options->SetNumericValue("tolerance", 1e-8);
+
+  //nlp.options->SetIntegerValue("verbosity_level", 7);
+
+  //nlp.options->SetNumericValue("kappa1", 1e-15);
+  //nlp.options->SetNumericValue("kappa2", 1e-15);
+  
+  //solve
+  status = solver.run();
+  obj_value = solver.getObjective();
+  
+  if(status<0) {
+    if(rank==0)
+      printf("solver returned negative solve status: %d (with objective is %18.12e)\n", status, obj_value);
+    return -1;
+  }
+
   if(selfCheck) {
     if(fabs(obj_value-(-4.999509728895e+01))>1e-6) {
       printf("selfcheck: objective mismatch for Ex4 MDS problem with 400 sparse variables and 100 "
@@ -146,6 +193,10 @@ int main(int argc, char **argv)
       printf("Optimal objective: %22.14e. Solver status: %d\n", obj_value, status);
     }
   }
+
+  
+  delete my_nlp;
+  
 #ifdef HIOP_USE_MAGMA
   magma_finalize();
 #endif

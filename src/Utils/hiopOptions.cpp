@@ -108,7 +108,9 @@ string hiopOptions::GetString (const char* name) const
 
 void hiopOptions::registerOptions()
 {
-  registerNumOption("mu0", 1., 1e-6, 1000., "Initial log-barrier parameter mu (default 1.)");
+  // TODO: add option for mu_target
+  registerNumOption("mu0", 1., 1e-16, 1000.,
+		    "Initial log-barrier parameter mu (default 1.)");
   registerNumOption("kappa_mu", 0.2, 1e-8, 0.999, 
 		    "Linear reduction coefficient for mu (default 0.2) (eqn (7) in Filt-IPM paper)");
   registerNumOption("theta_mu", 1.5,  1.0,   2.0, 

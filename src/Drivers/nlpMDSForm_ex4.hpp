@@ -38,6 +38,7 @@
  * Coding of the problem in MDS HiOp input: order of variables need to be [x,s,y] 
  * since [x,s] are the so-called sparse variables and y are the dense variables
  */
+
 class Ex4 : public hiop::hiopInterfaceMDS
 {
 public:
@@ -47,7 +48,7 @@ public:
   }
   
   Ex4(int ns_, int nd_)
-    : ns(ns_)
+    : ns(ns_), sol_x_(NULL), sol_zl_(NULL), sol_zu_(NULL), sol_lambda_(NULL)
   {
     if(ns<0) {
       ns = 0;
@@ -84,6 +85,10 @@ public:
     delete[] _buf_y;
     delete Md;
     delete Q;
+    delete[] sol_lambda_;
+    delete[] sol_zu_;
+    delete[] sol_zl_;
+    delete[] sol_x_;
   }
   
   bool get_prob_sizes(long long& n, long long& m)
@@ -383,19 +388,80 @@ public:
     }
     return true;
   }
-  
+
+  /* Implementation of the primal starting point specification */
   bool get_starting_point(const long long& global_n, double* x0)
   {
     assert(global_n==2*ns+nd); 
     for(int i=0; i<global_n; i++) x0[i]=1.;
     return true;
   }
+  bool get_starting_point(const long long& n, const long long& m,
+				  double* x0,
+				  bool& duals_avail,
+				  double* z_bndL0, double* z_bndU0,
+				  double* lambda0)
+  {
+    if(sol_x_ && sol_zl_ && sol_zu_ && sol_lambda_) {
 
+      duals_avail = true;
+	    
+      memcpy(x0, sol_x_, n*sizeof(double));
+      memcpy(z_bndL0, sol_zl_, n*sizeof(double));
+      memcpy(z_bndU0, sol_zu_, n*sizeof(double));
+      memcpy(lambda0, sol_lambda_, m*sizeof(double));
+
+    } else {
+      duals_avail = false;
+      return false;
+    }
+    return true;
+  }
+
+  /* The public methods below are not part of hiopInterface. They are a proxy
+   * for user's (front end) code to set solutions from a previous solve. 
+   *
+   * Same behaviour can be achieved internally (in this class ) if desired by 
+   * overriding @solution_callback and @get_starting_point
+   */
+  void set_solution_primal(const double* x)
+  {
+    int n=2*ns+nd;
+    if(NULL == sol_x_) {
+      sol_x_ = new double[n];
+    }
+    memcpy(sol_x_, x, n*sizeof(double));
+  }
+  void set_solution_duals(const double* zl, const double* zu, const double* lambda)
+  {
+    int m=ns+3*haveIneq;
+    int n=2*ns+nd;
+    if(NULL == sol_zl_) {
+      sol_zl_ = new double[n];
+    }
+    memcpy(sol_zl_, zl, n*sizeof(double));
+    
+    if(NULL == sol_zu_) {
+      sol_zu_ = new double[n];
+    }
+    memcpy(sol_zu_, zu, n*sizeof(double));
+	
+    if(NULL == sol_lambda_) {
+      sol_lambda_ = new double[m];
+    }
+    memcpy(sol_lambda_, lambda, m*sizeof(double));
+  }
 protected:
   int ns, nd;
   hiop::hiopMatrixDense *Q, *Md;
   double* _buf_y;
   bool haveIneq;
+
+  /* Internal buffers to store primal-dual solution */
+  double* sol_x_;
+  double* sol_zl_;
+  double* sol_zu_;
+  double* sol_lambda_;
 };
 
 class Ex4OneCallCons : public Ex4

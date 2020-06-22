@@ -461,7 +461,7 @@ public:
     if (rank== 0)
       setLocalElement(&pattern, N - 1, zero);
 
-    v.componentDiv_p_selectPattern(x, pattern);
+    v.componentDiv_w_selectPattern(x, pattern);
 
     const int fail = verifyAnswer(&v,
       [=] (local_ordinal_type i) -> real_type
