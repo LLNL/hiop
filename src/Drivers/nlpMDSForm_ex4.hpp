@@ -394,15 +394,19 @@ public:
   }
   bool get_starting_point(const long long& n, const long long& m,
 				  double* x0,
-				  bool duals_avail,
+				  bool& duals_avail,
 				  double* z_bndL0, double* z_bndU0,
 				  double* lambda0)
   {
     if(sol_x_ && sol_zl_ && sol_zu_ && sol_lambda_) {
+
+      duals_avail = true;
+	    
       memcpy(x0, sol_x_, n*sizeof(double));
       memcpy(z_bndL0, sol_zl_, n*sizeof(double));
       memcpy(z_bndU0, sol_zu_, n*sizeof(double));
       memcpy(lambda0, sol_lambda_, m*sizeof(double));
+
     } else {
       duals_avail = false;
       return false;

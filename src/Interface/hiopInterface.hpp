@@ -246,7 +246,7 @@ public:
    */
   virtual bool get_starting_point(const long long& n, const long long& m,
 				  double* x0,
-				  bool duals_avail,
+				  bool& duals_avail,
 				  double* z_bndL0, double* z_bndU0,
 				  double* lambda0)
   {

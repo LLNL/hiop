@@ -125,8 +125,6 @@ int main(int argc, char **argv)
   nlp.options->SetNumericValue("mu0", 1e-1);
   nlp.options->SetNumericValue("tolerance", 1e-5);
 
-    nlp.options->SetIntegerValue("verbosity_level", 10);
-  
   hiopAlgFilterIPMNewton solver(&nlp);
   status = solver.run();
   obj_value = solver.getObjective();
@@ -181,8 +179,12 @@ int main(int argc, char **argv)
   //less agressive log-barrier parameter is always a safe bet
   nlp.options->SetNumericValue("mu0", 1e-6);
   nlp.options->SetNumericValue("tolerance", 1e-8);
-  nlp.options->SetIntegerValue("verbosity_level", 10);
 
+  //nlp.options->SetIntegerValue("verbosity_level", 7);
+
+  //nlp.options->SetNumericValue("kappa1", 1e-15);
+  //nlp.options->SetNumericValue("kappa2", 1e-15);
+  
   //solve
   status = solver.run();
   obj_value = solver.getObjective();
