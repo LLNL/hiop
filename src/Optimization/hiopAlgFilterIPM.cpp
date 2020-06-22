@@ -401,8 +401,8 @@ evalNlp(hiopIterate& iter,
     return false;
   }
 
-  nlp->log->write("Eq   body c:", c, hovFcnEval);
-  nlp->log->write("Ineq body d:", d, hovFcnEval);
+  //nlp->log->write("Eq   body c:", c, hovFcnEval);
+  //nlp->log->write("Ineq body d:", d, hovFcnEval);
   
   //bret = nlp->eval_Jac_c    (x, new_x, Jac_c);           assert(bret);
   //bret = nlp->eval_Jac_d    (x, new_x, Jac_d);           assert(bret);
