@@ -85,6 +85,10 @@ public:
     delete[] _buf_y;
     delete Md;
     delete Q;
+    delete[] sol_lambda_;
+    delete[] sol_zu_;
+    delete[] sol_zl_;
+    delete[] sol_x_;
   }
   
   bool get_prob_sizes(long long& n, long long& m)

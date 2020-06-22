@@ -135,19 +135,6 @@ int main(int argc, char **argv)
     return -1;
   }
 
-  // this is used for testing when the driver is in '-selfcheck' mode
-  if(selfCheck) {
-    if(fabs(obj_value-(-4.999509728895e+01))>1e-6) {
-      printf("selfcheck: objective mismatch for Ex4 MDS problem with 400 sparse variables and 100 "
-	     "dense variables did. BTW, obj=%18.12e was returned by HiOp.\n", obj_value);
-      //return -1;
-    }
-  } else {
-    if(rank==0) {
-      printf("Optimal objective: %22.14e. Solver status: %d\n", obj_value, status);
-    }
-  }
-
   ////////////////////////////////////////////////////////////////////////////////////////////////////
   // Reoptimize
   // -----------
