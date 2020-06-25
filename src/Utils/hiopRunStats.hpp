@@ -60,6 +60,116 @@
 #endif
 namespace hiop
 {
+
+class hiopRunKKTSolStats
+{
+public:
+  hiopRunKKTSolStats()
+  { 
+    initialize();
+  };
+
+  virtual ~hiopRunKKTSolStats()
+  {
+  };
+
+  //
+  // at each optimization iteration
+  //
+
+  hiopTimer tmTotalPerIter;
+
+  // time of the initial boilerplate, before any expensive matrix update or factorization
+  hiopTimer tmUpdateInit;
+  // time in the update of the linsys to be sent to lower level linear solver; multiple updates can happen
+  // if the inertia correction kicks in
+  hiopTimer tmUpdateLinsys;
+  // time spent in lower level factorizations; can time multiple factorizations if the inertia correction kicks in 
+  hiopTimer tmUpdateInnerFact;
+  // number of inertia corrections
+  int nUpdateICCorr;
+
+  // time spent in compressing or decompressing rhs (or in other words, pre- and post-triangular solve)
+  hiopTimer tmSolveRhsManip;
+  // the actual triangular solve within the inner solver
+  hiopTimer tmSolveTriangular;
+
+  // total time 
+  double tmTotal;
+  //constituents of total -> map into timers used to time each optimization iteration
+  double tmTotalUpdateInit, tmTotalUpdateLinsys, tmTotalUpdateInnerFact;
+  double tmTotalSolveRhsManip, tmTotalSolveTriangular; 
+
+  inline void initialize() {
+    tmTotalPerIter.reset();
+    tmUpdateInit.reset();
+    tmUpdateLinsys.reset();
+    tmUpdateInnerFact.reset();
+    nUpdateICCorr = 0;
+    tmSolveRhsManip.reset();
+    tmSolveTriangular.reset();
+    
+    tmTotal = 0.;
+    tmTotalUpdateInit = 0;
+    tmTotalUpdateLinsys = 0;
+    tmTotalUpdateInnerFact = 0;
+    tmTotalSolveRhsManip = 0; 
+    tmTotalSolveTriangular = 0;
+  }
+
+  inline void start_optimiz_iteration()
+  {
+    tmTotalPerIter.reset();
+    tmUpdateInit.reset();
+    tmUpdateLinsys.reset();
+    tmUpdateInnerFact.reset();
+    nUpdateICCorr = 0;
+    tmSolveRhsManip.reset();
+    tmSolveTriangular.reset();
+  } 
+  inline void end_optimiz_iteration()
+  {
+    tmTotal += tmTotalPerIter.getElapsedTime();
+    tmTotalUpdateInit += tmUpdateInit.getElapsedTime();
+    tmTotalUpdateLinsys += tmUpdateLinsys.getElapsedTime();
+    tmTotalUpdateInnerFact += tmUpdateInnerFact.getElapsedTime();
+    tmTotalSolveRhsManip += tmSolveRhsManip.getElapsedTime(); 
+    tmTotalSolveTriangular += tmSolveTriangular.getElapsedTime();
+    
+  }
+  inline std::string get_summary_last_iter() {
+    std::stringstream ss;
+    ss << "Iteration KKT time=" << std::fixed << std::setprecision(3) << tmTotalPerIter.getElapsedTime() 
+       << " sec " << std::endl;
+
+    ss << "\t update init=" << std::setprecision(3) << tmUpdateInit.getElapsedTime() << "sec "
+       << "update linsys=" << tmUpdateLinsys.getElapsedTime() << "sec " 
+       << "fact=" << tmUpdateInnerFact.getElapsedTime() << "sec " 
+       << "inertia corrections=" << nUpdateICCorr << std::endl;
+
+    ss << "\tsolve rhs-manip=" <<tmSolveRhsManip.getElapsedTime() << "sec "
+       << "triangular solve=" << tmSolveTriangular.getElapsedTime() << "sec " << std::endl; 
+
+    return ss.str();
+  }
+
+  inline std::string get_summary_total() {
+    std::stringstream ss;
+    ss << "Total KKT time=" << std::fixed << std::setprecision(3) << tmTotal << " sec " 
+       << std::endl;
+
+    ss << "\tupdate init=" << std::setprecision(3) << tmTotalUpdateInit << "sec "
+       << "update linsys=" << tmTotalUpdateLinsys << "sec " 
+       << "fact=" << tmTotalUpdateInnerFact << "sec" << std::endl;
+
+    ss << "\tsolve rhs-manip=" <<tmTotalSolveRhsManip << "sec "
+       << "triangular solve=" << tmTotalSolveTriangular << "sec " << std::endl; 
+
+    return ss.str();
+  }
+};
+
+
 class hiopRunStats
 {
 public:
@@ -80,6 +190,9 @@ public:
 
   int nEvalObj, nEvalGrad_f, nEvalCons_eq, nEvalCons_ineq, nEvalJac_con_eq, nEvalJac_con_ineq;
   int nIter;
+
+  hiopRunKKTSolStats kkt;
+
   inline virtual void initialize() {
     tmOptimizTotal = tmSolverInternal = tmSearchDir = tmStartingPoint = tmMultUpdate = tmComm = tmInit = 0.;
     tmEvalObj = tmEvalGrad_f = tmEvalCons = tmEvalJac_con = 0.;    
@@ -137,5 +250,6 @@ private:
   MPI_Comm comm;
 
 };
+
 }
 #endif

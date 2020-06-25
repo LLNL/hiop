@@ -218,6 +218,8 @@ bool hiopKKTLinSysCompressedXYcYd::computeDirections(const hiopResidual* resid,
 						     hiopIterate* dir)
 {
   nlp_->runStats.tmSolverInternal.start();
+  nlp_->runStats.kkt.tmSolveRhsManip.start();
+
   const hiopResidual &r=*resid; 
 
   /***********************************************************************
@@ -280,12 +282,14 @@ bool hiopKKTLinSysCompressedXYcYd::computeDirections(const hiopResidual* resid,
   hiopVectorPar* ryd_tilde_save=ryd_tilde_->new_copy();
 #endif
 
-
+  nlp_->runStats.kkt.tmSolveRhsManip.stop();
   /***********************************************************************
    * solve the compressed system
    * (be aware that rx_tilde is reused/modified inside this function) 
    ***********************************************************************/
   solveCompressed(*rx_tilde_, *r.ryc, *ryd_tilde_, *dir->x, *dir->yc, *dir->yd);
+
+  nlp_->runStats.kkt.tmSolveRhsManip.start();
   //recover dir->d = (D)^{-1}*(dir->yd + ryd2)
   dir->d->copyFrom(ryd2);
   dir->d->axpy(1.0,*dir->yd);
@@ -371,6 +375,7 @@ bool hiopKKTLinSysCompressedXYcYd::computeDirections(const hiopResidual* resid,
   //CHECK THE SOLUTION
   errorKKT(resid,dir);
 #endif
+  nlp_->runStats.kkt.tmSolveRhsManip.stop();
   nlp_->runStats.tmSolverInternal.stop();
   return true;
 }
@@ -462,6 +467,8 @@ bool hiopKKTLinSysCompressedXDYcYd::computeDirections(const hiopResidual* resid,
 						      hiopIterate* dir)
 {
   nlp_->runStats.tmSolverInternal.start();
+  nlp_->runStats.kkt.tmSolveRhsManip.start();
+
   const hiopResidual &r=*resid; 
 
   /***********************************************************************
@@ -516,6 +523,7 @@ bool hiopKKTLinSysCompressedXDYcYd::computeDirections(const hiopResidual* resid,
   hiopVectorPar* ryd_save = r.ryd->new_copy();
 #endif
 
+  nlp_->runStats.kkt.tmSolveRhsManip.stop();
 
   /***********************************************************************
    * solve the compressed system
@@ -534,6 +542,8 @@ bool hiopKKTLinSysCompressedXDYcYd::computeDirections(const hiopResidual* resid,
   delete rd_tilde_save;
   delete ryd_save;
 #endif
+
+  nlp_->runStats.kkt.tmSolveRhsManip.start();
 
   /***********************************************************************
    * compute the rest of the directions
@@ -608,6 +618,7 @@ bool hiopKKTLinSysCompressedXDYcYd::computeDirections(const hiopResidual* resid,
   //CHECK THE SOLUTION
   errorKKT(resid,dir);
 #endif
+  nlp_->runStats.kkt.tmSolveRhsManip.stop();
   nlp_->runStats.tmSolverInternal.stop();
   return true;
 }

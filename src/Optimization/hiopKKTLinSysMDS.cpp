@@ -75,7 +75,9 @@ namespace hiop
 					       hiopMatrix* Hess)
   {
     if(!nlpMDS_) { assert(false); return false; }
+   
     nlp_->runStats.tmSolverInternal.start();
+    nlp_->runStats.kkt.tmUpdateInit.start();
 
     iter_ = iter;
     grad_f_ = dynamic_cast<const hiopVectorPar*>(grad_f);
@@ -137,7 +139,11 @@ namespace hiop
       return false;
     }
     
+    nlp_->runStats.kkt.tmUpdateInit.stop();
+
     while(num_ic_cor<=max_ic_cor) {
+
+      nlp_->runStats.kkt.tmUpdateLinsys.start();
 
       assert(delta_wx == delta_wd && "something went wrong with IC");
       assert(delta_cc == delta_cd && "something went wrong with IC");
@@ -223,6 +229,10 @@ namespace hiop
       if(nlp_->options->GetString("write_kkt") == "yes") write_linsys_counter_++;
       if(write_linsys_counter_>=0) csr_writer_.writeMatToFile(Msys, write_linsys_counter_); 
       
+      nlp_->runStats.kkt.tmUpdateLinsys.stop();
+      nlp_->runStats.kkt.nUpdateICCorr++;
+
+      nlp_->runStats.kkt.tmUpdateInnerFact.start();
       //factorization
       int n_neg_eig = linSys_->matrixChanged();
 
@@ -243,6 +253,8 @@ namespace hiop
 	  }
 	}
       }
+
+      nlp_->runStats.kkt.tmUpdateInnerFact.stop();
 
       if(n_neg_eig_11 < 0) {
 	nlp_->log->printf(hovScalars, "Detected null eigenvalues in (1,1) sparse block.\n");
@@ -320,6 +332,8 @@ namespace hiop
     if(!Jac_cMDS_) { assert(false); return; }
     if(!Jac_dMDS_) { assert(false); return; }
 
+    nlp_->runStats.kkt.tmSolveRhsManip.start();
+
     int nx=rx.get_size(), nyc=ryc.get_size(), nyd=ryd.get_size();
     int nxsp=Hxs_->get_size(); assert(nxsp<=nx);
     int nxde = nlpMDS_->nx_de();
@@ -357,12 +371,18 @@ namespace hiop
 
     if(write_linsys_counter_>=0) csr_writer_.writeRhsToFile(*rhs_, write_linsys_counter_);
 
+    nlp_->runStats.kkt.tmSolveRhsManip.stop();
+
+    nlp_->runStats.kkt.tmSolveTriangular.start();
     //
     // solve
     //
     linSys_->solve(*rhs_);
+    nlp_->runStats.kkt.tmSolveTriangular.stop();
 
     if(write_linsys_counter_>=0) csr_writer_.writeSolToFile(*rhs_, write_linsys_counter_);
+
+    nlp_->runStats.kkt.tmSolveRhsManip.start();
 
     //
     // unpack 
@@ -387,5 +407,10 @@ namespace hiop
     nlp_->log->write("SOL KKT MDS XYcYd dyc:", dyc, hovMatrices);
     nlp_->log->write("SOL KKT MDS XYcYd dyd:", dyd, hovMatrices);
   
+    nlp_->runStats.kkt.tmSolveRhsManip.stop();
+
+    if(perf_report_) {
+      nlp_->runStats.kkt.get_summary_last_iter();
+    }
   }
 } // end of namespace

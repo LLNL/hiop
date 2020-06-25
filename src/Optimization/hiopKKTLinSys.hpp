@@ -54,6 +54,8 @@
 #include "hiopHessianLowRank.hpp"
 #include "hiopPDPerturbation.hpp"
 
+#include "hiopCppStdUtils.hpp"
+
 namespace hiop
 {
 
@@ -63,7 +65,9 @@ public:
   hiopKKTLinSys(hiopNlpFormulation* nlp) 
     : nlp_(nlp), iter_(NULL), grad_f_(NULL), Jac_c_(NULL), Jac_d_(NULL), Hess_(NULL),
       perturb_calc_(NULL)
-  { }
+  { 
+    perf_report_ = "on"==hiop::tolower(nlp_->options->GetString("time_kkt"));
+  }
   virtual ~hiopKKTLinSys() 
   { }
   /* updates the parts in KKT system that are dependent on the iterate. 
@@ -108,6 +112,7 @@ protected:
   const hiopMatrix *Jac_c_, *Jac_d_;
   hiopMatrix* Hess_;
   hiopPDPerturbation* perturb_calc_;
+  bool perf_report_;
 };
 
 class hiopKKTLinSysCompressed : public hiopKKTLinSys
