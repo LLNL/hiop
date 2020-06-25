@@ -230,7 +230,6 @@ namespace hiop
       if(write_linsys_counter_>=0) csr_writer_.writeMatToFile(Msys, write_linsys_counter_); 
       
       nlp_->runStats.kkt.tmUpdateLinsys.stop();
-      nlp_->runStats.kkt.nUpdateICCorr++;
 
       nlp_->runStats.kkt.tmUpdateInnerFact.start();
       //factorization
@@ -310,6 +309,7 @@ namespace hiop
      
      //will do an inertia correction
      num_ic_cor++;
+     nlp_->runStats.kkt.nUpdateICCorr++;
     } // end of ic while
     
     if(num_ic_cor>max_ic_cor) {
@@ -408,9 +408,5 @@ namespace hiop
     nlp_->log->write("SOL KKT MDS XYcYd dyd:", dyd, hovMatrices);
   
     nlp_->runStats.kkt.tmSolveRhsManip.stop();
-
-    if(perf_report_) {
-      nlp_->runStats.kkt.get_summary_last_iter();
-    }
   }
 } // end of namespace

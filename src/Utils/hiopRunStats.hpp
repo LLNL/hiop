@@ -120,6 +120,8 @@ public:
   inline void start_optimiz_iteration()
   {
     tmTotalPerIter.reset();
+    tmTotalPerIter.start();
+    
     tmUpdateInit.reset();
     tmUpdateLinsys.reset();
     tmUpdateInnerFact.reset();
@@ -129,7 +131,9 @@ public:
   } 
   inline void end_optimiz_iteration()
   {
+    tmTotalPerIter.stop();
     tmTotal += tmTotalPerIter.getElapsedTime();
+      
     tmTotalUpdateInit += tmUpdateInit.getElapsedTime();
     tmTotalUpdateLinsys += tmUpdateLinsys.getElapsedTime();
     tmTotalUpdateInnerFact += tmUpdateInnerFact.getElapsedTime();
@@ -139,10 +143,11 @@ public:
   }
   inline std::string get_summary_last_iter() {
     std::stringstream ss;
-    ss << "Iteration KKT time=" << std::fixed << std::setprecision(3) << tmTotalPerIter.getElapsedTime() 
-       << " sec " << std::endl;
 
-    ss << "\t update init=" << std::setprecision(3) << tmUpdateInit.getElapsedTime() << "sec "
+    ss << std::fixed << std::setprecision(3);
+    ss << "Iteration KKT time=" << tmTotalPerIter.getElapsedTime() << "sec " << std::endl;
+
+    ss << "\tupdate init=" << std::setprecision(3) << tmUpdateInit.getElapsedTime() << "sec "
        << "update linsys=" << tmUpdateLinsys.getElapsedTime() << "sec " 
        << "fact=" << tmUpdateInnerFact.getElapsedTime() << "sec " 
        << "inertia corrections=" << nUpdateICCorr << std::endl;
@@ -200,9 +205,10 @@ public:
     nIter = 0; 
   }
 
-  inline std::string getSummary(int masterRank=0) {
+  inline std::string get_summary(int masterRank=0) {
     std::stringstream ss;
-    ss << "Total time=" << std::fixed << std::setprecision(3) << tmOptimizTotal.getElapsedTime() << " sec " << std::endl;
+    ss << "Total time=" << std::fixed << std::setprecision(3)
+       << tmOptimizTotal.getElapsedTime() << " sec " << std::endl;
 
     ss << "Hiop internal time: " << std::setprecision(3) 
        << "    total=" << std::setprecision(3) << tmSolverInternal.getElapsedTime() << " sec "

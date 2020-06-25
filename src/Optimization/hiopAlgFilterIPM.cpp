@@ -51,6 +51,8 @@
 #include "hiopKKTLinSysDense.hpp"
 #include "hiopKKTLinSysMDS.hpp"
 
+#include "hiopCppStdUtils.hpp"
+
 #include <cmath>
 #include <cstring>
 #include <cassert>
@@ -263,6 +265,8 @@ void hiopAlgFilterIPMBase::reloadOptions()
   _tau=fmax(tau_min,1.0-_mu);
   theta_max = 1e7; //temporary - will be updated after ini pt is computed
   theta_min = 1e7; //temporary - will be updated after ini pt is computed
+
+  perf_report_kkt_ = "on"==hiop::tolower(nlp->options->GetString("time_kkt"));
 }
 
 void hiopAlgFilterIPMBase::resetSolverStatus() 
@@ -637,43 +641,55 @@ checkTermination(const double& err_nlp, const int& iter_num, hiopSolveStatus& st
   return false;
 }
 /***** Termination message *****/
-void hiopAlgFilterIPMBase::displayTerminationMsg() {
-
+void hiopAlgFilterIPMBase::displayTerminationMsg()
+{
+  std::string strStatsReport = nlp->runStats.get_summary() + nlp->runStats.kkt.get_summary_total();
   switch(solver_status_) {
   case Solve_Success: 
     {
-      nlp->log->printf(hovSummary, "Successfull termination.\n%s\n", nlp->runStats.getSummary().c_str());
+      nlp->log->printf(hovSummary, "Successfull termination.\n%s\n", strStatsReport.c_str());
       break;
     }
   case Solve_Success_RelTol: 
     {
-      nlp->log->printf(hovSummary, "Successfull termination (error within the relative tolerance).\n%s\n", nlp->runStats.getSummary().c_str());
+      nlp->log->printf(hovSummary,
+		       "Successfull termination (error within the relative tolerance).\n%s\n",
+		        strStatsReport.c_str());
       break;
     }
   case Solve_Acceptable_Level:
     {
-      nlp->log->printf(hovSummary, "Solve to only to the acceptable tolerance(s).\n%s\n", nlp->runStats.getSummary().c_str());
+      nlp->log->printf(hovSummary,
+		       "Solve to only to the acceptable tolerance(s).\n%s\n",
+		       strStatsReport.c_str());
       break;
     }
   case Max_Iter_Exceeded:
     {
-      nlp->log->printf(hovSummary, "Maximum number of iterations reached.\n%s\n", nlp->runStats.getSummary().c_str());
+      nlp->log->printf(hovSummary,
+		       "Maximum number of iterations reached.\n%s\n",
+		       strStatsReport.c_str());//nlp->runStats.getSummary().c_str());
       break;
     }
   case Steplength_Too_Small:
     {
-      nlp->log->printf(hovSummary, "Couldn't solve the problem.\n%s\n", nlp->runStats.getSummary().c_str());
-      nlp->log->printf(hovSummary, "Linesearch returned unsuccessfully (small step). Probable cause: inaccurate gradients/Jacobians or infeasible problem.\n");
+      nlp->log->printf(hovSummary, "Couldn't solve the problem.\n");
+      nlp->log->printf(hovSummary, "Linesearch returned unsuccessfully (small step). Probable cause: "
+		       "inaccurate gradients/Jacobians or infeasible problem.\n");
+      nlp->log->printf(hovSummary, "%s\n", strStatsReport.c_str());
       break;
     }
   case User_Stopped:
     {
-      nlp->log->printf(hovSummary, "Stopped by the user through the user provided iterate callback.\n%s\n", nlp->runStats.getSummary().c_str());
+      nlp->log->printf(hovSummary,
+		       "Stopped by the user through the user provided iterate callback.\n%s\n",
+		       strStatsReport.c_str());
       break;
     }
   default:
     {
-      nlp->log->printf(hovSummary, "Do not know why HiOp stopped. This shouldn't happen. :)\n%s\n", nlp->runStats.getSummary().c_str());
+      nlp->log->printf(hovSummary, "Do not know why HiOp stopped. This shouldn't happen. :)\n%s\n", 
+		       strStatsReport.c_str());
       assert(false && "Do not know why hiop stopped. This shouldn't happen.");
       break;
     }
@@ -1136,7 +1152,8 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
   resetSolverStatus();
 
   nlp->runStats.initialize();
-
+  nlp->runStats.kkt.initialize();
+  
   if(!pd_perturb_.initialize(nlp)) {
     return SolveInitializationError;
   }
@@ -1278,6 +1295,8 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
      * Search direction calculation
      ***************************************************/
     pd_perturb_.set_mu(_mu);
+    nlp->runStats.kkt.start_optimiz_iteration();
+    
     //update the Hessian and kkt system
     if(!kkt->update(it_curr, _grad_f, _Jac_c, _Jac_d, _Hess_Lagr)) {
       nlp->log->write("Unrecoverable error in step computation (factorization). Will exit here.", hovError);
@@ -1288,6 +1307,11 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
       nlp->log->write("Unrecoverable error in step computation (solve). Will exit here.", hovError);
       return solver_status_ = Err_Step_Computation;
     }
+    nlp->runStats.kkt.end_optimiz_iteration();
+    if(perf_report_kkt_) {
+      nlp->log->printf(hovSummary,"%s", nlp->runStats.kkt.get_summary_last_iter().c_str());
+    }
+    
     nlp->log->printf(hovIteration, "Iter[%d] full search direction -------------\n", iter_num);
     nlp->log->write("", *dir, hovIteration);
     /***************************************************************
