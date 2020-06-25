@@ -66,6 +66,8 @@ Below is an example for specifiying `cuBlas`, `cuBlasLt`, and `nvblas` libraries
 $> cmake -DHIOP_USE_GPU=ON -DCUDA_cublas_LIBRARY=/usr/local/cuda-10.2/targets/x86_64-linux/lib/lib64 -DCUDA_cublasLt_LIBRARY=/export/home/petra1/work/installs/cuda10.2.89/targets/x86_64-linux/lib/ -DCUDA_nvblas_LIBRARY=/export/home/petra1/work/installs/cuda10.2.89/targets/x86_64-linux/lib/ .. && make -j && make install
 ```
 
+A detailed example on how to compile HiOp straight of the box on `summit.olcf.ornl.gov` is available [here](README_summit.md).
+
 ### Kron reduction
 
 Kron reduction functionality of HiOp is disabled by default. One can enable it by using 
