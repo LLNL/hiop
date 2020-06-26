@@ -61,26 +61,36 @@ public:
   hiopIterate(const hiopNlpFormulation* nlp);
   virtual ~hiopIterate();
 
-  //virtual void projectPrimalsIntoBounds(double kappa1, double kappa2);
   virtual void projectPrimalsXIntoBounds(double kappa1, double kappa2);
   virtual void projectPrimalsDIntoBounds(double kappa1, double kappa2);
   virtual void setBoundsDualsToConstant(const double& v);
   virtual void setEqualityDualsToConstant(const double& v);
-  /** computes the slacks given the primals: sxl=x-xl, sxu=xu-x, and similar 
-   *  for sdl and sdu  */
+  /** 
+   * Computes the slacks given the primals: sxl=x-xl, sxu=xu-x, and similar 
+   *  for sdl and sdu.
+   */
   virtual void determineSlacks();
 
+  /** 
+   * Computes duals for bounds on d, namely vl and vu from vl=mu e/sdl and vu = mu e/sdu. 
+   * Assumes sdl and sdu are available/computed previously.
+   */
+  virtual void determineDualsBounds_d(const double& mu);
+  
   /* max{a\in(0,1]| x+ad >=(1-tau)x} */
-  bool fractionToTheBdry(const hiopIterate& dir, const double& tau, double& alphaprimal, double& alphadual) const;
+  bool fractionToTheBdry(const hiopIterate& dir, const double& tau,
+			 double& alphaprimal, double& alphadual) const;
   
   /* take the step: this = iter+alpha*dir */
-  virtual bool takeStep_primals(const hiopIterate& iter, const hiopIterate& dir, const double& alphaprimal, const double& alphadual);
-  virtual bool takeStep_duals(const hiopIterate& iter, const hiopIterate& dir, const double& alphaprimal, const double& alphadual);
-  //virtual bool updateDualsEq(const hiopIterate& iter, const hiopIterate& dir, double& alphaprimal, double& alphadual);
-  //virtual bool updateDualsIneq(const hiopIterate& iter, const hiopIterate& dir, double& alphaprimal, double& alphadual);
+  virtual bool takeStep_primals(const hiopIterate& iter, const hiopIterate& dir,
+				const double& alphaprimal, const double& alphadual);
+  virtual bool takeStep_duals(const hiopIterate& iter, const hiopIterate& dir,
+			      const double& alphaprimal, const double& alphadual);
   
-  /* Adjusts the signed duals to ensure the the logbar primal-dual Hessian is not arbitrarily 
-   * far away from the primal counterpart. This is eq. 16 in the filter IPM paper */
+  /**
+   * Adjusts the signed duals to ensure the the logbar primal-dual Hessian is not arbitrarily 
+   * far away from the primal counterpart. This is eq. 16 in the filter IPM paper 
+   */
   virtual bool adjustDuals_primalLogHessian(const double& mu, const double& kappa_Sigma);
   /* compute the log-barrier term for the primal signed variables */
   virtual double evalLogBarrier() const;
@@ -88,11 +98,15 @@ public:
   virtual void addLogBarGrad_x(const double& mu, hiopVector& gradx) const;
   virtual void addLogBarGrad_d(const double& mu, hiopVector& gradd) const;
 
-  /* computes the log barrier's linear damping term of the Filter-IPM method of WaectherBiegler (section 3.7) */
+  /**
+   * Computes the log barrier's linear damping term of the Filter-IPM method of WaectherBiegler (section 3.7) 
+   */
   virtual double linearDampingTerm(const double& mu, const double& kappa_d) const;
   /* adds the damping term to the gradient */
-  virtual void addLinearDampingTermToGrad_x(const double& mu, const double& kappa_d, const double& beta, hiopVector& grad_x) const;
-  virtual void addLinearDampingTermToGrad_d(const double& mu, const double& kappa_d, const double& beta, hiopVector& grad_d) const;
+  virtual void addLinearDampingTermToGrad_x(const double& mu, const double& kappa_d, const double& beta,
+					    hiopVector& grad_x) const;
+  virtual void addLinearDampingTermToGrad_d(const double& mu, const double& kappa_d, const double& beta,
+					    hiopVector& grad_d) const;
 
   /** norms for individual parts of the iterate (on demand computation) */
   virtual double normOneOfBoundDuals() const;

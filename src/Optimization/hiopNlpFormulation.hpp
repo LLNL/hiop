@@ -90,8 +90,9 @@ public:
 
   virtual bool finalizeInitialization();
 
-  /* wrappers for the interface calls. Can be overridden for specialized formulations required 
-   * by the algorithm 
+  /**
+   * Wrappers for the interface calls. 
+   * Can be overridden for specialized formulations required by the algorithm.
    */
   virtual bool eval_f(double* x, bool new_x, double& f);
   virtual bool eval_grad_f(double* x, bool new_x, double* gradf);
@@ -114,7 +115,10 @@ public:
 			      bool new_lambdas, 
 			      hiopMatrix& Hess_L)=0;
   /* starting point */
-  virtual bool get_starting_point(hiopVector& x0);
+  virtual bool get_starting_point(hiopVector& x0,
+				  bool& duals_avail,
+				  hiopVector& zL0, hiopVector& zU0,
+				  hiopVector& yc0, hiopVector& yd0);
 
   /** linear algebra factory */
   virtual hiopVector* alloc_primal_vec() const;
@@ -129,7 +133,8 @@ public:
 
   virtual
   void user_callback_solution(hiopSolveStatus status,
-			      const hiopVector& x, const hiopVector& z_L, const hiopVector& z_U,
+			      const hiopVector& x,
+			      const hiopVector& z_L, const hiopVector& z_U,
 			      const hiopVector& c, const hiopVector& d,
 			      const hiopVector& yc, const hiopVector& yd,
 			      double obj_value);
@@ -137,7 +142,8 @@ public:
   virtual
   bool user_callback_iterate(int iter,
 			     double obj_value,
-			     const hiopVector& x, const hiopVector& z_L, const hiopVector& z_U,
+			     const hiopVector& x,
+			     const hiopVector& z_L, const hiopVector& z_U,
 			     const hiopVector& c, const hiopVector& d,
 			     const hiopVector& yc, const hiopVector& yd,
 			     double inf_pr, double inf_du, double mu,
@@ -179,6 +185,19 @@ public:
     memcpy(user_x, user_xa, nlp_transformations.n_post_local()*sizeof(double));
   }
 
+  /* copies/unpacks duals of the bounds and of constraints from 'it' to the three arrays */
+  void get_dual_solutions(const hiopIterate& it,
+			  double* zl_a,
+			  double* zu_a,
+			  double* lambda_a);
+  
+  /* packs constraint rhs or constraint multipliers into one array based on the internal mappings 
+   * 'cons_eq_mapping_'and 'cons_ineq_mapping_ */
+  void copy_EqIneq_to_cons(const hiopVector& yc,
+			   const hiopVector& yd,
+			   int num_cons, //size of 'cons'
+			   double* cons);
+  
   /* outputing and debug-related functionality*/
   hiopLogger* log;
   hiopRunStats runStats;
@@ -210,8 +229,9 @@ protected:
 
   hiopVectorPar *dl, *du,  *idl, *idu; //these will be local
   hiopInterfaceBase::NonlinearityType* cons_ineq_type;
+  
   // keep track of the constraints indexes in the original, user's formulation
-  long long *cons_eq_mapping, *cons_ineq_mapping; 
+  long long *cons_eq_mapping_, *cons_ineq_mapping_; 
 
   //options for which this class was setup
   std::string strFixedVars; //"none", "fixed", "relax"
@@ -225,18 +245,35 @@ protected:
   long long* vec_distrib;
 #endif
 
+  /* User provided interface */
   hiopInterfaceBase& interface_base;
 
-  /* Flag to indicate whether to use evaluate all constraints once or separately for equalities
+  /**
+   * Flag to indicate whether to use evaluate all constraints once or separately for equalities
    * or inequalities. Possible values
    * -1 : not initialized/not decided
    *  0 : separately
    *  1 : at once
    */
   int cons_eval_type_;
-  /* used only when constraints and Jacobian are evaluated at once (cons_eval_type_==1) */
+  
+  /** 
+   * Internal buffer for constraints. Used only when constraints and Jacobian are evaluated at 
+   * once (cons_eval_type_==1), otherwise NULL.
+   */
   double* cons_body_;
+  
+  /** 
+   * Internal buffer for the Jacobian. Used only when constraints and Jacobian are evaluated at 
+   * once (cons_eval_type_==1), otherwise NULL.
+   */
   hiopMatrix* cons_Jac_;
+
+  /** 
+   * Internal buffer for the multipliers of the constraints use to copy the multipliers of eq. and
+   * ineq. into and to return it to the user via @user_callback_solution and @user_callback_iterate
+   */
+  double* cons_lambdas_;
 private:
   hiopNlpFormulation(const hiopNlpFormulation& s) : interface_base(s.interface_base) {};
 };

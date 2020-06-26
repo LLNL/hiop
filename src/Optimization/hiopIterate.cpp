@@ -162,16 +162,12 @@ projectPrimalsDIntoBounds(double kappa1, double kappa2)
   }
 }
 
-
 void hiopIterate::setBoundsDualsToConstant(const double& v)
 {
   zl->setToConstant_w_patternSelect(v, nlp->get_ixl());
   zu->setToConstant_w_patternSelect(v, nlp->get_ixu());
   vl->setToConstant_w_patternSelect(v, nlp->get_idl());
   vu->setToConstant_w_patternSelect(v, nlp->get_idu());
-#ifdef WITH_GPU
-  //maybe do the above arithmetically zl->setToConstant(); zl=zl.*ixl
-#endif
 }
 
 void hiopIterate::setEqualityDualsToConstant(const double& v)
@@ -179,7 +175,6 @@ void hiopIterate::setEqualityDualsToConstant(const double& v)
   yc->setToConstant(v);
   yd->setToConstant(v);
 }
-
 
 double hiopIterate::normOneOfBoundDuals() const
 {
@@ -231,7 +226,8 @@ void hiopIterate::normOneOfDuals(double& nrm1Eq, double& nrm1Bnd) const
   nrm1Bnd = zl->onenorm_local() + zu->onenorm_local();
 #ifdef HIOP_USE_MPI
   double nrm1_global;
-  int ierr=MPI_Allreduce(&nrm1Bnd, &nrm1_global, 1, MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(MPI_SUCCESS==ierr);
+  int ierr=MPI_Allreduce(&nrm1Bnd, &nrm1_global, 1, MPI_DOUBLE, MPI_SUM, nlp->get_comm());
+  assert(MPI_SUCCESS==ierr);
   nrm1Bnd=nrm1_global;
 #endif
   nrm1Bnd += vl->onenorm_local() + vu->onenorm_local();
@@ -263,6 +259,19 @@ void hiopIterate::determineSlacks()
   assert(sdl->allPositive_w_patternSelect(nlp->get_idl()));
   assert(sdu->allPositive_w_patternSelect(nlp->get_idu()));
 #endif
+}
+
+void hiopIterate::determineDualsBounds_d(const double& mu)
+{
+#ifdef DEBUG
+  assert(true == sdl->allPositive_w_patternSelect(nlp->get_idl()));
+  assert(true == sdu->allPositive_w_patternSelect(nlp->get_idu()));
+#endif
+  vl->setToConstant(mu);
+  vl->componentDiv_w_selectPattern(*sdl, nlp->get_idl());
+
+  vu->setToConstant(mu);
+  vu->componentDiv_w_selectPattern(*sdu, nlp->get_idu());
 }
 
 bool hiopIterate::

@@ -190,7 +190,8 @@ public:
   /** pass the communicator, defaults to MPI_COMM_WORLD (dummy for non-MPI builds)  */
   virtual bool get_MPI_comm(MPI_Comm& comm_out) { comm_out=MPI_COMM_WORLD; return true;}
 
-  /**  column partitioning specification for distributed memory vectors 
+  /**  
+   * Column partitioning specification for distributed memory vectors 
   *  Process P owns cols[P], cols[P]+1, ..., cols[P+1]-1, P={0,1,...,NumRanks}.
   *  Example: for a vector x of 6 elements on 3 ranks, the col partitioning is cols=[0,2,4,6].
   *  The caller manages memory associated with 'cols', array of size NumRanks+1 
@@ -199,19 +200,67 @@ public:
     return false; //defaults to serial 
   }
 
-  /* Method providing a primal starting point. This point is subject to internal adjustments in hiOP.
-   * The method returns true (and populate x0) or return false, in which case hiOP will use set 
-   * x0 to all zero (still subject to internal adjustement).
+  /**
+   * Method provides a primal or starting point. This point is subject to internal adjustments.
    *
-   * TODO: provide API for a full, primal-dual restart. 
+   * Note: Avoid using this method since it will removed in a future release and replaced with
+   * the same-name method below.
+   *
+   * The method returns true (and populates x0) or returns false, in which case HiOp will 
+   * internally set x0 to all zero (still subject to internal adjustements).
+   *
+   * By default, HiOp first calls the overloaded primal-dual starting point specification
+   * method 
+   * @get_starting_point(const long long&, const long long&, double*, 
+   *                     bool, double*, double*, double*)
+   * If the above returns 'false', HiOp will then call this method.
+   *
    */
-  virtual bool get_starting_point(const long long&n, double* x0) { return false; }
+  virtual bool get_starting_point(const long long&n, double* x0)
+  {
+    return false;
+  }
+  
+  /**
+   * Method provides a primal or a primal-dual primal-dual starting point This point is subject 
+   * to internal adjustments in HiOp.
+   *
+   * If the user (implementer of this method) has good estimates only of the primal variables,
+   * the method should populates 'x0' with these values and return true. The 'duals_avail' 
+   * should be set to false; internally, HiOp will not access 'z_bndL0', 'z_bndU0', and 
+   * 'lambda0'.
+   *
+   * If the user (implementer of this method) has good estimates of the duals of bound constraints 
+   * and of inequality and equality constraints, 'duals_avail' boolean argument should 
+   * be set to true and the respective duals should be provided (in 'z_bndL0' and 'z_bndU0' and 
+   * 'lambda0', respectively). In this case, the user should also set 'x0' to his/her estimate 
+   * of primal variables and return 'true'.
+   *
+   * If user does not have high-quality (primal or primal-dual) starting points, the method should 
+   * return false (see note below).
+   *
+   * Note: when this method returns false, HiOp will call the overload
+   * @get_starting_point(long long&, double*)
+   * This behaviour is for backward compatibility and will be removed in a future release.
+   * 
+   */
+  virtual bool get_starting_point(const long long& n, const long long& m,
+				  double* x0,
+				  bool& duals_avail,
+				  double* z_bndL0, double* z_bndU0,
+				  double* lambda0)
+  {
+    return false;
+  }
 
-  /** callback for the optimal solution.
-   *  Note that:
+  /** 
+   * Callback method called by HiOp when the optimal solution is reached. User should use it
+   * to retrieve primal-dual optimal solution. 
+   * 
    *   i. x, z_L, z_U contain only the array slice that is local to the calling process
-   *  ii. g, lambda are replicated across all processes, which means they can be used as-is, without reducing them.
-   * iii. all other scalar quantities are replicated across all processes, which means they can be used as-is, 
+   *  ii. g, lambda are replicated across all processes, which means they can be used as-is, 
+   * without reducing them.
+   * iii. all other scalars are replicated across all processes, thus, they can be used as-is, 
    * without reducing them.
    */
   virtual void solution_callback(hiopSolveStatus status,
@@ -222,7 +271,8 @@ public:
 				 const double* lambda,
 				 double obj_value) { };
 
-  /** Callback for the iteration: at the end of each iteration. This is NOT called during the line-searches.
+  /** 
+   * Callback for the (end of) iteration. This is not called during the line-searches.
    * Note: all the notes for @solution_callback apply.
    */
   virtual bool iterate_callback(int iter, double obj_value,
