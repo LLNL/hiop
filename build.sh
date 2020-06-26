@@ -4,7 +4,6 @@
   source /etc/profile.d/modules.sh
 
 declare -a cmake_args
-declare -a compilers
 
 if type module
 then
@@ -14,8 +13,6 @@ then
   module purge
   case $cluster in
     newell)
-      # gcc=4.8.5
-      # gcc=5.2.0
       gcc=7.4.0
       cmake=3.16.4
       openmpi=3.1.5
@@ -28,14 +25,10 @@ then
       module load cuda/$cuda
       module load magma/$magma
       module load metis/$metis
-
-      cmake_args+=("-DHIOP_USE_GPU=ON \
-        -DHIOP_MAGMA_DIR=$mod_dir/magma/2.5.2/cuda10.2/ \
-        -DHIOP_USE_MPI=ON \
-        -DHIOP_WITH_KRON_REDUCTION=ON \
+      cmake_args+=("-DHIOP_USE_GPU=ON -DHIOP_MAGMA_DIR=$mod_dir/magma/2.5.2/cuda10.2/ \
+        -DHIOP_USE_MPI=ON -DHIOP_WITH_KRON_REDUCTION=ON \
         -DHIOP_UMFPACK_DIR=$proj_dir/$cluster/suitesparse \
         -DHIOP_METIS_DIR=$mod_dir/metis/$metis")
-
       export NVBLAS_CONFIG_FILE=$proj_dir/newell/nvblas.conf
       ;;
     marianas)
@@ -51,22 +44,15 @@ then
       module load cuda/$cuda
       module load magma/$magma
       module load metis/$metis
-
-      cmake_args+=("-DHIOP_USE_GPU=ON \
-        -DHIOP_MAGMA_DIR=$mod_dir/magma/2.5.2/cuda10.2/ \
-        -DHIOP_USE_MPI=ON \
-        -DHIOP_WITH_KRON_REDUCTION=ON \
+      cmake_args+=("-DHIOP_USE_GPU=ON -DHIOP_MAGMA_DIR=$mod_dir/magma/2.5.2/cuda10.2/ \
+        -DHIOP_USE_MPI=ON -DHIOP_WITH_KRON_REDUCTION=ON \
         -DHIOP_UMFPACK_DIR=$proj_dir/$cluster/suitesparse \
         -DHIOP_METIS_DIR=$mod_dir/metis/$metis")
-
       export NVBLAS_CONFIG_FILE=$proj_dir/marianas/nvblas.conf
       ;;
     *)
-      echo
       echo Generic Build
-      echo
       echo Note: NVBLAS_CONFIG_FILE will not be set.
-      echo
       ;;
   esac
 fi
@@ -84,16 +70,12 @@ cmake_args+=(
 )
 
 builddir=build
-for ((i=0; i<${#cmake_args[@]}; i++))
+for i in $(seq 0 ${#cmake_args[@]})
 do
   build=${cmake_args[i]}
   echo
   echo "Building with cmake args: $build"
   echo
-  if [[ ! -z "$NVBLAS_CONFIG_FILE" ]]; then
-    echo Using NVBLAS_CONFIG_FILE=$NVBLAS_CONFIG_FILE
-    echo
-  fi
   [ -d $builddir ] && rm -rf $builddir; mkdir $builddir
   cd $builddir
 
@@ -101,7 +83,7 @@ do
   pwd
   cmake $build .. || exit 1
   make $make_flags || exit 1
-  ctest -VV || exit 1
+  ctest || exit 1
   popd
   set +x
 
