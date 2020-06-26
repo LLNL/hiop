@@ -1309,7 +1309,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
     }
     nlp->runStats.kkt.end_optimiz_iteration();
     if(perf_report_kkt_) {
-      nlp->log->printf(hovSummary,"%s", nlp->runStats.kkt.get_summary_last_iter().c_str());
+      nlp->log->printf(hovSummary, "%s", nlp->runStats.kkt.get_summary_last_iter().c_str());
     }
     
     nlp->log->printf(hovIteration, "Iter[%d] full search direction -------------\n", iter_num);

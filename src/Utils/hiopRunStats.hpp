@@ -61,6 +61,7 @@
 namespace hiop
 {
 
+ 
 class hiopRunKKTSolStats
 {
 public:
@@ -175,6 +176,56 @@ public:
 };
 
 
+class hiopLinSolStats
+{
+public:
+  hiopLinSolStats()
+  {
+    flopsFact = flopsTriuSolves = -1.;
+  }
+  hiopTimer tmFactTime;
+  hiopTimer tmInertiaComp;
+  hiopTimer tmTriuSolves;
+
+  hiopTimer tmDeviceTansfer;
+  
+  //hiopTimer tmWholeLinSolve;
+
+  double flopsFact, flopsTriuSolves;
+  
+  inline void start_linsolve()
+  {
+    flopsFact = flopsTriuSolves = -1.;
+    //tmWholeLinSolve.reset();
+    tmFactTime.reset();
+    tmInertiaComp.reset();
+    tmTriuSolves.reset();
+
+    //tmWholeLinSolve.start();
+  }
+  
+  inline void end_linsolve()
+  {
+    //tmWholeLinSolve.stop();
+  }
+  inline std::string get_summary_last_solve() const
+  {
+    std::stringstream ss;
+    ss <<  std::fixed << std::setprecision(3);
+      //<< "Total LinSolve time=" << tmWholeLinSolve.getElapsedTime() << " sec " 
+    //<< std::endl;
+
+    ss << "(Last) Lin Solve: fact " << tmFactTime.getElapsedTime() << "s   flops=" << flopsFact
+       << "   inertia=" << tmInertiaComp.getElapsedTime() << "s" 
+       << "   triu. solves=" << tmTriuSolves.getElapsedTime() << "s   flops=" << flopsTriuSolves
+       << "   device transfer=" << tmDeviceTansfer.getElapsedTime() << "s"
+       << std::endl;
+
+    return ss.str();
+  }
+};
+
+
 class hiopRunStats
 {
 public:
@@ -197,7 +248,7 @@ public:
   int nIter;
 
   hiopRunKKTSolStats kkt;
-
+  hiopLinSolStats linsolv;
   inline virtual void initialize() {
     tmOptimizTotal = tmSolverInternal = tmSearchDir = tmStartingPoint = tmMultUpdate = tmComm = tmInit = 0.;
     tmEvalObj = tmEvalGrad_f = tmEvalCons = tmEvalJac_con = 0.;    

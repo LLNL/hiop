@@ -54,6 +54,8 @@
 
 #include "hiop_blasdefs.hpp"
 
+#include "hiopCppStdUtils.hpp"
+
 namespace hiop
 {
 
@@ -70,7 +72,7 @@ namespace hiop
 class hiopLinSolver
 {
 public:
-  hiopLinSolver() : nlp(NULL) {}
+  hiopLinSolver() : nlp_(NULL), perf_report_(false) {}
   virtual ~hiopLinSolver() {}
 
   /** Triggers a refactorization of the matrix, if necessary. 
@@ -84,17 +86,19 @@ public:
   virtual void solve ( hiopVector& x ) = 0;
   virtual void solve ( hiopMatrix& x ) { assert(false && "not yet supported"); }
 public: 
-  hiopNlpFormulation* nlp;
+  hiopNlpFormulation* nlp_;
+  bool perf_report_; 
 };
 
   /** Base class for Indefinite Dense Solvers */
 class hiopLinSolverIndefDense : public hiopLinSolver
 {
 public:
-  hiopLinSolverIndefDense(int n, hiopNlpFormulation* nlp_)
+  hiopLinSolverIndefDense(int n, hiopNlpFormulation* nlp)
     : M(n,n)
   {
-    nlp = nlp_;
+    nlp_ = nlp;
+    perf_report_ = "on"==hiop::tolower(nlp->options->GetString("time_kkt"));
   }
   virtual ~hiopLinSolverIndefDense()
   { 
@@ -111,8 +115,8 @@ protected:
 class hiopLinSolverIndefDenseLapack : public hiopLinSolverIndefDense
 {
 public:
-  hiopLinSolverIndefDenseLapack(int n, hiopNlpFormulation* nlp_)
-    : hiopLinSolverIndefDense(n, nlp_)
+  hiopLinSolverIndefDenseLapack(int n, hiopNlpFormulation* nlp)
+    : hiopLinSolverIndefDense(n, nlp)
   {
     ipiv = new int[n];
     dwork = new hiopVectorPar(0);
@@ -131,6 +135,8 @@ public:
     int N=M.n(), lda = N, info;
     if(N==0) return 0;
 
+    nlp_->runStats.linsolv.tmFactTime.start();
+    
     double dwork_tmp;
     char uplo='L'; // M is upper in C++ so it's lower in fortran
 
@@ -154,13 +160,13 @@ public:
     //
     DSYTRF(&uplo, &N, M.local_buffer(), &lda, ipiv, dwork->local_data(), &lwork, &info );
     if(info<0) {
-      nlp->log->printf(hovError,
+      nlp_->log->printf(hovError,
 		       "hiopLinSolverIndefDense error: %d argument to dsytrf has an illegal value.\n",
 		       -info);
       return -1;
     } else {
       if(info>0) {
-	nlp->log->printf(hovWarning,
+	nlp_->log->printf(hovWarning,
 			 "hiopLinSolverIndefDense error: %d entry in the factorization's diagonal\n"
 			 "is exactly zero. Division by zero will occur if it a solve is attempted.\n",
 			 info);
@@ -169,7 +175,9 @@ public:
       }
     }
     assert(info==0);
-
+    nlp_->runStats.linsolv.tmFactTime.stop();
+    
+    nlp_->runStats.linsolv.tmInertiaComp.start();
     //
     // Compute the inertia. Only negative eigenvalues are returned.
     // Code originally written by M. Schanenfor PIPS based on
@@ -211,6 +219,7 @@ public:
       }
     }
     //printf("(pos,null,neg)=(%d,%d,%d)\n", posEigVal, nullEigVal, negEigVal);
+    nlp_->runStats.linsolv.tmInertiaComp.stop();
     
     if(nullEigVal>0) return -1;
     return negEigVal;
@@ -226,6 +235,8 @@ public:
     int N=M.n(), LDA = N, info;
     if(N==0) return;
 
+    nlp_->runStats.linsolv.tmTriuSolves.start();
+    
     hiopVectorPar* x = dynamic_cast<hiopVectorPar*>(&x_);
     assert(x != NULL);
 
@@ -233,12 +244,12 @@ public:
     int NRHS=1, LDB=N;
     DSYTRS(&uplo, &N, &NRHS, M.local_buffer(), &LDA, ipiv, x->local_data(), &LDB, &info);
     if(info<0) {
-      nlp->log->printf(hovError, "hiopLinSolverIndefDenseLapack: DSYTRS returned error %d\n", info);
+      nlp_->log->printf(hovError, "hiopLinSolverIndefDenseLapack: DSYTRS returned error %d\n", info);
       assert(false);
     } else if(info>0) {
-      nlp->log->printf(hovError, "hiopLinSolverIndefDenseLapack: DSYTRS returned error %d\n", info);
+      nlp_->log->printf(hovError, "hiopLinSolverIndefDenseLapack: DSYTRS returned error %d\n", info);
     }
-    
+    nlp_->runStats.linsolv.tmTriuSolves.stop();
   }
   void solve ( hiopMatrix& x )
   {
@@ -272,8 +283,8 @@ private:
 class hiopLinSolverIndefDenseMagma : public hiopLinSolverIndefDense
 {
 public:
-  hiopLinSolverIndefDenseMagma(int n, hiopNlpFormulation* nlp_)
-    : hiopLinSolverIndefDense(n, nlp_)
+  hiopLinSolverIndefDenseMagma(int n, hiopNlpFormulation* nlp)
+    : hiopLinSolverIndefDense(n, nlp)
   {
 
     magma_int_t ndevices;
@@ -302,13 +313,12 @@ public:
   /** Triggers a refactorization of the matrix, if necessary. */
   int matrixChanged()
   {
+    nlp_->runStats.linsolv.tmFactTime.start();
     //TO DO: factorization done in 'solve' for now
     int negEigVal=0;
+    nlp_->runStats.tmFactTime.stop();
     return negEigVal;
   }
-    
-
-
 
   /** solves a linear system.
    * param 'x' is on entry the right hand side(s) of the system to be solved. On
@@ -320,7 +330,7 @@ public:
     int N=M.n(), LDA = N, LDB=N;
     if(N==0) return;
 
-    printf("Solve starts on a matrix %d x %d\n", N, N);
+    //printf("Solve starts on a matrix %d x %d\n", N, N);
 
     magma_int_t info; 
 
@@ -336,34 +346,35 @@ public:
 
     double gflops = ( FLOPS_DPOTRF( N ) + FLOPS_DPOTRS( N, NRHS ) ) / 1e9;
 
-    hiopTimer t_glob; t_glob.start();
-    hiopTimer t; t.start();
+    nlp_->runStats.tmDeviceTansfer.start();
     magma_dsetmatrix( N, N,    M.local_buffer(), LDA, device_M,   LDDA, magma_device_queue );
     magma_dsetmatrix( N, NRHS, x->local_data(),  LDB, device_rhs, LDDB, magma_device_queue );
-    t.stop();
-    printf("cpu->gpu data transfer in %g sec\n", t.getElapsedTime());
-    fflush(stdout);
-
+    nlp_->runStats.tmDeviceTansfer.stop();
+    
+    nlp_->runStats.tmTriuSolves.start();
     //DSYTRS(&uplo, &N, &NRHS, M.local_buffer(), &LDA, ipiv, x->local_data(), &LDB, &info);
-    t.reset(); t.start();
     magma_dsysv_nopiv_gpu(uplo, N, NRHS, device_M, LDDA, device_rhs, LDDB, &info);
-    t.stop();
-    printf("gpu solve in %g sec  TFlops: %g\n", t.getElapsedTime(), gflops / t.getElapsedTime() / 1000.);
 
     if(0 != info) {
       printf("dsysv_nopiv returned %d [%s]\n", info, magma_strerror( info ));
     }
     assert(info==0);
 
+    nlp_->runStats.tmTriuSolves.stop();
+    nlp_->runStats.linsolv.flopsTriuSolves = gflops / nlp_->runStats.tmTriuSolves.getElapsedTime() / 1000.;
+    
     if(info<0) {
-      nlp->log->printf(hovError, "hiopLinSolverIndefDenseMagma: DSYTRS returned error %d\n", info);
+      nlp_->log->printf(hovError, "hiopLinSolverIndefDenseMagma: dsysv_nopiv returned error %d\n", info);
       assert(false);
     }
-    t.reset(); t.start();
+
+    nlp_->runStats.tmDeviceTansfer.start();
     magma_dgetmatrix( N, NRHS, device_rhs, LDDB, x->local_data(), LDDB, magma_device_queue );
-    t.stop(); t_glob.stop();
-    printf("gpu->cpu solution transfer in %g sec\n", t.getElapsedTime());
-    printf("including tranfer time -> TFlops: %g\n", gflops / t_glob.getElapsedTime() / 1000.);
+    nlp_->runStats.tmDeviceTansfer.stop();
+    
+    //t.stop(); t_glob.stop();
+    //printf("gpu->cpu solution transfer in %g sec\n", t.getElapsedTime());
+    //printf("including tranfer time -> TFlops: %g\n", gflops / t_glob.getElapsedTime() / 1000.);
   }
   void solve ( hiopMatrix& x ) { assert(false && "not needed; see the other solve method for implementation"); }
 

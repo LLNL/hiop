@@ -73,11 +73,7 @@ public:
     int N=M.n(), lda = N, info;
     if(N==0) return 0;
 
-    hiopTimer tm_glob; 
-    tm_glob.start();
-    hiopTimer tm; 
-    tm.start();
-
+    nlp_->runStats.linsolv.tmFactTime.start();
 
     double gflops = FLOPS_DPOTRF( N )  / 1e9;
 
@@ -88,9 +84,8 @@ public:
     //
     magma_dsytrf(uplo, N, M.local_buffer(), lda, ipiv, &info );
 
-    tm.stop();
-    printf("GPU FACT in %g sec at TFlops: %g\n", tm.getElapsedTime(), gflops / tm.getElapsedTime() / 1000.);
-
+    nlp_->runStats.tmFactTime.stop();
+    nlp_->runStats.linsolv.flopsFact = gflops / nlp_->runStats.tmFactTime.getElapsedTime() / 1000.);
 
     if(info<0) {
       nlp->log->printf(hovError,
@@ -108,6 +103,8 @@ public:
       }
     }
     assert(info==0);
+
+    nlp_->runStats.linsolv.tmInertiaComp.start();
     //
     // Compute the inertia. Only negative eigenvalues are returned.
     // Code originally written by M. Schanenfor PIPS based on
@@ -149,13 +146,11 @@ public:
       }
     }
     //printf("(pos,null,neg)=(%d,%d,%d)\n", posEigVal, nullEigVal, negEigVal);
+    nlp_->runStats.linsolv.tmInertiaComp.stop();
     
     if(nullEigVal>0) return -1;
     return negEigVal;
   }
-    
-
-
 
   /** solves a linear system.
    * param 'x' is on entry the right hand side(s) of the system to be solved. On
@@ -170,6 +165,8 @@ public:
     int NRHS = 1;
     if(N == 0) return;
 
+    nlp_->runStats.linsolv.tmTriuSolves.start();
+    
     hiopVectorPar* x = dynamic_cast<hiopVectorPar*>(&x_);
     assert(x != NULL);
 
@@ -183,7 +180,7 @@ public:
       nlp->log->printf(hovError, "hiopLinSolverMAGMA: (LAPACK) DSYTRS returned error %d\n", info);
     }
 
-
+    nlp_->runStats.linsolv.tmTriuSolves.stop();
     /*
     printf("Solve starts on a matrix %d x %d\n", N, N);
 

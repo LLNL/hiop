@@ -131,8 +131,6 @@ namespace hiop
     const size_t max_ic_cor = 10;
     size_t num_ic_cor = 0;
 
-    //nlp_->log->write("KKT XDYcYd Linsys (no perturb):", Msys, hovMatrices);
-    
     double delta_wx, delta_wd, delta_cc, delta_cd;
     if(!perturb_calc_->compute_initial_deltas(delta_wx, delta_wd, delta_cc, delta_cd)) {
       nlp_->log->printf(hovWarning, "XDycYd linsys: IC perturbation on new linsys failed.\n");
@@ -183,7 +181,6 @@ namespace hiop
 	Jac_cMDS_->sp_mat()->addMDinvMtransToDiagBlockOfSymDeMatUTri(nxd, alpha, *Hxs_, Msys);
 	Msys.addSubDiagonal(nxd, neq, -delta_cc);
 	
-	
 	/* we've just done above the (1,1) and (2,2) blocks of
 	 *
 	 * [ Hd+Dxd+delta_wx*I           Jcd^T                                 Jdd^T  ]
@@ -231,6 +228,7 @@ namespace hiop
       
       nlp_->runStats.kkt.tmUpdateLinsys.stop();
 
+      nlp_->runStats.linsolv.start_linsolve();
       nlp_->runStats.kkt.tmUpdateInnerFact.start();
       //factorization
       int n_neg_eig = linSys_->matrixChanged();
@@ -379,7 +377,12 @@ namespace hiop
     //
     linSys_->solve(*rhs_);
     nlp_->runStats.kkt.tmSolveTriangular.stop();
+    nlp_->runStats.linsolv.end_linsolve();
 
+    if(perf_report_) {
+      nlp_->log->printf(hovSummary, "%s", nlp_->runStats.linsolv.get_summary_last_solve().c_str());
+    }
+    
     if(write_linsys_counter_>=0) csr_writer_.writeSolToFile(*rhs_, write_linsys_counter_);
 
     nlp_->runStats.kkt.tmSolveRhsManip.start();

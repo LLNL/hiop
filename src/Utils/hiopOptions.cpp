@@ -270,7 +270,11 @@ void hiopOptions::registerStrOption(const std::string& name, const std::string& 
   mOptions[name]=new _OStr(defaultValue, range, description);
 }
 
-void hiopOptions::registerIntOption(const std::string& name, int defaultValue, int low, int upp, const char* description)
+void hiopOptions::registerIntOption(const std::string& name,
+				    int defaultValue,
+				    int low,
+				    int upp,
+				    const char* description)
 {
   mOptions[name]=new _OInt(defaultValue, low, upp, description);
 }
