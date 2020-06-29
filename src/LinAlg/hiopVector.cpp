@@ -332,7 +332,7 @@ void hiopVectorPar::componentDiv ( const hiopVector& v_ )
   for(int i=0; i<n_local; i++) data[i] /= v.data[i];
 }
 
-void hiopVectorPar::componentDiv_p_selectPattern( const hiopVector& v_, const hiopVector& ix_)
+void hiopVectorPar::componentDiv_w_selectPattern( const hiopVector& v_, const hiopVector& ix_)
 {
   const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_);
   const hiopVectorPar& ix= dynamic_cast<const hiopVectorPar&>(ix_);
