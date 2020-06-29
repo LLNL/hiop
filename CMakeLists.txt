@@ -243,6 +243,7 @@ install(FILES src/Interface/hiopInterface.hpp
   src/Utils/hiopTimer.hpp
   src/Utils/hiopOptions.hpp
   src/Utils/hiopKronReduction.hpp
+  src/Utils/hiopCppStdUtils.hpp
   src/LinAlg/hiop_blasdefs.hpp
   src/Drivers/IpoptAdapter.hpp
   ${CMAKE_BINARY_DIR}/hiop_defs.hpp

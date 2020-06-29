@@ -242,17 +242,19 @@ public:
   hiopTimer tmSolverInternal, tmSearchDir, tmStartingPoint, tmMultUpdate, tmComm;
   hiopTimer tmInit;
 
-  hiopTimer tmEvalObj, tmEvalGrad_f, tmEvalCons, tmEvalJac_con;
-
+  hiopTimer tmEvalObj, tmEvalGrad_f, tmEvalCons, tmEvalJac_con, tmEvalHessL;
   int nEvalObj, nEvalGrad_f, nEvalCons_eq, nEvalCons_ineq, nEvalJac_con_eq, nEvalJac_con_ineq;
+  int nEvalHessL;
+  
   int nIter;
 
   hiopRunKKTSolStats kkt;
   hiopLinSolStats linsolv;
   inline virtual void initialize() {
     tmOptimizTotal = tmSolverInternal = tmSearchDir = tmStartingPoint = tmMultUpdate = tmComm = tmInit = 0.;
-    tmEvalObj = tmEvalGrad_f = tmEvalCons = tmEvalJac_con = 0.;    
+    tmEvalObj = tmEvalGrad_f = tmEvalCons = tmEvalJac_con = tmEvalHessL = 0.;    
     nEvalObj = nEvalGrad_f = nEvalCons_eq = nEvalCons_ineq =  nEvalJac_con_eq = nEvalJac_con_ineq = 0;
+    nEvalHessL = 0;
     nIter = 0; 
   }
 
@@ -279,10 +281,17 @@ public:
     ss << "    internal total time std dev across ranks=" << (stddev/mean*100) << " percent"  << std::endl;
 #endif
 
-    ss << "Fcn/deriv time:     total=" << std::setprecision(3) 
-       << (tmEvalObj.getElapsedTime() + tmEvalGrad_f.getElapsedTime() + tmEvalCons.getElapsedTime() + tmEvalJac_con.getElapsedTime()) 
-       << " sec  ( obj=" << tmEvalObj.getElapsedTime() << " grad=" << tmEvalGrad_f.getElapsedTime() 
-       << " cons=" << tmEvalCons.getElapsedTime() << " Jac=" << tmEvalJac_con.getElapsedTime() << " ) " << std::endl;
+    ss << std::setprecision(3)
+       << "Fcn/deriv time:     total=" << (tmEvalObj.getElapsedTime() +
+					   tmEvalGrad_f.getElapsedTime() +
+					   tmEvalCons.getElapsedTime() +
+					   tmEvalJac_con.getElapsedTime() +
+					   tmEvalHessL.getElapsedTime()) << " sec  "
+       << "( obj=" << tmEvalObj.getElapsedTime()
+       << " grad=" << tmEvalGrad_f.getElapsedTime() 
+       << " cons=" << tmEvalCons.getElapsedTime()
+       << " Jac=" << tmEvalJac_con.getElapsedTime()
+       << " Hess=" << tmEvalHessL.getElapsedTime() << ") " << std::endl;
 #ifdef HIOP_USE_MPI
     loc=tmEvalObj.getElapsedTime() + tmEvalGrad_f.getElapsedTime() + tmEvalCons.getElapsedTime() + tmEvalJac_con.getElapsedTime();
 
