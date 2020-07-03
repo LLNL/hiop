@@ -38,12 +38,18 @@ else()
   set(HIOP_USE_MAGMA OFF)
 endif()
 
+add_library(hiop_math INTERFACE)
+add_library(hiop_options INTERFACE)
+add_library(hiop_warnings INTERFACE)
+
 if(HIOP_USE_MPI)
+  find_package(MPI REQUIRED)
   if(NOT DEFINED MPI_CXX_COMPILER)
-    find_package(MPI REQUIRED)
     set(CMAKE_CXX_COMPILER ${MPI_CXX_COMPILER})
     set(CMAKE_C_COMPILER ${MPI_C_COMPILER})
   endif(NOT DEFINED MPI_CXX_COMPILER)
+  include_directories(${MPI_CXX_ADDITIONAL_INCLUDE_DIRS} ${MPI_CXX_COMPILER_INCLUDE_DIRS})
+  target_link_libraries(hiop_math INTERFACE MPI::MPI_CXX)
 endif(HIOP_USE_MPI)
 
 # The binary dir is already a global include directory
@@ -52,10 +58,6 @@ configure_file(
   "${CMAKE_BINARY_DIR}/hiop_defs.hpp")
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
-
-add_library(hiop_math INTERFACE)
-add_library(hiop_options INTERFACE)
-add_library(hiop_warnings INTERFACE)
 
 target_compile_features(hiop_options
   INTERFACE
