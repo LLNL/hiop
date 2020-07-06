@@ -63,7 +63,7 @@ void hiopMatrixSparseTriplet::timesVec(double beta,  hiopVector& y,
 void hiopMatrixSparseTriplet::timesVec(double beta,  double* y,
 				       double alpha, const double* x ) const
 {
-    // y:= beta*y
+  // y= beta*y
   for (int i = 0; i < nrows; i++) {
     y[i] *= beta;
   }

@@ -123,7 +123,47 @@ namespace hiop
     //! optimization needed -> use zcopy if exists
     for(int j=0; j<n_local*m_local; j++) *(buf++)=c;
   }
- 
+
+  void hiopMatrixComplexDense::timesVec(std::complex<double> beta_in,
+					std::complex<double>* ya_,
+					std::complex<double> alpha_in,
+					const std::complex<double>* xa_in) const
+  {
+    char fortranTrans='T';
+    int MM=m_local, NN=n_local, incx_y=1;  
+
+    dcomplex beta;
+    beta.re = beta_in.real();
+    beta.im = beta_in.imag();
+
+    dcomplex alpha;
+    alpha.re = alpha_in.real();
+    alpha.im = alpha_in.imag();
+
+    dcomplex* ya = reinterpret_cast<dcomplex*>(ya_);
+    const dcomplex* xa = reinterpret_cast<const dcomplex*>(xa_in);
+    dcomplex* Ma = reinterpret_cast<dcomplex*>(&M[0][0]);
+#ifdef HIOP_USE_MPI
+    assert(false && "functionality not supported/not needed");
+#endif
+    
+    if( MM != 0 && NN != 0 ) {
+      // the arguments seem reversed but so is trans='T' 
+      // required since we keep the matrix row-wise, while the Fortran/BLAS expects them column-wise
+      ZGEMV( &fortranTrans, &NN, &MM, &alpha, Ma, &NN,
+	     xa, &incx_y, &beta, ya, &incx_y );
+    } else {
+      if( MM != 0 ) {
+	int one=1; 
+	ZSCAL(&NN, &beta, ya, &one);
+	
+      } else {
+	assert(MM==0);
+	return;
+      }
+    }    
+  }
+  
   bool hiopMatrixComplexDense::isfinite() const
   {
     for(int i=0; i<m_local; i++)

@@ -75,6 +75,8 @@ namespace hiop
     virtual void solve(hiopMatrix& X);
     virtual void solve(const hiopMatrixComplexSparseTriplet& B, hiopMatrixComplexDense& X);
 
+    /** same as above but right-side and solution are separated */
+    virtual void solve(const std::complex<double>* rhs, std::complex<double>* x);
   private: 
     void* m_symbolic;
     void* m_numeric;

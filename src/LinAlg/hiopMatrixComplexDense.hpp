@@ -35,6 +35,11 @@ namespace hiop
      * 3. number of rows in 'src' must be at least the number of rows in 'this'
      */
     void copyRowsFrom(const hiopMatrix& src, const long long* rows_idxs, long long n_rows);
+
+    virtual void timesVec(std::complex<double> beta,
+			  std::complex<double>* y,
+			  std::complex<double> alpha,
+			  const std::complex<double>* x) const;
     
     virtual void timesVec(double beta,  hiopVector& y,
 			  double alpha, const hiopVector& x) const

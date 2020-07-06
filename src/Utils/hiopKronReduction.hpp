@@ -59,29 +59,47 @@
 
 namespace hiop
 {
+  //forward defs
+  class hiopLinSolverUMFPACKZ;
+  class hiopMatrixComplexDense;
+  
   /* Utility to perform the Kron reduction of the Ybus matrix (sparse symmetric complex)
    * into the reduced Ybus (dense symmetric complex) matrix
    */
   class hiopKronReduction
   {
   public:
-    hiopKronReduction() {};
-    virtual ~hiopKronReduction() {};
-
+    hiopKronReduction();
+    virtual ~hiopKronReduction();
+    
     /* Performs the Kron reduction (computes Schur complement)
      * In parameters
      *  - idx_nonaux_buses, idx_aux_buses: indexes of the auxiliary and non-auxiliary 
      * buses (in the rows/cols of Ybus)
      *  - Ybus
      * Out parameters
-     *  - Ybus_red: reduced Ybus of size (nonaux,nonaux)
+     *  - Ybus_red: reduced Ybus of size (nonaux,nonaux) = Yaa - Yab'*(Ybb\Yba)
+     *
+     * The function factorizes Ybb and stores the factorization for later use, for example for use
+     * in @axpy_nonaux_to_aux
      */
     bool go(const std::vector<int>& idx_nonaux_buses, const std::vector<int>& idx_aux_buses,
 	    const hiopMatrixComplexSparseTriplet& Ybus, 
 	    hiopMatrixComplexDense& Ybus_red);
-	    
+
+    /** 
+     * Performs v_aux_out = (Ybb\Yba)* v_nonaux_in
+     */
+    bool apply_nonaux_to_aux(const std::vector<std::complex<double> >& v_nonaux_in,
+			    std::vector<std::complex<double> >& v_aux_out);
+
+    const hiopMatrixComplexDense& map_nonaux_to_aux() const
+    {
+      return *map_nonaux_to_aux_;
+    } 
   private:
-    
+    hiopLinSolverUMFPACKZ* linsolver_;
+    hiopMatrixComplexDense* map_nonaux_to_aux_;
   };
 
 } //end namespace

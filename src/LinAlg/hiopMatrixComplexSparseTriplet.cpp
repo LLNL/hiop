@@ -57,6 +57,34 @@ namespace hiop
     return maxv;
   }
 
+  void hiopMatrixComplexSparseTriplet::timesVec(double beta, std::complex<double>* y,
+						double alpha, const std::complex<double>* x) const
+  {
+    int nrows = stM->m();
+    // y= beta*y
+    if(beta != 0.) {
+      for(int i=0; i<nrows; i++) {
+	y[i] *= beta;
+      }
+    } else {
+      for(int i=0; i<nrows; i++) {
+	y[i] = 0.;
+      }
+    }
+
+    auto* values = stM->M();
+    int* iRow = stM->i_row();
+    int* jCol = stM->j_col();
+    int nnz = stM->numberOfNonzeros();
+    int ncols = stM->n();
+    // y += alpha*this*x
+    for(int i=0; i<nnz; i++) {
+      assert(iRow[i] < nrows);
+      assert(jCol[i] < ncols);
+      y[iRow[i]] += alpha * x[jCol[i]] * values[i];
+    }
+  }
+  
   /* W = beta*W + alpha*this^T*X 
    *
    * Only supports W and X of the type 'hiopMatrixComplexDense'
