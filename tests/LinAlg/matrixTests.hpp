@@ -326,7 +326,7 @@ public:
     assert(getNumLocRows(&A) == A.n());
     assert(A.n() == x.get_size());
     assert(A.m() == x.get_size());
-    constexpr real_type alpha = two,
+    static const real_type alpha = two,
               A_val = quarter,
               x_val = half;
 
@@ -690,4 +690,4 @@ protected:
       local_ordinal_type& local_col) = 0;
 };
 
-}} // namespace hiop::tests
+}} // namespace hiop{ namespace tests{

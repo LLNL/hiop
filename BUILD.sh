@@ -49,7 +49,7 @@ fi
 export CMAKE_OPTIONS="\
     -DCMAKE_BUILD_TYPE=Debug \
     -DENABLE_TESTS=ON \
-    -DHIOP_USE_MPI=Off \
+    -DHIOP_USE_MPI=On \
     -DHIOP_DEEPCHECKS=ON \
     -DRAJA_DIR=$MY_RAJA_DIR \
     -DHIOP_USE_RAJA=On \

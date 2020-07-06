@@ -19,6 +19,8 @@ FortranCInterface_HEADER(FortranCInterface.hpp MACRO_NAMESPACE "FC_")
 
 option(HIOP_USE_MPI "Build with MPI support" ON)
 option(HIOP_USE_GPU "Build with support for GPUs - Magma and cuda libraries" OFF)
+option(HIOP_USE_UMPIRE "Build with portable memory management library Umpire" ON)
+option(HIOP_USE_RAJA   "Build with portability abstraction library RAJA" ON)
 option(HIOP_DEEPCHECKS "Extra checks and asserts in the code with a high penalty on performance" ON)
 option(HIOP_WITH_KRON_REDUCTION "Build Kron Reduction code (requires MA86)" OFF)
 option(HIOP_DEVELOPER_MODE "Build with extended warnings and options" OFF)
@@ -134,6 +136,20 @@ if(HIOP_USE_GPU)
   include(FindHiopCudaLibraries)
   target_link_libraries(hiop_math INTERFACE hiop_cuda)
 endif(HIOP_USE_GPU)
+
+if(HIOP_USE_RAJA)
+  # Look for CMake configuration file in RAJA installation
+  find_package(RAJA CONFIG
+    PATHS ${RAJA_DIR} ${RAJA_DIR}/share/raja/cmake
+    REQUIRED)
+endif()
+
+if(HIOP_USE_UMPIRE)
+  # Look for CMake configuration file in Umpire installation
+  find_package(umpire CONFIG
+    PATHS ${umpire_DIR} ${umpire_DIR}/share/umpire/cmake
+    REQUIRED)
+endif()
 
 if(HIOP_WITH_KRON_REDUCTION)
   set(HIOP_UMFPACK_DIR CACHE PATH "Path to UMFPACK directory")

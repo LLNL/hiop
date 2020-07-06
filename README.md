@@ -1,5 +1,4 @@
 
-
 # HiOp - HPC solver for optimization
 HiOp is an optimization solver for solving certain mathematical optimization problems expressed as nonlinear programming problems. HiOp is a lightweight HPC solver that leverages application's existing data parallelism to parallelize the optimization iterations by using specialized linear algebra kernels.
 
@@ -90,7 +89,21 @@ HiOp supports two input formats: `hiopInterfaceDenseConstraints` and `hiopInterf
 
 More information on the HiOp interfaces are [here](src/Interface/README.md).
 
-# Acknowledgments
+## Running HiOp tests and applications
+
+HiOp is using NVBlas library when built with CUDA support. If you don't specify
+location of the `nvblas.conf` configuration file, you may get an annoying
+warnings. HiOp provides default `nvblas.conf` file and installs it at the same
+location as HiOp libraries. To use it, set environment variable as
+```bash
+$ export NVBLAS_CONFIG_FILE=<hiop install dir>/lib/nvblas.conf
+```
+or, if you are using C-shell, as
+```shell
+$ setenv NVBLAS_CONFIG_FILE <hiop install dir>/lib/nvblas.conf
+```
+
+## Acknowledgments
 
 HiOp has been developed under the financial support of: 
 - Department of Energy, Office of Advanced Scientific Computing Research (ASCR)

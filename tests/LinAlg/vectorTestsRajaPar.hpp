@@ -47,123 +47,49 @@
 // product endorsement purposes.
 
 /**
- * @file vectorTestsPar.cpp
+ * @file vectorTestsRajaPar.hpp
  *
  * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
  * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
  *
  */
-#include <hiopVectorPar.hpp>
-#include "vectorTestsPar.hpp"
-#include "vectorTestsRajaPar.hpp"
+#pragma once
 
-namespace hiop { namespace tests {
+#include "vectorTests.hpp"
 
-/// Method to set vector _x_ element _i_ to _value_.
-/// First need to retrieve hiopVectorPar from the abstract interface
-void VectorTestsPar::setLocalElement(hiop::hiopVector* x, local_ordinal_type i, real_type value)
+namespace hiop
 {
-  hiop::hiopVectorPar* xvec = dynamic_cast<hiop::hiopVectorPar*>(x);
-  real_type* xdat = xvec->local_data();
-  xdat[i] = value;
-}
-
-/// Returns element _i_ of vector _x_.
-/// First need to retrieve hiopVectorPar from the abstract interface
-real_type VectorTestsPar::getLocalElement(const hiop::hiopVector* x, local_ordinal_type i)
+namespace tests
 {
-  const hiop::hiopVectorPar* xvec = dynamic_cast<const hiop::hiopVectorPar*>(x);
-  return xvec->local_data_const()[i];
-}
 
-/// Returns pointer to local ector data
-real_type* VectorTestsPar::getLocalData(hiop::hiopVector* x)
-{
-  hiop::hiopVectorPar* xvec = dynamic_cast<hiop::hiopVectorPar*>(x);
-  return xvec->local_data();
-}
-
-/// Returns size of local data array for vector _x_
-local_ordinal_type VectorTestsPar::getLocalSize(const hiop::hiopVector* x)
-{
-  const hiop::hiopVectorPar* xvec = dynamic_cast<const hiop::hiopVectorPar*>(x);
-  return static_cast<local_ordinal_type>(xvec->get_local_size());
-}
-
-#ifdef HIOP_USE_MPI
-/// Get communicator
-MPI_Comm VectorTestsPar::getMPIComm(hiop::hiopVector* x)
-{
-  const hiop::hiopVectorPar* xvec = dynamic_cast<const hiop::hiopVectorPar*>(x);
-  return xvec->get_mpi_comm();
-}
-#endif
-
-/// If test fails on any rank set fail flag on all ranks
-bool VectorTestsPar::reduceReturn(int failures, hiop::hiopVector* x)
-{
-  int fail = 0;
-
-#ifdef HIOP_USE_MPI
-  MPI_Allreduce(&failures, &fail, 1, MPI_INT, MPI_SUM, getMPIComm(x));
-#else
-  fail = failures;
-#endif
-
-  return (fail != 0);
-}
-
-
-/// Checks if _local_ vector elements are set to `answer`.
-int VectorTestsPar::verifyAnswer(hiop::hiopVector* x, real_type answer)
-{
-  const local_ordinal_type N = getLocalSize(x);
-  const real_type* xdata = getLocalData(x);
-
-  int local_fail = 0;
-  for(local_ordinal_type i=0; i<N; ++i)
-    if(!isEqual(xdata[i], answer))
-      ++local_fail;
-
-  return local_fail;
-}
-
-/*
- * Ensures that the vector's elements match the return value of
- * the function.
+/**
+ * @brief Utilities for testing hiopVectorPar class
+ *
+ * @todo In addition to set and get element ass set and get buffer methods.
+ *
  */
-int VectorTestsPar::verifyAnswer(
-    hiop::hiopVector* x,
-    std::function<real_type(local_ordinal_type)> expect)
+class VectorTestsRajaPar : public VectorTests
 {
-  const local_ordinal_type N = getLocalSize(x);
+public:
+  VectorTestsRajaPar(){}
+  virtual ~VectorTestsRajaPar(){}
 
-  int local_fail = 0;
-  for (int i=0; i<N; i++)
-  {
-    if(!isEqual(getLocalElement(x, i), expect(i)))
-    {
-      std::cout << getLocalElement(x, i) << " ?= " << expect(i) << "\n";
-      ++local_fail;
-    }
-  }
-  return local_fail;
-}
+private:
+  virtual void setLocalElement(hiop::hiopVector* x, local_ordinal_type i, real_type value) override;
+  virtual real_type getLocalElement(const hiop::hiopVector* x, local_ordinal_type i) override;
+  virtual local_ordinal_type getLocalSize(const hiop::hiopVector* x) override;
+  virtual real_type* getLocalData(hiop::hiopVector* x) override;
+  virtual int verifyAnswer(hiop::hiopVector* x, real_type answer) override;
+  virtual int verifyAnswer(
+      hiop::hiopVector* x,
+      std::function<real_type(local_ordinal_type)> expect) override;
+  virtual bool reduceReturn(int failures, hiop::hiopVector* x) override;
+  virtual real_type* createLocalBuffer(local_ordinal_type N, real_type val);
+  virtual void deleteLocalBuffer(real_type* buffer);
 
-/// Wrap new command
-real_type* VectorTestsPar::createLocalBuffer(local_ordinal_type N, real_type val)
-{
-  real_type* buffer = new real_type[N];
-  for(local_ordinal_type i = 0; i < N; ++i)
-    buffer[i] = val;
-  return buffer;
-}
+#ifdef HIOP_USE_MPI
+  MPI_Comm getMPIComm(hiop::hiopVector* x);
+#endif
+};
 
-/// Wrap delete command
-void VectorTestsPar::deleteLocalBuffer(real_type* buffer)
-{
-  delete [] buffer;
-}
-
-
-}} // namespace hiop::tests
+}} // namespace hiopTest
