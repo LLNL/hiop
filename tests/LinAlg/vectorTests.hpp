@@ -129,8 +129,9 @@ public:
     return reduceReturn(fail, &x);
   }
 
-  /*
-   * \forall n in n_local if (pattern[n] != 0.0) this[n] = x_val
+  /**
+   * @brief Test method: 
+   * forall n in n_local if (pattern[n] != 0.0) this[n] = x_val
    */
   bool vectorSetToConstant_w_patternSelect(
       hiop::hiopVector& x,
@@ -139,7 +140,7 @@ public:
   {
     const local_ordinal_type N = getLocalSize(&x);
     assert(N == getLocalSize(&pattern));
-    static constexpr real_type x_val = two;
+    static const real_type x_val = two;
 
     x.setToConstant(zero);
     pattern.setToConstant(one);
@@ -168,62 +169,79 @@ public:
    */
   bool vectorCopyFrom(hiop::hiopVector& v, hiop::hiopVector& from, const int rank)
   {
+    local_ordinal_type N = getLocalSize(&v);
     assert(v.get_size() == from.get_size());
-    assert(getLocalSize(&v) == getLocalSize(&from));
+    assert(N == getLocalSize(&from));
 
     from.setToConstant(one);
     v.setToConstant(two);
     v.copyFrom(from);
-
     int fail = verifyAnswer(&v, one);
-    printMessage(fail, __func__, rank);
 
+    // const real_type* from_buffer = createLocalBuffer(N, three);
+    // v.copyFrom(from_buffer);
+    // fail += verifyAnswer(&v, three);
+
+    printMessage(fail, __func__, rank);
     return reduceReturn(fail, &v);
   }
 
+  /**
+   * @brief Test vector method for copying data from another vector
+   * or data buffer. 
+   * 
+   * @pre Vectors are not distributed.
+   */  
   bool vectorCopyFromStarting(
       hiop::hiopVector& x,
       hiop::hiopVector& from,
       const int rank)
   {
     int fail = 0;
-    const local_ordinal_type N = getLocalSize(&x);
-    assert(N == x.get_size() && "This test cannot be ran with distributed vectors");
-    assert(N == getLocalSize(&from));
+    const local_ordinal_type Nx = getLocalSize(&x);
+    const local_ordinal_type Nfrom = getLocalSize(&from);
+    assert(Nx == x.get_size() && "This test cannot be ran with distributed vectors");
+    assert(Nx > Nfrom);
     x.setToConstant(two);
 
-    auto _from = new real_type[N];
-    for (local_ordinal_type i=0; i<N; i++)
-      _from[i] = one;
+    real_type* from_buffer = createLocalBuffer(Nx, one);
 
-    if (rank == 0)
-    {
-      x.copyFromStarting(1, _from, N-1);
-    }
-    else
-    {
-      x.copyFromStarting(0, _from, N);
-    }
-
-    for (local_ordinal_type i=0; i<N; i++)
-    {
-      if (getLocalElement(&x, i) != one && !(i == 0 && rank == 0))
-        fail++;
-    }
+    x.copyFromStarting(1, from_buffer, Nx-1);
+    fail += verifyAnswer(&x,
+      [=] (local_ordinal_type i) -> real_type
+      {
+        return (i == 0) ? two : one;
+      });
+    deleteLocalBuffer(from_buffer);
 
     x.setToConstant(two);
     from.setToConstant(one);
-    x.copyFromStarting(0, from);
-    fail += verifyAnswer(&x, one);
+    x.copyFromStarting(Nx - Nfrom, from);
+    fail += verifyAnswer(&x,
+      [=] (local_ordinal_type i) -> real_type
+      {
+        return (i < (Nx - Nfrom)) ? two : one;
+      });
 
-    delete[] _from;
+    x.setToConstant(two);
+    from.setToConstant(one);
+    x.copyFromStarting(1, from);
+    fail += verifyAnswer(&x,
+      [=] (local_ordinal_type i) -> real_type
+      {
+        return (i < 1 || i > (Nfrom)) ? two : one;
+      });
+
     printMessage(fail, __func__, rank);
     return reduceReturn(fail, &x);
   }
 
-  /*
-   * Copy from one vector to another, specifying both
-   * the start index in the source and the destination.
+  /**
+   * @brief Tests function that copies from one vector to another, specifying
+   * both the start index in the source and the destination.
+   * 
+   * @pre `src` and `dest` are allocated to nonzero sizes and
+   * size of `src` > size of `dest`.
    */
   bool vectorStartingAtCopyFromStartingAt(
       hiop::hiopVector& dest,
@@ -262,8 +280,8 @@ public:
     return reduceReturn(fail, &dest);
   }
 
-  /*
-   * Test for function that copies data from this to x.
+  /**
+   * Test for function that copies data from `this` to a data buffer.
    */
   bool vectorCopyTo(hiop::hiopVector& v, hiop::hiopVector& to, const int rank)
   {
@@ -282,6 +300,12 @@ public:
     return reduceReturn(fail, &v);
   }
 
+  /**
+   * @brief Test vector method for copying data to another vector
+   * starting from prescribed index in destination vector. 
+   * 
+   * @pre Vectors are not distributed.
+   */  
   bool vectorCopyToStarting(
       hiop::hiopVector& to,
       hiop::hiopVector& from,
@@ -319,6 +343,13 @@ public:
     return reduceReturn(fail, &from);
   }
 
+  /**
+   * @brief Test vector method for copying data to another vector
+   * starting from prescribed indices in source and destination
+   * vectors. 
+   * 
+   * @pre Vectors are not distributed.
+   */  
   bool vectorStartingAtCopyToStartingAt(
       hiop::hiopVector& to,
       hiop::hiopVector& from,
@@ -358,7 +389,8 @@ public:
     return reduceReturn(fail, &to);
   }
 
-  /*
+  /**
+   * @brief Test:
    * this[i] = (pattern[i] == 0 ? 0 : this[i])
    */
   bool vectorSelectPattern(
@@ -389,8 +421,8 @@ public:
     return reduceReturn(fail, &x);
   }
 
-  /*
-   * this[i] *= alpha
+  /**
+   * @brief Test: this[i] *= alpha
    */
   bool vectorScale(hiop::hiopVector& v, const int rank)
   {
@@ -403,8 +435,8 @@ public:
     return reduceReturn(fail, &v);
   }
 
-  /*
-   * this[i] *= x[i]
+  /**
+   * @brief Test: this[i] *= x[i]
    */
   bool vectorComponentMult(hiop::hiopVector& v, hiop::hiopVector& x, const int rank)
   {
@@ -422,8 +454,8 @@ public:
     return reduceReturn(fail, &v);
   }
 
-  /*
-   * this[i] /= x[i]
+  /**
+   * @brief Test: this[i] /= x[i]
    */
   bool vectorComponentDiv(hiop::hiopVector& v, hiop::hiopVector& x, const int rank)
   {
@@ -441,8 +473,8 @@ public:
     return reduceReturn(fail, &v);
   }
 
-  /*
-   * this[i] = (pattern[i] == 0 ? 0 : this[i]/x[i])
+  /**
+   * @brief Test: this[i] = (pattern[i] == 0 ? 0 : this[i]/x[i])
    */
   bool vectorComponentDiv_p_selectPattern(
       hiop::hiopVector& v,
@@ -477,9 +509,9 @@ public:
     return reduceReturn(fail, &v);
   }
 
-  /*
-   * Test computing 1-norm ||v||  of vector v
-   *                            1
+  /**
+   * @brief Test computing 1-norm ||v||  of vector v
+   *                                   1
    */
   bool vectorOnenorm(hiop::hiopVector& v, const int rank)
   {
@@ -493,9 +525,9 @@ public:
     return reduceReturn(fail, &v);
   }
 
-  /*
-   * Test computing 2-norm ||v||  of vector v
-   *                            2
+  /**
+   * @brief Test computing 2-norm ||v||  of vector v
+   *                                   2
    */
   bool vectorTwonorm(hiop::hiopVector& v, const int rank)
   {
@@ -509,9 +541,10 @@ public:
     return reduceReturn(fail, &v);
   }
 
-  /*
-   * Test infinity-norm = max(abs(this[i]))
-   *                       i
+  /**
+   * @brief Test:
+   * infinity-norm = max(abs(this[i]))
+   *                  i
    */
   bool vectorInfnorm(hiop::hiopVector& v, const int rank)
   {
@@ -529,7 +562,8 @@ public:
     return reduceReturn(fail, &v);
   }
 
-  /*
+  /** 
+   * @brief Test:
    * this[i] += alpha * x[i]
    */
   bool vectorAxpy(hiop::hiopVector& v, hiop::hiopVector& x, const int rank)
@@ -554,7 +588,8 @@ public:
     return reduceReturn(fail, &v);
   }
 
-  /*
+  /** 
+   * @brief Test:
    * this[i] += alpha * x[i] * z[i]
    */
   bool vectorAxzpy(
@@ -585,7 +620,8 @@ public:
     return reduceReturn(fail, &v);
   }
 
-  /*
+  /** 
+   * @brief Test:
    * this[i] += alpha * x[i] / z[i]
    */
   bool vectorAxdzpy(
@@ -616,8 +652,50 @@ public:
     return reduceReturn(fail, &v);
   }
 
-  /*
-   * this += C
+  /** 
+   * @brief Test:
+   * this[i] += alpha * x[i] / z[i]
+   */
+  bool vectorAxdzpy_w_patternSelect(
+      hiop::hiopVector& v,
+      hiop::hiopVector& x,
+      hiop::hiopVector& z,
+      hiop::hiopVector& pattern,
+      const int rank)
+  {
+    const local_ordinal_type N = getLocalSize(&v);
+    assert(v.get_size() == x.get_size());
+    assert(N == getLocalSize(&x));
+
+    const real_type alpha = three;
+    const real_type x_val = half;
+    const real_type v_val = two;
+    const real_type z_val = half;
+
+    x.setToConstant(x_val);
+    z.setToConstant(z_val);
+    v.setToConstant(v_val);
+    pattern.setToConstant(one);
+    if (rank== 0)
+      setLocalElement(&pattern, N - 1, zero);
+
+    const real_type expected = v_val + (alpha * x_val / z_val);
+    v.axdzpy_w_pattern(alpha, x, z, pattern);
+
+    const int fail = verifyAnswer(&v,
+      [=] (local_ordinal_type i) -> real_type
+      {
+        const bool isLastElementOnRank0 = (i == N-1 && rank == 0);
+        return isLastElementOnRank0 ? v_val : expected;
+      });
+
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &v);
+  }
+
+  /** 
+   * @brief Test:
+   * this[i] += C forall i
    */
   bool vectorAddConstant(hiop::hiopVector& x, const int rank)
   {
@@ -632,8 +710,9 @@ public:
     return reduceReturn(fail, &x);
   }
 
-  /*
-   * if (pattern[i] > 0.0) this[i] += C
+  /** 
+   * @brief Test:
+   * if (pattern[i] > 0.0) this[i] += C forall i
    */
   bool vectorAddConstant_w_patternSelect(
       hiop::hiopVector& x,
@@ -662,7 +741,8 @@ public:
     return reduceReturn(fail, &x);
   }
 
-  /*
+  /** 
+   * @brief Test:
    * Dot product == \sum{this[i] * other[i]}
    */
   bool vectorDotProductWith(
@@ -685,8 +765,9 @@ public:
     return reduceReturn(fail, &x);
   }
 
-  /*
-   * this[i] == -this_prev[i]
+  /** 
+   * @brief Test:
+   * this[i] *= -1 forall i
    */
   bool vectorNegate(hiop::hiopVector& x, const int rank)
   {
@@ -697,6 +778,10 @@ public:
     return reduceReturn(fail, &x);
   }
 
+  /** 
+   * @brief Test:
+   * this[i]^-1 forall i
+   */
   bool vectorInvert(hiop::hiopVector& x, const int rank)
   {
     x.setToConstant(two);
@@ -706,8 +791,9 @@ public:
     return reduceReturn(fail, &x);
   }
 
-  /*
-   * sum{ln(x_i):i=1,..,n}
+  /** 
+   * @brief Test:
+   * sum{ln(x[i]): pattern[i] = 1}
    */
   bool vectorLogBarrier(
       hiop::hiopVector& x,
@@ -722,15 +808,13 @@ public:
     pattern.setToConstant(one);
     setLocalElement(&pattern, N - 1, zero);
 
-    const real_type x_val = half;
+    const real_type x_val = two;
     x.setToConstant(x_val);
+    // Make sure pattern eliminates the correct element
+    setLocalElement(&x, N - 1, 1000*three);
 
-    // No loops such that the test captures accumulation errors
     const real_type expected = (N-1) * std::log(x_val);
-    const real_type result = x.logBarrier_local(pattern);
-    printf("r %f e %f diff %.10e\n",
-        result, expected,
-        std::abs(result-expected));
+    const real_type result = x.logBarrier(pattern);
 
     const bool fail = !isEqual(result, expected);
 
@@ -738,8 +822,9 @@ public:
     return reduceReturn(fail, &x);
   }
 
-  /*
-   * this += alpha / pattern(x)
+  /**
+   * @brief Test:
+   * if(pattern[i] == 1) this[i] += alpha /x[i] forall i 
    */
   bool vectorAddLogBarrierGrad(
       hiop::hiopVector& x,
@@ -750,9 +835,9 @@ public:
     const local_ordinal_type N = getLocalSize(&x);
     assert(N == getLocalSize(&pattern));
     assert(N == getLocalSize(&y));
-    static constexpr real_type alpha = half;
-    static constexpr real_type x_val = two;
-    static constexpr real_type y_val = two;
+    static const real_type alpha = half;
+    static const real_type x_val = two;
+    static const real_type y_val = two;
 
     pattern.setToConstant(one);
     x.setToConstant(x_val);
@@ -775,13 +860,16 @@ public:
     return reduceReturn(fail, &x);
   }
 
-  /*
+  /**
+   * @brief Test:
+   * @verbatim
    * term := 0.0
    * \forall n \in n_local
    *     if left[n] == 1.0 \land right[n] == 0.0
    *         term += this[n]
    * term *= mu * kappa
    * return term
+   * @endverbatim
    */
   bool vectorLinearDampingTerm(
       hiop::hiopVector& x,
@@ -792,8 +880,8 @@ public:
     const local_ordinal_type N = getLocalSize(&x);
     assert(N == getLocalSize(&left));
     assert(N == getLocalSize(&right));
-    static constexpr real_type mu = two;
-    static constexpr real_type kappa_d = two;
+    static const real_type mu = two;
+    static const real_type kappa_d = two;
 
     x.setToConstant(one);
     left.setToConstant(one);
@@ -822,7 +910,8 @@ public:
     return reduceReturn(fail, &x);
   }
 
-  /*
+  /**
+   * @brief Test:
    * this[i] > 0
    */
   bool vectorAllPositive(hiop::hiopVector& x, const int rank)
@@ -843,7 +932,8 @@ public:
     return fail;
   }
 
-  /*
+  /**
+   * @brief Test:
    * this[i] > 0 \lor pattern[i] != 1.0
    */
   bool vectorAllPositive_w_patternSelect(
@@ -875,8 +965,8 @@ public:
     return reduceReturn(fail, &x);
   }
 
-  /*
-   * This method is not yet implemented in HIOP
+  /**
+   * @warning This method is not yet implemented in HIOP
    */
   bool vectorMin(const hiop::hiopVector& x, const int rank)
   {
@@ -885,8 +975,8 @@ public:
     return 0;
   }
 
-  /*
-   * Project vector into bounds
+  /**
+   * @brief Test: Project vector into bounds
    */
   bool vectorProjectIntoBounds(
       hiop::hiopVector& x,
@@ -902,8 +992,8 @@ public:
     assert(N == getLocalSize(&upper));
     assert(N == getLocalSize(&lower_pattern));
     assert(N == getLocalSize(&upper_pattern));
-    static constexpr real_type kappa1 = half;
-    static constexpr real_type kappa2 = half;
+    static const real_type kappa1 = half;
+    static const real_type kappa2 = half;
     int fail = 0;
 
     // Check that lower > upper returns false
@@ -989,9 +1079,9 @@ public:
     return 0;
   }
 
-  /*
-   * fractionToTheBdry psuedocode:
-   *
+  /**
+   * @brief Test
+   * @verbatim
    * \forall dxi \in dx, dxi >= 0 \implies
    *     return 1.0
    *
@@ -1003,6 +1093,7 @@ public:
    *         if auxilary < return_value
    *             return_value = auxilary
    *     return auxilary
+   * @endverbatim
    */
   bool vectorFractionToTheBdry(
       hiop::hiopVector& x,
@@ -1011,7 +1102,7 @@ public:
   {
     const local_ordinal_type N = getLocalSize(&x);
     assert(N == getLocalSize(&dx));
-    static constexpr real_type tau = half;
+    static const real_type tau = half;
     int fail = 0;
 
     x.setToConstant(one);
@@ -1037,7 +1128,8 @@ public:
     return reduceReturn(fail, &x);
   }
 
-  /*
+  /**
+   * @brief Test:
    * Same as fractionToTheBdry, except that
    * no x[i] where pattern[i]==0 will be calculated
    */
@@ -1050,7 +1142,7 @@ public:
     const local_ordinal_type N = getLocalSize(&x);
     assert(N == getLocalSize(&dx));
     assert(N == getLocalSize(&pattern));
-    static constexpr real_type tau = half;
+    static const real_type tau = half;
     int fail = 0;
 
     // Fraction to boundary is const, so no need to reset x after each test
@@ -1092,7 +1184,8 @@ public:
     return reduceReturn(fail, &x);
   }
 
-  /*
+  /**
+   * @brief Test:
    *  pattern != 0 \lor this == 0
    */
   bool vectorMatchesPattern(
@@ -1122,8 +1215,8 @@ public:
     return reduceReturn(fail, &x);
   }
 
-  /*
-   * Checks that hiop correctly adjusts based on the
+  /**
+   * @brief Test that hiop correctly adjusts based on the
    * hessian of the duals function
    */
   bool vectorAdjustDuals_plh(
@@ -1147,8 +1240,8 @@ public:
     x.setToConstant(two);
     pattern.setToConstant(one);
 
-    static constexpr real_type mu = half;
-    static constexpr real_type kappa = half;
+    static const real_type mu = half;
+    static const real_type kappa = half;
     z1.adjustDuals_plh(
         x,
         pattern,
@@ -1180,7 +1273,8 @@ public:
     return reduceReturn(fail, &x);
   }
 
-  /*
+  /**
+   * @brief Test:
    * \exists e \in this s.t. isnan(e)
    */
   bool vectorIsnan(hiop::hiopVector& x, const int rank)
@@ -1200,7 +1294,8 @@ public:
     return reduceReturn(fail, &x);
   }
 
-  /*
+  /**
+   * @brief Test:
    * \exists e \in this s.t. isinf(e)
    */
   bool vectorIsinf(hiop::hiopVector& x, const int rank)
@@ -1220,7 +1315,8 @@ public:
     return reduceReturn(fail, &x);
   }
 
-  /*
+  /**
+   * @brief Test:
    * \forall e \in this, isfinite(e)
    */
   bool vectorIsfinite(hiop::hiopVector& x, const int rank)
@@ -1251,6 +1347,8 @@ protected:
       hiop::hiopVector* x,
       std::function<real_type(local_ordinal_type)> expect) = 0;
   virtual bool reduceReturn(int failures, hiop::hiopVector* x) = 0;
+  virtual real_type* createLocalBuffer(local_ordinal_type N, real_type val) = 0;
+  virtual void deleteLocalBuffer(real_type* buffer) = 0;
 };
 
 }} // namespace hiop::tests

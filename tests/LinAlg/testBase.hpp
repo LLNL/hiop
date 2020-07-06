@@ -60,43 +60,42 @@
 #include <limits>
 #include <cmath>
 
+namespace hiop { namespace tests {
+
 using real_type             = double;
 using local_ordinal_type    = int;
 using global_ordinal_type   = long long;
 
-static constexpr real_type zero = 0.0;
-static constexpr real_type quarter = 0.25;
-static constexpr real_type half = 0.5;
-static constexpr real_type one = 1.0;
-static constexpr real_type two = 2.0;
-static constexpr real_type three = 3.0;
-static constexpr real_type eps =
-    10*std::numeric_limits<real_type>::epsilon();
-static constexpr int SKIP_TEST = -1;
+static const real_type zero = 0.0;
+static const real_type quarter = 0.25;
+static const real_type half = 0.5;
+static const real_type one = 1.0;
+static const real_type two = 2.0;
+static const real_type three = 3.0;
+static const real_type eps =
+  10*std::numeric_limits<real_type>::epsilon();
+static const int SKIP_TEST = -1;
 
 // must be const pointer and const dest for
 // const string declarations to pass
 // -Wwrite-strings
-static constexpr const char * const  RED       = "\033[1;31m";
-static constexpr const char * const  GREEN     = "\033[1;32m";
-static constexpr const char * const  YELLOW    = "\033[1;33m";
-static constexpr const char * const  CLEAR     = "\033[0m";
-
-namespace hiop { namespace tests
-{
+static const char * const  RED       = "\033[1;31m";
+static const char * const  GREEN     = "\033[1;32m";
+static const char * const  YELLOW    = "\033[1;33m";
+static const char * const  CLEAR     = "\033[0m";
 
 class TestBase
 {
 protected:
   /// Returns true if two real numbers are equal within tolerance
-  //[[nodiscard]] constexpr
+  [[nodiscard]] static
   bool isEqual(const real_type a, const real_type b)
   {
-    return (std::abs(a - b) < eps);
+    return (std::abs(a - b)/(1.0 + std::abs(b)) < eps);
   }
 
   /// Prints error output for each rank
-  void printMessage(const int fail, const char* funcname, const int rank = 0)
+  static void printMessage(const int fail, const char* funcname, const int rank=0)
   {
     if(fail > 0)
     {

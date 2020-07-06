@@ -321,6 +321,17 @@ addMDinvNtransToSymDeMatUTri(int row_dest_start, int col_dest_start,
 
   double acc;
 
+  // only parallelize these two outter loops
+  //
+  // sort amount of work per thread/exe unit
+  // assign in order of most-> least work to better
+  // distribute workload
+  //
+  // These are multiplied many times, but sparsity pattern
+  // remains the same. We can do some preprocessing to save on 
+  // thread execution time
+  //
+  // compressed row/col patterns?
   for(int i=0; i<m1; i++) {
     // j>=i
     for(int j=0; j<m2; j++) {

@@ -63,6 +63,8 @@
 
 int main(int argc, char** argv)
 {
+  using hiop::tests::global_ordinal_type;
+
   int rank=0, numRanks=1;
   MPI_Comm comm = MPI_COMM_SELF;
 
