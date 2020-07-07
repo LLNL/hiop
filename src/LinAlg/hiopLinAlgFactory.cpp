@@ -48,6 +48,7 @@
 
 #include <hiopVectorPar.hpp>
 #include <hiopMatrixDenseRowMajor.hpp>
+#include <hiopMatrixSparseTriplet.hpp>
 
 #include "hiopLinAlgFactory.hpp"
 
@@ -81,4 +82,13 @@ hiopMatrixDense* LinearAlgebraFactory::createMatrixDense(
   const long long& m_max_alloc)
 {
   return new hiopMatrixDenseRowMajor(m, glob_n, col_part, comm, m_max_alloc);
+}
+
+/**
+ * @brief Creates an instance of a sparse matrix of the appropriate implementation
+ * depending on the build.
+ */
+hiopMatrixSparse* LinearAlgebraFactory::createMatrixSparse(int rows, int cols, int nnz)
+{
+  return new hiopMatrixSparseTriplet(rows, cols, nnz);
 }

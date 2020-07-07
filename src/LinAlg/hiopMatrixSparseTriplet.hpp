@@ -3,17 +3,18 @@
 
 #include "hiopVector.hpp"
 #include "hiopMatrixDense.hpp"
+#include "hiopMatrixSparse.hpp"
 
 #include <cassert>
 
 namespace hiop
 {
 
-/** Sparse matrix of doubles in triplet format - it is not distributed
- * 
- * Note: for now (i,j) are expected ordered: first on rows 'i' and then on cols 'j'
+/** 
+ * @brief Sparse matrix of doubles in triplet format - it is not distributed
+ * @note for now (i,j) are expected ordered: first on rows 'i' and then on cols 'j'
  */
-class hiopMatrixSparseTriplet : public hiopMatrix
+class hiopMatrixSparseTriplet : public hiopMatrixSparse
 {
 public:
   hiopMatrixSparseTriplet(int rows, int cols, int nnz);
@@ -21,7 +22,7 @@ public:
 
   virtual void setToZero();
   virtual void setToConstant(double c);
-  virtual void copyFrom(const hiopMatrixSparseTriplet& dm);
+  virtual void copyFrom(const hiopMatrixSparse& dm);
 
   virtual void copyRowsFrom(const hiopMatrix& src, const long long* rows_idxs, long long n_rows);
   
@@ -88,7 +89,7 @@ public:
    * triangular part of W will be accessed)
    */
   virtual void addMDinvNtransToSymDeMatUTri(int row_dest_start, int col_dest_start, const double& alpha,
-					    const hiopVector& D, const hiopMatrixSparseTriplet& N,
+					    const hiopVector& D, const hiopMatrixSparse& N,
 					    hiopMatrixDense& W) const;
 
   virtual double max_abs_value();
@@ -100,10 +101,6 @@ public:
 
   virtual hiopMatrix* alloc_clone() const;
   virtual hiopMatrix* new_copy() const;
-
-  virtual long long m() const {return nrows;}
-  virtual long long n() const {return ncols;}
-  virtual long long numberOfNonzeros() const {return nnz;}
 
   inline int* i_row() { return iRow; }
   inline int* j_col() { return jCol; }
@@ -117,13 +114,10 @@ public:
   virtual bool checkIndexesAreOrdered() const;
 #endif
 protected:
-  int nrows; ///< number of rows
-  int ncols; ///< number of columns
-  int nnz;  ///< number of nonzero entries
-   
   int* iRow; ///< row indices of the nonzero entries
   int* jCol; ///< column indices of the nonzero entries
   double* values; ///< values of the nonzero entries
+
 protected:
   struct RowStartsInfo
   {
@@ -145,11 +139,11 @@ private:
   RowStartsInfo* allocAndBuildRowStarts() const; 
 private:
   hiopMatrixSparseTriplet() 
-    : nrows(0), ncols(0), nnz(0), iRow(NULL), jCol(NULL), values(NULL)
+    : hiopMatrixSparse(0, 0, 0), iRow(NULL), jCol(NULL), values(NULL)
   {
   }
   hiopMatrixSparseTriplet(const hiopMatrixSparseTriplet&) 
-    : nrows(0), ncols(0), nnz(0), iRow(NULL), jCol(NULL), values(NULL)
+    : hiopMatrixSparse(0, 0, 0), iRow(NULL), jCol(NULL), values(NULL)
   {
     assert(false);
   }
@@ -182,13 +176,13 @@ public:
     return timesVec(beta, y, alpha, x);
   }
 
-  void addToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start,                                                                           
+  virtual void addToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start,                                                                           
 				double alpha, hiopMatrixDense& W) const;
   
-  void transAddToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start,                                                                           
+  virtual void transAddToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start,                                                                           
 				     double alpha, hiopMatrixDense& W) const;
 
-  inline void addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start, 
+  virtual void addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start, 
 							    double alpha, hiopMatrixDense& W) const
   {
     assert(this->n()+diag_start < W.n());
@@ -199,7 +193,7 @@ public:
    * index 'vec_start'. If num_elems>=0, 'num_elems' are copied; otherwise copies as many as
    * are available in 'vec_dest' starting at 'vec_start'
    */
-  void startingAtAddSubDiagonalToStartingAt(int diag_src_start, const double& alpha, 
+  virtual void startingAtAddSubDiagonalToStartingAt(int diag_src_start, const double& alpha, 
 					    hiopVector& vec_dest, int vec_start, int num_elems=-1) const;
 					    
 

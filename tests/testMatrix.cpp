@@ -60,6 +60,7 @@
 #include <hiopMatrixDenseRowMajor.hpp>
 #include "LinAlg/matrixTestsDense.hpp"
 
+
 int main(int argc, char** argv)
 {
   int rank=0, numRanks=1;

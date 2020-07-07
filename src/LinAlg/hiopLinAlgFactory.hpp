@@ -50,6 +50,7 @@
 #include <hiopMPI.hpp>
 #include <hiopVector.hpp>
 #include <hiopMatrixDense.hpp>
+#include <hiopMatrixSparse.hpp>
 
 namespace hiop {
 
@@ -74,6 +75,8 @@ public:
     long long* col_part = NULL,
     MPI_Comm comm = MPI_COMM_SELF,
     const long long& m_max_alloc = -1);
+
+  static hiopMatrixSparse* createMatrixSparse(int rows, int cols, int nnz);
 };
 
 } // namespace hiop

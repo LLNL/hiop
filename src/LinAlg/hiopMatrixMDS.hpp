@@ -21,7 +21,7 @@ class hiopMatrixMDS : public hiopMatrix
 public:
   hiopMatrixMDS(int rows, int cols_sparse, int cols_dense, int nnz_sparse)
   {
-    mSp = new hiopMatrixSparseTriplet(rows, cols_sparse, nnz_sparse);
+    mSp = LinearAlgebraFactory::createMatrixSparse(rows, cols_sparse, nnz_sparse);
     mDe = LinearAlgebraFactory::createMatrixDense(rows, cols_dense);
   }
   virtual ~hiopMatrixMDS()
@@ -40,6 +40,11 @@ public:
     mSp->setToConstant(c);
     mDe->setToConstant(c);
   }
+
+  /**
+   * @note should this method be called, an assertion will be thrown in 
+   * hiopMatrixSparseTriplet if that is the relevant implementation.
+   */
   virtual void copyFrom(const hiopMatrixMDS& m) 
   {
     mSp->copyFrom(*m.mSp);
@@ -198,20 +203,29 @@ public:
   inline long long n_sp() const {return mSp->n();}
   inline long long n_de() const {return  mDe->n();}
 
-  inline const hiopMatrixSparseTriplet* sp_mat() const { return mSp; }
+  inline const hiopMatrixSparse* sp_mat() const { return mSp; }
   inline const hiopMatrixDense* de_mat() const { return mDe; }
 
   inline int sp_nnz() const { return mSp->numberOfNonzeros(); }
-  inline int* sp_irow() { return mSp->i_row(); }
-  inline int* sp_jcol() { return mSp->j_col(); }
-  inline double* sp_M() { return mSp->M(); }
+  inline int* sp_irow()
+  {
+    return dynamic_cast<hiopMatrixSparseTriplet*>(mSp)->i_row();
+  }
+  inline int* sp_jcol()
+  {
+    return dynamic_cast<hiopMatrixSparseTriplet*>(mSp)->j_col();
+  }
+  inline double* sp_M()
+  {
+    return dynamic_cast<hiopMatrixSparseTriplet*>(mSp)->M();
+  }
   inline double** de_local_data() { return mDe->local_data(); }
 
 #ifdef HIOP_DEEPCHECKS
   virtual bool assertSymmetry(double tol=1e-16) const { return false; }
 #endif
 private:
-  hiopMatrixSparseTriplet* mSp;
+  hiopMatrixSparse* mSp;
   hiopMatrixDense* mDe;
 private:
   hiopMatrixMDS() : mSp(NULL), mDe(NULL) {};
