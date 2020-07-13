@@ -60,12 +60,11 @@
 #include <functional>
 #include <cassert>
 #include <utility>
-#include <optional>
 #include <hiopVector.hpp>
 #include <hiopMatrix.hpp>
 #include "testBase.hpp"
 
-namespace hiop::tests {
+namespace hiop { namespace tests {
 
 class MatrixTests : public TestBase
 {
@@ -691,4 +690,4 @@ protected:
       local_ordinal_type& local_col) = 0;
 };
 
-} // namespace hiopTest
+}} // namespace hiop::tests
