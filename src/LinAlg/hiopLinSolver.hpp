@@ -100,9 +100,9 @@ public:
   { 
   }
 
-  hiopMatrixDense& sysMatrix() { return M; }
+  hiopMatrixDenseRowMajor& sysMatrix() { return M; }
 protected:
-  hiopMatrixDense M;
+  hiopMatrixDenseRowMajor M;
 protected:
   hiopLinSolverIndefDense() : M(0,0) { assert(false); }
 };

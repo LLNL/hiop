@@ -47,6 +47,7 @@
 // product endorsement purposes.
 
 #include "hiopKKTLinSys.hpp"
+#include "hiopMatrixDenseFactory.hpp"
 #include "hiop_blasdefs.hpp"
 
 #include <cmath>
@@ -685,7 +686,7 @@ hiopKKTLinSysLowRank::hiopKKTLinSysLowRank(hiopNlpFormulation* nlp)
   nlpD = dynamic_cast<hiopNlpDenseConstraints*>(nlp_);
 
   _kxn_mat = nlpD->alloc_multivector_primal(nlpD->m()); //!opt
-  N = new hiopMatrixDense(nlpD->m(),nlpD->m());
+  N = getMatrixDenseInstance(nlpD->m(),nlpD->m());
 #ifdef HIOP_DEEPCHECKS
   Nmat=N->alloc_clone();
 #endif

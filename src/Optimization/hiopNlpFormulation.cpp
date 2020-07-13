@@ -48,6 +48,8 @@
 
 #include "hiopNlpFormulation.hpp"
 #include "hiopHessianLowRank.hpp"
+#include "hiopMatrixDenseFactory.hpp"
+#include "hiopMatrixDenseFactory.hpp"
 #include "hiopLogger.hpp"
 
 #ifdef HIOP_USE_MPI
@@ -965,20 +967,20 @@ hiopMatrixDense* hiopNlpDenseConstraints::alloc_multivector_primal(int nrows, in
   //if(true==interface.get_vecdistrib_info(n_vars,vec_distrib)) 
   if(vec_distrib)
   {
-    M = new hiopMatrixDense(nrows, n_vars, vec_distrib, comm, maxrows);
+    M = getMatrixDenseInstance(nrows, n_vars, vec_distrib, comm, maxrows);
   } else {
     //the if is not really needed, but let's keep it clear, costs only a comparison
     if(-1==maxrows)
-      M = new hiopMatrixDense(nrows, n_vars);   
+      M = getMatrixDenseInstance(nrows, n_vars);   
     else
-      M = new hiopMatrixDense(nrows, n_vars, NULL, MPI_COMM_SELF, maxrows);
+      M = getMatrixDenseInstance(nrows, n_vars, NULL, MPI_COMM_SELF, maxrows);
   }
 #else
   //the if is not really needed, but let's keep it clear, costs only a comparison
   if(-1==maxrows)
-    M = new hiopMatrixDense(nrows, n_vars);   
+    M = getMatrixDenseInstance(nrows, n_vars);   
   else
-    M = new hiopMatrixDense(nrows, n_vars, NULL, MPI_COMM_SELF, maxrows);
+    M = getMatrixDenseInstance(nrows, n_vars, NULL, MPI_COMM_SELF, maxrows);
 #endif
   return M;
 }

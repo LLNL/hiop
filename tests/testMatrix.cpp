@@ -57,7 +57,7 @@
 #include <cassert>
 
 #include <hiopVector.hpp>
-#include <hiopMatrix.hpp>
+#include <hiopMatrixDenseRowMajor.hpp>
 #include "LinAlg/matrixTestsDense.hpp"
 
 int main(int argc, char** argv)
@@ -109,25 +109,25 @@ int main(int argc, char** argv)
   {
     // Matrix dimensions denoted by subscript
     // Distributed matrices:
-    hiop::hiopMatrixDense A_mxn(M_global, N_global, n_partition, comm);
-    hiop::hiopMatrixDense B_mxn(M_global, N_global, n_partition, comm);
-    hiop::hiopMatrixDense A_nxm(N_global, M_global, m_partition, comm);
-    hiop::hiopMatrixDense A_nxn(N_global, N_global, n_partition, comm);
-    hiop::hiopMatrixDense A_kxn(K_global, N_global, n_partition, comm);
-    hiop::hiopMatrixDense A_mxm(M_global, M_global, m_partition, comm);
-    hiop::hiopMatrixDense A_kxm(K_global, M_global, m_partition, comm);
+    hiop::hiopMatrixDenseRowMajor A_mxn(M_global, N_global, n_partition, comm);
+    hiop::hiopMatrixDenseRowMajor B_mxn(M_global, N_global, n_partition, comm);
+    hiop::hiopMatrixDenseRowMajor A_nxm(N_global, M_global, m_partition, comm);
+    hiop::hiopMatrixDenseRowMajor A_nxn(N_global, N_global, n_partition, comm);
+    hiop::hiopMatrixDenseRowMajor A_kxn(K_global, N_global, n_partition, comm);
+    hiop::hiopMatrixDenseRowMajor A_mxm(M_global, M_global, m_partition, comm);
+    hiop::hiopMatrixDenseRowMajor A_kxm(K_global, M_global, m_partition, comm);
 
     // Some matrices need to scale only in one dimension as
     // ranks scale. The subscripted size suffixed with an 'l'
     // indicates which dimension will not scale with ranks.
-    hiop::hiopMatrixDense A_klxm(K_local, M_global, m_partition, comm);
-    hiop::hiopMatrixDense A_mlxk(M_local, K_global, k_partition, comm);
+    hiop::hiopMatrixDenseRowMajor A_klxm(K_local, M_global, m_partition, comm);
+    hiop::hiopMatrixDenseRowMajor A_mlxk(M_local, K_global, k_partition, comm);
 
     // Data is local even though sizes are global such that they can be
     // multiplied with the distributed matrices
-    hiop::hiopMatrixDense A_mxk_local(M_global, K_global);
-    hiop::hiopMatrixDense A_kxn_local(K_global, N_global);
-    hiop::hiopMatrixDense A_mxn_local(M_global, N_global);
+    hiop::hiopMatrixDenseRowMajor A_mxk_local(M_global, K_global);
+    hiop::hiopMatrixDenseRowMajor A_kxn_local(K_global, N_global);
+    hiop::hiopMatrixDenseRowMajor A_mxn_local(M_global, N_global);
 
     // Vectors with shape of the form:
     // x_<size>_<distributed or local>
@@ -178,7 +178,7 @@ int main(int argc, char** argv)
     // This matrix is allocated only for this test, since it requires
     // more rows to be allocated with the constructor. Here we allocate
     // one extra row for this purpose.
-    hiop::hiopMatrixDense A_mxn_extra_row(M_global, N_global, n_partition, comm, M_global+1);
+    hiop::hiopMatrixDenseRowMajor A_mxn_extra_row(M_global, N_global, n_partition, comm, M_global+1);
     fail += test.matrixAppendRow(A_mxn_extra_row, x_n_dist, rank);
     fail += test.matrixCopyRowsFrom(A_kxn, A_mxn, rank);
     fail += test.matrixCopyRowsFromSelect(A_mxn, A_kxn, rank);
