@@ -46,7 +46,7 @@
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or 
 // product endorsement purposes.
 
-#include "hiopMatrix.hpp"
+#include "hiopMatrixDense.hpp"
 
 #include <cstdio>
 #include <cstring> //for memcpy

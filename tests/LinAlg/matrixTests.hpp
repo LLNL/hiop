@@ -62,7 +62,7 @@
 #include <utility>
 #include <optional>
 #include <hiopVector.hpp>
-#include <hiopMatrix.hpp>
+#include <hiopMatrixDense.hpp>
 #include "testBase.hpp"
 
 namespace hiop::tests {

@@ -3,6 +3,7 @@
 
 #include "hiopVector.hpp"
 #include "hiopMatrix.hpp"
+#include "hiopMatrixDense.hpp"
 
 #include <cassert>
 

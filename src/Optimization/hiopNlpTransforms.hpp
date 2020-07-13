@@ -51,7 +51,7 @@
 
 #include "hiopInterface.hpp"
 #include "hiopVector.hpp"
-#include "hiopMatrix.hpp"
+#include "hiopMatrixDense.hpp"
 
 #include <cassert>
 #include <list>
