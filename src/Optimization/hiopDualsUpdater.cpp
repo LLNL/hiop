@@ -47,7 +47,7 @@
 // product endorsement purposes.
 
 #include "hiopDualsUpdater.hpp"
-#include "hiopFactory.hpp"
+#include "hiopLinAlgFactory.hpp"
 
 #include "hiop_blasdefs.hpp"
 
@@ -59,13 +59,13 @@ hiopDualsLsqUpdate::hiopDualsLsqUpdate(hiopNlpFormulation* nlp)
 {
   hiopNlpDenseConstraints* nlpd = dynamic_cast<hiopNlpDenseConstraints*>(_nlp);
   assert(NULL!=nlpd);
-  _mexme = getMatrixDenseInstance(nlpd->m_eq(),   nlpd->m_eq());
-  _mexmi = getMatrixDenseInstance(nlpd->m_eq(),   nlpd->m_ineq());
-  _mixmi = getMatrixDenseInstance(nlpd->m_ineq(), nlpd->m_ineq());
-  _mxm   = getMatrixDenseInstance(nlpd->m(), nlpd->m());
+  _mexme = LinearAlgebraFactory::createMatrixDense(nlpd->m_eq(),   nlpd->m_eq());
+  _mexmi = LinearAlgebraFactory::createMatrixDense(nlpd->m_eq(),   nlpd->m_ineq());
+  _mixmi = LinearAlgebraFactory::createMatrixDense(nlpd->m_ineq(), nlpd->m_ineq());
+  _mxm   = LinearAlgebraFactory::createMatrixDense(nlpd->m(), nlpd->m());
 
-  M      = getMatrixDenseInstance(nlpd->m(), nlpd->m());
-  rhs    = getVectorInstance(nlpd->m());
+  M      = LinearAlgebraFactory::createMatrixDense(nlpd->m(), nlpd->m());
+  rhs    = LinearAlgebraFactory::createVector(nlpd->m());
   rhsc   = dynamic_cast<hiopVectorPar*>(nlpd->alloc_dual_eq_vec());
   rhsc->setToZero();
   rhsd   = dynamic_cast<hiopVectorPar*>(nlpd->alloc_dual_ineq_vec());
@@ -75,7 +75,7 @@ hiopDualsLsqUpdate::hiopDualsLsqUpdate(hiopNlpFormulation* nlp)
 #ifdef HIOP_DEEPCHECKS
   M_copy = M->alloc_clone();
   rhs_copy = rhs->alloc_clone();
-  _mixme = getMatrixDenseInstance(nlpd->m_ineq(), nlpd->m_eq());
+  _mixme = LinearAlgebraFactory::createMatrixDense(nlpd->m_ineq(), nlpd->m_eq());
 #endif
   //user options
   recalc_lsq_duals_tol = 1e-6;

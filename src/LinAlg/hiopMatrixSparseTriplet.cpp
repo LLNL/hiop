@@ -1,4 +1,5 @@
 #include "hiopMatrixSparseTriplet.hpp"
+#include "hiopVectorPar.hpp"
 
 #include "hiop_blasdefs.hpp"
 

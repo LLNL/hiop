@@ -347,7 +347,7 @@ public:
   hiopNlpMDS(hiopInterfaceMDS& interface_)
     : hiopNlpFormulation(interface_), interface(interface_)
   {
-    _buf_lambda = getVectorInstance(0);
+    _buf_lambda = LinearAlgebraFactory::createVector(0);
   }
   virtual ~hiopNlpMDS() 
   {
