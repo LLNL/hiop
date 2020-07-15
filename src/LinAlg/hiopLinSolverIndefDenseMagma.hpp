@@ -37,7 +37,7 @@ public:
   {
 
     ipiv = new int[n];
-    dwork = new hiopVectorPar(0);
+    dwork = getVectorInstance(0);
 
 
     magma_int_t ndevices;
@@ -236,7 +236,7 @@ public:
   hiopMatrixDense& sysMatrix() { return M; }
 protected:
   int* ipiv;
-  hiopVectorPar* dwork;
+  hiopVector* dwork;
 
   magma_queue_t magma_device_queue;
   magmaDouble_ptr device_M, device_rhs;

@@ -56,7 +56,7 @@
 
 #include "hiop_blasdefs.hpp"
 
-#include "hiopVector.hpp"
+#include "hiopVectorPar.hpp"
 
 namespace hiop
 {
@@ -126,7 +126,7 @@ hiopMatrixDenseRowMajor::hiopMatrixDenseRowMajor(const hiopMatrixDenseRowMajor& 
   _buff_mxnlocal = NULL;
 }
 
-void hiopMatrixDenseRowMajor::appendRow(const hiopVectorPar& row)
+void hiopMatrixDenseRowMajor::appendRow(const hiopVector& row)
 {
 #ifdef HIOP_DEEPCHECKS  
   assert(row.get_local_size()==n_local);
@@ -268,7 +268,7 @@ void hiopMatrixDenseRowMajor::shiftRows(long long shift)
   }
 #endif
 }
-void hiopMatrixDenseRowMajor::replaceRow(long long row, const hiopVectorPar& vec)
+void hiopMatrixDenseRowMajor::replaceRow(long long row, const hiopVector& vec)
 {
   assert(row>=0); assert(row<m_local);
   long long vec_size=vec.get_local_size();

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "hiopVectorPar.hpp"
 #include "hiopMatrixDense.hpp"
 #include "hiopMatrixDenseRowMajor.hpp"
 
@@ -15,4 +16,10 @@ inline hiopMatrixDense* getMatrixDenseInstance(const long long& m, const long lo
   return new hiopMatrixDenseRowMajor(m, glob_n, col_part, comm, m_max_alloc);
 }
 
+inline hiopVector* getVectorInstance(
+  const long long& glob_n, long long* col_part = NULL, MPI_Comm comm = MPI_COMM_NULL)
+{
+  return new hiopVectorPar(glob_n, col_part, comm);
 }
+
+}   // namespace hiop

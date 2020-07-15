@@ -237,7 +237,7 @@ bool hiopMatrixSparseTriplet::checkIndexesAreOrdered() const
 void hiopMatrixSparseTriplet::
 addMDinvMtransToDiagBlockOfSymDeMatUTri(int rowAndCol_dest_start,
 					const double& alpha, 
-					const hiopVectorPar& D, hiopMatrixDense& W) const
+					const hiopVector& D, hiopMatrixDense& W) const
 {
   const int row_dest_start = rowAndCol_dest_start, col_dest_start = rowAndCol_dest_start;
   int n = this->nrows;
@@ -292,7 +292,7 @@ addMDinvMtransToDiagBlockOfSymDeMatUTri(int rowAndCol_dest_start,
 void hiopMatrixSparseTriplet::
 addMDinvNtransToSymDeMatUTri(int row_dest_start, int col_dest_start,
 			     const double& alpha, 
-			     const hiopVectorPar& D, const hiopMatrixSparseTriplet& M2,
+			     const hiopVector& D, const hiopMatrixSparseTriplet& M2,
 			     hiopMatrixDense& W) const
 {
   const hiopMatrixSparseTriplet& M1 = *this;

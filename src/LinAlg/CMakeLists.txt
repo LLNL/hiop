@@ -1,6 +1,6 @@
 add_library(hiopLinAlg 
     OBJECT
-        hiopVector.cpp
+        hiopVectorPar.cpp
         hiopMatrixDenseRowMajor.cpp
         hiopMatrixComplexDense.cpp
         hiopMatrixSparseTripletStorage.cpp

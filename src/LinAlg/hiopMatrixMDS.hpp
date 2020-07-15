@@ -4,7 +4,7 @@
 #include "hiopVector.hpp"
 #include "hiopMatrixDenseRowMajor.hpp"
 #include "hiopMatrixSparseTriplet.hpp"
-#include "hiopMatrixDenseFactory.hpp"
+#include "hiopFactory.hpp"
 
 #include <algorithm>
 

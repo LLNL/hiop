@@ -104,7 +104,7 @@ protected:
 protected:
   hiopNlpFormulation* nlp_;
   const hiopIterate* iter_;
-  const hiopVectorPar* grad_f_;
+  const hiopVector* grad_f_;
   const hiopMatrix *Jac_c_, *Jac_d_;
   hiopMatrix* Hess_;
   hiopPDPerturbation* perturb_calc_;
@@ -116,7 +116,7 @@ public:
   hiopKKTLinSysCompressed(hiopNlpFormulation* nlp)
     : hiopKKTLinSys(nlp), Dx_(NULL), rx_tilde_(NULL)
   {
-    Dx_ = dynamic_cast<hiopVectorPar*>(nlp->alloc_primal_vec());
+    Dx_ = nlp->alloc_primal_vec();
     assert(Dx_ != NULL);
     rx_tilde_  = Dx_->alloc_clone(); 
   }
@@ -132,8 +132,8 @@ public:
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction) = 0;
 
 protected:
-  hiopVectorPar* Dx_;
-  hiopVectorPar* rx_tilde_;
+  hiopVector* Dx_;
+  hiopVector* rx_tilde_;
 };
 
 /* Provides the functionality for reducing the KKT linear system to the 
@@ -158,21 +158,21 @@ public:
 
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction);
 
-  virtual void solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
-			       hiopVectorPar& dx, hiopVectorPar& dyc, hiopVectorPar& dyd) = 0;
+  virtual void solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
+			       hiopVector& dx, hiopVector& dyc, hiopVector& dyd) = 0;
 
 #ifdef HIOP_DEEPCHECKS
-  virtual double errorCompressedLinsys(const hiopVectorPar& rx, 
-				       const hiopVectorPar& ryc, 
-				       const hiopVectorPar& ryd,
-				       const hiopVectorPar& dx, 
-				       const hiopVectorPar& dyc, 
-				       const hiopVectorPar& dyd);
+  virtual double errorCompressedLinsys(const hiopVector& rx, 
+				       const hiopVector& ryc, 
+				       const hiopVector& ryd,
+				       const hiopVector& dx, 
+				       const hiopVector& dyc, 
+				       const hiopVector& dyd);
 #endif
 
 protected:
-  hiopVectorPar *Dd_inv_;
-  hiopVectorPar *ryd_tilde_;
+  hiopVector *Dd_inv_;
+  hiopVector *ryd_tilde_;
 };
 
 /* Provides the functionality for reducing the KKT linear system to the 
@@ -199,21 +199,21 @@ public:
 
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction);
 
-  virtual void solveCompressed(hiopVectorPar& rx, hiopVectorPar& rd, 
-			       hiopVectorPar& ryc, hiopVectorPar& ryd,
-			       hiopVectorPar& dx, hiopVectorPar& dd, 
-			       hiopVectorPar& dyc, hiopVectorPar& dyd) = 0;
+  virtual void solveCompressed(hiopVector& rx, hiopVector& rd, 
+			       hiopVector& ryc, hiopVector& ryd,
+			       hiopVector& dx, hiopVector& dd, 
+			       hiopVector& dyc, hiopVector& dyd) = 0;
 
 #ifdef HIOP_DEEPCHECKS
-  virtual double errorCompressedLinsys(const hiopVectorPar& rx,  const hiopVectorPar& rd, 
-				       const hiopVectorPar& ryc, const hiopVectorPar& ryd,
-				       const hiopVectorPar& dx,  const hiopVectorPar& dd, 
-				       const hiopVectorPar& dyc, const hiopVectorPar& dyd);
+  virtual double errorCompressedLinsys(const hiopVector& rx,  const hiopVector& rd, 
+				       const hiopVector& ryc, const hiopVector& ryd,
+				       const hiopVector& dx,  const hiopVector& dd, 
+				       const hiopVector& dyc, const hiopVector& dyd);
 #endif
 
 protected:
-  hiopVectorPar *Dd_;
-  hiopVectorPar *rd_tilde_;
+  hiopVector *Dd_;
+  hiopVector *rd_tilde_;
 protected: 
 #ifdef HIOP_DEEPCHECKS
   //y=beta*y+alpha*H*x
@@ -263,16 +263,16 @@ public:
    *  dx = - (H+Dx)^{-1}*(Jc^T*dyc+Jd^T*dyd - rx)
    * 
    */
-  virtual void solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
-			       hiopVectorPar& dx, hiopVectorPar& dyc, hiopVectorPar& dyd);
+  virtual void solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
+			       hiopVector& dx, hiopVector& dyc, hiopVector& dyd);
 
   //LAPACK wrappers
-  int solve(hiopMatrixDense& M, hiopVectorPar& rhs);
-  int solveWithRefin(hiopMatrixDense& M, hiopVectorPar& rhs);
+  int solve(hiopMatrixDense& M, hiopVector& rhs);
+  int solveWithRefin(hiopMatrixDense& M, hiopVector& rhs);
 #ifdef HIOP_DEEPCHECKS
-  static double solveError(const hiopMatrixDense& M,  const hiopVectorPar& x, hiopVectorPar& rhs);
-  double errorCompressedLinsys(const hiopVectorPar& rx, const hiopVectorPar& ryc, const hiopVectorPar& ryd,
-			       const hiopVectorPar& dx, const hiopVectorPar& dyc, const hiopVectorPar& dyd);
+  static double solveError(const hiopMatrixDense& M,  const hiopVector& x, hiopVector& rhs);
+  double errorCompressedLinsys(const hiopVector& rx, const hiopVector& ryc, const hiopVector& ryd,
+			       const hiopVector& dx, const hiopVector& dyc, const hiopVector& dyd);
 protected:
   //y=beta*y+alpha*H*x
   void HessianTimesVec_noLogBarrierTerm(double beta, hiopVector& y, double alpha, const hiopVector& x)
@@ -293,7 +293,7 @@ private:
 #endif
   //internal buffers
   hiopMatrixDense* _kxn_mat; //!opt (work directly with the Jacobian)
-  hiopVectorPar* _k_vec1;
+  hiopVector* _k_vec1;
 };
 
 };

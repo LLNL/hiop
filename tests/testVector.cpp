@@ -57,7 +57,7 @@
 #include <assert.h>
 
 // This header contains HiOp's MPI definitions
-#include <hiopVector.hpp>
+#include <hiopVectorPar.hpp>
 
 #include "LinAlg/vectorTestsPar.hpp"
 // #include "LinAlg/vectorTestsRAJA.hpp"

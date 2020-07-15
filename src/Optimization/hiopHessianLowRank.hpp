@@ -132,11 +132,11 @@ protected:
   double sigma_safe_min, sigma_safe_max; //min and max safety thresholds for sigma
   hiopNlpDenseConstraints* nlp;
 private:
-  hiopVectorPar* DhInv; //(B0+Dk)^{-1}
+  hiopVector* DhInv; //(B0+Dk)^{-1}
 #ifdef HIOP_DEEPCHECKS
   // needed in timesVec (for residual checking in solveCompressed, only HIOP_DEEPCHECKS mode).
   // can be recomputed from DhInv decided to store it instead to avoid round-off errors
-  hiopVectorPar* _Dx; 
+  hiopVector* _Dx; 
 #endif
   bool matrixChanged;
   //these are matrices from the compact representation; they are updated at each iteration.
@@ -144,20 +144,20 @@ private:
   //                                 [  L'      -D] [Yt   ]                   
   hiopMatrixDense *St,*Yt; //we store the transpose to easily access columns in S and T
   hiopMatrixDense *L;     //lower triangular from the compact representation
-  hiopVectorPar* D;       //diag 
+  hiopVector* D;       //diag 
   //these are matrices from the representation of the inverse
   hiopMatrixDense* V;    
 #ifdef HIOP_DEEPCHECKS
   //copy of the matrix - needed to check the residual
    hiopMatrixDense* _Vmat; 
 #endif
-  void growL(const int& lmem_curr, const int& lmem_max, const hiopVectorPar& YTs);
+  void growL(const int& lmem_curr, const int& lmem_max, const hiopVector& YTs);
   void growD(const int& l_curr, const int& l_max, const double& sTy);
-  void updateL(const hiopVectorPar& STy, const double& sTy);
+  void updateL(const hiopVector& STy, const double& sTy);
   void updateD(const double& sTy);
   //also stored are the iterate, gradient obj, and Jacobians at the previous optimization iteration
   hiopIterate *_it_prev;
-  hiopVectorPar *_grad_f_prev;
+  hiopVector *_grad_f_prev;
   hiopMatrixDense *_Jac_c_prev, *_Jac_d_prev;
 
   //internal helpers
@@ -177,10 +177,10 @@ private:
   hiopMatrixDense& new_kxl_mat1 (int k, int l);
   hiopMatrixDense& new_kx2l_mat1(int k, int l);
   
-  hiopVectorPar *_l_vec1, *_l_vec2, *_n_vec1, *_n_vec2, *_2l_vec1;
-  hiopVectorPar& new_l_vec1(int l);
-  hiopVectorPar& new_l_vec2(int l);
-  inline hiopVectorPar& new_n_vec1(long long n)
+  hiopVector *_l_vec1, *_l_vec2, *_n_vec1, *_n_vec2, *_2l_vec1;
+  hiopVector& new_l_vec1(int l);
+  hiopVector& new_l_vec2(int l);
+  inline hiopVector& new_n_vec1(long long n)
   {
 #ifdef HIOP_DEEPCHECKS
     assert(_n_vec1!=NULL);
@@ -188,7 +188,7 @@ private:
 #endif
     return *_n_vec1;
   }
-  inline hiopVectorPar& new_n_vec2(long long n)
+  inline hiopVector& new_n_vec2(long long n)
   {
 #ifdef HIOP_DEEPCHECKS
     assert(_n_vec2!=NULL);
@@ -196,10 +196,10 @@ private:
 #endif
     return *_n_vec2;
   }
-  inline hiopVectorPar& new_2l_vec1(int l) {
+  inline hiopVector& new_2l_vec1(int l) {
     if(_2l_vec1!=NULL && _2l_vec1->get_size()==2*l) return *_2l_vec1;
     if(_2l_vec1!=NULL) delete _2l_vec1;
-    _2l_vec1=new hiopVectorPar(2*l);
+    _2l_vec1=getVectorInstance(2*l);
     return *_2l_vec1;
   }
 private:
@@ -207,15 +207,15 @@ private:
   /* symmetric multiplication W = beta*W + alpha*X*Diag*X^T */
   static void symmMatTimesDiagTimesMatTrans_local(double beta, hiopMatrixDense& W_,
 					   double alpha, const hiopMatrixDense& X_,
-					   const hiopVectorPar& d);
+					   const hiopVector& d);
   /* W=S*Diag*X^T */
   static void matTimesDiagTimesMatTrans_local(hiopMatrixDense& W, const hiopMatrixDense& S, 
-					      const hiopVectorPar& d, const hiopMatrixDense& X);
+					      const hiopVector& d, const hiopMatrixDense& X);
   /* members and utilities related to V matrix: factorization and solve */
-  hiopVectorPar *_V_work_vec;
+  hiopVector *_V_work_vec;
   int _V_ipiv_size; int* _V_ipiv_vec;
   void factorizeV();
-  void solveWithV(hiopVectorPar& rhs_s, hiopVectorPar& rhs_y);
+  void solveWithV(hiopVector& rhs_s, hiopVector& rhs_y);
   void solveWithV(hiopMatrixDense& rhs);
 private:
   hiopHessianLowRank() {};
@@ -397,32 +397,32 @@ private: //internal methods
   /* symmetric multiplication W = beta*W + alpha*X*Diag*X^T */
   static void symmMatTimesDiagTimesMatTrans_local(double beta, hiopMatrixDense& W_,
 					   double alpha, const hiopMatrixDense& X_,
-					   const hiopVectorPar& d);
+					   const hiopVector& d);
   /* W=S*Diag*X^T */
-  static void matTimesDiagTimesMatTrans_local(hiopMatrixDense& W, const hiopMatrixDense& S, const hiopVectorPar& d, const hiopMatrixDense& X);
+  static void matTimesDiagTimesMatTrans_local(hiopMatrixDense& W, const hiopMatrixDense& S, const hiopVector& d, const hiopMatrixDense& X);
 
   /* rhs = R \ rhs, where R is upper triangular lxl and rhs is lx */
   static void triangularSolve(const hiopMatrixDense& R, hiopMatrixDense& rhs);
-  static void triangularSolve(const hiopMatrixDense& R, hiopVectorPar& rhs);
-  static void triangularSolveTrans(const hiopMatrixDense& R, hiopVectorPar& rhs);
+  static void triangularSolve(const hiopMatrixDense& R, hiopVector& rhs);
+  static void triangularSolveTrans(const hiopMatrixDense& R, hiopVector& rhs);
 
   //grows R when the number of BFGS updates is less than the max memory
-  void growR(const int& l_curr, const int& l_max, const hiopVectorPar& STy, const double& sTy);
+  void growR(const int& l_curr, const int& l_max, const hiopVector& STy, const double& sTy);
   void growD(const int& l_curr, const int& l_max, const double& sTy);
-  void updateR(const hiopVectorPar& STy, const double& sTy);
+  void updateR(const hiopVector& STy, const double& sTy);
   void updateD(const double& sTy);
 private:
-  hiopVectorPar* H0;
+  hiopVector* H0;
   hiopMatrixDense *St,*Yt; //we store the transpose to easily access columns in S and T
   hiopMatrixDense *R;
-  hiopVectorPar* D;
+  hiopVector* D;
 
   int sigma_update_strategy;
   double sigma_safe_min, sigma_safe_max;
 
   //also stored are the iterate, gradient obj, and Jacobians at the previous iterations
   hiopIterate *_it_prev;
-  hiopVectorPar *_grad_f_prev;
+  hiopVector *_grad_f_prev;
   hiopMatrixDense *_Jac_c_prev, *_Jac_d_prev;
 
   //internals buffers
@@ -437,11 +437,11 @@ private:
   //similar for S3=DpYtH0Y*S2
   hiopMatrixDense *_S3;
   hiopMatrixDense& new_S3(const hiopMatrixDense& Left, const hiopMatrixDense& Right);
-  hiopVectorPar *_l_vec1, *_l_vec2, *_l_vec3, *_n_vec1, *_n_vec2;
-  hiopVectorPar& new_l_vec1(int l);
-  hiopVectorPar& new_l_vec2(int l);
-  hiopVectorPar& new_l_vec3(int l);
-  inline hiopVectorPar& new_n_vec1(long long n)
+  hiopVector *_l_vec1, *_l_vec2, *_l_vec3, *_n_vec1, *_n_vec2;
+  hiopVector& new_l_vec1(int l);
+  hiopVector& new_l_vec2(int l);
+  hiopVector& new_l_vec3(int l);
+  inline hiopVector& new_n_vec1(long long n)
   {
 #ifdef HIOP_DEEPCHECKS
     assert(_n_vec1!=NULL);
@@ -449,7 +449,7 @@ private:
 #endif
     return *_n_vec1;
   }
-  inline hiopVectorPar& new_n_vec2(long long n)
+  inline hiopVector& new_n_vec2(long long n)
   {
 #ifdef HIOP_DEEPCHECKS
     assert(_n_vec2!=NULL);
