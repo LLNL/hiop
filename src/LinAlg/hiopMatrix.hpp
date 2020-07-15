@@ -96,7 +96,7 @@ public:
    * @brief subdigonal(this) += alpha*d 
    *
    * Adds elements of 'd' to the diagonal of 'this' starting at 'start_on_dest_diag'. 
-   * Precondition:  start_on_dest_diag + length(d) <= n_local
+   * Precondition:  start_on_dest_diag + length(d) <= n_local_
    * 
    * @pre _this_ is local/non-distributed
    */

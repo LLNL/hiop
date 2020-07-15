@@ -163,9 +163,9 @@ public:
   void overwriteUpperTriangleWithLower();
   void overwriteLowerTriangleWithUpper();
 #endif
-  virtual long long get_local_size_n() const { return n_local; }
-  virtual long long get_local_size_m() const { return m_local; }
-  virtual MPI_Comm get_mpi_comm() const { return comm; }
+  virtual long long get_local_size_n() const { return n_local_; }
+  virtual long long get_local_size_m() const { return m_local_; }
+  virtual MPI_Comm get_mpi_comm() const { return comm_; }
 
   //TODO: this is not kosher!
   inline double** local_data() const {return M; }
@@ -173,15 +173,15 @@ public:
   //do not use this unless you sure you know what you're doing
   inline double** get_M() { return M; }
 
-  virtual long long m() const {return m_local;}
-  virtual long long n() const {return n_global;}
+  virtual long long m() const {return m_local_;}
+  virtual long long n() const {return n_global_;}
 #ifdef HIOP_DEEPCHECKS
   virtual bool assertSymmetry(double tol=1e-16) const;
 #endif
 private:
   double** M; //local storage
-  int n_local; //local number of rows and cols, respectively
-  long long glob_jl, glob_ju;
+  int n_local_; //local number of rows and cols, respectively
+  long long glob_jl_, glob_ju_;
 
   mutable double* _buff_mxnlocal;  
 
@@ -194,7 +194,7 @@ private:
 
   inline double* new_mxnlocal_buff() const {
     if(_buff_mxnlocal==NULL) {
-      _buff_mxnlocal = new double[max_rows*n_local];
+      _buff_mxnlocal = new double[max_rows*n_local_];
     } 
     return _buff_mxnlocal;
   }

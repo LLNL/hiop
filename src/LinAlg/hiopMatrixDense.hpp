@@ -12,10 +12,10 @@ namespace hiop
 class hiopMatrixDense : public hiopMatrix
 {
 public:
-  hiopMatrixDense(const long long& m, const long long& glob_n, MPI_Comm _comm = MPI_COMM_SELF)
-      : m_local(m)
-      , n_global(glob_n)
-      , comm(_comm)
+  hiopMatrixDense(const long long& m, const long long& glob_n, MPI_Comm comm = MPI_COMM_SELF)
+      : m_local_(m)
+      , n_global_(glob_n)
+      , comm_(comm)
   {
   }
   virtual ~hiopMatrixDense()
@@ -161,7 +161,7 @@ public:
 #endif
   virtual long long get_local_size_n() const {assert(false && "not implemented in base class");}
   virtual long long get_local_size_m() const {assert(false && "not implemented in base class");}
-  virtual MPI_Comm get_mpi_comm() const { return comm; }
+  virtual MPI_Comm get_mpi_comm() const { return comm_; }
 
   //TODO: this is not kosher!
   virtual double** local_data() const {assert(false && "not implemented in base class");}
@@ -169,16 +169,16 @@ public:
   //do not use this unless you sure you know what you're doing
   virtual double** get_M(){assert(false && "not implemented in base class");}
 
-  virtual long long m() const {return m_local;}
-  virtual long long n() const {return n_global;}
+  virtual long long m() const {return m_local_;}
+  virtual long long n() const {return n_global_;}
 #ifdef HIOP_DEEPCHECKS
   virtual bool assertSymmetry(double tol=1e-16) const{assert(false && "not implemented in base class");}
 #endif
 protected:
-  long long n_global; //total / global number of columns
-  int m_local;
-  MPI_Comm comm; 
-  int myrank;
+  long long n_global_; //total / global number of columns
+  int m_local_;
+  MPI_Comm comm_;
+  int myrank_;
 
 protected:
   hiopMatrixDense() {};

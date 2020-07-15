@@ -66,7 +66,7 @@ public:
   virtual void setToConstant( double c );
   virtual void setToConstant_w_patternSelect(double c, const hiopVector& select);
   virtual void copyFrom(const hiopVector& v );
-  virtual void copyFrom(const double* v_local_data); //v should be of length at least n_local
+  virtual void copyFrom(const double* v_local_data); //v should be of length at least n_local_
   /// @brief Copy the 'n' elements of v starting at 'start_index_in_src' in 'this'
   virtual void copyFromStarting(int start_index_in_src, const double* v, int n);
   virtual void copyFromStarting(int start_index_in_src, const hiopVector& v);
@@ -134,16 +134,16 @@ public:
   virtual void print(FILE*, const char* withMessage=NULL, int max_elems=-1, int rank=-1) const;
 
   /* more accessers */
-  virtual long long get_local_size() const { return n_local; }
-  virtual double* local_data() { return data; }
-  virtual const double* local_data_const() const { return data; }
-  virtual MPI_Comm get_mpi_comm() const { return comm; }
+  virtual long long get_local_size() const { return n_local_; }
+  virtual double* local_data() { return data_; }
+  virtual const double* local_data_const() const { return data_; }
+  virtual MPI_Comm get_mpi_comm() const { return comm_; }
 
 protected:
-  MPI_Comm comm;
-  double* data;
-  long long glob_il, glob_iu;
-  long long n_local;
+  MPI_Comm comm_;
+  double* data_;
+  long long glob_il_, glob_iu_;
+  long long n_local_;
 private:
   /// @brief copy constructor, for internal/private use only (it doesn't copy the elements.)
   hiopVectorPar(const hiopVectorPar&);

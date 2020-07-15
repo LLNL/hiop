@@ -56,7 +56,7 @@ namespace hiop
 class hiopVector
 {
 public:
-  hiopVector() { n=0;}
+  hiopVector() { n_=0;}
   virtual ~hiopVector() {};
   /// @brief Set all elements to zero.
   virtual void setToZero() = 0;
@@ -68,7 +68,7 @@ public:
   //maybe startingAtCopyFromStartingAt startingAtCopyToStartingAt ?
   /// @brief Copy the elements of v
   virtual void copyFrom(const hiopVector& v ) = 0;
-  virtual void copyFrom(const double* v_local_data) = 0; //v should be of length at least n_local
+  virtual void copyFrom(const double* v_local_data) = 0; //v should be of length at least n_local_
   /// @brief Copy the 'n' elements of v starting at 'start_index_in_src' in 'this'
   virtual void copyFromStarting(int start_index_in_src, const double* v, int n) = 0;
   /// @brief Copy v in 'this' starting at start_index_in_src in  'this'. */
@@ -77,7 +77,7 @@ public:
   /// @brief copy from 'dest' starting at 'start_idx_dest' to 'this' starting at 'start_idx_src'
   virtual void startingAtCopyFromStartingAt(int start_idx_src, const hiopVector& dest, int start_idx_dest) = 0;
 
-  /// @brief Copy 'this' to double array, which is assumed to be at least of 'n_local' size.
+  /// @brief Copy 'this' to double array, which is assumed to be at least of 'n_local_' size.
   virtual void copyTo(double* dest) const = 0;
   /// @brief Copy 'this' to v starting at start_index in 'this'.
   virtual void copyToStarting(int start_index_in_src, hiopVector& v) = 0;
@@ -183,16 +183,16 @@ public:
   virtual hiopVector* alloc_clone() const = 0;
   /// @brief allocates a vector that mirrors this, and copies the values
   virtual hiopVector* new_copy () const = 0;
-  virtual long long get_size() const { return n; }
+  virtual long long get_size() const { return n_; }
   virtual long long get_local_size() const = 0;
   virtual double* local_data() = 0;
   virtual const double* local_data_const() const = 0;
 
 protected:
-  long long n; //we assume sequential data
+  long long n_; //we assume sequential data
 
 protected:
-  hiopVector(const hiopVector& v) : n(v.n) {};
+  hiopVector(const hiopVector& v) : n_(v.n_) {};
 };
 
 }
