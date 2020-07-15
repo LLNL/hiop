@@ -162,7 +162,7 @@ namespace hiop
 	
 	//build the diagonal Hxs = Hsparse+Dxs
 	if(NULL == Hxs_) {
-	  Hxs_ = getVectorInstance(nxs); assert(Hxs_);
+	  Hxs_ = LinearAlgebraFactory::createVector(nxs); assert(Hxs_);
 	}
 	Hxs_->startingAtCopyFromStartingAt(0, *Dx_, 0);
 	//a good time to add the IC 'delta_wx' perturbation
@@ -324,8 +324,8 @@ namespace hiop
     int nxsp=Hxs_->get_size(); assert(nxsp<=nx);
     int nxde = nlpMDS_->nx_de();
     assert(nxsp+nxde==nx);
-    if(rhs_ == NULL) rhs_ = getVectorInstance(nxde+nyc+nyd);
-    if(_buff_xs_==NULL) _buff_xs_ = getVectorInstance(nxsp);
+    if(rhs_ == NULL) rhs_ = LinearAlgebraFactory::createVector(nxde+nyc+nyd);
+    if(_buff_xs_==NULL) _buff_xs_ = LinearAlgebraFactory::createVector(nxsp);
 
     nlp_->log->write("RHS KKT MDS XDycYd rx: ", rx,  hovIteration);
     nlp_->log->write("RHS KKT MDS XDycYd ryc:", ryc, hovIteration);

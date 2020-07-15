@@ -1,8 +1,11 @@
 #pragma once
-#include "hiopMatrix.hpp"
+
 #include <cstddef>
 #include <cstdio>
 #include <cassert>
+
+#include <hiopMPI.hpp>
+#include "hiopMatrix.hpp"
 
 namespace hiop
 {

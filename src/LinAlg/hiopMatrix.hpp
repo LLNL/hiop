@@ -49,23 +49,8 @@
 #ifndef HIOP_MATRIX
 #define HIOP_MATRIX
 
-#include "hiop_defs.hpp"
-
-#ifdef HIOP_USE_MPI
-#include "mpi.h"
-#else 
-
-#ifndef MPI_COMM
-#define MPI_Comm int
-#endif
-#ifndef MPI_COMM_SELF
-#define MPI_COMM_SELF 0
-#endif
-#include <cstddef>
-
-#endif 
-
 #include <cstdio>
+#include "hiop_defs.hpp"
 
 namespace hiop
 {

@@ -1,6 +1,7 @@
 #ifndef HIOP_MATRIX_DENSE_COMPLEX
 #define HIOP_MATRIX_DENSE_COMPLEX
 
+#include <hiopMPI.hpp>
 #include "hiopMatrix.hpp"
 
 #include <cassert>

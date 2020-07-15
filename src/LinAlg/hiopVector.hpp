@@ -48,8 +48,6 @@
 
 #pragma once
 
-#include "hiop_defs.hpp"
-
 #include <cstdio>
 
 namespace hiop

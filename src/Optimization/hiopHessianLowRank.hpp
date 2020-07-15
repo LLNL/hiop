@@ -199,7 +199,7 @@ private:
   inline hiopVector& new_2l_vec1(int l) {
     if(_2l_vec1!=NULL && _2l_vec1->get_size()==2*l) return *_2l_vec1;
     if(_2l_vec1!=NULL) delete _2l_vec1;
-    _2l_vec1=getVectorInstance(2*l);
+    _2l_vec1=LinearAlgebraFactory::createVector(2*l);
     return *_2l_vec1;
   }
 private:

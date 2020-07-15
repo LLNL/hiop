@@ -37,7 +37,7 @@ public:
   {
 
     ipiv = new int[n];
-    dwork = getVectorInstance(0);
+    dwork = LinearAlgebraFactory::createVector(0);
 
 
     magma_int_t ndevices;

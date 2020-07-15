@@ -47,7 +47,7 @@
 // product endorsement purposes.
 
 #include "hiopNlpTransforms.hpp"
-#include "hiopFactory.hpp"
+#include "hiopLinAlgFactory.hpp"
 
 #include <cmath>
 namespace hiop
@@ -162,15 +162,15 @@ bool hiopFixedVarsRemover::setupConstraintsPart(const int& neq, const int& nineq
 #ifdef HIOP_USE_MPI
   if(fs_vec_distrib.size())
   {
-    Jacc_fs = getMatrixDenseInstance(neq,   n_fs, fs_vec_distrib.data(), comm);
-    Jacd_fs = getMatrixDenseInstance(nineq, n_fs, fs_vec_distrib.data(), comm);
+    Jacc_fs = LinearAlgebraFactory::createMatrixDense(neq,   n_fs, fs_vec_distrib.data(), comm);
+    Jacd_fs = LinearAlgebraFactory::createMatrixDense(nineq, n_fs, fs_vec_distrib.data(), comm);
   } else {
-    Jacc_fs = getMatrixDenseInstance(neq,   n_fs, NULL, comm);
-    Jacd_fs = getMatrixDenseInstance(nineq, n_fs, NULL, comm);
+    Jacc_fs = LinearAlgebraFactory::createMatrixDense(neq,   n_fs, NULL, comm);
+    Jacd_fs = LinearAlgebraFactory::createMatrixDense(nineq, n_fs, NULL, comm);
   }
 #else
-  Jacc_fs = getMatrixDenseInstance(neq,   n_fs);
-  Jacd_fs = getMatrixDenseInstance(nineq, n_fs);
+  Jacc_fs = LinearAlgebraFactory::createMatrixDense(neq,   n_fs);
+  Jacd_fs = LinearAlgebraFactory::createMatrixDense(nineq, n_fs);
 #endif
   return true;
 }

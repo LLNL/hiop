@@ -252,7 +252,7 @@ public:
 			       hiopVector& dx, hiopVector& dyc, hiopVector& dyd)
   {
     int nx=rx.get_size(), nyc=ryc.get_size(), nyd=ryd.get_size();
-    if(rhsXYcYd == NULL) rhsXYcYd = getVectorInstance(nx+nyc+nyd);
+    if(rhsXYcYd == NULL) rhsXYcYd = LinearAlgebraFactory::createVector(nx+nyc+nyd);
 
     nlp_->log->write("RHS KKT XDycYd rx: ", rx,  hovIteration);
     nlp_->log->write("RHS KKT XDycYd ryc:", ryc, hovIteration);
@@ -494,7 +494,7 @@ public:
 			       hiopVector& dx, hiopVector& dd, hiopVector& dyc, hiopVector& dyd)
   {
     int nx=rx.get_size(), nyc=ryc.get_size(), nyd=ryd.get_size();
-    if(rhsXDYcYd == NULL) rhsXDYcYd = getVectorInstance(nx+nyc+2*nyd);
+    if(rhsXDYcYd == NULL) rhsXDYcYd = LinearAlgebraFactory::createVector(nx+nyc+2*nyd);
 
     nlp_->log->write("RHS KKT XDycYd rx: ", rx,  hovMatrices);
     nlp_->log->write("RHS KKT XDycYd rd: ", rd,  hovMatrices);
