@@ -53,7 +53,7 @@
  * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
  *
  */
-#include <hiopVector.hpp>
+#include <hiopVectorPar.hpp>
 #include "vectorTestsPar.hpp"
 
 namespace hiop::tests {

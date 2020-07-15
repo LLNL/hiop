@@ -47,15 +47,15 @@
 // product endorsement purposes.
 
 #include "hiopNlpTransforms.hpp"
-#include "hiopMatrixDenseFactory.hpp"
+#include "hiopFactory.hpp"
 
 #include <cmath>
 namespace hiop
 {
 
 hiopFixedVarsRemover::  
-hiopFixedVarsRemover(const hiopVectorPar& xl, 
-		     const hiopVectorPar& xu, 
+hiopFixedVarsRemover(const hiopVector& xl, 
+		     const hiopVector& xu, 
 		     const double& fixedVarTol_,
 		     const long long& numFixedVars,
 		     const long long& numFixedVars_local)
@@ -176,7 +176,7 @@ bool hiopFixedVarsRemover::setupConstraintsPart(const int& neq, const int& nineq
 }
 
 /* "copies" a full space vector/array to a reduced space vector/array */
-void hiopFixedVarsRemover::copyFsToRs(const hiopVectorPar& fsVec,  hiopVectorPar& rsVec)
+void hiopFixedVarsRemover::copyFsToRs(const hiopVector& fsVec,  hiopVector& rsVec)
 {
   assert(fsVec.get_local_size()==fs2rs_idx_map.size());
   applyInvToArray(fsVec.local_data_const(), rsVec.local_data());
@@ -253,8 +253,8 @@ void hiopFixedVarsRemover::applyInvToMatrix(const double*const* M_fs, const int&
 }
 
 hiopFixedVarsRelaxer::
-hiopFixedVarsRelaxer(const hiopVectorPar& xl, 
-		     const hiopVectorPar& xu, 
+hiopFixedVarsRelaxer(const hiopVector& xl, 
+		     const hiopVector& xu, 
 		     const long long& numFixedVars,
 		     const long long& numFixedVars_local)
   : xl_copy(NULL), xu_copy(NULL), n_vars(xl.get_size()), n_vars_local(xl.get_local_size())
@@ -269,7 +269,7 @@ hiopFixedVarsRelaxer::~hiopFixedVarsRelaxer()
 }
 
 void hiopFixedVarsRelaxer::
-relax(const double& fixed_var_tol, const double& fixed_var_perturb, hiopVectorPar& xl, hiopVectorPar& xu)
+relax(const double& fixed_var_tol, const double& fixed_var_perturb, hiopVector& xl, hiopVector& xu)
 {
   double *xla=xl.local_data(), *xua=xu.local_data(), *v;
   long long n=xl.get_local_size();

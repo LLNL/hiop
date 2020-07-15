@@ -50,7 +50,7 @@
 #define HIOP_LINSOLVER
 
 #include "hiopMatrix.hpp"
-#include "hiopVector.hpp"
+#include "hiopVectorPar.hpp"
 
 #include "hiop_blasdefs.hpp"
 
@@ -115,7 +115,7 @@ public:
     : hiopLinSolverIndefDense(n, nlp_)
   {
     ipiv = new int[n];
-    dwork = new hiopVectorPar(0);
+    dwork = getVectorInstance(0);
   }
   virtual ~hiopLinSolverIndefDenseLapack()
   {
@@ -145,7 +145,7 @@ public:
     if(lwork != dwork->get_size()) {
       delete dwork;
       dwork = NULL;
-      dwork = new hiopVectorPar(lwork);
+      dwork = getVectorInstance(lwork);
     }
 
     bool rank_deficient=false;
@@ -247,7 +247,7 @@ public:
 
 protected:
   int* ipiv;
-  hiopVectorPar* dwork;
+  hiopVector* dwork;
 private:
   hiopLinSolverIndefDenseLapack()
     : ipiv(NULL), dwork(NULL)

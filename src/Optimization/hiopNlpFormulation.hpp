@@ -150,15 +150,15 @@ public:
 			     double alpha_du, double alpha_pr, int ls_trials);
   
   /** const accessors */
-  inline const hiopVectorPar& get_xl ()  const { return *xl;   }
-  inline const hiopVectorPar& get_xu ()  const { return *xu;   }
-  inline const hiopVectorPar& get_ixl()  const { return *ixl;  }
-  inline const hiopVectorPar& get_ixu()  const { return *ixu;  }
-  inline const hiopVectorPar& get_dl ()  const { return *dl;   }
-  inline const hiopVectorPar& get_du ()  const { return *du;   }
-  inline const hiopVectorPar& get_idl()  const { return *idl;  }
-  inline const hiopVectorPar& get_idu()  const { return *idu;  }
-  inline const hiopVectorPar& get_crhs() const { return *c_rhs;}
+  inline const hiopVector& get_xl ()  const { return *xl;   }
+  inline const hiopVector& get_xu ()  const { return *xu;   }
+  inline const hiopVector& get_ixl()  const { return *ixl;  }
+  inline const hiopVector& get_ixu()  const { return *ixu;  }
+  inline const hiopVector& get_dl ()  const { return *dl;   }
+  inline const hiopVector& get_du ()  const { return *du;   }
+  inline const hiopVector& get_idl()  const { return *idl;  }
+  inline const hiopVector& get_idu()  const { return *idu;  }
+  inline const hiopVector& get_crhs() const { return *c_rhs;}
 
   /** const accessors */
   inline long long n() const      {return n_vars;}
@@ -171,15 +171,19 @@ public:
   inline long long m_ineq_upp() const {return n_ineq_upp;}
   inline long long n_complem()  const {return m_ineq_low()+m_ineq_upp()+n_low()+n_upp();}
 
-  inline long long n_local() const{return xl->get_local_size();}
+  inline long long n_local() const
+  {
+    auto* xlvec = dynamic_cast<hiopVectorPar*>(xl);
+    return xlvec->get_local_size();
+  }
   inline long long n_low_local() const {return n_bnds_low_local;}
   inline long long n_upp_local() const {return n_bnds_upp_local;}
 
   /* methods for transforming the internal objects to corresponding user objects */
   inline double user_obj(double hiop_f) { return nlp_transformations.applyToObj(hiop_f); }
-  inline void   user_x(hiopVectorPar& hiop_x, double* user_x) 
+  inline void   user_x(hiopVector& hiop_x, double* user_x) 
   { 
-    double *hiop_xa = hiop_x.local_data();
+    double *hiop_xa = dynamic_cast<hiopVectorPar&>( hiop_x ).local_data();
     double *user_xa = nlp_transformations.applyTox(hiop_xa,/*new_x=*/true); 
     //memcpy(user_x, user_xa, hiop_x.get_local_size()*sizeof(double));
     memcpy(user_x, user_xa, nlp_transformations.n_post_local()*sizeof(double));
@@ -221,13 +225,13 @@ protected:
   long long n_vars, n_cons, n_cons_eq, n_cons_ineq;
   long long n_bnds_low, n_bnds_low_local, n_bnds_upp, n_bnds_upp_local, n_ineq_low, n_ineq_upp;
   long long n_bnds_lu, n_ineq_lu;
-  hiopVectorPar *xl, *xu, *ixu, *ixl; //these will/can be global, memory distributed
+  hiopVector *xl, *xu, *ixu, *ixl; //these will/can be global, memory distributed
   hiopInterfaceBase::NonlinearityType* vars_type; //C array containing the types for local vars
 
-  hiopVectorPar *c_rhs; //local
+  hiopVector *c_rhs; //local
   hiopInterfaceBase::NonlinearityType* cons_eq_type;
 
-  hiopVectorPar *dl, *du,  *idl, *idu; //these will be local
+  hiopVector *dl, *du,  *idl, *idu; //these will be local
   hiopInterfaceBase::NonlinearityType* cons_ineq_type;
   
   // keep track of the constraints indexes in the original, user's formulation
@@ -343,7 +347,7 @@ public:
   hiopNlpMDS(hiopInterfaceMDS& interface_)
     : hiopNlpFormulation(interface_), interface(interface_)
   {
-    _buf_lambda = new hiopVectorPar(0);
+    _buf_lambda = getVectorInstance(0);
   }
   virtual ~hiopNlpMDS() 
   {
@@ -396,7 +400,7 @@ private:
   int nnz_sparse_Jaceq, nnz_sparse_Jacineq;
   int nnz_sparse_Hess_Lagr_SS, nnz_sparse_Hess_Lagr_SD;
 
-  hiopVectorPar* _buf_lambda;
+  hiopVector* _buf_lambda;
 };
 
 }

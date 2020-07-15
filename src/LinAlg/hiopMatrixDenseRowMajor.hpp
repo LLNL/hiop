@@ -116,7 +116,7 @@ public:
   virtual hiopMatrixDense* alloc_clone() const;
   virtual hiopMatrixDense* new_copy() const;
 
-  void appendRow(const hiopVectorPar& row);
+  void appendRow(const hiopVector& row);
   /*copies the first 'num_rows' rows from 'src' to 'this' starting at 'row_dest' */
   void copyRowsFrom(const hiopMatrixDense& src, int num_rows, int row_dest);
   
@@ -138,7 +138,7 @@ public:
   void copyFromMatrixBlock(const hiopMatrixDense& src, const int i_src_block_start, const int j_src_block_start);
   /*  shift<0 -> up; shift>0 -> down  */
   void shiftRows(long long shift);
-  void replaceRow(long long row, const hiopVectorPar& vec);
+  void replaceRow(long long row, const hiopVector& vec);
   /* copies row 'irow' in the vector 'row_vec' (sizes should match) */
   void getRow(long long irow, hiopVector& row_vec);
 #ifdef HIOP_DEEPCHECKS

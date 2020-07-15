@@ -120,7 +120,7 @@ public:
   virtual hiopMatrixDense* alloc_clone() const=0;//{assert(false && "not implemented in base class");}
   virtual hiopMatrixDense* new_copy() const=0;//{assert(false && "not implemented in base class");}
 
-  virtual void appendRow(const hiopVectorPar& row){assert(false && "not implemented in base class");}
+  virtual void appendRow(const hiopVector& row){assert(false && "not implemented in base class");}
   /*copies the first 'num_rows' rows from 'src' to 'this' starting at 'row_dest' */
   virtual void copyRowsFrom(const hiopMatrixDense& src, int num_rows, int row_dest){assert(false && "not implemented in base class");}
   
@@ -142,7 +142,7 @@ public:
   virtual void copyFromMatrixBlock(const hiopMatrixDense& src, const int i_src_block_start, const int j_src_block_start){assert(false && "not implemented in base class");}
   /*  shift<0 -> up; shift>0 -> down  */
   virtual void shiftRows(long long shift){assert(false && "not implemented in base class");}
-  virtual void replaceRow(long long row, const hiopVectorPar& vec){assert(false && "not implemented in base class");}
+  virtual void replaceRow(long long row, const hiopVector& vec){assert(false && "not implemented in base class");}
   /* copies row 'irow' in the vector 'row_vec' (sizes should match) */
   virtual void getRow(long long irow, hiopVector& row_vec){assert(false && "not implemented in base class");}
 #ifdef HIOP_DEEPCHECKS

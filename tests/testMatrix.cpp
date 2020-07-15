@@ -56,7 +56,7 @@
 #include <iostream>
 #include <cassert>
 
-#include <hiopVector.hpp>
+#include <hiopVectorPar.hpp>
 #include <hiopMatrixDenseRowMajor.hpp>
 #include "LinAlg/matrixTestsDense.hpp"
 

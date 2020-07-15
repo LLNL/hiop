@@ -162,7 +162,7 @@ namespace hiop
 	
 	//build the diagonal Hxs = Hsparse+Dxs
 	if(NULL == Hxs_) {
-	  Hxs_ = new hiopVectorPar(nxs); assert(Hxs_);
+	  Hxs_ = getVectorInstance(nxs); assert(Hxs_);
 	}
 	Hxs_->startingAtCopyFromStartingAt(0, *Dx_, 0);
 	//a good time to add the IC 'delta_wx' perturbation
@@ -312,8 +312,8 @@ namespace hiop
   }
 
   void hiopKKTLinSysCompressedMDSXYcYd::
-  solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
-		  hiopVectorPar& dx, hiopVectorPar& dyc, hiopVectorPar& dyd)
+  solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
+		  hiopVector& dx, hiopVector& dyc, hiopVector& dyd)
   {
     if(!nlpMDS_)   { assert(false); return; }
     if(!HessMDS_)  { assert(false); return; }
@@ -324,14 +324,14 @@ namespace hiop
     int nxsp=Hxs_->get_size(); assert(nxsp<=nx);
     int nxde = nlpMDS_->nx_de();
     assert(nxsp+nxde==nx);
-    if(rhs_ == NULL) rhs_ = new hiopVectorPar(nxde+nyc+nyd);
-    if(_buff_xs_==NULL) _buff_xs_ = new hiopVectorPar(nxsp);
+    if(rhs_ == NULL) rhs_ = getVectorInstance(nxde+nyc+nyd);
+    if(_buff_xs_==NULL) _buff_xs_ = getVectorInstance(nxsp);
 
     nlp_->log->write("RHS KKT MDS XDycYd rx: ", rx,  hovIteration);
     nlp_->log->write("RHS KKT MDS XDycYd ryc:", ryc, hovIteration);
     nlp_->log->write("RHS KKT MDS XDycYd ryd:", ryd, hovIteration);
 
-    hiopVectorPar& rxs = *_buff_xs_;
+    hiopVector& rxs = *_buff_xs_;
     //rxs = Hxs^{-1} * rx_sparse 
     rx.startingAtCopyToStartingAt(0, rxs, 0, nxsp);
     rxs.componentDiv(*Hxs_);
@@ -374,7 +374,7 @@ namespace hiop
     //
     // compute dxs
     //
-    hiopVectorPar& dxs = *_buff_xs_;
+    hiopVector& dxs = *_buff_xs_;
     // dxs = (Hxs)^{-1} ( rxs - Jac_c_sp^T dyc - Jac_d_sp^T dyd)
     rx.startingAtCopyToStartingAt(0, dxs, 0, nxsp);
     Jac_cMDS_->sp_mat()->transTimesVec(1., dxs, -1., dyc);

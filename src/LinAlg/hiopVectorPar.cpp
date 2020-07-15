@@ -46,7 +46,7 @@
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or 
 // product endorsement purposes.
 
-#include "hiopVector.hpp"
+#include "hiopVectorPar.hpp"
 
 #include <cmath>
 #include <cstring> //for memcpy
@@ -97,14 +97,14 @@ hiopVectorPar::~hiopVectorPar()
   delete[] data; data=NULL;
 }
 
-hiopVectorPar* hiopVectorPar::alloc_clone() const
+hiopVector* hiopVectorPar::alloc_clone() const
 {
-  hiopVectorPar* v = new hiopVectorPar(*this); assert(v);
+  hiopVector* v = new hiopVectorPar(*this); assert(v);
   return v;
 }
-hiopVectorPar* hiopVectorPar::new_copy () const
+hiopVector* hiopVectorPar::new_copy () const
 {
-  hiopVectorPar* v = new hiopVectorPar(*this); assert(v);
+  hiopVector* v = new hiopVectorPar(*this); assert(v);
   v->copyFrom(*this);
   return v;
 }

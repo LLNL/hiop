@@ -90,16 +90,16 @@ public:
    * prints up to max_elems (by default all), on rank 'rank' (by default on all) */
   virtual void print(FILE*, const char* msg=NULL, int max_elems=-1, int rank=-1) const;
 private:
-  hiopVectorPar*rx;           // -\grad f - J_c^t y_c - J_d^t y_d + z_l - z_u
-  hiopVectorPar*rd;           //  y_d + v_l - v_u
-  hiopVectorPar*rxl,*rxu;     //  x - sxl-xl, -x-sxu+xu
-  hiopVectorPar*rdl,*rdu;     //  as above but for d
+  hiopVector*rx;           // -\grad f - J_c^t y_c - J_d^t y_d + z_l - z_u
+  hiopVector*rd;           //  y_d + v_l - v_u
+  hiopVector*rxl,*rxu;     //  x - sxl-xl, -x-sxu+xu
+  hiopVector*rdl,*rdu;     //  as above but for d
 
-  hiopVectorPar*ryc;          // -c(x)   (c(x)=0!//!)
-  hiopVectorPar*ryd;          //for d- d(x)
+  hiopVector*ryc;          // -c(x)   (c(x)=0!//!)
+  hiopVector*ryd;          //for d- d(x)
 
-  hiopVectorPar*rszl,*rszu;   // \mu e-sxl zl, \mu e - sxu zu
-  hiopVectorPar*rsvl,*rsvu;   // \mu e-sdl vl, \mu e - sdu vu
+  hiopVector*rszl,*rszu;   // \mu e-sxl zl, \mu e - sxu zu
+  hiopVector*rsvl,*rsvu;   // \mu e-sdl vl, \mu e - sdu vu
 
   /** storage for the norm of [rx,rd], [rxl,...,rdu,ryc,ryd], and [rszl,...,rsvu]  
    *  for the nlp (\mu=0)
