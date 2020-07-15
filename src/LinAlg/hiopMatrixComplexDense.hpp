@@ -226,20 +226,20 @@ namespace hiop
     MPI_Comm comm_; 
     int myrank_;
     
-    mutable std::complex<double>* _buff_mxnlocal;  
+    mutable std::complex<double>* buff_mxnlocal_;  
     
     //this is very private do not touch :)
-    long long max_rows;
+    long long max_rows_;
   private:
     hiopMatrixComplexDense() {};
     /** copy constructor, for internal/private use only (it doesn't copy the values) */
     hiopMatrixComplexDense(const hiopMatrixComplexDense&);
     
     inline std::complex<double>* new_mxnlocal_buff() const {
-      if(_buff_mxnlocal==NULL) {
-	_buff_mxnlocal = new std::complex<double>[max_rows*n_local_];
+      if(buff_mxnlocal_==NULL) {
+	buff_mxnlocal_ = new std::complex<double>[max_rows_*n_local_];
       } 
-      return _buff_mxnlocal;
+      return buff_mxnlocal_;
     }
   }; //end class   
 }//end namespace

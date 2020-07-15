@@ -27,25 +27,25 @@ namespace hiop
     
     myrank_ = P;
     
-    max_rows=m_max_alloc;
-    if(max_rows==-1) max_rows=m_local_;
-    assert(max_rows>=m_local_ &&
+    max_rows_=m_max_alloc;
+    if(max_rows_==-1) max_rows_=m_local_;
+    assert(max_rows_>=m_local_ &&
 	   "the requested extra allocation is smaller than the allocation needed by the matrix");
     
-    M=new std::complex<double>*[max_rows==0?1:max_rows];
-    M[0] = max_rows==0?NULL:new std::complex<double>[max_rows*n_local_];
-    for(int i=1; i<max_rows; i++)
+    M=new std::complex<double>*[max_rows_==0?1:max_rows_];
+    M[0] = max_rows_==0?NULL:new std::complex<double>[max_rows_*n_local_];
+    for(int i=1; i<max_rows_; i++)
       M[i]=M[0]+i*n_local_;
     
     //! valgrind reports a shit load of errors without this; check this
-    for(int i=0; i<max_rows*n_local_; i++) M[0][i]=0.0;
+    for(int i=0; i<max_rows_*n_local_; i++) M[0][i]=0.0;
     
     //internal buffers 
-    _buff_mxnlocal = NULL;
+    buff_mxnlocal_ = NULL;
   }
   hiopMatrixComplexDense::~hiopMatrixComplexDense()
   {
-    if(_buff_mxnlocal) delete[] _buff_mxnlocal;
+    if(buff_mxnlocal_) delete[] buff_mxnlocal_;
     if(M) {
       if(M[0]) delete[] M[0];
       delete[] M;
@@ -59,15 +59,15 @@ namespace hiop
     comm_=dm.comm_; myrank_=dm.myrank_;
     
     //M=new double*[m_local_==0?1:m_local_];
-    max_rows = dm.max_rows;
-    M=new std::complex<double>*[max_rows==0?1:max_rows];
+    max_rows_ = dm.max_rows_;
+    M=new std::complex<double>*[max_rows_==0?1:max_rows_];
 
-    M[0] = max_rows==0?NULL:new std::complex<double>[max_rows*n_local_];
+    M[0] = max_rows_==0?NULL:new std::complex<double>[max_rows_*n_local_];
 
-    for(int i=1; i<max_rows; i++)
+    for(int i=1; i<max_rows_; i++)
       M[i]=M[0]+i*n_local_;
     
-    _buff_mxnlocal = NULL;
+    buff_mxnlocal_ = NULL;
   }
 
   void hiopMatrixComplexDense::copyFrom(const hiopMatrixComplexDense& dm)

@@ -168,10 +168,10 @@ public:
   virtual MPI_Comm get_mpi_comm() const { return comm_; }
 
   //TODO: this is not kosher!
-  inline double** local_data() const {return M; }
-  inline double*  local_buffer() const {return M[0]; }
+  inline double** local_data() const {return M_; }
+  inline double*  local_buffer() const {return M_[0]; }
   //do not use this unless you sure you know what you're doing
-  inline double** get_M() { return M; }
+  inline double** get_M() { return M_; }
 
   virtual long long m() const {return m_local_;}
   virtual long long n() const {return n_global_;}
@@ -179,24 +179,24 @@ public:
   virtual bool assertSymmetry(double tol=1e-16) const;
 #endif
 private:
-  double** M; //local storage
+  double** M_; //local storage
   int n_local_; //local number of rows and cols, respectively
   long long glob_jl_, glob_ju_;
 
-  mutable double* _buff_mxnlocal;  
+  mutable double* buff_mxnlocal_;  
 
   //this is very private do not touch :)
-  long long max_rows;
+  long long max_rows_;
 private:
   hiopMatrixDenseRowMajor() {};
   /** copy constructor, for internal/private use only (it doesn't copy the values) */
   hiopMatrixDenseRowMajor(const hiopMatrixDenseRowMajor&);
 
   inline double* new_mxnlocal_buff() const {
-    if(_buff_mxnlocal==NULL) {
-      _buff_mxnlocal = new double[max_rows*n_local_];
+    if(buff_mxnlocal_==NULL) {
+      buff_mxnlocal_ = new double[max_rows_*n_local_];
     } 
-    return _buff_mxnlocal;
+    return buff_mxnlocal_;
   }
 };
 
