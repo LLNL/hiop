@@ -58,36 +58,37 @@ class hiopVector
 public:
   hiopVector() { n=0;}
   virtual ~hiopVector() {};
-  /** Set all elements to zero. */
+  /// @brief Set all elements to zero.
   virtual void setToZero() = 0;
-  /** Set all elements  to  c */
+  /// @brief Set all elements  to  c
   virtual void setToConstant( double c ) = 0;
-  /** Set all elements that are not zero in ix to  c, and the rest to 0 */
+  /// @brief Set all elements that are not zero in ix to  c, and the rest to 0
   virtual void setToConstant_w_patternSelect( double c, const hiopVector& ix)=0;
-  //TO DO: names of copyTo/FromStarting methods are quite confusing 
+  // TODO: names of copyTo/FromStarting methods are quite confusing 
   //maybe startingAtCopyFromStartingAt startingAtCopyToStartingAt ?
-  /** Copy the elements of v */
+  /// @brief Copy the elements of v
   virtual void copyFrom(const hiopVector& v ) = 0;
   virtual void copyFrom(const double* v_local_data) = 0; //v should be of length at least n_local
-  /** Copy the 'n' elements of v starting at 'start_index_in_src' in 'this' */
+  /// @brief Copy the 'n' elements of v starting at 'start_index_in_src' in 'this'
   virtual void copyFromStarting(int start_index_in_src, const double* v, int n) = 0;
-  /* Copy v in 'this' starting at start_index_in_src in  'this'. */
+  /// @brief Copy v in 'this' starting at start_index_in_src in  'this'. */
   virtual void copyFromStarting(int start_index_in_src, const hiopVector& v) = 0;
 
-  /* copy from 'dest' starting at 'start_idx_dest' to 'this' starting at 'start_idx_src' */
-   
+  /// @brief copy from 'dest' starting at 'start_idx_dest' to 'this' starting at 'start_idx_src'
   virtual void startingAtCopyFromStartingAt(int start_idx_src, const hiopVector& dest, int start_idx_dest) = 0;
 
-  /* Copy 'this' to double array, which is assumed to be at least of 'n_local' size.*/
+  /// @brief Copy 'this' to double array, which is assumed to be at least of 'n_local' size.
   virtual void copyTo(double* dest) const = 0;
-  /* Copy 'this' to v starting at start_index in 'this'. */
+  /// @brief Copy 'this' to v starting at start_index in 'this'.
   virtual void copyToStarting(int start_index_in_src, hiopVector& v) = 0;
-  /* Copy 'this' to v starting at start_index in 'v'. */
+  /// @brief Copy 'this' to v starting at start_index in 'v'.
   virtual void copyToStarting(hiopVector& v, int start_index_in_dest) = 0;
 
-  /* copy 'this' (source) starting at 'start_idx_in_src' to 'dest' starting at index 'int start_idx_dest' 
+  /**
+   * copy 'this' (source) starting at 'start_idx_in_src' to 'dest' starting at index 'int start_idx_dest' 
    * If num_elems>=0, 'num_elems' will be copied; if num_elems<0, elements will be copied till the end of
-   * either source ('this') or destination ('dest') is reached */
+   * either source ('this') or destination ('dest') is reached
+   */
   virtual void startingAtCopyToStartingAt(int start_idx_in_src, hiopVector& dest, int start_idx_dest, int num_elems=-1) const = 0;
 
   /** @brief Return the two norm */
@@ -114,71 +115,73 @@ public:
    * The rest of elements of this are set to zero.
    */
   virtual void componentDiv_w_selectPattern( const hiopVector& v, const hiopVector& ix) = 0;
-  /** Scale each element of this  by the constant alpha */
+  /// @brief Scale each element of this  by the constant alpha
   virtual void scale( double alpha ) = 0;
-  /** this += alpha * x */
+  /// @brief this += alpha * x
   virtual void axpy  ( double alpha, const hiopVector& x ) = 0;
-  /** this += alpha * x * z */
+  /// @brief this += alpha * x * z
   virtual void axzpy ( double alpha, const hiopVector& x, const hiopVector& z ) = 0;
-  /** this += alpha * x / z */
+  /// @brief this += alpha * x / z
   virtual void axdzpy( double alpha, const hiopVector& x, const hiopVector& z ) = 0;
-  /** this += alpha * x / z on entries 'i' for which select[i]==1. */
+  /// @brief this += alpha * x / z on entries 'i' for which select[i]==1.
   virtual void axdzpy_w_pattern( double alpha, const hiopVector& x, const hiopVector& z, const hiopVector& select ) = 0; 
-  /** Add c to the elements of this */
+  /// @brief Add c to the elements of this
   virtual void addConstant( double c ) = 0;
   virtual void addConstant_w_patternSelect(double c, const hiopVector& ix) = 0;
-  /** Return the dot product of this hiopVector with v */
+  /// @brief Return the dot product of this hiopVector with v
   virtual double dotProductWith( const hiopVector& v ) const = 0;
-  /** Negate all the elements of this */
+  /// @brief Negate all the elements of this
   virtual void negate() = 0;
-  /** Invert (1/x) the elements of this */
+  /// @brief Invert (1/x) the elements of this
   virtual void invert() = 0;
-  /* compute log barrier term, that is sum{ln(x_i):i=1,..,n} */
+  /// @brief compute log barrier term, that is sum{ln(x_i):i=1,..,n}
   virtual double logBarrier(const hiopVector& select) const = 0;
-  /* adds the gradient of the log barrier, namely this=this+alpha*1/select(x) */
+  /// @brief adds the gradient of the log barrier, namely this=this+alpha*1/select(x)
   virtual void addLogBarrierGrad(double alpha, const hiopVector& x, const hiopVector& select)=0;
 
-  /* computes the log barrier's linear damping term of the Filter-IPM method of WaectherBiegler (see paper, section 3.7).
-   * Essentially compute  kappa_d*mu* \sum { this[i] | ixleft[i]==1 and ixright[i]==0 } */
+  /**
+   * @brief computes the log barrier's linear damping term of the Filter-IPM method of WaectherBiegler (see paper, section 3.7).
+   * Essentially compute  kappa_d*mu* \sum { this[i] | ixleft[i]==1 and ixright[i]==0 }
+   */
   virtual double linearDampingTerm(const hiopVector& ixleft, const hiopVector& ixright, 
 				   const double& mu, const double& kappa_d)const=0;
-  /** True if all elements of this are positive. */
+  /// @brief True if all elements of this are positive.
   virtual int allPositive() = 0;
-  /** True if elements corresponding to nonzeros in w are all positive */
+  /// @brief True if elements corresponding to nonzeros in w are all positive
   virtual int allPositive_w_patternSelect(const hiopVector& w) = 0;
-  /** Return the minimum value in this vector, and the index at which it occurs. */
+  /// @brief Return the minimum value in this vector, and the index at which it occurs.
   virtual void min( double& m, int& index ) const = 0;
-  /** Project the vector into the bounds, used for shifting the ini pt in the bounds */
+  /// @brief Project the vector into the bounds, used for shifting the ini pt in the bounds
   virtual bool projectIntoBounds(const hiopVector& xl, const hiopVector& ixl, 
 				 const hiopVector& xu, const hiopVector& ixu,
 				 double kappa1, double kappa2) = 0;
-  /* max{a\in(0,1]| x+ad >=(1-tau)x} */
+  /// @brief max{a\in(0,1]| x+ad >=(1-tau)x}
   virtual double fractionToTheBdry(const hiopVector& dx, const double& tau) const = 0;
   virtual double fractionToTheBdry_w_pattern(const hiopVector& dx,
 					     const double& tau,
 					     const hiopVector& ix) const = 0;
-  /** Entries corresponding to zeros in ix are set to zero */
+  /// @brief Entries corresponding to zeros in ix are set to zero
   virtual void selectPattern(const hiopVector& ix) = 0;
-  /** checks whether entries in this matches pattern in ix */
+  /// @brief checks whether entries in this matches pattern in ix
   virtual bool matchesPattern(const hiopVector& ix) = 0;
 
-  /* dual adjustment -> see hiopIterate::adjustDuals_primalLogHessian */
+  /// @brief dual adjustment -> see hiopIterate::adjustDuals_primalLogHessian
   virtual void adjustDuals_plh(const hiopVector& x, const hiopVector& ix,
 			       const double& mu, const double& kappa)=0;
 
-  /* check for nans in the local vector */
+  /// @brief check for nans in the local vector
   virtual bool isnan() const = 0;
-  /* check for infs in the local vector */
+  /// @brief check for infs in the local vector
   virtual bool isinf() const = 0;
-  /* check if all values are finite /well-defined floats. Returns false is nan or infs are present. */
+  /// @brief check if all values are finite /well-defined floats. Returns false is nan or infs are present.
   virtual bool isfinite() const = 0;
   
-  /* prints up to max_elems (by default all), on rank 'rank' (by default on all) */
+  /// @brief prints up to max_elems (by default all), on rank 'rank' (by default on all)
   virtual void print(FILE*, const char* message=NULL,int max_elems=-1, int rank=-1) const = 0;
   
-  /** allocates a vector that mirrors this, but doesn't copy the values  */
+  /// @brief allocates a vector that mirrors this, but doesn't copy the values
   virtual hiopVector* alloc_clone() const = 0;
-  /** allocates a vector that mirrors this, and copies the values  */
+  /// @brief allocates a vector that mirrors this, and copies the values
   virtual hiopVector* new_copy () const = 0;
   virtual long long get_size() const { return n; }
   virtual long long get_local_size() const = 0;

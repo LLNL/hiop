@@ -67,8 +67,6 @@ hiopMatrixDenseRowMajor::hiopMatrixDenseRowMajor(const long long& m,
 				 MPI_Comm comm_/*=MPI_COMM_SELF*/, 
 				 const long long& m_max_alloc/*=-1*/) : hiopMatrixDense(m, glob_n, comm_)
 {
-  // m_local=m; n_global=glob_n;
-  // comm=comm_;
   int P=0;
   if(col_part) {
 #ifdef HIOP_USE_MPI
@@ -86,7 +84,6 @@ hiopMatrixDenseRowMajor::hiopMatrixDenseRowMajor(const long long& m,
   if(max_rows==-1) max_rows=m_local;
   assert(max_rows>=m_local && "the requested extra allocation is smaller than the allocation needed by the matrix");
 
-  //M=new double*[m_local==0?1:m_local];
   M=new double*[max_rows==0?1:max_rows];
   M[0] = max_rows==0?NULL:new double[max_rows*n_local];
   for(int i=1; i<max_rows; i++)
