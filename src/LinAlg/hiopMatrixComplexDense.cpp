@@ -144,7 +144,7 @@ namespace hiop
     const dcomplex* xa = reinterpret_cast<const dcomplex*>(xa_in);
     dcomplex* Ma = reinterpret_cast<dcomplex*>(&M[0][0]);
 #ifdef HIOP_USE_MPI
-    assert(false && "functionality not supported/not needed");
+    assert(n_local == n_global && "timesVec for distributed matrices not supported/not needed");
 #endif
     
     if( MM != 0 && NN != 0 ) {

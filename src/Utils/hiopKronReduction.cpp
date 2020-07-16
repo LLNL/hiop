@@ -103,7 +103,10 @@ namespace hiop
     assert(v_nonaux_in.size() == map_nonaux_to_aux_->n());
     assert(v_aux_out.size() == map_nonaux_to_aux_->m());
     
-    //    map_nonaux_to_aux_->timesVec(0., v_nonaux_in.data(), 1., v_aux_out.data());
+    map_nonaux_to_aux_->timesVec(std::complex<double>(0.,0.),
+				 v_aux_out.data(),
+				 std::complex<double>(1.,0.),
+				 v_nonaux_in.data());
 
     
     // assert(linsolver_);

@@ -89,7 +89,7 @@ class TestBase
 {
 protected:
   /// Returns true if two real numbers are equal within tolerance
-  [[nodiscard]] constexpr
+  //[[nodiscard]] constexpr
   bool isEqual(const real_type a, const real_type b)
   {
     return (std::abs(a - b) < eps);
