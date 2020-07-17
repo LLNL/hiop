@@ -66,7 +66,7 @@ public:
   static hiopVector* createVector(
     const long long& glob_n,
     long long* col_part = NULL,
-    MPI_Comm comm = MPI_COMM_NULL);
+    MPI_Comm comm = MPI_COMM_SELF);
 
   static hiopMatrixDense* createMatrixDense(
     const long long& m,

@@ -63,7 +63,7 @@
 int main(int argc, char** argv)
 {
   int rank=0, numRanks=1;
-  MPI_Comm comm = MPI_COMM_NULL;
+  MPI_Comm comm = MPI_COMM_SELF;
 
 #ifdef HIOP_USE_MPI
   int err;

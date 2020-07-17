@@ -59,7 +59,7 @@ namespace hiop
 class hiopVectorPar : public hiopVector
 {
 public:
-  hiopVectorPar(const long long& glob_n, long long* col_part=NULL, MPI_Comm comm=MPI_COMM_NULL);
+  hiopVectorPar(const long long& glob_n, long long* col_part=NULL, MPI_Comm comm=MPI_COMM_SELF);
   virtual ~hiopVectorPar();
 
   virtual void setToZero();

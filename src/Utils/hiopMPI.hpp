@@ -56,8 +56,8 @@
   #ifndef MPI_COMM
     #define MPI_Comm int
   #endif
-  #ifndef MPI_COMM_NULL
-    #define MPI_COMM_NULL 0
+  #ifndef MPI_COMM_SELF
+    #define MPI_COMM_SELF 0
   #endif
   #include <cstddef>
 #endif 
