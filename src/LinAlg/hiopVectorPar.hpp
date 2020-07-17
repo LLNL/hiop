@@ -66,20 +66,22 @@ public:
   virtual void setToConstant( double c );
   virtual void setToConstant_w_patternSelect(double c, const hiopVector& select);
   virtual void copyFrom(const hiopVector& v );
-  virtual void copyFrom(const double* v_local_data); //v should be of length at least n_local
-  /** Copy the 'n' elements of v starting at 'start_index_in_src' in 'this' */
+  virtual void copyFrom(const double* v_local_data); //v should be of length at least n_local_
+  /// @brief Copy the 'n' elements of v starting at 'start_index_in_src' in 'this'
   virtual void copyFromStarting(int start_index_in_src, const double* v, int n);
   virtual void copyFromStarting(int start_index_in_src, const hiopVector& v);
-  /* copy 'dest' starting at 'start_idx_dest' to 'this' starting at 'start_idx_src' */
+  /// @brief copy 'dest' starting at 'start_idx_dest' to 'this' starting at 'start_idx_src'
   virtual void startingAtCopyFromStartingAt(int start_idx_src, const hiopVector& v, int start_idx_dest);
 
   virtual void copyTo(double* dest) const;
   virtual void copyToStarting(int start_index_in_src, hiopVector& v);
-  /* Copy 'this' to v starting at start_index in 'v'. */
+  /// @brief Copy 'this' to v starting at start_index in 'v'.
   virtual void copyToStarting(hiopVector& v, int start_index_in_dest);
-  /* copy 'this' (source) starting at 'start_idx_in_src' to 'dest' starting at index 'int start_idx_dest' 
+  /**
+   * @brief copy 'this' (source) starting at 'start_idx_in_src' to 'dest' starting at index 'int start_idx_dest' 
    * If num_elems>=0, 'num_elems' will be copied; if num_elems<0, elements will be copied till the end of
-   * either source ('this') or destination ('dest') is reached */
+   * either source ('this') or destination ('dest') is reached
+   */
   virtual void startingAtCopyToStartingAt(int start_idx_in_src, hiopVector& dest, int start_idx_dest, int num_elems=-1) const;
 
   virtual double twonorm() const;
@@ -92,14 +94,14 @@ public:
   virtual void componentDiv ( const hiopVector& v );
   virtual void componentDiv_w_selectPattern( const hiopVector& v, const hiopVector& ix);
   virtual void scale( double alpha );
-  /** this += alpha * x */
+  /// @brief this += alpha * x
   virtual void axpy  ( double alpha, const hiopVector& x );
-  /** this += alpha * x * z */
+  /// @brief this += alpha * x * z
   virtual void axzpy ( double alpha, const hiopVector& x, const hiopVector& z );
-  /** this += alpha * x / z */
+  /// @brief this += alpha * x / z
   virtual void axdzpy( double alpha, const hiopVector& x, const hiopVector& z );
   virtual void axdzpy_w_pattern( double alpha, const hiopVector& x, const hiopVector& z, const hiopVector& select ); 
-  /** Add c to the elements of this */
+  /// @brief Add c to the elements of this
   virtual void addConstant( double c );
   virtual void addConstant_w_patternSelect(double c, const hiopVector& ix);
   virtual void min( double& m, int& index ) const;
@@ -132,18 +134,18 @@ public:
   virtual void print(FILE*, const char* withMessage=NULL, int max_elems=-1, int rank=-1) const;
 
   /* more accessers */
-  virtual long long get_local_size() const { return n_local; }
-  virtual double* local_data() { return data; }
-  virtual const double* local_data_const() const { return data; }
-  virtual MPI_Comm get_mpi_comm() const { return comm; }
+  virtual long long get_local_size() const { return n_local_; }
+  virtual double* local_data() { return data_; }
+  virtual const double* local_data_const() const { return data_; }
+  virtual MPI_Comm get_mpi_comm() const { return comm_; }
 
 protected:
-  MPI_Comm comm;
-  double* data;
-  long long glob_il, glob_iu;
-  long long n_local;
+  MPI_Comm comm_;
+  double* data_;
+  long long glob_il_, glob_iu_;
+  long long n_local_;
 private:
-  /** copy constructor, for internal/private use only (it doesn't copy the elements.) */
+  /// @brief copy constructor, for internal/private use only (it doesn't copy the elements.)
   hiopVectorPar(const hiopVectorPar&);
 
 };

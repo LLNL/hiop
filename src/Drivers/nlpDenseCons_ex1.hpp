@@ -2,6 +2,7 @@
 #define  HIOP_EXAMPLE_EX1
 
 #include "hiopVector.hpp"
+#include "hiopLinAlgFactory.hpp"
 #include "hiopNlpFormulation.hpp"
 #include "hiopInterface.hpp"
 #include "hiopAlgFilterIPM.hpp"
@@ -69,7 +70,7 @@ public:
   virtual void applyM(DiscretizedFunction& f);
 protected:
 
-  hiop::hiopVectorPar* _mass; //the length or the mass of the elements
+  hiop::hiopVector* _mass; //the length or the mass of the elements
   double _a,_b; //end points
   double _r; //distortion ratio
 

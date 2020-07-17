@@ -64,96 +64,93 @@ namespace hiop
 hiopMatrixDenseRowMajor::hiopMatrixDenseRowMajor(const long long& m, 
 				 const long long& glob_n, 
 				 long long* col_part/*=NULL*/, 
-				 MPI_Comm comm_/*=MPI_COMM_SELF*/, 
-				 const long long& m_max_alloc/*=-1*/) : hiopMatrixDense(m, glob_n, comm_)
+				 MPI_Comm comm/*=MPI_COMM_SELF*/, 
+				 const long long& m_max_alloc/*=-1*/) : hiopMatrixDense(m, glob_n, comm)
 {
-  // m_local=m; n_global=glob_n;
-  // comm=comm_;
   int P=0;
   if(col_part) {
 #ifdef HIOP_USE_MPI
-    int ierr=MPI_Comm_rank(comm, &P); assert(ierr==MPI_SUCCESS);
+    int ierr=MPI_Comm_rank(comm_, &P); assert(ierr==MPI_SUCCESS);
 #endif
-    glob_jl=col_part[P]; glob_ju=col_part[P+1];
+    glob_jl_=col_part[P]; glob_ju_=col_part[P+1];
   } else {
-    glob_jl=0; glob_ju=n_global;
+    glob_jl_=0; glob_ju_=n_global_;
   }
-  n_local=glob_ju-glob_jl;
+  n_local_=glob_ju_-glob_jl_;
 
-  myrank = P;
+  myrank_ = P;
 
-  max_rows=m_max_alloc;
-  if(max_rows==-1) max_rows=m_local;
-  assert(max_rows>=m_local && "the requested extra allocation is smaller than the allocation needed by the matrix");
+  max_rows_=m_max_alloc;
+  if(max_rows_==-1) max_rows_=m_local_;
+  assert(max_rows_>=m_local_ && "the requested extra allocation is smaller than the allocation needed by the matrix");
 
-  //M=new double*[m_local==0?1:m_local];
-  M=new double*[max_rows==0?1:max_rows];
-  M[0] = max_rows==0?NULL:new double[max_rows*n_local];
-  for(int i=1; i<max_rows; i++)
-    M[i]=M[0]+i*n_local;
+  M_=new double*[max_rows_==0?1:max_rows_];
+  M_[0] = max_rows_==0?NULL:new double[max_rows_*n_local_];
+  for(int i=1; i<max_rows_; i++)
+    M_[i]=M_[0]+i*n_local_;
 
   //! valgrind reports a shit load of errors without this; check this
-  for(int i=0; i<max_rows*n_local; i++) M[0][i]=0.0;
+  for(int i=0; i<max_rows_*n_local_; i++) M_[0][i]=0.0;
 
   //internal buffers 
-  _buff_mxnlocal = NULL;//new double[max_rows*n_local];
+  buff_mxnlocal_ = NULL;//new double[max_rows_*n_local_];
 }
 hiopMatrixDenseRowMajor::~hiopMatrixDenseRowMajor()
 {
-  if(_buff_mxnlocal) delete[] _buff_mxnlocal;
-  if(M) {
-    if(M[0]) delete[] M[0];
-    delete[] M;
+  if(buff_mxnlocal_) delete[] buff_mxnlocal_;
+  if(M_) {
+    if(M_[0]) delete[] M_[0];
+    delete[] M_;
   }
 }
 
 /// TODO: check again
 hiopMatrixDenseRowMajor::hiopMatrixDenseRowMajor(const hiopMatrixDenseRowMajor& dm)
 {
-  n_local=dm.n_local; m_local=dm.m_local; n_global=dm.n_global;
-  glob_jl=dm.glob_jl; glob_ju=dm.glob_ju;
-  comm=dm.comm; myrank=dm.myrank;
+  n_local_=dm.n_local_; m_local_=dm.m_local_; n_global_=dm.n_global_;
+  glob_jl_=dm.glob_jl_; glob_ju_=dm.glob_ju_;
+  comm_=dm.comm_; myrank_=dm.myrank_;
 
-  //M=new double*[m_local==0?1:m_local];
-  max_rows = dm.max_rows;
-  M=new double*[max_rows==0?1:max_rows];
-  //M[0] = m_local==0?NULL:new double[m_local*n_local];
-  M[0] = max_rows==0?NULL:new double[max_rows*n_local];
-  //for(int i=1; i<m_local; i++)
-  for(int i=1; i<max_rows; i++)
-    M[i]=M[0]+i*n_local;
+  //M=new double*[m_local_==0?1:m_local_];
+  max_rows_ = dm.max_rows_;
+  M_=new double*[max_rows_==0?1:max_rows_];
+  //M[0] = m_local_==0?NULL:new double[m_local_*n_local_];
+  M_[0] = max_rows_==0?NULL:new double[max_rows_*n_local_];
+  //for(int i=1; i<m_local_; i++)
+  for(int i=1; i<max_rows_; i++)
+    M_[i]=M_[0]+i*n_local_;
 
-  _buff_mxnlocal = NULL;
+  buff_mxnlocal_ = NULL;
 }
 
 void hiopMatrixDenseRowMajor::appendRow(const hiopVector& row)
 {
 #ifdef HIOP_DEEPCHECKS  
-  assert(row.get_local_size()==n_local);
-  assert(m_local<max_rows && "no more space to append rows ... should have preallocated more rows.");
+  assert(row.get_local_size()==n_local_);
+  assert(m_local_<max_rows_ && "no more space to append rows ... should have preallocated more rows.");
 #endif
-  memcpy(M[m_local], row.local_data_const(), n_local*sizeof(double));
-  m_local++;
+  memcpy(M_[m_local_], row.local_data_const(), n_local_*sizeof(double));
+  m_local_++;
 }
 
 void hiopMatrixDenseRowMajor::copyFrom(const hiopMatrixDense& dmmat)
 {
   const auto& dm = dynamic_cast<const hiopMatrixDenseRowMajor&>(dmmat);
-  assert(n_local==dm.n_local); assert(m_local==dm.m_local); assert(n_global==dm.n_global);
-  assert(glob_jl==dm.glob_jl); assert(glob_ju==dm.glob_ju);
-  if(NULL==dm.M[0]) {
-    M[0] = NULL;
+  assert(n_local_==dm.n_local_); assert(m_local_==dm.m_local_); assert(n_global_==dm.n_global_);
+  assert(glob_jl_==dm.glob_jl_); assert(glob_ju_==dm.glob_ju_);
+  if(NULL==dm.M_[0]) {
+    M_[0] = NULL;
   } else {
-    memcpy(M[0], dm.M[0], m_local*n_local*sizeof(double));
+    memcpy(M_[0], dm.M_[0], m_local_*n_local_*sizeof(double));
   }
 }
 
 void hiopMatrixDenseRowMajor::copyFrom(const double* buffer)
 {
   if(NULL==buffer) {
-    M[0] = NULL;
+    M_[0] = NULL;
   } else {
-    memcpy(M[0], buffer, m_local*n_local*sizeof(double));
+    memcpy(M_[0], buffer, m_local_*n_local_*sizeof(double));
   }
 }
 
@@ -162,29 +159,29 @@ void hiopMatrixDenseRowMajor::copyRowsFrom(const hiopMatrixDense& srcmat, int nu
   const auto& src = dynamic_cast<const hiopMatrixDenseRowMajor&>(srcmat);
 #ifdef HIOP_DEEPCHECKS
   assert(row_dest>=0);
-  assert(n_global==src.n_global);
-  assert(n_local==src.n_local);
-  assert(row_dest+num_rows<=m_local);
-  assert(num_rows<=src.m_local);
+  assert(n_global_==src.n_global_);
+  assert(n_local_==src.n_local_);
+  assert(row_dest+num_rows<=m_local_);
+  assert(num_rows<=src.m_local_);
 #endif
   if(num_rows>0)
-    memcpy(M[row_dest], src.M[0], n_local*num_rows*sizeof(double));
+    memcpy(M_[row_dest], src.M_[0], n_local_*num_rows*sizeof(double));
 }
 
 void hiopMatrixDenseRowMajor::copyRowsFrom(const hiopMatrix& src_gen, const long long* rows_idxs, long long n_rows)
 {
   const auto& src = dynamic_cast<const hiopMatrixDenseRowMajor&>(src_gen);
-  assert(n_global==src.n_global);
-  assert(n_local==src.n_local);
-  assert(n_rows<=src.m_local);
-  assert(n_rows == m_local);
+  assert(n_global_==src.n_global_);
+  assert(n_local_==src.n_local_);
+  assert(n_rows<=src.m_local_);
+  assert(n_rows == m_local_);
 
   // todo //! opt -> copy multiple (consecutive rows at the time -> maybe keep blocks of eq and ineq,
   //instead of indexes)
 
   //int i should suffice for dense matrices
   for(int i=0; i<n_rows; ++i) {
-    memcpy(M[i], src.M[rows_idxs[i]], n_local*sizeof(double));
+    memcpy(M_[i], src.M_[rows_idxs[i]], n_local_*sizeof(double));
   }
 }
 
@@ -193,110 +190,110 @@ void hiopMatrixDenseRowMajor::copyBlockFromMatrix(const long i_start, const long
 					  const hiopMatrixDense& srcmat)
 {
   const auto& src = dynamic_cast<const hiopMatrixDenseRowMajor&>(srcmat);
-  assert(n_local==n_global && "this method should be used only in 'serial' mode");
-  assert(src.n_local==src.n_global && "this method should be used only in 'serial' mode");
-  assert(m_local>=i_start+src.m_local && "the matrix does not fit as a sublock in 'this' at specified coordinates");
-  assert(n_local>=j_start+src.n_local && "the matrix does not fit as a sublock in 'this' at specified coordinates");
+  assert(n_local_==n_global_ && "this method should be used only in 'serial' mode");
+  assert(src.n_local_==src.n_global_ && "this method should be used only in 'serial' mode");
+  assert(m_local_>=i_start+src.m_local_ && "the matrix does not fit as a sublock in 'this' at specified coordinates");
+  assert(n_local_>=j_start+src.n_local_ && "the matrix does not fit as a sublock in 'this' at specified coordinates");
 
   //quick returns for empty source matrices
   if(src.n()==0) return;
   if(src.m()==0) return;
 #ifdef HIOP_DEEPCHECKS
-  assert(i_start<m_local || !m_local);
-  assert(j_start<n_local || !n_local);
+  assert(i_start<m_local_ || !m_local_);
+  assert(j_start<n_local_ || !n_local_);
   assert(i_start>=0); assert(j_start>=0);
 #endif
-  const size_t buffsize=src.n_local*sizeof(double);
-  for(long ii=0; ii<src.m_local; ii++)
-    memcpy(M[ii+i_start]+j_start, src.M[ii], buffsize);
+  const size_t buffsize=src.n_local_*sizeof(double);
+  for(long ii=0; ii<src.m_local_; ii++)
+    memcpy(M_[ii+i_start]+j_start, src.M_[ii], buffsize);
 }
 
 void hiopMatrixDenseRowMajor::copyFromMatrixBlock(const hiopMatrixDense& srcmat, const int i_block, const int j_block)
 {
   const auto& src = dynamic_cast<const hiopMatrixDenseRowMajor&>(srcmat);
-  assert(n_local==n_global && "this method should be used only in 'serial' mode");
-  assert(src.n_local==src.n_global && "this method should be used only in 'serial' mode");
-  assert(m_local+i_block<=src.m_local && "the source does not enough rows to fill 'this'");
-  assert(n_local+j_block<=src.n_local && "the source does not enough cols to fill 'this'");
+  assert(n_local_==n_global_ && "this method should be used only in 'serial' mode");
+  assert(src.n_local_==src.n_global_ && "this method should be used only in 'serial' mode");
+  assert(m_local_+i_block<=src.m_local_ && "the source does not enough rows to fill 'this'");
+  assert(n_local_+j_block<=src.n_local_ && "the source does not enough cols to fill 'this'");
 
-  if(n_local==src.n_local) //and j_block=0
-    memcpy(M[0], src.M[i_block], n_local*m_local*sizeof(double));
+  if(n_local_==src.n_local_) //and j_block=0
+    memcpy(M_[0], src.M_[i_block], n_local_*m_local_*sizeof(double));
   else {
-    for(int i=0; i<m_local; i++)
-      memcpy(M[i], src.M[i+i_block]+j_block, n_local*sizeof(double));
+    for(int i=0; i<m_local_; i++)
+      memcpy(M_[i], src.M_[i+i_block]+j_block, n_local_*sizeof(double));
   }
 }
 
 void hiopMatrixDenseRowMajor::shiftRows(long long shift)
 {
   if(shift==0) return;
-  if(fabs(shift)==m_local) return; //nothing to shift
-  if(m_local<=1) return; //nothing to shift
+  if(fabs(shift)==m_local_) return; //nothing to shift
+  if(m_local_<=1) return; //nothing to shift
   
-  assert(fabs(shift)<m_local); 
+  assert(fabs(shift)<m_local_); 
 
-  //at this point m_local should be >=2
-  assert(m_local>=2);
+  //at this point m_local_ should be >=2
+  assert(m_local_>=2);
   //and
-  assert(m_local-fabs(shift)>=1);
+  assert(m_local_-fabs(shift)>=1);
 #ifdef HIOP_DEEPCHECKS
   double test1=8.3, test2=-98.3;
-  if(n_local>0) {
+  if(n_local_>0) {
     //not sure if memcpy is copying sequentially on all systems. we check this.
     //let's at least check it
-    test1=shift<0 ? M[-shift][0] : M[m_local-shift-1][0];
-    test2=shift<0 ? M[-shift][n_local-1] : M[m_local-shift-1][n_local-1];
+    test1=shift<0 ? M_[-shift][0] : M_[m_local_-shift-1][0];
+    test2=shift<0 ? M_[-shift][n_local_-1] : M_[m_local_-shift-1][n_local_-1];
   }
 #endif
 
   //shift < 0 -> up; shift > 0 -> down
-  //if(shift<0) memcpy(M[0], M[-shift], n_local*(m_local+shift)*sizeof(double));
-  //else        memcpy(M[shift], M[0],  n_local*(m_local-shift)*sizeof(double));
+  //if(shift<0) memcpy(M[0], M[-shift], n_local_*(m_local_+shift)*sizeof(double));
+  //else        memcpy(M[shift], M[0],  n_local_*(m_local_-shift)*sizeof(double));
   if(shift<0) {
-    for(int row=0; row<m_local+shift; row++)
-      memcpy(M[row], M[row-shift], n_local*sizeof(double));
+    for(int row=0; row<m_local_+shift; row++)
+      memcpy(M_[row], M_[row-shift], n_local_*sizeof(double));
   } else {
-    for(int row=m_local-1; row>=shift; row--) {
-      memcpy(M[row], M[row-shift], n_local*sizeof(double));
+    for(int row=m_local_-1; row>=shift; row--) {
+      memcpy(M_[row], M_[row-shift], n_local_*sizeof(double));
     }
   }
  
 #ifdef HIOP_DEEPCHECKS
-  if(n_local>0) {
-    assert(test1==M[shift<0?0:m_local-1][0] && "a different copy technique than memcpy is needed on this system");
-    assert(test2==M[shift<0?0:m_local-1][n_local-1] && "a different copy technique than memcpy is needed on this system");
+  if(n_local_>0) {
+    assert(test1==M_[shift<0?0:m_local_-1][0] && "a different copy technique than memcpy is needed on this system");
+    assert(test2==M_[shift<0?0:m_local_-1][n_local_-1] && "a different copy technique than memcpy is needed on this system");
   }
 #endif
 }
 void hiopMatrixDenseRowMajor::replaceRow(long long row, const hiopVector& vec)
 {
-  assert(row>=0); assert(row<m_local);
+  assert(row>=0); assert(row<m_local_);
   long long vec_size=vec.get_local_size();
-  memcpy(M[row], vec.local_data_const(), (vec_size>=n_local?n_local:vec_size)*sizeof(double));
+  memcpy(M_[row], vec.local_data_const(), (vec_size>=n_local_?n_local_:vec_size)*sizeof(double));
 }
 
 void hiopMatrixDenseRowMajor::getRow(long long irow, hiopVector& row_vec)
 {
-  assert(irow>=0); assert(irow<m_local);
+  assert(irow>=0); assert(irow<m_local_);
   hiopVectorPar& vec=dynamic_cast<hiopVectorPar&>(row_vec);
-  assert(n_local==vec.get_local_size());
-  memcpy(vec.local_data(), M[irow], n_local*sizeof(double));
+  assert(n_local_==vec.get_local_size());
+  memcpy(vec.local_data(), M_[irow], n_local_*sizeof(double));
 }
 
 #ifdef HIOP_DEEPCHECKS
 void hiopMatrixDenseRowMajor::overwriteUpperTriangleWithLower()
 {
-  assert(n_local==n_global && "Use only with local, non-distributed matrices");
-  for(int i=0; i<m_local; i++)
-    for(int j=i+1; j<n_local; j++)
-      M[i][j] = M[j][i];
+  assert(n_local_==n_global_ && "Use only with local, non-distributed matrices");
+  for(int i=0; i<m_local_; i++)
+    for(int j=i+1; j<n_local_; j++)
+      M_[i][j] = M_[j][i];
 }
 void hiopMatrixDenseRowMajor::overwriteLowerTriangleWithUpper()
 {
-  assert(n_local==n_global && "Use only with local, non-distributed matrices");
-  for(int i=1; i<m_local; i++)
+  assert(n_local_==n_global_ && "Use only with local, non-distributed matrices");
+  for(int i=1; i<m_local_; i++)
     for(int j=0; j<i; j++)
-      M[i][j] = M[j][i];
+      M_[i][j] = M_[j][i];
 }
 #endif
 
@@ -319,26 +316,26 @@ void hiopMatrixDenseRowMajor::setToZero()
 }
 void hiopMatrixDenseRowMajor::setToConstant(double c)
 {
-  if(!M[0]) {
-    assert(m_local==0);
+  if(!M_[0]) {
+    assert(m_local_==0);
     return;
   }
-  double* buf=M[0]; 
-  for(int j=0; j<n_local; j++) *(buf++)=c;
+  double* buf=M_[0]; 
+  for(int j=0; j<n_local_; j++) *(buf++)=c;
   
-  buf=M[0]; int inc=1;
-  for(int i=1; i<m_local; i++)
-   DCOPY(&n_local, buf, &inc, M[i], &inc);
+  buf=M_[0]; int inc=1;
+  for(int i=1; i<m_local_; i++)
+   DCOPY(&n_local_, buf, &inc, M_[i], &inc);
   
-  //memcpy(M[i], buf, sizeof(double)*n_local); 
+  //memcpy(M[i], buf, sizeof(double)*n_local_); 
   //memcpy has similar performance as dcopy_; both faster than a loop
 }
 
 bool hiopMatrixDenseRowMajor::isfinite() const
 {
-  for(int i=0; i<m_local; i++)
-    for(int j=0; j<n_local; j++)
-      if(false==std::isfinite(M[i][j])) return false;
+  for(int i=0; i<m_local_; i++)
+    for(int j=0; j<n_local_; j++)
+      if(false==std::isfinite(M_[i][j])) return false;
   return true;
 }
 
@@ -348,24 +345,24 @@ void hiopMatrixDenseRowMajor::print(FILE* f,
 			    int maxCols/*=-1*/, 
 			    int rank/*=-1*/) const
 {
-  if(myrank==rank || rank==-1) {
+  if(myrank_==rank || rank==-1) {
     if(NULL==f) f=stdout;
-    if(maxRows>m_local) maxRows=m_local;
-    if(maxCols>n_local) maxCols=n_local;
+    if(maxRows>m_local_) maxRows=m_local_;
+    if(maxCols>n_local_) maxCols=n_local_;
 
     if(msg) {
-      fprintf(f, "%s (local_dims=[%d,%d])\n", msg, m_local,n_local);
+      fprintf(f, "%s (local_dims=[%d,%d])\n", msg, m_local_,n_local_);
     } else { 
       fprintf(f, "hiopMatrixDenseRowMajor::printing max=[%d,%d] (local_dims=[%d,%d], on rank=%d)\n", 
-	      maxRows, maxCols, m_local,n_local,myrank);
+	      maxRows, maxCols, m_local_,n_local_,myrank_);
     }
-    maxRows = maxRows>=0?maxRows:m_local;
-    maxCols = maxCols>=0?maxCols:n_local;
+    maxRows = maxRows>=0?maxRows:m_local_;
+    maxCols = maxCols>=0?maxCols:n_local_;
     fprintf(f, "[");
     for(int i=0; i<maxRows; i++) {
       if(i>0) fprintf(f, " ");
       for(int j=0; j<maxCols; j++) 
-	fprintf(f, "%20.12e ", M[i][j]);
+	fprintf(f, "%20.12e ", M_[i][j]);
       if(i<maxRows-1)
 	fprintf(f, "; ...\n");
       else
@@ -378,8 +375,8 @@ void hiopMatrixDenseRowMajor::print(FILE* f,
 
 /*  y = beta * y + alpha * this * x  
  *
- * Sizes: y is m_local, x is n_local, the matrix is m_local x n_global, and the
- * local chunk is m_local x n_local 
+ * Sizes: y is m_local_, x is n_local_, the matrix is m_local_ x n_global_, and the
+ * local chunk is m_local_ x n_local_ 
 */
 void hiopMatrixDenseRowMajor::timesVec(double beta, hiopVector& y_,
 			       double alpha, const hiopVector& x_) const
@@ -387,10 +384,10 @@ void hiopMatrixDenseRowMajor::timesVec(double beta, hiopVector& y_,
   hiopVectorPar& y = dynamic_cast<hiopVectorPar&>(y_);
   const hiopVectorPar& x = dynamic_cast<const hiopVectorPar&>(x_);
 #ifdef HIOP_DEEPCHECKS
-  assert(y.get_local_size() == m_local);
-  assert(y.get_size() == m_local); //y should not be distributed
-  assert(x.get_local_size() == n_local);
-  assert(x.get_size() == n_global);
+  assert(y.get_local_size() == m_local_);
+  assert(y.get_size() == m_local_); //y should not be distributed
+  assert(x.get_local_size() == n_local_);
+  assert(x.get_size() == n_global_);
 
   if(beta!=0) assert(y.isfinite()); 
   assert(x.isfinite());
@@ -407,17 +404,17 @@ void hiopMatrixDenseRowMajor::timesVec(double beta,  double* ya,
 			       double alpha, const double* xa) const
 {
   char fortranTrans='T';
-  int MM=m_local, NN=n_local, incx_y=1;
+  int MM=m_local_, NN=n_local_, incx_y=1;
 
 #ifdef HIOP_USE_MPI
   //only add beta*y on one processor (rank 0)
-  if(myrank!=0) beta=0.0; 
+  if(myrank_!=0) beta=0.0; 
 #endif
 
   if( MM != 0 && NN != 0 ) {
     // the arguments seem reversed but so is trans='T' 
     // required since we keep the matrix row-wise, while the Fortran/BLAS expects them column-wise
-    DGEMV( &fortranTrans, &NN, &MM, &alpha, &M[0][0], &NN,
+    DGEMV( &fortranTrans, &NN, &MM, &alpha, &M_[0][0], &NN,
 	    xa, &incx_y, &beta, ya, &incx_y );
   } else {
     if( MM != 0 ) {
@@ -432,10 +429,10 @@ void hiopMatrixDenseRowMajor::timesVec(double beta,  double* ya,
     }
   }
 #ifdef HIOP_USE_MPI
-  //here m_local is > 0
-  double yglob[m_local]; 
-  int ierr=MPI_Allreduce(ya, yglob, m_local, MPI_DOUBLE, MPI_SUM, comm); assert(MPI_SUCCESS==ierr);
-  memcpy(ya, yglob, m_local*sizeof(double));
+  //here m_local_ is > 0
+  double yglob[m_local_]; 
+  int ierr=MPI_Allreduce(ya, yglob, m_local_, MPI_DOUBLE, MPI_SUM, comm_); assert(MPI_SUCCESS==ierr);
+  memcpy(ya, yglob, m_local_*sizeof(double));
 #endif
 
 }
@@ -447,10 +444,10 @@ void hiopMatrixDenseRowMajor::transTimesVec(double beta, hiopVector& y_,
   hiopVectorPar& y = dynamic_cast<hiopVectorPar&>(y_);
   const hiopVectorPar& x = dynamic_cast<const hiopVectorPar&>(x_);
 #ifdef HIOP_DEEPCHECKS
-  assert(x.get_local_size() == m_local);
-  assert(x.get_size() == m_local); //x should not be distributed
-  assert(y.get_local_size() == n_local);
-  assert(y.get_size() == n_global);
+  assert(x.get_local_size() == m_local_);
+  assert(x.get_size() == m_local_); //x should not be distributed
+  assert(y.get_local_size() == n_local_);
+  assert(y.get_size() == n_global_);
   assert(y.isfinite());
   assert(x.isfinite());
 #endif
@@ -461,12 +458,12 @@ void hiopMatrixDenseRowMajor::transTimesVec(double beta, double* ya,
 				    double alpha, const double* xa) const
 {
   char fortranTrans='N';
-  int MM=m_local, NN=n_local, incx_y=1;
+  int MM=m_local_, NN=n_local_, incx_y=1;
 
   if( MM!=0 && NN!=0 ) {
     // the arguments seem reversed but so is trans='T' 
     // required since we keep the matrix row-wise, while the Fortran/BLAS expects them column-wise
-    DGEMV( &fortranTrans, &NN, &MM, &alpha, &M[0][0], &NN,
+    DGEMV( &fortranTrans, &NN, &MM, &alpha, &M_[0][0], &NN,
 	    xa, &incx_y, &beta, ya, &incx_y );
   } else {
     if( NN != 0 ) {
@@ -502,14 +499,14 @@ void hiopMatrixDenseRowMajor::timesMat(double beta, hiopMatrix& W_, double alpha
   assert(X.isfinite());
 #endif
 
-  if(X.n_local!=X.n_global || this->n_local!=this->n_global) {
+  if(X.n_local_!=X.n_global_ || this->n_local_!=this->n_global_) {
     assert(false && "'timesMat' involving distributed matrices is not needed/supported" &&
 	   "also, it cannot be performed efficiently with the data distribution used by this class");
     W.setToConstant(beta);
     return;
   }
   timesMat_local(beta,W_,alpha,X_);
-  // if(0==myrank) timesMat_local(beta,W_,alpha,X_);
+  // if(0==myrank_) timesMat_local(beta,W_,alpha,X_);
   // else          timesMat_local(0.,  W_,alpha,X_);
 
   // int n2Red=W.m()*W.n(); 
@@ -535,23 +532,23 @@ void hiopMatrixDenseRowMajor::timesMat_local(double beta, hiopMatrix& W_, double
   assert(W.isfinite());
   assert(X.isfinite());
 #endif
-  assert(W.n_local==W.n_global && "requested multiplication is not supported, see timesMat");
+  assert(W.n_local_==W.n_global_ && "requested multiplication is not supported, see timesMat");
   
   /* C = alpha*op(A)*op(B) + beta*C in our case is
      Wt= alpha* Xt  *Mt    + beta*Wt */
   char trans='N'; 
-  int M=X.n(), N=m_local, K=X.m();
-  int ldx=X.n(), ldm=n_local, ldw=X.n();
+  int M=X.n(), N=m_local_, K=X.m();
+  int ldx=X.n(), ldm=n_local_, ldw=X.n();
 
   double** XM=X.local_data(); double** WM=W.local_data();
-  DGEMM(&trans,&trans, &M,&N,&K, &alpha,XM[0],&ldx, this->M[0],&ldm, &beta,WM[0],&ldw);
+  DGEMM(&trans,&trans, &M,&N,&K, &alpha,XM[0],&ldx, this->M_[0],&ldm, &beta,WM[0],&ldw);
 
   /* C = alpha*op(A)*op(B) + beta*C in our case is
      Wt= alpha* Xt  *Mt    + beta*Wt */
 
   //char trans='T';
-  //int lda=X.m(), ldb=n_local, ldc=W.n();
-  //int M=X.n(), N=this->m(), K=this->n_local;
+  //int lda=X.m(), ldb=n_local_, ldc=W.n();
+  //int M=X.n(), N=this->m(), K=this->n_local_;
 
   //DGEMM(&trans,&trans, &M,&N,&K, &alpha,XM[0],&lda, this->M[0],&ldb, &beta,WM[0],&ldc);
 }
@@ -564,8 +561,8 @@ void hiopMatrixDenseRowMajor::transTimesMat(double beta, hiopMatrix& W_, double 
   const auto& X = dynamic_cast<const hiopMatrixDenseRowMajor&>(X_);
   auto& W = dynamic_cast<hiopMatrixDenseRowMajor&>(W_);
 
-  assert(W.m()==n_local);
-  assert(X.m()==m_local);
+  assert(W.m()==n_local_);
+  assert(X.m()==m_local_);
   assert(W.n()==X.n());
 #ifdef HIOP_DEEPCHECKS
   assert(W.isfinite());
@@ -573,15 +570,15 @@ void hiopMatrixDenseRowMajor::transTimesMat(double beta, hiopMatrix& W_, double 
 #endif
   if(W.m()==0) return;
 
-  assert(this->n_global==this->n_local && "requested parallel multiplication is not supported");
+  assert(this->n_global_==this->n_local_ && "requested parallel multiplication is not supported");
   
   /* C = alpha*op(A)*op(B) + beta*C in our case is Wt= alpha* Xt  *M    + beta*Wt */
   char transX='N', transM='T';
-  int ldx=X.n_local, ldm=n_local, ldw=W.n_local;
-  int M=X.n_local, N=n_local, K=X.m();
+  int ldx=X.n_local_, ldm=n_local_, ldw=W.n_local_;
+  int M=X.n_local_, N=n_local_, K=X.m();
   double** XM=X.local_data(); double** WM=W.local_data();
   
-  DGEMM(&transX, &transM, &M,&N,&K, &alpha,XM[0],&ldx, this->M[0],&ldm, &beta,WM[0],&ldw);
+  DGEMM(&transX, &transM, &M,&N,&K, &alpha,XM[0],&ldx, this->M_[0],&ldm, &beta,WM[0],&ldw);
 }
 
 /* W = beta*W + alpha*this*X^T
@@ -592,35 +589,35 @@ void hiopMatrixDenseRowMajor::timesMatTrans_local(double beta, hiopMatrix& W_, d
   const auto& X = dynamic_cast<const hiopMatrixDenseRowMajor&>(X_);
   auto& W = dynamic_cast<hiopMatrixDenseRowMajor&>(W_);
 #ifdef HIOP_DEEPCHECKS
-  assert(W.m()==m_local);
-  //assert(X.n()==n_local);
+  assert(W.m()==m_local_);
+  //assert(X.n()==n_local_);
   assert(W.n()==X.m());
 #endif
-  assert(W.n_local==W.n_global && "not intended for the case when the result matrix is distributed.");
+  assert(W.n_local_==W.n_global_ && "not intended for the case when the result matrix is distributed.");
   if(W.m()==0) return;
   if(W.n()==0) return;
-  if(n_local==0) {
+  if(n_local_==0) {
     if(beta!=1.0) {
       int one=1; int mn=W.m()*W.n();
-      DSCAL(&mn, &beta, W.M[0], &one);
+      DSCAL(&mn, &beta, W.M_[0], &one);
     }
     return;
   }
 
   /* C = alpha*op(A)*op(B) + beta*C in our case is Wt= alpha* X  *Mt    + beta*Wt */
   char transX='T', transM='N';
-  int ldx=n_local;//=X.n(); (modified to support the parallel case)
-  int ldm=n_local, ldw=W.n();
-  int M=X.m(), N=m_local, K=n_local;
+  int ldx=n_local_;//=X.n(); (modified to support the parallel case)
+  int ldm=n_local_, ldw=W.n();
+  int M=X.m(), N=m_local_, K=n_local_;
   double** XM=X.local_data(); double** WM=W.local_data();
 
-  DGEMM(&transX, &transM, &M,&N,&K, &alpha,XM[0],&ldx, this->M[0],&ldm, &beta,WM[0],&ldw);
+  DGEMM(&transX, &transM, &M,&N,&K, &alpha,XM[0],&ldx, this->M_[0],&ldm, &beta,WM[0],&ldw);
 }
 /* W = beta*W + alpha*this*X^T */
 void hiopMatrixDenseRowMajor::timesMatTrans(double beta, hiopMatrix& W_, double alpha, const hiopMatrix& X_) const
 {
   auto& W = dynamic_cast<hiopMatrixDenseRowMajor&>(W_); 
-  assert(W.n_local==W.n_global && "not intended for the case when the result matrix is distributed.");
+  assert(W.n_local_==W.n_global_ && "not intended for the case when the result matrix is distributed.");
 #ifdef HIOP_DEEPCHECKS
   const auto& X = dynamic_cast<const hiopMatrixDenseRowMajor&>(X_);
   assert(W.isfinite());
@@ -633,14 +630,14 @@ void hiopMatrixDenseRowMajor::timesMatTrans(double beta, hiopMatrix& W_, double 
   if(W.m()==0) return;
   if(W.n()==0) return;
 
-  if(0==myrank) timesMatTrans_local(beta,W_,alpha,X_);
+  if(0==myrank_) timesMatTrans_local(beta,W_,alpha,X_);
   else          timesMatTrans_local(0.,  W_,alpha,X_);
 
 #ifdef HIOP_USE_MPI
   int n2Red=W.m()*W.n(); 
   double** WM=W.local_data();
   double* Wglob= new_mxnlocal_buff(); //[n2Red];
-  int ierr = MPI_Allreduce(WM[0], Wglob, n2Red, MPI_DOUBLE, MPI_SUM, comm); assert(ierr==MPI_SUCCESS);
+  int ierr = MPI_Allreduce(WM[0], Wglob, n2Red, MPI_DOUBLE, MPI_SUM, comm_); assert(ierr==MPI_SUCCESS);
   memcpy(WM[0], Wglob, n2Red*sizeof(double));
 #endif
 }
@@ -650,15 +647,15 @@ void hiopMatrixDenseRowMajor::addDiagonal(const double& alpha, const hiopVector&
 #ifdef HIOP_DEEPCHECKS
   assert(d.get_size()==n());
   assert(d.get_size()==m());
-  assert(d.get_local_size()==m_local);
-  assert(d.get_local_size()==n_local);
+  assert(d.get_local_size()==m_local_);
+  assert(d.get_local_size()==n_local_);
 #endif
   const double* dd=d.local_data_const();
-  for(int i=0; i<n_local; i++) M[i][i] += alpha*dd[i];
+  for(int i=0; i<n_local_; i++) M_[i][i] += alpha*dd[i];
 }
 void hiopMatrixDenseRowMajor::addDiagonal(const double& value)
 {
-  for(int i=0; i<n_local; i++) M[i][i] += value;
+  for(int i=0; i<n_local_; i++) M_[i][i] += value;
 }
 void hiopMatrixDenseRowMajor::addSubDiagonal(const double& alpha, long long start, const hiopVector& d_)
 {
@@ -666,11 +663,11 @@ void hiopMatrixDenseRowMajor::addSubDiagonal(const double& alpha, long long star
   long long dlen=d.get_size();
 #ifdef HIOP_DEEPCHECKS
   assert(start>=0);
-  assert(start+dlen<=n_local);
+  assert(start+dlen<=n_local_);
 #endif
 
   const double* dd=d.local_data_const();
-  for(int i=start; i<start+dlen; i++) M[i][i] += alpha*dd[i-start];
+  for(int i=start; i<start+dlen; i++) M_[i][i] += alpha*dd[i-start];
 }
 
 /* add to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements of
@@ -682,39 +679,39 @@ void hiopMatrixDenseRowMajor::addSubDiagonal(int start_on_dest_diag, const doubl
   const hiopVectorPar& d = dynamic_cast<const hiopVectorPar&>(d_);
   if(num_elems<0) num_elems = d.get_size()-start_on_src_vec;
   assert(num_elems <= d.get_size());
-  assert(n_local == n_global && "method supported only for non-distributed matrices");
-  assert(n_local == m_local  && "method supported only for symmetric matrices");
+  assert(n_local_ == n_global_ && "method supported only for non-distributed matrices");
+  assert(n_local_ == m_local_  && "method supported only for symmetric matrices");
 
-  assert(start_on_dest_diag>=0 && start_on_dest_diag<m_local);
-  num_elems = std::min(num_elems, m_local-start_on_dest_diag);
+  assert(start_on_dest_diag>=0 && start_on_dest_diag<m_local_);
+  num_elems = std::min(num_elems, m_local_-start_on_dest_diag);
 
   const double* dd=d.local_data_const();
   const int nend = start_on_dest_diag+num_elems;
   for(int i=0; i<num_elems; i++)
-    M[i+start_on_dest_diag][i+start_on_dest_diag] += alpha*dd[start_on_src_vec+i];
+    M_[i+start_on_dest_diag][i+start_on_dest_diag] += alpha*dd[start_on_src_vec+i];
 }
 
 void hiopMatrixDenseRowMajor::addSubDiagonal(int start_on_dest_diag, int num_elems, const double& c)
 {
   assert(num_elems>=0);
-  assert(start_on_dest_diag>=0 && start_on_dest_diag+num_elems<=n_local);
-  assert(n_local == n_global && "method supported only for non-distributed matrices");
-  assert(n_local == m_local  && "method supported only for symmetric matrices");
+  assert(start_on_dest_diag>=0 && start_on_dest_diag+num_elems<=n_local_);
+  assert(n_local_ == n_global_ && "method supported only for non-distributed matrices");
+  assert(n_local_ == m_local_  && "method supported only for symmetric matrices");
 
   for(int i=0; i<num_elems; i++)
-    M[i+start_on_dest_diag][i+start_on_dest_diag] += c;  
+    M_[i+start_on_dest_diag][i+start_on_dest_diag] += c;  
 }
 
 void hiopMatrixDenseRowMajor::addMatrix(double alpha, const hiopMatrix& X_)
 {
   const auto& X = dynamic_cast<const hiopMatrixDenseRowMajor&>(X_); 
 #ifdef HIOP_DEEPCHECKS
-  assert(m_local==X.m_local);
-  assert(n_local==X.n_local);
+  assert(m_local_==X.m_local_);
+  assert(n_local_==X.n_local_);
 #endif
 
-  int N=m_local*n_local, inc=1;
-  DAXPY(&N, &alpha, X.M[0], &inc, M[0], &inc);
+  int N=m_local_*n_local_, inc=1;
+  DAXPY(&N, &alpha, X.M_[0], &inc, M_[0], &inc);
 }
 
 /* block of W += alpha*this 
@@ -727,12 +724,12 @@ void hiopMatrixDenseRowMajor::addToSymDenseMatrixUpperTriangle(int row_start, in
   assert(W.n()==W.m());
 
   double** WM = W.get_M();
-  for(int i=0; i<m_local; i++) {
+  for(int i=0; i<m_local_; i++) {
     const int iW = i+row_start;
-    for(int j=0; j<n_local; j++) {
+    for(int j=0; j<n_local_; j++) {
       const int jW = j+col_start;
       assert(iW<=jW && "source entries need to map inside the upper triangular part of destination");
-      WM[iW][jW] += alpha*this->M[i][j];
+      WM[iW][jW] += alpha*this->M_[i][j];
     }
   }
 }
@@ -746,12 +743,12 @@ void hiopMatrixDenseRowMajor::transAddToSymDenseMatrixUpperTriangle(int row_star
   assert(W.n()==W.m());
 
   double** WM = W.get_M();
-  for(int ir=0; ir<m_local; ir++) {
+  for(int ir=0; ir<m_local_; ir++) {
     const int jW = ir+col_start;
-    for(int jc=0; jc<n_local; jc++) {
+    for(int jc=0; jc<n_local_; jc++) {
       const int iW = jc+row_start;
       assert(iW<=jW && "source entries need to map inside the upper triangular part of destination");
-      WM[iW][jW] += alpha*this->M[ir][jc];
+      WM[iW][jW] += alpha*this->M_[ir][jc];
     }
   }
 }
@@ -774,13 +771,13 @@ addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start,
   assert(this->n()==this->m());
   assert(diag_start+this->n() <= W.n());
   double** WM = W.get_M();
-  for(int i=0; i<n_local; i++) {
+  for(int i=0; i<n_local_; i++) {
     const int iW = i+diag_start;
-    for(int j=i; j<m_local; j++) {
+    for(int j=i; j<m_local_; j++) {
       const int jW = j+diag_start;
       assert(iW<=jW && "source entries need to map inside the upper triangular part of destination");
       assert(iW<W.n() && jW<W.m());
-      WM[iW][jW] += alpha*this->M[i][j];
+      WM[iW][jW] += alpha*this->M_[i][j];
     }
   }
 }
@@ -789,10 +786,10 @@ addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start,
 double hiopMatrixDenseRowMajor::max_abs_value()
 {
   char norm='M';
-  double maxv = DLANGE(&norm, &n_local, &m_local, M[0], &n_local, NULL);
+  double maxv = DLANGE(&norm, &n_local_, &m_local_, M_[0], &n_local_, NULL);
 #ifdef HIOP_USE_MPI
   double maxvg;
-  int ierr=MPI_Allreduce(&maxv,&maxvg,1,MPI_DOUBLE,MPI_MAX,comm); assert(ierr==MPI_SUCCESS);
+  int ierr=MPI_Allreduce(&maxv,&maxvg,1,MPI_DOUBLE,MPI_MAX,comm_); assert(ierr==MPI_SUCCESS);
   return maxvg;
 #endif
   return maxv;
@@ -801,20 +798,20 @@ double hiopMatrixDenseRowMajor::max_abs_value()
 #ifdef HIOP_DEEPCHECKS
 bool hiopMatrixDenseRowMajor::assertSymmetry(double tol) const
 {
-  if(n_local!=n_global) {
+  if(n_local_!=n_global_) {
     assert(false && "should be used only for local matrices");
     return false;
   }
   //must be square
-  if(m_local!=n_global) {
+  if(m_local_!=n_global_) {
     assert(false);
     return false;
   }
 
   //symmetry
-  for(int i=0; i<n_local; i++)
-    for(int j=0; j<n_local; j++) {
-      double ij=M[i][j], ji=M[j][i];
+  for(int i=0; i<n_local_; i++)
+    for(int j=0; j<n_local_; j++) {
+      double ij=M_[i][j], ji=M_[j][i];
       double relerr= fabs(ij-ji)/(1+fabs(ij));
       assert(relerr<tol);
       if(relerr>=tol) {

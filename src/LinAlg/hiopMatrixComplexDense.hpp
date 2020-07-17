@@ -204,8 +204,8 @@ namespace hiop
       assert(false && "not yet implemented");
     }
     
-    inline long long get_local_size_n() const { return n_local; }
-    inline long long get_local_size_m() const { return m_local; } 
+    inline long long get_local_size_n() const { return n_local_; }
+    inline long long get_local_size_m() const { return m_local_; } 
     
     //TODO: this is not kosher!
     inline std::complex<double>** local_data() const { return M; }
@@ -213,33 +213,33 @@ namespace hiop
     //do not use this unless you sure you know what you're doing
     inline std::complex<double>** get_M() { return M; }
     
-    virtual long long m() const {return m_local;}
-    virtual long long n() const {return n_global;}
+    virtual long long m() const {return m_local_;}
+    virtual long long n() const {return n_global_;}
 #ifdef HIOP_DEEPCHECKS
     virtual bool assertSymmetry(double tol=1e-16) const;
 #endif
   private:
     std::complex<double>** M; //local storage
-    long long n_global; //total / global number of columns
-    int m_local, n_local; //local number of rows and cols, respectively
-    long long glob_jl, glob_ju;
-    MPI_Comm comm; 
-    int myrank;
+    long long n_global_; //total / global number of columns
+    int m_local_, n_local_; //local number of rows and cols, respectively
+    long long glob_jl_, glob_ju_;
+    MPI_Comm comm_; 
+    int myrank_;
     
-    mutable std::complex<double>* _buff_mxnlocal;  
+    mutable std::complex<double>* buff_mxnlocal_;  
     
     //this is very private do not touch :)
-    long long max_rows;
+    long long max_rows_;
   private:
     hiopMatrixComplexDense() {};
     /** copy constructor, for internal/private use only (it doesn't copy the values) */
     hiopMatrixComplexDense(const hiopMatrixComplexDense&);
     
     inline std::complex<double>* new_mxnlocal_buff() const {
-      if(_buff_mxnlocal==NULL) {
-	_buff_mxnlocal = new std::complex<double>[max_rows*n_local];
+      if(buff_mxnlocal_==NULL) {
+	buff_mxnlocal_ = new std::complex<double>[max_rows_*n_local_];
       } 
-      return _buff_mxnlocal;
+      return buff_mxnlocal_;
     }
   }; //end class   
 }//end namespace
