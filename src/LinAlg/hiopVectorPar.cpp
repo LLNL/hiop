@@ -153,25 +153,26 @@ void hiopVectorPar::copyFromStarting(int start_index/*_in_src*/,const hiopVector
   memcpy(data_+start_index, v.data_, v.n_local_*sizeof(double));
 }
 
-void hiopVectorPar::startingAtCopyFromStartingAt(int start_idx_src, 
-						 const hiopVector& v_, 
-						 int start_idx_dest)
+void hiopVectorPar::startingAtCopyFromStartingAt(int start_idx_dest, 
+						 const hiopVector& v_in, 
+						 int start_idx_src)
 {
 #ifdef HIOP_DEEPCHECKS
   assert(n_local_==n_ && "only for local/non-distributed vectors");
 #endif
-  assert((start_idx_src>=0 && start_idx_src<this->n_local_) || this->n_local_==0);
-  const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_);
-  assert((start_idx_dest>=0 && start_idx_dest<v.n_local_) || v.n_local_==0);
+  assert((start_idx_dest>=0 && start_idx_dest<this->n_local_) || this->n_local_==0);
+  const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_in);
+  assert((start_idx_src>=0 && start_idx_src<v.n_local_) || v.n_local_==0);
 
-  int howManyToCopy = this->n_local_ - start_idx_src;
-  const int howManyToCopyDest = v.n_local_-start_idx_dest;
-  assert(howManyToCopy <= howManyToCopyDest);
-  //howManyToCopy = howManyToCopy <= v.n_local_-start_idx_dest ? howManyToCopy : v.n_local_-start_idx_dest;
-  if(howManyToCopy > howManyToCopyDest) howManyToCopy = howManyToCopyDest;
+  int howManyToCopy = this->n_local_ - start_idx_dest;
+  const int howManyToCopySrc = v.n_local_-start_idx_dest;
+  assert(howManyToCopy <= howManyToCopySrc);
+
+  //just to be safe when not NDEBUG
+  if(howManyToCopy > howManyToCopySrc) howManyToCopy = howManyToCopySrc;
 
   assert(howManyToCopy>=0);
-  memcpy(data_+start_idx_src, v.data_+start_idx_dest, howManyToCopy*sizeof(double));
+  memcpy(data_+start_idx_dest, v.data_+start_idx_src, howManyToCopy*sizeof(double));
 }
 
 void hiopVectorPar::copyToStarting(int start_index, hiopVector& v_)
