@@ -57,7 +57,7 @@
 #include <hiopMatrix.hpp>
 #include "matrixTestsDense.hpp"
 
-namespace hiop::tests {
+namespace hiop { namespace tests {
 
 /// Method to set matrix _A_ element (i,j) to _val_.
 /// First need to retrieve hiopMatrixDense from the abstract interface
@@ -296,4 +296,4 @@ bool MatrixTestsDense::globalToLocalMap(
 
 // End helper methods
 
-} // namespace hiop::tests
+}} // namespace hiop::tests
