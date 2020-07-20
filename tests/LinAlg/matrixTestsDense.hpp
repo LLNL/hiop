@@ -57,6 +57,7 @@
 #pragma once
 
 #include "matrixTests.hpp"
+#include "hiopVectorPar.hpp"
 
 namespace hiop::tests {
 

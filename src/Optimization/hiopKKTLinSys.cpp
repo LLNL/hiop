@@ -47,6 +47,7 @@
 // product endorsement purposes.
 
 #include "hiopKKTLinSys.hpp"
+#include "hiopLinAlgFactory.hpp"
 #include "hiop_blasdefs.hpp"
 
 #include <cmath>
@@ -67,7 +68,7 @@ double hiopKKTLinSys::errorKKT(const hiopResidual* resid, const hiopIterate* sol
   }
   
   double derr=1e20, aux;
-  hiopVectorPar *RX=resid->rx->new_copy();
+  hiopVector *RX=resid->rx->new_copy();
   
   //RX=rx-H*dx-J'c*dyc-J'*dyd +dzl-dzu 
   HessianTimesVec_noLogBarrierTerm(1.0, *RX, -1.0, *sol->x);
@@ -83,7 +84,7 @@ double hiopKKTLinSys::errorKKT(const hiopResidual* resid, const hiopIterate* sol
 
 
   //RD = rd - (dyd + dvl - dvu - delta_wd*dd) 
-  hiopVectorPar* RD = resid->rd->new_copy();
+  hiopVector* RD = resid->rd->new_copy();
   RD->axpy(+1., *sol->yd);
   RD->axpy(+1., *sol->vl);
   RD->axpy(-1., *sol->vu);
@@ -93,7 +94,7 @@ double hiopKKTLinSys::errorKKT(const hiopResidual* resid, const hiopIterate* sol
   nlp_->log->printf(hovLinAlgScalars, "  --- rd=%g\n", aux);
   
   //RYC = ryc - Jc*dx + delta_cc*dyc 
-  hiopVectorPar* RYC=resid->ryc->new_copy();
+  hiopVector* RYC=resid->ryc->new_copy();
   Jac_c_->timesVec(1.0, *RYC, -1.0, *sol->x);
   RYC->axpy(delta_cc, *sol->yc);
   aux=RYC->twonorm();
@@ -102,7 +103,7 @@ double hiopKKTLinSys::errorKKT(const hiopResidual* resid, const hiopIterate* sol
   delete RYC;
 
   //RYD=ryd - Jd*dx + dd + delta_cd*dyd
-  hiopVectorPar* RYD=resid->ryd->new_copy();
+  hiopVector* RYD=resid->ryd->new_copy();
   Jac_d_->timesVec(1.0, *RYD, -1.0, *sol->x);
   RYD->axpy(1.0, *sol->d);
   RYD->axpy(delta_cd, *sol->yd);
@@ -202,7 +203,7 @@ double hiopKKTLinSys::errorKKT(const hiopResidual* resid, const hiopIterate* sol
 hiopKKTLinSysCompressedXYcYd::hiopKKTLinSysCompressedXYcYd(hiopNlpFormulation* nlp)
   : hiopKKTLinSysCompressed(nlp)
 {
-  Dd_inv_ = dynamic_cast<hiopVectorPar*>(nlp_->alloc_dual_ineq_vec());
+  Dd_inv_ = dynamic_cast<hiopVector*>(nlp_->alloc_dual_ineq_vec());
   assert(Dd_inv_ != NULL);
 
   ryd_tilde_ = Dd_inv_->alloc_clone(); 
@@ -229,7 +230,7 @@ bool hiopKKTLinSysCompressedXYcYd::computeDirections(const hiopResidual* resid,
   rx_tilde_->copyFrom(*r.rx); 
   if(nlp_->n_low_local()>0) {
     // rl:=rszl-Zl*rxl (using dir->x as working buffer)
-    hiopVectorPar &rl=*(dir->x);//temporary working buffer
+    hiopVector&rl=*(dir->x);//temporary working buffer
     rl.copyFrom(*r.rszl);
     rl.axzpy(-1.0, *iter_->zl, *r.rxl);
     //rx_tilde = rx+Sxl^{-1}*rl
@@ -237,7 +238,7 @@ bool hiopKKTLinSysCompressedXYcYd::computeDirections(const hiopResidual* resid,
   }
   if(nlp_->n_upp_local()>0) {
     //ru:=rszu-Zu*rxu (using dir->x as working buffer)
-    hiopVectorPar &ru=*(dir->x);//temporary working buffer
+    hiopVector&ru=*(dir->x);//temporary working buffer
     ru.copyFrom(*r.rszu); ru.axzpy(-1.0,*iter_->zu, *r.rxu);
     //rx_tilde = rx_tilde - Sxu^{-1}*ru
     rx_tilde_->axdzpy_w_pattern(-1.0, ru, *iter_->sxu, nlp_->get_ixu());
@@ -249,7 +250,7 @@ bool hiopKKTLinSysCompressedXYcYd::computeDirections(const hiopResidual* resid,
   // 2. compute the left multiplicand in ryd2 (using buffer dir->sdl), that is
   //   ryd2 = [rd + Sdl^{-1}*(rsvl-Vl*rdl)-Sdu^{-1}(rsvu-Vu*rdu)] (this is \tilde{r}_d in the notes)
   //    Inner ops are performed by accumulating in rd2  (buffer dir->sdu)
-  hiopVectorPar &ryd2=*dir->sdl;
+  hiopVector&ryd2=*dir->sdl;
   ryd2.copyFrom(*r.rd);
   
   if(nlp_->m_ineq_low()>0) {
@@ -275,9 +276,9 @@ bool hiopKKTLinSysCompressedXYcYd::computeDirections(const hiopResidual* resid,
   ryd_tilde_->axzpy(1.0, ryd2, *Dd_inv_);
 
 #ifdef HIOP_DEEPCHECKS
-  hiopVectorPar* rx_tilde_save=rx_tilde_->new_copy();
-  hiopVectorPar* ryc_save=r.ryc->new_copy();
-  hiopVectorPar* ryd_tilde_save=ryd_tilde_->new_copy();
+  hiopVector* rx_tilde_save=rx_tilde_->new_copy();
+  hiopVector* ryc_save=r.ryc->new_copy();
+  hiopVector* ryd_tilde_save=ryd_tilde_->new_copy();
 #endif
 
 
@@ -378,8 +379,8 @@ bool hiopKKTLinSysCompressedXYcYd::computeDirections(const hiopResidual* resid,
 #ifdef HIOP_DEEPCHECKS
 //this method needs a bit of revisiting if becomes critical (mainly avoid dynamic allocations)
 double hiopKKTLinSysCompressedXYcYd::
-errorCompressedLinsys(const hiopVectorPar& rx, const hiopVectorPar& ryc, const hiopVectorPar& ryd,
-		      const hiopVectorPar& dx, const hiopVectorPar& dyc, const hiopVectorPar& dyd)
+errorCompressedLinsys(const hiopVector& rx, const hiopVector& ryc, const hiopVector& ryd,
+		      const hiopVector& dx, const hiopVector& dyc, const hiopVector& dyd)
 {
   nlp_->log->printf(hovLinAlgScalars, "hiopKKTLinSysDenseXYcYd::errorCompressedLinsys residuals norm:\n");
 
@@ -390,7 +391,7 @@ errorCompressedLinsys(const hiopVectorPar& rx, const hiopVectorPar& ryc, const h
   }
   
   double derr=1e20, aux;
-  hiopVectorPar *RX=rx.new_copy();
+  hiopVector *RX=rx.new_copy();
   //RX=rx-H*dx-J'c*dyc-J'*dyd
   Hess_->timesVec(1.0, *RX, -1.0, dx);
   RX->axzpy(-1.0, *Dx_, dx);
@@ -403,7 +404,7 @@ errorCompressedLinsys(const hiopVectorPar& rx, const hiopVectorPar& ryc, const h
   nlp_->log->printf(hovLinAlgScalars, " >>  rx=%g\n", aux);
   delete RX; RX=NULL;
   
-  hiopVectorPar* RC=ryc.new_copy();
+  hiopVector* RC=ryc.new_copy();
   Jac_c_->timesVec(1.0, *RC, -1.0, dx);
   RC->axpy(delta_cc, dyc);
   aux = RC->twonorm();
@@ -411,7 +412,7 @@ errorCompressedLinsys(const hiopVectorPar& rx, const hiopVectorPar& ryc, const h
   nlp_->log->printf(hovLinAlgScalars, " >> ryc=%g\n", aux);
   delete RC; RC=NULL;
   
-  hiopVectorPar* RD=ryd.new_copy();
+  hiopVector* RD=ryd.new_copy();
   Jac_d_->timesVec(1.0, *RD, -1.0, dx);
 
   RD->axzpy(1.0, *Dd_inv_, dyd);
@@ -446,7 +447,7 @@ errorCompressedLinsys(const hiopVectorPar& rx, const hiopVectorPar& ryc, const h
 hiopKKTLinSysCompressedXDYcYd::hiopKKTLinSysCompressedXDYcYd(hiopNlpFormulation* nlp)
   : hiopKKTLinSysCompressed(nlp)
 {
-  Dd_ = dynamic_cast<hiopVectorPar*>(nlp_->alloc_dual_ineq_vec());
+  Dd_ = dynamic_cast<hiopVector*>(nlp_->alloc_dual_ineq_vec());
   assert(Dd_ != NULL);
 
   rd_tilde_ = Dd_->alloc_clone(); 
@@ -475,7 +476,7 @@ bool hiopKKTLinSysCompressedXDYcYd::computeDirections(const hiopResidual* resid,
   rx_tilde_->copyFrom(*r.rx); 
   if(nlp_->n_low_local()) {
     // rl:=rszl-Zl*rxl (using dir->x as working buffer)
-    hiopVectorPar &rl=*(dir->x);//temporary working buffer
+    hiopVector &rl=*(dir->x);//temporary working buffer
     rl.copyFrom(*r.rszl);
     rl.axzpy(-1.0, *iter_->zl, *r.rxl);
     //rx_tilde = rx+Sxl^{-1}*rl
@@ -483,7 +484,7 @@ bool hiopKKTLinSysCompressedXDYcYd::computeDirections(const hiopResidual* resid,
   }
   if(nlp_->n_upp_local()) {
     //ru:=rszu-Zu*rxu (using dir->x as working buffer)
-    hiopVectorPar &ru=*(dir->x);//temporary working buffer
+    hiopVector &ru=*(dir->x);//temporary working buffer
     ru.copyFrom(*r.rszu); ru.axzpy(-1.0,*iter_->zu, *r.rxu);
     //rx_tilde = rx_tilde - Sxu^{-1}*ru
     rx_tilde_->axdzpy_w_pattern(-1.0, ru, *iter_->sxu, nlp_->get_ixu());
@@ -510,10 +511,10 @@ bool hiopKKTLinSysCompressedXDYcYd::computeDirections(const hiopResidual* resid,
   nlp_->log->write("Dd (in computeDirections)", *Dd_, hovMatrices);
 
 #ifdef HIOP_DEEPCHECKS
-  hiopVectorPar* rx_tilde_save = rx_tilde_->new_copy();
-  hiopVectorPar* rd_tilde_save = rd_tilde_->new_copy();
-  hiopVectorPar* ryc_save = r.ryc->new_copy();
-  hiopVectorPar* ryd_save = r.ryd->new_copy();
+  hiopVector* rx_tilde_save = rx_tilde_->new_copy();
+  hiopVector* rd_tilde_save = rd_tilde_->new_copy();
+  hiopVector* ryc_save = r.ryc->new_copy();
+  hiopVector* ryd_save = r.ryd->new_copy();
 #endif
 
 
@@ -614,10 +615,10 @@ bool hiopKKTLinSysCompressedXDYcYd::computeDirections(const hiopResidual* resid,
 
 #ifdef HIOP_DEEPCHECKS
 double hiopKKTLinSysCompressedXDYcYd::
-errorCompressedLinsys(const hiopVectorPar& rx, const hiopVectorPar& rd,
-		      const hiopVectorPar& ryc, const hiopVectorPar& ryd,
-		      const hiopVectorPar& dx, const hiopVectorPar& dd,
-		      const hiopVectorPar& dyc, const hiopVectorPar& dyd)
+errorCompressedLinsys(const hiopVector& rx, const hiopVector& rd,
+		      const hiopVector& ryc, const hiopVector& ryd,
+		      const hiopVector& dx, const hiopVector& dd,
+		      const hiopVector& dyc, const hiopVector& dyd)
 {
   nlp_->log->printf(hovLinAlgScalars, "hiopKKTLinSysDenseXDYcYd::errorCompressedLinsys residuals norm:\n");
 
@@ -628,7 +629,7 @@ errorCompressedLinsys(const hiopVectorPar& rx, const hiopVectorPar& rd,
   }
   
   double derr=-1., aux;
-  hiopVectorPar *RX=rx.new_copy();
+  hiopVector *RX=rx.new_copy();
   //RX=rx-H*dx-J'c*dyc-J'*dyd
   Hess_->timesVec(1.0, *RX, -1.0, dx);
   RX->axzpy(-1.0, *Dx_, dx);
@@ -641,7 +642,7 @@ errorCompressedLinsys(const hiopVectorPar& rx, const hiopVectorPar& rd,
   delete RX; 
 
   //RD = rd + dyd - Dd*dd
-  hiopVectorPar* RD=rd.new_copy();
+  hiopVector* RD=rd.new_copy();
   RD->axpy( 1., dyd);
   RD->axzpy(-1., *Dd_, dd);
   RD->axpy(-delta_wd, dd);
@@ -650,7 +651,7 @@ errorCompressedLinsys(const hiopVectorPar& rx, const hiopVectorPar& rd,
   nlp_->log->printf(hovLinAlgScalars, " >>  rd=%g\n", aux);
   delete RD; 
 
-  hiopVectorPar* RC=ryc.new_copy();
+  hiopVector* RC=ryc.new_copy();
   Jac_c_->timesVec(1.0, *RC, -1.0, dx);
   RC->axpy(delta_cc, dyc);
   aux = RC->twonorm();
@@ -659,7 +660,7 @@ errorCompressedLinsys(const hiopVectorPar& rx, const hiopVectorPar& rd,
   delete RC; 
   
   //RYD = ryd+dyd - Jd*dx
-  hiopVectorPar* RYD=ryd.new_copy();
+  hiopVector* RYD=ryd.new_copy();
   Jac_d_->timesVec(1.0, *RYD, -1.0, dx);
   RYD->axpy(1.0, dd);
   RYD->axpy(delta_cd, dyd);
@@ -685,11 +686,11 @@ hiopKKTLinSysLowRank::hiopKKTLinSysLowRank(hiopNlpFormulation* nlp)
   nlpD = dynamic_cast<hiopNlpDenseConstraints*>(nlp_);
 
   _kxn_mat = nlpD->alloc_multivector_primal(nlpD->m()); //!opt
-  N = new hiopMatrixDense(nlpD->m(),nlpD->m());
+  N = LinearAlgebraFactory::createMatrixDense(nlpD->m(),nlpD->m());
 #ifdef HIOP_DEEPCHECKS
   Nmat=N->alloc_clone();
 #endif
-  _k_vec1 = dynamic_cast<hiopVectorPar*>(nlpD->alloc_dual_vec());
+  _k_vec1 = dynamic_cast<hiopVector*>(nlpD->alloc_dual_vec());
 }
 
 hiopKKTLinSysLowRank::~hiopKKTLinSysLowRank()
@@ -711,7 +712,7 @@ update(const hiopIterate* iter,
   nlp_->runStats.tmSolverInternal.start();
 
   iter_=iter;
-  grad_f_ = dynamic_cast<const hiopVectorPar*>(grad_f);
+  grad_f_ = dynamic_cast<const hiopVector*>(grad_f);
   Jac_c_ = Jac_c; Jac_d_ = Jac_d;
   //Hess = dynamic_cast<hiopHessianInvLowRank*>(Hess_);
   Hess_=HessLowRank=Hess;
@@ -755,8 +756,8 @@ update(const hiopIterate* iter,
  * Note that ops H+Dx are provided by hiopHessianLowRank
  */
 void hiopKKTLinSysLowRank::
-solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
-		hiopVectorPar& dx, hiopVectorPar& dyc, hiopVectorPar& dyd)
+solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
+		hiopVector& dx, hiopVector& dyc, hiopVector& dyd)
 {
 #ifdef HIOP_DEEPCHECKS
   //some outputing
@@ -798,7 +799,7 @@ solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
   
   // 2 . then rhs =   [ Jc(H+Dx)^{-1}*rx - ryc ]
   //                  [ Jd(H+dx)^{-1}*rx - ryd ]
-  hiopVectorPar& rhs=*_k_vec1;
+  hiopVector& rhs=*_k_vec1;
   rhs.copyFromStarting(0, ryc);
   rhs.copyFromStarting(nlp_->m_eq(), ryd);
   J.timesVec(-1.0, rhs, 1.0, dx);
@@ -807,7 +808,7 @@ solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
   nlp_->log->write("solveCompressed: dx sol is", dx, hovMatrices);
   nlp_->log->write("solveCompressed: rhs for N is", rhs, hovMatrices);
   Nmat->copyFrom(*N);
-  hiopVectorPar* r=rhs.new_copy(); //save the rhs to check the norm of the residual
+  hiopVector* r=rhs.new_copy(); //save the rhs to check the norm of the residual
 #endif
 
   //
@@ -834,7 +835,7 @@ solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
 #endif
 }
 
-int hiopKKTLinSysLowRank::solveWithRefin(hiopMatrixDense& M, hiopVectorPar& rhs)
+int hiopKKTLinSysLowRank::solveWithRefin(hiopMatrixDense& M, hiopVector& rhs)
 {
   // 1. Solve dposvx (solve + equilibrating + iterative refinement + forward and backward error estimates)
   // 2. Check the residual norm
@@ -846,7 +847,7 @@ int hiopKKTLinSysLowRank::solveWithRefin(hiopMatrixDense& M, hiopVectorPar& rhs)
   if(N<=0) return 0;
 
   hiopMatrixDense* Aref = M.new_copy();
-  hiopVectorPar* rhsref = rhs.new_copy();
+  hiopVector* rhsref = rhs.new_copy();
 
   char FACT='E'; 
   char UPLO='L';
@@ -884,7 +885,8 @@ int hiopKKTLinSysLowRank::solveWithRefin(hiopMatrixDense& M, hiopVectorPar& rhs)
   //
   // 2. check residual
   //
-  hiopVectorPar* x = rhs.alloc_clone(); 
+  hiopVector* x = rhs.alloc_clone(); 
+  /// TODO: how can we only use the hiopVector interface here?
   hiopVectorPar dx(N);
   hiopVectorPar resid(N); 
   int nIterRefin=0;double nrmResid;
@@ -992,7 +994,7 @@ int hiopKKTLinSysLowRank::solveWithRefin(hiopMatrixDense& M, hiopVectorPar& rhs)
   return 0;
 }
 
-int hiopKKTLinSysLowRank::solve(hiopMatrixDense& M, hiopVectorPar& rhs)
+int hiopKKTLinSysLowRank::solve(hiopMatrixDense& M, hiopVector& rhs)
 {
   char FACT='E'; 
   char UPLO='L';
@@ -1108,13 +1110,13 @@ int hiopKKTLinSysLowRank::solveWithRefin(hiopMatrixDense& M, hiopVectorPar& rhs)
 #ifdef HIOP_DEEPCHECKS
 
 double hiopKKTLinSysLowRank::
-errorCompressedLinsys(const hiopVectorPar& rx, const hiopVectorPar& ryc, const hiopVectorPar& ryd,
-		      const hiopVectorPar& dx, const hiopVectorPar& dyc, const hiopVectorPar& dyd)
+errorCompressedLinsys(const hiopVector& rx, const hiopVector& ryc, const hiopVector& ryd,
+		      const hiopVector& dx, const hiopVector& dyc, const hiopVector& dyd)
 {
   nlp_->log->printf(hovLinAlgScalars, "hiopKKTLinSysLowRank::errorCompressedLinsys residuals norm:\n");
 
   double derr=-1., aux;
-  hiopVectorPar *RX=rx.new_copy();
+  hiopVector *RX=rx.new_copy();
   //RX=rx-H*dx-J'c*dyc-J'*dyd
   HessLowRank->timesVec(1.0, *RX, -1.0, dx);
   //RX->axzpy(-1.0,*Dx,dx);
@@ -1128,14 +1130,14 @@ errorCompressedLinsys(const hiopVectorPar& rx, const hiopVectorPar& ryc, const h
   //}
   delete RX; RX=NULL;
 
-  hiopVectorPar* RC=ryc.new_copy();
+  hiopVector* RC=ryc.new_copy();
   Jac_c_->timesVec(1.0,*RC, -1.0,dx);
   aux = RC->twonorm();
   derr=fmax(derr,aux);
   nlp_->log->printf(hovLinAlgScalars, "  >>> ryc=%g\n", aux);
   delete RC; RC=NULL;
 
-  hiopVectorPar* RD=ryd.new_copy();
+  hiopVector* RD=ryd.new_copy();
   Jac_d_->timesVec(1.0,*RD, -1.0, dx);
   RD->axzpy(1.0, *Dd_inv_, dyd);
   aux = RD->twonorm();
@@ -1146,7 +1148,7 @@ errorCompressedLinsys(const hiopVectorPar& rx, const hiopVectorPar& ryc, const h
   return derr;
 }
 
-double hiopKKTLinSysLowRank::solveError(const hiopMatrixDense& M,  const hiopVectorPar& x, hiopVectorPar& rhs)
+double hiopKKTLinSysLowRank::solveError(const hiopMatrixDense& M,  const hiopVector& x, hiopVector& rhs)
 {
   double relError;
   double rhsnorm=rhs.infnorm();

@@ -57,7 +57,7 @@
 #include <assert.h>
 
 // This header contains HiOp's MPI definitions
-#include <hiopVector.hpp>
+#include <hiopVectorPar.hpp>
 
 #include "LinAlg/vectorTestsPar.hpp"
 // #include "LinAlg/vectorTestsRAJA.hpp"
@@ -75,7 +75,7 @@ int main(int argc, char** argv)
 {
   int rank=0;
   int numRanks=1;
-  MPI_Comm comm = MPI_COMM_NULL;
+  MPI_Comm comm = MPI_COMM_SELF;
 
 #ifdef HIOP_USE_MPI
   int err;

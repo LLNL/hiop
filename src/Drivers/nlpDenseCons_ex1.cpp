@@ -25,7 +25,7 @@ Ex1Meshing1D::Ex1Meshing1D(double a, double b,
   while(i<=remainder) { col_partition[i] = col_partition[i-1]+quotient+1; i++; }
   while(i<=comm_size) { col_partition[i] = col_partition[i-1]+quotient;   i++; }
 
-  _mass = new hiopVectorPar(glob_n, col_partition, comm);
+  _mass = LinearAlgebraFactory::createVector(glob_n, col_partition, comm);
 
   //if(my_rank==0) printf("reminder=%d quotient=%d\n", remainder, quotient);
   //printf("left=%d right=%d\n", col_partition[my_rank], col_partition[my_rank+1]);
@@ -112,8 +112,8 @@ double DiscretizedFunction::dotProductWith( const DiscretizedFunction& v_ ) cons
 {
   assert(v_._mesh->matches(this->_mesh));
   double* M=_mesh->_mass->local_data();
-  double* u= this->data;
-  double* v= v_.data;
+  double* u= this->data_;
+  double* v= v_.data_;
   
   double dot=0.;
   for(int i=0; i<get_local_size(); i++)
@@ -121,7 +121,7 @@ double DiscretizedFunction::dotProductWith( const DiscretizedFunction& v_ ) cons
  
  #ifdef HIOP_USE_MPI
   double dotprodG;
-  int ierr = MPI_Allreduce(&dot, &dotprodG, 1, MPI_DOUBLE, MPI_SUM, comm); assert(MPI_SUCCESS==ierr);
+  int ierr = MPI_Allreduce(&dot, &dotprodG, 1, MPI_DOUBLE, MPI_SUM, comm_); assert(MPI_SUCCESS==ierr);
   dot=dotprodG;
 #endif
   return dot;
@@ -138,7 +138,7 @@ double DiscretizedFunction::integral() const
 double DiscretizedFunction::twonorm() const 
 {
   double* M=_mesh->_mass->local_data();
-  double* u= this->data;
+  double* u= this->data_;
 
   double nrm_square=0.;
   for(int i=0; i<get_local_size(); i++)
@@ -146,7 +146,7 @@ double DiscretizedFunction::twonorm() const
 
 #ifdef HIOP_USE_MPI
   double nrm_squareG;
-  int ierr = MPI_Allreduce(&nrm_square, &nrm_squareG, 1, MPI_DOUBLE, MPI_SUM, comm); assert(MPI_SUCCESS==ierr);
+  int ierr = MPI_Allreduce(&nrm_square, &nrm_squareG, 1, MPI_DOUBLE, MPI_SUM, comm_); assert(MPI_SUCCESS==ierr);
   nrm_square=nrm_squareG;
 #endif  
   return sqrt(nrm_square);
@@ -171,7 +171,7 @@ double DiscretizedFunction::getFunctionArgument(long long i_global) const
 void DiscretizedFunction::setFunctionValue(long long i_global, const double& value)
 {
   long long i_local=_mesh->getLocalIndex(i_global);
-  this->data[i_local]=value;
+  this->data_[i_local]=value;
 }
 
 

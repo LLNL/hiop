@@ -5,7 +5,8 @@
 
 //this include is not needed in general
 //we use hiopMatrixDense in this particular example for convienience
-#include "hiopMatrix.hpp" 
+#include "hiopMatrixDense.hpp" 
+#include "hiopLinAlgFactory.hpp"
 
 #ifdef HIOP_USE_MPI
 #include "mpi.h"
@@ -74,7 +75,7 @@ public:
     if(nd<0) nd_=0;
     else nd_ = nd;
 
-    Q_  = new hiop::hiopMatrixDense(nd_,nd_);
+    Q_  = hiop::LinearAlgebraFactory::createMatrixDense(nd_,nd_);
     Q_->setToConstant(0.);
     Q_->addDiagonal(2. * (2*convex_obj_-1)); //-2 or 2
     double** Qa = Q_->get_M();
@@ -83,7 +84,7 @@ public:
       Qa[i+1][i] = 1.;
     }
 
-    Md_ = new hiop::hiopMatrixDense(ns_, nd_);
+    Md_ = hiop::LinearAlgebraFactory::createMatrixDense(ns_, nd_);
     Md_->setToConstant(-1.0);
 
     _buf_y_ = new double[nd_];
