@@ -9,43 +9,43 @@ namespace hiop
   hiopMatrixComplexDense::hiopMatrixComplexDense(const long long& m, 
 						 const long long& glob_n, 
 						 long long* col_part/*=NULL*/, 
-						 MPI_Comm comm_/*=MPI_COMM_SELF*/, 
+						 MPI_Comm comm/*=MPI_COMM_SELF*/, 
 						 const long long& m_max_alloc/*=-1*/)
   {
-    m_local=m; n_global=glob_n;
-    comm=comm_;
+    m_local_=m; n_global_=glob_n;
+    comm_=comm;
     int P=0;
     if(col_part) {
 #ifdef HIOP_USE_MPI
-      int ierr=MPI_Comm_rank(comm, &P); assert(ierr==MPI_SUCCESS);
+      int ierr=MPI_Comm_rank(comm_, &P); assert(ierr==MPI_SUCCESS);
 #endif
-      glob_jl=col_part[P]; glob_ju=col_part[P+1];
+      glob_jl_=col_part[P]; glob_ju_=col_part[P+1];
     } else {
-      glob_jl=0; glob_ju=n_global;
+      glob_jl_=0; glob_ju_=n_global_;
     }
-    n_local=glob_ju-glob_jl;
+    n_local_=glob_ju_-glob_jl_;
     
-    myrank = P;
+    myrank_ = P;
     
-    max_rows=m_max_alloc;
-    if(max_rows==-1) max_rows=m_local;
-    assert(max_rows>=m_local &&
+    max_rows_=m_max_alloc;
+    if(max_rows_==-1) max_rows_=m_local_;
+    assert(max_rows_>=m_local_ &&
 	   "the requested extra allocation is smaller than the allocation needed by the matrix");
     
-    M=new std::complex<double>*[max_rows==0?1:max_rows];
-    M[0] = max_rows==0?NULL:new std::complex<double>[max_rows*n_local];
-    for(int i=1; i<max_rows; i++)
-      M[i]=M[0]+i*n_local;
+    M=new std::complex<double>*[max_rows_==0?1:max_rows_];
+    M[0] = max_rows_==0?NULL:new std::complex<double>[max_rows_*n_local_];
+    for(int i=1; i<max_rows_; i++)
+      M[i]=M[0]+i*n_local_;
     
     //! valgrind reports a shit load of errors without this; check this
-    for(int i=0; i<max_rows*n_local; i++) M[0][i]=0.0;
+    for(int i=0; i<max_rows_*n_local_; i++) M[0][i]=0.0;
     
     //internal buffers 
-    _buff_mxnlocal = NULL;
+    buff_mxnlocal_ = NULL;
   }
   hiopMatrixComplexDense::~hiopMatrixComplexDense()
   {
-    if(_buff_mxnlocal) delete[] _buff_mxnlocal;
+    if(buff_mxnlocal_) delete[] buff_mxnlocal_;
     if(M) {
       if(M[0]) delete[] M[0];
       delete[] M;
@@ -54,30 +54,30 @@ namespace hiop
   
   hiopMatrixComplexDense::hiopMatrixComplexDense(const hiopMatrixComplexDense& dm)
   {
-    n_local=dm.n_local; m_local=dm.m_local; n_global=dm.n_global;
-    glob_jl=dm.glob_jl; glob_ju=dm.glob_ju;
-    comm=dm.comm; myrank=dm.myrank;
+    n_local_=dm.n_local_; m_local_=dm.m_local_; n_global_=dm.n_global_;
+    glob_jl_=dm.glob_jl_; glob_ju_=dm.glob_ju_;
+    comm_=dm.comm_; myrank_=dm.myrank_;
     
-    //M=new double*[m_local==0?1:m_local];
-    max_rows = dm.max_rows;
-    M=new std::complex<double>*[max_rows==0?1:max_rows];
+    //M=new double*[m_local_==0?1:m_local_];
+    max_rows_ = dm.max_rows_;
+    M=new std::complex<double>*[max_rows_==0?1:max_rows_];
 
-    M[0] = max_rows==0?NULL:new std::complex<double>[max_rows*n_local];
+    M[0] = max_rows_==0?NULL:new std::complex<double>[max_rows_*n_local_];
 
-    for(int i=1; i<max_rows; i++)
-      M[i]=M[0]+i*n_local;
+    for(int i=1; i<max_rows_; i++)
+      M[i]=M[0]+i*n_local_;
     
-    _buff_mxnlocal = NULL;
+    buff_mxnlocal_ = NULL;
   }
 
   void hiopMatrixComplexDense::copyFrom(const hiopMatrixComplexDense& dm)
   {
-    assert(n_local==dm.n_local); assert(m_local==dm.m_local); assert(n_global==dm.n_global);
-    assert(glob_jl==dm.glob_jl); assert(glob_ju==dm.glob_ju);
+    assert(n_local_==dm.n_local_); assert(m_local_==dm.m_local_); assert(n_global_==dm.n_global_);
+    assert(glob_jl_==dm.glob_jl_); assert(glob_ju_==dm.glob_ju_);
     if(NULL==dm.M[0]) {
       M[0] = NULL;
     } else {
-      memcpy(M[0], dm.M[0], m_local*n_local*sizeof(std::complex<double>));
+      memcpy(M[0], dm.M[0], m_local_*n_local_*sizeof(std::complex<double>));
     }
   }
   
@@ -86,7 +86,7 @@ namespace hiop
     if(NULL==buffer) {
       M[0] = NULL;
     } else {
-      memcpy(M[0], buffer, m_local*n_local*sizeof(std::complex<double>));
+      memcpy(M[0], buffer, m_local_*n_local_*sizeof(std::complex<double>));
     }
   }
 
@@ -95,16 +95,16 @@ namespace hiop
 					    long long n_rows)
   {
     const hiopMatrixComplexDense& src = dynamic_cast<const hiopMatrixComplexDense&>(src_gen);
-    assert(n_global==src.n_global);
-    assert(n_local==src.n_local);
-    assert(n_rows<=src.m_local);
-    assert(n_rows == m_local);
+    assert(n_global_==src.n_global_);
+    assert(n_local_==src.n_local_);
+    assert(n_rows<=src.m_local_);
+    assert(n_rows == m_local_);
     
     // todo //! opt - copy multiple consecutive rows at once ?!?
 
     //int i should suffice for this container
     for(int i=0; i<n_rows; ++i) {
-      memcpy(M[i], src.M[rows_idxs[i]], n_local*sizeof(std::complex<double>));
+      memcpy(M[i], src.M[rows_idxs[i]], n_local_*sizeof(std::complex<double>));
     }
   }
 
@@ -121,7 +121,7 @@ namespace hiop
   {
     auto buf=M[0];
     //! optimization needed -> use zcopy if exists
-    for(int j=0; j<n_local*m_local; j++) *(buf++)=c;
+    for(int j=0; j<n_local_*m_local_; j++) *(buf++)=c;
   }
 
   void hiopMatrixComplexDense::negate()
@@ -172,8 +172,8 @@ namespace hiop
   
   bool hiopMatrixComplexDense::isfinite() const
   {
-    for(int i=0; i<m_local; i++)
-      for(int j=0; j<n_local; j++)
+    for(int i=0; i<m_local_; i++)
+      for(int j=0; j<n_local_; j++)
 	if(false==std::isfinite(M[i][j].real()) ||
 	   false==std::isfinite(M[i][j].imag())) return false;
     return true;
@@ -185,21 +185,21 @@ namespace hiop
 				     int maxCols/*=-1*/, 
 				     int rank/*=-1*/) const
   {
-    if(myrank==rank || rank==-1) {
+    if(myrank_==rank || rank==-1) {
       if(NULL==f) f=stdout;
-      if(maxRows>m_local) maxRows=m_local;
-      if(maxCols>n_local) maxCols=n_local;
+      if(maxRows>m_local_) maxRows=m_local_;
+      if(maxCols>n_local_) maxCols=n_local_;
       
       if(f==NULL) f=stdout;
       
       if(msg) {
-	fprintf(f, "%s (local_dims=[%d,%d])\n", msg, m_local,n_local);
+	fprintf(f, "%s (local_dims=[%d,%d])\n", msg, m_local_,n_local_);
       } else { 
 	fprintf(f, "hiopMatrixComplexDense::printing max=[%d,%d] (local_dims=[%d,%d], on rank=%d)\n", 
-		maxRows, maxCols, m_local,n_local,myrank);
+		maxRows, maxCols, m_local_,n_local_,myrank_);
       }
-      maxRows = maxRows>=0?maxRows:m_local;
-      maxCols = maxCols>=0?maxCols:n_local;
+      maxRows = maxRows>=0?maxRows:m_local_;
+      maxCols = maxCols>=0?maxCols:n_local_;
       fprintf(f, "[");
       for(int i=0; i<maxRows; i++) {
 	if(i>0) fprintf(f, " ");
@@ -242,13 +242,13 @@ namespace hiop
   void hiopMatrixComplexDense::addMatrix(const std::complex<double>& alpha, const hiopMatrixComplexDense& X)
   {
 #ifdef HIOP_DEEPCHECKS
-    assert(m_local==X.m_local);
-    assert(n_local==X.n_local);
+    assert(m_local_==X.m_local_);
+    assert(n_local_==X.n_local_);
 #endif
     hiop::dcomplex* Mdest= reinterpret_cast<dcomplex*>(M[0]);
     hiop::dcomplex* Msrc = reinterpret_cast<dcomplex*>(X.M[0]);
     hiop::dcomplex a; a.re=alpha.real(); a.im=alpha.imag();
-    int N=m_local*n_local, inc=1;
+    int N=m_local_*n_local_, inc=1;
     ZAXPY(&N, &a, Msrc, &inc, Mdest, &inc);
   }
 
@@ -304,12 +304,12 @@ namespace hiop
 #ifdef HIOP_DEEPCHECKS    
   bool hiopMatrixComplexDense::assertSymmetry(double tol/*=1e-16*/) const
   {
-    assert(n_global==n_local && "not yet implemented for distributed matrices");
-    if(n_global!=n_local) return false;
-    if(n_local!=m_local) return false;
+    assert(n_global_==n_local_ && "not yet implemented for distributed matrices");
+    if(n_global_!=n_local_) return false;
+    if(n_local_!=m_local_) return false;
 
-    for(int i=0; i<m_local; i++)
-      for(int j=i+1; j<n_local; j++)
+    for(int i=0; i<m_local_; i++)
+      for(int j=i+1; j<n_local_; j++)
 	if(std::abs(M[i][j]-M[j][i])>tol)
 	  return false;
     return true;

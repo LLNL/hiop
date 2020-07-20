@@ -46,80 +46,39 @@
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or 
 // product endorsement purposes.
 
-#ifndef HIOP_RESIDUAL
-#define HIOP_RESIDUAL
+#include <hiopVectorPar.hpp>
+#include <hiopMatrixDenseRowMajor.hpp>
 
-#include "hiopNlpFormulation.hpp"
-#include "hiopVector.hpp"
-#include "hiopIterate.hpp"
+#include "hiopLinAlgFactory.hpp"
 
-#include "hiopLogBarProblem.hpp"
+using namespace hiop;
 
-namespace hiop
+/**
+ * @brief Method to create vector.
+ * 
+ * @todo For now this is just a wrapper for hiopVectorPar constructor.
+ * Need to add options for creating different vectors.
+ */
+hiopVector* LinearAlgebraFactory::createVector(
+  const long long& glob_n,
+  long long* col_part,
+  MPI_Comm comm)
 {
-
-class hiopResidual
-{
-public:
-  hiopResidual(hiopNlpFormulation* nlp);
-  virtual ~hiopResidual();
-
-  virtual int update(const hiopIterate& it, 
-		     const double& f, const hiopVector& c, const hiopVector& d,
-		     const hiopVector& gradf, const hiopMatrix& jac_c, const hiopMatrix& jac_d, 
-		     const hiopLogBarProblem& logbar);
-
-  /* Return the Nlp and Log-bar errors computed at the previous update call. */ 
-  inline void getNlpErrors(double& optim, double& feas, double& comple) const
-  { optim=nrmInf_nlp_optim; feas=nrmInf_nlp_feasib; comple=nrmInf_nlp_complem;};
-  inline void getBarrierErrors(double& optim, double& feas, double& comple) const
-  { optim=nrmInf_bar_optim; feas=nrmInf_bar_feasib; comple=nrmInf_bar_complem;};
-  /* get the previously computed Infeasibility */
-  inline double getInfeasInfNorm() const { 
-    return nrmInf_nlp_feasib;
-  }
-  /* evaluate the Infeasibility at the new iterate, which has eq and ineq functions 
-   * computed in c_eval and d_eval, respectively. 
-   * The method modifies 'this', in particular ryd,ryc, rxl,rxu, rdl, rdu in an attempt
-   * to reuse storage/buffers, but does not update the cached nrmInf_XXX members. */
-  double computeNlpInfeasInfNorm(const hiopIterate& iter, 
-				 const hiopVector& c_eval, 
-				 const hiopVector& d_eval);
-
-  /* residual printing function - calls hiopVector::print 
-   * prints up to max_elems (by default all), on rank 'rank' (by default on all) */
-  virtual void print(FILE*, const char* msg=NULL, int max_elems=-1, int rank=-1) const;
-private:
-  hiopVector*rx;           // -\grad f - J_c^t y_c - J_d^t y_d + z_l - z_u
-  hiopVector*rd;           //  y_d + v_l - v_u
-  hiopVector*rxl,*rxu;     //  x - sxl-xl, -x-sxu+xu
-  hiopVector*rdl,*rdu;     //  as above but for d
-
-  hiopVector*ryc;          // -c(x)   (c(x)=0!//!)
-  hiopVector*ryd;          //for d- d(x)
-
-  hiopVector*rszl,*rszu;   // \mu e-sxl zl, \mu e - sxu zu
-  hiopVector*rsvl,*rsvu;   // \mu e-sdl vl, \mu e - sdu vu
-
-  /** storage for the norm of [rx,rd], [rxl,...,rdu,ryc,ryd], and [rszl,...,rsvu]  
-   *  for the nlp (\mu=0)
-   */
-  double nrmInf_nlp_optim, nrmInf_nlp_feasib, nrmInf_nlp_complem; 
-  /** storage for the norm of [rx,rd], [rxl,...,rdu,ryc,ryd], and [rszl,...,rsvu]  
-   *  for the barrier subproblem
-   */
-  double nrmInf_bar_optim, nrmInf_bar_feasib, nrmInf_bar_complem; 
-  // and associated info from problem formulation
-  hiopNlpFormulation * nlp;
-private:
-  hiopResidual() {};
-  hiopResidual(const hiopResidual&) {};
-  hiopResidual& operator=(const hiopResidual& o) {return *this;};
-  friend class hiopKKTLinSysCompressedXYcYd;
-  friend class hiopKKTLinSysCompressedXDYcYd;
-  friend class hiopKKTLinSysLowRank;
-  friend class hiopKKTLinSys;
-};
-
+  return new hiopVectorPar(glob_n, col_part, comm);
 }
-#endif
+
+/**
+ * @brief Method to create matrix.
+ * 
+ * @todo For now this is just a wrapper for hiopMatrixDenseRowMajor constructor.
+ * Need to add options for creating different vectors.
+ */
+hiopMatrixDense* LinearAlgebraFactory::createMatrixDense(
+  const long long& m,
+  const long long& glob_n,
+  long long* col_part,
+  MPI_Comm comm,
+  const long long& m_max_alloc)
+{
+  return new hiopMatrixDenseRowMajor(m, glob_n, col_part, comm, m_max_alloc);
+}

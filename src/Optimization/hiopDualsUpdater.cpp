@@ -47,6 +47,7 @@
 // product endorsement purposes.
 
 #include "hiopDualsUpdater.hpp"
+#include "hiopLinAlgFactory.hpp"
 
 #include "hiop_blasdefs.hpp"
 
@@ -58,13 +59,13 @@ hiopDualsLsqUpdate::hiopDualsLsqUpdate(hiopNlpFormulation* nlp)
 {
   hiopNlpDenseConstraints* nlpd = dynamic_cast<hiopNlpDenseConstraints*>(_nlp);
   assert(NULL!=nlpd);
-  _mexme = new hiopMatrixDense(nlpd->m_eq(),   nlpd->m_eq());
-  _mexmi = new hiopMatrixDense(nlpd->m_eq(),   nlpd->m_ineq());
-  _mixmi = new hiopMatrixDense(nlpd->m_ineq(), nlpd->m_ineq());
-  _mxm   = new hiopMatrixDense(nlpd->m(), nlpd->m());
+  _mexme = LinearAlgebraFactory::createMatrixDense(nlpd->m_eq(),   nlpd->m_eq());
+  _mexmi = LinearAlgebraFactory::createMatrixDense(nlpd->m_eq(),   nlpd->m_ineq());
+  _mixmi = LinearAlgebraFactory::createMatrixDense(nlpd->m_ineq(), nlpd->m_ineq());
+  _mxm   = LinearAlgebraFactory::createMatrixDense(nlpd->m(), nlpd->m());
 
-  M      = new hiopMatrixDense(nlpd->m(), nlpd->m());
-  rhs    = new hiopVectorPar(nlpd->m());
+  M      = LinearAlgebraFactory::createMatrixDense(nlpd->m(), nlpd->m());
+  rhs    = LinearAlgebraFactory::createVector(nlpd->m());
   rhsc   = dynamic_cast<hiopVectorPar*>(nlpd->alloc_dual_eq_vec());
   rhsc->setToZero();
   rhsd   = dynamic_cast<hiopVectorPar*>(nlpd->alloc_dual_ineq_vec());
@@ -74,7 +75,7 @@ hiopDualsLsqUpdate::hiopDualsLsqUpdate(hiopNlpFormulation* nlp)
 #ifdef HIOP_DEEPCHECKS
   M_copy = M->alloc_clone();
   rhs_copy = rhs->alloc_clone();
-  _mixme = new hiopMatrixDense(nlpd->m_ineq(), nlpd->m_eq());
+  _mixme = LinearAlgebraFactory::createMatrixDense(nlpd->m_ineq(), nlpd->m_eq());
 #endif
   //user options
   recalc_lsq_duals_tol = 1e-6;
@@ -185,7 +186,7 @@ LSQUpdate(hiopIterate& iter, const hiopVector& grad_f, const hiopMatrix& jac_c, 
   // [ rhsc ] = - [ J_c   0 ] [ vecx ] 
   // [ rhsd ]     [ J_d   I ] [ vecd ]
   // [vecx,vecd] = - [ -\nabla f(xk) + zk_l-zk_u, - vk_l + vk_u]. 
-  hiopVectorPar& vecx = *_vec_n;
+  hiopVector& vecx = *_vec_n;
   vecx.copyFrom(grad_f);
   vecx.axpy(-1.0, *iter.get_zl());
   vecx.axpy( 1.0, *iter.get_zu());
@@ -254,7 +255,7 @@ int hiopDualsLsqUpdate::factorizeMat(hiopMatrixDense& M)
   return info;
 }
 
-int hiopDualsLsqUpdate::solveWithFactors(hiopMatrixDense& M, hiopVectorPar& r)
+int hiopDualsLsqUpdate::solveWithFactors(hiopMatrixDense& M, hiopVector& r)
 {
 #ifdef HIOP_DEEPCHECKS
   assert(M.m()==M.n());

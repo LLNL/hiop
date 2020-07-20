@@ -25,7 +25,7 @@ namespace hiop
     {
     }
 
-    void writeRhsToFile(const hiopVectorPar& rhs, const int& counter)
+    void writeRhsToFile(const hiopVector& rhs, const int& counter)
     {
 #ifdef HIOP_USE_MPI
       if(_master_rank>=0 && _master_rank != _nlp->get_rank()) return;
@@ -48,7 +48,7 @@ namespace hiop
       fprintf(f, "\n");
       fclose(f);
     }
-    inline void writeSolToFile(const hiopVectorPar& sol, const int& counter)
+    inline void writeSolToFile(const hiopVector& sol, const int& counter)
     { 
       writeRhsToFile(sol, counter); 
     }
