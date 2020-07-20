@@ -65,7 +65,7 @@
 #include <hiopVector.hpp>
 #include "testBase.hpp"
 
-namespace hiop::tests {
+namespace hiop { namespace tests {
 
 /**
  * @brief Collection of tests for abstract hiopVector implementations.
@@ -1253,4 +1253,4 @@ protected:
   virtual bool reduceReturn(int failures, hiop::hiopVector* x) = 0;
 };
 
-} // namespace hiop::tests
+}} // namespace hiop::tests
