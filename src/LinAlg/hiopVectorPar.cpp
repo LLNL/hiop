@@ -165,7 +165,7 @@ void hiopVectorPar::startingAtCopyFromStartingAt(int start_idx_dest,
   assert((start_idx_src>=0 && start_idx_src<v.n_local_) || v.n_local_==0);
 
   int howManyToCopy = this->n_local_ - start_idx_dest;
-  const int howManyToCopySrc = v.n_local_-start_idx_dest;
+  const int howManyToCopySrc = v.n_local_-start_idx_src;
   assert(howManyToCopy <= howManyToCopySrc);
 
   //just to be safe when not NDEBUG
