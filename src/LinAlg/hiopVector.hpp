@@ -74,8 +74,17 @@ public:
   /// @brief Copy v in 'this' starting at start_index_in_src in  'this'. */
   virtual void copyFromStarting(int start_index_in_src, const hiopVector& v) = 0;
 
-  /// @brief copy from 'dest' starting at 'start_idx_dest' to 'this' starting at 'start_idx_src'
-  virtual void startingAtCopyFromStartingAt(int start_idx_src, const hiopVector& dest, int start_idx_dest) = 0;
+  /*
+   * @brief Copy from 'v' starting at 'start_idx_src' to 'this' starting at 'start_idx_dest'
+   *
+   * Elements are copied into 'this' till the end of the 'this' is reached, more exactly a number 
+   * of lenght(this) - start_idx_dest elements.
+   *
+   * Precondition: The method expects that in 'v' there are at least as many elements starting 
+   * 'start_idx_src' as 'this' has starting at start_idx_dest, or in other words,
+   * length(this) - start_idx_dest <= length(v) - start_idx_src
+   */
+  virtual void startingAtCopyFromStartingAt(int start_idx_dest, const hiopVector& v, int start_idx_src) = 0;
 
   /// @brief Copy 'this' to double array, which is assumed to be at least of 'n_local_' size.
   virtual void copyTo(double* dest) const = 0;
