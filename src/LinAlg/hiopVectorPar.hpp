@@ -70,19 +70,34 @@ public:
   /// @brief Copy the 'n' elements of v starting at 'start_index_in_src' in 'this'
   virtual void copyFromStarting(int start_index_in_src, const double* v, int n);
   virtual void copyFromStarting(int start_index_in_src, const hiopVector& v);
-  /// @brief copy 'dest' starting at 'start_idx_dest' to 'this' starting at 'start_idx_src'
-  virtual void startingAtCopyFromStartingAt(int start_idx_src, const hiopVector& v, int start_idx_dest);
+  
+  /*
+   * @brief Copy from 'v' starting at 'start_idx_src' to 'this' starting at 'start_idx_dest'
+   *
+   * Elements are copied into 'this' till the end of the 'this' is reached, more exactly a number 
+   * of lenght(this) - start_idx_dest elements are copied.
+   *
+   * Precondition: The method expects that in 'v' there are at least as many elements starting 
+   * 'start_idx_src' as 'this' has starting at 'start_idx_dest', or in other words,
+   * length(this) - start_idx_dest <= length(v) - start_idx_src
+   */
+  virtual void startingAtCopyFromStartingAt(int start_idx_dest, const hiopVector& v, int start_idx_src);
 
   virtual void copyTo(double* dest) const;
   virtual void copyToStarting(int start_index_in_src, hiopVector& v);
   /// @brief Copy 'this' to v starting at start_index in 'v'.
   virtual void copyToStarting(hiopVector& v, int start_index_in_dest);
+  
   /**
-   * @brief copy 'this' (source) starting at 'start_idx_in_src' to 'dest' starting at index 'int start_idx_dest' 
+   * @brief copy 'this' (source) starting at 'start_idx_in_src' to 'dest' starting at index 'start_idx_dest' 
+   *
    * If num_elems>=0, 'num_elems' will be copied; if num_elems<0, elements will be copied till the end of
    * either source ('this') or destination ('dest') is reached
    */
-  virtual void startingAtCopyToStartingAt(int start_idx_in_src, hiopVector& dest, int start_idx_dest, int num_elems=-1) const;
+  virtual void startingAtCopyToStartingAt(int start_idx_in_src,
+					  hiopVector& dest,
+					  int start_idx_dest,
+					  int num_elems=-1) const;
 
   virtual double twonorm() const;
   virtual double dotProductWith( const hiopVector& v ) const;

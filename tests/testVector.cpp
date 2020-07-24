@@ -127,7 +127,7 @@ int main(int argc, char** argv)
     if (numRanks == 1)
     {
       fail += test.vectorCopyFromStarting(x, y, rank);
-      fail += test.vectorStartingAtCopyFromStartingAt(x, y, rank);
+      fail += test.vectorStartingAtCopyFromStartingAt(x_smaller, x, rank);
       fail += test.vectorCopyToStarting(x, x_smaller, rank);
       fail += test.vectorStartingAtCopyToStartingAt(x, x_smaller, rank);
     }
