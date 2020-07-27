@@ -27,6 +27,8 @@ namespace hiop
     virtual void copyFrom(const hiopMatrixComplexDense& dm);
     virtual void copyFrom(const std::complex<double>* buffer);
 
+    virtual void negate();
+    
     /* Copy 'n_rows' rows specified by 'rows_idxs' (array of size 'n_rows') from 'src' to 'this'
      * 
      * Preconditions

@@ -124,6 +124,12 @@ namespace hiop
     for(int j=0; j<n_local*m_local; j++) *(buf++)=c;
   }
 
+  void hiopMatrixComplexDense::negate()
+  {
+    auto buf=M[0];
+    for(int j=0; j<n_local*m_local; j++) buf[j] = - buf[j];
+  }
+
   void hiopMatrixComplexDense::timesVec(std::complex<double> beta_in,
 					std::complex<double>* ya_,
 					std::complex<double> alpha_in,

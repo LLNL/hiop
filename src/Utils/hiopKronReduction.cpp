@@ -65,13 +65,15 @@ namespace hiop
       delete map_nonaux_to_aux_;
       map_nonaux_to_aux_ = new hiopMatrixComplexDense(Yba->m(), Yba->n());
       linsolver_->solve(*Yba, *map_nonaux_to_aux_);
+
+      map_nonaux_to_aux_->negate();
       //Ybbinv_Yba.print();
       delete Ybb;
       delete linsolver_;
       linsolver_ = NULL;
 
       //Ybus_red = - Yab*(Ybb\Yba)
-      Yba->transTimesMat(0.0, Ybus_red, -1.0, *map_nonaux_to_aux_);
+      Yba->transTimesMat(0.0, Ybus_red, 1.0, *map_nonaux_to_aux_);
       delete Yba;
       
       Ybus_red.addSparseMatrix(std::complex<double>(1.0, 0.0), *Yaa);
