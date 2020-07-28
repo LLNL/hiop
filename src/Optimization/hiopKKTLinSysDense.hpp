@@ -51,6 +51,7 @@
 
 #include "hiopKKTLinSys.hpp"
 #include "hiopLinSolver.hpp"
+#include "hiopLinSolverIndefDenseMagma.hpp"
 
 #include "hiopCSR_IO.hpp"
 
@@ -104,7 +105,7 @@ public:
 
       if(nlp_->options->GetString("compute_mode")=="hybrid") {
 #ifdef HIOP_USE_MAGMA
-	linSys = new hiopLinSolverIndefDenseMagma(n, nlp_);
+	linSys = new hiopLinSolverIndefDenseMagmaNopiv(n, nlp_);
 	nlp_->log->printf(hovScalars,
 			  "LinSysDenseXYcYd: instantiating Magma for a matrix of size %d\n",
 			  n);
@@ -341,7 +342,7 @@ public:
       if(nlp_->options->GetString("compute_mode")=="hybrid") {
 #ifdef HIOP_USE_MAGMA
 	nlp_->log->printf(hovScalars, "LinSysDenseDXYcYd: instantiating Magma for a matrix of size %d\n", n);
-	linSys = new hiopLinSolverIndefDenseMagma(n, nlp_);
+	linSys = new hiopLinSolverIndefDenseMagmaNopiv(n, nlp_);
 #else
 	nlp_->log->printf(hovScalars, "LinSysDenseXDYcYd: instantiating Lapack for a matrix of size %d\n", n);
 	linSys = new hiopLinSolverIndefDenseLapack(n, nlp_);

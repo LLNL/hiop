@@ -8,6 +8,11 @@ add_library(hiopLinAlg
         hiopMatrixComplexSparseTriplet.cpp)
 target_link_libraries(hiopLinAlg PUBLIC hiopOptimization hiop_math)
 
+if(HIOP_USE_MAGMA)
+  add_library(hiopLinAlgGPU OBJECT hiopLinSolverIndefDenseMagma.cpp)
+  target_sources(hiopLinAlg PUBLIC $<TARGET_OBJECTS:hiopLinAlgGPU>)
+endif(HIOP_USE_MAGMA)
+
 if(HIOP_WITH_KRON_REDUCTION)
   add_library(hiopLinAlgZ OBJECT hiopLinSolverUMFPACKZ.cpp)
   target_link_libraries(hiopLinAlgZ PUBLIC hiop_math)

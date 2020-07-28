@@ -48,6 +48,7 @@
 
 #include "hiopKKTLinSysMDS.hpp"
 #include "hiopLinSolverIndefDenseMagma.hpp"
+
 namespace hiop
 {
 
@@ -104,14 +105,24 @@ namespace hiop
 
       if(nlp_->options->GetString("compute_mode")=="hybrid") {
 #ifdef HIOP_USE_MAGMA
-	nlp_->log->printf(hovScalars, "LinSysMDSXYcYd: Magma for a matrix of size %d\n", n);
-	linSys_ = new hiopLinSolverIndefDenseMagmaDev(n, nlp_);
+	nlp_->log->printf(hovWarning, 
+			  "KKT_MDS_XYcYd linsys: Magma for a matrix of size %d (%d cons)\n", 
+			  n, neq+nineq);
+	auto dev = false;
+	//auto dev=true;
+	if(dev) {
+	  linSys_ = new hiopLinSolverIndefDenseMagmaBuKa(n, nlp_);
+	} else {
+	  hiopLinSolverIndefDenseMagmaNopiv* p = new hiopLinSolverIndefDenseMagmaNopiv(n, nlp_);
+	  linSys_ = p;
+	  p->set_fake_inertia(neq + nineq);
+	}
 #else
-	nlp_->log->printf(hovScalars, "LinSysMDSXYcYd: Lapack for a matrix of size %d\n", n);
+	nlp_->log->printf(hovScalars, "KKT_MDS_XYcYd linsys: Lapack for a matrix of size %d\n", n);
 	linSys_ = new hiopLinSolverIndefDenseLapack(n, nlp_);
 #endif
       } else {
-	nlp_->log->printf(hovScalars, "LinSysMDSXYcYd: Lapack for a matrix of size %d\n", n);
+	nlp_->log->printf(hovScalars, "KKT_MDS_XYcYd linsys: Lapack for a matrix of size %d\n", n);
 	linSys_ = new hiopLinSolverIndefDenseLapack(n, nlp_);
       }
     }
@@ -124,7 +135,11 @@ namespace hiop
     nlp_->log->write("Dx in KKT", *Dx_, hovMatrices);
 
     hiopMatrixDense& Msys = linSys_->sysMatrix();
-
+    if(perf_report_) {
+      nlp_->log->printf(hovSummary, 
+			"KKT_MDS_XYcYd linsys: Low-level linear system size: %d\n", 
+			Msys.n());
+    }
     //
     //factorization + inertia correction if needed
     //
@@ -133,7 +148,8 @@ namespace hiop
 
     double delta_wx, delta_wd, delta_cc, delta_cd;
     if(!perturb_calc_->compute_initial_deltas(delta_wx, delta_wd, delta_cc, delta_cd)) {
-      nlp_->log->printf(hovWarning, "XDycYd linsys: IC perturbation on new linsys failed.\n");
+      nlp_->log->printf(hovWarning, 
+			"KKT_MDS_XYcYd linsys: IC perturbation on new linsys failed.\n");
       return false;
     }
     
@@ -145,7 +161,8 @@ namespace hiop
 
       assert(delta_wx == delta_wd && "something went wrong with IC");
       assert(delta_cc == delta_cd && "something went wrong with IC");
-      nlp_->log->printf(hovScalars, "XYcYdMDS linsys: delta_w=%12.5e delta_c=%12.5e (ic %d)\n",
+      nlp_->log->printf(hovWarning, 
+			"KKT_MDS_XYcYd linsys: delta_w=%12.5e delta_c=%12.5e (ic %d)\n",
 			delta_wx, delta_cc, num_ic_cor);
     
       //
@@ -174,7 +191,7 @@ namespace hiop
 	//Hxs +=  diag(HessMDS->sp_mat());
 	//todo: make sure we check that the HessMDS->sp_mat() is a diagonal
 	HessMDS_->sp_mat()->startingAtAddSubDiagonalToStartingAt(0, alpha, *Hxs_, 0);
-	nlp_->log->write("Hxs in KKT", *Hxs_, hovMatrices);
+	nlp_->log->write("Hxs in KKT_MDS_X", *Hxs_, hovMatrices);
 	
 	//add - Jac_c_sp * (Hxs)^{-1} Jac_c_sp^T to diagonal block linSys starting at (nxd, nxd)
 	alpha = -1.;
@@ -219,7 +236,7 @@ namespace hiop
 	Msys.addSubDiagonal(alpha, nxd+neq, *Dd_inv_);
 	Msys.addSubDiagonal(nxd+neq, nineq, -delta_cd);
 	
-	nlp_->log->write("KKT MDS XdenseDYcYd Linsys:", Msys, hovMatrices);
+	nlp_->log->write("KKT_MDS_XYcYd linsys:", Msys, hovMatrices);
       } // end of update of the linear system
       
       //write matrix to file if requested
@@ -250,40 +267,44 @@ namespace hiop
 	  }
 	}
       }
-
       nlp_->runStats.kkt.tmUpdateInnerFact.stop();
 
       if(n_neg_eig_11 < 0) {
-	nlp_->log->printf(hovScalars, "Detected null eigenvalues in (1,1) sparse block.\n");
+	nlp_->log->printf(hovWarning, 
+			  "KKT_MDS_XYcYd linsys: Detected null eigenvalues in (1,1) sparse block.\n");
 	assert(n_neg_eig_11 == -1);
 	n_neg_eig = -1;
       } else if(n_neg_eig_11 > 0) {
 	n_neg_eig += n_neg_eig_11;
-	nlp_->log->printf(hovScalars, "Detected negative eigenvalues in (1,1) sparse block.\n");
+	nlp_->log->printf(hovWarning, 
+			  "KKT_MDS_XYcYd linsys: Detected negative eigenvalues in (1,1) sparse block.\n");
       }
 
      if(Jac_cMDS_->m()+Jac_dMDS_->m()>0) {
 	if(n_neg_eig < 0) {
 	  //matrix singular
-	  nlp_->log->printf(hovScalars, "XYcYdMDS linsys is singular.\n");
+	  nlp_->log->printf(hovWarning, "KKT_MDS_XYcYdlinsys is singular.\n");
 
 	  if(!perturb_calc_->compute_perturb_singularity(delta_wx, delta_wd, delta_cc, delta_cd)) {
-	    nlp_->log->printf(hovWarning, "XYcYdMDS linsys: computing singularity perturbation failed.\n");
+	    nlp_->log->printf(hovWarning, 
+			      "KKT_MDS_XYcYd linsys: computing singularity perturbation failed.\n");
 	    return false;
 	  }
 	  
-	} else if(n_neg_eig != Jac_cMDS_->m()+Jac_dMDS_->m()) {
+	} else if(n_neg_eig != Jac_cMDS_->m() + Jac_dMDS_->m()) {
 	  //wrong inertia
-	  nlp_->log->printf(hovScalars, "XYcYdMDS linsys negative eigs mismatch: has %d expected %d.\n",
+	  nlp_->log->printf(hovWarning, 
+			    "KKT_MDS_XYcYd linsys negative eigs mismatch: has %d expected %d.\n",
 			    n_neg_eig,  Jac_cMDS_->m()+Jac_dMDS_->m());
 
 	  
-	  if(n_neg_eig < Jac_cMDS_->m()+Jac_dMDS_->m())
-	    nlp_->log->printf(hovWarning, "XYcYdMDS linsys negative eigs abnormality\n");
+	  if(n_neg_eig < Jac_cMDS_->m() + Jac_dMDS_->m())
+	    nlp_->log->printf(hovWarning, "KKT_MDS_XYcYd linsys negative eigs abnormality\n");
 
 
 	  if(!perturb_calc_->compute_perturb_wrong_inertia(delta_wx, delta_wd, delta_cc, delta_cd)) {
-	    nlp_->log->printf(hovWarning, "XYcYdMDS linsys: computing inertia perturbation failed.\n");
+	    nlp_->log->printf(hovWarning, 
+			      "KKT_MDS_XYcYd linsys: computing inertia perturbation failed.\n");
 	    return false;
 	  }
 	  
@@ -293,10 +314,12 @@ namespace hiop
 	}
      } else if(n_neg_eig != 0) {
        //correct for wrong intertia
-       nlp_->log->printf(hovScalars,  "XYcYdMDS linsys has wrong inertia (no constraints): factoriz "
+       nlp_->log->printf(hovScalars,  
+			 "KKT_MDS_XYcYd linsys has wrong inertia (no constraints): factoriz "
 			 "ret code/num negative eigs %d\n.", n_neg_eig);
        if(!perturb_calc_->compute_perturb_wrong_inertia(delta_wx, delta_wd, delta_cc, delta_cd)) {
-	 nlp_->log->printf(hovWarning, "XYcYdMDS linsys: computing inertia perturbation failed (2).\n");
+	 nlp_->log->printf(hovWarning, 
+			   "KKT_MDS_XYcYd linsys: computing inertia perturbation failed (2).\n");
 	 return false;
        }
        
@@ -313,7 +336,7 @@ namespace hiop
     if(num_ic_cor>max_ic_cor) {
       
       nlp_->log->printf(hovError,
-			"XYcYdMDS max number (%d) of inertia corrections reached.\n",
+			"KKT_MDS_XYcYd linsys: max number (%d) of inertia corrections reached.\n",
 			max_ic_cor);
       return false;
     }
@@ -339,9 +362,9 @@ namespace hiop
     if(rhs_ == NULL) rhs_ = new hiopVectorPar(nxde+nyc+nyd);
     if(_buff_xs_==NULL) _buff_xs_ = new hiopVectorPar(nxsp);
 
-    nlp_->log->write("RHS KKT MDS XDycYd rx: ", rx,  hovIteration);
-    nlp_->log->write("RHS KKT MDS XDycYd ryc:", ryc, hovIteration);
-    nlp_->log->write("RHS KKT MDS XDycYd ryd:", ryd, hovIteration);
+    nlp_->log->write("RHS KKT_MDS_XYcYd rx: ", rx,  hovIteration);
+    nlp_->log->write("RHS KKT_MDS_XYcYd ryc:", ryc, hovIteration);
+    nlp_->log->write("RHS KKT_MDS_XYcYd ryd:", ryd, hovIteration);
 
     hiopVectorPar& rxs = *_buff_xs_;
     //rxs = Hxs^{-1} * rx_sparse 
@@ -380,7 +403,8 @@ namespace hiop
     nlp_->runStats.linsolv.end_linsolve();
 
     if(perf_report_) {
-      nlp_->log->printf(hovSummary, "%s", nlp_->runStats.linsolv.get_summary_last_solve().c_str());
+      nlp_->log->printf(hovSummary, "(summary for linear solver from KKT_MDS_XYcYd)\n%s", 
+			nlp_->runStats.linsolv.get_summary_last_solve().c_str());
     }
     
     if(write_linsys_counter_>=0) csr_writer_.writeSolToFile(*rhs_, write_linsys_counter_);
@@ -406,9 +430,9 @@ namespace hiop
     //copy to dx
     dxs.startingAtCopyToStartingAt(0, dx, 0);
 
-    nlp_->log->write("SOL KKT MDS XYcYd dx: ", dx,  hovMatrices);
-    nlp_->log->write("SOL KKT MDS XYcYd dyc:", dyc, hovMatrices);
-    nlp_->log->write("SOL KKT MDS XYcYd dyd:", dyd, hovMatrices);
+    nlp_->log->write("SOL KKT_MDS_XYcYd dx: ", dx,  hovMatrices);
+    nlp_->log->write("SOL KKT_MDS_XYcYd dyc:", dyc, hovMatrices);
+    nlp_->log->write("SOL KKT_MDS_XYcYd dyd:", dyd, hovMatrices);
   
     nlp_->runStats.kkt.tmSolveRhsManip.stop();
   }
