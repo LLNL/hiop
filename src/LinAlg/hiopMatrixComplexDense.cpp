@@ -127,7 +127,7 @@ namespace hiop
   void hiopMatrixComplexDense::negate()
   {
     auto buf=M[0];
-    for(int j=0; j<n_local*m_local; j++) buf[j] = - buf[j];
+    for(int j=0; j<n_local_*m_local_; j++) buf[j] = - buf[j];
   }
 
   void hiopMatrixComplexDense::timesVec(std::complex<double> beta_in,
@@ -136,7 +136,7 @@ namespace hiop
 					const std::complex<double>* xa_in) const
   {
     char fortranTrans='T';
-    int MM=m_local, NN=n_local, incx_y=1;  
+    int MM=m_local_, NN=n_local_, incx_y=1;  
 
     dcomplex beta;
     beta.re = beta_in.real();
@@ -150,7 +150,7 @@ namespace hiop
     const dcomplex* xa = reinterpret_cast<const dcomplex*>(xa_in);
     dcomplex* Ma = reinterpret_cast<dcomplex*>(&M[0][0]);
 #ifdef HIOP_USE_MPI
-    assert(n_local == n_global && "timesVec for distributed matrices not supported/not needed");
+    assert(n_local_ == n_global_ && "timesVec for distributed matrices not supported/not needed");
 #endif
     
     if( MM != 0 && NN != 0 ) {
