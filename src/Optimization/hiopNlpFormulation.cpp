@@ -1096,6 +1096,10 @@ bool hiopNlpMDS::eval_Hess_Lagr(const double* x, bool new_x, const double& obj_f
 {
   hiopMatrixSymBlockDiagMDS* pHessL = dynamic_cast<hiopMatrixSymBlockDiagMDS*>(&Hess_L);
   assert(pHessL);
+
+  runStats.tmEvalHessL.start();
+
+  bool bret = false;
   if(pHessL) {
     
     if(n_cons_eq + n_cons_ineq != _buf_lambda->get_size()) {
@@ -1108,18 +1112,24 @@ bool hiopNlpMDS::eval_Hess_Lagr(const double* x, bool new_x, const double& obj_f
     _buf_lambda->copyFromStarting(n_cons_eq, lambda_ineq, n_cons_ineq);
     
     int nnzHSS = pHessL->sp_nnz(), nnzHSD = 0;
-    bool bret = interface.eval_Hess_Lagr(n_vars, n_cons, x, new_x, 
-					 obj_factor, _buf_lambda->local_data(), new_lambdas, 
-					 pHessL->n_sp(), pHessL->n_de(),
-					 nnzHSS, pHessL->sp_irow(), pHessL->sp_jcol(), pHessL->sp_M(),
-					 pHessL->de_local_data(),
-					 nnzHSD, NULL, NULL, NULL);
+    
+    bret = interface.eval_Hess_Lagr(n_vars, n_cons, x, new_x, 
+				    obj_factor, _buf_lambda->local_data(), new_lambdas, 
+				    pHessL->n_sp(), pHessL->n_de(),
+				    nnzHSS, pHessL->sp_irow(), pHessL->sp_jcol(), pHessL->sp_M(),
+				    pHessL->de_local_data(),
+				    nnzHSD, NULL, NULL, NULL);
     assert(nnzHSD==0);
     assert(nnzHSS==pHessL->sp_nnz());
-    return bret;
+    
   } else {
-    return false;
+    bret = false;
   }
+
+  runStats.tmEvalHessL.stop();
+  runStats.nEvalHessL++;
+  
+  return bret;
 }
 
 bool hiopNlpMDS::finalizeInitialization()
