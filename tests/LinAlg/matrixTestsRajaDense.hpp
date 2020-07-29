@@ -47,13 +47,12 @@
 // product endorsement purposes.
 
 /**
- * @file matrixTestsDense.hpp
+ * @file MatrixTestsRajaDense.hpp
  *
- * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>,  PNNL
+ * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
  * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
  *
  */
-
 #pragma once
 
 #include "matrixTests.hpp"
@@ -61,11 +60,11 @@
 
 namespace hiop { namespace tests {
 
-class MatrixTestsDense : public MatrixTests
+class MatrixTestsRajaDense : public MatrixTests
 {
 public:
-  MatrixTestsDense() {}
-  virtual ~MatrixTestsDense(){}
+  MatrixTestsRajaDense() {}
+  virtual ~MatrixTestsRajaDense(){}
 
 private:
   virtual void setLocalElement(
@@ -74,11 +73,11 @@ private:
       local_ordinal_type j,
       real_type val) override;
   virtual void setLocalElement(
-      hiop::hiopVector *_x,
+      hiop::hiopVector* x,
       const local_ordinal_type i,
       const real_type val) override;
   virtual void setLocalRow(
-      hiop::hiopMatrixDense* A,
+      hiop::hiopMatrixDense *A,
       const local_ordinal_type row,
       const real_type val) override;
   virtual real_type getLocalElement(const hiop::hiopMatrixDense* a, local_ordinal_type i, local_ordinal_type j) override;

@@ -46,46 +46,71 @@
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or 
 // product endorsement purposes.
 
+/**
+ * @file hiopMatrixRajaDense.hpp
+ *
+ * @author Jake Ryan <jake.ryan@pnnl.gov>, PNNL
+ * @author Robert Rutherford <robert.rutherford@pnnl.gov>, PNNL
+ * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
+ * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
+ *
+ */
 #pragma once
-
 #include <cstddef>
 #include <cstdio>
-#include <cassert>
 
-#include <hiopMPI.hpp>
-#include "hiopMatrix.hpp"
+#include <umpire/Allocator.hpp>
+#include <umpire/ResourceManager.hpp>
+
+#include "hiopMatrixDense.hpp"
 
 namespace hiop
 {
-class hiopMatrixDense : public hiopMatrix
+
+/** 
+ * @brief Dense matrix stored row-wise and distributed column-wise
+ * 
+ * Local methods (not MPI distributed)
+ * timesMat
+ * addDiagonal
+ * addSubDiagonal
+ * addToSymDenseMatrixUpperTriangle
+ * addToSymDenseMatrixUpperTriangle
+ * addUpperTriangleToSymDenseMatrixUpperTriangle
+ * assertSymmetry
+ * copyBlockFromMatrix
+ * copyFromMatrixBlock
+ */
+class hiopMatrixRajaDense : public hiopMatrixDense
 {
 public:
-  hiopMatrixDense(const long long& m, const long long& glob_n, MPI_Comm comm = MPI_COMM_SELF)
-      : m_local_(m)
-      , n_global_(glob_n)
-      , comm_(comm)
-  {
-  }
-  virtual ~hiopMatrixDense()
-  {
-  }
 
-  virtual void setToZero(){assert(false && "not implemented in base class");}
-  virtual void setToConstant(double c){assert(false && "not implemented in base class");}
-  virtual void copyFrom(const hiopMatrixDense& dm){assert(false && "not implemented in base class");}
-  virtual void copyFrom(const double* buffer){assert(false && "not implemented in base class");}
+  hiopMatrixRajaDense(const long long& m, 
+		  const long long& glob_n, 
+		  long long* col_part=NULL, 
+		  MPI_Comm comm=MPI_COMM_SELF, 
+		  const long long& m_max_alloc=-1);
+  virtual ~hiopMatrixRajaDense();
+
+  virtual void setToZero();
+  virtual void setToConstant(double c);
+  virtual void copyFrom(const hiopMatrixDense& dm);
+  virtual void copyFrom(const double* buffer);
 
   virtual void timesVec(double beta,  hiopVector& y,
-			double alpha, const hiopVector& x) const{assert(false && "not implemented in base class");}
+			double alpha, const hiopVector& x) const;
+
   /* same as above for mostly internal use - avoid using it */
   virtual void timesVec(double beta,  double* y,
-			double alpha, const double* x) const{assert(false && "not implemented in base class");}
+			double alpha, const double* x) const;
 
   virtual void transTimesVec(double beta,   hiopVector& y,
-			     double alpha, const hiopVector& x) const{assert(false && "not implemented in base class");}
+			     double alpha, const hiopVector& x) const;
+
   /* same as above for mostly for internal use - avoid using it */
   virtual void transTimesVec(double beta,   double* y,
-			     double alpha, const double* x) const{assert(false && "not implemented in base class");}
+			     double alpha, const double* x) const;
+
   /**
    * @brief W = beta*W + alpha*this*X 
    *
@@ -93,13 +118,13 @@ public:
    * of distributed matrices needed by HiOp internally can be done efficiently in parallel using the 
    * 'timesMatTrans' and 'transTimesMat' methods below.
    */ 
-  virtual void timesMat(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const{assert(false && "not implemented in base class");}
+  virtual void timesMat(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const;
   
   /**
    * @brief W = beta*W + alpha*this*X 
    * Contains the implementation internals of the above; can be used on its own.
    */
-  virtual void timesMat_local(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const{assert(false && "not implemented in base class");}
+  virtual void timesMat_local(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const;
 
   /**
    * @brief W = beta*W + alpha*this^T*X 
@@ -108,7 +133,7 @@ public:
    *
    * Note: no inter-process communication occurs in the parallel case
    */
-  virtual void transTimesMat(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const{assert(false && "not implemented in base class");}
+  virtual void transTimesMat(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const;
 
   /** 
    * @brief W = beta*W + alpha*this*X^T 
@@ -116,13 +141,13 @@ public:
    *
    * 'this' and 'X' can be distributed, in which case communication will occur.
    */
-  virtual void timesMatTrans(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const{assert(false && "not implemented in base class");}
+  virtual void timesMatTrans(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const;
   /* Contains dgemm wrapper needed by the above */
-  virtual void timesMatTrans_local(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const{assert(false && "not implemented in base class");}
+  virtual void timesMatTrans_local(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const;
 
-  virtual void addDiagonal(const double& alpha, const hiopVector& d_){assert(false && "not implemented in base class");}
-  virtual void addDiagonal(const double& value){assert(false && "not implemented in base class");}
-  virtual void addSubDiagonal(const double& alpha, long long start_on_dest_diag, const hiopVector& d_){assert(false && "not implemented in base class");}
+  virtual void addDiagonal(const double& alpha, const hiopVector& d_);
+  virtual void addDiagonal(const double& value);
+  virtual void addSubDiagonal(const double& alpha, long long start_on_dest_diag, const hiopVector& d_);
   
   /** 
    * @brief add to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements of
@@ -130,10 +155,10 @@ public:
    * when num_elems>=0, or the remaining elems on 'd_' starting at 'start_on_src_vec'.
    */
   virtual void addSubDiagonal(int start_on_dest_diag, const double& alpha, 
-			      const hiopVector& d_, int start_on_src_vec, int num_elems=-1){assert(false && "not implemented in base class");}
-  virtual void addSubDiagonal(int start_on_dest_diag, int num_elems, const double& c){assert(false && "not implemented in base class");}
+			      const hiopVector& d_, int start_on_src_vec, int num_elems=-1);
+  virtual void addSubDiagonal(int start_on_dest_diag, int num_elems, const double& c);
   
-  virtual void addMatrix(double alpha, const hiopMatrix& X){assert(false && "not implemented in base class");}
+  virtual void addMatrix(double alpha, const hiopMatrix& X);
 
   /**
    * @brief block of W += alpha*this
@@ -143,7 +168,8 @@ public:
    * @pre W.n() == W.m()
    */
   virtual void addToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start, 
-						double alpha, hiopMatrixDense& W) const{assert(false && "not implemented in base class");}
+						double alpha, hiopMatrixDense& W) const;
+
   /**
    * @brief block of W += alpha*transpose(this)
    * For efficiency, only upper triangular matrix is updated since this will be eventually sent to LAPACK
@@ -152,7 +178,7 @@ public:
    * @pre W.n() == W.m()
    */
   virtual void transAddToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start, 
-						     double alpha, hiopMatrixDense& W) const{assert(false && "not implemented in base class");}
+						     double alpha, hiopMatrixDense& W) const;
 
   /**
    * @brief diagonal block of W += alpha*this with 'diag_start' indicating the diagonal entry of W where
@@ -165,29 +191,22 @@ public:
    * @pre W.n() == W.m()
    */
   virtual void addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start, 
-							     double alpha, hiopMatrixDense& W) const
-  {
-    assert(false && "not implemented in base class");
-  }
+							     double alpha, hiopMatrixDense& W) const;
 
-  virtual double max_abs_value(){assert(false && "not implemented in base class"); return -1.0;}
+  virtual double max_abs_value();
 
-  virtual bool isfinite() const{assert(false && "not implemented in base class"); return false;}
+  virtual bool isfinite() const;
   
-  virtual void print(FILE* f=NULL, const char* msg=NULL, int maxRows=-1, int maxCols=-1, int rank=-1) const
-  {
-    assert(false && "not implemented in base class");
-  }
+  //virtual void print(int maxRows=-1, int maxCols=-1, int rank=-1) const;
+  virtual void print(FILE* f=NULL, const char* msg=NULL, int maxRows=-1, int maxCols=-1, int rank=-1) const;
 
-  virtual hiopMatrixDense* alloc_clone() const=0;
-  virtual hiopMatrixDense* new_copy() const=0;
+  virtual hiopMatrixDense* alloc_clone() const;
+  virtual hiopMatrixDense* new_copy() const;
 
-  virtual void appendRow(const hiopVector& row){assert(false && "not implemented in base class");}
+  void appendRow(const hiopVector& row);
+
   /// @brief copies the first 'num_rows' rows from 'src' to 'this' starting at 'row_dest'
-  virtual void copyRowsFrom(const hiopMatrixDense& src, int num_rows, int row_dest) 
-  {
-    assert(false && "not implemented in base class");
-  }
+  void copyRowsFrom(const hiopMatrixDense& src, int num_rows, int row_dest);
   
   /**
    * @brief Copy 'n_rows' rows specified by 'rows_idxs' (array of size 'n_rows') from 'src' to 'this'
@@ -196,55 +215,79 @@ public:
    * @pre 'src' and 'this' must have same number of columns
    * @pre number of rows in 'src' must be at least the number of rows in 'this'
    */
-  virtual void copyRowsFrom(const hiopMatrix& src_gen, const long long* rows_idxs, long long n_rows){assert(false && "not implemented in base class");}
+  void copyRowsFrom(const hiopMatrix& src_gen, const long long* rows_idxs, long long n_rows);
   
   /// @brief copies 'src' into this as a block starting at (i_block_start,j_block_start)
-  virtual void copyBlockFromMatrix(const long i_block_start, const long j_block_start,
-			   const hiopMatrixDense& src){assert(false && "not implemented in base class");}
+  void copyBlockFromMatrix(const long i_block_start, const long j_block_start,
+			   const hiopMatrixDense& src);
   
   /**
    * @brief overwrites 'this' with 'src''s block that starts at (i_src_block_start,j_src_block_start) 
    * and has dimensions of 'this'
    */
-  virtual void copyFromMatrixBlock(const hiopMatrixDense& src, const int i_src_block_start, const int j_src_block_start){assert(false && "not implemented in base class");}
+  void copyFromMatrixBlock(const hiopMatrixDense& src, const int i_src_block_start, const int j_src_block_start);
   /// @brief  shift<0 -> up; shift>0 -> down
-  virtual void shiftRows(long long shift){assert(false && "not implemented in base class");}
-  virtual void replaceRow(long long row, const hiopVector& vec){assert(false && "not implemented in base class");}
+  void shiftRows(long long shift);
+  void replaceRow(long long row, const hiopVector& vec);
   /// @brief copies row 'irow' in the vector 'row_vec' (sizes should match)
-  virtual void getRow(long long irow, hiopVector& row_vec){assert(false && "not implemented in base class");}
+  void getRow(long long irow, hiopVector& row_vec);
 #ifdef HIOP_DEEPCHECKS
-  virtual void overwriteUpperTriangleWithLower(){assert(false && "not implemented in base class");}
-  virtual void overwriteLowerTriangleWithUpper(){assert(false && "not implemented in base class");}
+  void overwriteUpperTriangleWithLower();
+  void overwriteLowerTriangleWithUpper();
 #endif
-  virtual long long get_local_size_n() const {assert(false && "not implemented in base class"); return -1;}
-  virtual long long get_local_size_m() const {assert(false && "not implemented in base class"); return -1;}
+  virtual long long get_local_size_n() const { return n_local_; }
+  virtual long long get_local_size_m() const { return m_local_; }
   virtual MPI_Comm get_mpi_comm() const { return comm_; }
 
   //TODO: this is not kosher!
-  virtual double** local_data() const {assert(false && "not implemented in base class"); return nullptr;}
-  virtual double*  local_buffer() const {assert(false && "not implemented in base class"); return nullptr;}
+  inline double** local_data() const {return M_; }
+  inline double*  local_buffer() const {return M_[0]; }
+  inline double*  local_buffer_dev() const {return M_dev_[0]; }
   //do not use this unless you sure you know what you're doing
-  virtual double** get_M(){assert(false && "not implemented in base class"); return nullptr;}
+  inline double** get_M() { return M_; }
 
   virtual long long m() const {return m_local_;}
   virtual long long n() const {return n_global_;}
 #ifdef HIOP_DEEPCHECKS
-  virtual bool assertSymmetry(double tol=1e-16) const
-  {
-    assert(false && "not implemented in base class");
-    return true;
-  }
+  virtual bool assertSymmetry(double tol=1e-16) const;
 #endif
-protected:
-  long long n_global_; //total / global number of columns
-  int m_local_;
-  MPI_Comm comm_;
-  int myrank_;
 
-protected:
-  hiopMatrixDense() {};
+  void copyToDev();
+  void copyFromDev();
+
+private:
+  mutable umpire::Allocator hostalloc_;
+  mutable umpire::Allocator devalloc_;
+  double* data_;      ///< pointer to host mirror of matrix data
+  double* data_dev_;  ///< pointer to memory space of matrix data
+  double** M_;        ///< array of pointers to matrix rows on host mirror
+  double** M_dev_;    ///< array of pointers to matrix rows on device
+  int n_local_;       ///< local number of columns
+  long long glob_jl_; ///< global index of first column in the local data block
+  long long glob_ju_; ///< global index of first column in the next data block
+
+  double* yglob_;
+  double* ya_host_;
+
+  mutable double* buff_mxnlocal_host_; ///< host data buffer
+
+  //this is very private do not touch :)
+  long long max_rows_;
+
+private:
+  hiopMatrixRajaDense() {};
   /** copy constructor, for internal/private use only (it doesn't copy the values) */
-  hiopMatrixDense(const hiopMatrixDense&){assert(false && "not implemented in base class");}
+  hiopMatrixRajaDense(const hiopMatrixRajaDense&);
+
+  inline double* new_mxnlocal_host_buff() const
+  {
+    if(buff_mxnlocal_host_ == NULL)
+    {
+      buff_mxnlocal_host_ = static_cast<double*>(hostalloc_.allocate(sizeof(double)*max_rows_*n_local_));
+    }
+    return buff_mxnlocal_host_;
+  }
+
 };
 
 } // namespace hiop
