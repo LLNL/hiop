@@ -212,9 +212,11 @@ public:
       //<< "Total LinSolve time=" << tmWholeLinSolve.getElapsedTime() << " sec " 
     //<< std::endl;
 
-    ss << "(Last) Lin Solve: fact " << tmFactTime.getElapsedTime() << "s   flops " << flopsFact
+    ss << "(Last) Lin Solve: fact " << tmFactTime.getElapsedTime() << "s" 
+       << " at " << flopsFact << "TFlops" 
        << "   inertia " << tmInertiaComp.getElapsedTime() << "s" 
-       << "   triu. solves " << tmTriuSolves.getElapsedTime() << "s   flops " << flopsTriuSolves
+       << "   triu. solves " << tmTriuSolves.getElapsedTime() << "s"
+       << " at " << flopsTriuSolves << "TFlops"
        << "   device transfer " << tmDeviceTransfer.getElapsedTime() << "s"
        << std::endl;
 

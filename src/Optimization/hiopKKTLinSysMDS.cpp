@@ -108,7 +108,19 @@ namespace hiop
 	nlp_->log->printf(hovWarning, 
 			  "KKT_MDS_XYcYd linsys: Magma for a matrix of size %d (%d cons)\n", 
 			  n, neq+nineq);
-	auto dev = false;
+	//! todo
+	// once we get the desired functionality from magma this should be revisited to 
+	// allow deploying i. nopiv Magma + inertia correction and, if i. fails,
+	// deploying ii. Magma BunchKaufman + inertia correction
+	//
+	// for i. we need inertia calculation algorithm from the nopiv factors 
+	//
+	// Performance of ii. can be improved if 
+	//------------
+	// - Magma would have a GPU routine for computing inertia
+	// - triangular solves would be done on CPU
+
+	auto dev = true;
 	//auto dev=true;
 	if(dev) {
 	  linSys_ = new hiopLinSolverIndefDenseMagmaBuKa(n, nlp_);
@@ -161,7 +173,7 @@ namespace hiop
 
       assert(delta_wx == delta_wd && "something went wrong with IC");
       assert(delta_cc == delta_cd && "something went wrong with IC");
-      nlp_->log->printf(hovWarning, 
+      nlp_->log->printf(hovScalars, 
 			"KKT_MDS_XYcYd linsys: delta_w=%12.5e delta_c=%12.5e (ic %d)\n",
 			delta_wx, delta_cc, num_ic_cor);
     
@@ -283,7 +295,8 @@ namespace hiop
      if(Jac_cMDS_->m()+Jac_dMDS_->m()>0) {
 	if(n_neg_eig < 0) {
 	  //matrix singular
-	  nlp_->log->printf(hovWarning, "KKT_MDS_XYcYdlinsys is singular.\n");
+	  nlp_->log->printf(hovScalars, 
+			    "KKT_MDS_XYcYdlinsys is singular. Regularization will be attempted...\n");
 
 	  if(!perturb_calc_->compute_perturb_singularity(delta_wx, delta_wd, delta_cc, delta_cd)) {
 	    nlp_->log->printf(hovWarning, 
@@ -293,7 +306,7 @@ namespace hiop
 	  
 	} else if(n_neg_eig != Jac_cMDS_->m() + Jac_dMDS_->m()) {
 	  //wrong inertia
-	  nlp_->log->printf(hovWarning, 
+	  nlp_->log->printf(hovScalars, 
 			    "KKT_MDS_XYcYd linsys negative eigs mismatch: has %d expected %d.\n",
 			    n_neg_eig,  Jac_cMDS_->m()+Jac_dMDS_->m());
 
