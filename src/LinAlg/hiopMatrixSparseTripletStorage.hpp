@@ -91,7 +91,7 @@ namespace hiop {
       }
     }
 
-    //add elements with identical (i,j) and update nnz, irow, jcol, and values array accordingly
+    // add elements with identical (i,j) and update nnz, irow, jcol, and values array accordingly
     // Precondition: (irow,jcol) are assumed to be sorted (see sort_indexes())
     void sum_up_duplicates()
     {

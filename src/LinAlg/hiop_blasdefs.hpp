@@ -11,6 +11,7 @@
 #define ZAXPY   FC_GLOBAL(zaxpy, ZAXPY)
 #define DCOPY   FC_GLOBAL(dcopy, DCOPY)
 #define DGEMV   FC_GLOBAL(dgemv, DGEMV)
+#define ZGEMV   FC_GLOBAL(zgemv, ZGEMV)
 #define DGEMM   FC_GLOBAL(dgemm, DGEMM)
 #define DTRSM   FC_GLOBAL(dtrsm, DTRSM)
 #define DPOTRF  FC_GLOBAL(dpotrf, DPOTRF)
@@ -45,6 +46,8 @@ extern "C" void   ZAXPY(int* n, dcomplex* da, dcomplex* dx, int* incx, dcomplex*
 extern "C" void   DCOPY(int* n,  double* da, int* incx, double* dy, int* incy);
 extern "C" void   DGEMV(char* trans, int* m, int* n, double* alpha, double* a, int* lda,
 			const double* x, int* incx, double* beta, double* y, int* incy );
+extern "C" void   ZGEMV(char* trans, int* m, int* n, dcomplex* alpha, dcomplex* a, int* lda,
+			const dcomplex* x, int* incx, dcomplex* beta, dcomplex* y, int* incy );  
 /* C := alpha*op( A )*op( B ) + beta*C
  * op( A ) an m by k matrix, op( B ) a  k by n matrix and C an m by n matrix
  */

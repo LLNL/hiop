@@ -442,12 +442,26 @@ public:
     } else {
       assert(values!=NULL);
 
+
+      
       if(JacDeq == NULL) {
 	JacDeq = new hiopMatrixDense(n_eq, nx_dense);
 	assert(JacDineq == NULL);
+      } else {
+	//this for the case when the problem (constraints) sizes changed
+	if(JacDeq->m() != n_eq || JacDeq->n() != nx_dense) {
+	  delete JacDeq;
+	  JacDeq = new hiopMatrixDense(n_eq, nx_dense);
+	}
       }
       if(JacDineq == NULL) {
 	JacDineq = new hiopMatrixDense(n_ineq, nx_dense);
+      } else {
+	//this for the case when the problem (constraints) sizes changed
+	if(JacDineq->m() != n_ineq || JacDineq->n() != nx_dense) {
+	  delete JacDineq;
+	  JacDineq = new hiopMatrixDense(n_ineq, nx_dense);
+	}
       }
       //eq_call_failed = false;
       //bool try_onecall_Jac
@@ -563,6 +577,12 @@ public:
       int nnzit = 0;
       if(HessDL==NULL) {
 	HessDL = new hiopMatrixDense(nx_dense, nx_dense);
+      } else {
+	//this for the case when the problem (constraints) sizes changed
+	if(HessDL->m() != nx_dense) {
+	  delete HessDL;
+	  HessDL = new hiopMatrixDense(nx_dense, nx_dense);
+	}
       }
       double** HessMat = HessDL->local_data();
 
@@ -593,11 +613,15 @@ public:
 
   /* This method is called when the algorithm is complete so the TNLP can store/write the solution */
   void finalize_solution(SolverReturn status,
-                                 Index n, const Number* x, const Number* z_L, const Number* z_U,
-                                 Index m, const Number* g, const Number* lambda,
-                                 Number obj_value,
-				 const IpoptData* ip_data,
-				 IpoptCalculatedQuantities* ip_cq) { };
+			 Index n, const Number* x, const Number* z_L, const Number* z_U,
+			 Index m, const Number* g, const Number* lambda,
+			 Number obj_value,
+			 const IpoptData* ip_data,
+			 IpoptCalculatedQuantities* ip_cq)
+  {
+    //! we use hiop::Solve_Success -> //! TODO: convert between IPOPT and HiOp err codes
+    hiopNLP->solution_callback(hiop::Solve_Success, n, x, z_L, z_U, m, g, lambda, obj_value);
+  };
   
 private:
   hiopInterfaceMDS* hiopNLP;

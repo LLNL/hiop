@@ -112,8 +112,6 @@ namespace hiop
       printf("UMFPACK: error in the symbolic factorization: status=%d\n", status);
       return -1;
     }
-    // print the symbolic factorization */
-    //printf ("\nSymbolic factorization of A: ") ;
     //umfpack_zi_report_symbolic (m_symbolic, m_control) ;
 
     status = umfpack_zi_numeric(m_colptr, m_rowidx, m_vals, (double*) NULL,
@@ -133,6 +131,25 @@ namespace hiop
     return 0;
   }
 
+  void hiopLinSolverUMFPACKZ::solve(const std::complex<double>* rhs_in, std::complex<double>* x)
+  {
+    const double* rhs = reinterpret_cast<const double*>(rhs_in);
+    double* sol = reinterpret_cast<double*>(x);
+    int status = umfpack_zi_solve(UMFPACK_A, m_colptr, m_rowidx, m_vals, (double*) NULL,
+				  sol, (double*) NULL,
+				  rhs, (double*) NULL,
+				  m_numeric, m_control, m_info);
+    if(status<0) {
+      umfpack_zi_report_info(m_control, m_info);
+      umfpack_zi_report_status(m_control, status);
+      printf("umfpack_zi_solve failed\n");
+    }
+    
+    //norm of residual
+    //double resnrm = resid_abs_norm(n, m_colptr, m_rowidx, m_vals, sol, rhs);
+    //printf("solve %d -> abs resid abs nrm: %g\n", col_current, resnrm);
+  }
+  
   void hiopLinSolverUMFPACKZ::solve(hiopVector& x)
   {
     assert(false && "not yet implemented"); //not needed; also there is no complex vector at this point

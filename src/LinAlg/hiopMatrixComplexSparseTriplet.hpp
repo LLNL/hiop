@@ -41,7 +41,10 @@ namespace hiop
     {
       assert(false && "not yet implemented");
     }
-
+    /** y = beta * y + alpha * this * x
+     */
+    virtual void timesVec(double beta,  std::complex<double>* y,
+			  double alpha, const std::complex<double>* x ) const;
 
     /** y = beta * y + alpha * this^T * x */
     virtual void transTimesVec(double beta,   hiopVector& y,
