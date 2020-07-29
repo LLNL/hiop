@@ -56,32 +56,36 @@
 #include <iostream>
 #include <cassert>
 
+#include <hiopMPI.hpp>
 #include <hiopVectorPar.hpp>
+#include <hiopVectorRajaPar.hpp>
 #include <hiopMatrixDenseRowMajor.hpp>
+#include <hiopMatrixRajaDense.hpp>
 #include "LinAlg/matrixTestsDense.hpp"
+#include "LinAlg/matrixTestsRajaDense.hpp"
 
 
 int main(int argc, char** argv)
 {
   using hiop::tests::global_ordinal_type;
 
-  int rank=0, numRanks=1;
-  MPI_Comm comm = MPI_COMM_SELF;
+  int rank = 0;
+  int numRanks = 1;
 
 #ifdef HIOP_USE_MPI
   int err;
-  err = MPI_Init(&argc, &argv);                  assert(MPI_SUCCESS==err);
-  comm = MPI_COMM_WORLD;
+  err = MPI_Init(&argc, &argv);        assert(MPI_SUCCESS==err);
+  MPI_Comm comm = MPI_COMM_WORLD;
   err = MPI_Comm_rank(comm,&rank);     assert(MPI_SUCCESS==err);
   err = MPI_Comm_size(comm,&numRanks); assert(MPI_SUCCESS==err);
-  (void)err; // Resolves -Wunused-but-set-variable
+  (void) err; // Resolves -Wunused-but-set-variable
   if(0 == rank)
     printf("Support for MPI is enabled\n");
 #endif
-  if(argc > 1)
+  if(rank == 0 && argc > 1)
     std::cout << "Executable " << argv[0] << " doesn't take any input.";
 
-  global_ordinal_type M_local = 5 * numRanks;
+  global_ordinal_type M_local = 50;
   global_ordinal_type K_local = 2 * M_local;
   global_ordinal_type N_local = 10 * M_local;
 
@@ -110,89 +114,157 @@ int main(int argc, char** argv)
 
   // Test dense matrix
   {
+    if (rank==0)
+      std::cout << "\nTesting hiopMatrixDenseRowMajor ...\n";
     // Matrix dimensions denoted by subscript
-    // Distributed matrices:
-    hiop::hiopMatrixDenseRowMajor A_mxn(M_global, N_global, n_partition, comm);
-    hiop::hiopMatrixDenseRowMajor B_mxn(M_global, N_global, n_partition, comm);
-    hiop::hiopMatrixDenseRowMajor A_nxm(N_global, M_global, m_partition, comm);
-    hiop::hiopMatrixDenseRowMajor A_nxn(N_global, N_global, n_partition, comm);
-    hiop::hiopMatrixDenseRowMajor A_kxn(K_global, N_global, n_partition, comm);
-    hiop::hiopMatrixDenseRowMajor A_mxm(M_global, M_global, m_partition, comm);
-    hiop::hiopMatrixDenseRowMajor A_kxm(K_global, M_global, m_partition, comm);
+    // Distributed matrices (only distributed by columns):
+    hiop::hiopMatrixDenseRowMajor A_kxm(K_local, M_global, m_partition, comm);
+    hiop::hiopMatrixDenseRowMajor A_kxn(K_local, N_global, n_partition, comm);
+    hiop::hiopMatrixDenseRowMajor A_mxk(M_local, K_global, k_partition, comm);
+    hiop::hiopMatrixDenseRowMajor A_mxn(M_local, N_global, n_partition, comm);
+    hiop::hiopMatrixDenseRowMajor A_nxm(N_local, M_global, m_partition, comm);
+    hiop::hiopMatrixDenseRowMajor B_mxn(M_local, N_global, n_partition, comm);
+    hiop::hiopMatrixDenseRowMajor A_mxn_extra_row(M_local, N_global, n_partition, comm, M_local+1);
 
-    // Some matrices need to scale only in one dimension as
-    // ranks scale. The subscripted size suffixed with an 'l'
-    // indicates which dimension will not scale with ranks.
-    hiop::hiopMatrixDenseRowMajor A_klxm(K_local, M_global, m_partition, comm);
-    hiop::hiopMatrixDenseRowMajor A_mlxk(M_local, K_global, k_partition, comm);
-
-    // Data is local even though sizes are global such that they can be
-    // multiplied with the distributed matrices
-    hiop::hiopMatrixDenseRowMajor A_mxk_local(M_global, K_global);
-    hiop::hiopMatrixDenseRowMajor A_kxn_local(K_global, N_global);
-    hiop::hiopMatrixDenseRowMajor A_mxn_local(M_global, N_global);
+    // Non-distributed matrices:
+    hiop::hiopMatrixDenseRowMajor A_mxk_nodist(M_local, K_local);
+    hiop::hiopMatrixDenseRowMajor A_mxm_nodist(M_local, M_local);
+    hiop::hiopMatrixDenseRowMajor A_kxn_nodist(K_local, N_local);
+    hiop::hiopMatrixDenseRowMajor A_kxm_nodist(K_local, M_local);
+    hiop::hiopMatrixDenseRowMajor A_mxn_nodist(M_local, N_local);
+    hiop::hiopMatrixDenseRowMajor A_nxn_nodist(N_local, N_local);
 
     // Vectors with shape of the form:
-    // x_<size>_<distributed or local>
+    // x_<size>_[non-distributed]
     //
-    // Distributed vectors
-    hiop::hiopVectorPar x_n_dist(N_global, n_partition, comm);
+    // Distributed vectors:
+    hiop::hiopVectorPar x_n(N_global, n_partition, comm);
 
-    // Local vectors
-    hiop::hiopVectorPar x_n_nodist(N_global);
-    hiop::hiopVectorPar x_m_nodist(M_global);
+    // Non-distributed vectors
+    hiop::hiopVectorPar x_n_nodist(N_local);
+    hiop::hiopVectorPar x_m_nodist(M_local);
 
     hiop::tests::MatrixTestsDense test;
 
     fail += test.matrixSetToZero(A_mxn, rank);
     fail += test.matrixSetToConstant(A_mxn, rank);
-    fail += test.matrixTimesVec(A_mxn, x_m_nodist, x_n_dist, rank);
-    fail += test.matrixTransTimesVec(A_mxn, x_m_nodist, x_n_dist, rank);
+    fail += test.matrixTimesVec(A_mxn, x_m_nodist, x_n, rank);
+    fail += test.matrixTransTimesVec(A_mxn, x_m_nodist, x_n, rank);
 
-    if (numRanks == 1)
+    if(rank == 0)
     {
       // These functions are only meant to be called locally
-      fail += test.matrixTimesMat(A_mxk_local, A_kxn_local, A_mxn_local, rank);
-      fail += test.matrixAddDiagonal(A_nxn, x_n_nodist, rank);
-      fail += test.matrixAddSubDiagonal(A_nxn, x_m_nodist, rank);
-      fail += test.matrixAddToSymDenseMatrixUpperTriangle(A_nxn, A_mlxk, rank);
-      fail += test.matrixTransAddToSymDenseMatrixUpperTriangle(A_nxn, A_klxm, rank);
-      fail += test.matrixAddUpperTriangleToSymDenseMatrixUpperTriangle(A_nxn, A_mxm, rank);
+      fail += test.matrixTimesMat(A_mxk_nodist, A_kxn_nodist, A_mxn_nodist, rank);
+      fail += test.matrixAddDiagonal(A_nxn_nodist, x_n_nodist, rank);
+      fail += test.matrixAddSubDiagonal(A_nxn_nodist, x_m_nodist, rank);
+      fail += test.matrixAddToSymDenseMatrixUpperTriangle(A_nxn_nodist, A_mxk_nodist, rank);
+      fail += test.matrixTransAddToSymDenseMatrixUpperTriangle(A_nxn_nodist, A_kxm_nodist, rank);
+      fail += test.matrixAddUpperTriangleToSymDenseMatrixUpperTriangle(A_nxn_nodist, A_mxm_nodist, rank);
 #ifdef HIOP_DEEPCHECKS
-      fail += test.matrixAssertSymmetry(A_nxn, rank);
+      fail += test.matrixAssertSymmetry(A_nxn_nodist, rank);
+      fail += test.matrixOverwriteUpperTriangleWithLower(A_nxn_nodist, rank);
+      fail += test.matrixOverwriteLowerTriangleWithUpper(A_nxn_nodist, rank);
 #endif
-
-      // specific to matrixTestsDense
-      fail += test.matrixCopyBlockFromMatrix(A_mxm, A_kxn, rank);
-      fail += test.matrixCopyFromMatrixBlock(A_kxn, A_mxm, rank);
+      // Not part of hiopMatrix interface, specific to matrixTestsDense
+      fail += test.matrixCopyBlockFromMatrix(A_mxm_nodist, A_kxn_nodist, rank);
+      fail += test.matrixCopyFromMatrixBlock(A_kxn_nodist, A_mxm_nodist, rank);
     }
 
-    fail += test.matrixTransTimesMat(A_mxk_local, A_kxn, A_mxn, rank);
-    fail += test.matrixTimesMatTrans(A_kxm, A_kxn_local, A_nxm, rank);
+    fail += test.matrixTransTimesMat(A_mxk_nodist, A_kxn, A_mxn, rank);
+    fail += test.matrixTimesMatTrans(A_mxn, A_mxk_nodist, A_kxn, rank);
     fail += test.matrixAddMatrix(A_mxn, B_mxn, rank);
     fail += test.matrixMaxAbsValue(A_mxn, rank);
     fail += test.matrixIsFinite(A_mxn, rank);
-    fail += test.matrixNumRows(A_mxn, M_global, rank);
+    fail += test.matrixNumRows(A_mxn, M_local, rank); //<-- no row partitioning
     fail += test.matrixNumCols(A_mxn, N_global, rank);
 
     // specific to matrixTestsDense
     fail += test.matrixCopyFrom(A_mxn, B_mxn, rank);
 
-    // This matrix is allocated only for this test, since it requires
-    // more rows to be allocated with the constructor. Here we allocate
-    // one extra row for this purpose.
-    hiop::hiopMatrixDenseRowMajor A_mxn_extra_row(M_global, N_global, n_partition, comm, M_global+1);
-    fail += test.matrixAppendRow(A_mxn_extra_row, x_n_dist, rank);
+    fail += test.matrixAppendRow(A_mxn_extra_row, x_n, rank);
     fail += test.matrixCopyRowsFrom(A_kxn, A_mxn, rank);
     fail += test.matrixCopyRowsFromSelect(A_mxn, A_kxn, rank);
     fail += test.matrixShiftRows(A_mxn, rank);
-    fail += test.matrixReplaceRow(A_mxn, x_n_dist, rank);
-    fail += test.matrixGetRow(A_mxn, x_n_dist, rank);
+    fail += test.matrixReplaceRow(A_mxn, x_n, rank);
+    fail += test.matrixGetRow(A_mxn, x_n, rank);
   }
 
   // Test RAJA matrix
   {
-    // Code here ...
+    if (rank==0)
+      std::cout << "\nTesting hiopMatrixRajaDense ...\n";
+
+    // Matrix dimensions denoted by subscript
+    // Distributed matrices (only distributed by columns):
+    hiop::hiopMatrixRajaDense A_kxm(K_local, M_global, m_partition, comm);
+    hiop::hiopMatrixRajaDense A_kxn(K_local, N_global, n_partition, comm);
+    hiop::hiopMatrixRajaDense A_mxk(M_local, K_global, k_partition, comm);
+    hiop::hiopMatrixRajaDense A_mxn(M_local, N_global, n_partition, comm);
+    hiop::hiopMatrixRajaDense A_nxm(N_local, M_global, m_partition, comm);
+    hiop::hiopMatrixRajaDense B_mxn(M_local, N_global, n_partition, comm);
+    hiop::hiopMatrixRajaDense A_mxn_extra_row(M_local, N_global, n_partition, comm, M_local+1);
+
+    // Non-distributed matrices:
+    hiop::hiopMatrixRajaDense A_mxk_nodist(M_local, K_local);
+    hiop::hiopMatrixRajaDense A_mxm_nodist(M_local, M_local);
+    hiop::hiopMatrixRajaDense A_kxn_nodist(K_local, N_local);
+    hiop::hiopMatrixRajaDense A_kxm_nodist(K_local, M_local);
+    hiop::hiopMatrixRajaDense A_mxn_nodist(M_local, N_local);
+    hiop::hiopMatrixRajaDense A_nxn_nodist(N_local, N_local);
+
+    // Vectors with shape of the form:
+    // x_<size>_[non-distributed]
+    //
+    // Distributed vectors:
+    hiop::hiopVectorRajaPar x_n(N_global, n_partition, comm);
+
+    // Non-distributed vectors
+    hiop::hiopVectorRajaPar x_n_nodist(N_local);
+    hiop::hiopVectorRajaPar x_m_nodist(M_local);
+
+    hiop::tests::MatrixTestsRajaDense test;
+
+    fail += test.matrixSetToZero(A_mxn, rank);
+    fail += test.matrixSetToConstant(A_mxn, rank);
+    fail += test.matrixTimesVec(A_mxn, x_m_nodist, x_n, rank);
+    fail += test.matrixTransTimesVec(A_mxn, x_m_nodist, x_n, rank);
+
+    if(rank == 0)
+    {
+      // These methods are local
+      fail += test.matrixTimesMat(A_mxk_nodist, A_kxn_nodist, A_mxn_nodist, rank);
+      fail += test.matrixAddDiagonal(A_nxn_nodist, x_n_nodist, rank);
+      fail += test.matrixAddSubDiagonal(A_nxn_nodist, x_m_nodist, rank);
+      fail += test.matrixAddToSymDenseMatrixUpperTriangle(A_nxn_nodist, A_mxk_nodist, rank);
+      fail += test.matrixTransAddToSymDenseMatrixUpperTriangle(A_nxn_nodist, A_kxm_nodist, rank);
+      fail += test.matrixAddUpperTriangleToSymDenseMatrixUpperTriangle(A_nxn_nodist, A_mxm_nodist, rank);
+#ifdef HIOP_DEEPCHECKS
+      fail += test.matrixAssertSymmetry(A_nxn_nodist, rank);
+      fail += test.matrixOverwriteUpperTriangleWithLower(A_nxn_nodist, rank);
+      fail += test.matrixOverwriteLowerTriangleWithUpper(A_nxn_nodist, rank);
+#endif
+      // Not part of hiopMatrix interface, specific to matrixTestsDense
+      fail += test.matrixCopyBlockFromMatrix(A_mxm_nodist, A_kxn_nodist, rank);
+      fail += test.matrixCopyFromMatrixBlock(A_kxn_nodist, A_mxm_nodist, rank);
+    }
+
+    fail += test.matrixTransTimesMat(A_mxk_nodist, A_kxn, A_mxn, rank);
+    fail += test.matrixTimesMatTrans(A_mxn, A_mxk_nodist, A_kxn, rank);
+    fail += test.matrixAddMatrix(A_mxn, B_mxn, rank);
+    fail += test.matrixMaxAbsValue(A_mxn, rank);
+    fail += test.matrixIsFinite(A_mxn, rank);
+    fail += test.matrixNumRows(A_mxn, M_local, rank); //<-- no row partitioning
+    fail += test.matrixNumCols(A_mxn, N_global, rank);
+
+    // specific to matrixTestsDense
+    fail += test.matrixCopyFrom(A_mxn, B_mxn, rank);
+
+    fail += test.matrixAppendRow(A_mxn_extra_row, x_n, rank);
+    fail += test.matrixCopyRowsFrom(A_kxn, A_mxn, rank);
+    fail += test.matrixCopyRowsFromSelect(A_mxn, A_kxn, rank);
+    fail += test.matrixShiftRows(A_mxn, rank);
+    fail += test.matrixReplaceRow(A_mxn, x_n, rank);
+    fail += test.matrixGetRow(A_mxn, x_n, rank);
   }
 
   if (rank == 0)

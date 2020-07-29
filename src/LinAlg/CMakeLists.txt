@@ -12,10 +12,11 @@ set(hiopLinAlg_SRC
 if(HIOP_USE_GPU)
   set(hiopLinAlg_SRC ${hiopLinAlg_SRC} hiopLinSolverIndefDenseMagma.cpp)
   set_source_files_properties(hiopVectorRajaPar.cpp PROPERTIES LANGUAGE CUDA)
+  set_source_files_properties(hiopMatrixRajaDense.cpp PROPERTIES LANGUAGE CUDA)
 endif()
 
 if(HIOP_USE_UMPIRE)
-  set(LinAlg_SRC ${LinAlg_SRC} hiopVectorRajaPar.cpp)
+  set(LinAlg_SRC ${LinAlg_SRC} hiopVectorRajaPar.cpp hiopMatrixRajaDense.cpp)
   include_directories(${UMPIRE_INCLUDE_DIRS} ${camp_INSTALL_PREFIX}/include)
 endif()
 

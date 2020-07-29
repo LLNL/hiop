@@ -61,6 +61,8 @@
 #include <hiopMatrixDenseRowMajor.hpp>
 #include "LinAlg/matrixTestsSparseTriplet.hpp"
 
+using namespace hiop::tests;
+
 /// Generate a sparse matrix in triplet format
 void initializeSparseTriplet(hiop::hiopMatrixSparseTriplet &A, local_ordinal_type entries_per_row)
 {
