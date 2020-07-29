@@ -47,6 +47,7 @@
 // product endorsement purposes.
 
 #include "hiopKKTLinSysMDS.hpp"
+#include "hiopLinSolverIndefDenseLapack.hpp"
 #include "hiopLinSolverIndefDenseMagma.hpp"
 
 namespace hiop
@@ -120,9 +121,9 @@ namespace hiop
 	// - Magma would have a GPU routine for computing inertia
 	// - triangular solves would be done on CPU
 
-	auto dev = true;
-	//auto dev=true;
-	if(dev) {
+	//const auto buka = false;
+	const auto buka=true;
+	if(buka) {
 	  linSys_ = new hiopLinSolverIndefDenseMagmaBuKa(n, nlp_);
 	} else {
 	  hiopLinSolverIndefDenseMagmaNopiv* p = new hiopLinSolverIndefDenseMagmaNopiv(n, nlp_);
@@ -176,7 +177,14 @@ namespace hiop
       nlp_->log->printf(hovScalars, 
 			"KKT_MDS_XYcYd linsys: delta_w=%12.5e delta_c=%12.5e (ic %d)\n",
 			delta_wx, delta_cc, num_ic_cor);
-    
+
+      // const double pert=1e-6;
+      // delta_wx = std::max(delta_wx, pert);
+      // delta_wd = delta_wx;
+
+      // delta_cc = std::max(delta_cc, pert);
+      // delta_cd = delta_cc;
+      
       //
       //the update of the linear system, including IC perturbations
       //

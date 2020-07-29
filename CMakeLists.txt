@@ -240,6 +240,8 @@ install(FILES src/Interface/hiopInterface.hpp
   src/LinAlg/hiopMatrixMDS.hpp
   src/LinAlg/hiopMatrixComplexSparseTriplet.hpp
   src/LinAlg/hiopMatrixComplexDense.hpp
+  src/LinAlg/hiopLinSolver.hpp
+  src/LinAlg/hiopLinSolverIndefDenseLapack.hpp
   src/LinAlg/hiopLinSolverUMFPACKZ.hpp
   src/Utils/hiopRunStats.hpp
   src/Utils/hiopLogger.hpp

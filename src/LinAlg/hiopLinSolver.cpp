@@ -46,68 +46,30 @@
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or 
 // product endorsement purposes.
 
-#ifndef HIOP_LINSOLVER
-#define HIOP_LINSOLVER
+#include "hiopLinSolver.hpp"
 
-#include "hiopNlpFormulation.hpp"
 #include "hiopMatrix.hpp"
-#include "hiopVectorPar.hpp"
 
-#include "hiop_blasdefs.hpp"
+#include "hiopOptions.hpp"
 
-#include "hiopCppStdUtils.hpp"
+namespace hiop {
+  hiopLinSolver::hiopLinSolver()
+    : nlp_(NULL), perf_report_(false) 
+  {
+  }
+  hiopLinSolver::~hiopLinSolver() 
+  {
+  }
 
-namespace hiop
-{
+  
+  hiopLinSolverIndefDense::hiopLinSolverIndefDense(int n, hiopNlpFormulation* nlp)
+    : M(n,n)
+  {
+    nlp_ = nlp;
+    perf_report_ = "on"==hiop::tolower(nlp->options->GetString("time_kkt"));
+  }
+  hiopLinSolverIndefDense::~hiopLinSolverIndefDense()
+  { 
+  }
 
-/**
- * Abstract class for Linear Solvers used by HiOp
- * Specifies interface for linear solver arising in Interior-Point methods, thus,
- * the underlying assumptions are that the system's matrix is symmetric (positive
- * definite or indefinite).
- *
- * Implementations of this abstract class have the purpose of serving as wrappers
- * of existing CPU and GPU libraries for linear systems. 
- */
-
-class hiopLinSolver
-{
-public:
-  hiopLinSolver();
-  virtual ~hiopLinSolver();
-
-  /** Triggers a refactorization of the matrix, if necessary. 
-   * Returns number of negative eigenvalues or -1 if null eigenvalues 
-   * are encountered. 
-   */
-  virtual int matrixChanged() = 0;
-
-  /** Solves a linear system.
-   * param 'x' is on entry the right hand side(s) of the system to be solved. On
-   * exit is contains the solution(s).  
-   */
-  virtual void solve ( hiopVector& x ) = 0;
-  virtual void solve ( hiopMatrix& x ) { assert(false && "not yet supported"); }
-public: 
-  hiopNlpFormulation* nlp_;
-  bool perf_report_; 
-};
-
-/** Base class for Indefinite Dense Solvers */
-class hiopLinSolverIndefDense : public hiopLinSolver
-{
-public:
-  hiopLinSolverIndefDense(int n, hiopNlpFormulation* nlp);
-  virtual ~hiopLinSolverIndefDense();
-
-  inline hiopMatrixDenseRowMajor& sysMatrix() { return M; }
-protected:
-  hiopMatrixDenseRowMajor M;
-protected:
-  hiopLinSolverIndefDense() : M(0,0) { assert(false); }
-};
-
-} //end namespace
-
-#endif
-
+}
