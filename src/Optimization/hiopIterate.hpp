@@ -144,16 +144,16 @@ public:
   friend class hiopHessianInvLowRank_obsolette;
 private:
   /** Primal variables */
-  hiopVectorPar*x;         //the original decision x
-  hiopVectorPar*d;         //the adtl decisions d, d=d(x)
-  hiopVectorPar*sxl,*sxu;  //slacks for x
-  hiopVectorPar*sdl,*sdu;  //slacks for d
+  hiopVector*x;         //the original decision x
+  hiopVector*d;         //the adtl decisions d, d=d(x)
+  hiopVector*sxl,*sxu;  //slacks for x
+  hiopVector*sdl,*sdu;  //slacks for d
 
   /** Dual variables */
-  hiopVectorPar*yc;       //for c(x)=crhs
-  hiopVectorPar*yd;       //for d(x)-d=0
-  hiopVectorPar*zl,*zu;   //for slacks eq. in x: x-sxl=xl, x+sxu=xu
-  hiopVectorPar*vl,*vu;   //for slack eq. in d, e.g., d-sdl=dl
+  hiopVector*yc;       //for c(x)=crhs
+  hiopVector*yd;       //for d(x)-d=0
+  hiopVector*zl,*zu;   //for slacks eq. in x: x-sxl=xl, x+sxu=xu
+  hiopVector*vl,*vu;   //for slack eq. in d, e.g., d-sdl=dl
 private:
   //associated info from problem formulation
   const hiopNlpFormulation * nlp;

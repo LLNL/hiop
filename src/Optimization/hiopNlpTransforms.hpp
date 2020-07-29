@@ -51,7 +51,7 @@
 
 #include "hiopInterface.hpp"
 #include "hiopVector.hpp"
-#include "hiopMatrix.hpp"
+#include "hiopMatrixDense.hpp"
 
 #include <cassert>
 #include <list>
@@ -83,7 +83,7 @@ public:
   /* transforms variable vector */
   virtual inline double* applyTox(double* x, const bool& new_x) { return x; };
   virtual inline double* applyInvTox(double* x) { return x; }
-  virtual inline void applyInvTox(double* x_in, hiopVectorPar& x_out) 
+  virtual inline void applyInvTox(double* x_in, hiopVector& x_out) 
   { 
     //default implementation should have x_in as x_out's internal data array
     assert(x_in == x_out.local_data());
@@ -132,8 +132,8 @@ public:
 class hiopFixedVarsRemover : public hiopNlpTransformation
 {
 public:
-  hiopFixedVarsRemover(const hiopVectorPar& xl, 
-		       const hiopVectorPar& xu, 
+  hiopFixedVarsRemover(const hiopVector& xl, 
+		       const hiopVector& xu, 
 		       const double& fixedVarTol,
 		       const long long& numFixedVars,
 		       const long long& numFixedVars_local);
@@ -169,7 +169,7 @@ public:
   }
   
   /* from fs to rs */
-  inline void  applyInvTox(double* x_in, hiopVectorPar& xv_out)
+  inline void  applyInvTox(double* x_in, hiopVector& xv_out)
   {
 #ifdef HIOP_DEEPCHECKS
     assert(xv_out.get_size()<xl_fs->get_size());
@@ -231,7 +231,7 @@ public:
   inline void setMPIComm(const MPI_Comm& commIn) { comm = commIn; }
 #endif
   /* "copies" a full space vector tp a reduced space vector */
-  void copyFsToRs(const hiopVectorPar& fsVec,  hiopVectorPar& rsVec);
+  void copyFsToRs(const hiopVector& fsVec,  hiopVector& rsVec);
   void copyFsToRs(const hiopInterfaceBase::NonlinearityType* fs, hiopInterfaceBase::NonlinearityType* rs);
   
   inline long long fs_n() const { return n_fs;}
@@ -253,12 +253,12 @@ protected:
   long long n_rs; //reduced-space n
 
   //working buffer used to hold the full-space (user's) vector of decision variables and other optimiz objects
-  hiopVectorPar *x_fs, *grad_fs;
+  hiopVector*x_fs, *grad_fs;
   //working buffers for the full-space Jacobians
   hiopMatrixDense *Jacc_fs, *Jacd_fs;
 
   //a copy of the lower and upper bounds provided by user
-  hiopVectorPar *xl_fs, *xu_fs;
+  hiopVector*xl_fs, *xu_fs;
   //indexes corresponding to fixed variables (local indexes)
   std::vector<int> fs2rs_idx_map;
 
@@ -276,8 +276,8 @@ protected:
 class hiopFixedVarsRelaxer : public hiopNlpTransformation
 {
 public: 
-  hiopFixedVarsRelaxer(const hiopVectorPar& xl, 
-		       const hiopVectorPar& xu, 
+  hiopFixedVarsRelaxer(const hiopVector& xl, 
+		       const hiopVector& xu, 
 		       const long long& numFixedVars,
 		       const long long& numFixedVars_local);
   virtual ~hiopFixedVarsRelaxer();
@@ -292,9 +292,9 @@ public:
   inline bool setup() { return true; }
 
   void relax(const double& fixed_var_tol, const double& fixed_var_perturb, 
-	     hiopVectorPar& xl, hiopVectorPar& xu);
+	     hiopVector& xl, hiopVector& xu);
 private:
-  hiopVectorPar *xl_copy, *xu_copy;
+  hiopVector*xl_copy, *xu_copy;
   long long  n_vars; int n_vars_local;
 };
 
@@ -375,7 +375,7 @@ public:
     return ret;
   }
 
-  void applyInvTox(double* x_in, hiopVectorPar& x_out) 
+  void applyInvTox(double* x_in, hiopVector& x_out) 
   {
     for(std::list<hiopNlpTransformation*>::reverse_iterator it=list_trans_.rbegin(); it!=list_trans_.rend(); ++it) {
       (*it)->applyInvTox(x_in, x_out);

@@ -48,6 +48,8 @@
 
 #include "hiopNlpFormulation.hpp"
 #include "hiopHessianLowRank.hpp"
+#include "hiopVector.hpp"
+#include "hiopLinAlgFactory.hpp"
 #include "hiopLogger.hpp"
 
 #ifdef HIOP_USE_MPI
@@ -193,14 +195,14 @@ bool hiopNlpFormulation::finalizeInitialization()
   if(vec_distrib) delete[] vec_distrib;
   vec_distrib=new long long[num_ranks+1];
   if(true==interface_base.get_vecdistrib_info(n_vars,vec_distrib)) {
-    xl = new hiopVectorPar(n_vars, vec_distrib, comm);
+    xl = LinearAlgebraFactory::createVector(n_vars, vec_distrib, comm);
   } else {
-    xl = new hiopVectorPar(n_vars);   
+    xl = LinearAlgebraFactory::createVector(n_vars);   
     delete[] vec_distrib;
     vec_distrib = NULL;
   }
 #else
-  xl   = new hiopVectorPar(n_vars);
+  xl   = LinearAlgebraFactory::createVector(n_vars);
 #endif  
   xu = xl->alloc_clone();
 
@@ -293,20 +295,20 @@ bool hiopNlpFormulation::finalizeInitialization()
       vec_distrib = vec_distrib_rs;
 #endif
     
-      hiopVectorPar* xl_rs;
+      hiopVector* xl_rs;
 #ifdef HIOP_USE_MPI
       if(vec_distrib!=NULL) {
-	xl_rs = new hiopVectorPar(n_vars, vec_distrib, comm);
+	xl_rs = LinearAlgebraFactory::createVector(n_vars, vec_distrib, comm);
       } else {
-	xl_rs = new hiopVectorPar(n_vars);   
+	xl_rs = LinearAlgebraFactory::createVector(n_vars);   
       }
 #else
-      xl_rs = new hiopVectorPar(n_vars); 
+      xl_rs = LinearAlgebraFactory::createVector(n_vars); 
 #endif
       
-      hiopVectorPar* xu_rs  = xl_rs->alloc_clone();
-      hiopVectorPar* ixl_rs = xl_rs->alloc_clone(); 
-      hiopVectorPar* ixu_rs = xu_rs->alloc_clone();
+      hiopVector* xu_rs  = xl_rs->alloc_clone();
+      hiopVector* ixl_rs = xl_rs->alloc_clone(); 
+      hiopVector* ixu_rs = xu_rs->alloc_clone();
       
       fixedVarsRemover->copyFsToRs( *xl, *xl_rs);
       fixedVarsRemover->copyFsToRs( *xu, *xu_rs);
@@ -345,8 +347,8 @@ bool hiopNlpFormulation::finalizeInitialization()
     }
   }
   /* split the constraints */
-  hiopVectorPar* gl = new hiopVectorPar(n_cons); 
-  hiopVectorPar* gu = new hiopVectorPar(n_cons);
+  hiopVector* gl = LinearAlgebraFactory::createVector(n_cons); 
+  hiopVector* gu = LinearAlgebraFactory::createVector(n_cons);
   double *gl_vec=gl->local_data(), *gu_vec=gu->local_data();
   hiopInterfaceBase::NonlinearityType* cons_type = new hiopInterfaceBase::NonlinearityType[n_cons];
   bret = interface_base.get_cons_info(n_cons, gl_vec, gu_vec, cons_type); assert(bret);
@@ -374,10 +376,10 @@ bool hiopNlpFormulation::finalizeInitialization()
     delete[] cons_ineq_mapping_;
   
   /* allocate c_rhs, dl, and du (all serial in this formulation) */
-  c_rhs = new hiopVectorPar(n_cons_eq);
+  c_rhs = LinearAlgebraFactory::createVector(n_cons_eq);
   cons_eq_type = new  hiopInterfaceBase::NonlinearityType[n_cons_eq];
-  dl    = new hiopVectorPar(n_cons_ineq);
-  du    = new hiopVectorPar(n_cons_ineq);
+  dl    = LinearAlgebraFactory::createVector(n_cons_ineq);
+  du    = LinearAlgebraFactory::createVector(n_cons_ineq);
   cons_ineq_type = new  hiopInterfaceBase::NonlinearityType[n_cons_ineq];
   cons_eq_mapping_   = new long long[n_cons_eq];
   cons_ineq_mapping_ = new long long[n_cons_ineq];
@@ -471,7 +473,7 @@ hiopVector* hiopNlpFormulation::alloc_dual_ineq_vec() const
 }
 hiopVector* hiopNlpFormulation::alloc_dual_vec() const
 {
-  hiopVectorPar* ret=new hiopVectorPar(n_cons);
+  hiopVector* ret=LinearAlgebraFactory::createVector(n_cons);
 #ifdef HIOP_DEEPCHECKS
   assert(ret!=NULL);
 #endif
@@ -509,7 +511,6 @@ bool hiopNlpFormulation::get_starting_point(hiopVector& x0,
 {
   //aaa
   hiopVectorPar &x0_for_hiop = dynamic_cast<hiopVectorPar&>(x0);
-  
   hiopVectorPar& zL0_for_hiop = dynamic_cast<hiopVectorPar&>(zL0);
   hiopVectorPar& zU0_for_hiop = dynamic_cast<hiopVectorPar&>(zU0);
   hiopVectorPar& yc0_for_hiop = dynamic_cast<hiopVectorPar&>(yc0);
@@ -965,20 +966,20 @@ hiopMatrixDense* hiopNlpDenseConstraints::alloc_multivector_primal(int nrows, in
   //if(true==interface.get_vecdistrib_info(n_vars,vec_distrib)) 
   if(vec_distrib)
   {
-    M = new hiopMatrixDense(nrows, n_vars, vec_distrib, comm, maxrows);
+    M = LinearAlgebraFactory::createMatrixDense(nrows, n_vars, vec_distrib, comm, maxrows);
   } else {
     //the if is not really needed, but let's keep it clear, costs only a comparison
     if(-1==maxrows)
-      M = new hiopMatrixDense(nrows, n_vars);   
+      M = LinearAlgebraFactory::createMatrixDense(nrows, n_vars);   
     else
-      M = new hiopMatrixDense(nrows, n_vars, NULL, MPI_COMM_SELF, maxrows);
+      M = LinearAlgebraFactory::createMatrixDense(nrows, n_vars, NULL, MPI_COMM_SELF, maxrows);
   }
 #else
   //the if is not really needed, but let's keep it clear, costs only a comparison
   if(-1==maxrows)
-    M = new hiopMatrixDense(nrows, n_vars);   
+    M = LinearAlgebraFactory::createMatrixDense(nrows, n_vars);   
   else
-    M = new hiopMatrixDense(nrows, n_vars, NULL, MPI_COMM_SELF, maxrows);
+    M = LinearAlgebraFactory::createMatrixDense(nrows, n_vars, NULL, MPI_COMM_SELF, maxrows);
 #endif
   return M;
 }
@@ -1101,7 +1102,7 @@ bool hiopNlpMDS::eval_Hess_Lagr(const double* x, bool new_x, const double& obj_f
     if(n_cons_eq + n_cons_ineq != _buf_lambda->get_size()) {
       delete _buf_lambda;
       _buf_lambda = NULL;
-	_buf_lambda = new hiopVectorPar(n_cons_eq + n_cons_ineq);
+	_buf_lambda = LinearAlgebraFactory::createVector(n_cons_eq + n_cons_ineq);
     }
     assert(_buf_lambda);
     _buf_lambda->copyFromStarting(0,         lambda_eq,   n_cons_eq);

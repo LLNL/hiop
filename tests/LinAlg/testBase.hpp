@@ -82,7 +82,7 @@ static constexpr const char * const  GREEN     = "\033[1;32m";
 static constexpr const char * const  YELLOW    = "\033[1;33m";
 static constexpr const char * const  CLEAR     = "\033[0m";
 
-namespace hiop::tests
+namespace hiop { namespace tests
 {
 
 class TestBase
@@ -120,4 +120,4 @@ protected:
 
 };
 
-} // namespace hiop::tests
+}} // namespace hiop::tests

@@ -126,12 +126,12 @@ private:
   hiopMatrixDense *_mexme, *_mexmi, *_mixmi, *_mxm;
   hiopMatrixDense *M;
   
-  hiopVectorPar *rhs, *rhsc, *rhsd;
-  hiopVectorPar *_vec_n, *_vec_mi;
+  hiopVector *rhs, *rhsc, *rhsd;
+  hiopVector *_vec_n, *_vec_mi;
 
 #ifdef HIOP_DEEPCHECKS
   hiopMatrixDense* M_copy;
-  hiopVectorPar *rhs_copy;
+  hiopVector *rhs_copy;
   hiopMatrixDense* _mixme;
 #endif
 
@@ -144,7 +144,7 @@ private:
                                 
   //helpers
   int factorizeMat(hiopMatrixDense& M);
-  int solveWithFactors(hiopMatrixDense& M, hiopVectorPar& r);
+  int solveWithFactors(hiopMatrixDense& M, hiopVector& r);
 private: 
   hiopDualsLsqUpdate() {};
   hiopDualsLsqUpdate(const hiopDualsLsqUpdate&) {};

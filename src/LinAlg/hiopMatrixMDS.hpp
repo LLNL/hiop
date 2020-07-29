@@ -1,9 +1,10 @@
 #ifndef HIOP_SPARSE_MATRIX_MDS
 #define HIOP_SPARSE_MATRIX_MDS
 
-#include "hiopVector.hpp"
-#include "hiopMatrix.hpp"
+#include "hiopVectorPar.hpp"
+#include "hiopMatrixDenseRowMajor.hpp"
 #include "hiopMatrixSparseTriplet.hpp"
+#include "hiopLinAlgFactory.hpp"
 
 #include <algorithm>
 
@@ -21,7 +22,7 @@ public:
   hiopMatrixMDS(int rows, int cols_sparse, int cols_dense, int nnz_sparse)
   {
     mSp = new hiopMatrixSparseTriplet(rows, cols_sparse, nnz_sparse);
-    mDe = new hiopMatrixDense(rows, cols_dense);
+    mDe = LinearAlgebraFactory::createMatrixDense(rows, cols_dense);
   }
   virtual ~hiopMatrixMDS()
   {
@@ -223,7 +224,7 @@ public:
   hiopMatrixSymBlockDiagMDS(int n_sparse, int n_dense, int nnz_sparse)
   {
     mSp = new hiopMatrixSymSparseTriplet(n_sparse, nnz_sparse);
-    mDe = new hiopMatrixDense(n_dense, n_dense);
+    mDe = LinearAlgebraFactory::createMatrixDense(n_dense, n_dense);
   }
   virtual ~hiopMatrixSymBlockDiagMDS()
   {
