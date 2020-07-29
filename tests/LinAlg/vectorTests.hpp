@@ -65,7 +65,7 @@
 #include <hiopVector.hpp>
 #include "testBase.hpp"
 
-namespace hiop::tests {
+namespace hiop { namespace tests {
 
 /**
  * @brief Collection of tests for abstract hiopVector implementations.
@@ -226,37 +226,40 @@ public:
    * the start index in the source and the destination.
    */
   bool vectorStartingAtCopyFromStartingAt(
-      hiop::hiopVector& x,
-      hiop::hiopVector& from,
+      hiop::hiopVector& dest,
+      hiop::hiopVector& src,
       const int rank)
   {
-    int fail = 0;
-    const local_ordinal_type N = getLocalSize(&x);
-    assert(N == x.get_size() && "This test cannot be ran with distributed vectors");
-    assert(N == getLocalSize(&from));
+    const local_ordinal_type Ndest = getLocalSize(&dest);
+    const local_ordinal_type Nsrc = getLocalSize(&src);
+    assert(Ndest == dest.get_size() && "This test cannot be run with distributed vectors");
+    assert(Ndest < Nsrc && "This test assumes source is bigger than destination vector");
 
-    const real_type x_val = one;
-    const real_type from_val = two;
-    const local_ordinal_type start_idx = 1;
+    const real_type dest_val = one;
+    const real_type src_val  = two;
+    dest.setToConstant(dest_val);
+    src.setToConstant(src_val);
 
-    x.setToConstant(x_val);
-    from.setToConstant(from_val);
+    // Copy one element from `src` to `dest`
+    local_ordinal_type start_dest = Ndest - 1;
+    local_ordinal_type start_src  = Nsrc/2;
+    dest.startingAtCopyFromStartingAt(start_dest, src, start_src);
+    int fail = verifyAnswer(&dest,
+                 [=] (local_ordinal_type i) -> real_type
+                 {
+                   return i == start_dest ? src_val : dest_val;
+                 });
+    // Restore destination values
+    dest.setToConstant(dest_val);
 
-    x.startingAtCopyFromStartingAt(start_idx, from, 0);
-
-    /*
-     * Ensure that elements in the vector before the start
-     * index remain unchanged, and elements after or equal to the
-     * start index are copied to the destination vector
-     */
-    verifyAnswer(&x,
-      [=] (local_ordinal_type i) -> real_type
-      {
-        return i < start_idx ? x_val : from_val;
-      });
+    // Overwrite all `dest` elements with last Ndest elements of `src`
+    start_dest = 0;
+    start_src  = Nsrc - Ndest;
+    dest.startingAtCopyFromStartingAt(start_dest, src, start_src);
+    fail += verifyAnswer(&dest, src_val);
 
     printMessage(fail, __func__, rank);
-    return reduceReturn(fail, &x);
+    return reduceReturn(fail, &dest);
   }
 
   /*
@@ -1253,4 +1256,4 @@ protected:
   virtual bool reduceReturn(int failures, hiop::hiopVector* x) = 0;
 };
 
-} // namespace hiop::tests
+}} // namespace hiop::tests

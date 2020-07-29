@@ -105,13 +105,13 @@ public:
 		      const hiopMatrix* Jac_c, const hiopMatrix* Jac_d,
 		      hiopMatrix* Hess);
 
-  virtual void solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
-			       hiopVectorPar& dx, hiopVectorPar& dyc, hiopVectorPar& dyd);
+  virtual void solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
+			       hiopVector& dx, hiopVector& dyc, hiopVector& dyd);
 
 protected:
   hiopLinSolverIndefDense* linSys_;
-  hiopVectorPar *rhs_; //[rxdense, ryc, ryd]
-  hiopVectorPar *_buff_xs_; //an auxiliary buffer 
+  hiopVector *rhs_; //[rxdense, ryc, ryd]
+  hiopVector *_buff_xs_; //an auxiliary buffer 
   //from the parent class we also use
   //  hiopVectorPar *Dd_inv;
   //  hiopVectorPar *ryd_tilde;
@@ -121,7 +121,7 @@ protected:
   //  hiopVectorPar *rx_tilde;
 
   //keep Hxs = HessMDS->sp_mat() + Dxs (Dx=log-barrier diagonal for xs)
-  hiopVectorPar *Hxs_; 
+  hiopVector *Hxs_; 
 
   //just dynamic_cast-ed pointers
   hiopNlpMDS* nlpMDS_;

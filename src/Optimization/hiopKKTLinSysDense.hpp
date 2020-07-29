@@ -249,11 +249,11 @@ public:
     return true;
   }
 
-  virtual void solveCompressed(hiopVectorPar& rx, hiopVectorPar& ryc, hiopVectorPar& ryd,
-			       hiopVectorPar& dx, hiopVectorPar& dyc, hiopVectorPar& dyd)
+  virtual void solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
+			       hiopVector& dx, hiopVector& dyc, hiopVector& dyd)
   {
     int nx=rx.get_size(), nyc=ryc.get_size(), nyd=ryd.get_size();
-    if(rhsXYcYd == NULL) rhsXYcYd = new hiopVectorPar(nx+nyc+nyd);
+    if(rhsXYcYd == NULL) rhsXYcYd = LinearAlgebraFactory::createVector(nx+nyc+nyd);
 
     nlp_->log->write("RHS KKT XDycYd rx: ", rx,  hovIteration);
     nlp_->log->write("RHS KKT XDycYd ryc:", ryc, hovIteration);
@@ -281,7 +281,7 @@ public:
 
 protected:
   hiopLinSolverIndefDense* linSys;
-  hiopVectorPar* rhsXYcYd;
+  hiopVector* rhsXYcYd;
   
   /** -1 when disabled; otherwise acts like a counter, 0,1,...
    * incremented each time 'solveCompressed' is called depends on the 'write_kkt' option
@@ -491,11 +491,11 @@ public:
     return true;
   }
 
-  virtual void solveCompressed(hiopVectorPar& rx, hiopVectorPar& rd, hiopVectorPar& ryc, hiopVectorPar& ryd,
-			       hiopVectorPar& dx, hiopVectorPar& dd, hiopVectorPar& dyc, hiopVectorPar& dyd)
+  virtual void solveCompressed(hiopVector& rx, hiopVector& rd, hiopVector& ryc, hiopVector& ryd,
+			       hiopVector& dx, hiopVector& dd, hiopVector& dyc, hiopVector& dyd)
   {
     int nx=rx.get_size(), nyc=ryc.get_size(), nyd=ryd.get_size();
-    if(rhsXDYcYd == NULL) rhsXDYcYd = new hiopVectorPar(nx+nyc+2*nyd);
+    if(rhsXDYcYd == NULL) rhsXDYcYd = LinearAlgebraFactory::createVector(nx+nyc+2*nyd);
 
     nlp_->log->write("RHS KKT XDycYd rx: ", rx,  hovMatrices);
     nlp_->log->write("RHS KKT XDycYd rd: ", rd,  hovMatrices);
@@ -526,7 +526,7 @@ public:
 
 protected:
   hiopLinSolverIndefDense* linSys;
-  hiopVectorPar* rhsXDYcYd;
+  hiopVector* rhsXDYcYd;
   //-1 when disabled; otherwise acts like a counter, 0,1,... incremented each time 'solveCompressed' is called
   //depends on the 'write_kkt' option
   int write_linsys_counter; 

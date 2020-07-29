@@ -1,4 +1,5 @@
 #include "hiopMatrixSparseTriplet.hpp"
+#include "hiopVectorPar.hpp"
 
 #include "hiop_blasdefs.hpp"
 
@@ -63,7 +64,7 @@ void hiopMatrixSparseTriplet::timesVec(double beta,  hiopVector& y,
 void hiopMatrixSparseTriplet::timesVec(double beta,  double* y,
 				       double alpha, const double* x ) const
 {
-    // y:= beta*y
+  // y= beta*y
   for (int i = 0; i < nrows; i++) {
     y[i] *= beta;
   }
@@ -237,7 +238,7 @@ bool hiopMatrixSparseTriplet::checkIndexesAreOrdered() const
 void hiopMatrixSparseTriplet::
 addMDinvMtransToDiagBlockOfSymDeMatUTri(int rowAndCol_dest_start,
 					const double& alpha, 
-					const hiopVectorPar& D, hiopMatrixDense& W) const
+					const hiopVector& D, hiopMatrixDense& W) const
 {
   const int row_dest_start = rowAndCol_dest_start, col_dest_start = rowAndCol_dest_start;
   int n = this->nrows;
@@ -292,7 +293,7 @@ addMDinvMtransToDiagBlockOfSymDeMatUTri(int rowAndCol_dest_start,
 void hiopMatrixSparseTriplet::
 addMDinvNtransToSymDeMatUTri(int row_dest_start, int col_dest_start,
 			     const double& alpha, 
-			     const hiopVectorPar& D, const hiopMatrixSparseTriplet& M2,
+			     const hiopVector& D, const hiopMatrixSparseTriplet& M2,
 			     hiopMatrixDense& W) const
 {
   const hiopMatrixSparseTriplet& M1 = *this;
@@ -444,19 +445,19 @@ void hiopMatrixSparseTriplet::print(FILE* file, const char* msg/*=NULL*/,
 				    int maxRows/*=-1*/, int maxCols/*=-1*/, 
 				    int rank/*=-1*/) const 
 {
-  int myrank=0, numranks=1; //this is a local object => always print
+  int myrank_=0, numranks=1; //this is a local object => always print
 
   if(file==NULL) file = stdout;
 
   int max_elems = maxRows>=0 ? maxRows : nnz;
   max_elems = std::min(max_elems, nnz);
 
-  if(myrank==rank || rank==-1) {
+  if(myrank_==rank || rank==-1) {
 
     if(NULL==msg) {
       if(numranks>1)
         fprintf(file, "matrix of size %lld %lld and nonzeros %lld, printing %d elems (on rank=%d)\n", 
-		m(), n(), numberOfNonzeros(), max_elems, myrank);
+		m(), n(), numberOfNonzeros(), max_elems, myrank_);
       else
         fprintf(file, "matrix of size %lld %lld and nonzeros %lld, printing %d elems\n", 
 		m(), n(), numberOfNonzeros(), max_elems);

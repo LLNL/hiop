@@ -57,6 +57,34 @@ namespace hiop
     return maxv;
   }
 
+  void hiopMatrixComplexSparseTriplet::timesVec(double beta, std::complex<double>* y,
+						double alpha, const std::complex<double>* x) const
+  {
+    int nrows = stM->m();
+    // y= beta*y
+    if(beta != 0.) {
+      for(int i=0; i<nrows; i++) {
+	y[i] *= beta;
+      }
+    } else {
+      for(int i=0; i<nrows; i++) {
+	y[i] = 0.;
+      }
+    }
+
+    auto* values = stM->M();
+    int* iRow = stM->i_row();
+    int* jCol = stM->j_col();
+    int nnz = stM->numberOfNonzeros();
+    int ncols = stM->n();
+    // y += alpha*this*x
+    for(int i=0; i<nnz; i++) {
+      assert(iRow[i] < nrows);
+      assert(jCol[i] < ncols);
+      y[iRow[i]] += alpha * x[jCol[i]] * values[i];
+    }
+  }
+  
   /* W = beta*W + alpha*this^T*X 
    *
    * Only supports W and X of the type 'hiopMatrixComplexDense'
@@ -436,19 +464,19 @@ namespace hiop
 					     int maxRows/*=-1*/, int maxCols/*=-1*/, 
 					     int rank/*=-1*/) const 
   {
-    int myrank=0, numranks=1; //this is a local object => always print
+    int myrank_=0, numranks=1; //this is a local object => always print
     
     int max_elems = maxRows>=0 ? maxRows : stM->numberOfNonzeros();
     max_elems = std::min(max_elems, stM->numberOfNonzeros());
 
     if(file==NULL) file=stdout;
     
-    if(myrank==rank || rank==-1) {
+    if(myrank_==rank || rank==-1) {
       
       if(NULL==msg) {
 	if(numranks>1)
 	  fprintf(file, "matrix of size %lld %lld and nonzeros %lld, printing %d elems (on rank=%d)\n", 
-		  m(), n(), numberOfNonzeros(), max_elems, myrank);
+		  m(), n(), numberOfNonzeros(), max_elems, myrank_);
 	else
 	  fprintf(file, "matrix of size %lld %lld and nonzeros %lld, printing %d elems\n", 
 		  m(), n(), numberOfNonzeros(), max_elems);

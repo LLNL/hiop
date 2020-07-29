@@ -24,31 +24,6 @@
 #define FLOPS_DPOTRS(n_, nrhs_) (     FMULS_POTRS((double)(n_), (double)(nrhs_)) +       FADDS_POTRS((double)(n_), (double)(nrhs_)) )
 
 
-/**Notes:
- * *** Bunch-Kaufmann ***
- * magma_dsytrf(magma_uplo_t uplo, magma_int_t n, double *A, magma_int_t lda, 
- *              magma_int_t *ipiv, magma_int_t *info)
- *  - no _gpu version
- *
- * *** same for Aasen ***
- * 
- * *** no pivoting ***
- * magma_int_t magma_dsytrf_nopiv(magma_uplo_t uplo, magma_int_t n, double *A, magma_int_t lda, 
- *                                 magma_int_t *info)
- * magma_int_t magma_dsytrf_nopiv_gpu(magma_uplo_t uplo, magma_int_t n, magmaDouble_ptr dA, magma_int_t ldda, 
- *                                    magma_int_t *info)
- * Guidelines on when to use _gpu ?
- *
- *  Forward and backsolves
- *  magma_int_t magma_dsytrs_nopiv_gpu(magma_uplo_t uplo, magma_int_t n, magma_int_t nrhs, magmaDouble_ptr dA, 
- *                                     magma_int_t ldda, magmaDouble_ptr dB, magma_int_t lddb, magma_int_t * info)
- *
- * How about when use (cpu) magma_dsytrf? What dsytrs function to use? 
- * In the example, the (triu) solves are done with blas blasf77_dsymv
- * 
- *
- */
-
 namespace hiop {
 
 /** 
@@ -62,7 +37,6 @@ class hiopLinSolverIndefDenseMagmaBuKa : public hiopLinSolverIndefDense
 public:
   hiopLinSolverIndefDenseMagmaBuKa(int n, hiopNlpFormulation* nlp_);
   virtual ~hiopLinSolverIndefDenseMagmaBuKa();
-
 
   /** Triggers a refactorization of the matrix, if necessary. */
   int matrixChanged();
@@ -139,6 +113,32 @@ private:
     assert(false); 
   }
 };
+
+/**Notes:
+ * *** Bunch-Kaufmann ***
+ * magma_dsytrf(magma_uplo_t uplo, magma_int_t n, double *A, magma_int_t lda, 
+ *              magma_int_t *ipiv, magma_int_t *info)
+ *  - no _gpu version
+ *
+ * *** same for Aasen ***
+ * 
+ * *** no pivoting ***
+ * magma_int_t magma_dsytrf_nopiv(magma_uplo_t uplo, magma_int_t n, double *A, magma_int_t lda, 
+ *                                 magma_int_t *info)
+ * magma_int_t magma_dsytrf_nopiv_gpu(magma_uplo_t uplo, magma_int_t n, magmaDouble_ptr dA, magma_int_t ldda, 
+ *                                    magma_int_t *info)
+ * Guidelines on when to use _gpu ?
+ *
+ *  Forward and backsolves
+ *  magma_int_t magma_dsytrs_nopiv_gpu(magma_uplo_t uplo, magma_int_t n, magma_int_t nrhs, magmaDouble_ptr dA, 
+ *                                     magma_int_t ldda, magmaDouble_ptr dB, magma_int_t lddb, magma_int_t * info)
+ *
+ * How about when use (cpu) magma_dsytrf? What dsytrs function to use? 
+ * In the example, the (triu) solves are done with blas blasf77_dsymv
+ * 
+ *
+ */
+
 
 
 } //end namespace

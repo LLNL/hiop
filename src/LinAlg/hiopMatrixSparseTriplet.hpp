@@ -2,7 +2,7 @@
 #define HIOP_SPARSE_MATRIX_TRIPLET
 
 #include "hiopVector.hpp"
-#include "hiopMatrix.hpp"
+#include "hiopMatrixDense.hpp"
 
 #include <cassert>
 
@@ -76,7 +76,7 @@ public:
    * Only the upper triangular entries of W are updated.
    */
   virtual void addMDinvMtransToDiagBlockOfSymDeMatUTri(int rowCol_dest_start, const double& alpha, 
-						       const hiopVectorPar& D, hiopMatrixDense& W) const;
+						       const hiopVector& D, hiopMatrixDense& W) const;
 
   /* block of W += alpha * M * D^{-1} * transpose(N), where M=this 
    *
@@ -88,7 +88,7 @@ public:
    * triangular part of W will be accessed)
    */
   virtual void addMDinvNtransToSymDeMatUTri(int row_dest_start, int col_dest_start, const double& alpha,
-					    const hiopVectorPar& D, const hiopMatrixSparseTriplet& N,
+					    const hiopVector& D, const hiopMatrixSparseTriplet& N,
 					    hiopMatrixDense& W) const;
 
   virtual double max_abs_value();

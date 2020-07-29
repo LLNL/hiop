@@ -1,8 +1,9 @@
-cmake_minimum_required (VERSION 3.8)
+cmake_minimum_required (VERSION 3.12)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 cmake_policy(SET CMP0074 NEW)
 
@@ -37,12 +38,18 @@ else()
   set(HIOP_USE_MAGMA OFF)
 endif()
 
+add_library(hiop_math INTERFACE)
+add_library(hiop_options INTERFACE)
+add_library(hiop_warnings INTERFACE)
+
 if(HIOP_USE_MPI)
+  find_package(MPI REQUIRED)
   if(NOT DEFINED MPI_CXX_COMPILER)
-    find_package(MPI REQUIRED)
     set(CMAKE_CXX_COMPILER ${MPI_CXX_COMPILER})
     set(CMAKE_C_COMPILER ${MPI_C_COMPILER})
   endif(NOT DEFINED MPI_CXX_COMPILER)
+  include_directories(${MPI_CXX_ADDITIONAL_INCLUDE_DIRS} ${MPI_CXX_COMPILER_INCLUDE_DIRS})
+  target_link_libraries(hiop_math INTERFACE MPI::MPI_CXX)
 endif(HIOP_USE_MPI)
 
 # The binary dir is already a global include directory
@@ -51,10 +58,6 @@ configure_file(
   "${CMAKE_BINARY_DIR}/hiop_defs.hpp")
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
-
-add_library(hiop_math INTERFACE)
-add_library(hiop_options INTERFACE)
-add_library(hiop_warnings INTERFACE)
 
 target_compile_features(hiop_options
   INTERFACE
@@ -237,6 +240,7 @@ install(FILES src/Interface/hiopInterface.hpp
   src/LinAlg/hiopMatrixMDS.hpp
   src/LinAlg/hiopMatrixComplexSparseTriplet.hpp
   src/LinAlg/hiopMatrixComplexDense.hpp
+  src/LinAlg/hiopLinSolverUMFPACKZ.hpp
   src/Utils/hiopRunStats.hpp
   src/Utils/hiopLogger.hpp
   src/Utils/hiopCSR_IO.hpp
