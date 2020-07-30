@@ -106,6 +106,24 @@ real_type MatrixTestsSparseTriplet::getLocalElement(
   else THROW_NULL_DEREF;
 }
 
+real_type* MatrixTestsSparseTriplet::getMatrixData(hiop::hiopMatrixSparse* A)
+{
+  auto* mat = dynamic_cast<hiop::hiopMatrixSparseTriplet*>(A);
+  return mat->M();
+}
+
+const local_ordinal_type* MatrixTestsSparseTriplet::getRowIndices(const hiop::hiopMatrixSparse* A)
+{
+  const auto* mat = dynamic_cast<const hiop::hiopMatrixSparseTriplet*>(A);
+  return mat->i_row();
+}
+
+const local_ordinal_type* MatrixTestsSparseTriplet::getColumnIndices(const hiop::hiopMatrixSparse* A)
+{
+  const auto* mat = dynamic_cast<const hiop::hiopMatrixSparseTriplet*>(A);
+  return mat->j_col();
+}
+
 /// Returns size of local data array for vector `x`
 int MatrixTestsSparseTriplet::getLocalSize(const hiop::hiopVector* x)
 {
@@ -204,8 +222,9 @@ int MatrixTestsSparseTriplet::verifyAnswer(
   return local_fail;
 }
 
-local_ordinal_type* MatrixTestsSparseTriplet::numNonzerosPerRow(hiop::hiopMatrixSparseTriplet* mat)
+local_ordinal_type* MatrixTestsSparseTriplet::numNonzerosPerRow(hiop::hiopMatrixSparse* A)
 {
+  auto* mat = dynamic_cast<hiop::hiopMatrixSparseTriplet*>(A);
   auto nnz = mat->numberOfNonzeros();
   auto iRow = mat->i_row();
   auto sparsity_pattern = new local_ordinal_type[mat->m()];
@@ -218,8 +237,9 @@ local_ordinal_type* MatrixTestsSparseTriplet::numNonzerosPerRow(hiop::hiopMatrix
   return sparsity_pattern;
 }
 
-local_ordinal_type* MatrixTestsSparseTriplet::numNonzerosPerCol(hiop::hiopMatrixSparseTriplet* mat)
+local_ordinal_type* MatrixTestsSparseTriplet::numNonzerosPerCol(hiop::hiopMatrixSparse* A)
 {
+  auto* mat = dynamic_cast<hiop::hiopMatrixSparseTriplet*>(A);
   auto nnz = mat->numberOfNonzeros();
   auto jCol = mat->j_col();
   auto sparsity_pattern = new local_ordinal_type[mat->n()];

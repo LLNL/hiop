@@ -122,13 +122,12 @@ public:
   
   /// Test y <- beta * y + alpha * A * x
   bool matrixTimesVec(
-      hiop::hiopMatrix& matA,
+      hiop::hiopMatrixSparse& A,
       hiop::hiopVector& y,
       hiop::hiopVector& x)
   {
-    auto A = dynamic_cast<hiop::hiopMatrixSparseTriplet*>(&matA);
-    assert(y.get_size() == A->m() && "Did you pass in vectors of the correct sizes?");
-    assert(x.get_size() == A->n() && "Did you pass in vectors of the correct sizes?");
+    assert(y.get_size() == A.m() && "Did you pass in vectors of the correct sizes?");
+    assert(x.get_size() == A.n() && "Did you pass in vectors of the correct sizes?");
     const real_type alpha = two,
           beta  = half,
           A_val = half,
@@ -138,10 +137,10 @@ public:
 
     y.setToConstant(y_val);
     x.setToConstant(x_val);
-    A->setToConstant(A_val);
-    local_ordinal_type* sparsity_pattern = numNonzerosPerRow(A);
+    A.setToConstant(A_val);
+    local_ordinal_type* sparsity_pattern = numNonzerosPerRow(&A);
 
-    A->timesVec(beta, y, alpha, x);
+    A.timesVec(beta, y, alpha, x);
 
     fail += verifyAnswer(&y,
       [=] (local_ordinal_type i)
@@ -157,13 +156,12 @@ public:
 
   /// Test: y <- beta * y + alpha * A^T * x
   bool matrixTransTimesVec(
-      hiop::hiopMatrix& matA,
+      hiop::hiopMatrixSparse& A,
       hiop::hiopVector& x,
       hiop::hiopVector& y)
   {
-    auto A = dynamic_cast<hiop::hiopMatrixSparseTriplet*>(&matA);
-    assert(x.get_size() == A->m() && "Did you pass in vectors of the correct sizes?");
-    assert(y.get_size() == A->n() && "Did you pass in vectors of the correct sizes?");
+    assert(x.get_size() == A.m() && "Did you pass in vectors of the correct sizes?");
+    assert(y.get_size() == A.n() && "Did you pass in vectors of the correct sizes?");
     const real_type alpha = one,
           beta  = one,
           A_val = one,
@@ -171,12 +169,12 @@ public:
           x_val = three;
     int fail = 0;
 
-    A->setToConstant(A_val);
+    A.setToConstant(A_val);
     y.setToConstant(y_val);
     x.setToConstant(x_val);
-    local_ordinal_type* sparsity_pattern = numNonzerosPerCol(A);
+    local_ordinal_type* sparsity_pattern = numNonzerosPerCol(&A);
 
-    A->transTimesVec(beta, y, alpha, x);
+    A.transTimesVec(beta, y, alpha, x);
 
     fail += verifyAnswer(&y,
       [=] (local_ordinal_type i) -> real_type
@@ -191,46 +189,42 @@ public:
 
   /// Test function that returns matrix element with maximum absolute value
   bool matrixMaxAbsValue(
-      hiop::hiopMatrix& matA,
+      hiop::hiopMatrixSparse& A,
       const int rank=0)
   {
-
-    auto A = dynamic_cast<hiop::hiopMatrixSparseTriplet*>(&matA);
-    auto nnz = A->numberOfNonzeros();
-    auto val = A->M();
+    auto nnz = A.numberOfNonzeros();
+    auto val = getMatrixData(&A);
 
     int fail = 0;
 
     // Positive largest value
-    A->setToConstant(zero);
+    A.setToConstant(zero);
     val[nnz - 1] = one;
-    fail += A->max_abs_value() != one;
+    fail += A.max_abs_value() != one;
 
     // Negative largest value
-    A->setToConstant(one);
+    A.setToConstant(one);
     val[nnz - 1] = -two;
-    fail += A->max_abs_value() != two;
+    fail += A.max_abs_value() != two;
 
     printMessage(fail, __func__);
     return fail;
   }
   
   /// Test method that checks if matrix elements are finite
-  bool matrixIsFinite(hiop::hiopMatrix& matA)
+  bool matrixIsFinite(hiop::hiopMatrixSparse& A)
   {
-
-    auto A = dynamic_cast<hiop::hiopMatrixSparseTriplet*>(&matA);
-    auto nnz = A->numberOfNonzeros();
-    auto val = A->M();
+    auto nnz = A.numberOfNonzeros();
+    auto val = getMatrixData(&A);
 
     int fail = 0;
 
-    A->setToConstant(two);
-    if (!A->isfinite())
+    A.setToConstant(two);
+    if (!A.isfinite())
       fail++;
 
     val[nnz - 1] = INFINITY;
-    if (A->isfinite()) 
+    if (A.isfinite()) 
       fail++;
 
     printMessage(fail, __func__);
@@ -249,17 +243,15 @@ public:
    * @param[in] offset - row/column offset in W, from where A*D^(-1)*A^T is added in place
    */
   int tripletAddMDinvMtransToDiagBlockOfSymDeMatUTri(
-    hiop::hiopMatrix& matA,
+    hiop::hiopMatrixSparse& A,
     hiop::hiopVectorPar& D,
     hiop::hiopMatrixDense& W,
     local_ordinal_type offset)
   {
-    auto A = dynamic_cast<hiop::hiopMatrixSparseTriplet*>(&matA);
-
     int fail = 0;
 
     // Assertion is using API calls.
-    assert(D.get_size() == A->n() && "Did you pass in a diagonal matrix of the correct size?");
+    assert(D.get_size() == A.n() && "Did you pass in a diagonal matrix of the correct size?");
 
     const real_type alpha = half,
           A_val = one,
@@ -268,19 +260,19 @@ public:
 
     D.setToConstant(d_val);
     W.setToConstant(W_val);
-    A->setToConstant(A_val);
+    A.setToConstant(A_val);
 
-    A->addMDinvMtransToDiagBlockOfSymDeMatUTri(offset, alpha, D, W);
+    A.addMDinvMtransToDiagBlockOfSymDeMatUTri(offset, alpha, D, W);
 
-    local_ordinal_type* iRow = A->i_row();
-    local_ordinal_type* jCol = A->j_col();
-    local_ordinal_type nnz = A->numberOfNonzeros();
+    const local_ordinal_type* iRow = getRowIndices(&A);
+    const local_ordinal_type* jCol = getColumnIndices(&A);
+    const local_ordinal_type nnz = A.numberOfNonzeros();
 
     fail += verifyAnswer(&W,
-      [=] (local_ordinal_type i, local_ordinal_type j) -> real_type
+      [&] (local_ordinal_type i, local_ordinal_type j) -> real_type
       {
         // Dense matrix elements that are not modified
-        if(i < offset || j < offset || i > j || i >= offset + A->m() || j >= offset + A->m())
+        if(i < offset || j < offset || i > j || i >= offset + A.m() || j >= offset + A.m())
         {
           return W_val;
         }
@@ -328,6 +320,7 @@ public:
     printMessage(fail, __func__);
     return fail;
   }
+
   
   /**
    * @brief Test for (W) += this * D^(-1) * B^T
@@ -342,19 +335,17 @@ public:
    * @param[in] j_offset - row offset in W, from where A*D^(-1)*B^T is stored
    */
   bool tripletAddMDinvNtransToSymDeMatUTri(
-    hiop::hiopMatrix& matA,
-    hiop::hiopMatrixSparseTriplet& B,
+    hiop::hiopMatrixSparse& A,
+    hiop::hiopMatrixSparse& B,
     hiop::hiopVectorPar& D,
     hiop::hiopMatrixDense& W,
     local_ordinal_type i_offset,
     local_ordinal_type j_offset)
   {
-    auto A = dynamic_cast<hiop::hiopMatrixSparseTriplet*>(&matA);
-
     int fail = 0;
 
-    assert(D.get_size() == A->n() && "Did you pass in a vector of the correct size?");
-    assert(A->n() == B.n() && "Did you pass in matrices with the same number of cols?");
+    assert(D.get_size() == A.n() && "Did you pass in a vector of the correct size?");
+    assert(A.n() == B.n() && "Did you pass in matrices with the same number of cols?");
 
     const real_type alpha = half;
     const real_type A_val = one;
@@ -364,32 +355,20 @@ public:
 
     D.setToConstant(d_val);
     W.setToConstant(W_val);
-    A->setToConstant(A_val);
+    A.setToConstant(A_val);
     B.setToConstant(B_val);
 
-    A->addMDinvNtransToSymDeMatUTri(i_offset, j_offset, alpha, D, B, W);
+    A.addMDinvNtransToSymDeMatUTri(i_offset, j_offset, alpha, D, B, W);
 
-    // int Mrows = W.m(); std::cout << "M = " << Mrows << "\n";
-    // int Ncols = W.n(); std::cout << "N = " << Ncols << "\n";
-    // for(int i=0; i<Mrows; ++i)
-    // {
-    //   for(int j=0; j<Ncols; ++j)
-    //   {
-    //     std::cout << getLocalElement(&W, i, j) << " ";
-    //   }
-    //   std::cout << "\n";
-    // }
-    // std::cout << "\n";
+    const local_ordinal_type* A_iRow = getRowIndices(&A);
+    const local_ordinal_type* A_jCol = getColumnIndices(&A);
+    const local_ordinal_type A_nnz = A.numberOfNonzeros();
 
-    local_ordinal_type* A_iRow = A->i_row();
-    local_ordinal_type* A_jCol = A->j_col();
-    local_ordinal_type A_nnz = A->numberOfNonzeros();
+    const local_ordinal_type* B_iRow = getRowIndices(&B);
+    const local_ordinal_type* B_jCol = getColumnIndices(&B);
+    const local_ordinal_type B_nnz = B.numberOfNonzeros();
 
-    local_ordinal_type* B_iRow = B.i_row();
-    local_ordinal_type* B_jCol = B.j_col();
-    local_ordinal_type B_nnz = B.numberOfNonzeros();
-
-    local_ordinal_type i_max = i_offset + A->m();
+    local_ordinal_type i_max = i_offset + A.m();
     local_ordinal_type j_max = j_offset + B.m();
 
     fail += verifyAnswer(&W,
@@ -442,6 +421,7 @@ public:
     printMessage(fail, __func__);
     return fail;
   }
+
 private:
   // TODO: The sparse matrix is not distributed - all is local. 
   // Rename functions to remove redundant "local" from their names?
@@ -451,6 +431,9 @@ private:
       const real_type val) = 0;
   virtual real_type getLocalElement(const hiop::hiopMatrix* a, local_ordinal_type i, local_ordinal_type j) = 0;
   virtual real_type getLocalElement(const hiop::hiopVector* x, local_ordinal_type i) = 0;
+  virtual real_type* getMatrixData(hiop::hiopMatrixSparse* a) = 0;
+  virtual const local_ordinal_type* getRowIndices(const hiop::hiopMatrixSparse* a) = 0;
+  virtual const local_ordinal_type* getColumnIndices(const hiop::hiopMatrixSparse* a) = 0;
   virtual local_ordinal_type getLocalSize(const hiop::hiopVector* x) = 0;
   virtual int verifyAnswer(hiop::hiopMatrix* A, real_type answer) = 0;
   virtual int verifyAnswer(
@@ -460,8 +443,8 @@ private:
   virtual int verifyAnswer(
       hiop::hiopVector* x,
       std::function<real_type(local_ordinal_type)> expect) = 0;
-  virtual local_ordinal_type* numNonzerosPerRow(hiop::hiopMatrixSparseTriplet* mat) = 0;
-  virtual local_ordinal_type* numNonzerosPerCol(hiop::hiopMatrixSparseTriplet* mat) = 0;
+  virtual local_ordinal_type* numNonzerosPerRow(hiop::hiopMatrixSparse* mat) = 0;
+  virtual local_ordinal_type* numNonzerosPerCol(hiop::hiopMatrixSparse* mat) = 0;
 };
 
 }} // namespace hiop::tests
