@@ -105,14 +105,17 @@ public:
 		      const hiopMatrix* Jac_c, const hiopMatrix* Jac_d,
 		      hiopMatrix* Hess);
 
-  virtual void solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
+  virtual bool solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
 			       hiopVector& dx, hiopVector& dyc, hiopVector& dyd);
 
 protected:
   hiopLinSolverIndefDense* linSys_;
   hiopVector *rhs_; //[rxdense, ryc, ryd]
   hiopVector *_buff_xs_; //an auxiliary buffer 
+
+  //
   //from the parent class we also use
+  //
   //  hiopVectorPar *Dd_inv;
   //  hiopVectorPar *ryd_tilde;
 
@@ -120,7 +123,7 @@ protected:
   //  hiopVectorPar *Dx;
   //  hiopVectorPar *rx_tilde;
 
-  //keep Hxs = HessMDS->sp_mat() + Dxs (Dx=log-barrier diagonal for xs)
+  // Keeps Hxs = HessMDS->sp_mat() + Dxs (Dx=log-barrier diagonal for xs)
   hiopVector *Hxs_; 
 
   //just dynamic_cast-ed pointers
@@ -133,6 +136,10 @@ protected:
   // 'solveCompressed' is called; activated by the 'write_kkt' option
   int write_linsys_counter_; 
   hiopCSR_IO csr_writer_;
+
+private:
+  //placeholder for the code that decides which linear solver to used based on safe_mode_
+  hiopLinSolverIndefDense* determineAndCreateLinsys(int nxd, int neq, int nineq);
 };
 
 } // end of namespace

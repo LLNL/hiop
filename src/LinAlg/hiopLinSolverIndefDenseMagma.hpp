@@ -45,11 +45,7 @@ public:
    * param 'x' is on entry the right hand side(s) of the system to be solved. On
    * exit is contains the solution(s).  
    */
-  void solve ( hiopVector& x_ );
-  void solve ( hiopMatrix& x ) 
-  { 
-    assert(false && "not needed; see the other solve method for implementation"); 
-  }
+  bool solve(hiopVector& x_in);
 
   inline hiopMatrixDense& sysMatrix() 
   { 
@@ -85,12 +81,7 @@ public:
    * param 'x' is on entry the right hand side(s) of the system to be solved. On
    * exit it contains the solution(s).  
    */
-  void solve ( hiopVector& x_ );
-
-  void solve ( hiopMatrix& x ) 
-  { 
-    assert(false && "not needed; see the other solve method for implementation"); 
-  }
+  bool solve(hiopVector& x_in);
 
   inline hiopMatrixDense& sysMatrix() 
   { 

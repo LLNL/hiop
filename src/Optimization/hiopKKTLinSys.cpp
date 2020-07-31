@@ -288,7 +288,7 @@ bool hiopKKTLinSysCompressedXYcYd::computeDirections(const hiopResidual* resid,
    * solve the compressed system
    * (be aware that rx_tilde is reused/modified inside this function) 
    ***********************************************************************/
-  solveCompressed(*rx_tilde_, *r.ryc, *ryd_tilde_, *dir->x, *dir->yc, *dir->yd);
+  bool sol_ok = solveCompressed(*rx_tilde_, *r.ryc, *ryd_tilde_, *dir->x, *dir->yc, *dir->yd);
 
   nlp_->runStats.kkt.tmSolveRhsManip.start();
   //recover dir->d = (D)^{-1}*(dir->yd + ryd2)
@@ -304,6 +304,10 @@ bool hiopKKTLinSysCompressedXYcYd::computeDirections(const hiopResidual* resid,
   delete ryc_save;
   delete ryd_tilde_save;
 #endif
+
+  if(false==sol_ok) {
+    return false;
+  }
 
   /***********************************************************************
    * compute the rest of the directions
@@ -530,7 +534,7 @@ bool hiopKKTLinSysCompressedXDYcYd::computeDirections(const hiopResidual* resid,
    * solve the compressed system
    * (be aware that rx_tilde is reused/modified inside this function) 
    ***********************************************************************/
-  solveCompressed(*rx_tilde_, *rd_tilde_, *r.ryc, *r.ryd, *dir->x, *dir->d, *dir->yc, *dir->yd);
+  bool sol_ok = solveCompressed(*rx_tilde_, *rd_tilde_, *r.ryc, *r.ryd, *dir->x, *dir->d, *dir->yc, *dir->yd);
 
 #ifdef HIOP_DEEPCHECKS
   double derr = 
@@ -545,6 +549,8 @@ bool hiopKKTLinSysCompressedXDYcYd::computeDirections(const hiopResidual* resid,
 #endif
 
   nlp_->runStats.kkt.tmSolveRhsManip.start();
+
+  if(false==sol_ok) return sol_ok;
 
   /***********************************************************************
    * compute the rest of the directions
@@ -766,7 +772,7 @@ update(const hiopIterate* iter,
  * 
  * Note that ops H+Dx are provided by hiopHessianLowRank
  */
-void hiopKKTLinSysLowRank::
+bool hiopKKTLinSysLowRank::
 solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
 		hiopVector& dx, hiopVector& dyc, hiopVector& dyd)
 {
@@ -844,6 +850,8 @@ solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
   nlp_->log->write("  dx: ",  dx, hovIteration); nlp_->log->write(" dyc: ", dyc, hovIteration); nlp_->log->write(" dyd: ", dyd, hovIteration);
   delete r;
 #endif
+
+  return ierr==0;
 }
 
 int hiopKKTLinSysLowRank::solveWithRefin(hiopMatrixDense& M, hiopVector& rhs)

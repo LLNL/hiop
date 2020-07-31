@@ -86,8 +86,8 @@ public:
    * param 'x' is on entry the right hand side(s) of the system to be solved. On
    * exit is contains the solution(s).  
    */
-  virtual void solve ( hiopVector& x ) = 0;
-  virtual void solve ( hiopMatrix& x ) { assert(false && "not yet supported"); }
+  virtual bool solve ( hiopVector& x ) = 0;
+  virtual bool solve ( hiopMatrix& x ) { assert(false && "not yet supported"); return true;}
 public: 
   hiopNlpFormulation* nlp_;
   bool perf_report_; 

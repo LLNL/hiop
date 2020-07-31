@@ -61,13 +61,13 @@ namespace hiop
 
     if(info<0) {
       nlp_->log->printf(hovError,
-		       "hiopLinSolverMagma error: %d argument to dsytrf has an illegal value.\n",
+		       "hiopLinSolverMagmaBuka error: %d argument to dsytrf has an illegal value.\n",
 		       -info);
       return -1;
     } else {
       if(info>0) {
 	nlp_->log->printf(hovWarning,
-			 "hiopLinSolverMagma error: %d entry in the factorization's diagonal\n"
+			 "hiopLinSolverMagmaBuka error: %d entry in the factorization's diagonal\n"
 			 "is exactly zero. Division by zero will occur if it a solve is attempted.\n",
 			 info);
 	//matrix is singular
@@ -124,7 +124,7 @@ namespace hiop
     return negEigVal;
   }
 
-  void hiopLinSolverIndefDenseMagmaBuKa::solve(hiopVector& x_)
+  bool hiopLinSolverIndefDenseMagmaBuKa::solve(hiopVector& x_)
   {
     assert(M.n() == M.m());
     assert(x_.get_size() == M.n());
@@ -132,7 +132,7 @@ namespace hiop
     int LDA = N;
     int LDB = N;
     int NRHS = 1;
-    if(N == 0) return;
+    if(N == 0) return true;
 
     nlp_->runStats.linsolv.tmTriuSolves.start();
     
@@ -143,13 +143,14 @@ namespace hiop
     int info;
     DSYTRS(&uplo, &N, &NRHS, M.local_buffer(), &LDA, ipiv, x->local_data(), &LDB, &info);
     if(info<0) {
-      nlp_->log->printf(hovError, "hiopLinSolverMAGMA: (LAPACK) DSYTRS returned error %d\n", info);
+      nlp_->log->printf(hovError, "hiopLinSolverMagmaBuKa: (LAPACK) DSYTRS returned error %d\n", info);
       assert(false);
     } else if(info>0) {
-      nlp_->log->printf(hovError, "hiopLinSolverMAGMA: (LAPACK) DSYTRS returned error %d\n", info);
+      nlp_->log->printf(hovError, "hiopLinSolverMagmaBuKa: (LAPACK) DSYTRS returned warning %d\n", info);
     }
-
     nlp_->runStats.linsolv.tmTriuSolves.stop();
+
+    return info==0;
     /*
     printf("Solve starts on a matrix %d x %d\n", N, N);
 
@@ -201,7 +202,7 @@ namespace hiop
   /*******************************************************************************************************
    * MAGMA indefinite solver without pivoting (fast)
    *
-   */
+   *******************************************************************************************************/
   hiopLinSolverIndefDenseMagmaNopiv::hiopLinSolverIndefDenseMagmaNopiv(int n, hiopNlpFormulation* nlp)
   : hiopLinSolverIndefDense(n, nlp) 
   {
@@ -249,12 +250,12 @@ namespace hiop
     return negEigVal;
   }
 
-  void hiopLinSolverIndefDenseMagmaNopiv::solve( hiopVector& x_ )
+  bool hiopLinSolverIndefDenseMagmaNopiv::solve( hiopVector& x_ )
   {
     assert(M.n() == M.m());
     assert(x_.get_size()==M.n());
     int N=M.n(), LDA = N, LDB=N;
-    if(N==0) return;
+    if(N==0) return true;
 
     magma_int_t info; 
 
@@ -282,23 +283,26 @@ namespace hiop
     //
     magma_dsysv_nopiv_gpu(uplo, N, NRHS, device_M_, ldda_, device_rhs_, lddb_, &info);
 
-    if(0 != info) {
-      printf("dsysv_nopiv returned %d [%s]\n", info, magma_strerror(info));
-    }
-    assert(info==0);
+    //if(0 != info) {
+    //  printf("dsysv_nopiv returned %d [%s]\n", info, magma_strerror(info));
+    //}
+    //assert(info==0);
 
     nlp_->runStats.linsolv.tmTriuSolves.stop();
     nlp_->runStats.linsolv.flopsTriuSolves = 
       gflops / nlp_->runStats.linsolv.tmTriuSolves.getElapsedTime()/1000.;
     
-    if(info<0) {
-      nlp_->log->printf(hovError, "hiopLinSolverIndefDenseMagma: dsysv_nopiv returned error %d\n", info);
-      assert(false);
+    if(info != 0) {
+      nlp_->log->printf(hovError, 
+			"hiopLinSolverMagmaNopiv: dsysv_nopiv returned error %d [%s]\n", 
+			info, magma_strerror(info));
+      return false;
     }
 
     nlp_->runStats.linsolv.tmDeviceTransfer.start();
     magma_dgetmatrix(N, NRHS, device_rhs_, lddb_, x->local_data(), LDB, magma_device_queue_);
     nlp_->runStats.linsolv.tmDeviceTransfer.stop();
+    return true;
   }
 
 } // end namespace

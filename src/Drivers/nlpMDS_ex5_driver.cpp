@@ -99,7 +99,7 @@ int main(int argc, char **argv)
   // 1. convex obj, rank deficient Jacobian of eq, full rank Jacobian of ineq
   // 2. convex obj, full rank Jacobian of eq, rank deficient Jacobian of ineq
   // 3. nonconvex obj, full rank Jacobian of eq, full rank Jacobian of ineq
-  // 3. nonconvex obj, rank deficient Jacobian of eq,  rank deficient Jacobian of ineq
+  // 4. nonconvex obj, rank deficient Jacobian of eq,  rank deficient Jacobian of ineq
 
   double obj_value1, obj_value2, obj_value3, obj_value4;
 

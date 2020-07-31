@@ -170,12 +170,12 @@ public:
   /** solves a linear system.
    * param 'x' is on entry the right hand side(s) of the system to be solved. On
    * exit is contains the solution(s).  */
-  void solve ( hiopVector& x_ )
+  bool solve ( hiopVector& x_ )
   {
     assert(M.n() == M.m());
     assert(x_.get_size()==M.n());
     int N=M.n(), LDA = N, info;
-    if(N==0) return;
+    if(N==0) return true;
 
     nlp_->runStats.linsolv.tmTriuSolves.start();
     
@@ -187,15 +187,11 @@ public:
     DSYTRS(&uplo, &N, &NRHS, M.local_buffer(), &LDA, ipiv, x->local_data(), &LDB, &info);
     if(info<0) {
       nlp_->log->printf(hovError, "hiopLinSolverIndefDenseLapack: DSYTRS returned error %d\n", info);
-      assert(false);
     } else if(info>0) {
-      nlp_->log->printf(hovError, "hiopLinSolverIndefDenseLapack: DSYTRS returned error %d\n", info);
+      nlp_->log->printf(hovError, "hiopLinSolverIndefDenseLapack: DSYTRS returned warning %d\n", info);
     }
     nlp_->runStats.linsolv.tmTriuSolves.stop();
-  }
-  void solve ( hiopMatrix& x )
-  {
-    assert(false && "not needed; see the other solve method for implementation");
+    return info==0;
   }
 
 protected:
