@@ -133,6 +133,10 @@ protected:
   // 'solveCompressed' is called; activated by the 'write_kkt' option
   int write_linsys_counter_; 
   hiopCSR_IO csr_writer_;
+
+private:
+  //placeholder for the code that decides which linear solver to used based on safe_mode_
+  hiopLinSolverIndefDense* determineAndCreateLinsys(int nxd, int neq, int nineq);
 };
 
 } // end of namespace

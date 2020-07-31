@@ -101,44 +101,14 @@ namespace hiop
     assert(nx==Jac_cMDS_->n_sp()+Jac_cMDS_->n_de());
     assert(nx==Jac_dMDS_->n_sp()+Jac_dMDS_->n_de());
 
-    if(NULL==linSys_) {
-      int n = nxd + neq + nineq;
+    //
+    //based on safe_mode_, decide whether to go with the nopiv (fast) or Bunch-Kaufman (stable) linear solve 
+    //
+    linSys_ = determineAndCreateLinsys(nxd, neq, nineq);
 
-      if(nlp_->options->GetString("compute_mode")=="hybrid") {
-#ifdef HIOP_USE_MAGMA
-	nlp_->log->printf(hovWarning, 
-			  "KKT_MDS_XYcYd linsys: Magma for a matrix of size %d (%d cons)\n", 
-			  n, neq+nineq);
-	//! todo
-	// once we get the desired functionality from magma this should be revisited to 
-	// allow deploying i. nopiv Magma + inertia correction and, if i. fails,
-	// deploying ii. Magma BunchKaufman + inertia correction
-	//
-	// for i. we need inertia calculation algorithm from the nopiv factors 
-	//
-	// Performance of ii. can be improved if 
-	//------------
-	// - Magma would have a GPU routine for computing inertia
-	// - triangular solves would be done on CPU
-
-	//const auto buka = false;
-	const auto buka=true;
-	if(buka) {
-	  linSys_ = new hiopLinSolverIndefDenseMagmaBuKa(n, nlp_);
-	} else {
-	  hiopLinSolverIndefDenseMagmaNopiv* p = new hiopLinSolverIndefDenseMagmaNopiv(n, nlp_);
-	  linSys_ = p;
-	  p->set_fake_inertia(neq + nineq);
-	}
-#else
-	nlp_->log->printf(hovScalars, "KKT_MDS_XYcYd linsys: Lapack for a matrix of size %d\n", n);
-	linSys_ = new hiopLinSolverIndefDenseLapack(n, nlp_);
-#endif
-      } else {
-	nlp_->log->printf(hovScalars, "KKT_MDS_XYcYd linsys: Lapack for a matrix of size %d\n", n);
-	linSys_ = new hiopLinSolverIndefDenseLapack(n, nlp_);
-      }
-    }
+    //
+    //update/compute KKT
+    //
 
     //Dx (<-- log-barrier diagonal, for both sparse (Dxs) and dense (Dxd)
     assert(Dx_->get_local_size() == nxs+nxd);
@@ -170,8 +140,6 @@ namespace hiop
 
     while(num_ic_cor<=max_ic_cor) {
 
-      nlp_->runStats.kkt.tmUpdateLinsys.start();
-
       assert(delta_wx == delta_wd && "something went wrong with IC");
       assert(delta_cc == delta_cd && "something went wrong with IC");
       nlp_->log->printf(hovScalars, 
@@ -188,14 +156,25 @@ namespace hiop
       //
       //the update of the linear system, including IC perturbations
       //
+      nlp_->runStats.kkt.tmUpdateLinsys.start();
       {
 	Msys.setToZero();
 
 	int alpha = 1.;
+
+	//! 
+	hiopTimer tm;
+	tm.start();
+
 	HessMDS_->de_mat()->addUpperTriangleToSymDenseMatrixUpperTriangle(0, alpha, Msys);
+
 	Jac_cMDS_->de_mat()->transAddToSymDenseMatrixUpperTriangle(0, nxd,     alpha, Msys);
 	Jac_dMDS_->de_mat()->transAddToSymDenseMatrixUpperTriangle(0, nxd+neq, alpha, Msys);
-	
+
+	tm.stop();
+	printf("the three add methods took %g sec\n", tm.getElapsedTime());
+	tm.reset();
+
 	//update -> add Dxd to (1,1) block of KKT matrix (Hd = HessMDS_->de_mat already added above)
 	Msys.addSubDiagonal(0, alpha, *Dx_, nxs, nxd);
 	//add perturbation 'delta_wx' for xd
@@ -215,7 +194,15 @@ namespace hiop
 	
 	//add - Jac_c_sp * (Hxs)^{-1} Jac_c_sp^T to diagonal block linSys starting at (nxd, nxd)
 	alpha = -1.;
+
+	//!
+	tm.start();
 	Jac_cMDS_->sp_mat()->addMDinvMtransToDiagBlockOfSymDeMatUTri(nxd, alpha, *Hxs_, Msys);
+
+	tm.stop();
+	printf("addMDinvMtransToDiagBlockOfSymDeMatUTri 111 took %g sec\n", tm.getElapsedTime());
+	tm.reset();
+
 	Msys.addSubDiagonal(nxd, neq, -delta_cc);
 	
 	/* we've just done above the (1,1) and (2,2) blocks of
@@ -234,8 +221,13 @@ namespace hiop
 	alpha = -1.;
 	// add   - Jac_d_sp * (Hxs+Dxs+delta_wx*I)^{-1} * Jac_d_sp^T   to diagonal block
 	// linSys starting at (nxd+neq, nxd+neq)
+
+	//!
+	tm.start();
 	Jac_dMDS_->sp_mat()->
 	  addMDinvMtransToDiagBlockOfSymDeMatUTri(nxd+neq, alpha, *Hxs_, Msys); 
+	tm.stop();
+	printf("addMDinvMtransToDiagBlockOfSymDeMatUTri 222 took %g sec\n", tm.getElapsedTime());
 
 	//K_21 = - Jcs * (Hs+Dxs+delta_wx)^{-1} * Jds^T
 	alpha = -1.;
@@ -258,12 +250,12 @@ namespace hiop
 	
 	nlp_->log->write("KKT_MDS_XYcYd linsys:", Msys, hovMatrices);
       } // end of update of the linear system
+      nlp_->runStats.kkt.tmUpdateLinsys.stop();
       
       //write matrix to file if requested
       if(nlp_->options->GetString("write_kkt") == "yes") write_linsys_counter_++;
       if(write_linsys_counter_>=0) csr_writer_.writeMatToFile(Msys, write_linsys_counter_); 
       
-      nlp_->runStats.kkt.tmUpdateLinsys.stop();
 
       nlp_->runStats.linsolv.start_linsolve();
       nlp_->runStats.kkt.tmUpdateInnerFact.start();
@@ -456,5 +448,77 @@ namespace hiop
     nlp_->log->write("SOL KKT_MDS_XYcYd dyd:", dyd, hovMatrices);
   
     nlp_->runStats.kkt.tmSolveRhsManip.stop();
+  }
+
+  hiopLinSolverIndefDense* 
+  hiopKKTLinSysCompressedMDSXYcYd::determineAndCreateLinsys(int nxd, int neq, int nineq)
+  {
+
+#ifdef HIOP_USE_MAGMA 
+    if(safe_mode_) {
+      hiopLinSolverIndefDenseMagmaBuKa* p = dynamic_cast<hiopLinSolverIndefDenseMagmaBuKa*>(linSys_);
+      if(p==NULL) {
+	//we have a nopiv linear solver or linear solver has not been created yet
+	delete linSys_;
+	linSys_ = NULL;
+      } else {
+	return p;
+      }
+    } else {
+      hiopLinSolverIndefDenseMagmaNopiv* p = dynamic_cast<hiopLinSolverIndefDenseMagmaNopiv*>(linSys_);
+      if(p==NULL) {
+	//we have a BuKa linear solver or linear solver has not been created yet
+	delete linSys_;
+	linSys_ = NULL;
+      } else {
+	return p;
+      }
+    }
+#endif
+
+    if(NULL==linSys_) {
+      int n = nxd + neq + nineq;
+
+      if(nlp_->options->GetString("compute_mode")=="hybrid") {
+#ifdef HIOP_USE_MAGMA
+
+	// once we get the desired functionality from magma this should be revisited to 
+	// increase robustness of nopiv factorization aftermath by making use of nopiv inertia
+	//
+	// Strategy
+	//  i. nopiv Magma (//! todo: + inertia correction) 
+	// when i. fails (in factorization, solve, or outer optimization loop--ascent direction--) employ
+	// ii. Magma BunchKaufman + inertia correction
+	//
+	// //! todo Performance of ii. can be improved if 
+	//------------
+	// - Magma would have a GPU routine for computing inertia
+	// - triangular solves would be done on CPU
+
+	if(safe_mode_) {
+	  nlp_->log->printf(hovWarning, 
+			    "KKT_MDS_XYcYd linsys: MagmaBuKa size %d (%d cons) (safe_mode=%d)\n", 
+			    n, neq+nineq, safe_mode_);
+	  
+	  linSys_ = new hiopLinSolverIndefDenseMagmaBuKa(n, nlp_);
+	} else {
+	  nlp_->log->printf(hovWarning, 
+			    "KKT_MDS_XYcYd linsys: MagmaNopiv size %d (%d cons) (safe_mode=%d)\n", 
+			    n, neq+nineq, safe_mode_);
+	  
+	  hiopLinSolverIndefDenseMagmaNopiv* p = new hiopLinSolverIndefDenseMagmaNopiv(n, nlp_);
+	  linSys_ = p;
+	  p->set_fake_inertia(neq + nineq);
+	}
+#else
+	nlp_->log->printf(hovScalars, "KKT_MDS_XYcYd linsys: Lapack for a matrix of size %d\n", n);
+	linSys_ = new hiopLinSolverIndefDenseLapack(n, nlp_);
+#endif
+      } else {
+	nlp_->log->printf(hovScalars, "KKT_MDS_XYcYd linsys: Lapack for a matrix of size %d\n", n);
+	linSys_ = new hiopLinSolverIndefDenseLapack(n, nlp_);
+      }
+    } 
+    return linSys_;
   }
 } // end of namespace
