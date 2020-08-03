@@ -714,9 +714,6 @@ public:
       hiop::hiopVector& pattern,
       const int rank)
   {
-    printMessage(SKIP_TEST, __func__, rank);
-    return 0;
-    
     const local_ordinal_type N = getLocalSize(&x);
     assert(N == getLocalSize(&pattern));
 

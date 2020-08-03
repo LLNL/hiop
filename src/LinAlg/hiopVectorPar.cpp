@@ -478,16 +478,25 @@ void hiopVectorPar::invert()
   }
 }
 
+// uses Kahan's summation algorithm to reduce numerical error
 double hiopVectorPar::logBarrier(const hiopVector& select) const 
 {
-  double res=0.0;
+  double sum = 0.0;
+  double comp = 0.0;
   const hiopVectorPar& ix = dynamic_cast<const hiopVectorPar&>(select);
   assert(this->n_local_ == ix.n_local_);
   const double* ix_vec = ix.data_;
-  for(int i=0; i<n_local_; i++) 
-    if(ix_vec[i]==1.) 
-      res += log(data_[i]);
-  return res;
+  for(int i=0; i<n_local_; i++)
+  {
+    if(ix_vec[i]==1.)
+    {
+      double y = log(data_[i]) - comp;
+      double t = sum + y;
+      comp = (t - sum) - y;
+      sum = t;
+    }
+  }
+  return sum;
 }
 
 /* adds the gradient of the log barrier, namely this=this+alpha*1/select(x) */
