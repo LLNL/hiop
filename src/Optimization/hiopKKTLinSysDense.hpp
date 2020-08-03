@@ -250,7 +250,7 @@ public:
     return true;
   }
 
-  virtual void solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
+  virtual bool solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
 			       hiopVector& dx, hiopVector& dyc, hiopVector& dyd)
   {
     int nx=rx.get_size(), nyc=ryc.get_size(), nyd=ryd.get_size();
@@ -266,10 +266,12 @@ public:
 
     if(write_linsys_counter>=0) csr_writer.writeRhsToFile(*rhsXYcYd, write_linsys_counter);
 
-    //to do: iterative refinement
-    linSys->solve(*rhsXYcYd);
+    //! todo: iterative refinement
+    bool sol_ok = linSys->solve(*rhsXYcYd);
 
     if(write_linsys_counter>=0) csr_writer.writeSolToFile(*rhsXYcYd, write_linsys_counter);
+
+    if(false==sol_ok) return false;
 
     rhsXYcYd->copyToStarting(0,      dx);
     rhsXYcYd->copyToStarting(nx,     dyc);
@@ -278,6 +280,7 @@ public:
     nlp_->log->write("SOL KKT XYcYd dx: ", dx,  hovMatrices);
     nlp_->log->write("SOL KKT XYcYd dyc:", dyc, hovMatrices);
     nlp_->log->write("SOL KKT XYcYd dyd:", dyd, hovMatrices);
+    return true;
   }
 
 protected:
@@ -492,7 +495,7 @@ public:
     return true;
   }
 
-  virtual void solveCompressed(hiopVector& rx, hiopVector& rd, hiopVector& ryc, hiopVector& ryd,
+  virtual bool solveCompressed(hiopVector& rx, hiopVector& rd, hiopVector& ryc, hiopVector& ryd,
 			       hiopVector& dx, hiopVector& dd, hiopVector& dyc, hiopVector& dyd)
   {
     int nx=rx.get_size(), nyc=ryc.get_size(), nyd=ryd.get_size();
@@ -510,9 +513,11 @@ public:
 
     if(write_linsys_counter>=0) csr_writer.writeRhsToFile(*rhsXDYcYd, write_linsys_counter);
 
-    linSys->solve(*rhsXDYcYd);
+    bool sol_ok = linSys->solve(*rhsXDYcYd);
 
     if(write_linsys_counter>=0) csr_writer.writeSolToFile(*rhsXDYcYd, write_linsys_counter);
+
+    if(false==sol_ok) return false;
 
     rhsXDYcYd->copyToStarting(0,          dx);
     rhsXDYcYd->copyToStarting(nx,         dd);
@@ -523,6 +528,7 @@ public:
     nlp_->log->write("SOL KKT XDYcYd dd: ", dd,  hovMatrices);
     nlp_->log->write("SOL KKT XDYcYd dyc:", dyc, hovMatrices);
     nlp_->log->write("SOL KKT XDYcYd dyd:", dyd, hovMatrices);
+    return true;
   }
 
 protected:

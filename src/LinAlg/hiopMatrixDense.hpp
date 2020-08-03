@@ -165,20 +165,29 @@ public:
    * @pre W.n() == W.m()
    */
   virtual void addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start, 
-							     double alpha, hiopMatrixDense& W) const{assert(false && "not implemented in base class");}
+							     double alpha, hiopMatrixDense& W) const
+  {
+    assert(false && "not implemented in base class");
+  }
 
-  virtual double max_abs_value(){assert(false && "not implemented in base class");}
+  virtual double max_abs_value(){assert(false && "not implemented in base class"); return 0;}
 
-  virtual bool isfinite() const{assert(false && "not implemented in base class");}
+  virtual bool isfinite() const {assert(false && "not implemented in base class"); return false;}
   
-  virtual void print(FILE* f=NULL, const char* msg=NULL, int maxRows=-1, int maxCols=-1, int rank=-1) const{assert(false && "not implemented in base class");}
+  virtual void print(FILE* f=NULL, const char* msg=NULL, int maxRows=-1, int maxCols=-1, int rank=-1) const
+  {
+    assert(false && "not implemented in base class");
+  }
 
-  virtual hiopMatrixDense* alloc_clone() const=0;//{assert(false && "not implemented in base class");}
-  virtual hiopMatrixDense* new_copy() const=0;//{assert(false && "not implemented in base class");}
+  virtual hiopMatrixDense* alloc_clone() const=0;
+  virtual hiopMatrixDense* new_copy() const=0;
 
   virtual void appendRow(const hiopVector& row){assert(false && "not implemented in base class");}
   /// @brief copies the first 'num_rows' rows from 'src' to 'this' starting at 'row_dest'
-  virtual void copyRowsFrom(const hiopMatrixDense& src, int num_rows, int row_dest){assert(false && "not implemented in base class");}
+  virtual void copyRowsFrom(const hiopMatrixDense& src, int num_rows, int row_dest) 
+  {
+    assert(false && "not implemented in base class");
+  }
   
   /**
    * @brief Copy 'n_rows' rows specified by 'rows_idxs' (array of size 'n_rows') from 'src' to 'this'
@@ -207,20 +216,24 @@ public:
   virtual void overwriteUpperTriangleWithLower(){assert(false && "not implemented in base class");}
   virtual void overwriteLowerTriangleWithUpper(){assert(false && "not implemented in base class");}
 #endif
-  virtual long long get_local_size_n() const {assert(false && "not implemented in base class");}
-  virtual long long get_local_size_m() const {assert(false && "not implemented in base class");}
+  virtual long long get_local_size_n() const {assert(false && "not implemented in base class"); return 0;}
+  virtual long long get_local_size_m() const {assert(false && "not implemented in base class"); return 0;}
   virtual MPI_Comm get_mpi_comm() const { return comm_; }
 
   //TODO: this is not kosher!
-  virtual double** local_data() const {assert(false && "not implemented in base class");}
-  virtual double*  local_buffer() const {assert(false && "not implemented in base class");}
+  virtual double** local_data() const {assert(false && "not implemented in base class"); return NULL;}
+  virtual double*  local_buffer() const {assert(false && "not implemented in base class"); return NULL;}
   //do not use this unless you sure you know what you're doing
-  virtual double** get_M(){assert(false && "not implemented in base class");}
+  virtual double** get_M(){assert(false && "not implemented in base class"); return NULL;}
 
   virtual long long m() const {return m_local_;}
   virtual long long n() const {return n_global_;}
 #ifdef HIOP_DEEPCHECKS
-  virtual bool assertSymmetry(double tol=1e-16) const{assert(false && "not implemented in base class");}
+  virtual bool assertSymmetry(double tol=1e-16) const
+  {
+    assert(false && "not implemented in base class");
+    return true;
+  }
 #endif
 protected:
   long long n_global_; //total / global number of columns

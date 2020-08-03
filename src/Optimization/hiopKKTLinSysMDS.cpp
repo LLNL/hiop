@@ -146,12 +146,6 @@ namespace hiop
 			"KKT_MDS_XYcYd linsys: delta_w=%12.5e delta_c=%12.5e (ic %d)\n",
 			delta_wx, delta_cc, num_ic_cor);
 
-      // const double pert=1e-6;
-      // delta_wx = std::max(delta_wx, pert);
-      // delta_wd = delta_wx;
-
-      // delta_cc = std::max(delta_cc, pert);
-      // delta_cd = delta_cc;
       
       //
       //the update of the linear system, including IC perturbations
@@ -162,18 +156,17 @@ namespace hiop
 
 	int alpha = 1.;
 
-	//! 
-	hiopTimer tm;
-	tm.start();
+	// perf eval 
+	//hiopTimer tm;
+	//tm.start();
 
 	HessMDS_->de_mat()->addUpperTriangleToSymDenseMatrixUpperTriangle(0, alpha, Msys);
-
 	Jac_cMDS_->de_mat()->transAddToSymDenseMatrixUpperTriangle(0, nxd,     alpha, Msys);
 	Jac_dMDS_->de_mat()->transAddToSymDenseMatrixUpperTriangle(0, nxd+neq, alpha, Msys);
 
-	tm.stop();
-	printf("the three add methods took %g sec\n", tm.getElapsedTime());
-	tm.reset();
+	//tm.stop();
+	//printf("the three add methods took %g sec\n", tm.getElapsedTime());
+	//tm.reset();
 
 	//update -> add Dxd to (1,1) block of KKT matrix (Hd = HessMDS_->de_mat already added above)
 	Msys.addSubDiagonal(0, alpha, *Dx_, nxs, nxd);
@@ -185,23 +178,27 @@ namespace hiop
 	  Hxs_ = LinearAlgebraFactory::createVector(nxs); assert(Hxs_);
 	}
 	Hxs_->startingAtCopyFromStartingAt(0, *Dx_, 0);
+	
 	//a good time to add the IC 'delta_wx' perturbation
 	Hxs_->addConstant(delta_wx);
+
+
 	//Hxs +=  diag(HessMDS->sp_mat());
 	//todo: make sure we check that the HessMDS->sp_mat() is a diagonal
 	HessMDS_->sp_mat()->startingAtAddSubDiagonalToStartingAt(0, alpha, *Hxs_, 0);
 	nlp_->log->write("Hxs in KKT_MDS_X", *Hxs_, hovMatrices);
-	
+
+
 	//add - Jac_c_sp * (Hxs)^{-1} Jac_c_sp^T to diagonal block linSys starting at (nxd, nxd)
 	alpha = -1.;
 
-	//!
-	tm.start();
+	// perf eval
+	//tm.start();
 	Jac_cMDS_->sp_mat()->addMDinvMtransToDiagBlockOfSymDeMatUTri(nxd, alpha, *Hxs_, Msys);
 
-	tm.stop();
-	printf("addMDinvMtransToDiagBlockOfSymDeMatUTri 111 took %g sec\n", tm.getElapsedTime());
-	tm.reset();
+	//tm.stop();
+	//printf("addMDinvMtransToDiagBlockOfSymDeMatUTri 111 took %g sec\n", tm.getElapsedTime());
+	//tm.reset();
 
 	Msys.addSubDiagonal(nxd, neq, -delta_cc);
 	
@@ -222,12 +219,14 @@ namespace hiop
 	// add   - Jac_d_sp * (Hxs+Dxs+delta_wx*I)^{-1} * Jac_d_sp^T   to diagonal block
 	// linSys starting at (nxd+neq, nxd+neq)
 
-	//!
-	tm.start();
+	// perf eval
+	//tm.start();
+
 	Jac_dMDS_->sp_mat()->
 	  addMDinvMtransToDiagBlockOfSymDeMatUTri(nxd+neq, alpha, *Hxs_, Msys); 
-	tm.stop();
-	printf("addMDinvMtransToDiagBlockOfSymDeMatUTri 222 took %g sec\n", tm.getElapsedTime());
+
+	//tm.stop();
+	//printf("addMDinvMtransToDiagBlockOfSymDeMatUTri 222 took %g sec\n", tm.getElapsedTime());
 
 	//K_21 = - Jcs * (Hs+Dxs+delta_wx)^{-1} * Jds^T
 	alpha = -1.;
@@ -357,14 +356,14 @@ namespace hiop
     return true;
   }
 
-  void hiopKKTLinSysCompressedMDSXYcYd::
+  bool hiopKKTLinSysCompressedMDSXYcYd::
   solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
 		  hiopVector& dx, hiopVector& dyc, hiopVector& dyd)
   {
-    if(!nlpMDS_)   { assert(false); return; }
-    if(!HessMDS_)  { assert(false); return; }
-    if(!Jac_cMDS_) { assert(false); return; }
-    if(!Jac_dMDS_) { assert(false); return; }
+    if(!nlpMDS_)   { assert(false); return false; }
+    if(!HessMDS_)  { assert(false); return false; }
+    if(!Jac_cMDS_) { assert(false); return false; }
+    if(!Jac_dMDS_) { assert(false); return false; }
 
     nlp_->runStats.kkt.tmSolveRhsManip.start();
 
@@ -403,7 +402,8 @@ namespace hiop
     //ths[nxde+nyc:nxde+nyc+nyd-1] = ryd
     ryd.copyToStarting(*rhs_, nxde+nyc);
 
-    if(write_linsys_counter_>=0) csr_writer_.writeRhsToFile(*rhs_, write_linsys_counter_);
+    if(write_linsys_counter_>=0) 
+      csr_writer_.writeRhsToFile(*rhs_, write_linsys_counter_);
 
     nlp_->runStats.kkt.tmSolveRhsManip.stop();
 
@@ -411,7 +411,7 @@ namespace hiop
     //
     // solve
     //
-    linSys_->solve(*rhs_);
+    bool linsol_ok = linSys_->solve(*rhs_);
     nlp_->runStats.kkt.tmSolveTriangular.stop();
     nlp_->runStats.linsolv.end_linsolve();
 
@@ -420,7 +420,10 @@ namespace hiop
 			nlp_->runStats.linsolv.get_summary_last_solve().c_str());
     }
     
-    if(write_linsys_counter_>=0) csr_writer_.writeSolToFile(*rhs_, write_linsys_counter_);
+    if(write_linsys_counter_>=0) 
+      csr_writer_.writeSolToFile(*rhs_, write_linsys_counter_);
+
+    if(false==linsol_ok) return false;
 
     nlp_->runStats.kkt.tmSolveRhsManip.start();
 
@@ -448,6 +451,7 @@ namespace hiop
     nlp_->log->write("SOL KKT_MDS_XYcYd dyd:", dyd, hovMatrices);
   
     nlp_->runStats.kkt.tmSolveRhsManip.stop();
+    return true;
   }
 
   hiopLinSolverIndefDense* 

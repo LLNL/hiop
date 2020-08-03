@@ -169,7 +169,7 @@ public:
 
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction);
 
-  virtual void solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
+  virtual bool solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
 			       hiopVector& dx, hiopVector& dyc, hiopVector& dyd) = 0;
 
 #ifdef HIOP_DEEPCHECKS
@@ -210,7 +210,7 @@ public:
 
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction);
 
-  virtual void solveCompressed(hiopVector& rx, hiopVector& rd, 
+  virtual bool solveCompressed(hiopVector& rx, hiopVector& rd, 
 			       hiopVector& ryc, hiopVector& ryd,
 			       hiopVector& dx, hiopVector& dd, 
 			       hiopVector& dyc, hiopVector& dyd) = 0;
@@ -274,7 +274,7 @@ public:
    *  dx = - (H+Dx)^{-1}*(Jc^T*dyc+Jd^T*dyd - rx)
    * 
    */
-  virtual void solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
+  virtual bool solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
 			       hiopVector& dx, hiopVector& dyc, hiopVector& dyd);
 
   //LAPACK wrappers
