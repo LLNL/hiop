@@ -47,77 +47,56 @@
 // product endorsement purposes.
 
 /**
- * @file testBase.hpp
+ * @file matrixTestsSparseTriplet.hpp
  *
- * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
+ * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>,  PNNL
  * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
- *
+ * @author Cameron Rutherford <robert.rutherford@pnnl.gov>, PNNL
+ * 
  */
+
 #pragma once
 
-#define THROW_NULL_DEREF throw std::runtime_error("error")
+#include <hiopMatrixSparseTriplet.hpp>
+#include "matrixTestsSparse.hpp"
 
-#include <limits>
-#include <cmath>
+namespace hiop { namespace tests {
 
-using real_type             = double;
-using local_ordinal_type    = int;
-using global_ordinal_type   = long long;
-
-static constexpr real_type zero = 0.0;
-static constexpr real_type quarter = 0.25;
-static constexpr real_type half = 0.5;
-static constexpr real_type one = 1.0;
-static constexpr real_type two = 2.0;
-static constexpr real_type three = 3.0;
-static constexpr real_type eps =
-    10*std::numeric_limits<real_type>::epsilon();
-static constexpr int SKIP_TEST = -1;
-
-// must be const pointer and const dest for
-// const string declarations to pass
-// -Wwrite-strings
-static constexpr const char * const  RED       = "\033[1;31m";
-static constexpr const char * const  GREEN     = "\033[1;32m";
-static constexpr const char * const  YELLOW    = "\033[1;33m";
-static constexpr const char * const  CLEAR     = "\033[0m";
-
-namespace hiop { namespace tests
+/**
+ * @brief Tests are re-implemented here if necessary for SparseTriplet Matrices,
+ * as the data layout is significantly different compares to dense matrices.
+ * Any tests that would modify the sparsity pattern are not implemented.
+ * Any tests that would make calls to non-implemented/needed functions are not implemented.
+ * 
+*/
+class MatrixTestsSparseTriplet : public MatrixTestsSparse
 {
+public:
+  MatrixTestsSparseTriplet() {}
+  virtual ~MatrixTestsSparseTriplet(){}
 
-class TestBase
-{
-protected:
-  /// Returns true if two real numbers are equal within tolerance
-  //[[nodiscard]] constexpr
-  bool isEqual(const real_type a, const real_type b)
-  {
-    return (std::abs(a - b) < eps);
-  }
 
-  /// Prints error output for each rank
-  void printMessage(const int fail, const char* funcname, const int rank = 0)
-  {
-    if(fail > 0)
-    {
-      std::cout << RED << "--- FAIL: Test " << funcname << " on rank " << rank << CLEAR << "\n";
-    }
-    else if (fail == SKIP_TEST)
-    {
-      if(rank == 0)
-      {
-        std::cout << YELLOW << "--- SKIP: Test " << funcname << CLEAR << "\n";
-      }
-    }
-    else
-    {
-      if(rank == 0)
-      {
-        std::cout << GREEN << "--- PASS: Test " << funcname << CLEAR << "\n";
-      }
-    }
-  }
-
+private:
+  virtual void setLocalElement(
+      hiop::hiopVector *_x,
+      const local_ordinal_type i,
+      const real_type val);
+  virtual real_type getLocalElement(const hiop::hiopMatrix *a, local_ordinal_type i, local_ordinal_type j) override;
+  virtual real_type getLocalElement(const hiop::hiopVector *x, local_ordinal_type i) override;
+  virtual real_type* getMatrixData(hiop::hiopMatrixSparse* a) override;
+  virtual const local_ordinal_type* getRowIndices(const hiop::hiopMatrixSparse* a);
+  virtual const local_ordinal_type* getColumnIndices(const hiop::hiopMatrixSparse* a);
+  virtual local_ordinal_type getLocalSize(const hiop::hiopVector *x) override;
+  virtual int verifyAnswer(hiop::hiopMatrix *A, real_type answer) override;
+  virtual int verifyAnswer(
+      hiop::hiopMatrix *A,
+      std::function<real_type(local_ordinal_type, local_ordinal_type)> expect) override;
+  virtual int verifyAnswer(hiop::hiopVector *x, real_type answer) override;
+  virtual int verifyAnswer(
+      hiop::hiopVector *x,
+      std::function<real_type(local_ordinal_type)> expect) override;
+  virtual local_ordinal_type* numNonzerosPerRow(hiop::hiopMatrixSparse* mat);
+  virtual local_ordinal_type* numNonzerosPerCol(hiop::hiopMatrixSparse* mat);
 };
 
 }} // namespace hiop::tests

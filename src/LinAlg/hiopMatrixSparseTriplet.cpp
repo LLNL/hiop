@@ -12,8 +12,9 @@
 namespace hiop
 {
 
-hiopMatrixSparseTriplet::hiopMatrixSparseTriplet(int rows, int cols, int nnz_)
-  : nrows(rows), ncols(cols), nnz(nnz_), row_starts(NULL)
+hiopMatrixSparseTriplet::hiopMatrixSparseTriplet(int rows, int cols, int _nnz)
+  : hiopMatrixSparse(rows, cols, _nnz)
+  , row_starts(NULL)
 {
   if(rows==0 || cols==0) {
     assert(nnz==0 && "number of nonzeros must be zero when any of the dimensions are 0");
@@ -216,7 +217,7 @@ hiopMatrix* hiopMatrixSparseTriplet::new_copy() const
   memcpy(copy->values, values, nnz*sizeof(double));
   return copy;
 }
-void hiopMatrixSparseTriplet::copyFrom(const hiopMatrixSparseTriplet& dm)
+void hiopMatrixSparseTriplet::copyFrom(const hiopMatrixSparse& dm)
 {
   assert(false && "this is to be implemented - method def too vague for now");
 }
@@ -293,9 +294,10 @@ addMDinvMtransToDiagBlockOfSymDeMatUTri(int rowAndCol_dest_start,
 void hiopMatrixSparseTriplet::
 addMDinvNtransToSymDeMatUTri(int row_dest_start, int col_dest_start,
 			     const double& alpha, 
-			     const hiopVector& D, const hiopMatrixSparseTriplet& M2,
+			     const hiopVector& D, const hiopMatrixSparse& M2mat,
 			     hiopMatrixDense& W) const
 {
+  const auto& M2 = dynamic_cast<const hiopMatrixSparseTriplet&>(M2mat);
   const hiopMatrixSparseTriplet& M1 = *this;
   const int m1 = M1.nrows, nx = M1.ncols, m2 = M2.nrows;
   assert(nx==M1.ncols);
