@@ -131,7 +131,7 @@ namespace hiop
     return 0;
   }
 
-  void hiopLinSolverUMFPACKZ::solve(const std::complex<double>* rhs_in, std::complex<double>* x)
+  bool hiopLinSolverUMFPACKZ::solve(const std::complex<double>* rhs_in, std::complex<double>* x)
   {
     const double* rhs = reinterpret_cast<const double*>(rhs_in);
     double* sol = reinterpret_cast<double*>(x);
@@ -143,33 +143,37 @@ namespace hiop
       umfpack_zi_report_info(m_control, m_info);
       umfpack_zi_report_status(m_control, status);
       printf("umfpack_zi_solve failed\n");
+      return false;
     }
+    return true;
     
     //norm of residual
     //double resnrm = resid_abs_norm(n, m_colptr, m_rowidx, m_vals, sol, rhs);
     //printf("solve %d -> abs resid abs nrm: %g\n", col_current, resnrm);
   }
   
-  void hiopLinSolverUMFPACKZ::solve(hiopVector& x)
+  bool hiopLinSolverUMFPACKZ::solve(hiopVector& x)
   {
     assert(false && "not yet implemented"); //not needed; also there is no complex vector at this point
+    return true;
   }
 
-  void hiopLinSolverUMFPACKZ::solve(hiopMatrix& X)
+  bool hiopLinSolverUMFPACKZ::solve(hiopMatrix& X)
   {
-    assert(false && "not yet implemented"); //not needed; 
+    assert(false && "not yet implemented"); //not needed;
+    return true;
   }
   
-  void hiopLinSolverUMFPACKZ::solve(const hiopMatrixComplexSparseTriplet& B, hiopMatrixComplexDense& X)
+  bool hiopLinSolverUMFPACKZ::solve(const hiopMatrixComplexSparseTriplet& B, hiopMatrixComplexDense& X)
   {
     assert(X.n()==B.n());
     assert(n==B.m()); 
     assert(n==X.m()); 
     
-    if(n==0) return;
+    if(n==0) return true;
 
     int nrhs = X.n();
-    if(0==nrhs) return;
+    if(0==nrhs) return true;
 
     const int* B_irow = B.storage()->i_row();
     const int* B_jcol = B.storage()->j_col();
@@ -229,7 +233,8 @@ namespace hiop
       if(status<0) {
 	umfpack_zi_report_info(m_control, m_info);
 	umfpack_zi_report_status(m_control, status);
-	printf("umfpack_zi_solve failed for rhs=%d", col_current);
+	printf("eumfpack_zi_solve failed for rhs=%d", col_current);
+	return false;
       }
 
       //norm of residual
@@ -241,7 +246,7 @@ namespace hiop
 	X_M[row][col_current] = std::complex<double>(sol[2*row], sol[2*row+1]);
       }
     }  //end of for loop over columns
-    
+    return true;
     //   printf ("\nx (solution of Ax=b): ") ;
     //   (void) umfpack_zi_report_vector (n, x, xz, Control) ;
     //   rnorm = resid (FALSE, Ap, Ai, Ax, Az) ;

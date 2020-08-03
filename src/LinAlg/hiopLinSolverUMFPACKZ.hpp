@@ -71,12 +71,12 @@ namespace hiop
     /** solves a linear system.
      * param 'x' is on entry the right hand side(s) of the system to be solved. On
      * exit is contains the solution(s).  */
-    virtual void solve(hiopVector& x);
-    virtual void solve(hiopMatrix& X);
-    virtual void solve(const hiopMatrixComplexSparseTriplet& B, hiopMatrixComplexDense& X);
+    virtual bool solve(hiopVector& x);
+    virtual bool solve(hiopMatrix& X);
+    virtual bool solve(const hiopMatrixComplexSparseTriplet& B, hiopMatrixComplexDense& X);
 
     /** same as above but right-side and solution are separated */
-    virtual void solve(const std::complex<double>* rhs, std::complex<double>* x);
+    virtual bool solve(const std::complex<double>* rhs, std::complex<double>* x);
   private: 
     void* m_symbolic;
     void* m_numeric;
