@@ -55,6 +55,9 @@
  *
  */
 
+#include <umpire/Allocator.hpp>
+#include <umpire/ResourceManager.hpp>
+
 #include <hiopVectorRajaPar.hpp>
 #include "vectorTestsRajaPar.hpp"
 
@@ -66,7 +69,7 @@ void VectorTestsRajaPar::setLocalElement(hiop::hiopVector* x, local_ordinal_type
 {
     hiop::hiopVectorRajaPar* xvec = dynamic_cast<hiop::hiopVectorRajaPar*>(x);
     xvec->copyFromDev();
-    real_type* xdat = xvec->local_data();
+    real_type* xdat = xvec->local_data_host();
     xdat[i] = value;
     xvec->copyToDev();
 }
@@ -78,14 +81,14 @@ real_type VectorTestsRajaPar::getLocalElement(const hiop::hiopVector* x, local_o
     const hiop::hiopVectorRajaPar* xv = dynamic_cast<const hiop::hiopVectorRajaPar*>(x);
     hiop::hiopVectorRajaPar* xvec = const_cast<hiop::hiopVectorRajaPar*>(xv);
     xvec->copyFromDev();
-    return xvec->local_data_const()[i];
+    return xvec->local_data_host_const()[i];
 }
 
 /// Returns pointer to local vector data
 real_type* VectorTestsRajaPar::getLocalData(hiop::hiopVector* x)
 {
     hiop::hiopVectorRajaPar* xvec = dynamic_cast<hiop::hiopVectorRajaPar*>(x);
-    return xvec->local_data_dev();
+    return xvec->local_data();
 }
 
 /// Returns size of local data array for vector _x_

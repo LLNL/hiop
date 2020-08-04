@@ -225,7 +225,7 @@ public:
       hiop::hiopMatrixDense& A,
       hiop::hiopMatrixDense& X,
       hiop::hiopMatrixDense& W,
-      const int rank)
+      const int rank=0)
   {
     const local_ordinal_type K = getNumLocCols(&A);
     assert(K == A.n());
@@ -499,7 +499,7 @@ public:
   int matrixAddToSymDenseMatrixUpperTriangle(
       hiop::hiopMatrixDense& _W,
       hiop::hiopMatrixDense& A,
-      const int rank)
+      const int rank=0)
   {
     // This method only takes hiopMatrixDense
     auto W = dynamic_cast<hiop::hiopMatrixDense*>(&_W);
@@ -545,7 +545,7 @@ public:
   int matrixTransAddToSymDenseMatrixUpperTriangle(
       hiop::hiopMatrixDense& _W,
       hiop::hiopMatrixDense& A,
-      const int rank)
+      const int rank=0)
   {
     // This method only takes hiopMatrixDense
     auto W = dynamic_cast<hiop::hiopMatrixDense*>(&_W);
@@ -590,7 +590,7 @@ public:
   int matrixAddUpperTriangleToSymDenseMatrixUpperTriangle(
       hiop::hiopMatrixDense& W,
       hiop::hiopMatrixDense& A,
-      const int rank)
+      const int rank=0)
   {
     const local_ordinal_type A_M = getNumLocRows(&A);
     const local_ordinal_type A_N = getNumLocCols(&A);
@@ -799,7 +799,7 @@ public:
   int matrixCopyBlockFromMatrix(
       hiopMatrixDense &src,
       hiopMatrixDense &dst,
-      const int rank)
+      const int rank=0)
   {
     assert(src.n() < dst.n()
       && "Src mat must be smaller than dst mat");
@@ -837,7 +837,7 @@ public:
   int matrixCopyFromMatrixBlock(
       hiopMatrixDense &src,
       hiopMatrixDense &dst,
-      const int rank)
+      const int rank=0)
   {
     assert(src.n() > dst.n()
       && "Src mat must be larger than dst mat");
@@ -1013,7 +1013,7 @@ public:
 #ifdef HIOP_DEEPCHECKS
   int matrixAssertSymmetry(
       hiop::hiopMatrixDense& A,
-      const int rank)
+      const int rank=0)
   {
     const local_ordinal_type M = getNumLocRows(&A);
     const local_ordinal_type N = getNumLocCols(&A);
@@ -1041,7 +1041,7 @@ public:
     return reduceReturn(fail, &A);
   }
 
-  int matrixOverwriteUpperTriangleWithLower(hiop::hiopMatrixDense& A, const int rank)
+  int matrixOverwriteUpperTriangleWithLower(hiop::hiopMatrixDense& A, const int rank=0)
   {
     const local_ordinal_type M = getNumLocRows(&A);
     const local_ordinal_type N = getNumLocCols(&A);
@@ -1062,7 +1062,7 @@ public:
     return reduceReturn(fail, &A);
   }
 
-  int matrixOverwriteLowerTriangleWithUpper(hiop::hiopMatrixDense& A, const int rank)
+  int matrixOverwriteLowerTriangleWithUpper(hiop::hiopMatrixDense& A, const int rank=0)
   {
     const local_ordinal_type M = getNumLocRows(&A);
     const local_ordinal_type N = getNumLocCols(&A);

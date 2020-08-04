@@ -195,7 +195,7 @@ public:
   bool vectorCopyFromStarting(
       hiop::hiopVector& x,
       hiop::hiopVector& from,
-      const int rank)
+      const int rank=0)
   {
     int fail = 0;
     const local_ordinal_type Nx = getLocalSize(&x);
@@ -246,7 +246,7 @@ public:
   bool vectorStartingAtCopyFromStartingAt(
       hiop::hiopVector& dest,
       hiop::hiopVector& src,
-      const int rank)
+      const int rank=0)
   {
     const local_ordinal_type Ndest = getLocalSize(&dest);
     const local_ordinal_type Nsrc = getLocalSize(&src);
@@ -309,7 +309,7 @@ public:
   bool vectorCopyToStarting(
       hiop::hiopVector& to,
       hiop::hiopVector& from,
-      const int rank)
+      const int rank=0)
   {
     const local_ordinal_type dest_size = getLocalSize(&to);
     const local_ordinal_type src_size = getLocalSize(&from);
@@ -353,7 +353,7 @@ public:
   bool vectorStartingAtCopyToStartingAt(
       hiop::hiopVector& to,
       hiop::hiopVector& from,
-      const int rank)
+      const int rank=0)
   {
     const local_ordinal_type dest_size = getLocalSize(&to);
     const local_ordinal_type src_size = getLocalSize(&from);
@@ -494,7 +494,10 @@ public:
     v.setToConstant(v_val);
     pattern.setToConstant(one);
     if (rank== 0)
+    {
       setLocalElement(&pattern, N - 1, zero);
+      setLocalElement(&x      , N - 1, zero);
+    }
 
     v.componentDiv_w_selectPattern(x, pattern);
 
@@ -677,7 +680,10 @@ public:
     v.setToConstant(v_val);
     pattern.setToConstant(one);
     if (rank== 0)
+    {
       setLocalElement(&pattern, N - 1, zero);
+      setLocalElement(&z,       N - 1, zero);
+    }
 
     const real_type expected = v_val + (alpha * x_val / z_val);
     v.axdzpy_w_pattern(alpha, x, z, pattern);
@@ -813,10 +819,20 @@ public:
     // Make sure pattern eliminates the correct element
     setLocalElement(&x, N - 1, 1000*three);
 
-    const real_type expected = (N-1) * std::log(x_val);
-    const real_type result = x.logBarrier(pattern);
+    real_type expected = (N-1) * std::log(x_val);
+    real_type result = x.logBarrier_local(pattern);
 
-    const bool fail = !isEqual(result, expected);
+    int fail = !isEqual(result, expected);
+
+    // Make sure pattern eliminates the correct elements
+    pattern.setToConstant(zero);
+    setLocalElement(&pattern, N - 1, one);
+    x.setToConstant(zero);
+    setLocalElement(&x, N - 1, x_val);
+
+    expected = std::log(x_val);
+    result = x.logBarrier_local(pattern);
+    fail += !isEqual(result, expected);
 
     printMessage(fail, __func__, rank);
     return reduceReturn(fail, &x);
@@ -1107,21 +1123,19 @@ public:
 
     x.setToConstant(one);
 
-    dx.setToConstant(one);
+    // Test correct default value is returned for dx >= 0
+    dx.setToConstant(two);
     real_type result = x.fractionToTheBdry_local(dx, tau);
 
     real_type expected = one;
     fail += !isEqual(result, expected);
 
+    // Test minumum finding for dx < 0
     dx.setToConstant(-one);
+    setLocalElement(&dx, N-1, -two);
+
     result = x.fractionToTheBdry_local(dx, tau);
-    real_type aux;
-    expected = one;
-    for (local_ordinal_type i=0; i<N; i++)
-    {
-      aux = -tau * getLocalElement(&x, i) / getLocalElement(&dx, i);
-      if (aux<expected) expected=aux;
-    }
+    expected = quarter; // -0.5*1/(-2)
     fail += !isEqual(result, expected);
 
     printMessage(fail, __func__, rank);
@@ -1159,9 +1173,10 @@ public:
     // Pattern all ones except for one value, should still be default
     // value of one
     pattern.setToConstant(one);
-    if (rank == 0)
-      setLocalElement(&pattern, N-1, 0);
     dx.setToConstant(one);
+    setLocalElement(&pattern, N-1,  zero);
+    setLocalElement(&dx,      N-1, -half);
+
     result = x.fractionToTheBdry_w_pattern_local(dx, tau, pattern);
     expected = one;  // default value if dx >= 0
     fail += !isEqual(result, expected);
@@ -1169,15 +1184,10 @@ public:
     // Pattern all ones, dx will be <0
     pattern.setToConstant(one);
     dx.setToConstant(-one);
+    setLocalElement(&dx, N-1, -two);
+
     result = x.fractionToTheBdry_w_pattern_local(dx, tau, pattern);
-    real_type aux;
-    expected = one;
-    for (local_ordinal_type i=0; i<N; i++)
-    {
-      if (rank == 0 && i == N-1) continue;
-      aux = -tau * getLocalElement(&x, i) / getLocalElement(&dx, i);
-      if (aux<expected) expected=aux;
-    }
+    expected = quarter; // -0.5*1/(-2)
     fail += !isEqual(result, expected);
 
     printMessage(fail, __func__, rank);
@@ -1276,8 +1286,10 @@ public:
   /**
    * @brief Test:
    * \exists e \in this s.t. isnan(e)
+   * 
+   * @note This is local method only
    */
-  bool vectorIsnan(hiop::hiopVector& x, const int rank)
+  bool vectorIsnan(hiop::hiopVector& x, const int rank=0)
   {
     const local_ordinal_type N = getLocalSize(&x);
     int fail = 0;
@@ -1285,9 +1297,17 @@ public:
     if (x.isnan_local())
       fail++;
 
-    if (rank == 0)
-      setLocalElement(&x, N-1, NAN);
-    if (x.isnan_local() && rank != 0)
+    x.setToConstant(one/zero);
+    if (x.isnan_local())
+      fail++;
+    
+    x.setToConstant(zero/zero);
+    if (!x.isnan_local())
+      fail++;
+
+    x.setToConstant(one);
+    setLocalElement(&x, N-1, zero/zero);
+    if (!x.isnan_local())
       fail++;
 
     printMessage(fail, __func__, rank);
@@ -1297,18 +1317,28 @@ public:
   /**
    * @brief Test:
    * \exists e \in this s.t. isinf(e)
+   * 
+   * @note This is local method only
    */
-  bool vectorIsinf(hiop::hiopVector& x, const int rank)
+  bool vectorIsinf(hiop::hiopVector& x, const int rank=0)
   {
     const local_ordinal_type N = getLocalSize(&x);
     int fail = 0;
     x.setToConstant(zero);
     if (x.isinf_local())
       fail++;
+    
+    x.setToConstant(zero/zero);
+    if (x.isinf_local())
+      fail++;
 
-    if (rank == 0)
-      setLocalElement(&x, N-1, INFINITY);
-    if (x.isinf_local() && rank != 0)
+    x.setToConstant(one/zero);
+    if (!x.isinf_local())
+      fail++;
+
+    x.setToConstant(one);
+    setLocalElement(&x, N-1, one/zero);
+    if (!x.isinf_local())
       fail++;
 
     printMessage(fail, __func__, rank);
@@ -1318,8 +1348,10 @@ public:
   /**
    * @brief Test:
    * \forall e \in this, isfinite(e)
+   * 
+   * @note This is local method only
    */
-  bool vectorIsfinite(hiop::hiopVector& x, const int rank)
+  bool vectorIsfinite(hiop::hiopVector& x, const int rank=0)
   {
     const local_ordinal_type N = getLocalSize(&x);
     int fail = 0;
@@ -1327,9 +1359,13 @@ public:
     if (!x.isfinite_local())
       fail++;
 
-    if (rank == 0)
-      setLocalElement(&x, N-1, INFINITY);
-    if (!x.isfinite_local() && rank != 0)
+    x.setToConstant(zero/zero);
+    if (x.isfinite_local())
+      fail++;
+
+    x.setToConstant(one);
+    setLocalElement(&x, N-1, one/zero);
+    if (x.isfinite_local())
       fail++;
 
     printMessage(fail, __func__, rank);

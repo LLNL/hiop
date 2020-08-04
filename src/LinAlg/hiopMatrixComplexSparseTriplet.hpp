@@ -17,6 +17,24 @@ namespace hiop
    * or simply cannot be implemented without i. having this class specialized for 
    * rectangular matrices and ii. derive a new specialization for symmetric matrices.
    */
+  /* 
+    Note: the following methods of hiopMatrix are NOT 
+    implemented in this class:
+    - copyRowsFrom
+    - timesVec
+    - transTimesVec
+    - timesMat
+    - transTimesMat
+    - timesMatTrans
+    - addDiagonal (both overloads)
+    - addSubDiagonal (all three overloads)
+    - addMatrix
+    - addToSymDenseMatrixUpperTriangle
+    - transAddToSymDenseMatrixUpperTriangle
+    - addUpperTriangleToSymDenseMatrixUpperTriangle
+    - isfinite
+    - assertSymmetry
+  */
   class hiopMatrixComplexSparseTriplet : public hiopMatrix
   {
   public:

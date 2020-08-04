@@ -9,9 +9,28 @@
 
 #include "hiopMatrixComplexSparseTriplet.hpp"
 
+
 namespace hiop
 {
-
+  /*
+  Note: the following methods of hiopMatrix are NOT 
+  implemented in this class:
+    - timesVec (both overloads)
+    - transTimesVec (both overloads)
+    - timesMat
+    - timesMat_local
+    - transTimesMat
+    - timesMatTran
+    - timesMatTran_local
+    - addDiagonal (both overloads)
+    - addSubDiagonal (all three overloads)
+    - addToSymDenseMatrixUpperTriangle
+    - transAddToSymDenseMatrixUpperTriangle
+    - addUpperTriangleToSymDenseMatrixUpperTriangle
+    - copyRowsFrom
+    - copyBlockFromMatrix
+    - copyFromMatrixBlock
+  */
   class hiopMatrixComplexDense : public hiopMatrix
   {
   public:
