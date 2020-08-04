@@ -233,7 +233,10 @@ install(FILES src/Interface/hiopInterface.hpp
   src/Optimization/hiopHessianLowRank.hpp
   src/Optimization/hiopDualsUpdater.hpp
   src/LinAlg/hiopVector.hpp
+  src/LinAlg/hiopVectorPar.hpp
   src/LinAlg/hiopMatrix.hpp
+  src/LinAlg/hiopMatrixDenseRowMajor.hpp
+  src/LinAlg/hiopMatrixDense.hpp
   src/LinAlg/hiopMatrixMDS.hpp
   src/LinAlg/hiopMatrixSparseTriplet.hpp
   src/LinAlg/hiopMatrixSparseTripletStorage.hpp
@@ -243,12 +246,14 @@ install(FILES src/Interface/hiopInterface.hpp
   src/LinAlg/hiopLinSolver.hpp
   src/LinAlg/hiopLinSolverIndefDenseLapack.hpp
   src/LinAlg/hiopLinSolverUMFPACKZ.hpp
+  src/LinAlg/hiopLinAlgFactory.hpp
   src/Utils/hiopRunStats.hpp
   src/Utils/hiopLogger.hpp
   src/Utils/hiopCSR_IO.hpp
   src/Utils/hiopTimer.hpp
   src/Utils/hiopOptions.hpp
   src/Utils/hiopKronReduction.hpp
+  src/Utils/hiopMPI.hpp
   src/Utils/hiopCppStdUtils.hpp
   src/LinAlg/hiop_blasdefs.hpp
   src/Drivers/IpoptAdapter.hpp
