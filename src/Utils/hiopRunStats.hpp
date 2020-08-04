@@ -200,6 +200,7 @@ public:
     tmFactTime.reset();
     tmInertiaComp.reset();
     tmTriuSolves.reset();
+    tmDeviceTransfer.reset();
   }
   
   inline void end_linsolve()
