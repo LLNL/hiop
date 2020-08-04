@@ -201,12 +201,12 @@ bool hiopMatrixSparseTriplet::isfinite() const
   return true;
 }
 
-hiopMatrix* hiopMatrixSparseTriplet::alloc_clone() const
+hiopMatrixSparse* hiopMatrixSparseTriplet::alloc_clone() const
 {
   return new hiopMatrixSparseTriplet(nrows_, ncols_, nnz_);
 }
 
-hiopMatrix* hiopMatrixSparseTriplet::new_copy() const
+hiopMatrixSparse* hiopMatrixSparseTriplet::new_copy() const
 {
 #ifdef HIOP_DEEPCHECKS
   assert(this->checkIndexesAreOrdered());
@@ -535,12 +535,12 @@ void hiopMatrixSymSparseTriplet::timesVec(double beta,  double* y,
   }
 }
 
-hiopMatrix* hiopMatrixSymSparseTriplet::alloc_clone() const
+hiopMatrixSparse* hiopMatrixSymSparseTriplet::alloc_clone() const
 {
   assert(nrows_ == ncols_);
   return new hiopMatrixSymSparseTriplet(nrows_, nnz_);
 }
-hiopMatrix* hiopMatrixSymSparseTriplet::new_copy() const
+hiopMatrixSparse* hiopMatrixSymSparseTriplet::new_copy() const
 {
   assert(nrows_ == ncols_);
   hiopMatrixSymSparseTriplet* copy = new hiopMatrixSymSparseTriplet(nrows_, nnz_);
@@ -550,8 +550,13 @@ hiopMatrix* hiopMatrixSymSparseTriplet::new_copy() const
   return copy;
 }
 
-/* block of W += alpha*this 
- * Note W; contains only the upper triangular entries */
+/** 
+ * @brief block of W += alpha*this 
+ * @note W contains only the upper triangular entries
+ * 
+ * @warning This method should not be called directly.
+ * Use addUpperTriangleToSymDenseMatrixUpperTriangle instead.
+ */
 void hiopMatrixSymSparseTriplet::addToSymDenseMatrixUpperTriangle(int row_start, int col_start, 
 						  double alpha, hiopMatrixDense& W) const
 {
@@ -569,22 +574,19 @@ void hiopMatrixSymSparseTriplet::addToSymDenseMatrixUpperTriangle(int row_start,
     WM[i][j] += alpha*values_[it];
   }
 }
+
+/** 
+ * @brief block of W += alpha*(this)^T 
+ * @note W contains only the upper triangular entries
+ * 
+ * @warning This method should not be called directly.
+ * Use addUpperTriangleToSymDenseMatrixUpperTriangle instead.
+ */
 void hiopMatrixSymSparseTriplet::transAddToSymDenseMatrixUpperTriangle(int row_start, int col_start, 
 								       double alpha, hiopMatrixDense& W) const
 {
-  assert(row_start>=0 && row_start+ncols_<=W.m());
-  assert(col_start>=0 && col_start+nrows_<=W.n());
-  assert(W.n()==W.m());
-
-  double** WM = W.get_M();
-  for(int it=0; it<nnz_; it++) {
-    assert(iRow_[it]<=jCol_[it] && "sparse symmetric matrices should contain only upper triangle entries");
-    const int i = jCol_[it]+row_start;
-    const int j = iRow_[it]+col_start;
-    assert(i<W.m() && j<W.n()); assert(i>=0 && j>=0);
-    assert(i<=j && "symMatrices not aligned; source entries need to map inside the upper triangular part of destination");
-    WM[i][j] += alpha*values_[it];
-  }
+  addToSymDenseMatrixUpperTriangle(row_start, col_start, alpha, W);
+  assert(0 && "This method should not be called for symmetric matrices.");
 }
 
 /* extract subdiagonal from 'this' (source) and adds the entries to 'vec_dest' starting at

@@ -266,6 +266,18 @@ void hiopOptions::registerOptions()
     registerStrOption("write_kkt", range[0], range, 
 		      "write internal KKT linear system (matrix, rhs, sol) to file (default 'no')");
   }
+
+  // memory space selection
+  {
+    vector<string> range(5);
+    range[0] = "default";
+    range[1] = "host";
+    range[2] = "device";
+    range[3] = "um";
+    range[4] = "pinned";
+    registerStrOption("mem_space", range[0], range,
+    "Determines the memory space in which future linear algebra objects will be created");
+  }
 }
 
 void hiopOptions::registerNumOption(const std::string& name, double defaultValue, 

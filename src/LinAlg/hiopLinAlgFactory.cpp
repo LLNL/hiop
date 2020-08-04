@@ -46,9 +46,27 @@
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or 
 // product endorsement purposes.
 
+/**
+ * @file hiopLinAlgFactory.cpp
+ *
+ * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
+ * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
+ * 
+ */
+#include <algorithm>
+
+#include <hiop_defs.hpp>
+#ifdef HIOP_USE_RAJA
+#include <umpire/Allocator.hpp>
+#include <umpire/ResourceManager.hpp>
+#endif
+
 #include <hiopVectorPar.hpp>
+#include <hiopVectorRajaPar.hpp>
 #include <hiopMatrixDenseRowMajor.hpp>
+#include <hiopMatrixRajaDense.hpp>
 #include <hiopMatrixSparseTriplet.hpp>
+#include <hiopMatrixRajaSparseTriplet.hpp>
 
 #include "hiopLinAlgFactory.hpp"
 
@@ -57,22 +75,29 @@ using namespace hiop;
 /**
  * @brief Method to create vector.
  * 
- * @todo For now this is just a wrapper for hiopVectorPar constructor.
- * Need to add options for creating different vectors.
+ * Creates legacy HiOp vector by default, RAJA vector when memory space
+ * is specified.
  */
 hiopVector* LinearAlgebraFactory::createVector(
   const long long& glob_n,
   long long* col_part,
   MPI_Comm comm)
 {
-  return new hiopVectorPar(glob_n, col_part, comm);
+  if(mem_space_ == "DEFAULT")
+  {
+    return new hiopVectorPar(glob_n, col_part, comm);
+  }
+  else
+  {
+   return new hiopVectorRajaPar(glob_n, mem_space_, col_part, comm);
+  }
 }
 
 /**
  * @brief Method to create matrix.
  * 
- * @todo For now this is just a wrapper for hiopMatrixDenseRowMajor constructor.
- * Need to add options for creating different vectors.
+ * Creates legacy HiOp dense matrix by default, RAJA vector when memory space
+ * is specified.
  */
 hiopMatrixDense* LinearAlgebraFactory::createMatrixDense(
   const long long& m,
@@ -81,7 +106,15 @@ hiopMatrixDense* LinearAlgebraFactory::createMatrixDense(
   MPI_Comm comm,
   const long long& m_max_alloc)
 {
-  return new hiopMatrixDenseRowMajor(m, glob_n, col_part, comm, m_max_alloc);
+  if(mem_space_ == "DEFAULT")
+  {
+    return new hiopMatrixDenseRowMajor(m, glob_n, col_part, comm, m_max_alloc);
+  }
+  else
+  {
+    return new hiopMatrixRajaDense(m, glob_n, mem_space_, col_part, comm, m_max_alloc);
+  }
+  
 }
 
 /**
@@ -90,5 +123,83 @@ hiopMatrixDense* LinearAlgebraFactory::createMatrixDense(
  */
 hiopMatrixSparse* LinearAlgebraFactory::createMatrixSparse(int rows, int cols, int nnz)
 {
-  return new hiopMatrixSparseTriplet(rows, cols, nnz);
+  if (mem_space_ == "DEFAULT")
+  {
+    return new hiopMatrixSparseTriplet(rows, cols, nnz);
+  }
+  else
+  {
+    return new hiopMatrixRajaSparseTriplet(rows, cols, nnz, mem_space_);
+  }
 }
+
+/**
+ * @brief Creates an instance of a symmetric sparse matrix of the appropriate
+ * implementation depending on the build.
+ */
+hiopMatrixSparse* LinearAlgebraFactory::createMatrixSymSparse(int size, int nnz)
+{
+  if (mem_space_ == "DEFAULT")
+  {
+    return new hiopMatrixSymSparseTriplet(size, nnz);
+  }
+  else
+  {
+    return new hiopMatrixRajaSymSparseTriplet(size, nnz, mem_space_);
+  }
+}
+
+/**
+ * @brief Static method to create a raw C array
+ */
+double* LinearAlgebraFactory::createRawArray(int n)
+{
+  if (mem_space_ == "DEFAULT")
+  {
+    return new double[n];
+  }
+  else
+  {
+#ifdef HIOP_USE_RAJA
+    auto& resmgr = umpire::ResourceManager::getInstance();
+    umpire::Allocator al  = resmgr.getAllocator(mem_space_);
+    return static_cast<double*>(al.allocate(n*sizeof(double)));
+#else
+    std::cout << "Need to enable RAJA and Umpire to use memory space "
+              << mem_space_ << ".\n"; 
+    return nullptr;
+#endif
+  }
+}
+
+/**
+ * @brief Static method to delete a raw C array
+ */
+void LinearAlgebraFactory::deleteRawArray(double* a)
+{
+  if (mem_space_ == "DEFAULT")
+  {
+    delete [] a;
+  }
+  else
+  {
+#ifdef HIOP_USE_RAJA
+    auto& resmgr = umpire::ResourceManager::getInstance();
+    umpire::Allocator al  = resmgr.getAllocator(mem_space_);
+    al.deallocate(a);
+#else
+    std::cout << "Need to enable RAJA and Umpire to delete array in memory space "
+              << mem_space_ << ".\n"; 
+#endif
+  }
+}
+
+
+void LinearAlgebraFactory::set_mem_space(const std::string mem_space)
+{
+  mem_space_ = mem_space;
+  // HiOp options turn all strings to lowercase. Need to revert that.
+  transform(mem_space_.begin(), mem_space_.end(), mem_space_.begin(), ::toupper);
+}
+
+std::string LinearAlgebraFactory::mem_space_ = "DEFAULT";

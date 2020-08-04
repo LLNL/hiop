@@ -58,9 +58,7 @@
 #pragma once
 #include <cstddef>
 #include <cstdio>
-
-#include <umpire/Allocator.hpp>
-#include <umpire/ResourceManager.hpp>
+#include <string>
 
 #include "hiopMatrixDense.hpp"
 
@@ -85,11 +83,13 @@ class hiopMatrixRajaDense : public hiopMatrixDense
 {
 public:
 
-  hiopMatrixRajaDense(const long long& m, 
-		  const long long& glob_n, 
-		  long long* col_part=NULL, 
-		  MPI_Comm comm=MPI_COMM_SELF, 
-		  const long long& m_max_alloc=-1);
+  hiopMatrixRajaDense(
+    const long long& m, 
+		const long long& glob_n,
+    std::string mem_space, 
+		long long* col_part = NULL, 
+		MPI_Comm comm = MPI_COMM_SELF, 
+		const long long& m_max_alloc = -1);
   virtual ~hiopMatrixRajaDense();
 
   virtual void setToZero();
@@ -240,11 +240,11 @@ public:
   virtual MPI_Comm get_mpi_comm() const { return comm_; }
 
   //TODO: this is not kosher!
-  inline double** local_data() const {return M_; }
-  inline double*  local_buffer() const {return M_[0]; }
-  inline double*  local_buffer_dev() const {return M_dev_[0]; }
+  inline double** local_data_host() const {return M_host_; }
+  inline double*  local_buffer_host() const {return M_host_[0]; }
+  inline double*  local_buffer() const {return data_dev_; }
   //do not use this unless you sure you know what you're doing
-  inline double** get_M() { return M_; }
+  inline double** get_M_host() { return M_host_; }
 
   virtual long long m() const {return m_local_;}
   virtual long long n() const {return n_global_;}
@@ -255,18 +255,19 @@ public:
   void copyToDev();
   void copyFromDev();
 
+  void setRowPointers();
+
 private:
-  mutable umpire::Allocator hostalloc_;
-  mutable umpire::Allocator devalloc_;
-  double* data_;      ///< pointer to host mirror of matrix data
+  std::string mem_space_;
+  double* data_host_; ///< pointer to host mirror of matrix data
   double* data_dev_;  ///< pointer to memory space of matrix data
-  double** M_;        ///< array of pointers to matrix rows on host mirror
+  double** M_host_;   ///< array of pointers to matrix rows on host mirror
   double** M_dev_;    ///< array of pointers to matrix rows on device
   int n_local_;       ///< local number of columns
   long long glob_jl_; ///< global index of first column in the local data block
   long long glob_ju_; ///< global index of first column in the next data block
 
-  double* yglob_;
+  double* yglob_host_;
   double* ya_host_;
 
   mutable double* buff_mxnlocal_host_; ///< host data buffer
@@ -279,15 +280,7 @@ private:
   /** copy constructor, for internal/private use only (it doesn't copy the values) */
   hiopMatrixRajaDense(const hiopMatrixRajaDense&);
 
-  inline double* new_mxnlocal_host_buff() const
-  {
-    if(buff_mxnlocal_host_ == NULL)
-    {
-      buff_mxnlocal_host_ = static_cast<double*>(hostalloc_.allocate(sizeof(double)*max_rows_*n_local_));
-    }
-    return buff_mxnlocal_host_;
-  }
-
+  double* new_mxnlocal_host_buff() const;
 };
 
 } // namespace hiop

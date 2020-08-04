@@ -58,9 +58,8 @@
 #define HIOP_VECTOR_RAJA_PAR
 
 #include <cstdio>
-
-#include <umpire/Allocator.hpp>
-#include <umpire/ResourceManager.hpp>
+#include <string>
+#include <cassert>
 
 #include <hiopMPI.hpp>
 #include "hiopVector.hpp"
@@ -72,7 +71,7 @@ namespace hiop
 class hiopVectorRajaPar : public hiopVector
 {
 public:
-  hiopVectorRajaPar(const long long& glob_n, long long* col_part=NULL, MPI_Comm comm=MPI_COMM_SELF);
+  hiopVectorRajaPar(const long long& glob_n, std::string mem_space, long long* col_part=NULL, MPI_Comm comm=MPI_COMM_SELF);
   virtual ~hiopVectorRajaPar();
 
   virtual void setToZero();
@@ -118,18 +117,18 @@ public:
   virtual void min( double& m, int& index ) const;
   virtual void negate();
   virtual void invert();
-  virtual double logBarrier(const hiopVector& select) const;
+  virtual double logBarrier_local(const hiopVector& select) const;
   virtual void addLogBarrierGrad(double alpha, const hiopVector& x, const hiopVector& select);
 
-  virtual double linearDampingTerm(const hiopVector& ixl_select, const hiopVector& ixu_select, 
-                                   const double& mu, const double& kappa_d) const;
+  virtual double linearDampingTerm_local(const hiopVector& ixl_select, const hiopVector& ixu_select, 
+                                         const double& mu, const double& kappa_d) const;
   virtual int allPositive();
   virtual int allPositive_w_patternSelect(const hiopVector& w);
-  virtual bool projectIntoBounds(const hiopVector& xl, const hiopVector& ixl, 
-                                 const hiopVector& xu, const hiopVector& ixu,
-                                 double kappa1, double kappa2);
-  virtual double fractionToTheBdry(const hiopVector& dx, const double& tau) const;
-  virtual double fractionToTheBdry_w_pattern(const hiopVector& dx, const double& tau, const hiopVector& ix) const;
+  virtual bool projectIntoBounds_local(const hiopVector& xl, const hiopVector& ixl, 
+                                       const hiopVector& xu, const hiopVector& ixu,
+                                       double kappa1, double kappa2);
+  virtual double fractionToTheBdry_local(const hiopVector& dx, const double& tau) const;
+  virtual double fractionToTheBdry_w_pattern_local(const hiopVector& dx, const double& tau, const hiopVector& ix) const;
   virtual void selectPattern(const hiopVector& ix);
   virtual bool matchesPattern(const hiopVector& ix);
 
@@ -138,28 +137,27 @@ public:
 
   virtual void adjustDuals_plh(const hiopVector& x, const hiopVector& ix, const double& mu, const double& kappa);
 
-  virtual bool isnan() const;
-  virtual bool isinf() const;
-  virtual bool isfinite() const;
+  virtual bool isnan_local() const;
+  virtual bool isinf_local() const;
+  virtual bool isfinite_local() const;
   
   virtual void print(FILE*, const char* withMessage=NULL, int max_elems=-1, int rank=-1) const;
 
   /* more accessers */
   inline long long get_local_size() const { return n_local_; }
-  inline double* local_data() { return data_; }
-  inline const double* local_data_const() const { return data_; }
-  inline double* local_data_dev() { return data_dev_; }
-  inline const double* local_data_dev_const() const { return data_dev_; }
+  inline double* local_data_host() { return data_host_; }
+  inline const double* local_data_host_const() const { return data_host_; }
+  inline double* local_data() { return data_dev_; }
+  inline const double* local_data_const() const { return data_dev_; }
   inline MPI_Comm get_mpi_comm() const { return comm_; }
 
   void copyToDev();
   void copyFromDev();
 
 private:
-  umpire::Allocator hostalloc_;
-  umpire::Allocator devalloc_;
+  std::string mem_space_;
   MPI_Comm comm_;
-  double* data_;
+  double* data_host_;
   double* data_dev_;
   long long glob_il_, glob_iu_;
   long long n_local_;
