@@ -52,7 +52,10 @@
 #include "hiopKKTLinSys.hpp"
 #include "hiopLinSolver.hpp"
 #include "hiopLinSolverIndefDenseLapack.hpp"
+
+#ifdef HIOP_USE_MAGMA
 #include "hiopLinSolverIndefDenseMagma.hpp"
+#endif
 
 #include "hiopCSR_IO.hpp"
 
