@@ -48,7 +48,10 @@
 
 #include "hiopKKTLinSysMDS.hpp"
 #include "hiopLinSolverIndefDenseLapack.hpp"
+
+#ifdef HIOP_USE_MAGMA
 #include "hiopLinSolverIndefDenseMagma.hpp"
+#endif
 
 namespace hiop
 {
