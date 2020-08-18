@@ -54,6 +54,8 @@
 #include "hiopHessianLowRank.hpp"
 #include "hiopPDPerturbation.hpp"
 
+#include "hiopCppStdUtils.hpp"
+
 namespace hiop
 {
 
@@ -62,8 +64,10 @@ class hiopKKTLinSys
 public:
   hiopKKTLinSys(hiopNlpFormulation* nlp) 
     : nlp_(nlp), iter_(NULL), grad_f_(NULL), Jac_c_(NULL), Jac_d_(NULL), Hess_(NULL),
-      perturb_calc_(NULL)
-  { }
+      perturb_calc_(NULL), safe_mode_(false)
+  { 
+    perf_report_ = "on"==hiop::tolower(nlp_->options->GetString("time_kkt"));
+  }
   virtual ~hiopKKTLinSys() 
   { }
   /* updates the parts in KKT system that are dependent on the iterate. 
@@ -81,6 +85,11 @@ public:
   virtual void set_PD_perturb_calc(hiopPDPerturbation* p)
   {
     perturb_calc_ = p;
+  }
+
+  inline void set_safe_mode(bool val)
+  {
+    safe_mode_ = val;
   }
 #ifdef HIOP_DEEPCHECKS
   //computes the solve error for the KKT Linear system; used only for correctness checking
@@ -108,6 +117,8 @@ protected:
   const hiopMatrix *Jac_c_, *Jac_d_;
   hiopMatrix* Hess_;
   hiopPDPerturbation* perturb_calc_;
+  bool perf_report_;
+  bool safe_mode_;
 };
 
 class hiopKKTLinSysCompressed : public hiopKKTLinSys
@@ -158,7 +169,7 @@ public:
 
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction);
 
-  virtual void solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
+  virtual bool solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
 			       hiopVector& dx, hiopVector& dyc, hiopVector& dyd) = 0;
 
 #ifdef HIOP_DEEPCHECKS
@@ -199,7 +210,7 @@ public:
 
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction);
 
-  virtual void solveCompressed(hiopVector& rx, hiopVector& rd, 
+  virtual bool solveCompressed(hiopVector& rx, hiopVector& rd, 
 			       hiopVector& ryc, hiopVector& ryd,
 			       hiopVector& dx, hiopVector& dd, 
 			       hiopVector& dyc, hiopVector& dyd) = 0;
@@ -263,7 +274,7 @@ public:
    *  dx = - (H+Dx)^{-1}*(Jc^T*dyc+Jd^T*dyd - rx)
    * 
    */
-  virtual void solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
+  virtual bool solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
 			       hiopVector& dx, hiopVector& dyc, hiopVector& dyd);
 
   //LAPACK wrappers

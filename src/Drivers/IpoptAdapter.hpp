@@ -19,7 +19,7 @@
 #include "IpTNLP.hpp"
 #include "hiopInterface.hpp"
 
-#include "hiopMatrix.hpp"
+#include "hiopMatrixDenseRowMajor.hpp"
 
 #include <cassert>
 #include <cstring>
@@ -182,9 +182,10 @@ private:
 
 };
 
-//we use hiopMatrixDense for the MDS adapter to enable double indexing, [i][j] on the double** 
+//we use hiopMatrixDenseRowMajor for the MDS adapter to enable double indexing,
+//[i][j] on the double** 
 //buffers hiopInterfaceMDS implementations expect
-#include "hiopMatrix.hpp"
+#include "hiopMatrixDenseRowMajor.hpp"
 
 /* Adapter from MixedDenseSparse NLP formulation to Ipopt's general TNLP */
 class hiopMDS2IpoptTNLP : public TNLP
@@ -445,22 +446,22 @@ public:
 
       
       if(JacDeq == NULL) {
-	JacDeq = new hiopMatrixDense(n_eq, nx_dense);
+	JacDeq = new hiopMatrixDenseRowMajor(n_eq, nx_dense);
 	assert(JacDineq == NULL);
       } else {
 	//this for the case when the problem (constraints) sizes changed
 	if(JacDeq->m() != n_eq || JacDeq->n() != nx_dense) {
 	  delete JacDeq;
-	  JacDeq = new hiopMatrixDense(n_eq, nx_dense);
+	  JacDeq = new hiopMatrixDenseRowMajor(n_eq, nx_dense);
 	}
       }
       if(JacDineq == NULL) {
-	JacDineq = new hiopMatrixDense(n_ineq, nx_dense);
+	JacDineq = new hiopMatrixDenseRowMajor(n_ineq, nx_dense);
       } else {
 	//this for the case when the problem (constraints) sizes changed
 	if(JacDineq->m() != n_ineq || JacDineq->n() != nx_dense) {
 	  delete JacDineq;
-	  JacDineq = new hiopMatrixDense(n_ineq, nx_dense);
+	  JacDineq = new hiopMatrixDenseRowMajor(n_ineq, nx_dense);
 	}
       }
       //eq_call_failed = false;
@@ -516,7 +517,7 @@ public:
       //try one call Jacobian
       if(try_onecall_Jac) {
 	if(JacDeqineq == NULL) {
-	  JacDeqineq = new hiopMatrixDense(m, nx_dense);
+	  JacDeqineq = new hiopMatrixDenseRowMajor(m, nx_dense);
 	  assert(JacDeq == NULL);
 	  assert(JacDineq == NULL);
 	}
@@ -576,12 +577,12 @@ public:
 
       int nnzit = 0;
       if(HessDL==NULL) {
-	HessDL = new hiopMatrixDense(nx_dense, nx_dense);
+	HessDL = new hiopMatrixDenseRowMajor(nx_dense, nx_dense);
       } else {
 	//this for the case when the problem (constraints) sizes changed
 	if(HessDL->m() != nx_dense) {
 	  delete HessDL;
-	  HessDL = new hiopMatrixDense(nx_dense, nx_dense);
+	  HessDL = new hiopMatrixDenseRowMajor(nx_dense, nx_dense);
 	}
       }
       double** HessMat = HessDL->local_data();
@@ -630,8 +631,8 @@ private:
   int nnz_sparse_Hess_Lagr_SS, nnz_sparse_Hess_Lagr_SD;
   int n_eq, n_ineq;
   long long *cons_eq_idxs, *cons_ineq_idxs; 
-  hiopMatrixDense *JacDeq, *JacDineq, *HessDL;
-  hiopMatrixDense *JacDeqineq; //this holds the full Jacobian when one-call Jacobian is activated
+  hiopMatrixDenseRowMajor *JacDeq, *JacDineq, *HessDL;
+  hiopMatrixDenseRowMajor *JacDeqineq; //this holds the full Jacobian when one-call Jacobian is activated
 
   /* Methods to block default compiler methods.
    * The compiler automatically generates the following three methods.

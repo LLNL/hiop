@@ -157,7 +157,8 @@ void hiopOptions::registerOptions()
 		    "approximation (default 1.)");
   {
     vector<string> range(2); range[0] = "no"; range[1] = "yes";
-    registerStrOption("accept_every_trial_step", "no", range, "Disable line-search and take close-to-boundary step");
+    registerStrOption("accept_every_trial_step", "no", range, 
+		      "Disable line-search and take close-to-boundary step");
   }
   {
     vector<string> range(5); 
@@ -239,6 +240,16 @@ void hiopOptions::registerOptions()
 		      "Jacobian (delta_c=delta_c_bar*mu^kappa_c)");
 
   }
+  // perfromance profiling
+  {
+    vector<string> range(2);
+    range[0] = "on";
+    range[1] = "off";
+    registerStrOption("time_kkt", "off", range,
+		      "turn on/off performance timers and reporting of the computational constituents of the "
+		      "KKT solve process");
+  }
+
   //other options
   {
     vector<string> range(2); range[0]="no"; range[1]="yes";
@@ -259,7 +270,11 @@ void hiopOptions::registerStrOption(const std::string& name, const std::string& 
   mOptions[name]=new _OStr(defaultValue, range, description);
 }
 
-void hiopOptions::registerIntOption(const std::string& name, int defaultValue, int low, int upp, const char* description)
+void hiopOptions::registerIntOption(const std::string& name,
+				    int defaultValue,
+				    int low,
+				    int upp,
+				    const char* description)
 {
   mOptions[name]=new _OInt(defaultValue, low, upp, description);
 }

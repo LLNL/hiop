@@ -46,58 +46,30 @@
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or 
 // product endorsement purposes.
 
-#ifndef HIOP_LINSOLVER_UMFPACKZ
-#define HIOP_LINSOLVER_UMFPACKZ
-
-#include "umfpack.h"
-
-#include "hiopNlpFormulation.hpp"
 #include "hiopLinSolver.hpp"
-#include "hiopMatrixComplexSparseTriplet.hpp"
-#include "hiopMatrixComplexDense.hpp"
 
-namespace hiop
-{
-  class hiopLinSolverUMFPACKZ : public hiopLinSolver
+#include "hiopMatrix.hpp"
+
+#include "hiopOptions.hpp"
+
+namespace hiop {
+  hiopLinSolver::hiopLinSolver()
+    : nlp_(NULL), perf_report_(false) 
   {
-  public:
-    hiopLinSolverUMFPACKZ(hiopMatrixComplexSparseTriplet& sysmat, hiopNlpFormulation* nlp_=NULL);
-    virtual ~hiopLinSolverUMFPACKZ();
-    
-    /** Triggers a refactorization of the matrix, if necessary. 
-     * Returns -1 if trouble in factorization is encountered. */
-    virtual int matrixChanged();
-    
-    /** solves a linear system.
-     * param 'x' is on entry the right hand side(s) of the system to be solved. On
-     * exit is contains the solution(s).  */
-    virtual bool solve(hiopVector& x);
-    virtual bool solve(hiopMatrix& X);
-    virtual bool solve(const hiopMatrixComplexSparseTriplet& B, hiopMatrixComplexDense& X);
+  }
+  hiopLinSolver::~hiopLinSolver() 
+  {
+  }
 
-    /** same as above but right-side and solution are separated */
-    virtual bool solve(const std::complex<double>* rhs, std::complex<double>* x);
-  private: 
-    void* m_symbolic;
-    void* m_numeric;
-    double* m_null;
+  
+  hiopLinSolverIndefDense::hiopLinSolverIndefDense(int n, hiopNlpFormulation* nlp)
+    : M(n,n)
+  {
+    nlp_ = nlp;
+    perf_report_ = "on"==hiop::tolower(nlp->options->GetString("time_kkt"));
+  }
+  hiopLinSolverIndefDense::~hiopLinSolverIndefDense()
+  { 
+  }
 
-    hiopNlpFormulation* nlp;
-    
-    int *m_colptr, *m_rowidx;
-    double *m_vals; //size 2*nnz !!!
-    const hiopMatrixComplexSparseTriplet& sys_mat;
-    int n, nnz;
-
-    double m_control [UMFPACK_CONTROL], m_info [UMFPACK_INFO];
-
-  private:
-    //returns the "abs" norm of the residual A*x-b
-    double resid_abs_norm(int n, int* Ap, int* Ai, double* Ax/*packed*/,
-			  double* x/*packed*/,
-			  double* b/*packed*/); 
-  };
-} //end namespace hiop
-
-#endif
-
+}

@@ -60,6 +60,172 @@
 #endif
 namespace hiop
 {
+
+ 
+class hiopRunKKTSolStats
+{
+public:
+  hiopRunKKTSolStats()
+  { 
+    initialize();
+  };
+
+  virtual ~hiopRunKKTSolStats()
+  {
+  };
+
+  //
+  // at each optimization iteration
+  //
+
+  hiopTimer tmTotalPerIter;
+
+  // time of the initial boilerplate, before any expensive matrix update or factorization
+  hiopTimer tmUpdateInit;
+  // time in the update of the linsys to be sent to lower level linear solver; multiple updates can happen
+  // if the inertia correction kicks in
+  hiopTimer tmUpdateLinsys;
+  // time spent in lower level factorizations; can time multiple factorizations if the inertia correction kicks in 
+  hiopTimer tmUpdateInnerFact;
+  // number of inertia corrections
+  int nUpdateICCorr;
+
+  // time spent in compressing or decompressing rhs (or in other words, pre- and post-triangular solve)
+  hiopTimer tmSolveRhsManip;
+  // the actual triangular solve within the inner solver
+  hiopTimer tmSolveTriangular;
+
+  // total time 
+  double tmTotal;
+  //constituents of total -> map into timers used to time each optimization iteration
+  double tmTotalUpdateInit, tmTotalUpdateLinsys, tmTotalUpdateInnerFact;
+  double tmTotalSolveRhsManip, tmTotalSolveTriangular; 
+
+  inline void initialize() {
+    tmTotalPerIter.reset();
+    tmUpdateInit.reset();
+    tmUpdateLinsys.reset();
+    tmUpdateInnerFact.reset();
+    nUpdateICCorr = 0;
+    tmSolveRhsManip.reset();
+    tmSolveTriangular.reset();
+    
+    tmTotal = 0.;
+    tmTotalUpdateInit = 0;
+    tmTotalUpdateLinsys = 0;
+    tmTotalUpdateInnerFact = 0;
+    tmTotalSolveRhsManip = 0; 
+    tmTotalSolveTriangular = 0;
+  }
+
+  inline void start_optimiz_iteration()
+  {
+    tmTotalPerIter.reset();
+    tmTotalPerIter.start();
+    
+    tmUpdateInit.reset();
+    tmUpdateLinsys.reset();
+    tmUpdateInnerFact.reset();
+    nUpdateICCorr = 0;
+    tmSolveRhsManip.reset();
+    tmSolveTriangular.reset();
+  } 
+  inline void end_optimiz_iteration()
+  {
+    tmTotalPerIter.stop();
+    tmTotal += tmTotalPerIter.getElapsedTime();
+      
+    tmTotalUpdateInit += tmUpdateInit.getElapsedTime();
+    tmTotalUpdateLinsys += tmUpdateLinsys.getElapsedTime();
+    tmTotalUpdateInnerFact += tmUpdateInnerFact.getElapsedTime();
+    tmTotalSolveRhsManip += tmSolveRhsManip.getElapsedTime(); 
+    tmTotalSolveTriangular += tmSolveTriangular.getElapsedTime();
+    
+  }
+  inline std::string get_summary_last_iter() {
+    std::stringstream ss;
+
+    ss << std::fixed << std::setprecision(3);
+    ss << "Iteration KKT time=" << tmTotalPerIter.getElapsedTime() << "sec " << std::endl;
+
+    ss << "\tupdate init=" << std::setprecision(3) << tmUpdateInit.getElapsedTime() << "sec "
+       << "update linsys=" << tmUpdateLinsys.getElapsedTime() << "sec " 
+       << "fact=" << tmUpdateInnerFact.getElapsedTime() << "sec " 
+       << "inertia corrections=" << nUpdateICCorr << std::endl;
+
+    ss << "\tsolve rhs-manip=" <<tmSolveRhsManip.getElapsedTime() << "sec "
+       << "triangular solve=" << tmSolveTriangular.getElapsedTime() << "sec " << std::endl; 
+
+    return ss.str();
+  }
+
+  inline std::string get_summary_total() {
+    std::stringstream ss;
+    ss << "Total KKT time " << std::fixed << std::setprecision(3) << tmTotal << " sec " 
+       << std::endl;
+
+    ss << "\tupdate init " << std::setprecision(3) << tmTotalUpdateInit <<  "sec "
+       << "    update linsys " << tmTotalUpdateLinsys << " sec " 
+       << "    fact " << tmTotalUpdateInnerFact << " sec " << std::endl;
+
+    ss << "\tsolve rhs-manip " <<tmTotalSolveRhsManip << " sec "
+       << "    triangular solve " << tmTotalSolveTriangular << " sec " << std::endl; 
+
+    return ss.str();
+  }
+};
+
+
+class hiopLinSolStats
+{
+public:
+  hiopLinSolStats()
+  {
+    flopsFact = flopsTriuSolves = -1.;
+  }
+  hiopTimer tmFactTime;
+  hiopTimer tmInertiaComp;
+  hiopTimer tmTriuSolves;
+
+  hiopTimer tmDeviceTransfer;
+  
+  //hiopTimer tmWholeLinSolve;
+
+  double flopsFact, flopsTriuSolves;
+  
+  inline void start_linsolve()
+  {
+    flopsFact = flopsTriuSolves = -1.;
+
+    tmFactTime.reset();
+    tmInertiaComp.reset();
+    tmTriuSolves.reset();
+    tmDeviceTransfer.reset();
+  }
+  
+  inline void end_linsolve()
+  {
+  }
+  inline std::string get_summary_last_solve() const
+  {
+    std::stringstream ss;
+    ss <<  std::fixed << std::setprecision(3);
+      //<< "Total LinSolve time=" << tmWholeLinSolve.getElapsedTime() << " sec " 
+    //<< std::endl;
+
+    ss << "(Last) Lin Solve: fact " << tmFactTime.getElapsedTime() << "s" 
+       << " at " << flopsFact << "TFlops" 
+       << "   inertia " << tmInertiaComp.getElapsedTime() << "s" 
+       << "   triu. solves " << tmTriuSolves.getElapsedTime() << "s"
+       << " at " << flopsTriuSolves << "TFlops"
+       << "   device transfer " << tmDeviceTransfer.getElapsedTime() << "s"
+       << std::endl;
+
+    return ss.str();
+  }
+};
+
+
 class hiopRunStats
 {
 public:
@@ -76,24 +242,30 @@ public:
   hiopTimer tmSolverInternal, tmSearchDir, tmStartingPoint, tmMultUpdate, tmComm;
   hiopTimer tmInit;
 
-  hiopTimer tmEvalObj, tmEvalGrad_f, tmEvalCons, tmEvalJac_con;
-
+  hiopTimer tmEvalObj, tmEvalGrad_f, tmEvalCons, tmEvalJac_con, tmEvalHessL;
   int nEvalObj, nEvalGrad_f, nEvalCons_eq, nEvalCons_ineq, nEvalJac_con_eq, nEvalJac_con_ineq;
+  int nEvalHessL;
+  
   int nIter;
+
+  hiopRunKKTSolStats kkt;
+  hiopLinSolStats linsolv;
   inline virtual void initialize() {
     tmOptimizTotal = tmSolverInternal = tmSearchDir = tmStartingPoint = tmMultUpdate = tmComm = tmInit = 0.;
-    tmEvalObj = tmEvalGrad_f = tmEvalCons = tmEvalJac_con = 0.;    
+    tmEvalObj = tmEvalGrad_f = tmEvalCons = tmEvalJac_con = tmEvalHessL = 0.;    
     nEvalObj = nEvalGrad_f = nEvalCons_eq = nEvalCons_ineq =  nEvalJac_con_eq = nEvalJac_con_ineq = 0;
+    nEvalHessL = 0;
     nIter = 0; 
   }
 
-  inline std::string getSummary(int masterRank=0) {
+  inline std::string get_summary(int masterRank=0) {
     std::stringstream ss;
-    ss << "Total time=" << std::fixed << std::setprecision(3) << tmOptimizTotal.getElapsedTime() << " sec " << std::endl;
+    ss << "Total time " << std::fixed << std::setprecision(3)
+       << tmOptimizTotal.getElapsedTime() << " sec " << std::endl;
 
     ss << "Hiop internal time: " << std::setprecision(3) 
-       << "    total=" << std::setprecision(3) << tmSolverInternal.getElapsedTime() << " sec "
-       << "  average per iteration=" << (tmSolverInternal.getElapsedTime()/nIter) << " sec " << std::endl;
+       << "    total " << std::setprecision(3) << tmSolverInternal.getElapsedTime() << " sec "
+       << "    avg iter " << (tmSolverInternal.getElapsedTime()/nIter) << " sec " << std::endl;
 #ifdef HIOP_USE_MPI
     int nranks;
     int ierr = MPI_Comm_size(comm, &nranks); assert(MPI_SUCCESS==ierr);
@@ -106,13 +278,27 @@ public:
     ierr = MPI_Allreduce(&loc, &stddev, 1, MPI_DOUBLE, MPI_SUM, comm); assert(MPI_SUCCESS==ierr);
     stddev = sqrt(stddev);
     stddev /= nranks;
-    ss << "    internal total time std dev across ranks=" << (stddev/mean*100) << " percent"  << std::endl;
+    ss << "    internal total std dev across ranks " << (stddev/mean*100) << " percent"  << std::endl;
 #endif
 
-    ss << "Fcn/deriv time:     total=" << std::setprecision(3) 
-       << (tmEvalObj.getElapsedTime() + tmEvalGrad_f.getElapsedTime() + tmEvalCons.getElapsedTime() + tmEvalJac_con.getElapsedTime()) 
-       << " sec  ( obj=" << tmEvalObj.getElapsedTime() << " grad=" << tmEvalGrad_f.getElapsedTime() 
-       << " cons=" << tmEvalCons.getElapsedTime() << " Jac=" << tmEvalJac_con.getElapsedTime() << " ) " << std::endl;
+    // <<<<<<< HEAD
+    //     ss << "Fcn/deriv time:     total " << std::setprecision(3) 
+    //        << (tmEvalObj.getElapsedTime() + tmEvalGrad_f.getElapsedTime() + tmEvalCons.getElapsedTime() + tmEvalJac_con.getElapsedTime()) 
+    //        << " sec  ( obj " << tmEvalObj.getElapsedTime() << " grad " << tmEvalGrad_f.getElapsedTime() 
+    //        << " cons " << tmEvalCons.getElapsedTime() << " Jac " << tmEvalJac_con.getElapsedTime() << " ) " << std::endl;
+    // =======
+    ss << std::setprecision(3)
+       << "Fcn/deriv time:     total=" << (tmEvalObj.getElapsedTime() +
+					   tmEvalGrad_f.getElapsedTime() +
+					   tmEvalCons.getElapsedTime() +
+					   tmEvalJac_con.getElapsedTime() +
+					   tmEvalHessL.getElapsedTime()) << " sec  "
+       << "( obj=" << tmEvalObj.getElapsedTime()
+       << " grad=" << tmEvalGrad_f.getElapsedTime() 
+       << " cons=" << tmEvalCons.getElapsedTime()
+       << " Jac=" << tmEvalJac_con.getElapsedTime()
+       << " Hess=" << tmEvalHessL.getElapsedTime() << ") " << std::endl;
+    // >>>>>>> 3e36fcc7eaf63ab1307c58f0beb79dce7ac4c928
 #ifdef HIOP_USE_MPI
     loc=tmEvalObj.getElapsedTime() + tmEvalGrad_f.getElapsedTime() + tmEvalCons.getElapsedTime() + tmEvalJac_con.getElapsedTime();
 
@@ -124,12 +310,12 @@ public:
     ierr = MPI_Allreduce(&loc, &stddev, 1, MPI_DOUBLE, MPI_SUM, comm); assert(MPI_SUCCESS==ierr);
     stddev = sqrt(stddev);
     stddev /= nranks;
-    ss << "    Fcn/deriv total time std dev across ranks=" << (stddev/mean*100) << " percent"  << std::endl;
+    ss << "    Fcn/deriv total std dev across ranks " << (stddev/mean*100) << " percent"  << std::endl;
 
 #endif
-    ss << "Fcn/deriv #: obj=" << nEvalObj <<  " grad=" << nEvalGrad_f 
-       << " eq cons=" << nEvalCons_eq << " ineq cons=" << nEvalCons_ineq 
-       << " eq Jac=" << nEvalJac_con_eq << " ineq Jac=" << nEvalJac_con_ineq << std::endl;
+    ss << "Fcn/deriv #: obj " << nEvalObj <<  " grad " << nEvalGrad_f 
+       << " eq cons " << nEvalCons_eq << " ineq cons " << nEvalCons_ineq 
+       << " eq Jac " << nEvalJac_con_eq << " ineq Jac " << nEvalJac_con_ineq << std::endl;
 
     return ss.str();
   }
@@ -137,5 +323,6 @@ private:
   MPI_Comm comm;
 
 };
+
 }
 #endif

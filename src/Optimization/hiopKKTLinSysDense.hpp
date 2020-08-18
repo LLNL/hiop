@@ -51,6 +51,11 @@
 
 #include "hiopKKTLinSys.hpp"
 #include "hiopLinSolver.hpp"
+#include "hiopLinSolverIndefDenseLapack.hpp"
+
+#ifdef HIOP_USE_MAGMA
+#include "hiopLinSolverIndefDenseMagma.hpp"
+#endif
 
 #include "hiopCSR_IO.hpp"
 
@@ -104,7 +109,7 @@ public:
 
       if(nlp_->options->GetString("compute_mode")=="hybrid") {
 #ifdef HIOP_USE_MAGMA
-	linSys = new hiopLinSolverIndefDenseMagma(n, nlp_);
+	linSys = new hiopLinSolverIndefDenseMagmaNopiv(n, nlp_);
 	nlp_->log->printf(hovScalars,
 			  "LinSysDenseXYcYd: instantiating Magma for a matrix of size %d\n",
 			  n);
@@ -248,7 +253,7 @@ public:
     return true;
   }
 
-  virtual void solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
+  virtual bool solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
 			       hiopVector& dx, hiopVector& dyc, hiopVector& dyd)
   {
     int nx=rx.get_size(), nyc=ryc.get_size(), nyd=ryd.get_size();
@@ -264,10 +269,12 @@ public:
 
     if(write_linsys_counter>=0) csr_writer.writeRhsToFile(*rhsXYcYd, write_linsys_counter);
 
-    //to do: iterative refinement
-    linSys->solve(*rhsXYcYd);
+    //! todo: iterative refinement
+    bool sol_ok = linSys->solve(*rhsXYcYd);
 
     if(write_linsys_counter>=0) csr_writer.writeSolToFile(*rhsXYcYd, write_linsys_counter);
+
+    if(false==sol_ok) return false;
 
     rhsXYcYd->copyToStarting(0,      dx);
     rhsXYcYd->copyToStarting(nx,     dyc);
@@ -276,6 +283,7 @@ public:
     nlp_->log->write("SOL KKT XYcYd dx: ", dx,  hovMatrices);
     nlp_->log->write("SOL KKT XYcYd dyc:", dyc, hovMatrices);
     nlp_->log->write("SOL KKT XYcYd dyd:", dyd, hovMatrices);
+    return true;
   }
 
 protected:
@@ -341,7 +349,7 @@ public:
       if(nlp_->options->GetString("compute_mode")=="hybrid") {
 #ifdef HIOP_USE_MAGMA
 	nlp_->log->printf(hovScalars, "LinSysDenseDXYcYd: instantiating Magma for a matrix of size %d\n", n);
-	linSys = new hiopLinSolverIndefDenseMagma(n, nlp_);
+	linSys = new hiopLinSolverIndefDenseMagmaNopiv(n, nlp_);
 #else
 	nlp_->log->printf(hovScalars, "LinSysDenseXDYcYd: instantiating Lapack for a matrix of size %d\n", n);
 	linSys = new hiopLinSolverIndefDenseLapack(n, nlp_);
@@ -490,7 +498,7 @@ public:
     return true;
   }
 
-  virtual void solveCompressed(hiopVector& rx, hiopVector& rd, hiopVector& ryc, hiopVector& ryd,
+  virtual bool solveCompressed(hiopVector& rx, hiopVector& rd, hiopVector& ryc, hiopVector& ryd,
 			       hiopVector& dx, hiopVector& dd, hiopVector& dyc, hiopVector& dyd)
   {
     int nx=rx.get_size(), nyc=ryc.get_size(), nyd=ryd.get_size();
@@ -508,9 +516,11 @@ public:
 
     if(write_linsys_counter>=0) csr_writer.writeRhsToFile(*rhsXDYcYd, write_linsys_counter);
 
-    linSys->solve(*rhsXDYcYd);
+    bool sol_ok = linSys->solve(*rhsXDYcYd);
 
     if(write_linsys_counter>=0) csr_writer.writeSolToFile(*rhsXDYcYd, write_linsys_counter);
+
+    if(false==sol_ok) return false;
 
     rhsXDYcYd->copyToStarting(0,          dx);
     rhsXDYcYd->copyToStarting(nx,         dd);
@@ -521,6 +531,7 @@ public:
     nlp_->log->write("SOL KKT XDYcYd dd: ", dd,  hovMatrices);
     nlp_->log->write("SOL KKT XDYcYd dyc:", dyc, hovMatrices);
     nlp_->log->write("SOL KKT XDYcYd dyd:", dyd, hovMatrices);
+    return true;
   }
 
 protected:

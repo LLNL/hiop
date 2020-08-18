@@ -47,7 +47,12 @@
 // product endorsement purposes.
 
 #include "hiopKKTLinSysMDS.hpp"
+#include "hiopLinSolverIndefDenseLapack.hpp"
+
+#ifdef HIOP_USE_MAGMA
 #include "hiopLinSolverIndefDenseMagma.hpp"
+#endif
+
 namespace hiop
 {
 
@@ -75,7 +80,9 @@ namespace hiop
 					       hiopMatrix* Hess)
   {
     if(!nlpMDS_) { assert(false); return false; }
+   
     nlp_->runStats.tmSolverInternal.start();
+    nlp_->runStats.kkt.tmUpdateInit.start();
 
     iter_ = iter;
     grad_f_ = dynamic_cast<const hiopVectorPar*>(grad_f);
@@ -97,22 +104,14 @@ namespace hiop
     assert(nx==Jac_cMDS_->n_sp()+Jac_cMDS_->n_de());
     assert(nx==Jac_dMDS_->n_sp()+Jac_dMDS_->n_de());
 
-    if(NULL==linSys_) {
-      int n = nxd + neq + nineq;
+    //
+    //based on safe_mode_, decide whether to go with the nopiv (fast) or Bunch-Kaufman (stable) linear solve 
+    //
+    linSys_ = determineAndCreateLinsys(nxd, neq, nineq);
 
-      if(nlp_->options->GetString("compute_mode")=="hybrid") {
-#ifdef HIOP_USE_MAGMA
-	nlp_->log->printf(hovScalars, "LinSysMDSXYcYd: Magma for a matrix of size %d\n", n);
-	linSys_ = new hiopLinSolverIndefDenseMagmaDev(n, nlp_);
-#else
-	nlp_->log->printf(hovScalars, "LinSysMDSXYcYd: Lapack for a matrix of size %d\n", n);
-	linSys_ = new hiopLinSolverIndefDenseLapack(n, nlp_);
-#endif
-      } else {
-	nlp_->log->printf(hovScalars, "LinSysMDSXYcYd: Lapack for a matrix of size %d\n", n);
-	linSys_ = new hiopLinSolverIndefDenseLapack(n, nlp_);
-      }
-    }
+    //
+    //update/compute KKT
+    //
 
     //Dx (<-- log-barrier diagonal, for both sparse (Dxs) and dense (Dxd)
     assert(Dx_->get_local_size() == nxs+nxd);
@@ -122,39 +121,56 @@ namespace hiop
     nlp_->log->write("Dx in KKT", *Dx_, hovMatrices);
 
     hiopMatrixDense& Msys = linSys_->sysMatrix();
-
+    if(perf_report_) {
+      nlp_->log->printf(hovSummary, 
+			"KKT_MDS_XYcYd linsys: Low-level linear system size: %d\n", 
+			Msys.n());
+    }
     //
     //factorization + inertia correction if needed
     //
     const size_t max_ic_cor = 10;
     size_t num_ic_cor = 0;
 
-    //nlp_->log->write("KKT XDYcYd Linsys (no perturb):", Msys, hovMatrices);
-    
     double delta_wx, delta_wd, delta_cc, delta_cd;
     if(!perturb_calc_->compute_initial_deltas(delta_wx, delta_wd, delta_cc, delta_cd)) {
-      nlp_->log->printf(hovWarning, "XDycYd linsys: IC perturbation on new linsys failed.\n");
+      nlp_->log->printf(hovWarning, 
+			"KKT_MDS_XYcYd linsys: IC perturbation on new linsys failed.\n");
       return false;
     }
     
+    nlp_->runStats.kkt.tmUpdateInit.stop();
+
     while(num_ic_cor<=max_ic_cor) {
 
       assert(delta_wx == delta_wd && "something went wrong with IC");
       assert(delta_cc == delta_cd && "something went wrong with IC");
-      nlp_->log->printf(hovScalars, "XYcYdMDS linsys: delta_w=%12.5e delta_c=%12.5e (ic %d)\n",
+      nlp_->log->printf(hovScalars, 
+			"KKT_MDS_XYcYd linsys: delta_w=%12.5e delta_c=%12.5e (ic %d)\n",
 			delta_wx, delta_cc, num_ic_cor);
-    
+
+      
       //
       //the update of the linear system, including IC perturbations
       //
+      nlp_->runStats.kkt.tmUpdateLinsys.start();
       {
 	Msys.setToZero();
 
 	int alpha = 1.;
+
+	// perf eval 
+	//hiopTimer tm;
+	//tm.start();
+
 	HessMDS_->de_mat()->addUpperTriangleToSymDenseMatrixUpperTriangle(0, alpha, Msys);
 	Jac_cMDS_->de_mat()->transAddToSymDenseMatrixUpperTriangle(0, nxd,     alpha, Msys);
 	Jac_dMDS_->de_mat()->transAddToSymDenseMatrixUpperTriangle(0, nxd+neq, alpha, Msys);
-	
+
+	//tm.stop();
+	//printf("the three add methods took %g sec\n", tm.getElapsedTime());
+	//tm.reset();
+
 	//update -> add Dxd to (1,1) block of KKT matrix (Hd = HessMDS_->de_mat already added above)
 	Msys.addSubDiagonal(0, alpha, *Dx_, nxs, nxd);
 	//add perturbation 'delta_wx' for xd
@@ -165,18 +181,29 @@ namespace hiop
 	  Hxs_ = LinearAlgebraFactory::createVector(nxs); assert(Hxs_);
 	}
 	Hxs_->startingAtCopyFromStartingAt(0, *Dx_, 0);
+	
 	//a good time to add the IC 'delta_wx' perturbation
 	Hxs_->addConstant(delta_wx);
+
+
 	//Hxs +=  diag(HessMDS->sp_mat());
 	//todo: make sure we check that the HessMDS->sp_mat() is a diagonal
 	HessMDS_->sp_mat()->startingAtAddSubDiagonalToStartingAt(0, alpha, *Hxs_, 0);
-	nlp_->log->write("Hxs in KKT", *Hxs_, hovMatrices);
-	
+	nlp_->log->write("Hxs in KKT_MDS_X", *Hxs_, hovMatrices);
+
+
 	//add - Jac_c_sp * (Hxs)^{-1} Jac_c_sp^T to diagonal block linSys starting at (nxd, nxd)
 	alpha = -1.;
+
+	// perf eval
+	//tm.start();
 	Jac_cMDS_->sp_mat()->addMDinvMtransToDiagBlockOfSymDeMatUTri(nxd, alpha, *Hxs_, Msys);
+
+	//tm.stop();
+	//printf("addMDinvMtransToDiagBlockOfSymDeMatUTri 111 took %g sec\n", tm.getElapsedTime());
+	//tm.reset();
+
 	Msys.addSubDiagonal(nxd, neq, -delta_cc);
-	
 	
 	/* we've just done above the (1,1) and (2,2) blocks of
 	 *
@@ -194,8 +221,15 @@ namespace hiop
 	alpha = -1.;
 	// add   - Jac_d_sp * (Hxs+Dxs+delta_wx*I)^{-1} * Jac_d_sp^T   to diagonal block
 	// linSys starting at (nxd+neq, nxd+neq)
+
+	// perf eval
+	//tm.start();
+
 	Jac_dMDS_->sp_mat()->
 	  addMDinvMtransToDiagBlockOfSymDeMatUTri(nxd+neq, alpha, *Hxs_, Msys); 
+
+	//tm.stop();
+	//printf("addMDinvMtransToDiagBlockOfSymDeMatUTri 222 took %g sec\n", tm.getElapsedTime());
 
 	//K_21 = - Jcs * (Hs+Dxs+delta_wx)^{-1} * Jds^T
 	alpha = -1.;
@@ -216,13 +250,17 @@ namespace hiop
 	Msys.addSubDiagonal(alpha, nxd+neq, *Dd_inv_);
 	Msys.addSubDiagonal(nxd+neq, nineq, -delta_cd);
 	
-	nlp_->log->write("KKT MDS XdenseDYcYd Linsys:", Msys, hovMatrices);
+	nlp_->log->write("KKT_MDS_XYcYd linsys:", Msys, hovMatrices);
       } // end of update of the linear system
+      nlp_->runStats.kkt.tmUpdateLinsys.stop();
       
       //write matrix to file if requested
       if(nlp_->options->GetString("write_kkt") == "yes") write_linsys_counter_++;
       if(write_linsys_counter_>=0) csr_writer_.writeMatToFile(Msys, write_linsys_counter_); 
       
+
+      nlp_->runStats.linsolv.start_linsolve();
+      nlp_->runStats.kkt.tmUpdateInnerFact.start();
       //factorization
       int n_neg_eig = linSys_->matrixChanged();
 
@@ -243,38 +281,45 @@ namespace hiop
 	  }
 	}
       }
+      nlp_->runStats.kkt.tmUpdateInnerFact.stop();
 
       if(n_neg_eig_11 < 0) {
-	nlp_->log->printf(hovScalars, "Detected null eigenvalues in (1,1) sparse block.\n");
+	nlp_->log->printf(hovWarning, 
+			  "KKT_MDS_XYcYd linsys: Detected null eigenvalues in (1,1) sparse block.\n");
 	assert(n_neg_eig_11 == -1);
 	n_neg_eig = -1;
       } else if(n_neg_eig_11 > 0) {
 	n_neg_eig += n_neg_eig_11;
-	nlp_->log->printf(hovScalars, "Detected negative eigenvalues in (1,1) sparse block.\n");
+	nlp_->log->printf(hovWarning, 
+			  "KKT_MDS_XYcYd linsys: Detected negative eigenvalues in (1,1) sparse block.\n");
       }
 
      if(Jac_cMDS_->m()+Jac_dMDS_->m()>0) {
 	if(n_neg_eig < 0) {
 	  //matrix singular
-	  nlp_->log->printf(hovScalars, "XYcYdMDS linsys is singular.\n");
+	  nlp_->log->printf(hovScalars, 
+			    "KKT_MDS_XYcYdlinsys is singular. Regularization will be attempted...\n");
 
 	  if(!perturb_calc_->compute_perturb_singularity(delta_wx, delta_wd, delta_cc, delta_cd)) {
-	    nlp_->log->printf(hovWarning, "XYcYdMDS linsys: computing singularity perturbation failed.\n");
+	    nlp_->log->printf(hovWarning, 
+			      "KKT_MDS_XYcYd linsys: computing singularity perturbation failed.\n");
 	    return false;
 	  }
 	  
-	} else if(n_neg_eig != Jac_cMDS_->m()+Jac_dMDS_->m()) {
+	} else if(n_neg_eig != Jac_cMDS_->m() + Jac_dMDS_->m()) {
 	  //wrong inertia
-	  nlp_->log->printf(hovScalars, "XYcYdMDS linsys negative eigs mismatch: has %d expected %d.\n",
+	  nlp_->log->printf(hovScalars, 
+			    "KKT_MDS_XYcYd linsys negative eigs mismatch: has %d expected %d.\n",
 			    n_neg_eig,  Jac_cMDS_->m()+Jac_dMDS_->m());
 
 	  
-	  if(n_neg_eig < Jac_cMDS_->m()+Jac_dMDS_->m())
-	    nlp_->log->printf(hovWarning, "XYcYdMDS linsys negative eigs abnormality\n");
+	  if(n_neg_eig < Jac_cMDS_->m() + Jac_dMDS_->m())
+	    nlp_->log->printf(hovWarning, "KKT_MDS_XYcYd linsys negative eigs abnormality\n");
 
 
 	  if(!perturb_calc_->compute_perturb_wrong_inertia(delta_wx, delta_wd, delta_cc, delta_cd)) {
-	    nlp_->log->printf(hovWarning, "XYcYdMDS linsys: computing inertia perturbation failed.\n");
+	    nlp_->log->printf(hovWarning, 
+			      "KKT_MDS_XYcYd linsys: computing inertia perturbation failed.\n");
 	    return false;
 	  }
 	  
@@ -284,10 +329,12 @@ namespace hiop
 	}
      } else if(n_neg_eig != 0) {
        //correct for wrong intertia
-       nlp_->log->printf(hovScalars,  "XYcYdMDS linsys has wrong inertia (no constraints): factoriz "
+       nlp_->log->printf(hovScalars,  
+			 "KKT_MDS_XYcYd linsys has wrong inertia (no constraints): factoriz "
 			 "ret code/num negative eigs %d\n.", n_neg_eig);
        if(!perturb_calc_->compute_perturb_wrong_inertia(delta_wx, delta_wd, delta_cc, delta_cd)) {
-	 nlp_->log->printf(hovWarning, "XYcYdMDS linsys: computing inertia perturbation failed (2).\n");
+	 nlp_->log->printf(hovWarning, 
+			   "KKT_MDS_XYcYd linsys: computing inertia perturbation failed (2).\n");
 	 return false;
        }
        
@@ -298,12 +345,13 @@ namespace hiop
      
      //will do an inertia correction
      num_ic_cor++;
+     nlp_->runStats.kkt.nUpdateICCorr++;
     } // end of ic while
     
     if(num_ic_cor>max_ic_cor) {
       
       nlp_->log->printf(hovError,
-			"XYcYdMDS max number (%d) of inertia corrections reached.\n",
+			"KKT_MDS_XYcYd linsys: max number (%d) of inertia corrections reached.\n",
 			max_ic_cor);
       return false;
     }
@@ -311,14 +359,16 @@ namespace hiop
     return true;
   }
 
-  void hiopKKTLinSysCompressedMDSXYcYd::
+  bool hiopKKTLinSysCompressedMDSXYcYd::
   solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
 		  hiopVector& dx, hiopVector& dyc, hiopVector& dyd)
   {
-    if(!nlpMDS_)   { assert(false); return; }
-    if(!HessMDS_)  { assert(false); return; }
-    if(!Jac_cMDS_) { assert(false); return; }
-    if(!Jac_dMDS_) { assert(false); return; }
+    if(!nlpMDS_)   { assert(false); return false; }
+    if(!HessMDS_)  { assert(false); return false; }
+    if(!Jac_cMDS_) { assert(false); return false; }
+    if(!Jac_dMDS_) { assert(false); return false; }
+
+    nlp_->runStats.kkt.tmSolveRhsManip.start();
 
     int nx=rx.get_size(), nyc=ryc.get_size(), nyd=ryd.get_size();
     int nxsp=Hxs_->get_size(); assert(nxsp<=nx);
@@ -327,9 +377,9 @@ namespace hiop
     if(rhs_ == NULL) rhs_ = LinearAlgebraFactory::createVector(nxde+nyc+nyd);
     if(_buff_xs_==NULL) _buff_xs_ = LinearAlgebraFactory::createVector(nxsp);
 
-    nlp_->log->write("RHS KKT MDS XDycYd rx: ", rx,  hovIteration);
-    nlp_->log->write("RHS KKT MDS XDycYd ryc:", ryc, hovIteration);
-    nlp_->log->write("RHS KKT MDS XDycYd ryd:", ryd, hovIteration);
+    nlp_->log->write("RHS KKT_MDS_XYcYd rx: ", rx,  hovIteration);
+    nlp_->log->write("RHS KKT_MDS_XYcYd ryc:", ryc, hovIteration);
+    nlp_->log->write("RHS KKT_MDS_XYcYd ryd:", ryd, hovIteration);
 
     hiopVector& rxs = *_buff_xs_;
     //rxs = Hxs^{-1} * rx_sparse 
@@ -355,14 +405,30 @@ namespace hiop
     //ths[nxde+nyc:nxde+nyc+nyd-1] = ryd
     ryd.copyToStarting(*rhs_, nxde+nyc);
 
-    if(write_linsys_counter_>=0) csr_writer_.writeRhsToFile(*rhs_, write_linsys_counter_);
+    if(write_linsys_counter_>=0) 
+      csr_writer_.writeRhsToFile(*rhs_, write_linsys_counter_);
 
+    nlp_->runStats.kkt.tmSolveRhsManip.stop();
+
+    nlp_->runStats.kkt.tmSolveTriangular.start();
     //
     // solve
     //
-    linSys_->solve(*rhs_);
+    bool linsol_ok = linSys_->solve(*rhs_);
+    nlp_->runStats.kkt.tmSolveTriangular.stop();
+    nlp_->runStats.linsolv.end_linsolve();
 
-    if(write_linsys_counter_>=0) csr_writer_.writeSolToFile(*rhs_, write_linsys_counter_);
+    if(perf_report_) {
+      nlp_->log->printf(hovSummary, "(summary for linear solver from KKT_MDS_XYcYd)\n%s", 
+			nlp_->runStats.linsolv.get_summary_last_solve().c_str());
+    }
+    
+    if(write_linsys_counter_>=0) 
+      csr_writer_.writeSolToFile(*rhs_, write_linsys_counter_);
+
+    if(false==linsol_ok) return false;
+
+    nlp_->runStats.kkt.tmSolveRhsManip.start();
 
     //
     // unpack 
@@ -383,9 +449,83 @@ namespace hiop
     //copy to dx
     dxs.startingAtCopyToStartingAt(0, dx, 0);
 
-    nlp_->log->write("SOL KKT MDS XYcYd dx: ", dx,  hovMatrices);
-    nlp_->log->write("SOL KKT MDS XYcYd dyc:", dyc, hovMatrices);
-    nlp_->log->write("SOL KKT MDS XYcYd dyd:", dyd, hovMatrices);
+    nlp_->log->write("SOL KKT_MDS_XYcYd dx: ", dx,  hovMatrices);
+    nlp_->log->write("SOL KKT_MDS_XYcYd dyc:", dyc, hovMatrices);
+    nlp_->log->write("SOL KKT_MDS_XYcYd dyd:", dyd, hovMatrices);
   
+    nlp_->runStats.kkt.tmSolveRhsManip.stop();
+    return true;
+  }
+
+  hiopLinSolverIndefDense* 
+  hiopKKTLinSysCompressedMDSXYcYd::determineAndCreateLinsys(int nxd, int neq, int nineq)
+  {
+
+#ifdef HIOP_USE_MAGMA 
+    if(safe_mode_) {
+      hiopLinSolverIndefDenseMagmaBuKa* p = dynamic_cast<hiopLinSolverIndefDenseMagmaBuKa*>(linSys_);
+      if(p==NULL) {
+	//we have a nopiv linear solver or linear solver has not been created yet
+	delete linSys_;
+	linSys_ = NULL;
+      } else {
+	return p;
+      }
+    } else {
+      hiopLinSolverIndefDenseMagmaNopiv* p = dynamic_cast<hiopLinSolverIndefDenseMagmaNopiv*>(linSys_);
+      if(p==NULL) {
+	//we have a BuKa linear solver or linear solver has not been created yet
+	delete linSys_;
+	linSys_ = NULL;
+      } else {
+	return p;
+      }
+    }
+#endif
+
+    if(NULL==linSys_) {
+      int n = nxd + neq + nineq;
+
+      if(nlp_->options->GetString("compute_mode")=="hybrid") {
+#ifdef HIOP_USE_MAGMA
+
+	// once we get the desired functionality from magma this should be revisited to 
+	// increase robustness of nopiv factorization aftermath by making use of nopiv inertia
+	//
+	// Strategy
+	//  i. nopiv Magma (//! todo: + inertia correction) 
+	// when i. fails (in factorization, solve, or outer optimization loop--ascent direction--) employ
+	// ii. Magma BunchKaufman + inertia correction
+	//
+	// //! todo Performance of ii. can be improved if 
+	//------------
+	// - Magma would have a GPU routine for computing inertia
+	// - triangular solves would be done on CPU
+
+	if(safe_mode_) {
+	  nlp_->log->printf(hovWarning, 
+			    "KKT_MDS_XYcYd linsys: MagmaBuKa size %d (%d cons) (safe_mode=%d)\n", 
+			    n, neq+nineq, safe_mode_);
+	  
+	  linSys_ = new hiopLinSolverIndefDenseMagmaBuKa(n, nlp_);
+	} else {
+	  nlp_->log->printf(hovWarning, 
+			    "KKT_MDS_XYcYd linsys: MagmaNopiv size %d (%d cons) (safe_mode=%d)\n", 
+			    n, neq+nineq, safe_mode_);
+	  
+	  hiopLinSolverIndefDenseMagmaNopiv* p = new hiopLinSolverIndefDenseMagmaNopiv(n, nlp_);
+	  linSys_ = p;
+	  p->set_fake_inertia(neq + nineq);
+	}
+#else
+	nlp_->log->printf(hovScalars, "KKT_MDS_XYcYd linsys: Lapack for a matrix of size %d\n", n);
+	linSys_ = new hiopLinSolverIndefDenseLapack(n, nlp_);
+#endif
+      } else {
+	nlp_->log->printf(hovScalars, "KKT_MDS_XYcYd linsys: Lapack for a matrix of size %d\n", n);
+	linSys_ = new hiopLinSolverIndefDenseLapack(n, nlp_);
+      }
+    } 
+    return linSys_;
   }
 } // end of namespace

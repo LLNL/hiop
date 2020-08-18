@@ -67,7 +67,7 @@ public:
     } else {
       if(4*(ns_/4) != ns_) {
 	ns_ = 4*((4+ns_)/4);
-	printf("[warning] number (%d) of sparse vars is not a multiple ->nwas altered to %d\n", 
+	printf("[warning] number (%d) of sparse vars is not a multiple of n; was altered to %d\n", 
 	       ns, ns_); 
       }
     }
