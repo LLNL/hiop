@@ -636,7 +636,7 @@ void hiopMatrixDenseRowMajor::timesMatTrans(double beta, hiopMatrix& W_, double 
 #ifdef HIOP_USE_MPI
   int n2Red=W.m()*W.n(); 
   double** WM=W.local_data();
-  double* Wglob= new_mxnlocal_buff(); //[n2Red];
+  double* Wglob= W.new_mxnlocal_buff(); 
   int ierr = MPI_Allreduce(WM[0], Wglob, n2Red, MPI_DOUBLE, MPI_SUM, comm_); assert(ierr==MPI_SUCCESS);
   memcpy(WM[0], Wglob, n2Red*sizeof(double));
 #endif
