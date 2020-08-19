@@ -190,9 +190,13 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 
 if(HIOP_BUILD_STATIC)
-  add_library(hiop STATIC $<TARGET_OBJECTS:hiopOptimization>
+  add_library(hiop STATIC
+    $<TARGET_OBJECTS:hiopOptimization>
     $<TARGET_OBJECTS:hiopLinAlg>
     $<TARGET_OBJECTS:hiopUtils>)
+  if(HIOP_WITH_KRON_REDUCTION)
+    target_sources(hiop PUBLIC $<TARGET_OBJECTS:hiopKronRed>)
+  endif(HIOP_WITH_KRON_REDUCTION)
   target_link_libraries(hiop PUBLIC hiop_math)
   install(TARGETS hiop DESTINATION lib)
 endif()
@@ -203,6 +207,9 @@ if(HIOP_BUILD_SHARED)
     $<TARGET_OBJECTS:hiopUtils>
     $<TARGET_OBJECTS:chiopInterface>)
   set_target_properties(hiop_shared PROPERTIES OUTPUT_NAME hiop)
+  if(HIOP_WITH_KRON_REDUCTION)
+    target_sources(hiop_shared PUBLIC $<TARGET_OBJECTS:hiopKronRed>)
+  endif(HIOP_WITH_KRON_REDUCTION)
   target_link_libraries(hiop_shared PUBLIC hiop_math)
   install(TARGETS hiop_shared DESTINATION lib)
 endif()
@@ -229,6 +236,7 @@ install(FILES src/Interface/hiopInterface.hpp
   src/LinAlg/hiopMatrixDenseRowMajor.hpp
   src/LinAlg/hiopMatrixDense.hpp
   src/LinAlg/hiopMatrixMDS.hpp
+  src/LinAlg/hiopMatrixSparse.hpp
   src/LinAlg/hiopMatrixSparseTriplet.hpp
   src/LinAlg/hiopMatrixSparseTripletStorage.hpp
   src/LinAlg/hiopMatrixMDS.hpp
