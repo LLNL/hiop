@@ -17,9 +17,9 @@ class hiopMatrixSparse : public hiopMatrix
 {
 public:
   hiopMatrixSparse(int rows, int cols, int nnz)
-      : nrows(rows)
-      , ncols(cols)
-      , nnz(nnz)
+      : nrows_(rows)
+      , ncols_(cols)
+      , nnz_(nnz)
   {
   }
   virtual ~hiopMatrixSparse()
@@ -106,15 +106,15 @@ public:
 
   inline long long m() const
   {
-    return nrows;
+    return nrows_;
   }
   inline long long n() const
   {
-    return ncols;
+    return ncols_;
   }
   inline long long numberOfNonzeros() const
   {
-    return nnz;
+    return nnz_;
   }
 
 #ifdef HIOP_DEEPCHECKS
@@ -125,9 +125,9 @@ public:
   virtual bool checkIndexesAreOrdered() const = 0;
 #endif
 protected:
-  int nrows;   ///< number of rows
-  int ncols;   ///< number of columns
-  int nnz;     ///< number of nonzero entries
+  int nrows_;   ///< number of rows
+  int ncols_;   ///< number of columns
+  int nnz_;     ///< number of nonzero entries
 };
 
 }   // namespace hiop

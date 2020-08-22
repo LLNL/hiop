@@ -102,48 +102,48 @@ public:
   virtual hiopMatrix* alloc_clone() const;
   virtual hiopMatrix* new_copy() const;
 
-  inline int* i_row() { return iRow; }
-  inline int* j_col() { return jCol; }
-  inline double* M() { return values; }
+  inline int* i_row() { return iRow_; }
+  inline int* j_col() { return jCol_; }
+  inline double* M() { return values_; }
 
-  inline const int* i_row() const { return iRow; }
-  inline const int* j_col() const { return jCol; }
-  inline const double* M() const { return values; }
+  inline const int* i_row() const { return iRow_; }
+  inline const int* j_col() const { return jCol_; }
+  inline const double* M() const { return values_; }
 #ifdef HIOP_DEEPCHECKS
   virtual bool assertSymmetry(double tol=1e-16) const { return false; }
   virtual bool checkIndexesAreOrdered() const;
 #endif
 protected:
-  int* iRow; ///< row indices of the nonzero entries
-  int* jCol; ///< column indices of the nonzero entries
-  double* values; ///< values of the nonzero entries
+  int* iRow_; ///< row indices of the nonzero entries
+  int* jCol_; ///< column indices of the nonzero entries
+  double* values_; ///< values_ of the nonzero entries
 
 protected:
   struct RowStartsInfo
   {
-    int *idx_start; //size num_rows+1
-    int num_rows;
+    int *idx_start_; //size num_rows+1
+    int num_rows_;
     RowStartsInfo()
-      : idx_start(NULL), num_rows(0)
+      : idx_start_(NULL), num_rows_(0)
     {}
     RowStartsInfo(int n_rows)
-      : idx_start(new int[n_rows+1]), num_rows(n_rows)
+      : idx_start_(new int[n_rows+1]), num_rows_(n_rows)
     {}
     virtual ~RowStartsInfo()
     {
-      delete[] idx_start;
+      delete[] idx_start_;
     }
   };
-  mutable RowStartsInfo* row_starts;
+  mutable RowStartsInfo* row_starts_;
 private:
   RowStartsInfo* allocAndBuildRowStarts() const; 
 private:
   hiopMatrixSparseTriplet() 
-    : hiopMatrixSparse(0, 0, 0), iRow(NULL), jCol(NULL), values(NULL)
+    : hiopMatrixSparse(0, 0, 0), iRow_(NULL), jCol_(NULL), values_(NULL)
   {
   }
   hiopMatrixSparseTriplet(const hiopMatrixSparseTriplet&) 
-    : hiopMatrixSparse(0, 0, 0), iRow(NULL), jCol(NULL), values(NULL)
+    : hiopMatrixSparse(0, 0, 0), iRow_(NULL), jCol_(NULL), values_(NULL)
   {
     assert(false);
   }
@@ -205,7 +205,7 @@ public:
 #endif
   virtual bool isDiagonal() const 
   {
-    for(int itnnz=0; itnnz<nnz; itnnz++) if(iRow[itnnz]!=jCol[itnnz]) return false;
+    for(int itnnz=0; itnnz<nnz_; itnnz++) if(iRow_[itnnz]!=jCol_[itnnz]) return false;
     return true;
   }
 };
