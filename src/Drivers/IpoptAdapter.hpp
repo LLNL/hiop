@@ -198,6 +198,7 @@ public:
     nnz_sparse_Hess_Lagr_SS = nnz_sparse_Hess_Lagr_SD = 0;
     cons_eq_idxs = cons_ineq_idxs = NULL;
     JacDeq = JacDineq = HessDL = JacDeqineq = NULL;
+    onecall_Jac_detected_ = false;
   };
   virtual ~hiopMDS2IpoptTNLP() 
   {
@@ -443,77 +444,81 @@ public:
     } else {
       assert(values!=NULL);
 
-
-      
-      if(JacDeq == NULL) {
-	JacDeq = new hiopMatrixDenseRowMajor(n_eq, nx_dense);
-	assert(JacDineq == NULL);
-      } else {
-	//this for the case when the problem (constraints) sizes changed
-	if(JacDeq->m() != n_eq || JacDeq->n() != nx_dense) {
-	  delete JacDeq;
+      //avoid unnecessary reallocations when one-call constraints/Jacobian is active
+      if(false == onecall_Jac_detected_) {
+	if(JacDeq == NULL) {
 	  JacDeq = new hiopMatrixDenseRowMajor(n_eq, nx_dense);
+	  assert(JacDineq == NULL);
+	} else {
+	  //this for the case when the problem (constraints) sizes changed
+	  if(JacDeq->m() != n_eq || JacDeq->n() != nx_dense) {
+	    delete JacDeq;
+	    JacDeq = new hiopMatrixDenseRowMajor(n_eq, nx_dense);
+	  }
 	}
-      }
-      if(JacDineq == NULL) {
-	JacDineq = new hiopMatrixDenseRowMajor(n_ineq, nx_dense);
-      } else {
-	//this for the case when the problem (constraints) sizes changed
-	if(JacDineq->m() != n_ineq || JacDineq->n() != nx_dense) {
-	  delete JacDineq;
+	if(JacDineq == NULL) {
 	  JacDineq = new hiopMatrixDenseRowMajor(n_ineq, nx_dense);
+	} else {
+	  //this for the case when the problem (constraints) sizes changed
+	  if(JacDineq->m() != n_ineq || JacDineq->n() != nx_dense) {
+	    delete JacDineq;
+	    JacDineq = new hiopMatrixDenseRowMajor(n_ineq, nx_dense);
+	  }
 	}
+
+	int nnzit = 0;
+	//sparse Jac Eq
+	{
+	  long long num_cons = n_eq;
+	  bret = hiopNLP->eval_Jac_cons(nll, mll, num_cons, cons_eq_idxs, 
+					x, new_x, nx_sparse, nx_dense, 
+					nnz_sparse_Jaceq, NULL, NULL, values,
+					JacDeq->local_data());
+	  if(bret) {
+	    nnzit += nnz_sparse_Jaceq; assert(nnzit<=nele_jac);
+	    
+	    //the dense part
+	    const size_t len = (size_t)(n_eq*nx_dense);
+	    memcpy(values+nnzit, JacDeq->local_buffer(), len*sizeof(double));
+	    
+	    nnzit += n_eq*nx_dense; assert(nnzit<=nele_jac);
+	  } else {
+	    eq_call_failed = true;
+	    delete JacDeq;
+	    JacDeq = NULL;
+	  }
+	}
+	
+	//sparse Jac Ineq
+	{
+	  long long num_cons = n_ineq;
+	  bret = hiopNLP->eval_Jac_cons(nll, mll, num_cons, cons_ineq_idxs, 
+					x, new_x, nx_sparse, nx_dense, 
+					nnz_sparse_Jacineq, NULL, NULL, values+nnzit,
+					JacDineq->local_data());
+	  if(bret) {
+	    nnzit += nnz_sparse_Jacineq; assert(nnzit<=nele_jac);
+	    
+	    const size_t len = (size_t)(n_ineq*nx_dense);
+	    //the dense part
+	    memcpy(values+nnzit, JacDineq->local_buffer(), len*sizeof(double));
+	    nnzit += n_ineq*nx_dense;
+	    assert(nnzit==nele_jac);
+	  } else {
+	    delete JacDineq;
+	    JacDineq = NULL;
+	    if(!eq_call_failed) {
+	      return false;
+	    } else {
+	      onecall_Jac_detected_ = true;
+	      try_onecall_Jac = true;
+	    }
+	  }
+	}
+      } else {  // if(true == onecall_Jac_detected_) {
+	try_onecall_Jac = true;
       }
-      //eq_call_failed = false;
-      //bool try_onecall_Jac
       
-      int nnzit = 0;
-      //sparse Jac Eq
-      {
-	long long num_cons = n_eq;
-	bret = hiopNLP->eval_Jac_cons(nll, mll, num_cons, cons_eq_idxs, 
-				      x, new_x, nx_sparse, nx_dense, 
-				      nnz_sparse_Jaceq, NULL, NULL, values,
-				      JacDeq->local_data());
-	if(bret) {
-	  nnzit += nnz_sparse_Jaceq; assert(nnzit<=nele_jac);
-	  
-	  //the dense part
-	  const size_t len = (size_t)(n_eq*nx_dense);
-	  memcpy(values+nnzit, JacDeq->local_buffer(), len*sizeof(double));
-
-	  nnzit += n_eq*nx_dense; assert(nnzit<=nele_jac);
-	} else {
-	  eq_call_failed = true;
-	  delete JacDeq;
-	  JacDeq = NULL;
-	}
-      }
-      //sparse Jac Ineq
-      {
-	long long num_cons = n_ineq;
-	bret = hiopNLP->eval_Jac_cons(nll, mll, num_cons, cons_ineq_idxs, 
-				      x, new_x, nx_sparse, nx_dense, 
-				      nnz_sparse_Jacineq, NULL, NULL, values+nnzit,
-				      JacDineq->local_data());
-	if(bret) {
-	  nnzit += nnz_sparse_Jacineq; assert(nnzit<=nele_jac);
-
-	  const size_t len = (size_t)(n_ineq*nx_dense);
-	  //the dense part
-	  memcpy(values+nnzit, JacDineq->local_buffer(), len*sizeof(double));
-	  nnzit += n_ineq*nx_dense;
-	  assert(nnzit==nele_jac);
-	} else {
-	  delete JacDineq;
-	  JacDineq = NULL;
-	  if(!eq_call_failed)
-	    return false;
-	  else
-	    try_onecall_Jac = true;
-	}
-      }
-
       //try one call Jacobian
       if(try_onecall_Jac) {
 	if(JacDeqineq == NULL) {
@@ -528,7 +533,7 @@ public:
 	if(!bret)
 	  return false; 
 
-	nnzit = nnz_sparse_Jaceq+nnz_sparse_Jacineq;
+	int nnzit = nnz_sparse_Jaceq+nnz_sparse_Jacineq;
 	//put the dense part of the MDS in the Ipopt sparse Jac matrix
 	memcpy(values+nnzit, JacDeqineq->local_buffer(), ((size_t)m*nx_dense)*sizeof(double));
 	nnzit += m*nx_dense;
@@ -612,7 +617,7 @@ public:
     return true; 
   }
 
-  /* This method is called when the algorithm is complete so the TNLP can store/write the solution */
+  /* This method is called when the algorithm terminates. */
   void finalize_solution(SolverReturn status,
 			 Index n, const Number* x, const Number* z_L, const Number* z_U,
 			 Index m, const Number* g, const Number* lambda,
@@ -622,6 +627,16 @@ public:
   {
     //! we use hiop::Solve_Success -> //! TODO: convert between IPOPT and HiOp err codes
     hiopNLP->solution_callback(hiop::Solve_Success, n, x, z_L, z_U, m, g, lambda, obj_value);
+
+    //free auxiliary buffers that may have been used by this adapter
+    delete JacDeq; delete JacDineq;  delete HessDL; delete JacDeqineq;
+    JacDeq = JacDineq = HessDL = JacDeqineq = NULL;
+
+    delete [] cons_eq_idxs;
+    delete [] cons_ineq_idxs;
+    cons_eq_idxs = cons_ineq_idxs = NULL;
+    
+    onecall_Jac_detected_ = false;
   };
   
 private:
@@ -634,6 +649,8 @@ private:
   hiopMatrixDenseRowMajor *JacDeq, *JacDineq, *HessDL;
   hiopMatrixDenseRowMajor *JacDeqineq; //this holds the full Jacobian when one-call Jacobian is activated
 
+  bool onecall_Jac_detected_;
+  
   /* Methods to block default compiler methods.
    * The compiler automatically generates the following three methods.
    *  Since the default compiler implementation is generally not what
