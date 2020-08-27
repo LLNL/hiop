@@ -3,9 +3,9 @@
 namespace hiop
 {
   hiopLinSolverIndefDenseMagmaBuKa::hiopLinSolverIndefDenseMagmaBuKa(int n, hiopNlpFormulation* nlp_)
-    : hiopLinSolverIndefDense(n, nlp_)
+    : hiopLinSolverIndefDense(n, nlp_), work_(NULL)
   {
-    ipiv = new int[n];
+    ipiv_ = new int[n];
 
     //
     // commented code - this class is using CPU MAGMA interface for now
@@ -34,8 +34,8 @@ namespace hiop
     // magma_free(device_rhs);
     // magma_queue_destroy(magma_device_queue);
     // magma_device_queue = NULL;
-
-    delete [] ipiv;
+    delete [] work_;
+    delete [] ipiv_;
   }
 
   /** Triggers a refactorization of the matrix, if necessary. */
@@ -75,18 +75,37 @@ namespace hiop
       }
     }
     assert(info==0);
+    int negEigVal, posEigVal, nullEigVal;
+
+    if(!compute_inertia(M.get_M(), N, ipiv_, posEigVal, negEigVal, nullEigVal)) {
+      return -1;
+    }
+
+    if(nullEigVal>0) return -1;
+    return negEigVal;
+  }
+  
+  bool hiopLinSolverIndefDenseMagmaBuKa::compute_inertia(double **MM_in, 
+							 int N, 
+							 int *ipiv,
+							 int& posEigVal, 
+							 int& negEigVal, 
+							 int& nullEigVal)
+  {
+    negEigVal=0;
+    posEigVal=0;
+    nullEigVal=0;
 
     nlp_->runStats.linsolv.tmInertiaComp.start();
     //
     // Compute the inertia. Only negative eigenvalues are returned.
-    // Code originally written by M. Schanenfor PIPS based on
+    // Code originally written by M. Schanen for PIPS based on
     // LINPACK's dsidi Fortran routine (http://www.netlib.org/linpack/dsidi.f)
     // 04/08/2020 - petra: fixed the test for non-positive pivots (was only for negative pivots)
-    int negEigVal=0;
-    int posEigVal=0;
-    int nullEigVal=0;
     double t=0;
+
     double* MM = M_->local_data();
+
     for(int k=0; k<N; k++) {
       //c       2 by 2 block
       //c       use det (d  s)  =  (d/t * c - t) * t  ,  t = dabs(s)
@@ -121,9 +140,40 @@ namespace hiop
     // std::cout << "Matrix inertia =(" << posEigVal << ", " << nullEigVal << ", " << negEigVal << ")\n";
     //printf("(pos,null,neg)=(%d,%d,%d)\n", posEigVal, nullEigVal, negEigVal);
     nlp_->runStats.linsolv.tmInertiaComp.stop();
-    
-    if(nullEigVal>0) return -1;
-    return negEigVal;
+
+    return true;
+  }
+
+  bool hiopLinSolverIndefDenseMagmaBuKaDev::compute_inertia(double **MM, 
+							 int N, 
+							 int *ipiv,
+							 int& posEigVal, 
+							 int& negEigVal, 
+							 int& nullEigVal)
+  {
+    double det[2];
+    int inert[3];
+    int job = 110;
+    int info;
+
+    nlp_->runStats.linsolv.tmInertiaComp.start();
+
+    if(NULL==work_) {
+      work_ = new double[N];
+    }
+
+
+    //determinant if only for logging/output/curiosity purposes
+    magma_dsidi(MM[0], N, N, ipiv, det, inert, work_, job, &info);
+
+    posEigVal = inert[0];
+    negEigVal = inert[1];
+    nullEigVal = inert[2];
+
+    printf("SIDI ON : det = %g\n", det[0] * std::pow(10, det[1]));
+
+    nlp_->runStats.linsolv.tmInertiaComp.stop();
+    return info==0;
   }
 
   bool hiopLinSolverIndefDenseMagmaBuKa::solve(hiopVector& x)
@@ -141,6 +191,7 @@ namespace hiop
     char uplo='L'; // M is upper in C++ so it's lower in fortran
     int info;
     DSYTRS(&uplo, &N, &NRHS, M_->local_data(), &LDA, ipiv, x.local_data(), &LDB, &info);
+
     if(info<0) {
       nlp_->log->printf(hovError, "hiopLinSolverMagmaBuKa: (LAPACK) DSYTRS returned error %d\n", info);
       assert(false);
