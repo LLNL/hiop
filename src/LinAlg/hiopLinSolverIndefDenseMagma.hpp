@@ -52,13 +52,36 @@ public:
     return M; 
   }
 protected:
-  int* ipiv;
+  virtual bool compute_inertia(double **A_in, int n_in, int *ipiv_in, 
+			       int& posEigvals, int& negEigvals, int& zeroEigvals); 
+protected:
+  int* ipiv_;
 
+  //allocated on demand; for example, it may only be required by Magma SIDI.
+  double* work_;
   //magma_queue_t magma_device_queue;
   //magmaDouble_ptr device_M, device_rhs_;
 private:
   hiopLinSolverIndefDenseMagmaBuKa() { assert(false); }
 };
+
+class hiopLinSolverIndefDenseMagmaBuKaDev : public hiopLinSolverIndefDenseMagmaBuKa
+{
+public:
+  hiopLinSolverIndefDenseMagmaBuKaDev(int n, hiopNlpFormulation* nlp_)
+    : hiopLinSolverIndefDenseMagmaBuKa(n, nlp_)
+  {
+
+  }
+  virtual ~hiopLinSolverIndefDenseMagmaBuKaDev()
+  {
+  }
+  
+protected:
+  virtual bool compute_inertia(double** A_in, int n_in, int *ipiv_in, 
+			       int& posEigvals, int& negEigvals, int& zeroEigvals); 
+};
+
 
 /**
  * Solver class for MAGMA symmetric indefinite GPU factorization "_nopiv". This
