@@ -133,7 +133,8 @@ public:
   /// @brief this += alpha * x / z
   virtual void axdzpy( double alpha, const hiopVector& x, const hiopVector& z ) = 0;
   /// @brief this += alpha * x / z on entries 'i' for which select[i]==1.
-  virtual void axdzpy_w_pattern( double alpha, const hiopVector& x, const hiopVector& z, const hiopVector& select ) = 0; 
+  virtual void axdzpy_w_pattern( double alpha, const hiopVector& x, const hiopVector& z,
+				 const hiopVector& select ) = 0; 
   /// @brief Add c to the elements of this
   virtual void addConstant( double c ) = 0;
   virtual void addConstant_w_patternSelect(double c, const hiopVector& ix) = 0;
@@ -144,16 +145,17 @@ public:
   /// @brief Invert (1/x) the elements of this
   virtual void invert() = 0;
   /// @brief compute log barrier term, that is sum{ln(x_i):i=1,..,n}
-  virtual double logBarrier(const hiopVector& select) const = 0;
+  virtual double logBarrier_local(const hiopVector& select) const = 0;
   /// @brief adds the gradient of the log barrier, namely this=this+alpha*1/select(x)
   virtual void addLogBarrierGrad(double alpha, const hiopVector& x, const hiopVector& select)=0;
 
   /**
-   * @brief computes the log barrier's linear damping term of the Filter-IPM method of WaectherBiegler (see paper, section 3.7).
+   * @brief computes the log barrier's linear damping term of the Filter-IPM method of 
+   * WaectherBiegler (see paper, section 3.7).
    * Essentially compute  kappa_d*mu* \sum { this[i] | ixleft[i]==1 and ixright[i]==0 }
    */
-  virtual double linearDampingTerm(const hiopVector& ixleft, const hiopVector& ixright, 
-				   const double& mu, const double& kappa_d)const=0;
+  virtual double linearDampingTerm_local(const hiopVector& ixleft, const hiopVector& ixright, 
+					 const double& mu, const double& kappa_d)const=0;
   /// @brief True if all elements of this are positive.
   virtual int allPositive() = 0;
   /// @brief True if elements corresponding to nonzeros in w are all positive
@@ -161,14 +163,14 @@ public:
   /// @brief Return the minimum value in this vector, and the index at which it occurs.
   virtual void min( double& m, int& index ) const = 0;
   /// @brief Project the vector into the bounds, used for shifting the ini pt in the bounds
-  virtual bool projectIntoBounds(const hiopVector& xl, const hiopVector& ixl, 
-				 const hiopVector& xu, const hiopVector& ixu,
-				 double kappa1, double kappa2) = 0;
+  virtual bool projectIntoBounds_local(const hiopVector& xl, const hiopVector& ixl, 
+				       const hiopVector& xu, const hiopVector& ixu,
+				       double kappa1, double kappa2) = 0;
   /// @brief max{a\in(0,1]| x+ad >=(1-tau)x}
-  virtual double fractionToTheBdry(const hiopVector& dx, const double& tau) const = 0;
-  virtual double fractionToTheBdry_w_pattern(const hiopVector& dx,
-					     const double& tau,
-					     const hiopVector& ix) const = 0;
+  virtual double fractionToTheBdry_local(const hiopVector& dx, const double& tau) const = 0;
+  virtual double fractionToTheBdry_w_pattern_local(const hiopVector& dx,
+						   const double& tau,
+						   const hiopVector& ix) const = 0;
   /// @brief Entries corresponding to zeros in ix are set to zero
   virtual void selectPattern(const hiopVector& ix) = 0;
   /// @brief checks whether entries in this matches pattern in ix
@@ -179,11 +181,11 @@ public:
 			       const double& mu, const double& kappa)=0;
 
   /// @brief check for nans in the local vector
-  virtual bool isnan() const = 0;
+  virtual bool isnan_local() const = 0;
   /// @brief check for infs in the local vector
-  virtual bool isinf() const = 0;
-  /// @brief check if all values are finite /well-defined floats. Returns false is nan or infs are present.
-  virtual bool isfinite() const = 0;
+  virtual bool isinf_local() const = 0;
+  /// @brief check if all values are finite /well-defined floats. Returns false if nan or infs are present.
+  virtual bool isfinite_local() const = 0;
   
   /// @brief prints up to max_elems (by default all), on rank 'rank' (by default on all)
   virtual void print(FILE*, const char* message=NULL,int max_elems=-1, int rank=-1) const = 0;

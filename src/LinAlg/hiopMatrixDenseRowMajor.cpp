@@ -389,14 +389,14 @@ void hiopMatrixDenseRowMajor::timesVec(double beta, hiopVector& y_,
   assert(x.get_local_size() == n_local_);
   assert(x.get_size() == n_global_);
 
-  if(beta!=0) assert(y.isfinite()); 
-  assert(x.isfinite());
+  if(beta!=0) assert(y.isfinite_local()); 
+  assert(x.isfinite_local());
 #endif
   
   timesVec(beta, y.local_data(), alpha, x.local_data_const());
 
 #ifdef HIOP_DEEPCHECKS  
-  assert(y.isfinite());
+  assert(y.isfinite_local());
 #endif
 }
 
@@ -448,8 +448,8 @@ void hiopMatrixDenseRowMajor::transTimesVec(double beta, hiopVector& y_,
   assert(x.get_size() == m_local_); //x should not be distributed
   assert(y.get_local_size() == n_local_);
   assert(y.get_size() == n_global_);
-  assert(y.isfinite());
-  assert(x.isfinite());
+  assert(y.isfinite_local());
+  assert(x.isfinite_local());
 #endif
   transTimesVec(beta, y.local_data(), alpha, x.local_data_const());
 }

@@ -122,29 +122,34 @@ public:
   virtual void min( double& m, int& index ) const;
   virtual void negate();
   virtual void invert();
-  virtual double logBarrier(const hiopVector& select) const;
+  virtual double logBarrier_local(const hiopVector& select) const;
   virtual void addLogBarrierGrad(double alpha, const hiopVector& x, const hiopVector& select);
 
-  virtual double linearDampingTerm(const hiopVector& ixl_select, const hiopVector& ixu_select, 
-				   const double& mu, const double& kappa_d) const;
+  virtual double linearDampingTerm_local(const hiopVector& ixl_select, const hiopVector& ixu_select, 
+					 const double& mu, const double& kappa_d) const;
   virtual int allPositive();
   virtual int allPositive_w_patternSelect(const hiopVector& w);
-  virtual bool projectIntoBounds(const hiopVector& xl, const hiopVector& ixl, 
-				 const hiopVector& xu, const hiopVector& ixu,
-				 double kappa1, double kappa2);
-  virtual double fractionToTheBdry(const hiopVector& dx, const double& tau) const;
-  virtual double fractionToTheBdry_w_pattern(const hiopVector& dx, const double& tau, const hiopVector& ix) const;
+  virtual bool projectIntoBounds_local(const hiopVector& xl, const hiopVector& ixl, 
+				       const hiopVector& xu, const hiopVector& ixu,
+				       double kappa1, double kappa2);
+  virtual double fractionToTheBdry_local(const hiopVector& dx, const double& tau) const;
+  virtual double fractionToTheBdry_w_pattern_local(const hiopVector& dx,
+						   const double& tau,
+						   const hiopVector& ix) const;
   virtual void selectPattern(const hiopVector& ix);
   virtual bool matchesPattern(const hiopVector& ix);
 
   virtual hiopVector* alloc_clone() const;
   virtual hiopVector* new_copy () const;
 
-  virtual void adjustDuals_plh(const hiopVector& x, const hiopVector& ix, const double& mu, const double& kappa);
+  virtual void adjustDuals_plh(const hiopVector& x,
+			       const hiopVector& ix,
+			       const double& mu,
+			       const double& kappa);
 
-  virtual bool isnan() const;
-  virtual bool isinf() const;
-  virtual bool isfinite() const;
+  virtual bool isnan_local() const;
+  virtual bool isinf_local() const;
+  virtual bool isfinite_local() const;
   
   virtual void print(FILE*, const char* withMessage=NULL, int max_elems=-1, int rank=-1) const;
 

@@ -143,9 +143,9 @@ void hiopIterate::print(FILE* f, const char* msg/*=NULL*/) const
 void hiopIterate::
 projectPrimalsXIntoBounds(double kappa1, double kappa2)
 {
-  if(!x->projectIntoBounds(nlp->get_xl(),nlp->get_ixl(),
-			   nlp->get_xu(),nlp->get_ixu(),
-			   kappa1,kappa2)) {
+  if(!x->projectIntoBounds_local(nlp->get_xl(),nlp->get_ixl(),
+				 nlp->get_xu(),nlp->get_ixu(),
+				 kappa1,kappa2)) {
     nlp->log->printf(hovError, "Problem is infeasible due to inconsistent bounds for the variables (lower>upper). Please fix this. In the meanwhile, HiOp will exit (ungracefully).\n");
     exit(-1);
   }
@@ -154,9 +154,9 @@ projectPrimalsXIntoBounds(double kappa1, double kappa2)
 void hiopIterate::
 projectPrimalsDIntoBounds(double kappa1, double kappa2)
 {
-  if(!d->projectIntoBounds(nlp->get_dl(),nlp->get_idl(),
-		       nlp->get_du(),nlp->get_idu(),
-			   kappa1,kappa2)) {
+  if(!d->projectIntoBounds_local(nlp->get_dl(),nlp->get_idl(),
+				 nlp->get_du(),nlp->get_idu(),
+				 kappa1,kappa2)) {
     nlp->log->printf(hovError, "Problem is infeasible due to inconsistent inequality constraints (lower>upper). Please fix this. In the meanwhile, HiOp will exit (ungracefully).\n");
     exit(-1);
   }
@@ -279,29 +279,29 @@ fractionToTheBdry(const hiopIterate& dir, const double& tau, double& alphaprimal
 {
   alphaprimal=alphadual=10.0;
   double alpha=0;
-  alpha=sxl->fractionToTheBdry_w_pattern(*dir.sxl, tau, nlp->get_ixl());
+  alpha=sxl->fractionToTheBdry_w_pattern_local(*dir.sxl, tau, nlp->get_ixl());
   alphaprimal=fmin(alphaprimal,alpha);
   
-  alpha=sxu->fractionToTheBdry_w_pattern(*dir.sxu, tau, nlp->get_ixu());
+  alpha=sxu->fractionToTheBdry_w_pattern_local(*dir.sxu, tau, nlp->get_ixu());
   alphaprimal=fmin(alphaprimal,alpha);
 
-  alpha=sdl->fractionToTheBdry_w_pattern(*dir.sdl, tau, nlp->get_idl());
+  alpha=sdl->fractionToTheBdry_w_pattern_local(*dir.sdl, tau, nlp->get_idl());
   alphaprimal=fmin(alphaprimal,alpha);
 
-  alpha=sdu->fractionToTheBdry_w_pattern(*dir.sdu, tau, nlp->get_idu());
+  alpha=sdu->fractionToTheBdry_w_pattern_local(*dir.sdu, tau, nlp->get_idu());
   alphaprimal=fmin(alphaprimal,alpha);
 
   //for dual variables
-  alpha=zl->fractionToTheBdry_w_pattern(*dir.zl, tau, nlp->get_ixl());
+  alpha=zl->fractionToTheBdry_w_pattern_local(*dir.zl, tau, nlp->get_ixl());
   alphadual=fmin(alphadual,alpha);
   
-  alpha=zu->fractionToTheBdry_w_pattern(*dir.zu, tau, nlp->get_ixu());
+  alpha=zu->fractionToTheBdry_w_pattern_local(*dir.zu, tau, nlp->get_ixu());
   alphadual=fmin(alphadual,alpha);
 
-  alpha=vl->fractionToTheBdry_w_pattern(*dir.vl, tau, nlp->get_idl());
+  alpha=vl->fractionToTheBdry_w_pattern_local(*dir.vl, tau, nlp->get_idl());
   alphadual=fmin(alphadual,alpha);
 
-  alpha=vu->fractionToTheBdry_w_pattern(*dir.vu, tau, nlp->get_idu());
+  alpha=vu->fractionToTheBdry_w_pattern_local(*dir.vu, tau, nlp->get_idu());
   alphadual=fmin(alphadual,alpha); 
 #ifdef HIOP_USE_MPI
   double aux[2]={alphaprimal,alphadual}, aux_g[2];
@@ -386,15 +386,15 @@ bool hiopIterate::adjustDuals_primalLogHessian(const double& mu, const double& k
 double hiopIterate::evalLogBarrier() const
 {
   double barrier;
-  barrier = sxl->logBarrier(nlp->get_ixl());
-  barrier+= sxu->logBarrier(nlp->get_ixu());
+  barrier = sxl->logBarrier_local(nlp->get_ixl());
+  barrier+= sxu->logBarrier_local(nlp->get_ixu());
 #ifdef HIOP_USE_MPI
   double res;
   int ierr = MPI_Allreduce(&barrier, &res, 1, MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(ierr==MPI_SUCCESS);
   barrier=res;
 #endif
-  barrier+= sdl->logBarrier(nlp->get_idl());
-  barrier+= sdu->logBarrier(nlp->get_idu());
+  barrier+= sdl->logBarrier_local(nlp->get_idl());
+  barrier+= sdu->logBarrier_local(nlp->get_idu());
 
   return barrier;
 }
@@ -416,15 +416,15 @@ void  hiopIterate::addLogBarGrad_d(const double& mu, hiopVector& gradd) const
 double hiopIterate::linearDampingTerm(const double& mu, const double& kappa_d) const
 {
   double term;
-  term  = sxl->linearDampingTerm(nlp->get_ixl(), nlp->get_ixu(), mu, kappa_d);
-  term += sxu->linearDampingTerm(nlp->get_ixu(), nlp->get_ixl(), mu, kappa_d);
+  term  = sxl->linearDampingTerm_local(nlp->get_ixl(), nlp->get_ixu(), mu, kappa_d);
+  term += sxu->linearDampingTerm_local(nlp->get_ixu(), nlp->get_ixl(), mu, kappa_d);
 #ifdef HIOP_USE_MPI
   double res;
   int ierr = MPI_Allreduce(&term, &res, 1, MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(ierr==MPI_SUCCESS);
   term = res;
 #endif  
-  term += sdl->linearDampingTerm(nlp->get_idl(), nlp->get_idu(), mu, kappa_d);
-  term += sdu->linearDampingTerm(nlp->get_idu(), nlp->get_idl(), mu, kappa_d);
+  term += sdl->linearDampingTerm_local(nlp->get_idl(), nlp->get_idu(), mu, kappa_d);
+  term += sdu->linearDampingTerm_local(nlp->get_idu(), nlp->get_idl(), mu, kappa_d);
 
   return term;
 }

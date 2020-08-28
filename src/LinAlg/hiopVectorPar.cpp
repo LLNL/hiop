@@ -479,7 +479,7 @@ void hiopVectorPar::invert()
 }
 
 // uses Kahan's summation algorithm to reduce numerical error
-double hiopVectorPar::logBarrier(const hiopVector& select) const 
+double hiopVectorPar::logBarrier_local(const hiopVector& select) const 
 {
   double sum = 0.0;
   double comp = 0.0;
@@ -500,7 +500,7 @@ double hiopVectorPar::logBarrier(const hiopVector& select) const
 }
 
 /* adds the gradient of the log barrier, namely this=this+alpha*1/select(x) */
-void  hiopVectorPar::addLogBarrierGrad(double alpha, const hiopVector& x, const hiopVector& ix)
+void hiopVectorPar::addLogBarrierGrad(double alpha, const hiopVector& x, const hiopVector& ix)
 {
 #ifdef HIOP_DEEPCHECKS
   assert(this->n_local_ == dynamic_cast<const hiopVectorPar&>(ix).n_local_);
@@ -515,8 +515,9 @@ void  hiopVectorPar::addLogBarrierGrad(double alpha, const hiopVector& x, const 
 }
 
 
-double hiopVectorPar::linearDampingTerm(const hiopVector& ixleft, const hiopVector& ixright, 
-				   const double& mu, const double& kappa_d) const
+double hiopVectorPar::
+linearDampingTerm_local(const hiopVector& ixleft, const hiopVector& ixright, 
+			const double& mu, const double& kappa_d) const
 {
   const double* ixl= (dynamic_cast<const hiopVectorPar&>(ixleft)).local_data_const();
   const double* ixr= (dynamic_cast<const hiopVectorPar&>(ixright)).local_data_const();
@@ -546,9 +547,9 @@ int hiopVectorPar::allPositive()
   return allPos;
 }
 
-bool hiopVectorPar::projectIntoBounds(const hiopVector& xl_, const hiopVector& ixl_, 
-				      const hiopVector& xu_, const hiopVector& ixu_,
-				      double kappa1, double kappa2)
+bool hiopVectorPar::projectIntoBounds_local(const hiopVector& xl_, const hiopVector& ixl_, 
+					    const hiopVector& xu_, const hiopVector& ixu_,
+					    double kappa1, double kappa2)
 {
 #ifdef HIOP_DEEPCHECKS
   assert((dynamic_cast<const hiopVectorPar&>(xl_) ).n_local_==n_local_);
@@ -599,7 +600,7 @@ bool hiopVectorPar::projectIntoBounds(const hiopVector& xl_, const hiopVector& i
 }
 
 /* max{a\in(0,1]| x+ad >=(1-tau)x} */
-double hiopVectorPar::fractionToTheBdry(const hiopVector& dx, const double& tau) const 
+double hiopVectorPar::fractionToTheBdry_local(const hiopVector& dx, const double& tau) const 
 {
 #ifdef HIOP_DEEPCHECKS
   assert((dynamic_cast<const hiopVectorPar&>(dx) ).n_local_==n_local_);
@@ -620,7 +621,8 @@ double hiopVectorPar::fractionToTheBdry(const hiopVector& dx, const double& tau)
   return alpha;
 }
 /* max{a\in(0,1]| x+ad >=(1-tau)x} */
-double hiopVectorPar::fractionToTheBdry_w_pattern(const hiopVector& dx, const double& tau, const hiopVector& ix) const 
+double hiopVectorPar::
+fractionToTheBdry_w_pattern_local(const hiopVector& dx, const double& tau, const hiopVector& ix) const 
 {
 #ifdef HIOP_DEEPCHECKS
   assert((dynamic_cast<const hiopVectorPar&>(dx) ).n_local_==n_local_);
@@ -718,19 +720,19 @@ void hiopVectorPar::adjustDuals_plh(const hiopVector& x_, const hiopVector& ix_,
   }
 }
 
-bool hiopVectorPar::isnan() const
+bool hiopVectorPar::isnan_local() const
 {
   for(long long i=0; i<n_local_; i++) if(std::isnan(data_[i])) return true;
   return false;
 }
 
-bool hiopVectorPar::isinf() const
+bool hiopVectorPar::isinf_local() const
 {
   for(long long i=0; i<n_local_; i++) if(std::isinf(data_[i])) return true;
   return false;
 }
 
-bool hiopVectorPar::isfinite() const
+bool hiopVectorPar::isfinite_local() const
 {
   for(long long i=0; i<n_local_; i++) if(0==std::isfinite(data_[i])) return false;
   return true;

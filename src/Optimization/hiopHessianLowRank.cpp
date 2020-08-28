@@ -456,8 +456,8 @@ void hiopHessianLowRank::solve(const hiopVector& rhs_, hiopVector& x_)
   assert(rhsx.get_size()==n);
   assert(x.get_size()==n);
   assert(DhInv->get_size()==n);
-  assert(DhInv->isfinite() && "inf or nan entry detected");
-  assert(rhsx.isfinite() && "inf or nan entry detected in rhs");
+  assert(DhInv->isfinite_local() && "inf or nan entry detected");
+  assert(rhsx.isfinite_local() && "inf or nan entry detected in rhs");
 #endif
 
   //1. x = DhInv*res
@@ -489,7 +489,7 @@ void hiopHessianLowRank::solve(const hiopVector& rhs_, hiopVector& x_)
   //5. x = first term - second term = x_computed_in_1 - result 
   x.axpy(-1.0,result);
 #ifdef HIOP_DEEPCHECKS
-  assert(x.isfinite() && "inf or nan entry detected in computed solution");
+  assert(x.isfinite_local() && "inf or nan entry detected in computed solution");
 #endif
   
 }

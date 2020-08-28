@@ -727,7 +727,7 @@ public:
 
     // No loops such that the test captures accumulation errors
     const real_type expected = (N-1) * std::log(x_val);
-    const real_type result = x.logBarrier(pattern);
+    const real_type result = x.logBarrier_local(pattern);
     printf("r %f e %f diff %.10e\n",
         result, expected,
         std::abs(result-expected));
@@ -814,7 +814,7 @@ public:
     expected *= mu;
     expected *= kappa_d;
 
-    const real_type term = x.linearDampingTerm(left, right, mu, kappa_d);
+    const real_type term = x.linearDampingTerm_local(left, right, mu, kappa_d);
 
     const int fail = !isEqual(term, expected);
 
@@ -912,7 +912,7 @@ public:
     upper.setToConstant(-one);
     lower_pattern.setToConstant(one);
     upper_pattern.setToConstant(one);
-    if (x.projectIntoBounds(
+    if (x.projectIntoBounds_local(
           lower, lower_pattern,
           upper, upper_pattern,
           kappa1, kappa2))
@@ -929,7 +929,7 @@ public:
     setLocalElement(&upper_pattern, 0, zero);
 
     // Call should return true
-    fail += !x.projectIntoBounds(
+    fail += !x.projectIntoBounds_local(
         lower, lower_pattern, upper,
         upper_pattern, kappa1, kappa2);
 
@@ -944,7 +944,7 @@ public:
     upper.setToConstant(one);
     lower_pattern.setToConstant(one);
     upper_pattern.setToConstant(one);
-    x.projectIntoBounds(
+    x.projectIntoBounds_local(
         lower, lower_pattern, upper,
         upper_pattern, kappa1, kappa2);
 
@@ -961,7 +961,7 @@ public:
     upper_pattern.setToConstant(one);
 
     // Call should return true
-    fail += !x.projectIntoBounds(
+    fail += !x.projectIntoBounds_local(
         lower, lower_pattern, upper,
         upper_pattern, kappa1, kappa2);
 
@@ -978,7 +978,7 @@ public:
     upper_pattern.setToConstant(one);
 
     // Call should return true
-    fail += !x.projectIntoBounds(
+    fail += !x.projectIntoBounds_local(
         lower, lower_pattern, upper,
         upper_pattern, kappa1, kappa2);
 
@@ -1017,13 +1017,13 @@ public:
     x.setToConstant(one);
 
     dx.setToConstant(one);
-    real_type result = x.fractionToTheBdry(dx, tau);
+    real_type result = x.fractionToTheBdry_local(dx, tau);
 
     real_type expected = one;
     fail += !isEqual(result, expected);
 
     dx.setToConstant(-one);
-    result = x.fractionToTheBdry(dx, tau);
+    result = x.fractionToTheBdry_local(dx, tau);
     real_type aux;
     expected = one;
     for (local_ordinal_type i=0; i<N; i++)
@@ -1060,7 +1060,7 @@ public:
     // default (alpha == one)
     pattern.setToConstant(one);
     dx.setToConstant(one);
-    real_type result = x.fractionToTheBdry_w_pattern(dx, tau, pattern);
+    real_type result = x.fractionToTheBdry_w_pattern_local(dx, tau, pattern);
     real_type expected = one;  // default value if dx >= 0
     fail += !isEqual(result, expected);
 
@@ -1070,14 +1070,14 @@ public:
     if (rank == 0)
       setLocalElement(&pattern, N-1, 0);
     dx.setToConstant(one);
-    result = x.fractionToTheBdry_w_pattern(dx, tau, pattern);
+    result = x.fractionToTheBdry_w_pattern_local(dx, tau, pattern);
     expected = one;  // default value if dx >= 0
     fail += !isEqual(result, expected);
 
     // Pattern all ones, dx will be <0
     pattern.setToConstant(one);
     dx.setToConstant(-one);
-    result = x.fractionToTheBdry_w_pattern(dx, tau, pattern);
+    result = x.fractionToTheBdry_w_pattern_local(dx, tau, pattern);
     real_type aux;
     expected = one;
     for (local_ordinal_type i=0; i<N; i++)
@@ -1188,12 +1188,12 @@ public:
     const local_ordinal_type N = getLocalSize(&x);
     int fail = 0;
     x.setToConstant(zero);
-    if (x.isnan())
+    if (x.isnan_local())
       fail++;
 
     if (rank == 0)
       setLocalElement(&x, N-1, NAN);
-    if (x.isnan() && rank != 0)
+    if (x.isnan_local() && rank != 0)
       fail++;
 
     printMessage(fail, __func__, rank);
@@ -1208,12 +1208,12 @@ public:
     const local_ordinal_type N = getLocalSize(&x);
     int fail = 0;
     x.setToConstant(zero);
-    if (x.isinf())
+    if (x.isinf_local())
       fail++;
 
     if (rank == 0)
       setLocalElement(&x, N-1, INFINITY);
-    if (x.isinf() && rank != 0)
+    if (x.isinf_local() && rank != 0)
       fail++;
 
     printMessage(fail, __func__, rank);
@@ -1228,12 +1228,12 @@ public:
     const local_ordinal_type N = getLocalSize(&x);
     int fail = 0;
     x.setToConstant(zero);
-    if (!x.isfinite())
+    if (!x.isfinite_local())
       fail++;
 
     if (rank == 0)
       setLocalElement(&x, N-1, INFINITY);
-    if (!x.isfinite() && rank != 0)
+    if (!x.isfinite_local() && rank != 0)
       fail++;
 
     printMessage(fail, __func__, rank);

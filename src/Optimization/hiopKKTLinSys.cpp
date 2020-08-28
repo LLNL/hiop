@@ -783,7 +783,7 @@ solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
   nlp_->log->write("  Jc: ", *Jac_c_, hovMatrices);
   nlp_->log->write("  Jd: ", *Jac_d_, hovMatrices);
   nlp_->log->write("  Dd_inv: ", *Dd_inv_, hovMatrices);
-  assert(Dd_inv_->isfinite() && "Something bad happened: nan or inf value");
+  assert(Dd_inv_->isfinite_local() && "Something bad happened: nan or inf value");
 #endif
 
   hiopMatrixDense& J = *_kxn_mat;
@@ -810,8 +810,8 @@ solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
   //  1. first compute (H+Dx)^{-1} rx_tilde and store it temporarily in dx
   HessLowRank->solve(rx, dx);
 #ifdef HIOP_DEEPCHECKS
-  assert(rx.isfinite() && "Something bad happened: nan or inf value");
-  assert(dx.isfinite() && "Something bad happened: nan or inf value");
+  assert(rx.isfinite_local() && "Something bad happened: nan or inf value");
+  assert(dx.isfinite_local() && "Something bad happened: nan or inf value");
 #endif
   
   // 2 . then rhs =   [ Jc(H+Dx)^{-1}*rx - ryc ]
