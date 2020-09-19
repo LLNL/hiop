@@ -207,9 +207,19 @@ void hiopOptions::registerOptions()
 		      "(default option), the more compact 'XYcYd' or the more stable 'XDYcYd'. "
 		      "The last two are only available with Hessian=analyticalExact");
   }
+  {
+    vector<string> range(3); range[0]="stable"; range[1]="speculative"; range[2]="forcequick";
+    registerStrOption("linsol_mode", "stable", range,
+		      "'stable'=using stable factorization; "
+		      "'speculative'=try faster linear solvers when is detected to be safe "
+		      "to do so (experimental) ; "
+		      "'forcequick'=rely on faster solvers on all situations "
+		      "(experimental, avoid)");
+  }
+
   //computations
   {
-    vector<string> range(3); range[0] = "auto"; range[1]="cpu"; range[2]="hybrid"; 
+    vector<string> range(3); range[0]="auto"; range[1]="cpu"; range[2]="hybrid"; 
     registerStrOption("compute_mode", "auto", range, 
 		      "'auto', 'cpu', 'hybrid'; 'hybrid'=cpu+gpu; 'auto' will decide between "
 		      "'cpu' and 'hybrid' based on the other options passed");

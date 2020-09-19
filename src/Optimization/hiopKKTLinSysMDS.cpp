@@ -284,13 +284,13 @@ namespace hiop
       nlp_->runStats.kkt.tmUpdateInnerFact.stop();
 
       if(n_neg_eig_11 < 0) {
-	nlp_->log->printf(hovWarning, 
+	nlp_->log->printf(hovScalars, 
 			  "KKT_MDS_XYcYd linsys: Detected null eigenvalues in (1,1) sparse block.\n");
 	assert(n_neg_eig_11 == -1);
 	n_neg_eig = -1;
       } else if(n_neg_eig_11 > 0) {
 	n_neg_eig += n_neg_eig_11;
-	nlp_->log->printf(hovWarning, 
+	nlp_->log->printf(hovScalars, 
 			  "KKT_MDS_XYcYd linsys: Detected negative eigenvalues in (1,1) sparse block.\n");
       }
 
@@ -461,11 +461,13 @@ namespace hiop
   hiopKKTLinSysCompressedMDSXYcYd::determineAndCreateLinsys(int nxd, int neq, int nineq)
   {
 
+    bool switched_linsolvers = false;
 #ifdef HIOP_USE_MAGMA 
     if(safe_mode_) {
       hiopLinSolverIndefDenseMagmaBuKa* p = dynamic_cast<hiopLinSolverIndefDenseMagmaBuKa*>(linSys_);
       if(p==NULL) {
 	//we have a nopiv linear solver or linear solver has not been created yet
+	if(linSys_) switched_linsolvers = true;
 	delete linSys_;
 	linSys_ = NULL;
       } else {
@@ -475,6 +477,7 @@ namespace hiop
       hiopLinSolverIndefDenseMagmaNopiv* p = dynamic_cast<hiopLinSolverIndefDenseMagmaNopiv*>(linSys_);
       if(p==NULL) {
 	//we have a BuKa linear solver or linear solver has not been created yet
+	if(linSys_) switched_linsolvers = true;
 	delete linSys_;
 	linSys_ = NULL;
       } else {
@@ -486,9 +489,16 @@ namespace hiop
     if(NULL==linSys_) {
       int n = nxd + neq + nineq;
 
-      if(nlp_->options->GetString("compute_mode")=="hybrid") {
-#ifdef HIOP_USE_MAGMA
+      if("cpu" == nlp_->options->GetString("compute_mode")) {
+	nlp_->log->printf(hovScalars, "KKT_MDS_XYcYd linsys: Lapack for a matrix of size %d [1]\n", n);
+	linSys_ = new hiopLinSolverIndefDenseLapack(n, nlp_);
+	return linSys_;
+      }
 
+
+#ifdef HIOP_USE_MAGMA
+      if(nlp_->options->GetString("compute_mode")=="hybrid" ||
+	 nlp_->options->GetString("compute_mode")=="auto") {
 	// once we get the desired functionality from magma this should be revisited to 
 	// increase robustness of nopiv factorization aftermath by making use of nopiv inertia
 	//
@@ -503,13 +513,20 @@ namespace hiop
 	// - triangular solves would be done on CPU
 
 	if(safe_mode_) {
-	  nlp_->log->printf(hovWarning, 
+
+	  auto hovLevel = hovScalars;
+	  if(switched_linsolvers) hovLevel = hovWarning;
+
+	  nlp_->log->printf(hovLevel, 
 			    "KKT_MDS_XYcYd linsys: MagmaBuKa size %d (%d cons) (safe_mode=%d)\n", 
 			    n, neq+nineq, safe_mode_);
 	  
 	  linSys_ = new hiopLinSolverIndefDenseMagmaBuKa(n, nlp_);
 	} else {
-	  nlp_->log->printf(hovWarning, 
+	  auto hovLevel = hovScalars;
+	  if(switched_linsolvers) hovLevel = hovWarning;
+
+	  nlp_->log->printf(hovLevel, 
 			    "KKT_MDS_XYcYd linsys: MagmaNopiv size %d (%d cons) (safe_mode=%d)\n", 
 			    n, neq+nineq, safe_mode_);
 	  
@@ -517,15 +534,18 @@ namespace hiop
 	  linSys_ = p;
 	  p->set_fake_inertia(neq + nineq);
 	}
-#else
-	nlp_->log->printf(hovScalars, "KKT_MDS_XYcYd linsys: Lapack for a matrix of size %d\n", n);
-	linSys_ = new hiopLinSolverIndefDenseLapack(n, nlp_);
-#endif
       } else {
-	nlp_->log->printf(hovScalars, "KKT_MDS_XYcYd linsys: Lapack for a matrix of size %d\n", n);
+	nlp_->log->printf(hovScalars, "KKT_MDS_XYcYd linsys: Lapack for a matrix of size %d [2]\n", n);
 	linSys_ = new hiopLinSolverIndefDenseLapack(n, nlp_);
+	return linSys_;
       }
-    } 
+#else
+      nlp_->log->printf(hovScalars, "KKT_MDS_XYcYd linsys: Lapack for a matrix of size %d [3]\n", n);
+      linSys_ = new hiopLinSolverIndefDenseLapack(n, nlp_);
+      return linSys_;
+#endif
+    }
     return linSys_;
   }
+    
 } // end of namespace
