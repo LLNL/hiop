@@ -79,12 +79,16 @@ int main(int argc, char *argv[])
   ret = MPI_Allreduce(&tmElapsed, &tmAvg, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); assert(ret==MPI_SUCCESS); 
   tmAvg /= comm_size;
 
-  aux = (tmElapsed-tmAvg)*(tmElapsed-tmAvg)/(comm_size-1);
-  ret = MPI_Allreduce(&aux, &stdDevTm, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); assert(ret==MPI_SUCCESS); 
-  stdDevTm = sqrt(stdDevTm);
-  
+  if(comm_size>1) {
+    aux = (tmElapsed-tmAvg)*(tmElapsed-tmAvg)/(comm_size-1);
+
+    ret = MPI_Allreduce(&aux, &stdDevTm, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); assert(ret==MPI_SUCCESS); 
+    stdDevTm = sqrt(stdDevTm);
+  } else {
+    aux = 0.;
+  }
   if(0==my_rank) {
-    printf("\n\nSummary: average time %g sec, std dev %.2f\%\n\n", tmAvg, 100*stdDevTm);
+    printf("\n\nSummary: average time %g sec, std dev %.2f\%\n\n", tmAvg, 100*stdDevTm/tmAvg);
   }
   
   MPI_Finalize();
