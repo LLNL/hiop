@@ -26,6 +26,7 @@ option(HIOP_DEVELOPER_MODE "Build with extended warnings and options" OFF)
 option(HIOP_WITH_MAKETEST "Enable 'make test'" ON)
 option(HIOP_BUILD_SHARED "Build shared library" OFF)
 option(HIOP_BUILD_STATIC "Build static library" ON)
+option(HIOP_SPARSE "Build with sparse linear algebra" OFF)
 
 if(HIOP_BUILD_SHARED)
   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -149,17 +150,62 @@ endif(HIOP_WITH_KRON_REDUCTION)
 find_package(OpenMP)
 target_link_libraries(hiop_math INTERFACE OpenMP::OpenMP_CXX)
 
+if(NOT DEFINED BLAS_LIBRARIES)
+  find_package(BLAS REQUIRED)
+  target_link_libraries(hiop_math INTERFACE ${BLAS_LIBRARIES})
+  message(STATUS "Found BLAS libraries: ${BLAS_LIBRARIES}")
+endif(NOT DEFINED BLAS_LIBRARIES)
+
+
+set(LAPACK_LIBRARIES "-lgfortran;/usr/lib64/liblapack.so;-lpthread;-lm;-ldl")
+
 if(NOT DEFINED LAPACK_LIBRARIES)
   # in case the toolchain defines them
   find_package(LAPACK REQUIRED)
   target_link_libraries(hiop_math INTERFACE ${LAPACK_LIBRARIES})
   message(STATUS "Found LAPACK libraries: ${LAPACK_LIBRARIES}")
 endif(NOT DEFINED LAPACK_LIBRARIES)
+target_link_libraries(hiop_math INTERFACE ${LAPACK_LIBRARIES})
+message(STATUS "Found LAPACK libraries: ${LAPACK_LIBRARIES}")
 
 #
 # extended precision lapack based on xblas testing example
 #
 #set(LAPACK_LIBRARIES "-lgfortran;/export/home/petra1/work/installs/xblas-1.0.248/libxblas.a;/home/petra1/work/installs/lapack-3.7.0/libblas.a;/home/petra1/work/installs/lapack-3.7.0/liblapack.a;/home/petra1/work/installs/lapack-3.7.0/liblapack.a;/home/petra1/work/installs/lapack-3.7.0/libblas.a;/export/home/petra1/work/installs/xblas-1.0.248/libxblas.a")
+
+
+# metis needed (5.x needed by umfpack)
+if(NOT HIOP_METIS4_DIR)
+    set(HIOP_METIS4_DIR "~/software/METIS_4")
+endif(NOT HIOP_METIS4_DIR)
+
+find_library(METIS_LIBRARY NAME libmetis.a HINTS ${HIOP_METIS4_DIR}/lib PATHS ${HIOP_METIS4_DIR}/lib)
+find_path(HIOP_METIS_INCLUDE_DIR NAME metis.h HINTS ${HIOP_METIS4_DIR}/include)
+if(HIOP_METIS_INCLUDE_DIR AND METIS_LIBRARY)
+    include_directories(${HIOP_METIS_INCLUDE_DIR})
+    message(STATUS "Found METIS libraries: ${METIS_LIBRARY}")
+ endif(HIOP_METIS_INCLUDE_DIR AND METIS_LIBRARY)
+
+if(NOT HIOP_MA57_DIR)
+    set(HIOP_MA57_DIR "~/software/HSL/MA57")
+endif(NOT HIOP_MA57_DIR)
+
+find_library(MA57_LIBRARY libma57.a PATHS ${HIOP_MA57_DIR}/lib)
+if(MA57_LIBRARY)
+    message(STATUS "Found MA57 libraries: ${MA57_LIBRARY}")
+endif(MA57_LIBRARY)
+
+if(MA57_LIBRARY AND METIS_LIBRARY)
+    target_link_libraries(hiop_math INTERFACE ${MA57_LIBRARY} ${METIS_LIBRARY})
+    option(HIOP_SPARSE "Build with sparse linear algebra" ON)
+    message(STATUS "Build with sparse linear algebra")
+endif()
+
+
+
+
+
+
 
 # include build directory for Fortran name mangling header
 include_directories(${CMAKE_BINARY_DIR})
@@ -245,6 +291,7 @@ install(FILES src/Interface/hiopInterface.hpp
   src/LinAlg/hiopLinSolver.hpp
   src/LinAlg/hiopLinSolverIndefDenseLapack.hpp
   src/LinAlg/hiopLinSolverUMFPACKZ.hpp
+  src/LinAlg/hiopLinSolverIndefSparseMA57.hpp
   src/LinAlg/hiopLinAlgFactory.hpp
   src/Utils/hiopRunStats.hpp
   src/Utils/hiopLogger.hpp

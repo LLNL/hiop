@@ -62,14 +62,26 @@ public:
 
   virtual void addMatrix(double alpha, const hiopMatrix& X) = 0;
 
-  /* block of W += alpha*this */
+  /* block of W += alpha*this, where W is dense */
   virtual void addToSymDenseMatrixUpperTriangle(
     int row_dest_start, int col_dest_start, double alpha, hiopMatrixDense& W) const = 0;
-  /* block of W += alpha*transpose(this) */
+  /* block of W += alpha*transpose(this), where W is dense */
   virtual void transAddToSymDenseMatrixUpperTriangle(
     int row_dest_start, int col_dest_start, double alpha, hiopMatrixDense& W) const = 0;
   virtual void addUpperTriangleToSymDenseMatrixUpperTriangle(
     int diag_start, double alpha, hiopMatrixDense& W) const
+  {
+    assert(false && "counterpart method of hiopMatrixSymSparse should be used");
+  }
+
+  /* block of W += alpha*this, where W is sparse */
+  virtual void addToSymSparseMatrixUpperTriangle(
+    int row_dest_start, int col_dest_start, double alpha, hiopMatrixSparse& W) const = 0;
+  /* block of W += alpha*transpose(this), where W is sparse */
+  virtual void transAddToSymSparseMatrixUpperTriangle(
+    int row_dest_start, int col_dest_start, double alpha, hiopMatrixSparse& W) const = 0;
+  virtual void addUpperTriangleToSymSparseMatrixUpperTriangle(
+    int diag_start, double alpha, hiopMatrixSparse& W) const
   {
     assert(false && "counterpart method of hiopMatrixSymSparse should be used");
   }

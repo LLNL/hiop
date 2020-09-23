@@ -46,40 +46,113 @@
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or
 // product endorsement purposes.
 
+#ifndef HIOP_LINSOLVER_MA57
+#define HIOP_LINSOLVER_MA57
+
 #include "hiopLinSolver.hpp"
+#include "hiopMatrixSparseTriplet.hpp"
 
-#include "hiopMatrix.hpp"
 
-#include "hiopOptions.hpp"
+/** implements the linear solver class using the HSL MA57 solver
+ *
+ * @ingroup LinearSolvers
+ */
+
+#ifndef FNAME
+#ifndef __bg__
+#define FNAME(f) f ## _
+#else
+#define FNAME(f) f
+#endif
+#endif
 
 namespace hiop {
-  hiopLinSolver::hiopLinSolver()
-    : nlp_(NULL), perf_report_(false)
-  {
-  }
-  hiopLinSolver::~hiopLinSolver()
-  {
-  }
 
+extern "C" {
+  void FNAME(ma57id)( double cntl[],  int icntl[] );
 
-  hiopLinSolverIndefDense::hiopLinSolverIndefDense(int n, hiopNlpFormulation* nlp)
-    : M(n,n)
-  {
-    nlp_ = nlp;
-    perf_report_ = "on"==hiop::tolower(nlp->options->GetString("time_kkt"));
-  }
-  hiopLinSolverIndefDense::~hiopLinSolverIndefDense()
-  {
-  }
+  void FNAME(ma57ad)( int * n,        int * ne,       int irn[],
+		int jcn[],      int * lkeep,    int keep[],
+		int iwork[],    int icntl[],    int info[],
+		double rinfo[] );
 
-  hiopLinSolverIndefSparse::hiopLinSolverIndefSparse(int n, int nnz, hiopNlpFormulation* nlp)
-    : M(n,nnz)
-  {
-    nlp_ = nlp;
-    perf_report_ = "on"==hiop::tolower(nlp->options->GetString("time_kkt"));
-  }
-  hiopLinSolverIndefSparse::~hiopLinSolverIndefSparse()
-  {
-  }
-
+  void FNAME(ma57bd)( int * n,        int * ne,       double a[],
+		double fact[],  int * lfact,    int ifact[],
+		int * lifact,   int * lkeep,    int keep[],
+		int ppos[],     int * icntl,    double cntl[],
+		int info[],     double rinfo[] );
+  void FNAME(ma57cd)( int * job,      int * n,        double fact[],
+		int * lfact,    int ifact[],    int * lifact,
+		int * nrhs,     double rhs[],   int * lrhs,
+		double w[],     int * lw,       int iw1[],
+		int icntl[],    int info[]);
+  void FNAME(ma57dd)( int * job,      int * n,        int * ne,
+		double a[],     int irn[],      int jcn[],
+		double fact[],  int * lfact,    int ifact[],
+		int * lifact,   double rhs[],   double x[],
+		double resid[], double w[],     int iw[],
+		int icntl[],    double cntl[],  int info[],
+		double rinfo[] );
+  void FNAME(ma57ed)( int * n,        int * ic,       int keep[],
+		double fact[],  int * lfact,    double * newfac,
+		int * lnew,     int  ifact[],   int * lifact,
+		int newifc[],   int * linew,    int * info );
 }
+
+
+/** Wrapper for MA57 */
+class hiopLinSolverIndefSparseMA57: public hiopLinSolverIndefSparse
+{
+public:
+  hiopLinSolverIndefSparseMA57(const int& n, const int& nnz, hiopNlpFormulation* nlp);
+  virtual ~hiopLinSolverIndefSparseMA57();
+
+  /** Triggers a refactorization of the matrix, if necessary.
+   * Overload from base class. */
+  int matrixChanged();
+
+  /** solves a linear system.
+   * param 'x' is on entry the right hand side(s) of the system to be solved. On
+   * exit is contains the solution(s).  */
+  bool solve ( hiopVector& x_ );
+
+//protected:
+//  int* ipiv;
+//  hiopVector* dwork;
+
+private:
+
+  int     m_icntl[20];
+  int     m_info[40];
+  double  m_cntl[5];
+  double  m_rinfo[20];
+
+  int      m_n;                         // dimension of the whole matrix
+  int      m_nnz;                       // number of nonzeros in the matrix
+
+  int     *m_irowM, *m_jcolM;           // index array for the factorization
+//  double  *m_M;                         // storage for the original matrix
+
+  int     m_lkeep, *m_keep;             // temporary storage
+  int     m_lifact, *m_ifact, m_lfact;  // temporary storage for the factorization process
+  double *m_fact;                       // storage for the factors
+  double  m_ipessimism, m_rpessimism;   // amounts by which to increase allocated factorization space
+
+  int *m_iwork;
+  double *m_dwork;
+
+  /** store as a sparse symmetric indefinite matrix */
+//  const hiopMatrixSymSparseTriplet& m_sys_mat;
+
+
+public:
+
+  /** called the very first time a matrix is factored. Allocates space
+   * for the factorization and performs ordering */
+  virtual void firstCall();
+//  virtual void diagonalChanged( int idiag, int extent );
+
+};
+
+} // end namespace
+#endif
