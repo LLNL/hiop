@@ -119,6 +119,18 @@ public:
   virtual void addUpperTriangleToSymDenseMatrixUpperTriangle(
     int diag_start, double alpha, hiopMatrixDense& W) const = 0;
 
+  /* block of W += alpha*this, where W is sparse */
+  virtual void addToSymSparseMatrixUpperTriangle(
+    int row_dest_start, int col_dest_start, double alpha, hiopMatrixSparse& W) const = 0;
+  /* block of W += alpha*transpose(this), where W is sparse */
+  virtual void transAddToSymSparseMatrixUpperTriangle(
+    int row_dest_start, int col_dest_start, double alpha, hiopMatrixSparse& W) const = 0;
+  virtual void addUpperTriangleToSymSparseMatrixUpperTriangle(
+    int diag_start, double alpha, hiopMatrixSparse& W) const
+  {
+    assert(false && "counterpart method of hiopMatrixSymSparse should be used");
+  }
+
   /* diag block of W += alpha * M * D^{-1} * transpose(M), where M=this
    *
    * Only the upper triangular entries of W are updated.

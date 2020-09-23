@@ -142,6 +142,9 @@ public:
   friend class hiopHessianLowRank;
   friend class hiopKKTLinSysCompressedMDSXYcYd;
   friend class hiopHessianInvLowRank_obsolette;
+  friend class hiopKKTLinSysSparse;
+  friend class hiopKKTLinSysCompressedSparseXYcYd;
+  friend class hiopKKTLinSysCompressedSparseXDYcYd;
 private:
   /** Primal variables */
   hiopVector*x;         //the original decision x

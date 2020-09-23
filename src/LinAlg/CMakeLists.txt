@@ -10,6 +10,10 @@ set(hiopLinAlg_SRC
   hiopMatrixComplexSparseTriplet.cpp
 )
 
+#if(HIOP_SPARSE)
+set(hiopLinAlg_SRC ${hiopLinAlg_SRC} hiopLinSolverIndefSparseMA57.cpp)
+#endif()
+
 if(HIOP_USE_GPU)
   set(hiopLinAlg_SRC ${hiopLinAlg_SRC} hiopLinSolverIndefDenseMagma.cpp)
   foreach(f hiopVectorRajaPar.cpp 

@@ -20,7 +20,7 @@ hiopMatrixSparseTriplet::hiopMatrixSparseTriplet(int rows, int cols, int nnz)
     assert(nnz_==0 && "number of nonzeros must be zero when any of the dimensions are 0");
     nnz_ = 0;
   }
-  
+
   iRow_ = new  int[nnz_];
   jCol_ = new int[nnz_];
   values_ = new double[nnz_];
@@ -60,7 +60,7 @@ void hiopMatrixSparseTriplet::timesVec(double beta,  hiopVector& y,
 
   timesVec(beta, y_data, alpha, x_data);
 }
- 
+
 /** y = beta * y + alpha * this * x */
 void hiopMatrixSparseTriplet::timesVec(double beta,  double* y,
 				       double alpha, const double* x ) const
@@ -77,7 +77,7 @@ void hiopMatrixSparseTriplet::timesVec(double beta,  double* y,
     y[iRow_[i]] += alpha * x[jCol_[i]] * values_[i];
   }
 }
- 
+
 /** y = beta * y + alpha * this^T * x */
 void hiopMatrixSparseTriplet::transTimesVec(double beta,   hiopVector& y,
 					    double alpha,  const hiopVector& x ) const
@@ -87,13 +87,13 @@ void hiopMatrixSparseTriplet::transTimesVec(double beta,   hiopVector& y,
 
   hiopVectorPar& yy = dynamic_cast<hiopVectorPar&>(y);
   const hiopVectorPar& xx = dynamic_cast<const hiopVectorPar&>(x);
-  
+
   double* y_data = yy.local_data();
   const double* x_data = xx.local_data_const();
-  
+
   transTimesVec(beta, y_data, alpha, x_data);
 }
- 
+
 /** y = beta * y + alpha * this^T * x */
 void hiopMatrixSparseTriplet::transTimesVec(double beta,   double* y,
 					    double alpha,  const double* x ) const
@@ -102,7 +102,7 @@ void hiopMatrixSparseTriplet::transTimesVec(double beta,   double* y,
   for (int i = 0; i < ncols_; i++) {
     y[i] *= beta;
   }
-  
+
   // y += alpha*this^T*x
   for (int i = 0; i < nnz_; i++) {
     assert(iRow_[i] < nrows_);
@@ -111,19 +111,19 @@ void hiopMatrixSparseTriplet::transTimesVec(double beta,   double* y,
   }
 }
 
-void hiopMatrixSparseTriplet::timesMat(double beta, hiopMatrix& W, 
+void hiopMatrixSparseTriplet::timesMat(double beta, hiopMatrix& W,
 				       double alpha, const hiopMatrix& X) const
 {
   assert(false && "not needed");
 }
 
-void hiopMatrixSparseTriplet::transTimesMat(double beta, hiopMatrix& W, 
+void hiopMatrixSparseTriplet::transTimesMat(double beta, hiopMatrix& W,
 					    double alpha, const hiopMatrix& X) const
 {
   assert(false && "not needed");
 }
 
-void hiopMatrixSparseTriplet::timesMatTrans(double beta, hiopMatrix& W, 
+void hiopMatrixSparseTriplet::timesMatTrans(double beta, hiopMatrix& W,
 					    double alpha, const hiopMatrix& X) const
 {
   assert(false && "not needed");
@@ -141,6 +141,37 @@ void hiopMatrixSparseTriplet::addSubDiagonal(const double& alpha, long long star
   assert(false && "not needed");
 }
 
+void hiopMatrixSparseTriplet::copySubDiagonalEleFromVec(const long long& start_on_dest_diag, const long long& num_elems,
+                                                     const hiopVector& d_, const long long& start_on_nnz_idx)
+{
+  const hiopVectorPar& vd = dynamic_cast<const hiopVectorPar&>(d_);
+  assert(num_elems<=vd.get_size());
+  assert(start_on_dest_diag>=0 && start_on_dest_diag+num_elems<=this->nrows_);
+  const double* v = vd.local_data_const();
+
+  for(int row_src=0; row_src<num_elems; row_src++) {
+    const int row_dest = row_src + start_on_dest_diag;
+    const int nnz_dest = row_src + start_on_nnz_idx;
+    assert(iRow_[nnz_dest]==jCol_[nnz_dest]);
+    assert(iRow_[nnz_dest]==row_dest);
+    this->values_[nnz_dest] = v[row_src];
+  }
+}
+
+void hiopMatrixSparseTriplet::copySubDiagonalEleFromConstant(const long long& start_on_dest_diag, const long long& num_elems,
+                                                      const double& c, const long long& start_on_nnz_idx)
+{
+  assert(start_on_dest_diag>=0 && start_on_dest_diag+num_elems<=this->nrows_);
+
+  for(int row_src=0; row_src<num_elems; row_src++) {
+    const int row_dest = row_src + start_on_dest_diag;
+    const int nnz_dest = row_src + start_on_nnz_idx;
+    assert(iRow_[nnz_dest]==jCol_[nnz_dest]);
+    assert(iRow_[nnz_dest]==row_dest);
+    this->values_[nnz_dest] = c;
+  }
+}
+
 void hiopMatrixSparseTriplet::addMatrix(double alpha, const hiopMatrix& X)
 {
   assert(false && "not needed");
@@ -148,7 +179,7 @@ void hiopMatrixSparseTriplet::addMatrix(double alpha, const hiopMatrix& X)
 
 /* block of W += alpha*transpose(this) 
  * Note W; contains only the upper triangular entries */
-void hiopMatrixSparseTriplet::transAddToSymDenseMatrixUpperTriangle(int row_start, int col_start, 
+void hiopMatrixSparseTriplet::transAddToSymDenseMatrixUpperTriangle(int row_start, int col_start,
 								    double alpha, hiopMatrixDense& W) const
 {
   assert(row_start>=0 && row_start+ncols_<=W.m());
@@ -220,7 +251,7 @@ bool hiopMatrixSparseTriplet::checkIndexesAreOrdered() const
 
 void hiopMatrixSparseTriplet::
 addMDinvMtransToDiagBlockOfSymDeMatUTri(int rowAndCol_dest_start,
-					const double& alpha, 
+					const double& alpha,
 					const hiopVector& D, hiopMatrixDense& W) const
 {
   const int row_dest_start = rowAndCol_dest_start, col_dest_start = rowAndCol_dest_start;
@@ -250,9 +281,9 @@ addMDinvMtransToDiagBlockOfSymDeMatUTri(int rowAndCol_dest_start,
 
       int ki=row_starts_->idx_start_[i], kj=row_starts_->idx_start_[j];
       while(ki<row_starts_->idx_start_[i+1] && kj<row_starts_->idx_start_[j+1]) {
-	assert(ki<this->nnz_); 
+	assert(ki<this->nnz_);
 	assert(kj<this->nnz_);
-	if(this->jCol_[ki] == this->jCol_[kj]) { 
+	if(this->jCol_[ki] == this->jCol_[kj]) {
 	  acc += this->values_[ki] / DM[this->jCol_[ki]] * this->values_[kj];
 	  ki++;
 	  kj++;
@@ -270,12 +301,12 @@ addMDinvMtransToDiagBlockOfSymDeMatUTri(int rowAndCol_dest_start,
 }
 
 /*
- * block of W += alpha * M1 * D^{-1} * transpose(M2), where M1=this 
+ * block of W += alpha * M1 * D^{-1} * transpose(M2), where M1=this
  *  Sizes: M1 is (m1 x nx);  D is vector of len nx, M2 is  (m2, nx)
  */
 void hiopMatrixSparseTriplet::
 addMDinvNtransToSymDeMatUTri(int row_dest_start, int col_dest_start,
-			     const double& alpha, 
+			     const double& alpha,
 			     const hiopVector& D, const hiopMatrixSparse& M2mat,
 			     hiopMatrixDense& W) const
 {
@@ -322,7 +353,7 @@ addMDinvNtransToSymDeMatUTri(int row_dest_start, int col_dest_start,
       acc = 0.;
       int ki=M1.row_starts_->idx_start_[i];
       int kj=M2.row_starts_->idx_start_[j];
-      
+
       while(ki<M1.row_starts_->idx_start_[i+1] && kj<M2.row_starts_->idx_start_[j+1]) {
 	assert(ki<M1.nnz_);
    	assert(kj<M2.nnz_);
@@ -352,7 +383,7 @@ addMDinvNtransToSymDeMatUTri(int row_dest_start, int col_dest_start,
 
 
 // //assumes triplets are ordered
-hiopMatrixSparseTriplet::RowStartsInfo* 
+hiopMatrixSparseTriplet::RowStartsInfo*
 hiopMatrixSparseTriplet::allocAndBuildRowStarts() const
 {
   assert(nrows_>=0);
@@ -360,13 +391,13 @@ hiopMatrixSparseTriplet::allocAndBuildRowStarts() const
   RowStartsInfo* rsi = new RowStartsInfo(nrows_); assert(rsi);
 
   if(nrows_<=0) return rsi;
-  
+
   int it_triplet=0;
   rsi->idx_start_[0]=0;
   for(int i=1; i<=this->nrows_; i++) {
-    
+
     rsi->idx_start_[i]=rsi->idx_start_[i-1];
-    
+
     while(it_triplet<this->nnz_ && this->iRow_[it_triplet]==i-1) {
 #ifdef HIOP_DEEPCHECKS
       if(it_triplet>=1) {
@@ -428,17 +459,74 @@ void hiopMatrixSparseTriplet::copyRowsFrom(const hiopMatrix& src_gen,
       iRow_[itnz_dest] = row_dest;//iRow_src[itnz_src];
       jCol_[itnz_dest] = jCol_src[itnz_src];
       values_[itnz_dest++] = values_src[itnz_src++];
-      
+
       assert(itnz_dest<=nnz_);
     }
   }
   assert(itnz_dest == nnz_);
 }
-  
-  
-void hiopMatrixSparseTriplet::print(FILE* file, const char* msg/*=NULL*/, 
-				    int maxRows/*=-1*/, int maxCols/*=-1*/, 
-				    int rank/*=-1*/) const 
+
+/**
+ * @brief Copy 'n_rows' rows started from 'rows_src_idx_st' (array of size 'n_rows') from 'src' to the destination,
+ * which starts from the 'rows_dest_idx_st'th row in 'this'
+ *
+ * @pre 'this' must have exactly, or more than 'n_rows' rows
+ * @pre 'this' must have exactly, or more cols than 'src'
+ */
+void hiopMatrixSparseTriplet::copyRowsFromSrcToDest(const hiopMatrix& src_gen,
+					   const long long& rows_src_idx_st, const long long& n_rows,
+					   const long long& rows_dest_idx_st, const long long& dest_nnz_st)
+{
+  const hiopMatrixSparseTriplet& src = dynamic_cast<const hiopMatrixSparseTriplet&>(src_gen);
+  assert(this->numberOfNonzeros() >= src.numberOfNonzeros());
+  assert(this->n() >= src.n());
+  assert(n_rows + rows_src_idx_st <= src.m());
+  assert(n_rows + rows_dest_idx_st <= this->m());
+
+  const int* iRow_src = src.i_row();
+  const int* jCol_src = src.j_col();
+  const double* values_src = src.M();
+  int nnz_src = src.numberOfNonzeros();
+  int itnz_src=0;
+  int itnz_dest=dest_nnz_st;
+  //int iterators should suffice
+  for(auto row_add=0; row_add<n_rows; ++row_add) {
+    const int row_src  = rows_src_idx_st  + row_add;
+    const int row_dest = rows_dest_idx_st + row_add;
+
+    while(itnz_src<nnz_src && iRow_src[itnz_src]<row_src) {
+#ifdef HIOP_DEEPCHECKS
+      if(itnz_src>0) {
+	assert(iRow_src[itnz_src]>=iRow_src[itnz_src-1] && "row indexes are not sorted");
+	if(iRow_src[itnz_src]==iRow_src[itnz_src-1])
+	  assert(jCol_src[itnz_src] >= jCol_src[itnz_src-1] && "col indexes are not sorted");
+      }
+#endif
+      ++itnz_src;
+    }
+
+    while(itnz_src<nnz_src && iRow_src[itnz_src]==row_src) {
+      assert(itnz_dest<nnz_);
+#ifdef HIOP_DEEPCHECKS
+      if(itnz_src>0) {
+	assert(iRow_src[itnz_src]>=iRow_src[itnz_src-1] && "row indexes are not sorted");
+	if(iRow_src[itnz_src]==iRow_src[itnz_src-1])
+	  assert(jCol_src[itnz_src] >= jCol_src[itnz_src-1] && "col indexes are not sorted");
+      }
+#endif
+      iRow_[itnz_dest] = row_dest;//iRow_src[itnz_src];
+      jCol_[itnz_dest] = jCol_src[itnz_src];
+      values_[itnz_dest++] = values_src[itnz_src++];
+
+      assert(itnz_dest<=nnz_);
+    }
+  }
+}
+
+
+void hiopMatrixSparseTriplet::print(FILE* file, const char* msg/*=NULL*/,
+				    int maxRows/*=-1*/, int maxCols/*=-1*/,
+				    int rank/*=-1*/) const
 {
   int myrank_=0, numranks=1; //this is a local object => always print
 
@@ -451,14 +539,14 @@ void hiopMatrixSparseTriplet::print(FILE* file, const char* msg/*=NULL*/,
 
     if(NULL==msg) {
       if(numranks>1)
-        fprintf(file, "matrix of size %lld %lld and nonzeros %lld, printing %d elems (on rank=%d)\n", 
+        fprintf(file, "matrix of size %lld %lld and nonzeros %lld, printing %d elems (on rank=%d)\n",
 		m(), n(), numberOfNonzeros(), max_elems, myrank_);
       else
-        fprintf(file, "matrix of size %lld %lld and nonzeros %lld, printing %d elems\n", 
+        fprintf(file, "matrix of size %lld %lld and nonzeros %lld, printing %d elems\n",
 		m(), n(), numberOfNonzeros(), max_elems);
     } else {
       fprintf(file, "%s ", msg);
-    }    
+    }
 
 
 
@@ -466,16 +554,18 @@ void hiopMatrixSparseTriplet::print(FILE* file, const char* msg/*=NULL*/,
     fprintf(file, "iRow_=[");
     for(int it=0; it<max_elems; it++)  fprintf(file, "%d; ", iRow_[it]+1);
     fprintf(file, "];\n");
-    
+
     fprintf(file, "jCol_=[");
     for(int it=0; it<max_elems; it++)  fprintf(file, "%d; ", jCol_[it]+1);
     fprintf(file, "];\n");
-    
+
     fprintf(file, "v=[");
     for(int it=0; it<max_elems; it++)  fprintf(file, "%22.16e; ", values_[it]);
     fprintf(file, "];\n");
   }
 }
+
+
 
 /**********************************************************************************
   * Sparse symmetric matrix in triplet format. Only the lower triangle is stored
@@ -496,7 +586,7 @@ void hiopMatrixSymSparseTriplet::timesVec(double beta,  hiopVector& y,
 
   timesVec(beta, y_data, alpha, x_data);
 }
- 
+
 /** y = beta * y + alpha * this * x */
 void hiopMatrixSymSparseTriplet::timesVec(double beta,  double* y,
 					  double alpha, const double* x ) const
@@ -573,7 +663,7 @@ void hiopMatrixSymSparseTriplet::transAddToSymDenseMatrixUpperTriangle(int row_s
  * are available in 'vec_dest' starting at 'vec_start'
  */
 void hiopMatrixSymSparseTriplet::
-startingAtAddSubDiagonalToStartingAt(int diag_src_start, const double& alpha, 
+startingAtAddSubDiagonalToStartingAt(int diag_src_start, const double& alpha,
 				     hiopVector& vec_dest, int vec_start, int num_elems/*=-1*/) const
 {
   hiopVectorPar& vd = dynamic_cast<hiopVectorPar&>(vec_dest);
