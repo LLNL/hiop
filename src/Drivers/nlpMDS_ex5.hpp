@@ -5,7 +5,7 @@
 
 //this include is not needed in general
 //we use hiopMatrixDense in this particular example for convienience
-#include "hiopMatrixDense.hpp" 
+#include "hiopMatrixDense.hpp"
 #include "hiopLinAlgFactory.hpp"
 
 #ifdef HIOP_USE_MPI
@@ -20,7 +20,7 @@
 #include <cstdio>
 #include <cmath>
 
-/** Nonlinear *highly nonconvex* and *rank deficient* problem test for the Filter IPM 
+/** Nonlinear *highly nonconvex* and *rank deficient* problem test for the Filter IPM
  * Newton of HiOp. It uses a mixed Dense-Sparse NLP formulation. The problem is based
  * on Ex4.
  *
@@ -38,14 +38,14 @@
  *  s.t.  [-inf] <= [ x_1 + e^T s + x_2 + 2e^T y] <= [ 4 ]   (rnkdef-con1.1)
  *        [ -4 ] <= [ x_1 + e^T s + x_3 + 2e^T y] <= [inf]   (rnkdef-con1.2)
  *        x+s + Md y = 0                                     (rnkdef-con2)
- * 
+ *
  * The vector 'y' is of dimension nd = ns (can be changed on construction)
  * Dense matrices Qd and Md are such that
  * Qd  = two on the diagonal, one on the first offdiagonals, zero elsewhere
  * Md  = minus one everywhere, matrix ns x nd
  * e   = vector of all ones
  *
- * Coding of the problem in MDS HiOp input: order of variables need to be [x,s,y] 
+ * Coding of the problem in MDS HiOp input: order of variables need to be [x,s,y]
  * since [x,s] are the so-called sparse variables and y are the dense variables
  */
 class Ex5 : public hiop::hiopInterfaceMDS
@@ -55,7 +55,7 @@ public:
     : Ex5(ns, ns, true, true, true)
   {
   }
-  
+
   Ex5(int ns, int nd, bool convex_obj, bool rankdefic_Jac_eq, bool rankdefic_Jac_ineq)
     : ns_(ns),
       rankdefic_eq_(rankdefic_Jac_eq),
@@ -67,8 +67,8 @@ public:
     } else {
       if(4*(ns_/4) != ns_) {
 	ns_ = 4*((4+ns_)/4);
-	printf("[warning] number (%d) of sparse vars is not a multiple of n; was altered to %d\n", 
-	       ns, ns_); 
+	printf("[warning] number (%d) of sparse vars is not a multiple of n; was altered to %d\n",
+	       ns, ns_);
       }
     }
 
@@ -96,12 +96,12 @@ public:
     delete Md_;
     delete Q_;
   }
-  
+
   bool get_prob_sizes(long long& n, long long& m)
-  { 
+  {
     n = 2*ns_ + nd_;
     m = ns_ + 3 + 2*rankdefic_ineq_ + ns_*rankdefic_eq_;
-    return true; 
+    return true;
   }
 
   bool get_vars_info(const long long& n, double *xlow, double* xupp, NonlinearityType* type)
@@ -113,9 +113,9 @@ public:
     for(int i=0; i<ns_; ++i) xlow[i] = -10.;
     //s
     for(int i=ns_; i<2*ns_; ++i) xlow[i] = 0.;
-    //y 
+    //y
     for(int i=2*ns_; i<n; ++i) xlow[i] = -4.;
-    
+
     //x
     for(int i=0; i<ns_; ++i) xupp[i] = 3.;
     //s
@@ -192,7 +192,7 @@ public:
     Q_->timesVec(0.0, _buf_y_, 1., y);
     for(int i=0; i<nd_; i++) term2 += _buf_y_[i] * y[i];
     obj_value += 0.5*term2;
-    
+
     const double* s=x+ns_;
     double term3=0.;//s[0]*s[0];
     for(int i=0; i<ns_; i++) term3 += s[i]*s[i];
@@ -201,22 +201,22 @@ public:
     return true;
   }
 
-  virtual bool eval_cons(const long long& n, const long long& m, 
-			 const long long& num_cons, const long long* idx_cons,  
+  virtual bool eval_cons(const long long& n, const long long& m,
+			 const long long& num_cons, const long long* idx_cons,
 			 const double* x, bool new_x, double* cons)
   {
     //return false so that HiOp will rely on the on-call constraint evaluator defined below
     return false;
   }
-  bool eval_cons(const long long& n, const long long& m, 
+  bool eval_cons(const long long& n, const long long& m,
 		 const double* x, bool new_x, double* cons)
   {
     const double* s = x+ns_;
     const double* y = x+2*ns_;
-    
+
     assert(n == 2*ns_+nd_);
     assert(m == ns_ + 3 + 2*rankdefic_ineq_ + ns_*rankdefic_eq_);
-    
+
     int con_idx=0;
 
     //equalities: x+s - Md y = 0
@@ -272,16 +272,16 @@ public:
       Md_->timesVec(1.0, cons+(m-ns_), 1.0, y);
     }
     assert(m == con_idx);
-    
+
     return true;
   }
-  
+
   //sum 0.5 {x_i*(x_{i}-1) : i=1,...,ns} + 0.5 y'*Qd*y + 0.5 s^T s
   bool eval_grad_f(const long long& n, const double* x, bool new_x, double* gradf)
   {
     //! assert(ns>=4); assert(Q->n()==ns/4); assert(Q->m()==ns/4);
-    //x_i - 0.5 
-    for(int i=0; i<ns_; i++) 
+    //x_i - 0.5
+    for(int i=0; i<ns_; i++)
       gradf[i] = (x[i]-0.5) * (2*convex_obj_-1);
 
     //Qd*y
@@ -296,13 +296,13 @@ public:
 
     return true;
   }
- 
+
   virtual bool
-  eval_Jac_cons(const long long& n, const long long& m, 
+  eval_Jac_cons(const long long& n, const long long& m,
 		const long long& num_cons, const long long* idx_cons,
 		const double* x, bool new_x,
-		const long long& nsparse, const long long& ndense, 
-		const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
+		const long long& nsparse, const long long& ndense,
+		const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS,
 		double** JacD)
   {
     //return false so that HiOp will rely on the on-call constraint evaluator defined below
@@ -310,10 +310,10 @@ public:
   }
 
   virtual bool
-  eval_Jac_cons(const long long& n, const long long& m, 
+  eval_Jac_cons(const long long& n, const long long& m,
  		const double* x, bool new_x,
- 		const long long& nsparse, const long long& ndense, 
- 		const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
+ 		const long long& nsparse, const long long& ndense,
+ 		const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS,
  		double** JacD)
   {
     assert(m == ns_ + 3 + 2*rankdefic_ineq_ + ns_*rankdefic_eq_);
@@ -323,19 +323,19 @@ public:
       int nnzit = 0;
       int con_idx = 0;
       for(; con_idx < ns_; con_idx++) {
-	
+
 	//sparse Jacobian eq w.r.t. x and s
 	//x
 	iJacS[nnzit] = con_idx;
 	jJacS[nnzit++] = con_idx;
-	
+
 	//s
 	iJacS[nnzit] = con_idx;
 	jJacS[nnzit++] = con_idx+ns_;
       }
       assert(con_idx == ns_);
       assert(nnzit == 2*ns_);
-      
+
       //sparse Jacobian ineq w.r.t x and s
       if(ns_>0) {
 	//w.r.t x_1
@@ -347,27 +347,27 @@ public:
 	  jJacS[nnzit++] = ns_+i;
 	}
 	con_idx++;
-	
-	//w.r.t x_2 
+
+	//w.r.t x_2
 	iJacS[nnzit] = con_idx;
 	jJacS[nnzit++] = 1;
 	con_idx++;
-	
+
 	//w.r.t x_3
 	iJacS[nnzit] = con_idx;
 	jJacS[nnzit++] = 2;
 	con_idx++;
       } // end of if(ns>0)
       assert(nnzit == 2*ns_ + 3*(ns_>0) + ns_);
-      
+
       if(rankdefic_ineq_ && ns_>0) {
 	// [-inf] <= [ x_1 + e^T s + x_2 + 2e^T y] <= [ 4 ]
 	iJacS[nnzit] = con_idx;
 	jJacS[nnzit++] = 0; //x1
-	
+
 	iJacS[nnzit] = con_idx;
 	jJacS[nnzit++] = 1; //x2
-	
+
 	for(int i=0; i<ns_; i++) {
 	  iJacS[nnzit] = con_idx;
 	  jJacS[nnzit++] = ns_+i; //s
@@ -377,10 +377,10 @@ public:
 	// [ -4 ] <= [ x_1 + e^T s + x_3 + 2e^T y] <= [inf]
 	iJacS[nnzit] = con_idx;
 	jJacS[nnzit++] = 0; //x1
-	
+
 	iJacS[nnzit] = con_idx;
 	jJacS[nnzit++] = 2; //x3
-	
+
 	for(int i=0; i<ns_; i++) {
 	  iJacS[nnzit] = con_idx;
 	  jJacS[nnzit++] = ns_+i; //s
@@ -393,7 +393,7 @@ public:
 	// x+s - Md y = 0, i=1,...,ns
 	for(int i=0; i<ns_; i++) {
 	  iJacS[nnzit] = con_idx;
-	  jJacS[nnzit++] = i; //x	
+	  jJacS[nnzit++] = i; //x
 	  iJacS[nnzit] = con_idx;
 	  jJacS[nnzit++] = i+ns_; //s
 	  con_idx++;
@@ -401,11 +401,11 @@ public:
       }
       assert(nnzit == nnzJacS);
     }
-    
+
     //values for sparse Jacobian if requested by the solver
     if(MJacS!=NULL) {
       int nnzit=0;
-      int con_idx=0;  
+      int con_idx=0;
 
        //sparse Jacobian EQ w.r.t. x and s
        for(int i=0; i<ns_; i++) {
@@ -415,7 +415,7 @@ public:
        }
        if(ns_>0) {
 	 //sparse Jacobian INEQ w.r.t x and s
-	 
+
 	 //w.r.t x_1
 	 MJacS[nnzit++] = 1.;
 	 //w.r.t s
@@ -423,14 +423,14 @@ public:
 	   MJacS[nnzit++] = 1.;
 	 }
 	 con_idx++;
-	 
+
 	 //w.r.t x_2
 	 MJacS[nnzit++] = 1.;
 	 con_idx++;
-	 
+
 	 //w.r.t. x_3
 	 MJacS[nnzit++] = 1.;
-	 con_idx++;	 
+	 con_idx++;
        }
        assert(nnzit == 2*ns_ + 3*(ns_>0) + ns_);
        assert(con_idx == ns_ + 3*(ns_>0));
@@ -439,15 +439,15 @@ public:
 	 // [-inf] <= [ x_1 + e^T s + x_2 + 2e^T y] <= [ 4 ]
 	 MJacS[nnzit++] = 1.; //x1
 	 MJacS[nnzit++] = 1.; //x2
-	 for(int i=0; i<ns_; i++) {	 
+	 for(int i=0; i<ns_; i++) {
 	   MJacS[nnzit++] = 1.; //s
 	 }
 	 con_idx++;
-	 
+
 	 // [ -4 ] <= [ x_1 + e^T s + x_3 + 2e^T y] <= [inf]
 	 MJacS[nnzit++] = 1.; //x1
 	 MJacS[nnzit++] = 1.; //x3
-	 for(int i=0; i<ns_; i++) {	 
+	 for(int i=0; i<ns_; i++) {
 	   MJacS[nnzit++] = 1.; //s
 	 }
 	 con_idx++;
@@ -465,14 +465,14 @@ public:
        assert(nnzit == nnzJacS);
     }
 
-    
+
     //
     //dense Jacobian w.r.t y
     //
     if(JacD!=NULL) {
       //eq
       memcpy(JacD[0], Md_->local_buffer(), ns_*nd_*sizeof(double));
-      
+
       //ineq
       for(int i=0; i<3*nd_; i++) {
 	JacD[ns_][i] = 1.;
@@ -485,7 +485,7 @@ public:
 	}
 	con_idx += 2;
       }
-      
+
       if(rankdefic_eq_) {
 	memcpy(JacD[con_idx], Md_->local_buffer(), ns_*nd_*sizeof(double));
 	con_idx += ns_;
@@ -493,19 +493,19 @@ public:
 
       assert(con_idx == m);
     }
-    
+
     return true;
   }
- 
-  bool eval_Hess_Lagr(const long long& n, const long long& m, 
+
+  bool eval_Hess_Lagr(const long long& n, const long long& m,
 			      const double* x, bool new_x, const double& obj_factor,
 			      const double* lambda, bool new_lambda,
-			      const long long& nsparse, const long long& ndense, 
-			      const int& nnzHSS, int* iHSS, int* jHSS, double* MHSS, 
+			      const long long& nsparse, const long long& ndense,
+			      const int& nnzHSS, int* iHSS, int* jHSS, double* MHSS,
 			      double** HDD,
 			      int& nnzHSD, int* iHSD, int* jHSD, double* MHSD)
   {
-    //Note: lambda is not used since all the constraints are linear and, therefore, do 
+    //Note: lambda is not used since all the constraints are linear and, therefore, do
     //not contribute to the Hessian of the Lagrangian
 
     assert(nnzHSS == 2*ns_);
@@ -513,7 +513,7 @@ public:
     assert(iHSD==NULL); assert(jHSD==NULL); assert(MHSD==NULL);
 
     if(iHSS!=NULL && jHSS!=NULL) {
-      for(int i=0; i<2*ns_; i++) iHSS[i] = jHSS[i] = i;     
+      for(int i=0; i<2*ns_; i++) iHSS[i] = jHSS[i] = i;
     }
 
     if(MHSS!=NULL) {
@@ -530,10 +530,10 @@ public:
     }
     return true;
   }
-  
+
   bool get_starting_point(const long long& global_n, double* x0)
   {
-    assert(global_n==2*ns_+nd_); 
+    assert(global_n==2*ns_+nd_);
     for(int i=0; i<global_n; i++) x0[i]=10.;
     return true;
   }
@@ -545,7 +545,7 @@ protected:
   hiop::hiopMatrixDense *Q_, *Md_;
   double* _buf_y_;
   bool rankdefic_eq_, rankdefic_ineq_;
-  bool convex_obj_; 
+  bool convex_obj_;
 };
 
 #endif

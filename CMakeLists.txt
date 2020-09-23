@@ -6,7 +6,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 if (POLICY CMP0074)
-  cmake_policy(SET CMP0074 NEW)
+cmake_policy(SET CMP0074 NEW)
 endif ()
 
 project (hiop)
@@ -29,13 +29,14 @@ option(HIOP_DEVELOPER_MODE "Build with extended warnings and options" OFF)
 option(HIOP_WITH_MAKETEST "Enable 'make test'" ON)
 option(HIOP_BUILD_SHARED "Build shared library" OFF)
 option(HIOP_BUILD_STATIC "Build static library" ON)
+option(HIOP_SPARSE "Build with sparse linear algebra" OFF)
 
 if(HIOP_BUILD_SHARED)
-  set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 endif()
 
 if(HIOP_USE_GPU)
-  option(HIOP_USE_MAGMA "Use Magma linear algebra" ON)
+option(HIOP_USE_MAGMA "Use Magma linear algebra" ON)
 endif()
 
 add_library(hiop_math INTERFACE)
@@ -43,132 +44,141 @@ add_library(hiop_options INTERFACE)
 add_library(hiop_warnings INTERFACE)
 
 if(HIOP_USE_MPI)
-  find_package(MPI REQUIRED)
-  if(NOT DEFINED MPI_CXX_COMPILER)
-    set(CMAKE_CXX_COMPILER ${MPI_CXX_COMPILER})
-    set(CMAKE_C_COMPILER ${MPI_C_COMPILER})
-  endif(NOT DEFINED MPI_CXX_COMPILER)
-  include_directories(${MPI_CXX_ADDITIONAL_INCLUDE_DIRS} ${MPI_CXX_COMPILER_INCLUDE_DIRS})
-  target_link_libraries(hiop_math INTERFACE MPI::MPI_CXX)
+find_package(MPI REQUIRED)
+if(NOT DEFINED MPI_CXX_COMPILER)
+  set(CMAKE_CXX_COMPILER ${MPI_CXX_COMPILER})
+  set(CMAKE_C_COMPILER ${MPI_C_COMPILER})
+endif(NOT DEFINED MPI_CXX_COMPILER)
+include_directories(${MPI_CXX_ADDITIONAL_INCLUDE_DIRS} ${MPI_CXX_COMPILER_INCLUDE_DIRS})
+target_link_libraries(hiop_math INTERFACE MPI::MPI_CXX)
 endif(HIOP_USE_MPI)
 
 # The binary dir is already a global include directory
 configure_file(
-  "${CMAKE_SOURCE_DIR}/src/Interface/hiop_defs.hpp.in"
-  "${CMAKE_BINARY_DIR}/hiop_defs.hpp")
+"${CMAKE_SOURCE_DIR}/src/Interface/hiop_defs.hpp.in"
+"${CMAKE_BINARY_DIR}/hiop_defs.hpp")
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
 target_compile_features(hiop_options
-  INTERFACE
-  cxx_std_11
-  cxx_alignas
-  cxx_alignof
-  cxx_attributes
-  cxx_auto_type
-  cxx_constexpr
-  cxx_defaulted_functions
-  cxx_deleted_functions
-  cxx_final
-  cxx_lambdas
-  cxx_noexcept
-  cxx_override
-  cxx_range_for
-  cxx_rvalue_references
-  cxx_static_assert
-  cxx_strong_enums
-  cxx_trailing_return_types
-  cxx_unicode_literals
-  cxx_user_literals
-  cxx_variadic_macros
-  )
+INTERFACE
+cxx_std_11
+cxx_alignas
+cxx_alignof
+cxx_attributes
+cxx_auto_type
+cxx_constexpr
+cxx_defaulted_functions
+cxx_deleted_functions
+cxx_final
+cxx_lambdas
+cxx_noexcept
+cxx_override
+cxx_range_for
+cxx_rvalue_references
+cxx_static_assert
+cxx_strong_enums
+cxx_trailing_return_types
+cxx_unicode_literals
+cxx_user_literals
+cxx_variadic_macros
+)
 
 target_compile_options(hiop_warnings
-  INTERFACE
-  -Wall
-  -Wextra
-  -Wshadow            # warn the user if a variable
-                      # declaration shadows one from a
-                      # parent context
-  -Wnull-dereference
-  -Wdouble-promotion  # Warn on implicit conversion from
-                      # float to double
-  )
+INTERFACE
+-Wall
+-Wextra
+-Wshadow            # warn the user if a variable
+                    # declaration shadows one from a
+                    # parent context
+-Wnull-dereference
+-Wdouble-promotion  # Warn on implicit conversion from
+                    # float to double
+)
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-  message(STATUS "Found extra GNU compiler warnings")
-  target_compile_options(hiop_warnings
-    INTERFACE
-    -Wmisleading-indentation    # Warn on indented blocks
-                                # that are not really blocks
-    -Wduplicated-cond           # Warn on if/else chain with
-                                # duplicated conditions
-    -Wduplicated-branches       # Warn on if/else chains with
-                                # duplicated code
-    -Wuseless-cast              # Warn when casting to the same type
-    )
+message(STATUS "Found extra GNU compiler warnings")
+target_compile_options(hiop_warnings
+  INTERFACE
+  -Wmisleading-indentation    # Warn on indented blocks
+                              # that are not really blocks
+  -Wduplicated-cond           # Warn on if/else chain with
+                              # duplicated conditions
+  -Wduplicated-branches       # Warn on if/else chains with
+                              # duplicated code
+  -Wuseless-cast              # Warn when casting to the same type
+  )
 endif()
 
 if(HIOP_DEVELOPER_MODE)
-  target_link_libraries(hiop_math INTERFACE hiop_options hiop_warnings)
+target_link_libraries(hiop_math INTERFACE hiop_options hiop_warnings)
 endif()
 
 if(HIOP_USE_GPU)
-  include(CheckLanguage)
-  enable_language(CUDA)
-  check_language(CUDA)
+include(CheckLanguage)
+enable_language(CUDA)
+check_language(CUDA)
 
-  if(NOT DEFINED CMAKE_CUDA_STANDARD)
-    set(CMAKE_CUDA_STANDARD 11)
-    set(CMAKE_CUDA_STANDARD_REQUIRED ON)
-  endif()
+if(NOT DEFINED CMAKE_CUDA_STANDARD)
+  set(CMAKE_CUDA_STANDARD 11)
+  set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+endif()
 
-  if(HIOP_NVCC_ARCH)
-    set(CMAKE_CUDA_FLAGS "-arch=${HIOP_NVCC_ARCH}")
-    message(STATUS "Using CUDA arch ${HIOP_NVCC_ARCH}")
-  else()
-    set(CMAKE_CUDA_FLAGS "-arch=sm_35")
-    message(STATUS "Using CUDA arch sm_35")
-  endif()
-  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-extended-lambda")
+if(HIOP_NVCC_ARCH)
+  set(CMAKE_CUDA_FLAGS "-arch=${HIOP_NVCC_ARCH}")
+  message(STATUS "Using CUDA arch ${HIOP_NVCC_ARCH}")
+else()
+  set(CMAKE_CUDA_FLAGS "-arch=sm_35")
+  message(STATUS "Using CUDA arch sm_35")
+endif()
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-extended-lambda")
 
-  set(HIOP_MAGMA_DIR CACHE PATH "Path to Magma directory")
+set(HIOP_MAGMA_DIR CACHE PATH "Path to Magma directory")
 
-  include(FindHiopCudaLibraries)
-  target_link_libraries(hiop_math INTERFACE hiop_cuda)
+include(FindHiopCudaLibraries)
+target_link_libraries(hiop_math INTERFACE hiop_cuda)
 endif(HIOP_USE_GPU)
 
 if(HIOP_USE_RAJA)
-  # Look for CMake configuration file in RAJA installation
-  find_package(RAJA CONFIG
-    PATHS ${RAJA_DIR} ${RAJA_DIR}/share/raja/cmake
-    REQUIRED)
+# Look for CMake configuration file in RAJA installation
+find_package(RAJA CONFIG
+  PATHS ${RAJA_DIR} ${RAJA_DIR}/share/raja/cmake
+  REQUIRED)
 endif()
 
 if(HIOP_USE_UMPIRE)
-  # Look for CMake configuration file in Umpire installation
-  find_package(umpire CONFIG
-    PATHS ${umpire_DIR} ${umpire_DIR}/share/umpire/cmake
-    REQUIRED)
+# Look for CMake configuration file in Umpire installation
+find_package(umpire CONFIG
+  PATHS ${umpire_DIR} ${umpire_DIR}/share/umpire/cmake
+  REQUIRED)
 endif()
 
 if(HIOP_WITH_KRON_REDUCTION)
-  set(HIOP_UMFPACK_DIR CACHE PATH "Path to UMFPACK directory")
-  include(FindUMFPACK)
-  target_link_libraries(hiop_math INTERFACE UMFPACK)
+set(HIOP_UMFPACK_DIR CACHE PATH "Path to UMFPACK directory")
+include(FindUMFPACK)
+target_link_libraries(hiop_math INTERFACE UMFPACK)
 
-  # metis needed (5.x needed by umfpack)
-  set(HIOP_METIS_DIR CACHE PATH "Path to METIS directory")
-  include(FindMETIS)
-  target_link_libraries(hiop_math INTERFACE METIS)
+# metis needed (5.x needed by umfpack)
+set(HIOP_METIS_DIR CACHE PATH "Path to METIS directory")
+include(FindMETIS)
+target_link_libraries(hiop_math INTERFACE METIS)
 endif(HIOP_WITH_KRON_REDUCTION)
 
 find_package(OpenMP)
 target_link_libraries(hiop_math INTERFACE OpenMP::OpenMP_CXX)
 
+if(NOT DEFINED BLAS_LIBRARIES)
+find_package(BLAS REQUIRED)
+target_link_libraries(hiop_math INTERFACE ${BLAS_LIBRARIES})
+message(STATUS "Found BLAS libraries: ${BLAS_LIBRARIES}")
+endif(NOT DEFINED BLAS_LIBRARIES)
+
+
+set(LAPACK_LIBRARIES "-lgfortran;/usr/lib64/liblapack.so;-lpthread;-lm;-ldl")
+
 if(NOT DEFINED LAPACK_LIBRARIES)
-  # in case the toolchain defines them
-  find_package(LAPACK REQUIRED)
+# in case the toolchain defines them
+find_package(LAPACK REQUIRED)
 endif(NOT DEFINED LAPACK_LIBRARIES)
 target_link_libraries(hiop_math INTERFACE ${LAPACK_LIBRARIES})
 message(STATUS "Using LAPACK libraries: ${LAPACK_LIBRARIES}")
@@ -182,6 +192,40 @@ endif()
 # extended precision lapack based on xblas testing example
 #
 #set(LAPACK_LIBRARIES "-lgfortran;/export/home/petra1/work/installs/xblas-1.0.248/libxblas.a;/home/petra1/work/installs/lapack-3.7.0/libblas.a;/home/petra1/work/installs/lapack-3.7.0/liblapack.a;/home/petra1/work/installs/lapack-3.7.0/liblapack.a;/home/petra1/work/installs/lapack-3.7.0/libblas.a;/export/home/petra1/work/installs/xblas-1.0.248/libxblas.a")
+
+
+# metis needed (5.x needed by umfpack)
+if(NOT HIOP_METIS4_DIR)
+    set(HIOP_METIS4_DIR "~/software/METIS_4")
+endif(NOT HIOP_METIS4_DIR)
+
+find_library(METIS_LIBRARY NAME libmetis.a HINTS ${HIOP_METIS4_DIR}/lib PATHS ${HIOP_METIS4_DIR}/lib)
+find_path(HIOP_METIS_INCLUDE_DIR NAME metis.h HINTS ${HIOP_METIS4_DIR}/include)
+if(HIOP_METIS_INCLUDE_DIR AND METIS_LIBRARY)
+    include_directories(${HIOP_METIS_INCLUDE_DIR})
+    message(STATUS "Found METIS libraries: ${METIS_LIBRARY}")
+ endif(HIOP_METIS_INCLUDE_DIR AND METIS_LIBRARY)
+
+if(NOT HIOP_MA57_DIR)
+    set(HIOP_MA57_DIR "~/software/HSL/MA57")
+endif(NOT HIOP_MA57_DIR)
+
+find_library(MA57_LIBRARY libma57.a PATHS ${HIOP_MA57_DIR}/lib)
+if(MA57_LIBRARY)
+    message(STATUS "Found MA57 libraries: ${MA57_LIBRARY}")
+endif(MA57_LIBRARY)
+
+if(MA57_LIBRARY AND METIS_LIBRARY)
+    target_link_libraries(hiop_math INTERFACE ${MA57_LIBRARY} ${METIS_LIBRARY})
+    option(HIOP_SPARSE "Build with sparse linear algebra" ON)
+    message(STATUS "Build with sparse linear algebra")
+endif()
+
+
+
+
+
+
 
 # include build directory for Fortran name mangling header
 include_directories(${CMAKE_BINARY_DIR})
@@ -269,6 +313,7 @@ install(FILES src/Interface/hiopInterface.hpp
   src/LinAlg/hiopLinSolver.hpp
   src/LinAlg/hiopLinSolverIndefDenseLapack.hpp
   src/LinAlg/hiopLinSolverUMFPACKZ.hpp
+  src/LinAlg/hiopLinSolverIndefSparseMA57.hpp
   src/LinAlg/hiopLinAlgFactory.hpp
   src/Utils/hiopRunStats.hpp
   src/Utils/hiopLogger.hpp
