@@ -46,85 +46,113 @@
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or
 // product endorsement purposes.
 
-#ifndef HIOP_LINSOLVER
-#define HIOP_LINSOLVER
+#ifndef HIOP_LINSOLVER_MA57
+#define HIOP_LINSOLVER_MA57
 
-#include "hiopNlpFormulation.hpp"
-#include "hiopMatrix.hpp"
-#include "hiopMatrixDense.hpp"
-#include "hiopVector.hpp"
+#include "hiopLinSolver.hpp"
+#include "hiopMatrixSparseTriplet.hpp"
 
-#include "hiop_blasdefs.hpp"
 
-#include "hiopCppStdUtils.hpp"
-
-namespace hiop
-{
-
-/**
- * Abstract class for Linear Solvers used by HiOp
- * Specifies interface for linear solver arising in Interior-Point methods, thus,
- * the underlying assumptions are that the system's matrix is symmetric (positive
- * definite or indefinite).
+/** implements the linear solver class using the HSL MA57 solver
  *
- * Implementations of this abstract class have the purpose of serving as wrappers
- * of existing CPU and GPU libraries for linear systems. 
- * 
- * Note:
- *  - solve(matrix) is not implemented
+ * @ingroup LinearSolvers
  */
 
-class hiopLinSolver
+#ifndef FNAME
+#ifndef __bg__
+#define FNAME(f) f ## _
+#else
+#define FNAME(f) f
+#endif
+#endif
+
+namespace hiop {
+
+extern "C" {
+  void FNAME(ma57id)( double cntl[],  int icntl[] );
+
+  void FNAME(ma57ad)( int * n,        int * ne,       int irn[],
+		int jcn[],      int * lkeep,    int keep[],
+		int iwork[],    int icntl[],    int info[],
+		double rinfo[] );
+
+  void FNAME(ma57bd)( int * n,        int * ne,       double a[],
+		double fact[],  int * lfact,    int ifact[],
+		int * lifact,   int * lkeep,    int keep[],
+		int ppos[],     int * icntl,    double cntl[],
+		int info[],     double rinfo[] );
+  void FNAME(ma57cd)( int * job,      int * n,        double fact[],
+		int * lfact,    int ifact[],    int * lifact,
+		int * nrhs,     double rhs[],   int * lrhs,
+		double w[],     int * lw,       int iw1[],
+		int icntl[],    int info[]);
+  void FNAME(ma57dd)( int * job,      int * n,        int * ne,
+		double a[],     int irn[],      int jcn[],
+		double fact[],  int * lfact,    int ifact[],
+		int * lifact,   double rhs[],   double x[],
+		double resid[], double w[],     int iw[],
+		int icntl[],    double cntl[],  int info[],
+		double rinfo[] );
+  void FNAME(ma57ed)( int * n,        int * ic,       int keep[],
+		double fact[],  int * lfact,    double * newfac,
+		int * lnew,     int  ifact[],   int * lifact,
+		int newifc[],   int * linew,    int * info );
+}
+
+
+/** Wrapper for MA57 */
+class hiopLinSolverIndefSparseMA57: public hiopLinSolverIndefSparse
 {
 public:
-  hiopLinSolver();
-  virtual ~hiopLinSolver();
+  hiopLinSolverIndefSparseMA57(const int& n, const int& nnz, hiopNlpFormulation* nlp);
+  virtual ~hiopLinSolverIndefSparseMA57();
 
   /** Triggers a refactorization of the matrix, if necessary.
-   * Returns number of negative eigenvalues or -1 if null eigenvalues
-   * are encountered.
-   */
-  virtual int matrixChanged() = 0;
+   * Overload from base class. */
+  int matrixChanged();
 
-  /** Solves a linear system.
+  /** solves a linear system.
    * param 'x' is on entry the right hand side(s) of the system to be solved. On
-   * exit is contains the solution(s).
-   */
-  virtual bool solve ( hiopVector& x ) = 0;
-  virtual bool solve ( hiopMatrix& x ) { assert(false && "not yet supported"); return true;}
+   * exit is contains the solution(s).  */
+  bool solve ( hiopVector& x_ );
+
+//protected:
+//  int* ipiv;
+//  hiopVector* dwork;
+
+private:
+
+  int     m_icntl[20];
+  int     m_info[40];
+  double  m_cntl[5];
+  double  m_rinfo[20];
+
+  int      m_n;                         // dimension of the whole matrix
+  int      m_nnz;                       // number of nonzeros in the matrix
+
+  int     *m_irowM, *m_jcolM;           // index array for the factorization
+//  double  *m_M;                         // storage for the original matrix
+
+  int     m_lkeep, *m_keep;             // temporary storage
+  int     m_lifact, *m_ifact, m_lfact;  // temporary storage for the factorization process
+  double *m_fact;                       // storage for the factors
+  double  m_ipessimism, m_rpessimism;   // amounts by which to increase allocated factorization space
+
+  int *m_iwork;
+  double *m_dwork;
+
+  /** store as a sparse symmetric indefinite matrix */
+//  const hiopMatrixSymSparseTriplet& m_sys_mat;
+
+
 public:
-  hiopNlpFormulation* nlp_;
-  bool perf_report_;
+
+  /** called the very first time a matrix is factored. Allocates space
+   * for the factorization and performs ordering */
+  virtual void firstCall();
+//  virtual void diagonalChanged( int idiag, int extent );
+
 };
 
-/** Base class for Indefinite Dense Solvers */
-class hiopLinSolverIndefDense : public hiopLinSolver
-{
-public:
-  hiopLinSolverIndefDense(int n, hiopNlpFormulation* nlp);
-  virtual ~hiopLinSolverIndefDense();
-
-  hiopMatrixDense& sysMatrix();
-protected:
-  hiopMatrixDense* M_;
-protected:
-  hiopLinSolverIndefDense();
-};
-
-/** Base class for Indefinite Sparse Solvers */
-class hiopLinSolverIndefSparse : public hiopLinSolver
-{
-public:
-  hiopLinSolverIndefSparse(int n, int nnz, hiopNlpFormulation* nlp);
-  virtual ~hiopLinSolverIndefSparse();
-
-  inline hiopMatrixSymSparseTriplet& sysMatrix() { return M; }
-protected:
-  hiopMatrixSymSparseTriplet M;
-protected:
-  hiopLinSolverIndefSparse() : M(0,0) { assert(false); }
-};
-
-} //end namespace
-
+} // end namespace
 #endif
