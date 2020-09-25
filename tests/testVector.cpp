@@ -60,11 +60,17 @@
 #include <hiopOptions.hpp>
 #include <hiopLinAlgFactory.hpp>
 #include <hiopVectorPar.hpp>
-#include <hiopVectorRajaPar.hpp>
+#include <hiopVectorIntSeq.hpp>
 
 #include "LinAlg/vectorTestsPar.hpp"
-#include "LinAlg/vectorTestsRajaPar.hpp"
+#include "LinAlg/vectorTestsIntSeq.hpp"
 
+#ifdef HIOP_USE_RAJA
+#include "LinAlg/vectorTestsRajaPar.hpp"
+#include "LinAlg/vectorTestsIntRaja.hpp"
+#include <hiopVectorRajaPar.hpp>
+#include <hiopVectorIntRaja.hpp>
+#endif
 
 /**
  * @brief Main body of vector implementation testing code.
@@ -88,8 +94,7 @@ int main(int argc, char** argv)
   comm = MPI_COMM_WORLD;
   err  = MPI_Comm_rank(comm, &rank);     assert(MPI_SUCCESS == err);
   err  = MPI_Comm_size(comm, &numRanks); assert(MPI_SUCCESS == err);
-  if(0 == rank && MPI_SUCCESS == err)
-    std::cout << "Running MPI enabled tests ...\n";
+  if(0 == rank && MPI_SUCCESS == err) std::cout << "Running MPI enabled tests ...\n";
 #endif
   hiop::hiopOptions options;
 
@@ -188,7 +193,8 @@ int main(int argc, char** argv)
     delete v;
   }
 
-  // Test MPI+RAJA vector
+#ifdef HIOP_USE_RAJA
+  // Test RAJA vector
   {
     if (rank == 0)
       std::cout << "\nTesting HiOp RAJA vector:\n";
@@ -273,6 +279,40 @@ int main(int argc, char** argv)
     // Set memory space back to default value
     options.SetStringValue("mem_space", "default");
   }
+#endif // HIOP_USE_RAJA
+
+  // Test hiopVectorIntSeq
+  if (rank == 0)
+  {
+    std::cout << "\nTesting HiOp sequential int vector:\n";
+
+    options.SetStringValue("mem_space", "DEFAULT");
+    hiop::LinearAlgebraFactory::set_mem_space(options.GetString("mem_space"));
+    hiop::tests::VectorTestsIntSeq test;
+    const int sz = 100;
+    auto* x = hiop::LinearAlgebraFactory::createVectorInt(sz);
+    fail += test.vectorSize(*x, sz);
+    fail += test.vectorGetElement(*x);
+    fail += test.vectorSetElement(*x);
+  }
+
+#ifdef HIOP_USE_RAJA
+  // Test hiopVectorIntRaja
+  if (rank == 0)
+  {
+    std::cout << "\nTesting HiOp RAJA int vector:\n";
+
+    options.SetStringValue("mem_space", "DEVICE");
+    hiop::LinearAlgebraFactory::set_mem_space(options.GetString("mem_space"));
+    hiop::tests::VectorTestsIntRaja test;
+    const int sz = 100;
+    auto* x = hiop::LinearAlgebraFactory::createVectorInt(sz);
+    fail += test.vectorSize(*x, sz);
+    fail += test.vectorGetElement(*x);
+    fail += test.vectorSetElement(*x);
+    options.SetStringValue("mem_space", "DEFAULT");
+  }
+#endif // HIOP_USE_RAJA
 
   if (rank == 0)
   {

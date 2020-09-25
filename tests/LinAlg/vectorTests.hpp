@@ -51,6 +51,7 @@
  *
  * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
  * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
+ * @author Cameron Rutherford <robert.rutherford@pnnl.gov>, PNNL
  *
  */
 #pragma once
@@ -63,6 +64,7 @@
 #include <functional>
 
 #include <hiopVector.hpp>
+#include <hiopLinAlgFactory.hpp>
 #include "testBase.hpp"
 
 namespace hiop { namespace tests {
@@ -76,6 +78,8 @@ namespace hiop { namespace tests {
  *
  * @pre All input vectors should be allocated to the same size and have
  * the same partitioning.
+ *
+ * @pre Memory space for hiop::LinearAlgebraFactory is set appropriately
  *
  * @post All tests return `true` on all ranks if the test fails on any rank
  * and return `false` otherwise.
@@ -191,6 +195,7 @@ public:
    * or data buffer. 
    * 
    * @pre Vectors are not distributed.
+   * @pre Memory space for hiop::LinearAlgebraFactory is set appropriately
    */  
   bool vectorCopyFromStarting(
       hiop::hiopVector& x,
@@ -231,6 +236,20 @@ public:
       {
         return (i < 1 || i > (Nfrom)) ? two : one;
       });
+
+    // Testing copying from a zero size vector
+    hiop::hiopVector* zero = hiop::LinearAlgebraFactory::createVector(0);
+    zero->setToConstant(one);
+    x.setToConstant(two);
+    x.copyFromStarting(0, *zero);
+    fail += verifyAnswer(&x, two);
+
+    // Testing copying from a zero size array
+    real_type* zero_buffer = createLocalBuffer(0, one);
+    x.setToConstant(two);
+    x.copyFromStarting(0, zero_buffer, 0);
+    fail += verifyAnswer(&x, two);
+    deleteLocalBuffer(zero_buffer);
 
     printMessage(fail, __func__, rank);
     return reduceReturn(fail, &x);
@@ -305,6 +324,7 @@ public:
    * starting from prescribed index in destination vector. 
    * 
    * @pre Vectors are not distributed.
+   * @pre Memory space for hiop::LinearAlgebraFactory is set appropriately
    */  
   bool vectorCopyToStarting(
       hiop::hiopVector& to,
@@ -333,11 +353,18 @@ public:
      * greater than or equal to the start idx are set
      * to the source value
      */
-    const int fail = verifyAnswer(&to,
+    int fail = verifyAnswer(&to,
       [=] (local_ordinal_type i) -> real_type
       {
         return i < start_idx ? to_val : from_val;
       });
+
+    // Testing copying from a zero size vector
+    hiop::hiopVector* zero = hiop::LinearAlgebraFactory::createVector(0);
+    zero->setToConstant(one);
+    to.setToConstant(to_val);
+    zero->copyToStarting(to, 0);
+    fail += verifyAnswer(&to, to_val);
 
     printMessage(fail, __func__, rank);
     return reduceReturn(fail, &from);
@@ -349,6 +376,7 @@ public:
    * vectors. 
    * 
    * @pre Vectors are not distributed.
+   * @pre Memory space for hiop::LinearAlgebraFactory is set appropriately
    */  
   bool vectorStartingAtCopyToStartingAt(
       hiop::hiopVector& to,
@@ -362,29 +390,156 @@ public:
     assert(dest_size > src_size
         && "Must pass in a destination vector larger than source vector");
 
-    const int start_idx_src = 1;
-    const int start_idx_dst = dest_size - (src_size - start_idx_src);
-    const int num_elements_to_copy = src_size - start_idx_src;
     const real_type from_val = one;
     const real_type to_val = two;
+    int start_idx_src = 0;
+    int start_idx_dst = 0;
+    int fail = 0;
+    int num_elements_to_copy = -1;
 
+    // Iteratively checking various edge cases for calls to the function
+  
+    hiop::hiopVector* zero = hiop::LinearAlgebraFactory::createVector(0);
+
+    // Copying from a size 0 vector
     from.setToConstant(from_val);
     to.setToConstant(to_val);
+    zero->startingAtCopyToStartingAt(start_idx_src, to, start_idx_dst, num_elements_to_copy);
 
-    from.startingAtCopyToStartingAt(
-        start_idx_src,
-        to,
-        start_idx_dst,
-        num_elements_to_copy);
+    fail += verifyAnswer(&to, to_val);
 
-    const int fail = verifyAnswer(&to,
+    // Copying to a size 0 vector
+    from.setToConstant(from_val);
+    to.setToConstant(to_val);
+    from.startingAtCopyToStartingAt(start_idx_src, *zero, start_idx_dst, num_elements_to_copy);
+
+    fail += verifyAnswer(zero, 0);
+
+    // Copying 0 elements
+    num_elements_to_copy = 0;
+    from.setToConstant(from_val);
+    to.setToConstant(to_val);
+    from.startingAtCopyToStartingAt(start_idx_src, to, start_idx_dst, num_elements_to_copy);
+
+    fail += verifyAnswer(&to, to_val);
+
+    // Copying from start of from to start of to
+    num_elements_to_copy = src_size;
+    from.setToConstant(from_val);
+    to.setToConstant(to_val);
+    from.startingAtCopyToStartingAt(start_idx_src, to, start_idx_dst, num_elements_to_copy);
+
+    fail += verifyAnswer(&to,
       [=] (local_ordinal_type i) -> real_type
       {
+        int tmp;
+        if(num_elements_to_copy == -1)
+        {
+          tmp = src_size;
+        }
+        else
+        {
+          tmp = num_elements_to_copy;
+        }
         const bool isValueCopied = (i >= start_idx_dst &&
-          i < start_idx_dst + num_elements_to_copy);
+          i < start_idx_dst + tmp);
         return isValueCopied ? from_val : to_val;
       });
 
+    // Copying from start of from to end of to
+    start_idx_dst = dest_size - src_size;
+    from.setToConstant(from_val);
+    to.setToConstant(to_val);
+    from.startingAtCopyToStartingAt(start_idx_src, to, start_idx_dst, num_elements_to_copy);
+
+    fail += verifyAnswer(&to,
+      [=] (local_ordinal_type i) -> real_type
+      {
+        int tmp;
+        if(num_elements_to_copy == -1)
+        {
+          tmp = src_size;
+        }
+        else
+        {
+          tmp = num_elements_to_copy;
+        }
+        const bool isValueCopied = (i >= start_idx_dst &&
+          i < start_idx_dst + tmp);
+        return isValueCopied ? from_val : to_val;
+      });
+
+    // Not copying all elemtents
+    num_elements_to_copy = num_elements_to_copy / 2;
+    from.setToConstant(from_val);
+    to.setToConstant(to_val);
+    from.startingAtCopyToStartingAt(start_idx_src, to, start_idx_dst, num_elements_to_copy);
+
+    fail += verifyAnswer(&to,
+      [=] (local_ordinal_type i) -> real_type
+      {
+        int tmp;
+        if(num_elements_to_copy == -1)
+        {
+          tmp = src_size;
+        }
+        else
+        {
+          tmp = num_elements_to_copy;
+        }
+        const bool isValueCopied = (i >= start_idx_dst &&
+          i < start_idx_dst + tmp);
+        return isValueCopied ? from_val : to_val;
+      });
+
+    // Passing -1 as the number of elements
+    num_elements_to_copy = -1;
+    from.setToConstant(from_val);
+    to.setToConstant(to_val);
+    from.startingAtCopyToStartingAt(start_idx_src, to, start_idx_dst, num_elements_to_copy);
+
+    fail += verifyAnswer(&to,
+      [=] (local_ordinal_type i) -> real_type
+      {
+        int tmp;
+        if(num_elements_to_copy == -1)
+        {
+          tmp = src_size;
+        }
+        else
+        {
+          tmp = num_elements_to_copy;
+        }
+        const bool isValueCopied = (i >= start_idx_dst &&
+          i < start_idx_dst + tmp);
+        return isValueCopied ? from_val : to_val;
+      });
+
+    // Passing starting indices equal to the sizes
+    start_idx_dst = src_size;
+    start_idx_dst = dest_size;
+    from.setToConstant(from_val);
+    to.setToConstant(to_val);
+    from.startingAtCopyToStartingAt(start_idx_src, to, start_idx_dst, num_elements_to_copy);
+
+    fail += verifyAnswer(&to,
+      [=] (local_ordinal_type i) -> real_type
+      {
+        int tmp;
+        if(num_elements_to_copy == -1)
+        {
+          tmp = src_size;
+        }
+        else
+        {
+          tmp = num_elements_to_copy;
+        }
+        const bool isValueCopied = (i >= start_idx_dst &&
+          i < start_idx_dst + tmp);
+        return isValueCopied ? from_val : to_val;
+      });
+
+    
     printMessage(fail, __func__, rank);
     return reduceReturn(fail, &to);
   }

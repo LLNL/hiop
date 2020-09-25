@@ -177,9 +177,12 @@ hiopMatrixRajaDense::hiopMatrixRajaDense(
 
 void hiopMatrixRajaDense::setRowPointers()
 {
-  for(int i=0; i<max_rows_; i++)
+  if(mem_space_ == "DEVICE")
   {
-    M_host_[i] = data_host_ + (i*n_local_);
+    for(int i=0; i<max_rows_; i++)
+    {
+      M_host_[i] = data_host_ + (i*n_local_);
+    }
   }
 
   auto n_local = n_local_;
@@ -323,8 +326,7 @@ void hiopMatrixRajaDense::copyFrom(const double* src)
 {
   if(nullptr == src)
   {
-    M_host_[0]     = nullptr;
-    //M_dev_[0] = nullptr;
+    M_host_[0] = nullptr;
   } 
   else
   {
@@ -568,7 +570,8 @@ void hiopMatrixRajaDense::overwriteUpperTriangleWithLower()
 void hiopMatrixRajaDense::overwriteLowerTriangleWithUpper()
 {
   assert(n_local_==n_global_ && "Use only with local, non-distributed matrices");
-  RAJA::View<double, RAJA::Layout<2>> Mview(data_dev_, get_local_size_m(), get_local_size_n());
+  double* data = data_dev_;
+  RAJA::View<double, RAJA::Layout<2>> Mview(data, get_local_size_m(), get_local_size_n());
   RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(1, m_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
@@ -661,13 +664,13 @@ void hiopMatrixRajaDense::print(FILE* f,
     for(int i=0; i<maxRows; i++) {
       if(i>0) fprintf(f, " ");
       for(int j=0; j<maxCols; j++) 
-	fprintf(f, "%20.12e ", M_host_[i][j]);
+        fprintf(f, "%20.12e ", M_host_[i][j]);
       if(i<maxRows-1)
-	fprintf(f, "; ...\n");
+        fprintf(f, "; ...\n");
       else
-	fprintf(f, "];\n");
-    }
-  }
+        fprintf(f, "];\n");
+    } 
+  } // if(myrank_==rank || rank==-1)
 }
 
 #include <unistd.h>
@@ -708,7 +711,9 @@ void hiopMatrixRajaDense::timesVec(
   assert(x.get_size() == n_global_);
 
   if(beta != 0)
+  {
     assert(y.isfinite_local() && "pre timesvec");
+  }
   assert(x.isfinite_local());
 #endif
   
@@ -747,12 +752,12 @@ void hiopMatrixRajaDense::timesVec(
   RAJA::View<const double, RAJA::Layout<2>> Mview(data, m_local, n_local);
   RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, m_local),
     RAJA_LAMBDA(RAJA::Index_type i)
-  {
-    double dot = 0;
-    for (int j = 0; j < n_local; j++)
-      dot += Mview(i, j) * xa[j];
-    ya[i] = beta * ya[i] + alpha * dot;
-  });
+    {
+      double dot = 0;
+      for (int j = 0; j < n_local; j++)
+        dot += Mview(i, j) * xa[j];
+      ya[i] = beta * ya[i] + alpha * dot;
+    });
 
 #ifdef HIOP_USE_MPI
   //here m_local_ is > 0
@@ -910,9 +915,12 @@ void hiopMatrixRajaDense::timesMat_local(double beta, hiopMatrix& W_, double alp
 #endif
   assert(W.n_local_==W.n_global_ && "requested multiplication is not supported, see timesMat");
   
-  RAJA::View<double, RAJA::Layout<2>> Mview(this->data_dev_, m_local_, n_local_);
-  RAJA::View<double, RAJA::Layout<2>> Xview(X.data_dev_, X.m_local_, X.n_local_);
-  RAJA::View<double, RAJA::Layout<2>> Wview(W.data_dev_, W.m_local_, W.n_local_);
+  double* data  = data_dev_;
+  double* xdata = X.data_dev_;
+  double* wdata = W.data_dev_;
+  RAJA::View<double, RAJA::Layout<2>> Mview(data,  m_local_, n_local_);
+  RAJA::View<double, RAJA::Layout<2>> Xview(xdata, X.m_local_, X.n_local_);
+  RAJA::View<double, RAJA::Layout<2>> Wview(wdata, W.m_local_, W.n_local_);
   RAJA::RangeSegment row_range(0, W.m_local_);
   RAJA::RangeSegment col_range(0, W.n_local_);
 
@@ -954,9 +962,12 @@ void hiopMatrixRajaDense::transTimesMat(double beta, hiopMatrix& W_, double alph
 
   assert(this->n_global_==this->n_local_ && "requested parallel multiplication is not supported");
 
-  RAJA::View<double, RAJA::Layout<2>> Mview(this->data_dev_, m_local_, n_local_);
-  RAJA::View<double, RAJA::Layout<2>> Xview(X.data_dev_, X.m_local_, X.n_local_);
-  RAJA::View<double, RAJA::Layout<2>> Wview(W.data_dev_, W.m_local_, W.n_local_);
+  double* data  = data_dev_;
+  double* xdata = X.data_dev_;
+  double* wdata = W.data_dev_;
+  RAJA::View<double, RAJA::Layout<2>> Mview(data,  m_local_, n_local_);
+  RAJA::View<double, RAJA::Layout<2>> Xview(xdata, X.m_local_, X.n_local_);
+  RAJA::View<double, RAJA::Layout<2>> Wview(wdata, W.m_local_, W.n_local_);
   RAJA::RangeSegment row_range(0, W.m_local_);
   RAJA::RangeSegment col_range(0, W.n_local_);
 
@@ -997,9 +1008,12 @@ void hiopMatrixRajaDense::timesMatTrans_local(double beta, hiopMatrix& W_, doubl
   if(W.n()==0)
     return;
 
-  RAJA::View<double, RAJA::Layout<2>> Mview(this->data_dev_, m_local_, n_local_);
-  RAJA::View<double, RAJA::Layout<2>> Xview(X.data_dev_, X.m_local_, X.n_local_);
-  RAJA::View<double, RAJA::Layout<2>> Wview(W.data_dev_, W.m_local_, W.n_local_);
+  double* data  = data_dev_;
+  double* xdata = X.data_dev_;
+  double* wdata = W.data_dev_;
+  RAJA::View<double, RAJA::Layout<2>> Mview(data,  m_local_, n_local_);
+  RAJA::View<double, RAJA::Layout<2>> Xview(xdata, X.m_local_, X.n_local_);
+  RAJA::View<double, RAJA::Layout<2>> Wview(wdata, W.m_local_, W.n_local_);
   RAJA::RangeSegment row_range(0, W.m_local_);
   RAJA::RangeSegment col_range(0, W.n_local_);
 
@@ -1084,8 +1098,10 @@ void hiopMatrixRajaDense::addDiagonal(const double& alpha, const hiopVector& dve
 
   // the min() is symbolic as n/m_local_ should be equal
   int diag = std::min(get_local_size_m(), get_local_size_n());
-  RAJA::View<double, RAJA::Layout<2>> Mview(data_dev_, get_local_size_m(), get_local_size_n()); // matrix
-  RAJA::View<const double, RAJA::Layout<1>> Dview(d.local_data_const(), d.get_size()); // vector
+  double* data = data_dev_;
+  const double* dd = d.local_data_const();
+  RAJA::View<double, RAJA::Layout<2>> Mview(data, get_local_size_m(), get_local_size_n()); // matrix
+  RAJA::View<const double, RAJA::Layout<1>> Dview(dd, d.get_size()); // vector
   RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, diag),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
@@ -1101,7 +1117,8 @@ void hiopMatrixRajaDense::addDiagonal(const double& alpha, const hiopVector& dve
 void hiopMatrixRajaDense::addDiagonal(const double& value)
 {
   int diag = std::min(get_local_size_m(), get_local_size_n());
-  RAJA::View<double, RAJA::Layout<2>> Mview(data_dev_, get_local_size_m(), get_local_size_n());
+  double* data = data_dev_;
+  RAJA::View<double, RAJA::Layout<2>> Mview(data, get_local_size_m(), get_local_size_n());
   RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, diag),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
@@ -1132,8 +1149,10 @@ void hiopMatrixRajaDense::addSubDiagonal(
 #endif
 
   int diag = std::min(get_local_size_m(), get_local_size_n());
-  RAJA::View<double, RAJA::Layout<2>> Mview(data_dev_, get_local_size_m(), get_local_size_n()); // matrix
-  RAJA::View<const double, RAJA::Layout<1>> Dview(d.local_data_const(), dlen); // vector
+  double* data = data_dev_;
+  const double* dd = d.local_data_const();
+  RAJA::View<double, RAJA::Layout<2>> Mview(data, get_local_size_m(), get_local_size_n()); // matrix
+  RAJA::View<const double, RAJA::Layout<1>> Dview(dd, dlen); // vector
   RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(start, start+dlen),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
@@ -1172,8 +1191,10 @@ void hiopMatrixRajaDense::addSubDiagonal(
   num_elems = std::min(num_elems, m_local_-start_on_dest_diag);
 
   int diag = std::min(get_local_size_m(), get_local_size_n());
-  RAJA::View<double, RAJA::Layout<2>> Mview(data_dev_, get_local_size_m(), get_local_size_n());
-  RAJA::View<const double, RAJA::Layout<1>> Dview(d.local_data_const(), d.get_size()); // vector
+  double* data = data_dev_;
+  const double* dd = d.local_data_const();
+  RAJA::View<double, RAJA::Layout<2>> Mview(data, get_local_size_m(), get_local_size_n());
+  RAJA::View<const double, RAJA::Layout<1>> Dview(dd, d.get_size()); // vector
   RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, num_elems),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
@@ -1201,7 +1222,8 @@ void hiopMatrixRajaDense::addSubDiagonal(int start_on_dest_diag, int num_elems, 
   assert(n_local_ == m_local_  && "method supported only for symmetric matrices");
 
   int diag = std::min(get_local_size_m(), get_local_size_n());
-  RAJA::View<double, RAJA::Layout<2>> Mview(data_dev_, get_local_size_m(), get_local_size_n());
+  double* data  = data_dev_;
+  RAJA::View<double, RAJA::Layout<2>> Mview(data, get_local_size_m(), get_local_size_n());
   RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, num_elems),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
@@ -1261,14 +1283,15 @@ void hiopMatrixRajaDense::addToSymDenseMatrixUpperTriangle(
   hiopMatrixDense& Wmat) const
 {
   hiopMatrixRajaDense& W = dynamic_cast<hiopMatrixRajaDense&>(Wmat);
-  double* wdata_dev = W.data_dev_;
+  double* wdata = W.data_dev_;
+  double* data  = data_dev_;
 
   assert(row_start >= 0 && m() + row_start <= W.m());
   assert(col_start >= 0 && n() + col_start <= W.n());
   assert(W.n() == W.m());
 
-  RAJA::View<double, RAJA::Layout<2>> Mview(data_dev_, m_local_, n_local_);
-  RAJA::View<double, RAJA::Layout<2>> Wview(wdata_dev, W.get_local_size_m(), W.get_local_size_n());
+  RAJA::View<double, RAJA::Layout<2>> Mview(data,  m_local_, n_local_);
+  RAJA::View<double, RAJA::Layout<2>> Wview(wdata, W.get_local_size_m(), W.get_local_size_n());
   RAJA::RangeSegment row_range(0, m_local_);
   RAJA::RangeSegment col_range(0, n_local_);
 
@@ -1286,11 +1309,6 @@ void hiopMatrixRajaDense::addToSymDenseMatrixUpperTriangle(
       const int jW = jcol + col_start;
       Wview(iW, jW) += alpha * Mview(irow, jcol);
     });
-//  RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, m_local_ * n_local_),
-//     RAJA_LAMBDA(RAJA::Index_type i)
-//     {
-//       wdata_dev[i] = 0;
-//     });
 }
 
 /**
@@ -1307,14 +1325,15 @@ void hiopMatrixRajaDense::transAddToSymDenseMatrixUpperTriangle(
   hiopMatrixDense& Wmat) const
 {
   hiopMatrixRajaDense& W = dynamic_cast<hiopMatrixRajaDense&>(Wmat);
-  double* wdata_dev = W.data_dev_;
+  double* wdata = W.data_dev_;
+  double* data  = data_dev_;
 
   assert(row_start >= 0 && n() + row_start <= W.m());
   assert(col_start >= 0 && m() + col_start <= W.n());
   assert(W.n() == W.m());
 
-  RAJA::View<double, RAJA::Layout<2>> Mview(data_dev_, this->get_local_size_m(), this->get_local_size_n());
-  RAJA::View<double, RAJA::Layout<2>> Wview(wdata_dev, W.get_local_size_m(), W.get_local_size_n());
+  RAJA::View<double, RAJA::Layout<2>> Mview(data,  this->get_local_size_m(), this->get_local_size_n());
+  RAJA::View<double, RAJA::Layout<2>> Wview(wdata, W.get_local_size_m(), W.get_local_size_n());
   RAJA::RangeSegment row_range(0, m_local_);
   RAJA::RangeSegment col_range(0, n_local_);
 
@@ -1349,10 +1368,11 @@ void hiopMatrixRajaDense::addUpperTriangleToSymDenseMatrixUpperTriangle(
   hiopMatrixDense& Wmat) const
 {
   hiopMatrixRajaDense& W = dynamic_cast<hiopMatrixRajaDense&>(Wmat);
-  double* wdata_dev = W.data_dev_;
+  double* wdata = W.data_dev_;
+  double* data  = data_dev_;
 
-  RAJA::View<double, RAJA::Layout<2>> Mview(data_dev_, this->get_local_size_m(), this->get_local_size_n());
-  RAJA::View<double, RAJA::Layout<2>> Wview(wdata_dev, W.get_local_size_m(), W.get_local_size_n());
+  RAJA::View<double, RAJA::Layout<2>> Mview(data,  this->get_local_size_m(), this->get_local_size_n());
+  RAJA::View<double, RAJA::Layout<2>> Wview(wdata, W.get_local_size_m(), W.get_local_size_n());
   RAJA::RangeSegment row_range(0, m_local_);
   RAJA::RangeSegment col_range(0, n_local_);
 
@@ -1404,7 +1424,8 @@ bool hiopMatrixRajaDense::assertSymmetry(double tol) const
     return false;
   }
 
-  RAJA::View<double, RAJA::Layout<2>> Mview(data_dev_, n_local_, n_local_);
+  double* data = data_dev_;
+  RAJA::View<double, RAJA::Layout<2>> Mview(data, n_local_, n_local_);
   RAJA::RangeSegment range(0, n_local_);
 
   //symmetry

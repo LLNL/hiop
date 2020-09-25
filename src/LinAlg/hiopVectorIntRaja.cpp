@@ -46,71 +46,66 @@
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or 
 // product endorsement purposes.
 
-#ifndef HIOP_LINSOLVER
-#define HIOP_LINSOLVER
+/**
+ * @file hiopVectorIntRaja.cpp
+ *
+ * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
+ *
+ */
 
-#include "hiopNlpFormulation.hpp"
-#include "hiopMatrix.hpp"
-#include "hiopMatrixDense.hpp"
-#include "hiopVector.hpp"
-
-#include "hiop_blasdefs.hpp"
-
-#include "hiopCppStdUtils.hpp"
+#include "hiopVectorIntRaja.hpp"
 
 namespace hiop
 {
 
-/**
- * Abstract class for Linear Solvers used by HiOp
- * Specifies interface for linear solver arising in Interior-Point methods, thus,
- * the underlying assumptions are that the system's matrix is symmetric (positive
- * definite or indefinite).
- *
- * Implementations of this abstract class have the purpose of serving as wrappers
- * of existing CPU and GPU libraries for linear systems. 
- * 
- * Note:
- *  - solve(matrix) is not implemented
- */
-
-class hiopLinSolver
+hiopVectorIntRaja::hiopVectorIntRaja(int sz, std::string mem_space)
+  : hiopVectorInt(sz)
+  , mem_space_(mem_space)
 {
-public:
-  hiopLinSolver();
-  virtual ~hiopLinSolver();
-
-  /** Triggers a refactorization of the matrix, if necessary. 
-   * Returns number of negative eigenvalues or -1 if null eigenvalues 
-   * are encountered. 
-   */
-  virtual int matrixChanged() = 0;
-
-  /** Solves a linear system.
-   * param 'x' is on entry the right hand side(s) of the system to be solved. On
-   * exit is contains the solution(s).  
-   */
-  virtual bool solve ( hiopVector& x ) = 0;
-  virtual bool solve ( hiopMatrix& x ) { assert(false && "not yet supported"); return true;}
-public: 
-  hiopNlpFormulation* nlp_;
-  bool perf_report_; 
-};
-
-/** Base class for Indefinite Dense Solvers */
-class hiopLinSolverIndefDense : public hiopLinSolver
-{
-public:
-  hiopLinSolverIndefDense(int n, hiopNlpFormulation* nlp);
-  virtual ~hiopLinSolverIndefDense();
-
-  hiopMatrixDense& sysMatrix();
-protected:
-  hiopMatrixDense* M_;
-protected:
-  hiopLinSolverIndefDense();
-};
-
-} //end namespace
-
+#ifndef HIOP_USE_GPU
+  mem_space_ = "HOST";
 #endif
+
+  auto& resmgr = umpire::ResourceManager::getInstance();
+  umpire::Allocator devalloc  = resmgr.getAllocator(mem_space_);
+  buf_dev_ = static_cast<int*>(devalloc.allocate(sz_*sizeof(int)));
+  if(mem_space_ != "HOST")
+  {
+    umpire::Allocator hostalloc = resmgr.getAllocator("HOST");
+    buf_host_ = static_cast<int*>(hostalloc.allocate(sz_*sizeof(int)));
+  }
+  else
+  {
+    buf_host_ = buf_dev_;
+  }
+}
+
+const int& hiopVectorIntRaja::operator[] (int i) const
+{
+  return buf_host_[i];
+}
+
+int& hiopVectorIntRaja::operator[] (int i)
+{
+  return buf_host_[i];
+}
+
+void hiopVectorIntRaja::copyFromDev() const
+{
+  if (buf_dev_ != buf_host_)
+  {
+    auto& resmgr = umpire::ResourceManager::getInstance();
+    resmgr.copy(buf_host_, buf_dev_);
+  }
+}
+
+void hiopVectorIntRaja::copyToDev() const
+{
+  if (buf_dev_ != buf_host_)
+  {
+    auto& resmgr = umpire::ResourceManager::getInstance();
+    resmgr.copy(buf_dev_, buf_host_);
+  }
+}
+
+} // namespace hiop

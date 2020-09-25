@@ -63,10 +63,14 @@
 #include <hiopLinAlgFactory.hpp>
 #include <hiopVectorPar.hpp>
 #include <hiopMatrixDenseRowMajor.hpp>
+
+#include "LinAlg/matrixTestsSymSparseTriplet.hpp"
+
+#ifdef HIOP_USE_RAJA
 #include <hiopVectorRajaPar.hpp>
 #include <hiopMatrixRajaDense.hpp>
-#include "LinAlg/matrixTestsSymSparseTriplet.hpp"
 #include "LinAlg/matrixTestsRajaSymSparseTriplet.hpp"
+#endif
 
 using namespace hiop::tests;
 
@@ -117,6 +121,7 @@ void initializeSymSparseMat(hiop::hiopMatrixSparse* mat)
   assert(nnz == nonZerosUsed && "incorrect amount of non-zeros in sparse sym matrix");
 }
 
+#ifdef HIOP_USE_RAJA
 /**
  * @brief Initialize RAJA sparse matrix with a homogeneous pattern to test a
  * realistic use-case.
@@ -162,6 +167,7 @@ void initializeRajaSymSparseMat(hiop::hiopMatrixSparse* mat)
   assert(nnz == nonZerosUsed && "incorrect amount of non-zeros in sparse sym matrix");
   A->copyToDev();
 }
+#endif
 
 int main(int argc, char** argv)
 {
@@ -203,6 +209,7 @@ int main(int argc, char** argv)
     delete m_sym;
   }
 
+#ifdef HIOP_USE_RAJA
   // Test RAJA sparse matrix
   {
     std::cout << "\nTesting hiopMatrixRajaSymSparseTriplet\n";
@@ -236,6 +243,7 @@ int main(int argc, char** argv)
     // Set memory space back to default value
     options.SetStringValue("mem_space", "default");
   }
+#endif
 
   if(fail)
   {

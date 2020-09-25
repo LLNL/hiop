@@ -1,7 +1,7 @@
 # Minimal testing procedure 
 Any PR or push to the master should go through and pass the procedures below. The shell commands need to be ran in the 'build' directory and assume bash shell. 
 
-## 1. All tests in 'make test' pass for
+## 1. All tests in 'make test' pass for each of these builds, with every combination of `HIOP_USE_RAJA` and `HIOP_USE_GPU`.
 1. a. MPI=ON, DEEPCHECKS=OFF, RELEASE=ON (this is the high-performance version of HiOp)
 ```shell
 $> rm -rf *; cmake -DHIOP_USE_MPI=ON -DHIOP_DEEPCHECKS=OFF -DCMAKE_BUILD_TYPE=RELEASE ..

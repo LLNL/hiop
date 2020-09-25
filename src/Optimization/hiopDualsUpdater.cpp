@@ -66,12 +66,12 @@ hiopDualsLsqUpdate::hiopDualsLsqUpdate(hiopNlpFormulation* nlp)
 
   M      = LinearAlgebraFactory::createMatrixDense(nlpd->m(), nlpd->m());
   rhs    = LinearAlgebraFactory::createVector(nlpd->m());
-  rhsc   = dynamic_cast<hiopVectorPar*>(nlpd->alloc_dual_eq_vec());
+  rhsc   = nlpd->alloc_dual_eq_vec();
   rhsc->setToZero();
-  rhsd   = dynamic_cast<hiopVectorPar*>(nlpd->alloc_dual_ineq_vec());
+  rhsd   = nlpd->alloc_dual_ineq_vec();
   rhsd->setToZero();
-  _vec_n = dynamic_cast<hiopVectorPar*>(nlpd->alloc_primal_vec());
-  _vec_mi= dynamic_cast<hiopVectorPar*>(nlpd->alloc_dual_ineq_vec());
+  _vec_n = nlpd->alloc_primal_vec();
+  _vec_mi= nlpd->alloc_dual_ineq_vec();
 #ifdef HIOP_DEEPCHECKS
   M_copy = M->alloc_clone();
   rhs_copy = rhs->alloc_clone();

@@ -47,77 +47,48 @@
 // product endorsement purposes.
 
 /**
- * @file testBase.hpp
+ * @file vectorTestsIntRaja.cpp
  *
  * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
- * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
  *
  */
-#pragma once
 
-#define THROW_NULL_DEREF throw std::runtime_error("error")
-
-#include <limits>
-#include <cmath>
-#include <iostream>
+#include <hiopVectorIntRaja.hpp>
+#include "vectorTestsIntRaja.hpp"
+#include <cassert>
 
 namespace hiop { namespace tests {
 
-using real_type             = double;
-using local_ordinal_type    = int;
-using global_ordinal_type   = long long;
-
-static const real_type zero = 0.0;
-static const real_type quarter = 0.25;
-static const real_type half = 0.5;
-static const real_type one = 1.0;
-static const real_type two = 2.0;
-static const real_type three = 3.0;
-static const real_type eps =
-  10*std::numeric_limits<real_type>::epsilon();
-static const int SKIP_TEST = -1;
-
-// must be const pointer and const dest for
-// const string declarations to pass
-// -Wwrite-strings
-static const char * const  RED       = "\033[1;31m";
-static const char * const  GREEN     = "\033[1;32m";
-static const char * const  YELLOW    = "\033[1;33m";
-static const char * const  CLEAR     = "\033[0m";
-
-class TestBase
+int VectorTestsIntRaja::getLocalElement(hiop::hiopVectorInt* xvec, int idx) const
 {
-protected:
-  /// Returns true if two real numbers are equal within tolerance
-  [[nodiscard]] static
-  bool isEqual(const real_type a, const real_type b)
+  if(auto* x = dynamic_cast<hiop::hiopVectorIntRaja*>(xvec))
   {
-    return (std::abs(a - b)/(1.0 + std::abs(b)) < eps);
+    x->copyFromDev();
+    /// @remark I don't think there's a more direct way to get at the
+    /// underlying data other than *(&x[0]+idx), which is disgusting...
+    return (*x)[idx];
   }
-
-  /// Prints error output for each rank
-  static void printMessage(const int fail, const char* funcname, const int rank=0)
+  else
   {
-    if(fail > 0)
-    {
-      std::cout << RED << "--- FAIL: Test " << funcname << " on rank " << rank << CLEAR << "\n";
-    }
-    else if (fail == SKIP_TEST)
-    {
-      if(rank == 0)
-      {
-        std::cout << YELLOW << "--- SKIP: Test " << funcname << CLEAR << "\n";
-      }
-    }
-    else
-    {
-      if(rank == 0)
-      {
-        std::cout << GREEN << "--- PASS: Test " << funcname << CLEAR << "\n";
-      }
-    }
+    assert(false && "Wrong type of vector passed into `VectorTestsIntRaja::getLocalElement`!");
   }
+  return 0;
+}
 
-};
+void VectorTestsIntRaja::setLocalElement(hiop::hiopVectorInt* xvec, int idx, int value) const
+{
+  if(auto* x = dynamic_cast<hiop::hiopVectorIntRaja*>(xvec))
+  {
+    x->copyFromDev();
+    /// @remark I don't think there's a more direct way to get at the
+    /// underlying data other than *(&x[0]+idx) = value, which is disgusting...
+    (*x)[idx] = value;
+    x->copyToDev();
+  }
+  else
+  {
+    assert(false && "Wrong type of vector passed into `VectorTestsIntRaja::setLocalElement`!");
+  }
+}
 
 }} // namespace hiop::tests

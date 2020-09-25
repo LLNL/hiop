@@ -63,10 +63,13 @@
 #include <hiopLinAlgFactory.hpp>
 #include <hiopVector.hpp>
 #include <hiopMatrixDenseRowMajor.hpp>
+#include "LinAlg/matrixTestsSparseTriplet.hpp"
+
+#ifdef HIOP_USE_RAJA
 #include <hiopVectorRajaPar.hpp>
 #include <hiopMatrixRajaDense.hpp>
-#include "LinAlg/matrixTestsSparseTriplet.hpp"
 #include "LinAlg/matrixTestsRajaSparseTriplet.hpp"
+#endif
 
 using namespace hiop::tests;
 
@@ -144,6 +147,7 @@ int main(int argc, char** argv)
     delete m2xn_sparse;
   }
 
+#ifdef HIOP_USE_RAJA
   // Test RAJA sparse matrix
   {
     std::cout << "\nTesting hiopMatrixRajaSparseTriplet\n";
@@ -210,6 +214,7 @@ int main(int argc, char** argv)
     // Set memory space back to default value
     options.SetStringValue("mem_space", "default");
   }
+#endif
 
 
   if(fail)

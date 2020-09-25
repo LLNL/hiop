@@ -48,10 +48,12 @@
 #pragma once
 
 #include <string>
+#include <iostream>
 #include <hiopMPI.hpp>
 #include <hiopVector.hpp>
 #include <hiopMatrixDense.hpp>
 #include <hiopMatrixSparse.hpp>
+#include <hiopVectorInt.hpp>
 
 namespace hiop {
 
@@ -62,8 +64,8 @@ namespace hiop {
 class LinearAlgebraFactory
 {
 public:
-  LinearAlgebraFactory() = delete; //default;
-  ~LinearAlgebraFactory() = delete; //default;
+  LinearAlgebraFactory()  = delete; 
+  ~LinearAlgebraFactory() = delete;
 
   /**
    * @brief Static method to create vector
@@ -72,6 +74,11 @@ public:
     const long long& glob_n,
     long long* col_part = NULL,
     MPI_Comm comm = MPI_COMM_SELF); 
+
+  /**
+   * @brief Static method to create local int vector.
+   */
+  static hiopVectorInt* createVectorInt(int size);
 
   /**
    * @brief Static method to create a dense matrix.

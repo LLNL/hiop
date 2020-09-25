@@ -1,4 +1,4 @@
-#include "nlpMDSForm_ex4.hpp"
+#include "nlpMDSForm_raja_ex4.hpp"
 #include "hiopNlpFormulation.hpp"
 #include "hiopAlgFilterIPM.hpp"
 
@@ -8,6 +8,11 @@
 
 #include <cstdlib>
 #include <string>
+
+#include <umpire/Allocator.hpp>
+#include <umpire/ResourceManager.hpp>
+#include <RAJA/RAJA.hpp>
+
 
 using namespace hiop;
 
@@ -94,6 +99,9 @@ int main(int argc, char **argv)
   magma_init();
 #endif
 
+  std::string mem_space = "um";
+  hiop::LinearAlgebraFactory::set_mem_space(mem_space);
+
   bool selfCheck, one_call_cons;
   long long n_sp, n_de;
   if(!parse_arguments(argc, argv, selfCheck, n_sp, n_de, one_call_cons)) {
@@ -106,10 +114,13 @@ int main(int argc, char **argv)
 
   //user's NLP -> implementation of hiop::hiopInterfaceMDS
   Ex4* my_nlp;
-  if(one_call_cons) {
-    my_nlp = new Ex4OneCallCons(n_sp, n_de);
-  } else {
-    my_nlp = new Ex4(n_sp, n_de);
+  if(one_call_cons)
+  {
+    my_nlp = new Ex4OneCallCons(n_sp, n_de, mem_space);
+  }
+  else
+  {
+    my_nlp = new Ex4(n_sp, n_de, mem_space);
   }
 
   hiopNlpMDS nlp(*my_nlp);
@@ -117,9 +128,11 @@ int main(int argc, char **argv)
   nlp.options->SetStringValue("dualsUpdateType", "linear");
   nlp.options->SetStringValue("dualsInitialization", "zero");
 
+  nlp.options->SetStringValue("fixed_var", "relax");
   nlp.options->SetStringValue("Hessian", "analytical_exact");
   nlp.options->SetStringValue("KKTLinsys", "xdycyd");
   nlp.options->SetStringValue("compute_mode", "hybrid");
+  nlp.options->SetStringValue("mem_space", mem_space.c_str());
 
   nlp.options->SetIntegerValue("verbosity_level", 3);
   nlp.options->SetNumericValue("mu0", 1e-1);
@@ -149,10 +162,10 @@ int main(int argc, char **argv)
   long long n_vars, n_cons;
   my_nlp->get_prob_sizes(n_vars, n_cons);
 
-  double x[n_vars];
-  double zl[n_vars];
-  double zu[n_vars];
-  double lambdas[n_cons];
+  double* x       = hiop::LinearAlgebraFactory::createRawArray(n_vars);
+  double* zl      = hiop::LinearAlgebraFactory::createRawArray(n_vars);
+  double* zu      = hiop::LinearAlgebraFactory::createRawArray(n_vars);
+  double* lambdas = hiop::LinearAlgebraFactory::createRawArray(n_cons);
 
   solver.getSolution(x);
   solver.getDualSolutions(zl, zu, lambdas);
@@ -194,9 +207,8 @@ int main(int argc, char **argv)
       printf("Optimal objective: %22.14e. Solver status: %d\n", obj_value, status);
     }
   }
-
 #endif
-
+  
   delete my_nlp;
   
 #ifdef HIOP_USE_MAGMA

@@ -47,77 +47,76 @@
 // product endorsement purposes.
 
 /**
- * @file testBase.hpp
+ * @file vectorTestsInt.hpp
  *
  * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
- * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
  *
  */
 #pragma once
 
-#define THROW_NULL_DEREF throw std::runtime_error("error")
-
-#include <limits>
-#include <cmath>
-#include <iostream>
+#include <hiopVectorInt.hpp>
+#include "testBase.hpp"
 
 namespace hiop { namespace tests {
 
-using real_type             = double;
-using local_ordinal_type    = int;
-using global_ordinal_type   = long long;
-
-static const real_type zero = 0.0;
-static const real_type quarter = 0.25;
-static const real_type half = 0.5;
-static const real_type one = 1.0;
-static const real_type two = 2.0;
-static const real_type three = 3.0;
-static const real_type eps =
-  10*std::numeric_limits<real_type>::epsilon();
-static const int SKIP_TEST = -1;
-
-// must be const pointer and const dest for
-// const string declarations to pass
-// -Wwrite-strings
-static const char * const  RED       = "\033[1;31m";
-static const char * const  GREEN     = "\033[1;32m";
-static const char * const  YELLOW    = "\033[1;33m";
-static const char * const  CLEAR     = "\033[0m";
-
-class TestBase
+/**
+ * @brief Collection of tests for abstract hiopVectorInt implementations.
+ *
+ * This class contains implementation of all int vector unit tests and abstract
+ * interface for testing utility functions, which are specific to vector
+ * implementation.
+ *
+ */
+class VectorTestsInt : public TestBase
 {
-protected:
-  /// Returns true if two real numbers are equal within tolerance
-  [[nodiscard]] static
-  bool isEqual(const real_type a, const real_type b)
+public:
+  VectorTestsInt(){}
+  virtual ~VectorTestsInt(){}
+
+  virtual bool vectorSize(hiop::hiopVectorInt& x, const int size) const
   {
-    return (std::abs(a - b)/(1.0 + std::abs(b)) < eps);
+    int fail = 0;
+    if (x.size() != size)
+      fail++;
+    printMessage(fail, __func__);
+    return fail;
   }
 
-  /// Prints error output for each rank
-  static void printMessage(const int fail, const char* funcname, const int rank=0)
+  virtual bool vectorSetElement(hiop::hiopVectorInt& x) const
   {
-    if(fail > 0)
-    {
-      std::cout << RED << "--- FAIL: Test " << funcname << " on rank " << rank << CLEAR << "\n";
-    }
-    else if (fail == SKIP_TEST)
-    {
-      if(rank == 0)
-      {
-        std::cout << YELLOW << "--- SKIP: Test " << funcname << CLEAR << "\n";
-      }
-    }
-    else
-    {
-      if(rank == 0)
-      {
-        std::cout << GREEN << "--- PASS: Test " << funcname << CLEAR << "\n";
-      }
-    }
+    int fail = 0;
+    const int idx = x.size()/2;
+    const int x_val = 1;
+    for(int i=0; i<x.size(); i++)
+      setLocalElement(&x, i, 0);
+
+    x[idx] = x_val;
+    if (getLocalElement(&x, idx) != x_val)
+      fail++;
+
+    printMessage(fail, __func__);
+    return fail;
   }
 
+  virtual bool vectorGetElement(hiop::hiopVectorInt& x) const
+  {
+    int fail = 0;
+    const int idx = x.size()/2;
+    const int x_val = 1;
+    for(int i=0; i<x.size(); i++)
+      setLocalElement(&x, i, 0);
+    setLocalElement(&x, idx, x_val);
+
+    if (x[idx] != x_val)
+      fail++;
+
+    printMessage(fail, __func__);
+    return fail;
+  }
+
+private:
+  virtual int getLocalElement(hiop::hiopVectorInt*, int) const = 0;
+  virtual void setLocalElement(hiop::hiopVectorInt*, int, int) const = 0;
 };
 
 }} // namespace hiop::tests

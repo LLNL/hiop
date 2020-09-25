@@ -60,11 +60,14 @@
 #include <hiopMPI.hpp>
 #include <hiopLinAlgFactory.hpp>
 #include <hiopVectorPar.hpp>
-#include <hiopVectorRajaPar.hpp>
 #include <hiopMatrixDenseRowMajor.hpp>
-#include <hiopMatrixRajaDense.hpp>
 #include "LinAlg/matrixTestsDense.hpp"
+
+#ifdef HIOP_USE_RAJA
+#include <hiopVectorRajaPar.hpp>
+#include <hiopMatrixRajaDense.hpp>
 #include "LinAlg/matrixTestsRajaDense.hpp"
+#endif
 
 int main(int argc, char** argv)
 {
@@ -203,6 +206,7 @@ int main(int argc, char** argv)
   }
 
   // Test RAJA dense matrix
+#ifdef HIOP_USE_RAJA
   {
     if (rank==0)
       std::cout << "\nTesting hiopMatrixRajaDense ...\n";
@@ -296,6 +300,7 @@ int main(int argc, char** argv)
     // Set memory space back to default value
     options.SetStringValue("mem_space", "default");
   }
+#endif
 
   if (rank == 0)
   {

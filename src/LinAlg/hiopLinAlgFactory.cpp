@@ -54,19 +54,23 @@
  * 
  */
 #include <algorithm>
+#include <iostream>
 
 #include <hiop_defs.hpp>
+
 #ifdef HIOP_USE_RAJA
 #include <umpire/Allocator.hpp>
 #include <umpire/ResourceManager.hpp>
-#endif
-
-#include <hiopVectorPar.hpp>
+#include <hiopVectorIntRaja.hpp>
 #include <hiopVectorRajaPar.hpp>
-#include <hiopMatrixDenseRowMajor.hpp>
 #include <hiopMatrixRajaDense.hpp>
-#include <hiopMatrixSparseTriplet.hpp>
 #include <hiopMatrixRajaSparseTriplet.hpp>
+#endif // HIOP_USE_RAJA
+
+#include <hiopVectorIntSeq.hpp>
+#include <hiopVectorPar.hpp>
+#include <hiopMatrixDenseRowMajor.hpp>
+#include <hiopMatrixSparseTriplet.hpp>
 
 #include "hiopLinAlgFactory.hpp"
 
@@ -89,7 +93,29 @@ hiopVector* LinearAlgebraFactory::createVector(
   }
   else
   {
-   return new hiopVectorRajaPar(glob_n, mem_space_, col_part, comm);
+#ifdef HIOP_USE_RAJA
+    return new hiopVectorRajaPar(glob_n, mem_space_, col_part, comm);
+#endif
+  }
+}
+
+/**
+ * @brief Method to create local int vector.
+ * 
+ * Creates int vector with operator new by default, RAJA vector when memory space
+ * is specified.
+ */
+hiopVectorInt* LinearAlgebraFactory::createVectorInt(int size)
+{
+  if(mem_space_ == "DEFAULT")
+  {
+    return new hiopVectorIntSeq(size);
+  }
+  else
+  {
+#ifdef HIOP_USE_RAJA
+    return new hiopVectorIntRaja(size, mem_space_);
+#endif
   }
 }
 
@@ -112,7 +138,9 @@ hiopMatrixDense* LinearAlgebraFactory::createMatrixDense(
   }
   else
   {
+#ifdef HIOP_USE_RAJA
     return new hiopMatrixRajaDense(m, glob_n, mem_space_, col_part, comm, m_max_alloc);
+#endif
   }
   
 }
@@ -129,7 +157,9 @@ hiopMatrixSparse* LinearAlgebraFactory::createMatrixSparse(int rows, int cols, i
   }
   else
   {
+#ifdef HIOP_USE_RAJA
     return new hiopMatrixRajaSparseTriplet(rows, cols, nnz, mem_space_);
+#endif
   }
 }
 
@@ -145,7 +175,9 @@ hiopMatrixSparse* LinearAlgebraFactory::createMatrixSymSparse(int size, int nnz)
   }
   else
   {
+#ifdef HIOP_USE_RAJA
     return new hiopMatrixRajaSymSparseTriplet(size, nnz, mem_space_);
+#endif
   }
 }
 
@@ -164,10 +196,6 @@ double* LinearAlgebraFactory::createRawArray(int n)
     auto& resmgr = umpire::ResourceManager::getInstance();
     umpire::Allocator al  = resmgr.getAllocator(mem_space_);
     return static_cast<double*>(al.allocate(n*sizeof(double)));
-#else
-    std::cout << "Need to enable RAJA and Umpire to use memory space "
-              << mem_space_ << ".\n"; 
-    return nullptr;
 #endif
   }
 }
@@ -187,9 +215,6 @@ void LinearAlgebraFactory::deleteRawArray(double* a)
     auto& resmgr = umpire::ResourceManager::getInstance();
     umpire::Allocator al  = resmgr.getAllocator(mem_space_);
     al.deallocate(a);
-#else
-    std::cout << "Need to enable RAJA and Umpire to delete array in memory space "
-              << mem_space_ << ".\n"; 
 #endif
   }
 }
@@ -198,7 +223,7 @@ void LinearAlgebraFactory::deleteRawArray(double* a)
 void LinearAlgebraFactory::set_mem_space(const std::string mem_space)
 {
   mem_space_ = mem_space;
-  // HiOp options turn all strings to lowercase. Need to revert that.
+  // HiOp options turn all strings to lowercase. Umpire wants uppercase.
   transform(mem_space_.begin(), mem_space_.end(), mem_space_.begin(), ::toupper);
 }
 

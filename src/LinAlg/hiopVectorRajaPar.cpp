@@ -52,6 +52,7 @@
  * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
  * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
  * @author Jake K. Ryan <jake.ryan@pnnl.gov>, PNNL
+ * @author Cameron Rutherford <cameron.rutherford@pnnl.gov>, PNNL
  *
  */
 #include "hiopVectorRajaPar.hpp"
@@ -160,11 +161,13 @@ hiopVectorRajaPar::hiopVectorRajaPar(const hiopVectorRajaPar& v)
   glob_il_ = v.glob_il_;
   glob_iu_ = v.glob_iu_;
   comm_ = v.comm_;
+  mem_space_ = v.mem_space_;
 
 #ifndef HIOP_USE_GPU
   mem_space_ = "HOST"; // If no GPU support, fall back to host!
 #endif
 
+  // std::cout << "Memory space: " << mem_space_ << "\n";
   auto& resmgr = umpire::ResourceManager::getInstance();
   umpire::Allocator devalloc  = resmgr.getAllocator(mem_space_);
   data_dev_ = static_cast<double*>(devalloc.allocate(n_local_*sizeof(double)));
@@ -178,7 +181,6 @@ hiopVectorRajaPar::hiopVectorRajaPar(const hiopVectorRajaPar& v)
   {
     data_host_ = data_dev_;
   }
-  //std::cout << "Memory space: " << mem_space_ << "\n";
 }
 
 hiopVectorRajaPar::~hiopVectorRajaPar()
@@ -195,14 +197,14 @@ hiopVectorRajaPar::~hiopVectorRajaPar()
   data_host_ = nullptr;
 }
 
-hiopVectorRajaPar* hiopVectorRajaPar::alloc_clone() const
+hiopVector* hiopVectorRajaPar::alloc_clone() const
 {
-  hiopVectorRajaPar* v = new hiopVectorRajaPar(*this); assert(v);
+  hiopVector* v = new hiopVectorRajaPar(*this); assert(v);
   return v;
 }
-hiopVectorRajaPar* hiopVectorRajaPar::new_copy () const
+hiopVector* hiopVectorRajaPar::new_copy () const
 {
-  hiopVectorRajaPar* v = new hiopVectorRajaPar(*this); assert(v);
+  hiopVector* v = new hiopVectorRajaPar(*this); assert(v);
   v->copyFrom(*this);
   return v;
 }
@@ -301,6 +303,9 @@ void hiopVectorRajaPar::copyFrom(const double* local_array)
  */
 void hiopVectorRajaPar::copyFromStarting(int start_index_in_this, const double* v, int nv)
 {
+  if(nv == 0)
+    return;
+
   assert(start_index_in_this+nv <= n_local_);
   
   auto& rm = umpire::ResourceManager::getInstance();
@@ -400,6 +405,9 @@ void hiopVectorRajaPar::copyToStarting(int start_index, hiopVector& vec)
  */
 void hiopVectorRajaPar::copyToStarting(hiopVector& vec, int start_index/*_in_dest*/)
 {
+  if(n_local_ == 0)
+    return;
+
   const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(vec);
   assert(start_index+n_local_ <= v.n_local_);
 
@@ -416,8 +424,8 @@ void hiopVectorRajaPar::copyToStarting(hiopVector& vec, int start_index/*_in_des
  * @param[out] vec - a vector where to copy elements of `this`
  * @param[in] start_index - position in `vec` where to copy
  * 
- * @pre start_idx_in_src < n_local_
- * @pre start_idx_dest   < destination.n_local_
+ * @pre start_idx_in_src <= n_local_
+ * @pre start_idx_dest   <= destination.n_local_
  * @pre `this` and `destination` are not distributed
  * @post If num_elems >= 0, `num_elems` will be copied
  * @post If num_elems < 0, elements will be copied till the end of
@@ -429,10 +437,19 @@ void hiopVectorRajaPar::startingAtCopyToStartingAt(
   int start_idx_dest, 
   int num_elems /* = -1 */) const
 {
+
+#ifdef HIOP_DEEPCHECKS
+  assert(n_local_==n_ && "only for local/non-distributed vectors");
+#endif  
+
   const hiopVectorRajaPar& dest = dynamic_cast<hiopVectorRajaPar&>(destination);
 
-  assert(start_idx_in_src >= 0 && start_idx_in_src < this->n_local_);
-  assert(start_idx_dest   >= 0 && start_idx_dest   < dest.n_local_);
+  assert(start_idx_in_src >= 0 && start_idx_in_src <= this->n_local_);
+  assert(start_idx_dest   >= 0 && start_idx_dest   <= dest.n_local_);
+
+#ifdef DEBUG  
+  if(start_idx_dest==dest.n_local_ || start_idx_in_src==this->n_local_) assert((num_elems==-1 || num_elems==0));
+#endif
 
   if(num_elems<0)
   {
@@ -447,6 +464,8 @@ void hiopVectorRajaPar::startingAtCopyToStartingAt(
     num_elems = std::min(num_elems, (int)dest.n_local_-start_idx_dest);
   }
 
+  if(num_elems == 0)
+    return;
   auto& rm = umpire::ResourceManager::getInstance();
   rm.copy(dest.data_dev_ + start_idx_dest, this->data_dev_ + start_idx_in_src, num_elems*sizeof(double));
 }
@@ -1395,14 +1414,36 @@ void hiopVectorRajaPar::print(FILE* file, const char* msg/*=NULL*/, int max_elem
 
 void hiopVectorRajaPar::copyToDev()
 {
+  if(data_dev_ == data_host_)
+    return;
   auto& resmgr = umpire::ResourceManager::getInstance();
   resmgr.copy(data_dev_, data_host_);
 }
 
 void hiopVectorRajaPar::copyFromDev()
 {
+  if(data_dev_ == data_host_)
+    return;
   auto& resmgr = umpire::ResourceManager::getInstance();
   resmgr.copy(data_host_, data_dev_);
+}
+
+void hiopVectorRajaPar::copyToDev() const
+{
+  if(data_dev_ == data_host_)
+    return;
+  auto& resmgr = umpire::ResourceManager::getInstance();
+  double* data_dev = const_cast<double*>(data_dev_);
+  resmgr.copy(data_dev, data_host_);
+}
+
+void hiopVectorRajaPar::copyFromDev() const
+{
+  if(data_dev_ == data_host_)
+    return;
+  auto& resmgr = umpire::ResourceManager::getInstance();
+  double* data_host = const_cast<double*>(data_host_);
+  resmgr.copy(data_host, data_dev_);
 }
 
 
