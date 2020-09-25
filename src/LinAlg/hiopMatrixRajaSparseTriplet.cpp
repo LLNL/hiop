@@ -786,7 +786,7 @@ void hiopMatrixRajaSparseTriplet::copyRowsFrom(
 
     while(itnz_src<nnz_src && iRow_src[itnz_src]==row_src)
     {
-      assert(itnz_dest<nnz);
+      assert(itnz_dest < nnz_);
       #ifdef HIOP_DEEPCHECKS
       if(itnz_src>0)
       {
@@ -799,10 +799,10 @@ void hiopMatrixRajaSparseTriplet::copyRowsFrom(
       jCol_[itnz_dest] = jCol_src[itnz_src];
       values_[itnz_dest++] = values_src[itnz_src++];
       
-      assert(itnz_dest<=nnz);
+      assert(itnz_dest <= nnz_);
     }
   }
-  assert(itnz_dest == nnz);
+  assert(itnz_dest == nnz_);
 }
   
 /// @brief Prints the contents of this function to a file.
