@@ -746,15 +746,63 @@ hiopMatrixRajaSparseTriplet::allocAndBuildRowStarts() const
 
 /**
  * @brief Copies rows from another sparse matrix into this one.
- * Not implemented (and won't be). Do not use!
  * 
  * @todo Better document this function.
  */
-void hiopMatrixRajaSparseTriplet::copyRowsFrom(const hiopMatrix& src_gen,
-					   const long long* rows_idxs,
-					   long long n_rows)
+void hiopMatrixRajaSparseTriplet::copyRowsFrom(
+  const hiopMatrix& src_gen,
+	const long long* rows_idxs,
+	long long n_rows)
 {
-  assert(false && "This function does not exist for sparse triplet matrices!");
+  const hiopMatrixRajaSparseTriplet& src = dynamic_cast<const hiopMatrixRajaSparseTriplet&>(src_gen);
+  assert(this->m() == n_rows);
+  assert(this->numberOfNonzeros() <= src.numberOfNonzeros());
+  assert(this->n() == src.n());
+  assert(n_rows <= src.m());
+
+  const int* iRow_src = src.i_row();
+  const int* jCol_src = src.j_col();
+  const double* values_src = src.M();
+  int nnz_src = src.numberOfNonzeros();
+  int itnz_src=0;
+  int itnz_dest=0;
+  //int iterators should suffice
+  for(int row_dest=0; row_dest<n_rows; ++row_dest)
+  {
+    const int& row_src = rows_idxs[row_dest];
+
+    while(itnz_src<nnz_src && iRow_src[itnz_src]<row_src)
+    {
+      #ifdef HIOP_DEEPCHECKS
+      if(itnz_src>0)
+      {
+	      assert(iRow_src[itnz_src]>=iRow_src[itnz_src-1] && "row indexes are not sorted");
+	      if(iRow_src[itnz_src]==iRow_src[itnz_src-1])
+	        assert(jCol_src[itnz_src] >= jCol_src[itnz_src-1] && "col indexes are not sorted");
+      }
+      #endif
+      ++itnz_src;
+    }
+
+    while(itnz_src<nnz_src && iRow_src[itnz_src]==row_src)
+    {
+      assert(itnz_dest<nnz);
+      #ifdef HIOP_DEEPCHECKS
+      if(itnz_src>0)
+      {
+      	assert(iRow_src[itnz_src]>=iRow_src[itnz_src-1] && "row indexes are not sorted");
+	      if(iRow_src[itnz_src]==iRow_src[itnz_src-1])
+	        assert(jCol_src[itnz_src] >= jCol_src[itnz_src-1] && "col indexes are not sorted");
+      }
+      #endif
+      iRow_[itnz_dest] = row_dest;//iRow_src[itnz_src];
+      jCol_[itnz_dest] = jCol_src[itnz_src];
+      values_[itnz_dest++] = values_src[itnz_src++];
+      
+      assert(itnz_dest<=nnz);
+    }
+  }
+  assert(itnz_dest == nnz);
 }
   
 /// @brief Prints the contents of this function to a file.

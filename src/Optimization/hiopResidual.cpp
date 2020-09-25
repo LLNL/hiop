@@ -57,14 +57,14 @@ namespace hiop
 hiopResidual::hiopResidual(hiopNlpFormulation* nlp_)
 {
   nlp = nlp_;
-  rx = dynamic_cast<hiopVectorPar*>(nlp->alloc_primal_vec());
-  rd = dynamic_cast<hiopVectorPar*>(nlp->alloc_dual_ineq_vec());
+  rx = nlp->alloc_primal_vec();
+  rd = nlp->alloc_dual_ineq_vec();
   rxl = rx->alloc_clone();
   rxu = rx->alloc_clone();
   rdl = rd->alloc_clone();
   rdu = rd->alloc_clone();
 
-  ryc = dynamic_cast<hiopVectorPar*>(nlp->alloc_dual_eq_vec());
+  ryc = nlp->alloc_dual_eq_vec();
   ryd = rd->alloc_clone();
 
   rszl = rx->alloc_clone();

@@ -338,7 +338,7 @@ public:
 
   virtual void addMatrix(double alpha, const hiopMatrix& X_in)
   {
-    const hiopMatrixSymBlockDiagMDS& X = dynamic_cast<const hiopMatrixSymBlockDiagMDS&>(X);
+    const hiopMatrixSymBlockDiagMDS& X = dynamic_cast<const hiopMatrixSymBlockDiagMDS&>(X_in);
     mSp->addMatrix(alpha, *X.mSp);
     mDe->addMatrix(alpha, *X.mDe);
   }

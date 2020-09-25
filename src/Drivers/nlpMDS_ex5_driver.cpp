@@ -260,7 +260,10 @@ int main(int argc, char **argv)
     }
 
     if(false == selfcheck_ok)
+    {
+      std::cout << "Selfcheck failed!\n";
       return -1;
+    }
   } else {
     if(rank==0) {
       printf("Optimal objective 1: %22.14e. Solver status: %d\n", obj_value1, status1);
@@ -276,5 +279,6 @@ int main(int argc, char **argv)
   MPI_Finalize();
 #endif
 
+  std::cout << "Return successful!\n";
   return 0;
 }

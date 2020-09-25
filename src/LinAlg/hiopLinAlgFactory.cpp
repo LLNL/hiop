@@ -61,6 +61,8 @@
 #include <umpire/ResourceManager.hpp>
 #endif
 
+#include <hiopVectorIntSeq.hpp>
+#include <hiopVectorIntRaja.hpp>
 #include <hiopVectorPar.hpp>
 #include <hiopVectorRajaPar.hpp>
 #include <hiopMatrixDenseRowMajor.hpp>
@@ -90,6 +92,24 @@ hiopVector* LinearAlgebraFactory::createVector(
   else
   {
    return new hiopVectorRajaPar(glob_n, mem_space_, col_part, comm);
+  }
+}
+
+/**
+ * @brief Method to create local int vector.
+ * 
+ * Creates int vector with operator new by default, RAJA vector when memory space
+ * is specified.
+ */
+hiopVectorInt* LinearAlgebraFactory::createVectorInt(int sz)
+{
+  if(mem_space_ == "DEFAULT")
+  {
+    return new hiopVectorIntSeq(sz);
+  }
+  else
+  {
+    return new hiopVectorIntRaja(sz, mem_space_);
   }
 }
 

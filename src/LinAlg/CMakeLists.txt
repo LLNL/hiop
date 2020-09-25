@@ -1,5 +1,6 @@
 set(hiopLinAlg_SRC
   hiopVectorPar.cpp
+  hiopVectorIntSeq.cpp
   hiopMatrixDenseRowMajor.cpp
   hiopLinSolver.cpp
   hiopLinAlgFactory.cpp
@@ -11,13 +12,20 @@ set(hiopLinAlg_SRC
 
 if(HIOP_USE_GPU)
   set(hiopLinAlg_SRC ${hiopLinAlg_SRC} hiopLinSolverIndefDenseMagma.cpp)
-  set_source_files_properties(hiopVectorRajaPar.cpp PROPERTIES LANGUAGE CUDA)
-  set_source_files_properties(hiopMatrixRajaDense.cpp PROPERTIES LANGUAGE CUDA)
-  set_source_files_properties(hiopMatrixRajaSparseTriplet.cpp PROPERTIES LANGUAGE CUDA)
+  foreach(f hiopVectorRajaPar.cpp 
+            hiopVectorIntRaja.cpp 
+            hiopMatrixRajaDense.cpp 
+            hiopMatrixRajaSparseTriplet.cpp)
+    set_source_files_properties(${f} PROPERTIES LANGUAGE CUDA)
+  endforeach()
 endif()
 
 if(HIOP_USE_UMPIRE)
-  set(hiopLinAlg_SRC ${hiopLinAlg_SRC} hiopVectorRajaPar.cpp hiopMatrixRajaDense.cpp hiopMatrixRajaSparseTriplet.cpp)
+  set(hiopLinAlg_SRC ${hiopLinAlg_SRC}
+    hiopVectorRajaPar.cpp 
+    hiopVectorIntRaja.cpp
+    hiopMatrixRajaDense.cpp 
+    hiopMatrixRajaSparseTriplet.cpp)
 endif()
 
 if(HIOP_WITH_KRON_REDUCTION)

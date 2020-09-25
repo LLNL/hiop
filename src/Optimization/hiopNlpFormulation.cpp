@@ -124,9 +124,9 @@ hiopNlpFormulation::hiopNlpFormulation(hiopInterfaceBase& interface_)
   vec_distrib=NULL;
 #endif
   cons_eval_type_ = -1;
-  cons_body_ = NULL;
+  cons_body_ = nullptr;
   cons_Jac_ = NULL;
-  cons_lambdas_ = NULL;
+  cons_lambdas_ = nullptr;
 }
 
 hiopNlpFormulation::~hiopNlpFormulation()
@@ -160,9 +160,9 @@ hiopNlpFormulation::~hiopNlpFormulation()
   //  int nret=MPI_Finalize(); assert(MPI_SUCCESS==nret);
   //}
 #endif
-  delete[] cons_body_;
+  delete cons_body_;
   delete cons_Jac_;
-  delete[] cons_lambdas_;
+  delete cons_lambdas_;
 }
 
 bool hiopNlpFormulation::finalizeInitialization()
@@ -210,10 +210,11 @@ bool hiopNlpFormulation::finalizeInitialization()
 
   nlp_transformations.setUserNlpNumLocalVars(nlocal);
 
-  double  *xl_vec= xl->local_data(),  *xu_vec= xu->local_data();
+  double  *xl_vec= xl->local_data_host(),  *xu_vec= xu->local_data_host();
   vars_type = new hiopInterfaceBase::NonlinearityType[nlocal];
 
   bret=interface_base.get_vars_info(n_vars,xl_vec,xu_vec,vars_type); assert(bret);
+  xl->copyToDev(); xu->copyToDev();
 
   //allocate and build ixl(ow) and ix(upp) vectors
   if(ixl) delete ixl; if(ixu) delete ixu;
@@ -221,7 +222,7 @@ bool hiopNlpFormulation::finalizeInitialization()
   n_bnds_low_local = n_bnds_upp_local = 0;
   n_bnds_lu = 0;
   long long nfixed_vars_local=0;
-  double *ixl_vec=ixl->local_data(), *ixu_vec=ixu->local_data();
+  double *ixl_vec=ixl->local_data_host(), *ixu_vec=ixu->local_data_host();
 #ifdef HIOP_DEEPCHECKS
   const int maxBndsCloseMsgs=3; int nBndsClose=0;
 #endif
@@ -263,6 +264,11 @@ bool hiopNlpFormulation::finalizeInitialization()
 #endif
     }
   }
+  // Copy data from host mirror to the memory space of vectors xl, xu
+  xl->copyToDev();  xu->copyToDev();
+  // Same for ixl, ixu
+  ixl->copyToDev(); ixu->copyToDev();
+
 
   dFixedVarsTol = fixedVarTol;
   
@@ -298,13 +304,13 @@ bool hiopNlpFormulation::finalizeInitialization()
       hiopVector* xl_rs;
 #ifdef HIOP_USE_MPI
       if(vec_distrib!=NULL) {
-	xl_rs = LinearAlgebraFactory::createVector(n_vars, vec_distrib, comm);
+        xl_rs = LinearAlgebraFactory::createVector(n_vars, vec_distrib, comm);
       } else {
-	xl_rs = LinearAlgebraFactory::createVector(n_vars);   
+        xl_rs = LinearAlgebraFactory::createVector(n_vars);   
       }
 #else
       xl_rs = LinearAlgebraFactory::createVector(n_vars); 
-#endif
+#endif // HIOP_USE_MPI
       
       hiopVector* xu_rs  = xl_rs->alloc_clone();
       hiopVector* ixl_rs = xl_rs->alloc_clone(); 
@@ -349,9 +355,10 @@ bool hiopNlpFormulation::finalizeInitialization()
   /* split the constraints */
   hiopVector* gl = LinearAlgebraFactory::createVector(n_cons); 
   hiopVector* gu = LinearAlgebraFactory::createVector(n_cons);
-  double *gl_vec=gl->local_data(), *gu_vec=gu->local_data();
+  double *gl_vec=gl->local_data_host(), *gu_vec=gu->local_data_host();
   hiopInterfaceBase::NonlinearityType* cons_type = new hiopInterfaceBase::NonlinearityType[n_cons];
   bret = interface_base.get_cons_info(n_cons, gl_vec, gu_vec, cons_type); assert(bret);
+  gl->copyToDev(); gu->copyToDev();
 
   assert(gl->get_local_size()==n_cons);
   assert(gl->get_local_size()==n_cons);
@@ -385,7 +392,8 @@ bool hiopNlpFormulation::finalizeInitialization()
   cons_ineq_mapping_ = new long long[n_cons_ineq];
 
   /* copy lower and upper bounds - constraints */
-  double *dlvec=dl->local_data(), *duvec=du->local_data(), *c_rhsvec=c_rhs->local_data();
+  double *dlvec=dl->local_data_host(), *duvec=du->local_data_host();
+  double *c_rhsvec=c_rhs->local_data_host();
   int it_eq=0, it_ineq=0;
   for(int i=0;i<n_cons; i++) {
     if(gl_vec[i]==gu_vec[i]) {
@@ -413,8 +421,8 @@ bool hiopNlpFormulation::finalizeInitialization()
   /* iterate over the inequalities and build the idl(ow) and idu(pp) vectors */
   idl = dl->alloc_clone(); idu=du->alloc_clone();
   n_ineq_low=n_ineq_upp=0; n_ineq_lu=0;
-  double* idl_vec=idl->local_data(); double* idu_vec=idu->local_data();
-  double* dl_vec = dl->local_data(); double* du_vec = du->local_data();
+  double* idl_vec=idl->local_data_host(); double* idu_vec=idu->local_data_host();
+  double* dl_vec = dl->local_data_host(); double* du_vec = du->local_data_host();
   for(int i=0; i<n_cons_ineq; i++) {
     if(dl_vec[i]>-1e20) { 
       idl_vec[i]=1.; n_ineq_low++; 
@@ -443,17 +451,26 @@ bool hiopNlpFormulation::finalizeInitialization()
   n_bnds_low=n_bnds_low_local; n_bnds_upp=n_bnds_upp_local; //n_bnds_lu is ok
 #endif
 
+  // Copy data from host mirror to the memory space
+  dl->copyToDev();  du->copyToDev();
+  idl->copyToDev(); idu->copyToDev();
+  c_rhs->copyToDev();
+
   //reset/release info and data related to one-call constraints evaluation
   cons_eval_type_ = -1;
   
-  delete[] cons_body_;
-  cons_body_ = NULL;
+  // delete[] cons_body_;
+  // cons_body_ = NULL;
+  delete cons_body_;
+  cons_body_ = nullptr;
   
   delete cons_Jac_;
   cons_Jac_ = NULL;
 
-  delete[] cons_lambdas_;
-  cons_lambdas_ = NULL;
+  // delete[] cons_lambdas_;
+  // cons_lambdas_ = NULL;
+  delete cons_lambdas_;
+  cons_lambdas_ = nullptr;
   return bret;
 }
 
@@ -480,53 +497,47 @@ hiopVector* hiopNlpFormulation::alloc_dual_vec() const
   return ret;
 }
 
-bool hiopNlpFormulation::eval_f(double* x, bool new_x, double& f)
+bool hiopNlpFormulation::eval_f(hiopVector& x, bool new_x, double& f)
 {
-  double* xx = nlp_transformations.applyTox(x, new_x);
+  hiopVector* xx = nlp_transformations.applyTox(x, new_x);
 
   runStats.tmEvalObj.start();
-  bool bret = interface_base.eval_f(nlp_transformations.n_post(),xx,new_x,f);
+  bool bret = interface_base.eval_f(nlp_transformations.n_post(), xx->local_data_const(), new_x, f);
   runStats.tmEvalObj.stop(); runStats.nEvalObj++;
 
   f = nlp_transformations.applyToObj(f);
   return bret;
 }
-bool hiopNlpFormulation::eval_grad_f(double* x, bool new_x, double* gradf)
+bool hiopNlpFormulation::eval_grad_f(hiopVector& x, bool new_x, double* gradf)
 {
-  double* xx     = nlp_transformations.applyTox(x, new_x);
+  hiopVector* xx = nlp_transformations.applyTox(x, new_x);
   double* gradff = nlp_transformations.applyToGradObj(gradf);
   bool bret; 
   runStats.tmEvalGrad_f.start();
-  bret = interface_base.eval_grad_f(nlp_transformations.n_post(),xx,new_x,gradff);
+  bret = interface_base.eval_grad_f(nlp_transformations.n_post(), xx->local_data_const(), new_x, gradff);
   runStats.tmEvalGrad_f.stop(); runStats.nEvalGrad_f++;
 
   gradf = nlp_transformations.applyInvToGradObj(gradff);
   return bret;
 }
 
-bool hiopNlpFormulation::get_starting_point(hiopVector& x0,
+bool hiopNlpFormulation::get_starting_point(hiopVector& x0_for_hiop,
 					    bool& duals_avail,
-					    hiopVector& zL0, hiopVector& zU0,
-					    hiopVector& yc0, hiopVector& yd0)
+					    hiopVector& zL0_for_hiop, hiopVector& zU0_for_hiop,
+					    hiopVector& yc0_for_hiop, hiopVector& yd0_for_hiop)
 {
   //aaa
-  hiopVectorPar &x0_for_hiop = dynamic_cast<hiopVectorPar&>(x0);
-  hiopVectorPar& zL0_for_hiop = dynamic_cast<hiopVectorPar&>(zL0);
-  hiopVectorPar& zU0_for_hiop = dynamic_cast<hiopVectorPar&>(zU0);
-  hiopVectorPar& yc0_for_hiop = dynamic_cast<hiopVectorPar&>(yc0);
-  hiopVectorPar& yd0_for_hiop = dynamic_cast<hiopVectorPar&>(yd0);
-  
   bool bret; 
 
-  hiopVectorPar lambdas(yc0.get_size() + yd0.get_size());
+  hiopVector* lambdas = hiop::LinearAlgebraFactory::createVector(yc0_for_hiop.get_size() + yd0_for_hiop.get_size());
   
-  double* x0_for_user = nlp_transformations.applyTox(x0_for_hiop.local_data(),true);
+  hiopVector* x0_for_user = nlp_transformations.applyTox(x0_for_hiop, true);
   double* zL0_for_user = zL0_for_hiop.local_data();
   double* zU0_for_user = zU0_for_hiop.local_data();
-  double* lambda_for_user = lambdas.local_data();
+  double* lambda_for_user = lambdas->local_data();
   
   bret = interface_base.get_starting_point(nlp_transformations.n_post(), n_cons,
-					   x0_for_user,
+					   x0_for_user->local_data(),
 					   duals_avail,
 					   zL0_for_user,
 					   zU0_for_user,
@@ -535,8 +546,8 @@ bool hiopNlpFormulation::get_starting_point(hiopVector& x0,
     double* yc0d = yc0_for_hiop.local_data();
     double* yd0d = yd0_for_hiop.local_data();
 
-    assert(n_cons_eq   == yc0.get_size() && "when did the cons change?");
-    assert(n_cons_ineq == yd0.get_size() && "when did the cons change?");
+    assert(n_cons_eq   == yc0_for_hiop.get_size() && "when did the cons change?");
+    assert(n_cons_ineq == yd0_for_hiop.get_size() && "when did the cons change?");
     assert(n_cons_eq+n_cons_ineq == n_cons);
     
     //copy back 
@@ -549,62 +560,63 @@ bool hiopNlpFormulation::get_starting_point(hiopVector& x0,
   }
   
   if(!bret) {
-    bret = interface_base.get_starting_point(nlp_transformations.n_post(), x0_for_user);
+    bret = interface_base.get_starting_point(nlp_transformations.n_post(), x0_for_user->local_data());
   }
   
   if(bret) {
-    nlp_transformations.applyInvTox(x0_for_user, x0_for_hiop);
+    nlp_transformations.applyInvTox(*x0_for_user, x0_for_hiop);
   }
   
   return bret;
 }
 
-bool hiopNlpFormulation::eval_c(double*x, bool new_x, double* c)
+bool hiopNlpFormulation::eval_c(hiopVector& x, bool new_x, double* c)
 {
-  double* xx = nlp_transformations.applyTox(x, new_x);
+  hiopVector* xx = nlp_transformations.applyTox(x, new_x);
   double* cc = c;//nlp_transformations.applyToCons(c, n_cons_eq); //not needed for now
 
   runStats.tmEvalCons.start();
   bool bret = interface_base.eval_cons(nlp_transformations.n_post(),
 				       n_cons,n_cons_eq,
 				       cons_eq_mapping_,
-				       xx,new_x,
+				       xx->local_data_const(), new_x,
 				       cc);
   runStats.tmEvalCons.stop(); runStats.nEvalCons_eq++;
 
   //c = nlp_transformations.applyInvToCons(c, n_cons_eq); //not needed for now
   return bret;
 }
-bool hiopNlpFormulation::eval_d(double*x, bool new_x, double* d)
+bool hiopNlpFormulation::eval_d(hiopVector& x, bool new_x, double* d)
 {
-  double* xx = nlp_transformations.applyTox(x, new_x);
+  hiopVector* xx = nlp_transformations.applyTox(x, new_x);
   double* dd = d;//nlp_transformations.applyToCons(d, n_cons_ineq); //not needed for now
 
   runStats.tmEvalCons.start();
   bool bret = interface_base.eval_cons(nlp_transformations.n_post(),
 				       n_cons, n_cons_ineq, cons_ineq_mapping_,
-				       xx, new_x, dd);
+				       xx->local_data_const(), new_x, dd);
   runStats.tmEvalCons.stop(); runStats.nEvalCons_ineq++;
 
   //d = nlp_transformations.applyInvToCons(d, n_cons_ineq); //not needed for now
   return bret;
 }
 
-bool hiopNlpFormulation::eval_c_d(double*x, bool new_x, double* c, double* d)
+bool hiopNlpFormulation::eval_c_d(hiopVector& x, bool new_x, double* c, double* d)
 {
   bool do_eval_c = true;
   if(-1 == cons_eval_type_) {
-    assert(cons_body_ == NULL);
+    assert(cons_body_ == nullptr);
     assert(NULL == cons_Jac_);
     if(!eval_c(x, new_x, c)) {
       //test if eval_d also fails; this means we should use one-call constraints/Jacobian evaluation
       if(!eval_d(x, new_x, d)) {
-	cons_eval_type_ = 1;
-	cons_body_ = new double[n_cons];
-	cons_Jac_ = alloc_Jac_cons();
+        cons_eval_type_ = 1;
+        cons_body_ = hiop::LinearAlgebraFactory::createVector(n_cons);
+        // cons_body_ = new double[n_cons];
+        cons_Jac_ = alloc_Jac_cons();
       } else {
-	cons_eval_type_ = 0;
-	return false;
+        cons_eval_type_ = 0;
+        return false;
       }
     } else {
       cons_eval_type_ = 0;
@@ -614,24 +626,25 @@ bool hiopNlpFormulation::eval_c_d(double*x, bool new_x, double* c, double* d)
 
   if(0 == cons_eval_type_) {
     if(do_eval_c) if(!eval_c(x, new_x, c)) {
-	return false;
-      }
+      return false;
+    }
     if(!eval_d(x, new_x, d)) {
       return false;
     }
     return true;
   } else {
     assert(1 == cons_eval_type_);
-    assert(cons_body_ != NULL);
+    assert(cons_body_ != nullptr);
 
-    double* xx = nlp_transformations.applyTox(x, new_x);
-    double* body = cons_body_;//nlp_transformations.applyToCons(d, n_cons_ineq); //not needed for now
+    hiopVector* xx = nlp_transformations.applyTox(x, new_x);
+    // double* body = cons_body_;//nlp_transformations.applyToCons(d, n_cons_ineq); //not needed for now
 
     runStats.tmEvalCons.start();
     bool bret = interface_base.eval_cons(nlp_transformations.n_post(),
 					 n_cons, 
-					 xx, new_x, body);
+					 xx->local_data_const(), new_x, cons_body_->local_data());
     //copy back to c and d
+    double* body = cons_body_->local_data();
     for(int i=0; i<n_cons_eq; ++i) {
       c[i] = body[cons_eq_mapping_[i]];
     }
@@ -648,21 +661,22 @@ bool hiopNlpFormulation::eval_c_d(double*x, bool new_x, double* c, double* d)
   }
 }
 
-bool hiopNlpFormulation::eval_Jac_c_d(double* x, bool new_x, hiopMatrix& Jac_c, hiopMatrix& Jac_d)
+bool hiopNlpFormulation::eval_Jac_c_d(hiopVector& x, bool new_x, hiopMatrix& Jac_c, hiopMatrix& Jac_d)
 {
   bool do_eval_Jac_c = true;
   if(-1 == cons_eval_type_) {
-    assert(cons_body_ == NULL);
+    assert(cons_body_ == nullptr);
     assert(NULL == cons_Jac_);
     if(!eval_Jac_c(x, new_x, Jac_c)) {
       //test if eval_d also fails; this means we should use one-call constraints/Jacobian evaluation
       if(!eval_Jac_d(x, new_x, Jac_d)) {
-	cons_eval_type_ = 1;
-	cons_body_ = new double[n_cons];
-	cons_Jac_ = alloc_Jac_cons();
+        cons_eval_type_ = 1;
+        cons_body_ = hiop::LinearAlgebraFactory::createVector(n_cons);
+        // cons_body_ = new double[n_cons];
+        cons_Jac_ = alloc_Jac_cons();
       } else {
-	cons_eval_type_ = 0;
-	return false;
+        cons_eval_type_ = 0;
+        return false;
       }
     } else {
       cons_eval_type_ = 0;
@@ -689,8 +703,8 @@ bool hiopNlpFormulation::eval_Jac_c_d(double* x, bool new_x, hiopMatrix& Jac_c, 
 void hiopNlpFormulation::
 get_dual_solutions(const hiopIterate& it, double* zl_a, double* zu_a, double* lambda_a)
 {
-  const hiopVectorPar& zl = dynamic_cast<hiopVectorPar&>(*it.get_zl());
-  const hiopVectorPar& zu = dynamic_cast<hiopVectorPar&>(*it.get_zu());
+  const hiopVector& zl = *it.get_zl();
+  const hiopVector& zu = *it.get_zu();
   zl.copyTo(zl_a);
   zu.copyTo(zu_a);
 
@@ -702,8 +716,8 @@ void hiopNlpFormulation::copy_EqIneq_to_cons(const hiopVector& yc_in,
 					     int num_cons, //size of 'cons'
 					     double* cons)
 {
-  const double* yc_arr = dynamic_cast<const hiopVectorPar&>(yc_in).local_data_const();
-  const double* yd_arr = dynamic_cast<const hiopVectorPar&>(yd_in).local_data_const();
+  const double* yc_arr = yc_in.local_data_const();
+  const double* yd_arr = yd_in.local_data_const();
   assert(num_cons == n_cons);
   assert(yc_in.get_size() + yd_in.get_size() == n_cons);
     //concatanate multipliers -> copy into whole lambda array 
@@ -712,6 +726,24 @@ void hiopNlpFormulation::copy_EqIneq_to_cons(const hiopVector& yc_in,
   }
   for(int i=0; i<n_cons_ineq; ++i) {
     cons[cons_ineq_mapping_[i]] = yd_arr[i];
+  }
+}
+
+void hiopNlpFormulation::copy_EqIneq_to_cons(const hiopVector& yc_in,
+					     const hiopVector& yd_in,
+					     hiopVector& cons)
+{
+  const double* yc_arr = yc_in.local_data_const();
+  const double* yd_arr = yd_in.local_data_const();
+  double* cons_arr = cons.local_data();
+  assert(cons.get_size() == n_cons);
+  assert(yc_in.get_size() + yd_in.get_size() == n_cons);
+    //concatanate multipliers -> copy into whole lambda array 
+  for(int i=0; i<n_cons_eq; ++i) {
+    cons_arr[cons_eq_mapping_[i]] = yc_arr[i];
+  }
+  for(int i=0; i<n_cons_ineq; ++i) {
+    cons_arr[cons_ineq_mapping_[i]] = yd_arr[i];
   }
 }
 
@@ -725,34 +757,29 @@ void hiopNlpFormulation::user_callback_solution(hiopSolveStatus status,
 						const hiopVector& y_d,
 						double obj_value) 
 {
-  const hiopVectorPar& xp = dynamic_cast<const hiopVectorPar&>(x);
-  const hiopVectorPar& zl = dynamic_cast<const hiopVectorPar&>(z_L);
-  const hiopVectorPar& zu = dynamic_cast<const hiopVectorPar&>(z_U);
-
-  assert(xp.get_size()==n_vars);
+  assert(x.get_size()==n_vars);
   assert(y_c.get_size() == n_cons_eq);
   assert(y_d.get_size() == n_cons_ineq);
 
-  if(cons_lambdas_ == NULL) {
-    cons_lambdas_ = new double[n_cons];
+  if(cons_lambdas_ == nullptr) {
+    cons_lambdas_ = hiop::LinearAlgebraFactory::createVector(n_cons);
   }
-  copy_EqIneq_to_cons(y_c, y_d, n_cons, cons_lambdas_);
-  
+  copy_EqIneq_to_cons(y_c, y_d, *cons_lambdas_);
   
   //concatenate 'c' and 'd' into user's constrainty body
-  if(cons_body_ == NULL) {
-    cons_body_ = new double[n_cons];
+  if(cons_body_ == nullptr) {
+    cons_body_ = hiop::LinearAlgebraFactory::createVector(n_cons);
   }
-  copy_EqIneq_to_cons(c, d, n_cons, cons_body_);
-  
+  copy_EqIneq_to_cons(c, d, *cons_body_);
+
   //! todo -> test this when fixed variables are removed -> the internal
   //! zl and zu may have different sizes than what user expects since HiOp removes
   //! variables internally
   interface_base.solution_callback(status, 
-				   (int)n_vars, xp.local_data_const(),
-				   zl.local_data_const(), zu.local_data_const(),
-				   (int)n_cons, cons_body_,
-				   cons_lambdas_,
+				   (int)n_vars, x.local_data_const(),
+				   z_L.local_data_const(), z_U.local_data_const(),
+				   (int)n_cons, cons_body_->local_data_const(),
+				   cons_lambdas_->local_data_const(),
 				   obj_value);
 }
 
@@ -772,36 +799,32 @@ bool hiopNlpFormulation::user_callback_iterate(int iter,
 					       double alpha_pr,
 					       int ls_trials)
 {
-  const hiopVectorPar& xp = dynamic_cast<const hiopVectorPar&>(x);
-  const hiopVectorPar& zl = dynamic_cast<const hiopVectorPar&>(z_L);
-  const hiopVectorPar& zu = dynamic_cast<const hiopVectorPar&>(z_U);
-  assert(xp.get_size()==n_vars);
+  assert(x.get_size()==n_vars);
   assert(c.get_size()+d.get_size()==n_cons);
 
   assert(y_c.get_size() == n_cons_eq);
   assert(y_d.get_size() == n_cons_ineq);
 
   if(cons_lambdas_ == NULL) {
-    cons_lambdas_ = new double[n_cons];
+    cons_lambdas_ = hiop::LinearAlgebraFactory::createVector(n_cons);
   }
-  copy_EqIneq_to_cons(y_c, y_d, n_cons, cons_lambdas_);
-  
+  copy_EqIneq_to_cons(y_c, y_d, *cons_lambdas_);
   
   //concatenate 'c' and 'd' into user's constrainty body
   if(cons_body_ == NULL) {
-    cons_body_ = new double[n_cons];
+    cons_body_ = hiop::LinearAlgebraFactory::createVector(n_cons);
   }
-  copy_EqIneq_to_cons(c, d, n_cons, cons_body_);
-  
+  copy_EqIneq_to_cons(c, d, *cons_body_);
+
   //! todo -> test this when fixed variables are removed -> the internal
   //! zl and zu may have different sizes than what user expects since HiOp removes
   //! variables internally
   
   return interface_base.iterate_callback(iter, obj_value, 
-					 (int)n_vars, xp.local_data_const(),
-					 zl.local_data_const(), zu.local_data_const(),
-					 (int)n_cons, cons_body_, 
-					 cons_lambdas_,
+					 (int)n_vars, x.local_data_const(),
+					 z_L.local_data_const(), z_U.local_data_const(),
+					 (int)n_cons, cons_body_->local_data_const(), 
+					 cons_lambdas_->local_data_const(),
 					 inf_pr, inf_du, mu, alpha_du, alpha_pr,  ls_trials);
 }
 
@@ -850,34 +873,34 @@ bool hiopNlpDenseConstraints::finalizeInitialization()
   return hiopNlpFormulation::finalizeInitialization();
 }
 
-bool hiopNlpDenseConstraints::eval_Jac_c(double* x, bool new_x, double** Jac_c)
+bool hiopNlpDenseConstraints::eval_Jac_c(hiopVector& x, bool new_x, double** Jac_c)
 {
-  double*  x_user      = nlp_transformations.applyTox(x, new_x);
+  hiopVector* x_user  = nlp_transformations.applyTox(x, new_x);
   double** Jac_c_user = nlp_transformations.applyToJacobEq(Jac_c, n_cons_eq);
 
   runStats.tmEvalJac_con.start();
   bool bret = interface.eval_Jac_cons(nlp_transformations.n_post(),n_cons,n_cons_eq,cons_eq_mapping_,
-				      x_user,new_x,Jac_c_user);
+				      x_user->local_data_const(),new_x,Jac_c_user);
   runStats.tmEvalJac_con.stop(); runStats.nEvalJac_con_eq++;
 
   Jac_c = nlp_transformations.applyInvToJacobEq(Jac_c_user, n_cons_eq);
   return bret;
 }
-bool hiopNlpDenseConstraints::eval_Jac_d(double* x, bool new_x, double** Jac_d)
+bool hiopNlpDenseConstraints::eval_Jac_d(hiopVector& x, bool new_x, double** Jac_d)
 {
-  double* x_user      = nlp_transformations.applyTox(x, new_x);
+  hiopVector* x_user  = nlp_transformations.applyTox(x, new_x);
   double** Jac_d_user = nlp_transformations.applyToJacobIneq(Jac_d, n_cons_ineq);
  
   runStats.tmEvalJac_con.start();
   bool bret = interface.eval_Jac_cons(nlp_transformations.n_post(),n_cons,n_cons_ineq,cons_ineq_mapping_,
-				      x_user,new_x,Jac_d_user);
+				      x_user->local_data_const(),new_x,Jac_d_user);
   runStats.tmEvalJac_con.stop(); runStats.nEvalJac_con_ineq++;
 
   Jac_d = nlp_transformations.applyInvToJacobIneq(Jac_d_user, n_cons_ineq);
   return bret;
 }
 
-bool hiopNlpDenseConstraints::eval_Jac_c_d_interface_impl(double* x, bool new_x,
+bool hiopNlpDenseConstraints::eval_Jac_c_d_interface_impl(hiopVector& x, bool new_x,
 							  hiopMatrix& Jac_c,
 							  hiopMatrix& Jac_d)
 {
@@ -893,13 +916,13 @@ bool hiopNlpDenseConstraints::eval_Jac_c_d_interface_impl(double* x, bool new_x,
     return false;
   }
 
-  double* x_user = nlp_transformations.applyTox(x, new_x);
+  hiopVector* x_user = nlp_transformations.applyTox(x, new_x);
   double** Jac_consde = cons_Jac_de->local_data();
   double** Jac_user = nlp_transformations.applyToJacobCons(Jac_consde, n_cons);
 
   runStats.tmEvalJac_con.start();
   bool bret = interface.eval_Jac_cons(nlp_transformations.n_post(), n_cons,
-				      x_user, new_x,
+				      x_user->local_data_const(), new_x,
 				      Jac_user);
   
   Jac_consde = nlp_transformations.applyInvToJacobCons(Jac_user, n_cons);
@@ -916,7 +939,7 @@ bool hiopNlpDenseConstraints::eval_Jac_c_d_interface_impl(double* x, bool new_x,
   return bret;
 }
 
-bool hiopNlpDenseConstraints::eval_Jac_c(double* x, bool new_x, hiopMatrix& Jac_c)
+bool hiopNlpDenseConstraints::eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& Jac_c)
 {
   hiopMatrixDense* Jac_cde = dynamic_cast<hiopMatrixDense*>(&Jac_c);
   if(Jac_cde==NULL) {
@@ -927,7 +950,7 @@ bool hiopNlpDenseConstraints::eval_Jac_c(double* x, bool new_x, hiopMatrix& Jac_
   }
 }
 
-bool hiopNlpDenseConstraints::eval_Jac_d(double* x, bool new_x, hiopMatrix& Jac_d)
+bool hiopNlpDenseConstraints::eval_Jac_d(hiopVector& x, bool new_x, hiopMatrix& Jac_d)
 {
   hiopMatrixDense* Jac_dde = dynamic_cast<hiopMatrixDense*>(&Jac_d);
   if(Jac_dde==NULL) {
@@ -988,12 +1011,12 @@ hiopMatrixDense* hiopNlpDenseConstraints::alloc_multivector_primal(int nrows, in
  *    hiopNlpMDS class implementation 
  * ***********************************************************************************
 */
-bool hiopNlpMDS::eval_Jac_c(double* x, bool new_x, hiopMatrix& Jac_c)
+bool hiopNlpMDS::eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& Jac_c)
 {
   hiopMatrixMDS* pJac_c = dynamic_cast<hiopMatrixMDS*>(&Jac_c);
   assert(pJac_c);
   if(pJac_c) {
-    double* x_user = nlp_transformations.applyTox(x, new_x);
+    hiopVector* x_user = nlp_transformations.applyTox(x, new_x);
     //! todo -> need hiopNlpTransformation::applyToJacobXXX to work with MDS Jacobian
     //double** Jac_c_user = nlp_transformations.applyToJacobEq(Jac_c, n_cons_eq); //!
     
@@ -1002,7 +1025,7 @@ bool hiopNlpMDS::eval_Jac_c(double* x, bool new_x, hiopMatrix& Jac_c)
     int nnz = pJac_c->sp_nnz();
     bool bret = interface.eval_Jac_cons(n_vars, n_cons, 
 					n_cons_eq, cons_eq_mapping_, 
-					x_user, new_x,
+					x_user->local_data_const(), new_x,
 					pJac_c->n_sp(), pJac_c->n_de(), 
 					nnz, pJac_c->sp_irow(), pJac_c->sp_jcol(), pJac_c->sp_M(),
 					pJac_c->de_local_data());
@@ -1016,12 +1039,12 @@ bool hiopNlpMDS::eval_Jac_c(double* x, bool new_x, hiopMatrix& Jac_c)
     return false;
   }
 }
-bool hiopNlpMDS::eval_Jac_d(double* x, bool new_x, hiopMatrix& Jac_d)
+bool hiopNlpMDS::eval_Jac_d(hiopVector& x, bool new_x, hiopMatrix& Jac_d)
 {
   hiopMatrixMDS* pJac_d = dynamic_cast<hiopMatrixMDS*>(&Jac_d);
   assert(pJac_d);
   if(pJac_d) {
-    double* x_user      = nlp_transformations.applyTox(x, new_x);
+    hiopVector* x_user      = nlp_transformations.applyTox(x, new_x);
     //! todo -> need hiopNlpTransformation::applyToJacobXXX to work with MDS Jacobian
     //double** Jac_d_user = nlp_transformations.applyToJacobIneq(Jac_d, n_cons_ineq);
     
@@ -1030,7 +1053,7 @@ bool hiopNlpMDS::eval_Jac_d(double* x, bool new_x, hiopMatrix& Jac_d)
     int nnz = pJac_d->sp_nnz();
     bool bret =  interface.eval_Jac_cons(n_vars, n_cons, 
 					 n_cons_ineq, cons_ineq_mapping_, 
-					 x_user, new_x,
+					 x_user->local_data_const(), new_x,
 					 pJac_d->n_sp(), pJac_d->n_de(), 
 					 nnz, pJac_d->sp_irow(), pJac_d->sp_jcol(), pJac_d->sp_M(),
 					 pJac_d->de_local_data());
@@ -1044,7 +1067,7 @@ bool hiopNlpMDS::eval_Jac_d(double* x, bool new_x, hiopMatrix& Jac_d)
     return false;
   }
 }
-bool hiopNlpMDS::eval_Jac_c_d_interface_impl(double* x,
+bool hiopNlpMDS::eval_Jac_c_d_interface_impl(hiopVector& x,
 					     bool new_x,
 					     hiopMatrix& Jac_c,
 					     hiopMatrix& Jac_d)
@@ -1061,7 +1084,7 @@ bool hiopNlpMDS::eval_Jac_c_d_interface_impl(double* x,
     assert(cons_Jac->n_sp() == pJac_d->n_sp());
     assert(cons_Jac->sp_nnz() == pJac_c->sp_nnz() + pJac_d->sp_nnz());
     
-    double* x_user      = nlp_transformations.applyTox(x, new_x);
+    hiopVector* x_user = nlp_transformations.applyTox(x, new_x);
     //! todo -> need hiopNlpTransformation::applyInvToJacobIneq to work with MDS Jacobian
     //double** Jac_d_user = nlp_transformations.applyToJacobIneq(Jac_d, n_cons_ineq);
     
@@ -1069,7 +1092,7 @@ bool hiopNlpMDS::eval_Jac_c_d_interface_impl(double* x,
   
     int nnz = cons_Jac->sp_nnz();
     bool bret = interface.eval_Jac_cons(n_vars, n_cons, 
-					x_user, new_x,
+					x_user->local_data_const(), new_x,
 					pJac_d->n_sp(), pJac_d->n_de(), 
 					nnz, cons_Jac->sp_irow(), cons_Jac->sp_jcol(), cons_Jac->sp_M(),
 					cons_Jac->de_local_data());
@@ -1091,7 +1114,7 @@ bool hiopNlpMDS::eval_Jac_c_d_interface_impl(double* x,
   return true;
 }
 
-bool hiopNlpMDS::eval_Hess_Lagr(const double* x, bool new_x, const double& obj_factor,
+bool hiopNlpMDS::eval_Hess_Lagr(const hiopVector& x, bool new_x, const double& obj_factor,
 			      const double* lambda_eq, const double* lambda_ineq, bool new_lambdas,
 			      hiopMatrix& Hess_L)
 {
@@ -1106,7 +1129,7 @@ bool hiopNlpMDS::eval_Hess_Lagr(const double* x, bool new_x, const double& obj_f
     if(n_cons_eq + n_cons_ineq != _buf_lambda->get_size()) {
       delete _buf_lambda;
       _buf_lambda = NULL;
-	_buf_lambda = LinearAlgebraFactory::createVector(n_cons_eq + n_cons_ineq);
+    	_buf_lambda = LinearAlgebraFactory::createVector(n_cons_eq + n_cons_ineq);
     }
     assert(_buf_lambda);
     _buf_lambda->copyFromStarting(0,         lambda_eq,   n_cons_eq);
@@ -1114,7 +1137,7 @@ bool hiopNlpMDS::eval_Hess_Lagr(const double* x, bool new_x, const double& obj_f
     
     int nnzHSS = pHessL->sp_nnz(), nnzHSD = 0;
     
-    bret = interface.eval_Hess_Lagr(n_vars, n_cons, x, new_x, 
+    bret = interface.eval_Hess_Lagr(n_vars, n_cons, x.local_data_const(), new_x, 
 				    obj_factor, _buf_lambda->local_data(), new_lambdas, 
 				    pHessL->n_sp(), pHessL->n_de(),
 				    nnzHSS, pHessL->sp_irow(), pHessL->sp_jcol(), pHessL->sp_M(),

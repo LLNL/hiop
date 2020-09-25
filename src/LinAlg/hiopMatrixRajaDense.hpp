@@ -241,6 +241,7 @@ public:
 
   //TODO: this is not kosher!
   inline double** local_data_host() const {return M_host_; }
+  inline double** local_data() const {return M_dev_; }
   inline double*  local_buffer_host() const {return M_host_[0]; }
   inline double*  local_buffer() const {return data_dev_; }
   //do not use this unless you sure you know what you're doing

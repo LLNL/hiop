@@ -57,14 +57,14 @@ namespace hiop
 hiopIterate::hiopIterate(const hiopNlpFormulation* nlp_)
 {
   nlp = nlp_;
-  x = dynamic_cast<hiopVectorPar*>(nlp->alloc_primal_vec());
-  d = dynamic_cast<hiopVectorPar*>(nlp->alloc_dual_ineq_vec());
+  x = nlp->alloc_primal_vec();
+  d = nlp->alloc_dual_ineq_vec();
   sxl = x->alloc_clone();
   sxu = x->alloc_clone();
   sdl = d->alloc_clone();
   sdu = d->alloc_clone();
   //duals
-  yc = dynamic_cast<hiopVectorPar*>(nlp->alloc_dual_eq_vec());
+  yc = nlp->alloc_dual_eq_vec();
   yd = d->alloc_clone();
   zl = x->alloc_clone();
   zu = x->alloc_clone();
@@ -434,12 +434,12 @@ void hiopIterate::addLinearDampingTermToGrad_x(const double& mu, const double& k
   /*sxl->addLinearDampingTermToGrad(nlp->get_ixl(), nlp->get_ixu(), mu, kappa_d, grad_x);
     sxu->addLinearDampingTermToGrad(nlp->get_ixu(), nlp->get_ixl(), mu, kappa_d, grad_x); */
   //I'll do it in place, in one for loop, to be faster
-  const double* ixl=dynamic_cast<const hiopVectorPar&>(nlp->get_ixl()).local_data_const();
-  const double* ixu=dynamic_cast<const hiopVectorPar&>(nlp->get_ixu()).local_data_const();
+  const double* ixl=(nlp->get_ixl()).local_data_const();
+  const double* ixu=(nlp->get_ixu()).local_data_const();
   const double*  xv=x->local_data_const();   long long n_local = x->get_local_size();
-  double* gv = dynamic_cast<hiopVectorPar&>(grad_x).local_data();
+  double* gv = grad_x.local_data();
 #ifdef HIOP_DEEPCHECKS
-  assert(n_local==dynamic_cast<hiopVectorPar&>(grad_x).get_local_size());
+  assert(n_local==grad_x.get_local_size());
 #endif
   
   const double ct=kappa_d*mu;
@@ -488,12 +488,12 @@ void hiopIterate::addLinearDampingTermToGrad_d(const double& mu, const double& k
   /*sxl->addLinearDampingTermToGrad(nlp->get_ixl(), nlp->get_ixu(), mu, kappa_d, grad_x);
     sxu->addLinearDampingTermToGrad(nlp->get_ixu(), nlp->get_ixl(), mu, kappa_d, grad_x); */
   //I'll do it in place, in one for loop, to be faster
-  const double* idl=dynamic_cast<const hiopVectorPar&>(nlp->get_idl()).local_data_const();
-  const double* idu=dynamic_cast<const hiopVectorPar&>(nlp->get_idu()).local_data_const();
+  const double* idl=(nlp->get_idl()).local_data_const();
+  const double* idu=(nlp->get_idu()).local_data_const();
   const double*  dv=d->local_data_const();   long long n_local = d->get_local_size();
-  double* gv = dynamic_cast<hiopVectorPar&>(grad_d).local_data();
+  double* gv = grad_d.local_data();
 #ifdef HIOP_DEEPCHECKS
-  assert(n_local==dynamic_cast<hiopVectorPar&>(grad_d).get_local_size());
+  assert(n_local==grad_d.get_local_size());
 #endif
   
   const double ct=kappa_d*mu;

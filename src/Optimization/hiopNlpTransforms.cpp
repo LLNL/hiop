@@ -62,7 +62,7 @@ hiopFixedVarsRemover(const hiopVector& xl,
   : n_fixed_vars_local(numFixedVars_local), fixedVarTol(fixedVarTol_),
     Jacc_fs(NULL), Jacd_fs(NULL),
     fs2rs_idx_map(xl.get_local_size()),
-    x_rs_ref(NULL), Jacc_rs_ref(NULL), Jacd_rs_ref(NULL)
+    x_rs_ref_(nullptr), Jacc_rs_ref(NULL), Jacd_rs_ref(NULL)
 {
   xl_fs = xl.new_copy();
   xu_fs = xu.new_copy();

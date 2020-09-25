@@ -85,7 +85,7 @@ namespace hiop
     nlp_->runStats.kkt.tmUpdateInit.start();
 
     iter_ = iter;
-    grad_f_ = dynamic_cast<const hiopVectorPar*>(grad_f);
+    grad_f_ = grad_f;
     Jac_c_ = Jac_c; Jac_d_ = Jac_d; Hess_=Hess;
 
     HessMDS_ = dynamic_cast<hiopMatrixSymBlockDiagMDS*>(Hess);

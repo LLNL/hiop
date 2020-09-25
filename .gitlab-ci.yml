@@ -27,24 +27,23 @@
 .pnnl_script_template: &pnnl_script_definition
   script:
     - |
-      set -xv
       #
       #  NOTES:  WORKDIR is on constance/marianas/newell
       #          ./      is only on the Kubernetes instance
       #
+      set -xv
       export WORKDIR="$HOME/gitlab/$CI_JOB_ID/"
       mkdir -p "$WORKDIR"
       cp -a ./ "$WORKDIR"
       cd "$WORKDIR"
-      [ -f output ] && rm output
       touch output
       tail -f output &
       tailpid=$!
-      sbatch -A EXASGD -p $SLURM_Q --gres=gpu:1 -o output -e output -t 1:00:00 $WORKDIR/BUILD.sh
+      sbatch -A EXASGD -p $SLURM_Q -t 1:00:00 --gres=gpu:1 -o output -e output $WORKDIR/BUILD.sh
       res=1
       set +xv
       while :;
-      do
+        do
         if [[ "$(awk 'BEGIN{i=0}/BUILD_STATUS/{i++}END{print i}' output)" != "0" ]]; then
           kill $tailpid
           res=$(grep BUILD_STATUS output | tail -n 1 | cut -f2 -d':')
@@ -81,6 +80,7 @@ build_on_marianas:
   stage: build
   variables:
     SLURM_Q: "dl"
+    MY_CLUSTER: "marianas"
   <<: *pnnl_tags_definition
   <<: *pnnl_script_definition
   only:
@@ -91,6 +91,7 @@ build_on_newell:
   stage: build
   variables:
     SLURM_Q: "newell_shared"
+    MY_CLUSTER: "newell"
   <<: *pnnl_tags_definition
   <<: *pnnl_script_definition
   only:

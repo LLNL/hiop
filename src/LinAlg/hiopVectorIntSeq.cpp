@@ -46,71 +46,31 @@
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or 
 // product endorsement purposes.
 
-#ifndef HIOP_LINSOLVER
-#define HIOP_LINSOLVER
+/**
+ * @file hiopVectorIntSeq.cpp
+ *
+ * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
+ *
+ */
 
-#include "hiopNlpFormulation.hpp"
-#include "hiopMatrix.hpp"
-#include "hiopMatrixDense.hpp"
-#include "hiopVector.hpp"
-
-#include "hiop_blasdefs.hpp"
-
-#include "hiopCppStdUtils.hpp"
+#include "hiopVectorIntSeq.hpp"
 
 namespace hiop
 {
 
-/**
- * Abstract class for Linear Solvers used by HiOp
- * Specifies interface for linear solver arising in Interior-Point methods, thus,
- * the underlying assumptions are that the system's matrix is symmetric (positive
- * definite or indefinite).
- *
- * Implementations of this abstract class have the purpose of serving as wrappers
- * of existing CPU and GPU libraries for linear systems. 
- * 
- * Note:
- *  - solve(matrix) is not implemented
- */
-
-class hiopLinSolver
+hiopVectorIntSeq::hiopVectorIntSeq(int sz) : hiopVectorInt(sz)
 {
-public:
-  hiopLinSolver();
-  virtual ~hiopLinSolver();
+  buf_ = new int[sz_];
+}
 
-  /** Triggers a refactorization of the matrix, if necessary. 
-   * Returns number of negative eigenvalues or -1 if null eigenvalues 
-   * are encountered. 
-   */
-  virtual int matrixChanged() = 0;
-
-  /** Solves a linear system.
-   * param 'x' is on entry the right hand side(s) of the system to be solved. On
-   * exit is contains the solution(s).  
-   */
-  virtual bool solve ( hiopVector& x ) = 0;
-  virtual bool solve ( hiopMatrix& x ) { assert(false && "not yet supported"); return true;}
-public: 
-  hiopNlpFormulation* nlp_;
-  bool perf_report_; 
-};
-
-/** Base class for Indefinite Dense Solvers */
-class hiopLinSolverIndefDense : public hiopLinSolver
+const int& hiopVectorIntSeq::operator[] (int i) const
 {
-public:
-  hiopLinSolverIndefDense(int n, hiopNlpFormulation* nlp);
-  virtual ~hiopLinSolverIndefDense();
+  return buf_[i];
+}
 
-  hiopMatrixDense& sysMatrix();
-protected:
-  hiopMatrixDense* M_;
-protected:
-  hiopLinSolverIndefDense();
-};
+int& hiopVectorIntSeq::operator[] (int i)
+{
+  return buf_[i];
+}
 
-} //end namespace
-
-#endif
+} // namespace hiop

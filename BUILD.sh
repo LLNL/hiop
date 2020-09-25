@@ -60,7 +60,7 @@ extra_cmake_args=""
 
 module purge
 case "$MY_CLUSTER" in
-newell)
+newell|newell_shared)
     export PROJ_DIR=/qfs/projects/exasgd
     export APPS_DIR=/share/apps
     #  NOTE: The following is required when running from Gitlab CI via slurm job
@@ -125,7 +125,7 @@ EOD
     export NVBLAS_CONFIG_FILE=$BUILDDIR/nvblas.conf
     extra_cmake_args="$extra_cmake_args -DHIOP_TEST_WITH_BSUB=ON"
     ;;
-marianas|dl)
+marianas|dl*)
     export MY_CLUSTER="marianas"
     export PROJ_DIR=/qfs/projects/exasgd
     export APPS_DIR=/share/apps
@@ -219,7 +219,7 @@ if [[ "$TEST" == "1" ]]; then
   echo
 
   pushd $BUILDDIR || exit 1
-  ctest -VV       || exit 1
+  ctest -VV --timeout 1800 || exit 1
   popd
 fi
 

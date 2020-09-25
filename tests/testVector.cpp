@@ -61,9 +61,13 @@
 #include <hiopLinAlgFactory.hpp>
 #include <hiopVectorPar.hpp>
 #include <hiopVectorRajaPar.hpp>
+#include <hiopVectorIntSeq.hpp>
+#include <hiopVectorIntRaja.hpp>
 
 #include "LinAlg/vectorTestsPar.hpp"
 #include "LinAlg/vectorTestsRajaPar.hpp"
+#include "LinAlg/vectorTestsIntSeq.hpp"
+#include "LinAlg/vectorTestsIntRaja.hpp"
 
 
 /**
@@ -88,8 +92,7 @@ int main(int argc, char** argv)
   comm = MPI_COMM_WORLD;
   err  = MPI_Comm_rank(comm, &rank);     assert(MPI_SUCCESS == err);
   err  = MPI_Comm_size(comm, &numRanks); assert(MPI_SUCCESS == err);
-  if(0 == rank && MPI_SUCCESS == err)
-    std::cout << "Running MPI enabled tests ...\n";
+  if(0 == rank && MPI_SUCCESS == err) std::cout << "Running MPI enabled tests ...\n";
 #endif
   hiop::hiopOptions options;
 
@@ -272,6 +275,37 @@ int main(int argc, char** argv)
 
     // Set memory space back to default value
     options.SetStringValue("mem_space", "default");
+  }
+
+  // Test hiopVectorIntSeq
+  if (rank == 0)
+  {
+    std::cout << "\nTesting HiOp sequential int vector:\n";
+
+    options.SetStringValue("mem_space", "DEFAULT");
+    hiop::LinearAlgebraFactory::set_mem_space(options.GetString("mem_space"));
+    hiop::tests::VectorTestsIntSeq test;
+    const int sz = 100;
+    auto* x = hiop::LinearAlgebraFactory::createVectorInt(sz);
+    fail += test.vectorSize(*x, sz);
+    fail += test.vectorGetElement(*x);
+    fail += test.vectorSetElement(*x);
+  }
+
+  // Test hiopVectorIntRaja
+  if (rank == 0)
+  {
+    std::cout << "\nTesting HiOp RAJA int vector:\n";
+
+    options.SetStringValue("mem_space", "DEVICE");
+    hiop::LinearAlgebraFactory::set_mem_space(options.GetString("mem_space"));
+    hiop::tests::VectorTestsIntRaja test;
+    const int sz = 100;
+    auto* x = hiop::LinearAlgebraFactory::createVectorInt(sz);
+    fail += test.vectorSize(*x, sz);
+    fail += test.vectorGetElement(*x);
+    fail += test.vectorSetElement(*x);
+    options.SetStringValue("mem_space", "DEFAULT");
   }
 
   if (rank == 0)

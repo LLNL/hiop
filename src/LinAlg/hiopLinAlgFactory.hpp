@@ -52,6 +52,7 @@
 #include <hiopVector.hpp>
 #include <hiopMatrixDense.hpp>
 #include <hiopMatrixSparse.hpp>
+#include <hiopVectorInt.hpp>
 
 namespace hiop {
 
@@ -72,6 +73,11 @@ public:
     const long long& glob_n,
     long long* col_part = NULL,
     MPI_Comm comm = MPI_COMM_SELF); 
+
+  /**
+   * @brief Static method to create local int vector.
+   */
+  static hiopVectorInt* createVectorInt(int sz);
 
   /**
    * @brief Static method to create a dense matrix.

@@ -81,12 +81,12 @@ public:
   virtual long long n_pre ()=0;
 
   /* transforms variable vector */
-  virtual inline double* applyTox(double* x, const bool& new_x) { return x; };
-  virtual inline double* applyInvTox(double* x) { return x; }
-  virtual inline void applyInvTox(double* x_in, hiopVector& x_out) 
+  virtual inline hiopVector* applyTox(hiopVector& x, const bool& new_x) { return &x; };
+  virtual inline hiopVector* applyInvTox(hiopVector& x) { return &x; }
+  virtual inline void applyInvTox(hiopVector& x_in, hiopVector& x_out) 
   { 
     //default implementation should have x_in as x_out's internal data array
-    assert(x_in == x_out.local_data());
+    assert(x_in.local_data() == x_out.local_data());
   }
 
   virtual inline double applyToObj(double& f_in) { return f_in;} 
@@ -152,29 +152,29 @@ public:
   virtual inline long long n_post_local() { return fs_n_local(); }
 
   /* from reduced space to full space */
-  inline double* applyTox(double* x, const bool& new_x) 
+  inline hiopVector* applyTox(hiopVector& x, const bool& new_x) 
   { 
-    x_rs_ref = x;
-    if(!new_x) { return x_fs->local_data(); }
-    applyToArray(x, x_fs->local_data());
-    return x_fs->local_data();
+    x_rs_ref_ = &x;
+    if(!new_x) { return x_fs; }
+    applyToArray(x.local_data_const(), x_fs->local_data());
+    return x_fs;
   };
 
   /* from full space to reduced space (fixed vars removed) */
-  inline double* applyInvTox(double* x_fs_in) 
+  inline hiopVector* applyInvTox(hiopVector& x_fs_in) 
   { 
-    assert(x_rs_ref!=NULL); assert(x_fs_in==x_fs->local_data());
-    applyInvToArray(x_fs_in, x_rs_ref);
-    return x_rs_ref; 
+    assert(x_rs_ref_!=NULL); assert(x_fs_in.local_data()==x_fs->local_data());
+    applyInvToArray(x_fs_in.local_data(), x_rs_ref_->local_data());
+    return x_rs_ref_; 
   }
   
   /* from fs to rs */
-  inline void  applyInvTox(double* x_in, hiopVector& xv_out)
+  inline void  applyInvTox(hiopVector& x_in, hiopVector& xv_out)
   {
 #ifdef HIOP_DEEPCHECKS
     assert(xv_out.get_size()<xl_fs->get_size());
 #endif
-    applyInvToArray(x_in, xv_out.local_data());
+    applyInvToArray(x_in.local_data(), xv_out.local_data());
   }
   
   /* from rs to fs and return the fs*/
@@ -263,7 +263,7 @@ protected:
   std::vector<int> fs2rs_idx_map;
 
   //references to reduced-space buffers - returned in applyInvXXX
-  double* x_rs_ref;
+  hiopVector* x_rs_ref_;
   double* grad_rs_ref;
   double **Jacc_rs_ref, **Jacd_rs_ref;
 #ifdef HIOP_USE_MPI
@@ -367,15 +367,21 @@ public:
     }
   }
 
-  double* applyTox(double* x, const bool& new_x) 
+  hiopVector* applyTox(hiopVector& x, const bool& new_x) 
   {
-    double* ret = x;
+    hiopVector* ret = &x;
     for(std::list<hiopNlpTransformation*>::iterator it=list_trans_.begin(); it!=list_trans_.end(); ++it)
-      ret = (*it)->applyTox(ret,new_x);
+      ret = (*it)->applyTox(*ret ,new_x);
     return ret;
   }
 
-  void applyInvTox(double* x_in, hiopVector& x_out) 
+  virtual hiopVector* applyInvTox(hiopVector& x)
+  { 
+    assert(false && "This overload of applyInvTox is not implemented in hiopNlpTransformations class\n");
+    return nullptr;
+  }
+
+  void applyInvTox(hiopVector& x_in, hiopVector& x_out) 
   {
     for(std::list<hiopNlpTransformation*>::reverse_iterator it=list_trans_.rbegin(); it!=list_trans_.rend(); ++it) {
       (*it)->applyInvTox(x_in, x_out);
