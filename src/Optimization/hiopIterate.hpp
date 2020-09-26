@@ -145,6 +145,7 @@ public:
   friend class hiopKKTLinSysSparse;
   friend class hiopKKTLinSysCompressedSparseXYcYd;
   friend class hiopKKTLinSysCompressedSparseXDYcYd;
+
 private:
   /** Primal variables */
   hiopVector*x;         //the original decision x
