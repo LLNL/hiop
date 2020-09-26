@@ -14,7 +14,7 @@ static bool parse_arguments(int argc, char **argv, long long& n, bool& self_chec
 
   //  printf("%s    %s \n", argv[1], argv[2]);
 
-  self_check=false; n = 50;
+  self_check=false; n = 3;
   switch(argc) {
   case 1:
     //no arguments
@@ -71,6 +71,11 @@ int main(int argc, char **argv)
 
   Ex6 nlp_interface(n);
   hiopNlpSparse nlp(nlp_interface);
+  nlp.options->SetStringValue("compute_mode", "cpu");
+  nlp.options->SetStringValue("KKTLinsys", "xdycyd");
+//  nlp.options->SetIntegerValue("max_iter", 100);
+//  nlp.options->SetNumericValue("kappa1", 1e-8);
+//  nlp.options->SetNumericValue("kappa2", 1e-8);
 
   hiopAlgFilterIPMNewton solver(&nlp);
   hiopSolveStatus status = solver.run();
