@@ -3,47 +3,47 @@
 // Written by Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
-// This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp
-// is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause).
+// This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
+// is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause). 
 // Please also read “Additional BSD Notice” below.
 //
-// Redistribution and use in source and binary forms, with or without modification,
+// Redistribution and use in source and binary forms, with or without modification, 
 // are permitted provided that the following conditions are met:
-// i. Redistributions of source code must retain the above copyright notice, this list
+// i. Redistributions of source code must retain the above copyright notice, this list 
 // of conditions and the disclaimer below.
-// ii. Redistributions in binary form must reproduce the above copyright notice,
-// this list of conditions and the disclaimer (as noted below) in the documentation and/or
+// ii. Redistributions in binary form must reproduce the above copyright notice, 
+// this list of conditions and the disclaimer (as noted below) in the documentation and/or 
 // other materials provided with the distribution.
-// iii. Neither the name of the LLNS/LLNL nor the names of its contributors may be used to
-// endorse or promote products derived from this software without specific prior written
+// iii. Neither the name of the LLNS/LLNL nor the names of its contributors may be used to 
+// endorse or promote products derived from this software without specific prior written 
 // permission.
 //
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
-// OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
-// SHALL LAWRENCE LIVERMORE NATIONAL SECURITY, LLC, THE U.S. DEPARTMENT OF ENERGY OR
-// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
-// OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
-// AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY 
+// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES 
+// OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT 
+// SHALL LAWRENCE LIVERMORE NATIONAL SECURITY, LLC, THE U.S. DEPARTMENT OF ENERGY OR 
+// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS 
+// OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED 
+// AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, 
 // EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 // Additional BSD Notice
-// 1. This notice is required to be provided under our contract with the U.S. Department
-// of Energy (DOE). This work was produced at Lawrence Livermore National Laboratory under
+// 1. This notice is required to be provided under our contract with the U.S. Department 
+// of Energy (DOE). This work was produced at Lawrence Livermore National Laboratory under 
 // Contract No. DE-AC52-07NA27344 with the DOE.
-// 2. Neither the United States Government nor Lawrence Livermore National Security, LLC
-// nor any of their employees, makes any warranty, express or implied, or assumes any
-// liability or responsibility for the accuracy, completeness, or usefulness of any
+// 2. Neither the United States Government nor Lawrence Livermore National Security, LLC 
+// nor any of their employees, makes any warranty, express or implied, or assumes any 
+// liability or responsibility for the accuracy, completeness, or usefulness of any 
 // information, apparatus, product, or process disclosed, or represents that its use would
 // not infringe privately-owned rights.
-// 3. Also, reference herein to any specific commercial products, process, or services by
-// trade name, trademark, manufacturer or otherwise does not necessarily constitute or
-// imply its endorsement, recommendation, or favoring by the United States Government or
-// Lawrence Livermore National Security, LLC. The views and opinions of authors expressed
-// herein do not necessarily state or reflect those of the United States Government or
-// Lawrence Livermore National Security, LLC, and shall not be used for advertising or
+// 3. Also, reference herein to any specific commercial products, process, or services by 
+// trade name, trademark, manufacturer or otherwise does not necessarily constitute or 
+// imply its endorsement, recommendation, or favoring by the United States Government or 
+// Lawrence Livermore National Security, LLC. The views and opinions of authors expressed 
+// herein do not necessarily state or reflect those of the United States Government or 
+// Lawrence Livermore National Security, LLC, and shall not be used for advertising or 
 // product endorsement purposes.
 
 #ifndef HIOP_KKTLINSYSY_DENSE
@@ -62,19 +62,19 @@
 namespace hiop
 {
 
-/* KKT system treated as dense; used for development/testing purposes mainly
- * updates the parts in KKT system that are dependent on the iterate.
- * Triggers a refactorization for the dense linear system
+/* KKT system treated as dense; used for development/testing purposes mainly 
+ * updates the parts in KKT system that are dependent on the iterate. 
+ * Triggers a refactorization for the dense linear system 
  * Forms the linear system
  * [  H  +  Dx   Jc^T   Jd^T   ] [ dx]   [ rx_tilde ]
  * [    Jc        0       0    ] [dyc] = [   ryc    ]
- * [    Jd        0   -Dd^{-1} ] [dyd]   [   ryd    ]
- */
+ * [    Jd        0   -Dd^{-1} ] [dyd]   [   ryd    ]  
+ */ 
 class hiopKKTLinSysDenseXYcYd : public hiopKKTLinSysCompressedXYcYd
 {
 public:
   hiopKKTLinSysDenseXYcYd(hiopNlpFormulation* nlp)
-    : hiopKKTLinSysCompressedXYcYd(nlp), linSys(NULL), rhsXYcYd(NULL),
+    : hiopKKTLinSysCompressedXYcYd(nlp), linSys(NULL), rhsXYcYd(NULL), 
       write_linsys_counter(-1), csr_writer(nlp)
   {
   }
@@ -84,18 +84,18 @@ public:
     delete rhsXYcYd;
   }
 
-  /* updates the parts in KKT system that are dependent on the iterate.
+  /* updates the parts in KKT system that are dependent on the iterate. 
    * Triggers a refactorization for the dense linear system */
 
-  bool update(const hiopIterate* iter,
-	      const hiopVector* grad_f,
+  bool update(const hiopIterate* iter, 
+	      const hiopVector* grad_f, 
 	      const hiopMatrix* Jac_c,
-	      const hiopMatrix* Jac_d,
+	      const hiopMatrix* Jac_d, 
 	      hiopMatrix* Hess)
   {
     nlp_->runStats.tmSolverInternal.start();
 
-    iter_ = iter;
+    iter_ = iter;   
     grad_f_ = dynamic_cast<const hiopVectorPar*>(grad_f_);
     Jac_c_ = Jac_c; Jac_d_ = Jac_d;
     Hess_=Hess;
@@ -103,7 +103,7 @@ public:
     int nx  = Hess_->m();
     assert(nx==Hess_->n()); assert(nx==Jac_c_->n()); assert(nx==Jac_d_->n());
     int neq = Jac_c_->m(), nineq = Jac_d_->m();
-
+    
     if(NULL==linSys) {
       int n=Jac_c_->m() + Jac_d_->m() + Hess_->m();
 
@@ -133,10 +133,10 @@ public:
     Dx_->axdzpy_w_pattern(1.0, *iter_->zl, *iter_->sxl, nlp_->get_ixl());
     Dx_->axdzpy_w_pattern(1.0, *iter_->zu, *iter_->sxu, nlp_->get_ixu());
     nlp_->log->write("Dx in KKT", *Dx_, hovMatrices);
-
+    
     // Dd=(Sdl)^{-1}Vu + (Sdu)^{-1}Vu is computed in the IC loop since we need to
     // add delta_wd and then invert
-
+    
     hiopMatrixDense& Msys = linSys->sysMatrix();
 
     //
@@ -146,31 +146,31 @@ public:
     size_t num_ic_cor = 0;
 
     //nlp_->log->write("KKT XDYcYd Linsys (no perturb):", Msys, hovMatrices);
-
+    
     double delta_wx, delta_wd, delta_cc, delta_cd;
     if(!perturb_calc_->compute_initial_deltas(delta_wx, delta_wd, delta_cc, delta_cd)) {
       nlp_->log->printf(hovWarning, "XDycYd linsys: IC perturbation on new linsys failed.\n");
       return false;
     }
-
+    
     while(num_ic_cor<=max_ic_cor) {
 
       assert(delta_wx == delta_wd && "something went wrong with IC");
       assert(delta_cc == delta_cd && "something went wrong with IC");
       nlp_->log->printf(hovScalars, "XYcYd linsys: delta_w=%12.5e delta_c=%12.5e (ic %d)\n",
 			delta_wx, delta_cc, num_ic_cor);
-
+      
       //
       // update linSys system matrix, including IC perturbations
       //
       Msys.setToZero();
-
+      
       int alpha = 1.;
       Hess_->addUpperTriangleToSymDenseMatrixUpperTriangle(0, alpha, Msys);
-
+      
       Jac_c_->transAddToSymDenseMatrixUpperTriangle(0, nx,     alpha, Msys);
       Jac_d_->transAddToSymDenseMatrixUpperTriangle(0, nx+neq, alpha, Msys);
-
+      
       Msys.addSubDiagonal(alpha, 0, *Dx_);
       Msys.addSubDiagonal(0, nx, delta_wx);
 
@@ -182,7 +182,7 @@ public:
       assert(true==Dd_inv_->allPositive());
 #endif
       Dd_inv_->invert();
-
+      
       alpha=-1.;
       Msys.addSubDiagonal(alpha, nx+neq, *Dd_inv_);
 
@@ -195,10 +195,10 @@ public:
 
       //write matrix to file if requested
       if(nlp_->options->GetString("write_kkt") == "yes") write_linsys_counter++;
-      if(write_linsys_counter>=0) csr_writer.writeMatToFile(Msys, write_linsys_counter);
+      if(write_linsys_counter>=0) csr_writer.writeMatToFile(Msys, write_linsys_counter); 
 
       int n_neg_eig = linSys->matrixChanged();
-
+      
       if(Jac_c_->m()+Jac_d_->m()>0) {
 	if(n_neg_eig < 0) {
 	  //matrix singular
@@ -208,12 +208,12 @@ public:
 	    nlp_->log->printf(hovWarning, "XYcYd linsys: computing singularity perturbation failed.\n");
 	    return false;
 	  }
-
+	  
 	} else if(n_neg_eig != Jac_c_->m()+Jac_d_->m()) {
 	  //wrong inertia
 	  nlp_->log->printf(hovScalars, "XYcYd linsys negative eigs mismatch: has %d expected %d.\n",
 			    n_neg_eig,  Jac_c_->m()+Jac_d_->m());
-
+	  
 	  if(!perturb_calc_->compute_perturb_wrong_inertia(delta_wx, delta_wd, delta_cc, delta_cd)) {
 	    nlp_->log->printf(hovWarning, "XYcYd linsys: computing inertia perturbation failed.\n");
 	    return false;
@@ -231,18 +231,18 @@ public:
 	  nlp_->log->printf(hovWarning, "XYcYd linsys: computing inertia perturbation failed (2).\n");
 	  return false;
 	}
-
+	
       } else {
 	//all is good
 	break;
       }
-
+   
       //will do an inertia correction
       num_ic_cor++;
     } // end of IC loop
 
     if(num_ic_cor>max_ic_cor) {
-
+      
       nlp_->log->printf(hovError,
 			"Reached max number (%d) of inertia corrections within an outer iteration.\n",
 			max_ic_cor);
@@ -289,18 +289,18 @@ public:
 protected:
   hiopLinSolverIndefDense* linSys;
   hiopVector* rhsXYcYd;
-
+  
   /** -1 when disabled; otherwise acts like a counter, 0,1,...
    * incremented each time 'solveCompressed' is called depends on the 'write_kkt' option
    */
-  int write_linsys_counter;
+  int write_linsys_counter; 
   hiopCSR_IO csr_writer;
 private:
-  hiopKKTLinSysDenseXYcYd()
-    :  hiopKKTLinSysCompressedXYcYd(NULL), linSys(NULL),
+  hiopKKTLinSysDenseXYcYd() 
+    :  hiopKKTLinSysCompressedXYcYd(NULL), linSys(NULL), 
        write_linsys_counter(-1), csr_writer(NULL)
-  {
-    assert(false);
+  { 
+    assert(false); 
   }
 };
 
@@ -319,30 +319,30 @@ public:
     delete rhsXDYcYd;
   }
 
-  /* Updates the parts in KKT system that are dependent on the iterate.
-   * Triggers a refactorization for the dense linear system
+  /* Updates the parts in KKT system that are dependent on the iterate. 
+   * Triggers a refactorization for the dense linear system 
    * Forms the linear system
    * [  H  +  Dx    0    Jc^T  Jd^T   ] [ dx]   [ rx_tilde ]
    * [    0         Dd    0     -I    ] [ dd]   [ rd_tilde ]
    * [    Jc        0     0      0    ] [dyc] = [   ryc    ]
-   * [    Jd       -I     0      0    ] [dyd]   [   ryd    ]
-   */
-  bool update(const hiopIterate* iter,
-	      const hiopVector* grad_f,
-	      const hiopMatrix* Jac_c, const hiopMatrix* Jac_d,
+   * [    Jd       -I     0      0    ] [dyd]   [   ryd    ]  
+   */ 
+  bool update(const hiopIterate* iter, 
+	      const hiopVector* grad_f, 
+	      const hiopMatrix* Jac_c, const hiopMatrix* Jac_d, 
 	      hiopMatrix* Hess)
   {
     nlp_->runStats.tmSolverInternal.start();
 
-    iter_ = iter;
+    iter_ = iter;   
     grad_f = dynamic_cast<const hiopVectorPar*>(grad_f_);
     Jac_c_ = Jac_c; Jac_d_ = Jac_d;
 
     Hess_=Hess;
 
-    int nx  = Hess_->m(); assert(nx==Hess_->n()); assert(nx==Jac_c_->n()); assert(nx==Jac_d_->n());
+    int nx  = Hess_->m(); assert(nx==Hess_->n()); assert(nx==Jac_c_->n()); assert(nx==Jac_d_->n()); 
     int neq = Jac_c_->m(), nineq = Jac_d_->m();
-
+    
     if(NULL==linSys) {
       int n=nx+neq+2*nineq;
 
@@ -357,11 +357,11 @@ public:
       } else {
 	nlp_->log->printf(hovScalars, "LinSysDenseXDYcYd instantiating Lapack for a matrix of size %d\n", n);
 	linSys = new hiopLinSolverIndefDenseLapack(n, nlp_);
-      }
+      }	
     }
 
     //
-    //compute barrier diagonals (these change only between outer optimiz iterations)
+    //compute barrier diagonals (these change only between outer optimiz iterations) 
     //
     // Dx=(Sxl)^{-1}Zl + (Sxu)^{-1}Zu
     Dx_->setToZero();
@@ -376,8 +376,8 @@ public:
     nlp_->log->write("Dd in KKT", *Dd_, hovMatrices);
 #ifdef HIOP_DEEPCHECKS
     assert(true==Dd_->allPositive());
-#endif
-
+#endif 
+    
     hiopMatrixDense& Msys = linSys->sysMatrix();
 
     //
@@ -387,40 +387,40 @@ public:
     size_t num_ic_cor = 0;
 
     //nlp_->log->write("KKT XDYcYd Linsys (no perturb):", Msys, hovMatrices);
-
+    
     double delta_wx, delta_wd, delta_cc, delta_cd;
     if(!perturb_calc_->compute_initial_deltas(delta_wx, delta_wd, delta_cc, delta_cd)) {
       nlp_->log->printf(hovWarning, "XDycYd linsys: IC perturbation on new linsys failed.\n");
       return false;
     }
-
+    
     while(num_ic_cor<=max_ic_cor) {
 
       assert(delta_wx == delta_wd && "something went wrong with IC");
       assert(delta_cc == delta_cd && "something went wrong with IC");
       nlp_->log->printf(hovScalars, "XDycYd linsys: delta_w=%12.5e delta_c=%12.5e (ic %d)\n",
 		       delta_wx, delta_cc, num_ic_cor);
-
+      
       //
       // update linSys system matrix, including IC perturbations
       //
       {
 	Msys.setToZero();
-
+      
 	const int alpha = 1.;
 	Hess_->addUpperTriangleToSymDenseMatrixUpperTriangle(0, alpha, Msys);
-
+	
 	Jac_c_->transAddToSymDenseMatrixUpperTriangle(0, nx+nineq,     alpha, Msys);
 	Jac_d_->transAddToSymDenseMatrixUpperTriangle(0, nx+nineq+neq, alpha, Msys);
-
+	
 
 	//add diagonals and IC perturbations
 	Msys.addSubDiagonal(alpha, 0, *Dx_);
 	Msys.addSubDiagonal(0, nx, delta_wx);
-
+	
 	Msys.addSubDiagonal(alpha, nx, *Dd_);
 	Msys.addSubDiagonal(nx, nineq, delta_wd);
-
+	
 	//add -I (of size nineq) starting at index (nx, nx+nineq+neq)
 	int col_start = nx+nineq+neq;
 	double** MsysM = Msys.local_data();
@@ -436,13 +436,13 @@ public:
 
       //write matrix to file if requested
       if(nlp_->options->GetString("write_kkt") == "yes") write_linsys_counter++;
-      if(write_linsys_counter>=0) csr_writer.writeMatToFile(Msys, write_linsys_counter);
+      if(write_linsys_counter>=0) csr_writer.writeMatToFile(Msys, write_linsys_counter); 
 
       nlp_->log->write("KKT XDYcYd Linsys (to be factorized):", Msys, hovMatrices);
-
+      
       //factorize the matrix (note: 'matrixChanged' returns -1 if null eigenvalues are detected)
       int n_neg_eig = linSys->matrixChanged();
-
+      
       if(Jac_c_->m()+Jac_d_->m()>0) {
 	if(n_neg_eig < 0) {
 	  //matrix singular
@@ -452,12 +452,12 @@ public:
 	    nlp_->log->printf(hovWarning, "XDycYd linsys: computing singularity perturbation failed.\n");
 	    return false;
 	  }
-
+	  
 	} else if(n_neg_eig != Jac_c_->m()+Jac_d_->m()) {
 	  //wrong inertia
 	  nlp_->log->printf(hovScalars, "XDycYd linsys negative eigs mismatch: has %d expected %d.\n",
 			    n_neg_eig,  Jac_c_->m()+Jac_d_->m());
-
+	  
 	  if(!perturb_calc_->compute_perturb_wrong_inertia(delta_wx, delta_wd, delta_cc, delta_cd)) {
 	    nlp_->log->printf(hovWarning, "XDycYd linsys: computing inertia perturbation failed.\n");
 	    return false;
@@ -476,18 +476,18 @@ public:
 	  nlp_->log->printf(hovWarning, "XDycYd linsys: computing inertia perturbation failed (2).\n");
 	  return false;
 	}
-
+	
       } else {
 	//all is good
 	break;
       }
-
+   
       //will do an inertia correction
       num_ic_cor++;
     }
-
+    
     if(num_ic_cor>max_ic_cor) {
-
+      
       nlp_->log->printf(hovError,
 		       "Reached max number (%d) of inertia corrections within an outer iteration.\n",
 		       max_ic_cor);
@@ -539,14 +539,14 @@ protected:
   hiopVector* rhsXDYcYd;
   //-1 when disabled; otherwise acts like a counter, 0,1,... incremented each time 'solveCompressed' is called
   //depends on the 'write_kkt' option
-  int write_linsys_counter;
+  int write_linsys_counter; 
   hiopCSR_IO csr_writer;
 private:
-  hiopKKTLinSysDenseXDYcYd()
-    : hiopKKTLinSysCompressedXDYcYd(NULL), linSys(NULL),
+  hiopKKTLinSysDenseXDYcYd() 
+    : hiopKKTLinSysCompressedXDYcYd(NULL), linSys(NULL), 
       write_linsys_counter(-1), csr_writer(NULL)
-  {
-    assert(false && "not intended to be used");
+  { 
+    assert(false && "not intended to be used"); 
   }
 };
 

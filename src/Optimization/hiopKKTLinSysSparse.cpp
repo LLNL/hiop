@@ -48,11 +48,9 @@
 
 #include "hiopKKTLinSysSparse.hpp"
 
-#ifdef HIOP_SPARSE
+//#ifdef HIOP_SPARSE
 #include "hiopLinSolverIndefSparseMA57.hpp"
-#else
-#include "hiopLinSolverIndefSparseMA57.hpp"
-#endif
+//#endif
 
 namespace hiop
 {
@@ -357,7 +355,7 @@ namespace hiop
   hiopKKTLinSysCompressedSparseXYcYd::determineAndCreateLinsys(int nx, int neq, int nineq, int nnz)
   {
 
-#ifndef HIOP_SPARSE
+#//ifdef HIOP_SPARSE
     if(safe_mode_) {
       hiopLinSolverIndefSparseMA57* p = dynamic_cast<hiopLinSolverIndefSparseMA57*>(linSys_);
       if(p==NULL) {
@@ -368,23 +366,25 @@ namespace hiop
         return p;
       }
     }
-#endif
+//#endif
 
     if(NULL==linSys_) {
       int n = nx + neq + nineq;
 
-      assert(nlp_->options->GetString("compute_mode")=="sparse");
+      assert(nlp_->options->GetString("compute_mode")=="cpu");
       {
-#ifndef HIOP_SPARSE
+//#ifdef HIOP_SPARSE
         nlp_->log->printf(hovWarning,
 			    "KKT_SPARSE_XYcYd linsys: MA57 size %d (%d cons) (safe_mode=%d)\n",
 			    n, neq+nineq, safe_mode_);
         if(safe_mode_) {
           linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
-        }
-#else
-        error("Please provide a sparse indefinite linear package for HiOP with sparse linear system.")
-#endif
+        }else{
+	  linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
+	}
+//#else
+//        assert(0 && "Please provide a sparse indefinite linear package for HiOP with sparse linear system.");
+//#endif
       }
     }
     return linSys_;
@@ -439,7 +439,7 @@ namespace hiop
 
     long long nx = HessSp_->n(), nd=Jac_dSp_->m(), neq=Jac_cSp_->m(), nineq=Jac_dSp_->m();
 
-    int nnz = HessSp_->numberOfNonzeros() + Jac_cSp_->numberOfNonzeros() + Jac_dSp_->numberOfNonzeros() + nx + nd + neq + nineq;
+    int nnz = HessSp_->numberOfNonzeros() + Jac_cSp_->numberOfNonzeros() + Jac_dSp_->numberOfNonzeros() + nd + nx + nd + neq + nineq;
 
     //
     //based on safe_mode_, decide whether to go with the nopiv (fast) or Bunch-Kaufman (stable) linear solve
@@ -506,6 +506,9 @@ namespace hiop
       Msys.copyRowsFromSrcToDest(*HessSp_,  0,   nx,     0,          dest_nnz_st); dest_nnz_st += HessSp_->numberOfNonzeros();
       Msys.copyRowsFromSrcToDest(*Jac_cSp_, 0,   neq,    nx+nd,      dest_nnz_st); dest_nnz_st += Jac_cSp_->numberOfNonzeros();
       Msys.copyRowsFromSrcToDest(*Jac_dSp_, 0,   nineq,  nx+nd+neq,  dest_nnz_st); dest_nnz_st += Jac_dSp_->numberOfNonzeros();
+
+      // minus identity matrix for slack variables
+      Msys.copyDiagMatrixToSubBlock(-1., nineq, nx+nd+neq, nx, dest_nnz_st); dest_nnz_st += nineq;
 
 	  //build the diagonal Hx = Dx + delta_wx
 	  if(NULL == Hx_) {
@@ -690,7 +693,7 @@ namespace hiop
   hiopKKTLinSysCompressedSparseXDYcYd::determineAndCreateLinsys(int nx, int neq, int nineq, int nnz)
   {
 
-#ifndef HIOP_SPARSE
+//#ifdef HIOP_SPARSE
     if(safe_mode_) {
       hiopLinSolverIndefSparseMA57* p = dynamic_cast<hiopLinSolverIndefSparseMA57*>(linSys_);
       if(p==NULL) {
@@ -701,23 +704,25 @@ namespace hiop
         return p;
       }
     }
-#endif
+//#endif
 
     if(NULL==linSys_) {
-      int n = nx + neq + nineq;
+      int n = nx + nineq + neq + nineq;
 
-      assert(nlp_->options->GetString("compute_mode")=="sparse");
+      assert(nlp_->options->GetString("compute_mode")=="cpu");
       {
-#ifndef HIOP_SPARSE
+//#ifdef HIOP_SPARSE
         nlp_->log->printf(hovWarning,
 			    "KKT_SPARSE_XYcYd linsys: MA57 size %d (%d cons) (safe_mode=%d)\n",
 			    n, neq+nineq, safe_mode_);
         if(safe_mode_) {
           linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
-        }
-#else
-        error("Please provide a sparse indefinite linear package for HiOP with sparse linear system.")
-#endif
+        }else{
+	  linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
+	}
+//#else
+ //       assert(0 && "Please provide a sparse indefinite linear package for HiOP with sparse linear system.");
+//#endif
       }
     }
     return linSys_;

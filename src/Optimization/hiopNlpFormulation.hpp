@@ -3,47 +3,47 @@
 // Written by Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
-// This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp
-// is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause).
+// This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
+// is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause). 
 // Please also read “Additional BSD Notice” below.
 //
-// Redistribution and use in source and binary forms, with or without modification,
+// Redistribution and use in source and binary forms, with or without modification, 
 // are permitted provided that the following conditions are met:
-// i. Redistributions of source code must retain the above copyright notice, this list
+// i. Redistributions of source code must retain the above copyright notice, this list 
 // of conditions and the disclaimer below.
-// ii. Redistributions in binary form must reproduce the above copyright notice,
-// this list of conditions and the disclaimer (as noted below) in the documentation and/or
+// ii. Redistributions in binary form must reproduce the above copyright notice, 
+// this list of conditions and the disclaimer (as noted below) in the documentation and/or 
 // other materials provided with the distribution.
-// iii. Neither the name of the LLNS/LLNL nor the names of its contributors may be used to
-// endorse or promote products derived from this software without specific prior written
+// iii. Neither the name of the LLNS/LLNL nor the names of its contributors may be used to 
+// endorse or promote products derived from this software without specific prior written 
 // permission.
 //
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
-// OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
-// SHALL LAWRENCE LIVERMORE NATIONAL SECURITY, LLC, THE U.S. DEPARTMENT OF ENERGY OR
-// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
-// OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
-// AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY 
+// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES 
+// OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT 
+// SHALL LAWRENCE LIVERMORE NATIONAL SECURITY, LLC, THE U.S. DEPARTMENT OF ENERGY OR 
+// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS 
+// OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED 
+// AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, 
 // EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 // Additional BSD Notice
-// 1. This notice is required to be provided under our contract with the U.S. Department
-// of Energy (DOE). This work was produced at Lawrence Livermore National Laboratory under
+// 1. This notice is required to be provided under our contract with the U.S. Department 
+// of Energy (DOE). This work was produced at Lawrence Livermore National Laboratory under 
 // Contract No. DE-AC52-07NA27344 with the DOE.
-// 2. Neither the United States Government nor Lawrence Livermore National Security, LLC
-// nor any of their employees, makes any warranty, express or implied, or assumes any
-// liability or responsibility for the accuracy, completeness, or usefulness of any
+// 2. Neither the United States Government nor Lawrence Livermore National Security, LLC 
+// nor any of their employees, makes any warranty, express or implied, or assumes any 
+// liability or responsibility for the accuracy, completeness, or usefulness of any 
 // information, apparatus, product, or process disclosed, or represents that its use would
 // not infringe privately-owned rights.
-// 3. Also, reference herein to any specific commercial products, process, or services by
-// trade name, trademark, manufacturer or otherwise does not necessarily constitute or
-// imply its endorsement, recommendation, or favoring by the United States Government or
-// Lawrence Livermore National Security, LLC. The views and opinions of authors expressed
-// herein do not necessarily state or reflect those of the United States Government or
-// Lawrence Livermore National Security, LLC, and shall not be used for advertising or
+// 3. Also, reference herein to any specific commercial products, process, or services by 
+// trade name, trademark, manufacturer or otherwise does not necessarily constitute or 
+// imply its endorsement, recommendation, or favoring by the United States Government or 
+// Lawrence Livermore National Security, LLC. The views and opinions of authors expressed 
+// herein do not necessarily state or reflect those of the United States Government or 
+// Lawrence Livermore National Security, LLC, and shall not be used for advertising or 
 // product endorsement purposes.
 
 #ifndef HIOP_NLP_FORMULATION
@@ -55,7 +55,7 @@
 #include "hiopMatrixMDS.hpp"
 
 #ifdef HIOP_USE_MPI
-#include "mpi.h"
+#include "mpi.h"  
 #endif
 
 #include "hiopNlpTransforms.hpp"
@@ -69,15 +69,15 @@
 namespace hiop
 {
 
-/** Class for a general NlpFormulation with general constraints and bounds on the variables.
- * This class also  acts as a factory for linear algebra objects (derivative
+/** Class for a general NlpFormulation with general constraints and bounds on the variables. 
+ * This class also  acts as a factory for linear algebra objects (derivative 
  * matrices, KKT system) whose types are decided based on the hiopInterfaceXXX object passed in the
  * constructor.
- *
- * This formulation assumes that optimiz variables, rhs, and gradient are VECTORS: contiguous
+ * 
+ * This formulation assumes that optimiz variables, rhs, and gradient are VECTORS: contiguous 
  * double arrays for which only local part is accessed (no inter-process comm).
- * Derivatives are generic MATRICES, whose type depend on
- *    i.  the NLP formulation (sparse general or NLP with few dense constraints)
+ * Derivatives are generic MATRICES, whose type depend on 
+ *    i.  the NLP formulation (sparse general or NLP with few dense constraints) 
  *   ii. the interface provided (general sparse (not yet supported), mixed sparse-dense, or dense
  * constraints).
  * Exact matching of MATRICES and hiopInterface is to be done by specializations of this class.
@@ -91,7 +91,7 @@ public:
   virtual bool finalizeInitialization();
 
   /**
-   * Wrappers for the interface calls.
+   * Wrappers for the interface calls. 
    * Can be overridden for specialized formulations required by the algorithm.
    */
   virtual bool eval_f(hiopVector& x, bool new_x, double& f);
@@ -148,7 +148,7 @@ public:
 			     const hiopVector& yc, const hiopVector& yd,
 			     double inf_pr, double inf_du, double mu,
 			     double alpha_du, double alpha_pr, int ls_trials);
-
+  
   /** const accessors */
   inline const hiopVector& get_xl ()  const { return *xl;   }
   inline const hiopVector& get_xu ()  const { return *xu;   }
@@ -193,8 +193,8 @@ public:
 			  double* zl_a,
 			  double* zu_a,
 			  double* lambda_a);
-
-  /* packs constraint rhs or constraint multipliers into one array based on the internal mappings
+  
+  /* packs constraint rhs or constraint multipliers into one array based on the internal mappings 
    * 'cons_eq_mapping_'and 'cons_ineq_mapping_ */
   void copy_EqIneq_to_cons(const hiopVector& yc,
 			   const hiopVector& yd,
@@ -238,9 +238,9 @@ protected:
 
   hiopVector *dl, *du,  *idl, *idu; //these will be local
   hiopInterfaceBase::NonlinearityType* cons_ineq_type;
-
+  
   // keep track of the constraints indexes in the original, user's formulation
-  long long *cons_eq_mapping_, *cons_ineq_mapping_;
+  long long *cons_eq_mapping_, *cons_ineq_mapping_; 
 
   //options for which this class was setup
   std::string strFixedVars; //"none", "fixed", "relax"
@@ -265,9 +265,9 @@ protected:
    *  1 : at once
    */
   int cons_eval_type_;
-
-  /**
-   * Internal buffer for constraints. Used only when constraints and Jacobian are evaluated at
+  
+  /** 
+   * Internal buffer for constraints. Used only when constraints and Jacobian are evaluated at 
    * once (cons_eval_type_==1), otherwise NULL.
    */
   hiopVector* cons_body_;
@@ -278,7 +278,7 @@ protected:
    */
   hiopMatrix* cons_Jac_;
 
-  /**
+  /** 
    * Internal buffer for the multipliers of the constraints use to copy the multipliers of eq. and
    * ineq. into and to return it to the user via @user_callback_solution and @user_callback_iterate
    */
@@ -312,10 +312,10 @@ protected:
 public:
   virtual bool eval_Hess_Lagr(const hiopVector& x,
 			      bool new_x,
-			      const double& obj_factor,
+			      const double& obj_factor, 
 			      const double* lambda_eq,
 			      const double* lambda_ineq,
-			      bool new_lambda,
+			      bool new_lambda, 
 			      hiopMatrix& Hess_L)
   {
     //silently ignore the call since we're in the quasi-Newton case
@@ -328,7 +328,7 @@ public:
   //returns hiopHessianLowRank which (fakely) inherits from hiopMatrix
   virtual hiopMatrix* alloc_Hess_Lagr();
 
-  /* this is in general for a dense matrix with n_vars cols and a small number of
+  /* this is in general for a dense matrix with n_vars cols and a small number of 
    * 'nrows' rows. The second argument indicates how much total memory should the
    * matrix (pre)allocate.
    */
@@ -343,7 +343,7 @@ private:
 
 /* *************************************************************************
  * Class is for general NLPs that have mixed sparse-dense (MDS) derivatives
- * blocks.
+ * blocks. 
  * *************************************************************************
  */
 class hiopNlpMDS : public hiopNlpFormulation
@@ -354,7 +354,7 @@ public:
   {
     _buf_lambda = LinearAlgebraFactory::createVector(0);
   }
-  virtual ~hiopNlpMDS()
+  virtual ~hiopNlpMDS() 
   {
     delete _buf_lambda;
   }
@@ -376,13 +376,13 @@ public:
 			      const double* lambda_ineq,
 			      bool new_lambdas,
 			      hiopMatrix& Hess_L);
-
-  virtual hiopMatrix* alloc_Jac_c()
+  
+  virtual hiopMatrix* alloc_Jac_c() 
   {
     assert(n_vars == nx_sparse+nx_dense);
     return new hiopMatrixMDS(n_cons_eq, nx_sparse, nx_dense, nnz_sparse_Jaceq);
   }
-  virtual hiopMatrix* alloc_Jac_d()
+  virtual hiopMatrix* alloc_Jac_d() 
   {
     assert(n_vars == nx_sparse+nx_dense);
     return new hiopMatrixMDS(n_cons_ineq, nx_sparse, nx_dense, nnz_sparse_Jacineq);
@@ -409,7 +409,6 @@ private:
 };
 
 
-
 /* *************************************************************************
  * Class is for general NLPs that have sparse derivatives blocks.
  * *************************************************************************
@@ -429,7 +428,7 @@ public:
     delete _buf_lambda;
   }
 
-  virtual bool finalizeInitialization(){};
+  virtual bool finalizeInitialization();
 
   virtual bool eval_Jac_c(double* x, bool new_x, hiopMatrix& Jac_c);
   virtual bool eval_Jac_d(double* x, bool new_x, hiopMatrix& Jac_d);
@@ -440,12 +439,12 @@ protected:
 
 public:
   virtual bool eval_Hess_Lagr(const double* x,
-			      bool new_x,
-			      const double& obj_factor,
-			      const double* lambda_eq,
-			      const double* lambda_ineq,
-			      bool new_lambdas,
-			      hiopMatrix& Hess_L);
+                            bool new_x,
+                            const double& obj_factor,
+                            const double* lambda_eq,
+                            const double* lambda_ineq,
+                            bool new_lambdas,
+                            hiopMatrix& Hess_L);
 
   virtual hiopMatrix* alloc_Jac_c()
   {
@@ -464,8 +463,8 @@ public:
   }
   virtual hiopMatrix* alloc_Hess_Lagr()
   {
-    assert(n_vars == m_nx);
-    return new hiopMatrixSparseTriplet(m_nx, m_nx, m_nnz_sparse_Hess_Lagr);
+  assert(n_vars == m_nx);
+    return new hiopMatrixSymSparseTriplet(m_nx, m_nnz_sparse_Hess_Lagr);
   }
   virtual long long nx() const { return m_nx; }
 private:
