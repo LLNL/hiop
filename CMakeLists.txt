@@ -180,8 +180,6 @@ if(NOT DEFINED LAPACK_LIBRARIES)
 # in case the toolchain defines them
 find_package(LAPACK REQUIRED)
 endif(NOT DEFINED LAPACK_LIBRARIES)
-
-set(LAPACK_LIBRARIES "-lgfortran;/usr/lib64/liblapack.so;-lpthread;-lm;-ldl")
 target_link_libraries(hiop_math INTERFACE ${LAPACK_LIBRARIES})
 message(STATUS "Using LAPACK libraries: ${LAPACK_LIBRARIES}")
 
@@ -196,32 +194,33 @@ endif()
 #set(LAPACK_LIBRARIES "-lgfortran;/export/home/petra1/work/installs/xblas-1.0.248/libxblas.a;/home/petra1/work/installs/lapack-3.7.0/libblas.a;/home/petra1/work/installs/lapack-3.7.0/liblapack.a;/home/petra1/work/installs/lapack-3.7.0/liblapack.a;/home/petra1/work/installs/lapack-3.7.0/libblas.a;/export/home/petra1/work/installs/xblas-1.0.248/libxblas.a")
 
 
-# metis needed (4.x needed by MA57)
+# metis needed (5.x needed by umfpack)
 if(NOT HIOP_METIS4_DIR)
-    set(HIOP_METIS4_DIR "~/software/METIS_4")
+  set(HIOP_METIS4_DIR $ENV{HIOP_METIS4_DIR} )
 endif(NOT HIOP_METIS4_DIR)
 
-find_library(METIS_LIBRARY NAME libmetis.a HINTS ${HIOP_METIS4_DIR}/lib PATHS ${HIOP_METIS4_DIR}/lib)
-find_path(HIOP_METIS_INCLUDE_DIR NAME metis.h HINTS ${HIOP_METIS4_DIR}/include)
-if(HIOP_METIS_INCLUDE_DIR AND METIS_LIBRARY)
-    include_directories(${HIOP_METIS_INCLUDE_DIR})
-    message(STATUS "Found METIS libraries: ${METIS_LIBRARY}")
- endif(HIOP_METIS_INCLUDE_DIR AND METIS_LIBRARY)
+find_library(METIS4_LIBRARY NAME libmetis.a HINTS ${HIOP_METIS4_DIR}/lib PATHS ${HIOP_METIS4_DIR}/lib)
+find_path(HIOP_METIS4_INCLUDE_DIR NAME metis.h HINTS ${HIOP_METIS4_DIR}/include)
+if(HIOP_METIS4_INCLUDE_DIR AND METIS4_LIBRARY)
+  include_directories(${HIOP_METIS4_INCLUDE_DIR})
+  message(STATUS "Found METIS_4 libraries: ${METIS4_LIBRARY}")
+endif(HIOP_METIS4_INCLUDE_DIR AND METIS4_LIBRARY)
 
-if(NOT HIOP_MA57_DIR)
-    set(HIOP_MA57_DIR "~/software/HSL/MA57")
+if( NOT HIOP_MA57_DIR)
+#  set(HIOP_MA57_DIR CACHE PATH "Path to MA57 directory")
+  set(HIOP_MA57_DIR $ENV{HIOP_MA57_DIR} )
 endif(NOT HIOP_MA57_DIR)
 
-find_library(MA57_LIBRARY libma57.a PATHS ${HIOP_MA57_DIR}/lib)
+find_library(MA57_LIBRARY libma57.a PATH ${HIOP_MA57_DIR}/lib)
 if(MA57_LIBRARY)
-    message(STATUS "Found MA57 libraries: ${MA57_LIBRARY}")
+  message(STATUS "Found MA57 libraries: ${MA57_LIBRARY}")
 endif(MA57_LIBRARY)
 
-if(MA57_LIBRARY AND METIS_LIBRARY)
-    target_link_libraries(hiop_math INTERFACE ${MA57_LIBRARY} ${METIS_LIBRARY} -lgfortran)
-    set(HIOP_SPARSE ON CACHE BOOL "Build with sparse linear algebra" FORCE)
-    message(STATUS "Build with sparse linear algebra")
-endif()
+if(MA57_LIBRARY AND METIS4_LIBRARY)
+  target_link_libraries(hiop_math INTERFACE ${MA57_LIBRARY} ${METIS4_LIBRARY} -lgfortran)
+  set(HIOP_SPARSE ON CACHE BOOL "Build with sparse linear algebra" FORCE)
+  message(STATUS "Build with sparse linear algebra" )
+endif(MA57_LIBRARY AND METIS4_LIBRARY)
 
 
 
