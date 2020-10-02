@@ -296,4 +296,52 @@ void MatrixTestsSparseTriplet::maybeCopyToDev(hiop::hiopMatrixSparse*) { }
  */
 void MatrixTestsSparseTriplet::maybeCopyFromDev(hiop::hiopMatrixSparse*) { }
 
+int MatrixTestsSparseTriplet::copyRowsFromSrcToDest(hiop::hiopMatrixSparse& src_gen,hiop::hiopMatrixSparse& dist_gen,
+                                         local_ordinal_type rows_src_idx_st, local_ordinal_type n_rows,
+                                         local_ordinal_type rows_dest_idx_st, local_ordinal_type dest_nnz_st
+                                         )
+{
+  auto &src_Mat = dynamic_cast<hiop::hiopMatrixSparseTriplet&>(src_gen);
+  auto &dist_Mat = dynamic_cast<hiop::hiopMatrixSparseTriplet&>(dist_gen);
+  assert(dist_Mat.n() >= src_Mat.n());
+  assert(n_rows + rows_src_idx_st <= src_Mat.m());
+  assert(n_rows + rows_dest_idx_st <= dist_Mat.m());
+
+  auto iRow_src = src_Mat.i_row();
+  auto jCol_src = src_Mat.j_col();
+  auto values_src = src_Mat.M();
+  auto nnz_src = src_Mat.numberOfNonzeros();
+  auto itnz_src{0};
+  auto itnz_dest=dest_nnz_st;
+  int fail{0};
+  
+  auto iRow_ = dist_Mat.i_row();
+  auto jCol_ = dist_Mat.j_col();
+  auto values_ = dist_Mat.M();
+  auto nnz_ = dist_Mat.numberOfNonzeros();
+
+  //int iterators should suffice
+  for(auto row_add=0; row_add<n_rows; ++row_add) {
+    auto row_src  = rows_src_idx_st  + row_add;
+    auto row_dest = rows_dest_idx_st + row_add;
+    
+   // assuming the source matrix is row-major orderd, otherwise we need to check all the nonzeros
+    while(itnz_src<nnz_src && iRow_src[itnz_src]<row_src) {
+      ++itnz_src;
+    }
+
+    while(itnz_src<nnz_src && iRow_src[itnz_src]==row_src) {
+      assert(itnz_dest<nnz_);
+      iRow_[itnz_dest] = row_dest;//iRow_src[itnz_src];
+      jCol_[itnz_dest] = jCol_src[itnz_src];
+      values_[itnz_dest++] = values_src[itnz_src++];
+
+      assert(itnz_dest<=nnz_);
+    }
+  }
+
+  printMessage(fail, __func__);
+  return fail;
+}
+
 }} // namespace hiop::tests

@@ -103,6 +103,10 @@ private:
   virtual void maybeCopyFromDev(hiop::hiopMatrixSparse*);
 public:
   virtual void initializeMatrix(hiop::hiopMatrixSparse* mat, local_ordinal_type entries_per_row);
+  virtual int copyRowsFromSrcToDest(hiop::hiopMatrixSparse& src_gen, hiop::hiopMatrixSparse& dist_gen,
+                                         local_ordinal_type rows_src_idx_st, local_ordinal_type n_rows,
+                                         local_ordinal_type rows_dest_idx_st, local_ordinal_type dest_nnz_st
+                                         );
 };
 
 }} // namespace hiop::tests
