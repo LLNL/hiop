@@ -100,16 +100,21 @@ public:
   hiopKKTLinSysCompressedMDSXYcYd(hiopNlpFormulation* nlp);
   virtual ~hiopKKTLinSysCompressedMDSXYcYd();
 
+  virtual int factorizeWithCurvCheck();
+
   virtual bool update(const hiopIterate* iter, 
 		      const hiopVector* grad_f, 
 		      const hiopMatrix* Jac_c, const hiopMatrix* Jac_d,
 		      hiopMatrix* Hess);
 
+  virtual bool updateMatrix( const double& delta_wx, const double& delta_wd,
+                      const double& delta_cc, const double& delta_cd);
+
   virtual bool solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
 			       hiopVector& dx, hiopVector& dyc, hiopVector& dyd);
 
 protected:
-  hiopLinSolverIndefDense* linSys_;
+//  hiopLinSolverIndefDense* linSys_;
   hiopVector *rhs_; //[rxdense, ryc, ryd]
   hiopVector *_buff_xs_; //an auxiliary buffer 
 
