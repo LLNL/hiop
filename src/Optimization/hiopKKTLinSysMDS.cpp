@@ -57,7 +57,9 @@ namespace hiop
 {
 
   hiopKKTLinSysCompressedMDSXYcYd::hiopKKTLinSysCompressedMDSXYcYd(hiopNlpFormulation* nlp)
-    : hiopKKTLinSysCompressedXYcYd(nlp), linSys_(NULL), rhs_(NULL), _buff_xs_(NULL),
+    : hiopKKTLinSysCompressedXYcYd(nlp), 
+//      linSys_(NULL), 
+      rhs_(NULL), _buff_xs_(NULL),
       Hxs_(NULL), HessMDS_(NULL), Jac_cMDS_(NULL), Jac_dMDS_(NULL),
       write_linsys_counter_(-1), csr_writer_(nlp)
   {
@@ -68,9 +70,47 @@ namespace hiop
   hiopKKTLinSysCompressedMDSXYcYd::~hiopKKTLinSysCompressedMDSXYcYd()
   {
     delete rhs_;
-    delete linSys_;
+//    delete linSys_;
     delete _buff_xs_;
     delete Hxs_;
+  }
+
+   int hiopKKTLinSysCompressedMDSXYcYd::factorizeWithCurvCheck()
+  {
+    int nxs = HessMDS_->n_sp(), nxd = HessMDS_->n_de(), nx = HessMDS_->n();
+    int neq = Jac_cMDS_->m(), nineq = Jac_dMDS_->m();
+    //factorization
+    int n_neg_eig = hiopKKTLinSysCurvCheck::factorizeWithCurvCheck();
+
+    int n_neg_eig_11 = 0;
+    if(n_neg_eig>=0) {
+      // 'n_neg_eig' is the number of negative eigenvalues of the "dense" (reduced) KKT
+      //
+      // One can compute the number of negative eigenvalues of the whole MDS or XYcYd
+      // linear system using Haynsworth inertia additivity formula, namely,
+      // count the negative eigenvalues of the sparse Hessian block.
+      const double* Hxsarr = Hxs_->local_data_const();
+      for(int itxs=0; itxs<nxs; ++itxs) {
+         if(Hxsarr[itxs] <= -1e-14) {
+            n_neg_eig_11++;
+          } else if(Hxsarr[itxs] <= 1e-14) {
+            n_neg_eig_11 = -1;
+            break;
+          }
+        }
+    }
+
+    if(n_neg_eig_11 < 0) {
+      nlp_->log->printf(hovWarning,
+                "KKT_MDS_XYcYd linsys: Detected null eigenvalues in (1,1) sparse block.\n");
+      assert(n_neg_eig_11 == -1);
+      n_neg_eig = -1;
+    } else if(n_neg_eig_11 > 0) {
+      n_neg_eig += n_neg_eig_11;
+      nlp_->log->printf(hovWarning,
+                "KKT_MDS_XYcYd linsys: Detected negative eigenvalues in (1,1) sparse block.\n");
+    }
+    return n_neg_eig;
   }
 
   bool hiopKKTLinSysCompressedMDSXYcYd::update(const hiopIterate* iter, 
@@ -120,249 +160,149 @@ namespace hiop
     Dx_->axdzpy_w_pattern(1.0, *iter->zu, *iter->sxu, nlp_->get_ixu());
     nlp_->log->write("Dx in KKT", *Dx_, hovMatrices);
 
-    hiopMatrixDense& Msys = linSys_->sysMatrix();
-    if(perf_report_) {
-      nlp_->log->printf(hovSummary, 
-			"KKT_MDS_XYcYd linsys: Low-level linear system size: %d\n", 
-			Msys.n());
-    }
+    nlp_->runStats.kkt.tmUpdateInit.stop();
+
     //
     //factorization + inertia correction if needed
     //
-    const size_t max_ic_cor = 10;
-    size_t num_ic_cor = 0;
-
-    double delta_wx, delta_wd, delta_cc, delta_cd;
-    if(!perturb_calc_->compute_initial_deltas(delta_wx, delta_wd, delta_cc, delta_cd)) {
-      nlp_->log->printf(hovWarning, 
-			"KKT_MDS_XYcYd linsys: IC perturbation on new linsys failed.\n");
-      return false;
-    }
+    bool retval = factorize();
     
-    nlp_->runStats.kkt.tmUpdateInit.stop();
-
-    while(num_ic_cor<=max_ic_cor) {
-
-      assert(delta_wx == delta_wd && "something went wrong with IC");
-      assert(delta_cc == delta_cd && "something went wrong with IC");
-      nlp_->log->printf(hovScalars, 
-			"KKT_MDS_XYcYd linsys: delta_w=%12.5e delta_c=%12.5e (ic %d)\n",
-			delta_wx, delta_cc, num_ic_cor);
-
-      
-      //
-      //the update of the linear system, including IC perturbations
-      //
-      nlp_->runStats.kkt.tmUpdateLinsys.start();
-      {
-	Msys.setToZero();
-
-	int alpha = 1.;
-
-	// perf eval 
-	//hiopTimer tm;
-	//tm.start();
-
-	HessMDS_->de_mat()->addUpperTriangleToSymDenseMatrixUpperTriangle(0, alpha, Msys);
-	Jac_cMDS_->de_mat()->transAddToSymDenseMatrixUpperTriangle(0, nxd,     alpha, Msys);
-	Jac_dMDS_->de_mat()->transAddToSymDenseMatrixUpperTriangle(0, nxd+neq, alpha, Msys);
-
-	//tm.stop();
-	//printf("the three add methods took %g sec\n", tm.getElapsedTime());
-	//tm.reset();
-
-	//update -> add Dxd to (1,1) block of KKT matrix (Hd = HessMDS_->de_mat already added above)
-	Msys.addSubDiagonal(0, alpha, *Dx_, nxs, nxd);
-	//add perturbation 'delta_wx' for xd
-	Msys.addSubDiagonal(0, nxd, delta_wx);
-	
-	//build the diagonal Hxs = Hsparse+Dxs
-	if(NULL == Hxs_) {
-	  Hxs_ = LinearAlgebraFactory::createVector(nxs); assert(Hxs_);
-	}
-	Hxs_->startingAtCopyFromStartingAt(0, *Dx_, 0);
-	
-	//a good time to add the IC 'delta_wx' perturbation
-	Hxs_->addConstant(delta_wx);
-
-
-	//Hxs +=  diag(HessMDS->sp_mat());
-	//todo: make sure we check that the HessMDS->sp_mat() is a diagonal
-	HessMDS_->sp_mat()->startingAtAddSubDiagonalToStartingAt(0, alpha, *Hxs_, 0);
-	nlp_->log->write("Hxs in KKT_MDS_X", *Hxs_, hovMatrices);
-
-
-	//add - Jac_c_sp * (Hxs)^{-1} Jac_c_sp^T to diagonal block linSys starting at (nxd, nxd)
-	alpha = -1.;
-
-	// perf eval
-	//tm.start();
-	Jac_cMDS_->sp_mat()->addMDinvMtransToDiagBlockOfSymDeMatUTri(nxd, alpha, *Hxs_, Msys);
-
-	//tm.stop();
-	//printf("addMDinvMtransToDiagBlockOfSymDeMatUTri 111 took %g sec\n", tm.getElapsedTime());
-	//tm.reset();
-
-	Msys.addSubDiagonal(nxd, neq, -delta_cc);
-	
-	/* we've just done above the (1,1) and (2,2) blocks of
-	 *
-	 * [ Hd+Dxd+delta_wx*I           Jcd^T                                 Jdd^T  ]
-	 * [  Jcd              -Jcs(Hs+Dxs+delta_wx*I)^{-1}Jcs^T-delta_cc*I    K_21   ]
-	 * [  Jdd                        K_21                                  M_{33} ]
-	 *  
-	 * where
-	 * K_21 = - Jcs * (Hs+Dxs+delta_wx)^{-1} * Jds^T
-	 * 
-	 * M_{33} = -Jds(Hs+Dxs+delta_wx)^{-1}Jds^T - (Dd+delta_wd)*I^{-1} - delta_cd*I
-	 *   is performed below
-	 */
-	
-	alpha = -1.;
-	// add   - Jac_d_sp * (Hxs+Dxs+delta_wx*I)^{-1} * Jac_d_sp^T   to diagonal block
-	// linSys starting at (nxd+neq, nxd+neq)
-
-	// perf eval
-	//tm.start();
-
-	Jac_dMDS_->sp_mat()->
-	  addMDinvMtransToDiagBlockOfSymDeMatUTri(nxd+neq, alpha, *Hxs_, Msys); 
-
-	//tm.stop();
-	//printf("addMDinvMtransToDiagBlockOfSymDeMatUTri 222 took %g sec\n", tm.getElapsedTime());
-
-	//K_21 = - Jcs * (Hs+Dxs+delta_wx)^{-1} * Jds^T
-	alpha = -1.;
-	Jac_cMDS_->sp_mat()->
-	  addMDinvNtransToSymDeMatUTri(nxd, nxd+neq, alpha, *Hxs_, *Jac_dMDS_->sp_mat(), Msys);
-
-	// add -{Dd}^{-1}
-	// Dd=(Sdl)^{-1}Vu + (Sdu)^{-1}Vu + delta_wd * I
-	Dd_inv_->setToConstant(delta_wd);
-	Dd_inv_->axdzpy_w_pattern(1.0, *iter->vl, *iter->sdl, nlp_->get_idl());
-	Dd_inv_->axdzpy_w_pattern(1.0, *iter->vu, *iter->sdu, nlp_->get_idu());
-#ifdef HIOP_DEEPCHECKS
-	assert(true==Dd_inv_->allPositive());
-#endif 
-	Dd_inv_->invert();
-	
-	alpha=-1.;
-	Msys.addSubDiagonal(alpha, nxd+neq, *Dd_inv_);
-	Msys.addSubDiagonal(nxd+neq, nineq, -delta_cd);
-	
-	nlp_->log->write("KKT_MDS_XYcYd linsys:", Msys, hovMatrices);
-      } // end of update of the linear system
-      nlp_->runStats.kkt.tmUpdateLinsys.stop();
-      
-      //write matrix to file if requested
-      if(nlp_->options->GetString("write_kkt") == "yes") write_linsys_counter_++;
-      if(write_linsys_counter_>=0) csr_writer_.writeMatToFile(Msys, write_linsys_counter_); 
-      
-
-      nlp_->runStats.linsolv.start_linsolve();
-      nlp_->runStats.kkt.tmUpdateInnerFact.start();
-      //factorization
-      int n_neg_eig = linSys_->matrixChanged();
-
-      int n_neg_eig_11 = 0;
-      if(n_neg_eig>=0) {
-	// 'n_neg_eig' is the number of negative eigenvalues of the "dense" (reduced) KKT
-	//
-	// One can compute the number of negative eigenvalues of the whole MDS or XYcYd
-	// linear system using Haynsworth inertia additivity formula, namely,
-	// count the negative eigenvalues of the sparse Hessian block.
-	const double* Hxsarr = Hxs_->local_data_const();
-	for(int itxs=0; itxs<nxs; ++itxs) {
-	  if(Hxsarr[itxs] <= -1e-14) {
-	    n_neg_eig_11++;
-	  } else if(Hxsarr[itxs] <= 1e-14) {
-	    n_neg_eig_11 = -1;
-	    break;
-	  }
-	}
-      }
-      nlp_->runStats.kkt.tmUpdateInnerFact.stop();
-
-      if(n_neg_eig_11 < 0) {
-	nlp_->log->printf(hovScalars, 
-			  "KKT_MDS_XYcYd linsys: Detected null eigenvalues in (1,1) sparse block.\n");
-	assert(n_neg_eig_11 == -1);
-	n_neg_eig = -1;
-      } else if(n_neg_eig_11 > 0) {
-	n_neg_eig += n_neg_eig_11;
-	nlp_->log->printf(hovScalars, 
-			  "KKT_MDS_XYcYd linsys: Detected negative eigenvalues in (1,1) sparse block.\n");
-      }
-
-     if(Jac_cMDS_->m()+Jac_dMDS_->m()>0) {
-	if(n_neg_eig < 0) {
-	  //matrix singular
-	  nlp_->log->printf(hovScalars, 
-			    "KKT_MDS_XYcYdlinsys is singular. Regularization will be attempted...\n");
-
-	  if(!perturb_calc_->compute_perturb_singularity(delta_wx, delta_wd, delta_cc, delta_cd)) {
-	    nlp_->log->printf(hovWarning, 
-			      "KKT_MDS_XYcYd linsys: computing singularity perturbation failed.\n");
-	    return false;
-	  }
-	  
-	} else if(n_neg_eig != Jac_cMDS_->m() + Jac_dMDS_->m()) {
-	  //wrong inertia
-	  nlp_->log->printf(hovScalars, 
-			    "KKT_MDS_XYcYd linsys negative eigs mismatch: has %d expected %d.\n",
-			    n_neg_eig,  Jac_cMDS_->m()+Jac_dMDS_->m());
-
-	  
-	  if(n_neg_eig < Jac_cMDS_->m() + Jac_dMDS_->m())
-	    nlp_->log->printf(hovWarning, "KKT_MDS_XYcYd linsys negative eigs abnormality\n");
-
-
-	  if(!perturb_calc_->compute_perturb_wrong_inertia(delta_wx, delta_wd, delta_cc, delta_cd)) {
-	    nlp_->log->printf(hovWarning, 
-			      "KKT_MDS_XYcYd linsys: computing inertia perturbation failed.\n");
-	    return false;
-	  }
-	  
-	} else {
-	  //all is good
-	  break;
-	}
-     } else if(n_neg_eig != 0) {
-       //correct for wrong intertia
-       nlp_->log->printf(hovScalars,  
-			 "KKT_MDS_XYcYd linsys has wrong inertia (no constraints): factoriz "
-			 "ret code/num negative eigs %d\n.", n_neg_eig);
-       if(!perturb_calc_->compute_perturb_wrong_inertia(delta_wx, delta_wd, delta_cc, delta_cd)) {
-	 nlp_->log->printf(hovWarning, 
-			   "KKT_MDS_XYcYd linsys: computing inertia perturbation failed (2).\n");
-	 return false;
-       }
-       
-     } else {
-       //all is good
-       break;
-     }
-     
-     //will do an inertia correction
-     num_ic_cor++;
-     nlp_->runStats.kkt.nUpdateICCorr++;
-    } // end of ic while
-    
-    if(num_ic_cor>max_ic_cor) {
-      
-      nlp_->log->printf(hovError,
-			"KKT_MDS_XYcYd linsys: max number (%d) of inertia corrections reached.\n",
-			max_ic_cor);
-      return false;
-    }
     nlp_->runStats.tmSolverInternal.stop();
     return true;
+  }
+
+
+  bool  hiopKKTLinSysCompressedMDSXYcYd::updateMatrix( const double& delta_wx, const double& delta_wd,
+                     const double& delta_cc, const double& delta_cd)
+  {
+    assert(linSys_);
+    hiopLinSolverIndefDense* linSys = dynamic_cast<hiopLinSolverIndefDense*> (linSys_);
+    assert(linSys);
+
+    int nxs = HessMDS_->n_sp(), nxd = HessMDS_->n_de(), nx = HessMDS_->n();
+    int neq = Jac_cMDS_->m(), nineq = Jac_dMDS_->m();
+
+    hiopMatrixDense& Msys = linSys->sysMatrix();
+    if(perf_report_) {
+      nlp_->log->printf(hovSummary,
+			"KKT_MDS_XYcYd linsys: Low-level linear system size: %d\n",
+			Msys.n());
+    }
+
+    nlp_->runStats.kkt.tmUpdateLinsys.start();
+
+    //
+    // update linSys system matrix, including IC perturbations
+    //
+    Msys.setToZero();
+  
+    int alpha = 1.;
+
+    // perf eval 
+    //hiopTimer tm;
+    //tm.start();
+
+    HessMDS_->de_mat()->addUpperTriangleToSymDenseMatrixUpperTriangle(0, alpha, Msys);
+    Jac_cMDS_->de_mat()->transAddToSymDenseMatrixUpperTriangle(0, nxd,     alpha, Msys);
+    Jac_dMDS_->de_mat()->transAddToSymDenseMatrixUpperTriangle(0, nxd+neq, alpha, Msys);
+
+    //tm.stop();
+    //printf("the three add methods took %g sec\n", tm.getElapsedTime());
+    //tm.reset();
+
+    //update -> add Dxd to (1,1) block of KKT matrix (Hd = HessMDS_->de_mat already added above)
+    Msys.addSubDiagonal(0, alpha, *Dx_, nxs, nxd);
+    //add perturbation 'delta_wx' for xd
+    Msys.addSubDiagonal(0, nxd, delta_wx);
+	
+    //build the diagonal Hxs = Hsparse+Dxs
+    if(NULL == Hxs_) {
+      Hxs_ = LinearAlgebraFactory::createVector(nxs); assert(Hxs_);
+    }
+    Hxs_->startingAtCopyFromStartingAt(0, *Dx_, 0);
+	
+    //a good time to add the IC 'delta_wx' perturbation
+    Hxs_->addConstant(delta_wx);
+
+    //Hxs +=  diag(HessMDS->sp_mat());
+    //todo: make sure we check that the HessMDS->sp_mat() is a diagonal
+    HessMDS_->sp_mat()->startingAtAddSubDiagonalToStartingAt(0, alpha, *Hxs_, 0);
+    nlp_->log->write("Hxs in KKT_MDS_X", *Hxs_, hovMatrices);
+
+    //add - Jac_c_sp * (Hxs)^{-1} Jac_c_sp^T to diagonal block linSys starting at (nxd, nxd)
+    alpha = -1.;
+
+    // perf eval
+    //tm.start();
+    Jac_cMDS_->sp_mat()->addMDinvMtransToDiagBlockOfSymDeMatUTri(nxd, alpha, *Hxs_, Msys);
+
+    //tm.stop();
+    //printf("addMDinvMtransToDiagBlockOfSymDeMatUTri 111 took %g sec\n", tm.getElapsedTime());
+    //tm.reset();
+
+    Msys.addSubDiagonal(nxd, neq, -delta_cc);
+	
+    /* we've just done above the (1,1) and (2,2) blocks of
+     *
+     * [ Hd+Dxd+delta_wx*I           Jcd^T                                 Jdd^T  ]
+     * [  Jcd              -Jcs(Hs+Dxs+delta_wx*I)^{-1}Jcs^T-delta_cc*I    K_21   ]
+     * [  Jdd                        K_21                                  M_{33} ]
+     *  
+     * where
+     * K_21 = - Jcs * (Hs+Dxs+delta_wx)^{-1} * Jds^T
+     * 
+     * M_{33} = -Jds(Hs+Dxs+delta_wx)^{-1}Jds^T - (Dd+delta_wd)*I^{-1} - delta_cd*I
+     *   is performed below
+     */
+	
+    alpha = -1.;
+    // add   - Jac_d_sp * (Hxs+Dxs+delta_wx*I)^{-1} * Jac_d_sp^T   to diagonal block
+    // linSys starting at (nxd+neq, nxd+neq)
+
+    // perf eval
+    //tm.start();
+
+    Jac_dMDS_->sp_mat()->
+      addMDinvMtransToDiagBlockOfSymDeMatUTri(nxd+neq, alpha, *Hxs_, Msys); 
+
+    //tm.stop();
+    //printf("addMDinvMtransToDiagBlockOfSymDeMatUTri 222 took %g sec\n", tm.getElapsedTime());
+
+    //K_21 = - Jcs * (Hs+Dxs+delta_wx)^{-1} * Jds^T
+    alpha = -1.;
+    Jac_cMDS_->sp_mat()->
+      addMDinvNtransToSymDeMatUTri(nxd, nxd+neq, alpha, *Hxs_, *Jac_dMDS_->sp_mat(), Msys);
+
+    // add -{Dd}^{-1}
+    // Dd=(Sdl)^{-1}Vu + (Sdu)^{-1}Vu + delta_wd * I
+    Dd_inv_->setToConstant(delta_wd);
+    Dd_inv_->axdzpy_w_pattern(1.0, *iter_->vl, *iter_->sdl, nlp_->get_idl());
+    Dd_inv_->axdzpy_w_pattern(1.0, *iter_->vu, *iter_->sdu, nlp_->get_idu());
+#ifdef HIOP_DEEPCHECKS
+    assert(true==Dd_inv_->allPositive());
+#endif 
+    Dd_inv_->invert();
+	
+    alpha=-1.;
+    Msys.addSubDiagonal(alpha, nxd+neq, *Dd_inv_);
+    Msys.addSubDiagonal(nxd+neq, nineq, -delta_cd);
+	
+    nlp_->log->write("KKT_MDS_XYcYd linsys:", Msys, hovMatrices);
+      
+    nlp_->runStats.kkt.tmUpdateLinsys.stop();
+      
+    //write matrix to file if requested
+    if(nlp_->options->GetString("write_kkt") == "yes") write_linsys_counter_++;
+    if(write_linsys_counter_>=0) csr_writer_.writeMatToFile(Msys, write_linsys_counter_); 
+      
   }
 
   bool hiopKKTLinSysCompressedMDSXYcYd::
   solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
 		  hiopVector& dx, hiopVector& dyc, hiopVector& dyd)
   {
+    hiopLinSolverIndefDense* linSys = dynamic_cast<hiopLinSolverIndefDense*> (linSys_);
+
     if(!nlpMDS_)   { assert(false); return false; }
     if(!HessMDS_)  { assert(false); return false; }
     if(!Jac_cMDS_) { assert(false); return false; }
@@ -414,7 +354,7 @@ namespace hiop
     //
     // solve
     //
-    bool linsol_ok = linSys_->solve(*rhs_);
+    bool linsol_ok = linSys->solve(*rhs_);
     nlp_->runStats.kkt.tmSolveTriangular.stop();
     nlp_->runStats.linsolv.end_linsolve();
 
