@@ -53,6 +53,7 @@
 #include "hiopResidual.hpp"
 #include "hiopHessianLowRank.hpp"
 #include "hiopPDPerturbation.hpp"
+#include "hiopLinSolver.hpp"
 
 #include "hiopCppStdUtils.hpp"
 
@@ -121,11 +122,42 @@ protected:
   bool safe_mode_;
 };
 
-class hiopKKTLinSysCompressed : public hiopKKTLinSys
+class hiopKKTLinSysCurvCheck : public hiopKKTLinSys
+{
+public:
+  hiopKKTLinSysCurvCheck(hiopNlpFormulation* nlp)
+    : hiopKKTLinSys(nlp), linSys_{nullptr}
+  {}
+
+  virtual ~hiopKKTLinSysCurvCheck()
+  {if(linSys_) delete linSys_;}
+
+  virtual bool update(const hiopIterate* iter,
+                    const hiopVector* grad_f,
+                    const hiopMatrix* Jac_c, const hiopMatrix* Jac_d, hiopMatrix* Hess) = 0;
+
+  virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction) = 0;
+
+  virtual bool factorize();
+  virtual int factorizeWithCurvCheck();
+  virtual int ifReFactorize(const int& n_neg_eig, double& delta_wx, double& delta_wd, double& delta_cc, double& delta_cd);
+
+  /* update the matrix
+   *
+   */
+  virtual bool updateMatrix(const double& delta_wx, const double& delta_wd,
+                            const double& delta_cc, const double& delta_cd) = 0;
+
+  hiopLinSolver* linSys_;
+
+};
+
+
+class hiopKKTLinSysCompressed : public hiopKKTLinSysCurvCheck
 {
 public:
   hiopKKTLinSysCompressed(hiopNlpFormulation* nlp)
-    : hiopKKTLinSys(nlp), Dx_(NULL), rx_tilde_(NULL)
+    : hiopKKTLinSysCurvCheck(nlp), Dx_(NULL), rx_tilde_(NULL)
   {
     Dx_ = nlp->alloc_primal_vec();
     assert(Dx_ != NULL);
@@ -142,6 +174,8 @@ public:
 
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction) = 0;
 
+  virtual bool updateMatrix( const double& delta_wx, const double& delta_wd,
+                            const double& delta_cc, const double& delta_cd) = 0;
 protected:
   hiopVector* Dx_;
   hiopVector* rx_tilde_;
@@ -162,12 +196,15 @@ public:
   hiopKKTLinSysCompressedXYcYd(hiopNlpFormulation* nlp);
   virtual ~hiopKKTLinSysCompressedXYcYd();
 
-  virtual bool update(const hiopIterate* iter,
-		      const hiopVector* grad_f,
-		      const hiopMatrix* Jac_c, const hiopMatrix* Jac_d, hiopMatrix* Hess) = 0;
+  virtual bool update(const hiopIterate* iter, 
+		      const hiopVector* grad_f, 
+		      const hiopMatrix* Jac_c, const hiopMatrix* Jac_d, hiopMatrix* Hess);
 
 
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction);
+
+  virtual bool updateMatrix( const double& delta_wx, const double& delta_wd,
+                            const double& delta_cc, const double& delta_cd) = 0;
 
   virtual bool solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
 			       hiopVector& dx, hiopVector& dyc, hiopVector& dyd) = 0;
@@ -204,13 +241,16 @@ public:
   hiopKKTLinSysCompressedXDYcYd(hiopNlpFormulation* nlp);
   virtual ~hiopKKTLinSysCompressedXDYcYd();
 
-  virtual bool update(const hiopIterate* iter,
-		      const hiopVector* grad_f,
-		      const hiopMatrix* Jac_c, const hiopMatrix* Jac_d, hiopMatrix* Hess) = 0;
+  virtual bool update(const hiopIterate* iter, 
+		      const hiopVector* grad_f, 
+		      const hiopMatrix* Jac_c, const hiopMatrix* Jac_d, hiopMatrix* Hess);
 
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction);
 
-  virtual bool solveCompressed(hiopVector& rx, hiopVector& rd,
+  virtual bool updateMatrix(const double& delta_wx, const double& delta_wd,
+                            const double& delta_cc, const double& delta_cd) = 0;
+
+  virtual bool solveCompressed(hiopVector& rx, hiopVector& rd, 
 			       hiopVector& ryc, hiopVector& ryd,
 			       hiopVector& dx, hiopVector& dd,
 			       hiopVector& dyc, hiopVector& dyd) = 0;
@@ -261,6 +301,9 @@ public:
 		      const hiopVector* grad_f,
 		      const hiopMatrixDense* Jac_c, const hiopMatrixDense* Jac_d,
 		      hiopHessianLowRank* Hess);
+
+  virtual bool updateMatrix( const double& delta_wx, const double& delta_wd,
+                            const double& delta_cc, const double& delta_cd) {assert(false && "not yet implemented");}
 
   /* Solves the system corresponding to directions for x, yc, and yd, namely
    * [ H_BFGS + Dx   Jc^T  Jd^T   ] [ dx]   [ rx_tilde ]

@@ -184,6 +184,112 @@ double hiopKKTLinSys::errorKKT(const hiopResidual* resid, const hiopIterate* sol
 
 #endif
 
+// hiopKKTLinSysCurvCheck
+////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+int hiopKKTLinSysCurvCheck::factorizeWithCurvCheck()
+{
+  return linSys_->matrixChanged();
+}
+
+bool hiopKKTLinSysCurvCheck::factorize()
+{
+  assert(linSys_);
+
+  //
+  //factorization + inertia correction if needed
+  //
+  const size_t max_refactorizaion = 10;
+  size_t num_refactorizaion = 0;
+
+  double delta_wx, delta_wd, delta_cc, delta_cd;
+  if(!perturb_calc_->compute_initial_deltas(delta_wx, delta_wd, delta_cc, delta_cd)) {
+    nlp_->log->printf(hovWarning, "linsys: IC perturbation on new linsys failed.\n");
+    return false;
+  }
+
+  while(num_refactorizaion<=max_refactorizaion) {
+    assert(delta_wx == delta_wd && "something went wrong with IC");
+    assert(delta_cc == delta_cd && "something went wrong with IC");
+    nlp_->log->printf(hovScalars, "linsys: delta_w=%12.5e delta_c=%12.5e (ic %d)\n",
+            delta_wx, delta_cc, num_refactorizaion);
+
+    //
+    //the update of the linear system, including IC perturbations
+    //
+    this->updateMatrix(delta_wx, delta_wd, delta_cc, delta_cd);
+
+    nlp_->runStats.linsolv.start_linsolve();
+    nlp_->runStats.kkt.tmUpdateInnerFact.start();
+
+    //factorization
+    int n_neg_eig = factorizeWithCurvCheck();
+
+    nlp_->runStats.kkt.tmUpdateInnerFact.stop();
+
+    int continue_re_fact = ifReFactorize(n_neg_eig,delta_wx, delta_wd, delta_cc, delta_cd);
+    if(-1==continue_re_fact)
+      return false;
+    else if(0==continue_re_fact)
+      break;
+
+    //will do an inertia correction
+    num_refactorizaion++;
+    nlp_->runStats.kkt.nUpdateICCorr++;
+  } // end of IC loop
+
+  if(num_refactorizaion>max_refactorizaion) {
+    nlp_->log->printf(hovError,
+        "Reached max number (%d) of refactorization within an outer iteration.\n",
+              max_refactorizaion);
+    return false;
+  }
+  return true;
+}
+
+
+int hiopKKTLinSysCurvCheck::ifReFactorize(const int& n_neg_eig, double& delta_wx, double& delta_wd, double& delta_cc, double& delta_cd)
+{
+  int continue_re_fact{1};
+
+  if(Jac_c_->m()+Jac_d_->m()>0) {
+   if(n_neg_eig < 0) {
+        //matrix singular
+        nlp_->log->printf(hovScalars, "linsys is singular.\n");
+
+        if(!perturb_calc_->compute_perturb_singularity(delta_wx, delta_wd, delta_cc, delta_cd)) {
+          nlp_->log->printf(hovWarning, "linsys: computing singularity perturbation failed.\n");
+          continue_re_fact = -1;
+        }
+      } else if(n_neg_eig != Jac_c_->m()+Jac_d_->m()) {
+        //wrong inertia
+        nlp_->log->printf(hovScalars, "linsys negative eigs mismatch: has %d expected %d.\n",
+         n_neg_eig,  Jac_c_->m()+Jac_d_->m());
+
+        if(!perturb_calc_->compute_perturb_wrong_inertia(delta_wx, delta_wd, delta_cc, delta_cd)) {
+          nlp_->log->printf(hovWarning, "linsys: computing inertia perturbation failed.\n");
+          continue_re_fact = -1;
+        }
+      } else {
+        //all is good
+      continue_re_fact = 0;
+    }
+  } else if(n_neg_eig != 0) {
+      //correct for wrong intertia
+      nlp_->log->printf(hovScalars,  "linsys has wrong inertia (no constraints): factoriz "
+               "ret code %d\n.", n_neg_eig);
+      if(!perturb_calc_->compute_perturb_wrong_inertia(delta_wx, delta_wd, delta_cc, delta_cd)) {
+        nlp_->log->printf(hovWarning, "linsys: computing inertia perturbation failed (2).\n");
+        continue_re_fact = -1;
+      }
+  } else {
+      //all is good
+      continue_re_fact = 0;
+  }
+  return continue_re_fact;
+}
+
+
 ////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
 // hiopKKTLinSysCompressedXYcYd
@@ -215,7 +321,46 @@ hiopKKTLinSysCompressedXYcYd::~hiopKKTLinSysCompressedXYcYd()
   delete ryd_tilde_;
 }
 
-bool hiopKKTLinSysCompressedXYcYd::computeDirections(const hiopResidual* resid,
+bool hiopKKTLinSysCompressedXYcYd::update(const hiopIterate* iter,
+            const hiopVector* grad_f,
+            const hiopMatrix* Jac_c,
+            const hiopMatrix* Jac_d,
+            hiopMatrix* Hess)
+{
+  nlp_->runStats.tmSolverInternal.start();
+  nlp_->runStats.kkt.tmUpdateInit.start();
+
+  iter_ = iter;
+  grad_f_ = dynamic_cast<const hiopVectorPar*>(grad_f_);
+  Jac_c_ = Jac_c; Jac_d_ = Jac_d;
+  Hess_=Hess;
+
+  int nx  = Hess_->m();
+  assert(nx==Hess_->n()); assert(nx==Jac_c_->n()); assert(nx==Jac_d_->n());
+  int neq = Jac_c_->m(), nineq = Jac_d_->m();
+
+  //compute and put the barrier diagonals in
+  //Dx=(Sxl)^{-1}Zl + (Sxu)^{-1}Zu
+  Dx_->setToZero();
+  Dx_->axdzpy_w_pattern(1.0, *iter_->zl, *iter_->sxl, nlp_->get_ixl());
+  Dx_->axdzpy_w_pattern(1.0, *iter_->zu, *iter_->sxu, nlp_->get_ixu());
+  nlp_->log->write("Dx in KKT", *Dx_, hovMatrices);
+
+  // Dd=(Sdl)^{-1}Vu + (Sdu)^{-1}Vu is computed in the IC loop since we need to
+  // add delta_wd and then invert
+  nlp_->runStats.kkt.tmUpdateInit.stop();
+
+  //
+  //factorization + inertia correction if needed
+  //
+  bool retval = factorize();
+
+  nlp_->runStats.tmSolverInternal.stop();
+  return retval;
+}
+
+
+bool hiopKKTLinSysCompressedXYcYd::computeDirections(const hiopResidual* resid, 
 						     hiopIterate* dir)
 {
   nlp_->runStats.tmSolverInternal.start();
@@ -471,7 +616,51 @@ hiopKKTLinSysCompressedXDYcYd::~hiopKKTLinSysCompressedXDYcYd()
   delete rd_tilde_;
 }
 
-bool hiopKKTLinSysCompressedXDYcYd::computeDirections(const hiopResidual* resid,
+bool hiopKKTLinSysCompressedXDYcYd::update( const hiopIterate* iter,
+                                            const hiopVector* grad_f,
+                                            const hiopMatrix* Jac_c, const hiopMatrix* Jac_d,
+                                            hiopMatrix* Hess)
+{
+  nlp_->runStats.tmSolverInternal.start();
+
+  iter_ = iter;
+  grad_f = dynamic_cast<const hiopVectorPar*>(grad_f_);
+  Jac_c_ = Jac_c; Jac_d_ = Jac_d;
+
+  Hess_=Hess;
+
+  int nx  = Hess_->m(); assert(nx==Hess_->n()); assert(nx==Jac_c_->n()); assert(nx==Jac_d_->n());
+  int neq = Jac_c_->m(), nineq = Jac_d_->m();
+
+  //
+  //compute barrier diagonals (these change only between outer optimiz iterations)
+  //
+  // Dx=(Sxl)^{-1}Zl + (Sxu)^{-1}Zu
+  Dx_->setToZero();
+  Dx_->axdzpy_w_pattern(1.0, *iter_->zl, *iter_->sxl, nlp_->get_ixl());
+  Dx_->axdzpy_w_pattern(1.0, *iter_->zu, *iter_->sxu, nlp_->get_ixu());
+  nlp_->log->write("Dx in KKT", *Dx_, hovMatrices);
+
+  // Dd=(Sdl)^{-1}Vu + (Sdu)^{-1}Vu
+  Dd_->setToZero();
+  Dd_->axdzpy_w_pattern(1.0, *iter_->vl, *iter_->sdl, nlp_->get_idl());
+  Dd_->axdzpy_w_pattern(1.0, *iter_->vu, *iter_->sdu, nlp_->get_idu());
+  nlp_->log->write("Dd in KKT", *Dd_, hovMatrices);
+#ifdef HIOP_DEEPCHECKS
+    assert(true==Dd_->allPositive());
+#endif
+
+  //
+  //factorization + inertia correction if needed
+  //
+  bool retval = factorize();
+
+  nlp_->runStats.tmSolverInternal.stop();
+  return retval;
+}
+
+
+bool hiopKKTLinSysCompressedXDYcYd::computeDirections(const hiopResidual* resid, 
 						      hiopIterate* dir)
 {
   nlp_->runStats.tmSolverInternal.start();
