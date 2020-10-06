@@ -1,7 +1,7 @@
 # Minimal testing procedure 
 Any PR or push to the master should go through and pass the procedures below. The shell commands need to be ran in the 'build' directory and assume bash shell. 
 
-## 1. All tests in 'make test' pass for
+## 1. All tests in 'make test' pass for every combination of the folowing build options and `HIOP_USE_RAJA` and `HIOP_USE_GPU` enabled/disabled.
 1. a. MPI=ON, DEEPCHECKS=OFF, RELEASE=ON (this is the high-performance version of HiOp)
 ```shell
 $> rm -rf *; cmake -DHIOP_USE_MPI=ON -DHIOP_DEEPCHECKS=OFF -DCMAKE_BUILD_TYPE=RELEASE ..
@@ -45,7 +45,7 @@ $> mpiexec -np 2 valgrind ./src/Drivers/nlpDenseCons_ex2.exe
 $> mpiexec -np 2 valgrind ./src/Drivers/nlpDenseCons_ex3.exe 
 ```
 
-## 3. clang with fsanitize group checks reports no warning and no errors. MacOS only.
+## 3. clang with fsanitize group checks reports no warning and no errors. MacOS only. Must build with `HIOP_USE_RAJA=OFF`.
 ```shell
 $> rm -rf *; CC=clang CXX=clang++ cmake -DCMAKE_CXX_FLAGS="-fsanitize=nullability,undefined,integer,alignment" -DHIOP_USE_MPI=ON -DHIOP_DEEPCHECKS=ON -DCMAKE_BUILD_TYPE=DEBUG ..
 $> make -j4 
