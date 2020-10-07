@@ -33,28 +33,6 @@ public:
 
   virtual void copyRowsFrom(const hiopMatrix& src, const long long* rows_idxs, long long n_rows);
  
-  /**
-   * @brief Copy 'n_rows' rows started from 'rows_src_idx_st' (array of size 'n_rows') from 'src' to the destination,
-   * which starts from the 'rows_dest_idx_st'th row in 'this'
-   *
-   * @pre 'this' must have exactly, or more than 'n_rows' rows
-   * @pre 'this' must have exactly, or more cols than 'src'
-   */
-  virtual void copyRowsFromSrcToDest(const hiopMatrix& src_gen,
-                                         const long long& rows_src_idx_st, const long long& n_rows,
-                                         const long long& rows_dest_idx_st, const long long& dest_nnz_st
-                                         );
-  /**
-   * @brief Copy a diagonal matrix to destination.
-   * This diagonal matrix is 'src_val'*identity matrix with size 'src_size'x'src_size'.
-   * The destination is defined from the start row 'row_dest_st' and start column 'col_dest_st'.
-   *
-   */
-  virtual void copyDiagMatrixToSubBlock(const double& src_val, const long long& src_size,
-                                         const long long& row_dest_st, const long long& col_dest_st,
-                                         const long long& dest_nnz_st
-                                         );
- 
   virtual void timesVec(double beta,  hiopVector& y,
 			double alpha, const hiopVector& x) const;
   virtual void timesVec(double beta,  double* y,
@@ -151,6 +129,15 @@ public:
 					    const hiopVector& D, const hiopMatrixSparse& N,
 					    hiopMatrixDense& W) const;
 
+  virtual void copyRowsFromSrcToDest(const hiopMatrix& src_gen,
+                                         const long long& rows_src_idx_st, const long long& n_rows,
+                                         const long long& rows_dest_idx_st, const long long& dest_nnz_st
+                                         );
+
+  virtual void copyDiagMatrixToSubBlock(const double& src_val, const long long& src_size,
+                                         const long long& row_dest_st, const long long& col_dest_st,
+                                         const long long& dest_nnz_st
+                                         );
   virtual double max_abs_value();
 
   virtual bool isfinite() const;

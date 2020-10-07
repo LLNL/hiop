@@ -33,8 +33,8 @@ if(HIOP_SPARSE)
     add_executable(nlpSparse_ex6.exe nlpSparse_ex6.cpp nlpSparse_ex6_driver.cpp)
     target_link_libraries(nlpSparse_ex6.exe hiop)
 
-#    add_executable(nlpSparse_ex7.exe nlpSparse_ex7.cpp nlpSparse_ex7_driver.cpp)
-#    target_link_libraries(nlpSparse_ex7.exe hiop)
+    add_executable(nlpSparse_ex7.exe nlpSparse_ex7.cpp nlpSparse_ex7_driver.cpp)
+    target_link_libraries(nlpSparse_ex7.exe hiop)
 endif()
 
 if(HIOP_BUILD_SHARED AND NOT HIOP_USE_GPU)
