@@ -29,7 +29,7 @@ option(HIOP_DEVELOPER_MODE "Build with extended warnings and options" OFF)
 option(HIOP_WITH_MAKETEST "Enable 'make test'" ON)
 option(HIOP_BUILD_SHARED "Build shared library" OFF)
 option(HIOP_BUILD_STATIC "Build static library" ON)
-option(HIOP_SPARSE "Build with sparse linear algebra" OFF)
+option(HIOP_SPARSE "Build with sparse linear algebra" ON)
 
 if(HIOP_BUILD_SHARED)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
