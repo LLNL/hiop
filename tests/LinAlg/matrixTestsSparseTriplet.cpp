@@ -113,6 +113,26 @@ real_type* MatrixTestsSparseTriplet::getMatrixData(hiop::hiopMatrixSparse* A)
   return mat->M();
 }
 
+real_type MatrixTestsSparseTriplet::getMatrixData(hiop::hiopMatrixSparse* A, local_ordinal_type i, local_ordinal_type j)
+{
+  auto* mat = dynamic_cast<hiop::hiopMatrixSparseTriplet*>(A);
+  auto* val = mat->M();
+  auto* iRow = mat->i_row();
+  auto* jCol = mat->j_col();
+  auto nnz = mat->numberOfNonzeros();
+
+  for (auto k=0; k< nnz; i++)
+  {
+    if(iRow[k]==i && jCol[k]==j){
+      return val[k];
+    }
+    // assume elements are row-major ordered.
+    if(iRow[k]>=i)
+      break;
+  }
+  return zero;
+}
+
 const local_ordinal_type* MatrixTestsSparseTriplet::getRowIndices(const hiop::hiopMatrixSparse* A)
 {
   const auto* mat = dynamic_cast<const hiop::hiopMatrixSparseTriplet*>(A);
@@ -150,6 +170,31 @@ int MatrixTestsSparseTriplet::verifyAnswer(hiop::hiopMatrixSparse* A, const doub
   const real_type* values = mat->M();
   int fail = 0;
   for (local_ordinal_type i=0; i<nnz; i++)
+  {
+    if (!isEqual(values[i], answer))
+    {
+      fail++;
+    }
+  }
+  return fail;
+}
+
+/**
+ * @brief Verifies values of the sparse matrix *only at indices already defined by the sparsity pattern*
+ * This may seem misleading, but verify answer does not check *every* value of the matrix,
+ * but only `nnz` elements with index from nnz_st to nnz_ed
+ *
+ */
+[[nodiscard]]
+int MatrixTestsSparseTriplet::verifyAnswer(hiop::hiopMatrix* A, local_ordinal_type nnz_st, local_ordinal_type nnz_ed, const double answer)
+{
+  if(A == nullptr)
+    return 1;
+  auto mat = dynamic_cast<hiop::hiopMatrixSparseTriplet*>(A);
+  const local_ordinal_type nnz = mat->numberOfNonzeros();
+  const real_type* values = mat->M();
+  int fail = 0;
+  for (local_ordinal_type i=nnz_st; i<nnz_ed; i++)
   {
     if (!isEqual(values[i], answer))
     {

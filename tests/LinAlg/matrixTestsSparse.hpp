@@ -732,6 +732,74 @@ public:
     return fail;
   }
 
+  /**
+  * @brief Copy 'n_rows' rows from matrix 'A', started from 'A_rows_st', to the rows started from 'B_rows_st' in 'B'.
+  * The non-zero elements start from 'B_nnz_st' will be replaced by the new elements.
+  *
+  * @pre 'A' must have exactly, or more than 'n_rows' rows after row 'A_rows_st'
+  * @pre 'B' must have exactly, or more than 'n_rows' rows after row 'B_rows_st'
+  * @pre 'B_nnz_st' + the number of non-zeros in the copied the rows must be less or equal to B.nnz
+  * @pre User must know the nonzero pattern of A and B. Assume non-zero patterns of A and B wont change, and A is a submatrix of B
+  * @pre Otherwise, this function may replace the non-zero values and nonzero patterns for the undesired elements.
+  */
+  int
+  copyRowsFromSrcToDest(
+    hiop::hiopMatrixSparse& A,
+    hiop::hiopMatrixSparse& B,
+    local_ordinal_type A_rows_st, local_ordinal_type n_rows,
+    local_ordinal_type B_rows_st, local_ordinal_type B_nnz_st
+    )
+  {
+    const local_ordinal_type* A_iRow = getRowIndices(&A);
+    const local_ordinal_type* A_jCol = getColumnIndices(&A);
+    const local_ordinal_type A_nnz = A.numberOfNonzeros();
+
+    const local_ordinal_type* B_iRow = getRowIndices(&B);
+    const local_ordinal_type* B_jCol = getColumnIndices(&B);
+    const local_ordinal_type B_nnz = B.numberOfNonzeros();
+
+    auto nnz_A_need_to_copy{0};
+    for(auto k=0;k<A_nnz;k++){
+      if(A_iRow[k] >= A_rows_st && A_iRow[k] < A_rows_st + n_rows )
+      {
+        nnz_A_need_to_copy++;
+      }
+      // assume matrix element is ordered by row
+      if(A_iRow[k]>=A_rows_st + n_rows)
+      {
+        break;
+      }
+    }
+
+    assert(A.n() >= B.n());
+    assert(n_rows + A_rows_st <= A.m());
+    assert(n_rows + B_rows_st <= B.m());
+    assert(nnz_A_need_to_copy<A_nnz);
+    assert(nnz_A_need_to_copy+B_nnz_st<=B_nnz);
+
+    const real_type A_val = one;
+    const real_type B_val = half;
+
+    A.setToConstant(A_val);
+    B.setToConstant(B_val);
+
+    auto itnz_src{0};
+    auto itnz_dest=B_nnz_st;
+    int fail{0};
+
+    B.copyRowsFromSrcToDest(A, A_rows_st, n_rows, B_rows_st, B_nnz_st);
+
+    auto val = getMatrixData(&B);
+
+    fail += verifyAnswer(&B,0,B_nnz_st,B_val);
+    fail += verifyAnswer(&B,B_nnz_st,B_nnz_st+nnz_A_need_to_copy,A_val);
+    fail += verifyAnswer(&B,B_nnz_st+nnz_A_need_to_copy,B_nnz,B_val);
+
+    printMessage(fail, __func__);
+    return fail;
+
+  }
+
 private:
   /// TODO: The sparse matrix is not distributed - all is local. 
   // Rename functions to remove redundant "local" from their names?
@@ -742,10 +810,12 @@ private:
   virtual real_type getLocalElement(const hiop::hiopMatrix* a, local_ordinal_type i, local_ordinal_type j) = 0;
   virtual real_type getLocalElement(const hiop::hiopVector* x, local_ordinal_type i) = 0;
   virtual real_type* getMatrixData(hiop::hiopMatrixSparse* a) = 0;
+  virtual real_type getMatrixData(hiop::hiopMatrixSparse* a, local_ordinal_type i, local_ordinal_type j) = 0;
   virtual const local_ordinal_type* getRowIndices(const hiop::hiopMatrixSparse* a) = 0;
   virtual const local_ordinal_type* getColumnIndices(const hiop::hiopMatrixSparse* a) = 0;
   virtual local_ordinal_type getLocalSize(const hiop::hiopVector* x) = 0;
   virtual int verifyAnswer(hiop::hiopMatrixSparse* A, real_type answer) = 0;
+  virtual int verifyAnswer(hiop::hiopMatrix* A, local_ordinal_type nnz_st, local_ordinal_type nnz_ed, const double answer) = 0;
   virtual int verifyAnswer(
       hiop::hiopMatrixDense* A,
       std::function<real_type(local_ordinal_type, local_ordinal_type)> expect) = 0;
