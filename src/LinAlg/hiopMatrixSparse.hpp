@@ -150,6 +150,32 @@ public:
   virtual void addMDinvNtransToSymDeMatUTri(int row_dest_start, int col_dest_start,
     const double& alpha, const hiopVector& D, const hiopMatrixSparse& N, hiopMatrixDense& W) const = 0;
 
+  /**
+   * @brief Copy 'n_rows' rows from matrix 'src_gen', started from 'rows_src_idx_st', to the rows started from 'B_rows_st' in 'this'.
+   * The non-zero elements start from 'dest_nnz_st' will be replaced by the new elements.
+   *
+   * @pre 'src_gen' must have exactly, or more than 'n_rows' rows after row 'rows_src_idx_st'
+   * @pre 'this' must have exactly, or more than 'n_rows' rows after row 'rows_dest_idx_st'
+   * @pre 'dest_nnz_st' + the number of non-zeros in the copied the rows must be less or equal to this->numOfNumbers()
+   * @pre User must know the nonzero pattern of src and dest matrices. Assume non-zero patterns of these two wont change, and 'src_gen' is a submatrix of 'this'
+   * @pre Otherwise, this function may replace the non-zero values and nonzero patterns for the undesired elements.
+   */
+  virtual void copyRowsFromSrcToDest(const hiopMatrix& src_gen,
+                                         const long long& rows_src_idx_st, const long long& n_rows,
+                                         const long long& rows_dest_idx_st, const long long& dest_nnz_st
+                                         ) = 0;
+
+  /**
+   * @brief Copy a diagonal matrix to destination.
+   * This diagonal matrix is 'src_val'*identity matrix with size 'src_size'x'src_size'.
+   * The destination is defined from the start row 'row_dest_st' and start column 'col_dest_st'.
+   *
+   */
+  virtual void copyDiagMatrixToSubBlock(const double& src_val, const long long& src_size,
+                                         const long long& row_dest_st, const long long& col_dest_st,
+                                         const long long& dest_nnz_st
+                                         ) = 0;
+
   virtual double max_abs_value() = 0;
 
   virtual bool isfinite() const = 0;
