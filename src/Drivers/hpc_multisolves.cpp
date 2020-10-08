@@ -15,7 +15,7 @@
 
 using namespace hiop; 
 
-/** Driver performs multiple solves per MPI process using Ex4 
+/** The driver performs multiple solves per MPI process using Ex4 
  *
  * Intended to be used to test intra-node CPU cores affinity or GPU streams multiprocessing
  *
@@ -58,7 +58,8 @@ int main(int argc, char *argv[])
     hiopAlgFilterIPMNewton solver(&nlp);
     status = solver.run();
     obj_value = solver.getObjective();
-    
+
+    delete my_nlp;
 
     t.stop();
     printf("[driver] Rank %d solved problem %d (obj=%12.5e) in %g sec\n", 
@@ -88,14 +89,14 @@ int main(int argc, char *argv[])
     aux = 0.;
   }
   if(0==my_rank) {
-    printf("\n\nSummary: average time %g sec, std dev %.2f\%\n\n", tmAvg, 100*stdDevTm/tmAvg);
+    printf("\n\nSummary: average time %g sec, std dev %.2f percent \n\n", tmAvg, 100*stdDevTm/tmAvg);
   }
   
   MPI_Finalize();
   return 0;
 }
 
-/* -- BSUB submission file 
+/* -- BSUB submission file --
 
 # Begin LSF Directives
 #BSUB -P csc359

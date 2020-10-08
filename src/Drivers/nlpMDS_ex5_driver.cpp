@@ -16,16 +16,22 @@ static bool self_check(long long n, double obj_value);
 static bool parse_arguments(int argc, char **argv,
 			    bool& self_check,
 			    long long& n_sp,
-			    long long& n_de)
+			    long long& n_de,
+			    bool& deep_tests)
 {
-  self_check=false;
+  self_check=deep_tests=false;
   n_sp = 100;
   n_de = 40;
   switch(argc) {
   case 1:
     //no arguments
-    return true;
+    return false;
     break;
+  case 5: // 4 arguments
+    {
+      if(std::string(argv[4]) == "-deeptests")
+	deep_tests = true;
+    }
   case 4: // 3 arguments
     {
       if(std::string(argv[3]) == "-selfcheck")
@@ -54,15 +60,18 @@ static bool parse_arguments(int argc, char **argv,
 
 static void usage(const char* exeName)
 {
-  printf("HiOp driver %s that solves a nonconvex synthetic problem with rank-deficient Jacobian "
-	 "of variable size in the mixed dense-sparse formulation.\n", exeName);
+  printf("HiOp driver %s that solves a nonconvex synthetic problem of variable size in the "
+	 "mixed dense-sparse formulation. The problem can be constructed to also have a "
+	 "rank-deficient Jacobian (use '-deeptests' option)\n", exeName);
   printf("Usage: \n");
   printf("  '$ %s sp_vars_size de_vars_size eq_ineq_combined_nlp -selfcheck'\n", exeName);
-  printf("Arguments, all integers, excepting string '-selfcheck'; should specified in the order below.\n");
+  printf("Arguments, all integers, excepting string '-selfcheck' and '-deeptests'should "
+	 "specified in the order below.\n");
   printf("  'sp_vars_size': # of sparse variables [default 400, optional]\n");
   printf("  'de_vars_size': # of dense variables [default 100, optional]\n");
   printf("  '-selfcheck': compares the optimal objective with sp_vars_size being 400 and "
 	 "de_vars_size being 100 (these two exact values must be passed as arguments). [optional]\n");
+  printf("  '-deeptests': performs additional test with rank-deficient Jacobians [optional]\n");
 }
 
 
@@ -86,25 +95,28 @@ int main(int argc, char **argv)
   magma_init();
 #endif
 
-  bool selfCheck;
+  bool selfCheck, deepTest;
   long long n_sp, n_de;
-  if(!parse_arguments(argc, argv, selfCheck, n_sp, n_de)) {
+  if(!parse_arguments(argc, argv, selfCheck, n_sp, n_de, deepTest)) {
     usage(argv[0]);
     return 1;
   }
 
   hiopSolveStatus status1, status2, status3, status4;
 
-  // we'll do four tests
+  // we can do four tests
   // 1. convex obj, rank deficient Jacobian of eq, full rank Jacobian of ineq
   // 2. convex obj, full rank Jacobian of eq, rank deficient Jacobian of ineq
   // 3. nonconvex obj, full rank Jacobian of eq, full rank Jacobian of ineq
   // 4. nonconvex obj, rank deficient Jacobian of eq,  rank deficient Jacobian of ineq
-
+  //
+  //all four tests are done when '-deeptests' is on
+  //only test 3 is done when '-deeptests' is off
+  
   double obj_value1, obj_value2, obj_value3, obj_value4;
 
   //test 1
-  {
+  if(deepTest) {
     bool convex_obj = true;
     bool rankdefic_Jac_eq = true;
     bool rankdefic_Jac_ineq = false;
@@ -137,7 +149,7 @@ int main(int argc, char **argv)
   } //end of test 1
 
   //test 2
-  {
+  if(deepTest) {
     bool convex_obj = true;
     bool rankdefic_Jac_eq = false;
     bool rankdefic_Jac_ineq = true;
@@ -203,7 +215,7 @@ int main(int argc, char **argv)
   } //end of test 3
 
   //test 4
-  {
+  if(deepTest) {
     bool convex_obj = false;
     bool rankdefic_Jac_eq = true;
     bool rankdefic_Jac_ineq = true;
@@ -238,12 +250,12 @@ int main(int argc, char **argv)
   bool selfcheck_ok=true;
   // this is used for testing when the driver is in '-selfcheck' mode
   if(selfCheck) {
-    if(fabs(obj_value1-(-1.24881064528112e+01))>1e-6) {
+    if(deepTest && fabs(obj_value1-(-1.24881064528112e+01))>1e-6) {
       printf("selfcheck1: objective mismatch for Ex5 MDS problem with 400 sparse variables and 100 "
 	     "dense variables did. BTW, obj=%18.12e was returned by HiOp.\n", obj_value1);
       selfcheck_ok = false;
     }
-    if(fabs(obj_value2-(-1.24881064633628e+01))>1e-6) {
+    if(deepTest && fabs(obj_value2-(-1.24881064633628e+01))>1e-6) {
       printf("selfcheck2: objective mismatch for Ex5 MDS problem with 400 sparse variables and 100 "
 	     "dense variables did. BTW, obj=%18.12e was returned by HiOp.\n", obj_value2);
       selfcheck_ok = false;
@@ -253,7 +265,7 @@ int main(int argc, char **argv)
 	     "dense variables did. BTW, obj=%18.12e was returned by HiOp.\n", obj_value3);
       selfcheck_ok = false;
     }
-    if(fabs(obj_value4-(-1.35649999989221e+03))>1e-6) {
+    if(deepTest && fabs(obj_value4-(-1.35649999989221e+03))>1e-6) {
       printf("selfcheck4: objective mismatch for Ex5 MDS problem with 400 sparse variables and 100 "
 	     "dense variables did. BTW, obj=%18.12e was returned by HiOp.\n", obj_value4);
       selfcheck_ok = false;
@@ -263,10 +275,10 @@ int main(int argc, char **argv)
       return -1;
   } else {
     if(rank==0) {
-      printf("Optimal objective 1: %22.14e. Solver status: %d\n", obj_value1, status1);
-      printf("Optimal objective 2: %22.14e. Solver status: %d\n", obj_value2, status2);
+      if(deepTest) printf("Optimal objective 1: %22.14e. Solver status: %d\n", obj_value1, status1);
+      if(deepTest) printf("Optimal objective 2: %22.14e. Solver status: %d\n", obj_value2, status2);
       printf("Optimal objective 3: %22.14e. Solver status: %d\n", obj_value3, status3);
-      printf("Optimal objective 4: %22.14e. Solver status: %d\n", obj_value4, status4);
+      if(deepTest) printf("Optimal objective 4: %22.14e. Solver status: %d\n", obj_value4, status4);
     }
   }
 #ifdef HIOP_USE_MAGMA
