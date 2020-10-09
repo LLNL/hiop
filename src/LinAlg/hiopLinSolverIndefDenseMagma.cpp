@@ -66,7 +66,7 @@ namespace hiop
       return -1;
     } else {
       if(info>0) {
-	nlp_->log->printf(hovWarning,
+	nlp_->log->printf(hovScalars,
 			 "hiopLinSolverMagmaBuka error: %d entry in the factorization's diagonal\n"
 			 "is exactly zero. Division by zero will occur if it a solve is attempted.\n",
 			 info);

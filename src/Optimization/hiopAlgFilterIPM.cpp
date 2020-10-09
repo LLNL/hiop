@@ -1214,8 +1214,9 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
   bool bret=true; 
   int lsStatus=-1, lsNum=0;
 
-  int linsol_safemode_lastiter = -1;
-  bool linsol_safemode_on = false;
+  int linsol_safe_mode_lastiter = -1;
+  bool linsol_safe_mode_on = "stable"==hiop::tolower(nlp->options->GetString("linsol_mode")); 
+  bool linsol_forcequick = "forcequick"==hiop::tolower(nlp->options->GetString("linsol_mode"));
 
   solver_status_ = NlpSolve_Pending;
   while(true) {
@@ -1316,25 +1317,53 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
     // linear solve with safe mode (=addtl accuracy and stability) off failed; second times with safe mode on
     //  - one time when the linear solve with the safe mode off is successfull (descent search direction)
     // 
+
+    {
+      if(linsol_forcequick) {
+	linsol_safe_mode_on = false;
+      } else {
+	//safe mode on for the first three iterations
+	if(iter_num<=2) {
+	
+	  linsol_safe_mode_on=true;
+	  
+	} else {
+	  // to do	  if(linsol_safe_mode_on || noinertiacorr)
+	  if("speculative"==hiop::tolower(nlp->options->GetString("linsol_mode"))) {
+	    linsol_safe_mode_on=false;
+	  }
+	}
+      }
+    }
+
     for(int linsolve=1; linsolve<=2; ++linsolve) {
 
       nlp->runStats.kkt.start_optimiz_iteration();    
 
-      kkt->set_safe_mode(linsol_safemode_on);
+      kkt->set_safe_mode(linsol_safe_mode_on);
       //
-      //update the Hessian and kkt system; ussually a matrix factorization occurs
+      //update the Hessian and kkt system; usually a matrix factorization occurs
       //
       if(!kkt->update(it_curr, _grad_f, _Jac_c, _Jac_d, _Hess_Lagr)) {
 
 	nlp->runStats.kkt.end_optimiz_iteration();
 
-	if(linsol_safemode_on) {
-	  nlp->log->write("Unrecoverable error in step computation (factorization). Will exit here.", 
+	if(linsol_safe_mode_on) {
+	  nlp->log->write("Unrecoverable error in step computation (factorization) [1]. Will exit here.", 
 			  hovError);
 	  return solver_status_ = Err_Step_Computation;	
 	} else {
-	  linsol_safemode_on = true;
-	  linsol_safemode_lastiter = iter_num;
+
+	  //failed with 'linsol_mode'='forcequick' means unrecoverable
+	  if(linsol_forcequick) {
+
+	    nlp->log->write("Unrecoverable error in step computation (factorization) [2]. Will exit here.", 
+			    hovError);
+	    return solver_status_ = Err_Step_Computation;	
+	  }
+
+	  linsol_safe_mode_on = true;
+	  linsol_safe_mode_lastiter = iter_num;
 	  
 	  nlp->log->printf(hovWarning, 
 			   "Requesting additional accuracy and stability from the KKT linear system "
@@ -1353,12 +1382,16 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 	
 	nlp->runStats.kkt.start_optimiz_iteration();
 	
-	if(linsol_safemode_on) {
-	  nlp->log->write("Unrecoverable error in step computation (solve). Will exit here.", hovError);
+	if(linsol_safe_mode_on) {
+	  nlp->log->write("Unrecoverable error in step computation (solve)[1]. Will exit here.", hovError);
 	  return solver_status_ = Err_Step_Computation;
 	} else {
-	  linsol_safemode_on = true;
-	  linsol_safemode_lastiter = iter_num;
+	  if(linsol_forcequick) {
+	    nlp->log->write("Unrecoverable error in step computation (solve)[2]. Will exit here.", hovError);
+	    return solver_status_ = Err_Step_Computation;
+	  }
+	  linsol_safe_mode_on = true;
+	  linsol_safe_mode_lastiter = iter_num;
 	  
 	  nlp->log->printf(hovWarning, 
 			   "Requesting additional accuracy and stability from the KKT linear system "
@@ -1416,7 +1449,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 	// fractionToTheBdry since these may occur for tight bounds at the first iteration(s)
 	if(!iniStep && _alpha_primal<1e-16) {
 
-	  if(linsol_safemode_on) {
+	  if(linsol_safe_mode_on) {
 	    nlp->log->write("Panic: minimum step size reached. The problem may be infeasible or the "
 			    "gradient inaccurate. Will exit here.", hovError);
 	    solver_status_ = Steplength_Too_Small;
@@ -1584,9 +1617,9 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 	//small step
 	//
 	
-	if(linsol_safemode_on) { 
+	if(linsol_safe_mode_on) { 
 
-	  // this is pretty much and very likely catastrophic
+	  // this is  likely catastrophic
 	  // however take the update;
 	  // if the update doesn't pass the convergence test, the optimiz. loop will exit
 	  
@@ -1594,9 +1627,20 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 	  break;
 
 	} else {
-	  //here false == linsol_safemode_on
-	  linsol_safemode_on = true;
-	  linsol_safemode_lastiter = iter_num;
+	  //here false == linsol_safe_mode_on
+	  if(linsol_forcequick) {
+	    // this is  likely catastrophic as under 'linsol_mode'='forcequick' we deliberately
+	    //won't switch to safe mode
+	    //
+	    // however take the update;
+	    // if the update doesn't pass the convergence test, the optimiz. loop will exit
+	    
+	    // first exit the linear solve (computeDirections) loop
+	    break;
+	  }
+
+	  linsol_safe_mode_on = true;
+	  linsol_safe_mode_lastiter = iter_num;
 
 	  nlp->log->printf(hovWarning, 
 			   "Requesting additional accuracy and stability from the KKT linear system "

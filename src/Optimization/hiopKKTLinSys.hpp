@@ -64,7 +64,7 @@ class hiopKKTLinSys
 public:
   hiopKKTLinSys(hiopNlpFormulation* nlp) 
     : nlp_(nlp), iter_(NULL), grad_f_(NULL), Jac_c_(NULL), Jac_d_(NULL), Hess_(NULL),
-      perturb_calc_(NULL), safe_mode_(false)
+      perturb_calc_(NULL), safe_mode_(true)
   { 
     perf_report_ = "on"==hiop::tolower(nlp_->options->GetString("time_kkt"));
   }
