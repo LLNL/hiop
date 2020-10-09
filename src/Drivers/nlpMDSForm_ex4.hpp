@@ -452,6 +452,10 @@ public:
     }
     memcpy(sol_lambda_, lambda, m*sizeof(double));
   }
+
+  /** pass the COMM_SELF communicator since this example is only intended to run inside 1 MPI process */
+  virtual bool get_MPI_comm(MPI_Comm& comm_out) { comm_out=MPI_COMM_SELF; return true;}
+
 protected:
   int ns, nd;
   hiop::hiopMatrixDense *Q, *Md;
