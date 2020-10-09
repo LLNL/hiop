@@ -16,8 +16,10 @@ target_link_libraries(nlpMDS_ex4.exe hiop)
 add_executable(nlpMDS_ex5.exe nlpMDS_ex5_driver.cpp)
 target_link_libraries(nlpMDS_ex5.exe hiop)
 
-add_executable(hpc_multisolves.exe hpc_multisolves.cpp)
-target_link_libraries(hpc_multisolves.exe hiop)
+if(HIOP_USE_MPI)
+  add_executable(hpc_multisolves.exe hpc_multisolves.cpp)
+  target_link_libraries(hpc_multisolves.exe hiop)
+endif()
 
 if(HIOP_BUILD_SHARED AND NOT HIOP_USE_GPU)
   add_executable(nlpMDS_cex4.exe nlpMDS_ex4.c)
