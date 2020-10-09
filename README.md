@@ -1,6 +1,6 @@
-
-
 # HiOp - HPC solver for optimization
+![tests](https://github.com/LLNL/hiop/workflows/tests/badge.svg)
+
 HiOp is an optimization solver for solving certain mathematical optimization problems expressed as nonlinear programming problems. HiOp is a lightweight HPC solver that leverages application's existing data parallelism to parallelize the optimization iterations by using specialized linear algebra kernels.
 
 ## Build/install instructions
