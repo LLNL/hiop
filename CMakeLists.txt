@@ -372,21 +372,8 @@ if (HIOP_WITH_MAKETEST)
     endif(HIOP_DEEPCHECKS)
   endif()
 
-  # This test will very often fail, yet we would still like to ensure that
-  # it builds and runs without segfaulting, so the test will display a false
-  # passing result.
-  add_test(NAME NlpMixedDenseSparse5_1 COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpMDS_ex5.exe> 100 40 -selfcheck
-    ret=$?
-    if [[ \"$ret\" == \"255\" ]]
-    then
-      echo \"Driver returned exit code $ret\"
-      echo 'This means something went wrong, but know this example is fickle.'
-      echo 'The test case did not converge but we will allow this test to pass.'
-      exit 0
-    else
-      exit $ret
-    fi
-    ")
+  add_test(NAME NlpMixedDenseSparse5_1 COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpMDS_ex5.exe> 400 100 -selfcheck")
+
   if(HIOP_BUILD_SHARED AND NOT HIOP_USE_GPU)
     add_test(NAME NlpMixedDenseSparseCinterface COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpMDS_cex4.exe>")
   endif()
