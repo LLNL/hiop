@@ -231,22 +231,20 @@ This work performed under the auspices of the U.S. Department of Energy by Lawre
 
 \section{Introduction}
 
-This document describes \Hi, a  memory-distributed high-performance computing (HPC) quasi-Newton solver for
-large-scale nonlinear programming problems (NLPs) with a small number
-of general constraints.
+This document describes the \Hi suite of HPC optimization solvers for some large-scale nonconvex nonlinear programming problems (NLPs). Two main classes of optimization problems are supported. First class consists of NLPs with extremely large number of variables  but with a relatively small number of general constraints; the solver for these problems is a  memory-distributed, MPI-based quasi-Newton interior-point solver using limited-memory approximations for the Hessians. The second class of problems consists of NLPs that have dense and sparse blocks, for which a ``Newton'' interior-point solver is available toghether with a specialized, so called mixed dense-sparse (MDS) linear algebra capable of achieving good performance on host-device, \textit{i.e.}, CPU-GPU, computing hardware. 
 
 This document includes instructions on how to obtain and
 build \Hi and a description of its interface, user options, and use as an optimization library. Guidelines on how is best to use the solver for parallel computations are also provided. The document generally targets users of \Hi, but also contains information relevant to potential developers or advanced users; these are strongly encouraged to also read the paper on the computational approach implemented in \Hi~\cite{petra_hiop}.
 
 
-While \texttt{Hiop} solver targets DAE- and PDE-constrained optimization problems formulated in a ``reduced-space'' approach, it can be used for general nonconvex nonlinear optimization as well. For efficiency considerations, it is recommended to \textit{use \texttt{Hiop} for NLPs that have a relatively small number of general constraints}, say less than $100$; note that there are no restrictions on the number of bounds constraints, \textit{e.g.}, one can specify simple bounds on any, and potentially all the decision variables without affecting the computational efficiency. The minimizers computed by \Hi satisfies \textit{local} first-order optimality conditions.
+While the MPI quasi-Newton solver of \texttt{Hiop} targets DAE- and PDE-constrained optimization problems formulated in a ``reduced-space'' approach, it can be used for general nonconvex nonlinear optimization as well. For efficiency considerations, it is recommended to \textit{use quasi-Newton \texttt{Hiop} for NLPs that have a relatively small number of general constraints}, say less than $100$; note that there are no restrictions on the number of bounds constraints, \textit{e.g.}, one can specify simple bounds on any, and potentially all the decision variables without affecting the computational efficiency. The minimizers computed by \Hi satisfies \textit{local} first-order optimality conditions.
 
-The goal of \Hi is to remove the parallelization limitations of existing state-of-the-art solvers for nonlinear programming (NLP) and match/surpass the parallel scalability of the underlying PDE or DAE solver. Such limitation occurs whenever the dimensionality of the optimization space  is as large as the dimensionality of the discretization of the differential systems of equations governing the optimization. In these cases, the use of existing NLP solvers  results in i. considerable long time spent in optimization, which affects the parallel scalability, and/or ii. memory requirements beyond the memory capacity of the computational node that runs the optimization. \Hi removes these scalability/parallelization bottlenecks (for certain optimization problems described above) by offering interface for a \textit{memory-distributed} specification of the problem and parallelizing the optimization search using specialized parallel linear algebra technique.
+The goal of quasi-Newton solver of \Hi is to remove the parallelization limitations of existing state-of-the-art solvers for nonlinear programming (NLP) and match/surpass the parallel scalability of the underlying PDE or DAE solver. Such limitation occurs whenever the dimensionality of the optimization space  is as large as the dimensionality of the discretization of the differential systems of equations governing the optimization. In these cases, the use of existing NLP solvers  results in i. considerable long time spent in optimization, which affects the parallel scalability, and/or ii. memory requirements beyond the memory capacity of the computational node that runs the optimization. \Hi removes these scalability/parallelization bottlenecks (for certain optimization problems described above) by offering interface for a \textit{memory-distributed} specification of the problem and parallelizing the optimization search using specialized parallel linear algebra technique.
 
-The general computational approach in  \texttt{Hiop} is to use existing state-of-the-art NLP algorithms and develop linear algebra kernels tailored to the specific of this
+The general computational approach in \Hi is to use existing state-of-the-art NLP algorithms and develop linear algebra kernels tailored to the specific of this
 class of problems. \Hi is based on an interior-point line search filter method~\cite{waecther_05_ipopt2,waecther_05_ipopt} and follows the implementation details from~\cite{waecther_05_ipopt0}, which is the implementation paper for IPOPT open-source NLP solver. The quasi-Newton approach is based on limited-memory secant approximations of the Hessian~\cite{ByrdNocedalSchnabel_94_quasiNewtonRepres}, which is generalized as required by the specific of interior-point methods for constrained optimization problems~\cite{petra_hiop}. The specialized linear algebra decomposition is obtained by using a Schur-complement reduction that
 leverages the fact that the quasi-Newton Hessian matrix has a small number of
-dense blocks that border a low-rank update of a diagonal matrix. The technique is described  in ~\cite{petra_hiop}.
+dense blocks that border a low-rank update of a diagonal matrix. The technique is described  in ~\cite{petra_hiop}. The Newton interior-point solver of \Hi uses linear algebra specialized to the particular form of the MDS NLPs supported by this solver, for more details consult Section~\ref{sec:mds}. 
 
 The C++ parallel implementation in \Hi
 is  lightweight and portable since it is expressed and implemented  only in terms of parallel (multi-)vector operations (implemented internally using BLAS level 1 and level 2 operations and MPI for communication) and BLAS level 3 and LAPACK operations for small dense matrices.
@@ -268,7 +266,7 @@ By using multithreadead BLAS and LAPACK libraries, \textit{e.g.}, INTEL MKL, Got
 \Hi is written in C++ (C++98) and requires a C++ compiler. 
 Also it requires BLAS and LAPACK, and, optionally, MPI. Not having MPI enabled in \Hi results in \Hi running on one processor only; still, significant multi-core parallelization can be obtained by using multithreaded BLAS and LAPACK. The CMake-based build system of \Hi generally detects these prerequisites automatically.
 
-At this point the build system only supports Linux operating systems; it may also work on macOS. On the other hand, other than the build system, \Hi is  platform independent and should run fine on Windows, macOS, and Linux.
+At this point the build system only supports macOS and Linux operating systems. On the other hand, other than the build system, \Hi's code is  platform independent and should run fine on Windows as well.
 
 
 \subsection{Building, testing, and installing \Hi}
@@ -282,6 +280,12 @@ A quick way to build and code is run the following commands in the `build\//' di
 > make install
 \end{verbatim}
 This will compile, build the static library and example executables, perform a couple of tests to detect potential issues during the installation, and will install \Hi's header and the static library in the root directory under `\_build\_defaultDist\//'
+
+\subsection{Support of host-device computations using (generic)CPU-(NVIDIA)GPU}
+
+Starting version 0.3, \Hi offers support for NVIDIA GPU computations acceleration. This feature is available only when solving NLPs in the mixed dense-sparse (MDS) form and should be enabled during the build by using \texttt{-DHIOP\_USE\_GPU} option with \texttt{cmake}. \Hi's \texttt{cmake} build system is quite versatile to find the dependencies required to offload computations to the device GPUs since was developed and tested on a few GPU-enabled HPC platforms at Oak Ridge, Lawrence Livermore, and Pacific Northwestern National Laboratories. These dependencies consist of CUDA library version 10.1 or later and a recent Magma linear solver library (as well as a physical NVIDIA GPU device). \Hi offers an extensive build support for using customized NVIDIA libraries and/or Magma solver as well as for advanced troubleshooting. The user is referred to \texttt{cmake/FindHiopCudaLibraries.cmake} and \texttt{cmake/FindMagma.cmake} scripts.
+
+\warningcp{Note: } Installing NVIDIA CUDA (and likely the NVIDIA driver) and/or building Magma can be quite challenging. The user is encouraged to rely on preinstalled versions of these, as they are available via \texttt{module} utility on virtually all high-performance computing machines. An example of how to satisfy all the GPU dependencies on Summit supercomputer at Oak Ridge National Lab with a one commands are available at \url{https://github.com/LLNL/hiop/blob/master/README_summit.md}.
 
 \section{Interfacing with \Hi}
 Once \Hi is built, it can be used as the optimization solver in your application through the \Hi's C++ interfaces and by linking with the static library. A shared dynamic load library can be also built using \texttt{HIOP\_BUILD\_SHARED} option with cmake. There are types or formulations of optimization supported currently by \Hi, which are described below. 
@@ -369,19 +373,6 @@ eval_Jac_cons(const long long& n, const long long& m,
 
 \noindent Implement this method to provide the Jacobian of a subset of the  constraints $c(x)$ and/or $d(x)$ in \texttt{Jac}; as above this subset is specified by the array \texttt{idx\_cons}. To set the $(i,j)$ entry of the Jacobian to $v$, one can use  \texttt{Jac[i][j]=v;}. Alternatively,  if you have a contiguous row-wise array storage of the Jacobian, simply (mem)copy it in \texttt{Jac[0]}. 
 
-\subsubsection{Specifying a starting point for the optimization process}
-
-The user   can  provide an initial (primal) point $x_0$ for \Hi's numerical process by implementing the method \texttt{get\_starting\_point} of the specification interface \texttt{hiop::hiopInterfaceDenseConstraints}. 
-\begin{lstlisting} 
-bool get_starting_point(const long long& n, double* x0);
-\end{lstlisting} 
-This method should return \texttt{true} if the initial point was successfully set. If the method returns \texttt{false},  then \Hi will use an all-zero starting point. The user does not have to implement this method, a default implementation that returns \texttt{false} is provided in the base class.
-
-\warningcp{Note:} The starting point returned in \texttt{x0} is subject to internal adjustments in \Hi and may differ from \texttt{x} with which the methods of the previous section are first called.
-
-% /* Method providing a primal starting point. This point is subject to internal adjustments in hiOP.
-%   * The method returns true (and populate x0) or return false, in which case hiOP will use set 
-%   * x0 to all zero (still subject to internal adjustement).
 
 \subsubsection{Specifying the inter-process/memory distribution of the   problem}
 
@@ -452,7 +443,7 @@ int getNumIterations() const;
 \end{lstlisting} 
 The standalone drivers \texttt{nlpDenseCons\_ex1}, \texttt{nlpDenseCons\_ex2}, and \texttt{nlpDenseCons\_ex3} inside directory \texttt{src/Drivers/} under the \Hi's root directory contain more detailed examples of the use of \Hi.
 
-\subsection{NLPs in the mixed dense-sparse (MDS) form}
+\subsection{NLPs in the mixed dense-sparse (MDS) form}\label{sec:mds}
 A second class of optimization problems supported by \Hi consists of nonlinear, possibly nonconvex optimization problems that explicitly partition the optimization variables into so-called ``dense'' and ``sparse`` variables, $x_d$ and $x_s$, respectively; this problem can be  expressed compactly as
 \begin{align}
 \min_{x_d\in\mathbb{R}^{n_d}, x_s\in\mathbb{R}^{n_s}} & \hspace{0.3cm} f(x_d, x_s) && \label{mdsobj}\\
@@ -471,7 +462,9 @@ As mentioned above we make a couple of assumptions on the block structure of the
     \item[A2.] The Hessian matrix $\nabla^2_{x_s x_s} L$ has a sparsity pattern that allows \textit{computationally efficient} inversion of (or solving with) the matrix $\nabla^2_{x_s x_s} L + D_{x_s}$ where $D_{x_s}$ is a diagonal matrix with positive diagonal entries; in our target applications, namely, optimal power flow problems, $\nabla^2_{x_s x_s} L$ is a diagonal matrix with nonnegative entries.
 \end{itemize}
 
-The optimization problem~\eqref{mdsobj}--\eqref{mdsbounds} is transformed internally by \Hi to an equivalent form that is more amenable to the use of interior-point methods as described on~\cite[Section~3]{petra2019memory}. Furthermore, HiOp implements the filter line-search interior-point algorithm of W{\"a}chter and Biegler~\cite{waecther_05_ipopt,waecther_05_ipopt2} (also implemented by IPOPT~\cite{waecther_05_ipopt0}) and makes explicit use of second-order derivatives/Hessians. 
+The optimization problem~\eqref{mdsobj}--\eqref{mdsbounds} is transformed internally by \Hi to an equivalent form that is more amenable to the use of interior-point methods as described on~\cite[Section~3]{petra2019memory}. Furthermore, HiOp implements the filter line-search interior-point algorithm of W{\"a}chter and Biegler~\cite{waecther_05_ipopt,waecther_05_ipopt2} (also implemented by IPOPT~\cite{waecther_05_ipopt0}) and makes explicit use of second-order derivatives/Hessians.
+
+Starting version 0.3, \Hi offers support for NVIDIA GPU computations acceleration. This feature is available only when solving NLPs in the mixed dense-sparse (MDS) form and should be enabled during the build by using \texttt{-DHIOP\_USE\_GPU} option with \texttt{cmake}. \Hi's \texttt{cmake} build system is quite versatile to find the dependencies required to offload computations to the device GPUs since was developed and tested on a few GPU-enabled HPC platforms at Oak Ridge, Lawrence Livermore, and Pacific Northwestern National Laboratories. These dependencies consist of CUDA library version 10.1 or later and a recent Magma linear solver library (as well as an NVIDIA GPU). If offloading computations to the device is not desired, the user can switch it off and perform only CPU (host) computations by setting \Hi's option \texttt{compute\_mode} to \texttt{cpu}. The Newton interior-point solver for MDS problems offers ample device/GPU (and limited CPU/multicore) fine-grain parallelism, however it does not offer support of interprocess/internode parallelism.
 
 %After a careful manipulation of the equations, which is described in detail in~\cite{petra2019memory}, also see~\cite{wachter2006implementation}, the interior-point solver needs to perform computations that can roughly categorized as 
 %\begin{itemize}
@@ -691,22 +684,43 @@ double obj_value = solver.getObjective();  //get objective
 
 %3. primal dual restart
 
-\bigskip
+
 
 \subsection{Specifying a starting point for the optimization process}
 
-The user   can  provide an initial (primal) point $x_0$ for \Hi's numerical process by implementing the method \texttt{get\_starting\_point} of the specification interface \texttt{hiop::hiopInterfaceDenseConstraints}. 
+The user  can  provide an initial primal or primal-dual point implementing the method \texttt{get\_starting\_point} of the NLP specification interfaces \texttt{hiopInterfaceDenseConstraints} or \texttt{hiopInterfaceMDS}. 
+
+\begin{lstlisting} 
+bool get_starting_point(const long long& n, const long long& m,
+                        double* x0,
+                        bool& duals_avail,
+                        double* z_bndL0, double* z_bndU0,
+                        double* lambda0);
+\end{lstlisting} 
+
+A second method is offered to user to provide an initial primal starting point. This method will be soon deprecated as its functionality is a subset of the method above and should be avoided.
+
 \begin{lstlisting} 
 bool get_starting_point(const long long& n, double* x0);
 \end{lstlisting} 
-This method should return \texttt{true} if the initial point was successfully set. If the method returns \texttt{false},  then \Hi will use an all-zero starting point. The user does not have to implement this method, a default implementation that returns \texttt{false} is provided in the base class.
 
-\warningcp{Note:} The starting point returned in \texttt{x0} is subject to internal adjustments in \Hi and may differ from \texttt{x} with which the methods of the previous section are first called.
+Parameters:
+\begin{itemize}
+\item \texttt{n} and \texttt{m} are the number of variables and the number of constraints.
+\item \texttt{x0} array of values for the initial primal variables/starting point.
+\item \texttt{duals\_avail} boolean flag expressing whether the user wishes to specifiy the a starting point for dual variables.
+\item \texttt{z\_bndL0} and  \texttt{z\_bndU0} starting points for the duals of the lower and upper bounds.
+\item \texttt{lambda0} is an array containing the starting point for the duals of the constraints. It is allocated to have the dimension of the constraints body and the entries in \texttt{lambda0} should have the same order as the constraints body (that is equalities may be mixed with inequalities), see \texttt{eval\_cons} methods; \Hi keeps track internally whether each value in \texttt{lambda0} is a multiplier for an equality or for an inequlity constraint.
+\end{itemize}
+  
+These methods should return \texttt{true} if the user successfully provided starting values for the primal or for the primal and dual variables. If the first method above returns \texttt{false},  then \Hi will attempt calling the second method above. This behavior is for backward compatibility. If a starting point cannot be set by the user, both methods should return \texttt{false}. Also, we remark that the  methods do not need to be implemented since  default implementations returning \texttt{false} are provided by the base class; in this case, \Hi will use a starting point of all zeros (which is subjected to internal adjustments, see below).
+
+
+\warningcp{Note:} The starting point returned by the user in \texttt{x0} using the methods above is subject to internal adjustments in \Hi and may differ from \texttt{x0} with which the methods of the previous section are first called.
 
 % /* Method providing a primal starting point. This point is subject to internal adjustments in hiOP.
 %   * The method returns true (and populate x0) or return false, in which case hiOP will use set 
 %   * x0 to all zero (still subject to internal adjustement).
-
 
 
 \subsection{Compiling and linking your project with the \Hi library}
@@ -746,7 +760,7 @@ The user can set \Hi's options in two ways:
 \subsection{List of available options}
 
 { \footnotesize 
-\begin{longtable}{| p{1.5cm} |  r |  r | c  |  p{8cm} |}
+\begin{longtable}{| p{1.5cm} |  r |  r | p{2.0cm}  |  p{8cm} |}
 \hline \hline
 \textbf{Name} & \textbf{Type} & \textbf{Default} & \textbf{Range} & \textbf{Explanation}\\\hline% \hline
 tolerance  & numeric & 1e-08 & 1e-14 -- 0.1 &   Absolute error tolerance for the NLP \\\hline%\\\hline
@@ -769,6 +783,8 @@ secant\_ memory\_ len & integer & 6 &  0 -- 256  & length of the memory of the H
 fixed\_var & string & "none" & "remove" "relax" "none" & treatment of fixed variables; in order, they can be removed, their lower and upper bounds relaxed, or ignored. The last value causes a premature termination if fixed variables are detected. \\  \hline
 fixed\_var\_ tolerance & numeric & 1e-15 & 1e-30 -- 1e-2 & tolerance for $|ub-lb|$ under which a variable will be considered fixed. \\ \hline
 fixed\_var\_ perturb & numeric & 1e-8 & 1e-14 -- 0.1 & Perturbation of the lower and upper bounds for a fixed variable relative to its magnitude: lb/ub $-$=/+= max(abs(ub),1)$\times$fixed\_var\_perturb\\ \hline
+compute\_mode & string & "auto" & "auto" "cpu" "hybrid" & Offloading of computations to GPUs: "hybrid" will use GPUs for linear systems, "auto" will decide between "cpu" and "hybrid" based on the other options passed, and "cpu" will only use device CPU. \\\hline
+time\_kkt & string & "off" & "on" "off" & Turns on/off internal performance timers and analysis and enables additional reporting of the computational constituents of the KKT solve process \\\hline
 %
 %% smax  1.000000e+02     	 \# (numeric)  1 to 1e+07   multiplier threshold used in computing the scaling factors for the optimality error (default 100.)]
 %
