@@ -103,7 +103,7 @@ build-on-login-node:
   tags:
     - nobatch
   rules:
-    - if: '$CI_PROJECT_ROOT_NAMESPACE == "ecpcitest"'
+    - if: '$CI_PROJECT_PATH == "ecpcitest/exasgd/hiop"'
   <<: *ornl_script_definition
 
 # For Ascent CI
@@ -116,5 +116,5 @@ test-on-compute-node:
   tags:
     - batch
   rules:
-    - if: '$CI_PROJECT_ROOT_NAMESPACE == "ecpcitest"'
+    - if: '$CI_PROJECT_PATH == "ecpcitest/exasgd/hiop"'
   <<: *ornl_test_script_definition
