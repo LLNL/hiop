@@ -1,0 +1,194 @@
+%\documentclass[11pt]{article}
+
+
+%\begin{document}
+
+%\section{Introduction}
+
+\trimbox{0.5cm 0.cm 0cm 0cm} {
+\begin{tikzpicture}[scale=.6]
+
+%\node[inner sep=0pt] (cube) at (-7.5,-4)  {\includegraphics[width=.3\textwidth]{images/partition-2048-a}};
+
+%\begin{scope}[every node/.append style={xslant=0.017,yslant=-0.04},xslant=0.017,yslant=-0.04]
+%  %\shade[right color=gray!10, left color=black!50, semitransparent] (-10.5,-2.5) rectangle +(4,1);
+%  \node[anchor=center] at (-8.,-3.75) {{\color{white} \textbf{Material and \ \ \ }}};
+%  \node[anchor=center] at (-8.75,-4.35) {{\color{white} \textbf{design domain}}};
+%\end{scope}
+
+%\node[anchor=center,rotate=20,opaque=0.7] at (7.5,-4.75) {\large\color{subsecblue}\textbf{Optimization computational layout}};
+
+%the table lines
+\draw[thick,dotted,violet](2.25,0.375) rectangle+(3.25,-7.);
+\draw[thick,dotted,violet](6.,0.375) rectangle+(3.5,-7.);
+\draw[thick,dotted,violet](11.5,0.375) rectangle+(3.25,-7.); 
+
+% line with procs
+\draw[thick](3.75,0) node(proc1)[anchor=center]{\scriptsize Rank $1$};
+\draw[thick](7.75,0) node(proc2){\scriptsize Rank $2$};
+\draw[thick](10.5,0) node{$\ldots$ };
+\draw[thick](13.25,0) node(procp){\scriptsize Rank $p$};
+
+
+%arrowsfrom 3d-domain to procs
+
+%\node(n1) at (-10.75,-1){};
+%\node(n2) at (-7.75,-1){};
+%\node(n3) at (-3.95,-5.15){};
+%\path[every node/.style={font=\sffamily\small},semitransparent,gray]
+%    (n1) edge[bend left,dashed,->,>=triangle 60,out=20, in=155] node [right] {} (proc1)
+%    (n2) edge[bend left,dashed,->,>=triangle 60,out=20, in=155] node [right] {} (proc2)
+%		(n3) edge[bend left,dashed,->,>=triangle 60,out=60, in=150] (procp);
+
+
+%\draw[thick](n1) -- (proc1);
+
+%Decision variable
+%!\draw(1.,-0.75) node[anchor=center]{\color{secblue}{\textbf{\scriptsize Decision $\textbf{x}$}}};
+\draw(0.5,-0.75) node[anchor=center]{\color{secblue}{\scriptsize $\mathbf{x}$, $\mathbf{x_l}$, $\mathbf{x_u}$ }};
+\draw[thick](2.5,-1) rectangle+(2.5,0.5); \fill[mycolor1,fill opacity=0.75](2.5,-1) rectangle+(2.5,0.5); 
+\draw(3.0,-1) rectangle +(.5,0.5);
+\draw[thick](4.0,-0.75) node[anchor=center]{$\cdots$}; 
+\draw(4.5,-1) rectangle+(.5,0.5);
+\draw [<->, >=triangle 90 reversed, line width=0.2ex,semitransparent](5.,-.75) -- ++(1.5,0);
+
+\draw[thick](6.5,-1) rectangle+(2.5,0.5); \fill[mycolor2,fill opacity=0.75](6.5,-1) rectangle+(2.5,0.5); 
+\draw(7.0,-1) rectangle +(.5,0.5);
+\draw[thick](8.0,-0.75) node[anchor=center]{$\cdots$}; 
+\draw(8.5,-1) rectangle+(.5,0.5);
+\draw [<-, >=triangle 90 reversed, line width=0.2ex,semitransparent](9,-0.75) -- ++(0.75,0);
+
+\draw[thick](10.5,-0.75) node[anchor=center]{$\cdots$};
+\draw [->, >=triangle 90 reversed, line width=0.2ex,semitransparent](11.25,-0.75) -- ++(0.75,0);
+
+
+\draw[thick](12,-1) rectangle+(2.5,0.5); \fill[mycolor3,fill opacity=0.75](12,-1) rectangle+(2.5,0.5); 
+\draw(12.5,-1) rectangle +(.5,0.5);
+\draw[thick](13.5,-0.75) node[anchor=center]{$\cdots$}; 
+\draw(14,-1) rectangle+(.5,0.5);
+
+%f(x)
+%\draw(0.75,-1.65) node[anchor=center]{{\footnotesize Objective \&} };
+%\draw(0.75,-1.85) node[anchor=center]{{\footnotesize constraints} };
+%!\draw(0.95,-1.75) node[anchor=center]{\color{secblue}{\scriptsize $\mathbf{f(x), g_i(x)}$ } };
+\draw(0.25,-1.75) node[anchor=center]{\color{secblue}{\scriptsize $\mathbf{f(\cdot), c_i(\cdot), d_i(\cdot)}$ } };
+
+
+%\draw[decorate,decoration={brace,mirror, amplitude=7pt},xshift=0pt,yshift=0pt]
+%(2.5,-1.125) -- (5.0,-1.125) node [black,midway,yshift=-12.5pt] 
+%{\scriptsize $f(x)$};
+\draw(3.75,-1.75) node[anchor=center] {\scriptsize val};
+\draw(7.75,-1.75) node[anchor=center] {\scriptsize val};
+\draw[thick](10.5,-1.75) node[anchor=center]{$\cdots$};
+\draw(13.25,-1.75) node[anchor=center] {\scriptsize val};
+
+%\draw[decorate,decoration={brace,mirror, amplitude=7pt},xshift=0pt,yshift=0pt]
+%(6.5,-1.75) -- (9.0,-1.125) node [black,midway,yshift=-12.5pt] 
+%%!{\scriptsize $f_2(x_2)$};
+%{\scriptsize $f(x)$};
+%
+%\draw[thick](10.5,-1.75) node[anchor=center]{$\cdots$};%
+%
+%\draw[decorate,decoration={brace,mirror, amplitude=7pt},xshift=0pt,yshift=0pt]
+%(12.00,-1.125) -- (14.5,-1.125) node [black,midway,yshift=-12.5pt] 
+%%!{ \scriptsize $f_p(x_p)$};
+%{ \scriptsize $f_p(z_p)$};
+
+
+
+
+
+%gradients
+%\draw(0.75,-2.63) node[anchor=center]{{\footnotesize Gradients}};
+%\draw(0.75,-3.02) node[anchor=center]{{\footnotesize $\nabla f(x)$, $\nabla g_i(x)$}};
+%!\draw(0.7,-2.75) node[anchor=center]{\color{secblue}{\scriptsize $\mathbf{\nabla f(x), \nabla g_i(x)}$}};
+\draw(0.5,-2.75) node[anchor=center]{\color{secblue}{\scriptsize $\mathbf{\nabla f(x)}$}};
+
+\draw[thick](2.5,-3.0) rectangle+(2.5,0.5); \fill[mycolor1,fill opacity=0.75](2.5,-3.0) rectangle+(2.5,0.5); 
+\draw(3.0,-3) rectangle +(.5,0.5);
+\draw[thick](4.0,-2.75) node[anchor=center]{$\cdots$}; 
+\draw(4.5,-3) rectangle+(.5,0.5);
+\draw [<->, >=triangle 90 reversed, line width=0.2ex,semitransparent](5.,-2.75) -- ++(1.5,0);
+
+\draw[thick](6.5,-3) rectangle+(2.5,0.5);\fill[mycolor2,fill opacity=0.75](6.5,-3) rectangle+(2.5,0.5);
+\draw(7.0,-3) rectangle +(.5,0.5);
+\draw[thick](8.0,-2.75) node[anchor=center]{$\cdots$}; 
+\draw(8.5,-3) rectangle+(.5,0.5);
+\draw [<-, >=triangle 90 reversed, line width=0.2ex,semitransparent](9,-2.75) -- ++(0.75,0);
+
+\draw[thick](10.5,-2.75) node[anchor=center]{$\cdots$};
+\draw [->, >=triangle 90 reversed, line width=0.2ex,semitransparent](11.25,-2.75) -- ++(0.75,0);
+
+\draw[thick](12,-3) rectangle+(2.5,0.5); \fill[mycolor3,fill opacity=0.75](12,-3) rectangle+(2.5,0.5); 
+\draw(12.5,-3) rectangle +(.5,0.5);
+\draw[thick](13.5,-2.75) node[anchor=center]{$\cdots$}; 
+\draw(14,-3) rectangle+(.5,0.5);
+
+%Jacobians
+\draw(0.5,-4.5) node[anchor=center]{\color{secblue}{\scriptsize $\mathbf{J_c(\cdot)}$, $\mathbf{J_d(\cdot)}$}};
+
+%U
+\draw[thick](2.5,-4) rectangle+(2.5,-1); \fill[mycolor1,fill opacity=0.75](2.5,-4) rectangle+(2.5,-1); 
+\draw(3.0,-4) rectangle+(0.5,-0.5); \draw(3.0,-4.5)rectangle+(0.5,-0.5);
+\draw(2.5,-4) rectangle+(0.5,-0.5); \draw(2.5,-4.5)rectangle+(0.5,-0.5);
+%\draw(2.5,-4) grid[step=0.5]+(1,-1);
+\draw[thick](4.0,-4.5) node[anchor=center]{$\cdots$}; 
+\draw(4.5,-4) rectangle+(0.5,-0.5);
+\draw(4.5,-4.5)rectangle+(0.5,-0.5);
+%\node at(1.4,-4.5) [right,fill=green,opacity=.0,text opacity=1] {\color{secblue}{\scriptsize $\mathbf{U}$}};
+\draw [<->, >=triangle 90 reversed, line width=0.2ex,semitransparent](5.,-4.5) -- ++(1.5,0);
+
+\draw[thick](6.5,-4) rectangle+(2.5,-1); \fill[mycolor2,fill opacity=0.75](6.5,-4) rectangle+(2.5,-1);
+\draw(7.0,-4) rectangle+(0.5,-0.5); \draw(7.0,-4.5)rectangle+(0.5,-0.5);
+\draw(6.5,-4) rectangle+(0.5,-0.5); \draw(6.5,-4.5)rectangle+(0.5,-0.5);
+%\draw(6.5,-4) grid[step=0.5]+(1,-1);
+\draw[thick](8.0,-4.5) node[anchor=center]{$\cdots$}; 
+\draw(8.5,-4) rectangle+(0.5,-0.5);
+\draw(8.5,-4.5)rectangle+(0.5,-0.5);
+\draw [<-, >=triangle 90 reversed, line width=0.2ex,semitransparent](9,-4.5) -- ++(0.75,0);
+
+\draw[thick](10.5,-4.5) node[anchor=center]{$\cdots$};
+\draw [->, >=triangle 90 reversed, line width=0.2ex,semitransparent](11.25,-4.5) -- ++(0.75,0);
+
+\draw[thick](12,-4) rectangle+(2.5,-1);  \fill[mycolor3,fill opacity=0.75](12,-4) rectangle+(2.5,-1); 
+\draw(12.0,-4) rectangle+(0.5,-0.5); \draw(12.0,-4.5)rectangle+(0.5,-0.5);
+\draw(12.5,-4) rectangle+(0.5,-0.5); \draw(12.5,-4.5)rectangle+(0.5,-0.5);
+%\draw(12,-4) grid[step=0.5]+(1,-1);
+\draw[thick](13.5,-4.5) node[anchor=center]{$\cdots$}; 
+\draw(14,-4) rectangle+(0.5,-0.5);
+\draw(14,-4.5)rectangle+(0.5,-0.5);
+
+%V
+\draw(0.5,-5.75) node[anchor=center] {\color{secblue}{\scriptsize $\mathbf{c_E}$, $\mathbf{d_l}$, $\mathbf{d_u}$ }};
+\draw[thick,pattern=north west lines] (2.5,-5.5) rectangle++(1,-0.5); \fill[semitransparent,darkgray] (2.5,-5.5) rectangle++(1,-0.5);\draw (2.5,-5.5) grid[step=0.5]+(1,-.5);
+\draw[thick,pattern=north west lines] (6.5,-5.5) rectangle++(1,-0.5); \fill[semitransparent,darkgray] (6.5,-5.5) rectangle++(1,-0.5);\draw (6.5,-5.5) grid[step=0.5]+(1,-0.5); 
+\draw[thick,pattern=north west lines] (12,-5.5) rectangle++(1,-0.5); \fill[semitransparent,darkgray] (12,-5.5) rectangle++(1,-0.5);\draw (12,-5.5) grid[step=0.5]+(1,-0.5);
+
+%B0
+%\node at(1.0,-7.25) [right,fill=green,opacity=.0,text opacity=1] {\color{secblue}{ \scriptsize $\mathbf{B_0}$} };
+%\draw[thick](2.5,-7.5) rectangle+(2.5,0.5); \fill[mycolor1,fill opacity=0.75](2.5,-7.5) rectangle+(2.5,0.5); 
+%\draw(3.0,-7.5) rectangle +(.5,0.5);
+%\draw[thick](4.0,-7.25) node[anchor=center]{$\cdots$}; 
+%\draw(4.5,-7.5) rectangle+(.5,0.5);
+%\draw [<->, >=triangle 90 reversed, line width=0.2ex,semitransparent](5.,-7.25) -- ++(1.5,0);
+
+%\draw[thick](6.5,-7.5) rectangle+(2.5,0.5); \fill[mycolor2,fill opacity=0.75](6.5,-7.5) rectangle+(2.5,0.5);
+%\draw(7.0,-7.5) rectangle +(.5,0.5);
+%\draw[thick](8.0,-7.25) node[anchor=center]{$\cdots$}; 
+%\draw(8.5,-7.5) rectangle+(.5,0.5);
+%\draw [<-, >=triangle 90 reversed, line width=0.2ex,semitransparent](9,-7.25) -- ++(0.75,0);
+
+%\draw[thick](10.5,-7.25) node[anchor=center]{$\cdots$};
+%\draw [->, >=triangle 90 reversed, line width=0.2ex,semitransparent](11.25,-7.25) -- ++(0.75,0);
+
+%\draw[thick](12,-7.5) rectangle+(2.5,0.5); \fill[mycolor3,fill opacity=0.75](12,-7.5) rectangle+(2.5,0.5); 
+%\draw(12.5,-7.5) rectangle +(.5,0.5);
+%\draw[thick](13.5,-7.25) node[anchor=center]{$\cdots$}; 
+%\draw(14,-7.5) rectangle+(.5,0.5);
+
+\end{tikzpicture}
+}
+
+
+
+%\end{document}

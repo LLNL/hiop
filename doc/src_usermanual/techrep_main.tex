@@ -1,0 +1,884 @@
+\documentclass[11pt]{article}
+
+\usepackage{amsmath,stackrel}
+\usepackage{amssymb}% http://ctan.org/pkg/amssymb
+
+\usepackage[margin=1.05in]{geometry}
+\usepackage{tikz}
+\usetikzlibrary{arrows}
+\usetikzlibrary{decorations.pathreplacing}
+%\usepgflibrary{patterns}
+\usetikzlibrary{patterns}
+
+\usepackage{adjustbox}
+\usepackage{listings}
+
+\usepackage{color}
+\definecolor{secblue}{HTML}{3B5E7F}
+\definecolor{mycolor1}{RGB}{184,183,255}
+\definecolor{mycolor2}{RGB}{255,  1,208}
+\definecolor{mycolor3}{RGB}{  1,255,  2}
+\definecolor{mypink}{rgb}{0.98,0.85,0.87}
+%\definecolor{mypink}{rgb}{0.98,0.75,0.987}
+\definecolor{listinggray}{gray}{0.9}
+\definecolor{lbcolor}{rgb}{0.9,0.9,0.9}
+
+\def\yy{\\\rowcolor{red}}
+\usepackage{colortbl,ifthen}
+\newcounter{line}
+\newcommand\xx{%
+  \addtocounter{line}{1}%
+  \ifthenelse{\isodd{\value{line}}}{\\\rowcolor{listinggray}}{\\}}
+
+
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{comment}
+\usepackage{xspace}
+\usepackage{hyperref}
+
+\usepackage{longtable}
+
+
+\lstset{
+backgroundcolor=\color{lbcolor},
+    tabsize=4,    
+%   rulecolor=,
+    language=[GNU]C++,
+        basicstyle=\scriptsize,
+        upquote=true,
+        aboveskip={1.5\baselineskip},
+        columns=fixed,
+        showstringspaces=false,
+        extendedchars=false,
+        breaklines=true,
+        prebreak = \raisebox{0ex}[0ex][0ex]{\ensuremath{\hookleftarrow}},
+        frame=single,
+        numbers=left,
+        showtabs=false,
+        showspaces=false,
+        showstringspaces=false,
+        identifierstyle=\ttfamily,
+        keywordstyle=\color[rgb]{0,0,1},
+        commentstyle=\color[rgb]{0.026,0.112,0.095},
+        stringstyle=\color[rgb]{0.627,0.126,0.941},
+        numberstyle=\color[rgb]{0.205, 0.142, 0.73},
+%        \lstdefinestyle{C++}{language=C++,style=numbers}’.
+}
+\lstset{
+    backgroundcolor=\color{lbcolor},
+    tabsize=4,
+  language=C++,
+  captionpos=b,
+  tabsize=3,
+  frame=lines,
+  numbers=left,
+  numberstyle=\tiny,
+  numbersep=5pt,
+  breaklines=true,
+  showstringspaces=false,
+  basicstyle=\footnotesize,
+%  identifierstyle=\color{magenta},
+  keywordstyle=\color[rgb]{0,0,1},
+  commentstyle=\color[rgb]{0,0.45,0},
+  stringstyle=\color{red}
+  }
+
+%\usepackage[utf8]{inputenc}
+%\usepackage[x11names,svgnames]{xcolor}
+\usepackage{graphicx}
+\usepackage{fourier-orns}
+%\usepackage[framemethod=tikz]{mdframed}
+%\usetikzlibrary{calc}
+
+\makeatletter
+% Default settings for warnings
+    \newcommand{\warningSymbol}{\raisebox{0.9\depth}{\danger}}
+
+    \definecolor{warningColorText}{named}{blue}
+    %\definecolor{warningColorLine}{named}{Red3}
+    %\definecolor{warningColorBack}{named}{LemonChiffon1}
+    %\definecolor{warningColorBackSymbol}{named}{white}
+
+% Inline mode
+    \newcommand{\warningcp}[1]{%
+        \smallskip \noindent \textcolor{warningColorText}{\warningSymbol{}}\,\textbf{#1} %
+    }
+
+    %\newmdenv[style=warning]{@Warning}
+    \newenvironment{Warning}{\let\warningcp\relax\begin{@Warning}}{\end{@Warning}}
+\makeatother
+
+
+
+\algnewcommand\algorithmicinput{\textbf{Input:}}
+\algnewcommand\Input{\item[\algorithmicinput]}
+\algnewcommand\algorithmicinit{\textbf{Initialization:}}
+\algnewcommand\Init{\item[\algorithmicinit]}
+\algnewcommand\algorithmicoutput{\textbf{Output:}}
+\algnewcommand\Output{\item[\algorithmicoutput]}
+
+\newcommand{\Hi}{\texttt{HiOp}\xspace}
+
+\begin{document}
+%\title{}
+
+\begin{titlepage}
+
+
+
+\begin{center}
+\ 
+\vspace{3cm}
+
+  {\huge\bfseries \Hi\ -- User Guide} \\[14pt]
+  {\large\bfseries version 0.3}
+
+\vspace{3cm}
+
+{\large\emph{by}}
+
+\vspace{1.25cm}
+
+ {\Large\bfseries Cosmin G. Petra}
+ 
+\vspace{1.1cm}
+
+{\bfseries\Large{\textcolor{blue}{Center for Applied Scientific Computing\\
+Lawrence Livermore National Laboratory}}}\\[10pt]
+
+
+{\Large{7000 East Avenue, \\Livermore, CA 94550, USA.}}
+
+
+\vspace{4.75cm}
+
+ \textcolor{violet}{{\large\bfseries Oct 15, 2017} \\
+{\large\bfseries Updated OCt, 2020}}
+
+\vspace{0.75cm}
+
+{\Large\bfseries \textcolor{violet}{Technical report LLNL-SM-743591}}
+
+
+
+
+%\maketitle
+
+\end{center}
+\end{titlepage}
+
+\newpage
+
+ \ 
+ 
+\bigskip
+
+\bigskip
+
+%\fbox{
+
+%\section*{Disclaimer and acknowledgments}
+
+\noindent\fcolorbox{black}{mypink}{\begin{minipage}{0.98\textwidth} \bfseries 
+This document was prepared as an account of work sponsored by an agency of the United States government.
+Neither the United States government nor Lawrence Livermore National Security, LLC, nor any of their employees
+makes any warranty, expressed or implied, or assumes any legal liability or responsibility for the accuracy,
+completeness, or usefulness of any information, apparatus, product, or process disclosed, or represents that its use
+would not infringe privately owned rights. Reference herein to any specific commercial product, process, or service
+by trade name, trademark, manufacturer, or otherwise does not necessarily constitute or imply its endorsement,
+recommendation, or favoring by the United States government or Lawrence Livermore National Security, LLC. The
+views and opinions of authors expressed herein do not necessarily state or reflect those of the United States
+government or Lawrence Livermore National Security, LLC, and shall not be used for advertising or product
+endorsement purposes.
+\end{minipage}}
+
+\bigskip
+
+\bigskip
+
+\bigskip
+
+\bigskip
+
+\bigskip
+
+\bigskip
+
+\bigskip
+
+\bigskip
+
+\noindent\fcolorbox{black}{mypink}{\begin{minipage}{0.98\textwidth} \bfseries 
+This work performed under the auspices of the U.S. Department of Energy by Lawrence Livermore National Laboratory under Contract DE-AC52-07NA27344. 
+\end{minipage}}
+
+\bigskip
+
+\bigskip
+
+
+%\noindent\fcolorbox{black}{lightgray}{\begin{minipage}{0.95\textwidth}
+%The author also acknowledges the support from the LDRD Program of Lawrence Livermore National Laboratory under the projects 16-ERD-025 and 17-SI-005 and from the Department of Energy's Office of Science through the Advanced Scientific Computing Research (ASCR) program.
+%\end{minipage}}
+
+
+\newpage
+
+\tableofcontents
+
+\newpage
+
+\section{Introduction}
+
+This document describes the \Hi suite of HPC optimization solvers for some large-scale nonconvex nonlinear programming problems (NLPs). Two main classes of optimization problems are supported. First class consists of NLPs with extremely large number of variables  but with a relatively small number of general constraints; the solver for these problems is a  memory-distributed, MPI-based quasi-Newton interior-point solver using limited-memory approximations for the Hessians. The second class of problems consists of NLPs that have dense and sparse blocks, for which a ``Newton'' interior-point solver is available toghether with a specialized, so called mixed dense-sparse (MDS) linear algebra capable of achieving good performance on host-device, \textit{i.e.}, CPU-GPU, computing hardware. 
+
+This document includes instructions on how to obtain and
+build \Hi and a description of its interface, user options, and use as an optimization library. Guidelines on how is best to use the solver for parallel computations are also provided. The document generally targets users of \Hi, but also contains information relevant to potential developers or advanced users; these are strongly encouraged to also read the paper on the computational approach implemented in \Hi~\cite{petra_hiop}.
+
+
+While the MPI quasi-Newton solver of \texttt{Hiop} targets DAE- and PDE-constrained optimization problems formulated in a ``reduced-space'' approach, it can be used for general nonconvex nonlinear optimization as well. For efficiency considerations, it is recommended to \textit{use quasi-Newton \texttt{Hiop} for NLPs that have a relatively small number of general constraints}, say less than $100$; note that there are no restrictions on the number of bounds constraints, \textit{e.g.}, one can specify simple bounds on any, and potentially all the decision variables without affecting the computational efficiency. The minimizers computed by \Hi satisfies \textit{local} first-order optimality conditions.
+
+The goal of quasi-Newton solver of \Hi is to remove the parallelization limitations of existing state-of-the-art solvers for nonlinear programming (NLP) and match/surpass the parallel scalability of the underlying PDE or DAE solver. Such limitation occurs whenever the dimensionality of the optimization space  is as large as the dimensionality of the discretization of the differential systems of equations governing the optimization. In these cases, the use of existing NLP solvers  results in i. considerable long time spent in optimization, which affects the parallel scalability, and/or ii. memory requirements beyond the memory capacity of the computational node that runs the optimization. \Hi removes these scalability/parallelization bottlenecks (for certain optimization problems described above) by offering interface for a \textit{memory-distributed} specification of the problem and parallelizing the optimization search using specialized parallel linear algebra technique.
+
+The general computational approach in \Hi is to use existing state-of-the-art NLP algorithms and develop linear algebra kernels tailored to the specific of this
+class of problems. \Hi is based on an interior-point line search filter method~\cite{waecther_05_ipopt2,waecther_05_ipopt} and follows the implementation details from~\cite{waecther_05_ipopt0}, which is the implementation paper for IPOPT open-source NLP solver. The quasi-Newton approach is based on limited-memory secant approximations of the Hessian~\cite{ByrdNocedalSchnabel_94_quasiNewtonRepres}, which is generalized as required by the specific of interior-point methods for constrained optimization problems~\cite{petra_hiop}. The specialized linear algebra decomposition is obtained by using a Schur-complement reduction that
+leverages the fact that the quasi-Newton Hessian matrix has a small number of
+dense blocks that border a low-rank update of a diagonal matrix. The technique is described  in ~\cite{petra_hiop}. The Newton interior-point solver of \Hi uses linear algebra specialized to the particular form of the MDS NLPs supported by this solver, for more details consult Section~\ref{sec:mds}. 
+
+The C++ parallel implementation in \Hi
+is  lightweight and portable since it is expressed and implemented  only in terms of parallel (multi-)vector operations (implemented internally using BLAS level 1 and level 2 operations and MPI for communication) and BLAS level 3 and LAPACK operations for small dense matrices.
+
+By using multithreadead BLAS and LAPACK libraries, \textit{e.g.}, INTEL MKL, GotoBlas, Atlas, etc, additional,  intra-node parallelism can be achieved. These libraries are usually  machine/hardware specific and available for a variety of computer architectures. A list of BLAS/LAPACK implementations can be found at 
+%\begin{lstlisting} 
+\url{https://en.wikipedia.org/wiki/Basic_Linear_Algebra_Subprograms\#Implementations}. 
+%\end{lstlisting}
+%The salient idea
+
+\section{Installing/building \Hi}
+\Hi is available on  Lawrence Livermore National Laboratory (LLNL)  github's page at 
+\url{https://github.com/LLNL/hiop}. \Hi can be obtained by cloning the repository or by downloading the release archive(s). To clone from the repository, one needs to simply run
+\begin{verbatim}
+> git clone https://github.com/LLNL/hiop.git
+\end{verbatim}
+
+\subsection{Prerequisites} 
+\Hi is written in C++ (C++98) and requires a C++ compiler. 
+Also it requires BLAS and LAPACK, and, optionally, MPI. Not having MPI enabled in \Hi results in \Hi running on one processor only; still, significant multi-core parallelization can be obtained by using multithreaded BLAS and LAPACK. The CMake-based build system of \Hi generally detects these prerequisites automatically.
+
+At this point the build system only supports macOS and Linux operating systems. On the other hand, other than the build system, \Hi's code is  platform independent and should run fine on Windows as well.
+
+
+\subsection{Building, testing, and installing \Hi}
+The build system is based on CMake. Up-to-date detailed information about \Hi custom builds and installs are kept at \url{https://github.com/LLNL/hiop}. 
+
+A quick way to build and code is run the following commands in the `build\//' directory in the root \Hi directory: 
+\begin{verbatim}
+> cmake ..
+> make all
+> make test
+> make install
+\end{verbatim}
+This will compile, build the static library and example executables, perform a couple of tests to detect potential issues during the installation, and will install \Hi's header and the static library in the root directory under `\_build\_defaultDist\//'
+
+\subsection{Support of host-device computations using (generic)CPU-(NVIDIA)GPU}
+
+Starting version 0.3, \Hi offers support for NVIDIA GPU computations acceleration. This feature is available only when solving NLPs in the mixed dense-sparse (MDS) form and should be enabled during the build by using \texttt{-DHIOP\_USE\_GPU} option with \texttt{cmake}. \Hi's \texttt{cmake} build system is quite versatile to find the dependencies required to offload computations to the device GPUs since was developed and tested on a few GPU-enabled HPC platforms at Oak Ridge, Lawrence Livermore, and Pacific Northwestern National Laboratories. These dependencies consist of CUDA library version 10.1 or later and a recent Magma linear solver library (as well as a physical NVIDIA GPU device). \Hi offers an extensive build support for using customized NVIDIA libraries and/or Magma solver as well as for advanced troubleshooting. The user is referred to \texttt{cmake/FindHiopCudaLibraries.cmake} and \texttt{cmake/FindMagma.cmake} scripts.
+
+\warningcp{Note: } Installing NVIDIA CUDA (and likely the NVIDIA driver) and/or building Magma can be quite challenging. The user is encouraged to rely on preinstalled versions of these, as they are available via \texttt{module} utility on virtually all high-performance computing machines. An example of how to satisfy all the GPU dependencies on Summit supercomputer at Oak Ridge National Lab with a one commands are available at \url{https://github.com/LLNL/hiop/blob/master/README_summit.md}.
+
+\section{Interfacing with \Hi}
+Once \Hi is built, it can be used as the optimization solver in your application through the \Hi's C++ interfaces and by linking with the static library. A shared dynamic load library can be also built using \texttt{HIOP\_BUILD\_SHARED} option with cmake. There are types or formulations of optimization supported currently by \Hi, which are described below. 
+
+\subsection{The NLP with \textit{dense} constraints formulation requiring \textit{up to first-order} derivative information}
+A first class of problems supported by \Hi consists of nonlinear nonconvex NLP with \textit{dense} constraints of the form
+\begin{align}
+&&&&\min_{x\in\mathbb{R}^n} & \hspace{0.5cm} f(x) &&&& \label{obj}\\
+&&&&\textnormal{s.t.} &\hspace{0.5cm}  c(x)=c_E &[y_c]&&&\\
+&&[v_l]&&& \hspace{0.5cm} d_l \leq d(x) \leq d_u  &[v_u]&&&\label{ineq} \\
+&&[z_u]&&& \hspace{0.5cm} x_l \leq x \leq x_u & [z_u] &&&\label{bounds}
+\end{align}
+Here $f:\mathbb{R}^n\rightarrow\mathbb{R}$, $c:\mathbb{R}^n\rightarrow\mathbb{R}^{m_E}$, $d:\mathbb{R}^n\rightarrow\mathbb{R}^{m_I}$. The bounds appearing in the inequality constraints~\eqref{ineq} are assumed to be $d^l\in\mathbb{R}^{m_I}\cup\{-\infty\}$, $d^u\in\mathbb{R}^{m_I}\cup\{+\infty\}$, $d_i^l < d_i^u$, and at least of one of $d_i^l$ and $d_i^u$ are finite for all $i\in\{1,\ldots,m_I\}$. The bounds in~\eqref{bounds} are such that $x^l\in\mathbb{R}^{n}\cup\{-\infty\}$, $x^u\in\mathbb{R}^{n}\cup\{+\infty\}$, and $x_i^l < x_i^u$, $i\in\{1,\ldots,n\}$. The quantities insides brackets are the Lagrange multipliers of the constraints. Whenever a bound is infinite, the corresponding multiplier is by convention zero.
+
+The following quantities are required by \Hi:
+\begin{itemize}
+\item[D1] objective and constraint functions $f(x)$, $c(x)$, $d(x)$;
+\item[D2] the first-order derivatives of the above: $\nabla f(x)$, $Jc(x)$, $Jd(x)$;
+\item[D3] the simple bounds $x_l$ and $x_u$, the inequalities bounds: $d_l$ and $d_u$, and the right-hand size of the equality constraints $c_E$.
+\end{itemize}
+
+\subsubsection{The C++ interface}
+The above optimization problem~\eqref{obj}-\eqref{bounds} can be specified by using the C++ interface, namely by deriving and providing an implementation for the \texttt{hiop::hiopInterfaceDenseConstraints} abstract class.
+
+ We present next the methods of this abstract class that needs to be implemented in order to specify the parts D1-D3 of the optimization problem. 
+
+\warningcp{Note:} All the functions that return \texttt{bool} should return \texttt{false} when an error occurs, otherwise should return \texttt{true}.
+
+\subsubsection{Specifying the optimization problem}
+
+All the methods of this section are ``pure'' virtual in \texttt{hiop::hiopInterfaceDenseConstraints} abstract class  and need to be provided by the user implementation.
+
+\begin{lstlisting} 
+bool get_prob_sizes(long long& n, long long& m);
+\end{lstlisting} 
+\noindent Provides the number of decision variables and the number of constraints ($m=m_E+m_I$).
+
+
+\begin{lstlisting} 
+bool get_vars_info(const long long& n, double *xlow, double* xupp, 
+                   NonlinearityType* type);
+\end{lstlisting} 
+
+\noindent Provides the lower and upper bounds $x_l$ and $x_u$ on the decision variables. When a variable (let us say the $i^{th}$) has no lower or/and upper bounds, the  $i^{th}$ entry of xlow and/or xupp should be less than $-1e20$ or/and larger than $1e20$, respectively. The last argument is not used and can set to any value of the enum \texttt{hiop::hiopInterfaceDenseConstraints::NonlinearityType}.
+
+\begin{lstlisting} 
+bool get_cons_info(const long long& m, double* clow, double* cupp, 
+                   NonlinearityType* type);
+\end{lstlisting}
+\noindent Similar to the above, but for the inequality bounds $d_l$ and $d_u$. For equalities, set the corresponding entries in clow and cupp equal to the desired value (from $c_E$).
+
+
+\begin{lstlisting} 
+bool eval_f(const long long& n, 
+            const double* x, bool new_x, 
+            double& obj_value);
+\end{lstlisting} 
+
+\noindent Implement this method to compute the function value $f(x)$ in \texttt{obj\_value} for the provided decision variables $x$. The input argument \texttt{new\_x} specifies whether the variables $x$ have been changed since the previous call of one of the \texttt{eval\_} methods. Use this argument to ``buffer'' the objective and gradients function and derivative evaluations when this is possible.
+
+\begin{lstlisting} 
+bool eval_grad_f(const long long& n, 
+                 const double* x, bool new_x, 
+                 double* gradf);
+\end{lstlisting} 
+
+\noindent Same as above but for $\nabla f(x)$.
+
+\begin{lstlisting} 
+ bool eval_cons(const long long& n, const long long& m, 
+                const long long& num_cons,
+				    const long long* idx_cons, const double* x, 
+			       bool new_x, double* cons);
+\end{lstlisting} 
+
+\noindent Implement this method to provide the value of the constraints $c(x)$ and/or $d(x)$. The input parameter \texttt{num\_cons} specifies how many constraints (out of \texttt{m}) needs to evaluated; \texttt{idx\_cons} array specifies the indexes, which are zero-based, of the constraints  and is of size \texttt{num\_cons}. These values should be provided in \texttt{cons}, which is also an array of size \texttt{num\_cons}.
+
+\begin{lstlisting} 
+bool 
+eval_Jac_cons(const long long& n, const long long& m, 
+			     const long long& num_cons, const long long* idx_cons,  
+			     const double* x, bool new_x,
+			     double** Jac);
+\end{lstlisting} 
+
+\noindent Implement this method to provide the Jacobian of a subset of the  constraints $c(x)$ and/or $d(x)$ in \texttt{Jac}; as above this subset is specified by the array \texttt{idx\_cons}. To set the $(i,j)$ entry of the Jacobian to $v$, one can use  \texttt{Jac[i][j]=v;}. Alternatively,  if you have a contiguous row-wise array storage of the Jacobian, simply (mem)copy it in \texttt{Jac[0]}. 
+
+
+\subsubsection{Specifying the inter-process/memory distribution of the   problem}
+
+\Hi uses \textit{data parallelism}, meaning that the data [D1]-[D3] of the optimization problem is distributed across processes (MPI ranks). It is \textbf{crucial} to understand the data distribution scheme in order to use \Hi's interface properly. 
+
+The general rule of thumb is to distribute any data of the problem with storage depending on $n$, namely the decision variables $x$ and their bounds $x_l$ and $x_u$, the gradient $\nabla f(x)$, and the Jacobians $Jc(x)$ and $Jd(x)$. The Jacobians, which are assumed to be dense matrices with $n$ columns, are distributed column-wise.
+
+\begin{figure}[h]
+\centering
+\input{diagr_distribution}
+\caption{Depiction of the distribution of the data of the optimization problem ~\eqref{obj}-\eqref{bounds} across MPI ranks. The vectors and matrices with storage dependent on the number of optimization variables are distributed. Other data, \textit{i.e.}, scalar function values or vectors of small size (shown in dashed dark grey boxes), are replicated on each rank.}
+\label{diagr_distrib}
+\end{figure}
+%\input{diagr_distribution}
+
+\warningcp{Note:} All the \texttt{eval\_} functions of the C++ interface provides local array slices of the above mentioned distributed data to the application code that implements \Hi's C++ interface. The size of these local slices is the ``local size'' (specified by the application code through the \texttt{get\_vecdistrib\_info} method explained below) and is different from the ``global size'' $n$ and parameter \texttt{n} of methods. 
+
+\warningcp{Note:} Since the Jacobians are distributed column-wise, the implementer should populate the \texttt{Jac} argument of \texttt{eval\_Jac\_cons} with the ``local'' columns.
+
+On the other hand, the problem's data that does not have storage depending on $n$, is not distributed; instead, it is replicated on all ranks. Such data consist of $c_E$, $d_l$, $d_u$ and the evaluations of $c(x)$ and $d(x)$.
+ 
+\begin{lstlisting} 
+bool get_MPI_comm(MPI_Comm& comm_out) ;
+\end{lstlisting}
+
+\noindent Use this method to specify the MPI communicator to be used by \Hi. It has a default implementation that will provide \texttt{MPI\_COMM\_WORLD}.
+
+
+%\noindent  \begin{verbatim}bool get_vecdistrib_info(long long global_n, long long* cols) \end{verbatim}
+\begin{lstlisting}
+bool get_vecdistrib_info(long long global_n, long long* cols);
+\end{lstlisting}
+
+\noindent Use this method to specify the data distribution of the data of the problem that has storage depending on $n$. \Hi will call the implementation of this methods to obtain the partitioning/distribution of an hypothetical vector of size \texttt{global\_n} across the MPI ranks. The array \texttt{cols} is of dimension number of ranks plus one and should be populated such that \texttt{cols[r]} and \texttt{cols[r+1]-1} specify the start and end indexes of the slice stored on rank $r$ in the hypothetical vector.  It has a default implementation that will returns \texttt{false}, indicating that \Hi should run in serial.
+
+
+\warningcp{Note:}  \Hi also uses \texttt{get\_vecdistrib\_info} to obtain the information about the Jacobians' distribution across MPI ranks (this is possible since they are  column-wise distributed).
+
+Examples of how to use these functions can be found in the standalone drivers in \texttt{src/Drivers/} under the \Hi's root directory.
+
+%\subsubsection{Additional interface methods}
+%\Hi's C++ interface provides methods to retrieve the optimal solution and the intermediate iterates.
+%
+%[[ to do ]]
+
+\subsubsection{Calling \Hi for a \texttt{hiopInterfaceDenseConstraints} formulation}
+Once an implementation of the \texttt{hiop::hiopInterfaceDenseConstraints} abstract interface class containing the user's NLP representation is available, the  user code needs to create a \Hi problem formulation that encapsulate the NLP representation, instantiate an optimization algorithm class, and start the numerical optimization process. Assuming that the NLP representation is implemented in a class named \texttt{NlpEx1} (deriving \texttt{hiop::hiopInterfaceDenseConstraints}), the aforementioned sequence of steps can be performed by:
+\begin{lstlisting}
+#include "NlpEx1.hpp"               //the NLP representation class
+#include "hiopInterface.hpp"   //HiOP encapsulation of the NLP
+#include "hiopAlgFilterIPM.hpp"     //solver class
+using namespace hiop;
+...
+NlpEx1 nlp_interface();                     //instantiate your NLP representation class
+hiopNlpDenseConstraints nlp(nlp_interface); //create HiOP encapsulation
+nlp.options.SetNumericValue("mu0", 0.01);  //set initial value for  barrier parameter
+hiopAlgFilterIPM solver(&nlp);             //create a solver object
+hiopSolveStatus status = solver.run();     //numerical optimization
+double obj_value = solver.getObjective();  //get objective
+...
+\end{lstlisting}
+Various output quantities of the numerical optimization phase (\textit{e.g.}, the optimal objective value and (primal) solution, status of the numerical optimization process, and solve statistics) can be retrieved from \Hi's \texttt{hiopAlgFilterIPM} solver object. Most commonly used such methods are: 
+\begin{lstlisting}
+double getObjective() const;
+void getSolution(double* x) const;
+hiopSolveStatus getSolveStatus() const;
+int getNumIterations() const;
+\end{lstlisting} 
+The standalone drivers \texttt{nlpDenseCons\_ex1}, \texttt{nlpDenseCons\_ex2}, and \texttt{nlpDenseCons\_ex3} inside directory \texttt{src/Drivers/} under the \Hi's root directory contain more detailed examples of the use of \Hi.
+
+\subsection{NLPs in the mixed dense-sparse (MDS) form}\label{sec:mds}
+A second class of optimization problems supported by \Hi consists of nonlinear, possibly nonconvex optimization problems that explicitly partition the optimization variables into so-called ``dense'' and ``sparse`` variables, $x_d$ and $x_s$, respectively; this problem can be  expressed compactly as
+\begin{align}
+\min_{x_d\in\mathbb{R}^{n_d}, x_s\in\mathbb{R}^{n_s}} & \hspace{0.3cm} f(x_d, x_s) && \label{mdsobj}\\
+\textnormal{s.t.} &\hspace{0.3cm}  c(x_d, x_s)=c_E, &&\\
+ &\hspace{0.3cm} d^l \leq d(x_d, x_s) \leq d^u,  &&\label{mdsineq} \\
+ &\hspace{0.3cm} x^{l}_{d} \leq x_d \leq x^{u}_{d}, \ x^{l}_{s} \leq x_s \leq x^{u}_{s}. &&\label{mdsbounds}
+\end{align}
+Here $f:\mathbb{R}^n\rightarrow\mathbb{R}$, $c:\mathbb{R}^n\rightarrow\mathbb{R}^{m_E}$, and $d:\mathbb{R}^n\rightarrow\mathbb{R}^{m_I}$, where $n$ denotes the total number of variables, $n=n_d + n_s$. The bounds appearing in the inequality constraints~\eqref{mdsineq} are assumed to be $d^l\in\mathbb{R}^{m_I}\cup\{-\infty\}$, $d^u\in\mathbb{R}^{m_I}\cup\{+\infty\}$, $d_i^l < d_i^u$, and at least of one of $d_i^l$ and $d_i^u$ are finite for each $i\in\{1,\ldots,m_I\}$. The vector bounds $x^{l}_{d}$, $x^{u}_{d}$, $x^{l}_{s}$, and $x^{u}_{s}$ in~\eqref{mdsbounds} need to satisfy identical requirements.  
+For the rest of the paper $m$ will denote $m_E+m_I$, \textit{i.e.}, the total number of constraints excepting the simple bounds constraints~\eqref{mdsbounds}.
+
+The salient idea behind mixed dense-sparse problems of the form~\eqref{mdsobj}-\eqref{mdsbounds} is that the explicit partitioning of the optimization variables and a couple of (block) structural properties of the functions $f(\cdot)$, $c(\cdot)$, and $d(\cdot)$, which are elaborated below, allow orchestrating the computations of the optimization algorithm to heavily rely on matrix and vector \textit{dense} kernels and to reduce the reliance on sparse linear algebra kernels.
+
+As mentioned above we make a couple of assumptions on the block structure of the derivatives:
+\begin{itemize}
+    \item[A1.] The ``cross-term'' Hessian matrices $\nabla^2_{x_d x_s} f$, $\nabla^2_{x_s x_d} f$, $\nabla^2_{x_d x_s} c$, $\nabla^2_{x_s x_d} c$, $\nabla^2_{x_d x_s} d$, and $\nabla^2_{x_s x_d} d$ are zero;
+    \item[A2.] The Hessian matrix $\nabla^2_{x_s x_s} L$ has a sparsity pattern that allows \textit{computationally efficient} inversion of (or solving with) the matrix $\nabla^2_{x_s x_s} L + D_{x_s}$ where $D_{x_s}$ is a diagonal matrix with positive diagonal entries; in our target applications, namely, optimal power flow problems, $\nabla^2_{x_s x_s} L$ is a diagonal matrix with nonnegative entries.
+\end{itemize}
+
+The optimization problem~\eqref{mdsobj}--\eqref{mdsbounds} is transformed internally by \Hi to an equivalent form that is more amenable to the use of interior-point methods as described on~\cite[Section~3]{petra2019memory}. Furthermore, HiOp implements the filter line-search interior-point algorithm of W{\"a}chter and Biegler~\cite{waecther_05_ipopt,waecther_05_ipopt2} (also implemented by IPOPT~\cite{waecther_05_ipopt0}) and makes explicit use of second-order derivatives/Hessians.
+
+Starting version 0.3, \Hi offers support for NVIDIA GPU computations acceleration. This feature is available only when solving NLPs in the mixed dense-sparse (MDS) form and should be enabled during the build by using \texttt{-DHIOP\_USE\_GPU} option with \texttt{cmake}. \Hi's \texttt{cmake} build system is quite versatile to find the dependencies required to offload computations to the device GPUs since was developed and tested on a few GPU-enabled HPC platforms at Oak Ridge, Lawrence Livermore, and Pacific Northwestern National Laboratories. These dependencies consist of CUDA library version 10.1 or later and a recent Magma linear solver library (as well as an NVIDIA GPU). If offloading computations to the device is not desired, the user can switch it off and perform only CPU (host) computations by setting \Hi's option \texttt{compute\_mode} to \texttt{cpu}. The Newton interior-point solver for MDS problems offers ample device/GPU (and limited CPU/multicore) fine-grain parallelism, however it does not offer support of interprocess/internode parallelism.
+
+%After a careful manipulation of the equations, which is described in detail in~\cite{petra2019memory}, also see~\cite{wachter2006implementation}, the interior-point solver needs to perform computations that can roughly categorized as 
+%\begin{itemize}
+%\item vector-vector operations involving only dense vectors, for example, in updating the optimization variables along the search direction (``axpy``), computing residual norms, searching for min/max elements, etc.;
+%\item matrix-vector operations involving both sparse and dense matrices and dense vectors, for example in residual computation;
+%\item solving augmented MDS linear systems of the form
+%\begin{align}
+%    \left[\begin{array}{cccc}
+%        \nabla^2_{x_s x_s} L + D_{x_s} & 0 & J_{x_s}^T c & J_{x_s}^T d  \\
+%         0 & \nabla^2_{x_d x_d} L + D_{x_d} & J_{x_d}^T &  J_{x_d}^T d\\
+%         J_{x_s} c & J_{x_d} c & 0 & 0 \\
+%         J_{x_s} d & J_{x_d} d & 0 & D_d^{-1} \\
+%    \end{array}\right]
+%    \left[\begin{array}{c} \Delta x_s \\ \Delta x_d \\ \Delta y_c \\ \Delta y_d\end{array}\right] = 
+%    \left[\begin{array}{c}  r_{x_s} \\ r_{x_d} \\ r_{y_c} \\  r_{y_d}\end{array}\right]
+%\end{align}
+%\end{itemize}
+
+The following quantities are required by \Hi:
+\begin{itemize}
+\item[D1] objective and constraint functions $f(x_d,x_s)$, $c(x_d,x_s)$, $d(x_d,x_s)$;
+\item[D2] the first-order derivatives: $\nabla f(x_d,x_s)$, $Jc(x_d,x_s)$, $Jd(x_d,x_s)$; the two Jacobians will have a MDS structure in the sense that the left blocks will be dense while the right blocks will be sparse in their expressions
+\begin{align}
+Jc(x_d,x_s) &= \left[\begin{array}{cc} J_{x_d} c(x_d,x_s) &  J_{x_s} c(x_d,x_s)\end{array}\right] 
+\end{align}
+and
+\begin{align}
+Jd(x_d,x_s) &= \left[\begin{array}{cc} J_{x_d} d(x_d,x_s) &  J_{x_s} d(x_d,x_s)\end{array}\right]. \label{mdsJac}
+\end{align}
+\Hi does not track MDS structure within the gradient $\nabla f(x_d,x_s)$ and treats it as an unstructured vector.
+\item[D3] the second-order derivatives in the form of the Hessian of the Lagrangian
+\begin{align}
+\nabla^2 L(x_d,x_s)& = \lambda_0 \nabla^2 f(x_d,x_s) + \sum_{i=1}^{m_E} \lambda_i^E \nabla^2 c_i(x_d,x_s) + \sum_{i=1}^{m_I} \lambda_i^I \nabla^2 d_i(x_d,x_s).\label{mdsHess}
+\end{align}
+We remark that  $\nabla^2 L(x_d,x_s)$ has a so-called MDS structure in the sense that $\nabla^2_{x_d^2} L(x_d,x_s)$ is dense, $\nabla^2_{x_s^2} L(x_d,x_s)$ is sparse, and $\nabla^2_{x_d x_s} L(x_d,x_s)$ and $\nabla^2_{x_s x_d} L(x_d,x_s)$ are zero; this is a consequence of the assumptions A1 and A2 above,
+
+\item[D4] the simple bounds $x_l$ and $x_u$, the inequalities bounds: $d_l$ and $d_u$, and the right-hand size of the equality constraints $c_E$.
+\end{itemize}
+
+\subsubsection{The C++ interface}
+The above optimization problem~\eqref{mdsobj}--\eqref{mdsbounds} can be specified by using the C++ interface, namely by deriving and providing an implementation for the \texttt{hiop::hiopInterfaceMDS} abstract class.
+
+ We present next the methods of this abstract class that needs to be implemented in order to specify the parts D1-D4 of the optimization problem. All the methods of this section are ``pure'' virtual in \texttt{hiop::hiopInterfaceMDS} abstract class  and need to be provided by the user implementation.
+ 
+ 
+
+\warningcp{Note:} Unless stated otherwise, all the functions that return \texttt{bool} should return \texttt{false} when an error occurs, otherwise should return \texttt{true}.
+
+\begin{lstlisting} 
+bool get_prob_sizes(long long& n, long long& m);
+\end{lstlisting} 
+\noindent Provides the number of decision variables and the number of constraints ($m=m_E+m_I$).
+
+
+\begin{lstlisting} 
+bool get_vars_info(const long long& n, double *xlow, double* xupp, 
+                   NonlinearityType* type);
+\end{lstlisting} 
+
+\noindent Provides the lower and upper bounds $x_l$ and $x_u$ on the decision variables. When a variable (let us say the $i^{th}$) has no lower or/and upper bounds, the  $i^{th}$ entry of xlow and/or xupp should be less than $-1e20$ or/and larger than $1e20$, respectively. The last argument is not used and can set to any value of the enum \texttt{hiop::hiopInterfaceDenseConstraints::NonlinearityType}.
+
+
+\begin{lstlisting} 
+bool get_cons_info(const long long& m, double* clow, double* cupp, 
+                   NonlinearityType* type);
+\end{lstlisting}
+\noindent Similar to the above, but for the inequality bounds $d_l$ and $d_u$. For equalities, set the corresponding entries in clow and cupp equal to the desired value (from $c_E$).
+
+\begin{lstlisting} 
+bool get_sparse_dense_blocks_info(int& nx_sparse, int& nx_dense,
+					                   int& nnz_sparse_Jaceq, 
+					                   int& nnz_sparse_Jacineq,
+					                   int& nnz_sparse_Hess_Lagr_SS, 
+					                   int& nnz_sparse_Hess_Lagr_SD);
+\end{lstlisting}
+\noindent Specifies the number of nonzero elements in the  \textit{sparse blocks} of the Jacobians of the constraints and of the Hessian of the Lagrangian, see~\eqref{mdsJac} and~\eqref{mdsHess}, respectively. The last parameter \texttt{nnz\_sparse\_Hess\_Lagr\_SD} is not used momentarily and should be set to zero.
+
+\begin{lstlisting} 
+bool eval_f(const long long& n, 
+            const double* x, bool new_x, 
+            double& obj_value);
+\end{lstlisting} 
+
+\noindent Implement this method to compute the function value $f(x)$ in \texttt{obj\_value} for the provided decision variables $x$. The input argument \texttt{new\_x} specifies whether the variables $x$ have been changed since the previous call of one of the \texttt{eval\_} methods. Use this argument to ``buffer'' the objective and gradients function and derivative evaluations when this is possible.
+
+\begin{lstlisting} 
+bool eval_grad_f(const long long& n, 
+                 const double* x, bool new_x, 
+                 double* gradf);
+\end{lstlisting} 
+
+\noindent Same as above but for $\nabla f(x)$.
+
+\begin{lstlisting} 
+ bool eval_cons(const long long& n, const long long& m, 
+                const long long& num_cons,
+				    const long long* idx_cons, const double* x, 
+			       bool new_x, double* cons);
+\end{lstlisting} 
+
+\noindent Implement this method to provide the value of the constraints $c(x)$ and/or $d(x)$. The input parameter \texttt{num\_cons} specifies how many constraints (out of \texttt{m}) needs to evaluated; \texttt{idx\_cons} array specifies the indexes, which are zero-based, of the constraints  and is of size \texttt{num\_cons}. These values should be provided in \texttt{cons}, which is also an array of size \texttt{num\_cons}.
+
+\begin{lstlisting} 
+eval_Jac_cons(const long long& n, const long long& m, 
+			     const long long& num_cons, const long long* idx_cons,
+			     const double* x, bool new_x,
+			     const long long& nsparse, const long long& ndense, 
+			     const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
+			     double** JacD);
+\end{lstlisting} 
+
+%\noindent Implement this method to provide the Jacobian of a subset of the  constraints $c(x)$ and/or $d(x)$ in \texttt{Jac}; as above this subset is specified by the array \texttt{idx\_cons}. To set the $(i,j)$ entry of the Jacobian to $v$, one can use  \texttt{Jac[i][j]=v;}. Alternatively,  if you have a contiguous row-wise array storage of the Jacobian, simply (mem)copy it in \texttt{Jac[0]}. 
+
+Evaluates the Jacobian of constraints split in the sparse (triplet format) and dense submatrices (contiguous  rows storage). The methods is called by \Hi twice once for equalities and once for inequalities and passes during each of these calls  the \texttt{idx\_cons} array of the indexes of equalities and inequalities in the whole body of constraints.
+
+It is advantageous to provide
+this method when the underlying NLP's constraints come naturally split in equalities
+and inequalities. When this is not convenient to do so, use \texttt{eval\_Jac\_cons} below.
+
+Parameters:
+\begin{itemize} 
+\item first six: see \texttt{eval\_cons}.
+\item \texttt{nnzJacS}, \texttt{iJacS}, \texttt{jJacS}, \texttt{MJacS} are for number of nonzeros, $(i,j)$ indexes, and nonzero values of   the sparse Jacobian.
+\item  JacD: dense Jacobian as a contiguous array storing the matrix by rows; the array is ``primed'' to support double indexing \texttt{JacD[i][j]}.
+\end{itemize}
+
+Notes for implementer of this method: 
+\begin{itemize}
+\item[1.] \texttt{JacD} parameter will be always non-null
+\item[2.] When \texttt{iJacS} and \texttt{jJacS} are non-null, the implementer should provide the $(i,j)$   indexes in these arrays. 
+\item[3.] When \texttt{MJacS} is non-null, the implementer should provide the values corresponding to    entries specified by \texttt{iJacS} and \texttt{jJacS}.
+\item[4.] \texttt{iJacS} and \texttt{jJacS} are both either non-null or null during a call.
+\item[5.] The pair (\texttt{iJacS}, \texttt{jJacS}) and \texttt{MJacS} can be both non-null during the same call or only one of them  non-null; but they will not be both null.
+\end{itemize}
+
+
+\begin{lstlisting}
+bool eval_Jac_cons(const long long& n, const long long& m, 
+			          const double* x, bool new_x,
+			          const long long& nsparse, const long long& ndense, 
+			          const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
+			          double** JacD);
+\end{lstlisting} 
+
+\noindent Evaluates the Jacobian of equality and inequality constraints \textit{in one call}. This Jacobian is mixed dense-sparse (MDS), which means is structurally split in the sparse (triplet format) and dense matrices (contiguous rows storage)
+   
+\warningcp{Note:}   HiOp will call this method whenever the implementer/user returns \texttt{false} from the previous, two-calls \texttt{eval\_Jac\_cons}; we remark that this method should return  \texttt{false} during both calls (for equalities and inequalities) made to it by \Hi.
+   
+   
+   
+The main difference from the above \texttt{eval\_Jac\_cons} is that the implementer/user of this 
+    method does not have to split the constraints into equalities and inequalities; instead,
+    HiOp does this internally.
+   
+ 
+   Parameters:
+    \begin{itemize}
+    \item  first four: number of variables, number of constraints, (primal) variables at which the
+    Jacobian should be evaluated, and boolean flag indicating whether the variables \texttt{x} have
+    changed since a previous call to any of the function and derivative evaluations.
+    \item   \texttt{nsparse} and \texttt{ndense}: number of sparse and dense variables, respectively, adding up to \texttt{n}.
+     \item   \texttt{nnzJacS}, \texttt{iJacS}, \texttt{jJacS}, \texttt{MJacS}: number of nonzeros, $(i,j)$ indexes, and nonzero values of 
+   the sparse Jacobian block; these indexes are within the sparse Jacobian block (not within 
+    the entire Jacobian).
+     \item   \texttt{JacD}: dense Jacobian block as a contiguous array storing the matrix by rows; array is    ``primed'' to support double indexing \texttt{JacD[i][j]}.
+    \end{itemize}
+   
+\warningcp{Note:} Notes 1-5 from the previous, two-call \texttt{eval\_Jac\_cons} applies here as well.
+    
+\begin{lstlisting} 
+bool eval_Hess_Lagr(const long long& n, const long long& m, 
+			      const double* x, bool new_x, const double& obj_factor,
+			      const double* lambda, bool new_lambda,
+			      const long long& nsparse, const long long& ndense, 
+			      const int& nnzHSS, int* iHSS, int* jHSS, double* MHSS, 
+			      double** HDD,
+			      int& nnzHSD, int* iHSD, int* jHSD, double* MHSD);
+\end{lstlisting} 
+
+\noindent Evaluates the Hessian of the Lagrangian function in three structural blocks given by the MDS structure of the problm. \texttt{nnzHSS}, \texttt{iHSS}, \texttt{jHSS}, and \texttt{MHSS} hold  $\nabla^2 L(x_s,x_s)$ from~\eqref{mdsHess}. \texttt{HDD} stores $\nabla^2 L(x_d,x_d)$ from~\eqref{mdsHess}. 
+
+
+\warningcp{Note:} The last four arguments, which are supposed to store the cross-Hessian $\nabla^2 L(x_s,x_d)$ from~\eqref{mdsHess}, are for now assumed to hold a zero matrix. The implementer should return \texttt{nnzHSD=0} during the first call to \texttt{eval\_Hess\_Lagr}. On subsequent calls, \Hi will pass the sparse triplet \texttt{HSD} arrays   set to \texttt{NULL} and the implementer (obviously) should not use them.
+ 
+ 
+\warningcp{Note:} Notes 1-5 from \texttt{eval\_Jac\_cons} apply to arrays \texttt{iHSS}, \texttt{jHSS}, and \texttt{MHSS} storing the sparse part of the Hessian as well as to the \texttt{HDD} array storing the dense block of the Hessian. 
+
+\warningcp{Note:} The array \texttt{lambda} contains first the multipliers of the equality constraints followed by the multipliers of the inequalities.
+
+\subsubsection{Calling \Hi for a \texttt{hiopInterfaceMDS} formulation}
+Once an implementation of the \texttt{hiop::hiopInterfaceMDS} abstract interface class containing the user's NLP representation is available, the  user code needs to create a \Hi problem formulation that encapsulate the NLP representation, instantiate an optimization algorithm class, and start the numerical optimization process. 
+
+A detailed, self-contained example can be found in \texttt{src/Drivers/} directory in \texttt{nlpMDS\_ex4\_driver.cpp} files for an illustration of aforementioned sequence of steps. A synposis of \Hi code that solves and MDS NLP implemented presumably in a class \texttt{Ex4 } (implemented in \texttt{nlpMDSForm\_ex4.hpp}) derived from \texttt{hiop::hiopInterfaceMDS} is as follows:
+\begin{lstlisting}
+#include "nlpMDSForm_ex4.hpp"               //the NLP representation class
+#include "hiopInterface.hpp"   //HiOP encapsulation of the NLP
+#include "hiopAlgFilterIPM.hpp"     //solver class
+using namespace hiop;
+...
+Ex4* my_nlp = new Ex4(n_sp, n_de); //instantiate your NLP representation class                    
+hiopNlpMDS nlp(*my_nlp); //create HiOP encapsulation
+nlp.options->SetStringValue("Hessian", "analytical_exact");
+nlp.options->SetNumericValue("mu0", 0.01);  //set initial value for  barrier parameter
+hiopAlgFilterIPMNewton solver(&nlp);         //create a solver object
+hiopSolveStatus status = solver.run();     //numerical optimization
+double obj_value = solver.getObjective();  //get objective
+...
+\end{lstlisting}
+
+
+
+%%%%%%
+
+%1. mention GPUs
+
+%2. Newton IPM for MDS
+
+%3. primal dual restart
+
+
+
+\subsection{Specifying a starting point for the optimization process}
+
+The user  can  provide an initial primal or primal-dual point implementing the method \texttt{get\_starting\_point} of the NLP specification interfaces \texttt{hiopInterfaceDenseConstraints} or \texttt{hiopInterfaceMDS}. 
+
+\begin{lstlisting} 
+bool get_starting_point(const long long& n, const long long& m,
+                        double* x0,
+                        bool& duals_avail,
+                        double* z_bndL0, double* z_bndU0,
+                        double* lambda0);
+\end{lstlisting} 
+
+A second method is offered to user to provide an initial primal starting point. This method will be soon deprecated as its functionality is a subset of the method above and should be avoided.
+
+\begin{lstlisting} 
+bool get_starting_point(const long long& n, double* x0);
+\end{lstlisting} 
+
+Parameters:
+\begin{itemize}
+\item \texttt{n} and \texttt{m} are the number of variables and the number of constraints.
+\item \texttt{x0} array of values for the initial primal variables/starting point.
+\item \texttt{duals\_avail} boolean flag expressing whether the user wishes to specifiy the a starting point for dual variables.
+\item \texttt{z\_bndL0} and  \texttt{z\_bndU0} starting points for the duals of the lower and upper bounds.
+\item \texttt{lambda0} is an array containing the starting point for the duals of the constraints. It is allocated to have the dimension of the constraints body and the entries in \texttt{lambda0} should have the same order as the constraints body (that is equalities may be mixed with inequalities), see \texttt{eval\_cons} methods; \Hi keeps track internally whether each value in \texttt{lambda0} is a multiplier for an equality or for an inequlity constraint.
+\end{itemize}
+  
+These methods should return \texttt{true} if the user successfully provided starting values for the primal or for the primal and dual variables. If the first method above returns \texttt{false},  then \Hi will attempt calling the second method above. This behavior is for backward compatibility. If a starting point cannot be set by the user, both methods should return \texttt{false}. Also, we remark that the  methods do not need to be implemented since  default implementations returning \texttt{false} are provided by the base class; in this case, \Hi will use a starting point of all zeros (which is subjected to internal adjustments, see below).
+
+
+\warningcp{Note:} The starting point returned by the user in \texttt{x0} using the methods above is subject to internal adjustments in \Hi and may differ from \texttt{x0} with which the methods of the previous section are first called.
+
+% /* Method providing a primal starting point. This point is subject to internal adjustments in hiOP.
+%   * The method returns true (and populate x0) or return false, in which case hiOP will use set 
+%   * x0 to all zero (still subject to internal adjustement).
+
+
+\subsection{Compiling and linking your project with the \Hi library}
+\Hi's build system offers \Hi as a static library. For a straightforward integration of \Hi in the user's project, one needs  to
+\begin{itemize}
+\item append to the compiler's include path the location of the HiOP's headers: \begin{verbatim} -Ihiop-dir/include \end{verbatim}
+\item specify \texttt{libhiop.a} to the linker, possibly adding the HiOP's library directory to the linker's libraries paths: 
+\begin{verbatim}-Lhiop-dir/lib -lhiop\end{verbatim} \end{itemize}
+Here, \texttt{hiop-dir} is the \Hi's distribution directory  (created using \Hi's build system, in particular   by using \texttt{make install} command).
+
+In addition, a shared dynamic load library can be also built by using \texttt{HIOP\_BUILD\_SHARED} option with cmake. 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Solver options
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Solver options}
+\Hi v0.1 prints all the available user options and their values on the standard output. 
+
+\warningcp{} Each option i. should be of one of types numeric/double, integer, and string; ii. has a value associated; iii. possess a range of values;  and, iv. has a default value. 
+
+The user can set \Hi's options in two ways:
+\begin{itemize}
+\item via \texttt{hiop.options} file that should be placed in the same directory where the application driver using \Hi is executed. The format of the \texttt{hiop.options} is very basic, each of its lines should contain a single pair \texttt{ option\_name option\_value}. Lines that begin with '\#' are discarded. The option value is checked to have the correct type (numeric, integer, or string) and to be in the expected range. If the checks fail, then the option is set to the default value and a warning message is displayed.
+\item at runtime via the \Hi's API using the \texttt{options} member of the \texttt{hiop::hiopInterfaceDenseConstraints} or \texttt{hiop::hiopInterfaceMDS} classes. This object has three methods that allows the user to set options based on their types:
+\begin{lstlisting}
+ bool SetNumericValue(const char* name, const double& value);
+ bool SetIntegerValue(const char* name, const int& value);
+ bool SetStringValue (const char* name,  const char* value);
+\end{lstlisting}
+\end{itemize}
+
+\warningcp{Note:} Options set in \texttt{hiop.options} file at runtime overwrite options set at runtime via the above API.
+
+
+
+\subsection{List of available options}
+
+{ \footnotesize 
+\begin{longtable}{| p{1.5cm} |  r |  r | p{2.0cm}  |  p{8cm} |}
+\hline \hline
+\textbf{Name} & \textbf{Type} & \textbf{Default} & \textbf{Range} & \textbf{Explanation}\\\hline% \hline
+tolerance  & numeric & 1e-08 & 1e-14 -- 0.1 &   Absolute error tolerance for the NLP \\\hline%\\\hline
+max\_iter  & integer & 3000 &   1 to 1000000 &  Max number of iterations \\\hline %\\hline
+ acceptable\_ tolerance  & numeric & 1e-06 &   1e-14 -- 0.1 &    HiOp will terminate if the NLP residuals are below this option for \texttt{acceptable\_iterations} many consecutive iterations \\\hline
+acceptable\_ iterations  & integer & 15 & 1 -- 1000000 &  Number of iterations of acceptable tolerance after which HiOp terminates \\\hline %\hline
+verbosity\_ level  & integer & 3 &   0 -- 12 &   Verbosity level: 0 no output (only errors), 1=0+warnings, 2=1 (reserved), 3=2+optimization output, 4=3+scalars; larger values explained in \texttt{hiopLogger.hpp} \\\hline %\hline
+mu0 & numeric & 1.0 &  1e-06 -- 1000 & Initial log-barrier parameter mu \\\hline
+kappa\_eps & numeric & 10.0 & 1e-06 -- 1000 & mu is reduced when when log-bar error is below kappa\_eps $\times$ mu \\\hline
+kappa\_mu & numeric & 0.2 & 1e-08 -- 0.999 & linear reduction coefficient for mu (eqn. (7) in~\cite{waecther_05_ipopt0}) \\\hline
+theta\_mu & numeric & 1.5 & 1.0 -- 2.0 & exponential reduction coefficient for mu (eqn. (7) in~\cite{waecther_05_ipopt0}) \\\hline
+tau\_min  & numeric & 0.99 &  0.9 -- 0.99999 & fraction-to-the-boundary parameter used in the line-search to back-off from the boundary (eqn. (8) in~\cite{waecther_05_ipopt0}) \\\hline 
+kappa1 & numeric &  1e-02 & 1e-08 -- 1 &   sufficiently-away-from-the-boundary projection parameter used in the shift of the user-provided initial point \\\hline 
+kappa2 & numeric & 1e-02 & 1e-08 -- 0.49999 &  shift projection parameter used in initialization for double-bounded variables \\\hline % \hline \hline 
+\multicolumn{2}{|l|}{ dualsInitialization } &&&\\
+\multicolumn{2}{|r|}{string} & "lsq" &  "lsq" "zero" &   type of update of the multipliers of the eq. cons.  \\\hline
+\multicolumn{2}{|l|}{dualsUpdateType} &&&\\
+\multicolumn{2}{|r|}{ string} &  "lsq" & "lsq" "linear" & type of update of the multipliers of the eq. cons.\\\hline
+secant\_ memory\_ len & integer & 6 &  0 -- 256  & length of the memory of the Hessian secant approximation\\\hline  
+fixed\_var & string & "none" & "remove" "relax" "none" & treatment of fixed variables; in order, they can be removed, their lower and upper bounds relaxed, or ignored. The last value causes a premature termination if fixed variables are detected. \\  \hline
+fixed\_var\_ tolerance & numeric & 1e-15 & 1e-30 -- 1e-2 & tolerance for $|ub-lb|$ under which a variable will be considered fixed. \\ \hline
+fixed\_var\_ perturb & numeric & 1e-8 & 1e-14 -- 0.1 & Perturbation of the lower and upper bounds for a fixed variable relative to its magnitude: lb/ub $-$=/+= max(abs(ub),1)$\times$fixed\_var\_perturb\\ \hline
+compute\_mode & string & "auto" & "auto" "cpu" "hybrid" & Offloading of computations to GPUs: "hybrid" will use GPUs for linear systems, "auto" will decide between "cpu" and "hybrid" based on the other options passed, and "cpu" will only use device CPU. \\\hline
+time\_kkt & string & "off" & "on" "off" & Turns on/off internal performance timers and analysis and enables additional reporting of the computational constituents of the KKT solve process \\\hline
+%
+%% smax  1.000000e+02     	 \# (numeric)  1 to 1e+07   multiplier threshold used in computing the scaling factors for the optimality error (default 100.)]
+%
+%
+%
+\end{longtable}}
+
+
+
+
+%\input{old_stuff}
+
+\section{Licensing and copyright}
+HiOp is free software; you can modify it and/or redistribute it under the terms of the following  modified BSD 3-clause license:
+
+\noindent\begin{center}\fcolorbox{black}{mypink}{\begin{minipage}{0.9\textwidth} \footnotesize
+\noindent Copyright (c) 2017, Lawrence Livermore National Security, LLC.
+
+\noindent Produced at the Lawrence Livermore National Laboratory (LLNL).
+
+\noindent Written by Cosmin G. Petra, petra1@llnl.gov. LLNL-CODE-742473. All rights reserved.
+
+\bigskip
+
+\noindent HiOp is released under the BSD 3-clause license (https://github.com/LLNL/hiop/blob/master/LICENSE). 
+Please also read “Additional BSD Notice” below.
+
+\bigskip
+
+\noindent Redistribution and use in source and binary forms, with or without modification, 
+are permitted provided that the following conditions are met:
+\begin{itemize}
+\item[i.] Redistributions of source code must retain the above copyright notice, this list 
+of conditions and the disclaimer below.
+\item[ii.] Redistributions in binary form must reproduce the above copyright notice, 
+this list of conditions and the disclaimer (as noted below) in the documentation and/or 
+other materials provided with the distribution.
+\item[iii.] Neither the name of the LLNS/LLNL nor the names of its contributors may be used to 
+endorse or promote products derived from this software without specific prior written 
+permission.
+\end{itemize}
+
+\medskip
+
+\noindent THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS ``AS IS'' AND ANY 
+EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES 
+OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT 
+SHALL LAWRENCE LIVERMORE NATIONAL SECURITY, LLC, THE U.S. DEPARTMENT OF ENERGY OR 
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS 
+OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED 
+AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, 
+EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+\medskip
+
+Additional BSD Notice
+\begin{itemize}
+\item[1.] This notice is required to be provided under our contract with the U.S. Department 
+of Energy (DOE). This work was produced at Lawrence Livermore National Laboratory under 
+Contract No. DE-AC52-07NA27344 with the DOE.
+\item[2.] Neither the United States Government nor Lawrence Livermore National Security, LLC 
+nor any of their employees, makes any warranty, express or implied, or assumes any 
+liability or responsibility for the accuracy, completeness, or usefulness of any 
+information, apparatus, product, or process disclosed, or represents that its use would
+not infringe privately-owned rights.
+\item[3.] Also, reference herein to any specific commercial products, process, or services by 
+trade name, trademark, manufacturer or otherwise does not necessarily constitute or 
+imply its endorsement, recommendation, or favoring by the United States Government or 
+Lawrence Livermore National Security, LLC. The views and opinions of authors expressed 
+herein do not necessarily state or reflect those of the United States Government or 
+Lawrence Livermore National Security, LLC, and shall not be used for advertising or 
+product endorsement purposes.
+\end{itemize}
+\end{minipage}}\end{center}
+
+\section{Acknowledgments}
+This work performed under the auspices of the U.S. Department of Energy by Lawrence Livermore National Laboratory under Contract DE-AC52-07NA27344. The author also acknowledges the support from the LDRD Program of Lawrence Livermore National Laboratory under the projects 16-ERD-025 and 17-SI-005.
+
+
+
+
+
+
+
+
+%\section{Implementation details}
+
+%\section{Solver API}
+
+\bibliographystyle{abbrv}
+\bibliography{petra,hiop}
+
+
+
+\end{document}
