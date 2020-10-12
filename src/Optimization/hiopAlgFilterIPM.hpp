@@ -95,7 +95,20 @@ protected:
 			double& f, hiopVector& c_, hiopVector& d_);
   bool evalNlp_derivOnly(hiopIterate& iter, 
 			 hiopVector& gradf_,  hiopMatrix& Jac_c,  hiopMatrix& Jac_d,
-			  hiopMatrix& Hess_L);
+			 hiopMatrix& Hess_L);
+
+  /* Evaluates all the functions and derivatives, excepting the Hessian, which is supposed
+   * to be evaluated at a later time.
+   */
+  bool evalNlp_noHess(hiopIterate& iter,
+		      double &f, hiopVector& c_, hiopVector& d_, 
+		      hiopVector& grad_,  hiopMatrix& Jac_c,  hiopMatrix& Jac_d);
+  /* Evaluates the Hessian
+   * 
+   * Assumes that @evalNlp_noHess has just been called, so the user provided Hessian callback
+   * is called with 'new_x' set to false.
+   */
+  bool evalNlp_HessOnly(hiopIterate& iter, hiopMatrix& Hess_L);
   
   /** Internal helper for NLP error/residuals computation.
    * TODO: add support for the 'true' infeasibility measure and propagate this downstream in
