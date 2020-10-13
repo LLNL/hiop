@@ -314,7 +314,7 @@ startingProcedure(hiopIterate& it_ini,
     // yc and yd were provided by the user
   }
   
-  if(!this->evalNlp(it_ini, f, c, d, gradf, Jac_c, Jac_d, *_Hess_Lagr)) {
+  if(!this->evalNlp_noHess(it_ini, f, c, d, gradf, Jac_c, Jac_d)) {
     nlp->log->printf(hovError, "Failure in evaluating user provided NLP functions.");
     assert(false);
     return false;
@@ -343,26 +343,32 @@ startingProcedure(hiopIterate& it_ini,
 
   if(!duals_avail) {
     if(0==dualsInitializ) {
-    //LSQ-based initialization of yc and yd
-
-    //is the dualsUpdate already the LSQ-based updater?
-    hiopDualsLsqUpdate* updater = dynamic_cast<hiopDualsLsqUpdate*>(dualsUpdate);
-    bool deleteUpdater = false;
-    if(updater == NULL) {
-      updater = new hiopDualsLsqUpdate(nlp);
-      deleteUpdater = true;
-    }
-
-    //this will update yc and yd in it_ini
-    updater->computeInitialDualsEq(it_ini, gradf, Jac_c, Jac_d);
-
-    if(deleteUpdater) delete updater;
+      //LSQ-based initialization of yc and yd
+      
+      //is the dualsUpdate already the LSQ-based updater?
+      hiopDualsLsqUpdate* updater = dynamic_cast<hiopDualsLsqUpdate*>(dualsUpdate);
+      bool deleteUpdater = false;
+      if(updater == NULL) {
+	updater = new hiopDualsLsqUpdate(nlp);
+	deleteUpdater = true;
+      }
+      
+      //this will update yc and yd in it_ini
+      updater->computeInitialDualsEq(it_ini, gradf, Jac_c, Jac_d);
+      
+      if(deleteUpdater) delete updater;
     } else {
       it_ini.setEqualityDualsToConstant(0.);
     }
   } // end of if(!duals_avail)
   else {
     // duals eq ('yc' and 'yd') were provided by the user 
+  }
+
+  //we have the duals
+  if(!this->evalNlp_HessOnly(it_ini, *_Hess_Lagr)) {
+    assert(false);
+    return false;
   }
   
   nlp->log->write("Using initial point:", it_ini, hovIteration);
@@ -426,6 +432,70 @@ evalNlp(hiopIterate& iter,
   }
   return true;
 }
+
+bool hiopAlgFilterIPMBase::
+evalNlp_noHess(hiopIterate& iter, 			       
+	       double &f, hiopVector& c_, hiopVector& d_, 
+	       hiopVector& gradf_,  hiopMatrix& Jac_c,  hiopMatrix& Jac_d)
+{
+  bool new_x=true; 
+  hiopVectorPar& it_x = dynamic_cast<hiopVectorPar&>(*iter.get_x());
+  hiopVectorPar& c=dynamic_cast<hiopVectorPar&>(c_);
+  hiopVectorPar& d=dynamic_cast<hiopVectorPar&>(d_);
+  hiopVectorPar& gradf=dynamic_cast<hiopVectorPar&>(gradf_);
+  double* x = it_x.local_data();//local_data_const();
+  //f(x)
+  if(!nlp->eval_f(x, new_x, f)) {
+    nlp->log->printf(hovError, "Error occured in user objective evaluation\n");
+    return false;
+  }
+  new_x= false; //same x for the rest
+  
+  if(!nlp->eval_grad_f(x, new_x, gradf.local_data())) {
+    nlp->log->printf(hovError, "Error occured in user gradient evaluation\n");
+    return false;
+  }
+  
+  //bret = nlp->eval_c        (x, new_x, c.local_data());  assert(bret);
+  //bret = nlp->eval_d        (x, new_x, d.local_data());  assert(bret);
+  if(!nlp->eval_c_d(x, new_x, c.local_data(), d.local_data())) {
+    nlp->log->printf(hovError, "Error occured in user constraint(s) function evaluation\n");
+    return false;
+  }
+
+  //nlp->log->write("Eq   body c:", c, hovFcnEval);
+  //nlp->log->write("Ineq body d:", d, hovFcnEval);
+  
+  //bret = nlp->eval_Jac_c    (x, new_x, Jac_c);           assert(bret);
+  //bret = nlp->eval_Jac_d    (x, new_x, Jac_d);           assert(bret);
+  if(!nlp->eval_Jac_c_d(x, new_x, Jac_c, Jac_d)) {
+    nlp->log->printf(hovError, "Error occured in user Jacobian function evaluation\n");
+    return false; 
+  }
+  return true;
+}
+
+bool hiopAlgFilterIPMBase::evalNlp_HessOnly(hiopIterate& iter,
+					    hiopMatrix& Hess_L)
+{
+  const bool new_x = false; //precondition is that 'evalNlp_noHess' was called just before
+
+  hiopVectorPar& it_x = dynamic_cast<hiopVectorPar&>(*iter.get_x());
+  
+  const hiopVectorPar* yc = dynamic_cast<const hiopVectorPar*>(iter.get_yc()); assert(yc);
+  const hiopVectorPar* yd = dynamic_cast<const hiopVectorPar*>(iter.get_yd()); assert(yd);
+  const int new_lambda = true;
+  double* x = it_x.local_data();//local_data_const();
+  
+  if(!nlp->eval_Hess_Lagr(x, new_x, 
+			  1., yc->local_data_const(), yd->local_data_const(), new_lambda,
+			  Hess_L)) {
+    nlp->log->printf(hovError, "Error occured in user Hessian function evaluation\n");
+    return false;
+  }
+  return true;
+}
+
 bool hiopAlgFilterIPMBase::
 updateLogBarrierParameters(const hiopIterate& it, const double& mu_curr, const double& tau_curr,
 			   double& mu_new, double& tau_new)
@@ -1062,14 +1132,16 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
 
     //update current iterate (do a fast swap of the pointers)
     hiopIterate* pit=it_curr; it_curr=it_trial; it_trial=pit;
-    nlp->log->printf(hovIteration, "Iter[%d] -> full iterate:", iter_num); nlp->log->write("", *it_curr, hovIteration); 
+    nlp->log->printf(hovIteration, "Iter[%d] -> full iterate:", iter_num);
+    nlp->log->write("", *it_curr, hovIteration);
     nlp->runStats.tmSolverInternal.stop(); //-----
 
     //notify logbar about the changes
     logbar->updateWithNlpInfo(*it_curr, _mu, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d);
     //update residual
     resid->update(*it_curr,_f_nlp, *_c, *_d,*_grad_f,*_Jac_c,*_Jac_d, *logbar);
-    nlp->log->printf(hovIteration, "Iter[%d] full residual:-------------\n", iter_num); nlp->log->write("", *resid, hovIteration);
+    nlp->log->printf(hovIteration, "Iter[%d] full residual:-------------\n", iter_num);
+    nlp->log->write("", *resid, hovIteration);
   }
 
   nlp->runStats.tmOptimizTotal.stop();
