@@ -169,9 +169,10 @@ target_link_libraries(hiop_math INTERFACE OpenMP::OpenMP_CXX)
 if(NOT DEFINED LAPACK_LIBRARIES)
   # in case the toolchain defines them
   find_package(LAPACK REQUIRED)
-  target_link_libraries(hiop_math INTERFACE ${LAPACK_LIBRARIES})
-  message(STATUS "Found LAPACK libraries: ${LAPACK_LIBRARIES}")
 endif(NOT DEFINED LAPACK_LIBRARIES)
+target_link_libraries(hiop_math INTERFACE ${LAPACK_LIBRARIES})
+message(STATUS "Using LAPACK libraries: ${LAPACK_LIBRARIES}")
+
 
 if(HIOP_USE_UMPIRE)
   target_link_libraries(hiop_math INTERFACE umpire RAJA)
