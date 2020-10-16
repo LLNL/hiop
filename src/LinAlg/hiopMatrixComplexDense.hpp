@@ -24,7 +24,6 @@ namespace hiop
     - timesMatTran_local
     - addDiagonal (both overloads)
     - addSubDiagonal (all three overloads)
-    - addToSymDenseMatrixUpperTriangle
     - transAddToSymDenseMatrixUpperTriangle
     - addUpperTriangleToSymDenseMatrixUpperTriangle
     - copyRowsFrom
@@ -155,17 +154,6 @@ namespace hiop
     void addSparseSymUpperTriangleToSymDenseMatrixUpperTriangle(const std::complex<double>& alpha,
 								const hiopMatrixComplexSparseTriplet& X);
 
-    /* block of W += alpha*this
-     * For efficiency, only upper triangular matrix is updated since this will be eventually sent to LAPACK
-     * Preconditions: 
-     *  1. 'this' has to fit in the upper triangle of W 
-     *  2. W.n() == W.m()
-     */
-    virtual void addToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start, 
-						  double alpha, hiopMatrixDense& W) const
-    {
-      assert(false && "not supported");
-    }
     /* block of W += alpha*transpose(this)
      * For efficiency, only upper triangular matrix is updated since this will be eventually sent to LAPACK
      * Preconditions: 

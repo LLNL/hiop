@@ -113,9 +113,6 @@ public:
 
   virtual void addMatrix(double alpha, const hiopMatrix& X) = 0;
 
-  /* block of W += alpha*this */
-  virtual void addToSymDenseMatrixUpperTriangle(
-    int row_dest_start, int col_dest_start, double alpha, hiopMatrixDense& W) const = 0;
   /* block of W += alpha*transpose(this) */
   virtual void transAddToSymDenseMatrixUpperTriangle(
     int row_dest_start, int col_dest_start, double alpha, hiopMatrixDense& W) const = 0;

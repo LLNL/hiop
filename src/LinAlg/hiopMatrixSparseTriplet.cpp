@@ -146,24 +146,6 @@ void hiopMatrixSparseTriplet::addMatrix(double alpha, const hiopMatrix& X)
   assert(false && "not needed");
 }
 
-/* block of W += alpha*this 
- * Note W; contains only the upper triangular entries */
-void hiopMatrixSparseTriplet::addToSymDenseMatrixUpperTriangle(int row_start, int col_start, 
-							       double alpha, hiopMatrixDense& W) const
-{
-  assert(row_start>=0 && row_start+nrows_<=W.m());
-  assert(col_start>=0 && col_start+ncols_<=W.n());
-  assert(W.n()==W.m());
-
-  double** WM = W.get_M();
-  for(int it=0; it<nnz_; it++) {
-    const int i = iRow_[it]+row_start;
-    const int j = jCol_[it]+col_start;
-    assert(i<W.m() && j<W.n()); assert(i>=0 && j>=0);
-    assert(i<=j && "source entries need to map inside the upper triangular part of destination");
-    WM[i][j] += alpha*values_[it];
-  }
-}
 /* block of W += alpha*transpose(this) 
  * Note W; contains only the upper triangular entries */
 void hiopMatrixSparseTriplet::transAddToSymDenseMatrixUpperTriangle(int row_start, int col_start, 
@@ -553,22 +535,20 @@ hiopMatrixSparse* hiopMatrixSymSparseTriplet::new_copy() const
 /** 
  * @brief block of W += alpha*this 
  * @note W contains only the upper triangular entries
- * 
- * @warning This method should not be called directly.
- * Use addUpperTriangleToSymDenseMatrixUpperTriangle instead.
  */
-void hiopMatrixSymSparseTriplet::addToSymDenseMatrixUpperTriangle(int row_start, int col_start, 
-						  double alpha, hiopMatrixDense& W) const
+void hiopMatrixSymSparseTriplet::
+addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start, 
+					      double alpha, hiopMatrixDense& W) const
 {
-  assert(row_start>=0 && row_start+nrows_<=W.m());
-  assert(col_start>=0 && col_start+ncols_<=W.n());
+  assert(diag_start>=0 && diag_start+nrows_<=W.m());
+  assert(diag_start+ncols_<=W.n());
   assert(W.n()==W.m());
 
   double** WM = W.get_M();
   for(int it=0; it<nnz_; it++) {
     assert(iRow_[it]<=jCol_[it] && "sparse symmetric matrices should contain only upper triangular entries");
-    const int i = iRow_[it]+row_start;
-    const int j = jCol_[it]+col_start;
+    const int i = iRow_[it]+diag_start;
+    const int j = jCol_[it]+diag_start;
     assert(i<W.m() && j<W.n()); assert(i>=0 && j>=0);
     assert(i<=j && "symMatrices not aligned; source entries need to map inside the upper triangular part of destination");
     WM[i][j] += alpha*values_[it];
@@ -585,7 +565,6 @@ void hiopMatrixSymSparseTriplet::addToSymDenseMatrixUpperTriangle(int row_start,
 void hiopMatrixSymSparseTriplet::transAddToSymDenseMatrixUpperTriangle(int row_start, int col_start, 
 								       double alpha, hiopMatrixDense& W) const
 {
-  addToSymDenseMatrixUpperTriangle(row_start, col_start, alpha, W);
   assert(0 && "This method should not be called for symmetric matrices.");
 }
 

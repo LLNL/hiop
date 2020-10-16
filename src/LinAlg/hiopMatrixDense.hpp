@@ -136,15 +136,6 @@ public:
   virtual void addMatrix(double alpha, const hiopMatrix& X){assert(false && "not implemented in base class");}
 
   /**
-   * @brief block of W += alpha*this
-   * For efficiency, only upper triangular matrix is updated since this will be eventually sent to LAPACK
-   *
-   * @pre 'this' has to fit in the upper triangle of W 
-   * @pre W.n() == W.m()
-   */
-  virtual void addToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start, 
-						double alpha, hiopMatrixDense& W) const{assert(false && "not implemented in base class");}
-  /**
    * @brief block of W += alpha*transpose(this)
    * For efficiency, only upper triangular matrix is updated since this will be eventually sent to LAPACK
    *
@@ -152,7 +143,10 @@ public:
    * @pre W.n() == W.m()
    */
   virtual void transAddToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start, 
-						     double alpha, hiopMatrixDense& W) const{assert(false && "not implemented in base class");}
+						     double alpha, hiopMatrixDense& W) const
+  {
+    assert(false && "not implemented in base class");
+  }
 
   /**
    * @brief diagonal block of W += alpha*this with 'diag_start' indicating the diagonal entry of W where

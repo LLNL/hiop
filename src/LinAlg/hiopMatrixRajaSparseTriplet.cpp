@@ -334,42 +334,6 @@ void hiopMatrixRajaSparseTriplet::addMatrix(double alpha, const hiopMatrix& X)
 }
 
 /**
- * @brief Adds the contents of this matrix to a block within a dense matrix.
- * 
- * @todo Test this function
- * @todo Better document this function
- * 
- * block of W += alpha*this
- * Note W; contains only the upper triangular entries
- */
-void hiopMatrixRajaSparseTriplet::addToSymDenseMatrixUpperTriangle(int row_start, int col_start, 
-  double alpha, hiopMatrixDense& W) const
-{
-  assert(row_start>=0 && row_start+nrows_<=W.m());
-  assert(col_start>=0 && col_start+ncols_<=W.n());
-  assert(W.n()==W.m());
-
-  RAJA::View<double, RAJA::Layout<2>> WM(W.local_buffer(), W.m(), W.n());
-  auto Wm = W.m();
-  auto Wn = W.n();
-  auto* iRow_buf = this->iRow_;
-  auto* jCol_buf = this->jCol_;
-  double* values = values_;
-  RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, nnz_),
-    RAJA_LAMBDA(RAJA::Index_type it)
-    {
-      const int i = iRow_buf[it] + row_start;
-      const int j = jCol_buf[it] + col_start;
-#ifdef HIOP_DEEPCHECKS
-      assert(i < Wm && j < Wn);
-      assert(i >= 0 && j >= 0);
-      assert(i <= j && "source entries need to map inside the upper triangular part of destination");
-#endif
-      WM(i, j) += alpha * values[it];
-    });
-}
-
-/**
  * @brief Adds the transpose of this matrix to a block within a dense matrix.
  * 
  * @todo Test this function
@@ -749,10 +713,9 @@ hiopMatrixRajaSparseTriplet::allocAndBuildRowStarts() const
  * 
  * @todo Better document this function.
  */
-void hiopMatrixRajaSparseTriplet::copyRowsFrom(
-  const hiopMatrix& src_gen,
-	const long long* rows_idxs,
-	long long n_rows)
+void hiopMatrixRajaSparseTriplet::copyRowsFrom(const hiopMatrix& src_gen,
+					       const long long* rows_idxs,
+					       long long n_rows)
 {
   const hiopMatrixRajaSparseTriplet& src = dynamic_cast<const hiopMatrixRajaSparseTriplet&>(src_gen);
   assert(this->m() == n_rows);
@@ -963,15 +926,14 @@ hiopMatrixSparse* hiopMatrixRajaSymSparseTriplet::new_copy() const
 /** 
  * @brief block of W += alpha*this 
  * @note W contains only the upper triangular entries
- * 
- * @warning This method should not be called directly.
- * Use addUpperTriangleToSymDenseMatrixUpperTriangle instead.
- */
-void hiopMatrixRajaSymSparseTriplet::addToSymDenseMatrixUpperTriangle(int row_start, int col_start, 
-  double alpha, hiopMatrixDense& W) const
+ */ 
+void hiopMatrixRajaSymSparseTriplet::addUpperTriangleToSymDenseMatrixUpperTriangle(
+  int diag_start, 
+	double alpha,
+  hiopMatrixDense& W) const
 {
-  assert(row_start>=0 && row_start+nrows_<=W.m());
-  assert(col_start>=0 && col_start+ncols_<=W.n());
+  assert(diag_start>=0 && diag_start+nrows_<=W.m());
+  assert(diag_start+ncols_<=W.n());
   assert(W.n()==W.m());
 
   // double** WM = W.get_M();
@@ -985,14 +947,13 @@ void hiopMatrixRajaSymSparseTriplet::addToSymDenseMatrixUpperTriangle(int row_st
     RAJA_LAMBDA(RAJA::Index_type it)
     {
       assert(iRow[it]<=jCol[it] && "sparse symmetric matrices should contain only upper triangular entries");
-      const int i = iRow[it]+row_start;
-      const int j = jCol[it]+col_start;
+      const int i = iRow[it]+diag_start;
+      const int j = jCol[it]+diag_start;
       assert(i<Wm && j<Wn); assert(i>=0 && j>=0);
       assert(i<=j && "symMatrices not aligned; source entries need to map inside the upper triangular part of destination");
       WM(i, j) += alpha * values[it];
     });
-}
-
+ }
 
 /** 
  * @brief block of W += alpha*(this)^T 
@@ -1004,7 +965,6 @@ void hiopMatrixRajaSymSparseTriplet::addToSymDenseMatrixUpperTriangle(int row_st
 void hiopMatrixRajaSymSparseTriplet::transAddToSymDenseMatrixUpperTriangle(int row_start, int col_start, 
   double alpha, hiopMatrixDense& W) const
 {
-  addToSymDenseMatrixUpperTriangle(row_start, col_start, alpha, W);
   assert(0 && "This method should not be called for symmetric matrices.");
 }
 

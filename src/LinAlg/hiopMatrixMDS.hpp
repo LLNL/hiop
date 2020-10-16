@@ -133,11 +133,12 @@ public:
   }
 
   /* block of W += alpha*this */
-  virtual void addToSymDenseMatrixUpperTriangle(int row_start, int col_start, double alpha, hiopMatrixDense& W) const
-  {
-    mSp->addToSymDenseMatrixUpperTriangle(row_start, col_start, alpha, W);
-    mDe->addToSymDenseMatrixUpperTriangle(row_start, col_start+mSp->n(), alpha, W);
-  }
+  // virtual void addToSymDenseMatrixUpperTriangle(int row_start, int col_start, double alpha, hiopMatrixDense& W) const
+  // {
+  //   mSp->addToSymDenseMatrixUpperTriangle(row_start, col_start, alpha, W);
+  //   mDe->addToSymDenseMatrixUpperTriangle(row_start, col_start+mSp->n(), alpha, W);
+  // } aaa
+
   /* block of W += alpha*this' */
   virtual void transAddToSymDenseMatrixUpperTriangle(int row_start, int col_start, double alpha, hiopMatrixDense& W) const
   {
@@ -158,7 +159,7 @@ public:
   virtual void addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start, 
 							     double alpha, hiopMatrixDense& W) const
   {
-    assert(false && "not for general matrices; counterpart method from hiopMatrixSymBlockDiagMDS should be used instead");
+    assert(false && "not needed for general/nonsymmetric matrices.");
   }
 
   virtual double max_abs_value()
@@ -238,7 +239,6 @@ private:
  * - timesMatTran
  * - addDiagonal (both overloads)
  * - addSubDiagonal (all three overloads)
- * - addToSymDenseMatrixUpperTriangle
  * - transAddToSymDenseMatrixUpperTriangle
  */
 class hiopMatrixSymBlockDiagMDS : public hiopMatrix
@@ -346,26 +346,13 @@ public:
   /**
    *  block of W += alpha*this
    * 
-   * @todo Should this method be available at all? Consider using
-   * addUpperTriangleToSymDenseMatrixUpperTriangle instead.
-   */
-  virtual void addToSymDenseMatrixUpperTriangle(int row_start, int col_start, double alpha, hiopMatrixDense& W) const
-  {
-    assert(mSp->m() == mSp->n());
-    mSp->addToSymDenseMatrixUpperTriangle(row_start,          col_start,          alpha, W);
-    mDe->addToSymDenseMatrixUpperTriangle(row_start+mSp->n(), col_start+mSp->n(), alpha, W);
-    assert(0 && "This should not be called for symmetric matrices.");
-  }
-  /**
-   *  block of W += alpha*this
-   * 
-   * @warning This method is implemented correctly, but should never be called actually.
+   * @warning This method should never be called/is never needed for symmetric matrixes.
    * Use addUpperTriangleToSymDenseMatrixUpperTriangle instead.
    */
-  virtual void transAddToSymDenseMatrixUpperTriangle(int row_start, int col_start, double alpha, hiopMatrixDense& W) const
+  virtual void transAddToSymDenseMatrixUpperTriangle(int row_start, int col_start, 
+						     double alpha, hiopMatrixDense& W) const
   {
-    addToSymDenseMatrixUpperTriangle(row_start, col_start, alpha, W);
-    assert(0 && "This should not be called for symmetric matrices.");
+    assert(0 && "This should not be called for MDS symmetric matrices.");
   }
 
   /* diagonal block of W += alpha*this with 'diag_start' indicating the diagonal entry of W where
@@ -375,7 +362,7 @@ public:
    * and only the upper triangle of 'this' is accessed
    * 
    * Preconditions: 
-   *  1. this->n()==this-m()
+   *  1. this->n()==this->m()
    *  2. W.n() == W.m()
    */
   virtual void addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start, 

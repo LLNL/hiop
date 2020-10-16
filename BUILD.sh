@@ -1,5 +1,20 @@
 #!/bin/bash
 
+#
+# A script file that builds and runs/tests HiOp on various paricular clusters, such as
+# summit and ascent @ ORNL and newell and marianas @ PNNL
+#
+# Usage: In a shell run
+#
+# ./BUILD.sh
+#
+#
+# Sometimes the cluster name is not detected correctly; in this cases, one can specify
+# the cluster name by prefixing the command with MY_CLUSTER=cluster_name, e.g., 
+#
+# MY_CLUSTER=ascent ./BUILD.sh
+#
+
 cleanup() {
   echo
   echo Exit code $1 caught in build script.

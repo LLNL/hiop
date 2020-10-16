@@ -430,61 +430,61 @@ public:
     return fail;
   }
 
-  /**
-   * Block of W += alpha*A
-   *
-   * Precondition: W is square
-   * 
-   * @todo Change parameter _A_ to be of abstract class hiopMatrixSymSparse
-   * as soon as this interface exists.
-   */
-  bool symAddToSymDenseMatrixUpperTriangle(
-    hiop::hiopMatrixDense& W,
-    hiop::hiopMatrixSparse& A, // sym sparse matrix
-    const int rank=0)
-  {
-    const local_ordinal_type N_loc = W.get_local_size_n();
-    const local_ordinal_type A_M = A.m();
-    const local_ordinal_type A_N_loc = A.n();
-    assert(W.m() == W.n());
-    assert(W.m() >= A.m());
-    assert(W.n() >= A.n());
+  // /**
+  //  * Block of W += alpha*A
+  //  *
+  //  * Precondition: W is square
+  //  * 
+  //  * @todo Change parameter _A_ to be of abstract class hiopMatrixSymSparse
+  //  * as soon as this interface exists.
+  //  */
+  // bool symAddToSymDenseMatrixUpperTriangle(
+  //   hiop::hiopMatrixDense& W,
+  //   hiop::hiopMatrixSparse& A, // sym sparse matrix
+  //   const int rank=0)
+  // {
+  //   const local_ordinal_type N_loc = W.get_local_size_n();
+  //   const local_ordinal_type A_M = A.m();
+  //   const local_ordinal_type A_N_loc = A.n();
+  //   assert(W.m() == W.n());
+  //   assert(W.m() >= A.m());
+  //   assert(W.n() >= A.n());
 
-    const local_ordinal_type start_idx_row = 0;
-    const local_ordinal_type start_idx_col = N_loc - A_N_loc;
-    const real_type alpha = half,
-          A_val = half,
-          W_val = one;
-    int fail = 0;
+  //   const local_ordinal_type start_idx_row = 0;
+  //   const local_ordinal_type start_idx_col = N_loc - A_N_loc;
+  //   const real_type alpha = half,
+  //         A_val = half,
+  //         W_val = one;
+  //   int fail = 0;
 
-    // Check with non-1 alpha
-    A.setToConstant(A_val);
-    W.setToConstant(W_val);
-    A.addToSymDenseMatrixUpperTriangle(start_idx_row, start_idx_col, alpha, W);
+  //   // Check with non-1 alpha
+  //   A.setToConstant(A_val);
+  //   W.setToConstant(W_val);
+  //   A.addToSymDenseMatrixUpperTriangle(start_idx_row, start_idx_col, alpha, W);
     
-    // get sparsity pattern
-    const auto* iRow = getRowIndices(&A);
-    const auto* jCol = getColumnIndices(&A);
-    auto nnz = A.numberOfNonzeros();
-    fail += verifyAnswer(&W,
-      [=] (local_ordinal_type i, local_ordinal_type j) -> real_type
-      {
-        // check if (i, j) within bounds of A
-        // then check if (i, j) within upper triangle of W
-        const bool isUpperTriangle = ( 
-          i>=start_idx_row && i<start_idx_row+A_M &&
-          j>=start_idx_col && j<start_idx_col+A_N_loc &&
-          j >= i);
+  //   // get sparsity pattern
+  //   const auto* iRow = getRowIndices(&A);
+  //   const auto* jCol = getColumnIndices(&A);
+  //   auto nnz = A.numberOfNonzeros();
+  //   fail += verifyAnswer(&W,
+  //     [=] (local_ordinal_type i, local_ordinal_type j) -> real_type
+  //     {
+  //       // check if (i, j) within bounds of A
+  //       // then check if (i, j) within upper triangle of W
+  //       const bool isUpperTriangle = ( 
+  //         i>=start_idx_row && i<start_idx_row+A_M &&
+  //         j>=start_idx_col && j<start_idx_col+A_N_loc &&
+  //         j >= i);
 
-        // only nonzero entries in A will be added
-        const bool indexExists = find_unsorted_pair(i, j, iRow, jCol, nnz);
-        real_type ans = (isUpperTriangle && indexExists) ? W_val + A_val*alpha : W_val; // 1 + .5 * .5 = 1.25
-        return ans;
-      });
+  //       // only nonzero entries in A will be added
+  //       const bool indexExists = find_unsorted_pair(i, j, iRow, jCol, nnz);
+  //       real_type ans = (isUpperTriangle && indexExists) ? W_val + A_val*alpha : W_val; // 1 + .5 * .5 = 1.25
+  //       return ans;
+  //     });
 
-    printMessage(fail, __func__, rank);
-    return fail;
-  }
+  //   printMessage(fail, __func__, rank);
+  //   return fail;
+  // }
 
   /**
    * Block of W += alpha*A
@@ -540,58 +540,58 @@ public:
     return fail;
   }
 
-  /**
-  * @brief Test for the method block of W += alpha*this, where `this' is sparse 
-  * The block of W is in the upper triangular part 
-  * @remark W; contains only the upper triangular entries as it is symmetric
-  * This test doesn't test if W itself is symmetric
-  * (i,j) are the indices of the upper triangle of W
-  */
+  // /**
+  // * @brief Test for the method block of W += alpha*this, where `this' is sparse 
+  // * The block of W is in the upper triangular part 
+  // * @remark W; contains only the upper triangular entries as it is symmetric
+  // * This test doesn't test if W itself is symmetric
+  // * (i,j) are the indices of the upper triangle of W
+  // */
 
-  bool addToSymDenseMatrixUpperTriangle(
-    hiop::hiopMatrixDense& W,
-    hiop::hiopMatrixSparse& A,
-    const int rank=0)
-  {
-    const local_ordinal_type N_loc = W.get_local_size_n();
-    const local_ordinal_type A_M = A.m();
-    const local_ordinal_type A_N_loc = A.n();
-    assert(W.m() == W.n());
-    assert(W.m() >= A.m());
-    assert(W.n() >= A.n());
+  // bool addToSymDenseMatrixUpperTriangle(
+  //   hiop::hiopMatrixDense& W,
+  //   hiop::hiopMatrixSparse& A,
+  //   const int rank=0)
+  // {
+  //   const local_ordinal_type N_loc = W.get_local_size_n();
+  //   const local_ordinal_type A_M = A.m();
+  //   const local_ordinal_type A_N_loc = A.n();
+  //   assert(W.m() == W.n());
+  //   assert(W.m() >= A.m());
+  //   assert(W.n() >= A.n());
 
-    const local_ordinal_type start_idx_row = 0;
-    const local_ordinal_type start_idx_col = N_loc - A_N_loc;
-    const real_type alpha = half,
-          A_val = half,
-          W_val = one;
+  //   const local_ordinal_type start_idx_row = 0;
+  //   const local_ordinal_type start_idx_col = N_loc - A_N_loc;
+  //   const real_type alpha = half,
+  //         A_val = half,
+  //         W_val = one;
 
-    A.setToConstant(A_val);
-    W.setToConstant(W_val);
+  //   A.setToConstant(A_val);
+  //   W.setToConstant(W_val);
 
-    A.addToSymDenseMatrixUpperTriangle(start_idx_row, start_idx_col, alpha, W);
+  //   A.addToSymDenseMatrixUpperTriangle(start_idx_row, start_idx_col, alpha, W);
 
-    // get sparsity pattern
-    const local_ordinal_type* iRow = getRowIndices(&A);
-    const local_ordinal_type* jCol = getColumnIndices(&A);
-    //const auto* iRow = A.i_row();
-    //const auto* jCol = A.j_col();
-    auto nnz = A.numberOfNonzeros();
-    const int fail = verifyAnswer(&W,
-      [=] (local_ordinal_type i, local_ordinal_type j) -> real_type
-      {
-        const bool isUpperTriangle = (
-          i>=start_idx_row && i<start_idx_row+A_M && 
-          j>=start_idx_col && j<start_idx_col+A_N_loc &&     
-          i <= j);                                       
+  //   // get sparsity pattern
+  //   const local_ordinal_type* iRow = getRowIndices(&A);
+  //   const local_ordinal_type* jCol = getColumnIndices(&A);
+  //   //const auto* iRow = A.i_row();
+  //   //const auto* jCol = A.j_col();
+  //   auto nnz = A.numberOfNonzeros();
+  //   const int fail = verifyAnswer(&W,
+  //     [=] (local_ordinal_type i, local_ordinal_type j) -> real_type
+  //     {
+  //       const bool isUpperTriangle = (
+  //         i>=start_idx_row && i<start_idx_row+A_M && 
+  //         j>=start_idx_col && j<start_idx_col+A_N_loc &&     
+  //         i <= j);                                       
 
-        const bool indexExists = find_unsorted_pair(i-start_idx_row, j-start_idx_col, iRow, jCol, nnz);
-        return (isUpperTriangle && indexExists) ? W_val + A_val*alpha : W_val;
-      });
+  //       const bool indexExists = find_unsorted_pair(i-start_idx_row, j-start_idx_col, iRow, jCol, nnz);
+  //       return (isUpperTriangle && indexExists) ? W_val + A_val*alpha : W_val;
+  //     });
 
-    printMessage(fail, __func__, rank);
-    return fail;
-  }
+  //   printMessage(fail, __func__, rank);
+  //   return fail;
+  // }
 
   /**
   * @brief Test for method block of W += alpha*transpose(this), where `this' is sparse.

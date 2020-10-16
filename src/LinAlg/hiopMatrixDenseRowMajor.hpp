@@ -137,16 +137,6 @@ public:
   virtual void addMatrix(double alpha, const hiopMatrix& X);
 
   /**
-   * @brief block of W += alpha*this
-   * For efficiency, only upper triangular matrix is updated since this will be eventually sent to LAPACK
-   *
-   * @pre 'this' has to fit in the upper triangle of W 
-   * @pre W.n() == W.m()
-   */
-  virtual void addToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start, 
-						double alpha, hiopMatrixDense& W) const;
-
-  /**
    * @brief block of W += alpha*transpose(this)
    * For efficiency, only upper triangular matrix is updated since this will be eventually sent to LAPACK
    *
@@ -163,6 +153,9 @@ public:
    * For efficiency, only upper triangle of W is updated since this will be eventually sent to LAPACK
    * and only the upper triangle of 'this' is accessed
    * 
+   * This functionality of this method is needed only for symmetric matrices and, for this reason,
+   * only symmetric matrices classes implement/need to implement it.
+   *
    * @pre this->n()==this->m()
    * @pre W.n() == W.m()
    */

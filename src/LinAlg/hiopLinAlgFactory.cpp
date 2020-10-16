@@ -95,6 +95,10 @@ hiopVector* LinearAlgebraFactory::createVector(
   {
 #ifdef HIOP_USE_RAJA
     return new hiopVectorRajaPar(glob_n, mem_space_, col_part, comm);
+#else
+    assert(false && "requested memory space not available because Hiop was not"
+           "built with RAJA support");
+    return new hiopVectorPar(glob_n, col_part, comm);
 #endif
   }
 }
@@ -115,6 +119,10 @@ hiopVectorInt* LinearAlgebraFactory::createVectorInt(int size)
   {
 #ifdef HIOP_USE_RAJA
     return new hiopVectorIntRaja(size, mem_space_);
+#else
+    assert(false && "requested memory space not available because Hiop was not"
+           "built with RAJA support");
+    return new hiopVectorIntSeq(size);
 #endif
   }
 }
@@ -140,6 +148,10 @@ hiopMatrixDense* LinearAlgebraFactory::createMatrixDense(
   {
 #ifdef HIOP_USE_RAJA
     return new hiopMatrixRajaDense(m, glob_n, mem_space_, col_part, comm, m_max_alloc);
+#else
+    assert(false && "requested memory space not available because Hiop was not"
+           "built with RAJA support");
+    return new hiopMatrixDenseRowMajor(m, glob_n, col_part, comm, m_max_alloc);
 #endif
   }
   
@@ -159,6 +171,10 @@ hiopMatrixSparse* LinearAlgebraFactory::createMatrixSparse(int rows, int cols, i
   {
 #ifdef HIOP_USE_RAJA
     return new hiopMatrixRajaSparseTriplet(rows, cols, nnz, mem_space_);
+#else
+    assert(false && "requested memory space not available because Hiop was not"
+           "built with RAJA support");
+    return new hiopMatrixSparseTriplet(rows, cols, nnz);
 #endif
   }
 }
@@ -177,6 +193,10 @@ hiopMatrixSparse* LinearAlgebraFactory::createMatrixSymSparse(int size, int nnz)
   {
 #ifdef HIOP_USE_RAJA
     return new hiopMatrixRajaSymSparseTriplet(size, nnz, mem_space_);
+#else
+    assert(false && "requested memory space not available because Hiop was not"
+           "built with RAJA support");
+    return new hiopMatrixSymSparseTriplet(size, nnz);
 #endif
   }
 }
@@ -196,6 +216,10 @@ double* LinearAlgebraFactory::createRawArray(int n)
     auto& resmgr = umpire::ResourceManager::getInstance();
     umpire::Allocator al  = resmgr.getAllocator(mem_space_);
     return static_cast<double*>(al.allocate(n*sizeof(double)));
+#else
+    assert(false && "requested memory space not available because Hiop was not"
+           "built with RAJA support");
+    return new double[n];
 #endif
   }
 }

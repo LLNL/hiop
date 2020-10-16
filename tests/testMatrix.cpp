@@ -168,7 +168,7 @@ int main(int argc, char** argv)
       fail += test.matrixTimesMat(A_mxk_nodist, A_kxn_nodist, A_mxn_nodist);
       fail += test.matrixAddDiagonal(A_nxn_nodist, x_n_nodist);
       fail += test.matrixAddSubDiagonal(A_nxn_nodist, x_m_nodist);
-      fail += test.matrixAddToSymDenseMatrixUpperTriangle(A_nxn_nodist, A_mxk_nodist);
+      //fail += test.matrixAddToSymDenseMatrixUpperTriangle(A_nxn_nodist, A_mxk_nodist);
       fail += test.matrixTransAddToSymDenseMatrixUpperTriangle(A_nxn_nodist, A_kxm_nodist);
       fail += test.matrixAddUpperTriangleToSymDenseMatrixUpperTriangle(A_nxn_nodist, *A_mxm_nodist);
 #ifdef HIOP_DEEPCHECKS
@@ -261,7 +261,7 @@ int main(int argc, char** argv)
       fail += test.matrixTimesMat(A_mxk_nodist, A_kxn_nodist, A_mxn_nodist);
       fail += test.matrixAddDiagonal(A_nxn_nodist, x_n_nodist);
       fail += test.matrixAddSubDiagonal(A_nxn_nodist, x_m_nodist);
-      fail += test.matrixAddToSymDenseMatrixUpperTriangle(A_nxn_nodist, A_mxk_nodist);
+      //fail += test.matrixAddToSymDenseMatrixUpperTriangle(A_nxn_nodist, A_mxk_nodist);
       fail += test.matrixTransAddToSymDenseMatrixUpperTriangle(A_nxn_nodist, A_kxm_nodist);
       fail += test.matrixAddUpperTriangleToSymDenseMatrixUpperTriangle(A_nxn_nodist, *A_mxm_nodist);
 #ifdef HIOP_DEEPCHECKS

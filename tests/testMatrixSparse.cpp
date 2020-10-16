@@ -125,7 +125,7 @@ int main(int argc, char** argv)
    
     // Need a dense matrix that is big enough for the sparse matrix to map inside the upper triangular part of it
     //hiop::hiopMatrixDenseRowMajor n2xn2_dense(2 * N_global, 2 * N_global);
-    fail += test.addToSymDenseMatrixUpperTriangle(W_dense, *mxn_sparse);
+    //fail += test.addToSymDenseMatrixUpperTriangle(W_dense, *mxn_sparse);
     fail += test.transAddToSymDenseMatrixUpperTriangle(W_dense, *mxn_sparse);
 
     // Initialise another sparse Matrix
@@ -191,7 +191,7 @@ int main(int argc, char** argv)
     fail += test.matrixAddMDinvMtransToDiagBlockOfSymDeMatUTri(*mxn_sparse, vec_n, W_dense, test_offset);
 
     // testing adding sparse matrix to the upper triangular area of a symmetric dense matrix    
-    fail += test.addToSymDenseMatrixUpperTriangle(W_dense, *mxn_sparse);
+    //fail += test.addToSymDenseMatrixUpperTriangle(W_dense, *mxn_sparse);
     fail += test.transAddToSymDenseMatrixUpperTriangle(W_dense, *mxn_sparse);
 
     // Initialise another sparse Matrix

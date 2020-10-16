@@ -714,26 +714,6 @@ void hiopMatrixDenseRowMajor::addMatrix(double alpha, const hiopMatrix& X_)
   DAXPY(&N, &alpha, X.M_[0], &inc, M_[0], &inc);
 }
 
-/* block of W += alpha*this 
- * starts are in destination */
-void hiopMatrixDenseRowMajor::addToSymDenseMatrixUpperTriangle(int row_start, int col_start, 
-						       double alpha, hiopMatrixDense& W) const
-{
-  assert(row_start>=0 && m()+row_start<=W.m());
-  assert(col_start>=0 && n()+col_start<=W.n());
-  assert(W.n()==W.m());
-
-  double** WM = W.get_M();
-  for(int i=0; i<m_local_; i++) {
-    const int iW = i+row_start;
-    for(int j=0; j<n_local_; j++) {
-      const int jW = j+col_start;
-      assert(iW<=jW && "source entries need to map inside the upper triangular part of destination");
-      WM[iW][jW] += alpha*this->M_[i][j];
-    }
-  }
-}
-
 /* block of W += alpha*this' */
 void hiopMatrixDenseRowMajor::transAddToSymDenseMatrixUpperTriangle(int row_start, int col_start, 
 							    double alpha, hiopMatrixDense& W) const

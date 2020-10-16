@@ -496,43 +496,43 @@ public:
    *
    * Precondition: W is square
    */
-  int matrixAddToSymDenseMatrixUpperTriangle(
-      hiop::hiopMatrixDense& _W,
-      hiop::hiopMatrixDense& A,
-      const int rank=0)
-  {
-    // This method only takes hiopMatrixDense
-    auto W = dynamic_cast<hiop::hiopMatrixDense*>(&_W);
-    const local_ordinal_type N_loc = getNumLocCols(W);
-    const local_ordinal_type A_M = getNumLocRows(&A);
-    const local_ordinal_type A_N_loc = getNumLocCols(&A);
-    assert(W->m() == W->n());
-    assert(getNumLocRows(W) >= getNumLocRows(&A));
-    assert(W->n() >= A.n());
+  // int matrixAddToSymDenseMatrixUpperTriangle(
+  //     hiop::hiopMatrixDense& _W,
+  //     hiop::hiopMatrixDense& A,
+  //     const int rank=0)
+  // {
+  //   // This method only takes hiopMatrixDense
+  //   auto W = dynamic_cast<hiop::hiopMatrixDense*>(&_W);
+  //   const local_ordinal_type N_loc = getNumLocCols(W);
+  //   const local_ordinal_type A_M = getNumLocRows(&A);
+  //   const local_ordinal_type A_N_loc = getNumLocCols(&A);
+  //   assert(W->m() == W->n());
+  //   assert(getNumLocRows(W) >= getNumLocRows(&A));
+  //   assert(W->n() >= A.n());
 
-    const local_ordinal_type start_idx_row = 0;
-    const local_ordinal_type start_idx_col = N_loc - A_N_loc;
-    const real_type alpha = half,
-          A_val = half,
-          W_val = one;
-    int fail = 0;
+  //   const local_ordinal_type start_idx_row = 0;
+  //   const local_ordinal_type start_idx_col = N_loc - A_N_loc;
+  //   const real_type alpha = half,
+  //         A_val = half,
+  //         W_val = one;
+  //   int fail = 0;
 
-    // Check with non-1 alpha
-    A.setToConstant(A_val);
-    W->setToConstant(W_val);
-    A.addToSymDenseMatrixUpperTriangle(start_idx_row, start_idx_col, alpha, *W);
-    fail += verifyAnswer(W,
-      [=] (local_ordinal_type i, local_ordinal_type j) -> real_type
-      {
-        const bool isUpperTriangle = (
-          i>=start_idx_row && i<start_idx_row+A_M &&
-          j>=start_idx_col && j<start_idx_col+A_N_loc);
-        return isUpperTriangle ? W_val + A_val*alpha : W_val;
-      });
+  //   // Check with non-1 alpha
+  //   A.setToConstant(A_val);
+  //   W->setToConstant(W_val);
+  //   A.addToSymDenseMatrixUpperTriangle(start_idx_row, start_idx_col, alpha, *W);
+  //   fail += verifyAnswer(W,
+  //     [=] (local_ordinal_type i, local_ordinal_type j) -> real_type
+  //     {
+  //       const bool isUpperTriangle = (
+  //         i>=start_idx_row && i<start_idx_row+A_M &&
+  //         j>=start_idx_col && j<start_idx_col+A_N_loc);
+  //       return isUpperTriangle ? W_val + A_val*alpha : W_val;
+  //     });
 
-    printMessage(fail, __func__, rank);
-    return reduceReturn(fail, &A);
-  }
+  //   printMessage(fail, __func__, rank);
+  //   return reduceReturn(fail, &A);
+  // } aaa
 
   /*
    * Block of W += alpha*A

@@ -67,17 +67,18 @@ public:
 
   virtual void addMatrix(double alpha, const hiopMatrix& X);
 
-  /* block of W += alpha*this */
-  virtual void addToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start, 
-						double alpha, hiopMatrixDense& W) const;
   /* block of W += alpha*transpose(this) */
   virtual void transAddToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start, 
 						     double alpha, hiopMatrixDense& W) const;
   virtual void addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start, 
 							     double alpha, hiopMatrixDense& W) const
   {
-    assert(false && "counterpart method of hiopMatrixSymSparseTriplet should be used");
+    assert(false && "implemented only for symmetric matrices");
   }
+
+  // {
+  //   assert(false && "counterpart method of hiopMatrixSymSparseTriplet should be used");
+  // }
 
   /* diag block of W += alpha * M * D^{-1} * transpose(M), where M=this 
    *
@@ -189,18 +190,11 @@ public:
     return timesVec(beta, y, alpha, x);
   }
 
-  virtual void addToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start,                                                                           
-				double alpha, hiopMatrixDense& W) const;
-  
-  virtual void transAddToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start,                                                                           
-				     double alpha, hiopMatrixDense& W) const;
+  virtual void transAddToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start, 
+						     double alpha, hiopMatrixDense& W) const;
 
   virtual void addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start, 
-							    double alpha, hiopMatrixDense& W) const
-  {
-    assert(this->n()+diag_start < W.n());
-    addToSymDenseMatrixUpperTriangle(diag_start, diag_start, alpha, W);
-  }
+							     double alpha, hiopMatrixDense& W) const;
 
   /* extract subdiagonal from 'this' (source) and adds the entries to 'vec_dest' starting at
    * index 'vec_start'. If num_elems>=0, 'num_elems' are copied; otherwise copies as many as

@@ -121,12 +121,11 @@ public:
   /**
    * Block of W += alpha*A
    *
-   * Precondition: W is square
+   * @pre W is square
+   * @pre A is symmetric sparse matrix
    * 
-   * @todo Change parameter _A_ to be of abstract class hiopMatrixSymSparse
-   * as soon as this interface exists.
    */
-  bool matrixAddToSymDenseMatrixUpperTriangle(
+  bool matrixAddUpperTriangleToSymDenseMatrixUpperTriangle(
     hiop::hiopMatrixDense& W,
     hiop::hiopMatrixSparse& A, // sym sparse matrix
     const int rank=0)
@@ -139,8 +138,7 @@ public:
     assert(W.n() >= A.n());
 
     // The offset must be on dense matrix diagonal
-    const local_ordinal_type start_idx_row = N_loc - A_N_loc;
-    const local_ordinal_type start_idx_col = N_loc - A_N_loc;
+    const local_ordinal_type start_diag = N_loc - A_N_loc;
     const real_type alpha = half,
           A_val = half,
           W_val = one;
@@ -149,7 +147,7 @@ public:
     // Check with non-1 alpha
     A.setToConstant(A_val);
     W.setToConstant(W_val);
-    A.addToSymDenseMatrixUpperTriangle(start_idx_row, start_idx_col, alpha, W);
+    A.addUpperTriangleToSymDenseMatrixUpperTriangle(start_diag, alpha, W);
     
     // get sparsity pattern
     const auto* iRow = getRowIndices(&A);
@@ -161,12 +159,12 @@ public:
         // check if (i, j) within bounds of A
         // then check if (i, j) within upper triangle of W
         const bool isUpperTriangle = ( 
-          i>=start_idx_row && i<start_idx_row+A_M &&
-          j>=start_idx_col && j<start_idx_col+A_N_loc &&
+          i>=start_diag && i<start_diag+A_M &&
+          j>=start_diag && j<start_diag+A_N_loc &&
           j >= i);
 
-        int i_sp = i - start_idx_row;
-        int j_sp = j - start_idx_col;
+        int i_sp = i - start_diag;
+        int j_sp = j - start_diag;
         // only nonzero entries in A will be added
         const bool indexExists = (find_unsorted_pair(i_sp, j_sp, iRow, jCol, nnz) || find_unsorted_pair(j_sp, i_sp, iRow, jCol, nnz));
         real_type ans = (isUpperTriangle && indexExists) ? W_val + A_val*alpha : W_val; // 1 + .5 * .5 = 1.25
@@ -177,66 +175,8 @@ public:
     return fail;
   }
 
-  /**
-   * Block of W += alpha*A
-   *
-   * Block of W summed with A is in the trasposed
-   * location of the same call to addToSymDenseMatrixUpperTriangle
-   *
-   * Precondition: W is square
-   * 
-   * @todo Remove implementations specific code from this test!!!
-   * @todo Format documentation correctly
-   */
-  bool matrixTransAddToSymDenseMatrixUpperTriangle(
-    hiop::hiopMatrixDense& W,
-    hiop::hiopMatrixSparse& A,
-    const int rank=0)
-  {
-    const local_ordinal_type N_loc = W.get_local_size_n();
-    const local_ordinal_type A_M = A.m();
-    const local_ordinal_type A_N_loc = A.n();
-    assert(W.m() == W.n());
-    assert(W.m() >= A.m());
-    assert(W.n() >= A.n());
 
-    const local_ordinal_type start_idx_row = N_loc - A_M;//0;
-    const local_ordinal_type start_idx_col = N_loc - A_M;
-    const real_type alpha = half,
-          A_val = half,
-          W_val = one;
-
-    A.setToConstant(A_val);
-    W.setToConstant(W_val);
-
-    A.transAddToSymDenseMatrixUpperTriangle(start_idx_row, start_idx_col, alpha, W);
-
-    // get sparsity pattern
-    const auto* iRow = getRowIndices(&A);
-    const auto* jCol = getColumnIndices(&A);
-    auto nnz = A.numberOfNonzeros();
-    const int fail = verifyAnswer(&W,
-      [=] (local_ordinal_type i, local_ordinal_type j) -> real_type
-      {
-        const bool isTransUpperTriangle = (
-          i>=start_idx_row && i<start_idx_row+A_M && // iCol is in A
-          j>=start_idx_col && j<start_idx_col+A_N_loc &&     // jRow is in A
-          j >= i);                                       // (i, j) are in upper triangle of W^T
-
-        int i_sp = i - start_idx_row;
-        int j_sp = j - start_idx_col;
-
-        const bool indexExists = (find_unsorted_pair(j_sp, i_sp, iRow, jCol, nnz));
-        return (isTransUpperTriangle && indexExists) ? W_val + A_val*alpha : W_val;
-      });
-
-    printMessage(fail, __func__, rank);
-    return fail;
-  }
-
-  /// @todo add implementation of `startingAtAddSubDiagonalToStartingAt`
-  /// for abstract sparse matrix interface and all sparse matrix classes, 
-  /// then remove this dynamic cast to make the test implementation-agnostic.
+  /// @todo Document this test for `startingAtAddSubDiagonalToStartingAt`
   bool matrixStartingAtAddSubDiagonalToStartingAt(
     hiop::hiopVector& W,
     hiop::hiopMatrixSparse& A,

@@ -16,8 +16,6 @@
 
 using namespace hiop;
 
-static bool self_check(long long n, double obj_value);
-
 static bool parse_arguments(int argc, char **argv,
 			    bool& self_check,
 			    long long& n_sp,

@@ -201,8 +201,7 @@ int main(int argc, char** argv)
     initializeSymSparseMat(m_sym);
 
     fail += test.matrixTimesVec(*m_sym, vec_m, vec_m_2);
-    fail += test.matrixAddToSymDenseMatrixUpperTriangle(mxm_dense, *m_sym);
-    // fail += test.matrixTransAddToSymDenseMatrixUpperTriangle(mxm_dense, *m_sym);
+    fail += test.matrixAddUpperTriangleToSymDenseMatrixUpperTriangle(mxm_dense, *m_sym);
     fail += test.matrixStartingAtAddSubDiagonalToStartingAt(vec_m, *m_sym);
 
     // Destroy testing objects
@@ -233,8 +232,7 @@ int main(int argc, char** argv)
     initializeRajaSymSparseMat(m_sym);
 
     fail += test.matrixTimesVec(*m_sym, vec_m, vec_m_2);
-    fail += test.matrixAddToSymDenseMatrixUpperTriangle(mxm_dense, *m_sym);
-    // fail += test.matrixTransAddToSymDenseMatrixUpperTriangle(mxm_dense, *m_sym);
+    fail += test.matrixAddUpperTriangleToSymDenseMatrixUpperTriangle(mxm_dense, *m_sym);
     fail += test.matrixStartingAtAddSubDiagonalToStartingAt(vec_m, *m_sym);
 
     // Destroy testing objects
