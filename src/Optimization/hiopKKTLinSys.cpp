@@ -227,7 +227,9 @@ bool hiopKKTLinSysCurvCheck::factorize()
 
     nlp_->runStats.kkt.tmUpdateInnerFact.stop();
 
-    int continue_re_fact = ifReFactorize(n_neg_eig,delta_wx, delta_wd, delta_cc, delta_cd);
+//    int continue_re_fact = ifReFactorize(n_neg_eig,delta_wx, delta_wd, delta_cc, delta_cd);
+    int continue_re_fact = fact_acceptor_->requireReFactorization(*nlp_, n_neg_eig, delta_wx, delta_wd, delta_cc, delta_cd);
+    
     if(-1==continue_re_fact)
       return false;
     else if(0==continue_re_fact)
@@ -250,6 +252,7 @@ bool hiopKKTLinSysCurvCheck::factorize()
 
 int hiopKKTLinSysCurvCheck::ifReFactorize(const int& n_neg_eig, double& delta_wx, double& delta_wd, double& delta_cc, double& delta_cd)
 {
+  
   int continue_re_fact{1};
 
   if(Jac_c_->m()+Jac_d_->m()>0) {

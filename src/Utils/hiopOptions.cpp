@@ -62,48 +62,48 @@ namespace hiop
 using namespace std;
 const char* szDefaultFilename = "hiop.options";
 
-  hiopOptions::hiopOptions(const char* szOptionsFilename/*=NULL*/)
-  : log(NULL)
+hiopOptions::hiopOptions(const char* szOptionsFilename/*=NULL*/)
+: log(NULL)
 {
-  registerOptions();
-  loadFromFile(szOptionsFilename==NULL?szDefaultFilename:szOptionsFilename);
-  ensureConsistence();
+registerOptions();
+loadFromFile(szOptionsFilename==NULL?szDefaultFilename:szOptionsFilename);
+ensureConsistence();
 }
 
 hiopOptions::~hiopOptions()
 {
-  map<std::string, _O*>::iterator it = mOptions.begin();
-  for(;it!=mOptions.end(); it++) delete it->second;
+map<std::string, _O*>::iterator it = mOptions.begin();
+for(;it!=mOptions.end(); it++) delete it->second;
 }
 
 double hiopOptions::GetNumeric(const char* name) const
 {
-  map<std::string, _O*>::const_iterator it = mOptions.find(name);
-  assert(it!=mOptions.end());
-  assert(it->second!=NULL);
-  _ONum* option = dynamic_cast<_ONum*>(it->second);
-  assert(option!=NULL);
-  return option->val;
+map<std::string, _O*>::const_iterator it = mOptions.find(name);
+assert(it!=mOptions.end());
+assert(it->second!=NULL);
+_ONum* option = dynamic_cast<_ONum*>(it->second);
+assert(option!=NULL);
+return option->val;
 }
 
 int hiopOptions::GetInteger(const char* name) const
 {
-  map<std::string, _O*>::const_iterator it = mOptions.find(name);
-  assert(it!=mOptions.end());
-  assert(it->second!=NULL);
-  _OInt* option = dynamic_cast<_OInt*>(it->second);
-  assert(option!=NULL);
-  return option->val;
+map<std::string, _O*>::const_iterator it = mOptions.find(name);
+assert(it!=mOptions.end());
+assert(it->second!=NULL);
+_OInt* option = dynamic_cast<_OInt*>(it->second);
+assert(option!=NULL);
+return option->val;
 }
 
 string hiopOptions::GetString (const char* name) const
 {
-  map<std::string, _O*>::const_iterator it = mOptions.find(name);
-  assert(it!=mOptions.end());
-  assert(it->second!=NULL);
-  _OStr* option = dynamic_cast<_OStr*>(it->second);
-  assert(option!=NULL);
-  return option->val;
+map<std::string, _O*>::const_iterator it = mOptions.find(name);
+assert(it!=mOptions.end());
+assert(it->second!=NULL);
+_OStr* option = dynamic_cast<_OStr*>(it->second);
+assert(option!=NULL);
+return option->val;
 }
 
 void hiopOptions::registerOptions()
@@ -144,7 +144,7 @@ void hiopOptions::registerOptions()
 		      "Type of update of the multipliers of the eq. cons. (default lsq)");
   }
 
-  registerIntOption("max_iter", 3000, 1, 1e6, "Max number of iterations (default 3000)");
+registerIntOption("max_iter", 3000, 1, 1e6, "Max number of iterations (default 3000)");
 
   registerNumOption("acceptable_tolerance", 1e-6, 1e-14, 1e-1,
 		    "HiOp will terminate if the NLP residuals are below for 'acceptable_iterations' "
@@ -210,13 +210,21 @@ void hiopOptions::registerOptions()
   {
     vector<string> range(3); range[0]="stable"; range[1]="speculative"; range[2]="forcequick";
     registerStrOption("linsol_mode", "stable", range,
-		      "'stable'=using stable factorization; "
-		      "'speculative'=try faster linear solvers when is detected to be safe "
-		      "to do so (experimental) ; "
-		      "'forcequick'=rely on faster solvers on all situations "
-		      "(experimental, avoid)");
+        "'stable'=using stable factorization; "
+        "'speculative'=try faster linear solvers when is detected to be safe "
+        "to do so (experimental) ; "
+        "'forcequick'=rely on faster solvers on all situations "
+        "(experimental, avoid)");
   }
 
+  //factorization acceptor
+  {
+    vector<string> range(2); range[0] = "inertia_correction"; range[1]="inertia_free";
+    registerStrOption("FactAcceptor", "inertia_correction", range,
+        "The criteria used to accept a factorization: "
+        " inertia_correction (default option) --- check if inertia is correct. "
+        " inertia_free --- to be updated");
+  }  
   //computations
   {
     vector<string> range(4); range[0]="auto"; range[1]="cpu"; range[2]="hybrid"; range[3]="gpu";
