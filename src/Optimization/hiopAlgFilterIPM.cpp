@@ -1186,12 +1186,15 @@ void hiopAlgFilterIPMQuasiNewton::outputIteration(int lsStatus, int lsNum)
  * FULL NEWTON IPM
  *****************************************************************************************************/
 hiopAlgFilterIPMNewton::hiopAlgFilterIPMNewton(hiopNlpFormulation* nlp_)
-  : hiopAlgFilterIPMBase(nlp_)
+  : hiopAlgFilterIPMBase(nlp_),
+    fact_acceptor_{nullptr}
 {
 }
 
 hiopAlgFilterIPMNewton::~hiopAlgFilterIPMNewton()
 {
+  if(fact_acceptor_) delete fact_acceptor_;
+  fact_acceptor_ = nullptr;
 }
 
 hiopKKTLinSysCompressed* hiopAlgFilterIPMNewton::
@@ -1209,6 +1212,19 @@ decideAndCreateLinearSystem(hiopNlpFormulation* nlp)
   } else {
     return new hiopKKTLinSysCompressedMDSXYcYd(nlp);
   }
+}
+
+hiopFactAcceptor* hiopAlgFilterIPMNewton::
+decideAndCreateFactAcceptor(hiopPDPerturbation* p, hiopNlpFormulation* nlp)
+{
+  std::string strKKT = nlp->options->GetString("FactAcceptor");
+  if(strKKT == "inertia_correction")
+  {
+    return new hiopFactAcceptorIC(p,nlp->m_eq()+nlp->m_ineq());
+  }else{
+    return new hiopFactAcceptorIC(p,nlp->m_eq()+nlp->m_ineq());
+  }
+    
 }
 
 hiopSolveStatus hiopAlgFilterIPMNewton::run()
@@ -1272,6 +1288,14 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
   hiopKKTLinSysCompressed* kkt = decideAndCreateLinearSystem(nlp);
   assert(kkt != NULL);
   kkt->set_PD_perturb_calc(&pd_perturb_);
+  
+  if(fact_acceptor_){
+    delete fact_acceptor_;
+    fact_acceptor_ = nullptr;
+  }
+  fact_acceptor_ = decideAndCreateFactAcceptor(&pd_perturb_,nlp);
+  
+  kkt->set_fact_acceptor(fact_acceptor_);
   
   _alpha_primal = _alpha_dual = 0;
 

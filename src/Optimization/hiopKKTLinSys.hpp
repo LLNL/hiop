@@ -54,6 +54,7 @@
 #include "hiopHessianLowRank.hpp"
 #include "hiopPDPerturbation.hpp"
 #include "hiopLinSolver.hpp"
+#include "hiopFactAcceptor.hpp"
 
 #include "hiopCppStdUtils.hpp"
 
@@ -88,6 +89,11 @@ public:
     perturb_calc_ = p;
   }
 
+  virtual void set_fact_acceptor(hiopFactAcceptor* p_fact_acceptor)
+  {
+    fact_acceptor_ = p_fact_acceptor;
+  }  
+  
   inline void set_safe_mode(bool val)
   {
     safe_mode_ = val;
@@ -118,6 +124,7 @@ protected:
   const hiopMatrix *Jac_c_, *Jac_d_;
   hiopMatrix* Hess_;
   hiopPDPerturbation* perturb_calc_;
+  hiopFactAcceptor* fact_acceptor_;  
   bool perf_report_;
   bool safe_mode_;
 };

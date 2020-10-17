@@ -62,161 +62,169 @@ namespace hiop
 using namespace std;
 const char* szDefaultFilename = "hiop.options";
 
-  hiopOptions::hiopOptions(const char* szOptionsFilename/*=NULL*/)
-  : log(NULL)
+hiopOptions::hiopOptions(const char* szOptionsFilename/*=NULL*/)
+: log(NULL)
 {
-  registerOptions();
-  loadFromFile(szOptionsFilename==NULL?szDefaultFilename:szOptionsFilename);
-  ensureConsistence();
+registerOptions();
+loadFromFile(szOptionsFilename==NULL?szDefaultFilename:szOptionsFilename);
+ensureConsistence();
 }
 
 hiopOptions::~hiopOptions()
 {
-  map<std::string, _O*>::iterator it = mOptions.begin();
-  for(;it!=mOptions.end(); it++) delete it->second;
+map<std::string, _O*>::iterator it = mOptions.begin();
+for(;it!=mOptions.end(); it++) delete it->second;
 }
 
 double hiopOptions::GetNumeric(const char* name) const
 {
-  map<std::string, _O*>::const_iterator it = mOptions.find(name);
-  assert(it!=mOptions.end());
-  assert(it->second!=NULL);
-  _ONum* option = dynamic_cast<_ONum*>(it->second);
-  assert(option!=NULL);
-  return option->val;
+map<std::string, _O*>::const_iterator it = mOptions.find(name);
+assert(it!=mOptions.end());
+assert(it->second!=NULL);
+_ONum* option = dynamic_cast<_ONum*>(it->second);
+assert(option!=NULL);
+return option->val;
 }
 
 int hiopOptions::GetInteger(const char* name) const
 {
-  map<std::string, _O*>::const_iterator it = mOptions.find(name);
-  assert(it!=mOptions.end());
-  assert(it->second!=NULL);
-  _OInt* option = dynamic_cast<_OInt*>(it->second);
-  assert(option!=NULL);
-  return option->val;
+map<std::string, _O*>::const_iterator it = mOptions.find(name);
+assert(it!=mOptions.end());
+assert(it->second!=NULL);
+_OInt* option = dynamic_cast<_OInt*>(it->second);
+assert(option!=NULL);
+return option->val;
 }
 
 string hiopOptions::GetString (const char* name) const
 {
-  map<std::string, _O*>::const_iterator it = mOptions.find(name);
-  assert(it!=mOptions.end());
-  assert(it->second!=NULL);
-  _OStr* option = dynamic_cast<_OStr*>(it->second);
-  assert(option!=NULL);
-  return option->val;
+map<std::string, _O*>::const_iterator it = mOptions.find(name);
+assert(it!=mOptions.end());
+assert(it->second!=NULL);
+_OStr* option = dynamic_cast<_OStr*>(it->second);
+assert(option!=NULL);
+return option->val;
 }
 
 void hiopOptions::registerOptions()
 {
-  // TODO: add option for mu_target
-  registerNumOption("mu0", 1., 1e-16, 1000.,
-		    "Initial log-barrier parameter mu (default 1.)");
-  registerNumOption("kappa_mu", 0.2, 1e-8, 0.999, 
-		    "Linear reduction coefficient for mu (default 0.2) (eqn (7) in Filt-IPM paper)");
-  registerNumOption("theta_mu", 1.5,  1.0,   2.0, 
-		    "Exponential reduction coefficient for mu (default 1.5) (eqn (7) in Filt-IPM paper)");
-  registerNumOption("eta_phi", 1e-8, 0, 0.01, "Parameter of (suff. decrease) in Armijo Rule");
-  registerNumOption("tolerance", 1e-8, 1e-14, 1e-1, 
-		    "Absolute error tolerance for the NLP (default 1e-8)");
-  registerNumOption("rel_tolerance", 0., 0., 0.1, 
-		    "Error tolerance for the NLP relative to errors at the initial point. A null "
-		    "value disables this option (default 0.)");
-  registerNumOption("tau_min", 0.99, 0.9,  0.99999, 
-		    "Fraction-to-the-boundary parameter used in the line-search to back-off a bit "
-		    "(see eqn (8) in the Filt-IPM paper) (default 0.99)");
-  registerNumOption("kappa_eps", 10., 1e-6, 1e+3, 
-		    "mu is reduced when when log-bar error is below kappa_eps*mu (default 10.)");
-  registerNumOption("kappa1", 1e-2, 1e-16, 1e+0, 
-		    "sufficiently-away-from-the-boundary projection parameter used in initialization (default 1e-2)");
-  registerNumOption("kappa2", 1e-2, 1e-16, 0.49999, 
-		    "shift projection parameter used in initialization for double-bounded variables (default 1e-2)");
-  registerNumOption("smax", 100., 1., 1e+7, 
-		    "multiplier threshold used in computing the scaling factors for the optimality error (default 100.)"); 
+// TODO: add option for mu_target
+registerNumOption("mu0", 1., 1e-16, 1000.,
+      "Initial log-barrier parameter mu (default 1.)");
+registerNumOption("kappa_mu", 0.2, 1e-8, 0.999, 
+      "Linear reduction coefficient for mu (default 0.2) (eqn (7) in Filt-IPM paper)");
+registerNumOption("theta_mu", 1.5,  1.0,   2.0, 
+      "Exponential reduction coefficient for mu (default 1.5) (eqn (7) in Filt-IPM paper)");
+registerNumOption("eta_phi", 1e-8, 0, 0.01, "Parameter of (suff. decrease) in Armijo Rule");
+registerNumOption("tolerance", 1e-8, 1e-14, 1e-1, 
+      "Absolute error tolerance for the NLP (default 1e-8)");
+registerNumOption("rel_tolerance", 0., 0., 0.1, 
+      "Error tolerance for the NLP relative to errors at the initial point. A null "
+      "value disables this option (default 0.)");
+registerNumOption("tau_min", 0.99, 0.9,  0.99999, 
+      "Fraction-to-the-boundary parameter used in the line-search to back-off a bit "
+      "(see eqn (8) in the Filt-IPM paper) (default 0.99)");
+registerNumOption("kappa_eps", 10., 1e-6, 1e+3, 
+      "mu is reduced when when log-bar error is below kappa_eps*mu (default 10.)");
+registerNumOption("kappa1", 1e-2, 1e-16, 1e+0, 
+      "sufficiently-away-from-the-boundary projection parameter used in initialization (default 1e-2)");
+registerNumOption("kappa2", 1e-2, 1e-16, 0.49999, 
+      "shift projection parameter used in initialization for double-bounded variables (default 1e-2)");
+registerNumOption("smax", 100., 1., 1e+7, 
+      "multiplier threshold used in computing the scaling factors for the optimality error (default 100.)"); 
 
-  {
-    vector<string> range(2); range[0]="lsq"; range[1]="linear";
-    registerStrOption("dualsUpdateType", "lsq", range, 
-		      "Type of update of the multipliers of the eq. cons. (default lsq)"); //
-  }
-  {
-    vector<string> range(2); range[0]="lsq"; range[1]="zero";
-    registerStrOption("dualsInitialization", "lsq", range, 
-		      "Type of update of the multipliers of the eq. cons. (default lsq)");
-  }
+{
+  vector<string> range(2); range[0]="lsq"; range[1]="linear";
+  registerStrOption("dualsUpdateType", "lsq", range, 
+        "Type of update of the multipliers of the eq. cons. (default lsq)"); //
+}
+{
+  vector<string> range(2); range[0]="lsq"; range[1]="zero";
+  registerStrOption("dualsInitialization", "lsq", range, 
+        "Type of update of the multipliers of the eq. cons. (default lsq)");
+}
 
-  registerIntOption("max_iter", 3000, 1, 1e6, "Max number of iterations (default 3000)");
+registerIntOption("max_iter", 3000, 1, 1e6, "Max number of iterations (default 3000)");
 
-  registerNumOption("acceptable_tolerance", 1e-6, 1e-14, 1e-1, 
-		    "HiOp will terminate if the NLP residuals are below for 'acceptable_iterations' "
-		    "many consecutive iterations (default 1e-6)");   
-  registerIntOption("acceptable_iterations", 10, 1, 1e6, 
-		    "Number of iterations of acceptable tolerance after which HiOp terminates (default 10)");
+registerNumOption("acceptable_tolerance", 1e-6, 1e-14, 1e-1, 
+      "HiOp will terminate if the NLP residuals are below for 'acceptable_iterations' "
+      "many consecutive iterations (default 1e-6)");   
+registerIntOption("acceptable_iterations", 10, 1, 1e6, 
+      "Number of iterations of acceptable tolerance after which HiOp terminates (default 10)");
 
-  registerNumOption("sigma0", 1., 0., 1e+7, 
-		    "Initial value of the initial multiplier of the identity in the secant "
-		    "approximation (default 1.)");
-  {
-    vector<string> range(2); range[0] = "no"; range[1] = "yes";
-    registerStrOption("accept_every_trial_step", "no", range, 
-		      "Disable line-search and take close-to-boundary step");
-  }
-  {
-    vector<string> range(5); 
-    range[0]="sigma0"; range[1]="sty"; range[2]="sty_inv"; 
-    range[3]="snrm_ynrm";  range[4]="sty_srnm_ynrm";
-    registerStrOption("sigma_update_strategy", range[1], range, 
-		      "Updating strategy for the multiplier of the identity in the secant "
-		      "approximation (default sty)");
-  }
-  registerIntOption("secant_memory_len", 6, 0, 256, 
-		    "Size of the memory of the Hessian secant approximation");
+registerNumOption("sigma0", 1., 0., 1e+7, 
+      "Initial value of the initial multiplier of the identity in the secant "
+      "approximation (default 1.)");
+{
+  vector<string> range(2); range[0] = "no"; range[1] = "yes";
+  registerStrOption("accept_every_trial_step", "no", range, 
+        "Disable line-search and take close-to-boundary step");
+}
+{
+  vector<string> range(5); 
+  range[0]="sigma0"; range[1]="sty"; range[2]="sty_inv"; 
+  range[3]="snrm_ynrm";  range[4]="sty_srnm_ynrm";
+  registerStrOption("sigma_update_strategy", range[1], range, 
+        "Updating strategy for the multiplier of the identity in the secant "
+        "approximation (default sty)");
+}
+registerIntOption("secant_memory_len", 6, 0, 256, 
+      "Size of the memory of the Hessian secant approximation");
 
-  registerIntOption("verbosity_level", 3, 0, 12, 
-		    "Verbosity level: 0 no output (only errors), 1=0+warnings, 2=1 (reserved), "
-		    "3=2+optimization output, 4=3+scalars; larger values explained in hiopLogger.hpp"); 
+registerIntOption("verbosity_level", 3, 0, 12, 
+      "Verbosity level: 0 no output (only errors), 1=0+warnings, 2=1 (reserved), "
+      "3=2+optimization output, 4=3+scalars; larger values explained in hiopLogger.hpp"); 
 
-  {
-    vector<string> range(3); range[0]="remove"; range[1]="relax"; range[2]="none";
-    registerStrOption("fixed_var", "none", range, 
-		      "Treatment of fixed variables: 'remove' from the problem, 'relax' bounds "
-		      "by 'fixed_var_perturb', or 'none', in which case the HiOp will terminate "
-		      "with an error message if fixed variables are detected (default 'none')");
+{
+  vector<string> range(3); range[0]="remove"; range[1]="relax"; range[2]="none";
+  registerStrOption("fixed_var", "none", range, 
+        "Treatment of fixed variables: 'remove' from the problem, 'relax' bounds "
+        "by 'fixed_var_perturb', or 'none', in which case the HiOp will terminate "
+        "with an error message if fixed variables are detected (default 'none')");
 
-    registerNumOption("fixed_var_tolerance", 1e-15, 1e-30, 0.01, 
-		      "A variable is considered fixed if |upp_bnd-low_bnd| < fixed_var_tolerance * "
-		      "max(abs(upp_bnd),1) (default 1e-15)");
+  registerNumOption("fixed_var_tolerance", 1e-15, 1e-30, 0.01, 
+        "A variable is considered fixed if |upp_bnd-low_bnd| < fixed_var_tolerance * "
+        "max(abs(upp_bnd),1) (default 1e-15)");
 
-    registerNumOption("fixed_var_perturb", 1e-8, 1e-14, 0.1, 
-		      "Perturbation of the lower and upper bounds for fixed variables relative "
-		      "to its magnitude: lower/upper_bound -=/+= max(abs(upper_bound),1)*"
-		      "fixed_var_perturb (default 1e-8)");
-  }
+  registerNumOption("fixed_var_perturb", 1e-8, 1e-14, 0.1, 
+        "Perturbation of the lower and upper bounds for fixed variables relative "
+        "to its magnitude: lower/upper_bound -=/+= max(abs(upper_bound),1)*"
+        "fixed_var_perturb (default 1e-8)");
+}
 
-  //optimization method used
-  {
-    vector<string> range(2); range[0]="quasinewton_approx"; range[1]="analytical_exact"; 
-    registerStrOption("Hessian", "quasinewton_approx", range, 
-		      "Type of Hessian used with the filter IPM: 'quasinewton_approx' built internally "
-		      "by HiOp (default option) or 'analytical_exact' provided by the user");
-  }
-  //linear algebra
-  {
-    vector<string> range(3); range[0] = "auto"; range[1]="xycyd"; range[2]="xdycyd"; 
-    registerStrOption("KKTLinsys", "auto", range, 
-		      "Type of KKT linear system used internally: decided by HiOp 'auto' "
-		      "(default option), the more compact 'XYcYd' or the more stable 'XDYcYd'. "
-		      "The last two are only available with Hessian=analyticalExact");
-  }
+//optimization method used
+{
+  vector<string> range(2); range[0]="quasinewton_approx"; range[1]="analytical_exact"; 
+  registerStrOption("Hessian", "quasinewton_approx", range, 
+        "Type of Hessian used with the filter IPM: 'quasinewton_approx' built internally "
+        "by HiOp (default option) or 'analytical_exact' provided by the user");
+}
+//linear algebra
+{
+  vector<string> range(3); range[0] = "auto"; range[1]="xycyd"; range[2]="xdycyd"; 
+  registerStrOption("KKTLinsys", "auto", range, 
+        "Type of KKT linear system used internally: decided by HiOp 'auto' "
+        "(default option), the more compact 'XYcYd' or the more stable 'XDYcYd'. "
+        "The last two are only available with Hessian=analyticalExact");
+}
   {
     vector<string> range(3); range[0]="stable"; range[1]="speculative"; range[2]="forcequick";
     registerStrOption("linsol_mode", "stable", range,
-		      "'stable'=using stable factorization; "
-		      "'speculative'=try faster linear solvers when is detected to be safe "
-		      "to do so (experimental) ; "
-		      "'forcequick'=rely on faster solvers on all situations "
-		      "(experimental, avoid)");
+        "'stable'=using stable factorization; "
+        "'speculative'=try faster linear solvers when is detected to be safe "
+        "to do so (experimental) ; "
+        "'forcequick'=rely on faster solvers on all situations "
+        "(experimental, avoid)");
   }
 
+  //factorization acceptor
+  {
+    vector<string> range(2); range[0] = "inertia_correction"; range[1]="inertia_free";
+    registerStrOption("FactAcceptor", "inertia_correction", range,
+        "The criteria used to accept a factorization: "
+        " inertia_correction (default option) --- check if inertia is correct. "
+        " inertia_free --- to be updated");
+  }  
   //computations
   {
     vector<string> range(3); range[0]="auto"; range[1]="cpu"; range[2]="hybrid"; 
