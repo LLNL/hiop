@@ -53,8 +53,7 @@
  * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
  *
  */
-
-#include <hiopMatrix.hpp>
+#include <hiopMatrixDenseRowMajor.hpp>
 #include "matrixTestsDense.hpp"
 
 namespace hiop { namespace tests {
@@ -62,7 +61,7 @@ namespace hiop { namespace tests {
 /// Method to set matrix _A_ element (i,j) to _val_.
 /// First need to retrieve hiopMatrixDense from the abstract interface
 void MatrixTestsDense::setLocalElement(
-    hiop::hiopMatrix* A,
+    hiop::hiopMatrixDense* A,
     local_ordinal_type i,
     local_ordinal_type j,
     real_type val)
@@ -106,7 +105,7 @@ void MatrixTestsDense::setLocalRow(
 /// Returns element (i,j) of matrix _A_.
 /// First need to retrieve hiopMatrixDense from the abstract interface
 real_type MatrixTestsDense::getLocalElement(
-    const hiop::hiopMatrix* A,
+    const hiop::hiopMatrixDense* A,
     local_ordinal_type i,
     local_ordinal_type j)
 {
@@ -128,7 +127,7 @@ real_type MatrixTestsDense::getLocalElement(
   else THROW_NULL_DEREF;
 }
 
-local_ordinal_type MatrixTestsDense::getNumLocRows(hiop::hiopMatrix* A)
+local_ordinal_type MatrixTestsDense::getNumLocRows(hiop::hiopMatrixDense* A)
 {
   hiop::hiopMatrixDense* amat = dynamic_cast<hiop::hiopMatrixDense*>(A);
   if(amat != nullptr)
@@ -137,7 +136,7 @@ local_ordinal_type MatrixTestsDense::getNumLocRows(hiop::hiopMatrix* A)
   else THROW_NULL_DEREF;
 }
 
-local_ordinal_type MatrixTestsDense::getNumLocCols(hiop::hiopMatrix* A)
+local_ordinal_type MatrixTestsDense::getNumLocCols(hiop::hiopMatrixDense* A)
 {
   hiop::hiopMatrixDense* amat = dynamic_cast<hiop::hiopMatrixDense*>(A);
   if(amat != nullptr)
@@ -157,7 +156,7 @@ int MatrixTestsDense::getLocalSize(const hiop::hiopVector* x)
 
 #ifdef HIOP_USE_MPI
 /// Get communicator
-MPI_Comm MatrixTestsDense::getMPIComm(hiop::hiopMatrix* _A)
+MPI_Comm MatrixTestsDense::getMPIComm(hiop::hiopMatrixDense* _A)
 {
   const hiop::hiopMatrixDense* A = dynamic_cast<const hiop::hiopMatrixDense*>(_A);
   if(A != nullptr)
@@ -166,8 +165,20 @@ MPI_Comm MatrixTestsDense::getMPIComm(hiop::hiopMatrix* _A)
 }
 #endif
 
+/// Returns pointer to local data block of matrix _A_.
+/// First need to retrieve hiopMatrixDenseRowMajor from the abstract interface
+real_type* MatrixTestsDense::getLocalData(hiop::hiopMatrixDense* A)
+{
+  auto* amat = dynamic_cast<hiop::hiopMatrixDenseRowMajor*>(A);
+  if(amat != nullptr)
+  {
+    return amat->local_buffer();
+  }
+  else THROW_NULL_DEREF;
+}
+
 // Every rank returns failure if any individual rank fails
-bool MatrixTestsDense::reduceReturn(int failures, hiop::hiopMatrix* A)
+bool MatrixTestsDense::reduceReturn(int failures, hiop::hiopMatrixDense* A)
 {
   int fail = 0;
 
@@ -182,7 +193,7 @@ bool MatrixTestsDense::reduceReturn(int failures, hiop::hiopMatrix* A)
 }
 
   [[nodiscard]]
-int MatrixTestsDense::verifyAnswer(hiop::hiopMatrix* A, const double answer)
+int MatrixTestsDense::verifyAnswer(hiop::hiopMatrixDense* A, const double answer)
 {
   const local_ordinal_type M = getNumLocRows(A);
   const local_ordinal_type N = getNumLocCols(A);
@@ -207,7 +218,7 @@ int MatrixTestsDense::verifyAnswer(hiop::hiopMatrix* A, const double answer)
  */
   [[nodiscard]]
 int MatrixTestsDense::verifyAnswer(
-    hiop::hiopMatrix* A,
+    hiop::hiopMatrixDense* A,
     std::function<real_type(local_ordinal_type, local_ordinal_type)> expect)
 {
   const local_ordinal_type M = getNumLocRows(A);
@@ -219,6 +230,7 @@ int MatrixTestsDense::verifyAnswer(
     {
       if (!isEqual(getLocalElement(A, i, j), expect(i, j)))
       {
+        std::cout << i << " " << j << " = " << getLocalElement(A, i, j) << " != " << expect(i, j) << "\n";
         fail++;
       }
     }
@@ -264,7 +276,7 @@ int MatrixTestsDense::verifyAnswer(
 }
 
 bool MatrixTestsDense::globalToLocalMap(
-    hiop::hiopMatrix* A,
+    hiop::hiopMatrixDense* A,
     const global_ordinal_type row,
     const global_ordinal_type col,
     local_ordinal_type& local_row,

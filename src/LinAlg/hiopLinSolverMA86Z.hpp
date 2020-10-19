@@ -72,6 +72,12 @@
 
 namespace hiop
 {
+  /* 
+    Note: the following methods of hiopLinSolver are NOT 
+    implemented in this class:
+    - solve (hiopVector)
+    - solve (hiopMatrix)
+  */
   class hiopLinSolverMA86Z : public hiopLinSolver
   {
   public:

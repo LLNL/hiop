@@ -49,7 +49,7 @@ public:
 
   inline hiopMatrixDense& sysMatrix() 
   { 
-    return M; 
+    return *M_; 
   }
 protected:
   int* ipiv;
@@ -85,7 +85,7 @@ public:
 
   inline hiopMatrixDense& sysMatrix() 
   { 
-    return M; 
+    return *M_; 
   }
 
   void inline set_fake_inertia(int nNegEigs)

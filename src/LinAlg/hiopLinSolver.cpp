@@ -48,9 +48,10 @@
 
 #include "hiopLinSolver.hpp"
 
-#include "hiopMatrix.hpp"
+#include "hiopMatrixDense.hpp"
 
 #include "hiopOptions.hpp"
+#include <hiopLinAlgFactory.hpp>
 
 namespace hiop {
   hiopLinSolver::hiopLinSolver()
@@ -61,15 +62,31 @@ namespace hiop {
   {
   }
 
-  
+  /// Constructor allocates dense system matrix
   hiopLinSolverIndefDense::hiopLinSolverIndefDense(int n, hiopNlpFormulation* nlp)
-    : M(n,n)
+    : M_(LinearAlgebraFactory::createMatrixDense(n, n))
   {
     nlp_ = nlp;
     perf_report_ = "on"==hiop::tolower(nlp->options->GetString("time_kkt"));
   }
-  hiopLinSolverIndefDense::~hiopLinSolverIndefDense()
-  { 
+
+  /// Default constructor is protected and should fail when called
+  hiopLinSolverIndefDense::hiopLinSolverIndefDense()
+    : M_(LinearAlgebraFactory::createMatrixDense(0, 0))
+  {
+    assert(false);
   }
 
-}
+  /// Destructor deletes the system matrix
+  hiopLinSolverIndefDense::~hiopLinSolverIndefDense()
+  {
+    delete M_;
+  }
+
+  /// Method to return reference to the system matrix
+  hiopMatrixDense& hiopLinSolverIndefDense::sysMatrix()
+  {
+    return *M_;
+  }
+
+} // namespace hiop

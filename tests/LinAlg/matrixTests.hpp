@@ -50,6 +50,8 @@
  * @file matrixTests.hpp
  *
  * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>,  PNNL
+ * @author Jake Ryan <jake.ryan@pnnl.gov>, PNNL
+ * @author Robert Rutherford <robert.rutherford@pnnl.gov>, PNNL
  * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
  *
  */
@@ -71,32 +73,60 @@ public:
   MatrixTests() {}
   virtual ~MatrixTests(){}
 
-  int matrixSetToZero(hiop::hiopMatrix& A, const int rank=0)
+  int matrixSetToZero(hiop::hiopMatrixDense& A, const int rank)
   {
+    A.setToConstant(one);
     A.setToZero();
     const int fail = verifyAnswer(&A, zero);
     printMessage(fail, __func__, rank);
     return reduceReturn(fail, &A);
   }
 
-  int matrixSetToConstant(hiop::hiopMatrix& A, const int rank=0)
+  int matrixSetToConstant(hiop::hiopMatrixDense& A, const int rank)
   {
-    const local_ordinal_type M = getNumLocRows(&A);
-    const local_ordinal_type N = getNumLocCols(&A);
-    for (local_ordinal_type i=0; i<M; i++)
-      for (local_ordinal_type j=0; j<N; j++)
-        setLocalElement(&A, i, j, one);
+    A.setToConstant(one);
+    int fail = verifyAnswer(&A, one);
     A.setToConstant(two);
-    const int fail = verifyAnswer(&A, two);
+    fail += verifyAnswer(&A, two);
     printMessage(fail, __func__, rank);
     return reduceReturn(fail, &A);
+  }
+
+  int matrixCopyFrom(
+      hiopMatrixDense &dst,
+      hiopMatrixDense &src,
+      const int rank)
+  {
+    assert(dst.n() == src.n() && "Did you pass in matrices of the same size?");
+    assert(dst.m() == src.m() && "Did you pass in matrices of the same size?");
+    assert(getNumLocRows(&dst) == getNumLocRows(&src) && "Did you pass in matrices of the same size?");
+    assert(getNumLocCols(&dst) == getNumLocCols(&src) && "Did you pass in matrices of the same size?");
+    const real_type src_val = one;
+
+    // Test copying src another matrix
+    src.setToConstant(src_val);
+    dst.setToZero();
+
+    dst.copyFrom(src);
+    int fail = verifyAnswer(&dst, src_val);
+
+    // test copying src a raw buffer
+    const size_t buf_len = getNumLocRows(&src) * getNumLocCols(&src);
+    real_type *src_buf = getLocalData(&src);
+    dst.setToZero();
+
+    dst.copyFrom(src_buf);
+    fail += verifyAnswer(&dst, src_val);
+
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &dst);
   }
 
   /*
    * y_{glob} \leftarrow \beta y_{glob} + \alpha A_{glob \times loc} x_{loc}
    */
   int matrixTimesVec(
-      hiop::hiopMatrix& A,
+      hiop::hiopMatrixDense& A,
       hiop::hiopVector& y,
       hiop::hiopVector& x,
       const int rank=0)
@@ -131,7 +161,7 @@ public:
    * the plain `timesVec' nessecitated that x be distributed and y not be.
    */
   int matrixTransTimesVec(
-      hiop::hiopMatrix& A,
+      hiop::hiopMatrixDense& A,
       hiop::hiopVector& x,
       hiop::hiopVector& y,
       const int rank=0)
@@ -192,9 +222,9 @@ public:
    *   all local
    */
   int matrixTimesMat(
-      hiop::hiopMatrix& A,
-      hiop::hiopMatrix& X,
-      hiop::hiopMatrix& W,
+      hiop::hiopMatrixDense& A,
+      hiop::hiopMatrixDense& X,
+      hiop::hiopMatrixDense& W,
       const int rank=0)
   {
     const local_ordinal_type K = getNumLocCols(&A);
@@ -230,10 +260,10 @@ public:
    *
    */
   int matrixTransTimesMat(
-      hiop::hiopMatrix& A_local,
-      hiop::hiopMatrix& W,
-      hiop::hiopMatrix& X,
-      const int rank=0)
+      hiop::hiopMatrixDense& A_local,
+      hiop::hiopMatrixDense& W,
+      hiop::hiopMatrixDense& X,
+      const int rank)
   {
     const local_ordinal_type K = getNumLocRows(&A_local);
     const global_ordinal_type N_loc = getNumLocCols(&X);
@@ -278,22 +308,19 @@ public:
    *
    *  A: mxn
    *  W: mxk local
-   *  X: nxk
+   *  X: kxn
    *
    */
   int matrixTimesMatTrans(
-      hiop::hiopMatrix& A,
-      hiop::hiopMatrix& W_local,
-      hiop::hiopMatrix& X,
-      const int rank=0)
+      hiop::hiopMatrixDense& A,
+      hiop::hiopMatrixDense& W_local,
+      hiop::hiopMatrixDense& X,
+      const int rank)
   {
-    // Skip for now - undetermined error in timeMatTrans call
-    printMessage(SKIP_TEST, __func__, rank); return 0;
-
-    const local_ordinal_type M = getNumLocCols(&A);
-    assert(getNumLocRows(&A) == getNumLocRows(&W_local) && "Matrices have mismatched shapes");
-    assert(getNumLocRows(&X) == getNumLocCols(&W_local) && "Matrices have mismatched shapes");
-    assert(M == getNumLocCols(&X) && "Matrices have mismatched shapes");
+    const global_ordinal_type Nglob = A.n();
+    assert(getNumLocRows(&A) == getNumLocRows(&W_local) && "Matrices have mismatched sizes");
+    assert(getNumLocRows(&X) == getNumLocCols(&W_local) && "Matrices have mismatched sizes");
+    assert(getNumLocCols(&A) == getNumLocCols(&X)       && "Matrices have mismatched sizes");
     const real_type A_val = two,
           X_val = three,
           W_val = two,
@@ -303,11 +330,25 @@ public:
     A.setToConstant(A_val);
     W_local.setToConstant(W_val);
     X.setToConstant(X_val);
+
+    // Set a row of X to zero
+    local_ordinal_type idx_of_zero_row = getNumLocRows(&X) - 1;
+    // for(local_ordinal_type j=0; j<getNumLocCols(&X); ++j)
+    // {
+    //   setLocalElement(&X, idx_of_zero_row, j, zero);    
+    // }
+    setLocalRow(&X, idx_of_zero_row, zero);
+
     A.timesMatTrans(beta, W_local, alpha, X);
 
-    real_type expected = (beta * W_val) + (alpha * A_val * X_val * M);
+    // Column of W with second term equal to zero
+    local_ordinal_type idx_of_zero_col = getNumLocCols(&W_local) - 1;
+    int fail = verifyAnswer(&W_local,
+      [=] (local_ordinal_type i, local_ordinal_type j) -> real_type
+      {
+        return j == idx_of_zero_col ? (beta * W_val) : (beta * W_val) + (alpha * A_val * X_val * Nglob);
+      });
 
-    const int fail = verifyAnswer(&W_local, expected);
     printMessage(fail, __func__, rank);
     return reduceReturn(fail, &A);
   }
@@ -316,7 +357,7 @@ public:
    * this += alpha * diag
    */
   int matrixAddDiagonal(
-      hiop::hiopMatrix& A,
+      hiop::hiopMatrixDense& A,
       hiop::hiopVector& x,
       const int rank=0)
   {
@@ -326,7 +367,7 @@ public:
     assert(getNumLocRows(&A) == A.n());
     assert(A.n() == x.get_size());
     assert(A.m() == x.get_size());
-    constexpr real_type alpha = two,
+    static const real_type alpha = two,
               A_val = quarter,
               x_val = half;
 
@@ -353,21 +394,27 @@ public:
     return reduceReturn(fail, &A);
   }
 
-  /*
-   * this += alpha * subdiag
+  /**
+   * @breif this += alpha * subdiag
+   *
+   * @note this test checks all three overloads:
+   *   - addSubDiagonal(const double&, long long, const hiopVector&)
+   *   - addSubDiagonal(int, const double&, const hiopVector&, int, int)
+   *   - addSubDiagonal(int, int, const double&)
    */
   int matrixAddSubDiagonal(
-      hiop::hiopMatrix& A,
+      hiop::hiopMatrixDense& A,
       hiop::hiopVector& x,
       const int rank=0)
   {
-    int fail = 0;
-    const local_ordinal_type N = getNumLocCols(&A);
-    assert(N == A.n() && "Test should only be ran sequentially.");
+    int                      fail  = 0;
+    const local_ordinal_type N     = getNumLocCols(&A);
     const local_ordinal_type x_len = getLocalSize(&x);
-    const real_type alpha = half,
-          A_val = half,
-          x_val = one;
+    const real_type          alpha = half;
+    const real_type          A_val = half;
+    const real_type          x_val = one;
+    assert(N == A.n() && "Test should only be ran sequentially.");
+    assert(N == A.m() && "Test should only run with symmetric matrices.");
 
     // Test the overload that assumes the entire source vector
     // will be added to the subdiagonal
@@ -386,18 +433,35 @@ public:
     // We're only going to add n-1 elements of the vector
     // Test the overload that specifies subset of the vector
     // to be added to subdiagonal
-    local_ordinal_type start_idx_src = 1,
-                       num_elements_to_add = x_len - start_idx_src,
-                       start_idx_dest = (N - x_len) + start_idx_src;
+    local_ordinal_type start_idx_src       = 1;
+    local_ordinal_type num_elements_to_add = x_len - start_idx_src;
+    local_ordinal_type start_idx_dest      = (N - x_len) + start_idx_src;
 
     A.setToConstant(A_val);
     x.setToConstant(x_val);
     A.addSubDiagonal(start_idx_dest, alpha, x, start_idx_src, num_elements_to_add);
+
     fail += verifyAnswer(&A,
       [=] (local_ordinal_type i, local_ordinal_type j) -> real_type
       {
         const bool isOnSubDiagonal = (i>=start_idx_dest && i==j);
         return isOnSubDiagonal ? A_val + x_val * alpha : A_val;
+      });
+
+    // Operating on N-2 elements s.t. the first and last elements of the sub
+    // diagonal are not operated on.
+    start_idx_dest         = 1;
+    const double c         = two;
+    const int    num_elems = N - 2;
+    A.setToConstant(A_val);
+    A.addSubDiagonal(start_idx_dest, num_elems, c);
+    fail += verifyAnswer(&A,
+      [=] (local_ordinal_type i, local_ordinal_type j) -> real_type
+      {
+        const bool isOperatedOn = i >= start_idx_dest && 
+                                  i == j &&
+                                  i < start_idx_dest + num_elems;
+        return isOperatedOn ? A_val + c : A_val;
       });
 
     printMessage(fail, __func__, rank);
@@ -408,9 +472,9 @@ public:
    * A += alpha * B
    */
   int matrixAddMatrix(
-      hiop::hiopMatrix& A,
-      hiop::hiopMatrix& B,
-      const int rank=0)
+      hiop::hiopMatrixDense& A,
+      hiop::hiopMatrixDense& B,
+      const int rank)
   {
     assert(getNumLocRows(&A) == getNumLocRows(&B));
     assert(getNumLocCols(&A) == getNumLocCols(&B));
@@ -432,43 +496,43 @@ public:
    *
    * Precondition: W is square
    */
-  int matrixAddToSymDenseMatrixUpperTriangle(
-      hiop::hiopMatrix& _W,
-      hiop::hiopMatrix& A,
-      const int rank=0)
-  {
-    // This method only takes hiopMatrixDense
-    auto W = dynamic_cast<hiop::hiopMatrixDense*>(&_W);
-    const local_ordinal_type N_loc = getNumLocCols(W);
-    const local_ordinal_type A_M = getNumLocRows(&A);
-    const local_ordinal_type A_N_loc = getNumLocCols(&A);
-    assert(W->m() == W->n());
-    assert(getNumLocRows(W) >= getNumLocRows(&A));
-    assert(W->n() >= A.n());
+  // int matrixAddToSymDenseMatrixUpperTriangle(
+  //     hiop::hiopMatrixDense& _W,
+  //     hiop::hiopMatrixDense& A,
+  //     const int rank=0)
+  // {
+  //   // This method only takes hiopMatrixDense
+  //   auto W = dynamic_cast<hiop::hiopMatrixDense*>(&_W);
+  //   const local_ordinal_type N_loc = getNumLocCols(W);
+  //   const local_ordinal_type A_M = getNumLocRows(&A);
+  //   const local_ordinal_type A_N_loc = getNumLocCols(&A);
+  //   assert(W->m() == W->n());
+  //   assert(getNumLocRows(W) >= getNumLocRows(&A));
+  //   assert(W->n() >= A.n());
 
-    const local_ordinal_type start_idx_row = 0;
-    const local_ordinal_type start_idx_col = N_loc - A_N_loc;
-    const real_type alpha = half,
-          A_val = half,
-          W_val = one;
-    int fail = 0;
+  //   const local_ordinal_type start_idx_row = 0;
+  //   const local_ordinal_type start_idx_col = N_loc - A_N_loc;
+  //   const real_type alpha = half,
+  //         A_val = half,
+  //         W_val = one;
+  //   int fail = 0;
 
-    // Check with non-1 alpha
-    A.setToConstant(A_val);
-    W->setToConstant(W_val);
-    A.addToSymDenseMatrixUpperTriangle(start_idx_row, start_idx_col, alpha, *W);
-    fail += verifyAnswer(W,
-      [=] (local_ordinal_type i, local_ordinal_type j) -> real_type
-      {
-        const bool isUpperTriangle = (
-          i>=start_idx_row && i<start_idx_row+A_M &&
-          j>=start_idx_col && j<start_idx_col+A_N_loc);
-        return isUpperTriangle ? W_val + A_val*alpha : W_val;
-      });
+  //   // Check with non-1 alpha
+  //   A.setToConstant(A_val);
+  //   W->setToConstant(W_val);
+  //   A.addToSymDenseMatrixUpperTriangle(start_idx_row, start_idx_col, alpha, *W);
+  //   fail += verifyAnswer(W,
+  //     [=] (local_ordinal_type i, local_ordinal_type j) -> real_type
+  //     {
+  //       const bool isUpperTriangle = (
+  //         i>=start_idx_row && i<start_idx_row+A_M &&
+  //         j>=start_idx_col && j<start_idx_col+A_N_loc);
+  //       return isUpperTriangle ? W_val + A_val*alpha : W_val;
+  //     });
 
-    printMessage(fail, __func__, rank);
-    return reduceReturn(fail, &A);
-  }
+  //   printMessage(fail, __func__, rank);
+  //   return reduceReturn(fail, &A);
+  // } aaa
 
   /*
    * Block of W += alpha*A
@@ -479,8 +543,8 @@ public:
    * Precondition: W is square
    */
   int matrixTransAddToSymDenseMatrixUpperTriangle(
-      hiop::hiopMatrix& _W,
-      hiop::hiopMatrix& A,
+      hiop::hiopMatrixDense& _W,
+      hiop::hiopMatrixDense& A,
       const int rank=0)
   {
     // This method only takes hiopMatrixDense
@@ -524,17 +588,17 @@ public:
    * degree of A <= degree of W
    */
   int matrixAddUpperTriangleToSymDenseMatrixUpperTriangle(
-      hiop::hiopMatrix& _W,
-      hiop::hiopMatrix& A,
+      hiop::hiopMatrixDense& W,
+      hiop::hiopMatrixDense& A,
       const int rank=0)
   {
     const local_ordinal_type A_M = getNumLocRows(&A);
     const local_ordinal_type A_N = getNumLocCols(&A);
-    assert(_W.m() == _W.n());
+    assert(W.m() == W.n());
     assert(A.m() == A.n());
-    assert(_W.n() >= A.n());
-    assert(getNumLocCols(&A) <= getNumLocCols(&_W));
-    auto W = dynamic_cast<hiop::hiopMatrixDense*>(&_W);
+    assert(W.n() >= A.n());
+    assert(getNumLocCols(&A) <= getNumLocCols(&W));
+    //auto W = dynamic_cast<hiop::hiopMatrixDense*>(&_W);
     // Map the upper triangle of A to W starting
     // at W's upper left corner
     const local_ordinal_type diag_start = 0;
@@ -544,9 +608,9 @@ public:
           W_val = one;
 
     A.setToConstant(A_val);
-    W->setToConstant(W_val);
-    A.addUpperTriangleToSymDenseMatrixUpperTriangle(diag_start, alpha, *W);
-    fail += verifyAnswer(W,
+    W.setToConstant(W_val);
+    A.addUpperTriangleToSymDenseMatrixUpperTriangle(diag_start, alpha, W);
+    fail += verifyAnswer(&W,
       [=] (local_ordinal_type i, local_ordinal_type j) -> real_type
       {
         bool isUpperTriangle = (i>=diag_start && i<diag_start+A_N && j>=i && j<diag_start+A_M);
@@ -561,9 +625,9 @@ public:
    * Set bottom right value to ensure that all values
    * are checked.
    */
-  virtual int matrixMaxAbsValue(
-      hiop::hiopMatrix& A,
-      const int rank=0)
+  int matrixMaxAbsValue(
+      hiop::hiopMatrixDense& A,
+      const int rank)
   {
     const local_ordinal_type last_row_idx = getNumLocRows(&A)-1;
     const local_ordinal_type last_col_idx = getNumLocCols(&A)-1;
@@ -587,9 +651,9 @@ public:
    * Set bottom right value to ensure that all values
    * are checked.
    */
-  virtual int matrixIsFinite(
-      hiop::hiopMatrix& A,
-      const int rank=0)
+  int matrixIsFinite(
+      hiop::hiopMatrixDense& A,
+      const int rank)
   {
     const local_ordinal_type last_row_idx = getNumLocRows(&A)-1;
     const local_ordinal_type last_col_idx = getNumLocCols(&A)-1;
@@ -606,9 +670,349 @@ public:
     return reduceReturn(fail, &A);
   }
 
+//////////////////////////////////////////////////////////////////////
+// Test for methods from hiopMatrixDense that are not part of the 
+// abstract class hiopMatrix
+//////////////////////////////////////////////////////////////////////
+
+  /**
+   * @brief Test method for appending matrix row.
+   * 
+   * @pre Matrix `A` must have space allocated for appending the row.
+   */
+  int matrixAppendRow(
+      hiopMatrixDense &A,
+      hiopVector &vec,
+      const int rank)
+  {
+    assert(A.n() == vec.get_size()
+      && "Did you pass in a vector with the same length as the number of columns of the matrix?");
+    assert(getNumLocCols(&A) == vec.get_local_size()
+      && "Did you pass in a vector with the same length as the number of columns of the matrix?");
+    const local_ordinal_type init_num_rows = A.m();
+    const real_type A_val = one;
+    const real_type vec_val = two;
+    int fail = 0;
+
+    A.setToConstant(A_val);
+    vec.setToConstant(vec_val);
+    A.appendRow(vec);
+
+    // Ensure A's num rows is updated
+    if (A.m() != init_num_rows + 1)
+      fail++;
+
+    // Ensure vec's values are copied over to A's last row
+    fail += verifyAnswer(&A,
+      [=](local_ordinal_type i, local_ordinal_type j) -> real_type
+      {
+        (void)j; // j is unused
+        const bool isLastRow = (i == init_num_rows);
+        return isLastRow ? vec_val : A_val;
+      });
+
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &A);
+  }
+
+  /**
+   * Tests function that copies rows from source to destination starting from
+   * `dst_start_idx` in the same order.
+   *
+   */
+  int matrixCopyRowsFrom(
+      hiopMatrixDense &dst,
+      hiopMatrixDense &src,
+      const int rank)
+  {
+    assert(dst.n() == src.n());
+    assert(dst.m() > src.m());
+    assert(getNumLocCols(&dst) == getNumLocCols(&src));
+    assert(getNumLocRows(&dst) > getNumLocRows(&src));
+    const real_type dst_val = one;
+    const real_type src_val = two;
+    const local_ordinal_type dst_start_idx = dst.m() - src.m();
+    local_ordinal_type num_rows_to_copy = src.m();
+    const local_ordinal_type src_num_rows = src.m();
+
+    // Test copying continuous rows from matrix
+    dst.setToConstant(dst_val);
+    src.setToConstant(src_val);
+
+    dst.copyRowsFrom(src, num_rows_to_copy, dst_start_idx);
+
+    int fail = verifyAnswer(&dst,
+      [=](local_ordinal_type i, local_ordinal_type j) -> real_type
+      {
+        (void)j; // j is unused
+        const bool isRowCopiedOver = (
+          i >= dst_start_idx &&
+          i < dst_start_idx + src_num_rows);
+        return isRowCopiedOver ? src_val : dst_val;
+      });
+
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &dst);
+  }
+
+  /**
+   * Tests function that copies rows from source to destination in order
+   * specified by index array `row_idxs`.
+   *
+   */
+  int matrixCopyRowsFromSelect(
+      hiopMatrixDense &dst,
+      hiopMatrixDense &src,
+      const int rank)
+  {
+    assert(dst.n() == src.n());
+    assert(getNumLocCols(&dst) == getNumLocCols(&src));
+    const real_type dst_val = one;
+    const real_type src_val = two;
+    const local_ordinal_type num_rows_to_copy = dst.m();
+    assert(num_rows_to_copy <= src.m());
+
+    // Test copying continuous rows from matrix
+    dst.setToConstant(dst_val);
+    src.setToConstant(src_val);
+    global_ordinal_type *row_idxs = new global_ordinal_type[num_rows_to_copy];
+    for (global_ordinal_type i = 0; i < num_rows_to_copy; ++i)
+      row_idxs[i] = i;
+    row_idxs[0] = num_rows_to_copy - 1;
+    row_idxs[num_rows_to_copy - 1] = 0;
+    setLocalRow(&src, num_rows_to_copy - 1, zero);
+
+    dst.copyRowsFrom(src, row_idxs, num_rows_to_copy);
+
+    int fail = verifyAnswer(&dst,
+      [=](local_ordinal_type i, local_ordinal_type j) -> real_type
+      {
+        (void)j; // j is unused
+        return i == 0 ? zero : src_val;
+      });
+
+    delete [] row_idxs;
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &dst);
+  }
+
+  int matrixCopyBlockFromMatrix(
+      hiopMatrixDense &src,
+      hiopMatrixDense &dst,
+      const int rank=0)
+  {
+    assert(src.n() < dst.n()
+      && "Src mat must be smaller than dst mat");
+    assert(src.m() < dst.m()
+      && "Src mat must be smaller than dst mat");
+    assert(getNumLocCols(&src) < getNumLocCols(&dst)
+      && "Src mat must be smaller than dst mat");
+    const real_type src_val = one;
+    const real_type dst_val = two;
+
+    // Copy matrix block into downmost and rightmost location
+    // possible
+    const local_ordinal_type src_num_rows = getNumLocRows(&src);
+    const local_ordinal_type src_num_cols = getNumLocCols(&src);
+    const local_ordinal_type dst_start_row = getNumLocRows(&dst) - src_num_rows;
+    const local_ordinal_type dst_start_col = getNumLocCols(&dst) - src_num_cols;
+
+    src.setToConstant(src_val);
+    dst.setToConstant(dst_val);
+    dst.copyBlockFromMatrix(dst_start_row, dst_start_col, src);
+
+    const int fail = verifyAnswer(&dst,
+      [=](local_ordinal_type i, local_ordinal_type j) -> real_type
+      {
+        const bool isIdxCopiedFromSource = (
+          i >= dst_start_row && i < dst_start_row + src_num_rows &&
+          j >= dst_start_col && j < dst_start_col + src_num_cols);
+        return isIdxCopiedFromSource ? src_val : dst_val;
+      });
+
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &dst);
+  }
+
+  int matrixCopyFromMatrixBlock(
+      hiopMatrixDense &src,
+      hiopMatrixDense &dst,
+      const int rank=0)
+  {
+    assert(src.n() > dst.n()
+      && "Src mat must be larger than dst mat");
+    assert(src.m() > dst.m()
+      && "Src mat must be larger than dst mat");
+    assert(getNumLocCols(&src) > getNumLocCols(&dst)
+      && "Src mat must be larger than dst mat");
+    const local_ordinal_type dst_m = getNumLocRows(&dst);
+    const local_ordinal_type dst_n = getNumLocCols(&dst);
+    const local_ordinal_type src_m = getNumLocRows(&src);
+    const local_ordinal_type src_n = getNumLocCols(&src);
+    const local_ordinal_type block_start_row = (src_m - getNumLocRows(&dst)) - 1;
+    const local_ordinal_type block_start_col = (src_n - getNumLocCols(&dst)) - 1;
+
+    const real_type src_val = one;
+    const real_type dst_val = two;
+    src.setToConstant(src_val);
+    if (rank == 0)
+        setLocalElement(&src, src_m - 1, src_n - 1, zero);
+    dst.setToConstant(dst_val);
+
+    dst.copyFromMatrixBlock(src, block_start_row, block_start_col);
+
+    const int fail = verifyAnswer(&dst,
+      [=] (local_ordinal_type i, local_ordinal_type j) -> real_type
+      {
+          // This is the element set to zero in src
+          // before being copied over
+          if (i == dst_m && j == dst_n && rank == 0)
+              return zero;
+          else
+              return src_val;
+      });
+
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &dst);
+  }
+
+  /**
+   * shiftRows does not overwrite rows in the opposite direction
+   * they are shifted. For example
+   * @verbatim
+   *    2 2 2                   2 2 2
+   *    1 1 1                   1 1 1
+   *    1 1 1  shiftRows(2) ->  2 2 2
+   * @endverbatim
+   * The uppermost row is not overwritten by the 1-row that would
+   * wrap around and replace it.
+   */
+  int matrixShiftRows(
+      hiopMatrixDense &A,
+      const int rank)
+  {
+    const local_ordinal_type M = getNumLocRows(&A);
+    local_ordinal_type uniq_row_idx = 0;
+    local_ordinal_type shift = M - 1;
+    int fail = 0;
+
+    const real_type A_val = one;
+    const real_type uniq_row_val = two;
+    A.setToConstant(A_val);
+
+    // Set one row to a unique value
+    setLocalRow(&A, uniq_row_idx, uniq_row_val);
+    A.shiftRows(shift);
+
+    fail += verifyAnswer(&A,
+      [=](local_ordinal_type i, local_ordinal_type j) -> real_type
+      {
+        (void)j; // j is unused
+        const bool isUniqueRow = (
+          i == (uniq_row_idx + shift) ||
+          i == uniq_row_idx);
+        return isUniqueRow ? uniq_row_val : A_val;
+      });
+
+    // Now check negative shift
+    shift *= -1;
+    uniq_row_idx = M - 1;
+    A.setToConstant(A_val);
+    setLocalRow(&A, uniq_row_idx, uniq_row_val);
+    A.shiftRows(shift);
+
+    fail += verifyAnswer(&A,
+      [=] (local_ordinal_type i, local_ordinal_type j) -> real_type
+      {
+          (void)j; // j is unused
+          const bool isUniqueRow = (
+              i == (uniq_row_idx + shift) ||
+              i == uniq_row_idx);
+          return isUniqueRow ? uniq_row_val : A_val;
+      });
+
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &A);
+  }
+
+  int matrixReplaceRow(
+      hiopMatrixDense &A,
+      hiopVector &vec,
+      const int rank)
+  {
+    const local_ordinal_type M = getNumLocRows(&A);
+    assert(getNumLocCols(&A) == vec.get_local_size() && "Did you pass a vector and matrix of compatible lengths?");
+    assert(A.n() == vec.get_size() && "Did you pass a vector and matrix of compatible lengths?");
+
+    const local_ordinal_type row_idx = M - 1;
+    const local_ordinal_type col_idx = 1;
+    const real_type A_val = one;
+    const real_type vec_val = two;
+    A.setToConstant(A_val);
+    vec.setToConstant(vec_val);
+    setLocalElement(&vec, col_idx, zero);
+
+    A.replaceRow(row_idx, vec);
+    const int fail = verifyAnswer(&A,
+      [=](local_ordinal_type i, local_ordinal_type j) -> real_type
+      {
+        // Was the row replaced?
+        if (i == row_idx)
+        {
+          // Was the value at col_idx set to zero?
+          if (j == col_idx)
+            return zero;
+          else
+            return vec_val;
+        }
+        // The matrix should be otherwise unchanged.
+        else
+        {
+          return A_val;
+        }
+      });
+
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &A);
+  }
+
+  int matrixGetRow(
+      hiopMatrixDense &A,
+      hiopVector &vec,
+      const int rank)
+  {
+    const local_ordinal_type N = getNumLocCols(&A);
+    const local_ordinal_type M = getNumLocRows(&A);
+    assert(N == vec.get_local_size() && "Did you pass a vector and matrix of compatible lengths?");
+    assert(A.n() == vec.get_size() && "Did you pass a vector and matrix of compatible lengths?");
+
+    // Set one value in the matrix row to be retrieved to be a unique value
+    const local_ordinal_type row_idx = M - 1;
+    const local_ordinal_type col_idx = N - 1;
+    const real_type A_val = one;
+    const real_type vec_val = two;
+    A.setToConstant(A_val);
+    if (rank == 0)
+      setLocalElement(&A, row_idx, col_idx, zero);
+    vec.setToConstant(vec_val);
+    A.getRow(row_idx, vec);
+
+    const int fail = verifyAnswer(&vec,
+      [=](local_ordinal_type i) -> real_type
+      {
+        if (rank == 0 && i == col_idx)
+          return zero;
+        else
+          return A_val;
+      });
+
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &A);
+  }
+
 #ifdef HIOP_DEEPCHECKS
   int matrixAssertSymmetry(
-      hiop::hiopMatrix& A,
+      hiop::hiopMatrixDense& A,
       const int rank=0)
   {
     const local_ordinal_type M = getNumLocRows(&A);
@@ -636,16 +1040,58 @@ public:
     printMessage(fail, __func__, rank);
     return reduceReturn(fail, &A);
   }
+
+  int matrixOverwriteUpperTriangleWithLower(hiop::hiopMatrixDense& A, const int rank=0)
+  {
+    const local_ordinal_type M = getNumLocRows(&A);
+    const local_ordinal_type N = getNumLocCols(&A);
+    
+    for (int i = 0; i < M; i++)
+    {
+      setLocalRow(&A, i, i);
+    }
+
+    A.overwriteUpperTriangleWithLower();
+
+    const int fail = verifyAnswer(&A, [=](int i, int j)
+    {
+      return j <= i ? i : j;
+    });
+
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &A);
+  }
+
+  int matrixOverwriteLowerTriangleWithUpper(hiop::hiopMatrixDense& A, const int rank=0)
+  {
+    const local_ordinal_type M = getNumLocRows(&A);
+    const local_ordinal_type N = getNumLocCols(&A);
+    
+    for (int i = 0; i < M; i++)
+    {
+      setLocalRow(&A, i, i);
+    }
+    
+    A.overwriteLowerTriangleWithUpper();
+
+    const int fail = verifyAnswer(&A, [=](int i, int j)
+    {
+      return j < i ? j : i;
+    });
+
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &A);
+  }
 #endif
 
-  int matrixNumRows(hiop::hiopMatrix& A, global_ordinal_type M, const int rank=0)
+  int matrixNumRows(hiop::hiopMatrixDense& A, global_ordinal_type M, const int rank)
   {
     const bool fail = A.m() == M ? 0 : 1;
     printMessage(fail, __func__, rank);
     return reduceReturn(fail, &A);
   }
 
-  int matrixNumCols(hiop::hiopMatrix& A, global_ordinal_type N, const int rank=0)
+  int matrixNumCols(hiop::hiopMatrixDense& A, global_ordinal_type N, const int rank)
   {
     const bool fail = A.n() == N ? 0 : 1;
     printMessage(fail, __func__, rank);
@@ -654,40 +1100,49 @@ public:
 
 protected:
   virtual void setLocalElement(
-      hiop::hiopMatrix* a,
+      hiop::hiopMatrixDense* a,
       local_ordinal_type i,
       local_ordinal_type j,
       real_type val) = 0;
+  virtual void setLocalElement(
+      hiop::hiopVector *_x,
+      const local_ordinal_type i,
+      const real_type val) = 0;
+  virtual void setLocalRow(
+      hiop::hiopMatrixDense* A,
+      const local_ordinal_type row,
+      const real_type val) = 0;
   virtual real_type getLocalElement(
-      const hiop::hiopMatrix* a,
+      const hiop::hiopMatrixDense* a,
       local_ordinal_type i,
       local_ordinal_type j) = 0;
   virtual real_type getLocalElement(
       const hiop::hiopVector* x,
       local_ordinal_type i) = 0;
-  virtual local_ordinal_type getNumLocRows(hiop::hiopMatrix* a) = 0;
-  virtual local_ordinal_type getNumLocCols(hiop::hiopMatrix* a) = 0;
+  virtual local_ordinal_type getNumLocRows(hiop::hiopMatrixDense* a) = 0;
+  virtual local_ordinal_type getNumLocCols(hiop::hiopMatrixDense* a) = 0;
   virtual local_ordinal_type getLocalSize(const hiop::hiopVector* x) = 0;
-  virtual int verifyAnswer(hiop::hiopMatrix* A, real_type answer) = 0;
+  virtual real_type* getLocalData(hiop::hiopMatrixDense* a) = 0;
+  virtual int verifyAnswer(hiop::hiopMatrixDense* A, real_type answer) = 0;
   virtual int verifyAnswer(
-      hiop::hiopMatrix* A,
+      hiop::hiopMatrixDense* A,
       std::function<real_type(local_ordinal_type, local_ordinal_type)> expect) = 0;
   virtual int verifyAnswer(hiop::hiopVector* x, real_type answer) = 0;
   virtual int verifyAnswer(
       hiop::hiopVector* x,
       std::function<real_type(local_ordinal_type)> expect) = 0;
-  virtual bool reduceReturn(int failures, hiop::hiopMatrix* A) = 0;
+  virtual bool reduceReturn(int failures, hiop::hiopMatrixDense* A) = 0;
   /*
    * Returns true and sets local coordinate pair if global indices
    * maps to local indices, otherwise false and does not alter
    * local coordinates.
    */
   virtual bool globalToLocalMap(
-      hiop::hiopMatrix* A,
+      hiop::hiopMatrixDense* A,
       const global_ordinal_type row,
       const global_ordinal_type col,
       local_ordinal_type& local_row,
       local_ordinal_type& local_col) = 0;
 };
 
-}} // namespace hiop::tests
+}} // namespace hiop{ namespace tests{

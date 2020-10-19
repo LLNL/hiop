@@ -7,12 +7,19 @@
 
 #include <cassert>
 
+
 namespace hiop
 {
 
 /** 
  * @brief Sparse matrix of doubles in triplet format - it is not distributed
  * @note for now (i,j) are expected ordered: first on rows 'i' and then on cols 'j'
+ *
+ * Note: the following methods of hiopMatrix are NOT 
+ * implemented in this class:
+ * - addSubDiagonal
+ * - addUpperTriangleToSymDenseMatrixUpperTriangle
+ * - startingAtAddSubDiagonalToStartingAt
  */
 class hiopMatrixSparseTriplet : public hiopMatrixSparse
 {
@@ -60,17 +67,18 @@ public:
 
   virtual void addMatrix(double alpha, const hiopMatrix& X);
 
-  /* block of W += alpha*this */
-  virtual void addToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start, 
-						double alpha, hiopMatrixDense& W) const;
   /* block of W += alpha*transpose(this) */
   virtual void transAddToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start, 
 						     double alpha, hiopMatrixDense& W) const;
   virtual void addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start, 
 							     double alpha, hiopMatrixDense& W) const
   {
-    assert(false && "counterpart method of hiopMatrixSymSparseTriplet should be used");
+    assert(false && "implemented only for symmetric matrices");
   }
+
+  // {
+  //   assert(false && "counterpart method of hiopMatrixSymSparseTriplet should be used");
+  // }
 
   /* diag block of W += alpha * M * D^{-1} * transpose(M), where M=this 
    *
@@ -99,8 +107,14 @@ public:
   //virtual void print(int maxRows=-1, int maxCols=-1, int rank=-1) const;
   virtual void print(FILE* f=NULL, const char* msg=NULL, int maxRows=-1, int maxCols=-1, int rank=-1) const;
 
-  virtual hiopMatrix* alloc_clone() const;
-  virtual hiopMatrix* new_copy() const;
+  virtual void startingAtAddSubDiagonalToStartingAt(int diag_src_start, const double& alpha, 
+					    hiopVector& vec_dest, int vec_start, int num_elems=-1) const 
+  {
+    assert(0 && "This method should be used only for symmetric matrices.\n");
+  }
+
+  virtual hiopMatrixSparse* alloc_clone() const;
+  virtual hiopMatrixSparse* new_copy() const;
 
   inline int* i_row() { return iRow_; }
   inline int* j_col() { return jCol_; }
@@ -176,18 +190,11 @@ public:
     return timesVec(beta, y, alpha, x);
   }
 
-  virtual void addToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start,                                                                           
-				double alpha, hiopMatrixDense& W) const;
-  
-  virtual void transAddToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start,                                                                           
-				     double alpha, hiopMatrixDense& W) const;
+  virtual void transAddToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start, 
+						     double alpha, hiopMatrixDense& W) const;
 
   virtual void addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start, 
-							    double alpha, hiopMatrixDense& W) const
-  {
-    assert(this->n()+diag_start < W.n());
-    addToSymDenseMatrixUpperTriangle(diag_start, diag_start, alpha, W);
-  }
+							     double alpha, hiopMatrixDense& W) const;
 
   /* extract subdiagonal from 'this' (source) and adds the entries to 'vec_dest' starting at
    * index 'vec_start'. If num_elems>=0, 'num_elems' are copied; otherwise copies as many as
@@ -197,8 +204,8 @@ public:
 					    hiopVector& vec_dest, int vec_start, int num_elems=-1) const;
 					    
 
-  virtual hiopMatrix* alloc_clone() const;
-  virtual hiopMatrix* new_copy() const;
+  virtual hiopMatrixSparse* alloc_clone() const;
+  virtual hiopMatrixSparse* new_copy() const;
 
 #ifdef HIOP_DEEPCHECKS
   virtual bool assertSymmetry(double tol=1e-16) const { return true; }

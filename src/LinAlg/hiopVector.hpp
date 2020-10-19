@@ -198,6 +198,13 @@ public:
   virtual long long get_local_size() const = 0;
   virtual double* local_data() = 0;
   virtual const double* local_data_const() const = 0;
+  virtual double* local_data_host() = 0;
+  virtual const double* local_data_host_const() const = 0;
+
+  virtual void copyToDev() = 0;
+  virtual void copyFromDev() = 0;
+  virtual void copyToDev() const = 0;
+  virtual void copyFromDev() const = 0;
 
 protected:
   long long n_; //we assume sequential data

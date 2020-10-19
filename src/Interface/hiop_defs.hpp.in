@@ -1,4 +1,5 @@
 #cmakedefine HIOP_USE_GPU
 #cmakedefine HIOP_USE_MPI
 #cmakedefine HIOP_USE_MAGMA
+#cmakedefine HIOP_USE_RAJA
 #cmakedefine HIOP_DEEPCHECKS

@@ -48,6 +48,7 @@
 
 #pragma once
 
+#include <string>
 #include <hiopMPI.hpp>
 #include "hiopVector.hpp"
 
@@ -55,7 +56,11 @@
 
 namespace hiop
 {
-
+/* hiopVectorPar
+ * Note: the following method(s) of hiopVector are NOT 
+ * implemented in this class:
+ * - min
+ */
 class hiopVectorPar : public hiopVector
 {
 public:
@@ -158,6 +163,13 @@ public:
   virtual double* local_data() { return data_; }
   virtual const double* local_data_const() const { return data_; }
   virtual MPI_Comm get_mpi_comm() const { return comm_; }
+  virtual inline double* local_data_host() { return local_data(); }
+  virtual inline const double* local_data_host_const() const { return local_data_const(); }
+
+  virtual void copyToDev() {}
+  virtual void copyFromDev() {}
+  virtual void copyToDev() const {}
+  virtual void copyFromDev() const {}
 
 protected:
   MPI_Comm comm_;

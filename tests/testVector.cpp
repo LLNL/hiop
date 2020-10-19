@@ -57,11 +57,20 @@
 #include <assert.h>
 
 // This header contains HiOp's MPI definitions
+#include <hiopOptions.hpp>
+#include <hiopLinAlgFactory.hpp>
 #include <hiopVectorPar.hpp>
+#include <hiopVectorIntSeq.hpp>
 
 #include "LinAlg/vectorTestsPar.hpp"
-// #include "LinAlg/vectorTestsRAJA.hpp"
+#include "LinAlg/vectorTestsIntSeq.hpp"
 
+#ifdef HIOP_USE_RAJA
+#include "LinAlg/vectorTestsRajaPar.hpp"
+#include "LinAlg/vectorTestsIntRaja.hpp"
+#include <hiopVectorRajaPar.hpp>
+#include <hiopVectorIntRaja.hpp>
+#endif
 
 /**
  * @brief Main body of vector implementation testing code.
@@ -73,24 +82,25 @@
  */
 int main(int argc, char** argv)
 {
+  using hiop::tests::global_ordinal_type;
+
   int rank=0;
   int numRanks=1;
   MPI_Comm comm = MPI_COMM_SELF;
 
 #ifdef HIOP_USE_MPI
   int err;
-  err = MPI_Init(&argc, &argv);         assert(MPI_SUCCESS == err);
+  err  = MPI_Init(&argc, &argv);         assert(MPI_SUCCESS == err);
   comm = MPI_COMM_WORLD;
-  err = MPI_Comm_rank(comm, &rank);     assert(MPI_SUCCESS == err);
-  err = MPI_Comm_size(comm, &numRanks); assert(MPI_SUCCESS == err);
-  if(0 == rank)
-    std::cout << "Running MPI enabled tests ...\n";
+  err  = MPI_Comm_rank(comm, &rank);     assert(MPI_SUCCESS == err);
+  err  = MPI_Comm_size(comm, &numRanks); assert(MPI_SUCCESS == err);
+  if(0 == rank && MPI_SUCCESS == err) std::cout << "Running MPI enabled tests ...\n";
 #endif
+  hiop::hiopOptions options;
 
   global_ordinal_type Nlocal = 1000;
   global_ordinal_type Mlocal = 500;
   global_ordinal_type Nglobal = Nlocal*numRanks;
-  global_ordinal_type Mglobal = Mlocal*numRanks;
 
   auto n_partition = new global_ordinal_type [numRanks + 1];
   auto m_partition = new global_ordinal_type [numRanks + 1];
@@ -107,14 +117,19 @@ int main(int argc, char** argv)
 
   // Test parallel vector
   {
+    hiop::LinearAlgebraFactory::set_mem_space(options.GetString("mem_space"));
     hiop::hiopVectorPar x(Nglobal, n_partition, comm);
     hiop::hiopVectorPar y(Nglobal, n_partition, comm);
     hiop::hiopVectorPar z(Nglobal, n_partition, comm);
-    hiop::hiopVectorPar a(Nglobal, n_partition, comm);
+    // Try using factory instead of constructor
+    hiop::hiopVector* a = hiop::LinearAlgebraFactory::createVector(Nglobal, n_partition, comm);
     hiop::hiopVectorPar b(Nglobal, n_partition, comm);
 
-    // Allocate a vector smaller than x for testing copying operations
-    hiop::hiopVectorPar x_smaller(Mglobal, m_partition, comm);
+    // Allocate vectors for testing non-MPI kernels
+    hiop::hiopVectorPar v_smaller(Mlocal);
+    // Try using factory instead of constructor
+    hiop::hiopVector* v = hiop::LinearAlgebraFactory::createVector(Nlocal);
+
     hiop::tests::VectorTestsPar test;
 
     fail += test.vectorGetSize(x, Nglobal, rank);
@@ -124,25 +139,27 @@ int main(int argc, char** argv)
     fail += test.vectorCopyFrom(x, y, rank);
     fail += test.vectorCopyTo(x, y, rank);
 
-    if (numRanks == 1)
+    if (rank == 0)
     {
-      fail += test.vectorCopyFromStarting(x, y, rank);
-      fail += test.vectorStartingAtCopyFromStartingAt(x_smaller, x, rank);
-      fail += test.vectorCopyToStarting(x, x_smaller, rank);
-      fail += test.vectorStartingAtCopyToStartingAt(x, x_smaller, rank);
+      fail += test.vectorCopyFromStarting(*v, v_smaller);
+      fail += test.vectorStartingAtCopyFromStartingAt(v_smaller, *v);
+      fail += test.vectorCopyToStarting(*v, v_smaller);
+      fail += test.vectorStartingAtCopyToStartingAt(*v, v_smaller);
     }
 
-    fail += test.vectorTwonorm(x, rank);
-    fail += test.vectorInfnorm(x, rank);
-    fail += test.vectorOnenorm(x, rank);
+    fail += test.vectorSelectPattern(x, y, rank);
+    fail += test.vectorScale(x, rank);
     fail += test.vectorComponentMult(x, y, rank);
     fail += test.vectorComponentDiv(x, y, rank);
     fail += test.vectorComponentDiv_p_selectPattern(x, y, z, rank);
-    fail += test.vectorScale(x, rank);
+    fail += test.vectorOnenorm(x, rank);
+    fail += test.vectorTwonorm(x, rank);
+    fail += test.vectorInfnorm(x, rank);
 
     fail += test.vectorAxpy(x, y, rank);
     fail += test.vectorAxzpy(x, y, z, rank);
     fail += test.vectorAxdzpy(x, y, z, rank);
+    fail += test.vectorAxdzpy_w_patternSelect(x, y, z, *a, rank);
 
     fail += test.vectorAddConstant(x, rank);
     fail += test.vectorAddConstant_w_patternSelect(x, y, rank);
@@ -157,29 +174,152 @@ int main(int argc, char** argv)
     fail += test.vectorAllPositive_w_patternSelect(x, y, rank);
 
     fail += test.vectorMin(x, rank);
-    fail += test.vectorProjectIntoBounds(x, y, z, a, b, rank);
+    fail += test.vectorProjectIntoBounds(x, y, z, *a, b, rank);
     fail += test.vectorFractionToTheBdry(x, y, rank);
     fail += test.vectorFractionToTheBdry_w_pattern(x, y, z, rank);
 
-    fail += test.vectorSelectPattern(x, y, rank);
     fail += test.vectorMatchesPattern(x, y, rank);
-    fail += test.vectorAdjustDuals_plh(x, y, z, a, rank);
-    fail += test.vectorIsnan(x, rank);
-    fail += test.vectorIsinf(x, rank);
-    fail += test.vectorIsfinite(x, rank);
+    fail += test.vectorAdjustDuals_plh(x, y, z, *a, rank);
+
+    if (rank == 0)
+    {
+      fail += test.vectorIsnan(*v);
+      fail += test.vectorIsinf(*v);
+      fail += test.vectorIsfinite(*v);
+    }
+
+    // Delete testing objects
+    delete a;
+    delete v;
   }
 
+#ifdef HIOP_USE_RAJA
   // Test RAJA vector
   {
+    if (rank == 0)
+      std::cout << "\nTesting HiOp RAJA vector:\n";
+
+    options.SetStringValue("mem_space", "device");
+    hiop::LinearAlgebraFactory::set_mem_space(options.GetString("mem_space"));
+    std::string mem_space = hiop::LinearAlgebraFactory::get_mem_space();
+
+    hiop::hiopVectorRajaPar x(Nglobal, mem_space, n_partition, comm);
+    hiop::hiopVectorRajaPar y(Nglobal, mem_space, n_partition, comm);
+    hiop::hiopVectorRajaPar z(Nglobal, mem_space, n_partition, comm);
+    // Try using factory instead of constructor
+    hiop::hiopVector* a = hiop::LinearAlgebraFactory::createVector(Nglobal, n_partition, comm);
+    hiop::hiopVectorRajaPar b(Nglobal, mem_space, n_partition, comm);
+    hiop::tests::VectorTestsRajaPar test;
+
+    // Allocate vectors for testing non-MPI kernels
+    hiop::hiopVectorRajaPar v_smaller(Mlocal, mem_space); // Mlocal < Nlocal
+    // Try using factory instead of constructor
+    hiop::hiopVector* v = hiop::LinearAlgebraFactory::createVector(Nlocal);
+
+    fail += test.vectorGetSize(x, Nglobal, rank);
+    fail += test.vectorSetToZero(x, rank);
+    fail += test.vectorSetToConstant(x, rank);
+    fail += test.vectorSetToConstant_w_patternSelect(x, y, rank);
+    fail += test.vectorCopyFrom(x, y, rank);
+    fail += test.vectorCopyTo(x, y, rank);
+
+    if (rank == 0)
+    {
+      fail += test.vectorCopyFromStarting(*v, v_smaller);
+      fail += test.vectorStartingAtCopyFromStartingAt(v_smaller, *v);
+      fail += test.vectorCopyToStarting(*v, v_smaller);
+      fail += test.vectorStartingAtCopyToStartingAt(*v, v_smaller);
+    }
+
+    fail += test.vectorSelectPattern(x, y, rank);
+    fail += test.vectorScale(x, rank);
+    fail += test.vectorComponentMult(x, y, rank);
+    fail += test.vectorComponentDiv(x, y, rank);
+    fail += test.vectorComponentDiv_p_selectPattern(x, y, z, rank);
+    fail += test.vectorOnenorm(x, rank);
+    fail += test.vectorTwonorm(x, rank);
+    fail += test.vectorInfnorm(x, rank);
+
+    fail += test.vectorAxpy(x, y, rank);
+    fail += test.vectorAxzpy(x, y, z, rank);
+    fail += test.vectorAxdzpy(x, y, z, rank);
+    fail += test.vectorAxdzpy_w_patternSelect(x, y, z, *a, rank);
+
+    fail += test.vectorAddConstant(x, rank);
+    fail += test.vectorAddConstant_w_patternSelect(x, y, rank);
+    fail += test.vectorDotProductWith(x, y, rank);
+    fail += test.vectorNegate(x, rank);
+    fail += test.vectorInvert(x, rank);
+    fail += test.vectorLogBarrier(x, y, rank);
+    fail += test.vectorAddLogBarrierGrad(x, y, z, rank);
+    fail += test.vectorLinearDampingTerm(x, y, z, rank);
+
+    fail += test.vectorAllPositive(x, rank);
+    fail += test.vectorAllPositive_w_patternSelect(x, y, rank);
+
+    fail += test.vectorMin(x, rank);
+    fail += test.vectorProjectIntoBounds(x, y, z, *a, b, rank);
+    fail += test.vectorFractionToTheBdry(x, y, rank);
+    fail += test.vectorFractionToTheBdry_w_pattern(x, y, z, rank);
+
+    fail += test.vectorMatchesPattern(x, y, rank);
+    fail += test.vectorAdjustDuals_plh(x, y, z, *a, rank);
+
+    if (rank == 0)
+    {
+      fail += test.vectorIsnan(*v);
+      fail += test.vectorIsinf(*v);
+      fail += test.vectorIsfinite(*v);
+    }
+
+    // Delete testing objects
+    delete a;
+    delete v;
+
+    // Set memory space back to default value
+    options.SetStringValue("mem_space", "default");
+  }
+#endif // HIOP_USE_RAJA
+
+  // Test hiopVectorIntSeq
+  if (rank == 0)
+  {
+    std::cout << "\nTesting HiOp sequential int vector:\n";
+
+    options.SetStringValue("mem_space", "DEFAULT");
+    hiop::LinearAlgebraFactory::set_mem_space(options.GetString("mem_space"));
+    hiop::tests::VectorTestsIntSeq test;
+    const int sz = 100;
+    auto* x = hiop::LinearAlgebraFactory::createVectorInt(sz);
+    fail += test.vectorSize(*x, sz);
+    fail += test.vectorGetElement(*x);
+    fail += test.vectorSetElement(*x);
   }
 
+#ifdef HIOP_USE_RAJA
+  // Test hiopVectorIntRaja
+  if (rank == 0)
+  {
+    std::cout << "\nTesting HiOp RAJA int vector:\n";
+
+    options.SetStringValue("mem_space", "DEVICE");
+    hiop::LinearAlgebraFactory::set_mem_space(options.GetString("mem_space"));
+    hiop::tests::VectorTestsIntRaja test;
+    const int sz = 100;
+    auto* x = hiop::LinearAlgebraFactory::createVectorInt(sz);
+    fail += test.vectorSize(*x, sz);
+    fail += test.vectorGetElement(*x);
+    fail += test.vectorSetElement(*x);
+    options.SetStringValue("mem_space", "DEFAULT");
+  }
+#endif // HIOP_USE_RAJA
 
   if (rank == 0)
   {
     if(fail)
-      std::cout << fail << " tests failed\n";
+      std::cout << "\n" << fail << " vector tests failed!\n\n";
     else
-      std::cout << "All tests passed\n";
+      std::cout << "\nAll vector tests passed!\n\n";
   }
 
   delete[] m_partition;

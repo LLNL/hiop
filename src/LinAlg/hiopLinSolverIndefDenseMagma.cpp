@@ -41,8 +41,8 @@ namespace hiop
   /** Triggers a refactorization of the matrix, if necessary. */
   int hiopLinSolverIndefDenseMagmaBuKa::matrixChanged()
   {
-    assert(M.n() == M.m());
-    int N=M.n(), lda = N, info;
+    assert(M_->n() == M_->m());
+    int N=M_->n(), lda = N, info;
     if(N==0) return 0;
 
     nlp_->runStats.linsolv.tmFactTime.start();
@@ -54,7 +54,7 @@ namespace hiop
     //
     //query sizes
     //
-    magma_dsytrf(uplo, N, M.local_buffer(), lda, ipiv, &info );
+    magma_dsytrf(uplo, N, M_->local_buffer(), lda, ipiv, &info );
 
     nlp_->runStats.linsolv.tmFactTime.stop();
     nlp_->runStats.linsolv.flopsFact = gflops / nlp_->runStats.linsolv.tmFactTime.getElapsedTime() / 1000.;
@@ -86,37 +86,39 @@ namespace hiop
     int posEigVal=0;
     int nullEigVal=0;
     double t=0;
-    double** MM = M.get_M();
+    double* MM = M_->local_buffer();
     for(int k=0; k<N; k++) {
       //c       2 by 2 block
       //c       use det (d  s)  =  (d/t * c - t) * t  ,  t = dabs(s)
       //c               (s  c)
       //c       to avoid underflow/overflow troubles.
       //c       take two passes through scaling.  use  t  for flag.
-      double d = MM[k][k];
+      double d = MM[N*k + k];
       if(ipiv[k] <= 0) {
-	if(t==0) {
-	  assert(k+1<N);
-	  if(k+1<N) {
-	    t=fabs(MM[k][k+1]);
-	    d=(d/t) * MM[k+1][k+1]-t;
-	  }
-	} else {
-	  d=t;
-	  t=0.;
-	}
+        if(t==0) {
+          assert(k+1<N);
+          if(k+1<N) {
+            t=fabs(MM[N*k + (k+1)]);
+            d=(d/t) * MM[N*(k+1) + (k+1)]-t;
+          }
+        } else {
+          d=t;
+          t=0.;
+        }
       }
       //printf("d = %22.14e \n", d);
       //if(d<0) negEigVal++;
       if(d < -1e-14) {
-	negEigVal++;
+        negEigVal++;
       } else if(d < 1e-14) {
-	nullEigVal++;
-	//break;
+        nullEigVal++;
+        //break;
       } else {
-	posEigVal++;
+        posEigVal++;
       }
     }
+    // std::cout << "Using Magma factorization ...\n";
+    // std::cout << "Matrix inertia =(" << posEigVal << ", " << nullEigVal << ", " << negEigVal << ")\n";
     //printf("(pos,null,neg)=(%d,%d,%d)\n", posEigVal, nullEigVal, negEigVal);
     nlp_->runStats.linsolv.tmInertiaComp.stop();
     
@@ -124,11 +126,11 @@ namespace hiop
     return negEigVal;
   }
 
-  bool hiopLinSolverIndefDenseMagmaBuKa::solve(hiopVector& x_)
+  bool hiopLinSolverIndefDenseMagmaBuKa::solve(hiopVector& x)
   {
-    assert(M.n() == M.m());
-    assert(x_.get_size() == M.n());
-    int N = M.n();
+    assert(M_->n() == M_->m());
+    assert(x.get_size() == M_->n());
+    int N = M_->n();
     int LDA = N;
     int LDB = N;
     int NRHS = 1;
@@ -136,12 +138,9 @@ namespace hiop
 
     nlp_->runStats.linsolv.tmTriuSolves.start();
     
-    hiopVectorPar* x = dynamic_cast<hiopVectorPar*>(&x_);
-    assert(x != NULL);
-
     char uplo='L'; // M is upper in C++ so it's lower in fortran
     int info;
-    DSYTRS(&uplo, &N, &NRHS, M.local_buffer(), &LDA, ipiv, x->local_data(), &LDB, &info);
+    DSYTRS(&uplo, &N, &NRHS, M_->local_buffer(), &LDA, ipiv, x.local_data(), &LDB, &info);
     if(info<0) {
       nlp_->log->printf(hovError, "hiopLinSolverMagmaBuKa: (LAPACK) DSYTRS returned error %d\n", info);
       assert(false);
@@ -224,18 +223,31 @@ namespace hiop
     lddb_ = ldda_;
 
 
-    magmaRet = magma_dmalloc(&device_M_, n*ldda_);
-    assert(MAGMA_SUCCESS == magmaRet);
-    magmaRet = magma_dmalloc(&device_rhs_, nrhs*lddb_ );
-    assert(MAGMA_SUCCESS == magmaRet);
+    std::string mem_space = nlp_->options->GetString("mem_space");
+    if(mem_space == "default" || mem_space == "host")
+    {
+      magmaRet = magma_dmalloc(&device_M_, n*ldda_);
+      assert(MAGMA_SUCCESS == magmaRet);
+      magmaRet = magma_dmalloc(&device_rhs_, nrhs*lddb_ );
+      assert(MAGMA_SUCCESS == magmaRet);
+    }
+    else
+    {
+      device_M_   = nullptr;
+      device_rhs_ = nullptr;
+    }
 
     nFakeNegEigs_ = 0;
   }
 
   hiopLinSolverIndefDenseMagmaNopiv::~hiopLinSolverIndefDenseMagmaNopiv()
   {
-    magma_free(device_M_);
-    magma_free(device_rhs_);
+    std::string mem_space = nlp_->options->GetString("mem_space");
+    if(mem_space == "default" || mem_space == "host")
+    {
+      magma_free(device_M_);
+      magma_free(device_rhs_);
+    }
     magma_queue_destroy(magma_device_queue_);
     magma_device_queue_ = NULL;
   }
@@ -250,28 +262,33 @@ namespace hiop
     return negEigVal;
   }
 
-  bool hiopLinSolverIndefDenseMagmaNopiv::solve( hiopVector& x_ )
+  bool hiopLinSolverIndefDenseMagmaNopiv::solve( hiopVector& x )
   {
-    assert(M.n() == M.m());
-    assert(x_.get_size()==M.n());
-    int N=M.n(), LDA = N, LDB=N;
+    assert(M_->n() == M_->m());
+    assert(x.get_size()==M_->n());
+    int N=M_->n(), LDA = N, LDB=N;
     if(N==0) return true;
 
     magma_int_t info; 
 
-    hiopVectorPar* x = dynamic_cast<hiopVectorPar*>(&x_);
-    assert(x != NULL);
-    
     magma_uplo_t uplo=MagmaLower; // M is upper in C++ so it's lower in fortran
     magma_int_t NRHS=1;
 
-
     double gflops = ( FLOPS_DPOTRF( N ) + FLOPS_DPOTRS( N, NRHS ) ) / 1e9;
 
-    nlp_->runStats.linsolv.tmDeviceTransfer.start();
-    magma_dsetmatrix(N, N,    M.local_buffer(), LDA, device_M_,   ldda_, magma_device_queue_);
-    magma_dsetmatrix(N, NRHS, x->local_data(),  LDB, device_rhs_, lddb_, magma_device_queue_);
-    nlp_->runStats.linsolv.tmDeviceTransfer.stop();
+    std::string mem_space = nlp_->options->GetString("mem_space");
+    if(mem_space == "default" || mem_space == "host")
+    {
+      nlp_->runStats.linsolv.tmDeviceTransfer.start();
+      magma_dsetmatrix(N, N,    M_->local_buffer(), LDA, device_M_,   ldda_, magma_device_queue_);
+      magma_dsetmatrix(N, NRHS, x.local_data(),   LDB, device_rhs_, lddb_, magma_device_queue_);
+      nlp_->runStats.linsolv.tmDeviceTransfer.stop();
+    }
+    else
+    {
+      device_M_   = M_->local_buffer();
+      device_rhs_ = x.local_data();
+    }
     
     nlp_->runStats.linsolv.tmTriuSolves.start();
     //DSYTRS(&uplo, &N, &NRHS, M.local_buffer(), &LDA, ipiv, x->local_data(), &LDB, &info);
@@ -299,9 +316,13 @@ namespace hiop
       return false;
     }
 
-    nlp_->runStats.linsolv.tmDeviceTransfer.start();
-    magma_dgetmatrix(N, NRHS, device_rhs_, lddb_, x->local_data(), LDB, magma_device_queue_);
-    nlp_->runStats.linsolv.tmDeviceTransfer.stop();
+    if(mem_space == "default" || mem_space == "host")
+    {
+      nlp_->runStats.linsolv.tmDeviceTransfer.start();
+      magma_dgetmatrix(N, NRHS, device_rhs_, lddb_, x.local_data(), LDB, magma_device_queue_);
+      nlp_->runStats.linsolv.tmDeviceTransfer.stop();
+    }
+
     return true;
   }
 

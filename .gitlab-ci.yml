@@ -1,22 +1,56 @@
-.script_template: &script_definition
+.ornl_test_script_template: &ornl_test_script_definition
+  script:
+    - |
+      set -xv
+      # Use project space so we have the correct permissions...
+      TESTDIR="$PROJWORK/csc359/ci"
+      cd "$TESTDIR/"
+      # We should use the build script so all the same modules are loaded. DRY!
+      MY_CLUSTER="ascent" ./BUILD.sh --test-only
+      res=$?
+      # Must clean up after ourselves
+      rm -rf *
+      exit $res
+    
+
+.ornl_script_template: &ornl_script_definition
+  script:
+    - |
+      # Don't clean up this working directory - we need some of these files for
+      # testing
+      set -xv
+      TESTDIR="$PROJWORK/csc359/ci"
+      cp -a * $TESTDIR/
+      cd $TESTDIR
+      MY_CLUSTER="ascent" ./BUILD.sh --build-only || exit 1
+
+.pnnl_script_template: &pnnl_script_definition
   script:
     - |
       #
       #  NOTES:  WORKDIR is on constance/marianas/newell
       #          ./      is only on the Kubernetes instance
       #
+      set -xv
       export WORKDIR="$HOME/gitlab/$CI_JOB_ID/"
       mkdir -p "$WORKDIR"
       cp -a ./ "$WORKDIR"
       cd "$WORKDIR"
-      # touch output
-      # tail -f output &
-      # echo submitting batch job
-      # Follow job output
       touch output
-      # tail -f output &
-      sbatch -A EXASGD -p $SLURM_Q --wait --gres=gpu:1 -o output -e output $WORKDIR/BUILD.sh
-      res=$?
+      tail -f output &
+      tailpid=$!
+      sbatch -A EXASGD -p $SLURM_Q -t 1:00:00 --gres=gpu:1 -o output -e output $WORKDIR/BUILD.sh
+      res=1
+      set +xv
+      while :;
+        do
+        if [[ "$(awk 'BEGIN{i=0}/BUILD_STATUS/{i++}END{print i}' output)" != "0" ]]; then
+          kill $tailpid
+          res=$(grep BUILD_STATUS output | tail -n 1 | cut -f2 -d':')
+          break
+        fi
+        sleep 10
+      done
       echo "finished batch job: $res"
       # cat output
       #
@@ -30,29 +64,57 @@
       exit $res
 
 
-.tags_template: &tags_definition
+.pnnl_tags_template: &pnnl_tags_definition
   tags:
     - k8s
     - ikp
     - exasgd
     - marianas
 
+stages:
+  - build
+  - test
 
+# PNNL CI
 build_on_marianas:
   stage: build
   variables:
     SLURM_Q: "dl"
-  <<: *tags_definition
-  <<: *script_definition
-  only:
-    - branches@exasgd/solvers/hiop
+    MY_CLUSTER: "marianas"
+  <<: *pnnl_tags_definition
+  <<: *pnnl_script_definition
+  rules:
+    - if: '$CI_PROJECT_ROOT_NAMESPACE == "exasgd"'
 
-
+# PNNL CI
 build_on_newell:
   stage: build
   variables:
-    SLURM_Q: "newell"
-  <<: *tags_definition
-  <<: *script_definition
-  only:
-    - branches@exasgd/solvers/hiop
+    SLURM_Q: "newell_shared"
+    MY_CLUSTER: "newell"
+  <<: *pnnl_tags_definition
+  <<: *pnnl_script_definition
+  rules:
+    - if: '$CI_PROJECT_ROOT_NAMESPACE == "exasgd"'
+
+# For Ascent CI
+build-on-login-node:
+  stage: build
+  tags:
+    - nobatch
+  rules:
+    - if: '$CI_PROJECT_PATH == "ecpcitest/exasgd/hiop"'
+  <<: *ornl_script_definition
+
+# For Ascent CI
+test-on-compute-node:
+  stage: test
+  variables:
+    SCHEDULER_PARAMETERS: "-P CSC359 -nnodes 1 -W 30"
+  dependencies:
+    - build-on-login-node
+  tags:
+    - batch
+  rules:
+    - if: '$CI_PROJECT_PATH == "ecpcitest/exasgd/hiop"'
+  <<: *ornl_test_script_definition

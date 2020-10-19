@@ -94,21 +94,21 @@ public:
    * Wrappers for the interface calls. 
    * Can be overridden for specialized formulations required by the algorithm.
    */
-  virtual bool eval_f(double* x, bool new_x, double& f);
-  virtual bool eval_grad_f(double* x, bool new_x, double* gradf);
+  virtual bool eval_f(hiopVector& x, bool new_x, double& f);
+  virtual bool eval_grad_f(hiopVector& x, bool new_x, double* gradf);
   
-  virtual bool eval_c(double* x, bool new_x, double* c);
-  virtual bool eval_d(double* x, bool new_x, double* d);
-  virtual bool eval_c_d(double* x, bool new_x, double* c, double* d);
+  virtual bool eval_c(hiopVector& x, bool new_x, double* c);
+  virtual bool eval_d(hiopVector& x, bool new_x, double* d);
+  virtual bool eval_c_d(hiopVector& x, bool new_x, double* c, double* d);
   /* the implementation of the next two methods depends both on the interface and on the formulation */
-  virtual bool eval_Jac_c(double* x, bool new_x, hiopMatrix& Jac_c)=0;
-  virtual bool eval_Jac_d(double* x, bool new_x, hiopMatrix& Jac_d)=0;
-  virtual bool eval_Jac_c_d(double* x, bool new_x, hiopMatrix& Jac_c, hiopMatrix& Jac_d);
+  virtual bool eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& Jac_c)=0;
+  virtual bool eval_Jac_d(hiopVector& x, bool new_x, hiopMatrix& Jac_d)=0;
+  virtual bool eval_Jac_c_d(hiopVector& x, bool new_x, hiopMatrix& Jac_c, hiopMatrix& Jac_d);
 protected:
   //calls specific hiopInterfaceXXX::eval_Jac_cons and deals with specializations of hiopMatrix arguments
-  virtual bool eval_Jac_c_d_interface_impl(double* x, bool new_x, hiopMatrix& Jac_c, hiopMatrix& Jac_d) = 0;
+  virtual bool eval_Jac_c_d_interface_impl(hiopVector& x, bool new_x, hiopMatrix& Jac_c, hiopMatrix& Jac_d) = 0;
 public:
-  virtual bool eval_Hess_Lagr(const double* x, bool new_x, 
+  virtual bool eval_Hess_Lagr(const hiopVector& x, bool new_x, 
 			      const double& obj_factor,  
 			      const double* lambda_eq, 
 			      const double* lambda_ineq, 
@@ -173,8 +173,7 @@ public:
 
   inline long long n_local() const
   {
-    auto* xlvec = dynamic_cast<hiopVectorPar*>(xl);
-    return xlvec->get_local_size();
+    return xl->get_local_size();
   }
   inline long long n_low_local() const {return n_bnds_low_local;}
   inline long long n_upp_local() const {return n_bnds_upp_local;}
@@ -183,10 +182,10 @@ public:
   inline double user_obj(double hiop_f) { return nlp_transformations.applyToObj(hiop_f); }
   inline void   user_x(hiopVector& hiop_x, double* user_x) 
   { 
-    double *hiop_xa = dynamic_cast<hiopVectorPar&>( hiop_x ).local_data();
-    double *user_xa = nlp_transformations.applyTox(hiop_xa,/*new_x=*/true); 
+    //double *hiop_xa = hiop_x.local_data();
+    hiopVector *x = nlp_transformations.applyTox(hiop_x,/*new_x=*/true); 
     //memcpy(user_x, user_xa, hiop_x.get_local_size()*sizeof(double));
-    memcpy(user_x, user_xa, nlp_transformations.n_post_local()*sizeof(double));
+    memcpy(user_x, x->local_data(), nlp_transformations.n_post_local()*sizeof(double));
   }
 
   /* copies/unpacks duals of the bounds and of constraints from 'it' to the three arrays */
@@ -201,6 +200,12 @@ public:
 			   const hiopVector& yd,
 			   int num_cons, //size of 'cons'
 			   double* cons);
+  
+  /* packs constraint rhs or constraint multipliers into hiopVector based on the internal mappings 
+   * 'cons_eq_mapping_'and 'cons_ineq_mapping_ */
+  void copy_EqIneq_to_cons(const hiopVector& yc,
+			   const hiopVector& yd,
+			   hiopVector& cons);
   
   /* outputing and debug-related functionality*/
   hiopLogger* log;
@@ -265,7 +270,7 @@ protected:
    * Internal buffer for constraints. Used only when constraints and Jacobian are evaluated at 
    * once (cons_eval_type_==1), otherwise NULL.
    */
-  double* cons_body_;
+  hiopVector* cons_body_;
   
   /** 
    * Internal buffer for the Jacobian. Used only when constraints and Jacobian are evaluated at 
@@ -277,7 +282,7 @@ protected:
    * Internal buffer for the multipliers of the constraints use to copy the multipliers of eq. and
    * ineq. into and to return it to the user via @user_callback_solution and @user_callback_iterate
    */
-  double* cons_lambdas_;
+  hiopVector* cons_lambdas_;
 private:
   hiopNlpFormulation(const hiopNlpFormulation& s) : interface_base(s.interface_base) {};
 };
@@ -295,17 +300,17 @@ public:
 
   virtual bool finalizeInitialization();
 
-  virtual bool eval_Jac_c(double* x, bool new_x, hiopMatrix& Jac_c);
-  virtual bool eval_Jac_d(double* x, bool new_x, hiopMatrix& Jac_d);
+  virtual bool eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& Jac_c);
+  virtual bool eval_Jac_d(hiopVector& x, bool new_x, hiopMatrix& Jac_d);
   /* specialized evals to avoid overhead of dynamic cast. Generic variants available above. */
-  virtual bool eval_Jac_c(double* x, bool new_x, double** Jac_c);
-  virtual bool eval_Jac_d(double* x, bool new_x, double** Jac_d);
+  virtual bool eval_Jac_c(hiopVector& x, bool new_x, double** Jac_c);
+  virtual bool eval_Jac_d(hiopVector& x, bool new_x, double** Jac_d);
 protected:
   //calls specific hiopInterfaceXXX::eval_Jac_cons and deals with specializations of
   //hiopMatrix arguments
-  virtual bool eval_Jac_c_d_interface_impl(double* x, bool new_x, hiopMatrix& Jac_c, hiopMatrix& Jac_d);
+  virtual bool eval_Jac_c_d_interface_impl(hiopVector& x, bool new_x, hiopMatrix& Jac_c, hiopMatrix& Jac_d);
 public:
-  virtual bool eval_Hess_Lagr(const double* x,
+  virtual bool eval_Hess_Lagr(const hiopVector& x,
 			      bool new_x,
 			      const double& obj_factor, 
 			      const double* lambda_eq,
@@ -356,15 +361,15 @@ public:
 
   virtual bool finalizeInitialization();
 
-  virtual bool eval_Jac_c(double* x, bool new_x, hiopMatrix& Jac_c);
-  virtual bool eval_Jac_d(double* x, bool new_x, hiopMatrix& Jac_d);
+  virtual bool eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& Jac_c);
+  virtual bool eval_Jac_d(hiopVector& x, bool new_x, hiopMatrix& Jac_d);
 
 
 protected:
   //calls specific hiopInterfaceXXX::eval_Jac_cons and deals with specializations of hiopMatrix arguments
-  virtual bool eval_Jac_c_d_interface_impl(double* x, bool new_x, hiopMatrix& Jac_c, hiopMatrix& Jac_d);
+  virtual bool eval_Jac_c_d_interface_impl(hiopVector& x, bool new_x, hiopMatrix& Jac_c, hiopMatrix& Jac_d);
 public:
-  virtual bool eval_Hess_Lagr(const double* x,
+  virtual bool eval_Hess_Lagr(const hiopVector& x,
 			      bool new_x,
 			      const double& obj_factor,
 			      const double* lambda_eq,

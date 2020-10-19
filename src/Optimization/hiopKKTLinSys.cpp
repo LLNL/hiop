@@ -905,20 +905,19 @@ int hiopKKTLinSysLowRank::solveWithRefin(hiopMatrixDense& M, hiopVector& rhs)
   // 2. check residual
   //
   hiopVector* x = rhs.alloc_clone(); 
-  /// TODO: how can we only use the hiopVector interface here?
-  hiopVectorPar dx(N);
-  hiopVectorPar resid(N); 
+  hiopVector* dx    = hiop::LinearAlgebraFactory::createVector(N);
+  hiopVector* resid = hiop::LinearAlgebraFactory::createVector(N); 
   int nIterRefin=0;double nrmResid;
   int info;
   const int MAX_ITER_REFIN=3;
   while(true) {
     x->copyFrom(X);
-    resid.copyFrom(*rhsref);
-    Aref->timesVec(1.0, resid, -1.0, *x);
+    resid->copyFrom(*rhsref);
+    Aref->timesVec(1.0, *resid, -1.0, *x);
 
-    nlp_->log->write("resid", resid, hovLinAlgScalars);
+    nlp_->log->write("resid", *resid, hovLinAlgScalars);
 
-    nrmResid= resid.infnorm();
+    nrmResid= resid->infnorm();
     nlp_->log->printf(hovScalars, "hiopKKTLinSysLowRank::solveWithRefin iterrefin=%d  residual norm=%g\n", nIterRefin, nrmResid);
 
     if(nrmResid<1e-8) break;
@@ -939,7 +938,7 @@ int hiopKKTLinSysLowRank::solveWithRefin(hiopMatrixDense& M, hiopVector& rhs)
       M.copyFrom(*Aref);
       DSYTRF(&UPLO, &N, M.local_buffer(), &LDA, _V_ipiv_vec, _V_work_vec, &lwork, &info);
       assert(info==0);
-      DSYTRS(&UPLO, &N, &NRHS, M.local_buffer(), &LDA, _V_ipiv_vec, resid.local_data(), &LDB, &info);
+      DSYTRS(&UPLO, &N, &NRHS, M.local_buffer(), &LDA, _V_ipiv_vec, resid->local_data(), &LDB, &info);
       assert(info==0);
     } else { //iter refin based on symmetric positive definite factorization+solve 
       M.copyFrom(*Aref);
@@ -953,7 +952,7 @@ int hiopKKTLinSysLowRank::solveWithRefin(hiopMatrixDense& M, hiopVector& rhs)
 	  nlp_->log->printf(hovError, "hiopKKTLinSysLowRank::factorizeMat: dpotrf returned "
 			    "error %d\n", info);
       
-      DPOTRS(&UPLO,&N, &NRHS, M.local_buffer(), &LDA, resid.local_data(), &LDA, &info);
+      DPOTRS(&UPLO,&N, &NRHS, M.local_buffer(), &LDA, resid->local_data(), &LDA, &info);
       if(info<0) 
 	nlp_->log->printf(hovError, "hiopKKTLinSysLowRank::solveWithFactors: dpotrs returned "
 			  "error %d\n", info);
@@ -974,8 +973,8 @@ int hiopKKTLinSysLowRank::solveWithRefin(hiopMatrixDense& M, hiopVector& rhs)
    // 	    &INFO); 
    //  printf("INFO ===== %d  RCOND=%g  FERR=%g   BERR=%g  EQUED=%c\n", INFO, RCOND, FERR, BERR, EQUED);
     
-    dx.copyFrom(resid);
-    x->axpy(1., dx);
+    dx->copyFrom(*resid);
+    x->axpy(1., *dx);
     
     nIterRefin++;
   }
@@ -989,6 +988,8 @@ int hiopKKTLinSysLowRank::solveWithRefin(hiopMatrixDense& M, hiopVector& rhs)
   delete Aref;
   delete rhsref;
   delete x;
+  delete dx;
+  delete resid;
 
 // #ifdef HIOP_DEEPCHECKS
 //   hiopVectorPar sol(rhs.get_size());

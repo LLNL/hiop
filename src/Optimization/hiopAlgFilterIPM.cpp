@@ -267,6 +267,9 @@ void hiopAlgFilterIPMBase::reloadOptions()
   theta_min = 1e7; //temporary - will be updated after ini pt is computed
 
   perf_report_kkt_ = "on"==hiop::tolower(nlp->options->GetString("time_kkt"));
+
+  // Set memory space for computations
+  hiop::LinearAlgebraFactory::set_mem_space(nlp->options->GetString("mem_space"));
 }
 
 void hiopAlgFilterIPMBase::resetSolverStatus() 
@@ -376,16 +379,16 @@ startingProcedure(hiopIterate& it_ini,
 
 bool hiopAlgFilterIPMBase::
 evalNlp(hiopIterate& iter, 			       
-	double &f, hiopVector& c_, hiopVector& d_, 
-	hiopVector& gradf_,  hiopMatrix& Jac_c,  hiopMatrix& Jac_d,
+	double &f, hiopVector& c, hiopVector& d, 
+	hiopVector& gradf,  hiopMatrix& Jac_c,  hiopMatrix& Jac_d,
 	hiopMatrix& Hess_L)
 {
   bool new_x=true; 
-  hiopVectorPar& it_x = dynamic_cast<hiopVectorPar&>(*iter.get_x());
-  hiopVectorPar& c=dynamic_cast<hiopVectorPar&>(c_);
-  hiopVectorPar& d=dynamic_cast<hiopVectorPar&>(d_);
-  hiopVectorPar& gradf=dynamic_cast<hiopVectorPar&>(gradf_);
-  double* x = it_x.local_data();//local_data_const();
+  // hiopVector& it_x = *iter.get_x();
+  // double* x = it_x.local_data();//local_data_const();
+  // //f(x)
+  // if(!nlp->eval_f(x, new_x, f)) {
+  hiopVector& x = *iter.get_x();
   //f(x)
   if(!nlp->eval_f(x, new_x, f)) {
     nlp->log->printf(hovError, "Error occured in user objective evaluation\n");
@@ -414,8 +417,8 @@ evalNlp(hiopIterate& iter,
     nlp->log->printf(hovError, "Error occured in user Jacobian function evaluation\n");
     return false; 
   }
-  const hiopVectorPar* yc = dynamic_cast<const hiopVectorPar*>(iter.get_yc()); assert(yc);
-  const hiopVectorPar* yd = dynamic_cast<const hiopVectorPar*>(iter.get_yd()); assert(yd);
+  const hiopVector* yc = iter.get_yc(); assert(yc);
+  const hiopVector* yd = iter.get_yd(); assert(yd);
   const int new_lambda = true;
   
   if(!nlp->eval_Hess_Lagr(x, new_x, 
@@ -508,13 +511,13 @@ evalNlpAndLogErrors(const hiopIterate& it, const hiopResidual& resid, const doub
 }
 
 bool hiopAlgFilterIPMBase::evalNlp_funcOnly(hiopIterate& iter,
-					    double& f, hiopVector& c_, hiopVector& d_)
+					    double& f, hiopVector& c, hiopVector& d)
 {
   bool new_x=true; 
-  hiopVectorPar& it_x = dynamic_cast<hiopVectorPar&>(*iter.get_x());
-  hiopVectorPar& c=dynamic_cast<hiopVectorPar&>(c_);
-  hiopVectorPar& d=dynamic_cast<hiopVectorPar&>(d_);
-  double* x = it_x.local_data();
+  // hiopVector& it_x = *iter.get_x();
+  // double* x = it_x.local_data();
+  // if(!nlp->eval_f(x, new_x, f)) {
+  hiopVector& x = *iter.get_x();
   if(!nlp->eval_f(x, new_x, f)) {
     nlp->log->printf(hovError, "Error occured in user objective evaluation\n");
     return false;
@@ -528,15 +531,15 @@ bool hiopAlgFilterIPMBase::evalNlp_funcOnly(hiopIterate& iter,
 }
 
 bool hiopAlgFilterIPMBase::evalNlp_derivOnly(hiopIterate& iter,
-					     hiopVector& gradf_,
+					     hiopVector& gradf,
 					     hiopMatrix& Jac_c,
 					     hiopMatrix& Jac_d,
 					     hiopMatrix& Hess_L)
 {
   bool new_x=false; //functions were previously evaluated in the line search
-  hiopVectorPar& it_x = dynamic_cast<hiopVectorPar&>(*iter.get_x());
-  hiopVectorPar & gradf=dynamic_cast<hiopVectorPar&>(gradf_);
-  double* x = it_x.local_data();
+  // hiopVector& it_x = *iter.get_x();
+  // double* x = it_x.local_data();
+  hiopVector& x = *iter.get_x();
   if(!nlp->eval_grad_f(x, new_x, gradf.local_data())) {
     nlp->log->printf(hovError, "Error occured in user gradient evaluation\n");
     return false;
@@ -546,9 +549,8 @@ bool hiopAlgFilterIPMBase::evalNlp_derivOnly(hiopIterate& iter,
     return false; 
   }
 
-
-  const hiopVectorPar* yc = dynamic_cast<const hiopVectorPar*>(iter.get_yc()); assert(yc);
-  const hiopVectorPar* yd = dynamic_cast<const hiopVectorPar*>(iter.get_yd()); assert(yd);
+  const hiopVector* yc = iter.get_yc(); assert(yc);
+  const hiopVector* yd = iter.get_yd(); assert(yd);
   const int new_lambda = true;
   if(!nlp->eval_Hess_Lagr(x, new_x, 
 			  1., yc->local_data_const(), yd->local_data_const(), new_lambda,
@@ -583,7 +585,7 @@ void hiopAlgFilterIPMBase::getSolution(double* x) const
     nlp->log->
       printf(hovWarning, "getSolution: HiOp has not completed yet and solution returned may not be optimal.");
   }
-  hiopVectorPar& it_x = dynamic_cast<hiopVectorPar&>(*it_curr->get_x());
+  hiopVector& it_x = *it_curr->get_x();
   //it_curr->get_x()->copyTo(x);
   nlp->user_x(it_x, x);
 }
@@ -600,8 +602,8 @@ void hiopAlgFilterIPMBase::getDualSolutions(double* zl_a, double* zu_a, double* 
       printf(hovWarning,
 	     "getSolution: HiOp has not completed yet and solution returned may not be optimal.");
   }
-  hiopVectorPar& zl = dynamic_cast<hiopVectorPar&>(*it_curr->get_zl());
-  hiopVectorPar& zu = dynamic_cast<hiopVectorPar&>(*it_curr->get_zu());
+  hiopVector& zl = *it_curr->get_zl();
+  hiopVector& zu = *it_curr->get_zu();
 
   nlp->get_dual_solutions(*it_curr, zl_a, zu_a, lambda_a);  
 }

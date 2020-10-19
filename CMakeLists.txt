@@ -19,8 +19,11 @@ FortranCInterface_HEADER(FortranCInterface.hpp MACRO_NAMESPACE "FC_")
 
 option(HIOP_USE_MPI "Build with MPI support" ON)
 option(HIOP_USE_GPU "Build with support for GPUs - Magma and cuda libraries" OFF)
-option(HIOP_DEEPCHECKS "Extra checks and asserts in the code with a high penalty on performance" ON)
-option(HIOP_WITH_KRON_REDUCTION "Build Kron Reduction code (requires MA86)" OFF)
+option(HIOP_TEST_WITH_BSUB "Use `jsrun` instead of `mpirun` commands when running tests" OFF)
+option(HIOP_USE_UMPIRE "Build with portable memory management library Umpire" ON)
+option(HIOP_USE_RAJA   "Build with portability abstraction library RAJA" ON)
+option(HIOP_DEEPCHECKS "Extra checks and asserts in the code with a high penalty on performance" OFF)
+option(HIOP_WITH_KRON_REDUCTION "Build Kron Reduction code (requires UMFPACK)" OFF)
 option(HIOP_DEVELOPER_MODE "Build with extended warnings and options" OFF)
 #with testing drivers capable of 'selfchecking' (-selfcheck)
 option(HIOP_WITH_MAKETEST "Enable 'make test'" ON)
@@ -135,6 +138,20 @@ if(HIOP_USE_GPU)
   target_link_libraries(hiop_math INTERFACE hiop_cuda)
 endif(HIOP_USE_GPU)
 
+if(HIOP_USE_RAJA)
+  # Look for CMake configuration file in RAJA installation
+  find_package(RAJA CONFIG
+    PATHS ${RAJA_DIR} ${RAJA_DIR}/share/raja/cmake
+    REQUIRED)
+endif()
+
+if(HIOP_USE_UMPIRE)
+  # Look for CMake configuration file in Umpire installation
+  find_package(umpire CONFIG
+    PATHS ${umpire_DIR} ${umpire_DIR}/share/umpire/cmake
+    REQUIRED)
+endif()
+
 if(HIOP_WITH_KRON_REDUCTION)
   set(HIOP_UMFPACK_DIR CACHE PATH "Path to UMFPACK directory")
   include(FindUMFPACK)
@@ -152,9 +169,14 @@ target_link_libraries(hiop_math INTERFACE OpenMP::OpenMP_CXX)
 if(NOT DEFINED LAPACK_LIBRARIES)
   # in case the toolchain defines them
   find_package(LAPACK REQUIRED)
-  target_link_libraries(hiop_math INTERFACE ${LAPACK_LIBRARIES})
-  message(STATUS "Found LAPACK libraries: ${LAPACK_LIBRARIES}")
 endif(NOT DEFINED LAPACK_LIBRARIES)
+target_link_libraries(hiop_math INTERFACE ${LAPACK_LIBRARIES})
+message(STATUS "Using LAPACK libraries: ${LAPACK_LIBRARIES}")
+
+
+if(HIOP_USE_UMPIRE)
+  target_link_libraries(hiop_math INTERFACE umpire RAJA)
+endif()
 
 #
 # extended precision lapack based on xblas testing example
@@ -232,6 +254,8 @@ install(FILES src/Interface/hiopInterface.hpp
   src/Optimization/hiopDualsUpdater.hpp
   src/LinAlg/hiopVector.hpp
   src/LinAlg/hiopVectorPar.hpp
+  src/LinAlg/hiopVectorInt.hpp
+  src/LinAlg/hiopVectorIntSeq.hpp
   src/LinAlg/hiopMatrix.hpp
   src/LinAlg/hiopMatrixDenseRowMajor.hpp
   src/LinAlg/hiopMatrixDense.hpp
@@ -259,38 +283,99 @@ install(FILES src/Interface/hiopInterface.hpp
   ${CMAKE_BINARY_DIR}/hiop_defs.hpp
   DESTINATION include)
 
+if(HIOP_USE_RAJA)
+  install(FILES
+    src/LinAlg/hiopVectorIntRaja.hpp
+    src/LinAlg/hiopVectorRajaPar.hpp
+    src/LinAlg/hiopMatrixRajaDense.hpp
+    src/LinAlg/hiopMatrixRajaSparseTriplet.hpp
+    DESTINATION include)
+endif()
+
+set(STRIP_TABLE_CMD "awk '/Problem Summary/ { while (!match($0, /termination/)){ if(match($0, /^[ ]+[0-9]/)) { print $0; } getline } }'")
+# If running in a BSUB allocaation, use jrun commands and make sure we are
+# requesting the correct resources.
+if(HIOP_TEST_WITH_BSUB)
+  set(RUNCMD "jsrun -n 1")
+  set(MPICMD "jsrun")
+  if(HIOP_USE_GPU)
+    set(MPICMD "${MPICMD} -g 1")
+    set(RUNCMD "${RUNCMD} -g 1")
+  endif()
+else()
+  set(RUNCMD "") # No special command is needed to run this program
+  set(MPICMD "mpirun")
+endif()
+
 ##########################################################
 # CMake Tests
 ##########################################################
 if (HIOP_WITH_MAKETEST)
   enable_testing()
-  add_test(NAME VectorTest        COMMAND $<TARGET_FILE:testVector> -selfcheck)
+  add_test(NAME VectorTest        COMMAND bash -c "${RUNCMD} $<TARGET_FILE:testVector>")
   if(HIOP_USE_MPI)
-    add_test(NAME VectorTest_mpi COMMAND mpirun -np 2 $<TARGET_FILE:testVector>)
+    add_test(NAME VectorTest_mpi COMMAND bash -c "${MPICMD} -n 2 $<TARGET_FILE:testVector>")
   endif(HIOP_USE_MPI)
-  add_test(NAME MatrixTest        COMMAND $<TARGET_FILE:testMatrix> -selfcheck)
+  add_test(NAME MatrixTest        COMMAND bash -c "${RUNCMD} $<TARGET_FILE:testMatrix>")
   if(HIOP_USE_MPI)
-    add_test(NAME MatrixTest_mpi COMMAND mpirun -np 2 $<TARGET_FILE:testMatrix>)
+    add_test(NAME MatrixTest_mpi COMMAND bash -c "${MPICMD} -n 2 $<TARGET_FILE:testMatrix>")
   endif(HIOP_USE_MPI)
-  add_test(NAME SparseMatrixTest  COMMAND $<TARGET_FILE:testMatrixSparse> -selfcheck)
-  add_test(NAME NlpDenseCons1_5H  COMMAND $<TARGET_FILE:nlpDenseCons_ex1.exe>   500 1.0 -selfcheck)
-  add_test(NAME NlpDenseCons1_5K  COMMAND $<TARGET_FILE:nlpDenseCons_ex1.exe>  5000 1.0 -selfcheck)
-  add_test(NAME NlpDenseCons1_50K COMMAND $<TARGET_FILE:nlpDenseCons_ex1.exe> 50000 1.0 -selfcheck)
+  add_test(NAME SparseMatrixTest  COMMAND bash -c "${RUNCMD} $<TARGET_FILE:testMatrixSparse>")
+  add_test(NAME SymmetricSparseMatrixTest COMMAND bash -c "${RUNCMD} $<TARGET_FILE:testMatrixSymSparse>")
+  add_test(NAME NlpDenseCons1_5H  COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpDenseCons_ex1.exe>   500 1.0 -selfcheck")
+  add_test(NAME NlpDenseCons1_5K  COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpDenseCons_ex1.exe>  5000 1.0 -selfcheck")
+  add_test(NAME NlpDenseCons1_50K COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpDenseCons_ex1.exe> 50000 1.0 -selfcheck")
   if(HIOP_USE_MPI)
-    add_test(NAME NlpDenseCons1_50K_mpi COMMAND mpirun -np 2 $<TARGET_FILE:nlpDenseCons_ex1.exe> 50000 1.0 -selfcheck)
+    add_test(NAME NlpDenseCons1_50K_mpi COMMAND bash -c "${MPICMD} -n 2 $<TARGET_FILE:nlpDenseCons_ex1.exe> 50000 1.0 -selfcheck")
   endif(HIOP_USE_MPI)
-  add_test(NAME NlpDenseCons2_5H COMMAND $<TARGET_FILE:nlpDenseCons_ex2.exe>   500 -selfcheck)
-  add_test(NAME NlpDenseCons2_5K COMMAND $<TARGET_FILE:nlpDenseCons_ex2.exe>  5000 -selfcheck)
-  add_test(NAME NlpDenseCons3_5H  COMMAND $<TARGET_FILE:nlpDenseCons_ex3.exe>   500 -selfcheck)
-  add_test(NAME NlpDenseCons3_5K  COMMAND $<TARGET_FILE:nlpDenseCons_ex3.exe>  5000 -selfcheck)
-  add_test(NAME NlpDenseCons3_50K COMMAND $<TARGET_FILE:nlpDenseCons_ex3.exe> 50000 -selfcheck)
+  add_test(NAME NlpDenseCons2_5H COMMAND  bash -c "${RUNCMD} $<TARGET_FILE:nlpDenseCons_ex2.exe>   500 -selfcheck")
+  add_test(NAME NlpDenseCons2_5K COMMAND  bash -c "${RUNCMD} $<TARGET_FILE:nlpDenseCons_ex2.exe>  5000 -selfcheck")
+  add_test(NAME NlpDenseCons3_5H  COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpDenseCons_ex3.exe>   500 -selfcheck")
+  add_test(NAME NlpDenseCons3_5K  COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpDenseCons_ex3.exe>  5000 -selfcheck")
+  add_test(NAME NlpDenseCons3_50K COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpDenseCons_ex3.exe> 50000 -selfcheck")
   if(HIOP_USE_MPI)
-    add_test(NAME NlpDenseCons3_50K_mpi COMMAND mpirun -np 2 $<TARGET_FILE:nlpDenseCons_ex3.exe> 50000 -selfcheck)
+    add_test(NAME NlpDenseCons3_50K_mpi COMMAND bash -c "${MPICMD} -n 2 $<TARGET_FILE:nlpDenseCons_ex3.exe> 50000 -selfcheck")
   endif(HIOP_USE_MPI)
-  add_test(NAME NlpMixedDenseSparse4_1 COMMAND $<TARGET_FILE:nlpMDS_ex4.exe> 400 100 0 -selfcheck)
-  add_test(NAME NlpMixedDenseSparse4_2 COMMAND $<TARGET_FILE:nlpMDS_ex4.exe> 400 100 1 -selfcheck)
-  add_test(NAME NlpMixedDenseSparse5_1 COMMAND $<TARGET_FILE:nlpMDS_ex5.exe> 400 100 -selfcheck)
+
+  add_test(NAME NlpMixedDenseSparse4_1 COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpMDS_ex4.exe> 400 100 0 -selfcheck \
+    | ${STRIP_TABLE_CMD} \
+    | tee ${PROJECT_BINARY_DIR}/mds4_1.out")
+  add_test(NAME NlpMixedDenseSparse4_2 COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpMDS_ex4.exe> 400 100 1 -selfcheck \
+    | ${STRIP_TABLE_CMD} \
+    | tee ${PROJECT_BINARY_DIR}/mds4_2.out")
+  if(HIOP_USE_RAJA)
+    add_test(NAME NlpMixedDenseSparseRaja4_1 COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpMDS_ex4_raja.exe> 400 100 0 -selfcheck \
+      | ${STRIP_TABLE_CMD} \
+      | tee ${PROJECT_BINARY_DIR}/mds4_raja_1.out")
+    add_test(NAME NlpMixedDenseSparseRaja4_2 COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpMDS_ex4_raja.exe> 400 100 1 -selfcheck \
+      | ${STRIP_TABLE_CMD} \
+      | tee ${PROJECT_BINARY_DIR}/mds4_raja_2.out")
+
+    if(HIOP_DEEPCHECKS)
+      foreach(iter 1 2)
+        add_test(
+          NAME "CompareExample4_NumIterations_${iter}" 
+          COMMAND bash -c "\
+          if [[ $(wc -l ${PROJECT_BINARY_DIR}/mds4_${iter}.out|cut -f1 -d' ') == $(wc -l ${PROJECT_BINARY_DIR}/mds4_raja_${iter}.out|cut -f1 -d' ') ]]
+            then
+              echo 'Output tables have the same number of iterations.'
+              exit 0
+            else
+              echo 'Output tables have a different number of iterations!'
+              exit 1
+            fi")
+        add_test(
+          NAME "CompareExample4_ElementWise_${iter}"
+          COMMAND bash -c "\
+            join ${PROJECT_BINARY_DIR}/mds4_${iter}.out ${PROJECT_BINARY_DIR}/mds4_raja_${iter}.out \
+            | ${PROJECT_SOURCE_DIR}/tests/testEx4CompareIterations.awk")
+      endforeach()
+    endif(HIOP_DEEPCHECKS)
+  endif()
+
+  add_test(NAME NlpMixedDenseSparse5_1 COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpMDS_ex5.exe> 400 100 -selfcheck")
+
   if(HIOP_BUILD_SHARED AND NOT HIOP_USE_GPU)
-    add_test(NAME NlpMixedDenseSparseCinterface COMMAND $<TARGET_FILE:nlpMDS_cex4.exe>)
+    add_test(NAME NlpMixedDenseSparseCinterface COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpMDS_cex4.exe>")
   endif()
 endif(HIOP_WITH_MAKETEST)

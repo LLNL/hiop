@@ -55,6 +55,7 @@
  */
 #include <hiopVectorPar.hpp>
 #include "vectorTestsPar.hpp"
+#include "vectorTestsRajaPar.hpp"
 
 namespace hiop { namespace tests {
 
@@ -142,10 +143,27 @@ int VectorTestsPar::verifyAnswer(
   {
     if(!isEqual(getLocalElement(x, i), expect(i)))
     {
+      std::cout << getLocalElement(x, i) << " ?= " << expect(i) << "\n";
       ++local_fail;
     }
   }
   return local_fail;
 }
+
+/// Wrap new command
+real_type* VectorTestsPar::createLocalBuffer(local_ordinal_type N, real_type val)
+{
+  real_type* buffer = new real_type[N];
+  for(local_ordinal_type i = 0; i < N; ++i)
+    buffer[i] = val;
+  return buffer;
+}
+
+/// Wrap delete command
+void VectorTestsPar::deleteLocalBuffer(real_type* buffer)
+{
+  delete [] buffer;
+}
+
 
 }} // namespace hiop::tests

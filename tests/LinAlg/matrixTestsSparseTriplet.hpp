@@ -49,15 +49,17 @@
 /**
  * @file matrixTestsSparseTriplet.hpp
  *
- * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>,  PNNL
+ * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
  * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
  * @author Cameron Rutherford <robert.rutherford@pnnl.gov>, PNNL
+ * @author Jake K. Ryan <jake.ryan@pnnl.gov>, PNNL
  * 
  */
 
 #pragma once
 
 #include <hiopMatrixSparseTriplet.hpp>
+#include <hiopMatrixRajaSparseTriplet.hpp>
 #include "matrixTestsSparse.hpp"
 
 namespace hiop { namespace tests {
@@ -87,9 +89,9 @@ private:
   virtual const local_ordinal_type* getRowIndices(const hiop::hiopMatrixSparse* a);
   virtual const local_ordinal_type* getColumnIndices(const hiop::hiopMatrixSparse* a);
   virtual local_ordinal_type getLocalSize(const hiop::hiopVector *x) override;
-  virtual int verifyAnswer(hiop::hiopMatrix *A, real_type answer) override;
+  virtual int verifyAnswer(hiop::hiopMatrixSparse* A, real_type answer) override;
   virtual int verifyAnswer(
-      hiop::hiopMatrix *A,
+      hiop::hiopMatrixDense* A,
       std::function<real_type(local_ordinal_type, local_ordinal_type)> expect) override;
   virtual int verifyAnswer(hiop::hiopVector *x, real_type answer) override;
   virtual int verifyAnswer(
@@ -97,6 +99,10 @@ private:
       std::function<real_type(local_ordinal_type)> expect) override;
   virtual local_ordinal_type* numNonzerosPerRow(hiop::hiopMatrixSparse* mat);
   virtual local_ordinal_type* numNonzerosPerCol(hiop::hiopMatrixSparse* mat);
+  virtual void maybeCopyToDev(hiop::hiopMatrixSparse*);
+  virtual void maybeCopyFromDev(hiop::hiopMatrixSparse*);
+public:
+  virtual void initializeMatrix(hiop::hiopMatrixSparse* mat, local_ordinal_type entries_per_row);
 };
 
 }} // namespace hiop::tests

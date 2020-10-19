@@ -135,6 +135,7 @@ int main(int argc, char **argv)
     return -1;
   }
 
+#if 0
   ////////////////////////////////////////////////////////////////////////////////////////////////////
   // Reoptimize
   // -----------
@@ -194,7 +195,8 @@ int main(int argc, char **argv)
     }
   }
 
-  
+#endif
+
   delete my_nlp;
   
 #ifdef HIOP_USE_MAGMA
