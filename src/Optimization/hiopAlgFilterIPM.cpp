@@ -317,15 +317,11 @@ startingProcedure(hiopIterate& it_ini,
     // yc and yd were provided by the user
   }
 
-  printf("111111 noHess \n"); fflush(stdout);  
-
   if(!this->evalNlp_noHess(it_ini, f, c, d, gradf, Jac_c, Jac_d)) {
     nlp->log->printf(hovError, "Failure in evaluating user provided NLP functions.");
     assert(false);
     return false;
   }
-
-  printf("2222222 noHess \n"); fflush(stdout);    
 
   nlp->runStats.tmSolverInternal.start();
   nlp->runStats.tmStartingPoint.start();
@@ -383,8 +379,6 @@ startingProcedure(hiopIterate& it_ini,
   nlp->runStats.tmSolverInternal.stop();
 
   solver_status_ = NlpSolve_SolveNotCalled;
-
-  printf("33333 noHess \n"); fflush(stdout);    
 
   return true;
 }
