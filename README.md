@@ -1,5 +1,6 @@
-
 # HiOp - HPC solver for optimization
+![tests](https://github.com/LLNL/hiop/workflows/tests/badge.svg)
+
 HiOp is an optimization solver for solving certain mathematical optimization problems expressed as nonlinear programming problems. HiOp is a lightweight HPC solver that leverages application's existing data parallelism to parallelize the optimization iterations by using specialized linear algebra kernels.
 
 ## Build/install instructions
@@ -112,12 +113,18 @@ $ setenv NVBLAS_CONFIG_FILE <hiop install dir>/lib/nvblas.conf
 ## Acknowledgments
 
 HiOp has been developed under the financial support of: 
-- Department of Energy, Office of Advanced Scientific Computing Research (ASCR)
+- Department of Energy, Office of Advanced Scientific Computing Research (ASCR): Exascale Computing Program (ECP) and Applied Math Program.
 - Department of Energy, Advanced Research Projects Agency-Energy (ARPA‑E)
 - Lawrence Livermore National Laboratory, through the LDRD program
 
+# Contributors
+
+HiOp is written by Cosmin G. Petra (petra1@llnl.gov) from LLNL and has received contributions from Slaven Peles (PNNL), Asher Mancinelli (PNNL), and Michel Schanen (ANL).  
+
 # Copyright
-Copyright (c) 2017, Lawrence Livermore National Security, LLC. All rights reserved. Produced at the Lawrence Livermore National Laboratory. LLNL-CODE-742473. 
+
+Copyright (c) 2017-2020, Lawrence Livermore National Security, LLC. All rights reserved. Produced at the Lawrence Livermore National Laboratory. LLNL-CODE-742473. 
+
 HiOp is written by Cosmin G. Petra (petra1@llnl.gov) of LLNL and has received contributions from Slaven Peles (PNNL), Asher Mancinelli (PNNL), Jake K. Ryan (PNNL), Cameron Rutherford (PNNL), Nai-Yuan Chiang (LLNL), and Michel Schanen (ANL).
 
 HiOp is free software; you can modify it and/or redistribute it under the terms of the BSD 3-clause license. See [COPYRIGHT](/COPYRIGHT) and [LICENSE](/LICENSE) for complete copyright and license information.

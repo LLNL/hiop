@@ -1,0 +1,25 @@
+name: tests
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+
+    steps:
+      - uses: actions/checkout@master
+      - uses: ashutoshvarma/action-cmake-build@master
+        with:
+          source-dir: ${{ runner.workspace }}/hiop
+          build-dir: ${{ runner.workspace }}/hiop/build
+          run: ls
+          cc: gcc
+          cxx: g++
+          build-type: Debug
+          configure-options: -DHIOP_USE_MPI=OFF -DCMAKE_BUILD_TYPE=Debug -DHIOP_BUILD_SHARED=ON -DHIOP_BUILD_STATIC=ON -DCMAKE_INSTALL_PREFIX=..
+          run-test: true
+          install-build: true
+          parallel: 4
