@@ -316,13 +316,17 @@ startingProcedure(hiopIterate& it_ini,
   } else {
     // yc and yd were provided by the user
   }
-  
+
+  printf("111111 noHess \n"); fflush(stdout);  
+
   if(!this->evalNlp_noHess(it_ini, f, c, d, gradf, Jac_c, Jac_d)) {
     nlp->log->printf(hovError, "Failure in evaluating user provided NLP functions.");
     assert(false);
     return false;
   }
-  
+
+  printf("2222222 noHess \n"); fflush(stdout);    
+
   nlp->runStats.tmSolverInternal.start();
   nlp->runStats.tmStartingPoint.start();
 
@@ -379,6 +383,8 @@ startingProcedure(hiopIterate& it_ini,
   nlp->runStats.tmSolverInternal.stop();
 
   solver_status_ = NlpSolve_SolveNotCalled;
+
+  printf("33333 noHess \n"); fflush(stdout);    
 
   return true;
 }
@@ -438,14 +444,14 @@ evalNlp(hiopIterate& iter,
 
 bool hiopAlgFilterIPMBase::
 evalNlp_noHess(hiopIterate& iter, 			       
-	       double &f, hiopVector& c_, hiopVector& d_, 
-	       hiopVector& gradf_,  hiopMatrix& Jac_c,  hiopMatrix& Jac_d)
+	       double &f, hiopVector& c, hiopVector& d, 
+	       hiopVector& gradf,  hiopMatrix& Jac_c,  hiopMatrix& Jac_d)
 {
   bool new_x=true; 
-  hiopVectorPar& it_x = dynamic_cast<hiopVectorPar&>(*iter.get_x());
-  hiopVectorPar& c=dynamic_cast<hiopVectorPar&>(c_);
-  hiopVectorPar& d=dynamic_cast<hiopVectorPar&>(d_);
-  hiopVectorPar& gradf=dynamic_cast<hiopVectorPar&>(gradf_);
+  //hiopVectorPar& it_x = dynamic_cast<hiopVectorPar&>(*iter.get_x());
+  //hiopVectorPar& c=dynamic_cast<hiopVectorPar&>(c_);
+  //hiopVectorPar& d=dynamic_cast<hiopVectorPar&>(d_);
+  //hiopVectorPar& gradf=dynamic_cast<hiopVectorPar&>(gradf_);
   hiopVector& x = *iter.get_x();
   //f(x)
   if(!nlp->eval_f(x, new_x, f)) {
@@ -483,10 +489,8 @@ bool hiopAlgFilterIPMBase::evalNlp_HessOnly(hiopIterate& iter,
 {
   const bool new_x = false; //precondition is that 'evalNlp_noHess' was called just before
 
-  hiopVectorPar& it_x = dynamic_cast<hiopVectorPar&>(*iter.get_x());
-  
-  const hiopVectorPar* yc = dynamic_cast<const hiopVectorPar*>(iter.get_yc()); assert(yc);
-  const hiopVectorPar* yd = dynamic_cast<const hiopVectorPar*>(iter.get_yd()); assert(yd);
+  const hiopVector* yc = iter.get_yc(); assert(yc);
+  const hiopVector* yd = iter.get_yd(); assert(yd);
   const int new_lambda = true;
   
   hiopVector& x = *iter.get_x();

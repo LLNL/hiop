@@ -11,7 +11,14 @@ $> make
 $> make test
 $> make install
 ```
-This sequence will build HiOp and install the headers and the shared library in the directory '_dist-default-build' in HiOp's root directory.
+This sequence will build HiOp, run integrity and correctness tests, and install the headers and the library in the directory '_dist-default-build' in HiOp's root directory. 
+
+Command `make test` runs extensive tests of the various modules of HiOp to check integrity and correctness. The tests suite range from unit testing to solving concrete optimization problems and checking the performance of HiOp solvers on these problems against known solutions. By default `make test` runs `mpirun` locally, which may not work on some HPC machines. For these HiOp allows using `bsub` to schedule `make test` on the compute nodes; to enable this, the use should use *-DHIOP_TEST_WITH_BSUB=ON* with cmake when building and run `make test` in a bsub shell session, for example,
+```
+bsub -P your_proj_name -nnodes 1 -W 30
+make test
+CTRL+D
+```
 
 The installation can be customized using the standard CMake options. For example, one can provide an alternative installation directory for HiOp by using 
 ```sh
@@ -119,14 +126,10 @@ HiOp has been developed under the financial support of:
 
 # Contributors
 
-HiOp is written by Cosmin G. Petra (petra1@llnl.gov) from LLNL and has received contributions from Slaven Peles (PNNL), Asher Mancinelli (PNNL), and Michel Schanen (ANL).  
+HiOp is written by Cosmin G. Petra (petra1@llnl.gov) from LLNL and has received contributions from Slaven Peles (PNNL), Asher Mancinelli (PNNL), Jake K. Ryan (PNNL), Cameron Rutherford (PNNL), Nai-Yuan Chiang (LLNL), and Michel Schanen (ANL).
 
 # Copyright
 
-Copyright (c) 2017-2020, Lawrence Livermore National Security, LLC. All rights reserved. Produced at the Lawrence Livermore National Laboratory. LLNL-CODE-742473. 
-
-HiOp is written by Cosmin G. Petra (petra1@llnl.gov) of LLNL and has received contributions from Slaven Peles (PNNL), Asher Mancinelli (PNNL), Jake K. Ryan (PNNL), Cameron Rutherford (PNNL), Nai-Yuan Chiang (LLNL), and Michel Schanen (ANL).
-
-HiOp is free software; you can modify it and/or redistribute it under the terms of the BSD 3-clause license. See [COPYRIGHT](/COPYRIGHT) and [LICENSE](/LICENSE) for complete copyright and license information.
+Copyright (c) 2017-2020, Lawrence Livermore National Security, LLC. All rights reserved. Produced at the Lawrence Livermore National Laboratory. LLNL-CODE-742473. HiOp is free software; you can modify it and/or redistribute it under the terms of the BSD 3-clause license. See [COPYRIGHT](/COPYRIGHT) and [LICENSE](/LICENSE) for complete copyright and license information.
  
 
