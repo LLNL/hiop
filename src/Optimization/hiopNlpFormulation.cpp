@@ -1172,19 +1172,19 @@ bool hiopNlpMDS::finalizeInitialization()
  *    hiopNlpSparse class implementation
  * ***********************************************************************************
 */
-bool hiopNlpSparse::eval_Jac_c(double* x, bool new_x, hiopMatrix& Jac_c)
+bool hiopNlpSparse::eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& Jac_c)
 {
   hiopMatrixSparseTriplet* pJac_c = dynamic_cast<hiopMatrixSparseTriplet*>(&Jac_c);
   assert(pJac_c);
   if(pJac_c) {
-    double* x_user = nlp_transformations.applyTox(x, new_x);
+    hiopVector* x_user = nlp_transformations.applyTox(x, new_x);
 
     runStats.tmEvalJac_con.start();
 
     int nnz = pJac_c->numberOfNonzeros();
     bool bret = interface.eval_Jac_cons(n_vars, n_cons,
                                       n_cons_eq, cons_eq_mapping_,
-                                      x_user, new_x,
+                                      x_user->local_data_const(), new_x,
                                       nnz, pJac_c->i_row(), pJac_c->j_col(), pJac_c->M());
 
     runStats.tmEvalJac_con.stop();
@@ -1195,19 +1195,19 @@ bool hiopNlpSparse::eval_Jac_c(double* x, bool new_x, hiopMatrix& Jac_c)
   }
 }
 
-bool hiopNlpSparse::eval_Jac_d(double* x, bool new_x, hiopMatrix& Jac_d)
+bool hiopNlpSparse::eval_Jac_d(hiopVector& x, bool new_x, hiopMatrix& Jac_d)
 {
   hiopMatrixSparseTriplet* pJac_d = dynamic_cast<hiopMatrixSparseTriplet*>(&Jac_d);
   assert(pJac_d);
   if(pJac_d) {
-    double* x_user      = nlp_transformations.applyTox(x, new_x);
+    hiopVector* x_user = nlp_transformations.applyTox(x, new_x);
 
     runStats.tmEvalJac_con.start();
 
     int nnz = pJac_d->numberOfNonzeros();
     bool bret =  interface.eval_Jac_cons(n_vars, n_cons,
                                        n_cons_ineq, cons_ineq_mapping_,
-                                       x_user, new_x,
+                                       x_user->local_data_const(), new_x,
                                        nnz, pJac_d->i_row(), pJac_d->j_col(), pJac_d->M());
 
     runStats.tmEvalJac_con.stop();
@@ -1218,7 +1218,7 @@ bool hiopNlpSparse::eval_Jac_d(double* x, bool new_x, hiopMatrix& Jac_d)
   }
 }
 
-bool hiopNlpSparse::eval_Jac_c_d_interface_impl(double* x,
+bool hiopNlpSparse::eval_Jac_c_d_interface_impl(hiopVector& x,
                                            bool new_x,
                                            hiopMatrix& Jac_c,
                                            hiopMatrix& Jac_d)
@@ -1233,13 +1233,13 @@ bool hiopNlpSparse::eval_Jac_c_d_interface_impl(double* x,
 
     assert(cons_Jac->numberOfNonzeros() == pJac_c->numberOfNonzeros() + pJac_d->numberOfNonzeros());
 
-    double* x_user      = nlp_transformations.applyTox(x, new_x);
+    hiopVector* x_user = nlp_transformations.applyTox(x, new_x);
 
     runStats.tmEvalJac_con.start();
 
     int nnz = cons_Jac->numberOfNonzeros();
     bool bret = interface.eval_Jac_cons(n_vars, n_cons,
-                                      x_user, new_x,
+                                      x_user->local_data_const(), new_x,
                                       nnz, cons_Jac->i_row(), cons_Jac->j_col(), cons_Jac->M());
 
     //copy back to Jac_c and Jac_d
@@ -1257,7 +1257,7 @@ bool hiopNlpSparse::eval_Jac_c_d_interface_impl(double* x,
   return true;
 }
 
-bool hiopNlpSparse::eval_Hess_Lagr(const double* x, bool new_x, const double& obj_factor,
+bool hiopNlpSparse::eval_Hess_Lagr(const hiopVector&  x, bool new_x, const double& obj_factor,
                             const double* lambda_eq, const double* lambda_ineq, bool new_lambdas,
                             hiopMatrix& Hess_L)
 {
@@ -1280,7 +1280,7 @@ bool hiopNlpSparse::eval_Hess_Lagr(const double* x, bool new_x, const double& ob
     int nnzHSS = pHessL->numberOfNonzeros(), nnzHSD = 0;
 
     bret = interface.eval_Hess_Lagr(n_vars, n_cons,
-                                    x, new_x, obj_factor,
+                                    x.local_data_const(), new_x, obj_factor,
                                     _buf_lambda->local_data(), new_lambdas,
                                     nnzHSS, pHessL->i_row(), pHessL->j_col(), pHessL->M());
     assert(nnzHSS==pHessL->numberOfNonzeros());

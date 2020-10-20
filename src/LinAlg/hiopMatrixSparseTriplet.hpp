@@ -79,9 +79,6 @@ public:
 
   virtual void addMatrix(double alpha, const hiopMatrix& X);
 
-  /* block of W += alpha*this, where W is dense */
-  virtual void addToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start, 
-						double alpha, hiopMatrixDense& W) const;
   /* block of W += alpha*transpose(this), where W is dense */
   virtual void transAddToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start, 
 						     double alpha, hiopMatrixDense& W) const;
@@ -228,18 +225,11 @@ public:
     return timesVec(beta, y, alpha, x);
   }
 
-  virtual void addToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start,                                                                           
-				double alpha, hiopMatrixDense& W) const;
-  
   virtual void transAddToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start,                                                                           
 				     double alpha, hiopMatrixDense& W) const;
 
   virtual void addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start, 
-							    double alpha, hiopMatrixDense& W) const
-  {
-    assert(this->n()+diag_start < W.n());
-    addToSymDenseMatrixUpperTriangle(diag_start, diag_start, alpha, W);
-  }
+							    double alpha, hiopMatrixDense& W) const;
 
    /* block of W += alpha*this, where W is sparse */
   virtual void addToSymSparseMatrixUpperTriangle(int row_dest_start, int col_dest_start,
