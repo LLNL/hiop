@@ -316,13 +316,13 @@ startingProcedure(hiopIterate& it_ini,
   } else {
     // yc and yd were provided by the user
   }
-  
+
   if(!this->evalNlp_noHess(it_ini, f, c, d, gradf, Jac_c, Jac_d)) {
     nlp->log->printf(hovError, "Failure in evaluating user provided NLP functions.");
     assert(false);
     return false;
   }
-  
+
   nlp->runStats.tmSolverInternal.start();
   nlp->runStats.tmStartingPoint.start();
 
@@ -438,15 +438,15 @@ evalNlp(hiopIterate& iter,
 
 bool hiopAlgFilterIPMBase::
 evalNlp_noHess(hiopIterate& iter, 			       
-	       double &f, hiopVector& c_, hiopVector& d_, 
-	       hiopVector& gradf_,  hiopMatrix& Jac_c,  hiopMatrix& Jac_d)
+	       double &f, hiopVector& c, hiopVector& d, 
+	       hiopVector& gradf,  hiopMatrix& Jac_c,  hiopMatrix& Jac_d)
 {
   bool new_x=true; 
-  hiopVectorPar& it_x = dynamic_cast<hiopVectorPar&>(*iter.get_x());
-  hiopVectorPar& c=dynamic_cast<hiopVectorPar&>(c_);
-  hiopVectorPar& d=dynamic_cast<hiopVectorPar&>(d_);
-  hiopVectorPar& gradf=dynamic_cast<hiopVectorPar&>(gradf_);
-  double* x = it_x.local_data();//local_data_const();
+  //hiopVectorPar& it_x = dynamic_cast<hiopVectorPar&>(*iter.get_x());
+  //hiopVectorPar& c=dynamic_cast<hiopVectorPar&>(c_);
+  //hiopVectorPar& d=dynamic_cast<hiopVectorPar&>(d_);
+  //hiopVectorPar& gradf=dynamic_cast<hiopVectorPar&>(gradf_);
+  hiopVector& x = *iter.get_x();
   //f(x)
   if(!nlp->eval_f(x, new_x, f)) {
     nlp->log->printf(hovError, "Error occured in user objective evaluation\n");
@@ -483,13 +483,11 @@ bool hiopAlgFilterIPMBase::evalNlp_HessOnly(hiopIterate& iter,
 {
   const bool new_x = false; //precondition is that 'evalNlp_noHess' was called just before
 
-  hiopVectorPar& it_x = dynamic_cast<hiopVectorPar&>(*iter.get_x());
-  
-  const hiopVectorPar* yc = dynamic_cast<const hiopVectorPar*>(iter.get_yc()); assert(yc);
-  const hiopVectorPar* yd = dynamic_cast<const hiopVectorPar*>(iter.get_yd()); assert(yd);
+  const hiopVector* yc = iter.get_yc(); assert(yc);
+  const hiopVector* yd = iter.get_yd(); assert(yd);
   const int new_lambda = true;
-  double* x = it_x.local_data();//local_data_const();
   
+  hiopVector& x = *iter.get_x();
   if(!nlp->eval_Hess_Lagr(x, new_x, 
 			  1., yc->local_data_const(), yd->local_data_const(), new_lambda,
 			  Hess_L)) {
