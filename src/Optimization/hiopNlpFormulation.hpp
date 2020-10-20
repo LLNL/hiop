@@ -430,15 +430,15 @@ public:
 
   virtual bool finalizeInitialization();
 
-  virtual bool eval_Jac_c(double* x, bool new_x, hiopMatrix& Jac_c);
-  virtual bool eval_Jac_d(double* x, bool new_x, hiopMatrix& Jac_d);
+  virtual bool eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& Jac_c);
+  virtual bool eval_Jac_d(hiopVector& x, bool new_x, hiopMatrix& Jac_d);
 
 protected:
   //calls specific hiopInterfaceXXX::eval_Jac_cons and deals with specializations of hiopMatrix arguments
-  virtual bool eval_Jac_c_d_interface_impl(double* x, bool new_x, hiopMatrix& Jac_c, hiopMatrix& Jac_d);
+  virtual bool eval_Jac_c_d_interface_impl(hiopVector& x, bool new_x, hiopMatrix& Jac_c, hiopMatrix& Jac_d);
 
 public:
-  virtual bool eval_Hess_Lagr(const double* x,
+  virtual bool eval_Hess_Lagr(const hiopVector& x,
                             bool new_x,
                             const double& obj_factor,
                             const double* lambda_eq,
