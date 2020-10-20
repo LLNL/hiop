@@ -154,7 +154,7 @@ Lawrence Livermore National Laboratory}}}\\[10pt]
 \vspace{4.75cm}
 
  \textcolor{violet}{{\large\bfseries Oct 15, 2017} \\
-{\large\bfseries Updated OCt, 2020}}
+{\large\bfseries Updated Oct 19, 2020}}
 
 \vspace{0.75cm}
 
@@ -281,9 +281,11 @@ A quick way to build and code is run the following commands in the `build\//' di
 \end{verbatim}
 This will compile, build the static library and example executables, perform a couple of tests to detect potential issues during the installation, and will install \Hi's header and the static library in the root directory under `\_build\_defaultDist\//'
 
-\subsection{Support of host-device computations using (generic)CPU-(NVIDIA)GPU}
+\subsection{Support of host-device computations using (generic)CPU-(NVIDIA)GPU hardware}
 
-Starting version 0.3, \Hi offers support for NVIDIA GPU computations acceleration. This feature is available only when solving NLPs in the mixed dense-sparse (MDS) form and should be enabled during the build by using \texttt{-DHIOP\_USE\_GPU} option with \texttt{cmake}. \Hi's \texttt{cmake} build system is quite versatile to find the dependencies required to offload computations to the device GPUs since was developed and tested on a few GPU-enabled HPC platforms at Oak Ridge, Lawrence Livermore, and Pacific Northwestern National Laboratories. These dependencies consist of CUDA library version 10.1 or later and a recent Magma linear solver library (as well as a physical NVIDIA GPU device). \Hi offers an extensive build support for using customized NVIDIA libraries and/or Magma solver as well as for advanced troubleshooting. The user is referred to \texttt{cmake/FindHiopCudaLibraries.cmake} and \texttt{cmake/FindMagma.cmake} scripts.
+Starting version 0.3, \Hi offers support for offloading computations to NVIDIA GPU accelerators. This feature is available only when solving NLPs in the mixed dense-sparse (MDS) form. First, support for GPUs should be enabled during the build by using \texttt{-DHIOP\_USE\_GPU} option with \texttt{cmake}, which will result in using the GPU accelerators for the internal linear solves; in addition, the options \texttt{-DHIOP\_USE\_RAJA} and \texttt{-DHIOP\_USE\_UMPIRE} will employ RAJA portability abstraction to perform the remaining linear algebra computations on the device or on the host (with OpenMP acceleration).
+
+\Hi's \texttt{cmake} build system is quite versatile to find the dependencies required to offload computations to the device GPUs since was developed and tested on a few GPU-enabled HPC platforms at Oak Ridge, Lawrence Livermore, and Pacific Northwestern National Laboratories. These dependencies consist of CUDA library version 10.1 or later and a recent Magma linear solver library (as well as a physical NVIDIA GPU device). \Hi offers an extensive build support for using customized NVIDIA libraries and/or Magma solver as well as for advanced troubleshooting. The user is referred to \texttt{cmake/FindHiopCudaLibraries.cmake} and \texttt{cmake/FindMagma.cmake} scripts.
 
 \warningcp{Note: } Installing NVIDIA CUDA (and likely the NVIDIA driver) and/or building Magma can be quite challenging. The user is encouraged to rely on preinstalled versions of these, as they are available via \texttt{module} utility on virtually all high-performance computing machines. An example of how to satisfy all the GPU dependencies on Summit supercomputer at Oak Ridge National Lab with a one commands are available at \url{https://github.com/LLNL/hiop/blob/master/README_summit.md}.
 
@@ -784,6 +786,7 @@ fixed\_var & string & "none" & "remove" "relax" "none" & treatment of fixed vari
 fixed\_var\_ tolerance & numeric & 1e-15 & 1e-30 -- 1e-2 & tolerance for $|ub-lb|$ under which a variable will be considered fixed. \\ \hline
 fixed\_var\_ perturb & numeric & 1e-8 & 1e-14 -- 0.1 & Perturbation of the lower and upper bounds for a fixed variable relative to its magnitude: lb/ub $-$=/+= max(abs(ub),1)$\times$fixed\_var\_perturb\\ \hline
 compute\_mode & string & "auto" & "auto" "cpu" "hybrid" & Offloading of computations to GPUs: "hybrid" will use GPUs for linear systems, "auto" will decide between "cpu" and "hybrid" based on the other options passed, and "cpu" will only use device CPU. \\\hline
+mem\_space & string & "default" & "default" "host" "device" "um" "pinned" & Memory space selection: the values currently supported are "default" (currently same the "host"), "host", and "um"; for more information consult UMPIRE documentation. \\\hline
 time\_kkt & string & "off" & "on" "off" & Turns on/off internal performance timers and analysis and enables additional reporting of the computational constituents of the KKT solve process \\\hline
 %
 %% smax  1.000000e+02     	 \# (numeric)  1 to 1e+07   multiplier threshold used in computing the scaling factors for the optimality error (default 100.)]
