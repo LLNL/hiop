@@ -294,7 +294,8 @@ namespace hiop
     //write matrix to file if requested
     if(nlp_->options->GetString("write_kkt") == "yes") write_linsys_counter_++;
     if(write_linsys_counter_>=0) csr_writer_.writeMatToFile(Msys, write_linsys_counter_); 
-      
+    
+    return true;
   }
 
   bool hiopKKTLinSysCompressedMDSXYcYd::
@@ -432,7 +433,7 @@ namespace hiop
       if("cpu" == nlp_->options->GetString("compute_mode")) {
 	nlp_->log->printf(hovScalars, "KKT_MDS_XYcYd linsys: Lapack for a matrix of size %d [1]\n", n);
 	linSys_ = new hiopLinSolverIndefDenseLapack(n, nlp_);
-	return linSys_;
+	return dynamic_cast<hiopLinSolverIndefDense*>(linSys_);
       }
 
 
@@ -477,15 +478,15 @@ namespace hiop
       } else {
 	nlp_->log->printf(hovScalars, "KKT_MDS_XYcYd linsys: Lapack for a matrix of size %d [2]\n", n);
 	linSys_ = new hiopLinSolverIndefDenseLapack(n, nlp_);
-	return linSys_;
+	return dynamic_cast<hiopLinSolverIndefDense*>(linSys_);
       }
 #else
       nlp_->log->printf(hovScalars, "KKT_MDS_XYcYd linsys: Lapack for a matrix of size %d [3]\n", n);
       linSys_ = new hiopLinSolverIndefDenseLapack(n, nlp_);
-      return linSys_;
+      return dynamic_cast<hiopLinSolverIndefDense*>(linSys_);
 #endif
     }
-    return linSys_;
+    return dynamic_cast<hiopLinSolverIndefDense*>(linSys_);
   }
     
 } // end of namespace
