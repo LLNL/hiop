@@ -289,9 +289,11 @@ add_subdirectory(tests)
 install(FILES src/Interface/hiopInterface.hpp
   src/Interface/chiopInterface.hpp
   src/Interface/hiopInterface.h
+  src/Interface/hiopInterfacePrimalDecomp.hpp
   src/Optimization/hiopNlpFormulation.hpp
   src/Optimization/hiopNlpTransforms.hpp
   src/Optimization/hiopAlgFilterIPM.hpp
+  src/Optimization/hiopAlgPrimalDecomp.hpp
   src/Optimization/hiopIterate.hpp
   src/Optimization/hiopResidual.hpp
   src/Optimization/hiopKKTLinSys.hpp
