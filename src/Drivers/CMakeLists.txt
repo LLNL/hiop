@@ -33,3 +33,6 @@ if(HIOP_BUILD_SHARED AND NOT HIOP_USE_GPU)
   add_executable(nlpMDS_cex4.exe nlpMDS_ex4.c)
   target_link_libraries(nlpMDS_cex4.exe hiop_shared)
 endif()
+
+add_executable(nlpPriDec_ex8.exe nlpPriDec_ex8_driver.cpp)
+target_link_libraries(nlpPriDec_ex8.exe hiop)
