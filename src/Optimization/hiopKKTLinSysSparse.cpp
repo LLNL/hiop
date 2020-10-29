@@ -50,6 +50,7 @@
 
 //#ifdef HIOP_SPARSE
 #include "hiopLinSolverIndefSparseMA57.hpp"
+#include "hiopLinSolverSparseSTRUMPACK.hpp"
 //#endif
 
 namespace hiop
@@ -163,46 +164,46 @@ namespace hiop
       Msys.copyRowsFromSrcToDest(*Jac_cSp_, 0,   neq,    nx,     dest_nnz_st); dest_nnz_st += Jac_cSp_->numberOfNonzeros();
       Msys.copyRowsFromSrcToDest(*Jac_dSp_, 0,   nineq,  nx+neq, dest_nnz_st); dest_nnz_st += Jac_dSp_->numberOfNonzeros();
 
-	  //build the diagonal Hx = Dx + delta_wx
-	  if(NULL == Hx_) {
-	    Hx_ = LinearAlgebraFactory::createVector(nx); assert(Hx_);
-	  }
-	  Hx_->startingAtCopyFromStartingAt(0, *Dx_, 0);
+      //build the diagonal Hx = Dx + delta_wx
+      if(NULL == Hx_) {
+        Hx_ = LinearAlgebraFactory::createVector(nx); assert(Hx_);
+      }
+      Hx_->startingAtCopyFromStartingAt(0, *Dx_, 0);
 
-	  //a good time to add the IC 'delta_wx' perturbation
-	  Hx_->addConstant(delta_wx);
+      //a good time to add the IC 'delta_wx' perturbation
+      Hx_->addConstant(delta_wx);
 
       Msys.copySubDiagonalEleFromVec(0, nx, *Hx_, dest_nnz_st); dest_nnz_st += nx;
 
-	  //add -delta_cc to diagonal block linSys starting at (nx, nx)
+      //add -delta_cc to diagonal block linSys starting at (nx, nx)
       Msys.copySubDiagonalEleFromConstant(nx, neq, -delta_cc, dest_nnz_st); dest_nnz_st += neq;
 
-	  /* we've just done above the (1,1) and (2,2) blocks of
+      /* we've just done above the (1,1) and (2,2) blocks of
       *
-	  * [ Hx+Dxd+delta_wx*I           Jcd^T          Jdd^T   ]
-	  * [  Jcd                       -delta_cc*I     0       ]
-	  * [  Jdd                        0              M_{33} ]
-	  *
-	  * where
-	  * M_{33} = - (Dd+delta_wd)*I^{-1} - delta_cd*I is performed below
-	  */
+      * [ Hx+Dxd+delta_wx*I           Jcd^T          Jdd^T   ]
+      * [  Jcd                       -delta_cc*I     0       ]
+      * [  Jdd                        0              M_{33} ]
+      *
+      * where
+      * M_{33} = - (Dd+delta_wd)*I^{-1} - delta_cd*I is performed below
+      */
 
-	  // add -{Dd}^{-1}
-	  // Dd=(Sdl)^{-1}Vu + (Sdu)^{-1}Vu + delta_wd * I
+      // add -{Dd}^{-1}
+      // Dd=(Sdl)^{-1}Vu + (Sdu)^{-1}Vu + delta_wd * I
       Dd_inv_->setToConstant(delta_wd);
-	  Dd_inv_->axdzpy_w_pattern(1.0, *iter->vl, *iter->sdl, nlp_->get_idl());
-	  Dd_inv_->axdzpy_w_pattern(1.0, *iter->vu, *iter->sdu, nlp_->get_idu());
+      Dd_inv_->axdzpy_w_pattern(1.0, *iter->vl, *iter->sdl, nlp_->get_idl());
+      Dd_inv_->axdzpy_w_pattern(1.0, *iter->vu, *iter->sdu, nlp_->get_idu());
 
 #ifdef HIOP_DEEPCHECKS
 	assert(true==Dd_inv_->allPositive());
 #endif
-	  Dd_inv_->invert();
+      Dd_inv_->invert();
       Dd_inv_->addConstant(-delta_cd);
 
-	  Msys.copySubDiagonalEleFromVec(nx+neq, nineq, *Dd_inv_, dest_nnz_st); dest_nnz_st += nineq;
+      Msys.copySubDiagonalEleFromVec(nx+neq, nineq, *Dd_inv_, dest_nnz_st); dest_nnz_st += nineq;
 
 
-	  nlp_->log->write("KKT_SPARSE_XYcYd linsys:", Msys, hovMatrices);
+      nlp_->log->write("KKT_SPARSE_XYcYd linsys:", Msys, hovMatrices);
       } // end of update of the linear system
 
       nlp_->runStats.kkt.tmUpdateLinsys.stop();
@@ -354,37 +355,19 @@ namespace hiop
   hiopLinSolverIndefSparse*
   hiopKKTLinSysCompressedSparseXYcYd::determineAndCreateLinsys(int nx, int neq, int nineq, int nnz)
   {
-
-#//ifdef HIOP_SPARSE
-    if(safe_mode_) {
-      hiopLinSolverIndefSparseMA57* p = dynamic_cast<hiopLinSolverIndefSparseMA57*>(linSys_);
-      if(p==NULL) {
-        //we have a nopiv linear solver or linear solver has not been created yet
-        delete linSys_;
-        linSys_ = NULL;
-      } else {
-        return p;
-      }
-    }
-//#endif
-
     if(NULL==linSys_) {
       int n = nx + neq + nineq;
 
-      assert(nlp_->options->GetString("compute_mode")=="cpu");
+      if(nlp_->options->GetString("compute_mode")=="cpu")
       {
-//#ifdef HIOP_SPARSE
         nlp_->log->printf(hovWarning,
 			    "KKT_SPARSE_XYcYd linsys: MA57 size %d (%d cons) (safe_mode=%d)\n",
 			    n, neq+nineq, safe_mode_);
-        if(safe_mode_) {
           linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
-        }else{
-	  linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
-	}
-//#else
-//        assert(0 && "Please provide a sparse indefinite linear package for HiOP with sparse linear system.");
-//#endif
+      }else{
+        hiopLinSolverSparseSTRUMPACK *p = new hiopLinSolverSparseSTRUMPACK(n, nnz, nlp_);
+        p->set_fake_inertia(neq + nineq);
+        linSys_ = p;
       }
     }
     return linSys_;
@@ -693,36 +676,19 @@ namespace hiop
   hiopKKTLinSysCompressedSparseXDYcYd::determineAndCreateLinsys(int nx, int neq, int nineq, int nnz)
   {
 
-//#ifdef HIOP_SPARSE
-    if(safe_mode_) {
-      hiopLinSolverIndefSparseMA57* p = dynamic_cast<hiopLinSolverIndefSparseMA57*>(linSys_);
-      if(p==NULL) {
-        //we have a nopiv linear solver or linear solver has not been created yet
-        delete linSys_;
-        linSys_ = NULL;
-      } else {
-        return p;
-      }
-    }
-//#endif
-
     if(NULL==linSys_) {
       int n = nx + nineq + neq + nineq;
 
-      assert(nlp_->options->GetString("compute_mode")=="cpu");
+      if(nlp_->options->GetString("compute_mode")=="cpu")
       {
-//#ifdef HIOP_SPARSE
         nlp_->log->printf(hovWarning,
 			    "KKT_SPARSE_XYcYd linsys: MA57 size %d (%d cons) (safe_mode=%d)\n",
 			    n, neq+nineq, safe_mode_);
-        if(safe_mode_) {
           linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
-        }else{
-	  linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
-	}
-//#else
- //       assert(0 && "Please provide a sparse indefinite linear package for HiOP with sparse linear system.");
-//#endif
+      }else{
+        hiopLinSolverSparseSTRUMPACK *p = new hiopLinSolverSparseSTRUMPACK(n, nnz, nlp_);
+        p->set_fake_inertia(neq + nineq);
+        linSys_ = p;
       }
     }
     return linSys_;

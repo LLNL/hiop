@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
+
 if (POLICY CMP0074)
 cmake_policy(SET CMP0074 NEW)
 endif ()
@@ -20,8 +21,8 @@ FortranCInterface_HEADER(FortranCInterface.hpp MACRO_NAMESPACE "FC_")
 option(HIOP_USE_MPI "Build with MPI support" ON)
 option(HIOP_USE_GPU "Build with support for GPUs - Magma and cuda libraries" OFF)
 option(HIOP_TEST_WITH_BSUB "Use `jsrun` instead of `mpirun` commands when running tests" OFF)
-option(HIOP_USE_UMPIRE "Build with portable memory management library Umpire" ON)
-option(HIOP_USE_RAJA   "Build with portability abstraction library RAJA" ON)
+option(HIOP_USE_UMPIRE "Build with portable memory management library Umpire" OFF)
+option(HIOP_USE_RAJA   "Build with portability abstraction library RAJA" OFF)
 option(HIOP_DEEPCHECKS "Extra checks and asserts in the code with a high penalty on performance" OFF)
 option(HIOP_WITH_KRON_REDUCTION "Build Kron Reduction code (requires UMFPACK)" OFF)
 option(HIOP_DEVELOPER_MODE "Build with extended warnings and options" OFF)
@@ -30,13 +31,14 @@ option(HIOP_WITH_MAKETEST "Enable 'make test'" ON)
 option(HIOP_BUILD_SHARED "Build shared library" OFF)
 option(HIOP_BUILD_STATIC "Build static library" ON)
 option(HIOP_SPARSE "Build with sparse linear algebra" ON)
+option(HIOP_USE_STRUMPACK "Build with sparse linear algebra" ON)
 
 if(HIOP_BUILD_SHARED)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 endif()
 
 if(HIOP_USE_GPU)
-option(HIOP_USE_MAGMA "Use Magma linear algebra" ON)
+  option(HIOP_USE_MAGMA "Use Magma linear algebra" OFF)
 endif()
 
 add_library(hiop_math INTERFACE)
@@ -174,7 +176,7 @@ message(STATUS "Found BLAS libraries: ${BLAS_LIBRARIES}")
 endif(NOT DEFINED BLAS_LIBRARIES)
 
 
-set(LAPACK_LIBRARIES "-lgfortran;/usr/lib64/liblapack.so;-lpthread;-lm;-ldl")
+#set(LAPACK_LIBRARIES "-lgfortran;/usr/lib64/liblapack.so;-lpthread;-lm;-ldl")
 
 if(NOT DEFINED LAPACK_LIBRARIES)
 # in case the toolchain defines them
@@ -194,7 +196,7 @@ endif()
 #set(LAPACK_LIBRARIES "-lgfortran;/export/home/petra1/work/installs/xblas-1.0.248/libxblas.a;/home/petra1/work/installs/lapack-3.7.0/libblas.a;/home/petra1/work/installs/lapack-3.7.0/liblapack.a;/home/petra1/work/installs/lapack-3.7.0/liblapack.a;/home/petra1/work/installs/lapack-3.7.0/libblas.a;/export/home/petra1/work/installs/xblas-1.0.248/libxblas.a")
 
 
-# metis needed (5.x needed by umfpack)
+# metis needed 
 if(NOT HIOP_METIS4_DIR)
   set(HIOP_METIS4_DIR $ENV{HIOP_METIS4_DIR} )
 endif(NOT HIOP_METIS4_DIR)
@@ -207,7 +209,7 @@ if(HIOP_METIS4_INCLUDE_DIR AND METIS4_LIBRARY)
 endif(HIOP_METIS4_INCLUDE_DIR AND METIS4_LIBRARY)
 
 if( NOT HIOP_MA57_DIR)
-#  set(HIOP_MA57_DIR CACHE PATH "Path to MA57 directory")
+  #  set(HIOP_MA57_DIR CACHE PATH "Path to MA57 directory")
   set(HIOP_MA57_DIR $ENV{HIOP_MA57_DIR} )
 endif(NOT HIOP_MA57_DIR)
 
@@ -217,14 +219,37 @@ if(MA57_LIBRARY)
 endif(MA57_LIBRARY)
 
 if(MA57_LIBRARY AND METIS4_LIBRARY)
-  target_link_libraries(hiop_math INTERFACE ${MA57_LIBRARY} ${METIS4_LIBRARY} -lgfortran)
+  #  target_link_libraries(hiop_math INTERFACE ${MA57_LIBRARY} ${METIS4_LIBRARY} -lgfortran)
+  target_link_libraries(hiop_math INTERFACE ${MA57_LIBRARY} -lgfortran)
   set(HIOP_SPARSE ON CACHE BOOL "Build with sparse linear algebra" FORCE)
   message(STATUS "Build with sparse linear algebra" )
 endif(MA57_LIBRARY AND METIS4_LIBRARY)
 
+message(STATUS "Start to find STRUMPACK" )
+
+# something wrong with cmake find_package, use hard code right now
+if(HIOP_USE_STRUMPACK)
+# Look for CMake configuration file in RAJA installation
+#  find_package(STRUMPACK CONFIG
+#    PATHS ${STRUMPACK_DIR} ${STRUMPACK_DIR}/install_db/cmake/STRUMPACK
+#    REQUIRED)
+#  target_link_libraries(hiop_math INTERFACE STRUMPACK)
+
+#  set(STRUMPACK_DIR $ENV{STRUMPACK_DIR})
+#  include_directories(${STRUMPACK_DIR}/include)
+#  find_library(STRUMPACK_LIBRARY libstrumpack.a PATH ${STRUMPACK_DIR}/lib)
+
+#  target_link_libraries(hiop_math INTERFACE ${STRUMPACK_LIBRARY})
+#  find_package(STRUMPACK REQUIRED)
+#  target_link_libraries(hiop_math INTERFACE STRUMPACK::strumpack)
+
+  include_directories("/g/g92/chiang7/software/STRUMPACK/install_db/include")
 
 
+  set(STRUMPACK_LIBRARIES "-L/usr/tce/packages/cuda/cuda-10.1.243/nvidia/targets/ppc64le-linux/lib/stubs -L/usr/tce/packages/cuda/cuda-10.1.243/nvidia/targets/ppc64le-linux/lib  -Wl,-rpath,/usr/tce/packages/spectrum-mpi/ibm/spectrum-mpi-2020.08.19/lib:/g/g92/chiang7/software/lapack-3.9.0/build/lassen_gcc:/usr/tce/packages/cuda/cuda-10.1.243/lib64 /g/g92/chiang7/software/STRUMPACK/install_db/lib/libstrumpack.a /usr/tce/packages/spectrum-mpi/ibm/spectrum-mpi-2020.08.19/lib/libmpiprofilesupport.so -lmpi_ibm_usempi /usr/tce/packages/spectrum-mpi/ibm/spectrum-mpi-2020.08.19/lib/libmpi_ibm_mpifh.so /usr/tce/packages/spectrum-mpi/ibm/spectrum-mpi-2020.08.19/lib/libmpi_ibm.so -lgomp -lpthread /usr/lib64/libessl.so /g/g92/chiang7/software/lapack-3.9.0/build/lassen_gcc/libblas.so /g/g92/chiang7/software/METIS_5/metis-5.1.0/build/Linux-ppc64le/lib/libmetis.a /usr/tce/packages/cuda/cuda-10.1.243/lib64/libcudart.so /usr/tce/packages/cuda/cuda-10.1.243/lib64/libcusolver.so /usr/tce/packages/cuda/cuda-10.1.243/lib64/libcusparse.so /usr/tce/packages/cuda/cuda-10.1.243/lib64/libcublas.so -lgfortran -lquadmath -lcudadevrt -lcudart_static -lrt -lpthread -ldl /g/g92/chiang7/software/scalapack-2.1.0/build/lib/libscalapack.a")
 
+  target_link_libraries(hiop_math INTERFACE ${STRUMPACK_LIBRARIES})
+endif(HIOP_USE_STRUMPACK)
 
 
 
@@ -400,7 +425,7 @@ if (HIOP_WITH_MAKETEST)
     if(HIOP_DEEPCHECKS)
       foreach(iter 1 2)
         add_test(
-          NAME "CompareExample4_NumIterations_${iter}" 
+          NAME "CompareExample4_NumIterations_${iter}"
           COMMAND bash -c "\
           if [[ $(wc -l ${PROJECT_BINARY_DIR}/mds4_${iter}.out|cut -f1 -d' ') == $(wc -l ${PROJECT_BINARY_DIR}/mds4_raja_${iter}.out|cut -f1 -d' ') ]]
             then

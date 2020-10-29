@@ -14,9 +14,9 @@
 #include <math.h>
 
 namespace hiop {
-  template<class T> inline void printvec(const std::vector<T>& v, const std::string& msg="") 
-  { 
-    std::cout.precision(6); 
+  template<class T> inline void printvec(const std::vector<T>& v, const std::string& msg="")
+  {
+    std::cout.precision(6);
     std::cout << msg << " size:" << v.size() << std::endl;
     std::cout << std::scientific;
     typename std::vector<T>::const_iterator it=v.begin();
@@ -24,9 +24,9 @@ namespace hiop {
     std::cout << std::endl;
   }
 
-  template<class T> inline void printlist(const std::list<T>& v, const std::string& msg="") 
-  { 
-    std::cout.precision(6); 
+  template<class T> inline void printlist(const std::list<T>& v, const std::string& msg="")
+  {
+    std::cout.precision(6);
     std::cout << msg << " size:" << v.size() << std::endl;
     std::cout << std::scientific;
     typename std::list<T>::const_iterator it=v.begin();
@@ -35,9 +35,9 @@ namespace hiop {
   }
 
 
-  template<class T> inline void printvecvec(const std::vector<std::vector<T> >& v, const std::string& msg="") 
-  { 
-    std::cout.precision(6); 
+  template<class T> inline void printvecvec(const std::vector<std::vector<T> >& v, const std::string& msg="")
+  {
+    std::cout.precision(6);
     std::cout << msg << " size:" << v.size() << std::endl;
     std::cout << std::scientific;
     for(auto& l: v) {
@@ -45,9 +45,9 @@ namespace hiop {
       std::cout << std::endl;
     }
   }
-  template<class T> inline void hardclear(std::vector<T>& in) 
-  { 
-    std::vector<T>().swap(in); 
+  template<class T> inline void hardclear(std::vector<T>& in)
+  {
+    std::vector<T>().swap(in);
   }
 
   static inline std::string tolower(const std::string& str_in)
@@ -61,5 +61,23 @@ namespace hiop {
   {
     std::transform(str_in.begin(), str_in.end(), str_in.begin(), ::tolower);
   }
+
+  // Function to reorder elements of arr[] according to index[]
+  template<class T> inline void reorder(T *arr, std::vector<int> index, int n)
+  {
+    T temp[n];
+
+    // arr[i] should be present at index[i] index
+    for (int i=0; i<n; i++)
+        temp[index[i]] = arr[i];
+
+    // Copy temp[] to arr[]
+    for (int i=0; i<n; i++)
+    {
+       arr[i]   = temp[i];
+       index[i] = i;
+    }
+  }
+
 } // end of namespace
 #endif

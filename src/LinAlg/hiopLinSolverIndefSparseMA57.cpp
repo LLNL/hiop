@@ -45,13 +45,21 @@ namespace hiop
   }
   hiopLinSolverIndefSparseMA57::~hiopLinSolverIndefSparseMA57()
   {
-//    delete [] m_irowM;
-//    delete [] m_jcolM;
+    if(m_irowM)
+      delete [] m_irowM;
+    if(m_jcolM)
+      delete [] m_jcolM;
 
-    delete [] m_ifact;
-    delete [] m_fact;
-    delete [] m_keep;
-    if(m_iwork) delete[] m_iwork;
+    if(m_ifact)
+      delete [] m_ifact;
+    if(m_fact)
+      delete [] m_fact;
+    if(m_keep)
+      delete [] m_keep;
+    if(m_iwork)
+      delete[] m_iwork;
+    if(m_dwork)
+      delete[] m_dwork;
   }
 
 
@@ -194,6 +202,9 @@ namespace hiop
     }
 
     nlp_->runStats.linsolv.tmTriuSolves.stop();
+
+    delete rhs; rhs=nullptr;
+    delete resid; resid=nullptr;
     return m_info[0]==0;
   }
 
