@@ -46,102 +46,87 @@
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or
 // product endorsement purposes.
 
-#ifndef HIOP_LINSOLVER
-#define HIOP_LINSOLVER
+#ifndef HIOP_LINSOLVER_STRUMPACK
+#define HIOP_LINSOLVER_STRUMPACK
 
-#include "hiopNlpFormulation.hpp"
-#include "hiopMatrix.hpp"
-#include "hiopMatrixDense.hpp"
-#include "hiopVector.hpp"
+#include "hiopLinSolver.hpp"
+#include "hiopMatrixSparseTriplet.hpp"
+#include "StrumpackSparseSolver.hpp"
 
-#include "hiop_blasdefs.hpp"
-
-#include "hiopCppStdUtils.hpp"
-
-namespace hiop
-{
-
-/**
- * Abstract class for Linear Solvers used by HiOp
- * Specifies interface for linear solver arising in Interior-Point methods, thus,
- * the underlying assumptions are that the system's matrix is symmetric (positive
- * definite or indefinite).
+/** implements the linear solver class using STRUMPACK
  *
- * Implementations of this abstract class have the purpose of serving as wrappers
- * of existing CPU and GPU libraries for linear systems.
- *
- * Note:
- *  - solve(matrix) is not implemented
+ * @ingroup LinearSolvers
  */
 
-class hiopLinSolver
-{
-public:
-  hiopLinSolver();
-  virtual ~hiopLinSolver();
-
-  /** Triggers a refactorization of the matrix, if necessary.
-   * Returns number of negative eigenvalues or -1 if null eigenvalues
-   * are encountered.
-   */
-  virtual int matrixChanged() = 0;
-
-  /** Solves a linear system.
-   * param 'x' is on entry the right hand side(s) of the system to be solved. On
-   * exit is contains the solution(s).
-   */
-  virtual bool solve ( hiopVector& x ) = 0;
-  virtual bool solve ( hiopMatrix& x ) { assert(false && "not yet supported"); return true;}
-public:
-  hiopNlpFormulation* nlp_;
-  bool perf_report_;
-};
-
-/** Base class for Indefinite Dense Solvers */
-class hiopLinSolverIndefDense : public hiopLinSolver
-{
-public:
-  hiopLinSolverIndefDense(int n, hiopNlpFormulation* nlp);
-  virtual ~hiopLinSolverIndefDense();
-
-  hiopMatrixDense& sysMatrix();
-protected:
-  hiopMatrixDense* M_;
-protected:
-  hiopLinSolverIndefDense();
-};
-
-/** Base class for Indefinite Sparse Solvers */
-class hiopLinSolverIndefSparse : public hiopLinSolver
-{
-public:
-  hiopLinSolverIndefSparse(int n, int nnz, hiopNlpFormulation* nlp);
-  virtual ~hiopLinSolverIndefSparse();
-
-  inline hiopMatrixSymSparseTriplet& sysMatrix() { return M; }
-protected:
-  hiopMatrixSymSparseTriplet M;
-protected:
-  hiopLinSolverIndefSparse() : M(0,0) { assert(false); }
-};
-
-#if 0
-// for general non-symmetric Sparse Solvers
-/** Base class for non-symmetric Sparse Solvers */
-class hiopLinSolverSparse : public hiopLinSolver
-{
-public:
-  hiopLinSolverSparse(int n, int nnz, hiopNlpFormulation* nlp);
-  virtual ~hiopLinSolverSparse();
-
-  inline hiopMatrixSparseTriplet& sysMatrix() { return M; }
-protected:
-  hiopMatrixSparseTriplet M;
-protected:
-  hiopLinSolverSparse() : M(0,0) { assert(false); }
-};
+#ifndef FNAME
+#ifndef __bg__
+#define FNAME(f) f ## _
+#else
+#define FNAME(f) f
+#endif
 #endif
 
-} //end namespace
+using namespace strumpack;
 
+
+namespace hiop {
+
+/** Wrapper for STRUMPACK */
+class hiopLinSolverSparseSTRUMPACK: public hiopLinSolverIndefSparse
+{
+public:
+  hiopLinSolverSparseSTRUMPACK(const int& n, const int& nnz, hiopNlpFormulation* nlp);
+  virtual ~hiopLinSolverSparseSTRUMPACK();
+
+  /** Triggers a refactorization of the matrix, if necessary.
+   * Overload from base class. */
+  int matrixChanged();
+
+  /** solves a linear system.
+   * param 'x' is on entry the right hand side(s) of the system to be solved. On
+   * exit is contains the solution(s).  */
+  bool solve ( hiopVector& x_ );
+
+//protected:
+//  int* ipiv;
+//  hiopVector* dwork;
+
+private:
+
+  int      m_;                         // number of rows of the whole matrix
+  int      n_;                         // number of cols of the whole matrix
+  int      nnz_;                       // number of nonzeros in the matrix
+
+  int     *kRowPtr_;                   // row pointer for nonzeros
+  int     *jCol_;                      // column indexes for nonzeros
+  double  *kVal_;                      // storage for sparse matrix
+
+  int *index_covert_CSR2Triplet_;
+  int *index_covert_extra_Diag2CSR_;
+
+  int nFakeNegEigs_;
+
+
+  /** store as a sparse symmetric indefinite matrix */
+//  const hiopMatrixSymSparseTriplet& m_sys_mat;
+
+  // strumpack object
+   StrumpackSparseSolver<double,int> spss;
+
+
+public:
+
+  /** called the very first time a matrix is factored. Allocates space
+   * for the factorization and performs ordering */
+  virtual void firstCall();
+//  virtual void diagonalChanged( int idiag, int extent );
+
+  void inline set_fake_inertia(int nNegEigs)
+  {
+    nFakeNegEigs_ = nNegEigs;
+  }
+
+};
+
+} // end namespace
 #endif
