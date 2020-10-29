@@ -3,47 +3,47 @@
 // Written by Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
-// This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
-// is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause). 
+// This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp
+// is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause).
 // Please also read “Additional BSD Notice” below.
 //
-// Redistribution and use in source and binary forms, with or without modification, 
+// Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
-// i. Redistributions of source code must retain the above copyright notice, this list 
+// i. Redistributions of source code must retain the above copyright notice, this list
 // of conditions and the disclaimer below.
-// ii. Redistributions in binary form must reproduce the above copyright notice, 
-// this list of conditions and the disclaimer (as noted below) in the documentation and/or 
+// ii. Redistributions in binary form must reproduce the above copyright notice,
+// this list of conditions and the disclaimer (as noted below) in the documentation and/or
 // other materials provided with the distribution.
-// iii. Neither the name of the LLNS/LLNL nor the names of its contributors may be used to 
-// endorse or promote products derived from this software without specific prior written 
+// iii. Neither the name of the LLNS/LLNL nor the names of its contributors may be used to
+// endorse or promote products derived from this software without specific prior written
 // permission.
 //
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY 
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES 
-// OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT 
-// SHALL LAWRENCE LIVERMORE NATIONAL SECURITY, LLC, THE U.S. DEPARTMENT OF ENERGY OR 
-// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS 
-// OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED 
-// AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, 
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
+// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+// OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
+// SHALL LAWRENCE LIVERMORE NATIONAL SECURITY, LLC, THE U.S. DEPARTMENT OF ENERGY OR
+// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+// OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+// AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
 // EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 // Additional BSD Notice
-// 1. This notice is required to be provided under our contract with the U.S. Department 
-// of Energy (DOE). This work was produced at Lawrence Livermore National Laboratory under 
+// 1. This notice is required to be provided under our contract with the U.S. Department
+// of Energy (DOE). This work was produced at Lawrence Livermore National Laboratory under
 // Contract No. DE-AC52-07NA27344 with the DOE.
-// 2. Neither the United States Government nor Lawrence Livermore National Security, LLC 
-// nor any of their employees, makes any warranty, express or implied, or assumes any 
-// liability or responsibility for the accuracy, completeness, or usefulness of any 
+// 2. Neither the United States Government nor Lawrence Livermore National Security, LLC
+// nor any of their employees, makes any warranty, express or implied, or assumes any
+// liability or responsibility for the accuracy, completeness, or usefulness of any
 // information, apparatus, product, or process disclosed, or represents that its use would
 // not infringe privately-owned rights.
-// 3. Also, reference herein to any specific commercial products, process, or services by 
-// trade name, trademark, manufacturer or otherwise does not necessarily constitute or 
-// imply its endorsement, recommendation, or favoring by the United States Government or 
-// Lawrence Livermore National Security, LLC. The views and opinions of authors expressed 
-// herein do not necessarily state or reflect those of the United States Government or 
-// Lawrence Livermore National Security, LLC, and shall not be used for advertising or 
+// 3. Also, reference herein to any specific commercial products, process, or services by
+// trade name, trademark, manufacturer or otherwise does not necessarily constitute or
+// imply its endorsement, recommendation, or favoring by the United States Government or
+// Lawrence Livermore National Security, LLC. The views and opinions of authors expressed
+// herein do not necessarily state or reflect those of the United States Government or
+// Lawrence Livermore National Security, LLC, and shall not be used for advertising or
 // product endorsement purposes.
 
 #include "hiopOptions.hpp"
@@ -111,82 +111,82 @@ void hiopOptions::registerOptions()
   // TODO: add option for mu_target
   registerNumOption("mu0", 1., 1e-16, 1000.,
 		    "Initial log-barrier parameter mu (default 1.)");
-  registerNumOption("kappa_mu", 0.2, 1e-8, 0.999, 
+  registerNumOption("kappa_mu", 0.2, 1e-8, 0.999,
 		    "Linear reduction coefficient for mu (default 0.2) (eqn (7) in Filt-IPM paper)");
-  registerNumOption("theta_mu", 1.5,  1.0,   2.0, 
+  registerNumOption("theta_mu", 1.5,  1.0,   2.0,
 		    "Exponential reduction coefficient for mu (default 1.5) (eqn (7) in Filt-IPM paper)");
   registerNumOption("eta_phi", 1e-8, 0, 0.01, "Parameter of (suff. decrease) in Armijo Rule");
-  registerNumOption("tolerance", 1e-8, 1e-14, 1e-1, 
+  registerNumOption("tolerance", 1e-8, 1e-14, 1e-1,
 		    "Absolute error tolerance for the NLP (default 1e-8)");
-  registerNumOption("rel_tolerance", 0., 0., 0.1, 
+  registerNumOption("rel_tolerance", 0., 0., 0.1,
 		    "Error tolerance for the NLP relative to errors at the initial point. A null "
 		    "value disables this option (default 0.)");
-  registerNumOption("tau_min", 0.99, 0.9,  0.99999, 
+  registerNumOption("tau_min", 0.99, 0.9,  0.99999,
 		    "Fraction-to-the-boundary parameter used in the line-search to back-off a bit "
 		    "(see eqn (8) in the Filt-IPM paper) (default 0.99)");
-  registerNumOption("kappa_eps", 10., 1e-6, 1e+3, 
+  registerNumOption("kappa_eps", 10., 1e-6, 1e+3,
 		    "mu is reduced when when log-bar error is below kappa_eps*mu (default 10.)");
-  registerNumOption("kappa1", 1e-2, 1e-16, 1e+0, 
+  registerNumOption("kappa1", 1e-2, 1e-16, 1e+0,
 		    "sufficiently-away-from-the-boundary projection parameter used in initialization (default 1e-2)");
-  registerNumOption("kappa2", 1e-2, 1e-16, 0.49999, 
+  registerNumOption("kappa2", 1e-2, 1e-16, 0.49999,
 		    "shift projection parameter used in initialization for double-bounded variables (default 1e-2)");
-  registerNumOption("smax", 100., 1., 1e+7, 
-		    "multiplier threshold used in computing the scaling factors for the optimality error (default 100.)"); 
+  registerNumOption("smax", 100., 1., 1e+7,
+		    "multiplier threshold used in computing the scaling factors for the optimality error (default 100.)");
 
   {
     vector<string> range(2); range[0]="lsq"; range[1]="linear";
-    registerStrOption("dualsUpdateType", "lsq", range, 
+    registerStrOption("dualsUpdateType", "lsq", range,
 		      "Type of update of the multipliers of the eq. cons. (default lsq)"); //
   }
   {
     vector<string> range(2); range[0]="lsq"; range[1]="zero";
-    registerStrOption("dualsInitialization", "lsq", range, 
+    registerStrOption("dualsInitialization", "lsq", range,
 		      "Type of update of the multipliers of the eq. cons. (default lsq)");
   }
 
   registerIntOption("max_iter", 3000, 1, 1e6, "Max number of iterations (default 3000)");
 
-  registerNumOption("acceptable_tolerance", 1e-6, 1e-14, 1e-1, 
+  registerNumOption("acceptable_tolerance", 1e-6, 1e-14, 1e-1,
 		    "HiOp will terminate if the NLP residuals are below for 'acceptable_iterations' "
-		    "many consecutive iterations (default 1e-6)");   
-  registerIntOption("acceptable_iterations", 10, 1, 1e6, 
+		    "many consecutive iterations (default 1e-6)");
+  registerIntOption("acceptable_iterations", 10, 1, 1e6,
 		    "Number of iterations of acceptable tolerance after which HiOp terminates (default 10)");
 
-  registerNumOption("sigma0", 1., 0., 1e+7, 
+  registerNumOption("sigma0", 1., 0., 1e+7,
 		    "Initial value of the initial multiplier of the identity in the secant "
 		    "approximation (default 1.)");
   {
     vector<string> range(2); range[0] = "no"; range[1] = "yes";
-    registerStrOption("accept_every_trial_step", "no", range, 
+    registerStrOption("accept_every_trial_step", "no", range,
 		      "Disable line-search and take close-to-boundary step");
   }
   {
-    vector<string> range(5); 
-    range[0]="sigma0"; range[1]="sty"; range[2]="sty_inv"; 
+    vector<string> range(5);
+    range[0]="sigma0"; range[1]="sty"; range[2]="sty_inv";
     range[3]="snrm_ynrm";  range[4]="sty_srnm_ynrm";
-    registerStrOption("sigma_update_strategy", range[1], range, 
+    registerStrOption("sigma_update_strategy", range[1], range,
 		      "Updating strategy for the multiplier of the identity in the secant "
 		      "approximation (default sty)");
   }
-  registerIntOption("secant_memory_len", 6, 0, 256, 
+  registerIntOption("secant_memory_len", 6, 0, 256,
 		    "Size of the memory of the Hessian secant approximation");
 
-  registerIntOption("verbosity_level", 3, 0, 12, 
+  registerIntOption("verbosity_level", 3, 0, 12,
 		    "Verbosity level: 0 no output (only errors), 1=0+warnings, 2=1 (reserved), "
-		    "3=2+optimization output, 4=3+scalars; larger values explained in hiopLogger.hpp"); 
+		    "3=2+optimization output, 4=3+scalars; larger values explained in hiopLogger.hpp");
 
   {
     vector<string> range(3); range[0]="remove"; range[1]="relax"; range[2]="none";
-    registerStrOption("fixed_var", "none", range, 
+    registerStrOption("fixed_var", "none", range,
 		      "Treatment of fixed variables: 'remove' from the problem, 'relax' bounds "
 		      "by 'fixed_var_perturb', or 'none', in which case the HiOp will terminate "
 		      "with an error message if fixed variables are detected (default 'none')");
 
-    registerNumOption("fixed_var_tolerance", 1e-15, 1e-30, 0.01, 
+    registerNumOption("fixed_var_tolerance", 1e-15, 1e-30, 0.01,
 		      "A variable is considered fixed if |upp_bnd-low_bnd| < fixed_var_tolerance * "
 		      "max(abs(upp_bnd),1) (default 1e-15)");
 
-    registerNumOption("fixed_var_perturb", 1e-8, 1e-14, 0.1, 
+    registerNumOption("fixed_var_perturb", 1e-8, 1e-14, 0.1,
 		      "Perturbation of the lower and upper bounds for fixed variables relative "
 		      "to its magnitude: lower/upper_bound -=/+= max(abs(upper_bound),1)*"
 		      "fixed_var_perturb (default 1e-8)");
@@ -194,15 +194,15 @@ void hiopOptions::registerOptions()
 
   //optimization method used
   {
-    vector<string> range(2); range[0]="quasinewton_approx"; range[1]="analytical_exact"; 
-    registerStrOption("Hessian", "quasinewton_approx", range, 
+    vector<string> range(2); range[0]="quasinewton_approx"; range[1]="analytical_exact";
+    registerStrOption("Hessian", "quasinewton_approx", range,
 		      "Type of Hessian used with the filter IPM: 'quasinewton_approx' built internally "
 		      "by HiOp (default option) or 'analytical_exact' provided by the user");
   }
   //linear algebra
   {
-    vector<string> range(3); range[0] = "auto"; range[1]="xycyd"; range[2]="xdycyd"; 
-    registerStrOption("KKTLinsys", "auto", range, 
+    vector<string> range(3); range[0] = "auto"; range[1]="xycyd"; range[2]="xdycyd";
+    registerStrOption("KKTLinsys", "auto", range,
 		      "Type of KKT linear system used internally: decided by HiOp 'auto' "
 		      "(default option), the more compact 'XYcYd' or the more stable 'XDYcYd'. "
 		      "The last two are only available with Hessian=analyticalExact");
@@ -219,33 +219,33 @@ void hiopOptions::registerOptions()
 
   //computations
   {
-    vector<string> range(3); range[0]="auto"; range[1]="cpu"; range[2]="hybrid"; 
-    registerStrOption("compute_mode", "auto", range, 
+    vector<string> range(3); range[0]="auto"; range[1]="cpu"; range[2]="hybrid";
+    registerStrOption("compute_mode", "auto", range,
 		      "'auto', 'cpu', 'hybrid'; 'hybrid'=cpu+gpu; 'auto' will decide between "
 		      "'cpu' and 'hybrid' based on the other options passed");
   }
   //inertia correction and Jacobian regularization
   {
     //Hessian related
-    registerNumOption("delta_w_min_bar", 1e-20, 0, 1000., 
+    registerNumOption("delta_w_min_bar", 1e-20, 0, 1000.,
 		      "Smallest perturbation of the Hessian block for inertia correction");
-    registerNumOption("delta_w_max_bar", 1e+20, 1e-40, 1e+40, 
+    registerNumOption("delta_w_max_bar", 1e+20, 1e-40, 1e+40,
 		      "Largest perturbation of the Hessian block for inertia correction");
-    registerNumOption("delta_0_bar", 1e-4, 0, 1e+40, 
+    registerNumOption("delta_0_bar", 1e-4, 0, 1e+40,
 		      "First perturbation of the Hessian block for inertia correction");
-    registerNumOption("kappa_w_minus", 1./3, 1e-20, 1-1e-20, 
+    registerNumOption("kappa_w_minus", 1./3, 1e-20, 1-1e-20,
 		      "Factor to decrease the most recent successful perturbation for inertia correction");
-    registerNumOption("kappa_w_plus", 8., 1+1e-20, 1e+40, 
+    registerNumOption("kappa_w_plus", 8., 1+1e-20, 1e+40,
 		      "Factor to increase perturbation when it did not provide correct "
 		      "inertia correction (not first iteration)");
-    registerNumOption("kappa_w_plus_bar", 100., 1+1e-20, 1e+40, 
+    registerNumOption("kappa_w_plus_bar", 100., 1+1e-20, 1e+40,
 		      "Factor to increase perturbation when it did not provide correct "
 		      "inertia correction (first iteration when scale not known)");
     //Jacobian related
-    registerNumOption("delta_c_bar", 1e-8, 1e-20, 1e+40, 
+    registerNumOption("delta_c_bar", 1e-8, 1e-20, 1e+40,
 		      "Factor for regularization for potentially rank-deficient Jacobian "
 		      "(delta_c=delta_c_bar*mu^kappa_c");
-    registerNumOption("kappa_c", 0.25, 0., 1e+40, 
+    registerNumOption("kappa_c", 0.25, 0., 1e+40,
 		      "Exponent of mu when computing regularization for potentially rank-deficient "
 		      "Jacobian (delta_c=delta_c_bar*mu^kappa_c)");
 
@@ -263,7 +263,7 @@ void hiopOptions::registerOptions()
   //other options
   {
     vector<string> range(2); range[0]="no"; range[1]="yes";
-    registerStrOption("write_kkt", range[0], range, 
+    registerStrOption("write_kkt", range[0], range,
 		      "write internal KKT linear system (matrix, rhs, sol) to file (default 'no')");
   }
 
@@ -285,13 +285,13 @@ void hiopOptions::registerOptions()
   }
 }
 
-void hiopOptions::registerNumOption(const std::string& name, double defaultValue, 
+void hiopOptions::registerNumOption(const std::string& name, double defaultValue,
 				    double low, double upp, const char* description)
 {
   mOptions[name]=new _ONum(defaultValue, low, upp, description);
 }
 
-void hiopOptions::registerStrOption(const std::string& name, const std::string& defaultValue, 
+void hiopOptions::registerStrOption(const std::string& name, const std::string& defaultValue,
 				    const std::vector<std::string>& range, const char* description)
 {
   mOptions[name]=new _OStr(defaultValue, range, description);
@@ -308,12 +308,12 @@ void hiopOptions::registerIntOption(const std::string& name,
 
 void hiopOptions::ensureConsistence()
 {
-  //check that the values of different options are consistent 
+  //check that the values of different options are consistent
   //do not check is the values of a particular option is valid; this is done in the Set methods
   double eps_tol_accep = GetNumeric("acceptable_tolerance");
-  double eps_tol  =      GetNumeric("tolerance");     
+  double eps_tol  =      GetNumeric("tolerance");
   if(eps_tol_accep < eps_tol) {
-    log_printf(hovWarning, 
+    log_printf(hovWarning,
 	       "There is no reason to set 'acceptable_tolerance' tighter than 'tolerance'. "
 	       "Will set the two to 'tolerance'.\n");
     SetNumericValue("acceptable_tolerance", eps_tol);
@@ -322,17 +322,19 @@ void hiopOptions::ensureConsistence()
   if(GetString("Hessian")=="quasinewton_approx") {
     string strKKT = GetString("KKTLinsys");
     if(strKKT=="xycyd" || strKKT=="xdycyd")
-      log_printf(hovWarning, 
+      log_printf(hovWarning,
 		 "The option 'KKTLinsys=%s' not valid with 'Hessian=quasiNewtonApprox'. "
 		 "Will use 'KKTLinsys=auto'\n", strKKT.c_str());
   }
 #ifndef HIOP_USE_MAGMA
+#ifndef HIOP_USE_STRUMPACK
   if(GetString("compute_mode")=="hybrid") {
-    log_printf(hovWarning, 
+    log_printf(hovWarning,
 	       "option compute_mode=hybrid was changed to 'cpu' since HiOp was built without "
 	       "GPU support/Magma.\n");
     SetStringValue("compute_mode", "cpu");
   }
+#endif
 #endif
 }
 
@@ -350,17 +352,17 @@ static inline std::string &ltrim(std::string &s) {
 
 void hiopOptions::loadFromFile(const char* filename)
 {
-  if(NULL==filename) { 
-    log_printf(hovError, "Option file name not valid"); 
+  if(NULL==filename) {
+    log_printf(hovError, "Option file name not valid");
     return;
   }
 
   ifstream input( filename );
 
-  if(input.fail()) 
+  if(input.fail())
     if(strcmp(szDefaultFilename, filename)) {
-      log_printf(hovError, 
-		 "Failed to read option file '%s'. Hiop will use default options.\n", 
+      log_printf(hovError,
+		 "Failed to read option file '%s'. Hiop will use default options.\n",
 		 filename);
       return;
     }
@@ -375,12 +377,12 @@ void hiopOptions::loadFromFile(const char* filename)
 
     istringstream iss(line);
     if(!(iss >> name >> value)) {
-      log_printf(hovWarning, 
-		 "Hiop could not parse and ignored line '%s' from the option file\n", 
+      log_printf(hovWarning,
+		 "Hiop could not parse and ignored line '%s' from the option file\n",
 		 line.c_str());
       continue;
     }
-    
+
     //find the _O object in mOptions corresponding to 'optname' and set his value to 'optval'
     _ONum* on; _OInt* oi; _OStr* os;
 
@@ -391,10 +393,10 @@ void hiopOptions::loadFromFile(const char* filename)
       if(on!=NULL) {
 	stringstream ss(value); double val;
 	if(ss>>val) { SetNumericValue(name.c_str(), val, true); }
-	else 
-	  log_printf(hovWarning, 
+	else
+	  log_printf(hovWarning,
 		      "Hiop could not parse value '%s' as double for option '%s' specified in "
-		     "the option file and will use default value '%g'\n", 
+		     "the option file and will use default value '%g'\n",
 		      value.c_str(), name.c_str(), on->val);
       } else {
 	os = dynamic_cast<_OStr*>(option);
@@ -406,7 +408,7 @@ void hiopOptions::loadFromFile(const char* filename)
 	    stringstream ss(value); int val;
 	    if(ss>>val) { SetIntegerValue(name.c_str(), val, true); }
 	    else {
-	      log_printf(hovWarning, 
+	      log_printf(hovWarning,
 			  "Hiop could not parse value '%s' as int for option '%s' specified in "
 			 "the option file and will use default value '%d'\n",
 			  value.c_str(), name.c_str(), oi->val);
@@ -420,7 +422,7 @@ void hiopOptions::loadFromFile(const char* filename)
 
     } else { // else from it!=mOptions.end()
       // option not recognized/found/registered
-      log_printf(hovWarning, 
+      log_printf(hovWarning,
 		 "Hiop does not understand option '%s' specified in the option file and will "
 		 "ignore its value '%s'.\n", name.c_str(), value.c_str());
     }
@@ -433,30 +435,30 @@ bool hiopOptions::SetNumericValue (const char* name, const double& value, const 
   if(it!=mOptions.end()) {
     _ONum* option = dynamic_cast<_ONum*>(it->second);
     if(NULL==option) {
-      log_printf(hovWarning, 
+      log_printf(hovWarning,
 		"Hiop does not know option '%s' as 'numeric'. Maybe it is an 'integer' or 'string' "
 		 "value? The option will be ignored.\n", name);
     } else {
       if(true==option->specifiedInFile) {
 	if(false==setFromFile) {
-	  log_printf(hovWarning, 
+	  log_printf(hovWarning,
 		     "Hiop will ignore value '%g' set for option '%s' at runtime since this option is "
 		     "already specified in the option file.\n", value, name);
 	  return true;
 	}
-      } 
+      }
 
       if(setFromFile)
 	option->specifiedInFile=true;
 
       if(value<option->lb || value>option->ub) {
-	log_printf(hovWarning, 
+	log_printf(hovWarning,
 		   "Hiop: option '%s' must be in [%g,%g]. Default value %g will be used.\n",
 		   name, option->lb, option->ub, option->val);
       } else option->val = value;
     }
   } else {
-    log_printf(hovWarning, 
+    log_printf(hovWarning,
 		"Hiop does not understand option '%s' and will ignore its value '%g'.\n",
 		name, value);
   }
@@ -470,31 +472,31 @@ bool hiopOptions::SetIntegerValue(const char* name, const int& value, const bool
   if(it!=mOptions.end()) {
     _OInt* option = dynamic_cast<_OInt*>(it->second);
     if(NULL==option) {
-      log_printf(hovWarning, 
+      log_printf(hovWarning,
 		 "Hiop does not know option '%s' as 'integer'. Maybe it is an 'numeric' "
 		 "or a 'string' option? The option will be ignored.\n",
 		  name);
     } else {
       if(true==option->specifiedInFile) {
 	if(false==setFromFile) {
-	  log_printf(hovWarning, 
+	  log_printf(hovWarning,
 		     "Hiop will ignore value '%d' set for option '%s' at runtime since this "
 		     "option is already specified in the option file.\n", value, name);
 	  return true;
 	}
-      } 
+      }
 
       if(setFromFile)
 	option->specifiedInFile=true;
 
       if(value<option->lb || value>option->ub) {
-	log_printf(hovWarning, 
+	log_printf(hovWarning,
 		   "Hiop: option '%s' must be in [%d, %d]. Default value %d will be used.\n",
 		   name, option->lb, option->ub, option->val);
       } else option->val = value;
     }
   } else {
-    log_printf(hovWarning, 
+    log_printf(hovWarning,
 		"Hiop does not understand option '%s' and will ignore its value '%d'.\n",
 		name, value);
   }
@@ -508,18 +510,18 @@ bool hiopOptions::SetStringValue (const char* name,  const char* value, const bo
   if(it!=mOptions.end()) {
     _OStr* option = dynamic_cast<_OStr*>(it->second);
     if(NULL==option) {
-      log_printf(hovWarning, 
+      log_printf(hovWarning,
 		  "Hiop does not know option '%s' as 'string'. Maybe it is an 'integer' or a "
 		 "'string' option? The option will be ignored.\n", name);
     } else {
       if(true==option->specifiedInFile) {
 	if(false==setFromFile) {
-	  log_printf(hovWarning, 
+	  log_printf(hovWarning,
 		     "Hiop will ignore value '%s' set for option '%s' at runtime since this option "
 		     "is already specified in the option file.\n", value, name);
 	  return true;
 	}
-      } 
+      }
 
       if(setFromFile)
 	option->specifiedInFile=true;
@@ -534,13 +536,13 @@ bool hiopOptions::SetStringValue (const char* name,  const char* value, const bo
 	stringstream ssRange; ssRange << " ";
 	for(int it=0; it<option->range.size(); it++) ssRange << option->range[it] << " ";
 
-	log_printf(hovWarning, 
+	log_printf(hovWarning,
 		    "Hiop: value '%s' for option '%s' must be one of [%s]. Default value "
 		   "'%s' will be used.\n", value, name, ssRange.str().c_str(), option->val.c_str());
       } else option->val = strValue;
     }
   } else {
-    log_printf(hovWarning, 
+    log_printf(hovWarning,
 		"Hiop does not understand option '%s' and will ignore its value '%s'.\n",
 		name, value);
   }
@@ -566,7 +568,7 @@ void hiopOptions::print(FILE* file, const char* msg) const
 {
   if(NULL==msg) fprintf(file, "#\n# Hiop options\n#\n");
   else          fprintf(file, "%s ", msg);
- 
+
   map<string,_O*>::const_iterator it = mOptions.begin();
   for(; it!=mOptions.end(); it++) {
     fprintf(file, "%s ", it->first.c_str());
