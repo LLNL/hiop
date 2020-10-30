@@ -61,12 +61,14 @@ public:
    * @param x : output, will contain the primal optimal solution of the master
    * 
    */
-  virtual hiopSolveStatus solve_master(double* x) = 0;
+  virtual hiopSolveStatus solve_master(double* x,const bool& include_r, const double& rval=0, 
+		                       const double* grad=0,const double*hess =0) = 0;
 
   virtual bool eval_f_rterm(size_t idx, const int& n, double* x, double& rval) = 0;
   virtual bool eval_grad_rterm(size_t idx, const int& n, double* x, double* grad) = 0;
 
-  virtual bool set_quadratic_regularization(/* params = ? */) = 0;
+  virtual bool set_quadratic_regularization(const int& n, const double* x, const double& rval,const double* grad,
+		                    const double* hess) = 0;
 
   /** 
    * Returns the number S of recourse terms

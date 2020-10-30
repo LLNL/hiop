@@ -19,7 +19,7 @@ int main(int argc, char **argv)
   magma_init();
 #endif
 
-  PriDecMasterProblemEx8 pridec_problem(100, 1000);
+  PriDecMasterProblemEx8 pridec_problem(12, 20);
 
   hiop::hiopAlgPrimalDecomposition pridec_solver(&pridec_problem, MPI_COMM_WORLD);
 

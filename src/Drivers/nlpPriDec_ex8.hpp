@@ -3,6 +3,9 @@
 
 #include "hiopInterfacePrimalDecomp.hpp"
 
+#include "hiopInterface.hpp"
+#include "hiopNlpFormulation.hpp"
+#include "hiopAlgFilterIPM.hpp"
 #ifdef HIOP_USE_MPI
 #include "mpi.h"
 #else
@@ -16,6 +19,348 @@
 #include <cmath>
 
 using namespace hiop;
+/* 
+class Ex8 : public hiop::hiopInterfaceMDS
+{
+public:
+  Ex8(int ns_)
+    : Ex8(ns_, ns_)  //ns = nx, nd=S
+  {
+  }
+  
+  Ex8(int ns_, int nd_)
+    : ns(ns_)
+  {
+    if(ns<0) {
+      ns = 0;
+    } else {
+      if(4*(ns/4) != ns) {
+	ns = 4*((4+ns)/4);
+	printf("[warning] number (%d) of sparse vars is not a multiple ->was altered to %d\n", 
+	       ns_, ns); 
+      }
+    }
+
+    if(nd_<0) nd=0;
+    else nd = nd_;
+    if(nd<ns){
+      nd = ns;
+      printf("[warning] number (%d) of recourse problems should be larger than sparse vars  %d,"
+	     " changed to be the same\n",  nd, ns); 
+    }
+    //haveIneq = true;
+  }
+
+  virtual ~Ex8()
+  {
+  }
+  
+  bool get_prob_sizes(long long& n, long long& m)
+  { 
+    n=ns;
+    m=0; 
+    return true; 
+  }
+
+  bool get_vars_info(const long long& n, double *xlow, double* xupp, NonlinearityType* type)
+  {
+    //assert(n>=4 && "number of variables should be greater than 4 for this example");
+    assert(n==ns);
+    //x
+    for(int i=0; i<ns; ++i) xlow[i] = 0.;
+    //x
+    for(int i=0; i<ns; ++i) xupp[i] = +1e+20;
+
+    for(int i=0; i<n; ++i) type[i]=hiopNonlinear;
+    return true;
+  }
+
+  bool get_cons_info(const long long& m, double* clow, double* cupp, NonlinearityType* type)
+  {
+    assert(m==0);
+
+    return true;
+  }
+  bool eval_f(const long long& n, const double* x, bool new_x, double& obj_value)
+  {
+    //assert(ns>=4);
+    obj_value=0.;//x[0]*(x[0]-1.);
+    //sum 0.5 {(x_i-1)*(x_{i}-1) : i=1,...,ns} + 0.5 y'*Qd*y + 0.5 s^T s
+    for(int i=0; i<ns; i++) obj_value += (x[i]-1.)*(x[i]-1.);
+    obj_value *= 0.5;
+
+    if(include_r){
+      for(int i=0; i<ns; i++) obj_value += 0.5*x[i]*x[i]+x[i]+0.5*ns;
+    }
+
+    return true;
+  }
+  virtual bool eval_cons(const long long& n, const long long& m, 
+			 const long long& num_cons, const long long* idx_cons,  
+			 const double* x, bool new_x, double* cons)
+  {
+    assert(num_cons==0);
+    return true;
+  }
+ 
+  //sum 0.5 {(x_i-1)*(x_{i}-1) : i=1,...,ns} 
+  bool eval_grad_f(const long long& n, const double* x, bool new_x, double* gradf)
+  {
+    //! assert(ns>=4); assert(Q->n()==ns/4); assert(Q->m()==ns/4);
+    //x_i - 0.5 
+    for(int i=0; i<ns; i++) 
+      gradf[i] = x[i]-1.;
+    if(include_r){
+      for(int i=0; i<ns; i++) gradf[i] += x[i]+1.;
+    }
+    return true;
+  }
+
+  // Implementation of the primal starting point specification //
+  bool get_starting_point(const long long& global_n, double* x0)
+  {
+    assert(global_n==ns); 
+    for(int i=0; i<global_n; i++) x0[i]= 2.;
+    return true;
+  }
+  bool get_starting_point(const long long& n, const long long& m,
+				  double* x0,
+				  bool& duals_avail,
+				  double* z_bndL0, double* z_bndU0,
+				  double* lambda0)
+  {
+    duals_avail = false;
+    return false;
+  }
+
+
+  // pass the COMM_SELF communicator since this example is only intended to run inside 1 MPI process //
+  virtual bool get_MPI_comm(MPI_Comm& comm_out) { comm_out=MPI_COMM_SELF; return true;}
+  virtual bool
+  eval_Jac_cons(const long long& n, const long long& m, 
+		const long long& num_cons, const long long* idx_cons,
+		const double* x, bool new_x,
+		const long long& nsparse, const long long& ndense, 
+		const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
+		double** JacD)
+  {
+    assert(m==0);
+    return true;
+  }
+  bool eval_Hess_Lagr(const long long& n, const long long& m, 
+			      const double* x, bool new_x, const double& obj_factor,
+			      const double* lambda, bool new_lambda,
+			      const long long& nsparse, const long long& ndense, 
+			      const int& nnzHSS, int* iHSS, int* jHSS, double* MHSS, 
+			      double** HDD,
+			      int& nnzHSD, int* iHSD, int* jHSD, double* MHSD)
+  {
+    //Note: lambda is not used since all the constraints are linear and, therefore, do 
+    //not contribute to the Hessian of the Lagrangian
+    assert(nnzHSS==ns);
+    assert(nnzHSD==0);
+    assert(iHSD==NULL); assert(jHSD==NULL); assert(MHSD==NULL);
+
+    if(iHSS!=NULL && jHSS!=NULL) {
+      for(int i=0; i<ns; i++) iHSS[i] = jHSS[i] = i;     
+    }
+
+    if(MHSS!=NULL) {
+      for(int i=0; i<ns; i++) MHSS[i] = obj_factor;
+    }
+    //assert(HDD==NULL);
+    return true;
+  }
+  bool get_sparse_dense_blocks_info(int& nx_sparse, int& nx_dense,
+				    int& nnz_sparse_Jace, int& nnz_sparse_Jaci,
+				    int& nnz_sparse_Hess_Lagr_SS, int& nnz_sparse_Hess_Lagr_SD)
+  {
+    nx_sparse = ns;
+    nx_dense = 0;
+    nnz_sparse_Jace = 0;
+    nnz_sparse_Jaci = 0;
+    nnz_sparse_Hess_Lagr_SS = ns;
+    nnz_sparse_Hess_Lagr_SD = 0.;
+    return true;
+  }
+
+
+protected:
+  int ns,nd;
+  bool include_r = false;
+
+};
+*/
+
+
+class Ex8 : public hiop::hiopInterfaceDenseConstraints
+{
+public:
+  Ex8(int ns_)
+    : Ex8(ns_, ns_)  //ns = nx, nd=S
+  {
+  }
+  
+  Ex8(int ns_, int S_)
+    : ns(ns_), rval(0.), rgrad(NULL), rhess(NULL),x0(NULL)
+
+  {
+    if(ns<0) {
+      ns = 0;
+    } else {
+      if(4*(ns/4) != ns) {
+	ns = 4*((4+ns)/4);
+	printf("[warning] number (%d) of sparse vars is not a multiple ->was altered to %d\n", 
+	       ns_, ns); 
+      }
+    }
+
+    if(S_<0) S=0;
+    else S = S_;
+    if(S<ns){
+      S = ns;
+      printf("[warning] number (%d) of recourse problems should be larger than sparse vars  %d,"
+	     " changed to be the same\n",  S, ns); 
+    }
+    //haveIneq = true;
+  }
+  Ex8(int ns_, int S_, bool include_)
+    : Ex8(ns_,S_)
+  {
+    include_r = include_;
+    /*if(include_r){
+      rval = 0.;
+      rgrad = new double[ns];
+      rhess = new double[ns];
+      x0 = new double[ns];
+    }*/
+  }
+  Ex8(int ns_, int S_, bool include_, const double& rval_, const double* rgrad_,const double* rhess_,const double* x0_)
+    : Ex8(ns_,S_)
+
+  {
+    include_r = include_;
+    if(include_r){
+      rval = rval_;
+      rgrad = new double[ns];
+      rhess = new double[ns];
+      x0 = new double[ns];
+      memcpy(rgrad,rgrad_ , ns*sizeof(double));
+      memcpy(rhess,rhess_ , ns*sizeof(double));
+      memcpy(x0,x0_, ns*sizeof(double));
+    }
+  }
+
+  virtual ~Ex8()
+  {
+    delete[] rgrad;
+    delete[] rhess;
+  }
+  
+  bool get_prob_sizes(long long& n, long long& m)
+  { 
+    n=ns;
+    m=0; 
+    return true; 
+  }
+
+  bool get_vars_info(const long long& n, double *xlow, double* xupp, NonlinearityType* type)
+  {
+    //assert(n>=4 && "number of variables should be greater than 4 for this example");
+    assert(n==ns);
+    //x
+    for(int i=0; i<ns; ++i) xlow[i] = 0.;
+    //x
+    for(int i=0; i<ns; ++i) xupp[i] = +1e+20;
+
+    for(int i=0; i<ns; ++i) type[i]=hiopNonlinear;
+    return true;
+  }
+
+  bool get_cons_info(const long long& m, double* clow, double* cupp, NonlinearityType* type)
+  {
+    assert(m==0);
+
+    return true;
+  }
+  bool eval_f(const long long& n, const double* x, bool new_x, double& obj_value)
+  {
+    //assert(ns>=4);
+    obj_value=0.;//x[0]*(x[0]-1.);
+    //sum 0.5 {(x_i-1)*(x_{i}-1) : i=1,...,ns} + 0.5 y'*Qd*y + 0.5 s^T s
+    for(int i=0; i<ns; i++) obj_value += (x[i]-1.)*(x[i]-1.);
+    obj_value *= 0.5;
+
+    if(include_r){
+      assert(rgrad!=NULL);
+      obj_value += rval;
+      for(int i=0; i<ns; i++) obj_value += rgrad[i]*(x[i]-x0[i]);
+      for(int i=0; i<ns; i++) obj_value += 0.5*rhess[i]*(x[i]-x0[i])*(x[i]-x0[i]);
+    }
+
+    return true;
+  }
+  virtual bool eval_cons(const long long& n, const long long& m, 
+			 const long long& num_cons, const long long* idx_cons,  
+			 const double* x, bool new_x, double* cons)
+  {
+    assert(num_cons==0);
+    return true;
+  }
+ 
+  //sum 0.5 {(x_i-1)*(x_{i}-1) : i=1,...,ns} 
+  bool eval_grad_f(const long long& n, const double* x, bool new_x, double* gradf)
+  {
+    //! assert(ns>=4); assert(Q->n()==ns/4); assert(Q->m()==ns/4);
+    //x_i - 0.5 
+    for(int i=0; i<ns; i++) 
+      gradf[i] = x[i]-1.;
+    if(include_r){
+      assert(rgrad!=NULL);
+      for(int i=0; i<ns; i++) gradf[i] += rgrad[i]+rhess[i]*(x[i]-x0[i]);
+    }
+    return true;
+  }
+
+  // Implementation of the primal starting point specification //
+  bool get_starting_point(const long long& global_n, double* x0_)
+  {
+    assert(global_n==ns); 
+    for(int i=0; i<global_n; i++) x0_[i]= 2.;
+    return true;
+  }
+
+  bool get_starting_point(const long long& n, const long long& m,
+				  double* x0_,
+				  bool& duals_avail,
+				  double* z_bndL0, double* z_bndU0,
+				  double* lambda0)
+  {
+    duals_avail = false;
+    return false;
+  }
+
+  // pass the COMM_SELF communicator since this example is only intended to run inside 1 MPI process //
+  virtual bool get_MPI_comm(MPI_Comm& comm_out) { comm_out=MPI_COMM_SELF; return true;}
+  virtual bool
+  eval_Jac_cons(const long long& n, const long long& m,
+			const long long& num_cons, const long long* idx_cons,  
+			const double* x, bool new_x, double** Jac) 
+  {
+    assert(m==0);
+    return true;
+  }
+
+protected:
+  int ns,S;
+  bool include_r = false;
+  double rval;
+  double* rgrad;
+  double* rhess; //diagonal vector for now
+  double* x0; //current solution
+};
+
+
 
 class PriDecMasterProblemEx8 : public hiopInterfacePriDecProblem
 {
@@ -24,27 +369,93 @@ public:
                          int S,
                          MPI_Comm comm_world=MPI_COMM_WORLD)
     : hiopInterfacePriDecProblem(comm_world),
-      n_(n), S_(S)
+      n_(n), S_(S), rval_(0.), rgrad_(NULL), rhess_(NULL),x0_(NULL),sol_(NULL)
   {
-
+        
   }
 
   virtual ~PriDecMasterProblemEx8()
   {
   }
 
-  hiopSolveStatus solve_master(double* x)
+  hiopSolveStatus solve_master(double* x, const bool& include_r, const double& rval = 0,
+		               const double* grad=0, const double* hess=0)
   {
+
+    //user's NLP -> implementation of hiop::hiopInterfaceMDS
+    double obj_value=-1e+20;
+    hiopSolveStatus status;
+    Ex8* my_nlp;
+    //my_nlp = new Ex8(12);
+    //hiopNlpMDS nlp(*my_nlp);
+    //Ex8 nlp_interface(n);
+    //hiopNlpDenseConstraints nlp(*my_nlp);
+   
+    if(include_r){
+      assert(rgrad_!=NULL);
+      // check to see if the resource value and gradient are correct
+      //printf("recourse value: is %18.12e)\n", rval_);
+      //for(int i=0;i<n_;i++) printf("%d %18.12e\n",i,rgrad_[i]);
+
+      my_nlp = new Ex8(n_,S_,include_r,rval_,rgrad_,rhess_,x0_);
+    }
+    else{
+      my_nlp = new Ex8(n_,S_,include_r);
+    }
+    //if(rank==0) printf("interface created\n");
+    hiopNlpDenseConstraints nlp(*my_nlp);
+    //if(rank==0) printf("nlp formulation created\n");  
+
+    /*
+    nlp.options->SetStringValue("dualsUpdateType", "linear");
+    nlp.options->SetStringValue("dualsInitialization", "zero");
+
+    nlp.options->SetStringValue("Hessian", "analytical_exact");
+    nlp.options->SetStringValue("KKTLinsys", "xdycyd");
+    nlp.options->SetStringValue("compute_mode", "hybrid");
+
+    nlp.options->SetIntegerValue("verbosity_level", 3);
+    nlp.options->SetNumericValue("mu0", 1e-1);
+    nlp.options->SetNumericValue("tolerance", 1e-5);
+    */
+    hiopAlgFilterIPM solver(&nlp);
+    status = solver.run();
+    obj_value = solver.getObjective();
+    solver.getSolution(x);
+
+    if(status<0) {
+      printf("solver returned negative solve status: %d (with objective is %18.12e)\n", status, obj_value);
+      return status;
+    }
+    for(int i=0;i<n_;i++) printf("%d %18.12e\n",i,x[i]);
     //pretend that the master problem has all zero solution
-    for(int i=0; i<n_; i++)
-      x[i] = 0.;
+    /*
+    if(include_r==0){
+      for(int i=0; i<n_; i++)
+        x[i] = 1.;
+    }
+    else{
+      for(int i=0; i<n_; i++)
+        x[i] = 0.; 
+    }
+    */
+    if(sol_==NULL){
+      sol_ = new double[n_];
+    }
+    memcpy(sol_,x, n_*sizeof(double));
+
     return Solve_Success;
   };
-
+  // The recourse solution is 0.5*(x+Se_i)(x+Se_i)
   bool eval_f_rterm(size_t idx, const int& n, double* x, double& rval)
   {
     rval = 0.;
-    for(int i=0; i<n; i++) rval += (x[i]-1)*(x[i]-1);
+    for(int i=0; i<n; i++) {
+      if(i==idx)	    
+	rval += (x[i]+S_)*(x[i]+S_);
+      else
+	rval += x[i]*x[i];
+    }
     rval *= 0.5;
     rval /= S_;
     return true;
@@ -52,13 +463,33 @@ public:
   bool eval_grad_rterm(size_t idx, const int& n, double* x, double* grad)
   {
     assert(n_ == n);
-    for(int i=0; i<n; i++)
-      grad[i] = (x[i]-1)/S_;
+    for(int i=0; i<n; i++){
+      if(i==idx)	    
+        grad[i] = (x[i]+S_)/S_;
+      else
+	grad[i] = x[i]/S_;
+    }
     return true;
   }  
-
-  bool set_quadratic_regularization(/* params = ? */)
+  //implement with alpha = 1 for now only
+  bool set_quadratic_regularization(const int& n, const double* x0, const double& rval,const double* grad,
+		                    const double* hess)
   {
+    assert(n_ == n);
+    rval_ = rval;
+    if(rgrad_==NULL){
+      rgrad_ = new double[n_];
+    }
+    if(rhess_==NULL){
+      rhess_ = new double[n_];
+    }
+    if(x0_==NULL){
+      x0_ = new double[n_];
+    }
+    memcpy(rgrad_,grad , n_*sizeof(double));
+    memcpy(rhess_,hess , n_*sizeof(double));
+    memcpy(x0_,x0, n_*sizeof(double));
+
     return true;
   }
 
@@ -76,7 +507,7 @@ public:
   void get_solution(double* x) const
   {
     for(int i=0; i<n_; i++)
-      x[i] = 0.;
+      x[i] = sol_[i];
   }
 
   double get_objective()
@@ -86,7 +517,12 @@ public:
 private:
   size_t n_;
   size_t S_;
-
+  double rval_;
+  double* rgrad_;
+  double* rhess_; 
+  double* x0_;
+  double obj_;
+  double* sol_; 
   // will need some encapsulation of the basecase NLP
   // nlpMDSForm_ex4.hpp
 };
