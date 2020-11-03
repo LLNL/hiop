@@ -202,7 +202,7 @@ public:
   }
   
   Ex8(int ns_, int S_)
-    : ns(ns_), rval(0.), rgrad(NULL), rhess(NULL),x0(NULL)
+    : ns(ns_), rval_(0.), rgrad_(NULL), rhess_(NULL),x0_(NULL)
 
   {
     if(ns<0) {
@@ -235,26 +235,27 @@ public:
       x0 = new double[ns];
     }*/
   }
-  Ex8(int ns_, int S_, bool include_, const double& rval_, const double* rgrad_,const double* rhess_,const double* x0_)
+  Ex8(int ns_, int S_, bool include, const double& rval, const double* rgrad,const double* rhess,const double* x0)
     : Ex8(ns_,S_)
 
   {
-    include_r = include_;
+    include_r = include;
     if(include_r){
-      rval = rval_;
-      rgrad = new double[ns];
-      rhess = new double[ns];
-      x0 = new double[ns];
-      memcpy(rgrad,rgrad_ , ns*sizeof(double));
-      memcpy(rhess,rhess_ , ns*sizeof(double));
-      memcpy(x0,x0_, ns*sizeof(double));
+      rval_ = rval;
+      rgrad_ = new double[ns];
+      rhess_ = new double[ns];
+      x0_ = new double[ns];
+      memcpy(rgrad_,rgrad, ns*sizeof(double));
+      memcpy(rhess_,rhess , ns*sizeof(double));
+      memcpy(x0_,x0, ns*sizeof(double));
     }
   }
 
   virtual ~Ex8()
   {
-    delete[] rgrad;
-    delete[] rhess;
+    delete[] rgrad_;
+    delete[] rhess_;
+    delete[] x0_;
   }
   
   bool get_prob_sizes(long long& n, long long& m)
@@ -292,10 +293,10 @@ public:
     obj_value *= 0.5;
 
     if(include_r){
-      assert(rgrad!=NULL);
-      obj_value += rval;
-      for(int i=0; i<ns; i++) obj_value += rgrad[i]*(x[i]-x0[i]);
-      for(int i=0; i<ns; i++) obj_value += 0.5*rhess[i]*(x[i]-x0[i])*(x[i]-x0[i]);
+      assert(rgrad_!=NULL);
+      obj_value += rval_;
+      for(int i=0; i<ns; i++) obj_value += rgrad_[i]*(x[i]-x0_[i]);
+      for(int i=0; i<ns; i++) obj_value += 0.5*rhess_[i]*(x[i]-x0_[i])*(x[i]-x0_[i]);
     }
 
     return true;
@@ -316,8 +317,8 @@ public:
     for(int i=0; i<ns; i++) 
       gradf[i] = x[i]-1.;
     if(include_r){
-      assert(rgrad!=NULL);
-      for(int i=0; i<ns; i++) gradf[i] += rgrad[i]+rhess[i]*(x[i]-x0[i]);
+      assert(rgrad_!=NULL);
+      for(int i=0; i<ns; i++) gradf[i] += rgrad_[i]+rhess_[i]*(x[i]-x0_[i]);
     }
     return true;
   }
@@ -350,14 +351,40 @@ public:
     assert(m==0);
     return true;
   }
+  bool set_quadratic_terms(const int& n, bool include_, const double* x0=NULL, 
+		           const double& rval=0.,const double* grad=NULL,const double* hess=NULL)
+  {
+    assert(ns == n);
+    include_r = include_;
+    if(include_r && grad!=NULL){
+      rval_ = rval;
+      if(rgrad_==NULL){
+        rgrad_ = new double[ns];
+      }
+      if(rhess_==NULL){
+        rhess_ = new double[ns];
+      }
+      if(x0_==NULL){
+        x0_ = new double[ns];
+      }
+      memcpy(rgrad_,grad , ns*sizeof(double));
+      memcpy(rhess_,hess , ns*sizeof(double));
+      memcpy(x0_,x0, ns*sizeof(double));
+    }
+    return true;
+  }
+  bool quad_is_defined() {
+    if(rgrad_!=NULL) return true;
+    else return false;
+  }
 
 protected:
   int ns,S;
   bool include_r = false;
-  double rval;
-  double* rgrad;
-  double* rhess; //diagonal vector for now
-  double* x0; //current solution
+  double rval_;
+  double* rgrad_;
+  double* rhess_; //diagonal vector for now
+  double* x0_; //current solution
 };
 
 
@@ -369,9 +396,9 @@ public:
                          int S,
                          MPI_Comm comm_world=MPI_COMM_WORLD)
     : hiopInterfacePriDecProblem(comm_world),
-      n_(n), S_(S), rval_(0.), rgrad_(NULL), rhess_(NULL),x0_(NULL),sol_(NULL)
+      n_(n), S_(S),obj_(-1e20),sol_(NULL)
   {
-        
+      my_nlp = new Ex8(n_,S_);   
   }
 
   virtual ~PriDecMasterProblemEx8()
@@ -385,22 +412,27 @@ public:
     //user's NLP -> implementation of hiop::hiopInterfaceMDS
     double obj_value=-1e+20;
     hiopSolveStatus status;
-    Ex8* my_nlp;
+    //Ex8* my_nlp;
     //my_nlp = new Ex8(12);
     //hiopNlpMDS nlp(*my_nlp);
     //Ex8 nlp_interface(n);
     //hiopNlpDenseConstraints nlp(*my_nlp);
-   
+    if(my_nlp==NULL){
+      my_nlp = new Ex8(n_,S_);
+    }
+
+    printf("here2\n");
     if(include_r){
-      assert(rgrad_!=NULL);
+      assert(my_nlp->quad_is_defined());
+
       // check to see if the resource value and gradient are correct
       //printf("recourse value: is %18.12e)\n", rval_);
       //for(int i=0;i<n_;i++) printf("%d %18.12e\n",i,rgrad_[i]);
-
-      my_nlp = new Ex8(n_,S_,include_r,rval_,rgrad_,rhess_,x0_);
+      bool ierr = my_nlp->set_quadratic_terms(n_,include_r);
+      //assert("for debugging" && false); //for debugging purpose
     }
     else{
-      my_nlp = new Ex8(n_,S_,include_r);
+      bool ierr = my_nlp->set_quadratic_terms(n_,include_r);
     }
     //if(rank==0) printf("interface created\n");
     hiopNlpDenseConstraints nlp(*my_nlp);
@@ -472,11 +504,13 @@ public:
     return true;
   }  
   //implement with alpha = 1 for now only
+  // this function should only be used if quadratic regularization is included
   bool set_quadratic_regularization(const int& n, const double* x0, const double& rval,const double* grad,
 		                    const double* hess)
   {
     assert(n_ == n);
-    rval_ = rval;
+    my_nlp->set_quadratic_terms(n,true,x0,rval,grad,hess);
+    /*rval_ = rval;
     if(rgrad_==NULL){
       rgrad_ = new double[n_];
     }
@@ -489,7 +523,7 @@ public:
     memcpy(rgrad_,grad , n_*sizeof(double));
     memcpy(rhess_,hess , n_*sizeof(double));
     memcpy(x0_,x0, n_*sizeof(double));
-
+    */
     return true;
   }
 
@@ -517,10 +551,11 @@ public:
 private:
   size_t n_;
   size_t S_;
-  double rval_;
-  double* rgrad_;
-  double* rhess_; 
-  double* x0_;
+  Ex8* my_nlp;
+  //double rval_;
+  //double* rgrad_;
+  //double* rhess_; 
+  //double* x0_;
   double obj_;
   double* sol_; 
   // will need some encapsulation of the basecase NLP

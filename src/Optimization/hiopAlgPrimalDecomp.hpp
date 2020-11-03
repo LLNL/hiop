@@ -6,7 +6,7 @@
 
 #include <cassert>
 #include <cstdio>
-
+#include <vector>
 namespace hiop
 {
 
@@ -45,37 +45,65 @@ public:
   virtual hiopSolveStatus run()
   {
 
+
     //initial point = ?
     //for now set to all zero
     for(int i=0; i<n_; i++) {
       x_[i] = 0.;
     }
-    
+      
     bool bret;
-    //all the cool stuff
-
+    int rank_master=0; //master rank is also the solver rank
+    //Define the values and gradients as needed for MPI_Reduce
+    double rval = 0.;
+    double grad_r[n_];
+    for(int i=0; i<n_; i++) {
+      grad_r[i] = 0.;
+    }
+    //local recourse terms for each evaluator, but defined accross all processors
+    double rec_val = 0.;
+    double grad_acc[n_];
+    for(int i=0; i<n_; i++) grad_acc[i] = 0.;
     //this is an example of the usage of the classes' design and has almost nothing to do with
     //the actual algorithm (master rank does all the computations)
-    
+
     //for now solve the basecase, add quadratic_regularizatin (does nothing for now), and resolve master
-    if(my_rank_type_ == 0) {
+    if(my_rank_ == 0) {
       printf("my rank for solver  %d)\n", my_rank_);
       //solve master problem (solver rank supposed to do it)
       solver_status_ = master_prob_->solve_master(x_,false);
     }
-      //todo error control
-    int ierr = MPI_Bcast(x_, n_, MPI_DOUBLE, 0, comm_world_);
+
+    //todo error control
+    int ierr = MPI_Bcast(x_, n_, MPI_DOUBLE, rank_master, comm_world_);
     assert(ierr == MPI_SUCCESS);
 
       //
       //workers
       //
-      //
     if(my_rank_ != 0){
-      double rec_val = 0., aux;
-      for(int ri=0; ri<S_; ri++) {
+      int cpr = S_/(comm_size_-1); //contingency per rank
+      int cr = S_%(comm_size_-1); //contingency remained
+      // contigency starts at 0                    
+      std::vector<int> cont_idx;
+      if(my_rank_==comm_size_-1){
+	for(int i=0;i<cpr+cr;i++){
+	  int idx_temp = i+(my_rank_-1)*cpr;
+          cont_idx.push_back(idx_temp);  //currently the last one gets the most contingency, not optimal
+	}
+      }
+      else{
+	for(int i=0;i<cpr;i++){
+	  int idx_temp = i+(my_rank_-1)*cpr;
+          cont_idx.push_back(idx_temp);
+	}
+      }
+
+      double aux=0.;
+      for(int ri=0; ri<cont_idx.size(); ri++) {
         aux = 0.;
-        bret = master_prob_->eval_f_rterm(ri, n_, x_, aux);
+	int idx_temp = cont_idx[ri];
+        bret = master_prob_->eval_f_rterm(idx_temp, n_, x_, aux);
         if(!bret) {
           //todo
         }
@@ -83,12 +111,12 @@ public:
       }
       //printf("recourse value: is %18.12e)\n", rec_val);
       printf("my rank for evaluator  %d)\n", my_rank_);
-      double grad_acc[n_];
-      for(int i=0; i<n_; i++) grad_acc[i] = 0.;
+
       
       double grad_aux[n_];
-      for(int ri=0; ri<S_; ri++) {
-        bret = master_prob_->eval_grad_rterm(ri, n_, x_, grad_aux);
+      for(int ri=0; ri<cont_idx.size(); ri++) {
+	int idx_temp = cont_idx[ri];
+        bret = master_prob_->eval_grad_rterm(idx_temp, n_, x_, grad_aux);
         if(!bret)
         {
           //todo
@@ -98,35 +126,44 @@ public:
       }
 
       //do something with the func eval and gradient to determine the quadratic regularization 
-      double hess_appx[n_];
-      for(int i=0; i<n_; i++) hess_appx[i] = 1.0;
-      int err= MPI_Send(&rec_val, 1, MPI_DOUBLE, 0, 1, comm_world_);
-      err= MPI_Send(grad_acc, n_, MPI_DOUBLE, 0, 1, comm_world_);
-      err= MPI_Send(hess_appx, n_, MPI_DOUBLE, 0, 1, comm_world_);
-      assert(err == MPI_SUCCESS);
+
+      //int err= MPI_Send(&rec_val, 1, MPI_DOUBLE, 0, 1, comm_world_);
+      //err= MPI_Send(grad_acc, n_, MPI_DOUBLE, 0, 1, comm_world_);
+      //err= MPI_Send(hess_appx, n_, MPI_DOUBLE, 0, 1, comm_world_);
 
     }
+
+
+    int err= MPI_Reduce(&rec_val,&rval,1, MPI_DOUBLE, MPI_SUM, rank_master, comm_world_);
+    err= MPI_Reduce(&grad_acc,&grad_r,n_, MPI_DOUBLE, MPI_SUM, rank_master, comm_world_);
+    assert(err == MPI_SUCCESS);
     if(my_rank_==0)
     {
-      double rval = 0.;
-      double grad_acc[n_];
-      double hess_appx[n_];	     
+
       MPI_Status mpi_status; 
 
-      int err =  MPI_Recv(&rval, 1, MPI_DOUBLE, 1, 1,comm_world_, &mpi_status);
-      assert(err == MPI_SUCCESS);
-      err =  MPI_Recv(grad_acc, n_, MPI_DOUBLE, 1, 1,comm_world_, &mpi_status);
-      assert(err == MPI_SUCCESS);
-      err =  MPI_Recv(hess_appx, n_, MPI_DOUBLE, 1, 1,comm_world_, &mpi_status);
+      double hess_appx[n_]; //Hessian is computed on the solver/master
+      for(int i=0; i<n_; i++) hess_appx[i] = 1.0;
+      
+      //int err =  MPI_Recv(&rval, 1, MPI_DOUBLE, 1, 1,comm_world_, &mpi_status);
+      //assert(err == MPI_SUCCESS);
+      //err =  MPI_Recv(grad_acc, n_, MPI_DOUBLE, 1, 1,comm_world_, &mpi_status);
+      //assert(err == MPI_SUCCESS);
+      //err =  MPI_Recv(hess_appx, n_, MPI_DOUBLE, 1, 1,comm_world_, &mpi_status);
 
-      bret = master_prob_->set_quadratic_regularization(n_,x_,rval,grad_acc,hess_appx);
-      printf("here2\n");
+      for(int i=0;i<n_;i++) printf("%d grad %18.12e\n",i,grad_r[i]);
+
+
+      bret = master_prob_->set_quadratic_regularization(n_,x_,rval,grad_r,hess_appx);
+
+
       if(!bret)
       {
         //todo
       }
 
       solver_status_ = master_prob_->solve_master(x_,true);
+
       printf("here3\n");
 
       return solver_status_;
