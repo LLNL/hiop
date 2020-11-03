@@ -689,16 +689,22 @@ double obj_value = solver.getObjective();  //get objective
 \end{lstlisting}
 
 
+\subsection{Structured NLPs suitable to primal decomposition (PriDe) schemes}\label{sec:pride}
 
-%%%%%%
+\Hi also offers parallel solution capabilities for NLPs that have separable objective terms. More specifically,
+\begin{align}
+&&&&\min_{x\in\mathbb{R}^n} & \hspace{0.5cm} f(x) + \sum_{i=1}^K r_i(x) &&&& \label{prideobj}\\
+&&&&\textnormal{s.t.} &\hspace{0.5cm}  c(x)=c_E &[y_c]&&&\\
+&&[v_l]&&& \hspace{0.5cm} d_l \leq d(x) \leq d_u  &[v_u]&&&\label{prideineq} \\
+&&[z_u]&&& \hspace{0.5cm} x_l \leq x \leq x_u & [z_u] &&&\label{pridebounds}
+\end{align}
+Mathematically, the above problem is identical (and has the same specification as the NLP~\eqref{obj}-\eqref{bounds}), with the exception of the so-called ``recourse`` terms $r_i(x)$ appearing in the objective. Each of these functions are real-valued, $r_i:\mathbb{R}^n\rightarrow \mathbb{R}$, for all $i\in\{1,2,\ldots, K\}$.
 
-%1. mention GPUs
 
-%2. Newton IPM for MDS
-
-%3. primal dual restart
+The input \Hi expects for this class of problems is a bit different than for NLPs of the form~\eqref{obj}-\eqref{bounds} and MDS NLPs introduced in the previous section.
 
 
+The user should use the above formulation/specification when the  ...
 
 \subsection{Specifying a starting point for the optimization process}
 
