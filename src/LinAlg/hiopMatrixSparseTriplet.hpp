@@ -11,11 +11,11 @@
 namespace hiop
 {
 
-/** 
+/**
  * @brief Sparse matrix of doubles in triplet format - it is not distributed
  * @note for now (i,j) are expected ordered: first on rows 'i' and then on cols 'j'
  *
- * Note: the following methods of hiopMatrix are NOT 
+ * Note: the following methods of hiopMatrix are NOT
  * implemented in this class:
  * - addSubDiagonal
  * - addUpperTriangleToSymDenseMatrixUpperTriangle
@@ -25,14 +25,14 @@ class hiopMatrixSparseTriplet : public hiopMatrixSparse
 {
 public:
   hiopMatrixSparseTriplet(int rows, int cols, int nnz);
-  virtual ~hiopMatrixSparseTriplet(); 
+  virtual ~hiopMatrixSparseTriplet();
 
   virtual void setToZero();
   virtual void setToConstant(double c);
   virtual void copyFrom(const hiopMatrixSparse& dm);
 
   virtual void copyRowsFrom(const hiopMatrix& src, const long long* rows_idxs, long long n_rows);
- 
+
   virtual void timesVec(double beta,  hiopVector& y,
 			double alpha, const hiopVector& x) const;
   virtual void timesVec(double beta,  double* y,
@@ -53,14 +53,14 @@ public:
   virtual void addDiagonal(const double& value);
   virtual void addSubDiagonal(const double& alpha, long long start, const hiopVector& d_);
   /* add to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements of
-   * 'd_' (source) starting at index 'start_on_src_vec'. The number of elements added is 'num_elems' 
+   * 'd_' (source) starting at index 'start_on_src_vec'. The number of elements added is 'num_elems'
    * when num_elems>=0, or the remaining elems on 'd_' starting at 'start_on_src_vec'. */
-  virtual void addSubDiagonal(int start_on_dest_diag, const double& alpha, 
+  virtual void addSubDiagonal(int start_on_dest_diag, const double& alpha,
 			      const hiopVector& d_, int start_on_src_vec, int num_elems=-1)
   {
     assert(false && "not needed / implemented");
   }
-  virtual void addSubDiagonal(int start_on_dest_diag, int num_elems, const double& c) 
+  virtual void addSubDiagonal(int start_on_dest_diag, int num_elems, const double& c)
   {
     assert(false && "not needed / implemented");
   }
@@ -80,9 +80,9 @@ public:
   virtual void addMatrix(double alpha, const hiopMatrix& X);
 
   /* block of W += alpha*transpose(this), where W is dense */
-  virtual void transAddToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start, 
+  virtual void transAddToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start,
 						     double alpha, hiopMatrixDense& W) const;
-  virtual void addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start, 
+  virtual void addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start,
 							     double alpha, hiopMatrixDense& W) const
   {
     assert(false && "counterpart method of hiopMatrixSymSparseTriplet should be used");
@@ -106,20 +106,20 @@ public:
     assert(false && "implemented only for symmetric matrices");
   }
 
-  /* diag block of W += alpha * M * D^{-1} * transpose(M), where M=this 
+  /* diag block of W += alpha * M * D^{-1} * transpose(M), where M=this
    *
    * Only the upper triangular entries of W are updated.
    */
-  virtual void addMDinvMtransToDiagBlockOfSymDeMatUTri(int rowCol_dest_start, const double& alpha, 
+  virtual void addMDinvMtransToDiagBlockOfSymDeMatUTri(int rowCol_dest_start, const double& alpha,
 						       const hiopVector& D, hiopMatrixDense& W) const;
 
-  /* block of W += alpha * M * D^{-1} * transpose(N), where M=this 
+  /* block of W += alpha * M * D^{-1} * transpose(N), where M=this
    *
-   * Warning: The product matrix M * D^{-1} * transpose(N) with start offsets 'row_dest_start' and 
-   * 'col_dest_start' needs to fit completely in the upper triangle of W. If this is NOT the 
-   * case, the method will assert(false) in debug; in release, the method will issue a 
-   * warning with HIOP_DEEPCHECKS (otherwise NO warning will be issue) and will silently update 
-   * the (strictly) lower triangular  elements (these are ignored later on since only the upper 
+   * Warning: The product matrix M * D^{-1} * transpose(N) with start offsets 'row_dest_start' and
+   * 'col_dest_start' needs to fit completely in the upper triangle of W. If this is NOT the
+   * case, the method will assert(false) in debug; in release, the method will issue a
+   * warning with HIOP_DEEPCHECKS (otherwise NO warning will be issue) and will silently update
+   * the (strictly) lower triangular  elements (these are ignored later on since only the upper
    * triangular part of W will be accessed)
    */
   virtual void addMDinvNtransToSymDeMatUTri(int row_dest_start, int col_dest_start, const double& alpha,
@@ -131,22 +131,66 @@ public:
                                          const long long& rows_dest_idx_st, const long long& dest_nnz_st
                                          );
 
-  virtual void copyDiagMatrixToSubBlock(const double& src_val, const long long& src_size,
-                                         const long long& row_dest_st, const long long& col_dest_st,
-                                         const long long& dest_nnz_st
-                                         );
+  /**
+  * @brief Copy matrix 'src_gen', into 'this' as a submatrix from corner 'dest_row_st' and 'dest_col_st'
+  * The non-zero elements start from 'dest_nnz_st' will be replaced by the new elements.
+  *
+  * @pre 'this' must have enough rows and cols after row 'dest_row_st' and col 'dest_col_st'
+  * @pre 'dest_nnz_st' + the number of non-zeros in the copied matrix must be less or equal to this->numOfNumbers()
+  * @pre User must know the nonzero pattern of src and dest matrices. Assume non-zero patterns wont change, and 'src_gen' is a submatrix of 'this'
+  */
+  virtual void SetSubMatrixFromSrc(const hiopMatrix& src_gen,
+                                   const long long& dest_row_st, const long long& dest_col_st,
+                                   const long long& dest_nnz_st);
+//                                   bool firstCall, std::map<int,int> &ValIdxMap );
+
+  /**
+  * @brief Copy the transpose of matrix 'src_gen', into 'this' as a submatrix from corner 'dest_row_st' and 'dest_col_st'
+  * The non-zero elements start from 'dest_nnz_st' will be replaced by the new elements.
+  */
+  virtual void SetSubMatrixFromSrcTrans(const hiopMatrix& src_gen,
+                                   const long long& dest_row_st, const long long& dest_col_st,
+                                   const long long& dest_nnz_st);
+
+  /**
+  * @brief Copy the selected cols/rows of a diagonal matrix (a constant 'scalar' times identity),
+  * into 'this' as a submatrix from corner 'dest_row_st' and 'dest_col_st'
+  * The non-zero elements start from 'dest_nnz_st' will be replaced by the new elements.
+  */
+  virtual void SetSubMatrixFromIdentitySelectCols(const double& scalar,
+                                   const long long& dest_row_st, const long long& dest_col_st,
+                                   const long long& dest_nnz_st, const int &nnz_to_copy, const hiopVector& ix );
+  virtual void SetSubMatrixFromIdentitySelectRows(const double& scalar,
+                                   const long long& dest_row_st, const long long& dest_col_st,
+                                   const long long& dest_nnz_st, const int &nnz_to_copy, const hiopVector& ix );
+
+  /**
+  * @brief Copy a diagonal matrix to destination.
+  * This diagonal matrix is 'src_val'*identity matrix with size 'n_rows'x'n_rows'.
+  * The destination is defined from the start row 'row_dest_st' and start column 'col_dest_st'.
+  */
+  virtual void copyDiagMatrixToSubBlock(const double& src_val,
+                                         const long long& dest_row_st, const long long& dest_col_st,
+                                         const long long& dest_nnz_st, const int &nnz_to_copy);
+  virtual void copyDiagMatrixToSubBlockSelect(const hiopVector& x,
+                                   const long long& dest_row_st, const long long& dest_col_st,
+                                   const long long& dest_nnz_st, const int &nnz_to_copy, const hiopVector& ix);
+
   virtual double max_abs_value();
 
   virtual bool isfinite() const;
-  
+
   //virtual void print(int maxRows=-1, int maxCols=-1, int rank=-1) const;
   virtual void print(FILE* f=NULL, const char* msg=NULL, int maxRows=-1, int maxCols=-1, int rank=-1) const;
 
-  virtual void startingAtAddSubDiagonalToStartingAt(int diag_src_start, const double& alpha, 
-					    hiopVector& vec_dest, int vec_start, int num_elems=-1) const 
+  virtual void startingAtAddSubDiagonalToStartingAt(int diag_src_start, const double& alpha,
+					    hiopVector& vec_dest, int vec_start, int num_elems=-1) const
   {
     assert(0 && "This method should be used only for symmetric matrices.\n");
   }
+
+  virtual void convertToCSR(int *csr_kRowPtr, int *csr_jCol, double *csr_kVal,
+                    int *index_covert_CSR2Triplet, int *index_covert_extra_Diag2CSR);
 
   virtual hiopMatrixSparse* alloc_clone() const;
   virtual hiopMatrixSparse* new_copy() const;
@@ -158,6 +202,9 @@ public:
   inline const int* i_row() const { return iRow_; }
   inline const int* j_col() const { return jCol_; }
   inline const double* M() const { return values_; }
+
+  virtual long long numberOfOffDiagNonzeros() const {assert("not implemented"&&0);return 0;};
+
 #ifdef HIOP_DEEPCHECKS
   virtual bool assertSymmetry(double tol=1e-16) const { return false; }
   virtual bool checkIndexesAreOrdered() const;
@@ -185,13 +232,13 @@ protected:
   };
   mutable RowStartsInfo* row_starts_;
 private:
-  RowStartsInfo* allocAndBuildRowStarts() const; 
+  RowStartsInfo* allocAndBuildRowStarts() const;
 private:
-  hiopMatrixSparseTriplet() 
+  hiopMatrixSparseTriplet()
     : hiopMatrixSparse(0, 0, 0), iRow_(NULL), jCol_(NULL), values_(NULL)
   {
   }
-  hiopMatrixSparseTriplet(const hiopMatrixSparseTriplet&) 
+  hiopMatrixSparseTriplet(const hiopMatrixSparseTriplet&)
     : hiopMatrixSparse(0, 0, 0), iRow_(NULL), jCol_(NULL), values_(NULL)
   {
     assert(false);
@@ -199,14 +246,13 @@ private:
 };
 
 /** Sparse symmetric matrix in triplet format. Only the upper triangle is stored */
-class hiopMatrixSymSparseTriplet : public hiopMatrixSparseTriplet 
+class hiopMatrixSymSparseTriplet : public hiopMatrixSparseTriplet
 {
-public: 
+public:
   hiopMatrixSymSparseTriplet(int n, int nnz)
-    : hiopMatrixSparseTriplet(n, n, nnz)
-  {
-  }
-  virtual ~hiopMatrixSymSparseTriplet() {}  
+    : hiopMatrixSparseTriplet(n, n, nnz), nnz_offdiag_{-1}
+  {}
+  virtual ~hiopMatrixSymSparseTriplet() {}
 
   /** y = beta * y + alpha * this * x */
   virtual void timesVec(double beta,  hiopVector& y,
@@ -225,10 +271,10 @@ public:
     return timesVec(beta, y, alpha, x);
   }
 
-  virtual void transAddToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start,                                                                           
+  virtual void transAddToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start,
 				     double alpha, hiopMatrixDense& W) const;
 
-  virtual void addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start, 
+  virtual void addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start,
 							    double alpha, hiopMatrixDense& W) const;
 
    /* block of W += alpha*this, where W is sparse */
@@ -254,9 +300,11 @@ public:
    * index 'vec_start'. If num_elems>=0, 'num_elems' are copied; otherwise copies as many as
    * are available in 'vec_dest' starting at 'vec_start'
    */
-  virtual void startingAtAddSubDiagonalToStartingAt(int diag_src_start, const double& alpha, 
+  virtual void startingAtAddSubDiagonalToStartingAt(int diag_src_start, const double& alpha,
 					    hiopVector& vec_dest, int vec_start, int num_elems=-1) const;
-					    
+
+  virtual void convertToCSR(int *csr_kRowPtr, int *csr_jCol, double *csr_kVal,
+                    int *index_covert_CSR2Triplet, int *index_covert_extra_Diag2CSR){assert("not yet"&&0);};
 
   virtual hiopMatrixSparse* alloc_clone() const;
   virtual hiopMatrixSparse* new_copy() const;
@@ -264,11 +312,17 @@ public:
 #ifdef HIOP_DEEPCHECKS
   virtual bool assertSymmetry(double tol=1e-16) const { return true; }
 #endif
-  virtual bool isDiagonal() const 
+  virtual bool isDiagonal() const
   {
     for(int itnnz=0; itnnz<nnz_; itnnz++) if(iRow_[itnnz]!=jCol_[itnnz]) return false;
     return true;
   }
+
+  virtual long long numberOfOffDiagNonzeros() const;
+
+protected:
+  int nnz_offdiag_;     ///< number of nonzero entries
+
 };
 
 } //end of namespace

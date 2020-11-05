@@ -196,39 +196,32 @@ endif()
 #set(LAPACK_LIBRARIES "-lgfortran;/export/home/petra1/work/installs/xblas-1.0.248/libxblas.a;/home/petra1/work/installs/lapack-3.7.0/libblas.a;/home/petra1/work/installs/lapack-3.7.0/liblapack.a;/home/petra1/work/installs/lapack-3.7.0/liblapack.a;/home/petra1/work/installs/lapack-3.7.0/libblas.a;/export/home/petra1/work/installs/xblas-1.0.248/libxblas.a")
 
 
-# metis needed 
-if(NOT HIOP_METIS4_DIR)
-  set(HIOP_METIS4_DIR $ENV{HIOP_METIS4_DIR} )
-endif(NOT HIOP_METIS4_DIR)
+if(HIOP_SPARSE)
+  # metis needed 
+  set(HIOP_METIS_DIR CACHE PATH "Path to METIS directory")
+  include(FindMETIS)
+  target_link_libraries(hiop_math INTERFACE METIS)
 
-find_library(METIS4_LIBRARY NAME libmetis.a HINTS ${HIOP_METIS4_DIR}/lib PATHS ${HIOP_METIS4_DIR}/lib)
-find_path(HIOP_METIS4_INCLUDE_DIR NAME metis.h HINTS ${HIOP_METIS4_DIR}/include)
-if(HIOP_METIS4_INCLUDE_DIR AND METIS4_LIBRARY)
-  include_directories(${HIOP_METIS4_INCLUDE_DIR})
-  message(STATUS "Found METIS_4 libraries: ${METIS4_LIBRARY}")
-endif(HIOP_METIS4_INCLUDE_DIR AND METIS4_LIBRARY)
+  set(HIOP_COINHSL_DIR CACHE PATH "Path to COINHSL directory")
+  include(FindCOINHSL)
+  target_link_libraries(hiop_math INTERFACE COINHSL)
+  
+  #  find_library(COINHSL_LIBRARY libcoinhsl.so PATH HIOP_COINHSL_DIR)
+  #if(COINHSL_LIBRARY)
+  # message(STATUS "Found Coinhsl libraries: ${COINHSL_LIBRARY}")
+  #  target_link_libraries(hiop_math INTERFACE ${COINHSL_LIBRARY} -lgfortran)
+  #  message(STATUS "Build with sparse linear algebra" )
+  #else(COINHSL_LIBRARY)
+  #  message(STATUS "Can NOT Coinhsl libraries")
+  #  set(HIOP_SPARSE OFF CACHE BOOL "Build with sparse linear algebra" FORCE)
+  #  message(STATUS "Do NOT build with sparse linear algebra" )
+  #endif(COINHSL_LIBRARY)
+endif(HIOP_SPARSE)
 
-if( NOT HIOP_MA57_DIR)
-  #  set(HIOP_MA57_DIR CACHE PATH "Path to MA57 directory")
-  set(HIOP_MA57_DIR $ENV{HIOP_MA57_DIR} )
-endif(NOT HIOP_MA57_DIR)
-
-find_library(MA57_LIBRARY libma57.a PATH ${HIOP_MA57_DIR}/lib)
-if(MA57_LIBRARY)
-  message(STATUS "Found MA57 libraries: ${MA57_LIBRARY}")
-endif(MA57_LIBRARY)
-
-if(MA57_LIBRARY AND METIS4_LIBRARY)
-  #  target_link_libraries(hiop_math INTERFACE ${MA57_LIBRARY} ${METIS4_LIBRARY} -lgfortran)
-  target_link_libraries(hiop_math INTERFACE ${MA57_LIBRARY} -lgfortran)
-  set(HIOP_SPARSE ON CACHE BOOL "Build with sparse linear algebra" FORCE)
-  message(STATUS "Build with sparse linear algebra" )
-endif(MA57_LIBRARY AND METIS4_LIBRARY)
-
-message(STATUS "Start to find STRUMPACK" )
 
 # something wrong with cmake find_package, use hard code right now
 if(HIOP_USE_STRUMPACK)
+  message(STATUS "Start to find STRUMPACK" )
 # Look for CMake configuration file in RAJA installation
 #  find_package(STRUMPACK CONFIG
 #    PATHS ${STRUMPACK_DIR} ${STRUMPACK_DIR}/install_db/cmake/STRUMPACK
@@ -239,9 +232,6 @@ if(HIOP_USE_STRUMPACK)
 #  include_directories(${STRUMPACK_DIR}/include)
 #  find_library(STRUMPACK_LIBRARY libstrumpack.a PATH ${STRUMPACK_DIR}/lib)
 
-#  target_link_libraries(hiop_math INTERFACE ${STRUMPACK_LIBRARY})
-#  find_package(STRUMPACK REQUIRED)
-#  target_link_libraries(hiop_math INTERFACE STRUMPACK::strumpack)
 
   include_directories("/g/g92/chiang7/software/STRUMPACK/install_db/include")
 

@@ -6,13 +6,13 @@ using namespace strumpack;
 
 namespace hiop
 {
-  hiopLinSolverSparseSTRUMPACK::hiopLinSolverSparseSTRUMPACK(const int& n, const int& nnz, hiopNlpFormulation* nlp)
+  hiopLinSolverIndefSparseSTRUMPACK::hiopLinSolverIndefSparseSTRUMPACK(const int& n, const int& nnz, hiopNlpFormulation* nlp)
     : hiopLinSolverIndefSparse(n, nnz, nlp),
       kRowPtr_{nullptr},jCol_{nullptr},kVal_{nullptr},index_covert_CSR2Triplet_{nullptr},index_covert_extra_Diag2CSR_{nullptr},
       n_{n}, nnz_{0}
   {}
 
-  hiopLinSolverSparseSTRUMPACK::~hiopLinSolverSparseSTRUMPACK()
+  hiopLinSolverIndefSparseSTRUMPACK::~hiopLinSolverIndefSparseSTRUMPACK()
   {
     if(kRowPtr_)
       delete [] kRowPtr_;
@@ -27,7 +27,7 @@ namespace hiop
   }
 
 
-  void hiopLinSolverSparseSTRUMPACK::firstCall()
+  void hiopLinSolverIndefSparseSTRUMPACK::firstCall()
   {
     assert(n_==M.n() && M.n()==M.m());
     assert(n_>0);
@@ -142,7 +142,7 @@ namespace hiop
   }
 
 
-  int hiopLinSolverSparseSTRUMPACK::matrixChanged()
+  int hiopLinSolverIndefSparseSTRUMPACK::matrixChanged()
   {
     assert(n_==M.n() && M.n()==M.m());
     assert(n_>0);
@@ -173,7 +173,7 @@ namespace hiop
     return negEigVal;
   }
 
-  bool hiopLinSolverSparseSTRUMPACK::solve ( hiopVector& x_ )
+  bool hiopLinSolverIndefSparseSTRUMPACK::solve ( hiopVector& x_ )
   {
     assert(n_==M.n() && M.n()==M.m());
     assert(n_>0);
@@ -191,6 +191,29 @@ namespace hiop
 
     nlp_->runStats.linsolv.tmTriuSolves.stop();
     return 1;
+  }
+
+
+
+
+  hiopLinSolverNonSymSparseSTRUMPACK::hiopLinSolverNonSymSparseSTRUMPACK(const int& n, const int& nnz, hiopNlpFormulation* nlp)
+    : hiopLinSolverNonSymSparse(n, nnz, nlp),
+      kRowPtr_{nullptr},jCol_{nullptr},kVal_{nullptr},index_covert_CSR2Triplet_{nullptr},index_covert_extra_Diag2CSR_{nullptr},
+      n_{n}, nnz_{0}
+  {}
+
+  hiopLinSolverNonSymSparseSTRUMPACK::~hiopLinSolverNonSymSparseSTRUMPACK()
+  {
+    if(kRowPtr_)
+      delete [] kRowPtr_;
+    if(jCol_)
+      delete [] jCol_;
+    if(kVal_)
+      delete [] kVal_;
+    if(index_covert_CSR2Triplet_)
+      delete [] index_covert_CSR2Triplet_;
+    if(index_covert_extra_Diag2CSR_)
+      delete [] index_covert_extra_Diag2CSR_;
   }
 
 } //end namespace hiop

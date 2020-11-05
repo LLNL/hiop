@@ -183,6 +183,71 @@ private:
   hiopLinSolverIndefSparse* determineAndCreateLinsys(int nxd, int neq, int nineq, int nnz);
 };
 
+
+/*
+ * Solves KKTLinSysCompressedXYcYd by exploiting the sparse structure
+ *
+ * In general, the so-called XYcYd system has the form
+ * [   H   Jc^T  Jd^T | 0 |  0   0  -I   I   |  0   0   0   0  ] [  dx]   [    rx    ]
+ * [  Jc    0     0   | 0 |  0   0   0   0   |  0   0   0   0  ] [ dyc] = [   ryc    ]
+ * [  Jd    0     0   |-I |  0   0   0   0   |  0   0   0   0  ] [ dyd]   [   ryd    ]
+ * -----------------------------------------------------------------------------------
+ * [  0     0    -I   | 0 |  -I  I   0   0   |  0   0   0   0  ] [  dd]   [    rd    ]
+ * -----------------------------------------------------------------------------------
+ * [  0     0     0   |-I |  0   0   0   0   |  I   0   0   0  ] [ dvl]   [   rvl    ]
+ * [  0     0     0   | I |  0   0   0   0   |  0   I   0   0  ] [ dvu]   [   rvu    ]
+ * [ -I     0     0   | 0 |  0   0   0   0   |  0   0   I   0  ] [ dzl]   [   rzl    ]
+ * [  I     0     0   | 0 |  0   0   0   0   |  0   0   0   I  ] [ dzu]   [   rzu    ]
+ * -----------------------------------------------------------------------------------
+ * [  0     0     0   | 0 | Sl^d 0   0   0   | Vl   0   0   0  ] [dsdl]   [  rsdl    ]
+ * [  0     0     0   | 0 |  0  Su^d 0   0   |  0  Vu   0   0  ] [dsdu]   [  rsdu    ]
+ * [  0     0     0   | 0 |  0   0  Sl^x 0   |  0   0  Zl   0  ] [dsxl]   [  rsxl    ]
+ * [  0     0     0   | 0 |  0   0   0  Su^x |  0   0   0  Zu  ] [dsxu]   [  rsxu    ]
+ * where
+ *  - Jc and Jd present the sparse Jacobians for equalities and inequalities
+ *  - H is a sparse Hessian matrix
+ *
+ */
+class hiopKKTLinSysSparseFull : public hiopKKTLinSysFull
+{
+public:
+  hiopKKTLinSysSparseFull(hiopNlpFormulation* nlp);
+
+  virtual ~hiopKKTLinSysSparseFull();
+
+  bool update(const hiopIterate* iter,
+		      const hiopVector* grad_f,
+		      const hiopMatrix* Jac_c, const hiopMatrix* Jac_d, hiopMatrix* Hess);
+
+  bool solve( hiopVector& rx, hiopVector& ryc, hiopVector& ryd, hiopVector& rd,
+                      hiopVector& rvl, hiopVector& rvu, hiopVector& rzl, hiopVector& rzu,
+                      hiopVector& rsdl, hiopVector& rsdu, hiopVector& rsxl, hiopVector& rsxu,
+                      hiopVector& dx, hiopVector& dyc, hiopVector& dyd, hiopVector& dd,
+                      hiopVector& dvl, hiopVector& dvu, hiopVector& dzl, hiopVector& dzu,
+                      hiopVector& dsdl, hiopVector& dsdu, hiopVector& dsxl, hiopVector& dsxu);
+
+protected:
+  hiopLinSolverNonSymSparse* linSys_;
+  hiopVector *rhs_; //[rx_tilde, rd_tilde, ryc, ryd]
+
+  hiopVector *Hx_, *Hd_;
+
+  //just dynamic_cast-ed pointers
+  hiopNlpSparse* nlpSp_;
+  hiopMatrixSparse* HessSp_;
+  const hiopMatrixSparse* Jac_cSp_;
+  const hiopMatrixSparse* Jac_dSp_;
+
+  // -1 when disabled; otherwise acts like a counter, 0,1,... incremented each time
+  // 'solveCompressed' is called; activated by the 'write_kkt' option
+  int write_linsys_counter_;
+  hiopCSR_IO csr_writer_;
+
+private:
+  //placeholder for the code that decides which linear solver to used based on safe_mode_
+  hiopLinSolverNonSymSparse* determineAndCreateLinsys(const int &n, const int &n_con, const int &nnz);
+};
+
 } // end of namespace
 
 #endif
