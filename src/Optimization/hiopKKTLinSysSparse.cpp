@@ -365,7 +365,7 @@ namespace hiop
 			    n, neq+nineq, safe_mode_);
           linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
       }else{
-        hiopLinSolverSparseSTRUMPACK *p = new hiopLinSolverSparseSTRUMPACK(n, nnz, nlp_);
+        hiopLinSolverIndefSparseSTRUMPACK *p = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
         p->set_fake_inertia(neq + nineq);
         linSys_ = p;
       }
@@ -491,7 +491,7 @@ namespace hiop
       Msys.copyRowsFromSrcToDest(*Jac_dSp_, 0,   nineq,  nx+nd+neq,  dest_nnz_st); dest_nnz_st += Jac_dSp_->numberOfNonzeros();
 
       // minus identity matrix for slack variables
-      Msys.copyDiagMatrixToSubBlock(-1., nineq, nx+nd+neq, nx, dest_nnz_st); dest_nnz_st += nineq;
+      Msys.copyDiagMatrixToSubBlock(-1., nx+nd+neq, nx, dest_nnz_st, nineq); dest_nnz_st += nineq;
 
 	  //build the diagonal Hx = Dx + delta_wx
 	  if(NULL == Hx_) {
@@ -515,7 +515,7 @@ namespace hiop
 	  //add -delta_cc to diagonal block linSys starting at (nx+nd, nx+nd)
       Msys.copySubDiagonalEleFromConstant(nx+nd, neq, -delta_cc, dest_nnz_st); dest_nnz_st += neq;
 
-	  //add -delta_cd to diagonal block linSys starting at (nx+nd+nineq, nx+nd+nineq)
+	  //add -delta_cd to diagonal block linSys starting at (nx+nd+neq, nx+nd+neq)
       Msys.copySubDiagonalEleFromConstant(nx+nd+neq, nineq, -delta_cd, dest_nnz_st); dest_nnz_st += nineq;
 
 	  /* we've just done
@@ -686,7 +686,7 @@ namespace hiop
 			    n, neq+nineq, safe_mode_);
           linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
       }else{
-        hiopLinSolverSparseSTRUMPACK *p = new hiopLinSolverSparseSTRUMPACK(n, nnz, nlp_);
+        hiopLinSolverIndefSparseSTRUMPACK*p = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
         p->set_fake_inertia(neq + nineq);
         linSys_ = p;
       }
@@ -695,6 +695,409 @@ namespace hiop
   }
 
 
+
+  /* *************************************************************************
+   * For class hiopKKTLinSysSparseFull
+   * *************************************************************************
+   */
+  hiopKKTLinSysSparseFull::hiopKKTLinSysSparseFull(hiopNlpFormulation* nlp)
+    : hiopKKTLinSysFull(nlp), linSys_(NULL), rhs_(NULL),
+      Hx_(NULL), HessSp_(NULL), Jac_cSp_(NULL), Jac_dSp_(NULL),
+      write_linsys_counter_(-1), csr_writer_(nlp)
+  {
+    nlpSp_ = dynamic_cast<hiopNlpSparse*>(nlp_);
+    assert(nlpSp_);
+  }
+
+  hiopKKTLinSysSparseFull::~hiopKKTLinSysSparseFull()
+  {
+    delete rhs_;
+    delete linSys_;
+    delete Hx_;
+    delete Hd_;
+  }
+
+  hiopLinSolverNonSymSparse*
+  hiopKKTLinSysSparseFull::determineAndCreateLinsys(const int &n, const int &n_con, const int &nnz)
+  {
+    if(NULL==linSys_)
+    {
+      nlp_->log->printf(hovWarning,
+			    "KKT_SPARSE_FULL_KKT linsys: STRUMPACK size %d (%d cons) (safe_mode=%d)\n",
+			    n, n_con, safe_mode_);
+      hiopLinSolverNonSymSparseSTRUMPACK *p = new hiopLinSolverNonSymSparseSTRUMPACK(n, nnz, nlp_);
+      p->set_fake_inertia(n_con);
+      linSys_ = p;
+    }
+    return linSys_;
+  }
+
+  bool hiopKKTLinSysSparseFull::update(const hiopIterate* iter,
+					       const hiopVector* grad_f,
+					       const hiopMatrix* Jac_c,
+					       const hiopMatrix* Jac_d,
+					       hiopMatrix* Hess)
+  {
+    if(!nlpSp_) { assert(false); return false; }
+
+    nlp_->runStats.tmSolverInternal.start();
+    nlp_->runStats.kkt.tmUpdateInit.start();
+
+    iter_ = iter;
+    grad_f_ = dynamic_cast<const hiopVectorPar*>(grad_f);
+    Jac_c_ = Jac_c; Jac_d_ = Jac_d; Hess_=Hess;
+
+    HessSp_ = dynamic_cast<hiopMatrixSymSparseTriplet*>(Hess);
+    if(!HessSp_) { assert(false); return false; }
+
+    Jac_cSp_ = dynamic_cast<const hiopMatrixSparseTriplet*>(Jac_c);
+    if(!Jac_cSp_) { assert(false); return false; }
+
+    Jac_dSp_ = dynamic_cast<const hiopMatrixSparseTriplet*>(Jac_d);
+    if(!Jac_dSp_) { assert(false); return false; }
+
+    long long nx = HessSp_->n(), nd=Jac_dSp_->m(), neq=Jac_cSp_->m(), nineq=Jac_dSp_->m(),
+              ndl = nlp_->m_ineq_low(), ndu = nlp_->m_ineq_upp(), nxl = nlp_->n_low(), nxu = nlp_->n_upp();
+
+    // note that hess may be saved as a triangular matrix
+    int n1st = 0;
+    int n2st = nx + neq + nineq;
+    int n3st = n2st + nd;
+    int n4st = n3st + ndl + ndu + nxl + nxu; // shortcut for each subbloock
+    int n = n4st + ndl + ndu + nxl + nxu;
+    int n_reg = n3st;
+
+    int required_num_neg_eig = neq+nineq;
+    int nnz = 2*HessSp_->numberOfOffDiagNonzeros() + 2*Jac_cSp_->numberOfNonzeros() + 2*Jac_dSp_->numberOfNonzeros()
+            + 2*(nd + ndl + ndu + nxl + nxu + ndl + ndu + nxl + nxu)
+            + n_reg;
+
+    //
+    //based on safe_mode_, decide whether to go with the nopiv (fast) or Bunch-Kaufman (stable) linear solve
+    //
+    linSys_ = determineAndCreateLinsys(n, required_num_neg_eig, nnz);
+
+
+
+/*
+hiopMatrixSparseTriplet::SetSubMatrixFromSrc(const hiopMatrix& src_gen,
+                                   const long long& dest_row_st, const long long& dest_col_st,
+                                   const long long& dest_nnz_st)
+*/
+
+    hiopMatrixSparseTriplet& Msys = linSys_->sysMatrix();
+    if(perf_report_) {
+      nlp_->log->printf(hovSummary,
+			"KKT_Sparse_Full linsys: Full KKT linear system size: %d\n",
+			Msys.n());
+    }
+
+    //
+    //factorization + inertia correction if needed
+    //
+    const size_t max_ic_cor = 10;
+    size_t num_ic_cor = 0;
+
+    double delta_wx, delta_wd, delta_cc, delta_cd;
+    if(!perturb_calc_->compute_initial_deltas(delta_wx, delta_wd, delta_cc, delta_cd)) {
+      nlp_->log->printf(hovWarning,
+			"KKT_Sparse_Full linsys: IC perturbation on new linsys failed.\n");
+      return false;
+    }
+
+    nlp_->runStats.kkt.tmUpdateInit.stop();
+
+    while(num_ic_cor<=max_ic_cor) {
+      assert(delta_wx == delta_wd && "something went wrong with IC");
+      assert(delta_cc == delta_cd && "something went wrong with IC");
+      nlp_->log->printf(hovScalars,
+			"KKT_Sparse_Full linsys: delta_w=%12.5e delta_c=%12.5e (ic %d)\n",
+			delta_wx, delta_cc, num_ic_cor);
+
+      //
+      //the update of the linear system, including IC perturbations
+      //
+      {
+        nlp_->runStats.kkt.tmUpdateLinsys.start();
+
+        Msys.setToZero();
+
+        //
+        // copy Jac and Hes to the full iterate matrix, use Dx_ and Dd_ as temp vector
+        //
+        long long dest_nnz_st{0};
+
+        // H is triangular
+        // [   H   Jc^T  Jd^T | 0 |  0   0  -I   I   |  0   0   0   0  ] [  dx]   [    rx    ]
+        Msys.SetSubMatrixFromSrc(*HessSp_, 0, 0, dest_nnz_st); dest_nnz_st += HessSp_->numberOfNonzeros();
+
+        Msys.SetSubMatrixFromSrcTrans(*Jac_cSp_, 0, nx, dest_nnz_st); dest_nnz_st += Jac_cSp_->numberOfNonzeros();
+        Msys.SetSubMatrixFromSrcTrans(*Jac_dSp_, 0, nx+neq, dest_nnz_st); dest_nnz_st += Jac_dSp_->numberOfNonzeros();
+        Msys.SetSubMatrixFromIdentitySelectCols(-1., 0, n3st+ndl+ndu, dest_nnz_st, nxl, nlp_->get_ixl()); dest_nnz_st += nxl;
+        Msys.SetSubMatrixFromIdentitySelectCols(1., 0, n3st+ndl+ndu+nxl, dest_nnz_st, nxu, nlp_->get_ixu()); dest_nnz_st += nxu;
+
+        // [  Jc    0     0   | 0 |  0   0   0   0   |  0   0   0   0  ] [ dyc] = [   ryc    ]
+        Msys.SetSubMatrixFromSrc(*Jac_cSp_, nx, 0, dest_nnz_st); dest_nnz_st += Jac_cSp_->numberOfNonzeros();
+
+        // [  Jd    0     0   |-I |  0   0   0   0   |  0   0   0   0  ] [ dyd]   [   ryd    ]
+        Msys.SetSubMatrixFromSrc(*Jac_dSp_, nx+neq, 0, dest_nnz_st); dest_nnz_st += Jac_dSp_->numberOfNonzeros();
+        Msys.copyDiagMatrixToSubBlock(-1., nx+neq, n2st, dest_nnz_st, nd); dest_nnz_st += nd;
+
+        // [  0     0    -I   | 0 |  -I  I   0   0   |  0   0   0   0  ] [  dd]   [    rd    ]
+        Msys.copyDiagMatrixToSubBlock(-1., n2st, nx+neq, dest_nnz_st, nd); dest_nnz_st += nd;
+        Msys.SetSubMatrixFromIdentitySelectCols(-1., n2st, n3st, dest_nnz_st, ndl, nlp_->get_idl()); dest_nnz_st += ndl;
+        Msys.SetSubMatrixFromIdentitySelectCols(1., n2st, n3st+ndl, dest_nnz_st, ndu, nlp_->get_idu()); dest_nnz_st += ndu;
+
+        // part3
+        // [  0     0     0   |-I |  0   0   0   0   |  I   0   0   0  ] [ dvl]   [   rvl    ]
+        Msys.SetSubMatrixFromIdentitySelectRows(-1., n3st, n2st, dest_nnz_st, ndl, nlp_->get_idl()); dest_nnz_st += ndl;
+        Msys.copyDiagMatrixToSubBlock(1., n3st, n4st, dest_nnz_st, ndl); dest_nnz_st += ndl;
+
+        // [  0     0     0   | I |  0   0   0   0   |  0   I   0   0  ] [ dvu]   [   rvu    ]
+        Msys.SetSubMatrixFromIdentitySelectRows(1., n3st+ndl, n2st, dest_nnz_st, ndu, nlp_->get_idu()); dest_nnz_st += ndu;
+        Msys.copyDiagMatrixToSubBlock(1., n3st+ndl, n4st+ndl, dest_nnz_st, ndu); dest_nnz_st += ndu;
+
+        // [ -I     0     0   | 0 |  0   0   0   0   |  0   0   I   0  ] [ dzl]   [   rzl    ]
+        Msys.SetSubMatrixFromIdentitySelectRows(-1., n3st+ndl+ndu, 0, dest_nnz_st, nxl, nlp_->get_ixl()); dest_nnz_st += nxl;
+        Msys.copyDiagMatrixToSubBlock(1., n3st+ndl+ndu, n4st+ndl+ndu, dest_nnz_st, nxl); dest_nnz_st += nxl;
+
+        // [  I     0     0   | 0 |  0   0   0   0   |  0   0   0   I  ] [ dzu]   [   rzu    ]
+        Msys.SetSubMatrixFromIdentitySelectRows(1., n3st+ndl+ndu+nxl, 0, dest_nnz_st, nxu, nlp_->get_ixu()); dest_nnz_st += nxu;
+        Msys.copyDiagMatrixToSubBlock(1., n3st+ndl+ndu+nxl, n4st+ndl+ndu+nxl, dest_nnz_st, nxu); dest_nnz_st += nxu;
+
+        // part 4
+        // [  0     0     0   | 0 | Sl^d 0   0   0   | Vl   0   0   0  ] [dsdl]   [  rsdl    ]
+        Msys.copyDiagMatrixToSubBlockSelect(*iter_->sdl, n4st, n3st, dest_nnz_st, ndl, nlp_->get_idl()); dest_nnz_st += ndl;
+        Msys.copyDiagMatrixToSubBlockSelect(*iter_->vl, n4st, n3st, dest_nnz_st, ndl, nlp_->get_idl()); dest_nnz_st += ndl;
+
+        // [  0     0     0   | 0 |  0  Su^d 0   0   |  0  Vu   0   0  ] [dsdu]   [  rsdu    ]
+        Msys.copyDiagMatrixToSubBlockSelect(*iter_->sdu, n4st+ndl, n3st+ndl, dest_nnz_st, ndu, nlp_->get_idu()); dest_nnz_st += ndu;
+        Msys.copyDiagMatrixToSubBlockSelect(*iter_->vu, n4st+ndl, n3st+ndl, dest_nnz_st, ndu, nlp_->get_idu()); dest_nnz_st += ndu;
+
+        // [  0     0     0   | 0 |  0   0  Sl^x 0   |  0   0  Zl   0  ] [dsxl]   [  rsxl    ]
+        Msys.copyDiagMatrixToSubBlockSelect(*iter_->sxl, n4st+ndl+ndu, n3st+ndl+ndu, dest_nnz_st, nxl, nlp_->get_ixl()); dest_nnz_st += nxl;
+        Msys.copyDiagMatrixToSubBlockSelect(*iter_->zl, n4st+ndl+ndu, n3st+ndl+ndu, dest_nnz_st, nxl, nlp_->get_ixl()); dest_nnz_st += nxl;
+
+        // [  0     0     0   | 0 |  0   0   0  Su^x |  0   0   0  Zu  ] [dsxu]   [  rsxu    ]
+        Msys.copyDiagMatrixToSubBlockSelect(*iter_->sxu, n4st+ndl+ndu+nxl, n3st+ndl+ndu+nxl, dest_nnz_st, nxu, nlp_->get_ixu()); dest_nnz_st += nxu;
+        Msys.copyDiagMatrixToSubBlockSelect(*iter_->zu, n4st+ndl+ndu+nxl, n3st+ndl+ndu+nxl, dest_nnz_st, nxu, nlp_->get_ixu()); dest_nnz_st += nxu;
+
+
+        //build the diagonal Hx = delta_wx
+        if(NULL == Hx_) {
+          Hx_ = LinearAlgebraFactory::createVector(nx); assert(Hx_);
+        }
+        Hx_->setToZero();
+        Hx_->addConstant(delta_wx);
+        Msys.copySubDiagonalEleFromVec(0, nx, *Hx_, dest_nnz_st); dest_nnz_st += nx;
+
+        //build the diagonal Hd = delta_wd
+        if(NULL == Hd_) {
+          Hd_ = LinearAlgebraFactory::createVector(nd); assert(Hd_);
+        }
+        Hd_->setToZero();
+        Hd_->addConstant(delta_wd);
+        Msys.copySubDiagonalEleFromVec(n2st, nd, *Hd_, dest_nnz_st); dest_nnz_st += nd;
+
+        //add -delta_cc to diagonal block linSys starting at (nx, nx)
+        Msys.copySubDiagonalEleFromConstant(nx, neq, -delta_cc, dest_nnz_st); dest_nnz_st += neq;
+
+        //add -delta_cd to diagonal block linSys starting at (nx+neq, nx+neq)
+        Msys.copySubDiagonalEleFromConstant(nx+nd+neq, nineq, -delta_cd, dest_nnz_st); dest_nnz_st += nineq;
+
+        assert(dest_nnz_st==nnz);
+        nlp_->log->write("KKT_SPARSE_FULL linsys:", Msys, hovMatrices);
+        nlp_->runStats.kkt.tmUpdateLinsys.stop();
+      }
+
+      //write matrix to file if requested
+      if(nlp_->options->GetString("write_kkt") == "yes") write_linsys_counter_++;
+
+      nlp_->runStats.linsolv.start_linsolve();
+      nlp_->runStats.kkt.tmUpdateInnerFact.start();
+
+      //factorization
+      int n_neg_eig = linSys_->matrixChanged();
+
+      nlp_->runStats.kkt.tmUpdateInnerFact.stop();
+
+      if(Jac_cSp_->m()+Jac_dSp_->m()>0)
+      {
+        if(n_neg_eig < 0) {
+          //matrix singular
+          nlp_->log->printf(hovScalars,
+			    "KKT_SPARSE_FULL linsys is singular. Regularization will be attempted...\n");
+
+          if(!perturb_calc_->compute_perturb_singularity(delta_wx, delta_wd, delta_cc, delta_cd)) {
+            nlp_->log->printf(hovWarning,
+			      "KKT_SPARSE_FULL linsys: computing singularity perturbation failed.\n");
+            return false;
+          }
+        } else if(n_neg_eig != Jac_cSp_->m() + Jac_dSp_->m()) {
+          //wrong inertia
+          nlp_->log->printf(hovScalars,
+			    "KKT_SPARSE_FULL linsys negative eigs mismatch: has %d expected %d.\n",
+			    n_neg_eig,  Jac_cSp_->m()+Jac_dSp_->m());
+
+          if(n_neg_eig < Jac_cSp_->m() + Jac_dSp_->m())
+            nlp_->log->printf(hovWarning, "KKT_SPARSE_XYcYd linsys negative eigs abnormality\n");
+
+          if(!perturb_calc_->compute_perturb_wrong_inertia(delta_wx, delta_wd, delta_cc, delta_cd)) {
+            nlp_->log->printf(hovWarning,
+			      "KKT_SPARSE_FULL linsys: computing inertia perturbation failed.\n");
+            return false;
+          }
+
+        } else {
+          //all is good
+          break;
+        }
+      }
+      else if(n_neg_eig != 0)
+      {
+        //correct for wrong intertia
+        nlp_->log->printf(hovScalars,
+			 "KKT_SPARSE_FULL linsys has wrong inertia (no constraints): factoriz "
+			 "ret code/num negative eigs %d\n.", n_neg_eig);
+        if(!perturb_calc_->compute_perturb_wrong_inertia(delta_wx, delta_wd, delta_cc, delta_cd)) {
+          nlp_->log->printf(hovWarning,
+			   "KKT_SPARSE_FULL linsys: computing inertia perturbation failed (2).\n");
+          return false;
+        }
+      } else {
+        //all is good
+        break;
+      }
+
+      //will do an inertia correction
+      num_ic_cor++;
+      nlp_->runStats.kkt.nUpdateICCorr++;
+    } // end of ic while
+
+    if(num_ic_cor>max_ic_cor) {
+      nlp_->log->printf(hovError,
+			"KKT_SPARSE_FULL linsys: max number (%d) of inertia corrections reached.\n",
+			max_ic_cor);
+      return false;
+    }
+    nlp_->runStats.tmSolverInternal.stop();
+    return true;
+  }
+
+
+  bool hiopKKTLinSysSparseFull::solve( hiopVector& rx, hiopVector& ryc, hiopVector& ryd, hiopVector& rd,
+                      hiopVector& rvl, hiopVector& rvu, hiopVector& rzl, hiopVector& rzu,
+                      hiopVector& rsdl, hiopVector& rsdu, hiopVector& rsxl, hiopVector& rsxu,
+                      hiopVector& dx, hiopVector& dyc, hiopVector& dyd, hiopVector& dd,
+                      hiopVector& dvl, hiopVector& dvu, hiopVector& dzl, hiopVector& dzu,
+                      hiopVector& dsdl, hiopVector& dsdu, hiopVector& dsxl, hiopVector& dsxu)
+  {
+    if(!nlpSp_)   { assert(false); return false; }
+    if(!HessSp_)  { assert(false); return false; }
+    if(!Jac_cSp_) { assert(false); return false; }
+    if(!Jac_dSp_) { assert(false); return false; }
+
+    nlp_->runStats.kkt.tmSolveRhsManip.start();
+
+    long long nx=rx.get_size(), nd=rd.get_size(), neq=ryc.get_size(), nineq=ryd.get_size(),
+              ndl=rvl.get_size(), ndu=rvu.get_size(), nxl=rzl.get_size(), nxu=rzu.get_size();
+    long long nxsp=Hx_->get_size();
+    assert(nxsp==nx);
+    int n = nx + neq + nineq + nd + ndl + ndu + nxl + nxu + ndl + ndu + nxl + nxu;
+
+    if(rhs_ == NULL) rhs_ = LinearAlgebraFactory::createVector(n);
+
+    {//write to log
+      nlp_->log->write("RHS KKT_SPARSE_FULL rx: ", rx,  hovIteration);
+      nlp_->log->write("RHS KKT_SPARSE_FULL ryc:", ryc, hovIteration);
+      nlp_->log->write("RHS KKT_SPARSE_FULL ryd:", ryd, hovIteration);
+      nlp_->log->write("RHS KKT_SPARSE_FULL rd: ", rd,  hovIteration);
+      nlp_->log->write("RHS KKT_SPARSE_FULL rvl: ", rvl,  hovIteration);
+      nlp_->log->write("RHS KKT_SPARSE_FULL rvu: ", rvu,  hovIteration);
+      nlp_->log->write("RHS KKT_SPARSE_FULL rzl: ", rzl,  hovIteration);
+      nlp_->log->write("RHS KKT_SPARSE_FULL rzu: ", rzu,  hovIteration);
+      nlp_->log->write("RHS KKT_SPARSE_FULL rsdl: ", rsdl,  hovIteration);
+      nlp_->log->write("RHS KKT_SPARSE_FULL rsdu: ", rsdu,  hovIteration);
+      nlp_->log->write("RHS KKT_SPARSE_FULL rsxl: ", rsxl,  hovIteration);
+      nlp_->log->write("RHS KKT_SPARSE_FULL rsxu: ", rsxu,  hovIteration);
+    }
+
+    //
+    // form the rhs for the sparse linSys
+    //
+    rx.copyToStarting(*rhs_, 0);
+    ryc.copyToStarting(*rhs_, nx);
+    ryd.copyToStarting(*rhs_, nx+neq);
+    rd.copyToStarting(*rhs_, nx + neq + nineq);
+    rvl.copyToStarting(*rhs_, nx + neq + nineq + nd);
+    rvu.copyToStarting(*rhs_, nx + neq + nineq + nd + ndl);
+    rzl.copyToStarting(*rhs_, nx + neq + nineq + nd + ndl + ndu);
+    rzu.copyToStarting(*rhs_, nx + neq + nineq + nd + ndl + ndu + nxl);
+    rsdl.copyToStarting(*rhs_, nx + neq + nineq + nd + ndl + ndu + nxl + nxu);
+    rsdu.copyToStarting(*rhs_, nx + neq + nineq + nd + ndl + ndu + nxl + nxu + ndl);
+    rsxl.copyToStarting(*rhs_, nx + neq + nineq + nd + ndl + ndu + nxl + nxu + ndl + ndu);
+    rsxu.copyToStarting(*rhs_, nx + neq + nineq + nd + ndl + ndu + nxl + nxu + ndl + ndu + nxl);
+
+    if(write_linsys_counter_>=0)
+      csr_writer_.writeRhsToFile(*rhs_, write_linsys_counter_);
+
+    nlp_->runStats.kkt.tmSolveRhsManip.stop();
+
+    nlp_->runStats.kkt.tmSolveTriangular.start();
+
+    //
+    // solve
+    //
+    bool linsol_ok = linSys_->solve(*rhs_);
+    nlp_->runStats.kkt.tmSolveTriangular.stop();
+    nlp_->runStats.linsolv.end_linsolve();
+
+    if(perf_report_) {
+      nlp_->log->printf(hovSummary, "(summary for linear solver from KKT_SPARSE_XDYcYd)\n%s",
+			nlp_->runStats.linsolv.get_summary_last_solve().c_str());
+    }
+
+    if(write_linsys_counter_>=0)
+      csr_writer_.writeSolToFile(*rhs_, write_linsys_counter_);
+
+    if(false==linsol_ok) return false;
+
+    nlp_->runStats.kkt.tmSolveRhsManip.start();
+
+    //
+    // unpack
+    //
+    rhs_->startingAtCopyToStartingAt(0,          dx,  0);
+    rhs_->startingAtCopyToStartingAt(nx,            dyc,  0);
+    rhs_->startingAtCopyToStartingAt(nx+neq,           dyd,  0);
+    rhs_->startingAtCopyToStartingAt(nx+neq+nineq,         dd,  0);
+    rhs_->startingAtCopyToStartingAt(nx+neq+nineq+nd,         dvl,  0);
+    rhs_->startingAtCopyToStartingAt(nx+neq+nineq+nd+ndl,         dvu,  0);
+    rhs_->startingAtCopyToStartingAt(nx+neq+nineq+nd+ndl+ndu,         dzl,  0);
+    rhs_->startingAtCopyToStartingAt(nx+neq+nineq+nd+ndl+ndu+nxl,         dzu,  0);
+    rhs_->startingAtCopyToStartingAt(nx+neq+nineq+nd+ndl+ndu+nxl+nxu,         dsdl,  0);
+    rhs_->startingAtCopyToStartingAt(nx+neq+nineq+nd+ndl+ndu+nxl+nxu+ndl,         dsdu,  0);
+    rhs_->startingAtCopyToStartingAt(nx+neq+nineq+nd+ndl+ndu+nxl+nxu+ndl+ndu,         dsxl,  0);
+    rhs_->startingAtCopyToStartingAt(nx+neq+nineq+nd+ndl+ndu+nxl+nxu+ndl+ndu+nxl,         dsxu,  0);
+
+    {//write to log
+      nlp_->log->write("RHS KKT_SPARSE_FULL dx: ", dx,  hovIteration);
+      nlp_->log->write("RHS KKT_SPARSE_FULL dyc:", dyc, hovIteration);
+      nlp_->log->write("RHS KKT_SPARSE_FULL dyd:", dyd, hovIteration);
+      nlp_->log->write("RHS KKT_SPARSE_FULL dd: ", dd,  hovIteration);
+      nlp_->log->write("RHS KKT_SPARSE_FULL dvl: ", dvl,  hovIteration);
+      nlp_->log->write("RHS KKT_SPARSE_FULL dvu: ", dvu,  hovIteration);
+      nlp_->log->write("RHS KKT_SPARSE_FULL dzl: ", dzl,  hovIteration);
+      nlp_->log->write("RHS KKT_SPARSE_FULL dzu: ", dzu,  hovIteration);
+      nlp_->log->write("RHS KKT_SPARSE_FULL dsdl: ", dsdl,  hovIteration);
+      nlp_->log->write("RHS KKT_SPARSE_FULL dsdu: ", dsdu,  hovIteration);
+      nlp_->log->write("RHS KKT_SPARSE_FULL dsxl: ", dsxl,  hovIteration);
+      nlp_->log->write("RHS KKT_SPARSE_FULL dsxu: ", dsxu,  hovIteration);
+    }
+
+    nlp_->runStats.kkt.tmSolveRhsManip.stop();
+    return true;
+  }
 
 
 

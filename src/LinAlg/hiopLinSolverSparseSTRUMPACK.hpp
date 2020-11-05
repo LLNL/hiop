@@ -72,11 +72,11 @@ using namespace strumpack;
 namespace hiop {
 
 /** Wrapper for STRUMPACK */
-class hiopLinSolverSparseSTRUMPACK: public hiopLinSolverIndefSparse
+class hiopLinSolverIndefSparseSTRUMPACK: public hiopLinSolverIndefSparse
 {
 public:
-  hiopLinSolverSparseSTRUMPACK(const int& n, const int& nnz, hiopNlpFormulation* nlp);
-  virtual ~hiopLinSolverSparseSTRUMPACK();
+  hiopLinSolverIndefSparseSTRUMPACK(const int& n, const int& nnz, hiopNlpFormulation* nlp);
+  virtual ~hiopLinSolverIndefSparseSTRUMPACK();
 
   /** Triggers a refactorization of the matrix, if necessary.
    * Overload from base class. */
@@ -106,10 +106,6 @@ private:
 
   int nFakeNegEigs_;
 
-
-  /** store as a sparse symmetric indefinite matrix */
-//  const hiopMatrixSymSparseTriplet& m_sys_mat;
-
   // strumpack object
    StrumpackSparseSolver<double,int> spss;
 
@@ -126,7 +122,64 @@ public:
     nFakeNegEigs_ = nNegEigs;
   }
 
+friend class hiopLinSolverNonSymSparseSTRUMPACK;
+
 };
+
+class hiopLinSolverNonSymSparseSTRUMPACK: public hiopLinSolverNonSymSparse
+{
+public:
+  hiopLinSolverNonSymSparseSTRUMPACK(const int& n, const int& nnz, hiopNlpFormulation* nlp);
+
+  virtual ~hiopLinSolverNonSymSparseSTRUMPACK();
+
+  /** Triggers a refactorization of the matrix, if necessary.
+   * Overload from base class. */
+  int matrixChanged(){return hiopLinSolverNonSymSparseSTRUMPACK::matrixChanged();};
+
+  /** solves a linear system.
+   * param 'x' is on entry the right hand side(s) of the system to be solved. On
+   * exit is contains the solution(s).  */
+  bool solve ( hiopVector& x_ ) {return hiopLinSolverNonSymSparseSTRUMPACK::solve(x_);};
+
+//protected:
+//  int* ipiv;
+//  hiopVector* dwork;
+
+private:
+
+  int      m_;                         // number of rows of the whole matrix
+  int      n_;                         // number of cols of the whole matrix
+  int      nnz_;                       // number of nonzeros in the matrix
+
+  int     *kRowPtr_;                   // row pointer for nonzeros
+  int     *jCol_;                      // column indexes for nonzeros
+  double  *kVal_;                      // storage for sparse matrix
+
+  int *index_covert_CSR2Triplet_;
+  int *index_covert_extra_Diag2CSR_;
+
+  int nFakeNegEigs_;
+
+  // strumpack object
+   StrumpackSparseSolver<double,int> spss;
+
+public:
+
+  /** called the very first time a matrix is factored. Allocates space
+   * for the factorization and performs ordering */
+  void firstCall() {return hiopLinSolverNonSymSparseSTRUMPACK::firstCall();};
+//  virtual void diagonalChanged( int idiag, int extent );
+
+  void inline set_fake_inertia(int nNegEigs)
+  {
+    nFakeNegEigs_ = nNegEigs;
+  }
+
+friend class hiopLinSolverIndefSparseSTRUMPACK;
+
+};
+
 
 } // end namespace
 #endif

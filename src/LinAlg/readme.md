@@ -62,6 +62,6 @@ Only upper triangular nonzero entries should be specified, accessed, and maintai
 
 ## Obtaining matrices from HiOp
 
-One can instruct HiOp to save the KKT linear systems solved internally during the optimization by setting 'write_kkt' string option to 'yes'. Which linear system is saved depends on the configuration of HiOp's internal linear algebra via the option 'KKTLinsys' (possible values 'xycyd' and 'xdycyd').
+One can instruct HiOp to save the KKT linear systems solved internally during the optimization by setting 'write_kkt' string option to 'yes'. Which linear system is saved depends on the configuration of HiOp's internal linear algebra via the option 'KKTLinsys' (possible values 'xycyd', 'xdycyd' and 'full').
 
 The output format is based on compressed sparse row (CSR) described [here](csr_iajaaa.md). A Matlab script that loads and solves such linear systems is provided [here](load_kkt_mat.m).

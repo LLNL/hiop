@@ -201,11 +201,11 @@ void hiopOptions::registerOptions()
   }
   //linear algebra
   {
-    vector<string> range(3); range[0] = "auto"; range[1]="xycyd"; range[2]="xdycyd";
+    vector<string> range(4); range[0] = "auto"; range[1]="xycyd"; range[2]="xdycyd"; range[3]="full";
     registerStrOption("KKTLinsys", "auto", range,
 		      "Type of KKT linear system used internally: decided by HiOp 'auto' "
-		      "(default option), the more compact 'XYcYd' or the more stable 'XDYcYd'. "
-		      "The last two are only available with Hessian=analyticalExact");
+		      "(default option), the more compact 'XYcYd, the more stable 'XDYcYd', or the full-size non-symmetric 'full' "
+		      "The last three are only available with Hessian=analyticalExact");
   }
   {
     vector<string> range(3); range[0]="stable"; range[1]="speculative"; range[2]="forcequick";
@@ -321,7 +321,7 @@ void hiopOptions::ensureConsistence()
 
   if(GetString("Hessian")=="quasinewton_approx") {
     string strKKT = GetString("KKTLinsys");
-    if(strKKT=="xycyd" || strKKT=="xdycyd")
+    if(strKKT=="xycyd" || strKKT=="xdycyd" || strKKT=="full")
       log_printf(hovWarning,
 		 "The option 'KKTLinsys=%s' not valid with 'Hessian=quasiNewtonApprox'. "
 		 "Will use 'KKTLinsys=auto'\n", strKKT.c_str());
