@@ -843,13 +843,13 @@ void hiopMatrixSparseTriplet::SetSubMatrixFromIdentitySelectRows(const double& s
 }
 
 
-long long hiopMatrixSymSparseTriplet::numberOfOffDiagNonzeros() const
+long long hiopMatrixSymSparseTriplet::numberOfOffDiagNonzeros()
 {
   if(-1==nnz_offdiag_){
-    int nnz_temp{nnz_};
+    nnz_offdiag_= nnz_;
     for(auto k=0;k<nnz_;k++){
       if(iRow_[k]==jCol_[k])
-        nnz_temp--;
+        nnz_offdiag_--;
     }
   }
   return nnz_offdiag_;
@@ -857,70 +857,98 @@ long long hiopMatrixSymSparseTriplet::numberOfOffDiagNonzeros() const
 
 
 // Generate the three vectors A, IA, JA
-void hiopMatrixSparseTriplet::convertToCSR(int *csr_kRowPtr, int *csr_jCol, double *csr_kVal,
-                                           int *index_covert_CSR2Triplet, int *index_covert_extra_Diag2CSR)
+void hiopMatrixSparseTriplet::convertToCSR(int &csr_nnz, int **csr_kRowPtr_in, int **csr_jCol_in, double **csr_kVal_in,
+                                           int **index_covert_CSR2Triplet_in, int **index_covert_extra_Diag2CSR_in,
+                                           std::unordered_map<int,int> &extra_diag_nnz_map)
 {
-  assert(csr_kRowPtr==nullptr && index_covert_CSR2Triplet==nullptr);
+  assert(*csr_kRowPtr_in==nullptr && *index_covert_CSR2Triplet_in==nullptr);
   int m = this->m();
   int n = this->n();
   int nnz = numberOfNonzeros();
 
-  csr_kRowPtr = new int[n+1]{0};
+  *csr_kRowPtr_in = new int[n+1]{};
 
-  int csr_nnz = 0;
+  int *csr_kRowPtr = *csr_kRowPtr_in;
 
+  csr_nnz = 0;
   /* transfer triplet form to CSR form
   * note that input is in lower triangular triplet form. First part is the sparse matrix, and the 2nd part are the additional diagonal elememts
   */
+  int n_diag_val=0;
+  std::unordered_map<int,int> extra_diag_nnz_map_temp;
+  int *diag_defined = new int[n]{};
 
   // compute nnz in each row
   {
+    for(int i=0;i<n;i++) diag_defined[i]=-1;
     // off-diagonal part
     csr_kRowPtr[0]=0;
-    for(int k=0;k<nnz-n;k++){
+    for(int k=0;k<nnz;k++){
       if(iRow_[k]!=jCol_[k]){
         csr_kRowPtr[iRow_[k]+1]++;
         csr_nnz++;
+      }else{
+        if(-1==diag_defined[iRow_[k]]){
+          diag_defined[iRow_[k]] = k;
+          csr_kRowPtr[iRow_[k]+1]++;
+          csr_nnz++;
+          n_diag_val++;
+        }else{
+          extra_diag_nnz_map_temp[iRow_[k]] = k;
+        }
       }
-    }
-    // diagonal part
-    for(int i=0;i<n;i++){
-      csr_kRowPtr[i+1]++;
-      csr_nnz += 1;
     }
     // get correct row ptr index
     for(int i=1;i<n+1;i++){
       csr_kRowPtr[i] += csr_kRowPtr[i-1];
     }
     assert(csr_nnz==csr_kRowPtr[n]);
+    assert(csr_nnz+extra_diag_nnz_map_temp.size()==nnz);
 
-    csr_kVal = new double[csr_nnz]{0.0};
-    csr_jCol = new int[csr_nnz]{0};
+    *csr_kVal_in = new double[csr_nnz]{};
+    *csr_jCol_in = new int[csr_nnz]{};
   }
+  double *csr_kVal = *csr_kVal_in;
+  int *csr_jCol = *csr_jCol_in;
+
+  int *index_covert_extra_Diag2CSR_temp = new int[n];
+  int *nnz_each_row_tmp = new int[n]{};
 
   // set correct col index and value
   {
-    index_covert_CSR2Triplet = new int[csr_nnz];
-    index_covert_extra_Diag2CSR = new int(n);
+    *index_covert_CSR2Triplet_in = new int[csr_nnz];
+    *index_covert_extra_Diag2CSR_in = new int[n];
 
-    int *nnz_each_row_tmp = new int[n]{0};
+    int *index_covert_CSR2Triplet = *index_covert_CSR2Triplet_in;
+    int *index_covert_extra_Diag2CSR = *index_covert_extra_Diag2CSR_in;
+
+    for(int i=0;i<n;i++) diag_defined[i]=-1;
+
     int total_nnz_tmp{0},nnz_tmp{0}, rowID_tmp, colID_tmp;
-    for(int k=0;k<n;k++) index_covert_extra_Diag2CSR[k]=-1;
+    for(int k=0;k<n;k++){
+        index_covert_extra_Diag2CSR_temp[k]=-1;
+        index_covert_extra_Diag2CSR[k]=-1;
+    }
 
-    for(int k=0;k<nnz-n;k++){
+    for(int k=0;k<nnz;k++){
       rowID_tmp = iRow_[k];
       colID_tmp = jCol_[k];
       if(rowID_tmp==colID_tmp){
-        nnz_tmp = nnz_each_row_tmp[rowID_tmp] + csr_kRowPtr[rowID_tmp];
-        csr_jCol[nnz_tmp] = colID_tmp;
-        csr_kVal[nnz_tmp] = values_[k];
-        index_covert_CSR2Triplet[nnz_tmp] = k;
+        if(-1==diag_defined[rowID_tmp]){
+          diag_defined[rowID_tmp] = k;
+          nnz_tmp = nnz_each_row_tmp[rowID_tmp] + csr_kRowPtr[rowID_tmp];
+          csr_jCol[nnz_tmp] = colID_tmp;
+          csr_kVal[nnz_tmp] = values_[k];
+          auto p = extra_diag_nnz_map_temp.find (rowID_tmp);
+          if( p != extra_diag_nnz_map_temp.end() )
+            csr_kVal[nnz_tmp] += values_[p->second];
 
-        csr_kVal[nnz_tmp] += values_[nnz-n+rowID_tmp];
-        index_covert_extra_Diag2CSR[rowID_tmp] = nnz_tmp;
+          index_covert_CSR2Triplet[nnz_tmp] = k;
+          index_covert_extra_Diag2CSR_temp[rowID_tmp] = nnz_tmp;
 
-        nnz_each_row_tmp[rowID_tmp]++;
-        total_nnz_tmp++;
+          nnz_each_row_tmp[rowID_tmp]++;
+          total_nnz_tmp++;
+        }
       }else{
         nnz_tmp = nnz_each_row_tmp[rowID_tmp] + csr_kRowPtr[rowID_tmp];
         csr_jCol[nnz_tmp] = colID_tmp;
@@ -934,7 +962,7 @@ void hiopMatrixSparseTriplet::convertToCSR(int *csr_kRowPtr, int *csr_jCol, doub
 
     // correct the missing diagonal term and sort the nonzeros
     for(int i=0;i<n;i++){
-      if(nnz_each_row_tmp[i] != csr_kRowPtr[i+1]-csr_kRowPtr[i]){
+/*      if(nnz_each_row_tmp[i] != csr_kRowPtr[i+1]-csr_kRowPtr[i]){
         assert(nnz_each_row_tmp[i] == csr_kRowPtr[i+1]-csr_kRowPtr[i]-1);
         nnz_tmp = nnz_each_row_tmp[i] + csr_kRowPtr[i];
         csr_jCol[nnz_tmp] = i;
@@ -942,6 +970,7 @@ void hiopMatrixSparseTriplet::convertToCSR(int *csr_kRowPtr, int *csr_jCol, doub
         index_covert_CSR2Triplet[nnz_tmp] = nnz-n+i;
         total_nnz_tmp += 1;
       }
+*/
       // sort the nonzeros
       {
         std::vector<int> ind_temp(csr_kRowPtr[i+1]-csr_kRowPtr[i]);
@@ -951,11 +980,26 @@ void hiopMatrixSparseTriplet::convertToCSR(int *csr_kRowPtr, int *csr_jCol, doub
         reorder(csr_kVal+csr_kRowPtr[i],ind_temp,csr_kRowPtr[i+1]-csr_kRowPtr[i]);
         reorder(index_covert_CSR2Triplet+csr_kRowPtr[i],ind_temp,csr_kRowPtr[i+1]-csr_kRowPtr[i]);
         std::sort(csr_jCol+csr_kRowPtr[i],csr_jCol+csr_kRowPtr[i+1]);
+
+
+        int old_nnz_idx = index_covert_extra_Diag2CSR_temp[i];
+        if(old_nnz_idx!=-1){
+          int old_nnz_in_row = ind_temp[old_nnz_idx - csr_kRowPtr[i]];
+          std::vector<int>::iterator p = std::find(ind_temp.begin(),ind_temp.end(),old_nnz_in_row);
+          assert(p != ind_temp.end());
+          int new_nnz_idx = std::distance (ind_temp.begin(), p) + csr_kRowPtr[i];
+          index_covert_extra_Diag2CSR[i] = new_nnz_idx;
+          extra_diag_nnz_map[new_nnz_idx] = extra_diag_nnz_map_temp[i];
+        }
       }
     }
 
-    delete [] nnz_each_row_tmp;
   }
+
+  delete [] nnz_each_row_tmp; nnz_each_row_tmp = nullptr;
+  delete [] diag_defined; diag_defined = nullptr;
+  delete [] nnz_each_row_tmp; nnz_each_row_tmp = nullptr;
+
 }
 
 

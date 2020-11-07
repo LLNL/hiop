@@ -195,6 +195,19 @@ void hiopVectorPar::copyToStarting(hiopVector& v_, int start_index/*_in_dest*/)
   memcpy(v.data_+start_index, data_, n_local_*sizeof(double)); 
 }
 
+void hiopVectorPar::copyToStartingSelect(hiopVector& v_, int start_index/*_in_dest*/, const hiopVector& select)
+{
+  const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_);
+  const hiopVectorPar& ix = dynamic_cast<const hiopVectorPar&>(select);
+  assert(n_local_ == ix.n_local_);
+  const double* ix_vec = ix.data_;
+  int find_nnz = 0;
+  
+  for(int i=0; i<n_local_; i++)
+    if(ix_vec[i]==1.) v.data_[start_index+(find_nnz++)] = data_[i];
+  assert(find_nnz + start_index <= v.n_local_);
+}
+
 /* copy 'this' (source) starting at 'start_idx_in_src' to 'dest' starting at index 'int start_idx_dest' 
  * If num_elems>=0, 'num_elems' will be copied; if num_elems<0, elements will be copied till the end of
  * either source ('this') or destination ('dest') is reached */
@@ -224,6 +237,28 @@ startingAtCopyToStartingAt(int start_idx_in_src, hiopVector& dest_, int start_id
   }
 
   memcpy(dest.data_+start_idx_dest, this->data_+start_idx_in_src, num_elems*sizeof(double));
+}
+
+void hiopVectorPar::
+startingAtCopyToStartingAtSelect(int start_idx_in_src, hiopVector& dest_, int start_idx_dest, const hiopVector& selec_dest, int num_elems/*=-1*/) const
+{
+  assert(start_idx_in_src>=0 && start_idx_in_src<=n_local_);
+  const hiopVectorPar& dest = dynamic_cast<hiopVectorPar&>(dest_);
+  const hiopVectorPar& ix = dynamic_cast<const hiopVectorPar&>(selec_dest);
+  assert(start_idx_dest>=0 && start_idx_dest<=dest.n_local_);
+  if(num_elems<0) {
+    num_elems = std::min(n_local_-start_idx_in_src, dest.n_local_-start_idx_dest);
+  } else {
+    assert(num_elems+start_idx_in_src <= this->n_local_);
+    assert(num_elems+start_idx_dest   <= dest.n_local_);
+    //make sure everything stays within bounds (in release)
+    num_elems = std::min(num_elems, (int)this->n_local_-start_idx_in_src);
+    num_elems = std::min(num_elems, (int)dest.n_local_-start_idx_dest);
+  }
+  int find_nnz = 0;
+  const double* ix_vec = ix.data_;
+  for(int i=start_idx_dest; i<dest.n_local_&&find_nnz<num_elems; i++)
+    if(ix_vec[i]==1.) dest.data_[start_idx_dest+find_nnz] = data_[ start_idx_in_src + (find_nnz++)];
 }
 
 void hiopVectorPar::copyTo(double* dest) const

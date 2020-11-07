@@ -5,7 +5,7 @@
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
 // is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause). 
-// Please also read “Additional BSD Notice” below.
+// Please also read "Additional BSD Notice" below.
 //
 // Redistribution and use in source and binary forms, with or without modification, 
 // are permitted provided that the following conditions are met:
@@ -92,17 +92,21 @@ public:
   virtual void copyToStarting(int start_index_in_src, hiopVector& v);
   /// @brief Copy 'this' to v starting at start_index in 'v'.
   virtual void copyToStarting(hiopVector& v, int start_index_in_dest);
-  
+  /// @brief Copy the entries in 'this' where corresponding 'ix' is nonzero, to v starting at start_index in 'v'.
+  virtual void copyToStartingSelect(hiopVector& v, int start_index_in_dest, const hiopVector& ix);
+
   /**
    * @brief copy 'this' (source) starting at 'start_idx_in_src' to 'dest' starting at index 'start_idx_dest' 
    *
    * If num_elems>=0, 'num_elems' will be copied; if num_elems<0, elements will be copied till the end of
    * either source ('this') or destination ('dest') is reached
+   * if 'selec_dest' is given, the values are copy to 'dest' where the corresponding entry in 'selec_dest' is nonzero
    */
   virtual void startingAtCopyToStartingAt(int start_idx_in_src,
 					  hiopVector& dest,
 					  int start_idx_dest,
 					  int num_elems=-1) const;
+  virtual void startingAtCopyToStartingAtSelect(int start_idx_in_src, hiopVector& dest, int start_idx_dest, const hiopVector& selec_dest, int num_elems=-1) const;
 
   virtual double twonorm() const;
   virtual double dotProductWith( const hiopVector& v ) const;

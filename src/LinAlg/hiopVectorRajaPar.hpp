@@ -89,10 +89,13 @@ public:
   virtual void copyToStarting(int start_index_in_src, hiopVector& v);
   /* Copy 'this' to v starting at start_index in 'v'. */
   virtual void copyToStarting(hiopVector& v, int start_index_in_dest);
+  virtual void copyToStartingSelect(hiopVector& v, int start_index_in_dest, const hiopVector& ix);
   /* copy 'this' (source) starting at 'start_idx_in_src' to 'dest' starting at index 'int start_idx_dest' 
    * If num_elems>=0, 'num_elems' will be copied; if num_elems<0, elements will be copied till the end of
-   * either source ('this') or destination ('dest') is reached */
+   * either source ('this') or destination ('dest') is reached
+   * if 'selec_dest' is given, the values are copy to 'dest' where the corresponding entry in 'selec_dest' is nonzero */
   virtual void startingAtCopyToStartingAt(int start_idx_in_src, hiopVector& dest, int start_idx_dest, int num_elems=-1) const;
+  virtual void startingAtCopyToStartingAtSelect(int start_idx_in_src, hiopVector& dest, int start_idx_dest, const hiopVector& selec_dest, int num_elems=-1) const;
 
   virtual double twonorm() const;
   virtual double dotProductWith( const hiopVector& v ) const;
