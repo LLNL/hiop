@@ -26,7 +26,6 @@ namespace hiop
       delete [] index_covert_extra_Diag2CSR_;
   }
 
-
   void hiopLinSolverIndefSparseSTRUMPACK::firstCall()
   {
     assert(n_==M.n() && M.n()==M.m());
@@ -134,13 +133,12 @@ namespace hiop
     * initialize strumpack parameters
     */
     spss.options().set_matching(MatchingJob::NONE);
-//    spss.options().disable_gpu();
-    spss.options().set_verbose(false);
+    spss.options().disable_gpu();
+//    spss.options().set_verbose(false);
 
     spss.set_csr_matrix(n_, kRowPtr_, jCol_, kVal_, true);
 //    spss.reorder(n_, n_);
   }
-
 
   int hiopLinSolverIndefSparseSTRUMPACK::matrixChanged()
   {
@@ -215,5 +213,79 @@ namespace hiop
     if(index_covert_extra_Diag2CSR_)
       delete [] index_covert_extra_Diag2CSR_;
   }
+
+  void hiopLinSolverNonSymSparseSTRUMPACK::firstCall()
+  {
+    assert(n_==M.n() && M.n()==M.m());
+    assert(n_>0);
+
+    // transfer triplet form to CSR form
+    // note that input is in lower triangular triplet form. First part is the sparse matrix, and the 2nd part are the additional diagonal elememts
+    // the 1st part is sorted by row
+
+    M.convertToCSR(nnz_, &kRowPtr_, &jCol_, &kVal_, &index_covert_CSR2Triplet_, &index_covert_extra_Diag2CSR_, extra_diag_nnz_map);
+
+    /*
+    * initialize strumpack parameters
+    */
+//    spss.options().set_matching(MatchingJob::NONE);
+    spss.options().disable_gpu();
+//    spss.options().set_verbose(false);
+
+    spss.set_csr_matrix(n_, kRowPtr_, jCol_, kVal_, true);
+//    spss.reorder(n_, n_);
+  }
+
+  int hiopLinSolverNonSymSparseSTRUMPACK::matrixChanged()
+  {
+    assert(n_==M.n() && M.n()==M.m());
+    assert(n_>0);
+
+    nlp_->runStats.linsolv.tmFactTime.start();
+
+    if( !kRowPtr_ ){
+      this->firstCall();
+    }else{
+      // update matrix
+      int rowID_tmp{0};
+      for(int k=0;k<nnz_;k++){
+        kVal_[k] = M.M()[index_covert_CSR2Triplet_[k]];
+      }
+      for(auto p: extra_diag_nnz_map){
+        kVal_[p.first] += M.M()[p.second];
+      }
+
+      spss.set_csr_matrix(n_, kRowPtr_, jCol_, kVal_, true);
+    }
+
+    spss.factor();   // not really necessary, called if needed by solve
+
+	  int negEigVal = nFakeNegEigs_;
+
+    nlp_->runStats.linsolv.tmInertiaComp.stop();
+    return negEigVal;
+  }
+
+  bool hiopLinSolverNonSymSparseSTRUMPACK::solve ( hiopVector& x_ )
+  {
+    assert(n_==M.n() && M.n()==M.m());
+    assert(n_>0);
+    assert(x_.get_size()==M.n());
+    std::cout<< "-----------------STRUMPACK_SOLVE-----------------" << std::endl;
+
+    nlp_->runStats.linsolv.tmTriuSolves.start();
+
+    hiopVectorPar* x = dynamic_cast<hiopVectorPar*>(&x_);
+    assert(x != NULL);
+    hiopVectorPar* rhs = dynamic_cast<hiopVectorPar*>(x->new_copy());
+    double* dx = x->local_data();
+    double* drhs = rhs->local_data();
+
+    spss.solve(drhs, dx);
+
+    nlp_->runStats.linsolv.tmTriuSolves.stop();
+    return 1;
+  }
+
 
 } //end namespace hiop

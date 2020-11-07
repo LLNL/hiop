@@ -43,3 +43,5 @@ endif()
 
 set(METIS_INCLUDE_DIR CACHE PATH "Path to metis.h")
 set(METIS_LIBRARY CACHE PATH "Path to metis library")
+#set(METIS_LIBRARIES CACHE PATH "Path to metis library")
+

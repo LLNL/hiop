@@ -52,6 +52,7 @@
 #include "hiopLinSolver.hpp"
 #include "hiopMatrixSparseTriplet.hpp"
 #include "StrumpackSparseSolver.hpp"
+#include <unordered_map>
 
 /** implements the linear solver class using STRUMPACK
  *
@@ -135,12 +136,12 @@ public:
 
   /** Triggers a refactorization of the matrix, if necessary.
    * Overload from base class. */
-  int matrixChanged(){return hiopLinSolverNonSymSparseSTRUMPACK::matrixChanged();};
+  int matrixChanged();
 
   /** solves a linear system.
    * param 'x' is on entry the right hand side(s) of the system to be solved. On
    * exit is contains the solution(s).  */
-  bool solve ( hiopVector& x_ ) {return hiopLinSolverNonSymSparseSTRUMPACK::solve(x_);};
+  bool solve ( hiopVector& x_ );
 
 //protected:
 //  int* ipiv;
@@ -158,6 +159,7 @@ private:
 
   int *index_covert_CSR2Triplet_;
   int *index_covert_extra_Diag2CSR_;
+  std::unordered_map<int,int> extra_diag_nnz_map;
 
   int nFakeNegEigs_;
 
@@ -168,7 +170,7 @@ public:
 
   /** called the very first time a matrix is factored. Allocates space
    * for the factorization and performs ordering */
-  void firstCall() {return hiopLinSolverNonSymSparseSTRUMPACK::firstCall();};
+  void firstCall();
 //  virtual void diagonalChanged( int idiag, int extent );
 
   void inline set_fake_inertia(int nNegEigs)

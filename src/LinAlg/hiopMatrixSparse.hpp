@@ -200,7 +200,7 @@ public:
   virtual const int* i_row() const = 0;
   virtual const int* j_col() const = 0;
   virtual const double* M()  const = 0;
-  virtual long long numberOfOffDiagNonzeros() const = 0;
+  virtual long long numberOfOffDiagNonzeros() = 0;
 
   inline long long m() const
   {

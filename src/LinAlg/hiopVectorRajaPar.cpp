@@ -415,6 +415,36 @@ void hiopVectorRajaPar::copyToStarting(hiopVector& vec, int start_index/*_in_des
   rm.copy(v.data_dev_ + start_index, this->data_dev_, this->n_local_*sizeof(double));
 }
 
+void hiopVectorRajaPar::copyToStartingSelect(hiopVector& vec, int start_index/*_in_dest*/, const hiopVector& select)
+{
+  if(n_local_ == 0)
+    return;
+ 
+  const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(vec);
+  assert(start_index+n_local_ <= v.n_local_);
+  
+  auto& rm = umpire::ResourceManager::getInstance();
+  rm.copy(v.data_dev_ + start_index, this->data_dev_, this->n_local_*sizeof(double));
+  
+  const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(vec);
+  const hiopVectorRajaPar& ix= dynamic_cast<const hiopVectorRajaPar&>(select);
+  assert(n_local_ == ix.n_local_);
+  
+  int find_nnz = 0;
+  
+  double* dd = data_dev_;
+  double* vd = v.data_dev_;
+  double* id = ix.data_dev_;
+  
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      assert(id[i] == zero || id[i] == one);
+      if(id[i] == one)
+        vd[start_index+(find_nnz++)] = dd[i];
+    });
+}
+
 /**
  * @brief Copy elements of `this` vector to `destination` with offsets.
  * 
@@ -470,7 +500,45 @@ void hiopVectorRajaPar::startingAtCopyToStartingAt(
   rm.copy(dest.data_dev_ + start_idx_dest, this->data_dev_ + start_idx_in_src, num_elems*sizeof(double));
 }
 
-/**
+void hiopVectorRajaPar::
+startingAtCopyToStartingAtSelect(int start_idx_in_src, hiopVector& destination, int start_idx_dest, const hiopVector& selec_dest, int num_elems/*=-1*/) const
+{
+  const hiopVectorRajaPar& dest = dynamic_cast<hiopVectorRajaPar&>(destination);
+  const hiopVectorRajaPar& ix = dynamic_cast<const hiopVectorRajaPar&>(selec_dest);
+    
+  assert(start_idx_in_src >= 0 && start_idx_in_src <= this->n_local_);
+  assert(start_idx_dest   >= 0 && start_idx_dest   <= dest.n_local_);
+    
+  if(num_elems<0)
+  {
+    num_elems = std::min(this->n_local_ - start_idx_in_src, dest.n_local_ - start_idx_dest);
+  }
+  else
+  {
+    assert(num_elems+start_idx_in_src <= this->n_local_);
+    assert(num_elems+start_idx_dest   <= dest.n_local_);
+    //make sure everything stays within bounds (in release)
+    num_elems = std::min(num_elems, (int)this->n_local_-start_idx_in_src);
+    num_elems = std::min(num_elems, (int)dest.n_local_-start_idx_dest);
+  }
+      
+  int find_nnz = 0;
+  double* dd = data_dev_;
+  double* vd = dest.data_dev_;
+  double* id = ix.data_dev_;
+
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      assert(id[i] == zero || id[i] == one);
+      if(id[i] == one)
+        vd[start_idx_dest+find_nnz] = dd[ start_idx_in_src + (find_nnz++)];
+      if(find_nnz>=num_elems)
+        break;
+    });
+}
+ 
+ /**
  * @brief Copy `this` vector local data to `dest` buffer.
  * 
  * @param[out] dest - destination buffer where to copy vector data

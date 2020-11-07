@@ -5,7 +5,7 @@
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp
 // is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause).
-// Please also read “Additional BSD Notice” below.
+// Please also read "Additional BSD Notice" below.
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -701,8 +701,8 @@ namespace hiop
    * *************************************************************************
    */
   hiopKKTLinSysSparseFull::hiopKKTLinSysSparseFull(hiopNlpFormulation* nlp)
-    : hiopKKTLinSysFull(nlp), linSys_(NULL), rhs_(NULL),
-      Hx_(NULL), HessSp_(NULL), Jac_cSp_(NULL), Jac_dSp_(NULL),
+    : hiopKKTLinSysFull(nlp), linSys_(nullptr), rhs_(nullptr),
+      Hx_(nullptr), Hd_(nullptr), HessSp_(nullptr), Jac_cSp_(nullptr), Jac_dSp_(nullptr),
       write_linsys_counter_(-1), csr_writer_(nlp)
   {
     nlpSp_ = dynamic_cast<hiopNlpSparse*>(nlp_);
@@ -768,22 +768,16 @@ namespace hiop
     int n_reg = n3st;
 
     int required_num_neg_eig = neq+nineq;
-    int nnz = 2*HessSp_->numberOfOffDiagNonzeros() + 2*Jac_cSp_->numberOfNonzeros() + 2*Jac_dSp_->numberOfNonzeros()
+    int nnz = HessSp_->numberOfNonzeros() + HessSp_->numberOfOffDiagNonzeros()
+            + 2*Jac_cSp_->numberOfNonzeros() + 2*Jac_dSp_->numberOfNonzeros()
             + 2*(nd + ndl + ndu + nxl + nxu + ndl + ndu + nxl + nxu)
+            + ndl + ndu + nxl + nxu
             + n_reg;
 
     //
     //based on safe_mode_, decide whether to go with the nopiv (fast) or Bunch-Kaufman (stable) linear solve
     //
     linSys_ = determineAndCreateLinsys(n, required_num_neg_eig, nnz);
-
-
-
-/*
-hiopMatrixSparseTriplet::SetSubMatrixFromSrc(const hiopMatrix& src_gen,
-                                   const long long& dest_row_st, const long long& dest_col_st,
-                                   const long long& dest_nnz_st)
-*/
 
     hiopMatrixSparseTriplet& Msys = linSys_->sysMatrix();
     if(perf_report_) {
@@ -868,23 +862,23 @@ hiopMatrixSparseTriplet::SetSubMatrixFromSrc(const hiopMatrix& src_gen,
         // part 4
         // [  0     0     0   | 0 | Sl^d 0   0   0   | Vl   0   0   0  ] [dsdl]   [  rsdl    ]
         Msys.copyDiagMatrixToSubBlockSelect(*iter_->sdl, n4st, n3st, dest_nnz_st, ndl, nlp_->get_idl()); dest_nnz_st += ndl;
-        Msys.copyDiagMatrixToSubBlockSelect(*iter_->vl, n4st, n3st, dest_nnz_st, ndl, nlp_->get_idl()); dest_nnz_st += ndl;
+        Msys.copyDiagMatrixToSubBlockSelect(*iter_->vl, n4st, n4st, dest_nnz_st, ndl, nlp_->get_idl()); dest_nnz_st += ndl;
 
         // [  0     0     0   | 0 |  0  Su^d 0   0   |  0  Vu   0   0  ] [dsdu]   [  rsdu    ]
         Msys.copyDiagMatrixToSubBlockSelect(*iter_->sdu, n4st+ndl, n3st+ndl, dest_nnz_st, ndu, nlp_->get_idu()); dest_nnz_st += ndu;
-        Msys.copyDiagMatrixToSubBlockSelect(*iter_->vu, n4st+ndl, n3st+ndl, dest_nnz_st, ndu, nlp_->get_idu()); dest_nnz_st += ndu;
+        Msys.copyDiagMatrixToSubBlockSelect(*iter_->vu, n4st+ndl, n4st+ndl, dest_nnz_st, ndu, nlp_->get_idu()); dest_nnz_st += ndu;
 
         // [  0     0     0   | 0 |  0   0  Sl^x 0   |  0   0  Zl   0  ] [dsxl]   [  rsxl    ]
         Msys.copyDiagMatrixToSubBlockSelect(*iter_->sxl, n4st+ndl+ndu, n3st+ndl+ndu, dest_nnz_st, nxl, nlp_->get_ixl()); dest_nnz_st += nxl;
-        Msys.copyDiagMatrixToSubBlockSelect(*iter_->zl, n4st+ndl+ndu, n3st+ndl+ndu, dest_nnz_st, nxl, nlp_->get_ixl()); dest_nnz_st += nxl;
+        Msys.copyDiagMatrixToSubBlockSelect(*iter_->zl, n4st+ndl+ndu, n4st+ndl+ndu, dest_nnz_st, nxl, nlp_->get_ixl()); dest_nnz_st += nxl;
 
         // [  0     0     0   | 0 |  0   0   0  Su^x |  0   0   0  Zu  ] [dsxu]   [  rsxu    ]
         Msys.copyDiagMatrixToSubBlockSelect(*iter_->sxu, n4st+ndl+ndu+nxl, n3st+ndl+ndu+nxl, dest_nnz_st, nxu, nlp_->get_ixu()); dest_nnz_st += nxu;
-        Msys.copyDiagMatrixToSubBlockSelect(*iter_->zu, n4st+ndl+ndu+nxl, n3st+ndl+ndu+nxl, dest_nnz_st, nxu, nlp_->get_ixu()); dest_nnz_st += nxu;
+        Msys.copyDiagMatrixToSubBlockSelect(*iter_->zu, n4st+ndl+ndu+nxl, n4st+ndl+ndu+nxl, dest_nnz_st, nxu, nlp_->get_ixu()); dest_nnz_st += nxu;
 
 
         //build the diagonal Hx = delta_wx
-        if(NULL == Hx_) {
+        if(nullptr == Hx_) {
           Hx_ = LinearAlgebraFactory::createVector(nx); assert(Hx_);
         }
         Hx_->setToZero();
@@ -892,7 +886,7 @@ hiopMatrixSparseTriplet::SetSubMatrixFromSrc(const hiopMatrix& src_gen,
         Msys.copySubDiagonalEleFromVec(0, nx, *Hx_, dest_nnz_st); dest_nnz_st += nx;
 
         //build the diagonal Hd = delta_wd
-        if(NULL == Hd_) {
+        if(nullptr == Hd_) {
           Hd_ = LinearAlgebraFactory::createVector(nd); assert(Hd_);
         }
         Hd_->setToZero();
@@ -903,7 +897,7 @@ hiopMatrixSparseTriplet::SetSubMatrixFromSrc(const hiopMatrix& src_gen,
         Msys.copySubDiagonalEleFromConstant(nx, neq, -delta_cc, dest_nnz_st); dest_nnz_st += neq;
 
         //add -delta_cd to diagonal block linSys starting at (nx+neq, nx+neq)
-        Msys.copySubDiagonalEleFromConstant(nx+nd+neq, nineq, -delta_cd, dest_nnz_st); dest_nnz_st += nineq;
+        Msys.copySubDiagonalEleFromConstant(nx+neq, nineq, -delta_cd, dest_nnz_st); dest_nnz_st += nineq;
 
         assert(dest_nnz_st==nnz);
         nlp_->log->write("KKT_SPARSE_FULL linsys:", Msys, hovMatrices);
@@ -1000,7 +994,7 @@ hiopMatrixSparseTriplet::SetSubMatrixFromSrc(const hiopMatrix& src_gen,
     nlp_->runStats.kkt.tmSolveRhsManip.start();
 
     long long nx=rx.get_size(), nd=rd.get_size(), neq=ryc.get_size(), nineq=ryd.get_size(),
-              ndl=rvl.get_size(), ndu=rvu.get_size(), nxl=rzl.get_size(), nxu=rzu.get_size();
+              ndl = nlp_->m_ineq_low(), ndu = nlp_->m_ineq_upp(), nxl = nlp_->n_low(), nxu = nlp_->n_upp();
     long long nxsp=Hx_->get_size();
     assert(nxsp==nx);
     int n = nx + neq + nineq + nd + ndl + ndu + nxl + nxu + ndl + ndu + nxl + nxu;
@@ -1029,14 +1023,14 @@ hiopMatrixSparseTriplet::SetSubMatrixFromSrc(const hiopMatrix& src_gen,
     ryc.copyToStarting(*rhs_, nx);
     ryd.copyToStarting(*rhs_, nx+neq);
     rd.copyToStarting(*rhs_, nx + neq + nineq);
-    rvl.copyToStarting(*rhs_, nx + neq + nineq + nd);
-    rvu.copyToStarting(*rhs_, nx + neq + nineq + nd + ndl);
-    rzl.copyToStarting(*rhs_, nx + neq + nineq + nd + ndl + ndu);
-    rzu.copyToStarting(*rhs_, nx + neq + nineq + nd + ndl + ndu + nxl);
-    rsdl.copyToStarting(*rhs_, nx + neq + nineq + nd + ndl + ndu + nxl + nxu);
-    rsdu.copyToStarting(*rhs_, nx + neq + nineq + nd + ndl + ndu + nxl + nxu + ndl);
-    rsxl.copyToStarting(*rhs_, nx + neq + nineq + nd + ndl + ndu + nxl + nxu + ndl + ndu);
-    rsxu.copyToStarting(*rhs_, nx + neq + nineq + nd + ndl + ndu + nxl + nxu + ndl + ndu + nxl);
+    rvl.copyToStartingSelect(*rhs_, nx + neq + nineq + nd, nlp_->get_idl());
+    rvu.copyToStartingSelect(*rhs_, nx + neq + nineq + nd + ndl, nlp_->get_idu());
+    rzl.copyToStartingSelect(*rhs_, nx + neq + nineq + nd + ndl + ndu, nlp_->get_ixl());
+    rzu.copyToStartingSelect(*rhs_, nx + neq + nineq + nd + ndl + ndu + nxl, nlp_->get_ixu());
+    rsdl.copyToStartingSelect(*rhs_, nx + neq + nineq + nd + ndl + ndu + nxl + nxu, nlp_->get_idl());
+    rsdu.copyToStartingSelect(*rhs_, nx + neq + nineq + nd + ndl + ndu + nxl + nxu + ndl, nlp_->get_idu());
+    rsxl.copyToStartingSelect(*rhs_, nx + neq + nineq + nd + ndl + ndu + nxl + nxu + ndl + ndu, nlp_->get_ixl());
+    rsxu.copyToStartingSelect(*rhs_, nx + neq + nineq + nd + ndl + ndu + nxl + nxu + ndl + ndu + nxl, nlp_->get_ixu());
 
     if(write_linsys_counter_>=0)
       csr_writer_.writeRhsToFile(*rhs_, write_linsys_counter_);
@@ -1071,14 +1065,14 @@ hiopMatrixSparseTriplet::SetSubMatrixFromSrc(const hiopMatrix& src_gen,
     rhs_->startingAtCopyToStartingAt(nx,            dyc,  0);
     rhs_->startingAtCopyToStartingAt(nx+neq,           dyd,  0);
     rhs_->startingAtCopyToStartingAt(nx+neq+nineq,         dd,  0);
-    rhs_->startingAtCopyToStartingAt(nx+neq+nineq+nd,         dvl,  0);
-    rhs_->startingAtCopyToStartingAt(nx+neq+nineq+nd+ndl,         dvu,  0);
-    rhs_->startingAtCopyToStartingAt(nx+neq+nineq+nd+ndl+ndu,         dzl,  0);
-    rhs_->startingAtCopyToStartingAt(nx+neq+nineq+nd+ndl+ndu+nxl,         dzu,  0);
-    rhs_->startingAtCopyToStartingAt(nx+neq+nineq+nd+ndl+ndu+nxl+nxu,         dsdl,  0);
-    rhs_->startingAtCopyToStartingAt(nx+neq+nineq+nd+ndl+ndu+nxl+nxu+ndl,         dsdu,  0);
-    rhs_->startingAtCopyToStartingAt(nx+neq+nineq+nd+ndl+ndu+nxl+nxu+ndl+ndu,         dsxl,  0);
-    rhs_->startingAtCopyToStartingAt(nx+neq+nineq+nd+ndl+ndu+nxl+nxu+ndl+ndu+nxl,         dsxu,  0);
+    rhs_->startingAtCopyToStartingAtSelect(nx+neq+nineq+nd,         dvl,  0, nlp_->get_idl() );
+    rhs_->startingAtCopyToStartingAtSelect(nx+neq+nineq+nd+ndl,         dvu,  0, nlp_->get_idu());
+    rhs_->startingAtCopyToStartingAtSelect(nx+neq+nineq+nd+ndl+ndu,         dzl,  0, nlp_->get_ixl());
+    rhs_->startingAtCopyToStartingAtSelect(nx+neq+nineq+nd+ndl+ndu+nxl,         dzu,  0, nlp_->get_ixu());
+    rhs_->startingAtCopyToStartingAtSelect(nx+neq+nineq+nd+ndl+ndu+nxl+nxu,         dsdl,  0, nlp_->get_idl());
+    rhs_->startingAtCopyToStartingAtSelect(nx+neq+nineq+nd+ndl+ndu+nxl+nxu+ndl,         dsdu,  0, nlp_->get_idu());
+    rhs_->startingAtCopyToStartingAtSelect(nx+neq+nineq+nd+ndl+ndu+nxl+nxu+ndl+ndu,         dsxl,  0, nlp_->get_ixl());
+    rhs_->startingAtCopyToStartingAtSelect(nx+neq+nineq+nd+ndl+ndu+nxl+nxu+ndl+ndu+nxl,         dsxu,  0, nlp_->get_ixu());
 
     {//write to log
       nlp_->log->write("RHS KKT_SPARSE_FULL dx: ", dx,  hovIteration);
