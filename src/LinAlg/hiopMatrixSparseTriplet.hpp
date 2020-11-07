@@ -6,7 +6,7 @@
 #include "hiopMatrixSparse.hpp"
 
 #include <cassert>
-
+#include <unordered_map>
 
 namespace hiop
 {
@@ -189,8 +189,9 @@ public:
     assert(0 && "This method should be used only for symmetric matrices.\n");
   }
 
-  virtual void convertToCSR(int *csr_kRowPtr, int *csr_jCol, double *csr_kVal,
-                    int *index_covert_CSR2Triplet, int *index_covert_extra_Diag2CSR);
+  virtual void convertToCSR(int &csr_nnz, int **csr_kRowPtr, int **csr_jCol, double **csr_kVal,
+                            int **index_covert_CSR2Triplet, int **index_covert_extra_Diag2CSR,
+                            std::unordered_map<int,int> &extra_diag_nnz_map);
 
   virtual hiopMatrixSparse* alloc_clone() const;
   virtual hiopMatrixSparse* new_copy() const;
@@ -203,7 +204,7 @@ public:
   inline const int* j_col() const { return jCol_; }
   inline const double* M() const { return values_; }
 
-  virtual long long numberOfOffDiagNonzeros() const {assert("not implemented"&&0);return 0;};
+  virtual long long numberOfOffDiagNonzeros() {assert("not implemented"&&0);return 0;};
 
 #ifdef HIOP_DEEPCHECKS
   virtual bool assertSymmetry(double tol=1e-16) const { return false; }
@@ -318,7 +319,7 @@ public:
     return true;
   }
 
-  virtual long long numberOfOffDiagNonzeros() const;
+  virtual long long numberOfOffDiagNonzeros();
 
 protected:
   int nnz_offdiag_;     ///< number of nonzero entries

@@ -5,7 +5,7 @@
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp
 // is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause).
-// Please also read “Additional BSD Notice” below.
+// Please also read "Additional BSD Notice" below.
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
