@@ -329,6 +329,33 @@ void MatrixTestsSparseTriplet::initializeMatrix(
 }
 
 /**
+ * @brief Wrapper for verifying that a sparse matrix conforms to pattern
+ * described by _expect_ function.
+ */
+int MatrixTestsSparseTriplet::verifyAnswer(
+      hiop::hiopMatrixSparse* Amat,
+      std::function<real_type(local_ordinal_type, local_ordinal_type)> expect)
+{
+  int fail = 0;
+  if(Amat != nullptr)
+  {
+    auto* A = dynamic_cast<hiop::hiopMatrixSparseTriplet*>(Amat);
+    const global_ordinal_type nnz = A->numberOfNonzeros();
+    for(global_ordinal_type i=0; i<nnz; i++)
+    {
+      auto ret = expect(A->i_row()[i], A->j_col()[i]);
+      if(ret != A->M()[i])
+        fail++;
+    }
+  }
+  else
+  {
+    assert(false && "Null pointer passed into `MatrixTestsSparseTriplet::verifyAnswer`.");
+  }
+  return fail;
+}
+
+/**
  * @brief Since some classes will have to copy data from device, this method is
  * a placeholder to keep tests implementation-agnostic; classes that have
  * device memory will copy from device when this is called, CPU-bound classes

@@ -92,6 +92,9 @@ private:
   virtual int verifyAnswer(hiop::hiopMatrixSparse* A, real_type answer) override;
   virtual int verifyAnswer(hiop::hiopMatrix* A, local_ordinal_type nnz_st, local_ordinal_type nnz_ed, const double answer) {assert(false);return 0;};
   virtual int verifyAnswer(
+      hiop::hiopMatrixSparse* A,
+      std::function<real_type(local_ordinal_type, local_ordinal_type)> expect) override;
+  virtual int verifyAnswer(
       hiop::hiopMatrixDense* A,
       std::function<real_type(local_ordinal_type, local_ordinal_type)> expect) override;
   virtual int verifyAnswer(hiop::hiopVector *x, real_type answer) override;

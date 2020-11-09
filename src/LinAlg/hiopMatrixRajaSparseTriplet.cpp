@@ -711,61 +711,94 @@ hiopMatrixRajaSparseTriplet::allocAndBuildRowStarts() const
 /**
  * @brief Copies rows from another sparse matrix into this one.
  * 
- * @todo Better document this function.
+ * @pre the sum of the number of elements in each row of rows_idxs of _src_
+ * equals this.nnz
+ * @pre _n_rows_ is the same as this->nrows
+ * @pre \forall row_dst in n_rows:
+ *    let row_src = rows_idxs[row_dst]
+ *    len of row row_src in _src_ matrix == len of row row_dst in _this_
+ *
+ * @post _this_ is comprised of nonzero values solely from _src_gen_
  */
-void hiopMatrixRajaSparseTriplet::copyRowsFrom(const hiopMatrix& src_gen,
-					       const long long* rows_idxs,
-					       long long n_rows)
+void hiopMatrixRajaSparseTriplet::copyRowsFrom(
+  const hiopMatrix& src_gen,
+	const long long* rows_idxs,
+	long long n_rows)
 {
   const hiopMatrixRajaSparseTriplet& src = dynamic_cast<const hiopMatrixRajaSparseTriplet&>(src_gen);
+  
   assert(this->m() == n_rows);
-  assert(this->numberOfNonzeros() <= src.numberOfNonzeros());
+  assert(src.m() >= n_rows);
   assert(this->n() == src.n());
-  assert(n_rows <= src.m());
+  assert(this->numberOfNonzeros() <= src.numberOfNonzeros());
 
-  const int* iRow_src = src.i_row();
+  auto& resmgr = umpire::ResourceManager::getInstance();
+  umpire::Allocator devalloc  = resmgr.getAllocator(mem_space_);
+  umpire::Allocator hostalloc = resmgr.getAllocator("HOST");
+
+  // Get the row starts Index to track where each row starts
+  auto* rsi_src = src.allocAndBuildRowStarts()->idx_start_;
+  auto* rsi_dst = this->allocAndBuildRowStarts()->idx_start_;
+
+  // Local copies of memory to allow capture by lambdas onto the device
   const int* jCol_src = src.j_col();
   const double* values_src = src.M();
-  int nnz_src = src.numberOfNonzeros();
-  int itnz_src=0;
-  int itnz_dest=0;
-  //int iterators should suffice
-  for(int row_dest=0; row_dest<n_rows; ++row_dest)
+  int* jCol_buf = this->j_col();
+  double* values_buf = this->M();
+  int this_nnz = this->numberOfNonzeros();
+  int this_nrows = this->nrows_;
+  int src_nrows = src.m();
+  int src_nnz = src.numberOfNonzeros();
+  
+  // Get the length of each row of this, and then copy from device to host
+  auto* row_lens_dst_dev = static_cast<int*>(devalloc.allocate(sizeof(int) * this->m()));
+  auto* row_lens_dst = static_cast<int*>(hostalloc.allocate(sizeof(int) * this->m()));
+  RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, this_nrows),
+      RAJA_LAMBDA(RAJA::Index_type i)
+      {
+        if(i == this_nrows - 1)
+        {
+          row_lens_dst_dev[i] = this_nnz - rsi_dst[i];
+        }
+        else
+        {
+          row_lens_dst_dev[i] = rsi_dst[i + 1] - rsi_dst[i];
+        }
+      });
+  resmgr.copy(row_lens_dst, row_lens_dst_dev);
+
+  // Get the length of each row of src, and then copy from device to host
+  auto* row_lens_src_dev = static_cast<int*>(devalloc.allocate(sizeof(int) * src.m()));
+  auto* row_lens_src = static_cast<int*>(hostalloc.allocate(sizeof(int) * src.m()));
+  RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, src_nrows),
+      RAJA_LAMBDA(RAJA::Index_type i)
+      {
+        if(i == src_nrows - 1)
+        {
+          row_lens_src_dev[i] = src_nnz - rsi_src[i];
+        }
+        else
+        {
+          row_lens_src_dev[i] = rsi_src[i + 1] - rsi_src[i];
+        }
+      });
+  resmgr.copy(row_lens_src, row_lens_src_dev);
+
+  // Copy _row_lens_dst[row_dest]_ elements from row _row_src_ in source matrix
+  // to row _row_dest_ in this matrix
+  for(int row_dest=0; row_dest<this_nrows; ++row_dest)
   {
     const int& row_src = rows_idxs[row_dest];
+    assert(row_lens_dst[row_dest] == row_lens_src[row_src] &&
+        "Tried to copy between sparse matrix rows with different sparsity pattern");
 
-    while(itnz_src<nnz_src && iRow_src[itnz_src]<row_src)
-    {
-      #ifdef HIOP_DEEPCHECKS
-      if(itnz_src>0)
-      {
-	      assert(iRow_src[itnz_src]>=iRow_src[itnz_src-1] && "row indexes are not sorted");
-	      if(iRow_src[itnz_src]==iRow_src[itnz_src-1])
-	        assert(jCol_src[itnz_src] >= jCol_src[itnz_src-1] && "col indexes are not sorted");
-      }
-      #endif
-      ++itnz_src;
-    }
-
-    while(itnz_src<nnz_src && iRow_src[itnz_src]==row_src)
-    {
-      assert(itnz_dest < nnz_);
-      #ifdef HIOP_DEEPCHECKS
-      if(itnz_src>0)
-      {
-      	assert(iRow_src[itnz_src]>=iRow_src[itnz_src-1] && "row indexes are not sorted");
-	      if(iRow_src[itnz_src]==iRow_src[itnz_src-1])
-	        assert(jCol_src[itnz_src] >= jCol_src[itnz_src-1] && "col indexes are not sorted");
-      }
-      #endif
-      iRow_[itnz_dest] = row_dest;//iRow_src[itnz_src];
-      jCol_[itnz_dest] = jCol_src[itnz_src];
-      values_[itnz_dest++] = values_src[itnz_src++];
-      
-      assert(itnz_dest <= nnz_);
-    }
+    RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, row_lens_dst[row_dest]),
+        RAJA_LAMBDA(RAJA::Index_type i)
+        {
+          jCol_buf[rsi_dst[row_dest] + i] = jCol_src[rsi_src[row_src] + i];
+          values_buf[rsi_dst[row_dest] + i] = values_src[rsi_src[row_src] + i];
+        });
   }
-  assert(itnz_dest == nnz_);
 }
   
 /// @brief Prints the contents of this function to a file.

@@ -316,6 +316,34 @@ void MatrixTestsRajaSparseTriplet::initializeMatrix(
 }
 
 /**
+ * @brief Wrapper for verifying that a raja sparse matrix conforms to pattern
+ * described by _expect_ function.
+ */
+int MatrixTestsRajaSparseTriplet::verifyAnswer(
+      hiop::hiopMatrixSparse* Amat,
+      std::function<real_type(local_ordinal_type, local_ordinal_type)> expect)
+{
+  int fail = 0;
+  if(Amat != nullptr)
+  {
+    auto* A = dynamic_cast<hiop::hiopMatrixRajaSparseTriplet*>(Amat);
+    A->copyFromDev();
+    const global_ordinal_type nnz = A->numberOfNonzeros();
+    for(global_ordinal_type i=0; i<nnz; i++)
+    {
+      auto ret = expect(A->i_row_host()[i], A->j_col_host()[i]);
+      if(ret != A->M_host()[i])
+        fail++;
+    }
+  }
+  else
+  {
+    assert(false && "Null pointer passed into `MatrixTestsRajaSparseTriplet::verifyAnswer`.");
+  }
+  return fail;
+}
+
+/**
  * @brief Copies data to device if needed
  */
 void MatrixTestsRajaSparseTriplet::maybeCopyToDev(hiop::hiopMatrixSparse* mat)

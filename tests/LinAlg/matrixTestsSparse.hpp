@@ -329,6 +329,38 @@ public:
     return fail;
   }
 
+  /**
+   * @brief Tests copyRowsFrom method of sparse matrix.
+   * @todo to -> dst; from -> src
+   */
+  bool matrixCopyRowsFrom(
+      hiop::hiopMatrixSparse& to,
+      hiop::hiopMatrixSparse& from)
+  {
+    int fail = 0;
+    assert(to.m() <= from.m() && "Must pass matrices of the same sparsity pattern");
+    const real_type from_val = one;
+
+    // Copy all rows (same effect as `copyFrom`)
+    auto* row_idxs = new global_ordinal_type[to.m()];
+
+    // Copy all but 1 row, at index index_to_skip
+    const int row_to_skip = to.m() / 2;
+    int it = 0;
+    for(global_ordinal_type i=0; i<from.m(); i++) 
+    {
+      if (i == row_to_skip) continue;
+      row_idxs[it++] = i;
+    }
+    to.setToZero();
+    from.setToConstant(from_val);
+    to.copyRowsFrom(from, row_idxs, to.m());
+    fail += verifyAnswer(&to, from_val);
+
+    delete[] row_idxs;
+    printMessage(fail, __func__);
+    return fail;
+  }
   
   /**
    * @brief Test for (W) += this * D^(-1) * B^T
@@ -814,6 +846,9 @@ private:
   virtual local_ordinal_type getLocalSize(const hiop::hiopVector* x) = 0;
   virtual int verifyAnswer(hiop::hiopMatrixSparse* A, real_type answer) = 0;
   virtual int verifyAnswer(hiop::hiopMatrix* A, local_ordinal_type nnz_st, local_ordinal_type nnz_ed, const double answer) = 0;
+  virtual int verifyAnswer(
+      hiop::hiopMatrixSparse* A,
+      std::function<real_type(local_ordinal_type, local_ordinal_type)> expect) = 0;
   virtual int verifyAnswer(
       hiop::hiopMatrixDense* A,
       std::function<real_type(local_ordinal_type, local_ordinal_type)> expect) = 0;

@@ -122,6 +122,13 @@ int main(int argc, char** argv)
     // local_ordinal_type test_offset = 10;
     local_ordinal_type test_offset = 4;
     fail += test.matrixAddMDinvMtransToDiagBlockOfSymDeMatUTri(*mxn_sparse, vec_n, W_dense, test_offset);
+
+     // Create matrix with one additional row
+     global_ordinal_type K_local = M_local + 1;
+     hiop::hiopMatrixSparse* kxn_sparse = 
+       hiop::LinearAlgebraFactory::createMatrixSparse(K_local, N_local, K_local * entries_per_row);
+     test.initializeMatrix(kxn_sparse, entries_per_row);
+     fail += test.matrixCopyRowsFrom(*mxn_sparse, *kxn_sparse);
    
     // Need a dense matrix that is big enough for the sparse matrix to map inside the upper triangular part of it
     //hiop::hiopMatrixDenseRowMajor n2xn2_dense(2 * N_global, 2 * N_global);
@@ -194,6 +201,13 @@ int main(int argc, char** argv)
     // local_ordinal_type test_offset = 10;
     local_ordinal_type test_offset = 4;
     fail += test.matrixAddMDinvMtransToDiagBlockOfSymDeMatUTri(*mxn_sparse, vec_n, W_dense, test_offset);
+
+     // Create matrix with one additional row
+     global_ordinal_type K_local = M_local + 1;
+     hiop::hiopMatrixSparse* kxn_sparse = 
+       hiop::LinearAlgebraFactory::createMatrixSparse(K_local, N_local, K_local * entries_per_row);
+     test.initializeMatrix(kxn_sparse, entries_per_row);
+     fail += test.matrixCopyRowsFrom(*mxn_sparse, *kxn_sparse);
 
     // testing adding sparse matrix to the upper triangular area of a symmetric dense matrix    
     //fail += test.addToSymDenseMatrixUpperTriangle(W_dense, *mxn_sparse);
