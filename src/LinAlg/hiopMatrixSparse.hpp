@@ -160,7 +160,7 @@ public:
    * @pre User must know the nonzero pattern of src and dest matrices. Assume non-zero patterns of these two wont change, and 'src_gen' is a submatrix of 'this'
    * @pre Otherwise, this function may replace the non-zero values and nonzero patterns for the undesired elements.
    */
-  virtual void copyRowsFromSrcToDest(const hiopMatrix& src_gen,
+  virtual void copyRowsBlockFrom(const hiopMatrix& src_gen,
                                          const long long& rows_src_idx_st, const long long& n_rows,
                                          const long long& rows_dest_idx_st, const long long& dest_nnz_st
                                          ) = 0;

@@ -415,7 +415,7 @@ void hiopVectorRajaPar::copyToStarting(hiopVector& vec, int start_index/*_in_des
   rm.copy(v.data_dev_ + start_index, this->data_dev_, this->n_local_*sizeof(double));
 }
 
-void hiopVectorRajaPar::copyToStartingSelect(hiopVector& vec, int start_index/*_in_dest*/, const hiopVector& select)
+void hiopVectorRajaPar::copyToStartingAt_w_pattern(hiopVector& vec, int start_index/*_in_dest*/, const hiopVector& select)
 {
   if(n_local_ == 0)
     return;
@@ -501,7 +501,7 @@ void hiopVectorRajaPar::startingAtCopyToStartingAt(
 }
 
 void hiopVectorRajaPar::
-startingAtCopyToStartingAtSelect(int start_idx_in_src, hiopVector& destination, int start_idx_dest, const hiopVector& selec_dest, int num_elems/*=-1*/) const
+startingAtCopyToStartingAt_w_pattern(int start_idx_in_src, hiopVector& destination, int start_idx_dest, const hiopVector& selec_dest, int num_elems/*=-1*/) const
 {
   const hiopVectorRajaPar& dest = dynamic_cast<hiopVectorRajaPar&>(destination);
   const hiopVectorRajaPar& ix = dynamic_cast<const hiopVectorRajaPar&>(selec_dest);

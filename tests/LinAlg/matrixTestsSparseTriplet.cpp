@@ -341,7 +341,7 @@ void MatrixTestsSparseTriplet::maybeCopyToDev(hiop::hiopMatrixSparse*) { }
  */
 void MatrixTestsSparseTriplet::maybeCopyFromDev(hiop::hiopMatrixSparse*) { }
 
-int MatrixTestsSparseTriplet::copyRowsFromSrcToDest(hiop::hiopMatrixSparse& src_gen,hiop::hiopMatrixSparse& dist_gen,
+int MatrixTestsSparseTriplet::copyRowsBlockFrom(hiop::hiopMatrixSparse& src_gen,hiop::hiopMatrixSparse& dist_gen,
                                          local_ordinal_type rows_src_idx_st, local_ordinal_type n_rows,
                                          local_ordinal_type rows_dest_idx_st, local_ordinal_type dest_nnz_st
                                          )
