@@ -162,7 +162,7 @@ target_link_libraries(hiop_math INTERFACE UMFPACK)
 
 # metis needed (5.x needed by umfpack)
 set(HIOP_METIS_DIR CACHE PATH "Path to METIS directory")
-include(FindMETIS)
+include(FindHiopMETIS)
 target_link_libraries(hiop_math INTERFACE METIS)
 endif(HIOP_WITH_KRON_REDUCTION)
 
@@ -199,23 +199,13 @@ endif()
 if(HIOP_SPARSE)
   # metis needed 
   set(HIOP_METIS_DIR CACHE PATH "Path to METIS directory")
-  include(FindMETIS)
+  include(FindHiopMETIS)
   target_link_libraries(hiop_math INTERFACE METIS)
 
   set(HIOP_COINHSL_DIR CACHE PATH "Path to COINHSL directory")
-  include(FindCOINHSL)
+  include(FindHiopCOINHSL)
   target_link_libraries(hiop_math INTERFACE COINHSL)
   
-  #  find_library(COINHSL_LIBRARY libcoinhsl.so PATH HIOP_COINHSL_DIR)
-  #if(COINHSL_LIBRARY)
-  # message(STATUS "Found Coinhsl libraries: ${COINHSL_LIBRARY}")
-  #  target_link_libraries(hiop_math INTERFACE ${COINHSL_LIBRARY} -lgfortran)
-  #  message(STATUS "Build with sparse linear algebra" )
-  #else(COINHSL_LIBRARY)
-  #  message(STATUS "Can NOT Coinhsl libraries")
-  #  set(HIOP_SPARSE OFF CACHE BOOL "Build with sparse linear algebra" FORCE)
-  #  message(STATUS "Do NOT build with sparse linear algebra" )
-  #endif(COINHSL_LIBRARY)
 endif(HIOP_SPARSE)
 
 
@@ -228,13 +218,7 @@ if(HIOP_USE_STRUMPACK)
 #    REQUIRED)
 #  target_link_libraries(hiop_math INTERFACE STRUMPACK)
 
-#  set(STRUMPACK_DIR $ENV{STRUMPACK_DIR})
-#  include_directories(${STRUMPACK_DIR}/include)
-#  find_library(STRUMPACK_LIBRARY libstrumpack.a PATH ${STRUMPACK_DIR}/lib)
-
-
   include_directories("/g/g92/chiang7/software/STRUMPACK/install_db/include")
-
 
   set(STRUMPACK_LIBRARIES "-L/usr/tce/packages/cuda/cuda-10.1.243/nvidia/targets/ppc64le-linux/lib/stubs -L/usr/tce/packages/cuda/cuda-10.1.243/nvidia/targets/ppc64le-linux/lib  -Wl,-rpath,/usr/tce/packages/spectrum-mpi/ibm/spectrum-mpi-2020.08.19/lib:/g/g92/chiang7/software/lapack-3.9.0/build/lassen_gcc:/usr/tce/packages/cuda/cuda-10.1.243/lib64 /g/g92/chiang7/software/STRUMPACK/install_db/lib/libstrumpack.a /usr/tce/packages/spectrum-mpi/ibm/spectrum-mpi-2020.08.19/lib/libmpiprofilesupport.so -lmpi_ibm_usempi /usr/tce/packages/spectrum-mpi/ibm/spectrum-mpi-2020.08.19/lib/libmpi_ibm_mpifh.so /usr/tce/packages/spectrum-mpi/ibm/spectrum-mpi-2020.08.19/lib/libmpi_ibm.so -lgomp -lpthread /usr/lib64/libessl.so /g/g92/chiang7/software/lapack-3.9.0/build/lassen_gcc/libblas.so /g/g92/chiang7/software/METIS_5/metis-5.1.0/build/Linux-ppc64le/lib/libmetis.a /usr/tce/packages/cuda/cuda-10.1.243/lib64/libcudart.so /usr/tce/packages/cuda/cuda-10.1.243/lib64/libcusolver.so /usr/tce/packages/cuda/cuda-10.1.243/lib64/libcusparse.so /usr/tce/packages/cuda/cuda-10.1.243/lib64/libcublas.so -lgfortran -lquadmath -lcudadevrt -lcudart_static -lrt -lpthread -ldl /g/g92/chiang7/software/scalapack-2.1.0/build/lib/libscalapack.a")
 

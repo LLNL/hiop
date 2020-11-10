@@ -134,7 +134,7 @@ namespace hiop
     */
     spss.options().set_matching(MatchingJob::NONE);
     spss.options().disable_gpu();
-//    spss.options().set_verbose(false);
+    spss.options().set_verbose(false);
 
     spss.set_csr_matrix(n_, kRowPtr_, jCol_, kVal_, true);
 //    spss.reorder(n_, n_);
@@ -230,7 +230,7 @@ namespace hiop
     */
 //    spss.options().set_matching(MatchingJob::NONE);
     spss.options().disable_gpu();
-//    spss.options().set_verbose(false);
+    spss.options().set_verbose(false);
 
     spss.set_csr_matrix(n_, kRowPtr_, jCol_, kVal_, true);
 //    spss.reorder(n_, n_);
@@ -271,7 +271,6 @@ namespace hiop
     assert(n_==M.n() && M.n()==M.m());
     assert(n_>0);
     assert(x_.get_size()==M.n());
-    std::cout<< "-----------------STRUMPACK_SOLVE-----------------" << std::endl;
 
     nlp_->runStats.linsolv.tmTriuSolves.start();
 

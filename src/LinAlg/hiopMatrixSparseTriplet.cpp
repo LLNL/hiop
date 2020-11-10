@@ -940,11 +940,11 @@ void hiopMatrixSparseTriplet::convertToCSR(int &csr_nnz, int **csr_kRowPtr_in, i
           csr_jCol[nnz_tmp] = colID_tmp;
           csr_kVal[nnz_tmp] = values_[k];
           auto p = extra_diag_nnz_map_temp.find (rowID_tmp);
-          if( p != extra_diag_nnz_map_temp.end() )
+          if( p != extra_diag_nnz_map_temp.end() ){
             csr_kVal[nnz_tmp] += values_[p->second];
-
+            index_covert_extra_Diag2CSR_temp[p->first] = nnz_tmp;
+          }
           index_covert_CSR2Triplet[nnz_tmp] = k;
-          index_covert_extra_Diag2CSR_temp[rowID_tmp] = nnz_tmp;
 
           nnz_each_row_tmp[rowID_tmp]++;
           total_nnz_tmp++;
