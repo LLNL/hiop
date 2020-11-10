@@ -743,7 +743,7 @@ public:
   * @pre Otherwise, this function may replace the non-zero values and nonzero patterns for the undesired elements.
   */
   int
-  copyRowsFromSrcToDest(
+  copyRowsBlockFrom(
     hiop::hiopMatrixSparse& A,
     hiop::hiopMatrixSparse& B,
     local_ordinal_type A_rows_st, local_ordinal_type n_rows,
@@ -787,7 +787,7 @@ public:
     auto itnz_dest=B_nnz_st;
     int fail{0};
 
-    B.copyRowsFromSrcToDest(A, A_rows_st, n_rows, B_rows_st, B_nnz_st);
+    B.copyRowsBlockFrom(A, A_rows_st, n_rows, B_rows_st, B_nnz_st);
 
     auto val = getMatrixData(&B);
 

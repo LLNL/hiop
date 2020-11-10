@@ -195,7 +195,7 @@ void hiopVectorPar::copyToStarting(hiopVector& v_, int start_index/*_in_dest*/)
   memcpy(v.data_+start_index, data_, n_local_*sizeof(double)); 
 }
 
-void hiopVectorPar::copyToStartingSelect(hiopVector& v_, int start_index/*_in_dest*/, const hiopVector& select)
+void hiopVectorPar::copyToStartingAt_w_pattern(hiopVector& v_, int start_index/*_in_dest*/, const hiopVector& select)
 {
   const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_);
   const hiopVectorPar& ix = dynamic_cast<const hiopVectorPar&>(select);
@@ -240,7 +240,7 @@ startingAtCopyToStartingAt(int start_idx_in_src, hiopVector& dest_, int start_id
 }
 
 void hiopVectorPar::
-startingAtCopyToStartingAtSelect(int start_idx_in_src, hiopVector& dest_, int start_idx_dest, const hiopVector& selec_dest, int num_elems/*=-1*/) const
+startingAtCopyToStartingAt_w_pattern(int start_idx_in_src, hiopVector& dest_, int start_idx_dest, const hiopVector& selec_dest, int num_elems/*=-1*/) const
 {
   assert(start_idx_in_src>=0 && start_idx_in_src<=n_local_);
   const hiopVectorPar& dest = dynamic_cast<hiopVectorPar&>(dest_);

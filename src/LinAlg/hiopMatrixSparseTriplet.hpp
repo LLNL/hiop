@@ -68,13 +68,13 @@ public:
   /* add to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements of
   * 'd_' (source) starting at index 'start_on_src_vec'. The number of elements added is 'num_elems'
   */
-  virtual void copySubDiagonalEleFromVec(const long long& start_on_dest_diag, const long long& num_elems,
+  virtual void copySubDiagonalFrom(const long long& start_on_dest_diag, const long long& num_elems,
                                       const hiopVector& d_, const long long& start_on_nnz_idx);
 
   /* add constant 'c' to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements.
   * The number of elements added is 'num_elems'
   */
-  virtual void copySubDiagonalEleFromConstant(const long long& start_on_dest_diag, const long long& num_elems,
+  virtual void setSubDiagonalTo(const long long& start_on_dest_diag, const long long& num_elems,
                                        const double& c, const long long& start_on_nnz_idx);
 
   virtual void addMatrix(double alpha, const hiopMatrix& X);
@@ -126,7 +126,7 @@ public:
 					    const hiopVector& D, const hiopMatrixSparse& N,
 					    hiopMatrixDense& W) const;
 
-  virtual void copyRowsFromSrcToDest(const hiopMatrix& src_gen,
+  virtual void copyRowsBlockFrom(const hiopMatrix& src_gen,
                                          const long long& rows_src_idx_st, const long long& n_rows,
                                          const long long& rows_dest_idx_st, const long long& dest_nnz_st
                                          );
@@ -139,7 +139,7 @@ public:
   * @pre 'dest_nnz_st' + the number of non-zeros in the copied matrix must be less or equal to this->numOfNumbers()
   * @pre User must know the nonzero pattern of src and dest matrices. Assume non-zero patterns wont change, and 'src_gen' is a submatrix of 'this'
   */
-  virtual void SetSubMatrixFromSrc(const hiopMatrix& src_gen,
+  virtual void copySubmatrixFrom(const hiopMatrix& src_gen,
                                    const long long& dest_row_st, const long long& dest_col_st,
                                    const long long& dest_nnz_st);
 //                                   bool firstCall, std::map<int,int> &ValIdxMap );
@@ -148,7 +148,7 @@ public:
   * @brief Copy the transpose of matrix 'src_gen', into 'this' as a submatrix from corner 'dest_row_st' and 'dest_col_st'
   * The non-zero elements start from 'dest_nnz_st' will be replaced by the new elements.
   */
-  virtual void SetSubMatrixFromSrcTrans(const hiopMatrix& src_gen,
+  virtual void copySubmatrixFromTrans(const hiopMatrix& src_gen,
                                    const long long& dest_row_st, const long long& dest_col_st,
                                    const long long& dest_nnz_st);
 
@@ -157,10 +157,10 @@ public:
   * into 'this' as a submatrix from corner 'dest_row_st' and 'dest_col_st'
   * The non-zero elements start from 'dest_nnz_st' will be replaced by the new elements.
   */
-  virtual void SetSubMatrixFromIdentitySelectCols(const double& scalar,
+  virtual void setSubmatrixToConstantDiag_w_colpattern(const double& scalar,
                                    const long long& dest_row_st, const long long& dest_col_st,
                                    const long long& dest_nnz_st, const int &nnz_to_copy, const hiopVector& ix );
-  virtual void SetSubMatrixFromIdentitySelectRows(const double& scalar,
+  virtual void setSubmatrixToConstantDiag_w_rowpattern(const double& scalar,
                                    const long long& dest_row_st, const long long& dest_col_st,
                                    const long long& dest_nnz_st, const int &nnz_to_copy, const hiopVector& ix );
 
