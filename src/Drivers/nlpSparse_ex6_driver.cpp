@@ -74,6 +74,8 @@ int main(int argc, char **argv)
 //  nlp.options->SetStringValue("compute_mode", "cpu");
   nlp.options->SetStringValue("compute_mode", "hybrid");
   nlp.options->SetStringValue("KKTLinsys", "xdycyd");
+//  nlp.options->SetStringValue("KKTLinsys", "full");
+
 //  nlp.options->SetIntegerValue("max_iter", 100);
 //  nlp.options->SetNumericValue("kappa1", 1e-8);
 //  nlp.options->SetNumericValue("kappa2", 1e-8);

@@ -258,7 +258,11 @@ startingAtCopyToStartingAtSelect(int start_idx_in_src, hiopVector& dest_, int st
   int find_nnz = 0;
   const double* ix_vec = ix.data_;
   for(int i=start_idx_dest; i<dest.n_local_&&find_nnz<num_elems; i++)
-    if(ix_vec[i]==1.) dest.data_[start_idx_dest+find_nnz] = data_[ start_idx_in_src + (find_nnz++)];
+    if(ix_vec[i]==1.)
+    {
+      dest.data_[i] = data_[ start_idx_in_src + find_nnz];
+      find_nnz++;
+    }
 }
 
 void hiopVectorPar::copyTo(double* dest) const
