@@ -143,7 +143,7 @@ void hiopMatrixSparseTriplet::addSubDiagonal(const double& alpha, long long star
   assert(false && "not needed");
 }
 
-void hiopMatrixSparseTriplet::copySubDiagonalEleFromVec(const long long& start_on_dest_diag, const long long& num_elems,
+void hiopMatrixSparseTriplet::copySubDiagonalFrom(const long long& start_on_dest_diag, const long long& num_elems,
                                                      const hiopVector& d_, const long long& start_on_nnz_idx)
 {
   const hiopVectorPar& vd = dynamic_cast<const hiopVectorPar&>(d_);
@@ -159,7 +159,7 @@ void hiopMatrixSparseTriplet::copySubDiagonalEleFromVec(const long long& start_o
   }
 }
 
-void hiopMatrixSparseTriplet::copySubDiagonalEleFromConstant(const long long& start_on_dest_diag, const long long& num_elems,
+void hiopMatrixSparseTriplet::setSubDiagonalTo(const long long& start_on_dest_diag, const long long& num_elems,
                                                       const double& c, const long long& start_on_nnz_idx)
 {
   assert(start_on_dest_diag>=0 && start_on_dest_diag+num_elems<=this->nrows_);
@@ -474,7 +474,7 @@ void hiopMatrixSparseTriplet::copyRowsFrom(const hiopMatrix& src_gen,
  * @pre 'this' must have exactly, or more than 'n_rows' rows
  * @pre 'this' must have exactly, or more cols than 'src'
  */
-void hiopMatrixSparseTriplet::copyRowsFromSrcToDest(const hiopMatrix& src_gen,
+void hiopMatrixSparseTriplet::copyRowsBlockFrom(const hiopMatrix& src_gen,
                                          const long long& rows_src_idx_st, const long long& n_rows,
                                          const long long& rows_dest_idx_st, const long long& dest_nnz_st)
 {
@@ -731,7 +731,7 @@ void hiopMatrixSymSparseTriplet::startingAtAddSubDiagonalToStartingAt(int diag_s
   }
 }
 
-void hiopMatrixSparseTriplet::SetSubMatrixFromSrc(const hiopMatrix& src_gen,
+void hiopMatrixSparseTriplet::copySubmatrixFrom(const hiopMatrix& src_gen,
                                    const long long& dest_row_st, const long long& dest_col_st,
                                    const long long& dest_nnz_st)
 //                                   bool firstCall, std::map<int,int> &ValIdxMap )
@@ -760,7 +760,7 @@ void hiopMatrixSparseTriplet::SetSubMatrixFromSrc(const hiopMatrix& src_gen,
   assert(dest_k <= this->numberOfNonzeros());
 }
 
-void hiopMatrixSparseTriplet::SetSubMatrixFromSrcTrans(const hiopMatrix& src_gen,
+void hiopMatrixSparseTriplet::copySubmatrixFromTrans(const hiopMatrix& src_gen,
                                    const long long& dest_row_st, const long long& dest_col_st,
                                    const long long& dest_nnz_st)
 {
@@ -788,7 +788,7 @@ void hiopMatrixSparseTriplet::SetSubMatrixFromSrcTrans(const hiopMatrix& src_gen
   assert(dest_k <= this->numberOfNonzeros());
 }
 
-void hiopMatrixSparseTriplet::SetSubMatrixFromIdentitySelectCols(const double& scalar,
+void hiopMatrixSparseTriplet::setSubmatrixToConstantDiag_w_colpattern(const double& scalar,
                                    const long long& dest_row_st, const long long& dest_col_st,
                                    const long long& dest_nnz_st, const int &nnz_to_copy, const hiopVector& ix)
 {
@@ -815,7 +815,7 @@ void hiopMatrixSparseTriplet::SetSubMatrixFromIdentitySelectCols(const double& s
   assert(nnz_find == nnz_to_copy);
 }
 
-void hiopMatrixSparseTriplet::SetSubMatrixFromIdentitySelectRows(const double& scalar,
+void hiopMatrixSparseTriplet::setSubmatrixToConstantDiag_w_rowpattern(const double& scalar,
                                    const long long& dest_row_st, const long long& dest_col_st,
                                    const long long& dest_nnz_st, const int &nnz_to_copy, const hiopVector& ix)
 {
