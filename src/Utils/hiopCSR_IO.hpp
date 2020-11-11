@@ -146,7 +146,7 @@ namespace hiop
       if(index_covert_extra_Diag2CSR) delete [] index_covert_extra_Diag2CSR; index_covert_extra_Diag2CSR = nullptr;
       
       //start writing -> indexes are starting at 1
-      fprintf(f, "%d\n %d\n", m, csr_nnz);      
+      fprintf(f, "%d\n%d\n", m, csr_nnz);      
       
       //array of pointers/offsets in of the first nonzero of each row; first entry is 1 and the last entry is nnz+1
       for(int i=0; i<m+1; i++) {	
@@ -157,7 +157,7 @@ namespace hiop
       
       //array of the column indexes of nonzeros
       for(int i=0; i<csr_nnz; i++) {
-        fprintf(f, "%d ", csr_jCol[i]);
+        fprintf(f, "%d ", csr_jCol[i]+1);
       }
       fprintf(f, "\n");
       
