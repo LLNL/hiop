@@ -98,7 +98,7 @@ namespace hiop
       for(int i=0; i<m; i++) {
 	for(int j=i; j<m; j++) 
 	  if(fabs(M[i][j])>zero_tol)
-	    fprintf(f, "%d ", j);
+	    fprintf(f, "%d ", j+1);
     }
       fprintf(f, "\n");
       
