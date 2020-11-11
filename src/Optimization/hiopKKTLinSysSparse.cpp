@@ -48,10 +48,12 @@
 
 #include "hiopKKTLinSysSparse.hpp"
 
-//#ifdef HIOP_SPARSE
+#ifdef HIOP_SPARSE
 #include "hiopLinSolverIndefSparseMA57.hpp"
+#ifdef HIOP_USE_STRUMPACK
 #include "hiopLinSolverSparseSTRUMPACK.hpp"
-//#endif
+#endif
+#endif
 
 namespace hiop
 {
@@ -359,14 +361,30 @@ namespace hiop
 
       if(nlp_->options->GetString("compute_mode")=="cpu")
       {
-        nlp_->log->printf(hovWarning,
-			    "KKT_SPARSE_XYcYd linsys: MA57 size %d (%d cons) (safe_mode=%d)\n",
-			    n, neq+nineq, safe_mode_);
-          linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
+        //#NYWRK - is 'safe_mode_' used by MA57? update the message if not please
+        nlp_->log->printf(hovScalars,
+                          "KKT_SPARSE_XYcYd linsys: using MA57 size %d (%d cons) (safe_mode=%d)\n",
+                          n, neq+nineq, safe_mode_);
+        linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
       }else{
+#ifdef HIOP_USE_STRUMPACK        
         hiopLinSolverIndefSparseSTRUMPACK *p = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
+
+        //print it as a warning if safe mode is on
+        auto verbosity = hovScalars;
+        if(safe_mode_) verbosity  = hovWarning;
+        nlp_->log->printf(verbosity,
+                          "KKT_SPARSE_XYcYd linsys: using STRUMPACK size %d (%d cons) (safe_mode=%d)\n",
+                          n, neq+nineq, safe_mode_);
+        
         p->set_fake_inertia(neq + nineq);
         linSys_ = p;
+#else
+        nlp_->log->printf(hovScalars,
+                          "KKT_SPARSE_XYcYd linsys: using MA57 size %d (%d cons)\n",
+                          n, neq+nineq);
+        linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
+#endif
       }
     }
     return linSys_;
@@ -686,9 +704,25 @@ namespace hiop
 			    n, neq+nineq, safe_mode_);
           linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
       }else{
-        hiopLinSolverIndefSparseSTRUMPACK*p = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
+
+#ifdef HIOP_USE_STRUMPACK        
+        hiopLinSolverIndefSparseSTRUMPACK *p = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
+
+        //print it as a warning if safe mode is on
+        auto verbosity = hovScalars;
+        if(safe_mode_) verbosity  = hovWarning;
+        nlp_->log->printf(verbosity,
+                          "KKT_SPARSE_XYcYd linsys: using STRUMPACK size %d (%d cons) (safe_mode=%d)\n",
+                          n, neq+nineq, safe_mode_);
+        
         p->set_fake_inertia(neq + nineq);
         linSys_ = p;
+#else
+        nlp_->log->printf(hovScalars,
+                          "KKT_SPARSE_XYcYd linsys: using MA57 size %d (%d cons)\n",
+                          n, neq+nineq);
+        linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
+#endif
       }
     }
     return linSys_;
@@ -722,12 +756,20 @@ namespace hiop
   {
     if(NULL==linSys_)
     {
+#ifdef HIOP_USE_STRUMPACK
       nlp_->log->printf(hovWarning,
-			    "KKT_SPARSE_FULL_KKT linsys: STRUMPACK size %d (%d cons) (safe_mode=%d)\n",
-			    n, n_con, safe_mode_);
+                        "KKT_SPARSE_FULL_KKT linsys: STRUMPACK size %d (%d cons) (safe_mode=%d)\n",
+                        n, n_con, safe_mode_);
       hiopLinSolverNonSymSparseSTRUMPACK *p = new hiopLinSolverNonSymSparseSTRUMPACK(n, nnz, nlp_);
       p->set_fake_inertia(n_con);
       linSys_ = p;
+#else
+      nlp_->log->printf(hovError,
+                        "KT_SPARSE_FULL_KKT linsys: cannot instantiate backend linear solver "
+                        "because HIOP was not built with STRUMPACK");
+      assert(false);
+      return NULL;
+#endif
     }
     return linSys_;
   }
@@ -775,7 +817,7 @@ namespace hiop
             + n_reg;
 
     //
-    //based on safe_mode_, decide whether to go with the nopiv (fast) or Bunch-Kaufman (stable) linear solve
+    // #TODONYWRK -is this message really applicable? based on safe_mode_, decide whether to go with the nopiv (fast) or Bunch-Kaufman (stable) linear solve
     //
     linSys_ = determineAndCreateLinsys(n, required_num_neg_eig, nnz);
 

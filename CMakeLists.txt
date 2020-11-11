@@ -31,7 +31,7 @@ option(HIOP_WITH_MAKETEST "Enable 'make test'" ON)
 option(HIOP_BUILD_SHARED "Build shared library" OFF)
 option(HIOP_BUILD_STATIC "Build static library" ON)
 option(HIOP_SPARSE "Build with sparse linear algebra" ON)
-option(HIOP_USE_STRUMPACK "Build with sparse linear algebra" ON)
+option(HIOP_USE_STRUMPACK "Build with STRUMPACK backend for sparse linear algebra" OFF)
 
 if(HIOP_BUILD_SHARED)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -205,6 +205,12 @@ if(HIOP_SPARSE)
   set(HIOP_COINHSL_DIR CACHE PATH "Path to COINHSL directory")
   include(FindHiopCOINHSL)
   target_link_libraries(hiop_math INTERFACE COINHSL)
+
+  #TODONYWRK
+  #if METIS not_found or HSL not_found
+  #  print a warning message saying prerequisites for sparse linear algebra were not found and the option will be disabled
+  #  disable HIOP_SPARSE -> set HIOP_SPARSE to false
+  #endif()
   
 endif(HIOP_SPARSE)
 
@@ -420,6 +426,12 @@ if (HIOP_WITH_MAKETEST)
 
   add_test(NAME NlpMixedDenseSparse5_1 COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpMDS_ex5.exe> 400 100 -selfcheck")
 
+  #TODONYWRK
+  if(HIOP_SPARSE)
+    #add_test 6
+    #add_test 7
+  endif(HIOP_SPARSE)
+  
   if(HIOP_BUILD_SHARED AND NOT HIOP_USE_GPU)
     add_test(NAME NlpMixedDenseSparseCinterface COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpMDS_cex4.exe>")
   endif()
