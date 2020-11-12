@@ -49,7 +49,9 @@
 #include "hiopKKTLinSysSparse.hpp"
 
 #ifdef HIOP_SPARSE
+#ifdef HIOP_USE_COINHSL
 #include "hiopLinSolverIndefSparseMA57.hpp"
+#endif
 #ifdef HIOP_USE_STRUMPACK
 #include "hiopLinSolverSparseSTRUMPACK.hpp"
 #endif
@@ -106,9 +108,6 @@ namespace hiop
 
     int nnz = HessSp_->numberOfNonzeros() + Jac_cSp_->numberOfNonzeros() + Jac_dSp_->numberOfNonzeros() + nx + neq + nineq;
 
-    //
-    //based on safe_mode_, decide whether to go with the nopiv (fast) or Bunch-Kaufman (stable) linear solve
-    //
     linSys_ = determineAndCreateLinsys(nx, neq, nineq, nnz);
 
     //
@@ -187,11 +186,10 @@ namespace hiop
       * [  Jdd                        0              M_{33} ]
       *
       * where
-      * M_{33} = - (Dd+delta_wd)*I^{-1} - delta_cd*I is performed below
+      * M_{33} = - (Dd+delta_wd)*I^{-1} - delta_cd*I = - Dd_inv - delta_cd*I is performed below
       */
 
-      // add -{Dd}^{-1}
-      // Dd=(Sdl)^{-1}Vu + (Sdu)^{-1}Vu + delta_wd * I
+      // Dd = (Sdl)^{-1}Vu + (Sdu)^{-1}Vu + delta_wd * I
       Dd_inv_->setToConstant(delta_wd);
       Dd_inv_->axdzpy_w_pattern(1.0, *iter->vl, *iter->sdl, nlp_->get_idl());
       Dd_inv_->axdzpy_w_pattern(1.0, *iter->vu, *iter->sdu, nlp_->get_idu());
@@ -200,9 +198,9 @@ namespace hiop
 	assert(true==Dd_inv_->allPositive());
 #endif
       Dd_inv_->invert();
-      Dd_inv_->addConstant(-delta_cd);
+      Dd_inv_->addConstant(delta_cd);
 
-      Msys.copySubDiagonalFrom(nx+neq, nineq, *Dd_inv_, dest_nnz_st); dest_nnz_st += nineq;
+      Msys.copySubDiagonalFrom(nx+neq, nineq, *Dd_inv_, dest_nnz_st, -1); dest_nnz_st += nineq;
 
 
       nlp_->log->write("KKT_SPARSE_XYcYd linsys:", Msys, hovMatrices);
@@ -361,11 +359,12 @@ namespace hiop
 
       if(nlp_->options->GetString("compute_mode")=="cpu")
       {
-        //#NYWRK - is 'safe_mode_' used by MA57? update the message if not please
         nlp_->log->printf(hovScalars,
-                          "KKT_SPARSE_XYcYd linsys: using MA57 size %d (%d cons) (safe_mode=%d)\n",
-                          n, neq+nineq, safe_mode_);
+                          "KKT_SPARSE_XYcYd linsys: using MA57 size %d (%d cons)\n",
+                          n, neq+nineq);
+#ifdef HIOP_USE_COINHSL        
         linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
+#endif // HIOP_USE_COINHSL
       }else{
 #ifdef HIOP_USE_STRUMPACK        
         hiopLinSolverIndefSparseSTRUMPACK *p = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
@@ -374,18 +373,21 @@ namespace hiop
         auto verbosity = hovScalars;
         if(safe_mode_) verbosity  = hovWarning;
         nlp_->log->printf(verbosity,
-                          "KKT_SPARSE_XYcYd linsys: using STRUMPACK size %d (%d cons) (safe_mode=%d)\n",
+                          "KKT_SPARSE_XYcYd linsys: using STRUMPACK as an indefinite solver, size %d (%d cons) (safe_mode=%d)\n",
                           n, neq+nineq, safe_mode_);
         
         p->set_fake_inertia(neq + nineq);
         linSys_ = p;
 #else
+#ifdef HIOP_USE_COINHSL
         nlp_->log->printf(hovScalars,
-                          "KKT_SPARSE_XYcYd linsys: using MA57 size %d (%d cons)\n",
-                          n, neq+nineq);
+                          "KKT_SPARSE_XYcYd linsys: using MA57 on CPU size %d (%d cons)\n",
+                          n, neq+nineq);                             
         linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
-#endif
+#endif // HIOP_USE_COINHSL
+#endif // HIOP_USE_STRUMPACK
       }
+      assert(linSys_&& "KKT_SPARSE_XYcYd linsys: cannot instantiate backend linear solver");
     }
     return linSys_;
   }
@@ -441,9 +443,6 @@ namespace hiop
 
     int nnz = HessSp_->numberOfNonzeros() + Jac_cSp_->numberOfNonzeros() + Jac_dSp_->numberOfNonzeros() + nd + nx + nd + neq + nineq;
 
-    //
-    //based on safe_mode_, decide whether to go with the nopiv (fast) or Bunch-Kaufman (stable) linear solve
-    //
     linSys_ = determineAndCreateLinsys(nx, neq, nineq, nnz);
 
     //
@@ -700,11 +699,12 @@ namespace hiop
       if(nlp_->options->GetString("compute_mode")=="cpu")
       {
         nlp_->log->printf(hovWarning,
-			    "KKT_SPARSE_XYcYd linsys: MA57 size %d (%d cons) (safe_mode=%d)\n",
-			    n, neq+nineq, safe_mode_);
+			    "KKT_SPARSE_XYcYd linsys: MA57 size %d (%d cons)\n",
+			    n, neq+nineq);
+#ifdef HIOP_USE_COINHSL			    
           linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
+#endif // HIOP_USE_COINHSL          
       }else{
-
 #ifdef HIOP_USE_STRUMPACK        
         hiopLinSolverIndefSparseSTRUMPACK *p = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
 
@@ -712,18 +712,21 @@ namespace hiop
         auto verbosity = hovScalars;
         if(safe_mode_) verbosity  = hovWarning;
         nlp_->log->printf(verbosity,
-                          "KKT_SPARSE_XYcYd linsys: using STRUMPACK size %d (%d cons) (safe_mode=%d)\n",
+                          "KKT_SPARSE_XDYcYd linsys: using STRUMPACK as an indefinite solver, size %d (%d cons) (safe_mode=%d)\n",
                           n, neq+nineq, safe_mode_);
         
         p->set_fake_inertia(neq + nineq);
         linSys_ = p;
 #else
+#ifdef HIOP_USE_COINHSL
         nlp_->log->printf(hovScalars,
-                          "KKT_SPARSE_XYcYd linsys: using MA57 size %d (%d cons)\n",
-                          n, neq+nineq);
+                          "KKT_SPARSE_XDYcYd linsys: using MA57 on CPU size %d (%d cons)\n",
+                          n, neq+nineq);                             
         linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
-#endif
+#endif // HIOP_USE_COINHSL
+#endif // HIOP_USE_STRUMPACK
       }
+      assert(linSys_&& "KKT_SPARSE_XDYcYd linsys: cannot instantiate backend linear solver");
     }
     return linSys_;
   }
@@ -765,7 +768,7 @@ namespace hiop
       linSys_ = p;
 #else
       nlp_->log->printf(hovError,
-                        "KT_SPARSE_FULL_KKT linsys: cannot instantiate backend linear solver "
+                        "KKT_SPARSE_FULL_KKT linsys: cannot instantiate backend linear solver "
                         "because HIOP was not built with STRUMPACK");
       assert(false);
       return NULL;
@@ -816,9 +819,6 @@ namespace hiop
             + ndl + ndu + nxl + nxu
             + n_reg;
 
-    //
-    // #TODONYWRK -is this message really applicable? based on safe_mode_, decide whether to go with the nopiv (fast) or Bunch-Kaufman (stable) linear solve
-    //
     linSys_ = determineAndCreateLinsys(n, required_num_neg_eig, nnz);
 
     hiopMatrixSparseTriplet& Msys = linSys_->sysMatrix();

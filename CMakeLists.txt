@@ -31,7 +31,8 @@ option(HIOP_WITH_MAKETEST "Enable 'make test'" ON)
 option(HIOP_BUILD_SHARED "Build shared library" OFF)
 option(HIOP_BUILD_STATIC "Build static library" ON)
 option(HIOP_SPARSE "Build with sparse linear algebra" ON)
-option(HIOP_USE_STRUMPACK "Build with STRUMPACK backend for sparse linear algebra" OFF)
+option(HIOP_USE_COINHSL "Build with sparse linear algebra" ON)
+option(HIOP_USE_STRUMPACK "Build with STRUMPACK backend for sparse linear algebra" ON)
 
 if(HIOP_BUILD_SHARED)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -200,35 +201,52 @@ if(HIOP_SPARSE)
   # metis needed 
   set(HIOP_METIS_DIR CACHE PATH "Path to METIS directory")
   include(FindHiopMETIS)
-  target_link_libraries(hiop_math INTERFACE METIS)
+  if(METIS_LIBRARY)
+    target_link_libraries(hiop_math INTERFACE METIS)
 
-  set(HIOP_COINHSL_DIR CACHE PATH "Path to COINHSL directory")
-  include(FindHiopCOINHSL)
-  target_link_libraries(hiop_math INTERFACE COINHSL)
+    if(HIOP_USE_COINHSL)
+      set(HIOP_COINHSL_DIR CACHE PATH "Path to COINHSL directory")
+      include(FindHiopCOINHSL)
+      if(COINHSL_LIBRARY)
+        target_link_libraries(hiop_math INTERFACE COINHSL)    
+      else(COINHSL_LIBRARY)
+        set(HIOP_USE_COINHSL OFF CACHE BOOL "Build without COINHSL" FORCE)
+      endif(COINHSL_LIBRARY)  
+    endif(HIOP_USE_COINHSL)
+    
+    if(HIOP_USE_STRUMPACK)
+      set(HIOP_STRUMPACK_DIR CACHE PATH "Path to STRUMPACK directory")
+      include(FindHiopSTRUMPACK)
+      target_link_libraries(hiop_math INTERFACE STRUMPACK)
 
-  #TODONYWRK
-  #if METIS not_found or HSL not_found
-  #  print a warning message saying prerequisites for sparse linear algebra were not found and the option will be disabled
-  #  disable HIOP_SPARSE -> set HIOP_SPARSE to false
-  #endif()
+      if(STRUMPACK_LIBRARIES)
+        target_link_libraries(hiop_math INTERFACE ${STRUMPACK_LIBRARIES})  
+      else(STRUMPACK_LIBRARIES)
+        set(HIOP_USE_STRUMPACK OFF CACHE BOOL "Build without STRUMPACK" FORCE)
+      endif(STRUMPACK_LIBRARIES)  
+    endif(HIOP_USE_STRUMPACK)
+    
+    if(NOT HIOP_USE_COINHSL AND NOT HIOP_USE_STRUMPACK )
+      set(HIOP_SPARSE OFF CACHE BOOL "Build without sparse linear algebra" FORCE)
+      message(STATUS "Cannot find COINHSL nor STRUMPACK for sparse linear algebra, and the option HIOP_SPARSE will be disabled")
+    endif(NOT HIOP_USE_COINHSL AND NOT HIOP_USE_STRUMPACK )
+        
+  else(METIS_LIBRARY)
+    set(HIOP_USE_COINHSL OFF CACHE BOOL "Build without COINHSL" FORCE)
+    set(HIOP_USE_STRUMPACK OFF CACHE BOOL "Build without STRUMPACK" FORCE)
+    set(HIOP_SPARSE OFF CACHE BOOL "Build without sparse linear algebra" FORCE)
+    message(STATUS "Prerequisites for sparse linear algebra, METUS, was not found and the option HIOP_SPARSE will be disabled")
+  endif()
   
+else(HIOP_SPARSE)
+ set(HIOP_USE_COINHSL OFF CACHE BOOL "Build without COINHSL" FORCE)
+ set(HIOP_USE_STRUMPACK OFF CACHE BOOL "Build without STRUMPACK" FORCE)
 endif(HIOP_SPARSE)
 
 
 # something wrong with cmake find_package, use hard code right now
 if(HIOP_USE_STRUMPACK)
-  message(STATUS "Start to find STRUMPACK" )
-# Look for CMake configuration file in RAJA installation
-#  find_package(STRUMPACK CONFIG
-#    PATHS ${STRUMPACK_DIR} ${STRUMPACK_DIR}/install_db/cmake/STRUMPACK
-#    REQUIRED)
-#  target_link_libraries(hiop_math INTERFACE STRUMPACK)
 
-  include_directories("/g/g92/chiang7/software/STRUMPACK/install_db/include")
-
-  set(STRUMPACK_LIBRARIES "-L/usr/tce/packages/cuda/cuda-10.1.243/nvidia/targets/ppc64le-linux/lib/stubs -L/usr/tce/packages/cuda/cuda-10.1.243/nvidia/targets/ppc64le-linux/lib  -Wl,-rpath,/usr/tce/packages/spectrum-mpi/ibm/spectrum-mpi-2020.08.19/lib:/g/g92/chiang7/software/lapack-3.9.0/build/lassen_gcc:/usr/tce/packages/cuda/cuda-10.1.243/lib64 /g/g92/chiang7/software/STRUMPACK/install_db/lib/libstrumpack.a /usr/tce/packages/spectrum-mpi/ibm/spectrum-mpi-2020.08.19/lib/libmpiprofilesupport.so -lmpi_ibm_usempi /usr/tce/packages/spectrum-mpi/ibm/spectrum-mpi-2020.08.19/lib/libmpi_ibm_mpifh.so /usr/tce/packages/spectrum-mpi/ibm/spectrum-mpi-2020.08.19/lib/libmpi_ibm.so -lgomp -lpthread /usr/lib64/libessl.so /g/g92/chiang7/software/lapack-3.9.0/build/lassen_gcc/libblas.so /g/g92/chiang7/software/METIS_5/metis-5.1.0/build/Linux-ppc64le/lib/libmetis.a /usr/tce/packages/cuda/cuda-10.1.243/lib64/libcudart.so /usr/tce/packages/cuda/cuda-10.1.243/lib64/libcusolver.so /usr/tce/packages/cuda/cuda-10.1.243/lib64/libcusparse.so /usr/tce/packages/cuda/cuda-10.1.243/lib64/libcublas.so -lgfortran -lquadmath -lcudadevrt -lcudart_static -lrt -lpthread -ldl /g/g92/chiang7/software/scalapack-2.1.0/build/lib/libscalapack.a")
-
-  target_link_libraries(hiop_math INTERFACE ${STRUMPACK_LIBRARIES})
 endif(HIOP_USE_STRUMPACK)
 
 
@@ -426,10 +444,9 @@ if (HIOP_WITH_MAKETEST)
 
   add_test(NAME NlpMixedDenseSparse5_1 COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpMDS_ex5.exe> 400 100 -selfcheck")
 
-  #TODONYWRK
   if(HIOP_SPARSE)
-    #add_test 6
-    #add_test 7
+    add_test(NAME NlpSparse6_1 COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpSparse_ex6.exe> 500 -selfcheck")
+    add_test(NAME NlpSparse7_1 COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpSparse_ex7.exe> 500 -selfcheck")
   endif(HIOP_SPARSE)
   
   if(HIOP_BUILD_SHARED AND NOT HIOP_USE_GPU)

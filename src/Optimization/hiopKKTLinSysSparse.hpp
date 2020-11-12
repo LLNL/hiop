@@ -239,7 +239,7 @@ protected:
   const hiopMatrixSparse* Jac_dSp_;
 
   // -1 when disabled; otherwise acts like a counter, 0,1,... incremented each time
-  // 'solveCompressed' is called; activated by the 'write_kkt' option
+  // 'solve' is called; activated by the 'write_kkt' option
   int write_linsys_counter_;
   hiopCSR_IO csr_writer_;
 

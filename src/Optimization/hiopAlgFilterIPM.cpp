@@ -1211,6 +1211,7 @@ decideAndCreateLinearSystem(hiopNlpFormulation* nlp)
       else //'auto' or 'XYcYd'
         return new hiopKKTLinSysDenseXYcYd(nlp);
     } else {
+#ifdef HIOP_SPARSE
       // this is Sparse linear system
       std::string strKKT = nlp->options->GetString("KKTLinsys");
       if(strKKT == "full")
@@ -1219,6 +1220,7 @@ decideAndCreateLinearSystem(hiopNlpFormulation* nlp)
         return new hiopKKTLinSysCompressedSparseXDYcYd(nlp);
       else //'auto' or 'XYcYd'
         return new hiopKKTLinSysCompressedSparseXYcYd(nlp);
+#endif
     }
   } else {
     return new hiopKKTLinSysCompressedMDSXYcYd(nlp);
