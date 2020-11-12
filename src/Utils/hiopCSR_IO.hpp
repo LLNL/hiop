@@ -168,6 +168,11 @@ namespace hiop
       fprintf(f, "\n");
       
       fclose(f);
+      
+      if(csr_kRowPtr) delete [] csr_kRowPtr; csr_kRowPtr = nullptr;
+      if(csr_jCol) delete [] csr_jCol; csr_jCol = nullptr;
+      if(csr_kVal) delete [] csr_kVal; csr_kVal = nullptr;
+      
     }
   
   private:

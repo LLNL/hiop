@@ -228,6 +228,9 @@ bool hiopKKTLinSysCompressedXYcYd::computeDirections(const hiopResidual* resid,
    * rx_tilde  = rx+Sxl^{-1}*[rszl-Zl*rxl] - Sxu^{-1}*(rszu-Zu*rxu)
    * ryd_tilde = ryd + [(Sdl^{-1}Vl+Sdu^{-1}Vu)]^{-1}*
    *                     [rd + Sdl^{-1}*(rsvl-Vl*rdl)-Sdu^{-1}(rsvu-Vu*rdu)]
+   * rd_tilde = rd + Sdl^{-1}*(rsvl-Vl*rdl)-Sdu^{-1}(rsvu-Vu*rdu)
+   * Dd_inv = [(Sdl^{-1}Vl+Sdu^{-1}Vu)]^{-1}
+   * yd_tilde = ryd + Dd_inv*rd_tilde
    */
   rx_tilde_->copyFrom(*r.rx);
   if(nlp_->n_low_local()>0) {
