@@ -11,7 +11,9 @@ set(hiopLinAlg_SRC
 )
 
 if(HIOP_SPARSE)
-    set(hiopLinAlg_SRC ${hiopLinAlg_SRC} hiopLinSolverIndefSparseMA57.cpp)
+    if(HIOP_USE_COINHSL)
+      set(hiopLinAlg_SRC ${hiopLinAlg_SRC} hiopLinSolverIndefSparseMA57.cpp)
+    endif(HIOP_USE_COINHSL)      
     if(HIOP_USE_STRUMPACK)
       set(hiopLinAlg_SRC ${hiopLinAlg_SRC} hiopLinSolverSparseSTRUMPACK.cpp)
     endif(HIOP_USE_STRUMPACK)

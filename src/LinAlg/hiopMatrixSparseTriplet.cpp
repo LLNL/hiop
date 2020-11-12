@@ -144,7 +144,7 @@ void hiopMatrixSparseTriplet::addSubDiagonal(const double& alpha, long long star
 }
 
 void hiopMatrixSparseTriplet::copySubDiagonalFrom(const long long& start_on_dest_diag, const long long& num_elems,
-                                                     const hiopVector& d_, const long long& start_on_nnz_idx)
+                                                     const hiopVector& d_, const long long& start_on_nnz_idx, double scal)
 {
   const hiopVectorPar& vd = dynamic_cast<const hiopVectorPar&>(d_);
   assert(num_elems<=vd.get_size());
@@ -155,7 +155,7 @@ void hiopMatrixSparseTriplet::copySubDiagonalFrom(const long long& start_on_dest
     const long long row_dest = row_src + start_on_dest_diag;
     const long long nnz_dest = row_src + start_on_nnz_idx;
     iRow_[nnz_dest] = jCol_[nnz_dest] = row_dest;
-    this->values_[nnz_dest] = v[row_src];
+    this->values_[nnz_dest] = scal*v[row_src];
   }
 }
 
@@ -998,7 +998,7 @@ void hiopMatrixSparseTriplet::convertToCSR(int &csr_nnz, int **csr_kRowPtr_in, i
 
   delete [] nnz_each_row_tmp; nnz_each_row_tmp = nullptr;
   delete [] diag_defined; diag_defined = nullptr;
-  delete [] nnz_each_row_tmp; nnz_each_row_tmp = nullptr;
+  delete [] index_covert_extra_Diag2CSR_temp; index_covert_extra_Diag2CSR_temp = nullptr;
 
 }
 

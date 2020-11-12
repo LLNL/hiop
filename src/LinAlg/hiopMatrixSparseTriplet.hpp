@@ -66,10 +66,10 @@ public:
   }
 
   /* add to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements of
-  * 'd_' (source) starting at index 'start_on_src_vec'. The number of elements added is 'num_elems'
+  * 'd_' (source) starting at index 'start_on_src_vec'. The number of elements added is 'num_elems', scaled by 'scal'
   */
   virtual void copySubDiagonalFrom(const long long& start_on_dest_diag, const long long& num_elems,
-                                      const hiopVector& d_, const long long& start_on_nnz_idx);
+                                      const hiopVector& d_, const long long& start_on_nnz_idx, double scal=1.0);
 
   /* add constant 'c' to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements.
   * The number of elements added is 'num_elems'
