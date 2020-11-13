@@ -24,9 +24,9 @@
       # Don't clean up this working directory - we need some of these files for
       # testing
       set -xv
-      mkdir "$WORKDIR"
-      cp -R ./* "$WORKDIR"
-      cd "$WORKDIR"
+      TESTDIR="$PROJWORK/csc359/ci"
+      cp -R ./* $TESTDIR/
+      cd $TESTDIR
       MY_CLUSTER="ascent" ./BUILD.sh --build-only || exit 1
 
 .pnnl_script_template: &pnnl_script_definition
