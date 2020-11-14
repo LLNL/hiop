@@ -32,7 +32,7 @@ option(HIOP_BUILD_SHARED "Build shared library" OFF)
 option(HIOP_BUILD_STATIC "Build static library" ON)
 option(HIOP_SPARSE "Build with sparse linear algebra" ON)
 option(HIOP_USE_COINHSL "Build with sparse linear algebra" ON)
-option(HIOP_USE_STRUMPACK "Build with STRUMPACK backend for sparse linear algebra" ON)
+option(HIOP_USE_STRUMPACK "Build with STRUMPACK backend for sparse linear algebra" OFF)
 
 if(HIOP_BUILD_SHARED)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
