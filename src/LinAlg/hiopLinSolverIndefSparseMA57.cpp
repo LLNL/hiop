@@ -81,14 +81,16 @@ namespace hiop
 
     m_iwork = new int[5 * m_n];
     m_dwork = new double[m_n];
+    
+
+    FNAME(ma57ad)( &m_n, &m_nnz, m_irowM, m_jcolM, &m_lkeep, m_keep, m_iwork, m_icntl, m_info, m_rinfo );
+        
     m_lfact = (int) (m_rpessimism * m_info[8]);
     m_fact  = new double[m_lfact];
 
     m_lifact = (int) (m_ipessimism * m_info[9]);
     m_ifact  = new int[m_lifact];
 
-    FNAME(ma57ad)( &m_n, &m_nnz, m_irowM, m_jcolM, &m_lkeep, m_keep, m_iwork, m_icntl,
-	   m_info, m_rinfo );
   }
 
 
