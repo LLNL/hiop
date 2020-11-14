@@ -23,13 +23,16 @@ find_library(SCALAPACK_LIBRARY
   PATH_SUFFIXES
   lib64 lib)
     
-if(STRUMPACK_LIBRARIES AND SCALAPACK_LIBRARY)
-  message(STATUS "Found scalapack library: ${SCALAPACK_LIBRARY}")
-  message(STATUS "Found strumpack library: ${STRUMPACK_LIBRARIES}")
+if(STRUMPACK_LIBRARIES) 
+  message(STATUS "Found STRUMPACK library: ${STRUMPACK_LIBRARIES}")
   add_library(STRUMPACK INTERFACE)
-  target_link_libraries(STRUMPACK INTERFACE STRUMPACK::strumpack ${SCALAPACK_LIBRARY})
-#  target_include_directories(STRUMPACK INTERFACE ${STRUMPACK_INCLUDE_DIR})
-  message(STATUS "Found STRUMPACK library: ${STRUMPACK_LIBRARIES} ${SCALAPACK_LIBRARY}")
+  target_link_libraries(STRUMPACK INTERFACE STRUMPACK::strumpack)
+
+  # ignore SCALAPACK not_found: it may be that strumpack was built without MPI/SCALAPCK
+  if(SCALAPACK_LIBRARY)
+    target_link_libraries(STRUMPACK INTERFACE ${SCALAPACK_LIBRARY})
+    message(STATUS "Found SCALAPACK library: ${SCALAPACK_LIBRARY}")
+  endif(SCALAPACK_LIBRARY)
 else()
   message(STATUS "STRUMPACK was not found.")
 endif()
