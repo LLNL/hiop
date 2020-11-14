@@ -19,11 +19,12 @@ int main(int argc, char **argv)
   magma_init();
 #endif
 
-  printf("here\n");
+  //printf("here\n");
   PriDecMasterProblemEx8 pridec_problem(12, 20);
-
+  //printf("total ranks %d\n",comm_size);
   hiop::hiopAlgPrimalDecomposition pridec_solver(&pridec_problem, MPI_COMM_WORLD);
 
+  //printf("my rank starting 0 %d)\n",rank);
   auto status = pridec_solver.run();
 
   if(status!=Solve_Success) {

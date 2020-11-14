@@ -17,6 +17,7 @@
 #include <cstring> //for memcpy
 #include <cstdio>
 #include <cmath>
+#include <chrono>
 
 using namespace hiop;
 /* 
@@ -192,6 +193,22 @@ protected:
 };
 */
 
+/* Problem test for the AlgPrimalDecomposition
+ *  min   sum 0.5 {(x[i]-1)*(x[i]-1) : i=1,...,ns} + 0.5/S sum{i=1,...,S} R_i(x)
+ *  where S>=ns
+ *  for i=1,...,S
+ *        R_i(x) = sum{j=1,..,ns}  0.5*(x[j]+S)(x[j]+S)   if j=i, j<=ns
+ *                                 0.5*x[j]*x[j]
+ *  s.t. x >= 0      
+ *        
+ * The example problem does not have constaints.       
+ * S number of contingencies       
+ *
+ * Coding of the problem in DenseConstraints HiOp input: variable x
+ * 
+ */
+
+
 
 class Ex8 : public hiop::hiopInterfaceDenseConstraints
 {
@@ -202,7 +219,7 @@ public:
   }
   
   Ex8(int ns_, int S_)
-    : ns(ns_), rval_(0.), rgrad_(NULL), rhess_(NULL),x0_(NULL)
+    : ns(ns_),evaluator_(NULL) 
 
   {
     if(ns<0) {
@@ -235,27 +252,18 @@ public:
       x0 = new double[ns];
     }*/
   }
-  Ex8(int ns_, int S_, bool include, const double& rval, const double* rgrad,const double* rhess,const double* x0)
+  Ex8(int ns_, int S_, bool include, const RecourseApproxEvaluator* evaluator)
     : Ex8(ns_,S_)
 
   {
     include_r = include;
-    if(include_r){
-      rval_ = rval;
-      rgrad_ = new double[ns];
-      rhess_ = new double[ns];
-      x0_ = new double[ns];
-      memcpy(rgrad_,rgrad, ns*sizeof(double));
-      memcpy(rhess_,rhess , ns*sizeof(double));
-      memcpy(x0_,x0, ns*sizeof(double));
-    }
+    evaluator_ = new RecourseApproxEvaluator(ns, S, evaluator->rval_, evaluator->rgrad_, 
+		            evaluator->rhess_, evaluator->x0_);
   }
 
   virtual ~Ex8()
   {
-    delete[] rgrad_;
-    delete[] rhess_;
-    delete[] x0_;
+    delete[] evaluator_;
   }
   
   bool get_prob_sizes(long long& n, long long& m)
@@ -293,10 +301,8 @@ public:
     obj_value *= 0.5;
 
     if(include_r){
-      assert(rgrad_!=NULL);
-      obj_value += rval_;
-      for(int i=0; i<ns; i++) obj_value += rgrad_[i]*(x[i]-x0_[i]);
-      for(int i=0; i<ns; i++) obj_value += 0.5*rhess_[i]*(x[i]-x0_[i])*(x[i]-x0_[i]);
+      assert(evaluator_->rgrad_!=NULL);
+      evaluator_->eval_f(ns, x, new_x, obj_value);
     }
 
     return true;
@@ -317,8 +323,8 @@ public:
     for(int i=0; i<ns; i++) 
       gradf[i] = x[i]-1.;
     if(include_r){
-      assert(rgrad_!=NULL);
-      for(int i=0; i<ns; i++) gradf[i] += rgrad_[i]+rhess_[i]*(x[i]-x0_[i]);
+      assert(evaluator_->rgrad_!=NULL);
+      evaluator_->eval_grad(ns, x, new_x, gradf);
     }
     return true;
   }
@@ -351,12 +357,115 @@ public:
     assert(m==0);
     return true;
   }
-  bool set_quadratic_terms(const int& n, bool include_, const double* x0=NULL, 
-		           const double& rval=0.,const double* grad=NULL,const double* hess=NULL)
+
+  bool quad_is_defined() {
+    if(evaluator_!=NULL) return true;
+    else return false;
+  }
+
+  bool set_quadratic_terms(const int& n, const RecourseApproxEvaluator* evaluator)
   {
     assert(ns == n);
-    include_r = include_;
-    if(include_r && grad!=NULL){
+    if(evaluator_==NULL){
+    
+      evaluator_ = new RecourseApproxEvaluator(n, S, evaluator->rval_, evaluator->rgrad_, 
+		            evaluator->rhess_, evaluator->x0_);
+      return true;
+    }
+
+    if(evaluator->rgrad_!=NULL){
+      evaluator_->rval_ = evaluator->rval_;
+      if(evaluator_->rgrad_==NULL){
+        evaluator_->rgrad_ = new double[ns];
+      }
+      if(evaluator_->rhess_==NULL){
+        evaluator_->rhess_ = new double[ns];
+      }
+      if(evaluator_->x0_==NULL){
+        evaluator_->x0_ = new double[ns];
+      }
+      memcpy(evaluator_->rgrad_,evaluator->rgrad_ , ns*sizeof(double));
+      memcpy(evaluator_->rhess_,evaluator->rhess_ , ns*sizeof(double));
+      memcpy(evaluator_->x0_,evaluator->x0_, ns*sizeof(double));
+    }
+    return true;
+  }
+  bool set_include(bool include){
+    include_r = include;
+    return true;
+  }
+
+protected:
+  int ns,S;
+  bool include_r = false;
+  RecourseApproxEvaluator* evaluator_;
+
+};
+
+/*
+class RecourseApproxEvaluator
+{
+public:
+
+  RecourseApproxEvaluator(int ns_)
+    : RecourseApproxEvaluator(ns_, ns_)  //ns = nx, nd=S
+  {
+  }
+  RecourseApproxEvaluator(int ns,int S): ns_(ns),S_(S),rval_(0.), rgrad_(NULL), rhess_(NULL),x0_(NULL)//ns = nx, nd=S
+  {
+     assert(S>=ns);
+  }
+  RecourseApproxEvaluator(int ns,int S, const double& rval, const double* rgrad, 
+		         const double* rhess, const double* x0): ns_(ns),S_(S)
+  {
+    assert(S>=ns);
+    rval_ = rval;
+    rgrad_ = new double[ns];
+    rhess_ = new double[ns];
+    x0_ = new double[ns];
+    memcpy(rgrad_,grad , ns*sizeof(double));
+    memcpy(rhess_,hess , ns*sizeof(double));
+    memcpy(x0_,x0, ns*sizeof(double));
+  }
+
+
+  bool eval_f(const long long& n, const double* x, bool new_x, double& obj_value)
+  {
+    //assert(ns>=4);
+    obj_value=0.;//x[0]*(x[0]-1.);
+    //sum 0.5 {(x_i-1)*(x_{i}-1) : i=1,...,ns} + 0.5 y'*Qd*y + 0.5 s^T s
+    assert(rgrad_!=NULL);
+    obj_value += rval_;
+    for(int i=0; i<ns_; i++) obj_value += rgrad_[i]*(x[i]-x0_[i]);
+    for(int i=0; i<ns_; i++) obj_value += 0.5*rhess_[i]*(x[i]-x0_[i])*(x[i]-x0_[i]);
+
+    return true;
+  }
+ 
+  //sum 0.5 {(x_i-1)*(x_{i}-1) : i=1,...,ns} 
+  bool eval_grad(const long long& n, const double* x, bool new_x, double* grad)
+  {
+    //x_i - 0.5 
+    assert(rgrad_!=NULL);
+    for(int i=0; i<ns_; i++) grad[i] += rgrad_[i]+rhess_[i]*(x[i]-x0_[i]);
+    return true;
+  }
+
+  bool eval_hess(const long long& n, const double* x, bool new_x, double* hess)
+  {
+    //x_i - 0.5 
+    assert(rgrad_!=NULL);
+    for(int i=0; i<ns_; i++) hess[i] += rhess_[i];
+    return true;
+  }
+  // pass the COMM_SELF communicator since this example is only intended to run inside 1 MPI process //
+  virtual bool get_MPI_comm(MPI_Comm& comm_out) { comm_out=MPI_COMM_SELF; return true;}
+
+  bool set_recourse_approx_evaluator(const int& n, const double* x0=NULL, 
+		           const double& rval=0.,const double* grad=NULL,const double* hess=NULL)
+  {
+    assert(ns_ == n);
+    if(grad!=NULL){
       rval_ = rval;
       if(rgrad_==NULL){
         rgrad_ = new double[ns];
@@ -373,21 +482,16 @@ public:
     }
     return true;
   }
-  bool quad_is_defined() {
-    if(rgrad_!=NULL) return true;
-    else return false;
-  }
 
 protected:
-  int ns,S;
-  bool include_r = false;
+  int ns_,S_;
   double rval_;
   double* rgrad_;
   double* rhess_; //diagonal vector for now
   double* x0_; //current solution
+  friend class Ex8;
 };
-
-
+*/
 
 class PriDecMasterProblemEx8 : public hiopInterfacePriDecProblem
 {
@@ -422,18 +526,15 @@ public:
     }
 
     printf("here2\n");
+
+    bool ierr = my_nlp->set_include(include_r);
     if(include_r){
       assert(my_nlp->quad_is_defined());
-
+    }
       // check to see if the resource value and gradient are correct
       //printf("recourse value: is %18.12e)\n", rval_);
       //for(int i=0;i<n_;i++) printf("%d %18.12e\n",i,rgrad_[i]);
-      bool ierr = my_nlp->set_quadratic_terms(n_,include_r);
       //assert("for debugging" && false); //for debugging purpose
-    }
-    else{
-      bool ierr = my_nlp->set_quadratic_terms(n_,include_r);
-    }
     //if(rank==0) printf("interface created\n");
     hiopNlpDenseConstraints nlp(*my_nlp);
     //if(rank==0) printf("nlp formulation created\n");  
@@ -502,15 +603,26 @@ public:
 	grad[i] = x[i]/S_;
     }
     return true;
-  }  
+  } 
+
+
   //implement with alpha = 1 for now only
   // this function should only be used if quadratic regularization is included
-  bool set_quadratic_regularization(const int& n, const double* x0, const double& rval,const double* grad,
-		                    const double* hess)
+  bool set_recourse_approx_evaluator(const int n, RecourseApproxEvaluator* evaluator){
+  
+     my_nlp->set_quadratic_terms( n, evaluator);
+     return true; 
+  }
+
+
+  /*
+  bool set_quadratic_regularization(RecourseApproxEvaluator* evaluator)
+		  //const int& n, const double* x0, const double& rval,const double* grad,
+		  //                  const double* hess)
   {
     assert(n_ == n);
-    my_nlp->set_quadratic_terms(n,true,x0,rval,grad,hess);
-    /*rval_ = rval;
+    my_nlp->set_quadratic_terms(n,true,evaluator);
+    rval_ = rval;
     if(rgrad_==NULL){
       rgrad_ = new double[n_];
     }
@@ -523,10 +635,10 @@ public:
     memcpy(rgrad_,grad , n_*sizeof(double));
     memcpy(rhess_,hess , n_*sizeof(double));
     memcpy(x0_,x0, n_*sizeof(double));
-    */
+    
     return true;
   }
-
+  */
   /** 
    * Returns the number S of recourse terms
    */
