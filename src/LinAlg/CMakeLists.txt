@@ -10,11 +10,20 @@ set(hiopLinAlg_SRC
   hiopMatrixComplexSparseTriplet.cpp
 )
 
-if(HIOP_USE_GPU)
+if(HIOP_SPARSE)
+    if(HIOP_USE_COINHSL)
+      set(hiopLinAlg_SRC ${hiopLinAlg_SRC} hiopLinSolverIndefSparseMA57.cpp)
+    endif(HIOP_USE_COINHSL)      
+    if(HIOP_USE_STRUMPACK)
+      set(hiopLinAlg_SRC ${hiopLinAlg_SRC} hiopLinSolverSparseSTRUMPACK.cpp)
+    endif(HIOP_USE_STRUMPACK)
+endif()
+
+if(HIOP_USE_RAJA)
   set(hiopLinAlg_SRC ${hiopLinAlg_SRC} hiopLinSolverIndefDenseMagma.cpp)
-  foreach(f hiopVectorRajaPar.cpp 
-            hiopVectorIntRaja.cpp 
-            hiopMatrixRajaDense.cpp 
+  foreach(f hiopVectorRajaPar.cpp
+            hiopVectorIntRaja.cpp
+            hiopMatrixRajaDense.cpp
             hiopMatrixRajaSparseTriplet.cpp)
     set_source_files_properties(${f} PROPERTIES LANGUAGE CUDA)
   endforeach()
@@ -22,9 +31,9 @@ endif()
 
 if(HIOP_USE_UMPIRE)
   set(hiopLinAlg_SRC ${hiopLinAlg_SRC}
-    hiopVectorRajaPar.cpp 
+    hiopVectorRajaPar.cpp
     hiopVectorIntRaja.cpp
-    hiopMatrixRajaDense.cpp 
+    hiopMatrixRajaDense.cpp
     hiopMatrixRajaSparseTriplet.cpp)
 endif()
 
