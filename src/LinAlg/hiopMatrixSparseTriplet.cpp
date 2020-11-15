@@ -524,9 +524,10 @@ void hiopMatrixSparseTriplet::copyRowsBlockFrom(const hiopMatrix& src_gen,
   }
 }
 
-void hiopMatrixSparseTriplet::copyDiagMatrixToSubBlock(const double& src_val,
-                                         const long long& dest_row_st, const long long& col_dest_st,
-                                         const long long& dest_nnz_st, const int &nnz_to_copy)
+void hiopMatrixSparseTriplet::
+copyDiagMatrixToSubblock(const double& src_val,
+                         const long long& dest_row_st, const long long& col_dest_st,
+                         const long long& dest_nnz_st, const int &nnz_to_copy)
 {
   assert(this->numberOfNonzeros() >= nnz_to_copy+dest_nnz_st);
   assert(this->n() >= nnz_to_copy);
@@ -542,9 +543,11 @@ void hiopMatrixSparseTriplet::copyDiagMatrixToSubBlock(const double& src_val,
   }
 }
 
-void hiopMatrixSparseTriplet::copyDiagMatrixToSubBlockSelect(const hiopVector& dx,
+void hiopMatrixSparseTriplet::
+copyDiagMatrixToSubblock_w_pattern(const hiopVector& dx,
                                    const long long& dest_row_st, const long long& dest_col_st,
-                                   const long long& dest_nnz_st, const int &nnz_to_copy, const hiopVector& ix)
+                                   const long long& dest_nnz_st, const int &nnz_to_copy,
+                                   const hiopVector& ix)
 {
   assert(this->numberOfNonzeros() >= nnz_to_copy+dest_nnz_st);
   assert(this->n() >= nnz_to_copy);

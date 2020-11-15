@@ -507,7 +507,7 @@ namespace hiop
       Msys.copyRowsBlockFrom(*Jac_dSp_, 0,   nineq,  nx+nd+neq,  dest_nnz_st); dest_nnz_st += Jac_dSp_->numberOfNonzeros();
 
       // minus identity matrix for slack variables
-      Msys.copyDiagMatrixToSubBlock(-1., nx+nd+neq, nx, dest_nnz_st, nineq); dest_nnz_st += nineq;
+      Msys.copyDiagMatrixToSubblock(-1., nx+nd+neq, nx, dest_nnz_st, nineq); dest_nnz_st += nineq;
 
 	  //build the diagonal Hx = Dx + delta_wx
 	  if(NULL == Hx_) {
@@ -877,46 +877,46 @@ namespace hiop
 
         // [  Jd    0     0   |-I |  0   0   0   0   |  0   0   0   0  ] [ dyd]   [   ryd    ]
         Msys.copySubmatrixFrom(*Jac_dSp_, nx+neq, 0, dest_nnz_st); dest_nnz_st += Jac_dSp_->numberOfNonzeros();
-        Msys.copyDiagMatrixToSubBlock(-1., nx+neq, n2st, dest_nnz_st, nd); dest_nnz_st += nd;
+        Msys.copyDiagMatrixToSubblock(-1., nx+neq, n2st, dest_nnz_st, nd); dest_nnz_st += nd;
 
         // [  0     0    -I   | 0 |  -I  I   0   0   |  0   0   0   0  ] [  dd]   [    rd    ]
-        Msys.copyDiagMatrixToSubBlock(-1., n2st, nx+neq, dest_nnz_st, nd); dest_nnz_st += nd;
+        Msys.copyDiagMatrixToSubblock(-1., n2st, nx+neq, dest_nnz_st, nd); dest_nnz_st += nd;
         Msys.setSubmatrixToConstantDiag_w_colpattern(-1., n2st, n3st, dest_nnz_st, ndl, nlp_->get_idl()); dest_nnz_st += ndl;
         Msys.setSubmatrixToConstantDiag_w_colpattern(1., n2st, n3st+ndl, dest_nnz_st, ndu, nlp_->get_idu()); dest_nnz_st += ndu;
 
         // part3
         // [  0     0     0   |-I |  0   0   0   0   |  I   0   0   0  ] [ dvl]   [   rvl    ]
         Msys.setSubmatrixToConstantDiag_w_rowpattern(-1., n3st, n2st, dest_nnz_st, ndl, nlp_->get_idl()); dest_nnz_st += ndl;
-        Msys.copyDiagMatrixToSubBlock(1., n3st, n4st, dest_nnz_st, ndl); dest_nnz_st += ndl;
+        Msys.copyDiagMatrixToSubblock(1., n3st, n4st, dest_nnz_st, ndl); dest_nnz_st += ndl;
 
         // [  0     0     0   | I |  0   0   0   0   |  0   I   0   0  ] [ dvu]   [   rvu    ]
         Msys.setSubmatrixToConstantDiag_w_rowpattern(1., n3st+ndl, n2st, dest_nnz_st, ndu, nlp_->get_idu()); dest_nnz_st += ndu;
-        Msys.copyDiagMatrixToSubBlock(1., n3st+ndl, n4st+ndl, dest_nnz_st, ndu); dest_nnz_st += ndu;
+        Msys.copyDiagMatrixToSubblock(1., n3st+ndl, n4st+ndl, dest_nnz_st, ndu); dest_nnz_st += ndu;
 
         // [ -I     0     0   | 0 |  0   0   0   0   |  0   0   I   0  ] [ dzl]   [   rzl    ]
         Msys.setSubmatrixToConstantDiag_w_rowpattern(-1., n3st+ndl+ndu, 0, dest_nnz_st, nxl, nlp_->get_ixl()); dest_nnz_st += nxl;
-        Msys.copyDiagMatrixToSubBlock(1., n3st+ndl+ndu, n4st+ndl+ndu, dest_nnz_st, nxl); dest_nnz_st += nxl;
+        Msys.copyDiagMatrixToSubblock(1., n3st+ndl+ndu, n4st+ndl+ndu, dest_nnz_st, nxl); dest_nnz_st += nxl;
 
         // [  I     0     0   | 0 |  0   0   0   0   |  0   0   0   I  ] [ dzu]   [   rzu    ]
         Msys.setSubmatrixToConstantDiag_w_rowpattern(1., n3st+ndl+ndu+nxl, 0, dest_nnz_st, nxu, nlp_->get_ixu()); dest_nnz_st += nxu;
-        Msys.copyDiagMatrixToSubBlock(1., n3st+ndl+ndu+nxl, n4st+ndl+ndu+nxl, dest_nnz_st, nxu); dest_nnz_st += nxu;
+        Msys.copyDiagMatrixToSubblock(1., n3st+ndl+ndu+nxl, n4st+ndl+ndu+nxl, dest_nnz_st, nxu); dest_nnz_st += nxu;
 
         // part 4
         // [  0     0     0   | 0 | Sl^d 0   0   0   | Vl   0   0   0  ] [dsdl]   [  rsdl    ]
-        Msys.copyDiagMatrixToSubBlockSelect(*iter_->sdl, n4st, n3st, dest_nnz_st, ndl, nlp_->get_idl()); dest_nnz_st += ndl;
-        Msys.copyDiagMatrixToSubBlockSelect(*iter_->vl, n4st, n4st, dest_nnz_st, ndl, nlp_->get_idl()); dest_nnz_st += ndl;
+        Msys.copyDiagMatrixToSubblock_w_pattern(*iter_->sdl, n4st, n3st, dest_nnz_st, ndl, nlp_->get_idl()); dest_nnz_st += ndl;
+        Msys.copyDiagMatrixToSubblock_w_pattern(*iter_->vl, n4st, n4st, dest_nnz_st, ndl, nlp_->get_idl()); dest_nnz_st += ndl;
 
         // [  0     0     0   | 0 |  0  Su^d 0   0   |  0  Vu   0   0  ] [dsdu]   [  rsdu    ]
-        Msys.copyDiagMatrixToSubBlockSelect(*iter_->sdu, n4st+ndl, n3st+ndl, dest_nnz_st, ndu, nlp_->get_idu()); dest_nnz_st += ndu;
-        Msys.copyDiagMatrixToSubBlockSelect(*iter_->vu, n4st+ndl, n4st+ndl, dest_nnz_st, ndu, nlp_->get_idu()); dest_nnz_st += ndu;
+        Msys.copyDiagMatrixToSubblock_w_pattern(*iter_->sdu, n4st+ndl, n3st+ndl, dest_nnz_st, ndu, nlp_->get_idu()); dest_nnz_st += ndu;
+        Msys.copyDiagMatrixToSubblock_w_pattern(*iter_->vu, n4st+ndl, n4st+ndl, dest_nnz_st, ndu, nlp_->get_idu()); dest_nnz_st += ndu;
 
         // [  0     0     0   | 0 |  0   0  Sl^x 0   |  0   0  Zl   0  ] [dsxl]   [  rsxl    ]
-        Msys.copyDiagMatrixToSubBlockSelect(*iter_->sxl, n4st+ndl+ndu, n3st+ndl+ndu, dest_nnz_st, nxl, nlp_->get_ixl()); dest_nnz_st += nxl;
-        Msys.copyDiagMatrixToSubBlockSelect(*iter_->zl, n4st+ndl+ndu, n4st+ndl+ndu, dest_nnz_st, nxl, nlp_->get_ixl()); dest_nnz_st += nxl;
+        Msys.copyDiagMatrixToSubblock_w_pattern(*iter_->sxl, n4st+ndl+ndu, n3st+ndl+ndu, dest_nnz_st, nxl, nlp_->get_ixl()); dest_nnz_st += nxl;
+        Msys.copyDiagMatrixToSubblock_w_pattern(*iter_->zl, n4st+ndl+ndu, n4st+ndl+ndu, dest_nnz_st, nxl, nlp_->get_ixl()); dest_nnz_st += nxl;
 
         // [  0     0     0   | 0 |  0   0   0  Su^x |  0   0   0  Zu  ] [dsxu]   [  rsxu    ]
-        Msys.copyDiagMatrixToSubBlockSelect(*iter_->sxu, n4st+ndl+ndu+nxl, n3st+ndl+ndu+nxl, dest_nnz_st, nxu, nlp_->get_ixu()); dest_nnz_st += nxu;
-        Msys.copyDiagMatrixToSubBlockSelect(*iter_->zu, n4st+ndl+ndu+nxl, n4st+ndl+ndu+nxl, dest_nnz_st, nxu, nlp_->get_ixu()); dest_nnz_st += nxu;
+        Msys.copyDiagMatrixToSubblock_w_pattern(*iter_->sxu, n4st+ndl+ndu+nxl, n3st+ndl+ndu+nxl, dest_nnz_st, nxu, nlp_->get_ixu()); dest_nnz_st += nxu;
+        Msys.copyDiagMatrixToSubblock_w_pattern(*iter_->zu, n4st+ndl+ndu+nxl, n4st+ndl+ndu+nxl, dest_nnz_st, nxu, nlp_->get_ixu()); dest_nnz_st += nxu;
 
 
         //build the diagonal Hx = delta_wx
