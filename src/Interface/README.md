@@ -1,7 +1,7 @@
 HiOp supports two input formats: `hiopInterfaceDenseConstraints`,`hiopInterfaceSparse` and `hiopInterfaceMDS`.
 Both formats are in the form of C++ interfaces (e.g., abstract classes), see [hiopInterface.hpp](hiopInterface.hpp) file, that the user must instantiate/implement and provide to HiOp.
 
-Please read carefully the (software) documentation provided in [hiopInterface.hpp](hiopInterface.hpp) and the (math) documentation provided in the [user manual](doc/hiop_usermanual.pdf). In addition, please be aware of the following notes in the case of `hiopInterfaceMDS`.
+Please read carefully the (software) documentation provided in [hiopInterface.hpp](hiopInterface.hpp) and the (math) documentation provided in the [user manual](../../doc/hiop_usermanual.pdf). In addition, please be aware of the following notes in the case of `hiopInterfaceMDS`.
 
 ## Key points/conventions for `hiopInterfaceMDS`
 
