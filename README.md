@@ -91,13 +91,13 @@ Metis is usually detected automatically and needs not be specified under normal 
 
 UMFPACK (part of SuiteSparse) and METIS need to be provided as shown above.
 
-# Interfacing with HiOp
+# Interfacing with HiOp 
 
-If your NLP is structured, it may be beneficial to use HiOp. If your NLP is unstructured, then you should be looking at a general purpose NLP solver such as the open-source [Ipopt](https://github.com/coin-or/Ipopt).    
-
-HiOp supports two input formats: `hiopInterfaceDenseConstraints` and `hiopInterfaceMDS`. Both formats are in the form of C++ interfaces (e.g., abstract classes), see [hiopInterface.hpp](src/Interface/hiopInterface.hpp) file, that the user must instantiate/implement and provide to HiOp.
+HiOp supports three types of optimization problems, each with a separate input formats in the form of the C++ interfaces `hiopInterfaceDenseConstraints`,`hiopInterfaceSparse` and `hiopInterfaceMDS`. These interfaces are specified in [hiopInterface.hpp](src/Interface/hiopInterface.hpp) and documented and discussed as well in the [user manual](doc/hiop_usermanual.pdf).
 
 *`hiopInterfaceDenseConstraints` interface* supports NLPs with **billions** of variables with and without bounds but only limited number (<100) of general, equality and inequality constraints. The underlying algorithm is a limited-memory quasi-Newton interior-point method and generally scales well computationally (but it may not algorithmically) on thousands of cores. This interface uses MPI for parallelization
+
+*`hiopInterfaceSparse` supports general sparse and large-scale NLPs. This functionality is similar to that of the state-of-the-art [Ipopt](https://github.com/coin-or/Ipopt) (without being as robust and flexible as Ipopt is). Acceleration for this class of problems can be achieved via OpenMP or CUDA, however, this is work in progress and you are encouraged to contact HiOp's developers for up-to-date information.
 
 *`hiopInterfaceMDS` interface* supports mixed dense-sparse NLPs and achives parallelization using GPUs and RAJA portability abstraction layer. 
 
