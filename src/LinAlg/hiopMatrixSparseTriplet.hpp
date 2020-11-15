@@ -136,16 +136,19 @@ public:
   * The non-zero elements start from 'dest_nnz_st' will be replaced by the new elements.
   *
   * @pre 'this' must have enough rows and cols after row 'dest_row_st' and col 'dest_col_st'
-  * @pre 'dest_nnz_st' + the number of non-zeros in the copied matrix must be less or equal to this->numOfNumbers()
-  * @pre User must know the nonzero pattern of src and dest matrices. Assume non-zero patterns wont change, and 'src_gen' is a submatrix of 'this'
+  * @pre 'dest_nnz_st' + the number of non-zeros in the copied matrix must be less or equal to 
+  * this->numOfNumbers()
+  * @pre User must know the nonzero pattern of src and dest matrices. The method assumes 
+  * that non-zero patterns does not change between calls and that 'src_gen' is a valid
+  *  submatrix of 'this'
   */
   virtual void copySubmatrixFrom(const hiopMatrix& src_gen,
                                    const long long& dest_row_st, const long long& dest_col_st,
                                    const long long& dest_nnz_st);
-//                                   bool firstCall, std::map<int,int> &ValIdxMap );
-
+  
   /**
-  * @brief Copy the transpose of matrix 'src_gen', into 'this' as a submatrix from corner 'dest_row_st' and 'dest_col_st'
+  * @brief Copy the transpose of matrix 'src_gen', into 'this' as a submatrix from corner 
+  * 'dest_row_st' and 'dest_col_st'.
   * The non-zero elements start from 'dest_nnz_st' will be replaced by the new elements.
   */
   virtual void copySubmatrixFromTrans(const hiopMatrix& src_gen,
@@ -159,22 +162,26 @@ public:
   */
   virtual void setSubmatrixToConstantDiag_w_colpattern(const double& scalar,
                                    const long long& dest_row_st, const long long& dest_col_st,
-                                   const long long& dest_nnz_st, const int &nnz_to_copy, const hiopVector& ix );
+                                   const long long& dest_nnz_st, const int &nnz_to_copy, const hiopVector& ix);
   virtual void setSubmatrixToConstantDiag_w_rowpattern(const double& scalar,
                                    const long long& dest_row_st, const long long& dest_col_st,
-                                   const long long& dest_nnz_st, const int &nnz_to_copy, const hiopVector& ix );
+                                   const long long& dest_nnz_st, const int &nnz_to_copy, const hiopVector& ix);
 
   /**
   * @brief Copy a diagonal matrix to destination.
   * This diagonal matrix is 'src_val'*identity matrix with size 'n_rows'x'n_rows'.
-  * The destination is defined from the start row 'row_dest_st' and start column 'col_dest_st'.
+  * The destination is updated from the start row 'row_dest_st' and start column 'col_dest_st'.
   */
-  virtual void copyDiagMatrixToSubBlock(const double& src_val,
-                                         const long long& dest_row_st, const long long& dest_col_st,
-                                         const long long& dest_nnz_st, const int &nnz_to_copy);
-  virtual void copyDiagMatrixToSubBlockSelect(const hiopVector& x,
-                                   const long long& dest_row_st, const long long& dest_col_st,
-                                   const long long& dest_nnz_st, const int &nnz_to_copy, const hiopVector& ix);
+  virtual void copyDiagMatrixToSubblock(const double& src_val,
+                                        const long long& dest_row_st, const long long& dest_col_st,
+                                        const long long& dest_nnz_st, const int &nnz_to_copy);
+  /** 
+   * @brief same as @copyDiagMatrixToSubblock, but copies only diagonal entries specified by 'pattern' 
+   */
+  virtual void copyDiagMatrixToSubblock_w_pattern(const hiopVector& x,
+                                                  const long long& dest_row_st, const long long& dest_col_st,
+                                                  const long long& dest_nnz_st, const int &nnz_to_copy,
+                                                  const hiopVector& pattern);
 
   virtual double max_abs_value();
 
