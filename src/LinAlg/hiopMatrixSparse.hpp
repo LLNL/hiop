@@ -171,9 +171,9 @@ public:
    * The destination is defined from the start row 'row_dest_st' and start column 'col_dest_st'.
    *
    */
-  virtual void copyDiagMatrixToSubBlock(const double& src_val,
-                                         const long long& row_dest_st, const long long& col_dest_st,
-                                         const long long& dest_nnz_st, const int &nnz_to_copy) = 0;
+  virtual void copyDiagMatrixToSubblock(const double& src_val,
+                                        const long long& row_dest_st, const long long& col_dest_st,
+                                        const long long& dest_nnz_st, const int &nnz_to_copy) = 0;
 
   virtual double max_abs_value() = 0;
 

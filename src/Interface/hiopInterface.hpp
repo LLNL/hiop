@@ -465,11 +465,13 @@ public:
  * min f(x) s.t. g(x) <= or = 0, lb<=x<=ub
  *
  * such that
- *  - Jacobian w.r.t. x and LagrHessian w.r.t. (xs,xs) are sparse
+ *  - Jacobian w.r.t. x and Hessian of the Lagrangian w.r.t. x are sparse
  *
  * Notes
  * 1) this interface is 'local' in the sense that data is not assumed to be
- * distributed across MPI ranks ('get_vecdistrib_info' should return 'false')
+ * distributed across MPI ranks ('get_vecdistrib_info' should return 'false').
+ * Acceleration can be however obtained using OpenMP and CUDA via Raja 
+ * abstraction layer that HiOp uses and via linear solver.
  *
  */
 class hiopInterfaceSparse : public hiopInterfaceBase

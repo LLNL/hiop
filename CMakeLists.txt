@@ -235,7 +235,7 @@ if(HIOP_SPARSE)
     set(HIOP_USE_COINHSL OFF CACHE BOOL "Build without COINHSL" FORCE)
     set(HIOP_USE_STRUMPACK OFF CACHE BOOL "Build without STRUMPACK" FORCE)
     set(HIOP_SPARSE OFF CACHE BOOL "Build without sparse linear algebra" FORCE)
-    message(STATUS "Prerequisites for sparse linear algebra, METUS, was not found and the option HIOP_SPARSE will be disabled")
+    message(STATUS "Prerequisites for sparse linear algebra, METIS, was not found and the option HIOP_SPARSE will be disabled")
   endif()
   
 else(HIOP_SPARSE)
