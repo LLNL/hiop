@@ -1,7 +1,16 @@
-HiOp supports two input formats: `hiopInterfaceDenseConstraints`,`hiopInterfaceSparse` and `hiopInterfaceMDS`.
-Both formats are in the form of C++ interfaces (e.g., abstract classes), see [hiopInterface.hpp](hiopInterface.hpp) file, that the user must instantiate/implement and provide to HiOp.
+HiOp supports three input formats: `hiopInterfaceDenseConstraints`,`hiopInterfaceSparse` and `hiopInterfaceMDS`.
+All formats are in the form of C++ interfaces (e.g., abstract classes), see [hiopInterface.hpp](hiopInterface.hpp) file, that the user must instantiate/implement and provide to HiOp.
 
-Please read carefully the (software) documentation provided in [hiopInterface.hpp](hiopInterface.hpp) and the (math) documentation provided in the [user manual](../../doc/hiop_usermanual.pdf). In addition, please be aware of the following notes in the case of `hiopInterfaceMDS`.
+Please read carefully the (software) documentation provided in [hiopInterface.hpp](hiopInterface.hpp) and the (math) documentation provided in the [user manual](../../doc/hiop_usermanual.pdf). In addition, please be aware of the following notes in the case of `hiopInterfaceSpare` or `hiopInterfaceMDS`.
+
+## Key points/conventions for `hiopInterfaceSparse`
+
+### Jacobian and Hessian
+* both Jacobian and Hessian are sparse, and their triplet forms are user inputs via the interface.
+* Jacobian is implemented as a geranal sparse matrix and hecne user need to provid all the nonzeros of it.
+* Hessian is implemented as a symmetric sparse matrix and hecne user only need to provid a triangular part of it.
+* for conventions on symmetric matrices and sparse matrices see [this](../LinAlg/readme.md)
+
 
 ## Key points/conventions for `hiopInterfaceMDS`
 

@@ -117,6 +117,15 @@ or, if you are using C-shell, as
 $ setenv NVBLAS_CONFIG_FILE <hiop install dir>/lib/nvblas.conf
 ```
 
+## Existing issues
+Users are highly encouraged to report any issues they found from using Hiop.
+One known issue is that there is some minor inconsistence between Hiop and linear package STRUMPACK.
+When STRUMPACK is compiled with MPI (and Scalapack), user must set flag `HIOP_USE_MPI` to `ON` when compiling Hiop.
+Otherwise Hiop won't load MPI module and will return an error when links to STRUMPACK, since the later one reuires a valid MPI module. 
+Similary, if both Magma and STRUMPACK are linked to Hiop, user must guarentee the all the packages are compiled by the same CUDA compiler.
+User can check other issues and their existing status from https://github.com/LLNL/hiop 
+
+
 ## Acknowledgments
 
 HiOp has been developed under the financial support of: 

@@ -56,9 +56,16 @@ virtual void addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start, doubl
 
 ## Sparse matrices 
 Triplet format is momentarily used for sparse matrices. 
+HSL linear solvers, e.g., MA57, use triplet format as an input.
+To use other linear solvers that require different format, e.g., STRUMPACK uses compressed sparse row (CSR) format, hiop will make the conversion internally. After converting the matrix from triplet to CSR format, Hiop will sort the 
+nonzeros to prevent unexpected behaviors happened in the 3rd party linear solver.
 
 ### *Symmetric* sparse matrices 
 Only upper triangular nonzero entries should be specified, accessed, and maintained.
+In the current code, only Hessian and the symmetic KKT systems are implelemented as symmetric matrices. Users only need to provide the triangular nonzero entries to Hessian.
+For the symmetic KKT, some linear algebra package, e.g., MA57 from HSL, can read entries from both the upper and lower triangular part. For example, only one entry from KKT[i,j] and KKT[j,i] is requied to be presented in MA57.
+If both constraint Jacobian and Lagrangian Hessian are sorted by row in the triplet format, it is easier to copy the entries from Jac/Hes to the lower triangular part and keep the elements sorted by row.
+
 
 ## Obtaining matrices from HiOp
 
