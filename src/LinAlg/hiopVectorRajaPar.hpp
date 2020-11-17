@@ -158,6 +158,9 @@ public:
   void copyFromDev();
   void copyToDev() const;
   void copyFromDev() const;
+  
+  virtual long long numOfNegVal_w_tol(const double &tol) const;
+  virtual long long numOfZeroVal_w_tol(const double &tol) const;      
 
 private:
   std::string mem_space_;
