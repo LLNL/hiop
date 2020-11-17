@@ -1,3 +1,5 @@
+
+# Environment variables shared between scripts for all ORNL CI stages
 .ornl_environment_template: &ornl_environment_variables
   variables:
     SCHEDULER_PARAMETERS: "-P CSC359 -nnodes 1 -W 30"
@@ -11,7 +13,6 @@
       MY_CLUSTER="ascent" ./BUILD.sh --test-only
       res=$?
       exit $res
-
   after_script:
     - |
       cd "$WORKDIR/.."
@@ -56,17 +57,12 @@
         sleep 10
       done
       echo "finished batch job: $res"
-      # cat output
-      #
-      #  NOTE:  If the job fails, comment out the line below and cd to
-      #         $HOME/gitlab/$CI_JOB_ID and run ./build.sh by hand to
-      #         figure out what went wrong.
-      # cd $WORKDIR
-      # ./BUILD.sh
-      #
-      rm -rf "$WORKDIR"
       exit $res
-
+  after_script:
+    - |
+      set -xv
+      export WORKDIR="$HOME/gitlab/$CI_JOB_ID/"
+      rm -rf "$WORKDIR"
 
 .pnnl_tags_template: &pnnl_tags_definition
   tags:
@@ -79,7 +75,7 @@ stages:
   - build
   - test
 
-# PNNL CI
+# For PNNL CI
 build_on_marianas:
   stage: build
   variables:
@@ -90,7 +86,6 @@ build_on_marianas:
   rules:
     - if: '$CI_PROJECT_ROOT_NAMESPACE == "exasgd"'
 
-# PNNL CI
 build_on_newell:
   stage: build
   variables:
@@ -100,9 +95,10 @@ build_on_newell:
   <<: *pnnl_script_definition
   rules:
     - if: '$CI_PROJECT_ROOT_NAMESPACE == "exasgd"'
+# ---
 
 # For Ascent CI
-build-on-login-node:
+build_on_login_node:
   stage: build
   tags:
     - nobatch
@@ -111,14 +107,14 @@ build-on-login-node:
   <<: *ornl_script_definition
   <<: *ornl_environment_variables
 
-# For Ascent CI
-test-on-compute-node:
+test_on_compute_node:
   stage: test
   dependencies:
-    - build-on-login-node
+    - build_on_login_node
   tags:
     - batch
   rules:
     - if: '$CI_PROJECT_PATH == "ecpcitest/exasgd/hiop"'
   <<: *ornl_test_script_definition
   <<: *ornl_environment_variables
+# ---
