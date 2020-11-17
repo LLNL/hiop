@@ -266,20 +266,16 @@ namespace hiop
 
       int n_neg_eig_11 = 0;
       if(n_neg_eig>=0) {
-	// 'n_neg_eig' is the number of negative eigenvalues of the "dense" (reduced) KKT
-	//
-	// One can compute the number of negative eigenvalues of the whole MDS or XYcYd
-	// linear system using Haynsworth inertia additivity formula, namely,
-	// count the negative eigenvalues of the sparse Hessian block.
-	const double* Hxsarr = Hxs_->local_data_const();
-	for(int itxs=0; itxs<nxs; ++itxs) {
-	  if(Hxsarr[itxs] <= -1e-14) {
-	    n_neg_eig_11++;
-	  } else if(Hxsarr[itxs] <= 1e-14) {
-	    n_neg_eig_11 = -1;
-	    break;
-	  }
-	}
+        // 'n_neg_eig' is the number of negative eigenvalues of the "dense" (reduced) KKT
+        //
+        // One can compute the number of negative eigenvalues of the whole MDS or XYcYd
+        // linear system using Haynsworth inertia additivity formula, namely,
+        // count the negative eigenvalues of the sparse Hessian block.
+        int n_neg_eig_Hxs  = Hxs_->numOfNegVal_w_tol(1e-14);
+        int n_zero_eig_Hxs = Hxs_->numOfZeroVal_w_tol(1e-14);
+        n_neg_eig_11 += n_neg_eig_Hxs;
+        if (n_zero_eig_Hxs > 0)
+          n_neg_eig_11 = -1;
       }
       nlp_->runStats.kkt.tmUpdateInnerFact.stop();
 
