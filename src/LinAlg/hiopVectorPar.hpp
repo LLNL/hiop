@@ -174,6 +174,9 @@ public:
   virtual void copyFromDev() {}
   virtual void copyToDev() const {}
   virtual void copyFromDev() const {}
+  
+  virtual long long numOfNegVal_w_tol(const double &tol) const;
+  virtual long long numOfZeroVal_w_tol(const double &tol) const;    
 
 protected:
   MPI_Comm comm_;

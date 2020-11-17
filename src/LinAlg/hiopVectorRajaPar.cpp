@@ -1516,5 +1516,30 @@ void hiopVectorRajaPar::copyFromDev() const
   resmgr.copy(data_host, data_dev_);
 }
 
+long long hiopVectorRajaPar::numOfNegVal_w_tol(const double &tol) const
+{  
+  double* data = data_dev_;
+  RAJA::ReduceSum<hiop_raja_reduce, int> sum(0);
+  RAJA::forall<hiop_raja_exec>( RAJA::RangeSegment(0, n_local_),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      sum += (data_[i]<-tol);
+    });
+  return sum.get();    
+}
+
+long long hiopVectorRajaPar::numOfZeroVal_w_tol(const double &tol) const
+{  
+  double* data = data_dev_;
+  RAJA::ReduceSum<hiop_raja_reduce, int> sum(0);
+  RAJA::forall<hiop_raja_exec>( RAJA::RangeSegment(0, n_local_),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      sum += (data_[i]>-tol && data_[i]<tol);
+    });
+  return sum.get();
+}
+ 
+
 
 } // namespace hiop
