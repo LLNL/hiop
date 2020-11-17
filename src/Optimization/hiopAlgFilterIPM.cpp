@@ -1194,7 +1194,9 @@ hiopAlgFilterIPMNewton::hiopAlgFilterIPMNewton(hiopNlpFormulation* nlp_)
 
 hiopAlgFilterIPMNewton::~hiopAlgFilterIPMNewton()
 {
-  if(fact_acceptor_) delete fact_acceptor_;
+  if(fact_acceptor_){
+    delete fact_acceptor_;
+  }
   fact_acceptor_ = nullptr;
 }
 
@@ -1204,9 +1206,11 @@ decideAndCreateLinearSystem(hiopNlpFormulation* nlp)
   //hiopNlpMDS* nlpMDS = NULL;
   hiopNlpMDS* nlpMDS = dynamic_cast<hiopNlpMDS*>(nlp);
 
-  if(NULL == nlpMDS) {
+  if(NULL == nlpMDS)
+  {
     hiopNlpSparse* nlpSp = dynamic_cast<hiopNlpSparse*>(nlp);
-    if(NULL == nlpSp) {
+    if(NULL == nlpSp)
+    {
       // this is dense linear system. This is the default case.
       std::string strKKT = nlp->options->GetString("KKTLinsys");
       if(strKKT == "xdycyd")
@@ -1243,9 +1247,10 @@ decideAndCreateFactAcceptor(hiopPDPerturbation* p, hiopNlpFormulation* nlp)
   {
     return new hiopFactAcceptorIC(p,nlp->m_eq()+nlp->m_ineq());
   }else{
+    assert(false &&
+    "Inertia-free approach hasn't been implemented yet.");
     return new hiopFactAcceptorIC(p,nlp->m_eq()+nlp->m_ineq());
-  }
-    
+  } 
 }
 
 hiopSolveStatus hiopAlgFilterIPMNewton::run()
@@ -1310,7 +1315,8 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
   assert(kkt != NULL);
   kkt->set_PD_perturb_calc(&pd_perturb_);
 
-  if(fact_acceptor_){
+  if(fact_acceptor_)
+  {
     delete fact_acceptor_;
     fact_acceptor_ = nullptr;
   }

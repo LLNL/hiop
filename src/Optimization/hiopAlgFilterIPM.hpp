@@ -246,7 +246,8 @@ public:
 
 private:
   virtual void outputIteration(int lsStatus, int lsNum);
-  virtual hiopKKTLinSysCompressed* decideAndCreateLinearSystem(hiopNlpFormulation* nlp);
+  virtual hiopKKTLinSys* decideAndCreateLinearSystem(hiopNlpFormulation* nlp);
+  /// @brief get the method to decide if a factorization is acceptable or not
   virtual hiopFactAcceptor* decideAndCreateFactAcceptor(hiopPDPerturbation* p, hiopNlpFormulation* nlp);
 
   hiopPDPerturbation pd_perturb_;

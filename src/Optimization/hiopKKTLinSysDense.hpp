@@ -1,6 +1,5 @@
 // Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
-// Written by Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
@@ -75,18 +74,16 @@ class hiopKKTLinSysDenseXYcYd : public hiopKKTLinSysCompressedXYcYd
 public:
   hiopKKTLinSysDenseXYcYd(hiopNlpFormulation* nlp)
     : hiopKKTLinSysCompressedXYcYd(nlp),rhsXYcYd(NULL), 
-//      linSys_(NULL), 
       write_linsys_counter(-1), csr_writer(nlp)
   {
   }
   virtual ~hiopKKTLinSysDenseXYcYd()
   {
-//    delete linSys_;
     delete rhsXYcYd;
   }
 
-  virtual bool updateMatrix( const double& delta_wx, const double& delta_wd,
-                     const double& delta_cc, const double& delta_cd)
+  virtual bool updateMatrix(const double& delta_wx, const double& delta_wd,
+                            const double& delta_cc, const double& delta_cd)
   {
     assert(nlp_);
 
@@ -120,10 +117,12 @@ public:
 
     hiopLinSolverIndefDense* linSys = dynamic_cast<hiopLinSolverIndefDense*> (linSys_);  
     hiopMatrixDense& Msys = linSys->sysMatrix();
-    
+ 
     //
     // update linSys system matrix, including IC perturbations
     //
+    nlp_->runStats.kkt.tmUpdateLinsys.start();
+    
     Msys.setToZero();
       
     int alpha = 1.;
@@ -157,13 +156,16 @@ public:
     //write matrix to file if requested
     if(nlp_->options->GetString("write_kkt") == "yes") write_linsys_counter++;
     if(write_linsys_counter>=0) csr_writer.writeMatToFile(Msys, write_linsys_counter); 
+    
+    return true;
   }
 
   virtual bool solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
-			       hiopVector& dx, hiopVector& dyc, hiopVector& dyd)
+                               hiopVector& dx, hiopVector& dyc, hiopVector& dyd)
   {
     hiopLinSolverIndefDense* linSys = dynamic_cast<hiopLinSolverIndefDense*> (linSys_);
-    
+    assert(linSys && "fail to get an object for correct linear system");
+
     int nx=rx.get_size(), nyc=ryc.get_size(), nyd=ryd.get_size();
     if(rhsXYcYd == NULL) rhsXYcYd = LinearAlgebraFactory::createVector(nx+nyc+nyd);
 
@@ -195,7 +197,6 @@ public:
   }
 
 protected:
-//  hiopLinSolverIndefDense* linSys;
   hiopVector* rhsXYcYd;
   
   /** -1 when disabled; otherwise acts like a counter, 0,1,...
@@ -206,7 +207,6 @@ protected:
 private:
   hiopKKTLinSysDenseXYcYd() 
     :  hiopKKTLinSysCompressedXYcYd(NULL), 
-//    linSys_(NULL), 
        write_linsys_counter(-1), csr_writer(NULL)
   { 
     assert(false); 
@@ -219,13 +219,11 @@ class hiopKKTLinSysDenseXDYcYd : public hiopKKTLinSysCompressedXDYcYd
 public:
   hiopKKTLinSysDenseXDYcYd(hiopNlpFormulation* nlp)
     : hiopKKTLinSysCompressedXDYcYd(nlp), rhsXDYcYd(NULL),
-//      linSys_(NULL) 
      write_linsys_counter(-1), csr_writer(nlp)
   {
   }
   virtual ~hiopKKTLinSysDenseXDYcYd()
   {
-//    delete linSys_;
     delete rhsXDYcYd;
   }
 
@@ -239,7 +237,7 @@ public:
   * [    Jd       -I     0      0    ] [dyd]   [   ryd    ]
   */
   virtual bool updateMatrix( const double& delta_wx, const double& delta_wd,
-                     const double& delta_cc, const double& delta_cd)
+                             const double& delta_cc, const double& delta_cd)
   {
     assert(nlp_);
    
@@ -267,12 +265,12 @@ public:
 
     hiopLinSolverIndefDense* linSys = dynamic_cast<hiopLinSolverIndefDense*> (linSys_);
     hiopMatrixDense& Msys = linSys->sysMatrix();
-      
+ 
     //
     // update linSys system matrix, including IC perturbations
     //
     Msys.setToZero();
-      
+  
     const int alpha = 1.;
     Hess_->addUpperTriangleToSymDenseMatrixUpperTriangle(0, alpha, Msys);
 	
@@ -310,10 +308,11 @@ public:
     if(write_linsys_counter>=0) csr_writer.writeMatToFile(Msys, write_linsys_counter);
 
     nlp_->log->write("KKT XDYcYd Linsys (to be factorized):", Msys, hovMatrices);
+    return true;
   }
 
   virtual bool solveCompressed(hiopVector& rx, hiopVector& rd, hiopVector& ryc, hiopVector& ryd,
-			       hiopVector& dx, hiopVector& dd, hiopVector& dyc, hiopVector& dyd)
+                               hiopVector& dx, hiopVector& dd, hiopVector& dyc, hiopVector& dyd)
   {
     hiopLinSolverIndefDense* linSys = dynamic_cast<hiopLinSolverIndefDense*> (linSys_);
 
@@ -351,7 +350,6 @@ public:
   }
 
 protected:
-//  hiopLinSolverIndefDense* linSys;
   hiopVector* rhsXDYcYd;
   //-1 when disabled; otherwise acts like a counter, 0,1,... incremented each time 'solveCompressed' is called
   //depends on the 'write_kkt' option
@@ -360,7 +358,6 @@ protected:
 private:
   hiopKKTLinSysDenseXDYcYd() 
     : hiopKKTLinSysCompressedXDYcYd(NULL), 
-//      linSys(NULL), 
       write_linsys_counter(-1), csr_writer(NULL)
   { 
     assert(false && "not intended to be used"); 

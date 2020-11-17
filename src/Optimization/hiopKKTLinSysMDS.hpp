@@ -107,14 +107,13 @@ public:
 		      const hiopMatrix* Jac_c, const hiopMatrix* Jac_d,
 		      hiopMatrix* Hess);
 
-  virtual bool updateMatrix( const double& delta_wx, const double& delta_wd,
-                      const double& delta_cc, const double& delta_cd);
+  virtual bool updateMatrix(const double& delta_wx, const double& delta_wd,
+                            const double& delta_cc, const double& delta_cd);
 
   virtual bool solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
-			       hiopVector& dx, hiopVector& dyc, hiopVector& dyd);
+                               hiopVector& dx, hiopVector& dyc, hiopVector& dyd);
 
 protected:
-//  hiopLinSolverIndefDense* linSys_;
   hiopVector *rhs_; //[rxdense, ryc, ryd]
   hiopVector *_buff_xs_; //an auxiliary buffer 
 

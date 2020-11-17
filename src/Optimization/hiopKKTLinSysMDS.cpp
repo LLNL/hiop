@@ -58,7 +58,6 @@ namespace hiop
 
   hiopKKTLinSysCompressedMDSXYcYd::hiopKKTLinSysCompressedMDSXYcYd(hiopNlpFormulation* nlp)
     : hiopKKTLinSysCompressedXYcYd(nlp), 
-//      linSys_(NULL), 
       rhs_(NULL), _buff_xs_(NULL),
       Hxs_(NULL), HessMDS_(NULL), Jac_cMDS_(NULL), Jac_dMDS_(NULL),
       write_linsys_counter_(-1), csr_writer_(nlp)
@@ -70,7 +69,6 @@ namespace hiop
   hiopKKTLinSysCompressedMDSXYcYd::~hiopKKTLinSysCompressedMDSXYcYd()
   {
     delete rhs_;
-//    delete linSys_;
     delete _buff_xs_;
     delete Hxs_;
   }
@@ -89,15 +87,13 @@ namespace hiop
       // One can compute the number of negative eigenvalues of the whole MDS or XYcYd
       // linear system using Haynsworth inertia additivity formula, namely,
       // count the negative eigenvalues of the sparse Hessian block.
-      const double* Hxsarr = Hxs_->local_data_const();
-      for(int itxs=0; itxs<nxs; ++itxs) {
-         if(Hxsarr[itxs] <= -1e-14) {
-            n_neg_eig_11++;
-          } else if(Hxsarr[itxs] <= 1e-14) {
-            n_neg_eig_11 = -1;
-            break;
-          }
-        }
+      int n_neg_eig_Hxs  = Hxs_->numOfElemsLessThan(-1e-14);
+      int n_zero_eig_Hxs = Hxs_->numOfElemsAbsLessThan(1e-14);
+      n_neg_eig_11 += n_neg_eig_Hxs;
+      if (n_zero_eig_Hxs > 0)
+      {  
+        n_neg_eig_11 = -1;
+      }
     }
 
     if(n_neg_eig_11 < 0) {
@@ -114,10 +110,10 @@ namespace hiop
   }
 
   bool hiopKKTLinSysCompressedMDSXYcYd::update(const hiopIterate* iter, 
-					       const hiopVector* grad_f, 
-					       const hiopMatrix* Jac_c,
-					       const hiopMatrix* Jac_d,
-					       hiopMatrix* Hess)
+                                               const hiopVector* grad_f, 
+                                               const hiopMatrix* Jac_c,
+                                               const hiopMatrix* Jac_d,
+                                               hiopMatrix* Hess)
   {
     if(!nlpMDS_) { assert(false); return false; }
    
@@ -173,7 +169,7 @@ namespace hiop
 
 
   bool  hiopKKTLinSysCompressedMDSXYcYd::updateMatrix( const double& delta_wx, const double& delta_wd,
-                     const double& delta_cc, const double& delta_cd)
+                                                       const double& delta_cc, const double& delta_cd)
   {
     assert(linSys_);
     hiopLinSolverIndefDense* linSys = dynamic_cast<hiopLinSolverIndefDense*> (linSys_);
@@ -191,9 +187,7 @@ namespace hiop
 
     nlp_->runStats.kkt.tmUpdateLinsys.start();
 
-    //
     // update linSys system matrix, including IC perturbations
-    //
     Msys.setToZero();
   
     int alpha = 1.;
@@ -300,7 +294,7 @@ namespace hiop
 
   bool hiopKKTLinSysCompressedMDSXYcYd::
   solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
-		  hiopVector& dx, hiopVector& dyc, hiopVector& dyd)
+                  hiopVector& dx, hiopVector& dyc, hiopVector& dyd)
   {
     hiopLinSolverIndefDense* linSys = dynamic_cast<hiopLinSolverIndefDense*> (linSys_);
 
@@ -352,9 +346,8 @@ namespace hiop
     nlp_->runStats.kkt.tmSolveRhsManip.stop();
 
     nlp_->runStats.kkt.tmSolveTriangular.start();
-    //
+    
     // solve
-    //
     bool linsol_ok = linSys->solve(*rhs_);
     nlp_->runStats.kkt.tmSolveTriangular.stop();
     nlp_->runStats.linsolv.end_linsolve();
@@ -371,16 +364,13 @@ namespace hiop
 
     nlp_->runStats.kkt.tmSolveRhsManip.start();
 
-    //
     // unpack 
-    //
     rhs_->startingAtCopyToStartingAt(0,        dx,  nxsp, nxde);
     rhs_->startingAtCopyToStartingAt(nxde,     dyc, 0);   
     rhs_->startingAtCopyToStartingAt(nxde+nyc, dyd, 0);
 
-    //
+
     // compute dxs
-    //
     hiopVector& dxs = *_buff_xs_;
     // dxs = (Hxs)^{-1} ( rxs - Jac_c_sp^T dyc - Jac_d_sp^T dyd)
     rx.startingAtCopyToStartingAt(0, dxs, 0, nxsp);
@@ -398,8 +388,7 @@ namespace hiop
     return true;
   }
 
-  hiopLinSolverIndefDense* 
-  hiopKKTLinSysCompressedMDSXYcYd::determineAndCreateLinsys(int nxd, int neq, int nineq)
+  hiopLinSolverIndefDense* hiopKKTLinSysCompressedMDSXYcYd::determineAndCreateLinsys(int nxd, int neq, int nineq)
   {
 
     bool switched_linsolvers = false;
@@ -407,22 +396,22 @@ namespace hiop
     if(safe_mode_) {
       hiopLinSolverIndefDenseMagmaBuKa* p = dynamic_cast<hiopLinSolverIndefDenseMagmaBuKa*>(linSys_);
       if(p==NULL) {
-	//we have a nopiv linear solver or linear solver has not been created yet
-	if(linSys_) switched_linsolvers = true;
-	delete linSys_;
-	linSys_ = NULL;
+        //we have a nopiv linear solver or linear solver has not been created yet
+	      if(linSys_) switched_linsolvers = true;
+	      delete linSys_;
+	      linSys_ = NULL;
       } else {
-	return p;
+	      return p;
       }
     } else {
       hiopLinSolverIndefDenseMagmaNopiv* p = dynamic_cast<hiopLinSolverIndefDenseMagmaNopiv*>(linSys_);
       if(p==NULL) {
-	//we have a BuKa linear solver or linear solver has not been created yet
-	if(linSys_) switched_linsolvers = true;
-	delete linSys_;
-	linSys_ = NULL;
+	      //we have a BuKa linear solver or linear solver has not been created yet
+	      if(linSys_) switched_linsolvers = true;
+	      delete linSys_;
+	      linSys_ = NULL;
       } else {
-	return p;
+	      return p;
       }
     }
 #endif
@@ -431,11 +420,10 @@ namespace hiop
       int n = nxd + neq + nineq;
 
       if("cpu" == nlp_->options->GetString("compute_mode")) {
-	nlp_->log->printf(hovScalars, "KKT_MDS_XYcYd linsys: Lapack for a matrix of size %d [1]\n", n);
-	linSys_ = new hiopLinSolverIndefDenseLapack(n, nlp_);
-	return dynamic_cast<hiopLinSolverIndefDense*>(linSys_);
+	      nlp_->log->printf(hovScalars, "KKT_MDS_XYcYd linsys: Lapack for a matrix of size %d [1]\n", n);
+	      linSys_ = new hiopLinSolverIndefDenseLapack(n, nlp_);
+        return dynamic_cast<hiopLinSolverIndefDense*>(linSys_);
       }
-
 
 #ifdef HIOP_USE_MAGMA
       if(nlp_->options->GetString("compute_mode")=="hybrid" ||
@@ -472,14 +460,23 @@ namespace hiop
 			    "KKT_MDS_XYcYd linsys: MagmaNopiv size %d (%d cons) (safe_mode=%d)\n", 
 			    n, neq+nineq, safe_mode_);
 	  
-	  hiopLinSolverIndefDenseMagmaNopiv* p = new hiopLinSolverIndefDenseMagmaNopiv(n, nlp_);
-	  linSys_ = p;
-	  p->set_fake_inertia(neq + nineq);
-	}
+	         linSys_ = new hiopLinSolverIndefDenseMagmaBuKa(n, nlp_);
+	      } else {
+	        auto hovLevel = hovScalars;
+	        if(switched_linsolvers) hovLevel = hovWarning;
+
+	        nlp_->log->printf(hovLevel, 
+			      "KKT_MDS_XYcYd linsys: MagmaNopiv size %d (%d cons) (safe_mode=%d)\n", 
+			      n, neq+nineq, safe_mode_);
+ 
+          hiopLinSolverIndefDenseMagmaNopiv* p = new hiopLinSolverIndefDenseMagmaNopiv(n, nlp_);
+	        linSys_ = p;
+	        p->set_fake_inertia(neq + nineq);
+	      }
       } else {
-	nlp_->log->printf(hovScalars, "KKT_MDS_XYcYd linsys: Lapack for a matrix of size %d [2]\n", n);
-	linSys_ = new hiopLinSolverIndefDenseLapack(n, nlp_);
-	return dynamic_cast<hiopLinSolverIndefDense*>(linSys_);
+    	  nlp_->log->printf(hovScalars, "KKT_MDS_XYcYd linsys: Lapack for a matrix of size %d [2]\n", n);
+    	  linSys_ = new hiopLinSolverIndefDenseLapack(n, nlp_);
+        return dynamic_cast<hiopLinSolverIndefDense*>(linSys_);
       }
 #else
       nlp_->log->printf(hovScalars, "KKT_MDS_XYcYd linsys: Lapack for a matrix of size %d [3]\n", n);
