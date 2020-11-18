@@ -211,6 +211,7 @@ public:
   //TODO: this is not kosher!
   inline double** local_data() const {return M_; }
   inline double*  local_buffer() const {return M_[0]; }
+  inline double*  local_buffer2() {return M_[0]; }
   //do not use this unless you sure you know what you're doing
   inline double** get_M() { return M_; }
 

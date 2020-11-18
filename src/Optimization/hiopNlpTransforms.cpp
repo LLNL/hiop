@@ -223,30 +223,40 @@ void hiopFixedVarsRemover::applyInvToArray(const double* x_fs, double* x_rs)
 }
 
 /* from rs to fs */
-void hiopFixedVarsRemover::applyToMatrix(const double*const* M_rs, const int& m_in, double** M_fs)
+void hiopFixedVarsRemover::applyToMatrix(const double* M_rs, const int& m_in, double* M_fs)
 {
   int rs_idx;
+  const int nfs = fs2rs_idx_map.size();
+  assert(nfs == fs_n_local());
+  const int nrs = rs_n_local();
+
   for(int i=0; i<m_in; i++) {
-    for(int j=0; j<fs2rs_idx_map.size(); j++) {
+    for(int j=0; j<nfs; j++) {
       rs_idx = fs2rs_idx_map[j];
       if(rs_idx<0) {
-  	M_fs[i][j] = 0.; //really no need to initialize this, these entries will be later ignored
+  	//M_fs[i][j] = 0.; //really no need to initialize this, these entries will be later ignored
+        M_fs[i*nfs+j] = 0.;
       } else {
-  	M_fs[i][j] = M_rs[i][rs_idx];
+  	//M_fs[i][j] = M_rs[i][rs_idx];
+        M_fs[i*nfs+j] = M_rs[i*nrs+rs_idx];
       }
     }
   }
 }
 
 /* from fs to rs */
-void hiopFixedVarsRemover::applyInvToMatrix(const double*const* M_fs, const int& m_in, double** M_rs)
+void hiopFixedVarsRemover::applyInvToMatrix(const double* M_fs, const int& m_in, double* M_rs)
 {
   int rs_idx;
+  const int nfs = fs2rs_idx_map.size();
+  assert(nfs == fs_n_local());
+  const int nrs = rs_n_local();
+
   for(int i=0; i<m_in; i++) {
-    for(int j=0; j<fs2rs_idx_map.size(); j++) {
+    for(int j=0; j<fs2rs_idx_map.size(); j++) {  
       rs_idx = fs2rs_idx_map[j];
       if(rs_idx>=0) {
-  	M_rs[i][rs_idx] = M_fs[i][j];
+  	M_rs[i*nrs+rs_idx] = M_fs[i*nfs+j];
       }
     }
   }
