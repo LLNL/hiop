@@ -380,18 +380,18 @@ if (HIOP_WITH_MAKETEST)
   endif(HIOP_USE_MPI)
 
   add_test(NAME NlpMixedDenseSparse4_1 COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpMDS_ex4.exe> 400 100 0 -selfcheck \
-    | ${STRIP_TABLE_CMD} \
-    | tee ${PROJECT_BINARY_DIR}/mds4_1.out")
+  | ${STRIP_TABLE_CMD} \
+  | tee ${PROJECT_BINARY_DIR}/mds4_1.out")
   add_test(NAME NlpMixedDenseSparse4_2 COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpMDS_ex4.exe> 400 100 1 -selfcheck \
-    | ${STRIP_TABLE_CMD} \
-    | tee ${PROJECT_BINARY_DIR}/mds4_2.out")
+  | ${STRIP_TABLE_CMD} \
+  | tee ${PROJECT_BINARY_DIR}/mds4_2.out")
   if(HIOP_USE_RAJA)
     add_test(NAME NlpMixedDenseSparseRaja4_1 COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpMDS_ex4_raja.exe> 400 100 0 -selfcheck \
-      | ${STRIP_TABLE_CMD} \
-      | tee ${PROJECT_BINARY_DIR}/mds4_raja_1.out")
+    | ${STRIP_TABLE_CMD} \
+    | tee ${PROJECT_BINARY_DIR}/mds4_raja_1.out")
     add_test(NAME NlpMixedDenseSparseRaja4_2 COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpMDS_ex4_raja.exe> 400 100 1 -selfcheck \
-      | ${STRIP_TABLE_CMD} \
-      | tee ${PROJECT_BINARY_DIR}/mds4_raja_2.out")
+    | ${STRIP_TABLE_CMD} \
+    | tee ${PROJECT_BINARY_DIR}/mds4_raja_2.out")
 
     if(HIOP_DEEPCHECKS)
       foreach(iter 1 2)
@@ -399,23 +399,23 @@ if (HIOP_WITH_MAKETEST)
           NAME "CompareExample4_NumIterations_${iter}" 
           COMMAND bash -c "\
           if [[ $(wc -l ${PROJECT_BINARY_DIR}/mds4_${iter}.out|cut -f1 -d' ') == $(wc -l ${PROJECT_BINARY_DIR}/mds4_raja_${iter}.out|cut -f1 -d' ') ]]
-            then
-              echo 'Output tables have the same number of iterations.'
-              exit 0
-            else
-              echo 'Output tables have a different number of iterations!'
-              exit 1
-            fi")
-        add_test(
-          NAME "CompareExample4_ElementWise_${iter}"
-          COMMAND bash -c "\
+          then
+          echo 'Output tables have the same number of iterations.'
+          exit 0
+          else
+          echo 'Output tables have a different number of iterations!'
+          exit 1
+          fi")
+          add_test(
+            NAME "CompareExample4_ElementWise_${iter}"
+            COMMAND bash -c "\
             join ${PROJECT_BINARY_DIR}/mds4_${iter}.out ${PROJECT_BINARY_DIR}/mds4_raja_${iter}.out \
             | ${PROJECT_SOURCE_DIR}/tests/testEx4CompareIterations.awk")
-      endforeach()
-    endif(HIOP_DEEPCHECKS)
-  endif()
+          endforeach()
+        endif(HIOP_DEEPCHECKS)
+      endif()
 
-  add_test(NAME NlpMixedDenseSparse5_1 COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpMDS_ex5.exe> 400 100 -selfcheck")
+      add_test(NAME NlpMixedDenseSparse5_1 COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpMDS_ex5.exe> 400 100 -selfcheck")
 
   if(HIOP_SPARSE)
     add_test(NAME NlpSparse6_1 COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpSparse_ex6.exe> 500 -selfcheck")
