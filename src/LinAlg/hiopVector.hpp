@@ -210,9 +210,10 @@ public:
   virtual void copyToDev() const = 0;
   virtual void copyFromDev() const = 0;
   
-  /// @brief get number of negative/zero values according to the given tolerance 'tol'
-  virtual long long numOfNegVal_w_tol(const double &tol) const = 0;
-  virtual long long numOfZeroVal_w_tol(const double &tol) const = 0;  
+  /// @brief get number of values that are less than the given value 'val'
+  virtual long long numOfElemsLessThan(const double &val) const = 0;
+  /// @brief get number of values whose absolute value are less than the given value 'val'
+  virtual long long numOfElemsAbsLessThan(const double &val) const = 0;  
 
 protected:
   long long n_; //we assume sequential data
