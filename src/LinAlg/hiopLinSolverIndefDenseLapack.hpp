@@ -86,7 +86,7 @@ public:
     //query sizes
     //
     int lwork=-1;
-    DSYTRF(&uplo, &N, M_->local_buffer(), &lda, ipiv, &dwork_tmp, &lwork, &info );
+    DSYTRF(&uplo, &N, M_->local_data(), &lda, ipiv, &dwork_tmp, &lwork, &info );
     assert(info==0);
 
     lwork=(int)dwork_tmp;
@@ -100,7 +100,7 @@ public:
     //
     // factorization
     //
-    DSYTRF(&uplo, &N, M_->local_buffer(), &lda, ipiv, dwork->local_data(), &lwork, &info );
+    DSYTRF(&uplo, &N, M_->local_data(), &lda, ipiv, dwork->local_data(), &lwork, &info );
     if(info<0) {
       nlp_->log->printf(hovError,
 		       "hiopLinSolverIndefDense error: %d argument to dsytrf has an illegal value.\n",
@@ -129,20 +129,21 @@ public:
     int posEigVal=0;
     int nullEigVal=0;
     double t=0;
-    double** MM = M_->local_data();
+    double* MM = M_->local_data();
+
     for(int k=0; k<N; k++) {
       //c       2 by 2 block
       //c       use det (d  s)  =  (d/t * c - t) * t  ,  t = dabs(s)
       //c               (s  c)
       //c       to avoid underflow/overflow troubles.
       //c       take two passes through scaling.  use  t  for flag.
-      double d = MM[k][k];
+      double d = MM[k*N+k];
       if(ipiv[k] <= 0) {
 	if(t==0) {
 	  assert(k+1<N);
 	  if(k+1<N) {
-	    t=fabs(MM[k][k+1]);
-	    d=(d/t) * MM[k+1][k+1]-t;
+	    t=fabs(MM[k*N+k+1]);
+	    d=(d/t) * MM[(k+1)*N+k+1]-t;
 	  }
 	} else {
 	  d=t;
@@ -181,7 +182,7 @@ public:
     
     char uplo='L'; // M is upper in C++ so it's lower in fortran
     int NRHS=1, LDB=N;
-    DSYTRS(&uplo, &N, &NRHS, M_->local_buffer(), &LDA, ipiv, x.local_data(), &LDB, &info);
+    DSYTRS(&uplo, &N, &NRHS, M_->local_data(), &LDA, ipiv, x.local_data(), &LDB, &info);
     if(info<0) {
       nlp_->log->printf(hovError, "hiopLinSolverIndefDenseLapack: DSYTRS returned error %d\n", info);
     } else if(info>0) {

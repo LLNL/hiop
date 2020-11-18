@@ -75,8 +75,8 @@ namespace hiop
       //count nnz
       const double zero_tol = 1e-25;
       int nnz=0;
-      double** M = Msys.local_data();
-      for(int i=0; i<m; i++) for(int j=i; j<m; j++) if(fabs(M[i][j])>zero_tol) nnz++;
+      double* M = Msys.local_data();
+      for(int i=0; i<m; i++) for(int j=i; j<m; j++) if(fabs(M[i*m+j])>zero_tol) nnz++;
       
       //start writing -> indexes are starting at 1
       fprintf(f, "%d\n %d\n", m, nnz);
@@ -86,7 +86,7 @@ namespace hiop
       fprintf(f, "%d ", offset);
       for(int i=0; i<m; i++) {
 	for(int j=i; j<m; j++) 
-	  if(fabs(M[i][j])>zero_tol)
+	  if(fabs(M[i*m+j])>zero_tol)
 	    offset++;
 	
 	fprintf(f, "%d ", offset);
@@ -97,7 +97,7 @@ namespace hiop
       //array of the column indexes of nonzeros
       for(int i=0; i<m; i++) {
 	for(int j=i; j<m; j++) 
-	  if(fabs(M[i][j])>zero_tol)
+	  if(fabs(M[i*m+j])>zero_tol)
 	    fprintf(f, "%d ", j+1);
     }
       fprintf(f, "\n");
@@ -105,8 +105,8 @@ namespace hiop
       //array of nonzero entries of the matrix
       for(int i=0; i<m; i++) {
 	for(int j=i; j<m; j++) 
-	  if(fabs(M[i][j])>zero_tol)
-	    fprintf(f, "%.20f ", M[i][j]);
+	  if(fabs(M[i*m+j])>zero_tol)
+	    fprintf(f, "%.20f ", M[i*m+j]);
       }
       fprintf(f, "\n");
       

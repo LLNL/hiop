@@ -69,8 +69,9 @@ void MatrixTestsDense::setLocalElement(
   hiop::hiopMatrixDense* amat = dynamic_cast<hiop::hiopMatrixDense*>(A);
   if(amat != nullptr)
   {
-    real_type** data = amat->get_M();
-    data[i][j] = val;
+    real_type* data = amat->local_data();
+    //data[i][j] = val;
+    data[i*amat->get_local_size_n()+j] = val;
   }
   else THROW_NULL_DEREF;
 }
@@ -111,7 +112,8 @@ real_type MatrixTestsDense::getLocalElement(
 {
   const hiop::hiopMatrixDense* amat = dynamic_cast<const hiop::hiopMatrixDense*>(A);
   if(amat != nullptr)
-    return amat->local_data()[i][j];
+    //return amat->local_data_const()[i][j];
+    return amat->local_data_const()[i*amat->get_local_size_n()+j];
   else THROW_NULL_DEREF;
 }
 
@@ -172,7 +174,7 @@ real_type* MatrixTestsDense::getLocalData(hiop::hiopMatrixDense* A)
   auto* amat = dynamic_cast<hiop::hiopMatrixDenseRowMajor*>(A);
   if(amat != nullptr)
   {
-    return amat->local_buffer();
+    return amat->local_data();
   }
   else THROW_NULL_DEREF;
 }
