@@ -805,17 +805,17 @@ void hiopVectorPar::print(FILE* file, const char* msg/*=NULL*/, int max_elems/*=
 }
 
 
-long long hiopVectorPar::numOfNegVal_w_tol(const double &tol) const
+long long hiopVectorPar::numOfElemsLessThan(const double &val) const
 {
   long long ret_num = 0;
-  for(long long i=0; i<n_local_; i++) if(data_[i]<-tol) ret_num++;
+  for(long long i=0; i<n_local_; i++) if(data_[i]<val) ret_num++;
   return ret_num;
 }
 
-long long hiopVectorPar::numOfZeroVal_w_tol(const double &tol) const
+long long hiopVectorPar::numOfElemsAbsLessThan(const double &val) const
 {
   long long ret_num = 0;
-  for(long long i=0; i<n_local_; i++) if(data_[i]>-tol && data_[i]<tol) ret_num++;
+  for(long long i=0; i<n_local_; i++) if(fabs(data_[i])<val) ret_num++;
   return ret_num;
 }
 
