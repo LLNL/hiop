@@ -41,8 +41,9 @@ public:
 			 const double* x, bool new_x, double* cons);
   virtual bool eval_grad_f(const long long& n, const double* x, bool new_x, double* gradf);
   virtual bool eval_Jac_cons(const long long& n, const long long& m,
-			     const long long& num_cons, const long long* idx_cons,  
-			     const double* x, bool new_x, double** Jac);
+                             const long long& num_cons, const long long* idx_cons,  
+                             const double* x, bool new_x, double* Jac);
+
   virtual bool get_vecdistrib_info(long long global_n, long long* cols);
 
   virtual bool get_starting_point(const long long&n, double* x0);

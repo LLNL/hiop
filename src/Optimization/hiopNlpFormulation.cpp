@@ -156,6 +156,7 @@ hiopNlpFormulation::~hiopNlpFormulation()
 #ifdef HIOP_USE_MPI
   //some (serial) drivers call (MPI) HiOp repeatedly in an outer loop
   //if we finalize here, subsequent calls to MPI will fail and break this outer loop. So we don't finalize
+
   //if(mpi_init_called) { 
   //  int nret=MPI_Finalize(); assert(MPI_SUCCESS==nret);
   //}
@@ -876,27 +877,29 @@ bool hiopNlpDenseConstraints::finalizeInitialization()
   return hiopNlpFormulation::finalizeInitialization();
 }
 
-bool hiopNlpDenseConstraints::eval_Jac_c(hiopVector& x, bool new_x, double** Jac_c)
+bool hiopNlpDenseConstraints::eval_Jac_c(hiopVector& x, bool new_x, double* Jac_c)
 {
   hiopVector* x_user  = nlp_transformations.applyTox(x, new_x);
-  double** Jac_c_user = nlp_transformations.applyToJacobEq(Jac_c, n_cons_eq);
+  double* Jac_c_user = nlp_transformations.applyToJacobEq(Jac_c, n_cons_eq);
 
   runStats.tmEvalJac_con.start();
-  bool bret = interface.eval_Jac_cons(nlp_transformations.n_post(),n_cons,n_cons_eq,cons_eq_mapping_,
-				      x_user->local_data_const(),new_x,Jac_c_user);
+  bool bret = interface.eval_Jac_cons(nlp_transformations.n_post(), n_cons,
+                                      n_cons_eq, cons_eq_mapping_,
+				      x_user->local_data_const(), new_x, Jac_c_user);
   runStats.tmEvalJac_con.stop(); runStats.nEvalJac_con_eq++;
 
   Jac_c = nlp_transformations.applyInvToJacobEq(Jac_c_user, n_cons_eq);
   return bret;
 }
-bool hiopNlpDenseConstraints::eval_Jac_d(hiopVector& x, bool new_x, double** Jac_d)
+bool hiopNlpDenseConstraints::eval_Jac_d(hiopVector& x, bool new_x, double* Jac_d)
 {
   hiopVector* x_user  = nlp_transformations.applyTox(x, new_x);
-  double** Jac_d_user = nlp_transformations.applyToJacobIneq(Jac_d, n_cons_ineq);
- 
+  double* Jac_d_user = nlp_transformations.applyToJacobIneq(Jac_d, n_cons_ineq);
+
   runStats.tmEvalJac_con.start();
-  bool bret = interface.eval_Jac_cons(nlp_transformations.n_post(),n_cons,n_cons_ineq,cons_ineq_mapping_,
-				      x_user->local_data_const(),new_x,Jac_d_user);
+  bool bret = interface.eval_Jac_cons(nlp_transformations.n_post(), n_cons,
+                                      n_cons_ineq, cons_ineq_mapping_,
+				      x_user->local_data_const(), new_x,Jac_d_user);
   runStats.tmEvalJac_con.stop(); runStats.nEvalJac_con_ineq++;
 
   Jac_d = nlp_transformations.applyInvToJacobIneq(Jac_d_user, n_cons_ineq);
@@ -920,8 +923,8 @@ bool hiopNlpDenseConstraints::eval_Jac_c_d_interface_impl(hiopVector& x, bool ne
   }
 
   hiopVector* x_user = nlp_transformations.applyTox(x, new_x);
-  double** Jac_consde = cons_Jac_de->local_data();
-  double** Jac_user = nlp_transformations.applyToJacobCons(Jac_consde, n_cons);
+  double* Jac_consde = cons_Jac_de->local_buffer2();
+  double* Jac_user = nlp_transformations.applyToJacobCons(Jac_consde, n_cons);
 
   runStats.tmEvalJac_con.start();
   bool bret = interface.eval_Jac_cons(nlp_transformations.n_post(), n_cons,
@@ -929,7 +932,7 @@ bool hiopNlpDenseConstraints::eval_Jac_c_d_interface_impl(hiopVector& x, bool ne
 				      Jac_user);
   
   Jac_consde = nlp_transformations.applyInvToJacobCons(Jac_user, n_cons);
-  assert(cons_Jac_de->local_data() == Jac_consde &&
+  assert(cons_Jac_de->local_buffer2() == Jac_consde &&
 	 "mismatch between Jacobian mem adress pre- and post-transformations should not happen");
 
   Jac_cde->copyRowsFrom(*cons_Jac_, cons_eq_mapping_, n_cons_eq);
@@ -949,7 +952,7 @@ bool hiopNlpDenseConstraints::eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& 
     log->printf(hovError, "[internal error] hiopNlpDenseConstraints NLP works only with dense matrices\n");
     return false;
   } else {
-    return this->eval_Jac_c(x, new_x, Jac_cde->local_data());
+    return this->eval_Jac_c(x, new_x, Jac_cde->local_buffer2());
   }
 }
 
@@ -960,7 +963,7 @@ bool hiopNlpDenseConstraints::eval_Jac_d(hiopVector& x, bool new_x, hiopMatrix& 
     log->printf(hovError, "[internal error] hiopNlpDenseConstraints NLP works only with dense matrices\n");
     return false;
   } else {
-    return this->eval_Jac_d(x, new_x, Jac_dde->local_data());
+    return this->eval_Jac_d(x, new_x, Jac_dde->local_buffer2());
   }
 }
 

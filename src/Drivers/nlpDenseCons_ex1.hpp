@@ -188,7 +188,7 @@ public:
 
   bool eval_Jac_cons(const long long& n, const long long& m, 
 		     const long long& num_cons, const long long* idx_cons,
-                     const double* x_in, bool new_x, double** Jac) 
+                     const double* x_in, bool new_x, double* Jac) 
   {
     assert(n==n_vars); 
     if(0==num_cons) return true; //this may happen when Hiop asks for inequalities, which we don't have in this example
@@ -196,7 +196,7 @@ public:
     //use x as auxiliary
     x->setToConstant(1.);
     _mesh->applyM(*x);
-    x->copyTo(Jac[0]);
+    x->copyTo(Jac);
     return true;
   }
 
