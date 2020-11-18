@@ -199,8 +199,8 @@ public:
     Jacc_rs_ref = Jac_in;
     assert(Jacc_fs->m()==m_in);
     //applyToMatrix(Jac_in, m_in, Jacc_fs->get_M());
-    applyToMatrix(Jac_in, m_in, Jacc_fs->local_buffer2());
-    return Jacc_fs->local_buffer2();
+    applyToMatrix(Jac_in, m_in, Jacc_fs->local_data());
+    return Jacc_fs->local_data();
   }
   inline double* applyInvToJacobEq(double* Jac_in, const int& m_in)
   {
@@ -213,8 +213,8 @@ public:
     Jacd_rs_ref = Jac_in;
     assert(Jacd_fs->m()==m_in);
     //applyToMatrix(Jac_in, m_in, Jacd_fs->get_M());
-    applyToMatrix(Jac_in, m_in, Jacd_fs->local_buffer2());
-    return Jacd_fs->local_buffer2();
+    applyToMatrix(Jac_in, m_in, Jacd_fs->local_data());
+    return Jacd_fs->local_data();
   }
   inline double* applyInvToJacobIneq(double* Jac_in, const int& m_in)
   {

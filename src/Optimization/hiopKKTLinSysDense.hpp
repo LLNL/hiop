@@ -423,8 +423,15 @@ public:
 	
 	//add -I (of size nineq) starting at index (nx, nx+nineq+neq)
 	int col_start = nx+nineq+neq;
-	double** MsysM = Msys.local_data();
-	for(int i=nx; i<nx+nineq; i++) MsysM[i][col_start++] -= 1.;
+	double* MsysM = Msys.local_data();
+        int m_Msys = Msys.m();
+        assert(m_Msys == Msys.n());
+	for(int i=nx; i<nx+nineq; i++) {
+          //MsysM[i][col_start++] -= 1.;
+          assert(i*m_Msys+col_start < m_Msys*m_Msys);
+          MsysM[i*m_Msys+col_start] -= 1.;
+          col_start++;
+        }
 
 	//add perturbations for IC (singularity)
 	assert(delta_cc == delta_cd);

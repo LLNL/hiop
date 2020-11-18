@@ -73,8 +73,9 @@ real_type MatrixTestsSymSparseTriplet::getLocalElement(
   
   if (mat != nullptr)
   {
-    double** M = mat->local_data();
-    return M[row][col];
+    double* M = mat->local_data_const();
+    //return M[row][col];
+    return M[row*mat->n()+col];
   }
 
   else THROW_NULL_DEREF;

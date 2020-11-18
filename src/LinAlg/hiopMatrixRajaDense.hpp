@@ -1,6 +1,5 @@
 // Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
-// Written by Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
@@ -239,14 +238,14 @@ public:
   virtual long long get_local_size_m() const { return m_local_; }
   virtual MPI_Comm get_mpi_comm() const { return comm_; }
 
-  //TODO: this is not kosher!
-  inline double** local_data_host() const {return M_host_; }
-  inline double** local_data() const {return M_dev_; }
-  inline double*  local_buffer_host() const {return M_host_[0]; }
-  inline double*  local_buffer() const {return data_dev_; }
+  //inline double** local_data_host() const {return M_host_; }
+  //inline double** local_data() const {return M_dev_; }
+  inline double* local_data_host() const {return M_host_[0]; }
+  inline double* local_data() const {return data_dev_; }
+protected:
   //do not use this unless you sure you know what you're doing
   inline double** get_M_host() { return M_host_; }
-
+public:
   virtual long long m() const {return m_local_;}
   virtual long long n() const {return n_global_;}
 #ifdef HIOP_DEEPCHECKS
