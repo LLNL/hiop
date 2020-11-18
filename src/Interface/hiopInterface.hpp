@@ -484,8 +484,8 @@ public:
   * and get the number of nonzeros in Jacobian and Heesian
   **/
   virtual bool get_sparse_blocks_info(int& nx,
-					    int& nnz_sparse_Jaceq, int& nnz_sparse_Jacineq,
-					    int& nnz_sparse_Hess_Lagr) = 0;
+                                      int& nnz_sparse_Jaceq, int& nnz_sparse_Jacineq,
+                                      int& nnz_sparse_Hess_Lagr) = 0;
 
   /** Evaluates the sparse Jacobian of constraints
    *
@@ -501,9 +501,9 @@ public:
    *
    */
   virtual bool eval_Jac_cons(const long long& n, const long long& m,
-			     const long long& num_cons, const long long* idx_cons,
-			     const double* x, bool new_x,
-			     const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS) = 0;
+                             const long long& num_cons, const long long* idx_cons,
+                             const double* x, bool new_x,
+                             const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS) = 0;
 
   /** Evaluates the sparse Jacobian of equality and inequality constraints in one call.
    *
@@ -531,8 +531,8 @@ public:
    * (which is called for equalities and inequalities separately) above.
    */
   virtual bool eval_Jac_cons(const long long& n, const long long& m,
-			     const double* x, bool new_x,
-			     const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS){ return false; }
+                             const double* x, bool new_x,
+                             const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS){ return false; }
 
   /** Evaluates the sparse Hessian of the Lagrangian function
    *
@@ -542,9 +542,9 @@ public:
    * 5) The order is multipliers is: lambda=[lambda_eq, lambda_ineq]
    */
   virtual bool eval_Hess_Lagr(const long long& n, const long long& m,
-			      const double* x, bool new_x, const double& obj_factor,
-			      const double* lambda, bool new_lambda,
-			      const int& nnzHSS, int* iHSS, int* jHSS, double* MHSS) = 0;
+                              const double* x, bool new_x, const double& obj_factor,
+                              const double* lambda, bool new_lambda,
+                              const int& nnzHSS, int* iHSS, int* jHSS, double* MHSS) = 0;
 
 };
 

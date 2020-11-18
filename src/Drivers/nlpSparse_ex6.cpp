@@ -56,8 +56,8 @@ bool Ex6::get_cons_info(const long long& m, double* clow, double* cupp, Nonlinea
 }
 
 bool Ex6::get_sparse_blocks_info(int& nx,
-					    int& nnz_sparse_Jaceq, int& nnz_sparse_Jacineq,
-					    int& nnz_sparse_Hess_Lagr)
+                                 int& nnz_sparse_Jaceq, int& nnz_sparse_Jacineq,
+					                       int& nnz_sparse_Hess_Lagr)
 {
     nx = n_vars;;
     nnz_sparse_Jaceq = 2;
@@ -83,15 +83,15 @@ bool Ex6::eval_grad_f(const long long& n, const double* x, bool new_x, double* g
 }
 
 bool Ex6::eval_cons(const long long& n, const long long& m,
-			 const long long& num_cons, const long long* idx_cons,
-			 const double* x, bool new_x, double* cons)
+                    const long long& num_cons, const long long* idx_cons,
+			              const double* x, bool new_x, double* cons)
 {
   return false;
 }
 
 /* Four constraints no matter how large n is */
 bool Ex6::eval_cons(const long long& n, const long long& m,
-		    const double* x, bool new_x, double* cons)
+		                const double* x, bool new_x, double* cons)
 {
   assert(n==n_vars); assert(m==n_cons);
   assert(n_cons==2+n-3);
@@ -116,16 +116,16 @@ bool Ex6::eval_cons(const long long& n, const long long& m,
 }
 
 bool Ex6::eval_Jac_cons(const long long& n, const long long& m,
-			     const long long& num_cons, const long long* idx_cons,
-			     const double* x, bool new_x,
-			     const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS)
+                        const long long& num_cons, const long long* idx_cons,
+                        const double* x, bool new_x,
+                        const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS)
 {
   return false;
 }
 
 bool Ex6::eval_Jac_cons(const long long& n, const long long& m,
-			     const double* x, bool new_x,
-			     const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS)
+                        const double* x, bool new_x,
+                        const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS)
 {
     assert(n==n_vars); assert(m==n_cons);
     assert(n>=3);
@@ -178,9 +178,9 @@ bool Ex6::eval_Jac_cons(const long long& n, const long long& m,
 }
 
 bool Ex6::eval_Hess_Lagr(const long long& n, const long long& m,
-			      const double* x, bool new_x, const double& obj_factor,
-			      const double* lambda, bool new_lambda,
-			      const int& nnzHSS, int* iHSS, int* jHSS, double* MHSS)
+                         const double* x, bool new_x, const double& obj_factor,
+                         const double* lambda, bool new_lambda,
+                         const int& nnzHSS, int* iHSS, int* jHSS, double* MHSS)
 {
     //Note: lambda is not used since all the constraints are linear and, therefore, do
     //not contribute to the Hessian of the Lagrangian
