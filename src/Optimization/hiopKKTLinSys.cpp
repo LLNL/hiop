@@ -875,7 +875,7 @@ int hiopKKTLinSysLowRank::solveWithRefin(hiopMatrixDense& M, hiopVector& rhs)
   char UPLO='L';
 
   int NRHS=1;
-  double* A=M.local_buffer();
+  double* A=M.local_data();
   int LDA=N;
   double* AF=new double[N*N];
   int LDAF=N;
@@ -939,14 +939,14 @@ int hiopKKTLinSysLowRank::solveWithRefin(hiopMatrixDense& M, hiopVector& rhs)
 
       int _V_ipiv_vec[1000]; double _V_work_vec[1000]; int lwork=1000;
       M.copyFrom(*Aref);
-      DSYTRF(&UPLO, &N, M.local_buffer(), &LDA, _V_ipiv_vec, _V_work_vec, &lwork, &info);
+      DSYTRF(&UPLO, &N, M.local_data(), &LDA, _V_ipiv_vec, _V_work_vec, &lwork, &info);
       assert(info==0);
-      DSYTRS(&UPLO, &N, &NRHS, M.local_buffer(), &LDA, _V_ipiv_vec, resid->local_data(), &LDB, &info);
+      DSYTRS(&UPLO, &N, &NRHS, M.local_data(), &LDA, _V_ipiv_vec, resid->local_data(), &LDB, &info);
       assert(info==0);
     } else { //iter refin based on symmetric positive definite factorization+solve
       M.copyFrom(*Aref);
       //for(int i=0; i<4; i++) M.local_data()[i][i] +=1e-8;
-      DPOTRF(&UPLO, &N, M.local_buffer(), &LDA, &info);
+      DPOTRF(&UPLO, &N, M.local_data(), &LDA, &info);
       if(info>0)
 	nlp_->log->printf(hovError, "hiopKKTLinSysLowRank::factorizeMat: dpotrf (Chol fact) "
 			  "detected %d minor being indefinite.\n", info);
@@ -955,7 +955,7 @@ int hiopKKTLinSysLowRank::solveWithRefin(hiopMatrixDense& M, hiopVector& rhs)
 	  nlp_->log->printf(hovError, "hiopKKTLinSysLowRank::factorizeMat: dpotrf returned "
 			    "error %d\n", info);
 
-      DPOTRS(&UPLO,&N, &NRHS, M.local_buffer(), &LDA, resid->local_data(), &LDA, &info);
+      DPOTRS(&UPLO,&N, &NRHS, M.local_data(), &LDA, resid->local_data(), &LDA, &info);
       if(info<0)
 	nlp_->log->printf(hovError, "hiopKKTLinSysLowRank::solveWithFactors: dpotrs returned "
 			  "error %d\n", info);
@@ -1023,7 +1023,7 @@ int hiopKKTLinSysLowRank::solve(hiopMatrixDense& M, hiopVector& rhs)
   char UPLO='L';
   int N=M.n();
   int NRHS=1;
-  double* A=M.local_buffer();
+  double* A=M.local_data();
   int LDA=N;
   double* AF=new double[N*N];
   int LDAF=N;

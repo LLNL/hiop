@@ -187,13 +187,15 @@ void hiopMatrixSparseTriplet::transAddToSymDenseMatrixUpperTriangle(int row_star
   assert(col_start>=0 && col_start+nrows_<=W.n());
   assert(W.n()==W.m());
 
-  double** WM = W.get_M();
+  int m_W = W.m();
+  double* WM = W.local_data();
   for(int it=0; it<nnz_; it++) {
     const int i = jCol_[it]+row_start;
     const int j = iRow_[it]+col_start;
     assert(i<W.m() && j<W.n()); assert(i>=0 && j>=0);
     assert(i<=j && "source entries need to map inside the upper triangular part of destination");
-    WM[i][j] += alpha*values_[it];
+    //WM[i][j] += alpha*values_[it];
+    WM[i*m_W+j] += alpha*values_[it];
   }
 }
 
@@ -260,7 +262,8 @@ addMDinvMtransToDiagBlockOfSymDeMatUTri(int rowAndCol_dest_start,
   assert(row_dest_start>=0 && row_dest_start+n<=W.m());
   assert(col_dest_start>=0 && col_dest_start+nrows_<=W.n());
   assert(D.get_size() == this->ncols_);
-  double** WM = W.get_M();
+  double* WM = W.local_data();
+  int m_W = W.m();
   const double* DM = D.local_data_const();
 
   if(row_starts_==NULL) row_starts_ = allocAndBuildRowStarts();
@@ -273,7 +276,8 @@ addMDinvMtransToDiagBlockOfSymDeMatUTri(int rowAndCol_dest_start,
     acc = 0.;
     for(int k=row_starts_->idx_start_[i]; k<row_starts_->idx_start_[i+1]; k++)
       acc += this->values_[k] / DM[this->jCol_[k]] * this->values_[k];
-    WM[i+row_dest_start][i+col_dest_start] += alpha*acc;
+    //WM[i+row_dest_start][i+col_dest_start] += alpha*acc;
+    WM[(i+row_dest_start)*m_W+i+col_dest_start] += alpha*acc;
 
     //j>i
     for(int j=i+1; j<this->nrows_; j++) {
@@ -294,7 +298,9 @@ addMDinvMtransToDiagBlockOfSymDeMatUTri(int rowAndCol_dest_start,
 	}
       } //end of loop over ki and kj
 
-      WM[i+row_dest_start][j+col_dest_start] += alpha*acc;
+      //WM[i+row_dest_start][j+col_dest_start] += alpha*acc;
+      WM[(i+row_dest_start)*m_W + j+col_dest_start] += alpha*acc;
+      
 
     } //end j
   } // end i
@@ -323,7 +329,9 @@ addMDinvNtransToSymDeMatUTri(int row_dest_start, int col_dest_start,
   assert(row_dest_start>=0 && row_dest_start+m1<=W.m());
   assert(col_dest_start>=0 && col_dest_start+m2<=W.n());
 
-  double** WM = W.get_M();
+  double* WM = W.local_data();
+  auto m_W = W.m();
+  
   const double* DM = D.local_data_const();
 
   // TODO: allocAndBuildRowStarts -> should create row_starts internally (name='prepareRowStarts' ?)
@@ -375,7 +383,8 @@ addMDinvNtransToSymDeMatUTri(int row_dest_start, int col_dest_start,
 	printf("[warning] lower triangular element updated in addMDinvNtransToSymDeMatUTri\n");
 #endif
       assert(i+row_dest_start <= j+col_dest_start);
-      WM[i+row_dest_start][j+col_dest_start] += alpha*acc;
+      //WM[i+row_dest_start][j+col_dest_start] += alpha*acc;
+      WM[(i+row_dest_start)*m_W + j+col_dest_start] += alpha*acc;
 
     } //end j
   } // end i
@@ -685,14 +694,16 @@ addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start,
   assert(diag_start+ncols_<=W.n());
   assert(W.n()==W.m());
 
-  double** WM = W.get_M();
+  const auto m_W = W.m();
+  double* WM = W.local_data();
   for(int it=0; it<nnz_; it++) {
     assert(iRow_[it]<=jCol_[it] && "sparse symmetric matrices should contain only upper triangular entries");
     const int i = iRow_[it]+diag_start;
     const int j = jCol_[it]+diag_start;
     assert(i<W.m() && j<W.n()); assert(i>=0 && j>=0);
     assert(i<=j && "symMatrices not aligned; source entries need to map inside the upper triangular part of destination");
-    WM[i][j] += alpha*values_[it];
+    //WM[i][j] += alpha*values_[it];
+    WM[i*m_W+j] += alpha*values_[it];
   }
 }
 

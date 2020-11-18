@@ -922,7 +922,7 @@ bool hiopNlpDenseConstraints::eval_Jac_c_d_interface_impl(hiopVector& x, bool ne
   }
 
   hiopVector* x_user = nlp_transformations.applyTox(x, new_x);
-  double* Jac_consde = cons_Jac_de->local_buffer2();
+  double* Jac_consde = cons_Jac_de->local_data();
   double* Jac_user = nlp_transformations.applyToJacobCons(Jac_consde, n_cons);
 
   runStats.tmEvalJac_con.start();
@@ -931,7 +931,7 @@ bool hiopNlpDenseConstraints::eval_Jac_c_d_interface_impl(hiopVector& x, bool ne
 				      Jac_user);
   
   Jac_consde = nlp_transformations.applyInvToJacobCons(Jac_user, n_cons);
-  assert(cons_Jac_de->local_buffer2() == Jac_consde &&
+  assert(cons_Jac_de->local_data() == Jac_consde &&
 	 "mismatch between Jacobian mem adress pre- and post-transformations should not happen");
 
   Jac_cde->copyRowsFrom(*cons_Jac_, cons_eq_mapping_, n_cons_eq);
@@ -951,7 +951,7 @@ bool hiopNlpDenseConstraints::eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& 
     log->printf(hovError, "[internal error] hiopNlpDenseConstraints NLP works only with dense matrices\n");
     return false;
   } else {
-    return this->eval_Jac_c(x, new_x, Jac_cde->local_buffer2());
+    return this->eval_Jac_c(x, new_x, Jac_cde->local_data());
   }
 }
 
@@ -962,7 +962,7 @@ bool hiopNlpDenseConstraints::eval_Jac_d(hiopVector& x, bool new_x, hiopMatrix& 
     log->printf(hovError, "[internal error] hiopNlpDenseConstraints NLP works only with dense matrices\n");
     return false;
   } else {
-    return this->eval_Jac_d(x, new_x, Jac_dde->local_buffer2());
+    return this->eval_Jac_d(x, new_x, Jac_dde->local_data());
   }
 }
 

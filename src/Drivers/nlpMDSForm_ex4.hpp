@@ -67,10 +67,12 @@ public:
     Q  = hiop::LinearAlgebraFactory::createMatrixDense(nd,nd);
     Q->setToConstant(1e-8);
     Q->addDiagonal(2.);
-    double** Qa = Q->get_M();
+    double* Qa = Q->local_data();
     for(int i=1; i<nd-1; i++) {
-      Qa[i][i+1] = 1.;
-      Qa[i+1][i] = 1.;
+      //Qa[i][i+1] = 1.;
+      Qa[i*nd+i+1] = 1.;
+      //Qa[i+1][i] = 1.;
+      Qa[(i+1)*nd+i] = 1.;
     }
 
     Md = hiop::LinearAlgebraFactory::createMatrixDense(ns,nd);
@@ -351,7 +353,7 @@ public:
 	}
       }
       if(isEq) {
-	memcpy(JacD, Md->local_buffer(), ns*nd*sizeof(double));
+	memcpy(JacD, Md->local_data(), ns*nd*sizeof(double));
       }
     }
 
@@ -384,7 +386,7 @@ public:
     if(HDD!=NULL) {
       const int nx_dense_squared = nd*nd;
       //memcpy(HDD[0], Q->local_buffer(), nx_dense_squared*sizeof(double));
-      const double* Qv = Q->local_buffer();
+      const double* Qv = Q->local_data();
       for(int i=0; i<nx_dense_squared; i++)
 	HDD[i] = obj_factor*Qv[i];
     }
@@ -634,7 +636,7 @@ public:
     //dense Jacobian w.r.t y
     if(JacD!=NULL) {
       //just copy the dense Jacobian corresponding to equalities
-      memcpy(JacD, Md->local_buffer(), ns*nd*sizeof(double));
+      memcpy(JacD, Md->local_data(), ns*nd*sizeof(double));
       
       if(haveIneq) {
 	assert(ns+3 == m);

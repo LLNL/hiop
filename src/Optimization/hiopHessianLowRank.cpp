@@ -374,7 +374,7 @@ void hiopHessianLowRank::updateInternalBFGSRepresentation()
   symmMatTimesDiagTimesMatTrans_local(0.0, DpYtDhInvY, 1.0,*Yt,*DhInv);
 #ifdef HIOP_USE_MPI
   const size_t buffsize=l*l*sizeof(double);
-  memcpy(_buff1_lxlx3, DpYtDhInvY.local_buffer(), buffsize);
+  memcpy(_buff1_lxlx3, DpYtDhInvY.local_data(), buffsize);
 #else
   DpYtDhInvY.addDiagonal(1., *D);
   V->copyBlockFromMatrix(l,l,DpYtDhInvY);
@@ -386,7 +386,7 @@ void hiopHessianLowRank::updateInternalBFGSRepresentation()
   B0DhInv.copyFrom(*DhInv); B0DhInv.scale(sigma);
   matTimesDiagTimesMatTrans_local(StB0DhInvYmL, *St, B0DhInv, *Yt);
 #ifdef HIOP_USE_MPI
-  memcpy(_buff1_lxlx3+l*l, StB0DhInvYmL.local_buffer(), buffsize);
+  memcpy(_buff1_lxlx3+l*l, StB0DhInvYmL.local_data(), buffsize);
 #else
   //substract L
   StB0DhInvYmL.addMatrix(-1.0, *L);
@@ -401,7 +401,7 @@ void hiopHessianLowRank::updateInternalBFGSRepresentation()
   hiopMatrixDense& StDS = DpYtDhInvY; //a rename
   symmMatTimesDiagTimesMatTrans_local(0.0, StDS, 1.0, *St, theDiag);
 #ifdef HIOP_USE_MPI
-  memcpy(_buff1_lxlx3+2*l*l, DpYtDhInvY.local_buffer(), buffsize);
+  memcpy(_buff1_lxlx3+2*l*l, DpYtDhInvY.local_data(), buffsize);
 #else
   V->copyBlockFromMatrix(0,0,StDS);
 #endif
@@ -539,8 +539,8 @@ symMatTimesInverseTimesMatTrans(double beta, hiopMatrixDense& W,
   S2Y2.copyBlockFromMatrix(0,l,Y1);
 #ifdef HIOP_USE_MPI
   int ierr;
-  ierr = MPI_Allreduce(S2Y2.local_buffer(), _buff_2lxk, 2*l*k, MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(ierr==MPI_SUCCESS);
-  ierr = MPI_Allreduce(W.local_buffer(),    _buff_kxk,  k*k,   MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(ierr==MPI_SUCCESS);
+  ierr = MPI_Allreduce(S2Y2.local_data(), _buff_2lxk, 2*l*k, MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(ierr==MPI_SUCCESS);
+  ierr = MPI_Allreduce(W.local_data(),    _buff_kxk,  k*k,   MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(ierr==MPI_SUCCESS);
   S2Y2.copyFrom(_buff_2lxk);
   W.copyFrom(_buff_kxk);
   //also copy S1 and Y1
@@ -598,7 +598,7 @@ void hiopHessianLowRank::factorizeV()
 
   int lwork=-1;//inquire sizes
   double Vwork_tmp;
-  DSYTRF(&uplo, &N, V->local_buffer(), &lda, _V_ipiv_vec, &Vwork_tmp, &lwork, &info);
+  DSYTRF(&uplo, &N, V->local_data(), &lda, _V_ipiv_vec, &Vwork_tmp, &lwork, &info);
   assert(info==0);
 
   lwork=(int)Vwork_tmp;
@@ -607,7 +607,7 @@ void hiopHessianLowRank::factorizeV()
     _V_work_vec=LinearAlgebraFactory::createVector(lwork);
   } else assert(_V_work_vec);
 
-  DSYTRF(&uplo, &N, V->local_buffer(), &lda, _V_ipiv_vec, _V_work_vec->local_data(), &lwork, &info);
+  DSYTRF(&uplo, &N, V->local_data(), &lda, _V_ipiv_vec, _V_work_vec->local_data(), &lwork, &info);
   
   if(info<0)
     nlp->log->printf(hovError, "hiopHessianLowRank::factorizeV error: %d argument to dsytrf has an illegal value\n", -info);
@@ -644,7 +644,7 @@ void hiopHessianLowRank::solveWithV(hiopVector& rhs_s, hiopVector& rhs_y)
   rhs.copyFromStarting(0, rhs_s);
   rhs.copyFromStarting(l, rhs_y);
 
-  DSYTRS(&uplo, &N, &one, V->local_buffer(), &lda, _V_ipiv_vec, rhs.local_data(), &N, &info);
+  DSYTRS(&uplo, &N, &one, V->local_data(), &lda, _V_ipiv_vec, rhs.local_data(), &N, &info);
 
   if(info<0) nlp->log->printf(hovError, "hiopHessianLowRank::solveWithV error: %d argument to dsytrf has an illegal value\n", -info);
   assert(info==0);
@@ -687,7 +687,7 @@ void hiopHessianLowRank::solveWithV(hiopMatrixDense& rhs)
 #ifdef HIOP_DEEPCHECKS
   assert(N==rhs.n()); 
 #endif
-  DSYTRS(&uplo, &N, &nrhs, V->local_buffer(), &lda, _V_ipiv_vec, rhs.local_buffer(), &ldb, &info);
+  DSYTRS(&uplo, &N, &nrhs, V->local_data(), &lda, _V_ipiv_vec, rhs.local_data(), &ldb, &info);
 
   if(info<0) nlp->log->printf(hovError, "hiopHessianLowRank::solveWithV error: %d argument to dsytrf has an illegal value\n", -info);
   assert(info==0);
@@ -730,12 +730,14 @@ void hiopHessianLowRank::growL(const int& lmem_curr, const int& lmem_max, const 
   //copy from L to newL
   newL->copyBlockFromMatrix(0,0, *L);
 
-  double** newL_mat=newL->local_data(); //doing the rest here
+  double* newL_mat=newL->local_data(); //doing the rest here
   const double* YTs_vec=YTs.local_data_const();
-  for(int j=0; j<l; j++) newL_mat[l][j] = YTs_vec[j];
+  //for(int j=0; j<l; j++) newL_mat[l][j] = YTs_vec[j];
+  for(int j=0; j<l; j++) newL_mat[l*(l+1)+j] = YTs_vec[j];
 
   //and the zero entries of the last column
-  for(int i=0; i<l+1; i++) newL_mat[i][l] = 0.0;
+  //for(int i=0; i<l+1; i++) newL_mat[i][l] = 0.0;
+  for(int i=0; i<l+1; i++) newL_mat[i*(l+1)+l] = 0.0;
 
   //swap the pointers
   delete L;
@@ -763,28 +765,36 @@ void hiopHessianLowRank::growD(const int& lmem_curr, const int& lmem_max, const 
 void hiopHessianLowRank::updateL(const hiopVector& YTs, const double& sTy)
 {
   int l=YTs.get_size();
-#ifdef HIOP_DEEPCHECKS
   assert(l==L->m());
   assert(l==L->n());
+#ifdef HIOP_DEEPCHECKS
   assert(l_curr==l);
   assert(l_curr==l_max);
 #endif
   const int lm1=l-1;
-  double** L_mat=L->local_data();
+  double* L_mat=L->local_data();
   const double* yts_vec=YTs.local_data_const();
-  for(int i=1; i<lm1; i++)
-    for(int j=0; j<i; j++)
-      L_mat[i][j] = L_mat[i+1][j+1];
+  for(int i=1; i<lm1; i++) {
+    for(int j=0; j<i; j++) {
+      //L_mat[i][j] = L_mat[i+1][j+1];
+      L_mat[i*l+j] = L_mat[(i+1)*l+j+1];
+    }
+  }
+      
 
   //is this really needed?
   //for(int i=0; i<lm1; i++)
   //  L_mat[i][lm1]=0.0;
 
   //first entry in YTs corresponds to y_to_be_discarded_since_it_is_the_oldest'* s_new and is discarded
-  for(int j=0; j<lm1; j++)
-    L_mat[lm1][j]=yts_vec[j+1];
+  for(int j=0; j<lm1; j++) {
+    //L_mat[lm1][j]=yts_vec[j+1];
+    L_mat[lm1*l+j]=yts_vec[j+1];
+    
+  }
 
-  L_mat[lm1][lm1]=0.0;
+  //L_mat[lm1][lm1]=0.0;
+  L_mat[lm1*l+lm1]=0.0;
 }
 void hiopHessianLowRank::updateD(const double& sTy)
 {
@@ -1000,26 +1010,32 @@ symmMatTimesDiagTimesMatTrans_local(double beta, hiopMatrixDense& W,
   long long k=W.m();
   long long n=X.n();
   size_t n_local=X.get_local_size_n();
+
+  assert(X.m()==k);
+    
 #ifdef HIOP_DEEPCHECKS
   assert(W.n()==k);
-  assert(X.m()==k);
   assert(d.get_size()==n);
   assert(d.get_local_size()==n_local);
 #endif
+  
   //#define chunk 512; //!opt
   double *xi, *xj, acc;
-  double **Wdata=W.local_data(), **Xdata=X.local_data();
+  double *Wdata=W.local_data(), *Xdata=X.local_data_const();
   const double* dd=d.local_data_const();
   for(int i=0; i<k; i++) {
-    xi=Xdata[i];
+    //xi=Xdata[i];
+    xi=Xdata+i*n_local;
     for(size_t j=i; j<k; j++) {
-      xj=Xdata[j];
+      //xj=Xdata[j];
+      xj=Xdata+j*n_local;
       //compute W[i,j] = sum {X[i,p]*d[p]*X[j,p] : p=1,...,n_local}
       acc=0.0;
       for(size_t p=0; p<n_local; p++)
 	acc += xi[p]*dd[p]*xj[p];
 
-      Wdata[i][j]=Wdata[j][i]=beta*Wdata[i][j]+alpha*acc;
+      //Wdata[i][j]=Wdata[j][i]=beta*Wdata[i][j]+alpha*acc;
+      Wdata[i*k+j] = Wdata[j*k+i] = beta*Wdata[i*k+j]+alpha*acc;
     }
   }
 }
@@ -1033,17 +1049,29 @@ matTimesDiagTimesMatTrans_local(hiopMatrixDense& W, const hiopMatrixDense& S, co
   assert(S.n()==X.n());
 #endif  
   int l=S.m(), n=d.get_local_size(), k=X.m();
-  double *Sdi, *Wdi, *Xdj, acc;
-  double **Wd=W.local_data(), **Sd=S.local_data(), **Xd=X.local_data(); const double *diag=d.local_data_const();
+  assert(X.get_local_size_n() == d.get_local_size());
+  
+  const double* Sdi;
+  double* Wdi;
+  const double* Xdj;
+  double acc;
+  double* Wd=W.local_data();
+  const double* Sd=S.local_data_const();
+  const double* Xd=X.local_data_const();
+  const double *diag=d.local_data_const();
   //!opt
   for(int i=0;i<l; i++) {
-    Sdi=Sd[i]; Wdi=Wd[i];
+    //Sdi=Sd[i]; Wdi=Wd[i];
+    Sdi = Sd+i*n;
+    Wdi = Wd+i*W.get_local_size_n();
+    
     for(int j=0; j<k; j++) {
-      Xdj=Xd[j];
+      //Xdj=Xd[j];
+      Xdj = Xd+j*n;
       acc=0.;
       for(int p=0; p<n; p++) 
-	acc += Sdi[p]*diag[p]*Xdj[p];
-      //for(int p=0; p<n;p++) {acc += *Si * *diag * *Xd; Si++; diag++; Xd+=n;}
+	//acc += Sdi[p]*diag[p]*Xdj[p];
+        acc += Sdi[p]*diag[p]*Xdj[p];
       
       Wdi[j]=acc;
     }
@@ -1343,14 +1371,14 @@ symmetricTimesMat(double beta, hiopMatrixDense& W,
   symmMatTimesDiagTimesMatTrans_local(0.0,DpYtH0Y, 1.0,*Yt,*H0);
 #ifdef HIOP_USE_MPI
   //!opt - use one buffer and one reduce call
-  ierr=MPI_Allreduce(S1.local_buffer(),      _buff_lxk,l*k, MPI_DOUBLE,MPI_SUM,nlp->get_comm()); assert(ierr==MPI_SUCCESS);
+  ierr=MPI_Allreduce(S1.local_data(),      _buff_lxk,l*k, MPI_DOUBLE,MPI_SUM,nlp->get_comm()); assert(ierr==MPI_SUCCESS);
   S1.copyFrom(_buff_lxk);
-  ierr=MPI_Allreduce(Y1.local_buffer(),      _buff_lxk,l*k, MPI_DOUBLE,MPI_SUM,nlp->get_comm()); assert(ierr==MPI_SUCCESS);
+  ierr=MPI_Allreduce(Y1.local_data(),      _buff_lxk,l*k, MPI_DOUBLE,MPI_SUM,nlp->get_comm()); assert(ierr==MPI_SUCCESS);
   Y1.copyFrom(_buff_lxk);
-  ierr=MPI_Allreduce(W.local_buffer(),       _buff_kxk,k*k, MPI_DOUBLE,MPI_SUM,nlp->get_comm()); assert(ierr==MPI_SUCCESS);
+  ierr=MPI_Allreduce(W.local_data(),       _buff_kxk,k*k, MPI_DOUBLE,MPI_SUM,nlp->get_comm()); assert(ierr==MPI_SUCCESS);
   W.copyFrom(_buff_kxk);
 
-  ierr=MPI_Allreduce(DpYtH0Y.local_buffer(), _buff_lxl,l*l, MPI_DOUBLE,MPI_SUM,nlp->get_comm()); assert(ierr==MPI_SUCCESS);
+  ierr=MPI_Allreduce(DpYtH0Y.local_data(), _buff_lxl,l*l, MPI_DOUBLE,MPI_SUM,nlp->get_comm()); assert(ierr==MPI_SUCCESS);
   DpYtH0Y.copyFrom(_buff_lxl);
 #endif
  //add D to finish calculating D+Y^T*H0*Y
@@ -1399,26 +1427,34 @@ symmMatTimesDiagTimesMatTrans_local(double beta, hiopMatrixDense& W,
   long long k=W.m();
   long long n=X.n();
   size_t n_local=X.get_local_size_n();
+
+  assert(X.m()==k);
+  
 #ifdef HIOP_DEEPCHECKS
   assert(W.n()==k);
-  assert(X.m()==k);
   assert(d.get_size()==n);
   assert(d.get_local_size()==n_local);
 #endif
   //#define chunk 512; //!opt
-  double *xi, *xj, acc;
-  double **Wdata=W.local_data(), **Xdata=X.local_data();
+  const double *xi, *xj;
+  double acc;
+  double* Wdata=W.local_data();
+  const double* Xdata=X.local_data_const();
   const double* dd=d.local_data_const();
   for(int i=0; i<k; i++) {
-    xi=Xdata[i];
+    //xi=Xdata[i];
+    xi=Xdata+i*n_local;
     for(size_t j=i; j<k; j++) {
-      xj=Xdata[j];
+      //xj=Xdata[j];
+      xj=Xdata+j*n_local;
       //compute W[i,j] = sum {X[i,p]*d[p]*X[j,p] : p=1,...,n_local}
       acc=0.0;
       for(size_t p=0; p<n_local; p++)
 	acc += xi[p]*dd[p]*xj[p];
 
-      Wdata[i][j]=Wdata[j][i]=beta*Wdata[i][j]+alpha*acc;
+      assert(W.get_local_size_n() == k);
+      //Wdata[i][j]=Wdata[j][i]=beta*Wdata[i][j]+alpha*acc;
+      Wdata[i*k+j]=Wdata[j*k+i]=beta*Wdata[i*k+j]+alpha*acc;
     }
   }
 }
@@ -1430,23 +1466,24 @@ matTimesDiagTimesMatTrans_local(hiopMatrixDense& W, const hiopMatrixDense& S, co
 #ifdef HIOP_DEEPCHECKS
   assert(S.n()==d.get_size());
   assert(S.n()==X.n());
-#endif  
-  int l=S.m(), n=d.get_local_size(), k=X.m();
-  double *Sdi, *Wdi, *Xdj, acc;
-  double **Wd=W.local_data(), **Sd=S.local_data(), **Xd=X.local_data(); const double *diag=d.local_data_const();
-  //!opt
-  for(int i=0;i<l; i++) {
-    Sdi=Sd[i]; Wdi=Wd[i];
-    for(int j=0; j<k; j++) {
-      Xdj=Xd[j];
-      acc=0.;
-      for(int p=0; p<n; p++) 
-	acc += Sdi[p]*diag[p]*Xdj[p];
-      //for(int p=0; p<n;p++) {acc += *Si * *diag * *Xd; Si++; diag++; Xd+=n;}
+#endif
+  assert(false);
+  // int l=S.m(), n=d.get_local_size(), k=X.m();
+  // double *Sdi, *Wdi, *Xdj, acc;
+  // double **Wd=W.local_data(), **Sd=S.local_data(), **Xd=X.local_data(); const double *diag=d.local_data_const();
+  // //!opt
+  // for(int i=0;i<l; i++) {
+  //   Sdi=Sd[i]; Wdi=Wd[i];
+  //   for(int j=0; j<k; j++) {
+  //     Xdj=Xd[j];
+  //     acc=0.;
+  //     for(int p=0; p<n; p++) 
+  //       acc += Sdi[p]*diag[p]*Xdj[p];
+  //     //for(int p=0; p<n;p++) {acc += *Si * *diag * *Xd; Si++; diag++; Xd+=n;}
       
-      Wdi[j]=acc;
-    }
-  }
+  //     Wdi[j]=acc;
+  //   }
+  // }
 }
 
 /* rhs = R \ rhs, where R is upper triangular lxl and rhs is lxk. R is supposed to be local */
@@ -1459,7 +1496,8 @@ void hiopHessianInvLowRank_obsolette::triangularSolve(const hiopMatrixDense& R, 
   assert(l==rhs.m());
   if(0==l) return; //nothing to solve
 
-  const double *Rbuf = R.local_buffer(); double *rhsbuf=rhs.local_buffer();
+  const double *Rbuf = R.local_data_const();
+  double *rhsbuf=rhs.local_data();
   char side  ='l'; //op(A)X=rhs
   char uplo  ='l'; //since we store it row-wise and fortran access it column-wise
   char transA='T'; //to solve with an upper triangular, we force fortran to solve a transpose lower (see above)
@@ -1482,7 +1520,8 @@ void hiopHessianInvLowRank_obsolette::triangularSolve(const hiopMatrixDense& R, 
   assert(rhs.get_size()==l);
 #endif
   if(0==l) return; //nothing to solve
-  const double* Rbuf=R.local_buffer(); double *rhsbuf=rhs.local_data();
+  const double* Rbuf=R.local_data_const();
+  double *rhsbuf=rhs.local_data();
 
   //we need to solve AX=B but we ask Fortran-style LAPACK to solve A^T X = B
   char side  ='l'; //op(A)X=rhs
@@ -1505,7 +1544,8 @@ void hiopHessianInvLowRank_obsolette::triangularSolveTrans(const hiopMatrixDense
   assert(rhs.get_size()==l);
 #endif
   if(0==l) return; //nothing to solve
-  const double* Rbuf=R.local_buffer(); double *rhsbuf=rhs.local_data();
+  const double* Rbuf=R.local_data_const();
+  double *rhsbuf=rhs.local_data();
 
   //we need to solve A^TX=B but we ask Fortran-style LAPACK to solve A X = B
   char side  ='l'; //op(A)X=rhs
@@ -1535,13 +1575,16 @@ void hiopHessianInvLowRank_obsolette::growR(const int& lmem_curr, const int& lme
   //copy from R to newR
   newR->copyBlockFromMatrix(0,0, *R);
 
-  double** newR_mat=newR->local_data(); //doing the rest here
+  double* newR_mat=newR->local_data(); //doing the rest here
   const double* STy_vec=STy.local_data_const();
-  for(int j=0; j<l; j++) newR_mat[j][l] = STy_vec[j];
-  newR_mat[l][l] = sTy;
+  //for(int j=0; j<l; j++) newR_mat[j][l] = STy_vec[j];
+  for(int j=0; j<l; j++) newR_mat[j*(l+1)+l] = STy_vec[j];
+  //newR_mat[l][l] = sTy;
+  newR_mat[l*(l+1)+l] = sTy;
 
   //and the zero entries on the last row
-  for(int i=0; i<l; i++) newR_mat[i][l] = 0.0;
+  //for(int i=0; i<l; i++) newR_mat[i][l] = 0.0;
+  for(int i=0; i<l; i++) newR_mat[i*(l+1)+l] = 0.0;
 
   //swap the pointers
   delete R;
@@ -1566,22 +1609,26 @@ void hiopHessianInvLowRank_obsolette::growD(const int& lmem_curr, const int& lme
 void hiopHessianInvLowRank_obsolette::updateR(const hiopVector& STy, const double& sTy)
 {
   int l=STy.get_size();
-#ifdef HIOP_DEEPCHECKS
   assert(l==R->m());
+#ifdef HIOP_DEEPCHECKS
   assert(l==R->n());
 #endif
   const int lm1=l-1;
-  double** R_mat=R->local_data();
+  double* R_mat=R->local_data();
   const double* sTy_vec=STy.local_data_const();
   for(int i=0; i<lm1; i++)
     for(int j=i; j<lm1; j++)
-      R_mat[i][j] = R_mat[i+1][j+1];
+      //R_mat[i][j] = R_mat[i+1][j+1];
+      R_mat[i*l+j] = R_mat[(i+1)*l+j+1];
   for(int j=0; j<lm1; j++)
-    R_mat[lm1][j]=0.0;
+    //R_mat[lm1][j]=0.0;
+    R_mat[lm1*l+j]=0.0;
   for(int i=0; i<lm1; i++)
-    R_mat[i][lm1]=sTy_vec[i];
+    //R_mat[i][lm1]=sTy_vec[i];
+    R_mat[i*l+lm1]=sTy_vec[i];
 
-  R_mat[lm1][lm1]=sTy;
+  //R_mat[lm1][lm1]=sTy;
+  R_mat[lm1*l+lm1]=sTy;
 }
 void hiopHessianInvLowRank_obsolette::updateD(const double& sTy)
 {

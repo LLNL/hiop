@@ -88,8 +88,9 @@ real_type MatrixTestsSparseTriplet::getLocalElement(
   
   if (mat != nullptr)
   {
-    double** M = mat->local_data();
-    return M[row][col];
+    const double* M = mat->local_data_const();
+    //return M[row][col];
+    return M[row*mat->get_local_size_n()+col];
   }
 
   else THROW_NULL_DEREF;
