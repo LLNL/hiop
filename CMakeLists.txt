@@ -174,9 +174,16 @@ endif(NOT DEFINED BLAS_LIBRARIES)
 if(NOT DEFINED LAPACK_LIBRARIES)
   # in case the toolchain defines them
   find_package(LAPACK REQUIRED)
+  target_link_libraries(hiop_math INTERFACE ${LAPACK_LIBRARIES})
+  message(STATUS "Using LAPACK libraries: ${LAPACK_LIBRARIES}")
+  string(FIND "${LAPACK_LIBRARIES}" "essl" FIND_ESSL)
+  if( NOT (FINDESSL EQUAL "-1") )
+    message(STATUS "Using ESSL for Lapack, add liblapackforessl from path ESSLLIBDIR64: "  $ENV{ESSLLIBDIR64})
+    ### FIXME: how to know which one should be used?
+    #    target_link_libraries(hiop_math INTERFACE $ENV{ESSLLIBDIR64}/liblapackforessl.so)
+    target_link_libraries(hiop_math INTERFACE $ENV{ESSLLIBDIR64}/liblapackforessl_.so)
+  endif()
 endif(NOT DEFINED LAPACK_LIBRARIES)
-target_link_libraries(hiop_math INTERFACE ${LAPACK_LIBRARIES})
-message(STATUS "Using LAPACK libraries: ${LAPACK_LIBRARIES}")
 
 if(HIOP_USE_UMPIRE)
   target_link_libraries(hiop_math INTERFACE umpire RAJA)
