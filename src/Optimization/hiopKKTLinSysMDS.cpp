@@ -272,7 +272,7 @@ namespace hiop
         // linear system using Haynsworth inertia additivity formula, namely,
         // count the negative eigenvalues of the sparse Hessian block.
         int n_neg_eig_Hxs  = Hxs_->numOfElemsLessThan(-1e-14);
-        int n_zero_eig_Hxs = Hxs_->numOfElemsLessThan(1e-14);
+        int n_zero_eig_Hxs = Hxs_->numOfElemsAbsLessThan(1e-14);
         n_neg_eig_11 += n_neg_eig_Hxs;
         if (n_zero_eig_Hxs > 0)
           n_neg_eig_11 = -1;
