@@ -217,6 +217,7 @@ public:
   //TODO: this is not kosher!
   virtual double** local_data() const {assert(false && "not implemented in base class"); return nullptr;}
   virtual double*  local_buffer() const {assert(false && "not implemented in base class"); return nullptr;}
+  virtual double*  local_buffer2() {assert(false && "not implemented in base class"); return nullptr;}
   //do not use this unless you sure you know what you're doing
   virtual double** get_M(){assert(false && "not implemented in base class"); return nullptr;}
 

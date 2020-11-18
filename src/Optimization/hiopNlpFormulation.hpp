@@ -303,8 +303,8 @@ public:
   virtual bool eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& Jac_c);
   virtual bool eval_Jac_d(hiopVector& x, bool new_x, hiopMatrix& Jac_d);
   /* specialized evals to avoid overhead of dynamic cast. Generic variants available above. */
-  virtual bool eval_Jac_c(hiopVector& x, bool new_x, double** Jac_c);
-  virtual bool eval_Jac_d(hiopVector& x, bool new_x, double** Jac_d);
+  virtual bool eval_Jac_c(hiopVector& x, bool new_x, double* Jac_c);
+  virtual bool eval_Jac_d(hiopVector& x, bool new_x, double* Jac_d);
 protected:
   //calls specific hiopInterfaceXXX::eval_Jac_cons and deals with specializations of
   //hiopMatrix arguments

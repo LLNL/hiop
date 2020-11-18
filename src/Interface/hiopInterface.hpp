@@ -300,33 +300,40 @@ class hiopInterfaceDenseConstraints : public hiopInterfaceBase
 public:
   hiopInterfaceDenseConstraints() {};
   virtual ~hiopInterfaceDenseConstraints() {};
-  /** Evaluates the Jacobian of the subset of constraints indicated by idx_cons and of size num_cons.
-   *  Example: Assuming idx_cons[k]=i, which means that the gradient of the (i+1)th constraint is
-   *  to be evaluated, one needs to do Jac[k][0]=d/dx_0 con_i(x), Jac[k][1]=d/dx_1 con_i(x), ...
-   *  When MPI enabled, each rank computes only the local columns of the Jacobian, that is the partials
-   *  with respect to local variables.
+  /** 
+   * Evaluates the Jacobian of the subset of constraints indicated by idx_cons and of size num_cons.
+   * Example: Assuming idx_cons[k]=i, which means that the gradient of the (i+1)th constraint is
+   * to be evaluated, one needs to do Jac[k][0]=d/dx_0 con_i(x), Jac[k][1]=d/dx_1 con_i(x), ...
+   * When MPI enabled, each rank computes only the local columns of the Jacobian, that is the partials
+   * with respect to local variables.
    *
-   *  Parameters: see eval_cons
+   * The parameter 'Jac' is passed as as a contiguous array storing the dense Jacobian matrix by rows.
+   *
+   * Parameters: see eval_cons
    */
   virtual bool eval_Jac_cons(const long long& n, const long long& m, 
 			     const long long& num_cons, const long long* idx_cons,  
 			     const double* x, bool new_x,
-			     double** Jac) = 0;
+                             double* Jac) = 0;
   
-  /** Evaluates the Jacobian of equality and inequality constraints in one call. 
+  /**
+   * Evaluates the Jacobian of equality and inequality constraints in one call. 
    *
    * The main difference from the above 'eval_Jac_cons' is that the implementer/user of this 
    * method does not have to split the constraints into equalities and inequalities; instead,
    * HiOp does this internally.
    *
+   * The parameter 'Jac' is passed as as a contiguous array storing the dense Jacobian matrix by rows.
+   *
    * TODO: build an example (new one-call Nlp formulation derived from ex2) to illustrate this 
    * feature and to test HiOp's internal implementation of eq.-ineq. spliting.
    */
   virtual bool eval_Jac_cons(const long long& n, const long long& m,
-  			     const double* x, bool new_x,
-  			     double** Jac) { return false; }
-
-  
+                             const double* x, bool new_x,
+                             double* Jac)
+  {
+    return false;
+  }
 };
 
 /** Specialized interface for NLPs having mixed DENSE and sparse (MDS) blocks in the 
@@ -373,8 +380,7 @@ public:
    *  - first six: see eval_cons (in parent class)
    *  - nnzJacS, iJacS, jJacS, MJacS: number of nonzeros, (i,j) indexes, and values of 
    * the sparse Jacobian
-   *  - JacD: dense Jacobian as a contiguous array storing the matrix by rows; array is
-   * "primed" to support double indexing JacD[i][j]
+   *  - JacD: dense Jacobian as a contiguous array storing the matrix by rows
    * 
    * Notes for implementer of this method: 
    * 1) 'JacD' parameter will be always non-null
@@ -392,8 +398,7 @@ public:
 			     const double* x, bool new_x,
 			     const long long& nsparse, const long long& ndense, 
 			     const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
-			     double** JacD) = 0;
-  
+			     double* JacD) = 0;
   /** Evaluates the Jacobian of equality and inequality constraints in one call. This Jacobian is
    * mixed dense-sparse (MDS), which means is structurally split in the sparse (triplet format) and 
    * dense matrices (rows storage)
@@ -411,8 +416,7 @@ public:
    *  - nnzJacS, iJacS, jJacS, MJacS: number of nonzeros, (i,j) indexes, and values of 
    * the sparse Jacobian block; indexes are within the sparse Jacobian block (not within 
    * the entire Jacobian)
-   *  - JacD: dense Jacobian block as a contiguous array storing the matrix by rows; array is
-   * "primed" to support double indexing JacD[i][j]
+   *  - JacD: dense Jacobian block as a contiguous array storing the matrix by rows
    * 
    * Notes for implementer of this method: 
    * 1) 'JacD' parameter will be always non-null
@@ -431,7 +435,10 @@ public:
 			     const double* x, bool new_x,
 			     const long long& nsparse, const long long& ndense, 
 			     const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
-			     double** JacD){ return false; }
+			     double* JacD)
+  {
+    return false;
+  }
 
   
   /** Evaluates the Hessian of the Lagrangian function in 3 structural blocks
@@ -452,9 +459,8 @@ public:
 			      const double* lambda, bool new_lambda,
 			      const long long& nsparse, const long long& ndense, 
 			      const int& nnzHSS, int* iHSS, int* jHSS, double* MHSS, 
-			      double** HDD,
+			      double* HDD,
 			      int& nnzHSD, int* iHSD, int* jHSD, double* MHSD) = 0;
-
 };
 
 
