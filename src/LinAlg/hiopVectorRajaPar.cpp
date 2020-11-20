@@ -417,32 +417,32 @@ void hiopVectorRajaPar::copyToStarting(hiopVector& vec, int start_index/*_in_des
 
 void hiopVectorRajaPar::copyToStartingAt_w_pattern(hiopVector& vec, int start_index/*_in_dest*/, const hiopVector& select)
 {
+#if 0  
   if(n_local_ == 0)
     return;
  
-  const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(vec);
-  assert(start_index+n_local_ <= v.n_local_);
-  
-  auto& rm = umpire::ResourceManager::getInstance();
-  rm.copy(v.data_dev_ + start_index, this->data_dev_, this->n_local_*sizeof(double));
-  
-  const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(vec);
+  hiopVectorRajaPar& v = dynamic_cast<hiopVectorRajaPar&>(vec);
   const hiopVectorRajaPar& ix= dynamic_cast<const hiopVectorRajaPar&>(select);
   assert(n_local_ == ix.n_local_);
   
   int find_nnz = 0;
-  
   double* dd = data_dev_;
   double* vd = v.data_dev_;
   double* id = ix.data_dev_;
   
+  RAJA::ReduceSum< hiop_raja_reduce, double > sum(zero);
   RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
-    RAJA_LAMBDA(RAJA::Index_type i)
+    [&](RAJA::Index_type i)
     {
       assert(id[i] == zero || id[i] == one);
-      if(id[i] == one)
-        vd[start_index+(find_nnz++)] = dd[i];
+      if(id[i] == one){
+        vd[start_index+find_nnz] = dd[i];
+        find_nnz++;
+      }
     });
+#else
+  assert(false && "not needed / implemented");
+#endif    
 }
 
 /**
@@ -503,7 +503,8 @@ void hiopVectorRajaPar::startingAtCopyToStartingAt(
 void hiopVectorRajaPar::
 startingAtCopyToStartingAt_w_pattern(int start_idx_in_src, hiopVector& destination, int start_idx_dest, const hiopVector& selec_dest, int num_elems/*=-1*/) const
 {
-  const hiopVectorRajaPar& dest = dynamic_cast<hiopVectorRajaPar&>(destination);
+#if 0  
+  hiopVectorRajaPar& dest = dynamic_cast<hiopVectorRajaPar&>(destination);
   const hiopVectorRajaPar& ix = dynamic_cast<const hiopVectorRajaPar&>(selec_dest);
     
   assert(start_idx_in_src >= 0 && start_idx_in_src <= this->n_local_);
@@ -528,14 +529,15 @@ startingAtCopyToStartingAt_w_pattern(int start_idx_in_src, hiopVector& destinati
   double* id = ix.data_dev_;
 
   RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
-    RAJA_LAMBDA(RAJA::Index_type i)
+    [&](RAJA::Index_type i)
     {
       assert(id[i] == zero || id[i] == one);
-      if(id[i] == one)
+      if(id[i] == one && find_nnz<num_elems)
         vd[start_idx_dest+find_nnz] = dd[ start_idx_in_src + (find_nnz++)];
-      if(find_nnz>=num_elems)
-        break;
     });
+#else
+  assert(false && "not needed / implemented");
+#endif
 }
  
  /**
