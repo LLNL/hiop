@@ -281,10 +281,6 @@ public:
   virtual void startingAtAddSubDiagonalToStartingAt(int diag_src_start, const double& alpha,
 					    hiopVector& vec_dest, int vec_start, int num_elems=-1) const;
 
-  virtual void convertToCSR(int &csr_nnz, int **csr_kRowPtr, int **csr_jCol, double **csr_kVal,
-                            int **index_covert_CSR2Triplet, int **index_covert_extra_Diag2CSR,
-                            std::unordered_map<int,int> &extra_diag_nnz_map){assert("not yet"&&0);}
-
   virtual hiopMatrixSparse* alloc_clone() const;
   virtual hiopMatrixSparse* new_copy() const;
 
