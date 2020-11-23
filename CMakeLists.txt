@@ -57,9 +57,9 @@ if(HIOP_USE_MPI)
 endif(HIOP_USE_MPI)
 
 # The binary dir is already a global include directory
-configure_file(
-  "${CMAKE_SOURCE_DIR}/src/Interface/hiop_defs.hpp.in"
-  "${CMAKE_BINARY_DIR}/hiop_defs.hpp")
+#configure_file(
+#  "${CMAKE_SOURCE_DIR}/src/Interface/hiop_defs.hpp.in"
+#  "${CMAKE_BINARY_DIR}/hiop_defs.hpp")
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
@@ -231,6 +231,11 @@ else(HIOP_SPARSE)
   set(HIOP_USE_COINHSL OFF CACHE BOOL "Build without COINHSL" FORCE)
   set(HIOP_USE_STRUMPACK OFF CACHE BOOL "Build without STRUMPACK" FORCE)
 endif(HIOP_SPARSE)
+
+# The binary dir is already a global include directory
+configure_file(
+  "${CMAKE_SOURCE_DIR}/src/Interface/hiop_defs.hpp.in"
+  "${CMAKE_BINARY_DIR}/hiop_defs.hpp")
 
 # include build directory for Fortran name mangling header
 include_directories(${CMAKE_BINARY_DIR})
