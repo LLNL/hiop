@@ -9,5 +9,5 @@ jobs:
     - uses: actions/checkout@v1
     - uses: pixta-dev/repository-mirroring-action@v1
       with:
-        target_repo_url: git@gitlab.pnnl.gov:2222/exasgd/solvers/hiop-mirror.git
+        target_repo_url: ssh://git@gitlab.pnnl.gov:2222/exasgd/solvers/hiop-mirror.git
         ssh_private_key: ${{ secrets.GITLAB_SSH_PRIVATE_KEY }}
