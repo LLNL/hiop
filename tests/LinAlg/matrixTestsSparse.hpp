@@ -758,8 +758,8 @@ public:
     const local_ordinal_type* B_jCol = getColumnIndices(&B);
     const local_ordinal_type B_nnz = B.numberOfNonzeros();
 
-    auto nnz_A_need_to_copy{0};
-    for(auto k=0;k<A_nnz;k++){
+    local_ordinal_type nnz_A_need_to_copy{0};
+    for(local_ordinal_type k=0;k<A_nnz;++k){
       if(A_iRow[k] >= A_rows_st && A_iRow[k] < A_rows_st + n_rows )
       {
         nnz_A_need_to_copy++;
