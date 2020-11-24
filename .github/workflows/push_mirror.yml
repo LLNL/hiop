@@ -9,6 +9,6 @@ jobs:
       - uses: actions/checkout@v1
       - uses: spyoungtech/mirror-action@master
         with:
-          REMOTE: 'https://gitlab.pnnl.gov/exasgd/solvers/hiop-mirror.git'
-          GIT_USERNAME: githubactions
+          REMOTE: ${{ secrets.GIT_REPO_URL }}
+          GIT_USERNAME: ${{ secrets.GIT_USER }}
           GIT_PASSWORD: ${{ secrets.GIT_PASSWORD }}
