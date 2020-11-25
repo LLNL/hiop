@@ -3,3 +3,7 @@
 #cmakedefine HIOP_USE_MAGMA
 #cmakedefine HIOP_USE_RAJA
 #cmakedefine HIOP_DEEPCHECKS
+#cmakedefine HIOP_SPARSE
+#cmakedefine HIOP_USE_COINHSL
+#cmakedefine HIOP_USE_STRUMPACK
+

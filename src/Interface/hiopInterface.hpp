@@ -456,5 +456,97 @@ public:
 			      int& nnzHSD, int* iHSD, int* jHSD, double* MHSD) = 0;
 
 };
+
+
+/** Specialized interface for NLPs with sparse blocks in the Jacobian and Hessian.
+ *
+ * More specifically, this interface is for specifying optimization problem:
+ *
+ * min f(x) s.t. g(x) <= or = 0, lb<=x<=ub
+ *
+ * such that
+ *  - Jacobian w.r.t. x and Hessian of the Lagrangian w.r.t. x are sparse
+ *
+ * Notes
+ * 1) this interface is 'local' in the sense that data is not assumed to be
+ * distributed across MPI ranks ('get_vecdistrib_info' should return 'false').
+ * Acceleration can be however obtained using OpenMP and CUDA via Raja 
+ * abstraction layer that HiOp uses and via linear solver.
+ *
+ */
+class hiopInterfaceSparse : public hiopInterfaceBase
+{
+public:
+  hiopInterfaceSparse() {};
+  virtual ~hiopInterfaceSparse() {};
+
+  /** get the number of variables and constraints, nonzeros
+  * and get the number of nonzeros in Jacobian and Heesian
+  **/
+  virtual bool get_sparse_blocks_info(int& nx,
+                                      int& nnz_sparse_Jaceq, int& nnz_sparse_Jacineq,
+                                      int& nnz_sparse_Hess_Lagr) = 0;
+
+  /** Evaluates the sparse Jacobian of constraints
+   *
+   * This method is called twice per Jacobian evaluation, once for equalities and once for
+   * inequalities (see 'eval_cons' for more information). It is advantageous to provide
+   * this method when the underlying NLP's constraints come naturally split in equalities
+   * and inequalities. When it is not convenient to do so, use 'eval_Jac_cons' below.
+   *
+   * Parameters:
+   *  - first six: see eval_cons (in parent class)
+   *  - nnzJacS, iJacS, jJacS, MJacS: number of nonzeros, (i,j) indexes, and values of
+   * the sparse Jacobian
+   *
+   */
+  virtual bool eval_Jac_cons(const long long& n, const long long& m,
+                             const long long& num_cons, const long long* idx_cons,
+                             const double* x, bool new_x,
+                             const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS) = 0;
+
+  /** Evaluates the sparse Jacobian of equality and inequality constraints in one call.
+   *
+   * The main difference from the above 'eval_Jac_cons' is that the implementer/user of this
+   * method does not have to split the constraints into equalities and inequalities; instead,
+   * HiOp does this internally.
+   *
+   * Parameters:
+   *  - first four: number of variables, number of constraints, (primal) variables at which the
+   * Jacobian should be evaluated, and boolean flag indicating whether the variables 'x' have
+   * changed since a previous call to ny of the function and derivative evaluations.
+   *  - nnzJacS, iJacS, jJacS, MJacS: number of nonzeros, (i,j) indexes, and values of
+   * the sparse Jacobian block; indexes are within the sparse Jacobian block
+   *
+   * Notes for implementer of this method:
+   * 1) When 'iJacS' and 'jJacS' are non-null, the implementer should provide the (i,j)
+   * indexes.
+   * 2) When 'MJacS' is non-null, the implementer should provide the values corresponding to
+   * entries specified by 'iJacS' and 'jJacS'
+   * 3) 'iJacS' and 'jJacS' are both either non-null or null during a call.
+   * 4) Both 'iJacS'/'jJacS' and 'MJacS' can be non-null during the same call or only one of them
+   * non-null; but they will not be both null.
+   *
+   * HiOp will call this method whenever the implementer/user returns false from the 'eval_Jac_cons'
+   * (which is called for equalities and inequalities separately) above.
+   */
+  virtual bool eval_Jac_cons(const long long& n, const long long& m,
+                             const double* x, bool new_x,
+                             const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS){ return false; }
+
+  /** Evaluates the sparse Hessian of the Lagrangian function
+   *
+   *
+   * Notes
+   * 1)-4) from 'eval_Jac_cons' applies to xxxHSS
+   * 5) The order is multipliers is: lambda=[lambda_eq, lambda_ineq]
+   */
+  virtual bool eval_Hess_Lagr(const long long& n, const long long& m,
+                              const double* x, bool new_x, const double& obj_factor,
+                              const double* lambda, bool new_lambda,
+                              const int& nnzHSS, int* iHSS, int* jHSS, double* MHSS) = 0;
+
+};
+
 } //end of namespace
 #endif

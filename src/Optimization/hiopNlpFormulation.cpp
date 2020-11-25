@@ -566,7 +566,10 @@ bool hiopNlpFormulation::get_starting_point(hiopVector& x0_for_hiop,
   if(bret) {
     nlp_transformations.applyInvTox(*x0_for_user, x0_for_hiop);
   }
-  
+
+  /* delete the temporary buffers */
+  delete lambdas;
+
   return bret;
 }
 
@@ -1165,6 +1168,143 @@ bool hiopNlpMDS::finalizeInitialization()
     return false;
   }
   assert(0==nnz_sparse_Hess_Lagr_SD);
+  return hiopNlpFormulation::finalizeInitialization();
+}
+
+/* ***********************************************************************************
+ *    hiopNlpSparse class implementation
+ * ***********************************************************************************
+*/
+bool hiopNlpSparse::eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& Jac_c)
+{
+  hiopMatrixSparseTriplet* pJac_c = dynamic_cast<hiopMatrixSparseTriplet*>(&Jac_c);
+  assert(pJac_c);
+  if(pJac_c) {
+    hiopVector* x_user = nlp_transformations.applyTox(x, new_x);
+
+    runStats.tmEvalJac_con.start();
+
+    int nnz = pJac_c->numberOfNonzeros();
+    bool bret = interface.eval_Jac_cons(n_vars, n_cons,
+                                      n_cons_eq, cons_eq_mapping_,
+                                      x_user->local_data_const(), new_x,
+                                      nnz, pJac_c->i_row(), pJac_c->j_col(), pJac_c->M());
+
+    runStats.tmEvalJac_con.stop();
+    runStats.nEvalJac_con_eq++;
+    return bret;
+  } else {
+    return false;
+  }
+}
+
+bool hiopNlpSparse::eval_Jac_d(hiopVector& x, bool new_x, hiopMatrix& Jac_d)
+{
+  hiopMatrixSparseTriplet* pJac_d = dynamic_cast<hiopMatrixSparseTriplet*>(&Jac_d);
+  assert(pJac_d);
+  if(pJac_d) {
+    hiopVector* x_user = nlp_transformations.applyTox(x, new_x);
+
+    runStats.tmEvalJac_con.start();
+
+    int nnz = pJac_d->numberOfNonzeros();
+    bool bret =  interface.eval_Jac_cons(n_vars, n_cons,
+                                       n_cons_ineq, cons_ineq_mapping_,
+                                       x_user->local_data_const(), new_x,
+                                       nnz, pJac_d->i_row(), pJac_d->j_col(), pJac_d->M());
+
+    runStats.tmEvalJac_con.stop();
+    runStats.nEvalJac_con_ineq++;
+    return bret;
+  } else {
+    return false;
+  }
+}
+
+bool hiopNlpSparse::eval_Jac_c_d_interface_impl(hiopVector& x,
+                                           bool new_x,
+                                           hiopMatrix& Jac_c,
+                                           hiopMatrix& Jac_d)
+{
+  hiopMatrixSparseTriplet* pJac_c = dynamic_cast<hiopMatrixSparseTriplet*>(&Jac_c);
+  hiopMatrixSparseTriplet* pJac_d = dynamic_cast<hiopMatrixSparseTriplet*>(&Jac_d);
+  hiopMatrixSparseTriplet* cons_Jac = dynamic_cast<hiopMatrixSparseTriplet*>(cons_Jac_);
+  if(pJac_c && pJac_d) {
+    assert(cons_Jac);
+    if(NULL == cons_Jac)
+      return false;
+
+    assert(cons_Jac->numberOfNonzeros() == pJac_c->numberOfNonzeros() + pJac_d->numberOfNonzeros());
+
+    hiopVector* x_user = nlp_transformations.applyTox(x, new_x);
+
+    runStats.tmEvalJac_con.start();
+
+    int nnz = cons_Jac->numberOfNonzeros();
+    bool bret = interface.eval_Jac_cons(n_vars, n_cons,
+                                      x_user->local_data_const(), new_x,
+                                      nnz, cons_Jac->i_row(), cons_Jac->j_col(), cons_Jac->M());
+
+    //copy back to Jac_c and Jac_d
+    pJac_c->copyRowsFrom(*cons_Jac, cons_eq_mapping_, n_cons_eq);
+    pJac_d->copyRowsFrom(*cons_Jac, cons_ineq_mapping_, n_cons_ineq);
+
+    runStats.tmEvalJac_con.stop();
+    runStats.nEvalJac_con_eq++;
+    runStats.nEvalJac_con_ineq++;
+
+    return bret;
+  } else {
+    return false;
+  }
+  return true;
+}
+
+bool hiopNlpSparse::eval_Hess_Lagr(const hiopVector&  x, bool new_x, const double& obj_factor,
+                            const double* lambda_eq, const double* lambda_ineq, bool new_lambdas,
+                            hiopMatrix& Hess_L)
+{
+  hiopMatrixSparseTriplet* pHessL = dynamic_cast<hiopMatrixSparseTriplet*>(&Hess_L);
+  assert(pHessL);
+
+  runStats.tmEvalHessL.start();
+
+  bool bret = false;
+  if(pHessL) {
+    if(n_cons_eq + n_cons_ineq != _buf_lambda->get_size()) {
+      delete _buf_lambda;
+      _buf_lambda = NULL;
+        _buf_lambda = LinearAlgebraFactory::createVector(n_cons_eq + n_cons_ineq);
+    }
+    assert(_buf_lambda);
+    _buf_lambda->copyFromStarting(0,         lambda_eq,   n_cons_eq);
+    _buf_lambda->copyFromStarting(n_cons_eq, lambda_ineq, n_cons_ineq);
+
+    int nnzHSS = pHessL->numberOfNonzeros(), nnzHSD = 0;
+
+    bret = interface.eval_Hess_Lagr(n_vars, n_cons,
+                                    x.local_data_const(), new_x, obj_factor,
+                                    _buf_lambda->local_data(), new_lambdas,
+                                    nnzHSS, pHessL->i_row(), pHessL->j_col(), pHessL->M());
+    assert(nnzHSS==pHessL->numberOfNonzeros());
+
+  } else {
+    bret = false;
+  }
+
+  runStats.tmEvalHessL.stop();
+  runStats.nEvalHessL++;
+
+  return bret;
+}
+
+bool hiopNlpSparse::finalizeInitialization()
+{
+  if(!interface.get_sparse_blocks_info(m_nx,
+                                           m_nnz_sparse_Jaceq, m_nnz_sparse_Jacineq,
+                                           m_nnz_sparse_Hess_Lagr)) {
+    return false;
+  }
   return hiopNlpFormulation::finalizeInitialization();
 }
 
