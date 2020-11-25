@@ -19,7 +19,7 @@ jobs:
           cc: gcc
           cxx: g++
           build-type: Debug
-          configure-options: -DHIOP_USE_MPI=OFF -DCMAKE_BUILD_TYPE=Debug -DHIOP_BUILD_SHARED=ON -DHIOP_BUILD_STATIC=ON -DCMAKE_INSTALL_PREFIX=..
+          configure-options: -DHIOP_USE_UMPIRE=OFF -DHIOP_USE_RAJA=OFF -DHIOP_USE_MPI=OFF -DCMAKE_BUILD_TYPE=Debug -DHIOP_BUILD_SHARED=ON -DHIOP_BUILD_STATIC=ON -DCMAKE_INSTALL_PREFIX=..
           run-test: true
           install-build: true
           parallel: 4
