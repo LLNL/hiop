@@ -174,6 +174,7 @@ marianas|dl*)
     export MY_UMFPACK_DIR=$PROJ_DIR/$MY_CLUSTER/suitesparse
     export MY_METIS_DIR=$APPS_DIR/metis/$MY_METIS_VERSION
     export MY_HIOP_MAGMA_DIR=$APPS_DIR/magma/2.5.2/cuda10.2
+    extra_cmake_args="$extra_cmake_args -DBLAS_LIBRARIES=/usr/lib64/libopenblas.so"
     ;;
 *)
     echo
