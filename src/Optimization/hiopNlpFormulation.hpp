@@ -408,5 +408,73 @@ private:
   hiopVector* _buf_lambda;
 };
 
+
+/* *************************************************************************
+ * Class is for general NLPs that have sparse derivatives blocks.
+ * *************************************************************************
+ */
+class hiopNlpSparse : public hiopNlpFormulation
+{
+public:
+  // TODO: notsure we need this
+
+  hiopNlpSparse(hiopInterfaceSparse& interface_)
+    : hiopNlpFormulation(interface_), interface(interface_)
+  {
+    _buf_lambda = LinearAlgebraFactory::createVector(0);
+  }
+  virtual ~hiopNlpSparse()
+  {
+    delete _buf_lambda;
+  }
+
+  virtual bool finalizeInitialization();
+
+  virtual bool eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& Jac_c);
+  virtual bool eval_Jac_d(hiopVector& x, bool new_x, hiopMatrix& Jac_d);
+
+protected:
+  //calls specific hiopInterfaceXXX::eval_Jac_cons and deals with specializations of hiopMatrix arguments
+  virtual bool eval_Jac_c_d_interface_impl(hiopVector& x, bool new_x, hiopMatrix& Jac_c, hiopMatrix& Jac_d);
+
+public:
+  virtual bool eval_Hess_Lagr(const hiopVector& x,
+                            bool new_x,
+                            const double& obj_factor,
+                            const double* lambda_eq,
+                            const double* lambda_ineq,
+                            bool new_lambdas,
+                            hiopMatrix& Hess_L);
+
+  virtual hiopMatrix* alloc_Jac_c()
+  {
+    assert(n_vars == m_nx);
+    return new hiopMatrixSparseTriplet(n_cons_eq, m_nx, m_nnz_sparse_Jaceq);
+  }
+  virtual hiopMatrix* alloc_Jac_d()
+  {
+    assert(n_vars == m_nx);
+    return new hiopMatrixSparseTriplet(n_cons_ineq, m_nx, m_nnz_sparse_Jacineq);
+  }
+  virtual hiopMatrix* alloc_Jac_cons()
+  {
+    assert(n_vars == m_nx);
+    return new hiopMatrixSparseTriplet(n_cons, m_nx, m_nnz_sparse_Jaceq + m_nnz_sparse_Jacineq);
+  }
+  virtual hiopMatrix* alloc_Hess_Lagr()
+  {
+  assert(n_vars == m_nx);
+    return new hiopMatrixSymSparseTriplet(m_nx, m_nnz_sparse_Hess_Lagr);
+  }
+  virtual long long nx() const { return m_nx; }
+private:
+  hiopInterfaceSparse& interface;
+  int m_nx;
+  int m_nnz_sparse_Jaceq, m_nnz_sparse_Jacineq;
+  int m_nnz_sparse_Hess_Lagr;
+
+  hiopVector* _buf_lambda;
+};
+
 }
 #endif

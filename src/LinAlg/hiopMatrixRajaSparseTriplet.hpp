@@ -145,6 +145,57 @@ public:
 					    const hiopVector& D, const hiopMatrixSparse& N,
 					    hiopMatrixDense& W) const;
 
+  virtual void copyRowsBlockFrom(const hiopMatrix& src_gen,
+                                         const long long& rows_src_idx_st, const long long& n_rows,
+                                         const long long& rows_dest_idx_st, const long long& dest_nnz_st
+                                         )
+  {
+    assert(false && "not needed / implemented");
+  }
+
+  virtual void copySubmatrixFrom(const hiopMatrix& src_gen,
+                                   const long long& dest_row_st, const long long& dest_col_st,
+                                   const long long& dest_nnz_st)
+  {
+    assert(false && "not needed / implemented");
+  }
+    
+  virtual void copySubmatrixFromTrans(const hiopMatrix& src_gen,
+                                   const long long& dest_row_st, const long long& dest_col_st,
+                                   const long long& dest_nnz_st)
+  {
+    assert(false && "not needed / implemented");
+  }  
+  
+  virtual void setSubmatrixToConstantDiag_w_colpattern(const double& scalar,
+                                   const long long& dest_row_st, const long long& dest_col_st,
+                                   const long long& dest_nnz_st, const int &nnz_to_copy, const hiopVector& ix)
+  {
+    assert(false && "not needed / implemented");
+  }
+
+  virtual void setSubmatrixToConstantDiag_w_rowpattern(const double& scalar,
+                                   const long long& dest_row_st, const long long& dest_col_st,
+                                   const long long& dest_nnz_st, const int &nnz_to_copy, const hiopVector& ix)
+  {
+    assert(false && "not needed / implemented");
+  }
+
+  virtual void copyDiagMatrixToSubblock(const double& src_val,
+                                        const long long& dest_row_st, const long long& dest_col_st,
+                                        const long long& dest_nnz_st, const int &nnz_to_copy)
+  {
+    assert(false && "not needed / implemented");
+  }
+
+  virtual void copyDiagMatrixToSubblock_w_pattern(const hiopVector& x,
+                                                  const long long& dest_row_st, const long long& dest_col_st,
+                                                  const long long& dest_nnz_st, const int &nnz_to_copy,
+                                                  const hiopVector& pattern)
+  {
+    assert(false && "not needed / implemented");
+  }
+  
   virtual double max_abs_value();
 
   virtual bool isfinite() const;
@@ -158,6 +209,14 @@ public:
     assert(0 && "This method should be used only for symmetric matrices.\n");
   }
 
+  virtual void convertToCSR(int &csr_nnz, int **csr_kRowPtr, int **csr_jCol, double **csr_kVal,
+                            int **index_covert_CSR2Triplet, int **index_covert_extra_Diag2CSR)
+  {
+    assert(false && "not needed / implemented");
+  }
+
+  virtual long long numberOfOffDiagNonzeros() {assert("not implemented"&&0);return 0;};
+      
   virtual hiopMatrixSparse* alloc_clone() const;
   virtual hiopMatrixSparse* new_copy() const;
 
@@ -284,5 +343,8 @@ public:
     }
     return true;
   }
+  
+  virtual long long numberOfOffDiagNonzeros(){assert(false && "not needed / implemented");return 0;}
+
 };
 } //end of namespace

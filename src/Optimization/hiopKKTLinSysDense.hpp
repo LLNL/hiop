@@ -62,7 +62,7 @@
 namespace hiop
 {
 
-/* KKT system treated as dense; used for developement/testing purposes mainly 
+/* KKT system treated as dense; used for development/testing purposes mainly 
  * updates the parts in KKT system that are dependent on the iterate. 
  * Triggers a refactorization for the dense linear system 
  * Forms the linear system

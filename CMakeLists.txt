@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
+
 if (POLICY CMP0074)
   cmake_policy(SET CMP0074 NEW)
 endif ()
@@ -29,6 +30,9 @@ option(HIOP_DEVELOPER_MODE "Build with extended warnings and options" OFF)
 option(HIOP_WITH_MAKETEST "Enable 'make test'" ON)
 option(HIOP_BUILD_SHARED "Build shared library" OFF)
 option(HIOP_BUILD_STATIC "Build static library" ON)
+option(HIOP_SPARSE "Build with sparse linear algebra" ON)
+option(HIOP_USE_COINHSL "Build with sparse linear algebra" ON)
+option(HIOP_USE_STRUMPACK "Build with STRUMPACK backend for sparse linear algebra" OFF)
 
 if(HIOP_BUILD_SHARED)
   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -51,11 +55,6 @@ if(HIOP_USE_MPI)
   include_directories(${MPI_CXX_ADDITIONAL_INCLUDE_DIRS} ${MPI_CXX_COMPILER_INCLUDE_DIRS})
   target_link_libraries(hiop_math INTERFACE MPI::MPI_CXX)
 endif(HIOP_USE_MPI)
-
-# The binary dir is already a global include directory
-configure_file(
-  "${CMAKE_SOURCE_DIR}/src/Interface/hiop_defs.hpp.in"
-  "${CMAKE_BINARY_DIR}/hiop_defs.hpp")
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
@@ -159,12 +158,18 @@ if(HIOP_WITH_KRON_REDUCTION)
 
   # metis needed (5.x needed by umfpack)
   set(HIOP_METIS_DIR CACHE PATH "Path to METIS directory")
-  include(FindMETIS)
+  include(FindHiopMETIS)
   target_link_libraries(hiop_math INTERFACE METIS)
 endif(HIOP_WITH_KRON_REDUCTION)
 
 find_package(OpenMP)
 target_link_libraries(hiop_math INTERFACE OpenMP::OpenMP_CXX)
+
+if(NOT DEFINED BLAS_LIBRARIES)
+  find_package(BLAS REQUIRED)
+  target_link_libraries(hiop_math INTERFACE ${BLAS_LIBRARIES})
+  message(STATUS "Found BLAS libraries: ${BLAS_LIBRARIES}")
+endif(NOT DEFINED BLAS_LIBRARIES)
 
 if(NOT DEFINED LAPACK_LIBRARIES)
   # in case the toolchain defines them
@@ -173,15 +178,51 @@ endif(NOT DEFINED LAPACK_LIBRARIES)
 target_link_libraries(hiop_math INTERFACE ${LAPACK_LIBRARIES})
 message(STATUS "Using LAPACK libraries: ${LAPACK_LIBRARIES}")
 
-
 if(HIOP_USE_UMPIRE)
   target_link_libraries(hiop_math INTERFACE umpire RAJA)
 endif()
 
-#
-# extended precision lapack based on xblas testing example
-#
-#set(LAPACK_LIBRARIES "-lgfortran;/export/home/petra1/work/installs/xblas-1.0.248/libxblas.a;/home/petra1/work/installs/lapack-3.7.0/libblas.a;/home/petra1/work/installs/lapack-3.7.0/liblapack.a;/home/petra1/work/installs/lapack-3.7.0/liblapack.a;/home/petra1/work/installs/lapack-3.7.0/libblas.a;/export/home/petra1/work/installs/xblas-1.0.248/libxblas.a")
+if(HIOP_SPARSE)
+  if(NOT TARGET METIS)
+    include(FindHiopMETIS)
+    target_link_libraries(hiop_math INTERFACE METIS)
+  endif(NOT TARGET METIS)
+
+  if(HIOP_USE_COINHSL)
+    set(HIOP_COINHSL_DIR CACHE PATH "Path to COINHSL directory")
+    include(FindHiopCOINHSL)
+    if(COINHSL_LIBRARY)
+      target_link_libraries(hiop_math INTERFACE COINHSL)    
+    else(COINHSL_LIBRARY)
+      set(HIOP_USE_COINHSL OFF CACHE BOOL "Build without COINHSL" FORCE)
+    endif(COINHSL_LIBRARY)  
+  endif(HIOP_USE_COINHSL)
+
+  if(HIOP_USE_STRUMPACK)
+    set(HIOP_STRUMPACK_DIR CACHE PATH "Path to STRUMPACK directory")
+    include(FindHiopSTRUMPACK)
+    target_link_libraries(hiop_math INTERFACE STRUMPACK)
+
+    if(STRUMPACK_LIBRARIES)
+      target_link_libraries(hiop_math INTERFACE ${STRUMPACK_LIBRARIES})  
+    else(STRUMPACK_LIBRARIES)
+      set(HIOP_USE_STRUMPACK OFF CACHE BOOL "Build without STRUMPACK" FORCE)
+    endif(STRUMPACK_LIBRARIES)  
+  endif(HIOP_USE_STRUMPACK)
+
+  if(NOT HIOP_USE_COINHSL AND NOT HIOP_USE_STRUMPACK )
+    set(HIOP_SPARSE OFF CACHE BOOL "Build without sparse linear algebra" FORCE)
+    message(STATUS "Cannot find COINHSL nor STRUMPACK for sparse linear algebra, and the option HIOP_SPARSE will be disabled")
+  endif(NOT HIOP_USE_COINHSL AND NOT HIOP_USE_STRUMPACK )
+else(HIOP_SPARSE)
+  set(HIOP_USE_COINHSL OFF CACHE BOOL "Build without COINHSL" FORCE)
+  set(HIOP_USE_STRUMPACK OFF CACHE BOOL "Build without STRUMPACK" FORCE)
+endif(HIOP_SPARSE)
+
+# The binary dir is already a global include directory
+configure_file(
+  "${CMAKE_SOURCE_DIR}/src/Interface/hiop_defs.hpp.in"
+  "${CMAKE_BINARY_DIR}/hiop_defs.hpp")
 
 # include build directory for Fortran name mangling header
 include_directories(${CMAKE_BINARY_DIR})
@@ -269,6 +310,7 @@ install(FILES src/Interface/hiopInterface.hpp
   src/LinAlg/hiopLinSolver.hpp
   src/LinAlg/hiopLinSolverIndefDenseLapack.hpp
   src/LinAlg/hiopLinSolverUMFPACKZ.hpp
+  src/LinAlg/hiopLinSolverIndefSparseMA57.hpp
   src/LinAlg/hiopLinAlgFactory.hpp
   src/Utils/hiopRunStats.hpp
   src/Utils/hiopLogger.hpp
@@ -374,6 +416,11 @@ if (HIOP_WITH_MAKETEST)
   endif()
 
   add_test(NAME NlpMixedDenseSparse5_1 COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpMDS_ex5.exe> 400 100 -selfcheck")
+
+  if(HIOP_SPARSE)
+    add_test(NAME NlpSparse6_1 COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpSparse_ex6.exe> 500 -selfcheck")
+    add_test(NAME NlpSparse7_1 COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpSparse_ex7.exe> 500 -selfcheck")
+  endif(HIOP_SPARSE)
 
   if(HIOP_BUILD_SHARED AND NOT HIOP_USE_GPU)
     add_test(NAME NlpMixedDenseSparseCinterface COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpMDS_cex4.exe>")
