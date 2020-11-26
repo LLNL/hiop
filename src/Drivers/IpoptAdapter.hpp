@@ -895,79 +895,44 @@ public:
       //avoid unnecessary reallocations when one-call constraints/Jacobian is active
 
       if(false == m_onecall_Jac_detected_) {
-        /*
-        if(m_Jac_eq == NULL) {
-          m_Jac_eq = new hiopMatrixSparseTriplet(m_n_eq, m_nx, m_nnz_sparse_Jaceq);
-          assert(m_Jac_eq == NULL);
-	    } else {
-          //this for the case when the problem (constraints) sizes changed
-          if(m_Jac_eq->m() != m_n_eq || m_Jac_eq->n() != m_nx) {
-	        delete m_Jac_eq;
-	        m_Jac_eq = new hiopMatrixSparseTriplet(m_n_eq, m_nx, m_nnz_sparse_Jaceq);
-	      }
-	    }
-
-        if(m_Jac_ineq == NULL) {
-          m_Jac_ineq = new hiopMatrixSparseTriplet(m_n_ineq, m_nx, m_nnz_sparse_Jacineq);
-        } else {
-	      //this for the case when the problem (constraints) sizes changed
-	      if(m_Jac_ineq->m() != m_n_ineq || m_Jac_ineq->n() != m_nx) {
-	        delete m_Jac_ineq;
-	        m_Jac_ineq = new hiopMatrixSparseTriplet(m_n_ineq, m_nx, m_nnz_sparse_Jacineq);
-	      }
-	    }
-	    */
-
-	    int nnzit = 0;
-	    //sparse Jac Eq
-	    {
-	      long long num_cons = m_n_eq;
-	      bret = hiopNLP->eval_Jac_cons(nll, mll, num_cons, m_cons_eq_idxs,
+	int nnzit = 0;
+	//sparse Jac Eq
+	{
+	  long long num_cons = m_n_eq;
+	  bret = hiopNLP->eval_Jac_cons(nll, mll, num_cons, m_cons_eq_idxs,
 					x, new_x,
 					m_nnz_sparse_Jaceq, NULL, NULL, values);
           if(bret) {
-	        nnzit += m_nnz_sparse_Jaceq; assert(nnzit<=nele_jac);
-	      } else {
-	        eq_call_failed = true;
-//	        delete m_Jac_eq;
-//	        m_Jac_eq = NULL;
+	    nnzit += m_nnz_sparse_Jaceq; assert(nnzit<=nele_jac);
+	  } else {
+	    eq_call_failed = true;
           }
-	    }
+	}
 
 	//sparse Jac Ineq
-	    {
-	      long long num_cons = m_n_ineq;
+	{
+	  long long num_cons = m_n_ineq;
           bret = hiopNLP->eval_Jac_cons(nll, mll, num_cons, m_cons_ineq_idxs,
-					x, new_x,
-					m_nnz_sparse_Jacineq, NULL, NULL, values+nnzit);
-	      if(bret) {
+		x, new_x,
+		m_nnz_sparse_Jacineq, NULL, NULL, values+nnzit);
+	  if(bret) {
             nnzit += m_nnz_sparse_Jacineq; assert(nnzit<=nele_jac);
             assert(nnzit==nele_jac);
-	      } else {
-//	        delete m_Jac_ineq;
-//	        m_Jac_ineq = NULL;
-	        if(!eq_call_failed) {
-	          return false;
-	        } else {
-	          m_onecall_Jac_detected_ = true;
-	          try_onecall_Jac = true;
-	        }
-	      }
+	  } else {
+	    if(!eq_call_failed) {
+	      return false;
+	    } else {
+	      m_onecall_Jac_detected_ = true;
+	      try_onecall_Jac = true;
 	    }
+	  }
+	}
       } else {  // if(true == onecall_Jac_detected_) {
         try_onecall_Jac = true;
       }
 
       //try one call Jacobian
       if(try_onecall_Jac) {
-        /*
-        if(m_Jac == NULL) {
-            m_Jac = new hiopMatrixSparseTriplet(m, m_nx, m_nnz_sparse_Jaceq+m_nnz_sparse_Jacineq);
-            assert(m_Jac_eq == NULL);
-            assert(m_Jac_ineq == NULL);
-        }
-        */
-
         bret = hiopNLP->eval_Jac_cons(nll, mll, x, new_x,
 				      m_nnz_sparse_Jaceq+m_nnz_sparse_Jacineq, NULL, NULL, values);
         if(!bret)

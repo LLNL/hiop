@@ -758,8 +758,9 @@ public:
     const local_ordinal_type* B_jCol = getColumnIndices(&B);
     const local_ordinal_type B_nnz = B.numberOfNonzeros();
 
-    auto nnz_A_need_to_copy{0};
-    for(auto k=0;k<A_nnz;k++){
+    local_ordinal_type nnz_A_need_to_copy{0};
+    for(local_ordinal_type k=0;k<A_nnz;++k){
+
       if(A_iRow[k] >= A_rows_st && A_iRow[k] < A_rows_st + n_rows )
       {
         nnz_A_need_to_copy++;
@@ -783,8 +784,6 @@ public:
     A.setToConstant(A_val);
     B.setToConstant(B_val);
 
-    auto itnz_src{0};
-    auto itnz_dest=B_nnz_st;
     int fail{0};
 
     B.copyRowsBlockFrom(A, A_rows_st, n_rows, B_rows_st, B_nnz_st);

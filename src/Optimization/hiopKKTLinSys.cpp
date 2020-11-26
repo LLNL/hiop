@@ -956,6 +956,7 @@ int hiopKKTLinSysLowRank::solveWithRefin(hiopMatrixDense& M, hiopVector& rhs)
 			    "error %d\n", info);
 
       DPOTRS(&UPLO,&N, &NRHS, M.local_data(), &LDA, resid->local_data(), &LDA, &info);
+
       if(info<0)
 	nlp_->log->printf(hovError, "hiopKKTLinSysLowRank::solveWithFactors: dpotrs returned "
 			  "error %d\n", info);

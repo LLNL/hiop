@@ -88,18 +88,6 @@ public:
     assert(false && "counterpart method of hiopMatrixSymSparseTriplet should be used");
   }
 
-  /* block of W += alpha*this, where W is sparse */
-  virtual void addToSymSparseMatrixUpperTriangle(int row_dest_start, int col_dest_start,
-                double alpha, hiopMatrixSparse& W) const
-  {
-    assert(false && "TODO LIST");
-  }
-  /* block of W += alpha*transpose(this), where W is sparse */
-  virtual void transAddToSymSparseMatrixUpperTriangle(int row_dest_start, int col_dest_start,
-                double alpha, hiopMatrixSparse& W) const
-  {
-    assert(false && "TODO LIST");
-  }
   virtual void addUpperTriangleToSymSparseMatrixUpperTriangle(int diag_start,
                 double alpha, hiopMatrixSparse& W) const
   {
@@ -200,6 +188,8 @@ public:
                             int **index_covert_CSR2Triplet, int **index_covert_extra_Diag2CSR,
                             std::unordered_map<int,int> &extra_diag_nnz_map);
 
+  virtual long long numberOfOffDiagNonzeros() {assert("not implemented"&&0);return 0;};
+
   virtual hiopMatrixSparse* alloc_clone() const;
   virtual hiopMatrixSparse* new_copy() const;
 
@@ -210,8 +200,6 @@ public:
   inline const int* i_row() const { return iRow_; }
   inline const int* j_col() const { return jCol_; }
   inline const double* M() const { return values_; }
-
-  virtual long long numberOfOffDiagNonzeros() {assert("not implemented"&&0);return 0;};
 
 #ifdef HIOP_DEEPCHECKS
   virtual bool assertSymmetry(double tol=1e-16) const { return false; }
@@ -285,34 +273,12 @@ public:
   virtual void addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start,
 							    double alpha, hiopMatrixDense& W) const;
 
-   /* block of W += alpha*this, where W is sparse */
-  virtual void addToSymSparseMatrixUpperTriangle(int row_dest_start, int col_dest_start,
-                double alpha, hiopMatrixSparse& W) const
-  {
-    assert(false && "TODO LIST");
-  }
-  /* block of W += alpha*transpose(this), where W is sparse */
-  virtual void transAddToSymSparseMatrixUpperTriangle(int row_dest_start, int col_dest_start,
-                double alpha, hiopMatrixSparse& W) const
-  {
-    assert(false && "TODO LIST");
-  }
-  virtual void addUpperTriangleToSymSparseMatrixUpperTriangle(int diag_start,
-                double alpha, hiopMatrixSparse& W) const
-  {
-    assert(this->n()+diag_start < W.n());
-    addToSymSparseMatrixUpperTriangle(diag_start, diag_start, alpha, W);
-  }
-
    /* extract subdiagonal from 'this' (source) and adds the entries to 'vec_dest' starting at
    * index 'vec_start'. If num_elems>=0, 'num_elems' are copied; otherwise copies as many as
    * are available in 'vec_dest' starting at 'vec_start'
    */
   virtual void startingAtAddSubDiagonalToStartingAt(int diag_src_start, const double& alpha,
 					    hiopVector& vec_dest, int vec_start, int num_elems=-1) const;
-
-  virtual void convertToCSR(int *csr_kRowPtr, int *csr_jCol, double *csr_kVal,
-                    int *index_covert_CSR2Triplet, int *index_covert_extra_Diag2CSR){assert("not yet"&&0);};
 
   virtual hiopMatrixSparse* alloc_clone() const;
   virtual hiopMatrixSparse* new_copy() const;

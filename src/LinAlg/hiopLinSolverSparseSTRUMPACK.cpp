@@ -70,7 +70,7 @@ namespace hiop
       // set correct col index and value
       //
       index_covert_CSR2Triplet_ = new int[nnz_];
-      index_covert_extra_Diag2CSR_ = new int(n_);
+      index_covert_extra_Diag2CSR_ = new int[n_];
 
       int *nnz_each_row_tmp = new int[n_]{0};
       int total_nnz_tmp{0},nnz_tmp{0}, rowID_tmp, colID_tmp;
@@ -188,6 +188,8 @@ namespace hiop
     spss.solve(drhs, dx);
 
     nlp_->runStats.linsolv.tmTriuSolves.stop();
+
+    delete rhs; rhs=nullptr;
     return 1;
   }
 
@@ -283,6 +285,7 @@ namespace hiop
     spss.solve(drhs, dx);
 
     nlp_->runStats.linsolv.tmTriuSolves.stop();
+    delete rhs; rhs=nullptr;
     return 1;
   }
 

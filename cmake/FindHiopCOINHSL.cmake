@@ -26,8 +26,10 @@ find_path(COINHSL_INCLUDE_DIR
   NAMES
   CoinHslConfig.h
   PATHS
-  ${COINHSL_DIR}/coin-or/hsl $ENV{COINHSL_DIR}/coin-or/hsl ${HIOP_COINHSL_DIR} ${COINHSL_LIBRARY_DIR}/../include/coin-or/hsl
+  ${COINHSL_DIR} $ENV{COINHSL_DIR} ${HIOP_COINHSL_DIR} ${COINHSL_LIBRARY_DIR}/..
   PATH_SUFFIXES
+  include/coin-or
+  include/coin-or/hsl
   include)
 
 if(COINHSL_LIBRARY)

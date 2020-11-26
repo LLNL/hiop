@@ -71,15 +71,16 @@ int main(int argc, char **argv)
 
   Ex6 nlp_interface(n);
   hiopNlpSparse nlp(nlp_interface);
-  nlp.options->SetStringValue("compute_mode", "cpu");
-//  nlp.options->SetStringValue("compute_mode", "hybrid");
+  //nlp.options->SetStringValue("compute_mode", "cpu");
+  nlp.options->SetStringValue("compute_mode", "hybrid");
+
   nlp.options->SetStringValue("KKTLinsys", "xdycyd");
-//  nlp.options->SetStringValue("KKTLinsys", "full");
+  //nlp.options->SetStringValue("KKTLinsys", "full");
   nlp.options->SetStringValue("write_kkt", "yes");
 
-//  nlp.options->SetIntegerValue("max_iter", 100);
-//  nlp.options->SetNumericValue("kappa1", 1e-8);
-//  nlp.options->SetNumericValue("kappa2", 1e-8);
+  //nlp.options->SetIntegerValue("max_iter", 100);
+  //nlp.options->SetNumericValue("kappa1", 1e-8);
+  //nlp.options->SetNumericValue("kappa2", 1e-8);
 
   hiopAlgFilterIPMNewton solver(&nlp);
   hiopSolveStatus status = solver.run();

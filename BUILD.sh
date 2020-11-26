@@ -105,6 +105,7 @@ newell|newell_shared)
     export MY_UMFPACK_DIR=$PROJ_DIR/$MY_CLUSTER/suitesparse
     export MY_METIS_DIR=$APPS_DIR/metis/$MY_METIS_VERSION
     export MY_HIOP_MAGMA_DIR=$APPS_DIR/magma/2.5.2/cuda10.2
+    export MY_COINHSL_DIR=$PROJ_DIR/$MY_CLUSTER/ipopt
     ;;
 ascent)
     module purge
@@ -174,6 +175,8 @@ marianas|dl*)
     export MY_UMFPACK_DIR=$PROJ_DIR/$MY_CLUSTER/suitesparse
     export MY_METIS_DIR=$APPS_DIR/metis/$MY_METIS_VERSION
     export MY_HIOP_MAGMA_DIR=$APPS_DIR/magma/2.5.2/cuda10.2
+    export MY_COINHSL_DIR=$PROJ_DIR/$MY_CLUSTER/ipopt
+    extra_cmake_args="$extra_cmake_args -DBLAS_LIBRARIES=/usr/lib64/libopenblas.so"
     ;;
 *)
     echo
@@ -201,6 +204,7 @@ export CMAKE_OPTIONS="\
     -DCMAKE_BUILD_TYPE=Debug \
     -DENABLE_TESTS=ON \
     -DHIOP_USE_MPI=On \
+    -DHIOP_SPARSE=On \
     -DHIOP_DEEPCHECKS=ON \
     -DRAJA_DIR=$MY_RAJA_DIR \
     -DHIOP_USE_RAJA=On \
@@ -212,6 +216,7 @@ export CMAKE_OPTIONS="\
     -DHIOP_USE_GPU=ON \
     -DHIOP_MAGMA_DIR=$MY_HIOP_MAGMA_DIR \
     -DHIOP_NVCC_ARCH=$MY_NVCC_ARCH \
+    -DHIOP_COINHSL_DIR=$MY_COINHSL_DIR \
     $extra_cmake_args"
 
 if [[ "$BUILD" == "1" ]]; then
