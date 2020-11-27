@@ -1225,6 +1225,11 @@ decideAndCreateLinearSystem(hiopNlpFormulation* nlp)
   } else {
     return new hiopKKTLinSysCompressedMDSXYcYd(nlp);
   }
+  assert(false && 
+	 "Could not match linear algebra to NLP formulation. Likely, HiOp was"
+	 "not built with all linear algebra modules/options");
+
+  return NULL;
 }
 
 hiopSolveStatus hiopAlgFilterIPMNewton::run()

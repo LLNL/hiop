@@ -1020,8 +1020,10 @@ symmMatTimesDiagTimesMatTrans_local(double beta, hiopMatrixDense& W,
 #endif
   
   //#define chunk 512; //!opt
-  double *xi, *xj, acc;
-  double *Wdata=W.local_data(), *Xdata=X.local_data_const();
+  const double *xi, *xj;
+  double acc;
+  double *Wdata=W.local_data();
+  const double *Xdata=X.local_data_const();
   const double* dd=d.local_data_const();
   for(int i=0; i<k; i++) {
     //xi=Xdata[i];

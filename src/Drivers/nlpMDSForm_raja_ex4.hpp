@@ -112,13 +112,13 @@ public:
         const double* x, bool new_x,
         const long long& nsparse, const long long& ndense, 
         const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
-        double** JacD);
+        double* JacD);
 
   virtual bool eval_Jac_cons(const long long& n, const long long& m, 
         const double* x, bool new_x,
         const long long& nsparse, const long long& ndense, 
         const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
-        double** JacD)
+        double* JacD)
   {
     //return false so that HiOp will rely on the Jacobian evaluator defined above
     return false;
@@ -129,7 +129,7 @@ public:
       const double* lambda, bool new_lambda,
       const long long& nsparse, const long long& ndense, 
       const int& nnzHSS, int* iHSS, int* jHSS, double* MHSS, 
-      double** HDD,
+      double* HDD,
       int& nnzHSD, int* iHSD, int* jHSD, double* MHSD);
 
   /* Implementation of the primal starting point specification */
@@ -203,7 +203,7 @@ class Ex4OneCallCons : public Ex4
           const double* x, bool new_x,
           const long long& nsparse, const long long& ndense, 
           const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
-          double** JacD)
+          double* JacD)
       {
         return false; // so that HiOp will call the one-call full-Jacob function below
       }
@@ -212,7 +212,7 @@ class Ex4OneCallCons : public Ex4
           const double* x, bool new_x,
           const long long& nsparse, const long long& ndense, 
           const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
-          double** JacD);
+          double* JacD);
 };
 
 #endif

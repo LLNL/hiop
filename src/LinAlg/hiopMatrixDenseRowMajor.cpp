@@ -506,6 +506,7 @@ void hiopMatrixDenseRowMajor::timesMat(double beta, hiopMatrix& W_, double alpha
     W.setToConstant(beta);
     return;
   }
+
   timesMat_local(beta,W_,alpha,X_);
   // if(0==myrank_) timesMat_local(beta,W_,alpha,X_);
   // else          timesMat_local(0.,  W_,alpha,X_);
@@ -542,8 +543,9 @@ void hiopMatrixDenseRowMajor::timesMat_local(double beta, hiopMatrix& W_, double
   int ldx=X.n(), ldm=n_local_, ldw=X.n();
 
   double* XM=X.local_data_const();
-  double* WM=W.local_data_const();
+  double* WM=W.local_data();
   //DGEMM(&trans,&trans, &M,&N,&K, &alpha,XM[0],&ldx, this->M_[0],&ldm, &beta,WM[0],&ldw);
+
   DGEMM(&trans,&trans, &M,&N,&K, &alpha,XM,&ldx, this->M_[0],&ldm, &beta,WM,&ldw);
 
   /* C = alpha*op(A)*op(B) + beta*C in our case is

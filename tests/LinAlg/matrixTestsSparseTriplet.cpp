@@ -209,7 +209,7 @@ int MatrixTestsSparseTriplet::verifyAnswer(hiop::hiopMatrix* A, local_ordinal_ty
  * Pass a function-like object to calculate the expected
  * answer dynamically, based on the row and column
  */
-  [[nodiscard]]
+[[nodiscard]]
 int MatrixTestsSparseTriplet::verifyAnswer(
     hiop::hiopMatrixDense* A,
     std::function<real_type(local_ordinal_type, local_ordinal_type)> expect)

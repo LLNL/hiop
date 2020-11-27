@@ -781,7 +781,7 @@ void hiopMatrixRajaDense::timesVec(
 void hiopMatrixRajaDense::transTimesVec(
   double beta,
   hiopVector& y_,
-	double alpha,
+  double alpha,
   const hiopVector& x_) const
 {
   hiopVectorRajaPar& y = dynamic_cast<hiopVectorRajaPar&>(y_);
@@ -810,7 +810,7 @@ void hiopMatrixRajaDense::transTimesVec(
 void hiopMatrixRajaDense::transTimesVec(
   double beta,
   double* ya,
-	double alpha,
+  double alpha,
   const double* xa) const
 {
   double* data = data_dev_;
@@ -819,6 +819,7 @@ void hiopMatrixRajaDense::transTimesVec(
   // this loop is inefficient if m_local_ is large
   // low n_local_ values effectively serialize this kernel
   // TODO: consider performance benefits of using nested RAJA loop
+
   RAJA::View<const double, RAJA::Layout<2>> Mview(data, m_local, n_local);
   RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, n_local),
     RAJA_LAMBDA(RAJA::Index_type j)
@@ -862,7 +863,7 @@ void hiopMatrixRajaDense::timesMat(
   timesMat_local(beta, Wmat, alpha, Xmat);
 #else
   auto& W = dynamic_cast<hiopMatrixRajaDense&>(Wmat);
-  double** WM = W.local_data_host();
+  //double* WM = W.local_data_host();
   const auto& X = dynamic_cast<const hiopMatrixRajaDense&>(Xmat);
   
   assert(W.m() == this->m());

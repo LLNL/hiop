@@ -349,7 +349,7 @@ void hiopMatrixRajaSparseTriplet::transAddToSymDenseMatrixUpperTriangle(int row_
   assert(col_start>=0 && col_start+nrows_<=W.n());
   assert(W.n()==W.m());
 
-  RAJA::View<double, RAJA::Layout<2>> WM(W.local_buffer(), W.m(), W.n());
+  RAJA::View<double, RAJA::Layout<2>> WM(W.local_data(), W.m(), W.n());
   auto Wm = W.m();
   auto Wn = W.n();
   int* iRow = iRow_;
@@ -493,7 +493,7 @@ addMDinvMtransToDiagBlockOfSymDeMatUTri(int rowAndCol_dest_start,
   assert(row_dest_start>=0 && row_dest_start+n<=W.m());
   assert(col_dest_start>=0 && col_dest_start+nrows_<=W.n());
   assert(D.get_size() == this->ncols_);
-  RAJA::View<double, RAJA::Layout<2>> WM(W.local_buffer(), W.m(), W.n());
+  RAJA::View<double, RAJA::Layout<2>> WM(W.local_data(), W.m(), W.n());
   const double* DM = D.local_data_const();
   
   if(row_starts_host==NULL)
@@ -593,7 +593,7 @@ addMDinvNtransToSymDeMatUTri(int row_dest_start, int col_dest_start,
   assert(col_dest_start>=0 && col_dest_start+m2<=W.n());
 
   //double** WM = W.get_M();
-  RAJA::View<double, RAJA::Layout<2>> WM(W.local_buffer(), W.m(), W.n());
+  RAJA::View<double, RAJA::Layout<2>> WM(W.local_data(), W.m(), W.n());
   const double* DM = D.local_data_const();
 
   // TODO: allocAndBuildRowStarts -> should create row_starts_host internally (name='prepareRowStarts' ?)
@@ -937,7 +937,7 @@ void hiopMatrixRajaSymSparseTriplet::addUpperTriangleToSymDenseMatrixUpperTriang
   assert(W.n()==W.m());
 
   // double** WM = W.get_M();
-  RAJA::View<double, RAJA::Layout<2>> WM(W.local_buffer(), W.get_local_size_m(), W.get_local_size_n());
+  RAJA::View<double, RAJA::Layout<2>> WM(W.local_data(), W.get_local_size_m(), W.get_local_size_n());
   auto Wm = W.m();
   auto Wn = W.n();
   auto iRow = this->iRow_;
