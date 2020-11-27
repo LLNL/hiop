@@ -94,10 +94,10 @@ real_type MatrixTestsRajaSparseTriplet::getLocalElement(
   {
     auto* amat = const_cast<hiop::hiopMatrixRajaDense*>(mat);
     amat->copyFromDev();
-    double** M = amat->get_M_host();
-    return M[row][col];
+    //double** M = amat->get_M_host();
+    //return M[row][col];
+    return amat->local_data_const()[row*amat->get_local_size_n() + col];
   }
-
   else THROW_NULL_DEREF;
 }
 
@@ -189,14 +189,14 @@ int MatrixTestsRajaSparseTriplet::verifyAnswer(
   const local_ordinal_type N = A->get_local_size_n();
   int fail = 0;
   A->copyFromDev();
-  double** mat = A->get_M_host();
+  const double* mat = A->local_data_host();
   for (local_ordinal_type i=0; i<M; i++)
   {
     for (local_ordinal_type j=0; j<N; j++)
     {
-      if (!isEqual(mat[i][j], expect(i, j)))
+      if (!isEqual(mat[i*N+j], expect(i, j)))
       {
-        printf("(%d, %d) failed. %f != %f.\n", i, j, mat[i][j], expect(i, j));
+        printf("(%d, %d) failed. %f != %f.\n", i, j, mat[i*N+j], expect(i, j));
         fail++;
       }
       // else

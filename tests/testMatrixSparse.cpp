@@ -191,9 +191,13 @@ int main(int argc, char** argv)
     /// @todo use linear algebra factory for these
     hiop::hiopMatrixRajaDense W_dense(N_global + W_delta, N_global + W_delta, mem_space);
 
+    std::cout << "aaaaaa\n";
+
     // local_ordinal_type test_offset = 10;
     local_ordinal_type test_offset = 4;
     fail += test.matrixAddMDinvMtransToDiagBlockOfSymDeMatUTri(*mxn_sparse, vec_n, W_dense, test_offset);
+
+    std::cout << "bbbbb\n";
 
     // testing adding sparse matrix to the upper triangular area of a symmetric dense matrix    
     //fail += test.addToSymDenseMatrixUpperTriangle(W_dense, *mxn_sparse);

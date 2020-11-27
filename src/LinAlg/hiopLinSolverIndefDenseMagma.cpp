@@ -54,7 +54,7 @@ namespace hiop
     //
     //query sizes
     //
-    magma_dsytrf(uplo, N, M_->local_buffer(), lda, ipiv, &info );
+    magma_dsytrf(uplo, N, M_->local_data(), lda, ipiv, &info );
 
     nlp_->runStats.linsolv.tmFactTime.stop();
     nlp_->runStats.linsolv.flopsFact = gflops / nlp_->runStats.linsolv.tmFactTime.getElapsedTime() / 1000.;
@@ -86,7 +86,7 @@ namespace hiop
     int posEigVal=0;
     int nullEigVal=0;
     double t=0;
-    double* MM = M_->local_buffer();
+    double* MM = M_->local_data();
     for(int k=0; k<N; k++) {
       //c       2 by 2 block
       //c       use det (d  s)  =  (d/t * c - t) * t  ,  t = dabs(s)
@@ -140,7 +140,7 @@ namespace hiop
     
     char uplo='L'; // M is upper in C++ so it's lower in fortran
     int info;
-    DSYTRS(&uplo, &N, &NRHS, M_->local_buffer(), &LDA, ipiv, x.local_data(), &LDB, &info);
+    DSYTRS(&uplo, &N, &NRHS, M_->local_data(), &LDA, ipiv, x.local_data(), &LDB, &info);
     if(info<0) {
       nlp_->log->printf(hovError, "hiopLinSolverMagmaBuKa: (LAPACK) DSYTRS returned error %d\n", info);
       assert(false);
@@ -280,13 +280,13 @@ namespace hiop
     if(mem_space == "default" || mem_space == "host")
     {
       nlp_->runStats.linsolv.tmDeviceTransfer.start();
-      magma_dsetmatrix(N, N,    M_->local_buffer(), LDA, device_M_,   ldda_, magma_device_queue_);
+      magma_dsetmatrix(N, N,    M_->local_data(), LDA, device_M_,   ldda_, magma_device_queue_);
       magma_dsetmatrix(N, NRHS, x.local_data(),   LDB, device_rhs_, lddb_, magma_device_queue_);
       nlp_->runStats.linsolv.tmDeviceTransfer.stop();
     }
     else
     {
-      device_M_   = M_->local_buffer();
+      device_M_   = M_->local_data();
       device_rhs_ = x.local_data();
     }
     

@@ -238,10 +238,9 @@ public:
   virtual long long get_local_size_m() const { return m_local_; }
   virtual MPI_Comm get_mpi_comm() const { return comm_; }
 
-  //inline double** local_data_host() const {return M_host_; }
-  //inline double** local_data() const {return M_dev_; }
   inline double* local_data_host() const {return M_host_[0]; }
-  inline double* local_data() const {return data_dev_; }
+  double* local_data() {return data_dev_; }
+  double* local_data_const() const { return data_dev_; }
 protected:
   //do not use this unless you sure you know what you're doing
   inline double** get_M_host() { return M_host_; }

@@ -947,7 +947,7 @@ void hiopVectorRajaPar::negate()
  */
 void hiopVectorRajaPar::invert()
 {
-#ifndef NDEBUG
+#ifdef HIOP_DEEPCHECKS
   const double small_real = 1e-35;
 #endif
   double *data = data_dev_;
