@@ -906,6 +906,8 @@ void hiopHessianLowRank::timesVecCmn(double beta, hiopVector& y, double alpha, c
   long long n=St->n();
   assert(l_curr==St->m());
   assert(y.get_size()==n);
+  assert(St->get_local_size_n() == Yt->get_local_size_n());
+
   //we have B+=B-B*s*B*s'/(s'*B*s)+yy'/(y'*s)
   //B0 is sigma*I. There is an additional diagonal log-barrier term _Dx
 
@@ -926,11 +928,12 @@ void hiopHessianLowRank::timesVecCmn(double beta, hiopVector& y, double alpha, c
   hiopVectorPar *yk=dynamic_cast<hiopVectorPar*>(nlp->alloc_primal_vec());
   hiopVectorPar *sk=dynamic_cast<hiopVectorPar*>(nlp->alloc_primal_vec());
   //allocate and compute a_k and b_k
-  vector<hiopVector*> a(l_curr),b(l_curr);
+  vector<hiopVector*> a(l_curr), b(l_curr);
+  int n_local = Yt->get_local_size_n();
   for(int k=0; k<l_curr; k++) {
     //bk=yk/sqrt(yk'*sk)
-    yk->copyFrom(Yt->local_data()[k]);
-    sk->copyFrom(St->local_data()[k]);
+    yk->copyFrom(Yt->local_data() + k*n_local);
+    sk->copyFrom(St->local_data() + k*n_local);
     double skTyk=yk->dotProductWith(*sk);
     assert(skTyk>0);
     b[k]=dynamic_cast<hiopVectorPar*>(nlp->alloc_primal_vec());
