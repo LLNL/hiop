@@ -246,7 +246,7 @@ public:
   /**
    * Method provides a primal or starting point. This point is subject to internal adjustments.
    *
-   * @note Avoid using this method since it will removed in a future release and replaced with
+   * @note Avoid using this method since it will be removed in a future release and replaced with
    * the same-name method below.
    *
    * The method returns true (and populates @p x0) or returns false, in which case HiOp will 

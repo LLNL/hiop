@@ -153,46 +153,24 @@ hiopMatrixRajaDense::hiopMatrixRajaDense(
   auto& resmgr = umpire::ResourceManager::getInstance();
   umpire::Allocator devalloc  = resmgr.getAllocator(mem_space_);
   data_dev_ = static_cast<double*>(devalloc.allocate(n_local_*max_rows_*sizeof(double)));
-  M_dev_    = static_cast<double**>(devalloc.allocate((max_rows_ == 0 ? 1 : max_rows_) * sizeof(double*)));
+  //M_dev_    = static_cast<double**>(devalloc.allocate((max_rows_ == 0 ? 1 : max_rows_) * sizeof(double*)));
   if(mem_space_ == "DEVICE")
   {
     // If memory space is on device, create a host mirror
     umpire::Allocator hostalloc = resmgr.getAllocator("HOST");
     data_host_  = static_cast<double*>(hostalloc.allocate(n_local_*max_rows_*sizeof(double)));
-    M_host_     = static_cast<double**>(hostalloc.allocate((max_rows_ == 0 ? 1 : max_rows_) * sizeof(double*)));
+    //M_host_     = static_cast<double**>(hostalloc.allocate((max_rows_ == 0 ? 1 : max_rows_) * sizeof(double*)));
     yglob_host_ = static_cast<double*>(hostalloc.allocate(m_local_ * sizeof(double)));
     ya_host_    = static_cast<double*>(hostalloc.allocate(m_local_ * sizeof(double)));
   }
   else
   {
     data_host_ = data_dev_;
-    M_host_    = M_dev_;
+    //M_host_    = M_dev_;
     // If memory space is not on device, these buffers are allocated in memory space
     yglob_host_ = static_cast<double*>(devalloc.allocate(m_local_ * sizeof(double)));
     ya_host_    = static_cast<double*>(devalloc.allocate(m_local_ * sizeof(double)));
   }
-  
-  setRowPointers();
-}
-
-void hiopMatrixRajaDense::setRowPointers()
-{
-  if(mem_space_ == "DEVICE")
-  {
-    for(int i=0; i<max_rows_; i++)
-    {
-      M_host_[i] = data_host_ + (i*n_local_);
-    }
-  }
-
-  auto n_local = n_local_;
-  double* data = data_dev_;
-  double** M = M_dev_;
-  RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, max_rows_),
-    RAJA_LAMBDA(RAJA::Index_type i)
-    {
-      M[i] = data + (i*n_local);
-    });
 }
 
 hiopMatrixRajaDense::~hiopMatrixRajaDense()
@@ -203,7 +181,6 @@ hiopMatrixRajaDense::~hiopMatrixRajaDense()
   if(data_dev_ != data_host_)
   {
     hostalloc.deallocate(data_host_);
-    hostalloc.deallocate(M_host_);
     hostalloc.deallocate(yglob_host_);
     hostalloc.deallocate(ya_host_);
   }
@@ -213,12 +190,9 @@ hiopMatrixRajaDense::~hiopMatrixRajaDense()
     devalloc.deallocate(ya_host_);
   }
   devalloc.deallocate(data_dev_);
-  devalloc.deallocate(M_dev_);
 
   data_host_  = nullptr;
   data_dev_   = nullptr;
-  M_host_     = nullptr;
-  M_dev_      = nullptr;
   yglob_host_ = nullptr;
   ya_host_    = nullptr;
 
@@ -248,26 +222,24 @@ hiopMatrixRajaDense::hiopMatrixRajaDense(const hiopMatrixRajaDense& dm)
   auto& resmgr = umpire::ResourceManager::getInstance();
   umpire::Allocator devalloc = resmgr.getAllocator(mem_space_);
   data_dev_ = static_cast<double*>(devalloc.allocate(n_local_*max_rows_*sizeof(double)));
-  M_dev_    = static_cast<double**>(devalloc.allocate((max_rows_ == 0 ? 1 : max_rows_) * sizeof(double*)));
+  //M_dev_    = static_cast<double**>(devalloc.allocate((max_rows_ == 0 ? 1 : max_rows_) * sizeof(double*)));
   if(mem_space_ == "DEVICE")
   {
     // If memory space is on device, create a host mirror
     umpire::Allocator hostalloc = resmgr.getAllocator("HOST");
     data_host_  = static_cast<double*>(hostalloc.allocate(n_local_*max_rows_*sizeof(double)));
-    M_host_     = static_cast<double**>(hostalloc.allocate((max_rows_ == 0 ? 1 : max_rows_) * sizeof(double*)));
+    //M_host_     = static_cast<double**>(hostalloc.allocate((max_rows_ == 0 ? 1 : max_rows_) * sizeof(double*)));
     yglob_host_ = static_cast<double*>(hostalloc.allocate(m_local_ * sizeof(double)));
     ya_host_    = static_cast<double*>(hostalloc.allocate(m_local_ * sizeof(double)));
   }
   else
   {
     data_host_ = data_dev_;
-    M_host_    = M_dev_;
+    //M_host_    = M_dev_;
     // If memory space is not on device, these buffers are allocated in memory space
     yglob_host_ = static_cast<double*>(devalloc.allocate(m_local_ * sizeof(double)));
     ya_host_    = static_cast<double*>(devalloc.allocate(m_local_ * sizeof(double)));
   }
-
-  setRowPointers();
 }
 
 /**
@@ -324,11 +296,7 @@ void hiopMatrixRajaDense::copyFrom(const hiopMatrixDense& dmmat)
  */
 void hiopMatrixRajaDense::copyFrom(const double* src)
 {
-  if(nullptr == src)
-  {
-    M_host_[0] = nullptr;
-  } 
-  else
+  if(nullptr != src)
   {
     auto& rm = umpire::ResourceManager::getInstance();
     double* source = const_cast<double*>(src);
@@ -499,8 +467,10 @@ void hiopMatrixRajaDense::shiftRows(long long shift)
   {
     //not sure if memcpy is copying sequentially on all systems. we check this.
     //let's at least check it
-    test1=shift<0 ? M_host_[-shift][0] : M_host_[m_local_-shift-1][0];
-    test2=shift<0 ? M_host_[-shift][n_local_-1] : M_host_[m_local_-shift-1][n_local_-1];
+    //!test1=shift<0 ? M_host_[-shift][0] : M_host_[m_local_-shift-1][0];
+    test1=shift<0 ? data_host_[-shift*n_local_] : data_host_[(m_local_-shift-1)*n_local_];
+    //!test2=shift<0 ? M_host_[-shift][n_local_-1] : M_host_[m_local_-shift-1][n_local_-1];
+    test2=shift<0 ? data_host_[-shift*n_local_ + n_local_-1] : data_host_[(m_local_-shift-1)*n_local_ + n_local_-1];
   }
 #endif
 
@@ -521,8 +491,8 @@ void hiopMatrixRajaDense::shiftRows(long long shift)
   copyFromDev();
   if(n_local_>0)
   {
-    assert(test1==M_host_[shift<0?0:m_local_-1][0] && "a different copy technique than memcpy is needed on this system");
-    assert(test2==M_host_[shift<0?0:m_local_-1][n_local_-1] && "a different copy technique than memcpy is needed on this system");
+    assert(test1==data_host_[n_local_*(shift<0?0:m_local_-1)] && "a different copy technique than memcpy is needed on this system");
+    assert(test2==data_host_[n_local_*(shift<0?0:m_local_-1) + n_local_-1] && "a different copy technique than memcpy is needed on this system");
   }
 #endif
 }
@@ -664,7 +634,7 @@ void hiopMatrixRajaDense::print(FILE* f,
     for(int i=0; i<maxRows; i++) {
       if(i>0) fprintf(f, " ");
       for(int j=0; j<maxCols; j++) 
-        fprintf(f, "%20.12e ", M_host_[i][j]);
+        fprintf(f, "%20.12e ", data_host_[i*n_local_+j]);
       if(i<maxRows-1)
         fprintf(f, "; ...\n");
       else
