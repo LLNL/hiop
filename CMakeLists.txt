@@ -345,15 +345,17 @@ set(STRIP_TABLE_CMD "awk '/Problem Summary/ { while (!match($0, /termination/)){
 # If running in a BSUB allocaation, use jrun commands and make sure we are
 # requesting the correct resources.
 if(HIOP_TEST_WITH_BSUB)
-  set(RUNCMD "jsrun -n 1")
+  set(RUNCMD "jsrun" "-n" "1")
   set(MPICMD "jsrun")
   if(HIOP_USE_GPU)
-    set(MPICMD "${MPICMD} -g 1")
-    set(RUNCMD "${RUNCMD} -g 1")
+    set(MPICMD ${MPICMD} "-g" "1")
+    set(RUNCMD ${RUNCMD} "-g" "1")
   endif()
 else()
-  set(RUNCMD "") # No special command is needed to run this program
+  set(RUNCMD "mpirun" "-n" "1")
   set(MPICMD "mpirun")
+  set(RUNCMD ${RUNCMD} "-mca" "oob" "tcp")
+  set(MPICMD ${MPICMD} "-mca" "oob" "tcp")
 endif()
 
 ##########################################################
@@ -361,44 +363,44 @@ endif()
 ##########################################################
 if (HIOP_WITH_MAKETEST)
   enable_testing()
-  add_test(NAME VectorTest        COMMAND bash -c "${RUNCMD} $<TARGET_FILE:testVector>")
+  add_test(NAME VectorTest        COMMAND ${RUNCMD} "$<TARGET_FILE:testVector>")
   if(HIOP_USE_MPI)
-    add_test(NAME VectorTest_mpi COMMAND bash -c "${MPICMD} -n 2 $<TARGET_FILE:testVector>")
+    add_test(NAME VectorTest_mpi COMMAND ${MPICMD} -n 2 "$<TARGET_FILE:testVector>")
   endif(HIOP_USE_MPI)
-  add_test(NAME MatrixTest        COMMAND bash -c "${RUNCMD} $<TARGET_FILE:testMatrix>")
+  add_test(NAME MatrixTest        COMMAND ${RUNCMD} "$<TARGET_FILE:testMatrix>")
   if(HIOP_USE_MPI)
-    add_test(NAME MatrixTest_mpi COMMAND bash -c "${MPICMD} -n 2 $<TARGET_FILE:testMatrix>")
+    add_test(NAME MatrixTest_mpi COMMAND ${MPICMD} -n 2 "$<TARGET_FILE:testMatrix>")
   endif(HIOP_USE_MPI)
-  add_test(NAME SparseMatrixTest  COMMAND bash -c "${RUNCMD} $<TARGET_FILE:testMatrixSparse>")
-  add_test(NAME SymmetricSparseMatrixTest COMMAND bash -c "${RUNCMD} $<TARGET_FILE:testMatrixSymSparse>")
-  add_test(NAME NlpDenseCons1_5H  COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpDenseCons_ex1.exe>   500 1.0 -selfcheck")
-  add_test(NAME NlpDenseCons1_5K  COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpDenseCons_ex1.exe>  5000 1.0 -selfcheck")
-  add_test(NAME NlpDenseCons1_50K COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpDenseCons_ex1.exe> 50000 1.0 -selfcheck")
+  add_test(NAME SparseMatrixTest  COMMAND ${RUNCMD} "$<TARGET_FILE:testMatrixSparse>")
+  add_test(NAME SymmetricSparseMatrixTest COMMAND ${RUNCMD} "$<TARGET_FILE:testMatrixSymSparse>")
+  add_test(NAME NlpDenseCons1_5H  COMMAND ${RUNCMD} "$<TARGET_FILE:nlpDenseCons_ex1.exe>"  "500" "1.0" "-selfcheck")
+  add_test(NAME NlpDenseCons1_5K  COMMAND ${RUNCMD} "$<TARGET_FILE:nlpDenseCons_ex1.exe>" "5000" "1.0" "-selfcheck")
+  add_test(NAME NlpDenseCons1_50K COMMAND ${RUNCMD} "$<TARGET_FILE:nlpDenseCons_ex1.exe>" "50000" "1.0" "-selfcheck")
   if(HIOP_USE_MPI)
-    add_test(NAME NlpDenseCons1_50K_mpi COMMAND bash -c "${MPICMD} -n 2 $<TARGET_FILE:nlpDenseCons_ex1.exe> 50000 1.0 -selfcheck")
+    add_test(NAME NlpDenseCons1_50K_mpi COMMAND ${MPICMD} -n 2 "$<TARGET_FILE:nlpDenseCons_ex1.exe>" "50000" "1.0" "-selfcheck")
   endif(HIOP_USE_MPI)
-  add_test(NAME NlpDenseCons2_5H COMMAND  bash -c "${RUNCMD} $<TARGET_FILE:nlpDenseCons_ex2.exe>   500 -selfcheck")
-  add_test(NAME NlpDenseCons2_5K COMMAND  bash -c "${RUNCMD} $<TARGET_FILE:nlpDenseCons_ex2.exe>  5000 -selfcheck")
-  add_test(NAME NlpDenseCons3_5H  COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpDenseCons_ex3.exe>   500 -selfcheck")
-  add_test(NAME NlpDenseCons3_5K  COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpDenseCons_ex3.exe>  5000 -selfcheck")
-  add_test(NAME NlpDenseCons3_50K COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpDenseCons_ex3.exe> 50000 -selfcheck")
+  add_test(NAME NlpDenseCons2_5H COMMAND  ${RUNCMD} "$<TARGET_FILE:nlpDenseCons_ex2.exe>"   "500" "-selfcheck")
+  add_test(NAME NlpDenseCons2_5K COMMAND  ${RUNCMD} "$<TARGET_FILE:nlpDenseCons_ex2.exe>"  "5000" "-selfcheck")
+  add_test(NAME NlpDenseCons3_5H  COMMAND ${RUNCMD} "$<TARGET_FILE:nlpDenseCons_ex3.exe>"   "500" "-selfcheck")
+  add_test(NAME NlpDenseCons3_5K  COMMAND ${RUNCMD} "$<TARGET_FILE:nlpDenseCons_ex3.exe>"  "5000" "-selfcheck")
+  add_test(NAME NlpDenseCons3_50K COMMAND ${RUNCMD} "$<TARGET_FILE:nlpDenseCons_ex3.exe>" "50000" "-selfcheck")
   if(HIOP_USE_MPI)
-    add_test(NAME NlpDenseCons3_50K_mpi COMMAND bash -c "${MPICMD} -n 2 $<TARGET_FILE:nlpDenseCons_ex3.exe> 50000 -selfcheck")
+    add_test(NAME NlpDenseCons3_50K_mpi COMMAND ${MPICMD} -n 2 "$<TARGET_FILE:nlpDenseCons_ex3.exe>" "50000" "-selfcheck")
   endif(HIOP_USE_MPI)
 
-  add_test(NAME NlpMixedDenseSparse4_1 COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpMDS_ex4.exe> 400 100 0 -selfcheck \
-  | ${STRIP_TABLE_CMD} \
-  | tee ${PROJECT_BINARY_DIR}/mds4_1.out")
-  add_test(NAME NlpMixedDenseSparse4_2 COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpMDS_ex4.exe> 400 100 1 -selfcheck \
-  | ${STRIP_TABLE_CMD} \
-  | tee ${PROJECT_BINARY_DIR}/mds4_2.out")
+  add_test(NAME NlpMixedDenseSparse4_1 COMMAND ${RUNCMD} bash -c "$<TARGET_FILE:nlpMDS_ex4.exe> 400 100 0 -selfcheck \
+    | ${STRIP_TABLE_CMD} \
+    | tee ${PROJECT_BINARY_DIR}/mds4_1.out")
+  add_test(NAME NlpMixedDenseSparse4_2 COMMAND ${RUNCMD} bash -c "$<TARGET_FILE:nlpMDS_ex4.exe> 400 100 1 -selfcheck \
+    | ${STRIP_TABLE_CMD} \
+    | tee ${PROJECT_BINARY_DIR}/mds4_2.out")
   if(HIOP_USE_RAJA)
-    add_test(NAME NlpMixedDenseSparseRaja4_1 COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpMDS_ex4_raja.exe> 400 100 0 -selfcheck \
-    | ${STRIP_TABLE_CMD} \
-    | tee ${PROJECT_BINARY_DIR}/mds4_raja_1.out")
-    add_test(NAME NlpMixedDenseSparseRaja4_2 COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpMDS_ex4_raja.exe> 400 100 1 -selfcheck \
-    | ${STRIP_TABLE_CMD} \
-    | tee ${PROJECT_BINARY_DIR}/mds4_raja_2.out")
+    add_test(NAME NlpMixedDenseSparseRaja4_1 COMMAND ${RUNCMD} bash -c "$<TARGET_FILE:nlpMDS_ex4_raja.exe> 400 100 0 -selfcheck \
+      | ${STRIP_TABLE_CMD} \
+      | tee ${PROJECT_BINARY_DIR}/mds4_raja_1.out")
+    add_test(NAME NlpMixedDenseSparseRaja4_2 COMMAND ${RUNCMD} bash -c "$<TARGET_FILE:nlpMDS_ex4_raja.exe> 400 100 1 -selfcheck \
+      | ${STRIP_TABLE_CMD} \
+      | tee ${PROJECT_BINARY_DIR}/mds4_raja_2.out")
 
     if(HIOP_DEEPCHECKS)
       foreach(iter 1 2)
@@ -422,14 +424,14 @@ if (HIOP_WITH_MAKETEST)
         endif(HIOP_DEEPCHECKS)
       endif()
 
-      add_test(NAME NlpMixedDenseSparse5_1 COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpMDS_ex5.exe> 400 100 -selfcheck")
+  add_test(NAME NlpMixedDenseSparse5_1 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpMDS_ex5.exe>" "400" "100" "-selfcheck")
 
   if(HIOP_SPARSE)
-    add_test(NAME NlpSparse6_1 COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpSparse_ex6.exe> 500 -selfcheck")
-    add_test(NAME NlpSparse7_1 COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpSparse_ex7.exe> 500 -selfcheck")
+    add_test(NAME NlpSparse6_1 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex6.exe>" "500" "-selfcheck")
+    add_test(NAME NlpSparse7_1 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex7.exe>" "500" "-selfcheck")
   endif(HIOP_SPARSE)
 
   if(HIOP_BUILD_SHARED AND NOT HIOP_USE_GPU)
-    add_test(NAME NlpMixedDenseSparseCinterface COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpMDS_cex4.exe>")
+    add_test(NAME NlpMixedDenseSparseCinterface COMMAND ${RUNCMD} "$<TARGET_FILE:nlpMDS_cex4.exe>")
   endif()
 endif(HIOP_WITH_MAKETEST)
