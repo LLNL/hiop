@@ -566,7 +566,7 @@ bool Ex4::eval_Jac_cons(const long long& n, const long long& m,
         assert(con_idx-ns_==0 || con_idx-ns_==1 || con_idx-ns_==2);
         assert(num_cons==3);
         //double* J = JacD[con_idx-ns_];
-	double* J = JacD + nd_*(con_idx-ns_);
+        double* J = JacD + nd_*(con_idx-ns_);
         RAJA::forall<ex4_raja_exec>(RAJA::RangeSegment(0, nd_),
           RAJA_LAMBDA(RAJA::Index_type i)
           {

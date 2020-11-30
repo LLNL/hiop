@@ -111,91 +111,134 @@ enum hiopSolveStatus {
   NlpSolve_Pending=-10003
 };
 
-/** The base interface class */
+/** Base class for the solver's interface that has no assumptions how the 
+ *  matrices are stored. The vectors are dense and distributed row-wise. 
+ *  The data distribution is decided by the calling code (that implements 
+ *  this interface) and specified to the optimization via 'get_vecdistrib_info'
+ *
+ *  Three possible implementations are for sparse NLPs (hiopInterfaceSparse), 
+ *  mixed dense-sparse NLPs (hiopInterfaceMDS), and NLPs with small 
+ *  number of global constraints (hiopInterfaceDenseConstraints).
+ *  
+ */
 class hiopInterfaceBase
 {
-  /** Base class for the solver's interface that has no assumptions how the 
-   *  matrices are stored. The vectors are dense and distributed row-wise. 
-   *  The data distribution is decided by the calling code (that implements 
-   *  this interface) and specified to the optimization via 'get_vecdistrib_info'
-   *
-   *  Two possible implementations are for sparse NLPs and NLPs with small 
-   *  number of global constraints.
-   *  
-   *  
-   */
 public:
+  //Types indicating linearity or nonlinearity.
   enum NonlinearityType{ hiopLinear=0, hiopQuadratic, hiopNonlinear};
 public:
   hiopInterfaceBase() {};
   virtual ~hiopInterfaceBase() {};
 
-  /** problem dimensions: n number of variables, m number of constraints */
+  /** Specifies the problem dimensions.
+   * 
+   * @param n global number of variables
+   * @param m number of constraints
+   */
   virtual bool get_prob_sizes(long long& n, long long& m)=0;
-  /** bounds on the variables 
-   *  (xlow<=-1e20 means no lower bound, xupp>=1e20 means no upper bound) */
+  
+  /** Specifies bounds on the variables.
+   *    
+   * @param[in] n global number of constraints
+   * @param[out] xlow array of lower bounds. A value of -1e20 or less means no lower 
+   * bound is present
+   * @param[out] xupp array of upper bounds. A value of 1e20 or more means no upper 
+   * bound is present
+   * @param[out] type array of indicating whether the variables enters the objective 
+   * linearily, quadratically, or general nonlinearily. Momentarily not used by HiOp
+   */
   virtual bool get_vars_info(const long long& n, double *xlow, double* xupp, NonlinearityType* type)=0;
-  /** bounds on the constraints 
-   *  (clow<=-1e20 means no lower bound, cupp>=1e20 means no upper bound) */
+  
+  /** Specififes the bounds on the constraints.
+   *
+   * @param[in] m number of constraints
+   * @param[out] clow array of lower bounds for constraints. A value of -1e20 or less means no lower 
+   * bound is present
+   * @param[out] cupp array of upper bounds for constraints. A value of 1e20 or more means no upper 
+   * bound is present
+   * @param[out] type array of indicating whether the constraint is linear, quadratic, or general
+   * nonlinear. Momentarily not used by HiOp
+   */
   virtual bool get_cons_info(const long long& m, double* clow, double* cupp, NonlinearityType* type)=0;
 
-  /** Objective function evaluation
-   *  When MPI enabled, each rank returns the obj. value. Also, x points to the local entries and 
-   *  the function is responsible for knowing the local buffer size.
+  /** Method the evaluation of the objective function.
+   *  
+   * @param[in] n global size of the problem
+   * @param[in] x array with the local entries of the primal variable
+   * @param[in] new_x whether x has been changed from the previous calls to other evaluation methods
+   * (gradient, constraints, Jacobian, and Hessian),
+   * @param[out] obj_value the value of the objective function at @p x
+   *
+   * @note When MPI is enabled, each rank returns the objective value in @p obj_value. @p x points to 
+   * the local entries and the function is responsible for knowing the local buffer size.
    */
   virtual bool eval_f(const long long& n, const double* x, bool new_x, double& obj_value)=0;
-  /** Gradient of objective.
-   *  When MPI enabled, each rank works only with local buffers x and gradf.
+  
+  /** Method for the evaluation of the gradient of objective.
+   *  
+   * @param[in] n global size of the problem
+   * @param[in] x array with the local entries of the primal variable
+   * @param[in] new_x whether x has been changed from the previous calls to other evaluation methods
+   * (function, constraints, Jacobian, and Hessian),
+   * @param[out] gradf the entries of the gradient of the objective function at @p x, local
+   * to the MPI rank.
+   *
+   *  @note When MPI is enabled, each rank should access only the local buffers @p x and @p gradf.
    */
   virtual bool eval_grad_f(const long long& n, const double* x, bool new_x, double* gradf)=0;
 
-  /** Evaluates a subset of the constraints cons(x) (where clow<=cons(x)<=cupp). The subset is of size
-   *  'num_cons' and is described by indexes in the 'idx_cons' array. The method will be called at each
+  /** Evaluates a subset of the constraints @p cons(@p x). The subset is of size
+   *  @p num_cons and is described by indexes in the @p idx_cons array. The method will be called at each
    *  iteration separately for the equality constraints subset and for the inequality constraints subset.
    *  This is done for performance considerations, to avoid auxiliary/temporary storage and copying.
    *
-   *  Parameters:
-   *   - n, m: the global number of variables and constraints
-   *   - num_cons, the number constraints/size of subset to be evaluated
-   *   - idx_cons: indexes in {1,2,...,m} of the constraints to be evaluated
-   *   - x: the point where the constraints are to be evaluated
-   *   - new_x: whether x has been changed from the previous call to f, grad_f, or Jac
-   *   - cons: array of size num_cons containing the value of the  constraints indicated by idx_cons
+   *   @param[in] n the global number of variables
+   *   @param[in] m the number of constraints
+   *   @param[in] num_cons the number constraints/size of subset to be evaluated
+   *   @param[in] idx_cons: indexes in {1,2,...,m} of the constraints to be evaluated
+   *   @param[in] x the point where the constraints need to be evaluated
+   *   @param[in] new_x whether x has been changed from the previous call to f, grad_f, or Jac
+   *   @param[out] cons: array of size num_cons containing the value of the  constraints indicated by 
+   * @p idx_cons
    *  
-   *  When MPI enabled, every rank populates 'cons' since the constraints are not distributed.
+   *  @note When MPI is enabled, every rank populates @p cons since the constraints are not distributed.
    */
   virtual bool eval_cons(const long long& n, const long long& m, 
 			 const long long& num_cons, const long long* idx_cons,  
 			 const double* x, bool new_x, 
 			 double* cons)=0;
-  /** Evaluates the constraints cons(x), both equalities and inequalities in one call. 
+  
+  /** Evaluates the constraints body @p cons(@p x), both equalities and inequalities, in one call. 
    *
-   *  Parameters:
-   *   - n, m: the global number of variables and constraints
-   *   - x: the point where the constraints are to be evaluated
-   *   - new_x: whether x has been changed from the previous call to f, grad_f, or Jac
-   *   - cons: array of size num_cons containing the value of the  constraints indicated by idx_cons
-   *  
-   *  When MPI enabled, every rank populates 'cons' since the constraints are not distributed.
+   *   @param[in] n the global number of variables
+   *   @param[in] m the number of constraints
+   *   @param[in] x the point where the constraints need to be evaluated
+   *   @param[in] new_x whether x has been changed from the previous call to f, grad_f, or Jac
+   *   @param[out] cons: array of size num_cons containing the value of the  constraints indicated by 
+   * @p idx_cons
    *
-   * HiOp will first call 'eval_cons' above (twice). If the implementer/user wants the functionality 
-   * of the one-call 'eval_cons' below, he should return false from 'eval_cons' above; then HiOp will
-   * call the method below.
+   * HiOp will first call the other hiopInterfaceBase::eval_cons() twice. If the implementer/user wants the 
+   * functionality  of this "one-call" overload, he should return false from the other 
+   * hiopInterfaceBase::eval_cons() (during both calls).
    * 
+   *  @note When MPI is enabled, every rank populates @p cons since the constraints are not distributed.
    */
   virtual bool eval_cons(const long long& n, const long long& m, 
 			 const double* x, bool new_x, 
 			 double* cons) { return false; }
   
-  /** pass the communicator, defaults to MPI_COMM_WORLD (dummy for non-MPI builds)  */
+  /** Passes the communicator, defaults to MPI_COMM_WORLD (dummy for non-MPI builds)  */
   virtual bool get_MPI_comm(MPI_Comm& comm_out) { comm_out=MPI_COMM_WORLD; return true;}
 
   /**  
-   * Column partitioning specification for distributed memory vectors 
-  *  Process P owns cols[P], cols[P]+1, ..., cols[P+1]-1, P={0,1,...,NumRanks}.
-  *  Example: for a vector x of 6 elements on 3 ranks, the col partitioning is cols=[0,2,4,6].
-  *  The caller manages memory associated with 'cols', array of size NumRanks+1 
-  */
+   * Method for column partitioning specification for distributed memory vectors. Process P owns 
+   * cols[P], cols[P]+1, ..., cols[P+1]-1, P={0,1,...,NumRanks}.
+   *
+   * Example: for a vector x of @p global_n=6 elements on 3 ranks, the column partitioning is 
+   * @p cols=[0,2,4,6].
+   * 
+   * The caller manages memory associated with @p cols, which is an array of size NumRanks+1 
+   */
   virtual bool get_vecdistrib_info(long long global_n, long long* cols) {
     return false; //defaults to serial 
   }
@@ -203,17 +246,15 @@ public:
   /**
    * Method provides a primal or starting point. This point is subject to internal adjustments.
    *
-   * Note: Avoid using this method since it will removed in a future release and replaced with
+   * @note Avoid using this method since it will removed in a future release and replaced with
    * the same-name method below.
    *
-   * The method returns true (and populates x0) or returns false, in which case HiOp will 
-   * internally set x0 to all zero (still subject to internal adjustements).
+   * The method returns true (and populates @p x0) or returns false, in which case HiOp will 
+   * internally set @p x0 to all zero (still subject to internal adjustements).
    *
    * By default, HiOp first calls the overloaded primal-dual starting point specification
-   * method 
-   * @get_starting_point(const long long&, const long long&, double*, 
-   *                     bool, double*, double*, double*)
-   * If the above returns 'false', HiOp will then call this method.
+   * (overloaded) method get_starting_point(). If the above returns false, HiOp will then call 
+   * this method.
    *
    */
   virtual bool get_starting_point(const long long&n, double* x0)
@@ -222,26 +263,26 @@ public:
   }
   
   /**
-   * Method provides a primal or a primal-dual primal-dual starting point This point is subject 
+   * Method provides a primal or a primal-dual primal-dual starting point. This point is subject 
    * to internal adjustments in HiOp.
    *
    * If the user (implementer of this method) has good estimates only of the primal variables,
-   * the method should populates 'x0' with these values and return true. The 'duals_avail' 
-   * should be set to false; internally, HiOp will not access 'z_bndL0', 'z_bndU0', and 
-   * 'lambda0'.
+   * the method should populate @p x0 with these values and return true. The @p duals_avail
+   * should be set to false; internally, HiOp will not access @p z_bndL0, @p z_bndU0, and 
+   * @p lambda0 in this case.
    *
    * If the user (implementer of this method) has good estimates of the duals of bound constraints 
-   * and of inequality and equality constraints, 'duals_avail' boolean argument should 
-   * be set to true and the respective duals should be provided (in 'z_bndL0' and 'z_bndU0' and 
-   * 'lambda0', respectively). In this case, the user should also set 'x0' to his/her estimate 
-   * of primal variables and return 'true'.
+   * and of inequality and equality constraints, @p duals_avail boolean argument should 
+   * be set to true and the respective duals should be provided (in @p z_bndL0 and @p z_bndU0 and 
+   * @p lambda0, respectively). In this case, the user should also set @p x0 to his/her estimate 
+   * of primal variables and return true.
    *
    * If user does not have high-quality (primal or primal-dual) starting points, the method should 
    * return false (see note below).
    *
-   * Note: when this method returns false, HiOp will call the overload
-   * @get_starting_point(long long&, double*)
-   * This behaviour is for backward compatibility and will be removed in a future release.
+   * @note When this method returns false, HiOp will call the overload 
+   * get_starting_point(). This behaviour is for backward compatibility and 
+   * will be removed in a future release.
    * 
    */
   virtual bool get_starting_point(const long long& n, const long long& m,
@@ -256,12 +297,16 @@ public:
   /** 
    * Callback method called by HiOp when the optimal solution is reached. User should use it
    * to retrieve primal-dual optimal solution. 
-   * 
-   *   i. x, z_L, z_U contain only the array slice that is local to the calling process
-   *  ii. g, lambda are replicated across all processes, which means they can be used as-is, 
-   * without reducing them.
-   * iii. all other scalars are replicated across all processes, thus, they can be used as-is, 
-   * without reducing them.
+   *
+   * @param status status of the solution process
+   * @param n global number of variables
+   * @param x array of (local) entries of the primal variable
+   * @param z_L array of (local) entries of the dual variables for lower bounds
+   * @param z_U array of (local) entries of the dual variables for upper bounds
+   * @param g array of the values of the constraints body
+   * @param lambda array of (local) entries of the dual variables for constraints
+   * @param obj_value objective value
+   *
    */
   virtual void solution_callback(hiopSolveStatus status,
 				 int n, const double* x,
@@ -272,8 +317,11 @@ public:
 				 double obj_value) { };
 
   /** 
-   * Callback for the (end of) iteration. This is not called during the line-searches.
-   * Note: all the notes for @solution_callback apply.
+   * Callback for the (end of) iteration. This method is not called during the line-searche
+   * procedure. @see solution_callback() for an explanation of the parameters.
+   *
+   * @note If the user (implementer) of this methods returns false, HiOp will stop the 
+   * the optimization with hiop::hiopSolveStatus ::User_Stopped return code.
    */
   virtual bool iterate_callback(int iter, double obj_value,
 				int n, const double* x,
@@ -312,8 +360,8 @@ public:
    * Parameters: see eval_cons
    */
   virtual bool eval_Jac_cons(const long long& n, const long long& m, 
-			     const long long& num_cons, const long long* idx_cons,  
-			     const double* x, bool new_x,
+                             const long long& num_cons, const long long* idx_cons,
+                             const double* x, bool new_x,
                              double* Jac) = 0;
   
   /**
@@ -470,11 +518,9 @@ public:
  *
  * min f(x) s.t. g(x) <= or = 0, lb<=x<=ub
  *
- * such that
- *  - Jacobian w.r.t. x and Hessian of the Lagrangian w.r.t. x are sparse
+ * such that Jacobian w.r.t. x and Hessian of the Lagrangian w.r.t. x are sparse
  *
- * Notes
- * 1) this interface is 'local' in the sense that data is not assumed to be
+ * @note this interface is 'local' in the sense that data is not assumed to be
  * distributed across MPI ranks ('get_vecdistrib_info' should return 'false').
  * Acceleration can be however obtained using OpenMP and CUDA via Raja 
  * abstraction layer that HiOp uses and via linear solver.
@@ -486,24 +532,24 @@ public:
   hiopInterfaceSparse() {};
   virtual ~hiopInterfaceSparse() {};
 
-  /** get the number of variables and constraints, nonzeros
-  * and get the number of nonzeros in Jacobian and Heesian
-  **/
+  /** Get the number of variables and constraints, nonzeros
+   * and get the number of nonzeros in Jacobian and Heesian
+  */
   virtual bool get_sparse_blocks_info(int& nx,
                                       int& nnz_sparse_Jaceq, int& nnz_sparse_Jacineq,
                                       int& nnz_sparse_Hess_Lagr) = 0;
 
-  /** Evaluates the sparse Jacobian of constraints
+  /** Evaluates the sparse Jacobian of constraints.
    *
    * This method is called twice per Jacobian evaluation, once for equalities and once for
    * inequalities (see 'eval_cons' for more information). It is advantageous to provide
    * this method when the underlying NLP's constraints come naturally split in equalities
-   * and inequalities. When it is not convenient to do so, use 'eval_Jac_cons' below.
+   * and inequalities. When it is not convenient to do so, see the overloaded method.
    *
    * Parameters:
    *  - first six: see eval_cons (in parent class)
    *  - nnzJacS, iJacS, jJacS, MJacS: number of nonzeros, (i,j) indexes, and values of
-   * the sparse Jacobian
+   * the sparse Jacobian.
    *
    */
   virtual bool eval_Jac_cons(const long long& n, const long long& m,
@@ -513,7 +559,7 @@ public:
 
   /** Evaluates the sparse Jacobian of equality and inequality constraints in one call.
    *
-   * The main difference from the above 'eval_Jac_cons' is that the implementer/user of this
+   * The main difference from the overloaded counterpart is that the implementer/user of this
    * method does not have to split the constraints into equalities and inequalities; instead,
    * HiOp does this internally.
    *
@@ -540,12 +586,10 @@ public:
                              const double* x, bool new_x,
                              const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS){ return false; }
 
-  /** Evaluates the sparse Hessian of the Lagrangian function
+  /** Evaluates the sparse Hessian of the Lagrangian function.
    *
-   *
-   * Notes
-   * 1)-4) from 'eval_Jac_cons' applies to xxxHSS
-   * 5) The order is multipliers is: lambda=[lambda_eq, lambda_ineq]
+   * @note 1)-4) from 'eval_Jac_cons' applies to xxxHSS
+   * @note 5) The order of multipliers is: lambda=[lambda_eq, lambda_ineq]
    */
   virtual bool eval_Hess_Lagr(const long long& n, const long long& m,
                               const double* x, bool new_x, const double& obj_factor,
