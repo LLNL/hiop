@@ -187,7 +187,7 @@ public:
   }
 
   bool eval_Jac_cons(const long long& n, const long long& m, 
-		     const long long& num_cons, const long long* idx_cons,
+                     const long long& num_cons, const long long* idx_cons,
                      const double* x_in, bool new_x, double* Jac) 
   {
     assert(n==n_vars); 

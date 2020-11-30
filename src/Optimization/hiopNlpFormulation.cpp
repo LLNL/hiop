@@ -885,7 +885,7 @@ bool hiopNlpDenseConstraints::eval_Jac_c(hiopVector& x, bool new_x, double* Jac_
   runStats.tmEvalJac_con.start();
   bool bret = interface.eval_Jac_cons(nlp_transformations.n_post(), n_cons,
                                       n_cons_eq, cons_eq_mapping_,
-				      x_user->local_data_const(), new_x, Jac_c_user);
+                                      x_user->local_data_const(), new_x, Jac_c_user);
   runStats.tmEvalJac_con.stop(); runStats.nEvalJac_con_eq++;
 
   Jac_c = nlp_transformations.applyInvToJacobEq(Jac_c_user, n_cons_eq);
