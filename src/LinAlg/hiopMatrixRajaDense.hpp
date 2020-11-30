@@ -238,12 +238,9 @@ public:
   virtual long long get_local_size_m() const { return m_local_; }
   virtual MPI_Comm get_mpi_comm() const { return comm_; }
 
-  inline double* local_data_host() const {return M_host_[0]; }
+  inline double* local_data_host() const {return data_host_; }
   double* local_data() {return data_dev_; }
   double* local_data_const() const { return data_dev_; }
-protected:
-  //do not use this unless you sure you know what you're doing
-  inline double** get_M_host() { return M_host_; }
 public:
   virtual long long m() const {return m_local_;}
   virtual long long n() const {return n_global_;}
@@ -254,14 +251,10 @@ public:
   void copyToDev();
   void copyFromDev();
 
-  void setRowPointers();
-
 private:
   std::string mem_space_;
   double* data_host_; ///< pointer to host mirror of matrix data
   double* data_dev_;  ///< pointer to memory space of matrix data
-  double** M_host_;   ///< array of pointers to matrix rows on host mirror
-  double** M_dev_;    ///< array of pointers to matrix rows on device
   int n_local_;       ///< local number of columns
   long long glob_jl_; ///< global index of first column in the local data block
   long long glob_ju_; ///< global index of first column in the next data block
@@ -283,4 +276,3 @@ private:
 };
 
 } // namespace hiop
-

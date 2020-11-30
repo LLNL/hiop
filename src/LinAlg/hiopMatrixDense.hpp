@@ -216,9 +216,6 @@ public:
 
   virtual double* local_data_const() const {assert(false && "not implemented in base class"); return nullptr;}
   virtual double* local_data() {assert(false && "not implemented in base class"); return nullptr;}
-protected:
-  //do not use this unless you sure you know what you're doing
-  virtual double** get_M(){assert(false && "not implemented in base class"); return nullptr;}
 public:
   virtual long long m() const {return m_local_;}
   virtual long long n() const {return n_global_;}
