@@ -209,7 +209,6 @@ protected:
  */
 
 
-
 class Ex8 : public hiop::hiopInterfaceDenseConstraints
 {
 public:
@@ -257,8 +256,8 @@ public:
 
   {
     include_r = include;
-    evaluator_ = new RecourseApproxEvaluator(ns, S, evaluator->rval_, evaluator->rgrad_, 
-		            evaluator->rhess_, evaluator->x0_);
+    evaluator_ = new RecourseApproxEvaluator(ns, S, evaluator->get_rval(), evaluator->get_rgrad(), 
+		            evaluator->get_rhess(), evaluator->get_x0());
   }
 
   virtual ~Ex8()
@@ -301,7 +300,7 @@ public:
     obj_value *= 0.5;
 
     if(include_r){
-      assert(evaluator_->rgrad_!=NULL);
+      assert(evaluator_->get_rgrad()!=NULL);
       evaluator_->eval_f(ns, x, new_x, obj_value);
     }
 
@@ -323,7 +322,7 @@ public:
     for(int i=0; i<ns; i++) 
       gradf[i] = x[i]-1.;
     if(include_r){
-      assert(evaluator_->rgrad_!=NULL);
+      assert(evaluator_->get_rgrad()!=NULL);
       evaluator_->eval_grad(ns, x, new_x, gradf);
     }
     return true;
@@ -368,25 +367,18 @@ public:
     assert(ns == n);
     if(evaluator_==NULL){
     
-      evaluator_ = new RecourseApproxEvaluator(n, S, evaluator->rval_, evaluator->rgrad_, 
-		            evaluator->rhess_, evaluator->x0_);
+      evaluator_ = new RecourseApproxEvaluator(n, S, evaluator->get_rval(), evaluator->get_rgrad(), 
+		            evaluator->get_rhess(), evaluator->get_x0());
       return true;
     }
 
-    if(evaluator->rgrad_!=NULL){
-      evaluator_->rval_ = evaluator->rval_;
-      if(evaluator_->rgrad_==NULL){
-        evaluator_->rgrad_ = new double[ns];
-      }
-      if(evaluator_->rhess_==NULL){
-        evaluator_->rhess_ = new double[ns];
-      }
-      if(evaluator_->x0_==NULL){
-        evaluator_->x0_ = new double[ns];
-      }
-      memcpy(evaluator_->rgrad_,evaluator->rgrad_ , ns*sizeof(double));
-      memcpy(evaluator_->rhess_,evaluator->rhess_ , ns*sizeof(double));
-      memcpy(evaluator_->x0_,evaluator->x0_, ns*sizeof(double));
+    if(evaluator->get_rgrad()!=NULL){
+      evaluator_->set_rval(evaluator->get_rval());
+     
+      evaluator_->set_rgrad(ns,evaluator->get_rgrad());
+      evaluator_->set_rhess(ns,evaluator->get_rhess());
+      
+      evaluator_->set_x0(ns,evaluator->get_x0());
     }
     return true;
   }
@@ -402,96 +394,6 @@ protected:
 
 };
 
-/*
-class RecourseApproxEvaluator
-{
-public:
-
-  RecourseApproxEvaluator(int ns_)
-    : RecourseApproxEvaluator(ns_, ns_)  //ns = nx, nd=S
-  {
-  }
-  RecourseApproxEvaluator(int ns,int S): ns_(ns),S_(S),rval_(0.), rgrad_(NULL), rhess_(NULL),x0_(NULL)//ns = nx, nd=S
-  {
-     assert(S>=ns);
-  }
-  RecourseApproxEvaluator(int ns,int S, const double& rval, const double* rgrad, 
-		         const double* rhess, const double* x0): ns_(ns),S_(S)
-  {
-    assert(S>=ns);
-    rval_ = rval;
-    rgrad_ = new double[ns];
-    rhess_ = new double[ns];
-    x0_ = new double[ns];
-    memcpy(rgrad_,grad , ns*sizeof(double));
-    memcpy(rhess_,hess , ns*sizeof(double));
-    memcpy(x0_,x0, ns*sizeof(double));
-  }
-
-
-  bool eval_f(const long long& n, const double* x, bool new_x, double& obj_value)
-  {
-    //assert(ns>=4);
-    obj_value=0.;//x[0]*(x[0]-1.);
-    //sum 0.5 {(x_i-1)*(x_{i}-1) : i=1,...,ns} + 0.5 y'*Qd*y + 0.5 s^T s
-    assert(rgrad_!=NULL);
-    obj_value += rval_;
-    for(int i=0; i<ns_; i++) obj_value += rgrad_[i]*(x[i]-x0_[i]);
-    for(int i=0; i<ns_; i++) obj_value += 0.5*rhess_[i]*(x[i]-x0_[i])*(x[i]-x0_[i]);
-
-    return true;
-  }
- 
-  //sum 0.5 {(x_i-1)*(x_{i}-1) : i=1,...,ns} 
-  bool eval_grad(const long long& n, const double* x, bool new_x, double* grad)
-  {
-    //x_i - 0.5 
-    assert(rgrad_!=NULL);
-    for(int i=0; i<ns_; i++) grad[i] += rgrad_[i]+rhess_[i]*(x[i]-x0_[i]);
-    return true;
-  }
-
-  bool eval_hess(const long long& n, const double* x, bool new_x, double* hess)
-  {
-    //x_i - 0.5 
-    assert(rgrad_!=NULL);
-    for(int i=0; i<ns_; i++) hess[i] += rhess_[i];
-    return true;
-  }
-  // pass the COMM_SELF communicator since this example is only intended to run inside 1 MPI process //
-  virtual bool get_MPI_comm(MPI_Comm& comm_out) { comm_out=MPI_COMM_SELF; return true;}
-
-  bool set_recourse_approx_evaluator(const int& n, const double* x0=NULL, 
-		           const double& rval=0.,const double* grad=NULL,const double* hess=NULL)
-  {
-    assert(ns_ == n);
-    if(grad!=NULL){
-      rval_ = rval;
-      if(rgrad_==NULL){
-        rgrad_ = new double[ns];
-      }
-      if(rhess_==NULL){
-        rhess_ = new double[ns];
-      }
-      if(x0_==NULL){
-        x0_ = new double[ns];
-      }
-      memcpy(rgrad_,grad , ns*sizeof(double));
-      memcpy(rhess_,hess , ns*sizeof(double));
-      memcpy(x0_,x0, ns*sizeof(double));
-    }
-    return true;
-  }
-
-protected:
-  int ns_,S_;
-  double rval_;
-  double* rgrad_;
-  double* rhess_; //diagonal vector for now
-  double* x0_; //current solution
-  friend class Ex8;
-};
-*/
 
 class PriDecMasterProblemEx8 : public hiopInterfacePriDecProblem
 {
