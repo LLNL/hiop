@@ -1525,7 +1525,17 @@ long long hiopVectorRajaPar::numOfElemsLessThan(const double &val) const
     {
       sum += (data[i]<val);
     });
-  return sum.get();    
+
+  long long nrm = sum.get();
+
+#ifdef HIOP_USE_MPI
+  double nrm_global;
+  int ierr = MPI_Allreduce(&nrm, &nrm_global, 1, MPI_LONG_LONG, MPI_SUM, comm_);
+  assert(MPI_SUCCESS == ierr);
+  nrm = nrm_global;
+#endif
+
+  return nrm;
 }
 
 long long hiopVectorRajaPar::numOfElemsAbsLessThan(const double &val) const
@@ -1537,7 +1547,17 @@ long long hiopVectorRajaPar::numOfElemsAbsLessThan(const double &val) const
     {
       sum += (fabs(data[i])<val);
     });
-  return sum.get();
+
+  long long nrm = sum.get();
+
+#ifdef HIOP_USE_MPI
+  double nrm_global;
+  int ierr = MPI_Allreduce(&nrm, &nrm_global, 1, MPI_LONG_LONG, MPI_SUM, comm_);
+  assert(MPI_SUCCESS == ierr);
+  nrm = nrm_global;
+#endif
+
+  return nrm;
 }
  
 
