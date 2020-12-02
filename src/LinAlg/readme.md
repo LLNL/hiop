@@ -55,16 +55,19 @@ virtual void addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start, doubl
 ```
 
 ## Sparse matrices 
-Triplet format is momentarily used for sparse matrices. 
-HSL linear solvers, e.g., MA57, use triplet format as an input.
-To use other linear solvers that require different format, e.g., STRUMPACK uses compressed sparse row (CSR) format, HiOp will make the conversion internally. After converting the matrix from triplet to CSR format, HiOp will sort the 
-nonzeros to prevent unexpected behaviors happened in the 3rd party linear solver.
+Triplet format is momentarily used for sparse matrices. The index arrays `i` and `j` used to store sparse matrices in triplet format need to be kept sorted by the following comparison rules: 
+ - row indexes `i` in increasing order
+ - column indexes `j` for the same row index `i` in strictly increasing order.
+ 
+ Please remark that this does not allow duplicated entries. In a couple of places, HiOp may internally relax this requirement; however, this is  documented at the method level; otherwise, the precondition of sorted (i,j) entries holds for all other methods related to sparse matrices.
+ 
+HiOp offers support for converting sparse triplet format to  compressed sparse row (CSR) format, which, for example, is used with STRUMPACK linear solver. It is worth mentioning that HiOp will also sort the arrays used by the CSR format based on the same rule, which seems to increase robustness with the third party linear solvers that require the CSR format.
 
 ### *Symmetric* sparse matrices 
 Only upper triangular nonzero entries should be specified, accessed, and maintained.
-In the current code, only Hessian and the symmetric KKT systems are implelemented as symmetric matrices. Users only need to provide the triangular nonzero entries to Hessian.
-For the symmetric KKT, some linear algebra package, e.g., MA57 from HSL, can read entries from both the upper and lower triangular part. For example, only one entry from KKT[i,j] and KKT[j,i] is required to be presented in MA57.
-If both constraint Jacobian and Lagrangian Hessian are sorted by row in the triplet format, it is easier to copy the entries from Jac/Hes to the lower triangular part and keep the elements sorted by row.
+The Hessian and the symmetric KKT systems are implemented as symmetric matrices. Users only need to provide the upper triangle nonzero entries to Hessian.
+For the symmetric KKT linearizations, some linear algebra package, e.g., MA57 from HSL, can read entries from both the upper and lower triangular part, however, only one from the entries (i,j) and (j,i) is required to be passed to HSL solvers.
+Developers should be remark that the internal sorting rules for sparse matrices in triplet format enable efficient copying of the constraint Jacobian and Lagrangian Hessian in the KKT linear system matrix.
 
 
 ## Obtaining matrices from HiOp
