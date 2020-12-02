@@ -351,7 +351,7 @@ public:
   virtual bool
   eval_Jac_cons(const long long& n, const long long& m,
 			const long long& num_cons, const long long* idx_cons,  
-			const double* x, bool new_x, double** Jac) 
+			const double* x, bool new_x, double* Jac) 
   {
     assert(m==0);
     return true;
