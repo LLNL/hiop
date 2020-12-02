@@ -804,4 +804,45 @@ void hiopVectorPar::print(FILE* file, const char* msg/*=NULL*/, int max_elems/*=
   }
 }
 
+
+long long hiopVectorPar::numOfElemsLessThan(const double &val) const
+{
+  long long ret_num = 0;
+  for(long long i=0; i<n_local_; i++)
+  {
+    if(data_[i]<val)
+    {
+      ret_num++;
+    }
+  }
+
+#ifdef HIOP_USE_MPI
+  long long ret_num_global;
+  int ierr=MPI_Allreduce(&ret_num, &ret_num_global, 1, MPI_LONG_LONG, MPI_SUM, comm_); assert(MPI_SUCCESS==ierr);
+  ret_num = ret_num_global;
+#endif
+
+  return ret_num;
+}
+
+long long hiopVectorPar::numOfElemsAbsLessThan(const double &val) const
+{
+  long long ret_num = 0;
+  for(long long i=0; i<n_local_; i++)
+  {
+    if(fabs(data_[i])<val)
+    {
+      ret_num++;
+    }
+  }
+
+#ifdef HIOP_USE_MPI
+  long long ret_num_global;
+  int ierr=MPI_Allreduce(&ret_num, &ret_num_global, 1, MPI_LONG_LONG, MPI_SUM, comm_); assert(MPI_SUCCESS==ierr);
+  ret_num = ret_num_global;
+#endif
+
+  return ret_num;
+}
+
 };

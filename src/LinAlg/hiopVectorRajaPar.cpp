@@ -1516,5 +1516,50 @@ void hiopVectorRajaPar::copyFromDev() const
   resmgr.copy(data_host, data_dev_);
 }
 
+long long hiopVectorRajaPar::numOfElemsLessThan(const double &val) const
+{  
+  double* data = data_dev_;
+  RAJA::ReduceSum<hiop_raja_reduce, long long> sum(0);
+  RAJA::forall<hiop_raja_exec>( RAJA::RangeSegment(0, n_local_),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      sum += (data[i]<val);
+    });
+
+  long long nrm = sum.get();
+
+#ifdef HIOP_USE_MPI
+  long long nrm_global;
+  int ierr = MPI_Allreduce(&nrm, &nrm_global, 1, MPI_LONG_LONG, MPI_SUM, comm_);
+  assert(MPI_SUCCESS == ierr);
+  nrm = nrm_global;
+#endif
+
+  return nrm;
+}
+
+long long hiopVectorRajaPar::numOfElemsAbsLessThan(const double &val) const
+{  
+  double* data = data_dev_;
+  RAJA::ReduceSum<hiop_raja_reduce, long long> sum(0);
+  RAJA::forall<hiop_raja_exec>( RAJA::RangeSegment(0, n_local_),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      sum += (fabs(data[i])<val);
+    });
+
+  long long nrm = sum.get();
+
+#ifdef HIOP_USE_MPI
+  long long nrm_global;
+  int ierr = MPI_Allreduce(&nrm, &nrm_global, 1, MPI_LONG_LONG, MPI_SUM, comm_);
+  assert(MPI_SUCCESS == ierr);
+  nrm = nrm_global;
+#endif
+
+  return nrm;
+}
+ 
+
 
 } // namespace hiop

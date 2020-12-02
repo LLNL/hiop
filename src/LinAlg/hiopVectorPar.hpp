@@ -174,6 +174,9 @@ public:
   virtual void copyFromDev() {}
   virtual void copyToDev() const {}
   virtual void copyFromDev() const {}
+  
+  virtual long long numOfElemsLessThan(const double &val) const;
+  virtual long long numOfElemsAbsLessThan(const double &val) const;    
 
 protected:
   MPI_Comm comm_;

@@ -158,6 +158,9 @@ public:
   void copyFromDev();
   void copyToDev() const;
   void copyFromDev() const;
+  
+  virtual long long numOfElemsLessThan(const double &val) const;
+  virtual long long numOfElemsAbsLessThan(const double &val) const;      
 
 private:
   std::string mem_space_;

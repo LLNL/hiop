@@ -21,8 +21,8 @@ FortranCInterface_HEADER(FortranCInterface.hpp MACRO_NAMESPACE "FC_")
 option(HIOP_USE_MPI "Build with MPI support" ON)
 option(HIOP_USE_GPU "Build with support for GPUs - Magma and cuda libraries" OFF)
 option(HIOP_TEST_WITH_BSUB "Use `jsrun` instead of `mpirun` commands when running tests" OFF)
-option(HIOP_USE_UMPIRE "Build with portable memory management library Umpire" ON)
-option(HIOP_USE_RAJA   "Build with portability abstraction library RAJA" ON)
+option(HIOP_USE_UMPIRE "Build with portable memory management library Umpire" OFF)
+option(HIOP_USE_RAJA   "Build with portability abstraction library RAJA" OFF)
 option(HIOP_DEEPCHECKS "Extra checks and asserts in the code with a high penalty on performance" OFF)
 option(HIOP_WITH_KRON_REDUCTION "Build Kron Reduction code (requires UMFPACK)" OFF)
 option(HIOP_DEVELOPER_MODE "Build with extended warnings and options" OFF)
@@ -185,17 +185,20 @@ endif()
 if(HIOP_SPARSE)
   if(NOT TARGET METIS)
     include(FindHiopMETIS)
-    target_link_libraries(hiop_math INTERFACE METIS)
   endif(NOT TARGET METIS)
 
   if(HIOP_USE_COINHSL)
     set(HIOP_COINHSL_DIR CACHE PATH "Path to COINHSL directory")
     include(FindHiopCOINHSL)
-    if(COINHSL_LIBRARY)
-      target_link_libraries(hiop_math INTERFACE COINHSL)    
-    else(COINHSL_LIBRARY)
+    if(COINHSL_LIBRARY AND METIS_LIBRARY)
+      target_link_libraries(hiop_math INTERFACE METIS)
+      target_link_libraries(hiop_math INTERFACE COINHSL)
+    else()
+      if(NOT METIS_LIBRARY)
+        message(STATUS "Cannot find METIS, which is required by COINHSL.")
+      endif()
       set(HIOP_USE_COINHSL OFF CACHE BOOL "Build without COINHSL" FORCE)
-    endif(COINHSL_LIBRARY)  
+    endif()
   endif(HIOP_USE_COINHSL)
 
   if(HIOP_USE_STRUMPACK)
@@ -203,11 +206,15 @@ if(HIOP_SPARSE)
     include(FindHiopSTRUMPACK)
     target_link_libraries(hiop_math INTERFACE STRUMPACK)
 
-    if(STRUMPACK_LIBRARIES)
+    if(STRUMPACK_LIBRARIES AND METIS_LIBRARY)
+      target_link_libraries(hiop_math INTERFACE METIS)
       target_link_libraries(hiop_math INTERFACE ${STRUMPACK_LIBRARIES})  
-    else(STRUMPACK_LIBRARIES)
+    else()
+      if(STRUMPACK_LIBRARIES)
+        message(STATUS "Cannot find METIS, which is required by STRUMPACK.")
+      endif()
       set(HIOP_USE_STRUMPACK OFF CACHE BOOL "Build without STRUMPACK" FORCE)
-    endif(STRUMPACK_LIBRARIES)  
+    endif()  
   endif(HIOP_USE_STRUMPACK)
 
   if(NOT HIOP_USE_COINHSL AND NOT HIOP_USE_STRUMPACK )
@@ -380,18 +387,18 @@ if (HIOP_WITH_MAKETEST)
   endif(HIOP_USE_MPI)
 
   add_test(NAME NlpMixedDenseSparse4_1 COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpMDS_ex4.exe> 400 100 0 -selfcheck \
-    | ${STRIP_TABLE_CMD} \
-    | tee ${PROJECT_BINARY_DIR}/mds4_1.out")
+  | ${STRIP_TABLE_CMD} \
+  | tee ${PROJECT_BINARY_DIR}/mds4_1.out")
   add_test(NAME NlpMixedDenseSparse4_2 COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpMDS_ex4.exe> 400 100 1 -selfcheck \
-    | ${STRIP_TABLE_CMD} \
-    | tee ${PROJECT_BINARY_DIR}/mds4_2.out")
+  | ${STRIP_TABLE_CMD} \
+  | tee ${PROJECT_BINARY_DIR}/mds4_2.out")
   if(HIOP_USE_RAJA)
     add_test(NAME NlpMixedDenseSparseRaja4_1 COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpMDS_ex4_raja.exe> 400 100 0 -selfcheck \
-      | ${STRIP_TABLE_CMD} \
-      | tee ${PROJECT_BINARY_DIR}/mds4_raja_1.out")
+    | ${STRIP_TABLE_CMD} \
+    | tee ${PROJECT_BINARY_DIR}/mds4_raja_1.out")
     add_test(NAME NlpMixedDenseSparseRaja4_2 COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpMDS_ex4_raja.exe> 400 100 1 -selfcheck \
-      | ${STRIP_TABLE_CMD} \
-      | tee ${PROJECT_BINARY_DIR}/mds4_raja_2.out")
+    | ${STRIP_TABLE_CMD} \
+    | tee ${PROJECT_BINARY_DIR}/mds4_raja_2.out")
 
     if(HIOP_DEEPCHECKS)
       foreach(iter 1 2)
@@ -399,23 +406,23 @@ if (HIOP_WITH_MAKETEST)
           NAME "CompareExample4_NumIterations_${iter}" 
           COMMAND bash -c "\
           if [[ $(wc -l ${PROJECT_BINARY_DIR}/mds4_${iter}.out|cut -f1 -d' ') == $(wc -l ${PROJECT_BINARY_DIR}/mds4_raja_${iter}.out|cut -f1 -d' ') ]]
-            then
-              echo 'Output tables have the same number of iterations.'
-              exit 0
-            else
-              echo 'Output tables have a different number of iterations!'
-              exit 1
-            fi")
-        add_test(
-          NAME "CompareExample4_ElementWise_${iter}"
-          COMMAND bash -c "\
+          then
+          echo 'Output tables have the same number of iterations.'
+          exit 0
+          else
+          echo 'Output tables have a different number of iterations!'
+          exit 1
+          fi")
+          add_test(
+            NAME "CompareExample4_ElementWise_${iter}"
+            COMMAND bash -c "\
             join ${PROJECT_BINARY_DIR}/mds4_${iter}.out ${PROJECT_BINARY_DIR}/mds4_raja_${iter}.out \
             | ${PROJECT_SOURCE_DIR}/tests/testEx4CompareIterations.awk")
-      endforeach()
-    endif(HIOP_DEEPCHECKS)
-  endif()
+          endforeach()
+        endif(HIOP_DEEPCHECKS)
+      endif()
 
-  add_test(NAME NlpMixedDenseSparse5_1 COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpMDS_ex5.exe> 400 100 -selfcheck")
+      add_test(NAME NlpMixedDenseSparse5_1 COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpMDS_ex5.exe> 400 100 -selfcheck")
 
   if(HIOP_SPARSE)
     add_test(NAME NlpSparse6_1 COMMAND bash -c "${RUNCMD} $<TARGET_FILE:nlpSparse_ex6.exe> 500 -selfcheck")
