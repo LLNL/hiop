@@ -313,6 +313,9 @@ public:
     real_type* todata = getLocalData(&to);
     v.copyTo(todata);
 
+    // Since we have copied into to's data_host, we need to copy to Device
+    to.copyToDev();
+
     int fail = verifyAnswer(&to, two);
     printMessage(fail, __func__, rank);
 
