@@ -76,12 +76,7 @@ public:
   virtual ~VectorTestsRajaPar(){}
 
 private:
-  virtual local_ordinal_type getLocalSize(const hiop::hiopVector* x) override;
   virtual real_type* getLocalData(hiop::hiopVector* x) override;
-  virtual int verifyAnswer(hiop::hiopVector* x, real_type answer) override;
-  virtual int verifyAnswer(
-      hiop::hiopVector* x,
-      std::function<real_type(local_ordinal_type)> expect) override;
   virtual bool reduceReturn(int failures, hiop::hiopVector* x) override;
   virtual real_type* createLocalBuffer(local_ordinal_type N, real_type val);
   virtual void deleteLocalBuffer(real_type* buffer);

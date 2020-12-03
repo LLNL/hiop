@@ -101,48 +101,6 @@ bool VectorTestsRajaPar::reduceReturn(int failures, hiop::hiopVector* x)
     return (fail != 0);
 }
 
-
-/// Checks if _local_ vector elements are set to `answer`.
-int VectorTestsRajaPar::verifyAnswer(hiop::hiopVector* x, real_type answer)
-{
-  hiop::hiopVectorRajaPar* xvec = dynamic_cast<hiop::hiopVectorRajaPar*>(x);                            
-
-  xvec->copyFromDev();
-  const local_ordinal_type N = getLocalSize(x);
-  //const real_type* xdata = getLocalData(x);
-
-  int local_fail = 0;
-  for(local_ordinal_type i=0; i<N; ++i)
-    if(!isEqual(getLocalElement(xvec, i), answer))
-    {
-      //std::cout << getLocalElement(xvec, i) << " ?= " << answer << "\n";
-      ++local_fail;
-    }
-
-  return local_fail;
-}
-
-int VectorTestsRajaPar::verifyAnswer(hiop::hiopVector* v, std::function<real_type (local_ordinal_type)> expect)
-{
-  auto xvec = dynamic_cast<hiop::hiopVectorRajaPar*>(v);
-  xvec->copyFromDev();
-  const local_ordinal_type N = getLocalSize(v);
-  //const real_type* xdata = getLocalData(v);
-
-  int local_fail = 0;
-  for(local_ordinal_type i=0; i<N; ++i)
-  {
-    const auto answer = expect(i);
-    if(!isEqual(getLocalElement(xvec, i), answer))
-    {
-      //std::cout << getLocalElement(xvec, i) << " ?= " << answer << "\n";
-      ++local_fail;
-    }
-  }
-
-  return local_fail;
-}
-
 /// Wrap new command
 real_type* VectorTestsRajaPar::createLocalBuffer(local_ordinal_type N, real_type val)
 {

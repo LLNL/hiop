@@ -97,43 +97,6 @@ bool VectorTestsPar::reduceReturn(int failures, hiop::hiopVector* x)
   return (fail != 0);
 }
 
-
-/// Checks if _local_ vector elements are set to `answer`.
-int VectorTestsPar::verifyAnswer(hiop::hiopVector* x, real_type answer)
-{
-  const local_ordinal_type N = getLocalSize(x);
-  const real_type* xdata = getLocalData(x);
-
-  int local_fail = 0;
-  for(local_ordinal_type i=0; i<N; ++i)
-    if(!isEqual(xdata[i], answer))
-      ++local_fail;
-
-  return local_fail;
-}
-
-/*
- * Ensures that the vector's elements match the return value of
- * the function.
- */
-int VectorTestsPar::verifyAnswer(
-    hiop::hiopVector* x,
-    std::function<real_type(local_ordinal_type)> expect)
-{
-  const local_ordinal_type N = getLocalSize(x);
-
-  int local_fail = 0;
-  for (int i=0; i<N; i++)
-  {
-    if(!isEqual(getLocalElement(x, i), expect(i)))
-    {
-      std::cout << getLocalElement(x, i) << " ?= " << expect(i) << "\n";
-      ++local_fail;
-    }
-  }
-  return local_fail;
-}
-
 /// Wrap new command
 real_type* VectorTestsPar::createLocalBuffer(local_ordinal_type N, real_type val)
 {
