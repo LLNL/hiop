@@ -1,9 +1,26 @@
-
-//the solver
-#include "hiopAlgPrimalDecomp.hpp"
 //the problem to be solved
 #include "nlpPriDec_ex8.hpp"
+//the solver
+#include "hiopAlgPrimalDecomp.hpp"
 
+#ifdef HIOP_USE_MAGMA
+#include "magma_v2.h"
+#endif
+
+#include <cstdlib>
+#include <string>
+
+/**
+ * Driver for example 8 that illustrates the use of hiop::hiopAlgPrimalDecomposition 
+ * 
+ * @note This example is built only when HIOP_USE_MPI is enabled during cmake build
+ * and require at least two MPI ranks in MPI_COMM_WORLD.
+ *
+ */
+
+//
+//todo: add -selfcheck option (see other drivers) and add the driver to cmake tests
+//
 
 int main(int argc, char **argv)
 {
