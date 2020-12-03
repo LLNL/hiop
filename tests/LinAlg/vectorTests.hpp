@@ -1535,10 +1535,15 @@ public:
     xdat[i] = val;
     x->copyToDev();
   }
+  /// Returns element _i_ of vector _x_.
+  real_type getLocalElement(const hiop::hiopVector* x, local_ordinal_type i)
+  {
+    x->copyFromDev();
+    return x->local_data_host_const()[i];
+  }
 
 protected:
   // Interface to methods specific to vector implementation
-  virtual real_type getLocalElement(const hiop::hiopVector* x, local_ordinal_type i) = 0;
   virtual local_ordinal_type getLocalSize(const hiop::hiopVector* x) = 0;
   virtual real_type* getLocalData(hiop::hiopVector* x) = 0;
   virtual int verifyAnswer(hiop::hiopVector* x, real_type answer) = 0;

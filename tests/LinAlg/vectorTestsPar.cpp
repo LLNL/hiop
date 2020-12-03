@@ -51,6 +51,7 @@
  *
  * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
  * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
+ * @author Cameron Rutherford <robert.rutherford@pnnl.gov>, PNNL
  *
  */
 #include <hiopVectorPar.hpp>
@@ -58,14 +59,6 @@
 #include "vectorTestsRajaPar.hpp"
 
 namespace hiop { namespace tests {
-
-/// Returns element _i_ of vector _x_.
-/// First need to retrieve hiopVectorPar from the abstract interface
-real_type VectorTestsPar::getLocalElement(const hiop::hiopVector* x, local_ordinal_type i)
-{
-  const hiop::hiopVectorPar* xvec = dynamic_cast<const hiop::hiopVectorPar*>(x);
-  return xvec->local_data_const()[i];
-}
 
 /// Returns pointer to local ector data
 real_type* VectorTestsPar::getLocalData(hiop::hiopVector* x)
