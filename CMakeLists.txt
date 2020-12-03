@@ -352,10 +352,14 @@ if(HIOP_TEST_WITH_BSUB)
     set(RUNCMD ${RUNCMD} "-g" "1")
   endif()
 else()
-  set(RUNCMD "mpirun" "-n" "1")
   set(MPICMD "mpirun")
-  set(RUNCMD ${RUNCMD} "-mca" "oob" "tcp")
-  set(MPICMD ${MPICMD} "-mca" "oob" "tcp")
+  if(HIOP_USE_MPI)
+    set(RUNCMD "mpirun" "-n" "1")
+    set(RUNCMD ${RUNCMD} "-mca" "oob" "tcp")
+    set(MPICMD ${MPICMD} "-mca" "oob" "tcp")
+  else()
+    set(RUNCMD "") # No special command is needed to run this program  
+  endif()
 endif()
 
 ##########################################################
