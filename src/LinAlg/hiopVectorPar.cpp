@@ -218,12 +218,12 @@ startingAtCopyToStartingAt(int start_idx_in_src, hiopVector& dest_, int start_id
   assert(n_local_==n_ && "only for local/non-distributed vectors");
 #endif  
   assert(start_idx_in_src>=0 && start_idx_in_src<=this->n_local_);
-#ifdef DEBUG  
+#infdef NDEBUG  
   if(start_idx_in_src==this->n_local_) assert((num_elems==-1 || num_elems==0));
 #endif
   const hiopVectorPar& dest = dynamic_cast<hiopVectorPar&>(dest_);
   assert(start_idx_dest>=0 && start_idx_dest<=dest.n_local_);
-#ifdef DEBUG  
+#ifndef NDEBUG  
   if(start_idx_dest==dest.n_local_) assert((num_elems==-1 || num_elems==0));
 #endif
   if(num_elems<0) {

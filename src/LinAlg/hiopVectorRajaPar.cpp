@@ -477,7 +477,7 @@ void hiopVectorRajaPar::startingAtCopyToStartingAt(
   assert(start_idx_in_src >= 0 && start_idx_in_src <= this->n_local_);
   assert(start_idx_dest   >= 0 && start_idx_dest   <= dest.n_local_);
 
-#ifdef DEBUG  
+#ifndef NDEBUG  
   if(start_idx_dest==dest.n_local_ || start_idx_in_src==this->n_local_) assert((num_elems==-1 || num_elems==0));
 #endif
 
