@@ -59,15 +59,6 @@
 
 namespace hiop { namespace tests {
 
-/// Method to set vector _x_ element _i_ to _value_.
-/// First need to retrieve hiopVectorPar from the abstract interface
-void VectorTestsPar::setLocalElement(hiop::hiopVector* x, local_ordinal_type i, real_type value)
-{
-  hiop::hiopVectorPar* xvec = dynamic_cast<hiop::hiopVectorPar*>(x);
-  real_type* xdat = xvec->local_data();
-  xdat[i] = value;
-}
-
 /// Returns element _i_ of vector _x_.
 /// First need to retrieve hiopVectorPar from the abstract interface
 real_type VectorTestsPar::getLocalElement(const hiop::hiopVector* x, local_ordinal_type i)

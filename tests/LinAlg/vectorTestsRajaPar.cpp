@@ -63,17 +63,6 @@
 
 namespace hiop { namespace tests {
 
-/// Method to set vector _x_ element _i_ to _value_.
-/// First need to retrieve hiopVectorRajaPar from the abstract interface
-void VectorTestsRajaPar::setLocalElement(hiop::hiopVector* x, local_ordinal_type i, real_type value)
-{
-    hiop::hiopVectorRajaPar* xvec = dynamic_cast<hiop::hiopVectorRajaPar*>(x);
-    xvec->copyFromDev();
-    real_type* xdat = xvec->local_data_host();
-    xdat[i] = value;
-    xvec->copyToDev();
-}
-
 /// Returns element _i_ of vector _x_.
 /// First need to retrieve hiopVectorRajaPar from the abstract interface
 real_type VectorTestsRajaPar::getLocalElement(const hiop::hiopVector* x, local_ordinal_type i)

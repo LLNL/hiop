@@ -72,7 +72,6 @@ public:
   virtual ~VectorTestsPar(){}
 
 private:
-  virtual void setLocalElement(hiop::hiopVector* x, local_ordinal_type i, real_type value) override;
   virtual real_type getLocalElement(const hiop::hiopVector* x, local_ordinal_type i) override;
   virtual local_ordinal_type getLocalSize(const hiop::hiopVector* x) override;
   virtual real_type* getLocalData(hiop::hiopVector* x) override;
