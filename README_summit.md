@@ -49,12 +49,13 @@ Developers are usually required to perform a more comprehensive build
 rm -rf *
 CC=/sw/summit/gcc/9.2.0/bin/gcc CXX=/sw/summit/gcc/9.2.0/bin/g++ cmake -DHIOP_SPARSE=ON -DHIOP_USE_GPU=ON -HIOP_TEST_WITH_BSUB=ON -DHIOP_USE_MPI=ON -DMETIS_DIR=$INSTALL_DIR/Compiler/gcc-9.2.0/metis/5.1.0/ -DHIOP_COINHSL_DIR=/ccs/home/cpetra/work/installs/coinhsl-2015.06.23/_install -DCMAKE_BUILD_TYPE=DEBUG -DHIOP_TEST_WITH_BSUB=ON -DHIOP_USE_RAJA=ON -DHIOP_USE_UMPIRE=ON -DHIOP_USE_GPU=ON -DHIOP_DEEPCHECKS=ON .. 
 make -j
+```
 
 Depending on the LAPACK/BLAS CPU library loaded by the `module` command, runtime crashes can occur (intermintently for different problems/linear systems sizes) if the `nvblas.conf` cannot be find or is not specifying the so-called NVBLAS CPU BLAS library required by CUDA. This can be remedied by specifying the location of the BLAS library in `NVBLAS_CPU_BLAS_LIB` in the `nvblas.conf` file; for example, this can be done by adding the following lines to `nvblas.conf` file 
 ```
 NVBLAS_CPU_BLAS_LIB /gpfs/alpine/proj-shared/csc359/installs/ExaSGD/Compiler/gcc-9.2.0/openblas/0.3.10/lib/libopenblas.so
 ```
-Be aware that this assumes that the openblas has been `module load`ed
+Be aware that this assumes that the openblas has been `module load`ed.
 
 For non-standard locations of `nvblas.conf`, one can specify the path to `nvblas.conf` via the environment variable `NVBLAS_CONFIG_FILE`; for example, this can be achieved by exporting the variable in your submission `your_job_file.lsf` file:
 ```
