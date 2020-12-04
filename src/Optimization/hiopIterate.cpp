@@ -263,7 +263,7 @@ void hiopIterate::determineSlacks()
 
 void hiopIterate::determineDualsBounds_d(const double& mu)
 {
-#ifdef DEBUG
+#ifndef NDEBUG
   assert(true == sdl->allPositive_w_patternSelect(nlp->get_idl()));
   assert(true == sdu->allPositive_w_patternSelect(nlp->get_idu()));
 #endif

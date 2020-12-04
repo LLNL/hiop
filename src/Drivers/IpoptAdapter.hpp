@@ -572,7 +572,7 @@ public:
 	  nnzit++;
 	}
       }
-#ifdef DEBUG
+#ifndef NDEBUG
       //nnzit += nx_dense*nx_dense;
       assert(nnzit==nele_hess);
 #endif
@@ -607,7 +607,7 @@ public:
 	  nnzit++;
 	}
       }
-#ifdef DEBUG
+#ifndef NDEBUG
       //nnzit += nx_dense*nx_dense;
       assert(nnzit==nele_hess);
 #endif
@@ -960,7 +960,7 @@ public:
       if(!bret) return false;
       nnzit += m_nnz_sparse_Hess_Lagr;
 
-#ifdef DEBUG
+#ifndef NDEBUG
       //nnzit += nx_dense*nx_dense;
       assert(nnzit==nele_hess);
 #endif
@@ -975,7 +975,7 @@ public:
       if(!bret) return false;
       nnzit += m_nnz_sparse_Hess_Lagr;
 
-#ifdef DEBUG
+#ifndef NDEBUG
       //nnzit += nx_dense*nx_dense;
       assert(nnzit==nele_hess);
 #endif
