@@ -13,13 +13,27 @@ namespace hiop
 
 /**
  * @brief Sparse matrix of doubles in triplet format - it is not distributed
- * @note for now (i,j) are expected ordered: first on rows 'i' and then on cols 'j'
  *
  * Note: the following methods of hiopMatrix are NOT
  * implemented in this class:
  * - addSubDiagonal
  * - addUpperTriangleToSymDenseMatrixUpperTriangle
  * - startingAtAddSubDiagonalToStartingAt
+ *
+ *
+ * *Unless stated otherwise*, the methods of this class work under the assumption that 
+ * `this` and all their hiopMatrixSparseTriplet parameters satisfy the ordered indexes (OrdIdx)
+ * assumption below.
+ * 
+ * @pre **OrdIdx Assumption**: A hiopMatrixSparseTriplet object `M` satisfies the OrdIdx assumption if 
+ * the pair (`M.irow_, M.jcol_)` is  ordered in the following sense: 
+ *  - elements `M.irow_` are increasing
+ *  - elements `M.jcol_[it]` are strictly increasing for all `it` for which `irow_[it]` has 
+ * the same value.
+ * 
+ * TODO
+ *  - document which methods do not require OrdIdx assumption
+ *  - document which methods break OrdIdx
  */
 class hiopMatrixSparseTriplet : public hiopMatrixSparse
 {
@@ -31,7 +45,21 @@ public:
   virtual void setToConstant(double c);
   virtual void copyFrom(const hiopMatrixSparse& dm);
 
-  virtual void copyRowsFrom(const hiopMatrix& src, const long long* rows_idxs, long long n_rows);
+ /**
+ * The method copies from `src_gen` to `this` the rows specified by the array `rows_idxs`, which is
+ *  of size `n_rows`.
+ *
+ * @pre `src_src` is expected to be hiop::hiopMatrixSparseTriplet
+ * @pre `src_gen` should satisfy the OrdIdx assumption
+ * @pre `n_rows` is the same as `this->nrows`
+ * @pre The internal arrays `irow_`, `jcol_` and `values_` of `this` should be preallocated 
+ * to be able to hold exactly the submatrix of rows `row_idxs` of `src_gen`
+ * @pre `this->nnz_` should be on entry equal to the number of nonzero entries of the submatrix of 
+ * rows `row_idxs` of `src_gen`
+ *
+ * @post `this` satisfies OrdIdx assumption
+ */
+  virtual void copyRowsFrom(const hiopMatrix& src_gen, const long long* rows_idxs, long long n_rows);
 
   virtual void timesVec(double beta,  hiopVector& y,
 			double alpha, const hiopVector& x) const;
@@ -116,8 +144,7 @@ public:
 
   virtual void copyRowsBlockFrom(const hiopMatrix& src_gen,
                                          const long long& rows_src_idx_st, const long long& n_rows,
-                                         const long long& rows_dest_idx_st, const long long& dest_nnz_st
-                                         );
+                                         const long long& rows_dest_idx_st, const long long& dest_nnz_st);
 
   /**
   * @brief Copy matrix 'src_gen', into 'this' as a submatrix from corner 'dest_row_st' and 'dest_col_st'

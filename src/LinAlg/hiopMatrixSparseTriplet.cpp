@@ -426,6 +426,7 @@ hiopMatrixSparseTriplet::allocAndBuildRowStarts() const
   return rsi;
 }
 
+
 void hiopMatrixSparseTriplet::copyRowsFrom(const hiopMatrix& src_gen,
 					   const long long* rows_idxs,
 					   long long n_rows)
