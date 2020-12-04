@@ -925,13 +925,13 @@ void hiopMatrixSparseTriplet::convertToCSR(int &csr_nnz, int **csr_kRowPtr_in, i
   double *csr_kVal = *csr_kVal_in;
   int *csr_jCol = *csr_jCol_in;
 
-  int *index_covert_extra_Diag2CSR_temp = new int[n];
+  int *index_covert_extra_Diag2CSR_temp = new int[n]{};
   int *nnz_each_row_tmp = new int[n]{};
 
   // set correct col index and value
   {
-    *index_covert_CSR2Triplet_in = new int[csr_nnz];
-    *index_covert_extra_Diag2CSR_in = new int[n];
+    *index_covert_CSR2Triplet_in = new int[csr_nnz]{};
+    *index_covert_extra_Diag2CSR_in = new int[n]{};
 
     int *index_covert_CSR2Triplet = *index_covert_CSR2Triplet_in;
     int *index_covert_extra_Diag2CSR = *index_covert_extra_Diag2CSR_in;
