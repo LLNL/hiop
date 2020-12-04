@@ -75,8 +75,8 @@ namespace hiop
       //count nnz
       const double zero_tol = 1e-25;
       int nnz=0;
-      double** M = Msys.local_data();
-      for(int i=0; i<m; i++) for(int j=i; j<m; j++) if(fabs(M[i][j])>zero_tol) nnz++;
+      double* M = Msys.local_data();
+      for(int i=0; i<m; i++) for(int j=i; j<m; j++) if(fabs(M[i*m+j])>zero_tol) nnz++;
       
       //start writing -> indexes are starting at 1
       fprintf(f, "%d\n %d\n", m, nnz);
@@ -86,7 +86,7 @@ namespace hiop
       fprintf(f, "%d ", offset);
       for(int i=0; i<m; i++) {
 	for(int j=i; j<m; j++) 
-	  if(fabs(M[i][j])>zero_tol)
+	  if(fabs(M[i*m+j])>zero_tol)
 	    offset++;
 	
 	fprintf(f, "%d ", offset);
@@ -97,21 +97,84 @@ namespace hiop
       //array of the column indexes of nonzeros
       for(int i=0; i<m; i++) {
 	for(int j=i; j<m; j++) 
-	  if(fabs(M[i][j])>zero_tol)
-	    fprintf(f, "%d ", j);
+	  if(fabs(M[i*m+j])>zero_tol)
+	    fprintf(f, "%d ", j+1);
     }
       fprintf(f, "\n");
       
       //array of nonzero entries of the matrix
       for(int i=0; i<m; i++) {
 	for(int j=i; j<m; j++) 
-	  if(fabs(M[i][j])>zero_tol)
-	    fprintf(f, "%.20f ", M[i][j]);
+	  if(fabs(M[i*m+j])>zero_tol)
+	    fprintf(f, "%.20f ", M[i*m+j]);
       }
       fprintf(f, "\n");
       
       fclose(f);
     }
+  
+    //write a sparse triplet matrix in the iajaaa format; zero elements are not written
+    //counter specifies the suffix in the filename, essentially is the iteration #
+    void writeMatToFile(hiopMatrixSparseTriplet& Msys, const int& counter)
+    {
+#ifdef HIOP_USE_MPI
+      if(_master_rank>=0 && _master_rank != _nlp->get_rank()) return;
+#endif
+      last_counter = counter;
+      m = Msys.m();
+
+      std::string fname = "kkt_linsys_"; 
+      fname += std::to_string(counter); 
+      fname += ".iajaaa";
+      FILE* f = fopen(fname.c_str(), "w+");
+      if(NULL==f) {
+        _nlp->log->printf(hovError, "Could not open '%s' for writing the linsys.\n", fname.c_str());
+        return;
+      }
+      
+      //count nnz
+      int nnz=Msys.numberOfNonzeros();
+      
+      int csr_nnz;
+      int *csr_kRowPtr{nullptr}, *csr_jCol{nullptr}, *index_covert_CSR2Triplet{nullptr}, *index_covert_extra_Diag2CSR{nullptr};
+      double *csr_kVal{nullptr};
+      std::unordered_map<int,int> extra_diag_nnz_map;
+      
+      Msys.convertToCSR(csr_nnz, &csr_kRowPtr, &csr_jCol, &csr_kVal, &index_covert_CSR2Triplet, &index_covert_extra_Diag2CSR, extra_diag_nnz_map);
+      
+      if(index_covert_CSR2Triplet) delete [] index_covert_CSR2Triplet; index_covert_CSR2Triplet = nullptr;
+      if(index_covert_extra_Diag2CSR) delete [] index_covert_extra_Diag2CSR; index_covert_extra_Diag2CSR = nullptr;
+      
+      //start writing -> indexes are starting at 1
+      fprintf(f, "%d\n%d\n", m, csr_nnz);      
+      
+      //array of pointers/offsets in of the first nonzero of each row; first entry is 1 and the last entry is nnz+1
+      for(int i=0; i<m+1; i++) {	
+        fprintf(f, "%d ", csr_kRowPtr[i]+1);
+      }
+      assert(csr_kRowPtr[m] == csr_nnz);
+      fprintf(f, "\n");
+      
+      //array of the column indexes of nonzeros
+      for(int i=0; i<csr_nnz; i++) {
+        fprintf(f, "%d ", csr_jCol[i]+1);
+      }
+      fprintf(f, "\n");
+      
+      //array of nonzero entries of the matrix
+      for(int i=0; i<csr_nnz; i++) {
+        fprintf(f, "%.20f ", csr_kVal[i]);
+      }
+      fprintf(f, "\n");
+      
+      fclose(f);
+      
+      if(csr_kRowPtr) delete [] csr_kRowPtr; csr_kRowPtr = nullptr;
+      if(csr_jCol) delete [] csr_jCol; csr_jCol = nullptr;
+      if(csr_kVal) delete [] csr_kVal; csr_kVal = nullptr;
+      
+    }
+  
   private:
     FILE* _f;
     hiopNlpFormulation* _nlp;

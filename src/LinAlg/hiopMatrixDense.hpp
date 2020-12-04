@@ -214,12 +214,9 @@ public:
   virtual long long get_local_size_m() const {assert(false && "not implemented in base class"); return -1;}
   virtual MPI_Comm get_mpi_comm() const { return comm_; }
 
-  //TODO: this is not kosher!
-  virtual double** local_data() const {assert(false && "not implemented in base class"); return nullptr;}
-  virtual double*  local_buffer() const {assert(false && "not implemented in base class"); return nullptr;}
-  //do not use this unless you sure you know what you're doing
-  virtual double** get_M(){assert(false && "not implemented in base class"); return nullptr;}
-
+  virtual double* local_data_const() const {assert(false && "not implemented in base class"); return nullptr;}
+  virtual double* local_data() {assert(false && "not implemented in base class"); return nullptr;}
+public:
   virtual long long m() const {return m_local_;}
   virtual long long n() const {return n_global_;}
 #ifdef HIOP_DEEPCHECKS

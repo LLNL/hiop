@@ -55,13 +55,23 @@ virtual void addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start, doubl
 ```
 
 ## Sparse matrices 
-Triplet format is momentarily used for sparse matrices. 
+Triplet format is momentarily used for sparse matrices. The index arrays `i` and `j` used to store sparse matrices in triplet format need to be kept sorted by the following comparison rules: 
+ - row indexes `i` in increasing order
+ - column indexes `j` for the same row index `i` in strictly increasing order.
+ 
+ Please remark that this does not allow duplicated entries. In a couple of places, HiOp may internally relax this requirement; however, this is  documented at the method level; otherwise, the precondition of sorted (i,j) entries holds for all other methods related to sparse matrices.
+ 
+HiOp offers support for converting sparse triplet format to  compressed sparse row (CSR) format, which, for example, is used with STRUMPACK linear solver. It is worth mentioning that HiOp will also sort the arrays used by the CSR format based on the same rule, which seems to increase robustness with the third party linear solvers that require the CSR format.
 
 ### *Symmetric* sparse matrices 
 Only upper triangular nonzero entries should be specified, accessed, and maintained.
+The Hessian and the symmetric KKT systems are implemented as symmetric matrices. Users only need to provide the upper triangle nonzero entries to Hessian.
+For the symmetric KKT linearizations, some linear algebra package, e.g., MA57 from HSL, can read entries from both the upper and lower triangular part, however, only one from the entries (i,j) and (j,i) is required to be passed to HSL solvers.
+Developers should be remark that the internal sorting rules for sparse matrices in triplet format enable efficient copying of the constraint Jacobian and Lagrangian Hessian in the KKT linear system matrix.
+
 
 ## Obtaining matrices from HiOp
 
-One can instruct HiOp to save the KKT linear systems solved internally during the optimization by setting 'write_kkt' string option to 'yes'. Which linear system is saved depends on the configuration of HiOp's internal linear algebra via the option 'KKTLinsys' (possible values 'xycyd' and 'xdycyd').
+One can instruct HiOp to save the KKT linear systems solved internally during the optimization by setting 'write_kkt' string option to 'yes'. Which linear system is saved depends on the configuration of HiOp's internal linear algebra via the option 'KKTLinsys' (possible values 'xycyd', 'xdycyd' and 'full').
 
 The output format is based on compressed sparse row (CSR) described [here](csr_iajaaa.md). A Matlab script that loads and solves such linear systems is provided [here](load_kkt_mat.m).

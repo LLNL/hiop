@@ -78,7 +78,8 @@ public:
   virtual long long n_post()=0;
   virtual long long n_post_local()=0;
   /* number of vars in the NLP to which the transformation is to be applied */
-  virtual long long n_pre ()=0;
+  virtual long long n_pre()=0;
+  virtual long long n_pre_local()=0;
 
   /* transforms variable vector */
   virtual inline hiopVector* applyTox(hiopVector& x, const bool& new_x) { return &x; };
@@ -106,13 +107,13 @@ public:
   virtual inline double* applyInvToCons(double* cons_in, const int* m_in) { return cons_in; }
 
   //! todo -> abstractize the below methods to work with other Jacobian types: sparse and MDS
-  virtual inline double** applyToJacobEq      (double** Jac_in, const int& m_in) { return Jac_in; }
-  virtual inline double** applyInvToJacobEq   (double** Jac_in, const int& m_in) { return Jac_in; }
-  virtual inline double** applyToJacobIneq    (double** Jac_in, const int& m_in) { return Jac_in; }
-  virtual inline double** applyInvToJacobIneq (double** Jac_in, const int& m_in) { return Jac_in; }
-  virtual inline double** applyToJacobCons    (double** Jac_in, const int& m_in) { return Jac_in; }
+  virtual inline double* applyToJacobEq      (double* Jac_in, const int& m_in) { return Jac_in; }
+  virtual inline double* applyInvToJacobEq   (double* Jac_in, const int& m_in) { return Jac_in; }
+  virtual inline double* applyToJacobIneq    (double* Jac_in, const int& m_in) { return Jac_in; }
+  virtual inline double* applyInvToJacobIneq (double* Jac_in, const int& m_in) { return Jac_in; }
+  virtual inline double* applyToJacobCons    (double* Jac_in, const int& m_in) { return Jac_in; }
   //the following two are for when the underlying NLP formulation works with full body constraints
-  virtual inline double** applyInvToJacobCons (double** Jac_in, const int& m_in) { return Jac_in; }
+  virtual inline double* applyInvToJacobCons (double* Jac_in, const int& m_in) { return Jac_in; }
 
   //! todo -> transformations for Hessian ?!?
 public:
@@ -150,6 +151,7 @@ public:
   virtual inline long long n_pre () { return rs_n(); }
 
   virtual inline long long n_post_local() { return fs_n_local(); }
+  virtual inline long long n_pre_local() { return rs_n_local(); }
 
   /* from reduced space to full space */
   inline hiopVector* applyTox(hiopVector& x, const bool& new_x) 
@@ -192,27 +194,29 @@ public:
     return grad_rs_ref;
   }
   /* from rs to fs */
-  inline double** applyToJacobEq(double** Jac_in, const int& m_in)
+  inline double* applyToJacobEq(double* Jac_in, const int& m_in)
   {
     Jacc_rs_ref = Jac_in;
     assert(Jacc_fs->m()==m_in);
-    applyToMatrix(Jac_in, m_in, Jacc_fs->get_M());
-    return Jacc_fs->get_M();
+    //applyToMatrix(Jac_in, m_in, Jacc_fs->get_M());
+    applyToMatrix(Jac_in, m_in, Jacc_fs->local_data());
+    return Jacc_fs->local_data();
   }
-  inline double** applyInvToJacobEq(double** Jac_in, const int& m_in)
+  inline double* applyInvToJacobEq(double* Jac_in, const int& m_in)
   {
     assert(Jacc_fs->m()==m_in);
     applyInvToMatrix(Jac_in, m_in, Jacc_rs_ref);
     return Jacc_rs_ref;
   }
-  inline double** applyToJacobIneq(double** Jac_in, const int& m_in)
+  inline double* applyToJacobIneq(double* Jac_in, const int& m_in)
   {
     Jacd_rs_ref = Jac_in;
     assert(Jacd_fs->m()==m_in);
-    applyToMatrix(Jac_in, m_in, Jacd_fs->get_M());
-    return Jacd_fs->get_M();
+    //applyToMatrix(Jac_in, m_in, Jacd_fs->get_M());
+    applyToMatrix(Jac_in, m_in, Jacd_fs->local_data());
+    return Jacd_fs->local_data();
   }
-  inline double** applyInvToJacobIneq(double** Jac_in, const int& m_in)
+  inline double* applyInvToJacobIneq(double* Jac_in, const int& m_in)
   {
     assert(Jacd_fs->m()==m_in);
     applyInvToMatrix(Jac_in, m_in, Jacd_rs_ref);
@@ -230,19 +234,20 @@ public:
   long long* allocRSVectorDistrib();
   inline void setMPIComm(const MPI_Comm& commIn) { comm = commIn; }
 #endif
-  /* "copies" a full space vector tp a reduced space vector */
+  /* "copies" a full space vector to a reduced space vector */
   void copyFsToRs(const hiopVector& fsVec,  hiopVector& rsVec);
   void copyFsToRs(const hiopInterfaceBase::NonlinearityType* fs, hiopInterfaceBase::NonlinearityType* rs);
   
   inline long long fs_n() const { return n_fs;}
   inline long long rs_n() const { return n_rs;}
-  inline long long fs_n_local() const { assert(xl_fs); return xl_fs->get_local_size();}
+  inline long long fs_n_local() const { assert(xl_fs); return xl_fs->get_local_size(); }
+  inline long long rs_n_local() const { assert(xl_fs); return fs_n_local()-n_fixed_vars_local;}
 protected: 
   void applyToArray   (const double* vec_rs, double* vec_fs);
   void applyInvToArray(const double* vec_fs, double* vec_rs);
 
-  void applyToMatrix   (const double*const* M_rs, const int& m_in, double** M_fs);
-  void applyInvToMatrix(const double*const* M_fs, const int& m_in, double** M_rs);
+  void applyToMatrix   (const double* M_rs, const int& m_in, double* M_fs);
+  void applyInvToMatrix(const double* M_fs, const int& m_in, double* M_rs);
 protected:
   long long n_fixed_vars_local;
   long long n_fixed_vars;
@@ -265,7 +270,7 @@ protected:
   //references to reduced-space buffers - returned in applyInvXXX
   hiopVector* x_rs_ref_;
   double* grad_rs_ref;
-  double **Jacc_rs_ref, **Jacd_rs_ref;
+  double *Jacc_rs_ref, *Jacd_rs_ref;
 #ifdef HIOP_USE_MPI
   std::vector<long long> fs_vec_distrib;
   MPI_Comm comm;
@@ -288,6 +293,7 @@ public:
   virtual long long n_pre () { /*assert(xl_copy);*/ return n_vars; } //xl_copy->get_size(); }
 
   inline long long n_post_local()  { return n_vars_local; } //xl_copy->get_local_size(); }
+  inline long long n_pre_local()  { return n_vars_local; } //xl_copy->get_local_size(); }
 
   inline bool setup() { return true; }
 
@@ -366,7 +372,22 @@ public:
       return list_trans_.front()->n_pre(); 
     }
   }
-
+  /* number of local vars in the NLP to which the tranformation is to be applied */
+  inline virtual long long n_pre_local() 
+  { 
+#ifdef HIOP_DEEPCHECKS
+    assert(n_vars_usernlp>0);
+#endif 
+    if(list_trans_.empty()) {
+      return n_vars_local_usernlp;
+    } else {
+#ifdef HIOP_DEEPCHECKS
+      assert(n_vars_usernlp==list_trans_.back()->n_post());
+#endif
+      return list_trans_.front()->n_pre_local(); 
+    }
+  }
+  
   hiopVector* applyTox(hiopVector& x, const bool& new_x) 
   {
     hiopVector* ret = &x;
@@ -404,33 +425,33 @@ public:
     return ret;
   }
 
-  double** applyToJacobEq(double** Jac_in, const int& m_in)
+  double* applyToJacobEq(double* Jac_in, const int& m_in)
   {
-    double** ret = Jac_in;
+    double* ret = Jac_in;
     for(std::list<hiopNlpTransformation*>::iterator it=list_trans_.begin(); it!=list_trans_.end(); ++it)
       ret = (*it)->applyToJacobEq(ret, m_in);
     return ret;
   }
 
-  double** applyInvToJacobEq(double** Jac_in, const int& m_in)
+  double* applyInvToJacobEq(double* Jac_in, const int& m_in)
   {
-    double** ret = Jac_in;
+    double* ret = Jac_in;
     for(std::list<hiopNlpTransformation*>::reverse_iterator it=list_trans_.rbegin(); it!=list_trans_.rend(); ++it)
       ret = (*it)->applyInvToJacobEq(ret, m_in);
     return ret;
   }
 
-  double** applyToJacobIneq(double** Jac_in, const int& m_in)
+  double* applyToJacobIneq(double* Jac_in, const int& m_in)
   {
-    double** ret = Jac_in;
+    double* ret = Jac_in;
     for(std::list<hiopNlpTransformation*>::iterator it=list_trans_.begin(); it!=list_trans_.end(); ++it)
       ret = (*it)->applyToJacobIneq(ret, m_in);
     return ret;
   }
 
-  double** applyInvToJacobIneq(double** Jac_in, const int& m_in)
+  double* applyInvToJacobIneq(double* Jac_in, const int& m_in)
   {
-    double** ret = Jac_in;
+    double* ret = Jac_in;
     for(std::list<hiopNlpTransformation*>::reverse_iterator it=list_trans_.rbegin(); it!=list_trans_.rend(); ++it)
       ret = (*it)->applyInvToJacobIneq(ret, m_in);
     return ret;

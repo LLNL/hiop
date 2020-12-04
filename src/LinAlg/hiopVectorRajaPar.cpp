@@ -415,6 +415,36 @@ void hiopVectorRajaPar::copyToStarting(hiopVector& vec, int start_index/*_in_des
   rm.copy(v.data_dev_ + start_index, this->data_dev_, this->n_local_*sizeof(double));
 }
 
+void hiopVectorRajaPar::copyToStartingAt_w_pattern(hiopVector& vec, int start_index/*_in_dest*/, const hiopVector& select)
+{
+#if 0  
+  if(n_local_ == 0)
+    return;
+ 
+  hiopVectorRajaPar& v = dynamic_cast<hiopVectorRajaPar&>(vec);
+  const hiopVectorRajaPar& ix= dynamic_cast<const hiopVectorRajaPar&>(select);
+  assert(n_local_ == ix.n_local_);
+  
+  int find_nnz = 0;
+  double* dd = data_dev_;
+  double* vd = v.data_dev_;
+  double* id = ix.data_dev_;
+  
+  RAJA::ReduceSum< hiop_raja_reduce, double > sum(zero);
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
+    [&](RAJA::Index_type i)
+    {
+      assert(id[i] == zero || id[i] == one);
+      if(id[i] == one){
+        vd[start_index+find_nnz] = dd[i];
+        find_nnz++;
+      }
+    });
+#else
+  assert(false && "not needed / implemented");
+#endif    
+}
+
 /**
  * @brief Copy elements of `this` vector to `destination` with offsets.
  * 
@@ -470,7 +500,47 @@ void hiopVectorRajaPar::startingAtCopyToStartingAt(
   rm.copy(dest.data_dev_ + start_idx_dest, this->data_dev_ + start_idx_in_src, num_elems*sizeof(double));
 }
 
-/**
+void hiopVectorRajaPar::
+startingAtCopyToStartingAt_w_pattern(int start_idx_in_src, hiopVector& destination, int start_idx_dest, const hiopVector& selec_dest, int num_elems/*=-1*/) const
+{
+#if 0  
+  hiopVectorRajaPar& dest = dynamic_cast<hiopVectorRajaPar&>(destination);
+  const hiopVectorRajaPar& ix = dynamic_cast<const hiopVectorRajaPar&>(selec_dest);
+    
+  assert(start_idx_in_src >= 0 && start_idx_in_src <= this->n_local_);
+  assert(start_idx_dest   >= 0 && start_idx_dest   <= dest.n_local_);
+    
+  if(num_elems<0)
+  {
+    num_elems = std::min(this->n_local_ - start_idx_in_src, dest.n_local_ - start_idx_dest);
+  }
+  else
+  {
+    assert(num_elems+start_idx_in_src <= this->n_local_);
+    assert(num_elems+start_idx_dest   <= dest.n_local_);
+    //make sure everything stays within bounds (in release)
+    num_elems = std::min(num_elems, (int)this->n_local_-start_idx_in_src);
+    num_elems = std::min(num_elems, (int)dest.n_local_-start_idx_dest);
+  }
+      
+  int find_nnz = 0;
+  double* dd = data_dev_;
+  double* vd = dest.data_dev_;
+  double* id = ix.data_dev_;
+
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
+    [&](RAJA::Index_type i)
+    {
+      assert(id[i] == zero || id[i] == one);
+      if(id[i] == one && find_nnz<num_elems)
+        vd[start_idx_dest+find_nnz] = dd[ start_idx_in_src + (find_nnz++)];
+    });
+#else
+  assert(false && "not needed / implemented");
+#endif
+}
+ 
+ /**
  * @brief Copy `this` vector local data to `dest` buffer.
  * 
  * @param[out] dest - destination buffer where to copy vector data
@@ -877,7 +947,7 @@ void hiopVectorRajaPar::negate()
  */
 void hiopVectorRajaPar::invert()
 {
-#ifndef NDEBUG
+#ifdef HIOP_DEEPCHECKS
   const double small_real = 1e-35;
 #endif
   double *data = data_dev_;
@@ -1445,6 +1515,51 @@ void hiopVectorRajaPar::copyFromDev() const
   double* data_host = const_cast<double*>(data_host_);
   resmgr.copy(data_host, data_dev_);
 }
+
+long long hiopVectorRajaPar::numOfElemsLessThan(const double &val) const
+{  
+  double* data = data_dev_;
+  RAJA::ReduceSum<hiop_raja_reduce, long long> sum(0);
+  RAJA::forall<hiop_raja_exec>( RAJA::RangeSegment(0, n_local_),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      sum += (data[i]<val);
+    });
+
+  long long nrm = sum.get();
+
+#ifdef HIOP_USE_MPI
+  long long nrm_global;
+  int ierr = MPI_Allreduce(&nrm, &nrm_global, 1, MPI_LONG_LONG, MPI_SUM, comm_);
+  assert(MPI_SUCCESS == ierr);
+  nrm = nrm_global;
+#endif
+
+  return nrm;
+}
+
+long long hiopVectorRajaPar::numOfElemsAbsLessThan(const double &val) const
+{  
+  double* data = data_dev_;
+  RAJA::ReduceSum<hiop_raja_reduce, long long> sum(0);
+  RAJA::forall<hiop_raja_exec>( RAJA::RangeSegment(0, n_local_),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      sum += (fabs(data[i])<val);
+    });
+
+  long long nrm = sum.get();
+
+#ifdef HIOP_USE_MPI
+  long long nrm_global;
+  int ierr = MPI_Allreduce(&nrm, &nrm_global, 1, MPI_LONG_LONG, MPI_SUM, comm_);
+  assert(MPI_SUCCESS == ierr);
+  nrm = nrm_global;
+#endif
+
+  return nrm;
+}
+ 
 
 
 } // namespace hiop

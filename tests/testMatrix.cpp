@@ -165,6 +165,7 @@ int main(int argc, char** argv)
     if(rank == 0)
     {
       // These functions are only meant to be called locally
+
       fail += test.matrixTimesMat(A_mxk_nodist, A_kxn_nodist, A_mxn_nodist);
       fail += test.matrixAddDiagonal(A_nxn_nodist, x_n_nodist);
       fail += test.matrixAddSubDiagonal(A_nxn_nodist, x_m_nodist);

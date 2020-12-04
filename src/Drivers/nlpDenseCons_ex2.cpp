@@ -143,9 +143,12 @@ bool Ex2::eval_cons(const long long& n, const long long& m,
   
   return true;
 }
+
+
+
 bool Ex2::eval_Jac_cons(const long long& n, const long long& m,
 			const long long& num_cons, const long long* idx_cons,  
-			const double* x, bool new_x, double** Jac) 
+			const double* x, bool new_x, double* Jac) 
 {
   assert(n==n_vars); assert(m==n_cons); 
   long long n_local=col_partition[my_rank+1]-col_partition[my_rank];
@@ -156,38 +159,49 @@ bool Ex2::eval_Jac_cons(const long long& n, const long long& m,
   
   
   for(int itcon=0; itcon<num_cons; itcon++) {
+
+    assert(itcon*n_local+n_local <= n_local*num_cons);
+    
     //Jacobian of constraint 1 is all ones
     if(idx_cons[itcon]==0) {
-      for(i=0; i<n_local; i++) Jac[itcon][i]=1.0;
+      for(i=0; i<n_local; i++) Jac[itcon*n_local+i] = 1.0; //!Jac[itcon][i]=1.0;
       continue;
     }
     
     //Jacobian of constraint 2 is all ones except the first entry, which is 2
     if(idx_cons[itcon]==1) {
-      for(i=1; i<n_local; i++) Jac[itcon][i]=1.0;
+      for(i=1; i<n_local; i++) Jac[itcon*n_local+i] = 1.0; //!Jac[itcon][i]=1.0;
       //this is an overkill, but finding it useful for educational purposes
       //is local index 0 the global index 0 (x_1)? If yes the Jac should be 2.0
-      Jac[itcon][0] = idx_local2global(n,0)==0?2.:1.;
+
+      //!Jac[itcon][0] = idx_local2global(n,0)==0?2.:1.;
+      Jac[itcon*n_local+0] = idx_local2global(n,0)==0?2.:1.;
       continue;
     }
     
     //Jacobian of constraint 3
-    if(idx_cons[itcon]==2) {
-      for(i=2; i<n_local; i++) Jac[itcon][i]=1.0;
-      Jac[itcon][0] = idx_local2global(n,0)==0?2.:1.;
-      Jac[itcon][1] = idx_local2global(n,1)==1?0.5:1.;
+    if(idx_cons[itcon]==2) {      
+      for(i=2; i<n_local; i++) Jac[itcon*n_local+i] = 1.0; //!Jac[itcon][i]=1.0;
+      //!Jac[itcon][0] = idx_local2global(n,0)==0?2.:1.;
+      Jac[itcon*n_local+0] = idx_local2global(n,0)==0?2.:1.;
+      //!Jac[itcon][1] = idx_local2global(n,1)==1?0.5:1.;
+      Jac[itcon*n_local+1] = idx_local2global(n,1)==1?0.5:1.;
       continue;
     }
     
     //Jacobian of constraint  4
     if(idx_cons[itcon]==3) {
-      for(i=2; i<n_local; i++) Jac[itcon][i]=1.0;
-      Jac[itcon][0] = idx_local2global(n,0)==0?4.:1.; 
-      Jac[itcon][1] = idx_local2global(n,1)==1?2.:1.;
-      Jac[itcon][2] = idx_local2global(n,2)==2?2.:1.;  
+      for(i=2; i<n_local; i++) Jac[itcon*n_local+i] = 1.0; //!Jac[itcon][i]=1.0;
+      //!Jac[itcon][0] = idx_local2global(n,0)==0?4.:1.;
+      Jac[itcon*n_local+0] = idx_local2global(n,0)==0?4.:1.; 
+      //!Jac[itcon][1] = idx_local2global(n,1)==1?2.:1.;
+      Jac[itcon*n_local+1] = idx_local2global(n,1)==1?2.:1.;
+      //!Jac[itcon][2] = idx_local2global(n,2)==2?2.:1.;
+      Jac[itcon*n_local+2] = idx_local2global(n,2)==2?2.:1.;
     }
   }
   return true;
+
 }
 
 bool Ex2::get_vecdistrib_info(long long global_n, long long* cols)

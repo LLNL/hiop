@@ -72,8 +72,8 @@ void MatrixTestsRajaDense::setLocalElement(
   if(amat != nullptr)
   {
     amat->copyFromDev();
-    real_type** data = amat->get_M_host();
-    data[i][j] = val;
+    real_type* data = amat->local_data_host(); 
+    data[i*amat->get_local_size_n() + j] = val;
     amat->copyToDev();
   }
   else THROW_NULL_DEREF;
@@ -104,10 +104,10 @@ void MatrixTestsRajaDense::setLocalRow(
   hiop::hiopMatrixRajaDense* A = dynamic_cast<hiop::hiopMatrixRajaDense*>(Amat);
   const local_ordinal_type N = getNumLocCols(A);
   A->copyFromDev();
-  real_type** local_data = A->local_data_host();
+  real_type* local_data = A->local_data_host();
   for (int j=0; j<N; j++)
   {
-    local_data[row][j] =  val;
+    local_data[row*N+j] =  val;
   }
   A->copyToDev();
 }
@@ -124,7 +124,7 @@ real_type MatrixTestsRajaDense::getLocalElement(
   if(amat != nullptr)
   {
     amat->copyFromDev();
-    return amat->local_data_host()[i][j];
+    return amat->local_data_host()[i*amat->get_local_size_n() + j];
   }
   else THROW_NULL_DEREF;
 }
@@ -190,7 +190,7 @@ real_type* MatrixTestsRajaDense::getLocalData(hiop::hiopMatrixDense* A)
   hiop::hiopMatrixRajaDense* amat = dynamic_cast<hiop::hiopMatrixRajaDense*>(A);
   if(amat != nullptr)
   {
-    return amat->local_buffer();
+    return amat->local_data();
   }
   else THROW_NULL_DEREF;
 }
@@ -220,16 +220,16 @@ int MatrixTestsRajaDense::verifyAnswer(hiop::hiopMatrixDense* Amat, const double
   // Copy data to the host mirror
   A->copyFromDev();
   // Get array of pointers to dense matrix rows
-  double** local_matrix_data = A->local_data_host();
+  double* local_matrix_data = A->local_data_host();
 
   int fail = 0;
   for (local_ordinal_type i=0; i<M; i++)
   {
     for (local_ordinal_type j=0; j<N; j++)
     {
-      if (!isEqual(local_matrix_data[i][j], answer))
+      if (!isEqual(local_matrix_data[i*N+j], answer))
       {
-        std::cout << i << " " << j << " = " << local_matrix_data[i][j] << " != " << answer << "\n";
+        std::cout << i << " " << j << " = " << local_matrix_data[i*N+j] << " != " << answer << "\n";
         fail++;
       }
     }
@@ -255,16 +255,16 @@ int MatrixTestsRajaDense::verifyAnswer(
   // Copy data to the host mirror
   A->copyFromDev();
   // Get array of pointers to dense matrix rows
-  double** local_matrix_data = A->local_data_host();
+  double* local_matrix_data = A->local_data_host();
   
   int fail = 0;
   for (local_ordinal_type i=0; i<M; i++)
   {
     for (local_ordinal_type j=0; j<N; j++)
     {
-      if (!isEqual(local_matrix_data[i][j], expect(i, j)))
+      if (!isEqual(local_matrix_data[i*N+j], expect(i, j)))
       {
-        std::cout << i << ", " << j << ": = " << local_matrix_data[i][j] << " != " << expect(i, j) << "\n";
+        std::cout << i << ", " << j << ": = " << local_matrix_data[i*N+j] << " != " << expect(i, j) << "\n";
         fail++;
       }
     }

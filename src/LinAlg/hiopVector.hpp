@@ -92,13 +92,17 @@ public:
   virtual void copyToStarting(int start_index_in_src, hiopVector& v) = 0;
   /// @brief Copy 'this' to v starting at start_index in 'v'.
   virtual void copyToStarting(hiopVector& v, int start_index_in_dest) = 0;
-
+  /// @brief Copy the entries in 'this' where corresponding 'ix' is nonzero, to v starting at start_index in 'v'.
+  virtual void copyToStartingAt_w_pattern(hiopVector& v, int start_index_in_dest, const hiopVector& ix) = 0;
+  
   /**
    * copy 'this' (source) starting at 'start_idx_in_src' to 'dest' starting at index 'int start_idx_dest' 
    * If num_elems>=0, 'num_elems' will be copied; if num_elems<0, elements will be copied till the end of
    * either source ('this') or destination ('dest') is reached
+   * if 'selec_dest' is given, the values are copy to 'dest' where the corresponding entry in 'selec_dest' is nonzero
    */
   virtual void startingAtCopyToStartingAt(int start_idx_in_src, hiopVector& dest, int start_idx_dest, int num_elems=-1) const = 0;
+  virtual void startingAtCopyToStartingAt_w_pattern(int start_idx_in_src, hiopVector& dest, int start_idx_dest, const hiopVector& selec_dest, int num_elems=-1) const = 0;
 
   /** @brief Return the two norm */
   virtual double twonorm() const = 0;
@@ -205,6 +209,11 @@ public:
   virtual void copyFromDev() = 0;
   virtual void copyToDev() const = 0;
   virtual void copyFromDev() const = 0;
+  
+  /// @brief get number of values that are less than the given value 'val'
+  virtual long long numOfElemsLessThan(const double &val) const = 0;
+  /// @brief get number of values whose absolute value are less than the given value 'val'
+  virtual long long numOfElemsAbsLessThan(const double &val) const = 0;  
 
 protected:
   long long n_; //we assume sequential data

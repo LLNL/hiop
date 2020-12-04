@@ -1,3 +1,4 @@
 # Ignore files that are generated from the repository sources
 build
+src/Drivers/ipopt.opt
 _dist-default-build

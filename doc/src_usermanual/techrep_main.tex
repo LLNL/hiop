@@ -290,7 +290,7 @@ Starting version 0.3, \Hi offers support for offloading computations to NVIDIA G
 \warningcp{Note: } Installing NVIDIA CUDA (and likely the NVIDIA driver) and/or building Magma can be quite challenging. The user is encouraged to rely on preinstalled versions of these, as they are available via \texttt{module} utility on virtually all high-performance computing machines. An example of how to satisfy all the GPU dependencies on Summit supercomputer at Oak Ridge National Lab with a one commands are available at \url{https://github.com/LLNL/hiop/blob/master/README_summit.md}.
 
 \section{Interfacing with \Hi}
-Once \Hi is built, it can be used as the optimization solver in your application through the \Hi's C++ interfaces and by linking with the static library. A shared dynamic load library can be also built using \texttt{HIOP\_BUILD\_SHARED} option with cmake. There are types or formulations of optimization supported currently by \Hi, which are described below. 
+Once \Hi is built, it can be used as the optimization solver in your application through the \Hi's C++ interfaces and by linking with the static library. A shared dynamic load library can be also built using \texttt{HIOP\_BUILD\_SHARED} option with cmake. There are three types of nonlinear optimization or NLP formulations currently supported by \Hi. They are described and discussed by the subsequent sections.
 
 \subsection{The NLP with \textit{dense} constraints formulation requiring \textit{up to first-order} derivative information}
 A first class of problems supported by \Hi consists of nonlinear nonconvex NLP with \textit{dense} constraints of the form
@@ -443,6 +443,18 @@ int getNumIterations() const;
 \end{lstlisting} 
 The standalone drivers \texttt{nlpDenseCons\_ex1}, \texttt{nlpDenseCons\_ex2}, and \texttt{nlpDenseCons\_ex3} inside directory \texttt{src/Drivers/} under the \Hi's root directory contain more detailed examples of the use of \Hi.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% NLP Sparse
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{nlpsparse}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% NLP MDS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{NLPs in the mixed dense-sparse (MDS) form}\label{sec:mds}
 A second class of optimization problems supported by \Hi consists of nonlinear, possibly nonconvex optimization problems that explicitly partition the optimization variables into so-called ``dense'' and ``sparse`` variables, $x_d$ and $x_s$, respectively; this problem can be  expressed compactly as
 \begin{align}
@@ -561,8 +573,8 @@ bool eval_grad_f(const long long& n,
 \begin{lstlisting} 
  bool eval_cons(const long long& n, const long long& m, 
                 const long long& num_cons,
-				    const long long* idx_cons, const double* x, 
-			       bool new_x, double* cons);
+		const long long* idx_cons, const double* x, 
+		bool new_x, double* cons);
 \end{lstlisting} 
 
 \noindent Implement this method to provide the value of the constraints $c(x)$ and/or $d(x)$. The input parameter \texttt{num\_cons} specifies how many constraints (out of \texttt{m}) needs to evaluated; \texttt{idx\_cons} array specifies the indexes, which are zero-based, of the constraints  and is of size \texttt{num\_cons}. These values should be provided in \texttt{cons}, which is also an array of size \texttt{num\_cons}.
@@ -767,7 +779,7 @@ In addition, a shared dynamic load library can be also built by using \texttt{HI
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \section{Solver options}
-\Hi v0.1 prints all the available user options and their values on the standard output. 
+\Hi  prints all the available user options and their values on the standard output. 
 
 \warningcp{} Each option i. should be of one of types numeric/double, integer, and string; ii. has a value associated; iii. possess a range of values;  and, iv. has a default value. 
 

@@ -22,7 +22,6 @@ for ii=2:m+1
         rowidx(jj) = ii-1;
     end
 end
-colidx = colidx + 1; % increase column indexes by one
 
 %% form the matrix and fill lower triangle
 M = sparse(rowidx, colidx, vals, m, m);

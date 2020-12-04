@@ -197,6 +197,7 @@ public:
     {
       setLocalElement(&A, i, index_to_zero, zero);
     }
+
     A.transTimesVec(beta, y, alpha, x);
 
     fail += verifyAnswer(&y,

@@ -218,7 +218,7 @@ public:
   {
     return mSp->M();
   }
-  inline double** de_local_data() { return mDe->local_data(); }
+  inline double* de_local_data() { return mDe->local_data(); }
 
 #ifdef HIOP_DEEPCHECKS
   virtual bool assertSymmetry(double tol=1e-16) const { return false; }
@@ -420,7 +420,7 @@ public:
   inline int* sp_irow() { return mSp->i_row(); }
   inline int* sp_jcol() { return mSp->j_col(); }
   inline double* sp_M() { return mSp->M(); }
-  inline double** de_local_data() { return mDe->local_data(); }
+  inline double* de_local_data() { return mDe->local_data(); }
 
 #ifdef HIOP_DEEPCHECKS
   virtual bool assertSymmetry(double tol=1e-16) const

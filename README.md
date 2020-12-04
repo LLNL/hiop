@@ -31,7 +31,7 @@ $> cmake -DCMAKE_INSTALL_PREFIX=/usr/lib/hiop ..'
 * GPU support: *-DHIOP_USE_GPU=ON*. MPI can be either off or on. For more build system options related to GPUs, see "Dependencies" section below.
 * Use RAJA portability layer to allow running linear algebra in either host (CPU) or device (GPU): *-DHIOP_USE_RAJA=ON* and *-DHIOP_USE_UMPIRE=ON*. These build options are off by default. Currently, HiOp only supports unified memory space.
 * Enable/disable "developer mode" build that enforces more restrictive compiler rules and guidelines: *-DHIOP_DEVELOPER_MODE=ON*. This option is by default off.
-* Additional checks and self-diagnostics inside HiOp meant to detect anormalities and help to detect bugs and/or troubleshoot problematic instances: *-DHIOP_DEEPCHECKS=[ON/OFF]* (by default ON). Disabling HIOP_DEEPCHECKS usually provides 30-40% execution speedup in HiOp. For full strength, it is recomended to use HIOP_DEEPCHECKS with debug builds. With non-debug builds, in particular the ones that disable the assert macro, HIOP_DEEPCHECKS does not perform all checks and, thus, may overlook potential issues.
+* Additional checks and self-diagnostics inside HiOp meant to detect abnormalities and help to detect bugs and/or troubleshoot problematic instances: *-DHIOP_DEEPCHECKS=[ON/OFF]* (by default ON). Disabling HIOP_DEEPCHECKS usually provides 30-40% execution speedup in HiOp. For full strength, it is recommended to use HIOP_DEEPCHECKS with debug builds. With non-debug builds, in particular the ones that disable the assert macro, HIOP_DEEPCHECKS does not perform all checks and, thus, may overlook potential issues.
 
 For example:
 ```shell 
@@ -49,7 +49,7 @@ $> make install
 ### Dependencies
 HiOp requires LAPACK and BLAS. These dependencies are automatically detected by the build system. MPI is optional and by default enabled. To disable use cmake option '-DHIOP_USE_MPI=OFF'.
 
-HiOp has some support for NVIDIA **GPU-based computations** via CUDA and Magma. To enable the use of GPUs,  use cmake with '-DHIOP_USE_GPU=ON'. The build system will automatically search for CUDA Toolkit. For non-standard CUDA Toolkit installations, use '-DHIOP_CUDA_LIB_DIR=/path' and '-DHIOP_CUDA_INCLUDE_DIR=/path'. For "very" non-standard CUDA Toolkit installations, one can specify the directory of cuBlas libraries as well with '-DHIOP_CUBLAS_LIB_DIR=/path'.
+HiOp has some support for NVIDIA **GPU-based computations** via CUDA and Magma. To enable the use of GPUs, use cmake with '-DHIOP_USE_GPU=ON'. The build system will automatically search for CUDA Toolkit. For non-standard CUDA Toolkit installations, use '-DHIOP_CUDA_LIB_DIR=/path' and '-DHIOP_CUDA_INCLUDE_DIR=/path'. For "very" non-standard CUDA Toolkit installations, one can specify the directory of cuBlas libraries as well with '-DHIOP_CUBLAS_LIB_DIR=/path'.
 
 When RAJA-based portability abstraction layer is enabled, HiOp requires RAJA and UMPIRE libraries 
 
@@ -91,13 +91,13 @@ Metis is usually detected automatically and needs not be specified under normal 
 
 UMFPACK (part of SuiteSparse) and METIS need to be provided as shown above.
 
-# Interfacing with HiOp
+# Interfacing with HiOp 
 
-If your NLP is structured, it may be beneficial to use HiOp. If your NLP is unstructured, then you should be looking at a general purpose NLP solver such as the open-source [Ipopt](https://github.com/coin-or/Ipopt).    
-
-HiOp supports two input formats: `hiopInterfaceDenseConstraints` and `hiopInterfaceMDS`. Both formats are in the form of C++ interfaces (e.g., abstract classes), see [hiopInterface.hpp](src/Interface/hiopInterface.hpp) file, that the user must instantiate/implement and provide to HiOp.
+HiOp supports three types of optimization problems, each with a separate input formats in the form of the C++ interfaces `hiopInterfaceDenseConstraints`,`hiopInterfaceSparse` and `hiopInterfaceMDS`. These interfaces are specified in [hiopInterface.hpp](src/Interface/hiopInterface.hpp) and documented and discussed as well in the [user manual](doc/hiop_usermanual.pdf).
 
 *`hiopInterfaceDenseConstraints` interface* supports NLPs with **billions** of variables with and without bounds but only limited number (<100) of general, equality and inequality constraints. The underlying algorithm is a limited-memory quasi-Newton interior-point method and generally scales well computationally (but it may not algorithmically) on thousands of cores. This interface uses MPI for parallelization
+
+*`hiopInterfaceSparse` interface* supports general sparse and large-scale NLPs. This functionality is similar to that of the state-of-the-art [Ipopt](https://github.com/coin-or/Ipopt) (without being as robust and flexible as Ipopt is). Acceleration for this class of problems can be achieved via OpenMP or CUDA, however, this is work in progress and you are encouraged to contact HiOp's developers for up-to-date information.
 
 *`hiopInterfaceMDS` interface* supports mixed dense-sparse NLPs and achives parallelization using GPUs and RAJA portability abstraction layer. 
 
@@ -116,6 +116,15 @@ or, if you are using C-shell, as
 ```shell
 $ setenv NVBLAS_CONFIG_FILE <hiop install dir>/lib/nvblas.conf
 ```
+
+## Existing issues
+Users are highly encouraged to report any issues they found from using HiOp.
+One known issue is that there is some minor inconsistence between HiOp and linear package STRUMPACK.
+When STRUMPACK is compiled with MPI (and Scalapack), user must set flag `HIOP_USE_MPI` to `ON` when compiling HiOp.
+Otherwise HiOp won't load MPI module and will return an error when links to STRUMPACK, since the later one requires a valid MPI module. 
+Similarly, if both Magma and STRUMPACK are linked to HiOp, user must guarantee the all the packages are compiled by the same CUDA compiler.
+User can check other issues and their existing status from https://github.com/LLNL/hiop 
+
 
 ## Acknowledgments
 

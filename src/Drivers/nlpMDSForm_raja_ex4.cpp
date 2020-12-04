@@ -103,7 +103,7 @@ void Ex4::initialize()
   Q_->setToConstant(1e-8);
   Q_->addDiagonal(2.);
 
-  double* data = Q_->local_buffer();
+  double* data = Q_->local_data();
   RAJA::View<double, RAJA::Layout<2>> Qview(data, nd_, nd_);
   RAJA::forall<ex4_raja_exec>(RAJA::RangeSegment(1, nd_-1),
     RAJA_LAMBDA(RAJA::Index_type i)
@@ -459,7 +459,7 @@ bool Ex4::eval_Jac_cons(const long long& n, const long long& m,
     const double* x, bool new_x,
     const long long& nsparse, const long long& ndense, 
     const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
-    double** JacD)
+    double* JacD)
 {
   assert(num_cons==ns_ || num_cons==3*haveIneq_);
 
@@ -550,12 +550,11 @@ bool Ex4::eval_Jac_cons(const long long& n, const long long& m,
     if(num_cons == ns_ && ns_ > static_cast<int>(idx_cons[0]))
     {
       //assert(num_cons==ns_);
-      double* data = JacD[0];
       auto& rm = umpire::ResourceManager::getInstance();
       if(mem_space_ == "DEFAULT")
-        memcpy(data, Md_->local_buffer(), ns_*nd_*sizeof(double));
+        memcpy(JacD, Md_->local_data_const(), ns_*nd_*sizeof(double));
       else
-        rm.copy(data, Md_->local_buffer(), ns_*nd_*sizeof(double));
+        rm.copy(JacD, Md_->local_data_const(), ns_*nd_*sizeof(double));
     }
 
     if(num_cons==3 && haveIneq_ && ns_>0)
@@ -566,7 +565,8 @@ bool Ex4::eval_Jac_cons(const long long& n, const long long& m,
         //do an in place fill-in for the ineq Jacobian corresponding to e^T
         assert(con_idx-ns_==0 || con_idx-ns_==1 || con_idx-ns_==2);
         assert(num_cons==3);
-        double* J = JacD[con_idx-ns_];
+        //double* J = JacD[con_idx-ns_];
+        double* J = JacD + nd_*(con_idx-ns_);
         RAJA::forall<ex4_raja_exec>(RAJA::RangeSegment(0, nd_),
           RAJA_LAMBDA(RAJA::Index_type i)
           {
@@ -595,7 +595,7 @@ bool Ex4::eval_Hess_Lagr(const long long& n, const long long& m,
     const double* lambda, bool new_lambda,
     const long long& nsparse, const long long& ndense, 
     const int& nnzHSS, int* iHSS, int* jHSS, double* MHSS, 
-    double** HDD,
+    double* HDD,
     int& nnzHSD, int* iHSD, int* jHSD, double* MHSD)
 {
   //Note: lambda is not used since all the constraints are linear and, therefore, do 
@@ -626,11 +626,11 @@ bool Ex4::eval_Hess_Lagr(const long long& n, const long long& m,
   if(HDD!=NULL)
   {
     const int nx_dense_squared = nd_*nd_;
-    const double* Qv = Q_->local_buffer();
+    const double* Qv = Q_->local_data();
     RAJA::forall<ex4_raja_exec>(RAJA::RangeSegment(0, nx_dense_squared),
       RAJA_LAMBDA(RAJA::Index_type i)
       {
-        HDD[0][i] = obj_factor*Qv[i];
+        HDD[i] = obj_factor*Qv[i];
       });
   }
   return true;
@@ -820,7 +820,7 @@ bool Ex4OneCallCons::eval_Jac_cons(const long long& n, const long long& m,
     const double* x, bool new_x,
     const long long& nsparse, const long long& ndense, 
     const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
-    double** JacD)
+    double* JacD)
 {
   assert(m==ns_+3*haveIneq_);
 
@@ -885,15 +885,16 @@ bool Ex4OneCallCons::eval_Jac_cons(const long long& n, const long long& m,
     //just copy the dense Jacobian corresponding to equalities
     auto& rm = umpire::ResourceManager::getInstance();
     if(mem_space_ == "DEFAULT")
-      memcpy(JacD[0], Md_->local_buffer(), ns_*nd_*sizeof(double));
+      memcpy(JacD, Md_->local_data_const(), ns_*nd_*sizeof(double));
     else
-      rm.copy(JacD[0], Md_->local_buffer(), ns_*nd_*sizeof(double));
+      rm.copy(JacD, Md_->local_data_const(), ns_*nd_*sizeof(double));
 
     if(haveIneq_)
     {
       assert(ns_+3 == m);
       //do an in place fill-in for the ineq Jacobian corresponding to e^T
-      double* J = JacD[ns_];
+      //double* J = JacD[ns_];
+      double* J = JacD + ns_*nd_;
       RAJA::forall<ex4_raja_exec>(RAJA::RangeSegment(0, 3*nd_),
         RAJA_LAMBDA(RAJA::Index_type i)
         {

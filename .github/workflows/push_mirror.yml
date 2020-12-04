@@ -1,0 +1,16 @@
+name: Mirroring
+
+on: [push, delete]
+
+jobs:
+  to_gitlab:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v1
+      - uses: spyoungtech/mirror-action@master
+        with:
+          REMOTE: ${{ secrets.GIT_REPO_URL }}
+          GIT_USERNAME: ${{ secrets.GIT_USER }}
+          GIT_PASSWORD: ${{ secrets.GIT_PASSWORD }}
+      - uses: nelonoel/branch-name@v1.0.1
+      - run: curl -X POST -F token=${{ secrets.PNNL_PIPELINE_TRIGGER_TOKEN }} -F ref=${BRANCH_NAME} https://gitlab.pnnl.gov/api/v4/projects/769/trigger/pipeline
