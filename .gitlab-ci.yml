@@ -95,6 +95,18 @@ build_on_newell:
   <<: *pnnl_script_definition
   rules:
     - if: '$CI_PROJECT_ROOT_NAMESPACE == "exasgd"'
+
+newell_full_build_matrix:
+  stage: build
+  variables:
+    SLURM_Q: "newell_shared"
+    MY_CLUSTER: "newell"
+    FULL_BUILD_MATRIX: 1
+  <<: *pnnl_tags_definition
+  <<: *pnnl_script_definition
+  rules:
+    - if: '$CI_PROJECT_ROOT_NAMESPACE == "exasgd"'
+      when: manual
 # ---
 
 # For Ascent CI
