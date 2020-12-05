@@ -727,78 +727,70 @@ void hiopMatrixRajaSparseTriplet::copyRowsFrom(
 {
   const hiopMatrixRajaSparseTriplet& src = dynamic_cast<const hiopMatrixRajaSparseTriplet&>(src_gen);
   
+  // Local copies of these are made for RAJA functions
+  int src_m = src.m();
+  int src_nnz = src.numberOfNonzeros();
+
   assert(this->m() == n_rows);
-  assert(src.m() >= n_rows);
+  assert(src_m >= n_rows);
   assert(this->n() == src.n());
-  assert(this->numberOfNonzeros() <= src.numberOfNonzeros());
+  assert(this->numberOfNonzeros() <= src_nnz);
 
   auto& resmgr = umpire::ResourceManager::getInstance();
   umpire::Allocator devalloc  = resmgr.getAllocator(mem_space_);
-  umpire::Allocator hostalloc = resmgr.getAllocator("HOST");
 
   // Get the row starts Index to track where each row starts
-  auto* rsi_src = src.allocAndBuildRowStarts()->idx_start_;
-  auto* rsi_dst = this->allocAndBuildRowStarts()->idx_start_;
+  if(src.row_starts_host==NULL)
+    src.row_starts_host = src.allocAndBuildRowStarts();
+  assert(src.row_starts_host);
 
-  // Local copies of memory to allow capture by lambdas onto the device
-  const int* jCol_src = src.j_col();
-  const double* values_src = src.M();
+  int* rsi_src = src.row_starts_host->idx_start_;
+
+  int* rsi_this = static_cast<int *>(devalloc.allocate(sizeof(int) * (n_rows + 1)));
+  
+  RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, n_rows),
+      RAJA_LAMBDA(RAJA::Index_type i)
+      {
+        int len = 0;
+        int row_idx = rows_idxs[i];
+        // Need to make sure that row_idx + 1 is not out of bounds for row_idx
+        if(row_idx == src_m)
+        {
+          len = src_nnz - rsi_src[row_idx];
+        }
+        else
+        {
+          len = rsi_src[row_idx + 1] - rsi_src[row_idx];
+        }
+        rsi_this[i] = len;
+      });
+
+  // This scan is the operation that "correctly" creates the rsi for this
+  RAJA::exclusive_scan_inplace<hiop_raja_exec>(rsi_this, rsi_this + n_rows + 1, RAJA::operators::plus<int>{});
+
+  // Local copies for RAJA kernel below
+  int* iRow_buf = this->i_row();
   int* jCol_buf = this->j_col();
   double* values_buf = this->M();
-  int this_nnz = this->numberOfNonzeros();
-  int this_nrows = this->nrows_;
-  int src_nrows = src.m();
-  int src_nnz = src.numberOfNonzeros();
-  
-  // Get the length of each row of this, and then copy from device to host
-  auto* row_lens_dst_dev = static_cast<int*>(devalloc.allocate(sizeof(int) * this->m()));
-  auto* row_lens_dst = static_cast<int*>(hostalloc.allocate(sizeof(int) * this->m()));
-  RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, this_nrows),
+  const int* jCol_src = src.j_col();
+  const double* values_src = src.M();
+
+  RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, n_rows),
       RAJA_LAMBDA(RAJA::Index_type i)
       {
-        if(i == this_nrows - 1)
+        int idx_src = rsi_src[rows_idxs[i]];
+        int idx_this = rsi_this[i];
+
+        // For every entry in row i in this, starting at idx_this
+        for (int j = 0; j < rsi_this[i + 1] - idx_this; j++)
         {
-          row_lens_dst_dev[i] = this_nnz - rsi_dst[i];
-        }
-        else
-        {
-          row_lens_dst_dev[i] = rsi_dst[i + 1] - rsi_dst[i];
+          iRow_buf[idx_this + j] = i;
+          jCol_buf[idx_this + j] = jCol_src[idx_src + j];
+          values_buf[idx_this + j] = values_src[idx_src + j]; 
         }
       });
-  resmgr.copy(row_lens_dst, row_lens_dst_dev);
 
-  // Get the length of each row of src, and then copy from device to host
-  auto* row_lens_src_dev = static_cast<int*>(devalloc.allocate(sizeof(int) * src.m()));
-  auto* row_lens_src = static_cast<int*>(hostalloc.allocate(sizeof(int) * src.m()));
-  RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, src_nrows),
-      RAJA_LAMBDA(RAJA::Index_type i)
-      {
-        if(i == src_nrows - 1)
-        {
-          row_lens_src_dev[i] = src_nnz - rsi_src[i];
-        }
-        else
-        {
-          row_lens_src_dev[i] = rsi_src[i + 1] - rsi_src[i];
-        }
-      });
-  resmgr.copy(row_lens_src, row_lens_src_dev);
-
-  // Copy _row_lens_dst[row_dest]_ elements from row _row_src_ in source matrix
-  // to row _row_dest_ in this matrix
-  for(int row_dest=0; row_dest<this_nrows; ++row_dest)
-  {
-    const int& row_src = rows_idxs[row_dest];
-    assert(row_lens_dst[row_dest] == row_lens_src[row_src] &&
-        "Tried to copy between sparse matrix rows with different sparsity pattern");
-
-    RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, row_lens_dst[row_dest]),
-        RAJA_LAMBDA(RAJA::Index_type i)
-        {
-          jCol_buf[rsi_dst[row_dest] + i] = jCol_src[rsi_src[row_src] + i];
-          values_buf[rsi_dst[row_dest] + i] = values_src[rsi_src[row_src] + i];
-        });
-  }
+  devalloc.deallocate(rsi_this);  
 }
   
 /// @brief Prints the contents of this function to a file.
