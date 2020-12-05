@@ -33,6 +33,7 @@ option(HIOP_BUILD_STATIC "Build static library" ON)
 option(HIOP_SPARSE "Build with sparse linear algebra" ON)
 option(HIOP_USE_COINHSL "Build with sparse linear algebra" ON)
 option(HIOP_USE_STRUMPACK "Build with STRUMPACK backend for sparse linear algebra" OFF)
+option(HIOP_WITH_VALGRIND_TESTS "Run valgrind on certain integration tests" OFF)
 
 if(HIOP_BUILD_SHARED)
   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -367,6 +368,7 @@ endif()
 # CMake Tests
 ##########################################################
 if (HIOP_WITH_MAKETEST)
+  include(cmake/FindValgrind.cmake)
   enable_testing()
   add_test(NAME VectorTest        COMMAND ${RUNCMD} "$<TARGET_FILE:testVector>")
   if(HIOP_USE_MPI)
