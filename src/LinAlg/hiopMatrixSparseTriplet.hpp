@@ -93,14 +93,18 @@ public:
     assert(false && "not needed / implemented");
   }
 
-  /* add to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements of
-  * 'd_' (source) starting at index 'start_on_src_vec'. The number of elements added is 'num_elems', scaled by 'scal'
+  /**
+   * @brief add to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements of 
+   * 'd_' (source) starting at index 'start_on_src_vec'. The number of elements added is 'num_elems', scaled by 'scal'
+   * @pre this method breaks **OrdIdx Assumption**, since it can add/replace any elements from 'this'
   */
   virtual void copySubDiagonalFrom(const long long& start_on_dest_diag, const long long& num_elems,
                                       const hiopVector& d_, const long long& start_on_nnz_idx, double scal=1.0);
 
-  /* add constant 'c' to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements.
-  * The number of elements added is 'num_elems'
+  /** 
+   * @brief add constant 'c' to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements.
+   * The number of elements added is 'num_elems'. The added elements are registered as nonzeros started from index 'start_on_nnz_idx'.
+   * @pre this method breaks **OrdIdx Assumption**, since it can add/replace any elements from 'this'
   */
   virtual void setSubDiagonalTo(const long long& start_on_dest_diag, const long long& num_elems,
                                        const double& c, const long long& start_on_nnz_idx);
@@ -142,38 +146,53 @@ public:
 					    const hiopVector& D, const hiopMatrixSparse& N,
 					    hiopMatrixDense& W) const;
 
+  /**
+   * @brief Copy 'n_rows' rows from row 'rows_src_idx_st' of matrix 'src_gen', into 'this' as a submatrix from row 'dest_row_st'
+   * The non-zero elements start from 'dest_nnz_st' will be replaced by the new elements.
+   *
+   * @pre 'this' must have enough rows and cols after row 'dest_row_st' and col 'dest_col_st'
+   * @pre 'dest_nnz_st' + the number of non-zeros in the copied matrix must be less or equal to
+   * this->numOfNumbers()
+   * @pre User must know the nonzero pattern of src and dest matrices. The method assumes
+   * that non-zero patterns does not change between calls and that 'src_gen' is a valid
+   *  submatrix of 'this'
+   * @pre **OrdIdx Assumption** is not necessary. If 'src_gen' satisfies this assumption, the corresponding submatrix of 'this' is sorted too.
+  */
   virtual void copyRowsBlockFrom(const hiopMatrix& src_gen,
                                          const long long& rows_src_idx_st, const long long& n_rows,
                                          const long long& rows_dest_idx_st, const long long& dest_nnz_st);
 
   /**
-  * @brief Copy matrix 'src_gen', into 'this' as a submatrix from corner 'dest_row_st' and 'dest_col_st'
-  * The non-zero elements start from 'dest_nnz_st' will be replaced by the new elements.
-  *
-  * @pre 'this' must have enough rows and cols after row 'dest_row_st' and col 'dest_col_st'
-  * @pre 'dest_nnz_st' + the number of non-zeros in the copied matrix must be less or equal to 
-  * this->numOfNumbers()
-  * @pre User must know the nonzero pattern of src and dest matrices. The method assumes 
-  * that non-zero patterns does not change between calls and that 'src_gen' is a valid
-  *  submatrix of 'this'
+   * @brief Copy matrix 'src_gen', into 'this' as a submatrix from corner 'dest_row_st' and 'dest_col_st'
+   * The non-zero elements start from 'dest_nnz_st' will be replaced by the new elements.
+   *
+   * @pre 'this' must have enough rows and cols after row 'dest_row_st' and col 'dest_col_st'
+   * @pre 'dest_nnz_st' + the number of non-zeros in the copied matrix must be less or equal to 
+   * this->numOfNumbers()
+   * @pre User must know the nonzero pattern of src and dest matrices. The method assumes 
+   * that non-zero patterns does not change between calls and that 'src_gen' is a valid
+   *  submatrix of 'this'
+   * @pre this method breaks **OrdIdx Assumption**, since it setups/replaces a sublock matrix of 'this'.
   */
   virtual void copySubmatrixFrom(const hiopMatrix& src_gen,
                                    const long long& dest_row_st, const long long& dest_col_st,
                                    const long long& dest_nnz_st);
   
   /**
-  * @brief Copy the transpose of matrix 'src_gen', into 'this' as a submatrix from corner 
-  * 'dest_row_st' and 'dest_col_st'.
-  * The non-zero elements start from 'dest_nnz_st' will be replaced by the new elements.
+   * @brief Copy the transpose of matrix 'src_gen', into 'this' as a submatrix from corner 
+   * 'dest_row_st' and 'dest_col_st'.
+   * The non-zero elements start from 'dest_nnz_st' will be replaced by the new elements.
+   * @pre this method breaks **OrdIdx Assumption**, since it setups/replaces a sublock matrix of 'this'.
   */
   virtual void copySubmatrixFromTrans(const hiopMatrix& src_gen,
                                    const long long& dest_row_st, const long long& dest_col_st,
                                    const long long& dest_nnz_st);
 
   /**
-  * @brief Copy the selected cols/rows of a diagonal matrix (a constant 'scalar' times identity),
-  * into 'this' as a submatrix from corner 'dest_row_st' and 'dest_col_st'
-  * The non-zero elements start from 'dest_nnz_st' will be replaced by the new elements.
+   * @brief Copy the selected cols/rows of a diagonal matrix (a constant 'scalar' times identity),
+   * into 'this' as a submatrix from corner 'dest_row_st' and 'dest_col_st'
+   * The non-zero elements start from 'dest_nnz_st' will be replaced by the new elements.
+   * @pre this method breaks **OrdIdx Assumption**, since it setups/replaces a sublock matrix of 'this'.
   */
   virtual void setSubmatrixToConstantDiag_w_colpattern(const double& scalar,
                                    const long long& dest_row_st, const long long& dest_col_st,
@@ -183,16 +202,18 @@ public:
                                    const long long& dest_nnz_st, const int &nnz_to_copy, const hiopVector& ix);
 
   /**
-  * @brief Copy a diagonal matrix to destination.
-  * This diagonal matrix is 'src_val'*identity matrix with size 'n_rows'x'n_rows'.
-  * The destination is updated from the start row 'row_dest_st' and start column 'col_dest_st'.
+   * @brief Copy a diagonal matrix to destination.
+   * This diagonal matrix is 'src_val'*identity matrix with size 'n_rows'x'n_rows'.
+   * The destination is updated from the start row 'row_dest_st' and start column 'col_dest_st'.
+   * @pre this method breaks **OrdIdx Assumption**, since it setups/replaces a sublock matrix of 'this'.
   */
   virtual void copyDiagMatrixToSubblock(const double& src_val,
                                         const long long& dest_row_st, const long long& dest_col_st,
                                         const long long& dest_nnz_st, const int &nnz_to_copy);
   /** 
    * @brief same as @copyDiagMatrixToSubblock, but copies only diagonal entries specified by 'pattern' 
-   */
+   * @pre this method breaks **OrdIdx Assumption**, since it setups/replaces a sublock matrix of 'this'.
+  */
   virtual void copyDiagMatrixToSubblock_w_pattern(const hiopVector& x,
                                                   const long long& dest_row_st, const long long& dest_col_st,
                                                   const long long& dest_nnz_st, const int &nnz_to_copy,
@@ -211,6 +232,10 @@ public:
     assert(0 && "This method should be used only for symmetric matrices.\n");
   }
 
+  /**
+   * @brief convert 'this' matrix, which is in the triplet form, to CSR form
+   * @pre **OrdIdx Assumption** is not required for the source matrix 'this', but it is satisfied in the output CSR format.
+  */
   virtual void convertToCSR(int &csr_nnz, int **csr_kRowPtr, int **csr_jCol, double **csr_kVal,
                             int **index_covert_CSR2Triplet, int **index_covert_extra_Diag2CSR,
                             std::unordered_map<int,int> &extra_diag_nnz_map);
