@@ -738,6 +738,7 @@ void hiopMatrixRajaSparseTriplet::copyRowsFrom(
 
   auto& resmgr = umpire::ResourceManager::getInstance();
   umpire::Allocator devalloc  = resmgr.getAllocator(mem_space_);
+  umpire::Allocator hostalloc  = resmgr.getAllocator("HOST");
 
   // Get the row starts Index to track where each row starts
   if(src.row_starts_host==NULL)
@@ -748,11 +749,21 @@ void hiopMatrixRajaSparseTriplet::copyRowsFrom(
 
   int* rsi_this = static_cast<int *>(devalloc.allocate(sizeof(int) * (n_rows + 1)));
   
+  int* rows_idxs_tmp = static_cast<int *>(hostalloc.allocate(sizeof(int) * n_rows));
+
+  for (int i = 0; i < n_rows; i++)
+  {
+    rows_idxs_tmp[i] = rows_idxs[i];
+  }
+
+  int* rows_idxs_tmp_dev = static_cast<int *>(devalloc.allocate(sizeof(int) * n_rows));
+  resmgr.copy(rows_idxs_tmp_dev, rows_idxs_tmp);
+
   RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, n_rows),
       RAJA_LAMBDA(RAJA::Index_type i)
       {
         int len = 0;
-        int row_idx = rows_idxs[i];
+        int row_idx = rows_idxs_tmp_dev[i];
         // Need to make sure that row_idx + 1 is not out of bounds for row_idx
         if(row_idx == src_m)
         {
@@ -778,11 +789,13 @@ void hiopMatrixRajaSparseTriplet::copyRowsFrom(
   RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, n_rows),
       RAJA_LAMBDA(RAJA::Index_type i)
       {
-        int idx_src = rsi_src[rows_idxs[i]];
+        int row_src = rows_idxs_tmp_dev[i];
+        int idx_src = rsi_src[row_src];
         int idx_this = rsi_this[i];
 
         // For every entry in row i in this, starting at idx_this
-        for (int j = 0; j < rsi_this[i + 1] - idx_this; j++)
+        int row_len = rsi_this[i + 1] - idx_this;
+        for (int j = 0; j < row_len; j++)
         {
           iRow_buf[idx_this + j] = i;
           jCol_buf[idx_this + j] = jCol_src[idx_src + j];
@@ -790,7 +803,9 @@ void hiopMatrixRajaSparseTriplet::copyRowsFrom(
         }
       });
 
-  devalloc.deallocate(rsi_this);  
+  devalloc.deallocate(rsi_this); 
+  hostalloc.deallocate(rows_idxs_tmp);
+  devalloc.deallocate(rows_idxs_tmp_dev);
 }
   
 /// @brief Prints the contents of this function to a file.
