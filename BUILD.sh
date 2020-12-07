@@ -93,6 +93,13 @@ newell|newell_shared)
     export MY_METIS_VERSION=5.1.0
     export MY_NVCC_ARCH="sm_70"
 
+    export OMP_CANCELLATION=true
+    export OMP_PROC_BIND=true
+    export OMPI_MCA_pml="ucx"
+    export UCX_NET_DEVICES=mlx5_1:1,mlx5_3:1
+    export OMPI_MCA_btl_openib_warn_default_gid_prefix=0
+    extra_cmake_args="$extra_cmake_args -DHIOP_EXTRA_MPI_FLAGS=-mca;oob;tcp"
+
     module load gcc/$MY_GCC_VERSION
     module load cuda/$MY_CUDA_VERSION
     module load openmpi/$MY_OPENMPI_VERSION
