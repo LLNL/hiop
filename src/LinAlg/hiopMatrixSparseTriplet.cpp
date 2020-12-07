@@ -890,7 +890,7 @@ void hiopMatrixSparseTriplet::convertToCSR(int &csr_nnz, int **csr_kRowPtr_in, i
   */
   int n_diag_val=0;
   std::unordered_map<int,int> extra_diag_nnz_map_temp;
-  int *diag_defined = new int[n]{};
+  int *diag_defined = new int[n];
 
   // compute nnz in each row
   {
@@ -919,19 +919,19 @@ void hiopMatrixSparseTriplet::convertToCSR(int &csr_nnz, int **csr_kRowPtr_in, i
     assert(csr_nnz==csr_kRowPtr[n]);
     assert(csr_nnz+extra_diag_nnz_map_temp.size()==nnz);
 
-    *csr_kVal_in = new double[csr_nnz]{};
-    *csr_jCol_in = new int[csr_nnz]{};
+    *csr_kVal_in = new double[csr_nnz];
+    *csr_jCol_in = new int[csr_nnz];
   }
   double *csr_kVal = *csr_kVal_in;
   int *csr_jCol = *csr_jCol_in;
 
-  int *index_covert_extra_Diag2CSR_temp = new int[n]{};
+  int *index_covert_extra_Diag2CSR_temp = new int[n];
   int *nnz_each_row_tmp = new int[n]{};
 
   // set correct col index and value
   {
-    *index_covert_CSR2Triplet_in = new int[csr_nnz]{};
-    *index_covert_extra_Diag2CSR_in = new int[n]{};
+    *index_covert_CSR2Triplet_in = new int[csr_nnz];
+    *index_covert_extra_Diag2CSR_in = new int[n];
 
     int *index_covert_CSR2Triplet = *index_covert_CSR2Triplet_in;
     int *index_covert_extra_Diag2CSR = *index_covert_extra_Diag2CSR_in;
@@ -976,15 +976,6 @@ void hiopMatrixSparseTriplet::convertToCSR(int &csr_nnz, int **csr_kRowPtr_in, i
 
     // correct the missing diagonal term and sort the nonzeros
     for(int i=0;i<n;i++){
-/*      if(nnz_each_row_tmp[i] != csr_kRowPtr[i+1]-csr_kRowPtr[i]){
-        assert(nnz_each_row_tmp[i] == csr_kRowPtr[i+1]-csr_kRowPtr[i]-1);
-        nnz_tmp = nnz_each_row_tmp[i] + csr_kRowPtr[i];
-        csr_jCol[nnz_tmp] = i;
-        csr_kVal[nnz_tmp] = values_[nnz-n+i];
-        index_covert_CSR2Triplet[nnz_tmp] = nnz-n+i;
-        total_nnz_tmp += 1;
-      }
-*/
       // sort the nonzeros
       {
         std::vector<int> ind_temp(csr_kRowPtr[i+1]-csr_kRowPtr[i]);
