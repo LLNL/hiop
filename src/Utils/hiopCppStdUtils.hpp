@@ -69,7 +69,7 @@ namespace hiop {
 
     // arr[i] should be present at index[i] index
     for (int i=0; i<n; i++)
-        temp[index[i]] = arr[i];
+        temp[i] = arr[index[i]];
 
     // Copy temp[] to arr[]
     for (int i=0; i<n; i++)

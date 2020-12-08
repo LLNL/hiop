@@ -231,6 +231,7 @@ namespace hiop
     * initialize strumpack parameters
     */
 //    spss.options().set_matching(MatchingJob::NONE);
+    spss.options().enable_METIS_NodeNDP();
     spss.options().disable_gpu();
     spss.options().set_verbose(false);
 
