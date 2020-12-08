@@ -60,7 +60,7 @@
 
 namespace hiop { namespace tests {
 
-/// Returns pointer to local ector data
+/// Returns pointer to local vector data
 real_type* VectorTestsPar::getLocalData(hiop::hiopVector* x)
 {
   return x->local_data_host();
@@ -81,20 +81,6 @@ MPI_Comm VectorTestsPar::getMPIComm(hiop::hiopVector* x)
   return xvec->get_mpi_comm();
 }
 #endif
-
-/// If test fails on any rank set fail flag on all ranks
-bool VectorTestsPar::reduceReturn(int failures, hiop::hiopVector* x)
-{
-  int fail = 0;
-
-#ifdef HIOP_USE_MPI
-  MPI_Allreduce(&failures, &fail, 1, MPI_INT, MPI_SUM, getMPIComm(x));
-#else
-  fail = failures;
-#endif
-
-  return (fail != 0);
-}
 
 /// Wrap new command
 real_type* VectorTestsPar::createLocalBuffer(local_ordinal_type N, real_type val)

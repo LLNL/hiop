@@ -84,24 +84,10 @@ void VectorTestsRajaPar::setLocalElement(hiop::hiopVector* x, local_ordinal_type
 /// Get communicator
 MPI_Comm VectorTestsRajaPar::getMPIComm(hiop::hiopVector* x)
 {
-    const hiop::hiopVectorRajaPar* xvec = dynamic_cast<const hiop::hiopVectorRajaPar*>(x);
-    return xvec->get_mpi_comm();
+  const hiop::hiopVectorRajaPar* xvec = dynamic_cast<const hiop::hiopVectorRajaPar*>(x);
+  return xvec->get_mpi_comm();
 }
 #endif
-
-/// If test fails on any rank set fail flag on all ranks
-bool VectorTestsRajaPar::reduceReturn(int failures, hiop::hiopVector* x)
-{
-    int fail = 0;
-
-#ifdef HIOP_USE_MPI
-    MPI_Allreduce(&failures, &fail, 1, MPI_INT, MPI_SUM, getMPIComm(x));
-#else
-    fail = failures;
-#endif
-
-    return (fail != 0);
-}
 
 /// Wrap new command
 real_type* VectorTestsRajaPar::createLocalBuffer(local_ordinal_type N, real_type val)

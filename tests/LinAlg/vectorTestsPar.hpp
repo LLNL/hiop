@@ -73,14 +73,13 @@ public:
   virtual ~VectorTestsPar(){}
 
 private:
-  virtual real_type* getLocalData(hiop::hiopVector* x) override;
+  virtual real_type* getLocalData(hiop::hiopVector* x);
   virtual void setLocalElement(hiop::hiopVector* x, local_ordinal_type i, real_type val);
-  virtual bool reduceReturn(int failures, hiop::hiopVector* x) override;
   virtual real_type* createLocalBuffer(local_ordinal_type N, real_type val);
   virtual void deleteLocalBuffer(real_type* buffer);
 
 #ifdef HIOP_USE_MPI
-  MPI_Comm getMPIComm(hiop::hiopVector* x);
+  virtual MPI_Comm getMPIComm(hiop::hiopVector* x);
 #endif
 };
 
