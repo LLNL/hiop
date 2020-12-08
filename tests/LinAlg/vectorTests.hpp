@@ -1539,10 +1539,9 @@ public:
     x->copyToDev();
   }
   /// Returns element _i_ of vector _x_.
-  real_type getLocalElement(const hiop::hiopVector* x, local_ordinal_type i)
+  real_type getLocalElement(hiop::hiopVector* x, local_ordinal_type i)
   {
-    x->copyFromDev();
-    return x->local_data_host_const()[i];
+    return getLocalData(x)[i];
   }
 
   /// Returns pointer to local vector data
