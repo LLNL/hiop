@@ -26,6 +26,9 @@ export buildNo=0
 # Names of each column in the logfile
 export columnNames="buildID;buildStatus;cmakeOptions"
 
+# If the tests are verbose, we overrun the log output limit
+export CTEST_CMD=$(echo $CTEST_CMD | sed 's/ -VV//')
+
 # Logs the output of a given run to the logfile
 logRun()
 {
