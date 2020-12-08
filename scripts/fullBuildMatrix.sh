@@ -8,7 +8,7 @@ set +xv
 
 # If any build configurations fail to build, they will be written here
 # and reported after all build configurations have run
-export logFile="$BUILDDIR/../buildmatrix.log"
+export logFile=${BUILDMATRIX_LOGFILE:-"$BUILDDIR/../buildmatrix.log"}
 
 # Error codes for specific cases
 export success=0
@@ -26,6 +26,9 @@ export buildNo=0
 # Names of each column in the logfile
 export columnNames="buildID;buildStatus;cmakeOptions"
 
+# If the tests are verbose, we overrun the log output limit
+export CTEST_CMD=$(echo $CTEST_CMD | sed 's/ -VV//')
+
 # Logs the output of a given run to the logfile
 logRun()
 {
@@ -40,7 +43,7 @@ reportRuns()
 {
   local numFailures=$(grep -v 'Success' $logFile | wc -l)
   ((numFailures--)) # Don't count the header row
-  echo "Found $numFailures failures."
+  echo "Found $numFailures failures. Full report:"
   cat $logFile
   return $numFailures
 }
@@ -52,6 +55,8 @@ buildMatrix()
   [[ -f $logFile ]] && rm $logFile
   touch $logFile
   echo "$columnNames" >> $logFile
+
+  local doTest=${1:-1}
 
   local baseCmakeOptions=" \
     -DCMAKE_BUILD_TYPE=Debug \
@@ -82,14 +87,9 @@ buildMatrix()
     '-DHIOP_USE_MPI=ON'
     '-DHIOP_USE_MPI=OFF'
     )
-
-  # STRUMPACK is not yet installed on our target platforms, so this will not
-  # be a part of the build matrix yet.
   sparseOpts=(
     '-DHIOP_SPARSE=OFF'
     "-DHIOP_SPARSE=ON \
-      -DHIOP_USE_STRUMPACK=ON \
-      -DHIOP_STRUMPACK_DIR=$MY_STRUMPACK_DIR \
       -DHIOP_METIS_DIR=$MY_METIS_DIR \
       -DHIOP_COINHSL_DIR=$MY_COINHSL_DIR"
     )
@@ -98,9 +98,12 @@ buildMatrix()
     for gpuOp in "${gpuOpts[@]}"; do
       for kronRedOp in "${kronRedOpts[@]}"; do
         for mpiOp in "${mpiOpts[@]}"; do
-          export cmakeOptions="$baseCmakeOptions $rajaOp $gpuOp $kronRedOp $mpiOp"
-          buildAndTest 1 0
-          logRun $?
+          for sparseOp in "${sparseOpts[@]}"; do
+            export cmakeOptions="$baseCmakeOptions $rajaOp $gpuOp $kronRedOp $mpiOp $sparseOp"
+            buildAndTest $doTest
+            logRun $?
+            reportRuns
+          done
         done
       done
     done
@@ -118,8 +121,8 @@ buildAndTest()
   echo $cmakeOptions
   echo
 
-  local doBuild=${1:-1}
-  local doTest=${2:-1}
+  local doTest=${1:-1}
+  local rc=0
 
   echo
   echo Configuring
@@ -131,17 +134,14 @@ buildAndTest()
   cmake $cmakeOptions .. || return $cmakeError
   popd
 
-  local rc=0
-  if [[ $doBuild -eq 1 ]]; then
-    echo
-    echo Building
-    echo
-    pushd $BUILDDIR
-    $MAKE_CMD
-    rc=$?
-    popd
-    [ $rc -ne 0 ] && return $buildError
-  fi
+  echo
+  echo Building
+  echo
+  pushd $BUILDDIR
+  $MAKE_CMD
+  rc=$?
+  popd
+  [ $rc -ne 0 ] && return $buildError
 
   if [[ $doTest -eq 1 ]]; then
     echo

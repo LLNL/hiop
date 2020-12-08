@@ -14,15 +14,24 @@
 #
 # MY_CLUSTER=ascent ./BUILD.sh
 #
+# All variables that will change the build script's behaviour:
+#
+# - MAKE_CMD command the script will use to run makefiles
+# - CTEST_CMD command the script will use to run ctest
+# - FULL_BUILD_MATRIX (bool) test all possible builds
+# - BUILDDIR path to temp build directory
+# - EXTRA_CMAKE_ARGS extra arguments passed to CMake
+# - MY_CLUSTER determines cluster-specific variables to use
+# - BUILDMATRIX_LOGFILE path to file where builds will be logged
 
 export BASE_PATH=$(dirname $0)
-export MAKE_CMD='make -j 8'
-export CTEST_CMD='ctest -VV --timeout 1800'
+export MAKE_CMD=${MAKE_CMD:-'make -j 8'}
+export CTEST_CMD=${CTEST_CMD:-'ctest -VV --timeout 1800'}
 
 # we want this settable via env var to make CI triggered builds simpler
 export FULL_BUILD_MATRIX=${FULL_BUILD_MATRIX:-0}
-export BUILDDIR="$(pwd)/build"
-export EXTRA_CMAKE_ARGS=""
+export BUILDDIR=${BUILDDIR:-"$(pwd)/build"}
+export EXTRA_CMAKE_ARGS=${EXTRA_CMAKE_ARGS:-""}
 export BUILD=1
 export TEST=1
 
@@ -127,7 +136,7 @@ module list
 
 if [[ $FULL_BUILD_MATRIX -eq 1 ]]; then
   source ./scripts/fullBuildMatrix.sh
-  buildMatrix
+  buildMatrix $TEST
   exit $?
 else
   source ./scripts/defaultBuild.sh

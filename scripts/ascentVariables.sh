@@ -1,3 +1,8 @@
+
+if [ ! -v BUILDDIR ]; then
+  echo BUILDDIR is not set! Your paths may be misconfigured.
+fi
+
 module purge
 module load cuda/11
 module use /gpfs/wolf/proj-shared/csc359/ascent/Modulefiles/Core
@@ -12,6 +17,7 @@ module load suitesparse
 module load cmake/3.18.2
 module load raja
 module load umpire
+module load valgrind/3.14.0
 export MY_RAJA_DIR=$RAJA_ROOT
 export MY_UMPIRE_DIR=$UMPIRE_ROOT
 export MY_METIS_DIR=$OLCF_METIS_ROOT
