@@ -66,6 +66,13 @@ real_type* VectorTestsPar::getLocalData(hiop::hiopVector* x)
   return x->local_data_host();
 }
 
+/// Method to set vector _x_ element _i_ to _value_.
+void VectorTestsPar::setLocalElement(hiop::hiopVector* x, local_ordinal_type i, real_type val)
+{
+  real_type *xdat = x->local_data_host();
+  xdat[i] = val;
+}
+
 #ifdef HIOP_USE_MPI
 /// Get communicator
 MPI_Comm VectorTestsPar::getMPIComm(hiop::hiopVector* x)

@@ -1530,14 +1530,6 @@ public:
     return reduceReturn(fail, &x);
   }
 
-  /// Method to set vector _x_ element _i_ to _value_.
-  void setLocalElement(hiop::hiopVector* x, local_ordinal_type i, real_type val)
-  {
-    x->copyFromDev();
-    real_type *xdat = x->local_data_host();
-    xdat[i] = val;
-    x->copyToDev();
-  }
   /// Returns element _i_ of vector _x_.
   real_type getLocalElement(hiop::hiopVector* x, local_ordinal_type i)
   {
@@ -1592,6 +1584,7 @@ public:
 protected:
   // Interface to methods specific to vector implementation
   virtual real_type* getLocalData(hiop::hiopVector* x) = 0;
+  virtual void setLocalElement(hiop::hiopVector* x, local_ordinal_type i, real_type val) = 0;
   virtual bool reduceReturn(int failures, hiop::hiopVector* x) = 0;
   virtual real_type* createLocalBuffer(local_ordinal_type N, real_type val) = 0;
   virtual void deleteLocalBuffer(real_type* buffer) = 0;

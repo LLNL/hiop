@@ -71,6 +71,15 @@ real_type* VectorTestsRajaPar::getLocalData(hiop::hiopVector* x)
   return x->local_data_host();
 }
 
+/// Method to set vector _x_ element _i_ to _value_.
+void VectorTestsRajaPar::setLocalElement(hiop::hiopVector* x, local_ordinal_type i, real_type val)
+{
+  x->copyFromDev();
+  real_type *xdat = x->local_data_host();
+  xdat[i] = val;
+  x->copyToDev();
+}
+
 #ifdef HIOP_USE_MPI
 /// Get communicator
 MPI_Comm VectorTestsRajaPar::getMPIComm(hiop::hiopVector* x)
