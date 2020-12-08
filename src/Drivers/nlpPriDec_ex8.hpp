@@ -218,7 +218,7 @@ public:
   }
   
   Ex8(int ns_, int S_)
-    : ns(ns_),evaluator_(NULL) 
+    : ns(ns_), evaluator_(nullptr) 
 
   {
     if(ns<0) {
@@ -262,7 +262,7 @@ public:
 
   virtual ~Ex8()
   {
-    delete[] evaluator_;
+    delete evaluator_;
   }
   
   bool get_prob_sizes(long long& n, long long& m)

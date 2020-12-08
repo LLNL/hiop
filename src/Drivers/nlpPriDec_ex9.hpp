@@ -1,14 +1,16 @@
-#ifndef HIOP_EXAMPLE_EX8
-#define HIOP_EXAMPLE_EX8
+#ifndef HIOP_EXAMPLE_EX9
+#define HIOP_EXAMPLE_EX9
+
+//base interface (NLP specification for primal decomposable problems)
+#include "hiopInterfacePrimalDecomp.hpp"
+
+//basecase sparse NLP
+#include "nlpPriDec_ex9_user_basecase.hpp"
+
+//recourse MDS NLP
+#include "nlpPriDec_ex9_user_recourse.hpp"
 
 /**
- * one-liner:
- * @f$ \min_x \sum_{i=1}^n f(x_i) @f$
- *
- * centered, multiline:
- * @f[ 
- * \min_x \sum_{i=1}^n f(x_i)
- * @f] 
  *
  * An example of the use of hiop::hiopInterfacePriDecProblem interface of HiOp.
  * This interface is used to specify and solve <i>primal decomposable problems</i>.
@@ -51,12 +53,67 @@
  * 
  * where the random function r(x;\xi) is defined similarily to r_i(x;\xi) (excepting the
  * scaling by 1/S).
+ *
+ * centered, multiline:
+ * @f[ 
+ * \min_x \sum_{i=1}^n f(x_i)
+ * @f] 
+ *
  */
 
-#include "hiopInterfacePrimalDecomp.hpp"
+class PriDecMasterProblemEx9 : public hiop::hiopInterfacePriDecProblem
+{
+public:
+  PriDecMasterProblemEx9(size_t nx, size_t ny, size_t nS, size_t S);
+  virtual ~PriDecMasterProblemEx9();
 
-#include "hiopInterface.hpp"
-#include "hiopNlpFormulation.hpp"
-#include "hiopAlgFilterIPM.hpp"
+  hiop::hiopSolveStatus solve_master(double* x,
+                                     const bool& include_r,
+                                     const double& rval=0, 
+                                     const double* grad=0,
+                                     const double*hess =0);
 
-#define A 0
+  bool set_recourse_approx_evaluator(const int n, RecourseApproxEvaluator* evaluator)
+  {
+    return false;
+  }
+  
+  bool eval_f_rterm(size_t idx, const int& n, double* x, double& rval);
+  
+  bool eval_grad_rterm(size_t idx, const int& n, double* x, double* grad);
+  
+  inline size_t get_num_rterms() const
+  {
+    return S_;
+  }
+  
+  inline size_t get_num_vars() const
+  {
+    return nx_;
+  }
+
+  void get_solution(double* x) const
+  {
+    assert(false && "to be implemented");
+  }
+
+  double get_objective()
+  {
+    assert(false && "to be implemented");
+    return 0.;
+  }
+private:
+  /// dimension of primal variable `x`
+  size_t nx_;
+  ///dimension of recourse problem primal variable `y`
+  size_t ny_;
+  /// dimension of uncertainty dimension entering the recourse problem
+  size_t nS_;
+  ///number of sample to use, effectively the number of recourse terms  
+  size_t S_;
+
+  /// basecase
+  PriDecBasecaseProblemEx9* basecase_;
+};
+
+#endif

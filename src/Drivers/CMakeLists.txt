@@ -46,3 +46,8 @@ if(HIOP_USE_MPI)
   add_executable(nlpPriDec_ex8.exe nlpPriDec_ex8_driver.cpp)
   target_link_libraries(nlpPriDec_ex8.exe hiop)
 endif()
+
+if(HIOP_USE_MPI AND HIOP_SPARSE)
+  add_executable(nlpPriDec_ex9.exe nlpPriDec_ex9_driver.cpp nlpPriDec_ex9.cpp nlpSparse_ex6.cpp)
+  target_link_libraries(nlpPriDec_ex9.exe hiop)
+endif()

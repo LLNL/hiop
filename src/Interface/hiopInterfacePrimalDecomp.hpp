@@ -7,6 +7,13 @@
 #include <cstring> //for memcpy
 
 
+// todo: it looks like this class should call the "user" methods
+//       eval_f_rterm  eval_grad_rterm
+//       (and then build the approximation)
+//   
+
+// todo: move RecourseApproxEvaluator "inside" hiopInterfacePriDecProblem
+
 class RecourseApproxEvaluator
 {
 public:
@@ -15,7 +22,8 @@ public:
     : RecourseApproxEvaluator(ns_, ns_)  //ns = nx, nd=S
   {
   }
-  RecourseApproxEvaluator(int ns,int S): ns_(ns),S_(S),rval_(0.), rgrad_(NULL), rhess_(NULL),x0_(NULL)//ns = nx, nd=S
+  RecourseApproxEvaluator(int ns, int S)
+    : ns_(ns),S_(S),rval_(0.), rgrad_(NULL), rhess_(NULL),x0_(NULL)//ns = nx, nd=S
   {
      assert(S>=ns);
   }
@@ -193,7 +201,9 @@ public:
   virtual bool eval_f_rterm(size_t idx, const int& n, double* x, double& rval) = 0;
   virtual bool eval_grad_rterm(size_t idx, const int& n, double* x, double* grad) = 0;
 
-  /** Documentation here
+  //
+  // Documentation here
+  //
   //virtual bool set_quadratic_regularization(const int& n, const double* x, const double& rval,const double* grad,
   //		                    const double* hess) = 0;
   virtual bool set_recourse_approx_evaluator(const int n, RecourseApproxEvaluator* evaluator)=0;
