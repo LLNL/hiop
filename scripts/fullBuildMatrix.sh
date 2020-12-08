@@ -53,6 +53,8 @@ buildMatrix()
   touch $logFile
   echo "$columnNames" >> $logFile
 
+  local doTest=${1:-1}
+
   local baseCmakeOptions=" \
     -DCMAKE_BUILD_TYPE=Debug \
     -DENABLE_TESTING=ON \
@@ -99,8 +101,9 @@ buildMatrix()
       for kronRedOp in "${kronRedOpts[@]}"; do
         for mpiOp in "${mpiOpts[@]}"; do
           export cmakeOptions="$baseCmakeOptions $rajaOp $gpuOp $kronRedOp $mpiOp"
-          buildAndTest 1 0
+          buildAndTest $doTest
           logRun $?
+          reportRuns
         done
       done
     done
@@ -118,8 +121,8 @@ buildAndTest()
   echo $cmakeOptions
   echo
 
-  local doBuild=${1:-1}
-  local doTest=${2:-1}
+  local doTest=${1:-1}
+  local rc=0
 
   echo
   echo Configuring
@@ -131,17 +134,14 @@ buildAndTest()
   cmake $cmakeOptions .. || return $cmakeError
   popd
 
-  local rc=0
-  if [[ $doBuild -eq 1 ]]; then
-    echo
-    echo Building
-    echo
-    pushd $BUILDDIR
-    $MAKE_CMD
-    rc=$?
-    popd
-    [ $rc -ne 0 ] && return $buildError
-  fi
+  echo
+  echo Building
+  echo
+  pushd $BUILDDIR
+  $MAKE_CMD
+  rc=$?
+  popd
+  [ $rc -ne 0 ] && return $buildError
 
   if [[ $doTest -eq 1 ]]; then
     echo

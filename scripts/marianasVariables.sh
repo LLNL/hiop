@@ -1,3 +1,6 @@
+if [ ! -v BUILDDIR ]; then
+  echo BUILDDIR is not set! Your paths may be misconfigured.
+fi
 export MY_CLUSTER="marianas"
 export PROJ_DIR=/qfs/projects/exasgd
 export APPS_DIR=/share/apps

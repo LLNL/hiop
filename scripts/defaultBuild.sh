@@ -23,8 +23,8 @@ defaultBuild()
       $EXTRA_CMAKE_ARGS"
 
   if [[ "$BUILD" == "1" ]]; then
-    if [[ -d $BUILDDIR ]]; then
-      rm -rf $BUILDDIR || exit 1
+    if [[ -f $BUILDDIR/CMakeCache.txt ]]; then
+      rm -f $BUILDDIR/CMakeCache.txt || exit 1
     fi
     mkdir -p $BUILDDIR || exit 1
     echo

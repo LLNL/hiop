@@ -44,7 +44,7 @@
       touch output
       tail -f output &
       tailpid=$!
-      sbatch -A EXASGD -p $SLURM_Q -t 1:00:00 --gres=gpu:1 -o output -e output $WORKDIR/BUILD.sh
+      sbatch -A EXASGD -p $SLURM_Q -t $TIMELIMIT --gres=gpu:1 -o output -e output $WORKDIR/BUILD.sh
       res=1
       set +xv
       while :;
@@ -81,6 +81,7 @@ build_on_marianas:
   variables:
     SLURM_Q: "dl"
     MY_CLUSTER: "marianas"
+    TIMELIMIT: 1:00:00
   <<: *pnnl_tags_definition
   <<: *pnnl_script_definition
   rules:
@@ -91,6 +92,7 @@ build_on_newell:
   variables:
     SLURM_Q: "newell_shared"
     MY_CLUSTER: "newell"
+    TIMELIMIT: 1:00:00
   <<: *pnnl_tags_definition
   <<: *pnnl_script_definition
   rules:
@@ -99,11 +101,13 @@ build_on_newell:
 newell_full_build_matrix:
   stage: build
   variables:
-    SLURM_Q: "newell_shared"
+    SLURM_Q: "newell"
     MY_CLUSTER: "newell"
+    TIMELIMIT: 3:00:00
     FULL_BUILD_MATRIX: 1
   <<: *pnnl_tags_definition
   <<: *pnnl_script_definition
+  timeout: 3h
   rules:
     - if: '$CI_PROJECT_ROOT_NAMESPACE == "exasgd"'
       when: manual

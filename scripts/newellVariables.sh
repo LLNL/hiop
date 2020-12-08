@@ -1,3 +1,6 @@
+if [ ! -v BUILDDIR ]; then
+  echo BUILDDIR is not set! Your paths may be misconfigured.
+fi
 export PROJ_DIR=/qfs/projects/exasgd
 export APPS_DIR=/share/apps
 #  NOTE: The following is required when running from Gitlab CI via slurm job
