@@ -1554,7 +1554,6 @@ public:
   /// Checks if _local_ vector elements are set to `answer`.
   int verifyAnswer(hiop::hiopVector* x, real_type answer)
   {
-    x->copyFromDev();
     const local_ordinal_type N = getLocalSize(x);
     auto* xdata = static_cast<const real_type*>(getLocalData(x));
     
@@ -1575,7 +1574,6 @@ public:
       hiop::hiopVector* x,
       std::function<real_type(local_ordinal_type)> expect)
   {
-    x->copyFromDev();
     const local_ordinal_type N = getLocalSize(x);
     auto* xdata = static_cast<const real_type*>(getLocalData(x));
     
