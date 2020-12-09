@@ -5,12 +5,14 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
-
 if (POLICY CMP0074)
   cmake_policy(SET CMP0074 NEW)
 endif ()
 
-project (hiop)
+project (hiop VERSION "0.3.0")
+
+string(TIMESTAMP HIOP_RELEASE_DATE "%Y-%m-%d")
+
 # enable Fortran for Fortran name mangling
 enable_language(Fortran)
 
