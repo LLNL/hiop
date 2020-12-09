@@ -438,6 +438,17 @@ if (HIOP_WITH_MAKETEST)
     add_test(NAME NlpSparse7_1 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex7.exe>" "500" "-selfcheck")
   endif(HIOP_SPARSE)
 
+  if(HIOP_WITH_VALGRIND_TESTS)
+    add_test(
+      NAME NlpDenseCons1_5H_Valgrind
+      COMMAND bash -c "${RUNCMD} ${HIOP_VALGRIND_CMD} $<TARGET_FILE:nlpDenseCons_ex1.exe> 500 1.0 -selfcheck"
+      )
+    add_test(
+      NAME NlpMixedDenseSparse4_1_Valgrind
+      COMMAND bash -c "${RUNCMD} ${HIOP_VALGRIND_CMD} $<TARGET_FILE:nlpMDS_ex4.exe> 400 100 0 -selfcheck"
+      )
+  endif()
+
   if(HIOP_BUILD_SHARED AND NOT HIOP_USE_GPU)
     add_test(NAME NlpMixedDenseSparseCinterface COMMAND ${RUNCMD} "$<TARGET_FILE:nlpMDS_cex4.exe>")
   endif()
