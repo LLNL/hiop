@@ -103,5 +103,19 @@ void VectorTestsPar::deleteLocalBuffer(real_type* buffer)
   delete [] buffer;
 }
 
+/// If test fails on any rank set fail flag on all ranks
+bool VectorTestsPar::reduceReturn(int failures, hiop::hiopVector* x)
+{
+  int fail = 0;
+
+#ifdef HIOP_USE_MPI
+  MPI_Allreduce(&failures, &fail, 1, MPI_INT, MPI_SUM, getMPIComm(x));
+#else
+  fail = failures;
+#endif
+
+  return (fail != 0);
+}
+
 
 }} // namespace hiop::tests

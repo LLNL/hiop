@@ -81,9 +81,9 @@ private:
   virtual void setLocalElement(hiop::hiopVector* x, local_ordinal_type i, real_type val);
   virtual real_type* createLocalBuffer(local_ordinal_type N, real_type val);
   virtual void deleteLocalBuffer(real_type* buffer);
-
+  virtual bool reduceReturn(int failures, hiop::hiopVector* x);
 #ifdef HIOP_USE_MPI
-  virtual MPI_Comm getMPIComm(hiop::hiopVector* x);
+  MPI_Comm getMPIComm(hiop::hiopVector* x);
 #endif
 };
 

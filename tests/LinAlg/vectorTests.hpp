@@ -1542,20 +1542,6 @@ public:
     return static_cast<local_ordinal_type>(x->get_local_size());
   }
 
-  /// If test fails on any rank set fail flag on all ranks
-  bool reduceReturn(int failures, hiop::hiopVector* x)
-  {
-    int fail = 0;
-
-#ifdef HIOP_USE_MPI
-    MPI_Allreduce(&failures, &fail, 1, MPI_INT, MPI_SUM, getMPIComm(x));
-#else
-    fail = failures;
-#endif
-
-    return (fail != 0);
-  }
-
   /// Checks if _local_ vector elements are set to `answer`.
   int verifyAnswer(hiop::hiopVector* x, real_type answer)
   {
@@ -1607,9 +1593,7 @@ protected:
   virtual void setLocalElement(hiop::hiopVector* x, local_ordinal_type i, real_type val) = 0;
   virtual real_type* createLocalBuffer(local_ordinal_type N, real_type val) = 0;
   virtual void deleteLocalBuffer(real_type* buffer) = 0;
-#ifdef HIOP_USE_MPI
-  virtual MPI_Comm getMPIComm(hiop::hiopVector* x) = 0;
-#endif
+  virtual bool reduceReturn(int failures, hiop::hiopVector* x) = 0;
 };
 
 }} // namespace hiop::tests
