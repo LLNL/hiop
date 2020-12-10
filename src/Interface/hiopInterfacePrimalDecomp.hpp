@@ -7,6 +7,8 @@
 #include <cstring> //for memcpy
 
 
+namespace hiop
+{
 class RecourseApproxEvaluator
 {
 public:
@@ -126,8 +128,7 @@ protected:
 };
 
 
-namespace hiop
-{
+
 /**
  * Base class (interface) for specifying optimization NLPs that have separable terms in the 
  * objective, which we coin as "primal decomposable" problems. 
