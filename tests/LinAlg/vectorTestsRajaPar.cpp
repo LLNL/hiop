@@ -163,42 +163,4 @@ int VectorTestsRajaPar::verifyAnswer(hiop::hiopVector* v, std::function<real_typ
   return local_fail;
 }
 
-/// Wrap new command
-real_type* VectorTestsRajaPar::createLocalBuffer(local_ordinal_type N, real_type val)
-{
-  auto& resmgr = umpire::ResourceManager::getInstance();
-  umpire::Allocator hal = resmgr.getAllocator("HOST");
-  real_type* buffer = static_cast<real_type*>(hal.allocate(N*sizeof(real_type)));
-
-  // Set buffer elements to the initial value
-  for(local_ordinal_type i = 0; i < N; ++i)
-    buffer[i] = val;
-
-#ifdef HIOP_USE_CUDA
-  umpire::Allocator dal = resmgr.getAllocator("DEVICE");
-  real_type* dev_buffer = static_cast<real_type*>(dal.allocate(N*sizeof(real_type)));
-  resmgr.copy(dev_buffer, buffer, N*sizeof(real_type));
-  hal.deallocate(buffer);
-  return dev_buffer;
-#endif
-
-  return buffer;
-}
-
-/// Wrap delete command
-void VectorTestsRajaPar::deleteLocalBuffer(real_type* buffer)
-{
-#ifdef HIOP_USE_CUDA
-  const std::string hiop_umpire_dev = "DEVICE";
-#else
-  const std::string hiop_umpire_dev = "HOST"; 
-#endif
-
-  auto& resmgr = umpire::ResourceManager::getInstance();
-  umpire::Allocator al = resmgr.getAllocator(hiop_umpire_dev);
-  al.deallocate(buffer);
-}
-
-
-
 }} // namespace hiop::tests

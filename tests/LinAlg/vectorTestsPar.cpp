@@ -150,20 +150,4 @@ int VectorTestsPar::verifyAnswer(
   return local_fail;
 }
 
-/// Wrap new command
-real_type* VectorTestsPar::createLocalBuffer(local_ordinal_type N, real_type val)
-{
-  real_type* buffer = new real_type[N];
-  for(local_ordinal_type i = 0; i < N; ++i)
-    buffer[i] = val;
-  return buffer;
-}
-
-/// Wrap delete command
-void VectorTestsPar::deleteLocalBuffer(real_type* buffer)
-{
-  delete [] buffer;
-}
-
-
 }} // namespace hiop::tests

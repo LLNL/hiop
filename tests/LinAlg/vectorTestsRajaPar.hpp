@@ -84,8 +84,6 @@ private:
       hiop::hiopVector* x,
       std::function<real_type(local_ordinal_type)> expect) override;
   virtual bool reduceReturn(int failures, hiop::hiopVector* x) override;
-  virtual real_type* createLocalBuffer(local_ordinal_type N, real_type val);
-  virtual void deleteLocalBuffer(real_type* buffer);
 
 #ifdef HIOP_USE_MPI
   MPI_Comm getMPIComm(hiop::hiopVector* x);

@@ -108,8 +108,11 @@ public:
 
   /**
    * @brief Static method to create a raw C array
+   *
+   * @param value default value of the memory. This is an int as Umpire
+   *              can only set blocks of memory to integer values.
    */
-  static double* createRawArray(int n);
+  static double* createRawArray(int n, int value=0);
 
   /**
    * @brief Static method to delete a raw C array

@@ -182,7 +182,7 @@ public:
     v.copyFrom(from);
     int fail = verifyAnswer(&v, one);
 
-    // const real_type* from_buffer = createLocalBuffer(N, three);
+    // const real_type* from_buffer = hiop::LinearAlgebraFactory::createRawArray(N, three);
     // v.copyFrom(from_buffer);
     // fail += verifyAnswer(&v, three);
 
@@ -209,7 +209,7 @@ public:
     assert(Nx > Nfrom);
     x.setToConstant(two);
 
-    real_type* from_buffer = createLocalBuffer(Nx, one);
+    real_type* from_buffer = hiop::LinearAlgebraFactory::createRawArray(Nx, one);
 
     x.copyFromStarting(1, from_buffer, Nx-1);
     fail += verifyAnswer(&x,
@@ -217,7 +217,7 @@ public:
       {
         return (i == 0) ? two : one;
       });
-    deleteLocalBuffer(from_buffer);
+    hiop::LinearAlgebraFactory::deleteRawArray(from_buffer);
 
     x.setToConstant(two);
     from.setToConstant(one);
@@ -245,11 +245,11 @@ public:
     fail += verifyAnswer(&x, two);
 
     // Testing copying from a zero size array
-    real_type* zero_buffer = createLocalBuffer(0, one);
+    real_type* zero_buffer = hiop::LinearAlgebraFactory::createRawArray(0, one);
     x.setToConstant(two);
     x.copyFromStarting(0, zero_buffer, 0);
     fail += verifyAnswer(&x, two);
-    deleteLocalBuffer(zero_buffer);
+    hiop::LinearAlgebraFactory::deleteRawArray(zero_buffer);
 
     printMessage(fail, __func__, rank);
     return reduceReturn(fail, &x);
@@ -1538,8 +1538,6 @@ protected:
       hiop::hiopVector* x,
       std::function<real_type(local_ordinal_type)> expect) = 0;
   virtual bool reduceReturn(int failures, hiop::hiopVector* x) = 0;
-  virtual real_type* createLocalBuffer(local_ordinal_type N, real_type val) = 0;
-  virtual void deleteLocalBuffer(real_type* buffer) = 0;
 };
 
 }} // namespace hiop::tests

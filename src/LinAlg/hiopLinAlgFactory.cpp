@@ -204,22 +204,28 @@ hiopMatrixSparse* LinearAlgebraFactory::createMatrixSymSparse(int size, int nnz)
 /**
  * @brief Static method to create a raw C array
  */
-double* LinearAlgebraFactory::createRawArray(int n)
+double* LinearAlgebraFactory::createRawArray(int n, int value)
 {
   if (mem_space_ == "DEFAULT")
   {
-    return new double[n];
+    double *tmp = new double[n];
+    std::fill(tmp, tmp + n, value);
+    return tmp;
   }
   else
   {
 #ifdef HIOP_USE_RAJA
     auto& resmgr = umpire::ResourceManager::getInstance();
     umpire::Allocator al  = resmgr.getAllocator(mem_space_);
-    return static_cast<double*>(al.allocate(n*sizeof(double)));
+    double *tmp = static_cast<double*>(al.allocate(n*sizeof(double)));
+    resmgr.memset(tmp, value);
+    return tmp;
 #else
     assert(false && "requested memory space not available because Hiop was not"
            "built with RAJA support");
-    return new double[n];
+    double *tmp = new double[n];
+    std::fill(tmp, tmp + n, value);
+    return tmp;
 #endif
   }
 }
