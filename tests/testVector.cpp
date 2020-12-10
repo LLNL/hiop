@@ -73,9 +73,11 @@
 #endif
 
 template <typename T>
-int vectorTests(T test, const char* mem_space, int rank, int numRanks, MPI_Comm comm)
+int vectorTests(const char* mem_space, int rank, int numRanks, MPI_Comm comm)
 {
   using hiop::tests::global_ordinal_type;
+
+  T test;
 
   hiop::LinearAlgebraFactory::set_mem_space(mem_space);
 
@@ -198,9 +200,10 @@ int main(int argc, char** argv)
 
   int fail = 0;
 
-  fail += vectorTests(hiop::tests::VectorTestsPar(), "default", rank, numRanks, comm);
+  fail += vectorTests<hiop::tests::VectorTestsPar>("DEFAULT", rank, numRanks, comm);
 #ifdef HIOP_USE_RAJA
-  fail += vectorTests(hiop::tests::VectorTestsRajaPar(), "device", rank, numRanks, comm);
+  if (rank == 0)	std::cout << "\nTesting HiOp RAJA vector:\n";
+  fail += vectorTests<hiop::tests::VectorTestsRajaPar>("DEVICE", rank, numRanks, comm);
 #endif
 
   hiop::hiopOptions options;
