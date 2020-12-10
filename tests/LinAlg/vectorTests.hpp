@@ -1575,6 +1575,11 @@ public:
     return local_fail;
   }
 
+  /**
+   * @brief Verifies:
+   * \forall x in _local_ vector data at index i,
+   *    x == expect(i)
+   */
   int verifyAnswer(
       hiop::hiopVector* x,
       std::function<real_type(local_ordinal_type)> expect)
