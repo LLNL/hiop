@@ -208,32 +208,36 @@ protected:
  * 
  */
 
-
 class Ex8 : public hiop::hiopInterfaceDenseConstraints
 {
 public:
   Ex8(int ns_)
-    : Ex8(ns_, ns_)  //ns = nx, nd=S
-  {
-  }
+    : Ex8(ns_, ns_){}  //ns = nx, nd=S
   
   Ex8(int ns_, int S_)
     : ns(ns_),evaluator_(NULL) 
 
   {
-    if(ns<0) {
+    if(ns<0)
+    {
       ns = 0;
-    } else {
-      if(4*(ns/4) != ns) {
+    }else{
+      if(4*(ns/4) != ns)
+      {
 	ns = 4*((4+ns)/4);
 	printf("[warning] number (%d) of sparse vars is not a multiple ->was altered to %d\n", 
 	       ns_, ns); 
       }
     }
 
-    if(S_<0) S=0;
-    else S = S_;
-    if(S<ns){
+    if(S_<0)
+    {
+      S=0;
+    }else{
+      S = S_;
+    }
+    if(S<ns)
+    {
       S = ns;
       printf("[warning] number (%d) of recourse problems should be larger than sparse vars  %d,"
 	     " changed to be the same\n",  S, ns); 
@@ -244,12 +248,10 @@ public:
     : Ex8(ns_,S_)
   {
     include_r = include_;
-    /*if(include_r){
-      rval = 0.;
-      rgrad = new double[ns];
-      rhess = new double[ns];
-      x0 = new double[ns];
-    }*/
+    if(include_r)
+    {
+      evaluator_ = new RecourseApproxEvaluator(ns_);
+    }
   }
   Ex8(int ns_, int S_, bool include, const RecourseApproxEvaluator* evaluator)
     : Ex8(ns_,S_)
@@ -278,9 +280,7 @@ public:
     assert(n==ns);
     //x
     for(int i=0; i<ns; ++i) xlow[i] = 0.;
-    //x
     for(int i=0; i<ns; ++i) xupp[i] = +1e+20;
-
     for(int i=0; i<ns; ++i) type[i]=hiopNonlinear;
     return true;
   }
@@ -288,7 +288,6 @@ public:
   bool get_cons_info(const long long& m, double* clow, double* cupp, NonlinearityType* type)
   {
     assert(m==0);
-
     return true;
   }
   bool eval_f(const long long& n, const double* x, bool new_x, double& obj_value)
@@ -299,11 +298,11 @@ public:
     for(int i=0; i<ns; i++) obj_value += (x[i]-1.)*(x[i]-1.);
     obj_value *= 0.5;
 
-    if(include_r){
+    if(include_r)
+    {
       assert(evaluator_->get_rgrad()!=NULL);
       evaluator_->eval_f(ns, x, new_x, obj_value);
     }
-
     return true;
   }
   virtual bool eval_cons(const long long& n, const long long& m, 
@@ -319,9 +318,12 @@ public:
   {
     //! assert(ns>=4); assert(Q->n()==ns/4); assert(Q->m()==ns/4);
     //x_i - 0.5 
-    for(int i=0; i<ns; i++) 
+    for(int i=0; i<ns; i++)
+    {
       gradf[i] = x[i]-1.;
-    if(include_r){
+    }
+    if(include_r)
+    {
       assert(evaluator_->get_rgrad()!=NULL);
       evaluator_->eval_grad(ns, x, new_x, gradf);
     }
@@ -357,7 +359,8 @@ public:
     return true;
   }
 
-  bool quad_is_defined() {
+  bool quad_is_defined()
+  {
     if(evaluator_!=NULL) return true;
     else return false;
   }
@@ -365,14 +368,15 @@ public:
   bool set_quadratic_terms(const int& n, const RecourseApproxEvaluator* evaluator)
   {
     assert(ns == n);
-    if(evaluator_==NULL){
-    
+    if(evaluator_==NULL)
+    {
       evaluator_ = new RecourseApproxEvaluator(n, S, evaluator->get_rval(), evaluator->get_rgrad(), 
 		            evaluator->get_rhess(), evaluator->get_x0());
       return true;
     }
 
-    if(evaluator->get_rgrad()!=NULL){
+    if(evaluator->get_rgrad()!=NULL)
+    {
       evaluator_->set_rval(evaluator->get_rval());
      
       evaluator_->set_rgrad(ns,evaluator->get_rgrad());
@@ -382,7 +386,8 @@ public:
     }
     return true;
   }
-  bool set_include(bool include){
+  bool set_include(bool include)
+  {
     include_r = include;
     return true;
   }
@@ -423,7 +428,8 @@ public:
     //hiopNlpMDS nlp(*my_nlp);
     //Ex8 nlp_interface(n);
     //hiopNlpDenseConstraints nlp(*my_nlp);
-    if(my_nlp==NULL){
+    if(my_nlp==NULL)
+    {
       my_nlp = new Ex8(n_,S_);
     }
 
