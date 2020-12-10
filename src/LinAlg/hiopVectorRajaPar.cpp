@@ -325,15 +325,12 @@ void hiopVectorRajaPar::copyFromStarting(int start_index_in_this, const double* 
  */
 void hiopVectorRajaPar::copyFromStarting(int start_index, const hiopVector& vec)
 {
-#ifdef HIOP_DEEPCHECKS
+#ifdef HIOP_DEEPCHECKS 
   assert(n_local_ == n_ && "are you sure you want to call this?");
 #endif
   const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(vec);
-  assert(start_index + v.n_local_ <= n_local_);
-  
-  auto& rm = umpire::ResourceManager::getInstance();
-  double* vv = const_cast<double*>(v.data_dev_); // scary: 
-  rm.copy(this->data_dev_ + start_index, vv, v.n_local_*sizeof(double));
+  assert(start_index + v.get_local_size() <= n_local_);
+  this->copyFromStarting(start_index, v.local_data_const(), v.get_local_size());
 }
 
 /**
