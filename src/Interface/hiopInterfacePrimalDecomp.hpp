@@ -9,6 +9,13 @@
 
 namespace hiop
 {
+// todo: it looks like this class should call the "user" methods
+//       eval_f_rterm  eval_grad_rterm
+//       (and then build the approximation)
+//   
+
+// todo: move RecourseApproxEvaluator "inside" hiopInterfacePriDecProblem
+
 class RecourseApproxEvaluator
 {
 public:
@@ -17,7 +24,8 @@ public:
     : RecourseApproxEvaluator(ns_, ns_)  //ns = nx, nd=S
   {
   }
-  RecourseApproxEvaluator(int ns,int S): ns_(ns),S_(S),rval_(0.), rgrad_(NULL), rhess_(NULL),x0_(NULL)//ns = nx, nd=S
+  RecourseApproxEvaluator(int ns, int S)
+    : ns_(ns),S_(S),rval_(0.), rgrad_(NULL), rhess_(NULL),x0_(NULL)//ns = nx, nd=S
   {
      assert(S>=ns);
   }
@@ -128,38 +136,49 @@ protected:
 };
 
 
+<<<<<<< HEAD
 
 /**
+=======
+namespace hiop
+{
+/** 
+>>>>>>> 705b3825e670e9325445af09fa8df588b3e6ab32
  * Base class (interface) for specifying optimization NLPs that have separable terms in the 
- * objective, which we coin as "primal decomposable" problems. 
- * 
- * The following structure and terminology is assumed
+ * objective, which we coin as "primal decomposable" problems. More specifically, these problems 
+ * have the following structure (please also take a note of the terminology):
  *
- *   min  basecase + sum { r_i(x) : i=1,...,S}      (primal decomposable NLP)
- *    x
+ *   min_x  basecase(x) + sum { r_i(x) : i=1,...,S}      (primal decomposable NLP)
  *
- * where 'basecase' refers to an NLP of a general form in the optimization variable 'x'. 
- * Furthermore, borrowing from stochastic programming terminology, the terms 'r_i' are called 
- * recourse terms, or, in short, r-term.
+ * The subproblem <b>'basecase'</b> refers to a general nonlinear nonconvex NLP in `x`. We point out 
+ * that the basecase can have general <i>twice continously differentiable</i> objective and 
+ * constraints; the latter can be equalities, inequalities, and bounds on `x`.
+ * Furthermore, borrowing from stochastic programming terminology, the terms `r_i` are 
+ * called <em> recourse terms </em>, or, in short, <b> r-terms </b>.
  * 
  * In order to solve the above problem, HiOp solver will perform a series of approximations and will
  * require the user to solve a so-called 'master' problem
  * 
- *   min  basecase +  q(x)                            (master NLP)
+ *   min  basecase(x) +  q(x)                            (master NLP)
  *    x
- * where q(x) are convex differentiable approximations of r_i(x). 
+ * where the function q(x) is a convex differentiable approximation of sum { r_i(x) : i=1,...,S}
+ * that we refer to as <i> quadratic regularization </i>.
  * 
- * The user is required to maintain and solve the master problem, more specifically
- *  - to add quadratic regularization to the basecase NLP to obtain the master NLP as
- * instructed by HiOp via @set_quadratic_regularization
- *  - (re)solve master NLP and return the primal optimal solution 'x' to HiOp via
- * @solve function.
+ * The user is required to maintain and solve the master problem, more specifically:
+ *  - to add the quadratic regularization to the basecase NLP; the quadratic regularization is 
+ * provided by HiOp hiopInterfacePriDecProblem::set_recourse_approx_evaluator
+ *  - to (re)solve master NLP  and return the primal optimal solution `x` to HiOp; for doing this, 
+ * the user is required to implement hiopInterfacePriDecProblem::solve_master method.
  *
  * In addition, the user is required to implement 
- *     @eval_f_rterm 
- *     @eval_grad_rterm
- * to allow HiOp to compute function value and gradient vector individually for each recourse 
- * term  r_i. This will be done at arbitrary vectors 'x' that will be decided by HiOp. 
+ *     - hiopInterfacePriDecProblem::eval_f_rterm 
+ *     - hiopInterfacePriDecProblem::eval_grad_rterm
+ * 
+ * These methods will be used by the HiOp's primal decomposition solver to  compute function value 
+ * and  gradient vector individually for each recourse term  r_i, which are needed to build the 
+ * convex regularizations q(x). The above methods will be called at arbitrary vectors `x` that 
+ * are decided internally  by HiOp. 
+ *
  */
 
 class hiopInterfacePriDecProblem
@@ -189,6 +208,9 @@ public:
   virtual bool eval_f_rterm(size_t idx, const int& n, double* x, double& rval) = 0;
   virtual bool eval_grad_rterm(size_t idx, const int& n, double* x, double* grad) = 0;
 
+  //
+  // Documentation here
+  //
   //virtual bool set_quadratic_regularization(const int& n, const double* x, const double& rval,const double* grad,
   //		                    const double* hess) = 0;
   virtual bool set_recourse_approx_evaluator(const int n, RecourseApproxEvaluator* evaluator)=0;
