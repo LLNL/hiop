@@ -11,7 +11,7 @@ set(testMatrixSparse_SRC testMatrixSparse.cpp LinAlg/matrixTestsSparseTriplet.cp
 set(testMatrixSymSparse_SRC testMatrixSymSparse.cpp LinAlg/matrixTestsSymSparseTriplet.cpp)
 
 # Check if using RAJA and Umpire and add RAJA sources
-if(HIOP_USE_UMPIRE)
+if(HIOP_USE_RAJA)
   set(testVector_SRC ${testVector_SRC} LinAlg/vectorTestsRajaPar.cpp LinAlg/vectorTestsIntRaja.cpp)
   set(testMatrix_SRC ${testMatrix_SRC} LinAlg/matrixTestsRajaDense.cpp)
   set(testMatrixSparse_SRC ${testMatrixSparse_SRC} LinAlg/matrixTestsRajaSparseTriplet.cpp)
@@ -43,7 +43,7 @@ target_link_libraries(testMatrixSparse PRIVATE hiop)
 add_executable(testMatrixSymSparse ${testMatrixSymSparse_SRC})
 target_link_libraries(testMatrixSymSparse PRIVATE hiop)
 
-if(HIOP_USE_UMPIRE)
+if(HIOP_USE_RAJA)
   target_link_libraries(testVector PRIVATE umpire RAJA OpenMP::OpenMP_CXX)
   target_link_libraries(testMatrix PRIVATE umpire RAJA OpenMP::OpenMP_CXX)
   target_link_libraries(testMatrixSparse PRIVATE umpire RAJA OpenMP::OpenMP_CXX)
