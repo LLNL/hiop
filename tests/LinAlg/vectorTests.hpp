@@ -1531,9 +1531,9 @@ public:
   }
 
   /// Returns element _i_ of vector _x_.
-  real_type getLocalElement(hiop::hiopVector* x, local_ordinal_type i)
+  real_type getLocalElement(const hiop::hiopVector* x, local_ordinal_type i)
   {
-    return getLocalData(x)[i];
+    return getLocalDataConst(x)[i];
   }
 
   /// Returns pointer to local vector data
@@ -1598,6 +1598,7 @@ public:
 protected:
   // Interface to methods specific to vector implementation
   virtual real_type* getLocalData(hiop::hiopVector* x) = 0;
+  virtual const real_type* getLocalDataConst(const hiop::hiopVector* x) = 0;
   virtual void setLocalElement(hiop::hiopVector* x, local_ordinal_type i, real_type val) = 0;
   virtual real_type* createLocalBuffer(local_ordinal_type N, real_type val) = 0;
   virtual void deleteLocalBuffer(real_type* buffer) = 0;

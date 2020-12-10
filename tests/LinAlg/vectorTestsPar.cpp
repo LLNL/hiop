@@ -66,6 +66,12 @@ real_type* VectorTestsPar::getLocalData(hiop::hiopVector* x)
   return x->local_data_host();
 }
 
+/// Returns const pointer to local vector data
+const real_type* VectorTestsPar::getLocalDataConst(const hiop::hiopVector* x)
+{
+  return x->local_data_host_const();
+}
+
 /// Method to set vector _x_ element _i_ to _value_.
 void VectorTestsPar::setLocalElement(hiop::hiopVector* x, local_ordinal_type i, real_type val)
 {

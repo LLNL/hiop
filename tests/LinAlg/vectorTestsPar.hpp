@@ -74,6 +74,7 @@ public:
 
 private:
   virtual real_type* getLocalData(hiop::hiopVector* x);
+  virtual const real_type* getLocalDataConst(const hiop::hiopVector* x);
   virtual void setLocalElement(hiop::hiopVector* x, local_ordinal_type i, real_type val);
   virtual real_type* createLocalBuffer(local_ordinal_type N, real_type val);
   virtual void deleteLocalBuffer(real_type* buffer);
