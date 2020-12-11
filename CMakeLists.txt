@@ -33,6 +33,7 @@ option(HIOP_BUILD_STATIC "Build static library" ON)
 option(HIOP_SPARSE "Build with sparse linear algebra" ON)
 option(HIOP_USE_COINHSL "Build with sparse linear algebra" ON)
 option(HIOP_USE_STRUMPACK "Build with STRUMPACK backend for sparse linear algebra" OFF)
+option(HIOP_BUILD_DOCUMENTATION "Build HiOp documentation via Doxygen" ON)
 
 if(HIOP_BUILD_SHARED)
   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -247,6 +248,10 @@ add_subdirectory(src/Optimization)
 add_subdirectory(src/LinAlg)
 add_subdirectory(src/Drivers)
 add_subdirectory(src/Utils)
+
+if(HIOP_BUILD_DOCUMENTATION)
+  include(cmake/HiOpDoxygenConfig.cmake)
+endif()
 
 ##########################################################
 #  INSTALLATION
