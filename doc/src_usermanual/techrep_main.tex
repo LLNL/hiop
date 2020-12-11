@@ -794,11 +794,11 @@ kappa2 & numeric & 1e-02 & 1e-08 -- 0.49999 &  shift projection parameter used i
 \multicolumn{2}{|l|}{dualsUpdateType} &&&\\
 \multicolumn{2}{|r|}{ string} &  "lsq" & "lsq" "linear" & type of update of the multipliers of the eq. cons.\\\hline
 secant\_ memory\_ len & integer & 6 &  0 -- 256  & length of the memory of the Hessian secant approximation\\\hline  
-fixed\_var & string & "none" & "remove" "relax" "none" & treatment of fixed variables; in order, they can be removed, their lower and upper bounds relaxed, or ignored. The last value causes a premature termination if fixed variables are detected. \\  \hline
+fixed\_var & string & "none" & "remove" "relax" "none" & treatment of fixed variables; in order, they can be removed, their lower and upper bounds relaxed, or ignored. "remove" is not available in "gpu" compute mode. "none" causes a premature termination if fixed variables are detected. \\  \hline
 fixed\_var\_ tolerance & numeric & 1e-15 & 1e-30 -- 1e-2 & tolerance for $|ub-lb|$ under which a variable will be considered fixed. \\ \hline
 fixed\_var\_ perturb & numeric & 1e-8 & 1e-14 -- 0.1 & Perturbation of the lower and upper bounds for a fixed variable relative to its magnitude: lb/ub $-$=/+= max(abs(ub),1)$\times$fixed\_var\_perturb\\ \hline
-compute\_mode & string & "auto" & "auto" "cpu" "hybrid" & Offloading of computations to GPUs: "hybrid" will use GPUs for linear systems, "auto" will decide between "cpu" and "hybrid" based on the other options passed, and "cpu" will only use device CPU. \\\hline
-mem\_space & string & "default" & "default" "host" "device" "um" "pinned" & Memory space selection: the values currently supported are "default" (currently same the "host"), "host", and "um"; for more information consult UMPIRE documentation. \\\hline
+compute\_mode & string & "auto" & "auto" "cpu" "hybrid" "gpu" & Offloading of computations to GPUs: "gpu" will run entirely on GPU (needs RAJA), "hybrid" will use GPUs for linear systems, "auto" will decide between "cpu" and "hybrid" based on the other options passed, and "cpu" will only use device CPU. \\\hline
+mem\_space & string & "default" & "default" "host" "device" "um" & Memory space selection: without RAJA/Umpire enabled only "default" is available; for "host" and "um" options consult Umpire documentation. \\\hline
 time\_kkt & string & "off" & "on" "off" & Turns on/off internal performance timers and analysis and enables additional reporting of the computational constituents of the KKT solve process \\\hline
 %
 %% smax  1.000000e+02     	 \# (numeric)  1 to 1e+07   multiplier threshold used in computing the scaling factors for the optimality error (default 100.)]
