@@ -293,6 +293,8 @@ Starting version 0.3, \Hi offers support for offloading computations to NVIDIA G
 
 To build the documentation for \Hi, enable the \texttt{HIOP\_BUILD\_DOCUMENTATION} option when configuring. This option can only be enabled if a \texttt{doxygen} executable is available in the path. This option adds the targets \texttt{doc} and \texttt{install_doc} which build and install the documentation. When installed, \texttt{html} and \LaTeX{}/pdf documentation may be found under \texttt{<install prefix>/doc/html} and \texttt{<install prefix>/doc/html}, respectively.
 
+To build every configuration of HiOp for testing purposes, the build script has an option \texttt{./BUILD.sh --full-build-matrix}. See the testing section of \texttt{README_developers.md} for more information.
+
 Additional \Hi features not yet mentioned may be found in the top of the top-level \texttt{CMakeLists.txt} file with a brief description.
 
 \section{Interfacing with \Hi}
