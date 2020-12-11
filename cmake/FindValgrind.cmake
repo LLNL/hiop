@@ -21,12 +21,7 @@ if(HIOP_WITH_VALGRIND_TESTS)
       "not be found. Disabling valgrind tests.")
     set(HIOP_WITH_VALGRIND_TESTS OFF)
   else(NOT VALGRIND)
-    set(HIOP_VALGRIND_CMD "${VALGRIND} \
-      --leak-check=full \
-      --show-leak-kinds=all \
-      --track-origins=yes \
-      --verbose \
-      --error-exitcode=1"
+    set(HIOP_VALGRIND_CMD "${VALGRIND} --error-exitcode=1"
       CACHE STRING
       "Command used to invoke valgrind by HiOp test suite"
       )

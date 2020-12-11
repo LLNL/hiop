@@ -34,6 +34,7 @@ option(HIOP_SPARSE "Build with sparse linear algebra" ON)
 option(HIOP_USE_COINHSL "Build with sparse linear algebra" ON)
 option(HIOP_USE_STRUMPACK "Build with STRUMPACK backend for sparse linear algebra" OFF)
 option(HIOP_WITH_VALGRIND_TESTS "Run valgrind on certain integration tests" OFF)
+option(HIOP_BUILD_DOCUMENTATION "Build HiOp documentation via Doxygen" ON)
 
 if(HIOP_BUILD_SHARED)
   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -249,6 +250,10 @@ add_subdirectory(src/LinAlg)
 add_subdirectory(src/Drivers)
 add_subdirectory(src/Utils)
 
+if(HIOP_BUILD_DOCUMENTATION)
+  include(cmake/HiOpDoxygenConfig.cmake)
+endif()
+
 ##########################################################
 #  INSTALLATION
 ##########################################################
@@ -437,6 +442,17 @@ if (HIOP_WITH_MAKETEST)
     add_test(NAME NlpSparse6_1 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex6.exe>" "500" "-selfcheck")
     add_test(NAME NlpSparse7_1 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex7.exe>" "500" "-selfcheck")
   endif(HIOP_SPARSE)
+
+  if(HIOP_WITH_VALGRIND_TESTS)
+    add_test(
+      NAME NlpDenseCons1_5H_Valgrind
+      COMMAND bash -c "${RUNCMD} ${HIOP_VALGRIND_CMD} $<TARGET_FILE:nlpDenseCons_ex1.exe> 500 1.0 -selfcheck"
+      )
+    add_test(
+      NAME NlpMixedDenseSparse4_1_Valgrind
+      COMMAND bash -c "${RUNCMD} ${HIOP_VALGRIND_CMD} $<TARGET_FILE:nlpMDS_ex4.exe> 400 100 0 -selfcheck"
+      )
+  endif()
 
   if(HIOP_BUILD_SHARED AND NOT HIOP_USE_GPU)
     add_test(NAME NlpMixedDenseSparseCinterface COMMAND ${RUNCMD} "$<TARGET_FILE:nlpMDS_cex4.exe>")
