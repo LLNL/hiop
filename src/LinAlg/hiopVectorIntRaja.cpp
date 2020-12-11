@@ -80,6 +80,20 @@ hiopVectorIntRaja::hiopVectorIntRaja(int sz, std::string mem_space)
   }
 }
 
+hiopVectorIntRaja::~hiopVectorIntRaja()
+{
+  auto& resmgr = umpire::ResourceManager::getInstance();
+  umpire::Allocator devalloc  = resmgr.getAllocator(mem_space_);
+  devalloc.deallocate(buf_dev_);
+  if (mem_space_ != "HOST")
+  {
+    umpire::Allocator hostalloc = resmgr.getAllocator("HOST");
+    hostalloc.deallocate(buf_host_);
+  }
+  buf_host_ = nullptr;
+  buf_dev_ = nullptr;
+}
+
 const int& hiopVectorIntRaja::operator[] (int i) const
 {
   return buf_host_[i];

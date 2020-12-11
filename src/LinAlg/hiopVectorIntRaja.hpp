@@ -74,6 +74,8 @@ private:
 public:
   hiopVectorIntRaja(int sz, std::string mem_space="HOST");
 
+  ~hiopVectorIntRaja();
+
   const int& operator[] (int i) const override;
 
   int& operator[] (int i) override;
