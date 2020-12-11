@@ -103,7 +103,6 @@ newell_full_build_matrix:
   variables:
     SLURM_Q: "newell"
     MY_CLUSTER: "newell"
-    FULL_BUILD_MATRIX: 1
     TIMELIMIT: '3:00:00'
     FULL_BUILD_MATRIX: '1'
   <<: *pnnl_tags_definition
