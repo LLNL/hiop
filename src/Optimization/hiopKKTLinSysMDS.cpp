@@ -494,7 +494,8 @@ namespace hiop
 
 #ifdef HIOP_USE_MAGMA
       if(nlp_->options->GetString("compute_mode")=="hybrid" ||
-	 nlp_->options->GetString("compute_mode")=="auto") {
+	       nlp_->options->GetString("compute_mode")=="gpu"    ||
+	       nlp_->options->GetString("compute_mode")=="auto") {
 	// once we get the desired functionality from magma this should be revisited to 
 	// increase robustness of nopiv factorization aftermath by making use of nopiv inertia
 	//

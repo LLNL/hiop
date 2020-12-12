@@ -107,7 +107,8 @@ public:
     if(NULL==linSys) {
       int n=Jac_c_->m() + Jac_d_->m() + Hess_->m();
 
-      if(nlp_->options->GetString("compute_mode")=="hybrid") {
+      if(nlp_->options->GetString("compute_mode")=="hybrid" ||
+         nlp_->options->GetString("compute_mode")=="gpu") {
 #ifdef HIOP_USE_MAGMA
 	linSys = new hiopLinSolverIndefDenseMagmaNopiv(n, nlp_);
 	nlp_->log->printf(hovScalars,
@@ -346,7 +347,8 @@ public:
     if(NULL==linSys) {
       int n=nx+neq+2*nineq;
 
-      if(nlp_->options->GetString("compute_mode")=="hybrid") {
+      if(nlp_->options->GetString("compute_mode")=="hybrid" ||
+         nlp_->options->GetString("compute_mode")=="gpu") {
 #ifdef HIOP_USE_MAGMA
 	nlp_->log->printf(hovScalars, "LinSysDenseDXYcYd: instantiating Magma for a matrix of size %d\n", n);
 	linSys = new hiopLinSolverIndefDenseMagmaNopiv(n, nlp_);

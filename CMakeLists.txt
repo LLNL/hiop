@@ -21,7 +21,6 @@ FortranCInterface_HEADER(FortranCInterface.hpp MACRO_NAMESPACE "FC_")
 option(HIOP_USE_MPI "Build with MPI support" ON)
 option(HIOP_USE_GPU "Build with support for GPUs - Magma and cuda libraries" OFF)
 option(HIOP_TEST_WITH_BSUB "Use `jsrun` instead of `mpirun` commands when running tests" OFF)
-option(HIOP_USE_UMPIRE "Build with portable memory management library Umpire" OFF)
 option(HIOP_USE_RAJA   "Build with portability abstraction library RAJA" OFF)
 option(HIOP_DEEPCHECKS "Extra checks and asserts in the code with a high penalty on performance" OFF)
 option(HIOP_WITH_KRON_REDUCTION "Build Kron Reduction code (requires UMFPACK)" OFF)
@@ -144,10 +143,7 @@ if(HIOP_USE_RAJA)
   find_package(RAJA CONFIG
     PATHS ${RAJA_DIR} ${RAJA_DIR}/share/raja/cmake
     REQUIRED)
-endif()
-
-if(HIOP_USE_UMPIRE)
-  # Look for CMake configuration file in Umpire installation
+  # Umpire is always needed when RAJA is enabled
   find_package(umpire CONFIG
     PATHS ${umpire_DIR} ${umpire_DIR}/share/umpire/cmake
     REQUIRED)
@@ -180,7 +176,7 @@ endif(NOT DEFINED LAPACK_LIBRARIES)
 target_link_libraries(hiop_math INTERFACE ${LAPACK_LIBRARIES})
 message(STATUS "Using LAPACK libraries: ${LAPACK_LIBRARIES}")
 
-if(HIOP_USE_UMPIRE)
+if(HIOP_USE_RAJA)
   target_link_libraries(hiop_math INTERFACE umpire RAJA)
 endif()
 

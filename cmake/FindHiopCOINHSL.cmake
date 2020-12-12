@@ -28,6 +28,8 @@ find_path(COINHSL_INCLUDE_DIR
   PATHS
   ${COINHSL_DIR} $ENV{COINHSL_DIR} ${HIOP_COINHSL_DIR} ${COINHSL_LIBRARY_DIR}/..
   PATH_SUFFIXES
+  include/coin/ThirdParty
+  include/coinor
   include/coin-or
   include/coin-or/hsl
   include)

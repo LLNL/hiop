@@ -177,12 +177,16 @@ bool hiopNlpFormulation::finalizeInitialization()
   if(dFixedVarsTol != fixedVarTol) {
     doinit=true;
   }
+
   //more tests here (for example change in the rescaling)
   if(!doinit) {
     return true;
   } else {
     
   }
+
+  // Select memory space where to create linear algebra objects
+  hiop::LinearAlgebraFactory::set_mem_space(options->GetString("mem_space"));
 
   bool bret = interface_base.get_prob_sizes(n_vars, n_cons); assert(bret);
 

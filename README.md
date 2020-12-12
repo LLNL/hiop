@@ -29,7 +29,6 @@ $> cmake -DCMAKE_INSTALL_PREFIX=/usr/lib/hiop ..'
 ### Selected HiOp-specific build options
 * Enable/disable MPI: *-DHIOP_USE_MPI=[ON/OFF]* (by default ON)
 * GPU support: *-DHIOP_USE_GPU=ON*. MPI can be either off or on. For more build system options related to GPUs, see "Dependencies" section below.
-* Use RAJA portability layer to allow running linear algebra in either host (CPU) or device (GPU): *-DHIOP_USE_RAJA=ON* and *-DHIOP_USE_UMPIRE=ON*. These build options are off by default. Currently, HiOp only supports unified memory space.
 * Enable/disable "developer mode" build that enforces more restrictive compiler rules and guidelines: *-DHIOP_DEVELOPER_MODE=ON*. This option is by default off.
 * Additional checks and self-diagnostics inside HiOp meant to detect abnormalities and help to detect bugs and/or troubleshoot problematic instances: *-DHIOP_DEEPCHECKS=[ON/OFF]* (by default ON). Disabling HIOP_DEEPCHECKS usually provides 30-40% execution speedup in HiOp. For full strength, it is recommended to use HIOP_DEEPCHECKS with debug builds. With non-debug builds, in particular the ones that disable the assert macro, HIOP_DEEPCHECKS does not perform all checks and, thus, may overlook potential issues.
 
@@ -51,11 +50,17 @@ HiOp requires LAPACK and BLAS. These dependencies are automatically detected by 
 
 HiOp has some support for NVIDIA **GPU-based computations** via CUDA and Magma. To enable the use of GPUs, use cmake with '-DHIOP_USE_GPU=ON'. The build system will automatically search for CUDA Toolkit. For non-standard CUDA Toolkit installations, use '-DHIOP_CUDA_LIB_DIR=/path' and '-DHIOP_CUDA_INCLUDE_DIR=/path'. For "very" non-standard CUDA Toolkit installations, one can specify the directory of cuBlas libraries as well with '-DHIOP_CUBLAS_LIB_DIR=/path'.
 
-When RAJA-based portability abstraction layer is enabled, HiOp requires RAJA and UMPIRE libraries 
+### Using RAJA and Umpire portability libraries
+
+Portability libraries allow running HiOp's linear algebra either on host (CPU) or a device (GPU). RAJA and Umpire are disabled by default. You can turn them on together by passing `-DHIOP_USE_RAJA=ON` to CMake. If the two libraries are not automatically found, specify their installation directories like this:
+```shell
+$> cmake -DHIOP_USE_RAJA=ON -DRAJA_DIR=/path/to/raja/dir -Dumpire_DIR=/path/to/umpire/dir
+```
+If the GPU support is enabled, RAJA will run all HiOp linear algebra kernels on GPU, otherwise RAJA will run the kernels on CPU using an OpenMP execution policy.
 
 ### Support for GPU computations
 
-When GPU support is on, HiOp requires Magma and CUDA Toolkit. Both are detected automatically in most normal use. The typical cmake command to enable GPU support in HiOp is
+When GPU support is on, HiOp requires Magma linear solver library and CUDA Toolkit. Both are detected automatically in most cases. The typical cmake command to enable GPU support in HiOp is
 ```shell 
 $> cmake -DHIOP_USE_GPU=ON ..
 ```

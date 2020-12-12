@@ -219,10 +219,10 @@ void hiopOptions::registerOptions()
 
   //computations
   {
-    vector<string> range(3); range[0]="auto"; range[1]="cpu"; range[2]="hybrid";
+    vector<string> range(4); range[0]="auto"; range[1]="cpu"; range[2]="hybrid"; range[3]="gpu";
     registerStrOption("compute_mode", "auto", range,
-		      "'auto', 'cpu', 'hybrid'; 'hybrid'=cpu+gpu; 'auto' will decide between "
-		      "'cpu' and 'hybrid' based on the other options passed");
+		      "'auto', 'cpu', 'hybrid', 'gpu'; 'hybrid'=linear solver on gpu; 'auto' will decide between "
+		      "'cpu', 'gpu' and 'hybrid' based on the other options passed");
   }
   //inertia correction and Jacobian regularization
   {
@@ -270,12 +270,11 @@ void hiopOptions::registerOptions()
   // memory space selection
   {
 #ifdef HIOP_USE_RAJA
-    vector<string> range(5);
+    vector<string> range(4);
     range[0] = "default";
     range[1] = "host";
     range[2] = "device";
     range[3] = "um";
-    range[4] = "pinned";
 #else
     vector<string> range(1);
     range[0] = "default";
@@ -326,11 +325,46 @@ void hiopOptions::ensureConsistence()
 		 "The option 'KKTLinsys=%s' not valid with 'Hessian=quasiNewtonApprox'. "
 		 "Will use 'KKTLinsys=auto'\n", strKKT.c_str());
   }
+
+// When RAJA is not enabled ...
+#ifndef HIOP_USE_RAJA
+  if(GetString("compute_mode")=="gpu") {
+    log_printf(hovWarning,
+	       "option compute_mode=gpu was changed to 'hybrid' since HiOp was built without "
+	       "RAJA/Umpire support.\n");
+    SetStringValue("compute_mode", "hybrid");
+  }
+  if(GetString("mem_space")!="default") {
+    std::string memory_space = GetString("mem_space");
+    log_printf(hovWarning,
+	       "option mem_space=%s was changed to 'default' since HiOp was built without "
+	       "RAJA/Umpire support.\n", memory_space.c_str());
+    SetStringValue("mem_space", "default");
+  }
+#endif
+
+// No removing fixed variables in GPU compute mode ...
+if(GetString("compute_mode")=="gpu") {
+  if(GetString("fixed_var")=="remove") {
+    log_printf(hovWarning,
+	       "option fixed_var=remove was changed to 'relax' since only 'relax'"
+	       "is supported in GPU compute mode.\n");
+    SetStringValue("fixed_var", "relax");
+  }
+}
+
+// No hybrid or GPU compute mode if HiOp is built without GPU linear solvers
 #ifndef HIOP_USE_MAGMA
 #ifndef HIOP_USE_STRUMPACK
   if(GetString("compute_mode")=="hybrid") {
     log_printf(hovWarning,
 	       "option compute_mode=hybrid was changed to 'cpu' since HiOp was built without "
+	       "GPU support/Magma.\n");
+    SetStringValue("compute_mode", "cpu");
+  }
+  if(GetString("compute_mode")=="gpu") {
+    log_printf(hovWarning,
+	       "option compute_mode=gpu was changed to 'cpu' since HiOp was built without "
 	       "GPU support/Magma.\n");
     SetStringValue("compute_mode", "cpu");
   }
