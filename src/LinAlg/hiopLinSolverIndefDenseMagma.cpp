@@ -284,8 +284,6 @@ namespace hiop
       device_M_   = nullptr;
       device_rhs_ = nullptr;
     }
-
-    nFakeNegEigs_ = 0;
   }
 
   hiopLinSolverIndefDenseMagmaNopiv::~hiopLinSolverIndefDenseMagmaNopiv()
@@ -370,8 +368,6 @@ namespace hiop
     //
     // inertia
     //
-    //magmablas_ddiinertia(N, d_A, ldda, dinert, opts.queue );
-    // GPU-interface to non-piv LDLt                                                                                                                                      
 
     int *dinert, inert[3];
     if(MAGMA_SUCCESS != magma_malloc((void**)&dinert, 3*sizeof(int))) {

@@ -127,10 +127,10 @@ public:
     return *M_; 
   }
 
-  void inline set_fake_inertia(int nNegEigs)
-  {
-    nFakeNegEigs_ = nNegEigs;
-  }
+  //void inline set_fake_inertia(int nNegEigs)
+  //{
+  //  nFakeNegEigs_ = nNegEigs;
+  //}
 protected:
   /**
    * Computes inertia of matrix, namely the triplet of non-negative numbers 
@@ -146,7 +146,7 @@ protected:
   magma_queue_t magma_device_queue_;
   magmaDouble_ptr device_M_, device_rhs_;
   magma_int_t ldda_, lddb_;
-  int nFakeNegEigs_;
+  //int nFakeNegEigs_;
 private:
   hiopLinSolverIndefDenseMagmaNopiv() 
   {

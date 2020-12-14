@@ -507,7 +507,7 @@ namespace hiop
 	// //! todo Performance of ii. can be improved if 
 	//------------
 	// - Magma would have a GPU routine for computing inertia
-	// - triangular solves would be done on CPU
+	// - triangular solves would be done on GPU
 
 	if(safe_mode_) {
 
@@ -518,7 +518,7 @@ namespace hiop
 			    "KKT_MDS_XYcYd linsys: MagmaBuKa size %d (%d cons) (safe_mode=%d)\n", 
 			    n, neq+nineq, safe_mode_);
 	  
-	  linSys_ = new hiopLinSolverIndefDenseMagmaBuKa(n, nlp_);
+	  linSys_ = new hiopLinSolverIndefDenseMagmaBuKaDev(n, nlp_);
 	} else {
 	  auto hovLevel = hovScalars;
 	  if(switched_linsolvers) hovLevel = hovWarning;
@@ -527,9 +527,10 @@ namespace hiop
 			    "KKT_MDS_XYcYd linsys: MagmaNopiv size %d (%d cons) (safe_mode=%d)\n", 
 			    n, neq+nineq, safe_mode_);
 	  
-	  hiopLinSolverIndefDenseMagmaNopiv* p = new hiopLinSolverIndefDenseMagmaNopiv(n, nlp_);
-	  linSys_ = p;
-	  p->set_fake_inertia(neq + nineq);
+          linSys_ = new hiopLinSolverIndefDenseMagmaNopiv(n, nlp_);
+	  //hiopLinSolverIndefDenseMagmaNopiv* p = new hiopLinSolverIndefDenseMagmaNopiv(n, nlp_);
+	  //linSys_ = p;
+	  //p->set_fake_inertia(neq + nineq);
 	}
       } else {
 	nlp_->log->printf(hovScalars, "KKT_MDS_XYcYd linsys: Lapack for a matrix of size %d [2]\n", n);
