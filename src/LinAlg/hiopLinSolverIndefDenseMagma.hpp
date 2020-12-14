@@ -116,29 +116,24 @@ public:
   /** Triggers a refactorization of the matrix, if necessary. */
   int matrixChanged();
 
-  /** solves a linear system.
-   * param 'x' is on entry the right hand side(s) of the system to be solved. On
-   * exit it contains the solution(s).  
+  /** 
+   * Solves a linear system with the right-hand side `x`. This is also an out
+   * parameter and on exit it contains the solution.
    */
-  bool solve(hiopVector& x_in);
+  bool solve(hiopVector& x);
 
   inline hiopMatrixDense& sysMatrix() 
   { 
     return *M_; 
   }
-
-  //void inline set_fake_inertia(int nNegEigs)
-  //{
-  //  nFakeNegEigs_ = nNegEigs;
-  //}
 protected:
   /**
    * Computes inertia of matrix, namely the triplet of non-negative numbers 
    * of positive, negative, and null eigenvalues. This method runs on device and
    * accesses the device pointer(s). All the parameters reside on device.
    *
-   * @pre The system matrix is factorized on the device.
-   * also correctly set 
+   * @pre The system matrix is factorized and is present on the device.
+   * 
    */
   bool compute_inertia(int n, int& posEigvals, int& negEigvals, int& zeroEigvals); 
 
@@ -146,7 +141,6 @@ protected:
   magma_queue_t magma_device_queue_;
   magmaDouble_ptr device_M_, device_rhs_;
   magma_int_t ldda_, lddb_;
-  //int nFakeNegEigs_;
 private:
   hiopLinSolverIndefDenseMagmaNopiv() 
   {
