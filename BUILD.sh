@@ -14,6 +14,26 @@
 #
 # MY_CLUSTER=ascent ./BUILD.sh
 #
+# All variables that will change the build script's behaviour:
+#
+# - MAKE_CMD command the script will use to run makefiles
+# - CTEST_CMD command the script will use to run ctest
+# - FULL_BUILD_MATRIX (bool) test all possible builds
+# - BUILDDIR path to temp build directory
+# - EXTRA_CMAKE_ARGS extra arguments passed to CMake
+# - MY_CLUSTER determines cluster-specific variables to use
+# - BUILDMATRIX_LOGFILE path to file where builds will be logged
+
+export BASE_PATH=$(dirname $0)
+export MAKE_CMD=${MAKE_CMD:-'make -j 8'}
+export CTEST_CMD=${CTEST_CMD:-'ctest -VV --timeout 1800'}
+
+# we want this settable via env var to make CI triggered builds simpler
+export FULL_BUILD_MATRIX=${FULL_BUILD_MATRIX:-0}
+export BUILDDIR=${BUILDDIR:-"$(pwd)/build"}
+export EXTRA_CMAKE_ARGS=${EXTRA_CMAKE_ARGS:-""}
+export BUILD=1
+export TEST=1
 
 cleanup() {
   echo
@@ -23,7 +43,7 @@ cleanup() {
     echo BUILD_STATUS:0
   else
     echo
-    echo Failure found on line $2 in build script.
+    echo Failure found in build script.
     echo
     echo BUILD_STATUS:1
   fi
@@ -31,11 +51,16 @@ cleanup() {
 
 trap 'cleanup $? $LINENO' EXIT
 
-export BUILD=1
-export TEST=1
 while [[ $# -gt 0 ]]
 do
   case $1 in
+    --full-build-matrix)
+      echo
+      echo Running full build matrix
+      echo
+      export FULL_BUILD_MATRIX=1
+      shift
+      ;;
     --build-only|-B)
       echo
       echo Building only
@@ -52,153 +77,55 @@ do
       export TEST=1
       shift
       ;;
-    *)
+    --help|*)
+      trap - 1 2 3 15 # we don't need traps if a user is asking for help
       cat <<EOD
-    Argument not found!
+      Usage:
+
+        $ MY_CLUSTER='clustername' $0
       
-    usage: $0 [ --test-only|-T ] [ --build-only|-B ]
+      Optional arguments:
+      
+        --build-only          Only build, don't test
+        --test-only           Only run tests, don't build
+        --full-build-matrix   Run entire matrix of build configurations
+        --help                Show this message
 EOD
       exit 1
       ;;
   esac
 done
 
-set -x
-x="unset"
+set -xv
 
+# If MY_CLUSTER is not set by user, try to discover it from environment
 if [[ ! -v MY_CLUSTER ]]
 then
   export MY_CLUSTER=`uname -n | sed -e 's/[0-9]//g' -e 's/\..*//'`
 fi
-BUILDDIR="$(pwd)/build"
-extra_cmake_args=""
 
-module purge
-case "$MY_CLUSTER" in
-newell|newell_shared)
-    export PROJ_DIR=/qfs/projects/exasgd
-    export APPS_DIR=/share/apps
-    #  NOTE: The following is required when running from Gitlab CI via slurm job
-    source /etc/profile.d/modules.sh
-    module use -a /usr/share/Modules/modulefiles
-    module use -a /share/apps/modules/tools
-    module use -a /share/apps/modules/compilers
-    module use -a /share/apps/modules/mpi
-    module use -a /etc/modulefiles
-    export MY_GCC_VERSION=7.4.0
-    export MY_CUDA_VERSION=10.2
-    export MY_OPENMPI_VERSION=3.1.5
-    export MY_CMAKE_VERSION=3.16.4
-    export MY_MAGMA_VERSION=2.5.2_cuda10.2
-    export MY_METIS_VERSION=5.1.0
-    export MY_NVCC_ARCH="sm_70"
-
-    export OMP_CANCELLATION=true
-    export OMP_PROC_BIND=true
-    export OMPI_MCA_pml="ucx"
-    export UCX_NET_DEVICES=mlx5_1:1,mlx5_3:1
-    export OMPI_MCA_btl_openib_warn_default_gid_prefix=0
-    extra_cmake_args="$extra_cmake_args -DHIOP_EXTRA_MPI_FLAGS=-mca;oob;tcp"
-
-    module load gcc/$MY_GCC_VERSION
-    module load cuda/$MY_CUDA_VERSION
-    module load openmpi/$MY_OPENMPI_VERSION
-    module load cmake/$MY_CMAKE_VERSION
-    module load magma/$MY_MAGMA_VERSION
-
-    export NVBLAS_CONFIG_FILE=$PROJ_DIR/$MY_CLUSTER/nvblas.conf
-    export MY_RAJA_DIR=$PROJ_DIR/$MY_CLUSTER/raja
-    export MY_UMPIRE_DIR=$PROJ_DIR/$MY_CLUSTER/umpire
-    export MY_UMFPACK_DIR=$PROJ_DIR/$MY_CLUSTER/suitesparse
-    export MY_METIS_DIR=$APPS_DIR/metis/$MY_METIS_VERSION
-    export MY_HIOP_MAGMA_DIR=$APPS_DIR/magma/2.5.2/cuda10.2
-    export MY_COINHSL_DIR=$PROJ_DIR/$MY_CLUSTER/ipopt
-    ;;
-ascent)
-    module purge
-    module load cuda/11
-    module use /gpfs/wolf/proj-shared/csc359/ascent/Modulefiles/Core
-    module load exasgd-base
-    module load gcc-ext/7.4.0
-    module load spectrum-mpi-ext
-    module load openblas
-    module load magma/2.5.3-cuda11
-    module load metis
-    module load mpfr
-    module load suitesparse
-    module load cmake/3.18.2
-    module load raja
-    module load umpire
-    export MY_RAJA_DIR=$RAJA_ROOT
-    export MY_UMPIRE_DIR=$UMPIRE_ROOT
-    export MY_METIS_DIR=$OLCF_METIS_ROOT
-    export MY_HIOP_MAGMA_DIR=$MAGMA_ROOT
-    export MY_UMFPACK_DIR=$SUITESPARSE_ROOT
-    export MY_NVCC_ARCH="sm_70"
-
-    if [[ ! -f $BUILDDIR/nvblas.conf ]]; then
-      cat > $BUILDDIR/nvblas.conf <<EOD
-NVBLAS_LOGFILE  nvblas.log
-NVBLAS_CPU_BLAS_LIB  /gpfs/wolf/proj-shared/csc359/ascent/Compiler/gcc-7.4.0/openblas/0.3.10/lib/libopenblas.so
-NVBLAS_GPU_LIST ALL
-NVBLAS_TILE_DIM 2048
-NVBLAS_AUTOPIN_MEM_ENABLED
-EOD
-    fi
-    export NVBLAS_CONFIG_FILE=$BUILDDIR/nvblas.conf
-    extra_cmake_args="$extra_cmake_args -DHIOP_TEST_WITH_BSUB=ON"
-    ;;
-marianas|dl*)
-    export MY_CLUSTER="marianas"
-    export PROJ_DIR=/qfs/projects/exasgd
-    export APPS_DIR=/share/apps
-    #  NOTE: The following is required when running from Gitlab CI via slurm job
-    source /etc/profile.d/modules.sh
-    module use -a /share/apps/modules/Modules/versions
-    module use -a $MODULESHOME/modulefiles/environment
-    module use -a $MODULESHOME/modulefiles/development/mpi
-    module use -a $MODULESHOME/modulefiles/development/mlib
-    module use -a $MODULESHOME/modulefiles/development/compilers
-    module use -a $MODULESHOME/modulefiles/development/tools
-    module use -a $MODULESHOME/modulefiles/apps
-    module use -a $MODULESHOME/modulefiles/libs
-    export MY_GCC_VERSION=7.3.0
-    export MY_CUDA_VERSION=10.2.89
-    export MY_OPENMPI_VERSION=3.1.3
-    export MY_CMAKE_VERSION=3.15.3
-    export MY_MAGMA_VERSION=2.5.2_cuda10.2
-    export MY_METIS_VERSION=5.1.0
-    export MY_NVCC_ARCH="sm_60"
-
-    export NVBLAS_CONFIG_FILE=$PROJ_DIR/$MY_CLUSTER/nvblas.conf
-    module load gcc/$MY_GCC_VERSION
-    module load cuda/$MY_CUDA_VERSION
-    module load openmpi/$MY_OPENMPI_VERSION
-    module load cmake/$MY_CMAKE_VERSION
-    module load magma/$MY_MAGMA_VERSION
-
-    export MY_RAJA_DIR=$PROJ_DIR/$MY_CLUSTER/raja
-    export MY_UMPIRE_DIR=$PROJ_DIR/$MY_CLUSTER/umpire
-    export MY_UMFPACK_DIR=$PROJ_DIR/$MY_CLUSTER/suitesparse
-    export MY_METIS_DIR=$APPS_DIR/metis/$MY_METIS_VERSION
-    export MY_HIOP_MAGMA_DIR=$APPS_DIR/magma/2.5.2/cuda10.2
-    export MY_COINHSL_DIR=$PROJ_DIR/$MY_CLUSTER/ipopt
-    extra_cmake_args="$extra_cmake_args -DBLAS_LIBRARIES=/usr/lib64/libopenblas.so"
-    ;;
-*)
-    echo
-    echo Cluster not detected.
-    echo
-    export NVBLAS_CONFIG_FILE=$BUILDDIR/nvblas.conf
-    ;;
-esac
-
-base_path=`dirname $0`
-#  NOTE: The following is required when running from Gitlab CI via slurm job
-if [ -z "$SLURM_SUBMIT_DIR" ]; then
-    cd $base_path          || exit 1
+# Some clusters have compute nodes with slightly different hostnames, so we
+# set MY_CLUSTER appropriately
+if [[ $MY_CLUSTER =~ newell* ]]; then
+  export MY_CLUSTER=newell
+elif [[ $MY_CLUSTER =~ dl* ]]; then
+  export MY_CLUSTER=marianas
 fi
 
+module purge
+
+# If we have modules/variables defined for the current cluster, use them
+if [ -f "./scripts/$(echo $MY_CLUSTER)Variables.sh" ]; then
+  source "./scripts/$(echo $MY_CLUSTER)Variables.sh"
+  echo "Using ./scripts/$(echo $MY_CLUSTER)Variables.sh"
+fi
+
+# The following is required when running from Gitlab CI via slurm job
+if [ -z "$SLURM_SUBMIT_DIR" ]; then
+    cd $BASE_PATH          || exit 1
+fi
+
+# Fail fast if we can't find NVBLAS_CONFIG_FILE since it's needed for all GPU builds
 if [[ ! -v NVBLAS_CONFIG_FILE ]] || [[ ! -f "$NVBLAS_CONFIG_FILE" ]]
 then
   echo "Please provide file 'nvblas.conf' in $BUILDDIR or set variable to desired location."
@@ -207,47 +134,12 @@ fi
 
 module list
 
-export CMAKE_OPTIONS="\
-    -DCMAKE_BUILD_TYPE=Debug \
-    -DENABLE_TESTS=ON \
-    -DHIOP_USE_MPI=On \
-    -DHIOP_SPARSE=On \
-    -DHIOP_DEEPCHECKS=ON \
-    -DRAJA_DIR=$MY_RAJA_DIR \
-    -DHIOP_USE_RAJA=On \
-    -Dumpire_DIR=$MY_UMPIRE_DIR \
-    -DHIOP_USE_UMPIRE=On \
-    -DHIOP_WITH_KRON_REDUCTION=ON \
-    -DHIOP_UMFPACK_DIR=$MY_UMFPACK_DIR \
-    -DHIOP_METIS_DIR=$MY_METIS_DIR \
-    -DHIOP_USE_GPU=ON \
-    -DHIOP_MAGMA_DIR=$MY_HIOP_MAGMA_DIR \
-    -DHIOP_NVCC_ARCH=$MY_NVCC_ARCH \
-    -DHIOP_COINHSL_DIR=$MY_COINHSL_DIR \
-    $extra_cmake_args"
-
-if [[ "$BUILD" == "1" ]]; then
-  if [[ -d $BUILDDIR ]]; then
-    rm -rf $BUILDDIR || exit 1
-  fi
-  mkdir -p $BUILDDIR || exit 1
-  echo
-  echo Build step
-  echo
-  pushd $BUILDDIR                             || exit 1
-  cmake $CMAKE_OPTIONS ..                     || exit 1
-  make -j || exit 1
-  popd
+if [[ $FULL_BUILD_MATRIX -eq 1 ]]; then
+  source ./scripts/fullBuildMatrix.sh
+  buildMatrix $TEST
+  exit $?
+else
+  source ./scripts/defaultBuild.sh
+  defaultBuild
+  exit $?
 fi
-
-if [[ "$TEST" == "1" ]]; then
-  echo
-  echo Testing step
-  echo
-
-  pushd $BUILDDIR || exit 1
-  ctest -VV --timeout 1800 || exit 1
-  popd
-fi
-
-exit 0

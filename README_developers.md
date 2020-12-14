@@ -36,6 +36,22 @@ $> rm -rf *; cmake -DHIOP_USE_MPI=OFF -DHIOP_DEEPCHECKS=OFF -DCMAKE_BUILD_TYPE=D
 $> make -j4; make install; make test
 ```
 
+2. Build Matrix
+
+To run tests for every possible cmake configuration, the build script has an
+option for that:
+
+```shell
+$> ./BUILD.sh --full-build-matrix
+```
+
+If you're going to use this, you'll likely want to create a file in `scripts`
+directory with name `./scripts/<cluster>Variables.sh` which sets relevant environment variables, or do this yourself. For example, see `./scripts/ascentVariables.sh` which you would call with:
+
+```shell
+$> MY_CLUSTER=ascent ./BUILD.sh --full-build-matrix
+```
+
 ## 2. Valgrind reports no errors and no warning when running the testing drivers of HiOp. Mandatory on Linux, optional on MacOS
 ```shell
 $> rm -rf *; cmake -DHIOP_USE_MPI=ON -DHIOP_DEEPCHECKS=ON -DCMAKE_BUILD_TYPE=DEBUG ..
