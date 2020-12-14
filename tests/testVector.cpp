@@ -72,13 +72,18 @@
 #include <hiopVectorIntRaja.hpp>
 #endif
 
-template <typename T>
+template <typename T,
+          typename std::enable_if<
+            std::is_base_of<hiop::tests::VectorTests, T>::value,
+            bool>::type = true>
 int vectorTests(const char* mem_space, int rank, int numRanks, MPI_Comm comm)
 {
   using hiop::tests::global_ordinal_type;
 
   T test;
 
+  hiop::hiopOptions options;
+  options.SetStringValue("mem_space", mem_space);
   hiop::LinearAlgebraFactory::set_mem_space(mem_space);
 
   global_ordinal_type Nlocal = 1000;
@@ -175,6 +180,35 @@ int vectorTests(const char* mem_space, int rank, int numRanks, MPI_Comm comm)
   return fail;
 }
 
+template <typename T,
+          typename std::enable_if<
+            std::is_base_of<hiop::tests::VectorTestsInt, T>::value,
+            bool>::type = true>
+int vectorTests(const char* mem_space, int rank, int numRanks, MPI_Comm comm)
+{
+  using hiop::tests::global_ordinal_type;
+
+  T test;
+
+  hiop::hiopOptions options;
+  options.SetStringValue("mem_space", mem_space);
+  hiop::LinearAlgebraFactory::set_mem_space(mem_space);
+
+  int fail = 0;
+
+  const int sz = 100;
+
+  auto* x = hiop::LinearAlgebraFactory::createVectorInt(sz);
+
+  fail += test.vectorSize(*x, sz);
+  fail += test.vectorGetElement(*x);
+  fail += test.vectorSetElement(*x);
+
+  delete x;
+
+  return fail;
+}
+
 /**
  * @brief Main body of vector implementation testing code.
  *
@@ -206,41 +240,16 @@ int main(int argc, char** argv)
   fail += vectorTests<hiop::tests::VectorTestsRajaPar>("DEVICE", rank, numRanks, comm);
 #endif
 
-  hiop::hiopOptions options;
-
-  // Test hiopVectorIntSeq
   if (rank == 0)
   {
     std::cout << "\nTesting HiOp sequential int vector:\n";
-
-    options.SetStringValue("mem_space", "DEFAULT");
-    hiop::LinearAlgebraFactory::set_mem_space(options.GetString("mem_space"));
-    hiop::tests::VectorTestsIntSeq test;
-    const int sz = 100;
-    auto* x = hiop::LinearAlgebraFactory::createVectorInt(sz);
-    fail += test.vectorSize(*x, sz);
-    fail += test.vectorGetElement(*x);
-    fail += test.vectorSetElement(*x);
-  }
-
+    fail += vectorTests<hiop::tests::VectorTestsIntSeq>("DEFAULT", rank, numRanks, comm);
 #ifdef HIOP_USE_RAJA
-  // Test hiopVectorIntRaja
-  if (rank == 0)
-  {
     std::cout << "\nTesting HiOp RAJA int vector:\n";
-
-    options.SetStringValue("mem_space", "DEVICE");
-    hiop::LinearAlgebraFactory::set_mem_space(options.GetString("mem_space"));
-    hiop::tests::VectorTestsIntRaja test;
-    const int sz = 100;
-    auto* x = hiop::LinearAlgebraFactory::createVectorInt(sz);
-    fail += test.vectorSize(*x, sz);
-    fail += test.vectorGetElement(*x);
-    fail += test.vectorSetElement(*x);
-    options.SetStringValue("mem_space", "DEFAULT");
+    fail += vectorTests<hiop::tests::VectorTestsIntRaja>("DEVICE", rank, numRanks, comm);
+#endif
   }
-#endif // HIOP_USE_RAJA
-
+  
   if (rank == 0)
   {
     if(fail)
