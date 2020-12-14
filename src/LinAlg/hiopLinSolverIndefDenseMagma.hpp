@@ -52,7 +52,15 @@ public:
     return *M_; 
   }
 protected:
-  virtual bool compute_inertia(double **A_in, int n_in, int *ipiv_in, 
+
+  /**
+   * Computes inertia of matrix, namely the triplet of non-negative numbers 
+   * consisting of the counts of positive, negative, and null eigenvalues
+   *
+   * @pre The system matrix is factorized and, as a result, `ipiv` has been 
+   * also updated properly.
+   */
+  virtual bool compute_inertia(int n_in, int *ipiv, 
 			       int& posEigvals, int& negEigvals, int& zeroEigvals); 
 protected:
   int* ipiv_;
@@ -78,7 +86,15 @@ public:
   }
   
 protected:
-  virtual bool compute_inertia(double** A_in, int n_in, int *ipiv_in, 
+  /**
+   * Computes inertia of matrix, namely the triplet of non-negative numbers 
+   * consisting of the counts of positive, negative, and null eigenvalues. This 
+   * method runs on host.
+   *
+   * @pre The system matrix is factorized and, as a result, `ipiv` has been 
+   * also correctly set 
+   */
+  virtual bool compute_inertia(int n, int *ipiv_in, 
 			       int& posEigvals, int& negEigvals, int& zeroEigvals); 
 };
 
@@ -115,6 +131,16 @@ public:
   {
     nFakeNegEigs_ = nNegEigs;
   }
+protected:
+  /**
+   * Computes inertia of matrix, namely the triplet of non-negative numbers 
+   * of positive, negative, and null eigenvalues. This method runs on device and
+   * accesses the device pointer(s). All the parameters reside on device.
+   *
+   * @pre The system matrix is factorized on the device.
+   * also correctly set 
+   */
+  bool compute_inertia(int n, int& posEigvals, int& negEigvals, int& zeroEigvals); 
 
 protected:
   magma_queue_t magma_device_queue_;
@@ -128,34 +154,8 @@ private:
   }
 };
 
-/**Notes:
- * *** Bunch-Kaufmann ***
- * magma_dsytrf(magma_uplo_t uplo, magma_int_t n, double *A, magma_int_t lda, 
- *              magma_int_t *ipiv, magma_int_t *info)
- *  - no _gpu version
- *
- * *** same for Aasen ***
- * 
- * *** no pivoting ***
- * magma_int_t magma_dsytrf_nopiv(magma_uplo_t uplo, magma_int_t n, double *A, magma_int_t lda, 
- *                                 magma_int_t *info)
- * magma_int_t magma_dsytrf_nopiv_gpu(magma_uplo_t uplo, magma_int_t n, magmaDouble_ptr dA, magma_int_t ldda, 
- *                                    magma_int_t *info)
- * Guidelines on when to use _gpu ?
- *
- *  Forward and backsolves
- *  magma_int_t magma_dsytrs_nopiv_gpu(magma_uplo_t uplo, magma_int_t n, magma_int_t nrhs, magmaDouble_ptr dA, 
- *                                     magma_int_t ldda, magmaDouble_ptr dB, magma_int_t lddb, magma_int_t * info)
- *
- * How about when use (cpu) magma_dsytrf? What dsytrs function to use? 
- * In the example, the (triu) solves are done with blas blasf77_dsymv
- * 
- *
- */
 
-
-
-} //end namespace
+} //end namespace hiop
 
 #endif //of HIOP_USE_MAGMA
 #endif
