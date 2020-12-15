@@ -182,9 +182,9 @@ public:
     v.copyFrom(from);
     int fail = verifyAnswer(&v, one);
 
-    // const real_type* from_buffer = createLocalBuffer(N, three);
-    // v.copyFrom(from_buffer);
-    // fail += verifyAnswer(&v, three);
+    const real_type* from_buffer = createLocalBuffer(N, three);
+    v.copyFrom(from_buffer);
+    fail += verifyAnswer(&v, three);
 
     printMessage(fail, __func__, rank);
     return reduceReturn(fail, &v);
@@ -301,6 +301,10 @@ public:
 
   /**
    * Test for function that copies data from `this` to a data buffer.
+   * 
+   * @note This test calls `local_data` vector method. Here this is OK,
+   * because for as long copies between vectors and bufers are implemented
+   * as public methods, `local_data` will be a public method, as well.
    */
   bool vectorCopyTo(hiop::hiopVector& v, hiop::hiopVector& to, const int rank)
   {
@@ -310,11 +314,8 @@ public:
     to.setToConstant(one);
     v.setToConstant(two);
 
-    real_type* todata = getLocalData(&to);
+    real_type* todata = to.local_data();
     v.copyTo(todata);
-
-    // Since we have copied into to's data_host, we need to copy to Device
-    to.copyToDev();
 
     int fail = verifyAnswer(&to, two);
     printMessage(fail, __func__, rank);
@@ -1422,9 +1423,9 @@ public:
       a = mu / getLocalElement(&x, i);
       b = a / kappa;
       a *= kappa;
-      if      (getLocalElement(&x, i) < b)     setLocalElement(&z2, i, b);
-      else if (a <= b)                    setLocalElement(&z2, i, b);
-      else if (a < getLocalElement(&x, i))     setLocalElement(&z2, i, a);
+      if      (getLocalElement(&x, i) < b) setLocalElement(&z2, i, b);
+      else if (a <= b)                     setLocalElement(&z2, i, b);
+      else if (a < getLocalElement(&x, i)) setLocalElement(&z2, i, a);
     }
 
     // the method's adjustDuals_plh should yield
@@ -1546,7 +1547,7 @@ public:
   int verifyAnswer(hiop::hiopVector* x, real_type answer)
   {
     const local_ordinal_type N = getLocalSize(x);
-    auto* xdata = static_cast<const real_type*>(getLocalData(x));
+    const real_type* xdata = getLocalDataConst(x);
     
     int local_fail = 0;
 
@@ -1571,7 +1572,7 @@ public:
       std::function<real_type(local_ordinal_type)> expect)
   {
     const local_ordinal_type N = getLocalSize(x);
-    auto* xdata = static_cast<const real_type*>(getLocalData(x));
+    const real_type* xdata = getLocalDataConst(x);
     
     int local_fail = 0;
 
@@ -1588,7 +1589,6 @@ public:
 
 protected:
   // Interface to methods specific to vector implementation
-  virtual real_type* getLocalData(hiop::hiopVector* x) = 0;
   virtual const real_type* getLocalDataConst(const hiop::hiopVector* x) = 0;
   virtual void setLocalElement(hiop::hiopVector* x, local_ordinal_type i, real_type val) = 0;
   virtual real_type* createLocalBuffer(local_ordinal_type N, real_type val) = 0;

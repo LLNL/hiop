@@ -64,37 +64,30 @@
 
 namespace hiop { namespace tests {
 
-/// Returns pointer to local vector data
-real_type* VectorTestsRajaPar::getLocalData(hiop::hiopVector* x)
-{
-  x->copyFromDev();
-  return x->local_data_host();
-}
-
 /// Returns const pointer to local vector data
-const real_type* VectorTestsRajaPar::getLocalDataConst(const hiop::hiopVector* x)
+const real_type* VectorTestsRajaPar::getLocalDataConst(const hiop::hiopVector* x_in)
 {
+  const hiop::hiopVectorRajaPar* x = dynamic_cast<const hiop::hiopVectorRajaPar*>(x_in);
   x->copyFromDev();
   return x->local_data_host_const();
 }
 
 /// Method to set vector _x_ element _i_ to _value_.
-void VectorTestsRajaPar::setLocalElement(hiop::hiopVector* x, local_ordinal_type i, real_type val)
+void VectorTestsRajaPar::setLocalElement(hiop::hiopVector* x_in, local_ordinal_type i, real_type val)
 {
+  hiop::hiopVectorRajaPar* x = dynamic_cast<hiop::hiopVectorRajaPar*>(x_in);
   x->copyFromDev();
   real_type *xdat = x->local_data_host();
   xdat[i] = val;
   x->copyToDev();
 }
 
-#ifdef HIOP_USE_MPI
 /// Get communicator
 MPI_Comm VectorTestsRajaPar::getMPIComm(hiop::hiopVector* x)
 {
   const hiop::hiopVectorRajaPar* xvec = dynamic_cast<const hiop::hiopVectorRajaPar*>(x);
   return xvec->get_mpi_comm();
 }
-#endif
 
 /// Wrap new command
 real_type* VectorTestsRajaPar::createLocalBuffer(local_ordinal_type N, real_type val)
@@ -107,7 +100,7 @@ real_type* VectorTestsRajaPar::createLocalBuffer(local_ordinal_type N, real_type
   for(local_ordinal_type i = 0; i < N; ++i)
     buffer[i] = val;
 
-#ifdef HIOP_USE_CUDA
+#ifdef HIOP_USE_GPU
   umpire::Allocator dal = resmgr.getAllocator("DEVICE");
   real_type* dev_buffer = static_cast<real_type*>(dal.allocate(N*sizeof(real_type)));
   resmgr.copy(dev_buffer, buffer, N*sizeof(real_type));
@@ -121,7 +114,7 @@ real_type* VectorTestsRajaPar::createLocalBuffer(local_ordinal_type N, real_type
 /// Wrap delete command
 void VectorTestsRajaPar::deleteLocalBuffer(real_type* buffer)
 {
-#ifdef HIOP_USE_CUDA
+#ifdef HIOP_USE_GPU
   const std::string hiop_umpire_dev = "DEVICE";
 #else
   const std::string hiop_umpire_dev = "HOST"; 

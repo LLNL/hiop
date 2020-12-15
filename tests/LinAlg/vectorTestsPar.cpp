@@ -60,16 +60,11 @@
 
 namespace hiop { namespace tests {
 
-/// Returns pointer to local vector data
-real_type* VectorTestsPar::getLocalData(hiop::hiopVector* x)
-{
-  return x->local_data_host();
-}
-
 /// Returns const pointer to local vector data
 const real_type* VectorTestsPar::getLocalDataConst(const hiop::hiopVector* x)
 {
-  return x->local_data_host_const();
+  const hiop::hiopVectorPar* xvec = dynamic_cast<const hiop::hiopVectorPar*>(x);
+  return x->local_data_const();
 }
 
 /// Method to set vector _x_ element _i_ to _value_.
@@ -80,14 +75,12 @@ void VectorTestsPar::setLocalElement(hiop::hiopVector* x, local_ordinal_type i, 
   xdat[i] = val;
 }
 
-#ifdef HIOP_USE_MPI
 /// Get communicator
 MPI_Comm VectorTestsPar::getMPIComm(hiop::hiopVector* x)
 {
   const hiop::hiopVectorPar* xvec = dynamic_cast<const hiop::hiopVectorPar*>(x);
   return xvec->get_mpi_comm();
 }
-#endif
 
 /// Wrap new command
 real_type* VectorTestsPar::createLocalBuffer(local_ordinal_type N, real_type val)
