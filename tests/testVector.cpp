@@ -72,26 +72,146 @@
 #include <hiopVectorIntRaja.hpp>
 #endif
 
-template <typename T,
-          typename std::enable_if<
-            std::is_base_of<hiop::tests::VectorTests, T>::value,
-            bool>::type = true>
-int vectorTests(const char* mem_space, int rank, int numRanks, MPI_Comm comm)
+template <typename T>
+static int runTests(const char* mem_space, MPI_Comm comm);
+
+template <typename T>
+static int runIntTests(const char* mem_space);
+
+
+/**
+ * @brief Main body of vector implementation testing code.
+ *
+ * @todo The size of the vector should be passed on the command line.
+ *
+ * @pre All test functions should return the same boolean value on all ranks.
+ *
+ */
+int main(int argc, char** argv)
 {
+  using namespace hiop::tests;
+
+  int rank=0;
+  MPI_Comm comm = MPI_COMM_SELF;
+
+#ifdef HIOP_USE_MPI
+  int err;
+  err  = MPI_Init(&argc, &argv);     assert(MPI_SUCCESS == err);
+  comm = MPI_COMM_WORLD;
+  err  = MPI_Comm_rank(comm, &rank); assert(MPI_SUCCESS == err);
+  if(0 == rank && MPI_SUCCESS == err)
+    std::cout << "\nRunning MPI enabled tests ...\n";
+#endif
+
+  int fail = 0;
+
+  //
+  // Test HiOp vectors
+  //
+  if (rank == 0)
+    std::cout << "\nTesting HiOp default vector implementation:\n";
+  fail += runTests<VectorTestsPar>("default", comm);
+#ifdef HIOP_USE_RAJA
+#ifdef HIOP_USE_GPU
+  if (rank == 0)
+  {
+    std::cout << "\nTesting HiOp RAJA vector\n";
+    std::cout << "  ... using device memory space:\n";
+  }
+  fail += runTests<VectorTestsRajaPar>("device", comm);
+  if (rank == 0)
+  {
+    std::cout << "\nTesting HiOp RAJA vector\n";
+    std::cout << "  ... using unified virtual memory space:\n";
+  }
+  fail += runTests<VectorTestsRajaPar>("um", comm);
+#elif
+  if (rank == 0)
+  {
+    std::cout << "\nTesting HiOp RAJA vector\n";
+    std::cout << "  ... using host memory space:\n";
+  }
+  fail += runTests<VectorTestsRajaPar>("host", comm);
+#endif // GPU
+#endif // RAJA
+
+  //
+  // Test HiOp integer vectors
+  // 
+  if (rank == 0)
+  {
+    std::cout << "\nTesting HiOp sequential int vector:\n";
+    fail += runIntTests<VectorTestsIntSeq>("default");
+#ifdef HIOP_USE_RAJA
+#ifdef HIOP_USE_GPU
+    if (rank == 0)
+    {
+      std::cout << "\nTesting HiOp RAJA int vector\n";
+      std::cout << "  ... using device memory space:\n";
+    }
+    fail += runIntTests<VectorTestsIntRaja>("device");
+    if (rank == 0)
+    {
+      std::cout << "\nTesting HiOp RAJA int vector\n";
+      std::cout << "  ... using unified virtual memory space:\n";
+    }
+    fail += runIntTests<VectorTestsIntRaja>("um");
+#elif
+    if (rank == 0)
+    {
+      std::cout << "\nTesting HiOp RAJA int vector\n";
+      std::cout << "  ... using host memory space:\n";
+    }
+    fail += runIntTests<VectorTestsIntRaja>("host");
+#endif // GPU
+#endif // RAJA
+  }
+  
+  //
+  // Test summary
+  //
+  if (rank == 0)
+  {
+    if(fail)
+      std::cout << "\n" << fail << " vector tests failed!\n\n";
+    else
+      std::cout << "\nAll vector tests passed!\n\n";
+  }
+
+#ifdef HIOP_USE_MPI
+  MPI_Finalize();
+#endif
+
+  return fail;
+}
+
+/// Driver for all real type vector tests
+template <typename T>
+int runTests(const char* mem_space, MPI_Comm comm)
+{
+  using namespace hiop;
   using hiop::tests::global_ordinal_type;
+
+  int rank=0;
+  int numRanks=1;
+
+#ifdef HIOP_USE_MPI
+  MPI_Comm_rank(comm, &rank);
+  MPI_Comm_size(comm, &numRanks);
+#endif
 
   T test;
 
-  hiop::hiopOptions options;
+  hiopOptions options;
   options.SetStringValue("mem_space", mem_space);
-  hiop::LinearAlgebraFactory::set_mem_space(mem_space);
+  LinearAlgebraFactory::set_mem_space(mem_space);
 
   global_ordinal_type Nlocal = 1000;
   global_ordinal_type Mlocal = 500;
   global_ordinal_type Nglobal = Nlocal*numRanks;
 
-  auto n_partition = new global_ordinal_type [numRanks + 1];
-  auto m_partition = new global_ordinal_type [numRanks + 1];
+  global_ordinal_type* n_partition = new global_ordinal_type [numRanks + 1];
+  global_ordinal_type* m_partition = new global_ordinal_type [numRanks + 1];
   n_partition[0] = 0;
   m_partition[0] = 0;
 
@@ -101,13 +221,13 @@ int vectorTests(const char* mem_space, int rank, int numRanks, MPI_Comm comm)
     m_partition[i] = i*Mlocal;
   }
 
-  hiop::hiopVector* a = hiop::LinearAlgebraFactory::createVector(Nglobal, n_partition, comm);
-  hiop::hiopVector* b = hiop::LinearAlgebraFactory::createVector(Nglobal, n_partition, comm);
-  hiop::hiopVector* v_smaller = hiop::LinearAlgebraFactory::createVector(Mlocal);
-  hiop::hiopVector* v = hiop::LinearAlgebraFactory::createVector(Nlocal);
-  hiop::hiopVector* x = hiop::LinearAlgebraFactory::createVector(Nglobal, n_partition, comm);
-  hiop::hiopVector* y = hiop::LinearAlgebraFactory::createVector(Nglobal, n_partition, comm);
-  hiop::hiopVector* z = hiop::LinearAlgebraFactory::createVector(Nglobal, n_partition, comm);
+  hiopVector* a = LinearAlgebraFactory::createVector(Nglobal, n_partition, comm);
+  hiopVector* b = LinearAlgebraFactory::createVector(Nglobal, n_partition, comm);
+  hiopVector* v_smaller = LinearAlgebraFactory::createVector(Mlocal);
+  hiopVector* v = LinearAlgebraFactory::createVector(Nlocal);
+  hiopVector* x = LinearAlgebraFactory::createVector(Nglobal, n_partition, comm);
+  hiopVector* y = LinearAlgebraFactory::createVector(Nglobal, n_partition, comm);
+  hiopVector* z = LinearAlgebraFactory::createVector(Nglobal, n_partition, comm);
   
   int fail = 0;
 
@@ -180,87 +300,30 @@ int vectorTests(const char* mem_space, int rank, int numRanks, MPI_Comm comm)
   return fail;
 }
 
-template <typename T,
-          typename std::enable_if<
-            std::is_base_of<hiop::tests::VectorTestsInt, T>::value,
-            bool>::type = true>
-int vectorTests(const char* mem_space, int rank, int numRanks, MPI_Comm comm)
+/// Driver for all integer vector tests
+template <typename T>
+int runIntTests(const char* mem_space)
 {
+  using namespace hiop;
   using hiop::tests::global_ordinal_type;
 
   T test;
 
-  hiop::hiopOptions options;
+  hiopOptions options;
   options.SetStringValue("mem_space", mem_space);
-  hiop::LinearAlgebraFactory::set_mem_space(mem_space);
+  LinearAlgebraFactory::set_mem_space(mem_space);
 
   int fail = 0;
 
   const int sz = 100;
 
-  auto* x = hiop::LinearAlgebraFactory::createVectorInt(sz);
+  auto* x = LinearAlgebraFactory::createVectorInt(sz);
 
   fail += test.vectorSize(*x, sz);
   fail += test.vectorGetElement(*x);
   fail += test.vectorSetElement(*x);
 
   delete x;
-
-  return fail;
-}
-
-/**
- * @brief Main body of vector implementation testing code.
- *
- * @todo The size of the vector should be passed on the command line.
- *
- * @pre All test functions should return the same boolean value on all ranks.
- *
- */
-int main(int argc, char** argv)
-{
-  int rank=0;
-  int numRanks=1;
-  MPI_Comm comm = MPI_COMM_SELF;
-
-#ifdef HIOP_USE_MPI
-  int err;
-  err  = MPI_Init(&argc, &argv);         assert(MPI_SUCCESS == err);
-  comm = MPI_COMM_WORLD;
-  err  = MPI_Comm_rank(comm, &rank);     assert(MPI_SUCCESS == err);
-  err  = MPI_Comm_size(comm, &numRanks); assert(MPI_SUCCESS == err);
-  if(0 == rank && MPI_SUCCESS == err) std::cout << "Running MPI enabled tests ...\n";
-#endif
-
-  int fail = 0;
-
-  fail += vectorTests<hiop::tests::VectorTestsPar>("DEFAULT", rank, numRanks, comm);
-#ifdef HIOP_USE_RAJA
-  if (rank == 0)	std::cout << "\nTesting HiOp RAJA vector:\n";
-  fail += vectorTests<hiop::tests::VectorTestsRajaPar>("DEVICE", rank, numRanks, comm);
-#endif
-
-  if (rank == 0)
-  {
-    std::cout << "\nTesting HiOp sequential int vector:\n";
-    fail += vectorTests<hiop::tests::VectorTestsIntSeq>("DEFAULT", rank, numRanks, comm);
-#ifdef HIOP_USE_RAJA
-    std::cout << "\nTesting HiOp RAJA int vector:\n";
-    fail += vectorTests<hiop::tests::VectorTestsIntRaja>("DEVICE", rank, numRanks, comm);
-#endif
-  }
-  
-  if (rank == 0)
-  {
-    if(fail)
-      std::cout << "\n" << fail << " vector tests failed!\n\n";
-    else
-      std::cout << "\nAll vector tests passed!\n\n";
-  }
-
-#ifdef HIOP_USE_MPI
-  MPI_Finalize();
-#endif
 
   return fail;
 }
