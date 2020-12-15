@@ -52,7 +52,6 @@ public:
     return *M_; 
   }
 protected:
-
   /**
    * Computes inertia of matrix, namely the triplet of non-negative numbers 
    * consisting of the counts of positive, negative, and null eigenvalues
@@ -73,15 +72,19 @@ private:
   hiopLinSolverIndefDenseMagmaBuKa() { assert(false); }
 };
 
-class hiopLinSolverIndefDenseMagmaBuKaDev : public hiopLinSolverIndefDenseMagmaBuKa
+/**
+ * This class is only for testing purposes (contains legacy code for computing the 
+ * inertia from a Bunch-Kaufman factorization) and should not be used.
+ */
+class hiopLinSolverIndefDenseMagmaBuKa_old : public hiopLinSolverIndefDenseMagmaBuKa
 {
 public:
-  hiopLinSolverIndefDenseMagmaBuKaDev(int n, hiopNlpFormulation* nlp_)
+  hiopLinSolverIndefDenseMagmaBuKa_old(int n, hiopNlpFormulation* nlp_)
     : hiopLinSolverIndefDenseMagmaBuKa(n, nlp_)
   {
 
   }
-  virtual ~hiopLinSolverIndefDenseMagmaBuKaDev()
+  virtual ~hiopLinSolverIndefDenseMagmaBuKa_old()
   {
   }
   

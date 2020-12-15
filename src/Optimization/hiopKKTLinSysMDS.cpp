@@ -518,7 +518,7 @@ namespace hiop
 			    "KKT_MDS_XYcYd linsys: MagmaBuKa size %d (%d cons) (safe_mode=%d)\n", 
 			    n, neq+nineq, safe_mode_);
 	  
-	  linSys_ = new hiopLinSolverIndefDenseMagmaBuKaDev(n, nlp_);
+	  linSys_ = new hiopLinSolverIndefDenseMagmaBuKa(n, nlp_);
 	} else {
 	  auto hovLevel = hovScalars;
 	  if(switched_linsolvers) hovLevel = hovWarning;
