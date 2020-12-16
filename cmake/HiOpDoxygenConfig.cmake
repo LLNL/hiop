@@ -19,7 +19,7 @@ else()
     )
 
   add_custom_target(
-    doc ALL
+    doc
     COMMAND doxygen ${PROJECT_BINARY_DIR}/Doxyfile
     COMMENT "Generate documentation"
     )
