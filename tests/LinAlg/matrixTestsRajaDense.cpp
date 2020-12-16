@@ -165,41 +165,6 @@ bool MatrixTestsRajaDense::reduceReturn(int failures, hiop::hiopMatrixDense* A)
   return (fail != 0);
 }
 
-/*
- * Pass a function-like object to calculate the expected
- * answer dynamically, based on the row and column
- */
-  [[nodiscard]]
-int MatrixTestsRajaDense::verifyAnswer(
-    hiop::hiopMatrixDense* Amat,
-    std::function<real_type(local_ordinal_type, local_ordinal_type)> expect)
-{
-  // const local_ordinal_type M = A->m();
-  // const local_ordinal_type N = A->n();
-  hiop::hiopMatrixRajaDense* A = dynamic_cast<hiop::hiopMatrixRajaDense*>(Amat);
-  const local_ordinal_type M = A->m();
-  const local_ordinal_type N = A->n();
-
-  // Copy data to the host mirror
-  A->copyFromDev();
-  // Get array of pointers to dense matrix rows
-  double* local_matrix_data = A->local_data_host();
-  
-  int fail = 0;
-  for (local_ordinal_type i=0; i<M; i++)
-  {
-    for (local_ordinal_type j=0; j<N; j++)
-    {
-      if (!isEqual(local_matrix_data[i*N+j], expect(i, j)))
-      {
-        std::cout << i << ", " << j << ": = " << local_matrix_data[i*N+j] << " != " << expect(i, j) << "\n";
-        fail++;
-      }
-    }
-  }
-  return fail;
-}
-
 /// Checks if _local_ vector elements are set to `answer`.
   [[nodiscard]]
 int MatrixTestsRajaDense::verifyAnswer(hiop::hiopVector* xvec, double answer)

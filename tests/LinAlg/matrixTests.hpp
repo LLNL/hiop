@@ -1130,6 +1130,34 @@ public:
     return fail;
   }
 
+  /*
+   * Pass a function-like object to calculate the expected
+   * answer dynamically, based on the row and column
+   */
+    [[nodiscard]]
+  int verifyAnswer(
+      hiop::hiopMatrixDense* A,
+      std::function<real_type(local_ordinal_type, local_ordinal_type)> expect)
+  {
+    const local_ordinal_type M = A->m();
+    const local_ordinal_type N = A->n();
+    int fail = 0;
+    const real_type* amat = getLocalDataConst(A);
+    for (local_ordinal_type i=0; i<M; i++)
+    {
+      for (local_ordinal_type j=0; j<N; j++)
+      {
+        if (!isEqual(amat[i * N + j], expect(i, j)))
+        {
+          std::cout << i << " " << j << " = " << amat[i * N + j] << " != " << expect(i, j) << "\n";
+          fail++;
+        }
+      }
+    }
+
+    return fail;
+  }
+
 protected:
   virtual const real_type* getLocalDataConst(const hiop::hiopMatrixDense* a) = 0;
   virtual const real_type* getLocalDataConst(const hiop::hiopVector* x) = 0;
@@ -1146,9 +1174,6 @@ protected:
       hiop::hiopMatrixDense* A,
       const local_ordinal_type row,
       const real_type val) = 0;
-  virtual int verifyAnswer( // impl
-      hiop::hiopMatrixDense* A,
-      std::function<real_type(local_ordinal_type, local_ordinal_type)> expect) = 0;
   virtual int verifyAnswer(hiop::hiopVector* x, real_type answer) = 0; // impl
   virtual int verifyAnswer( // impl
       hiop::hiopVector* x,

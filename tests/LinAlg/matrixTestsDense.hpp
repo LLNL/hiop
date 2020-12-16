@@ -84,9 +84,6 @@ private:
       hiop::hiopMatrixDense* A,
       const local_ordinal_type row,
       const real_type val) override;
-  virtual int verifyAnswer(
-      hiop::hiopMatrixDense* A,
-      std::function<real_type(local_ordinal_type, local_ordinal_type)> expect) override;
   virtual int verifyAnswer(hiop::hiopVector *x, real_type answer) override;
   virtual int verifyAnswer(
       hiop::hiopVector *x,
