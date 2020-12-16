@@ -96,12 +96,6 @@ private:
       hiop::hiopVector *x,
       std::function<real_type(local_ordinal_type)> expect) override;
   virtual bool reduceReturn(int failures, hiop::hiopMatrixDense* A) override;
-  virtual bool globalToLocalMap(
-      hiop::hiopMatrixDense* A,
-      const global_ordinal_type row,
-      const global_ordinal_type col,
-      local_ordinal_type &local_row,
-      local_ordinal_type &local_col) override;
 
 #ifdef HIOP_USE_MPI
   MPI_Comm getMPIComm(hiop::hiopMatrixDense* A);
