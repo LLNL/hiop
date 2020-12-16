@@ -239,37 +239,6 @@ int MatrixTestsDense::verifyAnswer(
   return local_fail;
 }
 
-bool MatrixTestsDense::globalToLocalMap(
-    hiop::hiopMatrixDense* A,
-    const global_ordinal_type row,
-    const global_ordinal_type col,
-    local_ordinal_type& local_row,
-    local_ordinal_type& local_col)
-{
-#ifdef HIOP_USE_MPI
-  int rank = 0;
-  MPI_Comm comm = getMPIComm(A);
-  MPI_Comm_rank(comm, &rank);
-  const local_ordinal_type n_local = A->n();
-  const global_ordinal_type local_col_start = n_local * rank;
-  if (col >= local_col_start && col < local_col_start + n_local)
-  {
-    local_row = row;
-    local_col = col % n_local;
-    return true;
-  }
-  else
-  {
-    return false;
-  }
-#else
-  (void) A; // surpresses waring as A is not needed here without MPI
-  local_row = row;
-  local_col = col;
-  return true;
-#endif
-}
-
 // End helper methods
 
 }} // namespace hiop::tests

@@ -1135,17 +1135,6 @@ protected:
       hiop::hiopVector* x,
       std::function<real_type(local_ordinal_type)> expect) = 0;
   virtual bool reduceReturn(int failures, hiop::hiopMatrixDense* A) = 0;
-  /*
-   * Returns true and sets local coordinate pair if global indices
-   * maps to local indices, otherwise false and does not alter
-   * local coordinates.
-   */
-  virtual bool globalToLocalMap( // delete this?
-      hiop::hiopMatrixDense* A,
-      const global_ordinal_type row,
-      const global_ordinal_type col,
-      local_ordinal_type& local_row,
-      local_ordinal_type& local_col) = 0;
 };
 
 }} // namespace hiop{ namespace tests{
