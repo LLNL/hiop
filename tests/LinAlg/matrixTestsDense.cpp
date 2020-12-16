@@ -114,55 +114,11 @@ void MatrixTestsDense::setLocalRow(
     const local_ordinal_type row,
     const real_type val)
 {
-  const local_ordinal_type N = getNumLocCols(A);
+  const local_ordinal_type N = A->n();
   for (int i=0; i<N; i++)
   {
     setLocalElement(A, row, i, val);
   }
-}
-
-/// Returns element (i,j) of matrix _A_.
-/// First need to retrieve hiopMatrixDense from the abstract interface
-real_type MatrixTestsDense::getLocalElement(
-    const hiop::hiopMatrixDense* A,
-    local_ordinal_type i,
-    local_ordinal_type j)
-{
-  const hiop::hiopMatrixDense* amat = dynamic_cast<const hiop::hiopMatrixDense*>(A);
-  if(amat != nullptr)
-    //return amat->local_data_const()[i][j];
-    return amat->local_data_const()[i*amat->get_local_size_n()+j];
-  else THROW_NULL_DEREF;
-}
-
-/// Returns element _i_ of vector _x_.
-/// First need to retrieve hiopVectorPar from the abstract interface
-real_type MatrixTestsDense::getLocalElement(
-    const hiop::hiopVector* x,
-    local_ordinal_type i)
-{
-  const hiop::hiopVectorPar* xvec = dynamic_cast<const hiop::hiopVectorPar*>(x);
-  if(xvec != nullptr)
-    return xvec->local_data_const()[i];
-  else THROW_NULL_DEREF;
-}
-
-local_ordinal_type MatrixTestsDense::getNumLocRows(hiop::hiopMatrixDense* A)
-{
-  hiop::hiopMatrixDense* amat = dynamic_cast<hiop::hiopMatrixDense*>(A);
-  if(amat != nullptr)
-    return amat->get_local_size_m();
-    //                         ^^^
-  else THROW_NULL_DEREF;
-}
-
-local_ordinal_type MatrixTestsDense::getNumLocCols(hiop::hiopMatrixDense* A)
-{
-  hiop::hiopMatrixDense* amat = dynamic_cast<hiop::hiopMatrixDense*>(A);
-  if(amat != nullptr)
-    return amat->get_local_size_n();
-    //                         ^^^
-  else THROW_NULL_DEREF;
 }
 
 /// Returns size of local data array for vector _x_
@@ -203,8 +159,8 @@ bool MatrixTestsDense::reduceReturn(int failures, hiop::hiopMatrixDense* A)
   [[nodiscard]]
 int MatrixTestsDense::verifyAnswer(hiop::hiopMatrixDense* A, const double answer)
 {
-  const local_ordinal_type M = getNumLocRows(A);
-  const local_ordinal_type N = getNumLocCols(A);
+  const local_ordinal_type M = A->m();
+  const local_ordinal_type N = A->n();
   int fail = 0;
   for (local_ordinal_type i=0; i<M; i++)
   {
@@ -229,8 +185,8 @@ int MatrixTestsDense::verifyAnswer(
     hiop::hiopMatrixDense* A,
     std::function<real_type(local_ordinal_type, local_ordinal_type)> expect)
 {
-  const local_ordinal_type M = getNumLocRows(A);
-  const local_ordinal_type N = getNumLocCols(A);
+  const local_ordinal_type M = A->m();
+  const local_ordinal_type N = A->n();
   int fail = 0;
   for (local_ordinal_type i=0; i<M; i++)
   {
@@ -294,7 +250,7 @@ bool MatrixTestsDense::globalToLocalMap(
   int rank = 0;
   MPI_Comm comm = getMPIComm(A);
   MPI_Comm_rank(comm, &rank);
-  const local_ordinal_type n_local = getNumLocCols(A);
+  const local_ordinal_type n_local = A->n();
   const global_ordinal_type local_col_start = n_local * rank;
   if (col >= local_col_start && col < local_col_start + n_local)
   {
