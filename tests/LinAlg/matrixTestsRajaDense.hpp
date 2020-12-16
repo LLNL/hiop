@@ -51,6 +51,7 @@
  *
  * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
  * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
+ * @author Robert Rutherford <robert.rutherford@pnnl.gov>, PNNL
  *
  */
 #pragma once
@@ -67,6 +68,8 @@ public:
   virtual ~MatrixTestsRajaDense(){}
 
 private:
+  virtual const real_type* getLocalDataConst(const hiop::hiopMatrixDense* a);
+  virtual const real_type* getLocalDataConst(const hiop::hiopVector* x);
   virtual void setLocalElement(
       hiop::hiopMatrixDense* a,
       local_ordinal_type i,
@@ -85,7 +88,6 @@ private:
   virtual local_ordinal_type getNumLocRows(hiop::hiopMatrixDense* a) override;
   virtual local_ordinal_type getNumLocCols(hiop::hiopMatrixDense* a) override;
   virtual local_ordinal_type getLocalSize(const hiop::hiopVector *x) override;
-  virtual real_type* getLocalData(hiop::hiopMatrixDense* a) override;
   virtual int verifyAnswer(hiop::hiopMatrixDense* A, real_type answer) override;
   virtual int verifyAnswer(
       hiop::hiopMatrixDense* A,

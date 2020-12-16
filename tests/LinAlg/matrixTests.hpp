@@ -112,7 +112,7 @@ public:
 
     // test copying src a raw buffer
     const size_t buf_len = getNumLocRows(&src) * getNumLocCols(&src);
-    real_type *src_buf = getLocalData(&src);
+    real_type *src_buf = src.local_data();
     dst.setToZero();
 
     dst.copyFrom(src_buf);
@@ -1100,6 +1100,8 @@ public:
   }
 
 protected:
+  virtual const real_type* getLocalDataConst(const hiop::hiopMatrixDense* a) = 0;
+  virtual const real_type* getLocalDataConst(const hiop::hiopVector* x) = 0;
   virtual void setLocalElement(
       hiop::hiopMatrixDense* a,
       local_ordinal_type i,
@@ -1113,23 +1115,22 @@ protected:
       hiop::hiopMatrixDense* A,
       const local_ordinal_type row,
       const real_type val) = 0;
-  virtual real_type getLocalElement(
+  virtual real_type getLocalElement( // impl
       const hiop::hiopMatrixDense* a,
       local_ordinal_type i,
       local_ordinal_type j) = 0;
-  virtual real_type getLocalElement(
+  virtual real_type getLocalElement( // impl
       const hiop::hiopVector* x,
       local_ordinal_type i) = 0;
-  virtual local_ordinal_type getNumLocRows(hiop::hiopMatrixDense* a) = 0;
-  virtual local_ordinal_type getNumLocCols(hiop::hiopMatrixDense* a) = 0;
-  virtual local_ordinal_type getLocalSize(const hiop::hiopVector* x) = 0;
-  virtual real_type* getLocalData(hiop::hiopMatrixDense* a) = 0;
-  virtual int verifyAnswer(hiop::hiopMatrixDense* A, real_type answer) = 0;
-  virtual int verifyAnswer(
+  virtual local_ordinal_type getNumLocRows(hiop::hiopMatrixDense* a) = 0; // impl
+  virtual local_ordinal_type getNumLocCols(hiop::hiopMatrixDense* a) = 0; // impl
+  virtual local_ordinal_type getLocalSize(const hiop::hiopVector* x) = 0; // impl
+  virtual int verifyAnswer(hiop::hiopMatrixDense* A, real_type answer) = 0; // impl
+  virtual int verifyAnswer( // impl
       hiop::hiopMatrixDense* A,
       std::function<real_type(local_ordinal_type, local_ordinal_type)> expect) = 0;
-  virtual int verifyAnswer(hiop::hiopVector* x, real_type answer) = 0;
-  virtual int verifyAnswer(
+  virtual int verifyAnswer(hiop::hiopVector* x, real_type answer) = 0; // impl
+  virtual int verifyAnswer( // impl
       hiop::hiopVector* x,
       std::function<real_type(local_ordinal_type)> expect) = 0;
   virtual bool reduceReturn(int failures, hiop::hiopMatrixDense* A) = 0;
@@ -1138,7 +1139,7 @@ protected:
    * maps to local indices, otherwise false and does not alter
    * local coordinates.
    */
-  virtual bool globalToLocalMap(
+  virtual bool globalToLocalMap( // delete this?
       hiop::hiopMatrixDense* A,
       const global_ordinal_type row,
       const global_ordinal_type col,

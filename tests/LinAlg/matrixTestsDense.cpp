@@ -51,12 +51,30 @@
  *
  * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>,  PNNL
  * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
+ * @author Robert Rutherford <robert.rutherford@pnnl.gov>, PNNL
  *
  */
 #include <hiopMatrixDenseRowMajor.hpp>
+#include <hiopVectorPar.hpp>
 #include "matrixTestsDense.hpp"
 
 namespace hiop { namespace tests {
+
+/// Returns const pointer to local Matrix data
+const real_type* MatrixTestsDense::getLocalDataConst(const hiop::hiopMatrixDense* a)
+{
+  auto* amat = dynamic_cast<const hiop::hiopMatrixDense*>(a);
+  if(amat != nullptr) return amat->local_data_const();
+  else THROW_NULL_DEREF;
+}
+
+/// Returns const pointer to local vector data
+const real_type* MatrixTestsDense::getLocalDataConst(const hiop::hiopVector* x_in)
+{
+  const hiop::hiopVectorPar* x = dynamic_cast<const hiop::hiopVectorPar*>(x_in);
+  if(x != nullptr) return x->local_data_host_const();
+  else THROW_NULL_DEREF;
+}
 
 /// Method to set matrix _A_ element (i,j) to _val_.
 /// First need to retrieve hiopMatrixDense from the abstract interface
@@ -166,18 +184,6 @@ MPI_Comm MatrixTestsDense::getMPIComm(hiop::hiopMatrixDense* _A)
   else THROW_NULL_DEREF;
 }
 #endif
-
-/// Returns pointer to local data block of matrix _A_.
-/// First need to retrieve hiopMatrixDenseRowMajor from the abstract interface
-real_type* MatrixTestsDense::getLocalData(hiop::hiopMatrixDense* A)
-{
-  auto* amat = dynamic_cast<hiop::hiopMatrixDenseRowMajor*>(A);
-  if(amat != nullptr)
-  {
-    return amat->local_data();
-  }
-  else THROW_NULL_DEREF;
-}
 
 // Every rank returns failure if any individual rank fails
 bool MatrixTestsDense::reduceReturn(int failures, hiop::hiopMatrixDense* A)

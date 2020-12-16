@@ -51,6 +51,7 @@
  *
  * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>,  PNNL
  * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
+ * @author Robert Rutherford <robert.rutherford@pnnl.gov>, PNNL
  *
  */
 
@@ -59,6 +60,32 @@
 #include "matrixTestsRajaDense.hpp"
 
 namespace hiop { namespace tests {
+
+/// Returns const pointer to local Matrix data
+const real_type* MatrixTestsRajaDense::getLocalDataConst(const hiop::hiopMatrixDense* a)
+{
+  auto* const_amat = dynamic_cast<const hiop::hiopMatrixRajaDense*>(a);
+  auto* amat = const_cast<hiop::hiopMatrixRajaDense*>(const_amat);
+  if(amat != nullptr)
+  {
+    amat->copyFromDev();
+    return amat->local_data_host();
+  }
+  else THROW_NULL_DEREF;
+}
+
+/// Returns const pointer to local vector data
+const real_type* MatrixTestsRajaDense::getLocalDataConst(const hiop::hiopVector* x_in)
+{
+  const auto* x_const = dynamic_cast<const hiop::hiopVectorRajaPar*>(x_in);
+  auto* x = const_cast<hiop::hiopVectorRajaPar*>(x_const);
+  if(x != nullptr)
+  {
+    x->copyFromDev();
+    return x->local_data_host_const();
+  }
+  else THROW_NULL_DEREF;
+}
 
 /// Method to set matrix _A_ element (i,j) to _val_.
 /// First need to retrieve hiopMatrixDense from the abstract interface
@@ -182,18 +209,6 @@ MPI_Comm MatrixTestsRajaDense::getMPIComm(hiop::hiopMatrixDense* _A)
   else THROW_NULL_DEREF;
 }
 #endif
-
-/// Returns pointer to local data block of matrix _A_.
-/// First need to retrieve hiopMatrixRajaDense from the abstract interface
-real_type* MatrixTestsRajaDense::getLocalData(hiop::hiopMatrixDense* A)
-{
-  hiop::hiopMatrixRajaDense* amat = dynamic_cast<hiop::hiopMatrixRajaDense*>(A);
-  if(amat != nullptr)
-  {
-    return amat->local_data();
-  }
-  else THROW_NULL_DEREF;
-}
 
 // Every rank returns failure if any individual rank fails
 bool MatrixTestsRajaDense::reduceReturn(int failures, hiop::hiopMatrixDense* A)
