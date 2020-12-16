@@ -121,15 +121,6 @@ void MatrixTestsDense::setLocalRow(
   }
 }
 
-/// Returns size of local data array for vector _x_
-int MatrixTestsDense::getLocalSize(const hiop::hiopVector* x)
-{
-  const hiop::hiopVectorPar* xvec = dynamic_cast<const hiop::hiopVectorPar*>(x);
-  if(xvec != nullptr)
-    return static_cast<int>(xvec->get_local_size());
-  else THROW_NULL_DEREF;
-}
-
 #ifdef HIOP_USE_MPI
 /// Get communicator
 MPI_Comm MatrixTestsDense::getMPIComm(hiop::hiopMatrixDense* _A)
@@ -207,7 +198,7 @@ int MatrixTestsDense::verifyAnswer(
   [[nodiscard]]
 int MatrixTestsDense::verifyAnswer(hiop::hiopVector* x, double answer)
 {
-  const local_ordinal_type N = getLocalSize(x);
+  const local_ordinal_type N = x->get_local_size();
 
   int local_fail = 0;
   for(local_ordinal_type i=0; i<N; ++i)
@@ -226,7 +217,7 @@ int MatrixTestsDense::verifyAnswer(
     hiop::hiopVector* x,
     std::function<real_type(local_ordinal_type)> expect)
 {
-  const local_ordinal_type N = getLocalSize(x);
+  const local_ordinal_type N = x->get_local_size();
 
   int local_fail = 0;
   for (int i=0; i<N; i++)

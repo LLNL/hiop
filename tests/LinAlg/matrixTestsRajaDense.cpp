@@ -139,15 +139,6 @@ void MatrixTestsRajaDense::setLocalRow(
   A->copyToDev();
 }
 
-/// Returns size of local data array for vector _x_
-int MatrixTestsRajaDense::getLocalSize(const hiop::hiopVector* x)
-{
-  const hiop::hiopVectorRajaPar* xvec = dynamic_cast<const hiop::hiopVectorRajaPar*>(x);
-  if(xvec != nullptr)
-    return static_cast<int>(xvec->get_local_size());
-  else THROW_NULL_DEREF;
-}
-
 #ifdef HIOP_USE_MPI
 /// Get communicator
 MPI_Comm MatrixTestsRajaDense::getMPIComm(hiop::hiopMatrixDense* _A)
@@ -241,7 +232,7 @@ int MatrixTestsRajaDense::verifyAnswer(
 int MatrixTestsRajaDense::verifyAnswer(hiop::hiopVector* xvec, double answer)
 {
   auto* x = dynamic_cast<hiop::hiopVectorRajaPar*>(xvec);
-  const local_ordinal_type N = getLocalSize(x);
+  const local_ordinal_type N = x->get_local_size();
 
   // Copy vector local data to the host mirror
   x->copyFromDev();
@@ -266,7 +257,7 @@ int MatrixTestsRajaDense::verifyAnswer(
     std::function<real_type(local_ordinal_type)> expect)
 {
   auto* x = dynamic_cast<hiop::hiopVectorRajaPar*>(xvec);
-  const local_ordinal_type N = getLocalSize(x);
+  const local_ordinal_type N = x->get_local_size();
 
   // Copy vector local data to the host mirror
   x->copyFromDev();

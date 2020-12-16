@@ -130,8 +130,8 @@ public:
       const int rank=0)
   {
     const global_ordinal_type N_glob = A.n();
-    assert(getLocalSize(&y) == A.m() && "Did you pass in vectors of the correct sizes?");
-    assert(getLocalSize(&x) == A.n() && "Did you pass in vectors of the correct sizes?");
+    assert(y.get_local_size() == A.m() && "Did you pass in vectors of the correct sizes?");
+    assert(x.get_local_size() == A.n() && "Did you pass in vectors of the correct sizes?");
     const real_type alpha = one,
           beta  = one,
           A_val = one,
@@ -169,8 +169,8 @@ public:
 
     // Take m() because A will be transposed
     const global_ordinal_type N_glob = A.m();
-    assert(getLocalSize(&x) == A.m() && "Did you pass in vectors of the correct sizes?");
-    assert(getLocalSize(&y) == A.n() && "Did you pass in vectors of the correct sizes?");
+    assert(x.get_local_size() == A.m() && "Did you pass in vectors of the correct sizes?");
+    assert(y.get_local_size() == A.n() && "Did you pass in vectors of the correct sizes?");
     const real_type alpha = one,
           beta  = one,
           A_val = one,
@@ -356,8 +356,8 @@ public:
       const int rank=0)
   {
     int fail = 0;
-    assert(A.n() == getLocalSize(&x));
-    assert(A.m() == getLocalSize(&x));
+    assert(A.n() == x.get_local_size());
+    assert(A.m() == x.get_local_size());
     assert(A.m() == A.n());
     assert(A.n() == x.get_size());
     assert(A.m() == x.get_size());
@@ -403,7 +403,7 @@ public:
   {
     int                      fail  = 0;
     const local_ordinal_type N     = A.n();
-    const local_ordinal_type x_len = getLocalSize(&x);
+    const local_ordinal_type x_len = x.get_local_size();
     const real_type          alpha = half;
     const real_type          A_val = half;
     const real_type          x_val = one;
@@ -1125,7 +1125,6 @@ protected:
       hiop::hiopMatrixDense* A,
       const local_ordinal_type row,
       const real_type val) = 0;
-  virtual local_ordinal_type getLocalSize(const hiop::hiopVector* x) = 0; // impl
   virtual int verifyAnswer(hiop::hiopMatrixDense* A, real_type answer) = 0; // impl
   virtual int verifyAnswer( // impl
       hiop::hiopMatrixDense* A,
