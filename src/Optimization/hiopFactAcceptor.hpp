@@ -87,11 +87,6 @@ public:
    */
   virtual int requireReFactorization(const hiopNlpFormulation& nlp, const int& n_neg_eig,
                                      double& delta_wx, double& delta_wd, double& delta_cc, double& delta_cd) = 0;
-  
-  inline void set_mu(const double& mu)
-  {
-    perturb_calc_->set_mu(mu);
-  }
       
 protected:  
   hiopPDPerturbation* perturb_calc_;

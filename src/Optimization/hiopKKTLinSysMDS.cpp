@@ -471,7 +471,7 @@ namespace hiop
  
           hiopLinSolverIndefDenseMagmaNopiv* p = new hiopLinSolverIndefDenseMagmaNopiv(n, nlp_);
 	        linSys_ = p;
-	        p->set_fake_inertia(neq + nineq);
+	        p->setFakeInertia(neq + nineq);
 	      }
       } else {
     	  nlp_->log->printf(hovScalars, "KKT_MDS_XYcYd linsys: Lapack for a matrix of size %d [2]\n", n);

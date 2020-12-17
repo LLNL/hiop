@@ -118,7 +118,7 @@ public:
   virtual void firstCall();
 //  virtual void diagonalChanged( int idiag, int extent );
 
-  void inline set_fake_inertia(int nNegEigs)
+  void inline setFakeInertia(int nNegEigs)
   {
     nFakeNegEigs_ = nNegEigs;
   }
@@ -173,7 +173,7 @@ public:
   void firstCall();
 //  virtual void diagonalChanged( int idiag, int extent );
 
-  void inline set_fake_inertia(int nNegEigs)
+  void inline setFakeInertia(int nNegEigs)
   {
     nFakeNegEigs_ = nNegEigs;
   }

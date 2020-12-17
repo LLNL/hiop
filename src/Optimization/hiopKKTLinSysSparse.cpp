@@ -259,7 +259,7 @@ namespace hiop
                           "KKT_SPARSE_XYcYd linsys: using STRUMPACK as an indefinite solver, size %d (%d cons) (safe_mode=%d)\n",
                           n, neq+nineq, safe_mode_);
         
-        p->set_fake_inertia(neq + nineq);
+        p->setFakeInertia(neq + nineq);
         linSys_ = p;
 #else
 #ifdef HIOP_USE_COINHSL
@@ -480,7 +480,7 @@ namespace hiop
                           "KKT_SPARSE_XDYcYd linsys: using STRUMPACK as an indefinite solver, size %d (%d cons) (safe_mode=%d)\n",
                           n, neq+nineq, safe_mode_);
         
-        p->set_fake_inertia(neq + nineq);
+        p->setFakeInertia(neq + nineq);
         linSys_ = p;
 #else
 #ifdef HIOP_USE_COINHSL
@@ -528,7 +528,7 @@ namespace hiop
                         "KKT_SPARSE_FULL_KKT linsys: STRUMPACK size %d (%d cons) (safe_mode=%d)\n",
                         n, n_con, safe_mode_);
       hiopLinSolverNonSymSparseSTRUMPACK *p = new hiopLinSolverNonSymSparseSTRUMPACK(n, nnz, nlp_);
-      p->set_fake_inertia(n_con);
+      p->setFakeInertia(n_con);
       linSys_ = p;
 #else
       nlp_->log->printf(hovError,
