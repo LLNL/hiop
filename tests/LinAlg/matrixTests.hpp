@@ -1158,6 +1158,46 @@ public:
     return fail;
   }
 
+  /// Checks if _local_ vector elements are set to `answer`.
+  int verifyAnswer(hiop::hiopVector* x, real_type answer)
+  {
+    const local_ordinal_type N = x->get_local_size();
+    const real_type* xdata = getLocalDataConst(x);
+    
+    int local_fail = 0;
+    for(local_ordinal_type i = 0; i < N; ++i)
+    {
+      if(!isEqual(xdata[i], answer))
+      {
+        ++local_fail;
+      }
+    }
+    return local_fail;
+  }
+
+  /**
+  * @brief Verifies:
+  * \forall x in _local_ vector data at index i,
+  *    x == expect(i)
+  */
+  int verifyAnswer(
+      hiop::hiopVector* x,
+      std::function<real_type(local_ordinal_type)> expect)
+  {
+    const local_ordinal_type N = x->get_local_size();
+    const real_type* xdata = getLocalDataConst(x);
+    
+    int local_fail = 0;
+    for(local_ordinal_type i = 0; i < N; ++i)
+    {
+      if(!isEqual(xdata[i], expect(i)))
+      {
+        ++local_fail;
+      }
+    }
+    return local_fail;
+  }
+
 protected:
   virtual const real_type* getLocalDataConst(const hiop::hiopMatrixDense* a) = 0;
   virtual const real_type* getLocalDataConst(const hiop::hiopVector* x) = 0;
@@ -1174,10 +1214,6 @@ protected:
       hiop::hiopMatrixDense* A,
       const local_ordinal_type row,
       const real_type val) = 0;
-  virtual int verifyAnswer(hiop::hiopVector* x, real_type answer) = 0; // impl
-  virtual int verifyAnswer( // impl
-      hiop::hiopVector* x,
-      std::function<real_type(local_ordinal_type)> expect) = 0;
   virtual bool reduceReturn(int failures, hiop::hiopMatrixDense* A) = 0;
 };
 

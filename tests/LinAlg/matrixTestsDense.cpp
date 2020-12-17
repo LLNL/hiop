@@ -147,42 +147,6 @@ bool MatrixTestsDense::reduceReturn(int failures, hiop::hiopMatrixDense* A)
   return (fail != 0);
 }
 
-/// Checks if _local_ vector elements are set to `answer`.
-  [[nodiscard]]
-int MatrixTestsDense::verifyAnswer(hiop::hiopVector* x, double answer)
-{
-  const local_ordinal_type N = x->get_local_size();
-
-  int local_fail = 0;
-  for(local_ordinal_type i=0; i<N; ++i)
-  {
-    if(!isEqual(getLocalElement(x, i), answer))
-    {
-      ++local_fail;
-    }
-  }
-
-  return local_fail;
-}
-
-  [[nodiscard]]
-int MatrixTestsDense::verifyAnswer(
-    hiop::hiopVector* x,
-    std::function<real_type(local_ordinal_type)> expect)
-{
-  const local_ordinal_type N = x->get_local_size();
-
-  int local_fail = 0;
-  for (int i=0; i<N; i++)
-  {
-    if(!isEqual(getLocalElement(x, i), expect(i)))
-    {
-      ++local_fail;
-    }
-  }
-  return local_fail;
-}
-
 // End helper methods
 
 }} // namespace hiop::tests

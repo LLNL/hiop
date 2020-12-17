@@ -165,54 +165,6 @@ bool MatrixTestsRajaDense::reduceReturn(int failures, hiop::hiopMatrixDense* A)
   return (fail != 0);
 }
 
-/// Checks if _local_ vector elements are set to `answer`.
-  [[nodiscard]]
-int MatrixTestsRajaDense::verifyAnswer(hiop::hiopVector* xvec, double answer)
-{
-  auto* x = dynamic_cast<hiop::hiopVectorRajaPar*>(xvec);
-  const local_ordinal_type N = x->get_local_size();
-
-  // Copy vector local data to the host mirror
-  x->copyFromDev();
-  // Get raw pointer to the host mirror
-  const real_type* local_data = x->local_data_host_const();
-
-  int local_fail = 0;
-  for(local_ordinal_type i=0; i<N; ++i)
-  {
-    if(!isEqual(local_data[i], answer))
-    {
-      ++local_fail;
-    }
-  }
-
-  return local_fail;
-}
-
-  [[nodiscard]]
-int MatrixTestsRajaDense::verifyAnswer(
-    hiop::hiopVector* xvec,
-    std::function<real_type(local_ordinal_type)> expect)
-{
-  auto* x = dynamic_cast<hiop::hiopVectorRajaPar*>(xvec);
-  const local_ordinal_type N = x->get_local_size();
-
-  // Copy vector local data to the host mirror
-  x->copyFromDev();
-  // Get raw pointer to the host mirror
-  const real_type* local_data = x->local_data_host_const();
-
-  int local_fail = 0;
-  for (int i=0; i<N; i++)
-  {
-    if(!isEqual(local_data[i], expect(i)))
-    {
-      ++local_fail;
-    }
-  }
-  return local_fail;
-}
-
 // End helper methods
 
 }} // namespace hiop::tests
