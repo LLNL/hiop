@@ -88,7 +88,7 @@ public:
     return *M_; 
   }
 
-  void inline set_fake_inertia(int nNegEigs)
+  void inline setFakeInertia(int nNegEigs)
   {
     nFakeNegEigs_ = nNegEigs;
   }

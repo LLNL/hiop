@@ -58,6 +58,7 @@
 #include "hiopLogBarProblem.hpp"
 #include "hiopDualsUpdater.hpp"
 #include "hiopPDPerturbation.hpp"
+#include "hiopFactAcceptor.hpp"
 
 #include "hiopTimer.hpp"
 
@@ -246,8 +247,11 @@ public:
 private:
   virtual void outputIteration(int lsStatus, int lsNum);
   virtual hiopKKTLinSys* decideAndCreateLinearSystem(hiopNlpFormulation* nlp);
+  /// @brief get the method to decide if a factorization is acceptable or not
+  virtual hiopFactAcceptor* decideAndCreateFactAcceptor(hiopPDPerturbation* p, hiopNlpFormulation* nlp);
 
   hiopPDPerturbation pd_perturb_;
+  hiopFactAcceptor* fact_acceptor_;
 private:
   hiopAlgFilterIPMNewton() : hiopAlgFilterIPMBase(NULL) {};
   hiopAlgFilterIPMNewton(const hiopAlgFilterIPMNewton& ) : hiopAlgFilterIPMBase(NULL){};
