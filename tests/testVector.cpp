@@ -125,7 +125,7 @@ int main(int argc, char** argv)
     std::cout << "  ... using unified virtual memory space:\n";
   }
   fail += runTests<VectorTestsRajaPar>("um", comm);
-#elif
+#else
   if (rank == 0)
   {
     std::cout << "\nTesting HiOp RAJA vector\n";
@@ -156,7 +156,7 @@ int main(int argc, char** argv)
       std::cout << "  ... using unified virtual memory space:\n";
     }
     fail += runIntTests<VectorTestsIntRaja>("um");
-#elif
+#else
     if (rank == 0)
     {
       std::cout << "\nTesting HiOp RAJA int vector\n";
