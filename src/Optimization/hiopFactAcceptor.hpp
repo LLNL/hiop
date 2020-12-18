@@ -102,7 +102,7 @@ public:
    */
   hiopFactAcceptorIC(hiopPDPerturbation* p, const long long n_required_neg_eig)
   : hiopFactAcceptor(p),
-    n_required_neg_eig_{n_required_neg_eig}
+    n_required_neg_eig_(n_required_neg_eig)
   {}
 
   virtual ~hiopFactAcceptorIC() 

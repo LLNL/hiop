@@ -316,7 +316,7 @@ public:
 		      hiopHessianLowRank* Hess);
 
   virtual bool updateMatrix(const double& delta_wx, const double& delta_wd,
-                            const double& delta_cc, const double& delta_cd) {assert(false && "not yet implemented");}
+                            const double& delta_cc, const double& delta_cd) {assert(false && "not yet implemented");return false;}
 
   /* Solves the system corresponding to directions for x, yc, and yd, namely
    * [ H_BFGS + Dx   Jc^T  Jd^T   ] [ dx]   [ rx_tilde ]
