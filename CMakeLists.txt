@@ -32,8 +32,6 @@ option(HIOP_WITH_MAKETEST "Enable 'make test'" ON)
 option(HIOP_BUILD_SHARED "Build shared library" OFF)
 option(HIOP_BUILD_STATIC "Build static library" ON)
 option(HIOP_SPARSE "Build with sparse linear algebra" ON)
-option(HIOP_USE_COINHSL "Build with sparse linear algebra" ON)
-option(HIOP_USE_STRUMPACK "Build with STRUMPACK backend for sparse linear algebra" OFF)
 option(HIOP_WITH_VALGRIND_TESTS "Run valgrind on certain integration tests" OFF)
 option(HIOP_BUILD_DOCUMENTATION "Build HiOp documentation via Doxygen" ON)
 
@@ -41,9 +39,35 @@ if(HIOP_BUILD_SHARED)
   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 endif()
 
-if(HIOP_USE_GPU)
-  option(HIOP_USE_MAGMA "Use Magma linear algebra" ON)
+include(CMakeDependentOption)
+# When HIOP_USE_GPU, either HIOP_USE_CUDA or HIOP_USE_HIP. We enable CUDA by
+# default.
+cmake_dependent_option(HIOP_USE_CUDA "Use CUDA for GPU code" ON
+  "HIOP_USE_GPU" OFF)
+cmake_dependent_option(HIOP_USE_HIP "Use HIP for GPU code" OFF
+  "HIOP_USE_GPU" OFF)
+
+# This is not currently supported, but we plan to inforporate in the future
+# cmake_dependent_option(HIOP_USE_INTELGPU "Use Intel compilers for GPU" ON
+# "HIOP_USE_GPU" OFF)
+
+if(HIOP_USE_CUDA AND HIOP_USE_HIP)
+  message(FATAL_ERROR "HIP and CUDA cannot be used in the same configuration.")
+elseif(HIOP_USE_GPU AND NOT HIOP_USE_CUDA AND NOT HIOP_USE_HIP)
+  message(FATAL_ERROR "When HIOP_USE_GPU, either HIOP_USE_CUDA or HIOP_USE_HIP "
+    "must be set.")
 endif()
+
+cmake_dependent_option(HIOP_USE_MAGMA "Use Magma linear algebra with CUDA" ON
+  "HIOP_USE_GPU;HIOP_USE_CUDA" OFF)
+cmake_dependent_option(HIOP_USE_HIPMAGMA "Use Magma linear algebra with HIP" ON
+  "HIOP_USE_GPU;HIOP_USE_HIP" OFF)
+
+cmake_dependent_option(HIOP_USE_COINHSL "Build with sparse linear algebra" ON
+  "HIOP_SPARSE" OFF)
+cmake_dependent_option(HIOP_USE_STRUMPACK
+  "Build with STRUMPACK backend for sparse linear algebra" OFF
+  "HIOP_SPARSE;NOT HIOP_USE_GPU" OFF)
 
 add_library(hiop_math INTERFACE)
 add_library(hiop_options INTERFACE)
