@@ -429,9 +429,6 @@ namespace hiop
       if(nlp_->options->GetString("compute_mode")=="hybrid" ||
 	       nlp_->options->GetString("compute_mode")=="gpu"    ||
 	       nlp_->options->GetString("compute_mode")=="auto") {
-	// once we get the desired functionality from magma this should be revisited to 
-	// increase robustness of nopiv factorization aftermath by making use of nopiv inertia
-	//
 	// Strategy
 	//  i. nopiv Magma (//! todo: + inertia correction) 
 	// when i. fails (in factorization, solve, or outer optimization loop--ascent direction--) employ
@@ -453,26 +450,17 @@ namespace hiop
 	  
 	  linSys_ = new hiopLinSolverIndefDenseMagmaBuKa(n, nlp_);
 	} else {
-	  auto hovLevel = hovScalars;
-	  if(switched_linsolvers) hovLevel = hovWarning;
-
-	  nlp_->log->printf(hovLevel, 
-			    "KKT_MDS_XYcYd linsys: MagmaNopiv size %d (%d cons) (safe_mode=%d)\n", 
-			    n, neq+nineq, safe_mode_);
-	  
-	         linSys_ = new hiopLinSolverIndefDenseMagmaBuKa(n, nlp_);
-	      } else {
-	        auto hovLevel = hovScalars;
-	        if(switched_linsolvers) hovLevel = hovWarning;
-
-	        nlp_->log->printf(hovLevel, 
-			      "KKT_MDS_XYcYd linsys: MagmaNopiv size %d (%d cons) (safe_mode=%d)\n", 
-			      n, neq+nineq, safe_mode_);
- 
+          auto hovLevel = hovScalars;
+          if(switched_linsolvers) hovLevel = hovWarning;
+          
+          nlp_->log->printf(hovLevel, 
+                            "KKT_MDS_XYcYd linsys: MagmaNopiv size %d (%d cons) (safe_mode=%d)\n", 
+                            n, neq+nineq, safe_mode_);
+          
           hiopLinSolverIndefDenseMagmaNopiv* p = new hiopLinSolverIndefDenseMagmaNopiv(n, nlp_);
-	        linSys_ = p;
-	        p->setFakeInertia(neq + nineq);
-	      }
+          linSys_ = p;
+          p->setFakeInertia(neq + nineq);
+        }
       } else {
     	  nlp_->log->printf(hovScalars, "KKT_MDS_XYcYd linsys: Lapack for a matrix of size %d [2]\n", n);
     	  linSys_ = new hiopLinSolverIndefDenseLapack(n, nlp_);
