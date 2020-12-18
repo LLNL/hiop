@@ -67,6 +67,26 @@
 
 namespace hiop { namespace tests {
 
+/**
+ * @brief Collection of tests for abstract hiopMatrixDense implementations.
+ *
+ * This class contains implementation of all dense matrix unit tests and abstract
+ * interface for testing utility functions, which are specific to the particular
+ * matrix and vector implementations.
+ *
+ * @pre All matrices should be allocated to have compatible sizes, with the same
+ * partitioning.
+ *
+ * @pre Memory space for hiop::LinearAlgebraFactory is set appropriately
+ *
+ * @pre Any vectors used in testing functions are compatible with the matrices
+ * that are being tested. i.e. RAJA matrices only work with RAJA vectors and 
+ * vice versa.
+ *
+ * @post All tests return `true` on all ranks if the test fails on any rank,
+ * and returns `false` otherwise.
+ */
+
 class MatrixTests : public TestBase
 {
 public:
@@ -1100,6 +1120,7 @@ public:
   }
 
 protected:
+  // Interface methods that are specific to the vector/matrix implementation
   virtual void setLocalElement(
       hiop::hiopMatrixDense* a,
       local_ordinal_type i,
