@@ -38,22 +38,23 @@ int main(int argc, char **argv)
   magma_init();
 #endif
 
-  //printf("here\n");
-  PriDecMasterProblemEx9 pridec_problem(12, 20, 5, 100);
+  //PriDecMasterProblemEx9 pridec_problem(12, 20, 5, 100);
+  PriDecMasterProblemEx9 pridec_problem(12, 12, 5, 5);
   //printf("total ranks %d\n",comm_size);
   hiop::hiopAlgPrimalDecomposition pridec_solver(&pridec_problem, MPI_COMM_WORLD);
 
-  //printf("my rank starting 0 %d)\n",rank);
+  printf("my rank starting 0 %d)\n",rank);
   auto status = pridec_solver.run();
 
-  if(status!=Solve_Success) {
+  /*
+  if(status!=Solve_Success){
     if(rank==0)
       printf("Solve was NOT successfull.");
-  } else {
+  }else{
     if(rank==0)
       printf("Solve was successfull. Optimal value: %12.5e\n",
              pridec_solver.getObjective());
-  }
+  }*/
 
 #ifdef HIOP_USE_MAGMA
   magma_finalize();

@@ -59,26 +59,41 @@
  * \min_x \sum_{i=1}^n f(x_i)
  * @f] 
  *
+ * 
  */
 
+using namespace hiop;
 class PriDecMasterProblemEx9 : public hiop::hiopInterfacePriDecProblem
 {
 public:
-  PriDecMasterProblemEx9(size_t nx, size_t ny, size_t nS, size_t S);
-  virtual ~PriDecMasterProblemEx9();
+  PriDecMasterProblemEx9(size_t nx, size_t ny, size_t nS, size_t S)
+  : nx_(nx), ny_(ny),nS_(nS),S_(S)
+  {
+    assert(nx==ny);
+    y_ = new double[ny_];
+    sol_ = new double[nx_];
+    obj_ = 1e20;
+    basecase_ = new PriDecBasecaseProblemEx9(nx_);
+  };
+  virtual ~PriDecMasterProblemEx9()
+  {
+    delete[] y_;
+    delete[] sol_; 
+    delete basecase_;
+  };
+
 
   hiop::hiopSolveStatus solve_master(double* x,
                                      const bool& include_r,
                                      const double& rval=0, 
                                      const double* grad=0,
                                      const double*hess =0);
+    
 
-  bool set_recourse_approx_evaluator(const int n, RecourseApproxEvaluator* evaluator)
-  {
-    return false;
-  }
+  virtual bool set_recourse_approx_evaluator(const int n, RecourseApproxEvaluator* evaluator);
   
-  bool eval_f_rterm(size_t idx, const int& n, double* x, double& rval);
+  //solving the idxth recourse optimization problem
+  bool eval_f_rterm(size_t idx, const int& n, const double* x, double& rval);
   
   bool eval_grad_rterm(size_t idx, const int& n, double* x, double* grad);
   
@@ -94,13 +109,13 @@ public:
 
   void get_solution(double* x) const
   {
-    assert(false && "to be implemented");
+    assert(sol_!=NULL);
+    memcpy(x,sol_, nx_*sizeof(double));
   }
 
   double get_objective()
   {
-    assert(false && "to be implemented");
-    return 0.;
+    return obj_;
   }
 private:
   /// dimension of primal variable `x`
@@ -112,6 +127,10 @@ private:
   ///number of sample to use, effectively the number of recourse terms  
   size_t S_;
 
+  double* y_;
+
+  double* sol_;
+  double obj_;
   /// basecase
   PriDecBasecaseProblemEx9* basecase_;
 };
