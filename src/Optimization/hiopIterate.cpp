@@ -234,6 +234,20 @@ void hiopIterate::normOneOfDuals(double& nrm1Eq, double& nrm1Bnd) const
   nrm1Eq   = nrm1Bnd + yc->onenorm_local() + yd->onenorm_local();
 }
 
+void hiopIterate::selectPattern()
+{
+  sxl->selectPattern(nlp->get_ixl());
+  zl->selectPattern(nlp->get_ixl());
+  
+  sxu->selectPattern(nlp->get_ixu());
+  zu->selectPattern(nlp->get_ixu());
+
+  sdl->selectPattern(nlp->get_idl());
+  vl->selectPattern(nlp->get_idl());
+
+  sdu->selectPattern(nlp->get_idu());
+  vu->selectPattern(nlp->get_idu());
+}
 
 void hiopIterate::determineSlacks()
 {

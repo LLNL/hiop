@@ -220,7 +220,7 @@ void hiopOptions::registerOptions()
   //factorization acceptor
   {
     vector<string> range(2); range[0] = "inertia_correction"; range[1]="inertia_free";
-    registerStrOption("FactAcceptor", "inertia_correction", range,
+    registerStrOption("fact_acceptor", "inertia_correction", range,
                       "The criteria used to accept a factorization: "
                       " inertia_correction (default option) --- check if inertia is correct. "
                       " inertia_free --- to be updated");

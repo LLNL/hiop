@@ -239,7 +239,7 @@ namespace hiop
     {
       spss.options().disable_gpu();
     }
-//    spss.options().set_verbose(false);
+    spss.options().set_verbose(false);
 
     spss.set_csr_matrix(n_, kRowPtr_, jCol_, kVal_, true);
 //    spss.reorder(n_, n_);
