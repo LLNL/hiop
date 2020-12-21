@@ -9,6 +9,7 @@ set(hiopOptimization_SRC
   hiopHessianLowRank.cpp 
   hiopDualsUpdater.cpp 
   hiopNlpTransforms.cpp
+  hiopAlgPrimalDecomp.cpp
 )
 
 if(HIOP_SPARSE)
