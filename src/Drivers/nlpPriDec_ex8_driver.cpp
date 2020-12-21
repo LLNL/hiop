@@ -21,7 +21,6 @@
 //
 //todo: add -selfcheck option (see other drivers) and add the driver to cmake tests
 //
->>>>>>> b464601f88b34f3bd869f951097587416efa3fff
 
 int main(int argc, char **argv)
 {
@@ -45,10 +44,10 @@ int main(int argc, char **argv)
   //printf("my rank starting 0 %d)\n",rank);
   auto status = pridec_solver.run();
 
-  if(status!=Solve_Success) {
+  if(status!=Solve_Success){
     if(rank==0)
       printf("Solve was NOT successfull.");
-  } else {
+  }else{
     if(rank==0)
       printf("Solve was successfull. Optimal value: %12.5e\n",
              pridec_solver.getObjective());

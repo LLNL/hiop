@@ -32,7 +32,7 @@ public:
   RecourseApproxEvaluator(int ns,int S, const double& rval, const double* rgrad, 
 		         const double* rhess, const double* x0): ns_(ns),S_(S)
   {
-    assert(S>=ns);
+    //assert(S>=ns);
     rval_ = rval;
     rgrad_ = new double[ns];
     rhess_ = new double[ns];
@@ -98,7 +98,7 @@ public:
     memcpy(x0_,x0 , ns_*sizeof(double));
   }
   
-  
+  int get_S() const {return S_;} 
   double get_rval() const {return rval_;}
   double* get_rgrad() const {return rgrad_;}
   double* get_rhess() const {return rhess_;}
@@ -135,8 +135,6 @@ protected:
   //friend class Ex8;
 };
 
-
-<<<<<<< HEAD
 
 /**
 =======
@@ -205,7 +203,7 @@ public:
   virtual hiopSolveStatus solve_master(double* x,const bool& include_r, const double& rval=0, 
 		                       const double* grad=0,const double*hess =0) = 0;
 
-  virtual bool eval_f_rterm(size_t idx, const int& n, double* x, double& rval) = 0;
+  virtual bool eval_f_rterm(size_t idx, const int& n, const double* x, double& rval) = 0;
   virtual bool eval_grad_rterm(size_t idx, const int& n, double* x, double* grad) = 0;
 
   //
