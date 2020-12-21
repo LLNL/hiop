@@ -43,7 +43,7 @@ if(HIOP_BUILD_SHARED AND NOT HIOP_USE_GPU)
 endif()
 
 if(HIOP_USE_MPI)
-  add_executable(nlpPriDec_ex8.exe nlpPriDec_ex8_driver.cpp)
+  add_executable(nlpPriDec_ex8.exe nlpPriDec_ex8.cpp nlpPriDec_ex8_driver.cpp)
   target_link_libraries(nlpPriDec_ex8.exe hiop)
 endif()
 
