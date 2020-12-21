@@ -133,7 +133,10 @@ namespace hiop
     * initialize strumpack parameters
     */
     spss.options().set_matching(MatchingJob::NONE);
-    spss.options().disable_gpu();
+    if(nlp_->options->GetString("compute_mode")=="cpu")
+    {
+      spss.options().disable_gpu();
+    }
     spss.options().set_verbose(false);
 
     spss.set_csr_matrix(n_, kRowPtr_, jCol_, kVal_, true);
@@ -232,8 +235,11 @@ namespace hiop
     */
 //    spss.options().set_matching(MatchingJob::NONE);
     spss.options().enable_METIS_NodeNDP();
-    spss.options().disable_gpu();
-    spss.options().set_verbose(false);
+    if(nlp_->options->GetString("compute_mode")=="cpu")
+    {
+      spss.options().disable_gpu();
+    }
+//    spss.options().set_verbose(false);
 
     spss.set_csr_matrix(n_, kRowPtr_, jCol_, kVal_, true);
 //    spss.reorder(n_, n_);
