@@ -1,6 +1,5 @@
 // Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
-// Written by Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
@@ -52,6 +51,7 @@
  * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
  * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
  * @author Jake K. Ryan <jake.ryan@pnnl.gov>, PNNL
+ * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
  *
  */
 #ifndef HIOP_VECTOR_RAJA_PAR
@@ -125,6 +125,21 @@ public:
 
   virtual double linearDampingTerm_local(const hiopVector& ixl_select, const hiopVector& ixu_select, 
                                          const double& mu, const double& kappa_d) const;
+
+  /** 
+   * Performs `this[i] = alpha*this[i] + sign*ct` where sign=1 when EXACTLY one of 
+   * ixleft[i] and ixright[i] is 1.0 and sign=0 otherwise. 
+   *
+   * This method is used to add gradient contributions from the (linear) damping term used
+   * to handle unbounded problems. The damping terms are used for variables that are 
+   * bounded on one side only. 
+   */
+
+  virtual void addLinearDampingTerm(const hiopVector& ixleft,
+                                    const hiopVector& ixright,
+                                    const double& alpha,
+                                    const double& ct);
+
   virtual int allPositive();
   virtual int allPositive_w_patternSelect(const hiopVector& w);
   virtual bool projectIntoBounds_local(const hiopVector& xl, const hiopVector& ixl, 

@@ -1086,6 +1086,98 @@ public:
   }
 
   /**
+   * @brief Test: For addLinearDampingTerm method, which performs a "signed" axpy:
+   * `x[i] = alpha*x[i] + sign*ct` where sign=1 when exactly one of left[i] and right[i]
+   * is 1. and sign=0 otherwise.
+   */
+  bool vectorAddLinearDampingTerm(
+      hiop::hiopVector& x,
+      hiop::hiopVector& left,
+      hiop::hiopVector& right,
+      const int rank)
+  {
+    const local_ordinal_type N = getLocalSize(&x);
+    assert(N == getLocalSize(&left));
+    assert(N == getLocalSize(&right));
+    static const real_type ct = two;
+    static const real_type alpha = quarter;
+
+    x.setToConstant(one);
+    left.setToConstant(one);
+    right.setToConstant(zero);
+
+    // idx 0: left=0, right=1
+    if(N>=1)
+    {
+      setLocalElement(&left, 0, zero);
+      setLocalElement(&right, 0, one);
+    }
+
+    //idx 1: left=0, right=0
+    if(N>=2) 
+    {
+      setLocalElement(&left, 1, zero);
+      setLocalElement(&right, 1, zero);
+      
+    }
+
+    //idx 2: left=1 right=1
+    if(N>=3)
+    {
+      setLocalElement(&left, 2, one);
+      setLocalElement(&right, 2, one);
+    }
+
+    //idx 3: left=1 right=0
+    if(N>=4)
+    {
+      setLocalElement(&left, 3, one);
+      setLocalElement(&right, 3, zero);
+    }
+
+    real_type expected[4];
+
+    // expected for idx 0 
+    expected[0] = getLocalElement(&x, 0) * alpha - ct;
+
+    // expected for idx 1 
+    if(N>=2)
+    {
+      expected[1] = getLocalElement(&x, 1) * alpha;
+    }
+
+    // expected for idx 2
+    if(N>=3)
+    {
+      expected[2] = getLocalElement(&x, 2) * alpha;
+    }
+
+    // expected for idx 3
+    if(N>=4) 
+    {   
+      expected[3] = getLocalElement(&x, 3) * alpha + ct;
+    }
+
+    //
+    // the call
+    //
+    x.addLinearDampingTerm(left, right, alpha, ct);
+
+    //
+    // compare with actual values 
+    //
+    bool fail = false;
+    for(local_ordinal_type test = 0; test < std::min(N,4) && !fail; ++test) 
+    {
+      fail = !isEqual(expected[test], getLocalElement(&x, test));
+    }
+    
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &x);
+  }
+
+
+  /**
    * @brief Test:
    * this[i] > 0
    */

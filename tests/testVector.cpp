@@ -268,6 +268,7 @@ int runTests(const char* mem_space, MPI_Comm comm)
   fail += test.vectorLogBarrier(*x, *y, rank);
   fail += test.vectorAddLogBarrierGrad(*x, *y, *z, rank);
   fail += test.vectorLinearDampingTerm(*x, *y, *z, rank);
+  fail += test.vectorAddLinearDampingTerm(*x, *y, *z, rank);
 
   fail += test.vectorAllPositive(*x, rank);
   fail += test.vectorAllPositive_w_patternSelect(*x, *y, rank);
