@@ -72,6 +72,13 @@ hiopAlgFilterIPMBase::hiopAlgFilterIPMBase(hiopNlpFormulation* nlp_)
   it_trial= it_curr->alloc_clone();
   dir     = it_curr->alloc_clone();
 
+  if(nlp->options->GetString("KKTLinsys")=="full")
+  {
+    it_curr->selectPattern();
+    it_trial->selectPattern(); 
+    dir->selectPattern();
+  }
+
   logbar = new hiopLogBarProblem(nlp);
 
   _f_nlp = _f_log = 0;
@@ -1242,7 +1249,7 @@ decideAndCreateLinearSystem(hiopNlpFormulation* nlp)
 hiopFactAcceptor* hiopAlgFilterIPMNewton::
 decideAndCreateFactAcceptor(hiopPDPerturbation* p, hiopNlpFormulation* nlp)
 {
-  std::string strKKT = nlp->options->GetString("FactAcceptor");
+  std::string strKKT = nlp->options->GetString("fact_acceptor");
   if(strKKT == "inertia_correction")
   {
     return new hiopFactAcceptorIC(p,nlp->m_eq()+nlp->m_ineq());

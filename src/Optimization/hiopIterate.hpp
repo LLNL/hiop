@@ -114,6 +114,9 @@ public:
   /* same as above but computed in one shot to save on communication and computation */
   virtual void   normOneOfDuals(double& nrm1Eq, double& nrm1Bnd) const;
 
+  /// @brief Entries corresponding to zeros in ix are set to zero
+  virtual void selectPattern();
+
   /* cloning and copying */
   hiopIterate* alloc_clone() const;
   hiopIterate* new_copy() const;

@@ -287,7 +287,7 @@ bool hiopKKTLinSysCompressedXYcYd::update(const hiopIterate* iter,
   nlp_->runStats.kkt.tmUpdateInit.start();
 
   iter_ = iter;
-  grad_f_ = dynamic_cast<const hiopVectorPar*>(grad_f_);
+  grad_f_ = dynamic_cast<const hiopVectorPar*>(grad_f);
   Jac_c_ = Jac_c; Jac_d_ = Jac_d;
   Hess_=Hess;
 
@@ -578,7 +578,7 @@ bool hiopKKTLinSysCompressedXDYcYd::update( const hiopIterate* iter,
   nlp_->runStats.tmSolverInternal.start();
 
   iter_ = iter;
-  grad_f = dynamic_cast<const hiopVectorPar*>(grad_f_);
+  grad_f_ = dynamic_cast<const hiopVectorPar*>(grad_f);
   Jac_c_ = Jac_c; Jac_d_ = Jac_d;
 
   Hess_=Hess;
@@ -1333,6 +1333,13 @@ bool hiopKKTLinSysFull::update( const hiopIterate* iter,
                                 const hiopMatrix* Jac_c, const hiopMatrix* Jac_d,
                                 hiopMatrix* Hess)
 {
+  
+  iter_ = iter;
+  grad_f_ = dynamic_cast<const hiopVectorPar*>(grad_f);
+  Jac_c_ = Jac_c; 
+  Jac_d_ = Jac_d;
+  Hess_=Hess;
+
   nlp_->runStats.tmSolverInternal.start();
 
   // factorization + inertia correction if needed
