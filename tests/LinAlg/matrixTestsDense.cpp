@@ -76,6 +76,7 @@ void MatrixTestsDense::setLocalElement(
   else
   {
     assert(false && "Wrong type of dense matrix passed into `MatrixTestsDense::setLocalElement`!");
+    THROW_NULL_DEREF;
   }
 }
 
@@ -92,6 +93,7 @@ void MatrixTestsDense::setLocalElement(
   else
   {
     assert(false && "Wrong type of vector passed into `MatrixTestsDense::setLocalElement`!");
+    THROW_NULL_DEREF;
   }
 }
 
@@ -122,6 +124,7 @@ real_type MatrixTestsDense::getLocalElement(
   else
   {
     assert(false && "Wrong type of dense matrix passed into `MatrixTestsDense::getLocalElement`!");
+    THROW_NULL_DEREF;
   }
 }
 
@@ -138,6 +141,7 @@ real_type MatrixTestsDense::getLocalElement(
   else
   {
     assert(false && "Wrong type of vector passed into `MatrixTestsDense::getLocalElement`!");
+    THROW_NULL_DEREF;
   }
 }
 
@@ -151,6 +155,7 @@ local_ordinal_type MatrixTestsDense::getNumLocRows(hiop::hiopMatrixDense* A)
   else
   {
     assert(false && "Wrong type of dense matrix passed into `MatrixTestsDense::getNumLocRows`!");
+    THROW_NULL_DEREF;
   }
 }
 
@@ -164,6 +169,7 @@ local_ordinal_type MatrixTestsDense::getNumLocCols(hiop::hiopMatrixDense* A)
   else
   {
     assert(false && "Wrong type of dense matrix passed into `MatrixTestsDense::getNumLocCols`!");
+    THROW_NULL_DEREF;
   }
 }
 
@@ -177,6 +183,7 @@ int MatrixTestsDense::getLocalSize(const hiop::hiopVector* x)
   else
   {
     assert(false && "Wrong type of dense matrix passed into `MatrixTestsDense::getLocalSize`!");
+    THROW_NULL_DEREF;
   }
 }
 
@@ -191,6 +198,7 @@ MPI_Comm MatrixTestsDense::getMPIComm(hiop::hiopMatrixDense* _A)
   else
   {
     assert(false && "Wrong type of dense matrix passed into `MatrixTestsDense::getMPIComm`!");
+    THROW_NULL_DEREF;
   }
 }
 #endif
@@ -207,6 +215,7 @@ real_type* MatrixTestsDense::getLocalData(hiop::hiopMatrixDense* A)
   else
   {
     assert(false && "Wrong type of dense matrix passed into `MatrixTestsDense::getMPIComm`!");
+    THROW_NULL_DEREF;
   }
 }
 

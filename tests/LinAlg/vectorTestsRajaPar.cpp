@@ -75,6 +75,7 @@ const real_type* VectorTestsRajaPar::getLocalDataConst(const hiop::hiopVector* x
   else
   {
     assert(false && "Wrong type of vector passed into `VectorTestsRajaPar::getLocalDataConst`!");
+    THROW_NULL_DEREF;
   }
 }
 
@@ -91,6 +92,7 @@ void VectorTestsRajaPar::setLocalElement(hiop::hiopVector* x_in, local_ordinal_t
   else
   {
     assert(false && "Wrong type of vector passed into `VectorTestsRajaPar::setLocalElement`!");
+    THROW_NULL_DEREF;
   }
 }
 
@@ -104,6 +106,7 @@ MPI_Comm VectorTestsRajaPar::getMPIComm(hiop::hiopVector* x)
   else
   {
     assert(false && "Wrong type of vector passed into `VectorTestsRajaPar::getMPIComm`!");
+    THROW_NULL_DEREF;
   }
 }
 

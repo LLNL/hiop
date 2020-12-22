@@ -70,6 +70,7 @@ const real_type* VectorTestsPar::getLocalDataConst(const hiop::hiopVector* x)
   else
   {
     assert(false && "Wrong type of vector passed into `VectorTestsPar::getLocalDataConst`!");
+    THROW_NULL_DEREF;
   }
 }
 
@@ -84,6 +85,7 @@ void VectorTestsPar::setLocalElement(hiop::hiopVector* x, local_ordinal_type i, 
   else
   {
     assert(false && "Wrong type of vector passed into `VectorTestsPar::setLocalElement`!");
+    THROW_NULL_DEREF;
   }
 }
 
@@ -97,6 +99,7 @@ MPI_Comm VectorTestsPar::getMPIComm(hiop::hiopVector* x)
   else
   {
     assert(false && "Wrong type of vector passed into `VectorTestsPar::getMPIComm`!");
+    THROW_NULL_DEREF;
   }
 }
 

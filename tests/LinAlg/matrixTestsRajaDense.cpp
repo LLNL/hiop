@@ -79,6 +79,7 @@ void MatrixTestsRajaDense::setLocalElement(
   else
   {
     assert(false && "Wrong type of dense matrix passed into `MatrixTestsRajaDense::setLocalElement`!");
+    THROW_NULL_DEREF;
   }
 }
 
@@ -97,6 +98,7 @@ void MatrixTestsRajaDense::setLocalElement(
   else
   {
     assert(false && "Wrong type of vector passed into `MatrixTestsRajaDense::setLocalElement`!");
+    THROW_NULL_DEREF;
   }
 }
 
@@ -120,6 +122,7 @@ void MatrixTestsRajaDense::setLocalRow(
   else
   {
     assert(false && "Wrong type of dense matrix passed into `MatrixTestsRajaDense::setLocalRow`!");
+    THROW_NULL_DEREF;
   }
 }
 
@@ -280,7 +283,7 @@ int MatrixTestsRajaDense::verifyAnswer(hiop::hiopMatrixDense* Amat, const double
   else
   {
     assert(false && "Wrong type of dense matrix passed into `MatrixTestsRajaDense::verifyAnswer`!");
-    return 1;
+    THROW_NULL_DEREF;
   }
 }
 
@@ -320,7 +323,7 @@ int MatrixTestsRajaDense::verifyAnswer(
   else
   {
     assert(false && "Wrong type of dense matrix passed into `MatrixTestsRajaDense::verifyAnswer`!");
-    return 1;
+    THROW_NULL_DEREF;
   }
 }
 
@@ -351,7 +354,7 @@ int MatrixTestsRajaDense::verifyAnswer(hiop::hiopVector* xvec, double answer)
   else
   {
     assert(false && "Wrong type of vector passed into `MatrixTestsRajaDense::verifyAnswer`!");
-    return 1;
+    THROW_NULL_DEREF;
   }
 }
 
@@ -382,7 +385,7 @@ int MatrixTestsRajaDense::verifyAnswer(
   else
   {
     assert(false && "Wrong type of vector passed into `MatrixTestsRajaDense::verifyAnswer`!");
-    return 1;
+    THROW_NULL_DEREF;
   }
 }
 
