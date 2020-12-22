@@ -564,18 +564,16 @@ public:
    * Precondition: W is square
    */
   int matrixTransAddToSymDenseMatrixUpperTriangle(
-      hiop::hiopMatrixDense& _W,
+      hiop::hiopMatrixDense& W,
       hiop::hiopMatrixDense& A,
       const int rank=0)
   {
-    // This method only takes hiopMatrixDense
-    auto W = dynamic_cast<hiop::hiopMatrixDense*>(&_W);
-    const local_ordinal_type N_loc = getNumLocCols(W);
+    const local_ordinal_type N_loc = getNumLocCols(&W);
     const local_ordinal_type A_M = getNumLocRows(&A);
     const local_ordinal_type A_N_loc = getNumLocCols(&A);
-    assert(W->m() == W->n());
-    assert(getNumLocRows(W) >= getNumLocRows(&A));
-    assert(W->n() >= A.n());
+    assert(W.m() == W.n());
+    assert(getNumLocRows(&W) >= getNumLocRows(&A));
+    assert(W.n() >= A.n());
 
     const local_ordinal_type start_idx_row = 0;
     const local_ordinal_type start_idx_col = N_loc - A_M;
@@ -584,9 +582,9 @@ public:
           W_val = one;
 
     A.setToConstant(A_val);
-    W->setToConstant(W_val);
-    A.transAddToSymDenseMatrixUpperTriangle(start_idx_row, start_idx_col, alpha, *W);
-    const int fail = verifyAnswer(W,
+    W.setToConstant(W_val);
+    A.transAddToSymDenseMatrixUpperTriangle(start_idx_row, start_idx_col, alpha, W);
+    const int fail = verifyAnswer(&W,
       [=] (local_ordinal_type i, local_ordinal_type j) -> real_type
       {
         const bool isTransUpperTriangle = (
