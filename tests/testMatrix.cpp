@@ -116,7 +116,7 @@ int main(int argc, char** argv)
     std::cout << "  ... using unified virtual memory space:\n";
   }
   fail += runTests<MatrixTestsRajaDense>("um", comm);
-#elif
+#else
   if (rank == 0)
   {
     std::cout << "\nTesting HiOp RAJA dense matrix implementation:\n";
