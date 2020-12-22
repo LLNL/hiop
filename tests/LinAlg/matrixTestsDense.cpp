@@ -67,14 +67,16 @@ void MatrixTestsDense::setLocalElement(
     local_ordinal_type j,
     real_type val)
 {
-  hiop::hiopMatrixDense* amat = dynamic_cast<hiop::hiopMatrixDense*>(A);
-  if(amat != nullptr)
+  if(auto* amat = dynamic_cast<hiop::hiopMatrixDense*>(A))
   {
     real_type* data = amat->local_data();
     //data[i][j] = val;
     data[i*amat->get_local_size_n()+j] = val;
   }
-  else THROW_NULL_DEREF;
+  else
+  {
+    assert(false && "Wrong type of dense matrix passed into `MatrixTestsDense::setLocalElement`!");
+  }
 }
 
 void MatrixTestsDense::setLocalElement(
@@ -82,13 +84,15 @@ void MatrixTestsDense::setLocalElement(
     const local_ordinal_type i,
     const real_type val)
 {
-  auto x = dynamic_cast<hiop::hiopVectorPar*>(_x);
-  if(x != nullptr)
+  if(auto* x = dynamic_cast<hiop::hiopVectorPar*>(_x))
   {
     real_type* data = x->local_data();
     data[i] = val;
   }
-  else THROW_NULL_DEREF;
+  else
+  {
+    assert(false && "Wrong type of vector passed into `MatrixTestsDense::setLocalElement`!");
+  }
 }
 
 /// Method to set a single row of matrix to a constant value
@@ -111,11 +115,14 @@ real_type MatrixTestsDense::getLocalElement(
     local_ordinal_type i,
     local_ordinal_type j)
 {
-  const hiop::hiopMatrixDense* amat = dynamic_cast<const hiop::hiopMatrixDense*>(A);
-  if(amat != nullptr)
-    //return amat->local_data_const()[i][j];
+  if(auto* amat = dynamic_cast<const hiop::hiopMatrixDense*>(A))
+  {
     return amat->local_data_const()[i*amat->get_local_size_n()+j];
-  else THROW_NULL_DEREF;
+  }
+  else
+  {
+    assert(false && "Wrong type of dense matrix passed into `MatrixTestsDense::getLocalElement`!");
+  }
 }
 
 /// Returns element _i_ of vector _x_.
@@ -124,47 +131,67 @@ real_type MatrixTestsDense::getLocalElement(
     const hiop::hiopVector* x,
     local_ordinal_type i)
 {
-  const hiop::hiopVectorPar* xvec = dynamic_cast<const hiop::hiopVectorPar*>(x);
-  if(xvec != nullptr)
+  if(auto* xvec = dynamic_cast<const hiop::hiopVectorPar*>(x))
+  {
     return xvec->local_data_const()[i];
-  else THROW_NULL_DEREF;
+  }
+  else
+  {
+    assert(false && "Wrong type of vector passed into `MatrixTestsDense::getLocalElement`!");
+  }
 }
 
 local_ordinal_type MatrixTestsDense::getNumLocRows(hiop::hiopMatrixDense* A)
 {
-  hiop::hiopMatrixDense* amat = dynamic_cast<hiop::hiopMatrixDense*>(A);
-  if(amat != nullptr)
+  if(auto* amat = dynamic_cast<hiop::hiopMatrixDense*>(A))
+  {
     return amat->get_local_size_m();
     //                         ^^^
-  else THROW_NULL_DEREF;
+  }
+  else
+  {
+    assert(false && "Wrong type of dense matrix passed into `MatrixTestsDense::getNumLocRows`!");
+  }
 }
 
 local_ordinal_type MatrixTestsDense::getNumLocCols(hiop::hiopMatrixDense* A)
 {
-  hiop::hiopMatrixDense* amat = dynamic_cast<hiop::hiopMatrixDense*>(A);
-  if(amat != nullptr)
+  if(auto* amat = dynamic_cast<hiop::hiopMatrixDense*>(A))
+  {
     return amat->get_local_size_n();
     //                         ^^^
-  else THROW_NULL_DEREF;
+  }
+  else
+  {
+    assert(false && "Wrong type of dense matrix passed into `MatrixTestsDense::getNumLocCols`!");
+  }
 }
 
 /// Returns size of local data array for vector _x_
 int MatrixTestsDense::getLocalSize(const hiop::hiopVector* x)
 {
-  const hiop::hiopVectorPar* xvec = dynamic_cast<const hiop::hiopVectorPar*>(x);
-  if(xvec != nullptr)
+  if(auto* xvec = dynamic_cast<const hiop::hiopVectorPar*>(x))
+  {
     return static_cast<int>(xvec->get_local_size());
-  else THROW_NULL_DEREF;
+  }
+  else
+  {
+    assert(false && "Wrong type of dense matrix passed into `MatrixTestsDense::getLocalSize`!");
+  }
 }
 
 #ifdef HIOP_USE_MPI
 /// Get communicator
 MPI_Comm MatrixTestsDense::getMPIComm(hiop::hiopMatrixDense* _A)
 {
-  const hiop::hiopMatrixDense* A = dynamic_cast<const hiop::hiopMatrixDense*>(_A);
-  if(A != nullptr)
+  if(auto* A = dynamic_cast<const hiop::hiopMatrixDense*>(_A))
+  {
     return A->get_mpi_comm();
-  else THROW_NULL_DEREF;
+  }
+  else
+  {
+    assert(false && "Wrong type of dense matrix passed into `MatrixTestsDense::getMPIComm`!");
+  }
 }
 #endif
 
@@ -177,7 +204,10 @@ real_type* MatrixTestsDense::getLocalData(hiop::hiopMatrixDense* A)
   {
     return amat->local_data();
   }
-  else THROW_NULL_DEREF;
+  else
+  {
+    assert(false && "Wrong type of dense matrix passed into `MatrixTestsDense::getMPIComm`!");
+  }
 }
 
 // Every rank returns failure if any individual rank fails
