@@ -130,6 +130,9 @@ public:
    * Performs `this[i] = alpha*this[i] + sign*ct` where sign=1 when EXACTLY one of 
    * ixleft[i] and ixright[i] is 1.0 and sign=0 otherwise. 
    *
+   * Supports distributed/MPI vectors, but performs only elementwise operations and do not
+   * require communication.
+   *
    * This method is used to add gradient contributions from the (linear) damping term used
    * to handle unbounded problems. The damping terms are used for variables that are 
    * bounded on one side only. 
