@@ -73,18 +73,14 @@ namespace hiop { namespace tests {
  * This class contains implementation of all dense matrix unit tests and abstract
  * interface for testing utility functions, which are specific to the particular
  * matrix and vector implementations.
- *
- * @pre All matrices should be allocated to have compatible sizes, with the same
- * partitioning.
- *
- * @pre Memory space for hiop::LinearAlgebraFactory is set appropriately
- *
- * @pre Any vectors used in testing functions are compatible with the matrices
- * that are being tested. i.e. RAJA matrices only work with RAJA vectors and 
- * vice versa.
- *
- * @post All tests return `true` on all ranks if the test fails on any rank,
- * and returns `false` otherwise.
+ * 
+ * To add a new test, simply add a new public method to this class and call it
+ * from function runTests implemented in file testMatrix.cpp. Use helper
+ * functions to abstract implementation specific details such as local data
+ * size and memory space, accessing local data elements, etc.
+ * 
+ * If you want to add tests for a new dense matrix implementation (e.g.
+ * column-major), you will need to reimplement helper functions, as well.  
  */
 
 class MatrixTests : public TestBase
@@ -151,14 +147,14 @@ public:
       hiop::hiopVector& x,
       const int rank=0)
   {
-    const global_ordinal_type N_glob = A.n();
     assert(getLocalSize(&y) == getNumLocRows(&A) && "Did you pass in vectors of the correct sizes?");
     assert(getLocalSize(&x) == getNumLocCols(&A) && "Did you pass in vectors of the correct sizes?");
-    const real_type alpha = one,
-          beta  = one,
-          A_val = one,
-          y_val = three,
-          x_val = three;
+    const real_type alpha = one;
+    const real_type beta  = one;
+    const real_type A_val = one;
+    const real_type y_val = three;
+    const real_type x_val = three;
+    const real_type N_glob = static_cast<real_type>(A.n());
     int fail = 0;
 
     y.setToConstant(y_val);
@@ -189,15 +185,15 @@ public:
     const local_ordinal_type M = getNumLocRows(&A);
     const local_ordinal_type N = getNumLocCols(&A);
 
-    // Take m() because A will be transposed
-    const global_ordinal_type N_glob = A.m();
     assert(getLocalSize(&x) == getNumLocRows(&A) && "Did you pass in vectors of the correct sizes?");
     assert(getLocalSize(&y) == getNumLocCols(&A) && "Did you pass in vectors of the correct sizes?");
-    const real_type alpha = one,
-          beta  = one,
-          A_val = one,
-          y_val = three,
-          x_val = three;
+    const real_type alpha = one;
+    const real_type beta  = one;
+    const real_type A_val = one;
+    const real_type y_val = three;
+    const real_type x_val = three;
+    // Take m() because A will be transposed
+    const real_type N_glob = static_cast<real_type>(A.m());
     int fail = 0;
 
     // Index of row of A that will be set to zero,
@@ -338,7 +334,6 @@ public:
       hiop::hiopMatrixDense& X,
       const int rank)
   {
-    const global_ordinal_type Nglob = A.n();
     assert(getNumLocRows(&A) == getNumLocRows(&W_local) && "Matrices have mismatched sizes");
     assert(getNumLocRows(&X) == getNumLocCols(&W_local) && "Matrices have mismatched sizes");
     assert(getNumLocCols(&A) == getNumLocCols(&X)       && "Matrices have mismatched sizes");
@@ -347,6 +342,7 @@ public:
           W_val = two,
           alpha = two,
           beta  = two;
+    const real_type Nglob = static_cast<real_type>(A.n());
 
     A.setToConstant(A_val);
     W_local.setToConstant(W_val);
@@ -354,10 +350,6 @@ public:
 
     // Set a row of X to zero
     local_ordinal_type idx_of_zero_row = getNumLocRows(&X) - 1;
-    // for(local_ordinal_type j=0; j<getNumLocCols(&X); ++j)
-    // {
-    //   setLocalElement(&X, idx_of_zero_row, j, zero);    
-    // }
     setLocalRow(&X, idx_of_zero_row, zero);
 
     A.timesMatTrans(beta, W_local, alpha, X);
@@ -574,7 +566,7 @@ public:
     assert(A.m() == A.n());
     assert(W.n() >= A.n());
     assert(getNumLocCols(&A) <= getNumLocCols(&W));
-    //auto W = dynamic_cast<hiop::hiopMatrixDense*>(&_W);
+
     // Map the upper triangle of A to W starting
     // at W's upper left corner
     const local_ordinal_type diag_start = 0;
@@ -657,15 +649,15 @@ public:
    * @pre Matrix `A` must have space allocated for appending the row.
    */
   int matrixAppendRow(
-      hiopMatrixDense &A,
-      hiopVector &vec,
+      hiopMatrixDense& A,
+      hiopVector& vec,
       const int rank)
   {
     assert(A.n() == vec.get_size()
       && "Did you pass in a vector with the same length as the number of columns of the matrix?");
     assert(getNumLocCols(&A) == vec.get_local_size()
       && "Did you pass in a vector with the same length as the number of columns of the matrix?");
-    const local_ordinal_type init_num_rows = A.m();
+    const global_ordinal_type init_num_rows = A.m();
     const real_type A_val = one;
     const real_type vec_val = two;
     int fail = 0;
@@ -682,8 +674,10 @@ public:
     fail += verifyAnswer(&A,
       [=](local_ordinal_type i, local_ordinal_type j) -> real_type
       {
+        // Rows are always global in HiOp (for now)
+        auto irow = static_cast<global_ordinal_type>(i);
         (void)j; // j is unused
-        const bool isLastRow = (i == init_num_rows);
+        const bool isLastRow = (irow == init_num_rows);
         return isLastRow ? vec_val : A_val;
       });
 
@@ -697,8 +691,8 @@ public:
    *
    */
   int matrixCopyRowsFrom(
-      hiopMatrixDense &dst,
-      hiopMatrixDense &src,
+      hiopMatrixDense& dst,
+      hiopMatrixDense& src,
       const int rank)
   {
     assert(dst.n() == src.n());
@@ -707,9 +701,9 @@ public:
     assert(getNumLocRows(&dst) > getNumLocRows(&src));
     const real_type dst_val = one;
     const real_type src_val = two;
-    const local_ordinal_type dst_start_idx = dst.m() - src.m();
-    local_ordinal_type num_rows_to_copy = src.m();
-    const local_ordinal_type src_num_rows = src.m();
+    const local_ordinal_type src_num_rows = getNumLocRows(&src);
+    local_ordinal_type num_rows_to_copy = src_num_rows;
+    const local_ordinal_type dst_start_idx = getNumLocRows(&dst) - src_num_rows;
 
     // Test copying continuous rows from matrix
     dst.setToConstant(dst_val);
@@ -737,15 +731,15 @@ public:
    *
    */
   int matrixCopyRowsFromSelect(
-      hiopMatrixDense &dst,
-      hiopMatrixDense &src,
+      hiopMatrixDense& dst,
+      hiopMatrixDense& src,
       const int rank)
   {
     assert(dst.n() == src.n());
     assert(getNumLocCols(&dst) == getNumLocCols(&src));
     const real_type dst_val = one;
     const real_type src_val = two;
-    const local_ordinal_type num_rows_to_copy = dst.m();
+    const local_ordinal_type num_rows_to_copy = getNumLocRows(&dst);
     assert(num_rows_to_copy <= src.m());
 
     // Test copying continuous rows from matrix
@@ -773,8 +767,8 @@ public:
   }
 
   int matrixCopyBlockFromMatrix(
-      hiopMatrixDense &src,
-      hiopMatrixDense &dst,
+      hiopMatrixDense& src,
+      hiopMatrixDense& dst,
       const int rank=0)
   {
     assert(src.n() < dst.n()
@@ -811,8 +805,8 @@ public:
   }
 
   int matrixCopyFromMatrixBlock(
-      hiopMatrixDense &src,
-      hiopMatrixDense &dst,
+      hiopMatrixDense& src,
+      hiopMatrixDense& dst,
       const int rank=0)
   {
     assert(src.n() > dst.n()
@@ -864,7 +858,7 @@ public:
    * wrap around and replace it.
    */
   int matrixShiftRows(
-      hiopMatrixDense &A,
+      hiopMatrixDense& A,
       const int rank)
   {
     const local_ordinal_type M = getNumLocRows(&A);
@@ -912,8 +906,8 @@ public:
   }
 
   int matrixReplaceRow(
-      hiopMatrixDense &A,
-      hiopVector &vec,
+      hiopMatrixDense& A,
+      hiopVector& vec,
       const int rank)
   {
     const local_ordinal_type M = getNumLocRows(&A);
@@ -953,8 +947,8 @@ public:
   }
 
   int matrixGetRow(
-      hiopMatrixDense &A,
-      hiopVector &vec,
+      hiopMatrixDense& A,
+      hiopVector& vec,
       const int rank)
   {
     const local_ordinal_type N = getNumLocCols(&A);
@@ -1075,16 +1069,14 @@ public:
   }
 
 protected:
-  // Interface methods that are specific to the vector/matrix implementation
+  // Matrix helper functions
+  virtual local_ordinal_type getNumLocRows(const hiop::hiopMatrixDense* a) = 0;
+  virtual local_ordinal_type getNumLocCols(const hiop::hiopMatrixDense* a) = 0;
   virtual void setLocalElement(
       hiop::hiopMatrixDense* a,
       local_ordinal_type i,
       local_ordinal_type j,
       real_type val) = 0;
-  virtual void setLocalElement(
-      hiop::hiopVector *_x,
-      const local_ordinal_type i,
-      const real_type val) = 0;
   virtual void setLocalRow(
       hiop::hiopMatrixDense* A,
       const local_ordinal_type row,
@@ -1093,22 +1085,26 @@ protected:
       const hiop::hiopMatrixDense* a,
       local_ordinal_type i,
       local_ordinal_type j) = 0;
-  virtual real_type getLocalElement(
-      const hiop::hiopVector* x,
-      local_ordinal_type i) = 0;
-  virtual local_ordinal_type getNumLocRows(hiop::hiopMatrixDense* a) = 0;
-  virtual local_ordinal_type getNumLocCols(hiop::hiopMatrixDense* a) = 0;
-  virtual local_ordinal_type getLocalSize(const hiop::hiopVector* x) = 0;
   virtual real_type* getLocalData(hiop::hiopMatrixDense* a) = 0;
   virtual int verifyAnswer(hiop::hiopMatrixDense* A, real_type answer) = 0;
   virtual int verifyAnswer(
       hiop::hiopMatrixDense* A,
       std::function<real_type(local_ordinal_type, local_ordinal_type)> expect) = 0;
+  virtual bool reduceReturn(int failures, hiop::hiopMatrixDense* A) = 0;
+
+  // Vector helper function
+  virtual void setLocalElement(
+      hiop::hiopVector *_x,
+      const local_ordinal_type i,
+      const real_type val) = 0;
+  virtual real_type getLocalElement(
+      const hiop::hiopVector* x,
+      local_ordinal_type i) = 0;
+  virtual local_ordinal_type getLocalSize(const hiop::hiopVector* x) = 0;
   virtual int verifyAnswer(hiop::hiopVector* x, real_type answer) = 0;
   virtual int verifyAnswer(
       hiop::hiopVector* x,
       std::function<real_type(local_ordinal_type)> expect) = 0;
-  virtual bool reduceReturn(int failures, hiop::hiopMatrixDense* A) = 0;
 };
 
 }} // namespace hiop{ namespace tests{
