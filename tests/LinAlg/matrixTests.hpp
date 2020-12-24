@@ -83,11 +83,11 @@ namespace hiop { namespace tests {
  * column-major), you will need to reimplement helper functions, as well.  
  */
 
-class MatrixTests : public TestBase
+class MatrixTestsDense : public TestBase
 {
 public:
-  MatrixTests() {}
-  virtual ~MatrixTests(){}
+  MatrixTestsDense() {}
+  virtual ~MatrixTestsDense(){}
 
   int matrixSetToZero(hiop::hiopMatrixDense& A, const int rank)
   {

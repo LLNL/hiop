@@ -61,7 +61,7 @@
 
 namespace hiop { namespace tests {
 
-class MatrixTestsRajaDense : public MatrixTests
+class MatrixTestsRajaDense : public MatrixTestsDense
 {
 public:
   MatrixTestsRajaDense() {}

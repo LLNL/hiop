@@ -62,11 +62,11 @@
 
 namespace hiop { namespace tests {
 
-class MatrixTestsDense : public MatrixTests
+class MatrixTestsDenseRowMajor : public MatrixTestsDense
 {
 public:
-  MatrixTestsDense() {}
-  virtual ~MatrixTestsDense(){}
+  MatrixTestsDenseRowMajor() {}
+  virtual ~MatrixTestsDenseRowMajor(){}
 
 private:
   // Matrix helper methods

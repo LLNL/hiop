@@ -101,7 +101,7 @@ int main(int argc, char** argv)
   //
   if (rank == 0)
     std::cout << "\nTesting HiOp default dense matrix implementation:\n";
-  fail += runTests<MatrixTestsDense>("default", comm);
+  fail += runTests<MatrixTestsDenseRowMajor>("default", comm);
 #ifdef HIOP_USE_RAJA
 #ifdef HIOP_USE_GPU
   if (rank == 0)

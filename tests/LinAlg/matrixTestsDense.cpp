@@ -64,7 +64,7 @@ namespace hiop { namespace tests {
 //
 
 /// Get number of rows in local data block of matrix _A_
-local_ordinal_type MatrixTestsDense::getNumLocRows(const hiop::hiopMatrixDense* A)
+local_ordinal_type MatrixTestsDenseRowMajor::getNumLocRows(const hiop::hiopMatrixDense* A)
 {
   const auto* amat = dynamic_cast<const hiop::hiopMatrixDenseRowMajor*>(A);
   if(amat == nullptr)
@@ -76,7 +76,7 @@ local_ordinal_type MatrixTestsDense::getNumLocRows(const hiop::hiopMatrixDense* 
 }
 
 /// Get number of columns in local data block of matrix _A_
-local_ordinal_type MatrixTestsDense::getNumLocCols(const hiop::hiopMatrixDense* A)
+local_ordinal_type MatrixTestsDenseRowMajor::getNumLocCols(const hiop::hiopMatrixDense* A)
 {
   const auto* amat = dynamic_cast<const hiop::hiopMatrixDenseRowMajor*>(A);
   if(amat == nullptr)
@@ -88,7 +88,7 @@ local_ordinal_type MatrixTestsDense::getNumLocCols(const hiop::hiopMatrixDense* 
 }
 
 /// Set local data element (i,j) of matrix _A_ to _val_.
-void MatrixTestsDense::setLocalElement(
+void MatrixTestsDenseRowMajor::setLocalElement(
     hiop::hiopMatrixDense* A,
     local_ordinal_type i,
     local_ordinal_type j,
@@ -105,7 +105,7 @@ void MatrixTestsDense::setLocalElement(
 }
 
 /// Method to set a single local row of matrix to a constant value
-void MatrixTestsDense::setLocalRow(
+void MatrixTestsDenseRowMajor::setLocalRow(
     hiop::hiopMatrixDense* A,
     const local_ordinal_type row,
     const real_type val)
@@ -122,7 +122,7 @@ void MatrixTestsDense::setLocalRow(
 }
 
 /// Returns by value local element (i,j) of matrix _A_.
-real_type MatrixTestsDense::getLocalElement(
+real_type MatrixTestsDenseRowMajor::getLocalElement(
     const hiop::hiopMatrixDense* A,
     local_ordinal_type i,
     local_ordinal_type j)
@@ -137,7 +137,7 @@ real_type MatrixTestsDense::getLocalElement(
 }
 
 /// Get MPI communicator of matrix _A_
-MPI_Comm MatrixTestsDense::getMPIComm(hiop::hiopMatrixDense* A)
+MPI_Comm MatrixTestsDenseRowMajor::getMPIComm(hiop::hiopMatrixDense* A)
 {
   auto* amat = dynamic_cast<hiop::hiopMatrixDense*>(A);
   if(amat == nullptr)
@@ -147,7 +147,7 @@ MPI_Comm MatrixTestsDense::getMPIComm(hiop::hiopMatrixDense* A)
 }
 
 /// Returns pointer to local data block of matrix _A_.
-real_type* MatrixTestsDense::getLocalData(hiop::hiopMatrixDense* A)
+real_type* MatrixTestsDenseRowMajor::getLocalData(hiop::hiopMatrixDense* A)
 {
   auto* amat = dynamic_cast<hiop::hiopMatrixDense*>(A);
   if(amat == nullptr)
@@ -157,7 +157,7 @@ real_type* MatrixTestsDense::getLocalData(hiop::hiopMatrixDense* A)
 }
 
 /// Reduce return output: Every rank returns failure if any individual rank fails
-bool MatrixTestsDense::reduceReturn(int failures, hiop::hiopMatrixDense* A)
+bool MatrixTestsDenseRowMajor::reduceReturn(int failures, hiop::hiopMatrixDense* A)
 {
   int fail = 0;
 
@@ -173,7 +173,7 @@ bool MatrixTestsDense::reduceReturn(int failures, hiop::hiopMatrixDense* A)
 
 /// Verify matrix elements are set to `answer`.
 [[nodiscard]]
-int MatrixTestsDense::verifyAnswer(hiop::hiopMatrixDense* A, const double answer)
+int MatrixTestsDenseRowMajor::verifyAnswer(hiop::hiopMatrixDense* A, const double answer)
 {
   local_ordinal_type mrows = getNumLocRows(A);
   local_ordinal_type ncols = getNumLocCols(A);
@@ -199,7 +199,7 @@ int MatrixTestsDense::verifyAnswer(hiop::hiopMatrixDense* A, const double answer
  * Verify matrix elements are set as defined in `expect`.
  */
 [[nodiscard]]
-int MatrixTestsDense::verifyAnswer(
+int MatrixTestsDenseRowMajor::verifyAnswer(
     hiop::hiopMatrixDense* A,
     std::function<real_type(local_ordinal_type, local_ordinal_type)> expect)
 {
@@ -229,7 +229,7 @@ int MatrixTestsDense::verifyAnswer(
 //
 
 /// Returns size of local data array for vector _x_
-int MatrixTestsDense::getLocalSize(const hiop::hiopVector* x)
+int MatrixTestsDenseRowMajor::getLocalSize(const hiop::hiopVector* x)
 {
   const hiop::hiopVectorPar* xvec = dynamic_cast<const hiop::hiopVectorPar*>(x);
   if(xvec == nullptr)
@@ -239,7 +239,7 @@ int MatrixTestsDense::getLocalSize(const hiop::hiopVector* x)
 }
 
 /// Sets a local data element of vector _x_
-void MatrixTestsDense::setLocalElement(
+void MatrixTestsDenseRowMajor::setLocalElement(
     hiop::hiopVector* x,
     const local_ordinal_type i,
     const real_type val)
@@ -253,7 +253,7 @@ void MatrixTestsDense::setLocalElement(
 }
 
 /// Returns local data element _i_ of vector _x_.
-real_type MatrixTestsDense::getLocalElement(
+real_type MatrixTestsDenseRowMajor::getLocalElement(
     const hiop::hiopVector* x,
     local_ordinal_type i)
 {
@@ -267,7 +267,7 @@ real_type MatrixTestsDense::getLocalElement(
 
 /// Checks if _local_ vector elements are set to `answer`.
 [[nodiscard]]
-int MatrixTestsDense::verifyAnswer(hiop::hiopVector* x, double answer)
+int MatrixTestsDenseRowMajor::verifyAnswer(hiop::hiopVector* x, double answer)
 {
   const local_ordinal_type N = getLocalSize(x);
 
@@ -285,7 +285,7 @@ int MatrixTestsDense::verifyAnswer(hiop::hiopVector* x, double answer)
 
 /// Checks if _local_ vector elements match `expected` values.
 [[nodiscard]]
-int MatrixTestsDense::verifyAnswer(
+int MatrixTestsDenseRowMajor::verifyAnswer(
     hiop::hiopVector* x,
     std::function<real_type(local_ordinal_type)> expect)
 {
