@@ -62,7 +62,7 @@
 #include <hiopLinAlgFactory.hpp>
 #include <hiopVectorPar.hpp>
 #include <hiopMatrixDenseRowMajor.hpp>
-#include "LinAlg/matrixTestsDense.hpp"
+#include "LinAlg/matrixTestsDenseRowMajor.hpp"
 
 #ifdef HIOP_USE_RAJA
 #include <hiopVectorRajaPar.hpp>
@@ -239,7 +239,7 @@ static int runTests(const char* mem_space, MPI_Comm comm)
     fail += test.matrixOverwriteUpperTriangleWithLower(*A_nxn_nodist);
     fail += test.matrixOverwriteLowerTriangleWithUpper(*A_nxn_nodist);
 #endif
-    // Not part of hiopMatrix interface, specific to matrixTestsDense
+    // Not part of hiopMatrix interface, specific to matrixTestsDenseRowMajor
     fail += test.matrixCopyBlockFromMatrix(*A_mxm_nodist, *A_kxn_nodist);
     fail += test.matrixCopyFromMatrixBlock(*A_kxn_nodist, *A_mxm_nodist);
   }
@@ -252,7 +252,7 @@ static int runTests(const char* mem_space, MPI_Comm comm)
   fail += test.matrixNumRows(*A_mxn, M_local, rank); //<- no row partitioning
   fail += test.matrixNumCols(*A_mxn, N_global, rank);
 
-  // specific to matrixTestsDense
+  // specific to matrixTestsDenseRowMajor
   fail += test.matrixCopyFrom(*A_mxn, *B_mxn, rank);
 
   fail += test.matrixAppendRow(*A_mxn_extra_row, *x_n, rank);

@@ -47,13 +47,14 @@
 // product endorsement purposes.
 
 /**
- * @file MatrixTestsRajaDense.hpp
+ * @file matrixTestsDenseRowMajor.hpp
  *
- * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
+ * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>,  PNNL
  * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
  * @author Robert Rutherford <robert.rutherford@pnnl.gov>, PNNL
  *
  */
+
 #pragma once
 
 #include "matrixTestsDense.hpp"
@@ -61,11 +62,11 @@
 
 namespace hiop { namespace tests {
 
-class MatrixTestsRajaDense : public MatrixTestsDense
+class MatrixTestsDenseRowMajor : public MatrixTestsDense
 {
 public:
-  MatrixTestsRajaDense() {}
-  virtual ~MatrixTestsRajaDense(){}
+  MatrixTestsDenseRowMajor() {}
+  virtual ~MatrixTestsDenseRowMajor(){}
 
 private:
   // Matrix helper methods

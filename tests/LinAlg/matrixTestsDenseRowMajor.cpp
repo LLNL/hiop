@@ -47,7 +47,7 @@
 // product endorsement purposes.
 
 /**
- * @file matrixTestsDense.cpp
+ * @file matrixTestsDenseRowMajor.cpp
  *
  * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>,  PNNL
  * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
@@ -55,7 +55,7 @@
  *
  */
 #include <hiopMatrixDenseRowMajor.hpp>
-#include "matrixTestsDense.hpp"
+#include "matrixTestsDenseRowMajor.hpp"
 
 namespace hiop { namespace tests {
 

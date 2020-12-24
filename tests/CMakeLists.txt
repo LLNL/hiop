@@ -2,7 +2,7 @@
 set(testVector_SRC testVector.cpp LinAlg/vectorTestsPar.cpp LinAlg/vectorTestsIntSeq.cpp)
 
 # Set sources for dense matrix tests
-set(testMatrix_SRC testMatrix.cpp LinAlg/matrixTestsDense.cpp)
+set(testMatrix_SRC testMatrix.cpp LinAlg/matrixTestsDenseRowMajor.cpp)
 
 # Set sources for sparse matrix tests
 set(testMatrixSparse_SRC testMatrixSparse.cpp LinAlg/matrixTestsSparseTriplet.cpp)
