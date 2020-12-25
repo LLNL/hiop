@@ -153,13 +153,13 @@ MPI_Comm MatrixTestsRajaDense::getMPIComm(hiop::hiopMatrixDense* A)
   return amat->get_mpi_comm();
 }
 
-/// Returns pointer to local data block of matrix _A_.
-real_type* MatrixTestsRajaDense::getLocalData(hiop::hiopMatrixDense* A)
+/// Returns pointer to local data block of matrix _A_ in current memory space.
+const real_type* MatrixTestsRajaDense::getLocalDataConst(hiop::hiopMatrixDense* A)
 {
   auto* amat = dynamic_cast<hiop::hiopMatrixRajaDense*>(A);
   if(amat == nullptr)
     THROW_NULL_DEREF;
-  return amat->local_data();
+  return amat->local_data_const();
 }
 
 /// Reduce return output: Every rank returns failure if any individual rank fails

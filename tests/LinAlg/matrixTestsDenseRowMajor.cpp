@@ -146,14 +146,14 @@ MPI_Comm MatrixTestsDenseRowMajor::getMPIComm(hiop::hiopMatrixDense* A)
   return amat->get_mpi_comm();
 }
 
-/// Returns pointer to local data block of matrix _A_.
-real_type* MatrixTestsDenseRowMajor::getLocalData(hiop::hiopMatrixDense* A)
+/// Returns const pointer to local data block of matrix _A_.
+const real_type* MatrixTestsDenseRowMajor::getLocalDataConst(hiop::hiopMatrixDense* A)
 {
   auto* amat = dynamic_cast<hiop::hiopMatrixDense*>(A);
   if(amat == nullptr)
     THROW_NULL_DEREF;
 
-  return amat->local_data();
+  return amat->local_data_const();
 }
 
 /// Reduce return output: Every rank returns failure if any individual rank fails

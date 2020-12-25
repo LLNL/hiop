@@ -80,7 +80,11 @@ namespace hiop { namespace tests {
  * size and memory space, accessing local data elements, etc.
  * 
  * If you want to add tests for a new dense matrix implementation (e.g.
- * column-major), you will need to reimplement helper functions, as well.  
+ * column-major), you will need to reimplement helper functions, as well.
+ * 
+ * @warning HiOp distributed memory partitioning is 1-D and some of the unit
+ * tests here implicitly assume that. When and if HiOp MPI partitioning
+ * changes, these tests will have to be rewritten.
  */
 
 class MatrixTestsDense : public TestBase
@@ -128,7 +132,7 @@ public:
 
     // test copying src a raw buffer
     const size_t buf_len = getNumLocRows(&src) * getNumLocCols(&src);
-    real_type *src_buf = getLocalData(&src);
+    const real_type* src_buf = getLocalDataConst(&src);
     dst.setToZero();
 
     dst.copyFrom(src_buf);
@@ -1085,7 +1089,7 @@ protected:
       const hiop::hiopMatrixDense* a,
       local_ordinal_type i,
       local_ordinal_type j) = 0;
-  virtual real_type* getLocalData(hiop::hiopMatrixDense* a) = 0;
+  virtual const real_type* getLocalDataConst(hiop::hiopMatrixDense* a) = 0;
   virtual int verifyAnswer(hiop::hiopMatrixDense* A, real_type answer) = 0;
   virtual int verifyAnswer(
       hiop::hiopMatrixDense* A,
