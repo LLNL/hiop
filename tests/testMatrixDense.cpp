@@ -47,7 +47,7 @@
 // product endorsement purposes.
 
 /**
- * @file testMatrix.cpp
+ * @file testMatrixDense.cpp
  *
  * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
  * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
@@ -79,7 +79,6 @@ int main(int argc, char** argv)
   using hiop::tests::global_ordinal_type;
 
   int rank = 0;
-  int numRanks = 1;
   MPI_Comm comm = MPI_COMM_SELF;
 
 #ifdef HIOP_USE_MPI
@@ -87,9 +86,8 @@ int main(int argc, char** argv)
   err = MPI_Init(&argc, &argv);        assert(MPI_SUCCESS==err);
   comm = MPI_COMM_WORLD;
   err = MPI_Comm_rank(comm,&rank);     assert(MPI_SUCCESS==err);
-  err = MPI_Comm_size(comm,&numRanks); assert(MPI_SUCCESS==err);
   if(0 == rank && MPI_SUCCESS == err)
-    printf("Support for MPI is enabled\n");
+    std::cout << "\nRunning MPI enabled tests ...\n";
 #endif
   if(rank == 0 && argc > 1)
     std::cout << "Executable " << argv[0] << " doesn't take any input.";
@@ -106,20 +104,20 @@ int main(int argc, char** argv)
 #ifdef HIOP_USE_GPU
   if (rank == 0)
   {
-    std::cout << "\nTesting HiOp RAJA dense matrix implementation:\n";
+    std::cout << "\nTesting HiOp RAJA dense matrix implementation ...\n";
     std::cout << "  ... using device memory space:\n";
   }
   fail += runTests<MatrixTestsRajaDense>("device", comm);
   if (rank == 0)
   {
-    std::cout << "\nTesting HiOp RAJA dense matrix implementation:\n";
+    std::cout << "\nTesting HiOp RAJA dense matrix implementation ...\n";
     std::cout << "  ... using unified virtual memory space:\n";
   }
   fail += runTests<MatrixTestsRajaDense>("um", comm);
 #else
   if (rank == 0)
   {
-    std::cout << "\nTesting HiOp RAJA dense matrix implementation:\n";
+    std::cout << "\nTesting HiOp RAJA dense matrix implementation ...\n";
     std::cout << "  ... using unified host memory space:\n";
   }
   fail += runTests<MatrixTestsRajaDense>("host", comm);

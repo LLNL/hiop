@@ -2,7 +2,7 @@
 set(testVector_SRC testVector.cpp LinAlg/vectorTestsPar.cpp LinAlg/vectorTestsIntSeq.cpp)
 
 # Set sources for dense matrix tests
-set(testMatrix_SRC testMatrix.cpp LinAlg/matrixTestsDenseRowMajor.cpp)
+set(testMatrix_SRC testMatrixDense.cpp LinAlg/matrixTestsDenseRowMajor.cpp)
 
 # Set sources for sparse matrix tests
 set(testMatrixSparse_SRC testMatrixSparse.cpp LinAlg/matrixTestsSparseTriplet.cpp)
@@ -21,7 +21,7 @@ endif()
 if(HIOP_USE_GPU)
   set_source_files_properties(testVector.cpp LinAlg/vectorTestsRajaPar.cpp PROPERTIES LANGUAGE CUDA)
   set_source_files_properties(testVector.cpp LinAlg/vectorTestsIntRaja.cpp PROPERTIES LANGUAGE CUDA)
-  set_source_files_properties(testMatrix.cpp LinAlg/matrixTestsRajaDense.cpp PROPERTIES LANGUAGE CUDA)
+  set_source_files_properties(testMatrixDense.cpp LinAlg/matrixTestsRajaDense.cpp PROPERTIES LANGUAGE CUDA)
   set_source_files_properties(testMatrixSparse.cpp LinAlg/matrixTestsRajaSparseTriplet.cpp PROPERTIES LANGUAGE CUDA)
   set_source_files_properties(testMatrixSymSparse.cpp LinAlg/matrixTestsRajaSymSparseTriplet.cpp PROPERTIES LANGUAGE CUDA)
 endif()
@@ -31,8 +31,8 @@ add_executable(testVector ${testVector_SRC})
 target_link_libraries(testVector PRIVATE hiop)
 
 # Build matrix test
-add_executable(testMatrix ${testMatrix_SRC})
-target_link_libraries(testMatrix PRIVATE hiop)
+add_executable(testMatrixDense ${testMatrix_SRC})
+target_link_libraries(testMatrixDense PRIVATE hiop)
 
 # Build sparse matrix test
 add_executable(testMatrixSparse ${testMatrixSparse_SRC})
@@ -44,7 +44,7 @@ target_link_libraries(testMatrixSymSparse PRIVATE hiop)
 
 if(HIOP_USE_RAJA)
   target_link_libraries(testVector PRIVATE umpire RAJA OpenMP::OpenMP_CXX)
-  target_link_libraries(testMatrix PRIVATE umpire RAJA OpenMP::OpenMP_CXX)
+  target_link_libraries(testMatrixDense PRIVATE umpire RAJA OpenMP::OpenMP_CXX)
   target_link_libraries(testMatrixSparse PRIVATE umpire RAJA OpenMP::OpenMP_CXX)
   target_link_libraries(testMatrixSymSparse PRIVATE umpire RAJA OpenMP::OpenMP_CXX)
 endif()

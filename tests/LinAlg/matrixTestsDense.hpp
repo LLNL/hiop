@@ -75,7 +75,7 @@ namespace hiop { namespace tests {
  * matrix and vector implementations.
  * 
  * To add a new test, simply add a new public method to this class and call it
- * from function runTests implemented in file testMatrix.cpp. Use helper
+ * from function runTests implemented in file testMatrixDense.cpp. Use helper
  * functions to abstract implementation specific details such as local data
  * size and memory space, accessing local data elements, etc.
  * 
