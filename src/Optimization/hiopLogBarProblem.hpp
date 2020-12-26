@@ -130,15 +130,18 @@ public:
 
     nlp->runStats.tmSolverInternal.stop();
   }
-  /* adds non-log bar terms to the gradient, e.g., damping terms */
+
+  /* @brief Adds beta*(damping terms) to the gradient `gradx` w.r.t. x */
   inline void addNonLogBarTermsToGrad_x(const double& beta, hiopVector& gradx) const
   {
-    if(kappa_d>0.) iter->addLinearDampingTermToGrad_x(mu,kappa_d,beta,gradx);
+    if(kappa_d>0.) iter->addLinearDampingTermToGrad_x(mu, kappa_d, beta, gradx);
   }
-  /* adds non-log bar terms to the gradient, e.g., damping terms */
+
+  /* @brief Adds beta*(damping terms) to the gradient `gradx` w.r.t. d */
   inline void addNonLogBarTermsToGrad_d(const double& beta, hiopVector& gradd) const
   {
-    if(kappa_d>0.) iter->addLinearDampingTermToGrad_d(mu,kappa_d,beta,gradd);
+    //if(kappa_d>0.) iter->addLinearDampingTermToGrad_d(mu,kappa_d,beta,gradd);
+    if(kappa_d>0.) iter->addLinearDampingTermToGrad_d(mu, kappa_d, beta, gradd);
   }
   /* grad_log^T * [ dx ] =  grad_f^T * dx + grad_x_dampingTerm^T * dx + grad_d_dampingTerm^T *ds 
                   [ dd ]   

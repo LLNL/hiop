@@ -99,13 +99,27 @@ public:
   virtual void addLogBarGrad_d(const double& mu, hiopVector& gradd) const;
 
   /**
-   * Computes the log barrier's linear damping term of the Filter-IPM method of WaectherBiegler (section 3.7)
+   * @brief Computes the log barrier's linear damping objective term used to handle unbounded
+   * solution sets (see Filter-IPM method of WaectherBiegler (section 3.7))
    */
   virtual double linearDampingTerm(const double& mu, const double& kappa_d) const;
-  /* adds the damping term to the gradient */
-  virtual void addLinearDampingTermToGrad_x(const double& mu, const double& kappa_d, const double& beta,
+
+  /* @brief Adds the x-damping term to the gradient, essentially adds mu*kappa_d*beta (or its
+   * negative) to each elements of the gradient that corresponds to a variable x bounded only
+   * from below (above). The parameter `beta` is 1.0 or -1.0 indicating whether one should
+   * add or substract kappa_d*mu; this is to accomodate also residuals computations. */
+  virtual void addLinearDampingTermToGrad_x(const double& mu, 
+                                            const double& kappa_d, 
+                                            const double& beta,
 					    hiopVector& grad_x) const;
-  virtual void addLinearDampingTermToGrad_d(const double& mu, const double& kappa_d, const double& beta,
+
+  /* @brief Adds the d-damping term to the gradient, essentially adds mu*kappa_d*beta (or its
+   * negative) to each elements of the gradient that corresponds to a variable d bounded only
+   * from below (above). The parameter `beta` is 1.0 or -1.0 indicating whether one should
+   * add or substract kappa_d*mu; this is to accomodate also residuals computation. */
+  virtual void addLinearDampingTermToGrad_d(const double& mu, 
+                                            const double& kappa_d, 
+                                            const double& beta,
 					    hiopVector& grad_d) const;
 
   /** norms for individual parts of the iterate (on demand computation) */
