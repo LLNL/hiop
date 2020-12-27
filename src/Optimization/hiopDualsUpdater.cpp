@@ -142,14 +142,40 @@ go(const hiopIterate& iter,  hiopIterate& iter_plus,
  *  which is
  *   min_{y_c, y_d} || [ J_c^T  J_d^T ] [ y_c ]  -  [ -\nabla f(xk) + zk_l-zk_u ]  ||^2
  *                  || [  0       I   ] [ y_d ]     [ - vk_l + vk_u               ]  ||_2
- *  We compute y_c and y_d by solving the linear system
+ * ******************************
+ * NLPs with dense constraints 
+ * ******************************
+ * For NLPs with dense constraints, the above LSQ problem is solved by solving the linear 
+ *  system in y_c and y_d:
  *   [ J_c J_c^T    J_c J_d^T     ] [ y_c ]  =  [ J_c   0 ] [ -\nabla f(xk) + zk_l-zk_u ] 
  *   [ J_d J_c^T    J_d J_d^T + I ] [ y_d ]     [ J_d   I ] [ - vk_l + vk_u              ]
- *
  * This linear system is small (of size m=m_E+m_I) (so it is replicated for all MPI ranks).
  * 
  * The matrix of the above system is stored in the member variable M of this class and the
- *  right-hand side in 'rhs'
+ *  right-hand side in 'rhs'.
+ * 
+ * **************
+ * MDS NLPs
+ * **************
+ * For MDS NLPs, the linear system exploits the block structure of the Jacobians Jc and Jd. 
+ * Namely, since Jc = [Jxdc  Jxsc] and Jd = [Jxdd  Jxsd], the following
+ * dense linear system is to be solved for y_c and y_d
+ *
+ *    [ Jxdc Jxdc^T + Jxsc Jxsc^T   Jxdc Jxdd^T + Jxsc Jxsd^T     ] [ y_c ] = same rhs as
+ *    [ Jxdc Jxdd^T + Jxsd Jxsc^T   Jxdd Jxdd^T + Jxsd Jxsd^T + I ] [ y_d ]     above
+ * The above linear system is dense and requires dense-dense^T matrix and sparse-sparse^T 
+ * matrix multiplications. All such multiplication operations are provided by the dense and
+ * sparse matrices. (@ny: hiopLinsysMDS::update forms a similar linear system)
+ * Once assembled, the above linear system can be solved using HiOp's symmetric linear 
+ * system class. (@ny: the system is pos.def., and since I think we do not have CPU and GPU
+ * classes for Cholesky, I suggest we solve it with LAPACK sym indef (on CPU) and Magma NoPiv
+ * on GPU). 
+ *
+ * ***********************
+ * Sparse (general) NLPs
+ * ***********************
+ * @ny - the augmented approach? (with I on (1,1) if I recall correctly from the impl
+ * paper of Biegler and Waechter)
  */
 bool hiopDualsLsqUpdate::
 LSQUpdate(hiopIterate& iter, const hiopVector& grad_f, const hiopMatrix& jac_c, const hiopMatrix& jac_d)
