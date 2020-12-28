@@ -1,5 +1,6 @@
 set(hiopOptimization_SRC
-  hiopNlpFormulation.cpp 
+  hiopNlpFormulation.cpp
+  hiopFactAcceptor.cpp
   hiopIterate.cpp 
   hiopResidual.cpp 
   hiopFilter.cpp 

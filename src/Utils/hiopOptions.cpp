@@ -210,13 +210,21 @@ void hiopOptions::registerOptions()
   {
     vector<string> range(3); range[0]="stable"; range[1]="speculative"; range[2]="forcequick";
     registerStrOption("linsol_mode", "stable", range,
-		      "'stable'=using stable factorization; "
-		      "'speculative'=try faster linear solvers when is detected to be safe "
-		      "to do so (experimental) ; "
-		      "'forcequick'=rely on faster solvers on all situations "
-		      "(experimental, avoid)");
+                      "'stable'=using stable factorization; "
+                      "'speculative'=try faster linear solvers when is detected to be safe "
+                      "to do so (experimental) ; "
+                      "'forcequick'=rely on faster solvers on all situations "
+                      "(experimental, avoid)");
   }
 
+  //factorization acceptor
+  {
+    vector<string> range(2); range[0] = "inertia_correction"; range[1]="inertia_free";
+    registerStrOption("fact_acceptor", "inertia_correction", range,
+                      "The criteria used to accept a factorization: "
+                      " inertia_correction (default option) --- check if inertia is correct. "
+                      " inertia_free --- to be updated");
+  }  
   //computations
   {
     vector<string> range(4); range[0]="auto"; range[1]="cpu"; range[2]="hybrid"; range[3]="gpu";

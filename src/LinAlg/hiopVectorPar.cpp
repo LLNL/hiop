@@ -1,6 +1,5 @@
 // Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
-// Written by Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
@@ -553,10 +552,10 @@ void hiopVectorPar::addLogBarrierGrad(double alpha, const hiopVector& x, const h
       data_[i] += alpha/x_vec[i];
 }
 
-
-double hiopVectorPar::
-linearDampingTerm_local(const hiopVector& ixleft, const hiopVector& ixright, 
-			const double& mu, const double& kappa_d) const
+double hiopVectorPar::linearDampingTerm_local(const hiopVector& ixleft, 
+                                              const hiopVector& ixright, 
+                                              const double& mu, 
+                                              const double& kappa_d) const
 {
   const double* ixl= (dynamic_cast<const hiopVectorPar&>(ixleft)).local_data_const();
   const double* ixr= (dynamic_cast<const hiopVectorPar&>(ixright)).local_data_const();
@@ -571,6 +570,25 @@ linearDampingTerm_local(const hiopVector& ixleft, const hiopVector& ixright,
   term *= mu; 
   term *= kappa_d;
   return term;
+}
+
+void hiopVectorPar::addLinearDampingTerm(const hiopVector& ixleft,
+                                         const hiopVector& ixright,
+                                         const double& alpha,
+                                         const double& ct)
+{
+  const double* ixl= (dynamic_cast<const hiopVectorPar&>(ixleft)).local_data_const();
+  const double* ixr= (dynamic_cast<const hiopVectorPar&>(ixright)).local_data_const();
+  double* v = this->local_data();
+
+#ifdef HIOP_DEEPCHECKS
+  assert(n_local_==(dynamic_cast<const hiopVectorPar&>(ixleft) ).n_local_);
+  assert(n_local_==(dynamic_cast<const hiopVectorPar&>(ixright) ).n_local_);
+#endif
+
+  for(long i=0; i<n_local_; i++) {
+    v[i] = alpha*v[i] + (ixl[i]-ixr[i])*ct;
+  }
 }
 
 int hiopVectorPar::allPositive()

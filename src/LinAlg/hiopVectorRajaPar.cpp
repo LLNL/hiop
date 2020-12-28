@@ -1,6 +1,5 @@
 // Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
-// Written by Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
@@ -53,6 +52,7 @@
  * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
  * @author Jake K. Ryan <jake.ryan@pnnl.gov>, PNNL
  * @author Cameron Rutherford <cameron.rutherford@pnnl.gov>, PNNL
+ * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
  *
  */
 #include "hiopVectorRajaPar.hpp"
@@ -1032,7 +1032,7 @@ void hiopVectorRajaPar::addLogBarrierGrad(
 double hiopVectorRajaPar::linearDampingTerm_local(
   const hiopVector& ixleft,
   const hiopVector& ixright,
-	const double& mu,
+  const double& mu,
   const double& kappa_d) const
 {
   const hiopVectorRajaPar& ixl = dynamic_cast<const hiopVectorRajaPar&>(ixleft);
@@ -1050,11 +1050,35 @@ double hiopVectorRajaPar::linearDampingTerm_local(
     {
       if (ld[i] == one && rd[i] == zero)
         sum += data[i];
-		});
+    });
   double term = sum.get();
   term *= mu; 
   term *= kappa_d;
   return term;
+}
+
+void hiopVectorRajaPar::addLinearDampingTerm(
+  const hiopVector& ixleft,
+  const hiopVector& ixright,
+  const double& alpha,
+  const double& ct)
+{
+
+  assert((dynamic_cast<const hiopVectorRajaPar&>(ixleft)).n_local_ == n_local_);
+  assert((dynamic_cast<const hiopVectorRajaPar&>(ixright)).n_local_ == n_local_);
+
+  const double* ixl= (dynamic_cast<const hiopVectorRajaPar&>(ixleft)).local_data_const();
+  const double* ixr= (dynamic_cast<const hiopVectorRajaPar&>(ixright)).local_data_const();
+
+  double* data = data_dev_;
+
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      // y := a * x + ...
+      data[i] = alpha * data[i] + ct*(ixl[i]-ixr[i]);
+    });
+
 }
 
 /**

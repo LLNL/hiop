@@ -1,11 +1,10 @@
 // Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
-// Written by Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp
 // is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause).
-// Please also read “Additional BSD Notice” below.
+// Please also read ~SAdditional BSD Notice~T below.
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -45,98 +44,76 @@
 // herein do not necessarily state or reflect those of the United States Government or
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or
 // product endorsement purposes.
+//
 
 /**
- * @file vectorTestsRajaPar.cpp
- *
- * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
- * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
- * @author Jake K. Ryan <jake.ryan@pnnl.gov>, PNNL
- * @author Cameron Rutherford <robert.rutherford@pnnl.gov>, PNNL
- *
- */
+  * @file hiopFactAcceptor.cpp
+  *
+  * @author Nai-Yuan Chiang <chiang7@lnnl.gov>, LNNL
+  * @author Cosmin G. Petra <petra@lnnl.gov>, LNNL
+  *
+  */
 
-#include <umpire/Allocator.hpp>
-#include <umpire/ResourceManager.hpp>
+#ifndef HIOP_FACT_ACCEPTOR
+#define HIOP_FACT_ACCEPTOR
 
-#include <hiopVectorRajaPar.hpp>
-#include "vectorTestsRajaPar.hpp"
+#include "hiopNlpFormulation.hpp"
+#include "hiopPDPerturbation.hpp"
 
-namespace hiop { namespace tests {
-
-/// Returns const pointer to local vector data
-const real_type* VectorTestsRajaPar::getLocalDataConst(const hiop::hiopVector* x_in)
+namespace hiop
 {
-  const hiop::hiopVectorRajaPar* x = dynamic_cast<const hiop::hiopVectorRajaPar*>(x_in);
-  x->copyFromDev();
-  return x->local_data_host_const();
-}
 
-/// Method to set vector _x_ element _i_ to _value_.
-void VectorTestsRajaPar::setLocalElement(hiop::hiopVector* x_in, local_ordinal_type i, real_type val)
+class hiopFactAcceptor
 {
-  hiop::hiopVectorRajaPar* x = dynamic_cast<hiop::hiopVectorRajaPar*>(x_in);
-  x->copyFromDev();
-  real_type *xdat = x->local_data_host();
-  xdat[i] = val;
-  x->copyToDev();
-}
+public:
+  /** 
+   * Default constructor 
+   * Determine if a factorization is acceptable or not
+   */
+  hiopFactAcceptor(hiopPDPerturbation* p)
+  : perturb_calc_{p}
+  {}
 
-/// Get communicator
-MPI_Comm VectorTestsRajaPar::getMPIComm(hiop::hiopVector* x)
+  virtual ~hiopFactAcceptor() 
+  {}
+  
+  /** 
+   * @brief method to check if current factorization is acceptable or/and if
+   * a re-factorization is reqired by increasing 'delta_wx'-'delta_cd'. 
+   * 
+   * Returns '1' if current factorization is rejected
+   * Returns '0' if current factorization is ok
+   * Returns '-1' if current factorization failed due to singularity
+   */
+  virtual int requireReFactorization(const hiopNlpFormulation& nlp, const int& n_neg_eig,
+                                     double& delta_wx, double& delta_wd, double& delta_cc, double& delta_cd) = 0;
+      
+protected:  
+  hiopPDPerturbation* perturb_calc_;
+  
+};
+  
+class hiopFactAcceptorIC : public hiopFactAcceptor
 {
-  const hiop::hiopVectorRajaPar* xvec = dynamic_cast<const hiop::hiopVectorRajaPar*>(x);
-  return xvec->get_mpi_comm();
-}
+public:
+  /** 
+   * Default constructor 
+   * Check inertia condition to determine if a factorization is acceptable or not
+   */
+  hiopFactAcceptorIC(hiopPDPerturbation* p, const long long n_required_neg_eig)
+  : hiopFactAcceptor(p),
+    n_required_neg_eig_(n_required_neg_eig)
+  {}
 
-/// Wrap new command
-real_type* VectorTestsRajaPar::createLocalBuffer(local_ordinal_type N, real_type val)
-{
-  auto& resmgr = umpire::ResourceManager::getInstance();
-  umpire::Allocator hal = resmgr.getAllocator("HOST");
-  real_type* buffer = static_cast<real_type*>(hal.allocate(N*sizeof(real_type)));
-
-  // Set buffer elements to the initial value
-  for(local_ordinal_type i = 0; i < N; ++i)
-    buffer[i] = val;
-
-#ifdef HIOP_USE_GPU
-  umpire::Allocator dal = resmgr.getAllocator("DEVICE");
-  real_type* dev_buffer = static_cast<real_type*>(dal.allocate(N*sizeof(real_type)));
-  resmgr.copy(dev_buffer, buffer, N*sizeof(real_type));
-  hal.deallocate(buffer);
-  return dev_buffer;
+  virtual ~hiopFactAcceptorIC() 
+  {}
+   
+  virtual int requireReFactorization(const hiopNlpFormulation& nlp, const int& n_neg_eig, 
+                                     double& delta_wx, double& delta_wd, double& delta_cc, double& delta_cd);
+ 
+protected:
+  int n_required_neg_eig_;    
+};
+  
+} //end of namespace
 #endif
-
-  return buffer;
-}
-
-/// Wrap delete command
-void VectorTestsRajaPar::deleteLocalBuffer(real_type* buffer)
-{
-#ifdef HIOP_USE_GPU
-  const std::string hiop_umpire_dev = "DEVICE";
-#else
-  const std::string hiop_umpire_dev = "HOST"; 
-#endif
-
-  auto& resmgr = umpire::ResourceManager::getInstance();
-  umpire::Allocator al = resmgr.getAllocator(hiop_umpire_dev);
-  al.deallocate(buffer);
-}
-
-/// If test fails on any rank set fail flag on all ranks
-bool VectorTestsRajaPar::reduceReturn(int failures, hiop::hiopVector* x)
-{
-  int fail = 0;
-
-#ifdef HIOP_USE_MPI
-  MPI_Allreduce(&failures, &fail, 1, MPI_INT, MPI_SUM, getMPIComm(x));
-#else
-  fail = failures;
-#endif
-
-  return (fail != 0);
-}
-
-}} // namespace hiop::tests

@@ -146,7 +146,9 @@ projectPrimalsXIntoBounds(double kappa1, double kappa2)
   if(!x->projectIntoBounds_local(nlp->get_xl(),nlp->get_ixl(),
 				 nlp->get_xu(),nlp->get_ixu(),
 				 kappa1,kappa2)) {
-    nlp->log->printf(hovError, "Problem is infeasible due to inconsistent bounds for the variables (lower>upper). Please fix this. In the meanwhile, HiOp will exit (ungracefully).\n");
+    nlp->log->printf(hovError, 
+                     "Problem is infeasible due to inconsistent bounds for the variables (lower>upper). "
+                     "Please fix this. In the meanwhile, HiOp will exit (ungracefully).\n");
     exit(-1);
   }
 }
@@ -157,7 +159,9 @@ projectPrimalsDIntoBounds(double kappa1, double kappa2)
   if(!d->projectIntoBounds_local(nlp->get_dl(),nlp->get_idl(),
 				 nlp->get_du(),nlp->get_idu(),
 				 kappa1,kappa2)) {
-    nlp->log->printf(hovError, "Problem is infeasible due to inconsistent inequality constraints (lower>upper). Please fix this. In the meanwhile, HiOp will exit (ungracefully).\n");
+    nlp->log->printf(hovError, 
+                     "Problem is infeasible due to inconsistent inequality constraints (lower>upper). "
+                     "Please fix this. In the meanwhile, HiOp will exit (ungracefully).\n");
     exit(-1);
   }
 }
@@ -234,6 +238,20 @@ void hiopIterate::normOneOfDuals(double& nrm1Eq, double& nrm1Bnd) const
   nrm1Eq   = nrm1Bnd + yc->onenorm_local() + yd->onenorm_local();
 }
 
+void hiopIterate::selectPattern()
+{
+  sxl->selectPattern(nlp->get_ixl());
+  zl->selectPattern(nlp->get_ixl());
+  
+  sxu->selectPattern(nlp->get_ixu());
+  zu->selectPattern(nlp->get_ixu());
+
+  sdl->selectPattern(nlp->get_idl());
+  vl->selectPattern(nlp->get_idl());
+
+  sdu->selectPattern(nlp->get_idu());
+  vu->selectPattern(nlp->get_idu());
+}
 
 void hiopIterate::determineSlacks()
 {
@@ -429,112 +447,26 @@ double hiopIterate::linearDampingTerm(const double& mu, const double& kappa_d) c
   return term;
 }
 
-void hiopIterate::addLinearDampingTermToGrad_x(const double& mu, const double& kappa_d, const double& beta, hiopVector& grad_x) const
+void hiopIterate::addLinearDampingTermToGrad_x(const double& mu, 
+                                               const double& kappa_d, 
+                                               const double& beta, 
+                                               hiopVector& grad_x) const
 {
-  /*sxl->addLinearDampingTermToGrad(nlp->get_ixl(), nlp->get_ixu(), mu, kappa_d, grad_x);
-    sxu->addLinearDampingTermToGrad(nlp->get_ixu(), nlp->get_ixl(), mu, kappa_d, grad_x); */
-  //I'll do it in place, in one for loop, to be faster
-  const double* ixl=(nlp->get_ixl()).local_data_const();
-  const double* ixu=(nlp->get_ixu()).local_data_const();
-  const double*  xv=x->local_data_const();   long long n_local = x->get_local_size();
-  double* gv = grad_x.local_data();
-#ifdef HIOP_DEEPCHECKS
-  assert(n_local==grad_x.get_local_size());
-#endif
-  
-  const double ct=kappa_d*mu;
-  if(1.0==beta) {
-    for(long i=0; i<n_local; i++) {
-      //!opt -> can be streamlined with blas:  gv[i] += ct*(ixl[i]-ixu[i]);
-      if(ixl[i]==1.) {
-	if(ixu[i]==0.) gv[i] += ct;
-      } else {
-	if(ixu[i]==1.) gv[i] -= ct;
-#ifdef HIOP_DEEPCHECKS
-	else {assert(ixl[i]==0); assert(ixu[i]==0);}
-#endif
-      }
-    }
-  } else if(-1.==beta) {
-    for(long i=0; i<n_local; i++) {
-      //!opt -> can be streamlined with blas:  gv[i] += ct*(ixl[i]-ixu[i]);
-      if(ixl[i]==1.) {
-	if(ixu[i]==0.) gv[i] -= ct;
-      } else {
-	if(ixu[i]==1.) gv[i] += ct;
-#ifdef HIOP_DEEPCHECKS
-	else {assert(ixl[i]==0); assert(ixu[i]==0);}
-#endif
-      }
-    }
-  } else {
-    //beta is neither 1. nor -1.
-    for(long i=0; i<n_local; i++) {
-      //!opt -> can be streamlined with blas:  gv[i] += ct*(ixl[i]-ixu[i]);
-      if(ixl[i]==1.) {
-	if(ixu[i]==0.) gv[i] += beta*ct;
-      } else {
-	if(ixu[i]==1.) gv[i] -= beta*ct;
-#ifdef HIOP_DEEPCHECKS
-	else {assert(ixl[i]==0); assert(ixu[i]==0);}
-#endif
-      }
-    }
-  }
+  assert(x->get_local_size()==grad_x.get_local_size());
+
+  const double ct=kappa_d*mu*beta;
+  grad_x.addLinearDampingTerm(nlp->get_ixl(), nlp->get_ixu(), 1.0, ct);
 }
 
-void hiopIterate::addLinearDampingTermToGrad_d(const double& mu, const double& kappa_d, const double& beta, hiopVector& grad_d) const
+void hiopIterate::addLinearDampingTermToGrad_d(const double& mu, 
+                                               const double& kappa_d, 
+                                               const double& beta, 
+                                               hiopVector& grad_d) const
 {
-  /*sxl->addLinearDampingTermToGrad(nlp->get_ixl(), nlp->get_ixu(), mu, kappa_d, grad_x);
-    sxu->addLinearDampingTermToGrad(nlp->get_ixu(), nlp->get_ixl(), mu, kappa_d, grad_x); */
-  //I'll do it in place, in one for loop, to be faster
-  const double* idl=(nlp->get_idl()).local_data_const();
-  const double* idu=(nlp->get_idu()).local_data_const();
-  const double*  dv=d->local_data_const();   long long n_local = d->get_local_size();
-  double* gv = grad_d.local_data();
-#ifdef HIOP_DEEPCHECKS
-  assert(n_local==grad_d.get_local_size());
-#endif
+  assert(d->get_local_size()==grad_d.get_local_size());
   
-  const double ct=kappa_d*mu;
-  if(beta==-1.0) {
-    for(long i=0; i<n_local; i++) {
-      //!opt -> can be streamlined with blas:  gv[i] += ct*(ixl[i]-ixu[i]);
-      if(idl[i]==1.) {
-	if(idu[i]==0.) gv[i] -= ct;
-      } else {
-	if(idu[i]==1.) gv[i] += ct;
-#ifdef HIOP_DEEPCHECKS
-	else {assert(idl[i]==0); assert(idu[i]==0);}
-#endif
-      }
-    }
-  } else if(1.0==beta) {
-    for(long i=0; i<n_local; i++) {
-      //!opt -> can be streamlined with blas:  gv[i] += ct*(ixl[i]-ixu[i]);
-      if(idl[i]==1.) {
-	if(idu[i]==0.) gv[i] += ct;
-      } else {
-	if(idu[i]==1.) gv[i] -= ct;
-#ifdef HIOP_DEEPCHECKS
-	else {assert(idl[i]==0); assert(idu[i]==0);}
-#endif
-      }
-    }
-  } else {
-    //beta is neither 1. nor -1.
-    for(long i=0; i<n_local; i++) {
-      //!opt -> can be streamlined with blas:  gv[i] += ct*(ixl[i]-ixu[i]);
-      if(idl[i]==1.) {
-	if(idu[i]==0.) gv[i] += beta*ct;
-      } else {
-	if(idu[i]==1.) gv[i] -= beta*ct;
-#ifdef HIOP_DEEPCHECKS
-	else {assert(idl[i]==0); assert(idu[i]==0);}
-#endif
-      }
-    }
-  }
+  const double ct=kappa_d*mu*beta;
+  grad_d.addLinearDampingTerm(nlp->get_idl(), nlp->get_idu(), 1.0, ct);
 }
 
 };
