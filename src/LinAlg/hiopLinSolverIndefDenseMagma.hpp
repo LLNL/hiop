@@ -129,7 +129,6 @@ public:
   { 
     return *M_; 
   }
-<<<<<<< HEAD
 protected:
   /**
    * Computes inertia of matrix, namely the triplet of non-negative numbers 
