@@ -10,7 +10,7 @@ module load exasgd-base
 module load gcc-ext/7.4.0
 module load spectrum-mpi-ext
 module load openblas
-module load magma/2.5.3-cuda11
+module load magma-2.5.4-gcc-7.4.0-vjotnd3
 module load metis
 module load mpfr
 module load suitesparse
