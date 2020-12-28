@@ -63,23 +63,44 @@ namespace hiop { namespace tests {
 /// Returns const pointer to local vector data
 const real_type* VectorTestsPar::getLocalDataConst(const hiop::hiopVector* x)
 {
-  const hiop::hiopVectorPar* xvec = dynamic_cast<const hiop::hiopVectorPar*>(x);
-  return x->local_data_const();
+  if(auto* xvec = dynamic_cast<const hiop::hiopVectorPar*>(x))
+  {
+    return xvec->local_data_const();
+  }
+  else
+  {
+    assert(false && "Wrong type of vector passed into `VectorTestsPar::getLocalDataConst`!");
+    THROW_NULL_DEREF;
+  }
 }
 
 /// Method to set vector _x_ element _i_ to _value_.
 void VectorTestsPar::setLocalElement(hiop::hiopVector* x, local_ordinal_type i, real_type val)
 {
-  hiop::hiopVectorPar* xvec = dynamic_cast<hiop::hiopVectorPar*>(x);
-  real_type *xdat = xvec->local_data();
-  xdat[i] = val;
+  if(auto* xvec = dynamic_cast<hiop::hiopVectorPar*>(x))
+  {
+    real_type *xdat = xvec->local_data();
+    xdat[i] = val;
+  }
+  else
+  {
+    assert(false && "Wrong type of vector passed into `VectorTestsPar::setLocalElement`!");
+    THROW_NULL_DEREF;
+  }
 }
 
 /// Get communicator
 MPI_Comm VectorTestsPar::getMPIComm(hiop::hiopVector* x)
 {
-  const hiop::hiopVectorPar* xvec = dynamic_cast<const hiop::hiopVectorPar*>(x);
-  return xvec->get_mpi_comm();
+  if(auto* xvec = dynamic_cast<const hiop::hiopVectorPar*>(x))
+  {
+    return xvec->get_mpi_comm();
+  }
+  else
+  {
+    assert(false && "Wrong type of vector passed into `VectorTestsPar::getMPIComm`!");
+    THROW_NULL_DEREF;
+  }
 }
 
 /// Wrap new command
