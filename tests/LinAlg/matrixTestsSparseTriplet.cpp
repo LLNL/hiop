@@ -120,7 +120,7 @@ local_ordinal_type MatrixTestsSparseTriplet::getLocalSize(const hiop::hiopVector
   const hiop::hiopVectorPar* xvec = dynamic_cast<const hiop::hiopVectorPar*>(x);
   if(xvec == nullptr)
     THROW_NULL_DEREF;
-  return static_cast<int>(xvec->get_local_size());
+  return static_cast<local_ordinal_type>(xvec->get_local_size());
 }
 
 /**
