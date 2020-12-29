@@ -73,6 +73,8 @@
 
 stages:
   - build
+  - default_build
+  - full_build
   - test
 
 # For PNNL CI
