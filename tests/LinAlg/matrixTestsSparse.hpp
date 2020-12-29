@@ -552,7 +552,6 @@ private:
   virtual real_type* getMatrixData(hiop::hiopMatrixSparse* a) = 0;
   virtual const local_ordinal_type* getRowIndices(const hiop::hiopMatrixSparse* a) = 0;
   virtual const local_ordinal_type* getColumnIndices(const hiop::hiopMatrixSparse* a) = 0;
-  virtual local_ordinal_type getLocalSize(const hiop::hiopVector* x) = 0;
   virtual int verifyAnswer(hiop::hiopMatrixSparse* A, real_type answer) = 0;
   virtual int verifyAnswer(hiop::hiopMatrix* A, local_ordinal_type nnz_st, local_ordinal_type nnz_ed, const double answer) = 0;
   virtual int verifyAnswer(

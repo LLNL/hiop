@@ -112,7 +112,7 @@ const local_ordinal_type* MatrixTestsSparseTriplet::getColumnIndices(const hiop:
 }
 
 /// Returns size of local data array for vector `x`
-int MatrixTestsSparseTriplet::getLocalSize(const hiop::hiopVector* x)
+local_ordinal_type MatrixTestsSparseTriplet::getLocalSize(const hiop::hiopVector* x)
 {
   const hiop::hiopVectorPar* xvec = dynamic_cast<const hiop::hiopVectorPar*>(x);
   if(xvec != nullptr)

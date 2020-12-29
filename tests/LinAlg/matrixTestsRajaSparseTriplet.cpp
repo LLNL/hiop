@@ -86,7 +86,7 @@ const local_ordinal_type* MatrixTestsRajaSparseTriplet::getColumnIndices(const h
 }
 
 /// Returns size of local data array for vector `x`
-int MatrixTestsRajaSparseTriplet::getLocalSize(const hiop::hiopVector* x)
+local_ordinal_type MatrixTestsRajaSparseTriplet::getLocalSize(const hiop::hiopVector* x)
 {
   const auto* xvec = dynamic_cast<const hiop::hiopVectorRajaPar*>(x);
   if(xvec != nullptr)
