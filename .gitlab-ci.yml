@@ -111,6 +111,7 @@ newell_full_build_matrix:
   rules:
     - if: '$CI_PROJECT_ROOT_NAMESPACE == "exasgd"'
       when: manual
+      allow_failure: true
 # ---
 
 # For Ascent CI
