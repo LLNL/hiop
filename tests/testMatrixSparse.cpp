@@ -62,12 +62,10 @@
 #include <hiopOptions.hpp>
 #include <hiopLinAlgFactory.hpp>
 #include <hiopVector.hpp>
-#include <hiopMatrixDenseRowMajor.hpp>
+#include <hiopMatrixDense.hpp>
 #include "LinAlg/matrixTestsSparseTriplet.hpp"
 
 #ifdef HIOP_USE_RAJA
-#include <hiopVectorRajaPar.hpp>
-#include <hiopMatrixRajaDense.hpp>
 #include "LinAlg/matrixTestsRajaSparseTriplet.hpp"
 #endif
 
