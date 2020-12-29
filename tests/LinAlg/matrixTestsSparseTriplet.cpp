@@ -62,21 +62,6 @@
 
 namespace hiop{ namespace tests {
 
-/// Set `i`th element of vector `x` 
-void MatrixTestsSparseTriplet::setLocalElement(
-    hiop::hiopVector* xvec,
-    const local_ordinal_type i,
-    const real_type val)
-{
-  auto x = dynamic_cast<hiop::hiopVectorPar*>(xvec);
-  if(x != nullptr)
-  {
-    real_type* data = x->local_data();
-    data[i] = val;
-  }
-  else THROW_NULL_DEREF;
-}
-
 /// Returns element (i,j) of a dense matrix `A`.
 /// First need to retrieve hiopMatrixDense from the abstract interface
 real_type MatrixTestsSparseTriplet::getLocalElement(

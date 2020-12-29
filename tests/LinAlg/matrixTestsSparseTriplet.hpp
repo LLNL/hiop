@@ -79,10 +79,6 @@ public:
 
 
 private:
-  virtual void setLocalElement(
-      hiop::hiopVector *_x,
-      const local_ordinal_type i,
-      const real_type val);
   virtual real_type getLocalElement(const hiop::hiopMatrix *a, local_ordinal_type i, local_ordinal_type j) override;
   virtual real_type getLocalElement(const hiop::hiopVector *x, local_ordinal_type i) override;
   virtual real_type* getMatrixData(hiop::hiopMatrixSparse* a) override;

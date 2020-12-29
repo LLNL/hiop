@@ -548,12 +548,7 @@ public:
   }
 
 private:
-  /// TODO: The sparse matrix is not distributed - all is local. 
-  // Rename functions to remove redundant "local" from their names?
-  virtual void setLocalElement(
-      hiop::hiopVector* x,
-      const local_ordinal_type i,
-      const real_type val) = 0;
+  // Implementation specific sprase matrix testing methods
   virtual real_type getLocalElement(const hiop::hiopMatrix* a, local_ordinal_type i, local_ordinal_type j) = 0;
   virtual real_type getLocalElement(const hiop::hiopVector* x, local_ordinal_type i) = 0;
   virtual real_type* getMatrixData(hiop::hiopMatrixSparse* a) = 0;
