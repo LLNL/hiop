@@ -123,6 +123,14 @@ buildMatrix()
     mpiOpts="${mpiOpts[CI_MPIOP]}"
     sparseOpts="${sparseOpts[CI_SPARSEOP]}"
 
+    echo "Using:"
+    echo "rajaOp: $rajaOp"
+    echo "gpuOp: $gpuOp"
+    echo "kronRedOp: $kronRedOp"
+    echo "mpiOp: $mpiOp"
+    echo "sparseOp: $sparseOp"
+    echo
+  
     export cmakeOptions="$baseCmakeOptions $rajaOp $gpuOp $kronRedOp $mpiOp $sparseOp"
     buildAndTest $doTest
     logRun $?

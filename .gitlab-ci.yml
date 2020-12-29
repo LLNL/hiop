@@ -126,11 +126,11 @@ newell_full_build_matrix:
       # These variables represent the indices of cmake options arrays that
       # will be used in a given build. See scripts/fullBuildMatrix.sh for more
       # details.
-      - CI_RAJAOPTS: [0, 1]
-        CI_GPUOPTS: [0, 1]
-        CI_KRONREDOPTS: [0, 1]
-        CI_MPIOPTS: [0, 1]
-        CI_SPARSEOPTS: [0, 1]
+      - CI_RAJAOPT: [0, 1]
+        CI_GPUOPT: [0, 1]
+        CI_KRONREDOPT: [0, 1]
+        CI_MPIOPT: [0, 1]
+        CI_SPARSEOPT: [0, 1]
 # ---
 
 # For Ascent CI
