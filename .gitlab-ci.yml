@@ -77,7 +77,7 @@ stages:
 
 # For PNNL CI
 build_on_marianas:
-  stage: build
+  stage: default_build
   variables:
     SLURM_Q: "dl"
     MY_CLUSTER: "marianas"
@@ -88,7 +88,7 @@ build_on_marianas:
     - if: '$CI_PROJECT_ROOT_NAMESPACE == "exasgd"'
 
 build_on_newell:
-  stage: build
+  stage: default_build
   variables:
     SLURM_Q: "newell_shared"
     MY_CLUSTER: "newell"
@@ -99,19 +99,36 @@ build_on_newell:
     - if: '$CI_PROJECT_ROOT_NAMESPACE == "exasgd"'
 
 newell_full_build_matrix:
-  stage: build
+  stage: full_build
+  dependencies:
+    - build_on_newell
+    - build_on_marianas
   variables:
     SLURM_Q: "newell"
     MY_CLUSTER: "newell"
-    TIMELIMIT: '3:00:00'
-    FULL_BUILD_MATRIX: '1'
+    TIMELIMIT: '30:00'
+    FULL_BUILD_MATRIX: 1
+    FULL_BUILD_MATRIX_PARALLEL: 1
   <<: *pnnl_tags_definition
   <<: *pnnl_script_definition
-  timeout: 3h
+  timeout: 30m
   rules:
+    - if: '$CI_PROJECT_ROOT_NAMESPACE == "exasgd" && $CI_PIPELINE_SOURCE == "schedule"'
+      when: always
+      allow_failure: false
     - if: '$CI_PROJECT_ROOT_NAMESPACE == "exasgd"'
       when: manual
       allow_failure: true
+  parallel:
+    matrix:
+      # These variables represent the indices of cmake options arrays that
+      # will be used in a given build. See scripts/fullBuildMatrix.sh for more
+      # details.
+      - CI_RAJAOPTS: [0, 1]
+        CI_GPUOPTS: [0, 1]
+        CI_KRONREDOPTS: [0, 1]
+        CI_MPIOPTS: [0, 1]
+        CI_SPARSEOPTS: [0, 1]
 # ---
 
 # For Ascent CI

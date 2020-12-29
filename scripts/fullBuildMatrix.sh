@@ -48,6 +48,27 @@ reportRuns()
   return $numFailures
 }
 
+# When running build matrix from CI, it's nicer to have each config run
+# as a seperate job. The cmake configurations are passed 
+CIBuildMatrix()
+{
+  local baseCmakeOptions=" \
+    -DCMAKE_BUILD_TYPE=Debug \
+    -DENABLE_TESTING=ON \
+    -DHIOP_DEEPCHECKS=ON \
+    "
+  
+  eval 'rajaOp=$RAJAOP'
+  eval 'gpuOp=$GPUOP'
+  eval 'kronRedOp=$KRONREDOP'
+  eval 'mpiOp=$MPIOP'
+  eval 'sparseOp=$SPARSEOP'
+  export cmakeOptions="$baseCmakeOptions $rajaOp $gpuOp $kronRedOp $mpiOp $sparseOp"
+  buildAndTest $doTest
+  logRun $?
+  reportRuns
+}
+
 # Iterates through every configuration of CMake variables and call the 
 # _buildAndTest_ function to ensure the configuration is functional
 buildMatrix()
@@ -94,20 +115,34 @@ buildMatrix()
       -DHIOP_COINHSL_DIR=$MY_COINHSL_DIR"
     )
 
-  for rajaOp in "${rajaOpts[@]}"; do
-    for gpuOp in "${gpuOpts[@]}"; do
-      for kronRedOp in "${kronRedOpts[@]}"; do
-        for mpiOp in "${mpiOpts[@]}"; do
-          for sparseOp in "${sparseOpts[@]}"; do
-            export cmakeOptions="$baseCmakeOptions $rajaOp $gpuOp $kronRedOp $mpiOp $sparseOp"
-            buildAndTest $doTest
-            logRun $?
-            reportRuns
+  # Are we running parallel jobs in ci?
+  if [[ $FULL_BUILD_MATRIX_PARALLEL -eq 1 ]]; then
+    rajaOp="${rajaOpts[CI_RAJAOP]}"
+    gpuOp="${gpuOpts[CI_GPUOP]}"
+    kronRedOpts="${kronRedOpts[CI_KRONREDOP]}"
+    mpiOpts="${mpiOpts[CI_MPIOP]}"
+    sparseOpts="${sparseOpts[CI_SPARSEOP]}"
+
+    export cmakeOptions="$baseCmakeOptions $rajaOp $gpuOp $kronRedOp $mpiOp $sparseOp"
+    buildAndTest $doTest
+    logRun $?
+    reportRuns
+  else # Are we running a single long-running job to test all configs?
+    for rajaOp in "${rajaOpts[@]}"; do
+      for gpuOp in "${gpuOpts[@]}"; do
+        for kronRedOp in "${kronRedOpts[@]}"; do
+          for mpiOp in "${mpiOpts[@]}"; do
+            for sparseOp in "${sparseOpts[@]}"; do
+              export cmakeOptions="$baseCmakeOptions $rajaOp $gpuOp $kronRedOp $mpiOp $sparseOp"
+              buildAndTest $doTest
+              logRun $?
+              reportRuns
+            done
           done
         done
       done
     done
-  done
+  fi
 
   reportRuns
   return $?
