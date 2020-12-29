@@ -119,9 +119,9 @@ buildMatrix()
   if [[ $FULL_BUILD_MATRIX_PARALLEL -eq 1 ]]; then
     rajaOp="${rajaOpts[CI_RAJAOP]}"
     gpuOp="${gpuOpts[CI_GPUOP]}"
-    kronRedOpts="${kronRedOpts[CI_KRONREDOP]}"
-    mpiOpts="${mpiOpts[CI_MPIOP]}"
-    sparseOpts="${sparseOpts[CI_SPARSEOP]}"
+    kronRedOp="${kronRedOpts[CI_KRONREDOP]}"
+    mpiOp="${mpiOpts[CI_MPIOP]}"
+    sparseOp="${sparseOpts[CI_SPARSEOP]}"
 
     echo "Using:"
     echo "rajaOp: $rajaOp"
