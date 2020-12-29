@@ -64,42 +64,6 @@
 
 namespace hiop{ namespace tests {
 
-/// Returns element (i,j) of a dense matrix `A`.
-/// First need to retrieve hiopMatrixDense from the abstract interface
-real_type MatrixTestsRajaSparseTriplet::getLocalElement(
-    const hiop::hiopMatrix* A,
-    local_ordinal_type row,
-    local_ordinal_type col)
-{
-  const auto* mat = dynamic_cast<const hiop::hiopMatrixRajaDense*>(A);
-  
-  if (mat != nullptr)
-  {
-    auto* amat = const_cast<hiop::hiopMatrixRajaDense*>(mat);
-    amat->copyFromDev();
-    //double** M = amat->get_M_host();
-    //return M[row][col];
-    return amat->local_data_const()[row*amat->get_local_size_n() + col];
-  }
-  else THROW_NULL_DEREF;
-}
-
-/// Returns element _i_ of vector _x_.
-/// First need to retrieve hiopVectorPar from the abstract interface
-real_type MatrixTestsRajaSparseTriplet::getLocalElement(
-    const hiop::hiopVector* x,
-    local_ordinal_type i)
-{
-  const auto* xvec = dynamic_cast<const hiop::hiopVectorRajaPar*>(x);
-  if(xvec != nullptr)
-  {
-    auto* axvec = const_cast<hiop::hiopVectorRajaPar*>(xvec);
-    axvec->copyFromDev();
-    return xvec->local_data_host_const()[i];
-  }
-  else THROW_NULL_DEREF;
-}
-
 real_type* MatrixTestsRajaSparseTriplet::getMatrixData(hiop::hiopMatrixSparse* A)
 {
   auto* mat = dynamic_cast<hiop::hiopMatrixRajaSparseTriplet*>(A);

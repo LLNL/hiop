@@ -64,7 +64,7 @@ namespace hiop{ namespace tests {
 
 /// Returns element (i,j) of a dense matrix `A`.
 /// First need to retrieve hiopMatrixDense from the abstract interface
-real_type MatrixTestsSparseTriplet::getLocalElement(
+real_type MatrixTestsSparseTriplet::getElement(
     const hiop::hiopMatrix* A,
     local_ordinal_type row,
     local_ordinal_type col)
@@ -83,7 +83,7 @@ real_type MatrixTestsSparseTriplet::getLocalElement(
 
 /// Returns element _i_ of vector _x_.
 /// First need to retrieve hiopVectorPar from the abstract interface
-real_type MatrixTestsSparseTriplet::getLocalElement(
+real_type MatrixTestsSparseTriplet::getElement(
     const hiop::hiopVector* x,
     local_ordinal_type i)
 {
@@ -97,26 +97,6 @@ real_type* MatrixTestsSparseTriplet::getMatrixData(hiop::hiopMatrixSparse* A)
 {
   auto* mat = dynamic_cast<hiop::hiopMatrixSparseTriplet*>(A);
   return mat->M();
-}
-
-real_type MatrixTestsSparseTriplet::getMatrixData(hiop::hiopMatrixSparse* A, local_ordinal_type i, local_ordinal_type j)
-{
-  auto* mat = dynamic_cast<hiop::hiopMatrixSparseTriplet*>(A);
-  auto* val = mat->M();
-  auto* iRow = mat->i_row();
-  auto* jCol = mat->j_col();
-  auto nnz = mat->numberOfNonzeros();
-
-  for (auto k=0; k< nnz; i++)
-  {
-    if(iRow[k]==i && jCol[k]==j){
-      return val[k];
-    }
-    // assume elements are row-major ordered.
-    if(iRow[k]>=i)
-      break;
-  }
-  return zero;
 }
 
 const local_ordinal_type* MatrixTestsSparseTriplet::getRowIndices(const hiop::hiopMatrixSparse* A)
@@ -208,7 +188,7 @@ int MatrixTestsSparseTriplet::verifyAnswer(
   {
     for (local_ordinal_type j=0; j<N; j++)
     {
-      if (!isEqual(getLocalElement(A, i, j), expect(i, j)))
+      if (!isEqual(getElement(A, i, j), expect(i, j)))
       {
         fail++;
       }
@@ -226,9 +206,9 @@ int MatrixTestsSparseTriplet::verifyAnswer(hiop::hiopVector* x, double answer)
   int local_fail = 0;
   for(local_ordinal_type i=0; i<N; ++i)
   {
-    if(!isEqual(getLocalElement(x, i), answer))
+    if(!isEqual(getElement(x, i), answer))
     {
-      printf("Failed. %f != %f.\n", getLocalElement(x, i), answer);
+      printf("Failed. %f != %f.\n", getElement(x, i), answer);
       ++local_fail;
     }
   }
@@ -245,9 +225,9 @@ int MatrixTestsSparseTriplet::verifyAnswer(
   int local_fail = 0;
   for (int i=0; i<N; i++)
   {
-    if(!isEqual(getLocalElement(x, i), expect(i)))
+    if(!isEqual(getElement(x, i), expect(i)))
     {
-      printf("Failed. %f != %f.\n", getLocalElement(x, i), expect(i));
+      printf("Failed. %f != %f.\n", getElement(x, i), expect(i));
       ++local_fail;
     }
   }

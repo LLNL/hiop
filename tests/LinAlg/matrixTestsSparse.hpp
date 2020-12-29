@@ -549,10 +549,7 @@ public:
 
 private:
   // Implementation specific sprase matrix testing methods
-  virtual real_type getLocalElement(const hiop::hiopMatrix* a, local_ordinal_type i, local_ordinal_type j) = 0;
-  virtual real_type getLocalElement(const hiop::hiopVector* x, local_ordinal_type i) = 0;
   virtual real_type* getMatrixData(hiop::hiopMatrixSparse* a) = 0;
-  virtual real_type getMatrixData(hiop::hiopMatrixSparse* a, local_ordinal_type i, local_ordinal_type j) = 0;
   virtual const local_ordinal_type* getRowIndices(const hiop::hiopMatrixSparse* a) = 0;
   virtual const local_ordinal_type* getColumnIndices(const hiop::hiopMatrixSparse* a) = 0;
   virtual local_ordinal_type getLocalSize(const hiop::hiopVector* x) = 0;
