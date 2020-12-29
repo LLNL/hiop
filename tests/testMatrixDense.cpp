@@ -76,7 +76,6 @@ static int runTests(const char* mem_space, MPI_Comm comm);
 int main(int argc, char** argv)
 {
   using namespace hiop::tests;
-  using hiop::tests::global_ordinal_type;
 
   int rank = 0;
   MPI_Comm comm = MPI_COMM_SELF;
