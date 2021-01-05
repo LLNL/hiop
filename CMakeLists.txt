@@ -306,6 +306,7 @@ install(FILES src/Interface/hiopInterface.hpp
   src/Optimization/hiopFilter.hpp
   src/Optimization/hiopHessianLowRank.hpp
   src/Optimization/hiopDualsUpdater.hpp
+  src/Optimization/hiopFactAcceptor.hpp
   src/LinAlg/hiopVector.hpp
   src/LinAlg/hiopVectorPar.hpp
   src/LinAlg/hiopVectorInt.hpp
@@ -336,6 +337,7 @@ install(FILES src/Interface/hiopInterface.hpp
   src/LinAlg/hiop_blasdefs.hpp
   src/Drivers/IpoptAdapter.hpp
   ${CMAKE_BINARY_DIR}/hiop_defs.hpp
+  ${CMAKE_BINARY_DIR}/FortranCInterface.hpp
   DESTINATION include)
 
 if(HIOP_USE_RAJA)
