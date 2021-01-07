@@ -39,11 +39,11 @@ int main(int argc, char **argv)
 #endif
 
   //PriDecMasterProblemEx9 pridec_problem(12, 20, 5, 100);
-  PriDecMasterProblemEx9 pridec_problem(12, 12, 5, 5);
+  PriDecMasterProblemEx9 pridec_problem(12, 12, 5, 8);
   //printf("total ranks %d\n",comm_size);
   hiop::hiopAlgPrimalDecomposition pridec_solver(&pridec_problem, MPI_COMM_WORLD);
 
-  printf("my rank starting 0 %d)\n",rank);
+  //printf("my rank starting3  %d\n",rank);
   auto status = pridec_solver.run();
 
   /*

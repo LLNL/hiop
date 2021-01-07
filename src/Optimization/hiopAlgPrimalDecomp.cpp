@@ -44,7 +44,7 @@ namespace hiop
       return run_single();
     }
 
-    //printf("total ranks %d\n",comm_size_); //printf("my rank starting 1 %d)\n",my_rank_);
+    printf("total ranks %d\n",comm_size_); //printf("my rank starting 1 %d)\n",my_rank_);
     //initial point = ?
     //for now set to all zero
     for(int i=0; i<n_; i++) {
@@ -69,23 +69,35 @@ namespace hiop
     //hess_appx_2 has to be declared by all ranks while only rank 0 uses it
     HessianBBApprox*  hess_appx_2 = new HessianBBApprox(n_);
 
+
+
     // Outer loop starts
     for(int it=0; it<max_iter;it++){
 
+      printf("my rank iteration  %d)\n", my_rank_);
       // solve the base case
       if(my_rank_ == 0 && it==0) //initial solve
-      { //printf("my rank for solver  %d)\n", my_rank_);
+      { 
+	printf("my rank for solver  %d)\n", my_rank_);
         //solve master problem base case(solver rank supposed to do it)
+	
+
         solver_status_ = master_prob_->solve_master(x_,false);
+        printf("solve master done  %d)\n", my_rank_);
         // to do, what if solve fails?
         if(solver_status_){     
 
         }
+	for(int i=0;i<n_;i++) printf("%d x %18.12e\n",i,x_[i]);
+
       }
+
       // send base case solutions to all ranks
       //todo error control
       int ierr = MPI_Bcast(x_, n_, MPI_DOUBLE, rank_master, comm_world_);
       assert(ierr == MPI_SUCCESS);
+
+
 
       //assert("for debugging" && false); //for debugging purpose
       // set up recourse problem send/recv interface
@@ -112,7 +124,7 @@ namespace hiop
         }
         // The number of contigencies should be larger than the number of processors
         // Otherwise not implemented
-        assert(S_>comm_size_-1);
+        assert(S_>=comm_size_-1);
         // idx is the next contingency to be sent out from the master
         int idx = 0;
         // Initilize the recourse communication by sending indices to the 
@@ -143,7 +155,7 @@ namespace hiop
         int last_loop = 0;
         while(idx<=S_ || last_loop)
 	{ 
-          std::this_thread::sleep_for(std::chrono::milliseconds(10)); //optional, used to adjust time
+          //std::this_thread::sleep_for(std::chrono::milliseconds(10)); //optional, used to adjust time
           for(int r=1; r< comm_size_;r++){
             //int cur_idx = cont_idx[idx];
             //int ierr = MPI_Isend(&rec_val, 1, MPI_DOUBLE, rank_master, 2, comm_world_, &request_[my_rank_]);
@@ -185,7 +197,7 @@ namespace hiop
 	      if(finish_flag[r]==0){last_loop=1;}
 	    }
 	  }
-          //  assert("for debugging" && false); //for debugging purpose
+
         }
         // send end signal to all evaluators
         int cur_idx = -1;
@@ -195,7 +207,7 @@ namespace hiop
 	  req_cont_idx->post_send(1,r,comm_world_);
           //int ierr = MPI_Isend(&cur_idx, 1, MPI_INT, r, 1, comm_world_, &request_[0+r*4]);	
         }
-        //assert("for debugging" && false); //for debugging purpose
+
       }
 
       //
@@ -258,10 +270,6 @@ namespace hiop
 
         while(cont_idx[0]!=-1)
 	{
-	  if(my_rank_%2)
-	  {
-            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-	  }
           //printf("contingency index %d, rank %d)\n",cont_idx[0],my_rank_);
 	  //mpi_test_flag = rec_prob[my_rank_]->test();
           //ierr = MPI_Test(&request_[0], &mpi_test_flag, &status_);
@@ -339,7 +347,7 @@ namespace hiop
             req_cont_idx->post_recv(1, rank_master, comm_world_);
 	    //ierr = MPI_Irecv(&cont_idx[0], 1, MPI_INT, rank_master, 1, comm_world_, &request_[0]); 	  
           }
-          std::this_thread::sleep_for(std::chrono::milliseconds(50));
+          //std::this_thread::sleep_for(std::chrono::milliseconds(50));
           //assert("for debugging" && false); //for debugging purpose
         }
       }
@@ -349,7 +357,7 @@ namespace hiop
       //assert(err == MPI_SUCCESS);
       if(my_rank_==0)
       {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        //std::this_thread::sleep_for(std::chrono::milliseconds(100));
         //assert("for debugging" && false); //for debugging purpose
 
         MPI_Status mpi_status; 

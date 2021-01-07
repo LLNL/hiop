@@ -36,6 +36,7 @@ PriDecMasterProblemEx9::solve_master(double* x,
     basecase_ = new PriDecBasecaseProblemEx9(nx_);
   }
   basecase_->set_include(include_r);
+
   if(include_r)
   {
     assert(basecase_->quad_is_defined());
@@ -43,6 +44,7 @@ PriDecMasterProblemEx9::solve_master(double* x,
   
   hiopNlpSparse nlp(*basecase_);
     
+  nlp.options->SetStringValue("compute_mode", "hybrid");
   /*
   // what should the solver options be?
   nlp.options->SetStringValue("dualsUpdateType", "linear");
@@ -58,8 +60,8 @@ PriDecMasterProblemEx9::solve_master(double* x,
   nlp.options->SetNumericValue("mu0", 1e-1);
   nlp.options->SetNumericValue("tolerance", 1e-5);
   */
-
   hiopAlgFilterIPMNewton solver(&nlp);
+
   status = solver.run();
   obj_ = solver.getObjective();
   solver.getSolution(x);
@@ -104,7 +106,7 @@ bool PriDecMasterProblemEx9::eval_f_rterm(size_t idx, const int& n, const double
   //printf("ny %d\n",ny_); 
   //printf("nx %d\n",nx_); 
 
-  ex9_recourse = new PriDecRecourseProblemEx9(ny_, nS_,x,xi);
+  ex9_recourse = new PriDecRecourseProblemEx9(ny_, nS_,S_,x,xi);
   //assert("for debugging" && false); //for debugging purpose
   hiopNlpMDS nlp(*ex9_recourse);
 
@@ -112,7 +114,6 @@ bool PriDecMasterProblemEx9::eval_f_rterm(size_t idx, const int& n, const double
   nlp.options->SetStringValue("dualsInitialization", "zero");
 
   nlp.options->SetStringValue("Hessian", "analytical_exact");
-  nlp.options->SetStringValue("KKTLinsys", "xdycyd");
   nlp.options->SetStringValue("compute_mode", "hybrid");
 
   nlp.options->SetIntegerValue("verbosity_level", 3);
@@ -137,7 +138,8 @@ bool PriDecMasterProblemEx9::eval_grad_rterm(size_t idx, const int& n, double* x
 {
   //todo:
   // return in grad the gradient computed in eval_f_rterm
-  assert(nx_=n);
+  assert(nx_==n);
   for(int i=0;i<n;i++) grad[i] = 2*(x[i]-y_[i]);
   return true;
 };
+

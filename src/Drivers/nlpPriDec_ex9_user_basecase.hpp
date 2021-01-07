@@ -113,6 +113,8 @@ public:
     }
   }
 
+  bool get_MPI_comm(MPI_Comm& comm_out) { comm_out=MPI_COMM_SELF; return true;};
+
 protected:
   bool include_rec_=false;
   RecourseApproxEvaluator* rec_evaluator_;

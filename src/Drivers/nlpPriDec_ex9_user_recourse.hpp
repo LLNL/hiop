@@ -26,19 +26,20 @@
 class PriDecRecourseProblemEx9 : public hiop::hiopInterfaceMDS
 {
 public:
-  PriDecRecourseProblemEx9(int n, int nS): n_(n), nS_(nS),x_(nullptr),xi_(nullptr)
+  PriDecRecourseProblemEx9(int n, int nS, int S): n_(n), nS_(nS),S_(S),x_(nullptr),xi_(nullptr)
   {
     assert(nS_>=1);
     assert(n_>=nS_);  // ny=nx=n
+    assert(S_>=1);
     nsparse_ = n_*sparse_ratio;
-
   }
 
-  PriDecRecourseProblemEx9(int n, int nS, const double* x,
-		           const double* xi): n_(n), nS_(nS)
+  PriDecRecourseProblemEx9(int n, int nS, int S, const double* x,
+		           const double* xi): n_(n), nS_(nS), S_(S)
   {
     assert(nS_>=1);
     assert(n_>=nS_);  // ny=nx=n
+    assert(S_>=1);
 
     xi_ = new double[n_];
     //printf("n %d\n",n_); 
@@ -49,7 +50,6 @@ public:
 
     //assert("for debugging" && false); //for debugging purpose
     memcpy(x_,x, n_*sizeof(double));
-
     nsparse_ = int(n_*sparse_ratio);
   }
   virtual ~PriDecRecourseProblemEx9()
@@ -91,7 +91,6 @@ public:
   {
     n = n_;
     m = n_; 
-    //assert(false && "not implemented");
     return true; 
   }
 
@@ -142,8 +141,7 @@ public:
     for(int i=0;i<n;i++){
       obj_value += (x[i]-x_[i])*(x[i]-x_[i]);
     }
-    obj_value *= 0.5/nS_;
-
+    obj_value *= 0.5/double(S_);
     return true;
   }
  
@@ -151,12 +149,10 @@ public:
 			 const long long& num_cons, const long long* idx_cons,  
 			 const double* x, bool new_x, double* cons)
   {
-    
     assert(n==n_); assert(m==n_);
     //printf("number of constraints %d\n",num_cons); 
     //printf("number of constraints should be %d)\n",n_);
     assert(num_cons==n_||num_cons==0);
-
     if(num_cons==0)
     {
       return true;
@@ -181,7 +177,6 @@ public:
         }
       } 
     }
-
     return true; 
   }
   
@@ -189,7 +184,8 @@ public:
   bool eval_grad_f(const long long& n, const double* x, bool new_x, double* gradf)
   {
     assert(n_==n);    
-    for(int i=0;i<n_;i++) gradf[i] = (x[i]-x_[i])/nS_;
+    for(int i=0;i<n_;i++) gradf[i] = (x[i]-x_[i])/double(S_);
+
     return true;
   }
  
@@ -200,7 +196,6 @@ public:
 		             const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
 		             double* JacD)
   {
-
     assert(num_cons==n_||num_cons==0);
     //indexes for sparse part
     if(num_cons==0)
@@ -315,7 +310,6 @@ public:
       }
       assert(nnzit==nnzJacS);
     }
-    
     //dense Jacobian w.r.t ydense
     //it has row number of m
     if(JacD!=NULL) {
@@ -366,19 +360,18 @@ public:
     }
     // need lambda
     if(MHSS!=NULL) {
-      for(int i=0;i<nsparse_;i++) MHSS[i] =  obj_factor/nS_; //what is this?     
-      MHSS[0] += -2*lambda[m-1];
+      for(int i=0;i<nsparse_;i++) MHSS[i] =  obj_factor/double(S_); //what is this?     
+      MHSS[0] += 2*lambda[m-1];
       for(int i=1;i<nsparse_;i++){
-        MHSS[i] += -lambda[m-1]* 2.; //what is this?     
+        MHSS[i] += lambda[m-1]* 2.; //what is this?     
       } 
     }
     //assert(false && "not implemented");
-
     if(HDD!=NULL){
       //HDD size: ndense_*ndense_
       for(int i=0; i<ndense;i++){
-        HDD[ndense*i+i] = obj_factor/nS_;
-	HDD[ndense*i+i] += -2*lambda[m-1];
+        HDD[ndense*i+i] = obj_factor/double(S_);
+	HDD[ndense*i+i] += 2*lambda[m-1];
       }
     }
     return true;
@@ -409,7 +402,7 @@ public:
   bool compute_gradx(const int n, const double* y, double*  gradx)
   {
     assert(n_==n);
-    for(int i=0;i<n_;i++) gradx[i] = 2*(x_[i]-y[i]);
+    for(int i=0;i<n_;i++) gradx[i] = (x_[i]-y[i])/double(S_);
     return true;
   };
 
@@ -425,8 +418,9 @@ public:
 protected:
   double* x_;
   double* xi_;
-  int n_;
+  int n_; //n_==nx==ny
   int nS_;
+  int S_;
   double sparse_ratio = 0.3;
   int nsparse_;
 };
