@@ -252,10 +252,7 @@ namespace hiop
 #ifdef HIOP_USE_STRUMPACK        
         hiopLinSolverIndefSparseSTRUMPACK *p = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
 
-        //print it as a warning if safe mode is on
-        auto verbosity = hovScalars;
-        if(safe_mode_) verbosity  = hovWarning;
-        nlp_->log->printf(verbosity,
+        nlp_->log->printf(hovScalars,
                           "KKT_SPARSE_XYcYd linsys: using STRUMPACK as an indefinite solver, size %d (%d cons) (safe_mode=%d)\n",
                           n, neq+nineq, safe_mode_);
         
@@ -463,7 +460,7 @@ namespace hiop
 
       if(nlp_->options->GetString("compute_mode")=="cpu")
       {
-        nlp_->log->printf(hovWarning,
+        nlp_->log->printf(hovScalars,
 			    "KKT_SPARSE_XYcYd linsys: MA57 size %d (%d cons)\n",
 			    n, neq+nineq);
 #ifdef HIOP_USE_COINHSL			    
@@ -473,10 +470,7 @@ namespace hiop
 #ifdef HIOP_USE_STRUMPACK        
         hiopLinSolverIndefSparseSTRUMPACK *p = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
 
-        //print it as a warning if safe mode is on
-        auto verbosity = hovScalars;
-        if(safe_mode_) verbosity  = hovWarning;
-        nlp_->log->printf(verbosity,
+        nlp_->log->printf(hovScalars,
                           "KKT_SPARSE_XDYcYd linsys: using STRUMPACK as an indefinite solver, size %d (%d cons) (safe_mode=%d)\n",
                           n, neq+nineq, safe_mode_);
         
@@ -533,7 +527,7 @@ namespace hiop
 #else
       nlp_->log->printf(hovError,
                         "KKT_SPARSE_FULL_KKT linsys: cannot instantiate backend linear solver "
-                        "because HIOP was not built with STRUMPACK");
+                        "because HIOP was not built with STRUMPACK.\n");
       assert(false);
       return NULL;
 #endif

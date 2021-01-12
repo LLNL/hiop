@@ -53,6 +53,7 @@
 #include "hiopIterate.hpp"
 #include "hiopResidual.hpp"
 #include "hiopMatrix.hpp"
+#include "hiopLinSolver.hpp"
 
 namespace hiop
 {
@@ -87,7 +88,7 @@ public:
 		  const hiopIterate& search_dir, const double& alpha_primal, const double& alpha_dual,
 		  const double& mu, const double& kappa_sigma, const double& infeas_nrm_trial)=0;
 protected:
-  hiopNlpFormulation* _nlp;	  
+  hiopNlpFormulation* _nlp;
 protected: 
   hiopDualsUpdater() {};
 private:
@@ -115,6 +116,12 @@ public:
 					    const hiopMatrix& jac_c,
 					    const hiopMatrix& jac_d)
   {
+    if(update_type_==2)
+      return LSQInitSparse(it_ini,grad_f,jac_c,jac_d);
+    else if(update_type_==1)
+      assert(0&&"not yet");
+
+    assert(update_type_==0);
     return LSQUpdate(it_ini,grad_f,jac_c,jac_d);
   }
 private: //common code 
@@ -122,17 +129,41 @@ private: //common code
 			 const hiopVector& grad_f,
 			 const hiopMatrix& jac_c,
 			 const hiopMatrix& jac_d);
+
+  /**
+   * @brief LSQ-based initialization for sparse linear algebra.
+   *
+   * NLPs with sparse Jac/Hes
+   * ******************************
+   * For NLPs with sparse inputs, the corresponding LSQ problem is solved in augmeted system:
+   * [    I    0     Jc^T  Jd^T  ] [ dx]      [ \nabla f(xk) - zk_l + zk_u  ]
+   * [    0    I     0     -I    ] [ dd]      [ -vk_l + vk_u ]
+   * [    Jc   0     0     0     ] [dyc] =  - [   0    ]
+   * [    Jd   -I    0     0     ] [dyd]      [   0    ]         ]
+   * This linear system is small (of size m=m_E+m_I) (so it is replicated for all MPI ranks).
+   *
+   * The matrix of the above system is stored in the member variable M of this class and the
+   *  right-hand side in 'rhs'.   *
+   */
+  virtual bool LSQInitSparse(hiopIterate& it,
+			 const hiopVector& grad_f,
+			 const hiopMatrix& jac_c,
+			 const hiopMatrix& jac_d);
+
 private:
-  hiopMatrixDense *_mexme, *_mexmi, *_mixmi, *_mxm;
-  hiopMatrixDense *M;
-  
-  hiopVector *rhs, *rhsc, *rhsd;
-  hiopVector *_vec_n, *_vec_mi;
+  hiopMatrix *_mexme_, *_mexmi_, *_mixmi_, *_mxm_;
+  hiopMatrix *M_;
+
+  hiopVector *rhs_, *rhsc_, *rhsd_;
+  hiopVector *_vec_n_, *_vec_mi_;
+
+  hiopLinSolver* linSys_;
+  double lsq_dual_init_max;
 
 #ifdef HIOP_DEEPCHECKS
-  hiopMatrixDense* M_copy;
-  hiopVector *rhs_copy;
-  hiopMatrixDense* _mixme;
+  hiopMatrix* M_copy_;
+  hiopVector *rhs_copy_;
+  hiopMatrix* _mixme_;
 #endif
 
   //user options
@@ -140,7 +171,9 @@ private:
   /** Do not recompute duals using LSQ unless the primal infeasibilty or constraint violation 
    * is less than this tolerance; default 1e-6
    */
-  double recalc_lsq_duals_tol;  
+  double recalc_lsq_duals_tol;
+  
+  int update_type_; //0:dense 1:mds 2:sparse
                                 
   //helpers
   int factorizeMat(hiopMatrixDense& M);
