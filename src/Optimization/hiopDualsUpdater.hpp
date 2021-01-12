@@ -46,6 +46,14 @@
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or 
 // product endorsement purposes.
 
+/**
+ * @file hiopDualsUpdater.hpp
+ *
+ * @author Cosmin G. Petra <petra1@llnl.gov>,  LLNL
+ * @author Nai-Yuan Chiang <chiang7@llnl.gov>,  LLNL
+ *
+ */
+ 
 #ifndef HIOP_DUALSUPDATER
 #define HIOP_DUALSUPDATER
 
@@ -117,9 +125,14 @@ public:
 					    const hiopMatrix& jac_d)
   {
     if(update_type_==2)
-      return LSQInitSparse(it_ini,grad_f,jac_c,jac_d);
+    {
+      return LSQInitDualSparse(it_ini,grad_f,jac_c,jac_d);
+    }
     else if(update_type_==1)
+    {
       assert(0&&"not yet");
+      return LSQInitDualMDS(it_ini,grad_f,jac_c,jac_d);
+    }
 
     assert(update_type_==0);
     return LSQUpdate(it_ini,grad_f,jac_c,jac_d);
@@ -140,12 +153,34 @@ private: //common code
    * [    0    I     0     -I    ] [ dd]      [ -vk_l + vk_u ]
    * [    Jc   0     0     0     ] [dyc] =  - [   0    ]
    * [    Jd   -I    0     0     ] [dyd]      [   0    ]         ]
-   * This linear system is small (of size m=m_E+m_I) (so it is replicated for all MPI ranks).
    *
-   * The matrix of the above system is stored in the member variable M of this class and the
-   *  right-hand side in 'rhs'.   *
+   * The matrix of the above system is stored in the member variable M_ of this class and the
+   * right-hand side in 'rhs'.   *
    */
-  virtual bool LSQInitSparse(hiopIterate& it,
+  virtual bool LSQInitDualSparse(hiopIterate& it,
+			 const hiopVector& grad_f,
+			 const hiopMatrix& jac_c,
+			 const hiopMatrix& jac_d);
+
+  /**
+   * @brief LSQ-based initialization for MDS linear algebra.
+   *
+   * NLPs with MDS Jac/Hes
+   * ******************************
+   * For MDS NLPs, the linear system exploits the block structure of the Jacobians Jc and Jd. 
+   * Namely, since Jc = [Jxdc  Jxsc] and Jd = [Jxdd  Jxsd], the following
+   * dense linear system is to be solved for y_c and y_d
+   *
+   *    [ Jxdc Jxdc^T + Jxsc Jxsc^T   Jxdc Jxdd^T + Jxsc Jxsd^T     ] [ y_c ] = rhs_
+   *    [ Jxdc Jxdd^T + Jxsd Jxsc^T   Jxdd Jxdd^T + Jxsd Jxsd^T + I ] [ y_d ]
+   *
+   *  rhs_ = [ J_c   0 ] [ -\nabla f(xk) + zk_l-zk_u  ] 
+   *       = [ J_d   I ] [ - vk_l + vk_u              ]
+   *
+   * The matrix of the above system is stored in the member variable M_ of this class and the
+   * right-hand side in 'rhs'.   *
+   */
+  virtual bool LSQInitDualMDS(hiopIterate& it,
 			 const hiopVector& grad_f,
 			 const hiopMatrix& jac_c,
 			 const hiopMatrix& jac_d);

@@ -46,6 +46,14 @@
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or 
 // product endorsement purposes.
 
+/**
+ * @file hiopDualsUpdater.cpp
+ *
+ * @author Cosmin G. Petra <petra1@llnl.gov>,  LLNL
+ * @author Nai-Yuan Chiang <chiang7@llnl.gov>,  LLNL
+ *
+ */
+ 
 #include "hiopDualsUpdater.hpp"
 #include "hiopLinAlgFactory.hpp"
 
@@ -99,7 +107,15 @@ hiopDualsLsqUpdate::hiopDualsLsqUpdate(hiopNlpFormulation* nlp)
       hiopNlpMDS* nlpmds = dynamic_cast<hiopNlpMDS*>(_nlp);
       assert(nullptr!=nlpmds);
       update_type_ = 1;
-      
+
+      _mexme_ = LinearAlgebraFactory::createMatrixDense(_nlp->m_eq(),   _nlp->m_eq());
+      _mexmi_ = LinearAlgebraFactory::createMatrixDense(_nlp->m_eq(),   _nlp->m_ineq());
+      _mixmi_ = LinearAlgebraFactory::createMatrixDense(_nlp->m_ineq(), _nlp->m_ineq());
+      _mxm_   = LinearAlgebraFactory::createMatrixDense(_nlp->m(), _nlp->m());
+
+      M_      = LinearAlgebraFactory::createMatrixDense(_nlp->m(), _nlp->m());
+      rhs_    = LinearAlgebraFactory::createVector(_nlp->m());
+
       assert(0&&"not yet");    
     }
   }
@@ -231,22 +247,22 @@ LSQUpdate(hiopIterate& iter, const hiopVector& grad_f, const hiopMatrix& jac_c, 
   _mixmi->addDiagonal(1.0);
 
   M->copyBlockFromMatrix(0,0,*_mexme);
-  M->copyBlockFromMatrix(0, nlpd->m_eq(), *_mexmi);
-  M->copyBlockFromMatrix(nlpd->m_eq(),nlpd->m_eq(), *_mixmi);
+  M->copyBlockFromMatrix(0, _nlp->m_eq(), *_mexmi);
+  M->copyBlockFromMatrix(_nlp->m_eq(),_nlp->m_eq(), *_mixmi);
 
 #ifdef HIOP_DEEPCHECKS
   hiopMatrixDense* _mixme = dynamic_cast<hiopMatrixDense*>(_mixme_);
   hiopMatrixDense* M_copy = dynamic_cast<hiopMatrixDense*>(M_copy_);
   M_copy->copyFrom(*M);
   jac_d.timesMatTrans(0.0, *_mixme, 1.0, jac_c);
-  M_copy->copyBlockFromMatrix(nlpd->m_eq(), 0, *_mixme);
+  M_copy->copyBlockFromMatrix(_nlp->m_eq(), 0, *_mixme);
   M_copy->assertSymmetry(1e-12);
 #endif
 
   //bailout in case there is an error in the Cholesky factorization
   int info;
   if((info=this->factorizeMat(*M))) {
-    nlpd->log->printf(hovError, "dual lsq update: error %d in the Cholesky factorization.\n", info);
+    _nlp->log->printf(hovError, "dual lsq update: error %d in the Cholesky factorization.\n", info);
     return false;
   }
 
@@ -268,41 +284,41 @@ LSQUpdate(hiopIterate& iter, const hiopVector& grad_f, const hiopMatrix& jac_c, 
   rhsd_->axpy(-1.0, vecd);
 
   rhs_->copyFromStarting(0, *rhsc_);
-  rhs_->copyFromStarting(nlpd->m_eq(), *rhsd_);
+  rhs_->copyFromStarting(_nlp->m_eq(), *rhsd_);
 
-  //nlpd->log->write("rhs_", *rhs_, hovSummary);
+  //_nlp->log->write("rhs_", *rhs_, hovSummary);
 #ifdef HIOP_DEEPCHECKS
   rhs_copy_->copyFrom(*rhs_);
 #endif
 
   //solve for this rhs_
   if((info=this->solveWithFactors(*M, *rhs_))) {
-    nlpd->log->printf(hovError, "dual lsq update: error %d in the solution process.\n", info);
+    _nlp->log->printf(hovError, "dual lsq update: error %d in the solution process.\n", info);
     return false;
   }
 
   //update yc and yd in iter_plus
   rhs_->copyToStarting(0, *iter.get_yc());
-  rhs_->copyToStarting(nlpd->m_eq(), *iter.get_yd());
+  rhs_->copyToStarting(_nlp->m_eq(), *iter.get_yd());
 
 #ifdef HIOP_DEEPCHECKS
   double nrmrhs = rhs_copy_->twonorm();
   M_copy_->timesVec(-1.0,  *rhs_copy_, 1.0, *rhs_);
   double nrmres = rhs_copy_->twonorm() / (1+nrmrhs);
   if(nrmres>1e-4) {
-    nlpd->log->printf(hovError,
+    _nlp->log->printf(hovError,
 		      "hiopDualsLsqUpdate::LSQUpdate linear system residual is dangerously high: %g\n", nrmres);
     assert(false && "hiopDualsLsqUpdate::LSQUpdate linear system residual is dangerously high");
     return false;
   } else {
     if(nrmres>1e-6)
-      nlpd->log->printf(hovWarning,
+      _nlp->log->printf(hovWarning,
 			"hiopDualsLsqUpdate::LSQUpdate linear system residual is dangerously high: %g\n", nrmres);
   }
 #endif
 
-  //nlpd->log->write("yc ini", *iter.get_yc(), hovSummary);
-  //nlpd->log->write("yd ini", *iter.get_yd(), hovSummary);
+  //_nlp->log->write("yc ini", *iter.get_yc(), hovSummary);
+  //_nlp->log->write("yd ini", *iter.get_yd(), hovSummary);
   return true;
 };
 
@@ -341,7 +357,7 @@ int hiopDualsLsqUpdate::solveWithFactors(hiopMatrixDense& M, hiopVector& r)
 }
 
 bool hiopDualsLsqUpdate::
-LSQInitSparse(hiopIterate& iter, const hiopVector& grad_f, const hiopMatrix& jac_c, const hiopMatrix& jac_d)
+LSQInitDualSparse(hiopIterate& iter, const hiopVector& grad_f, const hiopMatrix& jac_c, const hiopMatrix& jac_d)
 {
   hiopNlpSparse* nlpsp = dynamic_cast<hiopNlpSparse*>(_nlp);
   assert(nullptr!=nlpsp);
@@ -470,6 +486,77 @@ LSQInitSparse(hiopIterate& iter, const hiopVector& grad_f, const hiopMatrix& jac
   return true;
 };
 
+bool hiopDualsLsqUpdate::
+LSQInitDualMDS(hiopIterate& iter, const hiopVector& grad_f, const hiopMatrix& jac_c, const hiopMatrix& jac_d)
+{
+//  *   [ J_c J_c^T    J_c J_d^T     ] [ y_c ]  =  [ J_c   0 ] [ -\nabla f(xk) + zk_l-zk_u ] 
+//  *   [ J_d J_c^T    J_d J_d^T + I ] [ y_d ]     [ J_d   I ] [ - vk_l + vk_u              ]  
+// to  
+//  *    [ Jxdc Jxdc^T + Jxsc Jxsc^T   Jxdc Jxdd^T + Jxsc Jxsd^T     ] [ y_c ] = same rhs_ as
+//  *    [ Jxdc Jxdd^T + Jxsd Jxsc^T   Jxdd Jxdd^T + Jxsd Jxsd^T + I ] [ y_d ]     above  
+  
+  hiopNlpMDS* nlpmds = dynamic_cast<hiopNlpMDS*>(_nlp);
+  assert(nullptr!=nlpmds);
+
+  hiopMatrixDense* M = dynamic_cast<hiopMatrixDense*>(M_);
+  hiopMatrixDense* _mexme = dynamic_cast<hiopMatrixDense*>(_mexme_);
+  hiopMatrixDense* _mexmi = dynamic_cast<hiopMatrixDense*>(_mexmi_);
+  hiopMatrixDense* _mixmi = dynamic_cast<hiopMatrixDense*>(_mixmi_);
+
+  //compute terms in M: Jc * Jc^T, J_c * J_d^T, and J_d * J_d^T
+  //! streamline the communication (use _mxm as a global buffer for the MPI_Allreduce)
+  jac_c.timesMatTrans(0.0, *_mexme, 1.0, jac_c);
+  jac_c.timesMatTrans(0.0, *_mexmi, 1.0, jac_d);
+  jac_d.timesMatTrans(0.0, *_mixmi, 1.0, jac_d);
+  _mixmi->addDiagonal(1.0);
+
+  M->copyBlockFromMatrix(0,0,*_mexme);
+  M->copyBlockFromMatrix(0, _nlp->m_eq(), *_mexmi);
+  M->copyBlockFromMatrix(_nlp->m_eq(),_nlp->m_eq(), *_mixmi);
+
+  //bailout in case there is an error in the Cholesky factorization
+  int info;
+  if((info=this->factorizeMat(*M))) {
+    _nlp->log->printf(hovError, "dual lsq update: error %d in the Cholesky factorization.\n", info);
+    return false;
+  }
+
+  // compute rhs_=[rhsc_,rhsd_]. 
+  // [ rhsc_ ] = - [ J_c   0 ] [ vecx ] 
+  // [ rhsd_ ]     [ J_d   I ] [ vecd ]
+  // [vecx,vecd] = - [ -\nabla f(xk) + zk_l-zk_u, - vk_l + vk_u]. 
+  hiopVector& vecx = *_vec_n_;
+  vecx.copyFrom(grad_f);
+  vecx.axpy(-1.0, *iter.get_zl());
+  vecx.axpy( 1.0, *iter.get_zu());
+
+  hiopVector& vecd = *_vec_mi_;
+  vecd.copyFrom(*iter.get_vl());
+  vecd.axpy(-1.0, *iter.get_vu());
+
+  jac_c.timesVec(0.0, *rhsc_, -1.0, vecx);
+  jac_d.timesVec(0.0, *rhsd_, -1.0, vecx);
+  rhsd_->axpy(-1.0, vecd);
+
+  rhs_->copyFromStarting(0, *rhsc_);
+  rhs_->copyFromStarting(_nlp->m_eq(), *rhsd_);
+
+  //_nlp->log->write("rhs_", *rhs_, hovSummary);
+
+  //solve for this rhs_
+  if((info=this->solveWithFactors(*M, *rhs_))) {
+    _nlp->log->printf(hovError, "dual lsq update: error %d in the solution process.\n", info);
+    return false;
+  }
+
+  //update yc and yd in iter_plus
+  rhs_->copyToStarting(0, *iter.get_yc());
+  rhs_->copyToStarting(_nlp->m_eq(), *iter.get_yd());
+
+  //_nlp->log->write("yc ini", *iter.get_yc(), hovSummary);
+  //_nlp->log->write("yd ini", *iter.get_yd(), hovSummary);
+  return true;
+};
 
 
 }; //~ end of namespace
