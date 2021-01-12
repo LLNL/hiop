@@ -209,14 +209,14 @@ public:
 	const int con_idx = (int) idx_cons[itrow];
 	if(con_idx<nsparse_-1) {
 	  //sparse Jacobian eq w.r.t. x and s
-	  //yk+1
-	  iJacS[nnzit] = con_idx;
-	  jJacS[nnzit] = con_idx+1; //1
-	  nnzit++;
-
 	  //yk
 	  iJacS[nnzit] = con_idx;
 	  jJacS[nnzit] = con_idx; //-1
+	  nnzit++;
+
+	  //yk+1
+	  iJacS[nnzit] = con_idx;
+	  jJacS[nnzit] = con_idx+1; //1
 	  nnzit++;
 
 	}else if(con_idx==nsparse_-1){
@@ -267,11 +267,11 @@ public:
 	{
 	  //sparse Jacobian eq w.r.t. x and s
 	  //yk+1
-	  MJacS[nnzit] = 1.;
+	  MJacS[nnzit] = -1.;
 	  nnzit++;
 
 	  //yk
-	  MJacS[nnzit] = -1.;
+	  MJacS[nnzit] = 1.;
 	  nnzit++;
 
 	}else if(con_idx==nsparse_-1)
