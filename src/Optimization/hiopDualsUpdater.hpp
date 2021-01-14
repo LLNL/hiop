@@ -124,17 +124,17 @@ public:
 					    const hiopMatrix& jac_c,
 					    const hiopMatrix& jac_d)
   {
-    if(update_type_==2)
+    if(augsys_update_)
     {
       return LSQInitDualSparse(it_ini,grad_f,jac_c,jac_d);
     }
-    else if(update_type_==1)
-    {
-      assert(0&&"not yet");
-      return LSQInitDualMDS(it_ini,grad_f,jac_c,jac_d);
-    }
+    assert(augsys_update_==false);
+    
+    
+    _nlp->log->printf(hovSummary,
+                      "LSQ Daul Initialization --- Dense linsys: size %d (%d eq-cons)\n",
+                      _nlp->m_eq()+_nlp->m_ineq(), _nlp->m_eq());  
 
-    assert(update_type_==0);
     return LSQUpdate(it_ini,grad_f,jac_c,jac_d);
   }
 private: //common code 
@@ -208,7 +208,7 @@ private:
    */
   double recalc_lsq_duals_tol;
   
-  int update_type_; //0:dense 1:mds 2:sparse
+  int augsys_update_; //0:dense 1:mds 2:sparse
                                 
   //helpers
   int factorizeMat(hiopMatrixDense& M);

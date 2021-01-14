@@ -125,10 +125,67 @@ void hiopMatrixSparseTriplet::transTimesMat(double beta, hiopMatrix& W,
   assert(false && "not needed");
 }
 
-void hiopMatrixSparseTriplet::timesMatTrans(double beta, hiopMatrix& W,
-					    double alpha, const hiopMatrix& X) const
+void hiopMatrixSparseTriplet::timesMatTrans(double beta, hiopMatrix& Wmat,
+					    double alpha, const hiopMatrix& M2mat) const
 {
-  assert(false && "not needed");
+  auto& W = dynamic_cast<hiopMatrixDense&>(Wmat);
+  const auto& M2 = dynamic_cast<const hiopMatrixSparseTriplet&>(M2mat);
+  const hiopMatrixSparseTriplet& M1 = *this;
+  const int m1 = M1.nrows_, nx = M1.ncols_, m2 = M2.nrows_;
+  assert(nx==M1.ncols_);
+  assert(nx==M2.ncols_);
+  assert(M2.ncols_ == nx);
+
+  assert(m1==W.m());
+  assert(m2==W.n());
+  
+  double* WM = W.local_data();
+  auto n_W = W.n();
+  
+  // TODO: allocAndBuildRowStarts -> should create row_starts internally (name='prepareRowStarts' ?)
+  if(M1.row_starts_==NULL) M1.row_starts_ = M1.allocAndBuildRowStarts();
+  assert(M1.row_starts_);
+
+  if(M2.row_starts_==NULL) M2.row_starts_ = M2.allocAndBuildRowStarts();
+  assert(M2.row_starts_);
+
+  double acc;
+
+  for(int i=0; i<m1; i++) 
+  {
+    // j>=i
+    for(int j=0; j<m2; j++)
+    {
+      acc = 0.;
+      int ki=M1.row_starts_->idx_start_[i];
+      int kj=M2.row_starts_->idx_start_[j];
+
+      while(ki<M1.row_starts_->idx_start_[i+1] && kj<M2.row_starts_->idx_start_[j+1])
+      {
+        assert(ki<M1.nnz_);
+        assert(kj<M2.nnz_);
+
+        if(M1.jCol_[ki] == M2.jCol_[kj])
+        {
+          // same col, so multiply and increment 
+          acc += M1.values_[ki] * M2.values_[kj];
+          ki++;
+          kj++;
+        } 
+        else if(M1.jCol_[ki]<M2.jCol_[kj])
+        {
+          // skip M1
+          ki++;
+        }
+        else
+        {
+          // skip M2
+          kj++;
+        }                     
+      } //end of while(ki... && kj...)
+      WM[(i)*n_W + j] = beta*WM[(i)*n_W + j] + alpha*acc;
+    } //end j
+  } // end i    
 }
 void hiopMatrixSparseTriplet::addDiagonal(const double& alpha, const hiopVector& d_)
 {

@@ -79,10 +79,19 @@ hiopDualsLsqUpdate::hiopDualsLsqUpdate(hiopNlpFormulation* nlp)
     _vec_n_(nullptr),_vec_mi_(nullptr),
     linSys_(nullptr),
     lsq_dual_init_max(1e3),
-    update_type_(0) 
+    augsys_update_(false) 
 {
-  hiopNlpDenseConstraints* nlpd = dynamic_cast<hiopNlpDenseConstraints*>(_nlp);
-  if(nullptr!=nlpd){
+  hiopNlpSparse* nlpsp = dynamic_cast<hiopNlpSparse*>(_nlp);
+  if(nullptr!=nlpsp)
+  {
+#ifndef HIOP_SPARSE
+      assert(0 && "should not reach here!");
+#endif // HIOP_SPARSE        
+      augsys_update_ = true;
+      rhs_    = LinearAlgebraFactory::createVector(_nlp->n() + _nlp->m_ineq() + _nlp->m());
+  }
+  else
+  {
     _mexme_ = LinearAlgebraFactory::createMatrixDense(_nlp->m_eq(),   _nlp->m_eq());
     _mexmi_ = LinearAlgebraFactory::createMatrixDense(_nlp->m_eq(),   _nlp->m_ineq());
     _mixmi_ = LinearAlgebraFactory::createMatrixDense(_nlp->m_ineq(), _nlp->m_ineq());
@@ -93,31 +102,8 @@ hiopDualsLsqUpdate::hiopDualsLsqUpdate(hiopNlpFormulation* nlp)
 #ifdef HIOP_DEEPCHECKS
   M_copy_ = M_->alloc_clone();
   rhs_copy_ = rhs_->alloc_clone();
-  _mixme_ = LinearAlgebraFactory::createMatrixDense(nlpd->m_ineq(), nlpd->m_eq());
+  _mixme_ = LinearAlgebraFactory::createMatrixDense(_nlp->m_ineq(), _nlp->m_eq());
 #endif
-  }else{    
-    hiopNlpSparse* nlpsp = dynamic_cast<hiopNlpSparse*>(_nlp);
-    if(nullptr!=nlpsp){
-#ifndef HIOP_SPARSE
-      assert(0 && "should not reach here!");
-#endif // HIOP_SPARSE        
-      update_type_ = 2;
-      rhs_    = LinearAlgebraFactory::createVector(_nlp->n() + _nlp->m_ineq() + _nlp->m());
-    }else{
-      hiopNlpMDS* nlpmds = dynamic_cast<hiopNlpMDS*>(_nlp);
-      assert(nullptr!=nlpmds);
-      update_type_ = 1;
-
-      _mexme_ = LinearAlgebraFactory::createMatrixDense(_nlp->m_eq(),   _nlp->m_eq());
-      _mexmi_ = LinearAlgebraFactory::createMatrixDense(_nlp->m_eq(),   _nlp->m_ineq());
-      _mixmi_ = LinearAlgebraFactory::createMatrixDense(_nlp->m_ineq(), _nlp->m_ineq());
-      _mxm_   = LinearAlgebraFactory::createMatrixDense(_nlp->m(), _nlp->m());
-
-      M_      = LinearAlgebraFactory::createMatrixDense(_nlp->m(), _nlp->m());
-      rhs_    = LinearAlgebraFactory::createVector(_nlp->m());
-
-      assert(0&&"not yet");    
-    }
   }
 
   rhsc_   = _nlp->alloc_dual_eq_vec();
@@ -213,7 +199,7 @@ go(const hiopIterate& iter,  hiopIterate& iter_plus,
  * dense linear system is to be solved for y_c and y_d
  *
  *    [ Jxdc Jxdc^T + Jxsc Jxsc^T   Jxdc Jxdd^T + Jxsc Jxsd^T     ] [ y_c ] = same rhs_ as
- *    [ Jxdc Jxdd^T + Jxsd Jxsc^T   Jxdd Jxdd^T + Jxsd Jxsd^T + I ] [ y_d ]     above
+ *    [ Jxdd Jxdc^T + Jxsd Jxsc^T   Jxdd Jxdd^T + Jxsd Jxsd^T + I ] [ y_d ]     above
  * The above linear system is dense and requires dense-dense^T matrix and sparse-sparse^T 
  * matrix multiplications. All such multiplication operations are provided by the dense and
  * sparse matrices. (@ny: hiopLinsysMDS::update forms a similar linear system)
@@ -231,9 +217,6 @@ go(const hiopIterate& iter,  hiopIterate& iter_plus,
 bool hiopDualsLsqUpdate::
 LSQUpdate(hiopIterate& iter, const hiopVector& grad_f, const hiopMatrix& jac_c, const hiopMatrix& jac_d)
 {
-  hiopNlpDenseConstraints* nlpd = dynamic_cast<hiopNlpDenseConstraints*>(_nlp);
-  assert(nullptr!=nlpd);
-
   hiopMatrixDense* M = dynamic_cast<hiopMatrixDense*>(M_);
   hiopMatrixDense* _mexme = dynamic_cast<hiopMatrixDense*>(_mexme_);
   hiopMatrixDense* _mexmi = dynamic_cast<hiopMatrixDense*>(_mexmi_);

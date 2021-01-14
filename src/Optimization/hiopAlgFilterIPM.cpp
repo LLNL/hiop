@@ -252,21 +252,12 @@ void hiopAlgFilterIPMBase::reloadOptions()
 
   if(dualsUpdateType==0) {
     hiopNlpDenseConstraints* nlpd = dynamic_cast<hiopNlpDenseConstraints*>(nlp);
-    hiopNlpSparse* nlpsp = dynamic_cast<hiopNlpSparse*>(nlp);
-    if(NULL==nlpd && nullptr==nlpsp) {
-      // this is mds linear algebra
-      dualsUpdateType = 1;
-      dualsInitializ = 1;
-      //if(warnOnInconsistencies)
-      nlp->log->printf(hovWarning,
-		       "Option dualsUpdateType=lsq not compatible with the requested NLP formulation. "
-		       " Will use dualsUpdateType=linear together with dualsInitialization=zero\n");
-    }else if(NULL==nlpd){
-      // this is sparse linear algebra
+    if(NULL==nlpd){
+      // this is sparse or mds linear algebra
       dualsUpdateType = 1;
       nlp->log->printf(hovWarning,
 		       "Option dualsUpdateType=lsq not compatible with the requested NLP formulation. "
-		       " Will use dualsUpdateType=linear but dualsInitialization=zero\n");      
+		       " Will use dualsUpdateType=linear.\n");      
     }
   }
 
