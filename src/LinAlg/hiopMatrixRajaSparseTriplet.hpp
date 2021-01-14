@@ -97,7 +97,7 @@ public:
 
   virtual void transTimesMat(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const;
 
-  virtual void timesMatTrans(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const;
+  virtual void timesMatTrans(double beta, hiopMatrix& Wmat, double alpha, const hiopMatrix& M2mat) const;
 
   virtual void addDiagonal(const double& alpha, const hiopVector& d_);
   virtual void addDiagonal(const double& value);

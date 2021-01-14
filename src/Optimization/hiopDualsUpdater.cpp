@@ -100,18 +100,29 @@ hiopDualsLsqUpdate::hiopDualsLsqUpdate(hiopNlpFormulation* nlp)
     M_      = LinearAlgebraFactory::createMatrixDense(_nlp->m(), _nlp->m());
     rhs_    = LinearAlgebraFactory::createVector(_nlp->m());
 #ifdef HIOP_DEEPCHECKS
-  M_copy_ = M_->alloc_clone();
-  rhs_copy_ = rhs_->alloc_clone();
+  M_copy_ = LinearAlgebraFactory::createMatrixDense(_nlp->m(), _nlp->m());
+  rhs_copy_ = LinearAlgebraFactory::createVector(_nlp->m());
   _mixme_ = LinearAlgebraFactory::createMatrixDense(_nlp->m_ineq(), _nlp->m_eq());
 #endif
   }
 
-  rhsc_   = _nlp->alloc_dual_eq_vec();
+  hiopNlpDenseConstraints* nlpd = dynamic_cast<hiopNlpDenseConstraints*>(_nlp);
+  if(nullptr!=nlpd)
+  {
+    rhsc_   = nlpd->alloc_dual_eq_vec();
+    rhsd_   = nlpd->alloc_dual_ineq_vec();
+    _vec_n_ = nlpd->alloc_primal_vec();
+    _vec_mi_= nlpd->alloc_dual_ineq_vec();
+  }
+  else
+  {
+    rhsc_ = LinearAlgebraFactory::createVector(_nlp->m_eq());
+    rhsd_ = LinearAlgebraFactory::createVector(_nlp->m_ineq());
+    _vec_n_ = LinearAlgebraFactory::createVector(_nlp->n());
+    _vec_mi_ = LinearAlgebraFactory::createVector(_nlp->m_ineq());     
+  }
   rhsc_->setToZero();
-  rhsd_   = _nlp->alloc_dual_ineq_vec();
   rhsd_->setToZero();
-  _vec_n_ = _nlp->alloc_primal_vec();
-  _vec_mi_= _nlp->alloc_dual_ineq_vec();
 
   //user options
   recalc_lsq_duals_tol = 1e-6;
@@ -257,23 +268,18 @@ LSQUpdate(hiopIterate& iter, const hiopVector& grad_f, const hiopMatrix& jac_c, 
   vecx.copyFrom(grad_f);
   vecx.axpy(-1.0, *iter.get_zl());
   vecx.axpy( 1.0, *iter.get_zu());
-
   hiopVector& vecd = *_vec_mi_;
   vecd.copyFrom(*iter.get_vl());
   vecd.axpy(-1.0, *iter.get_vu());
-
   jac_c.timesVec(0.0, *rhsc_, -1.0, vecx);
   jac_d.timesVec(0.0, *rhsd_, -1.0, vecx);
   rhsd_->axpy(-1.0, vecd);
-
   rhs_->copyFromStarting(0, *rhsc_);
   rhs_->copyFromStarting(_nlp->m_eq(), *rhsd_);
-
   //_nlp->log->write("rhs_", *rhs_, hovSummary);
 #ifdef HIOP_DEEPCHECKS
   rhs_copy_->copyFrom(*rhs_);
 #endif
-
   //solve for this rhs_
   if((info=this->solveWithFactors(*M, *rhs_))) {
     _nlp->log->printf(hovError, "dual lsq update: error %d in the solution process.\n", info);

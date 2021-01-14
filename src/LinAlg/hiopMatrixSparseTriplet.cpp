@@ -182,7 +182,7 @@ void hiopMatrixSparseTriplet::timesMatTrans(double beta, hiopMatrix& Wmat,
           // skip M2
           kj++;
         }                     
-      } //end of while(ki... && kj...)
+      } //end of loop over ki and kj
       WM[(i)*n_W + j] = beta*WM[(i)*n_W + j] + alpha*acc;
     } //end j
   } // end i    

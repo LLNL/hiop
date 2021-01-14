@@ -136,10 +136,13 @@ int main(int argc, char** argv)
       hiop::LinearAlgebraFactory::createMatrixSparse(M2, N_global, nnz);
     test.initializeMatrix(m2xn_sparse, entries_per_row);
 
+    hiop::hiopMatrixDenseRowMajor mxm2_dense(M_global, M2);
+    
     // Set offsets where to insert sparse matrix
     local_ordinal_type i_offset = 1;
     local_ordinal_type j_offset = M2 + 1;
 
+    fail += test.matrixTimesMatTrans(*mxn_sparse, *m2xn_sparse, mxm2_dense);
     fail += test.matrixAddMDinvNtransToSymDeMatUTri(*mxn_sparse, *m2xn_sparse, vec_n, W_dense, i_offset, j_offset);
     
     // copy the 1st row of mxn_sparse to the last row.
@@ -207,10 +210,13 @@ int main(int argc, char** argv)
     hiop::hiopMatrixRajaSparseTriplet m2xn_sparse(M2, N_global, nnz, mem_space);
     test.initializeMatrix(&m2xn_sparse, entries_per_row);
 
+    hiop::hiopMatrixRajaDense mxm2_dense(M_global, M2, mem_space);
+
     // Set offsets where to insert sparse matrix
     local_ordinal_type i_offset = 1;
     local_ordinal_type j_offset = M2 + 1;
 
+    fail += test.matrixTimesMatTrans(*mxn_sparse, m2xn_sparse, mxm2_dense);
     fail += test.matrixAddMDinvNtransToSymDeMatUTri(*mxn_sparse, m2xn_sparse, vec_n, W_dense, i_offset, j_offset);
 
     // Remove testing objects
