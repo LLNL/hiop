@@ -162,29 +162,6 @@ private: //common code
 			 const hiopMatrix& jac_c,
 			 const hiopMatrix& jac_d);
 
-  /**
-   * @brief LSQ-based initialization for MDS linear algebra.
-   *
-   * NLPs with MDS Jac/Hes
-   * ******************************
-   * For MDS NLPs, the linear system exploits the block structure of the Jacobians Jc and Jd. 
-   * Namely, since Jc = [Jxdc  Jxsc] and Jd = [Jxdd  Jxsd], the following
-   * dense linear system is to be solved for y_c and y_d
-   *
-   *    [ Jxdc Jxdc^T + Jxsc Jxsc^T   Jxdc Jxdd^T + Jxsc Jxsd^T     ] [ y_c ] = rhs_
-   *    [ Jxdc Jxdd^T + Jxsd Jxsc^T   Jxdd Jxdd^T + Jxsd Jxsd^T + I ] [ y_d ]
-   *
-   *  rhs_ = [ J_c   0 ] [ -\nabla f(xk) + zk_l-zk_u  ] 
-   *       = [ J_d   I ] [ - vk_l + vk_u              ]
-   *
-   * The matrix of the above system is stored in the member variable M_ of this class and the
-   * right-hand side in 'rhs'.   *
-   */
-  virtual bool LSQInitDualMDS(hiopIterate& it,
-			 const hiopVector& grad_f,
-			 const hiopMatrix& jac_c,
-			 const hiopMatrix& jac_d);
-
 private:
   hiopMatrix *_mexme_, *_mexmi_, *_mixmi_, *_mxm_;
   hiopMatrix *M_;

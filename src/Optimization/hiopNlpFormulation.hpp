@@ -217,6 +217,7 @@ public:
   inline MPI_Comm get_comm() const { return comm; }
   inline int      get_rank() const { return rank; }
   inline int      get_num_ranks() const { return num_ranks; }
+  inline long long* get_vec_distrib() const {return vec_distrib;}
 #endif
 protected:
 #ifdef HIOP_USE_MPI
