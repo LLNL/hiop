@@ -1,6 +1,5 @@
 // Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
-// Written by Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
@@ -149,7 +148,6 @@ hiopDualsLsqUpdate::~hiopDualsLsqUpdate()
 #endif
 }
 
-
 bool hiopDualsLsqUpdate::
 go(const hiopIterate& iter,  hiopIterate& iter_plus,
    const double& f, const hiopVector& c, const hiopVector& d,
@@ -175,7 +173,8 @@ go(const hiopIterate& iter,  hiopIterate& iter_plus,
 
   //return if the constraint violation (primal infeasibility) is not below the tol for the LSQ update
   if(infeas_nrm_trial>recalc_lsq_duals_tol) {
-    _nlp->log->printf(hovScalars, "will not perform the dual lsq update since the primal infeasibility (%g) "
+    _nlp->log->printf(hovScalars,
+                      "will not perform the dual lsq update since the primal infeasibility (%g) "
 		      "is not under the tolerance recalc_lsq_duals_tol=%g.\n",
 		      infeas_nrm_trial, recalc_lsq_duals_tol);
     return true;
@@ -212,19 +211,19 @@ go(const hiopIterate& iter,  hiopIterate& iter_plus,
  *
  *    [ Jxdc Jxdc^T + Jxsc Jxsc^T   Jxdc Jxdd^T + Jxsc Jxsd^T     ] [ y_c ] = same rhs_ as
  *    [ Jxdd Jxdc^T + Jxsd Jxsc^T   Jxdd Jxdd^T + Jxsd Jxsd^T + I ] [ y_d ]     above
- * The above linear system is dense and requires dense-dense^T matrix and sparse-sparse^T 
- * matrix multiplications. All such multiplication operations are provided by the dense and
- * sparse matrices. (@ny: hiopLinsysMDS::update forms a similar linear system)
- * Once assembled, the above linear system can be solved using HiOp's symmetric linear 
- * system class. (@ny: the system is pos.def., and since I think we do not have CPU and GPU
- * classes for Cholesky, I suggest we solve it with LAPACK sym indef (on CPU) and Magma NoPiv
- * on GPU). 
+ * The above linear system is solved as a dense linear system. 
  *
  * ***********************
  * Sparse (general) NLPs
  * ***********************
- * @ny - the augmented approach? (with I on (1,1) if I recall correctly from the impl
- * paper of Biegler and Waechter)
+ * For NLPs with sparse inputs, the corresponding LSQ problem is solved in augmeted system:
+ * [    I    0     Jc^T  Jd^T  ] [ dx]      [ \nabla f(xk) - zk_l + zk_u  ]
+ * [    0    I     0     -I    ] [ dd]      [ -vk_l + vk_u ]
+ * [    Jc   0     0     0     ] [dyc] =  - [   0    ]
+ * [    Jd   -I    0     0     ] [dyd]      [   0    ]         ]
+ *
+ * The matrix of the above system is stored in the member variable M_ of this class and the
+ * right-hand side in 'rhs'.  * 
  */
 bool hiopDualsLsqUpdate::
 LSQUpdate(hiopIterate& iter, const hiopVector& grad_f, const hiopMatrix& jac_c, const hiopMatrix& jac_d)
@@ -297,13 +296,15 @@ LSQUpdate(hiopIterate& iter, const hiopVector& grad_f, const hiopMatrix& jac_c, 
   double nrmres = rhs_copy_->twonorm() / (1+nrmrhs);
   if(nrmres>1e-4) {
     _nlp->log->printf(hovError,
-		      "hiopDualsLsqUpdate::LSQUpdate linear system residual is dangerously high: %g\n", nrmres);
+		      "hiopDualsLsqUpdate::LSQUpdate linear system residual is dangerously high: %g\n",
+                      nrmres);
     assert(false && "hiopDualsLsqUpdate::LSQUpdate linear system residual is dangerously high");
     return false;
   } else {
     if(nrmres>1e-6)
       _nlp->log->printf(hovWarning,
-			"hiopDualsLsqUpdate::LSQUpdate linear system residual is dangerously high: %g\n", nrmres);
+			"hiopDualsLsqUpdate::LSQUpdate linear system residual is dangerously high: %g\n",
+                        nrmres);
   }
 #endif
 
@@ -320,11 +321,15 @@ int hiopDualsLsqUpdate::factorizeMat(hiopMatrixDense& M)
   if(M.m()==0) return 0;
   char uplo='L'; int N=M.n(), lda=N, info;
   DPOTRF(&uplo, &N, M.local_data(), &lda, &info);
-  if(info>0)
-    _nlp->log->printf(hovError, "hiopKKTLinSysLowRank::factorizeMat: dpotrf (Chol fact) detected %d minor being indefinite.\n", info);
-  else
-    if(info<0) 
+  if(info>0) {
+    _nlp->log->printf(hovError,
+                      "hiopKKTLinSysLowRank::factorizeMat: dpotrf (Chol fact) detected "
+                      "%d minor being indefinite.\n", info);
+  } else {
+    if(info<0) { 
       _nlp->log->printf(hovError, "hiopKKTLinSysLowRank::factorizeMat: dpotrf returned error %d\n", info);
+    }
+  }
   assert(info==0);
   return info;
 }
@@ -346,8 +351,10 @@ int hiopDualsLsqUpdate::solveWithFactors(hiopMatrixDense& M, hiopVector& r)
   return info;
 }
 
-bool hiopDualsLsqUpdate::
-LSQInitDualSparse(hiopIterate& iter, const hiopVector& grad_f, const hiopMatrix& jac_c, const hiopMatrix& jac_d)
+bool hiopDualsLsqUpdate::LSQInitDualSparse(hiopIterate& iter,
+                                           const hiopVector& grad_f,
+                                           const hiopMatrix& jac_c,
+                                           const hiopMatrix& jac_d)
 {
   hiopNlpSparse* nlpsp = dynamic_cast<hiopNlpSparse*>(_nlp);
   assert(nullptr!=nlpsp);
@@ -365,32 +372,34 @@ LSQInitDualSparse(hiopIterate& iter, const hiopVector& grad_f, const hiopMatrix&
     if(_nlp->options->GetString("compute_mode")=="cpu")
     {
       _nlp->log->printf(hovSummary,
-                        "LSQ Daul Initialization --- KKT_SPARSE_XYcYd linsys: MA57 size %d (%d cons)\n",
+                        "LSQ Dual Initialization --- KKT_SPARSE_XYcYd linsys: MA57 size %d (%d cons)\n",
                         n, neq+nineq);
-  #ifdef HIOP_USE_COINHSL			    
+#ifdef HIOP_USE_COINHSL			    
       linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, _nlp);
-  #endif // HIOP_USE_COINHSL          
-    }else{
-  #ifdef HIOP_USE_STRUMPACK        
+#endif // HIOP_USE_COINHSL          
+    } else {
+#ifdef HIOP_USE_STRUMPACK        
       hiopLinSolverIndefSparseSTRUMPACK *p = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, _nlp);
-
+      
       _nlp->log->printf(hovSummary,
-                        "LSQ Daul Initialization --- KKT_SPARSE_XDYcYd linsys: using STRUMPACK as an indefinite solver, size %d (%d cons) (safe_mode=%d)\n",
+                        "LSQ Dual Initialization --- KKT_SPARSE_XDYcYd linsys: using STRUMPACK as an "
+                        "indefinite solver, size %d (%d cons) (safe_mode=%d)\n",
                         n, neq+nineq);
-          
+      
       p->setFakeInertia(neq + nineq);
       linSys_ = p;
-  #else
-  #ifdef HIOP_USE_COINHSL
-          _nlp->log->printf(hovSummary,
-                            "LSQ Daul Initialization --- KKT_SPARSE_XDYcYd linsys: using MA57 on CPU size %d (%d cons)\n",
-                            n, neq+nineq);                             
-          linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, _nlp);
-  #endif // HIOP_USE_COINHSL
-  #endif // HIOP_USE_STRUMPACK
+#else
+#ifdef HIOP_USE_COINHSL
+      _nlp->log->printf(hovSummary,
+                        "LSQ Dual Initialization --- KKT_SPARSE_XDYcYd linsys: using MA57 on CPU size "
+                        "%d (%d cons)\n",
+                        n, neq+nineq);                             
+      linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, _nlp);
+#endif // HIOP_USE_COINHSL
+#endif // HIOP_USE_STRUMPACK
     }
   }
-
+  
   hiopLinSolverIndefSparse* linSys = dynamic_cast<hiopLinSolverIndefSparse*> (linSys_);
   assert(linSys);
 
@@ -401,30 +410,34 @@ LSQInitDualSparse(hiopIterate& iter, const hiopVector& grad_f, const hiopMatrix&
 
     // copy Jac and Hes to the full iterate matrix
     long long dest_nnz_st{0};
-    Msys.copyDiagMatrixToSubblock(1., 0, 0, dest_nnz_st, nx+nd); dest_nnz_st += nx+nd;
-    Msys.copyRowsBlockFrom(Jac_cSp, 0,   neq,    nx+nd,      dest_nnz_st); dest_nnz_st += Jac_cSp.numberOfNonzeros();
-    Msys.copyRowsBlockFrom(Jac_dSp, 0,   nineq,  nx+nd+neq,  dest_nnz_st); dest_nnz_st += Jac_dSp.numberOfNonzeros();
+    Msys.copyDiagMatrixToSubblock(1., 0, 0, dest_nnz_st, nx+nd);
+    dest_nnz_st += nx+nd;
+    Msys.copyRowsBlockFrom(Jac_cSp, 0,   neq,    nx+nd,      dest_nnz_st);
+    dest_nnz_st += Jac_cSp.numberOfNonzeros();
+    Msys.copyRowsBlockFrom(Jac_dSp, 0,   nineq,  nx+nd+neq,  dest_nnz_st);
+    dest_nnz_st += Jac_dSp.numberOfNonzeros();
 
     // minus identity matrix for slack variables
-    Msys.copyDiagMatrixToSubblock(-1., nx+nd+neq, nx, dest_nnz_st, nineq); dest_nnz_st += nineq;
+    Msys.copyDiagMatrixToSubblock(-1., nx+nd+neq, nx, dest_nnz_st, nineq);
+    dest_nnz_st += nineq;
 
     //add 0.0 to diagonal block linSys starting at (0,0)
-    Msys.setSubDiagonalTo(0, nx+nd+neq+nineq, 0.0, dest_nnz_st); dest_nnz_st += nx+nd+neq+nineq;
+    Msys.setSubDiagonalTo(0, nx+nd+neq+nineq, 0.0, dest_nnz_st);
+    dest_nnz_st += nx+nd+neq+nineq;
           
-	 /* we've just done
+    /* we've just done
     *
     * [    I    0     Jc^T  Jd^T  ] [ dx]   [ rx_tilde ]
     * [    0    I     0     -I    ] [ dd]   [ rd_tilde ]
     * [    Jc   0     0     0     ] [dyc] = [   ryc    ]
     * [    Jd   -I    0     0     ] [dyd]   [   ryd    ]
-	  */
-	  _nlp->log->write("LSQ Daul Initialization --- KKT_SPARSE_XDYcYd linsys:", Msys, hovMatrices);
+    */
+    _nlp->log->write("LSQ Dual Initialization --- KKT_SPARSE_XDYcYd linsys:", Msys, hovMatrices);
   }
 
   int ret_val = linSys->matrixChanged();
 
-  if(ret_val<0)
-  {
+  if(ret_val<0) {
     _nlp->log->printf(hovError, "dual lsq update: error %d in the factorization.\n", ret_val);
     return false;
   } 

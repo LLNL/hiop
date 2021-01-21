@@ -1,6 +1,5 @@
 // Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
-// Written by Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
@@ -49,8 +48,8 @@
 /**
  * @file hiopDualsUpdater.hpp
  *
- * @author Cosmin G. Petra <petra1@llnl.gov>,  LLNL
  * @author Nai-Yuan Chiang <chiang7@llnl.gov>,  LLNL
+ * @author Cosmin G. Petra <petra1@llnl.gov>,  LLNL
  *
  */
  
@@ -118,7 +117,7 @@ public:
 		  const hiopIterate& search_dir, const double& alpha_primal, const double& alpha_dual,
 		  const double& mu, const double& kappa_sigma, const double& infeas_nrm_trial);
 
-  /** LSQ-based initialization of the  constraints duals (yc and yd). Source file describe the math. */
+  /** LSQ-based initialization of the  constraints duals (yc and yd). Source file describes the math. */
   virtual inline bool computeInitialDualsEq(hiopIterate& it_ini,
 					    const hiopVector& grad_f,
 					    const hiopMatrix& jac_c,
@@ -126,22 +125,26 @@ public:
   {
     if(augsys_update_)
     {
+      _nlp->log->printf(hovSummary,
+                        "LSQ Dual Initialization --- Sparse linsys: size %d (%d eq-cons)\n",
+                        _nlp->m_eq()+_nlp->m_ineq(), _nlp->m_eq());  
+
       return LSQInitDualSparse(it_ini,grad_f,jac_c,jac_d);
     }
     assert(augsys_update_==false);
     
     
     _nlp->log->printf(hovSummary,
-                      "LSQ Daul Initialization --- Dense linsys: size %d (%d eq-cons)\n",
+                      "LSQ Dual Initialization --- Dense linsys: size %d (%d eq-cons)\n",
                       _nlp->m_eq()+_nlp->m_ineq(), _nlp->m_eq());  
 
     return LSQUpdate(it_ini,grad_f,jac_c,jac_d);
   }
 private: //common code 
   virtual bool LSQUpdate(hiopIterate& it,
-			 const hiopVector& grad_f,
-			 const hiopMatrix& jac_c,
-			 const hiopMatrix& jac_d);
+                         const hiopVector& grad_f,
+                         const hiopMatrix& jac_c,
+                         const hiopMatrix& jac_d);
 
   /**
    * @brief LSQ-based initialization for sparse linear algebra.
@@ -197,6 +200,10 @@ private:
   
 };
 
+/** 
+ * Performs Newton update for the duals, which is a simple linear update along the dual Newton direction
+ * with a given dual step.
+ */ 
 class hiopDualsNewtonLinearUpdate : public hiopDualsUpdater
 {
 public:
@@ -219,7 +226,6 @@ public:
     }
     return iter_plus.adjustDuals_primalLogHessian(mu,kappa_sigma);
   }
-
 
 private: 
   hiopDualsNewtonLinearUpdate() {};
