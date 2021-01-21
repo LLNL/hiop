@@ -51,6 +51,7 @@
 #include <cstring> //for memcpy
 #include <algorithm>
 #include <cassert>
+#include <iostream>
 
 #include "hiop_blasdefs.hpp"
 
@@ -645,12 +646,20 @@ bool hiopVectorPar::projectIntoBounds_local(const hiopVector& xl_, const hiopVec
       
 #endif
     } else {
-      if(ixl[i]!=0.)
-	x0[i] = fmax(x0[i], xl[i]+kappa1*fmax(1, fabs(xl[i]))-small_double);
+      if(ixl[i]!=0.){
+        if(small_double>0.0)
+          x0[i] = fmax(x0[i], xl[i]+kappa1*fmax(1, fabs(xl[i])));
+        else
+          x0[i] = fmax(x0[i], xl[i]+fmin(kappa1*fmax(1, fabs(xl[i])),-small_double));
+      }
       else 
-	if(ixu[i]!=0)
-	  x0[i] = fmin(x0[i], xu[i]-kappa1*fmax(1, fabs(xu[i]))-small_double);
-	else { /*nothing for free vars  */ }
+	      if(ixu[i]!=0)
+        {
+          if(small_double>0.0)
+	          x0[i] = fmin(x0[i], xu[i]-kappa1*fmax(1, fabs(xu[i])));
+          else
+            x0[i] = fmin(x0[i], fmin(xu[i]-kappa1*fmax(1, fabs(xu[i])),-small_double));
+        }else { /*nothing for free vars  */ }
     }
   }
   return true;
@@ -793,6 +802,13 @@ bool hiopVectorPar::isfinite_local() const
 {
   for(long long i=0; i<n_local_; i++) if(0==std::isfinite(data_[i])) return false;
   return true;
+}
+
+void hiopVectorPar::print()
+{
+  int max_elems = n_local_;
+  for(int it=0; it<max_elems; it++)  
+    printf("vec [%d] = %1.16e\n",it+1,data_[it]);
 }
 
 void hiopVectorPar::print(FILE* file, const char* msg/*=NULL*/, int max_elems/*=-1*/, int rank/*=-1*/) const 

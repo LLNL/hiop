@@ -2,3 +2,4 @@
 build
 src/Drivers/ipopt.opt
 _dist-default-build
+_dist-DEBUG

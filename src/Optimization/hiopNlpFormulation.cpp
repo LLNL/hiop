@@ -1248,9 +1248,17 @@ bool hiopNlpSparse::eval_Jac_c_d_interface_impl(hiopVector& x,
     runStats.tmEvalJac_con.start();
 
     int nnz = cons_Jac->numberOfNonzeros();
-    bool bret = interface.eval_Jac_cons(n_vars, n_cons,
-                                      x_user->local_data_const(), new_x,
-                                      nnz, cons_Jac->i_row(), cons_Jac->j_col(), cons_Jac->M());
+    bool bret=false;
+    if(0==num_jac_eval_)
+    {
+      bret = interface.eval_Jac_cons(n_vars, n_cons,
+                                     x_user->local_data_const(), new_x,
+                                     nnz, cons_Jac->i_row(), cons_Jac->j_col(), nullptr);
+    }
+    
+    bret = interface.eval_Jac_cons(n_vars, n_cons,
+                                   x_user->local_data_const(), new_x,
+                                   nnz, nullptr, nullptr, cons_Jac->M());
 
     //copy back to Jac_c and Jac_d
     pJac_c->copyRowsFrom(*cons_Jac, cons_eq_mapping_, n_cons_eq);
@@ -1289,10 +1297,18 @@ bool hiopNlpSparse::eval_Hess_Lagr(const hiopVector&  x, bool new_x, const doubl
 
     int nnzHSS = pHessL->numberOfNonzeros(), nnzHSD = 0;
 
+    if(0==num_hess_eval_)
+    {
+      bret = interface.eval_Hess_Lagr(n_vars, n_cons,
+                                      x.local_data_const(), new_x, obj_factor,
+                                      _buf_lambda->local_data(), new_lambdas,
+                                      nnzHSS, pHessL->i_row(), pHessL->j_col(), nullptr);
+    }
+
     bret = interface.eval_Hess_Lagr(n_vars, n_cons,
                                     x.local_data_const(), new_x, obj_factor,
                                     _buf_lambda->local_data(), new_lambdas,
-                                    nnzHSS, pHessL->i_row(), pHessL->j_col(), pHessL->M());
+                                    nnzHSS, nullptr, nullptr, pHessL->M());
     assert(nnzHSS==pHessL->numberOfNonzeros());
 
   } else {

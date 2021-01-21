@@ -419,7 +419,8 @@ public:
   // TODO: notsure we need this
 
   hiopNlpSparse(hiopInterfaceSparse& interface_)
-    : hiopNlpFormulation(interface_), interface(interface_)
+    : hiopNlpFormulation(interface_), interface(interface_),
+      num_jac_eval_{0}, num_hess_eval_{0}
   {
     _buf_lambda = LinearAlgebraFactory::createVector(0);
   }
@@ -472,6 +473,8 @@ private:
   int m_nx;
   int m_nnz_sparse_Jaceq, m_nnz_sparse_Jacineq;
   int m_nnz_sparse_Hess_Lagr;
+  int num_jac_eval_;
+  int num_hess_eval_;
 
   hiopVector* _buf_lambda;
 };
