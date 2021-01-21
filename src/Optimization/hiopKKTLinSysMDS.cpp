@@ -434,10 +434,6 @@ namespace hiop
 	// when i. fails (in factorization, solve, or outer optimization loop--ascent direction--) employ
 	// ii. Magma BunchKaufman + inertia correction
 	//
-	// //! todo Performance of ii. can be improved if 
-	//------------
-	// - Magma would have a GPU routine for computing inertia
-	// - triangular solves would be done on CPU
 
 	if(safe_mode_) {
 
@@ -450,17 +446,19 @@ namespace hiop
 	  
 	  linSys_ = new hiopLinSolverIndefDenseMagmaBuKa(n, nlp_);
 	} else {
-          auto hovLevel = hovScalars;
-          if(switched_linsolvers) hovLevel = hovWarning;
-          
-          nlp_->log->printf(hovLevel, 
-                            "KKT_MDS_XYcYd linsys: MagmaNopiv size %d (%d cons) (safe_mode=%d)\n", 
-                            n, neq+nineq, safe_mode_);
-          
-          hiopLinSolverIndefDenseMagmaNopiv* p = new hiopLinSolverIndefDenseMagmaNopiv(n, nlp_);
-          linSys_ = p;
-          p->setFakeInertia(neq + nineq);
-        }
+
+	  auto hovLevel = hovScalars;
+	  if(switched_linsolvers) hovLevel = hovWarning;
+
+	  nlp_->log->printf(hovLevel, 
+			    "KKT_MDS_XYcYd linsys: MagmaNopiv size %d (%d cons) (safe_mode=%d)\n", 
+			    n, neq+nineq, safe_mode_);
+	  
+          linSys_ = new hiopLinSolverIndefDenseMagmaNopiv(n, nlp_);
+	  //hiopLinSolverIndefDenseMagmaNopiv* p = new hiopLinSolverIndefDenseMagmaNopiv(n, nlp_);
+	  //linSys_ = p;
+	  //p->set_fake_inertia(neq + nineq);
+	}
       } else {
     	  nlp_->log->printf(hovScalars, "KKT_MDS_XYcYd linsys: Lapack for a matrix of size %d [2]\n", n);
     	  linSys_ = new hiopLinSolverIndefDenseLapack(n, nlp_);

@@ -4,6 +4,7 @@ fi
 export MY_CLUSTER="marianas"
 export PROJ_DIR=/qfs/projects/exasgd
 export APPS_DIR=/share/apps
+export SPACK_ARCH=linux-centos7-broadwell
 #  NOTE: The following is required when running from Gitlab CI via slurm job
 source /etc/profile.d/modules.sh
 module use -a /share/apps/modules/Modules/versions
@@ -14,11 +15,12 @@ module use -a $MODULESHOME/modulefiles/development/compilers
 module use -a $MODULESHOME/modulefiles/development/tools
 module use -a $MODULESHOME/modulefiles/apps
 module use -a $MODULESHOME/modulefiles/libs
+module use -a $PROJ_DIR/src/spack/share/spack/modules/$SPACK_ARCH/
 export MY_GCC_VERSION=7.3.0
 export MY_CUDA_VERSION=10.2.89
 export MY_OPENMPI_VERSION=3.1.3
 export MY_CMAKE_VERSION=3.15.3
-export MY_MAGMA_VERSION=2.5.2_cuda10.2
+export MY_MAGMA_VERSION=2.5.4-gcc-7.3.0-bwwsayw
 export MY_METIS_VERSION=5.1.0
 export MY_NVCC_ARCH="sm_60"
 

@@ -3,6 +3,7 @@ if [ ! -v BUILDDIR ]; then
 fi
 export PROJ_DIR=/qfs/projects/exasgd
 export APPS_DIR=/share/apps
+export SPACK_ARCH=linux-rhel7-power9le
 #  NOTE: The following is required when running from Gitlab CI via slurm job
 source /etc/profile.d/modules.sh
 module use -a /usr/share/Modules/modulefiles
@@ -10,11 +11,12 @@ module use -a /share/apps/modules/tools
 module use -a /share/apps/modules/compilers
 module use -a /share/apps/modules/mpi
 module use -a /etc/modulefiles
+module use -a $PROJ_DIR/src/spack/share/spack/modules/$SPACK_ARCH/
 export MY_GCC_VERSION=7.4.0
 export MY_CUDA_VERSION=10.2
 export MY_OPENMPI_VERSION=3.1.5
 export MY_CMAKE_VERSION=3.16.4
-export MY_MAGMA_VERSION=2.5.2_cuda10.2
+export MY_MAGMA_VERSION=2.5.4-gcc-7.4.0-jss5aen
 export MY_METIS_VERSION=5.1.0
 export MY_NVCC_ARCH="sm_70"
 
