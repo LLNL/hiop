@@ -511,12 +511,6 @@ void hiopOptions::loadFromFile(const char* filename)
   } //end of the for over the lines
 }
 
-
-bool hiopOptions::set_val(const char* name, const int& value)
-{
-  return true;
-}
-
 bool hiopOptions::is_user_defined(const char* option_name)
 {
   map<string, _O*>::iterator it = mOptions.find(option_name);
@@ -585,6 +579,29 @@ bool hiopOptions::SetNumericValue (const char* name, const double& value, const 
   ensureConsistence();
   return true;
 }
+
+
+bool hiopOptions::set_val(const char* name, const int& value)
+{
+  map<string, _O*>::iterator it = mOptions.find(name);
+  if(it!=mOptions.end()) {
+    _OInt* option = dynamic_cast<_OInt*>(it->second);
+    if(NULL==option) {
+      assert(false && "mismatch between name and type happened in internal 'set_val'");
+    } else {
+
+      if(value<option->lb || value>option->ub) {
+        assert(false && "incorrect use of internal 'set_val': value out of bounds\n");
+      } else {
+        option->val = value;
+      }
+    }
+  } else {
+    assert(false && "trying to change an inexistent option with internal 'set_val'");
+  }
+  return true;
+}
+
 
 bool hiopOptions::SetIntegerValue(const char* name, const int& value, const bool& setFromFile/*=false*/)
 {
