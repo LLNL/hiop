@@ -1254,6 +1254,7 @@ bool hiopNlpSparse::eval_Jac_c_d_interface_impl(hiopVector& x,
       bret = interface.eval_Jac_cons(n_vars, n_cons,
                                      x_user->local_data_const(), new_x,
                                      nnz, cons_Jac->i_row(), cons_Jac->j_col(), nullptr);
+      num_jac_eval_++;
     }
     
     bret = interface.eval_Jac_cons(n_vars, n_cons,
@@ -1303,6 +1304,7 @@ bool hiopNlpSparse::eval_Hess_Lagr(const hiopVector&  x, bool new_x, const doubl
                                       x.local_data_const(), new_x, obj_factor,
                                       _buf_lambda->local_data(), new_lambdas,
                                       nnzHSS, pHessL->i_row(), pHessL->j_col(), nullptr);
+      num_hess_eval_++;
     }
 
     bret = interface.eval_Hess_Lagr(n_vars, n_cons,
