@@ -69,8 +69,8 @@ public:
   //
   //Passing 'setFromFile' with non-default, 'true' value is for expert use-only. It indicates that the option 
   //value comes from the options file (hiop.options) and will overwrite any options set at runtime by the 
-  //user's code. However, passing 'setFromFile' with 'true' during runtime is perfectly fine and will 
-  //conviniently "overwrite the overwriting" file options  
+  //user's code. However, passing 'setFromFile' with 'true' at runtime is perfectly fine and will 
+  //conveniently "overwrite the overwriting" file options  
 
   virtual bool SetNumericValue (const char* name, const double& value, const bool& setFromFile=false);
   virtual bool SetIntegerValue(const char* name, const int& value, const bool& setFromFile=false);
@@ -87,25 +87,31 @@ protected:
 
   void registerNumOption(const std::string& name, double defaultValue, double rangeLo, double rangeUp, const char* description);
   void registerIntOption(const std::string& name, int    defaultValue, int    rangeLo, int    rangeUp, const char* description);
-  //void registerBooOption(const std::string& name, bool defaultValue);
   void registerStrOption(const std::string& name, const std::string& defaultValue, const std::vector<std::string>& range, const char* description);
   void registerOptions();
-
-  //sets the (name, value) pair accordingly to the type registered in mOptions, or prints an warning message and leaves
-  //the 'name' option to the default value. This method is for internal use.
-  bool setNameValuePair(const std::string& name, const std::string& value);
 
   void loadFromFile(const char* szFilename);
 
   void ensureConsistence();
 
+  //internal setter methods used to ensure consistence -- do not alter 'specifiedInFile' and 'specifiedAtRuntime'
+  virtual bool set_val(const char* name, const double& value);
+  virtual bool set_val(const char* name, const int& value);
+  virtual bool set_val(const char* name, const char* value);
+
+  //Returns true if an option was set or not by the user (via file or at runtime)
+  //or false if the option was not or cannot be found
+  virtual bool is_user_defined(const char* option_name);
+  
   void log_printf(hiopOutVerbosity v, const char* format, ...);
 
   struct _O { // option entry
-    _O(const char* description) : descr(description), specifiedInFile(false) {};
+    _O(const char* description)
+      : descr(description), specifiedInFile(false), specifiedAtRuntime(false) {};
     virtual ~_O() {};
     std::string descr;
     bool specifiedInFile;
+    bool specifiedAtRuntime;
     virtual void print(FILE* f) const =0;
   };
   struct _OInt : public _O { 

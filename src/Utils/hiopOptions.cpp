@@ -134,14 +134,21 @@ void hiopOptions::registerOptions()
 		    "multiplier threshold used in computing the scaling factors for the optimality error (default 100.)");
 
   {
+    // 'dualsUpdateType' should be 'lsq' or 'linear' for  'Hessian=quasinewton_approx'
+    // 'dualsUpdateType' can only be 'linear' for Newton methods 'Hessian=analytical_exact'
+
+    //here will set the default value to 'lsq' and this will be adjusted later in 'ensureConsistency'
+    //to a valid value depending on the 'Hessian' value
     vector<string> range(2); range[0]="lsq"; range[1]="linear";
     registerStrOption("dualsUpdateType", "lsq", range,
-		      "Type of update of the multipliers of the eq. cons. (default lsq)"); //
+		      "Type of update of the multipliers of the eq. constraints "
+                      "(default is 'lsq' when 'Hessian' is 'quasinewton_approx' and "
+                      "'linear' when 'Hessian is 'analytical_exact')"); 
   }
   {
     vector<string> range(2); range[0]="lsq"; range[1]="zero";
     registerStrOption("dualsInitialization", "lsq", range,
-		      "Type of update of the multipliers of the eq. cons. (default lsq)");
+		      "Type of initialization of the multipliers of the eq. cons. (default lsq)");
   }
 
   registerIntOption("max_iter", 3000, 1, 1e6, "Max number of iterations (default 3000)");
@@ -180,7 +187,8 @@ void hiopOptions::registerOptions()
     registerStrOption("fixed_var", "none", range,
 		      "Treatment of fixed variables: 'remove' from the problem, 'relax' bounds "
 		      "by 'fixed_var_perturb', or 'none', in which case the HiOp will terminate "
-		      "with an error message if fixed variables are detected (default 'none')");
+		      "with an error message if fixed variables are detected (default 'none'). "
+                      "Value 'remove' is available only when 'compute_mode' is 'hybrid' or 'cpu'.");
 
     registerNumOption("fixed_var_tolerance", 1e-15, 1e-30, 0.01,
 		      "A variable is considered fixed if |upp_bnd-low_bnd| < fixed_var_tolerance * "
@@ -204,8 +212,9 @@ void hiopOptions::registerOptions()
     vector<string> range(4); range[0] = "auto"; range[1]="xycyd"; range[2]="xdycyd"; range[3]="full";
     registerStrOption("KKTLinsys", "auto", range,
 		      "Type of KKT linear system used internally: decided by HiOp 'auto' "
-		      "(default option), the more compact 'XYcYd, the more stable 'XDYcYd', or the full-size non-symmetric 'full' "
-		      "The last three are only available with Hessian=analyticalExact");
+		      "(default option), the more compact 'XYcYd, the more stable 'XDYcYd', or the "
+                      "full-size non-symmetric 'full'. The last three options are only available with "
+                      "'Hessian=analyticalExact'.");
   }
   {
     vector<string> range(3); range[0]="stable"; range[1]="speculative"; range[2]="forcequick";
@@ -320,61 +329,92 @@ void hiopOptions::ensureConsistence()
   double eps_tol_accep = GetNumeric("acceptable_tolerance");
   double eps_tol  =      GetNumeric("tolerance");
   if(eps_tol_accep < eps_tol) {
-    log_printf(hovWarning,
-	       "There is no reason to set 'acceptable_tolerance' tighter than 'tolerance'. "
-	       "Will set the two to 'tolerance'.\n");
-    SetNumericValue("acceptable_tolerance", eps_tol);
+    if(is_user_defined("acceptable_tolerance")) {
+      log_printf(hovWarning,
+                 "There is no reason to set 'acceptable_tolerance' tighter than 'tolerance'. "
+                 "Will set the two to 'tolerance'.\n");
+      set_val("acceptable_tolerance", eps_tol);
+    }
   }
 
   if(GetString("Hessian")=="quasinewton_approx") {
     string strKKT = GetString("KKTLinsys");
-    if(strKKT=="xycyd" || strKKT=="xdycyd" || strKKT=="full")
-      log_printf(hovWarning,
-		 "The option 'KKTLinsys=%s' not valid with 'Hessian=quasiNewtonApprox'. "
-		 "Will use 'KKTLinsys=auto'\n", strKKT.c_str());
+    if(strKKT=="xycyd" || strKKT=="xdycyd" || strKKT=="full") {
+      if(is_user_defined("Hessian")) {
+        log_printf(hovWarning,
+                   "The option 'KKTLinsys=%s' is not valid with 'Hessian=quasiNewtonApprox'. "
+                   "Will use 'KKTLinsys=auto'\n", strKKT.c_str());
+      }
+      set_val("KKTLinsys", "auto");
+    }
+  }
+
+  if(GetString("Hessian")=="analytical_exact") {
+    string duals_update_type = GetString("dualsUpdateType");
+    if("linear" != duals_update_type) {
+      // 'dualsUpdateType' should be 'lsq' or 'linear' for  'Hessian=quasinewton_approx'
+      // 'dualsUpdateType' can only be 'linear' for Newton methods 'Hessian=analytical_exact'
+
+      //warn only if these are defined by the user (option file or via SetXXX methods)
+      if(is_user_defined("dualsUpdateType")) {
+        log_printf(hovWarning,
+                   "The option 'dualsUpdateType=%s' is not valid with 'Hessian=analytical_exact'. "
+                   "Will use 'dualsUpdateType=linear'.\n",
+                   duals_update_type.c_str());
+      }
+      set_val("dualsUpdateType", "linear");
+    }
   }
 
 // When RAJA is not enabled ...
 #ifndef HIOP_USE_RAJA
   if(GetString("compute_mode")=="gpu") {
-    log_printf(hovWarning,
-	       "option compute_mode=gpu was changed to 'hybrid' since HiOp was built without "
-	       "RAJA/Umpire support.\n");
-    SetStringValue("compute_mode", "hybrid");
+    if(is_user_defined("compute_mode")) {
+      log_printf(hovWarning,
+                 "option compute_mode=gpu was changed to 'hybrid' since HiOp was built without "
+                 "RAJA/Umpire support.\n");
+    }
+    set_val("compute_mode", "hybrid");
   }
   if(GetString("mem_space")!="default") {
     std::string memory_space = GetString("mem_space");
-    log_printf(hovWarning,
-	       "option mem_space=%s was changed to 'default' since HiOp was built without "
-	       "RAJA/Umpire support.\n", memory_space.c_str());
-    SetStringValue("mem_space", "default");
+    if(is_user_defined("compute_mode")) {
+      log_printf(hovWarning,
+                 "option mem_space=%s was changed to 'default' since HiOp was built without "
+                 "RAJA/Umpire support.\n", memory_space.c_str());
+    }
+    set_val("mem_space", "default");
   }
 #endif
 
-// No removing fixed variables in GPU compute mode ...
-if(GetString("compute_mode")=="gpu") {
-  if(GetString("fixed_var")=="remove") {
-    log_printf(hovWarning,
-	       "option fixed_var=remove was changed to 'relax' since only 'relax'"
-	       "is supported in GPU compute mode.\n");
-    SetStringValue("fixed_var", "relax");
+  // No removing of fixed variables in GPU compute mode ...
+  if(GetString("compute_mode")=="gpu") {
+    if(GetString("fixed_var")=="remove") {
+      
+      log_printf(hovWarning,
+                 "option fixed_var=remove was changed to 'relax' since only 'relax'"
+                 "is supported in GPU compute mode.\n");
+      set_val("fixed_var", "relax");
+    }
   }
-}
-
+  
 // No hybrid or GPU compute mode if HiOp is built without GPU linear solvers
 #ifndef HIOP_USE_MAGMA
 #ifndef HIOP_USE_STRUMPACK
   if(GetString("compute_mode")=="hybrid") {
-    log_printf(hovWarning,
-	       "option compute_mode=hybrid was changed to 'cpu' since HiOp was built without "
-	       "GPU support/Magma.\n");
-    SetStringValue("compute_mode", "cpu");
+
+    if(is_user_defined("compute_mode")) {
+      log_printf(hovWarning,
+                 "option compute_mode=hybrid was changed to 'cpu' since HiOp was built without "
+                 "GPU support/Magma.\n");
+    }
+    set_val("compute_mode", "cpu");
   }
   if(GetString("compute_mode")=="gpu") {
     log_printf(hovWarning,
 	       "option compute_mode=gpu was changed to 'cpu' since HiOp was built without "
 	       "GPU support/Magma.\n");
-    SetStringValue("compute_mode", "cpu");
+    set_val("compute_mode", "cpu");
   }
 #endif
 #endif
@@ -471,6 +511,41 @@ void hiopOptions::loadFromFile(const char* filename)
   } //end of the for over the lines
 }
 
+
+bool hiopOptions::set_val(const char* name, const int& value)
+{
+  return true;
+}
+
+bool hiopOptions::is_user_defined(const char* option_name)
+{
+  map<string, _O*>::iterator it = mOptions.find(option_name);
+  if(it==mOptions.end()) {
+    return false;
+  }
+  return (it->second->specifiedInFile || it->second->specifiedAtRuntime);
+}
+
+bool hiopOptions::set_val(const char* name, const double& value)
+{
+  map<string, _O*>::iterator it = mOptions.find(name);
+  if(it!=mOptions.end()) {
+    _ONum* option = dynamic_cast<_ONum*>(it->second);
+    if(NULL==option) {
+      assert(false && "mismatch between name and type happened in internal 'set_val'");
+    } else {
+
+      if(value<option->lb || value>option->ub) {
+        assert(false && "incorrect use of internal 'set_val': value out of bounds\n");
+      } else {
+        option->val = value;
+      }
+    }
+  } else {
+    assert(false && "trying to change an inexistent option with internal 'set_val'");
+  }
+  return true;
+}
 bool hiopOptions::SetNumericValue (const char* name, const double& value, const bool& setFromFile/*=false*/)
 {
   map<string, _O*>::iterator it = mOptions.find(name);
@@ -490,8 +565,11 @@ bool hiopOptions::SetNumericValue (const char* name, const double& value, const 
 	}
       }
 
-      if(setFromFile)
+      if(setFromFile) {
 	option->specifiedInFile=true;
+      } else {
+        option->specifiedAtRuntime=true;
+      }
 
       if(value<option->lb || value>option->ub) {
 	log_printf(hovWarning,
@@ -543,6 +621,32 @@ bool hiopOptions::SetIntegerValue(const char* name, const int& value, const bool
 		name, value);
   }
   ensureConsistence();
+  return true;
+}
+
+bool hiopOptions::set_val(const char* name, const char* value_in)
+{
+  map<string, _O*>::iterator it = mOptions.find(name);
+  if(it!=mOptions.end()) {
+    _OStr* option = dynamic_cast<_OStr*>(it->second);
+    if(NULL==option) {
+      assert(false && "mismatch between name and type happened in internal 'set_val'");
+    } else {
+      string value(value_in);
+      transform(value.begin(), value.end(), value.begin(), ::tolower);
+      //see if it is in the range (of supported values)
+      bool inrange=false;
+      for(int it=0; it<option->range.size() && !inrange; it++) inrange = (option->range[it]==value);
+
+      if(!inrange) {
+        assert(false && "incorrect use of internal 'set_val': value out of range\n");
+      } else {
+        option->val = value;
+      }
+    }
+  } else {
+    assert(false && "trying to change an inexistent option with internal 'set_val'");
+  }
   return true;
 }
 

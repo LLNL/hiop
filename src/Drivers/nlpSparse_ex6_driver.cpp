@@ -74,8 +74,10 @@ int main(int argc, char **argv)
   bool selfCheck; long long n;
   if(!parse_arguments(argc, argv, n, selfCheck)) { usage(argv[0]); return 1;}
 
+  
   Ex6 nlp_interface(n);
   hiopNlpSparse nlp(nlp_interface);
+  //nlp.options->SetStringValue("Hessian", "analytical_exact");
   nlp.options->SetStringValue("dualsUpdateType", "linear"); // "lsq" or "linear" --> lsq hasn't been implemented yet.
                                                             // it will be forced to use "linear" internally.
   nlp.options->SetStringValue("dualsInitialization", "lsq"); // "lsq" or "zero"
