@@ -1,6 +1,5 @@
 // Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
-// Written by Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
@@ -80,7 +79,11 @@ public:
   virtual int         GetInteger(const char* name) const;
   virtual std::string GetString (const char* name) const;
 
-  void SetLog(hiopLogger* log_) { log=log_; ensureConsistence(); }
+  void SetLog(hiopLogger* log_in)
+  {
+    log_=log_in;
+    ensureConsistence();
+  }
   virtual void print(FILE* file, const char* msg=NULL) const;
 protected:
   /* internal use only */
@@ -105,37 +108,39 @@ protected:
   
   void log_printf(hiopOutVerbosity v, const char* format, ...);
 
-  struct _O { // option entry
-    _O(const char* description)
+  struct Option { // option entry
+    Option(const char* description)
       : descr(description), specifiedInFile(false), specifiedAtRuntime(false) {};
-    virtual ~_O() {};
+    virtual ~Option() {};
     std::string descr;
     bool specifiedInFile;
     bool specifiedAtRuntime;
     virtual void print(FILE* f) const =0;
   };
-  struct _OInt : public _O { 
-    _OInt(int    v, int    low,    int upp, const char* description) : _O(description), val(v), lb(low), ub(upp) {}; 
+  struct OptionInt : public Option { 
+    OptionInt(int    v, int    low,    int upp, const char* description)
+      : Option(description), val(v), lb(low), ub(upp) {}; 
     int    val, lb, ub; 
     void print(FILE* f) const;
   };
-  struct _ONum : public _O { 
-    _ONum(double v, double low, double upp, const char* description) : _O(description), val(v), lb(low), ub(upp) {}; 
+  struct OptionNum : public Option { 
+    OptionNum(double v, double low, double upp, const char* description)
+      : Option(description), val(v), lb(low), ub(upp) {}; 
     double val, lb, ub; 
     void print(FILE* f) const;
   };
 
-  struct _OStr : public _O { 
-    _OStr(std::string v, const std::vector<std::string>& range_, const char* description) 
-      : _O(description), val(v), range(range_) {};
+  struct OptionStr : public Option { 
+    OptionStr(std::string v, const std::vector<std::string>& range_, const char* description) 
+      : Option(description), val(v), range(range_) {};
     std::string val;
     std::vector<std::string> range;
     void print(FILE* f) const;
   };
 
-  std::map<std::string, _O*> mOptions;
+  std::map<std::string, Option*> mOptions_;
 
-  hiopLogger* log;
+  hiopLogger* log_;
 };
 
 

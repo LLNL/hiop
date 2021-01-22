@@ -63,7 +63,7 @@ using namespace std;
 const char* szDefaultFilename = "hiop.options";
 
   hiopOptions::hiopOptions(const char* szOptionsFilename/*=NULL*/)
-  : log(NULL)
+    : log_(nullptr)
 {
   registerOptions();
   loadFromFile(szOptionsFilename==NULL?szDefaultFilename:szOptionsFilename);
@@ -72,36 +72,36 @@ const char* szDefaultFilename = "hiop.options";
 
 hiopOptions::~hiopOptions()
 {
-  map<std::string, _O*>::iterator it = mOptions.begin();
-  for(;it!=mOptions.end(); it++) delete it->second;
+  map<std::string, Option*>::iterator it = mOptions_.begin();
+  for(;it!=mOptions_.end(); it++) delete it->second;
 }
 
 double hiopOptions::GetNumeric(const char* name) const
 {
-  map<std::string, _O*>::const_iterator it = mOptions.find(name);
-  assert(it!=mOptions.end());
+  map<std::string, Option*>::const_iterator it = mOptions_.find(name);
+  assert(it!=mOptions_.end());
   assert(it->second!=NULL);
-  _ONum* option = dynamic_cast<_ONum*>(it->second);
+  OptionNum* option = dynamic_cast<OptionNum*>(it->second);
   assert(option!=NULL);
   return option->val;
 }
 
 int hiopOptions::GetInteger(const char* name) const
 {
-  map<std::string, _O*>::const_iterator it = mOptions.find(name);
-  assert(it!=mOptions.end());
+  map<std::string, Option*>::const_iterator it = mOptions_.find(name);
+  assert(it!=mOptions_.end());
   assert(it->second!=NULL);
-  _OInt* option = dynamic_cast<_OInt*>(it->second);
+  OptionInt* option = dynamic_cast<OptionInt*>(it->second);
   assert(option!=NULL);
   return option->val;
 }
 
 string hiopOptions::GetString (const char* name) const
 {
-  map<std::string, _O*>::const_iterator it = mOptions.find(name);
-  assert(it!=mOptions.end());
+  map<std::string, Option*>::const_iterator it = mOptions_.find(name);
+  assert(it!=mOptions_.end());
   assert(it->second!=NULL);
-  _OStr* option = dynamic_cast<_OStr*>(it->second);
+  OptionStr* option = dynamic_cast<OptionStr*>(it->second);
   assert(option!=NULL);
   return option->val;
 }
@@ -304,13 +304,13 @@ void hiopOptions::registerOptions()
 void hiopOptions::registerNumOption(const std::string& name, double defaultValue,
 				    double low, double upp, const char* description)
 {
-  mOptions[name]=new _ONum(defaultValue, low, upp, description);
+  mOptions_[name]=new OptionNum(defaultValue, low, upp, description);
 }
 
 void hiopOptions::registerStrOption(const std::string& name, const std::string& defaultValue,
 				    const std::vector<std::string>& range, const char* description)
 {
-  mOptions[name]=new _OStr(defaultValue, range, description);
+  mOptions_[name]=new OptionStr(defaultValue, range, description);
 }
 
 void hiopOptions::registerIntOption(const std::string& name,
@@ -319,7 +319,7 @@ void hiopOptions::registerIntOption(const std::string& name,
 				    int upp,
 				    const char* description)
 {
-  mOptions[name]=new _OInt(defaultValue, low, upp, description);
+  mOptions_[name]=new OptionInt(defaultValue, low, upp, description);
 }
 
 void hiopOptions::ensureConsistence()
@@ -465,13 +465,13 @@ void hiopOptions::loadFromFile(const char* filename)
       continue;
     }
 
-    //find the _O object in mOptions corresponding to 'optname' and set his value to 'optval'
-    _ONum* on; _OInt* oi; _OStr* os;
+    //find the Option object in mOptions_ corresponding to 'optname' and set his value to 'optval'
+    OptionNum* on; OptionInt* oi; OptionStr* os;
 
-    map<string, _O*>::iterator it = mOptions.find(name);
-    if(it!=mOptions.end()) {
-      _O* option = it->second;
-      on = dynamic_cast<_ONum*>(option);
+    map<string, Option*>::iterator it = mOptions_.find(name);
+    if(it!=mOptions_.end()) {
+      Option* option = it->second;
+      on = dynamic_cast<OptionNum*>(option);
       if(on!=NULL) {
 	stringstream ss(value); double val;
 	if(ss>>val) { SetNumericValue(name.c_str(), val, true); }
@@ -481,11 +481,11 @@ void hiopOptions::loadFromFile(const char* filename)
 		     "the option file and will use default value '%g'\n",
 		      value.c_str(), name.c_str(), on->val);
       } else {
-	os = dynamic_cast<_OStr*>(option);
+	os = dynamic_cast<OptionStr*>(option);
 	if(os!=NULL) {
 	  SetStringValue(name.c_str(), value.c_str(), true);
 	} else {
-	  oi = dynamic_cast<_OInt*>(option);
+	  oi = dynamic_cast<OptionInt*>(option);
 	  if(oi!=NULL) {
 	    stringstream ss(value); int val;
 	    if(ss>>val) { SetIntegerValue(name.c_str(), val, true); }
@@ -502,7 +502,7 @@ void hiopOptions::loadFromFile(const char* filename)
 	}
       }
 
-    } else { // else from it!=mOptions.end()
+    } else { // else from it!=mOptions_.end()
       // option not recognized/found/registered
       log_printf(hovWarning,
 		 "Hiop does not understand option '%s' specified in the option file and will "
@@ -513,8 +513,8 @@ void hiopOptions::loadFromFile(const char* filename)
 
 bool hiopOptions::is_user_defined(const char* option_name)
 {
-  map<string, _O*>::iterator it = mOptions.find(option_name);
-  if(it==mOptions.end()) {
+  map<string, Option*>::iterator it = mOptions_.find(option_name);
+  if(it==mOptions_.end()) {
     return false;
   }
   return (it->second->specifiedInFile || it->second->specifiedAtRuntime);
@@ -522,9 +522,9 @@ bool hiopOptions::is_user_defined(const char* option_name)
 
 bool hiopOptions::set_val(const char* name, const double& value)
 {
-  map<string, _O*>::iterator it = mOptions.find(name);
-  if(it!=mOptions.end()) {
-    _ONum* option = dynamic_cast<_ONum*>(it->second);
+  map<string, Option*>::iterator it = mOptions_.find(name);
+  if(it!=mOptions_.end()) {
+    OptionNum* option = dynamic_cast<OptionNum*>(it->second);
     if(NULL==option) {
       assert(false && "mismatch between name and type happened in internal 'set_val'");
     } else {
@@ -542,9 +542,9 @@ bool hiopOptions::set_val(const char* name, const double& value)
 }
 bool hiopOptions::SetNumericValue (const char* name, const double& value, const bool& setFromFile/*=false*/)
 {
-  map<string, _O*>::iterator it = mOptions.find(name);
-  if(it!=mOptions.end()) {
-    _ONum* option = dynamic_cast<_ONum*>(it->second);
+  map<string, Option*>::iterator it = mOptions_.find(name);
+  if(it!=mOptions_.end()) {
+    OptionNum* option = dynamic_cast<OptionNum*>(it->second);
     if(NULL==option) {
       log_printf(hovWarning,
 		"Hiop does not know option '%s' as 'numeric'. Maybe it is an 'integer' or 'string' "
@@ -583,9 +583,9 @@ bool hiopOptions::SetNumericValue (const char* name, const double& value, const 
 
 bool hiopOptions::set_val(const char* name, const int& value)
 {
-  map<string, _O*>::iterator it = mOptions.find(name);
-  if(it!=mOptions.end()) {
-    _OInt* option = dynamic_cast<_OInt*>(it->second);
+  map<string, Option*>::iterator it = mOptions_.find(name);
+  if(it!=mOptions_.end()) {
+    OptionInt* option = dynamic_cast<OptionInt*>(it->second);
     if(NULL==option) {
       assert(false && "mismatch between name and type happened in internal 'set_val'");
     } else {
@@ -605,9 +605,9 @@ bool hiopOptions::set_val(const char* name, const int& value)
 
 bool hiopOptions::SetIntegerValue(const char* name, const int& value, const bool& setFromFile/*=false*/)
 {
-  map<string, _O*>::iterator it = mOptions.find(name);
-  if(it!=mOptions.end()) {
-    _OInt* option = dynamic_cast<_OInt*>(it->second);
+  map<string, Option*>::iterator it = mOptions_.find(name);
+  if(it!=mOptions_.end()) {
+    OptionInt* option = dynamic_cast<OptionInt*>(it->second);
     if(NULL==option) {
       log_printf(hovWarning,
 		 "Hiop does not know option '%s' as 'integer'. Maybe it is an 'numeric' "
@@ -643,9 +643,9 @@ bool hiopOptions::SetIntegerValue(const char* name, const int& value, const bool
 
 bool hiopOptions::set_val(const char* name, const char* value_in)
 {
-  map<string, _O*>::iterator it = mOptions.find(name);
-  if(it!=mOptions.end()) {
-    _OStr* option = dynamic_cast<_OStr*>(it->second);
+  map<string, Option*>::iterator it = mOptions_.find(name);
+  if(it!=mOptions_.end()) {
+    OptionStr* option = dynamic_cast<OptionStr*>(it->second);
     if(NULL==option) {
       assert(false && "mismatch between name and type happened in internal 'set_val'");
     } else {
@@ -669,9 +669,9 @@ bool hiopOptions::set_val(const char* name, const char* value_in)
 
 bool hiopOptions::SetStringValue (const char* name,  const char* value, const bool& setFromFile/*=false*/)
 {
-  map<string, _O*>::iterator it = mOptions.find(name);
-  if(it!=mOptions.end()) {
-    _OStr* option = dynamic_cast<_OStr*>(it->second);
+  map<string, Option*>::iterator it = mOptions_.find(name);
+  if(it!=mOptions_.end()) {
+    OptionStr* option = dynamic_cast<OptionStr*>(it->second);
     if(NULL==option) {
       log_printf(hovWarning,
 		  "Hiop does not know option '%s' as 'string'. Maybe it is an 'integer' or a "
@@ -719,21 +719,22 @@ void hiopOptions::log_printf(hiopOutVerbosity v, const char* format, ...)
   va_list args;
   va_start (args, format);
   vsprintf (buff,format, args);
-  if(log)
-    log->printf(v,buff);
-  else
+  if(log_) {
+    log_->printf(v,buff);
+  } else {
     hiopLogger::printf_error(v,buff);
+  }
   //fprintf(stderr,buff);
   va_end (args);
 }
 
 void hiopOptions::print(FILE* file, const char* msg) const
 {
-  if(NULL==msg) fprintf(file, "#\n# Hiop options\n#\n");
+  if(nullptr==msg) fprintf(file, "#\n# Hiop options\n#\n");
   else          fprintf(file, "%s ", msg);
 
-  map<string,_O*>::const_iterator it = mOptions.begin();
-  for(; it!=mOptions.end(); it++) {
+  map<string,Option*>::const_iterator it = mOptions_.begin();
+  for(; it!=mOptions_.end(); it++) {
     fprintf(file, "%s ", it->first.c_str());
     it->second->print(file);
     fprintf(file, "\n");
@@ -741,16 +742,16 @@ void hiopOptions::print(FILE* file, const char* msg) const
   fprintf(file, "# end of Hiop options\n\n");
 }
 
-void hiopOptions::_ONum::print(FILE* f) const
+void hiopOptions::OptionNum::print(FILE* f) const
 {
   fprintf(f, "%.3e \t# (numeric) %g to %g [%s]", val, lb, ub, descr.c_str());
 }
-void hiopOptions::_OInt::print(FILE* f) const
+void hiopOptions::OptionInt::print(FILE* f) const
 {
   fprintf(f, "%d \t# (integer)  %d to %d [%s]", val, lb, ub, descr.c_str());
 }
 
-void hiopOptions::_OStr::print(FILE* f) const
+void hiopOptions::OptionStr::print(FILE* f) const
 {
   stringstream ssRange; ssRange << " ";
   for(int i=0; i<range.size(); i++) ssRange << range[i] << " ";

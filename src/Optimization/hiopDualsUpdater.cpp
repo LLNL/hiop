@@ -72,54 +72,54 @@ namespace hiop
 
 hiopDualsLsqUpdate::hiopDualsLsqUpdate(hiopNlpFormulation* nlp) 
   : hiopDualsUpdater(nlp), 
-    _mexme_(nullptr), _mexmi_(nullptr), _mixmi_(nullptr), _mxm_(nullptr), 
+    mexme_(nullptr), mexmi_(nullptr), mixmi_(nullptr), mxm_(nullptr), 
     M_(nullptr),
     rhs_(nullptr), rhsc_(nullptr), rhsd_(nullptr),
-    _vec_n_(nullptr),_vec_mi_(nullptr),
+    vec_n_(nullptr),vec_mi_(nullptr),
     linSys_(nullptr),
-    lsq_dual_init_max(1e3),
+    lsq_dual_init_max_(1e3),
     augsys_update_(false) 
 {
-  hiopNlpSparse* nlpsp = dynamic_cast<hiopNlpSparse*>(_nlp);
+  hiopNlpSparse* nlpsp = dynamic_cast<hiopNlpSparse*>(nlp_);
   if(nullptr!=nlpsp)
   {
 #ifndef HIOP_SPARSE
       assert(0 && "should not reach here!");
 #endif // HIOP_SPARSE        
       augsys_update_ = true;
-      rhs_    = LinearAlgebraFactory::createVector(_nlp->n() + _nlp->m_ineq() + _nlp->m());
+      rhs_    = LinearAlgebraFactory::createVector(nlp_->n() + nlp_->m_ineq() + nlp_->m());
   }
   else
   {
-    _mexme_ = LinearAlgebraFactory::createMatrixDense(_nlp->m_eq(),   _nlp->m_eq());
-    _mexmi_ = LinearAlgebraFactory::createMatrixDense(_nlp->m_eq(),   _nlp->m_ineq());
-    _mixmi_ = LinearAlgebraFactory::createMatrixDense(_nlp->m_ineq(), _nlp->m_ineq());
-    _mxm_   = LinearAlgebraFactory::createMatrixDense(_nlp->m(), _nlp->m());
+    mexme_ = LinearAlgebraFactory::createMatrixDense(nlp_->m_eq(),   nlp_->m_eq());
+    mexmi_ = LinearAlgebraFactory::createMatrixDense(nlp_->m_eq(),   nlp_->m_ineq());
+    mixmi_ = LinearAlgebraFactory::createMatrixDense(nlp_->m_ineq(), nlp_->m_ineq());
+    mxm_   = LinearAlgebraFactory::createMatrixDense(nlp_->m(), nlp_->m());
 
-    M_      = LinearAlgebraFactory::createMatrixDense(_nlp->m(), _nlp->m());
-    rhs_    = LinearAlgebraFactory::createVector(_nlp->m());
+    M_      = LinearAlgebraFactory::createMatrixDense(nlp_->m(), nlp_->m());
+    rhs_    = LinearAlgebraFactory::createVector(nlp_->m());
 #ifdef HIOP_DEEPCHECKS
-    M_copy_ = LinearAlgebraFactory::createMatrixDense(_nlp->m(), _nlp->m());
-    rhs_copy_ = LinearAlgebraFactory::createVector(_nlp->m());
-    _mixme_ = LinearAlgebraFactory::createMatrixDense(_nlp->m_ineq(), _nlp->m_eq());
+    M_copy_ = LinearAlgebraFactory::createMatrixDense(nlp_->m(), nlp_->m());
+    rhs_copy_ = LinearAlgebraFactory::createVector(nlp_->m());
+    mixme_ = LinearAlgebraFactory::createMatrixDense(nlp_->m_ineq(), nlp_->m_eq());
 #endif
   }
 
 #ifdef HIOP_USE_MPI
-  long long* vec_distrib = _nlp->get_vec_distrib();
+  long long* vec_distrib = nlp_->get_vec_distrib();
 
   if(vec_distrib!=NULL) {
-    _vec_n_ = LinearAlgebraFactory::createVector(_nlp->n(), vec_distrib, _nlp->get_comm());
+    vec_n_ = LinearAlgebraFactory::createVector(nlp_->n(), vec_distrib, nlp_->get_comm());
   } else {
-    _vec_n_ = LinearAlgebraFactory::createVector(_nlp->n());   
+    vec_n_ = LinearAlgebraFactory::createVector(nlp_->n());   
   }
 #else
-  _vec_n_ = LinearAlgebraFactory::createVector(_nlp->n());
+  vec_n_ = LinearAlgebraFactory::createVector(nlp_->n());
 #endif
 
-  rhsc_ = LinearAlgebraFactory::createVector(_nlp->m_eq());
-  rhsd_ = LinearAlgebraFactory::createVector(_nlp->m_ineq());
-  _vec_mi_ = LinearAlgebraFactory::createVector(_nlp->m_ineq());     
+  rhsc_ = LinearAlgebraFactory::createVector(nlp_->m_eq());
+  rhsd_ = LinearAlgebraFactory::createVector(nlp_->m_ineq());
+  vec_mi_ = LinearAlgebraFactory::createVector(nlp_->m_ineq());     
   
   rhsc_->setToZero();
   rhsd_->setToZero();
@@ -131,20 +131,20 @@ hiopDualsLsqUpdate::hiopDualsLsqUpdate(hiopNlpFormulation* nlp)
 hiopDualsLsqUpdate::~hiopDualsLsqUpdate()
 {
   if(linSys_) delete linSys_;
-  if(_mexme_) delete _mexme_;
-  if(_mexmi_) delete _mexmi_;
-  if(_mixmi_) delete _mixmi_;
-  if(_mxm_) delete _mxm_;
+  if(mexme_) delete mexme_;
+  if(mexmi_) delete mexmi_;
+  if(mixmi_) delete mixmi_;
+  if(mxm_) delete mxm_;
   if(M_) delete M_;
   if(rhs_) delete rhs_;
   if(rhsc_) delete rhsc_; 
   if(rhsd_) delete rhsd_;
-  if(_vec_n_) delete _vec_n_;
-  if(_vec_mi_) delete _vec_mi_;
+  if(vec_n_) delete vec_n_;
+  if(vec_mi_) delete vec_mi_;
 #ifdef HIOP_DEEPCHECKS
   if(M_copy_) delete M_copy_;
   if(rhs_copy_) delete rhs_copy_;
-  if(_mixme_) delete _mixme_;
+  if(mixme_) delete mixme_;
 #endif
 }
 
@@ -155,28 +155,28 @@ go(const hiopIterate& iter,  hiopIterate& iter_plus,
    const hiopIterate& search_dir, const double& alpha_primal, const double& alpha_dual,
    const double& mu, const double& kappa_sigma, const double& infeas_nrm_trial)
 {
-  hiopNlpDenseConstraints* nlpd = dynamic_cast<hiopNlpDenseConstraints*>(_nlp);
+  hiopNlpDenseConstraints* nlpd = dynamic_cast<hiopNlpDenseConstraints*>(nlp_);
   assert(nullptr!=nlpd);
 
   //first update the duals using steplength along the search directions. This is fine for 
   //signed duals z_l, z_u, v_l, and v_u. The rest of the duals, yc and yd, will be found as a 
   //solution to the above LSQ problem
   if(!iter_plus.takeStep_duals(iter, search_dir, alpha_primal, alpha_dual)) {
-    _nlp->log->printf(hovError, "dual lsq update: error in standard update of the duals");
+    nlp_->log->printf(hovError, "dual lsq update: error in standard update of the duals");
     return false;
   }
   if(!iter_plus.adjustDuals_primalLogHessian(mu,kappa_sigma)) {
-    _nlp->log->printf(hovError, "dual lsq update: error in adjustDuals");
+    nlp_->log->printf(hovError, "dual lsq update: error in adjustDuals");
     return false;
   }
 
 
   //return if the constraint violation (primal infeasibility) is not below the tol for the LSQ update
   if(infeas_nrm_trial>recalc_lsq_duals_tol) {
-    _nlp->log->printf(hovScalars,
+    nlp_->log->printf(hovScalars,
                       "will not perform the dual lsq update since the primal infeasibility (%g) "
-		      "is not under the tolerance recalc_lsq_duals_tol=%g.\n",
-		      infeas_nrm_trial, recalc_lsq_duals_tol);
+                      "is not under the tolerance recalc_lsq_duals_tol=%g.\n",
+                      infeas_nrm_trial, recalc_lsq_duals_tol);
     return true;
   }
 
@@ -229,34 +229,34 @@ bool hiopDualsLsqUpdate::
 LSQUpdate(hiopIterate& iter, const hiopVector& grad_f, const hiopMatrix& jac_c, const hiopMatrix& jac_d)
 {
   hiopMatrixDense* M = dynamic_cast<hiopMatrixDense*>(M_);
-  hiopMatrixDense* _mexme = dynamic_cast<hiopMatrixDense*>(_mexme_);
-  hiopMatrixDense* _mexmi = dynamic_cast<hiopMatrixDense*>(_mexmi_);
-  hiopMatrixDense* _mixmi = dynamic_cast<hiopMatrixDense*>(_mixmi_);
+  hiopMatrixDense* mexme = dynamic_cast<hiopMatrixDense*>(mexme_);
+  hiopMatrixDense* mexmi = dynamic_cast<hiopMatrixDense*>(mexmi_);
+  hiopMatrixDense* mixmi = dynamic_cast<hiopMatrixDense*>(mixmi_);
 
   //compute terms in M: Jc * Jc^T, J_c * J_d^T, and J_d * J_d^T
-  //! streamline the communication (use _mxm as a global buffer for the MPI_Allreduce)
-  jac_c.timesMatTrans(0.0, *_mexme, 1.0, jac_c);
-  jac_c.timesMatTrans(0.0, *_mexmi, 1.0, jac_d);
-  jac_d.timesMatTrans(0.0, *_mixmi, 1.0, jac_d);
-  _mixmi->addDiagonal(1.0);
+  //! streamline the communication (use mxm as a global buffer for the MPI_Allreduce)
+  jac_c.timesMatTrans(0.0, *mexme, 1.0, jac_c);
+  jac_c.timesMatTrans(0.0, *mexmi, 1.0, jac_d);
+  jac_d.timesMatTrans(0.0, *mixmi, 1.0, jac_d);
+  mixmi->addDiagonal(1.0);
 
-  M->copyBlockFromMatrix(0,0,*_mexme);
-  M->copyBlockFromMatrix(0, _nlp->m_eq(), *_mexmi);
-  M->copyBlockFromMatrix(_nlp->m_eq(),_nlp->m_eq(), *_mixmi);
+  M->copyBlockFromMatrix(0,0,*mexme);
+  M->copyBlockFromMatrix(0, nlp_->m_eq(), *mexmi);
+  M->copyBlockFromMatrix(nlp_->m_eq(),nlp_->m_eq(), *mixmi);
 
 #ifdef HIOP_DEEPCHECKS
-  hiopMatrixDense* _mixme = dynamic_cast<hiopMatrixDense*>(_mixme_);
+  hiopMatrixDense* mixme = dynamic_cast<hiopMatrixDense*>(mixme_);
   hiopMatrixDense* M_copy = dynamic_cast<hiopMatrixDense*>(M_copy_);
   M_copy->copyFrom(*M);
-  jac_d.timesMatTrans(0.0, *_mixme, 1.0, jac_c);
-  M_copy->copyBlockFromMatrix(_nlp->m_eq(), 0, *_mixme);
+  jac_d.timesMatTrans(0.0, *mixme, 1.0, jac_c);
+  M_copy->copyBlockFromMatrix(nlp_->m_eq(), 0, *mixme);
   M_copy->assertSymmetry(1e-12);
 #endif
 
   //bailout in case there is an error in the Cholesky factorization
   int info;
   if((info=this->factorizeMat(*M))) {
-    _nlp->log->printf(hovError, "dual lsq update: error %d in the Cholesky factorization.\n", info);
+    nlp_->log->printf(hovError, "dual lsq update: error %d in the Cholesky factorization.\n", info);
     return false;
   }
 
@@ -264,52 +264,52 @@ LSQUpdate(hiopIterate& iter, const hiopVector& grad_f, const hiopMatrix& jac_c, 
   // [ rhsc_ ] = - [ J_c   0 ] [ vecx ] 
   // [ rhsd_ ]     [ J_d   I ] [ vecd ]
   // [vecx,vecd] = - [ -\nabla f(xk) + zk_l-zk_u, - vk_l + vk_u]. 
-  hiopVector& vecx = *_vec_n_;
+  hiopVector& vecx = *vec_n_;
   vecx.copyFrom(grad_f);
   vecx.axpy(-1.0, *iter.get_zl());
   vecx.axpy( 1.0, *iter.get_zu());
-  hiopVector& vecd = *_vec_mi_;
+  hiopVector& vecd = *vec_mi_;
   vecd.copyFrom(*iter.get_vl());
   vecd.axpy(-1.0, *iter.get_vu());
   jac_c.timesVec(0.0, *rhsc_, -1.0, vecx);
   jac_d.timesVec(0.0, *rhsd_, -1.0, vecx);
   rhsd_->axpy(-1.0, vecd);
   rhs_->copyFromStarting(0, *rhsc_);
-  rhs_->copyFromStarting(_nlp->m_eq(), *rhsd_);
-  //_nlp->log->write("rhs_", *rhs_, hovSummary);
+  rhs_->copyFromStarting(nlp_->m_eq(), *rhsd_);
+  //nlp_->log->write("rhs_", *rhs_, hovSummary);
 #ifdef HIOP_DEEPCHECKS
   rhs_copy_->copyFrom(*rhs_);
 #endif
   //solve for this rhs_
   if((info=this->solveWithFactors(*M, *rhs_))) {
-    _nlp->log->printf(hovError, "dual lsq update: error %d in the solution process.\n", info);
+    nlp_->log->printf(hovError, "dual lsq update: error %d in the solution process.\n", info);
     return false;
   }
 
   //update yc and yd in iter_plus
   rhs_->copyToStarting(0, *iter.get_yc());
-  rhs_->copyToStarting(_nlp->m_eq(), *iter.get_yd());
+  rhs_->copyToStarting(nlp_->m_eq(), *iter.get_yd());
 
 #ifdef HIOP_DEEPCHECKS
   double nrmrhs = rhs_copy_->twonorm();
   M_copy_->timesVec(-1.0,  *rhs_copy_, 1.0, *rhs_);
   double nrmres = rhs_copy_->twonorm() / (1+nrmrhs);
   if(nrmres>1e-4) {
-    _nlp->log->printf(hovError,
-		      "hiopDualsLsqUpdate::LSQUpdate linear system residual is dangerously high: %g\n",
+    nlp_->log->printf(hovError,
+                      "hiopDualsLsqUpdate::LSQUpdate linear system residual is dangerously high: %g\n",
                       nrmres);
     assert(false && "hiopDualsLsqUpdate::LSQUpdate linear system residual is dangerously high");
     return false;
   } else {
     if(nrmres>1e-6)
-      _nlp->log->printf(hovWarning,
-			"hiopDualsLsqUpdate::LSQUpdate linear system residual is dangerously high: %g\n",
+      nlp_->log->printf(hovWarning,
+                        "hiopDualsLsqUpdate::LSQUpdate linear system residual is dangerously high: %g\n",
                         nrmres);
   }
 #endif
 
-  //_nlp->log->write("yc ini", *iter.get_yc(), hovSummary);
-  //_nlp->log->write("yd ini", *iter.get_yd(), hovSummary);
+  //nlp_->log->write("yc ini", *iter.get_yc(), hovSummary);
+  //nlp_->log->write("yd ini", *iter.get_yd(), hovSummary);
   return true;
 };
 
@@ -322,12 +322,12 @@ int hiopDualsLsqUpdate::factorizeMat(hiopMatrixDense& M)
   char uplo='L'; int N=M.n(), lda=N, info;
   DPOTRF(&uplo, &N, M.local_data(), &lda, &info);
   if(info>0) {
-    _nlp->log->printf(hovError,
+    nlp_->log->printf(hovError,
                       "hiopKKTLinSysLowRank::factorizeMat: dpotrf (Chol fact) detected "
                       "%d minor being indefinite.\n", info);
   } else {
     if(info<0) { 
-      _nlp->log->printf(hovError, "hiopKKTLinSysLowRank::factorizeMat: dpotrf returned error %d\n", info);
+      nlp_->log->printf(hovError, "hiopKKTLinSysLowRank::factorizeMat: dpotrf returned error %d\n", info);
     }
   }
   assert(info==0);
@@ -344,7 +344,7 @@ int hiopDualsLsqUpdate::solveWithFactors(hiopMatrixDense& M, hiopVector& r)
   int N=M.n(), lda=N, nrhs=1, info;
   DPOTRS(&uplo,&N, &nrhs, M.local_data(), &lda, r.local_data(), &lda, &info);
   if(info<0) 
-    _nlp->log->printf(hovError, "hiopKKTLinSysLowRank::solveWithFactors: dpotrs returned error %d\n", info);
+    nlp_->log->printf(hovError, "hiopKKTLinSysLowRank::solveWithFactors: dpotrs returned error %d\n", info);
 #ifdef HIOP_DEEPCHECKS
   assert(info<=0);
 #endif
@@ -356,7 +356,7 @@ bool hiopDualsLsqUpdate::LSQInitDualSparse(hiopIterate& iter,
                                            const hiopMatrix& jac_c,
                                            const hiopMatrix& jac_d)
 {
-  hiopNlpSparse* nlpsp = dynamic_cast<hiopNlpSparse*>(_nlp);
+  hiopNlpSparse* nlpsp = dynamic_cast<hiopNlpSparse*>(nlp_);
   assert(nullptr!=nlpsp);
   
   const hiopMatrixSparse& Jac_cSp = dynamic_cast<const hiopMatrixSparse&>(jac_c);
@@ -369,19 +369,19 @@ bool hiopDualsLsqUpdate::LSQInitDualSparse(hiopIterate& iter,
   
   if(!linSys_)
   {
-    if(_nlp->options->GetString("compute_mode")=="cpu")
+    if(nlp_->options->GetString("compute_mode")=="cpu")
     {
-      _nlp->log->printf(hovSummary,
+      nlp_->log->printf(hovSummary,
                         "LSQ Dual Initialization --- KKT_SPARSE_XYcYd linsys: MA57 size %d (%d cons)\n",
                         n, neq+nineq);
-#ifdef HIOP_USE_COINHSL			    
-      linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, _nlp);
+#ifdef HIOP_USE_COINHSL
+      linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
 #endif // HIOP_USE_COINHSL          
     } else {
 #ifdef HIOP_USE_STRUMPACK        
-      hiopLinSolverIndefSparseSTRUMPACK *p = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, _nlp);
+      hiopLinSolverIndefSparseSTRUMPACK *p = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
       
-      _nlp->log->printf(hovSummary,
+      nlp_->log->printf(hovSummary,
                         "LSQ Dual Initialization --- KKT_SPARSE_XDYcYd linsys: using STRUMPACK as an "
                         "indefinite solver, size %d (%d cons) (safe_mode=%d)\n",
                         n, neq+nineq);
@@ -390,11 +390,11 @@ bool hiopDualsLsqUpdate::LSQInitDualSparse(hiopIterate& iter,
       linSys_ = p;
 #else
 #ifdef HIOP_USE_COINHSL
-      _nlp->log->printf(hovSummary,
+      nlp_->log->printf(hovSummary,
                         "LSQ Dual Initialization --- KKT_SPARSE_XDYcYd linsys: using MA57 on CPU size "
                         "%d (%d cons)\n",
                         n, neq+nineq);                             
-      linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, _nlp);
+      linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
 #endif // HIOP_USE_COINHSL
 #endif // HIOP_USE_STRUMPACK
     }
@@ -432,13 +432,13 @@ bool hiopDualsLsqUpdate::LSQInitDualSparse(hiopIterate& iter,
     * [    Jc   0     0     0     ] [dyc] = [   ryc    ]
     * [    Jd   -I    0     0     ] [dyd]   [   ryd    ]
     */
-    _nlp->log->write("LSQ Dual Initialization --- KKT_SPARSE_XDYcYd linsys:", Msys, hovMatrices);
+    nlp_->log->write("LSQ Dual Initialization --- KKT_SPARSE_XDYcYd linsys:", Msys, hovMatrices);
   }
 
   int ret_val = linSys->matrixChanged();
 
   if(ret_val<0) {
-    _nlp->log->printf(hovError, "dual lsq update: error %d in the factorization.\n", ret_val);
+    nlp_->log->printf(hovError, "dual lsq update: error %d in the factorization.\n", ret_val);
     return false;
   } 
   
@@ -446,13 +446,13 @@ bool hiopDualsLsqUpdate::LSQInitDualSparse(hiopIterate& iter,
   // rhsx = - [ \nabla f(xk) - zk_l + zk_u  ]
   // rhss = - [ -vk_l + vk_u ]
   // rhsc_ = rhsd_ = 0
-  hiopVector& rhsx = *_vec_n_;
+  hiopVector& rhsx = *vec_n_;
   rhsx.copyFrom(grad_f);
   rhsx.negate();
   rhsx.axpy( 1.0, *iter.get_zl());
   rhsx.axpy(-1.0, *iter.get_zu());
 
-  hiopVector& rhss = *_vec_mi_;
+  hiopVector& rhss = *vec_mi_;
   rhss.copyFrom(*iter.get_vl());
   rhss.axpy(-1.0, *iter.get_vu());
 
@@ -465,7 +465,7 @@ bool hiopDualsLsqUpdate::LSQInitDualSparse(hiopIterate& iter,
   bool linsol_ok = linSys_->solve(*rhs_);
   if(!linsol_ok)
   {
-    _nlp->log->printf(hovWarning, "dual lsq update: error in the solution process.\n");
+    nlp_->log->printf(hovWarning, "dual lsq update: error in the solution process.\n");
     iter.get_yc()->setToZero();
     iter.get_yd()->setToZero();
     return true;
@@ -478,14 +478,14 @@ bool hiopDualsLsqUpdate::LSQInitDualSparse(hiopIterate& iter,
   double ycnrm = iter.get_yc()->infnorm();
   double ydnrm = iter.get_yd()->infnorm();
   double ynrm = (ycnrm>ydnrm)?ycnrm:ydnrm;
-  if( ynrm > lsq_dual_init_max  )
+  if( ynrm > lsq_dual_init_max_  )
   {
     iter.get_yc()->setToZero();
     iter.get_yd()->setToZero();
   }
 
-  //_nlp->log->write("yc ini", *iter.get_yc(), hovSummary);
-  //_nlp->log->write("yd ini", *iter.get_yd(), hovSummary);
+  //nlp_->log->write("yc ini", *iter.get_yc(), hovSummary);
+  //nlp_->log->write("yd ini", *iter.get_yd(), hovSummary);
   return true;
 };
 

@@ -48,8 +48,8 @@
 /**
  * @file hiopDualsUpdater.hpp
  *
- * @author Nai-Yuan Chiang <chiang7@llnl.gov>,  LLNL
- * @author Cosmin G. Petra <petra1@llnl.gov>,  LLNL
+ * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
+ * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
  *
  */
  
@@ -68,7 +68,7 @@ namespace hiop
 class hiopDualsUpdater
 {
 public:
-  hiopDualsUpdater(hiopNlpFormulation* nlp) : _nlp(nlp) {};
+  hiopDualsUpdater(hiopNlpFormulation* nlp) : nlp_(nlp) {};
   virtual ~hiopDualsUpdater() {};
 
   /* The method is called after each iteration to update the duals. Implementations for different 
@@ -90,12 +90,12 @@ public:
    * by lsq update)
    */
   virtual bool go(const hiopIterate& iter,  hiopIterate& iter_plus,
-		  const double& f, const hiopVector& c, const hiopVector& d,
-		  const hiopVector& grad_f, const hiopMatrix& jac_c, const hiopMatrix& jac_d,
-		  const hiopIterate& search_dir, const double& alpha_primal, const double& alpha_dual,
-		  const double& mu, const double& kappa_sigma, const double& infeas_nrm_trial)=0;
+                  const double& f, const hiopVector& c, const hiopVector& d,
+                  const hiopVector& grad_f, const hiopMatrix& jac_c, const hiopMatrix& jac_d,
+                  const hiopIterate& search_dir, const double& alpha_primal, const double& alpha_dual,
+                  const double& mu, const double& kappa_sigma, const double& infeas_nrm_trial)=0;
 protected:
-  hiopNlpFormulation* _nlp;
+  hiopNlpFormulation* nlp_;
 protected: 
   hiopDualsUpdater() {};
 private:
@@ -112,31 +112,31 @@ public:
 
   /** LSQ update of the constraints duals (yc and yd). Source file describe the math. */
   virtual bool go(const hiopIterate& iter,  hiopIterate& iter_plus,
-		  const double& f, const hiopVector& c, const hiopVector& d,
-		  const hiopVector& grad_f, const hiopMatrix& jac_c, const hiopMatrix& jac_d,
-		  const hiopIterate& search_dir, const double& alpha_primal, const double& alpha_dual,
-		  const double& mu, const double& kappa_sigma, const double& infeas_nrm_trial);
+                  const double& f, const hiopVector& c, const hiopVector& d,
+                  const hiopVector& grad_f, const hiopMatrix& jac_c, const hiopMatrix& jac_d,
+                  const hiopIterate& search_dir, const double& alpha_primal, const double& alpha_dual,
+                  const double& mu, const double& kappa_sigma, const double& infeas_nrm_trial);
 
   /** LSQ-based initialization of the  constraints duals (yc and yd). Source file describes the math. */
   virtual inline bool computeInitialDualsEq(hiopIterate& it_ini,
-					    const hiopVector& grad_f,
-					    const hiopMatrix& jac_c,
-					    const hiopMatrix& jac_d)
+                                            const hiopVector& grad_f,
+                                            const hiopMatrix& jac_c,
+                                            const hiopMatrix& jac_d)
   {
     if(augsys_update_)
     {
-      _nlp->log->printf(hovSummary,
+      nlp_->log->printf(hovSummary,
                         "LSQ Dual Initialization --- Sparse linsys: size %d (%d eq-cons)\n",
-                        _nlp->m_eq()+_nlp->m_ineq(), _nlp->m_eq());  
+                        nlp_->m_eq()+nlp_->m_ineq(), nlp_->m_eq());  
 
       return LSQInitDualSparse(it_ini,grad_f,jac_c,jac_d);
     }
     assert(augsys_update_==false);
     
     
-    _nlp->log->printf(hovSummary,
+    nlp_->log->printf(hovSummary,
                       "LSQ Dual Initialization --- Dense linsys: size %d (%d eq-cons)\n",
-                      _nlp->m_eq()+_nlp->m_ineq(), _nlp->m_eq());  
+                      nlp_->m_eq()+nlp_->m_ineq(), nlp_->m_eq());  
 
     return LSQUpdate(it_ini,grad_f,jac_c,jac_d);
   }
@@ -161,24 +161,24 @@ private: //common code
    * right-hand side in 'rhs'.   *
    */
   virtual bool LSQInitDualSparse(hiopIterate& it,
-			 const hiopVector& grad_f,
-			 const hiopMatrix& jac_c,
-			 const hiopMatrix& jac_d);
+                                 const hiopVector& grad_f,
+                                 const hiopMatrix& jac_c,
+                                 const hiopMatrix& jac_d);
 
 private:
-  hiopMatrix *_mexme_, *_mexmi_, *_mixmi_, *_mxm_;
+  hiopMatrix *mexme_, *mexmi_, *mixmi_, *mxm_;
   hiopMatrix *M_;
 
   hiopVector *rhs_, *rhsc_, *rhsd_;
-  hiopVector *_vec_n_, *_vec_mi_;
+  hiopVector *vec_n_, *vec_mi_;
 
   hiopLinSolver* linSys_;
-  double lsq_dual_init_max;
+  double lsq_dual_init_max_;
 
 #ifdef HIOP_DEEPCHECKS
   hiopMatrix* M_copy_;
   hiopVector *rhs_copy_;
-  hiopMatrix* _mixme_;
+  hiopMatrix* mixme_;
 #endif
 
   //user options
@@ -215,13 +215,13 @@ public:
    * This is standard in (full) Newton IPMs. Very cheap!
    */
   virtual bool go(const hiopIterate& iter, hiopIterate& iter_plus,
-		  const double& f, const hiopVector& c, const hiopVector& d,
-		  const hiopVector& grad_f, const hiopMatrix& jac_c, const hiopMatrix& jac_d,
-		  const hiopIterate& search_dir, const double& alpha_primal, const double& alpha_dual,
-		  const double& mu, const double& kappa_sigma, const double& infeas_nrm_trial)
+                  const double& f, const hiopVector& c, const hiopVector& d,
+                  const hiopVector& grad_f, const hiopMatrix& jac_c, const hiopMatrix& jac_d,
+                  const hiopIterate& search_dir, const double& alpha_primal, const double& alpha_dual,
+                  const double& mu, const double& kappa_sigma, const double& infeas_nrm_trial)
   { 
     if(!iter_plus.takeStep_duals(iter, search_dir, alpha_primal, alpha_dual)) {
-      _nlp->log->printf(hovError, "dual Newton updater: error in standard update of the duals");
+      nlp_->log->printf(hovError, "dual Newton updater: error in standard update of the duals");
       return false;
     }
     return iter_plus.adjustDuals_primalLogHessian(mu,kappa_sigma);
