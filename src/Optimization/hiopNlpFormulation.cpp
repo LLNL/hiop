@@ -51,6 +51,7 @@
 #include "hiopVector.hpp"
 #include "hiopLinAlgFactory.hpp"
 #include "hiopLogger.hpp"
+#include "hiopDualsUpdater.hpp"
 
 #ifdef HIOP_USE_MPI
 #include "mpi.h"
@@ -883,6 +884,11 @@ bool hiopNlpDenseConstraints::finalizeInitialization()
   return hiopNlpFormulation::finalizeInitialization();
 }
 
+hiopDualsLsqUpdate* hiopNlpDenseConstraints::alloc_duals_lsq_updater()
+{
+  return new hiopDualsLsqUpdateLinsysRedDense(this);
+}
+
 bool hiopNlpDenseConstraints::eval_Jac_c(hiopVector& x, bool new_x, double* Jac_c)
 {
   hiopVector* x_user  = nlp_transformations.applyTox(x, new_x);
@@ -1023,6 +1029,11 @@ hiopMatrixDense* hiopNlpDenseConstraints::alloc_multivector_primal(int nrows, in
  *    hiopNlpMDS class implementation 
  * ***********************************************************************************
 */
+hiopDualsLsqUpdate* hiopNlpMDS::alloc_duals_lsq_updater()
+{
+  return new hiopDualsLsqUpdateLinsysRedDense(this);
+}
+
 bool hiopNlpMDS::eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& Jac_c)
 {
   hiopMatrixMDS* pJac_c = dynamic_cast<hiopMatrixMDS*>(&Jac_c);
@@ -1184,6 +1195,11 @@ bool hiopNlpMDS::finalizeInitialization()
  *    hiopNlpSparse class implementation
  * ***********************************************************************************
 */
+hiopDualsLsqUpdate* hiopNlpSparse::alloc_duals_lsq_updater()
+{
+  return new hiopDualsLsqUpdateLinsysAugSparse(this);
+}
+
 bool hiopNlpSparse::eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& Jac_c)
 {
   hiopMatrixSparseTriplet* pJac_c = dynamic_cast<hiopMatrixSparseTriplet*>(&Jac_c);

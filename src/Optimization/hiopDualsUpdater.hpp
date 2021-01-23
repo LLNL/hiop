@@ -123,82 +123,143 @@ public:
                                             const hiopMatrix& jac_c,
                                             const hiopMatrix& jac_d)
   {
-    if(augsys_update_) {
-      nlp_->log->printf(hovSummary,
-                        "LSQ Dual Initialization --- Sparse linsys: size %d (%d eq-cons)\n",
-                        nlp_->m_eq()+nlp_->m_ineq(), nlp_->m_eq());  
-
-      return LSQInitDualSparse(it_ini,grad_f,jac_c,jac_d);
+    //nlp_->log->printf(hovSummary,
+    //                  "LSQ Dual Initialization --- Dense linsys: size %d (%d eq-cons)\n",
+    //                  nlp_->m_eq()+nlp_->m_ineq(), nlp_->m_eq());  
+    bool bret = LSQUpdate(it_ini,grad_f,jac_c,jac_d);
+    
+    double ycnrm = it_ini.get_yc()->infnorm();
+    double ydnrm = it_ini.get_yd()->infnorm();
+    double ynrm = (ycnrm > ydnrm) ? ycnrm : ydnrm;
+    if(ynrm > lsq_dual_init_max_ || !bret) {
+      it_ini.get_yc()->setToZero();
+      it_ini.get_yd()->setToZero();
+      if(bret) {
+        nlp_->log->printf(hovScalars,
+                          "will not use lsq dual initial point since its norm (%g) is larger than "
+                          "the tolerance lsq_dual_init_max=%g.\n",
+                          ynrm, lsq_dual_init_max_);
+      }
     }
-    assert(augsys_update_==false);
-    
-    
-    nlp_->log->printf(hovSummary,
-                      "LSQ Dual Initialization --- Dense linsys: size %d (%d eq-cons)\n",
-                      nlp_->m_eq()+nlp_->m_ineq(), nlp_->m_eq());  
-
-    return LSQUpdate(it_ini,grad_f,jac_c,jac_d);
+    //nlp_->log->write("yc ini", *iter.get_yc(), hovSummary);
+    //nlp_->log->write("yd ini", *iter.get_yd(), hovSummary);
+    return bret;
   }
-private: //common code 
+protected:
+  //method called by both 'go' and 'computeInitialDualsEq'
+  virtual bool LSQUpdate(hiopIterate& it,
+                         const hiopVector& grad_f,
+                         const hiopMatrix& jac_c,
+                         const hiopMatrix& jac_d) = 0;
+
+protected:
+  hiopVector *rhs_, *rhsc_, *rhsd_;
+  hiopVector *vec_n_, *vec_mi_;
+
+  //
+  //user options
+  //
+  
+  /** Do not recompute duals using LSQ unless the primal infeasibilty or constraint violation 
+   * is less than this tolerance; default 1e-6
+   */
+  double recalc_lsq_duals_tol;
+
+  /** Do not use the LSQ duals if their norm is greater than 'lsq_dual_init_max_'; instead, 
+   * initialize them to zero.
+   */
+  double lsq_dual_init_max_;
+private: 
+  hiopDualsLsqUpdate() {};
+  hiopDualsLsqUpdate(const hiopDualsLsqUpdate&) {};
+  void operator=(const  hiopDualsLsqUpdate&) {};  
+};
+
+/** Given xk, zk_l, zk_u, vk_l, and vk_u (contained in 'iter'), this method solves an LSQ problem 
+ * corresponding to dual infeasibility equation
+ *    min_{y_c,y_d} ||  \nabla f(xk) + J^T_c(xk) y_c + J_d^T(xk) y_d - zk_l+zk_u  ||^2
+ *                  || - y_d - vk_l + vk_u                                        ||_2,
+ *  which is
+ *   min_{y_c, y_d} || [ J_c^T  J_d^T ] [ y_c ]  -  [ -\nabla f(xk) + zk_l-zk_u ]  ||^2
+ *                  || [  0       I   ] [ y_d ]     [ - vk_l + vk_u             ]  ||_2
+ * ******************************
+ * NLPs with dense constraints 
+ * ******************************
+ * For NLPs with dense constraints, the above LSQ problem is solved by solving the linear 
+ *  system in y_c and y_d:
+ *   [ J_c J_c^T    J_c J_d^T     ] [ y_c ]  =  [ J_c   0 ] [ -\nabla f(xk) + zk_l-zk_u ] 
+ *   [ J_d J_c^T    J_d J_d^T + I ] [ y_d ]     [ J_d   I ] [ - vk_l + vk_u             ]
+ * This linear system is small (of size m=m_E+m_I) (so it is replicated for all MPI ranks).
+ * 
+ * The matrix of the above system is stored in the member variable M_ of this class and the
+ *  right-hand side in 'rhs_'.
+ * 
+ * **************
+ * MDS NLPs
+ * **************
+ * For MDS NLPs, the linear system exploits the block structure of the Jacobians Jc and Jd. 
+ * Namely, since Jc = [Jxdc  Jxsc] and Jd = [Jxdd  Jxsd], the following
+ * dense linear system is to be solved for y_c and y_d
+ *
+ *    [ Jxdc Jxdc^T + Jxsc Jxsc^T   Jxdc Jxdd^T + Jxsc Jxsd^T     ] [ y_c ] = same rhs as
+ *    [ Jxdd Jxdc^T + Jxsd Jxsc^T   Jxdd Jxdd^T + Jxsd Jxsd^T + I ] [ y_d ]     above
+ * 
+ * The above linear systems are solved as dense linear systems using Cholesky factorization 
+ * of LAPACK or MAGMA. 
+ *
+ */
+class hiopDualsLsqUpdateLinsysRedDense : public hiopDualsLsqUpdate
+{
+public:
+  hiopDualsLsqUpdateLinsysRedDense(hiopNlpFormulation* nlp);
+  virtual ~hiopDualsLsqUpdateLinsysRedDense();
+private:
   virtual bool LSQUpdate(hiopIterate& it,
                          const hiopVector& grad_f,
                          const hiopMatrix& jac_c,
                          const hiopMatrix& jac_d);
-
-  /**
-   * @brief LSQ-based initialization for sparse linear algebra.
-   *
-   * NLPs with sparse Jac/Hes
-   * ******************************
-   * For NLPs with sparse inputs, the corresponding LSQ problem is solved in augmeted system:
-   * [    I    0     Jc^T  Jd^T  ] [ dx]      [ \nabla f(xk) - zk_l + zk_u  ]
-   * [    0    I     0     -I    ] [ dd]      [ -vk_l + vk_u ]
-   * [    Jc   0     0     0     ] [dyc] =  - [   0    ]
-   * [    Jd   -I    0     0     ] [dyd]      [   0    ]         ]
-   *
-   * The matrix of the above system is stored in the member variable M_ of this class and the
-   * right-hand side in 'rhs'.   *
-   */
-  virtual bool LSQInitDualSparse(hiopIterate& it,
-                                 const hiopVector& grad_f,
-                                 const hiopMatrix& jac_c,
-                                 const hiopMatrix& jac_d);
-
+  //helpers
+  int factorizeMat(hiopMatrixDense& M);
+  int solveWithFactors(hiopMatrixDense& M, hiopVector& r);
 private:
   hiopMatrix *mexme_, *mexmi_, *mixmi_, *mxm_;
   hiopMatrix *M_;
-
-  hiopVector *rhs_, *rhsc_, *rhsd_;
-  hiopVector *vec_n_, *vec_mi_;
-
-  hiopLinSolver* linSys_;
-  double lsq_dual_init_max_;
-
 #ifdef HIOP_DEEPCHECKS
   hiopMatrix* M_copy_;
   hiopVector *rhs_copy_;
   hiopMatrix* mixme_;
 #endif
-
-  //user options
-
-  /** Do not recompute duals using LSQ unless the primal infeasibilty or constraint violation 
-   * is less than this tolerance; default 1e-6
-   */
-  double recalc_lsq_duals_tol;
-  
-  int augsys_update_; //0:dense 1:mds 2:sparse
-                                
-  //helpers
-  int factorizeMat(hiopMatrixDense& M);
-  int solveWithFactors(hiopMatrixDense& M, hiopVector& r);
-private: 
-  hiopDualsLsqUpdate() {};
-  hiopDualsLsqUpdate(const hiopDualsLsqUpdate&) {};
-  void operator=(const  hiopDualsLsqUpdate&) {};
-  
 };
 
+/**
+ * @brief LSQ-based initialization for sparse linear algebra (NLPs with sparse Jac/Hes)
+ * 
+ * With the same notation used above for hiopDualsLsqUpdateLinsysRedDense class,
+ * for sparse NLPs, the corresponding LSQ problem is the following augmented 
+ * linear system:
+ * [    I    0     Jc^T  Jd^T  ] [ dx]      [ \nabla f(xk) - zk_l + zk_u  ]
+ * [    0    I     0     -I    ] [ dd]      [        -vk_l + vk_u         ]
+ * [    Jc   0     0     0     ] [dyc] =  - [              0              ]
+ * [    Jd   -I    0     0     ] [dyd]      [              0              ]
+ *
+ * The matrix of the above system is stored in the member variable M_ of this class and the
+ * right-hand side in 'rhs'.
+ */
+class hiopDualsLsqUpdateLinsysAugSparse : public hiopDualsLsqUpdate
+{
+public:
+  hiopDualsLsqUpdateLinsysAugSparse(hiopNlpFormulation* nlp);
+  virtual ~hiopDualsLsqUpdateLinsysAugSparse();
+private:
+  virtual bool LSQUpdate(hiopIterate& iter,
+                         const hiopVector& grad_f,
+                         const hiopMatrix& jac_c,
+                         const hiopMatrix& jac_d);
+private:
+  hiopLinSolver* lin_sys_;
+};
+
+  
 /** 
  * Performs Newton update for the duals, which is a simple linear update along the dual Newton direction
  * with a given dual step.

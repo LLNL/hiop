@@ -69,6 +69,9 @@
 namespace hiop
 {
 
+//some forward decls
+class hiopDualsLsqUpdate;
+  
 /** Class for a general NlpFormulation with general constraints and bounds on the variables. 
  * This class also  acts as a factory for linear algebra objects (derivative 
  * matrices, KKT system) whose types are decided based on the hiopInterfaceXXX object passed in the
@@ -120,6 +123,9 @@ public:
 				  hiopVector& zL0, hiopVector& zU0,
 				  hiopVector& yc0, hiopVector& yd0);
 
+  /* Allocates the LSQ duals update class. */
+  virtual hiopDualsLsqUpdate* alloc_duals_lsq_updater() = 0;
+  
   /** linear algebra factory */
   virtual hiopVector* alloc_primal_vec() const;
   virtual hiopVector* alloc_dual_eq_vec() const;
@@ -322,6 +328,9 @@ public:
     return true;
   }
 
+  /* Allocates the LSQ duals update class. */
+  virtual hiopDualsLsqUpdate* alloc_duals_lsq_updater();
+  
   virtual hiopMatrixDense* alloc_Jac_c();
   virtual hiopMatrixDense* alloc_Jac_d();
   virtual hiopMatrixDense* alloc_Jac_cons();
@@ -376,6 +385,9 @@ public:
 			      const double* lambda_ineq,
 			      bool new_lambdas,
 			      hiopMatrix& Hess_L);
+  
+  /* Allocates the LSQ duals update class. */
+  virtual hiopDualsLsqUpdate* alloc_duals_lsq_updater();
   
   virtual hiopMatrix* alloc_Jac_c() 
   {
@@ -445,7 +457,9 @@ public:
                             const double* lambda_ineq,
                             bool new_lambdas,
                             hiopMatrix& Hess_L);
-
+  /* Allocates the LSQ duals update class. */
+  virtual hiopDualsLsqUpdate* alloc_duals_lsq_updater();
+  
   virtual hiopMatrix* alloc_Jac_c()
   {
     return new hiopMatrixSparseTriplet(n_cons_eq, n_vars, m_nnz_sparse_Jaceq);

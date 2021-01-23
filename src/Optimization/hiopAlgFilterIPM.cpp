@@ -104,7 +104,8 @@ hiopAlgFilterIPMBase::hiopAlgFilterIPMBase(hiopNlpFormulation* nlp_)
 
   //parameter based initialization
   if(dualsUpdateType==0) {
-    dualsUpdate = new hiopDualsLsqUpdate(nlp);
+    //dualsUpdate = new hiopDualsLsqUpdate(nlp);
+    dualsUpdate = nlp->alloc_duals_lsq_updater();
   } else if(dualsUpdateType==1) {
     dualsUpdate = new hiopDualsNewtonLinearUpdate(nlp);
   } else {
@@ -218,11 +219,15 @@ void hiopAlgFilterIPMBase::reInitializeNlpObjects()
   }
 
   //parameter based initialization
-  if(dualsUpdateType==0)
-    dualsUpdate = new hiopDualsLsqUpdate(nlp);
-  else if(dualsUpdateType==1)
-    dualsUpdate = new hiopDualsNewtonLinearUpdate(nlp);
-  else assert(false && "dualsUpdateType has an unrecognized value");
+  if(dualsUpdateType==0) {
+    //lsq update
+    //dualsUpdate = new hiopDualsLsqUpdate(nlp);
+    dualsUpdate = nlp->alloc_duals_lsq_updater();
+  } else {
+    if(dualsUpdateType==1) {
+      dualsUpdate = new hiopDualsNewtonLinearUpdate(nlp);
+    } else { assert(false && "dualsUpdateType has an unrecognized value"); }
+  }
 }
 
 void hiopAlgFilterIPMBase::reloadOptions()
@@ -359,7 +364,8 @@ startingProcedure(hiopIterate& it_ini,
       hiopDualsLsqUpdate* updater = dynamic_cast<hiopDualsLsqUpdate*>(dualsUpdate);
       bool deleteUpdater = false;
       if(updater == NULL) {
-	updater = new hiopDualsLsqUpdate(nlp);
+	//updater = new hiopDualsLsqUpdate(nlp);
+        updater = nlp->alloc_duals_lsq_updater();
 	deleteUpdater = true;
       }
 
