@@ -123,8 +123,7 @@ public:
                                             const hiopMatrix& jac_c,
                                             const hiopMatrix& jac_d)
   {
-    if(augsys_update_)
-    {
+    if(augsys_update_) {
       nlp_->log->printf(hovSummary,
                         "LSQ Dual Initialization --- Sparse linsys: size %d (%d eq-cons)\n",
                         nlp_->m_eq()+nlp_->m_ineq(), nlp_->m_eq());  

@@ -217,7 +217,6 @@ public:
   inline MPI_Comm get_comm() const { return comm; }
   inline int      get_rank() const { return rank; }
   inline int      get_num_ranks() const { return num_ranks; }
-  inline long long* get_vec_distrib() const {return vec_distrib;}
 #endif
 protected:
 #ifdef HIOP_USE_MPI
@@ -449,28 +448,33 @@ public:
 
   virtual hiopMatrix* alloc_Jac_c()
   {
-    assert(n_vars == m_nx);
-    return new hiopMatrixSparseTriplet(n_cons_eq, m_nx, m_nnz_sparse_Jaceq);
+    return new hiopMatrixSparseTriplet(n_cons_eq, n_vars, m_nnz_sparse_Jaceq);
   }
   virtual hiopMatrix* alloc_Jac_d()
   {
-    assert(n_vars == m_nx);
-    return new hiopMatrixSparseTriplet(n_cons_ineq, m_nx, m_nnz_sparse_Jacineq);
+    return new hiopMatrixSparseTriplet(n_cons_ineq, n_vars, m_nnz_sparse_Jacineq);
   }
   virtual hiopMatrix* alloc_Jac_cons()
   {
-    assert(n_vars == m_nx);
-    return new hiopMatrixSparseTriplet(n_cons, m_nx, m_nnz_sparse_Jaceq + m_nnz_sparse_Jacineq);
+    return new hiopMatrixSparseTriplet(n_cons, n_vars, m_nnz_sparse_Jaceq + m_nnz_sparse_Jacineq);
   }
   virtual hiopMatrix* alloc_Hess_Lagr()
   {
-  assert(n_vars == m_nx);
-    return new hiopMatrixSymSparseTriplet(m_nx, m_nnz_sparse_Hess_Lagr);
+    return new hiopMatrixSymSparseTriplet(n_vars, m_nnz_sparse_Hess_Lagr);
   }
-  virtual long long nx() const { return m_nx; }
+  virtual long long nx() const { return n_vars; }
+
+  //not inherited from NlpFormulation
+
+  //Allocates a non-MPI vector with size given by the size of primal plus dual (for both equality and inequality) spaces
+  virtual hiopVector* alloc_primal_dual_vec() const
+  {
+    assert(n_cons == n_cons_eq+n_cons_ineq);
+    return LinearAlgebraFactory::createVector(n_vars + n_cons);
+  }
+  
 private:
   hiopInterfaceSparse& interface;
-  int m_nx;
   int m_nnz_sparse_Jaceq, m_nnz_sparse_Jacineq;
   int m_nnz_sparse_Hess_Lagr;
 

@@ -84,13 +84,11 @@ hiopDualsLsqUpdate::hiopDualsLsqUpdate(hiopNlpFormulation* nlp)
   if(nullptr!=nlpsp)
   {
 #ifndef HIOP_SPARSE
-      assert(0 && "should not reach here!");
-#endif // HIOP_SPARSE        
-      augsys_update_ = true;
-      rhs_    = LinearAlgebraFactory::createVector(nlp_->n() + nlp_->m_ineq() + nlp_->m());
-  }
-  else
-  {
+    assert(0 && "should not reach here!");
+#endif // HIOP_SPARSE
+    augsys_update_ = true;
+    rhs_ = LinearAlgebraFactory::createVector(nlp_->n() + nlp_->m_ineq() + nlp_->m());
+  } else {
     mexme_ = LinearAlgebraFactory::createMatrixDense(nlp_->m_eq(),   nlp_->m_eq());
     mexmi_ = LinearAlgebraFactory::createMatrixDense(nlp_->m_eq(),   nlp_->m_ineq());
     mixmi_ = LinearAlgebraFactory::createMatrixDense(nlp_->m_ineq(), nlp_->m_ineq());
@@ -99,27 +97,16 @@ hiopDualsLsqUpdate::hiopDualsLsqUpdate(hiopNlpFormulation* nlp)
     M_      = LinearAlgebraFactory::createMatrixDense(nlp_->m(), nlp_->m());
     rhs_    = LinearAlgebraFactory::createVector(nlp_->m());
 #ifdef HIOP_DEEPCHECKS
-    M_copy_ = LinearAlgebraFactory::createMatrixDense(nlp_->m(), nlp_->m());
-    rhs_copy_ = LinearAlgebraFactory::createVector(nlp_->m());
+    M_copy_ = M_->alloc_clone(); 
+    rhs_copy_ = rhs_->alloc_clone(); 
     mixme_ = LinearAlgebraFactory::createMatrixDense(nlp_->m_ineq(), nlp_->m_eq());
 #endif
   }
 
-#ifdef HIOP_USE_MPI
-  long long* vec_distrib = nlp_->get_vec_distrib();
-
-  if(vec_distrib!=NULL) {
-    vec_n_ = LinearAlgebraFactory::createVector(nlp_->n(), vec_distrib, nlp_->get_comm());
-  } else {
-    vec_n_ = LinearAlgebraFactory::createVector(nlp_->n());   
-  }
-#else
-  vec_n_ = LinearAlgebraFactory::createVector(nlp_->n());
-#endif
-
-  rhsc_ = LinearAlgebraFactory::createVector(nlp_->m_eq());
-  rhsd_ = LinearAlgebraFactory::createVector(nlp_->m_ineq());
-  vec_mi_ = LinearAlgebraFactory::createVector(nlp_->m_ineq());     
+  vec_n_ = nlp_->alloc_primal_vec();
+  rhsc_ = nlp_->alloc_dual_eq_vec(); 
+  rhsd_ = nlp_->alloc_dual_ineq_vec();
+  vec_mi_ = rhsd_->alloc_clone(); 
   
   rhsc_->setToZero();
   rhsd_->setToZero();
@@ -189,14 +176,14 @@ go(const hiopIterate& iter,  hiopIterate& iter_plus,
  *                  || - y_d - vk_l + vk_u                                        ||_2,
  *  which is
  *   min_{y_c, y_d} || [ J_c^T  J_d^T ] [ y_c ]  -  [ -\nabla f(xk) + zk_l-zk_u ]  ||^2
- *                  || [  0       I   ] [ y_d ]     [ - vk_l + vk_u               ]  ||_2
+ *                  || [  0       I   ] [ y_d ]     [ - vk_l + vk_u             ]  ||_2
  * ******************************
  * NLPs with dense constraints 
  * ******************************
  * For NLPs with dense constraints, the above LSQ problem is solved by solving the linear 
  *  system in y_c and y_d:
  *   [ J_c J_c^T    J_c J_d^T     ] [ y_c ]  =  [ J_c   0 ] [ -\nabla f(xk) + zk_l-zk_u ] 
- *   [ J_d J_c^T    J_d J_d^T + I ] [ y_d ]     [ J_d   I ] [ - vk_l + vk_u              ]
+ *   [ J_d J_c^T    J_d J_d^T + I ] [ y_d ]     [ J_d   I ] [ - vk_l + vk_u             ]
  * This linear system is small (of size m=m_E+m_I) (so it is replicated for all MPI ranks).
  * 
  * The matrix of the above system is stored in the member variable M_ of this class and the
@@ -209,7 +196,7 @@ go(const hiopIterate& iter,  hiopIterate& iter_plus,
  * Namely, since Jc = [Jxdc  Jxsc] and Jd = [Jxdd  Jxsd], the following
  * dense linear system is to be solved for y_c and y_d
  *
- *    [ Jxdc Jxdc^T + Jxsc Jxsc^T   Jxdc Jxdd^T + Jxsc Jxsd^T     ] [ y_c ] = same rhs_ as
+ *    [ Jxdc Jxdc^T + Jxsc Jxsc^T   Jxdc Jxdd^T + Jxsc Jxsd^T     ] [ y_c ] = same rhs as
  *    [ Jxdd Jxdc^T + Jxsd Jxsc^T   Jxdd Jxdd^T + Jxsd Jxsd^T + I ] [ y_d ]     above
  * The above linear system is solved as a dense linear system. 
  *
@@ -218,9 +205,9 @@ go(const hiopIterate& iter,  hiopIterate& iter_plus,
  * ***********************
  * For NLPs with sparse inputs, the corresponding LSQ problem is solved in augmeted system:
  * [    I    0     Jc^T  Jd^T  ] [ dx]      [ \nabla f(xk) - zk_l + zk_u  ]
- * [    0    I     0     -I    ] [ dd]      [ -vk_l + vk_u ]
- * [    Jc   0     0     0     ] [dyc] =  - [   0    ]
- * [    Jd   -I    0     0     ] [dyd]      [   0    ]         ]
+ * [    0    I     0     -I    ] [ dd]      [        -vk_l + vk_u         ]
+ * [    Jc   0     0     0     ] [dyc] =  - [             0               ]
+ * [    Jd   -I    0     0     ] [dyd]      [             0               ]
  *
  * The matrix of the above system is stored in the member variable M_ of this class and the
  * right-hand side in 'rhs'.  * 
@@ -365,12 +352,10 @@ bool hiopDualsLsqUpdate::LSQInitDualSparse(hiopIterate& iter,
   int nx = Jac_cSp.n(), nd=Jac_dSp.m(), neq=Jac_cSp.m(), nineq=Jac_dSp.m();
   int n = nx + nineq + neq + nineq; 
 
-  int nnz = nx + nd + Jac_cSp.numberOfNonzeros() + Jac_dSp.numberOfNonzeros() + nd + ( nx + nd + neq + nineq);
+  int nnz = nx + nd + Jac_cSp.numberOfNonzeros() + Jac_dSp.numberOfNonzeros() + nd + (nx + nd + neq + nineq);
   
-  if(!linSys_)
-  {
-    if(nlp_->options->GetString("compute_mode")=="cpu")
-    {
+  if(!linSys_) {
+    if(nlp_->options->GetString("compute_mode")=="cpu") {
       nlp_->log->printf(hovSummary,
                         "LSQ Dual Initialization --- KKT_SPARSE_XYcYd linsys: MA57 size %d (%d cons)\n",
                         n, neq+nineq);

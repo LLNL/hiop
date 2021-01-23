@@ -489,13 +489,15 @@ hiopVector* hiopNlpFormulation::alloc_dual_eq_vec() const
 {
   return c_rhs->alloc_clone();
 }
+
 hiopVector* hiopNlpFormulation::alloc_dual_ineq_vec() const
 {
   return dl->alloc_clone();
 }
+
 hiopVector* hiopNlpFormulation::alloc_dual_vec() const
 {
-  hiopVector* ret=LinearAlgebraFactory::createVector(n_cons);
+  hiopVector* ret = LinearAlgebraFactory::createVector(n_cons);
 #ifdef HIOP_DEEPCHECKS
   assert(ret!=NULL);
 #endif
@@ -1307,11 +1309,13 @@ bool hiopNlpSparse::eval_Hess_Lagr(const hiopVector&  x, bool new_x, const doubl
 
 bool hiopNlpSparse::finalizeInitialization()
 {
-  if(!interface.get_sparse_blocks_info(m_nx,
-                                           m_nnz_sparse_Jaceq, m_nnz_sparse_Jacineq,
-                                           m_nnz_sparse_Hess_Lagr)) {
+  int nx = 0;
+  if(!interface.get_sparse_blocks_info(nx,
+                                       m_nnz_sparse_Jaceq, m_nnz_sparse_Jacineq,
+                                       m_nnz_sparse_Hess_Lagr)) {
     return false;
   }
+  assert(nx == n_vars);
   return hiopNlpFormulation::finalizeInitialization();
 }
 
