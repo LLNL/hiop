@@ -77,7 +77,7 @@ int main(int argc, char **argv)
 
   //nlp.options->SetIntegerValue("verbosity_level", 4);
   //nlp.options->SetNumericValue("tolerance", 1e-4);
-  //nlp.options->SetStringValue("dualsInitialization",  "zero");
+  //nlp.options->SetStringValue("duals_init",  "zero");
   //nlp.options->SetIntegerValue("max_iter", 2);
   
   hiop::hiopAlgFilterIPM solver(&nlp);

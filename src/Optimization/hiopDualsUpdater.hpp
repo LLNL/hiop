@@ -126,19 +126,22 @@ public:
     //nlp_->log->printf(hovSummary,
     //                  "LSQ Dual Initialization --- Dense linsys: size %d (%d eq-cons)\n",
     //                  nlp_->m_eq()+nlp_->m_ineq(), nlp_->m_eq());  
-    bool bret = LSQUpdate(it_ini,grad_f,jac_c,jac_d);
+    bool bret = do_lsq_update(it_ini,grad_f,jac_c,jac_d);
     
     double ycnrm = it_ini.get_yc()->infnorm();
     double ydnrm = it_ini.get_yd()->infnorm();
     double ynrm = (ycnrm > ydnrm) ? ycnrm : ydnrm;
-    if(ynrm > lsq_dual_init_max_ || !bret) {
+
+    // do not use the LSQ duals if their norm is greater than 'duals_lsq_ini_max'; instead, 
+    double lsq_dual_init_max = nlp_->options->GetNumeric("duals_lsq_ini_max");
+    if(ynrm > lsq_dual_init_max || !bret) {
       it_ini.get_yc()->setToZero();
       it_ini.get_yd()->setToZero();
       if(bret) {
         nlp_->log->printf(hovScalars,
                           "will not use lsq dual initial point since its norm (%g) is larger than "
-                          "the tolerance lsq_dual_init_max=%g.\n",
-                          ynrm, lsq_dual_init_max_);
+                          "the tolerance duals_lsq_ini_max=%g.\n",
+                          ynrm, lsq_dual_init_max);
       }
     }
     //nlp_->log->write("yc ini", *iter.get_yc(), hovSummary);
@@ -147,28 +150,15 @@ public:
   }
 protected:
   //method called by both 'go' and 'computeInitialDualsEq'
-  virtual bool LSQUpdate(hiopIterate& it,
-                         const hiopVector& grad_f,
-                         const hiopMatrix& jac_c,
-                         const hiopMatrix& jac_d) = 0;
+  virtual bool do_lsq_update(hiopIterate& it,
+                             const hiopVector& grad_f,
+                             const hiopMatrix& jac_c,
+                             const hiopMatrix& jac_d) = 0;
 
 protected:
   hiopVector *rhs_, *rhsc_, *rhsd_;
   hiopVector *vec_n_, *vec_mi_;
 
-  //
-  //user options
-  //
-  
-  /** Do not recompute duals using LSQ unless the primal infeasibilty or constraint violation 
-   * is less than this tolerance; default 1e-6
-   */
-  double recalc_lsq_duals_tol;
-
-  /** Do not use the LSQ duals if their norm is greater than 'lsq_dual_init_max_'; instead, 
-   * initialize them to zero.
-   */
-  double lsq_dual_init_max_;
 private: 
   hiopDualsLsqUpdate() {};
   hiopDualsLsqUpdate(const hiopDualsLsqUpdate&) {};
@@ -214,10 +204,10 @@ public:
   hiopDualsLsqUpdateLinsysRedDense(hiopNlpFormulation* nlp);
   virtual ~hiopDualsLsqUpdateLinsysRedDense();
 private:
-  virtual bool LSQUpdate(hiopIterate& it,
-                         const hiopVector& grad_f,
-                         const hiopMatrix& jac_c,
-                         const hiopMatrix& jac_d);
+  virtual bool do_lsq_update(hiopIterate& it,
+                             const hiopVector& grad_f,
+                             const hiopMatrix& jac_c,
+                             const hiopMatrix& jac_d);
   //helpers
   int factorizeMat(hiopMatrixDense& M);
   int solveWithFactors(hiopMatrixDense& M, hiopVector& r);
@@ -251,10 +241,10 @@ public:
   hiopDualsLsqUpdateLinsysAugSparse(hiopNlpFormulation* nlp);
   virtual ~hiopDualsLsqUpdateLinsysAugSparse();
 private:
-  virtual bool LSQUpdate(hiopIterate& iter,
-                         const hiopVector& grad_f,
-                         const hiopMatrix& jac_c,
-                         const hiopMatrix& jac_d);
+  virtual bool do_lsq_update(hiopIterate& iter,
+                             const hiopVector& grad_f,
+                             const hiopMatrix& jac_c,
+                             const hiopMatrix& jac_d);
 private:
   hiopLinSolver* lin_sys_;
 };

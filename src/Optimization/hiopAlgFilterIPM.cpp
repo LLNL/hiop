@@ -103,13 +103,13 @@ hiopAlgFilterIPMBase::hiopAlgFilterIPMBase(hiopNlpFormulation* nlp_)
   resid_trial = new hiopResidual(nlp);
 
   //parameter based initialization
-  if(dualsUpdateType==0) {
+  if(duals_update_type==0) {
     //dualsUpdate = new hiopDualsLsqUpdate(nlp);
     dualsUpdate = nlp->alloc_duals_lsq_updater();
-  } else if(dualsUpdateType==1) {
+  } else if(duals_update_type==1) {
     dualsUpdate = new hiopDualsNewtonLinearUpdate(nlp);
   } else {
-    assert(false && "dualsUpdateType has an unrecognized value");
+    assert(false && "duals_update_type has an unrecognized value");
   }
 
   resetSolverStatus();
@@ -203,30 +203,30 @@ void hiopAlgFilterIPMBase::reInitializeNlpObjects()
   resid_trial = new hiopResidual(nlp);
 
   //0 LSQ (default), 1 linear update (more stable)
-  dualsUpdateType = nlp->options->GetString("dualsUpdateType")=="lsq"?0:1;
+  duals_update_type = nlp->options->GetString("duals_update_type")=="lsq"?0:1;
   //0 LSQ (default), 1 set to zero
-  dualsInitializ = nlp->options->GetString("dualsInitialization")=="lsq"?0:1;
+  dualsInitializ = nlp->options->GetString("duals_init")=="lsq"?0:1;
 
-  if(dualsUpdateType==0) {
+  if(duals_update_type==0) {
     hiopNlpDenseConstraints* nlpd = dynamic_cast<hiopNlpDenseConstraints*>(nlp);
     if(NULL==nlpd) {
-      dualsUpdateType = 1;
+      duals_update_type = 1;
       dualsInitializ = 1;
       nlp->log->printf(hovWarning,
-		       "Option dualsUpdateType=lsq not compatible with the requested NLP formulation and will "
-		       "be set to dualsUpdateType=linear together with dualsInitialization=zero\n");
+		       "Option duals_update_type=lsq not compatible with the requested NLP formulation and will "
+		       "be set to duals_update_type=linear together with duals_init=zero\n");
     }
   }
 
   //parameter based initialization
-  if(dualsUpdateType==0) {
+  if(duals_update_type==0) {
     //lsq update
     //dualsUpdate = new hiopDualsLsqUpdate(nlp);
     dualsUpdate = nlp->alloc_duals_lsq_updater();
   } else {
-    if(dualsUpdateType==1) {
+    if(duals_update_type==1) {
       dualsUpdate = new hiopDualsNewtonLinearUpdate(nlp);
-    } else { assert(false && "dualsUpdateType has an unrecognized value"); }
+    } else { assert(false && "duals_update_type has an unrecognized value"); }
   }
 }
 
@@ -251,18 +251,18 @@ void hiopAlgFilterIPMBase::reloadOptions()
   eps_tol_accep = nlp->options->GetNumeric("acceptable_tolerance");
 
   //0 LSQ (default), 1 linear update (more stable)
-  dualsUpdateType = nlp->options->GetString("dualsUpdateType")=="lsq"?0:1;
+  duals_update_type = nlp->options->GetString("duals_update_type")=="lsq"?0:1;
   //0 LSQ (default), 1 set to zero
-  dualsInitializ = nlp->options->GetString("dualsInitialization")=="lsq"?0:1;
+  dualsInitializ = nlp->options->GetString("duals_init")=="lsq"?0:1;
 
-  if(dualsUpdateType==0) {
+  if(duals_update_type==0) {
     hiopNlpDenseConstraints* nlpd = dynamic_cast<hiopNlpDenseConstraints*>(nlp);
     if(NULL==nlpd){
       // this is sparse or mds linear algebra
-      dualsUpdateType = 1;
+      duals_update_type = 1;
       nlp->log->printf(hovWarning,
-		       "Option dualsUpdateType=lsq not compatible with the requested NLP formulation. "
-		       " Will use dualsUpdateType=linear.\n");
+		       "Option duals_update_type=lsq not compatible with the requested NLP formulation. "
+		       " Will use duals_update_type=linear.\n");
     }
   }
 

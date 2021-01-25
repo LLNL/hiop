@@ -78,9 +78,9 @@ int main(int argc, char **argv)
   Ex6 nlp_interface(n);
   hiopNlpSparse nlp(nlp_interface);
   //nlp.options->SetStringValue("Hessian", "analytical_exact");
-  nlp.options->SetStringValue("dualsUpdateType", "linear"); // "lsq" or "linear" --> lsq hasn't been implemented yet.
+  nlp.options->SetStringValue("duals_update_type", "linear"); // "lsq" or "linear" --> lsq hasn't been implemented yet.
                                                             // it will be forced to use "linear" internally.
-  nlp.options->SetStringValue("dualsInitialization", "lsq"); // "lsq" or "zero"
+  nlp.options->SetStringValue("duals_init", "lsq"); // "lsq" or "zero"
   nlp.options->SetStringValue("compute_mode", "cpu");
 //  nlp.options->SetStringValue("compute_mode", "hybrid");
   nlp.options->SetStringValue("KKTLinsys", "xdycyd");

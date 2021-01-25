@@ -82,10 +82,6 @@ hiopDualsLsqUpdate::hiopDualsLsqUpdate(hiopNlpFormulation* nlp)
   
   rhsc_->setToZero();
   rhsd_->setToZero();
-
-  //user options
-  recalc_lsq_duals_tol = 1e-6;
-  lsq_dual_init_max_ = 1e3;
 };
 
 hiopDualsLsqUpdate::~hiopDualsLsqUpdate()
@@ -119,9 +115,9 @@ go(const hiopIterate& iter,  hiopIterate& iter_plus,
     return false;
   }
 
-
+  const double recalc_lsq_duals_tol = nlp_->options->GetNumeric("recalc_lsq_duals_tol");
   //return if the constraint violation (primal infeasibility) is not below the tol for the LSQ update
-  if(infeas_nrm_trial>recalc_lsq_duals_tol) {
+  if(infeas_nrm_trial > recalc_lsq_duals_tol) {
     nlp_->log->printf(hovScalars,
                       "will not perform the dual lsq update since the primal infeasibility (%g) "
                       "is not under the tolerance recalc_lsq_duals_tol=%g.\n",
@@ -129,7 +125,7 @@ go(const hiopIterate& iter,  hiopIterate& iter_plus,
     return true;
   }
 
-  return LSQUpdate(iter_plus, grad_f, jac_c, jac_d);
+  return do_lsq_update(iter_plus, grad_f, jac_c, jac_d);
 }
 
 hiopDualsLsqUpdateLinsysRedDense::hiopDualsLsqUpdateLinsysRedDense(hiopNlpFormulation* nlp)
@@ -211,10 +207,10 @@ hiopDualsLsqUpdateLinsysRedDense::~hiopDualsLsqUpdateLinsysRedDense()
  * The matrix of the above system is stored in the member variable M_ of this class and the
  * right-hand side in 'rhs'.  * 
  */
-bool hiopDualsLsqUpdateLinsysRedDense::LSQUpdate(hiopIterate& iter,
-                                                 const hiopVector& grad_f,
-                                                 const hiopMatrix& jac_c,
-                                                 const hiopMatrix& jac_d)
+bool hiopDualsLsqUpdateLinsysRedDense::do_lsq_update(hiopIterate& iter,
+                                                     const hiopVector& grad_f,
+                                                     const hiopMatrix& jac_c,
+                                                     const hiopMatrix& jac_d)
 {
   hiopMatrixDense* M = dynamic_cast<hiopMatrixDense*>(M_);
   hiopMatrixDense* mexme = dynamic_cast<hiopMatrixDense*>(mexme_);
@@ -284,14 +280,14 @@ bool hiopDualsLsqUpdateLinsysRedDense::LSQUpdate(hiopIterate& iter,
   double nrmres = rhs_copy_->twonorm() / (1+nrmrhs);
   if(nrmres>1e-4) {
     nlp_->log->printf(hovError,
-                      "hiopDualsLsqUpdateDense::LSQUpdate linear system residual is dangerously high: %g\n",
+                      "hiopDualsLsqUpdateDense::do_lsq_update linear system residual is dangerously high: %g\n",
                       nrmres);
-    assert(false && "hiopDualsLsqUpdateDense::LSQUpdate linear system residual is dangerously high");
+    assert(false && "hiopDualsLsqUpdateDense::do_lsq_update linear system residual is dangerously high");
     return false;
   } else {
     if(nrmres>1e-6)
       nlp_->log->printf(hovWarning,
-                        "hiopDualsLsqUpdate::LSQUpdate linear system residual is dangerously high: %g\n",
+                        "hiopDualsLsqUpdate::do_lsq_update linear system residual is dangerously high: %g\n",
                         nrmres);
   }
 #endif
@@ -353,10 +349,10 @@ hiopDualsLsqUpdateLinsysAugSparse::~hiopDualsLsqUpdateLinsysAugSparse()
   if(lin_sys_) delete lin_sys_;
 }
 
-bool hiopDualsLsqUpdateLinsysAugSparse::LSQUpdate(hiopIterate& iter,
-                                                  const hiopVector& grad_f,
-                                                  const hiopMatrix& jac_c,
-                                                  const hiopMatrix& jac_d)
+bool hiopDualsLsqUpdateLinsysAugSparse::do_lsq_update(hiopIterate& iter,
+                                                      const hiopVector& grad_f,
+                                                      const hiopMatrix& jac_c,
+                                                      const hiopMatrix& jac_d)
 {
   hiopNlpSparse* nlpsp = dynamic_cast<hiopNlpSparse*>(nlp_);
   assert(nullptr!=nlpsp);

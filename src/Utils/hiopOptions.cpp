@@ -134,21 +134,31 @@ void hiopOptions::registerOptions()
 		    "multiplier threshold used in computing the scaling factors for the optimality error (default 100.)");
 
   {
-    // 'dualsUpdateType' should be 'lsq' or 'linear' for  'Hessian=quasinewton_approx'
-    // 'dualsUpdateType' can only be 'linear' for Newton methods 'Hessian=analytical_exact'
+    // 'duals_update_type' should be 'lsq' or 'linear' for  'Hessian=quasinewton_approx'
+    // 'duals_update_type' can only be 'linear' for Newton methods 'Hessian=analytical_exact'
 
     //here will set the default value to 'lsq' and this will be adjusted later in 'ensureConsistency'
     //to a valid value depending on the 'Hessian' value
     vector<string> range(2); range[0]="lsq"; range[1]="linear";
-    registerStrOption("dualsUpdateType", "lsq", range,
+    registerStrOption("duals_update_type", "lsq", range,
 		      "Type of update of the multipliers of the eq. constraints "
                       "(default is 'lsq' when 'Hessian' is 'quasinewton_approx' and "
-                      "'linear' when 'Hessian is 'analytical_exact')"); 
+                      "'linear' when 'Hessian is 'analytical_exact')");
+
+    registerNumOption("recalc_lsq_duals_tol", 1e-6, 0, 1e10, 
+                      "Threshold for infeasibility under which LSQ computation of duals will be employed "
+                      "(requires 'duals_update_type' to be 'lsq'");
   }
+
   {
     vector<string> range(2); range[0]="lsq"; range[1]="zero";
-    registerStrOption("dualsInitialization", "lsq", range,
+    registerStrOption("duals_init", "lsq", range,
 		      "Type of initialization of the multipliers of the eq. cons. (default lsq)");
+
+    registerNumOption("duals_lsq_ini_max", 1e3, 1e-16, 1e+10, 
+                      "Max inf-norm allowed for initials duals computed with LSQ; if norm is greater, the duals for"
+                      "equality constraints will be set to zero.");
+
   }
 
   registerIntOption("max_iter", 3000, 1, 1e6, "Max number of iterations (default 3000)");
@@ -350,19 +360,19 @@ void hiopOptions::ensureConsistence()
   }
 
   if(GetString("Hessian")=="analytical_exact") {
-    string duals_update_type = GetString("dualsUpdateType");
+    string duals_update_type = GetString("duals_update_type");
     if("linear" != duals_update_type) {
-      // 'dualsUpdateType' should be 'lsq' or 'linear' for  'Hessian=quasinewton_approx'
-      // 'dualsUpdateType' can only be 'linear' for Newton methods 'Hessian=analytical_exact'
+      // 'duals_update_type' should be 'lsq' or 'linear' for  'Hessian=quasinewton_approx'
+      // 'duals_update_type' can only be 'linear' for Newton methods 'Hessian=analytical_exact'
 
       //warn only if these are defined by the user (option file or via SetXXX methods)
-      if(is_user_defined("dualsUpdateType")) {
+      if(is_user_defined("duals_update_type")) {
         log_printf(hovWarning,
-                   "The option 'dualsUpdateType=%s' is not valid with 'Hessian=analytical_exact'. "
-                   "Will use 'dualsUpdateType=linear'.\n",
+                   "The option 'duals_update_type=%s' is not valid with 'Hessian=analytical_exact'. "
+                   "Will use 'duals_update_type=linear'.\n",
                    duals_update_type.c_str());
       }
-      set_val("dualsUpdateType", "linear");
+      set_val("duals_update_type", "linear");
     }
   }
 

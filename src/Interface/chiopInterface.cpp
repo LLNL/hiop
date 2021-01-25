@@ -7,8 +7,8 @@ using namespace hiop;
 int hiop_createProblem(cHiopProblem *prob) {
   cppUserProblem * cppproblem = new cppUserProblem(prob);
   hiopNlpMDS *nlp = new hiopNlpMDS(*cppproblem);
-  nlp->options->SetStringValue("dualsUpdateType", "linear");
-  nlp->options->SetStringValue("dualsInitialization", "zero");
+  nlp->options->SetStringValue("duals_update_type", "linear");
+  nlp->options->SetStringValue("duals_init", "zero");
 
   nlp->options->SetStringValue("Hessian", "analytical_exact");
   nlp->options->SetStringValue("KKTLinsys", "xdycyd");
