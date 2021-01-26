@@ -100,7 +100,7 @@ namespace hiop
 
     hiopMatrixSparseTriplet& Msys = linSys->sysMatrix();
     if(perf_report_) {
-      nlp_->log->printf(hovSummary,
+      nlp_->log->printf(hovScalars,
 			"KKT_Sparse_XYcYd linsys: Low-level linear system size: %d\n",
 			Msys.n());
     }
@@ -243,7 +243,7 @@ namespace hiop
       if(nlp_->options->GetString("compute_mode")=="cpu")
       {
         nlp_->log->printf(hovScalars,
-                          "KKT_SPARSE_XYcYd linsys: using MA57 size %d (%d cons)\n",
+                          "KKT_SPARSE_XYcYd linsys: alloc MA57 size %d (%d cons)\n",
                           n, neq+nineq);
 #ifdef HIOP_USE_COINHSL        
         linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
@@ -256,7 +256,7 @@ namespace hiop
         auto verbosity = hovScalars;
         if(safe_mode_) verbosity  = hovWarning;
         nlp_->log->printf(verbosity,
-                          "KKT_SPARSE_XYcYd linsys: using STRUMPACK as an indefinite solver, size %d (%d cons) (safe_mode=%d)\n",
+                          "KKT_SPARSE_XYcYd linsys: alloc STRUMPACK size %d (%d cons) (safe_mode=%d)\n",
                           n, neq+nineq, safe_mode_);
         
         p->setFakeInertia(neq + nineq);
@@ -264,7 +264,7 @@ namespace hiop
 #else
 #ifdef HIOP_USE_COINHSL
         nlp_->log->printf(hovScalars,
-                          "KKT_SPARSE_XYcYd linsys: using MA57 on CPU size %d (%d cons)\n",
+                          "KKT_SPARSE_XYcYd linsys: alloc MA57 on CPU size %d (%d cons)\n",
                           n, neq+nineq);                             
         linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
 #endif // HIOP_USE_COINHSL
@@ -320,7 +320,7 @@ namespace hiop
     hiopMatrixSparseTriplet& Msys = linSys->sysMatrix();
     if(perf_report_) {
       nlp_->log->printf(hovSummary,
-			"KKT_Sparse_XYcYd linsys: Low-level linear system size: %d\n",
+			"KKT_SPARSE_XDYcYd linsys: Low-level linear system size: %d\n",
 			Msys.n());
     }
 
@@ -350,31 +350,31 @@ namespace hiop
 
       Msys.copySubDiagonalFrom(0, nx, *Hx_, dest_nnz_st); dest_nnz_st += nx;
 
-	    //build the diagonal Hd = Dd + delta_wd
-	    if(NULL == Hd_) {
-	      Hd_ = LinearAlgebraFactory::createVector(nd); assert(Hd_);
-	    }
-	    Hd_->startingAtCopyFromStartingAt(0, *Dd_, 0);
-	    Hd_->addConstant(delta_wd);
+      //build the diagonal Hd = Dd + delta_wd
+      if(NULL == Hd_) {
+        Hd_ = LinearAlgebraFactory::createVector(nd); assert(Hd_);
+      }
+      Hd_->startingAtCopyFromStartingAt(0, *Dd_, 0);
+      Hd_->addConstant(delta_wd);
       Msys.copySubDiagonalFrom(nx, nd, *Hd_, dest_nnz_st); dest_nnz_st += nd;
 
-	    //add -delta_cc to diagonal block linSys starting at (nx+nd, nx+nd)
+      //add -delta_cc to diagonal block linSys starting at (nx+nd, nx+nd)
       Msys.setSubDiagonalTo(nx+nd, neq, -delta_cc, dest_nnz_st); dest_nnz_st += neq;
 
-	    //add -delta_cd to diagonal block linSys starting at (nx+nd+neq, nx+nd+neq)
+      //add -delta_cd to diagonal block linSys starting at (nx+nd+neq, nx+nd+neq)
       Msys.setSubDiagonalTo(nx+nd+neq, nineq, -delta_cd, dest_nnz_st); dest_nnz_st += nineq;
 
-	   /* we've just done
+      /* we've just done
       *
       * [  H+Dx+delta_wx    0          Jc^T    Jd^T     ] [ dx]   [ rx_tilde ]
       * [    0          Dd+delta_wd     0       -I      ] [ dd]   [ rd_tilde ]
       * [    Jc             0        -delta_cc  0       ] [dyc] = [   ryc    ]
       * [    Jd            -I           0    -delta_cd  ] [dyd]   [   ryd    ]
 	  */
-	    nlp_->log->write("KKT_SPARSE_XDYcYd linsys:", Msys, hovMatrices);
+      nlp_->log->write("KKT_SPARSE_XDYcYd linsys:", Msys, hovMatrices);
       nlp_->runStats.kkt.tmUpdateLinsys.stop();
     }
-
+    
     //write matrix to file if requested
     if(nlp_->options->GetString("write_kkt") == "yes") write_linsys_counter_++;
     if(write_linsys_counter_>=0) csr_writer_.writeMatToFile(Msys, write_linsys_counter_); 
@@ -464,7 +464,7 @@ namespace hiop
       if(nlp_->options->GetString("compute_mode")=="cpu")
       {
         nlp_->log->printf(hovWarning,
-			    "KKT_SPARSE_XYcYd linsys: MA57 size %d (%d cons)\n",
+			    "KKT_SPARSE_XDYcYd linsys: alloc MA57 size %d (%d cons)\n",
 			    n, neq+nineq);
 #ifdef HIOP_USE_COINHSL			    
           linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
@@ -477,7 +477,7 @@ namespace hiop
         auto verbosity = hovScalars;
         if(safe_mode_) verbosity  = hovWarning;
         nlp_->log->printf(verbosity,
-                          "KKT_SPARSE_XDYcYd linsys: using STRUMPACK as an indefinite solver, size %d (%d cons) (safe_mode=%d)\n",
+                          "KKT_SPARSE_XDYcYd linsys: alloc STRUMPACK size %d (%d cons) (safe_mode=%d)\n",
                           n, neq+nineq, safe_mode_);
         
         p->setFakeInertia(neq + nineq);
@@ -485,7 +485,7 @@ namespace hiop
 #else
 #ifdef HIOP_USE_COINHSL
         nlp_->log->printf(hovScalars,
-                          "KKT_SPARSE_XDYcYd linsys: using MA57 on CPU size %d (%d cons)\n",
+                          "KKT_SPARSE_XDYcYd linsys: alloc MA57 on CPU size %d (%d cons)\n",
                           n, neq+nineq);                             
         linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
 #endif // HIOP_USE_COINHSL
@@ -525,14 +525,14 @@ namespace hiop
     {
 #ifdef HIOP_USE_STRUMPACK
       nlp_->log->printf(hovWarning,
-                        "KKT_SPARSE_FULL_KKT linsys: STRUMPACK size %d (%d cons) (safe_mode=%d)\n",
+                        "KKT_SPARSE_FULL_KKT linsys: alloc STRUMPACK size %d (%d cons) (safe_mode=%d)\n",
                         n, n_con, safe_mode_);
       hiopLinSolverNonSymSparseSTRUMPACK *p = new hiopLinSolverNonSymSparseSTRUMPACK(n, nnz, nlp_);
       p->setFakeInertia(n_con);
       linSys_ = p;
 #else
       nlp_->log->printf(hovError,
-                        "KKT_SPARSE_FULL_KKT linsys: cannot instantiate backend linear solver "
+                        "KKT_SPARSE_FULL linsys: cannot instantiate backend linear solver "
                         "because HIOP was not built with STRUMPACK");
       assert(false);
       return NULL;
@@ -579,7 +579,7 @@ namespace hiop
     hiopMatrixSparseTriplet& Msys = linSys->sysMatrix();
     if(perf_report_) {
       nlp_->log->printf(hovSummary,
-			"KKT_Sparse_XYcYd linsys: Low-level linear system size: %d\n",
+			"KKT_SPARSE_FULL linsys: Low-level linear system size: %d\n",
 			Msys.n());
     }
 

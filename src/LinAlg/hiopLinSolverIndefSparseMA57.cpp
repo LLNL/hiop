@@ -155,6 +155,8 @@ namespace hiop
       num_tries++;
     } while( !done );
 
+    nlp_->runStats.linsolv.tmInertiaComp.start();
+    
     int negEigVal{0};
     if(is_singular)
   	  negEigVal = -1;
