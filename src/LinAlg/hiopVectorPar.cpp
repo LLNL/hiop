@@ -609,6 +609,12 @@ bool hiopVectorPar::projectIntoBounds_local(const hiopVector& xl_, const hiopVec
 					    const hiopVector& xu_, const hiopVector& ixu_,
 					    double kappa1, double kappa2)
 {
+  // move variables to bounds, to avoid round-off error
+  if( kappa1 > 0. || kappa2 > 0. )
+  {
+    projectIntoBounds_local(xl_, ixl_, xu_, ixu_, 0., 0.);
+  }  
+  
 #ifdef HIOP_DEEPCHECKS
   assert((dynamic_cast<const hiopVectorPar&>(xl_) ).n_local_==n_local_);
   assert((dynamic_cast<const hiopVectorPar&>(ixl_)).n_local_==n_local_);
@@ -623,43 +629,90 @@ bool hiopVectorPar::projectIntoBounds_local(const hiopVector& xl_, const hiopVec
 
   const double small_double = std::numeric_limits<double>::min() * 100;
 
-  double aux, aux2;
-  for(long long i=0; i<n_local_; i++) {
-    if(ixl[i]!=0 && ixu[i]!=0) {
-      if(xl[i]>xu[i]) return false;
-      aux=kappa2*(xu[i]-xl[i])-small_double;
-      aux2=xl[i]+fmin(kappa1*fmax(1., fabs(xl[i])),aux);
-      if(x0[i]<aux2) {
-	x0[i]=aux2;
-      } else {
-	aux2=xu[i]-fmin(kappa1*fmax(1., fabs(xu[i])),aux);
-	if(x0[i]>aux2) {
-	  x0[i]=aux2;
-	}
+  double aux, aux2, aux3;
+  
+  for(long long i=0; i<n_local_; i++)
+  {
+    if(ixl[i]!=0 && ixu[i]!=0)
+    {
+      if(xl[i]>xu[i])
+      {
+        return false;
       }
-#ifdef HIOP_DEEPCHECKS
-      //if(x0[i]>xl[i] && x0[i]<xu[i]) {
-      //} else {
-      //printf("i=%d  x0=%g xl=%g xu=%g\n", i, x0[i], xl[i], xu[i]);
-      //}
-      assert(x0[i]>xl[i] && x0[i]<xu[i] && "this should not happen -> HiOp bug");
       
-#endif
-    } else {
-      if(ixl[i]!=0.){
-        if(small_double>0.0)
-          x0[i] = fmax(x0[i], xl[i]+kappa1*fmax(1, fabs(xl[i])));
-        else
-          x0[i] = fmax(x0[i], xl[i]+fmin(kappa1*fmax(1, fabs(xl[i])),-small_double));
+      if(kappa2 >0.)
+      {
+        aux  = kappa2*(xu[i]-xl[i])-small_double;
+        aux2 = kappa1*fmax(1., fabs(xl[i]));
+        aux2 = 1./(fmax(1./aux, 1./aux2));
+      
+        aux3 = kappa1*fmax(1., fabs(xu[i]));
+        aux3 = 1./(fmax(1./aux, 1./aux3));
+
+        aux2 = fmax(0.0,xl[i]+aux2-x0[i]);
+        aux3 = fmax(0.0,-xu[i]+aux3+x0[i]);
       }
-      else 
-	      if(ixu[i]!=0)
+      else
+      {
+        aux2 = fmax(0.0,xl[i]-x0[i]);
+        aux3 = fmax(0.0,-xu[i]+x0[i]);
+      }
+      
+      if( aux2 > 0. || aux3 > 0. )
+      {
+        x0[i] = x0[i] + aux2 - aux3; 
+      }
+
+#ifdef HIOP_DEEPCHECKS
+      if(kappa2 > 0.)
+      {
+        assert(x0[i]>xl[i] && x0[i]<xu[i] && "this should not happen -> HiOp bug");        
+      }
+#endif
+    }
+    else
+    {
+      aux = -small_double;
+      if(ixl[i]!=0.)
+      {
+        if(kappa2 >0.)
         {
-          if(small_double>0.0)
-	          x0[i] = fmin(x0[i], xu[i]-kappa1*fmax(1, fabs(xu[i])));
-          else
-            x0[i] = fmin(x0[i], fmin(xu[i]-kappa1*fmax(1, fabs(xu[i])),-small_double));
-        }else { /*nothing for free vars  */ }
+          aux2 = kappa1*fmax(1., fabs(xl[i]));
+          aux2 = 1./(fmax(1./aux, 1./aux2));
+          aux2 = fmax(0.0,xl[i]+aux2-x0[i]);
+        }
+        else
+        {
+          aux2 = fmax(0.0,xl[i]-x0[i]);
+        }
+        
+        if( aux2 > 0.)
+        {
+          x0[i] = x0[i] + aux2; 
+        }
+      }
+      else if(ixu[i]!=0)
+      {
+        if(kappa2 >0.)
+        {
+          aux3 = kappa1*fmax(1., fabs(xu[i]));
+          aux3 = 1./(fmax(1./aux, 1./aux3));
+          aux3 = fmax(0.0,-xu[i]+aux3+x0[i]);
+        }
+        else
+        {
+          aux3 = fmax(0.0,-xu[i]+x0[i]);
+        }
+
+        if( aux3 > 0. )
+        {
+          x0[i] = x0[i] - aux3; 
+        }                         
+      }
+      else
+      { 
+          /*nothing for free vars  */ 
+      }
     }
   }
   return true;
