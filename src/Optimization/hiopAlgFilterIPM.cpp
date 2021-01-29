@@ -104,7 +104,6 @@ hiopAlgFilterIPMBase::hiopAlgFilterIPMBase(hiopNlpFormulation* nlp_)
 
   //parameter based initialization
   if(duals_update_type==0) {
-    //dualsUpdate = new hiopDualsLsqUpdate(nlp);
     dualsUpdate = nlp->alloc_duals_lsq_updater();
   } else if(duals_update_type==1) {
     dualsUpdate = new hiopDualsNewtonLinearUpdate(nlp);

@@ -534,7 +534,6 @@ bool hiopNlpFormulation::get_starting_point(hiopVector& x0_for_hiop,
 					    hiopVector& zL0_for_hiop, hiopVector& zU0_for_hiop,
 					    hiopVector& yc0_for_hiop, hiopVector& yd0_for_hiop)
 {
-  //aaa
   bool bret; 
 
   hiopVector* lambdas = hiop::LinearAlgebraFactory::createVector(yc0_for_hiop.get_size() + yd0_for_hiop.get_size());
@@ -886,7 +885,7 @@ bool hiopNlpDenseConstraints::finalizeInitialization()
 
 hiopDualsLsqUpdate* hiopNlpDenseConstraints::alloc_duals_lsq_updater()
 {
-  return new hiopDualsLsqUpdateLinsysRedDense(this);
+  return new hiopDualsLsqUpdateLinsysRedDenseSymPD(this);
 }
 
 bool hiopNlpDenseConstraints::eval_Jac_c(hiopVector& x, bool new_x, double* Jac_c)
@@ -1031,7 +1030,18 @@ hiopMatrixDense* hiopNlpDenseConstraints::alloc_multivector_primal(int nrows, in
 */
 hiopDualsLsqUpdate* hiopNlpMDS::alloc_duals_lsq_updater()
 {
-  return new hiopDualsLsqUpdateLinsysRedDense(this);
+#ifdef HIOP_USE_MAGMA
+  if(this->options->GetString("compute_mode")=="hybrid" ||
+     this->options->GetString("compute_mode")=="gpu"    ||
+     this->options->GetString("compute_mode")=="auto") {
+   return new hiopDualsLsqUpdateLinsysRedDenseSym(this);
+  } 
+#endif
+
+  //at this point use LAPACK Cholesky since we have that 
+  //i. cpu compute mode OR
+  //ii. MAGMA is not available to handle the LSQ linear system on the device
+  return new hiopDualsLsqUpdateLinsysRedDenseSymPD(this);
 }
 
 bool hiopNlpMDS::eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& Jac_c)

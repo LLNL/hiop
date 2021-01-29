@@ -56,6 +56,10 @@
 #include "hiopDualsUpdater.hpp"
 #include "hiopLinAlgFactory.hpp"
 
+#include "hiopLinSolverIndefDenseLapack.hpp"
+#include "hiopLinSolverIndefDenseMagma.hpp"
+
+
 #include "hiop_blasdefs.hpp"
 
 #ifdef HIOP_SPARSE
@@ -133,19 +137,17 @@ hiopDualsLsqUpdateLinsysRedDense::hiopDualsLsqUpdateLinsysRedDense(hiopNlpFormul
     mexme_(nullptr),
     mexmi_(nullptr),
     mixmi_(nullptr),
-    mxm_(nullptr),
-    M_(nullptr)
+    mxm_(nullptr)
 {
   mexme_ = LinearAlgebraFactory::createMatrixDense(nlp_->m_eq(), nlp_->m_eq());
   mexmi_ = LinearAlgebraFactory::createMatrixDense(nlp_->m_eq(), nlp_->m_ineq());
   mixmi_ = LinearAlgebraFactory::createMatrixDense(nlp_->m_ineq(), nlp_->m_ineq());
   mxm_   = LinearAlgebraFactory::createMatrixDense(nlp_->m(), nlp_->m());
   
-  M_      = LinearAlgebraFactory::createMatrixDense(nlp_->m(), nlp_->m());
   rhs_    = LinearAlgebraFactory::createVector(nlp_->m());
   
 #ifdef HIOP_DEEPCHECKS
-  M_copy_ = M_->alloc_clone(); 
+  M_copy_ = nullptr; //delayed allocation 
   rhs_copy_ = rhs_->alloc_clone(); 
   mixme_ = LinearAlgebraFactory::createMatrixDense(nlp_->m_ineq(), nlp_->m_eq());
 #endif
@@ -157,7 +159,6 @@ hiopDualsLsqUpdateLinsysRedDense::~hiopDualsLsqUpdateLinsysRedDense()
   if(mexmi_) delete mexmi_;
   if(mixmi_) delete mixmi_;
   if(mxm_) delete mxm_;
-  if(M_) delete M_;
 #ifdef HIOP_DEEPCHECKS
   if(M_copy_) delete M_copy_;
   if(rhs_copy_) delete rhs_copy_;
@@ -212,7 +213,8 @@ bool hiopDualsLsqUpdateLinsysRedDense::do_lsq_update(hiopIterate& iter,
                                                      const hiopMatrix& jac_c,
                                                      const hiopMatrix& jac_d)
 {
-  hiopMatrixDense* M = dynamic_cast<hiopMatrixDense*>(M_);
+  hiopMatrixDense* M = get_lsq_sysmatrix();
+  assert(M);
   hiopMatrixDense* mexme = dynamic_cast<hiopMatrixDense*>(mexme_);
   hiopMatrixDense* mexmi = dynamic_cast<hiopMatrixDense*>(mexmi_);
   hiopMatrixDense* mixmi = dynamic_cast<hiopMatrixDense*>(mixmi_);
@@ -229,18 +231,22 @@ bool hiopDualsLsqUpdateLinsysRedDense::do_lsq_update(hiopIterate& iter,
   M->copyBlockFromMatrix(nlp_->m_eq(),nlp_->m_eq(), *mixmi);
 
 #ifdef HIOP_DEEPCHECKS
+  if(M_copy_ == nullptr) {
+    M_copy_ = get_lsq_sysmatrix()->alloc_clone();
+  }
   hiopMatrixDense* mixme = dynamic_cast<hiopMatrixDense*>(mixme_);
   hiopMatrixDense* M_copy = dynamic_cast<hiopMatrixDense*>(M_copy_);
-  M_copy->copyFrom(*M);
+  assert(M_copy);
+  M_copy->copyFrom(*get_lsq_sysmatrix());
   jac_d.timesMatTrans(0.0, *mixme, 1.0, jac_c);
   M_copy->copyBlockFromMatrix(nlp_->m_eq(), 0, *mixme);
   M_copy->assertSymmetry(1e-12);
 #endif
 
   //bailout in case there is an error in the Cholesky factorization
-  int info;
-  if((info=this->factorizeMat(*M))) {
-    nlp_->log->printf(hovError, "dual lsq update: error %d in the dense Cholesky factorization.\n", info);
+  bool ret = this->factorize_mat();
+  if(!ret) {
+    nlp_->log->printf(hovError, "dual lsq update: error in the dense factorization.\n");
     return false;
   }
 
@@ -265,8 +271,8 @@ bool hiopDualsLsqUpdateLinsysRedDense::do_lsq_update(hiopIterate& iter,
   rhs_copy_->copyFrom(*rhs_);
 #endif
   //solve for this rhs_
-  if((info=this->solveWithFactors(*M, *rhs_))) {
-    nlp_->log->printf(hovError, "dual lsq update: error %d in the solution process (dense solve).\n", info);
+  if(!this->solve_with_factors(*rhs_)) {
+    nlp_->log->printf(hovError, "dual lsq update: error in the solution process (dense solve).\n");
     return false;
   }
 
@@ -275,6 +281,7 @@ bool hiopDualsLsqUpdateLinsysRedDense::do_lsq_update(hiopIterate& iter,
   rhs_->copyToStarting(nlp_->m_eq(), *iter.get_yd());
 
 #ifdef HIOP_DEEPCHECKS
+  assert(M_copy_);
   double nrmrhs = rhs_copy_->twonorm();
   M_copy_->timesVec(-1.0,  *rhs_copy_, 1.0, *rhs_);
   double nrmres = rhs_copy_->twonorm() / (1+nrmrhs);
@@ -295,44 +302,6 @@ bool hiopDualsLsqUpdateLinsysRedDense::do_lsq_update(hiopIterate& iter,
   //nlp_->log->write("yd ini", *iter.get_yd(), hovSummary);
   return true;
 };
-
-int hiopDualsLsqUpdateLinsysRedDense::factorizeMat(hiopMatrixDense& M)
-{
-#ifdef HIOP_DEEPCHECKS
-  assert(M.m()==M.n());
-#endif
-  if(M.m()==0) return 0;
-  char uplo='L'; int N=M.n(), lda=N, info;
-  DPOTRF(&uplo, &N, M.local_data(), &lda, &info);
-  if(info>0) {
-    nlp_->log->printf(hovError,
-                      "hiopDualsLsqUpdateLinsysRedDense::factorizeMat: dpotrf (Chol fact) detected "
-                      "%d minor being indefinite.\n", info);
-  } else {
-    if(info<0) { 
-      nlp_->log->printf(hovError, "hiopKKTLinSysLowRank::factorizeMat: dpotrf returned error %d\n", info);
-    }
-  }
-  assert(info==0);
-  return info;
-}
-
-int hiopDualsLsqUpdateLinsysRedDense::solveWithFactors(hiopMatrixDense& M, hiopVector& r)
-{
-#ifdef HIOP_DEEPCHECKS
-  assert(M.m()==M.n());
-#endif
-  if(M.m()==0) return 0;
-  char uplo='L'; //we have upper triangular in C++, but this is lower in fortran
-  int N=M.n(), lda=N, nrhs=1, info;
-  DPOTRS(&uplo,&N, &nrhs, M.local_data(), &lda, r.local_data(), &lda, &info);
-  if(info<0) 
-    nlp_->log->printf(hovError, "hiopDualsLsqUpdateLinsysRedDense::solveWithFactors: dpotrs returned error %d\n", info);
-#ifdef HIOP_DEEPCHECKS
-  assert(info<=0);
-#endif
-  return info;
-}
 
 hiopDualsLsqUpdateLinsysAugSparse::hiopDualsLsqUpdateLinsysAugSparse(hiopNlpFormulation* nlp)
   : hiopDualsLsqUpdate(nlp),
@@ -373,7 +342,7 @@ bool hiopDualsLsqUpdateLinsysAugSparse::do_lsq_update(hiopIterate& iter,
 #ifdef HIOP_USE_COINHSL
       lin_sys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
 #endif // HIOP_USE_COINHSL          
-    } else {
+    } else { //we're on device
 #ifdef HIOP_USE_STRUMPACK        
       hiopLinSolverIndefSparseSTRUMPACK *p = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
       
@@ -471,7 +440,79 @@ bool hiopDualsLsqUpdateLinsysAugSparse::do_lsq_update(hiopIterate& iter,
   rhs_->copyToStarting(nx+nd+neq, *iter.get_yd());
 
   return true;
+}
 
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// MAGMA specialization
+////////////////////////////////////////////////////////////////////////////////////////////////
+hiopDualsLsqUpdateLinsysRedDenseSym::hiopDualsLsqUpdateLinsysRedDenseSym(hiopNlpFormulation* nlp)
+  : hiopDualsLsqUpdateLinsysRedDense(nlp)
+{
+#ifdef HIOP_USE_MAGMA
+  linsys_ = new hiopLinSolverIndefDenseMagmaBuKa(nlp_->m(), nlp_);
+#else
+  assert(false && 
+         "hiopDualsLsqUpdateLinsysRedDenseSym is meant to be used with MAGMA, but"
+         "MAGMA is not available within HiOp.");
+  linsys_ = new hiopLinSolverIndefDenseLapack(nlp_->m(), nlp_);
+#endif
+}
+
+bool hiopDualsLsqUpdateLinsysRedDenseSym::factorize_mat()
+{
+  int ret = linsys_->matrixChanged();
+  return (ret==0);
+}
+
+bool hiopDualsLsqUpdateLinsysRedDenseSym::solve_with_factors(hiopVector& r)
+{
+  return linsys_->solve(r);
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// LAPACK specialization
+////////////////////////////////////////////////////////////////////////////////////////////////
+
+bool hiopDualsLsqUpdateLinsysRedDenseSymPD::solve_with_factors(hiopVector& r)
+{
+  assert(M_);
+#ifdef HIOP_DEEPCHECKS
+  assert(M_->m()==M_->n());
+#endif
+  if(M_->m()==0) return 0;
+  char uplo='L'; //we have upper triangular in C++, but this is lower in fortran
+  int N=M_->n(), lda=N, nrhs=1, info;
+  DPOTRS(&uplo,&N, &nrhs, M_->local_data(), &lda, r.local_data(), &lda, &info);
+  if(info<0) {
+    nlp_->log->printf(hovError, "hiopDualsLsqUpdateLinsysRedDenseSymPD::solveWithFactors: dpotrs "
+                      "returned error %d\n", info);
+  }
+#ifdef HIOP_DEEPCHECKS
+  assert(info<=0);
+#endif
+  return (info==0);
+}
+
+
+bool hiopDualsLsqUpdateLinsysRedDenseSymPD::factorize_mat()
+{
+#ifdef HIOP_DEEPCHECKS
+  assert(M_->m()==M_->n());
+#endif
+  if(M_->m()==0) return 0;
+  char uplo='L'; int N=M_->n(), lda=N, info;
+  DPOTRF(&uplo, &N, M_->local_data(), &lda, &info);
+  if(info>0) {
+    nlp_->log->printf(hovError,
+                      "hiopDualsLsqUpdateLinsysRedDense::factorizeMat: dpotrf (Chol fact) detected "
+                      "%d minor being indefinite.\n", info);
+  } else {
+    if(info<0) { 
+      nlp_->log->printf(hovError, "hiopKKTLinSysLowRank::factorizeMat: dpotrf returned error %d\n", info);
+    }
+  }
+  return (info==0);
 }
 
 }; //~ end of namespace

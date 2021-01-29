@@ -427,20 +427,11 @@ namespace hiop
 
 #ifdef HIOP_USE_MAGMA
       if(nlp_->options->GetString("compute_mode")=="hybrid" ||
-	       nlp_->options->GetString("compute_mode")=="gpu"    ||
-	       nlp_->options->GetString("compute_mode")=="auto") {
-	// Strategy
-	//  i. nopiv Magma (//! todo: + inertia correction) 
-	// when i. fails (in factorization, solve, or outer optimization loop--ascent direction--) employ
-	// ii. Magma BunchKaufman + inertia correction
-	//
-	// //! todo Performance of ii. can be improved if 
-	//------------
-	// - Magma would have a GPU routine for computing inertia
-	// - triangular solves would be done on CPU
+         nlp_->options->GetString("compute_mode")=="gpu"    ||
+	 nlp_->options->GetString("compute_mode")=="auto") {         
 
 	if(safe_mode_) {
-
+          
 	  auto hovLevel = hovScalars;
 	  if(switched_linsolvers) hovLevel = hovWarning;
 
