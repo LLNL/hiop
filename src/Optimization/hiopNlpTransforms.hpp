@@ -304,6 +304,115 @@ private:
   long long  n_vars; int n_vars_local;
 };
 
+/** Scale the NLP formulation.
+ *
+ * scale the NLP objective using the maximum gradient information.
+ */
+class hiopNLPObjGradScaling : public hiopNlpTransformation
+{
+public:
+  hiopNLPObjGradScaling(const double obj_scale);
+  ~hiopNLPObjGradScaling();
+public:
+  /** inherited from the parent class */
+
+  /* more setup methods (specific to this class) are defined below */
+  virtual inline bool setup() {return true;}
+
+  /* number of vars in the NLP after the tranformation */
+  inline long long n_post()  { return n_vars; } 
+  /* number of vars in the NLP to which the tranformation is to be applied */
+  virtual long long n_pre () { return n_vars; } 
+
+  inline long long n_post_local()  { return n_vars_local; }
+  inline long long n_pre_local()  { return n_vars_local; }
+
+  /* from scaled to unscaled objective*/
+  void applyToArray(const double* vec_s, double* vec_us);
+
+  /* from scaled to unscaled objective*/
+  inline double applyToObj(double& f_in) { return f_in/obj_scale;}
+  /* from unscaled to scaled objective*/
+  inline double applyInvToObj(double& f_in) { return obj_scale*f_in;}   
+
+  /* from scaled to unscaled*/
+  hiopVector* applyToGradObj(hiopVector* grad_in);
+  /* from unscaled to scaled*/
+  hiopVector* applyInvToGradObj(hiopVector* grad_in);
+
+#if 0  
+  /* from scaled to unscaled*/
+  inline double* applyToGradObj(double* grad_in)
+  {
+    grad_scaled_ref = grad_in;
+    applyToArray(grad_in, grad_unscaled->local_data());
+    return grad_unscaled->local_data();
+  }
+  /* from unscaled to scaled*/
+  inline double* applyInvToGradObj(double* grad_in)
+  {
+    assert(grad_in==grad_unscaled->local_data());
+    applyInvToArray(grad_in, grad_scaled_ref);
+    return grad_scaled_ref;
+  }
+  
+  /* from rs to fs */
+  inline double* applyToJacobEq(double* Jac_in, const int& m_in)
+  {
+    Jacc_rs_ref = Jac_in;
+    assert(Jacc_fs->m()==m_in);
+    //applyToMatrix(Jac_in, m_in, Jacc_fs->get_M());
+    applyToMatrix(Jac_in, m_in, Jacc_fs->local_data());
+    return Jacc_fs->local_data();
+  }
+  inline double* applyInvToJacobEq(double* Jac_in, const int& m_in)
+  {
+    assert(Jacc_fs->m()==m_in);
+    applyInvToMatrix(Jac_in, m_in, Jacc_rs_ref);
+    return Jacc_rs_ref;
+  }
+  inline double* applyToJacobIneq(double* Jac_in, const int& m_in)
+  {
+    Jacd_rs_ref = Jac_in;
+    assert(Jacd_fs->m()==m_in);
+    //applyToMatrix(Jac_in, m_in, Jacd_fs->get_M());
+    applyToMatrix(Jac_in, m_in, Jacd_fs->local_data());
+    return Jacd_fs->local_data();
+  }
+  inline double* applyInvToJacobIneq(double* Jac_in, const int& m_in)
+  {
+    assert(Jacd_fs->m()==m_in);
+    applyInvToMatrix(Jac_in, m_in, Jacd_rs_ref);
+    return Jacd_rs_ref;
+  }
+
+
+  
+protected: 
+  void applyToArray   (const double* vec_rs, double* vec_fs);
+  void applyInvToArray(const double* vec_fs, double* vec_rs);
+
+  void applyToMatrix   (const double* M_rs, const int& m_in, double* M_fs);
+  void applyInvToMatrix(const double* M_fs, const int& m_in, double* M_rs);
+#endif  
+
+private:
+  long long n_vars, n_vars_local;
+  double obj_scale;
+  
+  hiopVector *grad_scaled;
+  hiopVector *grad_unscaled;
+
+#if 0
+  hiopVector *scal_jacc, *scal_jacd;
+  hiopMatrix *Jacc_scaled, *Jacd_scaled;
+  hiopMatrix *Jacc_unscaled, *Jacd_unscaled;
+  hiopMatrix *Hess_scaled;
+  hiopMatrix *Hess_unscaled;
+#endif // 0
+};
+
+
 
 class hiopNlpTransformations : public hiopNlpTransformation
 {
@@ -409,6 +518,22 @@ public:
     }
   }
 
+  double applyToObj(double& f_in) 
+  {
+    double ret = f_in;
+    for(std::list<hiopNlpTransformation*>::iterator it=list_trans_.begin(); it!=list_trans_.end(); ++it)
+      ret = (*it)->applyToObj(ret);
+    return ret;
+  }
+
+  double applyInvToObj(double* f_in) 
+  {
+    double ret = f_in;
+    for(std::list<hiopNlpTransformation*>::reverse_iterator it=list_trans_.rbegin(); it!=list_trans_.rend(); ++it)
+      ret = (*it)->applyInvToGradObj(ret);
+    return ret;
+  }  
+  
   double* applyToGradObj(double* grad_in) 
   {
     double* ret = grad_in;

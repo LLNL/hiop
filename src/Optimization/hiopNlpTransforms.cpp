@@ -301,4 +301,67 @@ relax(const double& fixed_var_tol, const double& fixed_var_perturb, hiopVector& 
 }
 
 
+void hiopNLPObjGradScaling::hiopNLPObjGradScaling(const double max_grad,
+                                                  const hiopVector* gradf)
+      : n_vars(gradf.get_size()), n_vars_local(gradf.get_local_size())
+        obj_scale(0.)
+        grad_unscaled(gradf)
+//        , Jacc_unscaled(nullptr), Jacd_unscaled(nullptr), Hess_unscaled(nullptr)
+{
+  grad_scaled = grad_unscaled->new_copy();  
+
+  obj_scale = max_grad/grad_unscaled->infnorm();
+  if(obj_scale>1.)
+  {
+    obj_scale=1.;
+  }  
+  
+//  Jacc_scaled = Jacc_unscaled.new_copy();  
+//  Jacd_scaled = Jacd_unscaled.new_copy();
+//  Jacc_unscaled.row_max_abs_value(scal_jacc);   // missing function for all matrix classes
+//  Jacd_unscaled.row_max_abs_value(scal_jacd);   
+
+//  scal_jacc.invert();
+//  scal_jacc.scale(max_grad);
+//  scal_jacc.element_wise_min(1.0);              // missing function for all vector classes
+}
+
+#if 0 //old interface
+/* from s to us */
+void hiopNLPGradScaling::applyToArray(const double* vec_s, double* vec_us)
+{
+  int one=1; int n=n_vars_local;
+  double scale = 1./obj_scale;
+  DCOPY(&n, vec_s, &one, vec_us, &one);
+  DSCAL(&n, &scale, vec_us, &one);
+}
+
+/* from us to s */
+void hiopNLPGradScaling::applyInvToArray(const double* vec_us, double* vec_s)
+{
+  int one=1; int n=n_vars_local;
+  DCOPY(&n, vec_us, &one, vec_s, &one);
+  DSCAL(&n, &obj_scale, vec_s, &one);
+}
+#endif // 0
+
+
+/* from scaled to unscaled*/
+hiopVector* applyToGradObj(hiopVector* grad_in)
+{
+  grad_scaled = grad_in;
+  grad_unscaled->copyFrom(*grad_scaled);
+  grad_unscaled->scale(1./obj_scale);
+  return grad_unscaled;
+}
+/* from unscaled to scaled*/
+hiopVector* applyInvToGradObj(hiopVector* grad_in)
+{
+  assert(grad_in==grad_unscaled);
+  grad_scaled->copyFrom(*grad_unscaled);
+  grad_scaled->scale(obj_scale);
+  return grad_scaled;
+}
+
+
 } //end of namespace

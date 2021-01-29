@@ -166,6 +166,8 @@ public:
 
   virtual double max_abs_value(){assert(false && "not implemented in base class"); return -1.0;}
 
+  virtual void row_max_abs_value(hiopVector *ret_vec){assert(0&&"not yet")};
+  
   virtual bool isfinite() const{assert(false && "not implemented in base class"); return false;}
   
   virtual void print(FILE* f=NULL, const char* msg=NULL, int maxRows=-1, int maxCols=-1, int rank=-1) const

@@ -92,6 +92,7 @@ public:
   virtual ~hiopNlpFormulation();
 
   virtual bool finalizeInitialization();
+  virtual bool addScaling();
 
   /**
    * Wrappers for the interface calls. 
@@ -254,6 +255,9 @@ protected:
 
   //internal NLP transformations (currently fixing/relaxing variables implemented)
   hiopNlpTransformations nlp_transformations;
+  
+  //internal NLP transformations (currently gradient scaling implemented)
+  hiopNlpTransformations nlp_scaling;
 
 #ifdef HIOP_USE_MPI
   //inter-process distribution of vectors
