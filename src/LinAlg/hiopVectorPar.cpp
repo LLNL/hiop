@@ -51,6 +51,7 @@
 #include <cstring> //for memcpy
 #include <algorithm>
 #include <cassert>
+#include <iostream>
 
 #include "hiop_blasdefs.hpp"
 
@@ -626,15 +627,15 @@ bool hiopVectorPar::projectIntoBounds_local(const hiopVector& xl_, const hiopVec
   for(long long i=0; i<n_local_; i++) {
     if(ixl[i]!=0 && ixu[i]!=0) {
       if(xl[i]>xu[i]) return false;
-      aux=kappa2*(xu[i]-xl[i])-small_double;
-      aux2=xl[i]+fmin(kappa1*fmax(1., fabs(xl[i])),aux);
-      if(x0[i]<aux2) {
-	x0[i]=aux2;
+        aux=kappa2*(xu[i]-xl[i])-small_double;
+        aux2=xl[i]+fmin(kappa1*fmax(1., fabs(xl[i])),aux);
+        if(x0[i]<aux2) {
+        x0[i]=aux2;
       } else {
-	aux2=xu[i]-fmin(kappa1*fmax(1., fabs(xu[i])),aux);
-	if(x0[i]>aux2) {
-	  x0[i]=aux2;
-	}
+        aux2=xu[i]-fmin(kappa1*fmax(1., fabs(xu[i])),aux);
+        if(x0[i]>aux2) {
+          x0[i]=aux2;
+        }
       }
 #ifdef HIOP_DEEPCHECKS
       //if(x0[i]>xl[i] && x0[i]<xu[i]) {
@@ -642,15 +643,15 @@ bool hiopVectorPar::projectIntoBounds_local(const hiopVector& xl_, const hiopVec
       //printf("i=%d  x0=%g xl=%g xu=%g\n", i, x0[i], xl[i], xu[i]);
       //}
       assert(x0[i]>xl[i] && x0[i]<xu[i] && "this should not happen -> HiOp bug");
-      
+
 #endif
     } else {
       if(ixl[i]!=0.)
-	x0[i] = fmax(x0[i], xl[i]+kappa1*fmax(1, fabs(xl[i]))-small_double);
+        x0[i] = fmax(x0[i], xl[i]+kappa1*fmax(1, fabs(xl[i]))-small_double);
       else 
-	if(ixu[i]!=0)
-	  x0[i] = fmin(x0[i], xu[i]-kappa1*fmax(1, fabs(xu[i]))-small_double);
-	else { /*nothing for free vars  */ }
+        if(ixu[i]!=0)
+          x0[i] = fmin(x0[i], xu[i]-kappa1*fmax(1, fabs(xu[i]))-small_double);
+        else { /*nothing for free vars  */ }
     }
   }
   return true;
@@ -793,6 +794,13 @@ bool hiopVectorPar::isfinite_local() const
 {
   for(long long i=0; i<n_local_; i++) if(0==std::isfinite(data_[i])) return false;
   return true;
+}
+
+void hiopVectorPar::print()
+{
+  int max_elems = n_local_;
+  for(int it=0; it<max_elems; it++)  
+    printf("vec [%d] = %1.16e\n",it+1,data_[it]);
 }
 
 void hiopVectorPar::print(FILE* file, const char* msg/*=NULL*/, int max_elems/*=-1*/, int rank/*=-1*/) const 

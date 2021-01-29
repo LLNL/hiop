@@ -168,8 +168,8 @@ namespace hiop
 
     spss.factor();   // not really necessary, called if needed by solve
 
-	  int negEigVal = nFakeNegEigs_;
-
+    nlp_->runStats.linsolv.tmInertiaComp.start();
+    int negEigVal = nFakeNegEigs_;
     nlp_->runStats.linsolv.tmInertiaComp.stop();
     return negEigVal;
   }
@@ -269,8 +269,8 @@ namespace hiop
 
     spss.factor();   // not really necessary, called if needed by solve
 
-	  int negEigVal = nFakeNegEigs_;
-
+    nlp_->runStats.linsolv.tmInertiaComp.start();
+    int negEigVal = nFakeNegEigs_;
     nlp_->runStats.linsolv.tmInertiaComp.stop();
     return negEigVal;
   }
