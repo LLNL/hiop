@@ -34,13 +34,10 @@ namespace hiop
     m_icntl[9-1] = 10;      // up to 10 steps of iterative refinement
     m_icntl[11-1] = 16;
     m_icntl[12-1] = 16;
-    m_icntl[15-1] = 1;
+    m_icntl[15-1] = 0;
     m_icntl[16-1] = 0;
 
-    m_cntl[1-1] = 0.01;     // pivot tolerance
-    m_cntl[2-1] = 1.e-20;   // treat any pivot whose modulus is less than CNTL(2) as zero
-
-
+    m_cntl[1-1] = 1e-8;     // pivot tolerance
 
   }
   hiopLinSolverIndefSparseMA57::~hiopLinSolverIndefSparseMA57()
@@ -158,6 +155,8 @@ namespace hiop
       num_tries++;
     } while( !done );
 
+    nlp_->runStats.linsolv.tmInertiaComp.start();
+    
     int negEigVal{0};
     if(is_singular)
   	  negEigVal = -1;

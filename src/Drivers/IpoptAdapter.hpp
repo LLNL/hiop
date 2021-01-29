@@ -125,7 +125,7 @@ public:
     for(long long i=0; i<m && bret; i++) {
 
       if(values) {
-	bret=hiopNLP->eval_Jac_cons(nll, mll, onell, &i, x, new_x, &constraint);
+	bret=hiopNLP->eval_Jac_cons(nll, mll, onell, &i, x, new_x, constraint);
 	if(!bret) break;
 
 	memcpy(values+i*n, constraint, ((size_t)n)*sizeof(double));
@@ -479,7 +479,7 @@ public:
 	    
 	    //the dense part
 	    const size_t len = (size_t)(n_eq*nx_dense);
-	    memcpy(values+nnzit, JacDeq->local_buffer(), len*sizeof(double));
+	    memcpy(values+nnzit, JacDeq->local_data(), len*sizeof(double));
 	    
 	    nnzit += n_eq*nx_dense; assert(nnzit<=nele_jac);
 	  } else {
@@ -501,7 +501,7 @@ public:
 	    
 	    const size_t len = (size_t)(n_ineq*nx_dense);
 	    //the dense part
-	    memcpy(values+nnzit, JacDineq->local_buffer(), len*sizeof(double));
+	    memcpy(values+nnzit, JacDineq->local_data(), len*sizeof(double));
 	    nnzit += n_ineq*nx_dense;
 	    assert(nnzit==nele_jac);
 	  } else {
@@ -535,7 +535,7 @@ public:
 
 	int nnzit = nnz_sparse_Jaceq+nnz_sparse_Jacineq;
 	//put the dense part of the MDS in the Ipopt sparse Jac matrix
-	memcpy(values+nnzit, JacDeqineq->local_buffer(), ((size_t)m*nx_dense)*sizeof(double));
+	memcpy(values+nnzit, JacDeqineq->local_data(), ((size_t)m*nx_dense)*sizeof(double));
 	nnzit += m*nx_dense;
 	
 	assert(nnzit == nele_jac);
@@ -590,7 +590,7 @@ public:
 	  HessDL = new hiopMatrixDenseRowMajor(nx_dense, nx_dense);
 	}
       }
-      double** HessMat = HessDL->local_data();
+      double* HessMat = HessDL->local_data();
 
       bret = hiopNLP->eval_Hess_Lagr(nll, mll, x, new_x, obj_factor, lambda, new_lambda,
 				     nx_sparse, nx_dense,
@@ -603,7 +603,7 @@ public:
       //dense part
       for(int i=0; i<nx_dense; ++i) {
 	for(int j=i; j<nx_dense; ++j) {
-	  values[nnzit] = HessMat[i][j];
+	  values[nnzit] = HessMat[i*nx_dense+j];
 	  nnzit++;
 	}
       }

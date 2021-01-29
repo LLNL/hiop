@@ -178,6 +178,7 @@ public:
   virtual bool isfinite_local() const;
   
   virtual void print(FILE*, const char* withMessage=NULL, int max_elems=-1, int rank=-1) const;
+  virtual void print();
 
   /* more accessers */
   virtual long long get_local_size() const { return n_local_; }
