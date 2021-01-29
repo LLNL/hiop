@@ -480,6 +480,41 @@ bool hiopNlpFormulation::finalizeInitialization()
   return bret;
 }
 
+bool hiopNlpFormulation::addScaling(hiopVector& gradf, hiopMatrix& Jac_c, hiopMatrix& Jac_d)
+{
+
+  hiopVector& x, bool new_x, double* gradf)
+  hiopVector* xx = nlp_transformations.applyTox(x, new_x);
+  double* gradff = nlp_transformations.applyToGradObj(gradf);
+  bool bret; 
+  runStats.tmEvalGrad_f.start();
+  bret = interface_base.eval_grad_f(nlp_transformations.n_post(), xx->local_data_const(), new_x, gradff);
+  runStats.tmEvalGrad_f.stop(); runStats.nEvalGrad_f++;
+
+  gradf = nlp_transformations.applyInvToGradObj(gradff);
+  
+  //check if we need to do scaling
+  if("none" == options->GetString("scaling_type")) {
+    return false;
+  }
+  
+  const double max_grad = options->GetNumeric("scaling_max_grad");
+
+  double obj_scale = max_grad/gradf.infnorm();
+  if(obj_scale>1.)
+  {
+    obj_scale=1.;
+  }
+
+
+    
+  hiopNLPGradScaling* grad_scaling = new hiopNLPGradScaling(max_grad,gradf,Jac_c,Jac_d);
+
+  nlp_scaling.append(grad_scaling);
+
+  return bret;
+}
+
 
 hiopVector* hiopNlpFormulation::alloc_primal_vec() const
 {

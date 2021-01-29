@@ -164,6 +164,8 @@ public:
 
   virtual double max_abs_value();
 
+  virtual void row_max_abs_value(hiopVector *ret_vec){assert(0&&"not yet")};
+
   virtual bool isfinite() const;
   
   //virtual void print(int maxRows=-1, int maxCols=-1, int rank=-1) const;
