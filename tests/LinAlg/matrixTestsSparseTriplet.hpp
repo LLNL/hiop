@@ -79,17 +79,12 @@ public:
 
 
 private:
-  virtual void setLocalElement(
-      hiop::hiopVector *_x,
-      const local_ordinal_type i,
-      const real_type val);
-  virtual real_type getLocalElement(const hiop::hiopMatrix *a, local_ordinal_type i, local_ordinal_type j) override;
-  virtual real_type getLocalElement(const hiop::hiopVector *x, local_ordinal_type i) override;
+  real_type getElement(const hiop::hiopMatrix *a, local_ordinal_type i, local_ordinal_type j);
+  real_type getElement(const hiop::hiopVector *x, local_ordinal_type i);
   virtual real_type* getMatrixData(hiop::hiopMatrixSparse* a) override;
-  virtual real_type getMatrixData(hiop::hiopMatrixSparse* a, local_ordinal_type i, local_ordinal_type j) override;
   virtual const local_ordinal_type* getRowIndices(const hiop::hiopMatrixSparse* a);
   virtual const local_ordinal_type* getColumnIndices(const hiop::hiopMatrixSparse* a);
-  virtual local_ordinal_type getLocalSize(const hiop::hiopVector *x) override;
+  local_ordinal_type getLocalSize(const hiop::hiopVector *x);
   virtual int verifyAnswer(hiop::hiopMatrixSparse* A, real_type answer) override;
   virtual int verifyAnswer(hiop::hiopMatrix* A, local_ordinal_type nnz_st, local_ordinal_type nnz_ed, const double answer) override;
   virtual int verifyAnswer(
