@@ -128,6 +128,8 @@ hiopNlpFormulation::hiopNlpFormulation(hiopInterfaceBase& interface_)
   cons_body_ = nullptr;
   cons_Jac_ = NULL;
   cons_lambdas_ = nullptr;
+  
+  nlp_scaling = nullptr;
 }
 
 hiopNlpFormulation::~hiopNlpFormulation()
@@ -165,6 +167,8 @@ hiopNlpFormulation::~hiopNlpFormulation()
   delete cons_body_;
   delete cons_Jac_;
   delete cons_lambdas_;
+  
+  if(nlp_scaling) delete nlp_scaling;
 }
 
 bool hiopNlpFormulation::finalizeInitialization()
@@ -480,19 +484,8 @@ bool hiopNlpFormulation::finalizeInitialization()
   return bret;
 }
 
-bool hiopNlpFormulation::addScaling(hiopVector& gradf, hiopMatrix& Jac_c, hiopMatrix& Jac_d)
+bool hiopNlpFormulation::add_scaling(hiopVector& gradf, hiopMatrix& Jac_c, hiopMatrix& Jac_d)
 {
-
-  hiopVector& x, bool new_x, double* gradf)
-  hiopVector* xx = nlp_transformations.applyTox(x, new_x);
-  double* gradff = nlp_transformations.applyToGradObj(gradf);
-  bool bret; 
-  runStats.tmEvalGrad_f.start();
-  bret = interface_base.eval_grad_f(nlp_transformations.n_post(), xx->local_data_const(), new_x, gradff);
-  runStats.tmEvalGrad_f.stop(); runStats.nEvalGrad_f++;
-
-  gradf = nlp_transformations.applyInvToGradObj(gradff);
-  
   //check if we need to do scaling
   if("none" == options->GetString("scaling_type")) {
     return false;
@@ -504,15 +497,15 @@ bool hiopNlpFormulation::addScaling(hiopVector& gradf, hiopMatrix& Jac_c, hiopMa
   if(obj_scale>1.)
   {
     obj_scale=1.;
+    return false;
   }
+  
+   nlp_scaling = new hiopNLPObjGradScaling(max_grad,&gradf);
 
+//  hiopNLPObjGradScaling* grad_scaling = new hiopNLPObjGradScaling(max_grad,&gradf);
+  nlp_transformations.append(nlp_scaling);
 
-    
-  hiopNLPGradScaling* grad_scaling = new hiopNLPGradScaling(max_grad,gradf,Jac_c,Jac_d);
-
-  nlp_scaling.append(grad_scaling);
-
-  return bret;
+  return true;
 }
 
 
@@ -548,7 +541,12 @@ bool hiopNlpFormulation::eval_f(hiopVector& x, bool new_x, double& f)
   bool bret = interface_base.eval_f(nlp_transformations.n_post(), xx->local_data_const(), new_x, f);
   runStats.tmEvalObj.stop(); runStats.nEvalObj++;
 
-  f = nlp_transformations.applyToObj(f);
+  f = nlp_transformations.applyInvToObj(f);
+  
+  if(nlp_scaling)
+  {
+    f = nlp_scaling->applyInvToObj(f);
+  }
   return bret;
 }
 bool hiopNlpFormulation::eval_grad_f(hiopVector& x, bool new_x, double* gradf)
@@ -558,9 +556,15 @@ bool hiopNlpFormulation::eval_grad_f(hiopVector& x, bool new_x, double* gradf)
   bool bret; 
   runStats.tmEvalGrad_f.start();
   bret = interface_base.eval_grad_f(nlp_transformations.n_post(), xx->local_data_const(), new_x, gradff);
+
   runStats.tmEvalGrad_f.stop(); runStats.nEvalGrad_f++;
 
   gradf = nlp_transformations.applyInvToGradObj(gradff);
+  
+  if(nlp_scaling)
+  {
+    gradf = nlp_scaling->applyInvToGradObj(gradf);
+  }    
   return bret;
 }
 
@@ -1339,11 +1343,17 @@ bool hiopNlpSparse::eval_Jac_c_d_interface_impl(hiopVector& x,
   return true;
 }
 
-bool hiopNlpSparse::eval_Hess_Lagr(const hiopVector&  x, bool new_x, const double& obj_factor,
+bool hiopNlpSparse::eval_Hess_Lagr(const hiopVector&  x, bool new_x, const double& obj_factor_in,
                             const double* lambda_eq, const double* lambda_ineq, bool new_lambdas,
                             hiopMatrix& Hess_L)
 {
   hiopMatrixSparseTriplet* pHessL = dynamic_cast<hiopMatrixSparseTriplet*>(&Hess_L);
+  double obj_factor = obj_factor_in;
+  if(nlp_scaling)
+  {
+    obj_factor *=nlp_scaling->get_obj_scale();
+  }
+  
   assert(pHessL);
 
   runStats.tmEvalHessL.start();

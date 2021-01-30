@@ -171,7 +171,7 @@ public:
     return std::max(mSp->max_abs_value(), mDe->max_abs_value());
   }
   
-  virtual void row_max_abs_value(hiopVector *ret_vec){assert(0&&"not yet")};
+  virtual void row_max_abs_value(hiopVector *ret_vec){assert(0&&"not yet");}
 
   virtual bool isfinite() const
   {
@@ -384,7 +384,7 @@ public:
     return std::max(mSp->max_abs_value(), mDe->max_abs_value());
   }
 
-  virtual void row_max_abs_value(hiopVector *ret_vec){assert(0&&"not yet")};
+  virtual void row_max_abs_value(hiopVector *ret_vec){assert(0&&"not yet");}
 
   virtual bool isfinite() const
   {

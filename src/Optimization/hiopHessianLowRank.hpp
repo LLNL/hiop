@@ -321,7 +321,7 @@ public:
     return 0.;
   }
 
-  virtual void row_max_abs_value(hiopVector *ret_vec){assert(0&&"not yet")};
+  virtual void row_max_abs_value(hiopVector *ret_vec){assert(0&&"not yet");}
   
   void copyRowsFrom(const hiopMatrix& src_in, const long long* rows_idxs, long long n_rows)
   {
