@@ -184,7 +184,7 @@ namespace hiop
     
     virtual double max_abs_value();
 
-    virtual void row_max_abs_value(hiopVector *ret_vec){assert(0&&"not yet")};
+    virtual void row_max_abs_value(hiopVector *ret_vec){assert(0&&"not yet");}
 
     virtual bool isfinite() const;
     

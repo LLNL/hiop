@@ -311,7 +311,7 @@ private:
 class hiopNLPObjGradScaling : public hiopNlpTransformation
 {
 public:
-  hiopNLPObjGradScaling(const double obj_scale);
+  hiopNLPObjGradScaling(const double max_grad, hiopVector* gradf);
   ~hiopNLPObjGradScaling();
 public:
   /** inherited from the parent class */
@@ -327,20 +327,19 @@ public:
   inline long long n_post_local()  { return n_vars_local; }
   inline long long n_pre_local()  { return n_vars_local; }
 
-  /* from scaled to unscaled objective*/
+  /* from scaled to unscaled*/
   void applyToArray(const double* vec_s, double* vec_us);
-
+  /* from unscaled to scaled*/
+  void applyInvToArray(const double* vec_s, double* vec_us);  
+  
   /* from scaled to unscaled objective*/
   inline double applyToObj(double& f_in) { return f_in/obj_scale;}
   /* from unscaled to scaled objective*/
-  inline double applyInvToObj(double& f_in) { return obj_scale*f_in;}   
+  inline double applyInvToObj(double& f_in) { return obj_scale*f_in;}
+  
+  inline double get_obj_scale() const {return obj_scale;}
 
-  /* from scaled to unscaled*/
-  hiopVector* applyToGradObj(hiopVector* grad_in);
-  /* from unscaled to scaled*/
-  hiopVector* applyInvToGradObj(hiopVector* grad_in);
-
-#if 0  
+#if 1 //old interface
   /* from scaled to unscaled*/
   inline double* applyToGradObj(double* grad_in)
   {
@@ -355,7 +354,15 @@ public:
     applyInvToArray(grad_in, grad_scaled_ref);
     return grad_scaled_ref;
   }
+#else
+  /* from scaled to unscaled*/
+  hiopVector* applyToGradObj(hiopVector* grad_in);
+  /* from unscaled to scaled*/
+  hiopVector* applyInvToGradObj(hiopVector* grad_in);
+#endif
   
+  
+#if 0
   /* from rs to fs */
   inline double* applyToJacobEq(double* Jac_in, const int& m_in)
   {
@@ -402,7 +409,7 @@ private:
   
   hiopVector *grad_scaled;
   hiopVector *grad_unscaled;
-
+  double* grad_scaled_ref;
 #if 0
   hiopVector *scal_jacc, *scal_jacd;
   hiopMatrix *Jacc_scaled, *Jacd_scaled;
@@ -526,11 +533,11 @@ public:
     return ret;
   }
 
-  double applyInvToObj(double* f_in) 
+  double applyInvToObj(double& f_in) 
   {
     double ret = f_in;
     for(std::list<hiopNlpTransformation*>::reverse_iterator it=list_trans_.rbegin(); it!=list_trans_.rend(); ++it)
-      ret = (*it)->applyInvToGradObj(ret);
+      ret = (*it)->applyInvToObj(ret);
     return ret;
   }  
   

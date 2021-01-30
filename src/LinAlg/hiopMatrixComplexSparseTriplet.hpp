@@ -169,7 +169,7 @@ namespace hiop
     
     virtual double max_abs_value();
 
-    virtual void row_max_abs_value(hiopVector *ret_vec){assert(0&&"not yet")};
+    virtual void row_max_abs_value(hiopVector *ret_vec){assert(0&&"not yet");}
 
     /* return false is any of the entry is a nan, inf, or denormalized */
     virtual bool isfinite() const

@@ -170,10 +170,8 @@ public:
                                         const long long& dest_nnz_st, const int &nnz_to_copy) = 0;
 
   virtual double max_abs_value() = 0;
-  
-  virtual void row_max_abs_value(hiopVector *ret_vec){assert(0&&"not yet")};
-  
-  virtual void row_max_abs_value(hiopVector *ret_vec){assert(0&&"not yet")};
+    
+  virtual void row_max_abs_value(hiopVector *ret_vec){assert(0&&"not yet");}
   
   virtual bool isfinite() const = 0;
 

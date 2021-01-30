@@ -213,7 +213,7 @@ void hiopOptions::registerOptions()
   // scaling
   {
     vector<string> range(2); range[0]="none"; range[1]="gradient";
-    registerStrOption("scaling_type", "none", range,
+    registerStrOption("scaling_type", "gradient", range,
 		      "The method used for scaling the problem before solving it."
 		      "Setting this option to 'gradient' will scale the problem, guaranteeing the maximum "
 		      "gradient at the initial point is less or equal to scaling_max_grad (default 'none')");
