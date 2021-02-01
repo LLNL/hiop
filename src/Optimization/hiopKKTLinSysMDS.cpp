@@ -428,7 +428,7 @@ namespace hiop
 #ifdef HIOP_USE_MAGMA
       if(nlp_->options->GetString("compute_mode")=="hybrid" ||
          nlp_->options->GetString("compute_mode")=="gpu"    ||
-	 nlp_->options->GetString("compute_mode")=="auto") {         
+         nlp_->options->GetString("compute_mode")=="auto") {         
 
 	if(safe_mode_) {
           
