@@ -63,7 +63,7 @@ using namespace std;
 const char* szDefaultFilename = "hiop.options";
 
   hiopOptions::hiopOptions(const char* szOptionsFilename/*=NULL*/)
-  : log(NULL)
+    : log_(nullptr)
 {
   registerOptions();
   loadFromFile(szOptionsFilename==NULL?szDefaultFilename:szOptionsFilename);
@@ -72,36 +72,36 @@ const char* szDefaultFilename = "hiop.options";
 
 hiopOptions::~hiopOptions()
 {
-  map<std::string, _O*>::iterator it = mOptions.begin();
-  for(;it!=mOptions.end(); it++) delete it->second;
+  map<std::string, Option*>::iterator it = mOptions_.begin();
+  for(;it!=mOptions_.end(); it++) delete it->second;
 }
 
 double hiopOptions::GetNumeric(const char* name) const
 {
-  map<std::string, _O*>::const_iterator it = mOptions.find(name);
-  assert(it!=mOptions.end());
+  map<std::string, Option*>::const_iterator it = mOptions_.find(name);
+  assert(it!=mOptions_.end());
   assert(it->second!=NULL);
-  _ONum* option = dynamic_cast<_ONum*>(it->second);
+  OptionNum* option = dynamic_cast<OptionNum*>(it->second);
   assert(option!=NULL);
   return option->val;
 }
 
 int hiopOptions::GetInteger(const char* name) const
 {
-  map<std::string, _O*>::const_iterator it = mOptions.find(name);
-  assert(it!=mOptions.end());
+  map<std::string, Option*>::const_iterator it = mOptions_.find(name);
+  assert(it!=mOptions_.end());
   assert(it->second!=NULL);
-  _OInt* option = dynamic_cast<_OInt*>(it->second);
+  OptionInt* option = dynamic_cast<OptionInt*>(it->second);
   assert(option!=NULL);
   return option->val;
 }
 
 string hiopOptions::GetString (const char* name) const
 {
-  map<std::string, _O*>::const_iterator it = mOptions.find(name);
-  assert(it!=mOptions.end());
+  map<std::string, Option*>::const_iterator it = mOptions_.find(name);
+  assert(it!=mOptions_.end());
   assert(it->second!=NULL);
-  _OStr* option = dynamic_cast<_OStr*>(it->second);
+  OptionStr* option = dynamic_cast<OptionStr*>(it->second);
   assert(option!=NULL);
   return option->val;
 }
@@ -134,14 +134,31 @@ void hiopOptions::registerOptions()
 		    "multiplier threshold used in computing the scaling factors for the optimality error (default 100.)");
 
   {
+    // 'duals_update_type' should be 'lsq' or 'linear' for  'Hessian=quasinewton_approx'
+    // 'duals_update_type' can only be 'linear' for Newton methods 'Hessian=analytical_exact'
+
+    //here will set the default value to 'lsq' and this will be adjusted later in 'ensureConsistency'
+    //to a valid value depending on the 'Hessian' value
     vector<string> range(2); range[0]="lsq"; range[1]="linear";
-    registerStrOption("dualsUpdateType", "lsq", range,
-		      "Type of update of the multipliers of the eq. cons. (default lsq)"); //
+    registerStrOption("duals_update_type", "lsq", range,
+		      "Type of update of the multipliers of the eq. constraints "
+                      "(default is 'lsq' when 'Hessian' is 'quasinewton_approx' and "
+                      "'linear' when 'Hessian is 'analytical_exact')");
+
+    registerNumOption("recalc_lsq_duals_tol", 1e-6, 0, 1e10, 
+                      "Threshold for infeasibility under which LSQ computation of duals will be employed "
+                      "(requires 'duals_update_type' to be 'lsq'");
   }
+
   {
     vector<string> range(2); range[0]="lsq"; range[1]="zero";
-    registerStrOption("dualsInitialization", "lsq", range,
-		      "Type of update of the multipliers of the eq. cons. (default lsq)");
+    registerStrOption("duals_init", "lsq", range,
+		      "Type of initialization of the multipliers of the eq. cons. (default lsq)");
+
+    registerNumOption("duals_lsq_ini_max", 1e3, 1e-16, 1e+10, 
+                      "Max inf-norm allowed for initials duals computed with LSQ; if norm is greater, the duals for"
+                      "equality constraints will be set to zero.");
+
   }
 
   registerIntOption("max_iter", 3000, 1, 1e6, "Max number of iterations (default 3000)");
@@ -180,7 +197,8 @@ void hiopOptions::registerOptions()
     registerStrOption("fixed_var", "none", range,
 		      "Treatment of fixed variables: 'remove' from the problem, 'relax' bounds "
 		      "by 'fixed_var_perturb', or 'none', in which case the HiOp will terminate "
-		      "with an error message if fixed variables are detected (default 'none')");
+		      "with an error message if fixed variables are detected (default 'none'). "
+                      "Value 'remove' is available only when 'compute_mode' is 'hybrid' or 'cpu'.");
 
     registerNumOption("fixed_var_tolerance", 1e-15, 1e-30, 0.01,
 		      "A variable is considered fixed if |upp_bnd-low_bnd| < fixed_var_tolerance * "
@@ -204,8 +222,9 @@ void hiopOptions::registerOptions()
     vector<string> range(4); range[0] = "auto"; range[1]="xycyd"; range[2]="xdycyd"; range[3]="full";
     registerStrOption("KKTLinsys", "auto", range,
 		      "Type of KKT linear system used internally: decided by HiOp 'auto' "
-		      "(default option), the more compact 'XYcYd, the more stable 'XDYcYd', or the full-size non-symmetric 'full' "
-		      "The last three are only available with Hessian=analyticalExact");
+		      "(default option), the more compact 'XYcYd, the more stable 'XDYcYd', or the "
+                      "full-size non-symmetric 'full'. The last three options are only available with "
+                      "'Hessian=analyticalExact'.");
   }
   {
     vector<string> range(3); range[0]="stable"; range[1]="speculative"; range[2]="forcequick";
@@ -295,13 +314,13 @@ void hiopOptions::registerOptions()
 void hiopOptions::registerNumOption(const std::string& name, double defaultValue,
 				    double low, double upp, const char* description)
 {
-  mOptions[name]=new _ONum(defaultValue, low, upp, description);
+  mOptions_[name]=new OptionNum(defaultValue, low, upp, description);
 }
 
 void hiopOptions::registerStrOption(const std::string& name, const std::string& defaultValue,
 				    const std::vector<std::string>& range, const char* description)
 {
-  mOptions[name]=new _OStr(defaultValue, range, description);
+  mOptions_[name]=new OptionStr(defaultValue, range, description);
 }
 
 void hiopOptions::registerIntOption(const std::string& name,
@@ -310,7 +329,7 @@ void hiopOptions::registerIntOption(const std::string& name,
 				    int upp,
 				    const char* description)
 {
-  mOptions[name]=new _OInt(defaultValue, low, upp, description);
+  mOptions_[name]=new OptionInt(defaultValue, low, upp, description);
 }
 
 void hiopOptions::ensureConsistence()
@@ -320,61 +339,92 @@ void hiopOptions::ensureConsistence()
   double eps_tol_accep = GetNumeric("acceptable_tolerance");
   double eps_tol  =      GetNumeric("tolerance");
   if(eps_tol_accep < eps_tol) {
-    log_printf(hovWarning,
-	       "There is no reason to set 'acceptable_tolerance' tighter than 'tolerance'. "
-	       "Will set the two to 'tolerance'.\n");
-    SetNumericValue("acceptable_tolerance", eps_tol);
+    if(is_user_defined("acceptable_tolerance")) {
+      log_printf(hovWarning,
+                 "There is no reason to set 'acceptable_tolerance' tighter than 'tolerance'. "
+                 "Will set the two to 'tolerance'.\n");
+      set_val("acceptable_tolerance", eps_tol);
+    }
   }
 
   if(GetString("Hessian")=="quasinewton_approx") {
     string strKKT = GetString("KKTLinsys");
-    if(strKKT=="xycyd" || strKKT=="xdycyd" || strKKT=="full")
-      log_printf(hovWarning,
-		 "The option 'KKTLinsys=%s' not valid with 'Hessian=quasiNewtonApprox'. "
-		 "Will use 'KKTLinsys=auto'\n", strKKT.c_str());
+    if(strKKT=="xycyd" || strKKT=="xdycyd" || strKKT=="full") {
+      if(is_user_defined("Hessian")) {
+        log_printf(hovWarning,
+                   "The option 'KKTLinsys=%s' is not valid with 'Hessian=quasiNewtonApprox'. "
+                   "Will use 'KKTLinsys=auto'\n", strKKT.c_str());
+      }
+      set_val("KKTLinsys", "auto");
+    }
+  }
+
+  if(GetString("Hessian")=="analytical_exact") {
+    string duals_update_type = GetString("duals_update_type");
+    if("linear" != duals_update_type) {
+      // 'duals_update_type' should be 'lsq' or 'linear' for  'Hessian=quasinewton_approx'
+      // 'duals_update_type' can only be 'linear' for Newton methods 'Hessian=analytical_exact'
+
+      //warn only if these are defined by the user (option file or via SetXXX methods)
+      if(is_user_defined("duals_update_type")) {
+        log_printf(hovWarning,
+                   "The option 'duals_update_type=%s' is not valid with 'Hessian=analytical_exact'. "
+                   "Will use 'duals_update_type=linear'.\n",
+                   duals_update_type.c_str());
+      }
+      set_val("duals_update_type", "linear");
+    }
   }
 
 // When RAJA is not enabled ...
 #ifndef HIOP_USE_RAJA
   if(GetString("compute_mode")=="gpu") {
-    log_printf(hovWarning,
-	       "option compute_mode=gpu was changed to 'hybrid' since HiOp was built without "
-	       "RAJA/Umpire support.\n");
-    SetStringValue("compute_mode", "hybrid");
+    if(is_user_defined("compute_mode")) {
+      log_printf(hovWarning,
+                 "option compute_mode=gpu was changed to 'hybrid' since HiOp was built without "
+                 "RAJA/Umpire support.\n");
+    }
+    set_val("compute_mode", "hybrid");
   }
   if(GetString("mem_space")!="default") {
     std::string memory_space = GetString("mem_space");
-    log_printf(hovWarning,
-	       "option mem_space=%s was changed to 'default' since HiOp was built without "
-	       "RAJA/Umpire support.\n", memory_space.c_str());
-    SetStringValue("mem_space", "default");
+    if(is_user_defined("compute_mode")) {
+      log_printf(hovWarning,
+                 "option mem_space=%s was changed to 'default' since HiOp was built without "
+                 "RAJA/Umpire support.\n", memory_space.c_str());
+    }
+    set_val("mem_space", "default");
   }
 #endif
 
-// No removing fixed variables in GPU compute mode ...
-if(GetString("compute_mode")=="gpu") {
-  if(GetString("fixed_var")=="remove") {
-    log_printf(hovWarning,
-	       "option fixed_var=remove was changed to 'relax' since only 'relax'"
-	       "is supported in GPU compute mode.\n");
-    SetStringValue("fixed_var", "relax");
+  // No removing of fixed variables in GPU compute mode ...
+  if(GetString("compute_mode")=="gpu") {
+    if(GetString("fixed_var")=="remove") {
+      
+      log_printf(hovWarning,
+                 "option fixed_var=remove was changed to 'relax' since only 'relax'"
+                 "is supported in GPU compute mode.\n");
+      set_val("fixed_var", "relax");
+    }
   }
-}
-
+  
 // No hybrid or GPU compute mode if HiOp is built without GPU linear solvers
 #ifndef HIOP_USE_MAGMA
 #ifndef HIOP_USE_STRUMPACK
   if(GetString("compute_mode")=="hybrid") {
-    log_printf(hovWarning,
-	       "option compute_mode=hybrid was changed to 'cpu' since HiOp was built without "
-	       "GPU support/Magma.\n");
-    SetStringValue("compute_mode", "cpu");
+
+    if(is_user_defined("compute_mode")) {
+      log_printf(hovWarning,
+                 "option compute_mode=hybrid was changed to 'cpu' since HiOp was built without "
+                 "GPU support/Magma.\n");
+    }
+    set_val("compute_mode", "cpu");
   }
   if(GetString("compute_mode")=="gpu") {
     log_printf(hovWarning,
 	       "option compute_mode=gpu was changed to 'cpu' since HiOp was built without "
 	       "GPU support/Magma.\n");
-    SetStringValue("compute_mode", "cpu");
+    set_val("compute_mode", "cpu");
   }
 #endif
 #endif
@@ -425,13 +475,13 @@ void hiopOptions::loadFromFile(const char* filename)
       continue;
     }
 
-    //find the _O object in mOptions corresponding to 'optname' and set his value to 'optval'
-    _ONum* on; _OInt* oi; _OStr* os;
+    //find the Option object in mOptions_ corresponding to 'optname' and set his value to 'optval'
+    OptionNum* on; OptionInt* oi; OptionStr* os;
 
-    map<string, _O*>::iterator it = mOptions.find(name);
-    if(it!=mOptions.end()) {
-      _O* option = it->second;
-      on = dynamic_cast<_ONum*>(option);
+    map<string, Option*>::iterator it = mOptions_.find(name);
+    if(it!=mOptions_.end()) {
+      Option* option = it->second;
+      on = dynamic_cast<OptionNum*>(option);
       if(on!=NULL) {
 	stringstream ss(value); double val;
 	if(ss>>val) { SetNumericValue(name.c_str(), val, true); }
@@ -441,11 +491,11 @@ void hiopOptions::loadFromFile(const char* filename)
 		     "the option file and will use default value '%g'\n",
 		      value.c_str(), name.c_str(), on->val);
       } else {
-	os = dynamic_cast<_OStr*>(option);
+	os = dynamic_cast<OptionStr*>(option);
 	if(os!=NULL) {
 	  SetStringValue(name.c_str(), value.c_str(), true);
 	} else {
-	  oi = dynamic_cast<_OInt*>(option);
+	  oi = dynamic_cast<OptionInt*>(option);
 	  if(oi!=NULL) {
 	    stringstream ss(value); int val;
 	    if(ss>>val) { SetIntegerValue(name.c_str(), val, true); }
@@ -462,7 +512,7 @@ void hiopOptions::loadFromFile(const char* filename)
 	}
       }
 
-    } else { // else from it!=mOptions.end()
+    } else { // else from it!=mOptions_.end()
       // option not recognized/found/registered
       log_printf(hovWarning,
 		 "Hiop does not understand option '%s' specified in the option file and will "
@@ -471,11 +521,40 @@ void hiopOptions::loadFromFile(const char* filename)
   } //end of the for over the lines
 }
 
+bool hiopOptions::is_user_defined(const char* option_name)
+{
+  map<string, Option*>::iterator it = mOptions_.find(option_name);
+  if(it==mOptions_.end()) {
+    return false;
+  }
+  return (it->second->specifiedInFile || it->second->specifiedAtRuntime);
+}
+
+bool hiopOptions::set_val(const char* name, const double& value)
+{
+  map<string, Option*>::iterator it = mOptions_.find(name);
+  if(it!=mOptions_.end()) {
+    OptionNum* option = dynamic_cast<OptionNum*>(it->second);
+    if(NULL==option) {
+      assert(false && "mismatch between name and type happened in internal 'set_val'");
+    } else {
+
+      if(value<option->lb || value>option->ub) {
+        assert(false && "incorrect use of internal 'set_val': value out of bounds\n");
+      } else {
+        option->val = value;
+      }
+    }
+  } else {
+    assert(false && "trying to change an inexistent option with internal 'set_val'");
+  }
+  return true;
+}
 bool hiopOptions::SetNumericValue (const char* name, const double& value, const bool& setFromFile/*=false*/)
 {
-  map<string, _O*>::iterator it = mOptions.find(name);
-  if(it!=mOptions.end()) {
-    _ONum* option = dynamic_cast<_ONum*>(it->second);
+  map<string, Option*>::iterator it = mOptions_.find(name);
+  if(it!=mOptions_.end()) {
+    OptionNum* option = dynamic_cast<OptionNum*>(it->second);
     if(NULL==option) {
       log_printf(hovWarning,
 		"Hiop does not know option '%s' as 'numeric'. Maybe it is an 'integer' or 'string' "
@@ -490,8 +569,11 @@ bool hiopOptions::SetNumericValue (const char* name, const double& value, const 
 	}
       }
 
-      if(setFromFile)
+      if(setFromFile) {
 	option->specifiedInFile=true;
+      } else {
+        option->specifiedAtRuntime=true;
+      }
 
       if(value<option->lb || value>option->ub) {
 	log_printf(hovWarning,
@@ -508,11 +590,34 @@ bool hiopOptions::SetNumericValue (const char* name, const double& value, const 
   return true;
 }
 
+
+bool hiopOptions::set_val(const char* name, const int& value)
+{
+  map<string, Option*>::iterator it = mOptions_.find(name);
+  if(it!=mOptions_.end()) {
+    OptionInt* option = dynamic_cast<OptionInt*>(it->second);
+    if(NULL==option) {
+      assert(false && "mismatch between name and type happened in internal 'set_val'");
+    } else {
+
+      if(value<option->lb || value>option->ub) {
+        assert(false && "incorrect use of internal 'set_val': value out of bounds\n");
+      } else {
+        option->val = value;
+      }
+    }
+  } else {
+    assert(false && "trying to change an inexistent option with internal 'set_val'");
+  }
+  return true;
+}
+
+
 bool hiopOptions::SetIntegerValue(const char* name, const int& value, const bool& setFromFile/*=false*/)
 {
-  map<string, _O*>::iterator it = mOptions.find(name);
-  if(it!=mOptions.end()) {
-    _OInt* option = dynamic_cast<_OInt*>(it->second);
+  map<string, Option*>::iterator it = mOptions_.find(name);
+  if(it!=mOptions_.end()) {
+    OptionInt* option = dynamic_cast<OptionInt*>(it->second);
     if(NULL==option) {
       log_printf(hovWarning,
 		 "Hiop does not know option '%s' as 'integer'. Maybe it is an 'numeric' "
@@ -546,11 +651,37 @@ bool hiopOptions::SetIntegerValue(const char* name, const int& value, const bool
   return true;
 }
 
+bool hiopOptions::set_val(const char* name, const char* value_in)
+{
+  map<string, Option*>::iterator it = mOptions_.find(name);
+  if(it!=mOptions_.end()) {
+    OptionStr* option = dynamic_cast<OptionStr*>(it->second);
+    if(NULL==option) {
+      assert(false && "mismatch between name and type happened in internal 'set_val'");
+    } else {
+      string value(value_in);
+      transform(value.begin(), value.end(), value.begin(), ::tolower);
+      //see if it is in the range (of supported values)
+      bool inrange=false;
+      for(int it=0; it<option->range.size() && !inrange; it++) inrange = (option->range[it]==value);
+
+      if(!inrange) {
+        assert(false && "incorrect use of internal 'set_val': value out of range\n");
+      } else {
+        option->val = value;
+      }
+    }
+  } else {
+    assert(false && "trying to change an inexistent option with internal 'set_val'");
+  }
+  return true;
+}
+
 bool hiopOptions::SetStringValue (const char* name,  const char* value, const bool& setFromFile/*=false*/)
 {
-  map<string, _O*>::iterator it = mOptions.find(name);
-  if(it!=mOptions.end()) {
-    _OStr* option = dynamic_cast<_OStr*>(it->second);
+  map<string, Option*>::iterator it = mOptions_.find(name);
+  if(it!=mOptions_.end()) {
+    OptionStr* option = dynamic_cast<OptionStr*>(it->second);
     if(NULL==option) {
       log_printf(hovWarning,
 		  "Hiop does not know option '%s' as 'string'. Maybe it is an 'integer' or a "
@@ -598,21 +729,22 @@ void hiopOptions::log_printf(hiopOutVerbosity v, const char* format, ...)
   va_list args;
   va_start (args, format);
   vsprintf (buff,format, args);
-  if(log)
-    log->printf(v,buff);
-  else
+  if(log_) {
+    log_->printf(v,buff);
+  } else {
     hiopLogger::printf_error(v,buff);
+  }
   //fprintf(stderr,buff);
   va_end (args);
 }
 
 void hiopOptions::print(FILE* file, const char* msg) const
 {
-  if(NULL==msg) fprintf(file, "#\n# Hiop options\n#\n");
+  if(nullptr==msg) fprintf(file, "#\n# Hiop options\n#\n");
   else          fprintf(file, "%s ", msg);
 
-  map<string,_O*>::const_iterator it = mOptions.begin();
-  for(; it!=mOptions.end(); it++) {
+  map<string,Option*>::const_iterator it = mOptions_.begin();
+  for(; it!=mOptions_.end(); it++) {
     fprintf(file, "%s ", it->first.c_str());
     it->second->print(file);
     fprintf(file, "\n");
@@ -620,16 +752,16 @@ void hiopOptions::print(FILE* file, const char* msg) const
   fprintf(file, "# end of Hiop options\n\n");
 }
 
-void hiopOptions::_ONum::print(FILE* f) const
+void hiopOptions::OptionNum::print(FILE* f) const
 {
   fprintf(f, "%.3e \t# (numeric) %g to %g [%s]", val, lb, ub, descr.c_str());
 }
-void hiopOptions::_OInt::print(FILE* f) const
+void hiopOptions::OptionInt::print(FILE* f) const
 {
   fprintf(f, "%d \t# (integer)  %d to %d [%s]", val, lb, ub, descr.c_str());
 }
 
-void hiopOptions::_OStr::print(FILE* f) const
+void hiopOptions::OptionStr::print(FILE* f) const
 {
   stringstream ssRange; ssRange << " ";
   for(int i=0; i<range.size(); i++) ssRange << range[i] << " ";

@@ -310,11 +310,85 @@ void hiopMatrixRajaSparseTriplet::transTimesMat(double beta, hiopMatrix& W,
   assert(false && "not needed");
 }
 
-void hiopMatrixRajaSparseTriplet::timesMatTrans(double beta, hiopMatrix& W, 
-					    double alpha, const hiopMatrix& X) const
+/**
+ * @brief W = beta*W + alpha*this*X^T
+ * Sizes: M1(this) is (m1 x nx) and M2 is (m2, nx).
+ */
+void hiopMatrixRajaSparseTriplet::
+timesMatTrans(double beta, hiopMatrix& Wmat, double alpha, const hiopMatrix& M2mat) const
 {
-  assert(false && "not needed");
+  auto& W = dynamic_cast<hiopMatrixDense&>(Wmat);
+  const auto& M2 = dynamic_cast<const hiopMatrixRajaSparseTriplet&>(M2mat);
+  const hiopMatrixRajaSparseTriplet& M1 = *this;
+  
+  const int m1 = M1.nrows_;
+  const int nx = M1.ncols_;
+  const int m2 = M2.nrows_;
+  assert(nx==M1.ncols_);
+  assert(nx==M2.ncols_);
+  assert(M2.ncols_ == nx);
+
+  assert(m1==W.m());
+  assert(m2==W.n());
+
+  int M1nnz = M1.nnz_;
+  int M2nnz = M2.nnz_;
+    
+  //double** WM = W.get_M();
+  RAJA::View<double, RAJA::Layout<2>> WM(W.local_data(), W.m(), W.n());
+
+  // TODO: allocAndBuildRowStarts -> should create row_starts_host internally (name='prepareRowStarts' ?)
+  if(M1.row_starts_host==NULL)
+    M1.row_starts_host = M1.allocAndBuildRowStarts();
+  assert(M1.row_starts_host);
+
+  if(M2.row_starts_host==NULL)
+    M2.row_starts_host = M2.allocAndBuildRowStarts();
+  assert(M2.row_starts_host);
+
+  int* M1_idx_start = M1.row_starts_host->idx_start_;
+  int* M2_idx_start = M2.row_starts_host->idx_start_;
+
+  int* M1jCol = M1.jCol_;
+  int* M2jCol = M2.jCol_;
+  double* M1values = M1.values_;
+  double* M2values = M2.values_;
+
+  RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, m1),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      for(int j=0; j<m2; j++)
+      {
+        // dest[i,j] = weigthed_dotprod(M1_row_i,M2_row_j)
+        double acc = 0.;
+        int ki=M1_idx_start[i];
+        int kj=M2_idx_start[j];
+        
+        while(ki<M1_idx_start[i+1] && kj<M2_idx_start[j+1])
+        {
+          assert(ki<M1nnz);
+          assert(kj<M2nnz);
+
+          if(M1jCol[ki] == M2jCol[kj])
+          {
+            acc += M1values[ki] * M2values[kj];
+            ki++;
+            kj++;
+          }
+          else if(M1jCol[ki] < M2jCol[kj])
+          {
+            ki++;
+          }
+          else
+          {
+            kj++;
+          } 
+        } //end of while(ki... && kj...)
+        WM(i, j) = beta*WM(i, j) + alpha*acc;
+      } //end j
+    });
 }
+
 void hiopMatrixRajaSparseTriplet::addDiagonal(const double& alpha, const hiopVector& d_)
 {
   assert(false && "not needed");
@@ -581,9 +655,7 @@ addMDinvNtransToSymDeMatUTri(int row_dest_start, int col_dest_start,
   const hiopMatrixRajaSparseTriplet& M1 = *this;
   
   const int m1 = M1.nrows_;
-#ifndef NDEBUG
   const int nx = M1.ncols_;
-#endif
   const int m2 = M2.nrows_;
   assert(nx==M2.ncols_);
   assert(D.get_size() == nx);

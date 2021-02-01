@@ -93,7 +93,11 @@ public:
 
   virtual void timesMatTrans(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const
   {
-    assert(false && "not yet implemented");
+    const hiopMatrixMDS &X_mds = dynamic_cast<const hiopMatrixMDS&>(X);
+    hiopMatrixDense &W_d = dynamic_cast<hiopMatrixDense&>(W);
+    
+    mDe->timesMatTrans(beta, W, 1.0, *X_mds.de_mat());
+    mSp->timesMatTrans(1.0, W, 1.0, *X_mds.sp_mat());
   }
 
 

@@ -532,8 +532,8 @@ namespace hiop
       linSys_ = p;
 #else
       nlp_->log->printf(hovError,
-                        "KKT_SPARSE_FULL linsys: cannot instantiate backend linear solver "
-                        "because HIOP was not built with STRUMPACK");
+                        "KKT_SPARSE_FULL_KKT linsys: cannot instantiate backend linear solver "
+                        "because HIOP was not built with STRUMPACK.\n");
       assert(false);
       return NULL;
 #endif

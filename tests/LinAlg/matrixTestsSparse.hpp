@@ -329,6 +329,86 @@ public:
     return fail;
   }
 
+  /**
+   * @brief Test for (W) = beta(W) + (alpha)*this * B^T
+   W) += this * D^(-1) * B^T
+   *                    
+   * The method adds the matrix product to a block above the diagonal of W.
+   * 
+   * @param[in] A - sparse matrix object which invokes the method (this)
+   * @param[in] B - sparse matrix
+   * @param[in] W - dense matrix where the product is stored
+   */
+  bool matrixTimesMatTrans(
+    hiop::hiopMatrixSparse& A,
+    hiop::hiopMatrixSparse& B,
+    hiop::hiopMatrixDense& W)
+  {
+    int fail = 0;
+
+    assert(A.n() == B.n() && "Did you pass in matrices with the same number of cols?");
+
+    const real_type alpha = half;
+    const real_type beta  = two;
+    const real_type A_val = one;
+    const real_type B_val = one;
+    const real_type W_val = zero;
+
+    W.setToConstant(W_val);
+    A.setToConstant(A_val);
+    B.setToConstant(B_val);
+    A.timesMatTrans(beta, W, alpha, B);
+
+    const local_ordinal_type* A_iRow = getRowIndices(&A);
+    const local_ordinal_type* A_jCol = getColumnIndices(&A);
+    const local_ordinal_type A_nnz = A.numberOfNonzeros();
+
+    const local_ordinal_type* B_iRow = getRowIndices(&B);
+    const local_ordinal_type* B_jCol = getColumnIndices(&B);
+    const local_ordinal_type B_nnz = B.numberOfNonzeros();
+
+    fail += verifyAnswer(&W,
+      [=] (local_ordinal_type i, local_ordinal_type j) -> real_type
+      {
+        // Counting the number of columns with entries in row i in A and row j in B
+        local_ordinal_type count = 0;
+
+        local_ordinal_type d_i = i;
+        local_ordinal_type d_j = j;
+
+        // Searching for the row index d_i in triplet structure
+        local_ordinal_type rs_di = 0;
+        while(A_iRow[rs_di] != d_i && rs_di < A_nnz)
+          rs_di++;
+        // Searching for the row index d_j in triplet structure
+        local_ordinal_type rs_dj = 0;
+        while(B_iRow[rs_dj] != d_j && rs_dj < B_nnz)
+          rs_dj++;
+
+        // Counting nonzero terms of the matrix product innermost loop
+        // \sum_k A_ik * B^T_jk 
+        while(A_iRow[rs_di] == d_i && B_iRow[rs_dj] == d_j)
+        {
+          if(A_jCol[rs_di] == B_jCol[rs_dj])
+          {
+            count++;
+          }
+
+          if(A_jCol[rs_di]<B_jCol[rs_dj])
+          {
+            rs_di++;
+          }
+          else
+          {
+            rs_dj++;
+          }
+        }
+        return beta*W_val + (alpha * A_val * B_val * count);
+      });
+
+    printMessage(fail, __func__);
+    return fail;
+  }
   
   /**
    * @brief Test for (W) += this * D^(-1) * B^T

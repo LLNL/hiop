@@ -200,7 +200,7 @@ protected:
   double eta_phi;       //parameter in the Armijo rule
   double kappa_Sigma;   //parameter in resetting the duals to guarantee closedness of the
                         //primal-dual logbar Hessian to the primal logbar Hessian
-  int dualsUpdateType;  //type of the update for dual multipliers: 0 LSQ (default, recommended
+  int duals_update_type;//type of the update for dual multipliers: 0 LSQ (default, recommended
                         //for quasi-Newton); 1 Newton
   int max_n_it;
   int dualsInitializ;  //type of initialization for the duals of constraints: 0 LSQ (default), 1 set to zero

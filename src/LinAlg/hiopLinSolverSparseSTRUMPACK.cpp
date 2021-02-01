@@ -133,6 +133,8 @@ namespace hiop
     * initialize strumpack parameters
     */
     spss.options().set_matching(MatchingJob::NONE);
+//    spss.options().enable_METIS_NodeNDP();
+    
     if(nlp_->options->GetString("compute_mode")=="cpu")
     {
       spss.options().disable_gpu();
