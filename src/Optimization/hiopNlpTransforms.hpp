@@ -1,11 +1,10 @@
 // Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
-// Written by Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
 // is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause). 
-// Please also read ‚ÄúAdditional BSD Notice‚Äù below.
+// Please also read ìAdditional BSD Noticeî below.
 //
 // Redistribution and use in source and binary forms, with or without modification, 
 // are permitted provided that the following conditions are met:
@@ -46,6 +45,14 @@
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or 
 // product endorsement purposes.
 
+/**
+ * @file hiopNlpTransforms.hpp
+ *
+ * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
+ * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
+ *
+ */
+
 #ifndef HIOP_NLP_TRANSFORMS
 #define HIOP_NLP_TRANSFORMS
 
@@ -82,42 +89,59 @@ public:
   virtual long long n_pre_local()=0;
 
   /* transforms variable vector */
-  virtual inline hiopVector* applyTox(hiopVector& x, const bool& new_x) { return &x; };
-  virtual inline hiopVector* applyInvTox(hiopVector& x) { return &x; }
-  virtual inline void applyInvTox(hiopVector& x_in, hiopVector& x_out) 
+  virtual inline hiopVector* apply_to_x(hiopVector& x, const bool& new_x) { return &x; };
+  virtual inline hiopVector* apply_inv_to_x(hiopVector& x) { return &x; }
+  virtual inline void apply_inv_to_x(hiopVector& x_in, hiopVector& x_out) 
   { 
     //default implementation should have x_in as x_out's internal data array
     assert(x_in.local_data() == x_out.local_data());
   }
 
-  virtual inline double applyToObj(double& f_in) { return f_in;} 
-  virtual inline double applyInvToObj(double& f_in) { return f_in;} 
+  virtual inline double apply_to_obj                  (double& f_in) { return f_in;} 
+  virtual inline double apply_inv_to_obj              (double& f_in) { return f_in;} 
 
-  virtual inline double* applyToGradObj(double* grad_in) { return grad_in; }
-  virtual inline double* applyInvToGradObj(double* grad_in) { return grad_in; }
+  virtual inline hiopVector* apply_to_grad_obj        (hiopVector& grad_in) { return &grad_in; }
+  virtual inline hiopVector* apply_inv_to_grad_obj    (hiopVector& grad_in) { return &grad_in; }
 
-  virtual inline double* applyToConsEq(double* c_in, const int& m_in) { return c_in; }
-  virtual inline double* applyInvToConsEq(double* c_in, const int& m_in) { return c_in; }
-  virtual inline double* applyToConsIneq(double* c_in, const int& m_in) { return c_in; }
-  virtual inline double* applyInvToConsIneq(double* c_in, const int& m_in) { return c_in; }
+  virtual inline hiopVector* apply_to_cons_eq         (hiopVector& c_in, const int& m_in) { return &c_in; }
+  virtual inline hiopVector* apply_inv_to_cons_eq     (hiopVector& c_in, const int& m_in) { return &c_in; }
+  virtual inline hiopVector* apply_to_cons_ineq       (hiopVector& c_in, const int& m_in) { return &c_in; }
+  virtual inline hiopVector* apply_inv_to_cons_ineq   (hiopVector& c_in, const int& m_in) { return &c_in; }
+  
   //the following two are for when the underlying NLP formulation works with full body constraints,
   //that is, evaluates both equalities and inequalities at once (a.k.a. one-call constraints and
   //and Jacobian evaluations)
-  virtual inline double* applyToCons(double* cons_in, const int* m_in) { return cons_in; }
-  virtual inline double* applyInvToCons(double* cons_in, const int* m_in) { return cons_in; }
+  virtual inline hiopVector* apply_to_cons            (hiopVector&  cons_in, const int* m_in) { return &cons_in; }
+  virtual inline hiopVector* apply_inv_to_cons        (hiopVector&  cons_in, const int* m_in) { return &cons_in; }
 
+  virtual inline hiopMatrix* apply_to_jacob_eq        (hiopMatrix& Jac_in, const int& m_in) { return &Jac_in; }
+  virtual inline hiopMatrix* apply_inv_to_jacob_eq    (hiopMatrix& Jac_in, const int& m_in) { return &Jac_in; }
+
+  virtual inline hiopMatrix* apply_to_jacob_ineq      (hiopMatrix& Jac_in, const int& m_in) { return &Jac_in; }
+  virtual inline hiopMatrix* apply_inv_to_jacob_ineq  (hiopMatrix& Jac_in, const int& m_in) { return &Jac_in; }  
+
+  virtual inline hiopMatrix* apply_to_jacob_cons      (hiopMatrix& Jac_in, const int& m_in) { return &Jac_in; }
+  virtual inline hiopMatrix* apply_inv_to_jacob_cons  (hiopMatrix& Jac_in, const int& m_in) { return &Jac_in; } 
+
+  virtual inline hiopMatrix* apply_to_larg_hess       (hiopMatrix& Hess_in, const int& m_in) { return &Hess_in; }
+  virtual inline hiopMatrix* apply_inv_to_larg_hess   (hiopMatrix& Hess_in, const int& m_in) { return &Hess_in; }
+#if 0 //old code
   //! todo -> abstractize the below methods to work with other Jacobian types: sparse and MDS
-  virtual inline double* applyToJacobEq      (double* Jac_in, const int& m_in) { return Jac_in; }
-  virtual inline double* applyInvToJacobEq   (double* Jac_in, const int& m_in) { return Jac_in; }
-  virtual inline double* applyToJacobIneq    (double* Jac_in, const int& m_in) { return Jac_in; }
-  virtual inline double* applyInvToJacobIneq (double* Jac_in, const int& m_in) { return Jac_in; }
-  virtual inline double* applyToJacobCons    (double* Jac_in, const int& m_in) { return Jac_in; }
+  virtual inline double* apply_to_jacob_eq      (double* Jac_in, const int& m_in) { return Jac_in; }
+  virtual inline double* apply_inv_to_jacob_eq   (double* Jac_in, const int& m_in) { return Jac_in; }
+  
+  virtual inline double* apply_to_jacob_ineq    (double* Jac_in, const int& m_in) { return Jac_in; }
+  virtual inline double* apply_inv_to_jacob_ineq (double* Jac_in, const int& m_in) { return Jac_in; }
+  
   //the following two are for when the underlying NLP formulation works with full body constraints
-  virtual inline double* applyInvToJacobCons (double* Jac_in, const int& m_in) { return Jac_in; }
+  virtual inline double* apply_to_jacob_cons    (double* Jac_in, const int& m_in) { return Jac_in; }
+  virtual inline double* apply_inv_to_jacob_cons (double* Jac_in, const int& m_in) { return Jac_in; }
 
   //! todo -> transformations for Hessian ?!?
+#endif // 0
+  
 public:
-  hiopNlpTransformation() {}; 
+  hiopNlpTransformation(){};
   virtual ~hiopNlpTransformation() {};
 };
 
@@ -133,11 +157,11 @@ public:
 class hiopFixedVarsRemover : public hiopNlpTransformation
 {
 public:
-  hiopFixedVarsRemover(const hiopVector& xl, 
-		       const hiopVector& xu, 
-		       const double& fixedVarTol,
-		       const long long& numFixedVars,
-		       const long long& numFixedVars_local);
+  hiopFixedVarsRemover(const hiopVector& xl,
+                       const hiopVector& xu,
+                       const double& fixedVarTol,
+                       const long long& numFixedVars,
+                       const long long& numFixedVars_local);
   ~hiopFixedVarsRemover();
 public:
   /** inherited from the parent class */
@@ -154,77 +178,90 @@ public:
   virtual inline long long n_pre_local() { return rs_n_local(); }
 
   /* from reduced space to full space */
-  inline hiopVector* applyTox(hiopVector& x, const bool& new_x) 
+  inline hiopVector* apply_to_x(hiopVector& x, const bool& new_x) 
   { 
     x_rs_ref_ = &x;
     if(!new_x) { return x_fs; }
-    applyToArray(x.local_data_const(), x_fs->local_data());
+    apply_to_vector(&x, x_fs);
     return x_fs;
   };
 
   /* from full space to reduced space (fixed vars removed) */
-  inline hiopVector* applyInvTox(hiopVector& x_fs_in) 
+  inline hiopVector* apply_inv_to_x(hiopVector& x_fs_in) 
   { 
     assert(x_rs_ref_!=NULL); assert(x_fs_in.local_data()==x_fs->local_data());
-    applyInvToArray(x_fs_in.local_data(), x_rs_ref_->local_data());
+    apply_to_vector(&x_fs_in, x_rs_ref_);
     return x_rs_ref_; 
   }
   
   /* from fs to rs */
-  inline void  applyInvTox(hiopVector& x_in, hiopVector& xv_out)
+  inline void  apply_inv_to_x(hiopVector& x_in, hiopVector& xv_out)
   {
 #ifdef HIOP_DEEPCHECKS
     assert(xv_out.get_size()<xl_fs->get_size());
 #endif
-    applyInvToArray(x_in.local_data(), xv_out.local_data());
+    apply_inv_to_vector(&x_in, &xv_out);
   }
   
   /* from rs to fs and return the fs*/
-  inline double* applyToGradObj(double* grad_in)
+  inline hiopVector* apply_to_grad_obj(hiopVector& grad_in)
   {
-    grad_rs_ref = grad_in;
-    applyToArray(grad_in, grad_fs->local_data());
-    return grad_fs->local_data();
+    grad_rs_ref = &grad_in;
+    apply_to_vector(&grad_in, grad_fs);
+    return grad_fs;
   }
   /* from fs to rs */
-  inline double* applyInvToGradObj(double* grad_in)
+  inline hiopVector* apply_inv_to_grad_obj(hiopVector& grad_in)
   {
-    assert(grad_in==grad_fs->local_data());
-    applyInvToArray(grad_in, grad_rs_ref);
+    assert(&grad_in==grad_fs);
+    apply_inv_to_vector(&grad_in, grad_rs_ref);
     return grad_rs_ref;
   }
   /* from rs to fs */
-  inline double* applyToJacobEq(double* Jac_in, const int& m_in)
+  inline hiopMatrix* apply_to_jacob_eq(hiopMatrix& Jac_in, const int& m_in)
   {
-    Jacc_rs_ref = Jac_in;
+    hiopMatrixDense* Jac_de = dynamic_cast<hiopMatrixDense*>(&Jac_in);
+    if(Jac_de==nullptr) {
+      return nullptr;
+    }
+    Jacc_rs_ref = Jac_de;
     assert(Jacc_fs->m()==m_in);
-    //applyToMatrix(Jac_in, m_in, Jacc_fs->get_M());
-    applyToMatrix(Jac_in, m_in, Jacc_fs->local_data());
-    return Jacc_fs->local_data();
+    applyToMatrix(Jac_de->local_data(), m_in, Jacc_fs->local_data());
+    return Jacc_fs;
   }
-  inline double* applyInvToJacobEq(double* Jac_in, const int& m_in)
+  inline hiopMatrix* apply_inv_to_jacob_eq(hiopMatrix&  Jac_in, const int& m_in)
   {
+    hiopMatrixDense* Jac_de = dynamic_cast<hiopMatrixDense*>(&Jac_in);
+    if(Jac_de==NULL) {
+      return nullptr;
+    }    
     assert(Jacc_fs->m()==m_in);
-    applyInvToMatrix(Jac_in, m_in, Jacc_rs_ref);
+    applyInvToMatrix(Jac_de->local_data(), m_in, Jacc_rs_ref->local_data());
     return Jacc_rs_ref;
   }
-  inline double* applyToJacobIneq(double* Jac_in, const int& m_in)
+  inline hiopMatrix* apply_to_jacob_ineq(hiopMatrix& Jac_in, const int& m_in)
   {
-    Jacd_rs_ref = Jac_in;
+    hiopMatrixDense* Jac_de = dynamic_cast<hiopMatrixDense*>(&Jac_in);
+    if(Jac_de==NULL) {
+      return nullptr;
+    }
+    Jacd_rs_ref = Jac_de;
     assert(Jacd_fs->m()==m_in);
-    //applyToMatrix(Jac_in, m_in, Jacd_fs->get_M());
-    applyToMatrix(Jac_in, m_in, Jacd_fs->local_data());
-    return Jacd_fs->local_data();
+    applyToMatrix(Jac_de->local_data(), m_in, Jacd_fs->local_data());
+    return Jacd_fs;    
   }
-  inline double* applyInvToJacobIneq(double* Jac_in, const int& m_in)
+  inline hiopMatrix* apply_inv_to_jacob_ineq(hiopMatrix& Jac_in, const int& m_in)
   {
+    hiopMatrixDense* Jac_de = dynamic_cast<hiopMatrixDense*>(&Jac_in);
+    if(Jac_de==NULL) {
+      return nullptr;
+    }    
     assert(Jacd_fs->m()==m_in);
-    applyInvToMatrix(Jac_in, m_in, Jacd_rs_ref);
+    applyInvToMatrix(Jac_de->local_data(), m_in, Jacd_rs_ref->local_data());
     return Jacd_rs_ref;
   }
 
   /** methods not inherited from parent class */
-
   bool setupDecisionVectorPart();
   bool setupConstraintsPart(const int& neq, const int& nineq);
 #ifdef HIOP_USE_MPI
@@ -243,9 +280,13 @@ public:
   inline long long fs_n_local() const { assert(xl_fs); return xl_fs->get_local_size(); }
   inline long long rs_n_local() const { assert(xl_fs); return fs_n_local()-n_fixed_vars_local;}
 protected: 
+#if 0 //old interface
   void applyToArray   (const double* vec_rs, double* vec_fs);
   void applyInvToArray(const double* vec_fs, double* vec_rs);
-
+#endif
+  void apply_to_vector   (const hiopVector* vec_rs, hiopVector* vec_fs);
+  void apply_inv_to_vector(const hiopVector* vec_fs, hiopVector* vec_rs);
+  
   void applyToMatrix   (const double* M_rs, const int& m_in, double* M_fs);
   void applyInvToMatrix(const double* M_fs, const int& m_in, double* M_rs);
 protected:
@@ -261,6 +302,9 @@ protected:
   hiopVector*x_fs, *grad_fs;
   //working buffers for the full-space Jacobians
   hiopMatrixDense *Jacc_fs, *Jacd_fs;
+  
+  hiopMatrixDense *Jacc_rs_ref;
+  hiopMatrixDense *Jacd_rs_ref;
 
   //a copy of the lower and upper bounds provided by user
   hiopVector*xl_fs, *xu_fs;
@@ -269,8 +313,7 @@ protected:
 
   //references to reduced-space buffers - returned in applyInvXXX
   hiopVector* x_rs_ref_;
-  double* grad_rs_ref;
-  double *Jacc_rs_ref, *Jacd_rs_ref;
+  hiopVector* grad_rs_ref;
 #ifdef HIOP_USE_MPI
   std::vector<long long> fs_vec_distrib;
   MPI_Comm comm;
@@ -281,10 +324,10 @@ protected:
 class hiopFixedVarsRelaxer : public hiopNlpTransformation
 {
 public: 
-  hiopFixedVarsRelaxer(const hiopVector& xl, 
-		       const hiopVector& xu, 
-		       const long long& numFixedVars,
-		       const long long& numFixedVars_local);
+  hiopFixedVarsRelaxer(const hiopVector& xl,
+                       const hiopVector& xu,
+                       const long long& numFixedVars,
+                       const long long& numFixedVars_local);
   virtual ~hiopFixedVarsRelaxer();
 
   /* number of vars in the NLP after the tranformation */
@@ -304,9 +347,11 @@ private:
   long long  n_vars; int n_vars_local;
 };
 
-/** Scale the NLP formulation.
+/** 
+ * @brief Scale the NLP formulation before solving the problem
  *
- * scale the NLP objective using the maximum gradient information.
+ * scale the NLP objective using the maximum gradient approach.
+ * scale the NLP constraints using the maximum gradient approach.
  */
 class hiopNLPObjGradScaling : public hiopNlpTransformation
 {
@@ -327,44 +372,33 @@ public:
   inline long long n_post_local()  { return n_vars_local; }
   inline long long n_pre_local()  { return n_vars_local; }
 
-  /* from scaled to unscaled*/
-  void applyToArray(const double* vec_s, double* vec_us);
-  /* from unscaled to scaled*/
-  void applyInvToArray(const double* vec_s, double* vec_us);  
-  
   /* from scaled to unscaled objective*/
-  inline double applyToObj(double& f_in) { return f_in/obj_scale;}
+  inline double apply_to_obj(double& f_in) { return f_in/obj_scale;}
   /* from unscaled to scaled objective*/
-  inline double applyInvToObj(double& f_in) { return obj_scale*f_in;}
+  inline double apply_inv_to_obj(double& f_in) { return obj_scale*f_in;}
   
+  /// @brief return the scaling fact for objective
   inline double get_obj_scale() const {return obj_scale;}
 
-#if 1 //old interface
   /* from scaled to unscaled*/
-  inline double* applyToGradObj(double* grad_in)
+  inline hiopVector* apply_to_grad_obj(hiopVector& grad_in)
   {
-    grad_scaled_ref = grad_in;
-    applyToArray(grad_in, grad_unscaled->local_data());
-    return grad_unscaled->local_data();
+    grad_in.scale(1./obj_scale);
+    return &grad_in;
   }
-  /* from unscaled to scaled*/
-  inline double* applyInvToGradObj(double* grad_in)
-  {
-    assert(grad_in==grad_unscaled->local_data());
-    applyInvToArray(grad_in, grad_scaled_ref);
-    return grad_scaled_ref;
-  }
-#else
-  /* from scaled to unscaled*/
-  hiopVector* applyToGradObj(hiopVector* grad_in);
-  /* from unscaled to scaled*/
-  hiopVector* applyInvToGradObj(hiopVector* grad_in);
-#endif
   
+  /* from unscaled to scaled*/
+  inline hiopVector* apply_inv_to_grad_obj(hiopVector& grad_in)
+  {
+    grad_in.scale(obj_scale);
+    return &grad_in;
+  }
+
+
   
 #if 0
   /* from rs to fs */
-  inline double* applyToJacobEq(double* Jac_in, const int& m_in)
+  inline double* apply_to_jacob_eq(double* Jac_in, const int& m_in)
   {
     Jacc_rs_ref = Jac_in;
     assert(Jacc_fs->m()==m_in);
@@ -372,13 +406,13 @@ public:
     applyToMatrix(Jac_in, m_in, Jacc_fs->local_data());
     return Jacc_fs->local_data();
   }
-  inline double* applyInvToJacobEq(double* Jac_in, const int& m_in)
+  inline double* apply_inv_to_jacob_eq(double* Jac_in, const int& m_in)
   {
     assert(Jacc_fs->m()==m_in);
     applyInvToMatrix(Jac_in, m_in, Jacc_rs_ref);
     return Jacc_rs_ref;
   }
-  inline double* applyToJacobIneq(double* Jac_in, const int& m_in)
+  inline double* apply_to_jacob_ineq(double* Jac_in, const int& m_in)
   {
     Jacd_rs_ref = Jac_in;
     assert(Jacd_fs->m()==m_in);
@@ -386,7 +420,7 @@ public:
     applyToMatrix(Jac_in, m_in, Jacd_fs->local_data());
     return Jacd_fs->local_data();
   }
-  inline double* applyInvToJacobIneq(double* Jac_in, const int& m_in)
+  inline double* apply_inv_to_jacob_ineq(double* Jac_in, const int& m_in)
   {
     assert(Jacd_fs->m()==m_in);
     applyInvToMatrix(Jac_in, m_in, Jacd_rs_ref);
@@ -406,10 +440,7 @@ protected:
 private:
   long long n_vars, n_vars_local;
   double obj_scale;
-  
-  hiopVector *grad_scaled;
-  hiopVector *grad_unscaled;
-  double* grad_scaled_ref;
+
 #if 0
   hiopVector *scal_jacc, *scal_jacd;
   hiopMatrix *Jacc_scaled, *Jacd_scaled;
@@ -504,88 +535,88 @@ public:
     }
   }
   
-  hiopVector* applyTox(hiopVector& x, const bool& new_x) 
+  hiopVector* apply_to_x(hiopVector& x, const bool& new_x) 
   {
     hiopVector* ret = &x;
     for(std::list<hiopNlpTransformation*>::iterator it=list_trans_.begin(); it!=list_trans_.end(); ++it)
-      ret = (*it)->applyTox(*ret ,new_x);
+      ret = (*it)->apply_to_x(*ret ,new_x);
     return ret;
   }
 
-  virtual hiopVector* applyInvTox(hiopVector& x)
+  virtual hiopVector* apply_inv_to_x(hiopVector& x)
   { 
-    assert(false && "This overload of applyInvTox is not implemented in hiopNlpTransformations class\n");
+    assert(false && "This overload of apply_inv_to_x is not implemented in hiopNlpTransformations class\n");
     return nullptr;
   }
 
-  void applyInvTox(hiopVector& x_in, hiopVector& x_out) 
+  void apply_inv_to_x(hiopVector& x_in, hiopVector& x_out) 
   {
     for(std::list<hiopNlpTransformation*>::reverse_iterator it=list_trans_.rbegin(); it!=list_trans_.rend(); ++it) {
-      (*it)->applyInvTox(x_in, x_out);
+      (*it)->apply_inv_to_x(x_in, x_out);
     }
   }
 
-  double applyToObj(double& f_in) 
+  double apply_to_obj(double& f_in) 
   {
     double ret = f_in;
     for(std::list<hiopNlpTransformation*>::iterator it=list_trans_.begin(); it!=list_trans_.end(); ++it)
-      ret = (*it)->applyToObj(ret);
+      ret = (*it)->apply_to_obj(ret);
     return ret;
   }
 
-  double applyInvToObj(double& f_in) 
+  double apply_inv_to_obj(double& f_in) 
   {
     double ret = f_in;
     for(std::list<hiopNlpTransformation*>::reverse_iterator it=list_trans_.rbegin(); it!=list_trans_.rend(); ++it)
-      ret = (*it)->applyInvToObj(ret);
+      ret = (*it)->apply_inv_to_obj(ret);
     return ret;
   }  
   
-  double* applyToGradObj(double* grad_in) 
+  hiopVector* apply_to_grad_obj(hiopVector& grad_in) 
   {
-    double* ret = grad_in;
+    hiopVector* ret = &grad_in;
     for(std::list<hiopNlpTransformation*>::iterator it=list_trans_.begin(); it!=list_trans_.end(); ++it)
-      ret = (*it)->applyToGradObj(ret);
+      ret = (*it)->apply_to_grad_obj(*ret);
     return ret;
   }
 
-  double* applyInvToGradObj(double* grad_in) 
+  hiopVector* apply_inv_to_grad_obj(hiopVector& grad_in) 
   {
-    double* ret = grad_in;
+    hiopVector* ret = &grad_in;
     for(std::list<hiopNlpTransformation*>::reverse_iterator it=list_trans_.rbegin(); it!=list_trans_.rend(); ++it)
-      ret = (*it)->applyInvToGradObj(ret);
+      ret = (*it)->apply_inv_to_grad_obj(*ret);
     return ret;
   }
 
-  double* applyToJacobEq(double* Jac_in, const int& m_in)
+  hiopMatrix* apply_to_jacob_eq(hiopMatrix& Jac_in, const int& m_in)
   {
-    double* ret = Jac_in;
+    hiopMatrix* ret = &Jac_in;
     for(std::list<hiopNlpTransformation*>::iterator it=list_trans_.begin(); it!=list_trans_.end(); ++it)
-      ret = (*it)->applyToJacobEq(ret, m_in);
+      ret = (*it)->apply_to_jacob_eq(*ret, m_in);
     return ret;
   }
 
-  double* applyInvToJacobEq(double* Jac_in, const int& m_in)
+  hiopMatrix* apply_inv_to_jacob_eq(hiopMatrix& Jac_in, const int& m_in)
   {
-    double* ret = Jac_in;
+    hiopMatrix* ret = &Jac_in;
     for(std::list<hiopNlpTransformation*>::reverse_iterator it=list_trans_.rbegin(); it!=list_trans_.rend(); ++it)
-      ret = (*it)->applyInvToJacobEq(ret, m_in);
+      ret = (*it)->apply_inv_to_jacob_eq(*ret, m_in);
     return ret;
   }
 
-  double* applyToJacobIneq(double* Jac_in, const int& m_in)
+  hiopMatrix* apply_to_jacob_ineq(hiopMatrix& Jac_in, const int& m_in)
   {
-    double* ret = Jac_in;
+    hiopMatrix* ret = &Jac_in;
     for(std::list<hiopNlpTransformation*>::iterator it=list_trans_.begin(); it!=list_trans_.end(); ++it)
-      ret = (*it)->applyToJacobIneq(ret, m_in);
+      ret = (*it)->apply_to_jacob_ineq(*ret, m_in);
     return ret;
   }
 
-  double* applyInvToJacobIneq(double* Jac_in, const int& m_in)
+  hiopMatrix* apply_inv_to_jacob_ineq(hiopMatrix& Jac_in, const int& m_in)
   {
-    double* ret = Jac_in;
+    hiopMatrix* ret = &Jac_in;
     for(std::list<hiopNlpTransformation*>::reverse_iterator it=list_trans_.rbegin(); it!=list_trans_.rend(); ++it)
-      ret = (*it)->applyInvToJacobIneq(ret, m_in);
+      ret = (*it)->apply_inv_to_jacob_ineq(*ret, m_in);
     return ret;
   }
 
