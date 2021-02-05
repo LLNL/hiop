@@ -334,7 +334,7 @@ startingProcedure(hiopIterate& it_ini,
     return false;
   }
   
-  if(nlp->add_scaling(gradf, Jac_c, Jac_d)){
+  if(nlp->apply_scaling(gradf, Jac_c, Jac_d)){
     // do function evaluation again after add scaling 
     if(!this->evalNlp_noHess(it_ini, f, c, d, gradf, Jac_c, Jac_d)) {
       nlp->log->printf(hovError, "Failure in evaluating user provided NLP functions.");
@@ -423,14 +423,14 @@ evalNlp(hiopIterate& iter,
   }
   new_x= false; //same x for the rest
 
-  if(!nlp->eval_grad_f(x, new_x, gradf.local_data())) {
+  if(!nlp->eval_grad_f(x, new_x, gradf)) {
     nlp->log->printf(hovError, "Error occured in user gradient evaluation\n");
     return false;
   }
 
   //bret = nlp->eval_c        (x, new_x, c.local_data());  assert(bret);
   //bret = nlp->eval_d        (x, new_x, d.local_data());  assert(bret);
-  if(!nlp->eval_c_d(x, new_x, c.local_data(), d.local_data())) {
+  if(!nlp->eval_c_d(x, new_x, c, d)) {
     nlp->log->printf(hovError, "Error occured in user constraint(s) function evaluation\n");
     return false;
   }
@@ -475,14 +475,14 @@ evalNlp_noHess(hiopIterate& iter,
   }
   new_x= false; //same x for the rest
 
-  if(!nlp->eval_grad_f(x, new_x, gradf.local_data())) {
+  if(!nlp->eval_grad_f(x, new_x, gradf)) {
     nlp->log->printf(hovError, "Error occured in user gradient evaluation\n");
     return false;
   }
 
   //bret = nlp->eval_c        (x, new_x, c.local_data());  assert(bret);
   //bret = nlp->eval_d        (x, new_x, d.local_data());  assert(bret);
-  if(!nlp->eval_c_d(x, new_x, c.local_data(), d.local_data())) {
+  if(!nlp->eval_c_d(x, new_x, c, d)) {
     nlp->log->printf(hovError, "Error occured in user constraint(s) function evaluation\n");
     return false;
   }
@@ -612,7 +612,7 @@ bool hiopAlgFilterIPMBase::evalNlp_funcOnly(hiopIterate& iter,
     return false;
   }
   new_x= false; //same x for the rest
-  if(!nlp->eval_c_d(x, new_x, c.local_data(), d.local_data())) {
+  if(!nlp->eval_c_d(x, new_x, c, d)) {
     nlp->log->printf(hovError, "Error occured in user constraint(s) function evaluation\n");
     return false;
   }
@@ -629,7 +629,7 @@ bool hiopAlgFilterIPMBase::evalNlp_derivOnly(hiopIterate& iter,
   // hiopVector& it_x = *iter.get_x();
   // double* x = it_x.local_data();
   hiopVector& x = *iter.get_x();
-  if(!nlp->eval_grad_f(x, new_x, gradf.local_data())) {
+  if(!nlp->eval_grad_f(x, new_x, gradf)) {
     nlp->log->printf(hovError, "Error occured in user gradient evaluation\n");
     return false;
   }
@@ -1834,7 +1834,9 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
     nlp->runStats.tmSolverInternal.stop(); //-----
 
     //notify logbar about the changes
-    logbar->updateWithNlpInfo(*it_curr, _mu, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d);
+    _f_log = _f_nlp/nlp->get_obj_scale();
+
+    logbar->updateWithNlpInfo(*it_curr, _mu, _f_log, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d);
     //update residual
     resid->update(*it_curr,_f_nlp, *_c, *_d,*_grad_f,*_Jac_c,*_Jac_d, *logbar);
 

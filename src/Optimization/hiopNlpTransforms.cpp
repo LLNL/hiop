@@ -5,7 +5,7 @@
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
 // is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause). 
-// Please also read ‚ÄúAdditional BSD Notice‚Äù below.
+// Please also read ìAdditional BSD Noticeî below.
 //
 // Redistribution and use in source and binary forms, with or without modification, 
 // are permitted provided that the following conditions are met:
@@ -46,6 +46,14 @@
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or 
 // product endorsement purposes.
 
+/**
+ * @file hiopNlpTransforms.cpp
+ *
+ * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
+ * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
+ *
+ */
+ 
 #include "hiopNlpTransforms.hpp"
 #include "hiopLinAlgFactory.hpp"
 
@@ -53,12 +61,12 @@
 namespace hiop
 {
 
-hiopFixedVarsRemover::  
-hiopFixedVarsRemover(const hiopVector& xl, 
-		     const hiopVector& xu, 
-		     const double& fixedVarTol_,
-		     const long long& numFixedVars,
-		     const long long& numFixedVars_local)
+hiopFixedVarsRemover::
+hiopFixedVarsRemover(const hiopVector& xl,
+                     const hiopVector& xu,
+                     const double& fixedVarTol_,
+                     const long long& numFixedVars,
+                     const long long& numFixedVars_local)
   : n_fixed_vars_local(numFixedVars_local), fixedVarTol(fixedVarTol_),
     Jacc_fs(NULL), Jacd_fs(NULL),
     fs2rs_idx_map(xl.get_local_size()),
@@ -179,7 +187,7 @@ bool hiopFixedVarsRemover::setupConstraintsPart(const int& neq, const int& nineq
 void hiopFixedVarsRemover::copyFsToRs(const hiopVector& fsVec,  hiopVector& rsVec)
 {
   assert(fsVec.get_local_size()==fs2rs_idx_map.size());
-  applyInvToArray(fsVec.local_data_const(), rsVec.local_data());
+  apply_inv_to_vector(&fsVec, &rsVec);
 }
 
 void hiopFixedVarsRemover::
@@ -194,7 +202,7 @@ copyFsToRs(const hiopInterfaceBase::NonlinearityType* fs, hiopInterfaceBase::Non
   }
 }
 
-
+#if 0 //old interface
 /* from rs to fs */
 void hiopFixedVarsRemover::applyToArray(const double* vec_rs, double* vec_fs)
 {
@@ -218,6 +226,38 @@ void hiopFixedVarsRemover::applyInvToArray(const double* x_fs, double* x_rs)
     rs_idx = fs2rs_idx_map[i];
     if(rs_idx>=0) {
       x_rs[rs_idx]=x_fs[i];
+    }
+  }
+}
+#endif // 0
+
+/* from rs to fs */
+void hiopFixedVarsRemover::apply_to_vector(const hiopVector* vec_rs, hiopVector* vec_fs)
+{
+  double* xl_fs_arr = xl_fs->local_data();
+  const double* vec_rs_arr = vec_rs->local_data_const();
+  double* vec_fs_arr = vec_fs->local_data();
+  int rs_idx;
+  for(int i=0; i<fs2rs_idx_map.size(); i++) {
+    rs_idx = fs2rs_idx_map[i];
+    if(rs_idx<0) {
+      vec_fs_arr[i] = xl_fs_arr[i];
+    } else {
+      vec_fs_arr[i] = vec_rs_arr[rs_idx];
+    }
+  }
+}
+
+/* from fs to rs */
+void hiopFixedVarsRemover::apply_inv_to_vector(const hiopVector* vec_fs, hiopVector* vec_rs)
+{
+  double* vec_rs_arr = vec_rs->local_data();
+  const double* vec_fs_arr = vec_fs->local_data_const();
+  int rs_idx;
+  for(int i=0; i<fs2rs_idx_map.size(); i++) {
+    rs_idx = fs2rs_idx_map[i];
+    if(rs_idx>=0) {
+      vec_rs_arr[rs_idx]=vec_fs_arr[i];
     }
   }
 }
@@ -263,10 +303,10 @@ void hiopFixedVarsRemover::applyInvToMatrix(const double* M_fs, const int& m_in,
 }
 
 hiopFixedVarsRelaxer::
-hiopFixedVarsRelaxer(const hiopVector& xl, 
-		     const hiopVector& xu, 
-		     const long long& numFixedVars,
-		     const long long& numFixedVars_local)
+hiopFixedVarsRelaxer(const hiopVector& xl,
+                     const hiopVector& xu,
+                     const long long& numFixedVars,
+                     const long long& numFixedVars_local)
   : xl_copy(NULL), xu_copy(NULL), n_vars(xl.get_size()), n_vars_local(xl.get_local_size())
 {
   //xl_copy = xl.new_copy(); // no need to copy at this point
@@ -301,16 +341,19 @@ relax(const double& fixed_var_tol, const double& fixed_var_perturb, hiopVector& 
 }
 
 
+/**
+* For class hiopNLPObjGradScaling
+*/
 hiopNLPObjGradScaling::hiopNLPObjGradScaling(const double max_grad,
-                                                  hiopVector* gradf)
+                                             hiopVector* gradf)
       : n_vars(gradf->get_size()), n_vars_local(gradf->get_local_size()),
-        obj_scale(0.),
-        grad_unscaled(gradf), grad_scaled_ref(nullptr)
+        obj_scale(1.)
+//        grad_unscaled(gradf), grad_scaled(nullptr)
 //        , Jacc_unscaled(nullptr), Jacd_unscaled(nullptr), Hess_unscaled(nullptr)
 {
-  grad_scaled = grad_unscaled->new_copy();  
+//  grad_scaled = grad_unscaled->new_copy();  
 
-  obj_scale = max_grad/grad_unscaled->infnorm();
+  obj_scale = max_grad/gradf->infnorm();
   if(obj_scale>1.)
   {
     obj_scale=1.;
@@ -328,49 +371,12 @@ hiopNLPObjGradScaling::hiopNLPObjGradScaling(const double max_grad,
 
 hiopNLPObjGradScaling::~hiopNLPObjGradScaling()
 {
-  delete grad_scaled;
-};
-
-
-
-#if 1 //old interface
-/* from s to us */
-void hiopNLPObjGradScaling::applyToArray(const double* vec_s, double* vec_us)
-{
-  int one=1; int n=n_vars_local;
-  double scale = 1./obj_scale;
-  for(long long i=0; i<n; i++) {
-    vec_us[i] = scale*vec_s[i];
-  }
-}
-
-/* from us to s */
-void hiopNLPObjGradScaling::applyInvToArray(const double* vec_us, double* vec_s)
-{
-  int one=1; int n=n_vars_local;
-  for(long long i=0; i<n; i++) {
-    vec_s[i] = obj_scale*vec_us[i];
-  }
+//  delete grad_scaled;
 }
 
 
-#else
-/* from scaled to unscaled*/
-hiopVector* hiopNLPObjGradScaling::applyToGradObj(hiopVector* grad_in)
-{
-  grad_scaled = grad_in;
-  grad_unscaled->copyFrom(*grad_scaled);
-  grad_unscaled->scale(1./obj_scale);
-  return grad_unscaled;
-}
-/* from unscaled to scaled*/
-hiopVector* hiopNLPObjGradScaling::applyInvToGradObj(hiopVector* grad_in)
-{
-  assert(grad_in==grad_unscaled);
-  grad_scaled->copyFrom(*grad_unscaled);
-  grad_scaled->scale(obj_scale);
-  return grad_scaled;
-}
-#endif // 0
+
+
+
 
 } //end of namespace
