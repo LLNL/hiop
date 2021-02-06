@@ -95,9 +95,10 @@ $ git checkout -b my-bug-fix
 ## Indentation, Braces, and Declarations
 
 - Use two spaces for indentation, absolutely no tab characters.
-- No spaces between `if` and `(`
+- No spaces between `if` (and other control/loop statements) and `(`
+- Prefer opening brace for compound statements on the same line with statements, for example `while(cond) {`
+- Opening brace for function/method implementation should be on the next line
 - Avoid condition and loop bodies in the same line of code
-- Allman style braces
 - RAJA Lambdas
   - Indent two spaces above surrounding scope
   - No spaces around template parameter
@@ -107,7 +108,13 @@ $ git checkout -b my-bug-fix
   - Prefer `RAJA::Index_type` over `int` or anything else
 - Prefer braces for every block
 - Prefer no indentation for `private`, `public`, and `protected` statements
-- Each variable declaration should have it's own type declaration
+- Prefer each variable declaration have its own type declaration
+- Do not indent macros, even when they are nested
+- When breaking methods declaration into multiple lines
+    - have a limit of approx. 125 characters per line
+    - keep the first argument on the same line with the method name
+    - align arguments on the subsequent lines with the first argument
+    - if class name or return type long, place the function name at the beginning of the line and put the return type and class name qualification on the previous line (see example below)
 
 For example:
 
@@ -117,31 +124,39 @@ int a;
 int b;
 int c;
 
-// Bad
-// this causes confusion when working with pointers, and if you
-// must change a type in the future, we will have a larger diff.
+// not prefered
 int a, b, c;
 
 // Good
 // uses allman braces
 // no space between if and ()
+if(some_condition) {
+  value += 1;
+}
+
+// Not preferred: allman braces
 if(some_condition)
 {
   value += 1;
 }
 
-// Not preferred
-// use allman braces
-if(some_condition) {
-  value += 1;
-}
-
-// Not preferred
-// space in between if and ()
+// do not use: space in between if and ()
 if (some_condition)
 {
   value += 1;
 }
+
+// prefer opening brace on the next line for functions and method
+bool MyClass::my_method(int a)
+{
+
+}
+
+// Bad
+bool MyClass::my_method(int a) {
+
+}
+
 
 // Not preferred
 // please use braces
@@ -166,7 +181,54 @@ RAJA::forall<hiop_raja_exec>(
     }
   });
 
+// Good
+#ifdef MACRO1
+  a = 0;
+#ifdef MACRO2
+  b = 1;
+#endif //MACRO2
+#else //for MACRO1
+  //do something
+#endif //MACRO1
+
+// breaking method declaration into multiple lines
+
+//prefered
+void ClassName::some_method(double beta,
+                            hiopMatrix& W,
+                            double alpha,
+                            const hiopMatrix& X) const
+{
+}
+
+//less prefered: multiple arguments per line when using more than one line for the declaration 
+void ClassName::some_method(double beta, hiopMatrix& W,
+                            double alpha, const hiopMatrix& X) const
+{
+}
+
+//prefered when return type + class name + method name + first argument would overrun the 125 characters line limit.
+long_return_type SomeVeryLongClassNameIMeanLong::
+some_method(double beta,
+            hiopMatrix& W,
+            double alpha,
+            const hiopMatrix& X) const
+{
+}
+
+// avoid if possible (with the exception of lambda functions)
+void ClassName::some_method(
+  double beta,
+  hiopMatrix& W,
+  double alpha,
+  const hiopMatrix& X) 
+{
+}
+
+
 ```
+
+
 
 ## Naming Conventions
 
