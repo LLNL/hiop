@@ -70,19 +70,13 @@ $> mpiexec -np 2 ./src/Drivers/nlpDenseCons_ex2.exe
 $> mpiexec -np 2 ./src/Drivers/nlpDenseCons_ex3.exe 
 ```
 
-# Style Guide
 
-## Contributing
+# Branches and pull requests
 
 - Submit issue for discussion before submitting a pull request
-- Always branch from master
+- Always branch from `develop` branch
 - Name your branch `<feature name>-dev` for a feature and `<fix name>-fix` for fixing an issue
-- Separate with the dash (`-`) character
-- Provide extended description in pull request
-- Reference the issue in the description
-- Squash all commits on merge
-
-For example:
+- Separate with the dash (`-`) character For example:
 ```console
 $ # For a feature
 $ git checkout master
@@ -91,109 +85,251 @@ $ # For a fix
 $ git checkout master
 $ git checkout -b my-bug-fix
 ```
+- Provide extended description in pull request
+- Reference the issue in the description
+- Keep pull requests focused on single issue
+- Whenever possible squash all commits on merge
 
-## Indentation, Braces, and Declarations
 
-- Use two spaces for indentation, absolutely no tab characters.
-- No spaces between `if` (and other control/loop statements) and `(`
-- Prefer opening brace for compound statements on the same line with statements, for example `while(cond) {`
-- Opening brace for function/method implementation should be on the next line
-- Avoid condition and loop bodies in the same line of code
-- RAJA Lambdas
-  - Indent two spaces above surrounding scope
-  - No spaces around template parameter
-  - Line break before range segment
-  - Use `RAJA_LAMBDA` in favor of using `__device__` directly
-  - Use `hiop_*_policy` over directly using cuda or omp policies
-  - Prefer `RAJA::Index_type` over `int` or anything else
-- Prefer braces for every block
-- Prefer no indentation for `private`, `public`, and `protected` statements
-- Prefer each variable declaration have its own type declaration
-- Do not indent macros, even when they are nested
-- When breaking methods declaration into multiple lines
-    - have a limit of approx. 125 characters per line
-    - keep the first argument on the same line with the method name
-    - align arguments on the subsequent lines with the first argument
-    - if class name or return type long, place the function name at the beginning of the line and put the return type and class name qualification on the previous line (see example below)
 
-For example:
+# Style Guidelines
+## Indentation
 
-```cpp
-// Good
-int a;
-int b;
-int c;
+### Indent with spaces
+Use two spaces for indentation, absolutely no tab characters.
 
-// not prefered
-int a, b, c;
+Rationale: Different editors may interpret tabs differently. Using spaces
+only is more likely to provide consistent look in different editors.
 
-// Good
-// uses allman braces
-// no space between if and ()
+### Macros
+Do not indent macros, even when they are nested.
+```c++
+// Yes:
+#ifdef MACRO1
+  a = 0;
+#ifdef MACRO2
+  b = 1;
+#endif // MACRO2
+#else  // MACRO1
+  a = 1;
+#endif //MACRO1
+
+// No:
+#ifdef MACRO1
+  a = 0;
+  #ifdef MACRO2
+    b = 1;
+  #endif // MACRO2
+#else  // MACRO1
+  a = 1;
+#endif //MACRO1
+```
+### Indentation of access specifiers
+
+Prefer no indentation for `private`, `public`, and `protected` access
+specifiers.
+```c++
+// Yes: public and private keywords aligned with open/close braces 
+class Myclass
+{
+public:
+  int my_method();
+
+private:
+  int memeber_var_; 
+}
+```
+## Spacing
+
+### Operators
+
+There should be spaces before and after each operator with the
+exceptions of:
+- Member access operators `.` and `->`.
+- Reference `&` and dereference `*` operators.
+- Bitwise and logical NOT operators `~` and `!`, respectively.
+- Comma separator `,` should have space after, but not before.
+
+### Pointers and references
+
+The character `*` is a part of the pointer type name and there
+should be no space between the type name and `*`. Similar for
+the character `&` in reference types.
+
+```c++
+int* pint;      // Yes!
+double& refdbl; // Yes!
+
+int *pint;       // No!
+double & refdbl; // No!
+```
+### Flow control statements
+
+No spaces between `if` (and other control/loop statements) and `(`.
+However, do make space before opening brace `{`.
+```c++
+// Preferred: no space between if and ()
 if(some_condition) {
   value += 1;
 }
 
-// Not preferred: allman braces
-if(some_condition)
+// Discouraged: space in between if and ()
+if (some_condition) {
+  value += 1;
+}
+
+// Discouraged: no space between ) and {.
+for(some_condition){
+  value += 1;
+}
+```
+
+## Braces
+
+### Use K&R style
+
+Have the opening brace on the same line as the
+statement and the closing brace aligned with the statement.
+```c++
+// Yes: Use K&R braces
+while(a > 0) {
+  value += 1;
+}
+
+// No: Allman braces
+while(a > 0)
 {
   value += 1;
 }
 
-// do not use: space in between if and ()
-if (some_condition)
-{
+// No: GNU braces
+while(a > 0)
+  {
+    value += 1;
+  }
+```
+
+### Position of `else` keyword
+
+Align `else` with corresponding `if` keyword.
+
+```c++
+// Yes: else keyword is on the next line
+if(a > 0) {
   value += 1;
+  b = a;
+}
+else {
+  value -= 1;
 }
 
-// prefer opening brace on the next line for functions and method
+// No: else keyword follows }
+if(a > 0) {
+  value += 1;
+  b = a;
+} else {
+  value -= 1;
+}
+```
+### Use braces for every block
+
+For consistency and better code readability use braces
+for every code block in selection statements. Also,
+avoid condition and loop bodies in the same line of code
+```c++
+// Yes: Use braces for each block
+if(a > 0) {
+  value += 1;
+  b = a;
+}
+else {
+  value -= 1;
+}
+
+// No: Use braces only for blocks with more than one statement 
+if(a > 0) {
+  value += 1;
+  b = a;
+}
+else
+  value -= 1;
+
+// No: the condition and the body on the same line 
+if (a > 0) value += 1;
+else       value -= 1;
+```
+
+
+### Do not use one true brace style
+
+For function and class definitions, have the opening brace
+on the next line aligned with the definition statement.
+```c++
+// Yes: opening brace on the next line for functions and method
 bool MyClass::my_method(int a)
 {
 
 }
 
-// Bad
+// No: opening brace on the same line
 bool MyClass::my_method(int a) {
 
 }
+``` 
 
-
-// Not preferred
-// please use braces
-if(some_condition)
-  value += 1;
-
-// Bad!
-if(some_condition) value += 1;
-
+## RAJA specific style
+- Indent two spaces above surrounding scope
+- No spaces around template parameter
+- Line break before range segment
+- Use `RAJA_LAMBDA` define instead of specifying lambda function directly (e.g. `[=] __device__` )
+- Use `hiop_*` aliases over specific RAJA policies
+- Prefer `RAJA::Index_type` over `int` or anything else
+```c++
 // RAJA Lambdas
 RAJA::forall<hiop_raja_exec>(
   RAJA::RangeSegment(0, 10),
   RAJA_LAMBDA(RAJA::Index_type i)
   {
-    if(svec[i]==1.)
-    {
+    if(svec[i] == 1.) {
       local_data_dev[i] = c;
     }
-    else
-    {
-      local_data_dev[i]=0.;
+    else {
+      local_data_dev[i] = 0.;
     }
-  });
+  }
+);
+```
+## Declarations
 
-// Good
-#ifdef MACRO1
-  a = 0;
-#ifdef MACRO2
-  b = 1;
-#endif //MACRO2
-#else //for MACRO1
-  //do something
-#endif //MACRO1
+### Variables
 
-// breaking method declaration into multiple lines
+Have each variable declaration have its own type declaration
+For example:
 
-//prefered
+```cpp
+// Yes
+int a;
+int b;
+int c;
+
+// No
+int a, b, c;
+```
+
+### Long declaration lines
+When breaking methods declaration into multiple lines:
+- have a limit of ~125 characters per line
+- keep the first argument on the same line with the method name
+- align arguments on the subsequent lines with the first argument
+- if class name or return type long, place the function name at the beginning of the line and put the return type and class name qualification on the previous line (see example below)
+
+```c++
+// Yes: all arguments on the same line
+void ClassName::some_method(double beta, double alpha) const
+{
+}
+
+// Yes: each argument on a separate line
 void ClassName::some_method(double beta,
                             hiopMatrix& W,
                             double alpha,
@@ -201,13 +337,7 @@ void ClassName::some_method(double beta,
 {
 }
 
-//less prefered: multiple arguments per line when using more than one line for the declaration 
-void ClassName::some_method(double beta, hiopMatrix& W,
-                            double alpha, const hiopMatrix& X) const
-{
-}
-
-//prefered when return type + class name + method name + first argument would overrun the 125 characters line limit.
+// Yes: when return type + class name + method name + first argument would overrun the 125 characters line limit, have method name on the next line
 long_return_type SomeVeryLongClassNameIMeanLong::
 some_method(double beta,
             hiopMatrix& W,
@@ -216,7 +346,13 @@ some_method(double beta,
 {
 }
 
-// avoid if possible (with the exception of lambda functions)
+// No: multiple arguments per line when using more than one line for the declaration 
+void ClassName::some_method(double beta, hiopMatrix& W,
+                            double alpha, const hiopMatrix& X) const
+{
+}
+
+// No: arguments not aligned behind the opening parenthesis
 void ClassName::some_method(
   double beta,
   hiopMatrix& W,
@@ -224,57 +360,84 @@ void ClassName::some_method(
   const hiopMatrix& X) 
 {
 }
-
-
 ```
 
 
 
 ## Naming Conventions
 
-- Classes
-  - Pascal case (upper and lower case, no underscores)
-- Data members
-  - Snake case
-    - lower case only
-    - use _ to separate
-  - Ending in _
-- Member methods
-  - Snake case
-    - lower case only
-    - use _ to separate
-- Avoid encoding type information in names
+### Classes
 
-For example:
+Use Pascal case for class names (upper and lower case, no underscores).
+When the name is composite of multiple words, each word starts with a capital
+letter. If one of the "words" is an acronym use same capitalization (first
+capital and other letters lowercase).
+```c++
+class MyHiopClass;
+```
+
+### Variables
+
+Use "snake case" for all variables. All lower case; for composite names
+separate words with underscores.
+```c++
+int my_int_variable;
+```
+
+### Member variables
+
+All member variable names should end with trailing underscore to distingusish
+them from local variables.
+```c++
+int memeber_variable_; // Yes!
+
+int another_member_var;      // No!
+int _yet_another_member_var; // No!
+```
+### Function names
+
+Use the snake case for function names, as well.
+separate words with underscores.
+```c++
+void my_hiop_function(int i);
+```
+
+Avoid encoding type information in names and use function
+overloading instead. For example:
 ```cpp
-// Bad, prefer polymorphism
+// No!
 void print_double(double val);
 void print_str(std::string_view val);
 
-// Good
+// Yes!
 void print(double val);
 void print(std::string_view val);
-
-// Good
-class FooBar
-{
-private:
-  double* data_device_;
-public:
-  void to_device();
-}
-
-// Bad
-class Foo_bar {
-  private:
-    double* dataDevice;
-  public:
-    void toDevice();
-}
 ```
 
 ## Comments
-
 - Don't comment what can be expressed in code
 - Comment intent, not implementation
 - Block comments (`/* comment */`) are preferred for comments three lines or longer
+
+### Documenting methods
+
+Each method should be documented using Doxygen style comments. At minimum,
+there should be description of method arguments, template parameters (if
+applicable), return value, pre- and post-conditions. Use template as below.
+Input and output arguments should be clearly marked as such (e.g. `@param[in]`
+for inputs).
+
+```c++
+/**
+ * @brief <BRIEF DESCRIPTION>
+ *
+ * @param <NAME> <DESCRIPTION>
+ * @tparam <NAME> <DESCRIPTION>
+ * @return <DESCRIPTION OF RETURN VALUE>
+ *
+ * @pre <PRECONDITION>
+ * @post <POSTCONDITION>
+ *
+ * LONGER DESCRIPTION, RUNTIME, EXAMPLES, ETC 
+ */
+```
