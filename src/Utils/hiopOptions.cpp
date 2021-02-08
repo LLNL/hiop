@@ -354,8 +354,8 @@ void hiopOptions::ensureConsistence()
         log_printf(hovWarning,
                    "The option 'KKTLinsys=%s' is not valid with 'Hessian=quasiNewtonApprox'. "
                    "Will use 'KKTLinsys=auto'\n", strKKT.c_str());
+        set_val("KKTLinsys", "auto");
       }
-      set_val("KKTLinsys", "auto");
     }
   }
 
