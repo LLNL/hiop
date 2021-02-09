@@ -211,23 +211,23 @@ while(a > 0)
 
 ### Position of `else` keyword
 
-Align `else` with corresponding `if` keyword.
+Keyword `else` should follow the `if` closing brace. 
 
 ```c++
-// Yes: else keyword is on the next line
+// Yes: else keyword follows closing brace
+if(a > 0) {
+  value += 1;
+  b = a;
+} else {
+  value -= 1;
+}
+
+// No: else on the next line
 if(a > 0) {
   value += 1;
   b = a;
 }
 else {
-  value -= 1;
-}
-
-// No: else keyword follows }
-if(a > 0) {
-  value += 1;
-  b = a;
-} else {
   value -= 1;
 }
 ```
@@ -241,8 +241,7 @@ avoid condition and loop bodies in the same line of code
 if(a > 0) {
   value += 1;
   b = a;
-}
-else {
+} else {
   value -= 1;
 }
 
@@ -250,8 +249,7 @@ else {
 if(a > 0) {
   value += 1;
   b = a;
-}
-else
+} else
   value -= 1;
 
 // No: the condition and the body on the same line 
@@ -405,11 +403,11 @@ void my_hiop_function(int i);
 Avoid encoding type information in names and use function
 overloading instead. For example:
 ```cpp
-// No!
+// No
 void print_double(double val);
 void print_str(std::string_view val);
 
-// Yes!
+// Yes
 void print(double val);
 void print(std::string_view val);
 ```
