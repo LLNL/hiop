@@ -211,10 +211,10 @@ while(a > 0)
 
 ### Position of `else` keyword
 
-Keyword `else` should follow the `if` closing brace. 
+Keyword `else` should follow the if closing brace. 
 
 ```c++
-// Yes: else keyword follows closing brace
+// Yes: else keyword follows `if` closing brace
 if(a > 0) {
   value += 1;
   b = a;
@@ -263,7 +263,7 @@ else       value -= 1;
 For function and class definitions, have the opening brace
 on the next line aligned with the definition statement.
 ```c++
-// Yes: opening brace on the next line for functions and method
+// Yes: opening brace on the next line for functions and classes declarations
 bool MyClass::my_method(int a)
 {
 
@@ -290,13 +290,63 @@ RAJA::forall<hiop_raja_exec>(
   {
     if(svec[i] == 1.) {
       local_data_dev[i] = c;
-    }
-    else {
+    } else {
       local_data_dev[i] = 0.;
     }
   }
 );
 ```
+
+## Naming Conventions
+
+### Classes
+
+Use Pascal case for class names (upper and lower case, no underscores).
+When the name is composite of multiple words, each word starts with a capital
+letter. If one of the "words" is an acronym use same capitalization (first
+capital and other letters lowercase).
+```c++
+class MyHiopClass;
+```
+
+### Variables
+
+Use "snake case" for all variables. All lower case; for composite names
+separate words with underscores.
+```c++
+int my_int_variable;
+```
+
+### Member variables
+
+All member variable names should end with trailing underscore to distingusish
+them from local variables.
+```c++
+int memeber_variable_; // Yes!
+
+int another_member_var;      // No!
+int _yet_another_member_var; // No!
+```
+### Function names
+
+Use the snake case for function names, as well.
+separate words with underscores.
+```c++
+void my_hiop_function(int i);
+```
+
+Avoid encoding type information in names and use function
+overloading instead. For example:
+```cpp
+// No
+void print_double(double val);
+void print_str(std::string_view val);
+
+// Yes
+void print(double val);
+void print(std::string_view val);
+```
+
 ## Declarations
 
 ### Variables
@@ -360,57 +410,6 @@ void ClassName::some_method(
 }
 ```
 
-
-
-## Naming Conventions
-
-### Classes
-
-Use Pascal case for class names (upper and lower case, no underscores).
-When the name is composite of multiple words, each word starts with a capital
-letter. If one of the "words" is an acronym use same capitalization (first
-capital and other letters lowercase).
-```c++
-class MyHiopClass;
-```
-
-### Variables
-
-Use "snake case" for all variables. All lower case; for composite names
-separate words with underscores.
-```c++
-int my_int_variable;
-```
-
-### Member variables
-
-All member variable names should end with trailing underscore to distingusish
-them from local variables.
-```c++
-int memeber_variable_; // Yes!
-
-int another_member_var;      // No!
-int _yet_another_member_var; // No!
-```
-### Function names
-
-Use the snake case for function names, as well.
-separate words with underscores.
-```c++
-void my_hiop_function(int i);
-```
-
-Avoid encoding type information in names and use function
-overloading instead. For example:
-```cpp
-// No
-void print_double(double val);
-void print_str(std::string_view val);
-
-// Yes
-void print(double val);
-void print(std::string_view val);
-```
 
 ## Comments
 - Don't comment what can be expressed in code
