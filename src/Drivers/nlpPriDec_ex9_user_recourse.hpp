@@ -128,7 +128,12 @@ public:
     assert(nx_sparse>0);
 
     nnz_sparse_Jace = 0;
-    nnz_sparse_Jaci = nsparse_+(nsparse_-1)*2+1;
+    if(nx_sparse<n_){
+      nnz_sparse_Jaci = nsparse_+(nsparse_-1)*2+1;
+    }
+    else{
+      nnz_sparse_Jaci = nsparse_+(nsparse_-1)*2;
+    }
     nnz_sparse_Hess_Lagr_SS = nsparse_;  //Lagrangian?
     nnz_sparse_Hess_Lagr_SD = 0;
     return true;

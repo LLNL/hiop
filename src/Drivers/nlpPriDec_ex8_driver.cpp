@@ -37,7 +37,7 @@ int main(int argc, char **argv)
 #endif
 
   //printf("here\n");
-  PriDecMasterProblemEx8 pridec_problem(12, 20);
+  PriDecMasterProblemEx8 pridec_problem(20, 100);
   //printf("total ranks %d\n",comm_size);
   hiop::hiopAlgPrimalDecomposition pridec_solver(&pridec_problem, MPI_COMM_WORLD);
 

@@ -67,7 +67,7 @@ public:
       // is MHSS correct here?
       if(include_rec_){
         for(int i=0; i<n; i++) {
-          MHSS[i] += rec_evaluator_->get_rhess()[i] ;
+          MHSS[i] += obj_factor*rec_evaluator_->get_rhess()[i] ;
         }
       }
     }
@@ -114,6 +114,12 @@ public:
   }
 
   bool get_MPI_comm(MPI_Comm& comm_out) { comm_out=MPI_COMM_SELF; return true;};
+
+  
+  void get_rec_obj(const long long& n, const double* x, double& obj_value)
+  {
+    bool temp = rec_evaluator_->eval_f(n, x, false, obj_value);
+  }
 
 protected:
   bool include_rec_=false;

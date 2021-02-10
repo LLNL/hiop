@@ -127,7 +127,7 @@ bool Ex8::set_include(bool include)
 hiopSolveStatus PriDecMasterProblemEx8::solve_master(double* x, const bool& include_r, const double& rval/* = 0*/,
 		                                     const double* grad/*=0*/, const double* hess/*=0*/)
 {
-  double obj_value=-1e+20;
+  obj_=-1e+20;
   hiopSolveStatus status;
   if(my_nlp==NULL)
   {
@@ -152,20 +152,21 @@ hiopSolveStatus PriDecMasterProblemEx8::solve_master(double* x, const bool& incl
   nlp.options->SetStringValue("KKTLinsys", "xdycyd");
   nlp.options->SetStringValue("compute_mode", "hybrid");
 
-  nlp.options->SetIntegerValue("verbosity_level", 3);
+
   nlp.options->SetNumericValue("mu0", 1e-1);
   nlp.options->SetNumericValue("tolerance", 1e-5);
   */
+  nlp.options->SetIntegerValue("verbosity_level", 1);
   hiopAlgFilterIPM solver(&nlp);
   status = solver.run();
-  obj_value = solver.getObjective();
+  obj_ = solver.getObjective();
   solver.getSolution(x);
 
   if(status<0){
-    printf("solver returned negative solve status: %d (with objective is %18.12e)\n", status, obj_value);
+    printf("solver returned negative solve status: %d (with objective is %18.12e)\n", status, obj_);
     return status;
   }
-  for(int i=0;i<n_;i++) printf("%d %18.12e\n",i,x[i]);
+  //for(int i=0;i<n_;i++) printf("%d %18.12e\n",i,x[i]);
   //pretend that the master problem has all zero solution
   /*
   if(include_r==0){

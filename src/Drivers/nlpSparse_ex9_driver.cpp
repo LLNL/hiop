@@ -1,7 +1,9 @@
-//the problem to be solved
-#include "nlpPriDec_ex9.hpp"
-//the solver
-#include "hiopAlgPrimalDecomp.hpp"
+#include "nlpSparse_ex9.hpp"
+#include "hiopNlpFormulation.hpp"
+#include "hiopAlgFilterIPM.hpp"
+
+
+using namespace hiop;
 
 #ifdef HIOP_USE_MAGMA
 #include "magma_v2.h"
@@ -37,18 +39,23 @@ int main(int argc, char **argv)
 #ifdef HIOP_USE_MAGMA
   magma_init();
 #endif
+  int nx = 5;
+  int S = 100;
+  int nS = 5; 
+  double x[nx+S*nx];
+  Ex9 nlp_interface(nx,S,nS);
+  hiopNlpSparse nlp(nlp_interface);
 
-  //PriDecMasterProblemEx9 pridec_problem(12, 20, 5, 100);
-  //nx == ny,nS,S
-  int nx = 20;
-  int nS = 5;
-  int S = 1000;
-  PriDecMasterProblemEx9 pridec_problem(nx, nx, nS, S);
-  //printf("total ranks %d\n",comm_size);
-  hiop::hiopAlgPrimalDecomposition pridec_solver(&pridec_problem, MPI_COMM_WORLD);
+  hiopAlgFilterIPMNewton solver(&nlp);
+  hiopSolveStatus status = solver.run();
 
-  //printf("my rank starting3  %d\n",rank);
-  auto status = pridec_solver.run();
+  double obj_value = solver.getObjective();
+  
+  solver.getSolution(x);
+  for(int i=0;i<nx;i++){
+    printf("x%d %18.12e ",i,x[i]);
+  }
+  printf(" \n");
 
   /*
   if(status!=Solve_Success){
