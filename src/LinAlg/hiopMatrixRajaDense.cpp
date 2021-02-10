@@ -153,20 +153,17 @@ hiopMatrixRajaDense::hiopMatrixRajaDense(
   auto& resmgr = umpire::ResourceManager::getInstance();
   umpire::Allocator devalloc  = resmgr.getAllocator(mem_space_);
   data_dev_ = static_cast<double*>(devalloc.allocate(n_local_*max_rows_*sizeof(double)));
-  //M_dev_    = static_cast<double**>(devalloc.allocate((max_rows_ == 0 ? 1 : max_rows_) * sizeof(double*)));
   if(mem_space_ == "DEVICE")
   {
     // If memory space is on device, create a host mirror
     umpire::Allocator hostalloc = resmgr.getAllocator("HOST");
     data_host_  = static_cast<double*>(hostalloc.allocate(n_local_*max_rows_*sizeof(double)));
-    //M_host_     = static_cast<double**>(hostalloc.allocate((max_rows_ == 0 ? 1 : max_rows_) * sizeof(double*)));
     yglob_host_ = static_cast<double*>(hostalloc.allocate(m_local_ * sizeof(double)));
     ya_host_    = static_cast<double*>(hostalloc.allocate(m_local_ * sizeof(double)));
   }
   else
   {
     data_host_ = data_dev_;
-    //M_host_    = M_dev_;
     // If memory space is not on device, these buffers are allocated in memory space
     yglob_host_ = static_cast<double*>(devalloc.allocate(m_local_ * sizeof(double)));
     ya_host_    = static_cast<double*>(devalloc.allocate(m_local_ * sizeof(double)));
@@ -203,7 +200,6 @@ hiopMatrixRajaDense::~hiopMatrixRajaDense()
   }
 }
 
-/// TODO: check again
 /**
  * @brief Matrix copy constructor
  * 
@@ -218,24 +214,22 @@ hiopMatrixRajaDense::hiopMatrixRajaDense(const hiopMatrixRajaDense& dm)
   comm_     = dm.comm_;
   myrank_   = dm.myrank_;
   max_rows_ = dm.max_rows_;
+  mem_space_ = dm.mem_space_;
 
   auto& resmgr = umpire::ResourceManager::getInstance();
   umpire::Allocator devalloc = resmgr.getAllocator(mem_space_);
   data_dev_ = static_cast<double*>(devalloc.allocate(n_local_*max_rows_*sizeof(double)));
-  //M_dev_    = static_cast<double**>(devalloc.allocate((max_rows_ == 0 ? 1 : max_rows_) * sizeof(double*)));
   if(mem_space_ == "DEVICE")
   {
     // If memory space is on device, create a host mirror
     umpire::Allocator hostalloc = resmgr.getAllocator("HOST");
     data_host_  = static_cast<double*>(hostalloc.allocate(n_local_*max_rows_*sizeof(double)));
-    //M_host_     = static_cast<double**>(hostalloc.allocate((max_rows_ == 0 ? 1 : max_rows_) * sizeof(double*)));
     yglob_host_ = static_cast<double*>(hostalloc.allocate(m_local_ * sizeof(double)));
     ya_host_    = static_cast<double*>(hostalloc.allocate(m_local_ * sizeof(double)));
   }
   else
   {
     data_host_ = data_dev_;
-    //M_host_    = M_dev_;
     // If memory space is not on device, these buffers are allocated in memory space
     yglob_host_ = static_cast<double*>(devalloc.allocate(m_local_ * sizeof(double)));
     ya_host_    = static_cast<double*>(devalloc.allocate(m_local_ * sizeof(double)));
