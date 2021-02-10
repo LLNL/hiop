@@ -317,23 +317,27 @@ void hiopVectorRajaPar::copyFromStarting(int start_index_in_this, const double* 
  * @brief Copy `vec` to this vector starting from `start_index` in `this`.
  * 
  * @param[in] start_index - position in `this` where to copy
- * @param[in] vec - a vector from which to copy into `this`
+ * @param[in] src - the source vector from which to copy into `this`
  * 
- * @pre Size of `v` must be >= nv.
- * @pre start_index_in_this+nv <= n_local_
+ * @pre Size of `src` must be >= nv.
+ * @pre start_index + src.n_local_ <= n_local_
  * @pre `this` is not distributed
  */
-void hiopVectorRajaPar::copyFromStarting(int start_index, const hiopVector& vec)
+void hiopVectorRajaPar::copyFromStarting(int start_index, const hiopVector& src)
 {
 #ifdef HIOP_DEEPCHECKS
   assert(n_local_ == n_ && "are you sure you want to call this?");
 #endif
-  const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(vec);
+  const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(src);
   assert(start_index + v.n_local_ <= n_local_);
-  
+
+  // If there is nothing to copy, return.
+  if(v.n_local_ == 0)
+    return;
+
   auto& rm = umpire::ResourceManager::getInstance();
-  double* vv = const_cast<double*>(v.data_dev_); // scary: 
-  rm.copy(this->data_dev_ + start_index, vv, v.n_local_*sizeof(double));
+  double* vdata = const_cast<double*>(v.data_dev_); // scary:
+  rm.copy(this->data_dev_ + start_index, vdata, v.n_local_*sizeof(double));
 }
 
 /**
@@ -377,18 +381,23 @@ void hiopVectorRajaPar::startingAtCopyFromStartingAt(
  * @brief Copy to `vec` elements of `this` vector starting from `start_index`.
  * 
  * @param[in] start_index - position in `this` from where to copy
- * @param[out] vec - a vector where to copy elements of `this`
+ * @param[out] dst - the destination vector where to copy elements of `this`
  * 
- * @pre start_index + vec.n_local_ <= n_local_
- * @pre `this` and `vec` are not distributed
+ * @pre start_index + dst.n_local_ <= n_local_
+ * @pre `this` and `dst` are not distributed
  */
-void hiopVectorRajaPar::copyToStarting(int start_index, hiopVector& vec)
+void hiopVectorRajaPar::copyToStarting(int start_index, hiopVector& dst)
 {
-  const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(vec);
+  const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(dst);
+
 #ifdef HIOP_DEEPCHECKS
   assert(n_local_ == n_ && "are you sure you want to call this?");
 #endif
   assert(start_index + v.n_local_ <= n_local_);
+
+  // If nowhere to copy, return.
+  if(v.n_local_ == 0)
+    return;
 
   auto& rm = umpire::ResourceManager::getInstance();
   rm.copy(v.data_dev_, this->data_dev_ + start_index, v.n_local_*sizeof(double));
