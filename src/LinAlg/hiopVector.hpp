@@ -49,6 +49,7 @@
 #pragma once
 
 #include <cstdio>
+#include <cassert>
 
 namespace hiop
 {
@@ -154,12 +155,29 @@ public:
   virtual void addLogBarrierGrad(double alpha, const hiopVector& x, const hiopVector& select)=0;
 
   /**
-   * @brief computes the log barrier's linear damping term of the Filter-IPM method of 
+   * @brief Computes the log barrier's linear damping term of the Filter-IPM method of 
    * WaectherBiegler (see paper, section 3.7).
    * Essentially compute  kappa_d*mu* \sum { this[i] | ixleft[i]==1 and ixright[i]==0 }
    */
   virtual double linearDampingTerm_local(const hiopVector& ixleft, const hiopVector& ixright, 
-					 const double& mu, const double& kappa_d)const=0;
+					 const double& mu, const double& kappa_d) const=0;
+
+  /** 
+   * Performs `this[i] = alpha*this[i] + sign*ct` where sign=1 when EXACTLY one of 
+   * ixleft[i] and ixright[i] is 1.0 and sign=0 otherwise. 
+   *
+   * Supports distributed/MPI vectors, but performs only elementwise operations and do not
+   * require communication.
+   *
+   * This method is used to add gradient contributions from the (linear) damping term used
+   * to handle unbounded problems. The damping terms are used for variables that are 
+   * bounded on one side only. 
+   */
+  virtual void addLinearDampingTerm(const hiopVector& ixleft,
+                                    const hiopVector& ixright,
+                                    const double& alpha,
+                                    const double& ct) = 0;
+
   /// @brief True if all elements of this are positive.
   virtual int allPositive() = 0;
   /// @brief True if elements corresponding to nonzeros in w are all positive
@@ -193,7 +211,7 @@ public:
   
   /// @brief prints up to max_elems (by default all), on rank 'rank' (by default on all)
   virtual void print(FILE*, const char* message=NULL,int max_elems=-1, int rank=-1) const = 0;
-  
+  virtual void print(){assert(0);} 
   /// @brief allocates a vector that mirrors this, but doesn't copy the values
   virtual hiopVector* alloc_clone() const = 0;
   /// @brief allocates a vector that mirrors this, and copies the values

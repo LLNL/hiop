@@ -51,6 +51,7 @@
  *
  * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>,  PNNL
  * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
+ * @author Robert Rutherford <robert.rutherford@pnnl.gov>, PNNL
  *
  */
 
@@ -60,142 +61,108 @@
 
 namespace hiop { namespace tests {
 
-/// Method to set matrix _A_ element (i,j) to _val_.
-/// First need to retrieve hiopMatrixDense from the abstract interface
+//
+// Matrix helper methods
+//
+
+/// Get number of rows in local data block of matrix _A_
+local_ordinal_type MatrixTestsRajaDense::getNumLocRows(const hiop::hiopMatrixDense* A)
+{
+  const auto* amat = dynamic_cast<const hiop::hiopMatrixRajaDense*>(A);
+  if(amat == nullptr)
+    THROW_NULL_DEREF;
+
+  return amat->get_local_size_m();
+  //                         ^^^
+}
+
+/// Get number of columns in local data block of matrix _A_
+local_ordinal_type MatrixTestsRajaDense::getNumLocCols(const hiop::hiopMatrixDense* A)
+{
+  const auto* amat = dynamic_cast<const hiop::hiopMatrixRajaDense*>(A);
+  if(amat == nullptr)
+    THROW_NULL_DEREF;
+
+  return amat->get_local_size_n();
+  //                         ^^^
+}
+
+/// Set local data element (i,j) of matrix _A_ to _val_ in current memory space.
 void MatrixTestsRajaDense::setLocalElement(
     hiop::hiopMatrixDense* A,
     local_ordinal_type i,
     local_ordinal_type j,
     real_type val)
 {
-  hiop::hiopMatrixRajaDense* amat = dynamic_cast<hiop::hiopMatrixRajaDense*>(A);
-  if(amat != nullptr)
-  {
-    amat->copyFromDev();
-    real_type* data = amat->local_data_host(); 
-    data[i*amat->get_local_size_n() + j] = val;
-    amat->copyToDev();
-  }
-  else THROW_NULL_DEREF;
+  auto* amat = dynamic_cast<hiop::hiopMatrixRajaDense*>(A);
+  if(amat == nullptr)
+    THROW_NULL_DEREF;
+
+  amat->copyFromDev();
+  real_type* data = amat->local_data_host(); 
+  local_ordinal_type ncols = getNumLocCols(A);
+  data[i*ncols + j] = val;
+  amat->copyToDev();
 }
 
-void MatrixTestsRajaDense::setLocalElement(
-    hiop::hiopVector* xvec,
-    const local_ordinal_type i,
-    const real_type val)
-{
-  auto* x = dynamic_cast<hiop::hiopVectorRajaPar*>(xvec);
-  if(x != nullptr)
-  {
-    x->copyFromDev();
-    real_type* data = x->local_data_host();
-    data[i] = val;
-    x->copyToDev();
-  }
-  else THROW_NULL_DEREF;
-}
-
-/// Method to set a single row of matrix to a constant value
+/// Set a single local row of matrix to a constant value in current memory space.
 void MatrixTestsRajaDense::setLocalRow(
-    hiop::hiopMatrixDense* Amat,
+    hiop::hiopMatrixDense* A,
     const local_ordinal_type row,
     const real_type val)
 {
-  hiop::hiopMatrixRajaDense* A = dynamic_cast<hiop::hiopMatrixRajaDense*>(Amat);
+  auto* amat = dynamic_cast<hiop::hiopMatrixRajaDense*>(A);
+  if(amat == nullptr)
+    THROW_NULL_DEREF;
+
   const local_ordinal_type N = getNumLocCols(A);
-  A->copyFromDev();
-  real_type* local_data = A->local_data_host();
+  amat->copyFromDev();
+  real_type* data = amat->local_data_host();
   for (int j=0; j<N; j++)
   {
-    local_data[row*N+j] =  val;
+    data[row*N + j] =  val;
   }
-  A->copyToDev();
+  amat->copyToDev();
 }
 
-/// Returns element (i,j) of matrix _A_.
-/// First need to retrieve hiopMatrixDense from the abstract interface
+/// Returns by value local element (i,j) of matrix _A_.
 real_type MatrixTestsRajaDense::getLocalElement(
     const hiop::hiopMatrixDense* A,
     local_ordinal_type i,
     local_ordinal_type j)
 {
-  const hiop::hiopMatrixRajaDense* am = dynamic_cast<const hiop::hiopMatrixRajaDense*>(A);
-  hiop::hiopMatrixRajaDense* amat = const_cast<hiop::hiopMatrixRajaDense*>(am);
-  if(amat != nullptr)
-  {
-    amat->copyFromDev();
-    return amat->local_data_host()[i*amat->get_local_size_n() + j];
-  }
-  else THROW_NULL_DEREF;
+  const auto* am = dynamic_cast<const hiop::hiopMatrixRajaDense*>(A);
+  if(am == nullptr)
+    THROW_NULL_DEREF;
+  auto* amat = const_cast<hiop::hiopMatrixRajaDense*>(am);
+  if(amat == nullptr)
+    THROW_NULL_DEREF;
+
+  amat->copyFromDev();
+  const real_type* data = amat->local_data_host();
+  local_ordinal_type ncols = getNumLocCols(A);
+  return data[i*ncols + j];
 }
 
-/// Returns element _i_ of vector _x_.
-/// First need to retrieve hiopVectorPar from the abstract interface
-real_type MatrixTestsRajaDense::getLocalElement(
-    const hiop::hiopVector* x,
-    local_ordinal_type i)
+/// Get MPI communicator of matrix _A_
+MPI_Comm MatrixTestsRajaDense::getMPIComm(hiop::hiopMatrixDense* A)
 {
-  const hiop::hiopVectorRajaPar* xvec_const = dynamic_cast<const hiop::hiopVectorRajaPar*>(x);
-  hiop::hiopVectorRajaPar* xvec = const_cast<hiop::hiopVectorRajaPar*>(xvec_const);
-  if(xvec != nullptr)
-  {
-    xvec->copyFromDev();
-    return xvec->local_data_host_const()[i];
-  }
-  else THROW_NULL_DEREF;
+  const auto* amat = dynamic_cast<const hiop::hiopMatrixRajaDense*>(A);
+  if(amat == nullptr)
+    THROW_NULL_DEREF;
+  return amat->get_mpi_comm();
 }
 
-local_ordinal_type MatrixTestsRajaDense::getNumLocRows(hiop::hiopMatrixDense* A)
+/// Returns pointer to local data block of matrix _A_ in current memory space.
+const real_type* MatrixTestsRajaDense::getLocalDataConst(hiop::hiopMatrixDense* A)
 {
-  hiop::hiopMatrixDense* amat = dynamic_cast<hiop::hiopMatrixDense*>(A);
-  if(amat != nullptr)
-    return amat->get_local_size_m();
-    //                         ^^^
-  else THROW_NULL_DEREF;
+  auto* amat = dynamic_cast<hiop::hiopMatrixRajaDense*>(A);
+  if(amat == nullptr)
+    THROW_NULL_DEREF;
+  return amat->local_data_const();
 }
 
-local_ordinal_type MatrixTestsRajaDense::getNumLocCols(hiop::hiopMatrixDense* A)
-{
-  hiop::hiopMatrixDense* amat = dynamic_cast<hiop::hiopMatrixDense*>(A);
-  if(amat != nullptr)
-    return amat->get_local_size_n();
-    //                         ^^^
-  else THROW_NULL_DEREF;
-}
-
-/// Returns size of local data array for vector _x_
-int MatrixTestsRajaDense::getLocalSize(const hiop::hiopVector* x)
-{
-  const hiop::hiopVectorRajaPar* xvec = dynamic_cast<const hiop::hiopVectorRajaPar*>(x);
-  if(xvec != nullptr)
-    return static_cast<int>(xvec->get_local_size());
-  else THROW_NULL_DEREF;
-}
-
-#ifdef HIOP_USE_MPI
-/// Get communicator
-MPI_Comm MatrixTestsRajaDense::getMPIComm(hiop::hiopMatrixDense* _A)
-{
-  const hiop::hiopMatrixDense* A = dynamic_cast<const hiop::hiopMatrixDense*>(_A);
-  if(A != nullptr)
-    return A->get_mpi_comm();
-  else THROW_NULL_DEREF;
-}
-#endif
-
-/// Returns pointer to local data block of matrix _A_.
-/// First need to retrieve hiopMatrixRajaDense from the abstract interface
-real_type* MatrixTestsRajaDense::getLocalData(hiop::hiopMatrixDense* A)
-{
-  hiop::hiopMatrixRajaDense* amat = dynamic_cast<hiop::hiopMatrixRajaDense*>(A);
-  if(amat != nullptr)
-  {
-    return amat->local_data();
-  }
-  else THROW_NULL_DEREF;
-}
-
-// Every rank returns failure if any individual rank fails
+/// Reduce return output: Every rank returns failure if any individual rank fails
 bool MatrixTestsRajaDense::reduceReturn(int failures, hiop::hiopMatrixDense* A)
 {
   int fail = 0;
@@ -210,26 +177,32 @@ bool MatrixTestsRajaDense::reduceReturn(int failures, hiop::hiopMatrixDense* A)
   return (fail != 0);
 }
 
-  [[nodiscard]]
-int MatrixTestsRajaDense::verifyAnswer(hiop::hiopMatrixDense* Amat, const double answer)
+/// Verify matrix elements are set to `answer`.
+[[nodiscard]]
+int MatrixTestsRajaDense::verifyAnswer(hiop::hiopMatrixDense* A, const double answer)
 {
-  hiop::hiopMatrixRajaDense* A = dynamic_cast<hiop::hiopMatrixRajaDense*>(Amat);
-  const local_ordinal_type M = getNumLocRows(A);
-  const local_ordinal_type N = getNumLocCols(A);
+  auto* amat = dynamic_cast<hiop::hiopMatrixRajaDense*>(A);
+  if(amat == nullptr)
+    THROW_NULL_DEREF;
+  const local_ordinal_type M = getNumLocRows(amat);
+  const local_ordinal_type N = getNumLocCols(amat);
 
   // Copy data to the host mirror
-  A->copyFromDev();
-  // Get array of pointers to dense matrix rows
-  double* local_matrix_data = A->local_data_host();
+  amat->copyFromDev();
+  // Get pointer to dense matrix local data on the host
+  const real_type* local_matrix_data = amat->local_data_host();
 
   int fail = 0;
+  // RAJA matrix is stored in row-major format
   for (local_ordinal_type i=0; i<M; i++)
   {
     for (local_ordinal_type j=0; j<N; j++)
     {
-      if (!isEqual(local_matrix_data[i*N+j], answer))
+      if (!isEqual(local_matrix_data[i*N + j], answer))
       {
-        std::cout << i << " " << j << " = " << local_matrix_data[i*N+j] << " != " << answer << "\n";
+        // std::cout << i << " " << j << " = "
+        //           << local_matrix_data[i*N + j] << " != "
+        //           << answer << "\n";
         fail++;
       }
     }
@@ -237,52 +210,102 @@ int MatrixTestsRajaDense::verifyAnswer(hiop::hiopMatrixDense* Amat, const double
   return fail;
 }
 
-/*
- * Pass a function-like object to calculate the expected
- * answer dynamically, based on the row and column
+/**
+ * Verify matrix elements are set as defined in `expect`.
  */
-  [[nodiscard]]
+[[nodiscard]]
 int MatrixTestsRajaDense::verifyAnswer(
-    hiop::hiopMatrixDense* Amat,
+    hiop::hiopMatrixDense* A,
     std::function<real_type(local_ordinal_type, local_ordinal_type)> expect)
 {
-  // const local_ordinal_type M = getNumLocRows(A);
-  // const local_ordinal_type N = getNumLocCols(A);
-  hiop::hiopMatrixRajaDense* A = dynamic_cast<hiop::hiopMatrixRajaDense*>(Amat);
-  const local_ordinal_type M = getNumLocRows(A);
-  const local_ordinal_type N = getNumLocCols(A);
+  auto* amat = dynamic_cast<hiop::hiopMatrixRajaDense*>(A);
+  if(amat == nullptr)
+    THROW_NULL_DEREF;
+  const local_ordinal_type M = getNumLocRows(amat);
+  const local_ordinal_type N = getNumLocCols(amat);
 
   // Copy data to the host mirror
-  A->copyFromDev();
-  // Get array of pointers to dense matrix rows
-  double* local_matrix_data = A->local_data_host();
-  
+  amat->copyFromDev();
+  // Get pointer to dense matrix local data on the host
+  const real_type* local_matrix_data = amat->local_data_host();
+
   int fail = 0;
   for (local_ordinal_type i=0; i<M; i++)
   {
     for (local_ordinal_type j=0; j<N; j++)
     {
-      if (!isEqual(local_matrix_data[i*N+j], expect(i, j)))
+      if (!isEqual(local_matrix_data[i*N + j], expect(i, j)))
       {
-        std::cout << i << ", " << j << ": = " << local_matrix_data[i*N+j] << " != " << expect(i, j) << "\n";
+        std::cout << i << ", " << j << ": = "
+                  << local_matrix_data[i*N + j] << " != "
+                  << expect(i, j) << "\n";
         fail++;
       }
     }
   }
   return fail;
+}
+
+//
+// Vector helper methods
+//
+
+/// Returns size of local data array for vector _x_
+local_ordinal_type MatrixTestsRajaDense::getLocalSize(const hiop::hiopVector* x)
+{
+  const auto* xvec = dynamic_cast<const hiop::hiopVectorRajaPar*>(x);
+  if(xvec == nullptr)
+    THROW_NULL_DEREF;
+
+  return xvec->get_local_size();
+}
+
+/// Sets a local data element of vector _x_ in current memory space
+void MatrixTestsRajaDense::setLocalElement(
+    hiop::hiopVector* x,
+    const local_ordinal_type i,
+    const real_type val)
+{
+  auto* xvec = dynamic_cast<hiop::hiopVectorRajaPar*>(x);
+  if(xvec == nullptr)
+    THROW_NULL_DEREF;
+
+  xvec->copyFromDev();
+  real_type* data = xvec->local_data_host();
+  data[i] = val;
+  xvec->copyToDev();
+}
+
+/// Returns local data element _i_ of vector _x_ by value on the host.
+real_type MatrixTestsRajaDense::getLocalElement(
+    const hiop::hiopVector* x,
+    local_ordinal_type i)
+{
+  const auto* xv = dynamic_cast<const hiop::hiopVectorRajaPar*>(x);
+  if(xv == nullptr)
+    THROW_NULL_DEREF;
+  auto* xvec = const_cast<hiop::hiopVectorRajaPar*>(xv);
+  if(xvec == nullptr)
+    THROW_NULL_DEREF;
+
+  xvec->copyFromDev();
+  return xvec->local_data_host_const()[i];
 }
 
 /// Checks if _local_ vector elements are set to `answer`.
-  [[nodiscard]]
-int MatrixTestsRajaDense::verifyAnswer(hiop::hiopVector* xvec, double answer)
+[[nodiscard]]
+int MatrixTestsRajaDense::verifyAnswer(hiop::hiopVector* x, double answer)
 {
-  auto* x = dynamic_cast<hiop::hiopVectorRajaPar*>(xvec);
-  const local_ordinal_type N = getLocalSize(x);
+  auto* xvec = dynamic_cast<hiop::hiopVectorRajaPar*>(x);
+  if(xvec == nullptr)
+    THROW_NULL_DEREF;
+
+  const local_ordinal_type N = getLocalSize(xvec);
 
   // Copy vector local data to the host mirror
-  x->copyFromDev();
+  xvec->copyFromDev();
   // Get raw pointer to the host mirror
-  const real_type* local_data = x->local_data_host_const();
+  const real_type* local_data = xvec->local_data_host_const();
 
   int local_fail = 0;
   for(local_ordinal_type i=0; i<N; ++i)
@@ -296,21 +319,25 @@ int MatrixTestsRajaDense::verifyAnswer(hiop::hiopVector* xvec, double answer)
   return local_fail;
 }
 
-  [[nodiscard]]
+/// Checks if _local_ vector elements match `expected` values.
+[[nodiscard]]
 int MatrixTestsRajaDense::verifyAnswer(
-    hiop::hiopVector* xvec,
+    hiop::hiopVector* x,
     std::function<real_type(local_ordinal_type)> expect)
 {
-  auto* x = dynamic_cast<hiop::hiopVectorRajaPar*>(xvec);
-  const local_ordinal_type N = getLocalSize(x);
+  auto* xvec = dynamic_cast<hiop::hiopVectorRajaPar*>(x);
+  if(xvec == nullptr)
+    THROW_NULL_DEREF;
+
+  const local_ordinal_type N = getLocalSize(xvec);
 
   // Copy vector local data to the host mirror
-  x->copyFromDev();
+  xvec->copyFromDev();
   // Get raw pointer to the host mirror
-  const real_type* local_data = x->local_data_host_const();
+  const real_type* local_data = xvec->local_data_host_const();
 
   int local_fail = 0;
-  for (int i=0; i<N; i++)
+  for(local_ordinal_type i=0; i<N; ++i)
   {
     if(!isEqual(local_data[i], expect(i)))
     {
@@ -318,37 +345,6 @@ int MatrixTestsRajaDense::verifyAnswer(
     }
   }
   return local_fail;
-}
-
-bool MatrixTestsRajaDense::globalToLocalMap(
-    hiop::hiopMatrixDense* A,
-    const global_ordinal_type row,
-    const global_ordinal_type col,
-    local_ordinal_type& local_row,
-    local_ordinal_type& local_col)
-{
-#ifdef HIOP_USE_MPI
-  int rank = 0;
-  MPI_Comm comm = getMPIComm(A);
-  MPI_Comm_rank(comm, &rank);
-  const local_ordinal_type n_local = getNumLocCols(A);
-  const global_ordinal_type local_col_start = n_local * rank;
-  if (col >= local_col_start && col < local_col_start + n_local)
-  {
-    local_row = row;
-    local_col = col % n_local;
-    return true;
-  }
-  else
-  {
-    return false;
-  }
-#else
-  (void) A; // surpresses waring as A is not needed here without MPI
-  local_row = row;
-  local_col = col;
-  return true;
-#endif
 }
 
 // End helper methods

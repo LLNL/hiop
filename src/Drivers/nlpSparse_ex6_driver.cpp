@@ -62,17 +62,27 @@ int main(int argc, char **argv)
   int rank=0;
 #ifdef HIOP_USE_MPI
   MPI_Init(&argc, &argv);
-  int ierr = MPI_Comm_rank(MPI_COMM_WORLD,&rank);
-  assert(MPI_SUCCESS==ierr);
-  //if(0==rank) printf("Support for MPI is enabled\n");
+  int comm_size;
+  int ierr = MPI_Comm_size(MPI_COMM_WORLD, &comm_size); assert(MPI_SUCCESS==ierr);
+  if(comm_size != 1) {
+    printf("[error] driver detected more than one rank but the driver should be run "
+	   "in serial only; will exit\n");
+    MPI_Finalize();
+    return 1;
+  }
 #endif
   bool selfCheck; long long n;
   if(!parse_arguments(argc, argv, n, selfCheck)) { usage(argv[0]); return 1;}
 
+  
   Ex6 nlp_interface(n);
   hiopNlpSparse nlp(nlp_interface);
-//  nlp.options->SetStringValue("compute_mode", "cpu");
-  nlp.options->SetStringValue("compute_mode", "hybrid");
+  //nlp.options->SetStringValue("Hessian", "analytical_exact");
+  nlp.options->SetStringValue("duals_update_type", "linear"); // "lsq" or "linear" --> lsq hasn't been implemented yet.
+                                                            // it will be forced to use "linear" internally.
+  nlp.options->SetStringValue("duals_init", "lsq"); // "lsq" or "zero"
+  nlp.options->SetStringValue("compute_mode", "cpu");
+//  nlp.options->SetStringValue("compute_mode", "hybrid");
   nlp.options->SetStringValue("KKTLinsys", "xdycyd");
 //  nlp.options->SetStringValue("KKTLinsys", "full");
   nlp.options->SetStringValue("write_kkt", "yes");

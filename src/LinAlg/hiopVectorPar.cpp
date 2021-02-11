@@ -1,6 +1,5 @@
 // Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
-// Written by Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
@@ -52,6 +51,7 @@
 #include <cstring> //for memcpy
 #include <algorithm>
 #include <cassert>
+#include <iostream>
 
 #include "hiop_blasdefs.hpp"
 
@@ -218,12 +218,12 @@ startingAtCopyToStartingAt(int start_idx_in_src, hiopVector& dest_, int start_id
   assert(n_local_==n_ && "only for local/non-distributed vectors");
 #endif  
   assert(start_idx_in_src>=0 && start_idx_in_src<=this->n_local_);
-#ifdef DEBUG  
+#ifndef NDEBUG  
   if(start_idx_in_src==this->n_local_) assert((num_elems==-1 || num_elems==0));
 #endif
   const hiopVectorPar& dest = dynamic_cast<hiopVectorPar&>(dest_);
   assert(start_idx_dest>=0 && start_idx_dest<=dest.n_local_);
-#ifdef DEBUG  
+#ifndef NDEBUG  
   if(start_idx_dest==dest.n_local_) assert((num_elems==-1 || num_elems==0));
 #endif
   if(num_elems<0) {
@@ -553,10 +553,10 @@ void hiopVectorPar::addLogBarrierGrad(double alpha, const hiopVector& x, const h
       data_[i] += alpha/x_vec[i];
 }
 
-
-double hiopVectorPar::
-linearDampingTerm_local(const hiopVector& ixleft, const hiopVector& ixright, 
-			const double& mu, const double& kappa_d) const
+double hiopVectorPar::linearDampingTerm_local(const hiopVector& ixleft, 
+                                              const hiopVector& ixright, 
+                                              const double& mu, 
+                                              const double& kappa_d) const
 {
   const double* ixl= (dynamic_cast<const hiopVectorPar&>(ixleft)).local_data_const();
   const double* ixr= (dynamic_cast<const hiopVectorPar&>(ixright)).local_data_const();
@@ -571,6 +571,25 @@ linearDampingTerm_local(const hiopVector& ixleft, const hiopVector& ixright,
   term *= mu; 
   term *= kappa_d;
   return term;
+}
+
+void hiopVectorPar::addLinearDampingTerm(const hiopVector& ixleft,
+                                         const hiopVector& ixright,
+                                         const double& alpha,
+                                         const double& ct)
+{
+  const double* ixl= (dynamic_cast<const hiopVectorPar&>(ixleft)).local_data_const();
+  const double* ixr= (dynamic_cast<const hiopVectorPar&>(ixright)).local_data_const();
+  double* v = this->local_data();
+
+#ifdef HIOP_DEEPCHECKS
+  assert(n_local_==(dynamic_cast<const hiopVectorPar&>(ixleft) ).n_local_);
+  assert(n_local_==(dynamic_cast<const hiopVectorPar&>(ixright) ).n_local_);
+#endif
+
+  for(long i=0; i<n_local_; i++) {
+    v[i] = alpha*v[i] + (ixl[i]-ixr[i])*ct;
+  }
 }
 
 int hiopVectorPar::allPositive()
@@ -608,15 +627,15 @@ bool hiopVectorPar::projectIntoBounds_local(const hiopVector& xl_, const hiopVec
   for(long long i=0; i<n_local_; i++) {
     if(ixl[i]!=0 && ixu[i]!=0) {
       if(xl[i]>xu[i]) return false;
-      aux=kappa2*(xu[i]-xl[i])-small_double;
-      aux2=xl[i]+fmin(kappa1*fmax(1., fabs(xl[i])),aux);
-      if(x0[i]<aux2) {
-	x0[i]=aux2;
+        aux=kappa2*(xu[i]-xl[i])-small_double;
+        aux2=xl[i]+fmin(kappa1*fmax(1., fabs(xl[i])),aux);
+        if(x0[i]<aux2) {
+        x0[i]=aux2;
       } else {
-	aux2=xu[i]-fmin(kappa1*fmax(1., fabs(xu[i])),aux);
-	if(x0[i]>aux2) {
-	  x0[i]=aux2;
-	}
+        aux2=xu[i]-fmin(kappa1*fmax(1., fabs(xu[i])),aux);
+        if(x0[i]>aux2) {
+          x0[i]=aux2;
+        }
       }
 #ifdef HIOP_DEEPCHECKS
       //if(x0[i]>xl[i] && x0[i]<xu[i]) {
@@ -624,15 +643,15 @@ bool hiopVectorPar::projectIntoBounds_local(const hiopVector& xl_, const hiopVec
       //printf("i=%d  x0=%g xl=%g xu=%g\n", i, x0[i], xl[i], xu[i]);
       //}
       assert(x0[i]>xl[i] && x0[i]<xu[i] && "this should not happen -> HiOp bug");
-      
+
 #endif
     } else {
       if(ixl[i]!=0.)
-	x0[i] = fmax(x0[i], xl[i]+kappa1*fmax(1, fabs(xl[i]))-small_double);
+        x0[i] = fmax(x0[i], xl[i]+kappa1*fmax(1, fabs(xl[i]))-small_double);
       else 
-	if(ixu[i]!=0)
-	  x0[i] = fmin(x0[i], xu[i]-kappa1*fmax(1, fabs(xu[i]))-small_double);
-	else { /*nothing for free vars  */ }
+        if(ixu[i]!=0)
+          x0[i] = fmin(x0[i], xu[i]-kappa1*fmax(1, fabs(xu[i]))-small_double);
+        else { /*nothing for free vars  */ }
     }
   }
   return true;
@@ -775,6 +794,13 @@ bool hiopVectorPar::isfinite_local() const
 {
   for(long long i=0; i<n_local_; i++) if(0==std::isfinite(data_[i])) return false;
   return true;
+}
+
+void hiopVectorPar::print()
+{
+  int max_elems = n_local_;
+  for(int it=0; it<max_elems; it++)  
+    printf("vec [%d] = %1.16e\n",it+1,data_[it]);
 }
 
 void hiopVectorPar::print(FILE* file, const char* msg/*=NULL*/, int max_elems/*=-1*/, int rank/*=-1*/) const 

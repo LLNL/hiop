@@ -285,9 +285,24 @@ This will compile, build the static library and example executables, perform a c
 
 Starting version 0.3, \Hi offers support for offloading computations to NVIDIA GPU accelerators. This feature is available only when solving NLPs in the mixed dense-sparse (MDS) form. First, support for GPUs should be enabled during the build by using \texttt{-DHIOP\_USE\_GPU} option with \texttt{cmake}, which will result in using the GPU accelerators for the internal linear solves; in addition, the options \texttt{-DHIOP\_USE\_RAJA} and \texttt{-DHIOP\_USE\_UMPIRE} will employ RAJA portability abstraction to perform the remaining linear algebra computations on the device or on the host (with OpenMP acceleration).
 
-\Hi's \texttt{cmake} build system is quite versatile to find the dependencies required to offload computations to the device GPUs since was developed and tested on a few GPU-enabled HPC platforms at Oak Ridge, Lawrence Livermore, and Pacific Northwestern National Laboratories. These dependencies consist of CUDA library version 10.1 or later and a recent Magma linear solver library (as well as a physical NVIDIA GPU device). \Hi offers an extensive build support for using customized NVIDIA libraries and/or Magma solver as well as for advanced troubleshooting. The user is referred to \texttt{cmake/FindHiopCudaLibraries.cmake} and \texttt{cmake/FindMagma.cmake} scripts.
+\Hi's \texttt{cmake} build system is quite versatile to find the dependencies required to offload computations to the device GPUs since was developed and tested on a few GPU-enabled HPC platforms at Oak Ridge, Lawrence Livermore, and Pacific Northwest National Laboratories. These dependencies consist of CUDA library version 10.1 or later and a recent Magma linear solver library (as well as a physical NVIDIA GPU device). \Hi offers an extensive build support for using customized NVIDIA libraries and/or Magma solver as well as for advanced troubleshooting. The user is referred to \texttt{cmake/FindHiopCudaLibraries.cmake} and \texttt{cmake/FindMagma.cmake} scripts.
 
 \warningcp{Note: } Installing NVIDIA CUDA (and likely the NVIDIA driver) and/or building Magma can be quite challenging. The user is encouraged to rely on preinstalled versions of these, as they are available via \texttt{module} utility on virtually all high-performance computing machines. An example of how to satisfy all the GPU dependencies on Summit supercomputer at Oak Ridge National Lab with a one commands are available at \url{https://github.com/LLNL/hiop/blob/master/README_summit.md}.
+
+\subsection{Building extra features}
+
+To build the documentation for \Hi, enable the 
+\texttt{HIOP\_BUILD\_DOCUMENTATION} option when configuring. This option can 
+only be enabled if a \texttt{doxygen} executable is available in the path. This 
+option adds the \texttt{make} targets \texttt{doc} and \texttt{install_doc} 
+which build and install the documentation respectively. When installed, 
+\texttt{html} and \LaTeX{}/pdf documentation may be found under 
+\texttt{<install prefix>/doc/html} and \texttt{<install prefix>/doc/html}, 
+respectively.
+
+To build every configuration of HiOp for testing purposes, the build script has an option \texttt{./BUILD.sh --full-build-matrix}. See the testing section of \texttt{README_developers.md} for more information.
+
+Additional \Hi features not yet mentioned may be found in the top of the top-level \texttt{CMakeLists.txt} file with a brief description.
 
 \section{Interfacing with \Hi}
 Once \Hi is built, it can be used as the optimization solver in your application through the \Hi's C++ interfaces and by linking with the static library. A shared dynamic load library can be also built using \texttt{HIOP\_BUILD\_SHARED} option with cmake. There are three types of nonlinear optimization or NLP formulations currently supported by \Hi. They are described and discussed by the subsequent sections.
@@ -821,11 +836,11 @@ kappa2 & numeric & 1e-02 & 1e-08 -- 0.49999 &  shift projection parameter used i
 \multicolumn{2}{|l|}{dualsUpdateType} &&&\\
 \multicolumn{2}{|r|}{ string} &  "lsq" & "lsq" "linear" & type of update of the multipliers of the eq. cons.\\\hline
 secant\_ memory\_ len & integer & 6 &  0 -- 256  & length of the memory of the Hessian secant approximation\\\hline  
-fixed\_var & string & "none" & "remove" "relax" "none" & treatment of fixed variables; in order, they can be removed, their lower and upper bounds relaxed, or ignored. The last value causes a premature termination if fixed variables are detected. \\  \hline
+fixed\_var & string & "none" & "remove" "relax" "none" & treatment of fixed variables; in order, they can be removed, their lower and upper bounds relaxed, or ignored. "remove" is not available in "gpu" compute mode. "none" causes a premature termination if fixed variables are detected. \\  \hline
 fixed\_var\_ tolerance & numeric & 1e-15 & 1e-30 -- 1e-2 & tolerance for $|ub-lb|$ under which a variable will be considered fixed. \\ \hline
 fixed\_var\_ perturb & numeric & 1e-8 & 1e-14 -- 0.1 & Perturbation of the lower and upper bounds for a fixed variable relative to its magnitude: lb/ub $-$=/+= max(abs(ub),1)$\times$fixed\_var\_perturb\\ \hline
-compute\_mode & string & "auto" & "auto" "cpu" "hybrid" & Offloading of computations to GPUs: "hybrid" will use GPUs for linear systems, "auto" will decide between "cpu" and "hybrid" based on the other options passed, and "cpu" will only use device CPU. \\\hline
-mem\_space & string & "default" & "default" "host" "device" "um" "pinned" & Memory space selection: the values currently supported are "default" (currently same the "host"), "host", and "um"; for more information consult UMPIRE documentation. \\\hline
+compute\_mode & string & "auto" & "auto" "cpu" "hybrid" "gpu" & Offloading of computations to GPUs: "gpu" will run entirely on GPU (needs RAJA), "hybrid" will use GPUs for linear systems, "auto" will decide between "cpu" and "hybrid" based on the other options passed, and "cpu" will only use device CPU. \\\hline
+mem\_space & string & "default" & "default" "host" "device" "um" & Memory space selection: without RAJA/Umpire enabled only "default" is available; for "host" and "um" options consult Umpire documentation. \\\hline
 time\_kkt & string & "off" & "on" "off" & Turns on/off internal performance timers and analysis and enables additional reporting of the computational constituents of the KKT solve process \\\hline
 %
 %% smax  1.000000e+02     	 \# (numeric)  1 to 1e+07   multiplier threshold used in computing the scaling factors for the optimality error (default 100.)]

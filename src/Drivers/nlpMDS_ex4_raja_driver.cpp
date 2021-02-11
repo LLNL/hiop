@@ -97,8 +97,8 @@ int main(int argc, char **argv)
   magma_init();
 #endif
 
+  // Set memory space where to create models
   std::string mem_space = "um";
-  hiop::LinearAlgebraFactory::set_mem_space(mem_space);
 
   bool selfCheck, one_call_cons;
   long long n_sp, n_de;
@@ -123,13 +123,13 @@ int main(int argc, char **argv)
 
   hiopNlpMDS nlp(*my_nlp);
 
-  nlp.options->SetStringValue("dualsUpdateType", "linear");
-  nlp.options->SetStringValue("dualsInitialization", "zero");
+  nlp.options->SetStringValue("duals_update_type", "linear");
+  nlp.options->SetStringValue("duals_init", "zero");
 
   nlp.options->SetStringValue("fixed_var", "relax");
   nlp.options->SetStringValue("Hessian", "analytical_exact");
   nlp.options->SetStringValue("KKTLinsys", "xdycyd");
-  nlp.options->SetStringValue("compute_mode", "hybrid");
+  nlp.options->SetStringValue("compute_mode", "gpu");
   nlp.options->SetStringValue("mem_space", mem_space.c_str());
 
   nlp.options->SetIntegerValue("verbosity_level", 3);

@@ -69,6 +69,9 @@
 namespace hiop
 {
 
+//some forward decls
+class hiopDualsLsqUpdate;
+  
 /** Class for a general NlpFormulation with general constraints and bounds on the variables. 
  * This class also  acts as a factory for linear algebra objects (derivative 
  * matrices, KKT system) whose types are decided based on the hiopInterfaceXXX object passed in the
@@ -120,6 +123,9 @@ public:
 				  hiopVector& zL0, hiopVector& zU0,
 				  hiopVector& yc0, hiopVector& yd0);
 
+  /* Allocates the LSQ duals update class. */
+  virtual hiopDualsLsqUpdate* alloc_duals_lsq_updater() = 0;
+  
   /** linear algebra factory */
   virtual hiopVector* alloc_primal_vec() const;
   virtual hiopVector* alloc_dual_eq_vec() const;
@@ -322,6 +328,9 @@ public:
     return true;
   }
 
+  /* Allocates the LSQ duals update class. */
+  virtual hiopDualsLsqUpdate* alloc_duals_lsq_updater();
+  
   virtual hiopMatrixDense* alloc_Jac_c();
   virtual hiopMatrixDense* alloc_Jac_d();
   virtual hiopMatrixDense* alloc_Jac_cons();
@@ -377,6 +386,9 @@ public:
 			      bool new_lambdas,
 			      hiopMatrix& Hess_L);
   
+  /* Allocates the LSQ duals update class. */
+  virtual hiopDualsLsqUpdate* alloc_duals_lsq_updater();
+  
   virtual hiopMatrix* alloc_Jac_c() 
   {
     assert(n_vars == nx_sparse+nx_dense);
@@ -419,7 +431,8 @@ public:
   // TODO: notsure we need this
 
   hiopNlpSparse(hiopInterfaceSparse& interface_)
-    : hiopNlpFormulation(interface_), interface(interface_)
+    : hiopNlpFormulation(interface_), interface(interface_),
+      num_jac_eval_{0}, num_hess_eval_{0}
   {
     _buf_lambda = LinearAlgebraFactory::createVector(0);
   }
@@ -445,33 +458,42 @@ public:
                             const double* lambda_ineq,
                             bool new_lambdas,
                             hiopMatrix& Hess_L);
-
+  /* Allocates the LSQ duals update class. */
+  virtual hiopDualsLsqUpdate* alloc_duals_lsq_updater();
+  
   virtual hiopMatrix* alloc_Jac_c()
   {
-    assert(n_vars == m_nx);
-    return new hiopMatrixSparseTriplet(n_cons_eq, m_nx, m_nnz_sparse_Jaceq);
+    return new hiopMatrixSparseTriplet(n_cons_eq, n_vars, m_nnz_sparse_Jaceq);
   }
   virtual hiopMatrix* alloc_Jac_d()
   {
-    assert(n_vars == m_nx);
-    return new hiopMatrixSparseTriplet(n_cons_ineq, m_nx, m_nnz_sparse_Jacineq);
+    return new hiopMatrixSparseTriplet(n_cons_ineq, n_vars, m_nnz_sparse_Jacineq);
   }
   virtual hiopMatrix* alloc_Jac_cons()
   {
-    assert(n_vars == m_nx);
-    return new hiopMatrixSparseTriplet(n_cons, m_nx, m_nnz_sparse_Jaceq + m_nnz_sparse_Jacineq);
+    return new hiopMatrixSparseTriplet(n_cons, n_vars, m_nnz_sparse_Jaceq + m_nnz_sparse_Jacineq);
   }
   virtual hiopMatrix* alloc_Hess_Lagr()
   {
-  assert(n_vars == m_nx);
-    return new hiopMatrixSymSparseTriplet(m_nx, m_nnz_sparse_Hess_Lagr);
+    return new hiopMatrixSymSparseTriplet(n_vars, m_nnz_sparse_Hess_Lagr);
   }
-  virtual long long nx() const { return m_nx; }
+  virtual long long nx() const { return n_vars; }
+
+  //not inherited from NlpFormulation
+
+  //Allocates a non-MPI vector with size given by the size of primal plus dual (for both equality and inequality) spaces
+  virtual hiopVector* alloc_primal_dual_vec() const
+  {
+    assert(n_cons == n_cons_eq+n_cons_ineq);
+    return LinearAlgebraFactory::createVector(n_vars + n_cons);
+  }
+  
 private:
   hiopInterfaceSparse& interface;
-  int m_nx;
   int m_nnz_sparse_Jaceq, m_nnz_sparse_Jacineq;
   int m_nnz_sparse_Hess_Lagr;
+  int num_jac_eval_;
+  int num_hess_eval_;
 
   hiopVector* _buf_lambda;
 };

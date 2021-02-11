@@ -53,6 +53,8 @@
 #include "hiopResidual.hpp"
 #include "hiopHessianLowRank.hpp"
 #include "hiopPDPerturbation.hpp"
+#include "hiopLinSolver.hpp"
+#include "hiopFactAcceptor.hpp"
 
 #include "hiopCppStdUtils.hpp"
 
@@ -87,6 +89,11 @@ public:
     perturb_calc_ = p;
   }
 
+  virtual void set_fact_acceptor(hiopFactAcceptor* p_fact_acceptor)
+  {
+    fact_acceptor_ = p_fact_acceptor;
+  }  
+  
   inline void set_safe_mode(bool val)
   {
     safe_mode_ = val;
@@ -96,9 +103,11 @@ public:
   virtual double errorKKT(const hiopResidual* resid, const hiopIterate* sol);
 
 protected:
-  /** y=beta*y+alpha*H*x
-   * Should not include log barrier diagonal terms
-   * Should not include IC perturbations
+  /** 
+   * @brief y=beta*y+alpha*H*x
+   * 
+   * @pre Should not include log barrier diagonal terms
+   * @pre Should not include IC perturbations
    *
    * A default implementation is below
    */
@@ -117,15 +126,50 @@ protected:
   const hiopMatrix *Jac_c_, *Jac_d_;
   hiopMatrix* Hess_;
   hiopPDPerturbation* perturb_calc_;
+  hiopFactAcceptor* fact_acceptor_;  
   bool perf_report_;
   bool safe_mode_;
 };
 
-class hiopKKTLinSysCompressed : public hiopKKTLinSys
+class hiopKKTLinSysCurvCheck : public hiopKKTLinSys
+{
+public:
+  hiopKKTLinSysCurvCheck(hiopNlpFormulation* nlp)
+    : hiopKKTLinSys(nlp), linSys_{nullptr}
+  {}
+
+  virtual ~hiopKKTLinSysCurvCheck()
+  {if(linSys_) delete linSys_;}
+
+  virtual bool update(const hiopIterate* iter,
+                    const hiopVector* grad_f,
+                    const hiopMatrix* Jac_c, const hiopMatrix* Jac_d, hiopMatrix* Hess) = 0;
+
+  virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction) = 0;
+
+  virtual bool factorize();
+  
+  /**
+   * @brief factorize the matrix and check curvature
+   */ 
+  virtual int factorizeWithCurvCheck();
+
+  /** 
+   * @brief updates the iterate matrix, given regularizations 'delta_wx', 'delta_wd', 'delta_cc' and 'delta_cd'.
+   */
+  virtual bool updateMatrix(const double& delta_wx, const double& delta_wd,
+                            const double& delta_cc, const double& delta_cd) = 0;
+
+  hiopLinSolver* linSys_;
+
+};
+
+
+class hiopKKTLinSysCompressed : public hiopKKTLinSysCurvCheck
 {
 public:
   hiopKKTLinSysCompressed(hiopNlpFormulation* nlp)
-    : hiopKKTLinSys(nlp), Dx_(NULL), rx_tilde_(NULL)
+    : hiopKKTLinSysCurvCheck(nlp), Dx_(NULL), rx_tilde_(NULL)
   {
     Dx_ = nlp->alloc_primal_vec();
     assert(Dx_ != NULL);
@@ -142,6 +186,8 @@ public:
 
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction) = 0;
 
+  virtual bool updateMatrix(const double& delta_wx, const double& delta_wd,
+                            const double& delta_cc, const double& delta_cd) = 0;
 protected:
   hiopVector* Dx_;
   hiopVector* rx_tilde_;
@@ -162,15 +208,19 @@ public:
   hiopKKTLinSysCompressedXYcYd(hiopNlpFormulation* nlp);
   virtual ~hiopKKTLinSysCompressedXYcYd();
 
-  virtual bool update(const hiopIterate* iter,
-		      const hiopVector* grad_f,
-		      const hiopMatrix* Jac_c, const hiopMatrix* Jac_d, hiopMatrix* Hess) = 0;
+  virtual bool update(const hiopIterate* iter, 
+                      const hiopVector* grad_f, 
+                      const hiopMatrix* Jac_c, const hiopMatrix* Jac_d, 
+                      hiopMatrix* Hess);
 
 
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction);
 
+  virtual bool updateMatrix(const double& delta_wx, const double& delta_wd,
+                            const double& delta_cc, const double& delta_cd) = 0;
+
   virtual bool solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
-			       hiopVector& dx, hiopVector& dyc, hiopVector& dyd) = 0;
+                               hiopVector& dx, hiopVector& dyc, hiopVector& dyd) = 0;
 
 #ifdef HIOP_DEEPCHECKS
   virtual double errorCompressedLinsys(const hiopVector& rx,
@@ -204,22 +254,25 @@ public:
   hiopKKTLinSysCompressedXDYcYd(hiopNlpFormulation* nlp);
   virtual ~hiopKKTLinSysCompressedXDYcYd();
 
-  virtual bool update(const hiopIterate* iter,
-		      const hiopVector* grad_f,
-		      const hiopMatrix* Jac_c, const hiopMatrix* Jac_d, hiopMatrix* Hess) = 0;
+  virtual bool update(const hiopIterate* iter, 
+                      const hiopVector* grad_f, 
+                      const hiopMatrix* Jac_c, const hiopMatrix* Jac_d, hiopMatrix* Hess);
 
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction);
 
-  virtual bool solveCompressed(hiopVector& rx, hiopVector& rd,
-			       hiopVector& ryc, hiopVector& ryd,
-			       hiopVector& dx, hiopVector& dd,
-			       hiopVector& dyc, hiopVector& dyd) = 0;
+  virtual bool updateMatrix(const double& delta_wx, const double& delta_wd,
+                            const double& delta_cc, const double& delta_cd) = 0;
+
+  virtual bool solveCompressed(hiopVector& rx, hiopVector& rd, 
+                               hiopVector& ryc, hiopVector& ryd,
+                               hiopVector& dx, hiopVector& dd,
+                               hiopVector& dyc, hiopVector& dyd) = 0;
 
 #ifdef HIOP_DEEPCHECKS
   virtual double errorCompressedLinsys(const hiopVector& rx,  const hiopVector& rd,
-				       const hiopVector& ryc, const hiopVector& ryd,
-				       const hiopVector& dx,  const hiopVector& dd,
-				       const hiopVector& dyc, const hiopVector& dyd);
+                                       const hiopVector& ryc, const hiopVector& ryd,
+                                       const hiopVector& dx,  const hiopVector& dd,
+                                       const hiopVector& dyc, const hiopVector& dyd);
 #endif
 
 protected:
@@ -262,6 +315,9 @@ public:
 		      const hiopMatrixDense* Jac_c, const hiopMatrixDense* Jac_d,
 		      hiopHessianLowRank* Hess);
 
+  virtual bool updateMatrix(const double& delta_wx, const double& delta_wd,
+                            const double& delta_cc, const double& delta_cd) {assert(false && "not yet implemented");return false;}
+
   /* Solves the system corresponding to directions for x, yc, and yd, namely
    * [ H_BFGS + Dx   Jc^T  Jd^T   ] [ dx]   [ rx_tilde ]
    * [    Jc          0     0     ] [dyc] = [   ryc    ]
@@ -275,7 +331,7 @@ public:
    *
    */
   virtual bool solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
-			       hiopVector& dx, hiopVector& dyc, hiopVector& dyd);
+                               hiopVector& dx, hiopVector& dyc, hiopVector& dyd);
 
   //LAPACK wrappers
   int solve(hiopMatrixDense& M, hiopVector& rhs);
@@ -332,22 +388,25 @@ private:
  *  - H is a sparse Hessian matrix
  *
  */
-class hiopKKTLinSysFull: public hiopKKTLinSys
+class hiopKKTLinSysFull: public hiopKKTLinSysCurvCheck
 {
 public:
   hiopKKTLinSysFull(hiopNlpFormulation* nlp)
-    : hiopKKTLinSys(nlp)
+    : hiopKKTLinSysCurvCheck(nlp)
   {}
 
   virtual ~hiopKKTLinSysFull()
   {}
 
   virtual bool update(const hiopIterate* iter,
-		      const hiopVector* grad_f,
-		      const hiopMatrix* Jac_c, const hiopMatrix* Jac_d, hiopMatrix* Hess) = 0;
+                      const hiopVector* grad_f,
+                      const hiopMatrix* Jac_c, const hiopMatrix* Jac_d, hiopMatrix* Hess);
 
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction);
 
+  virtual bool updateMatrix(const double& delta_wx, const double& delta_wd,
+                            const double& delta_cc, const double& delta_cd) = 0;  
+  
   virtual bool solve( hiopVector& rx, hiopVector& ryc, hiopVector& ryd, hiopVector& rd,
                       hiopVector& rdl, hiopVector& rdu, hiopVector& rxl, hiopVector& rxu,
                       hiopVector& rsvl, hiopVector& rsvu, hiopVector& rszl, hiopVector& rszu,

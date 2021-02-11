@@ -182,9 +182,9 @@ public:
     v.copyFrom(from);
     int fail = verifyAnswer(&v, one);
 
-    // const real_type* from_buffer = createLocalBuffer(N, three);
-    // v.copyFrom(from_buffer);
-    // fail += verifyAnswer(&v, three);
+    const real_type* from_buffer = createLocalBuffer(N, three);
+    v.copyFrom(from_buffer);
+    fail += verifyAnswer(&v, three);
 
     printMessage(fail, __func__, rank);
     return reduceReturn(fail, &v);
@@ -301,6 +301,10 @@ public:
 
   /**
    * Test for function that copies data from `this` to a data buffer.
+   * 
+   * @note This test calls `local_data` vector method. Here this is OK,
+   * because for as long copies between vectors and bufers are implemented
+   * as public methods, `local_data` will be a public method, as well.
    */
   bool vectorCopyTo(hiop::hiopVector& v, hiop::hiopVector& to, const int rank)
   {
@@ -310,7 +314,7 @@ public:
     to.setToConstant(one);
     v.setToConstant(two);
 
-    real_type* todata = getLocalData(&to);
+    real_type* todata = to.local_data();
     v.copyTo(todata);
 
     int fail = verifyAnswer(&to, two);
@@ -1082,6 +1086,98 @@ public:
   }
 
   /**
+   * @brief Test: For addLinearDampingTerm method, which performs a "signed" axpy:
+   * `x[i] = alpha*x[i] + sign*ct` where sign=1 when exactly one of left[i] and right[i]
+   * is 1. and sign=0 otherwise.
+   */
+  bool vectorAddLinearDampingTerm(
+      hiop::hiopVector& x,
+      hiop::hiopVector& left,
+      hiop::hiopVector& right,
+      const int rank)
+  {
+    const local_ordinal_type N = getLocalSize(&x);
+    assert(N == getLocalSize(&left));
+    assert(N == getLocalSize(&right));
+    static const real_type ct = two;
+    static const real_type alpha = quarter;
+
+    x.setToConstant(one);
+    left.setToConstant(one);
+    right.setToConstant(zero);
+
+    // idx 0: left=0, right=1
+    if(N>=1)
+    {
+      setLocalElement(&left, 0, zero);
+      setLocalElement(&right, 0, one);
+    }
+
+    //idx 1: left=0, right=0
+    if(N>=2) 
+    {
+      setLocalElement(&left, 1, zero);
+      setLocalElement(&right, 1, zero);
+      
+    }
+
+    //idx 2: left=1 right=1
+    if(N>=3)
+    {
+      setLocalElement(&left, 2, one);
+      setLocalElement(&right, 2, one);
+    }
+
+    //idx 3: left=1 right=0
+    if(N>=4)
+    {
+      setLocalElement(&left, 3, one);
+      setLocalElement(&right, 3, zero);
+    }
+
+    real_type expected[4];
+
+    // expected for idx 0 
+    expected[0] = getLocalElement(&x, 0) * alpha - ct;
+
+    // expected for idx 1 
+    if(N>=2)
+    {
+      expected[1] = getLocalElement(&x, 1) * alpha;
+    }
+
+    // expected for idx 2
+    if(N>=3)
+    {
+      expected[2] = getLocalElement(&x, 2) * alpha;
+    }
+
+    // expected for idx 3
+    if(N>=4) 
+    {   
+      expected[3] = getLocalElement(&x, 3) * alpha + ct;
+    }
+
+    //
+    // the call
+    //
+    x.addLinearDampingTerm(left, right, alpha, ct);
+
+    //
+    // compare with actual values 
+    //
+    bool fail = false;
+    for(local_ordinal_type test = 0; test < std::min(N,4) && !fail; ++test) 
+    {
+      fail = !isEqual(expected[test], getLocalElement(&x, test));
+    }
+    
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &x);
+  }
+
+
+  /**
    * @brief Test:
    * this[i] > 0
    */
@@ -1419,9 +1515,9 @@ public:
       a = mu / getLocalElement(&x, i);
       b = a / kappa;
       a *= kappa;
-      if      (getLocalElement(&x, i) < b)     setLocalElement(&z2, i, b);
-      else if (a <= b)                    setLocalElement(&z2, i, b);
-      else if (a < getLocalElement(&x, i))     setLocalElement(&z2, i, a);
+      if      (getLocalElement(&x, i) < b) setLocalElement(&z2, i, b);
+      else if (a <= b)                     setLocalElement(&z2, i, b);
+      else if (a < getLocalElement(&x, i)) setLocalElement(&z2, i, a);
     }
 
     // the method's adjustDuals_plh should yield
@@ -1527,19 +1623,69 @@ public:
     return reduceReturn(fail, &x);
   }
 
+  /// Returns element _i_ of vector _x_.
+  real_type getLocalElement(const hiop::hiopVector* x, local_ordinal_type i)
+  {
+    return getLocalDataConst(x)[i];
+  }
+
+  /// Returns pointer to local vector data
+  local_ordinal_type getLocalSize(const hiop::hiopVector* x)
+  {
+    return static_cast<local_ordinal_type>(x->get_local_size());
+  }
+
+  /// Checks if _local_ vector elements are set to `answer`.
+  int verifyAnswer(hiop::hiopVector* x, real_type answer)
+  {
+    const local_ordinal_type N = getLocalSize(x);
+    const real_type* xdata = getLocalDataConst(x);
+    
+    int local_fail = 0;
+
+    for(local_ordinal_type i = 0; i < N; ++i)
+    {
+      if(!isEqual(xdata[i], answer))
+      {
+        ++local_fail;
+      }
+    }
+
+    return local_fail;
+  }
+
+  /**
+   * @brief Verifies:
+   * \forall x in _local_ vector data at index i,
+   *    x == expect(i)
+   */
+  int verifyAnswer(
+      hiop::hiopVector* x,
+      std::function<real_type(local_ordinal_type)> expect)
+  {
+    const local_ordinal_type N = getLocalSize(x);
+    const real_type* xdata = getLocalDataConst(x);
+    
+    int local_fail = 0;
+
+    for(local_ordinal_type i = 0; i < N; ++i)
+    {
+      if(!isEqual(xdata[i], expect(i)))
+      {
+        ++local_fail;
+      }
+    }
+
+    return local_fail;
+  }
+
 protected:
   // Interface to methods specific to vector implementation
+  virtual const real_type* getLocalDataConst(const hiop::hiopVector* x) = 0;
   virtual void setLocalElement(hiop::hiopVector* x, local_ordinal_type i, real_type val) = 0;
-  virtual real_type getLocalElement(const hiop::hiopVector* x, local_ordinal_type i) = 0;
-  virtual local_ordinal_type getLocalSize(const hiop::hiopVector* x) = 0;
-  virtual real_type* getLocalData(hiop::hiopVector* x) = 0;
-  virtual int verifyAnswer(hiop::hiopVector* x, real_type answer) = 0;
-  virtual int verifyAnswer(
-      hiop::hiopVector* x,
-      std::function<real_type(local_ordinal_type)> expect) = 0;
-  virtual bool reduceReturn(int failures, hiop::hiopVector* x) = 0;
   virtual real_type* createLocalBuffer(local_ordinal_type N, real_type val) = 0;
   virtual void deleteLocalBuffer(real_type* buffer) = 0;
+  virtual bool reduceReturn(int failures, hiop::hiopVector* x) = 0;
 };
 
 }} // namespace hiop::tests

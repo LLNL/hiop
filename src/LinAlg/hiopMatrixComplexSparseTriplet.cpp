@@ -147,7 +147,7 @@ namespace hiop
     for(int ki=0; ki<nrows; ki++) {
       const int& row = row_idxs[ki];
       assert(row<m());
-#ifdef DEBUG
+#ifndef NDEBUG
       if(ki>0) {
 	assert(row_idxs[ki]>row_idxs[ki-1] && "slice row indexes need to be increasingly ordered");
       }
@@ -160,7 +160,7 @@ namespace hiop
 	const int& col = col_idxs[kj];
 	assert(col<n());
 
-#ifdef DEBUG
+#ifndef NDEBUG
 	if(kj>0) {
 	  assert(col_idxs[kj]>col_idxs[kj-1] && "slice column indexes need to be increasingly ordered");
 	}
@@ -239,7 +239,7 @@ namespace hiop
     for(int ki=0; ki<nrows; ki++) {
       const int& row = row_idxs[ki];
       assert(row<m());
-#ifdef DEBUG
+#ifndef NDEBUG
       if(ki>0) {
 	assert(row_idxs[ki]>row_idxs[ki-1] && "slice row indexes need to be increasingly ordered");
       }
@@ -252,7 +252,7 @@ namespace hiop
 	const int& col = col_idxs[kj];
 	assert(col<n());
 
-#ifdef DEBUG
+#ifndef NDEBUG
 	if(kj>0) {
 	  assert(col_idxs[kj]>col_idxs[kj-1] && "slice column indexes need to be increasingly ordered");
 	}
@@ -396,7 +396,7 @@ namespace hiop
     for(int ki=0; ki<ndim; ki++) {
       const int& row = row_col_idxs[ki];
       assert(row<m());
-#ifdef DEBUG
+#ifndef NDEBUG
       if(ki>0) {
 	assert(row_col_idxs[ki]>row_col_idxs[ki-1] && "slice indexes need to be increasingly ordered");
       }

@@ -133,7 +133,12 @@ namespace hiop
     * initialize strumpack parameters
     */
     spss.options().set_matching(MatchingJob::NONE);
-    spss.options().disable_gpu();
+//    spss.options().enable_METIS_NodeNDP();
+    
+    if(nlp_->options->GetString("compute_mode")=="cpu")
+    {
+      spss.options().disable_gpu();
+    }
     spss.options().set_verbose(false);
 
     spss.set_csr_matrix(n_, kRowPtr_, jCol_, kVal_, true);
@@ -165,8 +170,8 @@ namespace hiop
 
     spss.factor();   // not really necessary, called if needed by solve
 
-	  int negEigVal = nFakeNegEigs_;
-
+    nlp_->runStats.linsolv.tmInertiaComp.start();
+    int negEigVal = nFakeNegEigs_;
     nlp_->runStats.linsolv.tmInertiaComp.stop();
     return negEigVal;
   }
@@ -231,7 +236,11 @@ namespace hiop
     * initialize strumpack parameters
     */
 //    spss.options().set_matching(MatchingJob::NONE);
-    spss.options().disable_gpu();
+    spss.options().enable_METIS_NodeNDP();
+    if(nlp_->options->GetString("compute_mode")=="cpu")
+    {
+      spss.options().disable_gpu();
+    }
     spss.options().set_verbose(false);
 
     spss.set_csr_matrix(n_, kRowPtr_, jCol_, kVal_, true);
@@ -262,8 +271,8 @@ namespace hiop
 
     spss.factor();   // not really necessary, called if needed by solve
 
-	  int negEigVal = nFakeNegEigs_;
-
+    nlp_->runStats.linsolv.tmInertiaComp.start();
+    int negEigVal = nFakeNegEigs_;
     nlp_->runStats.linsolv.tmInertiaComp.stop();
     return negEigVal;
   }

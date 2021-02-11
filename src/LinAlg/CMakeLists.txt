@@ -23,7 +23,7 @@ if(HIOP_SPARSE)
 endif()
 
 # Add RAJA/Umpire sources when enabled
-if(HIOP_USE_UMPIRE)
+if(HIOP_USE_RAJA)
   set(hiopLinAlg_SRC ${hiopLinAlg_SRC}
     hiopVectorRajaPar.cpp
     hiopVectorIntRaja.cpp
@@ -51,7 +51,7 @@ add_library(hiopLinAlg OBJECT ${hiopLinAlg_SRC})
 target_link_libraries(hiopLinAlg PUBLIC hiop_math)
 
 # Link linear algebra target to Umpire & RAJA when enabled
-if(HIOP_USE_UMPIRE)
+if(HIOP_USE_RAJA)
   target_link_libraries(hiopLinAlg PUBLIC umpire RAJA OpenMP::OpenMP_CXX)
 endif()
 

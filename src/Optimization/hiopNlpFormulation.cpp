@@ -51,6 +51,7 @@
 #include "hiopVector.hpp"
 #include "hiopLinAlgFactory.hpp"
 #include "hiopLogger.hpp"
+#include "hiopDualsUpdater.hpp"
 
 #ifdef HIOP_USE_MPI
 #include "mpi.h"
@@ -177,12 +178,16 @@ bool hiopNlpFormulation::finalizeInitialization()
   if(dFixedVarsTol != fixedVarTol) {
     doinit=true;
   }
+
   //more tests here (for example change in the rescaling)
   if(!doinit) {
     return true;
   } else {
     
   }
+
+  // Select memory space where to create linear algebra objects
+  hiop::LinearAlgebraFactory::set_mem_space(options->GetString("mem_space"));
 
   bool bret = interface_base.get_prob_sizes(n_vars, n_cons); assert(bret);
 
@@ -485,13 +490,15 @@ hiopVector* hiopNlpFormulation::alloc_dual_eq_vec() const
 {
   return c_rhs->alloc_clone();
 }
+
 hiopVector* hiopNlpFormulation::alloc_dual_ineq_vec() const
 {
   return dl->alloc_clone();
 }
+
 hiopVector* hiopNlpFormulation::alloc_dual_vec() const
 {
-  hiopVector* ret=LinearAlgebraFactory::createVector(n_cons);
+  hiopVector* ret = LinearAlgebraFactory::createVector(n_cons);
 #ifdef HIOP_DEEPCHECKS
   assert(ret!=NULL);
 #endif
@@ -527,7 +534,6 @@ bool hiopNlpFormulation::get_starting_point(hiopVector& x0_for_hiop,
 					    hiopVector& zL0_for_hiop, hiopVector& zU0_for_hiop,
 					    hiopVector& yc0_for_hiop, hiopVector& yd0_for_hiop)
 {
-  //aaa
   bool bret; 
 
   hiopVector* lambdas = hiop::LinearAlgebraFactory::createVector(yc0_for_hiop.get_size() + yd0_for_hiop.get_size());
@@ -877,6 +883,11 @@ bool hiopNlpDenseConstraints::finalizeInitialization()
   return hiopNlpFormulation::finalizeInitialization();
 }
 
+hiopDualsLsqUpdate* hiopNlpDenseConstraints::alloc_duals_lsq_updater()
+{
+  return new hiopDualsLsqUpdateLinsysRedDenseSymPD(this);
+}
+
 bool hiopNlpDenseConstraints::eval_Jac_c(hiopVector& x, bool new_x, double* Jac_c)
 {
   hiopVector* x_user  = nlp_transformations.applyTox(x, new_x);
@@ -1017,6 +1028,22 @@ hiopMatrixDense* hiopNlpDenseConstraints::alloc_multivector_primal(int nrows, in
  *    hiopNlpMDS class implementation 
  * ***********************************************************************************
 */
+hiopDualsLsqUpdate* hiopNlpMDS::alloc_duals_lsq_updater()
+{
+#ifdef HIOP_USE_MAGMA
+  if(this->options->GetString("compute_mode")=="hybrid" ||
+     this->options->GetString("compute_mode")=="gpu"    ||
+     this->options->GetString("compute_mode")=="auto") {
+   return new hiopDualsLsqUpdateLinsysRedDenseSym(this);
+  } 
+#endif
+
+  //at this point use LAPACK Cholesky since we have that 
+  //i. cpu compute mode OR
+  //ii. MAGMA is not available to handle the LSQ linear system on the device
+  return new hiopDualsLsqUpdateLinsysRedDenseSymPD(this);
+}
+
 bool hiopNlpMDS::eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& Jac_c)
 {
   hiopMatrixMDS* pJac_c = dynamic_cast<hiopMatrixMDS*>(&Jac_c);
@@ -1178,6 +1205,11 @@ bool hiopNlpMDS::finalizeInitialization()
  *    hiopNlpSparse class implementation
  * ***********************************************************************************
 */
+hiopDualsLsqUpdate* hiopNlpSparse::alloc_duals_lsq_updater()
+{
+  return new hiopDualsLsqUpdateLinsysAugSparse(this);
+}
+
 bool hiopNlpSparse::eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& Jac_c)
 {
   hiopMatrixSparseTriplet* pJac_c = dynamic_cast<hiopMatrixSparseTriplet*>(&Jac_c);
@@ -1244,9 +1276,18 @@ bool hiopNlpSparse::eval_Jac_c_d_interface_impl(hiopVector& x,
     runStats.tmEvalJac_con.start();
 
     int nnz = cons_Jac->numberOfNonzeros();
-    bool bret = interface.eval_Jac_cons(n_vars, n_cons,
-                                      x_user->local_data_const(), new_x,
-                                      nnz, cons_Jac->i_row(), cons_Jac->j_col(), cons_Jac->M());
+    bool bret=false;
+    if(0==num_jac_eval_)
+    {
+      bret = interface.eval_Jac_cons(n_vars, n_cons,
+                                     x_user->local_data_const(), new_x,
+                                     nnz, cons_Jac->i_row(), cons_Jac->j_col(), nullptr);
+      num_jac_eval_++;
+    }
+    
+    bret = interface.eval_Jac_cons(n_vars, n_cons,
+                                   x_user->local_data_const(), new_x,
+                                   nnz, nullptr, nullptr, cons_Jac->M());
 
     //copy back to Jac_c and Jac_d
     pJac_c->copyRowsFrom(*cons_Jac, cons_eq_mapping_, n_cons_eq);
@@ -1285,10 +1326,19 @@ bool hiopNlpSparse::eval_Hess_Lagr(const hiopVector&  x, bool new_x, const doubl
 
     int nnzHSS = pHessL->numberOfNonzeros(), nnzHSD = 0;
 
+    if(0==num_hess_eval_)
+    {
+      bret = interface.eval_Hess_Lagr(n_vars, n_cons,
+                                      x.local_data_const(), new_x, obj_factor,
+                                      _buf_lambda->local_data(), new_lambdas,
+                                      nnzHSS, pHessL->i_row(), pHessL->j_col(), nullptr);
+      num_hess_eval_++;
+    }
+
     bret = interface.eval_Hess_Lagr(n_vars, n_cons,
                                     x.local_data_const(), new_x, obj_factor,
                                     _buf_lambda->local_data(), new_lambdas,
-                                    nnzHSS, pHessL->i_row(), pHessL->j_col(), pHessL->M());
+                                    nnzHSS, nullptr, nullptr, pHessL->M());
     assert(nnzHSS==pHessL->numberOfNonzeros());
 
   } else {
@@ -1303,11 +1353,13 @@ bool hiopNlpSparse::eval_Hess_Lagr(const hiopVector&  x, bool new_x, const doubl
 
 bool hiopNlpSparse::finalizeInitialization()
 {
-  if(!interface.get_sparse_blocks_info(m_nx,
-                                           m_nnz_sparse_Jaceq, m_nnz_sparse_Jacineq,
-                                           m_nnz_sparse_Hess_Lagr)) {
+  int nx = 0;
+  if(!interface.get_sparse_blocks_info(nx,
+                                       m_nnz_sparse_Jaceq, m_nnz_sparse_Jacineq,
+                                       m_nnz_sparse_Hess_Lagr)) {
     return false;
   }
+  assert(nx == n_vars);
   return hiopNlpFormulation::finalizeInitialization();
 }
 

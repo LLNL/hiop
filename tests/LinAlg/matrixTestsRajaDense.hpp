@@ -51,60 +51,60 @@
  *
  * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
  * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
+ * @author Robert Rutherford <robert.rutherford@pnnl.gov>, PNNL
  *
  */
 #pragma once
 
-#include "matrixTests.hpp"
+#include "matrixTestsDense.hpp"
 #include "hiopVectorPar.hpp"
 
 namespace hiop { namespace tests {
 
-class MatrixTestsRajaDense : public MatrixTests
+class MatrixTestsRajaDense : public MatrixTestsDense
 {
 public:
   MatrixTestsRajaDense() {}
   virtual ~MatrixTestsRajaDense(){}
 
 private:
+  // Matrix helper methods
+  virtual local_ordinal_type getNumLocRows(const hiop::hiopMatrixDense* a) override;
+  virtual local_ordinal_type getNumLocCols(const hiop::hiopMatrixDense* a) override;
   virtual void setLocalElement(
       hiop::hiopMatrixDense* a,
       local_ordinal_type i,
       local_ordinal_type j,
       real_type val) override;
-  virtual void setLocalElement(
-      hiop::hiopVector* x,
-      const local_ordinal_type i,
-      const real_type val) override;
   virtual void setLocalRow(
-      hiop::hiopMatrixDense *A,
+      hiop::hiopMatrixDense* A,
       const local_ordinal_type row,
       const real_type val) override;
-  virtual real_type getLocalElement(const hiop::hiopMatrixDense* a, local_ordinal_type i, local_ordinal_type j) override;
-  virtual real_type getLocalElement(const hiop::hiopVector *x, local_ordinal_type i) override;
-  virtual local_ordinal_type getNumLocRows(hiop::hiopMatrixDense* a) override;
-  virtual local_ordinal_type getNumLocCols(hiop::hiopMatrixDense* a) override;
-  virtual local_ordinal_type getLocalSize(const hiop::hiopVector *x) override;
-  virtual real_type* getLocalData(hiop::hiopMatrixDense* a) override;
+  virtual real_type getLocalElement(
+    const hiop::hiopMatrixDense* a,
+    local_ordinal_type i,
+    local_ordinal_type j) override;
+  virtual const real_type* getLocalDataConst(hiop::hiopMatrixDense* a) override;
   virtual int verifyAnswer(hiop::hiopMatrixDense* A, real_type answer) override;
   virtual int verifyAnswer(
       hiop::hiopMatrixDense* A,
       std::function<real_type(local_ordinal_type, local_ordinal_type)> expect) override;
+  MPI_Comm getMPIComm(hiop::hiopMatrixDense* A);
+  virtual bool reduceReturn(int failures, hiop::hiopMatrixDense* A) override;
+
+  // Vector helper methods
+  virtual void setLocalElement(
+    hiop::hiopVector* x,
+    const local_ordinal_type i,
+    const real_type val) override;
+  virtual real_type getLocalElement(
+    const hiop::hiopVector* x,
+    local_ordinal_type i) override;
+  virtual local_ordinal_type getLocalSize(const hiop::hiopVector *x) override;
   virtual int verifyAnswer(hiop::hiopVector *x, real_type answer) override;
   virtual int verifyAnswer(
       hiop::hiopVector *x,
       std::function<real_type(local_ordinal_type)> expect) override;
-  virtual bool reduceReturn(int failures, hiop::hiopMatrixDense* A) override;
-  virtual bool globalToLocalMap(
-      hiop::hiopMatrixDense* A,
-      const global_ordinal_type row,
-      const global_ordinal_type col,
-      local_ordinal_type &local_row,
-      local_ordinal_type &local_col) override;
-
-#ifdef HIOP_USE_MPI
-  MPI_Comm getMPIComm(hiop::hiopMatrixDense* A);
-#endif
 };
 
 }} // namespace hiop::tests
