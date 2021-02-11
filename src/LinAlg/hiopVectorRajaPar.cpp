@@ -303,11 +303,12 @@ void hiopVectorRajaPar::copyFrom(const double* local_array)
  */
 void hiopVectorRajaPar::copyFromStarting(int start_index_in_this, const double* v, int nv)
 {
+  assert(start_index_in_this+nv <= n_local_);
+
+  // If nothing to copy, return.  
   if(nv == 0)
     return;
 
-  assert(start_index_in_this+nv <= n_local_);
-  
   auto& rm = umpire::ResourceManager::getInstance();
   double* vv = const_cast<double*>(v); // <- cast away const
   rm.copy(data_dev_ + start_index_in_this, vv, nv*sizeof(double));
@@ -414,11 +415,12 @@ void hiopVectorRajaPar::copyToStarting(int start_index, hiopVector& dst)
  */
 void hiopVectorRajaPar::copyToStarting(hiopVector& vec, int start_index/*_in_dest*/)
 {
-  if(n_local_ == 0)
-    return;
-
   const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(vec);
   assert(start_index+n_local_ <= v.n_local_);
+
+  // If there is nothing to copy, return.
+  if(n_local_ == 0)
+    return;
 
   auto& rm = umpire::ResourceManager::getInstance();
   rm.copy(v.data_dev_ + start_index, this->data_dev_, this->n_local_*sizeof(double));
