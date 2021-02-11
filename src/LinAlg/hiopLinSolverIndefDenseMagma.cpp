@@ -127,7 +127,7 @@ namespace hiop
   {
     double det[2];
     int inert[3];
-    int job = 110;
+    int job = 100;
     int info;
 
     nlp_->runStats.linsolv.tmInertiaComp.start();
