@@ -321,8 +321,16 @@ public:
     return 0.;
   }
 
-  virtual void row_max_abs_value(hiopVector *ret_vec){assert(0&&"not yet");}
+  virtual void row_max_abs_value(hiopVector &ret_vec)
+  {
+    assert(false && "not provided because it is not needed");
+  }
   
+  virtual void scale_row(hiopVector &vec_scal, const bool inv_scale)
+  {
+    assert(false && "not provided because it is not needed");
+  }
+
   void copyRowsFrom(const hiopMatrix& src_in, const long long* rows_idxs, long long n_rows)
   {
     assert(false && "not needed / should not be used");

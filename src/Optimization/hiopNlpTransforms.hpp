@@ -356,7 +356,8 @@ private:
 class hiopNLPObjGradScaling : public hiopNlpTransformation
 {
 public:
-  hiopNLPObjGradScaling(const double max_grad, hiopVector* gradf);
+  hiopNLPObjGradScaling(const double max_grad, hiopVector& c, hiopVector& d, hiopVector& gradf,
+                        hiopMatrix& Jac_c, hiopMatrix& Jac_d);
   ~hiopNLPObjGradScaling();
 public:
   /** inherited from the parent class */
@@ -373,62 +374,59 @@ public:
   inline long long n_pre_local()  { return n_vars_local; }
 
   /* from scaled to unscaled objective*/
-  inline double apply_to_obj(double& f_in) { return f_in/obj_scale;}
+  inline double apply_to_obj(double& f_in) { return f_in/scale_factor_obj;}
   /* from unscaled to scaled objective*/
-  inline double apply_inv_to_obj(double& f_in) { return obj_scale*f_in;}
+  inline double apply_inv_to_obj(double& f_in) { return scale_factor_obj*f_in;}
   
   /// @brief return the scaling fact for objective
-  inline double get_obj_scale() const {return obj_scale;}
+  inline double get_obj_scale() const {return scale_factor_obj;}
 
   /* from scaled to unscaled*/
   inline hiopVector* apply_to_grad_obj(hiopVector& grad_in)
   {
-    grad_in.scale(1./obj_scale);
+    grad_in.scale(1./scale_factor_obj);
     return &grad_in;
   }
   
   /* from unscaled to scaled*/
   inline hiopVector* apply_inv_to_grad_obj(hiopVector& grad_in)
   {
-    grad_in.scale(obj_scale);
+    grad_in.scale(scale_factor_obj);
     return &grad_in;
   }
 
+  /* from scaled to unscaled*/
+  inline hiopMatrix* apply_to_jacob_eq(hiopMatrix& Jac_in, const int& m_in)
+  {
+    assert(n_eq==m_in);
+    Jac_in.scale_row(*scale_factor_Jacc, true);
+    return &Jac_in;
+  }
 
-  
+  /* from scaled to unscaled*/
+  inline hiopMatrix* apply_inv_to_jacob_eq(hiopMatrix& Jac_in, const int& m_in)
+  {
+    assert(n_eq==m_in);
+    Jac_in.scale_row(*scale_factor_Jacc, false);
+    return &Jac_in;
+  }
+
+  /* from scaled to unscaled*/
+  inline hiopMatrix* apply_to_jacob_ineq(hiopMatrix& Jac_in, const int& m_in)
+  {
+    assert(n_ineq==m_in);
+    Jac_in.scale_row(*scale_factor_Jacd, true);
+    return &Jac_in;
+  }
+
+  /* from scaled to unscaled*/
+  inline hiopMatrix* apply_inv_to_jacob_ineq(hiopMatrix& Jac_in, const int& m_in)
+  {
+    assert(n_ineq==m_in);
+    Jac_in.scale_row(*scale_factor_Jacd, false);
+    return &Jac_in;
+  }
 #if 0
-  /* from rs to fs */
-  inline double* apply_to_jacob_eq(double* Jac_in, const int& m_in)
-  {
-    Jacc_rs_ref = Jac_in;
-    assert(Jacc_fs->m()==m_in);
-    //applyToMatrix(Jac_in, m_in, Jacc_fs->get_M());
-    applyToMatrix(Jac_in, m_in, Jacc_fs->local_data());
-    return Jacc_fs->local_data();
-  }
-  inline double* apply_inv_to_jacob_eq(double* Jac_in, const int& m_in)
-  {
-    assert(Jacc_fs->m()==m_in);
-    applyInvToMatrix(Jac_in, m_in, Jacc_rs_ref);
-    return Jacc_rs_ref;
-  }
-  inline double* apply_to_jacob_ineq(double* Jac_in, const int& m_in)
-  {
-    Jacd_rs_ref = Jac_in;
-    assert(Jacd_fs->m()==m_in);
-    //applyToMatrix(Jac_in, m_in, Jacd_fs->get_M());
-    applyToMatrix(Jac_in, m_in, Jacd_fs->local_data());
-    return Jacd_fs->local_data();
-  }
-  inline double* apply_inv_to_jacob_ineq(double* Jac_in, const int& m_in)
-  {
-    assert(Jacd_fs->m()==m_in);
-    applyInvToMatrix(Jac_in, m_in, Jacd_rs_ref);
-    return Jacd_rs_ref;
-  }
-
-
-  
 protected: 
   void applyToArray   (const double* vec_rs, double* vec_fs);
   void applyInvToArray(const double* vec_fs, double* vec_rs);
@@ -439,10 +437,10 @@ protected:
 
 private:
   long long n_vars, n_vars_local;
-  double obj_scale;
-
+  long long n_eq, n_ineq;
+  double scale_factor_obj;
+  hiopVector *scale_factor_Jacc, *scale_factor_Jacd;
 #if 0
-  hiopVector *scal_jacc, *scal_jacd;
   hiopMatrix *Jacc_scaled, *Jacd_scaled;
   hiopMatrix *Jacc_unscaled, *Jacd_unscaled;
   hiopMatrix *Hess_scaled;

@@ -171,7 +171,9 @@ public:
 
   virtual double max_abs_value() = 0;
 
-  virtual void row_max_abs_value(hiopVector *ret_vec){assert(0&&"not yet");}
+  virtual void row_max_abs_value(hiopVector &ret_vec) = 0;
+
+  virtual void scale_row(hiopVector &vec_scal, const bool inv_scale) = 0;
 
   virtual bool isfinite() const = 0;
 

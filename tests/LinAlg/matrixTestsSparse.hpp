@@ -190,7 +190,7 @@ public:
     return fail;
   }
 
-  /// @brief Test function that returns matrix element with maximum absolute value
+  /// @brief Test function that returns max-norm of each row in this matrix
   bool matrixMaxAbsValue(
       hiop::hiopMatrixSparse& A,
       const int rank=0)
@@ -217,7 +217,63 @@ public:
     printMessage(fail, __func__);
     return fail;
   }
-  
+
+  /// @brief Test function that returns matrix element with maximum absolute value
+  bool matrix_row_max_abs_value(
+      hiop::hiopMatrixSparse& A,
+      hiop::hiopVector& x,
+      const int rank=0)
+  {
+    auto nnz = A.numberOfNonzeros();
+    auto val = getMatrixData(&A);
+    const local_ordinal_type last_row_idx = A.m()-1;
+
+    int fail = 0;
+
+    // the largest absolute value is allocated in the end of this sparse matrix
+    A.setToConstant(one);
+    maybeCopyFromDev(&A);
+    val[nnz - 1] = -two;
+    maybeCopyToDev(&A);
+    
+    A.row_max_abs_value(x);
+    
+    fail += verifyAnswer(&x,
+      [=] (local_ordinal_type i) -> real_type
+      {
+        const bool is_last_row = (i == last_row_idx);
+        return is_last_row ? two : one;
+      });
+
+    printMessage(fail, __func__);
+    return fail;
+  }
+
+  /// @brief Test function that scale each row of A
+  bool matrix_scale_row(
+      hiop::hiopMatrixSparse& A,
+      hiop::hiopVector& x,
+      const int rank=0)
+  {
+    auto nnz = A.numberOfNonzeros();
+    auto val = getMatrixData(&A);
+    
+    const real_type A_val = two;
+    const real_type x_val = three;
+    int fail = 0;
+
+    x.setToConstant(x_val);
+    A.setToConstant(A_val);
+
+    A.scale_row(x,false);
+
+    real_type expected = A_val*x_val;
+    fail += verifyAnswer(&A, expected);
+
+    printMessage(fail, __func__, rank);
+    return fail;
+  }
+
   /// @brief Test method that checks if matrix elements are finite
   bool matrixIsFinite(hiop::hiopMatrixSparse& A)
   {

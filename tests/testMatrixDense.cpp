@@ -246,6 +246,8 @@ static int runTests(const char* mem_space, MPI_Comm comm)
   fail += test.matrixTimesMatTrans(*A_mxn, *A_mxk_nodist, *A_kxn, rank);
   fail += test.matrixAddMatrix(*A_mxn, *B_mxn, rank);
   fail += test.matrixMaxAbsValue(*A_mxn, rank);
+  fail += test.matrix_row_max_abs_value(*A_mxn, *x_m_nodist, rank);
+  fail += test.matrix_scale_row(*A_mxn, *x_m_nodist, rank);
   fail += test.matrixIsFinite(*A_mxn, rank);
   fail += test.matrixNumRows(*A_mxn, M_local, rank); //<- no row partitioning
   fail += test.matrixNumCols(*A_mxn, N_global, rank);

@@ -172,8 +172,25 @@ public:
  
   virtual double max_abs_value() = 0;
 
-  virtual void row_max_abs_value(hiopVector *ret_vec) = 0;
-  
+  /**
+  * @brief Find the maximum absolute value in each row of `this` matrix, and return them in `ret_vec`
+  *
+  * @pre 'ret_vec' has exactly same number of rows as `this` matrix
+  */  
+  virtual void row_max_abs_value(hiopVector &ret_vec) = 0;
+
+  /**
+  * @brief Scale each row of `this` matrix, according to the component of `ret_vec`.
+  *
+  * if inv_scale=false:
+  *   this[i] = ret_vec[i]*this[i]
+  * else
+  *   this[i] = (1/ret_vec[i])*this[i]
+  *
+  * @pre 'ret_vec' has exactly same number of rows as `this` matrix
+  */  
+  virtual void scale_row(hiopVector &vec_scal, const bool inv_scale) = 0;
+
   /** @brief return false is any of the entry is a nan, inf, or denormalized */
   virtual bool isfinite() const = 0;
   

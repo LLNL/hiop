@@ -459,6 +459,57 @@ double hiopMatrixRajaSparseTriplet::max_abs_value()
   return maxv;
 }
 
+void hiopMatrixRajaSparseTriplet::row_max_abs_value(hiopVector& ret_vec)
+{
+  assert(ret_vec.get_size() == nrows_);
+  
+  auto& vec = dynamic_cast<hiopVectorRajaPar&>(ret_vec);
+  vec.setToZero();
+  
+  double* vd = vec.local_data();
+  
+  auto iRow = this->iRow_;
+  auto jCol = this->jCol_;
+  auto values = this->values_;
+  
+  ReduceArray<RAJA::ReduceMax<hiop_raja_reduce, double>> reducers(nrows_, 0.0);
+  RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, nnz_),
+    RAJA_LAMBDA(RAJA::Index_type itnz)
+    {
+      const int row_id = iRow[itnz];
+      reducers[row_id].max(std::abs(values[itnz]));
+    });
+
+  for (int i = 0; i < nrows_; ++i)
+  {
+    vd[i] = reducers[i].get();
+  }
+}
+
+void hiopMatrixRajaSparseTriplet::scale_row(hiopVector &vec_scal, const bool inv_scale)
+{
+  assert(vec_scal.get_size() == nrows_);
+  
+  auto& vec = dynamic_cast<hiopVectorRajaPar&>(ret_vec);
+  double* vd = vec.local_data();
+
+  auto iRow = this->iRow_;
+  auto jCol = this->jCol_;
+  auto values = this->values_;
+  
+  RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, nnz_),
+    RAJA_LAMBDA(RAJA::Index_type itnz)
+    {
+      double scal;
+      if(inv_scale) {
+        scal = 1./vd[iRow[itnz]];
+      } else {
+        scal = vd[iRow[itnz]];
+      }
+      values[itnz] *= scal;
+    });
+}
+
 /**
  * @brief Returns whether all the values of this matrix are finite or not.
  */
