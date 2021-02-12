@@ -6,6 +6,24 @@
 #include <cassert>
 #include <cstring> //for memcpy
 
+#ifdef HIOP_USE_MPI
+#include "mpi.h"
+
+#else
+#ifndef MPI_Comm
+#define MPI_Comm int
+#endif
+
+#ifndef MPI_COMM_WORLD
+#define MPI_COMM_WORLD 0
+#endif 
+
+#ifndef MPI_COMM_SELF 
+#define MPI_COMM_SELF 0
+#endif 
+#endif
+
+
 
 namespace hiop
 {
