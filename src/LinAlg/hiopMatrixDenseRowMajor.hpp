@@ -1,6 +1,5 @@
 // Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
-// Written by Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
@@ -45,6 +44,14 @@
 // herein do not necessarily state or reflect those of the United States Government or 
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or 
 // product endorsement purposes.
+
+/**
+ * @file hiopMatrixDenseRowMajor.hpp
+ *
+ * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
+ * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
+ *
+ */
 
 #pragma once
 #include "hiopMatrixDense.hpp"
@@ -164,7 +171,9 @@ public:
 
   virtual double max_abs_value();
 
-  virtual void row_max_abs_value(hiopVector *ret_vec){assert(0&&"not yet");}
+  virtual void row_max_abs_value(hiopVector &ret_vec);
+
+  virtual void scale_row(hiopVector &vec_scal, const bool inv_scale=false);
 
   virtual bool isfinite() const;
   

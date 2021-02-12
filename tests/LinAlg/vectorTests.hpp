@@ -672,6 +672,74 @@ public:
   }
 
   /**
+   * @brief Test: this[i] = min(this[i], constant)
+   */
+  bool vector_component_min(hiop::hiopVector& v, const int rank)
+  {
+    v.setToConstant(one);
+
+    v.component_min(half);
+
+    int fail = verifyAnswer(&v, half);
+    printMessage(fail, __func__, rank);
+
+    return reduceReturn(fail, &v);
+  }
+  
+  /**
+   * @brief Test: this[i] = min(this[i], x[i])
+   */
+  bool vector_component_min(hiop::hiopVector& v, hiop::hiopVector& x, const int rank)
+  {
+    assert(v.get_size() == x.get_size());
+    assert(getLocalSize(&v) == getLocalSize(&x));
+
+    v.setToConstant(one);
+    x.setToConstant(half);
+
+    v.component_min(x);
+
+    int fail = verifyAnswer(&v, half);
+    printMessage(fail, __func__, rank);
+
+    return reduceReturn(fail, &v);
+  }
+
+  /**
+   * @brief Test: this[i] = max(this[i], constant)
+   */
+  bool vector_component_max(hiop::hiopVector& v, const int rank)
+  {
+    v.setToConstant(one);
+
+    v.component_max(two);
+
+    int fail = verifyAnswer(&v, two);
+    printMessage(fail, __func__, rank);
+
+    return reduceReturn(fail, &v);
+  }
+  
+  /**
+   * @brief Test: this[i] = max(this[i], x[i])
+   */
+  bool vector_component_max(hiop::hiopVector& v, hiop::hiopVector& x, const int rank)
+  {
+    assert(v.get_size() == x.get_size());
+    assert(getLocalSize(&v) == getLocalSize(&x));
+
+    v.setToConstant(one);
+    x.setToConstant(two);
+
+    v.component_max(x);
+
+    int fail = verifyAnswer(&v, two);
+    printMessage(fail, __func__, rank);
+
+    return reduceReturn(fail, &v);
+  }
+
+  /**
    * @brief Test computing 1-norm ||v||  of vector v
    *                                   1
    */

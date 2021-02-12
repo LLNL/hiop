@@ -482,7 +482,8 @@ bool hiopNlpFormulation::finalizeInitialization()
   return bret;
 }
 
-bool hiopNlpFormulation::apply_scaling(hiopVector& gradf, hiopMatrix& Jac_c, hiopMatrix& Jac_d)
+bool hiopNlpFormulation::apply_scaling(hiopVector& c, hiopVector& d, hiopVector& gradf, 
+                                       hiopMatrix& Jac_c, hiopMatrix& Jac_d)
 {
   //check if we need to do scaling
   if("none" == options->GetString("scaling_type")) {
@@ -498,9 +499,8 @@ bool hiopNlpFormulation::apply_scaling(hiopVector& gradf, hiopMatrix& Jac_c, hio
     return false;
   }
 
-  nlp_scaling = new hiopNLPObjGradScaling(max_grad,&gradf);
+  nlp_scaling = new hiopNLPObjGradScaling(max_grad, c, d, gradf, Jac_c, Jac_d);
     
-  //  hiopNLPObjGradScaling* grad_scaling = new hiopNLPObjGradScaling(max_grad,&gradf);
   nlp_transformations.append(nlp_scaling);
   
   return true;

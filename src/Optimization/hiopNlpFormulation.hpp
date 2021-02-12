@@ -99,7 +99,8 @@ public:
   virtual ~hiopNlpFormulation();
 
   virtual bool finalizeInitialization();
-  virtual bool apply_scaling(hiopVector& gradf, hiopMatrix& Jac_c, hiopMatrix& Jac_d);
+  virtual bool apply_scaling(hiopVector& c, hiopVector& d, hiopVector& gradf, 
+                             hiopMatrix& Jac_c, hiopMatrix& Jac_d);
 
   /**
    * Wrappers for the interface calls. 

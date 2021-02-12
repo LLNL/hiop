@@ -1376,6 +1376,63 @@ double hiopMatrixRajaDense::max_abs_value()
   return maxv;
 }
 
+/**
+ * @brief Returns the value of the element with the maximum absolute value.
+ * 
+ * @todo Consider using BLAS call (<D>LANGE)
+ */
+void hiopMatrixRajaDense::row_max_abs_value(hiopVector &ret_vec)
+{  
+  double* data = data_dev_;
+  auto& vec = dynamic_cast<hiopVectorRajaPar&>(ret_vec);
+  double* vd = vec.local_data();
+
+  for (int irow = 0; irow < m_local_; irow++)
+  {
+    RAJA::ReduceMax<hiop_raja_reduce, double> norm(0.0);
+    RAJA::View<const double, RAJA::Layout<2>> Mview(data, m_local_, n_local_);
+    RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, n_local_),
+      RAJA_LAMBDA(RAJA::Index_type j)
+      {
+        norm.max(fabs(Mview(i,j));
+      });  
+    double maxv = static_cast<double>(norm.get());
+  
+#ifdef HIOP_USE_MPI
+    double maxvg;
+    int ierr=MPI_Allreduce(&maxv,&maxvg,1,MPI_DOUBLE,MPI_MAX,comm_); assert(ierr==MPI_SUCCESS);
+    maxv = maxvg;
+#endif
+    vd[irow] = maxv;
+  }
+}
+
+/// Scale each row of matrix, according to the scale factor in `ret_vec`
+void hiopMatrixRajaDense::scale_row(hiopVector &vec_scal, const bool inv_scale)
+{
+  double* data = data_dev_;
+  auto& vec = dynamic_cast<hiopVectorRajaPar&>(ret_vec);
+  double* vd = vec.local_data();
+  double scal;
+
+  for (int irow = 0; irow < m_local_; irow++)
+  {
+    if(inv_scale) {
+      scal = 1./vd[irow];
+    } else {
+      scal = vd[irow];
+    }
+    DSCAL(&n_local_, &scal, M_[irow*n_local_], &one);
+    
+    RAJA::View<const double, RAJA::Layout<2>> Mview(data, m_local_, n_local_);
+    RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, n_local_),
+      RAJA_LAMBDA(RAJA::Index_type j)
+      {
+        Mview(irow,j) *= scal; 
+      });  
+  }
+}
+
 #ifdef HIOP_DEEPCHECKS
 bool hiopMatrixRajaDense::assertSymmetry(double tol) const
 {

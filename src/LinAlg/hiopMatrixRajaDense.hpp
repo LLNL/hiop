@@ -52,6 +52,8 @@
  * @author Robert Rutherford <robert.rutherford@pnnl.gov>, PNNL
  * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
  * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
+ * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
+ * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
  *
  */
 #pragma once
@@ -194,8 +196,10 @@ public:
 
   virtual double max_abs_value();
 
-  virtual void row_max_abs_value(hiopVector *ret_vec){assert(0&&"not yet");}
-  
+  virtual void row_max_abs_value(hiopVector &ret_vec);
+
+  virtual void scale_row(hiopVector &vec_scal, const bool inv_scale=false);
+
   virtual bool isfinite() const;
   
   //virtual void print(int maxRows=-1, int maxCols=-1, int rank=-1) const;

@@ -774,6 +774,80 @@ void hiopVectorRajaPar::componentDiv_w_selectPattern( const hiopVector& vec, con
 }
 
 /**
+ * @brief Set `this` vector elemenwise to the minimum of itself and the given `constant`
+ */
+void hiopVectorRajaPar::component_min (const double constant)
+{
+  double* dd = data_dev_;
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      if(dd[i]>constant) {
+        dd[i] = constant;
+      }      
+    });
+}
+
+/**
+ * @brief Set `this` vector elemenwise to the minimum of itself and the corresponding component of 'vec'.
+ * 
+ * @pre `this` and `vec` have same partitioning.
+ * @post `vec` is not modified
+ * 
+ */
+void hiopVectorRajaPar::component_min (const hiopVector& vec)
+{
+  const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(vec);
+  assert(n_local_ == v.n_local_);
+  double* dd = data_dev_;
+  double* vd = v.data_dev_;
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      if(dd[i]>vd[i]) {
+        dd[i] = vd[i];
+      } 
+    });
+}
+
+/**
+ * @brief Set `this` vector elemenwise to the maximum of itself and the given `constant`
+ */
+void hiopVectorRajaPar::component_max (const double constant)
+{
+  double* dd = data_dev_;
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      if(dd[i]<constant) {
+        dd[i] = constant;
+      }      
+    });
+}
+
+/**
+ * @brief Set `this` vector elemenwise to the maximum of itself and the corresponding component of 'vec'.
+ * 
+ * @pre `this` and `vec` have same partitioning.
+ * @post `vec` is not modified
+ * 
+ */
+void hiopVectorRajaPar::component_max (const hiopVector& vec)
+{
+  const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(vec);
+  assert(n_local_ == v.n_local_);
+  double* dd = data_dev_;
+  double* vd = v.data_dev_;
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      if(dd[i]<vd[i]) {
+        dd[i] = vd[i];
+      } 
+    });
+}
+
+/**
  * @brief Scale `this` vector by `c` 
  * 
  * @note Consider implementing with BLAS call (<D>SCAL)

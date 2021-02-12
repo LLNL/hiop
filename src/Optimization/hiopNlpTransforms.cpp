@@ -202,35 +202,6 @@ copyFsToRs(const hiopInterfaceBase::NonlinearityType* fs, hiopInterfaceBase::Non
   }
 }
 
-#if 0 //old interface
-/* from rs to fs */
-void hiopFixedVarsRemover::applyToArray(const double* vec_rs, double* vec_fs)
-{
-  double* xl_fs_arr = xl_fs->local_data();
-  int rs_idx;
-  for(int i=0; i<fs2rs_idx_map.size(); i++) {
-    rs_idx = fs2rs_idx_map[i];
-    if(rs_idx<0) {
-      vec_fs[i] = xl_fs_arr[i];
-    } else {
-      vec_fs[i] = vec_rs[rs_idx];
-    }
-  }
-}
-
-/* from fs to rs */
-void hiopFixedVarsRemover::applyInvToArray(const double* x_fs, double* x_rs)
-{
-  int rs_idx;
-  for(int i=0; i<fs2rs_idx_map.size(); i++)  {
-    rs_idx = fs2rs_idx_map[i];
-    if(rs_idx>=0) {
-      x_rs[rs_idx]=x_fs[i];
-    }
-  }
-}
-#endif // 0
-
 /* from rs to fs */
 void hiopFixedVarsRemover::apply_to_vector(const hiopVector* vec_rs, hiopVector* vec_fs)
 {
@@ -312,6 +283,7 @@ hiopFixedVarsRelaxer(const hiopVector& xl,
   //xl_copy = xl.new_copy(); // no need to copy at this point
   //xu_copy = xu.new_copy(); // no need to copy at this point
 }
+
 hiopFixedVarsRelaxer::~hiopFixedVarsRelaxer()
 {
   if(xl_copy) delete xl_copy;
@@ -344,34 +316,37 @@ relax(const double& fixed_var_tol, const double& fixed_var_perturb, hiopVector& 
 /**
 * For class hiopNLPObjGradScaling
 */
-hiopNLPObjGradScaling::hiopNLPObjGradScaling(const double max_grad,
-                                             hiopVector* gradf)
-      : n_vars(gradf->get_size()), n_vars_local(gradf->get_local_size()),
-        obj_scale(1.)
-//        grad_unscaled(gradf), grad_scaled(nullptr)
-//        , Jacc_unscaled(nullptr), Jacd_unscaled(nullptr), Hess_unscaled(nullptr)
+hiopNLPObjGradScaling::hiopNLPObjGradScaling(const double max_grad, 
+                                             hiopVector& c, hiopVector& d, hiopVector& gradf,
+                                             hiopMatrix& Jac_c, hiopMatrix& Jac_d)
+      : n_vars(gradf.get_size()), n_vars_local(gradf.get_local_size()),
+        scale_factor_obj(1.),
+        n_eq(c.get_size()), n_ineq(d.get_size())
 {
-//  grad_scaled = grad_unscaled->new_copy();  
-
-  obj_scale = max_grad/gradf->infnorm();
-  if(obj_scale>1.)
+  scale_factor_obj = max_grad/gradf.infnorm();
+  if(scale_factor_obj>1.)
   {
-    obj_scale=1.;
-  }  
+    scale_factor_obj=1.;
+  }
   
-//  Jacc_scaled = Jacc_unscaled.new_copy();  
-//  Jacd_scaled = Jacd_unscaled.new_copy();
-//  Jacc_unscaled.row_max_abs_value(scal_jacc);   // missing function for all matrix classes
-//  Jacd_unscaled.row_max_abs_value(scal_jacd);   
+  scale_factor_Jacc = c.new_copy();
+  scale_factor_Jacd = d.new_copy();
+  
+  Jac_c.row_max_abs_value(*scale_factor_Jacc);
+  scale_factor_Jacc->invert();
+  scale_factor_Jacc->scale(max_grad);
+  scale_factor_Jacc->component_min(1.0);
 
-//  scal_jacc.invert();
-//  scal_jacc.scale(max_grad);
-//  scal_jacc.element_wise_min(1.0);              // missing function for all vector classes
+  Jac_d.row_max_abs_value(*scale_factor_Jacd);
+  scale_factor_Jacd->invert();
+  scale_factor_Jacd->scale(max_grad);
+  scale_factor_Jacd->component_min(1.0);
 }
 
 hiopNLPObjGradScaling::~hiopNLPObjGradScaling()
 {
-//  delete grad_scaled;
+  delete scale_factor_Jacc;
+  delete scale_factor_Jacd;
 }
 
 

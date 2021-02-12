@@ -334,7 +334,7 @@ startingProcedure(hiopIterate& it_ini,
     return false;
   }
   
-  if(nlp->apply_scaling(gradf, Jac_c, Jac_d)){
+  if(nlp->apply_scaling(c, d, gradf, Jac_c, Jac_d)){
     // do function evaluation again after add scaling 
     if(!this->evalNlp_noHess(it_ini, f, c, d, gradf, Jac_c, Jac_d)) {
       nlp->log->printf(hovError, "Failure in evaluating user provided NLP functions.");

@@ -251,6 +251,10 @@ int runTests(const char* mem_space, MPI_Comm comm)
   fail += test.vectorComponentMult(*x, *y, rank);
   fail += test.vectorComponentDiv(*x, *y, rank);
   fail += test.vectorComponentDiv_p_selectPattern(*x, *y, *z, rank);
+  fail += test.vector_component_min(*x, rank);
+  fail += test.vector_component_min(*x, *y, rank);
+  fail += test.vector_component_max(*x, rank);
+  fail += test.vector_component_max(*x, *y, rank);
   fail += test.vectorOnenorm(*x, rank);
   fail += test.vectorTwonorm(*x, rank);
   fail += test.vectorInfnorm(*x, rank);
