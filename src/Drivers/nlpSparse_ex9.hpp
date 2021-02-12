@@ -1,5 +1,3 @@
-//#include "nlpSparse_ex6.hpp"
-//#include "hiopInterfacePrimalDecomp.hpp"
 #include <cmath>
 #include <cstring> //for memcpy
 #include <cstdio>
@@ -65,9 +63,9 @@ public:
     nS_ = int(nx_/2);
     xi_ = new double[S_*nS_];
     for(int i=0;i<nS_*S_;i++) xi_[i] = 1.0;
-    for(int i=0;i<S_;i++){
-      xi_[i*nS_+nS_-1] = -1.0;
-    }
+    //for(int i=0;i<S_;i++){
+    //  xi_[i*nS_+nS_-1] = -1.0;
+    //}
   }
 
   Ex9(int nx,int S,int nS)
@@ -329,6 +327,7 @@ public:
 	    nnzit++;
 	  }
 	}
+        //printf("nnzJacS %d should be %d, \n",nnzJacS,nnzit);
         assert(nnzit == nnzJacS);
     }
     return true;
@@ -339,8 +338,6 @@ public:
                            const double* lambda, bool new_lambda,
                            const int& nnzHSS, int* iHSS, int* jHSS, double* MHSS)
   {
-      //Note: lambda is not used since all the constraints are linear and, therefore, do
-      //not contribute to the Hessian of the Lagrangian
       assert(nnzHSS == nx_+S_*nx_*2+S_*nx_);
       int nnzit = 0;
       if(iHSS!=NULL && jHSS!=NULL) {
@@ -362,10 +359,14 @@ public:
 	    iHSS[nnzit] = nx_+ i*nx_+j; jHSS[nnzit] = nx_+i*nx_+j; nnzit++;
 	  }
 	}      
+        assert(nnzHSS == nnzit);
       }
 
-      assert(nnzHSS == nnzit);
+
       nnzit = 0;
+      if(MHSS==NULL) {
+        printf("what?\n");
+      }
       if(MHSS!=NULL) {
         for(int i=0; i<nx_; i++)
 	{ 		
@@ -390,13 +391,15 @@ public:
 	    nnzit++;
 	  }
 	}
+        assert(nnzHSS == nnzit);
       }
-      assert(nnzHSS == nnzit);
+      //printf("nnzHSS %d should be %d, \n",nnzHSS,nnzit);
+
       return true;
   }
 
 
-  bool get_MPI_comm(MPI_Comm& comm_out) { comm_out=MPI_COMM_SELF; return true;};
+  //bool get_MPI_comm(MPI_Comm& comm_out) { comm_out=MPI_COMM_SELF; return true;};
 
   bool get_starting_point(const long long& n, double* x0)
   {

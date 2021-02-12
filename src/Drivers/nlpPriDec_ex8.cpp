@@ -145,6 +145,11 @@ hiopSolveStatus PriDecMasterProblemEx8::solve_master(double* x, const bool& incl
   hiopNlpDenseConstraints nlp(*my_nlp);
   //if(rank==0) printf("nlp formulation created\n");  
 
+  nlp.options->SetStringValue("duals_update_type", "linear"); // "lsq" or "linear" --> lsq hasn't been implemented yet.
+                                                            // it will be forced to use "linear" internally.
+  nlp.options->SetStringValue("duals_init", "zero"); // "lsq" or "zero"
+  nlp.options->SetStringValue("compute_mode", "cpu");
+  nlp.options->SetStringValue("KKTLinsys", "xdycyd");
   /*
   nlp.options->SetStringValue("dualsUpdateType", "linear");
   nlp.options->SetStringValue("dualsInitialization", "zero");

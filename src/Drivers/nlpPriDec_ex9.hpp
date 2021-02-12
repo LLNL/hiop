@@ -9,6 +9,13 @@
 
 //recourse MDS NLP
 #include "nlpPriDec_ex9_user_recourse.hpp"
+#ifdef HIOP_USE_MPI
+#include "mpi.h"
+#else
+#define MPI_COMM_WORLD 0
+#define MPI_Comm int
+#endif
+
 
 /**
  *

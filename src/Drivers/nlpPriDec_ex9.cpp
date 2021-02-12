@@ -47,10 +47,10 @@ PriDecMasterProblemEx9::solve_master(double* x,
   //nlp.options->SetStringValue("compute_mode", "hybrid");
   
   // what should the solver options be?
-  nlp.options->SetStringValue("dualsUpdateType", "linear");
-  nlp.options->SetStringValue("dualsInitialization", "zero");
+  //nlp.options->SetStringValue("dualsUpdateType", "linear");
+  //nlp.options->SetStringValue("dualsInitialization", "zero"); hiop does not understand?
 
-  nlp.options->SetStringValue("fixed_var", "relax");
+  //nlp.options->SetStringValue("fixed_var", "relax");
   nlp.options->SetStringValue("Hessian", "analytical_exact");
   nlp.options->SetStringValue("KKTLinsys", "xdycyd");
   //nlp.options->SetStringValue("compute_mode", "hybrid");
@@ -120,8 +120,8 @@ bool PriDecMasterProblemEx9::eval_f_rterm(size_t idx, const int& n, const double
   //assert("for debugging" && false); //for debugging purpose
   hiopNlpMDS nlp(*ex9_recourse);
 
-  nlp.options->SetStringValue("dualsUpdateType", "linear");
-  nlp.options->SetStringValue("dualsInitialization", "zero");
+  //nlp.options->SetStringValue("dualsUpdateType", "linear");
+  //nlp.options->SetStringValue("dualsInitialization", "zero");
 
   nlp.options->SetStringValue("Hessian", "analytical_exact");
   //nlp.options->SetStringValue("compute_mode", "hybrid");

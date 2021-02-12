@@ -44,7 +44,9 @@ namespace hiop
   }
   
   /* MPI engine for parallel solver
-   */ 
+   */
+
+#ifdef HIOP_USE_MPI
   hiopSolveStatus hiopAlgPrimalDecomposition::run()
   {
 
@@ -437,6 +439,13 @@ namespace hiop
       return Solve_Success;    
     }
   }
+#else
+  hiopSolveStatus hiopAlgPrimalDecomposition::run()
+  {
+    return run_single();//call the serial solver
+  }
+#endif
+
 
   /* Solve problem in serial with only one rank
    */

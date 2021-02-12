@@ -45,6 +45,15 @@ int main(int argc, char **argv)
   double x[nx+S*nx];
   Ex9 nlp_interface(nx,S,nS);
   hiopNlpSparse nlp(nlp_interface);
+  //nlp.options->SetStringValue("duals_update_type", "linear"); // "lsq" or "linear" --> lsq hasn't been implemented yet.
+                                                            // it will be forced to use "linear" internally.
+  //nlp.options->SetStringValue("duals_init", "lsq"); // "lsq" or "zero"
+  nlp.options->SetStringValue("compute_mode", "cpu");
+//  nlp.options->SetStringValue("compute_mode", "hybrid");
+  nlp.options->SetStringValue("KKTLinsys", "xdycyd");
+//  nlp.options->SetStringValue("KKTLinsys", "full");
+  //nlp.options->SetStringValue("write_kkt", "yes");
+
 
   hiopAlgFilterIPMNewton solver(&nlp);
   hiopSolveStatus status = solver.run();

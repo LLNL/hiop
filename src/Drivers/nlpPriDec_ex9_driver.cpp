@@ -10,6 +10,20 @@
 #include <cstdlib>
 #include <string>
 
+#ifdef HIOP_USE_MPI
+#include "mpi.h"
+
+#else
+#ifndef MPI_Comm
+#define MPI_Comm int
+#endif
+
+#ifndef MPI_COMM_WORLD
+#define MPI_COMM_WORLD 0
+#endif 
+#endif
+
+
 /**
  * Driver for example 8 that illustrates the use of hiop::hiopAlgPrimalDecomposition 
  * 
@@ -50,7 +64,7 @@ int main(int argc, char **argv)
   //printf("my rank starting3  %d\n",rank);
   auto status = pridec_solver.run();
 
-  /*
+  
   if(status!=Solve_Success){
     if(rank==0)
       printf("Solve was NOT successfull.");
@@ -58,7 +72,7 @@ int main(int argc, char **argv)
     if(rank==0)
       printf("Solve was successfull. Optimal value: %12.5e\n",
              pridec_solver.getObjective());
-  }*/
+  }
 
 #ifdef HIOP_USE_MAGMA
   magma_finalize();

@@ -10,6 +10,15 @@
 #include <cstdlib>
 #include <string>
 
+#ifdef HIOP_USE_MPI
+#include "mpi.h"
+
+#else
+#define MPI_Comm int
+#define MPI_COMM_WORLD 0
+#endif
+
+
 /**
  * Driver for example 8 that illustrates the use of hiop::hiopAlgPrimalDecomposition 
  * 
@@ -35,13 +44,14 @@ int main(int argc, char **argv)
 #ifdef HIOP_USE_MAGMA
   magma_init();
 #endif
-
+  int nx=20;
+  int nS=100;
+   
   //printf("here\n");
-  PriDecMasterProblemEx8 pridec_problem(20, 100);
+  PriDecMasterProblemEx8 pridec_problem(nx, nS);
   //printf("total ranks %d\n",comm_size);
   hiop::hiopAlgPrimalDecomposition pridec_solver(&pridec_problem, MPI_COMM_WORLD);
 
-  //printf("my rank starting 0 %d)\n",rank);
   auto status = pridec_solver.run();
 
   if(status!=Solve_Success){

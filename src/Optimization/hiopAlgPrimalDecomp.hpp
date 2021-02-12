@@ -1,4 +1,3 @@
-
 #ifndef HIOP_PRIDECOMP
 #define HIOP_PRIDECOMP
 
@@ -10,92 +9,99 @@
 #include <thread>
 #include <cmath>
 
+#ifdef HIOP_USE_MPI
+#include "mpi.h"
+#else
+#define MPI_COMM_WORLD 0
+#define MPI_Comm int
+#endif
+
 namespace hiop
 {
 
-/* This struct provides the info necessary for the recourse approximation function
- * buffer[n+1] contains both the function value and gradient w.r.t x
- * buffer[0] is the function value and buffer[1:n] the gradient
- * Contains send and receive functionalities for the values in buffer
- */
-struct ReqRecourseApprox
-{
-  ReqRecourseApprox() : ReqRecourseApprox(1) {}
-  ReqRecourseApprox(const int& n)
+#ifdef HIOP_USE_MPI
+  /* This struct provides the info necessary for the recourse approximation function
+   * buffer[n+1] contains both the function value and gradient w.r.t x
+   * buffer[0] is the function value and buffer[1:n] the gradient
+   * Contains send and receive functionalities for the values in buffer
+   */
+  struct ReqRecourseApprox
   {
-    n_=n;
-    buffer=new double[n_];
-  }
-
-  int test() 
-  {
-    int mpi_test_flag; MPI_Status mpi_status;
-    int ierr = MPI_Test(&request_, &mpi_test_flag, &mpi_status);
-    assert(MPI_SUCCESS == ierr);
-    return mpi_test_flag;
-  }
-  void post_recv(int tag, int rank_from, MPI_Comm comm)
-  {
-    int ierr = MPI_Irecv(buffer, n_+1, MPI_DOUBLE, rank_from, tag, comm, &request_);
-    assert(MPI_SUCCESS == ierr);
-  }
-  void post_send(int tag, int rank_to, MPI_Comm comm)
-  {
-    int ierr = MPI_Isend(buffer, n_+1, MPI_DOUBLE, rank_to, tag, comm, &request_);
-    assert(MPI_SUCCESS == ierr);
-  }
-  double value(){return buffer[0];}
-  void set_value(const double v){buffer[0]=v;}
-  double grad(int i){return buffer[i+1];}
-  void set_grad(const double* g)
-  {
-    for(int i=0;i<n_;i++)
+    ReqRecourseApprox() : ReqRecourseApprox(1) {}
+    ReqRecourseApprox(const int& n)
     {
-      buffer[i+1]=g[i];
+      n_=n;
+      buffer=new double[n_];
     }
-  }
 
-  MPI_Request request_;
-private:
-  int n_;
-  double* buffer;
-};
+    int test() 
+    {
+      int mpi_test_flag; MPI_Status mpi_status;
+      int ierr = MPI_Test(&request_, &mpi_test_flag, &mpi_status);
+      assert(MPI_SUCCESS == ierr);
+      return mpi_test_flag;
+    }
+    void post_recv(int tag, int rank_from, MPI_Comm comm)
+    {
+      int ierr = MPI_Irecv(buffer, n_+1, MPI_DOUBLE, rank_from, tag, comm, &request_);
+      assert(MPI_SUCCESS == ierr);
+    }
+    void post_send(int tag, int rank_to, MPI_Comm comm)
+    {
+      int ierr = MPI_Isend(buffer, n_+1, MPI_DOUBLE, rank_to, tag, comm, &request_);
+      assert(MPI_SUCCESS == ierr);
+    }
+    double value(){return buffer[0];}
+    void set_value(const double v){buffer[0]=v;}
+    double grad(int i){return buffer[i+1];}
+    void set_grad(const double* g)
+    {
+      for(int i=0;i<n_;i++)
+      {
+        buffer[i+1]=g[i];
+      }
+    }
 
+    MPI_Request request_;
+  private:
+    int n_;
+    double* buffer;
+  };
 
-
-/* This struct is used to post receive and request for contingency
- * index that is to be solved by the solver ranks.
- */
-struct ReqContingencyIdx
-{
-  ReqContingencyIdx() : ReqContingencyIdx(-1) {}
-  ReqContingencyIdx(const int& idx_)
+  /* This struct is used to post receive and request for contingency
+   * index that is to be solved by the solver ranks.
+   */
+  struct ReqContingencyIdx
   {
-    idx=idx_;
-  }
+    ReqContingencyIdx() : ReqContingencyIdx(-1) {}
+    ReqContingencyIdx(const int& idx_)
+    {
+      idx=idx_;
+    }
 
-  int test() {
-    int mpi_test_flag; MPI_Status mpi_status;
-    int ierr = MPI_Test(&request_, &mpi_test_flag, &mpi_status);
-    assert(MPI_SUCCESS == ierr);
-    return mpi_test_flag;
-  }
-  void post_recv(int tag, int rank_from, MPI_Comm comm)
-  {
-    int ierr = MPI_Irecv(&idx, 1, MPI_INT, rank_from, tag, comm, &request_);
-    assert(MPI_SUCCESS == ierr);
-  }
-  void post_send(int tag, int rank_to, MPI_Comm comm)
-  {
-    int ierr = MPI_Isend(&idx, 1, MPI_INT, rank_to, tag, comm, &request_);
-    assert(MPI_SUCCESS == ierr);
-  }
-  double value(){return idx;}
-  void set_idx(const int& i){idx = i;}
-  MPI_Request request_;
-private:
-  int idx;
-};
+    int test() {
+      int mpi_test_flag; MPI_Status mpi_status;
+      int ierr = MPI_Test(&request_, &mpi_test_flag, &mpi_status);
+      assert(MPI_SUCCESS == ierr);
+      return mpi_test_flag;
+    }
+    void post_recv(int tag, int rank_from, MPI_Comm comm)
+    {
+      int ierr = MPI_Irecv(&idx, 1, MPI_INT, rank_from, tag, comm, &request_);
+      assert(MPI_SUCCESS == ierr);
+    }
+    void post_send(int tag, int rank_to, MPI_Comm comm)
+    {
+      int ierr = MPI_Isend(&idx, 1, MPI_INT, rank_to, tag, comm, &request_);
+      assert(MPI_SUCCESS == ierr);
+    }
+    double value(){return idx;}
+    void set_idx(const int& i){idx = i;}
+    MPI_Request request_;
+  private:
+    int idx;
+  };
+#endif
 
 /* The main mpi engine for solving a class of problems with primal decomposition. 
  * The master problem is the user defined class that should be able to solve both
@@ -117,17 +123,20 @@ public:
 
     //determine rank and rank type
     //only two rank types for now, master and evaluator/worker
-    int ierr = MPI_Comm_rank(comm_world, &my_rank_); assert(ierr == MPI_SUCCESS);
-    int ret = MPI_Comm_size(MPI_COMM_WORLD, &comm_size_); assert(ret==MPI_SUCCESS);
-    if(my_rank_==0)
-    { 
-      my_rank_type_ = 0;
-    }else{
-      my_rank_type_ = 1;
-    }
+
+    #ifdef HIOP_USE_MPI
+      int ierr = MPI_Comm_rank(comm_world, &my_rank_); assert(ierr == MPI_SUCCESS);
+      int ret = MPI_Comm_size(MPI_COMM_WORLD, &comm_size_); assert(ret==MPI_SUCCESS);
+      if(my_rank_==0)
+      { 
+        my_rank_type_ = 0;
+      }else{
+        my_rank_type_ = 1;
+      }
+      request_ = new MPI_Request[4];   
+    #endif
 
     x_ = new double[n_];
-    request_ = new MPI_Request[4];   
   }
   virtual ~hiopAlgPrimalDecomposition()
   {
@@ -429,14 +438,16 @@ public:
 
 private:
   //MPI 
-  MPI_Comm comm_world_;
+#ifdef HIOP_USE_MPI
   MPI_Request* request_;
   MPI_Status status_; 
-  int  my_rank_;
-  int  comm_size_;
-
-  //master/solver(0), or worker(1:total rank)
+  int  my_rank_,comm_size_;
   int my_rank_type_;
+#endif
+
+  MPI_Comm comm_world_;
+  //master/solver(0), or worker(1:total rank)
+
   //maximum number of outer iterations, user specified
   int max_iter = 100;
   

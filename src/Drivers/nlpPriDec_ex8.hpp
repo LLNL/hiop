@@ -6,6 +6,7 @@
 #include "hiopInterface.hpp"
 #include "hiopNlpFormulation.hpp"
 #include "hiopAlgFilterIPM.hpp"
+
 #ifdef HIOP_USE_MPI
 #include "mpi.h"
 #else
@@ -173,7 +174,6 @@ private:
   double obj_;
   double* sol_; 
   // will need some encapsulation of the basecase NLP
-  // nlpMDSForm_ex4.hpp
 };
 
 #endif
