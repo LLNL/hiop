@@ -1834,7 +1834,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
     nlp->runStats.tmSolverInternal.stop(); //-----
 
     //notify logbar about the changes
-    _f_log = _f_nlp/nlp->get_obj_scale();
+    _f_log = _f_nlp;
 
     logbar->updateWithNlpInfo(*it_curr, _mu, _f_log, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d);
     //update residual
@@ -1870,7 +1870,7 @@ void hiopAlgFilterIPMNewton::outputIteration(int lsStatus, int lsNum)
 
   if(lsStatus==-1)
     nlp->log->printf(hovSummary, "%4d %14.7e %7.3e  %7.3e %6.2f  %7.3e  %7.3e  -(-)\n",
-		     iter_num, _f_nlp, _err_nlp_feas, _err_nlp_optim, log10(_mu), _alpha_dual, _alpha_primal);
+		     iter_num, _f_nlp/nlp->get_obj_scale(), _err_nlp_feas, _err_nlp_optim, log10(_mu), _alpha_dual, _alpha_primal);
   else {
     char stepType[2];
 
@@ -1880,7 +1880,7 @@ void hiopAlgFilterIPMNewton::outputIteration(int lsStatus, int lsNum)
     else strcpy(stepType, "?");
 
     nlp->log->printf(hovSummary, "%4d %14.7e %7.3e  %7.3e %6.2f  %7.3e  %7.3e  %d(%s)\n",
-		     iter_num, _f_nlp, _err_nlp_feas,
+		     iter_num, _f_nlp/nlp->get_obj_scale(), _err_nlp_feas,
 		     _err_nlp_optim, log10(_mu),
 		     _alpha_dual, _alpha_primal,
 		     lsNum, stepType);

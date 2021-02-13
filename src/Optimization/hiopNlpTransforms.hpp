@@ -634,6 +634,54 @@ public:
     return ret;
   }
 
+  hiopVector* apply_to_cons_eq(hiopVector& c_in, const int& m_in)
+  {
+    hiopVector* ret = &c_in;
+    for(std::list<hiopNlpTransformation*>::iterator it=list_trans_.begin(); it!=list_trans_.end(); ++it)
+      ret = (*it)->apply_to_cons_eq(*ret, m_in);
+    return ret;
+  }
+
+  hiopVector* apply_inv_to_cons_eq(hiopVector& c_in, const int& m_in)
+  {
+    hiopVector* ret = &c_in;
+    for(std::list<hiopNlpTransformation*>::iterator it=list_trans_.begin(); it!=list_trans_.end(); ++it)
+      ret = (*it)->apply_inv_to_cons_eq(*ret, m_in);
+    return ret;
+  }
+
+  hiopVector* apply_to_cons_ineq(hiopVector& c_in, const int& m_in)
+  {
+    hiopVector* ret = &c_in;
+    for(std::list<hiopNlpTransformation*>::iterator it=list_trans_.begin(); it!=list_trans_.end(); ++it)
+      ret = (*it)->apply_to_cons_ineq(*ret, m_in);
+    return ret;
+  }
+
+  hiopVector* apply_inv_to_cons_ineq(hiopVector& c_in, const int& m_in)
+  {
+    hiopVector* ret = &c_in;
+    for(std::list<hiopNlpTransformation*>::iterator it=list_trans_.begin(); it!=list_trans_.end(); ++it)
+      ret = (*it)->apply_inv_to_cons_ineq(*ret, m_in);
+    return ret;
+  }
+
+  hiopVector* apply_to_cons(hiopVector& c_in, const int& m_in)
+  {
+    hiopVector* ret = &c_in;
+    for(std::list<hiopNlpTransformation*>::iterator it=list_trans_.begin(); it!=list_trans_.end(); ++it)
+      ret = (*it)->apply_to_cons(*ret, m_in);
+    return ret;
+  }
+
+  hiopVector* apply_inv_to_cons(hiopVector& c_in, const int& m_in)
+  {
+    hiopVector* ret = &c_in;
+    for(std::list<hiopNlpTransformation*>::iterator it=list_trans_.begin(); it!=list_trans_.end(); ++it)
+      ret = (*it)->apply_inv_to_cons(*ret, m_in);
+    return ret;
+  }
+
   hiopMatrix* apply_to_jacob_eq(hiopMatrix& Jac_in, const int& m_in)
   {
     hiopMatrix* ret = &Jac_in;

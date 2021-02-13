@@ -349,9 +349,9 @@ hiopNLPObjGradScaling::hiopNLPObjGradScaling(const double max_grad,
 
 hiopNLPObjGradScaling::~hiopNLPObjGradScaling()
 {
-  delete scale_factor_c;
-  delete scale_factor_d;
-  delete scale_factor_cd;
+  if(scale_factor_c) delete scale_factor_c;
+  if(scale_factor_d) delete scale_factor_d;
+  if(scale_factor_cd) delete scale_factor_cd;
 }
 
 
