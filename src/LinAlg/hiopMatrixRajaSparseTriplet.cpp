@@ -462,39 +462,40 @@ double hiopMatrixRajaSparseTriplet::max_abs_value()
 void hiopMatrixRajaSparseTriplet::row_max_abs_value(hiopVector& ret_vec)
 {
   assert(ret_vec.get_size() == nrows_);
+  ret_vec.setToZero();
   
   auto& vec = dynamic_cast<hiopVectorRajaPar&>(ret_vec);
-  vec.setToZero();
-  
-  double* vd = vec.local_data();
+  vec.copyFromDev();
+  double* vd = vec.local_data_host();
   
   auto iRow = this->iRow_;
-  auto jCol = this->jCol_;
   auto values = this->values_;
-  
-  ReduceArray<RAJA::ReduceMax<hiop_raja_reduce, double>> reducers(nrows_, 0.0);
-  RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, nnz_),
+ 
+  for (int i = 0; i < nrows_; ++i)
+  {
+    RAJA::ReduceMax<hiop_raja_reduce, double> norm(0.0);
+    RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, nnz_),
     RAJA_LAMBDA(RAJA::Index_type itnz)
     {
       const int row_id = iRow[itnz];
-      reducers[row_id].max(std::abs(values[itnz]));
+      if(i==row_id) {
+        norm.max(std::abs(values[itnz]));
+      }
     });
 
-  for (int i = 0; i < nrows_; ++i)
-  {
-    vd[i] = reducers[i].get();
+    vd[i] = static_cast<double>(norm.get());
   }
+  vec.copyToDev();
 }
 
 void hiopMatrixRajaSparseTriplet::scale_row(hiopVector &vec_scal, const bool inv_scale)
 {
   assert(vec_scal.get_size() == nrows_);
   
-  auto& vec = dynamic_cast<hiopVectorRajaPar&>(ret_vec);
+  auto& vec = dynamic_cast<hiopVectorRajaPar&>(vec_scal);
   double* vd = vec.local_data();
 
   auto iRow = this->iRow_;
-  auto jCol = this->jCol_;
   auto values = this->values_;
   
   RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, nnz_),

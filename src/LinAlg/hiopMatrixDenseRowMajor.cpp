@@ -798,7 +798,7 @@ void hiopMatrixDenseRowMajor::row_max_abs_value(hiopVector &ret_vec)
   
   for(int irow=0; irow<m_local_; irow++)
   {
-    maxv = DLANGE(&norm, &one, &n_local_, M_[irow*n_local_], &n_local_, nullptr);
+    maxv = DLANGE(&norm, &one, &n_local_, M_[0]+(irow*n_local_), &one, nullptr);
 #ifdef HIOP_USE_MPI
     double maxvg;
     int ierr=MPI_Allreduce(&maxv,&maxvg,1,MPI_DOUBLE,MPI_MAX,comm_); assert(ierr==MPI_SUCCESS);
@@ -825,7 +825,7 @@ void hiopMatrixDenseRowMajor::scale_row(hiopVector &vec_scal, const bool inv_sca
     } else {
       scal = vd[irow];
     }
-    DSCAL(&n_local_, &scal, M_[irow*n_local_], &one);        
+    DSCAL(&n_local_, &scal, M_[0]+(irow*n_local_), &one);        
   }  
 }
 

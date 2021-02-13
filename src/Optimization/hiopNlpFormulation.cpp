@@ -166,7 +166,7 @@ hiopNlpFormulation::~hiopNlpFormulation()
   delete cons_body_;
   delete cons_Jac_;
   delete cons_lambdas_;
-  if(nlp_scaling) delete nlp_scaling;
+//  if(nlp_scaling) delete nlp_scaling;  // deleted inside nlp_transformations
 }
 
 bool hiopNlpFormulation::finalizeInitialization()
@@ -500,7 +500,15 @@ bool hiopNlpFormulation::apply_scaling(hiopVector& c, hiopVector& d, hiopVector&
   }
 
   nlp_scaling = new hiopNLPObjGradScaling(max_grad, c, d, gradf, Jac_c, Jac_d);
-    
+  
+  // FIXME NY: scale the constraint lb and ub  
+  c_rhs = nlp_scaling->apply_inv_to_cons_eq(*c_rhs, n_cons_eq);
+  dl = nlp_scaling->apply_inv_to_cons_ineq(*dl, n_cons_ineq);
+  du = nlp_scaling->apply_inv_to_cons_ineq(*du, n_cons_ineq);
+
+  c_rhs->copyToDev();
+  dl->copyToDev();  du->copyToDev();
+
   nlp_transformations.append(nlp_scaling);
   
   return true;
@@ -692,7 +700,7 @@ bool hiopNlpFormulation::eval_c_d(hiopVector& x, bool new_x, hiopVector& c, hiop
       c.local_data()[i] = body[cons_eq_mapping_[i]];
     }
     // scale c
-    c = *(nlp_transformations.apply_inv_to_cons_ineq(c, n_cons_eq));
+    c = *(nlp_transformations.apply_inv_to_cons_eq(c, n_cons_eq));
     
     for(int i=0; i<n_cons_ineq; ++i) {
       d.local_data()[i] = body[cons_ineq_mapping_[i]];
@@ -798,8 +806,8 @@ void hiopNlpFormulation::user_callback_solution(hiopSolveStatus status,
 						const hiopVector& x,
 						const hiopVector& z_L,
 						const hiopVector& z_U,
-						const hiopVector& c,
-						const hiopVector& d,
+						hiopVector& c,
+						hiopVector& d,
 						const hiopVector& y_c,
 						const hiopVector& y_d,
 						double obj_value) 
@@ -813,9 +821,13 @@ void hiopNlpFormulation::user_callback_solution(hiopSolveStatus status,
   }
   copy_EqIneq_to_cons(y_c, y_d, *cons_lambdas_);
   
-  //concatenate 'c' and 'd' into user's constrainty body
+  //concatenate 'c' and 'd' into user's constraint body
   if(cons_body_ == nullptr) {
     cons_body_ = hiop::LinearAlgebraFactory::createVector(n_cons);
+  }
+  if(nlp_scaling) {
+    c = *(nlp_transformations.apply_inv_to_cons_eq(c, n_cons_eq));
+    d = *(nlp_transformations.apply_inv_to_cons_ineq(d, n_cons_ineq));
   }
   copy_EqIneq_to_cons(c, d, *cons_body_);
 
@@ -1478,7 +1490,7 @@ bool hiopNlpSparse::eval_Hess_Lagr(const hiopVector&  x, bool new_x, const doubl
     }
 
     bret = interface.eval_Hess_Lagr(n_vars, n_cons,
-                                    x.local_data_const(), new_x, obj_factor,
+                                    x.local_data_const(), new_x, obj_factor_with_scale,
                                     _buf_lambda->local_data(), new_lambdas,
                                     nnzHSS, nullptr, nullptr, pHessL->M());
     assert(nnzHSS==pHessL->numberOfNonzeros());

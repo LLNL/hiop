@@ -150,7 +150,7 @@ public:
   void user_callback_solution(hiopSolveStatus status,
 			      const hiopVector& x,
 			      const hiopVector& z_L, const hiopVector& z_U,
-			      const hiopVector& c, const hiopVector& d,
+			      hiopVector& c, hiopVector& d,
 			      const hiopVector& yc, const hiopVector& yd,
 			      double obj_value);
 

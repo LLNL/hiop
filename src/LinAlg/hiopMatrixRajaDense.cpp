@@ -1383,10 +1383,15 @@ double hiopMatrixRajaDense::max_abs_value()
  */
 void hiopMatrixRajaDense::row_max_abs_value(hiopVector &ret_vec)
 {  
-  double* data = data_dev_;
-  auto& vec = dynamic_cast<hiopVectorRajaPar&>(ret_vec);
-  double* vd = vec.local_data();
+  assert(ret_vec.get_size() == m());
+  ret_vec.setToZero();
 
+  auto& vec = dynamic_cast<hiopVectorRajaPar&>(ret_vec);
+  vec.copyFromDev();
+  double* vd = vec.local_data_host();
+  
+  double* data = data_dev_;
+  
   for (int irow = 0; irow < m_local_; irow++)
   {
     RAJA::ReduceMax<hiop_raja_reduce, double> norm(0.0);
@@ -1394,7 +1399,7 @@ void hiopMatrixRajaDense::row_max_abs_value(hiopVector &ret_vec)
     RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, n_local_),
       RAJA_LAMBDA(RAJA::Index_type j)
       {
-        norm.max(fabs(Mview(i,j));
+        norm.max(fabs(Mview(irow,j)));
       });  
     double maxv = static_cast<double>(norm.get());
   
@@ -1405,14 +1410,16 @@ void hiopMatrixRajaDense::row_max_abs_value(hiopVector &ret_vec)
 #endif
     vd[irow] = maxv;
   }
+  vec.copyToDev();
 }
 
 /// Scale each row of matrix, according to the scale factor in `ret_vec`
 void hiopMatrixRajaDense::scale_row(hiopVector &vec_scal, const bool inv_scale)
 {
   double* data = data_dev_;
-  auto& vec = dynamic_cast<hiopVectorRajaPar&>(ret_vec);
-  double* vd = vec.local_data();
+  auto& vec = dynamic_cast<hiopVectorRajaPar&>(vec_scal);
+  vec.copyFromDev();
+  double* vd = vec.local_data_host();
   double scal;
 
   for (int irow = 0; irow < m_local_; irow++)
@@ -1422,15 +1429,15 @@ void hiopMatrixRajaDense::scale_row(hiopVector &vec_scal, const bool inv_scale)
     } else {
       scal = vd[irow];
     }
-    DSCAL(&n_local_, &scal, M_[irow*n_local_], &one);
     
-    RAJA::View<const double, RAJA::Layout<2>> Mview(data, m_local_, n_local_);
+    RAJA::View<double, RAJA::Layout<2>> Mview(data, m_local_, n_local_);
     RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, n_local_),
       RAJA_LAMBDA(RAJA::Index_type j)
       {
         Mview(irow,j) *= scal; 
-      });  
+      });
   }
+  vec.copyToDev();
 }
 
 #ifdef HIOP_DEEPCHECKS
