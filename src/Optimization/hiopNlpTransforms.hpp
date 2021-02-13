@@ -111,8 +111,8 @@ public:
   //the following two are for when the underlying NLP formulation works with full body constraints,
   //that is, evaluates both equalities and inequalities at once (a.k.a. one-call constraints and
   //and Jacobian evaluations)
-  virtual inline hiopVector* apply_to_cons            (hiopVector&  cons_in, const int* m_in) { return &cons_in; }
-  virtual inline hiopVector* apply_inv_to_cons        (hiopVector&  cons_in, const int* m_in) { return &cons_in; }
+  virtual inline hiopVector* apply_to_cons            (hiopVector&  cons_in, const int& m_in) { return &cons_in; }
+  virtual inline hiopVector* apply_inv_to_cons        (hiopVector&  cons_in, const int& m_in) { return &cons_in; }
 
   virtual inline hiopMatrix* apply_to_jacob_eq        (hiopMatrix& Jac_in, const int& m_in) { return &Jac_in; }
   virtual inline hiopMatrix* apply_inv_to_jacob_eq    (hiopMatrix& Jac_in, const int& m_in) { return &Jac_in; }
@@ -373,13 +373,13 @@ public:
   inline long long n_post_local()  { return n_vars_local; }
   inline long long n_pre_local()  { return n_vars_local; }
 
+  /// @brief return the scaling fact for objective
+  inline double get_obj_scale() const {return scale_factor_obj;}
+
   /* from scaled to unscaled objective*/
   inline double apply_to_obj(double& f_in) { return f_in/scale_factor_obj;}
   /* from unscaled to scaled objective*/
   inline double apply_inv_to_obj(double& f_in) { return scale_factor_obj*f_in;}
-  
-  /// @brief return the scaling fact for objective
-  inline double get_obj_scale() const {return scale_factor_obj;}
 
   /* from scaled to unscaled*/
   inline hiopVector* apply_to_grad_obj(hiopVector& grad_in)
@@ -387,7 +387,7 @@ public:
     grad_in.scale(1./scale_factor_obj);
     return &grad_in;
   }
-  
+
   /* from unscaled to scaled*/
   inline hiopVector* apply_inv_to_grad_obj(hiopVector& grad_in)
   {
@@ -396,10 +396,58 @@ public:
   }
 
   /* from scaled to unscaled*/
+  inline hiopVector* apply_to_cons_eq(hiopVector& c_in, const int& m_in)
+  { 
+    assert(n_eq==m_in);
+    c_in.componentDiv(*scale_factor_c);
+    return &c_in;
+  }
+
+  /* from unscaled to scaled*/
+  inline hiopVector* apply_inv_to_cons_eq(hiopVector& c_in, const int& m_in) 
+  { 
+    assert(n_eq==m_in);
+    c_in.componentMult(*scale_factor_c);
+    return &c_in;
+  }
+  
+  /* from scaled to unscaled*/
+  inline hiopVector* apply_to_cons_ineq(hiopVector& d_in, const int& m_in)
+  { 
+    assert(n_ineq==m_in);
+    d_in.componentDiv(*scale_factor_d);
+    return &d_in;
+  }
+
+  /* from unscaled to scaled*/
+  inline hiopVector* apply_inv_to_cons_ineq(hiopVector& d_in, const int& m_in)
+  { 
+    assert(n_ineq==m_in);
+    d_in.componentMult(*scale_factor_d);
+    return &d_in;
+  }
+
+  /* from scaled to unscaled*/
+  inline hiopVector* apply_to_cons(hiopVector& cd_in, const int& m_in)
+  { 
+    assert(n_ineq+n_eq==m_in);
+    cd_in.componentDiv(*scale_factor_cd);
+    return &cd_in;
+  }
+
+  /* from unscaled to scaled*/
+  inline hiopVector* apply_inv_to_cons(hiopVector& cd_in, const int& m_in)
+  { 
+    assert(n_ineq+n_eq==m_in);
+    cd_in.componentMult(*scale_factor_cd);
+    return &cd_in;
+  }
+
+  /* from scaled to unscaled*/
   inline hiopMatrix* apply_to_jacob_eq(hiopMatrix& Jac_in, const int& m_in)
   {
     assert(n_eq==m_in);
-    Jac_in.scale_row(*scale_factor_Jacc, true);
+    Jac_in.scale_row(*scale_factor_c, true);
     return &Jac_in;
   }
 
@@ -407,7 +455,7 @@ public:
   inline hiopMatrix* apply_inv_to_jacob_eq(hiopMatrix& Jac_in, const int& m_in)
   {
     assert(n_eq==m_in);
-    Jac_in.scale_row(*scale_factor_Jacc, false);
+    Jac_in.scale_row(*scale_factor_c, false);
     return &Jac_in;
   }
 
@@ -415,7 +463,7 @@ public:
   inline hiopMatrix* apply_to_jacob_ineq(hiopMatrix& Jac_in, const int& m_in)
   {
     assert(n_ineq==m_in);
-    Jac_in.scale_row(*scale_factor_Jacd, true);
+    Jac_in.scale_row(*scale_factor_d, true);
     return &Jac_in;
   }
 
@@ -423,7 +471,7 @@ public:
   inline hiopMatrix* apply_inv_to_jacob_ineq(hiopMatrix& Jac_in, const int& m_in)
   {
     assert(n_ineq==m_in);
-    Jac_in.scale_row(*scale_factor_Jacd, false);
+    Jac_in.scale_row(*scale_factor_d, false);
     return &Jac_in;
   }
 #if 0
@@ -439,7 +487,7 @@ private:
   long long n_vars, n_vars_local;
   long long n_eq, n_ineq;
   double scale_factor_obj;
-  hiopVector *scale_factor_Jacc, *scale_factor_Jacd;
+  hiopVector *scale_factor_c, *scale_factor_d, *scale_factor_cd;
 #if 0
   hiopMatrix *Jacc_scaled, *Jacd_scaled;
   hiopMatrix *Jacc_unscaled, *Jacd_unscaled;

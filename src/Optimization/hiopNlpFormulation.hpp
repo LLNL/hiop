@@ -122,8 +122,8 @@ protected:
 public:
   virtual bool eval_Hess_Lagr(const hiopVector& x, bool new_x, 
 			      const double& obj_factor,  
-			      const double* lambda_eq, 
-			      const double* lambda_ineq, 
+			      const hiopVector& lambda_eq, 
+			      const hiopVector& lambda_ineq, 
 			      bool new_lambdas, 
 			      hiopMatrix& Hess_L)=0;
   /* starting point */
@@ -334,8 +334,8 @@ public:
   virtual bool eval_Hess_Lagr(const hiopVector& x,
 			      bool new_x,
 			      const double& obj_factor, 
-			      const double* lambda_eq,
-			      const double* lambda_ineq,
+			      const hiopVector& lambda_eq,
+			      const hiopVector& lambda_ineq,
 			      bool new_lambda, 
 			      hiopMatrix& Hess_L)
   {
@@ -388,7 +388,6 @@ public:
   virtual bool eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& Jac_c);
   virtual bool eval_Jac_d(hiopVector& x, bool new_x, hiopMatrix& Jac_d);
 
-
 protected:
   //calls specific hiopInterfaceXXX::eval_Jac_cons and deals with specializations of hiopMatrix arguments
   virtual bool eval_Jac_c_d_interface_impl(hiopVector& x, bool new_x, hiopMatrix& Jac_c, hiopMatrix& Jac_d);
@@ -396,8 +395,8 @@ public:
   virtual bool eval_Hess_Lagr(const hiopVector& x,
 			      bool new_x,
 			      const double& obj_factor,
-			      const double* lambda_eq,
-			      const double* lambda_ineq,
+			      const hiopVector& lambda_eq,
+			      const hiopVector& lambda_ineq,
 			      bool new_lambdas,
 			      hiopMatrix& Hess_L);
   
@@ -469,8 +468,8 @@ public:
   virtual bool eval_Hess_Lagr(const hiopVector& x,
                             bool new_x,
                             const double& obj_factor,
-                            const double* lambda_eq,
-                            const double* lambda_ineq,
+                            const hiopVector& lambda_eq,
+                            const hiopVector& lambda_ineq,
                             bool new_lambdas,
                             hiopMatrix& Hess_L);
   /* Allocates the LSQ duals update class. */

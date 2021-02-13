@@ -224,8 +224,11 @@ public:
       hiop::hiopVector& x,
       const int rank=0)
   {
-    auto nnz = A.numberOfNonzeros();
+    const local_ordinal_type nnz = A.numberOfNonzeros();
+    const local_ordinal_type* iRow = getRowIndices(&A);
+    const local_ordinal_type* jCol = getColumnIndices(&A);
     auto val = getMatrixData(&A);
+    
     const local_ordinal_type last_row_idx = A.m()-1;
 
     int fail = 0;
@@ -255,7 +258,9 @@ public:
       hiop::hiopVector& x,
       const int rank=0)
   {
-    auto nnz = A.numberOfNonzeros();
+    const local_ordinal_type nnz = A.numberOfNonzeros();
+    const local_ordinal_type* iRow = getRowIndices(&A);
+    const local_ordinal_type* jCol = getColumnIndices(&A);
     auto val = getMatrixData(&A);
     
     const real_type A_val = two;
@@ -361,7 +366,7 @@ public:
 
           // Counting nonzero terms of the matrix product innermost loop
           // \sum_k A_ik * A^T_jk / D_kk
-          while(iRow[rs_di] == d_i && iRow[rs_dj] == d_j)
+          while(rs_di < nnz && rs_dj < nnz && iRow[rs_di] == d_i && iRow[rs_dj] == d_j)
           {
             if(jCol[rs_di] == jCol[rs_dj])
             {
@@ -375,7 +380,7 @@ public:
             else
             {
               rs_dj++;
-            }
+            }            
           }
           return W_val + (alpha * A_val * A_val / d_val * count);
         }
@@ -443,7 +448,7 @@ public:
 
         // Counting nonzero terms of the matrix product innermost loop
         // \sum_k A_ik * B^T_jk 
-        while(A_iRow[rs_di] == d_i && B_iRow[rs_dj] == d_j)
+        while(rs_di < A_nnz && rs_dj < B_nnz && A_iRow[rs_di] == d_i && B_iRow[rs_dj] == d_j)
         {
           if(A_jCol[rs_di] == B_jCol[rs_dj])
           {
@@ -542,7 +547,7 @@ public:
 
           // Counting nonzero terms of the matrix product innermost loop
           // \sum_k A_ik * B^T_jk / D_kk
-          while(A_iRow[rs_di] == d_i && B_iRow[rs_dj] == d_j)
+          while(rs_di < A_nnz && rs_dj < B_nnz && A_iRow[rs_di] == d_i && B_iRow[rs_dj] == d_j)
           {
             if(A_jCol[rs_di] == B_jCol[rs_dj])
             {
