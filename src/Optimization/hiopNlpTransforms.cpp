@@ -329,24 +329,29 @@ hiopNLPObjGradScaling::hiopNLPObjGradScaling(const double max_grad,
     scale_factor_obj=1.;
   }
   
-  scale_factor_Jacc = c.new_copy();
-  scale_factor_Jacd = d.new_copy();
+  scale_factor_c = c.new_copy();
+  scale_factor_d = d.new_copy();
+  scale_factor_cd = LinearAlgebraFactory::createVector(n_eq + n_ineq);
   
-  Jac_c.row_max_abs_value(*scale_factor_Jacc);
-  scale_factor_Jacc->invert();
-  scale_factor_Jacc->scale(max_grad);
-  scale_factor_Jacc->component_min(1.0);
+  Jac_c.row_max_abs_value(*scale_factor_c);
+  scale_factor_c->invert();
+  scale_factor_c->scale(max_grad);
+  scale_factor_c->component_min(1.0);
 
-  Jac_d.row_max_abs_value(*scale_factor_Jacd);
-  scale_factor_Jacd->invert();
-  scale_factor_Jacd->scale(max_grad);
-  scale_factor_Jacd->component_min(1.0);
+  Jac_d.row_max_abs_value(*scale_factor_d);
+  scale_factor_d->invert();
+  scale_factor_d->scale(max_grad);
+  scale_factor_d->component_min(1.0);
+
+  scale_factor_cd->copyFromStarting(0,    scale_factor_c->local_data_const(),   n_eq);
+  scale_factor_cd->copyFromStarting(n_eq, scale_factor_d->local_data_const(), n_ineq);
 }
 
 hiopNLPObjGradScaling::~hiopNLPObjGradScaling()
 {
-  delete scale_factor_Jacc;
-  delete scale_factor_Jacd;
+  delete scale_factor_c;
+  delete scale_factor_d;
+  delete scale_factor_cd;
 }
 
 
