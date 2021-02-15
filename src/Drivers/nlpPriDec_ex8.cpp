@@ -31,8 +31,7 @@ bool Ex8::eval_f(const long long& n, const double* x, bool new_x, double& obj_va
   for(int i=0; i<ns; i++) obj_value += (x[i]-1.)*(x[i]-1.);
   obj_value *= 0.5;
 
-  if(include_r)
-  {
+  if(include_r) {
     assert(evaluator_->get_rgrad()!=NULL);
     evaluator_->eval_f(ns, x, new_x, obj_value);
   }
@@ -52,12 +51,10 @@ bool Ex8::eval_grad_f(const long long& n, const double* x, bool new_x, double* g
 {
   //! assert(ns>=4); assert(Q->n()==ns/4); assert(Q->m()==ns/4);
   //x_i - 0.5 
-  for(int i=0; i<ns; i++)
-  {
+  for(int i=0; i<ns; i++) {
     gradf[i] = x[i]-1.;
   }
-  if(include_r)
-  {
+  if(include_r) {
     assert(evaluator_->get_rgrad()!=NULL);
     evaluator_->eval_grad(ns, x, new_x, gradf);
   }
@@ -101,15 +98,13 @@ bool Ex8::quad_is_defined()
 bool Ex8::set_quadratic_terms(const int& n, const RecourseApproxEvaluator* evaluator)
 {
   assert(ns == n);
-  if(evaluator_==NULL)
-  {
+  if(evaluator_==NULL) {
     evaluator_ = new RecourseApproxEvaluator(n, S, evaluator->get_rval(), evaluator->get_rgrad(), 
                                              evaluator->get_rhess(), evaluator->get_x0());
     return true;
   }
 
-  if(evaluator->get_rgrad()!=NULL)
-  {
+  if(evaluator->get_rgrad()!=NULL) {
     evaluator_->set_rval(evaluator->get_rval());    
     evaluator_->set_rgrad(ns,evaluator->get_rgrad());
     evaluator_->set_rhess(ns,evaluator->get_rhess());  
@@ -129,21 +124,18 @@ hiopSolveStatus PriDecMasterProblemEx8::solve_master(double* x, const bool& incl
 {
   obj_=-1e+20;
   hiopSolveStatus status;
-  if(my_nlp==NULL)
-  {
+  if(my_nlp==NULL) {
     my_nlp = new Ex8(n_,S_);
   }
 
   bool ierr = my_nlp->set_include(include_r);
-  if(include_r){
+  if(include_r) {
     assert(my_nlp->quad_is_defined());
   }
   // check to see if the resource value and gradient are correct
   //printf("recourse value: is %18.12e)\n", rval_);
   //assert("for debugging" && false); //for debugging purpose
-  //if(rank==0) printf("interface created\n");
   hiopNlpDenseConstraints nlp(*my_nlp);
-  //if(rank==0) printf("nlp formulation created\n");  
 
   nlp.options->SetStringValue("duals_update_type", "linear"); // "lsq" or "linear" --> lsq hasn't been implemented yet.
                                                             // it will be forced to use "linear" internally.
@@ -157,7 +149,6 @@ hiopSolveStatus PriDecMasterProblemEx8::solve_master(double* x, const bool& incl
   nlp.options->SetStringValue("KKTLinsys", "xdycyd");
   nlp.options->SetStringValue("compute_mode", "hybrid");
 
-
   nlp.options->SetNumericValue("mu0", 1e-1);
   nlp.options->SetNumericValue("tolerance", 1e-5);
   */
@@ -167,12 +158,12 @@ hiopSolveStatus PriDecMasterProblemEx8::solve_master(double* x, const bool& incl
   obj_ = solver.getObjective();
   solver.getSolution(x);
 
-  if(status<0){
+  if(status<0) {
     printf("solver returned negative solve status: %d (with objective is %18.12e)\n", status, obj_);
     return status;
   }
   //for(int i=0;i<n_;i++) printf("%d %18.12e\n",i,x[i]);
-  //pretend that the master problem has all zero solution
+  //initialize the master problem with an all zero solution
   /*
   if(include_r==0){
     for(int i=0; i<n_; i++)
@@ -183,7 +174,7 @@ hiopSolveStatus PriDecMasterProblemEx8::solve_master(double* x, const bool& incl
       x[i] = 0.; 
   }
   */
-  if(sol_==NULL){
+  if(sol_==NULL) {
     sol_ = new double[n_];
   }
   memcpy(sol_,x, n_*sizeof(double));
@@ -194,9 +185,9 @@ bool PriDecMasterProblemEx8::eval_f_rterm(size_t idx, const int& n,const  double
 {
   rval = 0.;
   for(int i=0; i<n; i++) {
-    if(i==idx){	    
+    if(i==idx) {	    
       rval += (x[i]+S_)*(x[i]+S_);
-    }else{
+    } else {
       rval += x[i]*x[i];
     }
   }
@@ -208,10 +199,10 @@ bool PriDecMasterProblemEx8::eval_f_rterm(size_t idx, const int& n,const  double
 bool PriDecMasterProblemEx8::eval_grad_rterm(size_t idx, const int& n, double* x, double* grad)
 {
   assert(n_ == n);
-  for(int i=0; i<n; i++){
-    if(i==idx){	    
+  for(int i=0; i<n; i++) {
+    if(i==idx) {	    
       grad[i] = (x[i]+S_)/S_;
-    }else{
+    } else {
       grad[i] = x[i]/S_;
     }
   }
@@ -223,10 +214,4 @@ bool PriDecMasterProblemEx8::set_recourse_approx_evaluator(const int n, Recourse
    my_nlp->set_quadratic_terms( n, evaluator);
    return true; 
 }
-
-
-
-
-
-
 

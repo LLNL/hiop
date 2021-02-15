@@ -1,7 +1,6 @@
 #ifndef HIOP_INTERFACE_PRIDEC
 #define HIOP_INTERFACE_PRIDEC
 
-//for solve status
 #include "hiopInterface.hpp"
 #include <cassert>
 #include <cstring> //for memcpy
@@ -27,10 +26,6 @@
 
 namespace hiop
 {
-// todo: it looks like this class should call the "user" methods
-//       eval_f_rterm  eval_grad_rterm
-//       (and then build the approximation)
-//   
 
 // todo: move RecourseApproxEvaluator "inside" hiopInterfacePriDecProblem
 
@@ -77,7 +72,6 @@ public:
   //sum 0.5 {(x_i-1)*(x_{i}-1) : i=1,...,ns} 
   bool eval_grad(const long long& n, const double* x, bool new_x, double* grad)
   {
-    //x_i - 0.5 
     assert(rgrad_!=NULL);
     for(int i=0; i<ns_; i++) grad[i] += rgrad_[i]+rhess_[i]*(x[i]-x0_[i]);
     return true;
@@ -85,7 +79,6 @@ public:
 
   bool eval_hess(const long long& n, const double* x, bool new_x, double* hess)
   {
-    //x_i - 0.5 
     assert(rgrad_!=NULL);
     for(int i=0; i<ns_; i++) hess[i] += rhess_[i];
     return true;
@@ -96,21 +89,21 @@ public:
   void set_rval(const double rval){rval_ = rval;}
   void set_rgrad(const int n,const double* rgrad){
     assert(n == ns_);
-    if(rgrad_==NULL){
+    if(rgrad_==NULL) {
       rgrad_ = new double[ns_];
     }
     memcpy(rgrad_,rgrad , ns_*sizeof(double));
   }
   void set_rhess(const int n,const double* rhess){
     assert(n == ns_);
-    if(rgrad_==NULL){
+    if(rgrad_==NULL) {
       rhess_ = new double[ns_];
     }
     memcpy(rhess_,rhess , ns_*sizeof(double));
   }
   void set_x0(const int n,const double* x0){
     assert(n == ns_);
-    if(rgrad_==NULL){
+    if(rgrad_==NULL) {
       rhess_ = new double[ns_];
     }
     memcpy(x0_,x0 , ns_*sizeof(double));
@@ -150,7 +143,6 @@ protected:
   double* rgrad_;
   double* rhess_; //diagonal vector for now
   double* x0_; //current solution
-  //friend class Ex8;
 };
 
 

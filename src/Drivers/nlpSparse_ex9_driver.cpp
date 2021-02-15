@@ -49,11 +49,10 @@ int main(int argc, char **argv)
                                                             // it will be forced to use "linear" internally.
   //nlp.options->SetStringValue("duals_init", "lsq"); // "lsq" or "zero"
   nlp.options->SetStringValue("compute_mode", "cpu");
-//  nlp.options->SetStringValue("compute_mode", "hybrid");
+  //nlp.options->SetStringValue("compute_mode", "hybrid");
   nlp.options->SetStringValue("KKTLinsys", "xdycyd");
-//  nlp.options->SetStringValue("KKTLinsys", "full");
+  //nlp.options->SetStringValue("KKTLinsys", "full");
   //nlp.options->SetStringValue("write_kkt", "yes");
-
 
   hiopAlgFilterIPMNewton solver(&nlp);
   hiopSolveStatus status = solver.run();
@@ -66,7 +65,7 @@ int main(int argc, char **argv)
   }
   printf(" \n");
 
-  /*
+  
   if(status!=Solve_Success){
     if(rank==0)
       printf("Solve was NOT successfull.");
@@ -74,7 +73,7 @@ int main(int argc, char **argv)
     if(rank==0)
       printf("Solve was successfull. Optimal value: %12.5e\n",
              pridec_solver.getObjective());
-  }*/
+  }
 
 #ifdef HIOP_USE_MAGMA
   magma_finalize();

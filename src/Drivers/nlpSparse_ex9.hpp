@@ -75,10 +75,10 @@ public:
     if(nx>3)
       n_cons += nx-3;
     xi_ = new double[nS_*S_];
-    for(int i=0;i<nS_*S_;i++){ 
+    for(int i=0;i<nS_*S_;i++) { 
       xi_[i] = 1.0;
     }
-    for(int i=0;i<S_;i++){
+    for(int i=0;i<S_;i++) {
       xi_[i*nS_+nS_-1] = 0.1;
     }
   }
@@ -96,8 +96,8 @@ public:
       //this is for x_4, x_5, ... , x_n (i>=3), which are bounded only from below
       xlow[i]= 0.5; xupp[i]=1e20; type[i]=hiopNonlinear;
     }
-    for(long long i=0; i<S_; i++){
-      for(long long j=0; j<nx_; j++){
+    for(long long i=0; i<S_; i++) {
+      for(long long j=0; j<nx_; j++) {
         if(j==0){xlow[nx_+i*nx_] = 0.; xupp[nx_+i*nx_] = 1e20;type[i]=hiopNonlinear;continue;}
         xlow[nx_+i*nx_+j] = -1e+20; xupp[nx_+i*nx_+j] = +1e+20; type[i]=hiopNonlinear; 
       }
@@ -119,19 +119,14 @@ public:
     for(long long i=3; i<nx_; i++) {
       clow[conidx] = 1.0;   cupp[conidx]= 2*n_vars;  type[conidx++]=hiopInterfaceBase::hiopLinear;
     }
-    //printf("conidx %d\n",conidx);
     if(nx_>3){assert(conidx==2+nx_-3);}//nx_-1
-    for(long long i=0;i<S_;i++)
-    { 
-      for(long long j=0;j<nx_-1;j++)
-      {
+    for(long long i=0;i<S_;i++) { 
+      for(long long j=0;j<nx_-1;j++) {
         clow[conidx+nx_*i+j] = 0.;
         cupp[conidx+nx_*i+j] = 1e20;
       }
       clow[conidx+nx_*i+nx_-1] = 1.;
       cupp[conidx+nx_*i+nx_-1] = 1e20;
-
-      //printf("conidx i %d\n",conidx+nx_*i+nx_-1);
     }
     return true;
   }
@@ -154,12 +149,11 @@ public:
     obj_value=0.;
     for(auto i=0;i<nx_;i++) obj_value += 0.25*pow(x[i]-1., 4);
 
-    for(auto i=0;i<S_;i++){
-      for(int j=0;j<nx_;j++){
+    for(auto i=0;i<S_;i++) {
+      for(int j=0;j<nx_;j++) {
         obj_value += (x[nx_*(i+1)+j]-x[j])*(x[nx_*(i+1)+j]-x[j])*0.5/double(S_);
       }
     }
-
     return true;
   }
 
@@ -168,8 +162,8 @@ public:
     assert(n==n_vars);
     for(auto i=0;i<nx_;i++) gradf[i] = pow(x[i]-1.,3);
 
-    for(auto i=0;i<S_;i++){
-      for(int j=0;j<nx_;j++){
+    for(auto i=0;i<S_;i++) {
+      for(int j=0;j<nx_;j++) {
         gradf[nx_*(i+1)+j] = (x[nx_*(i+1)+j]-x[j])/double(S_);
 	gradf[j] += (x[j]-x[nx_*(i+1)+j])/double(S_);
       }
@@ -202,34 +196,19 @@ public:
       cons[conidx++] += 2*x[0] + 0.5*x[i];
     }
 
-    for(int i=0;i<S_;i++){
-      for(int j=0;j<nx_-1;j++){
+    for(int i=0;i<S_;i++) {
+      for(int j=0;j<nx_-1;j++) {
         cons[conidx+i*nx_+j] = x[nx_+i*nx_+j+1]-x[nx_+i*nx_+j];
       }
       cons[conidx+i*nx_+nx_-1] = (1-x[nx_+i*nx_]+xi_[i*nS_])*(1-x[nx_+i*nx_]+xi_[i*nS_]);
-      for(int j=1;j<nS_;j++)
-      {
+      for(int j=1;j<nS_;j++) {
         cons[conidx+i*nx_+nx_-1] += (x[nx_+i*nx_+j] + xi_[i*nS_+j])*(x[nx_+i*nx_+j] + xi_[i*nS_+j]);
       }
-      for(int j=nS_;j<nx_;j++)
-      {
+      for(int j=nS_;j<nx_;j++) {
         cons[conidx+i*nx_+nx_-1] += x[nx_+i*nx_+j]*x[nx_+i*nx_+j];
       }
     }
     
-    /*
-    double[nx_] cons_temp;
-    for(int i=0;i<nx_;i++){cons_temp=0.;} //initialize temperary constraint
-
-    for(auto i=0;i<S_;i++){
-      rec->eval_cons(nx_, nx_, nx_, 0, x, new_x, double* cons_temp);
-
-      for(int j=0;j<nx_;j++)
-      {
-        cons[nx_+i*nx_+j] = cons_temp[j]; 
-      }
-    }*/
-
     return true;
   }
   
@@ -260,75 +239,73 @@ public:
     int nnzit{0};
     long long conidx{0};
 
-    if(iJacS!=NULL && jJacS!=NULL){
-        // --- constraint 1 body --->  4*x_1 + 2*x_2 == 10
-        iJacS[nnzit] = conidx;   jJacS[nnzit++] = 0;
-        iJacS[nnzit] = conidx;   jJacS[nnzit++] = 1;
-        conidx++;
+    if(iJacS!=NULL && jJacS!=NULL) {
+      // --- constraint 1 body --->  4*x_1 + 2*x_2 == 10
+      iJacS[nnzit] = conidx;   jJacS[nnzit++] = 0;
+      iJacS[nnzit] = conidx;   jJacS[nnzit++] = 1;
+      conidx++;
 
-        // --- constraint 2 body ---> 2*x_1 + x_3
-        iJacS[nnzit] = conidx;   jJacS[nnzit++] = 0;
-        iJacS[nnzit] = conidx;   jJacS[nnzit++] = 2;
-        conidx++;
+      // --- constraint 2 body ---> 2*x_1 + x_3
+      iJacS[nnzit] = conidx;   jJacS[nnzit++] = 0;
+      iJacS[nnzit] = conidx;   jJacS[nnzit++] = 2;
+      conidx++;
 
-        // --- constraint 3 body --->   2*x_1 + 0.5*x_i, for i>=4
-        for(auto i=3; i<nx_; i++){
-            iJacS[nnzit] = conidx;   jJacS[nnzit++] = 0;
-            iJacS[nnzit] = conidx;   jJacS[nnzit++] = i;
-            conidx++;
+      // --- constraint 3 body --->   2*x_1 + 0.5*x_i, for i>=4
+      for(auto i=3; i<nx_; i++){
+          iJacS[nnzit] = conidx;   jJacS[nnzit++] = 0;
+          iJacS[nnzit] = conidx;   jJacS[nnzit++] = i;
+          conidx++;
+      }
+      for(auto i=0;i<S_;i++) {
+        for(auto j=0;j<nx_-1;j++) {
+          iJacS[nnzit] = conidx+i*nx_+j; jJacS[nnzit] = nx_+i*nx_+j; 
+          nnzit++; 
+          iJacS[nnzit] = conidx+i*nx_+j; jJacS[nnzit] = nx_+i*nx_+j+1; 
+          nnzit++;
         }
-        for(auto i=0;i<S_;i++){
-	  for(auto j=0;j<nx_-1;j++){
-	    iJacS[nnzit] = conidx+i*nx_+j; jJacS[nnzit] = nx_+i*nx_+j; 
-	    nnzit++; 
-	    iJacS[nnzit] = conidx+i*nx_+j; jJacS[nnzit] = nx_+i*nx_+j+1; 
-	    nnzit++;
-	  }
-	  for(auto j=0;j<nx_;j++){
-	    iJacS[nnzit] = conidx+i*nx_+nx_-1; jJacS[nnzit] = nx_+i*nx_+j;
-	    nnzit++;
-	  }
-	} 
-        //printf("nnzJacS %d should be %d, \n",nnzJacS,nnzit);
-	assert(nnzit == nnzJacS);
+	for(auto j=0;j<nx_;j++) {
+	  iJacS[nnzit] = conidx+i*nx_+nx_-1; jJacS[nnzit] = nx_+i*nx_+j;
+	  nnzit++;
+	}
+      } 
+      assert(nnzit == nnzJacS);
     }
 
     //values for sparse Jacobian if requested by the solver
     nnzit = 0;
     if(MJacS!=NULL) {
-        // --- constraint 1 body --->  4*x_1 + 2*x_2 == 10
-        MJacS[nnzit++] = 4;
-        MJacS[nnzit++] = 2;
+      // --- constraint 1 body --->  4*x_1 + 2*x_2 == 10
+      MJacS[nnzit++] = 4;
+      MJacS[nnzit++] = 2;
 
-        // --- constraint 2 body ---> 2*x_1 + x_3
-        MJacS[nnzit++] = 2;
-        MJacS[nnzit++] = 1;
+      // --- constraint 2 body ---> 2*x_1 + x_3
+      MJacS[nnzit++] = 2;
+      MJacS[nnzit++] = 1;
 
-        // --- constraint 3 body --->   2*x_1 + 0.5*x_4
-        for(auto i=3; i<nx_; i++){
-            MJacS[nnzit++] = 2;
-            MJacS[nnzit++] = 0.5;
+      // --- constraint 3 body --->   2*x_1 + 0.5*x_4
+      for(auto i=3; i<nx_; i++){
+        MJacS[nnzit++] = 2;
+        MJacS[nnzit++] = 0.5;
+      }
+      for(auto i=0;i<S_;i++) {
+        for(auto j=0;j<nx_-1;j++) {
+          MJacS[nnzit] = -1.; 
+          nnzit++; 
+          MJacS[nnzit] = 1.; 
+          nnzit++;
         }
-        for(auto i=0;i<S_;i++){
-	  for(auto j=0;j<nx_-1;j++){
-	    MJacS[nnzit] = -1.; 
-	    nnzit++; 
-	    MJacS[nnzit] = 1.; 
-	    nnzit++;
-	  }
-	  MJacS[nnzit] = -2*(1-x[nx_+i*nx_]+xi_[i*nS_]);
+	MJacS[nnzit] = -2*(1-x[nx_+i*nx_]+xi_[i*nS_]);
+	nnzit++;
+	for(auto j=1;j<nS_;j++) {
+	  MJacS[nnzit] = 2*(x[nx_+i*nx_+j]+xi_[i*nS_+j]);
 	  nnzit++;
-	  for(auto j=1;j<nS_;j++){
-	    MJacS[nnzit] = 2*(x[nx_+i*nx_+j]+xi_[i*nS_+j]);
-	    nnzit++;
-	  }
-	  for(auto j=nS_;j<nx_;j++){
-	    MJacS[nnzit] = 2*x[nx_+i*nx_+j];
-	    nnzit++;
-	  }
 	}
-        //printf("nnzJacS %d should be %d, \n",nnzJacS,nnzit);
-        assert(nnzit == nnzJacS);
+	for(auto j=nS_;j<nx_;j++) {
+	  MJacS[nnzit] = 2*x[nx_+i*nx_+j];
+	  nnzit++;
+	}
+      }
+      assert(nnzit == nnzJacS);
     }
     return true;
   }
@@ -338,64 +315,51 @@ public:
                            const double* lambda, bool new_lambda,
                            const int& nnzHSS, int* iHSS, int* jHSS, double* MHSS)
   {
-      assert(nnzHSS == nx_+S_*nx_*2+S_*nx_);
-      int nnzit = 0;
-      if(iHSS!=NULL && jHSS!=NULL) {
-        for(int i=0; i<nx_; i++)
-	{ 	
-          iHSS[nnzit] = jHSS[nnzit] = i;
+    assert(nnzHSS == nx_+S_*nx_*2+S_*nx_);
+    int nnzit = 0;
+    if(iHSS!=NULL && jHSS!=NULL) {
+      for(int i=0; i<nx_; i++) { 	
+        iHSS[nnzit] = jHSS[nnzit] = i;
+        nnzit++;
+	for(int j=0;j<S_;j++){
+	  iHSS[nnzit] = i; jHSS[nnzit] = nx_+j*nx_+i;
+	  nnzit++;
+	}    
+      }
+     // r_i(x;\xi^i) = 1/S *  min_y 0.5 || y - x ||^2 such that 
+      for(int i=0;i<S_;i++) {
+        for(int j=0;j<nx_;j++) {
+          iHSS[nnzit] = nx_+ i*nx_+j; jHSS[nnzit] = j; nnzit++;
+          iHSS[nnzit] = nx_+ i*nx_+j; jHSS[nnzit] = nx_+i*nx_+j; nnzit++;
+        }
+      }      
+      assert(nnzHSS == nnzit);
+    }
+    nnzit = 0;
+    if(MHSS!=NULL) {
+      for(int i=0; i<nx_; i++) { 		
+        MHSS[nnzit] = obj_factor * 3*pow(x[i]-1., 2);
+        for(int j=0;j<S_;j++){
+          MHSS[nnzit] += obj_factor/double(S_);
+        }
+        nnzit++;
+        for(int j=0;j<S_;j++){
+          MHSS[nnzit] = -obj_factor/double(S_);
           nnzit++;
-	  for(int j=0;j<S_;j++){
-	    iHSS[nnzit] = i; jHSS[nnzit] = nx_+j*nx_+i;
-	    nnzit++;
-	  }
-          
-	}
+        }
+      }
 	// r_i(x;\xi^i) = 1/S *  min_y 0.5 || y - x ||^2 such that 
-        for(int i=0;i<S_;i++){
-	  for(int j=0;j<nx_;j++)
-	  {
-	    iHSS[nnzit] = nx_+ i*nx_+j; jHSS[nnzit] = j; nnzit++;
-	    iHSS[nnzit] = nx_+ i*nx_+j; jHSS[nnzit] = nx_+i*nx_+j; nnzit++;
-	  }
-	}      
-        assert(nnzHSS == nnzit);
-      }
-
-
-      nnzit = 0;
-      if(MHSS==NULL) {
-        printf("what?\n");
-      }
-      if(MHSS!=NULL) {
-        for(int i=0; i<nx_; i++)
-	{ 		
-	  MHSS[nnzit] = obj_factor * 3*pow(x[i]-1., 2);
-	  for(int j=0;j<S_;j++){
-	    MHSS[nnzit] += obj_factor/double(S_);
-	  }
+      for(int i=0;i<S_;i++) {
+        for(int j=0;j<nx_;j++) {
+          MHSS[nnzit] = -obj_factor/double(S_);
           nnzit++;
-	  for(int j=0;j<S_;j++){
-            MHSS[nnzit] = -obj_factor/double(S_);
-	    nnzit++;
-	  }
-	}
-	// r_i(x;\xi^i) = 1/S *  min_y 0.5 || y - x ||^2 such that 
-        for(int i=0;i<S_;i++)
-	{
-	  for(int j=0;j<nx_;j++)
-	  {
-            MHSS[nnzit] = -obj_factor/double(S_);
-	    nnzit++;
-	    MHSS[nnzit] = obj_factor/double(S_)+lambda[(nx_-1)+nx_*i+nx_-1]*2.;
-	    nnzit++;
-	  }
-	}
-        assert(nnzHSS == nnzit);
+          MHSS[nnzit] = obj_factor/double(S_)+lambda[(nx_-1)+nx_*i+nx_-1]*2.;
+          nnzit++;
+        }
       }
-      //printf("nnzHSS %d should be %d, \n",nnzHSS,nnzit);
-
-      return true;
+      assert(nnzHSS == nnzit);
+    }
+    return true;
   }
 
 

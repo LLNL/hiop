@@ -1,4 +1,3 @@
-//the problem to be solved
 #include "nlpPriDec_ex9.hpp"
 //the solver
 #include "hiopAlgPrimalDecomp.hpp"
@@ -61,9 +60,7 @@ int main(int argc, char **argv)
   //printf("total ranks %d\n",comm_size);
   hiop::hiopAlgPrimalDecomposition pridec_solver(&pridec_problem, MPI_COMM_WORLD);
 
-  //printf("my rank starting3  %d\n",rank);
   auto status = pridec_solver.run();
-
   
   if(status!=Solve_Success){
     if(rank==0)

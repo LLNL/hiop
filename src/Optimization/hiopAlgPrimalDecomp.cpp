@@ -50,15 +50,13 @@ namespace hiop
   hiopSolveStatus hiopAlgPrimalDecomposition::run()
   {
 
-    if(comm_size_==1)
-    {
+    if(comm_size_==1) {
       return run_single();//call the serial solver
     }
 
     printf("total ranks %d\n",comm_size_); 
     //initial point for now set to all zero
-    for(int i=0; i<n_; i++)
-    {
+    for(int i=0; i<n_; i++) {
       x_[i] = 0.;
     }
       
@@ -84,12 +82,11 @@ namespace hiop
 
     int end_signal = 0;
     // Outer loop starts
-    for(int it=0; it<max_iter;it++){
+    for(int it=0; it<max_iter;it++) {
 
       printf(" iteration  %d\n", it);
       // solve the base case
-      if(my_rank_ == 0 && it==0) //initial solve
-      { 
+      if(my_rank_ == 0 && it==0) {//initial solve 
 	//printf("my rank for solver  %d\n", my_rank_);
         //solve master problem base case(solver rank supposed to do it)
 
@@ -111,25 +108,21 @@ namespace hiop
       // assert("for debugging" && false); //for debugging purpose
       // set up recourse problem send/recv interface
       std::vector<ReqRecourseApprox* > rec_prob(comm_size_);
-      for(int r=0; r<comm_size_;r++)
-      {
+      for(int r=0; r<comm_size_;r++) {
         rec_prob[r] = new ReqRecourseApprox(n_);
       }
       ReqContingencyIdx* req_cont_idx = new ReqContingencyIdx(0);
 
       // master rank communication
-      if(my_rank_ == 0)
-      {
+      if(my_rank_ == 0) {
         // array for number of indices, currently the indices are in [0,S_] 
 	// this is subjected to change	
         rval = 0.;
-        for(int i=0; i<n_; i++)
-	{
+        for(int i=0; i<n_; i++) {
           grad_r[i] = 0.;
         }
         int* cont_idx = new int[S_];
-        for(int i=0;i<S_;i++)
-	{
+        for(int i=0;i<S_;i++) {
  	  cont_idx[i]=i;
         }
         // The number of contigencies should be larger than the number of processors
@@ -139,8 +132,7 @@ namespace hiop
         int idx = 0;
         // Initilize the recourse communication by sending indices to the evaluator 
         // Using Blocking send here
-        for(int r=1; r< comm_size_;r++)
-	{
+        for(int r=1; r< comm_size_;r++) {
           int cur_idx = cont_idx[idx];
           int ierr = MPI_Send(&cur_idx, 1, MPI_INT, r, 1,comm_world_);
           assert(MPI_SUCCESS == ierr);  
@@ -149,8 +141,7 @@ namespace hiop
         }
         int mpi_test_flag; // for testing if the send/recv is completed
         // Posting initial receive of recourse solutions from evaluators
-        for(int r=1; r< comm_size_;r++)
-	{
+        for(int r=1; r< comm_size_;r++) {
           //int cur_idx = cont_idx[idx];
 	  rec_prob[r]->post_recv(2,r,comm_world_);// 2 is the tag, r is the rank source 
           //printf("receive flag for contingency value %d)\n", mpi_test_flag);
@@ -158,43 +149,37 @@ namespace hiop
         // Both finish_flag and last_loop are used to deal with the final round remaining contingencies.
         // Some ranks are finished while others are not. The loop needs to continue to fetch the results. 
         std::vector<int> finish_flag(comm_size_);
-        for(int i=0;i<comm_size_;i++)
-	{
+        for(int i=0;i<comm_size_;i++) {
 	  finish_flag[i]=0;
 	}
         int last_loop = 0;
         //printf("total idx %d\n", S_);
-        while(idx<=S_ || last_loop)
-	{ 
+        while(idx<=S_ || last_loop) { 
           //std::this_thread::sleep_for(std::chrono::milliseconds(10)); //optional, used to adjust time
-          for(int r=1; r< comm_size_;r++){
+          for(int r=1; r< comm_size_;r++) {
             //int ierr = MPI_Isend(&rec_val, 1, MPI_DOUBLE, rank_master, 2, comm_world_, &request_[my_rank_]);
             int mpi_test_flag = rec_prob[r]->test();
-            if(mpi_test_flag && (finish_flag[r]==0))// receive completed
-	    {
-	      if(!last_loop)
-	      {
+            if(mpi_test_flag && (finish_flag[r]==0)) {// receive completed
+	      if(!last_loop) {
                 printf("idx %d sent to rank %d\n", idx,r);
-	      }else{
+	      } else {
                 printf("last loop for rank %d\n", r);
 	      }
 	      // add to the master rank variables
               rval += rec_prob[r]->value();
-              for(int i=0;i<n_;i++)
-	      {
+              for(int i=0;i<n_;i++) {
 	        grad_r[i] += rec_prob[r]->grad(i);
 	      }
-	      if(last_loop){
+	      if(last_loop) {
 	        finish_flag[r]=1;
 	      }
               // this is for dealing with the end of contingencies where some ranks have already finished
-	      if(idx<S_)
-	      {
+	      if(idx<S_) {
 	        req_cont_idx->set_idx(cont_idx[idx]);
 	        req_cont_idx->post_send(1,r,comm_world_);
 	        rec_prob[r]->post_recv(2,r,comm_world_);// 2 is the tag, r is the rank source 
                 //printf("recourse value: is %18.12e)\n", rec_prob[r]->value());
-	      }else{
+	      } else {
 	        finish_flag[r] = 1;
 	        last_loop = 1; 
 	      }
@@ -202,9 +187,9 @@ namespace hiop
 	    } 
           }
 	  // Current way of ending the loop while accounting for all the last round of results
-	  if(last_loop){
+	  if(last_loop) {
 	    last_loop=0;
-            for(int r=1; r< comm_size_;r++){
+            for(int r=1; r< comm_size_;r++) {
 	      if(finish_flag[r]==0){last_loop=1;}
 	    }
 	  }
@@ -212,17 +197,14 @@ namespace hiop
         }
         // send end signal to all evaluators
         int cur_idx = -1;
-        for(int r=1; r< comm_size_;r++)
-	{
+        for(int r=1; r< comm_size_;r++) {
 	  req_cont_idx->set_idx(-1);
 	  req_cont_idx->post_send(1,r,comm_world_);
         }
-
       }
 
       //evaluators
-      if(my_rank_ != 0)
-      {
+      if(my_rank_ != 0) {
         /* old sychronous implmentation of contingencist
          * int cpr = S_/(comm_size_-1); //contingency per rank
          * int cr = S_%(comm_size_-1); //contingency remained
@@ -240,30 +222,25 @@ namespace hiop
         // printf("contingency index %d, rank %d)\n",cont_idx[0],my_rank_);
         // compute the recourse function values and gradients
         rec_val = 0.;
-        for(int i=0; i<n_; i++)
-	{
+        for(int i=0; i<n_; i++) {
 	  grad_acc[i] = 0.;
 	}
         double aux=0.;
-        for(int ri=0; ri<cont_idx.size(); ri++)
-	{
+        for(int ri=0; ri<cont_idx.size(); ri++) {
           aux = 0.;
           int idx_temp = cont_idx[ri];
           bret = master_prob_->eval_f_rterm(idx_temp, n_, x_, aux); // solving the recourse problem
-          if(!bret)
-	  {
+          if(!bret) {
               //todo
           }
           rec_val += aux;
         }
         //printf("recourse value: is %18.12e)\n", rec_val);
         double grad_aux[n_];
-        for(int ri=0; ri<cont_idx.size(); ri++)
-	{
+        for(int ri=0; ri<cont_idx.size(); ri++) {
           int idx_temp = cont_idx[ri];
           bret = master_prob_->eval_grad_rterm(idx_temp, n_, x_, grad_aux);
-          if(!bret)
-          {
+          if(!bret) {
             //todo
           }
           for(int i=0; i<n_; i++)
@@ -278,8 +255,7 @@ namespace hiop
         // ierr = MPI_Irecv(&cont_idx[0], 1, MPI_INT, rank_master, 1, comm_world_, &request_[0]); 
         req_cont_idx->post_recv(1, rank_master, comm_world_);
 
-        while(cont_idx[0]!=-1)//loop until end signal received
-	{
+        while(cont_idx[0]!=-1) {//loop until end signal received
           //printf("contingency index %d, rank %d)\n",cont_idx[0],my_rank_);
 	  //mpi_test_flag = rec_prob[my_rank_]->test();
           //ierr = MPI_Test(&request_[0], &mpi_test_flag, &status_);
@@ -292,55 +268,45 @@ namespace hiop
 	      int idx_temp = i+(my_rank_-1)*cpr;
               cont_idx.push_back(idx_temp);  //currently the last one gets the most contingency, not optimal
 	    }
-          }
-          else{
-	    for(int i=0;i<cpr;i++){
+          } else {
+	    for(int i=0;i<cpr;i++) {
 	      int idx_temp = i+(my_rank_-1)*cpr;
               cont_idx.push_back(idx_temp);
 	    }
           }
           */
-          if(mpi_test_flag)
-	  {
+          if(mpi_test_flag) {
             //printf("contingency index %d, rank %d)\n",cont_idx[0],my_rank_);
-            for(int ri=0; ri<cont_idx.size(); ri++)
-	    {
+            for(int ri=0; ri<cont_idx.size(); ri++) {
               cont_idx[ri] = req_cont_idx->value();
 	    }
-            if(cont_idx[0]==-1)
-	    {
+            if(cont_idx[0]==-1) {
 	      break;
 	    }
             rec_val = 0.;
-            for(int i=0; i<n_; i++)
-	    {
+            for(int i=0; i<n_; i++) {
 	      grad_acc[i] = 0.;
 	    }
             double aux=0.;
             //assert("for debugging" && false); //for debugging purpose
-            for(int ri=0; ri<cont_idx.size(); ri++)
-	    {
+            for(int ri=0; ri<cont_idx.size(); ri++) {
               aux = 0.;
               int idx_temp = cont_idx[ri];
               bret = master_prob_->eval_f_rterm(idx_temp, n_, x_, aux); //need to add extra time here
-              if(!bret)
-	      {
+              if(!bret) {
               //todo
               }
               rec_val += aux;
             }
             //printf("recourse value: is %18.12e)\n", rec_val);
             double grad_aux[n_];
-            for(int ri=0; ri<cont_idx.size(); ri++)
-	    {
+            for(int ri=0; ri<cont_idx.size(); ri++) {
               int idx_temp = cont_idx[ri];
               bret = master_prob_->eval_grad_rterm(idx_temp, n_, x_, grad_aux);
-              if(!bret)
-              {
+              if(!bret) {
                 //todo
               }
-              for(int i=0; i<n_; i++)
-	      {
+              for(int i=0; i<n_; i++) {
                 grad_acc[i] += grad_aux[i];
 	      }
             }
@@ -371,12 +337,12 @@ namespace hiop
         double hess_appx[n_]; //Hessian is computed on the solver/master
         for(int i=0; i<n_; i++) hess_appx[i] = 1.0;
      
-        if(it==0){
+        if(it==0) {
           hess_appx_2->initialize(rval,x_, grad_r);
 	  double alp_temp = hess_appx_2->get_alpha_f(grad_r);
           printf("alpd %18.12e\n",alp_temp);
           for(int i=0; i<n_; i++) hess_appx[i] = alp_temp;
-	}else{
+	} else {
           hess_appx_2->update_hess_coeff(x_, grad_r, rval);
 
           hess_appx_2->update_ratio();
@@ -391,14 +357,12 @@ namespace hiop
 
         // wait for the sending/receiving to finish
         int mpi_test_flag = 0;
-        for(int r=1; r<comm_size_;r++)
-	{
+        for(int r=1; r<comm_size_;r++) {
           MPI_Wait(&(rec_prob[r]->request_), &status_);
           MPI_Wait(&req_cont_idx->request_, &status_);
         }
         // for debugging purpose print out the recourse gradient
-        for(int i=0;i<n_;i++) 
-	{
+        for(int i=0;i<n_;i++) {
 	  printf("grad %d %18.12e ",i,grad_r[i]);
 	}
 	printf("\n");
@@ -406,36 +370,32 @@ namespace hiop
         RecourseApproxEvaluator* evaluator = new RecourseApproxEvaluator(n_,S_,rval,grad_r, 
 		                                hess_appx, x_);
         bret = master_prob_->set_recourse_approx_evaluator(n_, evaluator);
-        if(!bret)
-        {
+        if(!bret) {
           //todo
         }
 	printf("solving full problem starts, iteration %d \n",it);
         solver_status_ = master_prob_->solve_master(x_,true);
 	printf("solved full problem with objective %18.12e\n", master_prob_->get_objective());
-        for(int i=0;i<n_;i++){
+        for(int i=0;i<n_;i++) {
           printf("x%d %18.12e ",i,x_[i]);
         }
         printf(" \n");
         delete[] evaluator;
-      }
-      else{
+      } else {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));    
       }
-      if(stopping_criteria(it, convg))
-      {
+      if(stopping_criteria(it, convg)) {
 	end_signal = 1; 
       }
       ierr = MPI_Bcast(&end_signal, 1, MPI_INT, rank_master, comm_world_);
       assert(ierr == MPI_SUCCESS);
-      if(end_signal){
+      if(end_signal) {
         break;
       }
     }
-    if(my_rank_==0)
-    {
+    if(my_rank_==0) {
       return solver_status_;
-    }else{
+    } else {
       return Solve_Success;    
     }
   }
@@ -461,8 +421,7 @@ namespace hiop
     //Define the values and gradients as needed in the master rank
     double rval = 0.;
     double grad_r[n_];
-    for(int i=0; i<n_; i++) 
-    {
+    for(int i=0; i<n_; i++) {
       grad_r[i] = 0.;
     }
 
@@ -471,41 +430,37 @@ namespace hiop
 
     double convg = 1e20;
     // Outer loop starts
-    for(int it=0; it<max_iter;it++){
+    for(int it=0; it<max_iter;it++) {
 
       printf(" iteration  %d\n", it);
       // solve the base case
-      if(it==0) 
-      { 
+      if(it==0) { 
         //solve master problem base case(solver rank supposed to do it)
         solver_status_ = master_prob_->solve_master(x_,false);
         // to do, what if solve fails?
-        if(solver_status_){     
+        if(solver_status_) {     
 
         }
       }
 
       // array for number of indices, this is subjected to change	
       rval = 0.;
-      for(int i=0; i<n_; i++)
-      {
+      for(int i=0; i<n_; i++) {
         grad_r[i] = 0.;
       }
       int* cont_idx = new int[S_];
-      for(int i=0;i<S_;i++)
-      {
+      for(int i=0;i<S_;i++) {
         cont_idx[i]=i;
       }
       // The number of contigencies should be larger than the number of processors, which is 1
       // idx is the next contingency to be sent out from the master
       int idx = 0;
         
-      for(int i=0; i< S_;i++){
+      for(int i=0; i< S_;i++) {
         int idx_temp = cont_idx[i];
 	double aux=0.;
         bret = master_prob_->eval_f_rterm(idx_temp, n_, x_, aux); //need to add extra time here
-        if(!bret)
-        {
+        if(!bret) {
               //todo
         }
         rval += aux;
@@ -513,12 +468,10 @@ namespace hiop
       
         double grad_aux[n_];
         bret = master_prob_->eval_grad_rterm(idx_temp, n_, x_, grad_aux);
-        if(!bret)
-        {
+        if(!bret) {
             //todo
         }
-        for(int i=0; i<n_; i++)
-	{
+        for(int i=0; i<n_; i++) {
           grad_r[i] += grad_aux[i];
 	}
       }        
@@ -526,14 +479,13 @@ namespace hiop
       double hess_appx[n_]; //Hessian is computed on the solver/master
       for(int i=0; i<n_; i++) hess_appx[i] = 1e6;
  
-      if(it==0){
+      if(it==0) {
         hess_appx_2->initialize(rval,x_, grad_r);
 	double alp_temp = hess_appx_2->get_alpha_f(grad_r);
         printf("alpd %18.12e\n",alp_temp);
         for(int i=0; i<n_; i++) hess_appx[i] = alp_temp;
-      }else{
+      } else {
         hess_appx_2->update_hess_coeff(x_, grad_r, rval);
-
 	double alp_temp = hess_appx_2->get_alpha_f(grad_r);
         printf("alpd %18.12e\n",alp_temp);
         convg = hess_appx_2->check_convergence(grad_r);
@@ -542,22 +494,21 @@ namespace hiop
       }
 
       // for debugging purpose print out the recourse gradient
-      for(int i=0;i<n_;i++) 
-      {
+      for(int i=0;i<n_;i++) {
         printf("grad %d  %18.12e ",i,grad_r[i]);
       }
       printf(" \n");
       RecourseApproxEvaluator* evaluator = new RecourseApproxEvaluator(n_,S_,rval,grad_r, 
 		                                hess_appx, x_);
       bret = master_prob_->set_recourse_approx_evaluator(n_, evaluator);
-      if(!bret)
-      {
+      if(!bret) {
         //todo
       }
       printf("solving full problem starts, iteration %d \n",it);
       solver_status_ = master_prob_->solve_master(x_,true);
       printf("solved full problem with objective %18.12e\n", master_prob_->get_objective());
-      for(int i=0;i<n_;i++){
+      // print solution x at the end of a full solve
+      for(int i=0;i<n_;i++) {
         printf("x%d %18.12e ",i,x_[i]);
       }
       printf(" \n");

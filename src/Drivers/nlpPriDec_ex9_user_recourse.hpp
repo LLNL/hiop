@@ -42,10 +42,7 @@ public:
     assert(S_>=1);
 
     xi_ = new double[n_];
-    //printf("n %d\n",n_); 
-
     memcpy(xi_,xi, n_*sizeof(double));
-
     x_ = new double[n_];
 
     //assert("for debugging" && false); //for debugging purpose
@@ -69,7 +66,7 @@ public:
   /// Set the basecase solution `x`
   void set_x(const double* x)
   {
-    if(x_==NULL){
+    if(x_==NULL) {
       x_ = new double[n_]; 
     }
     memcpy(x_,x, n_*sizeof(double));
@@ -78,15 +75,12 @@ public:
   /// Set the "sample" vector \xi
   void set_center(const double *xi)
   {
-    if(xi_==NULL){
+    if(xi_==NULL) {
       xi_ = new double[n_];     
     }
     memcpy(xi_,xi, n_*sizeof(double));
   }
 
-  //
-  // this are pure virtual in hiop::hiopInterfaceMDS and need to be implemented
-  //
   bool get_prob_sizes(long long& n, long long& m)
   {
     n = n_;
@@ -109,8 +103,7 @@ public:
   bool get_cons_info(const long long& m, double* clow, double* cupp, NonlinearityType* type)
   {
     assert(m == n_);
-    for(int i=0;i<n_-1;i++)
-    {
+    for(int i=0;i<n_-1;i++) {
       clow[i] = 0.;
       cupp[i] = 1e20;
     }
@@ -128,10 +121,9 @@ public:
     assert(nx_sparse>0);
 
     nnz_sparse_Jace = 0;
-    if(nx_sparse<n_){
+    if(nx_sparse<n_) {
       nnz_sparse_Jaci = nsparse_+(nsparse_-1)*2+1;
-    }
-    else{
+    } else {
       nnz_sparse_Jaci = nsparse_+(nsparse_-1)*2;
     }
     nnz_sparse_Hess_Lagr_SS = nsparse_;  //Lagrangian?
@@ -143,7 +135,7 @@ public:
   {
     assert(n_==n);
     obj_value = 0.;
-    for(int i=0;i<n;i++){
+    for(int i=0;i<n;i++) {
       obj_value += (x[i]-x_[i])*(x[i]-x_[i]);
     }
     obj_value *= 0.5/double(S_);
@@ -155,29 +147,24 @@ public:
 			 const double* x, bool new_x, double* cons)
   {
     assert(n==n_); assert(m==n_);
-    //printf("number of constraints %d\n",num_cons); 
-    //printf("number of constraints should be %d)\n",n_);
     assert(num_cons==n_||num_cons==0);
-    if(num_cons==0)
-    {
+    if(num_cons==0) {
       return true;
     }
 
     for(auto j=0;j<m; j++) cons[j]=0.;
 
-    for(int irow=0; irow<num_cons; irow++){
+    for(int irow=0; irow<num_cons; irow++) {
       const int con_idx = (int) idx_cons[irow];
-      if(con_idx<m-1){
+      if(con_idx<m-1) {
         cons[con_idx] = x[con_idx+1]-x[con_idx];
-      }else{
+      } else {
         assert(con_idx==m-1);
         cons[m-1] = (1-x[0]+xi_[0])*(1-x[0]+xi_[0]);
-        for(int i=1;i<nS_;i++)
-        {
+        for(int i=1;i<nS_;i++) {
           cons[m-1] += (x[i] + xi_[i])*(x[i] + xi_[i]);
         }
-        for(int i=nS_;i<n_;i++)
-        {
+        for(int i=nS_;i<n_;i++) {
           cons[m-1] += x[i]*x[i];
         }
       } 
@@ -203,8 +190,7 @@ public:
   {
     assert(num_cons==n_||num_cons==0);
     //indexes for sparse part
-    if(num_cons==0)
-    {
+    if(num_cons==0) {
       return true;
     }
 
@@ -223,35 +209,30 @@ public:
 	  iJacS[nnzit] = con_idx;
 	  jJacS[nnzit] = con_idx+1; //1
 	  nnzit++;
-
-	}else if(con_idx==nsparse_-1){
+	} else if (con_idx==nsparse_-1) {
 	  iJacS[nnzit] = con_idx;
 	  jJacS[nnzit] = con_idx; //-1
 	  nnzit++;
-	}else if(con_idx==m-1)
-	{ 
+	} else if (con_idx==m-1) { 
 	  iJacS[nnzit] = m-1;
 	  jJacS[nnzit] = 0;
 	  nnzit++;
           //cons[m-1] = (1-x[0]+xi_[0]);
-	  if(nsparse_<=nS_){
-            for(int i=1;i<nsparse_;i++)
-            {
+	  if(nsparse_<=nS_) {
+            for(int i=1;i<nsparse_;i++) {
 	      iJacS[nnzit] = m-1;
 	      jJacS[nnzit] = i;
 	      nnzit++;
               //cons[m-1] += (x[i] + xi_[i])*(x[i] + xi_[i]);
             }
-	  }else{
-	    for(int i=1;i<nS_;i++)
-            {
+	  } else {
+	    for(int i=1;i<nS_;i++) {
 	      iJacS[nnzit] = m-1;
 	      jJacS[nnzit] = i;
 	      nnzit++;
               //cons[m-1] += (x[i] + xi_[i])*(x[i] + xi_[i]);
             }
-	    for(int i=nS_;i<nsparse_;i++)
-            {
+	    for(int i=nS_;i<nsparse_;i++) {
 	      iJacS[nnzit] = m-1;
 	      jJacS[nnzit] = i;
 	      nnzit++;
@@ -268,8 +249,7 @@ public:
       int nnzit=0;
       for(int itrow=0; itrow<num_cons; itrow++) {
 	const int con_idx = (int) idx_cons[itrow];
-	if(con_idx<nsparse_-1) 
-	{
+	if(con_idx<nsparse_-1) {
 	  //sparse Jacobian eq w.r.t. x and s
 	  //yk+1
 	  MJacS[nnzit] = -1.;
@@ -278,33 +258,26 @@ public:
 	  //yk
 	  MJacS[nnzit] = 1.;
 	  nnzit++;
-
-	}else if(con_idx==nsparse_-1)
-	{
+	} else if (con_idx==nsparse_-1) {
 	  MJacS[nnzit] = -1.;
 	  nnzit++;
-	}else if(con_idx==m-1)
-	{
-        
+	} else if (con_idx==m-1) {
 	  MJacS[nnzit] = -2*(1-x[0]+xi_[0]);
 	  nnzit++;
           //cons[m-1] = (1-x[0]+xi_[0])^2;
-	  if(nsparse_<=nS_){
-            for(int i=1;i<nsparse_;i++)
-            {
+	  if(nsparse_<=nS_) {
+            for(int i=1;i<nsparse_;i++) {
 	      MJacS[nnzit] = 2*(x[i]+xi_[i]);
 	      nnzit++;
               //cons[m-1] += (x[i] + xi_[i])*(x[i] + xi_[i]);
             }
-	  }else{
-	    for(int i=1;i<nS_;i++)
-            {
+	  } else {
+	    for(int i=1;i<nS_;i++) {
 	      MJacS[nnzit] = 2*(x[i]+xi_[i]);
 	      nnzit++;
               //cons[m-1] += (x[i] + xi_[i])*(x[i] + xi_[i]);
             }
-	    for(int i=nS_;i<nsparse_;i++)
-            {
+	    for(int i=nS_;i<nsparse_;i++) {
 	      MJacS[nnzit] = 2*x[i];
 	      nnzit++;
               //cons[m-1] += x[i]*x[i];
@@ -320,25 +293,22 @@ public:
     if(JacD!=NULL) {
       for(int itrow=0; itrow<num_cons; itrow++) {
 	const int con_idx = (int) idx_cons[itrow];
-	if(con_idx==nsparse_-1) 
-	{
+	if(con_idx==nsparse_-1) {
           JacD[(n_-nsparse_)*con_idx+(con_idx-nsparse_+1)] = 1.0;
-	}else if(con_idx>nsparse_-1 && con_idx!=m-1)
-	{
+	} else if (con_idx>nsparse_-1 && con_idx!=m-1) {
           JacD[(n_-nsparse_)*con_idx+(con_idx-nsparse_)] = -1.0;
           JacD[(n_-nsparse_)*con_idx+(con_idx-nsparse_)+1] = 1.0;
-	}else if(con_idx==m-1)
-	{
-          if(nsparse_<=nS_){
+	} else if(con_idx==m-1) {
+          if(nsparse_<=nS_) {
               //cons[m-1] += (x[i] + xi_[i])*(x[i] + xi_[i]);
-            for(int i=nsparse_; i<nS_;i++){
+            for(int i=nsparse_; i<nS_;i++) {
               JacD[(n_-nsparse_)*con_idx+i-nsparse_] = 2*(x[i] + xi_[i]);	
 	    }
-            for(int i=nS_; i<m;i++){
+            for(int i=nS_; i<m;i++) {
               JacD[(n_-nsparse_)*con_idx+i-nsparse_] = 2*x[i] ;	
 	    }
-          }else{
-            for(int i=nsparse_; i<m;i++){
+          } else {
+            for(int i=nsparse_; i<m;i++) {
               JacD[(n_-nsparse_)*con_idx+i-nsparse_] = 2*x[i] ;	
 	    }
 	  }
@@ -348,7 +318,7 @@ public:
     //assert("for debugging" && false); //for debugging purpose
     return true;
   }
-  //to do
+  
   bool eval_Hess_Lagr(const long long& n, const long long& m, 
                       const double* x, bool new_x, const double& obj_factor,
                       const double* lambda, bool new_lambda,
@@ -367,14 +337,13 @@ public:
     if(MHSS!=NULL) {
       for(int i=0;i<nsparse_;i++) MHSS[i] =  obj_factor/double(S_); //what is this?     
       MHSS[0] += 2*lambda[m-1];
-      for(int i=1;i<nsparse_;i++){
+      for(int i=1;i<nsparse_;i++) {
         MHSS[i] += lambda[m-1]* 2.; //what is this?     
       } 
     }
-    //assert(false && "not implemented");
     if(HDD!=NULL){
       //HDD size: ndense_*ndense_
-      for(int i=0; i<ndense;i++){
+      for(int i=0; i<ndense;i++) {
         HDD[ndense*i+i] = obj_factor/double(S_);
 	HDD[ndense*i+i] += 2*lambda[m-1];
       }
@@ -400,10 +369,11 @@ public:
     //assert(false && "not implemented");
     return false;
   }
-
-  // computing the derivative of the recourse function with respect to x in the problem description
-  // which is the x_ in the protected variable, while x in the function implementation
-  // represents y in the problem description
+  /*
+   * computing the derivative of the recourse function with respect to x in the problem description
+   * which is the x_ in the protected variable, while x in the function implementation
+   * represents y in the problem description
+   */
   bool compute_gradx(const int n, const double* y, double*  gradx)
   {
     assert(n_==n);
@@ -415,7 +385,8 @@ public:
    * Returns COMM_SELF communicator since this example is only intended to run 
    * on one MPI process 
    */
-  bool get_MPI_comm(MPI_Comm& comm_out) {
+  bool get_MPI_comm(MPI_Comm& comm_out) 
+  {
     comm_out=MPI_COMM_SELF;
     return true;
   }

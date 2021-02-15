@@ -10,11 +10,6 @@ PriDecMasterProblemEx9::PriDecMasterProblemEx9(size_t nx, size_t ny, size_t nS, 
 
   //todo:
   // - generate S vectors \xi (each of size nS) from U[-0.25, 0.25]
-  // - create S problems PriDecRecourseProblemEx9
-}
-PriDecMasterProblemEx9::~PriDecMasterProblemEx9()
-{
-  delete basecase_;
 }
 */
 using namespace hiop;
@@ -25,20 +20,15 @@ PriDecMasterProblemEx9::solve_master(double* x,
                                      const double* grad/*=0*/,
                                      const double*hess /*=0*/)
 {
-  //todo:
-  //  - solve PriDecBasecaseProblemEx9
-  //  - retrieve whatever is needed from it
 
   obj_=-1e+20;
   hiopSolveStatus status;
-  if(basecase_==NULL)
-  {
+  if(basecase_==NULL) {
     basecase_ = new PriDecBasecaseProblemEx9(nx_);
   }
   basecase_->set_include(include_r);
 
-  if(include_r)
-  {
+  if(include_r) {
     assert(basecase_->quad_is_defined());
   }
   
@@ -66,21 +56,20 @@ PriDecMasterProblemEx9::solve_master(double* x,
   obj_ = solver.getObjective();
   solver.getSolution(x);
 
-  if(status<0){
+  if(status<0) {
     printf("solver returned negative solve status: %d (with objective is %18.12e)\n", status, solver.getObjective());
     return status;
   }
    
   //for(int i=0;i<nx_;i++) printf(" %d %18.12e ",i,x[i]);
     
-  if(sol_==NULL){
+  if(sol_==NULL) {
     sol_ = new double[nx_];
   }
   memcpy(sol_,x, nx_*sizeof(double));
   
   //compute the recourse estimate
-  if(include_r)
-  {
+  if(include_r) {
     double rec_appx = 0.;
     basecase_->get_rec_obj(nx_, x, rec_appx);
     printf("recourse estimate: is %18.12e\n", rec_appx);
@@ -98,11 +87,6 @@ bool PriDecMasterProblemEx9::set_recourse_approx_evaluator(const int n, Recourse
 
 bool PriDecMasterProblemEx9::eval_f_rterm(size_t idx, const int& n, const double* x, double& rval)
 {
-  // todo:
-  //  - set `x` for the recourse PriDecRecourseProblemEx9 corresponding to `idx`
-  //  - solve the problem
-  //  - retrieve obj_value
-  //  - retrieve/compute the gradient 
   assert(nx_==n);
   rval=-1e+20;
   hiopSolveStatus status;
@@ -135,7 +119,7 @@ bool PriDecMasterProblemEx9::eval_f_rterm(size_t idx, const int& n, const double
   //assert("for debugging" && false); //for debugging purpose
   status = solver.run();
   rval = solver.getObjective();  
-  if(y_==NULL){
+  if(y_==NULL) {
     y_ = new double[ny_];
   }
 

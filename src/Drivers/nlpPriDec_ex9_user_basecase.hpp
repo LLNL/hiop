@@ -20,14 +20,11 @@ public:
     if(!Ex6::eval_f(n, x, new_x, obj_value)) {
       return false;
     }
-    if(include_rec_){
-    
+    if(include_rec_) {
       assert(rec_evaluator_->get_rgrad()!=NULL);
       rec_evaluator_->eval_f(n, x, new_x, obj_value);
     } 
-
     //add regularization to the objective based on rec_evaluator_
-    
     return true;
   }
 
@@ -37,8 +34,7 @@ public:
       return false;
     }
     //add regularization gradient
-    if(include_rec_)
-    {
+    if(include_rec_) {
       assert(rec_evaluator_->get_rgrad()!=NULL);
       rec_evaluator_->eval_grad(n, x, new_x, gradf);
     }
@@ -55,7 +51,6 @@ public:
       return false;
     }
     //add diagonal to the Hessian
-
     if(iHSS!=nullptr && jHSS!=nullptr) {
       //nothing to do as the parent already added (i,i) corresponding to the diagonal
     }
@@ -81,15 +76,13 @@ public:
     long long n2=0;
     bool s1 = get_prob_sizes(n1, n2);
     assert(n == n1);
-    if(rec_evaluator_==NULL)
-    {
+    if(rec_evaluator_==NULL) {
       rec_evaluator_ = new RecourseApproxEvaluator(n, evaluator->get_S(), evaluator->get_rval(), evaluator->get_rgrad(), 
 		            evaluator->get_rhess(), evaluator->get_x0());
       return true;
     }
 
     assert(rec_evaluator_->get_rgrad()!=NULL);// should be defined
-    
     rec_evaluator_->set_rval(evaluator->get_rval());
     rec_evaluator_->set_rgrad(n,evaluator->get_rgrad());
     rec_evaluator_->set_rhess(n,evaluator->get_rhess());
@@ -103,18 +96,16 @@ public:
     include_rec_ = include;
   };
 
-  bool quad_is_defined()
+  bool quad_is_defined() // check if quadratic approximation is defined
   {
-    if(rec_evaluator_!=NULL)
-    {
+    if(rec_evaluator_!=NULL) {
       return true;
-    }else{
+    } else {
       return false;
     }
   }
 
   bool get_MPI_comm(MPI_Comm& comm_out) { comm_out=MPI_COMM_SELF; return true;};
-
   
   void get_rec_obj(const long long& n, const double* x, double& obj_value)
   {
