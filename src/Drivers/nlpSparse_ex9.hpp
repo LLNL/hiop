@@ -16,9 +16,9 @@
 #endif
 
 
-/* Test with bounds and constraints of all types. For some reason this
- *  example is not very well behaved numerically.
- *  min   sum 1/4* { (x_{i}-1)^4 : i=1,...,n}
+/* This is the full problem defined directly in hiopSparse to test the result of hiopAlgPriDecomp
+ * Base case from Ex6. 
+ *  min   sum 1/4* { (x_{i}-1)^4 : i=1,...,n} + sum_{i=1^S} 1/S *  min_y 0.5 || y - x ||^2
  *  s.t.
  *            4*x_1 + 2*x_2                     == 10
  *        5<= 2*x_1         + x_3
@@ -27,27 +27,15 @@
  *        0.0 <= x_2
  *        1.5 <= x_3 <= 10
  *        x_i >=0.5, i=4,...,n
- */
 
-/** This class provide an example of what a user of hiop::hiopInterfacePriDecProblem 
- * should implement in order to provide the recourse problem to 
- * hiop::hiopAlgPrimalDecomposition solver
+ * For each i=1...S, an independent y^i, n_y=n_x
+ *        (1-y^i_1 + \xi^i_1)^2 + \sum_{k=2}^{n_S} (y^i_k+\xi^i_k)^2 
+ *          + \sum_{k=n_S+1}^{n_y} y_k^{i,2} >= 1   //last one in the constraint implementation 
  * 
- * For a given vector x\in R^n and \xi \in R^{n_S}, this example class implements
+ *        y^i_k - y^i_{k-1} >=0, k=2, ..., n_y
  *
- *     r_i(x;\xi^i) = 1/S *  min_y 0.5 || y - x ||^2 such that 
- * 
- *                   (1-y_1 + \xi^i_1)^2 + \sum_{k=2}^{n_S} (y_k+\xi^i_k)^2 
- * 
- *                                       + \sum_{k=n_S+1}^{n_y} y_k^2 >= 1   //last one in the constraint implementation 
- * 
- *                   y_k - y_{k-1} >=0, k=2, ..., n_y
- *
- *                   y_1 >=0
- *
- * Coding of the problem in MDS HiOp input: order of variables need to be [ysparse,ydense] 
+ *        y^i_1 >=0
  */
-
 
 
 using namespace hiop;

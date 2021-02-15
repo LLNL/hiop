@@ -20,6 +20,23 @@
 #include <cmath>
 #include <chrono>
 
+/** This class provide an example of what a user of hiop::hiopInterfacePriDecProblem 
+ * should implement in order to provide both the base and recourse problem to 
+ * hiop::hiopAlgPrimalDecomposition solver
+ * 
+ * Base case problem f
+ * sum 0.5 {(x_i-1)*(x_i-1) : i=1,...,ns} 
+ *           x_i >=0
+ * Contingency problems r_i
+ * r = 1/S * \sum{i=1^S} 0.5*|x+Se_i|^2
+ * where {Se_i}_j = 1  j=i
+ *                = 0  otherwise,  i=1,2,....S
+ * For i>ns, Se_i = 0
+ *
+ * This should produce the analytical solution of x* = 0
+ */
+
+
 using namespace hiop;
 class Ex8 : public hiop::hiopInterfaceDenseConstraints
 {

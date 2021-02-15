@@ -27,7 +27,7 @@ bool Ex8::get_cons_info(const long long& m, double* clow, double* cupp, Nonlinea
 bool Ex8::eval_f(const long long& n, const double* x, bool new_x, double& obj_value)
 {
   obj_value=0.;//x[0]*(x[0]-1.);
-  //sum 0.5 {(x_i-1)*(x_{i}-1) : i=1,...,ns} + 0.5 y'*Qd*y + 0.5 s^T s
+  //sum 0.5 {(x_i-1)*(x_{i}-1) : i=1,...,ns} 
   for(int i=0; i<ns; i++) obj_value += (x[i]-1.)*(x[i]-1.);
   obj_value *= 0.5;
 
