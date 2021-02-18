@@ -66,8 +66,8 @@ HiOp offers support for converting sparse triplet format to  compressed sparse r
 ### *Symmetric* sparse matrices 
 Only upper triangular nonzero entries should be specified, accessed, and maintained.
 The Hessian and the symmetric KKT systems are implemented as symmetric matrices. Users only need to provide the upper triangle nonzero entries to Hessian.
-For the symmetric KKT linearizations, some linear algebra package, e.g., MA57 from HSL, can read entries from both the upper and lower triangular part, however, only one from the entries (i,j) and (j,i) is required to be passed to HSL solvers.
-Developers should be remark that the internal sorting rules for sparse matrices in triplet format enable efficient copying of the constraint Jacobian and Lagrangian Hessian in the KKT linear system matrix.
+For the symmetric KKT linearizations, some linear algebra package, e.g., MA57 from HSL, can read entries from both the upper and lower triangular part, however, only one from the entries (i,j) and (j,i) is required to be passed to HSL solvers. 
+HiOp developers should be remark that the internal sorting rules for sparse matrices in triplet format enable efficient copying of the constraint Jacobian and Lagrangian Hessian in the KKT linear system matrix; also, the symmetric KKT linear systems store only the lower triangle entries for the sake of efficiency.
 
 
 ## Obtaining matrices from HiOp

@@ -1,6 +1,8 @@
 # CSR Format used by HiOp to save linear systems
 
-Each of the linear systems saved by HiOp in a .iajaaa file (see [this](readme.md) for more information) consists of the systems's matrix, the right-hand side(s) (rhs), and the solution(s). The matrix is assumed to be square and the indexes are Fortran style (1-based). For symmetric matrices only the elements from the upper triangle are used. An example Matlab script that loads and solves such linear systems is provided [here](load_kkt_mat.m). 
+Each of the linear systems saved by HiOp in a .iajaaa file (see [this](readme.md) for more information) consists of the systems's matrix, the right-hand side(s) (rhs), and the solution(s). The matrix is assumed to be square and the indexes are Fortran style (1-based). For KKT symmetric matrices only the elements from the upper or lower triangle are used. The lower triangle elements are saved for all symmetric KKT systems, while for the rest of the symmetric KKT systems (MDS and dense) the upper triangle elements are saved.
+
+An example Matlab script that loads and solves such linear systems is provided [here](load_kkt_mat.m). 
 
 The .iajaaa files contain
 
