@@ -91,7 +91,8 @@ namespace hiop
     if(!Jac_dSp_) { assert(false); return false; }
 
     long long nx = HessSp_->n(), neq=Jac_cSp_->m(), nineq=Jac_dSp_->m();
-    int nnz = HessSp_->numberOfNonzeros() + Jac_cSp_->numberOfNonzeros() + Jac_dSp_->numberOfNonzeros() + nx + neq + nineq;
+    int nnz = HessSp_->numberOfNonzeros() + Jac_cSp_->numberOfNonzeros() + Jac_dSp_->numberOfNonzeros();
+    nnz += nx + neq + nineq;
 
     linSys_ = determineAndCreateLinsys(nx, neq, nineq, nnz);
         
@@ -113,9 +114,12 @@ namespace hiop
 
       // copy Jac and Hes to the full iterate matrix
       long long dest_nnz_st{0};
-      Msys.copyRowsBlockFrom(*HessSp_,  0,   nx,     0,      dest_nnz_st); dest_nnz_st += HessSp_->numberOfNonzeros();
-      Msys.copyRowsBlockFrom(*Jac_cSp_, 0,   neq,    nx,     dest_nnz_st); dest_nnz_st += Jac_cSp_->numberOfNonzeros();
-      Msys.copyRowsBlockFrom(*Jac_dSp_, 0,   nineq,  nx+neq, dest_nnz_st); dest_nnz_st += Jac_dSp_->numberOfNonzeros();
+      Msys.copyRowsBlockFrom(*HessSp_,  0,   nx,     0,      dest_nnz_st);
+      dest_nnz_st += HessSp_->numberOfNonzeros();
+      Msys.copyRowsBlockFrom(*Jac_cSp_, 0,   neq,    nx,     dest_nnz_st);
+      dest_nnz_st += Jac_cSp_->numberOfNonzeros();
+      Msys.copyRowsBlockFrom(*Jac_dSp_, 0,   nineq,  nx+neq, dest_nnz_st);
+      dest_nnz_st += Jac_dSp_->numberOfNonzeros();
 
       //build the diagonal Hx = Dx + delta_wx
       if(NULL == Hx_) {

@@ -178,7 +178,7 @@ namespace hiop
         _nlp->log->printf(hovError, "Could not open '%s' for writing the linsys.\n", fname.c_str());
         return;
       }
-      
+
       //count nnz
       int nnz=Msys.numberOfNonzeros();
       

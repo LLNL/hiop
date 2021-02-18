@@ -6,9 +6,9 @@ The .iajaaa files contain
 
 1. number of rows (nrows) [1 int]
 
-2. number of nonzeros (nnz) [1 int]
+2. number of primal variables, number of equality constraints, and number of inequality constraints of the underlying NLP problem [3 ints]
 
-3. number of primal variables, number of equality constraints, and number of inequality constraints of the underlying NLP problem [3 ints]
+3. number of nonzeros (nnz) [1 int]
 
 4. array of pointers/offsets in 4. and 5. of the first nonzero of each row; first entry is 1 and the last entry is nnz+1 [nrows+1 ints]
 
