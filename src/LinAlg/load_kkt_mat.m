@@ -6,12 +6,15 @@ fclose(f);
 
 %% data loading
 m=A(1); % matrix size 
-nnz=A(2); % number of nnz of the upper triangle
-rowp = A(3:m+3); % row pointers in colidx and vals (see below)
-colidx=A(m+4:nnz+m+3); % column indexes for each nz
-vals=A(nnz+m+4:nnz+nnz+m+3); % values for each nz
-rhs=A(nnz+nnz+m+4:nnz+nnz+m+m+3); % rhs 
-sol=A(nnz+nnz+m+m+4:nnz+nnz+m+m+m+3); % solution
+nnz=A(2); % number of nnz of matrix (or of the upper triangle for symmetric matrices)
+nx=A(3); % number of (primal) variables of the underlying NLP
+meq=A(4); % number of equalities of the underlying NLP
+nineq=A(5); % number of inequalities of the underlying NLP
+rowp = A(6:m+6); % row pointers in colidx and vals (see below)
+colidx=A(m+7:nnz+m+6); % column indexes for each nz
+vals=A(nnz+m+7:nnz+nnz+m+6); % values for each nz
+rhs=A(nnz+nnz+m+7:nnz+nnz+m+m+6); % rhs 
+sol=A(nnz+nnz+m+m+7:nnz+nnz+m+m+m+6); % solution
 fprintf('Loaded a matrix of size %d with %d nonzeros from "%s"\n', ...
     m, nnz, filename);
 
@@ -23,7 +26,8 @@ for ii=2:m+1
     end
 end
 
-%% form the matrix and fill lower triangle
+%% form the matrix
+% if the matrix is known to be symmetric fill the lower triangle
 M = sparse(rowidx, colidx, vals, m, m);
 M=M+transpose(triu(M,1));
 
