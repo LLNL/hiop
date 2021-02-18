@@ -53,8 +53,8 @@ int main(int argc, char **argv)
   for(int i=0;i<nc;i++) list[i]=i+1;
   
 
-  //PriDecMasterProblemEx8 pridec_problem(nx, nS);
-  PriDecMasterProblemEx8 pridec_problem(nx, nS, nc);
+  //PriDecMasterProblemEx8 pridec_problem(nx, nS,MPI_COMM_WORLD);
+  PriDecMasterProblemEx8 pridec_problem(nx, nS, nc,MPI_COMM_WORLD);
   //printf("total ranks %d\n",comm_size);
   hiop::hiopAlgPrimalDecomposition pridec_solver(&pridec_problem, nc,list,MPI_COMM_WORLD);
 

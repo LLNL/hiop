@@ -65,14 +65,14 @@ int main(int argc, char **argv)
   }
   printf(" \n");
 
-  
+    
   if(status!=Solve_Success){
     if(rank==0)
       printf("Solve was NOT successfull.");
   }else{
     if(rank==0)
       printf("Solve was successfull. Optimal value: %12.5e\n",
-             pridec_solver.getObjective());
+         obj_value);
   }
 
 #ifdef HIOP_USE_MAGMA
