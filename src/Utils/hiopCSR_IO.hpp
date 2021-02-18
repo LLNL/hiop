@@ -8,11 +8,16 @@
 
 namespace hiop
 {
-  //saves a dense or other matrices in the CSR format. Expects the following order of calls
-  // 1. writeMatToFile -> will create/overwrite kkt_linsys_counter.iajaaa file and will write 
-  // the matrix  passed as argument
-  // 2. writeRhsToFile -> will append the rhs
-  // 3. writeSolToFile -> will append the sol
+  /**
+   * @brief This class saves a dense or other matrices in the CSR format. The implementation 
+   * assumes the following order of calls
+   *   1. writeMatToFile -> will create/overwrite kkt_linsys_counter.iajaaa file and will write 
+   * the matrix passed as argument
+   *   2. writeRhsToFile -> will append the rhs
+   *   3. writeSolToFile -> will append the sol
+   * 
+   * The format of .iajaaa files is described in src/LinAlg/csr_iajaaa.md
+   */
   class hiopCSR_IO {
   public:
     // masterrank=-1 means all ranks save
@@ -25,6 +30,12 @@ namespace hiop
     {
     }
 
+    /**
+     * @brief Appends a right-hand side vector to the .iajaaa file
+     *
+     * @param rhs is the right-hand side vector to be written
+     * @param counter specifies the suffix in the filename, usually is the iteration number
+     */
     void writeRhsToFile(const hiopVector& rhs, const int& counter)
     {
 #ifdef HIOP_USE_MPI
@@ -48,14 +59,33 @@ namespace hiop
       fprintf(f, "\n");
       fclose(f);
     }
+
+    /**
+     * @brief Appends a solution vector to the .iajaaa file
+     *
+     * @param sol is the solution vector to be written
+     * @param counter specifies the suffix in the filename, usually is the iteration number
+     */
+
     inline void writeSolToFile(const hiopVector& sol, const int& counter)
     { 
       writeRhsToFile(sol, counter); 
     }
 
-    //write a dense matrix in the iajaaa format; zero elements are not written
-    //counter specifies the suffix in the filename, essentially is the iteration #
-    void writeMatToFile(hiopMatrixDense& Msys, const int& counter)
+    /**
+     * @brief Writes a dense matrix in the sparse iajaaa format (zero elements are not written)
+     *
+     * @param Msys is the matrix to be written
+     * @param counter specifies the suffix in the filename, usually is the iteration number
+     * @param nx specifies the number of primal variables
+     * @param meq  specifies the number of equality constraints
+     * @param mineq  specifies  the number of inequality constraints
+     */
+    void writeMatToFile(hiopMatrixDense& Msys,
+                        const int& counter,
+                        const int& nx,
+                        const int& meq,
+                        const int& mineq)
     {
 #ifdef HIOP_USE_MPI
       if(_master_rank>=0 && _master_rank != _nlp->get_rank()) return;
@@ -76,10 +106,16 @@ namespace hiop
       const double zero_tol = 1e-25;
       int nnz=0;
       double* M = Msys.local_data();
-      for(int i=0; i<m; i++) for(int j=i; j<m; j++) if(fabs(M[i*m+j])>zero_tol) nnz++;
+      for(int i=0; i<m; i++) {
+        for(int j=i; j<m; j++) {
+          if(fabs(M[i*m+j])>zero_tol) {
+            nnz++;
+          }
+        }
+      }
       
       //start writing -> indexes are starting at 1
-      fprintf(f, "%d\n %d\n", m, nnz);
+      fprintf(f, "%d\n%d\n%d\n%d\n%d\n", m, nx, meq, mineq, nnz);
       
       //array of pointers/offsets in of the first nonzero of each row; first entry is 1 and the last entry is nnz+1
       int offset = 1;
@@ -113,9 +149,20 @@ namespace hiop
       fclose(f);
     }
   
-    //write a sparse triplet matrix in the iajaaa format; zero elements are not written
-    //counter specifies the suffix in the filename, essentially is the iteration #
-    void writeMatToFile(hiopMatrixSparseTriplet& Msys, const int& counter)
+    /**
+     * @brief Writes a dense matrix in the sparse iajaaa format (zero elements are not written)
+     *
+     * @param Msys is the matrix to be written
+     * @param counter specifies the suffix in the filename, usually is the iteration number
+     * @param nx specifies the number of primal variables
+     * @param meq  specifies the number of equality constraints
+     * @param mineq  specifies  the number of inequality constraints
+     */
+    void writeMatToFile(hiopMatrixSparseTriplet& Msys,
+                        const int& counter,
+                        const int& nx,
+                        const int& meq,
+                        const int& mineq)
     {
 #ifdef HIOP_USE_MPI
       if(_master_rank>=0 && _master_rank != _nlp->get_rank()) return;
@@ -146,7 +193,7 @@ namespace hiop
       if(index_covert_extra_Diag2CSR) delete [] index_covert_extra_Diag2CSR; index_covert_extra_Diag2CSR = nullptr;
       
       //start writing -> indexes are starting at 1
-      fprintf(f, "%d\n%d\n", m, csr_nnz);      
+      fprintf(f, "%d\n%d\n%d\n%d\n%d\n", m, nx, meq, mineq, csr_nnz);
       
       //array of pointers/offsets in of the first nonzero of each row; first entry is 1 and the last entry is nnz+1
       for(int i=0; i<m+1; i++) {	

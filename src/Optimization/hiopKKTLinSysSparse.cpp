@@ -160,8 +160,12 @@ namespace hiop
     } // end of update of the linear system
 
     //write matrix to file if requested
-    if(nlp_->options->GetString("write_kkt") == "yes") write_linsys_counter_++;
-    if(write_linsys_counter_>=0) csr_writer_.writeMatToFile(Msys, write_linsys_counter_); 
+    if(nlp_->options->GetString("write_kkt") == "yes") {
+      write_linsys_counter_++;
+    }
+    if(write_linsys_counter_>=0) {
+      csr_writer_.writeMatToFile(Msys, write_linsys_counter_, nx, neq, nineq);
+    }
 
     nlp_->runStats.tmSolverInternal.stop();
     return true;
@@ -194,9 +198,9 @@ namespace hiop
     ryc.copyToStarting(*rhs_, nx);
     ryd.copyToStarting(*rhs_, nx+nyc);
 
-    if(write_linsys_counter_>=0)
+    if(write_linsys_counter_>=0) {
       csr_writer_.writeRhsToFile(*rhs_, write_linsys_counter_);
-
+    }
     nlp_->runStats.kkt.tmSolveRhsManip.stop();
 
     nlp_->runStats.kkt.tmSolveTriangular.start();
@@ -212,9 +216,9 @@ namespace hiop
 			nlp_->runStats.linsolv.get_summary_last_solve().c_str());
     }
 
-    if(write_linsys_counter_>=0)
+    if(write_linsys_counter_>=0) {
       csr_writer_.writeSolToFile(*rhs_, write_linsys_counter_);
-
+    }
     if(false==linsol_ok) return false;
 
     nlp_->runStats.kkt.tmSolveRhsManip.start();
@@ -376,8 +380,12 @@ namespace hiop
     }
     
     //write matrix to file if requested
-    if(nlp_->options->GetString("write_kkt") == "yes") write_linsys_counter_++;
-    if(write_linsys_counter_>=0) csr_writer_.writeMatToFile(Msys, write_linsys_counter_); 
+    if(nlp_->options->GetString("write_kkt") == "yes") {
+      write_linsys_counter_++;
+    }
+    if(write_linsys_counter_>=0) {
+      csr_writer_.writeMatToFile(Msys, write_linsys_counter_, nx, neq, nineq);
+    }
 
     return true;
   }
@@ -675,8 +683,12 @@ namespace hiop
     }
  
     //write matrix to file if requested
-    if(nlp_->options->GetString("write_kkt") == "yes") write_linsys_counter_++;
-    if(write_linsys_counter_>=0) csr_writer_.writeMatToFile(Msys, write_linsys_counter_); 
+    if(nlp_->options->GetString("write_kkt") == "yes") {
+      write_linsys_counter_++;
+    }
+    if(write_linsys_counter_>=0) {
+      csr_writer_.writeMatToFile(Msys, write_linsys_counter_, nx, neq, nineq);
+    }
 
     return true;
   }

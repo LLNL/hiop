@@ -286,8 +286,12 @@ namespace hiop
     nlp_->runStats.kkt.tmUpdateLinsys.stop();
       
     //write matrix to file if requested
-    if(nlp_->options->GetString("write_kkt") == "yes") write_linsys_counter_++;
-    if(write_linsys_counter_>=0) csr_writer_.writeMatToFile(Msys, write_linsys_counter_); 
+    if(nlp_->options->GetString("write_kkt") == "yes") {
+      write_linsys_counter_++;
+    }
+    if(write_linsys_counter_>=0) {
+      csr_writer_.writeMatToFile(Msys, write_linsys_counter_, nxd+nxs, neq, nineq);
+    }
     
     return true;
   }
@@ -340,11 +344,11 @@ namespace hiop
     //ths[nxde+nyc:nxde+nyc+nyd-1] = ryd
     ryd.copyToStarting(*rhs_, nxde+nyc);
 
-    if(write_linsys_counter_>=0) 
+    if(write_linsys_counter_>=0) {
       csr_writer_.writeRhsToFile(*rhs_, write_linsys_counter_);
-
+    }
+    
     nlp_->runStats.kkt.tmSolveRhsManip.stop();
-
     nlp_->runStats.kkt.tmSolveTriangular.start();
     
     // solve
@@ -357,9 +361,9 @@ namespace hiop
 			nlp_->runStats.linsolv.get_summary_last_solve().c_str());
     }
     
-    if(write_linsys_counter_>=0) 
+    if(write_linsys_counter_>=0) {
       csr_writer_.writeSolToFile(*rhs_, write_linsys_counter_);
-
+    }
     if(false==linsol_ok) return false;
 
     nlp_->runStats.kkt.tmSolveRhsManip.start();
@@ -368,7 +372,6 @@ namespace hiop
     rhs_->startingAtCopyToStartingAt(0,        dx,  nxsp, nxde);
     rhs_->startingAtCopyToStartingAt(nxde,     dyc, 0);   
     rhs_->startingAtCopyToStartingAt(nxde+nyc, dyd, 0);
-
 
     // compute dxs
     hiopVector& dxs = *_buff_xs_;
