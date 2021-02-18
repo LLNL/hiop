@@ -6,6 +6,73 @@
 #include <cmath>
 
 
+Ex8::Ex8(int ns_)
+    : Ex8(ns_, ns_)
+{
+}  //ns = nx, nd=S
+
+Ex8::Ex8(int ns_, int S_)
+    : ns(ns_), evaluator_(nullptr) 
+{
+  if(ns<0) {
+    ns = 0;
+  } else {
+    if(4*(ns/4) != ns) {
+      ns = 4*((4+ns)/4);
+      printf("[warning] number (%d) of sparse vars is not a multiple ->was altered to %d\n", 
+             ns_, ns); 
+    }
+  }
+  if(S_<0) {
+    S=0;
+  } else {
+    S = S_;
+  }
+  if(S<ns) {
+    S = ns;
+    printf("[warning] number (%d) of recourse problems should be larger than sparse vars  %d,"
+           " changed to be the same\n",  S, ns); 
+  }
+  nc = ns;
+}
+
+Ex8::Ex8(int ns_, int S_, int nc_)
+    : Ex8(ns_,S_)
+{
+  nc = nc_;
+}
+
+	
+Ex8::Ex8(int ns_, int S_, int nc_,bool include_)
+    : Ex8(ns_,S_,nc_)
+{
+  include_r = include_;
+  if(include_r) {
+    evaluator_ = new hiopInterfacePriDecProblem::RecourseApproxEvaluator(nc_);
+  }
+}
+
+Ex8::Ex8(int ns_, int S_, bool include, const hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator)
+    : Ex8(ns_,S_)
+{
+  include_r = include;
+  evaluator_ = new hiopInterfacePriDecProblem::RecourseApproxEvaluator(ns, S, evaluator->get_rval(), evaluator->get_rgrad(), 
+                                           evaluator->get_rhess(), evaluator->get_x0());
+}
+
+Ex8::~Ex8()
+{
+  delete evaluator_;
+}
+ 
+bool Ex8::get_prob_sizes(long long& n, long long& m)
+{ 
+  n=ns;
+  m=0; 
+  return true; 
+}
+
+
 bool Ex8::get_vars_info(const long long& n, double *xlow, double* xupp, NonlinearityType* type)
 {
   //assert(n>=4 && "number of variables should be greater than 4 for this example");
@@ -14,6 +81,13 @@ bool Ex8::get_vars_info(const long long& n, double *xlow, double* xupp, Nonlinea
   for(int i=0; i<ns; ++i) xlow[i] = 0.;
   for(int i=0; i<ns; ++i) xupp[i] = +1e+20;
   for(int i=0; i<ns; ++i) type[i]=hiopNonlinear;
+  //uncoupled x fixed
+  //for testing
+  if(nc<ns){
+    for(int i=nc+1; i<ns; ++i) xlow[i] = 1.;
+    for(int i=nc+1; i<ns; ++i) xlow[i] = 1.;
+    xupp[0] = 1.; xupp[0] = 1.;
+  }
   return true;
 };
 
@@ -28,12 +102,12 @@ bool Ex8::eval_f(const long long& n, const double* x, bool new_x, double& obj_va
 {
   obj_value=0.;//x[0]*(x[0]-1.);
   //sum 0.5 {(x_i-1)*(x_{i}-1) : i=1,...,ns} 
-  for(int i=0; i<ns; i++) obj_value += (x[i]-1.)*(x[i]-1.);
+  for(int i=0; i<n; i++) obj_value += (x[i]-1.)*(x[i]-1.);
   obj_value *= 0.5;
 
   if(include_r) {
     assert(evaluator_->get_rgrad()!=NULL);
-    evaluator_->eval_f(ns, x, new_x, obj_value);
+    evaluator_->eval_f(n, x, new_x, obj_value);
   }
   return true;
 };
@@ -51,12 +125,12 @@ bool Ex8::eval_grad_f(const long long& n, const double* x, bool new_x, double* g
 {
   //! assert(ns>=4); assert(Q->n()==ns/4); assert(Q->m()==ns/4);
   //x_i - 0.5 
-  for(int i=0; i<ns; i++) {
+  for(int i=0; i<n; i++) {
     gradf[i] = x[i]-1.;
   }
   if(include_r) {
     assert(evaluator_->get_rgrad()!=NULL);
-    evaluator_->eval_grad(ns, x, new_x, gradf);
+    evaluator_->eval_grad(n, x, new_x, gradf);
   }
   return true;
 };
@@ -95,20 +169,21 @@ bool Ex8::quad_is_defined()
   else return false;
 };
 
-bool Ex8::set_quadratic_terms(const int& n, const RecourseApproxEvaluator* evaluator)
+bool Ex8::set_quadratic_terms(const int& n, const hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator)
 {
-  assert(ns == n);
+  assert(nc == n);
   if(evaluator_==NULL) {
-    evaluator_ = new RecourseApproxEvaluator(n, S, evaluator->get_rval(), evaluator->get_rgrad(), 
+    evaluator_ = new hiopInterfacePriDecProblem::RecourseApproxEvaluator(nc, S, evaluator->get_xc_idx(),
+		                             evaluator->get_rval(), evaluator->get_rgrad(), 
                                              evaluator->get_rhess(), evaluator->get_x0());
     return true;
   }
 
   if(evaluator->get_rgrad()!=NULL) {
     evaluator_->set_rval(evaluator->get_rval());    
-    evaluator_->set_rgrad(ns,evaluator->get_rgrad());
-    evaluator_->set_rhess(ns,evaluator->get_rhess());  
-    evaluator_->set_x0(ns,evaluator->get_x0());
+    evaluator_->set_rgrad(n,evaluator->get_rgrad());
+    evaluator_->set_rhess(n,evaluator->get_rhess());  
+    evaluator_->set_x0(n,evaluator->get_x0());
   }
   return true;
 };
@@ -125,7 +200,11 @@ hiopSolveStatus PriDecMasterProblemEx8::solve_master(double* x, const bool& incl
   obj_=-1e+20;
   hiopSolveStatus status;
   if(my_nlp==NULL) {
-    my_nlp = new Ex8(n_,S_);
+    if(n_==nc_) {
+      my_nlp = new Ex8(n_,S_);
+    } else {
+      my_nlp = new Ex8(n_,S_,nc_);
+    }
   }
 
   bool ierr = my_nlp->set_include(include_r);
@@ -142,6 +221,7 @@ hiopSolveStatus PriDecMasterProblemEx8::solve_master(double* x, const bool& incl
   nlp.options->SetStringValue("duals_init", "zero"); // "lsq" or "zero"
   nlp.options->SetStringValue("compute_mode", "cpu");
   nlp.options->SetStringValue("KKTLinsys", "xdycyd");
+  nlp.options->SetStringValue("fixed_var", "relax");
   /*
   nlp.options->SetStringValue("dualsUpdateType", "linear");
   nlp.options->SetStringValue("dualsInitialization", "zero");
@@ -152,10 +232,12 @@ hiopSolveStatus PriDecMasterProblemEx8::solve_master(double* x, const bool& incl
   nlp.options->SetNumericValue("mu0", 1e-1);
   nlp.options->SetNumericValue("tolerance", 1e-5);
   */
+
   nlp.options->SetIntegerValue("verbosity_level", 1);
   hiopAlgFilterIPM solver(&nlp);
   status = solver.run();
   obj_ = solver.getObjective();
+
   solver.getSolution(x);
 
   if(status<0) {
@@ -177,8 +259,12 @@ hiopSolveStatus PriDecMasterProblemEx8::solve_master(double* x, const bool& incl
   if(sol_==NULL) {
     sol_ = new double[n_];
   }
+
   memcpy(sol_,x, n_*sizeof(double));
+  for(int i=0;i<n_;i++) printf("%d %18.12e\n",i,x[i]);
+  //assert("for debugging" && false); //for debugging purpose
   return Solve_Success;
+
 };
 
 bool PriDecMasterProblemEx8::eval_f_rterm(size_t idx, const int& n,const  double* x, double& rval)
@@ -196,9 +282,10 @@ bool PriDecMasterProblemEx8::eval_f_rterm(size_t idx, const int& n,const  double
   return true;
 };
 
+// x is handled by primalDecomp to be the correct coupled x
 bool PriDecMasterProblemEx8::eval_grad_rterm(size_t idx, const int& n, double* x, double* grad)
 {
-  assert(n_ == n);
+  assert(nc_ == n);
   for(int i=0; i<n; i++) {
     if(i==idx) {	    
       grad[i] = (x[i]+S_)/S_;
@@ -209,7 +296,9 @@ bool PriDecMasterProblemEx8::eval_grad_rterm(size_t idx, const int& n, double* x
   return true;
 }; 
 
-bool PriDecMasterProblemEx8::set_recourse_approx_evaluator(const int n, RecourseApproxEvaluator* evaluator)
+bool PriDecMasterProblemEx8::
+set_recourse_approx_evaluator(const int n, 
+		              hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator)
 {  
    my_nlp->set_quadratic_terms( n, evaluator);
    return true; 

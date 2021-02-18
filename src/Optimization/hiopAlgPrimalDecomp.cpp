@@ -323,8 +323,11 @@ double hiopAlgPrimalDecomposition::HessianApprox::
   return convg;
 }
 
-hiopAlgPrimalDecomposition::hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
-       MPI_Comm comm_world=MPI_COMM_WORLD) : master_prob_(prob_in), comm_world_(comm_world)
+
+hiopAlgPrimalDecomposition::
+hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
+                           MPI_Comm comm_world/*=MPI_COMM_WORLD*/) : 
+	                   master_prob_(prob_in), comm_world_(comm_world)
 {
   S_ = master_prob_->get_num_rterms();
   n_ = master_prob_->get_num_vars();
@@ -350,8 +353,8 @@ hiopAlgPrimalDecomposition::hiopAlgPrimalDecomposition(hiopInterfacePriDecProble
 
 hiopAlgPrimalDecomposition::
 hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
-                             const int nc, const std::vector<int>& xc_index,
-                             MPI_Comm comm_world=MPI_COMM_WORLD)
+                           const int nc, const std::vector<int>& xc_index,
+                           MPI_Comm comm_world/*=MPI_COMM_WORLD*/)
     : master_prob_(prob_in),nc_(nc), comm_world_(comm_world)
 {
   S_ = master_prob_->get_num_rterms();
@@ -362,16 +365,16 @@ hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
   //determine rank and rank type
   //only two rank types for now, master and evaluator/worker
 
-  #ifdef HIOP_USE_MPI
-    int ierr = MPI_Comm_rank(comm_world, &my_rank_); assert(ierr == MPI_SUCCESS);
-    int ret = MPI_Comm_size(MPI_COMM_WORLD, &comm_size_); assert(ret==MPI_SUCCESS);
-    if(my_rank_==0) { 
-      my_rank_type_ = 0;
-    } else {
-      my_rank_type_ = 1;
-    }
-    request_ = new MPI_Request[4];   
-  #endif
+#ifdef HIOP_USE_MPI
+  int ierr = MPI_Comm_rank(comm_world, &my_rank_); assert(ierr == MPI_SUCCESS);
+  int ret = MPI_Comm_size(MPI_COMM_WORLD, &comm_size_); assert(ret==MPI_SUCCESS);
+  if(my_rank_==0) { 
+    my_rank_type_ = 0;
+  } else {
+    my_rank_type_ = 1;
+  }
+  request_ = new MPI_Request[4];   
+#endif
   x_ = new double[n_];
 }
 
@@ -781,7 +784,8 @@ bool hiopAlgPrimalDecomposition::stopping_criteria(const int it, const double co
         printf("\n");
         //todo S_ doesn't have to be bigger than n_ now right?
        
-        RecourseApproxEvaluator* evaluator = new RecourseApproxEvaluator(nc_,S_,xc_idx_,rval,grad_r, 
+        hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator = new hiopInterfacePriDecProblem::
+		                                 RecourseApproxEvaluator(nc_,S_,xc_idx_,rval,grad_r, 
                                                                          hess_appx, x0);
         bret = master_prob_->set_recourse_approx_evaluator(nc_, evaluator);
         if(!bret) {
@@ -927,7 +931,8 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
     }
     printf(" \n");
     // nc_ is the demesnion of coupled x
-    RecourseApproxEvaluator* evaluator = new RecourseApproxEvaluator(nc_,S_,xc_idx_,rval,grad_r, 
+    hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator = new hiopInterfacePriDecProblem::
+	                                     RecourseApproxEvaluator(nc_,S_,xc_idx_,rval,grad_r, 
                                                                      hess_appx, x0);
       
     bret = master_prob_->set_recourse_approx_evaluator(nc_, evaluator);

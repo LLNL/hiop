@@ -41,67 +41,22 @@ using namespace hiop;
 class Ex8 : public hiop::hiopInterfaceDenseConstraints
 {
 public:
-  Ex8(int ns_)
-    : Ex8(ns_, ns_){}  //ns = nx, nd=S
+  Ex8(int ns_);
   
-  Ex8(int ns_, int S_)
-    : ns(ns_), evaluator_(nullptr) 
-
-  {
-    if(ns<0)
-    {
-      ns = 0;
-    }else{
-      if(4*(ns/4) != ns)
-      {
-	ns = 4*((4+ns)/4);
-	printf("[warning] number (%d) of sparse vars is not a multiple ->was altered to %d\n", 
-	       ns_, ns); 
-      }
-    }
-    if(S_<0)
-    {
-      S=0;
-    }else{
-      S = S_;
-    }
-    if(S<ns)
-    {
-      S = ns;
-      printf("[warning] number (%d) of recourse problems should be larger than sparse vars  %d,"
-	     " changed to be the same\n",  S, ns); 
-    }
-    //haveIneq = true;
-  }
-  Ex8(int ns_, int S_, bool include_)
-    : Ex8(ns_,S_)
-  {
-    include_r = include_;
-    if(include_r)
-    {
-      evaluator_ = new RecourseApproxEvaluator(ns_);
-    }
-  }
-  Ex8(int ns_, int S_, bool include, const RecourseApproxEvaluator* evaluator)
-    : Ex8(ns_,S_)
-
-  {
-    include_r = include;
-    evaluator_ = new RecourseApproxEvaluator(ns, S, evaluator->get_rval(), evaluator->get_rgrad(), 
-		            evaluator->get_rhess(), evaluator->get_x0());
-  }
-
-  virtual ~Ex8()
-  {
-    delete evaluator_;
-  }
+  Ex8(int ns_, int S_);
   
-  bool get_prob_sizes(long long& n, long long& m)
-  { 
-    n=ns;
-    m=0; 
-    return true; 
-  }
+  Ex8(int ns_, int S_, int nc_);
+
+  Ex8(int ns_, int S_, int nc_,bool include_);
+  
+  Ex8(int ns_, 
+      int S_, 
+      bool include, 
+      const hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator);
+
+  virtual ~Ex8();
+  
+  bool get_prob_sizes(long long& n, long long& m);
 
   virtual bool get_vars_info(const long long& n, double *xlow, double* xupp, NonlinearityType* type);
 
@@ -133,14 +88,17 @@ public:
 
   virtual bool quad_is_defined();
 
-  virtual bool set_quadratic_terms(const int& n, const RecourseApproxEvaluator* evaluator);
+  virtual bool set_quadratic_terms(const int& n, 
+		                   const hiopInterfacePriDecProblem::
+				         RecourseApproxEvaluator* evaluator);
   
   virtual bool set_include(bool include);
 
 protected:
   int ns,S;
+  int nc;
   bool include_r = false;
-  RecourseApproxEvaluator* evaluator_;
+  hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator_;
 
 };
 
@@ -154,9 +112,18 @@ public:
     : hiopInterfacePriDecProblem(comm_world),
       n_(n), S_(S),obj_(-1e20),sol_(NULL)
   {
-      my_nlp = new Ex8(n_,S_);   
+    nc_ = n;
+    my_nlp = new Ex8(n_,S_);   
   }
-
+  PriDecMasterProblemEx8(int n,
+                         int S,
+			 int nc,
+                         MPI_Comm comm_world=MPI_COMM_WORLD)
+    : hiopInterfacePriDecProblem(comm_world),
+      n_(n), S_(S),nc_(nc),obj_(-1e20),sol_(NULL)
+  {
+    my_nlp = new Ex8(n,S,nc);   
+  }
   virtual ~PriDecMasterProblemEx8()
   {
     delete my_nlp;
@@ -172,7 +139,8 @@ public:
 
   //implement with alpha = 1 for now only
   // this function should only be used if quadratic regularization is included
-  virtual bool set_recourse_approx_evaluator(const int n, RecourseApproxEvaluator* evaluator);
+  virtual bool set_recourse_approx_evaluator(const int n, 
+		                             hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator);
   /** 
    * Returns the number S of recourse terms
    */
@@ -187,6 +155,7 @@ public:
 private:
   size_t n_;
   size_t S_;
+  size_t nc_;
   Ex8* my_nlp;
   double obj_;
   double* sol_; 

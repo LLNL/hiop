@@ -35,7 +35,6 @@ PriDecMasterProblemEx9::solve_master(double* x,
   hiopNlpSparse nlp(*basecase_);
     
   //nlp.options->SetStringValue("compute_mode", "hybrid");
-  
   // what should the solver options be?
   //nlp.options->SetStringValue("dualsUpdateType", "linear");
   //nlp.options->SetStringValue("dualsInitialization", "zero"); hiop does not understand?
@@ -79,8 +78,11 @@ PriDecMasterProblemEx9::solve_master(double* x,
   //return hiop::SolverInternal_Error;
 }
 
-bool PriDecMasterProblemEx9::set_recourse_approx_evaluator(const int n, RecourseApproxEvaluator* evaluator)
+bool PriDecMasterProblemEx9::
+set_recourse_approx_evaluator(const int n, 
+		              hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator)
 {
+  assert(n==nc_);
   basecase_->set_quadratic_terms(n, evaluator);
   return true; 
 }
@@ -91,16 +93,14 @@ bool PriDecMasterProblemEx9::eval_f_rterm(size_t idx, const int& n, const double
   rval=-1e+20;
   hiopSolveStatus status;
   double* xi;
-  xi = new double[ny_]; 
-  for(int i=0;i<ny_;i++) xi[i] = 1.;
-  xi[ny_-1] = 0.1;
+  
+  xi = new double[nS_]; 
+  for(int i=0;i<nS_;i++) xi[i] = 1.;
+  //xi[ny_-1] = 0.1;
 
   PriDecRecourseProblemEx9* ex9_recourse;
 
-  //printf("ny %d\n",ny_); 
-  //printf("nx %d\n",nx_); 
-
-  ex9_recourse = new PriDecRecourseProblemEx9(ny_, nS_,S_,x,xi);
+  ex9_recourse = new PriDecRecourseProblemEx9(nc_, nS_,S_,x,xi);
   //assert("for debugging" && false); //for debugging purpose
   hiopNlpMDS nlp(*ex9_recourse);
 
@@ -124,6 +124,7 @@ bool PriDecMasterProblemEx9::eval_f_rterm(size_t idx, const int& n, const double
   }
 
   solver.getSolution(y_);
+  delete[] xi;
   return true;
       
 };

@@ -1,6 +1,7 @@
 #ifndef HIOP_EXAMPLE_EX9
 #define HIOP_EXAMPLE_EX9
 
+#include <hiopVectorInt.hpp>
 //base interface (NLP specification for primal decomposable problems)
 #include "hiopInterfacePrimalDecomp.hpp"
 
@@ -15,7 +16,6 @@
 #define MPI_COMM_WORLD 0
 #define MPI_Comm int
 #endif
-
 
 /**
  *
@@ -65,7 +65,6 @@
  * @f[ 
  * \min_x \sum_{i=1}^n f(x_i)
  * @f] 
- *
  * 
  */
 
@@ -81,6 +80,7 @@ public:
     sol_ = new double[nx_];
     obj_ = 1e20;
     basecase_ = new PriDecBasecaseProblemEx9(nx_);
+    nc_ = nx_;
   };
   virtual ~PriDecMasterProblemEx9()
   {
@@ -89,7 +89,6 @@ public:
     delete basecase_;
   };
 
-
   hiop::hiopSolveStatus solve_master(double* x,
                                      const bool& include_r,
                                      const double& rval=0, 
@@ -97,7 +96,8 @@ public:
                                      const double*hess =0);
     
 
-  virtual bool set_recourse_approx_evaluator(const int n, RecourseApproxEvaluator* evaluator);
+  virtual bool set_recourse_approx_evaluator(const int n, 
+		                             hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator);
   
   //solving the idxth recourse optimization problem
   bool eval_f_rterm(size_t idx, const int& n, const double* x, double& rval);
@@ -127,7 +127,9 @@ public:
 private:
   /// dimension of primal variable `x`
   size_t nx_;
-  ///dimension of recourse problem primal variable `y`
+  /// dimension of the coupled variable, nc_<=nx_
+  size_t nc_;
+  ///dimension of recourse problem primal variable `y` for each contingency
   size_t ny_;
   /// dimension of uncertainty dimension entering the recourse problem
   size_t nS_;

@@ -38,10 +38,7 @@ public:
                              MPI_Comm comm_world=MPI_COMM_WORLD);
 
 
-  virtual ~hiopAlgPrimalDecomposition()
-  {
-    delete [] x_;
-  }
+  virtual ~hiopAlgPrimalDecomposition();
 
   //we should make the public methods to look like hiopAlgFilterIPMBase
   /* Main function to run the optimization in parallel */
@@ -65,7 +62,7 @@ public:
 
   /* Contains information of a solution step including function value 
    * and gradient. Used for storing the solution for the previous iteration
-   * */
+   */
   struct prev_sol{
     prev_sol(const int n, const double f, const double* grad, const double* x)
     {

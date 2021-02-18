@@ -46,11 +46,17 @@ int main(int argc, char **argv)
 #endif
   int nx=20;
   int nS=100;
-   
-  //printf("here\n");
-  PriDecMasterProblemEx8 pridec_problem(nx, nS);
+  int nc=12;
+  //index of coupled x in the entire x
+  //for testing purpos
+  std::vector<int> list(nc);
+  for(int i=0;i<nc;i++) list[i]=i+1;
+  
+
+  //PriDecMasterProblemEx8 pridec_problem(nx, nS);
+  PriDecMasterProblemEx8 pridec_problem(nx, nS, nc);
   //printf("total ranks %d\n",comm_size);
-  hiop::hiopAlgPrimalDecomposition pridec_solver(&pridec_problem, MPI_COMM_WORLD);
+  hiop::hiopAlgPrimalDecomposition pridec_solver(&pridec_problem, nc,list,MPI_COMM_WORLD);
 
   auto status = pridec_solver.run();
 

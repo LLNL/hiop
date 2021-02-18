@@ -20,7 +20,7 @@ public:
     if(!Ex6::eval_f(n, x, new_x, obj_value)) {
       return false;
     }
-    if(include_rec_) {
+    if(include_rec_) {//same as include_r
       assert(rec_evaluator_->get_rgrad()!=NULL);
       rec_evaluator_->eval_f(n, x, new_x, obj_value);
     } 
@@ -58,9 +58,7 @@ public:
     if(MHSS!=nullptr) {
       //use rec_evaluator_ to add diagonal entries in the Hessian
       assert(nnzHSS == n);
-
-      // is MHSS correct here?
-      if(include_rec_){
+      if(include_rec_) {
         for(int i=0; i<n; i++) {
           MHSS[i] += obj_factor*rec_evaluator_->get_rhess()[i] ;
         }
@@ -68,26 +66,43 @@ public:
     }
     return true;
   }
-
-  bool set_quadratic_terms(const int& n, const RecourseApproxEvaluator* evaluator)
+  /*
+  bool set_quadratic_terms(const int& n, int S, const std::vector<int>& list,
+                           const double& rval, const double* rgrad, 
+		           const double* rhess, const double* x0)
+  {
+    if(rec_evaluator_==NULL) {
+      rec_evaluator_ = new RecourseApproxEvaluator(n, S, list, rval, rgrad, rhess, x0);
+      return true;
+    }
+    assert(rec_evaluator_->get_rgrad()!=NULL);// should be defined
+    rec_evaluator_->set_rval(rval);
+    rec_evaluator_->set_rgrad(n,rgrad);
+    rec_evaluator_->set_rhess(n,rhess);
+    rec_evaluator_->set_x0(n,x0);
+    
+    return true;
+  }
+  */
+  bool set_quadratic_terms(const int& n, 
+		           const hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator)
   {
     //called for assert only
     long long n1=0;
     long long n2=0;
     bool s1 = get_prob_sizes(n1, n2);
-    assert(n == n1);
     if(rec_evaluator_==NULL) {
-      rec_evaluator_ = new RecourseApproxEvaluator(n, evaluator->get_S(), evaluator->get_rval(), evaluator->get_rgrad(), 
-		            evaluator->get_rhess(), evaluator->get_x0());
+      rec_evaluator_ = new hiopInterfacePriDecProblem::
+	                   RecourseApproxEvaluator(n, evaluator->get_S(), evaluator->get_xc_idx(),
+                                                   evaluator->get_rval(), evaluator->get_rgrad(),
+                                                   evaluator->get_rhess(), evaluator->get_x0());
       return true;
     }
-
     assert(rec_evaluator_->get_rgrad()!=NULL);// should be defined
     rec_evaluator_->set_rval(evaluator->get_rval());
     rec_evaluator_->set_rgrad(n,evaluator->get_rgrad());
     rec_evaluator_->set_rhess(n,evaluator->get_rhess());
     rec_evaluator_->set_x0(n,evaluator->get_x0());
-
     return true;
   }
 
@@ -114,5 +129,5 @@ public:
 
 protected:
   bool include_rec_=false;
-  RecourseApproxEvaluator* rec_evaluator_;
+  hiopInterfacePriDecProblem::RecourseApproxEvaluator* rec_evaluator_;
 };

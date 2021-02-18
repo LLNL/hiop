@@ -55,7 +55,7 @@ int main(int argc, char **argv)
   //nx == ny,nS,S
   int nx = 20;
   int nS = 5;
-  int S = 1000;
+  int S = 2000;
   PriDecMasterProblemEx9 pridec_problem(nx, nx, nS, S);
   //printf("total ranks %d\n",comm_size);
   hiop::hiopAlgPrimalDecomposition pridec_solver(&pridec_problem, MPI_COMM_WORLD);

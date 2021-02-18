@@ -26,29 +26,35 @@
 class PriDecRecourseProblemEx9 : public hiop::hiopInterfaceMDS
 {
 public:
-  PriDecRecourseProblemEx9(int n, int nS, int S): n_(n), nS_(nS),S_(S),x_(nullptr),xi_(nullptr)
+  PriDecRecourseProblemEx9(int n, int nS, int S): nx_(n), nS_(nS),S_(S),x_(nullptr),xi_(nullptr)
   {
     assert(nS_>=1);
-    assert(n_>=nS_);  // ny=nx=n
+    assert(nx_>=nS_);  // ny=nx=n
     assert(S_>=1);
-    nsparse_ = n_*sparse_ratio;
+    ny_ = nx_;
+    nsparse_ = nx_*sparse_ratio;
   }
 
-  PriDecRecourseProblemEx9(int n, int nS, int S, const double* x,
-		           const double* xi): n_(n), nS_(nS), S_(S)
+  PriDecRecourseProblemEx9(int n, 
+		           int nS, 
+			   int S, 
+			   const double* x,
+		           const double* xi): nx_(n), nS_(nS), S_(S)
   {
     assert(nS_>=1);
-    assert(n_>=nS_);  // ny=nx=n
+    assert(nx_>=nS_);  // ny=nx=n
     assert(S_>=1);
 
-    xi_ = new double[n_];
-    memcpy(xi_,xi, n_*sizeof(double));
-    x_ = new double[n_];
+    ny_ = nx_;
+    xi_ = new double[nS_];
+    memcpy(xi_,xi, nS_*sizeof(double));
+    x_ = new double[nx_];
 
     //assert("for debugging" && false); //for debugging purpose
-    memcpy(x_,x, n_*sizeof(double));
-    nsparse_ = int(n_*sparse_ratio);
+    memcpy(x_,x, nx_*sizeof(double));
+    nsparse_ = int(nx_*sparse_ratio);
   }
+
   virtual ~PriDecRecourseProblemEx9()
   {
     delete[] x_;
@@ -59,7 +65,7 @@ public:
   void set_sparse(const double ratio)
   {
     sparse_ratio = ratio;
-    nsparse_ = int(ratio*n_);
+    nsparse_ = int(ratio*nx_);
     assert(nsparse_>=1 && ratio<1 && ratio>0);  
   }
 
@@ -67,24 +73,24 @@ public:
   void set_x(const double* x)
   {
     if(x_==NULL) {
-      x_ = new double[n_]; 
+      x_ = new double[nx_]; 
     }
-    memcpy(x_,x, n_*sizeof(double));
+    memcpy(x_,x, nx_*sizeof(double));
   }
 
   /// Set the "sample" vector \xi
   void set_center(const double *xi)
   {
     if(xi_==NULL) {
-      xi_ = new double[n_];     
+      xi_ = new double[nS_];     
     }
-    memcpy(xi_,xi, n_*sizeof(double));
+    memcpy(xi_,xi, nS_*sizeof(double));
   }
 
   bool get_prob_sizes(long long& n, long long& m)
   {
-    n = n_;
-    m = n_; 
+    n = ny_;
+    m = ny_; 
     return true; 
   }
 
@@ -102,26 +108,29 @@ public:
 
   bool get_cons_info(const long long& m, double* clow, double* cupp, NonlinearityType* type)
   {
-    assert(m == n_);
-    for(int i=0;i<n_-1;i++) {
+    assert(m == ny_);
+    for(int i=0;i<ny_-1;i++) {
       clow[i] = 0.;
       cupp[i] = 1e20;
     }
-    clow[n_-1] = 1.;
-    cupp[n_-1] = 1e20;
+    clow[ny_-1] = 1.;
+    cupp[ny_-1] = 1e20;
     return true;
   }
 
-  bool get_sparse_dense_blocks_info(int& nx_sparse, int& nx_dense,
-				    int& nnz_sparse_Jace, int& nnz_sparse_Jaci,
-				    int& nnz_sparse_Hess_Lagr_SS, int& nnz_sparse_Hess_Lagr_SD)
+  bool get_sparse_dense_blocks_info(int& nx_sparse, 
+		                    int& nx_dense,
+				    int& nnz_sparse_Jace, 
+				    int& nnz_sparse_Jaci,
+				    int& nnz_sparse_Hess_Lagr_SS, 
+				    int& nnz_sparse_Hess_Lagr_SD)
   {
     nx_sparse = nsparse_;  
-    nx_dense = n_-nsparse_;
+    nx_dense = ny_-nsparse_;
     assert(nx_sparse>0);
 
     nnz_sparse_Jace = 0;
-    if(nx_sparse<n_) {
+    if(nx_sparse<ny_) {
       nnz_sparse_Jaci = nsparse_+(nsparse_-1)*2+1;
     } else {
       nnz_sparse_Jaci = nsparse_+(nsparse_-1)*2;
@@ -133,7 +142,7 @@ public:
 
   bool eval_f(const long long& n, const double* x, bool new_x, double& obj_value)
   {
-    assert(n_==n);
+    assert(ny_==n);
     obj_value = 0.;
     for(int i=0;i<n;i++) {
       obj_value += (x[i]-x_[i])*(x[i]-x_[i]);
@@ -142,12 +151,16 @@ public:
     return true;
   }
  
-  virtual bool eval_cons(const long long& n, const long long& m, 
-			 const long long& num_cons, const long long* idx_cons,  
-			 const double* x, bool new_x, double* cons)
+  virtual bool eval_cons(const long long& n, 
+		         const long long& m, 
+			 const long long& num_cons, 
+			 const long long* idx_cons,  
+			 const double* x, 
+			 bool new_x, 
+			 double* cons)
   {
-    assert(n==n_); assert(m==n_);
-    assert(num_cons==n_||num_cons==0);
+    assert(n==ny_); assert(m==ny_);
+    assert(num_cons==ny_||num_cons==0);
     if(num_cons==0) {
       return true;
     }
@@ -164,7 +177,7 @@ public:
         for(int i=1;i<nS_;i++) {
           cons[m-1] += (x[i] + xi_[i])*(x[i] + xi_[i]);
         }
-        for(int i=nS_;i<n_;i++) {
+        for(int i=nS_;i<nx_;i++) {
           cons[m-1] += x[i]*x[i];
         }
       } 
@@ -175,20 +188,27 @@ public:
   //  r_i(x;\xi^i) = 1/S *  min_y 0.5 || y - x ||^2 such that 
   bool eval_grad_f(const long long& n, const double* x, bool new_x, double* gradf)
   {
-    assert(n_==n);    
-    for(int i=0;i<n_;i++) gradf[i] = (x[i]-x_[i])/double(S_);
+    assert(ny_==n);    
+    for(int i=0;i<nx_;i++) gradf[i] = (x[i]-x_[i])/double(S_);
 
     return true;
   }
  
-  virtual bool eval_Jac_cons(const long long& n, const long long& m, 
-		             const long long& num_cons, const long long* idx_cons,
-		             const double* x, bool new_x,
-		             const long long& nsparse, const long long& ndense, 
-		             const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
+  virtual bool eval_Jac_cons(const long long& n, 
+		             const long long& m, 
+		             const long long& num_cons, 
+			     const long long* idx_cons,
+		             const double* x, 
+			     bool new_x,
+		             const long long& nsparse, 
+			     const long long& ndense, 
+		             const int& nnzJacS, 
+			     int* iJacS, 
+			     int* jJacS, 
+			     double* MJacS, 
 		             double* JacD)
   {
-    assert(num_cons==n_||num_cons==0);
+    assert(num_cons==nx_||num_cons==0);
     //indexes for sparse part
     if(num_cons==0) {
       return true;
@@ -294,22 +314,22 @@ public:
       for(int itrow=0; itrow<num_cons; itrow++) {
 	const int con_idx = (int) idx_cons[itrow];
 	if(con_idx==nsparse_-1) {
-          JacD[(n_-nsparse_)*con_idx+(con_idx-nsparse_+1)] = 1.0;
+          JacD[(nx_-nsparse_)*con_idx+(con_idx-nsparse_+1)] = 1.0;
 	} else if (con_idx>nsparse_-1 && con_idx!=m-1) {
-          JacD[(n_-nsparse_)*con_idx+(con_idx-nsparse_)] = -1.0;
-          JacD[(n_-nsparse_)*con_idx+(con_idx-nsparse_)+1] = 1.0;
+          JacD[(ny_-nsparse_)*con_idx+(con_idx-nsparse_)] = -1.0;
+          JacD[(ny_-nsparse_)*con_idx+(con_idx-nsparse_)+1] = 1.0;
 	} else if(con_idx==m-1) {
           if(nsparse_<=nS_) {
               //cons[m-1] += (x[i] + xi_[i])*(x[i] + xi_[i]);
             for(int i=nsparse_; i<nS_;i++) {
-              JacD[(n_-nsparse_)*con_idx+i-nsparse_] = 2*(x[i] + xi_[i]);	
+              JacD[(ny_-nsparse_)*con_idx+i-nsparse_] = 2*(x[i] + xi_[i]);	
 	    }
             for(int i=nS_; i<m;i++) {
-              JacD[(n_-nsparse_)*con_idx+i-nsparse_] = 2*x[i] ;	
+              JacD[(ny_-nsparse_)*con_idx+i-nsparse_] = 2*x[i] ;	
 	    }
           } else {
             for(int i=nsparse_; i<m;i++) {
-              JacD[(n_-nsparse_)*con_idx+i-nsparse_] = 2*x[i] ;	
+              JacD[(ny_-nsparse_)*con_idx+i-nsparse_] = 2*x[i] ;	
 	    }
 	  }
 	}
@@ -319,13 +339,24 @@ public:
     return true;
   }
   
-  bool eval_Hess_Lagr(const long long& n, const long long& m, 
-                      const double* x, bool new_x, const double& obj_factor,
-                      const double* lambda, bool new_lambda,
-                      const long long& nsparse, const long long& ndense, 
-                      const int& nnzHSS, int* iHSS, int* jHSS, double* MHSS, 
+  bool eval_Hess_Lagr(const long long& n, 
+		      const long long& m, 
+                      const double* x, 
+		      bool new_x, 
+		      const double& obj_factor,
+                      const double* lambda, 
+		      bool new_lambda,
+                      const long long& nsparse, 
+		      const long long& ndense, 
+                      const int& nnzHSS, 
+		      int* iHSS, 
+		      int* jHSS, 
+		      double* MHSS, 
                       double* HDD,
-                      int& nnzHSD, int* iHSD, int* jHSD, double* MHSD)
+                      int& nnzHSD, 
+		      int* iHSD, 
+		      int* jHSD, 
+		      double* MHSD)
   {
     assert(nnzHSS==nsparse_);
     assert(nnzHSD==0);
@@ -354,17 +385,18 @@ public:
   /* Implementation of the primal starting point specification */
   bool get_starting_point(const long long& global_n, double* x0)
   {    
-    assert(global_n==n_);
+    assert(global_n==nx_);
     for(int i=0; i<global_n; i++) x0[i]=1.;
     return true;
   }
 
-  //todo: what should I do here?
-  bool get_starting_point(const long long& n, const long long& m,
-				  double* x0,
-				  bool& duals_avail,
-				  double* z_bndL0, double* z_bndU0,
-				  double* lambda0)
+  bool get_starting_point(const long long& n, 
+		          const long long& m,
+			  double* x0,
+			  bool& duals_avail,
+			  double* z_bndL0, 
+			  double* z_bndU0,
+		          double* lambda0)
   {
     //assert(false && "not implemented");
     return false;
@@ -376,8 +408,8 @@ public:
    */
   bool compute_gradx(const int n, const double* y, double*  gradx)
   {
-    assert(n_==n);
-    for(int i=0;i<n_;i++) gradx[i] = (x_[i]-y[i])/double(S_);
+    assert(nx_==n);
+    for(int i=0;i<nx_;i++) gradx[i] = (x_[i]-y[i])/double(S_);
     return true;
   };
 
@@ -394,7 +426,8 @@ public:
 protected:
   double* x_;
   double* xi_;
-  int n_; //n_==nx==ny
+  int nx_; //n_==nx==ny
+  int ny_;
   int nS_;
   int S_;
   double sparse_ratio = 0.3;
