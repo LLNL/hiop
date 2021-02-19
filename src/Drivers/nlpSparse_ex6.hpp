@@ -60,6 +60,6 @@ public:
 
 private:
   int n_vars, n_cons;
-  int scal;
+  double scal;
 };
 #endif

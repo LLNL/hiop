@@ -103,10 +103,10 @@ int main(int argc, char **argv)
 //  nlp.options->SetStringValue("write_kkt", "yes");
 
 //  nlp.options->SetIntegerValue("max_iter", 100);
-  nlp.options->SetNumericValue("kappa1", 1e-8);
-  nlp.options->SetNumericValue("kappa2", 1e-8);
+//  nlp.options->SetNumericValue("kappa1", 1e-8);
+//  nlp.options->SetNumericValue("kappa2", 1e-8);
   nlp.options->SetNumericValue("mu0", 0.1);
-  nlp.options->SetStringValue("scaling_type", "none");
+//  nlp.options->SetStringValue("scaling_type", "none");
 
   hiopAlgFilterIPMNewton solver(&nlp);
   hiopSolveStatus status = solver.run();
