@@ -183,6 +183,17 @@ for(some_condition){
   value += 1;
 }
 ```
+### Constructor initialization list
+Use two spaces and then `:` followed by space to align the first member initialization. Use only one initialization per line with a trailing comma and align multiple initialization lines with the first declaration (essentially at four spaces).
+
+```c++
+MyClass::MyClass()
+  : member1_(nullptr),
+    other_member2_(0)
+{
+
+}
+```
 
 ## Braces
 
@@ -364,9 +375,11 @@ int c;
 int a, b, c;
 ```
 
-### Long declaration lines
-When breaking methods declaration into multiple lines:
-- have a limit of ~125 characters per line
+### Breaking down long lines
+
+Developers should have in mind a limit of ~125 characters per line. 
+
+Here are guidelines for breaking function/method declaration or calls into multiple lines:
 - keep the first argument on the same line with the method name
 - align arguments on the subsequent lines with the first argument
 - if class name or return type long, place the function name at the beginning of the line and put the return type and class name qualification on the previous line (see example below)
@@ -394,12 +407,29 @@ some_method(double beta,
 {
 }
 
+//Yes: function call may need to be broken into multiple line
+object1.method1(param1, param2).method2(param).some_method(beta,
+                                                           someobject.get_W(),
+                                                           alpha,
+                                                           X);
+                                                           
+//Yes: alternative to the above 
+object1.method1(param1, param2).method2(param).
+  some_method(beta, someobject.get_W(), alpha, X);
+                                                           
+                                                           
+                                                           
+
 // No: multiple arguments per line when using more than one line for the declaration 
 void ClassName::some_method(double beta, hiopMatrix& W,
                             double alpha, const hiopMatrix& X) const
 {
 }
 
+// No: multiple arguments per line when calling
+object1.method1(param1).method2(param).some_method(beta, someobject.get_W(),
+                                                   alpha, X);
+                                                           
 // No: arguments not aligned behind the opening parenthesis
 void ClassName::some_method(
   double beta,
@@ -408,8 +438,18 @@ void ClassName::some_method(
   const hiopMatrix& X) 
 {
 }
-```
 
+// everything above applies to constructors as well, for example,
+SomeVeryLongClassNameIMeanLong::
+SomeVeryLongClassNameIMeanLong(double beta,
+                               hiopMatrix& W,
+                               double alpha,
+                               const hiopMatrix& X)
+  : member1_(0),
+    member2_(nullptr)
+{
+}
+```
 
 ## Comments
 - Don't comment what can be expressed in code
@@ -423,6 +463,10 @@ there should be description of method arguments, template parameters (if
 applicable), return value, pre- and post-conditions. Use template as below.
 Input and output arguments should be clearly marked as such (e.g. `@param[in]`
 for inputs).
+
+Detailed comments should go in the implementation file (but not prohibited from appearing in the header file). 
+
+Documentation of pre and post conditions should appear in the interface or header file (but not prohibited from appearing in the implementation file). 
 
 ```c++
 /**
