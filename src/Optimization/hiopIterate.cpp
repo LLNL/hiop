@@ -386,6 +386,93 @@ bool hiopIterate::updateDualsIneq(const hiopIterate& iter, const hiopIterate& di
 }
 */
 
+int hiopIterate::adjust_small_slacks(hiopVector& slack, 
+                                     const hiopVector& bound, 
+                                     const hiopVector& slack_dual, 
+                                     const hiopVector& select,
+                                     const double& mu)
+{
+  int num_adjusted_slack = 0;
+  double zero=0.0;
+
+  if(slack.get_local_size() > 0) {
+    int min_idx;
+    double slack_min;
+    double small_val = std::numeric_limits<double>::epsilon()* fmin(1., mu);
+    double scale_fact = pow(std::numeric_limits<double>::epsilon(), 0.75);
+
+    slack.min(slack_min, min_idx);
+    if(slack_min < small_val) {
+      hiopVector* new_s = slack.new_copy();;
+      hiopVector* vec1 = slack.new_copy();;
+      hiopVector* vec2 = slack.new_copy();;
+
+      // correct variable bound to avoid numerical difficulty
+      new_s->addConstant_w_patternSelect(-small_val,select);
+      new_s->component_min(0.0);
+
+      num_adjusted_slack = new_s->numOfElemsLessThan(zero);
+
+      new_s->component_sgn();    // missing func
+      new_s->scale(-1.0);
+
+      slack.component_max(0.0);
+
+      vec1->setToConstant_w_patternSelect(mu, select);
+      vec1->componentDiv_w_selectPattern(slack_dual, select);
+
+      vec2->setToConstant_w_patternSelect(small_val, select);
+
+      vec1->component_max(*vec2);
+      vec1->axpy(-1.0, slack);
+
+      new_s->componentMult(*vec1);
+      new_s->axpy(1.0, slack);
+
+      vec1->setToConstant_w_patternSelect(1.0, select);
+      vec2->copyFrom(bound);
+      vec2->component_abs();  // missing func
+      vec1->component_max(*vec2);
+
+      vec1->scale(scale_fact);
+      vec1->axpy(1.0, slack);
+
+      new_s->component_min(*vec1);
+
+      slack.copyFrom(*new_s);
+
+//      slackselectPattern(select);
+#ifndef NDEBUG
+  assert(slack.matchesPattern(select));
+#endif
+      delete new_s;
+      delete vec1;
+      delete vec2;
+    }
+  }
+
+  return num_adjusted_slack;                      
+}
+
+
+int hiopIterate::adjust_small_slacks(const hiopIterate& iter_curr,
+                        const hiopVector& xl, 
+                        const hiopVector& xu, 
+                        const hiopVector& dl, 
+                        const hiopVector& du,
+                        const double& mu)
+{
+  int num_adjusted_slacks = 0;
+
+  num_adjusted_slacks += adjust_small_slacks(*sxl, xl, *(iter_curr.get_zl()), (nlp->get_ixl()), mu);
+  num_adjusted_slacks += adjust_small_slacks(*sxu, xu, *(iter_curr.get_zu()), (nlp->get_ixu()), mu);
+  num_adjusted_slacks += adjust_small_slacks(*sdl, dl, *(iter_curr.get_vl()), (nlp->get_idl()), mu);
+  num_adjusted_slacks += adjust_small_slacks(*sdu, du, *(iter_curr.get_vu()), (nlp->get_idu()), mu);
+
+  return num_adjusted_slacks;                      
+}
+
+
 bool hiopIterate::adjustDuals_primalLogHessian(const double& mu, const double& kappa_Sigma)
 {
   zl->adjustDuals_plh(*sxl,nlp->get_ixl(),mu,kappa_Sigma);

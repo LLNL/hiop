@@ -856,6 +856,38 @@ void hiopVectorRajaPar::component_max(const hiopVector& vec)
 }
 
 /**
+ * @brief Set each component to its absolute value
+ */
+void hiopVectorRajaPar::component_abs ()
+{
+  double* dd = data_dev_;
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      dd[i] = fabs(dd[i]);
+    });
+}
+
+/**
+ * @brief Set each component to its absolute value
+ */
+void hiopVectorRajaPar::component_sgn ()
+{
+  double* dd = data_dev_;
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      if(dd[i]<0.0) {
+        dd[i] = -1.0;
+      } else if(dd[i]>0.0) {
+        dd[i] = 1.0;
+      } else {
+        dd[i] = 0.0;
+      }
+    });
+}
+
+/**
  * @brief Scale `this` vector by `c` 
  * 
  * @note Consider implementing with BLAS call (<D>SCAL)

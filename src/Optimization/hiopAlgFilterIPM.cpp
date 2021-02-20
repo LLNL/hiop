@@ -1132,7 +1132,6 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
 
     nlp->log->printf(hovScalars, "Iter[%d] -> accepted step primal=[%17.11e] dual=[%17.11e]\n", iter_num, _alpha_primal, _alpha_dual);
     iter_num++; nlp->runStats.nIter=iter_num;
-
     //evaluate derivatives at the trial (and to be accepted) trial point
     if(!this->evalNlp_derivOnly(*it_trial, *_grad_f, *_Jac_c, *_Jac_d, *_Hess_Lagr)){
 	solver_status_ = Error_In_User_Function;
@@ -1355,6 +1354,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 
   bool bret=true;
   int lsStatus=-1, lsNum=0;
+  int num_adjusted_bounds = 0;
 
   int linsol_safe_mode_lastiter = -1;
   bool linsol_safe_mode_on = "stable"==hiop::tolower(nlp->options->GetString("linsol_mode"));
@@ -1603,6 +1603,12 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 	}
 	iniStep=false;
 	bret = it_trial->takeStep_primals(*it_curr, *dir, _alpha_primal, _alpha_dual); assert(bret);
+	num_adjusted_bounds = it_trial->adjust_small_slacks(*it_curr, nlp->get_xl(), nlp->get_xu(), 
+                                                     nlp->get_dl(), nlp->get_du(),_mu);
+	if(num_adjusted_bounds > 0) {
+    nlp->log->printf(hovWarning, "%d slacks are too small. Adjust corresponding variable bounds!", num_adjusted_bounds);
+    num_adjusted_bounds = 0;
+  }
 	nlp->runStats.tmSolverInternal.stop(); //---
 
 	//evaluate the problem at the trial iterate (functions only)

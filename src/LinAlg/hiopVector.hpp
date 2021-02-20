@@ -137,8 +137,12 @@ public:
   /** @brief Set each component of this hiopVector to the maximum of itself and the given constant. */
   virtual void component_max(const double constant) = 0;
   /** @brief Set each component of this hiopVector to the maximum of itself and the corresponding component of 'v'. */
-  virtual void component_max(const hiopVector& v ) = 0;
-
+  virtual void component_max(const hiopVector& v) = 0;
+  /** @brief Set each component to its absolute value */
+  virtual void component_abs () = 0;
+  /** @brief Apply sign function to each component */
+  virtual void component_sgn () = 0;
+  
   /// @brief Scale each element of this  by the constant alpha
   virtual void scale( double alpha ) = 0;
   /// @brief this += alpha * x

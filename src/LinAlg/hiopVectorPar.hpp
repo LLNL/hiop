@@ -121,7 +121,9 @@ public:
   virtual void component_min(const hiopVector& v);
   virtual void component_max(const double constant);
   virtual void component_max(const hiopVector& v);
-  
+  virtual void component_abs ();
+  virtual void component_sgn ();
+
   virtual void scale( double alpha );
   /// @brief this += alpha * x
   virtual void axpy  ( double alpha, const hiopVector& x );

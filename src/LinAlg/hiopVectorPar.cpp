@@ -426,6 +426,26 @@ void hiopVectorPar::component_max(const hiopVector& v_)
   }
 }
 
+void hiopVectorPar::component_abs ()
+{
+  for(int i=0; i<n_local_; i++) {
+    data_[i] = fabs(data_[i]);  
+  }
+}
+
+void hiopVectorPar::component_sgn ()
+{
+  for(int i=0; i<n_local_; i++) {
+    if(data_[i]<0.0) {
+      data_[i] = -1.0;
+    } else if(data_[i]>0.0) {
+      data_[i] = 1.0;
+    } else {
+      data_[i] = 0.0;
+    }
+  }
+}
+
 void hiopVectorPar::scale(double num)
 {
   if(1.0==num) return;

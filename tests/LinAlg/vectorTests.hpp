@@ -740,6 +740,61 @@ public:
   }
 
   /**
+   * @brief Test: this[i] = abs(this[i])
+   */
+  bool vector_component_abs(hiop::hiopVector& x, const int rank)
+  {
+    const local_ordinal_type N = getLocalSize(&x);
+    static const real_type x_val = -quarter;
+
+    x.setToConstant(x_val);
+
+    const real_type expected = half;
+    if(rank == 0) {
+      setLocalElement(&x, N-1, expected);
+    }
+
+    x.component_abs();
+
+    const int fail = verifyAnswer(&x,
+      [=] (local_ordinal_type i) -> real_type
+      {
+        const bool isLastElementOnRank0 = (i == N-1 && rank == 0);
+        return isLastElementOnRank0 ? fabs(expected) : fabs(x_val);
+      });
+
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &x);
+  }
+
+  /**
+   * @brief Test: this[i] = sgn(this[i])
+   */
+  bool vector_component_sgn(hiop::hiopVector& x, const int rank)
+  {
+    const local_ordinal_type N = getLocalSize(&x);
+    static const real_type x_val = -quarter;
+
+    x.setToConstant(x_val);
+
+    if(rank == 0) {
+      setLocalElement(&x, N-1, half);
+    }
+
+    x.component_sgn();
+
+    const int fail = verifyAnswer(&x,
+      [=] (local_ordinal_type i) -> real_type
+      {
+        const bool isLastElementOnRank0 = (i == N-1 && rank == 0);
+        return isLastElementOnRank0 ? one : -one;
+      });
+
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &x);
+  }
+
+  /**
    * @brief Test computing 1-norm ||v||  of vector v
    *                                   1
    */
