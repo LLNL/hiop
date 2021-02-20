@@ -487,6 +487,36 @@ private:
   hiopMatrix *Hess_scaled;
   hiopMatrix *Hess_unscaled;
 #endif // 0
+
+class hiopBoundsRelaxer : public hiopNlpTransformation
+{
+public: 
+  hiopBoundsRelaxer(const hiopVector& xl,
+                    const hiopVector& xu,
+                    const hiopVector& dl,
+                    const hiopVector& du);
+  virtual ~hiopBoundsRelaxer();
+
+  inline long long n_post()  { /*assert(xl_copy);*/ return n_vars; }
+  virtual long long n_pre () { /*assert(xl_copy);*/ return n_vars; }
+  inline long long n_post_local()  { return n_vars_local; }
+  inline long long n_pre_local()  { return n_vars_local; }
+  inline bool setup() { return true; }
+
+  void relax(const double& bound_relax_perturb,
+             hiopVector& xl,
+             hiopVector& xu,
+             hiopVector& dl,
+             hiopVector& du);
+
+private:
+  hiopVector* xl_ori;
+  hiopVector* xu_ori;
+  hiopVector* dl_ori;
+  hiopVector* du_ori;
+  long long n_vars; 
+  long long n_vars_local;
+  long long n_ineq;
 };
 
 

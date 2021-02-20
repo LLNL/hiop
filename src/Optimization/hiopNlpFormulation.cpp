@@ -349,7 +349,6 @@ bool hiopNlpFormulation::finalizeInitialization()
 	fixedVarsRelaxer->setup();
 	fixedVarsRelaxer->relax(options->GetNumeric("fixed_var_tolerance"),
 				options->GetNumeric("fixed_var_perturb"), *xl, *xu);
-
 	nlp_transformations.append(fixedVarsRelaxer);
 
       } else {
@@ -458,6 +457,14 @@ bool hiopNlpFormulation::finalizeInitialization()
 #else
   n_bnds_low=n_bnds_low_local; n_bnds_upp=n_bnds_upp_local; //n_bnds_lu is ok
 #endif
+
+  // relax bounds
+  if(options->GetNumeric("bound_relax_perturb") > 0.0) {
+    auto* relax_bounds = new hiopBoundsRelaxer(*xl, *xu, *dl, *du);
+    relax_bounds->setup();
+    relax_bounds->relax(options->GetNumeric("bound_relax_perturb"), *xl, *xu, *dl, *du);
+    nlp_transformations.append(relax_bounds);
+  }
 
   // Copy data from host mirror to the memory space
   dl->copyToDev();  du->copyToDev();

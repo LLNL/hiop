@@ -312,6 +312,57 @@ relax(const double& fixed_var_tol, const double& fixed_var_perturb, hiopVector& 
   }
 }
 
+hiopBoundsRelaxer::
+hiopBoundsRelaxer(const hiopVector& xl,
+                  const hiopVector& xu,
+                  const hiopVector& dl,
+                  const hiopVector& du)
+  : xl_ori(NULL), xu_ori(NULL), dl_ori(NULL), du_ori(NULL),
+    n_vars(xl.get_size()), n_vars_local(xl.get_local_size()),
+    n_ineq(dl.get_size())
+{
+  xl_ori = xl.new_copy();
+  xu_ori = xu.new_copy();
+  dl_ori = dl.new_copy();
+  du_ori = du.new_copy();
+}
+
+hiopBoundsRelaxer::~hiopBoundsRelaxer()
+{
+  if(xl_ori) {
+    delete xl_ori;
+  }
+  if(xu_ori) {
+    delete xu_ori;
+  }
+  if(dl_ori) {
+    delete dl_ori;
+  }
+  if(du_ori) {
+    delete du_ori;
+  }
+}
+
+void hiopBoundsRelaxer::
+relax(const double& bound_relax_perturb, hiopVector& xl, hiopVector& xu, hiopVector& dl, hiopVector& du)
+{
+  double* xla = xl.local_data();
+  double* xua = xu.local_data();
+  double* dla = dl.local_data();
+  double* dua = du.local_data();
+  
+  double dbval; // a temp variable
+
+  for(long long i=0; i<n_vars; i++) {
+    xua[i] += bound_relax_perturb*fmax(1.,fabs(xua[i]));
+    xla[i] -= bound_relax_perturb*fmax(1.,fabs(xla[i]));
+  }
+
+  for(long long i=0; i<n_ineq; i++) {
+    dua[i] += bound_relax_perturb*fmax(1.,fabs(dua[i]));
+    dla[i] -= bound_relax_perturb*fmax(1.,fabs(dla[i]));
+  }
+}
 
 /**
 * For class hiopNLPObjGradScaling
