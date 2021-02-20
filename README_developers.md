@@ -312,12 +312,20 @@ RAJA::forall<hiop_raja_exec>(
 
 ### Classes
 
-Use Pascal case for class names (upper and lower case, no underscores).
-When the name is composite of multiple words, each word starts with a capital
-letter. If one of the "words" is an acronym use same capitalization (first
-capital and other letters lowercase).
+For now prepend `hiop` to the class name. The remaining name should use only upper and lower cases, 
+no underscore, i.e., Pascal convention.  Nested classses (class inside a class) should be 
+named using  Pascal convention. When the name is composed of multiple words, each word 
+starts with a capital letter. If one of the "words" is an acronym use same capitalization 
+(first capital and other letters lowercase).
 ```c++
-class MyHiopClass;
+class hiopMyHiopClass;
+
+class hiopAbc
+{
+  class Xyz
+  {
+  };
+}
 ```
 
 ### Variables
@@ -333,7 +341,7 @@ int my_int_variable;
 All member variable names should end with trailing underscore to distingusish
 them from local variables.
 ```c++
-int memeber_variable_; // Yes!
+int member_variable_; // Yes!
 
 int another_member_var;      // No!
 int _yet_another_member_var; // No!
