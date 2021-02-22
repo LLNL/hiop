@@ -267,6 +267,7 @@ endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 if(HIOP_BUILD_STATIC)
   add_library(hiop STATIC
     $<TARGET_OBJECTS:hiopOptimization>
+    $<TARGET_OBJECTS:hiopInterface>
     $<TARGET_OBJECTS:hiopLinAlg>
     $<TARGET_OBJECTS:hiopUtils>)
   if(HIOP_WITH_KRON_REDUCTION)
@@ -279,6 +280,7 @@ endif()
 if(HIOP_BUILD_SHARED)
   add_library(hiop_shared SHARED $<TARGET_OBJECTS:hiopOptimization>
     $<TARGET_OBJECTS:hiopLinAlg>
+    $<TARGET_OBJECTS:hiopInterface>
     $<TARGET_OBJECTS:hiopUtils>
     $<TARGET_OBJECTS:chiopInterface>)
   set_target_properties(hiop_shared PROPERTIES OUTPUT_NAME hiop)
