@@ -219,9 +219,8 @@ void hiopOptions::registerOptions()
 		      "gradient at the initial point is less or equal to scaling_max_grad (default 'none')");
     
     registerNumOption("scaling_max_grad", 100, 1e-20, 1e+20,
-		      "The maximum initial gradient allowed in the problem."
-		      "Any gradient that is larger than this positive value will be scaled."
-		      "scaling_max_grad (default 100)");
+		      "The problem will be rescaled if the inf-norm of the gradient at the starting point is "
+		      "larger than the value of this option (default 100)");
   }
   
   //optimization method used

@@ -386,7 +386,7 @@ void hiopVectorPar::componentDiv_w_selectPattern( const hiopVector& v_, const hi
     else                s[i]/=x[i];
 }
 
-void hiopVectorPar::component_min ( const double constant)
+void hiopVectorPar::component_min(const double constant)
 {
   for(int i=0; i<n_local_; i++) {
     if(data_[i]>constant) {
@@ -395,7 +395,7 @@ void hiopVectorPar::component_min ( const double constant)
   }
 }
 
-void hiopVectorPar::component_min ( const hiopVector& v_ )
+void hiopVectorPar::component_min(const hiopVector& v_)
 {
   const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_);
   assert(n_local_==v.n_local_);
@@ -406,7 +406,7 @@ void hiopVectorPar::component_min ( const hiopVector& v_ )
   }
 }
 
-void hiopVectorPar::component_max ( const double constant )
+void hiopVectorPar::component_max(const double constant)
 {
   for(int i=0; i<n_local_; i++) {
     if(data_[i]<constant) {
@@ -415,7 +415,7 @@ void hiopVectorPar::component_max ( const double constant )
   }
 }
 
-void hiopVectorPar::component_max ( const hiopVector& v_ )
+void hiopVectorPar::component_max(const hiopVector& v_)
 {
   const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_);
   assert(n_local_==v.n_local_);
