@@ -90,6 +90,8 @@ namespace hiop
   };
 #endif
 
+
+
 hiopAlgPrimalDecomposition::HessianApprox::
 HessianApprox() :HessianApprox(-1) 
 {
@@ -124,14 +126,14 @@ hiopAlgPrimalDecomposition::HessianApprox::
 
 /* n_ is the dimension of x, hence the dimension of g_k, skm1, etc */
 void hiopAlgPrimalDecomposition::HessianApprox::
-     set_n(const int n)
+set_n(const int n)
 {
   n_=n;
 }
 
 
 void hiopAlgPrimalDecomposition::HessianApprox::
-     set_xkm1(const double* xk)
+set_xkm1(const double* xk)
 {
   if(xkm1==NULL) {
     assert(n_!=-1);
@@ -143,7 +145,7 @@ void hiopAlgPrimalDecomposition::HessianApprox::
 
 
 void hiopAlgPrimalDecomposition::HessianApprox::
-     set_gkm1(const double* grad)
+set_gkm1(const double* grad)
 {
   if(gkm1==NULL) {
     assert(n_!=-1);
@@ -153,9 +155,8 @@ void hiopAlgPrimalDecomposition::HessianApprox::
   }
 }
 
-
 void hiopAlgPrimalDecomposition::HessianApprox::
-     initialize(const double f_val, const double* xk, const double* grad)
+initialize(const double f_val, const double* xk, const double* grad)
 {
   fk = f_val;
   if(xkm1==NULL) {
@@ -182,7 +183,9 @@ void hiopAlgPrimalDecomposition::HessianApprox::
     
 /* updating variables for the current iteration */
 void hiopAlgPrimalDecomposition::HessianApprox::
-     update_hess_coeff(const double* xk, const double* gk, const double& f_val)
+update_hess_coeff(const double* xk, 
+		  const double* gk, 
+		  const double& f_val)
 {
   fkm1 = fk;
   fk = f_val;
@@ -199,7 +202,8 @@ void hiopAlgPrimalDecomposition::HessianApprox::
   }
 }
  
-/* updating ratio_ used to compute alpha i
+/** 
+ * updating ratio_ used to compute alpha i
  * Using trust-region notations,
  * rhok = (f_{k-1}-f_k)/(m(0)-m(p_k)), where m(p)=f_{k-1}+g_{k-1}^Tp+0.5 alpha_{k-1} pTp.
  * Therefore, m(0) = f_{k-1}. rhok is the ratio of real change in recourse function value
@@ -212,7 +216,7 @@ void hiopAlgPrimalDecomposition::HessianApprox::
  */
  
 void hiopAlgPrimalDecomposition::HessianApprox::
-     update_ratio()
+update_ratio()
 {
   double rk = fkm1;
   for(int i=0;i<n_;i++) {
@@ -235,13 +239,16 @@ void hiopAlgPrimalDecomposition::HessianApprox::
   update_ratio_tr(rho_k,fkm1, fk, alpha_g_ratio, ratio_);
 } 
 
-//a trust region way of updating alpha ratio
-//rkm1: true recourse value at {k-1}
-//rk: true recourse value at k
-
+/* a trust region way of updating alpha ratio
+ * rkm1: true recourse value at {k-1}
+ * rk: true recourse value at k
+ */
 void hiopAlgPrimalDecomposition::HessianApprox::
-     update_ratio_tr(const double rhok,const double rkm1, const double rk, const double alpha_g_ratio,
-                     double& alpha_ratio)
+update_ratio_tr(const double rhok,
+		const double rkm1, 
+		const double rk, 
+		const double alpha_g_ratio,
+                double& alpha_ratio)
 {
   if(rhok>0 && rhok < 1/4. && (rkm1-rk>0)) {
     alpha_ratio = alpha_ratio/0.75;
@@ -270,7 +277,7 @@ void hiopAlgPrimalDecomposition::HessianApprox::
  * or the alpha computed through the BarzilaiBorwein gradient method, a quasi-Newton method.
  */
 double hiopAlgPrimalDecomposition::HessianApprox::
-       get_alpha_BB()
+get_alpha_BB()
 {
   double temp1 = 0.;
   double temp2 = 0.;
@@ -292,8 +299,7 @@ double hiopAlgPrimalDecomposition::HessianApprox::
  * approximition. This is to ensure good approximation.
  */ 
 
-double hiopAlgPrimalDecomposition::HessianApprox::
-       get_alpha_f(const double* gk)
+double hiopAlgPrimalDecomposition::HessianApprox::get_alpha_f(const double* gk)
 {
   double temp3 = 0.;
   //call update first, gkm1 is already gk
@@ -310,8 +316,7 @@ double hiopAlgPrimalDecomposition::HessianApprox::
 /* Function to check convergence based gradient 
  */
 
-double hiopAlgPrimalDecomposition::HessianApprox::
-       check_convergence(const double* gk)
+double hiopAlgPrimalDecomposition::HessianApprox::check_convergence(const double* gk)
 {
   double temp1 = 0.;
   double temp2 = 0.;
@@ -326,8 +331,9 @@ double hiopAlgPrimalDecomposition::HessianApprox::
 
 hiopAlgPrimalDecomposition::
 hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
-                           MPI_Comm comm_world/*=MPI_COMM_WORLD*/) : 
-	                   master_prob_(prob_in), comm_world_(comm_world)
+                           MPI_Comm comm_world/*=MPI_COMM_WORLD*/) 
+  : master_prob_(prob_in), 
+    comm_world_(comm_world)
 {
   S_ = master_prob_->get_num_rterms();
   n_ = master_prob_->get_num_vars();
@@ -353,9 +359,12 @@ hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
 
 hiopAlgPrimalDecomposition::
 hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
-                           const int nc, const std::vector<int>& xc_index,
+                           const int nc, 
+			   const std::vector<int>& xc_index,
                            MPI_Comm comm_world/*=MPI_COMM_WORLD*/)
-    : master_prob_(prob_in),nc_(nc), comm_world_(comm_world)
+  : master_prob_(prob_in),
+    nc_(nc), 
+    comm_world_(comm_world)
 {
   S_ = master_prob_->get_num_rterms();
   n_ = master_prob_->get_num_vars();
@@ -404,6 +413,7 @@ inline hiopSolveStatus hiopAlgPrimalDecomposition::getSolveStatus() const
 {
   return solver_status_;
 }
+
 int hiopAlgPrimalDecomposition::getNumIterations() const
 {
   assert(false && "not yet implemented");

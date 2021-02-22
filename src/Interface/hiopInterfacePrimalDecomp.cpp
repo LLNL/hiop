@@ -2,26 +2,28 @@
 
 
 using namespace hiop;
-hiopInterfacePriDecProblem::
-RecourseApproxEvaluator::
-	RecourseApproxEvaluator(int nc) : RecourseApproxEvaluator(nc, nc)  //nc_ <= nx, nd=S
+hiopInterfacePriDecProblem::RecourseApproxEvaluator::
+RecourseApproxEvaluator(int nc) : RecourseApproxEvaluator(nc, nc)  //nc_ <= nx, nd=S
 {
 }
 
-hiopInterfacePriDecProblem::
-RecourseApproxEvaluator::
-  RecourseApproxEvaluator(int nc, int S) : nc_(nc),S_(S),rval_(0.), 
-	                                   rgrad_(NULL), rhess_(NULL),x0_(NULL)//nc = nx, nd=S
+hiopInterfacePriDecProblem::RecourseApproxEvaluator::
+RecourseApproxEvaluator(int nc, int S) 
+  : nc_(nc),S_(S),rval_(0.),rgrad_(NULL), rhess_(NULL),x0_(NULL)//nc = nx, nd=S
 {
    assert(S>=nc);
    xc_idx_.resize(nc_);
    for(int i=0;i<nc_;i++) xc_idx_[i] = i;
 }
 
-hiopInterfacePriDecProblem::
-RecourseApproxEvaluator::
-  RecourseApproxEvaluator(int nc, int S, const double& rval, const double* rgrad, 
-		          const double* rhess, const double* x0): nc_(nc),S_(S)
+hiopInterfacePriDecProblem::RecourseApproxEvaluator::
+RecourseApproxEvaluator(const int nc, 
+		        const int S, 
+			const double& rval, 
+			const double* rgrad, 
+		        const double* rhess, 
+			const double* x0)
+  : nc_(nc), S_(S)
 {
   //assert(S>=nc);
   rval_ = rval;
@@ -37,11 +39,15 @@ RecourseApproxEvaluator::
   memcpy(x0_,x0, nc*sizeof(double));
 }
 
-hiopInterfacePriDecProblem::
-RecourseApproxEvaluator::
-  RecourseApproxEvaluator(int nc,int S, const std::vector<int>& list,
-		          const double& rval, const double* rgrad, 
-		          const double* rhess, const double* x0): nc_(nc),S_(S)
+hiopInterfacePriDecProblem::RecourseApproxEvaluator::
+RecourseApproxEvaluator(const int nc, 
+		        const int S, 
+			const std::vector<int>& list,
+		        const double& rval, 
+			const double* rgrad, 
+		        const double* rhess, 
+			const double* x0)
+  : nc_(nc), S_(S)
 {
   //assert(S>=nc);
   rval_ = rval;
@@ -157,10 +163,15 @@ set_xc_idx(const std::vector<int>& idx)
 }
 
 int hiopInterfacePriDecProblem::RecourseApproxEvaluator::get_S() const {return S_;} 
+
 double hiopInterfacePriDecProblem::RecourseApproxEvaluator::get_rval() const {return rval_;}
+
 double* hiopInterfacePriDecProblem::RecourseApproxEvaluator::get_rgrad() const {return rgrad_;}
+
 double* hiopInterfacePriDecProblem::RecourseApproxEvaluator::get_rhess() const {return rhess_;}
+
 double* hiopInterfacePriDecProblem::RecourseApproxEvaluator::get_x0() const {return x0_;}
+
 std::vector<int> hiopInterfacePriDecProblem::RecourseApproxEvaluator::get_xc_idx() const {return xc_idx_;}
 
 

@@ -34,7 +34,8 @@ public:
                              MPI_Comm comm_world=MPI_COMM_WORLD);
 
   hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
-		             const int nc, const std::vector<int>& xc_index,
+		             const int nc, 
+			     const std::vector<int>& xc_index,
                              MPI_Comm comm_world=MPI_COMM_WORLD);
 
 
