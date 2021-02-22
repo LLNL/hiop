@@ -459,33 +459,36 @@ double hiopMatrixRajaSparseTriplet::max_abs_value()
   return maxv;
 }
 
+/**
+ * @brief Find the maximum absolute value in each row of `this` matrix, and return them in `ret_vec`
+ *
+ * @pre 'ret_vec' has exactly same number of rows as `this` matrix
+ * @pre row indices must be sorted
+ * @pre col indices must be sorted
+ */
 void hiopMatrixRajaSparseTriplet::row_max_abs_value(hiopVector& ret_vec)
 {
   assert(ret_vec.get_size() == nrows_);
   ret_vec.setToZero();
   
   auto& vec = dynamic_cast<hiopVectorRajaPar&>(ret_vec);
-  vec.copyFromDev();
-  double* vd = vec.local_data_host();
-  
-  auto iRow = this->iRow_;
-  auto values = this->values_;
- 
-  for (int i = 0; i < nrows_; ++i)
-  {
-    RAJA::ReduceMax<hiop_raja_reduce, double> norm(0.0);
-    RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, nnz_),
-    RAJA_LAMBDA(RAJA::Index_type itnz)
-    {
-      const int row_id = iRow[itnz];
-      if(i==row_id) {
-        norm.max(std::abs(values[itnz]));
-      }
-    });
+  double* vd = vec.local_data();
 
-    vd[i] = static_cast<double>(norm.get());
-  }
-  vec.copyToDev();
+  if(row_starts_host==NULL)
+    row_starts_host = allocAndBuildRowStarts();
+  assert(row_starts_host);
+
+  int num_rows = this->nrows_;
+  int* idx_start = row_starts_host->idx_start_;
+  double* values = values_;
+
+  RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, num_rows+1),
+  RAJA_LAMBDA(RAJA::Index_type row_id)
+  {
+    for(int itnz=idx_start[row_id]; itnz<idx_start[row_id+1]; itnz++) {
+      vd[row_id] = (vd[row_id] > fabs(values[itnz])) ? vd[row_id] : fabs(values[itnz]);
+    }
+  });  
 }
 
 void hiopMatrixRajaSparseTriplet::scale_row(hiopVector &vec_scal, const bool inv_scale)

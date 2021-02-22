@@ -131,13 +131,13 @@ public:
   virtual void componentDiv_w_selectPattern( const hiopVector& v, const hiopVector& ix) = 0;
 
   /** @brief Set each component of this hiopVector to the minimum of itself and the given constant. */
-  virtual void component_min ( const double constant) = 0;
+  virtual void component_min(const double constant) = 0;
   /** @brief Set each component of this hiopVector to the minimum of itself and the corresponding component of 'v'. */
-  virtual void component_min ( const hiopVector& v ) = 0;
+  virtual void component_min(const hiopVector& v ) = 0;
   /** @brief Set each component of this hiopVector to the maximum of itself and the given constant. */
-  virtual void component_max ( const double constant) = 0;
+  virtual void component_max(const double constant) = 0;
   /** @brief Set each component of this hiopVector to the maximum of itself and the corresponding component of 'v'. */
-  virtual void component_max ( const hiopVector& v ) = 0;
+  virtual void component_max(const hiopVector& v ) = 0;
 
   /// @brief Scale each element of this  by the constant alpha
   virtual void scale( double alpha ) = 0;

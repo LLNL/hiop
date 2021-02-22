@@ -1387,30 +1387,26 @@ void hiopMatrixRajaDense::row_max_abs_value(hiopVector &ret_vec)
   ret_vec.setToZero();
 
   auto& vec = dynamic_cast<hiopVectorRajaPar&>(ret_vec);
-  vec.copyFromDev();
-  double* vd = vec.local_data_host();
+  double* vd = vec.local_data();
   
   double* data = data_dev_;
   
-  for (int irow = 0; irow < m_local_; irow++)
+  RAJA::View<const double, RAJA::Layout<2>> Mview(data, m_local_, n_local_);
+  RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, m_local_),
+  RAJA_LAMBDA(RAJA::Index_type i)
   {
-    RAJA::ReduceMax<hiop_raja_reduce, double> norm(0.0);
-    RAJA::View<const double, RAJA::Layout<2>> Mview(data, m_local_, n_local_);
-    RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, n_local_),
-      RAJA_LAMBDA(RAJA::Index_type j)
-      {
-        norm.max(fabs(Mview(irow,j)));
-      });  
-    double maxv = static_cast<double>(norm.get());
-  
+    for (int j = 0; j < n_local_; j++) {
+      vd[i] = (vd[i] > fabs(Mview(i, j))) ? vd[i] : fabs(Mview(i, j));
+    }
+  });
+
 #ifdef HIOP_USE_MPI
-    double maxvg;
-    int ierr=MPI_Allreduce(&maxv,&maxvg,1,MPI_DOUBLE,MPI_MAX,comm_); assert(ierr==MPI_SUCCESS);
-    maxv = maxvg;
-#endif
-    vd[irow] = maxv;
-  }
+  vec.copyFromDev();
+  double *maxvg = new double[m_local_]{0};
+  int ierr=MPI_Allreduce(vec.local_data_host(),maxvg,m_local_,MPI_DOUBLE,MPI_MAX,comm_); assert(ierr==MPI_SUCCESS);
+  memcpy(vec.local_data_host(), maxvg, m_local_ * sizeof(double));
   vec.copyToDev();
+#endif
 }
 
 /// Scale each row of matrix, according to the scale factor in `ret_vec`

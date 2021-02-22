@@ -776,7 +776,7 @@ void hiopVectorRajaPar::componentDiv_w_selectPattern( const hiopVector& vec, con
 /**
  * @brief Set `this` vector elemenwise to the minimum of itself and the given `constant`
  */
-void hiopVectorRajaPar::component_min (const double constant)
+void hiopVectorRajaPar::component_min(const double constant)
 {
   double* dd = data_dev_;
   RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
@@ -795,7 +795,7 @@ void hiopVectorRajaPar::component_min (const double constant)
  * @post `vec` is not modified
  * 
  */
-void hiopVectorRajaPar::component_min (const hiopVector& vec)
+void hiopVectorRajaPar::component_min(const hiopVector& vec)
 {
   const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(vec);
   assert(n_local_ == v.n_local_);
@@ -813,7 +813,7 @@ void hiopVectorRajaPar::component_min (const hiopVector& vec)
 /**
  * @brief Set `this` vector elemenwise to the maximum of itself and the given `constant`
  */
-void hiopVectorRajaPar::component_max (const double constant)
+void hiopVectorRajaPar::component_max(const double constant)
 {
   double* dd = data_dev_;
   RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
@@ -832,7 +832,7 @@ void hiopVectorRajaPar::component_max (const double constant)
  * @post `vec` is not modified
  * 
  */
-void hiopVectorRajaPar::component_max (const hiopVector& vec)
+void hiopVectorRajaPar::component_max(const hiopVector& vec)
 {
   const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(vec);
   assert(n_local_ == v.n_local_);

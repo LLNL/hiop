@@ -52,7 +52,6 @@
  * @author Robert Rutherford <robert.rutherford@pnnl.gov>, PNNL
  * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
  * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
- * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
  * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
  *
  */
