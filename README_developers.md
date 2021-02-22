@@ -195,6 +195,7 @@ MyClass::MyClass()
 }
 ```
 
+Final note on spacing: avoid using trailing spaces, e.g., after member or variable declaration (`int a;//no trailing whitespaces`), after semicolon or braces that end a line in the code, after ifdef/endifs, etc.
 ## Braces
 
 ### Use K&R style
