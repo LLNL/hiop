@@ -28,13 +28,21 @@ end
 
 %% form the matrix
 M = sparse(rowidx, colidx, vals, m, m);
-% if the matrix is known to be symmetric fill, you also need to know whether
-%  A. the lower triangle was saved, in which case use
-% M=M+transpose(tril(M,-1));
-% or
-% B. the upper triangle was saved, in which case use
-% M=M+transpose(triu(M,1));
 
+% if the matrix is known to be symmetric, it is either lower or upper
+% triangle
+if istril(M)
+  %  A. the lower triangle was saved
+  M=M+transpose(tril(M,-1));
+else 
+    if istriu(M)
+      %the upper triangle was saved
+      M=M+transpose(triu(M,1));
+    else
+        %the matrix is not symmetric; do nothing
+    end
+end
+    
 %% solve using Matlab and check the residuals of the Matlab solution 
 %% and of the solution from .iajaaa file
 sol2 = M\rhs;
