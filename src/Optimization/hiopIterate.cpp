@@ -271,11 +271,13 @@ void hiopIterate::determineSlacks()
   sdu->axpy(-1., *d); 
   sdu->selectPattern(nlp->get_idu());
 
+#if 0
 #ifdef HIOP_DEEPCHECKS
   assert(sxl->allPositive_w_patternSelect(nlp->get_ixl()));
   assert(sxu->allPositive_w_patternSelect(nlp->get_ixu()));
   assert(sdl->allPositive_w_patternSelect(nlp->get_idl()));
   assert(sdu->allPositive_w_patternSelect(nlp->get_idu()));
+#endif
 #endif
 }
 
@@ -335,10 +337,16 @@ bool hiopIterate::takeStep_primals(const hiopIterate& iter, const hiopIterate& d
 {
   x->copyFrom(*iter.x); x->axpy(alphaprimal, *dir.x);
   d->copyFrom(*iter.d); d->axpy(alphaprimal, *dir.d);
+
+#if 1
+  determineSlacks();
+#else
   sxl->copyFrom(*iter.sxl); sxl->axpy(alphaprimal,*dir.sxl);
   sxu->copyFrom(*iter.sxu); sxu->axpy(alphaprimal,*dir.sxu);
   sdl->copyFrom(*iter.sdl); sdl->axpy(alphaprimal,*dir.sdl);
   sdu->copyFrom(*iter.sdu); sdu->axpy(alphaprimal,*dir.sdu);
+#endif // 1
+
 #ifdef HIOP_DEEPCHECKS
   assert(sxl->matchesPattern(nlp->get_ixl()));
   assert(sxu->matchesPattern(nlp->get_ixu()));
@@ -396,12 +404,11 @@ int hiopIterate::adjust_small_slacks(hiopVector& slack,
   double zero=0.0;
 
   if(slack.get_local_size() > 0) {
-    int min_idx;
     double slack_min;
     double small_val = std::numeric_limits<double>::epsilon()* fmin(1., mu);
     double scale_fact = pow(std::numeric_limits<double>::epsilon(), 0.75);
 
-    slack.min(slack_min, min_idx);
+    slack_min = slack.min_w_pattern(select);
     if(slack_min < small_val) {
       hiopVector* new_s = slack.new_copy();;
       hiopVector* vec1 = slack.new_copy();;
@@ -455,19 +462,14 @@ int hiopIterate::adjust_small_slacks(hiopVector& slack,
 }
 
 
-int hiopIterate::adjust_small_slacks(const hiopIterate& iter_curr,
-                        const hiopVector& xl, 
-                        const hiopVector& xu, 
-                        const hiopVector& dl, 
-                        const hiopVector& du,
-                        const double& mu)
+int hiopIterate::adjust_small_slacks(const hiopIterate& iter_curr, const double& mu)
 {
   int num_adjusted_slacks = 0;
 
-  num_adjusted_slacks += adjust_small_slacks(*sxl, xl, *(iter_curr.get_zl()), (nlp->get_ixl()), mu);
-  num_adjusted_slacks += adjust_small_slacks(*sxu, xu, *(iter_curr.get_zu()), (nlp->get_ixu()), mu);
-  num_adjusted_slacks += adjust_small_slacks(*sdl, dl, *(iter_curr.get_vl()), (nlp->get_idl()), mu);
-  num_adjusted_slacks += adjust_small_slacks(*sdu, du, *(iter_curr.get_vu()), (nlp->get_idu()), mu);
+  num_adjusted_slacks += adjust_small_slacks(*sxl, nlp->get_xl(), *(iter_curr.get_zl()), (nlp->get_ixl()), mu);
+  num_adjusted_slacks += adjust_small_slacks(*sxu, nlp->get_xu(), *(iter_curr.get_zu()), (nlp->get_ixu()), mu);
+  num_adjusted_slacks += adjust_small_slacks(*sdl, nlp->get_dl(), *(iter_curr.get_vl()), (nlp->get_idl()), mu);
+  num_adjusted_slacks += adjust_small_slacks(*sdu, nlp->get_du(), *(iter_curr.get_vu()), (nlp->get_idu()), mu);
 
   return num_adjusted_slacks;                      
 }

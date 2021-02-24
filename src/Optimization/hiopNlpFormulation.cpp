@@ -342,7 +342,7 @@ bool hiopNlpFormulation::finalizeInitialization()
       
       nlp_transformations.append(fixedVarsRemover);
     } else {
-      if(options->GetString("fixed_var")=="relax") {
+      if(options->GetString("fixed_var")=="relax" && options->GetNumeric("bound_relax_perturb") == 0.0) {
 	log->printf(hovWarning, "Fixed variables will be relaxed internally.\n");
 	auto* fixedVarsRelaxer = new hiopFixedVarsRelaxer(*xl, *xu,
 							  nfixed_vars, nfixed_vars_local);
@@ -351,7 +351,7 @@ bool hiopNlpFormulation::finalizeInitialization()
 				options->GetNumeric("fixed_var_perturb"), *xl, *xu);
 	nlp_transformations.append(fixedVarsRelaxer);
 
-      } else {
+      } else if(options->GetNumeric("bound_relax_perturb") == 0.0) {
 	log->printf(hovError,  
 		    "detected fixed variables but was not instructed "
 		    "how to deal with them (option 'fixed_var' is 'none').\n");

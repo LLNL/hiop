@@ -280,6 +280,7 @@ int runTests(const char* mem_space, MPI_Comm comm)
   fail += test.vectorAllPositive_w_patternSelect(*x, *y, rank);
 
   fail += test.vectorMin(*x, rank);
+  fail += test.vectorMin_w_pattern(*x, *y, rank);
   fail += test.vectorProjectIntoBounds(*x, *y, *z, *a, *b, rank);
   fail += test.vectorFractionToTheBdry(*x, *y, rank);
   fail += test.vectorFractionToTheBdry_w_pattern(*x, *y, *z, rank);

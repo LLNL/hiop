@@ -139,9 +139,9 @@ public:
   /** @brief Set each component of this hiopVector to the maximum of itself and the corresponding component of 'v'. */
   virtual void component_max(const hiopVector& v) = 0;
   /** @brief Set each component to its absolute value */
-  virtual void component_abs () = 0;
+  virtual void component_abs() = 0;
   /** @brief Apply sign function to each component */
-  virtual void component_sgn () = 0;
+  virtual void component_sgn() = 0;
   
   /// @brief Scale each element of this  by the constant alpha
   virtual void scale( double alpha ) = 0;
@@ -196,6 +196,9 @@ public:
   virtual int allPositive() = 0;
   /// @brief True if elements corresponding to nonzeros in w are all positive
   virtual int allPositive_w_patternSelect(const hiopVector& w) = 0;
+  /// @brief Return the minimum value in this vector
+  virtual double min() const = 0;
+  virtual double min_w_pattern(const hiopVector& select) const = 0;
   /// @brief Return the minimum value in this vector, and the index at which it occurs.
   virtual void min( double& m, int& index ) const = 0;
   /// @brief Project the vector into the bounds, used for shifting the ini pt in the bounds

@@ -348,8 +348,8 @@ public:
                         hiopVector& d, 
                         hiopVector& gradf,
                         hiopMatrix& Jac_c, 
-                        hiopMatrix& Jac_d,
-                        long long *cons_eq_mapping,
+                        hiopMatrix& Jac_d, 
+                        long long *cons_eq_mapping, 
                         long long *cons_ineq_mapping);
   ~hiopNLPObjGradScaling();
 public:
@@ -365,6 +365,8 @@ public:
 
   inline long long n_post_local()  { return n_vars_local; }
   inline long long n_pre_local()  { return n_vars_local; }
+
+  inline void apply_to_x(hiopVector& x_in, hiopVector& x_out){}
 
   /// @brief return the scaling fact for objective
   inline double get_obj_scale() const {return scale_factor_obj;}
@@ -503,6 +505,8 @@ public:
   inline long long n_post_local()  { return n_vars_local; }
   inline long long n_pre_local()  { return n_vars_local; }
   inline bool setup() { return true; }
+  
+  inline void apply_to_x(hiopVector& x_in, hiopVector& x_out){}
 
   void relax(const double& bound_relax_perturb,
              hiopVector& xl,

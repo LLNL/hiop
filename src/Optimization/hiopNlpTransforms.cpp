@@ -346,22 +346,26 @@ hiopBoundsRelaxer::~hiopBoundsRelaxer()
 void hiopBoundsRelaxer::
 relax(const double& bound_relax_perturb, hiopVector& xl, hiopVector& xu, hiopVector& dl, hiopVector& du)
 {
-  double* xla = xl.local_data();
-  double* xua = xu.local_data();
-  double* dla = dl.local_data();
-  double* dua = du.local_data();
-  
-  double dbval; // a temp variable
+  xl.component_abs();
+  xl.component_max(1.);
+  xl.scale(-bound_relax_perturb);
+  xl.axpy(1.0, *xl_ori);
 
-  for(long long i=0; i<n_vars; i++) {
-    xua[i] += bound_relax_perturb*fmax(1.,fabs(xua[i]));
-    xla[i] -= bound_relax_perturb*fmax(1.,fabs(xla[i]));
-  }
+  xu.component_abs();
+  xu.component_max(1.);
+  xu.scale(bound_relax_perturb);
+  xu.axpy(1.0, *xu_ori);
 
-  for(long long i=0; i<n_ineq; i++) {
-    dua[i] += bound_relax_perturb*fmax(1.,fabs(dua[i]));
-    dla[i] -= bound_relax_perturb*fmax(1.,fabs(dla[i]));
-  }
+  dl.component_abs();
+  dl.component_max(1.);
+  dl.scale(-bound_relax_perturb);
+  dl.axpy(1.0, *dl_ori);
+
+  du.component_abs();
+  du.component_max(1.);
+  du.scale(bound_relax_perturb);
+  du.axpy(1.0, *du_ori);
+
 }
 
 /**
@@ -372,8 +376,8 @@ hiopNLPObjGradScaling::hiopNLPObjGradScaling(const double max_grad,
                                              hiopVector& d, 
                                              hiopVector& gradf,
                                              hiopMatrix& Jac_c, 
-                                             hiopMatrix& Jac_d,
-                                             long long *cons_eq_mapping,
+                                             hiopMatrix& Jac_d, 
+                                             long long *cons_eq_mapping, 
                                              long long *cons_ineq_mapping)
       : n_vars(gradf.get_size()), n_vars_local(gradf.get_local_size()),
         scale_factor_obj(1.),
@@ -402,6 +406,7 @@ hiopNLPObjGradScaling::hiopNLPObjGradScaling(const double max_grad,
   const double* eq_arr = scale_factor_c->local_data_const();
   const double* ineq_arr = scale_factor_d->local_data_const();
   double* scale_factor_cd_arr = scale_factor_cd->local_data();
+
   for(int i=0; i<n_eq; ++i) {
     scale_factor_cd_arr[cons_eq_mapping[i]] = eq_arr[i];
   }

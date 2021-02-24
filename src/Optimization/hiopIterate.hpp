@@ -88,12 +88,7 @@ public:
 			      const double& alphaprimal, const double& alphadual);
 
   /// @brief adjust small slack variables
-  virtual int adjust_small_slacks(const hiopIterate& iter_curr,
-                                  const hiopVector& xl, 
-                                  const hiopVector& xu, 
-                                  const hiopVector& dl, 
-                                  const hiopVector& du,
-                                  const double& mu);
+  virtual int adjust_small_slacks(const hiopIterate& iter_curr, const double& mu);
   virtual int adjust_small_slacks(hiopVector& slack, 
                                   const hiopVector& bound, 
                                   const hiopVector& slack_dual, 
