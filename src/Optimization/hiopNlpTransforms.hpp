@@ -88,57 +88,44 @@ public:
   virtual long long n_pre()=0;
   virtual long long n_pre_local()=0;
 
-  /* transforms variable vector */
-  virtual inline hiopVector* apply_to_x(hiopVector& x, const bool& new_x) { return &x; };
-  virtual inline hiopVector* apply_inv_to_x(hiopVector& x) { return &x; }
-  virtual inline void apply_inv_to_x(hiopVector& x_in, hiopVector& x_out) 
+  /* transforms variable vector, from transformed ones to original ones*/
+  virtual inline hiopVector* apply_inv_to_x(hiopVector& x, const bool& new_x) { return &x; };
+  /* transforms variable vector, from original ones to transformed ones*/
+  virtual inline hiopVector* apply_to_x(hiopVector& x) { return &x; }
+  virtual inline void apply_to_x(hiopVector& x_in, hiopVector& x_out) 
   { 
     //default implementation should have x_in as x_out's internal data array
     assert(x_in.local_data() == x_out.local_data());
   }
 
-  virtual inline double apply_to_obj                  (double& f_in) { return f_in;} 
-  virtual inline double apply_inv_to_obj              (double& f_in) { return f_in;} 
+  virtual inline double apply_inv_to_obj                  (double& f_in) { return f_in;} 
+  virtual inline double apply_to_obj              (double& f_in) { return f_in;} 
 
-  virtual inline hiopVector* apply_to_grad_obj        (hiopVector& grad_in) { return &grad_in; }
-  virtual inline hiopVector* apply_inv_to_grad_obj    (hiopVector& grad_in) { return &grad_in; }
+  virtual inline hiopVector* apply_inv_to_grad_obj        (hiopVector& grad_in) { return &grad_in; }
+  virtual inline hiopVector* apply_to_grad_obj    (hiopVector& grad_in) { return &grad_in; }
 
-  virtual inline hiopVector* apply_to_cons_eq         (hiopVector& c_in, const int& m_in) { return &c_in; }
-  virtual inline hiopVector* apply_inv_to_cons_eq     (hiopVector& c_in, const int& m_in) { return &c_in; }
-  virtual inline hiopVector* apply_to_cons_ineq       (hiopVector& c_in, const int& m_in) { return &c_in; }
-  virtual inline hiopVector* apply_inv_to_cons_ineq   (hiopVector& c_in, const int& m_in) { return &c_in; }
+  virtual inline hiopVector* apply_inv_to_cons_eq         (hiopVector& c_in, const int& m_in) { return &c_in; }
+  virtual inline hiopVector* apply_to_cons_eq     (hiopVector& c_in, const int& m_in) { return &c_in; }
+  virtual inline hiopVector* apply_inv_to_cons_ineq       (hiopVector& c_in, const int& m_in) { return &c_in; }
+  virtual inline hiopVector* apply_to_cons_ineq   (hiopVector& c_in, const int& m_in) { return &c_in; }
   
   //the following two are for when the underlying NLP formulation works with full body constraints,
   //that is, evaluates both equalities and inequalities at once (a.k.a. one-call constraints and
   //and Jacobian evaluations)
-  virtual inline hiopVector* apply_to_cons            (hiopVector&  cons_in, const int& m_in) { return &cons_in; }
-  virtual inline hiopVector* apply_inv_to_cons        (hiopVector&  cons_in, const int& m_in) { return &cons_in; }
+  virtual inline hiopVector* apply_inv_to_cons            (hiopVector&  cons_in, const int& m_in) { return &cons_in; }
+  virtual inline hiopVector* apply_to_cons        (hiopVector&  cons_in, const int& m_in) { return &cons_in; }
 
-  virtual inline hiopMatrix* apply_to_jacob_eq        (hiopMatrix& Jac_in, const int& m_in) { return &Jac_in; }
-  virtual inline hiopMatrix* apply_inv_to_jacob_eq    (hiopMatrix& Jac_in, const int& m_in) { return &Jac_in; }
+  virtual inline hiopMatrix* apply_inv_to_jacob_eq        (hiopMatrix& Jac_in, const int& m_in) { return &Jac_in; }
+  virtual inline hiopMatrix* apply_to_jacob_eq    (hiopMatrix& Jac_in, const int& m_in) { return &Jac_in; }
 
-  virtual inline hiopMatrix* apply_to_jacob_ineq      (hiopMatrix& Jac_in, const int& m_in) { return &Jac_in; }
-  virtual inline hiopMatrix* apply_inv_to_jacob_ineq  (hiopMatrix& Jac_in, const int& m_in) { return &Jac_in; }  
+  virtual inline hiopMatrix* apply_inv_to_jacob_ineq      (hiopMatrix& Jac_in, const int& m_in) { return &Jac_in; }
+  virtual inline hiopMatrix* apply_to_jacob_ineq  (hiopMatrix& Jac_in, const int& m_in) { return &Jac_in; }  
 
-  virtual inline hiopMatrix* apply_to_jacob_cons      (hiopMatrix& Jac_in, const int& m_in) { return &Jac_in; }
-  virtual inline hiopMatrix* apply_inv_to_jacob_cons  (hiopMatrix& Jac_in, const int& m_in) { return &Jac_in; } 
+  virtual inline hiopMatrix* apply_inv_to_jacob_cons      (hiopMatrix& Jac_in, const int& m_in) { return &Jac_in; }
+  virtual inline hiopMatrix* apply_to_jacob_cons  (hiopMatrix& Jac_in, const int& m_in) { return &Jac_in; } 
 
-  virtual inline hiopMatrix* apply_to_larg_hess       (hiopMatrix& Hess_in, const int& m_in) { return &Hess_in; }
-  virtual inline hiopMatrix* apply_inv_to_larg_hess   (hiopMatrix& Hess_in, const int& m_in) { return &Hess_in; }
-#if 0 //old code
-  //! todo -> abstractize the below methods to work with other Jacobian types: sparse and MDS
-  virtual inline double* apply_to_jacob_eq      (double* Jac_in, const int& m_in) { return Jac_in; }
-  virtual inline double* apply_inv_to_jacob_eq   (double* Jac_in, const int& m_in) { return Jac_in; }
-  
-  virtual inline double* apply_to_jacob_ineq    (double* Jac_in, const int& m_in) { return Jac_in; }
-  virtual inline double* apply_inv_to_jacob_ineq (double* Jac_in, const int& m_in) { return Jac_in; }
-  
-  //the following two are for when the underlying NLP formulation works with full body constraints
-  virtual inline double* apply_to_jacob_cons    (double* Jac_in, const int& m_in) { return Jac_in; }
-  virtual inline double* apply_inv_to_jacob_cons (double* Jac_in, const int& m_in) { return Jac_in; }
-
-  //! todo -> transformations for Hessian ?!?
-#endif // 0
+  virtual inline hiopMatrix* apply_inv_to_larg_hess       (hiopMatrix& Hess_in, const int& m_in) { return &Hess_in; }
+  virtual inline hiopMatrix* apply_to_larg_hess   (hiopMatrix& Hess_in, const int& m_in) { return &Hess_in; }
   
 public:
   hiopNlpTransformation(){};
@@ -170,55 +157,55 @@ public:
   virtual inline bool setup() {return true;}
 
   /* number of vars in the NLP after the tranformation */
-  virtual inline long long n_post() { return fs_n(); }
+  virtual inline long long n_post() { return rs_n(); }
   /* number of vars in the NLP to which the tranformation is to be applied */
-  virtual inline long long n_pre () { return rs_n(); }
+  virtual inline long long n_pre () { return fs_n(); }
 
-  virtual inline long long n_post_local() { return fs_n_local(); }
-  virtual inline long long n_pre_local() { return rs_n_local(); }
+  virtual inline long long n_post_local() { return rs_n_local(); }
+  virtual inline long long n_pre_local() { return fs_n_local(); }
 
   /* from reduced space to full space */
-  inline hiopVector* apply_to_x(hiopVector& x, const bool& new_x) 
+  inline hiopVector* apply_inv_to_x(hiopVector& x, const bool& new_x) 
   { 
     x_rs_ref_ = &x;
     if(!new_x) { return x_fs; }
-    apply_to_vector(&x, x_fs);
+    apply_inv_to_vector(&x, x_fs);
     return x_fs;
   };
 
   /* from full space to reduced space (fixed vars removed) */
-  inline hiopVector* apply_inv_to_x(hiopVector& x_fs_in) 
+  inline hiopVector* apply_to_x(hiopVector& x_fs_in) 
   { 
     assert(x_rs_ref_!=NULL); assert(x_fs_in.local_data()==x_fs->local_data());
-    apply_to_vector(&x_fs_in, x_rs_ref_);
+    apply_inv_to_vector(&x_fs_in, x_rs_ref_);
     return x_rs_ref_; 
   }
   
   /* from fs to rs */
-  inline void  apply_inv_to_x(hiopVector& x_in, hiopVector& xv_out)
+  inline void  apply_to_x(hiopVector& x_in, hiopVector& xv_out)
   {
 #ifdef HIOP_DEEPCHECKS
     assert(xv_out.get_size()<xl_fs->get_size());
 #endif
-    apply_inv_to_vector(&x_in, &xv_out);
+    apply_to_vector(&x_in, &xv_out);
   }
   
   /* from rs to fs and return the fs*/
-  inline hiopVector* apply_to_grad_obj(hiopVector& grad_in)
+  inline hiopVector* apply_inv_to_grad_obj(hiopVector& grad_in)
   {
     grad_rs_ref = &grad_in;
-    apply_to_vector(&grad_in, grad_fs);
+    apply_inv_to_vector(&grad_in, grad_fs);
     return grad_fs;
   }
   /* from fs to rs */
-  inline hiopVector* apply_inv_to_grad_obj(hiopVector& grad_in)
+  inline hiopVector* apply_to_grad_obj(hiopVector& grad_in)
   {
     assert(&grad_in==grad_fs);
-    apply_inv_to_vector(&grad_in, grad_rs_ref);
+    apply_to_vector(&grad_in, grad_rs_ref);
     return grad_rs_ref;
   }
   /* from rs to fs */
-  inline hiopMatrix* apply_to_jacob_eq(hiopMatrix& Jac_in, const int& m_in)
+  inline hiopMatrix* apply_inv_to_jacob_eq(hiopMatrix& Jac_in, const int& m_in)
   {
     hiopMatrixDense* Jac_de = dynamic_cast<hiopMatrixDense*>(&Jac_in);
     if(Jac_de==nullptr) {
@@ -229,7 +216,7 @@ public:
     applyToMatrix(Jac_de->local_data(), m_in, Jacc_fs->local_data());
     return Jacc_fs;
   }
-  inline hiopMatrix* apply_inv_to_jacob_eq(hiopMatrix&  Jac_in, const int& m_in)
+  inline hiopMatrix* apply_to_jacob_eq(hiopMatrix&  Jac_in, const int& m_in)
   {
     hiopMatrixDense* Jac_de = dynamic_cast<hiopMatrixDense*>(&Jac_in);
     if(Jac_de==NULL) {
@@ -239,7 +226,7 @@ public:
     applyInvToMatrix(Jac_de->local_data(), m_in, Jacc_rs_ref->local_data());
     return Jacc_rs_ref;
   }
-  inline hiopMatrix* apply_to_jacob_ineq(hiopMatrix& Jac_in, const int& m_in)
+  inline hiopMatrix* apply_inv_to_jacob_ineq(hiopMatrix& Jac_in, const int& m_in)
   {
     hiopMatrixDense* Jac_de = dynamic_cast<hiopMatrixDense*>(&Jac_in);
     if(Jac_de==NULL) {
@@ -250,7 +237,7 @@ public:
     applyToMatrix(Jac_de->local_data(), m_in, Jacd_fs->local_data());
     return Jacd_fs;    
   }
-  inline hiopMatrix* apply_inv_to_jacob_ineq(hiopMatrix& Jac_in, const int& m_in)
+  inline hiopMatrix* apply_to_jacob_ineq(hiopMatrix& Jac_in, const int& m_in)
   {
     hiopMatrixDense* Jac_de = dynamic_cast<hiopMatrixDense*>(&Jac_in);
     if(Jac_de==NULL) {
@@ -284,8 +271,8 @@ protected:
   void applyToArray   (const double* vec_rs, double* vec_fs);
   void applyInvToArray(const double* vec_fs, double* vec_rs);
 #endif
-  void apply_to_vector   (const hiopVector* vec_rs, hiopVector* vec_fs);
-  void apply_inv_to_vector(const hiopVector* vec_fs, hiopVector* vec_rs);
+  void apply_inv_to_vector   (const hiopVector* vec_rs, hiopVector* vec_fs);
+  void apply_to_vector(const hiopVector* vec_fs, hiopVector* vec_rs);
   
   void applyToMatrix   (const double* M_rs, const int& m_in, double* M_fs);
   void applyInvToMatrix(const double* M_fs, const int& m_in, double* M_rs);
@@ -377,26 +364,26 @@ public:
   inline double get_obj_scale() const {return scale_factor_obj;}
 
   /* from scaled to unscaled objective*/
-  inline double apply_to_obj(double& f_in) { return f_in/scale_factor_obj;}
+  inline double apply_inv_to_obj(double& f_in) { return f_in/scale_factor_obj;}
   /* from unscaled to scaled objective*/
-  inline double apply_inv_to_obj(double& f_in) { return scale_factor_obj*f_in;}
+  inline double apply_to_obj(double& f_in) { return scale_factor_obj*f_in;}
 
   /* from scaled to unscaled*/
-  inline hiopVector* apply_to_grad_obj(hiopVector& grad_in)
+  inline hiopVector* apply_inv_to_grad_obj(hiopVector& grad_in)
   {
     grad_in.scale(1./scale_factor_obj);
     return &grad_in;
   }
 
   /* from unscaled to scaled*/
-  inline hiopVector* apply_inv_to_grad_obj(hiopVector& grad_in)
+  inline hiopVector* apply_to_grad_obj(hiopVector& grad_in)
   {
     grad_in.scale(scale_factor_obj);
     return &grad_in;
   }
 
   /* from scaled to unscaled*/
-  inline hiopVector* apply_to_cons_eq(hiopVector& c_in, const int& m_in)
+  inline hiopVector* apply_inv_to_cons_eq(hiopVector& c_in, const int& m_in)
   { 
     assert(n_eq==m_in);
     c_in.componentDiv(*scale_factor_c);
@@ -404,7 +391,7 @@ public:
   }
 
   /* from unscaled to scaled*/
-  inline hiopVector* apply_inv_to_cons_eq(hiopVector& c_in, const int& m_in) 
+  inline hiopVector* apply_to_cons_eq(hiopVector& c_in, const int& m_in) 
   { 
     assert(n_eq==m_in);
     c_in.componentMult(*scale_factor_c);
@@ -412,7 +399,7 @@ public:
   }
   
   /* from scaled to unscaled*/
-  inline hiopVector* apply_to_cons_ineq(hiopVector& d_in, const int& m_in)
+  inline hiopVector* apply_inv_to_cons_ineq(hiopVector& d_in, const int& m_in)
   { 
     assert(n_ineq==m_in);
     d_in.componentDiv(*scale_factor_d);
@@ -420,7 +407,7 @@ public:
   }
 
   /* from unscaled to scaled*/
-  inline hiopVector* apply_inv_to_cons_ineq(hiopVector& d_in, const int& m_in)
+  inline hiopVector* apply_to_cons_ineq(hiopVector& d_in, const int& m_in)
   { 
     assert(n_ineq==m_in);
     d_in.componentMult(*scale_factor_d);
@@ -428,7 +415,7 @@ public:
   }
 
   /* from scaled to unscaled*/
-  inline hiopVector* apply_to_cons(hiopVector& cd_in, const int& m_in)
+  inline hiopVector* apply_inv_to_cons(hiopVector& cd_in, const int& m_in)
   { 
     assert(n_ineq+n_eq==m_in);
     cd_in.componentDiv(*scale_factor_cd);
@@ -436,7 +423,7 @@ public:
   }
 
   /* from unscaled to scaled*/
-  inline hiopVector* apply_inv_to_cons(hiopVector& cd_in, const int& m_in)
+  inline hiopVector* apply_to_cons(hiopVector& cd_in, const int& m_in)
   { 
     assert(n_ineq+n_eq==m_in);
     cd_in.componentMult(*scale_factor_cd);
@@ -444,7 +431,7 @@ public:
   }
 
   /* from scaled to unscaled*/
-  inline hiopMatrix* apply_to_jacob_eq(hiopMatrix& Jac_in, const int& m_in)
+  inline hiopMatrix* apply_inv_to_jacob_eq(hiopMatrix& Jac_in, const int& m_in)
   {
     assert(n_eq==m_in);
     Jac_in.scale_row(*scale_factor_c, true);
@@ -452,7 +439,7 @@ public:
   }
 
   /* from scaled to unscaled*/
-  inline hiopMatrix* apply_inv_to_jacob_eq(hiopMatrix& Jac_in, const int& m_in)
+  inline hiopMatrix* apply_to_jacob_eq(hiopMatrix& Jac_in, const int& m_in)
   {
     assert(n_eq==m_in);
     Jac_in.scale_row(*scale_factor_c, false);
@@ -460,7 +447,7 @@ public:
   }
 
   /* from scaled to unscaled*/
-  inline hiopMatrix* apply_to_jacob_ineq(hiopMatrix& Jac_in, const int& m_in)
+  inline hiopMatrix* apply_inv_to_jacob_ineq(hiopMatrix& Jac_in, const int& m_in)
   {
     assert(n_ineq==m_in);
     Jac_in.scale_row(*scale_factor_d, true);
@@ -468,7 +455,7 @@ public:
   }
 
   /* from scaled to unscaled*/
-  inline hiopMatrix* apply_inv_to_jacob_ineq(hiopMatrix& Jac_in, const int& m_in)
+  inline hiopMatrix* apply_to_jacob_ineq(hiopMatrix& Jac_in, const int& m_in)
   {
     assert(n_ineq==m_in);
     Jac_in.scale_row(*scale_factor_d, false);
@@ -530,7 +517,7 @@ public:
       return n_vars_usernlp;
     } else {
 #ifdef HIOP_DEEPCHECKS
-      assert(n_vars_usernlp==list_trans_.back()->n_post());
+      assert(n_vars_usernlp==list_trans_.front()->n_pre());
 #endif 
       return list_trans_.back()->n_post(); 
     }
@@ -544,8 +531,8 @@ public:
       return n_vars_local_usernlp;
     } else {
 #ifdef HIOP_DEEPCHECKS
-      assert(n_vars_usernlp==list_trans_.back()->n_post());
-      assert(n_vars_local_usernlp==list_trans_.back()->n_post_local());
+      assert(n_vars_usernlp==list_trans_.front()->n_pre());
+      assert(n_vars_local_usernlp==list_trans_.front()->n_pre_local());
 #endif 
       return list_trans_.back()->n_post_local(); 
     }
@@ -560,7 +547,7 @@ public:
       return n_vars_usernlp;
     } else {
 #ifdef HIOP_DEEPCHECKS
-      assert(n_vars_usernlp==list_trans_.back()->n_post());
+      assert(n_vars_usernlp==list_trans_.front()->n_pre());
 #endif
       return list_trans_.front()->n_pre(); 
     }
@@ -575,142 +562,157 @@ public:
       return n_vars_local_usernlp;
     } else {
 #ifdef HIOP_DEEPCHECKS
-      assert(n_vars_usernlp==list_trans_.back()->n_post());
+      assert(n_vars_usernlp==list_trans_.front()->n_pre());
 #endif
       return list_trans_.front()->n_pre_local(); 
     }
   }
   
-  hiopVector* apply_to_x(hiopVector& x, const bool& new_x) 
+  hiopVector* apply_inv_to_x(hiopVector& x, const bool& new_x) 
   {
     hiopVector* ret = &x;
-    for(std::list<hiopNlpTransformation*>::iterator it=list_trans_.begin(); it!=list_trans_.end(); ++it)
-      ret = (*it)->apply_to_x(*ret ,new_x);
+    for(std::list<hiopNlpTransformation*>::reverse_iterator it=list_trans_.rbegin(); it!=list_trans_.rend(); ++it) {
+      ret = (*it)->apply_inv_to_x(*ret ,new_x);
+    }
     return ret;
   }
 
-  virtual hiopVector* apply_inv_to_x(hiopVector& x)
+  virtual hiopVector* apply_to_x(hiopVector& x)
   { 
-    assert(false && "This overload of apply_inv_to_x is not implemented in hiopNlpTransformations class\n");
+    assert(false && "This overload of apply_to_x is not implemented in hiopNlpTransformations class\n");
     return nullptr;
   }
 
-  void apply_inv_to_x(hiopVector& x_in, hiopVector& x_out) 
+  void apply_to_x(hiopVector& x_in, hiopVector& x_out) 
   {
-    for(std::list<hiopNlpTransformation*>::reverse_iterator it=list_trans_.rbegin(); it!=list_trans_.rend(); ++it) {
-      (*it)->apply_inv_to_x(x_in, x_out);
+    for(std::list<hiopNlpTransformation*>::iterator it=list_trans_.begin(); it!=list_trans_.end(); ++it) {
+      (*it)->apply_to_x(x_in, x_out);
     }
-  }
-
-  double apply_to_obj(double& f_in) 
-  {
-    double ret = f_in;
-    for(std::list<hiopNlpTransformation*>::iterator it=list_trans_.begin(); it!=list_trans_.end(); ++it)
-      ret = (*it)->apply_to_obj(ret);
-    return ret;
   }
 
   double apply_inv_to_obj(double& f_in) 
   {
     double ret = f_in;
-    for(std::list<hiopNlpTransformation*>::reverse_iterator it=list_trans_.rbegin(); it!=list_trans_.rend(); ++it)
+    for(std::list<hiopNlpTransformation*>::reverse_iterator it=list_trans_.rbegin(); it!=list_trans_.rend(); ++it) {
       ret = (*it)->apply_inv_to_obj(ret);
+    }
+    return ret;
+  }
+
+  double apply_to_obj(double& f_in) 
+  {
+    double ret = f_in;
+    for(std::list<hiopNlpTransformation*>::iterator it=list_trans_.begin(); it!=list_trans_.end(); ++it) {
+      ret = (*it)->apply_to_obj(ret);
+    }
     return ret;
   }  
   
-  hiopVector* apply_to_grad_obj(hiopVector& grad_in) 
-  {
-    hiopVector* ret = &grad_in;
-    for(std::list<hiopNlpTransformation*>::iterator it=list_trans_.begin(); it!=list_trans_.end(); ++it)
-      ret = (*it)->apply_to_grad_obj(*ret);
-    return ret;
-  }
-
   hiopVector* apply_inv_to_grad_obj(hiopVector& grad_in) 
   {
     hiopVector* ret = &grad_in;
-    for(std::list<hiopNlpTransformation*>::reverse_iterator it=list_trans_.rbegin(); it!=list_trans_.rend(); ++it)
+    for(std::list<hiopNlpTransformation*>::reverse_iterator it=list_trans_.rbegin(); it!=list_trans_.rend(); ++it) {
       ret = (*it)->apply_inv_to_grad_obj(*ret);
+    }
     return ret;
   }
 
-  hiopVector* apply_to_cons_eq(hiopVector& c_in, const int& m_in)
+  hiopVector* apply_to_grad_obj(hiopVector& grad_in) 
   {
-    hiopVector* ret = &c_in;
-    for(std::list<hiopNlpTransformation*>::iterator it=list_trans_.begin(); it!=list_trans_.end(); ++it)
-      ret = (*it)->apply_to_cons_eq(*ret, m_in);
+    hiopVector* ret = &grad_in;
+    for(std::list<hiopNlpTransformation*>::iterator it=list_trans_.begin(); it!=list_trans_.end(); ++it) {
+      ret = (*it)->apply_to_grad_obj(*ret);
+    }
     return ret;
   }
 
   hiopVector* apply_inv_to_cons_eq(hiopVector& c_in, const int& m_in)
   {
     hiopVector* ret = &c_in;
-    for(std::list<hiopNlpTransformation*>::iterator it=list_trans_.begin(); it!=list_trans_.end(); ++it)
+    for(std::list<hiopNlpTransformation*>::reverse_iterator it=list_trans_.rbegin(); it!=list_trans_.rend(); ++it) {
       ret = (*it)->apply_inv_to_cons_eq(*ret, m_in);
+    }
     return ret;
   }
 
-  hiopVector* apply_to_cons_ineq(hiopVector& c_in, const int& m_in)
+  hiopVector* apply_to_cons_eq(hiopVector& c_in, const int& m_in)
   {
     hiopVector* ret = &c_in;
-    for(std::list<hiopNlpTransformation*>::iterator it=list_trans_.begin(); it!=list_trans_.end(); ++it)
-      ret = (*it)->apply_to_cons_ineq(*ret, m_in);
+    for(std::list<hiopNlpTransformation*>::iterator it=list_trans_.begin(); it!=list_trans_.end(); ++it) {
+      ret = (*it)->apply_to_cons_eq(*ret, m_in);
+    }
     return ret;
   }
 
   hiopVector* apply_inv_to_cons_ineq(hiopVector& c_in, const int& m_in)
   {
     hiopVector* ret = &c_in;
-    for(std::list<hiopNlpTransformation*>::iterator it=list_trans_.begin(); it!=list_trans_.end(); ++it)
+    for(std::list<hiopNlpTransformation*>::reverse_iterator it=list_trans_.rbegin(); it!=list_trans_.rend(); ++it) {
       ret = (*it)->apply_inv_to_cons_ineq(*ret, m_in);
+    }
     return ret;
   }
 
-  hiopVector* apply_to_cons(hiopVector& c_in, const int& m_in)
+  hiopVector* apply_to_cons_ineq(hiopVector& c_in, const int& m_in)
   {
     hiopVector* ret = &c_in;
-    for(std::list<hiopNlpTransformation*>::iterator it=list_trans_.begin(); it!=list_trans_.end(); ++it)
-      ret = (*it)->apply_to_cons(*ret, m_in);
+    for(std::list<hiopNlpTransformation*>::iterator it=list_trans_.begin(); it!=list_trans_.end(); ++it) {
+      ret = (*it)->apply_to_cons_ineq(*ret, m_in);
+    }
     return ret;
   }
 
   hiopVector* apply_inv_to_cons(hiopVector& c_in, const int& m_in)
   {
     hiopVector* ret = &c_in;
-    for(std::list<hiopNlpTransformation*>::iterator it=list_trans_.begin(); it!=list_trans_.end(); ++it)
+    for(std::list<hiopNlpTransformation*>::reverse_iterator it=list_trans_.rbegin(); it!=list_trans_.rend(); ++it) {
       ret = (*it)->apply_inv_to_cons(*ret, m_in);
+    }
     return ret;
   }
 
-  hiopMatrix* apply_to_jacob_eq(hiopMatrix& Jac_in, const int& m_in)
+  hiopVector* apply_to_cons(hiopVector& c_in, const int& m_in)
   {
-    hiopMatrix* ret = &Jac_in;
-    for(std::list<hiopNlpTransformation*>::iterator it=list_trans_.begin(); it!=list_trans_.end(); ++it)
-      ret = (*it)->apply_to_jacob_eq(*ret, m_in);
+    hiopVector* ret = &c_in;
+    for(std::list<hiopNlpTransformation*>::iterator it=list_trans_.begin(); it!=list_trans_.end(); ++it) { 
+      ret = (*it)->apply_to_cons(*ret, m_in);
+    }
     return ret;
   }
 
   hiopMatrix* apply_inv_to_jacob_eq(hiopMatrix& Jac_in, const int& m_in)
   {
     hiopMatrix* ret = &Jac_in;
-    for(std::list<hiopNlpTransformation*>::reverse_iterator it=list_trans_.rbegin(); it!=list_trans_.rend(); ++it)
+    for(std::list<hiopNlpTransformation*>::reverse_iterator it=list_trans_.rbegin(); it!=list_trans_.rend(); ++it) {
       ret = (*it)->apply_inv_to_jacob_eq(*ret, m_in);
+    }
     return ret;
   }
 
-  hiopMatrix* apply_to_jacob_ineq(hiopMatrix& Jac_in, const int& m_in)
+  hiopMatrix* apply_to_jacob_eq(hiopMatrix& Jac_in, const int& m_in)
   {
     hiopMatrix* ret = &Jac_in;
-    for(std::list<hiopNlpTransformation*>::iterator it=list_trans_.begin(); it!=list_trans_.end(); ++it)
-      ret = (*it)->apply_to_jacob_ineq(*ret, m_in);
+    for(std::list<hiopNlpTransformation*>::iterator it=list_trans_.begin(); it!=list_trans_.end(); ++it) {
+      ret = (*it)->apply_to_jacob_eq(*ret, m_in);
+    }
     return ret;
   }
 
   hiopMatrix* apply_inv_to_jacob_ineq(hiopMatrix& Jac_in, const int& m_in)
   {
     hiopMatrix* ret = &Jac_in;
-    for(std::list<hiopNlpTransformation*>::reverse_iterator it=list_trans_.rbegin(); it!=list_trans_.rend(); ++it)
+    for(std::list<hiopNlpTransformation*>::reverse_iterator it=list_trans_.rbegin(); it!=list_trans_.rend(); ++it) {
       ret = (*it)->apply_inv_to_jacob_ineq(*ret, m_in);
+    }
+    return ret;
+  }
+
+  hiopMatrix* apply_to_jacob_ineq(hiopMatrix& Jac_in, const int& m_in)
+  {
+    hiopMatrix* ret = &Jac_in;
+    for(std::list<hiopNlpTransformation*>::iterator it=list_trans_.begin(); it!=list_trans_.end(); ++it) {
+      ret = (*it)->apply_to_jacob_ineq(*ret, m_in);
+    }
     return ret;
   }
 

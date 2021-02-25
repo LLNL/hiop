@@ -634,7 +634,10 @@ public:
 
     // set the last element to -2, others are set to 1
     A.setToConstant(one);
-    if (rank == 0) setLocalElement(&A, last_row_idx, last_col_idx, -two);
+    if (rank == 0) {
+      setLocalElement(&A, last_row_idx, last_col_idx, -two);
+    }
+    
     A.row_max_abs_value(x);
     
     fail += verifyAnswer(&x,

@@ -474,21 +474,24 @@ void hiopMatrixRajaSparseTriplet::row_max_abs_value(hiopVector& ret_vec)
   auto& vec = dynamic_cast<hiopVectorRajaPar&>(ret_vec);
   double* vd = vec.local_data();
 
-  if(row_starts_host==NULL)
+  if(row_starts_host==NULL) {
     row_starts_host = allocAndBuildRowStarts();
+  }
   assert(row_starts_host);
 
   int num_rows = this->nrows_;
   int* idx_start = row_starts_host->idx_start_;
   double* values = values_;
 
-  RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, num_rows+1),
-  RAJA_LAMBDA(RAJA::Index_type row_id)
-  {
-    for(int itnz=idx_start[row_id]; itnz<idx_start[row_id+1]; itnz++) {
-      vd[row_id] = (vd[row_id] > fabs(values[itnz])) ? vd[row_id] : fabs(values[itnz]);
+  RAJA::forall<hiop_raja_exec>(
+    RAJA::RangeSegment(0, num_rows+1),
+    RAJA_LAMBDA(RAJA::Index_type row_id)
+    {
+      for(int itnz=idx_start[row_id]; itnz<idx_start[row_id+1]; itnz++) {
+        vd[row_id] = (vd[row_id] > fabs(values[itnz])) ? vd[row_id] : fabs(values[itnz]);
+      }
     }
-  });  
+  );  
 }
 
 void hiopMatrixRajaSparseTriplet::scale_row(hiopVector &vec_scal, const bool inv_scale)
@@ -501,7 +504,8 @@ void hiopMatrixRajaSparseTriplet::scale_row(hiopVector &vec_scal, const bool inv
   auto iRow = this->iRow_;
   auto values = this->values_;
   
-  RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, nnz_),
+  RAJA::forall<hiop_raja_exec>(
+    RAJA::RangeSegment(0, nnz_),
     RAJA_LAMBDA(RAJA::Index_type itnz)
     {
       double scal;
@@ -511,7 +515,8 @@ void hiopMatrixRajaSparseTriplet::scale_row(hiopVector &vec_scal, const bool inv
         scal = vd[iRow[itnz]];
       }
       values[itnz] *= scal;
-    });
+    }
+  );
 }
 
 /**

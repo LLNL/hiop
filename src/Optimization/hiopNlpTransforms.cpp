@@ -187,7 +187,7 @@ bool hiopFixedVarsRemover::setupConstraintsPart(const int& neq, const int& nineq
 void hiopFixedVarsRemover::copyFsToRs(const hiopVector& fsVec,  hiopVector& rsVec)
 {
   assert(fsVec.get_local_size()==fs2rs_idx_map.size());
-  apply_inv_to_vector(&fsVec, &rsVec);
+  apply_to_vector(&fsVec, &rsVec);
 }
 
 void hiopFixedVarsRemover::
@@ -203,7 +203,7 @@ copyFsToRs(const hiopInterfaceBase::NonlinearityType* fs, hiopInterfaceBase::Non
 }
 
 /* from rs to fs */
-void hiopFixedVarsRemover::apply_to_vector(const hiopVector* vec_rs, hiopVector* vec_fs)
+void hiopFixedVarsRemover::apply_inv_to_vector(const hiopVector* vec_rs, hiopVector* vec_fs)
 {
   double* xl_fs_arr = xl_fs->local_data();
   const double* vec_rs_arr = vec_rs->local_data_const();
@@ -220,7 +220,7 @@ void hiopFixedVarsRemover::apply_to_vector(const hiopVector* vec_rs, hiopVector*
 }
 
 /* from fs to rs */
-void hiopFixedVarsRemover::apply_inv_to_vector(const hiopVector* vec_fs, hiopVector* vec_rs)
+void hiopFixedVarsRemover::apply_to_vector(const hiopVector* vec_fs, hiopVector* vec_rs)
 {
   double* vec_rs_arr = vec_rs->local_data();
   const double* vec_fs_arr = vec_fs->local_data_const();

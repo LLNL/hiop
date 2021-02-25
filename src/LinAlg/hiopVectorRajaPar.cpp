@@ -779,13 +779,15 @@ void hiopVectorRajaPar::componentDiv_w_selectPattern( const hiopVector& vec, con
 void hiopVectorRajaPar::component_min(const double constant)
 {
   double* dd = data_dev_;
-  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >(
+    RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       if(dd[i]>constant) {
         dd[i] = constant;
       }      
-    });
+    }
+  );
 }
 
 /**
@@ -801,13 +803,15 @@ void hiopVectorRajaPar::component_min(const hiopVector& vec)
   assert(n_local_ == v.n_local_);
   double* dd = data_dev_;
   double* vd = v.data_dev_;
-  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >(
+    RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       if(dd[i]>vd[i]) {
         dd[i] = vd[i];
       } 
-    });
+    }
+  );
 }
 
 /**
@@ -816,13 +820,15 @@ void hiopVectorRajaPar::component_min(const hiopVector& vec)
 void hiopVectorRajaPar::component_max(const double constant)
 {
   double* dd = data_dev_;
-  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >(
+    RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       if(dd[i]<constant) {
         dd[i] = constant;
       }      
-    });
+    }
+  );
 }
 
 /**
@@ -838,13 +844,15 @@ void hiopVectorRajaPar::component_max(const hiopVector& vec)
   assert(n_local_ == v.n_local_);
   double* dd = data_dev_;
   double* vd = v.data_dev_;
-  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >(
+    RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       if(dd[i]<vd[i]) {
         dd[i] = vd[i];
       } 
-    });
+    }
+  );
 }
 
 /**
