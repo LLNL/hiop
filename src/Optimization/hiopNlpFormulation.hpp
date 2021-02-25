@@ -194,11 +194,11 @@ public:
   inline long long n_upp_local() const {return n_bnds_upp_local;}
 
   /* methods for transforming the internal objects to corresponding user objects */
-  inline double user_obj(double hiop_f) { return nlp_transformations.apply_to_obj(hiop_f); }
+  inline double user_obj(double hiop_f) { return nlp_transformations.apply_inv_to_obj(hiop_f); }
   inline void   user_x(hiopVector& hiop_x, double* user_x) 
   { 
     //double *hiop_xa = hiop_x.local_data();
-    hiopVector *x = nlp_transformations.apply_to_x(hiop_x,/*new_x=*/true); 
+    hiopVector *x = nlp_transformations.apply_inv_to_x(hiop_x,/*new_x=*/true); 
     //memcpy(user_x, user_xa, hiop_x.get_local_size()*sizeof(double));
     memcpy(user_x, x->local_data(), nlp_transformations.n_post_local()*sizeof(double));
   }

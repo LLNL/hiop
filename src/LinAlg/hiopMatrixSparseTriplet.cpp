@@ -276,7 +276,7 @@ void hiopMatrixSparseTriplet::row_max_abs_value(hiopVector &ret_vec)
   for(int it=0; it<nnz_; it++) {
     const int i = iRow_[it];
     double abs_val = fabs(values_[it]);
-    if(y_data[i]<abs_val){
+    if(y_data[i] < abs_val) {
       y_data[i] = abs_val;
     }
   }

@@ -1390,15 +1390,20 @@ void hiopMatrixRajaDense::row_max_abs_value(hiopVector &ret_vec)
   double* vd = vec.local_data();
   
   double* data = data_dev_;
+  int m_local = m_local_;
+  int n_local = n_local_;
   
-  RAJA::View<const double, RAJA::Layout<2>> Mview(data, m_local_, n_local_);
-  RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, m_local_),
-  RAJA_LAMBDA(RAJA::Index_type i)
-  {
-    for (int j = 0; j < n_local_; j++) {
-      vd[i] = (vd[i] > fabs(Mview(i, j))) ? vd[i] : fabs(Mview(i, j));
+  RAJA::View<const double, RAJA::Layout<2>> Mview(data, m_local, n_local);
+  RAJA::forall<hiop_raja_exec>(
+    RAJA::RangeSegment(0, m_local),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      for(int j = 0; j < n_local; j++) {
+        double abs_val = fabs(Mview(i, j));
+        vd[i] = (vd[i] > abs_val) ? vd[i] : abs_val;
+      }
     }
-  });
+  );
 
 #ifdef HIOP_USE_MPI
   vec.copyFromDev();
@@ -1414,26 +1419,22 @@ void hiopMatrixRajaDense::scale_row(hiopVector &vec_scal, const bool inv_scale)
 {
   double* data = data_dev_;
   auto& vec = dynamic_cast<hiopVectorRajaPar&>(vec_scal);
-  vec.copyFromDev();
-  double* vd = vec.local_data_host();
-  double scal;
-
-  for (int irow = 0; irow < m_local_; irow++)
-  {
-    if(inv_scale) {
-      scal = 1./vd[irow];
-    } else {
-      scal = vd[irow];
-    }
-    
-    RAJA::View<double, RAJA::Layout<2>> Mview(data, m_local_, n_local_);
-    RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, n_local_),
-      RAJA_LAMBDA(RAJA::Index_type j)
+  double* vd = vec.local_data();
+  
+  int m_local = m_local_;
+  int n_local = n_local_;
+  
+  RAJA::View<double, RAJA::Layout<2>> Mview(data, m_local, n_local);
+  RAJA::forall<hiop_raja_exec>(
+    RAJA::RangeSegment(0, m_local),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      for (int j = 0; j < n_local; j++)
       {
-        Mview(irow,j) *= scal; 
-      });
-  }
-  vec.copyToDev();
+        Mview(i,j) *= vd[i]; 
+      }
+    }
+  );
 }
 
 #ifdef HIOP_DEEPCHECKS
