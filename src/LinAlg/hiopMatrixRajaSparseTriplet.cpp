@@ -468,6 +468,9 @@ double hiopMatrixRajaSparseTriplet::max_abs_value()
  */
 void hiopMatrixRajaSparseTriplet::row_max_abs_value(hiopVector& ret_vec)
 {
+#ifdef HIOP_DEEPCHECKS
+  assert(this->checkIndexesAreOrdered());
+#endif
   assert(ret_vec.get_size() == nrows_);
   ret_vec.setToZero();
   
@@ -488,7 +491,8 @@ void hiopMatrixRajaSparseTriplet::row_max_abs_value(hiopVector& ret_vec)
     RAJA_LAMBDA(RAJA::Index_type row_id)
     {
       for(int itnz=idx_start[row_id]; itnz<idx_start[row_id+1]; itnz++) {
-        vd[row_id] = (vd[row_id] > fabs(values[itnz])) ? vd[row_id] : fabs(values[itnz]);
+        double abs_val = fabs(values[itnz]);
+        vd[row_id] = (vd[row_id] > abs_val) ? vd[row_id] : abs_val;
       }
     }
   );  
