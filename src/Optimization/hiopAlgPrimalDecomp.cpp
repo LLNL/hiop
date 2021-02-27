@@ -19,7 +19,7 @@ namespace hiop
     ReqRecourseApprox(const int& n)
     {
       n_=n;
-      buffer=new double[n_];
+      buffer=new double[n_+1];
     }
 
     int test() 
@@ -493,10 +493,18 @@ bool hiopAlgPrimalDecomposition::stopping_criteria(const int it, const double co
 
       // assert("for debugging" && false); //for debugging purpose
       // set up recourse problem send/recv interface
-      std::vector<ReqRecourseApprox* > rec_prob(comm_size_);
+      /*std::vector<ReqRecourseApprox* > rec_prob(comm_size_);
       for(int r=0; r<comm_size_;r++) {
         rec_prob[r] = new ReqRecourseApprox(nc_);
+      }*/
+      
+      std::vector<ReqRecourseApprox* > rec_prob;
+      ReqRecourseApprox* p=NULL;
+      for(int r=0; r<comm_size_;r++) {
+        p = new ReqRecourseApprox(nc_);
+        rec_prob.push_back(p);
       }
+      
       ReqContingencyIdx* req_cont_idx = new ReqContingencyIdx(0);
 
       // master rank communication
