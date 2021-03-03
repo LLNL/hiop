@@ -154,8 +154,12 @@ public:
     nlp_->log->write("KKT Linsys:", Msys, hovMatrices);
 
     //write matrix to file if requested
-    if(nlp_->options->GetString("write_kkt") == "yes") write_linsys_counter++;
-    if(write_linsys_counter>=0) csr_writer.writeMatToFile(Msys, write_linsys_counter); 
+    if(nlp_->options->GetString("write_kkt") == "yes") {
+      write_linsys_counter++;
+    }
+    if(write_linsys_counter>=0) {
+      csr_writer.writeMatToFile(Msys, write_linsys_counter, nx, neq, nineq);
+    }
     
     return true;
   }
@@ -304,8 +308,12 @@ public:
     nlp_->log->write("KKT Linsys:", Msys, hovMatrices);
 
     //write matrix to file if requested
-    if(nlp_->options->GetString("write_kkt") == "yes") write_linsys_counter++;
-    if(write_linsys_counter>=0) csr_writer.writeMatToFile(Msys, write_linsys_counter);
+    if(nlp_->options->GetString("write_kkt") == "yes") {
+      write_linsys_counter++;
+    }
+    if(write_linsys_counter>=0) {
+      csr_writer.writeMatToFile(Msys, write_linsys_counter, nx, neq, nineq);
+    }
 
     nlp_->log->write("KKT XDYcYd Linsys (to be factorized):", Msys, hovMatrices);
     return true;
