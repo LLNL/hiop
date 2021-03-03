@@ -1,75 +1,3 @@
-# Minimal testing procedure 
-Any PR or push to the master should go through and pass the procedures below. The shell commands need to be ran in the 'build' directory and assume bash shell. 
-
-## 1. All tests in 'make test' pass for each of these builds, with every combination of `HIOP_USE_RAJA` and `HIOP_USE_GPU`.
-1. a. MPI=ON, DEEPCHECKS=OFF, RELEASE=ON (this is the high-performance version of HiOp)
-```shell
-$> rm -rf *; cmake -DHIOP_USE_MPI=ON -DHIOP_DEEPCHECKS=OFF -DCMAKE_BUILD_TYPE=RELEASE ..
-$> make -j4; make install; make test
-```
-1. b. MPI=OFF, DEEPCHECKS=OFF, RELEASE=ON
-```shell
-$> rm -rf *; cmake -DHIOP_USE_MPI=OFF -DHIOP_DEEPCHECKS=OFF -DCMAKE_BUILD_TYPE=RELEASE ..
-$> make -j4; make install; make test
-```
-and, optionally, for 
-1. c. MPI=ON, DEEPCHECKS=ON, RELEASE=ON
-```shell
-$> rm -rf *; cmake -DHIOP_USE_MPI=ON -DHIOP_DEEPCHECKS=ON -DCMAKE_BUILD_TYPE=RELEASE ..
-$> make -j4; make install; make test
-```
-1. d. MPI=OFF, DEEPCHECKS=ON, RELEASE=ON
-```shell
-$> rm -rf *; cmake -DHIOP_USE_MPI=OFF -DHIOP_DEEPCHECKS=ON -DCMAKE_BUILD_TYPE=RELEASE ..
-$> make -j4; make install; make test
-```
-
-1. e. MPI=ON, DEEPCHECKS=OFF, DEBUG=ON 
-```shell
-$> rm -rf *; cmake -DHIOP_USE_MPI=ON -DHIOP_DEEPCHECKS=OFF -DCMAKE_BUILD_TYPE=DEBUG ..
-$> make -j4; make install; make test
-```
-
-1. f. MPI=OFF, DEEPCHECKS=OFF, DEBUG=ON
-```shell
-$> rm -rf *; cmake -DHIOP_USE_MPI=OFF -DHIOP_DEEPCHECKS=OFF -DCMAKE_BUILD_TYPE=DEBUG ..
-$> make -j4; make install; make test
-```
-
-2. Build Matrix
-
-To run tests for every possible cmake configuration, the build script has an
-option for that:
-
-```shell
-$> ./BUILD.sh --full-build-matrix
-```
-
-If you're going to use this, you'll likely want to create a file in `scripts`
-directory with name `./scripts/<cluster>Variables.sh` which sets relevant environment variables, or do this yourself. For example, see `./scripts/ascentVariables.sh` which you would call with:
-
-```shell
-$> MY_CLUSTER=ascent ./BUILD.sh --full-build-matrix
-```
-
-## 2. Valgrind reports no errors and no warning when running the testing drivers of HiOp. Mandatory on Linux, optional on MacOS
-```shell
-$> rm -rf *; cmake -DHIOP_USE_MPI=ON -DHIOP_DEEPCHECKS=ON -DCMAKE_BUILD_TYPE=DEBUG ..
-$> make -j4
-$> mpiexec -np 2 valgrind ./src/Drivers/nlpDenseCons_ex1.exe 
-$> mpiexec -np 2 valgrind ./src/Drivers/nlpDenseCons_ex2.exe 
-$> mpiexec -np 2 valgrind ./src/Drivers/nlpDenseCons_ex3.exe 
-```
-
-## 3. clang with fsanitize group checks reports no warning and no errors. MacOS only.
-```shell
-$> rm -rf *; CC=clang CXX=clang++ cmake -DCMAKE_CXX_FLAGS="-fsanitize=nullability,undefined,integer,alignment" -DHIOP_USE_MPI=ON -DHIOP_DEEPCHECKS=ON -DCMAKE_BUILD_TYPE=DEBUG ..
-$> make -j4 
-$> mpiexec -np 2 ./src/Drivers/nlpDenseCons_ex1.exe 
-$> mpiexec -np 2 ./src/Drivers/nlpDenseCons_ex2.exe 
-$> mpiexec -np 2 ./src/Drivers/nlpDenseCons_ex3.exe 
-```
-
 
 # Branches and pull requests
 
@@ -490,4 +418,80 @@ Documentation of pre and post conditions should appear in the interface or heade
  *
  * LONGER DESCRIPTION, RUNTIME, EXAMPLES, ETC 
  */
+ 
 ```
+
+# Minimal testing procedure 
+Any PR or push to the `master` or `develop` branches should go through and pass the procedures below. The shell commands need to be ran in the 'build' directory and assume bash shell. 
+
+## 1. All "build matrix" tests must pass
+
+To run tests for every possible cmake configuration, the build script has an
+option for that:
+
+```shell
+$> ./BUILD.sh --full-build-matrix
+```
+
+If you're going to use this, you'll likely want to create a file in `scripts`
+directory with name `./scripts/<cluster>Variables.sh` which sets relevant environment variables, or do this yourself. For example, see `./scripts/ascentVariables.sh` which you would call with:
+
+```shell
+$> MY_CLUSTER=ascent ./BUILD.sh --full-build-matrix
+```
+
+### Manual testing
+To investigate a failure of a test from the build matrix, one can build and run individiual tests from the  build matrix manually, as shown in the examples below.
+
+1. a. MPI=ON, DEEPCHECKS=OFF, RELEASE=ON (this is the high-performance version of HiOp)
+```shell
+$> rm -rf *; cmake -DHIOP_USE_MPI=ON -DHIOP_DEEPCHECKS=OFF -DCMAKE_BUILD_TYPE=RELEASE ..
+$> make -j4; make install; make test
+```
+1. b. MPI=OFF, DEEPCHECKS=OFF, RELEASE=ON
+```shell
+$> rm -rf *; cmake -DHIOP_USE_MPI=OFF -DHIOP_DEEPCHECKS=OFF -DCMAKE_BUILD_TYPE=RELEASE ..
+$> make -j4; make install; make test
+```
+1. c. MPI=ON, DEEPCHECKS=ON, RELEASE=ON
+```shell
+$> rm -rf *; cmake -DHIOP_USE_MPI=ON -DHIOP_DEEPCHECKS=ON -DCMAKE_BUILD_TYPE=RELEASE ..
+$> make -j4; make install; make test
+```
+1. d. MPI=OFF, DEEPCHECKS=ON, RELEASE=ON
+```shell
+$> rm -rf *; cmake -DHIOP_USE_MPI=OFF -DHIOP_DEEPCHECKS=ON -DCMAKE_BUILD_TYPE=RELEASE ..
+$> make -j4; make install; make test
+```
+
+1. e. MPI=ON, DEEPCHECKS=OFF, DEBUG=ON 
+```shell
+$> rm -rf *; cmake -DHIOP_USE_MPI=ON -DHIOP_DEEPCHECKS=OFF -DCMAKE_BUILD_TYPE=DEBUG ..
+$> make -j4; make install; make test
+```
+
+1. f. MPI=OFF, DEEPCHECKS=OFF, DEBUG=ON
+```shell
+$> rm -rf *; cmake -DHIOP_USE_MPI=OFF -DHIOP_DEEPCHECKS=OFF -DCMAKE_BUILD_TYPE=DEBUG ..
+$> make -j4; make install; make test
+```
+
+
+## 2. Valgrind reports no errors and no warning when running the testing drivers of HiOp. Mandatory on Linux, optional on MacOS
+```shell
+$> rm -rf *; cmake -DHIOP_USE_MPI=ON -DHIOP_DEEPCHECKS=ON -DCMAKE_BUILD_TYPE=DEBUG ..
+$> make -j4
+$> mpiexec -np 2 valgrind ./src/Drivers/nlpDenseCons_ex1.exe 
+$> mpiexec -np 2 valgrind ./src/Drivers/nlpDenseCons_ex2.exe 
+$> mpiexec -np 2 valgrind ./src/Drivers/nlpDenseCons_ex3.exe 
+```
+
+## 3. clang with fsanitize group checks reports no warning and no errors. MacOS only (Optional).
+```shell
+$> rm -rf *; CC=clang CXX=clang++ cmake -DCMAKE_CXX_FLAGS="-fsanitize=nullability,undefined,integer,alignment" -DHIOP_USE_MPI=ON -DHIOP_DEEPCHECKS=ON -DCMAKE_BUILD_TYPE=DEBUG ..
+$> make -j4 
+$> mpiexec -np 2 ./src/Drivers/nlpDenseCons_ex1.exe 
+$> mpiexec -np 2 ./src/Drivers/nlpDenseCons_ex2.exe 
+$> mpiexec -np 2 ./src/Drivers/nlpDenseCons_ex3.exe 
+```
+
