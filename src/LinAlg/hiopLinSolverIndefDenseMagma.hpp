@@ -66,11 +66,65 @@ protected:
 
   //allocated on demand; for example, it may only be required by Magma SIDI.
   double* work_;
-  //magma_queue_t magma_device_queue;
-  //magmaDouble_ptr device_M, device_rhs_;
+
+protected:
+
 private:
   hiopLinSolverIndefDenseMagmaBuKa() { assert(false); }
 };
+
+/** 
+ * Solver based on Magma's GPU interface for 'dsytrf' using Bunch-Kaufmann. This is 
+ * a numerically stable factorization with decent peak performance on large matrices.
+ * 
+ * @note: The option "compute_mode" decides whether this class is instantiated (values
+ * "gpu" and "hybrid"); otherwise, the CPU, LAPACK-based counterpart linear solver 
+ * class is used. However, this class works with all the values for "mem_space" option. 
+ * Regardless of the value of the "mem_space" option (and when instructed by the 
+ * "compute_mode" option mentioned above) this class will always offload to the device 
+ * the factorization and the solve with the triangular factors. 
+ * 
+ */
+
+class hiopLinSolverIndefDenseMagmaBuKaDev : public hiopLinSolverIndefDense
+{
+public:
+  hiopLinSolverIndefDenseMagmaBuKaDev(int n, hiopNlpFormulation* nlp_);
+  virtual ~hiopLinSolverIndefDenseMagmaBuKaDev();
+
+  /** Triggers a refactorization of the matrix, if necessary. */
+  int matrixChanged();
+
+  /** Solves a linear system.
+   * param 'x' is on entry the right hand side(s) of the system to be solved. On
+   * exit is contains the solution(s).  
+   */
+  bool solve(hiopVector& x_in);
+
+  inline hiopMatrixDense& sysMatrix() 
+  { 
+    return *M_; 
+  }
+protected:
+  /**
+   * Computes inertia of matrix, namely the triplet of non-negative numbers 
+   * consisting of the counts of positive, negative, and null eigenvalues
+   *
+   * @pre The system matrix is factorized and, as a result, `ipiv` has been 
+   * also updated properly.
+   */
+  virtual bool compute_inertia(int n_in, int *ipiv, 
+			       int& posEigvals, int& negEigvals, int& zeroEigvals); 
+protected:
+  int* ipiv_;
+  magmaDouble_ptr work_;
+  magma_queue_t magma_device_queue_;
+  magmaDouble_ptr device_M_, device_rhs_;
+  magma_int_t ldda_, lddb_;
+private:
+  hiopLinSolverIndefDenseMagmaBuKaDev() { assert(false); }
+};
+
 
 /**
  * This class is only for testing purposes (contains legacy code for computing the 
