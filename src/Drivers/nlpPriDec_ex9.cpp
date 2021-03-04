@@ -21,6 +21,7 @@ PriDecMasterProblemEx9::solve_master(double* x,
                                      const double*hess /*=0*/)
 {
 
+
   obj_=-1e+20;
   hiopSolveStatus status;
   if(basecase_==NULL) {
@@ -33,6 +34,10 @@ PriDecMasterProblemEx9::solve_master(double* x,
   }
   
   hiopNlpSparse nlp(*basecase_);
+
+  //if(include_r){
+  //  assert("for debugging" && false); //for debugging purpose
+ // }
     
   //nlp.options->SetStringValue("compute_mode", "hybrid");
   // what should the solver options be?
@@ -42,6 +47,7 @@ PriDecMasterProblemEx9::solve_master(double* x,
   //nlp.options->SetStringValue("fixed_var", "relax");
   nlp.options->SetStringValue("Hessian", "analytical_exact");
   nlp.options->SetStringValue("KKTLinsys", "xdycyd");
+  nlp.options->SetStringValue("compute_mode", "cpu");
   //nlp.options->SetStringValue("compute_mode", "hybrid");
   //nlp.options->SetStringValue("mem_space", mem_space.c_str());
 
@@ -51,7 +57,10 @@ PriDecMasterProblemEx9::solve_master(double* x,
   
   hiopAlgFilterIPMNewton solver(&nlp);
 
+
   status = solver.run();
+
+
   obj_ = solver.getObjective();
   solver.getSolution(x);
 
@@ -67,12 +76,15 @@ PriDecMasterProblemEx9::solve_master(double* x,
   }
   memcpy(sol_,x, nx_*sizeof(double));
   
+
+  
   //compute the recourse estimate
   if(include_r) {
     double rec_appx = 0.;
     basecase_->get_rec_obj(nx_, x, rec_appx);
     printf("recourse estimate: is %18.12e\n", rec_appx);
   }
+  
 
   return Solve_Success;
   //return hiop::SolverInternal_Error;
@@ -104,13 +116,13 @@ bool PriDecMasterProblemEx9::eval_f_rterm(size_t idx, const int& n, const double
   //assert("for debugging" && false); //for debugging purpose
   hiopNlpMDS nlp(*ex9_recourse);
 
-  //nlp.options->SetStringValue("dualsUpdateType", "linear");
+  nlp.options->SetStringValue("dualsUpdateType", "linear");
   //nlp.options->SetStringValue("dualsInitialization", "zero");
 
   nlp.options->SetStringValue("Hessian", "analytical_exact");
-  //nlp.options->SetStringValue("compute_mode", "hybrid");
+  nlp.options->SetStringValue("compute_mode", "hybrid");
 
-  nlp.options->SetIntegerValue("verbosity_level", 0);
+  nlp.options->SetIntegerValue("verbosity_level", 1);
   nlp.options->SetNumericValue("mu0", 1e-1);
   //nlp.options->SetNumericValue("tolerance", 1e-5);
 
