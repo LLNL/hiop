@@ -21,7 +21,7 @@ include(FortranCInterface)
 FortranCInterface_HEADER(FortranCInterface.hpp MACRO_NAMESPACE "FC_")
 
 option(HIOP_USE_MPI "Build with MPI support" ON)
-option(HIOP_USE_GPU "Build with support for GPUs - Magma and cuda libraries" OFF)
+option(HIOP_USE_GPU "Build with support for GPUs" OFF)
 option(HIOP_TEST_WITH_BSUB "Use `jsrun` instead of `mpirun` commands when running tests" OFF)
 option(HIOP_USE_RAJA   "Build with portability abstraction library RAJA" OFF)
 option(HIOP_DEEPCHECKS "Extra checks and asserts in the code with a high penalty on performance" OFF)
@@ -117,28 +117,46 @@ if(HIOP_DEVELOPER_MODE)
 endif()
 
 if(HIOP_USE_GPU)
-  include(CheckLanguage)
-  enable_language(CUDA)
-  check_language(CUDA)
+  # Support builds with different vendor-specific GPU codes. Defaults to CUDA.
+  set(HIOP_GPU_PLATFORM "CUDA" CACHE STRING
+    "Vendor-specific GPU platform to target")
+  set_property(CACHE HIOP_GPU_PLATFORM PROPERTY STRINGS
+    "CUDA" "HIP" "Intel")
 
-  if(NOT DEFINED CMAKE_CUDA_STANDARD)
-    set(CMAKE_CUDA_STANDARD 11)
-    set(CMAKE_CUDA_STANDARD_REQUIRED ON)
-  endif()
+  if(HIOP_GPU_PLATFORM STREQUAL "CUDA")
+    include(CheckLanguage)
+    enable_language(CUDA)
+    check_language(CUDA)
 
-  if(HIOP_NVCC_ARCH)
-    set(CMAKE_CUDA_FLAGS "-arch=${HIOP_NVCC_ARCH}")
-    message(STATUS "Using CUDA arch ${HIOP_NVCC_ARCH}")
+    if(NOT DEFINED CMAKE_CUDA_STANDARD)
+      set(CMAKE_CUDA_STANDARD 11)
+      set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+    endif()
+
+    if(HIOP_NVCC_ARCH)
+      set(CMAKE_CUDA_FLAGS "-arch=${HIOP_NVCC_ARCH}")
+      message(STATUS "Using CUDA arch ${HIOP_NVCC_ARCH}")
+    else()
+      set(CMAKE_CUDA_FLAGS "-arch=sm_35")
+      message(STATUS "Using CUDA arch sm_35")
+    endif()
+    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-extended-lambda")
+
+    set(HIOP_MAGMA_DIR CACHE PATH "Path to Magma directory")
+
+    include(FindHiopCudaLibraries)
+    target_link_libraries(hiop_math INTERFACE hiop_cuda)
+
+  elseif(HIOP_GPU_PLATFORM STREQUAL "HIP")
+    set(HIOP_USE_HIPMAGMA ON)
+
+  elseif(HIOP_GPU_PLATFORM STREQUAL "Intel")
+    message(FATAL_ERROR "Intel support for HiOp has not been implemented yet")
+
   else()
-    set(CMAKE_CUDA_FLAGS "-arch=sm_35")
-    message(STATUS "Using CUDA arch sm_35")
+    message(FATAL_ERROR "Unsupported GPU platform specified: ${HIOP_GPU_PLATFORM}")
   endif()
-  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-extended-lambda")
 
-  set(HIOP_MAGMA_DIR CACHE PATH "Path to Magma directory")
-
-  include(FindHiopCudaLibraries)
-  target_link_libraries(hiop_math INTERFACE hiop_cuda)
 endif(HIOP_USE_GPU)
 
 if(HIOP_USE_RAJA)
