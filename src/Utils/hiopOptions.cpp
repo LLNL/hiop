@@ -210,6 +210,19 @@ void hiopOptions::registerOptions()
 		      "fixed_var_perturb (default 1e-8)");
   }
 
+  // scaling
+  {
+    vector<string> range(2); range[0]="none"; range[1]="gradient";
+    registerStrOption("scaling_type", "gradient", range,
+		      "The method used for scaling the problem before solving it."
+		      "Setting this option to 'gradient' will scale the problem, guaranteeing the maximum "
+		      "gradient at the initial point is less or equal to scaling_max_grad (default 'none')");
+    
+    registerNumOption("scaling_max_grad", 100, 1e-20, 1e+20,
+		      "The problem will be rescaled if the inf-norm of the gradient at the starting point is "
+		      "larger than the value of this option (default 100)");
+  }
+  
   //optimization method used
   {
     vector<string> range(2); range[0]="quasinewton_approx"; range[1]="analytical_exact";

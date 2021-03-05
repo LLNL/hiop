@@ -117,6 +117,11 @@ public:
   virtual void componentMult( const hiopVector& v );
   virtual void componentDiv ( const hiopVector& v );
   virtual void componentDiv_w_selectPattern( const hiopVector& v, const hiopVector& ix);
+  virtual void component_min(const double constant);
+  virtual void component_min(const hiopVector& v);
+  virtual void component_max(const double constant);
+  virtual void component_max(const hiopVector& v);
+  
   virtual void scale( double alpha );
   /// @brief this += alpha * x
   virtual void axpy  ( double alpha, const hiopVector& x );

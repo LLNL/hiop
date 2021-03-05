@@ -170,7 +170,25 @@ public:
   {
     return std::max(mSp->max_abs_value(), mDe->max_abs_value());
   }
+  
+  virtual void row_max_abs_value(hiopVector &ret_vec)
+  {
+    auto ret_vec_dense = ret_vec.new_copy();
+    
+    mSp->row_max_abs_value(ret_vec);
+    mDe->row_max_abs_value(*ret_vec_dense);
+    
+    ret_vec.component_max(*ret_vec_dense);
+        
+    delete ret_vec_dense;
+  }
 
+  virtual void scale_row(hiopVector &vec_scal, const bool inv_scale)
+  {
+    mSp->scale_row(vec_scal, inv_scale);
+    mDe->scale_row(vec_scal, inv_scale);
+  }
+  
   virtual bool isfinite() const
   {
     return mSp->isfinite() && mDe->isfinite();
@@ -380,6 +398,24 @@ public:
   virtual double max_abs_value()
   {
     return std::max(mSp->max_abs_value(), mDe->max_abs_value());
+  }
+
+  virtual void row_max_abs_value(hiopVector &ret_vec)
+  {
+    auto ret_vec_dense = ret_vec.new_copy();
+    
+    mSp->row_max_abs_value(ret_vec);
+    mDe->row_max_abs_value(*ret_vec_dense);
+    
+    ret_vec.component_max(*ret_vec_dense);
+        
+    delete ret_vec_dense;  
+  }
+
+  virtual void scale_row(hiopVector &vec_scal, const bool inv_scale)
+  {
+    mSp->scale_row(vec_scal, inv_scale);
+    mDe->scale_row(vec_scal, inv_scale);
   }
 
   virtual bool isfinite() const

@@ -198,6 +198,10 @@ public:
   
   virtual double max_abs_value();
 
+  virtual void row_max_abs_value(hiopVector &ret_vec);
+  
+  virtual void scale_row(hiopVector &vec_scal, const bool inv_scale=false);
+
   virtual bool isfinite() const;
   
   //virtual void print(int maxRows=-1, int maxCols=-1, int rank=-1) const;

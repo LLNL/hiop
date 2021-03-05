@@ -1,6 +1,5 @@
 // Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
-// Written by Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp
@@ -53,6 +52,7 @@
  * @author Jake Ryan <jake.ryan@pnnl.gov>, PNNL
  * @author Robert Rutherford <robert.rutherford@pnnl.gov>, PNNL
  * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
+ * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
  *
  */
 #pragma once
@@ -614,6 +614,62 @@ public:
     A.setToConstant(zero);
     if (rank == 0) setLocalElement(&A, last_row_idx, last_col_idx, -one);
     fail += A.max_abs_value() != one;
+
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &A);
+  }
+
+  /*
+   * Set bottom right value to ensure that all values
+   * are checked.
+   */
+  int matrix_row_max_abs_value(
+      hiop::hiopMatrixDense& A,
+      hiop::hiopVector& x,
+      const int rank)
+  {
+    const local_ordinal_type last_row_idx = getNumLocRows(&A)-1;
+    const local_ordinal_type last_col_idx = getNumLocCols(&A)-1;
+    int fail = 0;
+
+    // set the last element to -2, others are set to 1
+    A.setToConstant(one);
+    if (rank == 0) {
+      setLocalElement(&A, last_row_idx, last_col_idx, -two);
+    }
+    
+    A.row_max_abs_value(x);
+    
+    fail += verifyAnswer(&x,
+      [=] (local_ordinal_type i) -> real_type
+      {
+        const bool is_last_row = (i == last_row_idx);
+        return is_last_row ? two : one;
+      });
+
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &A);
+  }
+
+  /*
+   * scale each row of A
+   */
+  int matrix_scale_row(
+      hiop::hiopMatrixDense& A,
+      hiop::hiopVector& x,
+      const int rank)
+  {
+    const real_type A_val = two;
+    const real_type x_val = three;
+    int fail = 0;
+
+    x.setToConstant(x_val);
+    A.setToConstant(A_val);
+
+    A.scale_row(x,false);
+
+    real_type expected = A_val*x_val;
+    fail += verifyAnswer(&A, expected);
 
     printMessage(fail, __func__, rank);
     return reduceReturn(fail, &A);

@@ -52,6 +52,7 @@
  * @author Robert Rutherford <robert.rutherford@pnnl.gov>, PNNL
  * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
  * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
+ * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
  *
  */
 #pragma once
@@ -193,6 +194,10 @@ public:
 							     double alpha, hiopMatrixDense& W) const;
 
   virtual double max_abs_value();
+
+  virtual void row_max_abs_value(hiopVector &ret_vec);
+
+  virtual void scale_row(hiopVector &vec_scal, const bool inv_scale=false);
 
   virtual bool isfinite() const;
   

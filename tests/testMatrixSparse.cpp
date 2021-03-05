@@ -113,6 +113,8 @@ int main(int argc, char** argv)
     fail += test.matrixTimesVec(*mxn_sparse, vec_m, vec_n);
     fail += test.matrixTransTimesVec(*mxn_sparse, vec_m, vec_n);
     fail += test.matrixMaxAbsValue(*mxn_sparse);
+    fail += test.matrix_row_max_abs_value(*mxn_sparse, vec_m);
+    fail += test.matrix_scale_row(*mxn_sparse, vec_m);
     fail += test.matrixIsFinite(*mxn_sparse);
 
     // Need a dense matrix to store the output of the following tests
@@ -185,6 +187,8 @@ int main(int argc, char** argv)
     fail += test.matrixSetToZero(*mxn_sparse);
     fail += test.matrixSetToConstant(*mxn_sparse);
     fail += test.matrixMaxAbsValue(*mxn_sparse);
+    fail += test.matrix_row_max_abs_value(*mxn_sparse, vec_m);
+    fail += test.matrix_scale_row(*mxn_sparse, vec_m);
     fail += test.matrixIsFinite(*mxn_sparse);
     fail += test.matrixTimesVec(*mxn_sparse, vec_m, vec_n);
     fail += test.matrixTransTimesVec(*mxn_sparse, vec_m, vec_n);

@@ -106,6 +106,10 @@ public:
   virtual void componentMult( const hiopVector& v );
   virtual void componentDiv ( const hiopVector& v );
   virtual void componentDiv_w_selectPattern( const hiopVector& v, const hiopVector& ix);
+  virtual void component_min(const double constant);
+  virtual void component_min(const hiopVector& v);
+  virtual void component_max(const double constant);
+  virtual void component_max(const hiopVector& v);
   virtual void scale( double alpha );
   /** this += alpha * x */
   virtual void axpy  ( double alpha, const hiopVector& x );
@@ -163,6 +167,7 @@ public:
   virtual bool isfinite_local() const;
   
   virtual void print(FILE*, const char* withMessage=NULL, int max_elems=-1, int rank=-1) const;
+  virtual void print(){} ///< @todo Temporary to surpress warnings, will be removed.
 
   /* more accessers */
   inline long long get_local_size() const { return n_local_; }

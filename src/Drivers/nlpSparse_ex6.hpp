@@ -27,7 +27,7 @@
 class Ex6 : public hiop::hiopInterfaceSparse
 {
 public:
-  Ex6(int n);
+  Ex6(int n, double scal_in);
   virtual ~Ex6();
 
   virtual bool get_prob_sizes(long long& n, long long& m);
@@ -61,6 +61,6 @@ public:
 
 private:
   int n_vars, n_cons;
-
+  double scal;
 };
 #endif

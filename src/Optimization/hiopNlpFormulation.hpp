@@ -1,11 +1,10 @@
 // Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
-// Written by Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
 // is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause). 
-// Please also read ‚ÄúAdditional BSD Notice‚Äù below.
+// Please also read ìAdditional BSD Noticeî below.
 //
 // Redistribution and use in source and binary forms, with or without modification, 
 // are permitted provided that the following conditions are met:
@@ -46,6 +45,14 @@
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or 
 // product endorsement purposes.
 
+/**
+ * @file hiopNlpFormulation.hpp
+ *
+ * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
+ * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
+ *
+ */
+ 
 #ifndef HIOP_NLP_FORMULATION
 #define HIOP_NLP_FORMULATION
 
@@ -92,17 +99,19 @@ public:
   virtual ~hiopNlpFormulation();
 
   virtual bool finalizeInitialization();
+  virtual bool apply_scaling(hiopVector& c, hiopVector& d, hiopVector& gradf, 
+                             hiopMatrix& Jac_c, hiopMatrix& Jac_d);
 
   /**
    * Wrappers for the interface calls. 
    * Can be overridden for specialized formulations required by the algorithm.
    */
   virtual bool eval_f(hiopVector& x, bool new_x, double& f);
-  virtual bool eval_grad_f(hiopVector& x, bool new_x, double* gradf);
+  virtual bool eval_grad_f(hiopVector& x, bool new_x, hiopVector& gradf);
   
-  virtual bool eval_c(hiopVector& x, bool new_x, double* c);
-  virtual bool eval_d(hiopVector& x, bool new_x, double* d);
-  virtual bool eval_c_d(hiopVector& x, bool new_x, double* c, double* d);
+  virtual bool eval_c(hiopVector& x, bool new_x, hiopVector& c);
+  virtual bool eval_d(hiopVector& x, bool new_x, hiopVector& d);
+  virtual bool eval_c_d(hiopVector& x, bool new_x, hiopVector& c, hiopVector& d);
   /* the implementation of the next two methods depends both on the interface and on the formulation */
   virtual bool eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& Jac_c)=0;
   virtual bool eval_Jac_d(hiopVector& x, bool new_x, hiopMatrix& Jac_d)=0;
@@ -113,8 +122,8 @@ protected:
 public:
   virtual bool eval_Hess_Lagr(const hiopVector& x, bool new_x, 
 			      const double& obj_factor,  
-			      const double* lambda_eq, 
-			      const double* lambda_ineq, 
+			      const hiopVector& lambda_eq, 
+			      const hiopVector& lambda_ineq, 
 			      bool new_lambdas, 
 			      hiopMatrix& Hess_L)=0;
   /* starting point */
@@ -141,7 +150,7 @@ public:
   void user_callback_solution(hiopSolveStatus status,
 			      const hiopVector& x,
 			      const hiopVector& z_L, const hiopVector& z_U,
-			      const hiopVector& c, const hiopVector& d,
+			      hiopVector& c, hiopVector& d,
 			      const hiopVector& yc, const hiopVector& yd,
 			      double obj_value);
 
@@ -185,11 +194,11 @@ public:
   inline long long n_upp_local() const {return n_bnds_upp_local;}
 
   /* methods for transforming the internal objects to corresponding user objects */
-  inline double user_obj(double hiop_f) { return nlp_transformations.applyToObj(hiop_f); }
+  inline double user_obj(double hiop_f) { return nlp_transformations.apply_inv_to_obj(hiop_f); }
   inline void   user_x(hiopVector& hiop_x, double* user_x) 
   { 
     //double *hiop_xa = hiop_x.local_data();
-    hiopVector *x = nlp_transformations.applyTox(hiop_x,/*new_x=*/true); 
+    hiopVector *x = nlp_transformations.apply_inv_to_x(hiop_x,/*new_x=*/true); 
     //memcpy(user_x, user_xa, hiop_x.get_local_size()*sizeof(double));
     memcpy(user_x, x->local_data(), nlp_transformations.n_post_local()*sizeof(double));
   }
@@ -212,6 +221,9 @@ public:
   void copy_EqIneq_to_cons(const hiopVector& yc,
 			   const hiopVector& yd,
 			   hiopVector& cons);
+
+  /// @brief return the scaling fact for objective
+  double get_obj_scale() const;
   
   /* outputing and debug-related functionality*/
   hiopLogger* log;
@@ -254,6 +266,9 @@ protected:
 
   //internal NLP transformations (currently fixing/relaxing variables implemented)
   hiopNlpTransformations nlp_transformations;
+  
+  //internal NLP transformations (currently gradient scaling implemented)
+  hiopNLPObjGradScaling *nlp_scaling;
 
 #ifdef HIOP_USE_MPI
   //inter-process distribution of vectors
@@ -319,8 +334,8 @@ public:
   virtual bool eval_Hess_Lagr(const hiopVector& x,
 			      bool new_x,
 			      const double& obj_factor, 
-			      const double* lambda_eq,
-			      const double* lambda_ineq,
+			      const hiopVector& lambda_eq,
+			      const hiopVector& lambda_ineq,
 			      bool new_lambda, 
 			      hiopMatrix& Hess_L)
   {
@@ -373,7 +388,6 @@ public:
   virtual bool eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& Jac_c);
   virtual bool eval_Jac_d(hiopVector& x, bool new_x, hiopMatrix& Jac_d);
 
-
 protected:
   //calls specific hiopInterfaceXXX::eval_Jac_cons and deals with specializations of hiopMatrix arguments
   virtual bool eval_Jac_c_d_interface_impl(hiopVector& x, bool new_x, hiopMatrix& Jac_c, hiopMatrix& Jac_d);
@@ -381,8 +395,8 @@ public:
   virtual bool eval_Hess_Lagr(const hiopVector& x,
 			      bool new_x,
 			      const double& obj_factor,
-			      const double* lambda_eq,
-			      const double* lambda_ineq,
+			      const hiopVector& lambda_eq,
+			      const hiopVector& lambda_ineq,
 			      bool new_lambdas,
 			      hiopMatrix& Hess_L);
   
@@ -454,8 +468,8 @@ public:
   virtual bool eval_Hess_Lagr(const hiopVector& x,
                             bool new_x,
                             const double& obj_factor,
-                            const double* lambda_eq,
-                            const double* lambda_ineq,
+                            const hiopVector& lambda_eq,
+                            const hiopVector& lambda_ineq,
                             bool new_lambdas,
                             hiopMatrix& Hess_L);
   /* Allocates the LSQ duals update class. */

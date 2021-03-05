@@ -91,7 +91,8 @@ namespace hiop
     if(!Jac_dSp_) { assert(false); return false; }
 
     long long nx = HessSp_->n(), neq=Jac_cSp_->m(), nineq=Jac_dSp_->m();
-    int nnz = HessSp_->numberOfNonzeros() + Jac_cSp_->numberOfNonzeros() + Jac_dSp_->numberOfNonzeros() + nx + neq + nineq;
+    int nnz = HessSp_->numberOfNonzeros() + Jac_cSp_->numberOfNonzeros() + Jac_dSp_->numberOfNonzeros();
+    nnz += nx + neq + nineq;
 
     linSys_ = determineAndCreateLinsys(nx, neq, nineq, nnz);
         
@@ -113,9 +114,12 @@ namespace hiop
 
       // copy Jac and Hes to the full iterate matrix
       long long dest_nnz_st{0};
-      Msys.copyRowsBlockFrom(*HessSp_,  0,   nx,     0,      dest_nnz_st); dest_nnz_st += HessSp_->numberOfNonzeros();
-      Msys.copyRowsBlockFrom(*Jac_cSp_, 0,   neq,    nx,     dest_nnz_st); dest_nnz_st += Jac_cSp_->numberOfNonzeros();
-      Msys.copyRowsBlockFrom(*Jac_dSp_, 0,   nineq,  nx+neq, dest_nnz_st); dest_nnz_st += Jac_dSp_->numberOfNonzeros();
+      Msys.copyRowsBlockFrom(*HessSp_,  0,   nx,     0,      dest_nnz_st);
+      dest_nnz_st += HessSp_->numberOfNonzeros();
+      Msys.copyRowsBlockFrom(*Jac_cSp_, 0,   neq,    nx,     dest_nnz_st);
+      dest_nnz_st += Jac_cSp_->numberOfNonzeros();
+      Msys.copyRowsBlockFrom(*Jac_dSp_, 0,   nineq,  nx+neq, dest_nnz_st);
+      dest_nnz_st += Jac_dSp_->numberOfNonzeros();
 
       //build the diagonal Hx = Dx + delta_wx
       if(NULL == Hx_) {
@@ -160,8 +164,12 @@ namespace hiop
     } // end of update of the linear system
 
     //write matrix to file if requested
-    if(nlp_->options->GetString("write_kkt") == "yes") write_linsys_counter_++;
-    if(write_linsys_counter_>=0) csr_writer_.writeMatToFile(Msys, write_linsys_counter_); 
+    if(nlp_->options->GetString("write_kkt") == "yes") {
+      write_linsys_counter_++;
+    }
+    if(write_linsys_counter_>=0) {
+      csr_writer_.writeMatToFile(Msys, write_linsys_counter_, nx, neq, nineq);
+    }
 
     nlp_->runStats.tmSolverInternal.stop();
     return true;
@@ -194,9 +202,9 @@ namespace hiop
     ryc.copyToStarting(*rhs_, nx);
     ryd.copyToStarting(*rhs_, nx+nyc);
 
-    if(write_linsys_counter_>=0)
+    if(write_linsys_counter_>=0) {
       csr_writer_.writeRhsToFile(*rhs_, write_linsys_counter_);
-
+    }
     nlp_->runStats.kkt.tmSolveRhsManip.stop();
 
     nlp_->runStats.kkt.tmSolveTriangular.start();
@@ -212,9 +220,9 @@ namespace hiop
 			nlp_->runStats.linsolv.get_summary_last_solve().c_str());
     }
 
-    if(write_linsys_counter_>=0)
+    if(write_linsys_counter_>=0) {
       csr_writer_.writeSolToFile(*rhs_, write_linsys_counter_);
-
+    }
     if(false==linsol_ok) return false;
 
     nlp_->runStats.kkt.tmSolveRhsManip.start();
@@ -376,8 +384,12 @@ namespace hiop
     }
     
     //write matrix to file if requested
-    if(nlp_->options->GetString("write_kkt") == "yes") write_linsys_counter_++;
-    if(write_linsys_counter_>=0) csr_writer_.writeMatToFile(Msys, write_linsys_counter_); 
+    if(nlp_->options->GetString("write_kkt") == "yes") {
+      write_linsys_counter_++;
+    }
+    if(write_linsys_counter_>=0) {
+      csr_writer_.writeMatToFile(Msys, write_linsys_counter_, nx, neq, nineq);
+    }
 
     return true;
   }
@@ -675,8 +687,12 @@ namespace hiop
     }
  
     //write matrix to file if requested
-    if(nlp_->options->GetString("write_kkt") == "yes") write_linsys_counter_++;
-    if(write_linsys_counter_>=0) csr_writer_.writeMatToFile(Msys, write_linsys_counter_); 
+    if(nlp_->options->GetString("write_kkt") == "yes") {
+      write_linsys_counter_++;
+    }
+    if(write_linsys_counter_>=0) {
+      csr_writer_.writeMatToFile(Msys, write_linsys_counter_, nx, neq, nineq);
+    }
 
     return true;
   }

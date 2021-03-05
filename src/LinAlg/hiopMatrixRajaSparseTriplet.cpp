@@ -460,6 +460,70 @@ double hiopMatrixRajaSparseTriplet::max_abs_value()
 }
 
 /**
+ * @brief Find the maximum absolute value in each row of `this` matrix, and return them in `ret_vec`
+ *
+ * @pre 'ret_vec' has exactly same number of rows as `this` matrix
+ * @pre row indices must be sorted
+ * @pre col indices must be sorted
+ */
+void hiopMatrixRajaSparseTriplet::row_max_abs_value(hiopVector& ret_vec)
+{
+#ifdef HIOP_DEEPCHECKS
+  assert(this->checkIndexesAreOrdered());
+#endif
+  assert(ret_vec.get_size() == nrows_);
+  ret_vec.setToZero();
+  
+  auto& vec = dynamic_cast<hiopVectorRajaPar&>(ret_vec);
+  double* vd = vec.local_data();
+
+  if(row_starts_host==NULL) {
+    row_starts_host = allocAndBuildRowStarts();
+  }
+  assert(row_starts_host);
+
+  int num_rows = this->nrows_;
+  int* idx_start = row_starts_host->idx_start_;
+  double* values = values_;
+
+  RAJA::forall<hiop_raja_exec>(
+    RAJA::RangeSegment(0, num_rows+1),
+    RAJA_LAMBDA(RAJA::Index_type row_id)
+    {
+      for(int itnz=idx_start[row_id]; itnz<idx_start[row_id+1]; itnz++) {
+        double abs_val = fabs(values[itnz]);
+        vd[row_id] = (vd[row_id] > abs_val) ? vd[row_id] : abs_val;
+      }
+    }
+  );  
+}
+
+void hiopMatrixRajaSparseTriplet::scale_row(hiopVector &vec_scal, const bool inv_scale)
+{
+  assert(vec_scal.get_size() == nrows_);
+  
+  auto& vec = dynamic_cast<hiopVectorRajaPar&>(vec_scal);
+  double* vd = vec.local_data();
+
+  auto iRow = this->iRow_;
+  auto values = this->values_;
+  
+  RAJA::forall<hiop_raja_exec>(
+    RAJA::RangeSegment(0, nnz_),
+    RAJA_LAMBDA(RAJA::Index_type itnz)
+    {
+      double scal;
+      if(inv_scale) {
+        scal = 1./vd[iRow[itnz]];
+      } else {
+        scal = vd[iRow[itnz]];
+      }
+      values[itnz] *= scal;
+    }
+  );
+}
+
+/**
  * @brief Returns whether all the values of this matrix are finite or not.
  */
 bool hiopMatrixRajaSparseTriplet::isfinite() const

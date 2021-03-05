@@ -6,18 +6,18 @@
 
 /* Test with bounds and constraints of all types. For some reason this
  *  example is not very well behaved numerically.
- *  min   sum 1/4* { (x_{i}-1)^4 : i=1,...,n}
+ *  min   sum scal*1/4* { (x_{i}-1)^4 : i=1,...,n}
  *  s.t.
- *            4*x_1 + 2*x_2                     == 10
- *        5<= 2*x_1         + x_3
- *        1<= 2*x_1                 + 0.5*x_i   <= 2*n, for i=4,...,n
+ *             scal * 4*x_1 + 2*x_2                     == scal*10
+ *  scal * 5<= scal * 2*x_1         + x_3
+ *  scal * 1<= scal * 2*x_1                 + 0.5*x_i   <= scal*2*n, for i=4,...,n
  *        x_1 free
  *        0.0 <= x_2
  *        1.5 <= x_3 <= 10
  *        x_i >=0.5, i=4,...,n
  */
-Ex6::Ex6(int n)
-  : n_vars(n), n_cons{2}
+Ex6::Ex6(int n, double scal_input)
+  : n_vars(n), n_cons{2}, scal{scal_input}
 {
   assert(n>=3);
   if(n>3)
@@ -47,10 +47,10 @@ bool Ex6::get_cons_info(const long long& m, double* clow, double* cupp, Nonlinea
 {
   assert(m==n_cons);
   long long conidx{0};
-  clow[conidx]= 10.0;    cupp[conidx]= 10.0;      type[conidx++]=hiopInterfaceBase::hiopLinear;
-  clow[conidx]= 5.0;     cupp[conidx]= 1e20;      type[conidx++]=hiopInterfaceBase::hiopLinear;
+  clow[conidx]= scal*10.0;    cupp[conidx]= scal*10.0;      type[conidx++]=hiopInterfaceBase::hiopLinear;
+  clow[conidx]= scal*5.0;     cupp[conidx]= 1e20;      type[conidx++]=hiopInterfaceBase::hiopLinear;
   for(long long i=3; i<n_vars; i++) {
-    clow[conidx] = 1.0;   cupp[conidx]= 2*n_vars;  type[conidx++]=hiopInterfaceBase::hiopLinear;
+    clow[conidx] = scal*1.0;   cupp[conidx]= scal*2*n_vars;  type[conidx++]=hiopInterfaceBase::hiopLinear;
   }
   return true;
 }
@@ -70,7 +70,7 @@ bool Ex6::eval_f(const long long& n, const double* x, bool new_x, double& obj_va
 {
   assert(n==n_vars);
   obj_value=0.;
-  for(auto i=0;i<n;i++) obj_value += 0.25*pow(x[i]-1., 4);
+  for(auto i=0;i<n;i++) obj_value += scal*0.25*pow(x[i]-1., 4);
 
   return true;
 }
@@ -78,7 +78,7 @@ bool Ex6::eval_f(const long long& n, const double* x, bool new_x, double& obj_va
 bool Ex6::eval_grad_f(const long long& n, const double* x, bool new_x, double* gradf)
 {
   assert(n==n_vars);
-  for(auto i=0;i<n;i++) gradf[i] = pow(x[i]-1.,3);
+  for(auto i=0;i<n;i++) gradf[i] = scal*pow(x[i]-1.,3);
   return true;
 }
 
@@ -102,14 +102,14 @@ bool Ex6::eval_cons(const long long& n, const long long& m,
   long long conidx{0};
   //compute the constraint one by one.
   // --- constraint 1 body --->  4*x_1 + 2*x_2 == 10
-  cons[conidx++] += 4*x[0] + 2*x[1];
+  cons[conidx++] += scal*( 4*x[0] + 2*x[1]);
 
   // --- constraint 2 body ---> 2*x_1 + x_3
-  cons[conidx++] += 2*x[0] + 1*x[2];
+  cons[conidx++] += scal*( 2*x[0] + 1*x[2]);
 
   // --- constraint 3 body --->   2*x_1 + 0.5*x_i, for i>=4
   for(auto i=3; i<n; i++) {
-      cons[conidx++] += 2*x[0] + 0.5*x[i];
+      cons[conidx++] += scal*( 2*x[0] + 0.5*x[i]);
   }
 
   return true;
@@ -160,17 +160,17 @@ bool Ex6::eval_Jac_cons(const long long& n, const long long& m,
     nnzit = 0;
     if(MJacS!=NULL) {
         // --- constraint 1 body --->  4*x_1 + 2*x_2 == 10
-        MJacS[nnzit++] = 4;
-        MJacS[nnzit++] = 2;
+        MJacS[nnzit++] = scal*4;
+        MJacS[nnzit++] = scal*2;
 
         // --- constraint 2 body ---> 2*x_1 + x_3
-        MJacS[nnzit++] = 2;
-        MJacS[nnzit++] = 1;
+        MJacS[nnzit++] = scal*2;
+        MJacS[nnzit++] = scal*1;
 
         // --- constraint 3 body --->   2*x_1 + 0.5*x_4
         for(auto i=3; i<n; i++){
-            MJacS[nnzit++] = 2;
-            MJacS[nnzit++] = 0.5;
+            MJacS[nnzit++] = scal*2;
+            MJacS[nnzit++] = scal*0.5;
         }
         assert(nnzit == nnzJacS);
     }
@@ -191,7 +191,7 @@ bool Ex6::eval_Hess_Lagr(const long long& n, const long long& m,
     }
 
     if(MHSS!=NULL) {
-      for(int i=0; i<n; i++) MHSS[i] = obj_factor * 3*pow(x[i]-1., 2);
+      for(int i=0; i<n; i++) MHSS[i] = scal * obj_factor * 3*pow(x[i]-1., 2);
     }
     return true;
 }

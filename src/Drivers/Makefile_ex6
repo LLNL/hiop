@@ -39,7 +39,7 @@ OBJS =  IpoptAdapter_driver_ex6.o nlpSparse_ex6.o
 ADDLIBS =
 
 # CHANGEME: Additional flags for compilation (e.g., include flags)
-ADDINCFLAGS = -I/g/g92/chiang7/project/hiop-master/_dist-DEBUG/include/
+ADDINCFLAGS = -I/g/g92/chiang7/software/hiop_lassen/include/
 #ADDINCFLAGS = -I/Users/petra1/work/projects/hiop/_dist-DEBUG/include/
 
 ##########################################################################
@@ -56,17 +56,17 @@ CXXFLAGS = -g -pipe -Wparentheses -Wreturn-type -Wcast-qual -Wall -Wpointer-arit
 #CXXFLAGS = -g -pipe -Wparentheses -Wreturn-type -Wcast-qual -Wall -Wpointer-arith -Wwrite-strings -Wconversion -Wno-unknown-pragmas -Wno-long-long -m64 -I/home/petra1/intel_mkl2019/compilers_and_libraries_2019.2.187/linux/mkl/include -fPIC -DIPOPT_BUILD 
 
 # additional C++ Compiler options for linking
-CXXLINKFLAGS = -Wl,--rpath -Wl,/g/g92/chiang7/software/COIN-OR/lib
+CXXLINKFLAGS = -Wl,--rpath -Wl,/g/g92/chiang7/software/lassen/COIN-OR/build/lib
 #mac
 #CXXLINKFLAGS =  -Wl,-rpath -Wl,/Users/petra1/work/projects/go-compet/Ipopt-gollnlp/build/lib/
 
 # Include directories (we use the CYGPATH_W variables to allow compilation with Windows compilers)
-INCL = `PKG_CONFIG_PATH=/g/g92/chiang7/software/COIN-OR/lib/pkgconfig pkg-config --cflags ipopt` $(ADDINCFLAGS)
+INCL = `PKG_CONFIG_PATH=/g/g92/chiang7/software/lassen/COIN-OR/build/lib/pkgconfig pkg-config --cflags ipopt` $(ADDINCFLAGS)
 #mac
 #INCL = -I`$(CYGPATH_W) /Users/petra1/work/projects/go-compet/Ipopt-gollnlp/build/include/coin`  -I/Users/petra1/work/projects/go-compet/Ipopt-gollnlp/build/include/coin/ThirdParty  -I/Users/petra1/work/projects/go-compet/Ipopt-gollnlp/build/include/coin/ThirdParty   $(ADDINCFLAGS)
 
 # Linker flags
-LIBS = `PKG_CONFIG_PATH=/g/g92/chiang7/software/COIN-OR/lib/pkgconfig pkg-config --libs ipopt` -llapack -lblas  -ldl -lm /g/g92/chiang7/project/hiop-master/_dist-DEBUG/lib/libhiop.a
+LIBS = `PKG_CONFIG_PATH=/g/g92/chiang7/software/lassen/COIN-OR/build/lib/pkgconfig pkg-config --libs ipopt` -llapack -lblas  -ldl -lm /g/g92/chiang7/software/hiop_lassen/lib/libhiop.a
 
 #mac
 #LIBS = -L/Users/petra1/work/projects/go-compet/Ipopt-gollnlp/build/lib -lipopt  -L/Users/petra1/work/projects/go-compet/Ipopt-gollnlp/build/lib -lcoinhsl -framework Accelerate -framework Accelerate -L/usr/local/Cellar/gcc/9.2.0_1/lib/gcc/9/gcc/x86_64-apple-darwin18/9.2.0 -L/usr/local/Cellar/gcc/9.2.0_1/lib/gcc/9/gcc/x86_64-apple-darwin18/9.2.0/../../.. -lgfortran -lSystem -lquadmath -lm  -L/Users/petra1/work/projects/go-compet/Ipopt-gollnlp/build/lib -lcoinmetis  -framework Accelerate -framework Accelerate -lm  -ldl /Users/petra1/work/projects/hiop/_dist-DEBUG/lib/libhiop.a

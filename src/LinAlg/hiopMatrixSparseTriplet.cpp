@@ -264,6 +264,42 @@ double hiopMatrixSparseTriplet::max_abs_value()
   return maxv;
 }
 
+void hiopMatrixSparseTriplet::row_max_abs_value(hiopVector &ret_vec)
+{
+  assert(ret_vec.get_local_size() == nrows_);
+
+  hiopVectorPar& yy = dynamic_cast<hiopVectorPar&>(ret_vec);
+  yy.setToZero();
+  
+  double* y_data = yy.local_data();
+  
+  for(int it=0; it<nnz_; it++) {
+    const int i = iRow_[it];
+    double abs_val = fabs(values_[it]);
+    if(y_data[i] < abs_val) {
+      y_data[i] = abs_val;
+    }
+  }
+}
+
+void hiopMatrixSparseTriplet::scale_row(hiopVector &vec_scal, const bool inv_scale)
+{
+  assert(vec_scal.get_local_size() == nrows_);
+
+  hiopVectorPar& vscal = dynamic_cast<hiopVectorPar&>(vec_scal);  
+  double* vd = vscal.local_data();
+  double scal;
+  
+  for(int it=0; it<nnz_; it++) {
+    if(inv_scale) {
+      scal = 1./vd[iRow_[it]];
+    } else {
+      scal = vd[iRow_[it]];
+    }        
+    values_[it] *= scal;
+  }
+}
+
 bool hiopMatrixSparseTriplet::isfinite() const
 {
 

@@ -787,6 +787,48 @@ double hiopMatrixDenseRowMajor::max_abs_value()
   return maxv;
 }
 
+void hiopMatrixDenseRowMajor::row_max_abs_value(hiopVector &ret_vec)
+{
+  char norm='M';
+  int one=1;
+  double maxv;
+  
+  hiopVectorPar& vec=dynamic_cast<hiopVectorPar&>(ret_vec);
+  assert(m_local_==vec.get_local_size());
+  
+  for(int irow=0; irow<m_local_; irow++)
+  {
+    maxv = DLANGE(&norm, &one, &n_local_, M_[0]+(irow*n_local_), &one, nullptr);
+#ifdef HIOP_USE_MPI
+    double maxvg;
+    int ierr=MPI_Allreduce(&maxv,&maxvg,1,MPI_DOUBLE,MPI_MAX,comm_); assert(ierr==MPI_SUCCESS);
+    maxv = maxvg;
+#endif
+    vec.local_data()[irow] = maxv;
+  }  
+}
+
+void hiopMatrixDenseRowMajor::scale_row(hiopVector &vec_scal, const bool inv_scale)
+{
+  char norm='M';
+  int one=1;
+  double scal;
+  
+  hiopVectorPar& vec=dynamic_cast<hiopVectorPar&>(vec_scal);
+  assert(m_local_==vec.get_local_size());
+  double* vd = vec.local_data();
+  
+  for(int irow=0; irow<m_local_; irow++)
+  {
+    if(inv_scale) {
+      scal = 1./vd[irow];
+    } else {
+      scal = vd[irow];
+    }
+    DSCAL(&n_local_, &scal, M_[0]+(irow*n_local_), &one);        
+  }  
+}
+
 #ifdef HIOP_DEEPCHECKS
 bool hiopMatrixDenseRowMajor::assertSymmetry(double tol) const
 {
