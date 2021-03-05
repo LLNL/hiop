@@ -6,7 +6,7 @@ class PriDecBasecaseProblemEx9 : public Ex6
 {
 public:
   PriDecBasecaseProblemEx9(int n)
-    : Ex6(n), rec_evaluator_(nullptr)
+    : Ex6(n, 1.0), rec_evaluator_(nullptr)
   {
   }
 
