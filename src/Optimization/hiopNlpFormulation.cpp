@@ -497,7 +497,7 @@ bool hiopNlpFormulation::apply_scaling(hiopVector& c, hiopVector& d, hiopVector&
     return false;
   }
   
-  nlp_scaling = new hiopNLPObjGradScaling(max_grad, c, d, gradf, Jac_c, Jac_d);
+  nlp_scaling = new hiopNLPObjGradScaling(max_grad, c, d, gradf, Jac_c, Jac_d, cons_eq_mapping_, cons_ineq_mapping_);
   
   // FIXME NY: scale the constraint lb and ub  
   c_rhs = nlp_scaling->apply_to_cons_eq(*c_rhs, n_cons_eq);
@@ -1467,8 +1467,17 @@ bool hiopNlpSparse::eval_Hess_Lagr(const hiopVector&  x, bool new_x, const doubl
         _buf_lambda = LinearAlgebraFactory::createVector(n_cons_eq + n_cons_ineq);
     }
     assert(_buf_lambda);
-    _buf_lambda->copyFromStarting(0,         lambda_eq.local_data_const(),   n_cons_eq);
-    _buf_lambda->copyFromStarting(n_cons_eq, lambda_ineq.local_data_const(), n_cons_ineq);
+    
+    const double* lambda_eq_arr = lambda_eq.local_data_const();
+    const double* lambda_ineq_arr = lambda_ineq.local_data_const();
+    double* _buf_lambda_arr = _buf_lambda->local_data();
+
+    for(int i=0; i<n_cons_eq; ++i) {
+      _buf_lambda_arr[cons_eq_mapping_[i]] = lambda_eq_arr[i];
+    }
+    for(int i=0; i<n_cons_ineq; ++i) {
+      _buf_lambda_arr[cons_ineq_mapping_[i]] = lambda_ineq_arr[i];
+    }
 
     // scale lambda before passing it to user interface to compute Hess
     int n_cons_eq_ineq = n_cons_eq + n_cons_ineq;

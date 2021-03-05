@@ -343,8 +343,14 @@ private:
 class hiopNLPObjGradScaling : public hiopNlpTransformation
 {
 public:
-  hiopNLPObjGradScaling(const double max_grad, hiopVector& c, hiopVector& d, hiopVector& gradf,
-                        hiopMatrix& Jac_c, hiopMatrix& Jac_d);
+  hiopNLPObjGradScaling(const double max_grad, 
+                        hiopVector& c, 
+                        hiopVector& d, 
+                        hiopVector& gradf,
+                        hiopMatrix& Jac_c, 
+                        hiopMatrix& Jac_d,
+                        long long *cons_eq_mapping,
+                        long long *cons_ineq_mapping);
   ~hiopNLPObjGradScaling();
 public:
   /** inherited from the parent class */
