@@ -19,6 +19,14 @@
 namespace hiop
 {
 
+enum MPIout {
+  outlevel0=0, //print nothing during from the MPI engine
+  outlevel1=1, //print objective and start and end of a iteration
+  outlevel2=2, //print the output x and gradient
+  outlevel3=3, //print the send and receive messages 
+  outlevel4=4  //print details about the algorithm
+}; 
+
 /* The main mpi engine for solving a class of problems with primal decomposition. 
  * The master problem is the user defined class that should be able to solve both
  * the base case and full problem depending whether a recourse approximation is 
@@ -60,6 +68,8 @@ public:
   int getNumIterations() const;
 
   bool stopping_criteria(const int it, const double convg);
+
+  void set_verbosity(const int i);
 
   /* Contains information of a solution step including function value 
    * and gradient. Used for storing the solution for the previous iteration
@@ -156,7 +166,8 @@ public:
     /* Function to check convergence based gradient 
      */
     double check_convergence(const double* gk);
-    
+  
+    void set_verbosity(const int i);  
   private:
     int n_;
     double alpha_=1.0;  
@@ -169,6 +180,7 @@ public:
     double* gkm1;
     double* skm1;
     double* ykm1;
+    size_t ver_=0;
   };
 
 private:
@@ -201,6 +213,9 @@ private:
 
   //number of recourse terms
   size_t S_;
+
+  //level of output through the MPI engine
+  size_t ver_ = 1;
 
   //indices of the coupled x in the full x
   std::vector<int> xc_idx_;

@@ -116,13 +116,14 @@ bool PriDecMasterProblemEx9::eval_f_rterm(size_t idx, const int& n, const double
   //assert("for debugging" && false); //for debugging purpose
   hiopNlpMDS nlp(*ex9_recourse);
 
-  nlp.options->SetStringValue("dualsUpdateType", "linear");
+  nlp.options->SetStringValue("duals_update_type", "linear");
   //nlp.options->SetStringValue("dualsInitialization", "zero");
 
   nlp.options->SetStringValue("Hessian", "analytical_exact");
-  nlp.options->SetStringValue("compute_mode", "hybrid");
-
-  nlp.options->SetIntegerValue("verbosity_level", 1);
+  nlp.options->SetStringValue("compute_mode", "cpu");
+  //nlp.options->SetStringValue("compute_mode", "hybrid");
+  nlp.options->SetStringValue("time_kkt", "on");
+  nlp.options->SetIntegerValue("verbosity_level", 3);
   nlp.options->SetNumericValue("mu0", 1e-1);
   //nlp.options->SetNumericValue("tolerance", 1e-5);
 
