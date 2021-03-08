@@ -224,7 +224,7 @@ update_ratio()
   }
   //printf("recourse estimate inside HessianApprox %18.12e\n",rk);
   double rho_k = (fkm1-fk)/(fkm1-rk);
-  if(ver_ >=outlevel3) {
+  if(ver_ >=outlevel1) {
     printf("previuos val  %18.12e, real val %18.12e, predicted val %18.12e, rho_k %18.12e\n",fkm1,fk,rk,rho_k);
   }
   //a measure for when alpha should be decreasing (in addition to being good approximation)
@@ -235,7 +235,7 @@ update_ratio()
   }
   quanorm = alpha_*quanorm;
   double alpha_g_ratio = quanorm/fabs(gradnorm);
-  if(ver_ >=outlevel3) {
+  if(ver_ >=outlevel1) {
     printf("alpha norm ratio  %18.12e",alpha_g_ratio);
   }
   //using a trust region criteria for adjusting ratio
@@ -255,23 +255,23 @@ update_ratio_tr(const double rhok,
 {
   if(rhok>0 && rhok < 1/4. && (rkm1-rk>0)) {
     alpha_ratio = alpha_ratio/0.75;
-    if(ver_ >=outlevel3) {
+    if(ver_ >=outlevel1) {
       printf("increasing alpha ratio or increasing minimum for quadratic coefficient\n");
     }
   } else if(rhok<0 && (rkm1-rk)<0) {
     alpha_ratio = alpha_ratio/0.75;
-    if(ver_ >=outlevel3) {
+    if(ver_ >=outlevel1) {
       printf("increasing alpha ratio or increasing minimum for quadratic coefficient\n");
     }
   } else {
     if(rhok > 0.75 && rhok<1.333 &&(rkm1-rk>0) && alpha_g_ratio>0.1) { 
       alpha_ratio *= 0.75;
-      if(ver_ >=outlevel3) {
+      if(ver_ >=outlevel1) {
         printf("decreasing alpha ratio or decreasing minimum for quadratic coefficient\n");
       }
     } else if(rhok>1.333 && (rkm1-rk<0)) {
       alpha_ratio = alpha_ratio/0.75;
-      if(ver_ >=outlevel3) {
+      if(ver_ >=outlevel1) {
         printf("recourse increasing and increased more in real contingency, so increasing alpha\n");
       }
     }
@@ -283,7 +283,9 @@ update_ratio_tr(const double rhok,
     //sol_base = solm1;
     //f = fm1;
     //gradf = gkm1;
-   } 
+  }
+  alpha_ratio = std::max(ratio_min,alpha_ratio); 
+  alpha_ratio = std::min(ratio_max,alpha_ratio); 
 }
 
 /* currently provides multiple ways to compute alpha, one is to the BB alpha
@@ -335,11 +337,18 @@ double hiopAlgPrimalDecomposition::HessianApprox::check_convergence(const double
 {
   double temp1 = 0.;
   double temp2 = 0.;
+  double temp3 = 0.;
+  double temp4 = 0.;
   for(int i=0;i<n_;i++) {
     temp1 += std::pow(ykm1[i]-alpha_*skm1[i],2);
+    temp3 += std::pow(ykm1[i],2);
     temp2 += std::pow(gk[i],2);
+    temp4 += std::pow(-alpha_*skm1[i],2);
   }
   double convg = std::sqrt(temp1)/std::sqrt(temp2);
+  if(ver_ >=outlevel1) {
+    printf("temp1  %18.12e, temp2 %18.12e, temp3 %18.12e, temp4 %18.12e\n",temp1,temp2,temp3,temp4);
+  }
   return convg;
 }
 void hiopAlgPrimalDecomposition::HessianApprox::set_verbosity(const int i)
@@ -464,9 +473,10 @@ void hiopAlgPrimalDecomposition::set_verbosity(const int i)
     if(comm_size_==1) {
       return run_single();//call the serial solver
     }
-
-    printf("total number of recourse problems  %d\n", S_);
-    printf("total ranks %d\n",comm_size_); 
+    if(my_rank_==0) {
+      printf("total number of recourse problems  %d\n", S_);
+      printf("total ranks %d\n",comm_size_); 
+    }
     //initial point for now set to all zero
     for(int i=0; i<n_; i++) {
       x_[i] = 0.;
@@ -488,7 +498,7 @@ void hiopAlgPrimalDecomposition::set_verbosity(const int i)
     //the actual algorithm (master rank does all the computations)
 
     //hess_appx_2 is declared by all ranks while only rank 0 uses it
-    HessianApprox*  hess_appx_2 = new HessianApprox(nc_,2.0);
+    HessianApprox*  hess_appx_2 = new HessianApprox(nc_,1.0);
     if(ver_ >= outlevel3) {
       hess_appx_2->set_verbosity(ver_);
     }
@@ -498,9 +508,11 @@ void hiopAlgPrimalDecomposition::set_verbosity(const int i)
     int end_signal = 0;
     // Outer loop starts
     for(int it=0; it<max_iter;it++) {
-
-      if(ver_ >=outlevel1) {
-        printf("iteration  %d\n", it);
+      if(my_rank_==0) {
+        if(ver_ >=outlevel1) {
+          printf("iteration  %d\n", it);
+          fflush(stdout);
+        }
       }
       // solve the base case
       if(my_rank_ == 0 && it==0) {//initial solve 
@@ -587,7 +599,7 @@ void hiopAlgPrimalDecomposition::set_verbosity(const int i)
             //int ierr = MPI_Isend(&rec_val, 1, MPI_DOUBLE, rank_master, 2, comm_world_, &request_[my_rank_]);
             int mpi_test_flag = rec_prob[r]->test();
             if(mpi_test_flag && (finish_flag[r]==0)) {// receive completed
-              if(!last_loop) {
+              if(!last_loop && idx<S_) {
                 printf("idx %d sent to rank %d\n", idx,r);
               } else {
                 printf("last loop for rank %d\n", r);
@@ -814,7 +826,7 @@ void hiopAlgPrimalDecomposition::set_verbosity(const int i)
         } else {
           hess_appx_2->update_hess_coeff(x0, grad_r, rval);
 
-          hess_appx_2->update_ratio();
+          //hess_appx_2->update_ratio();
           double alp_temp = hess_appx_2->get_alpha_f(grad_r);
           //double alp_temp2 = hess_appx_2->get_alpha_BB();
           if(ver_ >=outlevel1) {
@@ -858,6 +870,7 @@ void hiopAlgPrimalDecomposition::set_verbosity(const int i)
         //assert("for debugging" && false); //for debugging purpose
         if(ver_ >=outlevel1) {
           printf("solved full problem with objective %18.12e\n", master_prob_->get_objective());
+          fflush(stdout);
 	}
 
         if(ver_ >=outlevel2) {
@@ -913,7 +926,7 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
   }
 
   //hess_appx_2 has to be declared by all ranks while only rank 0 uses it
-  HessianApprox*  hess_appx_2 = new HessianApprox(nc_,2.0);
+  HessianApprox*  hess_appx_2 = new HessianApprox(nc_,1.0);
 
   double convg = 1e20;
   // Outer loop starts
@@ -987,7 +1000,7 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
       for(int i=0; i<nc_; i++) hess_appx[i] = alp_temp;
     } else {
       hess_appx_2->update_hess_coeff(x0, grad_r, rval);
-      hess_appx_2->update_ratio();
+      //hess_appx_2->update_ratio();
       double alp_temp = hess_appx_2->get_alpha_f(grad_r);
       if(ver_ >=outlevel1) {
         printf("alpd %18.12e\n",alp_temp);

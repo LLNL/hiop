@@ -172,6 +172,8 @@ public:
     int n_;
     double alpha_=1.0;  
     double ratio_ = 1.0;
+    double ratio_min = 0.4;  
+    double ratio_max = 5.0;  
     double alpha_min = 1e-5;  
     double alpha_max = 1e10;  
     double fk; 
@@ -180,7 +182,7 @@ public:
     double* gkm1;
     double* skm1;
     double* ykm1;
-    size_t ver_=0;
+    size_t ver_=1;
   };
 
 private:
@@ -196,7 +198,7 @@ private:
   //master/solver(0), or worker(1:total rank)
 
   //maximum number of outer iterations, user specified
-  int max_iter = 100;
+  int max_iter = 200;
   
   //pointer to the problem to be solved (passed as argument)
   hiopInterfacePriDecProblem* master_prob_;
