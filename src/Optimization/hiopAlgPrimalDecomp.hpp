@@ -165,14 +165,15 @@ public:
 
     /* Function to check convergence based gradient 
      */
-    double check_convergence(const double* gk);
+    double check_convergence_grad(const double* gk);
+    double check_convergence_fcn( );
   
     void set_verbosity(const int i);  
   private:
     int n_;
     double alpha_=1.0;  
     double ratio_ = 1.0;
-    double ratio_min = 0.4;  
+    double ratio_min = 0.5;  
     double ratio_max = 5.0;  
     double alpha_min = 1e-5;  
     double alpha_max = 1e10;  

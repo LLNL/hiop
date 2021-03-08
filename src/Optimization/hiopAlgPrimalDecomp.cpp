@@ -234,8 +234,10 @@ update_ratio()
     quanorm += skm1[i]*skm1[i];
   }
   quanorm = alpha_*quanorm;
+
   double alpha_g_ratio = quanorm/fabs(gradnorm);
   if(ver_ >=outlevel1) {
+
     printf("alpha norm ratio  %18.12e",alpha_g_ratio);
   }
   //using a trust region criteria for adjusting ratio
@@ -330,10 +332,8 @@ double hiopAlgPrimalDecomposition::HessianApprox::get_alpha_f(const double* gk)
   return alpha_;
 }
 
-/* Function to check convergence based gradient 
- */
-
-double hiopAlgPrimalDecomposition::HessianApprox::check_convergence(const double* gk)
+// stopping criteria based on gradient
+double hiopAlgPrimalDecomposition::HessianApprox::check_convergence_grad(const double* gk)
 {
   double temp1 = 0.;
   double temp2 = 0.;
@@ -350,6 +350,19 @@ double hiopAlgPrimalDecomposition::HessianApprox::check_convergence(const double
     printf("temp1  %18.12e, temp2 %18.12e, temp3 %18.12e, temp4 %18.12e\n",temp1,temp2,temp3,temp4);
   }
   return convg;
+}
+// stopping criteria based on function value change
+double hiopAlgPrimalDecomposition::HessianApprox::check_convergence_fcn( )
+{
+  double predicted_decrease = 0.;
+  for(int i=0;i<n_;i++) {
+    predicted_decrease += gkm1[i]*skm1[i]+0.5*alpha_*(skm1[i]*skm1[i]);
+  }
+  if(ver_ >=outlevel1) {
+    printf("predicted decrease  %18.12e",predicted_decrease);
+  }
+  predicted_decrease = fabs(predicted_decrease);
+  return predicted_decrease;
 }
 void hiopAlgPrimalDecomposition::HessianApprox::set_verbosity(const int i)
 {
@@ -475,7 +488,8 @@ void hiopAlgPrimalDecomposition::set_verbosity(const int i)
     }
     if(my_rank_==0) {
       printf("total number of recourse problems  %d\n", S_);
-      printf("total ranks %d\n",comm_size_); 
+      printf("total ranks %d\n",comm_size_);
+
     }
     //initial point for now set to all zero
     for(int i=0; i<n_; i++) {
@@ -498,17 +512,24 @@ void hiopAlgPrimalDecomposition::set_verbosity(const int i)
     //the actual algorithm (master rank does all the computations)
 
     //hess_appx_2 is declared by all ranks while only rank 0 uses it
-    HessianApprox*  hess_appx_2 = new HessianApprox(nc_,1.0);
+    HessianApprox*  hess_appx_2 = new HessianApprox(nc_,0.75);
     if(ver_ >= outlevel3) {
       hess_appx_2->set_verbosity(ver_);
     }
 
     double convg = 1e20;
+    double convg_g = 1e20;
+    double convg_f = 1e20;
 
     int end_signal = 0;
+    double t1 = 0;
+    double t2 = 0; 
+
     // Outer loop starts
     for(int it=0; it<max_iter;it++) {
       if(my_rank_==0) {
+        t1 = MPI_Wtime(); 
+
         if(ver_ >=outlevel1) {
           printf("iteration  %d\n", it);
           fflush(stdout);
@@ -833,10 +854,15 @@ void hiopAlgPrimalDecomposition::set_verbosity(const int i)
             printf("alpd %18.12e\n",alp_temp);
 	  }
           //printf("alpd BB %18.12e\n",alp_temp2);
-          convg = hess_appx_2->check_convergence(grad_r);
+          convg_g = hess_appx_2->check_convergence_grad(grad_r);
           if(ver_ >=outlevel1) {
-            printf("convergence measure %18.12e\n",convg);
+            printf("gradient convergence measure %18.12e\n",convg_g);
 	  }
+          convg_f = hess_appx_2->check_convergence_fcn();
+          if(ver_ >=outlevel1) {
+            printf("function val convergence measure %18.12e\n",convg_f);
+	  }
+	  convg = std::min(convg_f,convg_g);
           for(int i=0; i<nc_; i++) hess_appx[i] = alp_temp;
         }
 
@@ -880,8 +906,10 @@ void hiopAlgPrimalDecomposition::set_verbosity(const int i)
           printf(" \n");
 	}
         delete evaluator;
+        t2 = MPI_Wtime(); 
+        printf( "Elapsed time for iteration %d is %f\n",it, t2 - t1 );  
       } else {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));    
+        //std::this_thread::sleep_for(std::chrono::milliseconds(100));    
       }
       if(stopping_criteria(it, convg)) {
         end_signal = 1; 
@@ -891,6 +919,7 @@ void hiopAlgPrimalDecomposition::set_verbosity(const int i)
       if(end_signal) {
         break;
       }
+
     }
     if(my_rank_==0) {
       return solver_status_;
@@ -929,6 +958,8 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
   HessianApprox*  hess_appx_2 = new HessianApprox(nc_,1.0);
 
   double convg = 1e20;
+  double convg_f = 1e20;
+  double convg_g = 1e20;
   // Outer loop starts
   for(int it=0; it<max_iter;it++) {
     printf("iteration  %d\n", it);
@@ -1005,11 +1036,16 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
       if(ver_ >=outlevel1) {
         printf("alpd %18.12e\n",alp_temp);
       }
-      convg = hess_appx_2->check_convergence(grad_r);
+      convg_g = hess_appx_2->check_convergence_grad(grad_r);
 
       if(ver_ >=outlevel1) {
-        printf("convergence measure %18.12e\n",convg);
+        printf("convergence measure %18.12e\n",convg_g);
       }
+      convg_f = hess_appx_2->check_convergence_fcn();
+      if(ver_ >=outlevel1) {
+        printf("function val convergence measure %18.12e\n",convg_f);
+      }
+      convg = std::min(convg_f,convg_g);
       for(int i=0; i<nc_; i++) hess_appx[i] = alp_temp;
     }
 
