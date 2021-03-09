@@ -317,8 +317,13 @@ relax(const double& fixed_var_tol, const double& fixed_var_perturb, hiopVector& 
 * For class hiopNLPObjGradScaling
 */
 hiopNLPObjGradScaling::hiopNLPObjGradScaling(const double max_grad, 
-                                             hiopVector& c, hiopVector& d, hiopVector& gradf,
-                                             hiopMatrix& Jac_c, hiopMatrix& Jac_d)
+                                             hiopVector& c, 
+                                             hiopVector& d, 
+                                             hiopVector& gradf,
+                                             hiopMatrix& Jac_c, 
+                                             hiopMatrix& Jac_d,
+                                             long long *cons_eq_mapping,
+                                             long long *cons_ineq_mapping)
       : n_vars(gradf.get_size()), n_vars_local(gradf.get_local_size()),
         scale_factor_obj(1.),
         n_eq(c.get_size()), n_ineq(d.get_size())
@@ -343,8 +348,15 @@ hiopNLPObjGradScaling::hiopNLPObjGradScaling(const double max_grad,
   scale_factor_d->scale(max_grad);
   scale_factor_d->component_min(1.0);
 
-  scale_factor_cd->copyFromStarting(0,    scale_factor_c->local_data_const(),   n_eq);
-  scale_factor_cd->copyFromStarting(n_eq, scale_factor_d->local_data_const(), n_ineq);
+  const double* eq_arr = scale_factor_c->local_data_const();
+  const double* ineq_arr = scale_factor_d->local_data_const();
+  double* scale_factor_cd_arr = scale_factor_cd->local_data();
+  for(int i=0; i<n_eq; ++i) {
+    scale_factor_cd_arr[cons_eq_mapping[i]] = eq_arr[i];
+  }
+  for(int i=0; i<n_ineq; ++i) {
+    scale_factor_cd_arr[cons_ineq_mapping[i]] = ineq_arr[i];
+  }
 }
 
 hiopNLPObjGradScaling::~hiopNLPObjGradScaling()
