@@ -476,6 +476,12 @@ void hiopAlgPrimalDecomposition::set_verbosity(const int i)
   ver_ = i;
 }
 
+void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
+{
+  assert(alpha>=0&&alpha<10.);
+  alpha_ratio_ = alpha;
+}
+
 /* MPI engine for parallel solver
  */
 
@@ -512,7 +518,7 @@ void hiopAlgPrimalDecomposition::set_verbosity(const int i)
     //the actual algorithm (master rank does all the computations)
 
     //hess_appx_2 is declared by all ranks while only rank 0 uses it
-    HessianApprox*  hess_appx_2 = new HessianApprox(nc_,0.75);
+    HessianApprox*  hess_appx_2 = new HessianApprox(nc_,alpha_ratio_);
     if(ver_ >= outlevel3) {
       hess_appx_2->set_verbosity(ver_);
     }
@@ -661,6 +667,8 @@ void hiopAlgPrimalDecomposition::set_verbosity(const int i)
           req_cont_idx->set_idx(-1);
           req_cont_idx->post_send(1,r,comm_world_);
         }
+        t2 = MPI_Wtime(); 
+        printf( "Elapsed time for iteration %d for contingency is %f\n",it, t2 - t1 );  
       }
 
       //evaluators
@@ -907,7 +915,7 @@ void hiopAlgPrimalDecomposition::set_verbosity(const int i)
 	}
         delete evaluator;
         t2 = MPI_Wtime(); 
-        printf( "Elapsed time for iteration %d is %f\n",it, t2 - t1 );  
+        printf( "Elapsed time for entire iteration %d is %f\n",it, t2 - t1 );  
       } else {
         //std::this_thread::sleep_for(std::chrono::milliseconds(100));    
       }
@@ -955,7 +963,7 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
   }
 
   //hess_appx_2 has to be declared by all ranks while only rank 0 uses it
-  HessianApprox*  hess_appx_2 = new HessianApprox(nc_,1.0);
+  HessianApprox*  hess_appx_2 = new HessianApprox(nc_,alpha_ratio_);
 
   double convg = 1e20;
   double convg_f = 1e20;

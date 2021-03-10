@@ -71,6 +71,7 @@ public:
 
   void set_verbosity(const int i);
 
+  void set_initial_alpha_ratio(const double ratio);
   /* Contains information of a solution step including function value 
    * and gradient. Used for storing the solution for the previous iteration
    */
@@ -224,7 +225,8 @@ private:
   std::vector<int> xc_idx_;
   //tolerance of the convergence stopping criteria
   double tol_=1e-6;
-
+  //initial alpha_ratio if used
+  double alpha_ratio_=1.0;
 };
 
 }; //end of namespace
