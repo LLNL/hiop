@@ -9,11 +9,28 @@ RecourseApproxEvaluator(int nc) : RecourseApproxEvaluator(nc, nc)  //nc_ <= nx, 
 
 hiopInterfacePriDecProblem::RecourseApproxEvaluator::
 RecourseApproxEvaluator(int nc, int S) 
+  : nc_(nc),S_(S),rval_(0.)//nc = nx, nd=S
+{
+  assert(S>=nc);
+  xc_idx_.resize(nc_);
+  for(int i=0;i<nc_;i++) xc_idx_[i] = i;
+  rgrad_ = new double[nc];
+  rhess_ = new double[nc];
+  x0_ = new double[nc];
+}
+
+hiopInterfacePriDecProblem::RecourseApproxEvaluator::
+RecourseApproxEvaluator(const int nc, 
+		        const int S, 
+			const std::vector<int>& list)
   : nc_(nc),S_(S),rval_(0.),rgrad_(NULL), rhess_(NULL),x0_(NULL)//nc = nx, nd=S
 {
-   assert(S>=nc);
-   xc_idx_.resize(nc_);
-   for(int i=0;i<nc_;i++) xc_idx_[i] = i;
+  //assert(S>=nc);
+  rgrad_ = new double[nc];
+  rhess_ = new double[nc];
+  x0_ = new double[nc];
+  assert(list.size()==nc_);
+  xc_idx_ = list;
 }
 
 hiopInterfacePriDecProblem::RecourseApproxEvaluator::

@@ -125,8 +125,10 @@ public:
     RecourseApproxEvaluator(int nc);
  
     RecourseApproxEvaluator(int nc, int S);
+    
+    RecourseApproxEvaluator(const int nc, const int S, const std::vector<int>& list);
   
-    RecourseApproxEvaluator(int nc,int S, const double& rval, const double* rgrad, 
+    RecourseApproxEvaluator(const int nc, const int S, const double& rval, const double* rgrad, 
                             const double* rhess, const double* x0);
   
     RecourseApproxEvaluator(int nc,int S, const std::vector<int>& list,

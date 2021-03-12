@@ -59,6 +59,10 @@
 #define MPI_Comm int
 #endif
 
+#ifndef MPI_Comm_SELF
+#define MPI_Comm_SELF 0
+#endif
+
 #ifndef MPI_COMM_WORLD
 #define MPI_COMM_WORLD 0
 #endif 
@@ -229,6 +233,8 @@ public:
   
   /** Passes the communicator, defaults to MPI_COMM_WORLD (dummy for non-MPI builds)  */
   virtual bool get_MPI_comm(MPI_Comm& comm_out) { comm_out=MPI_COMM_WORLD; return true;}
+  
+
 
   /**  
    * Method for column partitioning specification for distributed memory vectors. Process P owns 
@@ -595,6 +601,11 @@ public:
                               const double* x, bool new_x, const double& obj_factor,
                               const double* lambda, bool new_lambda,
                               const int& nnzHSS, int* iHSS, int* jHSS, double* MHSS) = 0;
+
+
+  /** Specifying the get_MPI_comm code defined in the base class
+   */
+  virtual bool get_MPI_comm(MPI_Comm& comm_out) { comm_out=MPI_COMM_SELF; return true;}
 
 };
 
