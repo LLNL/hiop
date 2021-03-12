@@ -132,7 +132,7 @@ backgroundcolor=\color{lbcolor},
 \vspace{3cm}
 
   {\huge\bfseries \Hi\ -- User Guide} \\[14pt]
-  {\large\bfseries version 0.3}
+  {\large\bfseries version 0.4}
 
 \vspace{3cm}
 
@@ -825,28 +825,72 @@ time\_kkt & string & "off" & "on" "off" & Turns on/off internal performance time
 
 \noindent \textbf{tolerance}: maximum (absolute)  NLP optimality error allowed at the optimal solution. Double values in $[10e-14,0.1]$. Default value: $10e-8$. 
 
-\smallskip
+\medskip
 
-\noindent \textbf{acceptable\_tolerance}: HiOp will terminate if the inf-norm of the NLP optimality residuals is below this value for \texttt{acceptable\_iterations} many consecutive iterations. Double values in $[1e-14,0.1]$. Default value $1e-06$.
+\noindent \textbf{acceptable\_tolerance}: HiOp will terminate if the inf-norm of the NLP optimality residuals is below this value for \texttt{acceptable\_iterations} many consecutive iterations. 
+Double values in $[10^{-14},0.1]$. Default value $10^{-6}$.
 
-\smallskip
+\medskip
 
 \noindent \textbf{max\_iter}: Maximum number of iterations. Integer values between $1$ to $1\,000\,000$. Default value: $3\,000$.
 
-\smallskip
+\medskip
 
 \noindent \textbf{acceptable\_iterations}: number of iterations passing the acceptable tolerance (see \textbf{acceptable\_tolerance}) after which HiOp terminates. Integer values between $1$ and $1\,000\,000$. Default value $15$.
 
-\smallskip
+\medskip
 
-\noindent \textbf{verbosity\_level}: Integer between $0$ and $12$ specifying the verbosity of \Hi's output. A value of $0$ disables any output (but still outputs fatal errors) . A value of $1$ also outputs warnings. The value of $2$ is reserved for future use. A value of $3$ will also output a table with \Hi's convergence metrics at each iteration. A value of $4$ and higher will display additional info related to the internals of the algorithm and is generally used only for debugging/development purposes. The higher the value the more verbose the output will be. 
+\noindent \textbf{verbosity\_level}: Integer between $0$ and $12$ specifying the verbosity of \Hi's output. A value of $0$ disables any output (but still outputs fatal errors) . A value of $1$ also outputs warnings. The value of $2$ is reserved for future use. A value of $3$ will also output a table with \Hi's convergence metrics at each iteration. A value of $4$ and higher will display additional info related to the internals of the algorithm and is generally used only for debugging/development purposes. The higher the value the more verbose the output will be.
 
-\smallskip
+\medskip
 
-%
-%\noindent \textbf{verbosity\_ level}: . Double values in $[10e-14,0.1]$. Default value: $10e-8$. 
+\noindent \textbf{mu0}: Initial log-barrier parameter mu. Double values in $[10^{-6},1\,000]$. Default value: $1.0$. 
+
+\medskip
+
+
+\noindent \textbf{kappa\_eps}: mu is reduced when when log-bar error is below kappa\_eps $\times$ mu. Double values in $[10^{-14},0.1]$. Default value: $10^{-8}$. 
+
+\medskip
+
+
+\noindent \textbf{kappa\_mu}: linear reduction coefficient for mu (eqn. (7) in~\cite{waecther_05_ipopt0}). Double values in $[10^{-8},0.999]$. Default value: $0.2$.  
+
+\medskip
+
+
+\noindent \textbf{theta\_mu}: exponential reduction coefficient for mu (eqn. (7) in~\cite{waecther_05_ipopt0}). Double values in $[1, 2]$. Default value: $1.5$.
+
+\medskip
+
+
+\noindent \textbf{tau\_min}: fraction-to-the-boundary parameter used in the line-search to back-off from the boundary (eqn. (8) in~\cite{waecther_05_ipopt0}). Double values in $[0.9, 0.99999]$. Default value: $0.99$. 
+
+\medskip
+
+
+\noindent \textbf{kappa1}: sufficiently-away-from-the-boundary projection parameter used in the shift of the user-provided initial point. Double values in $[10^{-8},0.1]$. Default value: $0.01$. 
+
+\medskip
+
+
+\noindent \textbf{kappa2}: shift projection parameter used in initialization for doubly bounded variables. Double values in $[10^{-8},0.49999]$. Default value: $0.01$. 
+
+\medskip
+
+\noindent \textbf{duals\_init}: type of the update for the Lagrange multipliers corresponding to  the equality constraints. Possible values one of the the strings "lsq" (least-square (LSQ) solve initialization) and "zero"(multipliers are set identatically to zero). Default value is "lsq". 
+
+\medskip
+
+\noindent \textbf{duals\_lsq\_ini\_max}: max inf-norm allowed for initial duals when computed with LSQ (see \textbf{duals\_init}); if norm is greater, the duals for the equality constraints will be set to zero. Double values between $10^{-16}$ and $10^{10}$. Default value: $1\,000$.
+
+\medskip
+
+
+%\noindent \textbf{a}: . Double values in $[10^{-14},0.1]$. Default value: $10^{-8}$. 
 %
 %\smallskip
+
 
 
 
