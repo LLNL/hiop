@@ -123,7 +123,7 @@ bool PriDecMasterProblemEx9::eval_f_rterm(size_t idx, const int& n, const double
   nlp.options->SetStringValue("compute_mode", "cpu");
   //nlp.options->SetStringValue("compute_mode", "hybrid");
   nlp.options->SetStringValue("time_kkt", "on");
-  nlp.options->SetIntegerValue("verbosity_level", 3);
+  nlp.options->SetIntegerValue("verbosity_level", 1);
   nlp.options->SetNumericValue("mu0", 1e-1);
   //nlp.options->SetNumericValue("tolerance", 1e-5);
 
@@ -149,5 +149,26 @@ bool PriDecMasterProblemEx9::eval_grad_rterm(size_t idx, const int& n, double* x
   assert(nx_==n);
   for(int i=0;i<n;i++) grad[i] = (x[i]-y_[i])/S_;
   return true;
+};
+
+inline size_t PriDecMasterProblemEx9::get_num_rterms() const
+{
+  return S_;
+}
+
+inline size_t PriDecMasterProblemEx9::get_num_vars() const
+{
+  return nx_;
+}
+
+void PriDecMasterProblemEx9::get_solution(double* x) const
+{
+  assert(sol_!=NULL);
+  memcpy(x,sol_, nx_*sizeof(double));
+};
+
+double PriDecMasterProblemEx9::get_objective()
+{
+  return obj_;
 };
 

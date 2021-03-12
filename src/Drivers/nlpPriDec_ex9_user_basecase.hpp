@@ -66,24 +66,13 @@ public:
     }
     return true;
   }
-  /*
-  bool set_quadratic_terms(const int& n, int S, const std::vector<int>& list,
-                           const double& rval, const double* rgrad, 
-		           const double* rhess, const double* x0)
+  
+  bool set_quadratic_terms(const int& n, 
+		           hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator)
   {
-    if(rec_evaluator_==NULL) {
-      rec_evaluator_ = new RecourseApproxEvaluator(n, S, list, rval, rgrad, rhess, x0);
-      return true;
-    }
-    assert(rec_evaluator_->get_rgrad()!=NULL);// should be defined
-    rec_evaluator_->set_rval(rval);
-    rec_evaluator_->set_rgrad(n,rgrad);
-    rec_evaluator_->set_rhess(n,rhess);
-    rec_evaluator_->set_x0(n,x0);
-    
-    return true;
+    rec_evaluator_ = evaluator;
   }
-  */
+  /* 
   bool set_quadratic_terms(const int& n, 
 		           const hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator)
   {
@@ -104,7 +93,7 @@ public:
     rec_evaluator_->set_rhess(n,evaluator->get_rhess());
     rec_evaluator_->set_x0(n,evaluator->get_x0());
     return true;
-  }
+  }*/
 
   void set_include(const bool include)
   {
@@ -120,7 +109,6 @@ public:
     }
   }
 
-  bool get_MPI_comm(MPI_Comm& comm_out) { comm_out=MPI_COMM_SELF; return true;};
   
   void get_rec_obj(const long long& n, const double* x, double& obj_value)
   {
@@ -129,5 +117,5 @@ public:
 
 protected:
   bool include_rec_=false;
-  hiopInterfacePriDecProblem::RecourseApproxEvaluator* rec_evaluator_;
+  hiopInterfacePriDecProblem::RecourseApproxEvaluator* rec_evaluator_; //this should be const
 };

@@ -99,31 +99,28 @@ public:
   virtual bool set_recourse_approx_evaluator(const int n, 
 		                             hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator);
   
-  //solving the idxth recourse optimization problem
+  /**
+   * solving the idxth recourse optimization problem
+   * n is the number of coupled x, not the entire dimension of x
+   * rval is the return value of the recourse solution function evaluation
+   */
   bool eval_f_rterm(size_t idx, const int& n, const double* x, double& rval);
   
+  /**
+   * compute the gradient of the recourse solution function w.r.t x
+   * n is the number of coupled x, not the entire dimension of x
+   * grad is the output
+   */
   bool eval_grad_rterm(size_t idx, const int& n, double* x, double* grad);
   
-  inline size_t get_num_rterms() const
-  {
-    return S_;
-  }
+  inline size_t get_num_rterms() const;
   
-  inline size_t get_num_vars() const
-  {
-    return nx_;
-  }
+  inline size_t get_num_vars() const;
 
-  void get_solution(double* x) const
-  {
-    assert(sol_!=NULL);
-    memcpy(x,sol_, nx_*sizeof(double));
-  }
+  void get_solution(double* x) const;
 
-  double get_objective()
-  {
-    return obj_;
-  }
+  double get_objective();
+
 private:
   /// dimension of primal variable `x`
   size_t nx_;

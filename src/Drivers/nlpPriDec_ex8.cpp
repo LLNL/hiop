@@ -52,12 +52,13 @@ Ex8::Ex8(int ns_, int S_, int nc_,bool include_)
   }
 }
 
-Ex8::Ex8(int ns_, int S_, bool include, const hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator)
+Ex8::Ex8(int ns_, int S_, bool include, hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator)
     : Ex8(ns_,S_)
 {
   include_r = include;
-  evaluator_ = new hiopInterfacePriDecProblem::RecourseApproxEvaluator(ns, S, evaluator->get_rval(), evaluator->get_rgrad(), 
-                                           evaluator->get_rhess(), evaluator->get_x0());
+  evaluator_ = new hiopInterfacePriDecProblem::RecourseApproxEvaluator(ns, S, 
+		   evaluator->get_rval(), evaluator->get_rgrad(), 
+                   evaluator->get_rhess(), evaluator->get_x0());
 }
 
 Ex8::~Ex8()
@@ -169,22 +170,11 @@ bool Ex8::quad_is_defined()
   else return false;
 };
 
-bool Ex8::set_quadratic_terms(const int& n, const hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator)
+bool Ex8::set_quadratic_terms(const int& n, 
+		              hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator)
 {
   assert(nc == n);
-  if(evaluator_==NULL) {
-    evaluator_ = new hiopInterfacePriDecProblem::RecourseApproxEvaluator(nc, S, evaluator->get_xc_idx(),
-		                             evaluator->get_rval(), evaluator->get_rgrad(), 
-                                             evaluator->get_rhess(), evaluator->get_x0());
-    return true;
-  }
-
-  if(evaluator->get_rgrad()!=NULL) {
-    evaluator_->set_rval(evaluator->get_rval());    
-    evaluator_->set_rgrad(n,evaluator->get_rgrad());
-    evaluator_->set_rhess(n,evaluator->get_rhess());  
-    evaluator_->set_x0(n,evaluator->get_x0());
-  }
+  evaluator_ = evaluator;
   return true;
 };
 
@@ -243,24 +233,12 @@ hiopSolveStatus PriDecMasterProblemEx8::solve_master(double* x, const bool& incl
     printf("solver returned negative solve status: %d (with objective is %18.12e)\n", status, obj_);
     return status;
   }
-  //for(int i=0;i<n_;i++) printf("%d %18.12e\n",i,x[i]);
-  //initialize the master problem with an all zero solution
-  /*
-  if(include_r==0){
-    for(int i=0; i<n_; i++)
-      x[i] = 1.;
-  }
-  else{
-    for(int i=0; i<n_; i++)
-      x[i] = 0.; 
-  }
-  */
   if(sol_==NULL) {
     sol_ = new double[n_];
   }
 
   memcpy(sol_,x, n_*sizeof(double));
-  for(int i=0;i<n_;i++) printf("%d %18.12e\n",i,x[i]);
+  //for(int i=0;i<n_;i++) printf("%d %18.12e\n",i,x[i]);
   //assert("for debugging" && false); //for debugging purpose
   return Solve_Success;
 

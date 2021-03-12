@@ -52,7 +52,7 @@ public:
   Ex8(int ns_, 
       int S_, 
       bool include, 
-      const hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator);
+      hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator);
 
   virtual ~Ex8();
   
@@ -89,7 +89,7 @@ public:
   virtual bool quad_is_defined();
 
   virtual bool set_quadratic_terms(const int& n, 
-		                   const hiopInterfacePriDecProblem::
+		                   hiopInterfacePriDecProblem::
 				         RecourseApproxEvaluator* evaluator);
   
   virtual bool set_include(bool include);
