@@ -59,8 +59,8 @@
 #define MPI_Comm int
 #endif
 
-#ifndef MPI_Comm_SELF
-#define MPI_Comm_SELF 0
+#ifndef MPI_COMM_SELF
+#define MPI_COMM_SELF 0
 #endif
 
 #ifndef MPI_COMM_WORLD
