@@ -168,8 +168,17 @@ public:
      */
     double check_convergence_grad(const double* gk);
     double check_convergence_fcn( );
-  
-    void set_verbosity(const int i);  
+ 
+    // setting the output level for the Hessian approximation 
+    void set_verbosity(const int i); 
+
+    void set_alpha_ratio_min(const double alp_ratio_min); 
+    
+    void set_alpha_ratio_max(const double alp_ratio_max);
+
+    void set_alpha_min(const double alp_min); 
+    
+    void set_alpha_max(const double alp_max);
   private:
     int n_;
     double alpha_=1.0;  

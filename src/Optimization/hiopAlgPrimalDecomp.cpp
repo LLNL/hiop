@@ -364,12 +364,36 @@ double hiopAlgPrimalDecomposition::HessianApprox::check_convergence_fcn( )
   predicted_decrease = fabs(predicted_decrease);
   return predicted_decrease;
 }
+
 void hiopAlgPrimalDecomposition::HessianApprox::set_verbosity(const int i)
 {
   assert(i<=3 && i>=0);
   ver_ = i;
 }
 
+void hiopAlgPrimalDecomposition::HessianApprox::
+set_alpha_ratio_min(const double alp_ratio_min)
+{
+  ratio_min = alp_ratio_min;
+}
+
+void hiopAlgPrimalDecomposition::HessianApprox::
+set_alpha_ratio_max(const double alp_ratio_max)
+{
+  ratio_max = alp_ratio_max;
+}
+
+void hiopAlgPrimalDecomposition::HessianApprox::
+set_alpha_min(const double alp_min)
+{
+  alpha_min = alp_min;
+}
+
+void hiopAlgPrimalDecomposition::HessianApprox::
+set_alpha_max(const double alp_max)
+{
+  alpha_max = alp_max;
+}
 hiopAlgPrimalDecomposition::
 hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
                            MPI_Comm comm_world/*=MPI_COMM_WORLD*/) 
@@ -530,6 +554,9 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
     int end_signal = 0;
     double t1 = 0;
     double t2 = 0; 
+
+    hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator = new hiopInterfacePriDecProblem::
+		                                             RecourseApproxEvaluator(nc_,S_,xc_idx_);
 
     // Outer loop starts
     for(int it=0; it<max_iter;it++) {
@@ -889,9 +916,12 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
 	}
         //todo S_ doesn't have to be bigger than n_ now right?
        
-        hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator = new hiopInterfacePriDecProblem::
-		                                 RecourseApproxEvaluator(nc_,S_,xc_idx_,rval,grad_r, 
-                                                                         hess_appx, x0);
+        assert(evaluator->get_rgrad()!=NULL);// should be defined
+        evaluator->set_rval(rval);
+        evaluator->set_rgrad(nc_,grad_r);
+        evaluator->set_rhess(nc_,hess_appx);
+        evaluator->set_x0(nc_,x0);
+
 
         bret = master_prob_->set_recourse_approx_evaluator(nc_, evaluator);
         if(!bret) {
@@ -913,7 +943,6 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
           }
           printf(" \n");
 	}
-        delete evaluator;
         t2 = MPI_Wtime(); 
         printf( "Elapsed time for entire iteration %d is %f\n",it, t2 - t1 );  
       } else {
@@ -965,9 +994,15 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
   //hess_appx_2 has to be declared by all ranks while only rank 0 uses it
   HessianApprox*  hess_appx_2 = new HessianApprox(nc_,alpha_ratio_);
 
+
+  hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator = new hiopInterfacePriDecProblem::
+	                                     RecourseApproxEvaluator(nc_,S_,xc_idx_);
+
   double convg = 1e20;
   double convg_f = 1e20;
   double convg_g = 1e20;
+  
+  
   // Outer loop starts
   for(int it=0; it<max_iter;it++) {
     printf("iteration  %d\n", it);
@@ -1066,10 +1101,14 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
     }
     // nc_ is the demesnion of coupled x
 
-    hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator = new hiopInterfacePriDecProblem::
-	                                     RecourseApproxEvaluator(nc_,S_,xc_idx_,rval,grad_r, 
-                                                                     hess_appx, x0);
-      
+
+    assert(evaluator->get_rgrad()!=NULL);// should be defined
+    evaluator->set_rval(rval);
+    evaluator->set_rgrad(nc_,grad_r);
+    evaluator->set_rhess(nc_,hess_appx);
+    evaluator->set_x0(nc_,x0);
+
+
     bret = master_prob_->set_recourse_approx_evaluator(nc_, evaluator);
     if(!bret) {
       //todo
@@ -1087,7 +1126,6 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
       printf(" \n");
     }
     //assert("for debugging" && false); //for debugging purpose
-    delete  evaluator;
     if(stopping_criteria(it, convg)){break;}
   }
     return Solve_Success;    
