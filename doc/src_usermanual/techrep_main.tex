@@ -140,7 +140,7 @@ backgroundcolor=\color{lbcolor},
 
 \vspace{1.25cm}
 
- {\Large\bfseries Cosmin G. Petra}
+ {\Large\bfseries Cosmin G. Petra} and {\Large\bfseries Nai-Yuan Chiang}
  
 \vspace{1.1cm}
 
@@ -154,7 +154,7 @@ Lawrence Livermore National Laboratory}}}\\[10pt]
 \vspace{4.75cm}
 
  \textcolor{violet}{{\large\bfseries Oct 15, 2017} \\
-{\large\bfseries Updated Oct 19, 2020}}
+{\large\bfseries Updated March 15, 2021}}
 
 \vspace{0.75cm}
 
@@ -784,44 +784,7 @@ The user can set \Hi's options in two ways:
 
 \warningcp{Note:} Options set in \texttt{hiop.options} file at runtime overwrite options set at runtime via the above API.
 
-
-
-\subsection{List of available options}
-
-{ \footnotesize 
-\begin{longtable}{| p{1.5cm} |  r |  r | p{2.0cm}  |  p{8cm} |}
-\hline \hline
-\textbf{Name} & \textbf{Type} & \textbf{Default} & \textbf{Range} & \textbf{Explanation}\\\hline% \hline
-tolerance  & numeric & 1e-08 & 1e-14 -- 0.1 &   Absolute error tolerance for the NLP \\\hline%\\\hline
-max\_iter  & integer & 3000 &   1 to 1000000 &  Max number of iterations \\\hline %\\hline
- acceptable\_ tolerance  & numeric & 1e-06 &   1e-14 -- 0.1 &    HiOp will terminate if the NLP residuals are below this option for \texttt{acceptable\_iterations} many consecutive iterations \\\hline
-acceptable\_ iterations  & integer & 15 & 1 -- 1000000 &  Number of iterations of acceptable tolerance after which HiOp terminates \\\hline %\hline
-verbosity\_ level  & integer & 3 &   0 -- 12 &   Verbosity level: 0 no output (only errors), 1=0+warnings, 2=1 (reserved), 3=2+optimization output, 4=3+scalars; larger values explained in \texttt{hiopLogger.hpp} \\\hline %\hline
-mu0 & numeric & 1.0 &  1e-06 -- 1000 & Initial log-barrier parameter mu \\\hline
-kappa\_eps & numeric & 10.0 & 1e-06 -- 1000 & mu is reduced when when log-bar error is below kappa\_eps $\times$ mu \\\hline
-kappa\_mu & numeric & 0.2 & 1e-08 -- 0.999 & linear reduction coefficient for mu (eqn. (7) in~\cite{waecther_05_ipopt0}) \\\hline
-theta\_mu & numeric & 1.5 & 1.0 -- 2.0 & exponential reduction coefficient for mu (eqn. (7) in~\cite{waecther_05_ipopt0}) \\\hline
-tau\_min  & numeric & 0.99 &  0.9 -- 0.99999 & fraction-to-the-boundary parameter used in the line-search to back-off from the boundary (eqn. (8) in~\cite{waecther_05_ipopt0}) \\\hline 
-kappa1 & numeric &  1e-02 & 1e-08 -- 1 &   sufficiently-away-from-the-boundary projection parameter used in the shift of the user-provided initial point \\\hline 
-kappa2 & numeric & 1e-02 & 1e-08 -- 0.49999 &  shift projection parameter used in initialization for double-bounded variables \\\hline % \hline \hline 
-\multicolumn{2}{|l|}{ dualsInitialization } &&&\\
-\multicolumn{2}{|r|}{string} & "lsq" &  "lsq" "zero" &   type of update of the multipliers of the eq. cons.  \\\hline
-\multicolumn{2}{|l|}{dualsUpdateType} &&&\\
-\multicolumn{2}{|r|}{ string} &  "lsq" & "lsq" "linear" & type of update of the multipliers of the eq. cons.\\\hline
-secant\_ memory\_ len & integer & 6 &  0 -- 256  & length of the memory of the Hessian secant approximation\\\hline  
-fixed\_var & string & "none" & "remove" "relax" "none" & treatment of fixed variables; in order, they can be removed, their lower and upper bounds relaxed, or ignored. "remove" is not available in "gpu" compute mode. "none" causes a premature termination if fixed variables are detected. \\  \hline
-fixed\_var\_ tolerance & numeric & 1e-15 & 1e-30 -- 1e-2 & tolerance for $|ub-lb|$ under which a variable will be considered fixed. \\ \hline
-fixed\_var\_ perturb & numeric & 1e-8 & 1e-14 -- 0.1 & Perturbation of the lower and upper bounds for a fixed variable relative to its magnitude: lb/ub $-$=/+= max(abs(ub),1)$\times$fixed\_var\_perturb\\ \hline
-compute\_mode & string & "auto" & "auto" "cpu" "hybrid" "gpu" & Offloading of computations to GPUs: "gpu" will run entirely on GPU (needs RAJA), "hybrid" will use GPUs for linear systems, "auto" will decide between "cpu" and "hybrid" based on the other options passed, and "cpu" will only use device CPU. \\\hline
-mem\_space & string & "default" & "default" "host" "device" "um" & Memory space selection: without RAJA/Umpire enabled only "default" is available; for "host" and "um" options consult Umpire documentation. \\\hline
-time\_kkt & string & "off" & "on" "off" & Turns on/off internal performance timers and analysis and enables additional reporting of the computational constituents of the KKT solve process \\\hline
-%
-%% smax  1.000000e+02     	 \# (numeric)  1 to 1e+07   multiplier threshold used in computing the scaling factors for the optimality error (default 100.)]
-%
-%
-%
-\end{longtable}}
-
+\subsection{Termination criteria and output}
 
 \noindent \textbf{tolerance}: maximum (absolute)  NLP optimality error allowed at the optimal solution. Double values in $[10e-14,0.1]$. Default value: $10e-8$. 
 
@@ -832,19 +795,19 @@ Double values in $[10^{-14},0.1]$. Default value $10^{-6}$.
 
 \medskip
 
-\noindent \textbf{max\_iter}: Maximum number of iterations. Integer values between $1$ to $1\,000\,000$. Default value: $3\,000$.
+\noindent \textbf{max\_iter}: maximum number of iterations. Integer values between $1$ to $10^6$. Default value: $3\,000$.
 
 \medskip
 
-\noindent \textbf{acceptable\_iterations}: number of iterations passing the acceptable tolerance (see \textbf{acceptable\_tolerance}) after which HiOp terminates. Integer values between $1$ and $1\,000\,000$. Default value $15$.
+\noindent \textbf{acceptable\_iterations}: number of iterations passing the acceptable tolerance (see \textbf{acceptable\_tolerance}) after which HiOp terminates. Integer values between $1$ and $10^6$. Default value $15$.
 
 \medskip
 
-\noindent \textbf{verbosity\_level}: Integer between $0$ and $12$ specifying the verbosity of \Hi's output. A value of $0$ disables any output (but still outputs fatal errors) . A value of $1$ also outputs warnings. The value of $2$ is reserved for future use. A value of $3$ will also output a table with \Hi's convergence metrics at each iteration. A value of $4$ and higher will display additional info related to the internals of the algorithm and is generally used only for debugging/development purposes. The higher the value the more verbose the output will be.
+\noindent \textbf{verbosity\_level}: integer between $0$ and $12$ specifying the verbosity of \Hi's output. A value of $0$ disables any output (but still outputs fatal errors). A value of $1$ also outputs warnings. The value of $2$ is reserved for future use. A value of $3$ will also output a table with \Hi's convergence metrics at each iteration. A value of $4$ and higher will display additional info related to the internals of the algorithm and is generally used only for debugging/development purposes. The higher the value the more verbose the output will be.
 
-\medskip
+\subsection{Algorithm selection and parameters}
 
-\noindent \textbf{mu0}: Initial log-barrier parameter mu. Double values in $[10^{-6},1\,000]$. Default value: $1.0$. 
+\noindent \textbf{mu0}: initial log-barrier parameter mu. Double values in $[10^{-6},10^3]$. Default value: $1.0$. 
 
 \medskip
 
@@ -868,6 +831,10 @@ Double values in $[10^{-14},0.1]$. Default value $10^{-6}$.
 
 \medskip
 
+\noindent \textbf{eta\_phi}: parameter of (suff. decrease) in Armijo Rule. Double values in $[ 0, 0.01]$. Default value $10^{-8}$.
+
+\medskip
+
 
 \noindent \textbf{kappa1}: sufficiently-away-from-the-boundary projection parameter used in the shift of the user-provided initial point. Double values in $[10^{-8},0.1]$. Default value: $0.01$. 
 
@@ -878,7 +845,12 @@ Double values in $[10^{-14},0.1]$. Default value $10^{-6}$.
 
 \medskip
 
-\noindent \textbf{duals\_init}: type of the update for the Lagrange multipliers corresponding to  the equality constraints. Possible values one of the the strings "lsq" (least-square (LSQ) solve initialization) and "zero"(multipliers are set identatically to zero). Default value is "lsq". 
+\noindent \textbf{smax}: the primal-dual IPM equations are rescaled when the average value of the is larger than this threshold value. Double values in $[1,10^7]$. Default value: $100$. 
+
+\medskip
+
+
+\noindent \textbf{duals\_init}: type of the update for the initialization of Lagrange multipliers corresponding to  the equality constraints. Possible values one of the the strings "lsq" (least-square (LSQ) solve initialization) and "zero"(multipliers are set identically to zero). Default value is "lsq". 
 
 \medskip
 
@@ -886,12 +858,136 @@ Double values in $[10^{-14},0.1]$. Default value $10^{-6}$.
 
 \medskip
 
+%%%%
 
-%\noindent \textbf{a}: . Double values in $[10^{-14},0.1]$. Default value: $10^{-8}$. 
-%
-%\smallskip
+\noindent \textbf{duals\_update\_type}: string option specifying the type of update of the multipliers of the eq. constraints after each iteration. Possible values are ``lsq'' (update based on a LSQ solve) and ``linear'' (Newton update based on the dual steplength. When ``Hessian'' is ``quasinewton\_approx'' the default value for this options is ``lsq''. When ``Hessian'' is ``analytical\_exact'' the default value is ``linear''.
+
+\medskip
+
+\noindent \textbf{recalc\_lsq\_duals\_tol}: threshold for inf-norm under which the LSQ computation of duals is used. If the inf-norm of the duals of the equality constraints is larger than the value of this options, these duals are set to zero. This options requires ``duals\_update\_type'' to be ``lsq'' (the option is ignored otherwise). Double values in $[0,10^{10}]$. Default value $10^{-6}$.
 
 
+\medskip
+
+\noindent \textbf{accept\_every\_trial\_stepduals}: disable the line-search and take the close-to-boundary step. String values: ``no'' (default) and ``yes''.
+
+\medskip
+
+\noindent \textbf{Hessian}: type of Hessian used with the filter IPM.
+\begin{itemize}
+\item ``quasinewton\_approx`` (default) - HiOp will build secant BFGS approximation for the Hessian and use a quasi-Newton filter IPM
+\item ``analytical\_exact'' - Hessian provided by the user and a Newton filter IPM algorithm will be used
+\end{itemize}
+
+\medskip
+
+\noindent \textbf{sigma0}: initial value of the initial multiplier of the identity in the secant approximation. Numeric values in $[0,10^7]$. Default value $1$.
+
+\medskip
+
+\noindent \textbf{secant\_memory\_len}: size of the memory (number of $(s,y)$ pairs) of the Hessian secant approximation. Integer values between $0$ and $256$. Default value $6$.
+
+\subsection{Linear algebra computational kernels}
+
+\noindent \textbf{KKTLinsys}: type of KKT linear system \textit{formulation} used internally
+\begin{itemize}
+\item ``auto'' (default): decided by \Hi based on the type of interface/NLP solved and ``compute\_mode`` and ``Hessian`` options
+\item ``xycyd'': symmetric indefinite (less stable but smaller size)
+\item ``xdycyd'': symmetric indefinite (more stable but  larger size)
+\item  ``full'': unsymetric suitable for LU solvers (experimental)
+\end{itemize}
+
+\medskip
+
+\noindent \textbf{linsol\_mode}: for some problem classes and KKT linearizations, one can instruct \Hi to switch between strategies for solving the IPM linear systems.
+\begin{itemize}
+\item ``stable'' (default): the most stable factorization is used
+\item ``speculative'': switch to faster linear solvers when is detected to be safe to do so. This is available for MDS problems and can offer considerable speed-up for these problems. The option is experimental and should be used only by advanced users
+\item ``forcequick'' rely on fast solvers (experimental, avoid)
+\end{itemize}
+
+\medskip
+
+\noindent \textbf{compute\_mode}: offloading of computations to GPUs
+\begin{itemize}
+\item ``auto'' (default): identical to ``hybrid''
+\item ``cpu'': run everything on cpu
+\item ``hybrid'':  \Hi will decide internally based on the type of NLP problem solved and other options which computational kernels will be offloaded to GPU. It usually runs the expensive linear solves on GPU but the remaining computations on the host/CPU.
+\item ``gpu'': run the all the computational kernels on the device; some computations (\textit{e.g.}, logic and control loop) will run on CPU. As of v0.4, this compute mode is experimental, should be used only by advanced users. 
+\end{itemize}
+
+\medskip
+
+%% memory space selection
+
+\noindent \textbf{mem\_space}: specifies the primary memory space in which the RAJA-based optimization and linear algebra objects will be created
+\begin{itemize}
+\item ``default'' (default): the default memory space as per RAJA specification 
+\item ``host'': cpu memory space
+\item ``device'': device memory space
+\item ``um'': unified memory space
+\end{itemize}
+
+\medskip
+
+\subsection{Problem preprocessing}
+
+
+\noindent \textbf{fixed\_var}: treatment of  variables that are detected to be fixed (according to the tolerance specified by ``fixed\_var\_tolerance'')
+\begin{itemize}
+\item ``none'' (default): will not handle fixed variable and will exit with an error message if such variable is encountered
+\item ``relax'':  relax the fixed variables accordingly to ``fixed\_var\_perturb'' option below
+\item ``'remove'': remove variables from the (internal) NLP formulation
+\end{itemize}
+
+\medskip
+
+\noindent \textbf{fixed\_var\_tolerance}: a variable (say the $i$th) is considered fixed if 
+\begin{displaymath}
+|(x_u)_i-(x_l)_i| < \textnormal{fixed\_var\_tolerance} \times \max(|(x_u)_i|,1).
+\end{displaymath}
+This option takes double values in $[10^{-30}, 10^{-2}]$ and has a default value $10^{-15}$.
+
+\medskip
+
+\noindent \textbf{fixed\_var\_perturb}: Perturbation of the lower and upper bounds for fixed variables relative their  magnitude. A variable (say the $i$th) is ``relaxed'' accordingly to 
+\begin{align*}
+(x_l)_i & =  (x_l)_i -  \max(|(x_u)_i|,1) \times \textnormal{fixed\_var\_perturb} \\
+(x_u)_i & =  (x_u)_i +  \max(|(x_u)_i|,1) \times \textnormal{fixed\_var\_perturb}
+\end{align*}
+This option takes double values in $[10^{-14}, 0.1]$ and has a default value $10^{-8}$.
+
+%% registerStrOption("fixed_var", "none", range,
+%% 		      "Treatment of fixed variables: 'remove' from the problem, 'relax' bounds "
+%% 		      "by 'fixed_var_perturb', or 'none', in which case the HiOp will terminate "
+%% 		      "with an error message if fixed variables are detected (default 'none'). "
+%%                       "Value 'remove' is available only when 'compute_mode' is 'hybrid' or 'cpu'.");
+
+%%     registerNumOption("fixed_var_tolerance", 1e-15, 1e-30, 0.01,
+%% 		      "A variable is considered fixed if |upp_bnd-low_bnd| < fixed_var_tolerance * "
+%% 		      "max(abs(upp_bnd),1) (default 1e-15)");
+
+%%     registerNumOption("fixed_var_perturb", 1e-8, 1e-14, 0.1,
+%% 		      "Perturbation of the lower and upper bounds for fixed variables relative "
+%% 		      "to its magnitude: lower/upper_bound -=/+= max(abs(upper_bound),1)*"
+%% 		      "fixed_var_perturb (default 1e-8)");
+
+
+
+%%%% scaling
+
+\noindent \textbf{scaling\_type}: scaling method for the user's NLP
+\begin{itemize}
+\item ``none'' (default): perform no problem scaling 
+\item ``gradient'':  will scale the problem such that the inf-norm of gradient at the initial point is less or equal to the value of ``scaling\_max\_grad'' option.
+\end{itemize}
+
+\medskip
+
+\noindent \textbf{scaling\_max\_grad}: The user's NLP will be rescaled if the inf-norm of the gradient at the starting point is larger than the value of this option. Double values in $[10^{-20}, 10^{20}]$. Default value $100$.
+
+
+\medskip
 
 
 %\input{old_stuff}
