@@ -298,7 +298,7 @@ option adds the \texttt{make} targets \texttt{doc} and \texttt{install\_doc}
 which build and install the documentation respectively. When installed, 
 \texttt{html} and \LaTeX{}/pdf documentation may be found under 
 \texttt{<install prefix>/doc/html} and \texttt{<install prefix>/doc/html}, 
-respectively.
+respectively.
 
 To build every configuration of HiOp for testing purposes, the build script has an option \texttt{./BUILD.sh --full-build-matrix}. See the testing section of \texttt{README\_developers.md} for more information.
 
@@ -620,7 +620,7 @@ Parameters:
 \item \texttt{JacD} should contain the Jacobian with respect to the dense variables of the MDS problem. The array should store this Jacobian submatrix row-wise, meaning that the each row of the Jacobian is contiguous in memory and starts right after the previous row.
 \end{itemize}
 
-Notes for implementer of this method: 
+\warningcp{Note:} When implementing this methods one should be aware that:
 \begin{itemize}
 \item[1.] \texttt{JacD} parameter will be always non-null
 \item[2.] When \texttt{iJacS} and \texttt{jJacS} are non-null, the implementer should provide the $(i,j)$   indexes in these arrays. 
@@ -681,7 +681,11 @@ bool eval_Hess_Lagr(const long long& n, const long long& m,
  
 \warningcp{Note:} Notes 1-5 from \texttt{eval\_Jac\_cons} apply to arrays \texttt{iHSS}, \texttt{jHSS}, and \texttt{MHSS} storing the sparse part of the Hessian as well as to the \texttt{HDD} array storing the dense block of the Hessian. 
 
-\warningcp{Note:} The array \texttt{lambda} contains first the multipliers of the equality constraints followed by the multipliers of the inequalities.
+\warningcp{Note:} The rule of thumb is that when specifying \textit{symmetric} matrices to \Hi, only the \textit{upper triangle elements} should be specified by the user. The rule applies both to sparse and dense matrices. More info on \Hi's conventions on matrices storage can be found at \url{https://github.com/LLNL/hiop/tree/develop/src/LinAlg}.
+
+%that sparse symmOnly upper triangular nonzero entries should be specified, accessed, and maintained. The Hessian and the symmetric KKT systems are implemented as symmetric matrices. Users only need to provide the upper triangle nonzero entries to Hessian. 
+
+\warningcp{Note:} The array \texttt{lambda} contains  the multipliers of constraints. These multipliers come have the same order as the constraints in \texttt{eval\_cons} (this is a new behavior introduced in \Hi v0.4).
 
 \subsubsection{Calling \Hi for a \texttt{hiopInterfaceMDS} formulation}
 Once an implementation of the \texttt{hiop::hiopInterfaceMDS} abstract interface class containing the user's NLP representation is available, the  user code needs to create a \Hi problem formulation that encapsulate the NLP representation, instantiate an optimization algorithm class, and start the numerical optimization process. 
@@ -786,7 +790,7 @@ The user can set \Hi's options in two ways:
 
 \subsection{Termination criteria and output}
 
-\noindent \textbf{tolerance}: maximum (absolute)  NLP optimality error allowed at the optimal solution. Double values in $[10e-14,0.1]$. Default value: $10e-8$. 
+\noindent \textbf{tolerance}: maximum (absolute)  NLP optimality error allowed at the optimal solution. Double values in $[10^{-14},0.1]$. Default value: $10^{-8}$. 
 
 \medskip
 
@@ -850,7 +854,7 @@ Double values in $[10^{-14},0.1]$. Default value $10^{-6}$.
 \medskip
 
 
-\noindent \textbf{duals\_init}: type of the update for the initialization of Lagrange multipliers corresponding to  the equality constraints. Possible values one of the the strings "lsq" (least-square (LSQ) solve initialization) and "zero"(multipliers are set identically to zero). Default value is "lsq". 
+\noindent \textbf{duals\_init}: type of the update for the initialization of Lagrange multipliers corresponding to  the equality constraints. Possible values one of the the strings ``lsq'' (least-square (LSQ) solve initialization) and ``zero'' (multipliers are set identically to zero). Default value is ``lsq''.
 
 \medskip
 
@@ -950,29 +954,20 @@ This option takes double values in $[10^{-30}, 10^{-2}]$ and has a default value
 
 \medskip
 
-\noindent \textbf{fixed\_var\_perturb}: Perturbation of the lower and upper bounds for fixed variables relative their  magnitude. A variable (say the $i$th) is ``relaxed'' accordingly to 
+\noindent \textbf{fixed\_var\_perturb}: fixed variable perturbation of the lower and upper bounds for fixed variables relative their  magnitude. A variable (say the $i$th) (that is detected to be fixed) is ``relaxed'' accordingly to 
 \begin{align*}
 (x_l)_i & =  (x_l)_i -  \max(|(x_u)_i|,1) \times \textnormal{fixed\_var\_perturb} \\
-(x_u)_i & =  (x_u)_i +  \max(|(x_u)_i|,1) \times \textnormal{fixed\_var\_perturb}
+(x_u)_i & =  (x_u)_i +  \max(|(x_u)_i|,1) \times \textnormal{fixed\_var\_perturb}.
 \end{align*}
 This option takes double values in $[10^{-14}, 0.1]$ and has a default value $10^{-8}$.
 
-%% registerStrOption("fixed_var", "none", range,
-%% 		      "Treatment of fixed variables: 'remove' from the problem, 'relax' bounds "
-%% 		      "by 'fixed_var_perturb', or 'none', in which case the HiOp will terminate "
-%% 		      "with an error message if fixed variables are detected (default 'none'). "
-%%                       "Value 'remove' is available only when 'compute_mode' is 'hybrid' or 'cpu'.");
 
-%%     registerNumOption("fixed_var_tolerance", 1e-15, 1e-30, 0.01,
-%% 		      "A variable is considered fixed if |upp_bnd-low_bnd| < fixed_var_tolerance * "
-%% 		      "max(abs(upp_bnd),1) (default 1e-15)");
-
-%%     registerNumOption("fixed_var_perturb", 1e-8, 1e-14, 0.1,
-%% 		      "Perturbation of the lower and upper bounds for fixed variables relative "
-%% 		      "to its magnitude: lower/upper_bound -=/+= max(abs(upper_bound),1)*"
-%% 		      "fixed_var_perturb (default 1e-8)");
-
-
+\noindent \textbf{bound\_relax\_perturb}: perturbation of the lower and upper bounds for all variables and all constraints relative to their magnitude. A variable or constraint (say the $i$th) with lower and upper bounds $(x_l)_i$ and $(x_u)_i$, respectively,  is ``relaxed'' accordingly to 
+\begin{align*}
+(x_l)_i & =  (x_l)_i -  \max(|(x_l)_i|,1) \times \textnormal{bound\_relax\_perturb} \\
+(x_u)_i & =  (x_u)_i +  \max(|(x_u)_i|,1) \times \textnormal{bound\_relax\_perturb}.
+\end{align*}
+This option takes double values in $[0, 10^{20}]$ and has a default value $10^{-8}$.
 
 %%%% scaling
 
