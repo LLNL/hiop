@@ -423,7 +423,7 @@ bool get_MPI_comm(MPI_Comm& comm_out) ;
 bool get_vecdistrib_info(long long global_n, long long* cols);
 \end{lstlisting}
 
-\noindent Use this method to specify the data distribution of the data of the problem that has storage depending on $n$. \Hi will call the implementation of this methods to obtain the partitioning/distribution of an hypothetical vector of size \texttt{global\_n} across the MPI ranks. The array \texttt{cols} is of dimension number of ranks plus one and should be populated such that \texttt{cols[r]} and \texttt{cols[r+1]-1} specify the start and end indexes of the slice stored on rank $r$ in the hypothetical vector.  It has a default implementation that will returns \texttt{false}, indicating that \Hi should run in serial.
+\noindent Use this method to specify the data distribution of the data of the problem that has storage depending on $n$. \Hi will call the implementation of this method to obtain the partitioning/distribution of an hypothetical vector of size \texttt{global\_n} across the MPI ranks. The array \texttt{cols} is of dimension number of ranks plus one and should be populated such that \texttt{cols[r]} and \texttt{cols[r+1]-1} specify the start and end indexes of the slice stored on rank $r$ in the hypothetical vector.  It has a default implementation that will returns \texttt{false}, indicating that \Hi should run in serial.
 
 
 \warningcp{Note:}  \Hi also uses \texttt{get\_vecdistrib\_info} to obtain the information about the Jacobians' distribution across MPI ranks (this is possible since they are  column-wise distributed).
@@ -620,7 +620,7 @@ Parameters:
 \item \texttt{JacD} should contain the Jacobian with respect to the dense variables of the MDS problem. The array should store this Jacobian submatrix row-wise, meaning that the each row of the Jacobian is contiguous in memory and starts right after the previous row.
 \end{itemize}
 
-\warningcp{Note:} When implementing this methods one should be aware that:
+\warningcp{Note:} When implementing this method one should be aware that:
 \begin{itemize}
 \item[1.] \texttt{JacD} parameter will be always non-null
 \item[2.] When \texttt{iJacS} and \texttt{jJacS} are non-null, the implementer should provide the $(i,j)$   indexes in these arrays. 
