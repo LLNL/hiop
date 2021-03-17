@@ -494,6 +494,11 @@ bool hiopAlgPrimalDecomposition::stopping_criteria(const int it, const double co
   return false;
 }
   
+void hiopAlgPrimalDecomposition::set_max_iteration(const int max_it)  
+{
+  max_iter = max_it;
+}
+
 void hiopAlgPrimalDecomposition::set_verbosity(const int i)
 {
   assert(i<=3 && i>=0);
@@ -554,7 +559,6 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
     int end_signal = 0;
     double t1 = 0;
     double t2 = 0; 
-
     hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator = new hiopInterfacePriDecProblem::
 		                                             RecourseApproxEvaluator(nc_,S_,xc_idx_);
 
@@ -647,6 +651,8 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
         }
         int last_loop = 0;
         //printf("total idx %d\n", S_);
+        t2 = MPI_Wtime(); 
+        printf( "Elapsed time for iteration %d for misc is %f\n",it, t2 - t1 );  
         while(idx<=S_ || last_loop) { 
           //std::this_thread::sleep_for(std::chrono::milliseconds(10)); //optional, used to adjust time
           for(int r=1; r< comm_size_;r++) {
@@ -763,7 +769,6 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
         // ierr = MPI_Test(&request_[0], &mpi_test_flag, &status_);
         // ierr = MPI_Irecv(&cont_idx[0], 1, MPI_INT, rank_master, 1, comm_world_, &request_[0]); 
         req_cont_idx->post_recv(1, rank_master, comm_world_);
-
         while(cont_idx[0]!=-1) {//loop until end signal received
           //printf("contingency index %d, rank %d)\n",cont_idx[0],my_rank_);
           //mpi_test_flag = rec_prob[my_rank_]->test();

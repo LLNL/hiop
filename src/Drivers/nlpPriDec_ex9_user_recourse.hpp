@@ -55,6 +55,28 @@ public:
     nsparse_ = int(nx_*sparse_ratio);
   }
 
+  PriDecRecourseProblemEx9(int n, 
+		           int nS, 
+			   int S, 
+			   int idx,
+			   const double* x,
+		           const double* xi): nx_(n), nS_(nS), S_(S)
+  {
+    assert(nS_>=1);
+    assert(nx_>=nS_);  // ny=nx=n
+    assert(S_>=1);
+
+    ny_ = nx_;
+    xi_ = new double[nS_];
+    memcpy(xi_,xi, nS_*sizeof(double));
+    x_ = new double[nx_];
+
+    //assert("for debugging" && false); //for debugging purpose
+    memcpy(x_,x, nx_*sizeof(double));
+    nsparse_ = int(nx_*sparse_ratio);
+    idx_ = idx;
+  }
+
   virtual ~PriDecRecourseProblemEx9()
   {
     delete[] x_;
@@ -113,7 +135,16 @@ public:
       clow[i] = 0.;
       cupp[i] = 1e20;
     }
-    clow[ny_-1] = 1.;
+
+    /*if(idx_<=10) {
+      for(int i=0;i<100;i++) {
+        clow[i] = 0.;
+        cupp[i] = 0.;
+      }
+    }*/
+
+    //clow[ny_-1] = 1.;
+    clow[ny_-1] = 1.; //This is changing a lot
     cupp[ny_-1] = 1e20;
     return true;
   }
@@ -180,7 +211,11 @@ public:
         for(int i=nS_;i<nx_;i++) {
           cons[m-1] += x[i]*x[i];
         }
-      } 
+      }
+      /*if(idx_<=10 && con_idx<100) {
+        cons[con_idx] = x[con_idx]-x_[idx];
+      }*/    
+
     }
     return true; 
   }
@@ -401,6 +436,8 @@ public:
     //assert(false && "not implemented");
     return false;
   }
+
+
   /*
    * computing the derivative of the recourse function with respect to x in the problem description
    * which is the x_ in the protected variable, while x in the function implementation
@@ -430,7 +467,8 @@ protected:
   int ny_;
   int nS_;
   int S_;
-  double sparse_ratio = 0.3;
+  int idx_;
+  double sparse_ratio = 0.7;
   int nsparse_;
 };
 

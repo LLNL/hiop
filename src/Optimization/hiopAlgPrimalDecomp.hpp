@@ -72,6 +72,8 @@ public:
   void set_verbosity(const int i);
 
   void set_initial_alpha_ratio(const double ratio);
+    
+  void set_max_iteration(const int max_it); 
   /* Contains information of a solution step including function value 
    * and gradient. Used for storing the solution for the previous iteration
    */
@@ -168,7 +170,8 @@ public:
      */
     double check_convergence_grad(const double* gk);
     double check_convergence_fcn( );
- 
+
+
     // setting the output level for the Hessian approximation 
     void set_verbosity(const int i); 
 
