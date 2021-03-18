@@ -873,6 +873,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
 
   //int algStatus=0;
   bool bret=true; int lsStatus=-1, lsNum=0;
+  int num_adjusted_bounds = 0;
   solver_status_ = NlpSolve_Pending;
   while(true) {
 
@@ -1002,6 +1003,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
       }
       iniStep=false;
       bret = it_trial->takeStep_primals(*it_curr, *dir, _alpha_primal, _alpha_dual); assert(bret);
+      num_adjusted_bounds = it_trial->adjust_small_slacks(*it_curr, _mu);
       nlp->runStats.tmSolverInternal.stop(); //---
 
       //evaluate the problem at the trial iterate (functions only)
@@ -1097,6 +1099,10 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
       } //end of else: theta_trial<theta_min
     } //end of while for the linesearch loop
     nlp->runStats.tmSolverInternal.stop();
+
+    if(num_adjusted_bounds > 0) {
+      nlp->log->printf(hovWarning, "%d slacks are too small. Adjust corresponding variable bounds!\n", num_adjusted_bounds);
+    }
 
     //post line-search stuff
     //filter is augmented whenever the switching condition or Armijo rule do not hold for the trial point that was just accepted

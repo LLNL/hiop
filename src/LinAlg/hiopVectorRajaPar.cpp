@@ -1052,7 +1052,7 @@ double hiopVectorRajaPar::min() const
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       minimum.min(data[i]);
-		}
+    }
   );
   double ret_val = minimum.get();
 
