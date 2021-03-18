@@ -18,7 +18,7 @@ If you are not compatible, state what is lacking and what are your plans on how 
 |**M4.** Give best effort at portability to key architectures (standard Linux distributions, GNU, Clang, vendor compilers, and target machines at ALCF, NERSC, OLCF). |Full| Our continuous integration tests every branch on multiple platforms. |
 |**M5.** Provide a documented, reliable way to contact the development team. |Full| [Submit issues here](https://github.com/LLNL/hiop/issues). |
 |**M6.** Respect system resources and settings made by other previously called packages (e.g. signal handling). |Full| None. |
-|**M7.** Come with an open source (BSD style) license. |Full| Use 2-clause BSD license. |
+|**M7.** Come with an open source (BSD style) license. |Full| Use 3-clause BSD license. |
 |**M8.** Provide a runtime API to return the current version number of the software. |Full| Header `hiopVersion.hpp` provides functions and data such as `void version(int& major, int& minor, int& patch)`. |
 |**M9.** Use a limited and well-defined symbol, macro, library, and include file name space. |Full| None. |
 |**M10.** Provide an xSDK team accessible repository (not necessarily publicly available). |Full| None. |
