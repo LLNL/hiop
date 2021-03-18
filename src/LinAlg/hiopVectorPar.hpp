@@ -121,7 +121,9 @@ public:
   virtual void component_min(const hiopVector& v);
   virtual void component_max(const double constant);
   virtual void component_max(const hiopVector& v);
-  
+  virtual void component_abs();
+  virtual void component_sgn();
+
   virtual void scale( double alpha );
   /// @brief this += alpha * x
   virtual void axpy  ( double alpha, const hiopVector& x );
@@ -133,6 +135,8 @@ public:
   /// @brief Add c to the elements of this
   virtual void addConstant( double c );
   virtual void addConstant_w_patternSelect(double c, const hiopVector& ix);
+  virtual double min() const;
+  virtual double min_w_pattern(const hiopVector& select) const;  
   virtual void min( double& m, int& index ) const;
   virtual void negate();
   virtual void invert();

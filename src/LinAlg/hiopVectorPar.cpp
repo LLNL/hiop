@@ -426,6 +426,21 @@ void hiopVectorPar::component_max(const hiopVector& v_)
   }
 }
 
+void hiopVectorPar::component_abs()
+{
+  for(int i=0; i<n_local_; i++) {
+    data_[i] = fabs(data_[i]);  
+  }
+}
+
+void hiopVectorPar::component_sgn()
+{
+  for(int i=0; i<n_local_; i++) {
+    int sign = (0.0 < data_[i]) - (data_[i] < 0.0);
+    data_[i] = static_cast<double>(sign);      
+  }
+}
+
 void hiopVectorPar::scale(double num)
 {
   if(1.0==num) return;
@@ -534,6 +549,40 @@ void  hiopVectorPar::addConstant_w_patternSelect(double c, const hiopVector& ix_
   assert(this->n_local_ == ix.n_local_);
   const double* ix_vec = ix.data_;
   for(int i=0; i<n_local_; i++) if(ix_vec[i]==1.) data_[i]+=c;
+}
+
+double hiopVectorPar::min() const
+{
+  double ret_val = std::numeric_limits<double>::max();
+  for(int i=0; i<n_local_; i++) {
+    ret_val = (ret_val < data_[i]) ? ret_val : data_[i];
+  }
+#ifdef HIOP_USE_MPI
+  double ret_val_g;
+  int ierr=MPI_Allreduce(&ret_val, &ret_val_g, 1, MPI_DOUBLE, MPI_MIN, comm_); assert(MPI_SUCCESS==ierr);
+  ret_val = ret_val_g;
+#endif
+  return ret_val;
+}
+
+double hiopVectorPar::min_w_pattern(const hiopVector& select) const
+{
+  const hiopVectorPar& ix = dynamic_cast<const hiopVectorPar&>(select);
+  assert(this->n_local_ == ix.n_local_);
+  
+  double ret_val = std::numeric_limits<double>::max();
+  const double* ix_vec = ix.data_;
+  for(int i=0; i<n_local_; i++) {
+    if(ix_vec[i]==1.) {
+      ret_val = (ret_val < data_[i]) ? ret_val : data_[i];
+    }   
+  }
+#ifdef HIOP_USE_MPI
+  double ret_val_g;
+  int ierr=MPI_Allreduce(&ret_val, &ret_val_g, 1, MPI_DOUBLE, MPI_MIN, comm_); assert(MPI_SUCCESS==ierr);
+  ret_val = ret_val_g;
+#endif
+  return ret_val;
 }
 
 void hiopVectorPar::min( double& m, int& index ) const

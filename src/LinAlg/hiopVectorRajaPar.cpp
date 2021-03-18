@@ -856,6 +856,37 @@ void hiopVectorRajaPar::component_max(const hiopVector& vec)
 }
 
 /**
+ * @brief Set each component to its absolute value
+ */
+void hiopVectorRajaPar::component_abs ()
+{
+  double* dd = data_dev_;
+  RAJA::forall< hiop_raja_exec >(
+    RAJA::RangeSegment(0, n_local_),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      dd[i] = fabs(dd[i]);
+    }
+  );
+}
+
+/**
+ * @brief Set each component to its absolute value
+ */
+void hiopVectorRajaPar::component_sgn ()
+{
+  double* dd = data_dev_;
+  RAJA::forall< hiop_raja_exec >(
+    RAJA::RangeSegment(0, n_local_),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      int sign = (0.0 < dd[i]) - (dd[i] < 0.0);
+      dd[i] = static_cast<double>(sign);      
+    }
+  );
+}
+
+/**
  * @brief Scale `this` vector by `c` 
  * 
  * @note Consider implementing with BLAS call (<D>SCAL)
@@ -1009,6 +1040,56 @@ void  hiopVectorRajaPar::addConstant_w_patternSelect(double c, const hiopVector&
       assert(id[i] == one || id[i] == zero);
       data[i] += id[i]*c;
     });
+}
+
+/// Find minimum vector element
+double hiopVectorRajaPar::min() const
+{
+  double* data = data_dev_;
+  RAJA::ReduceMin< hiop_raja_reduce, double > minimum(std::numeric_limits<double>::max());
+  RAJA::forall< hiop_raja_exec >(
+    RAJA::RangeSegment(0, n_local_),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      minimum.min(data[i]);
+    }
+  );
+  double ret_val = minimum.get();
+
+#ifdef HIOP_USE_MPI
+  double ret_val_g;
+  int ierr=MPI_Allreduce(&ret_val, &ret_val_g, 1, MPI_DOUBLE, MPI_MIN, comm_); assert(MPI_SUCCESS==ierr);
+  ret_val = ret_val_g;
+#endif
+  return ret_val;
+}
+
+/// Find minimum vector element for `select` pattern
+double hiopVectorRajaPar::min_w_pattern(const hiopVector& select) const
+{
+  const hiopVectorRajaPar& sel = dynamic_cast<const hiopVectorRajaPar&>(select);
+  assert(this->n_local_ == sel.n_local_);
+  double* data = data_dev_;
+  const double* id = sel.local_data_const();
+  
+  RAJA::ReduceMin< hiop_raja_reduce, double > minimum(std::numeric_limits<double>::max());
+  RAJA::forall< hiop_raja_exec >(
+    RAJA::RangeSegment(0, n_local_),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      if(id[i] == one) {
+        minimum.min(data[i]);
+      }
+    }
+  );
+  double ret_val = minimum.get();
+
+#ifdef HIOP_USE_MPI
+  double ret_val_g;
+  int ierr=MPI_Allreduce(&ret_val, &ret_val_g, 1, MPI_DOUBLE, MPI_MIN, comm_); assert(MPI_SUCCESS==ierr);
+  ret_val = ret_val_g;
+#endif
+  return ret_val;
 }
 
 /// Find minimum vector element

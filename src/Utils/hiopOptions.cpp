@@ -223,6 +223,14 @@ void hiopOptions::registerOptions()
 		      "larger than the value of this option (default 100)");
   }
   
+  // relax bound
+  {
+    registerNumOption("bound_relax_perturb", 1e-8, 0.0, 1e20,
+		      "Perturbation of the lower and upper bounds for variables and constraints relative"
+		      "to its magnitude: lower/upper_bound -=/+= bound_relax_perturb*max(abs(lower/upper_bound),1)*"
+		      "bound_relax_perturb (default 1e-8)");
+  }
+
   //optimization method used
   {
     vector<string> range(2); range[0]="quasinewton_approx"; range[1]="analytical_exact";
