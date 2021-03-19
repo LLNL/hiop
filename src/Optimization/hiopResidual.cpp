@@ -226,7 +226,7 @@ int hiopResidual::update(const hiopIterate& it,
     if(nlp->n_low_local()<nx_loc)
       rxl->selectPattern(nlp->get_ixl());
     buf = rxl->infnorm_local();
-    nrmInf_nlp_feasib = fmax(nrmInf_nlp_feasib, buf);
+//    nrmInf_nlp_feasib = fmax(nrmInf_nlp_feasib, buf);
     nlp->log->printf(hovScalars,"NLP resid [update]: inf norm rxl=%22.17e\n", buf);
   }
   //printf("  %10.4e (xl)", nrmInf_nlp_feasib);
@@ -238,7 +238,7 @@ int hiopResidual::update(const hiopIterate& it,
     if(nlp->n_upp_local()<nx_loc)
       rxu->selectPattern(nlp->get_ixu());
     buf = rxu->infnorm_local();
-    nrmInf_nlp_feasib = fmax(nrmInf_nlp_feasib, buf);
+//    nrmInf_nlp_feasib = fmax(nrmInf_nlp_feasib, buf);
     nlp->log->printf(hovScalars,"NLP resid [update]: inf norm rxu=%22.17e\n", buf);
   }  
   //printf("  %10.4e (xu)", nrmInf_nlp_feasib);
@@ -247,7 +247,7 @@ int hiopResidual::update(const hiopIterate& it,
     rdl->copyFrom(*it.d); rdl->axpy(-1.0,*it.sdl); rdl->axpy(-1.0,nlp->get_dl());
     rdl->selectPattern(nlp->get_idl());
     buf = rdl->infnorm_local();
-    nrmInf_nlp_feasib = fmax(nrmInf_nlp_feasib, buf);
+//    nrmInf_nlp_feasib = fmax(nrmInf_nlp_feasib, buf);
     nlp->log->printf(hovScalars,"NLP resid [update]: inf norm rdl=%22.17e\n", buf);
   }
   //printf("  %10.4e (dl)", nrmInf_nlp_feasib);
@@ -258,7 +258,7 @@ int hiopResidual::update(const hiopIterate& it,
     rdu->axpy(-1.0,*it.d);
     rdu->selectPattern(nlp->get_idu());
     buf = rdu->infnorm_local();
-    nrmInf_nlp_feasib = fmax(nrmInf_nlp_feasib, buf);
+//    nrmInf_nlp_feasib = fmax(nrmInf_nlp_feasib, buf);
     nlp->log->printf(hovScalars,"NLP resid [update]: inf norm rdl=%22.17e\n", buf);
   }
   //printf("  %10.4e (du)\n", nrmInf_nlp_feasib);
