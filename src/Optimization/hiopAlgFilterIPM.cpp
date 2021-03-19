@@ -266,7 +266,7 @@ void hiopAlgFilterIPMBase::reloadOptions()
   }
 
   gamma_theta = 1e-5; //sufficient progress parameters for the feasibility violation
-  gamma_phi=1e-5;     //and log barrier objective
+  gamma_phi=1e-8;     //and log barrier objective
   s_theta=1.1;        //parameters in the switch condition of
   s_phi=2.3;          // the linearsearch (equation 19) in
   delta=1.;           // the WachterBiegler paper
@@ -856,8 +856,8 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
 
   iter_num=0; nlp->runStats.nIter=iter_num;
 
-  theta_max=1e+4*fmax(1.0,resid->getInfeasInfNorm());
-  theta_min=1e-4*fmax(1.0,resid->getInfeasInfNorm());
+  theta_max=1e+4*fmax(1.0,resid->get_theta());
+  theta_min=1e-4*fmax(1.0,resid->get_theta());
 
   hiopKKTLinSysLowRank* kkt=new hiopKKTLinSysLowRank(nlp);
 
@@ -1016,7 +1016,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
 
       nlp->runStats.tmSolverInternal.start(); //---
       //compute infeasibility theta at trial point.
-      infeas_nrm_trial = theta_trial = resid->computeNlpInfeasInfNorm(*it_trial, *_c_trial, *_d_trial);
+      infeas_nrm_trial = theta_trial = resid->compute_nlp_norms(*it_trial, *_c_trial, *_d_trial);
 
       lsNum++;
 
@@ -1322,7 +1322,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 
   //update log bar
   logbar->updateWithNlpInfo(*it_curr, _mu, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d);
-  nlp->log->printf(hovScalars, "log bar obj: %g", logbar->f_logbar);
+  nlp->log->printf(hovScalars, "log bar obj: %g\n", logbar->f_logbar);
   //recompute the residuals
   resid->update(*it_curr,_f_nlp, *_c, *_d,*_grad_f,*_Jac_c,*_Jac_d, *logbar);
 
@@ -1333,8 +1333,8 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
   iter_num=0; nlp->runStats.nIter=iter_num;
   bool disableLS = nlp->options->GetString("accept_every_trial_step")=="yes";
 
-  theta_max=1e+4*fmax(1.0,resid->getInfeasInfNorm());
-  theta_min=1e-4*fmax(1.0,resid->getInfeasInfNorm());
+  theta_max=1e+4*fmax(1.0,resid->get_theta());
+  theta_min=1e-4*fmax(1.0,resid->get_theta());
 
   hiopKKTLinSys* kkt = decideAndCreateLinearSystem(nlp);
   assert(kkt != NULL);
@@ -1569,7 +1569,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 
       //maximum  step
       bret = it_curr->fractionToTheBdry(*dir, _tau, _alpha_primal, _alpha_dual); assert(bret);
-      double theta = resid->getInfeasInfNorm(); //at it_curr
+      double theta = resid->get_theta(); //at it_curr
       double theta_trial;
       nlp->runStats.tmSolverInternal.stop();
 
@@ -1620,7 +1620,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 
         nlp->runStats.tmSolverInternal.start(); //---
         //compute infeasibility theta at trial point.
-        infeas_nrm_trial = theta_trial = resid->computeNlpInfeasInfNorm(*it_trial, *_c_trial, *_d_trial);
+        infeas_nrm_trial = theta_trial = resid->compute_nlp_norms(*it_trial, *_c_trial, *_d_trial);
 
         lsNum++;
 
