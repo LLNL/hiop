@@ -3,7 +3,7 @@
 This document summarizes the efforts of current and future xSDK member packages to achieve compatibility with the xSDK community policies. Below only short descriptions of each policy are provided. The full description is available [here](https://github.com/xsdk-project/xsdk-community-policies)
 and should be considered when filling out this form.
 
-Please, provide information on your compability status for each mandatory policy, and if possible also for recommended policies.
+Please, provide information on your compatibility status for each mandatory policy, and if possible also for recommended policies.
 If you are not compatible, state what is lacking and what are your plans on how to achieve compliance.
 
 **Website:** https://github.com/LLNL/hiop
