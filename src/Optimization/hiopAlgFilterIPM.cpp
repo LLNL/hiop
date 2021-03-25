@@ -1016,7 +1016,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
 
       nlp->runStats.tmSolverInternal.start(); //---
       //compute infeasibility theta at trial point.
-      infeas_nrm_trial = theta_trial = resid->compute_nlp_norms(*it_trial, *_c_trial, *_d_trial);
+      infeas_nrm_trial = theta_trial = resid->compute_nlp_infeasib_onenorm(*it_trial, *_c_trial, *_d_trial);
 
       lsNum++;
 
@@ -1620,7 +1620,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 
         nlp->runStats.tmSolverInternal.start(); //---
         //compute infeasibility theta at trial point.
-        infeas_nrm_trial = theta_trial = resid->compute_nlp_norms(*it_trial, *_c_trial, *_d_trial);
+        infeas_nrm_trial = theta_trial = resid->compute_nlp_infeasib_onenorm(*it_trial, *_c_trial, *_d_trial);
 
         lsNum++;
 

@@ -95,7 +95,7 @@ hiopResidual::~hiopResidual()
   if(rsvu) delete rsvu;
 }
 
-double hiopResidual::compute_nlp_norms(const hiopIterate& it, 
+double hiopResidual::compute_nlp_infeasib_onenorm (const hiopIterate& it, 
 			       const hiopVector& c, 
 			       const hiopVector& d)
 {
@@ -107,13 +107,11 @@ double hiopResidual::compute_nlp_norms(const hiopIterate& it,
   //ryc
   ryc->copyFrom(nlp->get_crhs());
   ryc->axpy(-1.0,c);
-//  nrmInf_infeasib = ryc->infnorm_local();
-  nrmOne_infeasib += ryc->onenorm_local();
+  nrmOne_infeasib += ryc->onenorm();
   //ryd
   ryd->copyFrom(*it.d);
   ryd->axpy(-1.0, d);
-//  nrmInf_infeasib = fmax(nrmInf_infeasib, ryd->infnorm_local());
-  nrmOne_infeasib += ryd->onenorm_local();
+  nrmOne_infeasib += ryd->onenorm();
   //rxl=x-sxl-xl
   if(nlp->n_low_local()>0) {
     rxl->copyFrom(*it.x);
@@ -122,39 +120,24 @@ double hiopResidual::compute_nlp_norms(const hiopIterate& it,
     //zero out entries in the resid that don't correspond to a finite low bound 
     if(nlp->n_low_local()<nx_loc)
       rxl->selectPattern(nlp->get_ixl());
-//    nrmInf_infeasib = fmax(nrmInf_infeasib, rxl->infnorm_local());
   }
   //rxu=-x-sxu+xu
   if(nlp->n_upp_local()>0) {
     rxu->copyFrom(nlp->get_xu()); rxu->axpy(-1.0,*it.x); rxu->axpy(-1.0,*it.sxu);
     if(nlp->n_upp_local()<nx_loc)
       rxu->selectPattern(nlp->get_ixu());
-//    nrmInf_infeasib = fmax(nrmInf_infeasib, rxu->infnorm_local());
   }
   //rdl=d-sdl-dl
   if(nlp->m_ineq_low()>0) {
     rdl->copyFrom(*it.d); rdl->axpy(-1.0,*it.sdl); rdl->axpy(-1.0,nlp->get_dl());
     rdl->selectPattern(nlp->get_idl());
-//    nrmInf_infeasib = fmax(nrmInf_infeasib, rdl->infnorm_local());
   }
   //rdu=-d-sdu+du
   if(nlp->m_ineq_upp()>0) {
     rdu->copyFrom(nlp->get_du()); rdu->axpy(-1.0,*it.sdu); rdu->axpy(-1.0,*it.d);
     rdu->selectPattern(nlp->get_idu());
-//    nrmInf_infeasib = fmax(nrmInf_infeasib, rdu->infnorm_local());
   }
 
-#ifdef HIOP_USE_MPI
-  //here we reduce each of the norm together for a total cost of 1 Allreduce of 3 doubles
-  //otherwise, if calling infnorm() for each vector, there will be 12 Allreduce's, each of 1 double
-//  double aux;
-//  int ierr = MPI_Allreduce(&nrmInf_infeasib, &aux, 1, MPI_DOUBLE, MPI_MAX, nlp->get_comm()); assert(MPI_SUCCESS==ierr);
-//  nrmInf_infeasib = aux;
-
-  double sum_one_norm = 0.0;
-  int ierr = MPI_Allreduce(nrmOne_infeasib, sum_one_norm, 1, MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(MPI_SUCCESS==ierr);
-  nrmOne_infeasib = sum_one_norm;
-#endif
   nlp->runStats.tmSolverInternal.stop();
   return nrmOne_infeasib;
 }
@@ -206,7 +189,7 @@ int hiopResidual::update(const hiopIterate& it,
   ryc->axpy(-1.0,c);
   buf = ryc->infnorm_local();
   nrmInf_nlp_feasib = fmax(nrmInf_nlp_feasib, buf);
-  nrmOne_theta += ryc->onenorm_local();
+  nrmOne_theta += ryc->onenorm();
   nlp->log->printf(hovScalars,"NLP resid [update]: inf norm ryc=%22.17e\n", buf);
 
   //ryd
@@ -214,7 +197,7 @@ int hiopResidual::update(const hiopIterate& it,
   ryd->axpy(-1.0, d);
   buf = ryd->infnorm_local();
   nrmInf_nlp_feasib = fmax(nrmInf_nlp_feasib, buf);
-  nrmOne_theta += ryd->onenorm_local();
+  nrmOne_theta += ryd->onenorm();
   nlp->log->printf(hovScalars,"NLP resid [update]: inf norm ryd=%22.17e\n", buf);
   
   //rxl=x-sxl-xl
@@ -329,11 +312,7 @@ int hiopResidual::update(const hiopIterate& it,
   double aux[6]={nrmInf_nlp_optim,nrmInf_nlp_feasib,nrmInf_nlp_complem,nrmInf_bar_optim,nrmInf_bar_feasib,nrmInf_bar_complem}, aux_g[6];
   int ierr = MPI_Allreduce(aux, aux_g, 6, MPI_DOUBLE, MPI_MAX, nlp->get_comm()); assert(MPI_SUCCESS==ierr);
   nrmInf_nlp_optim=aux_g[0]; nrmInf_nlp_feasib=aux_g[1]; nrmInf_nlp_complem=aux_g[2];
-  nrmInf_bar_optim=aux_g[3]; nrmInf_bar_feasib=aux_g[4]; nrmInf_bar_complem=aux_g[5];
-  
-  double sum_one_norm = 0.0;
-  int ierr = MPI_Allreduce(nrmOne_theta, sum_one_norm, 1, MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(MPI_SUCCESS==ierr);
-  nrmOne_theta = sum_one_norm;
+  nrmInf_bar_optim=aux_g[3]; nrmInf_bar_feasib=aux_g[4]; nrmInf_bar_complem=aux_g[5];  
 #endif
   nlp->runStats.tmSolverInternal.stop();
   return true;

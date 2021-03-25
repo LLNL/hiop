@@ -87,9 +87,9 @@ public:
    * The method modifies 'this', in particular ryd,ryc, rxl,rxu, rdl, rdu in an attempt
    * to reuse storage/buffers, but does not update the cached nrmInf_XXX members. 
    * It computes and returns the one norm of [ryc ryd] */
-  double compute_nlp_norms(const hiopIterate& iter,
-				 const hiopVector& c_eval,
-				 const hiopVector& d_eval);
+  double compute_nlp_infeasib_onenorm (const hiopIterate& iter,
+                                       const hiopVector& c_eval,
+                                       const hiopVector& d_eval);
 
   /* residual printing function - calls hiopVector::print
    * prints up to max_elems (by default all), on rank 'rank' (by default on all) */
