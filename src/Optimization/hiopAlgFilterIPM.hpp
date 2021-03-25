@@ -144,7 +144,7 @@ protected:
                                             bool &grad_phi_dx_computed,
                                             double &grad_phi_dx);
 
-  virtual void outputIteration(int lsStatus, int lsNum) = 0;
+  virtual void outputIteration(int lsStatus, int lsNum, int use_soc) = 0;
 
   //returns whether the algorithm should stop and set an appropriate solve status
   bool checkTermination(const double& _err_nlp, const int& iter_num, hiopSolveStatus& status);
@@ -241,7 +241,7 @@ public:
 
   virtual hiopSolveStatus run();
 private:
-  virtual void outputIteration(int lsStatus, int lsNum);
+  virtual void outputIteration(int lsStatus, int lsNum, int use_soc);
 private:
   hiopNlpDenseConstraints* nlpdc;
 private:
@@ -263,7 +263,7 @@ public:
   virtual hiopSolveStatus run();
 
 private:
-  virtual void outputIteration(int lsStatus, int lsNum);
+  virtual void outputIteration(int lsStatus, int lsNum, int use_soc);
   virtual hiopKKTLinSys* decideAndCreateLinearSystem(hiopNlpFormulation* nlp);
   /// @brief get the method to decide if a factorization is acceptable or not
   virtual hiopFactAcceptor* decideAndCreateFactAcceptor(hiopPDPerturbation* p, hiopNlpFormulation* nlp);

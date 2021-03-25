@@ -57,6 +57,8 @@
 #include <cmath>
 #include <cstring>
 #include <cassert>
+#include <stdio.h>
+#include <ctype.h>
 
 namespace hiop
 {
@@ -141,6 +143,10 @@ void hiopAlgFilterIPMBase::destructorPart()
   if(logbar) delete logbar;
 
   if(dualsUpdate) delete dualsUpdate;
+  
+  if(c_soc) delete c_soc;
+  if(d_soc) delete d_soc;
+  if(soc_dir) delete soc_dir;
 }
 hiopAlgFilterIPMBase::~hiopAlgFilterIPMBase()
 {
@@ -169,6 +175,10 @@ hiopAlgFilterIPMBase::~hiopAlgFilterIPMBase()
   if(logbar) delete logbar;
 
   if(dualsUpdate) delete dualsUpdate;
+  
+  if(c_soc) delete c_soc;
+  if(d_soc) delete d_soc;
+  if(soc_dir) delete soc_dir;
 }
 
 void hiopAlgFilterIPMBase::reInitializeNlpObjects()
@@ -201,6 +211,10 @@ void hiopAlgFilterIPMBase::reInitializeNlpObjects()
 
   resid = new hiopResidual(nlp);
   resid_trial = new hiopResidual(nlp);
+
+  c_soc = nlp->alloc_dual_eq_vec();
+  d_soc = nlp->alloc_dual_ineq_vec();
+  soc_dir = it_curr->alloc_clone();
 
   //0 LSQ (default), 1 linear update (more stable)
   duals_update_type = nlp->options->GetString("duals_update_type")=="lsq"?0:1;
@@ -874,6 +888,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
 
   //int algStatus=0;
   bool bret=true; int lsStatus=-1, lsNum=0;
+  int use_soc = 0;
   int num_adjusted_bounds = 0;
   solver_status_ = NlpSolve_Pending;
   while(true) {
@@ -892,7 +907,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
     nlp->log->printf(hovScalars,
 		     "  LogBar errs: pr-infeas:%23.17e   dual-infeas:%23.17e  comp:%23.17e  overall:%23.17e\n",
 		     _err_log_feas, _err_log_optim, _err_log_complem, _err_log);
-    outputIteration(lsStatus, lsNum);
+    outputIteration(lsStatus, lsNum, use_soc);
 
     if(_err_nlp_optim0<0) { // && _err_nlp_feas0<0 && _err_nlp_complem0<0
       _err_nlp_optim0=_err_nlp_optim; _err_nlp_feas0=_err_nlp_feas; _err_nlp_complem0=_err_nlp_complem;
@@ -982,6 +997,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
     //2 close to solution but switching condition does not hold, so trial accepted based on "sufficient decrease"
     //3 close to solution and switching condition is true; trial accepted based on Armijo
     lsStatus=0; lsNum=0;
+    use_soc = 0;
 
     bool grad_phi_dx_computed=false, iniStep=true; double grad_phi_dx;
 
@@ -1040,6 +1056,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
           num_adjusted_bounds = num_adjusted_bounds_soc;
           grad_phi_dx_computed = grad_phi_dx_soc_computed;
           grad_phi_dx = grad_phi_dx_soc;
+          use_soc = 1;
           break;
         }
       }
@@ -1139,22 +1156,29 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
   return solver_status_;
 }
 
-void hiopAlgFilterIPMQuasiNewton::outputIteration(int lsStatus, int lsNum)
+void hiopAlgFilterIPMQuasiNewton::outputIteration(int lsStatus, int lsNum, int use_soc)
 {
   if(iter_num/10*10==iter_num)
     nlp->log->printf(hovSummary, "iter    objective     inf_pr     inf_du   lg(mu)  alpha_du   alpha_pr linesrch\n");
 
   if(lsStatus==-1)
     nlp->log->printf(hovSummary, "%4d %14.7e %7.3e  %7.3e %6.2f  %7.3e  %7.3e  -(-)\n",
-		     iter_num, _f_nlp, _err_nlp_feas, _err_nlp_optim, log10(_mu), _alpha_dual, _alpha_primal);
+                     iter_num, _f_nlp/nlp->get_obj_scale(), _err_nlp_feas, _err_nlp_optim,
+                     log10(_mu), _alpha_dual, _alpha_primal);
   else {
     char stepType[2];
     if(lsStatus==1) strcpy(stepType, "s");
     else if(lsStatus==2) strcpy(stepType, "h");
     else if(lsStatus==3) strcpy(stepType, "f");
     else strcpy(stepType, "?");
+
+    if(use_soc && lsStatus >= 1 && lsStatus <= 3) {
+      stepType[0] = (char) toupper(stepType[0]);
+    }
+
     nlp->log->printf(hovSummary, "%4d %14.7e %7.3e  %7.3e %6.2f  %7.3e  %7.3e  %d(%s)\n",
-		     iter_num, _f_nlp, _err_nlp_feas, _err_nlp_optim, log10(_mu), _alpha_dual, _alpha_primal, lsNum, stepType);
+                     iter_num, _f_nlp/nlp->get_obj_scale(), _err_nlp_feas, _err_nlp_optim,
+                     log10(_mu), _alpha_dual, _alpha_primal, lsNum, stepType);
   }
 }
 
@@ -1311,6 +1335,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 
   bool bret=true;
   int lsStatus=-1, lsNum=0;
+  int use_soc = 0;
   int num_adjusted_bounds = 0;
 
   int linsol_safe_mode_lastiter = -1;
@@ -1336,7 +1361,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
       printf(hovScalars,
 	     "  LogBar errs: pr-infeas:%23.17e   dual-infeas:%23.17e  comp:%23.17e  overall:%23.17e\n",
 	     _err_log_feas, _err_log_optim, _err_log_complem, _err_log);
-    outputIteration(lsStatus, lsNum);
+    outputIteration(lsStatus, lsNum, use_soc);
 
     if(_err_nlp_optim0<0) { // && _err_nlp_feas0<0 && _err_nlp_complem0<0
       _err_nlp_optim0=_err_nlp_optim; _err_nlp_feas0=_err_nlp_feas; _err_nlp_complem0=_err_nlp_complem;
@@ -1531,6 +1556,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
       //2 close to solution but switching condition does not hold; trial accepted based on "sufficient decrease"
       //3 close to solution and switching condition is true; trial accepted based on Armijo
       lsStatus=0; lsNum=0;
+      use_soc = 0;
 
       bool grad_phi_dx_computed=false, iniStep=true; double grad_phi_dx;
 
@@ -1599,6 +1625,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
             num_adjusted_bounds = num_adjusted_bounds_soc;
             grad_phi_dx_computed = grad_phi_dx_soc_computed;
             grad_phi_dx = grad_phi_dx_soc;
+            use_soc = 1;
             break;
           }
         }
@@ -1757,28 +1784,29 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
   return solver_status_;
 }
 
-void hiopAlgFilterIPMNewton::outputIteration(int lsStatus, int lsNum)
+void hiopAlgFilterIPMNewton::outputIteration(int lsStatus, int lsNum, int use_soc)
 {
   if(iter_num/10*10==iter_num)
-    nlp->log->printf(hovSummary,
-		     "iter    objective     inf_pr     inf_du   lg(mu)  alpha_du   alpha_pr linesrch\n");
+    nlp->log->printf(hovSummary, "iter    objective     inf_pr     inf_du   lg(mu)  alpha_du   alpha_pr linesrch\n");
 
   if(lsStatus==-1)
     nlp->log->printf(hovSummary, "%4d %14.7e %7.3e  %7.3e %6.2f  %7.3e  %7.3e  -(-)\n",
-		     iter_num, _f_nlp/nlp->get_obj_scale(), _err_nlp_feas, _err_nlp_optim, log10(_mu), _alpha_dual, _alpha_primal);
+                     iter_num, _f_nlp/nlp->get_obj_scale(), _err_nlp_feas, _err_nlp_optim,
+                     log10(_mu), _alpha_dual, _alpha_primal);
   else {
     char stepType[2];
-
     if(lsStatus==1) strcpy(stepType, "s");
     else if(lsStatus==2) strcpy(stepType, "h");
     else if(lsStatus==3) strcpy(stepType, "f");
     else strcpy(stepType, "?");
 
+    if(use_soc && lsStatus >= 1 && lsStatus <= 3) {
+      stepType[0] = (char) toupper(stepType[0]);
+    }
+
     nlp->log->printf(hovSummary, "%4d %14.7e %7.3e  %7.3e %6.2f  %7.3e  %7.3e  %d(%s)\n",
-		     iter_num, _f_nlp/nlp->get_obj_scale(), _err_nlp_feas,
-		     _err_nlp_optim, log10(_mu),
-		     _alpha_dual, _alpha_primal,
-		     lsNum, stepType);
+                     iter_num, _f_nlp/nlp->get_obj_scale(), _err_nlp_feas, _err_nlp_optim,
+                     log10(_mu), _alpha_dual, _alpha_primal, lsNum, stepType);
   }
 }
 
@@ -1886,7 +1914,7 @@ int hiopAlgFilterIPMBase::apply_second_order_correction(hiopKKTLinSys* kkt,
   }
 
   if(!soc_dir){
-    soc_dir = it_curr->alloc_clone();
+    soc_dir = dir->alloc_clone();
     if(nlp->options->GetString("KKTLinsys")=="full")
     {
       soc_dir->selectPattern();
