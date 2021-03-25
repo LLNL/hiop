@@ -1632,6 +1632,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 
         nlp->log->write("Filter IPM: ", filter, hovLinesearch);
 
+#if 0
         // Do the cheap, "sufficient progress" test first, before more involved/expensive tests.
         // This simple test is good enough when iterate is far away from solution
         if(theta>=theta_min) {
@@ -1688,6 +1689,13 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
           } // end of else: switching condition does not hold
         } //end of else: theta_trial<theta_min
 
+#endif
+        lsStatus = accept_line_search_conditions(theta, theta_trial, _alpha_primal, grad_phi_dx_computed, grad_phi_dx);
+        
+        if(lsStatus>0) {
+          break;          
+        }
+        
         // second order correction
         if(iniStep && theta<=theta_trial) {
           bool grad_phi_dx_soc_computed = false;
@@ -1900,7 +1908,7 @@ int hiopAlgFilterIPMBase::accept_line_search_conditions(const double theta_curr,
     if(theta_trial<=(1-gamma_theta)*theta_curr ||
        logbar->f_logbar_trial<=logbar->f_logbar - gamma_phi*theta_curr) {
       //trial good to go
-      nlp->log->printf(hovLinesearchVerb, "SOC: accepting based on suff. decrease "
+      nlp->log->printf(hovLinesearchVerb, "Linesearch: accepting based on suff. decrease "
                        "(far from solution)\n");
       bret=1;
       return bret;
