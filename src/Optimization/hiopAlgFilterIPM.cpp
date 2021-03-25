@@ -62,6 +62,7 @@ namespace hiop
 {
 
 hiopAlgFilterIPMBase::hiopAlgFilterIPMBase(hiopNlpFormulation* nlp_)
+ : c_soc(nullptr), d_soc(nullptr), soc_dir(nullptr)
 {
   nlp = nlp_;
   //force completion of the nlp's initialization
@@ -1605,7 +1606,6 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
             break;
           }
         }
-        iniStep=false;
         bret = it_trial->takeStep_primals(*it_curr, *dir, _alpha_primal, _alpha_dual); assert(bret);
         num_adjusted_bounds = it_trial->adjust_small_slacks(*it_curr, _mu);
         nlp->runStats.tmSolverInternal.stop(); //---
@@ -1644,18 +1644,8 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
                                "(far from solution)\n");
               lsStatus=1;
               break;
-            } else {
-              //there is no sufficient progress
-              _alpha_primal *= 0.5;
-              continue;
             }
-          } else {
-            //it is in the filter
-            _alpha_primal *= 0.5;
-            continue;
           }
-          nlp->log->write("Warning (close to panic): got to a point I wasn't supposed reach. (1)",
-                          hovWarning);
         } else {
           // if(theta<theta_min,  then check the switching condition and, if true, rely on Armijo rule.
           // first compute grad_phi^T d_x if it hasn't already been computed
@@ -1667,13 +1657,6 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
           }
           nlp->log->printf(hovLinesearch, "Linesearch: grad_phi_dx = %22.15e\n", grad_phi_dx);
 
-          // nlp->log->printf(hovSummary,
-          // 		 "Linesearch: grad_phi_dx = %22.15e      %22.15e >   %22.15e  \n",
-          // 		 grad_phi_dx, _alpha_primal*pow(-grad_phi_dx,s_phi), delta*pow(theta,s_theta));
-          // nlp->log->printf(hovSummary,
-          // 		 "Linesearch: s_phi=%22.15e;   s_theta=%22.15e; theta=%22.15e; delta=%22.15e\n",
-          // 		 s_phi, s_theta, theta, delta);
-
           // this is the actual switching condition
           if(grad_phi_dx<0 && _alpha_primal*pow(-grad_phi_dx,s_phi)>delta*pow(theta,s_theta)) {
 
@@ -1684,10 +1667,6 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 
             //iterate good to go since it satisfies Armijo
               break;
-            } else {
-              //Armijo is not satisfied
-              _alpha_primal *= 0.5; //reduce step and try again
-              continue;
             }
           } else {//switching condition does not hold
 
@@ -1704,22 +1683,30 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
                                  "Linesearch: accepting based on suff. decrease (switch cond also passed)\n");
                 lsStatus=2;
                 break;
-              } else {
-                //there is no sufficient progress
-                _alpha_primal *= 0.5;
-                continue;
               }
-            } else {
-              //it is in the filter
-              _alpha_primal *= 0.5;
-              continue;
-            }
+            } 
           } // end of else: switching condition does not hold
-
-          nlp->log->write("Warning (close to panic): got to a point I wasn't supposed to reach. (2)",
-                          hovWarning);
-
         } //end of else: theta_trial<theta_min
+
+        // second order correction
+        if(iniStep && theta<=theta_trial) {
+          bool grad_phi_dx_soc_computed = false;
+          double grad_phi_dx_soc = 0.0;
+          int num_adjusted_bounds_soc = 0;
+          lsStatus = apply_second_order_correction(kkt, theta, theta_trial, 
+                                                   grad_phi_dx_soc_computed, grad_phi_dx_soc, num_adjusted_bounds_soc);
+          if(lsStatus>0) {
+            num_adjusted_bounds = num_adjusted_bounds_soc;
+            grad_phi_dx_computed = grad_phi_dx_soc_computed;
+            grad_phi_dx = grad_phi_dx_soc;
+            break;
+          }
+        }
+        
+        assert(lsStatus == 0);
+        _alpha_primal *= 0.5;
+        
+        iniStep=false;
       } //end of while for the linesearch loop
       nlp->runStats.tmSolverInternal.stop();
 
@@ -1894,4 +1881,187 @@ void hiopAlgFilterIPMNewton::outputIteration(int lsStatus, int lsNum)
 		     lsNum, stepType);
   }
 }
+
+
+int hiopAlgFilterIPMBase::accept_line_search_conditions(const double theta_curr,
+                                                        const double theta_trial,
+                                                        const double alpha_primal,
+                                                        bool &grad_phi_dx_computed,
+                                                        double &grad_phi_dx)
+{
+  int bret = 0;
+  trial_is_rejected_by_filter = false;
+
+  // Do the cheap, "sufficient progress" test first, before more involved/expensive tests.
+  // This simple test is good enough when iterate is far away from solution  
+  if(theta_curr>=theta_min) {
+
+    //check the sufficient decrease condition (18)
+    if(theta_trial<=(1-gamma_theta)*theta_curr ||
+       logbar->f_logbar_trial<=logbar->f_logbar - gamma_phi*theta_curr) {
+      //trial good to go
+      nlp->log->printf(hovLinesearchVerb, "SOC: accepting based on suff. decrease "
+                       "(far from solution)\n");
+      bret=1;
+      return bret;
+    } else {
+      //there is no sufficient progress
+      trial_is_rejected_by_filter = false;
+      return bret;
+    }
+    
+    //check filter condition
+    if(filter.contains(theta_trial,logbar->f_logbar_trial)) {
+      //it is in the filter, reject this trial point
+      trial_is_rejected_by_filter = true;
+      return bret;
+    }    
+  } else {
+    // if(theta_curr<theta_min,  then check the switching condition and, if true, rely on Armijo rule.
+    // first compute grad_phi^T d_x if it hasn't already been computed
+    if(!grad_phi_dx_computed) {
+      grad_phi_dx = logbar->directionalDerivative(*dir);
+      grad_phi_dx_computed=true;
+    }
+    nlp->log->printf(hovLinesearch, "Linesearch: grad_phi_dx = %22.15e\n", grad_phi_dx);
+
+    // this is the actual switching condition (19)
+    if(grad_phi_dx<0. && alpha_primal*pow(-grad_phi_dx,s_phi)>delta*pow(theta_curr,s_theta)) {
+      // test Armijo
+      if(logbar->f_logbar_trial <= logbar->f_logbar + eta_phi*alpha_primal*grad_phi_dx) {
+        bret = 3;
+        nlp->log->printf(hovLinesearchVerb,
+                         "Linesearch: accepting based on Armijo (switch cond also passed)\n");
+
+        //iterate good to go since it satisfies Armijo
+        return bret;
+      } else {
+        //Armijo is not satisfied
+        trial_is_rejected_by_filter = false;
+        return bret;
+      }
+    } else {//switching condition does not hold
+
+      //ok to go with  "sufficient progress" condition even when close to solution, provided the
+      //switching condition is not satisfied
+
+      //check the filter and the sufficient decrease condition (18)
+      if(theta_trial<=(1-gamma_theta)*theta_curr ||
+         logbar->f_logbar_trial <= logbar->f_logbar - gamma_phi*theta_curr) {
+        //trial good to go
+        nlp->log->printf(hovLinesearchVerb,
+                         "Linesearch: accepting based on suff. decrease (switch cond also passed)\n");
+        bret=2;
+        return bret;
+      } else {
+        //there is no sufficient progress
+        trial_is_rejected_by_filter = false;
+        return bret;
+      }
+      
+      //check filter condition
+      if(filter.contains(theta_trial,logbar->f_logbar_trial)) {
+        //it is in the filter, reject this trial point
+        trial_is_rejected_by_filter = true;
+        return bret;
+      }
+    } // end of else: switching condition does not hold
+    assert(0&&"cannot reach here!");
+  } //end of else: theta_trial<theta_min
+}
+
+
+int hiopAlgFilterIPMBase::apply_second_order_correction(hiopKKTLinSys* kkt,
+                                                        const double theta_curr,
+                                                        const double theta_trial0,
+                                                        bool &grad_phi_dx_computed,
+                                                        double &grad_phi_dx,
+                                                        int &num_adjusted_bounds)
+{
+  int max_soc_iter = nlp->options->GetNumeric("max_soc_iter");
+  int kappa_soc = nlp->options->GetNumeric("kappa_soc");
+
+  if(max_soc_iter == 0) {
+    return false;
+  }
+
+  if(!soc_dir){
+    soc_dir = it_curr->alloc_clone();
+    if(nlp->options->GetString("KKTLinsys")=="full")
+    {
+      soc_dir->selectPattern();
+    }      
+    c_soc = nlp->alloc_dual_eq_vec();
+    d_soc = nlp->alloc_dual_ineq_vec();        
+  }
+
+  double theta_trial_last = 0.;
+  double theta_trial = theta_trial0;
+  double alpha_primal_soc = _alpha_primal;
+  double alpha_dual_soc = alpha_primal_soc;
+
+  int num_soc = 0;
+  bool bret = true;
+  int ls_status = 0;
+  
+  // set initial c/d for soc
+  c_soc->copyFrom(nlp->get_crhs());
+  c_soc->axpy(-1.0, *_c);
+
+  d_soc->copyFrom(*it_curr->get_d());
+  d_soc->axpy(-1.0, *_d);
+  
+  while(num_soc<max_soc_iter && (num_soc==0 || theta_trial<=kappa_soc*theta_trial_last)) {
+    theta_trial_last = theta_trial;
+    
+    c_soc->scale(alpha_primal_soc);
+    c_soc->axpy(1.0, nlp->get_crhs());
+    c_soc->axpy(-1.0, *_c_trial);
+  
+    d_soc->scale(alpha_primal_soc);
+    d_soc->axpy(1.0, *it_trial->get_d());
+    d_soc->axpy(-1.0, *_d_trial);
+    
+    // compute rhs for soc. Use resid_trial since it hasn't been used
+    resid_trial->update_soc(*it_curr, *c_soc, *d_soc, *_grad_f,*_Jac_c,*_Jac_d, *logbar);
+
+    // solve for search directions
+    bret = kkt->computeDirections(resid_trial, soc_dir); 
+    assert(bret);
+
+    // Compute step size
+    bret = it_curr->fractionToTheBdry(*soc_dir, _tau, alpha_primal_soc, alpha_dual_soc); 
+    assert(bret);
+    
+    // Compute trial point
+    bret = it_trial->takeStep_primals(*it_curr, *soc_dir, alpha_primal_soc, alpha_dual_soc); 
+    assert(bret);
+    num_adjusted_bounds = it_trial->adjust_small_slacks(*it_curr, _mu);
+
+    //evaluate the problem at the trial iterate (functions only)
+    if(!this->evalNlp_funcOnly(*it_trial, _f_nlp_trial, *_c_trial, *_d_trial)) {
+      solver_status_ = Error_In_User_Function;
+      return Error_In_User_Function;
+    }
+
+    logbar->updateWithNlpInfo_trial_funcOnly(*it_trial, _f_nlp_trial, *_c_trial, *_d_trial);
+        
+    //compute infeasibility theta at trial point.
+    theta_trial = resid_trial->compute_nlp_norms(*it_trial, *_c_trial, *_d_trial);
+
+    ls_status = accept_line_search_conditions(theta_curr, theta_trial, _alpha_primal, grad_phi_dx_computed, grad_phi_dx);
+
+    if(ls_status>0) {
+      _alpha_primal = alpha_primal_soc;
+      dir->copyFrom(*soc_dir);
+      resid->copyFrom(*resid_trial);
+      break;
+    } else {
+      num_soc++;
+    }
+  }
+  return ls_status;
+
+}
+
 } //end namespace

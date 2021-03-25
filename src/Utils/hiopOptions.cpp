@@ -216,7 +216,7 @@ void hiopOptions::registerOptions()
     registerStrOption("scaling_type", "gradient", range,
 		      "The method used for scaling the problem before solving it."
 		      "Setting this option to 'gradient' will scale the problem, guaranteeing the maximum "
-		      "gradient at the initial point is less or equal to scaling_max_grad (default 'none')");
+		      "gradient at the initial point is less or equal to scaling_max_grad (default 'gradient')");
     
     registerNumOption("scaling_max_grad", 100, 1e-20, 1e+20,
 		      "The problem will be rescaled if the inf-norm of the gradient at the starting point is "
@@ -229,6 +229,15 @@ void hiopOptions::registerOptions()
 		      "Perturbation of the lower and upper bounds for variables and constraints relative"
 		      "to its magnitude: lower/upper_bound -=/+= bound_relax_perturb*max(abs(lower/upper_bound),1)*"
 		      "bound_relax_perturb (default 1e-8)");
+  }
+
+  // second order correction
+  {
+    registerNumOption("max_soc_iter", 4, 0, 1e6,
+		      "Max number of iterations in second order correction (default 4)");
+    
+    registerNumOption("kappa_soc", 0.99, 0.0, 1e+20,
+		      "Factor to decrease the constraint violation in second order correction.");
   }
 
   //optimization method used

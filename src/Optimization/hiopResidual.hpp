@@ -69,6 +69,14 @@ public:
 		     const hiopVector& gradf, const hiopMatrix& jac_c, const hiopMatrix& jac_d,
 		     const hiopLogBarProblem& logbar);
 
+  virtual void update_soc(const hiopIterate& it,
+                          const hiopVector& c_soc,
+                          const hiopVector& d_soc,
+                          const hiopVector& grad,
+                          const hiopMatrix& jac_c,
+                          const hiopMatrix& jac_d,
+                          const hiopLogBarProblem& logprob);
+
   /* Return the Nlp and Log-bar errors computed at the previous update call. */
   inline void getNlpErrors(double& optim, double& feas, double& comple) const
   { optim=nrmInf_nlp_optim; feas=nrmInf_nlp_feasib; comple=nrmInf_nlp_complem;};
@@ -80,7 +88,7 @@ public:
   }
   /* get the previously computed Infeasibility */
   inline double get_theta() const {
-    return nrmOne_theta;
+    return nrmOne_nlp_feasib;
   } 
   /* evaluate the Infeasibility at the new iterate, which has eq and ineq functions
    * computed in c_eval and d_eval, respectively.
@@ -94,6 +102,33 @@ public:
   /* residual printing function - calls hiopVector::print
    * prints up to max_elems (by default all), on rank 'rank' (by default on all) */
   virtual void print(FILE*, const char* msg=NULL, int max_elems=-1, int rank=-1) const;
+  
+  /* accessors */
+  inline hiopVector* get_rx()   const {return rx;}
+  inline hiopVector* get_rd()   const {return rd;}
+  inline hiopVector* get_rxl()  const {return rxl;}
+  inline hiopVector* get_rxu()  const {return rxu;}
+  inline hiopVector* get_rdl()  const {return rdl;}
+  inline hiopVector* get_rdu()  const {return rdu;}
+  inline hiopVector* get_ryc()  const {return ryc;}
+  inline hiopVector* get_ryd()  const {return ryd;}
+  inline hiopVector* get_rszl() const {return rszl;}
+  inline hiopVector* get_rszu() const {return rszu;}
+  inline hiopVector* get_rsvl() const {return rsvl;}
+  inline hiopVector* get_rsvu() const {return rsvu;}
+  
+  inline double get_nrmInf_nlp_optim() const {return nrmInf_nlp_optim;}
+  inline double get_nrmInf_nlp_feasib() const {return nrmInf_nlp_feasib;}
+  inline double get_nrmInf_nlp_complem() const {return nrmInf_nlp_complem;}
+  inline double get_nrmInf_bar_optim() const {return nrmInf_bar_optim;}
+  inline double get_nrmInf_bar_feasib() const {return nrmInf_bar_feasib;}
+  inline double get_nrmInf_bar_complem() const {return nrmInf_bar_complem;}
+  inline double get_nrmOne_nlp_feasib() const {return nrmOne_nlp_feasib;}
+  inline double get_nrmOne_bar_feasib() const {return nrmOne_bar_feasib;}
+  inline hiopNlpFormulation * get_nlp() const {return nlp;}
+  
+  void copyFrom(const hiopResidual& resid_src);
+
 private:
   hiopVector*rx;           // -\grad f - J_c^t y_c - J_d^t y_d + z_l - z_u
   hiopVector*rd;           //  y_d + v_l - v_u
@@ -116,7 +151,8 @@ private:
   double nrmInf_bar_optim, nrmInf_bar_feasib, nrmInf_bar_complem;
   /** storage for the one norm of [ryc,ryd]. This is the one norm of constraint violations.
   */ 
-  double nrmOne_theta;
+  double nrmOne_nlp_feasib, nrmOne_bar_feasib;
+
   // and associated info from problem formulation
   hiopNlpFormulation * nlp;
 private:
