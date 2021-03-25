@@ -997,20 +997,19 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
       // check the step against the minimum step size, but accept small
       // fractionToTheBdry since these may occur for tight bounds at the first iteration(s)
       if(!iniStep && _alpha_primal<1e-16) {
-	nlp->log->write("Panic: minimum step size reached. The problem may be infeasible or the "
-			"gradient inaccurate. Will exit here.",hovError);
-	solver_status_ = Steplength_Too_Small;
-	break;
+        nlp->log->write("Panic: minimum step size reached. The problem may be infeasible or the "
+                        "gradient inaccurate. Will exit here.",hovError);
+        solver_status_ = Steplength_Too_Small;
+        break;
       }
-      iniStep=false;
       bret = it_trial->takeStep_primals(*it_curr, *dir, _alpha_primal, _alpha_dual); assert(bret);
       num_adjusted_bounds = it_trial->adjust_small_slacks(*it_curr, _mu);
       nlp->runStats.tmSolverInternal.stop(); //---
 
       //evaluate the problem at the trial iterate (functions only)
       if(!this->evalNlp_funcOnly(*it_trial, _f_nlp_trial, *_c_trial, *_d_trial)) {
-	solver_status_ = Error_In_User_Function;
-	return Error_In_User_Function;
+        solver_status_ = Error_In_User_Function;
+        return Error_In_User_Function;
       }
 
       logbar->updateWithNlpInfo_trial_funcOnly(*it_trial, _f_nlp_trial, *_c_trial, *_d_trial);
@@ -1024,80 +1023,31 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
       nlp->log->printf(hovLinesearch, "  trial point %d: alphaPrimal=%14.8e barier:(%22.16e)>%15.9e theta:(%22.16e)>%22.16e\n",
 		       lsNum, _alpha_primal, logbar->f_logbar, logbar->f_logbar_trial, theta, theta_trial);
 
-      //let's do the cheap, "sufficient progress" test first, before more involved/expensive tests.
-      // This simple test is good enough when iterate is far away from solution
-      if(theta>=theta_min) {
-	//check the filter and the sufficient decrease condition (18)
-	if(!filter.contains(theta_trial,logbar->f_logbar_trial)) {
-	  if(theta_trial<=(1-gamma_theta)*theta || logbar->f_logbar_trial<=logbar->f_logbar - gamma_phi*theta) {
-	    //trial good to go
-	    nlp->log->printf(hovLinesearchVerb,
-			     "Linesearch: accepting based on suff. decrease (far from solution)\n");
-	    lsStatus=1;
-	    break;
-	  } else {
-	    //there is no sufficient progress
-	    _alpha_primal *= 0.5;
-	    continue;
-	  }
-	} else {
-	  //it is in the filter
-	  _alpha_primal *= 0.5;
-	  continue;
-	}
-	nlp->log->write("Warning (close to panic): I got to a point where I wasn't supposed to be. (1)", hovWarning);
-      } else {
-	// if(theta<theta_min,  then check the switching condition and, if true, rely on Armijo rule.
-	// first compute grad_phi^T d_x if it hasn't already been computed
-	if(!grad_phi_dx_computed) {
-	  nlp->runStats.tmSolverInternal.stop(); //---
-	  grad_phi_dx = logbar->directionalDerivative(*dir);
-	  grad_phi_dx_computed=true;
-	  nlp->runStats.tmSolverInternal.start(); //---
-	}
-	nlp->log->printf(hovLinesearch, "Linesearch: grad_phi_dx = %22.15e\n", grad_phi_dx);
-	//nlp->log->printf(hovSummary, "Linesearch: grad_phi_dx = %22.15e      %22.15e >   %22.15e  \n", grad_phi_dx, _alpha_primal*pow(-grad_phi_dx,s_phi), delta*pow(theta,s_theta));
-	//nlp->log->printf(hovSummary, "Linesearch: s_phi=%22.15e;   s_theta=%22.15e; theta=%22.15e; delta=%22.15e \n", s_phi, s_theta, theta, delta);
-	//this is the actual switching condition
-	if(grad_phi_dx<0 && _alpha_primal*pow(-grad_phi_dx,s_phi)>delta*pow(theta,s_theta)) {
+      lsStatus = accept_line_search_conditions(theta, theta_trial, _alpha_primal, grad_phi_dx_computed, grad_phi_dx);
 
-	  if(logbar->f_logbar_trial <= logbar->f_logbar + eta_phi*_alpha_primal*grad_phi_dx) {
-	    lsStatus=3;
-	    nlp->log->printf(hovLinesearchVerb,
-			     "Linesearch: accepting based on Armijo (switch cond also passed)\n");
-	    break; //iterate good to go since it satisfies Armijo
-	  } else {  //Armijo is not satisfied
-	    _alpha_primal *= 0.5; //reduce step and try again
-	    continue;
-	  }
-	} else {//switching condition does not hold
+      if(lsStatus>0) {
+        break;
+      }
 
-	  //ok to go with  "sufficient progress" condition even when close to solution, provided the switching condition is not satisfied
-	  //check the filter and the sufficient decrease condition (18)
-	  if(!filter.contains(theta_trial,logbar->f_logbar_trial)) {
-	    if(theta_trial<=(1-gamma_theta)*theta
-	       || logbar->f_logbar_trial<=logbar->f_logbar - gamma_phi*theta) {
+      // second order correction
+      if(iniStep && theta<=theta_trial) {
+        bool grad_phi_dx_soc_computed = false;
+        double grad_phi_dx_soc = 0.0;
+        int num_adjusted_bounds_soc = 0;
+        lsStatus = apply_second_order_correction(kkt, theta, theta_trial, 
+                                                 grad_phi_dx_soc_computed, grad_phi_dx_soc, num_adjusted_bounds_soc);
+        if(lsStatus>0) {
+          num_adjusted_bounds = num_adjusted_bounds_soc;
+          grad_phi_dx_computed = grad_phi_dx_soc_computed;
+          grad_phi_dx = grad_phi_dx_soc;
+          break;
+        }
+      }
 
-	      //trial good to go
-	      nlp->log->printf(hovLinesearchVerb,
-			       "Linesearch: accepting based on suff. decrease (switch cond also passed)\n");
-	      lsStatus=2;
-	      break;
-	    } else {
-	      //there is no sufficient progress
-	      _alpha_primal *= 0.5;
-	      continue;
-	    }
-	  } else {
-	    //it is in the filter
-	    _alpha_primal *= 0.5;
-	    continue;
-	  }
-	} // end of else: switching condition does not hold
+      assert(lsStatus == 0);
+      _alpha_primal *= 0.5;
 
-	nlp->log->write("Warning (close to panic): I got to a point where I wasn't supposed to be. (2)", hovWarning);
-
-      } //end of else: theta_trial<theta_min
+      iniStep=false;
     } //end of while for the linesearch loop
     nlp->runStats.tmSolverInternal.stop();
 
@@ -1632,70 +1582,12 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 
         nlp->log->write("Filter IPM: ", filter, hovLinesearch);
 
-#if 0
-        // Do the cheap, "sufficient progress" test first, before more involved/expensive tests.
-        // This simple test is good enough when iterate is far away from solution
-        if(theta>=theta_min) {
-          //check the filter and the sufficient decrease condition (18)
-          if(!filter.contains(theta_trial,logbar->f_logbar_trial)) {
-            if(theta_trial<=(1-gamma_theta)*theta ||
-               logbar->f_logbar_trial<=logbar->f_logbar - gamma_phi*theta) {
-              //trial good to go
-              nlp->log->printf(hovLinesearchVerb, "Linesearch: accepting based on suff. decrease "
-                               "(far from solution)\n");
-              lsStatus=1;
-              break;
-            }
-          }
-        } else {
-          // if(theta<theta_min,  then check the switching condition and, if true, rely on Armijo rule.
-          // first compute grad_phi^T d_x if it hasn't already been computed
-          if(!grad_phi_dx_computed) {
-            nlp->runStats.tmSolverInternal.stop(); //---
-            grad_phi_dx = logbar->directionalDerivative(*dir);
-            grad_phi_dx_computed=true;
-            nlp->runStats.tmSolverInternal.start(); //---
-          }
-          nlp->log->printf(hovLinesearch, "Linesearch: grad_phi_dx = %22.15e\n", grad_phi_dx);
-
-          // this is the actual switching condition
-          if(grad_phi_dx<0 && _alpha_primal*pow(-grad_phi_dx,s_phi)>delta*pow(theta,s_theta)) {
-
-            if(logbar->f_logbar_trial <= logbar->f_logbar + eta_phi*_alpha_primal*grad_phi_dx) {
-              lsStatus=3;
-              nlp->log->printf(hovLinesearchVerb,
-                               "Linesearch: accepting based on Armijo (switch cond also passed)\n");
-
-            //iterate good to go since it satisfies Armijo
-              break;
-            }
-          } else {//switching condition does not hold
-
-            //ok to go with  "sufficient progress" condition even when close to solution, provided the
-            //switching condition is not satisfied
-
-            //check the filter and the sufficient decrease condition (18)
-            if(!filter.contains(theta_trial,logbar->f_logbar_trial)) {
-              if(theta_trial<=(1-gamma_theta)*theta ||
-                 logbar->f_logbar_trial <= logbar->f_logbar - gamma_phi*theta) {
-
-                //trial good to go
-                nlp->log->printf(hovLinesearchVerb,
-                                 "Linesearch: accepting based on suff. decrease (switch cond also passed)\n");
-                lsStatus=2;
-                break;
-              }
-            } 
-          } // end of else: switching condition does not hold
-        } //end of else: theta_trial<theta_min
-
-#endif
         lsStatus = accept_line_search_conditions(theta, theta_trial, _alpha_primal, grad_phi_dx_computed, grad_phi_dx);
-        
+
         if(lsStatus>0) {
-          break;          
+          break;
         }
-        
+
         // second order correction
         if(iniStep && theta<=theta_trial) {
           bool grad_phi_dx_soc_computed = false;
@@ -1710,10 +1602,10 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
             break;
           }
         }
-        
+
         assert(lsStatus == 0);
         _alpha_primal *= 0.5;
-        
+
         iniStep=false;
       } //end of while for the linesearch loop
       nlp->runStats.tmSolverInternal.stop();
