@@ -1830,11 +1830,11 @@ int hiopAlgFilterIPMBase::accept_line_search_conditions(const double theta_curr,
       //trial good to go
       nlp->log->printf(hovLinesearchVerb, "Linesearch: accepting based on suff. decrease "
                        "(far from solution)\n");
-      bret=1;
-      return bret;
+      bret = 1;
     } else {
       //there is no sufficient progress
       trial_is_rejected_by_filter = false;
+      bret = 0;
       return bret;
     }
     
@@ -1842,8 +1842,9 @@ int hiopAlgFilterIPMBase::accept_line_search_conditions(const double theta_curr,
     if(filter.contains(theta_trial,logbar->f_logbar_trial)) {
       //it is in the filter, reject this trial point
       trial_is_rejected_by_filter = true;
-      return bret;
-    }    
+      bret = 0;
+    }
+    return bret;
   } else {
     // if(theta_curr<theta_min,  then check the switching condition and, if true, rely on Armijo rule.
     // first compute grad_phi^T d_x if it hasn't already been computed
@@ -1857,17 +1858,25 @@ int hiopAlgFilterIPMBase::accept_line_search_conditions(const double theta_curr,
     if(grad_phi_dx<0. && alpha_primal*pow(-grad_phi_dx,s_phi)>delta*pow(theta_curr,s_theta)) {
       // test Armijo
       if(logbar->f_logbar_trial <= logbar->f_logbar + eta_phi*alpha_primal*grad_phi_dx) {
-        bret = 3;
         nlp->log->printf(hovLinesearchVerb,
                          "Linesearch: accepting based on Armijo (switch cond also passed)\n");
 
         //iterate good to go since it satisfies Armijo
-        return bret;
+        bret = 3;
       } else {
         //Armijo is not satisfied
         trial_is_rejected_by_filter = false;
+        bret = 0;
         return bret;
       }
+
+      //check filter condition
+      if(filter.contains(theta_trial,logbar->f_logbar_trial)) {
+        //it is in the filter, reject this trial point
+        trial_is_rejected_by_filter = true;
+        bret = 0;
+      }
+      return bret;
     } else {//switching condition does not hold
 
       //ok to go with  "sufficient progress" condition even when close to solution, provided the
@@ -1880,7 +1889,6 @@ int hiopAlgFilterIPMBase::accept_line_search_conditions(const double theta_curr,
         nlp->log->printf(hovLinesearchVerb,
                          "Linesearch: accepting based on suff. decrease (switch cond also passed)\n");
         bret=2;
-        return bret;
       } else {
         //there is no sufficient progress
         trial_is_rejected_by_filter = false;
@@ -1891,8 +1899,9 @@ int hiopAlgFilterIPMBase::accept_line_search_conditions(const double theta_curr,
       if(filter.contains(theta_trial,logbar->f_logbar_trial)) {
         //it is in the filter, reject this trial point
         trial_is_rejected_by_filter = true;
-        return bret;
+        bret = 0;
       }
+      return bret;
     } // end of else: switching condition does not hold
     assert(0&&"cannot reach here!");
   } //end of else: theta_trial<theta_min
