@@ -1,4 +1,4 @@
-## Option 1: using on libraries generally available on Summit
+# Option 1: using libraries generally available on Summit
 
 Building and running HiOp on `summit` is quite simple since the dependencies of HiOp can be satisfied quickly using the `module` utility. Please note that supports only a limited number of external dependecies and, as a result, HiOp cannot be usually built with all the features (for example dependences for sparse linear algebra will not be satisfied).
 ```
@@ -31,19 +31,19 @@ export NVBLAS_CONFIG_FILE=/ccs/home/cpetra/work/projects/hiop/runs/nvblas.conf
 
 ```
 
-## Option 2 - using precompiled dependencies made available by exaSGD project
-
-
-## Option 3 - using Spack
-
-### Using official Spack recipe
+# Option 2 - using precompiled dependencies made available by exaSGD project
 [[to be done]]
+
+# Option 3 - using Spack
+
+## Using official Spack recipe
+To be supported soon.
 
 This will not support some important dependencies of the sparse solver of HiOp. 
 
-### Custom Spack-based build to build HiOp's sparse
+## Custom Spack-based build to build HiOp's sparse
 
-####Method 1:####
+#### Method 1:####
 Install hiop and all its dependencies from scratch via spack:
 1.	Download ExaSGD_Spack repository 
 ```bash
@@ -82,7 +82,7 @@ spack env activate hiop-sparse-coinhsl-llnl
 spack install
 ```
 
-####Method 2:####
+#### Method 2:####
 Install *ONLY* coinhsl via spack:
 1.	Download ExaSGD_Spack repository 
 ```bash
