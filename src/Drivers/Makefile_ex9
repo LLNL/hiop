@@ -33,15 +33,16 @@ EXE = IpoptAdapter_driver_ex9.exe
 
 # CHANGEME: Here is the name of all object files corresponding to the source
 #           code that you wrote in order to define the problem statement
-OBJS =  IpoptAdapter_driver_ex9.o nlpSparse_ex9.o
+OBJS =  IpoptAdapter_driver_ex9.o nlpSparse_ex6.o 
 
 # CHANGEME: Additional libraries
-ADDLIBS =
+ADDLIBS = -L/g/g90/wang125/software/magma/lib /g/g90/wang125/software/coinhsl/lib/libcoinhsl.so 
+#ADDLIBS = -shared -L/usr/tce/packages/spectrum-mpi/ibm/spectrum-mpi-rolling-release/lib:/usr/tce/packages/cuda/cuda-11.0.2/lib64:/g/g90/wang125/software/magma/lib:/g/g90/wang125/software/coinhsl/lib -llapack /usr/tce/packages/spectrum-mpi/ibm/spectrum-mpi-rolling-release/lib/libmpiprofilesupport.so /usr/tce/packages/spectrum-mpi/ibm/spectrum-mpi-rolling-release/lib/libmpi_ibm.so /usr/tce/packages/cuda/cuda-11.0.2/lib64/libcublas.so /usr/tce/packages/cuda/cuda-11.0.2/lib64/libcudart.so /usr/tce/packages/cuda/cuda-11.0.2/lib64/libcudadevrt.a /usr/tce/packages/cuda/cuda-11.0.2/lib64/libcusparse.so /usr/lib64/libcublasLt.so /usr/tce/packages/cuda/cuda-11.0.2/lib64/libculibos.a /g/g90/wang125/software/magma/lib/libmagma.so -lgomp -lpthread /usr/lib64/libessl.so /usr/lib64/libblas.so /usr/lib64/libessl.so /usr/lib64/libblas.so /g/g90/wang125/software/metis/lib/libmetis.a /g/g90/wang125/software/coinhsl/lib/libcoinhsl.so 
+
 
 # CHANGEME: Additional flags for compilation (e.g., include flags)
 ADDINCFLAGS = -I/g/g90/wang125/software/hiop/include/
 #ADDINCFLAGS = -I/Users/petra1/work/projects/hiop/_dist-DEBUG/include/
-
 ##########################################################################
 #  Usually, you don't have to change anything below.  Note that if you   #
 #  change certain compiler options, you might have to recompile Ipopt.   #
@@ -56,7 +57,7 @@ CXXFLAGS = -g -pipe -Wparentheses -Wreturn-type -Wcast-qual -Wall -Wpointer-arit
 #CXXFLAGS = -g -pipe -Wparentheses -Wreturn-type -Wcast-qual -Wall -Wpointer-arith -Wwrite-strings -Wconversion -Wno-unknown-pragmas -Wno-long-long -m64 -I/home/petra1/intel_mkl2019/compilers_and_libraries_2019.2.187/linux/mkl/include -fPIC -DIPOPT_BUILD 
 
 # additional C++ Compiler options for linking
-CXXLINKFLAGS = -Wl,--rpath -Wl,/g/g90/wang125/software/lib
+CXXLINKFLAGS = -Wl,--rpath -Wl,/g/g90/wang125/software/lassen/Ipopt/lib/
 #mac
 #CXXLINKFLAGS =  -Wl,-rpath -Wl,/Users/petra1/work/projects/go-compet/Ipopt-gollnlp/build/lib/
 
@@ -66,7 +67,7 @@ INCL = `PKG_CONFIG_PATH=/g/g90/wang125/software/lib/pkgconfig pkg-config --cflag
 #INCL = -I`$(CYGPATH_W) /Users/petra1/work/projects/go-compet/Ipopt-gollnlp/build/include/coin`  -I/Users/petra1/work/projects/go-compet/Ipopt-gollnlp/build/include/coin/ThirdParty  -I/Users/petra1/work/projects/go-compet/Ipopt-gollnlp/build/include/coin/ThirdParty   $(ADDINCFLAGS)
 
 # Linker flags
-LIBS = `PKG_CONFIG_PATH=/g/g90/wang125/software/lib/pkgconfig pkg-config --libs ipopt` -llapack -lblas  -ldl -lm /g/g90/wang125/software/hiop/lib/libhiop.a
+LIBS = `PKG_CONFIG_PATH=/g/g90/wang125/software/lassen/Ipopt/lib/pkgconfig pkg-config --libs ipopt` -llapack -lblas  -ldl -lm /g/g90/wang125/software/hiop/lib/libhiop.a
 
 #mac
 #LIBS = -L/Users/petra1/work/projects/go-compet/Ipopt-gollnlp/build/lib -lipopt  -L/Users/petra1/work/projects/go-compet/Ipopt-gollnlp/build/lib -lcoinhsl -framework Accelerate -framework Accelerate -L/usr/local/Cellar/gcc/9.2.0_1/lib/gcc/9/gcc/x86_64-apple-darwin18/9.2.0 -L/usr/local/Cellar/gcc/9.2.0_1/lib/gcc/9/gcc/x86_64-apple-darwin18/9.2.0/../../.. -lgfortran -lSystem -lquadmath -lm  -L/Users/petra1/work/projects/go-compet/Ipopt-gollnlp/build/lib -lcoinmetis  -framework Accelerate -framework Accelerate -lm  -ldl /Users/petra1/work/projects/hiop/_dist-DEBUG/lib/libhiop.a

@@ -505,6 +505,11 @@ void hiopAlgPrimalDecomposition::set_verbosity(const int i)
   ver_ = i;
 }
 
+void hiopAlgPrimalDecomposition::set_tolerance(const double tol)
+{
+  tol_ = tol;
+}
+
 void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
 {
   assert(alpha>=0&&alpha<10.);
@@ -652,7 +657,9 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
         int last_loop = 0;
         //printf("total idx %d\n", S_);
         t2 = MPI_Wtime(); 
-        printf( "Elapsed time for iteration %d for misc is %f\n",it, t2 - t1 );  
+        if(ver_ >=outlevel2) {
+          printf( "Elapsed time for iteration %d for misc is %f\n",it, t2 - t1 );  
+	}
         while(idx<=S_ || last_loop) { 
           //std::this_thread::sleep_for(std::chrono::milliseconds(10)); //optional, used to adjust time
           for(int r=1; r< comm_size_;r++) {
@@ -660,9 +667,13 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
             int mpi_test_flag = rec_prob[r]->test();
             if(mpi_test_flag && (finish_flag[r]==0)) {// receive completed
               if(!last_loop && idx<S_) {
-                printf("idx %d sent to rank %d\n", idx,r);
+                if(ver_ >=outlevel2) {
+                  printf("idx %d sent to rank %d\n", idx,r);
+		}
               } else {
-                printf("last loop for rank %d\n", r);
+                if(ver_ >=outlevel2) {
+                  printf("last loop for rank %d\n", r);
+		}
               }
               // add to the master rank variables
               rval += rec_prob[r]->value();
@@ -701,7 +712,9 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
           req_cont_idx->post_send(1,r,comm_world_);
         }
         t2 = MPI_Wtime(); 
-        printf( "Elapsed time for iteration %d for contingency is %f\n",it, t2 - t1 );  
+        if(ver_ >=outlevel1) {
+          printf( "Elapsed time for iteration %d for contingency is %f\n",it, t2 - t1 );  
+	}
       }
 
       //evaluators
@@ -949,7 +962,9 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
           printf(" \n");
 	}
         t2 = MPI_Wtime(); 
-        printf( "Elapsed time for entire iteration %d is %f\n",it, t2 - t1 );  
+        if(ver_ >=outlevel1) {
+          printf( "Elapsed time for entire iteration %d is %f\n",it, t2 - t1 );  
+	}
       } else {
         //std::this_thread::sleep_for(std::chrono::milliseconds(100));    
       }

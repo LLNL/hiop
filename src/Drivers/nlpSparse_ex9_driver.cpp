@@ -34,13 +34,15 @@ int main(int argc, char **argv)
   int comm_size;
   int ierr = MPI_Comm_size(MPI_COMM_WORLD, &comm_size); assert(MPI_SUCCESS==ierr);
   ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank); assert(MPI_SUCCESS==ierr);
+  double t3 =  MPI_Wtime(); 
+  double t4 = 0.; 
 #endif
 
 #ifdef HIOP_USE_MAGMA
   magma_init();
 #endif
-  int nx = 5;
-  int S = 100;
+  int nx = 40;
+  int S = 1000;
   int nS = 5; 
   double x[nx+S*nx];
   Ex9 nlp_interface(nx,S,nS);
@@ -74,6 +76,11 @@ int main(int argc, char **argv)
       printf("Solve was successfull. Optimal value: %12.5e\n",
          obj_value);
   }
+  #ifdef HIOP_USE_MPI
+    t4 =  MPI_Wtime(); 
+    printf( "Elapsed time for sparseex9 is %f\n", t4 - t3 ); 
+  #endif
+
 
 #ifdef HIOP_USE_MAGMA
   magma_finalize();

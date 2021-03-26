@@ -3,7 +3,7 @@
 #include <cstdio>
 #include "hiopInterface.hpp"
 #include <cassert>
-
+#include <chrono>
 
 #ifndef HIOP_EXAMPLE_EX9
 #define  HIOP_EXAMPLE_EX9
@@ -50,7 +50,9 @@ public:
       n_cons += nx-3;
     nS_ = int(nx_/2);
     xi_ = new double[S_*nS_];
+    x0_ = new double[nx_];
     for(int i=0;i<nS_*S_;i++) xi_[i] = 1.0;
+    for(int i=0;i<nx_;i++) x0_[i] = 1.0;
     //for(int i=0;i<S_;i++){
     //  xi_[i*nS_+nS_-1] = -1.0;
     //}
@@ -63,12 +65,14 @@ public:
     if(nx>3)
       n_cons += nx-3;
     xi_ = new double[nS_*S_];
+    x0_ = new double[nx_];
     for(int i=0;i<nS_*S_;i++) { 
       xi_[i] = 1.0;
     }
-    for(int i=0;i<S_;i++) {
-      xi_[i*nS_+nS_-1] = 0.1;
-    }
+    //for(int i=0;i<S_;i++) {
+    //  xi_[i*nS_+nS_-1] = 1.0;
+    //}
+    for(int i=0;i<nx_;i++) x0_[i] = 1.0;
   }
   bool get_prob_sizes(long long& n, long long& m)
   { n=n_vars; m=n_cons; return true; }
@@ -96,6 +100,7 @@ public:
   ~Ex9()
   { 
     delete[] xi_;
+    delete[] x0_;
   }
 
   bool get_cons_info(const long long& m, double* clow, double* cupp, NonlinearityType* type)
@@ -105,7 +110,7 @@ public:
     clow[conidx]= 10.0;    cupp[conidx]= 10.0;      type[conidx++]=hiopInterfaceBase::hiopLinear;
     clow[conidx]= 5.0;     cupp[conidx]= 1e20;      type[conidx++]=hiopInterfaceBase::hiopLinear;
     for(long long i=3; i<nx_; i++) {
-      clow[conidx] = 1.0;   cupp[conidx]= 2*n_vars;  type[conidx++]=hiopInterfaceBase::hiopLinear;
+      clow[conidx] = 1.0;   cupp[conidx]= 2*nx_;  type[conidx++]=hiopInterfaceBase::hiopLinear;
     }
     if(nx_>3){assert(conidx==2+nx_-3);}//nx_-1
     for(long long i=0;i<S_;i++) { 
@@ -119,15 +124,16 @@ public:
     return true;
   }
  
-  bool get_sparse_blocks_info(int& nx,
+  bool get_sparse_blocks_info(int& n,
                                  int& nnz_sparse_Jaceq, int& nnz_sparse_Jacineq,
 					                       int& nnz_sparse_Hess_Lagr)
   {
-    nx = n_vars;
+    n = n_vars;
     nnz_sparse_Jaceq = 2;
     nnz_sparse_Jacineq = 2+2*(nx_-3)+S_*(nx_+ 2*(nx_-1)) ;
     //printf("nnz_sparse_Jacineq %d\n",nnz_sparse_Jacineq);
-    nnz_sparse_Hess_Lagr = nx_+S_*nx_*2+S_*nx_; //this variable should always be <= n_vars?
+    //nnz_sparse_Hess_Lagr = nx_+S_*nx_*2+S_*nx_; //this variable should always be <= n_vars?
+    nnz_sparse_Hess_Lagr = nx_+S_*nx_+S_*nx_; //this variable should always be <= n_vars?
     return true;
   }
 
@@ -135,9 +141,11 @@ public:
   {
     assert(n==n_vars);
     obj_value=0.;
-    for(auto i=0;i<nx_;i++) obj_value += 0.25*pow(x[i]-1., 4);
-
-    for(auto i=0;i<S_;i++) {
+    for(int i=0;i<nx_;i++) {
+      //obj_value += 0.25*std::pow(x[i]-1.,4);
+      obj_value += 0.25*std::pow(x[i]-1.,4);
+    }
+    for(int i=0;i<S_;i++) {
       for(int j=0;j<nx_;j++) {
         obj_value += (x[nx_*(i+1)+j]-x[j])*(x[nx_*(i+1)+j]-x[j])*0.5/double(S_);
       }
@@ -148,14 +156,17 @@ public:
   bool eval_grad_f(const long long& n, const double* x, bool new_x, double* gradf)
   {
     assert(n==n_vars);
-    for(auto i=0;i<nx_;i++) gradf[i] = pow(x[i]-1.,3);
+    for(int i=0;i<n_vars;i++) gradf[i] = 0.;
+    //for(int i=0;i<nx_;i++) gradf[i] = std::pow(x[i]-1.,3);
+    for(int i=0;i<nx_;i++) gradf[i] = 1.0*std::pow(x[i]-1.,3);
 
-    for(auto i=0;i<S_;i++) {
+    for(int i=0;i<S_;i++) {
       for(int j=0;j<nx_;j++) {
-        gradf[nx_*(i+1)+j] = (x[nx_*(i+1)+j]-x[j])/double(S_);
+        gradf[nx_*(i+1)+j] += (x[nx_*(i+1)+j]-x[j])/double(S_);
 	gradf[j] += (x[j]-x[nx_*(i+1)+j])/double(S_);
       }
     }
+    //std::cout<<"gradf15 "<<gradf[15]<<std::endl;
     return true;
   }
 
@@ -298,21 +309,27 @@ public:
     return true;
   }
 
+  /*bool eval_Hess_Lagr(const long long& n, const long long& m,
+                           const double* x, bool new_x, const double& obj_factor,
+                           const double* lambda, bool new_lambda,
+                           const int& nnzHSS, int* iHSS, int* jHSS, double* MHSS)
+  {return false;}*/
   bool eval_Hess_Lagr(const long long& n, const long long& m,
                            const double* x, bool new_x, const double& obj_factor,
                            const double* lambda, bool new_lambda,
                            const int& nnzHSS, int* iHSS, int* jHSS, double* MHSS)
   {
-    assert(nnzHSS == nx_+S_*nx_*2+S_*nx_);
+    //assert(nnzHSS == nx_+S_*nx_*2+S_*nx_);
+    assert(nnzHSS == nx_+S_*nx_+S_*nx_);
     int nnzit = 0;
     if(iHSS!=NULL && jHSS!=NULL) {
       for(int i=0; i<nx_; i++) { 	
         iHSS[nnzit] = jHSS[nnzit] = i;
         nnzit++;
-	for(int j=0;j<S_;j++){
-	  iHSS[nnzit] = i; jHSS[nnzit] = nx_+j*nx_+i;
-	  nnzit++;
-	}    
+	//for(int j=0;j<S_;j++){
+	//  iHSS[nnzit] = i; jHSS[nnzit] = nx_+j*nx_+i;
+	//  nnzit++;
+	//}    
       }
      // r_i(x;\xi^i) = 1/S *  min_y 0.5 || y - x ||^2 such that 
       for(int i=0;i<S_;i++) {
@@ -324,17 +341,19 @@ public:
       assert(nnzHSS == nnzit);
     }
     nnzit = 0;
+    
     if(MHSS!=NULL) {
+      //std::cout<<"MHSS "<<-obj_factor/double(S_)<<std::endl;
       for(int i=0; i<nx_; i++) { 		
         MHSS[nnzit] = obj_factor * 3*pow(x[i]-1., 2);
         for(int j=0;j<S_;j++){
           MHSS[nnzit] += obj_factor/double(S_);
         }
         nnzit++;
-        for(int j=0;j<S_;j++){
+        /*for(int j=0;j<S_;j++){
           MHSS[nnzit] = -obj_factor/double(S_);
           nnzit++;
-        }
+        }*/
       }
 	// r_i(x;\xi^i) = 1/S *  min_y 0.5 || y - x ||^2 such that 
       for(int i=0;i<S_;i++) {
@@ -346,7 +365,12 @@ public:
         }
       }
       assert(nnzHSS == nnzit);
+      //for(int i=0;i<nnzHSS;i++) {
+      //  std::cout<<"MHSS "<<i<<" "<<MHSS[i];
+      //}
+      //std::cout<<std::endl;
     }
+
     return true;
   }
 
@@ -356,15 +380,27 @@ public:
   bool get_starting_point(const long long& n, double* x0)
   {
     assert(n==n_vars);
-    for(auto i=0; i<n; i++)
-      x0[i]=0.0;
+    for(auto i=0; i<n; i++) {
+      x0[i]=1.0;
+    }
+    for(auto i=0;i<nx_;i++) {
+      x0[i]=x0_[i]; 
+    }
     return true;
-  } 
+  }
+
+  void set_starting_point(const double* x0) 
+  {
+    for(auto i=0;i<nx_;i++) {
+      x0_[i]=x0[i]; 
+    }
+  }
 
 private:
   int n_vars, n_cons;
   int nx_, S_,nS_;
   double* xi_;// of size S_*nS_
+  double* x0_;// of size S_*nS_
 };
 
 #endif

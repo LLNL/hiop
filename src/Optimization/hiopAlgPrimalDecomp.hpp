@@ -74,6 +74,9 @@ public:
   void set_initial_alpha_ratio(const double ratio);
     
   void set_max_iteration(const int max_it); 
+  
+  void set_tolerance(const double tol);
+  
   /* Contains information of a solution step including function value 
    * and gradient. Used for storing the solution for the previous iteration
    */
