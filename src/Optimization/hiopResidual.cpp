@@ -189,7 +189,7 @@ int hiopResidual::update(const hiopIterate& it,
   ryc->axpy(-1.0,c);
   buf = ryc->infnorm_local();
   nrmInf_nlp_feasib = fmax(nrmInf_nlp_feasib, buf);
-  nrmOne_theta += ryc->onenorm();
+  nrmOne_nlp_feasib += ryc->onenorm();
   nlp->log->printf(hovScalars,"NLP resid [update]: inf norm ryc=%22.17e\n", buf);
 
   //ryd
@@ -197,7 +197,7 @@ int hiopResidual::update(const hiopIterate& it,
   ryd->axpy(-1.0, d);
   buf = ryd->infnorm_local();
   nrmInf_nlp_feasib = fmax(nrmInf_nlp_feasib, buf);
-  nrmOne_theta += ryd->onenorm();
+  nrmOne_nlp_feasib += ryd->onenorm();
   nlp->log->printf(hovScalars,"NLP resid [update]: inf norm ryd=%22.17e\n", buf);
   
   //rxl=x-sxl-xl
