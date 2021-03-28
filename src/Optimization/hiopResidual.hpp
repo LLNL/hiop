@@ -78,13 +78,18 @@ public:
   inline double getInfeasInfNorm() const {
     return nrmInf_nlp_feasib;
   }
+  /* get the previously computed Infeasibility */
+  inline double get_theta() const {
+    return nrmOne_theta;
+  } 
   /* evaluate the Infeasibility at the new iterate, which has eq and ineq functions
    * computed in c_eval and d_eval, respectively.
    * The method modifies 'this', in particular ryd,ryc, rxl,rxu, rdl, rdu in an attempt
-   * to reuse storage/buffers, but does not update the cached nrmInf_XXX members. */
-  double computeNlpInfeasInfNorm(const hiopIterate& iter,
-				 const hiopVector& c_eval,
-				 const hiopVector& d_eval);
+   * to reuse storage/buffers, but does not update the cached nrmInf_XXX members. 
+   * It computes and returns the one norm of [ryc ryd] */
+  double compute_nlp_infeasib_onenorm (const hiopIterate& iter,
+                                       const hiopVector& c_eval,
+                                       const hiopVector& d_eval);
 
   /* residual printing function - calls hiopVector::print
    * prints up to max_elems (by default all), on rank 'rank' (by default on all) */
@@ -109,6 +114,9 @@ private:
    *  for the barrier subproblem
    */
   double nrmInf_bar_optim, nrmInf_bar_feasib, nrmInf_bar_complem;
+  /** storage for the one norm of [ryc,ryd]. This is the one norm of constraint violations.
+  */ 
+  double nrmOne_theta;
   // and associated info from problem formulation
   hiopNlpFormulation * nlp;
 private:
