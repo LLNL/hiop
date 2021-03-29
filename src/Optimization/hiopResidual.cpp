@@ -192,6 +192,7 @@ int hiopResidual::update(const hiopIterate& it,
   buf = ryc->infnorm_local();
   nrmInf_nlp_feasib = fmax(nrmInf_nlp_feasib, buf);
   nrmOne_nlp_feasib += ryc->onenorm();
+
   nlp->log->printf(hovScalars,"NLP resid [update]: inf norm ryc=%22.17e\n", buf);
 
   //ryd

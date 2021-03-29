@@ -165,6 +165,7 @@ private:
    *  for the barrier subproblem
    */
   double nrmInf_bar_optim, nrmInf_bar_feasib, nrmInf_bar_complem;
+  
   /** storage for the one norm of [ryc,ryd]. This is the one norm of constraint violations.
   */ 
   double nrmOne_nlp_feasib, nrmOne_bar_feasib;
