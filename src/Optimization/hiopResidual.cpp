@@ -118,14 +118,16 @@ double hiopResidual::compute_nlp_infeasib_onenorm (const hiopIterate& it,
     rxl->axpy(-1.0,*it.sxl);
     rxl->axpy(-1.0,nlp->get_xl());
     //zero out entries in the resid that don't correspond to a finite low bound 
-    if(nlp->n_low_local()<nx_loc)
+    if(nlp->n_low_local()<nx_loc) {
       rxl->selectPattern(nlp->get_ixl());
+    }
   }
   //rxu=-x-sxu+xu
   if(nlp->n_upp_local()>0) {
     rxu->copyFrom(nlp->get_xu()); rxu->axpy(-1.0,*it.x); rxu->axpy(-1.0,*it.sxu);
-    if(nlp->n_upp_local()<nx_loc)
+    if(nlp->n_upp_local()<nx_loc) {
       rxu->selectPattern(nlp->get_ixu());
+    }
   }
   //rdl=d-sdl-dl
   if(nlp->m_ineq_low()>0) {
@@ -206,8 +208,9 @@ int hiopResidual::update(const hiopIterate& it,
     rxl->axpy(-1.0,*it.sxl);
     rxl->axpy(-1.0,nlp->get_xl());
     //zero out entries in the resid that don't correspond to a finite low bound 
-    if(nlp->n_low_local()<nx_loc)
+    if(nlp->n_low_local()<nx_loc) {
       rxl->selectPattern(nlp->get_ixl());
+    }
     buf = rxl->infnorm_local();
 //    nrmInf_nlp_feasib = fmax(nrmInf_nlp_feasib, buf);
     nlp->log->printf(hovScalars,"NLP resid [update]: inf norm rxl=%22.17e\n", buf);
@@ -218,8 +221,9 @@ int hiopResidual::update(const hiopIterate& it,
     rxu->copyFrom(nlp->get_xu());
     rxu->axpy(-1.0,*it.x);
     rxu->axpy(-1.0,*it.sxu);
-    if(nlp->n_upp_local()<nx_loc)
+    if(nlp->n_upp_local()<nx_loc) {
       rxu->selectPattern(nlp->get_ixu());
+    }
     buf = rxu->infnorm_local();
 //    nrmInf_nlp_feasib = fmax(nrmInf_nlp_feasib, buf);
     nlp->log->printf(hovScalars,"NLP resid [update]: inf norm rxu=%22.17e\n", buf);
@@ -253,8 +257,9 @@ int hiopResidual::update(const hiopIterate& it,
   if(nlp->n_low_local()>0) {
     rszl->setToZero();
     rszl->axzpy(-1.0, *it.sxl, *it.zl);
-    if(nlp->n_low_local()<nx_loc)
+    if(nlp->n_low_local()<nx_loc) {
       rszl->selectPattern(nlp->get_ixl());
+    }
     nrmInf_nlp_complem = fmax(nrmInf_nlp_complem, rszl->infnorm_local());
     
     rszl->addConstant_w_patternSelect(mu,nlp->get_ixl());
@@ -266,8 +271,9 @@ int hiopResidual::update(const hiopIterate& it,
   if(nlp->n_upp_local()>0) {
     rszu->setToZero();
     rszu->axzpy(-1.0, *it.sxu, *it.zu);
-    if(nlp->n_upp_local()<nx_loc)
+    if(nlp->n_upp_local()<nx_loc) {
       rszu->selectPattern(nlp->get_ixu());
+    }
 
     buf = rszu->infnorm_local();
     nrmInf_nlp_complem = fmax(nrmInf_nlp_complem, buf);
@@ -281,7 +287,9 @@ int hiopResidual::update(const hiopIterate& it,
   if(nlp->m_ineq_low()>0) {
     rsvl->setToZero();
     rsvl->axzpy(-1.0, *it.sdl, *it.vl);
-    if(nlp->m_ineq_low()<nlp->m_ineq()) rsvl->selectPattern(nlp->get_idl());
+    if(nlp->m_ineq_low()<nlp->m_ineq()) {
+      rsvl->selectPattern(nlp->get_idl());
+    }
     buf = rsvl->infnorm_local();
     nrmInf_nlp_complem = fmax(nrmInf_nlp_complem, buf);
 
@@ -296,7 +304,9 @@ int hiopResidual::update(const hiopIterate& it,
     rsvu->setToZero();
     rsvu->axzpy(-1.0, *it.sdu, *it.vu);
 
-    if(nlp->m_ineq_upp()<nlp->m_ineq()) rsvu->selectPattern(nlp->get_idu());
+    if(nlp->m_ineq_upp()<nlp->m_ineq()) {
+      rsvu->selectPattern(nlp->get_idu());
+    }
     buf = rsvu->infnorm_local();
     nrmInf_nlp_complem = fmax(nrmInf_nlp_complem, buf);
 
@@ -311,7 +321,8 @@ int hiopResidual::update(const hiopIterate& it,
   //here we reduce each of the norm together for a total cost of 1 Allreduce of 3 doubles
   //otherwise, if calling infnorm() for each vector, there will be 12 Allreduce's, each of 1 double
   double aux[6]={nrmInf_nlp_optim,nrmInf_nlp_feasib,nrmInf_nlp_complem,nrmInf_bar_optim,nrmInf_bar_feasib,nrmInf_bar_complem}, aux_g[6];
-  int ierr = MPI_Allreduce(aux, aux_g, 6, MPI_DOUBLE, MPI_MAX, nlp->get_comm()); assert(MPI_SUCCESS==ierr);
+  int ierr = MPI_Allreduce(aux, aux_g, 6, MPI_DOUBLE, MPI_MAX, nlp->get_comm()); 
+  assert(MPI_SUCCESS==ierr);
   nrmInf_nlp_optim=aux_g[0]; nrmInf_nlp_feasib=aux_g[1]; nrmInf_nlp_complem=aux_g[2];
   nrmInf_bar_optim=aux_g[3]; nrmInf_bar_feasib=aux_g[4]; nrmInf_bar_complem=aux_g[5];  
 #endif
@@ -421,14 +432,14 @@ void hiopResidual::update_soc(const hiopIterate& it,
   ryc->copyFrom(c_soc);
   buf = ryc->infnorm_local();
   nrmInf_nlp_feasib = fmax(nrmInf_nlp_feasib, buf);
-  nrmOne_nlp_feasib += ryc->onenorm_local();
+  nrmOne_nlp_feasib += ryc->onenorm();
   nlp->log->printf(hovScalars,"NLP resid [update]: inf norm ryc=%22.17e\n", buf);
 
   //ryd for soc: \alpha*(slack-d_soc) + (slack_trial-c_trial)
   ryd->copyFrom(d_soc);
   buf = ryd->infnorm_local();
   nrmInf_nlp_feasib = fmax(nrmInf_nlp_feasib, buf);
-  nrmOne_nlp_feasib += ryd->onenorm_local();
+  nrmOne_nlp_feasib += ryd->onenorm();
   nlp->log->printf(hovScalars,"NLP resid [update]: inf norm ryd=%22.17e\n", buf);
 
   //rxl=x-sxl-xl
@@ -437,8 +448,9 @@ void hiopResidual::update_soc(const hiopIterate& it,
     rxl->axpy(-1.0,*it.sxl);
     rxl->axpy(-1.0,nlp->get_xl());
     //zero out entries in the resid that don't correspond to a finite low bound 
-    if(nlp->n_low_local()<nx_loc)
+    if(nlp->n_low_local()<nx_loc) {
       rxl->selectPattern(nlp->get_ixl());
+    }
     buf = rxl->infnorm_local();
 //    nrmInf_nlp_feasib = fmax(nrmInf_nlp_feasib, buf);
     nlp->log->printf(hovScalars,"NLP resid [update]: inf norm rxl=%22.17e\n", buf);
@@ -449,8 +461,9 @@ void hiopResidual::update_soc(const hiopIterate& it,
     rxu->copyFrom(nlp->get_xu());
     rxu->axpy(-1.0,*it.x);
     rxu->axpy(-1.0,*it.sxu);
-    if(nlp->n_upp_local()<nx_loc)
+    if(nlp->n_upp_local()<nx_loc) {
       rxu->selectPattern(nlp->get_ixu());
+    }
     buf = rxu->infnorm_local();
 //    nrmInf_nlp_feasib = fmax(nrmInf_nlp_feasib, buf);
     nlp->log->printf(hovScalars,"NLP resid [update]: inf norm rxu=%22.17e\n", buf);
@@ -484,8 +497,9 @@ void hiopResidual::update_soc(const hiopIterate& it,
   if(nlp->n_low_local()>0) {
     rszl->setToZero();
     rszl->axzpy(-1.0, *it.sxl, *it.zl);
-    if(nlp->n_low_local()<nx_loc)
+    if(nlp->n_low_local()<nx_loc) {
       rszl->selectPattern(nlp->get_ixl());
+    }
     nrmInf_nlp_complem = fmax(nrmInf_nlp_complem, rszl->infnorm_local());
     
     rszl->addConstant_w_patternSelect(mu,nlp->get_ixl());
@@ -497,8 +511,9 @@ void hiopResidual::update_soc(const hiopIterate& it,
   if(nlp->n_upp_local()>0) {
     rszu->setToZero();
     rszu->axzpy(-1.0, *it.sxu, *it.zu);
-    if(nlp->n_upp_local()<nx_loc)
+    if(nlp->n_upp_local()<nx_loc) {
       rszu->selectPattern(nlp->get_ixu());
+    }
 
     buf = rszu->infnorm_local();
     nrmInf_nlp_complem = fmax(nrmInf_nlp_complem, buf);
@@ -512,7 +527,9 @@ void hiopResidual::update_soc(const hiopIterate& it,
   if(nlp->m_ineq_low()>0) {
     rsvl->setToZero();
     rsvl->axzpy(-1.0, *it.sdl, *it.vl);
-    if(nlp->m_ineq_low()<nlp->m_ineq()) rsvl->selectPattern(nlp->get_idl());
+    if(nlp->m_ineq_low()<nlp->m_ineq()) {
+      rsvl->selectPattern(nlp->get_idl());
+    }
     buf = rsvl->infnorm_local();
     nrmInf_nlp_complem = fmax(nrmInf_nlp_complem, buf);
 
@@ -527,7 +544,9 @@ void hiopResidual::update_soc(const hiopIterate& it,
     rsvu->setToZero();
     rsvu->axzpy(-1.0, *it.sdu, *it.vu);
 
-    if(nlp->m_ineq_upp()<nlp->m_ineq()) rsvu->selectPattern(nlp->get_idu());
+    if(nlp->m_ineq_upp()<nlp->m_ineq()) {
+      rsvu->selectPattern(nlp->get_idu());
+    }
     buf = rsvu->infnorm_local();
     nrmInf_nlp_complem = fmax(nrmInf_nlp_complem, buf);
 
@@ -541,14 +560,15 @@ void hiopResidual::update_soc(const hiopIterate& it,
 #ifdef HIOP_USE_MPI
   //here we reduce each of the norm together for a total cost of 1 Allreduce of 3 doubles
   //otherwise, if calling infnorm() for each vector, there will be 12 Allreduce's, each of 1 double
-  double aux[6]={nrmInf_nlp_optim,nrmInf_nlp_feasib,nrmInf_nlp_complem,nrmInf_bar_optim,nrmInf_bar_feasib,nrmInf_bar_complem}, aux_g[6];
-  int ierr = MPI_Allreduce(aux, aux_g, 6, MPI_DOUBLE, MPI_MAX, nlp->get_comm()); assert(MPI_SUCCESS==ierr);
-  nrmInf_nlp_optim=aux_g[0]; nrmInf_nlp_feasib=aux_g[1]; nrmInf_nlp_complem=aux_g[2];
-  nrmInf_bar_optim=aux_g[3]; nrmInf_bar_feasib=aux_g[4]; nrmInf_bar_complem=aux_g[5];
-  
-  double sum_one_norm = 0.0;
-  int ierr = MPI_Allreduce(nrmOne_nlp_feasib, sum_one_norm, 1, MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(MPI_SUCCESS==ierr);
-  nrmOne_bar_feasib = nrmOne_nlp_feasib = sum_one_norm;
+  double aux[6] = {nrmInf_nlp_optim,nrmInf_nlp_feasib,nrmInf_nlp_complem,nrmInf_bar_optim,nrmInf_bar_feasib,nrmInf_bar_complem}, aux_g[6];
+  int ierr = MPI_Allreduce(aux, aux_g, 6, MPI_DOUBLE, MPI_MAX, nlp->get_comm());
+  assert(MPI_SUCCESS==ierr);
+  nrmInf_nlp_optim = aux_g[0];
+  nrmInf_nlp_feasib = aux_g[1];
+  nrmInf_nlp_complem = aux_g[2];
+  nrmInf_bar_optim = aux_g[3];
+  nrmInf_bar_feasib = aux_g[4];
+  nrmInf_bar_complem = aux_g[5];  
 #endif
   nlp->runStats.tmSolverInternal.stop();
 

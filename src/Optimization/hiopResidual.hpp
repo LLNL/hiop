@@ -69,6 +69,22 @@ public:
 		     const hiopVector& gradf, const hiopMatrix& jac_c, const hiopMatrix& jac_d,
 		     const hiopLogBarProblem& logbar);
 
+  /// 
+  /// @pre
+  /**
+   * @brief Evaluate the infeasibilities at the new second-order-correction iterate.
+   * 
+   * Evaluate the the infeasibilities at the new second-order-correction iterate. Save 
+   * The method modifies 'this', in particular ryd,ryc, rxl,rxu, rdl, rdu in an attempt
+   * to reuse storage/buffers, and it updates the cached `nrmXXX` members. 
+   *
+   * @pre unlike method `update`, here vector `c_soc` and `d_soc` is the constraint 
+   *      violation including the constraint right-hand-side/slack, i.e.,
+   *      c_soc = c_rhs - c_body and d_soc = d - d_body
+   *
+   * computed in c_eval and d_eval, respectively.
+   * The method modifies 'this', in particular ryd,ryc, rxl,rxu, rdl, rdu in an attemp
+   */
   virtual void update_soc(const hiopIterate& it,
                           const hiopVector& c_soc,
                           const hiopVector& d_soc,

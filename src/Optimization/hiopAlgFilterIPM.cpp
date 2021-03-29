@@ -144,9 +144,15 @@ void hiopAlgFilterIPMBase::destructorPart()
 
   if(dualsUpdate) delete dualsUpdate;
   
-  if(c_soc) delete c_soc;
-  if(d_soc) delete d_soc;
-  if(soc_dir) delete soc_dir;
+  if(c_soc) {
+    delete c_soc;
+  }
+  if(d_soc) {
+    delete d_soc;
+  }
+  if(soc_dir) {
+    delete soc_dir;
+  }
 }
 hiopAlgFilterIPMBase::~hiopAlgFilterIPMBase()
 {
@@ -176,9 +182,15 @@ hiopAlgFilterIPMBase::~hiopAlgFilterIPMBase()
 
   if(dualsUpdate) delete dualsUpdate;
   
-  if(c_soc) delete c_soc;
-  if(d_soc) delete d_soc;
-  if(soc_dir) delete soc_dir;
+  if(c_soc) {
+    delete c_soc;
+  }
+  if(d_soc) {
+    delete d_soc;
+  }
+  if(soc_dir) {
+    delete soc_dir;
+  }
 }
 
 void hiopAlgFilterIPMBase::reInitializeNlpObjects()
@@ -1922,10 +1934,9 @@ int hiopAlgFilterIPMBase::apply_second_order_correction(hiopKKTLinSys* kkt,
     return false;
   }
 
-  if(!soc_dir){
+  if(!soc_dir) {
     soc_dir = dir->alloc_clone();
-    if(nlp->options->GetString("KKTLinsys")=="full")
-    {
+    if(nlp->options->GetString("KKTLinsys")=="full") {
       soc_dir->selectPattern();
     }      
     c_soc = nlp->alloc_dual_eq_vec();
