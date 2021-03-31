@@ -17,6 +17,24 @@ namespace hiop
    * or simply cannot be implemented without i. having this class specialized for 
    * rectangular matrices and ii. derive a new specialization for symmetric matrices.
    */
+  /* 
+    Note: the following methods of hiopMatrix are NOT 
+    implemented in this class:
+    - copyRowsFrom
+    - timesVec
+    - transTimesVec
+    - timesMat
+    - transTimesMat
+    - timesMatTrans
+    - addDiagonal (both overloads)
+    - addSubDiagonal (all three overloads)
+    - addMatrix
+    - addToSymDenseMatrixUpperTriangle
+    - transAddToSymDenseMatrixUpperTriangle
+    - addUpperTriangleToSymDenseMatrixUpperTriangle
+    - isfinite
+    - assertSymmetry
+  */
   class hiopMatrixComplexSparseTriplet : public hiopMatrix
   {
   public:
@@ -150,7 +168,11 @@ namespace hiop
     }
     
     virtual double max_abs_value();
-    
+
+    virtual void row_max_abs_value(hiopVector &ret_vec){assert(0&&"not yet");}
+
+    virtual void scale_row(hiopVector &vec_scal, const bool inv_scale){assert(0&&"not yet");}
+
     /* return false is any of the entry is a nan, inf, or denormalized */
     virtual bool isfinite() const
     {

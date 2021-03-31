@@ -129,37 +129,31 @@ public:
   virtual void addMatrix(double alpha, const hiopMatrix& X) = 0;
 
   /**
-   * @brief block of W += alpha*this
-   *
-   * For efficiency, only upper triangular matrix is updated since this will be eventually sent to LAPACK
-   *
-   * @pre 'this' fits in the upper triangle of W 
-   * @pre W.n() == W.m()
-   * @pre 'this' and W are local/non-distributed matrices
-   */
-  virtual void addToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start, 
-						double alpha, hiopMatrixDense& W) const = 0;
-
-  /**
    * @brief block of W += alpha*transpose(this)
    *
    * For efficiency, only upper triangular matrix is updated since this will be eventually sent to LAPACK
+   *
+   * The functionality of this method is needed only for general (non-symmetric) matrices and, for this
+   * reason, only general matrices classes implement/need to implement this method.
    *
    * @pre transpose of 'this' fits in the upper triangle of W 
    * @pre W.n() == W.m()
    * @pre 'this' and W are local/non-distributed matrices
    */
   virtual void transAddToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start, 
-						     double alpha, hiopMatrixDense& W) const = 0;
+  						     double alpha, hiopMatrixDense& W) const = 0;
 
   /**
    * @brief diagonal block of W += alpha*this with 'diag_start' indicating the diagonal entry of W where
-   * 'this' should start to contribute.
+   * 'this' should start to contribute to.
    * 
    * For efficiency, only upper triangle of W is updated since this will be eventually sent to LAPACK
-   * and only the upper triangle of 'this' is accessed
+   * and only the upper triangle of 'this' is accessed.
    * 
-   * @pre this->n()==this-m()
+   * This functionality of this method is needed only for symmetric matrices and, for this reason,
+   * only symmetric matrices classes implement/need to implement it.
+   *
+   * @pre this->n()==this->m()
    * @pre W.n() == W.m()
    * @pre 'this' and W are local/non-distributed matrices
    */
@@ -177,6 +171,25 @@ public:
   virtual void copyRowsFrom(const hiopMatrix& src, const long long* rows_idxs, long long n_rows) = 0;
  
   virtual double max_abs_value() = 0;
+
+  /**
+  * @brief Find the maximum absolute value in each row of `this` matrix, and return them in `ret_vec`
+  *
+  * @pre 'ret_vec' has exactly same number of rows as `this` matrix
+  */  
+  virtual void row_max_abs_value(hiopVector &ret_vec) = 0;
+
+  /**
+  * @brief Scale each row of `this` matrix, according to the component of `ret_vec`.
+  *
+  * if inv_scale=false:
+  *   this[i] = ret_vec[i]*this[i]
+  * else
+  *   this[i] = (1/ret_vec[i])*this[i]
+  *
+  * @pre 'ret_vec' has exactly same number of rows as `this` matrix
+  */  
+  virtual void scale_row(hiopVector &vec_scal, const bool inv_scale) = 0;
 
   /** @brief return false is any of the entry is a nan, inf, or denormalized */
   virtual bool isfinite() const = 0;

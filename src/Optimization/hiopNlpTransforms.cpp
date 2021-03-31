@@ -5,7 +5,7 @@
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
 // is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause). 
-// Please also read ‚ÄúAdditional BSD Notice‚Äù below.
+// Please also read ìAdditional BSD Noticeî below.
 //
 // Redistribution and use in source and binary forms, with or without modification, 
 // are permitted provided that the following conditions are met:
@@ -46,6 +46,14 @@
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or 
 // product endorsement purposes.
 
+/**
+ * @file hiopNlpTransforms.cpp
+ *
+ * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
+ * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
+ *
+ */
+ 
 #include "hiopNlpTransforms.hpp"
 #include "hiopLinAlgFactory.hpp"
 
@@ -53,16 +61,16 @@
 namespace hiop
 {
 
-hiopFixedVarsRemover::  
-hiopFixedVarsRemover(const hiopVector& xl, 
-		     const hiopVector& xu, 
-		     const double& fixedVarTol_,
-		     const long long& numFixedVars,
-		     const long long& numFixedVars_local)
+hiopFixedVarsRemover::
+hiopFixedVarsRemover(const hiopVector& xl,
+                     const hiopVector& xu,
+                     const double& fixedVarTol_,
+                     const long long& numFixedVars,
+                     const long long& numFixedVars_local)
   : n_fixed_vars_local(numFixedVars_local), fixedVarTol(fixedVarTol_),
     Jacc_fs(NULL), Jacd_fs(NULL),
     fs2rs_idx_map(xl.get_local_size()),
-    x_rs_ref(NULL), Jacc_rs_ref(NULL), Jacd_rs_ref(NULL)
+    x_rs_ref_(nullptr), Jacc_rs_ref(NULL), Jacd_rs_ref(NULL)
 {
   xl_fs = xl.new_copy();
   xu_fs = xu.new_copy();
@@ -179,7 +187,7 @@ bool hiopFixedVarsRemover::setupConstraintsPart(const int& neq, const int& nineq
 void hiopFixedVarsRemover::copyFsToRs(const hiopVector& fsVec,  hiopVector& rsVec)
 {
   assert(fsVec.get_local_size()==fs2rs_idx_map.size());
-  applyInvToArray(fsVec.local_data_const(), rsVec.local_data());
+  apply_to_vector(&fsVec, &rsVec);
 }
 
 void hiopFixedVarsRemover::
@@ -194,74 +202,88 @@ copyFsToRs(const hiopInterfaceBase::NonlinearityType* fs, hiopInterfaceBase::Non
   }
 }
 
-
 /* from rs to fs */
-void hiopFixedVarsRemover::applyToArray(const double* vec_rs, double* vec_fs)
+void hiopFixedVarsRemover::apply_inv_to_vector(const hiopVector* vec_rs, hiopVector* vec_fs)
 {
   double* xl_fs_arr = xl_fs->local_data();
+  const double* vec_rs_arr = vec_rs->local_data_const();
+  double* vec_fs_arr = vec_fs->local_data();
   int rs_idx;
   for(int i=0; i<fs2rs_idx_map.size(); i++) {
     rs_idx = fs2rs_idx_map[i];
     if(rs_idx<0) {
-      vec_fs[i] = xl_fs_arr[i];
+      vec_fs_arr[i] = xl_fs_arr[i];
     } else {
-      vec_fs[i] = vec_rs[rs_idx];
+      vec_fs_arr[i] = vec_rs_arr[rs_idx];
     }
   }
 }
 
 /* from fs to rs */
-void hiopFixedVarsRemover::applyInvToArray(const double* x_fs, double* x_rs)
+void hiopFixedVarsRemover::apply_to_vector(const hiopVector* vec_fs, hiopVector* vec_rs)
 {
+  double* vec_rs_arr = vec_rs->local_data();
+  const double* vec_fs_arr = vec_fs->local_data_const();
   int rs_idx;
-  for(int i=0; i<fs2rs_idx_map.size(); i++)  {
+  for(int i=0; i<fs2rs_idx_map.size(); i++) {
     rs_idx = fs2rs_idx_map[i];
     if(rs_idx>=0) {
-      x_rs[rs_idx]=x_fs[i];
+      vec_rs_arr[rs_idx]=vec_fs_arr[i];
     }
   }
 }
 
 /* from rs to fs */
-void hiopFixedVarsRemover::applyToMatrix(const double*const* M_rs, const int& m_in, double** M_fs)
+void hiopFixedVarsRemover::applyToMatrix(const double* M_rs, const int& m_in, double* M_fs)
 {
   int rs_idx;
+  const int nfs = fs2rs_idx_map.size();
+  assert(nfs == fs_n_local());
+  const int nrs = rs_n_local();
+
   for(int i=0; i<m_in; i++) {
-    for(int j=0; j<fs2rs_idx_map.size(); j++) {
+    for(int j=0; j<nfs; j++) {
       rs_idx = fs2rs_idx_map[j];
       if(rs_idx<0) {
-  	M_fs[i][j] = 0.; //really no need to initialize this, these entries will be later ignored
+  	//M_fs[i][j] = 0.; //really no need to initialize this, these entries will be later ignored
+        M_fs[i*nfs+j] = 0.;
       } else {
-  	M_fs[i][j] = M_rs[i][rs_idx];
+  	//M_fs[i][j] = M_rs[i][rs_idx];
+        M_fs[i*nfs+j] = M_rs[i*nrs+rs_idx];
       }
     }
   }
 }
 
 /* from fs to rs */
-void hiopFixedVarsRemover::applyInvToMatrix(const double*const* M_fs, const int& m_in, double** M_rs)
+void hiopFixedVarsRemover::applyInvToMatrix(const double* M_fs, const int& m_in, double* M_rs)
 {
   int rs_idx;
+  const int nfs = fs2rs_idx_map.size();
+  assert(nfs == fs_n_local());
+  const int nrs = rs_n_local();
+
   for(int i=0; i<m_in; i++) {
-    for(int j=0; j<fs2rs_idx_map.size(); j++) {
+    for(int j=0; j<fs2rs_idx_map.size(); j++) {  
       rs_idx = fs2rs_idx_map[j];
       if(rs_idx>=0) {
-  	M_rs[i][rs_idx] = M_fs[i][j];
+  	M_rs[i*nrs+rs_idx] = M_fs[i*nfs+j];
       }
     }
   }
 }
 
 hiopFixedVarsRelaxer::
-hiopFixedVarsRelaxer(const hiopVector& xl, 
-		     const hiopVector& xu, 
-		     const long long& numFixedVars,
-		     const long long& numFixedVars_local)
+hiopFixedVarsRelaxer(const hiopVector& xl,
+                     const hiopVector& xu,
+                     const long long& numFixedVars,
+                     const long long& numFixedVars_local)
   : xl_copy(NULL), xu_copy(NULL), n_vars(xl.get_size()), n_vars_local(xl.get_local_size())
 {
   //xl_copy = xl.new_copy(); // no need to copy at this point
   //xu_copy = xu.new_copy(); // no need to copy at this point
 }
+
 hiopFixedVarsRelaxer::~hiopFixedVarsRelaxer()
 {
   if(xl_copy) delete xl_copy;
@@ -289,6 +311,120 @@ relax(const double& fixed_var_tol, const double& fixed_var_perturb, hiopVector& 
     }
   }
 }
+
+hiopBoundsRelaxer::
+hiopBoundsRelaxer(const hiopVector& xl,
+                  const hiopVector& xu,
+                  const hiopVector& dl,
+                  const hiopVector& du)
+  : xl_ori(NULL), xu_ori(NULL), dl_ori(NULL), du_ori(NULL),
+    n_vars(xl.get_size()), n_vars_local(xl.get_local_size()),
+    n_ineq(dl.get_size())
+{
+  xl_ori = xl.new_copy();
+  xu_ori = xu.new_copy();
+  dl_ori = dl.new_copy();
+  du_ori = du.new_copy();
+}
+
+hiopBoundsRelaxer::~hiopBoundsRelaxer()
+{
+  if(xl_ori) {
+    delete xl_ori;
+  }
+  if(xu_ori) {
+    delete xu_ori;
+  }
+  if(dl_ori) {
+    delete dl_ori;
+  }
+  if(du_ori) {
+    delete du_ori;
+  }
+}
+
+void hiopBoundsRelaxer::
+relax(const double& bound_relax_perturb, hiopVector& xl, hiopVector& xu, hiopVector& dl, hiopVector& du)
+{
+  xl.component_abs();
+  xl.component_max(1.);
+  xl.scale(-bound_relax_perturb);
+  xl.axpy(1.0, *xl_ori);
+
+  xu.component_abs();
+  xu.component_max(1.);
+  xu.scale(bound_relax_perturb);
+  xu.axpy(1.0, *xu_ori);
+
+  dl.component_abs();
+  dl.component_max(1.);
+  dl.scale(-bound_relax_perturb);
+  dl.axpy(1.0, *dl_ori);
+
+  du.component_abs();
+  du.component_max(1.);
+  du.scale(bound_relax_perturb);
+  du.axpy(1.0, *du_ori);
+
+}
+
+/**
+* For class hiopNLPObjGradScaling
+*/
+hiopNLPObjGradScaling::hiopNLPObjGradScaling(const double max_grad, 
+                                             hiopVector& c, 
+                                             hiopVector& d, 
+                                             hiopVector& gradf,
+                                             hiopMatrix& Jac_c, 
+                                             hiopMatrix& Jac_d, 
+                                             long long *cons_eq_mapping, 
+                                             long long *cons_ineq_mapping)
+      : n_vars(gradf.get_size()), n_vars_local(gradf.get_local_size()),
+        scale_factor_obj(1.),
+        n_eq(c.get_size()), n_ineq(d.get_size())
+{
+  scale_factor_obj = max_grad/gradf.infnorm();
+  if(scale_factor_obj>1.)
+  {
+    scale_factor_obj=1.;
+  }
+  
+  scale_factor_c = c.new_copy();
+  scale_factor_d = d.new_copy();
+  scale_factor_cd = LinearAlgebraFactory::createVector(n_eq + n_ineq);
+  
+  Jac_c.row_max_abs_value(*scale_factor_c);
+  scale_factor_c->invert();
+  scale_factor_c->scale(max_grad);
+  scale_factor_c->component_min(1.0);
+
+  Jac_d.row_max_abs_value(*scale_factor_d);
+  scale_factor_d->invert();
+  scale_factor_d->scale(max_grad);
+  scale_factor_d->component_min(1.0);
+
+  const double* eq_arr = scale_factor_c->local_data_const();
+  const double* ineq_arr = scale_factor_d->local_data_const();
+  double* scale_factor_cd_arr = scale_factor_cd->local_data();
+
+  for(int i=0; i<n_eq; ++i) {
+    scale_factor_cd_arr[cons_eq_mapping[i]] = eq_arr[i];
+  }
+  for(int i=0; i<n_ineq; ++i) {
+    scale_factor_cd_arr[cons_ineq_mapping[i]] = ineq_arr[i];
+  }
+}
+
+hiopNLPObjGradScaling::~hiopNLPObjGradScaling()
+{
+  if(scale_factor_c) delete scale_factor_c;
+  if(scale_factor_d) delete scale_factor_d;
+  if(scale_factor_cd) delete scale_factor_cd;
+}
+
+
+
+
 
 
 } //end of namespace

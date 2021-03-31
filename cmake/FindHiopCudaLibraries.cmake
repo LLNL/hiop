@@ -49,7 +49,7 @@ target_link_libraries(hiop_cuda INTERFACE
 target_include_directories(hiop_cuda INTERFACE ${CUDA_TOOLKIT_INCLUDE})
 
 # for now we rely on MAGMA for GPUs computations
-include(FindMagma)
+include(FindHiopMagma)
 target_link_libraries(hiop_cuda INTERFACE Magma)
 
 message(STATUS "HiOp support for GPUs is on")

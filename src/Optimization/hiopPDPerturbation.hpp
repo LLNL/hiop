@@ -181,7 +181,6 @@ public:
 	if(!guts_of_compute_perturb_wrong_inertia(delta_wx, delta_wd)) {
 	  return false;
 	}
-	assert(delta_cc == 0. && delta_cd == 0.);
 	deltas_test_type_ = dttDeltac0Deltawpos;
         break;
       case dttDeltac0Deltawpos:

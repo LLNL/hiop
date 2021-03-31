@@ -137,8 +137,8 @@ int main(int argc, char **argv)
     
     hiopNlpMDS nlp(*nlp_interface);
     
-    nlp.options->SetStringValue("dualsUpdateType", "linear");
-    nlp.options->SetStringValue("dualsInitialization", "zero");
+    nlp.options->SetStringValue("duals_update_type", "linear");
+//    nlp.options->SetStringValue("duals_init", "zero");
     
     nlp.options->SetStringValue("Hessian", "analytical_exact");
     //nlp.options->SetStringValue("KKTLinsys", "xdycyd");
@@ -170,8 +170,8 @@ int main(int argc, char **argv)
     
     hiopNlpMDS nlp(*nlp_interface);
     
-    nlp.options->SetStringValue("dualsUpdateType", "linear");
-    nlp.options->SetStringValue("dualsInitialization", "zero");
+    nlp.options->SetStringValue("duals_update_type", "linear");
+//    nlp.options->SetStringValue("duals_init", "zero");
     
     nlp.options->SetStringValue("Hessian", "analytical_exact");
     //nlp.options->SetStringValue("KKTLinsys", "xdycyd");
@@ -203,8 +203,8 @@ int main(int argc, char **argv)
     
     hiopNlpMDS nlp(*nlp_interface);
     
-    nlp.options->SetStringValue("dualsUpdateType", "linear");
-    nlp.options->SetStringValue("dualsInitialization", "zero");
+    nlp.options->SetStringValue("duals_update_type", "linear");
+//    nlp.options->SetStringValue("duals_init", "zero");
     
     nlp.options->SetStringValue("Hessian", "analytical_exact");
     //nlp.options->SetStringValue("KKTLinsys", "xdycyd");
@@ -236,8 +236,8 @@ int main(int argc, char **argv)
     
     hiopNlpMDS nlp(*nlp_interface);
     
-    nlp.options->SetStringValue("dualsUpdateType", "linear");
-    nlp.options->SetStringValue("dualsInitialization", "zero");
+    nlp.options->SetStringValue("duals_update_type", "linear");
+//    nlp.options->SetStringValue("duals_init", "zero");
     
     nlp.options->SetStringValue("Hessian", "analytical_exact");
     //nlp.options->SetStringValue("KKTLinsys", "xdycyd");
@@ -284,7 +284,10 @@ int main(int argc, char **argv)
     // }
 
     if(false == selfcheck_ok)
+    {
+      std::cout << "Selfcheck failed!\n";
       return -1;
+    }
   } else {
     if(rank==0) {
       if(rdJac) printf("Optimal objective 1: %22.14e. Solver status: %d\n", obj_value1, status1);
@@ -300,5 +303,6 @@ int main(int argc, char **argv)
   MPI_Finalize();
 #endif
 
+  std::cout << "Return successful!\n";
   return 0;
 }

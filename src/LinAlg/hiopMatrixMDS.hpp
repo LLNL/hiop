@@ -12,10 +12,17 @@
 
 namespace hiop
 {
-
 /** Mixed Sparse-Dense blocks matrix  - it is not distributed
  *  M = [S D] where S is sparse and D is dense
-*/
+ *  Note: the following methods of hiopMatrix are NOT 
+ *  implemented in this class:
+ *  - timesMat
+ *  - transTimesMat
+ *  - timesMatTran
+ *  - addDiagonal (both overloads)
+ *  - addSubDiagonal (all three overloads)
+ *  - addUpperTriangleToSymDenseMatrixUpperTriangle
+ */
 class hiopMatrixMDS : public hiopMatrix
 {
 public:
@@ -61,24 +68,16 @@ public:
   virtual void timesVec(double beta,  hiopVector& y,
 			double alpha, const hiopVector& x) const
   {
-    hiopVectorPar* yp = dynamic_cast<hiopVectorPar*>(&y);
-    const hiopVectorPar* xp = dynamic_cast<const hiopVectorPar*>(&x);
-    assert(yp);
-    assert(xp);
-    assert(xp->get_size() == mSp->n()+mDe->n());
-    mSp->timesVec(beta, yp->local_data(), alpha, xp->local_data_const());
-    mDe->timesVec(1.,   yp->local_data(), alpha, xp->local_data_const()+mSp->n());
+    assert(x.get_size() == mSp->n()+mDe->n());
+    mSp->timesVec(beta, y.local_data(), alpha, x.local_data_const());
+    mDe->timesVec(1.,   y.local_data(), alpha, x.local_data_const()+mSp->n());
   }
   virtual void transTimesVec(double beta,   hiopVector& y,
 			     double alpha, const hiopVector& x) const
   {
-    hiopVectorPar* yp = dynamic_cast<hiopVectorPar*>(&y);
-    const hiopVectorPar* xp = dynamic_cast<const hiopVectorPar*>(&x);
-    assert(yp);
-    assert(xp);
-    assert(yp->get_size() == mSp->n()+mDe->n());
-    mSp->transTimesVec(beta, yp->local_data(),          alpha, xp->local_data_const());
-    mDe->transTimesVec(beta, yp->local_data()+mSp->n(), alpha, xp->local_data_const());
+    assert(y.get_size() == mSp->n()+mDe->n());
+    mSp->transTimesVec(beta, y.local_data(),          alpha, x.local_data_const());
+    mDe->transTimesVec(beta, y.local_data()+mSp->n(), alpha, x.local_data_const());
   }
 
   /* W = beta*W + alpha*this*X */  
@@ -94,7 +93,11 @@ public:
 
   virtual void timesMatTrans(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const
   {
-    assert(false && "not yet implemented");
+    const hiopMatrixMDS &X_mds = dynamic_cast<const hiopMatrixMDS&>(X);
+    hiopMatrixDense &W_d = dynamic_cast<hiopMatrixDense&>(W);
+    
+    mDe->timesMatTrans(beta, W, 1.0, *X_mds.de_mat());
+    mSp->timesMatTrans(1.0, W, 1.0, *X_mds.sp_mat());
   }
 
 
@@ -134,11 +137,12 @@ public:
   }
 
   /* block of W += alpha*this */
-  virtual void addToSymDenseMatrixUpperTriangle(int row_start, int col_start, double alpha, hiopMatrixDense& W) const
-  {
-    mSp->addToSymDenseMatrixUpperTriangle(row_start, col_start, alpha, W);
-    mDe->addToSymDenseMatrixUpperTriangle(row_start, col_start+mSp->n(), alpha, W);
-  }
+  // virtual void addToSymDenseMatrixUpperTriangle(int row_start, int col_start, double alpha, hiopMatrixDense& W) const
+  // {
+  //   mSp->addToSymDenseMatrixUpperTriangle(row_start, col_start, alpha, W);
+  //   mDe->addToSymDenseMatrixUpperTriangle(row_start, col_start+mSp->n(), alpha, W);
+  // } aaa
+
   /* block of W += alpha*this' */
   virtual void transAddToSymDenseMatrixUpperTriangle(int row_start, int col_start, double alpha, hiopMatrixDense& W) const
   {
@@ -159,20 +163,37 @@ public:
   virtual void addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start, 
 							     double alpha, hiopMatrixDense& W) const
   {
-    assert(false && "not for general matrices; counterpart method from hiopMatrixSymBlockDiagMDS should be used instead");
+    assert(false && "not needed for general/nonsymmetric matrices.");
   }
 
   virtual double max_abs_value()
   {
     return std::max(mSp->max_abs_value(), mDe->max_abs_value());
   }
+  
+  virtual void row_max_abs_value(hiopVector &ret_vec)
+  {
+    auto ret_vec_dense = ret_vec.new_copy();
+    
+    mSp->row_max_abs_value(ret_vec);
+    mDe->row_max_abs_value(*ret_vec_dense);
+    
+    ret_vec.component_max(*ret_vec_dense);
+        
+    delete ret_vec_dense;
+  }
 
+  virtual void scale_row(hiopVector &vec_scal, const bool inv_scale)
+  {
+    mSp->scale_row(vec_scal, inv_scale);
+    mDe->scale_row(vec_scal, inv_scale);
+  }
+  
   virtual bool isfinite() const
   {
     return mSp->isfinite() && mDe->isfinite();
   }
   
-  //virtual void print(int maxRows=-1, int maxCols=-1, int rank=-1) const;
   virtual void print(FILE* f=NULL, const char* msg=NULL, int maxRows=-1, int maxCols=-1, int rank=-1) const
   {
     mSp->print(f,msg,maxRows,maxCols,rank);
@@ -183,8 +204,8 @@ public:
   {
     hiopMatrixMDS* m = new hiopMatrixMDS();
     assert(m->mSp==NULL); assert(m->mDe==NULL); 
-    m->mSp = dynamic_cast<hiopMatrixSparseTriplet*>(mSp->alloc_clone());
-    m->mDe = dynamic_cast<hiopMatrixDense*>(mDe->alloc_clone());
+    m->mSp = mSp->alloc_clone();
+    m->mDe = mDe->alloc_clone();
     assert(m->mSp!=NULL); assert(m->mDe!=NULL); 
     return m;
   }
@@ -192,8 +213,8 @@ public:
   {
     hiopMatrixMDS* m = new hiopMatrixMDS();
     assert(m->mSp==NULL); assert(m->mDe==NULL); 
-    m->mSp = dynamic_cast<hiopMatrixSparseTriplet*>(mSp->new_copy());
-    m->mDe = dynamic_cast<hiopMatrixDense*>(mDe->new_copy());
+    m->mSp = mSp->new_copy();
+    m->mDe = mDe->new_copy();
     assert(m->mSp!=NULL); assert(m->mDe!=NULL); 
     return m;
   }
@@ -209,17 +230,17 @@ public:
   inline int sp_nnz() const { return mSp->numberOfNonzeros(); }
   inline int* sp_irow()
   {
-    return dynamic_cast<hiopMatrixSparseTriplet*>(mSp)->i_row();
+    return mSp->i_row();
   }
   inline int* sp_jcol()
   {
-    return dynamic_cast<hiopMatrixSparseTriplet*>(mSp)->j_col();
+    return mSp->j_col();
   }
   inline double* sp_M()
   {
-    return dynamic_cast<hiopMatrixSparseTriplet*>(mSp)->M();
+    return mSp->M();
   }
-  inline double** de_local_data() { return mDe->local_data(); }
+  inline double* de_local_data() { return mDe->local_data(); }
 
 #ifdef HIOP_DEEPCHECKS
   virtual bool assertSymmetry(double tol=1e-16) const { return false; }
@@ -232,12 +253,22 @@ private:
   hiopMatrixMDS(const hiopMatrixMDS&) {};
 };
 
+/*
+ * Note: the following methods of hiopMatrix are NOT 
+ * implemented in this class:
+ * - timesMat
+ * - transTimesMat
+ * - timesMatTran
+ * - addDiagonal (both overloads)
+ * - addSubDiagonal (all three overloads)
+ * - transAddToSymDenseMatrixUpperTriangle
+ */
 class hiopMatrixSymBlockDiagMDS : public hiopMatrix
 {
 public:
   hiopMatrixSymBlockDiagMDS(int n_sparse, int n_dense, int nnz_sparse)
   {
-    mSp = new hiopMatrixSymSparseTriplet(n_sparse, nnz_sparse);
+    mSp = LinearAlgebraFactory::createMatrixSymSparse(n_sparse, nnz_sparse);
     mDe = LinearAlgebraFactory::createMatrixDense(n_dense, n_dense);
   }
   virtual ~hiopMatrixSymBlockDiagMDS()
@@ -272,16 +303,11 @@ public:
   virtual void timesVec(double beta,  hiopVector& y,
 			double alpha, const hiopVector& x) const
   {
-    hiopVectorPar* yp = dynamic_cast<hiopVectorPar*>(&y);
-    const hiopVectorPar* xp = dynamic_cast<const hiopVectorPar*>(&x);
-    assert(yp);
-    assert(xp);
- 
-    assert(xp->get_size() == mSp->n()+mDe->n());
-    assert(yp->get_size() == mSp->n()+mDe->n());
+    assert(x.get_size() == mSp->n()+mDe->n());
+    assert(y.get_size() == mSp->n()+mDe->n());
 
-    mSp->timesVec(beta, yp->local_data(),          alpha, xp->local_data_const());
-    mDe->timesVec(beta, yp->local_data()+mSp->n(), alpha, xp->local_data_const()+mSp->n());
+    mSp->timesVec(beta, y.local_data(),          alpha, x.local_data_const());
+    mDe->timesVec(beta, y.local_data()+mSp->n(), alpha, x.local_data_const()+mSp->n());
   }
   virtual void transTimesVec(double beta,   hiopVector& y,
 			     double alpha, const hiopVector& x) const
@@ -332,29 +358,23 @@ public:
     assert(false && "not needed / implemented");
   }
 
-  virtual void addMatrix(double alpha, const hiopMatrix& X)
+  virtual void addMatrix(double alpha, const hiopMatrix& X_in)
   {
-    const hiopMatrixSymBlockDiagMDS* pX=dynamic_cast<const hiopMatrixSymBlockDiagMDS*>(&X);
-    if(pX==NULL) {
-      assert(false && "operation only supported for hiopMatrixMDS left operand");
-    } 
-    mSp->addMatrix(alpha, *pX->mSp);
-    mDe->addMatrix(alpha, *pX->mDe);
+    const hiopMatrixSymBlockDiagMDS& X = dynamic_cast<const hiopMatrixSymBlockDiagMDS&>(X_in);
+    mSp->addMatrix(alpha, *X.mSp);
+    mDe->addMatrix(alpha, *X.mDe);
   }
 
-  /* block of W += alpha*this */
-  virtual void addToSymDenseMatrixUpperTriangle(int row_start, int col_start, double alpha, hiopMatrixDense& W) const
+  /**
+   *  block of W += alpha*this
+   * 
+   * @warning This method should never be called/is never needed for symmetric matrixes.
+   * Use addUpperTriangleToSymDenseMatrixUpperTriangle instead.
+   */
+  virtual void transAddToSymDenseMatrixUpperTriangle(int row_start, int col_start, 
+						     double alpha, hiopMatrixDense& W) const
   {
-    assert(mSp->m() == mSp->n());
-    mSp->addToSymDenseMatrixUpperTriangle(row_start,          col_start,          alpha, W);
-    mDe->addToSymDenseMatrixUpperTriangle(row_start+mSp->n(), col_start+mSp->n(), alpha, W);
-  }
-  /* block of W += alpha*this */
-  virtual void transAddToSymDenseMatrixUpperTriangle(int row_start, int col_start, double alpha, hiopMatrixDense& W) const
-  {
-    assert(mSp->m() == mSp->n());
-    mSp->transAddToSymDenseMatrixUpperTriangle(row_start,          col_start,          alpha, W);
-    mDe->transAddToSymDenseMatrixUpperTriangle(row_start+mSp->n(), col_start+mSp->n(), alpha, W);
+    assert(0 && "This should not be called for MDS symmetric matrices.");
   }
 
   /* diagonal block of W += alpha*this with 'diag_start' indicating the diagonal entry of W where
@@ -364,7 +384,7 @@ public:
    * and only the upper triangle of 'this' is accessed
    * 
    * Preconditions: 
-   *  1. this->n()==this-m()
+   *  1. this->n()==this->m()
    *  2. W.n() == W.m()
    */
   virtual void addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start, 
@@ -380,12 +400,29 @@ public:
     return std::max(mSp->max_abs_value(), mDe->max_abs_value());
   }
 
+  virtual void row_max_abs_value(hiopVector &ret_vec)
+  {
+    auto ret_vec_dense = ret_vec.new_copy();
+    
+    mSp->row_max_abs_value(ret_vec);
+    mDe->row_max_abs_value(*ret_vec_dense);
+    
+    ret_vec.component_max(*ret_vec_dense);
+        
+    delete ret_vec_dense;  
+  }
+
+  virtual void scale_row(hiopVector &vec_scal, const bool inv_scale)
+  {
+    mSp->scale_row(vec_scal, inv_scale);
+    mDe->scale_row(vec_scal, inv_scale);
+  }
+
   virtual bool isfinite() const
   {
     return mSp->isfinite() && mDe->isfinite();
   }
   
-  //virtual void print(int maxRows=-1, int maxCols=-1, int rank=-1) const;
   virtual void print(FILE* f=NULL, const char* msg=NULL, int maxRows=-1, int maxCols=-1, int rank=-1) const
   {
     mSp->print(f,msg,maxRows,maxCols,rank);
@@ -396,8 +433,8 @@ public:
   {
     hiopMatrixSymBlockDiagMDS* m = new hiopMatrixSymBlockDiagMDS();
     assert(m->mSp==NULL); assert(m->mDe==NULL); 
-    m->mSp = dynamic_cast<hiopMatrixSymSparseTriplet*>(mSp->alloc_clone());
-    m->mDe = dynamic_cast<hiopMatrixDense*>(mDe->alloc_clone());
+    m->mSp = mSp->alloc_clone();
+    m->mDe = mDe->alloc_clone();
     assert(m->mSp!=NULL); assert(m->mDe!=NULL); 
     return m;
   }
@@ -405,8 +442,8 @@ public:
   {
     hiopMatrixSymBlockDiagMDS* m = new hiopMatrixSymBlockDiagMDS();
     assert(m->mSp==NULL); assert(m->mDe==NULL); 
-    m->mSp = dynamic_cast<hiopMatrixSymSparseTriplet*>(mSp->new_copy());
-    m->mDe = dynamic_cast<hiopMatrixDense*>(mDe->new_copy());
+    m->mSp = mSp->new_copy();
+    m->mDe = mDe->new_copy();
     assert(m->mSp!=NULL); assert(m->mDe!=NULL); 
     return m;
   }
@@ -416,14 +453,14 @@ public:
   inline long long n_sp() const {return mSp->n();}
   inline long long n_de() const {return  mDe->n();}
 
-  inline const hiopMatrixSymSparseTriplet* sp_mat() const { return mSp; }
+  inline const hiopMatrixSparse* sp_mat() const { return mSp; }
   inline const hiopMatrixDense* de_mat() const { return mDe; }
 
   inline int sp_nnz() const { return mSp->numberOfNonzeros(); }
   inline int* sp_irow() { return mSp->i_row(); }
   inline int* sp_jcol() { return mSp->j_col(); }
   inline double* sp_M() { return mSp->M(); }
-  inline double** de_local_data() { return mDe->local_data(); }
+  inline double* de_local_data() { return mDe->local_data(); }
 
 #ifdef HIOP_DEEPCHECKS
   virtual bool assertSymmetry(double tol=1e-16) const
@@ -435,8 +472,8 @@ public:
   }
 #endif
 private:
-  hiopMatrixSymSparseTriplet* mSp;
-  hiopMatrixDense* mDe;
+  hiopMatrixSparse* mSp; ///< Symmetric sparse matrix
+  hiopMatrixDense*  mDe; ///< Row-major dense matrix
 private:
   hiopMatrixSymBlockDiagMDS() : mSp(NULL), mDe(NULL) {};
   hiopMatrixSymBlockDiagMDS(const hiopMatrixMDS&) {};

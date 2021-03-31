@@ -1,6 +1,5 @@
 // Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
-// Written by Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
@@ -69,8 +68,8 @@ public:
   //
   //Passing 'setFromFile' with non-default, 'true' value is for expert use-only. It indicates that the option 
   //value comes from the options file (hiop.options) and will overwrite any options set at runtime by the 
-  //user's code. However, passing 'setFromFile' with 'true' during runtime is perfectly fine and will 
-  //conviniently "overwrite the overwriting" file options  
+  //user's code. However, passing 'setFromFile' with 'true' at runtime is perfectly fine and will 
+  //conveniently "overwrite the overwriting" file options  
 
   virtual bool SetNumericValue (const char* name, const double& value, const bool& setFromFile=false);
   virtual bool SetIntegerValue(const char* name, const int& value, const bool& setFromFile=false);
@@ -80,56 +79,68 @@ public:
   virtual int         GetInteger(const char* name) const;
   virtual std::string GetString (const char* name) const;
 
-  void SetLog(hiopLogger* log_) { log=log_; ensureConsistence(); }
+  void SetLog(hiopLogger* log_in)
+  {
+    log_=log_in;
+    ensureConsistence();
+  }
   virtual void print(FILE* file, const char* msg=NULL) const;
 protected:
   /* internal use only */
 
   void registerNumOption(const std::string& name, double defaultValue, double rangeLo, double rangeUp, const char* description);
   void registerIntOption(const std::string& name, int    defaultValue, int    rangeLo, int    rangeUp, const char* description);
-  //void registerBooOption(const std::string& name, bool defaultValue);
   void registerStrOption(const std::string& name, const std::string& defaultValue, const std::vector<std::string>& range, const char* description);
   void registerOptions();
-
-  //sets the (name, value) pair accordingly to the type registered in mOptions, or prints an warning message and leaves
-  //the 'name' option to the default value. This method is for internal use.
-  bool setNameValuePair(const std::string& name, const std::string& value);
 
   void loadFromFile(const char* szFilename);
 
   void ensureConsistence();
 
+  //internal setter methods used to ensure consistence -- do not alter 'specifiedInFile' and 'specifiedAtRuntime'
+  virtual bool set_val(const char* name, const double& value);
+  virtual bool set_val(const char* name, const int& value);
+  virtual bool set_val(const char* name, const char* value);
+
+  //Returns true if an option was set or not by the user (via file or at runtime)
+  //or false if the option was not or cannot be found
+  virtual bool is_user_defined(const char* option_name);
+  
   void log_printf(hiopOutVerbosity v, const char* format, ...);
 
-  struct _O { // option entry
-    _O(const char* description) : descr(description), specifiedInFile(false) {};
-    virtual ~_O() {};
+  struct Option { // option entry
+    Option(const char* description)
+      : descr(description), specifiedInFile(false), specifiedAtRuntime(false) {};
+    virtual ~Option() {};
     std::string descr;
     bool specifiedInFile;
+    bool specifiedAtRuntime;
     virtual void print(FILE* f) const =0;
   };
-  struct _OInt : public _O { 
-    _OInt(int    v, int    low,    int upp, const char* description) : _O(description), val(v), lb(low), ub(upp) {}; 
+  struct OptionInt : public Option { 
+    OptionInt(int    v, int    low,    int upp, const char* description)
+      : Option(description), val(v), lb(low), ub(upp) {}; 
     int    val, lb, ub; 
     void print(FILE* f) const;
   };
-  struct _ONum : public _O { 
-    _ONum(double v, double low, double upp, const char* description) : _O(description), val(v), lb(low), ub(upp) {}; 
+  struct OptionNum : public Option { 
+    OptionNum(double v, double low, double upp, const char* description)
+      : Option(description), val(v), lb(low), ub(upp) {}; 
     double val, lb, ub; 
     void print(FILE* f) const;
   };
 
-  struct _OStr : public _O { 
-    _OStr(std::string v, const std::vector<std::string>& range_, const char* description) 
-      : _O(description), val(v), range(range_) {};
+  struct OptionStr : public Option { 
+    OptionStr(std::string v, const std::vector<std::string>& range_, const char* description) 
+      : Option(description), val(v), range(range_) {};
     std::string val;
     std::vector<std::string> range;
     void print(FILE* f) const;
   };
 
-  std::map<std::string, _O*> mOptions;
+  std::map<std::string, Option*> mOptions_;
 
-  hiopLogger* log;
+  hiopLogger* log_;
 };
 
 

@@ -1,6 +1,5 @@
 // Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
-// Written by Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
@@ -45,6 +44,14 @@
 // herein do not necessarily state or reflect those of the United States Government or 
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or 
 // product endorsement purposes.
+
+/**
+ * @file hiopMatrixDenseRowMajor.hpp
+ *
+ * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
+ * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
+ *
+ */
 
 #pragma once
 #include "hiopMatrixDense.hpp"
@@ -137,16 +144,6 @@ public:
   virtual void addMatrix(double alpha, const hiopMatrix& X);
 
   /**
-   * @brief block of W += alpha*this
-   * For efficiency, only upper triangular matrix is updated since this will be eventually sent to LAPACK
-   *
-   * @pre 'this' has to fit in the upper triangle of W 
-   * @pre W.n() == W.m()
-   */
-  virtual void addToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start, 
-						double alpha, hiopMatrixDense& W) const;
-
-  /**
    * @brief block of W += alpha*transpose(this)
    * For efficiency, only upper triangular matrix is updated since this will be eventually sent to LAPACK
    *
@@ -163,6 +160,9 @@ public:
    * For efficiency, only upper triangle of W is updated since this will be eventually sent to LAPACK
    * and only the upper triangle of 'this' is accessed
    * 
+   * This functionality of this method is needed only for symmetric matrices and, for this reason,
+   * only symmetric matrices classes implement/need to implement it.
+   *
    * @pre this->n()==this->m()
    * @pre W.n() == W.m()
    */
@@ -170,6 +170,10 @@ public:
 							     double alpha, hiopMatrixDense& W) const;
 
   virtual double max_abs_value();
+
+  virtual void row_max_abs_value(hiopVector &ret_vec);
+
+  virtual void scale_row(hiopVector &vec_scal, const bool inv_scale=false);
 
   virtual bool isfinite() const;
   
@@ -215,12 +219,12 @@ public:
   virtual long long get_local_size_m() const { return m_local_; }
   virtual MPI_Comm get_mpi_comm() const { return comm_; }
 
-  //TODO: this is not kosher!
-  inline double** local_data() const {return M_; }
-  inline double*  local_buffer() const {return M_[0]; }
+  double* local_data_const() const {return M_[0]; }
+  double* local_data() {return M_[0]; }
+protected:
   //do not use this unless you sure you know what you're doing
   inline double** get_M() { return M_; }
-
+public:
   virtual long long m() const {return m_local_;}
   virtual long long n() const {return n_global_;}
 #ifdef HIOP_DEEPCHECKS

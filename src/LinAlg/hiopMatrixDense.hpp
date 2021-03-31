@@ -136,15 +136,6 @@ public:
   virtual void addMatrix(double alpha, const hiopMatrix& X){assert(false && "not implemented in base class");}
 
   /**
-   * @brief block of W += alpha*this
-   * For efficiency, only upper triangular matrix is updated since this will be eventually sent to LAPACK
-   *
-   * @pre 'this' has to fit in the upper triangle of W 
-   * @pre W.n() == W.m()
-   */
-  virtual void addToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start, 
-						double alpha, hiopMatrixDense& W) const{assert(false && "not implemented in base class");}
-  /**
    * @brief block of W += alpha*transpose(this)
    * For efficiency, only upper triangular matrix is updated since this will be eventually sent to LAPACK
    *
@@ -152,7 +143,10 @@ public:
    * @pre W.n() == W.m()
    */
   virtual void transAddToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start, 
-						     double alpha, hiopMatrixDense& W) const{assert(false && "not implemented in base class");}
+						     double alpha, hiopMatrixDense& W) const
+  {
+    assert(false && "not implemented in base class");
+  }
 
   /**
    * @brief diagonal block of W += alpha*this with 'diag_start' indicating the diagonal entry of W where
@@ -170,9 +164,13 @@ public:
     assert(false && "not implemented in base class");
   }
 
-  virtual double max_abs_value(){assert(false && "not implemented in base class"); return 0;}
+  virtual double max_abs_value(){assert(false && "not implemented in base class"); return -1.0;}
 
-  virtual bool isfinite() const {assert(false && "not implemented in base class"); return false;}
+  virtual void row_max_abs_value(hiopVector &ret_vec){assert(false && "not implemented in base class");}
+
+  virtual void scale_row(hiopVector &vec_scal, const bool inv_scale){assert(false && "not implemented in base class");}
+
+  virtual bool isfinite() const{assert(false && "not implemented in base class"); return false;}
   
   virtual void print(FILE* f=NULL, const char* msg=NULL, int maxRows=-1, int maxCols=-1, int rank=-1) const
   {
@@ -216,16 +214,13 @@ public:
   virtual void overwriteUpperTriangleWithLower(){assert(false && "not implemented in base class");}
   virtual void overwriteLowerTriangleWithUpper(){assert(false && "not implemented in base class");}
 #endif
-  virtual long long get_local_size_n() const {assert(false && "not implemented in base class"); return 0;}
-  virtual long long get_local_size_m() const {assert(false && "not implemented in base class"); return 0;}
+  virtual long long get_local_size_n() const {assert(false && "not implemented in base class"); return -1;}
+  virtual long long get_local_size_m() const {assert(false && "not implemented in base class"); return -1;}
   virtual MPI_Comm get_mpi_comm() const { return comm_; }
 
-  //TODO: this is not kosher!
-  virtual double** local_data() const {assert(false && "not implemented in base class"); return NULL;}
-  virtual double*  local_buffer() const {assert(false && "not implemented in base class"); return NULL;}
-  //do not use this unless you sure you know what you're doing
-  virtual double** get_M(){assert(false && "not implemented in base class"); return NULL;}
-
+  virtual double* local_data_const() const {assert(false && "not implemented in base class"); return nullptr;}
+  virtual double* local_data() {assert(false && "not implemented in base class"); return nullptr;}
+public:
   virtual long long m() const {return m_local_;}
   virtual long long n() const {return n_global_;}
 #ifdef HIOP_DEEPCHECKS

@@ -1,11 +1,10 @@
 // Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
-// Written by Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
 // is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause). 
-// Please also read ‚ÄúAdditional BSD Notice‚Äù below.
+// Please also read ìAdditional BSD Noticeî below.
 //
 // Redistribution and use in source and binary forms, with or without modification, 
 // are permitted provided that the following conditions are met:
@@ -46,6 +45,14 @@
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or 
 // product endorsement purposes.
 
+/**
+ * @file hiopNlpFormulation.hpp
+ *
+ * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
+ * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
+ *
+ */
+ 
 #ifndef HIOP_NLP_FORMULATION
 #define HIOP_NLP_FORMULATION
 
@@ -69,6 +76,9 @@
 namespace hiop
 {
 
+//some forward decls
+class hiopDualsLsqUpdate;
+  
 /** Class for a general NlpFormulation with general constraints and bounds on the variables. 
  * This class also  acts as a factory for linear algebra objects (derivative 
  * matrices, KKT system) whose types are decided based on the hiopInterfaceXXX object passed in the
@@ -89,29 +99,31 @@ public:
   virtual ~hiopNlpFormulation();
 
   virtual bool finalizeInitialization();
+  virtual bool apply_scaling(hiopVector& c, hiopVector& d, hiopVector& gradf, 
+                             hiopMatrix& Jac_c, hiopMatrix& Jac_d);
 
   /**
    * Wrappers for the interface calls. 
    * Can be overridden for specialized formulations required by the algorithm.
    */
-  virtual bool eval_f(double* x, bool new_x, double& f);
-  virtual bool eval_grad_f(double* x, bool new_x, double* gradf);
+  virtual bool eval_f(hiopVector& x, bool new_x, double& f);
+  virtual bool eval_grad_f(hiopVector& x, bool new_x, hiopVector& gradf);
   
-  virtual bool eval_c(double* x, bool new_x, double* c);
-  virtual bool eval_d(double* x, bool new_x, double* d);
-  virtual bool eval_c_d(double* x, bool new_x, double* c, double* d);
+  virtual bool eval_c(hiopVector& x, bool new_x, hiopVector& c);
+  virtual bool eval_d(hiopVector& x, bool new_x, hiopVector& d);
+  virtual bool eval_c_d(hiopVector& x, bool new_x, hiopVector& c, hiopVector& d);
   /* the implementation of the next two methods depends both on the interface and on the formulation */
-  virtual bool eval_Jac_c(double* x, bool new_x, hiopMatrix& Jac_c)=0;
-  virtual bool eval_Jac_d(double* x, bool new_x, hiopMatrix& Jac_d)=0;
-  virtual bool eval_Jac_c_d(double* x, bool new_x, hiopMatrix& Jac_c, hiopMatrix& Jac_d);
+  virtual bool eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& Jac_c)=0;
+  virtual bool eval_Jac_d(hiopVector& x, bool new_x, hiopMatrix& Jac_d)=0;
+  virtual bool eval_Jac_c_d(hiopVector& x, bool new_x, hiopMatrix& Jac_c, hiopMatrix& Jac_d);
 protected:
   //calls specific hiopInterfaceXXX::eval_Jac_cons and deals with specializations of hiopMatrix arguments
-  virtual bool eval_Jac_c_d_interface_impl(double* x, bool new_x, hiopMatrix& Jac_c, hiopMatrix& Jac_d) = 0;
+  virtual bool eval_Jac_c_d_interface_impl(hiopVector& x, bool new_x, hiopMatrix& Jac_c, hiopMatrix& Jac_d) = 0;
 public:
-  virtual bool eval_Hess_Lagr(const double* x, bool new_x, 
+  virtual bool eval_Hess_Lagr(const hiopVector& x, bool new_x, 
 			      const double& obj_factor,  
-			      const double* lambda_eq, 
-			      const double* lambda_ineq, 
+			      const hiopVector& lambda_eq, 
+			      const hiopVector& lambda_ineq, 
 			      bool new_lambdas, 
 			      hiopMatrix& Hess_L)=0;
   /* starting point */
@@ -120,6 +132,9 @@ public:
 				  hiopVector& zL0, hiopVector& zU0,
 				  hiopVector& yc0, hiopVector& yd0);
 
+  /* Allocates the LSQ duals update class. */
+  virtual hiopDualsLsqUpdate* alloc_duals_lsq_updater() = 0;
+  
   /** linear algebra factory */
   virtual hiopVector* alloc_primal_vec() const;
   virtual hiopVector* alloc_dual_eq_vec() const;
@@ -135,7 +150,7 @@ public:
   void user_callback_solution(hiopSolveStatus status,
 			      const hiopVector& x,
 			      const hiopVector& z_L, const hiopVector& z_U,
-			      const hiopVector& c, const hiopVector& d,
+			      hiopVector& c, hiopVector& d,
 			      const hiopVector& yc, const hiopVector& yd,
 			      double obj_value);
 
@@ -173,20 +188,19 @@ public:
 
   inline long long n_local() const
   {
-    auto* xlvec = dynamic_cast<hiopVectorPar*>(xl);
-    return xlvec->get_local_size();
+    return xl->get_local_size();
   }
   inline long long n_low_local() const {return n_bnds_low_local;}
   inline long long n_upp_local() const {return n_bnds_upp_local;}
 
   /* methods for transforming the internal objects to corresponding user objects */
-  inline double user_obj(double hiop_f) { return nlp_transformations.applyToObj(hiop_f); }
+  inline double user_obj(double hiop_f) { return nlp_transformations.apply_inv_to_obj(hiop_f); }
   inline void   user_x(hiopVector& hiop_x, double* user_x) 
   { 
-    double *hiop_xa = dynamic_cast<hiopVectorPar&>( hiop_x ).local_data();
-    double *user_xa = nlp_transformations.applyTox(hiop_xa,/*new_x=*/true); 
+    //double *hiop_xa = hiop_x.local_data();
+    hiopVector *x = nlp_transformations.apply_inv_to_x(hiop_x,/*new_x=*/true); 
     //memcpy(user_x, user_xa, hiop_x.get_local_size()*sizeof(double));
-    memcpy(user_x, user_xa, nlp_transformations.n_post_local()*sizeof(double));
+    memcpy(user_x, x->local_data(), nlp_transformations.n_post_local()*sizeof(double));
   }
 
   /* copies/unpacks duals of the bounds and of constraints from 'it' to the three arrays */
@@ -201,6 +215,15 @@ public:
 			   const hiopVector& yd,
 			   int num_cons, //size of 'cons'
 			   double* cons);
+  
+  /* packs constraint rhs or constraint multipliers into hiopVector based on the internal mappings 
+   * 'cons_eq_mapping_'and 'cons_ineq_mapping_ */
+  void copy_EqIneq_to_cons(const hiopVector& yc,
+			   const hiopVector& yd,
+			   hiopVector& cons);
+
+  /// @brief return the scaling fact for objective
+  double get_obj_scale() const;
   
   /* outputing and debug-related functionality*/
   hiopLogger* log;
@@ -243,6 +266,9 @@ protected:
 
   //internal NLP transformations (currently fixing/relaxing variables implemented)
   hiopNlpTransformations nlp_transformations;
+  
+  //internal NLP transformations (currently gradient scaling implemented)
+  hiopNLPObjGradScaling *nlp_scaling;
 
 #ifdef HIOP_USE_MPI
   //inter-process distribution of vectors
@@ -265,7 +291,7 @@ protected:
    * Internal buffer for constraints. Used only when constraints and Jacobian are evaluated at 
    * once (cons_eval_type_==1), otherwise NULL.
    */
-  double* cons_body_;
+  hiopVector* cons_body_;
   
   /** 
    * Internal buffer for the Jacobian. Used only when constraints and Jacobian are evaluated at 
@@ -277,7 +303,7 @@ protected:
    * Internal buffer for the multipliers of the constraints use to copy the multipliers of eq. and
    * ineq. into and to return it to the user via @user_callback_solution and @user_callback_iterate
    */
-  double* cons_lambdas_;
+  hiopVector* cons_lambdas_;
 private:
   hiopNlpFormulation(const hiopNlpFormulation& s) : interface_base(s.interface_base) {};
 };
@@ -295,21 +321,21 @@ public:
 
   virtual bool finalizeInitialization();
 
-  virtual bool eval_Jac_c(double* x, bool new_x, hiopMatrix& Jac_c);
-  virtual bool eval_Jac_d(double* x, bool new_x, hiopMatrix& Jac_d);
+  virtual bool eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& Jac_c);
+  virtual bool eval_Jac_d(hiopVector& x, bool new_x, hiopMatrix& Jac_d);
   /* specialized evals to avoid overhead of dynamic cast. Generic variants available above. */
-  virtual bool eval_Jac_c(double* x, bool new_x, double** Jac_c);
-  virtual bool eval_Jac_d(double* x, bool new_x, double** Jac_d);
+  virtual bool eval_Jac_c(hiopVector& x, bool new_x, double* Jac_c);
+  virtual bool eval_Jac_d(hiopVector& x, bool new_x, double* Jac_d);
 protected:
   //calls specific hiopInterfaceXXX::eval_Jac_cons and deals with specializations of
   //hiopMatrix arguments
-  virtual bool eval_Jac_c_d_interface_impl(double* x, bool new_x, hiopMatrix& Jac_c, hiopMatrix& Jac_d);
+  virtual bool eval_Jac_c_d_interface_impl(hiopVector& x, bool new_x, hiopMatrix& Jac_c, hiopMatrix& Jac_d);
 public:
-  virtual bool eval_Hess_Lagr(const double* x,
+  virtual bool eval_Hess_Lagr(const hiopVector& x,
 			      bool new_x,
 			      const double& obj_factor, 
-			      const double* lambda_eq,
-			      const double* lambda_ineq,
+			      const hiopVector& lambda_eq,
+			      const hiopVector& lambda_ineq,
 			      bool new_lambda, 
 			      hiopMatrix& Hess_L)
   {
@@ -317,6 +343,9 @@ public:
     return true;
   }
 
+  /* Allocates the LSQ duals update class. */
+  virtual hiopDualsLsqUpdate* alloc_duals_lsq_updater();
+  
   virtual hiopMatrixDense* alloc_Jac_c();
   virtual hiopMatrixDense* alloc_Jac_d();
   virtual hiopMatrixDense* alloc_Jac_cons();
@@ -356,21 +385,23 @@ public:
 
   virtual bool finalizeInitialization();
 
-  virtual bool eval_Jac_c(double* x, bool new_x, hiopMatrix& Jac_c);
-  virtual bool eval_Jac_d(double* x, bool new_x, hiopMatrix& Jac_d);
-
+  virtual bool eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& Jac_c);
+  virtual bool eval_Jac_d(hiopVector& x, bool new_x, hiopMatrix& Jac_d);
 
 protected:
   //calls specific hiopInterfaceXXX::eval_Jac_cons and deals with specializations of hiopMatrix arguments
-  virtual bool eval_Jac_c_d_interface_impl(double* x, bool new_x, hiopMatrix& Jac_c, hiopMatrix& Jac_d);
+  virtual bool eval_Jac_c_d_interface_impl(hiopVector& x, bool new_x, hiopMatrix& Jac_c, hiopMatrix& Jac_d);
 public:
-  virtual bool eval_Hess_Lagr(const double* x,
+  virtual bool eval_Hess_Lagr(const hiopVector& x,
 			      bool new_x,
 			      const double& obj_factor,
-			      const double* lambda_eq,
-			      const double* lambda_ineq,
+			      const hiopVector& lambda_eq,
+			      const hiopVector& lambda_ineq,
 			      bool new_lambdas,
 			      hiopMatrix& Hess_L);
+  
+  /* Allocates the LSQ duals update class. */
+  virtual hiopDualsLsqUpdate* alloc_duals_lsq_updater();
   
   virtual hiopMatrix* alloc_Jac_c() 
   {
@@ -399,6 +430,84 @@ private:
   int nx_sparse, nx_dense;
   int nnz_sparse_Jaceq, nnz_sparse_Jacineq;
   int nnz_sparse_Hess_Lagr_SS, nnz_sparse_Hess_Lagr_SD;
+
+  hiopVector* _buf_lambda;
+};
+
+
+/* *************************************************************************
+ * Class is for general NLPs that have sparse derivatives blocks.
+ * *************************************************************************
+ */
+class hiopNlpSparse : public hiopNlpFormulation
+{
+public:
+  // TODO: notsure we need this
+
+  hiopNlpSparse(hiopInterfaceSparse& interface_)
+    : hiopNlpFormulation(interface_), interface(interface_),
+      num_jac_eval_{0}, num_hess_eval_{0}
+  {
+    _buf_lambda = LinearAlgebraFactory::createVector(0);
+  }
+  virtual ~hiopNlpSparse()
+  {
+    delete _buf_lambda;
+  }
+
+  virtual bool finalizeInitialization();
+
+  virtual bool eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& Jac_c);
+  virtual bool eval_Jac_d(hiopVector& x, bool new_x, hiopMatrix& Jac_d);
+
+protected:
+  //calls specific hiopInterfaceXXX::eval_Jac_cons and deals with specializations of hiopMatrix arguments
+  virtual bool eval_Jac_c_d_interface_impl(hiopVector& x, bool new_x, hiopMatrix& Jac_c, hiopMatrix& Jac_d);
+
+public:
+  virtual bool eval_Hess_Lagr(const hiopVector& x,
+                            bool new_x,
+                            const double& obj_factor,
+                            const hiopVector& lambda_eq,
+                            const hiopVector& lambda_ineq,
+                            bool new_lambdas,
+                            hiopMatrix& Hess_L);
+  /* Allocates the LSQ duals update class. */
+  virtual hiopDualsLsqUpdate* alloc_duals_lsq_updater();
+  
+  virtual hiopMatrix* alloc_Jac_c()
+  {
+    return new hiopMatrixSparseTriplet(n_cons_eq, n_vars, m_nnz_sparse_Jaceq);
+  }
+  virtual hiopMatrix* alloc_Jac_d()
+  {
+    return new hiopMatrixSparseTriplet(n_cons_ineq, n_vars, m_nnz_sparse_Jacineq);
+  }
+  virtual hiopMatrix* alloc_Jac_cons()
+  {
+    return new hiopMatrixSparseTriplet(n_cons, n_vars, m_nnz_sparse_Jaceq + m_nnz_sparse_Jacineq);
+  }
+  virtual hiopMatrix* alloc_Hess_Lagr()
+  {
+    return new hiopMatrixSymSparseTriplet(n_vars, m_nnz_sparse_Hess_Lagr);
+  }
+  virtual long long nx() const { return n_vars; }
+
+  //not inherited from NlpFormulation
+
+  //Allocates a non-MPI vector with size given by the size of primal plus dual (for both equality and inequality) spaces
+  virtual hiopVector* alloc_primal_dual_vec() const
+  {
+    assert(n_cons == n_cons_eq+n_cons_ineq);
+    return LinearAlgebraFactory::createVector(n_vars + n_cons);
+  }
+  
+private:
+  hiopInterfaceSparse& interface;
+  int m_nnz_sparse_Jaceq, m_nnz_sparse_Jacineq;
+  int m_nnz_sparse_Hess_Lagr;
+  int num_jac_eval_;
+  int num_hess_eval_;
 
   hiopVector* _buf_lambda;
 };

@@ -51,6 +51,7 @@
  *
  * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
  * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
+ * @author Cameron Rutherford <robert.rutherford@pnnl.gov>, PNNL
  *
  */
 #pragma once
@@ -72,19 +73,12 @@ public:
   virtual ~VectorTestsPar(){}
 
 private:
-  virtual void setLocalElement(hiop::hiopVector* x, local_ordinal_type i, real_type value) override;
-  virtual real_type getLocalElement(const hiop::hiopVector* x, local_ordinal_type i) override;
-  virtual local_ordinal_type getLocalSize(const hiop::hiopVector* x) override;
-  virtual real_type* getLocalData(hiop::hiopVector* x) override;
-  virtual int verifyAnswer(hiop::hiopVector* x, real_type answer) override;
-  virtual int verifyAnswer(
-      hiop::hiopVector* x,
-      std::function<real_type(local_ordinal_type)> expect) override;
-  virtual bool reduceReturn(int failures, hiop::hiopVector* x) override;
-
-#ifdef HIOP_USE_MPI
+  virtual const real_type* getLocalDataConst(const hiop::hiopVector* x);
+  virtual void setLocalElement(hiop::hiopVector* x, local_ordinal_type i, real_type val);
+  virtual real_type* createLocalBuffer(local_ordinal_type N, real_type val);
+  virtual void deleteLocalBuffer(real_type* buffer);
+  virtual bool reduceReturn(int failures, hiop::hiopVector* x);
   MPI_Comm getMPIComm(hiop::hiopVector* x);
-#endif
 };
 
 }} // namespace hiop::tests

@@ -67,10 +67,12 @@ public:
     Q  = hiop::LinearAlgebraFactory::createMatrixDense(nd,nd);
     Q->setToConstant(1e-8);
     Q->addDiagonal(2.);
-    double** Qa = Q->get_M();
+    double* Qa = Q->local_data();
     for(int i=1; i<nd-1; i++) {
-      Qa[i][i+1] = 1.;
-      Qa[i+1][i] = 1.;
+      //Qa[i][i+1] = 1.;
+      Qa[i*nd+i+1] = 1.;
+      //Qa[i+1][i] = 1.;
+      Qa[(i+1)*nd+i] = 1.;
     }
 
     Md = hiop::LinearAlgebraFactory::createMatrixDense(ns,nd);
@@ -248,7 +250,7 @@ public:
 		const double* x, bool new_x,
 		const long long& nsparse, const long long& ndense, 
 		const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
-		double** JacD)
+		double* JacD)
   {
     assert(num_cons==ns || num_cons==3*haveIneq);
 
@@ -345,12 +347,13 @@ public:
 	  assert(con_idx-ns==0 || con_idx-ns==1 || con_idx-ns==2);
 	  assert(num_cons==3);
 	  for(int i=0; i<nd; i++) {
-	    JacD[con_idx-ns][i] = 1.;
+	    //!JacD[con_idx-ns][i] = 1.;
+            JacD[(con_idx-ns)*nd+i] = 1.;
 	  }
 	}
       }
       if(isEq) {
-	memcpy(JacD[0], Md->local_buffer(), ns*nd*sizeof(double));
+	memcpy(JacD, Md->local_data(), ns*nd*sizeof(double));
       }
     }
 
@@ -358,12 +361,12 @@ public:
   }
  
   bool eval_Hess_Lagr(const long long& n, const long long& m, 
-			      const double* x, bool new_x, const double& obj_factor,
-			      const double* lambda, bool new_lambda,
-			      const long long& nsparse, const long long& ndense, 
-			      const int& nnzHSS, int* iHSS, int* jHSS, double* MHSS, 
-			      double** HDD,
-			      int& nnzHSD, int* iHSD, int* jHSD, double* MHSD)
+                      const double* x, bool new_x, const double& obj_factor,
+                      const double* lambda, bool new_lambda,
+                      const long long& nsparse, const long long& ndense, 
+                      const int& nnzHSS, int* iHSS, int* jHSS, double* MHSS, 
+                      double* HDD,
+                      int& nnzHSD, int* iHSD, int* jHSD, double* MHSD)
   {
     //Note: lambda is not used since all the constraints are linear and, therefore, do 
     //not contribute to the Hessian of the Lagrangian
@@ -383,9 +386,9 @@ public:
     if(HDD!=NULL) {
       const int nx_dense_squared = nd*nd;
       //memcpy(HDD[0], Q->local_buffer(), nx_dense_squared*sizeof(double));
-      const double* Qv = Q->local_buffer();
+      const double* Qv = Q->local_data();
       for(int i=0; i<nx_dense_squared; i++)
-	HDD[0][i] = obj_factor*Qv[i];
+	HDD[i] = obj_factor*Qv[i];
     }
     return true;
   }
@@ -536,7 +539,7 @@ public:
 		const double* x, bool new_x,
 		const long long& nsparse, const long long& ndense, 
 		const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
-		double** JacD)
+		double* JacD)
   {
     return false; // so that HiOp will call the one-call full-Jacob function below
   }
@@ -546,7 +549,7 @@ public:
 		const double* x, bool new_x,
 		const long long& nsparse, const long long& ndense, 
 		const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
-		double** JacD)
+		double* JacD)
   {
     assert(m==ns+3*haveIneq);
 
@@ -633,13 +636,13 @@ public:
     //dense Jacobian w.r.t y
     if(JacD!=NULL) {
       //just copy the dense Jacobian corresponding to equalities
-      memcpy(JacD[0], Md->local_buffer(), ns*nd*sizeof(double));
+      memcpy(JacD, Md->local_data(), ns*nd*sizeof(double));
       
       if(haveIneq) {
 	assert(ns+3 == m);
 	//do an in place fill-in for the ineq Jacobian corresponding to e^T
 	for(int i=0; i<3*nd; ++i)
-	  JacD[ns][i] = 1.;
+	  JacD[ns*nd+i] = 1.;
       }
     }
     return true;

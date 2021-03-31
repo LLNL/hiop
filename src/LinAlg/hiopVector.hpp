@@ -49,6 +49,7 @@
 #pragma once
 
 #include <cstdio>
+#include <cassert>
 
 namespace hiop
 {
@@ -92,13 +93,17 @@ public:
   virtual void copyToStarting(int start_index_in_src, hiopVector& v) = 0;
   /// @brief Copy 'this' to v starting at start_index in 'v'.
   virtual void copyToStarting(hiopVector& v, int start_index_in_dest) = 0;
-
+  /// @brief Copy the entries in 'this' where corresponding 'ix' is nonzero, to v starting at start_index in 'v'.
+  virtual void copyToStartingAt_w_pattern(hiopVector& v, int start_index_in_dest, const hiopVector& ix) = 0;
+  
   /**
    * copy 'this' (source) starting at 'start_idx_in_src' to 'dest' starting at index 'int start_idx_dest' 
    * If num_elems>=0, 'num_elems' will be copied; if num_elems<0, elements will be copied till the end of
    * either source ('this') or destination ('dest') is reached
+   * if 'selec_dest' is given, the values are copy to 'dest' where the corresponding entry in 'selec_dest' is nonzero
    */
   virtual void startingAtCopyToStartingAt(int start_idx_in_src, hiopVector& dest, int start_idx_dest, int num_elems=-1) const = 0;
+  virtual void startingAtCopyToStartingAt_w_pattern(int start_idx_in_src, hiopVector& dest, int start_idx_dest, const hiopVector& selec_dest, int num_elems=-1) const = 0;
 
   /** @brief Return the two norm */
   virtual double twonorm() const = 0;
@@ -124,6 +129,20 @@ public:
    * The rest of elements of this are set to zero.
    */
   virtual void componentDiv_w_selectPattern( const hiopVector& v, const hiopVector& ix) = 0;
+
+  /** @brief Set each component of this hiopVector to the minimum of itself and the given constant. */
+  virtual void component_min(const double constant) = 0;
+  /** @brief Set each component of this hiopVector to the minimum of itself and the corresponding component of 'v'. */
+  virtual void component_min(const hiopVector& v ) = 0;
+  /** @brief Set each component of this hiopVector to the maximum of itself and the given constant. */
+  virtual void component_max(const double constant) = 0;
+  /** @brief Set each component of this hiopVector to the maximum of itself and the corresponding component of 'v'. */
+  virtual void component_max(const hiopVector& v) = 0;
+  /** @brief Set each component to its absolute value */
+  virtual void component_abs() = 0;
+  /** @brief Apply sign function to each component */
+  virtual void component_sgn() = 0;
+  
   /// @brief Scale each element of this  by the constant alpha
   virtual void scale( double alpha ) = 0;
   /// @brief this += alpha * x
@@ -150,16 +169,36 @@ public:
   virtual void addLogBarrierGrad(double alpha, const hiopVector& x, const hiopVector& select)=0;
 
   /**
-   * @brief computes the log barrier's linear damping term of the Filter-IPM method of 
+   * @brief Computes the log barrier's linear damping term of the Filter-IPM method of 
    * WaectherBiegler (see paper, section 3.7).
    * Essentially compute  kappa_d*mu* \sum { this[i] | ixleft[i]==1 and ixright[i]==0 }
    */
   virtual double linearDampingTerm_local(const hiopVector& ixleft, const hiopVector& ixright, 
-					 const double& mu, const double& kappa_d)const=0;
+					 const double& mu, const double& kappa_d) const=0;
+
+  /** 
+   * Performs `this[i] = alpha*this[i] + sign*ct` where sign=1 when EXACTLY one of 
+   * ixleft[i] and ixright[i] is 1.0 and sign=0 otherwise. 
+   *
+   * Supports distributed/MPI vectors, but performs only elementwise operations and do not
+   * require communication.
+   *
+   * This method is used to add gradient contributions from the (linear) damping term used
+   * to handle unbounded problems. The damping terms are used for variables that are 
+   * bounded on one side only. 
+   */
+  virtual void addLinearDampingTerm(const hiopVector& ixleft,
+                                    const hiopVector& ixright,
+                                    const double& alpha,
+                                    const double& ct) = 0;
+
   /// @brief True if all elements of this are positive.
   virtual int allPositive() = 0;
   /// @brief True if elements corresponding to nonzeros in w are all positive
   virtual int allPositive_w_patternSelect(const hiopVector& w) = 0;
+  /// @brief Return the minimum value in this vector
+  virtual double min() const = 0;
+  virtual double min_w_pattern(const hiopVector& select) const = 0;
   /// @brief Return the minimum value in this vector, and the index at which it occurs.
   virtual void min( double& m, int& index ) const = 0;
   /// @brief Project the vector into the bounds, used for shifting the ini pt in the bounds
@@ -189,7 +228,7 @@ public:
   
   /// @brief prints up to max_elems (by default all), on rank 'rank' (by default on all)
   virtual void print(FILE*, const char* message=NULL,int max_elems=-1, int rank=-1) const = 0;
-  
+  virtual void print(){assert(0);} 
   /// @brief allocates a vector that mirrors this, but doesn't copy the values
   virtual hiopVector* alloc_clone() const = 0;
   /// @brief allocates a vector that mirrors this, and copies the values
@@ -198,6 +237,18 @@ public:
   virtual long long get_local_size() const = 0;
   virtual double* local_data() = 0;
   virtual const double* local_data_const() const = 0;
+  virtual double* local_data_host() = 0;
+  virtual const double* local_data_host_const() const = 0;
+
+  virtual void copyToDev() = 0;
+  virtual void copyFromDev() = 0;
+  virtual void copyToDev() const = 0;
+  virtual void copyFromDev() const = 0;
+  
+  /// @brief get number of values that are less than the given value 'val'
+  virtual long long numOfElemsLessThan(const double &val) const = 0;
+  /// @brief get number of values whose absolute value are less than the given value 'val'
+  virtual long long numOfElemsAbsLessThan(const double &val) const = 0;  
 
 protected:
   long long n_; //we assume sequential data

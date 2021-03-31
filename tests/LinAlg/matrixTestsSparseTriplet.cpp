@@ -49,9 +49,10 @@
 /**
  * @file matrixTestsSparseTriplet.cpp
  *
- * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>,  PNNL
+ * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
  * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
  * @author Cameron Rutherford <robert.rutherford@pnnl.gov>, PNNL
+ * @author Jake K. Ryan <jake.ryan@pnnl.gov>, PNNL
  * 
  */
 
@@ -87,8 +88,9 @@ real_type MatrixTestsSparseTriplet::getLocalElement(
   
   if (mat != nullptr)
   {
-    double** M = mat->local_data();
-    return M[row][col];
+    const double* M = mat->local_data_const();
+    //return M[row][col];
+    return M[row*mat->get_local_size_n()+col];
   }
 
   else THROW_NULL_DEREF;
@@ -110,6 +112,26 @@ real_type* MatrixTestsSparseTriplet::getMatrixData(hiop::hiopMatrixSparse* A)
 {
   auto* mat = dynamic_cast<hiop::hiopMatrixSparseTriplet*>(A);
   return mat->M();
+}
+
+real_type MatrixTestsSparseTriplet::getMatrixData(hiop::hiopMatrixSparse* A, local_ordinal_type i, local_ordinal_type j)
+{
+  auto* mat = dynamic_cast<hiop::hiopMatrixSparseTriplet*>(A);
+  auto* val = mat->M();
+  auto* iRow = mat->i_row();
+  auto* jCol = mat->j_col();
+  auto nnz = mat->numberOfNonzeros();
+
+  for (auto k=0; k< nnz; i++)
+  {
+    if(iRow[k]==i && jCol[k]==j){
+      return val[k];
+    }
+    // assume elements are row-major ordered.
+    if(iRow[k]>=i)
+      break;
+  }
+  return zero;
 }
 
 const local_ordinal_type* MatrixTestsSparseTriplet::getRowIndices(const hiop::hiopMatrixSparse* A)
@@ -140,7 +162,7 @@ int MatrixTestsSparseTriplet::getLocalSize(const hiop::hiopVector* x)
  *
  */
 [[nodiscard]]
-int MatrixTestsSparseTriplet::verifyAnswer(hiop::hiopMatrix* A, const double answer)
+int MatrixTestsSparseTriplet::verifyAnswer(hiop::hiopMatrixSparse* A, const double answer)
 {
   if(A == nullptr)
     return 1;
@@ -158,16 +180,41 @@ int MatrixTestsSparseTriplet::verifyAnswer(hiop::hiopMatrix* A, const double ans
   return fail;
 }
 
+/**
+ * @brief Verifies values of the sparse matrix *only at indices already defined by the sparsity pattern*
+ * This may seem misleading, but verify answer does not check *every* value of the matrix,
+ * but only `nnz` elements with index from nnz_st to nnz_ed
+ *
+ */
+[[nodiscard]]
+int MatrixTestsSparseTriplet::verifyAnswer(hiop::hiopMatrix* A, local_ordinal_type nnz_st, local_ordinal_type nnz_ed, const double answer)
+{
+  if(A == nullptr)
+    return 1;
+  auto mat = dynamic_cast<hiop::hiopMatrixSparseTriplet*>(A);
+  const local_ordinal_type nnz = mat->numberOfNonzeros();
+  const real_type* values = mat->M();
+  int fail = 0;
+  for (local_ordinal_type i=nnz_st; i<nnz_ed; i++)
+  {
+    if (!isEqual(values[i], answer))
+    {
+      fail++;
+    }
+  }
+  return fail;
+}
+
 /*
  * Pass a function-like object to calculate the expected
  * answer dynamically, based on the row and column
  */
-  [[nodiscard]]
+[[nodiscard]]
 int MatrixTestsSparseTriplet::verifyAnswer(
-    hiop::hiopMatrix* Amat,
+    hiop::hiopMatrixDense* A,
     std::function<real_type(local_ordinal_type, local_ordinal_type)> expect)
 {
-  auto A = dynamic_cast<hiop::hiopMatrixDense*>(Amat);
+  //auto A = dynamic_cast<hiop::hiopMatrixDense*>(Amat);
   assert(A->get_local_size_n() == A->n() && "Matrix should not be distributed");
   const local_ordinal_type M = A->get_local_size_m();
   const local_ordinal_type N = A->get_local_size_n();
@@ -252,5 +299,95 @@ local_ordinal_type* MatrixTestsSparseTriplet::numNonzerosPerCol(hiop::hiopMatrix
   return sparsity_pattern;
 }
 
+void MatrixTestsSparseTriplet::initializeMatrix(
+    hiop::hiopMatrixSparse* mat,
+    local_ordinal_type entries_per_row)
+{
+  auto* A = dynamic_cast<hiop::hiopMatrixSparseTriplet*>(mat);
+  local_ordinal_type * iRow = A->i_row();
+  local_ordinal_type * jCol = A->j_col();
+  double * val = A->M();
+
+  local_ordinal_type m = A->m();
+  local_ordinal_type n = A->n();
+
+  assert(A->numberOfNonzeros() == m * entries_per_row && "Matrix initialized with insufficent number of non-zero entries");
+
+  for(local_ordinal_type row = 0, col = 0, i = 0; row < m; row++, col = 0) 
+  {
+    for(local_ordinal_type j=0; j<entries_per_row-1; i++, j++, col += n / entries_per_row)
+    {
+      iRow[i] = row;
+      jCol[i] = col;
+      val[i] = one;
+    }
+
+    iRow[i] = row;
+    jCol[i] = n-1;
+    val[i++] = one;
+  }
+}
+
+/**
+ * @brief Since some classes will have to copy data from device, this method is
+ * a placeholder to keep tests implementation-agnostic; classes that have
+ * device memory will copy from device when this is called, CPU-bound classes
+ * will no-op.
+ */
+void MatrixTestsSparseTriplet::maybeCopyToDev(hiop::hiopMatrixSparse*) { }
+
+/**
+ * @brief placeholder on CPU-bound classes.
+ * @see MatrixTestsSparseTriplet::maybeCopyToDev
+ */
+void MatrixTestsSparseTriplet::maybeCopyFromDev(hiop::hiopMatrixSparse*) { }
+
+int MatrixTestsSparseTriplet::copyRowsBlockFrom(hiop::hiopMatrixSparse& src_gen,hiop::hiopMatrixSparse& dist_gen,
+                                         local_ordinal_type rows_src_idx_st, local_ordinal_type n_rows,
+                                         local_ordinal_type rows_dest_idx_st, local_ordinal_type dest_nnz_st
+                                         )
+{
+  auto &src_Mat = dynamic_cast<hiop::hiopMatrixSparseTriplet&>(src_gen);
+  auto &dist_Mat = dynamic_cast<hiop::hiopMatrixSparseTriplet&>(dist_gen);
+  assert(dist_Mat.n() >= src_Mat.n());
+  assert(n_rows + rows_src_idx_st <= src_Mat.m());
+  assert(n_rows + rows_dest_idx_st <= dist_Mat.m());
+
+  auto iRow_src = src_Mat.i_row();
+  auto jCol_src = src_Mat.j_col();
+  auto values_src = src_Mat.M();
+  auto nnz_src = src_Mat.numberOfNonzeros();
+  auto itnz_src{0};
+  auto itnz_dest=dest_nnz_st;
+  int fail{0};
+  
+  auto iRow_ = dist_Mat.i_row();
+  auto jCol_ = dist_Mat.j_col();
+  auto values_ = dist_Mat.M();
+  auto nnz_ = dist_Mat.numberOfNonzeros();
+
+  //int iterators should suffice
+  for(auto row_add=0; row_add<n_rows; ++row_add) {
+    auto row_src  = rows_src_idx_st  + row_add;
+    auto row_dest = rows_dest_idx_st + row_add;
+    
+   // assuming the source matrix is row-major orderd, otherwise we need to check all the nonzeros
+    while(itnz_src<nnz_src && iRow_src[itnz_src]<row_src) {
+      ++itnz_src;
+    }
+
+    while(itnz_src<nnz_src && iRow_src[itnz_src]==row_src) {
+      assert(itnz_dest<nnz_);
+      iRow_[itnz_dest] = row_dest;//iRow_src[itnz_src];
+      jCol_[itnz_dest] = jCol_src[itnz_src];
+      values_[itnz_dest++] = values_src[itnz_src++];
+
+      assert(itnz_dest<=nnz_);
+    }
+  }
+
+  printMessage(fail, __func__);
+  return fail;
+}
 
 }} // namespace hiop::tests

@@ -78,10 +78,12 @@ public:
     Q_  = hiop::LinearAlgebraFactory::createMatrixDense(nd_,nd_);
     Q_->setToConstant(0.);
     Q_->addDiagonal(2. * (2*convex_obj_-1)); //-2 or 2
-    double** Qa = Q_->get_M();
+    double* Qa = Q_->local_data();
     for(int i=1; i<nd-1; i++) {
-      Qa[i][i+1] = 1.;
-      Qa[i+1][i] = 1.;
+      //Qa[i][i+1] = 1.;
+      Qa[i*nd_+i+1] = 1.;
+      //Qa[i+1][i] = 1.;
+      Qa[(i+1)*nd_+i] = 1.;
     }
 
     Md_ = hiop::LinearAlgebraFactory::createMatrixDense(ns_, nd_);
@@ -303,7 +305,7 @@ public:
 		const double* x, bool new_x,
 		const long long& nsparse, const long long& ndense, 
 		const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
-		double** JacD)
+		double* JacD)
   {
     //return false so that HiOp will rely on the on-call constraint evaluator defined below
     return false;
@@ -314,7 +316,7 @@ public:
  		const double* x, bool new_x,
  		const long long& nsparse, const long long& ndense, 
  		const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
- 		double** JacD)
+ 		double* JacD)
   {
     assert(m == ns_ + 3 + 2*rankdefic_ineq_ + ns_*rankdefic_eq_);
     assert(nnzJacS ==  2*ns_ + rankdefic_eq_*2*ns_ +  (ns_==0) ? 0 : 3+ns_ + rankdefic_ineq_*2*(2+ns_));
@@ -471,23 +473,25 @@ public:
     //
     if(JacD!=NULL) {
       //eq
-      memcpy(JacD[0], Md_->local_buffer(), ns_*nd_*sizeof(double));
+      memcpy(JacD, Md_->local_data(), ns_*nd_*sizeof(double));
       
       //ineq
       for(int i=0; i<3*nd_; i++) {
-	JacD[ns_][i] = 1.;
+	//!JacD[ns_][i] = 1.;
+        JacD[ns_*nd_+i] = 1.;
       }
 
       int con_idx=ns_+3;
       if(rankdefic_ineq_) {
 	for(int i=0; i<2*nd_; i++) {
-	  JacD[con_idx][i] = 2.;
+	  //!JacD[con_idx][i] = 2.;
+          JacD[con_idx*nd_+i] = 2.;
 	}
 	con_idx += 2;
       }
       
       if(rankdefic_eq_) {
-	memcpy(JacD[con_idx], Md_->local_buffer(), ns_*nd_*sizeof(double));
+	memcpy(JacD+con_idx*nd_, Md_->local_data(), ns_*nd_*sizeof(double));
 	con_idx += ns_;
       }
 
@@ -498,12 +502,12 @@ public:
   }
  
   bool eval_Hess_Lagr(const long long& n, const long long& m, 
-			      const double* x, bool new_x, const double& obj_factor,
-			      const double* lambda, bool new_lambda,
-			      const long long& nsparse, const long long& ndense, 
-			      const int& nnzHSS, int* iHSS, int* jHSS, double* MHSS, 
-			      double** HDD,
-			      int& nnzHSD, int* iHSD, int* jHSD, double* MHSD)
+                      const double* x, bool new_x, const double& obj_factor,
+                      const double* lambda, bool new_lambda,
+                      const long long& nsparse, const long long& ndense, 
+                      const int& nnzHSS, int* iHSS, int* jHSS, double* MHSS, 
+                      double* HDD,
+                      int& nnzHSD, int* iHSD, int* jHSD, double* MHSD)
   {
     //Note: lambda is not used since all the constraints are linear and, therefore, do 
     //not contribute to the Hessian of the Lagrangian
@@ -524,9 +528,9 @@ public:
     if(HDD!=NULL) {
       const int nx_dense_squared = nd_*nd_;
       //memcpy(HDD[0], Q->local_buffer(), nx_dense_squared*sizeof(double));
-      const double* Qv = Q_->local_buffer();
+      const double* Qv = Q_->local_data();
       for(int i=0; i<nx_dense_squared; i++)
-	HDD[0][i] = obj_factor*Qv[i];
+	HDD[i] = obj_factor*Qv[i];
     }
     return true;
   }

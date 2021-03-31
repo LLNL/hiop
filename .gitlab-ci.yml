@@ -1,58 +1,156 @@
-.script_template: &script_definition
+
+# Environment variables shared between scripts for all ORNL CI stages
+.ornl_environment_template: &ornl_environment_variables
+  variables:
+    SCHEDULER_PARAMETERS: "-P CSC359 -nnodes 1 -W 30"
+    WORKDIR: /gpfs/wolf/proj-shared/csc359/ci/${CI_PIPELINE_ID}
+    
+.ornl_test_script_template: &ornl_test_script_definition
+  script:
+    - |
+      set -xv
+      cd "$WORKDIR"
+      MY_CLUSTER="ascent" ./BUILD.sh --test-only
+      res=$?
+      exit $res
+  after_script:
+    - |
+      cd "$WORKDIR/.."
+      rm -rf "$WORKDIR"
+
+.ornl_script_template: &ornl_script_definition
+  script:
+    - |
+      # Don't clean up this working directory - we need some of these files for
+      # testing
+      set -xv
+      mkdir "$WORKDIR"
+      cp -R ./* "$WORKDIR"
+      cd "$WORKDIR"
+      MY_CLUSTER="ascent" ./BUILD.sh --build-only || exit 1
+
+.pnnl_script_template: &pnnl_script_definition
   script:
     - |
       #
       #  NOTES:  WORKDIR is on constance/marianas/newell
       #          ./      is only on the Kubernetes instance
       #
+      set -xv
       export WORKDIR="$HOME/gitlab/$CI_JOB_ID/"
       mkdir -p "$WORKDIR"
-      cp -a ./ "$WORKDIR"
+      cp -R ./* "$WORKDIR"
       cd "$WORKDIR"
-      # touch output
-      # tail -f output &
-      # echo submitting batch job
-      # Follow job output
       touch output
-      # tail -f output &
-      sbatch -A EXASGD -p $SLURM_Q --wait --gres=gpu:1 -o output -e output $WORKDIR/BUILD.sh
-      res=$?
+      tail -f output &
+      tailpid=$!
+      sbatch -A EXASGD -p $SLURM_Q -t $TIMELIMIT --gres=gpu:1 -o output -e output $WORKDIR/BUILD.sh
+      res=1
+      set +xv
+      while :;
+        do
+        if [[ "$(awk 'BEGIN{i=0}/BUILD_STATUS/{i++}END{print i}' output)" != "0" ]]; then
+          kill $tailpid
+          res=$(grep BUILD_STATUS output | tail -n 1 | cut -f2 -d':')
+          break
+        fi
+        sleep 10
+      done
       echo "finished batch job: $res"
-      # cat output
-      #
-      #  NOTE:  If the job fails, comment out the line below and cd to
-      #         $HOME/gitlab/$CI_JOB_ID and run ./build.sh by hand to
-      #         figure out what went wrong.
-      # cd $WORKDIR
-      # ./BUILD.sh
-      #
-      rm -rf "$WORKDIR"
       exit $res
+  after_script:
+    - |
+      set -xv
+      export WORKDIR="$HOME/gitlab/$CI_JOB_ID/"
+      rm -rf "$WORKDIR"
 
-
-.tags_template: &tags_definition
+.pnnl_tags_template: &pnnl_tags_definition
   tags:
     - k8s
     - ikp
     - exasgd
     - marianas
 
+stages:
+  - build
+  - default_build
+  - full_build
+  - test
 
+# For PNNL CI
 build_on_marianas:
-  stage: build
+  stage: default_build
   variables:
     SLURM_Q: "dl"
-  <<: *tags_definition
-  <<: *script_definition
-  only:
-    - branches@exasgd/solvers/hiop
-
+    MY_CLUSTER: "marianas"
+    TIMELIMIT: '1:00:00'
+  <<: *pnnl_tags_definition
+  <<: *pnnl_script_definition
+  rules:
+    - if: '$CI_PROJECT_ROOT_NAMESPACE == "exasgd"'
 
 build_on_newell:
-  stage: build
+  stage: default_build
+  variables:
+    SLURM_Q: "newell_shared"
+    MY_CLUSTER: "newell"
+    TIMELIMIT: '1:00:00'
+  <<: *pnnl_tags_definition
+  <<: *pnnl_script_definition
+  rules:
+    - if: '$CI_PROJECT_ROOT_NAMESPACE == "exasgd"'
+
+newell_full_build_matrix:
+  stage: full_build
+  dependencies:
+    - build_on_newell
+    - build_on_marianas
   variables:
     SLURM_Q: "newell"
-  <<: *tags_definition
-  <<: *script_definition
-  only:
-    - branches@exasgd/solvers/hiop
+    MY_CLUSTER: "newell"
+    TIMELIMIT: '30:00'
+    FULL_BUILD_MATRIX: 1
+    FULL_BUILD_MATRIX_PARALLEL: 1
+  <<: *pnnl_tags_definition
+  <<: *pnnl_script_definition
+  timeout: 30m
+  rules:
+    - if: '$CI_PROJECT_ROOT_NAMESPACE == "exasgd" && $CI_PIPELINE_SOURCE == "schedule"'
+      when: always
+      allow_failure: false
+    - if: '$CI_PROJECT_ROOT_NAMESPACE == "exasgd"'
+      when: manual
+      allow_failure: true
+  parallel:
+    matrix:
+      # These variables represent the indices of cmake options arrays that
+      # will be used in a given build. See scripts/fullBuildMatrix.sh for more
+      # details.
+      - CI_RAJAOP: [0, 1]
+        CI_GPUOP: [0, 1]
+        CI_KRONREDOP: [0, 1]
+        CI_MPIOP: [0, 1]
+        CI_SPARSEOP: [0, 1]
+# ---
+
+# For Ascent CI
+build_on_login_node:
+  stage: build
+  tags:
+    - nobatch
+  rules:
+    - if: '$CI_PROJECT_PATH == "ecpcitest/exasgd/hiop"'
+  <<: *ornl_script_definition
+  <<: *ornl_environment_variables
+
+test_on_compute_node:
+  stage: test
+  dependencies:
+    - build_on_login_node
+  tags:
+    - batch
+  rules:
+    - if: '$CI_PROJECT_PATH == "ecpcitest/exasgd/hiop"'
+  <<: *ornl_test_script_definition
+  <<: *ornl_environment_variables
+# ---

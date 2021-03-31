@@ -1,6 +1,5 @@
 // Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
-// Written by Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
@@ -52,6 +51,7 @@
 #include <cstring> //for memcpy
 #include <algorithm>
 #include <cassert>
+#include <iostream>
 
 #include "hiop_blasdefs.hpp"
 
@@ -195,6 +195,19 @@ void hiopVectorPar::copyToStarting(hiopVector& v_, int start_index/*_in_dest*/)
   memcpy(v.data_+start_index, data_, n_local_*sizeof(double)); 
 }
 
+void hiopVectorPar::copyToStartingAt_w_pattern(hiopVector& v_, int start_index/*_in_dest*/, const hiopVector& select)
+{
+  const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_);
+  const hiopVectorPar& ix = dynamic_cast<const hiopVectorPar&>(select);
+  assert(n_local_ == ix.n_local_);
+  const double* ix_vec = ix.data_;
+  int find_nnz = 0;
+  
+  for(int i=0; i<n_local_; i++)
+    if(ix_vec[i]==1.) v.data_[start_index+(find_nnz++)] = data_[i];
+  assert(find_nnz + start_index <= v.n_local_);
+}
+
 /* copy 'this' (source) starting at 'start_idx_in_src' to 'dest' starting at index 'int start_idx_dest' 
  * If num_elems>=0, 'num_elems' will be copied; if num_elems<0, elements will be copied till the end of
  * either source ('this') or destination ('dest') is reached */
@@ -205,12 +218,12 @@ startingAtCopyToStartingAt(int start_idx_in_src, hiopVector& dest_, int start_id
   assert(n_local_==n_ && "only for local/non-distributed vectors");
 #endif  
   assert(start_idx_in_src>=0 && start_idx_in_src<=this->n_local_);
-#ifdef DEBUG  
+#ifndef NDEBUG  
   if(start_idx_in_src==this->n_local_) assert((num_elems==-1 || num_elems==0));
 #endif
   const hiopVectorPar& dest = dynamic_cast<hiopVectorPar&>(dest_);
   assert(start_idx_dest>=0 && start_idx_dest<=dest.n_local_);
-#ifdef DEBUG  
+#ifndef NDEBUG  
   if(start_idx_dest==dest.n_local_) assert((num_elems==-1 || num_elems==0));
 #endif
   if(num_elems<0) {
@@ -224,6 +237,32 @@ startingAtCopyToStartingAt(int start_idx_in_src, hiopVector& dest_, int start_id
   }
 
   memcpy(dest.data_+start_idx_dest, this->data_+start_idx_in_src, num_elems*sizeof(double));
+}
+
+void hiopVectorPar::
+startingAtCopyToStartingAt_w_pattern(int start_idx_in_src, hiopVector& dest_, int start_idx_dest, const hiopVector& selec_dest, int num_elems/*=-1*/) const
+{
+  assert(start_idx_in_src>=0 && start_idx_in_src<=n_local_);
+  const hiopVectorPar& dest = dynamic_cast<hiopVectorPar&>(dest_);
+  const hiopVectorPar& ix = dynamic_cast<const hiopVectorPar&>(selec_dest);
+  assert(start_idx_dest>=0 && start_idx_dest<=dest.n_local_);
+  if(num_elems<0) {
+    num_elems = std::min(n_local_-start_idx_in_src, dest.n_local_-start_idx_dest);
+  } else {
+    assert(num_elems+start_idx_in_src <= this->n_local_);
+    assert(num_elems+start_idx_dest   <= dest.n_local_);
+    //make sure everything stays within bounds (in release)
+    num_elems = std::min(num_elems, (int)this->n_local_-start_idx_in_src);
+    num_elems = std::min(num_elems, (int)dest.n_local_-start_idx_dest);
+  }
+  int find_nnz = 0;
+  const double* ix_vec = ix.data_;
+  for(int i=start_idx_dest; i<dest.n_local_&&find_nnz<num_elems; i++)
+    if(ix_vec[i]==1.)
+    {
+      dest.data_[i] = data_[ start_idx_in_src + find_nnz];
+      find_nnz++;
+    }
 }
 
 void hiopVectorPar::copyTo(double* dest) const
@@ -347,6 +386,61 @@ void hiopVectorPar::componentDiv_w_selectPattern( const hiopVector& v_, const hi
     else                s[i]/=x[i];
 }
 
+void hiopVectorPar::component_min(const double constant)
+{
+  for(int i=0; i<n_local_; i++) {
+    if(data_[i]>constant) {
+      data_[i] = constant;
+    }
+  }
+}
+
+void hiopVectorPar::component_min(const hiopVector& v_)
+{
+  const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_);
+  assert(n_local_==v.n_local_);
+  for(int i=0; i<n_local_; i++) {
+    if(data_[i]>v.data_[i]) {
+      data_[i] = v.data_[i];
+    }
+  }
+}
+
+void hiopVectorPar::component_max(const double constant)
+{
+  for(int i=0; i<n_local_; i++) {
+    if(data_[i]<constant) {
+      data_[i] = constant;
+    }
+  }
+}
+
+void hiopVectorPar::component_max(const hiopVector& v_)
+{
+  const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_);
+  assert(n_local_==v.n_local_);
+  for(int i=0; i<n_local_; i++) {
+    if(data_[i]<v.data_[i]) {
+      data_[i] = v.data_[i];
+    }
+  }
+}
+
+void hiopVectorPar::component_abs()
+{
+  for(int i=0; i<n_local_; i++) {
+    data_[i] = fabs(data_[i]);  
+  }
+}
+
+void hiopVectorPar::component_sgn()
+{
+  for(int i=0; i<n_local_; i++) {
+    int sign = (0.0 < data_[i]) - (data_[i] < 0.0);
+    data_[i] = static_cast<double>(sign);      
+  }
+}
+
 void hiopVectorPar::scale(double num)
 {
   if(1.0==num) return;
@@ -457,6 +551,40 @@ void  hiopVectorPar::addConstant_w_patternSelect(double c, const hiopVector& ix_
   for(int i=0; i<n_local_; i++) if(ix_vec[i]==1.) data_[i]+=c;
 }
 
+double hiopVectorPar::min() const
+{
+  double ret_val = std::numeric_limits<double>::max();
+  for(int i=0; i<n_local_; i++) {
+    ret_val = (ret_val < data_[i]) ? ret_val : data_[i];
+  }
+#ifdef HIOP_USE_MPI
+  double ret_val_g;
+  int ierr=MPI_Allreduce(&ret_val, &ret_val_g, 1, MPI_DOUBLE, MPI_MIN, comm_); assert(MPI_SUCCESS==ierr);
+  ret_val = ret_val_g;
+#endif
+  return ret_val;
+}
+
+double hiopVectorPar::min_w_pattern(const hiopVector& select) const
+{
+  const hiopVectorPar& ix = dynamic_cast<const hiopVectorPar&>(select);
+  assert(this->n_local_ == ix.n_local_);
+  
+  double ret_val = std::numeric_limits<double>::max();
+  const double* ix_vec = ix.data_;
+  for(int i=0; i<n_local_; i++) {
+    if(ix_vec[i]==1.) {
+      ret_val = (ret_val < data_[i]) ? ret_val : data_[i];
+    }   
+  }
+#ifdef HIOP_USE_MPI
+  double ret_val_g;
+  int ierr=MPI_Allreduce(&ret_val, &ret_val_g, 1, MPI_DOUBLE, MPI_MIN, comm_); assert(MPI_SUCCESS==ierr);
+  ret_val = ret_val_g;
+#endif
+  return ret_val;
+}
+
 void hiopVectorPar::min( double& m, int& index ) const
 {
   assert(false && "not implemented");
@@ -514,10 +642,10 @@ void hiopVectorPar::addLogBarrierGrad(double alpha, const hiopVector& x, const h
       data_[i] += alpha/x_vec[i];
 }
 
-
-double hiopVectorPar::
-linearDampingTerm_local(const hiopVector& ixleft, const hiopVector& ixright, 
-			const double& mu, const double& kappa_d) const
+double hiopVectorPar::linearDampingTerm_local(const hiopVector& ixleft, 
+                                              const hiopVector& ixright, 
+                                              const double& mu, 
+                                              const double& kappa_d) const
 {
   const double* ixl= (dynamic_cast<const hiopVectorPar&>(ixleft)).local_data_const();
   const double* ixr= (dynamic_cast<const hiopVectorPar&>(ixright)).local_data_const();
@@ -532,6 +660,25 @@ linearDampingTerm_local(const hiopVector& ixleft, const hiopVector& ixright,
   term *= mu; 
   term *= kappa_d;
   return term;
+}
+
+void hiopVectorPar::addLinearDampingTerm(const hiopVector& ixleft,
+                                         const hiopVector& ixright,
+                                         const double& alpha,
+                                         const double& ct)
+{
+  const double* ixl= (dynamic_cast<const hiopVectorPar&>(ixleft)).local_data_const();
+  const double* ixr= (dynamic_cast<const hiopVectorPar&>(ixright)).local_data_const();
+  double* v = this->local_data();
+
+#ifdef HIOP_DEEPCHECKS
+  assert(n_local_==(dynamic_cast<const hiopVectorPar&>(ixleft) ).n_local_);
+  assert(n_local_==(dynamic_cast<const hiopVectorPar&>(ixright) ).n_local_);
+#endif
+
+  for(long i=0; i<n_local_; i++) {
+    v[i] = alpha*v[i] + (ixl[i]-ixr[i])*ct;
+  }
 }
 
 int hiopVectorPar::allPositive()
@@ -569,15 +716,15 @@ bool hiopVectorPar::projectIntoBounds_local(const hiopVector& xl_, const hiopVec
   for(long long i=0; i<n_local_; i++) {
     if(ixl[i]!=0 && ixu[i]!=0) {
       if(xl[i]>xu[i]) return false;
-      aux=kappa2*(xu[i]-xl[i])-small_double;
-      aux2=xl[i]+fmin(kappa1*fmax(1., fabs(xl[i])),aux);
-      if(x0[i]<aux2) {
-	x0[i]=aux2;
+        aux=kappa2*(xu[i]-xl[i])-small_double;
+        aux2=xl[i]+fmin(kappa1*fmax(1., fabs(xl[i])),aux);
+        if(x0[i]<aux2) {
+        x0[i]=aux2;
       } else {
-	aux2=xu[i]-fmin(kappa1*fmax(1., fabs(xu[i])),aux);
-	if(x0[i]>aux2) {
-	  x0[i]=aux2;
-	}
+        aux2=xu[i]-fmin(kappa1*fmax(1., fabs(xu[i])),aux);
+        if(x0[i]>aux2) {
+          x0[i]=aux2;
+        }
       }
 #ifdef HIOP_DEEPCHECKS
       //if(x0[i]>xl[i] && x0[i]<xu[i]) {
@@ -585,15 +732,15 @@ bool hiopVectorPar::projectIntoBounds_local(const hiopVector& xl_, const hiopVec
       //printf("i=%d  x0=%g xl=%g xu=%g\n", i, x0[i], xl[i], xu[i]);
       //}
       assert(x0[i]>xl[i] && x0[i]<xu[i] && "this should not happen -> HiOp bug");
-      
+
 #endif
     } else {
       if(ixl[i]!=0.)
-	x0[i] = fmax(x0[i], xl[i]+kappa1*fmax(1, fabs(xl[i]))-small_double);
+        x0[i] = fmax(x0[i], xl[i]+kappa1*fmax(1, fabs(xl[i]))-small_double);
       else 
-	if(ixu[i]!=0)
-	  x0[i] = fmin(x0[i], xu[i]-kappa1*fmax(1, fabs(xu[i]))-small_double);
-	else { /*nothing for free vars  */ }
+        if(ixu[i]!=0)
+          x0[i] = fmin(x0[i], xu[i]-kappa1*fmax(1, fabs(xu[i]))-small_double);
+        else { /*nothing for free vars  */ }
     }
   }
   return true;
@@ -738,6 +885,13 @@ bool hiopVectorPar::isfinite_local() const
   return true;
 }
 
+void hiopVectorPar::print()
+{
+  int max_elems = n_local_;
+  for(int it=0; it<max_elems; it++)  
+    printf("vec [%d] = %1.16e\n",it+1,data_[it]);
+}
+
 void hiopVectorPar::print(FILE* file, const char* msg/*=NULL*/, int max_elems/*=-1*/, int rank/*=-1*/) const 
 {
   int myrank_=0, numranks=1; 
@@ -763,6 +917,47 @@ void hiopVectorPar::print(FILE* file, const char* msg/*=NULL*/, int max_elems/*=
     for(int it=0; it<max_elems; it++)  fprintf(file, "%24.18e ; ", data_[it]);
     fprintf(file, "];\n");
   }
+}
+
+
+long long hiopVectorPar::numOfElemsLessThan(const double &val) const
+{
+  long long ret_num = 0;
+  for(long long i=0; i<n_local_; i++)
+  {
+    if(data_[i]<val)
+    {
+      ret_num++;
+    }
+  }
+
+#ifdef HIOP_USE_MPI
+  long long ret_num_global;
+  int ierr=MPI_Allreduce(&ret_num, &ret_num_global, 1, MPI_LONG_LONG, MPI_SUM, comm_); assert(MPI_SUCCESS==ierr);
+  ret_num = ret_num_global;
+#endif
+
+  return ret_num;
+}
+
+long long hiopVectorPar::numOfElemsAbsLessThan(const double &val) const
+{
+  long long ret_num = 0;
+  for(long long i=0; i<n_local_; i++)
+  {
+    if(fabs(data_[i])<val)
+    {
+      ret_num++;
+    }
+  }
+
+#ifdef HIOP_USE_MPI
+  long long ret_num_global;
+  int ierr=MPI_Allreduce(&ret_num, &ret_num_global, 1, MPI_LONG_LONG, MPI_SUM, comm_); assert(MPI_SUCCESS==ierr);
+  ret_num = ret_num_global;
+#endif
+
+  return ret_num;
 }
 
 };

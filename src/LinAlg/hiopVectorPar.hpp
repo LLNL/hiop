@@ -5,7 +5,7 @@
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
 // is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause). 
-// Please also read “Additional BSD Notice” below.
+// Please also read "Additional BSD Notice" below.
 //
 // Redistribution and use in source and binary forms, with or without modification, 
 // are permitted provided that the following conditions are met:
@@ -48,6 +48,7 @@
 
 #pragma once
 
+#include <string>
 #include <hiopMPI.hpp>
 #include "hiopVector.hpp"
 
@@ -55,7 +56,11 @@
 
 namespace hiop
 {
-
+/* hiopVectorPar
+ * Note: the following method(s) of hiopVector are NOT 
+ * implemented in this class:
+ * - min
+ */
 class hiopVectorPar : public hiopVector
 {
 public:
@@ -87,17 +92,21 @@ public:
   virtual void copyToStarting(int start_index_in_src, hiopVector& v);
   /// @brief Copy 'this' to v starting at start_index in 'v'.
   virtual void copyToStarting(hiopVector& v, int start_index_in_dest);
-  
+  /// @brief Copy the entries in 'this' where corresponding 'ix' is nonzero, to v starting at start_index in 'v'.
+  virtual void copyToStartingAt_w_pattern(hiopVector& v, int start_index_in_dest, const hiopVector& ix);
+
   /**
    * @brief copy 'this' (source) starting at 'start_idx_in_src' to 'dest' starting at index 'start_idx_dest' 
    *
    * If num_elems>=0, 'num_elems' will be copied; if num_elems<0, elements will be copied till the end of
    * either source ('this') or destination ('dest') is reached
+   * if 'selec_dest' is given, the values are copy to 'dest' where the corresponding entry in 'selec_dest' is nonzero
    */
   virtual void startingAtCopyToStartingAt(int start_idx_in_src,
 					  hiopVector& dest,
 					  int start_idx_dest,
 					  int num_elems=-1) const;
+  virtual void startingAtCopyToStartingAt_w_pattern(int start_idx_in_src, hiopVector& dest, int start_idx_dest, const hiopVector& selec_dest, int num_elems=-1) const;
 
   virtual double twonorm() const;
   virtual double dotProductWith( const hiopVector& v ) const;
@@ -108,6 +117,13 @@ public:
   virtual void componentMult( const hiopVector& v );
   virtual void componentDiv ( const hiopVector& v );
   virtual void componentDiv_w_selectPattern( const hiopVector& v, const hiopVector& ix);
+  virtual void component_min(const double constant);
+  virtual void component_min(const hiopVector& v);
+  virtual void component_max(const double constant);
+  virtual void component_max(const hiopVector& v);
+  virtual void component_abs();
+  virtual void component_sgn();
+
   virtual void scale( double alpha );
   /// @brief this += alpha * x
   virtual void axpy  ( double alpha, const hiopVector& x );
@@ -119,6 +135,8 @@ public:
   /// @brief Add c to the elements of this
   virtual void addConstant( double c );
   virtual void addConstant_w_patternSelect(double c, const hiopVector& ix);
+  virtual double min() const;
+  virtual double min_w_pattern(const hiopVector& select) const;  
   virtual void min( double& m, int& index ) const;
   virtual void negate();
   virtual void invert();
@@ -127,6 +145,23 @@ public:
 
   virtual double linearDampingTerm_local(const hiopVector& ixl_select, const hiopVector& ixu_select, 
 					 const double& mu, const double& kappa_d) const;
+
+  /** 
+   * Performs `this[i] = alpha*this[i] + sign*ct` where sign=1 when EXACTLY one of 
+   * ixleft[i] and ixright[i] is 1.0 and sign=0 otherwise. 
+   *
+   * Supports distributed/MPI vectors, but performs only elementwise operations and do not
+   * require communication.
+   *
+   * This method is used to add gradient contributions from the (linear) damping term used
+   * to handle unbounded problems. The damping terms are used for variables that are 
+   * bounded on one side only. 
+   */
+  virtual void addLinearDampingTerm(const hiopVector& ixleft,
+                                    const hiopVector& ixright,
+                                    const double& alpha,
+                                    const double& ct);
+
   virtual int allPositive();
   virtual int allPositive_w_patternSelect(const hiopVector& w);
   virtual bool projectIntoBounds_local(const hiopVector& xl, const hiopVector& ixl, 
@@ -152,12 +187,23 @@ public:
   virtual bool isfinite_local() const;
   
   virtual void print(FILE*, const char* withMessage=NULL, int max_elems=-1, int rank=-1) const;
+  virtual void print();
 
   /* more accessers */
   virtual long long get_local_size() const { return n_local_; }
   virtual double* local_data() { return data_; }
   virtual const double* local_data_const() const { return data_; }
   virtual MPI_Comm get_mpi_comm() const { return comm_; }
+  virtual inline double* local_data_host() { return local_data(); }
+  virtual inline const double* local_data_host_const() const { return local_data_const(); }
+
+  virtual void copyToDev() {}
+  virtual void copyFromDev() {}
+  virtual void copyToDev() const {}
+  virtual void copyFromDev() const {}
+  
+  virtual long long numOfElemsLessThan(const double &val) const;
+  virtual long long numOfElemsAbsLessThan(const double &val) const;    
 
 protected:
   MPI_Comm comm_;

@@ -49,11 +49,23 @@ public:
 
   inline hiopMatrixDense& sysMatrix() 
   { 
-    return M; 
+    return *M_; 
   }
 protected:
-  int* ipiv;
+  /**
+   * Computes inertia of matrix, namely the triplet of non-negative numbers 
+   * consisting of the counts of positive, negative, and null eigenvalues
+   *
+   * @pre The system matrix is factorized and, as a result, `ipiv` has been 
+   * also updated properly.
+   */
+  virtual bool compute_inertia(int n_in, int *ipiv, 
+			       int& posEigvals, int& negEigvals, int& zeroEigvals); 
+protected:
+  int* ipiv_;
 
+  //allocated on demand; for example, it may only be required by Magma SIDI.
+  double* work_;
   //magma_queue_t magma_device_queue;
   //magmaDouble_ptr device_M, device_rhs_;
 private:
@@ -61,8 +73,38 @@ private:
 };
 
 /**
+ * This class is only for testing purposes (contains legacy code for computing the 
+ * inertia from a Bunch-Kaufman factorization) and should not be used.
+ */
+class hiopLinSolverIndefDenseMagmaBuKa_old : public hiopLinSolverIndefDenseMagmaBuKa
+{
+public:
+  hiopLinSolverIndefDenseMagmaBuKa_old(int n, hiopNlpFormulation* nlp_)
+    : hiopLinSolverIndefDenseMagmaBuKa(n, nlp_)
+  {
+
+  }
+  virtual ~hiopLinSolverIndefDenseMagmaBuKa_old()
+  {
+  }
+  
+protected:
+  /**
+   * Computes inertia of matrix, namely the triplet of non-negative numbers 
+   * consisting of the counts of positive, negative, and null eigenvalues. This 
+   * method runs on host.
+   *
+   * @pre The system matrix is factorized and, as a result, `ipiv` has been 
+   * also correctly set 
+   */
+  virtual bool compute_inertia(int n, int *ipiv_in, 
+			       int& posEigvals, int& negEigvals, int& zeroEigvals); 
+};
+
+
+/**
  * Solver class for MAGMA symmetric indefinite GPU factorization "_nopiv". This
- * is a as much as twice as faster but numerically less stable than the above
+ * is as much as twice as faster but numerically less stable than the above
  * factorization.
  *
  */
@@ -77,27 +119,31 @@ public:
   /** Triggers a refactorization of the matrix, if necessary. */
   int matrixChanged();
 
-  /** solves a linear system.
-   * param 'x' is on entry the right hand side(s) of the system to be solved. On
-   * exit it contains the solution(s).  
+  /** 
+   * Solves a linear system with the right-hand side `x`. This is also an out
+   * parameter and on exit it contains the solution.
    */
-  bool solve(hiopVector& x_in);
+  bool solve(hiopVector& x);
 
   inline hiopMatrixDense& sysMatrix() 
   { 
-    return M; 
+    return *M_; 
   }
-
-  void inline set_fake_inertia(int nNegEigs)
-  {
-    nFakeNegEigs_ = nNegEigs;
-  }
+protected:
+  /**
+   * Computes inertia of matrix, namely the triplet of non-negative numbers 
+   * of positive, negative, and null eigenvalues. This method runs on device and
+   * accesses the device pointer(s). All the parameters reside on device.
+   *
+   * @pre The system matrix is factorized and is present on the device.
+   * 
+   */
+  bool compute_inertia(int n, int& posEigvals, int& negEigvals, int& zeroEigvals); 
 
 protected:
   magma_queue_t magma_device_queue_;
   magmaDouble_ptr device_M_, device_rhs_;
   magma_int_t ldda_, lddb_;
-  int nFakeNegEigs_;
 private:
   hiopLinSolverIndefDenseMagmaNopiv() 
   {
@@ -105,34 +151,8 @@ private:
   }
 };
 
-/**Notes:
- * *** Bunch-Kaufmann ***
- * magma_dsytrf(magma_uplo_t uplo, magma_int_t n, double *A, magma_int_t lda, 
- *              magma_int_t *ipiv, magma_int_t *info)
- *  - no _gpu version
- *
- * *** same for Aasen ***
- * 
- * *** no pivoting ***
- * magma_int_t magma_dsytrf_nopiv(magma_uplo_t uplo, magma_int_t n, double *A, magma_int_t lda, 
- *                                 magma_int_t *info)
- * magma_int_t magma_dsytrf_nopiv_gpu(magma_uplo_t uplo, magma_int_t n, magmaDouble_ptr dA, magma_int_t ldda, 
- *                                    magma_int_t *info)
- * Guidelines on when to use _gpu ?
- *
- *  Forward and backsolves
- *  magma_int_t magma_dsytrs_nopiv_gpu(magma_uplo_t uplo, magma_int_t n, magma_int_t nrhs, magmaDouble_ptr dA, 
- *                                     magma_int_t ldda, magmaDouble_ptr dB, magma_int_t lddb, magma_int_t * info)
- *
- * How about when use (cpu) magma_dsytrf? What dsytrs function to use? 
- * In the example, the (triu) solves are done with blas blasf77_dsymv
- * 
- *
- */
 
-
-
-} //end namespace
+} //end namespace hiop
 
 #endif //of HIOP_USE_MAGMA
 #endif

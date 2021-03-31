@@ -125,7 +125,7 @@ class cppUserProblem : public hiopInterfaceMDS
       const double* x, bool new_x,
       const long long& nsparse, const long long& ndense, 
       const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
-      double** JacD)
+      double* JacD)
     {
       return false;
     };
@@ -133,10 +133,11 @@ class cppUserProblem : public hiopInterfaceMDS
       const double* x, bool new_x,
       const long long& nsparse, const long long& ndense, 
       const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
-      double** JacD)
+      double* JacD)
     {
       cprob->eval_Jac_cons(n, m, (double *) x, new_x, nsparse, ndense, 
-                                          nnzJacS, iJacS, jJacS, MJacS, &JacD[0][0], cprob->user_data);
+                           nnzJacS, iJacS, jJacS, MJacS,
+                           JacD, cprob->user_data);
       return true;
     };
     bool eval_Hess_Lagr(const long long& n, const long long& m,
@@ -144,15 +145,17 @@ class cppUserProblem : public hiopInterfaceMDS
       const double* lambda, bool new_lambda,
       const long long& nsparse, const long long& ndense, 
       const int& nnzHSS, int* iHSS, int* jHSS, double* MHSS, 
-      double** HDD,
+      double* HDD,
       int& nnzHSD, int* iHSD, int* jHSD, double* MHSD)
     {
       //Note: lambda is not used since all the constraints are linear and, therefore, do 
       //not contribute to the Hessian of the Lagrangian
-      cprob->eval_Hess_Lagr(n, m, (double *) x, new_x, obj_factor, (double *) lambda, new_lambda, nsparse, ndense,
-                                          nnzHSS, iHSS, jHSS, MHSS, 
-                                          &HDD[0][0], 
-                                          nnzHSD, iHSD, jHSD, MHSD, cprob->user_data);
+      cprob->eval_Hess_Lagr(n, m, (double *) x, new_x, obj_factor,
+                            (double *) lambda, new_lambda, nsparse, ndense,
+                            nnzHSS, iHSS, jHSS, MHSS, 
+                            HDD, 
+                            nnzHSD, iHSD, jHSD, MHSD,
+                            cprob->user_data);
       return true;
     };
 private:
