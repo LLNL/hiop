@@ -105,27 +105,26 @@ bool PriDecMasterProblemEx9::eval_f_rterm(size_t idx, const int& n, const double
   rval=-1e+20;
   hiopSolveStatus status;
   double* xi;
-  int nS_2 = nS_;
-
-  #ifdef HIOP_USE_MPI
-    double t3 =  MPI_Wtime(); 
-    double t4 = 0.; 
-  #endif 
+  
+#ifdef HIOP_USE_MPI
+  double t3 =  MPI_Wtime(); 
+  double t4 = 0.; 
+#endif 
   //if(idx==0||idx==50||idx==75||idx==150) {  
   //  nS_2 = 1;
   //}
   //if(idx<ny_ && idx>1) {
   //  nS_2 = idx;
   //}
-  xi = new double[nS_2]; 
+  xi = new double[nS_]; 
   //for(int i=0;i<nS_2;i++) xi[i] = idx*1./nS_2*5.-5.;
-  for(int i=0;i<nS_2;i++) xi[i] = 1.;
+  for(int i=0;i<nS_;i++) xi[i] = 1.;
 
   //xi[ny_-1] = double(idx/100.0+1.);
 
   PriDecRecourseProblemEx9* ex9_recourse;
 
-  ex9_recourse = new PriDecRecourseProblemEx9(nc_, nS_2,S_,x,xi);
+  ex9_recourse = new PriDecRecourseProblemEx9(nc_, nS_,S_,x,xi);
   
   if(idx%30==0) {  
     ex9_recourse->set_sparse(0.3);
@@ -138,9 +137,12 @@ bool PriDecMasterProblemEx9::eval_f_rterm(size_t idx, const int& n, const double
   //nlp.options->SetStringValue("dualsInitialization", "zero");
 
   nlp.options->SetStringValue("Hessian", "analytical_exact");
+#ifdef HIOP_USE_GPU
+  nlp.options->SetStringValue("compute_mode", "hybrid");
+#else  
   nlp.options->SetStringValue("compute_mode", "cpu");
-  //nlp.options->SetStringValue("compute_mode", "hybrid");
-  nlp.options->SetStringValue("time_kkt", "on");
+#endif
+  //nlp.options->SetStringValue("time_kkt", "on");
   nlp.options->SetIntegerValue("verbosity_level", 1);
   nlp.options->SetNumericValue("mu0", 1e-1);
   //nlp.options->SetNumericValue("tolerance", 1e-5);
@@ -157,11 +159,11 @@ bool PriDecMasterProblemEx9::eval_f_rterm(size_t idx, const int& n, const double
   solver.getSolution(y_);
   
   #ifdef HIOP_USE_MPI
-    t4 =  MPI_Wtime(); 
+  /*  t4 =  MPI_Wtime(); 
     if(idx==0||idx==1) {
       printf( "Elapsed time for contingency %d is %f\n",idx, t4 - t3 ); 
       printf(" Objective for idx %d value %18.12e, xi %18.12e\n",idx,rval,xi[0]);
-    }
+    }*/
   #endif
 
   delete[] xi;

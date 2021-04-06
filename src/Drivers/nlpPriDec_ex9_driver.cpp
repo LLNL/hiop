@@ -98,8 +98,7 @@ static bool parse_arguments(int argc, char **argv,
 static void usage(const char* exeName)
 {
   printf("HiOp driver %s that solves a nonconvex synthetic problem of variable size in the "
-	 "mixed dense-sparse formulation. In addition, the driver can be instructed to "
-	 "solve additional problems that have rank-deficient Jacobian (use '-withrdJ' option)\n", 
+	 "primal decomposition formulation. )\n", 
 	 exeName);
   printf("Usage: \n");
   printf("  '$ %s nx S -selfcheck '\n", exeName);

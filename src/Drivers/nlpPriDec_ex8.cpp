@@ -86,7 +86,7 @@ bool Ex8::get_vars_info(const long long& n, double *xlow, double* xupp, Nonlinea
   //for testing
   if(nc<ns){
     for(int i=nc+1; i<ns; ++i) xlow[i] = 1.;
-    for(int i=nc+1; i<ns; ++i) xlow[i] = 1.;
+    for(int i=nc+1; i<ns; ++i) xupp[i] = 1.;
     xupp[0] = 1.; xupp[0] = 1.;
   }
   return true;

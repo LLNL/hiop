@@ -29,7 +29,7 @@
  *           x_i >=0
  * Contingency problems r_i
  * r = 1/S * \sum{i=1^S} 0.5*|x+Se_i|^2
- * where {Se_i}_j = 1  j=i
+ * where {Se_i}_j = S  j=i
  *                = 0  otherwise,  i=1,2,....S
  * For i>ns, Se_i = 0
  *
