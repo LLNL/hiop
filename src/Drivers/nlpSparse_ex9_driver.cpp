@@ -26,6 +26,7 @@ using namespace hiop;
 
 using namespace hiop;
 
+
 int main(int argc, char **argv)
 {
   int rank=0;
@@ -41,10 +42,12 @@ int main(int argc, char **argv)
 #ifdef HIOP_USE_MAGMA
   magma_init();
 #endif
-  int nx = 40;
-  int S = 1000;
+  int nx = 1000;
+  int S = 1920;
   int nS = 5; 
   double x[nx+S*nx];
+
+
   Ex9 nlp_interface(nx,S,nS);
   hiopNlpSparse nlp(nlp_interface);
   //nlp.options->SetStringValue("duals_update_type", "linear"); // "lsq" or "linear" --> lsq hasn't been implemented yet.

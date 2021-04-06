@@ -31,11 +31,86 @@
  *
  */
 
-//
-//todo: add -selfcheck option (see other drivers) and add the driver to cmake tests
-//
 
 using namespace hiop;
+
+
+
+static bool self_check(int nx, int S, double obj_value);
+static bool parse_arguments(int argc, char **argv,
+			    bool& self_check,
+			    int& nx,
+			    int& S)
+{
+  self_check = false;
+  nx = 20;
+  S = 100;
+
+  switch(argc) {
+  case 1:
+    //no arguments
+    return true;
+    break;
+  case 4: // 3 arguments
+    {
+      if(std::string(argv[3]) == "-selfcheck")
+      {
+	self_check=true;
+        nx = std::atoi(argv[1]);
+        S = std::atof(argv[2]);
+        if(S<3) S = 4;
+        if(nx<=0) return false;
+      } else {
+        return false;
+      }
+    }
+  case 3: //2 arguments
+    {
+      nx = atoi(argv[1]);
+      if(nx<=0) return false;
+      S = atoi(argv[2]);
+      if(S<3) S = 4;
+    }
+  case 2: //1 argument
+    {
+      if(std::string(argv[1]) == "-selfcheck")
+      {
+        self_check=true;
+      } else {
+        nx = atoi(argv[1]);
+        if(nx<=0) return false;
+      }
+    }
+    break;
+  default: 
+    return false; //4 or more arguments
+  }
+
+  if(self_check && nx!=20 && S!=100) {
+      printf("Error: incorrect input parameters: '-selfcheck' must be used with predefined "
+	     "values for input  parameters, nx=20 S=100.\n");
+      return false;
+  }
+  
+  return true;
+};
+
+static void usage(const char* exeName)
+{
+  printf("HiOp driver %s that solves a nonconvex synthetic problem of variable size in the "
+	 "mixed dense-sparse formulation. In addition, the driver can be instructed to "
+	 "solve additional problems that have rank-deficient Jacobian (use '-withrdJ' option)\n", 
+	 exeName);
+  printf("Usage: \n");
+  printf("  '$ %s nx S -selfcheck '\n", exeName);
+  printf("Arguments, all integers, excepting strings '-selfcheck' \n");
+  printf("  'nx': # of base case variables [default 20, optional, nonnegative integer].\n");
+  printf("  'S': # of recourse/contingency problems [default 100, optional, nonnegative integer].\n");
+  printf("  '-selfcheck': compares the optimal objective with nx being 20 and "
+	 "S being 100 (these two exact values must be passed as arguments). [optional]\n");
+}
+
+
 
 int main(int argc, char **argv)
 {
@@ -53,14 +128,23 @@ int main(int argc, char **argv)
 
   //PriDecMasterProblemEx9 pridec_problem(12, 20, 5, 100);
   //nx == ny,nS,S
-  int nx = 40;
+  int nx = 20;
   int nS = 5;
-  int S = 1000;
+  int S = 100;
+  
+  bool selfCheck;
+  
+  if(!parse_arguments(argc, argv, selfCheck, nx, S)) {
+    usage(argv[0]);
+    return 1;
+  }
+  
+  
   PriDecMasterProblemEx9 pridec_problem(nx, nx, nS, S);
   //printf("total ranks %d\n",comm_size);
   hiop::hiopAlgPrimalDecomposition pridec_solver(&pridec_problem, MPI_COMM_WORLD);
   pridec_solver.set_initial_alpha_ratio(0.5);
-  pridec_solver.set_tolerance(1e-6);
+  //pridec_solver.set_tolerance(1e-6);
   //pridec_solver.set_max_iteration(5);
   auto status = pridec_solver.run();
   
@@ -72,7 +156,14 @@ int main(int argc, char **argv)
       printf("Solve was successfull. Optimal value: %12.5e\n",
              pridec_solver.getObjective());
   }
-
+  
+  if(selfCheck) {
+    if(rank==0) {
+      if(!self_check(nx,S, pridec_solver.getObjective()))
+        return -1;
+    }
+  } 
+  
 #ifdef HIOP_USE_MAGMA
   magma_finalize();
 #endif
@@ -80,6 +171,22 @@ int main(int argc, char **argv)
   MPI_Finalize();
 #endif
 
-  printf("Returned successfully from driver! Rank=%d\n", rank);;
+  //printf("Returned successfully from driver! Rank=%d\n", rank);;
   return 0;
+}
+
+
+static bool self_check(int nx, int S, double obj_value)
+{
+  double obj_true = 0.2633425377;
+  double err = 1e-5;
+  if(fabs((obj_value)-obj_true)<1e-5) {
+    printf("selfcheck success (error less than %18.12e), objective value is %18.12e \n", err,obj_value);
+    return true;
+  } else {
+    printf("selfcheck failure. Objective (%18.12e) does not agree  with the saved value (%18.12e) for nx=%d,S=%d.\n", 
+           obj_value, obj_true, nx,S);
+    return false;
+  }
+  return true;
 }
