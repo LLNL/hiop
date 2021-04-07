@@ -132,7 +132,7 @@ backgroundcolor=\color{lbcolor},
 \vspace{3cm}
 
   {\huge\bfseries \Hi\ -- User Guide} \\[14pt]
-  {\large\bfseries version 0.4}
+  {\large\bfseries version 0.4.1}
 
 \vspace{3cm}
 
@@ -154,7 +154,7 @@ Lawrence Livermore National Laboratory}}}\\[10pt]
 \vspace{4.75cm}
 
  \textcolor{violet}{{\large\bfseries Oct 15, 2017} \\
-{\large\bfseries Updated March 15, 2021}}
+{\large\bfseries Updated April 07, 2021}}
 
 \vspace{0.75cm}
 
@@ -673,7 +673,7 @@ bool eval_Hess_Lagr(const long long& n, const long long& m,
 			      int& nnzHSD, int* iHSD, int* jHSD, double* MHSD);
 \end{lstlisting} 
 
-\noindent Evaluates the Hessian of the Lagrangian function in three structural blocks given by the MDS structure of the problm. \texttt{nnzHSS}, \texttt{iHSS}, \texttt{jHSS}, and \texttt{MHSS} hold  $\nabla^2 L(x_s,x_s)$ from~\eqref{mdsHess}. \texttt{HDD} stores $\nabla^2 L(x_d,x_d)$ from~\eqref{mdsHess}. 
+\noindent Evaluates the Hessian of the Lagrangian function in three structural blocks given by the MDS structure of the problem. The arguments \texttt{nnzHSS}, \texttt{iHSS}, \texttt{jHSS}, and \texttt{MHSS} hold  $\nabla^2 L(x_s,x_s)$ from~\eqref{mdsHess}. The argument \texttt{HDD} stores $\nabla^2 L(x_d,x_d)$ from~\eqref{mdsHess}. 
 
 
 \warningcp{Note:} The last four arguments, which are supposed to store the cross-Hessian $\nabla^2 L(x_s,x_d)$ from~\eqref{mdsHess}, are for now assumed to hold a zero matrix. The implementer should return \texttt{nnzHSD=0} during the first call to \texttt{eval\_Hess\_Lagr}. On subsequent calls, \Hi will pass the sparse triplet \texttt{HSD} arrays   set to \texttt{NULL} and the implementer (obviously) should not use them.
