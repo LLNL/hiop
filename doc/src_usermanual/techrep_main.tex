@@ -132,7 +132,7 @@ backgroundcolor=\color{lbcolor},
 \vspace{3cm}
 
   {\huge\bfseries \Hi\ -- User Guide} \\[14pt]
-  {\large\bfseries version 0.4}
+  {\large\bfseries version 0.4.1}
 
 \vspace{3cm}
 
@@ -154,7 +154,7 @@ Lawrence Livermore National Laboratory}}}\\[10pt]
 \vspace{4.75cm}
 
  \textcolor{violet}{{\large\bfseries Oct 15, 2017} \\
-{\large\bfseries Updated March 15, 2021}}
+{\large\bfseries Updated April 07, 2021}}
 
 \vspace{0.75cm}
 
@@ -263,8 +263,7 @@ By using multithreadead BLAS and LAPACK libraries, \textit{e.g.}, INTEL MKL, Got
 \end{verbatim}
 
 \subsection{Prerequisites} 
-\Hi is written in C++ (C++98) and requires a C++ compiler. 
-Also it requires BLAS and LAPACK, and, optionally, MPI. Not having MPI enabled in \Hi results in \Hi running on one processor only; still, significant multi-core parallelization can be obtained by using multithreaded BLAS and LAPACK. The CMake-based build system of \Hi generally detects these prerequisites automatically.
+\Hi is written in C++11. At minimum, \Hi  requires BLAS and LAPACK, however, the more advanced solvers require additional dependencies (MPI, RAJA and UMPIRE, CUDA, MAGMA, CoinHSL, STRUMPACK, etc.). The CMake-based build system of \Hi generally detects these prerequisites automatically and warns the user when such prerequisites are missing.
 
 At this point the build system only supports macOS and Linux operating systems. On the other hand, other than the build system, \Hi's code is  platform independent and should run fine on Windows as well.
 
@@ -673,7 +672,7 @@ bool eval_Hess_Lagr(const long long& n, const long long& m,
 			      int& nnzHSD, int* iHSD, int* jHSD, double* MHSD);
 \end{lstlisting} 
 
-\noindent Evaluates the Hessian of the Lagrangian function in three structural blocks given by the MDS structure of the problm. \texttt{nnzHSS}, \texttt{iHSS}, \texttt{jHSS}, and \texttt{MHSS} hold  $\nabla^2 L(x_s,x_s)$ from~\eqref{mdsHess}. \texttt{HDD} stores $\nabla^2 L(x_d,x_d)$ from~\eqref{mdsHess}. 
+\noindent Evaluates the Hessian of the Lagrangian function in three structural blocks given by the MDS structure of the problem. The arguments \texttt{nnzHSS}, \texttt{iHSS}, \texttt{jHSS}, and \texttt{MHSS} hold  $\nabla^2 L(x_s,x_s)$ from~\eqref{mdsHess}. The argument \texttt{HDD} stores $\nabla^2 L(x_d,x_d)$ from~\eqref{mdsHess}. 
 
 
 \warningcp{Note:} The last four arguments, which are supposed to store the cross-Hessian $\nabla^2 L(x_s,x_d)$ from~\eqref{mdsHess}, are for now assumed to hold a zero matrix. The implementer should return \texttt{nnzHSD=0} during the first call to \texttt{eval\_Hess\_Lagr}. On subsequent calls, \Hi will pass the sparse triplet \texttt{HSD} arrays   set to \texttt{NULL} and the implementer (obviously) should not use them.
@@ -916,8 +915,8 @@ Double values in $[10^{-14},0.1]$. Default value $10^{-6}$.
 \begin{itemize}
 \item ``auto'' (default): identical to ``hybrid''
 \item ``cpu'': run everything on cpu
-\item ``hybrid'':  \Hi will decide internally based on the type of NLP problem solved and other options which computational kernels will be offloaded to GPU. It usually runs the expensive linear solves on GPU but the remaining computations on the host/CPU.
-\item ``gpu'': run the all the computational kernels on the device; some computations (\textit{e.g.}, logic and control loop) will run on CPU. As of v0.4, this compute mode is experimental, should be used only by advanced users. 
+\item ``hybrid'':  \Hi will decide internally based on the type of NLP problem solved and other options which computational kernels will be offloaded to GPU. It usually runs the expensive linear solves on GPU but the remaining computations on the host/CPU
+\item ``gpu'': run the all the computational kernels on the device; some computations (\textit{e.g.}, logic and control loop) will run on CPU. Introduced as of v0.4, this compute mode is experimental, should be used only by advanced users
 \end{itemize}
 
 \medskip
@@ -926,10 +925,10 @@ Double values in $[10^{-14},0.1]$. Default value $10^{-6}$.
 
 \noindent \textbf{mem\_space}: specifies the primary memory space in which the RAJA-based optimization and linear algebra objects will be created
 \begin{itemize}
-\item ``default'' (default): the default memory space as per RAJA specification 
-\item ``host'': cpu memory space
-\item ``device'': device memory space
-\item ``um'': unified memory space
+\item ``default'' (default): allocations are done by \Hi in the cpu's memory space
+\item ``host'':  allocations via UMPIRE in UMPIRE's ``HOST`` memory space, typically CPU memory
+\item ``device'': allocations via UMPIRE in UMPIRE's ``DEVICE`` device memory space
+\item ``um'': allocations via UMPIRE's unified memory model, know as ``UM`` 
 \end{itemize}
 
 \medskip

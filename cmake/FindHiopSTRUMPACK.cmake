@@ -37,6 +37,3 @@ else()
   message(STATUS "STRUMPACK was not found.")
 endif()
 
-#set(STRUMPACK_INCLUDE_DIR CACHE PATH "Path to StrumpackConfig.hpp")
-#set(STRUMPACK_LIBRARIES CACHE PATH "Path to strumpack library")
-
