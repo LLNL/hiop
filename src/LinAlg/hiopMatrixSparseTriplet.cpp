@@ -841,8 +841,8 @@ void hiopMatrixSymSparseTriplet::startingAtAddSubDiagonalToStartingAt(int diag_s
 
 void hiopMatrixSparseTriplet::copySubmatrixFrom(const hiopMatrix& src_gen,
                                    const long long& dest_row_st, const long long& dest_col_st,
-                                   const long long& dest_nnz_st)
-//                                   bool firstCall, std::map<int,int> &ValIdxMap )
+                                   const long long& dest_nnz_st,
+                                   const bool offdiag_only)
 {
   const hiopMatrixSparseTriplet& src = dynamic_cast<const hiopMatrixSparseTriplet&>(src_gen);
   auto m_rows = src.m();
@@ -860,17 +860,22 @@ void hiopMatrixSparseTriplet::copySubmatrixFrom(const hiopMatrix& src_gen,
   int dest_k = dest_nnz_st;
 
   // FIXME: irow and jcol only need to be assigned once; should we save a map for the indexes?
-  for(auto src_k = 0; src_k < src_nnz; ++src_k,++dest_k) {
+  for(auto src_k = 0; src_k < src_nnz; ++src_k) {
+    if(offdiag_only && src_iRow[src_k]==src_jCol[src_k]) {
+      continue;
+    }
     iRow_[dest_k] = dest_row_st + src_iRow[src_k];
     jCol_[dest_k] = dest_col_st + src_jCol[src_k];
     values_[dest_k] = src_val[src_k];
+    dest_k++;
   }
   assert(dest_k <= this->numberOfNonzeros());
 }
 
 void hiopMatrixSparseTriplet::copySubmatrixFromTrans(const hiopMatrix& src_gen,
                                    const long long& dest_row_st, const long long& dest_col_st,
-                                   const long long& dest_nnz_st)
+                                   const long long& dest_nnz_st,
+                                   const bool offdiag_only)
 {
   const hiopMatrixSparseTriplet& src = dynamic_cast<const hiopMatrixSparseTriplet&>(src_gen);
   auto m_rows = src.n();
@@ -888,10 +893,14 @@ void hiopMatrixSparseTriplet::copySubmatrixFromTrans(const hiopMatrix& src_gen,
   int dest_k = dest_nnz_st;
 
   // FIXME: irow and jcol only need to be assigned once; should we save a map for the indexes?
-  for(auto src_k = 0; src_k < src_nnz; ++src_k,++dest_k) {
+  for(auto src_k = 0; src_k < src_nnz; ++src_k) {
+    if(offdiag_only && src_iRow[src_k]==src_jCol[src_k]) {
+      continue;
+    }
     iRow_[dest_k] = dest_row_st + src_iRow[src_k];
     jCol_[dest_k] = dest_col_st + src_jCol[src_k];
     values_[dest_k] = src_val[src_k];
+    dest_k++;
   }
   assert(dest_k <= this->numberOfNonzeros());
 }

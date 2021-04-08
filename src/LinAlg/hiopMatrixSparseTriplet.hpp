@@ -132,7 +132,8 @@ public:
   */
   virtual void copySubmatrixFrom(const hiopMatrix& src_gen,
                                    const long long& dest_row_st, const long long& dest_col_st,
-                                   const long long& dest_nnz_st);
+                                   const long long& dest_nnz_st,
+                                   const bool offdiag_only = false);
   
   /**
   * @brief Copy the transpose of matrix 'src_gen', into 'this' as a submatrix from corner 
@@ -141,7 +142,8 @@ public:
   */
   virtual void copySubmatrixFromTrans(const hiopMatrix& src_gen,
                                    const long long& dest_row_st, const long long& dest_col_st,
-                                   const long long& dest_nnz_st);
+                                   const long long& dest_nnz_st,
+                                   const bool offdiag_only = false);
 
   /**
   * @brief Copy the selected cols/rows of a diagonal matrix (a constant 'scalar' times identity),
