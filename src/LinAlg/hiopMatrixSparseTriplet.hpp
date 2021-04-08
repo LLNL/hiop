@@ -121,7 +121,8 @@ public:
 
   /**
   * @brief Copy matrix 'src_gen', into 'this' as a submatrix from corner 'dest_row_st' and 'dest_col_st'
-  * The non-zero elements start from 'dest_nnz_st' will be replaced by the new elements.
+  * The non-zero elements start from 'dest_nnz_st' will be replaced by the new elements. 
+  * When `offdiag_only` is set to true, only the off-diagonal part of `src_gen` is copied.
   *
   * @pre 'this' must have enough rows and cols after row 'dest_row_st' and col 'dest_col_st'
   * @pre 'dest_nnz_st' + the number of non-zeros in the copied matrix must be less or equal to 
@@ -139,6 +140,7 @@ public:
   * @brief Copy the transpose of matrix 'src_gen', into 'this' as a submatrix from corner 
   * 'dest_row_st' and 'dest_col_st'.
   * The non-zero elements start from 'dest_nnz_st' will be replaced by the new elements.
+  * When `offdiag_only` is set to true, only the off-diagonal part of `src_gen` is copied.
   */
   virtual void copySubmatrixFromTrans(const hiopMatrix& src_gen,
                                    const long long& dest_row_st, const long long& dest_col_st,
