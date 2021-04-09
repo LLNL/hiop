@@ -44,7 +44,7 @@ static bool parse_arguments(int argc, char **argv,
 {
   self_check = false;
   nx = 20;
-  S = 100;
+  S = 5;
 
   switch(argc) {
   case 1:
@@ -86,9 +86,9 @@ static bool parse_arguments(int argc, char **argv,
     return false; //4 or more arguments
   }
 
-  if(self_check && nx!=20 && S!=100) {
+  if(self_check && nx!=20 && S!=5) {
       printf("Error: incorrect input parameters: '-selfcheck' must be used with predefined "
-	     "values for input  parameters, nx=20 S=100.\n");
+	     "values for input  parameters, nx=20 S=5.\n");
       return false;
   }
   
@@ -104,9 +104,9 @@ static void usage(const char* exeName)
   printf("  '$ %s nx S -selfcheck '\n", exeName);
   printf("Arguments, all integers, excepting strings '-selfcheck' \n");
   printf("  'nx': # of base case variables [default 20, optional, nonnegative integer].\n");
-  printf("  'S': # of recourse/contingency problems [default 100, optional, nonnegative integer].\n");
+  printf("  'S': # of recourse/contingency problems [default 5, optional, nonnegative integer].\n");
   printf("  '-selfcheck': compares the optimal objective with nx being 20 and "
-	 "S being 100 (these two exact values must be passed as arguments). [optional]\n");
+	 "S being 5 (these two exact values must be passed as arguments). [optional]\n");
 }
 
 
@@ -129,7 +129,7 @@ int main(int argc, char **argv)
   //nx == ny,nS,S
   int nx = 20;
   int nS = 5;
-  int S = 100;
+  int S = 5;
   
   bool selfCheck;
   
@@ -177,7 +177,7 @@ int main(int argc, char **argv)
 
 static bool self_check(int nx, int S, double obj_value)
 {
-  double obj_true = 0.2633425377;
+  double obj_true = 0.2633380121143;
   double err = 1e-5;
   if(fabs((obj_value)-obj_true)<1e-5) {
     printf("selfcheck success (error less than %18.12e), objective value is %18.12e \n", err,obj_value);
