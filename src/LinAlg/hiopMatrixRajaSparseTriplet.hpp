@@ -155,14 +155,16 @@ public:
 
   virtual void copySubmatrixFrom(const hiopMatrix& src_gen,
                                    const long long& dest_row_st, const long long& dest_col_st,
-                                   const long long& dest_nnz_st)
+                                   const long long& dest_nnz_st,
+                                   const bool offdiag_only = false)
   {
     assert(false && "not needed / implemented");
   }
     
   virtual void copySubmatrixFromTrans(const hiopMatrix& src_gen,
                                    const long long& dest_row_st, const long long& dest_col_st,
-                                   const long long& dest_nnz_st)
+                                   const long long& dest_nnz_st,
+                                   const bool offdiag_only = false)
   {
     assert(false && "not needed / implemented");
   }  
