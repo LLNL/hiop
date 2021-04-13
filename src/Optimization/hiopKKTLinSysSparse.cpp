@@ -606,7 +606,8 @@ namespace hiop
 
       // H is triangular
       // [   H   Jc^T  Jd^T | 0 |  0   0  -I   I   |  0   0   0   0  ] [  dx]   [    rx    ]
-      Msys.copySubmatrixFrom(*HessSp_, 0, 0, dest_nnz_st); dest_nnz_st += HessSp_->numberOfNonzeros();
+      Msys.copySubmatrixFrom(*HessSp_, 0, 0, dest_nnz_st, true); dest_nnz_st += HessSp_->numberOfOffDiagNonzeros();
+      Msys.copySubmatrixFromTrans(*HessSp_, 0, 0, dest_nnz_st); dest_nnz_st += HessSp_->numberOfNonzeros();
 
       Msys.copySubmatrixFromTrans(*Jac_cSp_, 0, nx, dest_nnz_st); dest_nnz_st += Jac_cSp_->numberOfNonzeros();
       Msys.copySubmatrixFromTrans(*Jac_dSp_, 0, nx+neq, dest_nnz_st); dest_nnz_st += Jac_dSp_->numberOfNonzeros();
