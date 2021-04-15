@@ -45,7 +45,7 @@
       tail -f output &
       tailpid=$!
 
-      if [[ $MY_CLUSTER -eq "marianas" ]]; then
+      if [[ $MY_CLUSTER == "marianas" ]]; then
         export SLURM_Q=`perl $WORKDIR/scripts/findIdleDLNodes.pl`
       fi
 
