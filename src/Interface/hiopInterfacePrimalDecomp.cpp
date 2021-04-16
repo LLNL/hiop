@@ -25,7 +25,6 @@ RecourseApproxEvaluator(const int nc,
 			const std::vector<int>& list)
   : nc_(nc),S_(S),rval_(0.),rgrad_(NULL), rhess_(NULL),x0_(NULL)//nc = nx, nd=S
 {
-  //assert(S>=nc);
   rgrad_ = new double[nc];
   rhess_ = new double[nc];
   x0_ = new double[nc];
@@ -102,8 +101,7 @@ eval_f(const long long& n, const double* x, bool new_x, double& obj_value)
   return true;
 }
  
-// sum 0.5 {(x_i-1)*(x_{i}-1) : i=1,...,nc} 
-// grad is of the length n, of the entire x
+// grad is assumed to be of the length n, of the entire x
 bool hiopInterfacePriDecProblem::RecourseApproxEvaluator::
 eval_grad(const long long& n, const double* x, bool new_x, double* grad)
 {

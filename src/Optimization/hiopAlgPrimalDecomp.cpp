@@ -548,8 +548,6 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
     double rec_val = 0.;
     double grad_acc[nc_];
     for(int i=0; i<nc_; i++) grad_acc[i] = 0.;
-    //this is an example of the usage of the classes' design and has almost nothing to do with
-    //the actual algorithm (master rank does all the computations)
 
     //hess_appx_2 is declared by all ranks while only rank 0 uses it
     HessianApprox*  hess_appx_2 = new HessianApprox(nc_,alpha_ratio_);
@@ -579,11 +577,10 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
       }
       // solve the base case
       if(my_rank_ == 0 && it==0) {//initial solve 
-        //printf("my rank for solver  %d\n", my_rank_);
-        //solve master problem base case(solver rank supposed to do it)
+        // printf("my rank for solver  %d\n", my_rank_);
+        // solve master problem base case on master and iteration 0
 
         solver_status_ = master_prob_->solve_master(x_,false);
-        //printf("solve master done  %d\n", my_rank_);
         // to do, what if solve fails?
         if(solver_status_){     
 
@@ -601,10 +598,6 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
 
       // assert("for debugging" && false); //for debugging purpose
       // set up recourse problem send/recv interface
-      /*std::vector<ReqRecourseApprox* > rec_prob(comm_size_);
-      for(int r=0; r<comm_size_;r++) {
-        rec_prob[r] = new ReqRecourseApprox(nc_);
-      }*/
       
       std::vector<ReqRecourseApprox* > rec_prob;
       ReqRecourseApprox* p=NULL;
@@ -661,9 +654,7 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
           printf( "Elapsed time for iteration %d for misc is %f\n",it, t2 - t1 );  
 	}
         while(idx<=S_ || last_loop) { 
-          //std::this_thread::sleep_for(std::chrono::milliseconds(10)); //optional, used to adjust time
           for(int r=1; r< comm_size_;r++) {
-            //int ierr = MPI_Isend(&rec_val, 1, MPI_DOUBLE, rank_master, 2, comm_world_, &request_[my_rank_]);
             int mpi_test_flag = rec_prob[r]->test();
             if(mpi_test_flag && (finish_flag[r]==0)) {// receive completed
               if(!last_loop && idx<S_) {
@@ -778,29 +769,11 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
         rec_prob[my_rank_]->set_grad(grad_acc);
         rec_prob[my_rank_]->post_send(2, rank_master, comm_world_);
 
-        // post receive to the next index
-        // ierr = MPI_Test(&request_[0], &mpi_test_flag, &status_);
-        // ierr = MPI_Irecv(&cont_idx[0], 1, MPI_INT, rank_master, 1, comm_world_, &request_[0]); 
         req_cont_idx->post_recv(1, rank_master, comm_world_);
         while(cont_idx[0]!=-1) {//loop until end signal received
-          //printf("contingency index %d, rank %d)\n",cont_idx[0],my_rank_);
-          //mpi_test_flag = rec_prob[my_rank_]->test();
-          //ierr = MPI_Test(&request_[0], &mpi_test_flag, &status_);
           mpi_test_flag = req_cont_idx->test();
           /* contigency starts at 0 
            * sychronous implmentation of contingencist
-          std::vector<int> cont_idx;
-          if(my_rank_==comm_size_-1){
-            for(int i=0;i<cpr+cr;i++){
-              int idx_temp = i+(my_rank_-1)*cpr;
-              cont_idx.push_back(idx_temp);  //currently the last one gets the most contingency, not optimal
-            }
-          } else {
-            for(int i=0;i<cpr;i++) {
-              int idx_temp = i+(my_rank_-1)*cpr;
-              cont_idx.push_back(idx_temp);
-            }
-          }
           */
           if(mpi_test_flag) {
             //printf("contingency index %d, rank %d)\n",cont_idx[0],my_rank_);
@@ -815,7 +788,6 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
               grad_acc[i] = 0.;
             }
             double aux=0.;
-            //assert("for debugging" && false); //for debugging purpose
             double x0[nc_]; 
             if(nc_<n_) {
               assert(xc_idx_[0]>=0);// if nc==0, why bother using this code?
@@ -861,16 +833,11 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
             req_cont_idx->post_recv(1, rank_master, comm_world_);
             //ierr = MPI_Irecv(&cont_idx[0], 1, MPI_INT, rank_master, 1, comm_world_, &request_[0]); 	  
           }
-          //std::this_thread::sleep_for(std::chrono::milliseconds(50));
         }
       }
 
-      //int err= MPI_Reduce(&rec_val,&rval,1, MPI_DOUBLE, MPI_SUM, rank_master, comm_world_);
-      //err= MPI_Reduce(&grad_acc,&grad_r,n_, MPI_DOUBLE, MPI_SUM, rank_master, comm_world_);
-      //assert(err == MPI_SUCCESS);
       if(my_rank_==0)
       {
-        //std::this_thread::sleep_for(std::chrono::milliseconds(100));
         printf("real rval %18.12e\n",rval);
         MPI_Status mpi_status; 
 
@@ -932,14 +899,12 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
           }
           printf("\n");
 	}
-        //todo S_ doesn't have to be bigger than n_ now right?
        
         assert(evaluator->get_rgrad()!=NULL);// should be defined
         evaluator->set_rval(rval);
         evaluator->set_rgrad(nc_,grad_r);
         evaluator->set_rhess(nc_,hess_appx);
         evaluator->set_x0(nc_,x0);
-
 
         bret = master_prob_->set_recourse_approx_evaluator(nc_, evaluator);
         if(!bret) {
@@ -948,8 +913,6 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
 
         //printf("solving full problem starts, iteration %d \n",it);
 	solver_status_ = master_prob_->solve_master(x_,true);
-        //assert("for debugging" && false); //for debugging purpose
-        //assert("for debugging" && false); //for debugging purpose
         if(ver_ >=outlevel1) {
           printf("solved full problem with objective %18.12e\n", master_prob_->get_objective());
           fflush(stdout);
@@ -966,7 +929,7 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
           printf( "Elapsed time for entire iteration %d is %f\n",it, t2 - t1 );  
 	}
       } else {
-        //std::this_thread::sleep_for(std::chrono::milliseconds(100));    
+        // evaluator ranks do nothing     
       }
       if(stopping_criteria(it, convg)) {
         end_signal = 1; 

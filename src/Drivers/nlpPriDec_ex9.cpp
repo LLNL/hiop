@@ -1,18 +1,32 @@
 #include "nlpPriDec_ex9.hpp"
-
 #include "hiopNlpFormulation.hpp"
 #include "hiopAlgFilterIPM.hpp"
-/*
-PriDecMasterProblemEx9::PriDecMasterProblemEx9(size_t nx, size_t ny, size_t nS, size_t S)
-  : nx_(nx), ny_(ny), nS_(nS), S_(S)
-{
-  basecase_ = new PriDecBasecaseProblemEx9(nx_);
 
-  //todo:
-  // - generate S vectors \xi (each of size nS) from U[-0.25, 0.25]
-}
+/*
+  todo:
+  - generate S vectors \xi (each of size nS) from U[-0.25, 0.25]
 */
 using namespace hiop;
+
+	
+PriDecMasterProblemEx9::
+PriDecMasterProblemEx9(size_t nx, size_t ny, size_t nS, size_t S) : nx_(nx), ny_(ny),nS_(nS),S_(S)
+{
+  assert(nx==ny);
+  y_ = new double[ny_];
+  sol_ = new double[nx_];
+  obj_ = 1e20;
+  basecase_ = new PriDecBasecaseProblemEx9(nx_);
+  nc_ = nx_;
+};
+
+PriDecMasterProblemEx9::~PriDecMasterProblemEx9()
+{
+  delete[] y_;
+  delete[] sol_; 
+  delete basecase_;
+};
+	
 hiop::hiopSolveStatus
 PriDecMasterProblemEx9::solve_master(double* x,
                                      const bool& include_r,
@@ -20,8 +34,6 @@ PriDecMasterProblemEx9::solve_master(double* x,
                                      const double* grad/*=0*/,
                                      const double*hess /*=0*/)
 {
-
-
   obj_=-1e+20;
   hiopSolveStatus status;
   if(basecase_==NULL) {
@@ -34,15 +46,9 @@ PriDecMasterProblemEx9::solve_master(double* x,
   }
   
   hiopNlpSparse nlp(*basecase_);
-
-  //if(include_r){
-  //  assert("for debugging" && false); //for debugging purpose
- // }
     
   //nlp.options->SetStringValue("compute_mode", "hybrid");
-  // what should the solver options be?
   //nlp.options->SetStringValue("dualsUpdateType", "linear");
-  //nlp.options->SetStringValue("dualsInitialization", "zero"); hiop does not understand?
 
   //nlp.options->SetStringValue("fixed_var", "relax");
   nlp.options->SetStringValue("Hessian", "analytical_exact");
@@ -57,9 +63,7 @@ PriDecMasterProblemEx9::solve_master(double* x,
   
   hiopAlgFilterIPMNewton solver(&nlp);
 
-
   status = solver.run();
-
 
   obj_ = solver.getObjective();
   solver.getSolution(x);
@@ -68,15 +72,14 @@ PriDecMasterProblemEx9::solve_master(double* x,
     printf("solver returned negative solve status: %d (with objective is %18.12e)\n", status, solver.getObjective());
     return status;
   }
-   
-  //for(int i=0;i<nx_;i++) printf(" %d %18.12e ",i,x[i]);
+  
+  // print x
+  // for(int i=0;i<nx_;i++) printf(" %d %18.12e ",i,x[i]);
     
   if(sol_==NULL) {
     sol_ = new double[nx_];
   }
   memcpy(sol_,x, nx_*sizeof(double));
-  
-
   
   //compute the recourse estimate
   if(include_r) {
@@ -85,7 +88,6 @@ PriDecMasterProblemEx9::solve_master(double* x,
     printf("recourse estimate: is %18.12e\n", rec_appx);
   }
   
-
   return Solve_Success;
   //return hiop::SolverInternal_Error;
 }
@@ -110,32 +112,26 @@ bool PriDecMasterProblemEx9::eval_f_rterm(size_t idx, const int& n, const double
   double t3 =  MPI_Wtime(); 
   double t4 = 0.; 
 #endif 
-  //if(idx==0||idx==50||idx==75||idx==150) {  
-  //  nS_2 = 1;
-  //}
-  //if(idx<ny_ && idx>1) {
-  //  nS_2 = idx;
-  //}
+  
+  // xi can be set below 
   xi = new double[nS_]; 
-  //for(int i=0;i<nS_2;i++) xi[i] = idx*1./nS_2*5.-5.;
   for(int i=0;i<nS_;i++) xi[i] = 1.;
-
   //xi[ny_-1] = double(idx/100.0+1.);
 
   PriDecRecourseProblemEx9* ex9_recourse;
 
   ex9_recourse = new PriDecRecourseProblemEx9(nc_, nS_,S_,x,xi);
   
+  // set a few contingencies to have different sparse structure
+  /*
   if(idx%30==0) {  
     ex9_recourse->set_sparse(0.3);
   }
+  */
   
-  //assert("for debugging" && false); //for debugging purpose
   hiopNlpMDS nlp(*ex9_recourse);
-
   nlp.options->SetStringValue("duals_update_type", "linear");
   //nlp.options->SetStringValue("dualsInitialization", "zero");
-
   nlp.options->SetStringValue("Hessian", "analytical_exact");
 #ifdef HIOP_USE_GPU
   nlp.options->SetStringValue("compute_mode", "hybrid");
@@ -155,26 +151,25 @@ bool PriDecMasterProblemEx9::eval_f_rterm(size_t idx, const int& n, const double
   if(y_==NULL) {
     y_ = new double[ny_];
   }
-
   solver.getSolution(y_);
   
   #ifdef HIOP_USE_MPI
-  /*  t4 =  MPI_Wtime(); 
-    if(idx==0||idx==1) {
-      printf( "Elapsed time for contingency %d is %f\n",idx, t4 - t3 ); 
-      printf(" Objective for idx %d value %18.12e, xi %18.12e\n",idx,rval,xi[0]);
-    }*/
+  // uncomment if want to monitor contingency computing time
+  /* t4 =  MPI_Wtime(); 
+     if(idx==0||idx==1) {
+       printf( "Elapsed time for contingency %d is %f\n",idx, t4 - t3 ); 
+       printf(" Objective for idx %d value %18.12e, xi %18.12e\n",idx,rval,xi[0]);
+     }
+  */
   #endif
 
   delete[] xi;
   return true;
-      
 };
 
+//returns the gradient computed in eval_f_rterm
 bool PriDecMasterProblemEx9::eval_grad_rterm(size_t idx, const int& n, double* x, double* grad)
 {
-  //todo:
-  // return in grad the gradient computed in eval_f_rterm
   assert(nx_==n);
   for(int i=0;i<n;i++) grad[i] = (x[i]-y_[i])/S_;
   return true;

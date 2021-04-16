@@ -22,7 +22,7 @@
  * An example of the use of hiop::hiopInterfacePriDecProblem interface of HiOp.
  * This interface is used to specify and solve <i>primal decomposable problems</i>.
  * For a detailed mathematical form of such problems, please see
- *  hiop::hiopInterfacePriDecProblem.
+ * hiop::hiopInterfacePriDecProblem.
  *
  * The basecase NLP problem is given by Ex6 and the recourse problems are nonconvex
  * NLPs expressing the distance from the basecase variables `x` to a nonconvex nonlinear
@@ -45,13 +45,13 @@
  *
  *                   y_1 >=0
  * 
- * Here  each of @f$ \xi^i_1, \xi^i_2, ..., \xi^i_{n_S} @f$  are withdrawn from U[-0.25, 0.25]
- * and the size n_S of the sample satisfying 1<=n_S<=n_y.
+ * Eventually each of @f$ \xi^i_1, \xi^i_2, ..., \xi^i_{n_S} @f$  can be withdrawn from U[-0.25, 0.25]
+ * and the size n_S of the sample satisfying 1<=n_S<=n_y. They are set to 1.0 for now.
  *
  * When $S$ samples (\xi^i_1, \xi^i_2, ..., \xi^i_{n_S}), i=1,\ldots,S, are used the
  * primal decomposable problem looks like 
  *
- *     min_x basecase(x) +  \sum_{i=1}^S r_i(x;\xi_i)
+ *     min_x basecase(x) +  1/S \sum_{i=1}^S r_i(x;\xi_i)
  *
  * The above problem can be viewed as the sample average approximation of the two-stage
  * stochastic programming problem
@@ -72,22 +72,9 @@ using namespace hiop;
 class PriDecMasterProblemEx9 : public hiop::hiopInterfacePriDecProblem
 {
 public:
-  PriDecMasterProblemEx9(size_t nx, size_t ny, size_t nS, size_t S)
-  : nx_(nx), ny_(ny),nS_(nS),S_(S)
-  {
-    assert(nx==ny);
-    y_ = new double[ny_];
-    sol_ = new double[nx_];
-    obj_ = 1e20;
-    basecase_ = new PriDecBasecaseProblemEx9(nx_);
-    nc_ = nx_;
-  };
-  virtual ~PriDecMasterProblemEx9()
-  {
-    delete[] y_;
-    delete[] sol_; 
-    delete basecase_;
-  };
+  PriDecMasterProblemEx9(size_t nx, size_t ny, size_t nS, size_t S);
+  
+  virtual ~PriDecMasterProblemEx9();
 
   hiop::hiopSolveStatus solve_master(double* x,
                                      const bool& include_r,
@@ -100,7 +87,7 @@ public:
 		                             hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator);
   
   /**
-   * solving the idxth recourse optimization problem
+   * solving the idxth recourse optimization subproblem
    * n is the number of coupled x, not the entire dimension of x
    * rval is the return value of the recourse solution function evaluation
    */
@@ -137,7 +124,7 @@ private:
 
   double* sol_;
   double obj_;
-  /// basecase
+  // basecase problem
   PriDecBasecaseProblemEx9* basecase_;
 };
 

@@ -137,8 +137,8 @@ public:
   
   virtual bool eval_grad_rterm(size_t idx, const int& n, double* x, double* grad);
 
-  //implement with alpha = 1 for now only
-  // this function should only be used if quadratic regularization is included
+  // Implement with alpha = 1 for now only
+  // This function should only be used if quadratic regularization is included
   virtual bool set_recourse_approx_evaluator(const int n, 
 		                             hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator);
   /** 
@@ -159,7 +159,6 @@ private:
   Ex8* my_nlp;
   double obj_;
   double* sol_; 
-  // will need some encapsulation of the basecase NLP
 };
 
 #endif

@@ -72,28 +72,6 @@ public:
   {
     rec_evaluator_ = evaluator;
   }
-  /* 
-  bool set_quadratic_terms(const int& n, 
-		           const hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator)
-  {
-    //called for assert only
-    long long n1=0;
-    long long n2=0;
-    bool s1 = get_prob_sizes(n1, n2);
-    if(rec_evaluator_==NULL) {
-      rec_evaluator_ = new hiopInterfacePriDecProblem::
-	                   RecourseApproxEvaluator(n, evaluator->get_S(), evaluator->get_xc_idx(),
-                                                   evaluator->get_rval(), evaluator->get_rgrad(),
-                                                   evaluator->get_rhess(), evaluator->get_x0());
-      return true;
-    }
-    assert(rec_evaluator_->get_rgrad()!=NULL);// should be defined
-    rec_evaluator_->set_rval(evaluator->get_rval());
-    rec_evaluator_->set_rgrad(n,evaluator->get_rgrad());
-    rec_evaluator_->set_rhess(n,evaluator->get_rhess());
-    rec_evaluator_->set_x0(n,evaluator->get_x0());
-    return true;
-  }*/
 
   void set_include(const bool include)
   {

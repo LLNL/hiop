@@ -114,9 +114,13 @@ bool Ex8::eval_f(const long long& n, const double* x, bool new_x, double& obj_va
 };
 
 
-bool Ex8::eval_cons(const long long& n, const long long& m, 
-                       const long long& num_cons, const long long* idx_cons,  
-		       const double* x, bool new_x, double* cons)
+bool Ex8::eval_cons(const long long& n, 
+		    const long long& m, 
+                    const long long& num_cons, 
+		    const long long* idx_cons,  
+		    const double* x, 
+		    bool new_x, 
+		    double* cons)
 {
   assert(num_cons==0);
   return true;
@@ -125,7 +129,6 @@ bool Ex8::eval_cons(const long long& n, const long long& m,
 bool Ex8::eval_grad_f(const long long& n, const double* x, bool new_x, double* gradf)
 {
   //! assert(ns>=4); assert(Q->n()==ns/4); assert(Q->m()==ns/4);
-  //x_i - 0.5 
   for(int i=0; i<n; i++) {
     gradf[i] = x[i]-1.;
   }
@@ -143,11 +146,13 @@ bool Ex8::get_starting_point(const long long& global_n, double* x0_)
   return true;
 };
 
-bool Ex8::get_starting_point(const long long& n, const long long& m,
-				  double* x0_,
-				  bool& duals_avail,
-				  double* z_bndL0, double* z_bndU0,
-				  double* lambda0)
+bool Ex8::get_starting_point(const long long& n, 
+		             const long long& m,
+			     double* x0_,
+			     bool& duals_avail,
+			     double* z_bndL0, 
+			     double* z_bndU0,
+			     double* lambda0)
 {
   duals_avail = false;
   return false;
@@ -184,8 +189,12 @@ bool Ex8::set_include(bool include)
   return true;
 };
 
-hiopSolveStatus PriDecMasterProblemEx8::solve_master(double* x, const bool& include_r, const double& rval/* = 0*/,
-		                                     const double* grad/*=0*/, const double* hess/*=0*/)
+hiopSolveStatus PriDecMasterProblemEx8::
+solve_master(double* x, 
+	     const bool& include_r, 
+	     const double& rval/* = 0*/,
+	     const double* grad/*=0*/, 
+	     const double* hess/*=0*/)
 {
   obj_=-1e+20;
   hiopSolveStatus status;
@@ -203,11 +212,9 @@ hiopSolveStatus PriDecMasterProblemEx8::solve_master(double* x, const bool& incl
   }
   // check to see if the resource value and gradient are correct
   //printf("recourse value: is %18.12e)\n", rval_);
-  //assert("for debugging" && false); //for debugging purpose
   hiopNlpDenseConstraints nlp(*my_nlp);
 
-  nlp.options->SetStringValue("duals_update_type", "linear"); // "lsq" or "linear" --> lsq hasn't been implemented yet.
-                                                            // it will be forced to use "linear" internally.
+  nlp.options->SetStringValue("duals_update_type", "linear"); 
   nlp.options->SetStringValue("duals_init", "zero"); // "lsq" or "zero"
   nlp.options->SetStringValue("compute_mode", "cpu");
   nlp.options->SetStringValue("KKTLinsys", "xdycyd");
@@ -238,7 +245,6 @@ hiopSolveStatus PriDecMasterProblemEx8::solve_master(double* x, const bool& incl
   }
 
   memcpy(sol_,x, n_*sizeof(double));
-  //for(int i=0;i<n_;i++) printf("%d %18.12e\n",i,x[i]);
   //assert("for debugging" && false); //for debugging purpose
   return Solve_Success;
 

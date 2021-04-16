@@ -28,15 +28,12 @@
 namespace hiop
 {
 
-// todo: move RecourseApproxEvaluator "inside" hiopInterfacePriDecProblem
-
-
 /** 
  * Base class (interface) for specifying optimization NLPs that have separable terms in the 
  * objective, which we coin as "primal decomposable" problems. More specifically, these problems 
  * have the following structure (please also take a note of the terminology):
  *
- *   min_x  basecase(x) + sum { r_i(x) : i=1,...,S}      (primal decomposable NLP)
+ *   min_x  basecase(x) + 1/S sum { r_i(x) : i=1,...,S}      (primal decomposable NLP)
  *
  * The subproblem <b>'basecase'</b> refers to a general nonlinear nonconvex NLP in `x`. We point out 
  * that the basecase can have general <i>twice continously differentiable</i> objective and 
@@ -54,14 +51,17 @@ namespace hiop
  * 
  * The user is required to maintain and solve the master problem, more specifically:
  *  - to add the quadratic regularization to the basecase NLP; the quadratic regularization is 
- * provided by HiOp hiopInterfacePriDecProblem::set_recourse_approx_evaluator
+ * provided by HiOp hiopInterfacePriDecProblem::RecourseApproxEvaluator classs. the user is 
+ * expected to implement hiopInterfacePriDecProblem::set_recourse_approx_evaluator in the master 
+ * problem class.
  *  - to (re)solve master NLP  and return the primal optimal solution `x` to HiOp; for doing this, 
  * the user is required to implement hiopInterfacePriDecProblem::solve_master method.
  *
  * In addition, the user is required to implement 
  *     - hiopInterfacePriDecProblem::eval_f_rterm 
  *     - hiopInterfacePriDecProblem::eval_grad_rterm
- * 
+ * which solves the individual recourse subproblems.
+ *
  * These methods will be used by the HiOp's primal decomposition solver to  compute function value 
  * and  gradient vector individually for each recourse term  r_i, which are needed to build the 
  * convex regularizations q(x). The above methods will be called at arbitrary vectors `x` that 
@@ -119,6 +119,11 @@ public:
   virtual void get_solution(double* x) const = 0;
   virtual double get_objective() = 0;
 
+
+  /** 
+   * Define the evaluator class called by the base case problem class to add the quadratic 
+   * recourse approximation
+   */
   class RecourseApproxEvaluator
   {
   public:
@@ -155,29 +160,7 @@ public:
     double* get_rhess() const;
     double* get_x0() const; 
     std::vector<int> get_xc_idx() const; 
-    /*
-    bool set_recourse_approx_quadratic(const int& n, const double* x0=NULL, 
-  		           const double& rval=0.,const double* grad=NULL,const double* hess=NULL)
-    {
-      assert(ns_ == n);
-      if(grad!=NULL){
-        rval_ = rval;
-        if(rgrad_==NULL){
-          rgrad_ = new double[ns_];
-        }
-        if(rhess_==NULL){
-          rhess_ = new double[ns_];
-        }
-        if(x0_==NULL){
-          x0_ = new double[ns_];
-        }
-        memcpy(rgrad_,grad , ns_*sizeof(double));
-        memcpy(rhess_,hess , ns_*sizeof(double));
-        memcpy(x0_,x0, ns_*sizeof(double));
-      }
-      return true;
-    }
-    */
+
   protected:
     int nc_,S_;
     std::vector<int> xc_idx_;

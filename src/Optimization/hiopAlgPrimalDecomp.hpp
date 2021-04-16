@@ -19,6 +19,7 @@
 namespace hiop
 {
 
+// temporary output levels, aiming to integrate with hiop verbosity
 enum MPIout {
   outlevel0=0, //print nothing during from the MPI engine
   outlevel1=1, //print objective and start and end of a iteration
