@@ -116,6 +116,22 @@ if(HIOP_DEVELOPER_MODE)
   target_link_libraries(hiop_math INTERFACE hiop_options hiop_warnings)
 endif()
 
+find_package(OpenMP)
+target_link_libraries(hiop_math INTERFACE OpenMP::OpenMP_CXX)
+
+if(NOT DEFINED BLAS_LIBRARIES)
+  find_package(BLAS REQUIRED)
+  target_link_libraries(hiop_math INTERFACE ${BLAS_LIBRARIES})
+  message(STATUS "Found BLAS libraries: ${BLAS_LIBRARIES}")
+endif(NOT DEFINED BLAS_LIBRARIES)
+
+if(NOT DEFINED LAPACK_LIBRARIES)
+  # in case the toolchain defines them
+  find_package(LAPACK REQUIRED)
+endif(NOT DEFINED LAPACK_LIBRARIES)
+target_link_libraries(hiop_math INTERFACE ${LAPACK_LIBRARIES})
+message(STATUS "Using LAPACK libraries: ${LAPACK_LIBRARIES}")
+
 if(HIOP_USE_GPU)
   include(CheckLanguage)
   enable_language(CUDA)
@@ -162,22 +178,6 @@ if(HIOP_WITH_KRON_REDUCTION)
   include(FindHiopMETIS)
   target_link_libraries(hiop_math INTERFACE METIS)
 endif(HIOP_WITH_KRON_REDUCTION)
-
-find_package(OpenMP)
-target_link_libraries(hiop_math INTERFACE OpenMP::OpenMP_CXX)
-
-if(NOT DEFINED BLAS_LIBRARIES)
-  find_package(BLAS REQUIRED)
-  target_link_libraries(hiop_math INTERFACE ${BLAS_LIBRARIES})
-  message(STATUS "Found BLAS libraries: ${BLAS_LIBRARIES}")
-endif(NOT DEFINED BLAS_LIBRARIES)
-
-if(NOT DEFINED LAPACK_LIBRARIES)
-  # in case the toolchain defines them
-  find_package(LAPACK REQUIRED)
-endif(NOT DEFINED LAPACK_LIBRARIES)
-target_link_libraries(hiop_math INTERFACE ${LAPACK_LIBRARIES})
-message(STATUS "Using LAPACK libraries: ${LAPACK_LIBRARIES}")
 
 if(HIOP_USE_RAJA)
   target_link_libraries(hiop_math INTERFACE umpire RAJA)

@@ -16,25 +16,13 @@ module use -a $MODULESHOME/modulefiles/development/tools
 module use -a $MODULESHOME/modulefiles/apps
 module use -a $MODULESHOME/modulefiles/libs
 module use -a $PROJ_DIR/src/spack/share/spack/modules/$SPACK_ARCH/
-export MY_GCC_VERSION=7.3.0
-export MY_CUDA_VERSION=10.2.89
-export MY_OPENMPI_VERSION=3.1.3
-export MY_CMAKE_VERSION=3.15.3
-export MY_MAGMA_VERSION=2.5.4-gcc-7.3.0-bwwsayw
-export MY_METIS_VERSION=5.1.0
+source $PROJ_DIR/src/spack/share/spack/setup-env.sh
+
 export MY_NVCC_ARCH="sm_60"
-
 export NVBLAS_CONFIG_FILE=$PROJ_DIR/$MY_CLUSTER/nvblas.conf
-module load gcc/$MY_GCC_VERSION
-module load cuda/$MY_CUDA_VERSION
-module load openmpi/$MY_OPENMPI_VERSION
-module load cmake/$MY_CMAKE_VERSION
-module load magma/$MY_MAGMA_VERSION
+module load gcc/7.3.0
+module load cuda/10.2.89
+module load openmpi/3.1.3
+module load cmake-3.18.4-gcc-7.3.0-fuktvvh
 
-export MY_RAJA_DIR=$PROJ_DIR/$MY_CLUSTER/raja
-export MY_UMPIRE_DIR=$PROJ_DIR/$MY_CLUSTER/umpire
-export MY_UMFPACK_DIR=$PROJ_DIR/$MY_CLUSTER/suitesparse
-export MY_METIS_DIR=$APPS_DIR/metis/$MY_METIS_VERSION
-export MY_HIOP_MAGMA_DIR=$APPS_DIR/magma/2.5.2/cuda10.2
-export MY_COINHSL_DIR=$PROJ_DIR/$MY_CLUSTER/ipopt
-EXTRA_CMAKE_ARGS="$EXTRA_CMAKE_ARGS -DBLAS_LIBRARIES=/usr/lib64/libopenblas.so"
+spack env activate exago-v0-99-2-hiop-v0-3-99-2-marianas --with-view
