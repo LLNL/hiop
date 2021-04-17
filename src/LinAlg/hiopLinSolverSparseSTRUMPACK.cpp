@@ -126,14 +126,32 @@ namespace hiop
         }
       }
 
-      delete   [] nnz_each_row_tmp;
+      delete[] nnz_each_row_tmp;
     }
 
     /*
     * initialize strumpack parameters
     */
+
+    // possible values for MatchingJob (from STRUMPACK's source code)
+    //NONE,                         /*!< Don't do anything                   */
+    //MAX_CARDINALITY,              /*!< Maximum cardinality                 */
+    //MAX_SMALLEST_DIAGONAL,        /*!< Maximum smallest diagonal value     */
+    //MAX_SMALLEST_DIAGONAL_2,      /*!< Same as MAX_SMALLEST_DIAGONAL,
+    //                                but different algorithm                */
+    //MAX_DIAGONAL_SUM,             /*!< Maximum sum of diagonal values      */
+    //MAX_DIAGONAL_PRODUCT_SCALING, /*!< Maximum product of diagonal values
+    //                               and row and column scaling             */
+    //COMBBLAS                      /*!< Use AWPM from CombBLAS              */
+    //
+    // If you encounter numerical issues during the factorization
+    //(such as small pivots, failure in LU factorization), you can
+    // also try a different matching (MatchingJob::MAX_DIAGONAL_PRODUCT_SCALING
+    // is the most robust option)
+    
+    
     spss.options().set_matching(MatchingJob::NONE);
-//    spss.options().enable_METIS_NodeNDP();
+    spss.options().enable_METIS_NodeNDP();
     
     if(nlp_->options->GetString("compute_mode")=="cpu")
     {
@@ -235,10 +253,26 @@ namespace hiop
     /*
     * initialize strumpack parameters
     */
-//    spss.options().set_matching(MatchingJob::NONE);
-    spss.options().enable_METIS_NodeNDP();
-    if(nlp_->options->GetString("compute_mode")=="cpu")
-    {
+
+    // possible values for MatchingJob (from STRUMPACK's source code)
+    //NONE,                         /*!< Don't do anything                   */
+    //MAX_CARDINALITY,              /*!< Maximum cardinality                 */
+    //MAX_SMALLEST_DIAGONAL,        /*!< Maximum smallest diagonal value     */
+    //MAX_SMALLEST_DIAGONAL_2,      /*!< Same as MAX_SMALLEST_DIAGONAL,
+    //                                but different algorithm                */
+    //MAX_DIAGONAL_SUM,             /*!< Maximum sum of diagonal values      */
+    //MAX_DIAGONAL_PRODUCT_SCALING, /*!< Maximum product of diagonal values
+    //                               and row and column scaling             */
+    //COMBBLAS                      /*!< Use AWPM from CombBLAS              */
+    //
+    // If you encounter numerical issues during the factorization
+    //(such as small pivots, failure in LU factorization), you can
+    // also try a different matching (MatchingJob::MAX_DIAGONAL_PRODUCT_SCALING
+    // is the most robust option)
+
+    //spss.options().set_matching(MatchingJob::MAX_DIAGONAL_PRODUCT_SCALING);
+    //spss.options().enable_METIS_NodeNDP();
+    if(nlp_->options->GetString("compute_mode")=="cpu") {
       spss.options().disable_gpu();
     }
     spss.options().set_verbose(false);
@@ -254,15 +288,15 @@ namespace hiop
 
     nlp_->runStats.linsolv.tmFactTime.start();
 
-    if( !kRowPtr_ ){
+    if( !kRowPtr_ ) {
       this->firstCall();
-    }else{
+    } else {
       // update matrix
       int rowID_tmp{0};
-      for(int k=0;k<nnz_;k++){
+      for(int k=0;k<nnz_;k++) {
         kVal_[k] = M.M()[index_covert_CSR2Triplet_[k]];
       }
-      for(auto p: extra_diag_nnz_map){
+      for(auto p: extra_diag_nnz_map) {
         kVal_[p.first] += M.M()[p.second];
       }
 
@@ -277,7 +311,7 @@ namespace hiop
     return negEigVal;
   }
 
-  bool hiopLinSolverNonSymSparseSTRUMPACK::solve ( hiopVector& x_ )
+  bool hiopLinSolverNonSymSparseSTRUMPACK::solve(hiopVector& x_)
   {
     assert(n_==M.n() && M.n()==M.m());
     assert(n_>0);
