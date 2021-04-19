@@ -96,11 +96,11 @@ hiopResidual::~hiopResidual()
 }
 
 double hiopResidual::compute_nlp_infeasib_onenorm (const hiopIterate& it, 
-			       const hiopVector& c, 
-			       const hiopVector& d)
+                                                   const hiopVector& c, 
+                                                   const hiopVector& d)
 {
+
   nlp->runStats.tmSolverInternal.start();
-  
 //  double nrmInf_infeasib;
   double nrmOne_infeasib = 0.;
   long long nx_loc=rx->get_local_size();
@@ -321,11 +321,21 @@ int hiopResidual::update(const hiopIterate& it,
 #ifdef HIOP_USE_MPI
   //here we reduce each of the norm together for a total cost of 1 Allreduce of 3 doubles
   //otherwise, if calling infnorm() for each vector, there will be 12 Allreduce's, each of 1 double
-  double aux[6]={nrmInf_nlp_optim,nrmInf_nlp_feasib,nrmInf_nlp_complem,nrmInf_bar_optim,nrmInf_bar_feasib,nrmInf_bar_complem}, aux_g[6];
+  double aux[6]={nrmInf_nlp_optim,
+                 nrmInf_nlp_feasib,
+                 nrmInf_nlp_complem,
+                 nrmInf_bar_optim,
+                 nrmInf_bar_feasib,
+                 nrmInf_bar_complem};
+  double aux_g[6];
   int ierr = MPI_Allreduce(aux, aux_g, 6, MPI_DOUBLE, MPI_MAX, nlp->get_comm()); 
   assert(MPI_SUCCESS==ierr);
-  nrmInf_nlp_optim=aux_g[0]; nrmInf_nlp_feasib=aux_g[1]; nrmInf_nlp_complem=aux_g[2];
-  nrmInf_bar_optim=aux_g[3]; nrmInf_bar_feasib=aux_g[4]; nrmInf_bar_complem=aux_g[5];  
+  nrmInf_nlp_optim=aux_g[0];
+  nrmInf_nlp_feasib=aux_g[1];
+  nrmInf_nlp_complem=aux_g[2];
+  nrmInf_bar_optim=aux_g[3];
+  nrmInf_bar_feasib=aux_g[4];
+  nrmInf_bar_complem=aux_g[5];  
 #endif
   nlp->runStats.tmSolverInternal.stop();
   return true;

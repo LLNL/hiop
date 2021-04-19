@@ -40,11 +40,19 @@ public:
   
     // set up vector distribution for primal variables - easier to store it as a member in this simple example
     col_partition = new long long[comm_size+1];
-    long long quotient=n_vars/comm_size, remainder=n_vars-comm_size*quotient;
-    //if(my_rank==0) printf("reminder=%llu quotient=%llu\n", remainder, quotient);
-    int i=0; col_partition[i]=0; i++;
-    while(i<=remainder) { col_partition[i] = col_partition[i-1]+quotient+1; i++; }
-    while(i<=comm_size) { col_partition[i] = col_partition[i-1]+quotient;   i++; }
+    long long quotient=n_vars/comm_size;
+    long long remainder=n_vars-comm_size*quotient;
+
+    int i=0;
+    col_partition[i++]=0;
+    while(i<=remainder) {
+      col_partition[i] = col_partition[i-1]+quotient+1;
+      i++;
+    }
+    while(i<=comm_size) {
+      col_partition[i] = col_partition[i-1]+quotient;
+      i++;
+    }
   };
 
   virtual ~Ex3()
@@ -179,10 +187,14 @@ public:
 
   virtual bool get_vecdistrib_info(long long global_n, long long* cols)
   {
-    if(global_n==n_vars)
-      for(int i=0; i<=comm_size; i++) cols[i]=col_partition[i];
-    else 
+    if(global_n==n_vars) {
+      for(int i=0; i<=comm_size; i++) {
+        cols[i]=col_partition[i];
+      }
+    } else { 
       assert(false && "You shouldn't need distrib info for this size.");
+      return false;
+    }
     return true;
   }
 
