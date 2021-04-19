@@ -129,7 +129,22 @@ protected:
   bool updateLogBarrierParameters(const hiopIterate& it, const double& mu_curr, const double& tau_curr,
 				  double& mu_new, double& tau_new);
 
-  virtual void outputIteration(int lsStatus, int lsNum) = 0;
+  // second order correction
+  virtual int apply_second_order_correction(hiopKKTLinSys* kkt,
+                                            const double theta_curr,
+                                            const double theta_trial0,
+                                            bool &grad_phi_dx_computed,
+                                            double &grad_phi_dx,
+                                            int &num_adjusted_bounds);
+
+  // check if all the line search conditions are accepted or not
+  virtual int accept_line_search_conditions(const double theta_curr,
+                                            const double theta_trial,
+                                            const double alpha_primal,
+                                            bool &grad_phi_dx_computed,
+                                            double &grad_phi_dx);
+
+  virtual void outputIteration(int lsStatus, int lsNum, int use_soc) = 0;
 
   //returns whether the algorithm should stop and set an appropriate solve status
   bool checkTermination(const double& _err_nlp, const int& iter_num, hiopSolveStatus& status);
@@ -150,6 +165,7 @@ protected:
   hiopIterate*it_curr;
   hiopIterate*it_trial;
   hiopIterate* dir;
+  hiopIterate* soc_dir;
 
   hiopResidual* resid, *resid_trial;
 
@@ -170,6 +186,7 @@ protected:
    */
   double _f_nlp, _f_log, _f_nlp_trial, _f_log_trial;
   hiopVector *_c,*_d, *_c_trial, *_d_trial;
+  hiopVector *c_soc, *d_soc;
   hiopVector* _grad_f, *_grad_f_trial; //gradient of the log-barrier objective function
   hiopMatrix* _Jac_c, *_Jac_c_trial; //Jacobian of c(x), the equality part
   hiopMatrix* _Jac_d, *_Jac_d_trial; //Jacobian of d(x), the inequality part
@@ -210,6 +227,7 @@ protected:
   //internal flags related to the state of the solver
   hiopSolveStatus solver_status_;
   int n_accep_iters_;
+  bool trial_is_rejected_by_filter;
 
   /* Flag for timing and timing breakdown report for the KKT solve */
   bool perf_report_kkt_;
@@ -223,7 +241,7 @@ public:
 
   virtual hiopSolveStatus run();
 private:
-  virtual void outputIteration(int lsStatus, int lsNum);
+  virtual void outputIteration(int lsStatus, int lsNum, int use_soc);
 private:
   hiopNlpDenseConstraints* nlpdc;
 private:
@@ -245,11 +263,11 @@ public:
   virtual hiopSolveStatus run();
 
 private:
-  virtual void outputIteration(int lsStatus, int lsNum);
+  virtual void outputIteration(int lsStatus, int lsNum, int use_soc);
   virtual hiopKKTLinSys* decideAndCreateLinearSystem(hiopNlpFormulation* nlp);
   /// @brief get the method to decide if a factorization is acceptable or not
   virtual hiopFactAcceptor* decideAndCreateFactAcceptor(hiopPDPerturbation* p, hiopNlpFormulation* nlp);
-
+  
   hiopPDPerturbation pd_perturb_;
   hiopFactAcceptor* fact_acceptor_;
 private:

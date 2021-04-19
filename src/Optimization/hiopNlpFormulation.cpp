@@ -342,17 +342,16 @@ bool hiopNlpFormulation::finalizeInitialization()
       
       nlp_transformations.append(fixedVarsRemover);
     } else {
-      if(options->GetString("fixed_var")=="relax") {
+      if(options->GetString("fixed_var")=="relax" && options->GetNumeric("bound_relax_perturb") == 0.0) {
 	log->printf(hovWarning, "Fixed variables will be relaxed internally.\n");
 	auto* fixedVarsRelaxer = new hiopFixedVarsRelaxer(*xl, *xu,
 							  nfixed_vars, nfixed_vars_local);
 	fixedVarsRelaxer->setup();
 	fixedVarsRelaxer->relax(options->GetNumeric("fixed_var_tolerance"),
 				options->GetNumeric("fixed_var_perturb"), *xl, *xu);
-
 	nlp_transformations.append(fixedVarsRelaxer);
 
-      } else {
+      } else if(options->GetNumeric("bound_relax_perturb") == 0.0) {
 	log->printf(hovError,  
 		    "detected fixed variables but was not instructed "
 		    "how to deal with them (option 'fixed_var' is 'none').\n");
@@ -459,6 +458,14 @@ bool hiopNlpFormulation::finalizeInitialization()
   n_bnds_low=n_bnds_low_local; n_bnds_upp=n_bnds_upp_local; //n_bnds_lu is ok
 #endif
 
+  // relax bounds
+  if(options->GetNumeric("bound_relax_perturb") > 0.0) {
+    auto* relax_bounds = new hiopBoundsRelaxer(*xl, *xu, *dl, *du);
+    relax_bounds->setup();
+    relax_bounds->relax(options->GetNumeric("bound_relax_perturb"), *xl, *xu, *dl, *du);
+    nlp_transformations.append(relax_bounds);
+  }
+
   // Copy data from host mirror to the memory space
   dl->copyToDev();  du->copyToDev();
   idl->copyToDev(); idu->copyToDev();
@@ -497,7 +504,7 @@ bool hiopNlpFormulation::apply_scaling(hiopVector& c, hiopVector& d, hiopVector&
     return false;
   }
   
-  nlp_scaling = new hiopNLPObjGradScaling(max_grad, c, d, gradf, Jac_c, Jac_d);
+  nlp_scaling = new hiopNLPObjGradScaling(max_grad, c, d, gradf, Jac_c, Jac_d, cons_eq_mapping_, cons_ineq_mapping_);
   
   // FIXME NY: scale the constraint lb and ub  
   c_rhs = nlp_scaling->apply_to_cons_eq(*c_rhs, n_cons_eq);
@@ -1467,8 +1474,17 @@ bool hiopNlpSparse::eval_Hess_Lagr(const hiopVector&  x, bool new_x, const doubl
         _buf_lambda = LinearAlgebraFactory::createVector(n_cons_eq + n_cons_ineq);
     }
     assert(_buf_lambda);
-    _buf_lambda->copyFromStarting(0,         lambda_eq.local_data_const(),   n_cons_eq);
-    _buf_lambda->copyFromStarting(n_cons_eq, lambda_ineq.local_data_const(), n_cons_ineq);
+    
+    const double* lambda_eq_arr = lambda_eq.local_data_const();
+    const double* lambda_ineq_arr = lambda_ineq.local_data_const();
+    double* _buf_lambda_arr = _buf_lambda->local_data();
+
+    for(int i=0; i<n_cons_eq; ++i) {
+      _buf_lambda_arr[cons_eq_mapping_[i]] = lambda_eq_arr[i];
+    }
+    for(int i=0; i<n_cons_ineq; ++i) {
+      _buf_lambda_arr[cons_ineq_mapping_[i]] = lambda_ineq_arr[i];
+    }
 
     // scale lambda before passing it to user interface to compute Hess
     int n_cons_eq_ineq = n_cons_eq + n_cons_ineq;

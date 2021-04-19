@@ -312,13 +312,73 @@ relax(const double& fixed_var_tol, const double& fixed_var_perturb, hiopVector& 
   }
 }
 
+hiopBoundsRelaxer::
+hiopBoundsRelaxer(const hiopVector& xl,
+                  const hiopVector& xu,
+                  const hiopVector& dl,
+                  const hiopVector& du)
+  : xl_ori(NULL), xu_ori(NULL), dl_ori(NULL), du_ori(NULL),
+    n_vars(xl.get_size()), n_vars_local(xl.get_local_size()),
+    n_ineq(dl.get_size())
+{
+  xl_ori = xl.new_copy();
+  xu_ori = xu.new_copy();
+  dl_ori = dl.new_copy();
+  du_ori = du.new_copy();
+}
+
+hiopBoundsRelaxer::~hiopBoundsRelaxer()
+{
+  if(xl_ori) {
+    delete xl_ori;
+  }
+  if(xu_ori) {
+    delete xu_ori;
+  }
+  if(dl_ori) {
+    delete dl_ori;
+  }
+  if(du_ori) {
+    delete du_ori;
+  }
+}
+
+void hiopBoundsRelaxer::
+relax(const double& bound_relax_perturb, hiopVector& xl, hiopVector& xu, hiopVector& dl, hiopVector& du)
+{
+  xl.component_abs();
+  xl.component_max(1.);
+  xl.scale(-bound_relax_perturb);
+  xl.axpy(1.0, *xl_ori);
+
+  xu.component_abs();
+  xu.component_max(1.);
+  xu.scale(bound_relax_perturb);
+  xu.axpy(1.0, *xu_ori);
+
+  dl.component_abs();
+  dl.component_max(1.);
+  dl.scale(-bound_relax_perturb);
+  dl.axpy(1.0, *dl_ori);
+
+  du.component_abs();
+  du.component_max(1.);
+  du.scale(bound_relax_perturb);
+  du.axpy(1.0, *du_ori);
+
+}
 
 /**
 * For class hiopNLPObjGradScaling
 */
 hiopNLPObjGradScaling::hiopNLPObjGradScaling(const double max_grad, 
-                                             hiopVector& c, hiopVector& d, hiopVector& gradf,
-                                             hiopMatrix& Jac_c, hiopMatrix& Jac_d)
+                                             hiopVector& c, 
+                                             hiopVector& d, 
+                                             hiopVector& gradf,
+                                             hiopMatrix& Jac_c, 
+                                             hiopMatrix& Jac_d, 
+                                             long long *cons_eq_mapping, 
+                                             long long *cons_ineq_mapping)
       : n_vars(gradf.get_size()), n_vars_local(gradf.get_local_size()),
         scale_factor_obj(1.),
         n_eq(c.get_size()), n_ineq(d.get_size())
@@ -343,8 +403,16 @@ hiopNLPObjGradScaling::hiopNLPObjGradScaling(const double max_grad,
   scale_factor_d->scale(max_grad);
   scale_factor_d->component_min(1.0);
 
-  scale_factor_cd->copyFromStarting(0,    scale_factor_c->local_data_const(),   n_eq);
-  scale_factor_cd->copyFromStarting(n_eq, scale_factor_d->local_data_const(), n_ineq);
+  const double* eq_arr = scale_factor_c->local_data_const();
+  const double* ineq_arr = scale_factor_d->local_data_const();
+  double* scale_factor_cd_arr = scale_factor_cd->local_data();
+
+  for(int i=0; i<n_eq; ++i) {
+    scale_factor_cd_arr[cons_eq_mapping[i]] = eq_arr[i];
+  }
+  for(int i=0; i<n_ineq; ++i) {
+    scale_factor_cd_arr[cons_ineq_mapping[i]] = ineq_arr[i];
+  }
 }
 
 hiopNLPObjGradScaling::~hiopNLPObjGradScaling()

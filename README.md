@@ -140,10 +140,10 @@ HiOp has been developed under the financial support of:
 
 # Contributors
 
-HiOp is written by Cosmin G. Petra (petra1@llnl.gov) from LLNL and has received contributions from Slaven Peles (PNNL), Asher Mancinelli (PNNL), Jake K. Ryan (PNNL), Cameron Rutherford (PNNL), Nai-Yuan Chiang (LLNL), and Michel Schanen (ANL).
+HiOp is written by Cosmin G. Petra (petra1@llnl.gov) and Nai-Yuan Chiang (chiang7@llnl.gov) from LLNL and has received contributions from Slaven Peles (PNNL), Asher Mancinelli (PNNL), Cameron Rutherford (PNNL), Jake K. Ryan (PNNL), and Michel Schanen (ANL).
 
 # Copyright
 
-Copyright (c) 2017-2020, Lawrence Livermore National Security, LLC. All rights reserved. Produced at the Lawrence Livermore National Laboratory. LLNL-CODE-742473. HiOp is free software; you can modify it and/or redistribute it under the terms of the BSD 3-clause license. See [COPYRIGHT](/COPYRIGHT) and [LICENSE](/LICENSE) for complete copyright and license information.
+Copyright (c) 2017-2021, Lawrence Livermore National Security, LLC. All rights reserved. Produced at the Lawrence Livermore National Laboratory. LLNL-CODE-742473. HiOp is free software; you can modify it and/or redistribute it under the terms of the BSD 3-clause license. See [COPYRIGHT](/COPYRIGHT) and [LICENSE](/LICENSE) for complete copyright and license information.
  
 

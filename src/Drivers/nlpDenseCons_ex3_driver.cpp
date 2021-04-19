@@ -67,37 +67,40 @@ int main(int argc, char **argv)
   if(!parse_arguments(argc, argv, n, selfCheck)) { usage(argv[0]); return 1;}
 
   double obj_value;
+  bool do_second_round = true;
+  
   hiopSolveStatus status;
 
   Ex3 nlp_interface(n);
 
   hiopNlpDenseConstraints nlp(nlp_interface);
 
-  //set options before the solver is even allocated
-  nlp.options->SetStringValue("fixed_var", "relax");
+  // relax var/con bounds before solving the problem
+  nlp.options->SetNumericValue("bound_relax_perturb", 1e-10);
 
   {
     hiopAlgFilterIPM solver(&nlp);
+    nlp.options->SetStringValue("fixed_var", "remove");
     status = solver.run();
     obj_value = solver.getObjective();
 
     //change options and resolve
-    nlp.options->SetStringValue("fixed_var", "remove");
+    nlp.options->SetStringValue("fixed_var", "relax");
     status = solver.run();
     obj_value = solver.getObjective();
 
   }
   //do the same as above but force deallocation of the solver 
-  {
+  if(do_second_round) {
     {
       hiopAlgFilterIPM solver(&nlp);
-      nlp.options->SetStringValue("fixed_var", "relax");
+      nlp.options->SetStringValue("fixed_var", "remove");
       status = solver.run();
       obj_value = solver.getObjective();
     }
     {
       hiopAlgFilterIPM solver(&nlp);
-      nlp.options->SetStringValue("fixed_var", "remove");
+      nlp.options->SetStringValue("fixed_var", "relax");
       status = solver.run();
       obj_value = solver.getObjective();
     }

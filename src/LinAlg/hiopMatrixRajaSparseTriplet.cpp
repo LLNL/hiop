@@ -87,8 +87,13 @@ namespace hiop
 
 
 /// @brief Constructs a hiopMatrixRajaSparseTriplet with the given dimensions and memory space
-hiopMatrixRajaSparseTriplet::hiopMatrixRajaSparseTriplet(int rows, int cols, int _nnz, std::string memspace)
-  : hiopMatrixSparse(rows, cols, _nnz), row_starts_host(NULL), mem_space_(memspace)
+hiopMatrixRajaSparseTriplet::hiopMatrixRajaSparseTriplet(int rows,
+                                                         int cols,
+                                                         int _nnz,
+                                                         std::string memspace)
+  : hiopMatrixSparse(rows, cols, _nnz),
+    row_starts_host(NULL),
+    mem_space_(memspace)
 {
   if(rows==0 || cols==0)
   {
@@ -185,8 +190,10 @@ void hiopMatrixRajaSparseTriplet::setToConstant(double c)
  * The full operation performed is:
  * _y_ = _beta_ * _y_ + _alpha_ * this * _x_
  */
-void hiopMatrixRajaSparseTriplet::timesVec(double beta,  hiopVector& y,
-  double alpha, const hiopVector& x) const
+void hiopMatrixRajaSparseTriplet::timesVec(double beta,
+                                           hiopVector& y,
+                                           double alpha,
+                                           const hiopVector& x) const
 {
   assert(x.get_size() == ncols_);
   assert(y.get_size() == nrows_);
@@ -206,8 +213,10 @@ void hiopMatrixRajaSparseTriplet::timesVec(double beta,  hiopVector& y,
  * @see above timesVec function for more detail. This overload takes raw data
  * pointers rather than hiop constructs.
  */
-void hiopMatrixRajaSparseTriplet::timesVec(double beta,  double* y,
-  double alpha, const double* x) const
+void hiopMatrixRajaSparseTriplet::timesVec(double beta,
+                                           double* y,
+                                           double alpha,
+                                           const double* x) const
 {
   // y = beta * y
   RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, nrows_),
@@ -245,8 +254,10 @@ void hiopMatrixRajaSparseTriplet::timesVec(double beta,  double* y,
  * The full operation performed is:
  * y = beta * y + alpha * this^T * x
  */
-void hiopMatrixRajaSparseTriplet::transTimesVec(double beta, hiopVector& y,
-  double alpha, const hiopVector& x) const
+void hiopMatrixRajaSparseTriplet::transTimesVec(double beta,
+                                                hiopVector& y,
+                                                double alpha,
+                                                const hiopVector& x) const
 {
   assert(x.get_size() == nrows_);
   assert(y.get_size() == ncols_);
@@ -270,8 +281,10 @@ void hiopMatrixRajaSparseTriplet::transTimesVec(double beta, hiopVector& y,
  * The full operation performed is:
  * y = beta * y + alpha * this^T * x
  */
-void hiopMatrixRajaSparseTriplet::transTimesVec(double beta, double* y,
-  double alpha, const double* x ) const
+void hiopMatrixRajaSparseTriplet::transTimesVec(double beta,
+                                                double* y,
+                                                double alpha,
+                                                const double* x ) const
 {
   RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, ncols_),
     RAJA_LAMBDA(RAJA::Index_type i)
@@ -298,14 +311,18 @@ void hiopMatrixRajaSparseTriplet::transTimesVec(double beta, double* y,
     });
 }
 
-void hiopMatrixRajaSparseTriplet::timesMat(double beta, hiopMatrix& W, 
-				       double alpha, const hiopMatrix& X) const
+void hiopMatrixRajaSparseTriplet::timesMat(double beta,
+                                           hiopMatrix& W, 
+                                           double alpha,
+                                           const hiopMatrix& X) const
 {
   assert(false && "not needed");
 }
 
-void hiopMatrixRajaSparseTriplet::transTimesMat(double beta, hiopMatrix& W, 
-					    double alpha, const hiopMatrix& X) const
+void hiopMatrixRajaSparseTriplet::transTimesMat(double beta,
+                                                hiopMatrix& W, 
+                                                double alpha,
+                                                const hiopMatrix& X) const
 {
   assert(false && "not needed");
 }
@@ -416,8 +433,10 @@ void hiopMatrixRajaSparseTriplet::addMatrix(double alpha, const hiopMatrix& X)
  * block of W += alpha*transpose(this) 
  * Note W; contains only the upper triangular entries
  */
-void hiopMatrixRajaSparseTriplet::transAddToSymDenseMatrixUpperTriangle(int row_start, int col_start, 
-  double alpha, hiopMatrixDense& W) const
+void hiopMatrixRajaSparseTriplet::transAddToSymDenseMatrixUpperTriangle(int row_start,
+                                                                        int col_start, 
+                                                                        double alpha,
+                                                                        hiopMatrixDense& W) const
 {
   assert(row_start>=0 && row_start+ncols_<=W.m());
   assert(col_start>=0 && col_start+nrows_<=W.n());
@@ -560,7 +579,10 @@ hiopMatrixSparse* hiopMatrixRajaSparseTriplet::new_copy() const
 #ifdef HIOP_DEEPCHECKS
   assert(this->checkIndexesAreOrdered());
 #endif
-  hiopMatrixRajaSparseTriplet* copy = new hiopMatrixRajaSparseTriplet(nrows_, ncols_, nnz_, mem_space_);
+  hiopMatrixRajaSparseTriplet* copy = new hiopMatrixRajaSparseTriplet(nrows_,
+                                                                      ncols_,
+                                                                      nnz_,
+                                                                      mem_space_);
   auto& resmgr = umpire::ResourceManager::getInstance();
   resmgr.copy(copy->iRow_, iRow_);
   resmgr.copy(copy->jCol_, jCol_);
@@ -710,10 +732,12 @@ addMDinvMtransToDiagBlockOfSymDeMatUTri(int rowAndCol_dest_start,
  * Sizes: M1 is (m1 x nx);  D is vector of len nx, M2 is  (m2, nx).
  */
 void hiopMatrixRajaSparseTriplet::
-addMDinvNtransToSymDeMatUTri(int row_dest_start, int col_dest_start,
-  const double& alpha, 
-  const hiopVector& D, const hiopMatrixSparse& M2mat,
-  hiopMatrixDense& W) const
+addMDinvNtransToSymDeMatUTri(int row_dest_start,
+                             int col_dest_start,
+                             const double& alpha, 
+                             const hiopVector& D,
+                             const hiopMatrixSparse& M2mat,
+                             hiopMatrixDense& W) const
 {
   const auto& M2 = dynamic_cast<const hiopMatrixRajaSparseTriplet&>(M2mat);
   const hiopMatrixRajaSparseTriplet& M1 = *this;
@@ -905,9 +929,11 @@ void hiopMatrixRajaSparseTriplet::copyRowsFrom(const hiopMatrix& src_gen,
 }
   
 /// @brief Prints the contents of this function to a file.
-void hiopMatrixRajaSparseTriplet::print(FILE* file, const char* msg/*=NULL*/, 
-				    int maxRows/*=-1*/, int maxCols/*=-1*/, 
-				    int rank/*=-1*/) const 
+void hiopMatrixRajaSparseTriplet::print(FILE* file,
+                                        const char* msg/*=NULL*/, 
+                                        int maxRows/*=-1*/,
+                                        int maxCols/*=-1*/, 
+                                        int rank/*=-1*/) const 
 {
   int myrank_=0, numranks=1; //this is a local object => always print
   copyFromDev();
@@ -988,8 +1014,10 @@ hiopMatrixRajaSparseTriplet::RowStartsInfo::~RowStartsInfo()
 /**********************************************************************************
   * Sparse symmetric matrix in triplet format. Only the UPPER triangle is stored
   **********************************************************************************/
-void hiopMatrixRajaSymSparseTriplet::timesVec(double beta,  hiopVector& y,
-					  double alpha, const hiopVector& x ) const
+void hiopMatrixRajaSymSparseTriplet::timesVec(double beta,
+                                              hiopVector& y,
+                                              double alpha,
+                                              const hiopVector& x ) const
 {
   assert(ncols_ == nrows_);
   assert(x.get_size() == ncols_);
@@ -1005,8 +1033,8 @@ void hiopMatrixRajaSymSparseTriplet::timesVec(double beta,  hiopVector& y,
 }
  
 /** y = beta * y + alpha * this * x */
-void hiopMatrixRajaSymSparseTriplet::timesVec(double beta,  double* y,
-					  double alpha, const double* x) const
+void hiopMatrixRajaSymSparseTriplet::
+timesVec(double beta, double* y, double alpha, const double* x) const
 {
   assert(ncols_ == nrows_);
   
@@ -1073,7 +1101,9 @@ void hiopMatrixRajaSymSparseTriplet::addUpperTriangleToSymDenseMatrixUpperTriang
   assert(W.n()==W.m());
 
   // double** WM = W.get_M();
-  RAJA::View<double, RAJA::Layout<2>> WM(W.local_data(), W.get_local_size_m(), W.get_local_size_n());
+  RAJA::View<double, RAJA::Layout<2>> WM(W.local_data(),
+                                         W.get_local_size_m(),
+                                         W.get_local_size_n());
   auto Wm = W.m();
   auto Wn = W.n();
   auto iRow = this->iRow_;
@@ -1108,12 +1138,12 @@ void hiopMatrixRajaSymSparseTriplet::transAddToSymDenseMatrixUpperTriangle(int r
  * index 'vec_start'. If num_elems>=0, 'num_elems' are copied; otherwise copies as many as
  * are available in 'vec_dest' starting at 'vec_start'
  */
-void hiopMatrixRajaSymSparseTriplet::startingAtAddSubDiagonalToStartingAt(
-  int diag_src_start,
-  const double& alpha, 
-  hiopVector& vec_dest,
-  int vec_start,
-  int num_elems/*=-1*/) const
+void hiopMatrixRajaSymSparseTriplet::
+startingAtAddSubDiagonalToStartingAt(int diag_src_start,
+                                     const double& alpha, 
+                                     hiopVector& vec_dest,
+                                     int vec_start,
+                                     int num_elems/*=-1*/) const
 {
   auto& vd = dynamic_cast<hiopVectorRajaPar&>(vec_dest);
   if(num_elems < 0)
