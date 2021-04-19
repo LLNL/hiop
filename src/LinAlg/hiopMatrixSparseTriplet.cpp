@@ -48,8 +48,10 @@ void hiopMatrixSparseTriplet::setToConstant(double c)
 }
 
 /** y = beta * y + alpha * this * x */
-void hiopMatrixSparseTriplet::timesVec(double beta,  hiopVector& y,
-                                       double alpha, const hiopVector& x ) const
+void hiopMatrixSparseTriplet::timesVec(double beta,
+                                       hiopVector& y,
+                                       double alpha,
+                                       const hiopVector& x) const
 {
   assert(x.get_size() == ncols_);
   assert(y.get_size() == nrows_);
@@ -64,8 +66,10 @@ void hiopMatrixSparseTriplet::timesVec(double beta,  hiopVector& y,
 }
 
 /** y = beta * y + alpha * this * x */
-void hiopMatrixSparseTriplet::timesVec(double beta,  double* y,
-                                       double alpha, const double* x ) const
+void hiopMatrixSparseTriplet::timesVec(double beta,
+                                       double* y,
+                                       double alpha,
+                                       const double* x) const
 {
   // y= beta*y
   for (int i = 0; i < nrows_; i++) {
@@ -81,8 +85,10 @@ void hiopMatrixSparseTriplet::timesVec(double beta,  double* y,
 }
 
 /** y = beta * y + alpha * this^T * x */
-void hiopMatrixSparseTriplet::transTimesVec(double beta,   hiopVector& y,
-                                            double alpha,  const hiopVector& x ) const
+void hiopMatrixSparseTriplet::transTimesVec(double beta,
+                                            hiopVector& y,
+                                            double alpha,
+                                            const hiopVector& x) const
 {
   assert(x.get_size() == nrows_);
   assert(y.get_size() == ncols_);
@@ -97,8 +103,10 @@ void hiopMatrixSparseTriplet::transTimesVec(double beta,   hiopVector& y,
 }
 
 /** y = beta * y + alpha * this^T * x */
-void hiopMatrixSparseTriplet::transTimesVec(double beta,   double* y,
-                                            double alpha,  const double* x ) const
+void hiopMatrixSparseTriplet::transTimesVec(double beta,
+                                            double* y,
+                                            double alpha,
+                                            const double* x) const
 {
   // y:= beta*y
   for (int i = 0; i < ncols_; i++) {
@@ -113,20 +121,26 @@ void hiopMatrixSparseTriplet::transTimesVec(double beta,   double* y,
   }
 }
 
-void hiopMatrixSparseTriplet::timesMat(double beta, hiopMatrix& W,
-                                       double alpha, const hiopMatrix& X) const
+void hiopMatrixSparseTriplet::timesMat(double beta,
+                                       hiopMatrix& W,
+                                       double alpha,
+                                       const hiopMatrix& X) const
 {
   assert(false && "not needed");
 }
 
-void hiopMatrixSparseTriplet::transTimesMat(double beta, hiopMatrix& W,
-                                            double alpha, const hiopMatrix& X) const
+void hiopMatrixSparseTriplet::transTimesMat(double beta,
+                                            hiopMatrix& W,
+                                            double alpha,
+                                            const hiopMatrix& X) const
 {
   assert(false && "not needed");
 }
 
-void hiopMatrixSparseTriplet::timesMatTrans(double beta, hiopMatrix& Wmat,
-                                            double alpha, const hiopMatrix& M2mat) const
+void hiopMatrixSparseTriplet::timesMatTrans(double beta,
+                                            hiopMatrix& Wmat,
+                                            double alpha,
+                                            const hiopMatrix& M2mat) const
 {
   auto& W = dynamic_cast<hiopMatrixDense&>(Wmat);
   const auto& M2 = dynamic_cast<const hiopMatrixSparseTriplet&>(M2mat);
@@ -151,38 +165,33 @@ void hiopMatrixSparseTriplet::timesMatTrans(double beta, hiopMatrix& Wmat,
 
   double acc;
 
-  for(int i=0; i<m1; i++) 
-  {
+  for(int i=0; i<m1; i++) {
     // j>=i
-    for(int j=0; j<m2; j++)
-    {
+    for(int j=0; j<m2; j++) {
       acc = 0.;
       int ki=M1.row_starts_->idx_start_[i];
       int kj=M2.row_starts_->idx_start_[j];
 
-      while(ki<M1.row_starts_->idx_start_[i+1] && kj<M2.row_starts_->idx_start_[j+1])
-      {
+      while(ki<M1.row_starts_->idx_start_[i+1] && kj<M2.row_starts_->idx_start_[j+1]) {
         assert(ki<M1.nnz_);
         assert(kj<M2.nnz_);
 
-        if(M1.jCol_[ki] == M2.jCol_[kj])
-        {
+        if(M1.jCol_[ki] == M2.jCol_[kj]) {
           // same col, so multiply and increment 
           acc += M1.values_[ki] * M2.values_[kj];
           ki++;
           kj++;
-        } 
-        else if(M1.jCol_[ki]<M2.jCol_[kj])
-        {
-          // skip M1
-          ki++;
+        } else {
+          if(M1.jCol_[ki]<M2.jCol_[kj]) {
+            // skip M1
+            ki++;
+          }
+          else {
+            // skip M2
+            kj++;
+          }
         }
-        else
-        {
-          // skip M2
-          kj++;
-        }                     
-      } //end of loop over ki and kj
+      } //end of while loop over ki and kj
       WM[(i)*n_W + j] = beta*WM[(i)*n_W + j] + alpha*acc;
     } //end j
   } // end i    
@@ -200,8 +209,11 @@ void hiopMatrixSparseTriplet::addSubDiagonal(const double& alpha, long long star
   assert(false && "not needed");
 }
 
-void hiopMatrixSparseTriplet::copySubDiagonalFrom(const long long& start_on_dest_diag, const long long& num_elems,
-                                                     const hiopVector& d_, const long long& start_on_nnz_idx, double scal)
+void hiopMatrixSparseTriplet::copySubDiagonalFrom(const long long& start_on_dest_diag,
+                                                  const long long& num_elems,
+                                                  const hiopVector& d_,
+                                                  const long long& start_on_nnz_idx,
+                                                  double scal)
 {
   const hiopVectorPar& vd = dynamic_cast<const hiopVectorPar&>(d_);
   assert(num_elems<=vd.get_size());
@@ -216,8 +228,10 @@ void hiopMatrixSparseTriplet::copySubDiagonalFrom(const long long& start_on_dest
   }
 }
 
-void hiopMatrixSparseTriplet::setSubDiagonalTo(const long long& start_on_dest_diag, const long long& num_elems,
-                                                      const double& c, const long long& start_on_nnz_idx)
+void hiopMatrixSparseTriplet::setSubDiagonalTo(const long long& start_on_dest_diag,
+                                               const long long& num_elems,
+                                               const double& c,
+                                               const long long& start_on_nnz_idx)
 {
   assert(start_on_dest_diag>=0 && start_on_dest_diag+num_elems<=this->nrows_);
 
@@ -818,8 +832,11 @@ transAddToSymDenseMatrixUpperTriangle(int row_start, int col_start,
  * index 'vec_start'. If num_elems>=0, 'num_elems' are copied; otherwise copies as many as
  * are available in 'vec_dest' starting at 'vec_start'
  */
-void hiopMatrixSymSparseTriplet::startingAtAddSubDiagonalToStartingAt(int diag_src_start, const double& alpha,
-                          hiopVector& vec_dest, int vec_start, int num_elems/*=-1*/) const
+void hiopMatrixSymSparseTriplet::startingAtAddSubDiagonalToStartingAt(int diag_src_start,
+                                                                      const double& alpha,
+                                                                      hiopVector& vec_dest,
+                                                                      int vec_start,
+                                                                      int num_elems/*=-1*/) const
 {
   hiopVectorPar& vd = dynamic_cast<hiopVectorPar&>(vec_dest);
   if(num_elems<0) num_elems = vd.get_size();
@@ -840,9 +857,10 @@ void hiopMatrixSymSparseTriplet::startingAtAddSubDiagonalToStartingAt(int diag_s
 }
 
 void hiopMatrixSparseTriplet::copySubmatrixFrom(const hiopMatrix& src_gen,
-                                   const long long& dest_row_st, const long long& dest_col_st,
-                                   const long long& dest_nnz_st,
-                                   const bool offdiag_only)
+                                                const long long& dest_row_st,
+                                                const long long& dest_col_st,
+                                                const long long& dest_nnz_st,
+                                                const bool offdiag_only)
 {
   const hiopMatrixSparseTriplet& src = dynamic_cast<const hiopMatrixSparseTriplet&>(src_gen);
   auto m_rows = src.m();
@@ -873,9 +891,10 @@ void hiopMatrixSparseTriplet::copySubmatrixFrom(const hiopMatrix& src_gen,
 }
 
 void hiopMatrixSparseTriplet::copySubmatrixFromTrans(const hiopMatrix& src_gen,
-                                   const long long& dest_row_st, const long long& dest_col_st,
-                                   const long long& dest_nnz_st,
-                                   const bool offdiag_only)
+                                                     const long long& dest_row_st,
+                                                     const long long& dest_col_st,
+                                                     const long long& dest_nnz_st,
+                                                     const bool offdiag_only)
 {
   const hiopMatrixSparseTriplet& src = dynamic_cast<const hiopMatrixSparseTriplet&>(src_gen);
   auto m_rows = src.n();
@@ -906,8 +925,11 @@ void hiopMatrixSparseTriplet::copySubmatrixFromTrans(const hiopMatrix& src_gen,
 }
 
 void hiopMatrixSparseTriplet::setSubmatrixToConstantDiag_w_colpattern(const double& scalar,
-                                   const long long& dest_row_st, const long long& dest_col_st,
-                                   const long long& dest_nnz_st, const int &nnz_to_copy, const hiopVector& ix)
+                                                                      const long long& dest_row_st,
+                                                                      const long long& dest_col_st,
+                                                                      const long long& dest_nnz_st,
+                                                                      const int &nnz_to_copy,
+                                                                      const hiopVector& ix)
 {
   assert(ix.get_local_size() + dest_row_st <= this->m());
   assert(nnz_to_copy + dest_col_st <= this->n() );
@@ -933,8 +955,11 @@ void hiopMatrixSparseTriplet::setSubmatrixToConstantDiag_w_colpattern(const doub
 }
 
 void hiopMatrixSparseTriplet::setSubmatrixToConstantDiag_w_rowpattern(const double& scalar,
-                                   const long long& dest_row_st, const long long& dest_col_st,
-                                   const long long& dest_nnz_st, const int &nnz_to_copy, const hiopVector& ix)
+                                                                      const long long& dest_row_st,
+                                                                      const long long& dest_col_st,
+                                                                      const long long& dest_nnz_st,
+                                                                      const int &nnz_to_copy,
+                                                                      const hiopVector& ix)
 {
   assert(nnz_to_copy + dest_row_st <= this->m());
   assert(ix.get_local_size() + dest_col_st <= this->n() );
@@ -974,8 +999,12 @@ long long hiopMatrixSymSparseTriplet::numberOfOffDiagNonzeros()
 
 
 // Generate the three vectors A, IA, JA
-void hiopMatrixSparseTriplet::convertToCSR(int &csr_nnz, int **csr_kRowPtr_in, int **csr_jCol_in, double **csr_kVal_in,
-                                           int **index_covert_CSR2Triplet_in, int **index_covert_extra_Diag2CSR_in,
+void hiopMatrixSparseTriplet::convertToCSR(int &csr_nnz,
+                                           int **csr_kRowPtr_in,
+                                           int **csr_jCol_in,
+                                           double **csr_kVal_in,
+                                           int **index_covert_CSR2Triplet_in,
+                                           int **index_covert_extra_Diag2CSR_in,
                                            std::unordered_map<int,int> &extra_diag_nnz_map)
 {
   assert(*csr_kRowPtr_in==nullptr && *index_covert_CSR2Triplet_in==nullptr);

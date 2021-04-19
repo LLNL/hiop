@@ -154,7 +154,7 @@ Lawrence Livermore National Laboratory}}}\\[10pt]
 \vspace{4.75cm}
 
  \textcolor{violet}{{\large\bfseries Oct 15, 2017} \\
-{\large\bfseries Updated April 07, 2021}}
+{\large\bfseries Updated April 12, 2021}}
 
 \vspace{0.75cm}
 
@@ -263,7 +263,7 @@ By using multithreadead BLAS and LAPACK libraries, \textit{e.g.}, INTEL MKL, Got
 \end{verbatim}
 
 \subsection{Prerequisites} 
-\Hi is written in C++11. At minimum, \Hi  requires BLAS and LAPACK, however, the more advanced solvers require additional dependencies (MPI, RAJA and UMPIRE, CUDA, MAGMA, CoinHSL, STRUMPACK, etc.). The CMake-based build system of \Hi generally detects these prerequisites automatically and warns the user when such prerequisites are missing.
+\Hi is written in C++11. At minimum, \Hi  requires BLAS and LAPACK, however, the more advanced solvers require additional dependencies (MPI, RAJA and Umpire, CUDA, MAGMA, CoinHSL, STRUMPACK, etc.). The CMake-based build system of \Hi generally detects these prerequisites automatically and warns the user when such prerequisites are missing.
 
 At this point the build system only supports macOS and Linux operating systems. On the other hand, other than the build system, \Hi's code is  platform independent and should run fine on Windows as well.
 
@@ -472,7 +472,7 @@ The standalone drivers \texttt{nlpDenseCons\_ex1}, \texttt{nlpDenseCons\_ex2}, a
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{NLPs in the mixed dense-sparse (MDS) form}\label{sec:mds}
-A second class of optimization problems supported by \Hi consists of nonlinear, possibly nonconvex optimization problems that explicitly partition the optimization variables into so-called ``dense'' and ``sparse`` variables, $x_d$ and $x_s$, respectively; this problem can be  expressed compactly as
+A second class of optimization problems supported by \Hi consists of nonlinear, possibly nonconvex optimization problems that explicitly partition the optimization variables into so-called ``dense'' and ``sparse'' variables, $x_d$ and $x_s$, respectively; this problem can be  expressed compactly as
 \begin{align}
 \min_{x_d\in\mathbb{R}^{n_d}, x_s\in\mathbb{R}^{n_s}} & \hspace{0.3cm} f(x_d, x_s) && \label{mdsobj}\\
 \textnormal{s.t.} &\hspace{0.3cm}  c(x_d, x_s)=c_E, &&\\
@@ -496,7 +496,7 @@ Starting version 0.3, \Hi offers support for NVIDIA GPU computations acceleratio
 
 %After a careful manipulation of the equations, which is described in detail in~\cite{petra2019memory}, also see~\cite{wachter2006implementation}, the interior-point solver needs to perform computations that can roughly categorized as 
 %\begin{itemize}
-%\item vector-vector operations involving only dense vectors, for example, in updating the optimization variables along the search direction (``axpy``), computing residual norms, searching for min/max elements, etc.;
+%\item vector-vector operations involving only dense vectors, for example, in updating the optimization variables along the search direction (``axpy''), computing residual norms, searching for min/max elements, etc.;
 %\item matrix-vector operations involving both sparse and dense matrices and dense vectors, for example in residual computation;
 %\item solving augmented MDS linear systems of the form
 %\begin{align}
@@ -878,8 +878,8 @@ Double values in $[10^{-14},0.1]$. Default value $10^{-6}$.
 
 \noindent \textbf{Hessian}: type of Hessian used with the filter IPM.
 \begin{itemize}
-\item ``quasinewton\_approx`` (default) - HiOp will build secant BFGS approximation for the Hessian and use a quasi-Newton filter IPM
-\item ``analytical\_exact'' - Hessian provided by the user and a Newton filter IPM algorithm will be used
+\item ``quasinewton\_approx'' (default) - HiOp will build secant BFGS approximation for the Hessian and use a quasi-Newton filter IPM;
+\item ``analytical\_exact'' - Hessian provided by the user and a Newton filter IPM algorithm will be used.
 \end{itemize}
 
 \medskip
@@ -892,43 +892,43 @@ Double values in $[10^{-14},0.1]$. Default value $10^{-6}$.
 
 \subsection{Linear algebra computational kernels}
 
-\noindent \textbf{KKTLinsys}: type of KKT linear system \textit{formulation} used internally
+\noindent \textbf{KKTLinsys}: type of KKT linear system \textit{formulation} used internally:
 \begin{itemize}
-\item ``auto'' (default): decided by \Hi based on the type of interface/NLP solved and ``compute\_mode`` and ``Hessian`` options
-\item ``xycyd'': symmetric indefinite (less stable but smaller size)
-\item ``xdycyd'': symmetric indefinite (more stable but  larger size)
-\item  ``full'': unsymetric suitable for LU solvers (experimental)
+\item ``auto'' (default): decided by \Hi based on the type of interface/NLP solved and ``compute\_mode'' and ``Hessian'' options;
+\item ``xycyd'': symmetric indefinite (less stable but smaller size);
+\item ``xdycyd'': symmetric indefinite (more stable but  larger size);
+\item  ``full'': unsymetric suitable for LU solvers (experimental).
 \end{itemize}
 
 \medskip
 
-\noindent \textbf{linsol\_mode}: for some problem classes and KKT linearizations, one can instruct \Hi to switch between strategies for solving the IPM linear systems.
+\noindent \textbf{linsol\_mode}: for some problem classes and KKT linearizations, one can instruct \Hi to switch between strategies for solving the IPM linear systems:
 \begin{itemize}
-\item ``stable'' (default): the most stable factorization is used
-\item ``speculative'': switch to faster linear solvers when is detected to be safe to do so. This is available for MDS problems and can offer considerable speed-up for these problems. The option is experimental and should be used only by advanced users
-\item ``forcequick'' rely on fast solvers (experimental, avoid)
+\item ``stable'' (default): the most stable factorization is used;
+\item ``speculative'': switch to faster linear solvers when is detected to be safe to do so. This is available for MDS problems and can offer considerable speed-up for these problems. The option is experimental and should be used only by advanced users;
+\item ``forcequick'' rely on fast solvers (experimental, avoid).
 \end{itemize}
 
 \medskip
 
-\noindent \textbf{compute\_mode}: offloading of computations to GPUs
+\noindent \textbf{compute\_mode}: offloading of computations to GPUs:
 \begin{itemize}
-\item ``auto'' (default): identical to ``hybrid''
-\item ``cpu'': run everything on cpu
-\item ``hybrid'':  \Hi will decide internally based on the type of NLP problem solved and other options which computational kernels will be offloaded to GPU. It usually runs the expensive linear solves on GPU but the remaining computations on the host/CPU
-\item ``gpu'': run the all the computational kernels on the device; some computations (\textit{e.g.}, logic and control loop) will run on CPU. Introduced as of v0.4, this compute mode is experimental, should be used only by advanced users
+\item ``auto'' (default): identical to ``hybrid'';
+\item ``cpu'': run everything on the CPU;
+\item ``hybrid'':  \Hi will decide internally based on the type of NLP problem solved and other options which computational kernels will be offloaded to GPU. It usually runs the expensive linear solves on GPU but the remaining computations on the host/CPU;
+\item ``gpu'': run the all the computational kernels on the device; some computations (\textit{e.g.}, logic and control loop) will run on CPU. Introduced as of v0.4, this compute mode is experimental, should be used only by advanced users.
 \end{itemize}
 
 \medskip
 
 %% memory space selection
 
-\noindent \textbf{mem\_space}: specifies the primary memory space in which the RAJA-based optimization and linear algebra objects will be created
+\noindent \textbf{mem\_space}: specifies the primary memory space in which the RAJA-based optimization and linear algebra objects will be created:
 \begin{itemize}
-\item ``default'' (default): allocations are done by \Hi in the cpu's memory space
-\item ``host'':  allocations via UMPIRE in UMPIRE's ``HOST`` memory space, typically CPU memory
-\item ``device'': allocations via UMPIRE in UMPIRE's ``DEVICE`` device memory space
-\item ``um'': allocations via UMPIRE's unified memory model, know as ``UM`` 
+\item ``default'' (default): allocations are done by \Hi in the cpu's memory space;
+\item ``host'':  allocations via Umpire in Umpire's ``HOST'' memory space, typically CPU memory;
+\item ``device'': allocations via Umpire in Umpire's ``DEVICE'' device memory space;
+\item ``um'': allocations via Umpire's unified memory model, know as ``UM''.
 \end{itemize}
 
 \medskip
@@ -936,11 +936,11 @@ Double values in $[10^{-14},0.1]$. Default value $10^{-6}$.
 \subsection{Problem preprocessing}
 
 
-\noindent \textbf{fixed\_var}: treatment of  variables that are detected to be fixed (according to the tolerance specified by ``fixed\_var\_tolerance'')
+\noindent \textbf{fixed\_var}: treatment of  variables that are detected to be fixed (according to the tolerance specified by ``fixed\_var\_tolerance''):
 \begin{itemize}
-\item ``none'' (default): will not handle fixed variable and will exit with an error message if such variable is encountered
-\item ``relax'':  relax the fixed variables accordingly to ``fixed\_var\_perturb'' option below
-\item ``'remove'': remove variables from the (internal) NLP formulation
+\item ``none'' (default): will not handle fixed variable and will exit with an error message if such variable is encountered;
+\item ``relax'':  relax the fixed variables accordingly to ``fixed\_var\_perturb'' option below;
+\item ``'remove'': remove variables from the (internal) NLP formulation.
 \end{itemize}
 
 \medskip
@@ -955,7 +955,7 @@ This option takes double values in $[10^{-30}, 10^{-2}]$ and has a default value
 
 \noindent \textbf{fixed\_var\_perturb}: fixed variable perturbation of the lower and upper bounds for fixed variables relative their  magnitude. A variable (say the $i$th) (that is detected to be fixed) is ``relaxed'' accordingly to 
 \begin{align*}
-(x_l)_i & =  (x_l)_i -  \max(|(x_u)_i|,1) \times \textnormal{fixed\_var\_perturb} \\
+(x_l)_i & =  (x_l)_i -  \max(|(x_u)_i|,1) \times \textnormal{fixed\_var\_perturb}, \\
 (x_u)_i & =  (x_u)_i +  \max(|(x_u)_i|,1) \times \textnormal{fixed\_var\_perturb}.
 \end{align*}
 This option takes double values in $[10^{-14}, 0.1]$ and has a default value $10^{-8}$.
@@ -963,7 +963,7 @@ This option takes double values in $[10^{-14}, 0.1]$ and has a default value $10
 
 \noindent \textbf{bound\_relax\_perturb}: perturbation of the lower and upper bounds for all variables and all constraints relative to their magnitude. A variable or constraint (say the $i$th) with lower and upper bounds $(x_l)_i$ and $(x_u)_i$, respectively,  is ``relaxed'' accordingly to 
 \begin{align*}
-(x_l)_i & =  (x_l)_i -  \max(|(x_l)_i|,1) \times \textnormal{bound\_relax\_perturb} \\
+(x_l)_i & =  (x_l)_i -  \max(|(x_l)_i|,1) \times \textnormal{bound\_relax\_perturb}, \\
 (x_u)_i & =  (x_u)_i +  \max(|(x_u)_i|,1) \times \textnormal{bound\_relax\_perturb}.
 \end{align*}
 This option takes double values in $[0, 10^{20}]$ and has a default value $10^{-8}$.
@@ -972,7 +972,7 @@ This option takes double values in $[0, 10^{20}]$ and has a default value $10^{-
 
 \noindent \textbf{scaling\_type}: scaling method for the user's NLP
 \begin{itemize}
-\item ``none'' (default): perform no problem scaling 
+\item ``none'' (default): perform no problem scaling;
 \item ``gradient'':  will scale the problem such that the inf-norm of gradient at the initial point is less or equal to the value of ``scaling\_max\_grad'' option.
 \end{itemize}
 
