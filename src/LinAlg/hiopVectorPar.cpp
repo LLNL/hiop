@@ -273,7 +273,10 @@ void hiopVectorPar::copyTo(double* dest) const
 double hiopVectorPar::twonorm() const 
 {
   int one=1; int n=n_local_;
-  double nrm = DNRM2(&n,data_,&one); 
+  double nrm = 0.;
+  if(n>0) {
+    nrm = DNRM2(&n,data_,&one);
+  }
 
 #ifdef HIOP_USE_MPI
   nrm *= nrm;
@@ -284,14 +287,18 @@ double hiopVectorPar::twonorm() const
   return nrm;
 }
 
-double hiopVectorPar::dotProductWith( const hiopVector& v_ ) const
+double hiopVectorPar::dotProductWith(const hiopVector& v_) const
 {
   const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_);
   int one=1; int n=n_local_;
   assert(this->n_local_==v.n_local_);
 
-  double dotprod=DDOT(&n, this->data_, &one, v.data_, &one);
-
+  double dotprod;
+  if(n>0) {
+    dotprod = DDOT(&n, this->data_, &one, v.data_, &one);
+  } else {
+    dotprod = 0.;
+  }
 #ifdef HIOP_USE_MPI
   double dotprodG;
   int ierr = MPI_Allreduce(&dotprod, &dotprodG, 1, MPI_DOUBLE, MPI_SUM, comm_); assert(MPI_SUCCESS==ierr);
@@ -342,10 +349,14 @@ double hiopVectorPar::infnorm_local() const
 
 double hiopVectorPar::onenorm() const
 {
-  double nrm1=0.; for(int i=0; i<n_local_; i++) nrm1 += fabs(data_[i]);
+  double nrm1=0.;
+  for(int i=0; i<n_local_; i++) {
+    nrm1 += fabs(data_[i]);
+  }
 #ifdef HIOP_USE_MPI
   double nrm1_global;
-  int ierr = MPI_Allreduce(&nrm1, &nrm1_global, 1, MPI_DOUBLE, MPI_SUM, comm_); assert(MPI_SUCCESS==ierr);
+  int ierr = MPI_Allreduce(&nrm1, &nrm1_global, 1, MPI_DOUBLE, MPI_SUM, comm_);
+  assert(MPI_SUCCESS==ierr);
   return nrm1_global;
 #endif
   return nrm1;
@@ -353,7 +364,10 @@ double hiopVectorPar::onenorm() const
 
 double hiopVectorPar::onenorm_local() const
 {
-  double nrm1=0.; for(int i=0; i<n_local_; i++) nrm1 += fabs(data_[i]);
+  double nrm1=0.;
+  for(int i=0; i<n_local_; i++) {
+    nrm1 += fabs(data_[i]);
+  }
   return nrm1;
 }
 
@@ -361,8 +375,9 @@ void hiopVectorPar::componentMult( const hiopVector& v_ )
 {
   const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_);
   assert(n_local_==v.n_local_);
-  for(int i=0; i<n_local_; ++i)
+  for(int i=0; i<n_local_; ++i) {
     data_[i] *= v.data_[i];
+  }
 }
 
 void hiopVectorPar::componentDiv ( const hiopVector& v_ )
@@ -559,7 +574,8 @@ double hiopVectorPar::min() const
   }
 #ifdef HIOP_USE_MPI
   double ret_val_g;
-  int ierr=MPI_Allreduce(&ret_val, &ret_val_g, 1, MPI_DOUBLE, MPI_MIN, comm_); assert(MPI_SUCCESS==ierr);
+  int ierr=MPI_Allreduce(&ret_val, &ret_val_g, 1, MPI_DOUBLE, MPI_MIN, comm_);
+  assert(MPI_SUCCESS==ierr);
   ret_val = ret_val_g;
 #endif
   return ret_val;
@@ -683,8 +699,13 @@ void hiopVectorPar::addLinearDampingTerm(const hiopVector& ixleft,
 
 int hiopVectorPar::allPositive()
 {
-  int allPos=true, i=0;
-  while(i<n_local_ && allPos) if(data_[i++]<=0) allPos=false;
+  int allPos=true;
+  int i=0;
+  while(i<n_local_ && allPos) {
+    if(data_[i++]<=0) {
+      allPos=false;
+    }
+  }
 
 #ifdef HIOP_USE_MPI
   int allPosG;
@@ -811,12 +832,15 @@ bool hiopVectorPar::matchesPattern(const hiopVector& ix_)
   const double* ix = (dynamic_cast<const hiopVectorPar&>(ix_) ).local_data_const();
   int bmatches=true;
   double* x=data_;
-  for(int i=0; (i<n_local_) && bmatches; i++) 
-    if(ix[i]==0.0 && x[i]!=0.0) bmatches=false; 
-
+  for(int i=0; (i<n_local_) && bmatches; i++) {
+    if(ix[i]==0.0 && x[i]!=0.0) {
+      bmatches=false;
+    }
+  }
 #ifdef HIOP_USE_MPI
   int bmatches_glob=bmatches;
-  int ierr=MPI_Allreduce(&bmatches, &bmatches_glob, 1, MPI_INT, MPI_LAND, comm_); assert(MPI_SUCCESS==ierr);
+  int ierr=MPI_Allreduce(&bmatches, &bmatches_glob, 1, MPI_INT, MPI_LAND, comm_);
+  assert(MPI_SUCCESS==ierr);
   return bmatches_glob;
 #endif
   return bmatches;
@@ -830,18 +854,24 @@ int hiopVectorPar::allPositive_w_patternSelect(const hiopVector& w_)
   const double* w = (dynamic_cast<const hiopVectorPar&>(w_) ).local_data_const();
   const double* x=data_;
   int allPos=1; 
-  for(int i=0; i<n_local_ && allPos; i++) 
-    if(w[i]!=0.0 && x[i]<=0.) allPos=0;
-  
+  for(int i=0; i<n_local_ && allPos; i++) {
+    if(w[i]!=0.0 && x[i]<=0.) {
+      allPos=0;
+    }
+  }
 #ifdef HIOP_USE_MPI
   int allPosG=allPos;
-  int ierr = MPI_Allreduce(&allPos, &allPosG, 1, MPI_INT, MPI_MIN, comm_); assert(MPI_SUCCESS==ierr);
+  int ierr = MPI_Allreduce(&allPos, &allPosG, 1, MPI_INT, MPI_MIN, comm_);
+  assert(MPI_SUCCESS==ierr);
   return allPosG;
 #endif  
   return allPos;
 }
 
-void hiopVectorPar::adjustDuals_plh(const hiopVector& x_, const hiopVector& ix_, const double& mu, const double& kappa)
+void hiopVectorPar::adjustDuals_plh(const hiopVector& x_,
+                                    const hiopVector& ix_,
+                                    const double& mu,
+                                    const double& kappa)
 {
 #ifdef HIOP_DEEPCHECKS
   assert((dynamic_cast<const hiopVectorPar&>(x_) ).n_local_==n_local_);
@@ -923,17 +953,16 @@ void hiopVectorPar::print(FILE* file, const char* msg/*=NULL*/, int max_elems/*=
 long long hiopVectorPar::numOfElemsLessThan(const double &val) const
 {
   long long ret_num = 0;
-  for(long long i=0; i<n_local_; i++)
-  {
-    if(data_[i]<val)
-    {
+  for(long long i=0; i<n_local_; i++) {
+    if(data_[i]<val) {
       ret_num++;
     }
   }
 
 #ifdef HIOP_USE_MPI
   long long ret_num_global;
-  int ierr=MPI_Allreduce(&ret_num, &ret_num_global, 1, MPI_LONG_LONG, MPI_SUM, comm_); assert(MPI_SUCCESS==ierr);
+  int ierr=MPI_Allreduce(&ret_num, &ret_num_global, 1, MPI_LONG_LONG, MPI_SUM, comm_);
+  assert(MPI_SUCCESS==ierr);
   ret_num = ret_num_global;
 #endif
 
@@ -943,17 +972,16 @@ long long hiopVectorPar::numOfElemsLessThan(const double &val) const
 long long hiopVectorPar::numOfElemsAbsLessThan(const double &val) const
 {
   long long ret_num = 0;
-  for(long long i=0; i<n_local_; i++)
-  {
-    if(fabs(data_[i])<val)
-    {
+  for(long long i=0; i<n_local_; i++) {
+    if(fabs(data_[i])<val) {
       ret_num++;
     }
   }
 
 #ifdef HIOP_USE_MPI
   long long ret_num_global;
-  int ierr=MPI_Allreduce(&ret_num, &ret_num_global, 1, MPI_LONG_LONG, MPI_SUM, comm_); assert(MPI_SUCCESS==ierr);
+  int ierr=MPI_Allreduce(&ret_num, &ret_num_global, 1, MPI_LONG_LONG, MPI_SUM, comm_);
+  assert(MPI_SUCCESS==ierr);
   ret_num = ret_num_global;
 #endif
 
