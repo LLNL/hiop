@@ -8,11 +8,18 @@ if(HIOP_WITH_KRON_REDUCTION)
 endif(HIOP_WITH_KRON_REDUCTION)
 # ---
 
-hiop_add_component(
-  SOURCES
+set(hiopUtils_SRC
   hiopLogger.cpp
   hiopOptions.cpp
-  $<$<BOOL:${HIOP_WITH_KRON_REDUCTION}>:hiopKronReduction.cpp>
+  )
+
+if(HIOP_WITH_KRON_REDUCTION)
+  list(APPEND hiopUtils_SRC hiopKronReduction.cpp)
+endif()
+
+hiop_add_component(
+  SOURCES
+  ${hiopUtils_SRC}
   INTERFACE_HEADERS
   hiopCSR_IO.hpp
   hiopCppStdUtils.hpp
