@@ -269,8 +269,6 @@ endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 
 hiop_create_concrete_libraries()
 
-hiop_create_alias_library()
-
 # Create legacy library
 if(HIOP_BUILD_STATIC)
   add_library(hiop_legacy STATIC

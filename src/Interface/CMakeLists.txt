@@ -12,5 +12,7 @@ if(HIOP_BUILD_SHARED)
     hiopInterface.hpp
     hiopVersion.hpp
     hiop_defs.hpp
+    COMPONENT_NAME
+    interface
     )
 endif()

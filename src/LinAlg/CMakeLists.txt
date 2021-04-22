@@ -87,6 +87,7 @@ hiop_add_component(
   SOURCES ${hiopLinAlg_SRC}
   INTERFACE_HEADERS ${hiopLinAlg_HEADERS}
   LINK_LIBRARIES PRIVATE umpire RAJA OpenMP::OpenMP_CXX
+  COMPONENT_NAME linalg
   )
 
 # Build Kron reduction app

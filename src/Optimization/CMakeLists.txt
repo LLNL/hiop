@@ -42,4 +42,5 @@ target_link_libraries(hiopOptimization PUBLIC hiop_math)
 hiop_add_component(
   SOURCES ${hiopOptimization_SRC}
   INTERFACE_HEADERS ${hiopOptimization_HEADERS}
+  COMPONENT_NAME optimization
   )

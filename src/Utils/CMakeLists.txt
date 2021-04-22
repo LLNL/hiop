@@ -29,4 +29,6 @@ hiop_add_component(
   hiopOptions.hpp
   hiopRunStats.hpp
   hiopTimer.hpp
+  COMPONENT_NAME
+  utils
   )
