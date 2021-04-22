@@ -46,17 +46,50 @@ if(HIOP_WITH_KRON_REDUCTION)
   set(hiopLinAlg_SRC ${hiopLinAlg_SRC} hiopLinSolverUMFPACKZ.cpp)
 endif()
 
-# Build and link linear algebra target
+# Create legacy library
 add_library(hiopLinAlg OBJECT ${hiopLinAlg_SRC})
 target_link_libraries(hiopLinAlg PUBLIC hiop_math)
-
-# Link linear algebra target to Umpire & RAJA when enabled
 if(HIOP_USE_RAJA)
   target_link_libraries(hiopLinAlg PUBLIC umpire RAJA OpenMP::OpenMP_CXX)
 endif()
+# ---
+
+set(hiopLinAlg_HEADERS
+  hiopLinAlgFactory.hpp
+  hiopLinSolver.hpp
+  hiopLinSolverIndefDenseLapack.hpp
+  hiopLinSolverIndefDenseMagma.hpp
+  hiopLinSolverIndefSparseMA57.hpp
+  hiopLinSolverMA86Z.hpp
+  hiopLinSolverSparseSTRUMPACK.hpp
+  hiopLinSolverUMFPACKZ.hpp
+  hiopMatrix.hpp
+  hiopMatrixComplexDense.hpp
+  hiopMatrixComplexSparseTriplet.hpp
+  hiopMatrixDense.hpp
+  hiopMatrixDenseRowMajor.hpp
+  hiopMatrixMDS.hpp
+  hiopMatrixRajaDense.hpp
+  hiopMatrixRajaSparseTriplet.hpp
+  hiopMatrixSparse.hpp
+  hiopMatrixSparseTriplet.hpp
+  hiopMatrixSparseTripletStorage.hpp
+  hiopVector.hpp
+  hiopVectorInt.hpp
+  hiopVectorIntRaja.hpp
+  hiopVectorIntSeq.hpp
+  hiopVectorPar.hpp
+  hiopVectorRajaPar.hpp
+  hiop_blasdefs.hpp
+  )
+
+hiop_add_component(
+  SOURCES ${hiopLinAlg_SRC}
+  INTERFACE_HEADERS ${hiopLinAlg_HEADERS}
+  )
 
 # Build Kron reduction app
 if(HIOP_WITH_KRON_REDUCTION)
   add_executable(test_hiopLinAlgComplex.exe test_hiopLinalgComplex.cpp)
-  target_link_libraries(test_hiopLinAlgComplex.exe PRIVATE hiop)
+  target_link_libraries(test_hiopLinAlgComplex.exe PRIVATE HiOp::HiOp)
 endif(HIOP_WITH_KRON_REDUCTION)

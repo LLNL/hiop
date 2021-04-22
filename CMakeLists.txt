@@ -62,6 +62,9 @@ endif(HIOP_USE_MPI)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
+# Include macros for adding library components
+include(HiOpAddComponent)
+
 target_compile_features(hiop_options
   INTERFACE
   cxx_std_11
@@ -264,30 +267,36 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
   set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/_dist-${CMAKE_BUILD_TYPE}")
 endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 
+hiop_create_concrete_libraries()
+
+hiop_create_alias_library()
+
+# Create legacy library
 if(HIOP_BUILD_STATIC)
-  add_library(hiop STATIC
+  add_library(hiop_legacy STATIC
     $<TARGET_OBJECTS:hiopOptimization>
     $<TARGET_OBJECTS:hiopLinAlg>
     $<TARGET_OBJECTS:hiopUtils>)
   if(HIOP_WITH_KRON_REDUCTION)
-    target_sources(hiop PUBLIC $<TARGET_OBJECTS:hiopKronRed>)
+    target_sources(hiop_legacy PUBLIC $<TARGET_OBJECTS:hiopKronRed>)
   endif(HIOP_WITH_KRON_REDUCTION)
-  target_link_libraries(hiop PUBLIC hiop_math)
-  install(TARGETS hiop DESTINATION lib)
+  target_link_libraries(hiop_legacy PUBLIC HiOp::HiOp)
+  install(TARGETS hiop_legacy DESTINATION lib)
 endif()
 
 if(HIOP_BUILD_SHARED)
-  add_library(hiop_shared SHARED $<TARGET_OBJECTS:hiopOptimization>
+  add_library(hiop_shared_legacy SHARED $<TARGET_OBJECTS:hiopOptimization>
     $<TARGET_OBJECTS:hiopLinAlg>
     $<TARGET_OBJECTS:hiopUtils>
     $<TARGET_OBJECTS:chiopInterface>)
-  set_target_properties(hiop_shared PROPERTIES OUTPUT_NAME hiop)
+  set_target_properties(hiop_shared_legacy PROPERTIES OUTPUT_NAME hiop_legacy)
   if(HIOP_WITH_KRON_REDUCTION)
-    target_sources(hiop_shared PUBLIC $<TARGET_OBJECTS:hiopKronRed>)
+    target_sources(hiop_shared_legacy PUBLIC $<TARGET_OBJECTS:hiopKronRed>)
   endif(HIOP_WITH_KRON_REDUCTION)
-  target_link_libraries(hiop_shared PUBLIC hiop_math)
-  install(TARGETS hiop_shared DESTINATION lib)
+  target_link_libraries(hiop_shared_legacy PUBLIC HiOp::HiOp)
+  install(TARGETS hiop_shared_legacy DESTINATION lib)
 endif()
+# ---
 
 add_subdirectory(tests)
 
