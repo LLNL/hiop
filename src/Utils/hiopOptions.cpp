@@ -240,6 +240,16 @@ void hiopOptions::registerOptions()
 		      "Factor to decrease the constraint violation in second order correction.");
   }
 
+  // feasibility restoration
+  {
+    registerNumOption("kappa_resto", 0.9, 0, 1.0,
+		      "Factor to decrease the constraint violation in feasibility restoration. (default 0.9)");
+
+    vector<string> range(2); range[0] = "no"; range[1] = "yes";
+    registerStrOption("force_resto", "no", range,
+		      "Force applying feasibility restoration phase");
+  }
+
   //optimization method used
   {
     vector<string> range(2); range[0]="quasinewton_approx"; range[1]="analytical_exact";

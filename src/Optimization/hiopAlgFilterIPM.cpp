@@ -51,6 +51,7 @@
 #include "hiopKKTLinSysDense.hpp"
 #include "hiopKKTLinSysMDS.hpp"
 #include "hiopKKTLinSysSparse.hpp"
+#include "hiopFRInterface.hpp"
 
 #include "hiopCppStdUtils.hpp"
 
@@ -63,8 +64,8 @@
 namespace hiop
 {
 
-hiopAlgFilterIPMBase::hiopAlgFilterIPMBase(hiopNlpFormulation* nlp_)
- : c_soc(nullptr), d_soc(nullptr), soc_dir(nullptr)
+hiopAlgFilterIPMBase::hiopAlgFilterIPMBase(hiopNlpFormulation* nlp_, const bool within_FR)
+ : c_soc(nullptr), d_soc(nullptr), soc_dir(nullptr), within_FR_{within_FR}, onenorm_pr_curr_{0.0}
 {
   nlp = nlp_;
   //force completion of the nlp's initialization
@@ -821,8 +822,8 @@ void hiopAlgFilterIPMBase::displayTerminationMsg()
 
 
 
-hiopAlgFilterIPMQuasiNewton::hiopAlgFilterIPMQuasiNewton(hiopNlpDenseConstraints* nlp_)
-  : hiopAlgFilterIPMBase(nlp_)
+hiopAlgFilterIPMQuasiNewton::hiopAlgFilterIPMQuasiNewton(hiopNlpDenseConstraints* nlp_, const bool within_FR)
+  : hiopAlgFilterIPMBase(nlp_, within_FR)
 {
   nlpdc = nlp_;
   //_Hess = new hiopHessianLowRank(nlpdc, nlpdc->options->GetInteger("secant_memory_len"));
@@ -901,6 +902,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
   //int algStatus=0;
   bool bret=true; int lsStatus=-1, lsNum=0;
   int use_soc = 0;
+  int use_fr = 0;
   int num_adjusted_bounds = 0;
   solver_status_ = NlpSolve_Pending;
   while(true) {
@@ -919,20 +921,21 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
     nlp->log->printf(hovScalars,
 		     "  LogBar errs: pr-infeas:%23.17e   dual-infeas:%23.17e  comp:%23.17e  overall:%23.17e\n",
 		     _err_log_feas, _err_log_optim, _err_log_complem, _err_log);
-    outputIteration(lsStatus, lsNum, use_soc);
+    outputIteration(lsStatus, lsNum, use_soc, use_fr);
 
     if(_err_nlp_optim0<0) { // && _err_nlp_feas0<0 && _err_nlp_complem0<0
       _err_nlp_optim0=_err_nlp_optim; _err_nlp_feas0=_err_nlp_feas; _err_nlp_complem0=_err_nlp_complem;
     }
 
     //user callback
-    if(!nlp->user_callback_iterate(iter_num, _f_nlp,
+    if(!nlp->user_callback_iterate(iter_num, _f_nlp, logbar->f_logbar,
 				   *it_curr->get_x(),
 				   *it_curr->get_zl(),
 				   *it_curr->get_zu(),
+				   *it_curr->get_d(),
 				   *_c,*_d,
 				   *it_curr->get_yc(),  *it_curr->get_yd(), //lambda,
-				   _err_nlp_feas, _err_nlp_optim,
+				   _err_nlp_feas, _err_nlp_optim, onenorm_pr_curr_,
 				   _mu,
 				   _alpha_dual, _alpha_primal,  lsNum)) {
       solver_status_ = User_Stopped; break;
@@ -975,10 +978,11 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
 		       _err_log_feas, _err_log_optim, _err_log_complem, _err_log);
 
       filter.reinitialize(theta_max);
-      //recheck residuals at the first iteration in case the starting pt is  very good
-      //if(iter_num==0) {
-      //	continue;
-      //}
+      /*recheck residuals at the first iteration in case the starting pt is  very good
+      * if(iter_num==0) {
+      *   continue;
+      * }
+      */
     }
     nlp->log->printf(hovScalars, "Iter[%d] logbarObj=%23.17e (mu=%12.5e)\n", iter_num, logbar->f_logbar,_mu);
     /****************************************************
@@ -998,7 +1002,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
 
     //maximum  step
     bret = it_curr->fractionToTheBdry(*dir, _tau, _alpha_primal, _alpha_dual); assert(bret);
-    double theta = resid->getInfeasInfNorm(); //at it_curr
+    double theta = onenorm_pr_curr_ = resid->getInfeasInfNorm(); //at it_curr
     double theta_trial;
     nlp->runStats.tmSolverInternal.stop();
 
@@ -1010,6 +1014,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
     //3 close to solution and switching condition is true; trial accepted based on Armijo
     lsStatus=0; lsNum=0;
     use_soc = 0;
+    use_fr = 0;
 
     bool grad_phi_dx_computed=false, iniStep=true; double grad_phi_dx;
 
@@ -1026,7 +1031,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
       // fractionToTheBdry since these may occur for tight bounds at the first iteration(s)
       if(!iniStep && _alpha_primal<1e-16) {
         nlp->log->write("Panic: minimum step size reached. The problem may be infeasible or the "
-                        "gradient inaccurate. Will exit here.",hovError);
+                        "gradient inaccurate. Try to restore feasibility.",hovError);
         solver_status_ = Steplength_Too_Small;
         break;
       }
@@ -1168,7 +1173,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
   return solver_status_;
 }
 
-void hiopAlgFilterIPMQuasiNewton::outputIteration(int lsStatus, int lsNum, int use_soc)
+void hiopAlgFilterIPMQuasiNewton::outputIteration(int lsStatus, int lsNum, int use_soc, int use_fr)
 {
   if(iter_num/10*10==iter_num)
     nlp->log->printf(hovSummary, "iter    objective     inf_pr     inf_du   lg(mu)  alpha_du   alpha_pr linesrch\n");
@@ -1188,6 +1193,10 @@ void hiopAlgFilterIPMQuasiNewton::outputIteration(int lsStatus, int lsNum, int u
       stepType[0] = (char) toupper(stepType[0]);
     }
 
+    if(use_fr){
+      strcpy(stepType, "R");
+    }
+
     nlp->log->printf(hovSummary, "%4d %14.7e %7.3e  %7.3e %6.2f  %7.3e  %7.3e  %d(%s)\n",
                      iter_num, _f_nlp/nlp->get_obj_scale(), _err_nlp_feas, _err_nlp_optim,
                      log10(_mu), _alpha_dual, _alpha_primal, lsNum, stepType);
@@ -1198,8 +1207,8 @@ void hiopAlgFilterIPMQuasiNewton::outputIteration(int lsStatus, int lsNum, int u
 /******************************************************************************************************
  * FULL NEWTON IPM
  *****************************************************************************************************/
-hiopAlgFilterIPMNewton::hiopAlgFilterIPMNewton(hiopNlpFormulation* nlp_)
-  : hiopAlgFilterIPMBase(nlp_),
+hiopAlgFilterIPMNewton::hiopAlgFilterIPMNewton(hiopNlpFormulation* nlp_, const bool within_FR)
+  : hiopAlgFilterIPMBase(nlp_, within_FR),
     fact_acceptor_{nullptr}
 {
 }
@@ -1348,6 +1357,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
   bool bret=true;
   int lsStatus=-1, lsNum=0;
   int use_soc = 0;
+  int use_fr = 0;
   int num_adjusted_bounds = 0;
 
   int linsol_safe_mode_lastiter = -1;
@@ -1373,20 +1383,21 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
       printf(hovScalars,
 	     "  LogBar errs: pr-infeas:%23.17e   dual-infeas:%23.17e  comp:%23.17e  overall:%23.17e\n",
 	     _err_log_feas, _err_log_optim, _err_log_complem, _err_log);
-    outputIteration(lsStatus, lsNum, use_soc);
+    outputIteration(lsStatus, lsNum, use_soc, use_fr);
 
     if(_err_nlp_optim0<0) { // && _err_nlp_feas0<0 && _err_nlp_complem0<0
       _err_nlp_optim0=_err_nlp_optim; _err_nlp_feas0=_err_nlp_feas; _err_nlp_complem0=_err_nlp_complem;
     }
 
     //user callback
-    if(!nlp->user_callback_iterate(iter_num, _f_nlp,
+    if(!nlp->user_callback_iterate(iter_num, _f_nlp, logbar->f_logbar,
 				   *it_curr->get_x(),
 				   *it_curr->get_zl(),
 				   *it_curr->get_zu(),
+				   *it_curr->get_d(),
 				   *_c,*_d,
 				   *it_curr->get_yc(),  *it_curr->get_yd(), //lambda,
-				   _err_nlp_feas, _err_nlp_optim,
+				   _err_nlp_feas, _err_nlp_optim, onenorm_pr_curr_,
 				   _mu,
 				   _alpha_dual, _alpha_primal,  lsNum)) {
       solver_status_ = User_Stopped; break;
@@ -1557,7 +1568,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 
       //maximum  step
       bret = it_curr->fractionToTheBdry(*dir, _tau, _alpha_primal, _alpha_dual); assert(bret);
-      double theta = resid->get_theta(); //at it_curr
+      double theta = onenorm_pr_curr_ = resid->get_theta(); //at it_curr
       double theta_trial;
       nlp->runStats.tmSolverInternal.stop();
 
@@ -1569,6 +1580,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
       //3 close to solution and switching condition is true; trial accepted based on Armijo
       lsStatus=0; lsNum=0;
       use_soc = 0;
+      use_fr = 0;
 
       bool grad_phi_dx_computed=false, iniStep=true; double grad_phi_dx;
 
@@ -1586,7 +1598,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 
           if(linsol_safe_mode_on) {
             nlp->log->write("Panic: minimum step size reached. The problem may be infeasible or the "
-                            "gradient inaccurate. Will exit here.", hovError);
+                            "gradient inaccurate. Try to restore feasibility.", hovError);
             solver_status_ = Steplength_Too_Small;
             break;
           } else {
@@ -1654,7 +1666,12 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
       }
       // post line-search: filter is augmented whenever the switching condition or Armijo rule do not
       // hold for the trial point that was just accepted
-      if(lsStatus==1) {
+      if(nlp->options->GetString("force_resto")=="yes" && !within_FR_) {
+        bool fr_converged = apply_feasibility_restoration(kkt);
+        if(!fr_converged) {
+          break;
+        }
+      } else if(lsStatus==1) {
 
         //need to check switching cond and Armijo to decide if filter is augmented
         if(!grad_phi_dx_computed) {
@@ -1699,9 +1716,16 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
           // however take the update;
           // if the update doesn't pass the convergence test, the optimiz. loop will exit
 
-          // first exit the linear solve (computeDirections) loop
-          break;
+          // do FR
+          use_fr = apply_feasibility_restoration(kkt);
 
+          if(use_fr) {
+            // continue iterations if FR is accepted
+            solver_status_ = NlpSolve_Pending;
+          }
+          
+          // exit the linear solve (computeDirections) loop
+          break;
         } else {
           //here false == linsol_safe_mode_on
           if(linsol_forcequick) {
@@ -1738,18 +1762,22 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
     iter_num++;
     nlp->runStats.nIter=iter_num;
 
-    // update and adjust the duals
-    // this needs to be done before evalNlp_derivOnly so that the user's NLP functions
-    // get the updated duals
-    assert(infeas_nrm_trial>=0 && "this should not happen");
-    bret = dualsUpdate->go(*it_curr, *it_trial,
-			   _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d, *dir,
-			   _alpha_primal, _alpha_dual, _mu, kappa_Sigma, infeas_nrm_trial); assert(bret);
+    // fr problem has already updated dual, slacks and NLP fynctuins
+    if(!use_fr) {
+      // update and adjust the duals
+      // this needs to be done before evalNlp_derivOnly so that the user's NLP functions
+      // get the updated duals
+      assert(infeas_nrm_trial>=0 && "this should not happen");
+      bret = dualsUpdate->go(*it_curr, *it_trial,
+                             _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d, *dir,
+                             _alpha_primal, _alpha_dual, _mu, kappa_Sigma, infeas_nrm_trial); 
+      assert(bret);
 
-    //evaluate derivatives at the trial (and to be accepted) trial point
-    if(!this->evalNlp_derivOnly(*it_trial, *_grad_f, *_Jac_c, *_Jac_d, *_Hess_Lagr)) {
-      solver_status_ = Error_In_User_Function;
-      return Error_In_User_Function;
+      //evaluate derivatives at the trial (and to be accepted) trial point
+      if(!this->evalNlp_derivOnly(*it_trial, *_grad_f, *_Jac_c, *_Jac_d, *_Hess_Lagr)) {
+        solver_status_ = Error_In_User_Function;
+        return Error_In_User_Function;
+      }
     }
 
     nlp->runStats.tmSolverInternal.start(); //-----
@@ -1796,7 +1824,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
   return solver_status_;
 }
 
-void hiopAlgFilterIPMNewton::outputIteration(int lsStatus, int lsNum, int use_soc)
+void hiopAlgFilterIPMNewton::outputIteration(int lsStatus, int lsNum, int use_soc, int use_fr)
 {
   if(iter_num/10*10==iter_num)
     nlp->log->printf(hovSummary, "iter    objective     inf_pr     inf_du   lg(mu)  alpha_du   alpha_pr linesrch\n");
@@ -1811,9 +1839,14 @@ void hiopAlgFilterIPMNewton::outputIteration(int lsStatus, int lsNum, int use_so
     else if(lsStatus==2) strcpy(stepType, "h");
     else if(lsStatus==3) strcpy(stepType, "f");
     else strcpy(stepType, "?");
-
+    
     if(use_soc && lsStatus >= 1 && lsStatus <= 3) {
       stepType[0] = (char) toupper(stepType[0]);
+    }
+
+    if(use_fr){
+      lsNum = 0;
+      strcpy(stepType, "R");
     }
 
     nlp->log->printf(hovSummary, "%4d %14.7e %7.3e  %7.3e %6.2f  %7.3e  %7.3e  %d(%s)\n",
@@ -2011,5 +2044,99 @@ int hiopAlgFilterIPMBase::apply_second_order_correction(hiopKKTLinSys* kkt,
   return ls_status;
 
 }
+
+bool hiopAlgFilterIPMBase::apply_feasibility_restoration(hiopKKTLinSys* kkt)
+{
+  if(!within_FR_) {
+    hiopFRInterfaceSparse nlp_fr_interface(*this);  
+    hiopNlpSparse nlpFR(nlp_fr_interface, "hiop_fr.options");
+
+    nlpFR.options->SetStringValue("Hessian", "analytical_exact");
+    nlpFR.options->SetStringValue("duals_update_type", "linear");
+    nlpFR.options->SetStringValue("duals_init", "zero");
+    nlpFR.options->SetStringValue("compute_mode", "cpu");
+    nlpFR.options->SetStringValue("KKTLinsys", "xdycyd");
+    nlpFR.options->SetIntegerValue("verbosity_level", 0);
+
+    // set mu0 to be the maximun of the current barrier parameter mu and norm_inf(|c|)*/
+    double theta_ref = resid->getInfeasInfNorm(); //at current point, i.e., reference point
+    double mu_FR = std::max(_mu, theta_ref);
+
+    nlpFR.options->SetNumericValue("mu0", mu_FR);
+
+    hiopAlgFilterIPMNewton solver(&nlpFR, true);  // solver fr problem
+    hiopSolveStatus FR_status = solver.run();
+    
+    if(FR_status == User_Stopped) {
+      // FR successes, it_trial->x and it_trial->d has been updated to the next search point
+      // in the above solver.run()
+      if(!this->evalNlp_noHess(*it_trial, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d)) {
+        nlp->log->printf(hovError, "Failure in evaluating user provided NLP functions.");
+        assert(false);
+        return false;
+      }
+      // determine other slacks
+      it_trial->determineSlacks();
+
+      // compute dx = x_{k+1} - x_k
+      dir->get_x()->copyFrom(*it_trial->get_x());
+      dir->get_x()->axpy(-1.0, *it_curr->get_x());
+      dir->get_d()->copyFrom(*it_trial->get_d());
+      dir->get_d()->axpy(-1.0, *it_curr->get_d());
+
+      // set step size to 1
+      _alpha_primal = 1.0;
+      _alpha_dual = 1.0;
+      
+      // compute directions for bound duals (zl, zu, vl, vu)
+      kkt->compute_directions_for_full_space(resid, dir);
+
+      //LSQ-based initialization of yc and yd
+      if(0==dualsInitializ) {
+        //is the dualsUpdate already the LSQ-based updater?
+        hiopDualsLsqUpdate* updater = dynamic_cast<hiopDualsLsqUpdate*>(dualsUpdate);
+        bool deleteUpdater = false;
+        if(!updater) {
+          //updater = new hiopDualsLsqUpdate(nlp);
+          updater = nlp->alloc_duals_lsq_updater();
+          deleteUpdater = true;
+        }
+        //this will update yc and yd in it_trial
+        updater->computeInitialDualsEq(*it_trial, *_grad_f, *_Jac_c, *_Jac_d);
+        if(deleteUpdater) {
+          delete updater;
+        }
+      } else {
+        it_trial->setEqualityDualsToConstant(0.);
+      }
+    } else if(FR_status == Solve_Success) {
+      solver_status_ = Infeasible_Problem;
+      return false;
+    } else {
+      solver_status_ = Error_In_FR;
+      return false;
+    }
+  } else {
+    // FR problem inside a FR problem, see equation (33)
+    // use wildcard function to update iterate
+    if(!nlp->user_force_update(iter_num,
+                               _f_nlp,
+                               *it_curr->get_x(),
+                               *it_curr->get_zl(),
+                               *it_curr->get_zu(),
+                               *_c,
+                               *_d,
+                               *it_curr->get_yc(),
+                               *it_curr->get_yd(), //lambda,
+                               _mu,
+                               _alpha_dual,
+                               _alpha_primal)) {
+      solver_status_ = Error_In_FR; 
+      return false;
+    }    
+  }
+  return true;
+}
+
 
 } //end namespace

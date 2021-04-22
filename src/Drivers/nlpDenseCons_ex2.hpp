@@ -60,13 +60,13 @@ public:
 };
   
 
-    virtual bool iterate_callback(int iter, double obj_value,
+    virtual bool iterate_callback(int iter, double obj_value, double logbar_obj_value,
 				int n, const double* x,
 				const double* z_L,
 				const double* z_U,
 				int m, const double* g,
 				const double* lambda,
-				double inf_pr, double inf_du,
+				double inf_pr, double inf_du, double onenorm_pr, 
 				double mu,
 				double alpha_du, double alpha_pr,
   				int ls_trials) {if(iter==3)return false;printf("%g %g\n", x[0], x[1]); return true;}

@@ -95,6 +95,7 @@ enum hiopSolveStatus {
   Invalid_UserOption=-13,
   Invalid_Number=-14,
   Error_In_User_Function=-15,
+  Error_In_FR =-16,
   
   //ungraceful errors and returns
   Exception_Unrecoverable=-100,
@@ -323,18 +324,46 @@ public:
    * @note If the user (implementer) of this methods returns false, HiOp will stop the 
    * the optimization with hiop::hiopSolveStatus ::User_Stopped return code.
    */
-  virtual bool iterate_callback(int iter, double obj_value,
-				int n, const double* x,
-				const double* z_L,
-				const double* z_U,
-				int m, const double* g,
-				const double* lambda,
-				double inf_pr, double inf_du,
-				double mu,
-				double alpha_du, double alpha_pr,
-				int ls_trials) {return true;}
+  virtual bool iterate_callback(int iter,
+                                double obj_value,
+                                double logbar_obj_value,
+                                int n,
+                                const double* x,
+                                const double* z_L,
+                                const double* z_U,
+                                int m_ineq,
+                                const double* s,
+                                int m,
+                                const double* g,
+                                const double* lambda,
+                                double inf_pr,
+                                double inf_du,
+                                double onenorm_pr_,
+                                double mu,
+                                double alpha_du,
+                                double alpha_pr,
+                                int ls_trials) {return true;}
   
-
+  /** 
+   * A wildcard function used to change the variables and other values
+   *
+   * @note If the user (implementer) of this methods returns false, HiOp will stop the 
+   * the optimization with hiop::hiopSolveStatus ::User_Stopped return code.
+   */
+  virtual bool force_update(double obj_value,
+                            const int n,
+                            double* x,
+                            double* z_L,
+                            double* z_U,
+                            const int m,
+                            double* g,
+                            double* lambda,
+                            double& mu,
+                            double& alpha_du,
+                            double& alpha_pr)
+  {
+    return true;
+  }
 
 private:
   hiopInterfaceBase(const hiopInterfaceBase& ) {};

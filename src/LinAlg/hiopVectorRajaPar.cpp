@@ -342,6 +342,30 @@ void hiopVectorRajaPar::copyFromStarting(int start_index, const hiopVector& src)
 }
 
 /**
+ * @brief Copy `nv` elements from `start_index_in_v` at array `v` to this vector 
+ * 
+ * @param[in] start_index_in_v - position in v
+ * @param[in] v  - a raw array from which to copy into `this`
+ * @param[in] nv - how many elements of `v` to copy
+ * 
+ * @pre Size of `v` must be >= nv.
+ * @pre start_index_in_v+nv <= size of 'v'
+ * @pre `this` is not distributed
+ * 
+ * @warning Method casts away const from the `local_array`.
+ */
+void hiopVectorRajaPar::copyFromStarting(const double* v, int start_index_in_v, int nv)
+{
+  // If nothing to copy, return.  
+  if(nv == 0)
+    return;
+
+  auto& rm = umpire::ResourceManager::getInstance();
+  double* vv = const_cast<double*>(v); // <- cast away const
+  rm.copy(data_dev_, vv + start_index_in_v, nv*sizeof(double));
+}
+
+/**
  * @brief Copy from `vec_src` starting at `start_idx_src` into
  * `this` vector starting at `start_idx_dest`.
  * 
@@ -387,7 +411,7 @@ void hiopVectorRajaPar::startingAtCopyFromStartingAt(
  * @pre start_index + dst.n_local_ <= n_local_
  * @pre `this` and `dst` are not distributed
  */
-void hiopVectorRajaPar::copyToStarting(int start_index, hiopVector& dst)
+void hiopVectorRajaPar::copyToStarting(int start_index, hiopVector& dst) const
 {
   const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(dst);
 
@@ -413,7 +437,7 @@ void hiopVectorRajaPar::copyToStarting(int start_index, hiopVector& dst)
  * @pre start_index + vec.n_local_ <= n_local_
  * @pre `this` and `vec` are not distributed
  */
-void hiopVectorRajaPar::copyToStarting(hiopVector& vec, int start_index/*_in_dest*/)
+void hiopVectorRajaPar::copyToStarting(hiopVector& vec, int start_index/*_in_dest*/) const
 {
   const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(vec);
   assert(start_index+n_local_ <= v.n_local_);
@@ -426,7 +450,7 @@ void hiopVectorRajaPar::copyToStarting(hiopVector& vec, int start_index/*_in_des
   rm.copy(v.data_dev_ + start_index, this->data_dev_, this->n_local_*sizeof(double));
 }
 
-void hiopVectorRajaPar::copyToStartingAt_w_pattern(hiopVector& vec, int start_index/*_in_dest*/, const hiopVector& select)
+void hiopVectorRajaPar::copyToStartingAt_w_pattern(hiopVector& vec, int start_index/*_in_dest*/, const hiopVector& select) const
 {
 #if 0  
   if(n_local_ == 0)
@@ -887,6 +911,22 @@ void hiopVectorRajaPar::component_sgn ()
 }
 
 /**
+ * @brief compute square root of each element
+ * @pre all the elements are non-negative
+ */
+void hiopVectorRajaPar::component_sqrt()
+{
+  double* dd = data_dev_;
+  RAJA::forall< hiop_raja_exec >(
+    RAJA::RangeSegment(0, n_local_),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      dd[i] = sqrt(dd[i]);
+    }
+  );
+}
+
+/**
  * @brief Scale `this` vector by `c` 
  * 
  * @note Consider implementing with BLAS call (<D>SCAL)
@@ -1161,6 +1201,24 @@ double hiopVectorRajaPar::logBarrier_local(const hiopVector& select) const
       if(id[i] == one)
         sum += std::log(data[i]);
 		});
+
+  return sum.get();
+}
+
+/**
+ * @brief Sum all elements
+ */
+double hiopVectorPar::sum_local() const 
+{
+  double* data = data_dev_;
+  RAJA::ReduceSum< hiop_raja_reduce, double > sum(0.0);
+  RAJA::forall< hiop_raja_exec >( 
+    RAJA::RangeSegment(0, n_local_),
+		RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      sum += data[i];
+		}
+  );
 
   return sum.get();
 }
