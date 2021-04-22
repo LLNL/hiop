@@ -37,6 +37,31 @@ option(HIOP_USE_STRUMPACK "Build with STRUMPACK backend for sparse linear algebr
 option(HIOP_WITH_VALGRIND_TESTS "Run valgrind on certain integration tests" OFF)
 option(HIOP_BUILD_DOCUMENTATION "Build HiOp documentation via Doxygen" ON)
 
+# Ensure at least one library type is being built!
+if((NOT HIOP_BUILD_SHARED) AND (NOT HIOP_BUILD_STATIC))
+  message(WARNING "Must build at least one of SHARED or STATIC libraries!")
+  message(WARNING "Enabling HIOP_BUILD_STATIC.")
+  set(HIOP_BUILD_STATIC ON)
+endif()
+
+# This is the default library which HiOp::HiOp will point to. Try to use
+# shared by default. Users should only link to HiOp::HiOp.
+set(hiop_default_library_type "SHARED")
+if(NOT HIOP_BUILD_SHARED)
+  set(hiop_default_library_type "STATIC")
+endif()
+string(TOLOWER
+  ${hiop_default_library_type}
+  hiop_default_library_type_lower
+  )
+set(hiop_default_library_name
+  "hiop_${hiop_default_library_type_lower}"
+  )
+mark_as_advanced(FORCE
+  hiop_default_library_type
+  hiop_default_library_type_lower
+  )
+
 if(HIOP_BUILD_SHARED)
   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 endif()
@@ -242,11 +267,7 @@ include_directories(src/Utils)
 #!!!this include needs to ALWAYS be the last!!!
 include_directories(src/_Internals)
 
-add_subdirectory(src/Interface)
-add_subdirectory(src/Optimization)
-add_subdirectory(src/LinAlg)
-add_subdirectory(src/Drivers)
-add_subdirectory(src/Utils)
+add_subdirectory(src)
 
 if(HIOP_BUILD_DOCUMENTATION)
   include(cmake/HiOpDoxygenConfig.cmake)
@@ -264,90 +285,7 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
   set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/_dist-${CMAKE_BUILD_TYPE}")
 endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 
-if(HIOP_BUILD_STATIC)
-  add_library(hiop STATIC
-    $<TARGET_OBJECTS:hiopOptimization>
-    $<TARGET_OBJECTS:hiopLinAlg>
-    $<TARGET_OBJECTS:hiopUtils>)
-  if(HIOP_WITH_KRON_REDUCTION)
-    target_sources(hiop PUBLIC $<TARGET_OBJECTS:hiopKronRed>)
-  endif(HIOP_WITH_KRON_REDUCTION)
-  target_link_libraries(hiop PUBLIC hiop_math)
-  install(TARGETS hiop DESTINATION lib)
-endif()
-
-if(HIOP_BUILD_SHARED)
-  add_library(hiop_shared SHARED $<TARGET_OBJECTS:hiopOptimization>
-    $<TARGET_OBJECTS:hiopLinAlg>
-    $<TARGET_OBJECTS:hiopUtils>
-    $<TARGET_OBJECTS:chiopInterface>)
-  set_target_properties(hiop_shared PROPERTIES OUTPUT_NAME hiop)
-  if(HIOP_WITH_KRON_REDUCTION)
-    target_sources(hiop_shared PUBLIC $<TARGET_OBJECTS:hiopKronRed>)
-  endif(HIOP_WITH_KRON_REDUCTION)
-  target_link_libraries(hiop_shared PUBLIC hiop_math)
-  install(TARGETS hiop_shared DESTINATION lib)
-endif()
-
 add_subdirectory(tests)
-
-install(FILES src/Interface/hiopInterface.hpp
-  src/Interface/chiopInterface.hpp
-  src/Interface/hiopInterface.h
-  src/Interface/hiopVersion.hpp
-  src/Optimization/hiopNlpFormulation.hpp
-  src/Optimization/hiopNlpTransforms.hpp
-  src/Optimization/hiopAlgFilterIPM.hpp
-  src/Optimization/hiopIterate.hpp
-  src/Optimization/hiopResidual.hpp
-  src/Optimization/hiopKKTLinSys.hpp
-  src/Optimization/hiopPDPerturbation.hpp
-  src/Optimization/hiopLogBarProblem.hpp
-  src/Optimization/hiopFilter.hpp
-  src/Optimization/hiopHessianLowRank.hpp
-  src/Optimization/hiopDualsUpdater.hpp
-  src/Optimization/hiopFactAcceptor.hpp
-  src/LinAlg/hiopVector.hpp
-  src/LinAlg/hiopVectorPar.hpp
-  src/LinAlg/hiopVectorInt.hpp
-  src/LinAlg/hiopVectorIntSeq.hpp
-  src/LinAlg/hiopMatrix.hpp
-  src/LinAlg/hiopMatrixDenseRowMajor.hpp
-  src/LinAlg/hiopMatrixDense.hpp
-  src/LinAlg/hiopMatrixMDS.hpp
-  src/LinAlg/hiopMatrixSparse.hpp
-  src/LinAlg/hiopMatrixSparseTriplet.hpp
-  src/LinAlg/hiopMatrixSparseTripletStorage.hpp
-  src/LinAlg/hiopMatrixMDS.hpp
-  src/LinAlg/hiopMatrixComplexSparseTriplet.hpp
-  src/LinAlg/hiopMatrixComplexDense.hpp
-  src/LinAlg/hiopLinSolver.hpp
-  src/LinAlg/hiopLinSolverIndefDenseLapack.hpp
-  src/LinAlg/hiopLinSolverUMFPACKZ.hpp
-  src/LinAlg/hiopLinSolverIndefSparseMA57.hpp
-  src/LinAlg/hiopLinAlgFactory.hpp
-  src/Utils/hiopRunStats.hpp
-  src/Utils/hiopLogger.hpp
-  src/Utils/hiopCSR_IO.hpp
-  src/Utils/hiopTimer.hpp
-  src/Utils/hiopOptions.hpp
-  src/Utils/hiopKronReduction.hpp
-  src/Utils/hiopMPI.hpp
-  src/Utils/hiopCppStdUtils.hpp
-  src/LinAlg/hiop_blasdefs.hpp
-  src/Drivers/IpoptAdapter.hpp
-  ${CMAKE_BINARY_DIR}/hiop_defs.hpp
-  ${CMAKE_BINARY_DIR}/FortranCInterface.hpp
-  DESTINATION include)
-
-if(HIOP_USE_RAJA)
-  install(FILES
-    src/LinAlg/hiopVectorIntRaja.hpp
-    src/LinAlg/hiopVectorRajaPar.hpp
-    src/LinAlg/hiopMatrixRajaDense.hpp
-    src/LinAlg/hiopMatrixRajaSparseTriplet.hpp
-    DESTINATION include)
-endif()
 
 set(STRIP_TABLE_CMD "awk '/Problem Summary/ { while (!match($0, /termination/)){ if(match($0, /^[ ]+[0-9]/)) { print $0; } getline } }'")
 # If running in a BSUB allocaation, use jrun commands and make sure we are

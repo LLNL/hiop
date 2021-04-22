@@ -5,6 +5,8 @@ defaultBuild()
 {
   export CMAKE_OPTIONS="\
       -DCMAKE_BUILD_TYPE=Debug \
+      -DHIOP_BUILD_SHARED=ON \
+      -DHIOP_BUILD_STATIC=ON \
       -DENABLE_TESTS=ON \
       -DHIOP_USE_MPI=On \
       -DHIOP_SPARSE=On \
