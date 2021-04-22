@@ -55,7 +55,6 @@ endif()
 # ---
 
 set(hiopLinAlg_HEADERS
-  hiopLinAlgFactory.hpp
   hiopLinSolver.hpp
   hiopLinSolverIndefDenseLapack.hpp
   hiopLinSolverIndefDenseMagma.hpp
