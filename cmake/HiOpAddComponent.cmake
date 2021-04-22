@@ -17,12 +17,14 @@ Relies on the following input defined variables:
 
 @param SOURCES Source files to be used in component.
 @param INTERFACE_HEADERS Header files from component that must be installed.
+@param LINK_LIBRARIES Libraries that should be linked to final targets. Privacy
+  qualifiers provided by caller.
 
 #]]
 macro(hiop_add_component)
   set(options "")
   set(oneValueArgs "")
-  set(multiValueArgs SOURCES INTERFACE_HEADERS)
+  set(multiValueArgs SOURCES INTERFACE_HEADERS LINK_LIBRARIES)
   cmake_parse_arguments(hiop_add_component "${options}" "${oneValueArgs}"
                         "${multiValueArgs}" ${ARGN})
 
@@ -32,10 +34,11 @@ macro(hiop_add_component)
   # of these object libraries.
   if(NOT TARGET hiop_obj)
     add_library(hiop_obj OBJECT ${hiop_add_component_SOURCES})
-    target_link_libraries(hiop_obj PUBLIC hiop_math)
   else()
     target_sources(hiop_obj PRIVATE ${hiop_add_component_SOURCES})
   endif()
+
+  target_link_libraries(hiop_obj ${hiop_add_component_LINK_LIBRARIES})
 
   # Install headers
   install(FILES ${hiop_add_component_INTERFACE_HEADERS} DESTINATION include)
@@ -89,15 +92,21 @@ macro(hiop_create_concrete_libraries)
   foreach(libtype shared static)
     string(TOUPPER ${libtype} libtype_upper)
     if(${HIOP_BUILD_${libtype_upper}})
-      if(NOT TARGET hiop_${libtype})
-        add_library(hiop_${libtype} ${libtype_upper} $<TARGET_OBJECTS:hiop_obj>)
-        add_library(HiOp::${libtype_upper} ALIAS hiop_${libtype})
-        target_link_libraries(hiop_${libtype} PUBLIC hiop_math)
-        set_target_properties(hiop_${libtype} PROPERTIES OUTPUT_NAME hiop)
-        install(TARGETS hiop_${libtype} DESTINATION lib)
-      else()
-        target_sources(hiop_${libtype} PRIVATE ${hiop_add_component_SOURCES})
-      endif()
+      add_library(hiop_${libtype} ${libtype_upper} $<TARGET_OBJECTS:hiop_obj>)
+      add_library(HiOp::${libtype_upper} ALIAS hiop_${libtype})
+      target_include_directories(hiop_${libtype}
+        PUBLIC
+        $<TARGET_PROPERTY:hiop_obj,INTERFACE_INCLUDE_DIRECTORIES>
+        PRIVATE
+        $<TARGET_PROPERTY:hiop_obj,INCLUDE_DIRECTORIES>
+        )
+      target_link_libraries(hiop_${libtype}
+        PUBLIC
+        hiop_math
+        $<TARGET_PROPERTY:hiop_obj,LINK_LIBRARIES>
+        )
+      set_target_properties(hiop_${libtype} PROPERTIES OUTPUT_NAME hiop)
+      install(TARGETS hiop_${libtype} DESTINATION lib)
     endif()
   endforeach()
 endmacro()
