@@ -125,8 +125,9 @@ public:
   }
  
   bool get_sparse_blocks_info(int& n,
-                                 int& nnz_sparse_Jaceq, int& nnz_sparse_Jacineq,
-					                       int& nnz_sparse_Hess_Lagr)
+                              int& nnz_sparse_Jaceq, 
+                              int& nnz_sparse_Jacineq,
+                              int& nnz_sparse_Hess_Lagr)
   {
     n = n_vars;
     nnz_sparse_Jaceq = 2;
@@ -163,7 +164,7 @@ public:
     for(int i=0;i<S_;i++) {
       for(int j=0;j<nx_;j++) {
         gradf[nx_*(i+1)+j] += (x[nx_*(i+1)+j]-x[j])/double(S_);
-	gradf[j] += (x[j]-x[nx_*(i+1)+j])/double(S_);
+        gradf[j] += (x[j]-x[nx_*(i+1)+j])/double(S_);
       }
     }
     //std::cout<<"gradf15 "<<gradf[15]<<std::endl;
@@ -172,8 +173,11 @@ public:
 
   /* Four constraints no matter how large n is */
   // This constraint attempts to use existing functions
-  bool eval_cons(const long long& n, const long long& m,
-		                const double* x, bool new_x, double* cons)
+  bool eval_cons(const long long& n, 
+                 const long long& m,
+                 const double* x, 
+                 bool new_x, 
+                 double* cons)
   {
 
     assert(n==n_vars); assert(m==n_cons);
@@ -211,23 +215,38 @@ public:
     return true;
   }
   
-  bool eval_cons(const long long& n, const long long& m,
-                    const long long& num_cons, const long long* idx_cons,
-			              const double* x, bool new_x, double* cons)
+  bool eval_cons(const long long& n, 
+                 const long long& m,
+                 const long long& num_cons, 
+                 const long long* idx_cons,
+                 const double* x, 
+                 bool new_x, 
+                 double* cons)
   {
     return false;
   }
-  bool eval_Jac_cons(const long long& n, const long long& m,
-                        const long long& num_cons, const long long* idx_cons,
-                        const double* x, bool new_x,
-                        const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS)
+  bool eval_Jac_cons(const long long& n, 
+                     const long long& m,
+                     const long long& num_cons, 
+                     const long long* idx_cons,
+                     const double* x, 
+                     bool new_x,
+                     const int& nnzJacS, 
+                     int* iJacS, 
+                     int* jJacS, 
+                     double* MJacS)
   {
     return false;
   }
 
-  bool eval_Jac_cons(const long long& n, const long long& m,
-                          const double* x, bool new_x,
-                          const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS)
+  bool eval_Jac_cons(const long long& n, 
+                     const long long& m,
+                     const double* x, 
+                     bool new_x,
+                     const int& nnzJacS, 
+                     int* iJacS, 
+                     int* jJacS, 
+                     double* MJacS)
   {
     assert(n==n_vars); assert(m==n_cons);
     assert(n>=3);
@@ -262,10 +281,10 @@ public:
           iJacS[nnzit] = conidx+i*nx_+j; jJacS[nnzit] = nx_+i*nx_+j+1; 
           nnzit++;
         }
-	for(auto j=0;j<nx_;j++) {
-	  iJacS[nnzit] = conidx+i*nx_+nx_-1; jJacS[nnzit] = nx_+i*nx_+j;
-	  nnzit++;
-	}
+        for(auto j=0;j<nx_;j++) {
+          iJacS[nnzit] = conidx+i*nx_+nx_-1; jJacS[nnzit] = nx_+i*nx_+j;
+          nnzit++;
+        }
       } 
       assert(nnzit == nnzJacS);
     }
@@ -293,16 +312,16 @@ public:
           MJacS[nnzit] = 1.; 
           nnzit++;
         }
-	MJacS[nnzit] = -2*(1-x[nx_+i*nx_]+xi_[i*nS_]);
-	nnzit++;
-	for(auto j=1;j<nS_;j++) {
-	  MJacS[nnzit] = 2*(x[nx_+i*nx_+j]+xi_[i*nS_+j]);
-	  nnzit++;
-	}
-	for(auto j=nS_;j<nx_;j++) {
-	  MJacS[nnzit] = 2*x[nx_+i*nx_+j];
-	  nnzit++;
-	}
+        MJacS[nnzit] = -2*(1-x[nx_+i*nx_]+xi_[i*nS_]);
+        nnzit++;
+        for(auto j=1;j<nS_;j++) {
+          MJacS[nnzit] = 2*(x[nx_+i*nx_+j]+xi_[i*nS_+j]);
+          nnzit++;
+        }
+        for(auto j=nS_;j<nx_;j++) {
+          MJacS[nnzit] = 2*x[nx_+i*nx_+j];
+          nnzit++;
+        }
       }
       assert(nnzit == nnzJacS);
     }
@@ -314,10 +333,17 @@ public:
                            const double* lambda, bool new_lambda,
                            const int& nnzHSS, int* iHSS, int* jHSS, double* MHSS)
   {return false;}*/
-  bool eval_Hess_Lagr(const long long& n, const long long& m,
-                           const double* x, bool new_x, const double& obj_factor,
-                           const double* lambda, bool new_lambda,
-                           const int& nnzHSS, int* iHSS, int* jHSS, double* MHSS)
+  bool eval_Hess_Lagr(const long long& n, 
+                      const long long& m,
+                      const double* x, 
+                      bool new_x, 
+                      const double& obj_factor,
+                      const double* lambda, 
+                      bool new_lambda,
+                      const int& nnzHSS, 
+                      int* iHSS, 
+                      int* jHSS, 
+                      double* MHSS)
   {
     //assert(nnzHSS == nx_+S_*nx_*2+S_*nx_);
     assert(nnzHSS == nx_+S_*nx_+S_*nx_);
@@ -326,10 +352,10 @@ public:
       for(int i=0; i<nx_; i++) { 	
         iHSS[nnzit] = jHSS[nnzit] = i;
         nnzit++;
-	//for(int j=0;j<S_;j++){
-	//  iHSS[nnzit] = i; jHSS[nnzit] = nx_+j*nx_+i;
-	//  nnzit++;
-	//}    
+        //for(int j=0;j<S_;j++){
+        //  iHSS[nnzit] = i; jHSS[nnzit] = nx_+j*nx_+i;
+        //  nnzit++;
+        //}    
       }
      // r_i(x;\xi^i) = 1/S *  min_y 0.5 || y - x ||^2 such that 
       for(int i=0;i<S_;i++) {
@@ -355,7 +381,7 @@ public:
           nnzit++;
         }*/
       }
-	// r_i(x;\xi^i) = 1/S *  min_y 0.5 || y - x ||^2 such that 
+      // r_i(x;\xi^i) = 1/S *  min_y 0.5 || y - x ||^2 such that 
       for(int i=0;i<S_;i++) {
         for(int j=0;j<nx_;j++) {
           MHSS[nnzit] = -obj_factor/double(S_);

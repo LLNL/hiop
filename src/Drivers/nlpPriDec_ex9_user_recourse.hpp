@@ -36,10 +36,10 @@ public:
   }
 
   PriDecRecourseProblemEx9(int n, 
-		           int nS, 
-			   int S, 
-			   const double* x,
-		           const double* xi): nx_(n), nS_(nS), S_(S)
+                           int nS, 
+                           int S, 
+                           const double* x,
+                           const double* xi): nx_(n), nS_(nS), S_(S)
   {
     assert(nS_>=1);
     assert(nx_>=nS_);  // ny=nx=n
@@ -56,11 +56,11 @@ public:
   }
 
   PriDecRecourseProblemEx9(int n, 
-		           int nS, 
-			   int S, 
-			   int idx,
-			   const double* x,
-		           const double* xi): nx_(n), nS_(nS), S_(S)
+                           int nS, 
+                           int S, 
+                           int idx,
+                           const double* x,
+                           const double* xi): nx_(n), nS_(nS), S_(S)
   {
     assert(nS_>=1);
     assert(nx_>=nS_);  // ny=nx=n
@@ -150,11 +150,11 @@ public:
   }
 
   bool get_sparse_dense_blocks_info(int& nx_sparse, 
-		                    int& nx_dense,
-				    int& nnz_sparse_Jace, 
-				    int& nnz_sparse_Jaci,
-				    int& nnz_sparse_Hess_Lagr_SS, 
-				    int& nnz_sparse_Hess_Lagr_SD)
+                                    int& nx_dense,
+                                    int& nnz_sparse_Jace, 
+                                    int& nnz_sparse_Jaci,
+                                    int& nnz_sparse_Hess_Lagr_SS, 
+                                    int& nnz_sparse_Hess_Lagr_SD)
   {
     nx_sparse = nsparse_;  
     nx_dense = ny_-nsparse_;
@@ -183,12 +183,12 @@ public:
   }
  
   virtual bool eval_cons(const long long& n, 
-		         const long long& m, 
-			 const long long& num_cons, 
-			 const long long* idx_cons,  
-			 const double* x, 
-			 bool new_x, 
-			 double* cons)
+                         const long long& m, 
+                         const long long& num_cons, 
+                         const long long* idx_cons,  
+                         const double* x, 
+                         bool new_x, 
+                         double* cons)
   {
     assert(n==ny_); assert(m==ny_);
     assert(num_cons==ny_||num_cons==0);
@@ -230,18 +230,18 @@ public:
   }
  
   virtual bool eval_Jac_cons(const long long& n, 
-		             const long long& m, 
-		             const long long& num_cons, 
-			     const long long* idx_cons,
-		             const double* x, 
-			     bool new_x,
-		             const long long& nsparse, 
-			     const long long& ndense, 
-		             const int& nnzJacS, 
-			     int* iJacS, 
-			     int* jJacS, 
-			     double* MJacS, 
-		             double* JacD)
+                             const long long& m, 
+                             const long long& num_cons, 
+                             const long long* idx_cons,
+                             const double* x, 
+                             bool new_x,
+                             const long long& nsparse, 
+                             const long long& ndense, 
+                             const int& nnzJacS, 
+                             int* iJacS, 
+                             int* jJacS, 
+                             double* MJacS, 
+                             double* JacD)
   {
     assert(num_cons==nx_||num_cons==0);
     //indexes for sparse part
@@ -252,50 +252,50 @@ public:
     if(iJacS!=NULL && jJacS!=NULL) {
       int nnzit=0;
       for(int itrow=0; itrow<num_cons; itrow++) {
-	const int con_idx = (int) idx_cons[itrow];
-	if(con_idx<nsparse_-1) {
-	  //sparse Jacobian eq w.r.t. x and s
-	  //yk
-	  iJacS[nnzit] = con_idx;
-	  jJacS[nnzit] = con_idx; //-1
-	  nnzit++;
+        const int con_idx = (int) idx_cons[itrow];
+        if(con_idx<nsparse_-1) {
+          //sparse Jacobian eq w.r.t. x and s
+          //yk
+          iJacS[nnzit] = con_idx;
+          jJacS[nnzit] = con_idx; //-1
+          nnzit++;
 
-	  //yk+1
-	  iJacS[nnzit] = con_idx;
-	  jJacS[nnzit] = con_idx+1; //1
-	  nnzit++;
-	} else if (con_idx==nsparse_-1) {
-	  iJacS[nnzit] = con_idx;
-	  jJacS[nnzit] = con_idx; //-1
-	  nnzit++;
-	} else if (con_idx==m-1) { 
-	  iJacS[nnzit] = m-1;
-	  jJacS[nnzit] = 0;
-	  nnzit++;
+          //yk+1
+          iJacS[nnzit] = con_idx;
+          jJacS[nnzit] = con_idx+1; //1
+          nnzit++;
+        } else if (con_idx==nsparse_-1) {
+          iJacS[nnzit] = con_idx;
+          jJacS[nnzit] = con_idx; //-1
+          nnzit++;
+        } else if (con_idx==m-1) { 
+          iJacS[nnzit] = m-1;
+          jJacS[nnzit] = 0;
+          nnzit++;
           //cons[m-1] = (1-x[0]+xi_[0]);
-	  if(nsparse_<=nS_) {
+          if(nsparse_<=nS_) {
             for(int i=1;i<nsparse_;i++) {
-	      iJacS[nnzit] = m-1;
-	      jJacS[nnzit] = i;
-	      nnzit++;
+              iJacS[nnzit] = m-1;
+              jJacS[nnzit] = i;
+              nnzit++;
               //cons[m-1] += (x[i] + xi_[i])*(x[i] + xi_[i]);
             }
-	  } else {
-	    for(int i=1;i<nS_;i++) {
-	      iJacS[nnzit] = m-1;
-	      jJacS[nnzit] = i;
-	      nnzit++;
+          } else {
+            for(int i=1;i<nS_;i++) {
+              iJacS[nnzit] = m-1;
+              jJacS[nnzit] = i;
+              nnzit++;
               //cons[m-1] += (x[i] + xi_[i])*(x[i] + xi_[i]);
             }
-	    for(int i=nS_;i<nsparse_;i++) {
-	      iJacS[nnzit] = m-1;
-	      jJacS[nnzit] = i;
-	      nnzit++;
+            for(int i=nS_;i<nsparse_;i++) {
+              iJacS[nnzit] = m-1;
+              jJacS[nnzit] = i;
+              nnzit++;
               //cons[m-1] += x[i]*x[i];
             }
-	  }
-	  //sparse Jacobian ineq w.r.t x and s
-	}
+          }
+          //sparse Jacobian ineq w.r.t x and s
+        }
       }
       assert(nnzit==nnzJacS);
     }
@@ -303,43 +303,43 @@ public:
     if(MJacS!=NULL) {
       int nnzit=0;
       for(int itrow=0; itrow<num_cons; itrow++) {
-	const int con_idx = (int) idx_cons[itrow];
-	if(con_idx<nsparse_-1) {
-	  //sparse Jacobian eq w.r.t. x and s
-	  //yk+1
-	  MJacS[nnzit] = -1.;
-	  nnzit++;
+        const int con_idx = (int) idx_cons[itrow];
+        if(con_idx<nsparse_-1) {
+          //sparse Jacobian eq w.r.t. x and s
+          //yk+1
+          MJacS[nnzit] = -1.;
+          nnzit++;
 
-	  //yk
-	  MJacS[nnzit] = 1.;
-	  nnzit++;
-	} else if (con_idx==nsparse_-1) {
-	  MJacS[nnzit] = -1.;
-	  nnzit++;
-	} else if (con_idx==m-1) {
-	  MJacS[nnzit] = -2*(1-x[0]+xi_[0]);
-	  nnzit++;
+          //yk
+          MJacS[nnzit] = 1.;
+          nnzit++;
+        } else if (con_idx==nsparse_-1) {
+          MJacS[nnzit] = -1.;
+          nnzit++;
+        } else if (con_idx==m-1) {
+          MJacS[nnzit] = -2*(1-x[0]+xi_[0]);
+          nnzit++;
           //cons[m-1] = (1-x[0]+xi_[0])^2;
-	  if(nsparse_<=nS_) {
+          if(nsparse_<=nS_) {
             for(int i=1;i<nsparse_;i++) {
-	      MJacS[nnzit] = 2*(x[i]+xi_[i]);
-	      nnzit++;
+              MJacS[nnzit] = 2*(x[i]+xi_[i]);
+              nnzit++;
               //cons[m-1] += (x[i] + xi_[i])*(x[i] + xi_[i]);
             }
-	  } else {
-	    for(int i=1;i<nS_;i++) {
-	      MJacS[nnzit] = 2*(x[i]+xi_[i]);
-	      nnzit++;
+          } else {
+            for(int i=1;i<nS_;i++) {
+              MJacS[nnzit] = 2*(x[i]+xi_[i]);
+              nnzit++;
               //cons[m-1] += (x[i] + xi_[i])*(x[i] + xi_[i]);
             }
-	    for(int i=nS_;i<nsparse_;i++) {
-	      MJacS[nnzit] = 2*x[i];
-	      nnzit++;
+            for(int i=nS_;i<nsparse_;i++) {
+              MJacS[nnzit] = 2*x[i];
+              nnzit++;
               //cons[m-1] += x[i]*x[i];
             }
-	  }
-	  //sparse Jacobian ineq w.r.t x and s
-	}
+          }
+          //sparse Jacobian ineq w.r.t x and s
+        }
       }
       assert(nnzit==nnzJacS);
     }
@@ -347,27 +347,27 @@ public:
     //it has row number of m
     if(JacD!=NULL) {
       for(int itrow=0; itrow<num_cons; itrow++) {
-	const int con_idx = (int) idx_cons[itrow];
-	if(con_idx==nsparse_-1) {
+        const int con_idx = (int) idx_cons[itrow];
+        if(con_idx==nsparse_-1) {
           JacD[(nx_-nsparse_)*con_idx+(con_idx-nsparse_+1)] = 1.0;
-	} else if (con_idx>nsparse_-1 && con_idx!=m-1) {
+        } else if (con_idx>nsparse_-1 && con_idx!=m-1) {
           JacD[(ny_-nsparse_)*con_idx+(con_idx-nsparse_)] = -1.0;
           JacD[(ny_-nsparse_)*con_idx+(con_idx-nsparse_)+1] = 1.0;
-	} else if(con_idx==m-1) {
+        } else if(con_idx==m-1) {
           if(nsparse_<=nS_) {
               //cons[m-1] += (x[i] + xi_[i])*(x[i] + xi_[i]);
             for(int i=nsparse_; i<nS_;i++) {
-              JacD[(ny_-nsparse_)*con_idx+i-nsparse_] = 2*(x[i] + xi_[i]);	
-	    }
+              JacD[(ny_-nsparse_)*con_idx+i-nsparse_] = 2*(x[i] + xi_[i]);
+            }
             for(int i=nS_; i<m;i++) {
-              JacD[(ny_-nsparse_)*con_idx+i-nsparse_] = 2*x[i] ;	
-	    }
+              JacD[(ny_-nsparse_)*con_idx+i-nsparse_] = 2*x[i] ;
+            }
           } else {
             for(int i=nsparse_; i<m;i++) {
               JacD[(ny_-nsparse_)*con_idx+i-nsparse_] = 2*x[i] ;	
-	    }
-	  }
-	}
+            }
+          }
+        }
       }
     }
     //assert("for debugging" && false); //for debugging purpose
@@ -375,23 +375,23 @@ public:
   }
   
   bool eval_Hess_Lagr(const long long& n, 
-		      const long long& m, 
+                      const long long& m, 
                       const double* x, 
-		      bool new_x, 
-		      const double& obj_factor,
+                      bool new_x, 
+                      const double& obj_factor,
                       const double* lambda, 
-		      bool new_lambda,
+                      bool new_lambda,
                       const long long& nsparse, 
-		      const long long& ndense, 
+                      const long long& ndense, 
                       const int& nnzHSS, 
-		      int* iHSS, 
-		      int* jHSS, 
-		      double* MHSS, 
+                      int* iHSS, 
+                      int* jHSS, 
+                      double* MHSS, 
                       double* HDD,
                       int& nnzHSD, 
-		      int* iHSD, 
-		      int* jHSD, 
-		      double* MHSD)
+                      int* iHSD, 
+                      int* jHSD, 
+                      double* MHSD)
   {
     assert(nnzHSS==nsparse_);
     assert(nnzHSD==0);
@@ -411,7 +411,7 @@ public:
       //HDD size: ndense_*ndense_
       for(int i=0; i<ndense;i++) {
         HDD[ndense*i+i] = obj_factor/double(S_);
-	HDD[ndense*i+i] += 2*lambda[m-1];
+        HDD[ndense*i+i] += 2*lambda[m-1];
       }
     }
     return true;
@@ -426,12 +426,12 @@ public:
   }
 
   bool get_starting_point(const long long& n, 
-		          const long long& m,
-			  double* x0,
-			  bool& duals_avail,
-			  double* z_bndL0, 
-			  double* z_bndU0,
-		          double* lambda0)
+                          const long long& m,
+                          double* x0,
+                          bool& duals_avail,
+                          double* z_bndL0, 
+                          double* z_bndU0,
+                          double* lambda0)
   {
     //assert(false && "not implemented");
     return false;

@@ -93,7 +93,8 @@ namespace hiop
 
 
 hiopAlgPrimalDecomposition::HessianApprox::
-HessianApprox() :HessianApprox(-1) 
+HessianApprox() : 
+  HessianApprox(-1) 
 {
 }
 
@@ -184,8 +185,8 @@ initialize(const double f_val, const double* xk, const double* grad)
 /* updating variables for the current iteration */
 void hiopAlgPrimalDecomposition::HessianApprox::
 update_hess_coeff(const double* xk, 
-		  const double* gk, 
-		  const double& f_val)
+                  const double* gk, 
+                  const double& f_val)
 {
   fkm1 = fk;
   fk = f_val;
@@ -250,9 +251,9 @@ update_ratio()
  */
 void hiopAlgPrimalDecomposition::HessianApprox::
 update_ratio_tr(const double rhok,
-		const double rkm1, 
-		const double rk, 
-		const double alpha_g_ratio,
+                const double rkm1, 
+                const double rk, 
+                const double alpha_g_ratio,
                 double& alpha_ratio)
 {
   if(rhok>0 && rhok < 1/4. && (rkm1-rk>0)) {
@@ -425,7 +426,7 @@ hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
 hiopAlgPrimalDecomposition::
 hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
                            const int nc, 
-			   const std::vector<int>& xc_index,
+                           const std::vector<int>& xc_index,
                            MPI_Comm comm_world/*=MPI_COMM_WORLD*/)
   : master_prob_(prob_in),
     nc_(nc), 
@@ -563,7 +564,7 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
     double t1 = 0;
     double t2 = 0; 
     hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator = new hiopInterfacePriDecProblem::
-		                                             RecourseApproxEvaluator(nc_,S_,xc_idx_);
+                                                             RecourseApproxEvaluator(nc_,S_,xc_idx_);
 
     // Outer loop starts
     for(int it=0; it<max_iter;it++) {
@@ -588,7 +589,7 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
         if(ver_ >=outlevel2) {
           for(int i=0;i<n_;i++) printf("x %d %18.12e ",i,x_[i]);
           printf("\n ");
-	}
+        }
       }
 
       // send base case solutions to all ranks
@@ -652,7 +653,7 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
         t2 = MPI_Wtime(); 
         if(ver_ >=outlevel2) {
           printf( "Elapsed time for iteration %d for misc is %f\n",it, t2 - t1 );  
-	}
+        }
         while(idx<=S_ || last_loop) { 
           for(int r=1; r< comm_size_;r++) {
             int mpi_test_flag = rec_prob[r]->test();
@@ -660,11 +661,11 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
               if(!last_loop && idx<S_) {
                 if(ver_ >=outlevel2) {
                   printf("idx %d sent to rank %d\n", idx,r);
-		}
+                }
               } else {
                 if(ver_ >=outlevel2) {
                   printf("last loop for rank %d\n", r);
-		}
+                }
               }
               // add to the master rank variables
               rval += rec_prob[r]->value();
@@ -705,7 +706,7 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
         t2 = MPI_Wtime(); 
         if(ver_ >=outlevel1) {
           printf( "Elapsed time for iteration %d for contingency is %f\n",it, t2 - t1 );  
-	}
+        }
       }
 
       //evaluators
@@ -836,8 +837,7 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
         }
       }
 
-      if(my_rank_==0)
-      {
+      if(my_rank_==0) {
         printf("real rval %18.12e\n",rval);
         MPI_Status mpi_status; 
 
@@ -862,7 +862,7 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
           double alp_temp = hess_appx_2->get_alpha_f(grad_r);
           if(ver_ >=outlevel1) {
             printf("alpd %18.12e\n",alp_temp);
-	  }
+          }
           for(int i=0; i<nc_; i++) hess_appx[i] = alp_temp;
         } else {
           hess_appx_2->update_hess_coeff(x0, grad_r, rval);
@@ -872,17 +872,17 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
           //double alp_temp2 = hess_appx_2->get_alpha_BB();
           if(ver_ >=outlevel1) {
             printf("alpd %18.12e\n",alp_temp);
-	  }
+          }
           //printf("alpd BB %18.12e\n",alp_temp2);
           convg_g = hess_appx_2->check_convergence_grad(grad_r);
           if(ver_ >=outlevel1) {
             printf("gradient convergence measure %18.12e\n",convg_g);
-	  }
+          }
           convg_f = hess_appx_2->check_convergence_fcn();
           if(ver_ >=outlevel1) {
             printf("function val convergence measure %18.12e\n",convg_f);
-	  }
-	  convg = std::min(convg_f,convg_g);
+          }
+          convg = std::min(convg_f,convg_g);
           for(int i=0; i<nc_; i++) hess_appx[i] = alp_temp;
         }
 
@@ -898,7 +898,7 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
             printf("grad %d %18.12e ",i,grad_r[i]);
           }
           printf("\n");
-	}
+        }
        
         assert(evaluator->get_rgrad()!=NULL);// should be defined
         evaluator->set_rval(rval);
@@ -912,22 +912,22 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
         }
 
         //printf("solving full problem starts, iteration %d \n",it);
-	solver_status_ = master_prob_->solve_master(x_,true);
+        solver_status_ = master_prob_->solve_master(x_,true);
         if(ver_ >=outlevel1) {
           printf("solved full problem with objective %18.12e\n", master_prob_->get_objective());
           fflush(stdout);
-	}
+        }
 
         if(ver_ >=outlevel2) {
           for(int i=0;i<n_;i++) {
             printf("x%d %18.12e ",i,x_[i]);
           }
           printf(" \n");
-	}
+        }
         t2 = MPI_Wtime(); 
         if(ver_ >=outlevel1) {
           printf( "Elapsed time for entire iteration %d is %f\n",it, t2 - t1 );  
-	}
+        }
       } else {
         // evaluator ranks do nothing     
       }
@@ -979,7 +979,7 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
 
 
   hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator = new hiopInterfacePriDecProblem::
-	                                     RecourseApproxEvaluator(nc_,S_,xc_idx_);
+                                                           RecourseApproxEvaluator(nc_,S_,xc_idx_);
 
   double convg = 1e20;
   double convg_f = 1e20;

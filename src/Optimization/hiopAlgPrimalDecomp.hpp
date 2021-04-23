@@ -43,8 +43,8 @@ public:
                              MPI_Comm comm_world=MPI_COMM_WORLD);
 
   hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
-		             const int nc, 
-			     const std::vector<int>& xc_index,
+                             const int nc, 
+                             const std::vector<int>& xc_index,
                              MPI_Comm comm_world=MPI_COMM_WORLD);
 
 
@@ -81,8 +81,8 @@ public:
   /* Contains information of a solution step including function value 
    * and gradient. Used for storing the solution for the previous iteration
    */
-  struct prev_sol{
-    prev_sol(const int n, const double f, const double* grad, const double* x)
+  struct Prevsol{
+    Prevsol(const int n, const double f, const double* grad, const double* x)
     {
       n_ = n;
       f_ = f;
@@ -117,7 +117,7 @@ public:
    * every iteration to ensure the values are up to date.
    * The xk here should only be the coupled x.
    */
-  struct HessianApprox{
+  struct HessianApprox {
     HessianApprox();
     HessianApprox(const int& n);
     
@@ -154,8 +154,8 @@ public:
     //a trust region way of updating alpha ratio
     //rkm1: true recourse value at {k-1}
     //rk: true recourse value at k
-    void update_ratio_tr(const double rhok,const double rkm1, const double rk, const double alpha_g_ratio,
-		         double& alpha_ratio);
+    void update_ratio_tr(const double rhok, const double rkm1, const double rk, 
+                         const double alpha_g_ratio, double& alpha_ratio);
 
     /* currently provides multiple ways to compute alpha, one is to the BB alpha
      * or the alpha computed through the BarzilaiBorwein gradient method, a quasi-Newton method.

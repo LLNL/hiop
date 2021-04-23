@@ -142,19 +142,21 @@ int main(int argc, char **argv)
   //pridec_solver.set_max_iteration(5);
   auto status = pridec_solver.run();
   
-  if(status!=Solve_Success){
-    if(rank==0)
+  if(status!=Solve_Success) {
+    if(rank==0) {
       printf("Solve was NOT successfull.");
-  }else{
-    if(rank==0)
-      printf("Solve was successfull. Optimal value: %12.5e\n",
-             pridec_solver.getObjective());
+    }
+  } else {
+    if(rank==0) {
+      printf("Solve was successfull. Optimal value: %12.5e\n",pridec_solver.getObjective());
+    }
   }
   
   if(selfCheck) {
     if(rank==0) {
-      if(!self_check(nx,S, pridec_solver.getObjective()))
+      if(!self_check(nx,S, pridec_solver.getObjective())) {
         return -1;
+      }
     }
   } 
   

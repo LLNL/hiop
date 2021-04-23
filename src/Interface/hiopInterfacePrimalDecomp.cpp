@@ -21,8 +21,8 @@ RecourseApproxEvaluator(int nc, int S)
 
 hiopInterfacePriDecProblem::RecourseApproxEvaluator::
 RecourseApproxEvaluator(const int nc, 
-		        const int S, 
-			const std::vector<int>& list)
+                        const int S, 
+                        const std::vector<int>& list)
   : nc_(nc),S_(S),rval_(0.),rgrad_(NULL), rhess_(NULL),x0_(NULL)//nc = nx, nd=S
 {
   rgrad_ = new double[nc];
@@ -34,11 +34,11 @@ RecourseApproxEvaluator(const int nc,
 
 hiopInterfacePriDecProblem::RecourseApproxEvaluator::
 RecourseApproxEvaluator(const int nc, 
-		        const int S, 
-			const double& rval, 
-			const double* rgrad, 
-		        const double* rhess, 
-			const double* x0)
+                        const int S, 
+                        const double& rval, 
+                        const double* rgrad, 
+                        const double* rhess, 
+                        const double* x0)
   : nc_(nc), S_(S)
 {
   //assert(S>=nc);
@@ -57,12 +57,12 @@ RecourseApproxEvaluator(const int nc,
 
 hiopInterfacePriDecProblem::RecourseApproxEvaluator::
 RecourseApproxEvaluator(const int nc, 
-		        const int S, 
-			const std::vector<int>& list,
-		        const double& rval, 
-			const double* rgrad, 
-		        const double* rhess, 
-			const double* x0)
+                        const int S, 
+                        const std::vector<int>& list,
+                        const double& rval, 
+                        const double* rgrad, 
+                        const double* rhess, 
+                        const double* x0)
   : nc_(nc), S_(S)
 {
   //assert(S>=nc);
@@ -177,16 +177,40 @@ set_xc_idx(const std::vector<int>& idx)
   xc_idx_ = idx;
 }
 
-int hiopInterfacePriDecProblem::RecourseApproxEvaluator::get_S() const {return S_;} 
+int hiopInterfacePriDecProblem::
+RecourseApproxEvaluator::get_S() const 
+{
+  return S_;
+} 
 
-double hiopInterfacePriDecProblem::RecourseApproxEvaluator::get_rval() const {return rval_;}
+double hiopInterfacePriDecProblem::
+RecourseApproxEvaluator::get_rval() const 
+{
+  return rval_;
+}
 
-double* hiopInterfacePriDecProblem::RecourseApproxEvaluator::get_rgrad() const {return rgrad_;}
+double* hiopInterfacePriDecProblem::
+RecourseApproxEvaluator::get_rgrad() const 
+{
+  return rgrad_;
+}
 
-double* hiopInterfacePriDecProblem::RecourseApproxEvaluator::get_rhess() const {return rhess_;}
+double* hiopInterfacePriDecProblem::
+RecourseApproxEvaluator::get_rhess() const 
+{
+  return rhess_;
+}
 
-double* hiopInterfacePriDecProblem::RecourseApproxEvaluator::get_x0() const {return x0_;}
+double* hiopInterfacePriDecProblem::
+RecourseApproxEvaluator::get_x0() const 
+{
+  return x0_;
+}
 
-std::vector<int> hiopInterfacePriDecProblem::RecourseApproxEvaluator::get_xc_idx() const {return xc_idx_;}
+std::vector<int> hiopInterfacePriDecProblem::
+RecourseApproxEvaluator::get_xc_idx() const 
+{
+  return xc_idx_;
+}
 
 
