@@ -34,11 +34,6 @@ set(hiopOptimization_HEADERS
   hiopResidual.hpp
   )
 
-# Create legacy library
-add_library(hiopOptimization OBJECT ${hiopOptimization_SRC})
-target_link_libraries(hiopOptimization PUBLIC hiop_math)
-# ---
-
 hiop_add_component(
   SOURCES ${hiopOptimization_SRC}
   INTERFACE_HEADERS ${hiopOptimization_HEADERS}

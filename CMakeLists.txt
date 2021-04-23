@@ -269,92 +269,15 @@ endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 
 hiop_create_concrete_libraries()
 
-# Create legacy library
-if(HIOP_BUILD_STATIC)
-  add_library(hiop_legacy STATIC
-    $<TARGET_OBJECTS:hiopOptimization>
-    $<TARGET_OBJECTS:hiopLinAlg>
-    $<TARGET_OBJECTS:hiopUtils>)
-  if(HIOP_WITH_KRON_REDUCTION)
-    target_sources(hiop_legacy PUBLIC $<TARGET_OBJECTS:hiopKronRed>)
-  endif(HIOP_WITH_KRON_REDUCTION)
-  target_link_libraries(hiop_legacy PUBLIC HiOp::HiOp)
-  install(TARGETS hiop_legacy DESTINATION lib)
-endif()
-
-if(HIOP_BUILD_SHARED)
-  add_library(hiop_shared_legacy SHARED $<TARGET_OBJECTS:hiopOptimization>
-    $<TARGET_OBJECTS:hiopLinAlg>
-    $<TARGET_OBJECTS:hiopUtils>
-    $<TARGET_OBJECTS:chiopInterface>)
-  set_target_properties(hiop_shared_legacy PROPERTIES OUTPUT_NAME hiop_legacy)
-  if(HIOP_WITH_KRON_REDUCTION)
-    target_sources(hiop_shared_legacy PUBLIC $<TARGET_OBJECTS:hiopKronRed>)
-  endif(HIOP_WITH_KRON_REDUCTION)
-  target_link_libraries(hiop_shared_legacy PUBLIC HiOp::HiOp)
-  install(TARGETS hiop_shared_legacy DESTINATION lib)
-endif()
-# ---
-
 add_subdirectory(tests)
 
-install(FILES src/Interface/hiopInterface.hpp
-  src/Interface/chiopInterface.hpp
-  src/Interface/hiopInterface.h
-  src/Interface/hiopVersion.hpp
-  src/Optimization/hiopNlpFormulation.hpp
-  src/Optimization/hiopNlpTransforms.hpp
-  src/Optimization/hiopAlgFilterIPM.hpp
-  src/Optimization/hiopIterate.hpp
-  src/Optimization/hiopResidual.hpp
-  src/Optimization/hiopKKTLinSys.hpp
-  src/Optimization/hiopPDPerturbation.hpp
-  src/Optimization/hiopLogBarProblem.hpp
-  src/Optimization/hiopFilter.hpp
-  src/Optimization/hiopHessianLowRank.hpp
-  src/Optimization/hiopDualsUpdater.hpp
-  src/Optimization/hiopFactAcceptor.hpp
-  src/LinAlg/hiopVector.hpp
-  src/LinAlg/hiopVectorPar.hpp
-  src/LinAlg/hiopVectorInt.hpp
-  src/LinAlg/hiopVectorIntSeq.hpp
-  src/LinAlg/hiopMatrix.hpp
-  src/LinAlg/hiopMatrixDenseRowMajor.hpp
-  src/LinAlg/hiopMatrixDense.hpp
-  src/LinAlg/hiopMatrixMDS.hpp
-  src/LinAlg/hiopMatrixSparse.hpp
-  src/LinAlg/hiopMatrixSparseTriplet.hpp
-  src/LinAlg/hiopMatrixSparseTripletStorage.hpp
-  src/LinAlg/hiopMatrixMDS.hpp
-  src/LinAlg/hiopMatrixComplexSparseTriplet.hpp
-  src/LinAlg/hiopMatrixComplexDense.hpp
-  src/LinAlg/hiopLinSolver.hpp
-  src/LinAlg/hiopLinSolverIndefDenseLapack.hpp
-  src/LinAlg/hiopLinSolverUMFPACKZ.hpp
-  src/LinAlg/hiopLinSolverIndefSparseMA57.hpp
-  src/LinAlg/hiopLinAlgFactory.hpp
-  src/Utils/hiopRunStats.hpp
-  src/Utils/hiopLogger.hpp
-  src/Utils/hiopCSR_IO.hpp
-  src/Utils/hiopTimer.hpp
-  src/Utils/hiopOptions.hpp
-  src/Utils/hiopKronReduction.hpp
-  src/Utils/hiopMPI.hpp
-  src/Utils/hiopCppStdUtils.hpp
-  src/LinAlg/hiop_blasdefs.hpp
+# Install headers not already part of a hiop component library
+install(FILES 
   src/Drivers/IpoptAdapter.hpp
   ${CMAKE_BINARY_DIR}/hiop_defs.hpp
   ${CMAKE_BINARY_DIR}/FortranCInterface.hpp
-  DESTINATION include)
-
-if(HIOP_USE_RAJA)
-  install(FILES
-    src/LinAlg/hiopVectorIntRaja.hpp
-    src/LinAlg/hiopVectorRajaPar.hpp
-    src/LinAlg/hiopMatrixRajaDense.hpp
-    src/LinAlg/hiopMatrixRajaSparseTriplet.hpp
-    DESTINATION include)
-endif()
+  DESTINATION include
+  )
 
 set(STRIP_TABLE_CMD "awk '/Problem Summary/ { while (!match($0, /termination/)){ if(match($0, /^[ ]+[0-9]/)) { print $0; } getline } }'")
 # If running in a BSUB allocaation, use jrun commands and make sure we are

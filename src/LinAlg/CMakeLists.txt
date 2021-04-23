@@ -46,15 +46,8 @@ if(HIOP_WITH_KRON_REDUCTION)
   set(hiopLinAlg_SRC ${hiopLinAlg_SRC} hiopLinSolverUMFPACKZ.cpp)
 endif()
 
-# Create legacy library
-add_library(hiopLinAlg OBJECT ${hiopLinAlg_SRC})
-target_link_libraries(hiopLinAlg PUBLIC hiop_math)
-if(HIOP_USE_RAJA)
-  target_link_libraries(hiopLinAlg PUBLIC umpire RAJA OpenMP::OpenMP_CXX)
-endif()
-# ---
-
 set(hiopLinAlg_HEADERS
+  hiop_blasdefs.hpp
   hiopLinSolver.hpp
   hiopLinSolverIndefDenseLapack.hpp
   hiopLinSolverIndefDenseMagma.hpp
@@ -79,7 +72,6 @@ set(hiopLinAlg_HEADERS
   hiopVectorIntSeq.hpp
   hiopVectorPar.hpp
   hiopVectorRajaPar.hpp
-  hiop_blasdefs.hpp
   )
 
 hiop_add_component(
