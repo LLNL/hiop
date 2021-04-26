@@ -371,15 +371,13 @@ void hiopMatrixDenseRowMajor::print(FILE* f,
   }
 }
 
-#include <unistd.h>
-
 /*  y = beta * y + alpha * this * x  
  *
  * Sizes: y is m_local_, x is n_local_, the matrix is m_local_ x n_global_, and the
  * local chunk is m_local_ x n_local_ 
 */
-void hiopMatrixDenseRowMajor::timesVec(double beta, hiopVector& y_,
-			       double alpha, const hiopVector& x_) const
+void hiopMatrixDenseRowMajor::
+timesVec(double beta, hiopVector& y_, double alpha, const hiopVector& x_) const
 {
   hiopVectorPar& y = dynamic_cast<hiopVectorPar&>(y_);
   const hiopVectorPar& x = dynamic_cast<const hiopVectorPar&>(x_);
@@ -400,8 +398,8 @@ void hiopMatrixDenseRowMajor::timesVec(double beta, hiopVector& y_,
 #endif
 }
 
-void hiopMatrixDenseRowMajor::timesVec(double beta,  double* ya,
-			       double alpha, const double* xa) const
+void hiopMatrixDenseRowMajor::
+timesVec(double beta, double* ya, double alpha, const double* xa) const
 {
   char fortranTrans='T';
   int MM=m_local_, NN=n_local_, incx_y=1;
@@ -410,18 +408,16 @@ void hiopMatrixDenseRowMajor::timesVec(double beta,  double* ya,
   //only add beta*y on one processor (rank 0)
   if(myrank_!=0) beta=0.0; 
 #endif
-
   if( MM != 0 && NN != 0 ) {
     // the arguments seem reversed but so is trans='T' 
     // required since we keep the matrix row-wise, while the Fortran/BLAS expects them column-wise
-    DGEMV( &fortranTrans, &NN, &MM, &alpha, &M_[0][0], &NN,
-	    xa, &incx_y, &beta, ya, &incx_y );
+    DGEMV( &fortranTrans, &NN, &MM, &alpha, &M_[0][0], &NN, xa, &incx_y, &beta, ya, &incx_y );
   } else {
     if( MM != 0 ) {
       //y.scale( beta );
       if(beta != 1.) {
 	int one=1; 
-	DSCAL(&NN, &beta, ya, &one);
+	DSCAL(&MM, &beta, ya, &one);
       }
     } else {
       assert(MM==0);
@@ -438,8 +434,8 @@ void hiopMatrixDenseRowMajor::timesVec(double beta,  double* ya,
 }
 
 /* y = beta * y + alpha * transpose(this) * x */
-void hiopMatrixDenseRowMajor::transTimesVec(double beta, hiopVector& y_,
-				    double alpha, const hiopVector& x_) const
+void hiopMatrixDenseRowMajor::
+transTimesVec(double beta, hiopVector& y_, double alpha, const hiopVector& x_) const
 {
   hiopVectorPar& y = dynamic_cast<hiopVectorPar&>(y_);
   const hiopVectorPar& x = dynamic_cast<const hiopVectorPar&>(x_);
