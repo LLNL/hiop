@@ -54,7 +54,8 @@ CIBuildMatrix()
 {
   local baseCmakeOptions=" \
     -DCMAKE_BUILD_TYPE=Debug \
-    -DENABLE_TESTING=ON \
+    -DHIOP_WITH_MAKETEST=ON
+    -DHIOP_WITH_VALGRIND_TESTS=ON \
     -DHIOP_DEEPCHECKS=ON \
     "
   
@@ -81,7 +82,8 @@ buildMatrix()
 
   local baseCmakeOptions=" \
     -DCMAKE_BUILD_TYPE=Debug \
-    -DENABLE_TESTING=ON \
+    -DHIOP_WITH_MAKETEST=ON
+    -DHIOP_WITH_VALGRIND_TESTS=ON \
     -DHIOP_DEEPCHECKS=ON \
     "
 
