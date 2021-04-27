@@ -44,4 +44,4 @@ install(
   )
 
 add_library(hiopOptimization OBJECT ${hiopOptimization_SRC})
-target_link_libraries(hiopOptimization PRIVATE hiop_math)
+target_link_libraries(hiopOptimization PRIVATE hiop_tpl)

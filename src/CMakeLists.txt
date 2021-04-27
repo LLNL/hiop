@@ -1,5 +1,3 @@
-include(HiOpAddComponent)
-
 add_subdirectory(Interface)
 add_subdirectory(Optimization)
 add_subdirectory(LinAlg)
@@ -28,7 +26,7 @@ foreach(libtype shared static)
       $<TARGET_OBJECTS:hiopUtils>
       $<$<BOOL:${HIOP_BUILD_SHARED}>:$<TARGET_OBJECTS:hiopInterface>>
       )
-    target_link_libraries(hiop_${libtype} PUBLIC hiop_math)
+    target_link_libraries(hiop_${libtype} PUBLIC hiop_tpl)
     set_target_properties(hiop_${libtype} PROPERTIES OUTPUT_NAME hiop)
     install(TARGETS hiop_${libtype} DESTINATION lib)
   endif()

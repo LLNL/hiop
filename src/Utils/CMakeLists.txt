@@ -28,4 +28,4 @@ install(
   )
 
 add_library(hiopUtils OBJECT ${hiopUtils_SRC})
-target_link_libraries(hiopUtils PRIVATE hiop_math)
+target_link_libraries(hiopUtils PRIVATE hiop_tpl)
