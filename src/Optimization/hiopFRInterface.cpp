@@ -2,47 +2,47 @@
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
 // LLNL-CODE-742473. All rights reserved.
 //
-// This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
-// is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause). 
+// This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp
+// is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause).
 // Please also read “Additional BSD Notice” below.
 //
-// Redistribution and use in source and binary forms, with or without modification, 
+// Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
-// i. Redistributions of source code must retain the above copyright notice, this list 
+// i. Redistributions of source code must retain the above copyright notice, this list
 // of conditions and the disclaimer below.
-// ii. Redistributions in binary form must reproduce the above copyright notice, 
-// this list of conditions and the disclaimer (as noted below) in the documentation and/or 
+// ii. Redistributions in binary form must reproduce the above copyright notice,
+// this list of conditions and the disclaimer (as noted below) in the documentation and/or
 // other materials provided with the distribution.
-// iii. Neither the name of the LLNS/LLNL nor the names of its contributors may be used to 
-// endorse or promote products derived from this software without specific prior written 
+// iii. Neither the name of the LLNS/LLNL nor the names of its contributors may be used to
+// endorse or promote products derived from this software without specific prior written
 // permission.
 //
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY 
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES 
-// OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT 
-// SHALL LAWRENCE LIVERMORE NATIONAL SECURITY, LLC, THE U.S. DEPARTMENT OF ENERGY OR 
-// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS 
-// OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED 
-// AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, 
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
+// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+// OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
+// SHALL LAWRENCE LIVERMORE NATIONAL SECURITY, LLC, THE U.S. DEPARTMENT OF ENERGY OR
+// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+// OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+// AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
 // EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 // Additional BSD Notice
-// 1. This notice is required to be provided under our contract with the U.S. Department 
-// of Energy (DOE). This work was produced at Lawrence Livermore National Laboratory under 
+// 1. This notice is required to be provided under our contract with the U.S. Department
+// of Energy (DOE). This work was produced at Lawrence Livermore National Laboratory under
 // Contract No. DE-AC52-07NA27344 with the DOE.
-// 2. Neither the United States Government nor Lawrence Livermore National Security, LLC 
-// nor any of their employees, makes any warranty, express or implied, or assumes any 
-// liability or responsibility for the accuracy, completeness, or usefulness of any 
+// 2. Neither the United States Government nor Lawrence Livermore National Security, LLC
+// nor any of their employees, makes any warranty, express or implied, or assumes any
+// liability or responsibility for the accuracy, completeness, or usefulness of any
 // information, apparatus, product, or process disclosed, or represents that its use would
 // not infringe privately-owned rights.
-// 3. Also, reference herein to any specific commercial products, process, or services by 
-// trade name, trademark, manufacturer or otherwise does not necessarily constitute or 
-// imply its endorsement, recommendation, or favoring by the United States Government or 
-// Lawrence Livermore National Security, LLC. The views and opinions of authors expressed 
-// herein do not necessarily state or reflect those of the United States Government or 
-// Lawrence Livermore National Security, LLC, and shall not be used for advertising or 
+// 3. Also, reference herein to any specific commercial products, process, or services by
+// trade name, trademark, manufacturer or otherwise does not necessarily constitute or
+// imply its endorsement, recommendation, or favoring by the United States Government or
+// Lawrence Livermore National Security, LLC. The views and opinions of authors expressed
+// herein do not necessarily state or reflect those of the United States Government or
+// Lawrence Livermore National Security, LLC, and shall not be used for advertising or
 // product endorsement purposes.
 
 /**
@@ -52,7 +52,7 @@
  * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
  *
  */
- 
+
 #include "hiopFRInterface.hpp"
 
 #include "hiopVector.hpp"
@@ -72,15 +72,15 @@ hiopFRInterfaceSparse::hiopFRInterfaceSparse(hiopAlgFilterIPMBase& solver_base)
   n_x_ = nlp_base_->n();
   m_eq_ = nlp_base_->m_eq();
   m_ineq_ = nlp_base_->m_ineq();
-  
+
   n_ = n_x_ + 2*m_eq_ + 2*m_ineq_;
   m_ = m_eq_ + m_ineq_;
-  
+
   pe_st_ = n_x_;
   ne_st_ = pe_st_ + m_eq_;
   pi_st_ = ne_st_ + m_eq_;
   ni_st_ = pi_st_ + m_ineq_;
-  
+
   x_ref_ = solver_base.get_it_curr()->get_x();
 
   // build vector VR
@@ -88,7 +88,7 @@ hiopFRInterfaceSparse::hiopFRInterfaceSparse(hiopAlgFilterIPMBase& solver_base)
   DR_->component_abs();
   DR_->invert();
   DR_->component_min(1.0);
-  
+
   wrk_x_ = x_ref_->alloc_clone();
   wrk_c_ = LinearAlgebraFactory::createVector(m_eq_);
   wrk_d_ = LinearAlgebraFactory::createVector(m_ineq_);
@@ -101,7 +101,7 @@ hiopFRInterfaceSparse::hiopFRInterfaceSparse(hiopAlgFilterIPMBase& solver_base)
 
   // nnz for sparse matrices;
   nnz_Jac_c_ = nlp_base_->get_nnz_Jaceq() + 2 * m_eq_;
-  nnz_Jac_d_ = nlp_base_->get_nnz_Jaceq() + 2 * m_ineq_;
+  nnz_Jac_d_ = nlp_base_->get_nnz_Jacineq() + 2 * m_ineq_;
 
   // not sure i Hess has diagonal terms, compute nnz_hess here
   // assuming hess is in upper_triangular form
@@ -109,10 +109,10 @@ hiopFRInterfaceSparse::hiopFRInterfaceSparse(hiopAlgFilterIPMBase& solver_base)
   nnz_Hess_Lag_ = n_x_ + Hess->numberOfOffDiagNonzeros();
 
   // set mu0 to be the maximun of the current barrier parameter mu and norm_inf(|c|)*/
-  theta_ref_ = solver_base_.get_resid()->get_theta(); //at current point, i.e., reference point  
+  theta_ref_ = solver_base_.get_resid()->get_theta(); //at current point, i.e., reference point
   mu_ = solver_base.get_mu();
-  mu_ = std::max(mu_, theta_ref_);
-  
+  mu_ = std::max(mu_, solver_base_.get_resid()->get_nrmInf_bar_feasib());
+
   zeta_ = std::sqrt(mu_);
   rho_ = 1000; // FIXME: make this as an user option
 }
@@ -154,7 +154,7 @@ bool hiopFRInterfaceSparse::get_vars_info(const long long& n, double *xlow, doub
   wrk_primal_->setToConstant(1e+20);
   xu.copyToStarting(*wrk_primal_,0);
   wrk_primal_->copyTo(xupp);
-  
+
   // x
   for(long long i = 0; i < n_x_; ++i) {
     type[i] = var_type[i];
@@ -177,7 +177,7 @@ bool hiopFRInterfaceSparse::get_cons_info(const long long& m, double* clow, doub
   const NonlinearityType* cons_ineq_type = nlp_base_->get_cons_ineq_type();
 
   wrk_dual_->setToConstant(0.0);
-  
+
   // assemble wrk_dual_ = [crhs; dl] for lower bounds
   crhs.copyToStarting(*wrk_dual_, 0);
   dl.copyToStarting(*wrk_dual_, (int)m_eq_);
@@ -250,7 +250,7 @@ bool hiopFRInterfaceSparse::eval_grad_f(const long long& n, const double* x, boo
   return true;
 }
 
-bool hiopFRInterfaceSparse::eval_cons(const long long& n, 
+bool hiopFRInterfaceSparse::eval_cons(const long long& n,
                                       const long long& m,
                                       const long long& num_cons,
                                       const long long* idx_cons,
@@ -266,7 +266,7 @@ bool hiopFRInterfaceSparse::eval_cons(const long long& n,
                                       bool new_x,
                                       double* cons)
 {
-  assert(n == n_); 
+  assert(n == n_);
   assert(m == m_);
 
   // evaluate c and d
@@ -331,7 +331,7 @@ bool hiopFRInterfaceSparse::eval_Jac_cons(const long long& n,
 
   // assuming Jac is sorted!
   int nnz_Jac_c_base = nlp_base_->get_nnz_Jaceq();
-  int nnz_Jac_d_base = nlp_base_->get_nnz_Jacineq();    
+  int nnz_Jac_d_base = nlp_base_->get_nnz_Jacineq();
 
   int k;
   int k_base;
@@ -346,13 +346,13 @@ bool hiopFRInterfaceSparse::eval_Jac_cons(const long long& n,
       int row_in_jac_d = irow_d[k_base];
       int row_idx = row_in_jac_d + m_eq_;
       if(row_idx != last_row_idx) {
-        // n  
+        // n
         iJacS[k] = row_idx;
         jJacS[k] = ni_st_ + row_in_jac_d;
         // p
         iJacS[k-1] = row_idx;
         jJacS[k-1] = pi_st_ + row_in_jac_d;
-        
+
         last_row_idx = row_idx;
         k = k-2;
       } else {
@@ -361,7 +361,7 @@ bool hiopFRInterfaceSparse::eval_Jac_cons(const long long& n,
         jJacS[k] = jcol_d[k_base];
         k--;
         k_base--;
-      }    
+      }
     }
     assert( k == nnz_Jac_c_ - 1 && k_base == -1 );
 
@@ -371,13 +371,13 @@ bool hiopFRInterfaceSparse::eval_Jac_cons(const long long& n,
     for(k = nnz_Jac_c_ - 1; k >= 0 && k_base >= 0; ) {
       int row_idx = irow_c[k_base];
       if(row_idx != last_row_idx) {
-        // n  
+        // n
         iJacS[k] = row_idx;
         jJacS[k] = ne_st_ + row_idx;
         // p
         iJacS[k-1] = row_idx;
         jJacS[k-1] = pe_st_ + row_idx;
-        
+
         last_row_idx = row_idx;
         k = k-2;
       } else {
@@ -395,7 +395,7 @@ bool hiopFRInterfaceSparse::eval_Jac_cons(const long long& n,
   if(MJacS != NULL) {
     // get x for the original problem
     wrk_x_->copy_from_starting_at(x, 0, n_x_);
-  
+
     // get Jac_c and Jac_d for the x part --- use original Jac_c/Jac_d as buffers
     nlp_base_->eval_Jac_c_d(*wrk_x_, new_x, *Jac_c, *Jac_d);
 
@@ -413,7 +413,7 @@ bool hiopFRInterfaceSparse::eval_Jac_cons(const long long& n,
         MJacS[k] = 1.0;
         // p
         MJacS[k-1] = -1.0;
-        
+
         last_row_idx = row_idx;
         k = k-2;
       } else {
@@ -421,7 +421,7 @@ bool hiopFRInterfaceSparse::eval_Jac_cons(const long long& n,
         MJacS[k] = M_d[k_base];
         k--;
         k_base--;
-      }    
+      }
     }
     assert( k == nnz_Jac_c_ - 1 && k_base == -1 );
 
@@ -435,7 +435,7 @@ bool hiopFRInterfaceSparse::eval_Jac_cons(const long long& n,
         MJacS[k] = 1.0;
         // p
         MJacS[k-1] = -1.0;
-        
+
         last_row_idx = row_idx;
         k = k-2;
       } else {
@@ -463,7 +463,7 @@ bool hiopFRInterfaceSparse::eval_Hess_Lagr(const long long& n,
                                            double* MHSS)
 {
   assert(nnzHSS == nnz_Hess_Lag_);
-  
+
   // shortcut to the original Hess
   hiopMatrixSparse* Hess = dynamic_cast<hiopMatrixSparse*>(solver_base_.get_Hess_Lagr());
   int *irow_h = Hess->i_row();
@@ -505,9 +505,9 @@ bool hiopFRInterfaceSparse::eval_Hess_Lagr(const long long& n,
           iHSS[k] = row_idx;
           jHSS[k] = row_idx;
           k++;
-          row_idx++;       
+          row_idx++;
         }
-        
+
         // copy original off-diag nonzero
         iHSS[k] = row_base;
         jHSS[k] = col_base;
@@ -527,7 +527,7 @@ bool hiopFRInterfaceSparse::eval_Hess_Lagr(const long long& n,
 
     // get x for the original problem
     wrk_x_->copy_from_starting_at(x, 0, n_x_);
-    
+
     // split lambda
     wrk_eq_->copy_from_starting_at(lambda, 0, m_eq_);
     wrk_ineq_->copy_from_starting_at(lambda, m_eq_, m_ineq_);
@@ -538,15 +538,15 @@ bool hiopFRInterfaceSparse::eval_Hess_Lagr(const long long& n,
 
     // shortcut to the original Jac
     double *M_h = Hess->M();
-    
+
     // Hess for x:  zeta*DR^2.*(x-x_ref)
     wrk_x_->axpy(-1.0, *x_ref_);
     wrk_x_->componentMult(*DR_);
     wrk_x_->componentMult(*DR_);
     wrk_x_->scale(zeta_);
-    
+
     double* x_db = wrk_x_->local_data();
-    
+
     row_idx = 0;
     for(k_base = 0; k_base < nnz_Hess_base; ) {
       int row_base = irow_h[k_base];
@@ -571,9 +571,9 @@ bool hiopFRInterfaceSparse::eval_Hess_Lagr(const long long& n,
           // insert diagonal nonzero into the beginning of this row
           MHSS[k] = x_db[row_idx];
           k++;
-          row_idx++;       
+          row_idx++;
         }
-        
+
         // copy original off-diag nonzero
         MHSS[k] = M_h[k_base];
         k++;
@@ -593,7 +593,8 @@ bool hiopFRInterfaceSparse::get_starting_point(const long long& n,
                                                bool& duals_avail,
                                                double* z_bndL0,
                                                double* z_bndU0,
-                                               double* lambda0)
+                                               double* lambda0,
+                                               double *ineq_slack)
 {
   assert( n == n_);
   assert( m == m_);
@@ -610,8 +611,11 @@ bool hiopFRInterfaceSparse::get_starting_point(const long long& n,
   // x0 = x_ref
   wrk_x_->copyFrom(*x_ref_);
 
+  // s = curr_s
+  s->copyTo(ineq_slack);
+
   /*
-  * compute pe (wrk_c_) and ne (wrk_eq_) rom equation (33)  
+  * compute pe (wrk_c_) and ne (wrk_eq_) rom equation (33)
   */
   // firstly use pe as a temp vec
   double tmp_db = mu_/(2*rho_);
@@ -626,13 +630,13 @@ bool hiopFRInterfaceSparse::get_starting_point(const long long& n,
   wrk_eq_->axpy(tmp_db, *wrk_cbody_);
   wrk_eq_->component_sqrt();
   wrk_eq_->axpy(1.0, *wrk_c_);
-  
+
   // compute pe (wrk_c_)
   wrk_c_->copyFrom(*wrk_cbody_);
   wrk_c_->axpy(1.0, *wrk_eq_);
 
   /*
-  * compute pi (wrk_d_) and ni (wrk_ineq_) rom equation (33)  
+  * compute pi (wrk_d_) and ni (wrk_ineq_) rom equation (33)
   */
   // firstly use pi as a temp vec
   wrk_dbody_->copyFrom(*d);
@@ -646,10 +650,10 @@ bool hiopFRInterfaceSparse::get_starting_point(const long long& n,
   wrk_ineq_->axpy(tmp_db, *wrk_dbody_);
   wrk_ineq_->component_sqrt();
   wrk_ineq_->axpy(1.0, *wrk_d_);
-  
+
   // compute pi (wrk_d_)
   wrk_d_->copyFrom(*wrk_dbody_);
-  wrk_d_->axpy(1.0, *wrk_ineq_);  
+  wrk_d_->axpy(1.0, *wrk_ineq_);
 
   /*
   * assemble x0
@@ -659,9 +663,9 @@ bool hiopFRInterfaceSparse::get_starting_point(const long long& n,
   wrk_eq_->copyToStarting(*wrk_primal_, n_x_ + m_eq_);                // ne
   wrk_d_->copyToStarting(*wrk_primal_, n_x_ + 2*m_eq_);               // pi
   wrk_ineq_->copyToStarting(*wrk_primal_, n_x_ + 2*m_eq_ + m_ineq_);  // ni
-  
+
   wrk_primal_->copyTo(x0);
-  
+
   /* initialize the dual variables for the variable bounds*/
   // get z = min(rho, z_base)
   wrk_x_->copyFrom(*zl);
@@ -676,7 +680,7 @@ bool hiopFRInterfaceSparse::get_starting_point(const long long& n,
   wrk_d_->scale(mu_);
   wrk_ineq_->invert();
   wrk_ineq_->scale(mu_);
-  
+
   // assemble zl
   wrk_x_->copyToStarting(*wrk_primal_, 0);
   wrk_c_->copyToStarting(*wrk_primal_, n_x_);                         // pe
@@ -722,10 +726,25 @@ bool hiopFRInterfaceSparse::iterate_callback(int iter,
   assert(n_ == n);
   assert(m_ineq_ == m_ineq);
 
+  const hiopVector& crhs = nlp_base_->get_crhs();
+
+  // evaluate c_body and d_body in base problem
+  wrk_x_->copy_from_starting_at(x, 0, n_x_);
+  wrk_d_->copy_from_starting_at(s, 0, m_ineq_);
+  nlp_base_->eval_c_d(*wrk_x_, true, *wrk_cbody_, *wrk_dbody_);
+
+  // compute theta for base problem
+  wrk_cbody_->axpy(-1.0, crhs);           // wrk_cbody_ = (c-crhs)
+  wrk_dbody_->axpy(-1.0, *wrk_d_);        // wrk_dbody_ = (d-s)
+
+  double theta_ori = 0.0;
+  theta_ori += wrk_cbody_->onenorm();
+  theta_ori += wrk_dbody_->onenorm();
+
   // check if restoration phase should be discontinued
-  
-  // termination condition 1) theta_curr <= kappa_resto*theta_ref 
-  if(onenorm_pr_ <= nlp_base_->options->GetNumeric("kappa_resto")*theta_ref_ && iter>0) {
+
+  // termination condition 1) theta_curr <= kappa_resto*theta_ref
+  if(theta_ori <= nlp_base_->options->GetNumeric("kappa_resto")*theta_ref_ && iter>0) {
     // termination condition 2) (theta and logbar) are not in the original filter
     // check (original) filter condition
     if(!solver_base_.filter_contains(onenorm_pr_, logbar_obj_value)) {
@@ -743,7 +762,7 @@ bool hiopFRInterfaceSparse::iterate_callback(int iter,
       return false;
     }
   }
-  
+
   mu_ = mu;
   zeta_ = std::sqrt(mu_);
 
@@ -774,7 +793,7 @@ bool hiopFRInterfaceSparse::force_update(double obj_value,
   wrk_x_->copy_from_starting_at(x, 0, n_x_);
 
   /*
-  * compute pe (wrk_c_) and ne (wrk_eq_) rom equation (33)  
+  * compute pe (wrk_c_) and ne (wrk_eq_) rom equation (33)
   */
   // firstly use pe as a temp vec
   double tmp_db = mu_/(2*rho_);
@@ -789,13 +808,13 @@ bool hiopFRInterfaceSparse::force_update(double obj_value,
   wrk_eq_->axpy(tmp_db, *wrk_cbody_);
   wrk_eq_->component_sqrt();
   wrk_eq_->axpy(1.0, *wrk_c_);
-  
+
   // compute pe (wrk_c_)
   wrk_c_->copyFrom(*wrk_cbody_);
   wrk_c_->axpy(1.0, *wrk_eq_);
 
   /*
-  * compute pi (wrk_d_) and ni (wrk_ineq_) rom equation (33)  
+  * compute pi (wrk_d_) and ni (wrk_ineq_) rom equation (33)
   */
   // firstly use pi as a temp vec
   wrk_dbody_->copyFrom(*d);
@@ -809,10 +828,10 @@ bool hiopFRInterfaceSparse::force_update(double obj_value,
   wrk_ineq_->axpy(tmp_db, *wrk_dbody_);
   wrk_ineq_->component_sqrt();
   wrk_ineq_->axpy(1.0, *wrk_d_);
-  
+
   // compute pi (wrk_d_)
   wrk_d_->copyFrom(*wrk_dbody_);
-  wrk_d_->axpy(1.0, *wrk_ineq_);  
+  wrk_d_->axpy(1.0, *wrk_ineq_);
 
   /*
   * assemble x
@@ -822,7 +841,7 @@ bool hiopFRInterfaceSparse::force_update(double obj_value,
   wrk_eq_->copyToStarting(*wrk_primal_, n_x_ + m_eq_);
   wrk_d_->copyToStarting(*wrk_primal_, n_x_ + 2*m_eq_);
   wrk_ineq_->copyToStarting(*wrk_primal_, n_x_ + 2*m_eq_ + m_ineq_);
-  
+
   wrk_primal_->copyTo(x);
 
   return true;

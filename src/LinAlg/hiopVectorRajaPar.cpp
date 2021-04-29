@@ -2,47 +2,47 @@
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
 // LLNL-CODE-742473. All rights reserved.
 //
-// This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
-// is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause). 
+// This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp
+// is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause).
 // Please also read “Additional BSD Notice” below.
 //
-// Redistribution and use in source and binary forms, with or without modification, 
+// Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
-// i. Redistributions of source code must retain the above copyright notice, this list 
+// i. Redistributions of source code must retain the above copyright notice, this list
 // of conditions and the disclaimer below.
-// ii. Redistributions in binary form must reproduce the above copyright notice, 
-// this list of conditions and the disclaimer (as noted below) in the documentation and/or 
+// ii. Redistributions in binary form must reproduce the above copyright notice,
+// this list of conditions and the disclaimer (as noted below) in the documentation and/or
 // other materials provided with the distribution.
-// iii. Neither the name of the LLNS/LLNL nor the names of its contributors may be used to 
-// endorse or promote products derived from this software without specific prior written 
+// iii. Neither the name of the LLNS/LLNL nor the names of its contributors may be used to
+// endorse or promote products derived from this software without specific prior written
 // permission.
 //
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY 
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES 
-// OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT 
-// SHALL LAWRENCE LIVERMORE NATIONAL SECURITY, LLC, THE U.S. DEPARTMENT OF ENERGY OR 
-// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS 
-// OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED 
-// AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, 
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
+// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+// OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
+// SHALL LAWRENCE LIVERMORE NATIONAL SECURITY, LLC, THE U.S. DEPARTMENT OF ENERGY OR
+// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+// OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+// AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
 // EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 // Additional BSD Notice
-// 1. This notice is required to be provided under our contract with the U.S. Department 
-// of Energy (DOE). This work was produced at Lawrence Livermore National Laboratory under 
+// 1. This notice is required to be provided under our contract with the U.S. Department
+// of Energy (DOE). This work was produced at Lawrence Livermore National Laboratory under
 // Contract No. DE-AC52-07NA27344 with the DOE.
-// 2. Neither the United States Government nor Lawrence Livermore National Security, LLC 
-// nor any of their employees, makes any warranty, express or implied, or assumes any 
-// liability or responsibility for the accuracy, completeness, or usefulness of any 
+// 2. Neither the United States Government nor Lawrence Livermore National Security, LLC
+// nor any of their employees, makes any warranty, express or implied, or assumes any
+// liability or responsibility for the accuracy, completeness, or usefulness of any
 // information, apparatus, product, or process disclosed, or represents that its use would
 // not infringe privately-owned rights.
-// 3. Also, reference herein to any specific commercial products, process, or services by 
-// trade name, trademark, manufacturer or otherwise does not necessarily constitute or 
-// imply its endorsement, recommendation, or favoring by the United States Government or 
-// Lawrence Livermore National Security, LLC. The views and opinions of authors expressed 
-// herein do not necessarily state or reflect those of the United States Government or 
-// Lawrence Livermore National Security, LLC, and shall not be used for advertising or 
+// 3. Also, reference herein to any specific commercial products, process, or services by
+// trade name, trademark, manufacturer or otherwise does not necessarily constitute or
+// imply its endorsement, recommendation, or favoring by the United States Government or
+// Lawrence Livermore National Security, LLC. The views and opinions of authors expressed
+// herein do not necessarily state or reflect those of the United States Government or
+// Lawrence Livermore National Security, LLC, and shall not be used for advertising or
 // product endorsement purposes.
 
 /**
@@ -113,11 +113,11 @@ hiopVectorRajaPar::hiopVectorRajaPar(
 
 #ifdef HIOP_USE_MPI
   // if this is a serial vector, make sure it has a valid comm in the mpi case
-  if(comm_ == MPI_COMM_NULL) 
+  if(comm_ == MPI_COMM_NULL)
     comm_ = MPI_COMM_SELF;
 #endif
 
-  int P = 0; 
+  int P = 0;
   if(col_part)
   {
 #ifdef HIOP_USE_MPI
@@ -125,7 +125,7 @@ hiopVectorRajaPar::hiopVectorRajaPar(
 #endif
     glob_il_ = col_part[P];
     glob_iu_ = col_part[P+1];
-  } 
+  }
   else
   {
     glob_il_ = 0;
@@ -245,9 +245,9 @@ void hiopVectorRajaPar::setToConstant_w_patternSelect(double c, const hiopVector
 
 /**
  * @brief Copy data from vec to this vector
- * 
+ *
  * @param[in] vec - Vector from which to copy into `this`
- * 
+ *
  * @pre `vec` and `this` must have same partitioning.
  * @post Elements of `this` are overwritten with elements of `vec`
  */
@@ -264,18 +264,18 @@ void hiopVectorRajaPar::copyFrom(const hiopVector& vec)
 
 /**
  * @brief Copy data from local_array to this vector
- * 
+ *
  * @param[in] local_array - A raw array from which to copy into `this`
- * 
+ *
  * @pre `local_array` is allocated by Umpire on device
  * @pre `local_array` must be of same size as the data block of `this`.
  * @post Elements of `this` are overwritten with elements of `local_array`.
- * 
+ *
  * @warning Method has no way to check for the size of `local_array`. May
  * read past the end of the array.
- * 
+ *
  * @warning Method casts away const from the `local_array`.
- * 
+ *
  * @warning Not tested - not part of the hiopVector interface.
  */
 void hiopVectorRajaPar::copyFrom(const double* local_array)
@@ -290,22 +290,22 @@ void hiopVectorRajaPar::copyFrom(const double* local_array)
 
 /**
  * @brief Copy `nv` elements from array `v` to this vector starting from `start_index_in_this`
- * 
+ *
  * @param[in] start_index_in_this - position in this where to copy
  * @param[in] v  - a raw array from which to copy into `this`
  * @param[in] nv - how many elements of `v` to copy
- * 
+ *
  * @pre Size of `v` must be >= nv.
  * @pre start_index_in_this+nv <= n_local_
  * @pre `this` is not distributed
- * 
+ *
  * @warning Method casts away const from the `local_array`.
  */
 void hiopVectorRajaPar::copyFromStarting(int start_index_in_this, const double* v, int nv)
 {
   assert(start_index_in_this+nv <= n_local_);
 
-  // If nothing to copy, return.  
+  // If nothing to copy, return.
   if(nv == 0)
     return;
 
@@ -316,10 +316,10 @@ void hiopVectorRajaPar::copyFromStarting(int start_index_in_this, const double* 
 
 /**
  * @brief Copy `vec` to this vector starting from `start_index` in `this`.
- * 
+ *
  * @param[in] start_index - position in `this` where to copy
  * @param[in] src - the source vector from which to copy into `this`
- * 
+ *
  * @pre Size of `src` must be >= nv.
  * @pre start_index + src.n_local_ <= n_local_
  * @pre `this` is not distributed
@@ -342,21 +342,21 @@ void hiopVectorRajaPar::copyFromStarting(int start_index, const hiopVector& src)
 }
 
 /**
- * @brief Copy `nv` elements from `start_index_in_v` at array `v` to this vector 
- * 
+ * @brief Copy `nv` elements from `start_index_in_v` at array `v` to this vector
+ *
  * @param[in] start_index_in_v - position in v
  * @param[in] v  - a raw array from which to copy into `this`
  * @param[in] nv - how many elements of `v` to copy
- * 
+ *
  * @pre Size of `v` must be >= nv.
  * @pre start_index_in_v+nv <= size of 'v'
  * @pre `this` is not distributed
- * 
+ *
  * @warning Method casts away const from the `local_array`.
  */
-void hiopVectorRajaPar::copyFromStarting(const double* v, int start_index_in_v, int nv)
+void hiopVectorRajaPar::copy_from_starting_at(const double* v, int start_index_in_v, int nv)
 {
-  // If nothing to copy, return.  
+  // If nothing to copy, return.
   if(nv == 0)
     return;
 
@@ -368,13 +368,13 @@ void hiopVectorRajaPar::copyFromStarting(const double* v, int start_index_in_v, 
 /**
  * @brief Copy from `vec_src` starting at `start_idx_src` into
  * `this` vector starting at `start_idx_dest`.
- * 
+ *
  * @pre `vec_src` and `this` are not distributed.
  * @pre `start_idx_dest` + `howManyToCopySrc` <= `n_local_`
  * @pre `start_idx_src` + `howManyToCopySrc` <= `vec_src.n_local_`
  * @post Elements of `vec_src` are unchanged.
  * @post All elements of `this` starting from `start_idx_dest` are overwritten
- * 
+ *
  * @todo Implentation differs from CPU - check with upstream what is correct!
  */
 void hiopVectorRajaPar::startingAtCopyFromStartingAt(
@@ -395,19 +395,19 @@ void hiopVectorRajaPar::startingAtCopyFromStartingAt(
   const int howManyToCopySrc = v.n_local_-start_idx_src;
 #endif
   assert(howManyToCopyDest <= howManyToCopySrc);
-  
+
   auto& rm = umpire::ResourceManager::getInstance();
-  rm.copy(this->data_dev_ + start_idx_dest, 
-          v.data_dev_ + start_idx_src, 
+  rm.copy(this->data_dev_ + start_idx_dest,
+          v.data_dev_ + start_idx_src,
           howManyToCopyDest*sizeof(double));
 }
 
 /**
  * @brief Copy to `vec` elements of `this` vector starting from `start_index`.
- * 
+ *
  * @param[in] start_index - position in `this` from where to copy
  * @param[out] dst - the destination vector where to copy elements of `this`
- * 
+ *
  * @pre start_index + dst.n_local_ <= n_local_
  * @pre `this` and `dst` are not distributed
  */
@@ -430,10 +430,10 @@ void hiopVectorRajaPar::copyToStarting(int start_index, hiopVector& dst) const
 
 /**
  * @brief Copy elements of `this` vector to `vec` starting at `start_index`.
- * 
+ *
  * @param[out] vec - a vector where to copy elements of `this`
  * @param[in] start_index - position in `vec` where to copy
- * 
+ *
  * @pre start_index + vec.n_local_ <= n_local_
  * @pre `this` and `vec` are not distributed
  */
@@ -452,19 +452,19 @@ void hiopVectorRajaPar::copyToStarting(hiopVector& vec, int start_index/*_in_des
 
 void hiopVectorRajaPar::copyToStartingAt_w_pattern(hiopVector& vec, int start_index/*_in_dest*/, const hiopVector& select) const
 {
-#if 0  
+#if 0
   if(n_local_ == 0)
     return;
- 
+
   hiopVectorRajaPar& v = dynamic_cast<hiopVectorRajaPar&>(vec);
   const hiopVectorRajaPar& ix= dynamic_cast<const hiopVectorRajaPar&>(select);
   assert(n_local_ == ix.n_local_);
-  
+
   int find_nnz = 0;
   double* dd = data_dev_;
   double* vd = v.data_dev_;
   double* id = ix.data_dev_;
-  
+
   RAJA::ReduceSum< hiop_raja_reduce, double > sum(zero);
   RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
     [&](RAJA::Index_type i)
@@ -477,18 +477,18 @@ void hiopVectorRajaPar::copyToStartingAt_w_pattern(hiopVector& vec, int start_in
     });
 #else
   assert(false && "not needed / implemented");
-#endif    
+#endif
 }
 
 /**
  * @brief Copy elements of `this` vector to `destination` with offsets.
- * 
- * Copy `this` (source) starting at `start_idx_in_src` to `destination` 
- * starting at index 'int start_idx_dest'. If num_elems>=0, 'num_elems' will be copied; 
- * 
+ *
+ * Copy `this` (source) starting at `start_idx_in_src` to `destination`
+ * starting at index 'int start_idx_dest'. If num_elems>=0, 'num_elems' will be copied;
+ *
  * @param[out] vec - a vector where to copy elements of `this`
  * @param[in] start_index - position in `vec` where to copy
- * 
+ *
  * @pre start_idx_in_src <= n_local_
  * @pre start_idx_dest   <= destination.n_local_
  * @pre `this` and `destination` are not distributed
@@ -497,29 +497,29 @@ void hiopVectorRajaPar::copyToStartingAt_w_pattern(hiopVector& vec, int start_in
  * either source (`this`) or `destination` is reached
  */
 void hiopVectorRajaPar::startingAtCopyToStartingAt(
-  int start_idx_in_src, 
-  hiopVector& destination, 
-  int start_idx_dest, 
+  int start_idx_in_src,
+  hiopVector& destination,
+  int start_idx_dest,
   int num_elems /* = -1 */) const
 {
 
 #ifdef HIOP_DEEPCHECKS
   assert(n_local_==n_ && "only for local/non-distributed vectors");
-#endif  
+#endif
 
   const hiopVectorRajaPar& dest = dynamic_cast<hiopVectorRajaPar&>(destination);
 
   assert(start_idx_in_src >= 0 && start_idx_in_src <= this->n_local_);
   assert(start_idx_dest   >= 0 && start_idx_dest   <= dest.n_local_);
 
-#ifndef NDEBUG  
+#ifndef NDEBUG
   if(start_idx_dest==dest.n_local_ || start_idx_in_src==this->n_local_) assert((num_elems==-1 || num_elems==0));
 #endif
 
   if(num_elems<0)
   {
     num_elems = std::min(this->n_local_ - start_idx_in_src, dest.n_local_ - start_idx_dest);
-  } 
+  }
   else
   {
     assert(num_elems+start_idx_in_src <= this->n_local_);
@@ -538,13 +538,13 @@ void hiopVectorRajaPar::startingAtCopyToStartingAt(
 void hiopVectorRajaPar::
 startingAtCopyToStartingAt_w_pattern(int start_idx_in_src, hiopVector& destination, int start_idx_dest, const hiopVector& selec_dest, int num_elems/*=-1*/) const
 {
-#if 0  
+#if 0
   hiopVectorRajaPar& dest = dynamic_cast<hiopVectorRajaPar&>(destination);
   const hiopVectorRajaPar& ix = dynamic_cast<const hiopVectorRajaPar&>(selec_dest);
-    
+
   assert(start_idx_in_src >= 0 && start_idx_in_src <= this->n_local_);
   assert(start_idx_dest   >= 0 && start_idx_dest   <= dest.n_local_);
-    
+
   if(num_elems<0)
   {
     num_elems = std::min(this->n_local_ - start_idx_in_src, dest.n_local_ - start_idx_dest);
@@ -557,7 +557,7 @@ startingAtCopyToStartingAt_w_pattern(int start_idx_in_src, hiopVector& destinati
     num_elems = std::min(num_elems, (int)this->n_local_-start_idx_in_src);
     num_elems = std::min(num_elems, (int)dest.n_local_-start_idx_dest);
   }
-      
+
   int find_nnz = 0;
   double* dd = data_dev_;
   double* vd = dest.data_dev_;
@@ -574,12 +574,12 @@ startingAtCopyToStartingAt_w_pattern(int start_idx_in_src, hiopVector& destinati
   assert(false && "not needed / implemented");
 #endif
 }
- 
+
  /**
  * @brief Copy `this` vector local data to `dest` buffer.
- * 
+ *
  * @param[out] dest - destination buffer where to copy vector data
- * 
+ *
  * @pre Size of `dest` must be >= n_local_
  * @post `this` is not modified
  */
@@ -591,9 +591,9 @@ void hiopVectorRajaPar::copyTo(double* dest) const
 
 /**
  * @brief L2 vector norm.
- * 
+ *
  * @post `this` is not modified
- * 
+ *
  * @todo Consider implementing with BLAS call (<D>NRM2).
  */
 double hiopVectorRajaPar::twonorm() const
@@ -612,18 +612,18 @@ double hiopVectorRajaPar::twonorm() const
   int ierr = MPI_Allreduce(&nrm, &nrm_global, 1, MPI_DOUBLE, MPI_SUM, comm_);
   assert(MPI_SUCCESS == ierr);
   return std::sqrt(nrm_global);
-#endif  
+#endif
   return std::sqrt(nrm);
 }
 
 /**
  * @brief scalar (dot) product.
- * 
+ *
  * @param[in] vec - vector which is scalar-multiplied to `this`.
- * 
+ *
  * @pre `vec` has same size and partitioning as `this`.
  * @post `this` and `vec` are not modified.
- * 
+ *
  * @todo Consider implementing with BLAS call (<D>DOT).
  */
 double hiopVectorRajaPar::dotProductWith( const hiopVector& vec) const
@@ -652,9 +652,9 @@ double hiopVectorRajaPar::dotProductWith( const hiopVector& vec) const
 
 /**
  * @brief L-infinity (max) vector norm.
- * 
+ *
  * @post `this` is not modified
- * 
+ *
  */
 double hiopVectorRajaPar::infnorm() const
 {
@@ -671,10 +671,10 @@ double hiopVectorRajaPar::infnorm() const
 
 /**
  * @brief Local L-infinity (max) vector norm.
- * 
+ *
  * @pre  `this` is not empty vector
  * @post `this` is not modified
- * 
+ *
  */
 double hiopVectorRajaPar::infnorm_local() const
 {
@@ -691,9 +691,9 @@ double hiopVectorRajaPar::infnorm_local() const
 
 /**
  * @brief 1-norm of `this` vector.
- * 
+ *
  * @post `this` is not modified
- * 
+ *
  */
 double hiopVectorRajaPar::onenorm() const
 {
@@ -708,10 +708,10 @@ double hiopVectorRajaPar::onenorm() const
 
 /**
  * @brief Local 1-norm of `this` vector.
- * 
+ *
  * @pre  `this` is not empty vector
  * @post `this` is not modified
- * 
+ *
  */
 double hiopVectorRajaPar::onenorm_local() const
 {
@@ -727,10 +727,10 @@ double hiopVectorRajaPar::onenorm_local() const
 
 /**
  * @brief Multiply `this` by `vec` elementwise and store result in `this`.
- * 
+ *
  * @pre  `this` and `vec` have same partitioning.
  * @post `vec` is not modified
- * 
+ *
  */
 void hiopVectorRajaPar::componentMult(const hiopVector& vec)
 {
@@ -746,12 +746,12 @@ void hiopVectorRajaPar::componentMult(const hiopVector& vec)
 }
 
 /**
- * @brief Divide `this` vector elemenwise in-place by `vec`. 
- * 
+ * @brief Divide `this` vector elemenwise in-place by `vec`.
+ *
  * @pre `this` and `vec` have same partitioning.
  * @pre vec[i] != 0 forall i
  * @post `vec` is not modified
- * 
+ *
  */
 void hiopVectorRajaPar::componentDiv (const hiopVector& vec)
 {
@@ -768,12 +768,12 @@ void hiopVectorRajaPar::componentDiv (const hiopVector& vec)
 
 /**
  * @brief Divide `this` vector elemenwise in-place by `vec`
- * with pattern selection. 
- * 
+ * with pattern selection.
+ *
  * @pre `this`, `select` and `vec` have same partitioning.
  * @pre vec[i] != 0 when select[i] = 1
  * @post `vec` and `select` are not modified
- * 
+ *
  */
 void hiopVectorRajaPar::componentDiv_w_selectPattern( const hiopVector& vec, const hiopVector& select)
 {
@@ -792,7 +792,7 @@ void hiopVectorRajaPar::componentDiv_w_selectPattern( const hiopVector& vec, con
       assert(id[i] == zero || id[i] == one);
       if(id[i] == zero)
         dd[i] = zero;
-      else  
+      else
         dd[i] /= vd[i];
     });
 }
@@ -809,17 +809,17 @@ void hiopVectorRajaPar::component_min(const double constant)
     {
       if(dd[i]>constant) {
         dd[i] = constant;
-      }      
+      }
     }
   );
 }
 
 /**
  * @brief Set `this` vector elemenwise to the minimum of itself and the corresponding component of 'vec'.
- * 
+ *
  * @pre `this` and `vec` have same partitioning.
  * @post `vec` is not modified
- * 
+ *
  */
 void hiopVectorRajaPar::component_min(const hiopVector& vec)
 {
@@ -833,7 +833,7 @@ void hiopVectorRajaPar::component_min(const hiopVector& vec)
     {
       if(dd[i]>vd[i]) {
         dd[i] = vd[i];
-      } 
+      }
     }
   );
 }
@@ -850,17 +850,17 @@ void hiopVectorRajaPar::component_max(const double constant)
     {
       if(dd[i]<constant) {
         dd[i] = constant;
-      }      
+      }
     }
   );
 }
 
 /**
  * @brief Set `this` vector elemenwise to the maximum of itself and the corresponding component of 'vec'.
- * 
+ *
  * @pre `this` and `vec` have same partitioning.
  * @post `vec` is not modified
- * 
+ *
  */
 void hiopVectorRajaPar::component_max(const hiopVector& vec)
 {
@@ -874,7 +874,7 @@ void hiopVectorRajaPar::component_max(const hiopVector& vec)
     {
       if(dd[i]<vd[i]) {
         dd[i] = vd[i];
-      } 
+      }
     }
   );
 }
@@ -905,7 +905,7 @@ void hiopVectorRajaPar::component_sgn ()
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       int sign = (0.0 < dd[i]) - (dd[i] < 0.0);
-      dd[i] = static_cast<double>(sign);      
+      dd[i] = static_cast<double>(sign);
     }
   );
 }
@@ -927,15 +927,15 @@ void hiopVectorRajaPar::component_sqrt()
 }
 
 /**
- * @brief Scale `this` vector by `c` 
- * 
+ * @brief Scale `this` vector by `c`
+ *
  * @note Consider implementing with BLAS call (<D>SCAL)
  */
 void hiopVectorRajaPar::scale(double c)
 {
   if(1.0==c)
     return;
-  
+
   double* data = data_dev_;
   RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
@@ -945,17 +945,17 @@ void hiopVectorRajaPar::scale(double c)
 }
 
 /**
- * @brief Implementation of AXPY kernel 
- * 
+ * @brief Implementation of AXPY kernel
+ *
  * @pre `this` and `xvec` have same partitioning.
  * @post `xvec` is not modified
- * 
+ *
  * @note Consider implementing with BLAS call (<D>AXPY)
  */
 void hiopVectorRajaPar::axpy(double alpha, const hiopVector& xvec)
 {
   const hiopVectorRajaPar& x = dynamic_cast<const hiopVectorRajaPar&>(xvec);
-  
+
   double* yd = data_dev_;
   double* xd = x.data_dev_;
   RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
@@ -968,7 +968,7 @@ void hiopVectorRajaPar::axpy(double alpha, const hiopVector& xvec)
 
 /**
  * @brief this[i] += alpha*x[i]*z[i] forall i
- * 
+ *
  * @pre `this`, `xvec` and `zvec` have same partitioning.
  * @post `xvec` and `zvec` are not modified
  */
@@ -979,7 +979,7 @@ void hiopVectorRajaPar::axzpy(double alpha, const hiopVector& xvec, const hiopVe
 #ifdef HIOP_DEEPCHECKS
   assert(x.n_local_ == z.n_local_);
   assert(  n_local_ == z.n_local_);
-#endif  
+#endif
   double *dd       = data_dev_;
   const double *xd = x.local_data_const();
   const double *zd = z.local_data_const();
@@ -992,7 +992,7 @@ void hiopVectorRajaPar::axzpy(double alpha, const hiopVector& xvec, const hiopVe
 
 /**
  * @brief this[i] += alpha*x[i]/z[i] forall i
- * 
+ *
  * @pre `this`, `xvec` and `zvec` have same partitioning.
  * @pre zvec[i] != 0 forall i
  * @post `xvec` and `zvec` are not modified
@@ -1004,7 +1004,7 @@ void hiopVectorRajaPar::axdzpy(double alpha, const hiopVector& xvec, const hiopV
 #ifdef HIOP_DEEPCHECKS
   assert(x.n_local_==z.n_local_);
   assert(  n_local_==z.n_local_);
-#endif  
+#endif
   double *yd       = data_dev_;
   const double *xd = x.local_data_const();
   const double *zd = z.local_data_const();
@@ -1017,14 +1017,14 @@ void hiopVectorRajaPar::axdzpy(double alpha, const hiopVector& xvec, const hiopV
 
 /**
  * @brief this[i] += alpha*x[i]/z[i] forall i with pattern selection
- * 
+ *
  * @pre `this`, `xvec`, `zvec` and `select` have same partitioning.
  * @pre zvec[i] != 0 when select[i] = 1
  * @post `xvec`, `zvec` and `select` are not modified
  */
-void hiopVectorRajaPar::axdzpy_w_pattern( 
+void hiopVectorRajaPar::axdzpy_w_pattern(
   double alpha,
-  const hiopVector& xvec, 
+  const hiopVector& xvec,
   const hiopVector& zvec,
   const hiopVector& select)
 {
@@ -1034,13 +1034,13 @@ void hiopVectorRajaPar::axdzpy_w_pattern(
 #ifdef HIOP_DEEPCHECKS
   assert(x.n_local_==z.n_local_);
   assert(  n_local_==z.n_local_);
-#endif  
+#endif
   double* yd = data_dev_;
   const double* xd = x.local_data_const();
-  const double* zd = z.local_data_const(); 
+  const double* zd = z.local_data_const();
   const double* id = sel.local_data_const();
   RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
-    RAJA_LAMBDA(RAJA::Index_type i) 
+    RAJA_LAMBDA(RAJA::Index_type i)
     {
       assert(id[i] == one || id[i] == zero);
       if(id[i] == one)
@@ -1050,7 +1050,7 @@ void hiopVectorRajaPar::axdzpy_w_pattern(
 
 /**
  * @brief this[i] += c forall i
- * 
+ *
  */
 void hiopVectorRajaPar::addConstant(double c)
 {
@@ -1064,7 +1064,7 @@ void hiopVectorRajaPar::addConstant(double c)
 
 /**
  * @brief this[i] += c forall i with pattern selection
- * 
+ *
  * @pre `this` and `select` have same partitioning.
  * @post `select` is not modified
  */
@@ -1111,7 +1111,7 @@ double hiopVectorRajaPar::min_w_pattern(const hiopVector& select) const
   assert(this->n_local_ == sel.n_local_);
   double* data = data_dev_;
   const double* id = sel.local_data_const();
-  
+
   RAJA::ReduceMin< hiop_raja_reduce, double > minimum(std::numeric_limits<double>::max());
   RAJA::forall< hiop_raja_exec >(
     RAJA::RangeSegment(0, n_local_),
@@ -1140,7 +1140,7 @@ void hiopVectorRajaPar::min( double& /* m */, int& /* index */) const
 
 /**
  * @brief Negate all vector elements
- * 
+ *
  * @note Consider implementing with BLAS call (<D>SCAL)
  */
 void hiopVectorRajaPar::negate()
@@ -1155,7 +1155,7 @@ void hiopVectorRajaPar::negate()
 
 /**
  * @brief Invert vector elements
- * 
+ *
  * @pre this[i] != 0 forall i
  * @post `this` is overwritten
  */
@@ -1177,11 +1177,11 @@ void hiopVectorRajaPar::invert()
 
 /**
  * @brief Sum all selected log(this[i])
- * 
+ *
  * @pre `this` and `select` have same partitioning.
  * @pre Selected elements of `this` are > 0.
  * @post `this` and `select` are not modified
- * 
+ *
  * @warning This is local method only!
  */
 double hiopVectorRajaPar::logBarrier_local(const hiopVector& select) const
@@ -1208,16 +1208,16 @@ double hiopVectorRajaPar::logBarrier_local(const hiopVector& select) const
 /**
  * @brief Sum all elements
  */
-double hiopVectorPar::sum_local() const 
+double hiopVectorRajaPar::sum_local() const
 {
   double* data = data_dev_;
   RAJA::ReduceSum< hiop_raja_reduce, double > sum(0.0);
-  RAJA::forall< hiop_raja_exec >( 
+  RAJA::forall< hiop_raja_exec >(
     RAJA::RangeSegment(0, n_local_),
 		RAJA_LAMBDA(RAJA::Index_type i)
     {
       sum += data[i];
-		}
+    }
   );
 
   return sum.get();
@@ -1225,7 +1225,7 @@ double hiopVectorPar::sum_local() const
 
 /**
  * @brief Sum all selected log(this[i])
- * 
+ *
  * @pre `this`, `xvec` and `select` have same partitioning.
  * @pre xvec[i] != 0 forall i
  * @post `xvec` and `select` are not modified
@@ -1236,7 +1236,7 @@ void hiopVectorRajaPar::addLogBarrierGrad(
   const hiopVector& select)
 {
   const hiopVectorRajaPar& x = dynamic_cast<const hiopVectorRajaPar&>(xvec);
-  const hiopVectorRajaPar& sel = dynamic_cast<const hiopVectorRajaPar&>(select);  
+  const hiopVectorRajaPar& sel = dynamic_cast<const hiopVectorRajaPar&>(select);
 #ifdef HIOP_DEEPCHECKS
   assert(n_local_ == x.n_local_);
   assert(n_local_ == sel.n_local_);
@@ -1245,20 +1245,20 @@ void hiopVectorRajaPar::addLogBarrierGrad(
   const double* xd = x.local_data_const();
   const double* id = sel.local_data_const();
   RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
-    RAJA_LAMBDA(RAJA::Index_type i) 
+    RAJA_LAMBDA(RAJA::Index_type i)
     {
-      if (id[i] == 1.0) 
+      if (id[i] == 1.0)
         data[i] += alpha/xd[i];
     });
 }
 
 /**
  * @brief Linear damping term
- * 
+ *
  * @pre `this`, `ixleft` and `ixright` have same partitioning.
  * @pre `ixleft` and `ixright` elements are 0 or 1 only.
  * @post `this`, `ixleft` and `ixright` are not modified
- * 
+ *
  * @warning This is local method only!
  */
 double hiopVectorRajaPar::linearDampingTerm_local(
@@ -1268,7 +1268,7 @@ double hiopVectorRajaPar::linearDampingTerm_local(
   const double& kappa_d) const
 {
   const hiopVectorRajaPar& ixl = dynamic_cast<const hiopVectorRajaPar&>(ixleft);
-  const hiopVectorRajaPar& ixr = dynamic_cast<const hiopVectorRajaPar&>(ixright);  
+  const hiopVectorRajaPar& ixr = dynamic_cast<const hiopVectorRajaPar&>(ixright);
 #ifdef HIOP_DEEPCHECKS
   assert(n_local_ == ixl.n_local_);
   assert(n_local_ == ixr.n_local_);
@@ -1284,7 +1284,7 @@ double hiopVectorRajaPar::linearDampingTerm_local(
         sum += data[i];
     });
   double term = sum.get();
-  term *= mu; 
+  term *= mu;
   term *= kappa_d;
   return term;
 }
@@ -1315,7 +1315,7 @@ void hiopVectorRajaPar::addLinearDampingTerm(
 
 /**
  * @brief Check if all elements of the vector are positive
- * 
+ *
  * @post `this` is not modified
  */
 int hiopVectorRajaPar::allPositive()
@@ -1339,15 +1339,15 @@ int hiopVectorRajaPar::allPositive()
 
 /**
  * @brief Project solution into bounds
- * 
+ *
  * @pre `this`, `xlo`, `ixl`, `xup` and `ixu` have same partitioning.
  * @pre `ixl` and `ixu` elements are 0 or 1 only.
  * @post `xlo`, `ixl`, `xup` and `ixu` are not modified
- * 
+ *
  * @warning This is local method only!
  */
 bool hiopVectorRajaPar::projectIntoBounds_local(
-  const hiopVector& xlo, 
+  const hiopVector& xlo,
   const hiopVector& ixl,
 	const hiopVector& xup,
   const hiopVector& ixu,
@@ -1370,7 +1370,7 @@ bool hiopVectorRajaPar::projectIntoBounds_local(
   const double* ild = il.local_data_const();
   const double* xud = xu.local_data_const();
   const double* iud = iu.local_data_const();
-  double* xd = data_dev_; 
+  double* xd = data_dev_;
   // Perform preliminary check to see of all upper value
   RAJA::ReduceMin< hiop_raja_reduce, double > minimum(one);
   RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
@@ -1378,7 +1378,7 @@ bool hiopVectorRajaPar::projectIntoBounds_local(
       {
         minimum.min(xud[i] - xld[i]);
       });
-  if (minimum.get() < zero) 
+  if (minimum.get() < zero)
     return false;
 
   const double small_real = std::numeric_limits<double>::min() * 100;
@@ -1412,7 +1412,7 @@ bool hiopVectorRajaPar::projectIntoBounds_local(
       {
         if(ild[i] != zero)
           xd[i] = fmax(xd[i], xld[i] + kappa1*fmax(one, fabs(xld[i])) - small_real);
-        else 
+        else
           if(iud[i] != zero)
             xd[i] = fmin(xd[i], xud[i] - kappa1*fmax(one, fabs(xud[i])) - small_real);
           else { /*nothing for free vars  */ }
@@ -1423,10 +1423,10 @@ bool hiopVectorRajaPar::projectIntoBounds_local(
 
 /**
  * @brief max{a\in(0,1]| x+ad >=(1-tau)x}
- * 
+ *
  * @pre `this` and `dvec` have same partitioning.
  * @post `this` and `dvec` are not modified
- * 
+ *
  * @warning This is local method only!
  */
 double hiopVectorRajaPar::fractionToTheBdry_local(const hiopVector& dvec, const double& tau) const
@@ -1457,16 +1457,16 @@ double hiopVectorRajaPar::fractionToTheBdry_local(const hiopVector& dvec, const 
 
 /**
  * @brief max{a\in(0,1]| x+ad >=(1-tau)x} with pattern select
- * 
+ *
  * @pre `this`, `select` and `dvec` have same partitioning.
  * @pre Elements of `select` are either 0 or 1.
  * @post `this`, `select` and `dvec` are not modified
- * 
+ *
  * @warning This is local method only!
  */
 double hiopVectorRajaPar::fractionToTheBdry_w_pattern_local(
   const hiopVector& dvec,
-  const double& tau, 
+  const double& tau,
   const hiopVector& select) const
 {
   const hiopVectorRajaPar& d = dynamic_cast<const hiopVectorRajaPar&>(dvec);
@@ -1500,7 +1500,7 @@ double hiopVectorRajaPar::fractionToTheBdry_w_pattern_local(
 
 /**
  * @brief Set elements of `this` to zero based on `select`.
- * 
+ *
  * @pre `this` and `select` have same partitioning.
  * @pre Elements of `select` are either 0 or 1.
  * @post `select` is not modified
@@ -1523,13 +1523,13 @@ void hiopVectorRajaPar::selectPattern(const hiopVector& select)
 
 /**
  * @brief Checks if `this` matches nonzero pattern of `select`.
- * 
+ *
  * @pre `this` and `select` have same partitioning.
  * @pre Elements of `select` are either 0 or 1.
  * @post `select` is not modified
  */
 bool hiopVectorRajaPar::matchesPattern(const hiopVector& pattern)
-{  
+{
   const hiopVectorRajaPar& p = dynamic_cast<const hiopVectorRajaPar&>(pattern);
 
 #ifdef HIOP_DEEPCHECKS
@@ -1557,7 +1557,7 @@ bool hiopVectorRajaPar::matchesPattern(const hiopVector& pattern)
 
 /**
  * @brief Checks if selected elements of `this` are positive.
- * 
+ *
  * @pre `this` and `select` have same partitioning.
  * @pre Elements of `select` are either 0 or 1.
  * @post `select` is not modified
@@ -1568,39 +1568,39 @@ int hiopVectorRajaPar::allPositive_w_patternSelect(const hiopVector& wvec)
 
 #ifdef HIOP_DEEPCHECKS
   assert(w.n_local_ == n_local_);
-#endif 
+#endif
 
   const double* wd = w.local_data_const();
   const double* data = data_dev_;
   RAJA::ReduceSum< hiop_raja_reduce, int > sum(0);
   RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
-    RAJA_LAMBDA(RAJA::Index_type i) 
+    RAJA_LAMBDA(RAJA::Index_type i)
     {
       if(wd[i] != zero && data[i] <= zero)
         sum += 1;
     });
   int allPos = (sum.get() == 0);
-  
+
 #ifdef HIOP_USE_MPI
   int allPosG;
   int ierr = MPI_Allreduce(&allPos, &allPosG, 1, MPI_INT, MPI_MIN, comm_);
   assert(MPI_SUCCESS==ierr);
   return allPosG;
-#endif  
+#endif
   return allPos;
 }
 
 /**
  * @brief Adjusts duals.
- * 
+ *
  * @pre `this`, `xvec` and `ixvec` have same partitioning.
  * @pre Elements of `ixvec` are either 0 or 1.
  * @post `xvec` and `ixvec` are not modified
- * 
+ *
  * @note Implementation probably inefficient.
  */
 void hiopVectorRajaPar::adjustDuals_plh(
-  const hiopVector& xvec, 
+  const hiopVector& xvec,
   const hiopVector& ixvec,
   const double& mu,
   const double& kappa)
@@ -1626,15 +1626,15 @@ void hiopVectorRajaPar::adjustDuals_plh(
           b = a/kappa;
           a = a*kappa;
           // Necessary conditionals
-          if(z[i]<b) 
+          if(z[i]<b)
             z[i]=b;
           else //z[i]>=b
-            if(a<=b) 
+            if(a<=b)
               z[i]=b;
             else //a>b
               if(a<z[i])
                 z[i]=a;
-          // - - - - 
+          // - - - -
           //else a>=z[i] then *z=*z (z[i] does not need adjustment)
       }
     });
@@ -1642,9 +1642,9 @@ void hiopVectorRajaPar::adjustDuals_plh(
 
 /**
  * @brief Returns true if any element of `this` is NaN.
- * 
+ *
  * @post `this` is not modified
- * 
+ *
  * @warning This is local method only!
  */
 bool hiopVectorRajaPar::isnan_local() const
@@ -1662,9 +1662,9 @@ bool hiopVectorRajaPar::isnan_local() const
 
 /**
  * @brief Returns true if any element of `this` is Inf.
- * 
+ *
  * @post `this` is not modified
- * 
+ *
  * @warning This is local method only!
  */
 bool hiopVectorRajaPar::isinf_local() const
@@ -1682,9 +1682,9 @@ bool hiopVectorRajaPar::isinf_local() const
 
 /**
  * @brief Returns true if all elements of `this` are finite.
- * 
+ *
  * @post `this` is not modified
- * 
+ *
  * @warning This is local method only!
  */
 bool hiopVectorRajaPar::isfinite_local() const
@@ -1702,12 +1702,12 @@ bool hiopVectorRajaPar::isfinite_local() const
 
 /**
  * @brief Prints vector data to a file in Matlab format.
- * 
+ *
  * @pre Vector data was moved from the memory space to the host mirror.
  */
 void hiopVectorRajaPar::print(FILE* file, const char* msg/*=NULL*/, int max_elems/*=-1*/, int rank/*=-1*/) const
 {
-  int myrank=0, numranks=1; 
+  int myrank=0, numranks=1;
 #ifdef HIOP_USE_MPI
   if(rank >= 0) {
     int err = MPI_Comm_rank(comm_, &myrank); assert(err==MPI_SUCCESS);
@@ -1729,7 +1729,7 @@ void hiopVectorRajaPar::print(FILE* file, const char* msg/*=NULL*/, int max_elem
     else
     {
       fprintf(file, "%s ", msg);
-    }    
+    }
     fprintf(file, "=[");
     max_elems = max_elems >= 0 ? max_elems : n_local_;
     for(int it=0; it<max_elems; it++)
@@ -1773,7 +1773,7 @@ void hiopVectorRajaPar::copyFromDev() const
 }
 
 long long hiopVectorRajaPar::numOfElemsLessThan(const double &val) const
-{  
+{
   double* data = data_dev_;
   RAJA::ReduceSum<hiop_raja_reduce, long long> sum(0);
   RAJA::forall<hiop_raja_exec>( RAJA::RangeSegment(0, n_local_),
@@ -1795,7 +1795,7 @@ long long hiopVectorRajaPar::numOfElemsLessThan(const double &val) const
 }
 
 long long hiopVectorRajaPar::numOfElemsAbsLessThan(const double &val) const
-{  
+{
   double* data = data_dev_;
   RAJA::ReduceSum<hiop_raja_reduce, long long> sum(0);
   RAJA::forall<hiop_raja_exec>( RAJA::RangeSegment(0, n_local_),
@@ -1815,7 +1815,7 @@ long long hiopVectorRajaPar::numOfElemsAbsLessThan(const double &val) const
 
   return nrm;
 }
- 
+
 
 
 } // namespace hiop

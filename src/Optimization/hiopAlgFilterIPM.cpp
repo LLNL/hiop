@@ -79,7 +79,7 @@ hiopAlgFilterIPMBase::hiopAlgFilterIPMBase(hiopNlpFormulation* nlp_, const bool 
   if(nlp->options->GetString("KKTLinsys")=="full")
   {
     it_curr->selectPattern();
-    it_trial->selectPattern(); 
+    it_trial->selectPattern();
     dir->selectPattern();
   }
 
@@ -144,7 +144,7 @@ void hiopAlgFilterIPMBase::destructorPart()
   if(logbar) delete logbar;
 
   if(dualsUpdate) delete dualsUpdate;
-  
+
   if(c_soc) {
     delete c_soc;
   }
@@ -182,7 +182,7 @@ hiopAlgFilterIPMBase::~hiopAlgFilterIPMBase()
   if(logbar) delete logbar;
 
   if(dualsUpdate) delete dualsUpdate;
-  
+
   if(c_soc) {
     delete c_soc;
   }
@@ -324,10 +324,13 @@ startingProcedure(hiopIterate& it_ini,
 		  hiopVector& gradf,  hiopMatrix& Jac_c,  hiopMatrix& Jac_d)
 {
   bool duals_avail = false;
+  bool slacks_avail = false;
   if(!nlp->get_starting_point(*it_ini.get_x(),
-			      duals_avail,
-			      *it_ini.get_zl(), *it_ini.get_zu(),
-			      *it_ini.get_yc(), *it_ini.get_yd())) {
+                              duals_avail,
+                              *it_ini.get_zl(), *it_ini.get_zu(),
+                              *it_ini.get_yc(), *it_ini.get_yd(),
+                              slacks_avail,
+                              *it_ini.get_d())) {
 
     nlp->log->printf(hovWarning, "user did not provide a starting point; will be set to all zeros\n");
     it_ini.get_x()->setToZero();
@@ -361,9 +364,9 @@ startingProcedure(hiopIterate& it_ini,
     assert(false);
     return false;
   }
-  
+
   if(nlp->apply_scaling(c, d, gradf, Jac_c, Jac_d)){
-    // do function evaluation again after add scaling 
+    // do function evaluation again after add scaling
     if(!this->evalNlp_noHess(it_ini, f, c, d, gradf, Jac_c, Jac_d)) {
       nlp->log->printf(hovError, "Failure in evaluating user provided NLP functions.");
       assert(false);
@@ -374,7 +377,9 @@ startingProcedure(hiopIterate& it_ini,
   nlp->runStats.tmSolverInternal.start();
   nlp->runStats.tmStartingPoint.start();
 
-  it_ini.get_d()->copyFrom(d);
+  if(!slacks_avail) {
+    it_ini.get_d()->copyFrom(d);
+  }
 
   it_ini.projectPrimalsDIntoBounds(kappa1, kappa2);
 
@@ -1067,7 +1072,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
         bool grad_phi_dx_soc_computed = false;
         double grad_phi_dx_soc = 0.0;
         int num_adjusted_bounds_soc = 0;
-        lsStatus = apply_second_order_correction(kkt, theta, theta_trial, 
+        lsStatus = apply_second_order_correction(kkt, theta, theta_trial,
                                                  grad_phi_dx_soc_computed, grad_phi_dx_soc, num_adjusted_bounds_soc);
         if(lsStatus>0) {
           num_adjusted_bounds = num_adjusted_bounds_soc;
@@ -1253,7 +1258,7 @@ decideAndCreateLinearSystem(hiopNlpFormulation* nlp)
   } else {
     return new hiopKKTLinSysCompressedMDSXYcYd(nlp);
   }
-  assert(false && 
+  assert(false &&
 	 "Could not match linear algebra to NLP formulation. Likely, HiOp was"
 	 "not built with all linear algebra modules/options");
 
@@ -1271,7 +1276,7 @@ decideAndCreateFactAcceptor(hiopPDPerturbation* p, hiopNlpFormulation* nlp)
     assert(false &&
     "Inertia-free approach hasn't been implemented yet.");
     return new hiopFactAcceptorIC(p,nlp->m_eq()+nlp->m_ineq());
-  } 
+  }
 }
 
 hiopSolveStatus hiopAlgFilterIPMNewton::run()
@@ -1343,7 +1348,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
   }
   fact_acceptor_ = decideAndCreateFactAcceptor(&pd_perturb_,nlp);
   kkt->set_fact_acceptor(fact_acceptor_);
-  
+
   _alpha_primal = _alpha_dual = 0;
 
   _err_nlp_optim0=-1.; _err_nlp_feas0=-1.; _err_nlp_complem0=-1;
@@ -1643,7 +1648,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
           bool grad_phi_dx_soc_computed = false;
           double grad_phi_dx_soc = 0.0;
           int num_adjusted_bounds_soc = 0;
-          lsStatus = apply_second_order_correction(kkt, theta, theta_trial, 
+          lsStatus = apply_second_order_correction(kkt, theta, theta_trial,
                                                    grad_phi_dx_soc_computed, grad_phi_dx_soc, num_adjusted_bounds_soc);
           if(lsStatus>0) {
             num_adjusted_bounds = num_adjusted_bounds_soc;
@@ -1723,7 +1728,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
             // continue iterations if FR is accepted
             solver_status_ = NlpSolve_Pending;
           }
-          
+
           // exit the linear solve (computeDirections) loop
           break;
         } else {
@@ -1770,7 +1775,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
       assert(infeas_nrm_trial>=0 && "this should not happen");
       bret = dualsUpdate->go(*it_curr, *it_trial,
                              _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d, *dir,
-                             _alpha_primal, _alpha_dual, _mu, kappa_Sigma, infeas_nrm_trial); 
+                             _alpha_primal, _alpha_dual, _mu, kappa_Sigma, infeas_nrm_trial);
       assert(bret);
 
       //evaluate derivatives at the trial (and to be accepted) trial point
@@ -1839,7 +1844,7 @@ void hiopAlgFilterIPMNewton::outputIteration(int lsStatus, int lsNum, int use_so
     else if(lsStatus==2) strcpy(stepType, "h");
     else if(lsStatus==3) strcpy(stepType, "f");
     else strcpy(stepType, "?");
-    
+
     if(use_soc && lsStatus >= 1 && lsStatus <= 3) {
       stepType[0] = (char) toupper(stepType[0]);
     }
@@ -1866,7 +1871,7 @@ int hiopAlgFilterIPMBase::accept_line_search_conditions(const double theta_curr,
   trial_is_rejected_by_filter = false;
 
   // Do the cheap, "sufficient progress" test first, before more involved/expensive tests.
-  // This simple test is good enough when iterate is far away from solution  
+  // This simple test is good enough when iterate is far away from solution
   if(theta_curr>=theta_min) {
 
     //check the sufficient decrease condition (18)
@@ -1882,7 +1887,7 @@ int hiopAlgFilterIPMBase::accept_line_search_conditions(const double theta_curr,
       bret = 0;
       return bret;
     }
-    
+
     //check filter condition
     if(filter.contains(theta_trial,logbar->f_logbar_trial)) {
       //it is in the filter, reject this trial point
@@ -1939,7 +1944,7 @@ int hiopAlgFilterIPMBase::accept_line_search_conditions(const double theta_curr,
         trial_is_rejected_by_filter = false;
         return bret;
       }
-      
+
       //check filter condition
       if(filter.contains(theta_trial,logbar->f_logbar_trial)) {
         //it is in the filter, reject this trial point
@@ -1971,9 +1976,9 @@ int hiopAlgFilterIPMBase::apply_second_order_correction(hiopKKTLinSys* kkt,
     soc_dir = dir->alloc_clone();
     if(nlp->options->GetString("KKTLinsys")=="full") {
       soc_dir->selectPattern();
-    }      
+    }
     c_soc = nlp->alloc_dual_eq_vec();
-    d_soc = nlp->alloc_dual_ineq_vec();        
+    d_soc = nlp->alloc_dual_ineq_vec();
   }
 
   double theta_trial_last = 0.;
@@ -1984,38 +1989,38 @@ int hiopAlgFilterIPMBase::apply_second_order_correction(hiopKKTLinSys* kkt,
   int num_soc = 0;
   bool bret = true;
   int ls_status = 0;
-  
+
   // set initial c/d for soc
   c_soc->copyFrom(nlp->get_crhs());
   c_soc->axpy(-1.0, *_c);
 
   d_soc->copyFrom(*it_curr->get_d());
   d_soc->axpy(-1.0, *_d);
-  
+
   while(num_soc<max_soc_iter && (num_soc==0 || theta_trial<=kappa_soc*theta_trial_last)) {
     theta_trial_last = theta_trial;
-    
+
     c_soc->scale(alpha_primal_soc);
     c_soc->axpy(1.0, nlp->get_crhs());
     c_soc->axpy(-1.0, *_c_trial);
-  
+
     d_soc->scale(alpha_primal_soc);
     d_soc->axpy(1.0, *it_trial->get_d());
     d_soc->axpy(-1.0, *_d_trial);
-    
+
     // compute rhs for soc. Use resid_trial since it hasn't been used
     resid_trial->update_soc(*it_curr, *c_soc, *d_soc, *_grad_f,*_Jac_c,*_Jac_d, *logbar);
 
     // solve for search directions
-    bret = kkt->computeDirections(resid_trial, soc_dir); 
+    bret = kkt->computeDirections(resid_trial, soc_dir);
     assert(bret);
 
     // Compute step size
-    bret = it_curr->fractionToTheBdry(*soc_dir, _tau, alpha_primal_soc, alpha_dual_soc); 
+    bret = it_curr->fractionToTheBdry(*soc_dir, _tau, alpha_primal_soc, alpha_dual_soc);
     assert(bret);
-    
+
     // Compute trial point
-    bret = it_trial->takeStep_primals(*it_curr, *soc_dir, alpha_primal_soc, alpha_dual_soc); 
+    bret = it_trial->takeStep_primals(*it_curr, *soc_dir, alpha_primal_soc, alpha_dual_soc);
     assert(bret);
     num_adjusted_bounds = it_trial->adjust_small_slacks(*it_curr, _mu);
 
@@ -2026,7 +2031,7 @@ int hiopAlgFilterIPMBase::apply_second_order_correction(hiopKKTLinSys* kkt,
     }
 
     logbar->updateWithNlpInfo_trial_funcOnly(*it_trial, _f_nlp_trial, *_c_trial, *_d_trial);
-        
+
     //compute infeasibility theta at trial point.
     theta_trial = resid_trial->compute_nlp_infeasib_onenorm(*it_trial, *_c_trial, *_d_trial);
 
@@ -2048,7 +2053,7 @@ int hiopAlgFilterIPMBase::apply_second_order_correction(hiopKKTLinSys* kkt,
 bool hiopAlgFilterIPMBase::apply_feasibility_restoration(hiopKKTLinSys* kkt)
 {
   if(!within_FR_) {
-    hiopFRInterfaceSparse nlp_fr_interface(*this);  
+    hiopFRInterfaceSparse nlp_fr_interface(*this);
     hiopNlpSparse nlpFR(nlp_fr_interface, "hiop_fr.options");
 
     nlpFR.options->SetStringValue("Hessian", "analytical_exact");
@@ -2066,7 +2071,7 @@ bool hiopAlgFilterIPMBase::apply_feasibility_restoration(hiopKKTLinSys* kkt)
 
     hiopAlgFilterIPMNewton solver(&nlpFR, true);  // solver fr problem
     hiopSolveStatus FR_status = solver.run();
-    
+
     if(FR_status == User_Stopped) {
       // FR successes, it_trial->x and it_trial->d has been updated to the next search point
       // in the above solver.run()
@@ -2087,7 +2092,7 @@ bool hiopAlgFilterIPMBase::apply_feasibility_restoration(hiopKKTLinSys* kkt)
       // set step size to 1
       _alpha_primal = 1.0;
       _alpha_dual = 1.0;
-      
+
       // compute directions for bound duals (zl, zu, vl, vu)
       kkt->compute_directions_for_full_space(resid, dir);
 
@@ -2131,9 +2136,9 @@ bool hiopAlgFilterIPMBase::apply_feasibility_restoration(hiopKKTLinSys* kkt)
                                _mu,
                                _alpha_dual,
                                _alpha_primal)) {
-      solver_status_ = Error_In_FR; 
+      solver_status_ = Error_In_FR;
       return false;
-    }    
+    }
   }
   return true;
 }

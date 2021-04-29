@@ -137,7 +137,7 @@ int main(int argc, char** argv)
 
   //
   // Test HiOp integer vectors
-  // 
+  //
   if (rank == 0)
   {
     std::cout << "\nTesting HiOp sequential int vector:\n";
@@ -166,7 +166,7 @@ int main(int argc, char** argv)
 #endif // GPU
 #endif // RAJA
   }
-  
+
   //
   // Test summary
   //
@@ -228,7 +228,7 @@ int runTests(const char* mem_space, MPI_Comm comm)
   hiopVector* x = LinearAlgebraFactory::createVector(Nglobal, n_partition, comm);
   hiopVector* y = LinearAlgebraFactory::createVector(Nglobal, n_partition, comm);
   hiopVector* z = LinearAlgebraFactory::createVector(Nglobal, n_partition, comm);
-  
+
   int fail = 0;
 
   fail += test.vectorGetSize(*x, Nglobal, rank);
@@ -257,6 +257,7 @@ int runTests(const char* mem_space, MPI_Comm comm)
   fail += test.vector_component_max(*x, *y, rank);
   fail += test.vector_component_abs(*x, rank);
   fail += test.vector_component_sgn(*x, rank);
+  fail += test.vector_component_sqrt(*x, rank);
   fail += test.vectorOnenorm(*x, rank);
   fail += test.vectorTwonorm(*x, rank);
   fail += test.vectorInfnorm(*x, rank);
