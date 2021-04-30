@@ -6,7 +6,7 @@ fi
 export PROJ_DIR=/gpfs/wolf/proj-shared/csc359
 source $PROJ_DIR/src/spack/share/spack/setup-env.sh
 module purge
-module load cuda/11.0.2
+module load cuda/10.2.89
 module use $PROJ_DIR/$MY_CLUSTER/Modulefiles/Core
 module load exasgd-base
 module load gcc-ext/7.4.0

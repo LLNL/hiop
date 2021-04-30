@@ -492,7 +492,10 @@ void hiopMatrixRajaSparseTriplet::row_max_abs_value(hiopVector& ret_vec)
 #endif
   assert(ret_vec.get_size() == nrows_);
   ret_vec.setToZero();
-  
+  if(0 == nrows_) {
+    return;
+  } 
+ 
   auto& vec = dynamic_cast<hiopVectorRajaPar&>(ret_vec);
   double* vd = vec.local_data();
 
