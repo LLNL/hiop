@@ -3,6 +3,7 @@ if [ ! -v BUILDDIR ]; then
   echo BUILDDIR is not set! Your paths may be misconfigured.
 fi
 
+export MY_CLUSTER=ascent
 export PROJ_DIR=/gpfs/wolf/proj-shared/csc359
 source $PROJ_DIR/src/spack/share/spack/setup-env.sh
 module purge
@@ -16,7 +17,7 @@ module load cmake/3.18.2
 
 ls $PROJ_DIR/src/spack/var/spack/environments/*
 
-spack env activate exago-v0-99-2-hiop-v0-3-99-2
+spack env activate exago-v1-0-0-hiop-v0-4-1
 
 export MY_NVCC_ARCH="sm_70"
 export EXTRA_CMAKE_ARGS="$EXTRA_CMAKE_ARGS -DHIOP_NVCC_ARCH=$MY_NVCC_ARCH"
