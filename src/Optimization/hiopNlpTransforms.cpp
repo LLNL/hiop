@@ -392,16 +392,16 @@ hiopNLPObjGradScaling::hiopNLPObjGradScaling(const double max_grad,
   scale_factor_c = c.new_copy();
   scale_factor_d = d.new_copy();
   scale_factor_cd = LinearAlgebraFactory::createVector(n_eq + n_ineq);
-  
+
   Jac_c.row_max_abs_value(*scale_factor_c);
+  scale_factor_c->scale(1./max_grad);
+  scale_factor_c->component_max(1.0);
   scale_factor_c->invert();
-  scale_factor_c->scale(max_grad);
-  scale_factor_c->component_min(1.0);
 
   Jac_d.row_max_abs_value(*scale_factor_d);
+  scale_factor_d->scale(1./max_grad);
+  scale_factor_d->component_max(1.0);
   scale_factor_d->invert();
-  scale_factor_d->scale(max_grad);
-  scale_factor_d->component_min(1.0);
 
   const double* eq_arr = scale_factor_c->local_data_const();
   const double* ineq_arr = scale_factor_d->local_data_const();
