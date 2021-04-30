@@ -3,28 +3,23 @@ if [ ! -v BUILDDIR ]; then
   echo BUILDDIR is not set! Your paths may be misconfigured.
 fi
 
+export PROJ_DIR=/gpfs/wolf/proj-shared/csc359
+source $PROJ_DIR/src/spack/share/spack/setup-env.sh
 module purge
-module load cuda/11
-module use /gpfs/wolf/proj-shared/csc359/ascent/Modulefiles/Core
+module load cuda/11.0.2
+module use $PROJ_DIR/$MY_CLUSTER/Modulefiles/Core
 module load exasgd-base
 module load gcc-ext/7.4.0
 module load spectrum-mpi-ext
 module load openblas
-module use /gpfs/wolf/proj-shared/csc359/ascent/spack-modulefiles/
-module load magma-2.5.4-gcc-7.4.0-vjotnd3
-module load metis
-module load mpfr
-module load suitesparse
 module load cmake/3.18.2
-module load raja
-module load umpire
-module load valgrind/3.14.0
-export MY_RAJA_DIR=$RAJA_ROOT
-export MY_UMPIRE_DIR=$UMPIRE_ROOT
-export MY_METIS_DIR=$OLCF_METIS_ROOT
-export MY_HIOP_MAGMA_DIR=$MAGMA_ROOT
-export MY_UMFPACK_DIR=$SUITESPARSE_ROOT
+
+ls $PROJ_DIR/src/spack/var/spack/environments/*
+
+spack env activate exago-v0-99-2-hiop-v0-3-99-2
+
 export MY_NVCC_ARCH="sm_70"
+export EXTRA_CMAKE_ARGS="$EXTRA_CMAKE_ARGS -DHIOP_NVCC_ARCH=$MY_NVCC_ARCH"
 
 if [[ ! -f $BUILDDIR/nvblas.conf ]]; then
   cat > $BUILDDIR/nvblas.conf <<EOD
