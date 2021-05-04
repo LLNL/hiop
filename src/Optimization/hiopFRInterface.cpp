@@ -440,7 +440,7 @@ bool hiopFRInterfaceSparse::eval_Jac_cons(const long long& n,
         k = k-2;
       } else {
         // x
-        MJacS[k] = M_d[k_base];
+        MJacS[k] = M_c[k_base];
         k--;
         k_base--;
       }
@@ -594,12 +594,14 @@ bool hiopFRInterfaceSparse::get_starting_point(const long long& n,
                                                double* z_bndL0,
                                                double* z_bndU0,
                                                double* lambda0,
-                                               double *ineq_slack)
+                                               bool& slack_avail,
+					       double *ineq_slack)
 {
   assert( n == n_);
   assert( m == m_);
 
   duals_avail = true;
+  slack_avail = true;
 
   hiopVector* c = solver_base_.get_c();
   hiopVector* d = solver_base_.get_d();

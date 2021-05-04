@@ -130,6 +130,7 @@ public:
                                   double* z_bndL0,
                                   double* z_bndU0,
                                   double* lambda0,
+                                  bool& slack_avail,
                                   double* ineq_slack = nullptr);
 
   virtual bool eval_Hess_Lagr(const long long& n,
