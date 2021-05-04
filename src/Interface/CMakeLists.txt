@@ -7,7 +7,6 @@ set(hiopInterface_INTERFACE_HEADERS
   hiopInterface.h
   hiopInterface.hpp
   hiopVersion.hpp
-  hiop_defs.hpp
   )
 
 install(
