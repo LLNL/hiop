@@ -1,4 +1,4 @@
-#include "nlpMDSForm_raja_ex4.hpp"
+#include "nlpMDS_raja_ex4.hpp"
 #include "hiopNlpFormulation.hpp"
 #include "hiopAlgFilterIPM.hpp"
 
@@ -31,10 +31,19 @@ static bool parse_arguments(int argc, char **argv,
     //no arguments
     return true;
     break;
+  case 6: // 5 arguments
+    {
+      if(std::string(argv[5]) == "-selfcheck")
+	    self_check=true;
+    }
   case 5: // 4 arguments
     {
-      if(std::string(argv[4]) == "-selfcheck")
-	self_check=true;
+      if(std::string(argv[4]) == "-selfcheck") {
+        self_check=true;
+      }
+      if(std::string(argv[4]) == "-empty_sp_row") {
+        empty_sp_row=true;
+      }      
     }
   case 4: // 3 arguments
     {
@@ -55,7 +64,7 @@ static bool parse_arguments(int argc, char **argv,
     return false; //5 or more arguments
   }
 
-  if(self_check && n_sp!=400 && n_de!=100)
+  if(self_check && (n_sp!=400 || n_de!=100 || empty_sp_row) )
     return false;
   
   return true;
@@ -70,6 +79,7 @@ static void usage(const char* exeName)
   printf("Arguments, all integers, excepting string '-selfcheck'\n");
   printf("  'sp_vars_size': # of sparse variables [default 400, optional]\n");
   printf("  'de_vars_size': # of dense variables [default 100, optional]\n");
+  printf("  '-empty_sp_row': set an empty row in sparser inequality Jacobian. [optional]\n");
   printf("  '-selfcheck': compares the optimal objective with sp_vars_size being 400 and "
 	 "de_vars_size being 100 (these two exact values must be passed as arguments). [optional]\n");
   printf("  'eq_ineq_combined_nlp': 0 or 1, specifying whether the NLP formulation with split "

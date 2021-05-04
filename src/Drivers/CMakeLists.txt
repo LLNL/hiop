@@ -13,18 +13,16 @@ target_link_libraries(nlpDenseCons_ex3.exe hiop)
 add_executable(nlpMDS_ex4.exe nlpMDS_ex4_driver.cpp)
 target_link_libraries(nlpMDS_ex4.exe hiop)
 
-add_executable(nlpMDS_ex6.exe nlpMDS_ex6_driver.cpp)
-target_link_libraries(nlpMDS_ex6.exe hiop)
-
 if(HIOP_USE_RAJA)
   if(HIOP_USE_GPU)
-    set_source_files_properties(nlpMDSForm_raja_ex4.cpp nlpMDS_ex4_raja_driver.cpp PROPERTIES LANGUAGE CUDA)
-    set_source_files_properties(nlpMDSForm_raja_ex6.cpp nlpMDS_ex6_raja_driver.cpp PROPERTIES LANGUAGE CUDA)
+    set_source_files_properties(
+      nlpMDS_raja_ex4.cpp 
+      nlpMDS_ex4_raja_driver.cpp 
+      PROPERTIES LANGUAGE CUDA
+    )
   endif()
-  add_executable(nlpMDS_ex4_raja.exe nlpMDS_ex4_raja_driver.cpp nlpMDSForm_raja_ex4.cpp)
+  add_executable(nlpMDS_ex4_raja.exe nlpMDS_ex4_raja_driver.cpp nlpMDS_raja_ex4.cpp)
   target_link_libraries(nlpMDS_ex4_raja.exe hiop)
-  add_executable(nlpMDS_ex6_raja.exe nlpMDS_ex6_raja_driver.cpp nlpMDSForm_raja_ex6.cpp)
-  target_link_libraries(nlpMDS_ex6_raja.exe hiop)
 endif()
 
 add_executable(nlpMDS_ex5.exe nlpMDS_ex5_driver.cpp)
