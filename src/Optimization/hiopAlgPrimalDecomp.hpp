@@ -22,8 +22,9 @@ namespace hiop
 // temporary output levels, aiming to integrate with hiop verbosity
 enum MPIout {
   outlevel0=0, //print nothing during from the MPI engine
-  outlevel1=1, //print objective and start and end of a iteration
-  outlevel2=2, //print the output x and gradient
+  outlevel1=1, //print standard output: objective, step size
+  outlevel2=2, //print the details needed to debug the algorithm, including alpha info, 
+               //also prints elapsed time and output x and gradient
   outlevel3=3, //print the send and receive messages 
   outlevel4=4  //print details about the algorithm
 }; 
@@ -78,6 +79,9 @@ public:
   
   void set_tolerance(const double tol);
   
+  void set_acceptable_tolerance(const double tol);
+ 
+  double step_size_inf(const int nc, const double* x, const double* x0);
   /* Contains information of a solution step including function value 
    * and gradient. Used for storing the solution for the previous iteration
    */
@@ -240,9 +244,17 @@ private:
   //indices of the coupled x in the full x
   std::vector<int> xc_idx_;
   //tolerance of the convergence stopping criteria
-  double tol_=1e-6;
+  double tol_=1e-8;
+
+  //acceptable tolerance is used to terminate hiop if NLP residuals are below the 
+  //set value for 10 consecutive iterations
+  double accp_tol_ = 1e-6;
+  //consecutive iteration count where NLP residual is lower than acceptable tolerance
+  int accp_count = 0;
   //initial alpha_ratio if used
   double alpha_ratio_=1.0;
+  //real decrease over expected decrease ratio
+  double rhok_ = 0.;
 };
 
 }; //end of namespace

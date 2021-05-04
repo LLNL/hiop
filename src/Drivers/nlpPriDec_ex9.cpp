@@ -85,7 +85,7 @@ PriDecMasterProblemEx9::solve_master(double* x,
   if(include_r) {
     double rec_appx = 0.;
     basecase_->get_rec_obj(nx_, x, rec_appx);
-    printf("recourse estimate: is %18.12e\n", rec_appx);
+    //printf("recourse estimate: is %18.12e\n", rec_appx); 
   }
   
   return Solve_Success;

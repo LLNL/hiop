@@ -225,7 +225,7 @@ update_ratio()
   }
   //printf("recourse estimate inside HessianApprox %18.12e\n",rk);
   double rho_k = (fkm1-fk)/(fkm1-rk);
-  if(ver_ >=outlevel1) {
+  if(ver_ >=outlevel2) {
     printf("previuos val  %18.12e, real val %18.12e, predicted val %18.12e, rho_k %18.12e\n",fkm1,fk,rk,rho_k);
   }
   //a measure for when alpha should be decreasing (in addition to being good approximation)
@@ -237,7 +237,7 @@ update_ratio()
   quanorm = alpha_*quanorm;
 
   double alpha_g_ratio = quanorm/fabs(gradnorm);
-  if(ver_ >=outlevel1) {
+  if(ver_ >=outlevel2) {
 
     printf("alpha norm ratio  %18.12e",alpha_g_ratio);
   }
@@ -269,12 +269,12 @@ update_ratio_tr(const double rhok,
   } else {
     if(rhok > 0.75 && rhok<1.333 &&(rkm1-rk>0) && alpha_g_ratio>0.1) { 
       alpha_ratio *= 0.75;
-      if(ver_ >=outlevel1) {
+      if(ver_ >=outlevel2) {
         printf("decreasing alpha ratio or decreasing minimum for quadratic coefficient\n");
       }
     } else if(rhok>1.333 && (rkm1-rk<0)) {
       alpha_ratio = alpha_ratio/0.75;
-      if(ver_ >=outlevel1) {
+      if(ver_ >=outlevel2) {
         printf("recourse increasing and increased more in real contingency, so increasing alpha\n");
       }
     }
@@ -347,7 +347,7 @@ double hiopAlgPrimalDecomposition::HessianApprox::check_convergence_grad(const d
     temp4 += std::pow(-alpha_*skm1[i],2);
   }
   double convg = std::sqrt(temp1)/std::sqrt(temp2);
-  if(ver_ >=outlevel1) {
+  if(ver_ >=outlevel2) {
     printf("temp1  %18.12e, temp2 %18.12e, temp3 %18.12e, temp4 %18.12e\n",temp1,temp2,temp3,temp4);
   }
   return convg;
@@ -359,7 +359,7 @@ double hiopAlgPrimalDecomposition::HessianApprox::check_convergence_fcn( )
   for(int i=0;i<n_;i++) {
     predicted_decrease += gkm1[i]*skm1[i]+0.5*alpha_*(skm1[i]*skm1[i]);
   }
-  if(ver_ >=outlevel1) {
+  if(ver_ >=outlevel2) {
     printf("predicted decrease  %18.12e",predicted_decrease);
   }
   predicted_decrease = fabs(predicted_decrease);
@@ -492,9 +492,23 @@ bool hiopAlgPrimalDecomposition::stopping_criteria(const int it, const double co
   if(convg<tol_){printf("reaching error tolerance, successfully found solution\n"); return true;}
   //stopping criteria based on the change in objective function
   if(it == max_iter-1){printf("reached maximum iterations, optimization stops.\n"); return true;}
+
+  if(accp_count == 10){printf("reached acceptable tolerance of %18.12e for 10 iterations, " 
+		              "optimization stops.\n", accp_tol_); return true;}
   return false;
 }
   
+double hiopAlgPrimalDecomposition::
+step_size_inf(const int nc, const double* x, const double* x0)
+{
+  double step = -1e20;
+  for(int i=0; i<nc; i++) {
+    step = std::max(step,fabs(x[i]-x0[i]));
+  }
+  return step;
+}
+
+
 void hiopAlgPrimalDecomposition::set_max_iteration(const int max_it)  
 {
   max_iter = max_it;
@@ -510,6 +524,12 @@ void hiopAlgPrimalDecomposition::set_tolerance(const double tol)
 {
   tol_ = tol;
 }
+
+void hiopAlgPrimalDecomposition::set_acceptable_tolerance(const double tol)
+{
+  accp_tol_ = tol;
+}
+
 
 void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
 {
@@ -571,10 +591,10 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
       if(my_rank_==0) {
         t1 = MPI_Wtime(); 
 
-        if(ver_ >=outlevel1) {
-          printf("iteration  %d\n", it);
-          fflush(stdout);
-        }
+        //if(ver_ >=outlevel1) {
+        //  printf("iteration  %d\n", it);
+        //}
+        
       }
       // solve the base case
       if(my_rank_ == 0 && it==0) {//initial solve 
@@ -704,7 +724,7 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
           req_cont_idx->post_send(1,r,comm_world_);
         }
         t2 = MPI_Wtime(); 
-        if(ver_ >=outlevel1) {
+        if(ver_ >=outlevel2) {
           printf( "Elapsed time for iteration %d for contingency is %f\n",it, t2 - t1 );  
         }
       }
@@ -838,7 +858,9 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
       }
 
       if(my_rank_==0) {
-        printf("real rval %18.12e\n",rval);
+        if(ver_ >=outlevel2) {
+          printf("real rval %18.12e\n",rval);
+	}
         MPI_Status mpi_status; 
 
         double hess_appx[nc_]; //Hessian is computed on the solver/master
@@ -860,7 +882,7 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
         if(it==0) {
           hess_appx_2->initialize(rval,x0, grad_r);
           double alp_temp = hess_appx_2->get_alpha_f(grad_r);
-          if(ver_ >=outlevel1) {
+          if(ver_ >=outlevel2) {
             printf("alpd %18.12e\n",alp_temp);
           }
           for(int i=0; i<nc_; i++) hess_appx[i] = alp_temp;
@@ -870,16 +892,16 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
           //hess_appx_2->update_ratio();
           double alp_temp = hess_appx_2->get_alpha_f(grad_r);
           //double alp_temp2 = hess_appx_2->get_alpha_BB();
-          if(ver_ >=outlevel1) {
+          if(ver_ >=outlevel2) {
             printf("alpd %18.12e\n",alp_temp);
           }
           //printf("alpd BB %18.12e\n",alp_temp2);
           convg_g = hess_appx_2->check_convergence_grad(grad_r);
-          if(ver_ >=outlevel1) {
+          if(ver_ >=outlevel2) {
             printf("gradient convergence measure %18.12e\n",convg_g);
           }
           convg_f = hess_appx_2->check_convergence_fcn();
-          if(ver_ >=outlevel1) {
+          if(ver_ >=outlevel2) {
             printf("function val convergence measure %18.12e\n",convg_f);
           }
           convg = std::min(convg_f,convg_g);
@@ -913,7 +935,7 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
 
         //printf("solving full problem starts, iteration %d \n",it);
         solver_status_ = master_prob_->solve_master(x_,true);
-        if(ver_ >=outlevel1) {
+        if(ver_ >=outlevel2) {
           printf("solved full problem with objective %18.12e\n", master_prob_->get_objective());
           fflush(stdout);
         }
@@ -925,17 +947,36 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
           printf(" \n");
         }
         t2 = MPI_Wtime(); 
-        if(ver_ >=outlevel1) {
+        if(ver_ >=outlevel2) {
           printf( "Elapsed time for entire iteration %d is %f\n",it, t2 - t1 );  
         }
+        // print out the iteration from the master rank
+	double dinf = step_size_inf(nc_, x_, x0);
+	if(ver_ >=outlevel1) {
+          //printf("iteration         sub_obj              res               step_size           convg\n");
+          printf("iteration              sub_obj                    residual                  "   
+	         "step_size                   convg\n");
+          printf("%d                %18.12e          %18.12e          %18.12e          "
+	         "%18.12e\n", it, master_prob_->get_objective(),convg_f,dinf, convg_g);
+          fflush(stdout);
+        }
+
       } else {
         // evaluator ranks do nothing     
       }
+      if(convg <= accp_tol_) {
+        accp_count += 1;
+      } else {
+        accp_count = 0;
+      }
+
       if(stopping_criteria(it, convg)) {
         end_signal = 1; 
       }
       ierr = MPI_Bcast(&end_signal, 1, MPI_INT, rank_master, comm_world_);
       assert(ierr == MPI_SUCCESS);
+      
+     
       if(end_signal) {
         break;
       }
@@ -988,8 +1029,9 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
   
   // Outer loop starts
   for(int it=0; it<max_iter;it++) {
-    printf("iteration  %d\n", it);
+    //printf("iteration  %d\n", it);
     // solve the base case
+
     if(it==0) { 
       //solve master problem base case(solver rank supposed to do it)
       solver_status_ = master_prob_->solve_master(x_,false);
@@ -1042,7 +1084,7 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
         grad_r[i] += grad_aux[i];
       }
     }        
-    if(ver_ >=outlevel1) {
+    if(ver_ >=outlevel2) {
       printf("real rval %18.12e\n",rval);
     }
     double hess_appx[nc_]; //Hessian is computed on the solver/master
@@ -1051,7 +1093,7 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
     if(it==0) {
       hess_appx_2->initialize(rval,x0, grad_r);
       double alp_temp = hess_appx_2->get_alpha_f(grad_r);
-      if(ver_ >=outlevel1) {
+      if(ver_ >=outlevel2) {
         printf("alpd %18.12e\n",alp_temp);
       }
       for(int i=0; i<nc_; i++) hess_appx[i] = alp_temp;
@@ -1059,16 +1101,16 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
       hess_appx_2->update_hess_coeff(x0, grad_r, rval);
       //hess_appx_2->update_ratio();
       double alp_temp = hess_appx_2->get_alpha_f(grad_r);
-      if(ver_ >=outlevel1) {
+      if(ver_ >=outlevel2) {
         printf("alpd %18.12e\n",alp_temp);
       }
       convg_g = hess_appx_2->check_convergence_grad(grad_r);
 
-      if(ver_ >=outlevel1) {
+      if(ver_ >=outlevel2) {
         printf("convergence measure %18.12e\n",convg_g);
       }
       convg_f = hess_appx_2->check_convergence_fcn();
-      if(ver_ >=outlevel1) {
+      if(ver_ >=outlevel2) {
         printf("function val convergence measure %18.12e\n",convg_f);
       }
       convg = std::min(convg_f,convg_g);
@@ -1098,9 +1140,19 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
     }
     //printf("solving full problem starts, iteration %d \n",it);
     solver_status_ = master_prob_->solve_master(x_,true);
+    //if(ver_ >=outlevel1) { //non-standard output could be deleted soon
+    //  printf("solved full problem with objective %18.12e\n", master_prob_->get_objective());
+    //}
+    double dinf = step_size_inf(nc_, x_, x0);
     if(ver_ >=outlevel1) {
-      printf("solved full problem with objective %18.12e\n", master_prob_->get_objective());
+      //printf("iteration         sub_obj              res               step_size          convg\n");
+      printf("iteration              sub_obj                    resdual                  "   
+             "step_size                   convg\n");
+      printf("%d                %18.12e          %18.12e          %18.12e         " 
+             "%18.12e\n", it, master_prob_->get_objective(),convg_f,dinf, convg_g);
+      fflush(stdout);
     }
+
     // print solution x at the end of a full solve
     if(ver_ >=outlevel2) {
       for(int i=0;i<n_;i++) {
@@ -1109,6 +1161,12 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
       printf(" \n");
     }
     //assert("for debugging" && false); //for debugging purpose
+    if(convg <= accp_tol_) {
+      accp_count += 1;
+    } else {
+      accp_count = 0;
+    }
+    //printf("count  %d \n", accp_count);
     if(stopping_criteria(it, convg)){break;}
   }
     return Solve_Success;    

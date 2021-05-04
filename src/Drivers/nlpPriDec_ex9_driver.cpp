@@ -174,7 +174,7 @@ int main(int argc, char **argv)
 
 static bool self_check(int nx, int S, double obj_value)
 {
-  double obj_true = 0.2633380121143;
+  double obj_true = 0.2633379371706;
   double err = 1e-5;
   if(fabs((obj_value)-obj_true)<1e-5) {
     printf("selfcheck success (error less than %18.12e), objective value is %18.12e \n", err,obj_value);
