@@ -1150,6 +1150,28 @@ public:
 
   /**
    * @brief Test:
+   * sum{x[i]}
+   */
+  bool vector_sum_local(hiop::hiopVector& x, const int rank)
+  {
+    const local_ordinal_type N = getLocalSize(&x);
+
+    // Ensure that only N-1 elements of x are
+    // used in the log calculation
+    x.setToConstant(half);
+    setLocalElement(&x, N-1, two);
+
+    real_type expected = (N-1) * half + two;
+    real_type result = x.sum_local();
+
+    int fail = !isEqual(result, expected);
+
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &x);
+  }
+
+  /**
+   * @brief Test:
    * if(pattern[i] == 1) this[i] += alpha /x[i] forall i
    */
   bool vectorAddLogBarrierGrad(
