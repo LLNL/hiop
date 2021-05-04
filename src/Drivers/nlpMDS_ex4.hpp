@@ -209,29 +209,28 @@ public:
     for(int irow=0; irow<num_cons; irow++) {
       const int con_idx = (int) idx_cons[irow];
       if(con_idx<ns) {
-	//equalities: x+s - Md y = 0
-	cons[con_idx] = x[con_idx] + s[con_idx];
-	isEq=true;
+        //equalities: x+s - Md y = 0
+        cons[con_idx] = x[con_idx] + s[con_idx];
+        isEq=true;
       } else if(haveIneq) {
-	assert(con_idx<ns+3);
-	//inequality
-	const int conineq_idx=con_idx-ns;
-	if(conineq_idx==0) {
-	  cons[conineq_idx] = x[0];
-	  for(int i=0; i<ns; i++) cons[conineq_idx] += s[i];
-	  for(int i=0; i<nd; i++) cons[conineq_idx] += y[i];
-
-	} else if(conineq_idx==1) {
-    if(empty_sp_row_) {
-      cons[conineq_idx] = 0.0;
-    } else {
-  	  cons[conineq_idx] = x[1];
-    }
-	  for(int i=0; i<nd; i++) cons[conineq_idx] += y[i];
-	} else if(conineq_idx==2) {
-	  cons[conineq_idx] = x[2];
-	  for(int i=0; i<nd; i++) cons[conineq_idx] += y[i];
-	} else { assert(false); }
+        assert(con_idx<ns+3);
+        //inequality
+        const int conineq_idx=con_idx-ns;
+        if(conineq_idx==0) {
+          cons[conineq_idx] = x[0];
+          for(int i=0; i<ns; i++) cons[conineq_idx] += s[i];
+          for(int i=0; i<nd; i++) cons[conineq_idx] += y[i];
+        } else if(conineq_idx==1) {
+          if(empty_sp_row_) {
+            cons[conineq_idx] = 0.0;
+          } else {
+            cons[conineq_idx] = x[1];
+          }
+          for(int i=0; i<nd; i++) cons[conineq_idx] += y[i];
+        } else if(conineq_idx==2) {
+          cons[conineq_idx] = x[2];
+          for(int i=0; i<nd; i++) cons[conineq_idx] += y[i];
+        } else { assert(false); }
       }  
     }
     if(isEq) {
@@ -526,27 +525,27 @@ public:
 
     for(int con_idx=0; con_idx<m; ++con_idx) {
       if(con_idx<ns) {
-	//equalities
-	cons[con_idx] = x[con_idx]+s[con_idx];
+        //equalities
+        cons[con_idx] = x[con_idx]+s[con_idx];
       } else if(haveIneq) {
-	//inequalties
-	assert(con_idx<ns+3);
-	if(con_idx==ns) {
-	  cons[con_idx] = x[0];
-	  for(int i=0; i<ns; i++) cons[con_idx] += s[i];
-	  for(int i=0; i<nd; i++) cons[con_idx] += y[i];
+        //inequalties
+        assert(con_idx<ns+3);
+        if(con_idx==ns) {
+          cons[con_idx] = x[0];
+          for(int i=0; i<ns; i++) cons[con_idx] += s[i];
+          for(int i=0; i<nd; i++) cons[con_idx] += y[i];
 
-	} else if(con_idx==ns+1) {
-	  if(empty_sp_row_) {
-      cons[con_idx] = 0.0;
-    } else {
-      cons[con_idx] = x[1];
-    }
-    for(int i=0; i<nd; i++) cons[con_idx] += y[i];
-	} else if(con_idx==ns+2) {
-	  cons[con_idx] = x[2];
-	  for(int i=0; i<nd; i++) cons[con_idx] += y[i];
-	} else { assert(false); }
+        } else if(con_idx==ns+1) {
+          if(empty_sp_row_) {
+            cons[con_idx] = 0.0;
+          } else {
+            cons[con_idx] = x[1];
+          }
+          for(int i=0; i<nd; i++) cons[con_idx] += y[i];
+        } else if(con_idx==ns+2) {
+          cons[con_idx] = x[2];
+          for(int i=0; i<nd; i++) cons[con_idx] += y[i];
+        } else { assert(false); }
       }
     }
 
