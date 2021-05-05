@@ -407,6 +407,9 @@ if (HIOP_WITH_MAKETEST)
   add_test(NAME NlpMixedDenseSparse4_2 COMMAND ${RUNCMD} bash -c "$<TARGET_FILE:nlpMDS_ex4.exe> 400 100 1 -selfcheck \
     | ${STRIP_TABLE_CMD} \
     | tee ${PROJECT_BINARY_DIR}/mds4_2.out")
+  
+  add_test(NAME NlpMixedDenseSparse4_3 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpMDS_ex4.exe>" "400" "100" "0" "-empty_sp_row" "-selfcheck")
+
   if(HIOP_USE_RAJA)
     add_test(NAME NlpMixedDenseSparseRaja4_1 COMMAND ${RUNCMD} bash -c "$<TARGET_FILE:nlpMDS_ex4_raja.exe> 400 100 0 -selfcheck \
       | ${STRIP_TABLE_CMD} \
@@ -414,7 +417,8 @@ if (HIOP_WITH_MAKETEST)
     add_test(NAME NlpMixedDenseSparseRaja4_2 COMMAND ${RUNCMD} bash -c "$<TARGET_FILE:nlpMDS_ex4_raja.exe> 400 100 1 -selfcheck \
       | ${STRIP_TABLE_CMD} \
       | tee ${PROJECT_BINARY_DIR}/mds4_raja_2.out")
-
+    add_test(NAME NlpMixedDenseSparseRaja4_3 COMMAND ${RUNCMD} bash -c "$<TARGET_FILE:nlpMDS_ex4_raja.exe> 400 100 0 -empty_sp_row -selfcheck")
+    
     if(HIOP_DEEPCHECKS)
       foreach(iter 1 2)
         add_test(
@@ -428,14 +432,14 @@ if (HIOP_WITH_MAKETEST)
           echo 'Output tables have a different number of iterations!'
           exit 1
           fi")
-          add_test(
-            NAME "CompareExample4_ElementWise_${iter}"
-            COMMAND bash -c "\
-            join ${PROJECT_BINARY_DIR}/mds4_${iter}.out ${PROJECT_BINARY_DIR}/mds4_raja_${iter}.out \
-            | ${PROJECT_SOURCE_DIR}/tests/testEx4CompareIterations.awk")
-          endforeach()
-        endif(HIOP_DEEPCHECKS)
-      endif()
+        add_test(
+          NAME "CompareExample4_ElementWise_${iter}"
+          COMMAND bash -c "\
+          join ${PROJECT_BINARY_DIR}/mds4_${iter}.out ${PROJECT_BINARY_DIR}/mds4_raja_${iter}.out \
+          | ${PROJECT_SOURCE_DIR}/tests/testEx4CompareIterations.awk")
+      endforeach()
+    endif(HIOP_DEEPCHECKS)
+  endif()
 
   add_test(NAME NlpMixedDenseSparse5_1 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpMDS_ex5.exe>" "400" "100" "-selfcheck")
 

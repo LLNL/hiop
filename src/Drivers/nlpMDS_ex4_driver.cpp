@@ -63,7 +63,7 @@ static bool parse_arguments(int argc, char **argv,
     return false; //5 or more arguments
   }
 
-  if(self_check && (n_sp!=400 || n_de!=100 || empty_sp_row) )
+  if(self_check && (n_sp!=400 || n_de!=100) )
     return false;
   
   return true;
@@ -74,7 +74,7 @@ static void usage(const char* exeName)
   printf("HiOp driver %s that solves a synthetic problem of variable size in the "
 	 "mixed dense-sparse formulation.\n", exeName);
   printf("Usage: \n");
-  printf("  '$ %s sp_vars_size de_vars_size eq_ineq_combined_nlp -selfcheck -empty_sp_row'\n", exeName);
+  printf("  '$ %s sp_vars_size de_vars_size eq_ineq_combined_nlp -empty_sp_row -selfcheck'\n", exeName);
   printf("Arguments, all integers, excepting string '-selfcheck'\n");
   printf("  'sp_vars_size': # of sparse variables [default 400, optional]\n");
   printf("  'de_vars_size': # of dense variables [default 100, optional]\n");
@@ -142,7 +142,14 @@ int main(int argc, char **argv)
   status = solver.run();
   obj_value = solver.getObjective();
   
-  if(status<0) {
+
+  if(selfCheck && has_empty_sp_row) {
+    if(fabs(obj_value-(-4.9994888159755632e+01))>1e-6) {
+      printf("selfcheck: objective mismatch for Ex4 MDS problem with 400 sparse variables and 100 "
+	     "dense variables did. BTW, obj=%18.12e was returned by HiOp.\n", obj_value);
+      return -1;
+    }
+  } else if(status<0) {
     if(rank==0)
       printf("solver returned negative solve status: %d (with objective is %18.12e)\n", status, obj_value);
     return -1;
