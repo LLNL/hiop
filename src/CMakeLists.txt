@@ -1,8 +1,8 @@
 add_subdirectory(Interface)
 add_subdirectory(Optimization)
 add_subdirectory(LinAlg)
-add_subdirectory(Drivers)
 add_subdirectory(Utils)
+add_subdirectory(Drivers)
 
 # Interface headers not already picked up by another subdirectory
 set(hiop_INTERFACE_HEADERS
