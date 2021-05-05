@@ -20,9 +20,11 @@ static bool parse_arguments(int argc, char **argv,
 			    bool& self_check,
 			    long long& n_sp,
 			    long long& n_de,
-			    bool& one_call_cons)
+			    bool& one_call_cons,
+          bool& empty_sp_row)
 {
   self_check=false;
+  empty_sp_row = false;
   n_sp = 1000;
   n_de = 1000;
   one_call_cons = false;
@@ -111,8 +113,9 @@ int main(int argc, char **argv)
   std::string mem_space = "um";
 
   bool selfCheck, one_call_cons;
+  bool has_empty_sp_row;
   long long n_sp, n_de;
-  if(!parse_arguments(argc, argv, selfCheck, n_sp, n_de, one_call_cons)) {
+  if(!parse_arguments(argc, argv, selfCheck, n_sp, n_de, one_call_cons, has_empty_sp_row)) {
     usage(argv[0]);
     return 1;
   }
