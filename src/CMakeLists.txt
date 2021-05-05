@@ -2,7 +2,6 @@ add_subdirectory(Interface)
 add_subdirectory(Optimization)
 add_subdirectory(LinAlg)
 add_subdirectory(Utils)
-add_subdirectory(Drivers)
 
 # Interface headers not already picked up by another subdirectory
 set(hiop_INTERFACE_HEADERS
@@ -38,3 +37,6 @@ add_library(HiOp::HiOp ALIAS ${hiop_default_library_name})
 # Naked _hiop_ target is still used elsewhere in the codebase. This should be
 # removed...
 add_library(hiop ALIAS ${hiop_default_library_name})
+
+# Test drivers in the form of user applications
+add_subdirectory(Drivers)
