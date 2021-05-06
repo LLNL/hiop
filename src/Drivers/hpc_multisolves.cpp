@@ -1,4 +1,4 @@
-#include "nlpMDSForm_ex4.hpp"
+#include "nlpMDS_ex4.hpp"
 #include "hiopNlpFormulation.hpp"
 #include "hiopAlgFilterIPM.hpp"
 

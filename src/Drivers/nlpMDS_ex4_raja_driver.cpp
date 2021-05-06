@@ -1,4 +1,4 @@
-#include "nlpMDSForm_raja_ex4.hpp"
+#include "nlpMDS_raja_ex4.hpp"
 #include "hiopNlpFormulation.hpp"
 #include "hiopAlgFilterIPM.hpp"
 
@@ -20,9 +20,11 @@ static bool parse_arguments(int argc, char **argv,
 			    bool& self_check,
 			    long long& n_sp,
 			    long long& n_de,
-			    bool& one_call_cons)
+			    bool& one_call_cons,
+          bool& empty_sp_row)
 {
   self_check=false;
+  empty_sp_row = false;
   n_sp = 1000;
   n_de = 1000;
   one_call_cons = false;
@@ -31,10 +33,19 @@ static bool parse_arguments(int argc, char **argv,
     //no arguments
     return true;
     break;
+  case 6: // 5 arguments
+    {
+      if(std::string(argv[5]) == "-selfcheck")
+	    self_check=true;
+    }
   case 5: // 4 arguments
     {
-      if(std::string(argv[4]) == "-selfcheck")
-	self_check=true;
+      if(std::string(argv[4]) == "-selfcheck") {
+        self_check=true;
+      }
+      if(std::string(argv[4]) == "-empty_sp_row") {
+        empty_sp_row=true;
+      }      
     }
   case 4: // 3 arguments
     {
@@ -55,7 +66,7 @@ static bool parse_arguments(int argc, char **argv,
     return false; //5 or more arguments
   }
 
-  if(self_check && n_sp!=400 && n_de!=100)
+  if(self_check && (n_sp!=400 || n_de!=100) )
     return false;
   
   return true;
@@ -66,10 +77,11 @@ static void usage(const char* exeName)
   printf("HiOp driver %s that solves a synthetic problem of variable size in the "
 	 "mixed dense-sparse formulation.\n", exeName);
   printf("Usage: \n");
-  printf("  '$ %s sp_vars_size de_vars_size eq_ineq_combined_nlp -selfcheck'\n", exeName);
+  printf("  '$ %s sp_vars_size de_vars_size eq_ineq_combined_nlp -empty_sp_row -selfcheck'\n", exeName);
   printf("Arguments, all integers, excepting string '-selfcheck'\n");
   printf("  'sp_vars_size': # of sparse variables [default 400, optional]\n");
   printf("  'de_vars_size': # of dense variables [default 100, optional]\n");
+  printf("  '-empty_sp_row': set an empty row in sparser inequality Jacobian. [optional]\n");
   printf("  '-selfcheck': compares the optimal objective with sp_vars_size being 400 and "
 	 "de_vars_size being 100 (these two exact values must be passed as arguments). [optional]\n");
   printf("  'eq_ineq_combined_nlp': 0 or 1, specifying whether the NLP formulation with split "
@@ -101,8 +113,9 @@ int main(int argc, char **argv)
   std::string mem_space = "um";
 
   bool selfCheck, one_call_cons;
+  bool has_empty_sp_row;
   long long n_sp, n_de;
-  if(!parse_arguments(argc, argv, selfCheck, n_sp, n_de, one_call_cons)) {
+  if(!parse_arguments(argc, argv, selfCheck, n_sp, n_de, one_call_cons, has_empty_sp_row)) {
     usage(argv[0]);
     return 1;
   }
@@ -140,7 +153,13 @@ int main(int argc, char **argv)
   status = solver.run();
   obj_value = solver.getObjective();
   
-  if(status<0) {
+  if(selfCheck && has_empty_sp_row) {
+    if(fabs(obj_value-(-4.9994888159755632e+01))>1e-6) {
+      printf("selfcheck: objective mismatch for Ex4 MDS problem with 400 sparse variables and 100 "
+	     "dense variables did. BTW, obj=%18.12e was returned by HiOp.\n", obj_value);
+      return -1;
+    }
+  } else if(status<0) {
     if(rank==0)
       printf("solver returned negative solve status: %d (with objective is %18.12e)\n", status, obj_value);
     return -1;

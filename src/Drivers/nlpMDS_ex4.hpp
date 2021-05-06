@@ -21,6 +21,16 @@
 #include <cmath>
 
 /* Problem test for the linear algebra of Mixed Dense-Sparse NLPs
+ * if 'empty_sp_row' is set to true:
+ *  min   sum 0.5 {x_i*(x_{i}-1) : i=1,...,ns} + 0.5 y'*Qd*y + 0.5 s^T s
+ *  s.t.  x+s + Md y = 0, i=1,...,ns
+ *        [-2  ]    [ x_1 + e^T s]   [e^T]      [ 2 ]
+ *        [-inf] <= [            ] + [e^T] y <= [ 2 ]
+ *        [-2  ]    [ x_3        ]   [e^T]      [inf]
+ *        x <= 3
+ *        s>=0
+ *        -4 <=y_1 <=4, the rest of y are free
+ * otherwise:
  *  min   sum 0.5 {x_i*(x_{i}-1) : i=1,...,ns} + 0.5 y'*Qd*y + 0.5 s^T s
  *  s.t.  x+s + Md y = 0, i=1,...,ns
  *        [-2  ]    [ x_1 + e^T s]   [e^T]      [ 2 ]
@@ -43,21 +53,20 @@
 class Ex4 : public hiop::hiopInterfaceMDS
 {
 public:
-  Ex4(int ns_)
-    : Ex4(ns_, ns_)
+  Ex4(int ns_, bool empty_sp_row = false)
+    : Ex4(ns_, ns_, empty_sp_row)
   {
   }
   
-  Ex4(int ns_, int nd_)
-    : ns(ns_), sol_x_(NULL), sol_zl_(NULL), sol_zu_(NULL), sol_lambda_(NULL)
+  Ex4(int ns_, int nd_, bool empty_sp_row = false)
+    : ns(ns_), sol_x_(NULL), sol_zl_(NULL), sol_zu_(NULL), sol_lambda_(NULL), empty_sp_row_(empty_sp_row)
   {
     if(ns<0) {
       ns = 0;
     } else {
       if(4*(ns/4) != ns) {
-	ns = 4*((4+ns)/4);
-	printf("[warning] number (%d) of sparse vars is not a multiple ->was altered to %d\n", 
-	       ns_, ns); 
+        ns = 4*((4+ns)/4);
+        printf("[warning] number (%d) of sparse vars is not a multiple ->was altered to %d\n", ns_, ns); 
       }
     }
 
@@ -154,7 +163,11 @@ public:
     nx_sparse = 2*ns;
     nx_dense = nd;
     nnz_sparse_Jace = 2*ns;
-    nnz_sparse_Jaci = (ns==0 || !haveIneq) ? 0 : 3+ns;
+    if(empty_sp_row_) {
+      nnz_sparse_Jaci = (ns==0 || !haveIneq) ? 0 : 2+ns;
+    } else {
+      nnz_sparse_Jaci = (ns==0 || !haveIneq) ? 0 : 3+ns;      
+    }
     nnz_sparse_Hess_Lagr_SS = 2*ns;
     nnz_sparse_Hess_Lagr_SD = 0.;
     return true;
@@ -196,25 +209,28 @@ public:
     for(int irow=0; irow<num_cons; irow++) {
       const int con_idx = (int) idx_cons[irow];
       if(con_idx<ns) {
-	//equalities: x+s - Md y = 0
-	cons[con_idx] = x[con_idx] + s[con_idx];
-	isEq=true;
+        //equalities: x+s - Md y = 0
+        cons[con_idx] = x[con_idx] + s[con_idx];
+        isEq=true;
       } else if(haveIneq) {
-	assert(con_idx<ns+3);
-	//inequality
-	const int conineq_idx=con_idx-ns;
-	if(conineq_idx==0) {
-	  cons[conineq_idx] = x[0];
-	  for(int i=0; i<ns; i++) cons[conineq_idx] += s[i];
-	  for(int i=0; i<nd; i++) cons[conineq_idx] += y[i];
-
-	} else if(conineq_idx==1) {
-	  cons[conineq_idx] = x[1];
-	  for(int i=0; i<nd; i++) cons[conineq_idx] += y[i];
-	} else if(conineq_idx==2) {
-	  cons[conineq_idx] = x[2];
-	  for(int i=0; i<nd; i++) cons[conineq_idx] += y[i];
-	} else { assert(false); }
+        assert(con_idx<ns+3);
+        //inequality
+        const int conineq_idx=con_idx-ns;
+        if(conineq_idx==0) {
+          cons[conineq_idx] = x[0];
+          for(int i=0; i<ns; i++) cons[conineq_idx] += s[i];
+          for(int i=0; i<nd; i++) cons[conineq_idx] += y[i];
+        } else if(conineq_idx==1) {
+          if(empty_sp_row_) {
+            cons[conineq_idx] = 0.0;
+          } else {
+            cons[conineq_idx] = x[1];
+          }
+          for(int i=0; i<nd; i++) cons[conineq_idx] += y[i];
+        } else if(conineq_idx==2) {
+          cons[conineq_idx] = x[2];
+          for(int i=0; i<nd; i++) cons[conineq_idx] += y[i];
+        } else { assert(false); }
       }  
     }
     if(isEq) {
@@ -284,7 +300,7 @@ public:
 	      nnzit++;
 	    }
 	  } else {
-	    if( (con_idx-ns==1 || con_idx-ns==2) && ns>0 ) {
+	    if(((con_idx-ns==1 && !empty_sp_row_) || con_idx-ns==2) && ns>0) {
 	      //w.r.t x_2 or x_3
 	      iJacS[nnzit] = con_idx-ns;
 	      jJacS[nnzit] = con_idx-ns;
@@ -322,7 +338,7 @@ public:
 	     nnzit++;
 	   }
 	 } else {
-	   if( (con_idx-ns==1 || con_idx-ns==2) && ns>0) {
+	   if(((con_idx-ns==1 && !empty_sp_row_) || con_idx-ns==2) && ns>0) {
 	     //w.r.t x_2 or x_3
 	     MJacS[nnzit] = 1.;
 	     nnzit++;
@@ -470,18 +486,21 @@ protected:
   double* sol_zl_;
   double* sol_zu_;
   double* sol_lambda_;
+
+  /* indicate if problem has empty row in constraint Jacobian */
+  bool empty_sp_row_;
 };
 
 class Ex4OneCallCons : public Ex4
 {
 public:
-  Ex4OneCallCons(int ns_in)
-    : Ex4(ns_in)
+  Ex4OneCallCons(int ns_in, bool empty_sp_row = false)
+    : Ex4(ns_in, empty_sp_row)
   {
   }
   
-  Ex4OneCallCons(int ns_in, int nd_in)
-    : Ex4(ns_in, nd_in)
+  Ex4OneCallCons(int ns_in, int nd_in, bool empty_sp_row = false)
+    : Ex4(ns_in, nd_in, empty_sp_row)
   {
   }
   
@@ -506,23 +525,27 @@ public:
 
     for(int con_idx=0; con_idx<m; ++con_idx) {
       if(con_idx<ns) {
-	//equalities
-	cons[con_idx] = x[con_idx]+s[con_idx];
+        //equalities
+        cons[con_idx] = x[con_idx]+s[con_idx];
       } else if(haveIneq) {
-	//inequalties
-	assert(con_idx<ns+3);
-	if(con_idx==ns) {
-	  cons[con_idx] = x[0];
-	  for(int i=0; i<ns; i++) cons[con_idx] += s[i];
-	  for(int i=0; i<nd; i++) cons[con_idx] += y[i];
+        //inequalties
+        assert(con_idx<ns+3);
+        if(con_idx==ns) {
+          cons[con_idx] = x[0];
+          for(int i=0; i<ns; i++) cons[con_idx] += s[i];
+          for(int i=0; i<nd; i++) cons[con_idx] += y[i];
 
-	} else if(con_idx==ns+1) {
-	  cons[con_idx] = x[1];
-	  for(int i=0; i<nd; i++) cons[con_idx] += y[i];
-	} else if(con_idx==ns+2) {
-	  cons[con_idx] = x[2];
-	  for(int i=0; i<nd; i++) cons[con_idx] += y[i];
-	} else { assert(false); }
+        } else if(con_idx==ns+1) {
+          if(empty_sp_row_) {
+            cons[con_idx] = 0.0;
+          } else {
+            cons[con_idx] = x[1];
+          }
+          for(int i=0; i<nd; i++) cons[con_idx] += y[i];
+        } else if(con_idx==ns+2) {
+          cons[con_idx] = x[2];
+          for(int i=0; i<nd; i++) cons[con_idx] += y[i];
+        } else { assert(false); }
       }
     }
 
@@ -583,12 +606,12 @@ public:
 	      nnzit++;
 	    }
 	  } else {
-	    if(con_idx-ns==1 || con_idx-ns==2) {
+	    if( (con_idx-ns==1 && !empty_sp_row_) || con_idx-ns==2 ) {
 	      //w.r.t x_2 or x_3
 	      iJacS[nnzit] = con_idx;
 	      jJacS[nnzit] = con_idx-ns;
 	      nnzit++;
-	    } else { assert(false); }
+	    }
 	  }
 	}
       }
@@ -622,11 +645,11 @@ public:
 	      nnzit++;
 	    }
 	  } else {
-	    if(con_idx-ns==1 || con_idx-ns==2) {
+	    if( (con_idx-ns==1 && !empty_sp_row_) || con_idx-ns==2 ) {
 	      //w.r.t x_2 or x_3
 	      MJacS[nnzit] = 1.;
 	      nnzit++;
-	    } else { assert(false); }
+	    }
 	  }
 	}
       }

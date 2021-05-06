@@ -1385,6 +1385,9 @@ void hiopMatrixRajaDense::row_max_abs_value(hiopVector &ret_vec)
 {  
   assert(ret_vec.get_size() == m());
   ret_vec.setToZero();
+  if(0 == m_local_) {
+    return;
+  }  
 
   auto& vec = dynamic_cast<hiopVectorRajaPar&>(ret_vec);
   double* vd = vec.local_data();
