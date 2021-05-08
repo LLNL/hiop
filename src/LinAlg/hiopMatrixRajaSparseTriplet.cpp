@@ -509,7 +509,7 @@ void hiopMatrixRajaSparseTriplet::row_max_abs_value(hiopVector& ret_vec)
   double* values = values_;
 
   RAJA::forall<hiop_raja_exec>(
-    RAJA::RangeSegment(0, num_rows+1),
+    RAJA::RangeSegment(0, num_rows),
     RAJA_LAMBDA(RAJA::Index_type row_id)
     {
       for(int itnz=idx_start[row_id]; itnz<idx_start[row_id+1]; itnz++) {
