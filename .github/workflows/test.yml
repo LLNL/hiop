@@ -15,7 +15,6 @@ jobs:
         with:
           source-dir: ${{ runner.workspace }}/hiop
           build-dir: ${{ runner.workspace }}/hiop/build
-          run: ls
           cc: gcc
           cxx: g++
           build-type: Debug

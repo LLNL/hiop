@@ -1,3 +1,9 @@
+
+install(
+  FILES IpoptAdapter.hpp
+  DESTINATION include
+  )
+
 #add_executable(linalgTest.exe linalgTest.cpp)
 #target_link_libraries(linalgTest.exe hiop ${HIOP_MATH_LIBRARIES})
 
@@ -41,7 +47,7 @@ if(HIOP_SPARSE)
     target_link_libraries(nlpSparse_ex7.exe hiop)
 endif()
 
-if(HIOP_BUILD_SHARED AND NOT HIOP_USE_GPU)
+if(HIOP_BUILD_SHARED)
   add_executable(nlpMDS_cex4.exe nlpMDS_ex4.c)
-  target_link_libraries(nlpMDS_cex4.exe hiop_shared)
+  target_link_libraries(nlpMDS_cex4.exe HiOp::HiOp)
 endif()
