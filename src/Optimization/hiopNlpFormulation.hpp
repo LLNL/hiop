@@ -444,8 +444,15 @@ public:
     assert(0==nnz_sparse_Hess_Lagr_SD);
     return new hiopMatrixSymBlockDiagMDS(nx_sparse, nx_dense, nnz_sparse_Hess_Lagr_SS);
   }
+
+  /** const accessors */
   virtual size_type nx_sp() const { return nx_sparse; }
   virtual size_type nx_de() const { return nx_dense; }
+  inline const int get_nnz_sp_Jaceq()  const { return nnz_sparse_Jaceq; }
+  inline const int get_nnz_sp_Jacineq()  const { return nnz_sparse_Jacineq; }
+  inline const int get_nnz_sp_Hess_Lagr_SS()  const { return nnz_sparse_Hess_Lagr_SS; }
+  inline const int get_nnz_sp_Hess_Lagr_SD()  const { return nnz_sparse_Hess_Lagr_SD; }
+
 private:
   hiopInterfaceMDS& interface;
   int nx_sparse, nx_dense;
