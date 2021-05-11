@@ -217,6 +217,144 @@ private:
   int ni_st_; // the 1st index of ni in the full primal space
 };
 
+/** Specialized interface for feasibility restoration problem with MDS blocks in the Jacobian and Hessian.
+ *
+ * More specifically, this interface is for specifying optimization problem:
+ *
+ * min f(x)
+ *  s.t. g(x) <= or = 0, lb<=x<=ub
+ *
+ * such that Jacobian w.r.t. x and Hessian of the Lagrangian w.r.t. x are MDS
+ *
+ */
+class hiopFRInterfaceMDS : public hiopInterfaceMDS
+{
+public:
+  hiopFRInterfaceMDS(hiopAlgFilterIPMBase& solver_base);
+  virtual ~hiopFRInterfaceMDS();
+
+  virtual bool get_sparse_dense_blocks_info(int& nx_sparse, int& nx_dense,
+					    int& nnz_sparse_Jaceq, int& nnz_sparse_Jacineq,
+					    int& nnz_sparse_Hess_Lagr_SS,
+					    int& nnz_sparse_Hess_Lagr_SD) = 0;
+
+  virtual bool eval_Jac_cons(const long long& n, const long long& m,
+			     const long long& num_cons, const long long* idx_cons,
+			     const double* x, bool new_x,
+			     const long long& nsparse, const long long& ndense,
+			     const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS,
+			     double* JacD);
+
+  virtual bool eval_Hess_Lagr(const long long& n, const long long& m,
+			      const double* x, bool new_x, const double& obj_factor,
+			      const double* lambda, bool new_lambda,
+			      const long long& nsparse, const long long& ndense,
+			      const int& nnzHSS, int* iHSS, int* jHSS, double* MHSS,
+			      double* HDD,
+			      int& nnzHSD, int* iHSD, int* jHSD, double* MHSD);
+
+  virtual bool get_prob_sizes(long long& n, long long& m);
+  virtual bool get_vars_info(const long long& n, double *xlow, double* xupp, NonlinearityType* type);
+  virtual bool get_cons_info(const long long& m, double* clow, double* cupp, NonlinearityType* type);
+
+  virtual bool eval_f(const long long& n, const double* x, bool new_x, double& obj_value);
+  virtual bool eval_cons(const long long& n,
+                         const long long& m,
+                         const long long& num_cons,
+                         const long long* idx_cons,
+                         const double* x,
+                         bool new_x,
+                         double* cons);
+  virtual bool eval_cons(const long long& n,
+                         const long long& m,
+                         const double* x,
+                         bool new_x,
+                         double* cons);
+  virtual bool eval_grad_f(const long long& n, const double* x, bool new_x, double* gradf);
+
+  virtual bool get_starting_point(const long long& n,
+                                  const long long& m,
+                                  double* x0,
+                                  bool& duals_avail,
+                                  double* z_bndL0,
+                                  double* z_bndU0,
+                                  double* lambda0,
+                                  bool& slack_avail,
+                                  double* ineq_slack = nullptr);
+
+  virtual bool iterate_callback(int iter,
+                                double obj_value,
+                                double logbar_obj_value,
+                                int n,
+                                const double* x,
+                                const double* z_L,
+                                const double* z_U,
+                                int m_ineq,
+                                const double* s,
+                                int m,
+                                const double* g,
+                                const double* lambda,
+                                double inf_pr,
+                                double inf_du,
+                                double onenorm_pr_,
+                                double mu,
+                                double alpha_du,
+                                double alpha_pr,
+                                int ls_trials);
+
+  virtual bool force_update(double obj_value,
+                            const int n,
+                            double* x,
+                            double* z_L,
+                            double* z_U,
+                            const int m,
+                            double* g,
+                            double* lambda,
+                            double& mu,
+                            double& alpha_du,
+                            double& alpha_pr);
+private:
+  long long n_;
+  long long m_;
+
+  long long n_x_;
+  long long n_x_sp_;
+  long long n_x_de_;
+  long long m_eq_;
+  long long m_ineq_;
+
+  long long nnz_sp_Jac_c_;
+  long long nnz_sp_Jac_d_;
+  long long nnz_sp_Hess_Lag_SS_;
+  long long nnz_sp_Hess_Lag_SD_;
+
+  hiopAlgFilterIPMBase& solver_base_;
+  hiopNlpMDS* nlp_base_;
+
+  hiopVector* x_ref_;
+  hiopVector* DR_;
+  hiopVector* wrk_x_;
+  hiopVector* wrk_c_;
+  hiopVector* wrk_d_;
+  hiopVector* wrk_eq_;
+  hiopVector* wrk_ineq_;
+  hiopVector* wrk_cbody_;
+  hiopVector* wrk_dbody_;
+  hiopVector* wrk_primal_;  // [x pe ne pi ni]
+  hiopVector* wrk_dual_;    // [c d]
+
+  double zeta_;
+  double theta_ref_;
+  double mu_;
+  double rho_;
+
+  int pe_st_; // the 1st index of pe in the full primal space
+  int ne_st_; // the 1st index of ne in the full primal space
+  int pi_st_; // the 1st index of pi in the full primal space
+  int ni_st_; // the 1st index of ni in the full primal space
+};
+
+
 
 } //end of namespace
 #endif
