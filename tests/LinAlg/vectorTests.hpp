@@ -134,7 +134,7 @@ public:
   }
 
   /**
-   * @brief Test method:
+   * @brief Test method: 
    * forall n in n_local if (pattern[n] != 0.0) this[n] = x_val
    */
   bool vectorSetToConstant_w_patternSelect(
@@ -192,11 +192,11 @@ public:
 
   /**
    * @brief Test vector method for copying data from another vector
-   * or data buffer.
-   *
+   * or data buffer. 
+   * 
    * @pre Vectors are not distributed.
    * @pre Memory space for hiop::LinearAlgebraFactory is set appropriately
-   */
+   */  
   bool vectorCopyFromStarting(
       hiop::hiopVector& x,
       hiop::hiopVector& from,
@@ -258,7 +258,7 @@ public:
   /**
    * @brief Tests function that copies from one vector to another, specifying
    * both the start index in the source and the destination.
-   *
+   * 
    * @pre `src` and `dest` are allocated to nonzero sizes and
    * size of `src` > size of `dest`.
    */
@@ -301,7 +301,7 @@ public:
 
   /**
    * Test for function that copies data from `this` to a data buffer.
-   *
+   * 
    * @note This test calls `local_data` vector method. Here this is OK,
    * because for as long copies between vectors and bufers are implemented
    * as public methods, `local_data` will be a public method, as well.
@@ -325,11 +325,11 @@ public:
 
   /**
    * @brief Test vector method for copying data to another vector
-   * starting from prescribed index in destination vector.
-   *
+   * starting from prescribed index in destination vector. 
+   * 
    * @pre Vectors are not distributed.
    * @pre Memory space for hiop::LinearAlgebraFactory is set appropriately
-   */
+   */  
   bool vectorCopyToStarting(
       hiop::hiopVector& to,
       hiop::hiopVector& from,
@@ -377,11 +377,11 @@ public:
   /**
    * @brief Test vector method for copying data to another vector
    * starting from prescribed indices in source and destination
-   * vectors.
-   *
+   * vectors. 
+   * 
    * @pre Vectors are not distributed.
    * @pre Memory space for hiop::LinearAlgebraFactory is set appropriately
-   */
+   */  
   bool vectorStartingAtCopyToStartingAt(
       hiop::hiopVector& to,
       hiop::hiopVector& from,
@@ -402,7 +402,7 @@ public:
     int num_elements_to_copy = -1;
 
     // Iteratively checking various edge cases for calls to the function
-
+  
     hiop::hiopVector* zero = hiop::LinearAlgebraFactory::createVector(0);
 
     // Copying from a size 0 vector
@@ -543,7 +543,7 @@ public:
         return isValueCopied ? from_val : to_val;
       });
 
-
+    
     printMessage(fail, __func__, rank);
     return reduceReturn(fail, &to);
   }
@@ -685,7 +685,7 @@ public:
 
     return reduceReturn(fail, &v);
   }
-
+  
   /**
    * @brief Test: this[i] = min(this[i], x[i])
    */
@@ -719,7 +719,7 @@ public:
 
     return reduceReturn(fail, &v);
   }
-
+  
   /**
    * @brief Test: this[i] = max(this[i], x[i])
    */
@@ -794,7 +794,7 @@ public:
     printMessage(fail, __func__, rank);
     return reduceReturn(fail, &x);
   }
-
+  
   /**
    * @brief Test: this[i] = sgn(this[i])
    */
@@ -875,7 +875,7 @@ public:
     return reduceReturn(fail, &v);
   }
 
-  /**
+  /** 
    * @brief Test:
    * this[i] += alpha * x[i]
    */
@@ -901,7 +901,7 @@ public:
     return reduceReturn(fail, &v);
   }
 
-  /**
+  /** 
    * @brief Test:
    * this[i] += alpha * x[i] * z[i]
    */
@@ -933,7 +933,7 @@ public:
     return reduceReturn(fail, &v);
   }
 
-  /**
+  /** 
    * @brief Test:
    * this[i] += alpha * x[i] / z[i]
    */
@@ -965,7 +965,7 @@ public:
     return reduceReturn(fail, &v);
   }
 
-  /**
+  /** 
    * @brief Test:
    * this[i] += alpha * x[i] / z[i]
    */
@@ -1009,7 +1009,7 @@ public:
     return reduceReturn(fail, &v);
   }
 
-  /**
+  /** 
    * @brief Test:
    * this[i] += C forall i
    */
@@ -1026,7 +1026,7 @@ public:
     return reduceReturn(fail, &x);
   }
 
-  /**
+  /** 
    * @brief Test:
    * if (pattern[i] > 0.0) this[i] += C forall i
    */
@@ -1057,7 +1057,7 @@ public:
     return reduceReturn(fail, &x);
   }
 
-  /**
+  /** 
    * @brief Test:
    * Dot product == \sum{this[i] * other[i]}
    */
@@ -1081,7 +1081,7 @@ public:
     return reduceReturn(fail, &x);
   }
 
-  /**
+  /** 
    * @brief Test:
    * this[i] *= -1 forall i
    */
@@ -1094,7 +1094,7 @@ public:
     return reduceReturn(fail, &x);
   }
 
-  /**
+  /** 
    * @brief Test:
    * this[i]^-1 forall i
    */
@@ -1107,7 +1107,7 @@ public:
     return reduceReturn(fail, &x);
   }
 
-  /**
+  /** 
    * @brief Test:
    * sum{ln(x[i]): pattern[i] = 1}
    */
@@ -1169,10 +1169,10 @@ public:
     printMessage(fail, __func__, rank);
     return reduceReturn(fail, &x);
   }
-
+  
   /**
    * @brief Test:
-   * if(pattern[i] == 1) this[i] += alpha /x[i] forall i
+   * if(pattern[i] == 1) this[i] += alpha /x[i] forall i 
    */
   bool vectorAddLogBarrierGrad(
       hiop::hiopVector& x,
@@ -1287,11 +1287,11 @@ public:
     }
 
     //idx 1: left=0, right=0
-    if(N>=2)
+    if(N>=2) 
     {
       setLocalElement(&left, 1, zero);
       setLocalElement(&right, 1, zero);
-
+      
     }
 
     //idx 2: left=1 right=1
@@ -1310,10 +1310,10 @@ public:
 
     real_type expected[4];
 
-    // expected for idx 0
+    // expected for idx 0 
     expected[0] = getLocalElement(&x, 0) * alpha - ct;
 
-    // expected for idx 1
+    // expected for idx 1 
     if(N>=2)
     {
       expected[1] = getLocalElement(&x, 1) * alpha;
@@ -1326,8 +1326,8 @@ public:
     }
 
     // expected for idx 3
-    if(N>=4)
-    {
+    if(N>=4) 
+    {   
       expected[3] = getLocalElement(&x, 3) * alpha + ct;
     }
 
@@ -1337,14 +1337,14 @@ public:
     x.addLinearDampingTerm(left, right, alpha, ct);
 
     //
-    // compare with actual values
+    // compare with actual values 
     //
     bool fail = false;
-    for(local_ordinal_type test = 0; test < std::min(N,4) && !fail; ++test)
+    for(local_ordinal_type test = 0; test < std::min(N,4) && !fail; ++test) 
     {
       fail = !isEqual(expected[test], getLocalElement(&x, test));
     }
-
+    
     printMessage(fail, __func__, rank);
     return reduceReturn(fail, &x);
   }
@@ -1432,7 +1432,7 @@ public:
   /**
    * @brief Test: min value in a vector
    */
-  bool vectorMin_w_pattern(hiop::hiopVector& x,
+  bool vectorMin_w_pattern(hiop::hiopVector& x, 
                            hiop::hiopVector& pattern,
                            const int rank)
   {
@@ -1750,7 +1750,7 @@ public:
   /**
    * @brief Test:
    * \exists e \in this s.t. isnan(e)
-   *
+   * 
    * @note This is local method only
    */
   bool vectorIsnan(hiop::hiopVector& x, const int rank=0)
@@ -1764,7 +1764,7 @@ public:
     x.setToConstant(one/zero);
     if (x.isnan_local())
       fail++;
-
+    
     x.setToConstant(zero/zero);
     if (!x.isnan_local())
       fail++;
@@ -1781,7 +1781,7 @@ public:
   /**
    * @brief Test:
    * \exists e \in this s.t. isinf(e)
-   *
+   * 
    * @note This is local method only
    */
   bool vectorIsinf(hiop::hiopVector& x, const int rank=0)
@@ -1791,7 +1791,7 @@ public:
     x.setToConstant(zero);
     if (x.isinf_local())
       fail++;
-
+    
     x.setToConstant(zero/zero);
     if (x.isinf_local())
       fail++;
@@ -1812,7 +1812,7 @@ public:
   /**
    * @brief Test:
    * \forall e \in this, isfinite(e)
-   *
+   * 
    * @note This is local method only
    */
   bool vectorIsfinite(hiop::hiopVector& x, const int rank=0)
@@ -1853,7 +1853,7 @@ public:
   {
     const local_ordinal_type N = getLocalSize(x);
     const real_type* xdata = getLocalDataConst(x);
-
+    
     int local_fail = 0;
 
     for(local_ordinal_type i = 0; i < N; ++i)
@@ -1878,7 +1878,7 @@ public:
   {
     const local_ordinal_type N = getLocalSize(x);
     const real_type* xdata = getLocalDataConst(x);
-
+    
     int local_fail = 0;
 
     for(local_ordinal_type i = 0; i < N; ++i)

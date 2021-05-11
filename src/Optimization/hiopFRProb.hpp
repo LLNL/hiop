@@ -46,7 +46,7 @@
 // product endorsement purposes.
 
 /**
- * @file hiopFRInterface.hpp
+ * @file hiopFRProb.hpp
  *
  * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
  * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
@@ -77,11 +77,11 @@ namespace hiop
  * abstraction layer that HiOp uses and via linear solver.
  *
  */
-class hiopFRInterfaceSparse : public hiopInterfaceSparse
+class hiopFRProbSparse : public hiopInterfaceSparse
 {
 public:
-  hiopFRInterfaceSparse(hiopAlgFilterIPMBase& solver_base);
-  virtual ~hiopFRInterfaceSparse();
+  hiopFRProbSparse(hiopAlgFilterIPMBase& solver_base);
+  virtual ~hiopFRProbSparse();
 
   virtual bool get_prob_sizes(long long& n, long long& m);
   virtual bool get_vars_info(const long long& n, double *xlow, double* xupp, NonlinearityType* type);

@@ -51,7 +51,7 @@
 #include "hiopKKTLinSysDense.hpp"
 #include "hiopKKTLinSysMDS.hpp"
 #include "hiopKKTLinSysSparse.hpp"
-#include "hiopFRInterface.hpp"
+#include "hiopFRProb.hpp"
 
 #include "hiopCppStdUtils.hpp"
 
@@ -1258,7 +1258,7 @@ decideAndCreateLinearSystem(hiopNlpFormulation* nlp)
   } else {
     return new hiopKKTLinSysCompressedMDSXYcYd(nlp);
   }
-  assert(false &&
+  assert(false && 
 	 "Could not match linear algebra to NLP formulation. Likely, HiOp was"
 	 "not built with all linear algebra modules/options");
 
@@ -1276,7 +1276,7 @@ decideAndCreateFactAcceptor(hiopPDPerturbation* p, hiopNlpFormulation* nlp)
     assert(false &&
     "Inertia-free approach hasn't been implemented yet.");
     return new hiopFactAcceptorIC(p,nlp->m_eq()+nlp->m_ineq());
-  }
+  } 
 }
 
 hiopSolveStatus hiopAlgFilterIPMNewton::run()
@@ -1348,7 +1348,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
   }
   fact_acceptor_ = decideAndCreateFactAcceptor(&pd_perturb_,nlp);
   kkt->set_fact_acceptor(fact_acceptor_);
-
+  
   _alpha_primal = _alpha_dual = 0;
 
   _err_nlp_optim0=-1.; _err_nlp_feas0=-1.; _err_nlp_complem0=-1;
@@ -1648,7 +1648,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
           bool grad_phi_dx_soc_computed = false;
           double grad_phi_dx_soc = 0.0;
           int num_adjusted_bounds_soc = 0;
-          lsStatus = apply_second_order_correction(kkt, theta, theta_trial,
+          lsStatus = apply_second_order_correction(kkt, theta, theta_trial, 
                                                    grad_phi_dx_soc_computed, grad_phi_dx_soc, num_adjusted_bounds_soc);
           if(lsStatus>0) {
             num_adjusted_bounds = num_adjusted_bounds_soc;
@@ -1871,7 +1871,7 @@ int hiopAlgFilterIPMBase::accept_line_search_conditions(const double theta_curr,
   trial_is_rejected_by_filter = false;
 
   // Do the cheap, "sufficient progress" test first, before more involved/expensive tests.
-  // This simple test is good enough when iterate is far away from solution
+  // This simple test is good enough when iterate is far away from solution  
   if(theta_curr>=theta_min) {
 
     //check the sufficient decrease condition (18)
@@ -1887,7 +1887,7 @@ int hiopAlgFilterIPMBase::accept_line_search_conditions(const double theta_curr,
       bret = 0;
       return bret;
     }
-
+    
     //check filter condition
     if(filter.contains(theta_trial,logbar->f_logbar_trial)) {
       //it is in the filter, reject this trial point
@@ -1944,7 +1944,7 @@ int hiopAlgFilterIPMBase::accept_line_search_conditions(const double theta_curr,
         trial_is_rejected_by_filter = false;
         return bret;
       }
-
+      
       //check filter condition
       if(filter.contains(theta_trial,logbar->f_logbar_trial)) {
         //it is in the filter, reject this trial point
@@ -1976,9 +1976,9 @@ int hiopAlgFilterIPMBase::apply_second_order_correction(hiopKKTLinSys* kkt,
     soc_dir = dir->alloc_clone();
     if(nlp->options->GetString("KKTLinsys")=="full") {
       soc_dir->selectPattern();
-    }
+    }      
     c_soc = nlp->alloc_dual_eq_vec();
-    d_soc = nlp->alloc_dual_ineq_vec();
+    d_soc = nlp->alloc_dual_ineq_vec();        
   }
 
   double theta_trial_last = 0.;
@@ -1989,38 +1989,38 @@ int hiopAlgFilterIPMBase::apply_second_order_correction(hiopKKTLinSys* kkt,
   int num_soc = 0;
   bool bret = true;
   int ls_status = 0;
-
+  
   // set initial c/d for soc
   c_soc->copyFrom(nlp->get_crhs());
   c_soc->axpy(-1.0, *_c);
 
   d_soc->copyFrom(*it_curr->get_d());
   d_soc->axpy(-1.0, *_d);
-
+  
   while(num_soc<max_soc_iter && (num_soc==0 || theta_trial<=kappa_soc*theta_trial_last)) {
     theta_trial_last = theta_trial;
-
+    
     c_soc->scale(alpha_primal_soc);
     c_soc->axpy(1.0, nlp->get_crhs());
     c_soc->axpy(-1.0, *_c_trial);
-
+  
     d_soc->scale(alpha_primal_soc);
     d_soc->axpy(1.0, *it_trial->get_d());
     d_soc->axpy(-1.0, *_d_trial);
-
+    
     // compute rhs for soc. Use resid_trial since it hasn't been used
     resid_trial->update_soc(*it_curr, *c_soc, *d_soc, *_grad_f,*_Jac_c,*_Jac_d, *logbar);
 
     // solve for search directions
-    bret = kkt->computeDirections(resid_trial, soc_dir);
+    bret = kkt->computeDirections(resid_trial, soc_dir); 
     assert(bret);
 
     // Compute step size
-    bret = it_curr->fractionToTheBdry(*soc_dir, _tau, alpha_primal_soc, alpha_dual_soc);
+    bret = it_curr->fractionToTheBdry(*soc_dir, _tau, alpha_primal_soc, alpha_dual_soc); 
     assert(bret);
-
+    
     // Compute trial point
-    bret = it_trial->takeStep_primals(*it_curr, *soc_dir, alpha_primal_soc, alpha_dual_soc);
+    bret = it_trial->takeStep_primals(*it_curr, *soc_dir, alpha_primal_soc, alpha_dual_soc); 
     assert(bret);
     num_adjusted_bounds = it_trial->adjust_small_slacks(*it_curr, _mu);
 
@@ -2031,7 +2031,7 @@ int hiopAlgFilterIPMBase::apply_second_order_correction(hiopKKTLinSys* kkt,
     }
 
     logbar->updateWithNlpInfo_trial_funcOnly(*it_trial, _f_nlp_trial, *_c_trial, *_d_trial);
-
+        
     //compute infeasibility theta at trial point.
     theta_trial = resid_trial->compute_nlp_infeasib_onenorm(*it_trial, *_c_trial, *_d_trial);
 
@@ -2053,7 +2053,7 @@ int hiopAlgFilterIPMBase::apply_second_order_correction(hiopKKTLinSys* kkt,
 bool hiopAlgFilterIPMBase::apply_feasibility_restoration(hiopKKTLinSys* kkt)
 {
   if(!within_FR_) {
-    hiopFRInterfaceSparse nlp_fr_interface(*this);
+    hiopFRProbSparse nlp_fr_interface(*this);
     hiopNlpSparse nlpFR(nlp_fr_interface, "hiop_fr.options");
 
     nlpFR.options->SetStringValue("Hessian", "analytical_exact");

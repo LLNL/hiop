@@ -10,7 +10,7 @@ set(hiopOptimization_SRC
   hiopHessianLowRank.cpp 
   hiopDualsUpdater.cpp 
   hiopNlpTransforms.cpp
-  hiopFRInterface.cpp
+  hiopFRProb.cpp
 )
 
 set(hiopOptimization_SPARSE_SRC
