@@ -5,7 +5,7 @@
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
 // is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause). 
-// Please also read “Additional BSD Notice” below.
+// Please also read ï¿½Additional BSD Noticeï¿½ below.
 //
 // Redistribution and use in source and binary forms, with or without modification, 
 // are permitted provided that the following conditions are met:
@@ -65,7 +65,7 @@
 namespace hiop
 {
 
-hiopNlpFormulation::hiopNlpFormulation(hiopInterfaceBase& interface_)
+hiopNlpFormulation::hiopNlpFormulation(hiopInterfaceBase& interface_, const char* option_file)
 #ifdef HIOP_USE_MPI
   : mpi_init_called(false), interface_base(interface_)
 #else 
@@ -95,7 +95,7 @@ hiopNlpFormulation::hiopNlpFormulation(hiopInterfaceBase& interface_)
   MPI_Comm comm = MPI_COMM_SELF;
 #endif
 
-  options = new hiopOptions(/*filename=NULL*/);
+  options = new hiopOptions(option_file);
 
   hiopOutVerbosity hov = (hiopOutVerbosity) options->GetInteger("verbosity_level");
   log = new hiopLogger(this, stdout);
@@ -570,9 +570,13 @@ bool hiopNlpFormulation::eval_grad_f(hiopVector& x, bool new_x, hiopVector& grad
 }
 
 bool hiopNlpFormulation::get_starting_point(hiopVector& x0_for_hiop,
-					    bool& duals_avail,
-					    hiopVector& zL0_for_hiop, hiopVector& zU0_for_hiop,
-					    hiopVector& yc0_for_hiop, hiopVector& yd0_for_hiop)
+                                            bool& duals_avail,
+                                            hiopVector& zL0_for_hiop,
+                                            hiopVector& zU0_for_hiop,
+                                            hiopVector& yc0_for_hiop,
+                                            hiopVector& yd0_for_hiop,
+                                            bool& slacks_avail,
+                                            hiopVector& d0)
 {
   bool bret; 
 
@@ -582,13 +586,16 @@ bool hiopNlpFormulation::get_starting_point(hiopVector& x0_for_hiop,
   double* zL0_for_user = zL0_for_hiop.local_data();
   double* zU0_for_user = zU0_for_hiop.local_data();
   double* lambda_for_user = lambdas->local_data();
+  double* d_for_user = d0.local_data();
   
   bret = interface_base.get_starting_point(nlp_transformations.n_pre(), n_cons,
 					   x0_for_user->local_data(),
 					   duals_avail,
 					   zL0_for_user,
 					   zU0_for_user,
-					   lambda_for_user);
+					   lambda_for_user,
+					   slacks_avail,
+					   d_for_user);
   if(duals_avail) {
     double* yc0d = yc0_for_hiop.local_data();
     double* yd0d = yd0_for_hiop.local_data();
@@ -807,6 +814,24 @@ void hiopNlpFormulation::copy_EqIneq_to_cons(const hiopVector& yc_in,
   }
 }
 
+void hiopNlpFormulation::copy_cons_to_EqIneq(hiopVector& yc_in,
+                                             hiopVector& yd_in,
+                                             const hiopVector& cons)
+{
+  double* yc_arr = yc_in.local_data();
+  double* yd_arr = yd_in.local_data();
+  const double* cons_arr = cons.local_data_const();
+  assert(cons.get_size() == n_cons);
+  assert(yc_in.get_size() + yd_in.get_size() == n_cons);
+  //split whole lambda array to eq/ineq
+  for(int i=0; i<n_cons_eq; ++i) {
+    yc_arr[i] = cons_arr[cons_eq_mapping_[i]];
+  }
+  for(int i=0; i<n_cons_ineq; ++i) {
+    yd_arr[i] = cons_arr[cons_ineq_mapping_[i]];
+  }
+}
+
 void hiopNlpFormulation::user_callback_solution(hiopSolveStatus status,
 						const hiopVector& x,
 						const hiopVector& z_L,
@@ -848,20 +873,23 @@ void hiopNlpFormulation::user_callback_solution(hiopSolveStatus status,
 }
 
 bool hiopNlpFormulation::user_callback_iterate(int iter,
-					       double obj_value,
-					       const hiopVector& x,
-					       const hiopVector& z_L,
-					       const hiopVector& z_U,
-					       const hiopVector& c,
-					       const hiopVector& d,
-					       const hiopVector& y_c,
-					       const hiopVector& y_d,
-					       double inf_pr,
-					       double inf_du,
-					       double mu,
-					       double alpha_du,
-					       double alpha_pr,
-					       int ls_trials)
+                                               double obj_value,
+                                               double logbar_obj_value,
+                                               const hiopVector& x,
+                                               const hiopVector& z_L,
+                                               const hiopVector& z_U,
+                                               const hiopVector& s,
+                                               const hiopVector& c,
+                                               const hiopVector& d,
+                                               const hiopVector& y_c,
+                                               const hiopVector& y_d,
+                                               double inf_pr,
+                                               double inf_du,
+                                               double onenorm_pr,
+                                               double mu,
+                                               double alpha_du,
+                                               double alpha_pr,
+                                               int ls_trials)
 {
   assert(x.get_size()==n_vars);
   assert(c.get_size()+d.get_size()==n_cons);
@@ -884,12 +912,67 @@ bool hiopNlpFormulation::user_callback_iterate(int iter,
   //! zl and zu may have different sizes than what user expects since HiOp removes
   //! variables internally
   
-  return interface_base.iterate_callback(iter, obj_value, 
+  return interface_base.iterate_callback(iter, obj_value, logbar_obj_value,
 					 (int)n_vars, x.local_data_const(),
 					 z_L.local_data_const(), z_U.local_data_const(),
-					 (int)n_cons, cons_body_->local_data_const(), 
+           (int)n_cons_ineq, s.local_data_const(),
+					 (int)n_cons, cons_body_->local_data_const(),
 					 cons_lambdas_->local_data_const(),
-					 inf_pr, inf_du, mu, alpha_du, alpha_pr,  ls_trials);
+					 inf_pr, inf_du, onenorm_pr, mu, alpha_du, alpha_pr,  ls_trials);
+}
+
+bool hiopNlpFormulation::user_force_update(int iter,
+                                           double& obj_value,
+                                           hiopVector& x,
+                                           hiopVector& z_L,
+                                           hiopVector& z_U,
+                                           hiopVector& c,
+                                           hiopVector& d,
+                                           hiopVector& y_c,
+                                           hiopVector& y_d,
+                                           double& mu,
+                                           double& alpha_du,
+                                           double& alpha_pr)
+{
+  bool retval;
+  assert(x.get_size()==n_vars);
+  assert(c.get_size()+d.get_size()==n_cons);
+
+  assert(y_c.get_size() == n_cons_eq);
+  assert(y_d.get_size() == n_cons_ineq);
+
+  if(cons_lambdas_ == NULL) {
+    cons_lambdas_ = hiop::LinearAlgebraFactory::createVector(n_cons);
+  }
+  copy_EqIneq_to_cons(y_c, y_d, *cons_lambdas_);
+
+  //concatenate 'c' and 'd' into user's constrainty body
+  if(cons_body_ == NULL) {
+    cons_body_ = hiop::LinearAlgebraFactory::createVector(n_cons);
+  }
+  copy_EqIneq_to_cons(c, d, *cons_body_);
+
+  //! todo -> test this when fixed variables are removed -> the internal
+  //! zl and zu may have different sizes than what user expects since HiOp removes
+  //! variables internally
+
+  retval = interface_base.force_update(obj_value,
+                                       (int)n_vars,
+                                       x.local_data(),
+                                       z_L.local_data(),
+                                       z_U.local_data(),
+                                       (int)n_cons,
+                                       cons_body_->local_data(),
+                                       cons_lambdas_->local_data(),
+                                       mu,
+                                       alpha_du,
+                                       alpha_pr);
+  assert(retval);
+
+  // unpack the full size vector
+  copy_cons_to_EqIneq(c, d, *cons_body_);
+  copy_cons_to_EqIneq(y_c, y_d, *cons_lambdas_);
+
 }
 
 void hiopNlpFormulation::print(FILE* f, const char* msg, int rank) const
@@ -931,8 +1014,9 @@ double hiopNlpFormulation::get_obj_scale() const
  * ***********************************************************************************
 */
 
-hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& interface_)
-  : hiopNlpFormulation(interface_), interface(interface_)
+hiopNlpDenseConstraints::hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& interface_,
+                                                 const char* option_file)
+  : hiopNlpFormulation(interface_, option_file), interface(interface_)
 {
 }
 

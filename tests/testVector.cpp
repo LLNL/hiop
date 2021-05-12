@@ -257,6 +257,7 @@ int runTests(const char* mem_space, MPI_Comm comm)
   fail += test.vector_component_max(*x, *y, rank);
   fail += test.vector_component_abs(*x, rank);
   fail += test.vector_component_sgn(*x, rank);
+  fail += test.vector_component_sqrt(*x, rank);
   fail += test.vectorOnenorm(*x, rank);
   fail += test.vectorTwonorm(*x, rank);
   fail += test.vectorInfnorm(*x, rank);
@@ -272,6 +273,7 @@ int runTests(const char* mem_space, MPI_Comm comm)
   fail += test.vectorNegate(*x, rank);
   fail += test.vectorInvert(*x, rank);
   fail += test.vectorLogBarrier(*x, *y, rank);
+  fail += test.vector_sum_local(*x, rank);
   fail += test.vectorAddLogBarrierGrad(*x, *y, *z, rank);
   fail += test.vectorLinearDampingTerm(*x, *y, *z, rank);
   fail += test.vectorAddLinearDampingTerm(*x, *y, *z, rank);

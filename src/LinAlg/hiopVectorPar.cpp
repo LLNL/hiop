@@ -153,6 +153,11 @@ void hiopVectorPar::copyFromStarting(int start_index/*_in_src*/,const hiopVector
   memcpy(data_+start_index, v.data_, v.n_local_*sizeof(double));
 }
 
+void hiopVectorPar::copy_from_starting_at(const double* v, int start_index_in_v, int nv)
+{
+  memcpy(data_, v+start_index_in_v, nv*sizeof(double));
+}
+
 void hiopVectorPar::startingAtCopyFromStartingAt(int start_idx_dest, 
 						 const hiopVector& v_in, 
 						 int start_idx_src)
@@ -175,7 +180,7 @@ void hiopVectorPar::startingAtCopyFromStartingAt(int start_idx_dest,
   memcpy(data_+start_idx_dest, v.data_+start_idx_src, howManyToCopy*sizeof(double));
 }
 
-void hiopVectorPar::copyToStarting(int start_index, hiopVector& v_)
+void hiopVectorPar::copyToStarting(int start_index, hiopVector& v_) const
 {
   const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_);
 #ifdef HIOP_DEEPCHECKS
@@ -185,7 +190,7 @@ void hiopVectorPar::copyToStarting(int start_index, hiopVector& v_)
   memcpy(v.data_, data_+start_index, v.n_local_*sizeof(double));
 }
 /* Copy 'this' to v starting at start_index in 'v'. */
-void hiopVectorPar::copyToStarting(hiopVector& v_, int start_index/*_in_dest*/)
+void hiopVectorPar::copyToStarting(hiopVector& v_, int start_index/*_in_dest*/) const
 {
 #ifdef HIOP_DEEPCHECKS
   assert(n_local_==n_ && "only for local/non-distributed vectors");
@@ -195,7 +200,7 @@ void hiopVectorPar::copyToStarting(hiopVector& v_, int start_index/*_in_dest*/)
   memcpy(v.data_+start_index, data_, n_local_*sizeof(double)); 
 }
 
-void hiopVectorPar::copyToStartingAt_w_pattern(hiopVector& v_, int start_index/*_in_dest*/, const hiopVector& select)
+void hiopVectorPar::copyToStartingAt_w_pattern(hiopVector& v_, int start_index/*_in_dest*/, const hiopVector& select) const
 {
   const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_);
   const hiopVectorPar& ix = dynamic_cast<const hiopVectorPar&>(select);
@@ -456,6 +461,14 @@ void hiopVectorPar::component_sgn()
   }
 }
 
+void hiopVectorPar::component_sqrt()
+{
+  for(int i=0; i<n_local_; i++) {
+    assert(data_[i]>=0);
+    data_[i] = std::sqrt(data_[i]);  
+  }
+}
+
 void hiopVectorPar::scale(double num)
 {
   if(1.0==num) return;
@@ -639,6 +652,15 @@ double hiopVectorPar::logBarrier_local(const hiopVector& select) const
       comp = (t - sum) - y;
       sum = t;
     }
+  }
+  return sum;
+}
+
+double hiopVectorPar::sum_local() const 
+{
+  double sum = 0.0;
+  for(int i=0; i<n_local_; i++) {
+    sum += data_[i];
   }
   return sum;
 }

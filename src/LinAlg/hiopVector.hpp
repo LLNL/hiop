@@ -70,10 +70,12 @@ public:
   /// @brief Copy the elements of v
   virtual void copyFrom(const hiopVector& v ) = 0;
   virtual void copyFrom(const double* v_local_data) = 0; //v should be of length at least n_local_
-  /// @brief Copy the 'n' elements of v starting at 'start_index_in_src' in 'this'
-  virtual void copyFromStarting(int start_index_in_src, const double* v, int n) = 0;
+  /// @brief Copy the 'n' elements of v starting at 'start_index_in_this' in 'this'
+  virtual void copyFromStarting(int start_index_in_this, const double* v, int n) = 0;
   /// @brief Copy v in 'this' starting at start_index_in_src in  'this'. */
   virtual void copyFromStarting(int start_index_in_src, const hiopVector& v) = 0;
+  /// @brief Copy the 'n' elements of v starting at 'start_index_in_v' into 'this'
+  virtual void copy_from_starting_at(const double* v, int start_index_in_v, int n) = 0;
 
   /*
    * @brief Copy from 'v' starting at 'start_idx_src' to 'this' starting at 'start_idx_dest'
@@ -90,11 +92,11 @@ public:
   /// @brief Copy 'this' to double array, which is assumed to be at least of 'n_local_' size.
   virtual void copyTo(double* dest) const = 0;
   /// @brief Copy 'this' to v starting at start_index in 'this'.
-  virtual void copyToStarting(int start_index_in_src, hiopVector& v) = 0;
+  virtual void copyToStarting(int start_index_in_src, hiopVector& v) const = 0;
   /// @brief Copy 'this' to v starting at start_index in 'v'.
-  virtual void copyToStarting(hiopVector& v, int start_index_in_dest) = 0;
+  virtual void copyToStarting(hiopVector& v, int start_index_in_dest) const = 0;
   /// @brief Copy the entries in 'this' where corresponding 'ix' is nonzero, to v starting at start_index in 'v'.
-  virtual void copyToStartingAt_w_pattern(hiopVector& v, int start_index_in_dest, const hiopVector& ix) = 0;
+  virtual void copyToStartingAt_w_pattern(hiopVector& v, int start_index_in_dest, const hiopVector& ix) const = 0;
   
   /**
    * copy 'this' (source) starting at 'start_idx_in_src' to 'dest' starting at index 'int start_idx_dest' 
@@ -142,7 +144,9 @@ public:
   virtual void component_abs() = 0;
   /** @brief Apply sign function to each component */
   virtual void component_sgn() = 0;
-  
+  /** @brief compute sqrt of each component */
+  virtual void component_sqrt() = 0;
+
   /// @brief Scale each element of this  by the constant alpha
   virtual void scale( double alpha ) = 0;
   /// @brief this += alpha * x
@@ -167,6 +171,8 @@ public:
   virtual double logBarrier_local(const hiopVector& select) const = 0;
   /// @brief adds the gradient of the log barrier, namely this=this+alpha*1/select(x)
   virtual void addLogBarrierGrad(double alpha, const hiopVector& x, const hiopVector& select)=0;
+  /// @brief compute sum{(x_i):i=1,..,n}
+  virtual double sum_local() const = 0;
 
   /**
    * @brief Computes the log barrier's linear damping term of the Filter-IPM method of 

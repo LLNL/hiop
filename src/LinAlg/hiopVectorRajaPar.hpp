@@ -79,17 +79,19 @@ public:
   virtual void setToConstant_w_patternSelect(double c, const hiopVector& select);
   virtual void copyFrom(const hiopVector& v );
   virtual void copyFrom(const double* v_local_data); //v should be of length at least n_local
-  /** Copy the 'n' elements of v starting at 'start_index_in_src' in 'this' */
-  virtual void copyFromStarting(int start_index_in_src, const double* v, int n);
+  /** Copy the 'n' elements of v starting at 'start_index_in_this' in 'this' */
+  virtual void copyFromStarting(int start_index_in_this, const double* v, int n);
   virtual void copyFromStarting(int start_index_in_src, const hiopVector& v);
+  /// @brief Copy the 'n' elements of v starting at 'start_index_in_v' into 'this'
+  virtual void copy_from_starting_at(const double* v, int start_index_in_v, int n);
   /* copy 'dest' starting at 'start_idx_dest' to 'this' starting at 'start_idx_src' */
   virtual void startingAtCopyFromStartingAt(int start_idx_src, const hiopVector& v, int start_idx_dest);
 
   virtual void copyTo(double* dest) const;
-  virtual void copyToStarting(int start_index_in_src, hiopVector& v);
+  virtual void copyToStarting(int start_index_in_src, hiopVector& v) const;
   /* Copy 'this' to v starting at start_index in 'v'. */
-  virtual void copyToStarting(hiopVector& v, int start_index_in_dest);
-  virtual void copyToStartingAt_w_pattern(hiopVector& v, int start_index_in_dest, const hiopVector& ix);
+  virtual void copyToStarting(hiopVector& v, int start_index_in_dest) const;
+  virtual void copyToStartingAt_w_pattern(hiopVector& v, int start_index_in_dest, const hiopVector& ix) const;
   /* copy 'this' (source) starting at 'start_idx_in_src' to 'dest' starting at index 'int start_idx_dest' 
    * If num_elems>=0, 'num_elems' will be copied; if num_elems<0, elements will be copied till the end of
    * either source ('this') or destination ('dest') is reached
@@ -111,7 +113,8 @@ public:
   virtual void component_max(const double constant);
   virtual void component_max(const hiopVector& v);
   virtual void component_abs();
-  virtual void component_sgn();  
+  virtual void component_sgn();
+  virtual void component_sqrt();
   virtual void scale( double alpha );
   /** this += alpha * x */
   virtual void axpy  ( double alpha, const hiopVector& x );
@@ -129,6 +132,7 @@ public:
   virtual void negate();
   virtual void invert();
   virtual double logBarrier_local(const hiopVector& select) const;
+  virtual double sum_local() const;
   virtual void addLogBarrierGrad(double alpha, const hiopVector& x, const hiopVector& select);
 
   virtual double linearDampingTerm_local(const hiopVector& ixl_select, const hiopVector& ixu_select, 
