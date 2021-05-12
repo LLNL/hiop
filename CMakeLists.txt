@@ -285,6 +285,35 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
   set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/_dist-${CMAKE_BUILD_TYPE}")
 endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 
+##########################################################
+#  EXPORTING
+##########################################################
+
+export(EXPORT hiop-targets FILE "${CMAKE_CURRENT_BINARY_DIR}/HiOpTargets.cmake")
+install(EXPORT hiop-targets
+  FILE HiOpTargets.cmake
+  NAMESPACE HiOp::
+  DESTINATION
+  share/hiop/cmake)
+
+include(CMakePackageConfigHelpers)
+
+write_basic_package_version_file(
+  HiOpConfigVersion.cmake
+  VERSION ${CMAKE_PROJECT_VERSION}
+  COMPATIBILITY AnyNewerVersion)
+
+configure_package_config_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/HiOpConfig.cmake.in
+  "${CMAKE_CURRENT_BINARY_DIR}/HiOpConfig.cmake"
+  INSTALL_DESTINATION "share/hiop/cmake"
+  NO_SET_AND_CHECK_MACRO
+  NO_CHECK_REQUIRED_COMPONENTS_MACRO)
+
+install(FILES
+  ${CMAKE_CURRENT_BINARY_DIR}/HiOpConfig.cmake
+  ${CMAKE_CURRENT_BINARY_DIR}/HiOpConfigVersion.cmake
+  DESTINATION share/hiop/cmake)
+
 add_subdirectory(tests)
 
 set(STRIP_TABLE_CMD "awk '/Problem Summary/ { while (!match($0, /termination/)){ if(match($0, /^[ ]+[0-9]/)) { print $0; } getline } }'")

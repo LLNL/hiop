@@ -1,0 +1,6 @@
+# Author(s):
+# - Cameron Rutherford <cameron.rutherford@pnnl.gov>
+
+include( "${CMAKE_CURRENT_LIST_DIR}/HiOpTargets.cmake" )
+
+# TODO: add tpl configuration for all targets that we are linking against
