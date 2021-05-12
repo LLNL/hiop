@@ -27,7 +27,7 @@ foreach(libtype shared static)
       )
     target_link_libraries(hiop_${libtype} PUBLIC hiop_tpl)
     set_target_properties(hiop_${libtype} PROPERTIES OUTPUT_NAME hiop)
-    install(TARGETS hiop_${libtype} DESTINATION lib)
+    install(TARGETS hiop_${libtype} DESTINATION lib EXPORT hiop-targets)
   endif()
 endforeach()
 
