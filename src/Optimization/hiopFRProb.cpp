@@ -48,7 +48,6 @@
 /**
  * @file hiopFRProb.cpp
  *
- * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
  * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
  *
  */
@@ -197,9 +196,9 @@ bool hiopFRProbSparse::get_cons_info(const long long& m, double* clow, double* c
 }
 
 bool hiopFRProbSparse::get_sparse_blocks_info(int& nx,
-                                                   int& nnz_sparse_Jaceq,
-                                                   int& nnz_sparse_Jacineq,
-                                                   int& nnz_sparse_Hess_Lagr)
+                                              int& nnz_sparse_Jaceq,
+                                              int& nnz_sparse_Jacineq,
+                                              int& nnz_sparse_Hess_Lagr)
 {
   nx = n_;
   nnz_sparse_Jaceq = nnz_Jac_c_;
@@ -251,20 +250,20 @@ bool hiopFRProbSparse::eval_grad_f(const long long& n, const double* x, bool new
 }
 
 bool hiopFRProbSparse::eval_cons(const long long& n,
-                                      const long long& m,
-                                      const long long& num_cons,
-                                      const long long* idx_cons,
-                                      const double* x,
-                                      bool new_x, double* cons)
+                                 const long long& m,
+                                 const long long& num_cons,
+                                 const long long* idx_cons,
+                                 const double* x,
+                                 bool new_x, double* cons)
 {
   return false;
 }
 
 bool hiopFRProbSparse::eval_cons(const long long& n,
-                                      const long long& m,
-                                      const double* x,
-                                      bool new_x,
-                                      double* cons)
+                                 const long long& m,
+                                 const double* x,
+                                 bool new_x,
+                                 double* cons)
 {
   assert(n == n_);
   assert(m == m_);
@@ -293,27 +292,27 @@ bool hiopFRProbSparse::eval_cons(const long long& n,
 }
 
 bool hiopFRProbSparse::eval_Jac_cons(const long long& n, const long long& m,
-                                          const long long& num_cons,
-                                          const long long* idx_cons,
-                                          const double* x,
-                                          bool new_x,
-                                          const int& nnzJacS,
-                                          int* iJacS,
-                                          int* jJacS,
-                                          double* MJacS)
+                                     const long long& num_cons,
+                                     const long long* idx_cons,
+                                     const double* x,
+                                     bool new_x,
+                                     const int& nnzJacS,
+                                     int* iJacS,
+                                     int* jJacS,
+                                     double* MJacS)
 {
   return false;
 }
 
 /// @pre assuming Jac of the original prob is sorted
 bool hiopFRProbSparse::eval_Jac_cons(const long long& n,
-                                          const long long& m,
-                                          const double* x,
-                                          bool new_x,
-                                          const int& nnzJacS,
-                                          int* iJacS,
-                                          int* jJacS,
-                                          double* MJacS)
+                                     const long long& m,
+                                     const double* x,
+                                     bool new_x,
+                                     const int& nnzJacS,
+                                     int* iJacS,
+                                     int* jJacS,
+                                     double* MJacS)
 {
   assert( n == n_);
   assert( m == m_);
@@ -451,16 +450,16 @@ bool hiopFRProbSparse::eval_Jac_cons(const long long& n,
 }
 
 bool hiopFRProbSparse::eval_Hess_Lagr(const long long& n,
-                                           const long long& m,
-                                           const double* x,
-                                           bool new_x,
-                                           const double& obj_factor,
-                                           const double* lambda,
-                                           bool new_lambda,
-                                           const int& nnzHSS,
-                                           int* iHSS,
-                                           int* jHSS,
-                                           double* MHSS)
+                                      const long long& m,
+                                      const double* x,
+                                      bool new_x,
+                                      const double& obj_factor,
+                                      const double* lambda,
+                                      bool new_lambda,
+                                      const int& nnzHSS,
+                                      int* iHSS,
+                                      int* jHSS,
+                                      double* MHSS)
 {
   assert(nnzHSS == nnz_Hess_Lag_);
 
@@ -588,14 +587,14 @@ bool hiopFRProbSparse::eval_Hess_Lagr(const long long& n,
 }
 
 bool hiopFRProbSparse::get_starting_point(const long long& n,
-                                               const long long& m,
-                                               double* x0,
-                                               bool& duals_avail,
-                                               double* z_bndL0,
-                                               double* z_bndU0,
-                                               double* lambda0,
-                                               bool& slack_avail,
-					       double *ineq_slack)
+                                          const long long& m,
+                                          double* x0,
+                                          bool& duals_avail,
+                                          double* z_bndL0,
+                                          double* z_bndU0,
+                                          double* lambda0,
+                                          bool& slack_avail,
+                                          double *ineq_slack)
 {
   assert( n == n_);
   assert( m == m_);
@@ -706,24 +705,24 @@ bool hiopFRProbSparse::get_starting_point(const long long& n,
 }
 
 bool hiopFRProbSparse::iterate_callback(int iter,
-                                             double obj_value,
-                                             double logbar_obj_value,
-                                             int n,
-                                             const double* x,
-                                             const double* z_L,
-                                             const double* z_U,
-                                             int m_ineq,
-                                             const double* s,
-                                             int m,
-                                             const double* g,
-                                             const double* lambda,
-                                             double inf_pr,
-                                             double inf_du,
-                                             double onenorm_pr_,
-                                             double mu,
-                                             double alpha_du,
-                                             double alpha_pr,
-                                             int ls_trials)
+                                        double obj_value,
+                                        double logbar_obj_value,
+                                        int n,
+                                        const double* x,
+                                        const double* z_L,
+                                        const double* z_U,
+                                        int m_ineq,
+                                        const double* s,
+                                        int m,
+                                        const double* g,
+                                        const double* lambda,
+                                        double inf_pr,
+                                        double inf_du,
+                                        double onenorm_pr_,
+                                        double mu,
+                                        double alpha_du,
+                                        double alpha_pr,
+                                        int ls_trials)
 {
   assert(n_ == n);
   assert(m_ineq_ == m_ineq);
@@ -772,16 +771,16 @@ bool hiopFRProbSparse::iterate_callback(int iter,
 }
 
 bool hiopFRProbSparse::force_update(double obj_value,
-                                         const int n,
-                                         double* x,
-                                         double* z_L,
-                                         double* z_U,
-                                         const int m,
-                                         double* g,
-                                         double* lambda,
-                                         double& mu,
-                                         double& alpha_du,
-                                         double& alpha_pr)
+                                    const int n,
+                                    double* x,
+                                    double* z_L,
+                                    double* z_U,
+                                    const int m,
+                                    double* g,
+                                    double* lambda,
+                                    double& mu,
+                                    double& alpha_du,
+                                    double& alpha_pr)
 {
   // this function is used in FR in FR, see eq (33)
   assert( n == n_);

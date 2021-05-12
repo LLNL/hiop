@@ -432,25 +432,25 @@ void hiopVectorRajaPar::copyToStarting(int start_index, hiopVector& dst) const
  * @brief Copy elements of `this` vector to `vec` starting at `start_index`.
  * 
  * @param[out] vec - a vector where to copy elements of `this`
- * @param[in] start_index - position in `vec` where to copy
+ * @param[in] start_index_in_dest - position in `vec` where to copy
  * 
- * @pre start_index + vec.n_local_ <= n_local_
+ * @pre start_index_in_dest + vec.n_local_ <= n_local_
  * @pre `this` and `vec` are not distributed
  */
-void hiopVectorRajaPar::copyToStarting(hiopVector& vec, int start_index/*_in_dest*/) const
+void hiopVectorRajaPar::copyToStarting(hiopVector& vec, int start_index_in_dest) const
 {
   const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(vec);
-  assert(start_index+n_local_ <= v.n_local_);
+  assert(start_index_in_dest+n_local_ <= v.n_local_);
 
   // If there is nothing to copy, return.
   if(n_local_ == 0)
     return;
 
   auto& rm = umpire::ResourceManager::getInstance();
-  rm.copy(v.data_dev_ + start_index, this->data_dev_, this->n_local_*sizeof(double));
+  rm.copy(v.data_dev_ + start_index_in_dest, this->data_dev_, this->n_local_*sizeof(double));
 }
 
-void hiopVectorRajaPar::copyToStartingAt_w_pattern(hiopVector& vec, int start_index/*_in_dest*/, const hiopVector& select) const
+void hiopVectorRajaPar::copyToStartingAt_w_pattern(hiopVector& vec, int start_index_in_dest, const hiopVector& select) const
 {
 #if 0  
   if(n_local_ == 0)
@@ -471,7 +471,7 @@ void hiopVectorRajaPar::copyToStartingAt_w_pattern(hiopVector& vec, int start_in
     {
       assert(id[i] == zero || id[i] == one);
       if(id[i] == one){
-        vd[start_index+find_nnz] = dd[i];
+        vd[start_index_in_dest+find_nnz] = dd[i];
         find_nnz++;
       }
     });
@@ -487,7 +487,7 @@ void hiopVectorRajaPar::copyToStartingAt_w_pattern(hiopVector& vec, int start_in
  * starting at index 'int start_idx_dest'. If num_elems>=0, 'num_elems' will be copied; 
  * 
  * @param[out] vec - a vector where to copy elements of `this`
- * @param[in] start_index - position in `vec` where to copy
+ * @param[in] start_idx_in_src - position in `vec` where to copy
  * 
  * @pre start_idx_in_src <= n_local_
  * @pre start_idx_dest   <= destination.n_local_
@@ -1214,7 +1214,7 @@ double hiopVectorRajaPar::sum_local() const
   RAJA::ReduceSum< hiop_raja_reduce, double > sum(0.0);
   RAJA::forall< hiop_raja_exec >(
     RAJA::RangeSegment(0, n_local_),
-		RAJA_LAMBDA(RAJA::Index_type i)
+    RAJA_LAMBDA(RAJA::Index_type i)
     {
       sum += data[i];
     }
