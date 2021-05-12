@@ -82,6 +82,10 @@ public:
     return fail;
   }
 
+  /**
+   * Ensure that non-const operator[] correctly _assigns_ to the underlying
+   * data.
+   */
   virtual bool vectorSetElement(hiop::hiopVectorInt& x) const
   {
     int fail = 0;
@@ -98,6 +102,9 @@ public:
     return fail;
   }
 
+  /**
+   * Ensure that const operator[] correctly _returns_ value at specified index.
+   */
   virtual bool vectorGetElement(hiop::hiopVectorInt& x) const
   {
     int fail = 0;

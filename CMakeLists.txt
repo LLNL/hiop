@@ -387,13 +387,14 @@ if (HIOP_WITH_MAKETEST)
   endif(HIOP_SPARSE)
 
   if(HIOP_WITH_VALGRIND_TESTS)
+    string(REPLACE ";" " " runcmd_str "${RUNCMD}")
     add_test(
       NAME NlpDenseCons1_5H_Valgrind
-      COMMAND bash -c "${RUNCMD} ${HIOP_VALGRIND_CMD} $<TARGET_FILE:nlpDenseCons_ex1.exe> 500 1.0 -selfcheck"
+      COMMAND bash -c "${runcmd_str} ${HIOP_VALGRIND_CMD} $<TARGET_FILE:nlpDenseCons_ex1.exe> 500 1.0 -selfcheck"
       )
     add_test(
       NAME NlpMixedDenseSparse4_1_Valgrind
-      COMMAND bash -c "${RUNCMD} ${HIOP_VALGRIND_CMD} $<TARGET_FILE:nlpMDS_ex4.exe> 400 100 0 -selfcheck"
+      COMMAND bash -c "${runcmd_str} ${HIOP_VALGRIND_CMD} $<TARGET_FILE:nlpMDS_ex4.exe> 400 100 0 -selfcheck"
       )
   endif()
 

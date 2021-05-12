@@ -67,31 +67,31 @@ hiopVectorIntRaja::hiopVectorIntRaja(int sz, std::string mem_space)
 #endif
 
   auto& resmgr = umpire::ResourceManager::getInstance();
-  umpire::Allocator devalloc  = resmgr.getAllocator(mem_space_);
-  buf_dev_ = static_cast<int*>(devalloc.allocate(sz_*sizeof(int)));
-  if(mem_space_ != "HOST")
+  umpire::Allocator devalloc = resmgr.getAllocator(mem_space_);
+  buf_ = static_cast<int*>(devalloc.allocate(sz_*sizeof(int)));
+  if(mem_space_ == "DEVICE")
   {
     umpire::Allocator hostalloc = resmgr.getAllocator("HOST");
     buf_host_ = static_cast<int*>(hostalloc.allocate(sz_*sizeof(int)));
   }
   else
   {
-    buf_host_ = buf_dev_;
+    buf_host_ = buf_;
   }
 }
 
 hiopVectorIntRaja::~hiopVectorIntRaja()
 {
   auto& resmgr = umpire::ResourceManager::getInstance();
-  umpire::Allocator devalloc  = resmgr.getAllocator(mem_space_);
-  devalloc.deallocate(buf_dev_);
-  if (mem_space_ != "HOST")
+  umpire::Allocator devalloc = resmgr.getAllocator(mem_space_);
+  devalloc.deallocate(buf_);
+  if (mem_space_ == "DEVICE")
   {
     umpire::Allocator hostalloc = resmgr.getAllocator("HOST");
     hostalloc.deallocate(buf_host_);
   }
   buf_host_ = nullptr;
-  buf_dev_ = nullptr;
+  buf_ = nullptr;
 }
 
 const int& hiopVectorIntRaja::operator[] (int i) const
@@ -106,19 +106,19 @@ int& hiopVectorIntRaja::operator[] (int i)
 
 void hiopVectorIntRaja::copyFromDev() const
 {
-  if (buf_dev_ != buf_host_)
+  if (buf_ != buf_host_)
   {
     auto& resmgr = umpire::ResourceManager::getInstance();
-    resmgr.copy(buf_host_, buf_dev_);
+    resmgr.copy(buf_host_, buf_);
   }
 }
 
 void hiopVectorIntRaja::copyToDev() const
 {
-  if (buf_dev_ != buf_host_)
+  if (buf_ != buf_host_)
   {
     auto& resmgr = umpire::ResourceManager::getInstance();
-    resmgr.copy(buf_dev_, buf_host_);
+    resmgr.copy(buf_, buf_host_);
   }
 }
 
