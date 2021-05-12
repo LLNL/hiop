@@ -177,8 +177,8 @@ public:
     /* Function to check convergence based gradient 
      */
     double check_convergence_grad(const double* gk);
-    double check_convergence_fcn( );
-
+    double check_convergence_fcn();
+    double compute_base(const double val, const double rval);
 
     // setting the output level for the Hessian approximation 
     void set_verbosity(const int i); 

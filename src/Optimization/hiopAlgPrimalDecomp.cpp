@@ -353,7 +353,7 @@ double hiopAlgPrimalDecomposition::HessianApprox::check_convergence_grad(const d
   return convg;
 }
 // stopping criteria based on function value change
-double hiopAlgPrimalDecomposition::HessianApprox::check_convergence_fcn( )
+double hiopAlgPrimalDecomposition::HessianApprox::check_convergence_fcn()
 {
   double predicted_decrease = 0.;
   for(int i=0;i<n_;i++) {
@@ -364,6 +364,21 @@ double hiopAlgPrimalDecomposition::HessianApprox::check_convergence_fcn( )
   }
   predicted_decrease = fabs(predicted_decrease);
   return predicted_decrease;
+}
+
+// Compute the base case value at the kth step by subtracting
+// recourse approximation value from the objective. rval is the real
+// recourse function value at x_{k-1}, val is the master problem 
+// objective which is the sum of the base case value and the recourse function value.
+// This requires the previous steps to compute, hence in the HessianApprox class.
+double hiopAlgPrimalDecomposition::HessianApprox::
+compute_base(const double val, const double rval)
+{
+  double rec_appx = rval;
+  for(int i=0;i<n_;i++) {
+    rec_appx += gkm1[i]*skm1[i]+0.5*alpha_*(skm1[i]*skm1[i]);
+  }
+  return val-rec_appx;
 }
 
 void hiopAlgPrimalDecomposition::HessianApprox::set_verbosity(const int i)
@@ -576,6 +591,10 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
       hess_appx_2->set_verbosity(ver_);
     }
 
+    double base_val = 0.; // base case objective value 
+    double recourse_val = 0.;  // recourse objective value
+    double dinf = 0.; // step size 
+
     double convg = 1e20;
     double convg_g = 1e20;
     double convg_f = 1e20;
@@ -610,6 +629,7 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
           for(int i=0;i<n_;i++) printf("x %d %18.12e ",i,x_[i]);
           printf("\n ");
         }
+	base_val = master_prob_->get_objective();
       }
 
       // send base case solutions to all ranks
@@ -858,6 +878,14 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
       }
 
       if(my_rank_==0) {
+        int mpi_test_flag = 0;
+        for(int r=1; r<comm_size_;r++) {
+          MPI_Wait(&(rec_prob[r]->request_), &status_);
+          MPI_Wait(&req_cont_idx->request_, &status_);
+        }
+        
+	recourse_val = rval;
+
         if(ver_ >=outlevel2) {
           printf("real rval %18.12e\n",rval);
 	}
@@ -906,14 +934,11 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
           }
           convg = std::min(convg_f,convg_g);
           for(int i=0; i<nc_; i++) hess_appx[i] = alp_temp;
+	  base_val = hess_appx_2->compute_base(master_prob_->get_objective(),rval);
         }
 
         // wait for the sending/receiving to finish
-        int mpi_test_flag = 0;
-        for(int r=1; r<comm_size_;r++) {
-          MPI_Wait(&(rec_prob[r]->request_), &status_);
-          MPI_Wait(&req_cont_idx->request_, &status_);
-        }
+        
         // for debugging purpose print out the recourse gradient
         if(ver_ >=outlevel2) {
           for(int i=0;i<nc_;i++) {
@@ -922,6 +947,15 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
           printf("\n");
         }
        
+        if(ver_ >=outlevel1 && it>0) {
+          //printf("iteration         sub_obj              res               step_size           convg\n");
+          printf("iteration          objective                 residual                   "   
+	         "step_size                   convg\n");
+          printf("%d            %18.12e          %18.12e             %18.12e          "
+	         "%18.12e\n", it, base_val+recourse_val,convg_f,dinf, convg_g);
+          fflush(stdout);
+        }
+
         assert(evaluator->get_rgrad()!=NULL);// should be defined
         evaluator->set_rval(rval);
         evaluator->set_rgrad(nc_,grad_r);
@@ -951,15 +985,8 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
           printf( "Elapsed time for entire iteration %d is %f\n",it, t2 - t1 );  
         }
         // print out the iteration from the master rank
-	double dinf = step_size_inf(nc_, x_, x0);
-	if(ver_ >=outlevel1) {
-          //printf("iteration         sub_obj              res               step_size           convg\n");
-          printf("iteration              sub_obj                    residual                  "   
-	         "step_size                   convg\n");
-          printf("%d                %18.12e          %18.12e          %18.12e          "
-	         "%18.12e\n", it, master_prob_->get_objective(),convg_f,dinf, convg_g);
-          fflush(stdout);
-        }
+	dinf = step_size_inf(nc_, x_, x0);
+	
 
       } else {
         // evaluator ranks do nothing     
@@ -1022,6 +1049,9 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
   hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator = new hiopInterfacePriDecProblem::
                                                            RecourseApproxEvaluator(nc_,S_,xc_idx_);
 
+  double base_val = 0.; // base case objective value 
+  double recourse_val = 0.;  // recourse objective value
+  double dinf = 0.; // step size 
   double convg = 1e20;
   double convg_f = 1e20;
   double convg_g = 1e20;
@@ -1038,6 +1068,7 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
       // to do, what if solve fails?
       if(solver_status_) {     
       }
+      base_val = master_prob_->get_objective();
     }
 
     // array for number of indices, this is subjected to change	
@@ -1087,6 +1118,9 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
     if(ver_ >=outlevel2) {
       printf("real rval %18.12e\n",rval);
     }
+    
+    recourse_val = rval;
+
     double hess_appx[nc_]; //Hessian is computed on the solver/master
     for(int i=0; i<nc_; i++) hess_appx[i] = 1e6;
  
@@ -1115,6 +1149,7 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
       }
       convg = std::min(convg_f,convg_g);
       for(int i=0; i<nc_; i++) hess_appx[i] = alp_temp;
+      base_val = hess_appx_2->compute_base(master_prob_->get_objective(),rval);
     }
 
     // for debugging purpose print out the recourse gradient
@@ -1126,6 +1161,14 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
     }
     // nc_ is the demesnion of coupled x
 
+    if(ver_ >=outlevel1 && it>0) {
+      //printf("iteration         sub_obj              res               step_size          convg\n");
+      printf("iteration           objective                   residual                   "   
+             "step_size                   convg\n");
+      printf("%d              %18.12e            %18.12e           %18.12e         " 
+             "%18.12e\n", it, base_val+recourse_val, convg_f, dinf, convg_g);
+      fflush(stdout);
+    }
 
     assert(evaluator->get_rgrad()!=NULL);// should be defined
     evaluator->set_rval(rval);
@@ -1143,15 +1186,8 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
     //if(ver_ >=outlevel1) { //non-standard output could be deleted soon
     //  printf("solved full problem with objective %18.12e\n", master_prob_->get_objective());
     //}
-    double dinf = step_size_inf(nc_, x_, x0);
-    if(ver_ >=outlevel1) {
-      //printf("iteration         sub_obj              res               step_size          convg\n");
-      printf("iteration              sub_obj                    resdual                  "   
-             "step_size                   convg\n");
-      printf("%d                %18.12e          %18.12e          %18.12e         " 
-             "%18.12e\n", it, master_prob_->get_objective(),convg_f,dinf, convg_g);
-      fflush(stdout);
-    }
+    dinf = step_size_inf(nc_, x_, x0);
+    
 
     // print solution x at the end of a full solve
     if(ver_ >=outlevel2) {
