@@ -81,7 +81,6 @@ if(HIOP_USE_MPI)
     set(CMAKE_C_COMPILER ${MPI_C_COMPILER})
   endif(NOT DEFINED MPI_CXX_COMPILER)
   include_directories(${MPI_CXX_ADDITIONAL_INCLUDE_DIRS} ${MPI_CXX_COMPILER_INCLUDE_DIRS})
-  target_link_libraries(hiop_tpl INTERFACE MPI::MPI_CXX)
   set(HIOP_EXTRA_MPI_FLAGS "" CACHE STRING "Extra arguments to mpiexec when running tests")
 endif(HIOP_USE_MPI)
 
@@ -137,16 +136,10 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     )
 endif()
 
-if(HIOP_DEVELOPER_MODE)
-  target_link_libraries(hiop_tpl INTERFACE hiop_options hiop_warnings)
-endif()
-
 find_package(OpenMP)
-target_link_libraries(hiop_tpl INTERFACE OpenMP::OpenMP_CXX)
 
 if(NOT DEFINED BLAS_LIBRARIES)
   find_package(BLAS REQUIRED)
-  target_link_libraries(hiop_tpl INTERFACE ${BLAS_LIBRARIES})
   message(STATUS "Found BLAS libraries: ${BLAS_LIBRARIES}")
 endif(NOT DEFINED BLAS_LIBRARIES)
 
@@ -154,7 +147,6 @@ if(NOT DEFINED LAPACK_LIBRARIES)
   # in case the toolchain defines them
   find_package(LAPACK REQUIRED)
 endif(NOT DEFINED LAPACK_LIBRARIES)
-target_link_libraries(hiop_tpl INTERFACE ${LAPACK_LIBRARIES})
 message(STATUS "Using LAPACK libraries: ${LAPACK_LIBRARIES}")
 
 if(HIOP_USE_GPU)
@@ -167,19 +159,17 @@ if(HIOP_USE_GPU)
     set(CMAKE_CUDA_STANDARD_REQUIRED ON)
   endif()
 
-  if(HIOP_NVCC_ARCH)
-    set(CMAKE_CUDA_FLAGS "-arch=${HIOP_NVCC_ARCH}")
-    message(STATUS "Using CUDA arch ${HIOP_NVCC_ARCH}")
-  else()
-    set(CMAKE_CUDA_FLAGS "-arch=sm_35")
-    message(STATUS "Using CUDA arch sm_35")
+  if(NOT HIOP_NVCC_ARCH)
+    set(HIOP_NVCC_ARCH sm_35)
   endif()
+  if(HIOP_NVCC_ARCH AND NOT CMAKE_CUDA_ARCHITECTURES)
+    set(CMAKE_CUDA_ARCHITECTURES sm_35)
+  endif()
+  message(STATUS "Using CUDA arch ${CMAKE_CUDA_ARCHITECTURES}")
   set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-extended-lambda")
 
   set(HIOP_MAGMA_DIR CACHE PATH "Path to Magma directory")
-
   include(FindHiopCudaLibraries)
-  target_link_libraries(hiop_tpl INTERFACE hiop_cuda)
 endif(HIOP_USE_GPU)
 
 if(HIOP_USE_RAJA)
@@ -196,17 +186,12 @@ endif()
 if(HIOP_WITH_KRON_REDUCTION)
   set(HIOP_UMFPACK_DIR CACHE PATH "Path to UMFPACK directory")
   include(FindUMFPACK)
-  target_link_libraries(hiop_tpl INTERFACE UMFPACK)
 
   # metis needed (5.x needed by umfpack)
   set(HIOP_METIS_DIR CACHE PATH "Path to METIS directory")
   include(FindHiopMETIS)
-  target_link_libraries(hiop_tpl INTERFACE METIS)
 endif(HIOP_WITH_KRON_REDUCTION)
 
-if(HIOP_USE_RAJA)
-  target_link_libraries(hiop_tpl INTERFACE umpire RAJA)
-endif()
 
 if(HIOP_SPARSE)
   if(NOT TARGET METIS)
@@ -216,10 +201,7 @@ if(HIOP_SPARSE)
   if(HIOP_USE_COINHSL)
     set(HIOP_COINHSL_DIR CACHE PATH "Path to COINHSL directory")
     include(FindHiopCOINHSL)
-    if(COINHSL_LIBRARY AND METIS_LIBRARY)
-      target_link_libraries(hiop_tpl INTERFACE METIS)
-      target_link_libraries(hiop_tpl INTERFACE COINHSL)
-    else()
+    if(NOT (COINHSL_LIBRARY AND METIS_LIBRARY))
       if(NOT METIS_LIBRARY)
         message(STATUS "Cannot find METIS, which is required by COINHSL.")
       endif()
@@ -230,12 +212,8 @@ if(HIOP_SPARSE)
   if(HIOP_USE_STRUMPACK)
     set(HIOP_STRUMPACK_DIR CACHE PATH "Path to STRUMPACK directory")
     include(FindHiopSTRUMPACK)
-    target_link_libraries(hiop_tpl INTERFACE STRUMPACK)
 
-    if(STRUMPACK_LIBRARIES AND METIS_LIBRARY)
-      target_link_libraries(hiop_tpl INTERFACE METIS)
-      target_link_libraries(hiop_tpl INTERFACE ${STRUMPACK_LIBRARIES})  
-    else()
+    if(NOT (STRUMPACK_LIBRARIES AND METIS_LIBRARY))
       if(STRUMPACK_LIBRARIES)
         message(STATUS "Cannot find METIS, which is required by STRUMPACK.")
       endif()
@@ -289,6 +267,7 @@ endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 #  EXPORTING
 ##########################################################
 
+# Export libhiop
 export(EXPORT hiop-targets FILE "${CMAKE_CURRENT_BINARY_DIR}/HiOpTargets.cmake")
 install(EXPORT hiop-targets
   FILE HiOpTargets.cmake
@@ -296,8 +275,8 @@ install(EXPORT hiop-targets
   DESTINATION
   share/hiop/cmake)
 
+# Package version file
 include(CMakePackageConfigHelpers)
-
 write_basic_package_version_file(
   HiOpConfigVersion.cmake
   VERSION ${CMAKE_PROJECT_VERSION}

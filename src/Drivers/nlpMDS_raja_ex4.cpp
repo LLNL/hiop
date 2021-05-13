@@ -200,7 +200,7 @@ bool Ex4::get_vars_info(const long long& n, double *xlow, double* xupp, Nonlinea
     });
 
   /// Using OpenMP execution policy for nonlinearity type setting
-  RAJA::forall<RAJA::omp_parallel_for_exec>(RAJA::RangeSegment(0, n),
+  RAJA::forall<RAJA::seq_exec>(RAJA::RangeSegment(0, n),
     [=](RAJA::Index_type i)
     {
       type[i] = hiopNonlinear;
@@ -239,7 +239,8 @@ bool Ex4::get_cons_info(const long long& m, double* clow, double* cupp, Nonlinea
     });
 
   /// Using OpenMP execution policy for nonlinearity type setting
-  RAJA::forall<RAJA::omp_parallel_for_exec>(RAJA::RangeSegment(0, m),
+  // Using sequential execution temporarily
+  RAJA::forall<RAJA::seq_exec>(RAJA::RangeSegment(0, m),
     [=](RAJA::Index_type i)
     {
       type[i] = hiopNonlinear;

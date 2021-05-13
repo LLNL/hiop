@@ -25,7 +25,29 @@ foreach(libtype shared static)
       $<TARGET_OBJECTS:hiopUtils>
       $<$<BOOL:${HIOP_BUILD_SHARED}>:$<TARGET_OBJECTS:hiopInterface>>
       )
-    target_link_libraries(hiop_${libtype} PUBLIC hiop_tpl)
+    # Link against all tpls + options/warnings
+    target_link_libraries(hiop_${libtype}
+      $<$<BOOL:${HIOP_USE_MPI}>:MPI::MPI_CXX>
+      OpenMP::OpenMP_CXX
+      ${BLAS_LIBRARIES}
+      ${LAPACK_LIBRARIES}
+      $<$<BOOL:${HIOP_USE_GPU}>:hiop_cuda>
+      $<$<BOOL:${HIOP_DEVELOPER_MODE}>:hiop_options>
+      $<$<BOOL:${HIOP_DEVELOPER_MODE}>:hiop_warnings>
+      $<$<BOOL:${HIOP_USE_RAJA}>:RAJA>
+      $<$<BOOL:${HIOP_USE_RAJA}>:umpire>
+      $<$<BOOL:${HIOP_WITH_KRON_REDUCTION}>:UMFPACK>
+      $<$<BOOL:${HIOP_USE_COINHSL}>:COINHSL>
+      $<$<BOOL:${HIOP_USE_STRUMPACK}>:STRUMPACK>
+      $<$<BOOL:${HIOP_USE_STRUMPACK}>:${STRUMPACK_LIBRARIES}>)
+    # Metis logic outside of ugly regexp...
+    if(HIOP_WITH_KRON_REDUCTION OR HIOP_SPARSE)
+      target_link_libraries(hiop_${libtype} METIS)
+    endif()
+    # This should probably be re-configured later...
+    if(HIOP_USE_GPU)
+      set_target_properties(hiop_${libtype} PROPERTIES CUDA_ARCHITECTURES ${HIOP_NVCC_ARCH})
+    endif()
     set_target_properties(hiop_${libtype} PROPERTIES OUTPUT_NAME hiop)
     install(TARGETS hiop_${libtype} DESTINATION lib EXPORT hiop-targets)
   endif()

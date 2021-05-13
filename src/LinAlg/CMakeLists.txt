@@ -103,4 +103,4 @@ install(
   )
 
 add_library(hiopLinAlg OBJECT ${hiopLinAlg_SRC})
-target_link_libraries(hiopLinAlg PRIVATE hiop_tpl)
+

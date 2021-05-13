@@ -3,4 +3,13 @@
 
 include( "${CMAKE_CURRENT_LIST_DIR}/HiOpTargets.cmake" )
 
-# TODO: add tpl configuration for all targets that we are linking against
+# TODO: add tpl configuration for all targets that we need to export
+if(@HIOP_USE_RAJA@ AND NOT TARGET RAJA)
+  find_package(RAJA CONFIG
+    PATHS ${RAJA_DIR} ${RAJA_DIR}/share/raja/cmake
+    REQUIRED)
+  find_package(umpire CONFIG
+    PATHS ${umpire_DIR} ${umpire_DIR}/share/umpire/cmake
+    REQUIRED)
+endif()
+
