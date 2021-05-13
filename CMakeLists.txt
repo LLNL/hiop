@@ -252,6 +252,13 @@ else(HIOP_SPARSE)
   set(HIOP_USE_STRUMPACK OFF CACHE BOOL "Build without STRUMPACK" FORCE)
 endif(HIOP_SPARSE)
 
+# It simplifies linking against metis to set an internal variable
+if(HIOP_SPARSE OR HIOP_WITH_KRON_REDUCTION)
+  set(HIOP_USE_METIS INTERNAL ON CACHE BOOL "Link against METIS library ${METIS_LIBRARY}" FORCE)
+else()
+  set(HIOP_USE_METIS INTERNAL OFF CACHE BOOL "Link against METIS library: ${METIS_LIBRARY}" FORCE)
+endif()
+
 # The binary dir is already a global include directory
 configure_file(
   "${CMAKE_SOURCE_DIR}/src/Interface/hiop_defs.hpp.in"
@@ -289,25 +296,25 @@ endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 #  EXPORTING
 ##########################################################
 
-export(EXPORT hiop-targets FILE "${CMAKE_CURRENT_BINARY_DIR}/HiOpTargets.cmake")
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+  HiOpConfigVersion.cmake
+  VERSION ${CMAKE_PROJECT_VERSION}
+  COMPATIBILITY AnyNewerVersion)
+
+install(TARGETS hiop_tpl EXPORT hiop-targets)
+
+# Export libhiop
 install(EXPORT hiop-targets
   FILE HiOpTargets.cmake
   NAMESPACE HiOp::
   DESTINATION
   share/hiop/cmake)
 
-include(CMakePackageConfigHelpers)
-
-write_basic_package_version_file(
-  HiOpConfigVersion.cmake
-  VERSION ${CMAKE_PROJECT_VERSION}
-  COMPATIBILITY AnyNewerVersion)
-
-configure_package_config_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/HiOpConfig.cmake.in
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/HiOpConfig.cmake.in
   "${CMAKE_CURRENT_BINARY_DIR}/HiOpConfig.cmake"
-  INSTALL_DESTINATION "share/hiop/cmake"
-  NO_SET_AND_CHECK_MACRO
-  NO_CHECK_REQUIRED_COMPONENTS_MACRO)
+  @ONLY
+  )
 
 install(FILES
   ${CMAKE_CURRENT_BINARY_DIR}/HiOpConfig.cmake

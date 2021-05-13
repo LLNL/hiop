@@ -34,9 +34,6 @@ endforeach()
 # Create default library pointed to by HiOp::HiOp
 add_library(HiOp::HiOp ALIAS ${hiop_default_library_name})
 
-# Naked _hiop_ target is still used elsewhere in the codebase. This should be
-# removed...
-add_library(hiop ALIAS ${hiop_default_library_name})
-
 # Test drivers in the form of user applications
 add_subdirectory(Drivers)
+
