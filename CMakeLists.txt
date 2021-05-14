@@ -177,9 +177,10 @@ if(HIOP_USE_GPU)
   set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-extended-lambda")
 
   set(HIOP_MAGMA_DIR CACHE PATH "Path to Magma directory")
-
+  include(FindHiopMagma)
   include(FindHiopCudaLibraries)
   target_link_libraries(hiop_tpl INTERFACE hiop_cuda)
+  target_link_libraries(hiop_tpl INTERFACE Magma)
 endif(HIOP_USE_GPU)
 
 if(HIOP_USE_RAJA)
@@ -191,6 +192,7 @@ if(HIOP_USE_RAJA)
   find_package(umpire CONFIG
     PATHS ${umpire_DIR} ${umpire_DIR}/share/umpire/cmake
     REQUIRED)
+  target_link_libraries(hiop_tpl INTERFACE umpire RAJA)
 endif()
 
 if(HIOP_WITH_KRON_REDUCTION)
