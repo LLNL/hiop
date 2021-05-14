@@ -9,8 +9,7 @@ if (POLICY CMP0074)
   cmake_policy(SET CMP0074 NEW)
 endif ()
 
-project (hiop VERSION "0.4.1"
-  LANGUAGES C CXX CUDA)
+project (hiop VERSION "0.4.1")
 
 string(TIMESTAMP HIOP_RELEASE_DATE "%Y-%m-%d")
 
