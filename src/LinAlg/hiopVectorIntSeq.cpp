@@ -63,6 +63,11 @@ hiopVectorIntSeq::hiopVectorIntSeq(int sz) : hiopVectorInt(sz)
   buf_ = new int[sz_];
 }
 
+hiopVectorIntSeq::~hiopVectorIntSeq()
+{
+  delete[] buf_;
+}
+
 const int& hiopVectorIntSeq::operator[] (int i) const
 {
   return buf_[i];
