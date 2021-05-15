@@ -246,7 +246,7 @@ public:
                           const hiopMatrixSparse& Jac_d,
                           int* iJacS,
                           int* jJacS,
-                          double* MJacS);
+                          double* MJacS) {assert("not implemented"&&0);}
 
   virtual void set_Hess_FR(const hiopMatrixSparse& Hess,
                            int* iHSS,
@@ -401,7 +401,7 @@ public:
                            int* iHSS,
                            int* jHSS,
                            double* MHSS,
-                           const hiopVector& add_diag);
+                           const hiopVector& add_diag){assert("not implemented"&&0);}
 
 };
 } //end of namespace

@@ -1309,6 +1309,7 @@ void hiopMatrixSymSparseTriplet::set_Hess_FR(const hiopMatrixSparse& Hess,
   if(iHSS != nullptr && jHSS != nullptr) {
     int k = 0;
   
+    const int* Hess_row = Hess_base.i_row();
     const int* Hess_col = Hess_base.j_col();
     for(int i = 0; i < m_h; ++i) {
       int k_base = Hess_base.row_starts_->idx_start_[i];
@@ -1319,7 +1320,7 @@ void hiopMatrixSymSparseTriplet::set_Hess_FR(const hiopMatrixSparse& Hess,
       jCol_[k] = jHSS[k] = i;
       k++;
       
-      if(nnz_in_row > 0 && iHSS[k_base] == jHSS[k_base]) {
+      if(nnz_in_row > 0 && Hess_row[k_base] == Hess_col[k_base]) {
         // first nonzero in this row is a diagonal term 
         // skip it since we have already defined the diagonal nonezero
         k_base++;
@@ -1340,6 +1341,8 @@ void hiopMatrixSymSparseTriplet::set_Hess_FR(const hiopMatrixSparse& Hess,
   if(MHSS != nullptr) {    
     int k = 0;
   
+    const int* Hess_row = Hess_base.i_row();
+    const int* Hess_col = Hess_base.j_col();
     const double* Hess_val = Hess_base.M();
     const hiopVectorPar& diag_x = dynamic_cast<const hiopVectorPar&>(add_diag);
     assert(m_h == diag_x.get_size());
@@ -1352,12 +1355,11 @@ void hiopMatrixSymSparseTriplet::set_Hess_FR(const hiopMatrixSparse& Hess,
       // add diagonal entry due to the new obj term
       values_[k] = MHSS[k] = diag_data[k];
       
-      if(nnz_in_row > 0 && iHSS[k_base] == jHSS[k_base]) {
+      if(nnz_in_row > 0 && Hess_row[k_base] == Hess_col[k_base]) {
         // first nonzero in this row is a diagonal term 
         // add this element to the existing diag term
         values_[k] += Hess_val[k_base];
         MHSS[k] = values_[k];
-        k++;
         k_base++;
       }
       k++;
