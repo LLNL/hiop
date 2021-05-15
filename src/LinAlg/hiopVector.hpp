@@ -50,6 +50,7 @@
 
 #include <cstdio>
 #include <cassert>
+#include "hiopInterface.hpp"
 
 namespace hiop
 {
@@ -256,6 +257,16 @@ public:
   /// @brief get number of values whose absolute value are less than the given value 'val'
   virtual long long numOfElemsAbsLessThan(const double &val) const = 0;  
 
+  /// @brief set int array 'arr', starting at `start` and ending at `end`, to the values in `arr_src` from 'start_src`
+  virtual void set_array_from_to(hiopInterfaceBase::NonlinearityType* arr, 
+                                 const int start, 
+                                 const int end, 
+                                 const hiopInterfaceBase::NonlinearityType* arr_src,
+                                 const int start_src) const = 0;
+  virtual void set_array_from_to(hiopInterfaceBase::NonlinearityType* arr, 
+                                 const int start, 
+                                 const int end, 
+                                 const hiopInterfaceBase::NonlinearityType arr_src) const = 0;
 protected:
   long long n_; //we assume sequential data
 

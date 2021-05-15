@@ -241,8 +241,22 @@ public:
     assert(false && "not needed / implemented");
   }
 
-  virtual long long numberOfOffDiagNonzeros() {assert("not implemented"&&0);return 0;};
-      
+  virtual long long numberOfOffDiagNonzeros() const {assert("not implemented"&&0);return 0;};
+  virtual void set_Jac_FR(const hiopMatrixSparse& Jac_c,
+                          const hiopMatrixSparse& Jac_d,
+                          int* iJacS,
+                          int* jJacS,
+                          double* MJacS);
+
+  virtual void set_Hess_FR(const hiopMatrixSparse& Hess,
+                           int* iHSS,
+                           int* jHSS,
+                           double* MHSS,
+                           const hiopVector& add_diag)
+  {
+    assert(false && "not needed / implemented");
+  }
+
   virtual hiopMatrixSparse* alloc_clone() const;
   virtual hiopMatrixSparse* new_copy() const;
 
@@ -372,10 +386,22 @@ public:
     return true;
   }
   
-  virtual long long numberOfOffDiagNonzeros() {
+  virtual long long numberOfOffDiagNonzeros() const {
     assert(false && "not needed / implemented");
     return 0;
   }
+
+  virtual void set_Jac_FR(const hiopMatrixSparse& Jac_c,
+                          const hiopMatrixSparse& Jac_d,
+                          int* iJacS,
+                          int* jJacS,
+                          double* MJacS) {assert("not implemented"&&0);};
+
+  virtual void set_Hess_FR(const hiopMatrixSparse& Hess,
+                           int* iHSS,
+                           int* jHSS,
+                           double* MHSS,
+                           const hiopVector& add_diag);
 
 };
 } //end of namespace

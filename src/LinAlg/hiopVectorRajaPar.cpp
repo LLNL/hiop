@@ -1816,6 +1816,42 @@ long long hiopVectorRajaPar::numOfElemsAbsLessThan(const double &val) const
   return nrm;
 }
  
+void hiopVectorRajaPar::set_array_from_to(hiopInterfaceBase::NonlinearityType* arr, 
+                                          const int start, 
+                                          const int end, 
+                                          const hiopInterfaceBase::NonlinearityType* arr_src,
+                                          const int start_src) const
+{
+  assert(end <= n_local_ && start <= end && start >= 0 && start_src >= 0);
 
+  // If there is nothing to copy, return.
+  if(end - start == 0)
+    return;
+  
+  auto& rm = umpire::ResourceManager::getInstance();
+  hiopInterfaceBase::NonlinearityType* vv = const_cast<hiopInterfaceBase::NonlinearityType*>(arr_src); // <- cast away const
+  rm.copy(arc+start, vv+start+start_src, (end-start)*sizeof(hiopInterfaceBase::NonlinearityType));
+}
+
+void hiopVectorRajaPar::set_array_from_to(hiopInterfaceBase::NonlinearityType* arr, 
+                                          const int start, 
+                                          const int end, 
+                                          const hiopInterfaceBase::NonlinearityType arr_src) const
+{
+  assert(end <= n_local_ && start <= end && start >= 0);
+
+  // If there is nothing to copy, return.
+  if(end - start == 0)
+    return;
+
+  auto& rm = umpire::ResourceManager::getInstance();
+  RAJA::forall< hiop_raja_exec >(
+    RAJA::RangeSegment(start, end),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      arr[i] = arr_src;
+    }
+  );      
+}
 
 } // namespace hiop

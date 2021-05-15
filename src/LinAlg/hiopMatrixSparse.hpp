@@ -198,7 +198,21 @@ public:
   virtual const int* i_row() const = 0;
   virtual const int* j_col() const = 0;
   virtual const double* M()  const = 0;
-  virtual long long numberOfOffDiagNonzeros() = 0;
+  virtual long long numberOfOffDiagNonzeros() const = 0;
+  
+  /// @brief build Jac for FR problem, from the base problem `Jac_c` and `Jac_d`. Set sparsity if `task`=0, otherwise set values
+  virtual void set_Jac_FR(const hiopMatrixSparse& Jac_c,
+                          const hiopMatrixSparse& Jac_d,
+                          int* iJacS,
+                          int* jJacS,
+                          double* MJacS) = 0;
+
+  /// @brief build Hess for FR problem, from the base problem `Hess`. Set sparsity if `task`=0, otherwise set values
+  virtual void set_Hess_FR(const hiopMatrixSparse& Hess,
+                           int* iHSS,
+                           int* jHSS,
+                           double* MHSS,
+                           const hiopVector& add_diag) = 0;
 
   inline long long m() const
   {

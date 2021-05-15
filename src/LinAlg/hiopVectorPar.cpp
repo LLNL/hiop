@@ -1010,4 +1010,38 @@ long long hiopVectorPar::numOfElemsAbsLessThan(const double &val) const
   return ret_num;
 }
 
+void hiopVectorPar::set_array_from_to(hiopInterfaceBase::NonlinearityType* arr, 
+                                      const int start, 
+                                      const int end, 
+                                      const hiopInterfaceBase::NonlinearityType* arr_src,
+                                      const int start_src) const
+{
+  assert(end <= n_local_ && start <= end && start >= 0 && start_src >= 0);
+
+  // If there is nothing to copy, return.
+  if(end - start == 0)
+    return;
+
+  memcpy(arr+start, arr_src+start_src, (end-start)*sizeof(hiopInterfaceBase::NonlinearityType));
+}
+
+void hiopVectorPar::set_array_from_to(hiopInterfaceBase::NonlinearityType* arr, 
+                                      const int start, 
+                                      const int end, 
+                                      const hiopInterfaceBase::NonlinearityType arr_src) const
+{
+  assert(end <= n_local_ && start <= end);
+
+  // If there is nothing to copy, return.
+  if(end - start == 0)
+    return;
+
+  for(int i=start; i<end; i++) {
+    arr[i] = arr_src;
+  }
+}
+
+
+
+
 };
