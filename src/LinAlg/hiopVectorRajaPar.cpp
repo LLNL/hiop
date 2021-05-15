@@ -1830,7 +1830,7 @@ void hiopVectorRajaPar::set_array_from_to(hiopInterfaceBase::NonlinearityType* a
   
   auto& rm = umpire::ResourceManager::getInstance();
   hiopInterfaceBase::NonlinearityType* vv = const_cast<hiopInterfaceBase::NonlinearityType*>(arr_src); // <- cast away const
-  rm.copy(arc+start, vv+start+start_src, (end-start)*sizeof(hiopInterfaceBase::NonlinearityType));
+  rm.copy(arr+start, vv+start+start_src, (end-start)*sizeof(hiopInterfaceBase::NonlinearityType));
 }
 
 void hiopVectorRajaPar::set_array_from_to(hiopInterfaceBase::NonlinearityType* arr, 
