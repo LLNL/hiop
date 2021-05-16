@@ -240,6 +240,16 @@ void hiopOptions::registerOptions()
 		      "Factor to decrease the constraint violation in second order correction.");
   }
 
+  // feasibility restoration
+  {
+    registerNumOption("kappa_resto", 0.9, 0, 1.0,
+                      "Factor to decrease the constraint violation in feasibility restoration. (default 0.9)");
+
+    vector<string> range(2); range[0] = "no"; range[1] = "yes";
+    registerStrOption("force_resto", "no", range,
+                      "Force applying feasibility restoration phase");
+  }
+
   //optimization method used
   {
     vector<string> range(2); range[0]="quasinewton_approx"; range[1]="analytical_exact";
@@ -256,6 +266,30 @@ void hiopOptions::registerOptions()
                       "full-size non-symmetric 'full'. The last three options are only available with "
                       "'Hessian=analyticalExact'.");
   }
+
+  //
+  // choose linear solver for  KKT solves 
+  //
+  // when KKTLinsys is 'full' only strumpack is available
+  // for the other KKTLinsys (which are all symmetric), MA57 is chosen 'auto'matically for all compute
+  // modes, unless the user overwrites this
+  {
+    vector<string> range(3); range[0] = "auto"; range[1]="ma57"; range[2]="strumpack";
+    registerStrOption("linear_solver_sparse", "auto", range,
+		      "Selects between MA57 and STRUMPACK for the sparse linear solves.");
+  }
+
+  // choose linear solver for duals intializations for sparse NLP problems
+  //  - when only CPU is used (compute_mode is cpu or HIOP_USE_GPU is off), MA57 is chosen by 'auto'
+  //  - when GPU mode is on, STRUMPACK is chosen by 'auto' if available
+  //  - choosing option ma57 with GPU being on, it results in no device being used in the linear solve!
+  {
+    vector<string> range(3); range[0] = "auto"; range[1]="ma57"; range[2]="strumpack";
+    registerStrOption("duals_init_linear_solver_sparse", "auto", range,
+		      "Selects between MA57 and STRUMPACK for the sparse linear solves.");
+  }
+
+  //linsol_mode -> mostly related to magma and MDS linear algebra
   {
     vector<string> range(3); range[0]="stable"; range[1]="speculative"; range[2]="forcequick";
     registerStrOption("linsol_mode", "stable", range,
@@ -406,6 +440,18 @@ void hiopOptions::ensureConsistence()
     }
   }
 
+  if(GetString("KKTLinsys") == "full") {
+    if(GetString("linear_solver_sparse") == "ma57") {
+      if(is_user_defined("linear_solver_sparse")) {
+        log_printf(hovWarning,
+                   "The option 'linear_solver_sparse=%s' is not valid with option 'KKTLinsys=full'. "
+                   " Will use 'linear_solver_sparse=auto'.\n",
+                   GetString("linear_solver_sparse").c_str());
+      }
+      set_val("linear_solver_sparse", "auto");
+    }
+  }
+  
 // When RAJA is not enabled ...
 #ifndef HIOP_USE_RAJA
   if(GetString("compute_mode")=="gpu") {
@@ -427,6 +473,29 @@ void hiopOptions::ensureConsistence()
   }
 #endif
 
+  // No hybrid or GPU compute mode if HiOp is built without GPU linear solvers
+#ifndef HIOP_USE_GPU
+  if(GetString("compute_mode")=="hybrid") {
+
+    if(is_user_defined("compute_mode")) {
+      log_printf(hovWarning,
+                 "option compute_mode=hybrid was changed to 'cpu' since HiOp was built without "
+                 "GPU support.\n");
+    }
+    set_val("compute_mode", "cpu");
+  }
+  if(GetString("compute_mode")=="gpu") {
+    log_printf(hovWarning,
+	       "option compute_mode=gpu was changed to 'cpu' since HiOp was built without "
+	       "GPU support.\n");
+    set_val("compute_mode", "cpu");
+  }
+  
+  if(GetString("compute_mode")=="auto") {
+    set_val("compute_mode", "cpu");
+  }
+#endif
+
   // No removing of fixed variables in GPU compute mode ...
   if(GetString("compute_mode")=="gpu") {
     if(GetString("fixed_var")=="remove") {
@@ -437,27 +506,7 @@ void hiopOptions::ensureConsistence()
       set_val("fixed_var", "relax");
     }
   }
-  
-// No hybrid or GPU compute mode if HiOp is built without GPU linear solvers
-#ifndef HIOP_USE_MAGMA
-#ifndef HIOP_USE_STRUMPACK
-  if(GetString("compute_mode")=="hybrid") {
 
-    if(is_user_defined("compute_mode")) {
-      log_printf(hovWarning,
-                 "option compute_mode=hybrid was changed to 'cpu' since HiOp was built without "
-                 "GPU support/Magma.\n");
-    }
-    set_val("compute_mode", "cpu");
-  }
-  if(GetString("compute_mode")=="gpu") {
-    log_printf(hovWarning,
-	       "option compute_mode=gpu was changed to 'cpu' since HiOp was built without "
-	       "GPU support/Magma.\n");
-    set_val("compute_mode", "cpu");
-  }
-#endif
-#endif
 }
 
 static inline std::string &ltrim(std::string &s) {

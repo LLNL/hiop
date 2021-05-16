@@ -68,18 +68,38 @@ class hiopVectorIntRaja : public hiopVectorInt
 {
 private:
   int *buf_host_;
-  int *buf_dev_;
+  int *buf_;
   std::string mem_space_;
 
 public:
   hiopVectorIntRaja(int sz, std::string mem_space="HOST");
 
+  ~hiopVectorIntRaja();
+
+  /**
+   * @brief Access constant data at element _i_ on the _host_. To access data
+   * on the device, you must first call _copyFromDev_.
+   */
   const int& operator[] (int i) const override;
 
+  /**
+   * @brief Access data at element _i_ on the _host_. To access data on the
+   * device, you must first call _copyFromDev_.
+   */
   int& operator[] (int i) override;
 
+  /**
+   * @brief Copy array data from the device.
+   *
+   * @note This is a no-op if the memory space is _host_ or _uvm_.
+   */
   void copyFromDev() const;
 
+  /**
+   * @brief Copy array data to the device.
+   *
+   * @note This is a no-op if the memory space is _host_ or _uvm_.
+   */
   void copyToDev() const;
 
 };

@@ -68,6 +68,8 @@ private:
 public:
   hiopVectorIntSeq(int sz);
 
+  ~hiopVectorIntSeq();
+
   const int& operator[] (int i) const override;
 
   int& operator[] (int i) override;

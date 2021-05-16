@@ -768,6 +768,34 @@ public:
   }
 
   /**
+   * @brief Test: this[i] = sqrt(this[i])
+   */
+  bool vector_component_sqrt(hiop::hiopVector& x, const int rank)
+  {
+    const local_ordinal_type N = getLocalSize(&x);
+    static const real_type x_val = quarter;
+
+    x.setToConstant(x_val);
+
+    const real_type expected = two*two;
+    if(rank == 0) {
+      setLocalElement(&x, N-1, expected);
+    }
+
+    x.component_sqrt();
+
+    const int fail = verifyAnswer(&x,
+      [=] (local_ordinal_type i) -> real_type
+      {
+        const bool isLastElementOnRank0 = (i == N-1 && rank == 0);
+        return isLastElementOnRank0 ? fabs(two) : fabs(half);
+      });
+
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &x);
+  }
+  
+  /**
    * @brief Test: this[i] = sgn(this[i])
    */
   bool vector_component_sgn(hiop::hiopVector& x, const int rank)
@@ -1120,6 +1148,28 @@ public:
     return reduceReturn(fail, &x);
   }
 
+  /**
+   * @brief Test:
+   * sum{x[i]}
+   */
+  bool vector_sum_local(hiop::hiopVector& x, const int rank)
+  {
+    const local_ordinal_type N = getLocalSize(&x);
+
+    // Ensure that only N-1 elements of x are
+    // used in the log calculation
+    x.setToConstant(half);
+    setLocalElement(&x, N-1, two);
+
+    real_type expected = (N-1) * half + two;
+    real_type result = x.sum_local();
+
+    int fail = !isEqual(result, expected);
+
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &x);
+  }
+  
   /**
    * @brief Test:
    * if(pattern[i] == 1) this[i] += alpha /x[i] forall i 

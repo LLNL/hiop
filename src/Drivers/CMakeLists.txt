@@ -1,3 +1,9 @@
+
+install(
+  FILES IpoptAdapter.hpp
+  DESTINATION include
+  )
+
 #add_executable(linalgTest.exe linalgTest.cpp)
 #target_link_libraries(linalgTest.exe hiop ${HIOP_MATH_LIBRARIES})
 
@@ -15,9 +21,13 @@ target_link_libraries(nlpMDS_ex4.exe hiop)
 
 if(HIOP_USE_RAJA)
   if(HIOP_USE_GPU)
-    set_source_files_properties(nlpMDSForm_raja_ex4.cpp nlpMDS_ex4_raja_driver.cpp PROPERTIES LANGUAGE CUDA)
+    set_source_files_properties(
+      nlpMDS_raja_ex4.cpp 
+      nlpMDS_ex4_raja_driver.cpp 
+      PROPERTIES LANGUAGE CUDA
+    )
   endif()
-  add_executable(nlpMDS_ex4_raja.exe nlpMDS_ex4_raja_driver.cpp nlpMDSForm_raja_ex4.cpp)
+  add_executable(nlpMDS_ex4_raja.exe nlpMDS_ex4_raja_driver.cpp nlpMDS_raja_ex4.cpp)
   target_link_libraries(nlpMDS_ex4_raja.exe hiop)
 endif()
 
@@ -37,9 +47,9 @@ if(HIOP_SPARSE)
     target_link_libraries(nlpSparse_ex7.exe hiop)
 endif()
 
-if(HIOP_BUILD_SHARED AND NOT HIOP_USE_GPU)
+if(HIOP_BUILD_SHARED)
   add_executable(nlpMDS_cex4.exe nlpMDS_ex4.c)
-  target_link_libraries(nlpMDS_cex4.exe hiop_shared)
+  target_link_libraries(nlpMDS_cex4.exe HiOp::HiOp)
 endif()
 
 if(HIOP_USE_MPI)

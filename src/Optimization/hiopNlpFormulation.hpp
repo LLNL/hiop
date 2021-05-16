@@ -4,7 +4,7 @@
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
 // is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause). 
-// Please also read “Additional BSD Notice” below.
+// Please also read ?Additional BSD Notice? below.
 //
 // Redistribution and use in source and binary forms, with or without modification, 
 // are permitted provided that the following conditions are met:
@@ -95,7 +95,7 @@ class hiopDualsLsqUpdate;
 class hiopNlpFormulation
 {
 public:
-  hiopNlpFormulation(hiopInterfaceBase& interface);
+  hiopNlpFormulation(hiopInterfaceBase& interface, const char* option_file = nullptr);
   virtual ~hiopNlpFormulation();
 
   virtual bool finalizeInitialization();
@@ -128,9 +128,13 @@ public:
 			      hiopMatrix& Hess_L)=0;
   /* starting point */
   virtual bool get_starting_point(hiopVector& x0,
-				  bool& duals_avail,
-				  hiopVector& zL0, hiopVector& zU0,
-				  hiopVector& yc0, hiopVector& yd0);
+                                  bool& duals_avail,
+                                  hiopVector& zL0,
+                                  hiopVector& zU0,
+                                  hiopVector& yc0,
+                                  hiopVector& yd0,
+                                  bool& slacks_avail,
+                                  hiopVector& d0);
 
   /* Allocates the LSQ duals update class. */
   virtual hiopDualsLsqUpdate* alloc_duals_lsq_updater() = 0;
@@ -156,13 +160,37 @@ public:
 
   virtual
   bool user_callback_iterate(int iter,
-			     double obj_value,
-			     const hiopVector& x,
-			     const hiopVector& z_L, const hiopVector& z_U,
-			     const hiopVector& c, const hiopVector& d,
-			     const hiopVector& yc, const hiopVector& yd,
-			     double inf_pr, double inf_du, double mu,
-			     double alpha_du, double alpha_pr, int ls_trials);
+                             double obj_value,
+                             double logbar_obj_value,
+                             const hiopVector& x,
+                             const hiopVector& z_L,
+                             const hiopVector& z_U,
+                             const hiopVector& s, // the slack for inequalities
+                             const hiopVector& c,
+                             const hiopVector& d,
+                             const hiopVector& yc,
+                             const hiopVector& yd,
+                             double inf_pr,
+                             double inf_du,
+                             double onenorm_pr,
+                             double mu,
+                             double alpha_du,
+                             double alpha_pr,
+                             int ls_trials);
+
+  virtual
+  bool user_force_update(int iter,
+                         double& obj_value,
+                         hiopVector& x,
+                         hiopVector& z_L,
+                         hiopVector& z_U,
+                         hiopVector& c,
+                         hiopVector& d,
+                         hiopVector& y_c,
+                         hiopVector& y_d,
+                         double& mu,
+                         double& alpha_du,
+                         double& alpha_pr);
   
   /** const accessors */
   inline const hiopVector& get_xl ()  const { return *xl;   }
@@ -175,6 +203,10 @@ public:
   inline const hiopVector& get_idu()  const { return *idu;  }
   inline const hiopVector& get_crhs() const { return *c_rhs;}
 
+  inline hiopInterfaceBase::NonlinearityType* get_var_type() const {return vars_type;}
+  inline hiopInterfaceBase::NonlinearityType* get_cons_eq_type() const {return cons_eq_type;}
+  inline hiopInterfaceBase::NonlinearityType* get_cons_ineq_type() const {return cons_ineq_type;}
+  
   /** const accessors */
   inline long long n() const      {return n_vars;}
   inline long long m() const      {return n_cons;}
@@ -221,6 +253,12 @@ public:
   void copy_EqIneq_to_cons(const hiopVector& yc,
 			   const hiopVector& yd,
 			   hiopVector& cons);
+
+  /* unpacks constraint rhs or constraint multipliers into hiopVector based on the internal mappings
+   * 'cons_eq_mapping_'and 'cons_ineq_mapping_ */
+  void copy_cons_to_EqIneq(hiopVector& yc_in,
+                           hiopVector& yd_in,
+                           const hiopVector& cons);
 
   /// @brief return the scaling fact for objective
   double get_obj_scale() const;
@@ -316,7 +354,7 @@ private:
 class hiopNlpDenseConstraints : public hiopNlpFormulation
 {
 public:
-  hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& interface);
+  hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& interface, const char* option_file = nullptr);
   virtual ~hiopNlpDenseConstraints();
 
   virtual bool finalizeInitialization();
@@ -373,8 +411,8 @@ private:
 class hiopNlpMDS : public hiopNlpFormulation
 {
 public:
-  hiopNlpMDS(hiopInterfaceMDS& interface_)
-    : hiopNlpFormulation(interface_), interface(interface_)
+  hiopNlpMDS(hiopInterfaceMDS& interface_, const char* option_file = nullptr)
+    : hiopNlpFormulation(interface_, option_file), interface(interface_)
   {
     _buf_lambda = LinearAlgebraFactory::createVector(0);
   }
@@ -444,8 +482,8 @@ class hiopNlpSparse : public hiopNlpFormulation
 public:
   // TODO: notsure we need this
 
-  hiopNlpSparse(hiopInterfaceSparse& interface_)
-    : hiopNlpFormulation(interface_), interface(interface_),
+  hiopNlpSparse(hiopInterfaceSparse& interface_, const char* option_file = nullptr)
+    : hiopNlpFormulation(interface_, option_file), interface(interface_),
       num_jac_eval_{0}, num_hess_eval_{0}
   {
     _buf_lambda = LinearAlgebraFactory::createVector(0);
@@ -501,6 +539,11 @@ public:
     assert(n_cons == n_cons_eq+n_cons_ineq);
     return LinearAlgebraFactory::createVector(n_vars + n_cons);
   }
+
+  /** const accessors */
+  inline const int get_nnz_Jaceq()  const { return m_nnz_sparse_Jaceq; }
+  inline const int get_nnz_Jacineq()  const { return m_nnz_sparse_Jacineq; }
+  inline const int get_nnz_Hess_Lagr()  const { return m_nnz_sparse_Hess_Lagr; }
   
 private:
   hiopInterfaceSparse& interface;

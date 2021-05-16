@@ -333,38 +333,84 @@ bool hiopDualsLsqUpdateLinsysAugSparse::do_lsq_update(hiopIterate& iter,
   int n = nx + nineq + neq + nineq; 
 
   int nnz = nx + nd + Jac_cSp.numberOfNonzeros() + Jac_dSp.numberOfNonzeros() + nd + (nx + nd + neq + nineq);
+
+  auto compute_mode = nlp_->options->GetString("compute_mode");
+#ifndef HIOP_USE_GPU
+    assert(compute_mode == "cpu" &&
+           "the value for compute_mode is invalid and should have been corrected during user options processing");
+#endif
   
   if(!lin_sys_) {
-    if(nlp_->options->GetString("compute_mode")=="cpu") {
-      nlp_->log->printf(hovSummary,
-                        "LSQ Dual Initialization --- KKT_SPARSE_XYcYd linsys: MA57 size %d (%d cons)\n",
-                        n, neq+nineq);
+    auto linear_solver = nlp_->options->GetString("duals_init_linear_solver_sparse");
+    
+    if(compute_mode == "cpu") {
+
+      if(linear_solver == "ma57" || linear_solver == "auto") {
 #ifdef HIOP_USE_COINHSL
-      lin_sys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
-#endif // HIOP_USE_COINHSL          
-    } else { //we're on device
-#ifdef HIOP_USE_STRUMPACK        
-      hiopLinSolverIndefSparseSTRUMPACK *p = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
+        nlp_->log->printf(hovSummary,
+                          "LSQ Dual Initialization --- KKT_SPARSE_XYcYd linsys: MA57 size %d (%d cons)\n",
+                          n, neq+nineq);
+        
+        lin_sys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
       
-      nlp_->log->printf(hovSummary,
-                        "LSQ Dual Initialization --- KKT_SPARSE_XDYcYd linsys: using STRUMPACK as an "
-                        "indefinite solver, size %d (%d cons) (safe_mode=%d)\n",
-                        n, neq+nineq);
-      
-      p->setFakeInertia(neq + nineq);
-      lin_sys_ = p;
-#else
-#ifdef HIOP_USE_COINHSL
-      nlp_->log->printf(hovSummary,
-                        "LSQ Dual Initialization --- KKT_SPARSE_XDYcYd linsys: using MA57 on CPU size "
-                        "%d (%d cons)\n",
-                        n, neq+nineq);                             
-      lin_sys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
 #endif // HIOP_USE_COINHSL
-#endif // HIOP_USE_STRUMPACK
-    }
+      }
+
+      if(NULL == lin_sys_) {
+        //ma57 not available or user requested strumpack
+#ifdef HIOP_USE_STRUMPACK
+        assert((linear_solver == "strumpack" || linear_solver == "auto") &&
+               "the value for duals_init_linear_solver_sparse is invalid and should have been corrected during "
+               "options processing");
+              
+        hiopLinSolverIndefSparseSTRUMPACK *p = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
+        
+        nlp_->log->printf(hovSummary,
+                          "LSQ Duals Initialization --- KKT_SPARSE_XDYcYd linsys: using STRUMPACK on CPU as an "
+                          "indefinite solver, size %d (%d cons)\n",
+                          n, neq+nineq);
+        
+        p->setFakeInertia(neq + nineq);
+        lin_sys_ = p;
+        
+#endif  // HIOP_USE_STRUMPACK
+      }
+    } else {
+      //
+      // we're on device
+      //
+#ifdef HIOP_USE_STRUMPACK
+      if(linear_solver == "strumpack" || linear_solver == "auto") {
+
+        hiopLinSolverIndefSparseSTRUMPACK *p = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
+        
+        nlp_->log->printf(hovSummary,
+                          "LSQ Dual Initialization --- KKT_SPARSE_XDYcYd linsys: using STRUMPACK on device as an "
+                          "indefinite solver, size %d (%d cons)\n",
+                          n, neq+nineq);
+        
+        p->setFakeInertia(neq + nineq);
+        lin_sys_ = p;
+      }
+#endif  // HIOP_USE_STRUMPACK
+      
+#ifdef HIOP_USE_COINHSL
+      if(NULL == lin_sys_) {
+        // we get here if strumpack is not available or is available but the duals_init_linear_solver_sparse was
+        //set to be ma57
+        assert((linear_solver == "ma57" || linear_solver == "auto") &&
+               "the value for duals_init_linear_solver_sparse is invalid and should have been corrected during "
+               "options processing");
+        nlp_->log->printf(hovSummary,
+                          "LSQ Dual Initialization --- KKT_SPARSE_XDYcYd linsys: using MA57 on CPU(!!!) size "
+                          "%d (%d cons)\n",
+                          n, neq+nineq);                             
+        lin_sys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
+      }
+#endif // HIOP_USE_COINHSL
+    } // end of else  compute_mode=='cpu'
   }
-  
+  assert(lin_sys_ && "no sparse linear solver is available");
   hiopLinSolverIndefSparse* linSys = dynamic_cast<hiopLinSolverIndefSparse*> (lin_sys_);
   assert(linSys);
 

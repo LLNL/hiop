@@ -83,6 +83,7 @@ public:
    * computed by 'update' to compute the "reduced-space" search directions by solving
    * with the factors, then computes the "full-space" directions */
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction) = 0;
+  virtual bool compute_directions_for_full_space(const hiopResidual* resid, hiopIterate* direction);
 
   virtual void set_PD_perturb_calc(hiopPDPerturbation* p)
   {
