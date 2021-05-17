@@ -2,9 +2,6 @@ set(hiopInterface_PD
   hiopInterfacePrimalDecomp.cpp	
 )
 
-
-add_library(hiopInterface OBJECT ${hiopInterface_PD})
-
 set(hiopInterface_SRC
     chiopInterface.cpp
   )
@@ -23,4 +20,6 @@ install(
 
 if(HIOP_BUILD_SHARED)
   add_library(hiopInterface OBJECT ${hiopInterface_SRC})
+else()
+  add_library(hiopInterface OBJECT ${hiopInterface_SRC} ${hiopInterface_PD})
 endif()
