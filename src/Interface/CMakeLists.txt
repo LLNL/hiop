@@ -19,7 +19,7 @@ install(
   )
 
 if(HIOP_BUILD_SHARED)
-  add_library(hiopInterface OBJECT ${hiopInterface_SRC})
-else()
   add_library(hiopInterface OBJECT ${hiopInterface_SRC} ${hiopInterface_PD})
+else()
+  add_library(hiopInterface OBJECT ${hiopInterface_PD})
 endif()
