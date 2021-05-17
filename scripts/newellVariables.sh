@@ -15,7 +15,7 @@ module use -a $PROJ_DIR/src/spack/share/spack/modules/$SPACK_ARCH/
 export MY_GCC_VERSION=7.4.0
 export MY_CUDA_VERSION=10.2
 export MY_OPENMPI_VERSION=3.1.5
-export MY_CMAKE_VERSION=3.16.4
+export MY_CMAKE_VERSION=3.19.6
 export MY_MAGMA_VERSION=2.5.4-gcc-7.4.0-jss5aen
 export MY_METIS_VERSION=5.1.0
 export MY_NVCC_ARCH="sm_70"
