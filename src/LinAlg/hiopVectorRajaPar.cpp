@@ -56,6 +56,7 @@
  *
  */
 #include "hiopVectorRajaPar.hpp"
+#include "hiopVectorIntRaja.hpp"
 
 #include <cmath>
 #include <cstring> //for memcpy
@@ -486,12 +487,44 @@ void hiopVectorRajaPar::copyToStartingAt_w_pattern(hiopVector& vec, int start_in
 *  @pre: the size of `this` = the size of `c` + the size of `d`.
 *  @pre: `c_map` \Union `d_map` = {0, ..., size_of_this_vec-1}
 */
-void hiopVectorRajaPar::copy_from_two_vec_w_pattern(const hiopVector& c, 
-                                                const hiopVectorInt& c_map, 
-                                                const hiopVector& d, 
-                                                const hiopVectorInt& d_map)
+void hiopVectorRajaPar::copy_from_two_vec_w_pattern(const hiopVector& c,
+                                                    const hiopVectorInt& c_map,
+                                                    const hiopVector& d,
+                                                    const hiopVectorInt& d_map)
 {
-  assert("not yet" && 0);
+  const hiopVectorRajaPar& v1 = dynamic_cast<const hiopVectorRajaPar&>(c);
+  const hiopVectorRajaPar& v2 = dynamic_cast<const hiopVectorRajaPar&>(d);
+  const hiopVectorIntRaja& ix1 = dynamic_cast<const hiopVectorIntRaja&>(c_map);
+  const hiopVectorIntRaja& ix2 = dynamic_cast<const hiopVectorIntRaja&>(d_map);
+  
+  hiopInt n1_local = v1.n_local;
+  hiopInt n2_local = v2.n_local;
+
+#ifdef HIOP_DEEPCHECKS
+  assert(n1_local + n2_local == n_local_);
+  assert(n_local_ == ix1.size() + ix2.size());
+#endif
+  double*   dd = data_dev_;
+  double*  vd1 = v1.data_dev_;
+  double*  vd2 = v2.data_dev_;
+  hiopInt* id1 = ix1.buf_dev_;
+  hiopInt* id2 = ix2.buf_dev_;
+  
+  RAJA::forall< hiop_raja_exec >(
+    RAJA::RangeSegment(0, n1_local),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      dd[id1[i]] = vd1[i];
+    }
+  );
+
+  RAJA::forall< hiop_raja_exec >(
+    RAJA::RangeSegment(0, n2_local),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      dd[id2[i]] = vd2[i];
+    }
+  );
 }
 
 /* split `this` to `c` and `d`, according to the map 'c_map` and `d_map`, respectively.
@@ -499,12 +532,44 @@ void hiopVectorRajaPar::copy_from_two_vec_w_pattern(const hiopVector& c,
 *  @pre: the size of `this` = the size of `c` + the size of `d`.
 *  @pre: `c_map` \Union `d_map` = {0, ..., size_of_this_vec-1}
 */
-void hiopVectorRajaPar::copy_to_two_vec_w_pattern(hiopVector& c, 
-                                              const hiopVectorInt& c_map, 
-                                              hiopVector& d, 
-                                              const hiopVectorInt& d_map) const
+void hiopVectorRajaPar::copy_to_two_vec_w_pattern(hiopVector& c,
+                                                  const hiopVectorInt& c_map,
+                                                  hiopVector& d,
+                                                  const hiopVectorInt& d_map) const
 {
-  assert("not yet" && 0);                                              
+  const hiopVectorRajaPar& v1 = dynamic_cast<const hiopVectorRajaPar&>(c);
+  const hiopVectorRajaPar& v2 = dynamic_cast<const hiopVectorRajaPar&>(d);
+  const hiopVectorIntRaja& ix1 = dynamic_cast<const hiopVectorIntRaja&>(c_map);
+  const hiopVectorIntRaja& ix2 = dynamic_cast<const hiopVectorIntRaja&>(d_map);
+  
+  hiopInt n1_local = v1.n_local;
+  hiopInt n2_local = v2.n_local;
+
+#ifdef HIOP_DEEPCHECKS
+  assert(n1_local + n2_local == n_local_);
+  assert(n_local_ == ix1.size() + ix2.size());
+#endif
+  double*   dd = data_dev_;
+  double*  vd1 = v1.data_dev_;
+  double*  vd2 = v2.data_dev_;
+  hiopInt* id1 = ix1.buf_dev_;
+  hiopInt* id2 = ix2.buf_dev_;
+  
+  RAJA::forall< hiop_raja_exec >(
+    RAJA::RangeSegment(0, n1_local),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      vd1[i] = dd[id1[i]];
+    }
+  );
+
+  RAJA::forall< hiop_raja_exec >(
+    RAJA::RangeSegment(0, n2_local),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      vd2[i] = dd[id2[i]];
+    }
+  );                                           
 }
 
 /**

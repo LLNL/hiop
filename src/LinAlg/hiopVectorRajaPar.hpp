@@ -63,6 +63,7 @@
 
 #include <hiopMPI.hpp>
 #include "hiopVector.hpp"
+#include "hiopVectorInt.hpp"
 
 namespace hiop
 {
