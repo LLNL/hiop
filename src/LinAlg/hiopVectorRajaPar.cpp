@@ -497,7 +497,7 @@ void hiopVectorRajaPar::copy_from_two_vec_w_pattern(const hiopVector& c,
   const hiopVectorIntRaja& ix1 = dynamic_cast<const hiopVectorIntRaja&>(c_map);
   const hiopVectorIntRaja& ix2 = dynamic_cast<const hiopVectorIntRaja&>(d_map);
   
-  hiopInt n1_local = v1.n_local_);
+  hiopInt n1_local = v1.n_local_;
   hiopInt n2_local = v2.n_local_;
 
 #ifdef HIOP_DEEPCHECKS
