@@ -480,6 +480,33 @@ void hiopVectorRajaPar::copyToStartingAt_w_pattern(hiopVector& vec, int start_in
 #endif    
 }
 
+/* copy 'c' and `d` into `this`, according to the map 'c_map` and `d_map`, respectively.
+*  e.g., this[c_map[i]] = c[i];
+*
+*  @pre: the size of `this` = the size of `c` + the size of `d`.
+*  @pre: `c_map` \Union `d_map` = {0, ..., size_of_this_vec-1}
+*/
+void hiopVectorRajaPar::copy_from_two_vec_w_pattern(const hiopVector& c, 
+                                                const hiopVectorInt& c_map, 
+                                                const hiopVector& d, 
+                                                const hiopVectorInt& d_map)
+{
+  assert("not yet" && 0);
+}
+
+/* split `this` to `c` and `d`, according to the map 'c_map` and `d_map`, respectively.
+*
+*  @pre: the size of `this` = the size of `c` + the size of `d`.
+*  @pre: `c_map` \Union `d_map` = {0, ..., size_of_this_vec-1}
+*/
+void hiopVectorRajaPar::copy_to_two_vec_w_pattern(hiopVector& c, 
+                                              const hiopVectorInt& c_map, 
+                                              hiopVector& d, 
+                                              const hiopVectorInt& d_map) const
+{
+  assert("not yet" && 0);                                              
+}
+
 /**
  * @brief Copy elements of `this` vector to `destination` with offsets.
  * 

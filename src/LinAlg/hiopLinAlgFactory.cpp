@@ -109,7 +109,7 @@ hiopVector* LinearAlgebraFactory::createVector(
  * Creates int vector with operator new by default, RAJA vector when memory space
  * is specified.
  */
-hiopVectorInt* LinearAlgebraFactory::createVectorInt(int size)
+hiopVectorInt* LinearAlgebraFactory::createVectorInt(hiopInt size)
 {
   if(mem_space_ == "DEFAULT")
   {

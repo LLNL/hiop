@@ -71,6 +71,8 @@
 #include "hiopLogger.hpp"
 #include "hiopOptions.hpp"
 
+#include "hiopVectorInt.hpp"
+
 #include <cstring>
 
 namespace hiop
@@ -240,25 +242,6 @@ public:
 			  double* zl_a,
 			  double* zu_a,
 			  double* lambda_a);
-  
-  /* packs constraint rhs or constraint multipliers into one array based on the internal mappings 
-   * 'cons_eq_mapping_'and 'cons_ineq_mapping_ */
-  void copy_EqIneq_to_cons(const hiopVector& yc,
-			   const hiopVector& yd,
-			   int num_cons, //size of 'cons'
-			   double* cons);
-  
-  /* packs constraint rhs or constraint multipliers into hiopVector based on the internal mappings 
-   * 'cons_eq_mapping_'and 'cons_ineq_mapping_ */
-  void copy_EqIneq_to_cons(const hiopVector& yc,
-			   const hiopVector& yd,
-			   hiopVector& cons);
-
-  /* unpacks constraint rhs or constraint multipliers into hiopVector based on the internal mappings
-   * 'cons_eq_mapping_'and 'cons_ineq_mapping_ */
-  void copy_cons_to_EqIneq(hiopVector& yc_in,
-                           hiopVector& yd_in,
-                           const hiopVector& cons);
 
   /// @brief return the scaling fact for objective
   double get_obj_scale() const;
@@ -296,7 +279,7 @@ protected:
   hiopInterfaceBase::NonlinearityType* cons_ineq_type;
   
   // keep track of the constraints indexes in the original, user's formulation
-  long long *cons_eq_mapping_, *cons_ineq_mapping_; 
+  hiopVectorInt *cons_eq_mapping_, *cons_ineq_mapping_; 
 
   //options for which this class was setup
   std::string strFixedVars; //"none", "fixed", "relax"

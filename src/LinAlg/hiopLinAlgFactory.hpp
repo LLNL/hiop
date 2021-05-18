@@ -78,7 +78,7 @@ public:
   /**
    * @brief Static method to create local int vector.
    */
-  static hiopVectorInt* createVectorInt(int size);
+  static hiopVectorInt* createVectorInt(hiopInt size);
 
   /**
    * @brief Static method to create a dense matrix.

@@ -4,7 +4,7 @@
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
 // is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause). 
-// Please also read “Additional BSD Notice” below.
+// Please also read ï¿½Additional BSD Noticeï¿½ below.
 //
 // Redistribution and use in source and binary forms, with or without modification, 
 // are permitted provided that the following conditions are met:
@@ -349,8 +349,8 @@ public:
                         hiopVector& gradf,
                         hiopMatrix& Jac_c, 
                         hiopMatrix& Jac_d, 
-                        long long *cons_eq_mapping, 
-                        long long *cons_ineq_mapping);
+                        hiopInt* cons_eq_mapping, 
+                        hiopInt* cons_ineq_mapping);
   ~hiopNLPObjGradScaling();
 public:
   /** inherited from the parent class */

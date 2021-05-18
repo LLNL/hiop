@@ -51,6 +51,7 @@
 #include <string>
 #include <hiopMPI.hpp>
 #include "hiopVector.hpp"
+#include "hiopVectorInt.hpp"
 
 #include <cstdio>
 
@@ -96,6 +97,18 @@ public:
   virtual void copyToStarting(hiopVector& v, int start_index_in_dest) const;
   /// @brief Copy the entries in 'this' where corresponding 'ix' is nonzero, to v starting at start_index in 'v'.
   virtual void copyToStartingAt_w_pattern(hiopVector& v, int start_index_in_dest, const hiopVector& ix) const;
+
+  /// @brief Copy the entries in `c` and `d` to `this`, according to the mapping in `c_map` and `d_map`
+  virtual void copy_from_two_vec_w_pattern(const hiopVector& c, 
+                                           const hiopVectorInt& c_map, 
+                                           const hiopVector& d, 
+                                           const hiopVectorInt& d_map);
+
+  /// @brief Copy the entries in `this` to `c` and `d`, according to the mapping `c_map` and `d_map`
+  virtual void copy_to_two_vec_w_pattern(hiopVector& c, 
+                                         const hiopVectorInt& c_map, 
+                                         hiopVector& d, 
+                                         const hiopVectorInt& d_map) const;
 
   /**
    * @brief copy 'this' (source) starting at 'start_idx_in_src' to 'dest' starting at index 'start_idx_dest' 

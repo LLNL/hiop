@@ -58,7 +58,7 @@
 namespace hiop
 {
 
-hiopVectorIntRaja::hiopVectorIntRaja(int sz, std::string mem_space)
+hiopVectorIntRaja::hiopVectorIntRaja(hiopInt sz, std::string mem_space)
   : hiopVectorInt(sz)
   , mem_space_(mem_space)
 {
@@ -68,11 +68,11 @@ hiopVectorIntRaja::hiopVectorIntRaja(int sz, std::string mem_space)
 
   auto& resmgr = umpire::ResourceManager::getInstance();
   umpire::Allocator devalloc = resmgr.getAllocator(mem_space_);
-  buf_ = static_cast<int*>(devalloc.allocate(sz_*sizeof(int)));
+  buf_ = static_cast<hiopInt*>(devalloc.allocate(sz_*sizeof(hiopInt)));
   if(mem_space_ == "DEVICE")
   {
     umpire::Allocator hostalloc = resmgr.getAllocator("HOST");
-    buf_host_ = static_cast<int*>(hostalloc.allocate(sz_*sizeof(int)));
+    buf_host_ = static_cast<hiopInt*>(hostalloc.allocate(sz_*sizeof(hiopInt)));
   }
   else
   {
@@ -99,7 +99,7 @@ const int& hiopVectorIntRaja::operator[] (int i) const
   return buf_host_[i];
 }
 
-int& hiopVectorIntRaja::operator[] (int i)
+hiopInt& hiopVectorIntRaja::operator[] (hiopInt i)
 {
   return buf_host_[i];
 }
