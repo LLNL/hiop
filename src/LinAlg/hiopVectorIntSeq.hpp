@@ -67,7 +67,6 @@ private:
 
 public:
   hiopVectorIntSeq(hiopInt sz);
-  ~hiopVectorIntSeq() {delete [] buf_;}
 
   ~hiopVectorIntSeq();
 
