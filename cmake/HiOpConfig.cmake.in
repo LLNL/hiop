@@ -19,6 +19,12 @@ if(@HIOP_USE_RAJA@ AND NOT TARGET OpenMP::OpenMP_CXX)
   find_package(OpenMP)
 endif()
 
+# Need to export RAJA and umpire as they have find_package
+if(@HIOP_USE_RAJA@ AND NOT TARGET RAJA)
+  find_package(RAJA PATHS @RAJA_DIR@)
+  find_package(umpire PATHS @umpire_DIR@)
+endif()
+
 # Add HiOp::HiOp alias library
 if(@HIOP_BUILD_SHARED@ AND NOT TARGET HiOp::HiOp)
   add_library(HiOp::HiOp ALIAS HiOp::@hiop_default_library_name@)

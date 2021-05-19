@@ -206,10 +206,6 @@ if(HIOP_WITH_KRON_REDUCTION)
   target_link_libraries(hiop_tpl INTERFACE METIS)
 endif(HIOP_WITH_KRON_REDUCTION)
 
-if(HIOP_USE_RAJA)
-  target_link_libraries(hiop_tpl INTERFACE umpire RAJA)
-endif()
-
 if(HIOP_SPARSE)
   if(NOT TARGET METIS)
     include(FindHiopMETIS)
