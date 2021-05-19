@@ -3,35 +3,20 @@
 
 include( "${CMAKE_CURRENT_LIST_DIR}/HiOpTargets.cmake" )
 
-# TODO: add tpl configuration for all targets that we are linking against
-if(@HIOP_USE_METIS@ AND NOT TARGET HiOp::METIS)
-  add_library(METIS INTERFACE IMPORTED GLOBAL)
-  target_link_libraries(METIS INTERFACE "@METIS_LIBRARY@")
-  set_target_properties(METIS PROPERTIES EXPORT_LINK_INTERFACE_LIBRARIES "@METIS_INCLUDE_DIR@")
+# Configure TPLs if not already in an export set
+
+# If using MPI, make sure module is loaded
+if(@HIOP_USE_MPI@ AND NOT TARGET MPI::MPI_CXX)  
+  find_package(MPI REQUIRED)
+  include_directories(@MPI_CXX_ADDITIONAL_INCLUDE_DIRS@ @MPI_CXX_COMPILER_INCLUDE_DIRS@)
+  if(NOT DEFINED MPI_CXX_COMPILER)
+    set(CMAKE_CXX_COMPILER @MPI_CXX_COMPILER@)
+    set(CMAKE_C_COMPILER @MPI_C_COMPILER@)
+  endif()
 endif()
 
-if(@HIOP_USE_GPU@ AND NOT TARGET HiOp::hiop_cuda)
-  add_library(hiop_cuda INTERFACE IMPORTED GLOBAL)
-  target_link_libraries(hiop_cuda INTERFACE "@CUDA_cublas_LIBRARY@" "@CUDA_CUDART_LIBRARY@" "@CUDA_cudadevrt_LIBRARY@" "@CUDA_cusparse_LIBRARY@" "@CUDA_cublasLt_LIBRARY@" "@CUDA_nvblas_LIBRARY@" "@CUDA_culibos_LIBRARY@")
-  set_target_properties(hiop_cuda PROPERTIES EXPORT_LINK_INTERFACE_LIBRARIES "@CUDA_TOOLKIT_INCLUDE@")
-endif()
-
-if(@HIOP_USE_MAGMA@ AND NOT TARGET HiOp::Magma)
-  add_library(Magma INTERFACE IMPORTED GLOBAL)
-  target_link_libraries(Mamga INTERFACE "@MAGMA_LIBRARY@")
-  set_target_properties(Magma PROPERTIES EXPORT_LINK_INTERFACE_LIBRARIES "@MAGMA_INCLUDE_DIR@")
-endif()
-
-if(@HIOP_USE_METIS@ AND NOT TARGET HiOp::UMFPACK)
-  add_library(UMFPACK INTERFACE IMPORTED GLOBAL)
-  target_link_libraries(UMFPACK INTERFACE "@UMFPACK_LIBRARY@")
-  set_target_properties(UMFPACK PROPERTIES EXPORT_LINK_INTERFACE_LIBRARIES "@UMFPACK_INCLUDE_DIR@")
- endif()
-
-if(@HIOP_USE_COINHSL@ AND NOT TARGET HiOp::COINHSL)
-  add_library(COINHSL INTERFACE IMPORTED GLOBAL)
-  target_link_libraries(COINHSL INTERFACE "@COINHSL_LIBRARY@" "@CMAKE_DL_LIBS@")
-  set_target_properties(COINHSL PROPERTIES EXPORT_LINK_INTERFACE_LIBRARIES "@COINHSL_INCLUDE_DIR@")
+if(@HIOP_USE_RAJA@ AND NOT TARGET OpenMP::OpenMP_CXX)
+  find_package(OpenMP)
 endif()
 
 # Add HiOp::HiOp alias library
@@ -42,3 +27,4 @@ endif()
 if(@HIOP_BUILD_STATIC@ AND NOT TARGET HiOp::HiOp)
   add_library(HiOp::HiOp ALIAS HiOp::@hiop_default_library_name@)
 endif()
+
