@@ -514,15 +514,17 @@ void hiopVectorRajaPar::copy_from_two_vec_w_pattern(const hiopVector& c,
     RAJA::RangeSegment(0, (int)n1_local),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
-      dd[(int)id1[i]] = vd1[i];
+      int idx = id1[i];
+      dd[idx] = vd1[i];
     }
   );
 
   RAJA::forall< hiop_raja_exec >(
-    RAJA::RangeSegment(0, n2_local),
+    RAJA::RangeSegment(0, (int)n2_local),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
-      dd[(int)id2[i]] = vd2[i];
+      int idx = id2[i];
+      dd[idx] = vd2[i];
     }
   );
 }
@@ -559,7 +561,8 @@ void hiopVectorRajaPar::copy_to_two_vec_w_pattern(hiopVector& c,
     RAJA::RangeSegment(0, (int)n1_local),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
-      vd1[i] = dd[(int)id1[i]];
+      int idx = id1[i];
+      vd1[i] = dd[idx];
     }
   );
 
@@ -567,7 +570,8 @@ void hiopVectorRajaPar::copy_to_two_vec_w_pattern(hiopVector& c,
     RAJA::RangeSegment(0, (int)n2_local),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
-      vd2[i] = dd[(int)id2[i]];
+      int idx = id2[i];
+      vd2[i] = dd[idx];
     }
   );                                           
 }
