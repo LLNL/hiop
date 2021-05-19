@@ -25,6 +25,15 @@ if(@HIOP_USE_RAJA@ AND NOT TARGET RAJA)
   find_package(umpire PATHS @umpire_DIR@)
 endif()
 
+if(@HIOP_USE_GPU@)
+  include(CheckLanguage)
+  # This must come before enable_language(CUDA)
+  set(CMAKE_CUDA_COMPILER @CMAKE_CUDA_COMPILER@)
+  enable_language(CUDA)
+  check_language(CUDA)
+  set(CMAKE_CUDA_FLAGS "@CMAKE_CUDA_FLAGS@")
+endif()
+
 # Add HiOp::HiOp alias library
 if(@HIOP_BUILD_SHARED@ AND NOT TARGET HiOp::HiOp)
   add_library(HiOp::HiOp ALIAS HiOp::@hiop_default_library_name@)
