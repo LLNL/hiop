@@ -256,9 +256,9 @@ endif(HIOP_SPARSE)
 
 # It simplifies linking against metis to set an internal variable
 if(HIOP_SPARSE OR HIOP_WITH_KRON_REDUCTION)
-  set(HIOP_USE_METIS INTERNAL ON CACHE BOOL "Link against METIS library ${METIS_LIBRARY}" FORCE)
+  set(HIOP_USE_METIS ON CACHE BOOL "Link against METIS library ${METIS_LIBRARY}" FORCE)
 else()
-  set(HIOP_USE_METIS INTERNAL OFF CACHE BOOL "Link against METIS library: ${METIS_LIBRARY}" FORCE)
+  set(HIOP_USE_METIS OFF CACHE BOOL "Link against METIS library: ${METIS_LIBRARY}" FORCE)
 endif()
 
 # The binary dir is already a global include directory
