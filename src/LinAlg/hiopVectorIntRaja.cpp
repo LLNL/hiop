@@ -94,7 +94,7 @@ hiopVectorIntRaja::~hiopVectorIntRaja()
   buf_ = nullptr;
 }
 
-const int& hiopVectorIntRaja::operator[] (int i) const
+const hiopInt& hiopVectorIntRaja::operator[] (hiopInt i) const
 {
   return buf_host_[i];
 }
