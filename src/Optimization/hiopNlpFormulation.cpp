@@ -638,7 +638,7 @@ bool hiopNlpFormulation::eval_c(hiopVector& x, bool new_x, hiopVector& c)
   runStats.tmEvalCons.start();
   bool bret = interface_base.eval_cons(nlp_transformations.n_pre(),
 				       n_cons,n_cons_eq,
-				       (const long long*) cons_eq_mapping_->local_data_const(),
+				       cons_eq_mapping_->local_data_const(),
 				       xx->local_data_const(), new_x,
 				       cc->local_data());
   runStats.tmEvalCons.stop(); runStats.nEvalCons_eq++;
@@ -655,7 +655,7 @@ bool hiopNlpFormulation::eval_d(hiopVector& x, bool new_x, hiopVector& d)
 
   runStats.tmEvalCons.start();
   bool bret = interface_base.eval_cons(nlp_transformations.n_pre(),
-				       n_cons, n_cons_ineq, (const long long*) cons_ineq_mapping_->local_data_const(),
+				       n_cons, n_cons_ineq, cons_ineq_mapping_->local_data_const(),
 				       xx->local_data_const(), new_x, dd->local_data());
   runStats.tmEvalCons.stop(); runStats.nEvalCons_ineq++;
 
@@ -1087,7 +1087,7 @@ bool hiopNlpDenseConstraints::eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& 
 
     runStats.tmEvalJac_con.start();
     bool bret = interface.eval_Jac_cons(nlp_transformations.n_pre(), n_cons,
-                                        n_cons_eq, (const long long*) cons_eq_mapping_->local_data_const(),
+                                        n_cons_eq, cons_eq_mapping_->local_data_const(),
                                         x_user->local_data_const(), new_x, Jac_c_user_de->local_data());
     runStats.tmEvalJac_con.stop(); runStats.nEvalJac_con_eq++;
 
@@ -1121,7 +1121,7 @@ bool hiopNlpDenseConstraints::eval_Jac_d(hiopVector& x, bool new_x, hiopMatrix& 
 
     runStats.tmEvalJac_con.start();
     bool bret = interface.eval_Jac_cons(nlp_transformations.n_pre(), n_cons,
-                                        n_cons_ineq, (const long long*) cons_ineq_mapping_->local_data_const(),
+                                        n_cons_ineq, cons_ineq_mapping_->local_data_const(),
                                         x_user->local_data_const(), new_x,Jac_d_user_de->local_data());
     runStats.tmEvalJac_con.stop(); runStats.nEvalJac_con_ineq++;
 
@@ -1215,7 +1215,7 @@ bool hiopNlpMDS::eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& Jac_c)
     
     int nnz = pJac_c->sp_nnz();
     bool bret = interface.eval_Jac_cons(n_vars, n_cons, 
-					n_cons_eq, (const long long*) cons_eq_mapping_->local_data_const(), 
+					n_cons_eq, cons_eq_mapping_->local_data_const(), 
 					x_user->local_data_const(), new_x,
 					pJac_c->n_sp(), pJac_c->n_de(), 
 					nnz, pJac_c->sp_irow(), pJac_c->sp_jcol(), pJac_c->sp_M(),
@@ -1247,7 +1247,7 @@ bool hiopNlpMDS::eval_Jac_d(hiopVector& x, bool new_x, hiopMatrix& Jac_d)
   
     int nnz = pJac_d->sp_nnz();
     bool bret =  interface.eval_Jac_cons(n_vars, n_cons, 
-					 n_cons_ineq, (const long long*) cons_ineq_mapping_->local_data_const(), 
+					 n_cons_ineq, cons_ineq_mapping_->local_data_const(), 
 					 x_user->local_data_const(), new_x,
 					 pJac_d->n_sp(), pJac_d->n_de(), 
 					 nnz, pJac_d->sp_irow(), pJac_d->sp_jcol(), pJac_d->sp_M(),
@@ -1295,8 +1295,8 @@ bool hiopNlpMDS::eval_Jac_c_d_interface_impl(hiopVector& x,
 					cons_Jac->de_local_data());
     
     //copy back to Jac_c and Jac_d
-    pJac_c->copyRowsFrom(*cons_Jac, (const long long*) cons_eq_mapping_->local_data_const(), n_cons_eq);
-    pJac_d->copyRowsFrom(*cons_Jac, (const long long*) cons_ineq_mapping_->local_data_const(), n_cons_ineq);
+    pJac_c->copyRowsFrom(*cons_Jac, cons_eq_mapping_->local_data_const(), n_cons_eq);
+    pJac_d->copyRowsFrom(*cons_Jac, cons_ineq_mapping_->local_data_const(), n_cons_ineq);
     
     // scale the matrices
     Jac_c = *(nlp_transformations.apply_to_jacob_eq(Jac_c, n_cons_eq));
@@ -1468,8 +1468,8 @@ bool hiopNlpSparse::eval_Jac_c_d_interface_impl(hiopVector& x,
                                    nnz, nullptr, nullptr, cons_Jac->M());
 
     //copy back to Jac_c and Jac_d
-    pJac_c->copyRowsFrom(*cons_Jac, (const long long*) cons_eq_mapping_->local_data_const(), n_cons_eq);
-    pJac_d->copyRowsFrom(*cons_Jac, (const long long*) cons_ineq_mapping_->local_data_const(), n_cons_ineq);
+    pJac_c->copyRowsFrom(*cons_Jac, cons_eq_mapping_->local_data_const(), n_cons_eq);
+    pJac_d->copyRowsFrom(*cons_Jac, cons_ineq_mapping_->local_data_const(), n_cons_ineq);
 
     // scale the matrix
     Jac_c = *(nlp_transformations.apply_to_jacob_eq(Jac_c, n_cons_eq));

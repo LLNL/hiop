@@ -67,13 +67,8 @@ namespace hiop
 class hiopVectorIntRaja : public hiopVectorInt
 {
 private:
-<<<<<<< HEAD
-  int *buf_host_;
-  int *buf_;
-=======
   hiopInt *buf_host_;
-  hiopInt *buf_dev_;
->>>>>>> fix issue 233
+  hiopInt *buf_;
   std::string mem_space_;
 
 public:
@@ -111,9 +106,9 @@ public:
 
   inline const hiopInt* local_data_host_const() const { return buf_host_; }
 
-  inline hiopInt* local_data() { return buf_dev_; }
+  inline hiopInt* local_data() { return buf_; }
 
-  inline const hiopInt* local_data_const() const { return buf_dev_; }
+  inline const hiopInt* local_data_const() const { return buf_; }
 
 };
 

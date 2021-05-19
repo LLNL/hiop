@@ -358,7 +358,7 @@ bool hiopFRProbSparse::eval_Hess_Lagr(const long long& n,
     wrk_ineq_->copy_from_starting_at(lambda, m_eq_, m_ineq_);
 
     double obj_factor = 0.0;
-    // get Jac_c and Jac_d for the x part --- use original Jac_c/Jac_d as buffers
+    // get Hess for the x part --- use original Hess as buffers
     nlp_base_->eval_Hess_Lagr(*wrk_x_, new_x, obj_factor, *wrk_eq_, *wrk_ineq_, new_lambda, Hess);
     
     // additional diag Hess for x:  zeta*DR^2.*(x-x_ref)
