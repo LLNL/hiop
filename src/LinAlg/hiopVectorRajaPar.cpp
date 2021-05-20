@@ -510,8 +510,11 @@ void hiopVectorRajaPar::copy_from_two_vec_w_pattern(const hiopVector& c,
   const hiopInt* id1 = ix1.local_data_const();
   const hiopInt* id2 = ix2.local_data_const();
   
+  int n1_local_int = (int) n1_local;
+  int n2_local_int = (int) n2_local
+
   RAJA::forall< hiop_raja_exec >(
-    RAJA::RangeSegment(0, (int)n1_local),
+    RAJA::RangeSegment(0, n1_local_int),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       int idx = id1[i];
@@ -520,7 +523,7 @@ void hiopVectorRajaPar::copy_from_two_vec_w_pattern(const hiopVector& c,
   );
 
   RAJA::forall< hiop_raja_exec >(
-    RAJA::RangeSegment(0, (int)n2_local),
+    RAJA::RangeSegment(0, n2_local_int),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       int idx = id2[i];
