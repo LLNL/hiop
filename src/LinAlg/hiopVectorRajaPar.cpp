@@ -509,15 +509,38 @@ void hiopVectorRajaPar::copy_from_two_vec_w_pattern(const hiopVector& c,
   double*  vd2 = v2.data_dev_;
   const hiopInt* id1 = ix1.local_data_const();
   const hiopInt* id2 = ix2.local_data_const();
+
+  ix1.copyFromDev();
+  ix2.copyFromDev();
+  const hiopInt* ih1 = ix1.local_data_host_const();
+  const hiopInt* ih2 = ix2.local_data_host_const();
   
+  auto& resmgr = umpire::ResourceManager::getInstance();
+  umpire::Allocator devalloc = resmgr.getAllocator(mem_space_);
+  int* id1i = static_cast<int*>(devalloc.allocate(ix1.size()*sizeof(int)));
+  int* id2i = static_cast<int*>(devalloc.allocate(ix2.size()*sizeof(int)));
+
+  umpire::Allocator hostalloc = resmgr.getAllocator("HOST");
+  int* ih1i = static_cast<int*>(hostalloc.allocate(ix1.size()*sizeof(int)));
+  int* ih2i = static_cast<int*>(hostalloc.allocate(ix2.size()*sizeof(int)));
+
+  for(int i=0; i<ix1.size(); ++i)
+    ih1i[i] = ih1[i];
+
+  for(int i=0; i<ix2.size(); ++i)
+    ih2i[i] = ih2[i];
+
+  resmgr.copy(id1i, ih1i);
+  resmgr.copy(id2i, ih2i);
+    
   int n1_local_int = (int) n1_local;
-  int n2_local_int = (int) n2_local
+  int n2_local_int = (int) n2_local;
 
   RAJA::forall< hiop_raja_exec >(
     RAJA::RangeSegment(0, n1_local_int),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
-      int idx = id1[i];
+      int idx = id1i[i];
       dd[idx] = vd1[i];
     }
   );
@@ -526,10 +549,15 @@ void hiopVectorRajaPar::copy_from_two_vec_w_pattern(const hiopVector& c,
     RAJA::RangeSegment(0, n2_local_int),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
-      int idx = id2[i];
+      int idx = id2i[i];
       dd[idx] = vd2[i];
     }
   );
+
+  hostalloc.deallocate(ih1i);
+  hostalloc.deallocate(ih2i);
+  devalloc.deallocate(id1i);
+  devalloc.deallocate(id2i);
 }
 
 /* split `this` to `c` and `d`, according to the map 'c_map` and `d_map`, respectively.
@@ -560,11 +588,34 @@ void hiopVectorRajaPar::copy_to_two_vec_w_pattern(hiopVector& c,
   const hiopInt* id1 = ix1.local_data_const();
   const hiopInt* id2 = ix2.local_data_const();
   
+  ix1.copyFromDev();
+  ix2.copyFromDev();
+  const hiopInt* ih1 = ix1.local_data_host_const();
+  const hiopInt* ih2 = ix2.local_data_host_const();
+  
+  auto& resmgr = umpire::ResourceManager::getInstance();
+  umpire::Allocator devalloc = resmgr.getAllocator(mem_space_);
+  int* id1i = static_cast<int*>(devalloc.allocate(ix1.size()*sizeof(int)));
+  int* id2i = static_cast<int*>(devalloc.allocate(ix2.size()*sizeof(int)));
+
+  umpire::Allocator hostalloc = resmgr.getAllocator("HOST");
+  int* ih1i = static_cast<int*>(hostalloc.allocate(ix1.size()*sizeof(int)));
+  int* ih2i = static_cast<int*>(hostalloc.allocate(ix2.size()*sizeof(int)));
+
+  for(int i=0; i<ix1.size(); ++i)
+    ih1i[i] = ih1[i];
+
+  for(int i=0; i<ix2.size(); ++i)
+    ih2i[i] = ih2[i];
+
+  resmgr.copy(id1i, ih1i);
+  resmgr.copy(id2i, ih2i);
+
   RAJA::forall< hiop_raja_exec >(
     RAJA::RangeSegment(0, (int)n1_local),
-    RAJA_LAMBDA(RAJA::Index_type i)
+    RAJA_LAMBDA(int i)
     {
-      int idx = id1[i];
+      int idx = id1i[i];
       vd1[i] = dd[idx];
     }
   );
@@ -573,10 +624,15 @@ void hiopVectorRajaPar::copy_to_two_vec_w_pattern(hiopVector& c,
     RAJA::RangeSegment(0, (int)n2_local),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
-      int idx = id2[i];
+      int idx = id2i[i];
       vd2[i] = dd[idx];
     }
   );                                           
+
+  hostalloc.deallocate(ih1i);
+  hostalloc.deallocate(ih2i);
+  devalloc.deallocate(id1i);
+  devalloc.deallocate(id2i);
 }
 
 /**
