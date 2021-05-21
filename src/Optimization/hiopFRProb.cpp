@@ -647,7 +647,7 @@ bool hiopFRProbSparse::force_update(double obj_value,
 /* 
 *  Specialized interface for feasibility restoration problem with MDS blocks in the Jacobian and Hessian.
 */
-hiopFRInterfaceMDS::hiopFRInterfaceMDS(hiopAlgFilterIPMBase& solver_base)
+hiopFRProbMDS::hiopFRProbMDS(hiopAlgFilterIPMBase& solver_base)
   : solver_base_(solver_base)
 {
   nlp_base_ = dynamic_cast<hiopNlpMDS*>(solver_base.get_nlp());
@@ -701,7 +701,7 @@ hiopFRInterfaceMDS::hiopFRInterfaceMDS(hiopAlgFilterIPMBase& solver_base)
   rho_ = 1000; // FIXME: make this as an user option
 }
 
-hiopFRInterfaceSparse::~hiopFRInterfaceSparse()
+hiopFRProbMDS::~hiopFRProbMDS()
 {
   delete wrk_x_;
   delete wrk_c_;
@@ -715,14 +715,14 @@ hiopFRInterfaceSparse::~hiopFRInterfaceSparse()
   delete DR_;
 }
 
-bool hiopFRInterfaceSparse::get_prob_sizes(long long& n, long long& m)
+bool hiopFRProbMDS::get_prob_sizes(long long& n, long long& m)
 {
   n = n_;
   m = m_;
   return true;
 }
 
-bool hiopFRInterfaceSparse::get_vars_info(const long long& n, double *xlow, double* xupp, NonlinearityType* type)
+bool hiopFRProbMDS::get_vars_info(const long long& n, double *xlow, double* xupp, NonlinearityType* type)
 {
   assert(n == n_);
 
@@ -750,7 +750,7 @@ bool hiopFRInterfaceSparse::get_vars_info(const long long& n, double *xlow, doub
   return true;
 }
 
-bool hiopFRInterfaceSparse::get_cons_info(const long long& m, double* clow, double* cupp, NonlinearityType* type)
+bool hiopFRProbMDS::get_cons_info(const long long& m, double* clow, double* cupp, NonlinearityType* type)
 {
   assert(m == m_);
   assert(m_eq_ + m_ineq_ == m_);
@@ -780,7 +780,7 @@ bool hiopFRInterfaceSparse::get_cons_info(const long long& m, double* clow, doub
   return true;
 }
 
-bool hiopFRInterfaceSparse::get_sparse_blocks_info(int& nx,
+bool hiopFRProbMDS::get_sparse_blocks_info(int& nx,
                                                    int& nnz_sparse_Jaceq,
                                                    int& nnz_sparse_Jacineq,
                                                    int& nnz_sparse_Hess_Lagr)
@@ -792,7 +792,7 @@ bool hiopFRInterfaceSparse::get_sparse_blocks_info(int& nx,
   return true;
 }
 
-bool hiopFRInterfaceSparse::eval_f(const long long& n, const double* x, bool new_x, double& obj_value)
+bool hiopFRProbMDS::eval_f(const long long& n, const double* x, bool new_x, double& obj_value)
 {
   assert(n == n_);
   obj_value = 0.;
@@ -814,7 +814,7 @@ bool hiopFRInterfaceSparse::eval_f(const long long& n, const double* x, bool new
   return true;
 }
 
-bool hiopFRInterfaceSparse::eval_grad_f(const long long& n, const double* x, bool new_x, double* gradf)
+bool hiopFRProbMDS::eval_grad_f(const long long& n, const double* x, bool new_x, double* gradf)
 {
   assert(n == n_);
 
@@ -834,7 +834,7 @@ bool hiopFRInterfaceSparse::eval_grad_f(const long long& n, const double* x, boo
   return true;
 }
 
-bool hiopFRInterfaceSparse::eval_cons(const long long& n,
+bool hiopFRProbMDS::eval_cons(const long long& n,
                                       const long long& m,
                                       const long long& num_cons,
                                       const long long* idx_cons,
@@ -844,7 +844,7 @@ bool hiopFRInterfaceSparse::eval_cons(const long long& n,
   return false;
 }
 
-bool hiopFRInterfaceSparse::eval_cons(const long long& n,
+bool hiopFRProbMDS::eval_cons(const long long& n,
                                       const long long& m,
                                       const double* x,
                                       bool new_x,
@@ -876,7 +876,7 @@ bool hiopFRInterfaceSparse::eval_cons(const long long& n,
   return true;
 }
 
-bool hiopFRInterfaceSparse::eval_Jac_cons(const long long& n, const long long& m,
+bool hiopFRProbMDS::eval_Jac_cons(const long long& n, const long long& m,
                                           const long long& num_cons,
                                           const long long* idx_cons,
                                           const double* x,
@@ -890,7 +890,7 @@ bool hiopFRInterfaceSparse::eval_Jac_cons(const long long& n, const long long& m
 }
 
 /// @pre assuming Jac of the original prob is sorted
-bool hiopFRInterfaceSparse::eval_Jac_cons(const long long& n,
+bool hiopFRProbMDS::eval_Jac_cons(const long long& n,
                                           const long long& m,
                                           const double* x,
                                           bool new_x,
@@ -1034,7 +1034,7 @@ bool hiopFRInterfaceSparse::eval_Jac_cons(const long long& n,
   return true;
 }
 
-bool hiopFRInterfaceSparse::eval_Hess_Lagr(const long long& n,
+bool hiopFRProbMDS::eval_Hess_Lagr(const long long& n,
                                            const long long& m,
                                            const double* x,
                                            bool new_x,
@@ -1171,7 +1171,7 @@ bool hiopFRInterfaceSparse::eval_Hess_Lagr(const long long& n,
   return true;
 }
 
-bool hiopFRInterfaceSparse::get_starting_point(const long long& n,
+bool hiopFRProbMDS::get_starting_point(const long long& n,
                                                const long long& m,
                                                double* x0,
                                                bool& duals_avail,
@@ -1289,7 +1289,7 @@ bool hiopFRInterfaceSparse::get_starting_point(const long long& n,
   return true;
 }
 
-bool hiopFRInterfaceSparse::iterate_callback(int iter,
+bool hiopFRProbMDS::iterate_callback(int iter,
                                              double obj_value,
                                              double logbar_obj_value,
                                              int n,
@@ -1355,7 +1355,7 @@ bool hiopFRInterfaceSparse::iterate_callback(int iter,
   return true;
 }
 
-bool hiopFRInterfaceSparse::force_update(double obj_value,
+bool hiopFRProbMDS::force_update(double obj_value,
                                          const int n,
                                          double* x,
                                          double* z_L,

@@ -227,11 +227,11 @@ private:
  * such that Jacobian w.r.t. x and Hessian of the Lagrangian w.r.t. x are MDS
  *
  */
-class hiopFRInterfaceMDS : public hiopInterfaceMDS
+class hiopFRProbMDS : public hiopInterfaceMDS
 {
 public:
-  hiopFRInterfaceMDS(hiopAlgFilterIPMBase& solver_base);
-  virtual ~hiopFRInterfaceMDS();
+  hiopFRProbMDS(hiopAlgFilterIPMBase& solver_base);
+  virtual ~hiopFRProbMDS();
 
   virtual bool get_sparse_dense_blocks_info(int& nx_sparse, int& nx_dense,
 					    int& nnz_sparse_Jaceq, int& nnz_sparse_Jacineq,
