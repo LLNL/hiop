@@ -279,6 +279,21 @@ void hiopMatrixRajaDense::copyFrom(const hiopMatrixDense& dmmat)
 }
 
 /**
+ * @brief Copies the elements of `this` matrix to output buffer.
+ * 
+ * @pre The input buffer is big enough to hold the entire matrix.
+ * @pre The memory pointed at by the input is allocated by Umpire.
+ */
+void hiopMatrixRajaDense::copy_to(double* dest)
+{
+  if(nullptr != dest)
+  {
+    auto& rm = umpire::ResourceManager::getInstance();
+    rm.copy(dest, data_dev_, m_local_*n_local_*sizeof(double));
+  }
+}
+
+/**
  * @brief Copies the elements of the input buffer to this matrix.
  * 
  * @param[in] buffer - The beginning of a matrix
@@ -514,6 +529,13 @@ void hiopMatrixRajaDense::getRow(index_type irow, hiopVector& row_vec)
   auto& vec = dynamic_cast<hiopVectorRajaPar&>(row_vec);
   assert(n_local_ == vec.get_local_size());
   rm.copy(vec.local_data(), &Mview(irow, 0), n_local_ * sizeof(double));
+}
+
+void hiopMatrixRajaDense::set_Hess_FR(const hiopMatrixDense& Hess, const hiopVector& add_diag_de)
+{
+  double one{1.0};
+  copyFrom(Hess);
+  addDiagonal(one, add_diag_de);
 }
 
 #ifdef HIOP_DEEPCHECKS

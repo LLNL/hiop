@@ -262,7 +262,7 @@ public:
   }
   
   /**
-   * Method provides a primal or a primal-dual primal-dual starting point. This point is subject 
+   * Method provides a primal or a primal-dual starting point. This point is subject 
    * to internal adjustments in HiOp.
    *
    * If the user (implementer of this method) has good estimates only of the primal variables,
@@ -295,6 +295,26 @@ public:
   {
     duals_avail = false;
     slacks_avail = false;
+    return false;
+  }
+
+  /**
+   * Method provides a primal-dual starting point for warm start. This point is subject 
+   * to internal adjustments in HiOp.
+   *
+   * User provides starting point for all the iterate variable used in HiOp.
+   * 
+   */
+  virtual bool get_starting_point(const long long& n,
+                                  const long long& m,
+                                  double* x0,
+                                  double* z_bndL0, 
+                                  double* z_bndU0,
+                                  double* lambda0,
+                                  double* ineq_slack,
+                                  double* vl0,
+                                  double* vu0)
+  {
     return false;
   }
 

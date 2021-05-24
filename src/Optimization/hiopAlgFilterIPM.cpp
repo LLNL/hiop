@@ -327,23 +327,39 @@ startingProcedure(hiopIterate& it_ini,
 {
   bool duals_avail = false;
   bool slacks_avail = false;
-  if(!nlp->get_starting_point(*it_ini.get_x(),
-                              duals_avail,
-                              *it_ini.get_zl(), *it_ini.get_zu(),
-                              *it_ini.get_yc(), *it_ini.get_yd(),
-                              slacks_avail,
-                              *it_ini.get_d())) {
+  bool warmstart_avail = false;
+  bool ret_bool = false;
+  
+  if(nlp->options->GetString("warm_start")=="yes") {
+    ret_bool = nlp->get_starting_point(*it_ini.get_x(),
+                                       *it_ini.get_zl(), *it_ini.get_zu(),
+                                       *it_ini.get_yc(), *it_ini.get_yd(),
+                                       *it_ini.get_d(),
+                                       *it_ini.get_vl(), *it_ini.get_vu());
+    warmstart_avail = duals_avail = slacks_avail = true;
+  } else {
+    ret_bool = nlp->get_starting_point(*it_ini.get_x(),
+                                       duals_avail,
+                                       *it_ini.get_zl(), *it_ini.get_zu(),
+                                       *it_ini.get_yc(), *it_ini.get_yd(),
+                                       slacks_avail,
+                                       *it_ini.get_d());
+    
+  }
 
+  if(!ret_bool) {
     nlp->log->printf(hovWarning, "user did not provide a starting point; will be set to all zeros\n");
     it_ini.get_x()->setToZero();
     //in case user wrongly set this to true when he/she returned false
-    duals_avail = false;
+    warmstart_avail = duals_avail = slacks_avail = false;
   }
 
   nlp->runStats.tmSolverInternal.start();
   nlp->runStats.tmStartingPoint.start();
 
-  it_ini.projectPrimalsXIntoBounds(kappa1, kappa2);
+  if(!warmstart_avail) {
+    it_ini.projectPrimalsXIntoBounds(kappa1, kappa2);
+  }
 
   nlp->runStats.tmStartingPoint.stop();
   nlp->runStats.tmSolverInternal.stop();
@@ -383,8 +399,9 @@ startingProcedure(hiopIterate& it_ini,
     it_ini.get_d()->copyFrom(d);
   }
 
-  it_ini.projectPrimalsDIntoBounds(kappa1, kappa2);
-
+  if(!warmstart_avail) {
+    it_ini.projectPrimalsDIntoBounds(kappa1, kappa2);
+  }
   it_ini.determineSlacks();
 
   if(!duals_avail) {
@@ -395,8 +412,9 @@ startingProcedure(hiopIterate& it_ini,
 
     // compute vl and vu from vl = mu e ./ sdl and vu = mu e ./ sdu
     // sdl and sdu were initialized above in 'determineSlacks'
-
-    it_ini.determineDualsBounds_d(mu0);
+    if(!warmstart_avail) {
+      it_ini.determineDualsBounds_d(mu0);      
+    }
   }
 
   if(!duals_avail) {
@@ -809,6 +827,13 @@ void hiopAlgFilterIPMBase::displayTerminationMsg()
     {
       nlp->log->printf(hovSummary,
 		       "Stopped by the user through the user provided iterate callback.\n%s\n",
+		       strStatsReport.c_str());
+      break;
+    }
+  case Error_In_FR:
+    {
+      nlp->log->printf(hovSummary,
+		       "Feasibility restoration problem failed to converge.\n%s\n",
 		       strStatsReport.c_str());
       break;
     }
@@ -1412,7 +1437,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 
     /*************************************************
      * Termination check
-     ************************************************/
+     ************************************************/    
     if(checkTermination(_err_nlp, iter_num, solver_status_)) {
       break;
     }
@@ -2055,15 +2080,58 @@ int hiopAlgFilterIPMBase::apply_second_order_correction(hiopKKTLinSys* kkt,
 bool hiopAlgFilterIPMBase::apply_feasibility_restoration(hiopKKTLinSys* kkt)
 {
   if(!within_FR_) {
-    hiopFRProbSparse nlp_fr_interface(*this);
-    hiopNlpSparse nlpFR(nlp_fr_interface, "hiop_fr.options");
+    hiopNlpMDS* nlpMDS = dynamic_cast<hiopNlpMDS*>(nlp);
+    if (nlpMDS == nullptr) {
+      hiopNlpSparse* nlpSp = dynamic_cast<hiopNlpSparse*>(nlp);
+      if(NULL == nlpSp)
+      {
+        // this is dense linear system. This is the default case.
+        assert(0 && "feasibility problem hasn't support dense system yet.");
+      } else {
+        // this is Sparse linear system
+        hiopFRProbSparse nlp_fr_interface(*this);
+        hiopNlpSparse nlpFR(nlp_fr_interface, "hiop_fr.options");
+        return solve_feasibility_restoration(kkt, nlpFR);
+      }
+    } else {
+      // this is MDS system
+      hiopFRProbMDS nlp_fr_interface(*this);
+      hiopNlpMDS nlpFR(nlp_fr_interface, "hiop_fr.options");
+      return solve_feasibility_restoration(kkt, nlpFR);
+//      assert(0 && "feasibility problem hasn't support mds system yet.");
+    }
+  } else {
+    // FR problem inside a FR problem, see equation (33)
+    // use wildcard function to update iterate
+    if(!nlp->user_force_update(iter_num,
+                               _f_nlp,
+                               *it_curr->get_x(),
+                               *it_curr->get_zl(),
+                               *it_curr->get_zu(),
+                               *_c,
+                               *_d,
+                               *it_curr->get_yc(),
+                               *it_curr->get_yd(), //lambda,
+                               _mu,
+                               _alpha_dual,
+                               _alpha_primal)) {
+      solver_status_ = Error_In_FR;
+      return false;
+    }
+  }
+  return true;
+}
 
+bool hiopAlgFilterIPMBase::solve_feasibility_restoration(hiopKKTLinSys* kkt, hiopNlpFormulation& nlpFR)
+{
+  {
     nlpFR.options->SetStringValue("Hessian", "analytical_exact");
     nlpFR.options->SetStringValue("duals_update_type", "linear");
     nlpFR.options->SetStringValue("duals_init", "zero");
     nlpFR.options->SetStringValue("compute_mode", "cpu");
     nlpFR.options->SetStringValue("KKTLinsys", "xdycyd");
     nlpFR.options->SetIntegerValue("verbosity_level", 0);
+    nlpFR.options->SetStringValue("warm_start", "yes");
 
     // set mu0 to be the maximun of the current barrier parameter mu and norm_inf(|c|)*/
     double theta_ref = resid->getInfeasInfNorm(); //at current point, i.e., reference point
@@ -2123,25 +2191,7 @@ bool hiopAlgFilterIPMBase::apply_feasibility_restoration(hiopKKTLinSys* kkt)
       solver_status_ = Error_In_FR;
       return false;
     }
-  } else {
-    // FR problem inside a FR problem, see equation (33)
-    // use wildcard function to update iterate
-    if(!nlp->user_force_update(iter_num,
-                               _f_nlp,
-                               *it_curr->get_x(),
-                               *it_curr->get_zl(),
-                               *it_curr->get_zu(),
-                               *_c,
-                               *_d,
-                               *it_curr->get_yc(),
-                               *it_curr->get_yd(), //lambda,
-                               _mu,
-                               _alpha_dual,
-                               _alpha_primal)) {
-      solver_status_ = Error_In_FR;
-      return false;
-    }
-  }
+  } 
   return true;
 }
 

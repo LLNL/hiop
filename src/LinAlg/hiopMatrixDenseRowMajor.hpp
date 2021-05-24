@@ -79,6 +79,7 @@ public:
   virtual void setToConstant(double c);
   virtual void copyFrom(const hiopMatrixDense& dm);
   virtual void copyFrom(const double* buffer);
+  virtual void copy_to(double* buffer);
 
   virtual void timesVec(double beta,  hiopVector& y,
 			double alpha, const hiopVector& x) const;
@@ -211,6 +212,10 @@ public:
   void replaceRow(index_type row, const hiopVector& vec);
   /// @brief copies row 'irow' in the vector 'row_vec' (sizes should match)
   void getRow(index_type irow, hiopVector& row_vec);
+
+  /// @brief build Hess for FR problem, from the base problem `Hess`.
+  virtual void set_Hess_FR(const hiopMatrixDense& Hess, const hiopVector& add_diag_de);
+
 #ifdef HIOP_DEEPCHECKS
   void overwriteUpperTriangleWithLower();
   void overwriteLowerTriangleWithUpper();

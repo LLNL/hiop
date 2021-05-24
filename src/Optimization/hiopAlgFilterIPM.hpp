@@ -164,6 +164,7 @@ protected:
 
   /// @brief do feasibility restoration
   virtual bool apply_feasibility_restoration(hiopKKTLinSys* kkt);
+  virtual bool solve_feasibility_restoration(hiopKKTLinSys* kkt, hiopNlpFormulation& nlpFR);
 
   virtual void outputIteration(int lsStatus, int lsNum, int use_soc = 0, int use_fr = 0) = 0;
 

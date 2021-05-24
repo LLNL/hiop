@@ -155,6 +155,15 @@ void hiopMatrixDenseRowMajor::copyFrom(const double* buffer)
   }
 }
 
+void hiopMatrixDenseRowMajor::copy_to(double* buffer)
+{
+  if(NULL==buffer) {
+    return;
+  } else {
+    memcpy(buffer, M_[0], m_local_*n_local_*sizeof(double));
+  }
+}
+
 void hiopMatrixDenseRowMajor::copyRowsFrom(const hiopMatrixDense& srcmat, int num_rows, int row_dest)
 {
   const auto& src = dynamic_cast<const hiopMatrixDenseRowMajor&>(srcmat);
@@ -279,6 +288,13 @@ void hiopMatrixDenseRowMajor::getRow(index_type irow, hiopVector& row_vec)
   hiopVectorPar& vec=dynamic_cast<hiopVectorPar&>(row_vec);
   assert(n_local_==vec.get_local_size());
   memcpy(vec.local_data(), M_[irow], n_local_*sizeof(double));
+}
+
+void hiopMatrixDenseRowMajor::set_Hess_FR(const hiopMatrixDense& Hess, const hiopVector& add_diag_de)
+{
+  double one{1.0};
+  copyFrom(Hess);
+  addDiagonal(one, add_diag_de);
 }
 
 #ifdef HIOP_DEEPCHECKS

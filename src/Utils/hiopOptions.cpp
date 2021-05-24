@@ -210,6 +210,13 @@ void hiopOptions::registerOptions()
 		      "fixed_var_perturb (default 1e-8)");
   }
 
+  // warm_start
+  {
+    vector<string> range(2); range[0] = "no"; range[1] = "yes";
+    registerStrOption("warm_start", "no", range,
+                      "Wart start from the user provided primal-dual point. (default no)");    
+  }
+
   // scaling
   {
     vector<string> range(2); range[0]="none"; range[1]="gradient";
