@@ -242,6 +242,14 @@ public:
   }
   inline double* de_local_data() { return mDe->local_data(); }
 
+  /// @brief extend base problem Jac to the Jac in feasibility problem
+  virtual void set_Jac_FR(const hiopMatrixMDS& Jac_c,
+                          const hiopMatrixMDS& Jac_d,
+                          int* iJacS,
+                          int* jJacS,
+                          double* MJacS,
+                          double* JacD);
+
 #ifdef HIOP_DEEPCHECKS
   virtual bool assertSymmetry(double tol=1e-16) const { return false; }
 #endif
@@ -461,6 +469,13 @@ public:
   inline int* sp_jcol() { return mSp->j_col(); }
   inline double* sp_M() { return mSp->M(); }
   inline double* de_local_data() { return mDe->local_data(); }
+
+  /// @brief build Hess for FR problem, from the base problem `Hess`.
+  virtual void set_Hess_FR(const hiopMatrixSymBlockDiagMDS& Hess,
+                           int* iHSS,
+                           int* jHSS,
+                           double* MHSS,
+                           const hiopVector& add_diag);
 
 #ifdef HIOP_DEEPCHECKS
   virtual bool assertSymmetry(double tol=1e-16) const

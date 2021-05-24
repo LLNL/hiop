@@ -233,25 +233,57 @@ public:
   hiopFRProbMDS(hiopAlgFilterIPMBase& solver_base);
   virtual ~hiopFRProbMDS();
 
-  virtual bool get_sparse_dense_blocks_info(int& nx_sparse, int& nx_dense,
-					    int& nnz_sparse_Jaceq, int& nnz_sparse_Jacineq,
-					    int& nnz_sparse_Hess_Lagr_SS,
-					    int& nnz_sparse_Hess_Lagr_SD) = 0;
+  virtual bool get_sparse_dense_blocks_info(int& nx_sparse, 
+                                            int& nx_dense,
+                                            int& nnz_sparse_Jaceq,
+                                            int& nnz_sparse_Jacineq,
+                                            int& nnz_sparse_Hess_Lagr_SS,
+                                            int& nnz_sparse_Hess_Lagr_SD) = 0;
 
-  virtual bool eval_Jac_cons(const long long& n, const long long& m,
-			     const long long& num_cons, const long long* idx_cons,
-			     const double* x, bool new_x,
-			     const long long& nsparse, const long long& ndense,
-			     const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS,
-			     double* JacD);
+  virtual bool eval_Jac_cons(const long long& n, 
+                             const long long& m,
+                             const double* x,
+                             bool new_x,
+                             const long long& nsparse,
+                             const long long& ndense,
+                             const int& nnzJacS,
+                             int* iJacS,
+                             int* jJacS,
+                             double* MJacS,
+                             double* JacD);
 
-  virtual bool eval_Hess_Lagr(const long long& n, const long long& m,
-			      const double* x, bool new_x, const double& obj_factor,
-			      const double* lambda, bool new_lambda,
-			      const long long& nsparse, const long long& ndense,
-			      const int& nnzHSS, int* iHSS, int* jHSS, double* MHSS,
-			      double* HDD,
-			      int& nnzHSD, int* iHSD, int* jHSD, double* MHSD);
+  virtual bool eval_Jac_cons(const long long& n, 
+                             const long long& m,
+                             const long long& num_cons,
+                             const long long* idx_cons,
+                             const double* x,
+                             bool new_x,
+                             const long long& nsparse,
+                             const long long& ndense,
+                             const int& nnzJacS,
+                             int* iJacS,
+                             int* jJacS,
+                             double* MJacS,
+                             double* JacD);
+  
+  virtual bool eval_Hess_Lagr(const long long& n,
+                              const long long& m,
+                              const double* x,
+                              bool new_x,
+                              const double& obj_factor,
+                              const double* lambda,
+                              bool new_lambda,
+                              const long long& nsparse,
+                              const long long& ndense,
+                              const int& nnzHSS,
+                              int* iHSS,
+                              int* jHSS,
+                              double* MHSS,
+                              double* HDD,
+                              int& nnzHSD,
+                              int* iHSD,
+                              int* jHSD,
+                              double* MHSD);
 
   virtual bool get_prob_sizes(long long& n, long long& m);
   virtual bool get_vars_info(const long long& n, double *xlow, double* xupp, NonlinearityType* type);
@@ -315,6 +347,8 @@ public:
                             double& alpha_pr);
 private:
   long long n_;
+  long long n_sp_;
+  long long n_de_;
   long long m_;
 
   long long n_x_;
@@ -325,8 +359,8 @@ private:
 
   long long nnz_sp_Jac_c_;
   long long nnz_sp_Jac_d_;
-  long long nnz_sp_Hess_Lag_SS_;
-  long long nnz_sp_Hess_Lag_SD_;
+  long long nnz_sp_Hess_Lagr_SS_;
+  long long nnz_sp_Hess_Lagr_SD_;
 
   hiopAlgFilterIPMBase& solver_base_;
   hiopNlpMDS* nlp_base_;
@@ -342,6 +376,9 @@ private:
   hiopVector* wrk_dbody_;
   hiopVector* wrk_primal_;  // [x pe ne pi ni]
   hiopVector* wrk_dual_;    // [c d]
+
+  hiopMatrixMDS* Jac_cd_;
+  hiopMatrixSymBlockDiagMDS* Hess_cd_;
 
   double zeta_;
   double theta_ref_;

@@ -36,6 +36,7 @@ set(hiopLinAlg_SRC
   hiopMatrixDenseRowMajor.cpp
   hiopLinSolver.cpp
   hiopLinAlgFactory.cpp
+  hiopMatrixMDS.cpp
   hiopMatrixComplexDense.cpp
   hiopMatrixSparseTripletStorage.cpp
   hiopMatrixSparseTriplet.cpp

@@ -207,7 +207,7 @@ public:
                           int* jJacS,
                           double* MJacS) = 0;
 
-  /// @brief build Hess for FR problem, from the base problem `Hess`. Set sparsity if `task`=0, otherwise set values
+  /// @brief build Hess for FR problem, from the base problem `Hess`.
   virtual void set_Hess_FR(const hiopMatrixSparse& Hess,
                            int* iHSS,
                            int* jHSS,

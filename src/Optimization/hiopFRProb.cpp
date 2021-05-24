@@ -105,7 +105,7 @@ hiopFRProbSparse::hiopFRProbSparse(hiopAlgFilterIPMBase& solver_base)
   nnz_Jac_c_ = nlp_base_->get_nnz_Jaceq() + 2 * m_eq_;
   nnz_Jac_d_ = nlp_base_->get_nnz_Jacineq() + 2 * m_ineq_;
   
-  // not sure i Hess has diagonal terms, compute nnz_hess here
+  // not sure if Hess has diagonal terms, compute nnz_hess here
   // assuming hess is in upper_triangular form
   hiopMatrixSparse* Hess_base = dynamic_cast<hiopMatrixSparse*>(solver_base_.get_Hess_Lagr());
   nnz_Hess_Lag_ = n_x_ + Hess_base->numberOfOffDiagNonzeros();
@@ -253,7 +253,8 @@ bool hiopFRProbSparse::eval_cons(const long long& n,
                                  const long long& num_cons,
                                  const long long* idx_cons,
                                  const double* x,
-                                 bool new_x, double* cons)
+                                 bool new_x,
+                                 double* cons)
 {
   return false;
 }
@@ -658,6 +659,8 @@ hiopFRProbMDS::hiopFRProbMDS(hiopAlgFilterIPMBase& solver_base)
   m_ineq_ = nlp_base_->m_ineq();
 
   n_ = n_x_ + 2*m_eq_ + 2*m_ineq_;
+  n_sp_ = n_x_sp_ + 2*m_eq_ + 2*m_ineq_;
+  n_de_ = n_x_de_;
   m_ = m_eq_ + m_ineq_;
 
   pe_st_ = n_x_;
@@ -687,10 +690,14 @@ hiopFRProbMDS::hiopFRProbMDS(hiopAlgFilterIPMBase& solver_base)
   nnz_sp_Jac_c_ = nlp_base_->get_nnz_sp_Jaceq() + 2 * m_eq_;
   nnz_sp_Jac_d_ = nlp_base_->get_nnz_sp_Jacineq() + 2 * m_ineq_;
 
-  // not sure i Hess has diagonal terms, compute nnz_hess here
+  // not sure if Hess has diagonal terms, compute nnz_hess here
   // assuming hess is in upper_triangular form
-  hiopMatrixSparse* Hess_SS = dynamic_cast<hiopMatrixSparse*>(solver_base_.get_Hess_Lagr());
-  nnz_sp_Hess_Lag_SS_ = n_x_ + Hess_SS->numberOfOffDiagNonzeros();
+  hiopMatrixSymBlockDiagMDS* Hess_SS = dynamic_cast<hiopMatrixSymBlockDiagMDS*>(solver_base_.get_Hess_Lagr());
+  nnz_sp_Hess_Lagr_SS_ = n_x_ + Hess_SS->sp_mat()->numberOfOffDiagNonzeros();
+  nnz_sp_Hess_Lagr_SD_ = 0;
+
+  Jac_cd_ = new hiopMatrixMDS(m_, n_sp_, n_de_, nnz_sp_Jac_c_+nnz_sp_Jac_d_);
+  Hess_cd_ = new hiopMatrixSymBlockDiagMDS(n_sp_, n_de_, nnz_sp_Hess_Lagr_SS_);
 
   // set mu0 to be the maximun of the current barrier parameter mu and norm_inf(|c|)*/
   theta_ref_ = solver_base_.get_resid()->get_theta(); //at current point, i.e., reference point
@@ -713,6 +720,9 @@ hiopFRProbMDS::~hiopFRProbMDS()
   delete wrk_primal_;
   delete wrk_dual_;
   delete DR_;
+
+  delete Jac_cd_;
+  delete Hess_cd_;
 }
 
 bool hiopFRProbMDS::get_prob_sizes(long long& n, long long& m)
@@ -739,14 +749,9 @@ bool hiopFRProbMDS::get_vars_info(const long long& n, double *xlow, double* xupp
   xu.copyToStarting(*wrk_primal_,0);
   wrk_primal_->copyTo(xupp);
 
-  // x
-  for(long long i = 0; i < n_x_; ++i) {
-    type[i] = var_type[i];
-  }
-  // p and n
-  for(long long i = n_x_; i < n_; ++i) {
-    type[i] = hiopLinear;
-  }
+  wrk_primal_->set_array_from_to(type, 0, n_x_, var_type, 0);
+  wrk_primal_->set_array_from_to(type, n_x_, n_, hiopLinear);
+  
   return true;
 }
 
@@ -771,24 +776,25 @@ bool hiopFRProbMDS::get_cons_info(const long long& m, double* clow, double* cupp
   du.copyToStarting(*wrk_dual_, (int)m_eq_);
   wrk_dual_->copyTo(cupp);
 
-  for(long long i = 0; i < m_eq_; ++i) {
-    type[i] = cons_eq_type[i];
-  }
-  for(long long i = m_eq_; i < m_; ++i) {
-    type[i] = cons_ineq_type[i-m_eq_];
-  }
+  wrk_dual_->set_array_from_to(type, 0, m_eq_, cons_eq_type, 0);
+  wrk_dual_->set_array_from_to(type, m_eq_, m_, cons_ineq_type, 0);
+
   return true;
 }
 
-bool hiopFRProbMDS::get_sparse_blocks_info(int& nx,
-                                                   int& nnz_sparse_Jaceq,
-                                                   int& nnz_sparse_Jacineq,
-                                                   int& nnz_sparse_Hess_Lagr)
+bool hiopFRProbMDS::get_sparse_dense_blocks_info(int& nx_sparse,
+                                                 int& nx_dense,
+                                                 int& nnz_sparse_Jaceq,
+                                                 int& nnz_sparse_Jacineq,
+                                                 int& nnz_sparse_Hess_Lagr_SS,
+                                                 int& nnz_sparse_Hess_Lagr_SD)
 {
-  nx = n_;
-  nnz_sparse_Jaceq = nnz_Jac_c_;
-  nnz_sparse_Jacineq = nnz_Jac_d_;
-  nnz_sparse_Hess_Lagr = nnz_Hess_Lag_;
+  nx_sparse = n_sp_;
+  nx_dense = n_de_;
+  nnz_sparse_Jaceq = nnz_sp_Jac_c_;
+  nnz_sparse_Jacineq = nnz_sp_Jac_d_;
+  nnz_sparse_Hess_Lagr_SS = nnz_sp_Hess_Lagr_SS_;
+  nnz_sparse_Hess_Lagr_SD = nnz_sp_Hess_Lagr_SD_;
   return true;
 }
 
@@ -797,14 +803,13 @@ bool hiopFRProbMDS::eval_f(const long long& n, const double* x, bool new_x, doub
   assert(n == n_);
   obj_value = 0.;
 
+  wrk_primal_->copy_from_starting_at(x, 0, n_); // [x pe ne pi ni]
+  wrk_x_->copy_from_starting_at(x, 0, n_x_);    // [x]
+  
   // rho*sum(p+n)
-  for(auto i = n_x_; i < n_; ++i) {
-    obj_value += x[i];
-  }
-  obj_value *= rho_;
+  obj_value += rho_ * (wrk_primal_->sum_local() - wrk_x_->sum_local());
 
   // zeta/2*[DR*(x-x_ref)]^2
-  wrk_x_->copy_from_starting_at(x, 0, n_x_);
   wrk_x_->axpy(-1.0, *x_ref_);
   wrk_x_->componentMult(*DR_);
   double wrk_db = wrk_x_->twonorm();
@@ -835,20 +840,21 @@ bool hiopFRProbMDS::eval_grad_f(const long long& n, const double* x, bool new_x,
 }
 
 bool hiopFRProbMDS::eval_cons(const long long& n,
-                                      const long long& m,
-                                      const long long& num_cons,
-                                      const long long* idx_cons,
-                                      const double* x,
-                                      bool new_x, double* cons)
+                              const long long& m,
+                              const long long& num_cons,
+                              const long long* idx_cons,
+                              const double* x,
+                              bool new_x,
+                              double* cons)
 {
   return false;
 }
 
 bool hiopFRProbMDS::eval_cons(const long long& n,
-                                      const long long& m,
-                                      const double* x,
-                                      bool new_x,
-                                      double* cons)
+                              const long long& m,
+                              const double* x,
+                              bool new_x,
+                              double* cons)
 {
   assert(n == n_);
   assert(m == m_);
@@ -876,298 +882,57 @@ bool hiopFRProbMDS::eval_cons(const long long& n,
   return true;
 }
 
-bool hiopFRProbMDS::eval_Jac_cons(const long long& n, const long long& m,
-                                          const long long& num_cons,
-                                          const long long* idx_cons,
-                                          const double* x,
-                                          bool new_x,
-                                          const int& nnzJacS,
-                                          int* iJacS,
-                                          int* jJacS,
-                                          double* MJacS)
+bool hiopFRProbMDS::eval_Jac_cons(const long long& n, 
+                                  const long long& m,
+                                  const long long& num_cons,
+                                  const long long* idx_cons,
+                                  const double* x, 
+                                  bool new_x,
+                                  const long long& nsparse,
+                                  const long long& ndense,
+                                  const int& nnzJacS,
+                                  int* iJacS,
+                                  int* jJacS,
+                                  double* MJacS,
+                                  double* JacD)
 {
   return false;
 }
 
 /// @pre assuming Jac of the original prob is sorted
-bool hiopFRProbMDS::eval_Jac_cons(const long long& n,
-                                          const long long& m,
-                                          const double* x,
-                                          bool new_x,
-                                          const int& nnzJacS,
-                                          int* iJacS,
-                                          int* jJacS,
-                                          double* MJacS)
+bool hiopFRProbMDS::eval_Jac_cons(const long long& n, 
+                                  const long long& m,
+                                  const double* x,
+                                  bool new_x,
+                                  const long long& nsparse,
+                                  const long long& ndense,
+                                  const int& nnzJacS,
+                                  int* iJacS,
+                                  int* jJacS,
+                                  double* MJacS,
+                                  double* JacD)
 {
   assert( n == n_);
   assert( m == m_);
+  assert( nsparse == n_sp_);
+  assert( ndense == n_de_);
+  assert( nnzJacS == nlp_base_->get_nnz_sp_Jaceq() + nlp_base_->get_nnz_sp_Jacineq() + 2 * (m_));
 
-  assert(nnzJacS == nlp_base_->get_nnz_Jaceq() + nlp_base_->get_nnz_Jacineq() + 2 * (m_));
-
-  hiopMatrixSparse* Jac_c = dynamic_cast<hiopMatrixSparse*>(solver_base_.get_Jac_c());
-  hiopMatrixSparse* Jac_d = dynamic_cast<hiopMatrixSparse*>(solver_base_.get_Jac_d());
-
-  // shortcut to the original Jac
-  int *irow_c = Jac_c->i_row();
-  int *jcol_c = Jac_c->j_col();
-  int *irow_d = Jac_d->i_row();
-  int *jcol_d = Jac_d->j_col();
-
-  // assuming Jac is sorted!
-  int nnz_Jac_c_base = nlp_base_->get_nnz_Jaceq();
-  int nnz_Jac_d_base = nlp_base_->get_nnz_Jacineq();
-
-  int k;
-  int k_base;
-  int last_row_idx;
+  hiopMatrixMDS* Jac_c = dynamic_cast<hiopMatrixMDS*>(solver_base_.get_Jac_c());
+  hiopMatrixMDS* Jac_d = dynamic_cast<hiopMatrixMDS*>(solver_base_.get_Jac_d());
+  assert(Jac_c && Jac_d);
 
   // extend Jac to the p and n parts
-  if(iJacS != NULL && jJacS != NULL){
-    // Jac for d(x) - p + n
-    last_row_idx = m_;
-    k_base = nnz_Jac_d_base - 1;
-    for(k = nnz_Jac_c_ + nnz_Jac_d_ - 1; k >= nnz_Jac_c_ && k_base >= 0; ) {
-      int row_in_jac_d = irow_d[k_base];
-      int row_idx = row_in_jac_d + m_eq_;
-      if(row_idx != last_row_idx) {
-        // n
-        iJacS[k] = row_idx;
-        jJacS[k] = ni_st_ + row_in_jac_d;
-        // p
-        iJacS[k-1] = row_idx;
-        jJacS[k-1] = pi_st_ + row_in_jac_d;
-
-        last_row_idx = row_idx;
-        k = k-2;
-      } else {
-        // x
-        iJacS[k] = row_idx;
-        jJacS[k] = jcol_d[k_base];
-        k--;
-        k_base--;
-      }
-    }
-    assert( k == nnz_Jac_c_ - 1 && k_base == -1 );
-
-    // Jac for c(x) - p + n
-    last_row_idx = m_eq_;
-    k_base = nnz_Jac_c_base - 1;
-    for(k = nnz_Jac_c_ - 1; k >= 0 && k_base >= 0; ) {
-      int row_idx = irow_c[k_base];
-      if(row_idx != last_row_idx) {
-        // n
-        iJacS[k] = row_idx;
-        jJacS[k] = ne_st_ + row_idx;
-        // p
-        iJacS[k-1] = row_idx;
-        jJacS[k-1] = pe_st_ + row_idx;
-
-        last_row_idx = row_idx;
-        k = k-2;
-      } else {
-        // x
-        iJacS[k] = row_idx;
-        jJacS[k] = jcol_c[k_base];
-        k--;
-        k_base--;
-      }
-    }
-    assert( k == -1 && k_base == -1 );
-  }
-
-  //values for sparse Jacobian if requested by the solver
-  if(MJacS != NULL) {
+  if(MJacS != nullptr) {
     // get x for the original problem
     wrk_x_->copy_from_starting_at(x, 0, n_x_);
 
     // get Jac_c and Jac_d for the x part --- use original Jac_c/Jac_d as buffers
-    nlp_base_->eval_Jac_c_d(*wrk_x_, new_x, *Jac_c, *Jac_d);
-
-    // shortcut to the original Jac
-    double *M_c = Jac_c->M();
-    double *M_d = Jac_d->M();
-
-    // Jac for d(x) - p + n
-    last_row_idx = m_;
-    k_base = nnz_Jac_d_base - 1;
-    for(k = nnz_Jac_c_ + nnz_Jac_d_ - 1; k >= nnz_Jac_c_ && k_base >= 0; ) {
-      int row_idx = irow_d[k_base] + m_eq_;
-      if(row_idx != last_row_idx) {
-        // n
-        MJacS[k] = 1.0;
-        // p
-        MJacS[k-1] = -1.0;
-
-        last_row_idx = row_idx;
-        k = k-2;
-      } else {
-        // x
-        MJacS[k] = M_d[k_base];
-        k--;
-        k_base--;
-      }
-    }
-    assert( k == nnz_Jac_c_ - 1 && k_base == -1 );
-
-    // Jac for c(x) - p + n
-    last_row_idx = m_eq_;
-    k_base = nnz_Jac_c_base - 1;
-    for(k = nnz_Jac_c_ - 1; k >= 0 && k_base >= 0; ) {
-      int row_idx = irow_c[k_base];
-      if(row_idx != last_row_idx) {
-        // n
-        MJacS[k] = 1.0;
-        // p
-        MJacS[k-1] = -1.0;
-
-        last_row_idx = row_idx;
-        k = k-2;
-      } else {
-        // x
-        MJacS[k] = M_c[k_base];
-        k--;
-        k_base--;
-      }
-    }
-    assert( k == -1 && k_base == -1 );
-  }
-  return true;
-}
-
-bool hiopFRProbMDS::eval_Hess_Lagr(const long long& n,
-                                           const long long& m,
-                                           const double* x,
-                                           bool new_x,
-                                           const double& obj_factor,
-                                           const double* lambda,
-                                           bool new_lambda,
-                                           const int& nnzHSS,
-                                           int* iHSS,
-                                           int* jHSS,
-                                           double* MHSS)
-{
-  assert(nnzHSS == nnz_Hess_Lag_);
-
-  // shortcut to the original Hess
-  hiopMatrixSparse* Hess = dynamic_cast<hiopMatrixSparse*>(solver_base_.get_Hess_Lagr());
-  int *irow_h = Hess->i_row();
-  int *jcol_h = Hess->j_col();
-
-  // assuming Hess is sorted, and in upper-triangle format
-  int nnz_Hess_base = nlp_base_->get_nnz_Hess_Lagr();
-
-  // extend Jac to the p and n parts
-  if(iHSS != NULL && jHSS != NULL) {
-    int k = 0;
-    int k_base = 0;
-    int row_idx = 0;
-
-    // Hess for x:  zeta*DR^2.*(x-x_ref)
-    for(k_base = 0; k_base < nnz_Hess_base; ) {
-      int row_base = irow_h[k_base];
-      int col_base = jcol_h[k_base];
-      if(row_idx < row_base) {
-        // find empty row, insert diagonal entries
-        iHSS[k] = row_idx;
-        jHSS[k] = row_idx;
-        k++;
-        row_idx++;
-        continue;
-      }
-
-      // now we are on a non-empty row
-      if(col_base == row_base) {
-        // find a diagonal nonzero in the original hess
-        iHSS[k] = row_base;
-        jHSS[k] = col_base;
-        k++;
-        k_base++;
-        row_idx++;
-      } else {
-        if(row_idx == row_base) {
-          // insert diagonal nonzero into the beginning of this row
-          iHSS[k] = row_idx;
-          jHSS[k] = row_idx;
-          k++;
-          row_idx++;
-        }
-
-        // copy original off-diag nonzero
-        iHSS[k] = row_base;
-        jHSS[k] = col_base;
-        k++;
-        k_base++;
-      }
-    }
-    assert(row_idx == n_x_);
-    assert(k_base == nnz_Hess_base);
-    assert(k == nnz_Hess_Lag_);
+    nlp_base_->eval_Jac_c_d(*wrk_x_, new_x, *Jac_c, *Jac_d); 
   }
 
-  if(MHSS != NULL) {
-    int k = 0;
-    int k_base = 0;
-    int row_idx = 0;
+  Jac_cd_->set_Jac_FR(*Jac_c, *Jac_d, iJacS, jJacS, MJacS, JacD);
 
-    // get x for the original problem
-    wrk_x_->copy_from_starting_at(x, 0, n_x_);
-
-    // split lambda
-    wrk_eq_->copy_from_starting_at(lambda, 0, m_eq_);
-    wrk_ineq_->copy_from_starting_at(lambda, m_eq_, m_ineq_);
-
-    double obj_factor = 0.0;
-    // get Jac_c and Jac_d for the x part --- use original Jac_c/Jac_d as buffers
-    nlp_base_->eval_Hess_Lagr(*wrk_x_, new_x, obj_factor, *wrk_eq_, *wrk_ineq_, new_lambda, *Hess);
-
-    // shortcut to the original Jac
-    double *M_h = Hess->M();
-
-    // Hess for x:  zeta*DR^2.*(x-x_ref)
-    wrk_x_->axpy(-1.0, *x_ref_);
-    wrk_x_->componentMult(*DR_);
-    wrk_x_->componentMult(*DR_);
-    wrk_x_->scale(zeta_);
-
-    double* x_db = wrk_x_->local_data();
-
-    row_idx = 0;
-    for(k_base = 0; k_base < nnz_Hess_base; ) {
-      int row_base = irow_h[k_base];
-      int col_base = jcol_h[k_base];
-      if(row_idx < row_base) {
-        // find empty row, insert diagonal entries
-        MHSS[k] = x_db[row_idx];
-        k++;
-        row_idx++;
-        continue;
-      }
-
-      // now we are on a non-empty row
-      if(col_base == row_base) {
-        // find a diagonal nonzero in the original hess
-        MHSS[k] = M_h[k_base] + x_db[row_idx];
-        k++;
-        k_base++;
-        row_idx++;
-      } else {
-        if(row_idx == row_base) {
-          // insert diagonal nonzero into the beginning of this row
-          MHSS[k] = x_db[row_idx];
-          k++;
-          row_idx++;
-        }
-
-        // copy original off-diag nonzero
-        MHSS[k] = M_h[k_base];
-        k++;
-        k_base++;
-      }
-    }
-    assert(row_idx == n_x_);
-    assert(k_base == nnz_Hess_base);
-    assert(k == nnz_Hess_Lag_);
-  }
   return true;
 }
 
@@ -1290,24 +1055,24 @@ bool hiopFRProbMDS::get_starting_point(const long long& n,
 }
 
 bool hiopFRProbMDS::iterate_callback(int iter,
-                                             double obj_value,
-                                             double logbar_obj_value,
-                                             int n,
-                                             const double* x,
-                                             const double* z_L,
-                                             const double* z_U,
-                                             int m_ineq,
-                                             const double* s,
-                                             int m,
-                                             const double* g,
-                                             const double* lambda,
-                                             double inf_pr,
-                                             double inf_du,
-                                             double onenorm_pr_,
-                                             double mu,
-                                             double alpha_du,
-                                             double alpha_pr,
-                                             int ls_trials)
+                                     double obj_value,
+                                     double logbar_obj_value,
+                                     int n,
+                                     const double* x,
+                                     const double* z_L,
+                                     const double* z_U,
+                                     int m_ineq,
+                                     const double* s,
+                                     int m,
+                                     const double* g,
+                                     const double* lambda,
+                                     double inf_pr,
+                                     double inf_du,
+                                     double onenorm_pr_,
+                                     double mu,
+                                     double alpha_du,
+                                     double alpha_pr,
+                                     int ls_trials)
 {
   assert(n_ == n);
   assert(m_ineq_ == m_ineq);
@@ -1356,16 +1121,16 @@ bool hiopFRProbMDS::iterate_callback(int iter,
 }
 
 bool hiopFRProbMDS::force_update(double obj_value,
-                                         const int n,
-                                         double* x,
-                                         double* z_L,
-                                         double* z_U,
-                                         const int m,
-                                         double* g,
-                                         double* lambda,
-                                         double& mu,
-                                         double& alpha_du,
-                                         double& alpha_pr)
+                                 const int n,
+                                 double* x,
+                                 double* z_L,
+                                 double* z_U,
+                                 const int m,
+                                 double* g,
+                                 double* lambda,
+                                 double& mu,
+                                 double& alpha_du,
+                                 double& alpha_pr)
 {
   // this function is used in FR in FR, see eq (33)
   assert( n == n_);
@@ -1433,6 +1198,56 @@ bool hiopFRProbMDS::force_update(double obj_value,
   return true;
 }
 
+bool hiopFRProbMDS::eval_Hess_Lagr(const long long& n,
+                                   const long long& m,
+                                   const double* x,
+                                   bool new_x,
+                                   const double& obj_factor,
+                                   const double* lambda,
+                                   bool new_lambda,
+                                   const long long& nsparse,
+                                   const long long& ndense,
+                                   const int& nnzHSS,
+                                   int* iHSS,
+                                   int* jHSS,
+                                   double* MHSS,
+                                   double* HDD,
+                                   int& nnzHSD,
+                                   int* iHSD,
+                                   int* jHSD,
+                                   double* MHSD)
+{
+  assert(nnzHSS == nnz_sp_Hess_Lagr_SS_);
+  assert(nnzHSD == 0);
+
+  // shortcut to the original Hess
+  hiopMatrixSymBlockDiagMDS* Hess = dynamic_cast<hiopMatrixSymBlockDiagMDS*>(solver_base_.get_Hess_Lagr());
+  assert(Hess);
+
+  if(MHSS != nullptr) {
+    // get x for the original problem
+    wrk_x_->copy_from_starting_at( x, 0, n_x_);
+
+    // split lambda
+    wrk_eq_->copy_from_starting_at(lambda, 0, m_eq_);
+    wrk_ineq_->copy_from_starting_at(lambda, m_eq_, m_ineq_);
+
+    double obj_factor = 0.0;
+    // get Hess for the x part --- use original Hess as buffers
+    nlp_base_->eval_Hess_Lagr(*wrk_x_, new_x, obj_factor, *wrk_eq_, *wrk_ineq_, new_lambda, *Hess);
+    
+    // additional diag Hess for x:  zeta*DR^2.*(x-x_ref)
+    wrk_x_->axpy(-1.0, *x_ref_);
+    wrk_x_->componentMult(*DR_);
+    wrk_x_->componentMult(*DR_);
+    wrk_x_->scale(zeta_);    
+  }
+
+  // extend Hes to the p and n parts
+  Hess_cd_->set_Hess_FR(*Hess, iHSS, jHSS, MHSS, *wrk_x_);
+
+  return true;
+}
 
 
 
