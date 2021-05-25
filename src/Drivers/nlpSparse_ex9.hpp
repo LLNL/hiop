@@ -53,9 +53,6 @@ public:
     x0_ = new double[nx_];
     for(int i=0;i<nS_*S_;i++) xi_[i] = 1.0;
     for(int i=0;i<nx_;i++) x0_[i] = 1.0;
-    //for(int i=0;i<S_;i++){
-    //  xi_[i*nS_+nS_-1] = -1.0;
-    //}
   }
 
   Ex9(int nx,int S,int nS)
@@ -69,9 +66,6 @@ public:
     for(int i=0;i<nS_*S_;i++) { 
       xi_[i] = 1.0;
     }
-    //for(int i=0;i<S_;i++) {
-    //  xi_[i*nS_+nS_-1] = 1.0;
-    //}
     for(int i=0;i<nx_;i++) x0_[i] = 1.0;
   }
   bool get_prob_sizes(long long& n, long long& m)
@@ -132,9 +126,7 @@ public:
     n = n_vars;
     nnz_sparse_Jaceq = 2;
     nnz_sparse_Jacineq = 2+2*(nx_-3)+S_*(nx_+ 2*(nx_-1)) ;
-    //printf("nnz_sparse_Jacineq %d\n",nnz_sparse_Jacineq);
-    //nnz_sparse_Hess_Lagr = nx_+S_*nx_*2+S_*nx_; //this variable should always be <= n_vars?
-    nnz_sparse_Hess_Lagr = nx_+S_*nx_+S_*nx_; //this variable should always be <= n_vars?
+    nnz_sparse_Hess_Lagr = nx_+S_*nx_+S_*nx_; //this variable should always be <= n_vars
     return true;
   }
 
@@ -157,9 +149,12 @@ public:
   bool eval_grad_f(const long long& n, const double* x, bool new_x, double* gradf)
   {
     assert(n==n_vars);
-    for(int i=0;i<n_vars;i++) gradf[i] = 0.;
-    //for(int i=0;i<nx_;i++) gradf[i] = std::pow(x[i]-1.,3);
-    for(int i=0;i<nx_;i++) gradf[i] = 1.0*std::pow(x[i]-1.,3);
+    for(int i=0;i<n_vars;i++) {
+      gradf[i] = 0.;
+    }
+    for(int i=0;i<nx_;i++) {
+      gradf[i] = 1.0*std::pow(x[i]-1.,3);
+    }
 
     for(int i=0;i<S_;i++) {
       for(int j=0;j<nx_;j++) {
@@ -328,11 +323,6 @@ public:
     return true;
   }
 
-  /*bool eval_Hess_Lagr(const long long& n, const long long& m,
-                           const double* x, bool new_x, const double& obj_factor,
-                           const double* lambda, bool new_lambda,
-                           const int& nnzHSS, int* iHSS, int* jHSS, double* MHSS)
-  {return false;}*/
   bool eval_Hess_Lagr(const long long& n, 
                       const long long& m,
                       const double* x, 
@@ -352,10 +342,6 @@ public:
       for(int i=0; i<nx_; i++) { 	
         iHSS[nnzit] = jHSS[nnzit] = i;
         nnzit++;
-        //for(int j=0;j<S_;j++){
-        //  iHSS[nnzit] = i; jHSS[nnzit] = nx_+j*nx_+i;
-        //  nnzit++;
-        //}    
       }
      // r_i(x;\xi^i) = 1/S *  min_y 0.5 || y - x ||^2 such that 
       for(int i=0;i<S_;i++) {
@@ -391,12 +377,7 @@ public:
         }
       }
       assert(nnzHSS == nnzit);
-      //for(int i=0;i<nnzHSS;i++) {
-      //  std::cout<<"MHSS "<<i<<" "<<MHSS[i];
-      //}
-      //std::cout<<std::endl;
     }
-
     return true;
   }
 

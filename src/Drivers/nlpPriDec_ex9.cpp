@@ -28,7 +28,7 @@ PriDecMasterProblemEx9::~PriDecMasterProblemEx9()
 };
 	
 hiop::hiopSolveStatus
-PriDecMasterProblemEx9::solve_master(double* x,
+PriDecMasterProblemEx9::solve_master(hiopVector& x,
                                      const bool& include_r,
                                      const double& rval/*=0*/, 
                                      const double* grad/*=0*/,
@@ -66,7 +66,8 @@ PriDecMasterProblemEx9::solve_master(double* x,
   status = solver.run();
 
   obj_ = solver.getObjective();
-  solver.getSolution(x);
+  double* x_vec = x.local_data();
+  solver.getSolution(x_vec);
 
   if(status<0) {
     printf("solver returned negative solve status: %d (with objective is %18.12e)\n", status, solver.getObjective());
@@ -79,12 +80,12 @@ PriDecMasterProblemEx9::solve_master(double* x,
   if(sol_==NULL) {
     sol_ = new double[nx_];
   }
-  memcpy(sol_,x, nx_*sizeof(double));
+  memcpy(sol_,x_vec, nx_*sizeof(double));
   
   //compute the recourse estimate
   if(include_r) {
     double rec_appx = 0.;
-    basecase_->get_rec_obj(nx_, x, rec_appx);
+    basecase_->get_rec_obj(nx_, x_vec, rec_appx);
     //printf("recourse estimate: is %18.12e\n", rec_appx); 
   }
   
@@ -168,10 +169,12 @@ bool PriDecMasterProblemEx9::eval_f_rterm(size_t idx, const int& n, const double
 };
 
 //returns the gradient computed in eval_f_rterm
-bool PriDecMasterProblemEx9::eval_grad_rterm(size_t idx, const int& n, double* x, double* grad)
+bool PriDecMasterProblemEx9::eval_grad_rterm(size_t idx, const int& n, double* x, hiopVector& grad)
 {
   assert(nx_==n);
-  for(int i=0;i<n;i++) grad[i] = (x[i]-y_[i])/S_;
+  double* grad_vec = grad.local_data();
+  for(int i=0;i<n;i++) 
+    grad_vec[i] = (x[i]-y_[i])/S_;
   return true;
 };
 

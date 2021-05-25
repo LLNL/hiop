@@ -76,7 +76,7 @@ public:
   
   virtual ~PriDecMasterProblemEx9();
 
-  hiop::hiopSolveStatus solve_master(double* x,
+  hiop::hiopSolveStatus solve_master(hiopVector& x,
                                      const bool& include_r,
                                      const double& rval=0, 
                                      const double* grad=0,
@@ -98,7 +98,7 @@ public:
    * n is the number of coupled x, not the entire dimension of x
    * grad is the output
    */
-  bool eval_grad_rterm(size_t idx, const int& n, double* x, double* grad);
+  bool eval_grad_rterm(size_t idx, const int& n, double* x, hiopVector& grad);
   
   inline size_t get_num_rterms() const;
   

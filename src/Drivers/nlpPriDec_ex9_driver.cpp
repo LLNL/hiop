@@ -2,7 +2,7 @@
 //the solver
 #include "hiopAlgPrimalDecomp.hpp"
 
-#ifdef HIOP_USE_MAGMA
+#ifdef HIOP_USE_GPU
 #include "magma_v2.h"
 #endif
 

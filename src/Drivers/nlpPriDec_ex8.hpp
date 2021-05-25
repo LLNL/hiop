@@ -129,13 +129,13 @@ public:
     delete my_nlp;
   }
 
-  virtual hiopSolveStatus solve_master(double* x, const bool& include_r, const double& rval = 0,
+  virtual hiopSolveStatus solve_master(hiopVector& x, const bool& include_r, const double& rval = 0,
 		                       const double* grad=0, const double* hess=0);
 
   // The recourse solution is 0.5*(x+Se_i)(x+Se_i)
   virtual bool eval_f_rterm(size_t idx, const int& n,const  double* x, double& rval);
   
-  virtual bool eval_grad_rterm(size_t idx, const int& n, double* x, double* grad);
+  virtual bool eval_grad_rterm(size_t idx, const int& n, double* x, hiopVector& grad);
 
   // Implement with alpha = 1 for now only
   // This function should only be used if quadratic regularization is included

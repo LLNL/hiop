@@ -50,17 +50,15 @@ public:
                             nnzHSS, iHSS, jHSS, MHSS)) {
       return false;
     }
-    //add diagonal to the Hessian
-    if(iHSS!=nullptr && jHSS!=nullptr) {
-      //nothing to do as the parent already added (i,i) corresponding to the diagonal
-    }
+    // Add diagonal to the Hessian
+    // The indices are already added through the parent 
 
     if(MHSS!=nullptr) {
       //use rec_evaluator_ to add diagonal entries in the Hessian
       assert(nnzHSS == n);
       if(include_rec_) {
         for(int i=0; i<n; i++) {
-          MHSS[i] += obj_factor*rec_evaluator_->get_rhess()[i] ;
+          MHSS[i] += obj_factor*(rec_evaluator_->get_rhess()->local_data_const()[i]) ;
         }
       }
     }

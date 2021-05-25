@@ -136,15 +136,8 @@ public:
       cupp[i] = 1e20;
     }
 
-    /*if(idx_<=10) {
-      for(int i=0;i<100;i++) {
-        clow[i] = 0.;
-        cupp[i] = 0.;
-      }
-    }*/
-
-    //clow[ny_-1] = 1.;
-    clow[ny_-1] = 1.; //This is changing a lot
+    //clow[ny_-1] = 0.;
+    clow[ny_-1] = 1.; 
     cupp[ny_-1] = 1e20;
     return true;
   }
@@ -212,10 +205,6 @@ public:
           cons[m-1] += x[i]*x[i];
         }
       }
-      /*if(idx_<=10 && con_idx<100) {
-        cons[con_idx] = x[con_idx]-x_[idx];
-      }*/    
-
     }
     return true; 
   }

@@ -2,6 +2,8 @@
 #define HIOP_INTERFACE_PRIDEC
 
 #include "hiopInterface.hpp"
+#include "hiopVector.hpp"
+#include "hiopLinAlgFactory.hpp"
 #include <cassert>
 #include <cstring> //for memcpy
 #include <vector>
@@ -90,11 +92,11 @@ public:
    * @param x : output, will contain the primal optimal solution of the master
    * 
    */
-  virtual hiopSolveStatus solve_master(double* x,const bool& include_r, const double& rval=0, 
+  virtual hiopSolveStatus solve_master(hiopVector& x,const bool& include_r, const double& rval=0, 
 		                       const double* grad=0,const double*hess =0) = 0;
 
   virtual bool eval_f_rterm(size_t idx, const int& n, const double* x, double& rval) = 0;
-  virtual bool eval_grad_rterm(size_t idx, const int& n, double* x, double* grad) = 0;
+  virtual bool eval_grad_rterm(size_t idx, const int& n, double* x, hiopVector& grad) = 0;
 
   //
   // Documentation here
@@ -133,41 +135,44 @@ public:
     
     RecourseApproxEvaluator(const int nc, const int S, const std::vector<int>& list);
   
-    RecourseApproxEvaluator(const int nc, const int S, const double& rval, const double* rgrad, 
-                            const double* rhess, const double* x0);
+    RecourseApproxEvaluator(const int nc, const int S, const double& rval, const hiopVector& rgrad, 
+                            const hiopVector& rhess, const hiopVector& x0);
   
     RecourseApproxEvaluator(int nc,int S, const std::vector<int>& list,
-                            const double& rval, const double* rgrad, 
-                            const double* rhess, const double* x0);
+                            const double& rval, const hiopVector& rgrad, 
+                            const hiopVector& rhess, const hiopVector& x0);
+
+    ~RecourseApproxEvaluator();
 
     bool eval_f(const long long& n, const double* x, bool new_x, double& obj_value);
  
     bool eval_grad(const long long& n, const double* x, bool new_x, double* grad);
 
-    bool eval_hess(const long long& n, const double* x, bool new_x, double* hess);
+    bool eval_hess(const long long& n, const hiopVector& x, bool new_x, hiopVector& hess);
   
     virtual bool get_MPI_comm(MPI_Comm& comm_out);
     
     void set_rval(const double rval);
-    void set_rgrad(const int n,const double* rgrad);
-    void set_rhess(const int n,const double* rhess);
-    void set_x0(const int n,const double* x0);
+    void set_rgrad(const int n, const hiopVector& rgrad);
+    void set_rhess(const int n, const hiopVector& rhess);
+    void set_x0(const int n, const hiopVector& x0);
     void set_xc_idx(const std::vector<int>& idx);
 
     int get_S() const; 
     double get_rval() const;
-    double* get_rgrad() const;
-    double* get_rhess() const;
-    double* get_x0() const; 
+    hiopVector* get_rgrad() const;
+    hiopVector* get_rhess() const;
+    hiopVector* get_x0() const; 
     std::vector<int> get_xc_idx() const; 
 
   protected:
     int nc_,S_;
     std::vector<int> xc_idx_;
     double rval_;
-    double* rgrad_;
-    double* rhess_; //diagonal vector for now
-    double* x0_; //current solution
+    //double* rgrad_;
+    hiopVector* rgrad_;
+    hiopVector* rhess_; //diagonal Hessian vector
+    hiopVector* x0_; //current solution
   };
   
   virtual bool set_recourse_approx_evaluator(const int n, RecourseApproxEvaluator* evaluator)=0;

@@ -3,7 +3,7 @@
 //the solver
 #include "hiopAlgPrimalDecomp.hpp"
 
-#ifdef HIOP_USE_MAGMA
+#ifdef HIOP_USE_GPU
 #include "magma_v2.h"
 #endif
 
@@ -129,9 +129,7 @@ int main(int argc, char **argv)
     return 1;
   }
 
-  //PriDecMasterProblemEx8 pridec_problem(nx, S,MPI_COMM_WORLD);
   PriDecMasterProblemEx8 pridec_problem(nx, S, nc,MPI_COMM_WORLD);
-  //printf("total ranks %d\n",comm_size);
   hiop::hiopAlgPrimalDecomposition pridec_solver(&pridec_problem, nc,list,MPI_COMM_WORLD);
 
   auto status = pridec_solver.run();

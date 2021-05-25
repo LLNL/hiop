@@ -56,9 +56,7 @@ Ex8::Ex8(int ns_, int S_, bool include, hiopInterfacePriDecProblem::RecourseAppr
     : Ex8(ns_,S_)
 {
   include_r = include;
-  evaluator_ = new hiopInterfacePriDecProblem::RecourseApproxEvaluator(ns, S, 
-		   evaluator->get_rval(), evaluator->get_rgrad(), 
-                   evaluator->get_rhess(), evaluator->get_x0());
+  evaluator_ = evaluator;
 }
 
 Ex8::~Ex8()
@@ -190,7 +188,7 @@ bool Ex8::set_include(bool include)
 };
 
 hiopSolveStatus PriDecMasterProblemEx8::
-solve_master(double* x, 
+solve_master(hiopVector& x, 
 	     const bool& include_r, 
 	     const double& rval/* = 0*/,
 	     const double* grad/*=0*/, 
@@ -234,7 +232,8 @@ solve_master(double* x,
   status = solver.run();
   obj_ = solver.getObjective();
 
-  solver.getSolution(x);
+  double* x_vec = x.local_data();
+  solver.getSolution(x_vec);
 
   if(status<0) {
     printf("solver returned negative solve status: %d (with objective is %18.12e)\n", status, obj_);
@@ -244,7 +243,7 @@ solve_master(double* x,
     sol_ = new double[n_];
   }
 
-  memcpy(sol_,x, n_*sizeof(double));
+  memcpy(sol_,x_vec, n_*sizeof(double));
   //assert("for debugging" && false); //for debugging purpose
   return Solve_Success;
 
@@ -266,14 +265,15 @@ bool PriDecMasterProblemEx8::eval_f_rterm(size_t idx, const int& n,const  double
 };
 
 // x is handled by primalDecomp to be the correct coupled x
-bool PriDecMasterProblemEx8::eval_grad_rterm(size_t idx, const int& n, double* x, double* grad)
+bool PriDecMasterProblemEx8::eval_grad_rterm(size_t idx, const int& n, double* x, hiopVector& grad)
 {
   assert(nc_ == n);
+  double* grad_vec = grad.local_data();
   for(int i=0; i<n; i++) {
     if(i==idx) {	    
-      grad[i] = (x[i]+S_)/S_;
+      grad_vec[i] = (x[i]+S_)/S_;
     } else {
-      grad[i] = x[i]/S_;
+      grad_vec[i] = x[i]/S_;
     }
   }
   return true;

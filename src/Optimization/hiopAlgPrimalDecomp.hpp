@@ -59,7 +59,7 @@ public:
 
   double getObjective() const;
   
-  void getSolution(double* x) const;
+  void getSolution(hiopVector& x) const;
   
   void getDualSolutions(double* zl, double* zu, double* lambda);
   
@@ -81,7 +81,7 @@ public:
   
   void set_acceptable_tolerance(const double tol);
  
-  double step_size_inf(const int nc, const double* x, const double* x0);
+  double step_size_inf(const int nc, const hiopVector& x, const hiopVector& x0);
   /* Contains information of a solution step including function value 
    * and gradient. Used for storing the solution for the previous iteration
    */
@@ -133,14 +133,14 @@ public:
     /* n_ is the dimension of x, hence the dimension of g_k, skm1, etc */
     void set_n(const int n);
 
-    void set_xkm1(const double* xk);
+    void set_xkm1(const hiopVector& xk);
     
-    void set_gkm1(const double* grad);
+    void set_gkm1(const hiopVector& grad);
 
-    void initialize(const double f_val, const double* xk, const double* grad);
+    void initialize(const double f_val, const hiopVector& xk, const hiopVector& grad);
     
     /* updating variables for the current iteration */
-    void update_hess_coeff(const double* xk, const double* gk, const double& f_val);
+    void update_hess_coeff(const hiopVector& xk, const hiopVector& gk, const double& f_val);
  
     /* updating ratio_ used to compute alpha i
      * Using trust-region notations,
@@ -172,11 +172,11 @@ public:
      * So alpha_f is based on the constraint on the minimum of recourse
      * approximition. This is to ensure good approximation.
      */ 
-    double get_alpha_f(const double* gk);
+    double get_alpha_f(const hiopVector& gk);
 
     /* Function to check convergence based gradient 
      */
-    double check_convergence_grad(const double* gk);
+    double check_convergence_grad(const hiopVector& gk);
     double check_convergence_fcn();
     double compute_base(const double val, const double rval);
 
@@ -200,10 +200,10 @@ public:
     double alpha_max = 1e10;  
     double fk; 
     double fkm1;
-    double* xkm1;
-    double* gkm1;
-    double* skm1;
-    double* ykm1;
+    hiopVector* xkm1;
+    hiopVector* gkm1;
+    hiopVector* skm1;
+    hiopVector* ykm1;
     size_t ver_=1;
   };
 
@@ -227,7 +227,8 @@ private:
   hiopSolveStatus solver_status_;
   
   //current primal iterate
-  double* x_;
+  hiopVector* x_;
+  //double* x_;
 
   //dimension of x_
   size_t n_;
@@ -257,6 +258,6 @@ private:
   double rhok_ = 0.;
 };
 
-}; //end of namespace
+} //end of namespace
 
 #endif
