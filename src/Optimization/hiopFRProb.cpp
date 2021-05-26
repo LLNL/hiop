@@ -225,6 +225,8 @@ bool hiopFRProbSparse::eval_f(const long long& n, const double* x, bool new_x, d
 
   obj_value += 0.5 * zeta_ * wrk_db * wrk_db;
 
+  nlp_base_->eval_f(*wrk_x_, new_x, obj_base_); 
+
   return true;
 }
 
@@ -235,7 +237,7 @@ bool hiopFRProbSparse::eval_grad_f(const long long& n, const double* x, bool new
   // p and n
   wrk_primal_->setToConstant(rho_);
 
-  // x
+  // x: zeta*DR^2*(x-x_ref)
   wrk_x_->copy_from_starting_at(x, 0, n_x_);
   wrk_x_->axpy(-1.0, *x_ref_);
   wrk_x_->componentMult(*DR_);
@@ -365,11 +367,10 @@ bool hiopFRProbSparse::eval_Hess_Lagr(const long long& n,
     // get Hess for the x part --- use original Hess as buffers
     nlp_base_->eval_Hess_Lagr(*wrk_x_, new_x, obj_factor, *wrk_eq_, *wrk_ineq_, new_lambda, Hess);
     
-    // additional diag Hess for x:  zeta*DR^2.*(x-x_ref)
-    wrk_x_->axpy(-1.0, *x_ref_);
+    // additional diag Hess for x:  zeta*DR^2
+    wrk_x_->setToConstant(zeta_);
     wrk_x_->componentMult(*DR_);
     wrk_x_->componentMult(*DR_);
-    wrk_x_->scale(zeta_);    
   }
 
   // extend Hes to the p and n parts
@@ -381,24 +382,23 @@ bool hiopFRProbSparse::eval_Hess_Lagr(const long long& n,
 bool hiopFRProbSparse::get_starting_point(const long long& n,
                                           const long long& m,
                                           double* x0,
-                                          bool& duals_avail,
-                                          double* z_bndL0,
+                                          double* z_bndL0, 
                                           double* z_bndU0,
                                           double* lambda0,
-                                          bool& slack_avail,
-                                          double *ineq_slack)
+                                          double* ineq_slack,
+                                          double* vl0,
+                                          double* vu0 )
 {
   assert( n == n_);
   assert( m == m_);
-
-  duals_avail = true;
-  slack_avail = true;
 
   hiopVector* c = solver_base_.get_c();
   hiopVector* d = solver_base_.get_d();
   hiopVector* s = solver_base_.get_it_curr()->get_d();
   hiopVector* zl = solver_base_.get_it_curr()->get_zl();
   hiopVector* zu = solver_base_.get_it_curr()->get_zu();
+  hiopVector* vl = solver_base_.get_it_curr()->get_vl();
+  hiopVector* vu = solver_base_.get_it_curr()->get_vu();
   const hiopVector& crhs = nlp_base_->get_crhs();
 
   // x0 = x_ref
@@ -489,6 +489,15 @@ bool hiopFRProbSparse::get_starting_point(const long long& n,
   wrk_x_->copyToStarting(*wrk_primal_, 0);
   wrk_primal_->copyTo(z_bndU0);
 
+  // compute vl vu
+  wrk_ineq_->copyFrom(*vl);
+  wrk_ineq_->component_min(rho_);
+  wrk_ineq_->copyTo(vl0);
+
+  wrk_ineq_->copyFrom(*vu);
+  wrk_ineq_->component_min(rho_);
+  wrk_ineq_->copyTo(vu0);
+
   // set lambda to 0 --- this will be updated by lsq later.
   // Need to have this since we set duals_avail to true, in order to initialize zl and zu
   wrk_dual_->setToZero();
@@ -545,11 +554,9 @@ bool hiopFRProbSparse::iterate_callback(int iter,
       hiopIterate* it_next = solver_base_.get_it_trial();
 
       // set next iter->x to x from FR
-      wrk_x_->copy_from_starting_at(x, 0, n_x_);
       it_next->get_x()->copyFrom(*wrk_x_);
 
       // set next iter->d (the slack for ineqaulities) to s from FR
-      wrk_d_->copy_from_starting_at(s, 0, m_ineq_);
       it_next->get_d()->copyFrom(*wrk_d_);
 
       return false;
@@ -663,10 +670,12 @@ hiopFRProbMDS::hiopFRProbMDS(hiopAlgFilterIPMBase& solver_base)
   n_de_ = n_x_de_;
   m_ = m_eq_ + m_ineq_;
 
-  pe_st_ = n_x_;
+  x_sp_st_ = 0;
+  pe_st_ = n_x_sp_;
   ne_st_ = pe_st_ + m_eq_;
   pi_st_ = ne_st_ + m_eq_;
   ni_st_ = pi_st_ + m_ineq_;
+  x_de_st_ = ni_st_ + m_ineq_;
 
   x_ref_ = solver_base.get_it_curr()->get_x();
 
@@ -686,6 +695,9 @@ hiopFRProbMDS::hiopFRProbMDS(hiopAlgFilterIPMBase& solver_base)
   wrk_primal_ = LinearAlgebraFactory::createVector(n_);
   wrk_dual_ = LinearAlgebraFactory::createVector(m_);
 
+  wrk_x_sp_ = LinearAlgebraFactory::createVector(n_x_sp_);
+  wrk_x_de_ = LinearAlgebraFactory::createVector(n_x_de_);
+
   // nnz for sparse matrices;
   nnz_sp_Jac_c_ = nlp_base_->get_nnz_sp_Jaceq() + 2 * m_eq_;
   nnz_sp_Jac_d_ = nlp_base_->get_nnz_sp_Jacineq() + 2 * m_ineq_;
@@ -693,7 +705,7 @@ hiopFRProbMDS::hiopFRProbMDS(hiopAlgFilterIPMBase& solver_base)
   // not sure if Hess has diagonal terms, compute nnz_hess here
   // assuming hess is in upper_triangular form
   hiopMatrixSymBlockDiagMDS* Hess_SS = dynamic_cast<hiopMatrixSymBlockDiagMDS*>(solver_base_.get_Hess_Lagr());
-  nnz_sp_Hess_Lagr_SS_ = n_x_ + Hess_SS->sp_mat()->numberOfOffDiagNonzeros();
+  nnz_sp_Hess_Lagr_SS_ = n_x_sp_ + Hess_SS->sp_mat()->numberOfOffDiagNonzeros();
   nnz_sp_Hess_Lagr_SD_ = 0;
 
   Jac_cd_ = new hiopMatrixMDS(m_, n_sp_, n_de_, nnz_sp_Jac_c_+nnz_sp_Jac_d_);
@@ -721,6 +733,9 @@ hiopFRProbMDS::~hiopFRProbMDS()
   delete wrk_dual_;
   delete DR_;
 
+  delete wrk_x_sp_;
+  delete wrk_x_de_;
+  
   delete Jac_cd_;
   delete Hess_cd_;
 }
@@ -740,17 +755,20 @@ bool hiopFRProbMDS::get_vars_info(const long long& n, double *xlow, double* xupp
   const hiopVector& xu = nlp_base_->get_xu();
   const NonlinearityType* var_type = nlp_base_->get_var_type();
 
-  // x, p and n
+  // x, p and n, in the order of [xsp pe ne pi ni xde]
   wrk_primal_->setToConstant(0.0);
-  xl.copyToStarting(*wrk_primal_,0);
+  xl.startingAtCopyToStartingAt(0, *wrk_primal_, x_sp_st_, n_x_sp_);
+  xl.startingAtCopyToStartingAt(n_x_sp_, *wrk_primal_, x_de_st_, n_x_de_);
   wrk_primal_->copyTo(xlow);
 
   wrk_primal_->setToConstant(1e+20);
-  xu.copyToStarting(*wrk_primal_,0);
+  xu.startingAtCopyToStartingAt(0, *wrk_primal_, x_sp_st_, n_x_sp_);
+  xu.startingAtCopyToStartingAt(n_x_sp_, *wrk_primal_, x_de_st_, n_x_de_);
   wrk_primal_->copyTo(xupp);
 
-  wrk_primal_->set_array_from_to(type, 0, n_x_, var_type, 0);
-  wrk_primal_->set_array_from_to(type, n_x_, n_, hiopLinear);
+  wrk_primal_->set_array_from_to(type, 0, n_, hiopLinear);
+  wrk_primal_->set_array_from_to(type, x_sp_st_, x_sp_st_+n_x_sp_, var_type, x_sp_st_);
+  wrk_primal_->set_array_from_to(type, x_de_st_, x_de_st_+n_x_de_, var_type, x_de_st_);
   
   return true;
 }
@@ -803,8 +821,9 @@ bool hiopFRProbMDS::eval_f(const long long& n, const double* x, bool new_x, doub
   assert(n == n_);
   obj_value = 0.;
 
-  wrk_primal_->copy_from_starting_at(x, 0, n_); // [x pe ne pi ni]
-  wrk_x_->copy_from_starting_at(x, 0, n_x_);    // [x]
+  wrk_primal_->copy_from_starting_at(x, 0, n_); // [xsp pe ne pi ni xde]
+  wrk_primal_->startingAtCopyToStartingAt(x_sp_st_, *wrk_x_, 0, n_x_sp_);       // [xsp]
+  wrk_primal_->startingAtCopyToStartingAt(x_de_st_, *wrk_x_, n_x_sp_, n_x_de_); // [xde]
   
   // rho*sum(p+n)
   obj_value += rho_ * (wrk_primal_->sum_local() - wrk_x_->sum_local());
@@ -816,6 +835,8 @@ bool hiopFRProbMDS::eval_f(const long long& n, const double* x, bool new_x, doub
 
   obj_value += 0.5 * zeta_ * wrk_db * wrk_db;
 
+  nlp_base_->eval_f(*wrk_x_, new_x, obj_base_); 
+
   return true;
 }
 
@@ -823,17 +844,22 @@ bool hiopFRProbMDS::eval_grad_f(const long long& n, const double* x, bool new_x,
 {
   assert(n == n_);
 
+  // x
+  wrk_primal_->copy_from_starting_at(x, 0, n_); // [xsp pe ne pi ni xde]
+  wrk_primal_->startingAtCopyToStartingAt(x_sp_st_, *wrk_x_, 0, n_x_sp_);       // x = [xsp xde]
+  wrk_primal_->startingAtCopyToStartingAt(x_de_st_, *wrk_x_, n_x_sp_, n_x_de_); // x = [xsp xde]
+  
   // p and n
   wrk_primal_->setToConstant(rho_);
 
   // x
-  wrk_x_->copy_from_starting_at(x, 0, n_x_);
   wrk_x_->axpy(-1.0, *x_ref_);
   wrk_x_->componentMult(*DR_);
   wrk_x_->componentMult(*DR_);
   wrk_x_->scale(zeta_);
-  wrk_x_->copyToStarting(*wrk_primal_,0);
-
+  wrk_x_->startingAtCopyToStartingAt(0, *wrk_primal_, x_sp_st_, n_x_sp_);       // x = [xsp pe ne pi ni xde]
+  wrk_x_->startingAtCopyToStartingAt(n_x_sp_, *wrk_primal_, x_de_st_, n_x_de_); // x = [xsp pe ne pi ni xde]
+  
   wrk_primal_->copyTo(gradf);
 
   return true;
@@ -860,7 +886,9 @@ bool hiopFRProbMDS::eval_cons(const long long& n,
   assert(m == m_);
 
   // evaluate c and d
-  wrk_x_->copy_from_starting_at(x, 0, n_x_);
+  wrk_primal_->copy_from_starting_at(x, 0, n_); // [xsp pe ne pi ni xde]
+  wrk_primal_->startingAtCopyToStartingAt(x_sp_st_, *wrk_x_, 0, n_x_sp_);       // x = [xsp xde]
+  wrk_primal_->startingAtCopyToStartingAt(x_de_st_, *wrk_x_, n_x_sp_, n_x_de_); // x = [xsp xde]
   nlp_base_->eval_c_d(*wrk_x_, new_x, *wrk_c_, *wrk_d_);
 
   wrk_eq_->copy_from_starting_at(x, pe_st_, m_eq_);     //pe
@@ -883,6 +911,7 @@ bool hiopFRProbMDS::eval_cons(const long long& n,
 }
 
 bool hiopFRProbMDS::eval_Jac_cons(const long long& n, 
+            
                                   const long long& m,
                                   const long long& num_cons,
                                   const long long* idx_cons,
@@ -925,7 +954,9 @@ bool hiopFRProbMDS::eval_Jac_cons(const long long& n,
   // extend Jac to the p and n parts
   if(MJacS != nullptr) {
     // get x for the original problem
-    wrk_x_->copy_from_starting_at(x, 0, n_x_);
+     wrk_primal_->copy_from_starting_at(x, 0, n_); // [xsp pe ne pi ni xde]
+     wrk_primal_->startingAtCopyToStartingAt(x_sp_st_, *wrk_x_, 0, n_x_sp_);       // x = [xsp xde]
+     wrk_primal_->startingAtCopyToStartingAt(x_de_st_, *wrk_x_, n_x_sp_, n_x_de_); // x = [xsp xde]
 
     // get Jac_c and Jac_d for the x part --- use original Jac_c/Jac_d as buffers
     nlp_base_->eval_Jac_c_d(*wrk_x_, new_x, *Jac_c, *Jac_d); 
@@ -937,26 +968,27 @@ bool hiopFRProbMDS::eval_Jac_cons(const long long& n,
 }
 
 bool hiopFRProbMDS::get_starting_point(const long long& n,
-                                               const long long& m,
-                                               double* x0,
-                                               bool& duals_avail,
-                                               double* z_bndL0,
-                                               double* z_bndU0,
-                                               double* lambda0,
-                                               bool& slack_avail,
-                                               double *ineq_slack)
+                                       const long long& m,
+                                       double* x0,
+                                       double* z_bndL0, 
+                                       double* z_bndU0,
+                                       double* lambda0,
+                                       double* ineq_slack,
+                                       double* vl0,
+                                       double* vu0 )
 {
   assert( n == n_);
   assert( m == m_);
-
-  duals_avail = true;
-  slack_avail = true;
 
   hiopVector* c = solver_base_.get_c();
   hiopVector* d = solver_base_.get_d();
   hiopVector* s = solver_base_.get_it_curr()->get_d();
   hiopVector* zl = solver_base_.get_it_curr()->get_zl();
   hiopVector* zu = solver_base_.get_it_curr()->get_zu();
+
+  hiopVector* vl = solver_base_.get_it_curr()->get_vl();
+  hiopVector* vu = solver_base_.get_it_curr()->get_vu();
+
   const hiopVector& crhs = nlp_base_->get_crhs();
 
   // x0 = x_ref
@@ -1009,11 +1041,12 @@ bool hiopFRProbMDS::get_starting_point(const long long& n,
   /*
   * assemble x0
   */
-  wrk_x_->copyToStarting(*wrk_primal_, 0);
-  wrk_c_->copyToStarting(*wrk_primal_, n_x_);                         // pe
-  wrk_eq_->copyToStarting(*wrk_primal_, n_x_ + m_eq_);                // ne
-  wrk_d_->copyToStarting(*wrk_primal_, n_x_ + 2*m_eq_);               // pi
-  wrk_ineq_->copyToStarting(*wrk_primal_, n_x_ + 2*m_eq_ + m_ineq_);  // ni
+  wrk_x_->startingAtCopyToStartingAt(0, *wrk_primal_, x_sp_st_, n_x_sp_);       // [xsp pe ne pi ni xde]
+  wrk_c_->copyToStarting(*wrk_primal_, pe_st_);     // pe
+  wrk_eq_->copyToStarting(*wrk_primal_, ne_st_);    // ne
+  wrk_d_->copyToStarting(*wrk_primal_, pi_st_);     // pi
+  wrk_ineq_->copyToStarting(*wrk_primal_, ni_st_);  // ni
+  wrk_x_->startingAtCopyToStartingAt(n_x_sp_, *wrk_primal_, x_de_st_, n_x_de_); // [xsp pe ne pi ni xde]
 
   wrk_primal_->copyTo(x0);
 
@@ -1033,19 +1066,30 @@ bool hiopFRProbMDS::get_starting_point(const long long& n,
   wrk_ineq_->scale(mu_);
 
   // assemble zl
-  wrk_x_->copyToStarting(*wrk_primal_, 0);
-  wrk_c_->copyToStarting(*wrk_primal_, n_x_);                         // pe
-  wrk_eq_->copyToStarting(*wrk_primal_, n_x_ + m_eq_);                // ne
-  wrk_d_->copyToStarting(*wrk_primal_, n_x_ + 2*m_eq_);               // pi
-  wrk_ineq_->copyToStarting(*wrk_primal_, n_x_ + 2*m_eq_ + m_ineq_);  // ni
+  wrk_x_->startingAtCopyToStartingAt(0, *wrk_primal_, x_sp_st_, n_x_sp_);       // [xsp pe ne pi ni xde]
+  wrk_c_->copyToStarting(*wrk_primal_, pe_st_);     // pe
+  wrk_eq_->copyToStarting(*wrk_primal_, ne_st_);    // ne
+  wrk_d_->copyToStarting(*wrk_primal_, pi_st_);     // pi
+  wrk_ineq_->copyToStarting(*wrk_primal_, ni_st_);  // ni
+  wrk_x_->startingAtCopyToStartingAt(n_x_sp_, *wrk_primal_, x_de_st_, n_x_de_); // [xsp pe ne pi ni xde]  
   wrk_primal_->copyTo(z_bndL0);
 
   // get zu
   wrk_primal_->setToZero();
   wrk_x_->copyFrom(*zu);
   wrk_x_->component_min(rho_);
-  wrk_x_->copyToStarting(*wrk_primal_, 0);
+  wrk_x_->startingAtCopyToStartingAt(0, *wrk_primal_, x_sp_st_, n_x_sp_);       // [xsp pe ne pi ni xde]
+  wrk_x_->startingAtCopyToStartingAt(n_x_sp_, *wrk_primal_, x_de_st_, n_x_de_); // [xsp pe ne pi ni xde]  
   wrk_primal_->copyTo(z_bndU0);
+
+  // compute vl vu
+  wrk_ineq_->copyFrom(*vl);
+  wrk_ineq_->component_min(rho_);
+  wrk_ineq_->copyTo(vl0);
+
+  wrk_ineq_->copyFrom(*vu);
+  wrk_ineq_->component_min(rho_);
+  wrk_ineq_->copyTo(vu0);
 
   // set lambda to 0 --- this will be updated by lsq later.
   // Need to have this since we set duals_avail to true, in order to initialize zl and zu
@@ -1080,7 +1124,9 @@ bool hiopFRProbMDS::iterate_callback(int iter,
   const hiopVector& crhs = nlp_base_->get_crhs();
 
   // evaluate c_body and d_body in base problem
-  wrk_x_->copy_from_starting_at(x, 0, n_x_);
+  wrk_primal_->copy_from_starting_at(x, 0, n_); // [xsp pe ne pi ni xde]
+  wrk_primal_->startingAtCopyToStartingAt(x_sp_st_, *wrk_x_, 0, n_x_sp_);       // x = [xsp xde]
+  wrk_primal_->startingAtCopyToStartingAt(x_de_st_, *wrk_x_, n_x_sp_, n_x_de_); // x = [xsp xde]
   wrk_d_->copy_from_starting_at(s, 0, m_ineq_);
   nlp_base_->eval_c_d(*wrk_x_, true, *wrk_cbody_, *wrk_dbody_);
 
@@ -1103,11 +1149,9 @@ bool hiopFRProbMDS::iterate_callback(int iter,
       hiopIterate* it_next = solver_base_.get_it_trial();
 
       // set next iter->x to x from FR
-      wrk_x_->copy_from_starting_at(x, 0, n_x_);
       it_next->get_x()->copyFrom(*wrk_x_);
 
       // set next iter->d (the slack for ineqaulities) to s from FR
-      wrk_d_->copy_from_starting_at(s, 0, m_ineq_);
       it_next->get_d()->copyFrom(*wrk_d_);
 
       return false;
@@ -1141,7 +1185,9 @@ bool hiopFRProbMDS::force_update(double obj_value,
   const hiopVector& crhs = nlp_base_->get_crhs();
 
   // x is fixed
-  wrk_x_->copy_from_starting_at(x, 0, n_x_);
+  wrk_primal_->copy_from_starting_at(x, 0, n_); // [xsp pe ne pi ni xde]
+  wrk_primal_->startingAtCopyToStartingAt(x_sp_st_, *wrk_x_, 0, n_x_sp_);       // x = [xsp xde]
+  wrk_primal_->startingAtCopyToStartingAt(x_de_st_, *wrk_x_, n_x_sp_, n_x_de_); // x = [xsp xde]
 
   /*
   * compute pe (wrk_c_) and ne (wrk_eq_) rom equation (33)
@@ -1187,11 +1233,12 @@ bool hiopFRProbMDS::force_update(double obj_value,
   /*
   * assemble x
   */
-  wrk_x_->copyToStarting(*wrk_primal_, 0);
-  wrk_c_->copyToStarting(*wrk_primal_, n_x_);
-  wrk_eq_->copyToStarting(*wrk_primal_, n_x_ + m_eq_);
-  wrk_d_->copyToStarting(*wrk_primal_, n_x_ + 2*m_eq_);
-  wrk_ineq_->copyToStarting(*wrk_primal_, n_x_ + 2*m_eq_ + m_ineq_);
+  wrk_x_->startingAtCopyToStartingAt(0, *wrk_primal_, x_sp_st_, n_x_sp_);       // [xsp pe ne pi ni xde]
+  wrk_c_->copyToStarting(*wrk_primal_, pe_st_);     // pe
+  wrk_eq_->copyToStarting(*wrk_primal_, ne_st_);    // ne
+  wrk_d_->copyToStarting(*wrk_primal_, pi_st_);     // pi
+  wrk_ineq_->copyToStarting(*wrk_primal_, ni_st_);  // ni
+  wrk_x_->startingAtCopyToStartingAt(n_x_sp_, *wrk_primal_, x_de_st_, n_x_de_); // [xsp pe ne pi ni xde]  
 
   wrk_primal_->copyTo(x);
 
@@ -1226,7 +1273,9 @@ bool hiopFRProbMDS::eval_Hess_Lagr(const long long& n,
 
   if(MHSS != nullptr) {
     // get x for the original problem
-    wrk_x_->copy_from_starting_at( x, 0, n_x_);
+    wrk_primal_->copy_from_starting_at(x, 0, n_); // [xsp pe ne pi ni xde]
+    wrk_primal_->startingAtCopyToStartingAt(x_sp_st_, *wrk_x_, 0, n_x_sp_);       // x = [xsp xde]
+    wrk_primal_->startingAtCopyToStartingAt(x_de_st_, *wrk_x_, n_x_sp_, n_x_de_); // x = [xsp xde]
 
     // split lambda
     wrk_eq_->copy_from_starting_at(lambda, 0, m_eq_);
@@ -1236,15 +1285,17 @@ bool hiopFRProbMDS::eval_Hess_Lagr(const long long& n,
     // get Hess for the x part --- use original Hess as buffers
     nlp_base_->eval_Hess_Lagr(*wrk_x_, new_x, obj_factor, *wrk_eq_, *wrk_ineq_, new_lambda, *Hess);
     
-    // additional diag Hess for x:  zeta*DR^2.*(x-x_ref)
-    wrk_x_->axpy(-1.0, *x_ref_);
+    // additional diag Hess for x:  zeta*DR^2
+    wrk_x_->setToConstant(zeta_);
     wrk_x_->componentMult(*DR_);
     wrk_x_->componentMult(*DR_);
-    wrk_x_->scale(zeta_);    
+    
+    wrk_x_->copyToStarting(0, *wrk_x_sp_);
+    wrk_x_->copyToStarting(n_x_sp_, *wrk_x_de_);    
   }
 
   // extend Hes to the p and n parts
-  Hess_cd_->set_Hess_FR(*Hess, iHSS, jHSS, MHSS, *wrk_x_);
+  Hess_cd_->set_Hess_FR(*Hess, iHSS, jHSS, MHSS, HDD, *wrk_x_sp_, *wrk_x_de_);
 
   return true;
 }

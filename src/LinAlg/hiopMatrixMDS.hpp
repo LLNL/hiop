@@ -475,7 +475,9 @@ public:
                            int* iHSS,
                            int* jHSS,
                            double* MHSS,
-                           const hiopVector& add_diag);
+                           double* MHDD,
+                           const hiopVector& add_diag_sp,
+                           const hiopVector& add_diag_de);
 
 #ifdef HIOP_DEEPCHECKS
   virtual bool assertSymmetry(double tol=1e-16) const

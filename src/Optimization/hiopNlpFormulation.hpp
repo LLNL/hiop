@@ -138,6 +138,15 @@ public:
                                   bool& slacks_avail,
                                   hiopVector& d0);
 
+  virtual bool get_starting_point(hiopVector& x0,
+                                  hiopVector& zL0,
+                                  hiopVector& zU0,
+                                  hiopVector& yc0,
+                                  hiopVector& yd0,
+                                  hiopVector& d0,
+                                  hiopVector& vl0,
+                                  hiopVector& vu0);
+
   /* Allocates the LSQ duals update class. */
   virtual hiopDualsLsqUpdate* alloc_duals_lsq_updater() = 0;
   

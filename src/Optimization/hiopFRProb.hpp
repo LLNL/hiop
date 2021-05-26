@@ -126,12 +126,12 @@ public:
   virtual bool get_starting_point(const long long& n,
                                   const long long& m,
                                   double* x0,
-                                  bool& duals_avail,
-                                  double* z_bndL0,
+                                  double* z_bndL0, 
                                   double* z_bndU0,
                                   double* lambda0,
-                                  bool& slack_avail,
-                                  double* ineq_slack = nullptr);
+                                  double* ineq_slack,
+                                  double* vl0,
+                                  double* vu0);
 
   virtual bool eval_Hess_Lagr(const long long& n,
                               const long long& m,
@@ -210,6 +210,7 @@ private:
   double theta_ref_;
   double mu_;
   double rho_;
+  double obj_base_;
 
   int pe_st_; // the 1st index of pe in the full primal space
   int ne_st_; // the 1st index of ne in the full primal space
@@ -238,7 +239,7 @@ public:
                                             int& nnz_sparse_Jaceq,
                                             int& nnz_sparse_Jacineq,
                                             int& nnz_sparse_Hess_Lagr_SS,
-                                            int& nnz_sparse_Hess_Lagr_SD) = 0;
+                                            int& nnz_sparse_Hess_Lagr_SD);
 
   virtual bool eval_Jac_cons(const long long& n, 
                              const long long& m,
@@ -307,12 +308,12 @@ public:
   virtual bool get_starting_point(const long long& n,
                                   const long long& m,
                                   double* x0,
-                                  bool& duals_avail,
-                                  double* z_bndL0,
+                                  double* z_bndL0, 
                                   double* z_bndU0,
                                   double* lambda0,
-                                  bool& slack_avail,
-                                  double* ineq_slack = nullptr);
+                                  double* ineq_slack,
+                                  double* vl0,
+                                  double* vu0);
 
   virtual bool iterate_callback(int iter,
                                 double obj_value,
@@ -374,9 +375,12 @@ private:
   hiopVector* wrk_ineq_;
   hiopVector* wrk_cbody_;
   hiopVector* wrk_dbody_;
-  hiopVector* wrk_primal_;  // [x pe ne pi ni]
+  hiopVector* wrk_primal_;  // [xsp pe ne pi ni xde]
   hiopVector* wrk_dual_;    // [c d]
 
+  hiopVector* wrk_x_sp_;    // the sparse part of x, xsp
+  hiopVector* wrk_x_de_;    // the dense part of x, xde
+  
   hiopMatrixMDS* Jac_cd_;
   hiopMatrixSymBlockDiagMDS* Hess_cd_;
 
@@ -384,11 +388,14 @@ private:
   double theta_ref_;
   double mu_;
   double rho_;
+  double obj_base_;
 
+  int x_sp_st_; // the 1st index of x_sp in the full primal space
   int pe_st_; // the 1st index of pe in the full primal space
   int ne_st_; // the 1st index of ne in the full primal space
   int pi_st_; // the 1st index of pi in the full primal space
   int ni_st_; // the 1st index of ni in the full primal space
+  int x_de_st_; // the 1st index of x_de in the full primal space
 };
 
 

@@ -3,7 +3,7 @@
 #include "IpoptAdapter.hpp"
 
 //use HiOp's Example4 - mixed dense-sparse QP
-#include "nlpMDSForm_ex4.hpp"
+//#include "nlpMDS_ex4.hpp"
 #include "nlpMDS_ex5.hpp"
 
 #include <iostream>
@@ -16,7 +16,8 @@ int main(int argv, char** argc)
 {
   //instantiate a HiOp problem
   //
-  Ex5 hiopNlp(300,100,true,true);
+//  Ex5 hiopNlp(300,100,true,true);
+  Ex5 hiopNlp(0,3,false,false,false);
   //
   //create 
 
