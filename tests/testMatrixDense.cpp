@@ -254,6 +254,7 @@ static int runTests(const char* mem_space, MPI_Comm comm)
 
   // specific to matrixTestsDenseRowMajor
   fail += test.matrixCopyFrom(*A_mxn, *B_mxn, rank);
+  fail += test.matrix_copy_to(*A_mxn, *B_mxn, rank);
 
   fail += test.matrixAppendRow(*A_mxn_extra_row, *x_n, rank);
   fail += test.matrixCopyRowsFrom(*A_kxn, *A_mxn, rank);

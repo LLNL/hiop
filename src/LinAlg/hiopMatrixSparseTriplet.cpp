@@ -1370,7 +1370,7 @@ void hiopMatrixSymSparseTriplet::set_Hess_FR(const hiopMatrixSparse& Hess,
         int nnz_in_row = Hess_base.row_starts_->idx_start_[i+1] - k_base;
       
         // add diagonal entry due to the new obj term
-        values_[k] = MHSS[k] = diag_data[k];
+        values_[k] = MHSS[k] = diag_data[i];
         
         if(nnz_in_row > 0 && Hess_row[k_base] == Hess_col[k_base]) {
           // first nonzero in this row is a diagonal term 

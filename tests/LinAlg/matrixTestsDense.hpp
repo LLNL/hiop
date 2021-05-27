@@ -142,6 +142,30 @@ public:
     return reduceReturn(fail, &dst);
   }
 
+  int matrix_copy_to(hiopMatrixDense &dst, hiopMatrixDense &src, const int rank)
+  {
+    assert(dst.n() == src.n() && "Did you pass in matrices of the same size?");
+    assert(dst.m() == src.m() && "Did you pass in matrices of the same size?");
+    assert(getNumLocRows(&dst) == getNumLocRows(&src) && "Did you pass in matrices of the same size?");
+    assert(getNumLocCols(&dst) == getNumLocCols(&src) && "Did you pass in matrices of the same size?");
+    const real_type src_val = one;
+
+    // Test copying to dest
+    src.setToConstant(src_val);
+    dst.setToZero();
+
+    // test copying src a raw buffer
+    const size_t buf_len = getNumLocRows(&dst) * getNumLocCols(&dst);
+    real_type* dst_buf = getLocalData(&dst);
+    dst.setToZero();
+
+    src.copy_to(dst_buf);
+    int fail = verifyAnswer(&dst, src_val);
+
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &dst);
+  }
+
   /*
    * y_{glob} \leftarrow \beta y_{glob} + \alpha A_{glob \times loc} x_{loc}
    */
@@ -1146,6 +1170,7 @@ protected:
       local_ordinal_type i,
       local_ordinal_type j) = 0;
   virtual const real_type* getLocalDataConst(hiop::hiopMatrixDense* a) = 0;
+  virtual real_type* getLocalData(hiop::hiopMatrixDense* a) = 0;
   virtual int verifyAnswer(hiop::hiopMatrixDense* A, real_type answer) = 0;
   virtual int verifyAnswer(
       hiop::hiopMatrixDense* A,
