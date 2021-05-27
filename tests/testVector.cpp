@@ -305,11 +305,14 @@ int runTests(const char* mem_space, MPI_Comm comm)
 
   delete a;
   delete b;
-  delete v_smaller;
   delete v;
   delete x;
   delete y;
   delete z;
+  delete v_map;
+  delete v2_map;
+  delete v_smaller;
+  delete v2_smaller;
   delete[] m_partition;
   delete[] n_partition;
 

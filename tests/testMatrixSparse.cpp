@@ -220,11 +220,12 @@ int main(int argc, char** argv)
 
     // Initialise another sparse Matrix
     local_ordinal_type M2 = M_global * 2;
-    nnz = M2 * (entries_per_row);
+    local_ordinal_type nnz2 = M2 * (entries_per_row);
 
     /// @todo: use linear algebra factory for this
-    hiop::hiopMatrixRajaSparseTriplet m2xn_sparse(M2, N_global, nnz, mem_space);
-    test.initializeMatrix(&m2xn_sparse, entries_per_row);
+    hiop::hiopMatrixSparse* m2xn_sparse = 
+      hiop::LinearAlgebraFactory::createMatrixSparse(M2, N_global, nnz2, mem_space);
+    test.initializeMatrix(m2xn_sparse, entries_per_row);
 
     hiop::hiopMatrixRajaDense mxm2_dense(M_global, M2, mem_space);
 
@@ -232,11 +233,24 @@ int main(int argc, char** argv)
     local_ordinal_type i_offset = 1;
     local_ordinal_type j_offset = M2 + 1;
 
-    fail += test.matrixTimesMatTrans(*mxn_sparse, m2xn_sparse, mxm2_dense);
-    fail += test.matrixAddMDinvNtransToSymDeMatUTri(*mxn_sparse, m2xn_sparse, vec_n, W_dense, i_offset, j_offset);
+    fail += test.matrixTimesMatTrans(*mxn_sparse, *m2xn_sparse, mxm2_dense);
+    fail += test.matrixAddMDinvNtransToSymDeMatUTri(*mxn_sparse, *m2xn_sparse, vec_n, W_dense, i_offset, j_offset);
+
+    // copy sparse matrix to dense matrix
+    hiop::hiopMatrixRajaDense mxn_dense(M_global, N_global);
+    fail += test.matrix_copy_to(mxn_dense, *mxn_sparse);
+  
+    // extend a sparse matrix [C;D] to [C -I I 0 0; D 0 0 -I I]
+    hiop::hiopMatrixRajaDense m3xn3_dense(M_global+M2, N_global+2*(M_global+M2));
+    local_ordinal_type nnz3 = nnz + nnz2 + 2*M_global + 2*M2;
+    hiop::hiopMatrixSparse* m3xn3_sparse = 
+      hiop::LinearAlgebraFactory::createMatrixSparse(M_global+M2, N_global+2*(M_global+M2), nnz3);
+    fail += test.matrix_set_Jac_FR(m3xn3_dense, *m3xn3_sparse, *mxn_sparse, *m2xn_sparse);
 
     // Remove testing objects
     delete mxn_sparse;
+    delete m2xn_sparse;
+    delete m3xn3_sparse;
 
     // Set memory space back to default value
     options.SetStringValue("mem_space", "default");
