@@ -966,7 +966,8 @@ public:
         return (indexExists) ? A_val: zero;
       }
     );
-
+    printMessage(fail, __func__);
+    return fail;
   }
 
   /**
@@ -992,6 +993,18 @@ public:
     C.setToConstant(C_val);
     D.setToConstant(D_val);
 
+
+    const auto* C_iRow = getRowIndices(&C);
+    const auto* C_jCol = getColumnIndices(&C);
+    auto C_nnz = C.numberOfNonzeros();
+    const auto* D_iRow = getRowIndices(&D);
+    const auto* D_jCol = getColumnIndices(&D);
+    auto D_nnz = D.numberOfNonzeros();
+    int mC = C.m();
+    int mD = D.m();
+    int nC = C.n();
+    int nD = D.n();
+
     A.set_Jac_FR(C, D, A.i_row(), A.j_col(), A.M());
 
     // copy to dense matrix
@@ -1000,18 +1013,6 @@ public:
     const auto* iRow = getRowIndices(&A);
     const auto* jCol = getColumnIndices(&A);
     auto nnz = A.numberOfNonzeros();
-
-    const auto* C_iRow = getRowIndices(&C);
-    const auto* C_jCol = getColumnIndices(&C);
-    auto C_nnz = C.numberOfNonzeros();
-    const auto* D_iRow = getRowIndices(&D);
-    const auto* D_jCol = getColumnIndices(&D);
-    auto D_nnz = D.numberOfNonzeros();
-    
-    int mC = C.m();
-    int mD = D.m();
-    int nC = C.n();
-    int nD = D.n();
 
     fail += verifyAnswer(&W,
       [=] (local_ordinal_type i, local_ordinal_type j) -> real_type

@@ -612,7 +612,7 @@ void hiopMatrixRajaSparseTriplet::copy_to(int* irow, int* jcol, double* val)
   resmgr.copy(val, values_);
 }
 
-void hiopMatrixSparsehiopMatrixRajaSparseTripletTriplet::copy_to(hiopMatrixDense& W)
+void hiopMatrixRajaSparseTriplet::copy_to(hiopMatrixDense& W)
 {
   assert(W.m() == nrows_);
   assert(W.n() == ncols_);
@@ -880,6 +880,7 @@ hiopMatrixRajaSparseTriplet::allocAndBuildRowStarts() const
   // build rsi on the host, then copy it to the device for simplicity
   int it_triplet = 0;
   rsi->idx_start_[0] = 0;
+
   for(int i = 1; i <= this->nrows_; i++)
   {
     rsi->idx_start_[i]=rsi->idx_start_[i-1];
@@ -1206,6 +1207,7 @@ void hiopMatrixRajaSparseTriplet::set_Jac_FR(const hiopMatrixSparse& Jac_c,
       }
     );
   }
+  copyFromDev();
 }
 
 /**********************************************************************************
@@ -1369,6 +1371,29 @@ startingAtAddSubDiagonalToStartingAt(int diag_src_start,
     });
 }
 
+
+long long hiopMatrixRajaSymSparseTriplet::numberOfOffDiagNonzeros() const 
+{
+  if(-1==nnz_offdiag_){
+    nnz_offdiag_= nnz_;
+    int *irow = iRow_;
+    int *jcol = jCol_;
+    RAJA::ReduceSum<hiop_raja_reduce, int> sum(0);
+    RAJA::forall<hiop_raja_exec>(
+      RAJA::RangeSegment(0, nnz_),
+      RAJA_LAMBDA(RAJA::Index_type i)
+      {
+        if (irow[i]==jcol[i]){
+          sum += 1; 
+        }
+      }
+    );
+    nnz_offdiag_ -= static_cast<int>(sum.get());
+  }
+
+  return nnz_offdiag_;
+}
+
 /*
 *  extend original Hess to [Hess+diag_term]
 */
@@ -1423,7 +1448,18 @@ void hiopMatrixRajaSymSparseTriplet::set_Hess_FR(const hiopMatrixSparse& Hess,
       auto& resmgr = umpire::ResourceManager::getInstance();
       umpire::Allocator devalloc = resmgr.getAllocator(mem_space_);
       int* m1_row_start = static_cast<int*>(devalloc.allocate((m1+1)*sizeof(int)));
-    
+
+      RAJA::forall<hiop_raja_exec>(
+        RAJA::RangeSegment(0, m1+1),
+        RAJA_LAMBDA(RAJA::Index_type i)
+        {
+          if(i>0)
+            m1_row_start[i] = 1;
+          else 
+           m1_row_start[i] = 0;
+        }
+      );
+
       RAJA::forall<hiop_raja_exec>(
         RAJA::RangeSegment(0, m2),
         RAJA_LAMBDA(RAJA::Index_type i)
@@ -1434,15 +1470,15 @@ void hiopMatrixRajaSymSparseTriplet::set_Hess_FR(const hiopMatrixSparse& Hess,
           if(nnz_in_row > 0 && M2iRow[k_base] == M2jCol[k_base]) {
             // first nonzero in this row is a diagonal term 
             // skip it since we will defined the diagonal nonezero
-            m1_row_start[i] = nnz_in_row-1;
+            m1_row_start[i+1] += nnz_in_row-1;
           } else {
-            m1_row_start[i] = nnz_in_row;
+            m1_row_start[i+1] += nnz_in_row;
           }
         }
       );
       
       RAJA::inclusive_scan_inplace<hiop_raja_exec>(m1_row_start,m1_row_start+m1+1,RAJA::operators::plus<int>());
-
+      
       RAJA::forall<hiop_raja_exec>(
         RAJA::RangeSegment(0, m2),
         RAJA_LAMBDA(RAJA::Index_type i)
@@ -1485,14 +1521,16 @@ void hiopMatrixRajaSymSparseTriplet::set_Hess_FR(const hiopMatrixSparse& Hess,
       );
     }
   }
-  
+
   // extend Hess to the p and n parts --- element
-  if(MHSS != nullptr) {
-    if(M1.row_starts_host==NULL)
+  if(MHSS != nullptr) {    
+    if(M1.row_starts_host==NULL){
+      copyFromDev();
       M1.row_starts_host = M1.allocAndBuildRowStarts();
+    }
     assert(M1.row_starts_host);
     int* M1_idx_start = M1.row_starts_host->idx_start_;
-  
+
     double* M1values = M1.M();
     const double* M2values = M2.M();
   
@@ -1539,6 +1577,7 @@ void hiopMatrixRajaSymSparseTriplet::set_Hess_FR(const hiopMatrixSparse& Hess,
       );
     }
   }
+  copyFromDev();
 }
 
 } //end of namespace
