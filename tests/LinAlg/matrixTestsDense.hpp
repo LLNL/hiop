@@ -930,6 +930,39 @@ public:
     return reduceReturn(fail, &dst);
   }
 
+  int matrix_set_Hess_FR(hiopMatrixDense& src, hiopMatrixDense& dst, hiopVector& diag, const int rank=0)
+  {
+    assert(src.n() == src.m() && "Src mat must be square mat");
+    assert(src.n() == dst.n() && "Src mat must be equal to dst mat");
+    assert(src.m() == dst.m() && "Src mat must be equal to dst mat");
+    assert(src.m() == diag.get_size() && "Wrong vec size");
+    const local_ordinal_type dst_m = getNumLocRows(&dst);
+    const local_ordinal_type dst_n = getNumLocCols(&dst);
+    const local_ordinal_type src_m = getNumLocRows(&src);
+    const local_ordinal_type src_n = getNumLocCols(&src);
+
+    const real_type src_val = one;
+    const real_type diag_val = two;
+    src.setToConstant(src_val);
+    diag.setToConstant(diag_val);
+
+    dst.set_Hess_FR(src, diag);
+    
+    const int fail = verifyAnswer(&dst,
+      [=] (local_ordinal_type i, local_ordinal_type j) -> real_type
+      {
+          // This is the element set to zero in src
+          // before being copied over
+          if (i == j && rank == 0)
+              return src_val + diag_val;
+          else
+              return src_val;
+      });
+
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &dst);
+  }
+
   /**
    * shiftRows does not overwrite rows in the opposite direction
    * they are shifted. For example

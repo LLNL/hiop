@@ -939,6 +939,117 @@ public:
 
   }
 
+  /**
+  * @brief copy a sparse matrix into dense matrix
+  * 
+  * @pre 'A' must have same dim as `W`
+  */
+  bool matrix_copy_to( hiop::hiopMatrixDense& W, hiop::hiopMatrixSparse& A, const int rank = 0)
+  {
+    assert(A.m() == W.m()); // W has same dimension as A
+    assert(A.n() == W.n()); // W has same dimension as A
+    
+    const auto A_val = one;
+    const auto W_val = two;
+    W.setToConstant(W_val);
+    
+    A.copy_to(W);
+    
+    int fail = 0;
+    const auto* iRow = getRowIndices(&A);
+    const auto* jCol = getColumnIndices(&A);
+    auto nnz = A.numberOfNonzeros();
+    fail += verifyAnswer(&W,
+      [=] (local_ordinal_type i, local_ordinal_type j) -> real_type
+      {
+        const bool indexExists = find_unsorted_pair(i, j, iRow, jCol, nnz);
+        return (indexExists) ? A_val: zero;
+      }
+    );
+
+  }
+
+  /**
+  * @brief set matrix `A` as [C -I I 0 0; D 0 0 -I I]
+  * 
+  * @pre 'C' must have same number of cols as `D`
+  * @pre nnz of 'A' is predetermined
+  */
+  bool matrix_set_Jac_FR( hiop::hiopMatrixDense& W,
+                          hiop::hiopMatrixSparse& A,
+                          hiop::hiopMatrixSparse& C,
+                          hiop::hiopMatrixSparse& D,
+                          const int rank = 0)
+  {
+    assert(A.m() == W.m()); // W has same dimension as A
+    assert(A.n() == W.n()); // W has same dimension as A
+    assert(C.n() == D.n()); // W has same dimension as A
+
+    int fail = 0;
+    const auto C_val = half;
+    const auto D_val = two;
+
+    C.setToConstant(C_val);
+    D.setToConstant(D_val);
+
+    A.set_Jac_FR(C, D, A.i_row(), A.j_col(), A.M());
+
+    // copy to dense matrix
+    A.copy_to(W);
+
+    const auto* iRow = getRowIndices(&A);
+    const auto* jCol = getColumnIndices(&A);
+    auto nnz = A.numberOfNonzeros();
+
+    const auto* C_iRow = getRowIndices(&C);
+    const auto* C_jCol = getColumnIndices(&C);
+    auto C_nnz = C.numberOfNonzeros();
+    const auto* D_iRow = getRowIndices(&D);
+    const auto* D_jCol = getColumnIndices(&D);
+    auto D_nnz = D.numberOfNonzeros();
+    
+    int mC = C.m();
+    int mD = D.m();
+    int nC = C.n();
+    int nD = D.n();
+
+    fail += verifyAnswer(&W,
+      [=] (local_ordinal_type i, local_ordinal_type j) -> real_type
+      {
+        double ans = zero;
+        // this ele comes from sparse matrix C
+        if(i<mC && j<nC) {
+          const bool indexExists = find_unsorted_pair(i, j, C_iRow, C_jCol, C_nnz);
+          if(indexExists) {
+            ans = C_val;
+          } 
+        } else if(i<mC+mD && j<nD) {
+          // this ele comes from sparse matrix D
+          const bool indexExists = find_unsorted_pair(i-mC, j, D_iRow, D_jCol, D_nnz);
+           if(indexExists) {
+            ans = D_val;
+          } 
+        } else if(i<mC && j == i+nC) {
+          // this is -I in [C -I I 0 0]
+          ans = -one;
+        } else if(i<mC && j == i+nC+mC) {
+          // this is I in [C -I I 0 0]
+          ans = one;
+        } else if(i>=mC && i<mC+mD && j == nC+mC+i) {
+          // this is -I in [D 0 0 -I I]
+          ans = -one;
+        } else if(i>=mC && i<mC+mD && j == nC+mC+mD+i) {
+          // this is I in [D 0 0 -I I]
+          ans = one;
+        }
+        return ans;
+      }
+    );
+
+    printMessage(fail, __func__, rank);
+    return fail;
+  }
+
 private:
   /// TODO: The sparse matrix is not distributed - all is local. 
   // Rename functions to remove redundant "local" from their names?

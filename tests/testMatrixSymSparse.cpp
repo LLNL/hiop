@@ -200,12 +200,19 @@ int main(int argc, char** argv)
       hiop::LinearAlgebraFactory::createMatrixSymSparse(M_global, nnz);
     initializeSymSparseMat(m_sym);
 
+    local_ordinal_type nnz_m2 = m_sym->numberOfOffDiagNonzeros() + M_global;
+    hiop::hiopMatrixSparse* m2_sym = 
+      hiop::LinearAlgebraFactory::createMatrixSymSparse(2*M_global, nnz_m2);
+
     fail += test.matrixTimesVec(*m_sym, vec_m, vec_m_2);
     fail += test.matrixAddUpperTriangleToSymDenseMatrixUpperTriangle(mxm_dense, *m_sym);
     fail += test.matrixStartingAtAddSubDiagonalToStartingAt(vec_m, *m_sym);
 
+    fail += test.matrix_set_Hess_FR(mxm_dense, *m2_sym, *m_sym, vec_m);
+
     // Destroy testing objects
     delete m_sym;
+    delete m2_sym;
   }
 
 #ifdef HIOP_USE_RAJA
@@ -231,12 +238,19 @@ int main(int argc, char** argv)
       hiop::LinearAlgebraFactory::createMatrixSymSparse(M_local, nnz);
     initializeRajaSymSparseMat(m_sym);
 
+    local_ordinal_type nnz_m2 = m_sym->numberOfOffDiagNonzeros() + M_global;
+    hiop::hiopMatrixSparse* m2_sym = 
+      hiop::LinearAlgebraFactory::createMatrixSymSparse(2*M_global, nnz_m2);
+
     fail += test.matrixTimesVec(*m_sym, vec_m, vec_m_2);
     fail += test.matrixAddUpperTriangleToSymDenseMatrixUpperTriangle(mxm_dense, *m_sym);
     fail += test.matrixStartingAtAddSubDiagonalToStartingAt(vec_m, *m_sym);
 
+    fail += test.matrix_set_Hess_FR(mxm_dense, *m2_sym, *m_sym, vec_m);
+
     // Destroy testing objects
     delete m_sym;
+    delete m2_sym;
 
     // Set memory space back to default value
     options.SetStringValue("mem_space", "default");

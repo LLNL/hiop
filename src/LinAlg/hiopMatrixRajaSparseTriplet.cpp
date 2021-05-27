@@ -601,6 +601,44 @@ void hiopMatrixRajaSparseTriplet::copyFrom(const hiopMatrixSparse& dm)
   assert(false && "this is to be implemented - method def too vague for now");
 }
 
+/// @brief copy to 3 arrays.
+/// @pre these 3 arrays are not nullptr
+void hiopMatrixRajaSparseTriplet::copy_to(int* irow, int* jcol, double* val)
+{
+  assert(irow && jcol && val);
+  auto& resmgr = umpire::ResourceManager::getInstance();
+  resmgr.copy(irow, iRow_);
+  resmgr.copy(jcol, jCol_);
+  resmgr.copy(val, values_);
+}
+
+void hiopMatrixSparsehiopMatrixRajaSparseTripletTriplet::copy_to(hiopMatrixDense& W)
+{
+  assert(W.m() == nrows_);
+  assert(W.n() == ncols_);
+  W.setToZero();
+  
+  RAJA::View<double, RAJA::Layout<2>> WM(W.local_data(), W.m(), W.n());
+
+  if(row_starts_host==NULL)
+    row_starts_host = allocAndBuildRowStarts();
+  assert(row_starts_host);
+  
+  int num_rows = this->nrows_;
+  int* idx_start = row_starts_host->idx_start_;
+  int* jCol = jCol_;
+  double* values = values_;
+  RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, this->nrows_),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      for(int k=idx_start[i]; k<idx_start[i+1]; k++)
+      {
+        WM(i, jCol[k]) += values[k];
+      }
+    }
+  );
+}
+
 #ifdef HIOP_DEEPCHECKS
 /// @brief Ensures the rows and column triplet entries are ordered.
 bool hiopMatrixRajaSparseTriplet::checkIndexesAreOrdered() const
@@ -1344,14 +1382,14 @@ void hiopMatrixRajaSymSparseTriplet::set_Hess_FR(const hiopMatrixSparse& Hess,
     return;
   }
   
-  const hiopMatrixRajaSparseTriplet& M1 = *this;
+  hiopMatrixRajaSymSparseTriplet& M1 = *this;
   const auto& M2 = dynamic_cast<const hiopMatrixRajaSymSparseTriplet&>(Hess);
 
   // assuming original Hess is sorted, and in upper-triangle format
-  const int m1 = M1.nrows_;
-  const int n1 = M1.ncols_;
-  const int m2 = M2.nrows_;
-  const int n2 = M2.ncols_;
+  const int m1 = M1.m();
+  const int n1 = M1.n();
+  const int m2 = M2.m();
+  const int n2 = M2.n();
   int m_row = add_diag.get_size();
 
   assert(n1==m1);
@@ -1371,15 +1409,15 @@ void hiopMatrixRajaSymSparseTriplet::set_Hess_FR(const hiopMatrixSparse& Hess,
   assert(M2.row_starts_host);
   int* M2_idx_start = M2.row_starts_host->idx_start_;
 
-  int* M2iRow = M2.iRow_;
-  int* M2jCol = M2.jCol_;
+  const int* M2iRow = M2.i_row();
+  const int* M2jCol = M2.j_col();
     
   // extend Hess to the p and n parts --- sparsity
   // sparsity may change due to te new obj term zeta*DR^2.*(x-x_ref)
   if(iHSS != nullptr && jHSS != nullptr) {
 
-    int* M1iRow = M1.iRow_;
-    int* M1jCol = M1.jCol_;
+    int* M1iRow = M1.i_row();
+    int* M1jCol = M1.j_col();
     
     if(m2 > 0) {
       auto& resmgr = umpire::ResourceManager::getInstance();
@@ -1403,7 +1441,7 @@ void hiopMatrixRajaSymSparseTriplet::set_Hess_FR(const hiopMatrixSparse& Hess,
         }
       );
       
-      RAJA::inclusive_scan<hiop_raja_exec>*(m1_row_start,m1_row_start+m1+1,RAJA::operators::plus<int>);
+      RAJA::inclusive_scan_inplace<hiop_raja_exec>(m1_row_start,m1_row_start+m1+1,RAJA::operators::plus<int>());
 
       RAJA::forall<hiop_raja_exec>(
         RAJA::RangeSegment(0, m2),
@@ -1416,12 +1454,12 @@ void hiopMatrixRajaSymSparseTriplet::set_Hess_FR(const hiopMatrixSparse& Hess,
           // insert diagonal entry due to the new obj term
           M1iRow[k] = iHSS[k] = i;
           M1jCol[k] = jHSS[k] = i;
-          k++
+          k++;
 
           if(nnz_in_row > 0 && M2iRow[k_base] == M2jCol[k_base]) {
             // first nonzero in this row is a diagonal term 
             // skip it since we will defined the diagonal nonezero
-            k_base++
+            k_base++;
           }
   
           // copy from base Hess
@@ -1455,8 +1493,8 @@ void hiopMatrixRajaSymSparseTriplet::set_Hess_FR(const hiopMatrixSparse& Hess,
     assert(M1.row_starts_host);
     int* M1_idx_start = M1.row_starts_host->idx_start_;
   
-    double* M1values = M1.values_;
-    double* M2values = M2.values_;
+    double* M1values = M1.M();
+    const double* M2values = M2.M();
   
     const auto& diag_x = dynamic_cast<const hiopVectorRajaPar&>(add_diag);  
     const double* diag_data = add_diag.local_data_const();
@@ -1478,7 +1516,7 @@ void hiopMatrixRajaSymSparseTriplet::set_Hess_FR(const hiopMatrixSparse& Hess,
             // add it since we will defined the diagonal nonezero
             M1values[k] += M2values[k_base];
             MHSS[k] = M1values[k];
-            k_base++
+            k_base++;
           }
           k++;
   

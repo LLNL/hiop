@@ -132,10 +132,10 @@ int main(int argc, char** argv)
 
     // Initialise another sparse Matrix
     local_ordinal_type M2 = M_global * 2;
-    nnz = M2 * (entries_per_row);
+    local_ordinal_type nnz2 = M2 * (entries_per_row);
 
     hiop::hiopMatrixSparse* m2xn_sparse = 
-      hiop::LinearAlgebraFactory::createMatrixSparse(M2, N_global, nnz);
+      hiop::LinearAlgebraFactory::createMatrixSparse(M2, N_global, nnz2);
     test.initializeMatrix(m2xn_sparse, entries_per_row);
 
     hiop::hiopMatrixDenseRowMajor mxm2_dense(M_global, M2);
@@ -151,9 +151,21 @@ int main(int argc, char** argv)
     // replace the nonzero index from "nnz-entries_per_row"
     fail += test.copyRowsBlockFrom(*mxn_sparse, *m2xn_sparse,0, 1, M_global-1, mxn_sparse->numberOfNonzeros()-entries_per_row);
 
+    // copy sparse matrix to dense matrix
+    hiop::hiopMatrixDenseRowMajor mxn_dense(M_global, N_global);
+    fail += test.matrix_copy_to(mxn_dense, *mxn_sparse);
+  
+    // extend a sparse matrix [C;D] to [C -I I 0 0; D 0 0 -I I]
+    hiop::hiopMatrixDenseRowMajor m3xn3_dense(M_global+M2, N_global+2*(M_global+M2));
+    local_ordinal_type nnz3 = nnz + nnz2 + 2*M_global + 2*M2;
+    hiop::hiopMatrixSparse* m3xn3_sparse = 
+      hiop::LinearAlgebraFactory::createMatrixSparse(M_global+M2, N_global+2*(M_global+M2), nnz3);
+    fail += test.matrix_set_Jac_FR(m3xn3_dense, *m3xn3_sparse, *mxn_sparse, *m2xn_sparse);
+
     // Remove testing objects
     delete mxn_sparse;
     delete m2xn_sparse;
+    delete m3xn3_sparse;
   
   }
 

@@ -209,6 +209,86 @@ public:
     return fail;
   }
 
+  /// @brief copy sublok `B` into `A`, and add diagonal `diag` to `A`, `W` is a buffer used to verify solution
+  bool matrix_set_Hess_FR(hiop::hiopMatrixDense& W,
+                          hiop::hiopMatrixSparse& A,
+                          hiop::hiopMatrixSparse& B,
+                          hiop::hiopVector& diag,
+                          const int rank = 0)
+  {
+    assert(A.m() == A.n()); // A is square matrix
+    assert(diag.get_size() == B.m()); // B is square matrix
+    assert(A.m() >= B.m()); // A is larger or equal to B
+    assert(W.m() == W.n()); // W is square matrix
+    assert(W.m() == A.m()); // W has same dim as A
+  
+    const local_ordinal_type A_M = A.m();
+    const local_ordinal_type A_N_loc = A.n();
+    const local_ordinal_type B_M = B.m();
+    
+    const auto num_elems = diag.get_size();
+  
+    const auto B_val = one;
+    const auto W_val = zero;
+    const auto D_val = two;
+    const real_type alpha = one;
+    const local_ordinal_type start_diag = 0;
+    int fail = 0;
+
+    B.setToConstant(B_val);
+    diag.setToConstant(D_val);
+  
+    A.set_Hess_FR(B, A.i_row(), A.j_col(), A.M(), diag);
+
+    // copy to a dense matrix
+    W.setToConstant(W_val);
+    A.addUpperTriangleToSymDenseMatrixUpperTriangle(start_diag, alpha, W);
+    
+    // get sparsity pattern
+    const auto* iRow = getRowIndices(&A);
+    const auto* jCol = getColumnIndices(&A);
+    auto nnz = A.numberOfNonzeros();
+    const auto* iRowB = getRowIndices(&B);
+    const auto* jColB = getColumnIndices(&B);
+    auto nnzB = B.numberOfNonzeros();
+    fail += verifyAnswer(&W,
+      [=] (local_ordinal_type i, local_ordinal_type j) -> real_type
+      {
+        // check if (i, j) within bounds of A
+        // then check if (i, j) within upper triangle of W
+        const bool isUpperTriangle = ( 
+          i>=start_diag && i<start_diag+A_M &&
+          j>=start_diag && j<start_diag+A_N_loc &&
+          j >= i);
+
+        // only nonzero entries in A will be added to W
+        int i_sp = i - start_diag;
+        int j_sp = j - start_diag;
+        const bool sp_index_B = (i<B_M && j<B_M) && (find_unsorted_pair(i_sp, j_sp, iRowB, jColB, nnzB) || find_unsorted_pair(j_sp, i_sp, iRowB, jColB, nnzB));
+        const bool diag_index = (i<B_M && j<B_M) && (i==j);
+
+        real_type ans;
+
+        if(isUpperTriangle && sp_index_B && diag_index) {
+          // found in sparse matirx B and it is a diagonal entry in B
+          ans = B_val + D_val;
+        } else if (isUpperTriangle && sp_index_B) {
+          // found in sparse matirx B
+          ans = B_val;
+        } else if (isUpperTriangle && diag_index) {
+          // NOT found in sparse matirx B. It comes from extra diag term
+          ans = D_val;
+        } else {
+          ans = W_val;
+        } 
+        return ans;
+      }
+    );
+
+    printMessage(fail, __func__, rank);
+    return fail;
+  }
+
 protected:
   /// TODO: The sparse matrix is not distributed - all is local. 
   virtual real_type getLocalElement(const hiop::hiopMatrix* a, local_ordinal_type i, local_ordinal_type j) = 0;
