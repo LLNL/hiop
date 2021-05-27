@@ -86,6 +86,7 @@ private:
     local_ordinal_type i,
     local_ordinal_type j) override;
   virtual const real_type* getLocalDataConst(hiop::hiopMatrixDense* a) override;
+  virtual real_type* getLocalData(hiop::hiopMatrixDense* a) override;
   virtual int verifyAnswer(hiop::hiopMatrixDense* A, real_type answer) override;
   virtual int verifyAnswer(
       hiop::hiopMatrixDense* A,

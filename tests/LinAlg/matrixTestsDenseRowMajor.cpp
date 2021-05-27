@@ -156,6 +156,16 @@ const real_type* MatrixTestsDenseRowMajor::getLocalDataConst(hiop::hiopMatrixDen
   return amat->local_data_const();
 }
 
+/// Returns const pointer to local data block of matrix _A_.
+real_type* MatrixTestsDenseRowMajor::getLocalData(hiop::hiopMatrixDense* A)
+{
+  auto* amat = dynamic_cast<hiop::hiopMatrixDense*>(A);
+  if(amat == nullptr)
+    THROW_NULL_DEREF;
+
+  return amat->local_data();
+}
+
 /// Reduce return output: Every rank returns failure if any individual rank fails
 bool MatrixTestsDenseRowMajor::reduceReturn(int failures, hiop::hiopMatrixDense* A)
 {

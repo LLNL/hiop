@@ -225,6 +225,7 @@ int MatrixTestsSparseTriplet::verifyAnswer(
     {
       if (!isEqual(getLocalElement(A, i, j), expect(i, j)))
       {
+        //printf("(%d, %d) failed. %f != %f.\n", i, j, getLocalElement(A, i, j), expect(i, j));
         fail++;
       }
     }

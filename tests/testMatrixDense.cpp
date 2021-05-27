@@ -206,6 +206,7 @@ static int runTests(const char* mem_space, MPI_Comm comm)
   hiopMatrixDense* A_kxm_nodist = LinearAlgebraFactory::createMatrixDense(K_local, M_local);
   hiopMatrixDense* A_mxn_nodist = LinearAlgebraFactory::createMatrixDense(M_local, N_local);
   hiopMatrixDense* A_nxn_nodist = LinearAlgebraFactory::createMatrixDense(N_local, N_local);
+  hiopMatrixDense* B_nxn_nodist = LinearAlgebraFactory::createMatrixDense(N_local, N_local);
 
   // Vectors with shape of the form:
   // x_<size>_[non-distributed]
@@ -239,6 +240,8 @@ static int runTests(const char* mem_space, MPI_Comm comm)
     // Not part of hiopMatrix interface, specific to matrixTestsDenseRowMajor
     fail += test.matrixCopyBlockFromMatrix(*A_mxm_nodist, *A_kxn_nodist);
     fail += test.matrixCopyFromMatrixBlock(*A_kxn_nodist, *A_mxm_nodist);
+    
+    fail += test.matrix_set_Hess_FR(*A_nxn_nodist, *B_nxn_nodist, *x_n_nodist);
   }
 
   fail += test.matrixTransTimesMat(*A_mxk_nodist, *A_kxn, *A_mxn, rank);
@@ -253,6 +256,7 @@ static int runTests(const char* mem_space, MPI_Comm comm)
 
   // specific to matrixTestsDenseRowMajor
   fail += test.matrixCopyFrom(*A_mxn, *B_mxn, rank);
+  fail += test.matrix_copy_to(*A_mxn, *B_mxn, rank);
 
   fail += test.matrixAppendRow(*A_mxn_extra_row, *x_n, rank);
   fail += test.matrixCopyRowsFrom(*A_kxn, *A_mxn, rank);
@@ -274,6 +278,7 @@ static int runTests(const char* mem_space, MPI_Comm comm)
   delete A_kxm_nodist;
   delete A_mxn_nodist;
   delete A_nxn_nodist;
+  delete B_nxn_nodist;
   delete x_n;
   delete x_n_nodist;
   delete x_m_nodist;

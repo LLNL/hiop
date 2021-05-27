@@ -349,6 +349,29 @@ void hiopMatrixSparseTriplet::copyFrom(const hiopMatrixSparse& dm)
   assert(false && "this is to be implemented - method def too vague for now");
 }
 
+/// @brief copy to 3 arrays.
+/// @pre these 3 arrays are not nullptr
+void hiopMatrixSparseTriplet::copy_to(int* irow, int* jcol, double* val)
+{
+  assert(irow && jcol && val);
+  memcpy(irow, iRow_, nnz_*sizeof(int));
+  memcpy(jcol, jCol_, nnz_*sizeof(int));
+  memcpy(val, values_, nnz_*sizeof(double));
+}
+
+void hiopMatrixSparseTriplet::copy_to(hiopMatrixDense& W)
+{
+  assert(W.m() == nrows_);
+  assert(W.n() == ncols_);
+  W.setToZero();
+  double* WM = W.local_data();
+  int n_W = W.n();
+  
+  for(int k=0; k<nnz_; k++) {
+    WM[ iRow_[k]*n_W + jCol_[k]] += values_[k];
+  }
+}
+
 #ifdef HIOP_DEEPCHECKS
 bool hiopMatrixSparseTriplet::checkIndexesAreOrdered() const
 {
@@ -1395,7 +1418,7 @@ void hiopMatrixSymSparseTriplet::set_Hess_FR(const hiopMatrixSparse& Hess,
         int nnz_in_row = Hess_base.row_starts_->idx_start_[i+1] - k_base;
       
         // add diagonal entry due to the new obj term
-        values_[k] = MHSS[k] = diag_data[k];
+        values_[k] = MHSS[k] = diag_data[i];
         
         if(nnz_in_row > 0 && Hess_row[k_base] == Hess_col[k_base]) {
           // first nonzero in this row is a diagonal term 

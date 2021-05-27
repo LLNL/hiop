@@ -80,6 +80,11 @@ public:
   virtual void setToZero() = 0;
   virtual void setToConstant(double c) = 0;
   virtual void copyFrom(const hiopMatrixSparse& dm) = 0;
+  
+  /// @brief copy the nonzeros into 3 arrays, in their triplet form.
+  virtual void copy_to(int* irow, int* jcol, double* val) = 0;
+  /// @brief copy the matrix into a dense matrix
+  virtual void copy_to(hiopMatrixDense& W) = 0;
 
   virtual void copyRowsFrom(const hiopMatrix& src, const index_type* rows_idxs, size_type n_rows) = 0;
 

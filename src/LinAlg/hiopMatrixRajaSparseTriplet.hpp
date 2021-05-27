@@ -80,6 +80,8 @@ public:
   virtual void setToZero();
   virtual void setToConstant(double c);
   virtual void copyFrom(const hiopMatrixSparse& dm);
+  virtual void copy_to(int* irow, int* jcol, double* val);
+  virtual void copy_to(hiopMatrixDense& W);
 
   virtual void copyRowsFrom(const hiopMatrix& src, const index_type* rows_idxs, size_type n_rows);
   
@@ -247,7 +249,7 @@ public:
                           const hiopMatrixSparse& Jac_d,
                           int* iJacS,
                           int* jJacS,
-                          double* MJacS) {assert("not implemented"&&0);}
+                          double* MJacS);
 
   virtual void set_Hess_FR(const hiopMatrixSparse& Hess,
                            int* iHSS,
@@ -312,7 +314,7 @@ protected:
   mutable RowStartsInfo* row_starts_host;
   //mutable RowStartsInfo* row_starts;
 
-private:
+protected:
   RowStartsInfo* allocAndBuildRowStarts() const; 
 private:
   hiopMatrixRajaSparseTriplet() 
@@ -331,7 +333,7 @@ class hiopMatrixRajaSymSparseTriplet : public hiopMatrixRajaSparseTriplet
 {
 public: 
   hiopMatrixRajaSymSparseTriplet(int n, int nnz, std::string memspace)
-    : hiopMatrixRajaSparseTriplet(n, n, nnz, memspace)
+    : hiopMatrixRajaSparseTriplet(n, n, nnz, memspace), nnz_offdiag_{-1}
   {
   }
   virtual ~hiopMatrixRajaSymSparseTriplet() {}  
@@ -387,11 +389,7 @@ public:
     return true;
   }
   
-  virtual size_type numberOfOffDiagNonzeros() const
-  {
-    assert(false && "not needed / implemented");
-    return 0;
-  }
+  virtual size_type numberOfOffDiagNonzeros() const;
 
   virtual void set_Jac_FR(const hiopMatrixSparse& Jac_c,
                           const hiopMatrixSparse& Jac_d,
@@ -406,10 +404,10 @@ public:
                            int* iHSS,
                            int* jHSS,
                            double* MHSS,
-                           const hiopVector& add_diag)
-  {
-    assert("not implemented"&&0);
-  }
+                           const hiopVector& add_diag);
+
+protected:
+  mutable int nnz_offdiag_;     ///< number of nonzero entries
 
 };
 } //end of namespace
