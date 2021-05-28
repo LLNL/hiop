@@ -177,7 +177,6 @@ if(HIOP_USE_GPU)
   include(FindHiopCudaLibraries)
   target_link_libraries(hiop_tpl INTERFACE hiop_cuda)
   target_link_libraries(hiop_cuda INTERFACE Magma)
-  set_target_properties(hiop_tpl PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 endif(HIOP_USE_GPU)
 
 if(HIOP_USE_RAJA)
