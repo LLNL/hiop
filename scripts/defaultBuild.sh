@@ -22,7 +22,6 @@ defaultBuild()
       -DHIOP_MAGMA_DIR=$MY_HIOP_MAGMA_DIR \
       -DHIOP_NVCC_ARCH=$MY_NVCC_ARCH \
       -DHIOP_COINHSL_DIR=$MY_COINHSL_DIR \
-      -DCMAKE_INSTALL_PREFIX=/qfs/people/ruth521/projects/hiop/install \
       $EXTRA_CMAKE_ARGS"
 
   if [[ "$BUILD" == "1" ]]; then
@@ -36,7 +35,6 @@ defaultBuild()
     pushd $BUILDDIR                             || exit 1
     cmake $CMAKE_OPTIONS ..                     || exit 1
     $MAKE_CMD || exit 1
-    make install
     popd
   fi
 
