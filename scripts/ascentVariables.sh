@@ -20,7 +20,7 @@ ls $PROJ_DIR/src/spack/var/spack/environments/*
 
 spack env activate hiop-v0-4-3-deps
 
-export MY_NVCC_ARCH="sm_70"
+export MY_NVCC_ARCH="70"
 export EXTRA_CMAKE_ARGS="$EXTRA_CMAKE_ARGS -DHIOP_NVCC_ARCH=$MY_NVCC_ARCH"
 
 if [[ ! -f $BUILDDIR/nvblas.conf ]]; then
