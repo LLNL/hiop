@@ -391,8 +391,8 @@ public:
     const local_ordinal_type cd_size = getLocalSize(&cd);
     const local_ordinal_type c_size = getLocalSize(&c);
     const local_ordinal_type d_size = getLocalSize(&d);
-    const hiopInt c_map_size = c_map.size();
-    const hiopInt d_map_size = d_map.size();
+    const local_ordinal_type c_map_size = c_map.size();
+    const local_ordinal_type d_map_size = d_map.size();
     assert(c_size == c_map_size && "size doesn't match");
     assert(d_size == d_map_size && "size doesn't match");
     assert(c_size + d_size == cd_size && "size doesn't match");
@@ -402,11 +402,11 @@ public:
  
     c.setToConstant(c_val);
     d.setToConstant(d_val);
-    for(hiopInt i = 0; i < c_size; ++i) {
-      c_map[i] = (hiopInt) i;
+    for(local_ordinal_type i = 0; i < c_size; ++i) {
+      c_map[i] = i;
     }
-    for(hiopInt i = 0; i < d_size; ++i) {
-      d_map[i] = (hiopInt) (i + c_size);
+    for(local_ordinal_type i = 0; i < d_size; ++i) {
+      d_map[i] = i + c_size;
     }
     c_map.copyToDev();
     d_map.copyToDev();
@@ -439,8 +439,8 @@ public:
     const local_ordinal_type cd_size = getLocalSize(&cd);
     const local_ordinal_type c_size = getLocalSize(&c);
     const local_ordinal_type d_size = getLocalSize(&d);
-    const hiopInt c_map_size = c_map.size();
-    const hiopInt d_map_size = d_map.size();
+    const local_ordinal_type c_map_size = c_map.size();
+    const local_ordinal_type d_map_size = d_map.size();
     assert(c_size == c_map_size && "size doesn't match");
     assert(d_size == d_map_size && "size doesn't match");
     assert(c_size + d_size == cd_size && "size doesn't match");
@@ -449,11 +449,11 @@ public:
  
     c.setToZero();
     d.setToZero();
-    for(hiopInt i = 0; i < c_size; ++i) {
-      c_map[i] = (hiopInt) i;
+    for(local_ordinal_type i = 0; i < c_size; ++i) {
+      c_map[i] = i;
     }
-    for(hiopInt i = 0; i < d_size; ++i) {
-      d_map[i] = (hiopInt) (i + c_size);
+    for(local_ordinal_type i = 0; i < d_size; ++i) {
+      d_map[i] = i + c_size;
     }
     c_map.copyToDev();
     d_map.copyToDev();

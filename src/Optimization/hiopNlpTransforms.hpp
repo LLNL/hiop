@@ -349,8 +349,8 @@ public:
                         hiopVector& gradf,
                         hiopMatrix& Jac_c, 
                         hiopMatrix& Jac_d, 
-                        hiopInt* cons_eq_mapping, 
-                        hiopInt* cons_ineq_mapping);
+                        int_type* cons_eq_mapping, 
+                        int_type* cons_ineq_mapping);
   ~hiopNLPObjGradScaling();
 public:
   /** inherited from the parent class */

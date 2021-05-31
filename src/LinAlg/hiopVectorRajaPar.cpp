@@ -497,8 +497,8 @@ void hiopVectorRajaPar::copy_from_two_vec_w_pattern(const hiopVector& c,
   const hiopVectorIntRaja& ix1 = dynamic_cast<const hiopVectorIntRaja&>(c_map);
   const hiopVectorIntRaja& ix2 = dynamic_cast<const hiopVectorIntRaja&>(d_map);
   
-  hiopInt n1_local = v1.n_local_;
-  hiopInt n2_local = v2.n_local_;
+  int_type n1_local = v1.n_local_;
+  int_type n2_local = v2.n_local_;
 
 #ifdef HIOP_DEEPCHECKS
   assert(n1_local + n2_local == n_local_);
@@ -507,8 +507,8 @@ void hiopVectorRajaPar::copy_from_two_vec_w_pattern(const hiopVector& c,
   double*   dd = data_dev_;
   double*  vd1 = v1.data_dev_;
   double*  vd2 = v2.data_dev_;
-  const hiopInt* id1 = ix1.local_data_const();
-  const hiopInt* id2 = ix2.local_data_const();
+  const int_type* id1 = ix1.local_data_const();
+  const int_type* id2 = ix2.local_data_const();
   
   int n1_local_int = (int) n1_local;
   int n2_local_int = (int) n2_local;
@@ -547,8 +547,8 @@ void hiopVectorRajaPar::copy_to_two_vec_w_pattern(hiopVector& c,
   const hiopVectorIntRaja& ix1 = dynamic_cast<const hiopVectorIntRaja&>(c_map);
   const hiopVectorIntRaja& ix2 = dynamic_cast<const hiopVectorIntRaja&>(d_map);
   
-  hiopInt n1_local = v1.n_local_;
-  hiopInt n2_local = v2.n_local_;
+  int_type n1_local = v1.n_local_;
+  int_type n2_local = v2.n_local_;
 
 #ifdef HIOP_DEEPCHECKS
   assert(n1_local + n2_local == n_local_);
@@ -557,8 +557,8 @@ void hiopVectorRajaPar::copy_to_two_vec_w_pattern(hiopVector& c,
   double*   dd = data_dev_;
   double*  vd1 = v1.data_dev_;
   double*  vd2 = v2.data_dev_;
-  const hiopInt* id1 = ix1.local_data_const();
-  const hiopInt* id2 = ix2.local_data_const();
+  const int_type* id1 = ix1.local_data_const();
+  const int_type* id2 = ix2.local_data_const();
   
   RAJA::forall< hiop_raja_exec >(
     RAJA::RangeSegment(0, (int)n1_local),

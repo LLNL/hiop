@@ -377,8 +377,8 @@ hiopNLPObjGradScaling::hiopNLPObjGradScaling(const double max_grad,
                                              hiopVector& gradf,
                                              hiopMatrix& Jac_c, 
                                              hiopMatrix& Jac_d, 
-                                             hiopInt* cons_eq_mapping, 
-                                             hiopInt* cons_ineq_mapping)
+                                             int_type* cons_eq_mapping, 
+                                             int_type* cons_ineq_mapping)
       : n_vars(gradf.get_size()), n_vars_local(gradf.get_local_size()),
         scale_factor_obj(1.),
         n_eq(c.get_size()), n_ineq(d.get_size())

@@ -404,8 +404,8 @@ bool hiopNlpFormulation::finalizeInitialization()
   /* copy lower and upper bounds - constraints */
   double *dlvec=dl->local_data_host(), *duvec=du->local_data_host();
   double *c_rhsvec=c_rhs->local_data_host();
-  hiopInt *cons_eq_mapping = cons_eq_mapping_->local_data_host();
-  hiopInt *cons_ineq_mapping = cons_ineq_mapping_->local_data_host();
+  int_type *cons_eq_mapping = cons_eq_mapping_->local_data_host();
+  int_type *cons_ineq_mapping = cons_ineq_mapping_->local_data_host();
   int it_eq=0, it_ineq=0;
   for(int i=0;i<n_cons; i++) {
     if(gl_vec[i]==gu_vec[i]) {

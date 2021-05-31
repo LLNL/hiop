@@ -63,27 +63,27 @@ namespace hiop
 class hiopVectorIntSeq : public hiopVectorInt
 {
 private:
-  hiopInt *buf_;
+  int_type *buf_;
 
 public:
-  hiopVectorIntSeq(hiopInt sz);
+  hiopVectorIntSeq(int_type sz);
 
   ~hiopVectorIntSeq();
 
   virtual void copyToDev() const {}
   virtual void copyFromDev() const {}
 
-  virtual hiopInt* local_data() { return buf_; }
+  virtual int_type* local_data() { return buf_; }
 
-  virtual const hiopInt* local_data_const() const { return buf_; }
+  virtual const int_type* local_data_const() const { return buf_; }
 
-  virtual inline hiopInt* local_data_host() { return local_data(); }
+  virtual inline int_type* local_data_host() { return local_data(); }
 
-  virtual inline const hiopInt* local_data_host_const() const { return local_data_const(); }
+  virtual inline const int_type* local_data_host_const() const { return local_data_const(); }
 
-  const hiopInt& operator[] (hiopInt i) const override;
+  const int_type& operator[] (int_type i) const override;
 
-  hiopInt& operator[] (hiopInt i) override;
+  int_type& operator[] (int_type i) override;
 };
 
 } // namespace hiop
