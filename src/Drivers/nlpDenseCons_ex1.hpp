@@ -175,9 +175,9 @@ public:
   /** Sum(x[i])<=10 and sum(x[i])>= 1  (we pretend are different)
    */
   bool eval_cons(const int_type& n, 
-		 const int_type& m,  
-		 const int_type& num_cons, const int_type* idx_cons,
-		 const double* x_in, bool new_x, double* cons)
+                 const int_type& m,  
+                 const int_type& num_cons, const int_type* idx_cons,
+                 const double* x_in, bool new_x, double* cons)
   {
     assert(n==n_vars); 
     if(0==num_cons) return true; //this may happen when Hiop asks for inequalities, which we don't have in this example

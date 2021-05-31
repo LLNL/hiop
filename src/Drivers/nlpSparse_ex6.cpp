@@ -82,9 +82,12 @@ bool Ex6::eval_grad_f(const int_type& n, const double* x, bool new_x, double* gr
   return true;
 }
 
-bool Ex6::eval_cons(const int_type& n, const int_type& m,
-                    const int_type& num_cons, const int_type* idx_cons,
-			              const double* x, bool new_x, double* cons)
+bool Ex6::eval_cons(const int_type& n,
+                    const int_type& m,
+                    const int_type& num_cons,
+                    const int_type* idx_cons,
+                    const double* x,
+                    bool new_x, double* cons)
 {
   return false;
 }
