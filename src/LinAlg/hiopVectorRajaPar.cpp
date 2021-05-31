@@ -511,7 +511,7 @@ void hiopVectorRajaPar::copy_from_two_vec_w_pattern(const hiopVector& c,
   const hiopInt* id2 = ix2.local_data_const();
   
   int n1_local_int = (int) n1_local;
-  int n2_local_int = (int) n2_local
+  int n2_local_int = (int) n2_local;
 
   RAJA::forall< hiop_raja_exec >(
     RAJA::RangeSegment(0, n1_local_int),
