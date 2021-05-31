@@ -10,9 +10,9 @@
 
 using namespace std;
 
-void net_benchmark(const long long baseDim);
+void net_benchmark(const int_type baseDim);
 
-static const long long default_num_doubles_per_rank = 32768;
+static const int_type default_num_doubles_per_rank = 32768;
 int main(int argc, char **argv)
 {
   int nranks=1;
@@ -20,7 +20,7 @@ int main(int argc, char **argv)
   MPI_Init(&argc, &argv);
   int err = MPI_Comm_size(MPI_COMM_WORLD, &nranks); assert(MPI_SUCCESS==err);
 #endif
-  long long base_dim = nranks*default_num_doubles_per_rank;
+  int_type base_dim = nranks*default_num_doubles_per_rank;
   if(argc>1) base_dim = nranks*atol(argv[1]);
 
   net_benchmark(base_dim);
@@ -35,7 +35,7 @@ const static int NUM_REPETES=100;
 const static int NUM_REDUCES=8;
 const static int NUM_TESTS  =5;
 const static int TEST_X_SIZE=2; 
-void net_benchmark(const long long baseDim)
+void net_benchmark(const int_type baseDim)
 {
 #ifndef HIOP_USE_MPI
   printf("non-MPI build, skipping network benchmark\n");
@@ -51,7 +51,7 @@ void net_benchmark(const long long baseDim)
   vector< vector<double> > results( NUM_TESTS, vector<double>(NUM_REPETES,0.) );
 
   for(int r=0; r<NUM_REPETES; r++) {
-    long long loc_size = baseDim/nranks;
+    int_type loc_size = baseDim/nranks;
     for(int t=1; t<=NUM_TESTS; t++) {
       
       double* bufSend = new double[loc_size];
@@ -78,7 +78,7 @@ void net_benchmark(const long long baseDim)
   if(0==my_rank ) {
     printf("\nSummary: MPI ranks=%d baseDim=%lu X_size=%d TESTS=%d REDUCES=%d REPETITIONS=%d\n", 
 	   nranks, baseDim, TEST_X_SIZE, NUM_TESTS, NUM_REDUCES, NUM_REPETES);
-    long long loc_size = baseDim/nranks;
+    int_type loc_size = baseDim/nranks;
     for(int t=0; t<NUM_TESTS; t++) {
       double mean=0.; for(int r=0; r<NUM_REPETES; r++) mean += results[t][r]; 
       mean /= NUM_REPETES;

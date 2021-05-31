@@ -83,13 +83,12 @@ class hiopMatrixRajaDense : public hiopMatrixDense
 {
 public:
 
-  hiopMatrixRajaDense(
-    const long long& m, 
-		const long long& glob_n,
-    std::string mem_space, 
-		long long* col_part = NULL, 
-		MPI_Comm comm = MPI_COMM_SELF, 
-		const long long& m_max_alloc = -1);
+  hiopMatrixRajaDense(const int_type& m, 
+                      const int_type& glob_n,
+                      std::string mem_space, 
+                      int_type* col_part = NULL, 
+                      MPI_Comm comm = MPI_COMM_SELF, 
+                      const int_type& m_max_alloc = -1);
   virtual ~hiopMatrixRajaDense();
 
   virtual void setToZero();
@@ -147,7 +146,7 @@ public:
 
   virtual void addDiagonal(const double& alpha, const hiopVector& d_);
   virtual void addDiagonal(const double& value);
-  virtual void addSubDiagonal(const double& alpha, long long start_on_dest_diag, const hiopVector& d_);
+  virtual void addSubDiagonal(const double& alpha, int_type start_on_dest_diag, const hiopVector& d_);
   
   /** 
    * @brief add to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements of
@@ -219,7 +218,7 @@ public:
    * @pre 'src' and 'this' must have same number of columns
    * @pre number of rows in 'src' must be at least the number of rows in 'this'
    */
-  void copyRowsFrom(const hiopMatrix& src_gen, const long long* rows_idxs, long long n_rows);
+  void copyRowsFrom(const hiopMatrix& src_gen, const int_type* rows_idxs, int_type n_rows);
   
   /// @brief copies 'src' into this as a block starting at (i_block_start,j_block_start)
   void copyBlockFromMatrix(const long i_block_start, const long j_block_start,
@@ -231,24 +230,24 @@ public:
    */
   void copyFromMatrixBlock(const hiopMatrixDense& src, const int i_src_block_start, const int j_src_block_start);
   /// @brief  shift<0 -> up; shift>0 -> down
-  void shiftRows(long long shift);
-  void replaceRow(long long row, const hiopVector& vec);
+  void shiftRows(int_type shift);
+  void replaceRow(int_type row, const hiopVector& vec);
   /// @brief copies row 'irow' in the vector 'row_vec' (sizes should match)
-  void getRow(long long irow, hiopVector& row_vec);
+  void getRow(int_type irow, hiopVector& row_vec);
 #ifdef HIOP_DEEPCHECKS
   void overwriteUpperTriangleWithLower();
   void overwriteLowerTriangleWithUpper();
 #endif
-  virtual long long get_local_size_n() const { return n_local_; }
-  virtual long long get_local_size_m() const { return m_local_; }
+  virtual int_type get_local_size_n() const { return n_local_; }
+  virtual int_type get_local_size_m() const { return m_local_; }
   virtual MPI_Comm get_mpi_comm() const { return comm_; }
 
   inline double* local_data_host() const {return data_host_; }
   double* local_data() {return data_dev_; }
   double* local_data_const() const { return data_dev_; }
 public:
-  virtual long long m() const {return m_local_;}
-  virtual long long n() const {return n_global_;}
+  virtual int_type m() const {return m_local_;}
+  virtual int_type n() const {return n_global_;}
 #ifdef HIOP_DEEPCHECKS
   virtual bool assertSymmetry(double tol=1e-16) const;
 #endif
@@ -261,8 +260,8 @@ private:
   double* data_host_; ///< pointer to host mirror of matrix data
   double* data_dev_;  ///< pointer to memory space of matrix data
   int n_local_;       ///< local number of columns
-  long long glob_jl_; ///< global index of first column in the local data block
-  long long glob_ju_; ///< global index of first column in the next data block
+  int_type glob_jl_; ///< global index of first column in the local data block
+  int_type glob_ju_; ///< global index of first column in the next data block
 
   double* yglob_host_;
   double* ya_host_;
@@ -270,7 +269,7 @@ private:
   mutable double* buff_mxnlocal_host_; ///< host data buffer
 
   //this is very private do not touch :)
-  long long max_rows_;
+  int_type max_rows_;
 
 private:
   hiopMatrixRajaDense() {};

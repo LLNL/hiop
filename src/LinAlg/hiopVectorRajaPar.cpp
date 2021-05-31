@@ -78,8 +78,8 @@ namespace hiop
 {
 // Define type aliases
 using real_type = double;
-using local_index_type = int;
-using global_index_type = long long;
+using local_index_type = int_type;
+using global_index_type = int_type;
 
 // Define constants
 static constexpr real_type zero = 0.0;
@@ -102,9 +102,9 @@ static constexpr real_type one  = 1.0;
 
 
 hiopVectorRajaPar::hiopVectorRajaPar(
-  const long long& glob_n,
+  const int_type& glob_n,
   std::string mem_space /* = "HOST" */,
-  long long* col_part /* = NULL */,
+  int_type* col_part /* = NULL */,
   MPI_Comm comm /* = MPI_COMM_NULL */)
   : hiopVector(),
     mem_space_(mem_space),
@@ -1871,21 +1871,21 @@ void hiopVectorRajaPar::copyFromDev() const
   resmgr.copy(data_host, data_dev_);
 }
 
-long long hiopVectorRajaPar::numOfElemsLessThan(const double &val) const
+int_type hiopVectorRajaPar::numOfElemsLessThan(const double &val) const
 {  
   double* data = data_dev_;
-  RAJA::ReduceSum<hiop_raja_reduce, long long> sum(0);
+  RAJA::ReduceSum<hiop_raja_reduce, int_type> sum(0);
   RAJA::forall<hiop_raja_exec>( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       sum += (data[i]<val);
     });
 
-  long long nrm = sum.get();
+  int_type nrm = sum.get();
 
 #ifdef HIOP_USE_MPI
-  long long nrm_global;
-  int ierr = MPI_Allreduce(&nrm, &nrm_global, 1, MPI_LONG_LONG, MPI_SUM, comm_);
+  int_type nrm_global;
+  int ierr = MPI_Allreduce(&nrm, &nrm_global, 1, MPI_INT, MPI_SUM, comm_);
   assert(MPI_SUCCESS == ierr);
   nrm = nrm_global;
 #endif
@@ -1893,21 +1893,21 @@ long long hiopVectorRajaPar::numOfElemsLessThan(const double &val) const
   return nrm;
 }
 
-long long hiopVectorRajaPar::numOfElemsAbsLessThan(const double &val) const
+int_type hiopVectorRajaPar::numOfElemsAbsLessThan(const double &val) const
 {  
   double* data = data_dev_;
-  RAJA::ReduceSum<hiop_raja_reduce, long long> sum(0);
+  RAJA::ReduceSum<hiop_raja_reduce, int_type> sum(0);
   RAJA::forall<hiop_raja_exec>( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       sum += (fabs(data[i])<val);
     });
 
-  long long nrm = sum.get();
+  int_type nrm = sum.get();
 
 #ifdef HIOP_USE_MPI
-  long long nrm_global;
-  int ierr = MPI_Allreduce(&nrm, &nrm_global, 1, MPI_LONG_LONG, MPI_SUM, comm_);
+  int_type nrm_global;
+  int ierr = MPI_Allreduce(&nrm, &nrm_global, 1, MPI_INT, MPI_SUM, comm_);
   assert(MPI_SUCCESS == ierr);
   nrm = nrm_global;
 #endif

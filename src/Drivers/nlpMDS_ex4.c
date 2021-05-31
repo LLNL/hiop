@@ -7,7 +7,7 @@
 #include <math.h>
 
 typedef struct settings {
-  long long n; long long m; int ns; int nd;
+  hiop_int_type n; hiop_int_type m; int ns; int nd;
   int nx_sparse; int nx_dense;
   int nnz_sparse_Jaceq; int nnz_sparse_Jacineq;
   int nnz_sparse_Hess_Lagr_SS; int nnz_sparse_Hess_Lagr_SD;
@@ -29,31 +29,31 @@ void timesVec(const double* Q, double beta, double*y, double alpha, const double
 }
 
 
-int get_starting_point(const long long n, double* x0, void* user_data_) {
+int get_starting_point(const hiop_int_type n, double* x0, void* user_data_) {
   settings* user_data = (settings*) user_data_;
   int i = 0;
   for(i=0; i<user_data->n; i=i+1) x0[i]=1.;
   return 0;
 }
 
-int get_prob_sizes(long long* n_, long long* m_, void* user_data_) {
+int get_prob_sizes(hiop_int_type* n_, hiop_int_type* m_, void* user_data_) {
   settings* user_data = (settings*) user_data_;
   *n_ = user_data->n;
   *m_ = user_data->m;
   return 0;
 } 
 
-int get_vars_info(long long n, double *xlow_, double* xupp_, void* user_data_) {
+int get_vars_info(hiop_int_type n, double *xlow_, double* xupp_, void* user_data_) {
   settings* user_data = (settings*) user_data_;
-  long long i = 0;
+  hiop_int_type i = 0;
   for(i=0; i<user_data->n; i=i+1) xlow_[i] = user_data->xlow[i];
   for(i=0; i<user_data->n; i=i+1) xupp_[i] = user_data->xupp[i];
   return 0;
 }
 
-int get_cons_info(long long m, double *clow_, double* cupp_, void* user_data_) {
+int get_cons_info(hiop_int_type m, double *clow_, double* cupp_, void* user_data_) {
   settings* user_data = (settings*) user_data_;
-  long long i = 0;
+  hiop_int_type i = 0;
   for(i=0; i<user_data->m; i=i+1) clow_[i] = user_data->clow[i];
   for(i=0; i<user_data->m; i=i+1) cupp_[i] = user_data->cupp[i];
   return 0;
@@ -80,11 +80,11 @@ int eval_f(int n, double* x, int new_x, double* obj, void* user_data_) {
   return 0;
 }
 
-int eval_grad_f(long long n, double* x, int new_x, double* gradf, void* user_data_) {
+int eval_grad_f(hiop_int_type n, double* x, int new_x, double* gradf, void* user_data_) {
   settings* user_data = (settings*) user_data_;
   int i = 0;
   //x_i - 0.5 
-  for(long long  i=0; i<n; ++i) gradf[i]=0.0;
+  for(hiop_int_type  i=0; i<n; ++i) gradf[i]=0.0;
   for(i=0; i<user_data->ns; i=i+1) gradf[i] = x[i]-0.5;
 
   //Qd*y
@@ -99,7 +99,7 @@ int eval_grad_f(long long n, double* x, int new_x, double* gradf, void* user_dat
   return 0;
 }
 
-int eval_cons(long long n, long long m,
+int eval_cons(hiop_int_type n, hiop_int_type m,
     double* x, int new_x, 
     double* cons, void* user_data_) {
   settings* user_data = (settings*) user_data_;
@@ -150,9 +150,9 @@ int get_sparse_dense_blocks_info(int* nx_sparse, int* nx_dense,
   return 0;
 }
 
-int eval_Jac_cons(long long n, long long m,
+int eval_Jac_cons(hiop_int_type n, hiop_int_type m,
     double* x, int new_x,
-    long long nsparse, long long ndense, 
+    hiop_int_type nsparse, hiop_int_type ndense, 
     int nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
     double* JacD, void* user_data_) {
   settings* user_data = (settings*) user_data_;
@@ -247,10 +247,10 @@ int eval_Jac_cons(long long n, long long m,
   return 0;
 }
 
-int eval_Hess_Lagr(long long n, long long m,
+int eval_Hess_Lagr(hiop_int_type n, hiop_int_type m,
     double* x, int new_x, double obj_factor,
     double* lambda, int new_lambda,
-    long long nsparse, long long ndense, 
+    hiop_int_type nsparse, hiop_int_type ndense, 
     int nnzHSS, int* iHSS, int* jHSS, double* MHSS, 
     double* HDD,
   int nnzHSD, int* iHSD, int* jHSD, double* MHSD, void* user_data_) {
@@ -313,8 +313,8 @@ int main(int argc, char **argv) {
   double* buf_y = malloc(nd*sizeof(double));
   for(i=0; i<nd; i=i+1) buf_y[i] = 0.0;
 
-  long long n = 2*ns + nd;
-  long long m = ns+3;
+  hiop_int_type n = 2*ns + nd;
+  hiop_int_type m = ns+3;
   int nx_sparse = 2*ns;
   int nx_dense = nd;
   int nnz_sparse_Jaceq = 2*ns;

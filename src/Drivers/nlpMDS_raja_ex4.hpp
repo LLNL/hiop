@@ -20,6 +20,8 @@
 #include <cstdio>
 #include <cmath>
 
+using int_type = hiop::int_type;
+
 /* Problem test for the linear algebra of Mixed Dense-Sparse NLPs
  *  min   sum 0.5 {x_i*(x_{i}-1) : i=1,...,ns} + 0.5 y'*Qd*y + 0.5 s^T s
  *  s.t.  x+s + Md y = 0, i=1,...,ns
@@ -52,14 +54,14 @@ public:
 
   virtual ~Ex4();
   
-  bool get_prob_sizes(long long& n, long long& m);
+  bool get_prob_sizes(int_type& n, int_type& m);
 
   /**
    * @todo will param _type_ live on host or device?
    * @todo register pointers with umpire in case they need to be copied
    * from device to host.
    */
-  bool get_vars_info(const long long& n, double *xlow, double* xupp, NonlinearityType* type);
+  bool get_vars_info(const int_type& n, double *xlow, double* xupp, NonlinearityType* type);
 
   /**
    * @todo fill out param descriptions below to determine whether or not
@@ -71,13 +73,13 @@ public:
    * @param[out] cupp ?
    * @param[out] type ?
    */
-  bool get_cons_info(const long long& m, double* clow, double* cupp, NonlinearityType* type);
+  bool get_cons_info(const int_type& m, double* clow, double* cupp, NonlinearityType* type);
 
   bool get_sparse_dense_blocks_info(int& nx_sparse, int& nx_dense,
 				    int& nnz_sparse_Jace, int& nnz_sparse_Jaci,
 				    int& nnz_sparse_Hess_Lagr_SS, int& nnz_sparse_Hess_Lagr_SD);
   
-  bool eval_f(const long long& n, const double* x, bool new_x, double& obj_value);
+  bool eval_f(const int_type& n, const double* x, bool new_x, double& obj_value);
 
   /**
    * @todo figure out which of these pointers (if any) will need to be
@@ -88,11 +90,11 @@ public:
    * @param[in] x ?
    * @param[in] cons ?
    */
-  virtual bool eval_cons(const long long& n, const long long& m, 
-			 const long long& num_cons, const long long* idx_cons,  
+  virtual bool eval_cons(const int_type& n, const int_type& m, 
+			 const int_type& num_cons, const int_type* idx_cons,  
 			 const double* x, bool new_x, double* cons);
 
-  bool eval_cons(const long long& n, const long long& m, 
+  bool eval_cons(const int_type& n, const int_type& m, 
       const double* x, bool new_x, double* cons)
   {
     //return false so that HiOp will rely on the constraint evaluator defined above
@@ -100,23 +102,23 @@ public:
   }
 
   //sum 0.5 {x_i*(x_{i}-1) : i=1,...,ns} + 0.5 y'*Qd*y + 0.5 s^T s
-  bool eval_grad_f(const long long& n, const double* x, bool new_x, double* gradf);
+  bool eval_grad_f(const int_type& n, const double* x, bool new_x, double* gradf);
 
   /**
    * @todo This method will probably always have to run on the CPU side since
    * the var _nnzit_ is loop-dependent and cannot be run in parallel with the
    * other loop iterations.
    */
-  virtual bool eval_Jac_cons(const long long& n, const long long& m, 
-        const long long& num_cons, const long long* idx_cons,
+  virtual bool eval_Jac_cons(const int_type& n, const int_type& m, 
+        const int_type& num_cons, const int_type* idx_cons,
         const double* x, bool new_x,
-        const long long& nsparse, const long long& ndense, 
+        const int_type& nsparse, const int_type& ndense, 
         const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
         double* JacD);
 
-  virtual bool eval_Jac_cons(const long long& n, const long long& m, 
+  virtual bool eval_Jac_cons(const int_type& n, const int_type& m, 
         const double* x, bool new_x,
-        const long long& nsparse, const long long& ndense, 
+        const int_type& nsparse, const int_type& ndense, 
         const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
         double* JacD)
   {
@@ -124,18 +126,18 @@ public:
     return false;
   }
 
-  bool eval_Hess_Lagr(const long long& n, const long long& m, 
+  bool eval_Hess_Lagr(const int_type& n, const int_type& m, 
       const double* x, bool new_x, const double& obj_factor,
       const double* lambda, bool new_lambda,
-      const long long& nsparse, const long long& ndense, 
+      const int_type& nsparse, const int_type& ndense, 
       const int& nnzHSS, int* iHSS, int* jHSS, double* MHSS, 
       double* HDD,
       int& nnzHSD, int* iHSD, int* jHSD, double* MHSD);
 
   /* Implementation of the primal starting point specification */
-  bool get_starting_point(const long long& global_n, double* x0);
+  bool get_starting_point(const int_type& global_n, double* x0);
 
-  bool get_starting_point(const long long& n, const long long& m,
+  bool get_starting_point(const int_type& n, const int_type& m,
       double* x0,
       bool& duals_avail,
       double* z_bndL0, double* z_bndU0,
@@ -185,8 +187,8 @@ class Ex4OneCallCons : public Ex4
     {
     }
 
-    bool eval_cons(const long long& n, const long long& m, 
-        const long long& num_cons, const long long* idx_cons,  
+    bool eval_cons(const int_type& n, const int_type& m, 
+        const int_type& num_cons, const int_type* idx_cons,  
         const double* x, bool new_x, double* cons)
     {
       //return false so that HiOp will rely on the on-call constraint evaluator defined below
@@ -194,23 +196,23 @@ class Ex4OneCallCons : public Ex4
     }
 
     /** all constraints evaluated in here */
-    bool eval_cons(const long long& n, const long long& m, 
+    bool eval_cons(const int_type& n, const int_type& m, 
         const double* x, bool new_x, double* cons);
 
     virtual bool
-      eval_Jac_cons(const long long& n, const long long& m, 
-          const long long& num_cons, const long long* idx_cons,
+      eval_Jac_cons(const int_type& n, const int_type& m, 
+          const int_type& num_cons, const int_type* idx_cons,
           const double* x, bool new_x,
-          const long long& nsparse, const long long& ndense, 
+          const int_type& nsparse, const int_type& ndense, 
           const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
           double* JacD)
       {
         return false; // so that HiOp will call the one-call full-Jacob function below
       }
 
-    virtual bool eval_Jac_cons(const long long& n, const long long& m, 
+    virtual bool eval_Jac_cons(const int_type& n, const int_type& m, 
           const double* x, bool new_x,
-          const long long& nsparse, const long long& ndense, 
+          const int_type& nsparse, const int_type& ndense, 
           const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
           double* JacD);
 };

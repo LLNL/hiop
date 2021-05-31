@@ -65,8 +65,8 @@ hiopFixedVarsRemover::
 hiopFixedVarsRemover(const hiopVector& xl,
                      const hiopVector& xu,
                      const double& fixedVarTol_,
-                     const long long& numFixedVars,
-                     const long long& numFixedVars_local)
+                     const int_type& numFixedVars,
+                     const int_type& numFixedVars_local)
   : n_fixed_vars_local(numFixedVars_local), fixedVarTol(fixedVarTol_),
     Jacc_fs(NULL), Jacd_fs(NULL),
     fs2rs_idx_map(xl.get_local_size()),
@@ -93,18 +93,18 @@ hiopFixedVarsRemover::~hiopFixedVarsRemover()
 
 #ifdef HIOP_USE_MPI
 /* saves the inter-process distribution of (primal) vectors distribution */
-void hiopFixedVarsRemover::setFSVectorDistrib(long long* vec_distrib_in, int num_ranks)
+void hiopFixedVarsRemover::setFSVectorDistrib(int_type* vec_distrib_in, int num_ranks)
 {
   assert(vec_distrib_in!=NULL);
   fs_vec_distrib.resize(num_ranks+1);
   std::copy(vec_distrib_in, vec_distrib_in+num_ranks+1, fs_vec_distrib.begin());
 };
 /* allocates and returns the reduced-space column partitioning to be used internally by HiOp */
-long long* hiopFixedVarsRemover::allocRSVectorDistrib()
+int_type* hiopFixedVarsRemover::allocRSVectorDistrib()
 {
-  int nlen = fs_vec_distrib.size(); //nlen==nranks+1
+  size_t nlen = fs_vec_distrib.size(); //nlen==nranks+1
   assert(nlen>=1);
-  long long* rsVecDistrib = new long long[nlen];
+  int_type* rsVecDistrib = new int_type[nlen];
   rsVecDistrib[0]=0;
 #ifdef HIOP_DEEPCHECKS
   assert(fs_vec_distrib[0]==0);
@@ -119,7 +119,7 @@ long long* hiopFixedVarsRemover::allocRSVectorDistrib()
   assert(nRanks==nlen-1);
 #endif
   //first gather on all ranks the number of variables fixed on each rank
-  ierr = MPI_Allgather(&n_fixed_vars_local, 1, MPI_LONG_LONG_INT, rsVecDistrib+1, 1, MPI_LONG_LONG_INT, comm);
+  ierr = MPI_Allgather(&n_fixed_vars_local, 1, MPI_INT, rsVecDistrib+1, 1, MPI_INT, comm);
   assert(ierr==MPI_SUCCESS);
 #else
   assert(nlen==1);
@@ -237,7 +237,7 @@ void hiopFixedVarsRemover::apply_to_vector(const hiopVector* vec_fs, hiopVector*
 void hiopFixedVarsRemover::applyToMatrix(const double* M_rs, const int& m_in, double* M_fs)
 {
   int rs_idx;
-  const int nfs = fs2rs_idx_map.size();
+  const size_t nfs = fs2rs_idx_map.size();
   assert(nfs == fs_n_local());
   const int nrs = rs_n_local();
 
@@ -259,7 +259,7 @@ void hiopFixedVarsRemover::applyToMatrix(const double* M_rs, const int& m_in, do
 void hiopFixedVarsRemover::applyInvToMatrix(const double* M_fs, const int& m_in, double* M_rs)
 {
   int rs_idx;
-  const int nfs = fs2rs_idx_map.size();
+  const size_t nfs = fs2rs_idx_map.size();
   assert(nfs == fs_n_local());
   const int nrs = rs_n_local();
 
@@ -276,8 +276,8 @@ void hiopFixedVarsRemover::applyInvToMatrix(const double* M_fs, const int& m_in,
 hiopFixedVarsRelaxer::
 hiopFixedVarsRelaxer(const hiopVector& xl,
                      const hiopVector& xu,
-                     const long long& numFixedVars,
-                     const long long& numFixedVars_local)
+                     const int_type& numFixedVars,
+                     const int_type& numFixedVars_local)
   : xl_copy(NULL), xu_copy(NULL), n_vars(xl.get_size()), n_vars_local(xl.get_local_size())
 {
   //xl_copy = xl.new_copy(); // no need to copy at this point
@@ -294,9 +294,9 @@ void hiopFixedVarsRelaxer::
 relax(const double& fixed_var_tol, const double& fixed_var_perturb, hiopVector& xl, hiopVector& xu)
 {
   double *xla=xl.local_data(), *xua=xu.local_data(), *v;
-  long long n=xl.get_local_size();
+  int_type n=xl.get_local_size();
   double xuabs;
-  for(long long i=0; i<n; i++) {
+  for(int_type i=0; i<n; i++) {
     xuabs = fabs(xua[i]);
     if(fabs(xua[i]-xla[i])<= fixed_var_tol*fmax(1.,xuabs)) {
 

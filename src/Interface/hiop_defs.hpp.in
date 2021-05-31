@@ -13,3 +13,9 @@
 
 /// Date of build with the format "%Y-%m-%d"
 #define HIOP_RELEASE_DATE "@HIOP_RELEASE_DATE@"
+
+namespace hiop
+{
+  using int_type = int;
+}
+

@@ -475,10 +475,10 @@ namespace hiop
       
       if(NULL==msg) {
 	if(numranks>1)
-	  fprintf(file, "matrix of size %lld %lld and nonzeros %lld, printing %d elems (on rank=%d)\n", 
+	  fprintf(file, "matrix of size %d %d and nonzeros %d, printing %d elems (on rank=%d)\n", 
 		  m(), n(), numberOfNonzeros(), max_elems, myrank_);
 	else
-	  fprintf(file, "matrix of size %lld %lld and nonzeros %lld, printing %d elems\n", 
+	  fprintf(file, "matrix of size %d %d and nonzeros %d, printing %d elems\n", 
 		  m(), n(), numberOfNonzeros(), max_elems);
       } else {
 	fprintf(file, "%s ", msg);

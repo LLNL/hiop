@@ -41,30 +41,32 @@
 
 class DiscretizedFunction;
 
+using int_type = hiop::int_type;
+
 /* our (admitedly weird) 1D distorted meshing */
 class Ex1Meshing1D 
 {
 public:
   Ex1Meshing1D(double a, double b, 
-	       long long glob_n, double r=1.0, 
+	       int_type glob_n, double r=1.0, 
 	       MPI_Comm comm=MPI_COMM_WORLD);
   virtual ~Ex1Meshing1D();
   virtual bool matches(Ex1Meshing1D* other) { return this==other; }
-  virtual long long size() const { return _mass->get_size(); }
-  virtual long long local_size() const { return col_partition[my_rank+1]-col_partition[my_rank]; }
+  virtual int_type size() const { return _mass->get_size(); }
+  virtual int_type local_size() const { return col_partition[my_rank+1]-col_partition[my_rank]; }
 
   /* the following methods are mostly for educational purposes and may not be optimized */
   //converts the local indexes to global indexes
-  long long getGlobalIndex(long long i_local) const;
+  int_type getGlobalIndex(int_type i_local) const;
   //given a global index, returns the local index
-  long long getLocalIndex(long long i_global) const;
+  int_type getLocalIndex(int_type i_global) const;
   //for a function c(t), for given global index in the discretization 
   // returns the corresponding continuous argument 't', which is in this 
   // case the middle of the discretization interval.
-  double getFunctionArgument(long long i_global) const;
+  double getFunctionArgument(int_type i_global) const;
 
-  virtual bool get_vecdistrib_info(long long global_n, long long* cols);
-  long long* get_col_partition() const { return col_partition; }
+  virtual bool get_vecdistrib_info(int_type global_n, int_type* cols);
+  int_type* get_col_partition() const { return col_partition; }
   MPI_Comm get_comm() const { return comm; }
 
   virtual void applyM(DiscretizedFunction& f);
@@ -76,7 +78,7 @@ protected:
 
   MPI_Comm comm;
   int my_rank, comm_size;
-  long long* col_partition;
+  int_type* col_partition;
 
   friend class DiscretizedFunction;
 
@@ -96,13 +98,13 @@ public:
 
   /* the following methods are mostly for educational purposes and may not be optimized */
   //converts the local indexes to global indexes
-  long long getGlobalIndex(long long i_local) const;
+  int_type getGlobalIndex(int_type i_local) const;
   //for a function c(t), for given global index in the discretization 
   // returns the corresponding continuous argument 't', which is in this 
   // case the middle of the discretization interval.
-  double getFunctionArgument(long long i_global) const;
+  double getFunctionArgument(int_type i_global) const;
   //set the function value for a given global index
-  void setFunctionValue(long long i_global, const double& value);
+  void setFunctionValue(int_type i_global, const double& value);
 protected:
   Ex1Meshing1D* _mesh;
 };
@@ -130,24 +132,24 @@ public:
     //delete _aux;
     delete _mesh;
   }
-  bool get_prob_sizes(long long& n, long long& m)
+  bool get_prob_sizes(int_type& n, int_type& m)
   { n=n_vars; m=1; return true; }
 
-  bool get_vars_info(const long long& n, double *xlow, double* xupp, NonlinearityType* type)
+  bool get_vars_info(const int_type& n, double *xlow, double* xupp, NonlinearityType* type)
   {
     for(int i_local=0; i_local<n_local; i_local++) {
       xlow[i_local]=0.1; xupp[i_local]=1.0; type[i_local]=hiopNonlinear;
     }
     return true;
   }
-  bool get_cons_info(const long long& m, double* clow, double* cupp, NonlinearityType* type)
+  bool get_cons_info(const int_type& m, double* clow, double* cupp, NonlinearityType* type)
   {
     assert(m==1);
     
     clow[0]= 0.5; cupp[0]= 0.5; type[0]=hiopInterfaceBase::hiopLinear;
     return true;
   }
-  bool eval_f(const long long& n, const double* x_in, bool new_x, double& obj_value)
+  bool eval_f(const int_type& n, const double* x_in, bool new_x, double& obj_value)
   {
     x->copyFrom(x_in);
     obj_value  = c->dotProductWith(*x);
@@ -157,7 +159,7 @@ public:
 
     return true;
   }
-  bool eval_grad_f(const long long& n, const double* x_in, bool new_x, double* gradf)
+  bool eval_grad_f(const int_type& n, const double* x_in, bool new_x, double* gradf)
   {
     //gradf = m.*(x + c)
     //use x as auxiliary variable
@@ -172,9 +174,9 @@ public:
   }
   /** Sum(x[i])<=10 and sum(x[i])>= 1  (we pretend are different)
    */
-  bool eval_cons(const long long& n, 
-		 const long long& m,  
-		 const long long& num_cons, const long long* idx_cons,
+  bool eval_cons(const int_type& n, 
+		 const int_type& m,  
+		 const int_type& num_cons, const int_type* idx_cons,
 		 const double* x_in, bool new_x, double* cons)
   {
     assert(n==n_vars); 
@@ -186,8 +188,8 @@ public:
     return true;
   }
 
-  bool eval_Jac_cons(const long long& n, const long long& m, 
-                     const long long& num_cons, const long long* idx_cons,
+  bool eval_Jac_cons(const int_type& n, const int_type& m, 
+                     const int_type& num_cons, const int_type* idx_cons,
                      const double* x_in, bool new_x, double* Jac) 
   {
     assert(n==n_vars); 
@@ -200,7 +202,7 @@ public:
     return true;
   }
 
-  bool get_vecdistrib_info(long long global_n, long long* cols)
+  bool get_vecdistrib_info(int_type global_n, int_type* cols)
   {
     if(global_n==n_vars)
       return _mesh->get_vecdistrib_info(global_n, cols);
@@ -209,7 +211,7 @@ public:
     return true;
   }
 
-  bool get_starting_point(const long long &global_n, double* x0)
+  bool get_starting_point(const int_type &global_n, double* x0)
   {
     assert(global_n==n_vars); 
     for(int i_local=0; i_local<n_local; i_local++) {
@@ -231,14 +233,14 @@ private:
   void set_c();
 
 public:
-  // inline int idx_local2global(long long global_n, int idx_local) 
+  // inline int idx_local2global(int_type global_n, int idx_local) 
   // { 
   //   assert(idx_local + col_partition[my_rank]<col_partition[my_rank+1]);
   //   if(global_n==n_vars)
   //     return idx_local + col_partition[my_rank]; 
   //   assert(false && "You shouldn't need global index for a vector of this size.");
   // }
-  // inline int idx_global2local(long long global_n, long long idx_global)
+  // inline int idx_global2local(int_type global_n, int_type idx_global)
   // {
   //   assert(idx_global>=col_partition[my_rank]   && "global index does not belong to this rank");
   //   assert(idx_global< col_partition[my_rank+1] && "global index does not belong to this rank");

@@ -6,11 +6,11 @@
 
 namespace hiop
 {
-  hiopMatrixComplexDense::hiopMatrixComplexDense(const long long& m, 
-						 const long long& glob_n, 
-						 long long* col_part/*=NULL*/, 
+  hiopMatrixComplexDense::hiopMatrixComplexDense(const int_type& m, 
+						 const int_type& glob_n, 
+						 int_type* col_part/*=NULL*/, 
 						 MPI_Comm comm/*=MPI_COMM_SELF*/, 
-						 const long long& m_max_alloc/*=-1*/)
+						 const int_type& m_max_alloc/*=-1*/)
   {
     m_local_=m; n_global_=glob_n;
     comm_=comm;
@@ -91,8 +91,8 @@ namespace hiop
   }
 
   void hiopMatrixComplexDense::copyRowsFrom(const hiopMatrix& src_gen,
-					    const long long* rows_idxs,
-					    long long n_rows)
+					    const int_type* rows_idxs,
+					    int_type n_rows)
   {
     const hiopMatrixComplexDense& src = dynamic_cast<const hiopMatrixComplexDense&>(src_gen);
     assert(n_global_==src.n_global_);

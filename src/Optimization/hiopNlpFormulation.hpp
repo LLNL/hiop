@@ -210,22 +210,22 @@ public:
   inline hiopInterfaceBase::NonlinearityType* get_cons_ineq_type() const {return cons_ineq_type;}
   
   /** const accessors */
-  inline long long n() const      {return n_vars;}
-  inline long long m() const      {return n_cons;}
-  inline long long m_eq() const   {return n_cons_eq;}
-  inline long long m_ineq() const {return n_cons_ineq;}
-  inline long long n_low() const  {return n_bnds_low;}
-  inline long long n_upp() const  {return n_bnds_upp;}
-  inline long long m_ineq_low() const {return n_ineq_low;}
-  inline long long m_ineq_upp() const {return n_ineq_upp;}
-  inline long long n_complem()  const {return m_ineq_low()+m_ineq_upp()+n_low()+n_upp();}
+  inline int_type n() const      {return n_vars;}
+  inline int_type m() const      {return n_cons;}
+  inline int_type m_eq() const   {return n_cons_eq;}
+  inline int_type m_ineq() const {return n_cons_ineq;}
+  inline int_type n_low() const  {return n_bnds_low;}
+  inline int_type n_upp() const  {return n_bnds_upp;}
+  inline int_type m_ineq_low() const {return n_ineq_low;}
+  inline int_type m_ineq_upp() const {return n_ineq_upp;}
+  inline int_type n_complem()  const {return m_ineq_low()+m_ineq_upp()+n_low()+n_upp();}
 
-  inline long long n_local() const
+  inline int_type n_local() const
   {
     return xl->get_local_size();
   }
-  inline long long n_low_local() const {return n_bnds_low_local;}
-  inline long long n_upp_local() const {return n_bnds_upp_local;}
+  inline int_type n_low_local() const {return n_bnds_low_local;}
+  inline int_type n_upp_local() const {return n_bnds_upp_local;}
 
   /* methods for transforming the internal objects to corresponding user objects */
   inline double user_obj(double hiop_f) { return nlp_transformations.apply_inv_to_obj(hiop_f); }
@@ -266,9 +266,9 @@ protected:
 
   /* problem data */
   //various dimensions
-  long long n_vars, n_cons, n_cons_eq, n_cons_ineq;
-  long long n_bnds_low, n_bnds_low_local, n_bnds_upp, n_bnds_upp_local, n_ineq_low, n_ineq_upp;
-  long long n_bnds_lu, n_ineq_lu;
+  int_type n_vars, n_cons, n_cons_eq, n_cons_ineq;
+  int_type n_bnds_low, n_bnds_low_local, n_bnds_upp, n_bnds_upp_local, n_ineq_low, n_ineq_upp;
+  int_type n_bnds_lu, n_ineq_lu;
   hiopVector *xl, *xu, *ixu, *ixl; //these will/can be global, memory distributed
   hiopInterfaceBase::NonlinearityType* vars_type; //C array containing the types for local vars
 
@@ -293,7 +293,7 @@ protected:
 
 #ifdef HIOP_USE_MPI
   //inter-process distribution of vectors
-  long long* vec_distrib;
+  int_type* vec_distrib;
 #endif
 
   /* User provided interface */
@@ -444,8 +444,8 @@ public:
     assert(0==nnz_sparse_Hess_Lagr_SD);
     return new hiopMatrixSymBlockDiagMDS(nx_sparse, nx_dense, nnz_sparse_Hess_Lagr_SS);
   }
-  virtual long long nx_sp() const { return nx_sparse; }
-  virtual long long nx_de() const { return nx_dense; }
+  virtual int_type nx_sp() const { return nx_sparse; }
+  virtual int_type nx_de() const { return nx_dense; }
 private:
   hiopInterfaceMDS& interface;
   int nx_sparse, nx_dense;
@@ -512,7 +512,7 @@ public:
   {
     return new hiopMatrixSymSparseTriplet(n_vars, m_nnz_sparse_Hess_Lagr);
   }
-  virtual long long nx() const { return n_vars; }
+  virtual int_type nx() const { return n_vars; }
 
   //not inherited from NlpFormulation
 

@@ -204,15 +204,15 @@ void hiopMatrixSparseTriplet::addDiagonal(const double& value)
 {
   assert(false && "not needed");
 }
-void hiopMatrixSparseTriplet::addSubDiagonal(const double& alpha, long long start, const hiopVector& d_)
+void hiopMatrixSparseTriplet::addSubDiagonal(const double& alpha, int_type start, const hiopVector& d_)
 {
   assert(false && "not needed");
 }
 
-void hiopMatrixSparseTriplet::copySubDiagonalFrom(const long long& start_on_dest_diag,
-                                                  const long long& num_elems,
+void hiopMatrixSparseTriplet::copySubDiagonalFrom(const int_type& start_on_dest_diag,
+                                                  const int_type& num_elems,
                                                   const hiopVector& d_,
-                                                  const long long& start_on_nnz_idx,
+                                                  const int_type& start_on_nnz_idx,
                                                   double scal)
 {
   const hiopVectorPar& vd = dynamic_cast<const hiopVectorPar&>(d_);
@@ -221,23 +221,23 @@ void hiopMatrixSparseTriplet::copySubDiagonalFrom(const long long& start_on_dest
   const double* v = vd.local_data_const();
 
   for(auto row_src=0; row_src<num_elems; row_src++) {
-    const long long row_dest = row_src + start_on_dest_diag;
-    const long long nnz_dest = row_src + start_on_nnz_idx;
+    const int_type row_dest = row_src + start_on_dest_diag;
+    const int_type nnz_dest = row_src + start_on_nnz_idx;
     iRow_[nnz_dest] = jCol_[nnz_dest] = row_dest;
     this->values_[nnz_dest] = scal*v[row_src];
   }
 }
 
-void hiopMatrixSparseTriplet::setSubDiagonalTo(const long long& start_on_dest_diag,
-                                               const long long& num_elems,
+void hiopMatrixSparseTriplet::setSubDiagonalTo(const int_type& start_on_dest_diag,
+                                               const int_type& num_elems,
                                                const double& c,
-                                               const long long& start_on_nnz_idx)
+                                               const int_type& start_on_nnz_idx)
 {
   assert(start_on_dest_diag>=0 && start_on_dest_diag+num_elems<=this->nrows_);
 
   for(auto row_src=0; row_src<num_elems; row_src++) {
-    const long long  row_dest = row_src + start_on_dest_diag;
-    const long long  nnz_dest = row_src + start_on_nnz_idx;
+    const int_type  row_dest = row_src + start_on_dest_diag;
+    const int_type  nnz_dest = row_src + start_on_nnz_idx;
     iRow_[nnz_dest] = row_dest;
     jCol_[nnz_dest] = row_dest;
     this->values_[nnz_dest] = c;
@@ -533,8 +533,8 @@ hiopMatrixSparseTriplet::allocAndBuildRowStarts() const
 }
 
 void hiopMatrixSparseTriplet::copyRowsFrom(const hiopMatrix& src_gen,
-                                           const long long* rows_idxs,
-                                           long long n_rows)
+                                           const int_type* rows_idxs,
+                                           int_type n_rows)
 {
   const hiopMatrixSparseTriplet& src = dynamic_cast<const hiopMatrixSparseTriplet&>(src_gen);
   assert(this->m() == n_rows);
@@ -590,8 +590,8 @@ void hiopMatrixSparseTriplet::copyRowsFrom(const hiopMatrix& src_gen,
  * @pre 'this' must have exactly, or more cols than 'src'
  */
 void hiopMatrixSparseTriplet::copyRowsBlockFrom(const hiopMatrix& src_gen,
-                                         const long long& rows_src_idx_st, const long long& n_rows,
-                                         const long long& rows_dest_idx_st, const long long& dest_nnz_st)
+                                         const int_type& rows_src_idx_st, const int_type& n_rows,
+                                         const int_type& rows_dest_idx_st, const int_type& dest_nnz_st)
 {
   const hiopMatrixSparseTriplet& src = dynamic_cast<const hiopMatrixSparseTriplet&>(src_gen);
   assert(this->numberOfNonzeros() >= src.numberOfNonzeros());
@@ -641,8 +641,8 @@ void hiopMatrixSparseTriplet::copyRowsBlockFrom(const hiopMatrix& src_gen,
 
 void hiopMatrixSparseTriplet::
 copyDiagMatrixToSubblock(const double& src_val,
-                         const long long& dest_row_st, const long long& col_dest_st,
-                         const long long& dest_nnz_st, const int &nnz_to_copy)
+                         const int_type& dest_row_st, const int_type& col_dest_st,
+                         const int_type& dest_nnz_st, const int &nnz_to_copy)
 {
   assert(this->numberOfNonzeros() >= nnz_to_copy+dest_nnz_st);
   assert(this->n() >= nnz_to_copy);
@@ -660,8 +660,8 @@ copyDiagMatrixToSubblock(const double& src_val,
 
 void hiopMatrixSparseTriplet::
 copyDiagMatrixToSubblock_w_pattern(const hiopVector& dx,
-                                   const long long& dest_row_st, const long long& dest_col_st,
-                                   const long long& dest_nnz_st, const int &nnz_to_copy,
+                                   const int_type& dest_row_st, const int_type& dest_col_st,
+                                   const int_type& dest_nnz_st, const int &nnz_to_copy,
                                    const hiopVector& ix)
 {
   assert(this->numberOfNonzeros() >= nnz_to_copy+dest_nnz_st);
@@ -706,11 +706,11 @@ void hiopMatrixSparseTriplet::print(FILE* file, const char* msg/*=NULL*/,
     if(NULL==msg) {
       if(numranks>1) {
         fprintf(file,
-                "matrix of size %lld %lld and nonzeros %lld, printing %d elems (on rank=%d)\n",
+                "matrix of size %d %d and nonzeros %d, printing %d elems (on rank=%d)\n",
                 m(), n(), numberOfNonzeros(), max_elems, myrank_);
       } else {
         fprintf(file,
-                "matrix of size %lld %lld and nonzeros %lld, printing %d elems\n",
+                "matrix of size %d %d and nonzeros %d, printing %d elems\n",
                 m(), n(), numberOfNonzeros(), max_elems);
       }
     } else {
@@ -995,9 +995,9 @@ void hiopMatrixSymSparseTriplet::startingAtAddSubDiagonalToStartingAt(int diag_s
 }
 
 void hiopMatrixSparseTriplet::copySubmatrixFrom(const hiopMatrix& src_gen,
-                                                const long long& dest_row_st,
-                                                const long long& dest_col_st,
-                                                const long long& dest_nnz_st,
+                                                const int_type& dest_row_st,
+                                                const int_type& dest_col_st,
+                                                const int_type& dest_nnz_st,
                                                 const bool offdiag_only)
 {
   const hiopMatrixSparseTriplet& src = dynamic_cast<const hiopMatrixSparseTriplet&>(src_gen);
@@ -1029,9 +1029,9 @@ void hiopMatrixSparseTriplet::copySubmatrixFrom(const hiopMatrix& src_gen,
 }
 
 void hiopMatrixSparseTriplet::copySubmatrixFromTrans(const hiopMatrix& src_gen,
-                                                     const long long& dest_row_st,
-                                                     const long long& dest_col_st,
-                                                     const long long& dest_nnz_st,
+                                                     const int_type& dest_row_st,
+                                                     const int_type& dest_col_st,
+                                                     const int_type& dest_nnz_st,
                                                      const bool offdiag_only)
 {
   const hiopMatrixSparseTriplet& src = dynamic_cast<const hiopMatrixSparseTriplet&>(src_gen);
@@ -1063,9 +1063,9 @@ void hiopMatrixSparseTriplet::copySubmatrixFromTrans(const hiopMatrix& src_gen,
 }
 
 void hiopMatrixSparseTriplet::setSubmatrixToConstantDiag_w_colpattern(const double& scalar,
-                                                                      const long long& dest_row_st,
-                                                                      const long long& dest_col_st,
-                                                                      const long long& dest_nnz_st,
+                                                                      const int_type& dest_row_st,
+                                                                      const int_type& dest_col_st,
+                                                                      const int_type& dest_nnz_st,
                                                                       const int &nnz_to_copy,
                                                                       const hiopVector& ix)
 {
@@ -1093,9 +1093,9 @@ void hiopMatrixSparseTriplet::setSubmatrixToConstantDiag_w_colpattern(const doub
 }
 
 void hiopMatrixSparseTriplet::setSubmatrixToConstantDiag_w_rowpattern(const double& scalar,
-                                                                      const long long& dest_row_st,
-                                                                      const long long& dest_col_st,
-                                                                      const long long& dest_nnz_st,
+                                                                      const int_type& dest_row_st,
+                                                                      const int_type& dest_col_st,
+                                                                      const int_type& dest_nnz_st,
                                                                       const int &nnz_to_copy,
                                                                       const hiopVector& ix)
 {
@@ -1123,7 +1123,7 @@ void hiopMatrixSparseTriplet::setSubmatrixToConstantDiag_w_rowpattern(const doub
 }
 
 
-long long hiopMatrixSymSparseTriplet::numberOfOffDiagNonzeros() const
+int_type hiopMatrixSymSparseTriplet::numberOfOffDiagNonzeros() const
 {
   if(-1==nnz_offdiag_){
     nnz_offdiag_= nnz_;
@@ -1233,7 +1233,7 @@ void hiopMatrixSparseTriplet::convertToCSR(int &csr_nnz,
           nnz_each_row_tmp[rowID_tmp]++;
           total_nnz_tmp++;
         }
-      }else{
+      } else {
         nnz_tmp = nnz_each_row_tmp[rowID_tmp] + csr_kRowPtr[rowID_tmp];
         csr_jCol[nnz_tmp] = colID_tmp;
         csr_kVal[nnz_tmp] = values_[k];
@@ -1247,28 +1247,26 @@ void hiopMatrixSparseTriplet::convertToCSR(int &csr_nnz,
     // correct the missing diagonal term and sort the nonzeros
     for(int i=0;i<n;i++){
       // sort the nonzeros
-      {
-        std::vector<int> ind_temp(csr_kRowPtr[i+1]-csr_kRowPtr[i]);
-        std::iota(ind_temp.begin(), ind_temp.end(), 0);
-        std::sort(ind_temp.begin(), ind_temp.end(),[&](int a, int b){ return csr_jCol[a+csr_kRowPtr[i]]<csr_jCol[b+csr_kRowPtr[i]]; });
-
-        reorder(csr_kVal+csr_kRowPtr[i],ind_temp,csr_kRowPtr[i+1]-csr_kRowPtr[i]);
-        reorder(index_covert_CSR2Triplet+csr_kRowPtr[i],ind_temp,csr_kRowPtr[i+1]-csr_kRowPtr[i]);
-        std::sort(csr_jCol+csr_kRowPtr[i],csr_jCol+csr_kRowPtr[i+1]);
-
-
-        int old_nnz_idx = index_covert_extra_Diag2CSR_temp[i];
-        if(old_nnz_idx!=-1){
-          int old_nnz_in_row = ind_temp[old_nnz_idx - csr_kRowPtr[i]];
-          std::vector<int>::iterator p = std::find(ind_temp.begin(),ind_temp.end(),old_nnz_in_row);
-          assert(p != ind_temp.end());
-          int new_nnz_idx = std::distance (ind_temp.begin(), p) + csr_kRowPtr[i];
-          index_covert_extra_Diag2CSR[i] = new_nnz_idx;
-          extra_diag_nnz_map[new_nnz_idx] = extra_diag_nnz_map_temp[i];
-        }
+      std::vector<int> ind_temp(csr_kRowPtr[i+1]-csr_kRowPtr[i]);
+      std::iota(ind_temp.begin(), ind_temp.end(), 0);
+      std::sort(ind_temp.begin(), ind_temp.end(),[&](int a, int b){ return csr_jCol[a+csr_kRowPtr[i]]<csr_jCol[b+csr_kRowPtr[i]]; });
+      
+      reorder(csr_kVal+csr_kRowPtr[i],ind_temp,csr_kRowPtr[i+1]-csr_kRowPtr[i]);
+      reorder(index_covert_CSR2Triplet+csr_kRowPtr[i],ind_temp,csr_kRowPtr[i+1]-csr_kRowPtr[i]);
+      std::sort(csr_jCol+csr_kRowPtr[i],csr_jCol+csr_kRowPtr[i+1]);
+      
+      
+      int old_nnz_idx = index_covert_extra_Diag2CSR_temp[i];
+      if(old_nnz_idx!=-1){
+        int old_nnz_in_row = ind_temp[old_nnz_idx - csr_kRowPtr[i]];
+        std::vector<int>::iterator p = std::find(ind_temp.begin(),ind_temp.end(),old_nnz_in_row);
+        assert(p != ind_temp.end());        
+        int new_nnz_idx = (int) std::distance (ind_temp.begin(), p) + csr_kRowPtr[i];
+        assert(new_nnz_idx>=0);
+        index_covert_extra_Diag2CSR[i] = new_nnz_idx;
+        extra_diag_nnz_map[new_nnz_idx] = extra_diag_nnz_map_temp[i];
       }
-    }
-
+    } 
   }
 
   delete [] nnz_each_row_tmp; nnz_each_row_tmp = nullptr;

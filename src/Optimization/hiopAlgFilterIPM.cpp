@@ -300,7 +300,9 @@ void hiopAlgFilterIPMBase::reloadOptions()
   delta=1.;           // the WachterBiegler paper
   // parameter in the Armijo rule
   eta_phi=nlp->options->GetNumeric("eta_phi");
-  kappa_Sigma = 1e10; //parameter in resetting the duals to guarantee closedness of the primal-dual logbar Hessian to the primal logbar Hessian
+  //parameter in resetting the duals to guarantee closedness of the primal-dual logbar Hessian to the primal
+  //logbar Hessian
+  kappa_Sigma = 1e10; 
   _tau=fmax(tau_min,1.0-_mu);
   theta_max = 1e7; //temporary - will be updated after ini pt is computed
   theta_min = 1e7; //temporary - will be updated after ini pt is computed
@@ -578,7 +580,7 @@ evalNlpAndLogErrors(const hiopIterate& it, const hiopResidual& resid, const doub
 {
   nlp->runStats.tmSolverInternal.start();
 
-  long long n=nlp->n_complem(), m=nlp->m();
+  int_type n=nlp->n_complem(), m=nlp->m();
   //the one norms
   //double nrmDualBou=it.normOneOfBoundDuals();
   //double nrmDualEqu=it.normOneOfEqualityDuals();
@@ -1965,8 +1967,8 @@ int hiopAlgFilterIPMBase::apply_second_order_correction(hiopKKTLinSys* kkt,
                                                         double &grad_phi_dx,
                                                         int &num_adjusted_bounds)
 {
-  int max_soc_iter = nlp->options->GetNumeric("max_soc_iter");
-  int kappa_soc = nlp->options->GetNumeric("kappa_soc");
+  int max_soc_iter = nlp->options->GetInteger("max_soc_iter");
+  double kappa_soc = nlp->options->GetNumeric("kappa_soc");
 
   if(max_soc_iter == 0) {
     return false;

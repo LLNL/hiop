@@ -253,8 +253,8 @@ public:
   virtual hiopVector* alloc_clone() const = 0;
   /// @brief allocates a vector that mirrors this, and copies the values
   virtual hiopVector* new_copy () const = 0;
-  virtual long long get_size() const { return n_; }
-  virtual long long get_local_size() const = 0;
+  virtual int_type get_size() const { return n_; }
+  virtual int_type get_local_size() const = 0;
   virtual double* local_data() = 0;
   virtual const double* local_data_const() const = 0;
   virtual double* local_data_host() = 0;
@@ -266,9 +266,9 @@ public:
   virtual void copyFromDev() const = 0;
   
   /// @brief get number of values that are less than the given value 'val'
-  virtual long long numOfElemsLessThan(const double &val) const = 0;
+  virtual int_type numOfElemsLessThan(const double &val) const = 0;
   /// @brief get number of values whose absolute value are less than the given value 'val'
-  virtual long long numOfElemsAbsLessThan(const double &val) const = 0;  
+  virtual int_type numOfElemsAbsLessThan(const double &val) const = 0;  
 
   /// @brief set int array 'arr', starting at `start` and ending at `end`, to the values in `arr_src` from 'start_src`
   virtual void set_array_from_to(hiopInterfaceBase::NonlinearityType* arr, 
@@ -281,7 +281,7 @@ public:
                                  const int end, 
                                  const hiopInterfaceBase::NonlinearityType arr_src) const = 0;
 protected:
-  long long n_; //we assume sequential data
+  int_type n_; //we assume sequential data
 
 protected:
   hiopVector(const hiopVector& v) : n_(v.n_) {};

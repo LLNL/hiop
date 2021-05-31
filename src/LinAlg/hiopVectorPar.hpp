@@ -65,7 +65,7 @@ namespace hiop
 class hiopVectorPar : public hiopVector
 {
 public:
-  hiopVectorPar(const long long& glob_n, long long* col_part=NULL, MPI_Comm comm=MPI_COMM_SELF);
+  hiopVectorPar(const int_type& glob_n, int_type* col_part=NULL, MPI_Comm comm=MPI_COMM_SELF);
   virtual ~hiopVectorPar();
 
   virtual void setToZero();
@@ -207,7 +207,7 @@ public:
   virtual void print();
 
   /* more accessers */
-  virtual long long get_local_size() const { return n_local_; }
+  virtual int_type get_local_size() const { return n_local_; }
   virtual double* local_data() { return data_; }
   virtual const double* local_data_const() const { return data_; }
   virtual MPI_Comm get_mpi_comm() const { return comm_; }
@@ -219,8 +219,8 @@ public:
   virtual void copyToDev() const {}
   virtual void copyFromDev() const {}
   
-  virtual long long numOfElemsLessThan(const double &val) const;
-  virtual long long numOfElemsAbsLessThan(const double &val) const;    
+  virtual int_type numOfElemsLessThan(const double &val) const;
+  virtual int_type numOfElemsAbsLessThan(const double &val) const;    
 
   virtual void set_array_from_to(hiopInterfaceBase::NonlinearityType* arr, 
                                  const int start, 
@@ -235,8 +235,8 @@ public:
 protected:
   MPI_Comm comm_;
   double* data_;
-  long long glob_il_, glob_iu_;
-  long long n_local_;
+  int_type glob_il_, glob_iu_;
+  int_type n_local_;
 private:
   /// @brief copy constructor, for internal/private use only (it doesn't copy the elements.)
   hiopVectorPar(const hiopVectorPar&);

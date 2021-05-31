@@ -233,7 +233,7 @@ void hiopOptions::registerOptions()
 
   // second order correction
   {
-    registerNumOption("max_soc_iter", 4, 0, 1e6,
+    registerIntOption("max_soc_iter", 4, 0, 1000000,
 		      "Max number of iterations in second order correction (default 4)");
     
     registerNumOption("kappa_soc", 0.99, 0.0, 1e+20,

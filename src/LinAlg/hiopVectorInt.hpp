@@ -1,6 +1,5 @@
 // Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
-// Written by Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
@@ -55,9 +54,11 @@
  *
  */
 
+#include "hiop_defs.hpp"
+
 namespace hiop
 {
-typedef long long hiopInt;
+typedef int_type hiopInt;
 
 class hiopVectorInt
 {

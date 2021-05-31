@@ -103,7 +103,7 @@ double hiopResidual::compute_nlp_infeasib_onenorm (const hiopIterate& it,
 {
   nlp->runStats.tmSolverInternal.start();
   double nrmOne_infeasib = 0.;
-  long long nx_loc=rx->get_local_size();
+  int_type nx_loc=rx->get_local_size();
   //ryc
   ryc->copyFrom(nlp->get_crhs());
   ryc->axpy(-1.0,c);
@@ -159,7 +159,7 @@ int hiopResidual::update(const hiopIterate& it,
   nrmInf_bar_optim = nrmInf_bar_feasib = nrmInf_bar_complem = 0;
   nrmOne_nlp_feasib = nrmOne_bar_feasib = 0.;
 
-  long long nx_loc=rx->get_local_size();
+  int_type nx_loc=rx->get_local_size();
   const double&  mu=logprob.mu;
   double buf;
 #ifdef HIOP_DEEPCHECKS
@@ -411,7 +411,7 @@ void hiopResidual::update_soc(const hiopIterate& it,
   nrmInf_bar_optim = nrmInf_bar_feasib = nrmInf_bar_complem = 0;
   nrmOne_nlp_feasib = nrmOne_bar_feasib = 0.;
 
-  long long nx_loc=rx->get_local_size();
+  int_type nx_loc=rx->get_local_size();
   const double&  mu=logprob.mu;
   double buf;
 #ifdef HIOP_DEEPCHECKS

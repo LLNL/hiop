@@ -5,7 +5,7 @@
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
 // is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause). 
-// Please also read �Additional BSD Notice� below.
+// Please also read "Additional BSD Notice" below.
 //
 // Redistribution and use in source and binary forms, with or without modification, 
 // are permitted provided that the following conditions are met:
@@ -203,7 +203,7 @@ bool hiopNlpFormulation::finalizeInitialization()
   if(vars_type) delete[] vars_type;
 #ifdef HIOP_USE_MPI
   if(vec_distrib) delete[] vec_distrib;
-  vec_distrib=new long long[num_ranks+1];
+  vec_distrib=new int_type[num_ranks+1];
   if(true==interface_base.get_vecdistrib_info(n_vars,vec_distrib)) {
     xl = LinearAlgebraFactory::createVector(n_vars, vec_distrib, comm);
   } else {
@@ -231,7 +231,7 @@ bool hiopNlpFormulation::finalizeInitialization()
   ixl = xu->alloc_clone(); ixu = xu->alloc_clone();
   n_bnds_low_local = n_bnds_upp_local = 0;
   n_bnds_lu = 0;
-  long long nfixed_vars_local=0;
+  int_type nfixed_vars_local=0;
   double *ixl_vec=ixl->local_data_host(), *ixu_vec=ixu->local_data_host();
 #ifdef HIOP_DEEPCHECKS
   const int maxBndsCloseMsgs=3; int nBndsClose=0;
@@ -282,9 +282,9 @@ bool hiopNlpFormulation::finalizeInitialization()
 
   dFixedVarsTol = fixedVarTol;
   
-  long long nfixed_vars=nfixed_vars_local;
+  int_type nfixed_vars=nfixed_vars_local;
 #ifdef HIOP_USE_MPI
-  int ierr = MPI_Allreduce(&nfixed_vars_local, &nfixed_vars, 1, MPI_LONG_LONG, MPI_SUM, comm); 
+  int ierr = MPI_Allreduce(&nfixed_vars_local, &nfixed_vars, 1, MPI_INT, MPI_SUM, comm); 
   assert(MPI_SUCCESS==ierr);
 #endif
   hiopFixedVarsRemover* fixedVarsRemover = NULL;
@@ -306,7 +306,7 @@ bool hiopNlpFormulation::finalizeInitialization()
     
       n_vars = fixedVarsRemover->rs_n();
 #ifdef HIOP_USE_MPI
-      long long* vec_distrib_rs = fixedVarsRemover->allocRSVectorDistrib();
+      int_type* vec_distrib_rs = fixedVarsRemover->allocRSVectorDistrib();
       if(vec_distrib) delete[] vec_distrib;
       vec_distrib = vec_distrib_rs;
 #endif
@@ -456,8 +456,8 @@ bool hiopNlpFormulation::finalizeInitialization()
 
   //compute the overall n_low and n_upp
 #ifdef HIOP_USE_MPI
-  long long aux[3]={n_bnds_low_local, n_bnds_upp_local, n_bnds_lu}, aux_g[3];
-  ierr=MPI_Allreduce(aux, aux_g, 3, MPI_LONG_LONG, MPI_SUM, comm); assert(MPI_SUCCESS==ierr);
+  int_type aux[3]={n_bnds_low_local, n_bnds_upp_local, n_bnds_lu}, aux_g[3];
+  ierr=MPI_Allreduce(aux, aux_g, 3, MPI_INT, MPI_SUM, comm); assert(MPI_SUCCESS==ierr);
   n_bnds_low=aux_g[0]; n_bnds_upp=aux_g[1]; n_bnds_lu=aux_g[2];
 #else
   n_bnds_low=n_bnds_low_local; n_bnds_upp=n_bnds_upp_local; //n_bnds_lu is ok
@@ -918,6 +918,7 @@ bool hiopNlpFormulation::user_force_update(int iter,
   // unpack the full size vector
   cons_body_->copy_to_two_vec_w_pattern(c, *cons_eq_mapping_, d, *cons_ineq_mapping_);
   cons_lambdas_->copy_to_two_vec_w_pattern(y_c, *cons_eq_mapping_, y_d, *cons_ineq_mapping_);
+  return true;
 }
 
 void hiopNlpFormulation::print(FILE* f, const char* msg, int rank) const
@@ -936,12 +937,12 @@ void hiopNlpFormulation::print(FILE* f, const char* msg, int rank) const
     } else { 
       fprintf(f, "NLP summary\n");
     }
-    fprintf(f, "Total number of variables: %lld\n", n_vars);
-    fprintf(f, "     lower/upper/lower_and_upper bounds: %lld / %lld / %lld\n",
+    fprintf(f, "Total number of variables: %d\n", n_vars);
+    fprintf(f, "     lower/upper/lower_and_upper bounds: %d / %d / %d\n",
 	    n_bnds_low, n_bnds_upp, n_bnds_lu);
-    fprintf(f, "Total number of equality constraints: %lld\n", n_cons_eq);
-    fprintf(f, "Total number of inequality constraints: %lld\n", n_cons_ineq );
-    fprintf(f, "     lower/upper/lower_and_upper bounds: %lld / %lld / %lld\n",
+    fprintf(f, "Total number of equality constraints: %d\n", n_cons_eq);
+    fprintf(f, "Total number of inequality constraints: %d\n", n_cons_ineq );
+    fprintf(f, "     lower/upper/lower_and_upper bounds: %d / %d / %d\n",
 	    n_ineq_low, n_ineq_upp, n_ineq_lu);
   } 
 }
@@ -1158,7 +1159,7 @@ hiopMatrixDense* hiopNlpDenseConstraints::alloc_multivector_primal(int nrows, in
 {
   hiopMatrixDense* M;
 #ifdef HIOP_USE_MPI
-  //long long* vec_distrib=new long long[num_ranks+1];
+  //int_type* vec_distrib=new int_type[num_ranks+1];
   //if(true==interface.get_vecdistrib_info(n_vars,vec_distrib)) 
   if(vec_distrib)
   {
@@ -1392,10 +1393,16 @@ bool hiopNlpSparse::eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& Jac_c)
     runStats.tmEvalJac_con.start();
 
     int nnz = pJac_c->numberOfNonzeros();
-    bool bret = interface.eval_Jac_cons(n_vars, n_cons,
-                                      n_cons_eq, (const long long *) cons_eq_mapping_->local_data_const(),
-                                      x_user->local_data_const(), new_x,
-                                      nnz, pJac_c->i_row(), pJac_c->j_col(), pJac_c->M());
+    bool bret = interface.eval_Jac_cons(n_vars,
+                                        n_cons,
+                                        n_cons_eq,
+                                        cons_eq_mapping_->local_data_const(),
+                                        x_user->local_data_const(),
+                                        new_x,
+                                        nnz,
+                                        pJac_c->i_row(),
+                                        pJac_c->j_col(),
+                                        pJac_c->M());
 
     // scale the matrix
     Jac_c = *(nlp_transformations.apply_to_jacob_eq(Jac_c, n_cons_eq));
@@ -1418,10 +1425,16 @@ bool hiopNlpSparse::eval_Jac_d(hiopVector& x, bool new_x, hiopMatrix& Jac_d)
     runStats.tmEvalJac_con.start();
 
     int nnz = pJac_d->numberOfNonzeros();
-    bool bret =  interface.eval_Jac_cons(n_vars, n_cons,
-                                       n_cons_ineq, (const long long *) cons_ineq_mapping_->local_data_const(),
-                                       x_user->local_data_const(), new_x,
-                                       nnz, pJac_d->i_row(), pJac_d->j_col(), pJac_d->M());
+    bool bret =  interface.eval_Jac_cons(n_vars,
+                                         n_cons,
+                                         n_cons_ineq,
+                                         cons_ineq_mapping_->local_data_const(),
+                                         x_user->local_data_const(),
+                                         new_x,
+                                         nnz,
+                                         pJac_d->i_row(),
+                                         pJac_d->j_col(),
+                                         pJac_d->M());
 
     // scale the matrix
     Jac_d = *(nlp_transformations.apply_to_jacob_ineq(Jac_d, n_cons_ineq));

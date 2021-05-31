@@ -420,7 +420,7 @@ bool hiopDualsLsqUpdateLinsysAugSparse::do_lsq_update(hiopIterate& iter,
     Msys.setToZero();
 
     // copy Jac and Hes to the full iterate matrix
-    long long dest_nnz_st{0};
+    int_type dest_nnz_st{0};
     Msys.copyDiagMatrixToSubblock(1., 0, 0, dest_nnz_st, nx+nd);
     dest_nnz_st += nx+nd;
     Msys.copyRowsBlockFrom(Jac_cSp, 0,   neq,    nx+nd,      dest_nnz_st);

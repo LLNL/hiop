@@ -61,11 +61,12 @@
 namespace hiop
 {
 
-hiopMatrixDenseRowMajor::hiopMatrixDenseRowMajor(const long long& m, 
-				 const long long& glob_n, 
-				 long long* col_part/*=NULL*/, 
-				 MPI_Comm comm/*=MPI_COMM_SELF*/, 
-				 const long long& m_max_alloc/*=-1*/) : hiopMatrixDense(m, glob_n, comm)
+hiopMatrixDenseRowMajor::hiopMatrixDenseRowMajor(const int_type& m, 
+                                                 const int_type& glob_n, 
+                                                 int_type* col_part/*=NULL*/, 
+                                                 MPI_Comm comm/*=MPI_COMM_SELF*/, 
+                                                 const int_type& m_max_alloc/*=-1*/)
+  : hiopMatrixDense(m, glob_n, comm)
 {
   int P=0;
   if(col_part) {
@@ -168,7 +169,7 @@ void hiopMatrixDenseRowMajor::copyRowsFrom(const hiopMatrixDense& srcmat, int nu
     memcpy(M_[row_dest], src.M_[0], n_local_*num_rows*sizeof(double));
 }
 
-void hiopMatrixDenseRowMajor::copyRowsFrom(const hiopMatrix& src_gen, const long long* rows_idxs, long long n_rows)
+void hiopMatrixDenseRowMajor::copyRowsFrom(const hiopMatrix& src_gen, const int_type* rows_idxs, int_type n_rows)
 {
   const auto& src = dynamic_cast<const hiopMatrixDenseRowMajor&>(src_gen);
   assert(n_global_==src.n_global_);
@@ -224,7 +225,7 @@ void hiopMatrixDenseRowMajor::copyFromMatrixBlock(const hiopMatrixDense& srcmat,
   }
 }
 
-void hiopMatrixDenseRowMajor::shiftRows(long long shift)
+void hiopMatrixDenseRowMajor::shiftRows(int_type shift)
 {
   if(shift==0) return;
   if(fabs(shift)==m_local_) return; //nothing to shift
@@ -265,14 +266,14 @@ void hiopMatrixDenseRowMajor::shiftRows(long long shift)
   }
 #endif
 }
-void hiopMatrixDenseRowMajor::replaceRow(long long row, const hiopVector& vec)
+void hiopMatrixDenseRowMajor::replaceRow(int_type row, const hiopVector& vec)
 {
   assert(row>=0); assert(row<m_local_);
-  long long vec_size=vec.get_local_size();
+  int_type vec_size=vec.get_local_size();
   memcpy(M_[row], vec.local_data_const(), (vec_size>=n_local_?n_local_:vec_size)*sizeof(double));
 }
 
-void hiopMatrixDenseRowMajor::getRow(long long irow, hiopVector& row_vec)
+void hiopMatrixDenseRowMajor::getRow(int_type irow, hiopVector& row_vec)
 {
   assert(irow>=0); assert(irow<m_local_);
   hiopVectorPar& vec=dynamic_cast<hiopVectorPar&>(row_vec);
@@ -660,10 +661,10 @@ void hiopMatrixDenseRowMajor::addDiagonal(const double& value)
 {
   for(int i=0; i<n_local_; i++) M_[i][i] += value;
 }
-void hiopMatrixDenseRowMajor::addSubDiagonal(const double& alpha, long long start, const hiopVector& d_)
+void hiopMatrixDenseRowMajor::addSubDiagonal(const double& alpha, int_type start, const hiopVector& d_)
 {
   const hiopVectorPar& d = dynamic_cast<const hiopVectorPar&>(d_);
-  long long dlen=d.get_size();
+  int_type dlen=d.get_size();
 #ifdef HIOP_DEEPCHECKS
   assert(start>=0);
   assert(start+dlen<=n_local_);
@@ -676,8 +677,11 @@ void hiopMatrixDenseRowMajor::addSubDiagonal(const double& alpha, long long star
 /* add to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements of
  * 'd_' (source) starting at index 'start_on_src_vec'. The number of elements added is 'num_elems' 
  * when num_elems>=0, or the remaining elems on 'd_' starting at 'start_on_src_vec'. */
-void hiopMatrixDenseRowMajor::addSubDiagonal(int start_on_dest_diag, const double& alpha, 
-				     const hiopVector& d_, int start_on_src_vec, int num_elems/*=-1*/)
+void hiopMatrixDenseRowMajor::addSubDiagonal(int start_on_dest_diag,
+                                             const double& alpha, 
+                                             const hiopVector& d_,
+                                             int start_on_src_vec,
+                                             int num_elems/*=-1*/)
 {
   const hiopVectorPar& d = dynamic_cast<const hiopVectorPar&>(d_);
   if(num_elems<0) num_elems = d.get_size()-start_on_src_vec;
