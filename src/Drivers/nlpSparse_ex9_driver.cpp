@@ -50,7 +50,6 @@ int main(int argc, char **argv)
   Ex9 nlp_interface(nx,S,nS);
   hiopNlpSparse nlp(nlp_interface);
   nlp.options->SetStringValue("compute_mode", "cpu");// using CPU only in computations
-  //nlp.options->SetStringValue("compute_mode", "hybrid");// using both CPU and GPU
   nlp.options->SetStringValue("KKTLinsys", "xdycyd");
   //nlp.options->SetStringValue("KKTLinsys", "full");
 

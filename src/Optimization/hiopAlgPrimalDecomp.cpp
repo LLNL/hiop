@@ -19,7 +19,7 @@ namespace hiop
     ReqRecourseApprox(const int& n)
     {
       n_=n;
-      buffer=new double[n_+1];
+      buffer = LinearAlgebraFactory::createVector(n_+1);
     }
 
     int test() 
@@ -31,28 +31,28 @@ namespace hiop
     }
     void post_recv(int tag, int rank_from, MPI_Comm comm)
     {
-      int ierr = MPI_Irecv(buffer, n_+1, MPI_DOUBLE, rank_from, tag, comm, &request_);
+      double* buffer_arr = buffer->local_data();
+      int ierr = MPI_Irecv(buffer_arr, n_+1, MPI_DOUBLE, rank_from, tag, comm, &request_);
       assert(MPI_SUCCESS == ierr);
     }
     void post_send(int tag, int rank_to, MPI_Comm comm)
     {
-      int ierr = MPI_Isend(buffer, n_+1, MPI_DOUBLE, rank_to, tag, comm, &request_);
+      double* buffer_arr = buffer->local_data();
+      int ierr = MPI_Isend(buffer_arr, n_+1, MPI_DOUBLE, rank_to, tag, comm, &request_);
       assert(MPI_SUCCESS == ierr);
     }
-    double value(){return buffer[0];}
-    void set_value(const double v){buffer[0]=v;}
-    double grad(int i){return buffer[i+1];}
+    double value(){return buffer->local_data()[0];}
+    void set_value(const double v){buffer->local_data()[0]=v;}
+    double grad(int i){return buffer->local_data()[i+1];}
     void set_grad(const double* g)
     {
-      for(int i=0;i<n_;i++) {
-        buffer[i+1]=g[i];
-      }
+      buffer->copyFromStarting(1,g,n_);
     }
 
     MPI_Request request_;
   private:
     int n_;
-    double* buffer;
+    hiopVector* buffer;
   };
 
   /* This struct is used to post receive and request for contingency
@@ -448,7 +448,8 @@ hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
   n_ = master_prob_->get_num_vars();
   // if no coupling indices are specified, assume the entire x is coupled
   nc_ = n_;
-  xc_idx_.resize(nc_);
+  xc_idx_ = new int[nc_];
+  
   for(int i=0;i<nc_;i++) xc_idx_[i] = i;
   //determine rank and rank type
   //only two rank types for now, master and evaluator/worker
@@ -470,7 +471,7 @@ hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
 hiopAlgPrimalDecomposition::
 hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
                            const int nc, 
-                           const std::vector<int>& xc_index,
+                           const int* xc_index,
                            MPI_Comm comm_world/*=MPI_COMM_WORLD*/)
   : master_prob_(prob_in),
     nc_(nc), 
@@ -479,8 +480,10 @@ hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
   S_ = master_prob_->get_num_rterms();
   n_ = master_prob_->get_num_vars();
 
-  assert(xc_index.size()==nc);
-  xc_idx_ = xc_index;
+  xc_idx_ = new int[nc_];
+  for(int i=0; i<nc; i++) {
+    xc_idx_[i] = xc_index[i];
+  }
   //determine rank and rank type
   //only two rank types for now, master and evaluator/worker
 
@@ -828,9 +831,10 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
 
         if(nc_<n_) {
           assert(xc_idx_[0]>=0);// if nc==0, why bother using this code?
-          for(int i=0;i<nc_;i++) {
-            x0_vec[i] = x_vec[xc_idx_[i]];
-          }
+	  x0->copyFrom(xc_idx_,*x_);
+          //for(int i=0;i<nc_;i++) {
+          //  x0_vec[i] = x_vec[xc_idx_[i]];
+          //}
         } else {
           assert(nc_==n_);
           x0->copyFromStarting(0, *x_);
@@ -891,9 +895,7 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
             //double x0[nc_]; 
             if(nc_<n_) {
               assert(xc_idx_[0]>=0);// if nc==0, why bother using this code?
-              for(int i=0;i<nc_;i++) {
-              x0_vec[i] = x_vec[xc_idx_[i]];
-              }
+	      x0->copyFrom(xc_idx_,*x_);
             } else {
               assert(nc_==n_);
               x0->copyFromStarting(0, *x_);
@@ -962,9 +964,10 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
     
         if(nc_<n_) {
           assert(xc_idx_[0]>=0);// if nc==0, why bother using this code?
-          for(int i=0;i<nc_;i++) {
-            x0_vec[i] = x_vec[xc_idx_[i]];
-          }
+	  x0->copyFrom(xc_idx_,*x_);
+          //for(int i=0;i<nc_;i++) {
+          //  x0_vec[i] = x_vec[xc_idx_[i]];
+          //}
         } else {
           assert(nc_==n_);
           x0->copyFromStarting(0, *x_);
@@ -1101,9 +1104,6 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
   printf("total number of recourse problems  %d\n", S_);
   // initial point for now set to all zero
   x_->setToZero();
-  //for(int i=0; i<n_; i++) {
-  //  x_[i] = 0.;
-  //}
       
   bool bret;
   int rank_master=0; //master rank is also the solver rank
@@ -1130,6 +1130,7 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
   HessianApprox*  hess_appx_2 = new HessianApprox(nc_,alpha_ratio_);
 
 
+
   hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator = new hiopInterfacePriDecProblem::
                                                            RecourseApproxEvaluator(nc_,S_,xc_idx_);
 
@@ -1141,6 +1142,7 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
   double convg_g = 1e20;
   double* x_vec = x_->local_data(); 
   
+
   // Outer loop starts
   for(int it=0; it<max_iter;it++) {
     //printf("iteration  %d\n", it);
@@ -1169,9 +1171,7 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
     if(nc_<n_) {
       //printf("xc_idx %d ",xc_idx_[0]);
       assert(xc_idx_[0]>=0);// if nc==0, why bother using this code?
-      for(int i=0;i<nc_;i++) {
-        x0_vec[i] = x_vec[xc_idx_[i]];
-      }
+      x0->copyFrom(xc_idx_,*x_);
     } else {
       assert(nc_==n_);
       x0->copyFromStarting(0, *x_);

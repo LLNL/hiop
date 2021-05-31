@@ -20,7 +20,7 @@ RecourseApproxEvaluator(int nc, int S)
   : nc_(nc),S_(S),rval_(0.)//nc = nx, nd=S
 {
   assert(S>=nc);
-  xc_idx_.resize(nc_);
+  xc_idx_ = new int[nc_];
   for(int i=0;i<nc_;i++) xc_idx_[i] = i;
   rgrad_ = LinearAlgebraFactory::createVector(nc);
   rhess_ = LinearAlgebraFactory::createVector(nc);
@@ -30,14 +30,16 @@ RecourseApproxEvaluator(int nc, int S)
 hiopInterfacePriDecProblem::RecourseApproxEvaluator::
 RecourseApproxEvaluator(const int nc, 
                         const int S, 
-                        const std::vector<int>& list)
+                        const int* list)
   : nc_(nc),S_(S),rval_(0.),rgrad_(NULL), rhess_(NULL),x0_(NULL)//nc = nx, nd=S
 {
   rgrad_ = LinearAlgebraFactory::createVector(nc);
   rhess_ = LinearAlgebraFactory::createVector(nc);
   x0_ = LinearAlgebraFactory::createVector(nc);
-  assert(list.size()==nc_);
-  xc_idx_ = list;
+  //assert(list.size()==nc_);
+  xc_idx_ = new int[nc_];
+  
+  for(int i=0;i<nc_;i++) xc_idx_[i] = list[i];
 }
 
 hiopInterfacePriDecProblem::RecourseApproxEvaluator::
@@ -55,8 +57,7 @@ RecourseApproxEvaluator(const int nc,
   //rgrad_ = new double[nc];
   rhess_ = LinearAlgebraFactory::createVector(nc);
   x0_ = LinearAlgebraFactory::createVector(nc);
-    
-  xc_idx_.resize(nc_);
+  xc_idx_ = new int[nc_];
   for(int i=0;i<nc_;i++) xc_idx_[i] = i;
 
   rgrad_->copyFromStarting(0, rgrad.local_data_const(), nc);
@@ -67,7 +68,7 @@ RecourseApproxEvaluator(const int nc,
 hiopInterfacePriDecProblem::RecourseApproxEvaluator::
 RecourseApproxEvaluator(const int nc, 
                         const int S, 
-                        const std::vector<int>& list,
+                        const int* list,
                         const double& rval, 
                         const hiopVector& rgrad, 
                         const hiopVector& rhess, 
@@ -79,8 +80,8 @@ RecourseApproxEvaluator(const int nc,
   rgrad_ = LinearAlgebraFactory::createVector(nc);
   rhess_ = LinearAlgebraFactory::createVector(nc);
   x0_ = LinearAlgebraFactory::createVector(nc);
-  assert(list.size()==nc_);
-  xc_idx_ = list;
+  xc_idx_ = new int[nc_];
+  for(int i=0;i<nc_;i++) xc_idx_[i] = list[i];
 
   rgrad_->copyFromStarting(0, rgrad.local_data_const(), nc);
   //memcpy(rgrad_,rgrad, nc*sizeof(double));
@@ -102,15 +103,15 @@ eval_f(const long long& n, const double* x, bool new_x, double& obj_value)
   assert(rgrad_!=NULL);
   obj_value += rval_;
 
-  double* rgrad_arr = rgrad_->local_data();
-  double* x0_arr = x0_->local_data();
-  for(int i=0; i<nc_; i++) {
-    obj_value += rgrad_arr[i]*(x[xc_idx_[i]]-x0_arr[i]);
-  }
-  double* rhess_arr = rhess_->local_data();
-  for(int i=0; i<nc_; i++) {
-    obj_value += 0.5*rhess_arr[i]*(x[xc_idx_[i]]-x0_arr[i])*(x[xc_idx_[i]]-x0_arr[i]);
-  }
+  hiopVector* temp;
+  temp = LinearAlgebraFactory::createVector(nc_); 
+  temp->copyFrom(xc_idx_,x);   
+  temp->axpy(-1.0,*x0_);
+  obj_value += temp->dotProductWith(*rgrad_);
+
+  temp->componentMult(*temp);
+  obj_value += 0.5*temp->dotProductWith(*rhess_);
+  
   return true;
 }
  
@@ -122,8 +123,16 @@ eval_grad(const long long& n, const double* x, bool new_x, double* grad)
   double* rgrad_arr = rgrad_->local_data();
   double* rhess_arr = rhess_->local_data();
   double* x0_arr = x0_->local_data();
+
+  hiopVector* temp;
+  temp = LinearAlgebraFactory::createVector(nc_); 
+  temp->copyFrom(xc_idx_,x);
+  temp->axpy(-1.0,*x0_);
+  temp->componentMult(*rhess_);
+  temp->axpy(1.0,*rgrad_);
+
   for(int i=0; i<nc_; i++) {
-    grad[xc_idx_[i]] += rgrad_arr[i]+rhess_arr[i]*(x[xc_idx_[i]]-x0_arr[i]);
+    grad[xc_idx_[i]] += temp->local_data()[i];
   }
   return true;
 }
@@ -144,7 +153,6 @@ eval_hess(const long long& n, const hiopVector& x, bool new_x, hiopVector& hess)
 }
 
 // pass the COMM_SELF communicator since this example is only intended to run inside 1 MPI process //
-
 bool hiopInterfacePriDecProblem::RecourseApproxEvaluator::
 get_MPI_comm(MPI_Comm& comm_out) { comm_out=MPI_COMM_SELF; return true;}
   
@@ -186,10 +194,12 @@ set_x0(const int n, const hiopVector& x0)
 }
 
 void hiopInterfacePriDecProblem::RecourseApproxEvaluator::
-set_xc_idx(const std::vector<int>& idx)
+set_xc_idx(const int* idx)
 {
-  assert(nc_=idx.size());
-  xc_idx_ = idx;
+  if(xc_idx_==NULL){ 
+    xc_idx_ = new int[nc_];
+  }
+  for(int i=0;i<nc_;i++) xc_idx_[i] = idx[i];
 }
 
 int hiopInterfacePriDecProblem::
@@ -222,7 +232,7 @@ RecourseApproxEvaluator::get_x0() const
   return x0_;
 }
 
-std::vector<int> hiopInterfacePriDecProblem::
+int* hiopInterfacePriDecProblem::
 RecourseApproxEvaluator::get_xc_idx() const 
 {
   return xc_idx_;

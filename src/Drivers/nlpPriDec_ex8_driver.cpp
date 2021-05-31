@@ -119,7 +119,7 @@ int main(int argc, char **argv)
   int nc=20;
   //index of coupled x in the entire x
   //for testing purpos
-  std::vector<int> list(nc);
+  int* list = new int[nc];
   for(int i=0;i<nc;i++) list[i]=i;
  
   bool selfCheck;

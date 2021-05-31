@@ -362,10 +362,6 @@ public:
           MHSS[nnzit] += obj_factor/double(S_);
         }
         nnzit++;
-        /*for(int j=0;j<S_;j++){
-          MHSS[nnzit] = -obj_factor/double(S_);
-          nnzit++;
-        }*/
       }
       // r_i(x;\xi^i) = 1/S *  min_y 0.5 || y - x ||^2 such that 
       for(int i=0;i<S_;i++) {

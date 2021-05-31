@@ -182,10 +182,30 @@ public:
     v.copyFrom(from);
     int fail = verifyAnswer(&v, one);
 
-    const real_type* from_buffer = createLocalBuffer(N, three);
+    real_type* from_buffer = createLocalBuffer(N, three);
     v.copyFrom(from_buffer);
     fail += verifyAnswer(&v, three);
 
+    // createIdxBuffer creates an int* with value 1, except the N-1 
+    // component with value 0
+    local_ordinal_type* idx_buffer = createIdxBuffer(N,1);
+    setLocalElement(&from, 0, two);
+    v.copyFrom(idx_buffer, from);
+ 
+    fail += verifyAnswer(&v,
+      [=] (local_ordinal_type i) -> real_type
+      {
+        return (i == N-1) ? two : one;
+      });
+    
+    real_type* from_buffer_new = from.local_data(); 
+    v.copyFrom(idx_buffer, from_buffer_new);
+    fail += verifyAnswer(&v,
+      [=] (local_ordinal_type i) -> real_type
+      {
+        return (i == N-1) ? two : one;
+      });
+    deleteLocalBuffer(from_buffer);
     printMessage(fail, __func__, rank);
     return reduceReturn(fail, &v);
   }
@@ -1897,6 +1917,7 @@ protected:
   virtual const real_type* getLocalDataConst(const hiop::hiopVector* x) = 0;
   virtual void setLocalElement(hiop::hiopVector* x, local_ordinal_type i, real_type val) = 0;
   virtual real_type* createLocalBuffer(local_ordinal_type N, real_type val) = 0;
+  virtual local_ordinal_type* createIdxBuffer(local_ordinal_type N, local_ordinal_type val) = 0;
   virtual void deleteLocalBuffer(real_type* buffer) = 0;
   virtual bool reduceReturn(int failures, hiop::hiopVector* x) = 0;
 };

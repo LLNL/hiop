@@ -8,13 +8,8 @@
 #include <chrono>
 #include <thread>
 #include <cmath>
+#include "hiopMPI.hpp"
 
-#ifdef HIOP_USE_MPI
-#include "mpi.h"
-#else
-#define MPI_COMM_WORLD 0
-#define MPI_Comm int
-#endif
 
 namespace hiop
 {
@@ -45,7 +40,7 @@ public:
 
   hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
                              const int nc, 
-                             const std::vector<int>& xc_index,
+                             const int* xc_index,
                              MPI_Comm comm_world=MPI_COMM_WORLD);
 
 
@@ -228,7 +223,6 @@ private:
   
   //current primal iterate
   hiopVector* x_;
-  //double* x_;
 
   //dimension of x_
   size_t n_;
@@ -243,7 +237,7 @@ private:
   size_t ver_ = 1;
 
   //indices of the coupled x in the full x
-  std::vector<int> xc_idx_;
+  int* xc_idx_;
   //tolerance of the convergence stopping criteria
   double tol_=1e-8;
 

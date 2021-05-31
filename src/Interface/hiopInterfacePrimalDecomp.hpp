@@ -7,25 +7,7 @@
 #include <cassert>
 #include <cstring> //for memcpy
 #include <vector>
-
-#ifdef HIOP_USE_MPI
-#include "mpi.h"
-
-#else
-#ifndef MPI_Comm
-#define MPI_Comm int
-#endif
-
-#ifndef MPI_COMM_WORLD
-#define MPI_COMM_WORLD 0
-#endif 
-
-#ifndef MPI_COMM_SELF 
-#define MPI_COMM_SELF 0
-#endif 
-#endif
-
-
+#include "hiopMPI.hpp"
 
 namespace hiop
 {
@@ -133,12 +115,12 @@ public:
  
     RecourseApproxEvaluator(int nc, int S);
     
-    RecourseApproxEvaluator(const int nc, const int S, const std::vector<int>& list);
+    RecourseApproxEvaluator(const int nc, const int S, const int* list);
   
     RecourseApproxEvaluator(const int nc, const int S, const double& rval, const hiopVector& rgrad, 
                             const hiopVector& rhess, const hiopVector& x0);
   
-    RecourseApproxEvaluator(int nc,int S, const std::vector<int>& list,
+    RecourseApproxEvaluator(int nc,int S, const int* list,
                             const double& rval, const hiopVector& rgrad, 
                             const hiopVector& rhess, const hiopVector& x0);
 
@@ -156,18 +138,18 @@ public:
     void set_rgrad(const int n, const hiopVector& rgrad);
     void set_rhess(const int n, const hiopVector& rhess);
     void set_x0(const int n, const hiopVector& x0);
-    void set_xc_idx(const std::vector<int>& idx);
+    void set_xc_idx(const int* idx);
 
     int get_S() const; 
     double get_rval() const;
     hiopVector* get_rgrad() const;
     hiopVector* get_rhess() const;
     hiopVector* get_x0() const; 
-    std::vector<int> get_xc_idx() const; 
+    int* get_xc_idx() const; 
 
   protected:
     int nc_,S_;
-    std::vector<int> xc_idx_;
+    int* xc_idx_;
     double rval_;
     //double* rgrad_;
     hiopVector* rgrad_;

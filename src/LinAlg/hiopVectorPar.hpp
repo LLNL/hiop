@@ -72,11 +72,17 @@ public:
   virtual void setToConstant_w_patternSelect(double c, const hiopVector& select);
   virtual void copyFrom(const hiopVector& v );
   virtual void copyFrom(const double* v_local_data); //v should be of length at least n_local_
+  
+  /// @brief Copy from the indices in index_in_src in v
+  virtual void copyFrom(const int* index_in_src, const hiopVector& v);
+  virtual void copyFrom(const int* index_in_src, const double* v);
+  
   /// @brief Copy the 'n' elements of v starting at 'start_index_in_this' in 'this'
   virtual void copyFromStarting(int start_index_in_this, const double* v, int n);
   virtual void copyFromStarting(int start_index_in_src, const hiopVector& v);
   /// @brief Copy the 'n' elements of v starting at 'start_index_in_v' into 'this'
   virtual void copy_from_starting_at(const double* v, int start_index_in_v, int n);
+  
     
   /*
    * @brief Copy from 'v' starting at 'start_idx_src' to 'this' starting at 'start_idx_dest'
