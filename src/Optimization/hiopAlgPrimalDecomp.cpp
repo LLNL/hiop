@@ -660,11 +660,6 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
     for(int it=0; it<max_iter;it++) {
       if(my_rank_==0) {
         t1 = MPI_Wtime(); 
-
-        //if(ver_ >=outlevel1) {
-        //  printf("iteration  %d\n", it);
-        //}
-        
       }
       // solve the base case
       if(my_rank_ == 0 && it==0) {//initial solve 

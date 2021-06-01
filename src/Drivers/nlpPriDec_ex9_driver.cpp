@@ -52,13 +52,16 @@ static bool parse_arguments(int argc, char **argv,
     break;
   case 4: // 3 arguments
     {
-      if(std::string(argv[3]) == "-selfcheck")
-      {
+      if(std::string(argv[3]) == "-selfcheck") {
 	self_check=true;
         nx = std::atoi(argv[1]);
         S = std::atof(argv[2]);
-        if(S<3) S = 4;
-        if(nx<=0) return false;
+        if(S<3) {
+          S = 4;
+        }
+        if(nx<=0) {
+          return false;
+        }
       } else {
         return false;
       }
@@ -72,12 +75,13 @@ static bool parse_arguments(int argc, char **argv,
     }
   case 2: //1 argument
     {
-      if(std::string(argv[1]) == "-selfcheck")
-      {
+      if(std::string(argv[1]) == "-selfcheck") {
         self_check=true;
       } else {
         nx = atoi(argv[1]);
-        if(nx<=0) return false;
+        if(nx<=0) {
+	  return false;
+	}
       }
     }
     break;
