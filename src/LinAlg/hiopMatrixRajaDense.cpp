@@ -68,46 +68,13 @@
 #include <RAJA/RAJA.hpp>
 
 #include "hiop_blasdefs.hpp"
+#include "hiop_raja_defs.hpp"
 
 #include "hiopVectorPar.hpp"
 #include "hiopVectorRajaPar.hpp"
 
 namespace hiop
 {
-
-#ifdef HIOP_USE_GPU
-  #include "cuda.h"
-  using hiop_raja_exec   = RAJA::cuda_exec<128>;
-  using hiop_raja_reduce = RAJA::cuda_reduce;
-  using hiop_raja_atomic = RAJA::cuda_atomic;
-  #define RAJA_LAMBDA [=] __device__
-  // Matrix execution policy
-  using matrix_exec =
-  RAJA::KernelPolicy<
-    RAJA::statement::CudaKernel<
-      RAJA::statement::For<1, RAJA::cuda_block_x_loop,
-        RAJA::statement::For<0, RAJA::cuda_thread_x_loop,
-          RAJA::statement::Lambda<0>
-        >
-      >
-    >
-  >;
-#else
-  using hiop_raja_exec   = RAJA::omp_parallel_for_exec;
-  using hiop_raja_reduce = RAJA::omp_reduce;
-  using hiop_raja_atomic = RAJA::omp_atomic;
-  #define RAJA_LAMBDA [=]
-  // Matrix execution policy
-  using matrix_exec = 
-  RAJA::KernelPolicy<
-    RAJA::statement::For<1, hiop_raja_exec,    // row
-      RAJA::statement::For<0, hiop_raja_exec,  // col
-        RAJA::statement::Lambda<0> 
-      >
-    >
-  >;
-#endif
-
 
 hiopMatrixRajaDense::hiopMatrixRajaDense(
   const long long& m, 

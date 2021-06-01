@@ -76,6 +76,7 @@ endif()
 
 # Add RAJA/Umpire sources when enabled
 if(HIOP_USE_RAJA)
+  list(APPEND hiopLinAlg_INTERFACE_HEADERS hiop_raja_defs.hpp)
   list(APPEND hiopLinAlg_SRC ${hiopLinAlg_RAJA_SRC})
 endif()
 
@@ -83,7 +84,9 @@ endif()
 # Treat RAJA sources as CUDA (temporary, need more flexible solutions)
 if(HIOP_USE_GPU)
   list(APPEND hiopLinAlg_SRC ${hiopLinAlg_GPU_SRC})
-  set_source_files_properties(${hiopLinAlg_RAJA_SRC} PROPERTIES LANGUAGE CUDA)
+  if(HIOP_USE_CUDA)
+    set_source_files_properties(${hiopLinAlg_RAJA_SRC} PROPERTIES LANGUAGE CUDA)
+  endif()
 endif()
 
 # Add interface to UMFPACK when Kron reduction is enabled

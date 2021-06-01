@@ -66,9 +66,16 @@ if(HIOP_BUILD_SHARED)
   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 endif()
 
-if(HIOP_USE_GPU)
-  option(HIOP_USE_MAGMA "Use Magma linear algebra" ON)
-endif()
+include(CMakeDependentOption)
+cmake_dependent_option(
+  HIOP_USE_CUDA "Build with support for CUDA" OFF "HIOP_USE_GPU" OFF
+)
+cmake_dependent_option(
+  HIOP_USE_HIP "Build with support for HIP" OFF "HIOP_USE_GPU" OFF
+)
+cmake_dependent_option(
+  HIOP_USE_MAGMA "Use Magma linear algebra" ON "HIOP_USE_GPU" ON
+)
 
 add_library(hiop_tpl INTERFACE)
 add_library(hiop_options INTERFACE)
@@ -141,8 +148,10 @@ if(HIOP_DEVELOPER_MODE)
   target_link_libraries(hiop_tpl INTERFACE hiop_options hiop_warnings)
 endif()
 
-find_package(OpenMP)
-target_link_libraries(hiop_tpl INTERFACE OpenMP::OpenMP_CXX)
+if(NOT (HIOP_USE_GPU AND HIOP_USE_HIP))
+  find_package(OpenMP)
+  target_link_libraries(hiop_tpl INTERFACE OpenMP::OpenMP_CXX)
+endif()
 
 if(NOT DEFINED BLAS_LIBRARIES)
   find_package(BLAS REQUIRED)
@@ -158,28 +167,42 @@ target_link_libraries(hiop_tpl INTERFACE ${LAPACK_LIBRARIES})
 message(STATUS "Using LAPACK libraries: ${LAPACK_LIBRARIES}")
 
 if(HIOP_USE_GPU)
-  include(CheckLanguage)
-  enable_language(CUDA)
-  check_language(CUDA)
-
-  if(NOT DEFINED CMAKE_CUDA_STANDARD)
-    set(CMAKE_CUDA_STANDARD 11)
-    set(CMAKE_CUDA_STANDARD_REQUIRED ON)
-  endif()
-
-  if(HIOP_NVCC_ARCH)
-    set(CMAKE_CUDA_FLAGS "-arch=${HIOP_NVCC_ARCH}")
-    message(STATUS "Using CUDA arch ${HIOP_NVCC_ARCH}")
-  else()
-    set(CMAKE_CUDA_FLAGS "-arch=sm_35")
-    message(STATUS "Using CUDA arch sm_35")
-  endif()
-  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-extended-lambda")
-
   set(HIOP_MAGMA_DIR CACHE PATH "Path to Magma directory")
+  if(HIOP_USE_CUDA)
+    include(CheckLanguage)
+    enable_language(CUDA)
+    check_language(CUDA)
 
-  include(FindHiopCudaLibraries)
-  target_link_libraries(hiop_tpl INTERFACE hiop_cuda)
+    if(NOT DEFINED CMAKE_CUDA_STANDARD)
+      set(CMAKE_CUDA_STANDARD 11)
+      set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+    endif()
+
+    if(HIOP_NVCC_ARCH)
+      set(CMAKE_CUDA_FLAGS "-arch=${HIOP_NVCC_ARCH}")
+      message(STATUS "Using CUDA arch ${HIOP_NVCC_ARCH}")
+    else()
+      set(CMAKE_CUDA_FLAGS "-arch=sm_35")
+      message(STATUS "Using CUDA arch sm_35")
+    endif()
+    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-extended-lambda")
+
+    include(FindHiopCudaLibraries)
+    target_link_libraries(hiop_tpl INTERFACE hiop_cuda)
+  elseif(HIOP_USE_HIP)
+    include(FindHiopHipLibraries)
+    add_definitions(-DHAVE_HIP) # For hipmagma
+    target_link_libraries(hiop_tpl INTERFACE hiop_hip)
+  else()
+    message(
+      FATAL_ERROR
+        "\nGPU is enabled, but both CUDA and HIP are disabled. "
+        "Enabling CUDA by default. If you would like to enable a particular GPU "
+        "platform, set one of the following variables to ON: "
+        "\n* EXAGO_ENABLE_CUDA"
+        "\n* EXAGO_ENABLE_HIP"
+    )
+  endif()
 endif(HIOP_USE_GPU)
 
 if(HIOP_USE_RAJA)

@@ -300,7 +300,7 @@ int main(int argc, char **argv) {
 
   // println("ns: $ns, nd: $nd")
 
-  double* Q = malloc(nd*nd*sizeof(double));
+  double* Q = (double*)malloc(nd*nd*sizeof(double));
   for(i=0; i<nd*nd; i=i+1) Q[i] = 1e-8;
   for(i=0; i<nd; i=i+1) Q[i + i*nd] += 2.0;
   for(i=1; i<nd-1; i=i+1) {
@@ -308,9 +308,9 @@ int main(int argc, char **argv) {
     Q[i + (i+1)*nd] += 1.0;
   }
 
-  double* Md = malloc(ns*nd*sizeof(double));
+  double* Md = (double*)malloc(ns*nd*sizeof(double));
   for(i=0; i<ns*nd; i=i+1) Md[i] = -1.0;
-  double* buf_y = malloc(nd*sizeof(double));
+  double* buf_y = (double*)malloc(nd*sizeof(double));
   for(i=0; i<nd; i=i+1) buf_y[i] = 0.0;
 
   long long n = 2*ns + nd;
@@ -322,11 +322,11 @@ int main(int argc, char **argv) {
   int nnz_sparse_Hess_Lagr_SS = 2*ns;
   int nnz_sparse_Hess_Lagr_SD = 0;
 
-  double* xlow = malloc(n*sizeof(double));
-  double* xupp = malloc(n*sizeof(double));
+  double* xlow = (double*)malloc(n*sizeof(double));
+  double* xupp = (double*)malloc(n*sizeof(double));
 
-  double* clow = malloc(m*sizeof(double));
-  double* cupp = malloc(m*sizeof(double));
+  double* clow = (double*)malloc(m*sizeof(double));
+  double* cupp = (double*)malloc(m*sizeof(double));
 
   for(i=0; i<ns; i=i+1) xlow[i] = -1e+20;
   for(i=ns; i<2*ns; i=i+1) xlow[i] = 0.;
@@ -362,7 +362,7 @@ int main(int argc, char **argv) {
   problem.get_sparse_dense_blocks_info = get_sparse_dense_blocks_info;
   problem.eval_Jac_cons = eval_Jac_cons;
   problem.eval_Hess_Lagr = eval_Hess_Lagr;
-  problem.solution = malloc(n * sizeof(double));
+  problem.solution = (double*)malloc(n * sizeof(double));
   for(int i=0; i<n; i++) problem.solution[i] = 0.0;
   
   hiop_createProblem(&problem);

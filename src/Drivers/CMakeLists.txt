@@ -20,7 +20,7 @@ add_executable(nlpMDS_ex4.exe nlpMDS_ex4_driver.cpp)
 target_link_libraries(nlpMDS_ex4.exe hiop)
 
 if(HIOP_USE_RAJA)
-  if(HIOP_USE_GPU)
+  if(HIOP_USE_GPU AND HIOP_USE_CUDA)
     set_source_files_properties(
       nlpMDS_raja_ex4.cpp 
       nlpMDS_ex4_raja_driver.cpp 

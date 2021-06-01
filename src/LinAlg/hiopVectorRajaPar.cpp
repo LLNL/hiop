@@ -71,6 +71,7 @@
 #include <umpire/ResourceManager.hpp>
 
 #include <RAJA/RAJA.hpp>
+#include "hiop_raja_defs.hpp"
 
 
 namespace hiop
@@ -83,22 +84,6 @@ using global_index_type = long long;
 // Define constants
 static constexpr real_type zero = 0.0;
 static constexpr real_type one  = 1.0;
-
-
-#ifdef HIOP_USE_GPU
-  #include "cuda.h"
-  #define RAJA_CUDA_BLOCK_SIZE 128
-  using hiop_raja_exec   = RAJA::cuda_exec<RAJA_CUDA_BLOCK_SIZE>;
-  using hiop_raja_reduce = RAJA::cuda_reduce;
-  using hiop_raja_atomic = RAJA::cuda_atomic;
-  #define RAJA_LAMBDA [=] __device__
-#else
-  using hiop_raja_exec   = RAJA::omp_parallel_for_exec;
-  using hiop_raja_reduce = RAJA::omp_reduce;
-  using hiop_raja_atomic = RAJA::omp_atomic;
-  #define RAJA_LAMBDA [=]
-#endif
-
 
 hiopVectorRajaPar::hiopVectorRajaPar(
   const long long& glob_n,
