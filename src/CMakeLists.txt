@@ -26,17 +26,17 @@ foreach(libtype shared static)
       $<$<BOOL:${HIOP_BUILD_SHARED}>:$<TARGET_OBJECTS:hiopInterface>>
       )
     target_link_libraries(hiop_${libtype} PUBLIC hiop_tpl)
+    target_include_directories(hiop_${libtype} PUBLIC
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/Interface>
+      $<INSTALL_INTERFACE:${CMAKE_INSTALL_PREFIX}/include>)
     set_target_properties(hiop_${libtype} PROPERTIES OUTPUT_NAME hiop)
-    install(TARGETS hiop_${libtype} DESTINATION lib)
+    install(TARGETS hiop_${libtype} DESTINATION lib EXPORT hiop-targets)
   endif()
 endforeach()
 
 # Create default library pointed to by HiOp::HiOp
 add_library(HiOp::HiOp ALIAS ${hiop_default_library_name})
 
-# Naked _hiop_ target is still used elsewhere in the codebase. This should be
-# removed...
-add_library(hiop ALIAS ${hiop_default_library_name})
-
 # Test drivers in the form of user applications
 add_subdirectory(Drivers)
+

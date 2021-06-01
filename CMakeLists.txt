@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.15)
+cmake_minimum_required (VERSION 3.18)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -167,19 +167,17 @@ if(HIOP_USE_GPU)
     set(CMAKE_CUDA_STANDARD_REQUIRED ON)
   endif()
 
-  if(HIOP_NVCC_ARCH)
-    set(CMAKE_CUDA_FLAGS "-arch=${HIOP_NVCC_ARCH}")
-    message(STATUS "Using CUDA arch ${HIOP_NVCC_ARCH}")
-  else()
-    set(CMAKE_CUDA_FLAGS "-arch=sm_35")
-    message(STATUS "Using CUDA arch sm_35")
+  if(NOT HIOP_NVCC_ARCH)
+    set(HIOP_NVCC_ARCH 35)
   endif()
-  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-extended-lambda")
-
+  set(HIOP_NVCC_ARCH "${HIOP_NVCC_ARCH}" CACHE STRING "Specifies CMAKE_CUDA_ARCHITECTURES")
+  set(CMAKE_CUDA_FLAGS "--expt-extended-lambda")
+  set(CMAKE_CUDA_ARCHITECTURES ${HIOP_NVCC_ARCH} CACHE STRING "" FORCE)
   set(HIOP_MAGMA_DIR CACHE PATH "Path to Magma directory")
-
+  include(FindHiopMagma)
   include(FindHiopCudaLibraries)
   target_link_libraries(hiop_tpl INTERFACE hiop_cuda)
+  target_link_libraries(hiop_cuda INTERFACE Magma)
 endif(HIOP_USE_GPU)
 
 if(HIOP_USE_RAJA)
@@ -191,6 +189,7 @@ if(HIOP_USE_RAJA)
   find_package(umpire CONFIG
     PATHS ${umpire_DIR} ${umpire_DIR}/share/umpire/cmake
     REQUIRED)
+  target_link_libraries(hiop_tpl INTERFACE umpire RAJA)
 endif()
 
 if(HIOP_WITH_KRON_REDUCTION)
@@ -203,10 +202,6 @@ if(HIOP_WITH_KRON_REDUCTION)
   include(FindHiopMETIS)
   target_link_libraries(hiop_tpl INTERFACE METIS)
 endif(HIOP_WITH_KRON_REDUCTION)
-
-if(HIOP_USE_RAJA)
-  target_link_libraries(hiop_tpl INTERFACE umpire RAJA)
-endif()
 
 if(HIOP_SPARSE)
   if(NOT TARGET METIS)
@@ -252,6 +247,13 @@ else(HIOP_SPARSE)
   set(HIOP_USE_STRUMPACK OFF CACHE BOOL "Build without STRUMPACK" FORCE)
 endif(HIOP_SPARSE)
 
+# It simplifies linking against metis to set an internal variable
+if(HIOP_SPARSE OR HIOP_WITH_KRON_REDUCTION)
+  set(HIOP_USE_METIS ON CACHE BOOL "Link against METIS library ${METIS_LIBRARY}" FORCE)
+else()
+  set(HIOP_USE_METIS OFF CACHE BOOL "Link against METIS library: ${METIS_LIBRARY}" FORCE)
+endif()
+
 # The binary dir is already a global include directory
 configure_file(
   "${CMAKE_SOURCE_DIR}/src/Interface/hiop_defs.hpp.in"
@@ -284,6 +286,35 @@ endif("${CMAKE_BUILD_TYPE}" STREQUAL "")
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
   set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/_dist-${CMAKE_BUILD_TYPE}")
 endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+
+##########################################################
+#  EXPORTING
+##########################################################
+
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+  HiOpConfigVersion.cmake
+  VERSION ${CMAKE_PROJECT_VERSION}
+  COMPATIBILITY AnyNewerVersion)
+
+install(TARGETS hiop_tpl EXPORT hiop-targets)
+
+# Export libhiop
+install(EXPORT hiop-targets
+  FILE HiOpTargets.cmake
+  NAMESPACE HiOp::
+  DESTINATION
+  share/hiop/cmake)
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/HiOpConfig.cmake.in
+  "${CMAKE_CURRENT_BINARY_DIR}/HiOpConfig.cmake"
+  @ONLY
+  )
+
+install(FILES
+  ${CMAKE_CURRENT_BINARY_DIR}/HiOpConfig.cmake
+  ${CMAKE_CURRENT_BINARY_DIR}/HiOpConfigVersion.cmake
+  DESTINATION share/hiop/cmake)
 
 add_subdirectory(tests)
 

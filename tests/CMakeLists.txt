@@ -28,23 +28,17 @@ endif()
 
 # Build vector test
 add_executable(testVector ${testVector_SRC})
-target_link_libraries(testVector PRIVATE hiop)
+target_link_libraries(testVector PRIVATE HiOp::HiOp)
 
 # Build matrix test
 add_executable(testMatrixDense ${testMatrix_SRC})
-target_link_libraries(testMatrixDense PRIVATE hiop)
+target_link_libraries(testMatrixDense PRIVATE HiOp::HiOp)
 
 # Build sparse matrix test
 add_executable(testMatrixSparse ${testMatrixSparse_SRC})
-target_link_libraries(testMatrixSparse PRIVATE hiop)
+target_link_libraries(testMatrixSparse PRIVATE HiOp::HiOp)
 
 # Build symmetric sparse matrix test
 add_executable(testMatrixSymSparse ${testMatrixSymSparse_SRC})
-target_link_libraries(testMatrixSymSparse PRIVATE hiop)
+target_link_libraries(testMatrixSymSparse PRIVATE HiOp::HiOp)
 
-if(HIOP_USE_RAJA)
-  target_link_libraries(testVector PRIVATE umpire RAJA OpenMP::OpenMP_CXX)
-  target_link_libraries(testMatrixDense PRIVATE umpire RAJA OpenMP::OpenMP_CXX)
-  target_link_libraries(testMatrixSparse PRIVATE umpire RAJA OpenMP::OpenMP_CXX)
-  target_link_libraries(testMatrixSymSparse PRIVATE umpire RAJA OpenMP::OpenMP_CXX)
-endif()
