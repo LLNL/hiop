@@ -107,6 +107,9 @@ public:
   /** 
    * Define the evaluator class called by the base case problem class to add the quadratic 
    * recourse approximation
+   * This class is intened for internal use of hiopInterfacePriDecProblem class only
+   * In the cases where only RecourseApproxEvaluator is needed, a shell hiopInterfacePriDecProblem
+   * is still required to be created.
    */
   class RecourseApproxEvaluator
   {

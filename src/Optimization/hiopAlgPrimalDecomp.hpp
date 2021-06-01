@@ -77,8 +77,10 @@ public:
   void set_acceptable_tolerance(const double tol);
  
   double step_size_inf(const int nc, const hiopVector& x, const hiopVector& x0);
-  /* Contains information of a solution step including function value 
+  
+  /* Contains information of a previous solution step including function value 
    * and gradient. Used for storing the solution for the previous iteration
+   * This struct is intened for internal use of hiopAlgPrimalDecomposition class only
    */
   struct Prevsol{
     Prevsol(const int n, const double f, const double* grad, const double* x)
@@ -115,6 +117,7 @@ public:
    * as well as the convergence measure. The update function is called
    * every iteration to ensure the values are up to date.
    * The xk here should only be the coupled x.
+   * This struct is intened for internal use of hiopAlgPrimalDecomposition class only
    */
   struct HessianApprox {
     HessianApprox();
