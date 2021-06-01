@@ -2,6 +2,7 @@
 # Set headers to be installed as part of the hiop interface
 set(hiopLinAlg_INTERFACE_HEADERS
   hiop_blasdefs.hpp
+  hiopLinAlgFactory.hpp
   hiopLinSolver.hpp
   hiopLinSolverIndefDenseLapack.hpp
   hiopLinSolverIndefDenseMagma.hpp
