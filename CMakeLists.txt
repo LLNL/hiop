@@ -197,7 +197,7 @@ if(HIOP_USE_GPU)
     message(
       FATAL_ERROR
         "\nGPU is enabled, but both CUDA and HIP are disabled. "
-        "Enabling CUDA by default. If you would like to enable a particular GPU "
+        "If you would like to enable a particular GPU "
         "platform, set one of the following variables to ON: "
         "\n* EXAGO_ENABLE_CUDA"
         "\n* EXAGO_ENABLE_HIP"
