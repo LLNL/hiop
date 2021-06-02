@@ -74,7 +74,7 @@ cmake_dependent_option(
   HIOP_USE_HIP "Build with support for HIP" OFF "HIOP_USE_GPU" OFF
 )
 cmake_dependent_option(
-  HIOP_USE_MAGMA "Use Magma linear algebra" ON "HIOP_USE_GPU" ON
+  HIOP_USE_MAGMA "Use Magma linear algebra" ON "HIOP_USE_GPU" OFF
 )
 
 add_library(hiop_tpl INTERFACE)
