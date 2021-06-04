@@ -79,7 +79,7 @@ extern "C" void pardiso_get_schur_d(void*, int*, int*, int*, double*, int*, int*
 
 
 /** Wrapper for PARDISO */
-class hiopLinSolverIndefSparsePARDISO: public hiopLinSolverIndefSparse
+class hiopLinSolverIndefSparsePARDISO: public hiopLinSolverSymSparse
 {
 public:
   hiopLinSolverIndefSparsePARDISO(const int& n, const int& nnz, hiopNlpFormulation* nlp);

@@ -160,13 +160,12 @@ void hiopOptions::load_from_file(const char* filename)
   }
 
   ifstream input( filename );
-
   if(input.fail()) {
     if(strcmp(default_filename, filename)) {
       log_printf(hovWarning,
                  "Failed to read option file '%s'. Hiop will use default options.\n",
                  filename);
-      return;
+//      return;
     }
   }
   string line; string name, value;
@@ -800,7 +799,8 @@ void hiopOptionsNLP::register_options()
   // for the other KKTLinsys (which are all symmetric), MA57 is chosen 'auto'matically for all compute
   // modes, unless the user overwrites this
   {
-    vector<string> range(4); range[0] = "auto"; range[1]="ma57"; range[2]="pardiso"; range[3]="strumpack";
+    vector<string> range(5); range[0] = "auto"; range[1]="ma57"; range[2]="pardiso"; range[3]="strumpack"; range[4]="cusolver";
+
     register_str_option("linear_solver_sparse",
                         "auto",
                         range,
@@ -812,7 +812,8 @@ void hiopOptionsNLP::register_options()
   //  - when GPU mode is on, STRUMPACK is chosen by 'auto' if available
   //  - choosing option ma57 or pardiso with GPU being on, it results in no device being used in the linear solve!
   {
-    vector<string> range(4); range[0] = "auto"; range[1]="ma57"; range[2]="pardiso"; range[3]="strumpack";
+    vector<string> range(5); range[0] = "auto"; range[1]="ma57"; range[2]="pardiso"; range[3]="strumpack"; range[4]="cusolver";
+
     register_str_option("duals_init_linear_solver_sparse",
                         "auto",
                         range,

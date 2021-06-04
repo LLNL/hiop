@@ -73,7 +73,7 @@ using namespace strumpack;
 namespace hiop {
 
 /** Wrapper for STRUMPACK */
-class hiopLinSolverIndefSparseSTRUMPACK: public hiopLinSolverIndefSparse
+class hiopLinSolverIndefSparseSTRUMPACK: public hiopLinSolverSymSparse
 {
 public:
   hiopLinSolverIndefSparseSTRUMPACK(const int& n, const int& nnz, hiopNlpFormulation* nlp);
