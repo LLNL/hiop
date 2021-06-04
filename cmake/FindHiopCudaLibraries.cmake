@@ -13,6 +13,7 @@ target_link_libraries(hiop_cuda INTERFACE
   culibos
   nvblas
   cusparse
+  cusolver
   cudart
   cublasLt
   )

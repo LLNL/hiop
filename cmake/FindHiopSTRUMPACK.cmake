@@ -27,6 +27,7 @@ if(STRUMPACK_LIBRARIES)
   message(STATUS "Found STRUMPACK library: ${STRUMPACK_LIBRARIES}")
   add_library(STRUMPACK INTERFACE)
   target_link_libraries(STRUMPACK INTERFACE STRUMPACK::strumpack)
+  install(TARGETS STRUMPACK EXPORT hiop-targets)
 
   # ignore SCALAPACK not_found: it may be that strumpack was built without MPI/SCALAPCK
   if(SCALAPACK_LIBRARY)

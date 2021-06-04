@@ -96,11 +96,11 @@ int main(int argc, char **argv)
   nlp.options->SetStringValue("duals_update_type", "linear"); // "lsq" or "linear" --> lsq hasn't been implemented yet.
                                                             // it will be forced to use "linear" internally.
 //  nlp.options->SetStringValue("duals_init", "zero"); // "lsq" or "zero"
-  nlp.options->SetStringValue("compute_mode", "cpu");
+  nlp.options->SetStringValue("compute_mode", "hybrid");
 //  nlp.options->SetStringValue("compute_mode", "hybrid");
   nlp.options->SetStringValue("KKTLinsys", "xdycyd");
 //  nlp.options->SetStringValue("KKTLinsys", "full");
-//  nlp.options->SetStringValue("write_kkt", "yes");
+ nlp.options->SetStringValue("write_kkt", "yes");
 
 //  nlp.options->SetIntegerValue("max_iter", 100);
 //  nlp.options->SetNumericValue("kappa1", 1e-8);

@@ -50,3 +50,4 @@ endif()
 
 set(UMFPACK_INCLUDE_DIR CACHE PATH "Path to umfpack.h")
 set(UMFPACK_LIBRARY CACHE PATH "Path to umfpack library")
+
