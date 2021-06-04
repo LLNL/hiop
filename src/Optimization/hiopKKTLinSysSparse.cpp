@@ -57,6 +57,9 @@
 #ifdef HIOP_USE_PARDISO
 #include "hiopLinSolverSparsePARDISO.hpp"
 #endif
+#ifdef HIOP_USE_CUSOLVER
+#include "hiopLinSolverSparseCUSOLVER.hpp"
+#endif
 #endif
 
 namespace hiop
@@ -291,7 +294,20 @@ namespace hiop
         }
       }else{
         // on device
-#ifdef HIOP_USE_STRUMPACK        
+#ifdef HIOP_USE_CUSOLVER
+
+        hiopLinSolverIndefSparseCUSOLVER *p = new hiopLinSolverIndefSparseCUSOLVER(n, nnz, nlp_);
+
+        //print it as a warning if safe mode is on
+        auto verbosity = hovScalars;
+        if(safe_mode_) verbosity  = hovWarning;
+        nlp_->log->printf(verbosity,
+                          "KKT_SPARSE_XYcYd linsys: alloc CUSOLVER size %d (%d cons) (safe_mode=%d)\n",
+                          n, neq+nineq, safe_mode_);
+        
+        p->setFakeInertia(neq + nineq);
+        linSys_ = p;
+#elif defined(HIOP_USE_STRUMPACK)        
         hiopLinSolverIndefSparseSTRUMPACK *p = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
 
         //print it as a warning if safe mode is on
@@ -319,7 +335,7 @@ namespace hiop
           linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
 #endif // HIOP_USE_PARDISO
         }
-#endif // HIOP_USE_STRUMPACK
+#endif // HIOP_USE_CUSOLVER
       }
       assert(linSys_&& "KKT_SPARSE_XYcYd linsys: cannot instantiate backend linear solver");
     }
@@ -551,16 +567,23 @@ namespace hiop
 #endif  // HIOP_USE_STRUMPACK        
         }
       }else{
-        // on device
-#ifdef HIOP_USE_STRUMPACK   
-        hiopLinSolverIndefSparseSTRUMPACK *p = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
-
-        //print it as a warning if safe mode is on
+#if  defined(HIOP_USE_STRUMPACK) ||  defined(HIOP_USE_CUSOLVER)        
+//KS: I am lazy
+#ifdef HIOP_USE_CUSOLVER      
+        hiopLinSolverIndefSparseCUSOLVER *p = new hiopLinSolverIndefSparseCUSOLVER(n, nnz, nlp_);
         auto verbosity = hovScalars;
-        if(safe_mode_) verbosity  = hovWarning;
+        nlp_->log->printf(verbosity,
+                          "KKT_SPARSE_XDYcYd linsys: alloc CUSOLVER size %d (%d cons) (safe_mode=%d)\n",
+                          n, neq+nineq, safe_mode_);
+#elif defined(HIOP_USE_STRUMPACK)
+  hiopLinSolverIndefSparseSTRUMPACK *p = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
+        auto verbosity = hovScalars;
         nlp_->log->printf(verbosity,
                           "KKT_SPARSE_XDYcYd linsys: alloc STRUMPACK size %d (%d cons) (safe_mode=%d)\n",
                           n, neq+nineq, safe_mode_);
+#endif      
+  //print it as a warning if safe mode is on
+        if(safe_mode_) verbosity  = hovWarning;
         
         p->setFakeInertia(neq + nineq);
         linSys_ = p;
@@ -580,7 +603,7 @@ namespace hiop
           linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
 #endif // HIOP_USE_PARDISO
         }
-#endif // HIOP_USE_STRUMPACK
+#endif // HIOP_USE_CUSOLVER/STRUMPACK
       }
       assert(linSys_&& "KKT_SPARSE_XDYcYd linsys: cannot instantiate backend linear solver");
     }
@@ -621,14 +644,21 @@ namespace hiop
       p->setFakeInertia(n_con);
       linSys_ = p;
 #endif
-#ifdef HIOP_USE_STRUMPACK
+#if defined(HIOP_USE_STRUMPACK) || defined(HIOP_USE_CUSOLVER)
+#ifdef HIOP_USE_CUSOLVER
+      nlp_->log->printf(hovWarning,
+                        "KKT_SPARSE_FULL_KKT linsys: alloc CUSOLVER size %d (%d cons) (safe_mode=%d)\n",
+                        n, n_con, safe_mode_);
+      hiopLinSolverNonSymSparseCUSOLVER *p = new hiopLinSolverNonSymSparseCUSOLVER(n, nnz, nlp_);
+#elif  
+      hiopLinSolverNonSymSparseSTRUMPACK *p = new hiopLinSolverNonSymSparseSTRUMPACK(n, nnz, nlp_);
       nlp_->log->printf(hovWarning,
                         "KKT_SPARSE_FULL_KKT linsys: alloc STRUMPACK size %d (%d cons) (safe_mode=%d)\n",
                         n, n_con, safe_mode_);
-      hiopLinSolverNonSymSparseSTRUMPACK *p = new hiopLinSolverNonSymSparseSTRUMPACK(n, nnz, nlp_);
+#endif      
       p->setFakeInertia(n_con);
       linSys_ = p;
-#endif
+#endif // STRUMPACK/CUSOLVER
       if(NULL==linSys_) {
         nlp_->log->printf(hovError,
                           "KKT_SPARSE_FULL_KKT linsys: cannot instantiate backend linear solver "

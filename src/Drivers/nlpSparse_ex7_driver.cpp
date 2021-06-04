@@ -80,7 +80,7 @@ int main(int argc, char **argv)
 
   Ex7 nlp_interface(n,convex_obj,rankdefic_Jac_eq,rankdefic_Jac_ineq);
   hiopNlpSparse nlp(nlp_interface);
-  nlp.options->SetStringValue("compute_mode", "cpu");
+  nlp.options->SetStringValue("compute_mode", "hybrid");
   nlp.options->SetStringValue("KKTLinsys", "xdycyd");
 //  nlp.options->SetIntegerValue("max_iter", 100);
 //  nlp.options->SetNumericValue("kappa1", 1e-8);

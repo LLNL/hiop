@@ -62,8 +62,8 @@ namespace hiop
 {
   hiopLinSolverIndefSparseSTRUMPACK::hiopLinSolverIndefSparseSTRUMPACK(const int& n, const int& nnz, hiopNlpFormulation* nlp)
     : hiopLinSolverIndefSparse(n, nnz, nlp),
-      kRowPtr_{nullptr},jCol_{nullptr},kVal_{nullptr},index_covert_CSR2Triplet_{nullptr},index_covert_extra_Diag2CSR_{nullptr},
-      n_{n}, nnz_{0}
+    kRowPtr_{nullptr},jCol_{nullptr},kVal_{nullptr},index_covert_CSR2Triplet_{nullptr},index_covert_extra_Diag2CSR_{nullptr},
+    n_{n}, nnz_{0}
   {}
 
   hiopLinSolverIndefSparseSTRUMPACK::~hiopLinSolverIndefSparseSTRUMPACK()
@@ -184,8 +184,8 @@ namespace hiop
     }
 
     /*
-    * initialize strumpack parameters
-    */
+     * initialize strumpack parameters
+     */
 
     // possible values for MatchingJob (from STRUMPACK's source code)
     //NONE,                         /*!< Don't do anything                   */
@@ -202,11 +202,15 @@ namespace hiop
     //(such as small pivots, failure in LU factorization), you can
     // also try a different matching (MatchingJob::MAX_DIAGONAL_PRODUCT_SCALING
     // is the most robust option)
-    
-    
+
+
     spss.options().set_matching(MatchingJob::NONE);
     spss.options().enable_METIS_NodeNDP();
-    
+
+    spss.options().set_Krylov_solver(KrylovSolver::PREC_GMRES);
+    spss.options().set_GramSchmidt_type(GramSchmidtType::MODIFIED);
+    spss.options().set_nd_param(25);
+    printf("Setting solver to gmres \n");
     if(nlp_->options->GetString("compute_mode")=="cpu")
     {
       spss.options().disable_gpu();
@@ -214,7 +218,7 @@ namespace hiop
     spss.options().set_verbose(false);
 
     spss.set_csr_matrix(n_, kRowPtr_, jCol_, kVal_, true);
-//    spss.reorder(n_, n_);
+    //    spss.reorder(n_, n_);
   }
 
   int hiopLinSolverIndefSparseSTRUMPACK::matrixChanged()
@@ -265,7 +269,7 @@ namespace hiop
     spss.solve(drhs, dx);
 
     nlp_->runStats.linsolv.tmTriuSolves.stop();
-    
+
     delete rhs; rhs=nullptr;
     return 1;
   }
@@ -275,8 +279,8 @@ namespace hiop
 
   hiopLinSolverNonSymSparseSTRUMPACK::hiopLinSolverNonSymSparseSTRUMPACK(const int& n, const int& nnz, hiopNlpFormulation* nlp)
     : hiopLinSolverNonSymSparse(n, nnz, nlp),
-      kRowPtr_{nullptr},jCol_{nullptr},kVal_{nullptr},index_covert_CSR2Triplet_{nullptr},index_covert_extra_Diag2CSR_{nullptr},
-      n_{n}, nnz_{0}
+    kRowPtr_{nullptr},jCol_{nullptr},kVal_{nullptr},index_covert_CSR2Triplet_{nullptr},index_covert_extra_Diag2CSR_{nullptr},
+    n_{n}, nnz_{0}
   {}
 
   hiopLinSolverNonSymSparseSTRUMPACK::~hiopLinSolverNonSymSparseSTRUMPACK()
@@ -305,8 +309,8 @@ namespace hiop
     M.convertToCSR(nnz_, &kRowPtr_, &jCol_, &kVal_, &index_covert_CSR2Triplet_, &index_covert_extra_Diag2CSR_, extra_diag_nnz_map);
 
     /*
-    * initialize strumpack parameters
-    */
+     * initialize strumpack parameters
+     */
 
     // possible values for MatchingJob (from STRUMPACK's source code)
     //NONE,                         /*!< Don't do anything                   */
@@ -327,64 +331,72 @@ namespace hiop
     //spss.options().set_matching(MatchingJob::MAX_DIAGONAL_PRODUCT_SCALING);
     //spss.options().enable_METIS_NodeNDP();
     if(nlp_->options->GetString("compute_mode")=="cpu") {
-      spss.options().disable_gpu();
-    }
-    spss.options().set_verbose(false);
-
-    spss.set_csr_matrix(n_, kRowPtr_, jCol_, kVal_, true);
-//    spss.reorder(n_, n_);
-  }
-
-  int hiopLinSolverNonSymSparseSTRUMPACK::matrixChanged()
-  {
-    assert(n_==M.n() && M.n()==M.m());
-    assert(n_>0);
-
-    nlp_->runStats.linsolv.tmFactTime.start();
-
-    if( !kRowPtr_ ) {
-      this->firstCall();
-    } else {
-      // update matrix
-      int rowID_tmp{0};
-      for(int k=0;k<nnz_;k++) {
-        kVal_[k] = M.M()[index_covert_CSR2Triplet_[k]];
+      //    spss.options().set_matching(MatchingJob::NONE);
+      spss.options().enable_METIS_NodeNDP();
+      spss.options().set_Krylov_solver(KrylovSolver::PREC_GMRES);
+      spss.options().set_GramSchmidt_type(GramSchmidtType::MODIFIED);
+      spss.options().set_nd_param(25);
+      printf("Setting solver to gmres \n");
+      if(nlp_->options->GetString("compute_mode")=="cpu")
+      {
+        spss.options().disable_gpu();
       }
-      for(auto p: extra_diag_nnz_map) {
-        kVal_[p.first] += M.M()[p.second];
-      }
+      spss.options().set_verbose(false);
 
       spss.set_csr_matrix(n_, kRowPtr_, jCol_, kVal_, true);
+      //    spss.reorder(n_, n_);
+    }
+}
+    int hiopLinSolverNonSymSparseSTRUMPACK::matrixChanged()
+    {
+      assert(n_==M.n() && M.n()==M.m());
+      assert(n_>0);
+
+      nlp_->runStats.linsolv.tmFactTime.start();
+
+      if( !kRowPtr_ ) {
+        this->firstCall();
+      } else {
+        // update matrix
+        int rowID_tmp{0};
+        for(int k=0;k<nnz_;k++) {
+          kVal_[k] = M.M()[index_covert_CSR2Triplet_[k]];
+        }
+        for(auto p: extra_diag_nnz_map) {
+          kVal_[p.first] += M.M()[p.second];
+        }
+
+        spss.set_csr_matrix(n_, kRowPtr_, jCol_, kVal_, true);
+      }
+
+      spss.factor();   // not really necessary, called if needed by solve
+
+      nlp_->runStats.linsolv.tmInertiaComp.start();
+      int negEigVal = nFakeNegEigs_;
+      nlp_->runStats.linsolv.tmInertiaComp.stop();
+      return negEigVal;
     }
 
-    spss.factor();   // not really necessary, called if needed by solve
+    bool hiopLinSolverNonSymSparseSTRUMPACK::solve(hiopVector& x_)
+    {
+      assert(n_==M.n() && M.n()==M.m());
+      assert(n_>0);
+      assert(x_.get_size()==M.n());
 
-    nlp_->runStats.linsolv.tmInertiaComp.start();
-    int negEigVal = nFakeNegEigs_;
-    nlp_->runStats.linsolv.tmInertiaComp.stop();
-    return negEigVal;
-  }
+      nlp_->runStats.linsolv.tmTriuSolves.start();
 
-  bool hiopLinSolverNonSymSparseSTRUMPACK::solve(hiopVector& x_)
-  {
-    assert(n_==M.n() && M.n()==M.m());
-    assert(n_>0);
-    assert(x_.get_size()==M.n());
+      hiopVectorPar* x = dynamic_cast<hiopVectorPar*>(&x_);
+      assert(x != NULL);
+      hiopVectorPar* rhs = dynamic_cast<hiopVectorPar*>(x->new_copy());
+      double* dx = x->local_data();
+      double* drhs = rhs->local_data();
 
-    nlp_->runStats.linsolv.tmTriuSolves.start();
+      spss.solve(drhs, dx);
 
-    hiopVectorPar* x = dynamic_cast<hiopVectorPar*>(&x_);
-    assert(x != NULL);
-    hiopVectorPar* rhs = dynamic_cast<hiopVectorPar*>(x->new_copy());
-    double* dx = x->local_data();
-    double* drhs = rhs->local_data();
-
-    spss.solve(drhs, dx);
-
-    nlp_->runStats.linsolv.tmTriuSolves.stop();
-    delete rhs; rhs=nullptr;
-    return 1;
-  }
+      nlp_->runStats.linsolv.tmTriuSolves.stop();
+      delete rhs; rhs=nullptr;
+      return 1;
+    }
 
 
-} //end namespace hiop
+  } //end namespace hiop
