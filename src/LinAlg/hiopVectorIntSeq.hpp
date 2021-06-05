@@ -70,9 +70,11 @@ public:
 
   ~hiopVectorIntSeq();
 
-  const int& operator[] (int i) const override;
+  virtual const int* data() const override;
+  virtual const int* data_host() const override;
 
-  int& operator[] (int i) override;
+  virtual int* data() override;
+  virtual int* data_host() override;
 };
 
 } // namespace hiop

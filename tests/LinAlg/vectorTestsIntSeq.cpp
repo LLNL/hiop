@@ -63,9 +63,7 @@ int VectorTestsIntSeq::getLocalElement(hiop::hiopVectorInt* xvec, int idx) const
 {
   if(auto* x = dynamic_cast<hiop::hiopVectorIntSeq*>(xvec))
   {
-    /// @remark I don't think there's a more direct way to get at the
-    /// underlying data other than *(&x[0]+idx), which is disgusting...
-    return (*x)[idx];
+    return x->data_host()[idx];
   }
   else
   {
@@ -77,9 +75,7 @@ void VectorTestsIntSeq::setLocalElement(hiop::hiopVectorInt* xvec, int idx, int 
 {
   if(auto* x = dynamic_cast<hiop::hiopVectorIntSeq*>(xvec))
   {
-    /// @remark I don't think there's a more direct way to get at the
-    /// underlying data other than *(&x[0]+idx), which is disgusting...
-    (*x)[idx] = value;
+    x->data_host()[idx] = value;
   }
   else
   {

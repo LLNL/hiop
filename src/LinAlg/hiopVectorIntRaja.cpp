@@ -94,17 +94,27 @@ hiopVectorIntRaja::~hiopVectorIntRaja()
   buf_ = nullptr;
 }
 
-const int& hiopVectorIntRaja::operator[] (int i) const
+int* hiopVectorIntRaja::data()
 {
-  return buf_host_[i];
+  return buf_;
 }
 
-int& hiopVectorIntRaja::operator[] (int i)
+const int* hiopVectorIntRaja::data() const
 {
-  return buf_host_[i];
+  return buf_;
 }
 
-void hiopVectorIntRaja::copyFromDev() const
+int* hiopVectorIntRaja::data_host()
+{
+  return buf_host_;
+}
+
+const int* hiopVectorIntRaja::data_host() const
+{
+  return buf_host_;
+}
+
+void hiopVectorIntRaja::copy_from_dev()
 {
   if (buf_ != buf_host_)
   {
@@ -113,7 +123,7 @@ void hiopVectorIntRaja::copyFromDev() const
   }
 }
 
-void hiopVectorIntRaja::copyToDev() const
+void hiopVectorIntRaja::copy_to_dev()
 {
   if (buf_ != buf_host_)
   {

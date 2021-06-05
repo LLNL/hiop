@@ -77,30 +77,38 @@ public:
   ~hiopVectorIntRaja();
 
   /**
-   * @brief Access constant data at element _i_ on the _host_. To access data
-   * on the device, you must first call _copyFromDev_.
+   * @brief Access constant data at element _i_ on the _host_.
    */
-  const int& operator[] (int i) const override;
+  virtual const int* data_host() const override;
 
   /**
-   * @brief Access data at element _i_ on the _host_. To access data on the
-   * device, you must first call _copyFromDev_.
+   * @brief Access data at element _i_ on the _host_.
    */
-  int& operator[] (int i) override;
+  virtual int* data_host() override;
+
+  /**
+   * @brief Access constant data at element _i_ on the _device_.
+   */
+  virtual const int* data() const override;
+
+  /**
+   * @brief Access data at element _i_ on the _device_.
+   */
+  virtual int* data() override;
 
   /**
    * @brief Copy array data from the device.
    *
    * @note This is a no-op if the memory space is _host_ or _uvm_.
    */
-  void copyFromDev() const;
+  virtual void copy_from_dev() override;
 
   /**
    * @brief Copy array data to the device.
    *
    * @note This is a no-op if the memory space is _host_ or _uvm_.
    */
-  void copyToDev() const;
+  virtual void copy_to_dev() override;
 
 };
 

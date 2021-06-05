@@ -68,14 +68,24 @@ hiopVectorIntSeq::~hiopVectorIntSeq()
   delete[] buf_;
 }
 
-const int& hiopVectorIntSeq::operator[] (int i) const
+int* hiopVectorIntSeq::data()
 {
-  return buf_[i];
+  return buf_;
 }
 
-int& hiopVectorIntSeq::operator[] (int i)
+const int* hiopVectorIntSeq::data() const
 {
-  return buf_[i];
+  return buf_;
+}
+
+int* hiopVectorIntSeq::data_host()
+{
+  return data();
+}
+
+const int* hiopVectorIntSeq::data_host() const
+{
+  return data();
 }
 
 } // namespace hiop

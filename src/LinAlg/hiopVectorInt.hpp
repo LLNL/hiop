@@ -72,8 +72,14 @@ public:
     return sz_;
   }
 
-  virtual const int& operator[] (int i) const = 0;
-  virtual int& operator[] (int i) = 0;
+  virtual const int* data() const = 0;
+  virtual const int* data_host() const = 0;
+
+  virtual int* data() = 0;
+  virtual int* data_host() = 0;
+
+  virtual void copy_from_dev() {}
+  virtual void copy_to_dev() {}
 };
 
 } // namespace hiop
