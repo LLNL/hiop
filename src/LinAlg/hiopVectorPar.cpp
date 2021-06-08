@@ -232,6 +232,65 @@ void hiopVectorPar::copyToStartingAt_w_pattern(hiopVector& v_, int start_index/*
   assert(find_nnz + start_index <= v.n_local_);
 }
 
+/* copy 'c' and `d` into `this`, according to the map 'c_map` and `d_map`, respectively.
+*  e.g., this[c_map[i]] = c[i];
+*
+*  @pre: the size of `this` = the size of `c` + the size of `d`.
+*  @pre: `c_map` \Union `d_map` = {0, ..., size_of_this_vec-1}
+*/
+void hiopVectorPar::copy_from_two_vec_w_pattern(const hiopVector& c, 
+                                                const hiopVectorInt& c_map, 
+                                                const hiopVector& d, 
+                                                const hiopVectorInt& d_map)
+{
+  const double* c_arr = c.local_data_const();
+  const double* d_arr = d.local_data_const();
+  double* arr = local_data();
+  const int c_size = c.get_size();
+  assert( c_size == c_map.size() );
+  const int d_size = d.get_size();
+  assert( d_size == d_map.size() );
+  assert( c_size + d_size == n_local_);
+
+  //concatanate multipliers -> copy into whole lambda array 
+  for(int i=0; i<c_size; ++i) {
+    arr[c_map[i]] = c_arr[i];
+  }
+  for(int i=0; i<d_size; ++i) {
+    arr[d_map[i]] = d_arr[i];
+  }                                               
+}
+
+/* split `this` to `c` and `d`, according to the map 'c_map` and `d_map`, respectively.
+*
+*  @pre: the size of `this` = the size of `c` + the size of `d`.
+*  @pre: `c_map` \Union `d_map` = {0, ..., size_of_this_vec-1}
+*/
+void hiopVectorPar::copy_to_two_vec_w_pattern(hiopVector& c, 
+                                              const hiopVectorInt& c_map, 
+                                              hiopVector& d, 
+                                              const hiopVectorInt& d_map) const
+{
+  double* c_arr = c.local_data();
+  double* d_arr = d.local_data();
+  const double* arr = local_data_const();
+  const int c_size = c.get_size();
+  assert( c_size == c_map.size() );
+  const int d_size = d.get_size();
+  assert( d_size == d_map.size() );
+  assert( c_size + d_size == n_local_);
+
+  //concatanate multipliers -> copy into whole lambda array 
+  for(int i=0; i<c_size; ++i) {
+    c_arr[i] = arr[c_map[i]];
+  }
+  for(int i=0; i<d_size; ++i) {
+    d_arr[i] = arr[d_map[i]];
+  }                                               
+}
+
+
+
 /* copy 'this' (source) starting at 'start_idx_in_src' to 'dest' starting at index 'int start_idx_dest' 
  * If num_elems>=0, 'num_elems' will be copied; if num_elems<0, elements will be copied till the end of
  * either source ('this') or destination ('dest') is reached */
@@ -1028,5 +1087,39 @@ long long hiopVectorPar::numOfElemsAbsLessThan(const double &val) const
 
   return ret_num;
 }
+
+void hiopVectorPar::set_array_from_to(hiopInterfaceBase::NonlinearityType* arr, 
+                                      const int start, 
+                                      const int end, 
+                                      const hiopInterfaceBase::NonlinearityType* arr_src,
+                                      const int start_src) const
+{
+  assert(end <= n_local_ && start <= end && start >= 0 && start_src >= 0);
+
+  // If there is nothing to copy, return.
+  if(end - start == 0)
+    return;
+
+  memcpy(arr+start, arr_src+start_src, (end-start)*sizeof(hiopInterfaceBase::NonlinearityType));
+}
+
+void hiopVectorPar::set_array_from_to(hiopInterfaceBase::NonlinearityType* arr, 
+                                      const int start, 
+                                      const int end, 
+                                      const hiopInterfaceBase::NonlinearityType arr_src) const
+{
+  assert(end <= n_local_ && start <= end);
+
+  // If there is nothing to copy, return.
+  if(end - start == 0)
+    return;
+
+  for(int i=start; i<end; i++) {
+    arr[i] = arr_src;
+  }
+}
+
+
+
 
 };

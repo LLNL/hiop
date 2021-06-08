@@ -5,7 +5,7 @@
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
 // is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause). 
-// Please also read “Additional BSD Notice” below.
+// Please also read "Additional BSD Notice" below.
 //
 // Redistribution and use in source and binary forms, with or without modification, 
 // are permitted provided that the following conditions are met:
@@ -377,8 +377,8 @@ hiopNLPObjGradScaling::hiopNLPObjGradScaling(const double max_grad,
                                              hiopVector& gradf,
                                              hiopMatrix& Jac_c, 
                                              hiopMatrix& Jac_d, 
-                                             long long *cons_eq_mapping, 
-                                             long long *cons_ineq_mapping)
+                                             hiopInt* cons_eq_mapping, 
+                                             hiopInt* cons_ineq_mapping)
       : n_vars(gradf.get_size()), n_vars_local(gradf.get_local_size()),
         scale_factor_obj(1.),
         n_eq(c.get_size()), n_ineq(d.get_size())

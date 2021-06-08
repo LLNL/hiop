@@ -230,7 +230,18 @@ public:
                             int **index_covert_extra_Diag2CSR,
                             std::unordered_map<int,int> &extra_diag_nnz_map);
 
-  virtual long long numberOfOffDiagNonzeros() {assert("not implemented"&&0);return 0;};
+  virtual long long numberOfOffDiagNonzeros() const {assert("not implemented"&&0);return 0;};
+  virtual void set_Jac_FR(const hiopMatrixSparse& Jac_c,
+                          const hiopMatrixSparse& Jac_d,
+                          int* iJacS,
+                          int* jJacS,
+                          double* MJacS);
+
+  virtual void set_Hess_FR(const hiopMatrixSparse& Hess,
+                           int* iHSS,
+                           int* jHSS,
+                           double* MHSS,
+                           const hiopVector& add_diag) {assert("not implemented"&&0);}
 
   virtual hiopMatrixSparse* alloc_clone() const;
   virtual hiopMatrixSparse* new_copy() const;
@@ -270,7 +281,7 @@ protected:
     }
   };
   mutable RowStartsInfo* row_starts_;
-private:
+protected:
   RowStartsInfo* allocAndBuildRowStarts() const;
 private:
   hiopMatrixSparseTriplet()
@@ -335,10 +346,22 @@ public:
     return true;
   }
 
-  virtual long long numberOfOffDiagNonzeros();
+  virtual long long numberOfOffDiagNonzeros() const;
+
+  virtual void set_Jac_FR(const hiopMatrixSparse& Jac_c,
+                          const hiopMatrixSparse& Jac_d,
+                          int* iJacS,
+                          int* jJacS,
+                          double* MJacS){assert("not implemented"&&0);};
+
+  virtual void set_Hess_FR(const hiopMatrixSparse& Hess,
+                           int* iHSS,
+                           int* jHSS,
+                           double* MHSS,
+                           const hiopVector& add_diag);
 
 protected:
-  int nnz_offdiag_;     ///< number of nonzero entries
+  mutable int nnz_offdiag_;     ///< number of nonzero entries
 
 };
 

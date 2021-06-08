@@ -224,10 +224,14 @@ int runTests(const char* mem_space, MPI_Comm comm)
   hiopVector* a = LinearAlgebraFactory::createVector(Nglobal, n_partition, comm);
   hiopVector* b = LinearAlgebraFactory::createVector(Nglobal, n_partition, comm);
   hiopVector* v_smaller = LinearAlgebraFactory::createVector(Mlocal);
+  hiopVector* v2_smaller = LinearAlgebraFactory::createVector(Mlocal);
   hiopVector* v = LinearAlgebraFactory::createVector(Nlocal);
   hiopVector* x = LinearAlgebraFactory::createVector(Nglobal, n_partition, comm);
   hiopVector* y = LinearAlgebraFactory::createVector(Nglobal, n_partition, comm);
   hiopVector* z = LinearAlgebraFactory::createVector(Nglobal, n_partition, comm);
+  
+  hiopVectorInt* v_map = LinearAlgebraFactory::createVectorInt(Mlocal);
+  hiopVectorInt* v2_map = LinearAlgebraFactory::createVectorInt(Mlocal);
   
   int fail = 0;
 
@@ -244,6 +248,8 @@ int runTests(const char* mem_space, MPI_Comm comm)
     fail += test.vectorStartingAtCopyFromStartingAt(*v_smaller, *v);
     fail += test.vectorCopyToStarting(*v, *v_smaller);
     fail += test.vectorStartingAtCopyToStartingAt(*v, *v_smaller);
+    fail += test.vector_copy_from_two_vec(*v, *v_smaller, *v_map, *v2_smaller, *v2_map);
+    fail += test.vector_copy_to_two_vec(*v, *v_smaller, *v_map, *v2_smaller, *v2_map);
   }
 
   fail += test.vectorSelectPattern(*x, *y, rank);

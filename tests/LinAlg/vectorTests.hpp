@@ -64,6 +64,7 @@
 #include <functional>
 
 #include <hiopVector.hpp>
+#include <hiopVectorInt.hpp>
 #include <hiopLinAlgFactory.hpp>
 #include "testBase.hpp"
 
@@ -392,6 +393,99 @@ public:
 
     printMessage(fail, __func__, rank);
     return reduceReturn(fail, &from);
+  }
+
+  /**
+   * @brief Test vector method for copying data from another two vectors
+   * 
+   * @pre Vectors are not distributed.
+   * @pre Memory space for hiop::LinearAlgebraFactory is set appropriately
+   */  
+  bool vector_copy_from_two_vec( hiop::hiopVector& cd,
+                                 hiop::hiopVector& c,
+                                 hiop::hiopVectorInt& c_map,
+                                 hiop::hiopVector& d,
+                                 hiop::hiopVectorInt& d_map,
+                                 const int rank=0)
+  {
+    const local_ordinal_type cd_size = getLocalSize(&cd);
+    const local_ordinal_type c_size = getLocalSize(&c);
+    const local_ordinal_type d_size = getLocalSize(&d);
+    const hiopInt c_map_size = c_map.size();
+    const hiopInt d_map_size = d_map.size();
+    assert(c_size == c_map_size && "size doesn't match");
+    assert(d_size == d_map_size && "size doesn't match");
+    assert(c_size + d_size == cd_size && "size doesn't match");
+
+    const real_type c_val = one;
+    const real_type d_val = two;
+ 
+    c.setToConstant(c_val);
+    d.setToConstant(d_val);
+    for(hiopInt i = 0; i < c_size; ++i) {
+      c_map[i] = (hiopInt) i;
+    }
+    for(hiopInt i = 0; i < d_size; ++i) {
+      d_map[i] = (hiopInt) (i + c_size);
+    }
+    c_map.copyToDev();
+    d_map.copyToDev();
+
+    cd.copy_from_two_vec_w_pattern(c, c_map, d, d_map);
+
+    int fail = verifyAnswer(&cd,
+      [=] (local_ordinal_type i) -> real_type
+      {
+        return i < c_size ? c_val : d_val;
+      });
+
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &cd);
+  }
+
+  /**
+   * @brief Test vector method for copying data to another two vectors
+   * 
+   * @pre Vectors are not distributed.
+   * @pre Memory space for hiop::LinearAlgebraFactory is set appropriately
+   */  
+  bool vector_copy_to_two_vec( hiop::hiopVector& cd,
+                               hiop::hiopVector& c,
+                               hiop::hiopVectorInt& c_map,
+                               hiop::hiopVector& d,
+                               hiop::hiopVectorInt& d_map,
+                               const int rank=0)
+  {
+    const local_ordinal_type cd_size = getLocalSize(&cd);
+    const local_ordinal_type c_size = getLocalSize(&c);
+    const local_ordinal_type d_size = getLocalSize(&d);
+    const hiopInt c_map_size = c_map.size();
+    const hiopInt d_map_size = d_map.size();
+    assert(c_size == c_map_size && "size doesn't match");
+    assert(d_size == d_map_size && "size doesn't match");
+    assert(c_size + d_size == cd_size && "size doesn't match");
+
+    const real_type cd_val = two;
+ 
+    c.setToZero();
+    d.setToZero();
+    for(hiopInt i = 0; i < c_size; ++i) {
+      c_map[i] = (hiopInt) i;
+    }
+    for(hiopInt i = 0; i < d_size; ++i) {
+      d_map[i] = (hiopInt) (i + c_size);
+    }
+    c_map.copyToDev();
+    d_map.copyToDev();
+
+    cd.setToConstant(cd_val);
+    cd.copy_to_two_vec_w_pattern(c, c_map, d, d_map);
+
+    int fail = verifyAnswer(&c, cd_val);
+    fail += verifyAnswer(&d, cd_val);
+
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &cd);
   }
 
   /**

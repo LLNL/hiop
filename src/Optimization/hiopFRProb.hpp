@@ -203,6 +203,9 @@ private:
   hiopVector* wrk_primal_;  // [x pe ne pi ni]
   hiopVector* wrk_dual_;  // [c d]
 
+  hiopMatrixSparse* Jac_cd_;
+  hiopMatrixSparse* Hess_cd_;
+
   double zeta_;
   double theta_ref_;
   double mu_;
