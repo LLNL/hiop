@@ -7,9 +7,9 @@
 
 using namespace hiop;
 
-static bool self_check(int_type n, double obj_value);
+static bool self_check(size_type n, double obj_value);
 
-static bool parse_arguments(int argc, char **argv, int_type& n, double &scal,  bool& self_check)
+static bool parse_arguments(int argc, char **argv, size_type& n, double &scal,  bool& self_check)
 {
 
   //  printf("%s    %s \n", argv[1], argv[2]);
@@ -85,7 +85,7 @@ int main(int argc, char **argv)
     return 1;
   }
 #endif
-  bool selfCheck; int_type n;
+  bool selfCheck; size_type n;
   double scal;
 
   if(!parse_arguments(argc, argv, n, scal, selfCheck)) { usage(argv[0]); return 1;}
@@ -137,10 +137,10 @@ int main(int argc, char **argv)
 }
 
 
-static bool self_check(int_type n, double objval)
+static bool self_check(size_type n, double objval)
 {
 #define num_n_saved 3 //keep this is sync with n_saved and objval_saved
-  const int_type n_saved[] = {50, 500, 5000};
+  const size_type n_saved[] = {50, 500, 5000};
   const double objval_saved[] = {1.10351564683176e-01, 1.10351566513480e-01, 1.10351578644469e-01};
 
 #define relerr 1e-6

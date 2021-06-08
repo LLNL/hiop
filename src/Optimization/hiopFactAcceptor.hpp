@@ -100,7 +100,7 @@ public:
    * Default constructor 
    * Check inertia condition to determine if a factorization is acceptable or not
    */
-  hiopFactAcceptorIC(hiopPDPerturbation* p, const int_type n_required_neg_eig)
+  hiopFactAcceptorIC(hiopPDPerturbation* p, const size_type n_required_neg_eig)
     : hiopFactAcceptor(p),
       n_required_neg_eig_(n_required_neg_eig)
   {}

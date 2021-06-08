@@ -20,7 +20,8 @@
 #include <cstdio>
 #include <cmath>
 
-using int_type = hiop::int_type;
+using size_type = hiop::size_type;
+using index_type = hiop::index_type;
 
 /** Nonlinear *highly nonconvex* and *rank deficient* problem test for the Filter IPM 
  * Newton of HiOp. It uses a mixed Dense-Sparse NLP formulation. The problem is based
@@ -101,14 +102,14 @@ public:
     delete Q_;
   }
   
-  bool get_prob_sizes(int_type& n, int_type& m)
+  bool get_prob_sizes(size_type& n, size_type& m)
   { 
     n = 2*ns_ + nd_;
     m = ns_ + 3 + 2*rankdefic_ineq_ + ns_*rankdefic_eq_;
     return true; 
   }
 
-  bool get_vars_info(const int_type& n, double *xlow, double* xupp, NonlinearityType* type)
+  bool get_vars_info(const size_type& n, double *xlow, double* xupp, NonlinearityType* type)
   {
     //assert(n>=4 && "number of variables should be greater than 4 for this example");
     assert(n == 2*ns_ + nd_);
@@ -132,7 +133,7 @@ public:
     return true;
   }
 
-  bool get_cons_info(const int_type& m, double* clow, double* cupp, NonlinearityType* type)
+  bool get_cons_info(const size_type& m, double* clow, double* cupp, NonlinearityType* type)
   {
     assert(m == ns_ + 3 + 2*rankdefic_ineq_ + ns_*rankdefic_eq_);
     int i;
@@ -181,7 +182,7 @@ public:
     return true;
   }
 
-  bool eval_f(const int_type& n, const double* x, bool new_x, double& obj_value)
+  bool eval_f(const size_type& n, const double* x, bool new_x, double& obj_value)
   {
     //assert(ns>=4);
     assert(Q_->n()==nd_); assert(Q_->m()==nd_);
@@ -205,14 +206,14 @@ public:
     return true;
   }
 
-  virtual bool eval_cons(const int_type& n, const int_type& m, 
-			 const int_type& num_cons, const int_type* idx_cons,  
+  virtual bool eval_cons(const size_type& n, const size_type& m, 
+			 const size_type& num_cons, const index_type* idx_cons,  
 			 const double* x, bool new_x, double* cons)
   {
     //return false so that HiOp will rely on the on-call constraint evaluator defined below
     return false;
   }
-  bool eval_cons(const int_type& n, const int_type& m, 
+  bool eval_cons(const size_type& n, const size_type& m, 
 		 const double* x, bool new_x, double* cons)
   {
     const double* s = x+ns_;
@@ -281,7 +282,7 @@ public:
   }
   
   //sum 0.5 {x_i*(x_{i}-1) : i=1,...,ns} + 0.5 y'*Qd*y + 0.5 s^T s
-  bool eval_grad_f(const int_type& n, const double* x, bool new_x, double* gradf)
+  bool eval_grad_f(const size_type& n, const double* x, bool new_x, double* gradf)
   {
     //! assert(ns>=4); assert(Q->n()==ns/4); assert(Q->m()==ns/4);
     //x_i - 0.5 
@@ -302,11 +303,11 @@ public:
   }
  
   virtual bool
-  eval_Jac_cons(const int_type& n, const int_type& m, 
-		const int_type& num_cons, const int_type* idx_cons,
+  eval_Jac_cons(const size_type& n, const size_type& m, 
+		const size_type& num_cons, const index_type* idx_cons,
 		const double* x, bool new_x,
-		const int_type& nsparse, const int_type& ndense, 
-		const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
+		const size_type& nsparse, const size_type& ndense, 
+		const size_type& nnzJacS, index_type* iJacS, index_type* jJacS, double* MJacS, 
 		double* JacD)
   {
     //return false so that HiOp will rely on the on-call constraint evaluator defined below
@@ -314,10 +315,10 @@ public:
   }
 
   virtual bool
-  eval_Jac_cons(const int_type& n, const int_type& m, 
+  eval_Jac_cons(const size_type& n, const size_type& m, 
  		const double* x, bool new_x,
- 		const int_type& nsparse, const int_type& ndense, 
- 		const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
+ 		const size_type& nsparse, const size_type& ndense, 
+ 		const size_type& nnzJacS, index_type* iJacS, index_type* jJacS, double* MJacS, 
  		double* JacD)
   {
     assert(m == ns_ + 3 + 2*rankdefic_ineq_ + ns_*rankdefic_eq_);
@@ -503,13 +504,13 @@ public:
     return true;
   }
  
-  bool eval_Hess_Lagr(const int_type& n, const int_type& m, 
+  bool eval_Hess_Lagr(const size_type& n, const size_type& m, 
                       const double* x, bool new_x, const double& obj_factor,
                       const double* lambda, bool new_lambda,
-                      const int_type& nsparse, const int_type& ndense, 
-                      const int& nnzHSS, int* iHSS, int* jHSS, double* MHSS, 
+                      const size_type& nsparse, const size_type& ndense, 
+                      const size_type& nnzHSS, index_type* iHSS, index_type* jHSS, double* MHSS, 
                       double* HDD,
-                      int& nnzHSD, int* iHSD, int* jHSD, double* MHSD)
+                      size_type& nnzHSD, index_type* iHSD, index_type* jHSD, double* MHSD)
   {
     //Note: lambda is not used since all the constraints are linear and, therefore, do 
     //not contribute to the Hessian of the Lagrangian
@@ -537,7 +538,7 @@ public:
     return true;
   }
   
-  bool get_starting_point(const int_type& global_n, double* x0)
+  bool get_starting_point(const size_type& global_n, double* x0)
   {
     assert(global_n==2*ns_+nd_); 
     for(int i=0; i<global_n; i++) x0[i]=10.;

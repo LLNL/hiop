@@ -55,12 +55,6 @@
 
 #include "hiopVectorInt.hpp"
 
-#ifdef HIOP_USE_MPI
-#include "mpi.h"
-#else 
-#include <cstddef>
-#endif
-
 #include <stdlib.h>     /* exit, EXIT_FAILURE */
 
 #include <cassert>
@@ -203,7 +197,7 @@ bool hiopNlpFormulation::finalizeInitialization()
   if(vars_type) delete[] vars_type;
 #ifdef HIOP_USE_MPI
   if(vec_distrib) delete[] vec_distrib;
-  vec_distrib=new int_type[num_ranks+1];
+  vec_distrib=new index_type[num_ranks+1];
   if(true==interface_base.get_vecdistrib_info(n_vars,vec_distrib)) {
     xl = LinearAlgebraFactory::createVector(n_vars, vec_distrib, comm);
   } else {
@@ -231,7 +225,7 @@ bool hiopNlpFormulation::finalizeInitialization()
   ixl = xu->alloc_clone(); ixu = xu->alloc_clone();
   n_bnds_low_local = n_bnds_upp_local = 0;
   n_bnds_lu = 0;
-  int_type nfixed_vars_local=0;
+  size_type nfixed_vars_local=0;
   double *ixl_vec=ixl->local_data_host(), *ixu_vec=ixu->local_data_host();
 #ifdef HIOP_DEEPCHECKS
   const int maxBndsCloseMsgs=3; int nBndsClose=0;
@@ -282,9 +276,9 @@ bool hiopNlpFormulation::finalizeInitialization()
 
   dFixedVarsTol = fixedVarTol;
   
-  int_type nfixed_vars=nfixed_vars_local;
+  size_type nfixed_vars=nfixed_vars_local;
 #ifdef HIOP_USE_MPI
-  int ierr = MPI_Allreduce(&nfixed_vars_local, &nfixed_vars, 1, MPI_INT, MPI_SUM, comm); 
+  int ierr = MPI_Allreduce(&nfixed_vars_local, &nfixed_vars, 1, MPI_HIOP_SIZE_TYPE, MPI_SUM, comm); 
   assert(MPI_SUCCESS==ierr);
 #endif
   hiopFixedVarsRemover* fixedVarsRemover = NULL;
@@ -306,7 +300,7 @@ bool hiopNlpFormulation::finalizeInitialization()
     
       n_vars = fixedVarsRemover->rs_n();
 #ifdef HIOP_USE_MPI
-      int_type* vec_distrib_rs = fixedVarsRemover->allocRSVectorDistrib();
+      index_type* vec_distrib_rs = fixedVarsRemover->allocRSVectorDistrib();
       if(vec_distrib) delete[] vec_distrib;
       vec_distrib = vec_distrib_rs;
 #endif
@@ -404,8 +398,8 @@ bool hiopNlpFormulation::finalizeInitialization()
   /* copy lower and upper bounds - constraints */
   double *dlvec=dl->local_data_host(), *duvec=du->local_data_host();
   double *c_rhsvec=c_rhs->local_data_host();
-  int_type *cons_eq_mapping = cons_eq_mapping_->local_data_host();
-  int_type *cons_ineq_mapping = cons_ineq_mapping_->local_data_host();
+  index_type *cons_eq_mapping = cons_eq_mapping_->local_data_host();
+  index_type *cons_ineq_mapping = cons_ineq_mapping_->local_data_host();
 
   int it_eq=0, it_ineq=0;
   for(int i=0;i<n_cons; i++) {
@@ -457,8 +451,8 @@ bool hiopNlpFormulation::finalizeInitialization()
 
   //compute the overall n_low and n_upp
 #ifdef HIOP_USE_MPI
-  int_type aux[3]={n_bnds_low_local, n_bnds_upp_local, n_bnds_lu}, aux_g[3];
-  ierr=MPI_Allreduce(aux, aux_g, 3, MPI_INT, MPI_SUM, comm); assert(MPI_SUCCESS==ierr);
+  size_type aux[3]={n_bnds_low_local, n_bnds_upp_local, n_bnds_lu}, aux_g[3];
+  ierr=MPI_Allreduce(aux, aux_g, 3, MPI_HIOP_SIZE_TYPE, MPI_SUM, comm); assert(MPI_SUCCESS==ierr);
   n_bnds_low=aux_g[0]; n_bnds_upp=aux_g[1]; n_bnds_lu=aux_g[2];
 #else
   n_bnds_low=n_bnds_low_local; n_bnds_upp=n_bnds_upp_local; //n_bnds_lu is ok
@@ -1160,7 +1154,7 @@ hiopMatrixDense* hiopNlpDenseConstraints::alloc_multivector_primal(int nrows, in
 {
   hiopMatrixDense* M;
 #ifdef HIOP_USE_MPI
-  //int_type* vec_distrib=new int_type[num_ranks+1];
+  //index_type* vec_distrib=new index_type[num_ranks+1];
   //if(true==interface.get_vecdistrib_info(n_vars,vec_distrib)) 
   if(vec_distrib)
   {

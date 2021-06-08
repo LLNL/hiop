@@ -58,9 +58,9 @@
 namespace hiop
 {
 
-hiopVectorIntSeq::hiopVectorIntSeq(int_type sz) : hiopVectorInt(sz)
+hiopVectorIntSeq::hiopVectorIntSeq(size_type sz) : hiopVectorInt(sz)
 {
-  buf_ = new int_type[sz_];
+  buf_ = new index_type[sz_];
 }
 
 hiopVectorIntSeq::~hiopVectorIntSeq()
@@ -68,12 +68,12 @@ hiopVectorIntSeq::~hiopVectorIntSeq()
   delete[] buf_;
 }
 
-const int_type& hiopVectorIntSeq::operator[] (int_type i) const
+const index_type& hiopVectorIntSeq::operator[] (index_type i) const
 {
   return buf_[i];
 }
 
-int_type& hiopVectorIntSeq::operator[] (int_type i)
+index_type& hiopVectorIntSeq::operator[] (index_type i)
 {
   return buf_[i];
 }

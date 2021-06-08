@@ -70,38 +70,38 @@ public:
   /**
    * @brief Static method to create vector
    */
-  static hiopVector* createVector(const int_type& glob_n,
-                                  int_type* col_part = NULL,
+  static hiopVector* createVector(const size_type& glob_n,
+                                  index_type* col_part = NULL,
                                   MPI_Comm comm = MPI_COMM_SELF); 
 
   /**
    * @brief Static method to create local int vector.
    */
-  static hiopVectorInt* createVectorInt(int_type size);
+  static hiopVectorInt* createVectorInt(size_type size);
 
   /**
    * @brief Static method to create a dense matrix.
    * 
    */
-  static hiopMatrixDense* createMatrixDense(const int_type& m,
-                                            const int_type& glob_n,
-                                            int_type* col_part = NULL,
+  static hiopMatrixDense* createMatrixDense(const size_type& m,
+                                            const size_type& glob_n,
+                                            index_type* col_part = NULL,
                                             MPI_Comm comm = MPI_COMM_SELF,
-                                            const int_type& m_max_alloc = -1);
+                                            const size_type& m_max_alloc = -1);
   /**
    * @brief Static method to create a sparse matrix
    */
-  static hiopMatrixSparse* createMatrixSparse(int_type rows, int_type cols, int_type nnz);
+  static hiopMatrixSparse* createMatrixSparse(size_type rows, size_type cols, size_type nnz);
 
   /**
    * @brief Static method to create a symmetric sparse matrix
    */
-  static hiopMatrixSparse* createMatrixSymSparse(int_type size, int_type nnz);
+  static hiopMatrixSparse* createMatrixSymSparse(size_type size, size_type nnz);
   
   /**
    * @brief Static method to create a raw C array
    */
-  static double* createRawArray(int_type n);
+  static double* createRawArray(size_type n);
 
   /**
    * @brief Static method to delete a raw C array

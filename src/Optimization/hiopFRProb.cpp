@@ -4,7 +4,7 @@
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp
 // is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause).
-// Please also read �Additional BSD Notice� below.
+// Please also read "Additional BSD Notice" below.
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -135,14 +135,14 @@ hiopFRProbSparse::~hiopFRProbSparse()
   delete Hess_cd_;
 }
 
-bool hiopFRProbSparse::get_prob_sizes(int_type& n, int_type& m)
+bool hiopFRProbSparse::get_prob_sizes(size_type& n, size_type& m)
 {
   n = n_;
   m = m_;
   return true;
 }
 
-bool hiopFRProbSparse::get_vars_info(const int_type& n, double *xlow, double* xupp, NonlinearityType* type)
+bool hiopFRProbSparse::get_vars_info(const size_type& n, double *xlow, double* xupp, NonlinearityType* type)
 {
   assert(n == n_);
 
@@ -165,7 +165,7 @@ bool hiopFRProbSparse::get_vars_info(const int_type& n, double *xlow, double* xu
   return true;
 }
 
-bool hiopFRProbSparse::get_cons_info(const int_type& m, double* clow, double* cupp, NonlinearityType* type)
+bool hiopFRProbSparse::get_cons_info(const size_type& m, double* clow, double* cupp, NonlinearityType* type)
 {
   assert(m == m_);
   assert(m_eq_ + m_ineq_ == m_);
@@ -204,7 +204,7 @@ bool hiopFRProbSparse::get_sparse_blocks_info(int& nx,
   return true;
 }
 
-bool hiopFRProbSparse::eval_f(const int_type& n, const double* x, bool new_x, double& obj_value)
+bool hiopFRProbSparse::eval_f(const size_type& n, const double* x, bool new_x, double& obj_value)
 {
   assert(n == n_);
   obj_value = 0.;
@@ -225,7 +225,7 @@ bool hiopFRProbSparse::eval_f(const int_type& n, const double* x, bool new_x, do
   return true;
 }
 
-bool hiopFRProbSparse::eval_grad_f(const int_type& n, const double* x, bool new_x, double* gradf)
+bool hiopFRProbSparse::eval_grad_f(const size_type& n, const double* x, bool new_x, double* gradf)
 {
   assert(n == n_);
 
@@ -245,18 +245,18 @@ bool hiopFRProbSparse::eval_grad_f(const int_type& n, const double* x, bool new_
   return true;
 }
 
-bool hiopFRProbSparse::eval_cons(const int_type& n,
-                                 const int_type& m,
-                                 const int_type& num_cons,
-                                 const int_type* idx_cons,
+bool hiopFRProbSparse::eval_cons(const size_type& n,
+                                 const size_type& m,
+                                 const size_type& num_cons,
+                                 const index_type* idx_cons,
                                  const double* x,
                                  bool new_x, double* cons)
 {
   return false;
 }
 
-bool hiopFRProbSparse::eval_cons(const int_type& n,
-                                 const int_type& m,
+bool hiopFRProbSparse::eval_cons(const size_type& n,
+                                 const size_type& m,
                                  const double* x,
                                  bool new_x,
                                  double* cons)
@@ -287,9 +287,9 @@ bool hiopFRProbSparse::eval_cons(const int_type& n,
   return true;
 }
 
-bool hiopFRProbSparse::eval_Jac_cons(const int_type& n, const int_type& m,
-                                     const int_type& num_cons,
-                                     const int_type* idx_cons,
+bool hiopFRProbSparse::eval_Jac_cons(const size_type& n, const size_type& m,
+                                     const size_type& num_cons,
+                                     const index_type* idx_cons,
                                      const double* x,
                                      bool new_x,
                                      const int& nnzJacS,
@@ -301,8 +301,8 @@ bool hiopFRProbSparse::eval_Jac_cons(const int_type& n, const int_type& m,
 }
 
 /// @pre assuming Jac of the original prob is sorted
-bool hiopFRProbSparse::eval_Jac_cons(const int_type& n,
-                                     const int_type& m,
+bool hiopFRProbSparse::eval_Jac_cons(const size_type& n,
+                                     const size_type& m,
                                      const double* x,
                                      bool new_x,
                                      const int& nnzJacS,
@@ -332,8 +332,8 @@ bool hiopFRProbSparse::eval_Jac_cons(const int_type& n,
   return true;
 }
 
-bool hiopFRProbSparse::eval_Hess_Lagr(const int_type& n,
-                                      const int_type& m,
+bool hiopFRProbSparse::eval_Hess_Lagr(const size_type& n,
+                                      const size_type& m,
                                       const double* x,
                                       bool new_x,
                                       const double& obj_factor,
@@ -374,8 +374,8 @@ bool hiopFRProbSparse::eval_Hess_Lagr(const int_type& n,
   return true;
 }
 
-bool hiopFRProbSparse::get_starting_point(const int_type& n,
-                                          const int_type& m,
+bool hiopFRProbSparse::get_starting_point(const size_type& n,
+                                          const size_type& m,
                                           double* x0,
                                           bool& duals_avail,
                                           double* z_bndL0,

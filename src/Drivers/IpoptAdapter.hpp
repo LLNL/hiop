@@ -41,7 +41,7 @@ public:
   virtual bool get_nlp_info(Index& n, Index& m, Index& nnz_jac_g,
                             Index& nnz_h_lag, IndexStyleEnum& index_style) 
   {
-    int_type nvars, ncons;
+    size_type nvars, ncons;
     if(false==hiopNLP->get_prob_sizes(nvars, ncons))
       return false;
     n = (int)nvars; m=(int)ncons;
@@ -56,7 +56,7 @@ public:
                                Index m, Number* g_l, Number* g_u) 
   {
     bool bSuccess=true;
-    int_type nll=n, mll=m;
+    size_type nll=n, mll=m;
     hiopInterfaceBase::NonlinearityType* types=new hiopInterfaceBase::NonlinearityType[n];
     bSuccess = hiopNLP->get_vars_info(nll, x_l, x_u, types);
     delete[] types;
@@ -78,7 +78,7 @@ public:
   {
     assert(false==init_z);
     assert(false==init_lambda);
-    int_type nll=n;
+    size_type nll=n;
     return hiopNLP->get_starting_point(nll,x);
   }
 
@@ -86,7 +86,7 @@ public:
   /** Method to return the objective value */
   virtual bool eval_f(Index n, const Number* x, bool new_x, Number& obj_value) 
   {
-    int_type nll=n;
+    size_type nll=n;
     return hiopNLP->eval_f(nll,x,new_x,obj_value);
   }
 
@@ -94,7 +94,7 @@ public:
   /** Method to return the gradient of the objective */
   virtual bool eval_grad_f(Index n, const Number* x, bool new_x, Number* grad_f) 
   {
-    int_type nll=n;
+    size_type nll=n;
     return hiopNLP->eval_grad_f(nll,x,new_x,grad_f);
   }
 
@@ -102,8 +102,8 @@ public:
   /** Method to return the constraint residuals */
   virtual bool eval_g(Index n, const Number* x, bool new_x, Index m, Number* g) 
   {
-    int_type nll=n, mll=m;
-    int_type* idx_cons=new int_type[m];
+    size_type nll=n, mll=m;
+    index_type* idx_cons=new index_type[m];
     for(int i=0; i<m; i++) idx_cons[i]=i;
     bool bret = hiopNLP->eval_cons(nll,mll,mll,idx_cons,x,new_x,g);
     delete[] idx_cons;
@@ -119,10 +119,10 @@ public:
                           Index m, Index nele_jac, Index* iRow, Index *jCol,
                           Number* values) 
   {
-    bool bret=true; int_type nll=n, mll=m, onell=1;
+    bool bret=true; size_type nll=n, mll=m, onell=1;
     double* constraint=new double[n]; 
-    int_type nz=0;
-    for(int_type i=0; i<m && bret; i++) {
+    size_type nz=0;
+    for(size_type i=0; i<m && bret; i++) {
 
       if(values) {
 	bret=hiopNLP->eval_Jac_cons(nll, mll, onell, &i, x, new_x, constraint);
@@ -132,7 +132,7 @@ public:
 
       } else { //this is only for iRow and jCol
 
-	for(int_type j=0; j<n; j++) {
+	for(size_type j=0; j<n; j++) {
 	  iRow[nz]=(int) i; 
 	  jCol[nz]=(int) j;
 	  nz++;
@@ -215,7 +215,7 @@ public:
   bool get_nlp_info(Index& n, Index& m, Index& nnz_jac_g,
 		    Index& nnz_h_lag, IndexStyleEnum& index_style) 
   {
-    int_type nvars, ncons;
+    size_type nvars, ncons;
     if(false==hiopNLP->get_prob_sizes(nvars, ncons))
       return false;
 
@@ -245,7 +245,7 @@ public:
 		       Index m, Number* g_l, Number* g_u) 
   {
     bool bSuccess=true;
-    int_type nll=n, mll=m;
+    size_type nll=n, mll=m;
     hiopInterfaceBase::NonlinearityType* types=new hiopInterfaceBase::NonlinearityType[n];
     bSuccess = hiopNLP->get_vars_info(nll, x_l, x_u, types);
     delete[] types;
@@ -265,8 +265,8 @@ public:
     if(cons_eq_idxs!=NULL) delete[] cons_eq_idxs;
     if(cons_ineq_idxs!=NULL) delete[] cons_ineq_idxs;
 
-    cons_eq_idxs = new int_type[n_eq];
-    cons_ineq_idxs = new int_type[n_ineq];
+    cons_eq_idxs = new index_type[n_eq];
+    cons_ineq_idxs = new index_type[n_ineq];
 
     int it_eq=0, it_ineq=0;
     for(int it=0; it<m; it++) {
@@ -287,7 +287,7 @@ public:
   {
     assert(false==init_z && "primal-dual restart not supported by the addapter");
     assert(false==init_lambda && "primal-dual restart not supported by the addapter");
-    int_type nll=n;
+    size_type nll=n;
     return hiopNLP->get_starting_point(nll,x);
   }
 
@@ -295,7 +295,7 @@ public:
   /** Method to return the objective value */
   bool eval_f(Index n, const Number* x, bool new_x, Number& obj_value) 
   {
-    int_type nll=n;
+    size_type nll=n;
     return hiopNLP->eval_f(nll,x,new_x,obj_value);
   }
 
@@ -303,7 +303,7 @@ public:
   /** Method to return the gradient of the objective */
   bool eval_grad_f(Index n, const Number* x, bool new_x, Number* grad_f) 
   {
-    int_type nll=n;
+    size_type nll=n;
     return hiopNLP->eval_grad_f(nll,x,new_x,grad_f);
   }
 
@@ -313,13 +313,13 @@ public:
   // mimic it
   bool eval_g(Index n, const Number* x, bool new_x, Index m, Number* g) 
   {
-    int_type nll=n, mll=m;
+    size_type nll=n, mll=m;
     bool bret=false;
     bool eq_call_failed = false;
     bool try_onecall_Jac = false;
     {
       double g_eq[n_eq];
-      int_type num_cons = n_eq;
+      size_type num_cons = n_eq;
       bret = hiopNLP->eval_cons(nll, mll, num_cons, cons_eq_idxs, x, new_x,g_eq);
       if(bret) {
 	for(int i=0; i<n_eq; i++)
@@ -330,7 +330,7 @@ public:
     }
     {
       double g_ineq[n_ineq];
-      int_type num_cons = n_ineq;
+      size_type num_cons = n_ineq;
       bret = hiopNLP->eval_cons(nll, mll, num_cons, cons_ineq_idxs, x, new_x,g_ineq);
       if(bret) {
 	for(int i=0; i<n_ineq; i++)
@@ -362,14 +362,14 @@ public:
 		  Number* values) 
   {
     bool bret = true;
-    int_type nll = n, mll = m;
+    size_type nll = n, mll = m;
     bool eq_call_failed = false;
     bool try_onecall_Jac = false;
     if(values==NULL) {
       int nnzit = 0;
       //Sparse Jac for Eq
       {
-	int_type num_cons = n_eq;
+	size_type num_cons = n_eq;
 	bret = hiopNLP->eval_Jac_cons(nll, mll, num_cons, cons_eq_idxs, 
 				      x, new_x, nx_sparse, nx_dense, 
 				      nnz_sparse_Jaceq, iRow, jCol, NULL,
@@ -391,7 +391,7 @@ public:
 
       //Sparse Jac for Ineq
       {
-	int_type num_cons = n_ineq;
+	size_type num_cons = n_ineq;
 	bret = hiopNLP->eval_Jac_cons(nll, mll, num_cons, cons_ineq_idxs, 
 				      x, new_x, nx_sparse, nx_dense, 
 				      nnz_sparse_Jacineq, iRow+nnzit, jCol+nnzit, NULL,
@@ -469,7 +469,7 @@ public:
 	int nnzit = 0;
 	//sparse Jac Eq
 	{
-	  int_type num_cons = n_eq;
+	  size_type num_cons = n_eq;
 	  bret = hiopNLP->eval_Jac_cons(nll, mll, num_cons, cons_eq_idxs, 
 					x, new_x, nx_sparse, nx_dense, 
 					nnz_sparse_Jaceq, NULL, NULL, values,
@@ -491,7 +491,7 @@ public:
 	
 	//sparse Jac Ineq
 	{
-	  int_type num_cons = n_ineq;
+	  size_type num_cons = n_ineq;
 	  bret = hiopNLP->eval_Jac_cons(nll, mll, num_cons, cons_ineq_idxs, 
 					x, new_x, nx_sparse, nx_dense, 
 					nnz_sparse_Jacineq, NULL, NULL, values+nnzit,
@@ -549,7 +549,7 @@ public:
                       bool new_lambda, Index nele_hess, Index* iRow,
                       Index* jCol, Number* values) 
   { 
-    bool bret = true; int_type nll=n, mll=m;
+    bool bret = true; size_type nll=n, mll=m;
     assert(nnz_sparse_Hess_Lagr_SD == 0 && "not yet supported");
 
     if(values==NULL) {
@@ -645,7 +645,7 @@ private:
   int nnz_sparse_Jaceq, nnz_sparse_Jacineq;
   int nnz_sparse_Hess_Lagr_SS, nnz_sparse_Hess_Lagr_SD;
   int n_eq, n_ineq;
-  int_type *cons_eq_idxs, *cons_ineq_idxs; 
+  index_type *cons_eq_idxs, *cons_ineq_idxs; 
   hiopMatrixDenseRowMajor *JacDeq, *JacDineq, *HessDL;
   hiopMatrixDenseRowMajor *JacDeqineq; //this holds the full Jacobian when one-call Jacobian is activated
 
@@ -696,7 +696,7 @@ public:
   bool get_nlp_info(Index& n, Index& m, Index& nnz_jac_g,
 		    Index& nnz_h_lag, IndexStyleEnum& index_style)
   {
-    int_type nvars, ncons;
+    size_type nvars, ncons;
     if(false==hiopNLP->get_prob_sizes(nvars, ncons))
       return false;
 
@@ -721,7 +721,7 @@ public:
 		       Index m, Number* g_l, Number* g_u)
   {
     bool bSuccess=true;
-    int_type nll=n, mll=m;
+    size_type nll=n, mll=m;
     hiopInterfaceBase::NonlinearityType* types=new hiopInterfaceBase::NonlinearityType[n];
     bSuccess = hiopNLP->get_vars_info(nll, x_l, x_u, types);
     delete[] types;
@@ -741,8 +741,8 @@ public:
     if(m_cons_eq_idxs!=NULL) delete[] m_cons_eq_idxs;
     if(m_cons_ineq_idxs!=NULL) delete[] m_cons_ineq_idxs;
 
-    m_cons_eq_idxs = new int_type[m_n_eq];
-    m_cons_ineq_idxs = new int_type[m_n_ineq];
+    m_cons_eq_idxs = new index_type[m_n_eq];
+    m_cons_ineq_idxs = new index_type[m_n_ineq];
 
     int it_eq=0, it_ineq=0;
     for(int it=0; it<m; it++) {
@@ -763,7 +763,7 @@ public:
   {
     assert(false==init_z && "primal-dual restart not supported by the addapter");
     assert(false==init_lambda && "primal-dual restart not supported by the addapter");
-    int_type nll=n;
+    size_type nll=n;
     return hiopNLP->get_starting_point(nll,x);
   }
 
@@ -771,7 +771,7 @@ public:
   /** Method to return the objective value */
   bool eval_f(Index n, const Number* x, bool new_x, Number& obj_value)
   {
-    int_type nll=n;
+    size_type nll=n;
     return hiopNLP->eval_f(nll,x,new_x,obj_value);
   }
 
@@ -779,7 +779,7 @@ public:
   /** Method to return the gradient of the objective */
   bool eval_grad_f(Index n, const Number* x, bool new_x, Number* grad_f)
   {
-    int_type nll=n;
+    size_type nll=n;
     return hiopNLP->eval_grad_f(nll,x,new_x,grad_f);
   }
 
@@ -789,14 +789,14 @@ public:
   // mimic it
   bool eval_g(Index n, const Number* x, bool new_x, Index m, Number* g)
   {
-    int_type nll=n, mll=m;
+    size_type nll=n, mll=m;
     bool bret=false;
     bool eq_call_failed = false;
     bool try_onecall_Jac = false;
 
     {
     double g_eq[m_n_eq];
-    int_type num_cons = m_n_eq;
+    size_type num_cons = m_n_eq;
     bret = hiopNLP->eval_cons(nll, mll, num_cons, m_cons_eq_idxs, x, new_x,g_eq);
     if(bret) {
       for(int i=0; i<m_n_eq; i++)
@@ -808,7 +808,7 @@ public:
 
     {
     double g_ineq[m_n_ineq];
-    int_type num_cons = m_n_ineq;
+    size_type num_cons = m_n_ineq;
     bret = hiopNLP->eval_cons(nll, mll, num_cons, m_cons_ineq_idxs, x, new_x,g_ineq);
     if(bret) {
 	  for(int i=0; i<m_n_ineq; i++)
@@ -838,14 +838,14 @@ public:
 		  Number* values)
   {
     bool bret = true;
-    int_type nll = n, mll = m;
+    size_type nll = n, mll = m;
     bool eq_call_failed = false;
     bool try_onecall_Jac = false;
     if(values==NULL) {
       int nnzit = 0;
       //Sparse Jac for Eq
       {
-        int_type num_cons = m_n_eq;
+        size_type num_cons = m_n_eq;
         bret = hiopNLP->eval_Jac_cons(nll, mll, num_cons, m_cons_eq_idxs,
 				      x, new_x,
 				      m_nnz_sparse_Jaceq, iRow, jCol, NULL);
@@ -859,7 +859,7 @@ public:
 
       //Sparse Jac for Ineq
       {
-        int_type num_cons = m_n_ineq;
+        size_type num_cons = m_n_ineq;
         bret = hiopNLP->eval_Jac_cons(nll, mll, num_cons, m_cons_ineq_idxs,
                           x, new_x,
                           m_nnz_sparse_Jacineq, iRow+nnzit, jCol+nnzit, NULL);
@@ -898,7 +898,7 @@ public:
 	int nnzit = 0;
 	//sparse Jac Eq
 	{
-	  int_type num_cons = m_n_eq;
+	  size_type num_cons = m_n_eq;
 	  bret = hiopNLP->eval_Jac_cons(nll, mll, num_cons, m_cons_eq_idxs,
 					x, new_x,
 					m_nnz_sparse_Jaceq, NULL, NULL, values);
@@ -911,7 +911,7 @@ public:
 
 	//sparse Jac Ineq
 	{
-	  int_type num_cons = m_n_ineq;
+	  size_type num_cons = m_n_ineq;
           bret = hiopNLP->eval_Jac_cons(nll, mll, num_cons, m_cons_ineq_idxs,
 		x, new_x,
 		m_nnz_sparse_Jacineq, NULL, NULL, values+nnzit);
@@ -950,7 +950,7 @@ public:
                       bool new_lambda, Index nele_hess, Index* iRow,
                       Index* jCol, Number* values)
   {
-    bool bret = true; int_type nll=n, mll=m;
+    bool bret = true; size_type nll=n, mll=m;
 
     if(values==NULL) {
       int nnzit = 0;
@@ -1010,7 +1010,7 @@ private:
   int m_nx; // by convention, sparse variables comes first
   int m_nnz_sparse_Jaceq, m_nnz_sparse_Jacineq,m_nnz_sparse_Hess_Lagr;
   int m_n_eq, m_n_ineq;
-  int_type *m_cons_eq_idxs, *m_cons_ineq_idxs;
+  index_type *m_cons_eq_idxs, *m_cons_ineq_idxs;
 //  hiopMatrixSparseTriplet *m_Jac_eq, *m_Jac_ineq, *m_Hess;
 //  hiopMatrixSparseTriplet *m_Jac; //this holds the full Jacobian when one-call Jacobian is activated
 

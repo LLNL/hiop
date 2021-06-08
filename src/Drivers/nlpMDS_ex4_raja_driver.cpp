@@ -18,8 +18,8 @@ using namespace hiop;
 
 static bool parse_arguments(int argc, char **argv,
 			    bool& self_check,
-			    int_type& n_sp,
-			    int_type& n_de,
+			    size_type& n_sp,
+			    size_type& n_de,
 			    bool& one_call_cons,
                             bool& empty_sp_row)
 {
@@ -114,7 +114,7 @@ int main(int argc, char **argv)
 
   bool selfCheck, one_call_cons;
   bool has_empty_sp_row;
-  int_type n_sp, n_de;
+  size_type n_sp, n_de;
   if(!parse_arguments(argc, argv, selfCheck, n_sp, n_de, one_call_cons, has_empty_sp_row)) {
     usage(argv[0]);
     return 1;
@@ -176,7 +176,7 @@ int main(int argc, char **argv)
   // bounds on variables or on inequalities
   ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  int_type n_vars, n_cons;
+  size_type n_vars, n_cons;
   my_nlp->get_prob_sizes(n_vars, n_cons);
 
   double* x       = hiop::LinearAlgebraFactory::createRawArray(n_vars);

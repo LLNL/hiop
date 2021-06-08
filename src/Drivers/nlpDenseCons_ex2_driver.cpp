@@ -7,9 +7,9 @@
 
 using namespace hiop;
 
-static bool self_check(int_type n, double obj_value);
+static bool self_check(size_type n, double obj_value);
 
-static bool parse_arguments(int argc, char **argv, int_type& n, bool& self_check)
+static bool parse_arguments(int argc, char **argv, size_type& n, bool& self_check)
 {
 
   //  printf("%s    %s \n", argv[1], argv[2]);
@@ -66,7 +66,7 @@ int main(int argc, char **argv)
   assert(MPI_SUCCESS==ierr);
   //if(0==rank) printf("Support for MPI is enabled\n");
 #endif
-  bool selfCheck; int_type n;
+  bool selfCheck; size_type n;
   if(!parse_arguments(argc, argv, n, selfCheck)) { usage(argv[0]); return 1;}
 
   Ex2 nlp_interface(n);
@@ -103,10 +103,10 @@ int main(int argc, char **argv)
 }
 
 
-static bool self_check(int_type n, double objval)
+static bool self_check(size_type n, double objval)
 {
 #define num_n_saved 3 //keep this is sync with n_saved and objval_saved
-  const int_type n_saved[] = {500, 5000, 50000}; 
+  const size_type n_saved[] = {500, 5000, 50000}; 
   const double objval_saved[] = {1.56251020819349e-02, 1.56251019995139e-02, 1.56251028980352e-02};
 
 #define relerr 1e-6

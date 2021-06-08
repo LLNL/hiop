@@ -41,17 +41,17 @@ Ex7::~Ex7()
 {
 }
 
-bool Ex7::get_prob_sizes(int_type& n, int_type& m)
+bool Ex7::get_prob_sizes(size_type& n, size_type& m)
 {
   n=n_vars;
   m=n_cons;
   return true;
 }
 
-bool Ex7::get_vars_info(const int_type& n, double *xlow, double* xupp, NonlinearityType* type)
+bool Ex7::get_vars_info(const size_type& n, double *xlow, double* xupp, NonlinearityType* type)
 {
   assert(n==n_vars);
-  for(int_type i=0; i<n; i++) {
+  for(index_type i=0; i<n; i++) {
     if(i==0) { xlow[i]=-1e20; xupp[i]=1e20; type[i]=hiopNonlinear; continue; }
     if(i==1) { xlow[i]= 0.0;  xupp[i]=1e20; type[i]=hiopNonlinear; continue; }
     if(i==2) { xlow[i]= 1.5;  xupp[i]=10.0 ;type[i]=hiopNonlinear; continue; }
@@ -61,13 +61,13 @@ bool Ex7::get_vars_info(const int_type& n, double *xlow, double* xupp, Nonlinear
   return true;
 }
 
-bool Ex7::get_cons_info(const int_type& m, double* clow, double* cupp, NonlinearityType* type)
+bool Ex7::get_cons_info(const size_type& m, double* clow, double* cupp, NonlinearityType* type)
 {
   assert(m==n_cons);
-  int_type conidx{0};
+  index_type conidx{0};
   clow[conidx]= 10.0;    cupp[conidx]= 10.0;      type[conidx++]=hiopInterfaceBase::hiopLinear;
   clow[conidx]= 5.0;     cupp[conidx]= 1e20;      type[conidx++]=hiopInterfaceBase::hiopLinear;
-  for(int_type i=3; i<n_vars; i++) {
+  for(index_type i=3; i<n_vars; i++) {
     clow[conidx] = 1.0;   cupp[conidx]= 2*n_vars; type[conidx++]=hiopInterfaceBase::hiopLinear;
   }
 
@@ -95,7 +95,7 @@ bool Ex7::get_sparse_blocks_info(int& nx,
     return true;
 }
 
-bool Ex7::eval_f(const int_type& n, const double* x, bool new_x, double& obj_value)
+bool Ex7::eval_f(const size_type& n, const double* x, bool new_x, double& obj_value)
 {
   assert(n==n_vars);
   obj_value=0.;
@@ -104,17 +104,17 @@ bool Ex7::eval_f(const int_type& n, const double* x, bool new_x, double& obj_val
   return true;
 }
 
-bool Ex7::eval_grad_f(const int_type& n, const double* x, bool new_x, double* gradf)
+bool Ex7::eval_grad_f(const size_type& n, const double* x, bool new_x, double* gradf)
 {
   assert(n==n_vars);
   for(auto i=0;i<n;i++) gradf[i] = (2*convex_obj_-1)*pow(x[i]-1.,3) + x[i];
   return true;
 }
 
-bool Ex7::eval_cons(const int_type& n,
-                    const int_type& m,
-                    const int_type& num_cons,
-                    const int_type* idx_cons,
+bool Ex7::eval_cons(const size_type& n,
+                    const size_type& m,
+                    const size_type& num_cons,
+                    const index_type* idx_cons,
                     const double* x,
                     bool new_x,
                     double* cons)
@@ -123,7 +123,7 @@ bool Ex7::eval_cons(const int_type& n,
 }
 
 /* Four constraints no matter how large n is */
-bool Ex7::eval_cons(const int_type& n, const int_type& m,
+bool Ex7::eval_cons(const size_type& n, const size_type& m,
 		    const double* x, bool new_x, double* cons)
 {
   assert(n==n_vars); assert(m==n_cons);
@@ -132,7 +132,7 @@ bool Ex7::eval_cons(const int_type& n, const int_type& m,
   //local contributions to the constraints in cons are reset
   for(auto j=0;j<m; j++) cons[j]=0.;
 
-  int_type conidx{0};
+  index_type conidx{0};
   //compute the constraint one by one.
   // --- constraint 1 body --->  4*x_1 + 2*x_2 == 10
   cons[conidx++] += 4*x[0] + 2*x[1];
@@ -159,27 +159,27 @@ bool Ex7::eval_cons(const int_type& n, const int_type& m,
   return true;
 }
 
-bool Ex7::eval_Jac_cons(const int_type& n,
-                        const int_type& m,
-                        const int_type& num_cons,
-                        const int_type* idx_cons,
+bool Ex7::eval_Jac_cons(const size_type& n,
+                        const size_type& m,
+                        const size_type& num_cons,
+                        const index_type* idx_cons,
                         const double* x,
                         bool new_x,
                         const int& nnzJacS,
-                        int_type* iJacS,
-                        int_type* jJacS,
+                        index_type* iJacS,
+                        index_type* jJacS,
                         double* MJacS)
 {
   return false;
 }
 
-bool Ex7::eval_Jac_cons(const int_type& n,
-                        const int_type& m,
+bool Ex7::eval_Jac_cons(const size_type& n,
+                        const size_type& m,
                         const double* x,
                         bool new_x,
                         const int& nnzJacS,
-                        int_type* iJacS,
-                        int_type* jJacS,
+                        index_type* iJacS,
+                        index_type* jJacS,
                         double* MJacS)
 {
     assert(n==n_vars); assert(m==n_cons);
@@ -189,7 +189,7 @@ bool Ex7::eval_Jac_cons(const int_type& n,
 
 
     int nnzit{0};
-    int_type conidx{0};
+    index_type conidx{0};
 
     if(iJacS!=NULL && jJacS!=NULL){
         // --- constraint 1 body --->  4*x_1 + 2*x_2 == 10
@@ -259,16 +259,16 @@ bool Ex7::eval_Jac_cons(const int_type& n,
     return true;
 }
 
-bool Ex7::eval_Hess_Lagr(const int_type& n,
-                         const int_type& m,
+bool Ex7::eval_Hess_Lagr(const size_type& n,
+                         const size_type& m,
                          const double* x,
                          bool new_x,
                          const double& obj_factor,
                          const double* lambda,
                          bool new_lambda,
-                         const int_type& nnzHSS,
-                         int_type* iHSS,
-                         int_type* jHSS,
+                         const size_type& nnzHSS,
+                         index_type* iHSS,
+                         index_type* jHSS,
                          double* MHSS)
 {
     //Note: lambda is not used since all the constraints are linear and, therefore, do
@@ -285,7 +285,7 @@ bool Ex7::eval_Hess_Lagr(const int_type& n,
     return true;
 }
 
-bool Ex7::get_starting_point(const int_type& n, double* x0)
+bool Ex7::get_starting_point(const size_type& n, double* x0)
 {
   assert(n==n_vars);
   for(auto i=0; i<n; i++)

@@ -33,11 +33,11 @@ namespace hiop
   class hiopMatrixComplexDense : public hiopMatrix
   {
   public:
-    hiopMatrixComplexDense(const int_type& m, 
-			   const int_type& glob_n, 
-			   int_type* col_part=NULL, 
+    hiopMatrixComplexDense(const size_type& m, 
+			   const size_type& glob_n, 
+			   index_type* col_part=NULL, 
 			   MPI_Comm comm=MPI_COMM_SELF, 
-			   const int_type& m_max_alloc=-1);
+			   const size_type& m_max_alloc=-1);
     virtual ~hiopMatrixComplexDense();
     
     virtual void setToZero();
@@ -55,7 +55,7 @@ namespace hiop
      * 2. 'src' and 'this' must have same number of columns
      * 3. number of rows in 'src' must be at least the number of rows in 'this'
      */
-    void copyRowsFrom(const hiopMatrix& src, const int_type* rows_idxs, int_type n_rows);
+    void copyRowsFrom(const hiopMatrix& src, const index_type* rows_idxs, size_type n_rows);
 
     virtual void timesVec(std::complex<double> beta,
 			  std::complex<double>* y,
@@ -123,7 +123,7 @@ namespace hiop
     {
       assert(false && "not yet supported");
     }
-    virtual void addSubDiagonal(const double& alpha, int_type start_on_dest_diag, const hiopVector& d_)
+    virtual void addSubDiagonal(const double& alpha, index_type start_on_dest_diag, const hiopVector& d_)
     {
       assert(false && "not yet supported");
     }
@@ -222,8 +222,8 @@ namespace hiop
       assert(false && "not yet implemented");
     }
     
-    inline int_type get_local_size_n() const { return n_local_; }
-    inline int_type get_local_size_m() const { return m_local_; } 
+    inline size_type get_local_size_n() const { return n_local_; }
+    inline size_type get_local_size_m() const { return m_local_; } 
     
     //TODO: this is not kosher!
     inline std::complex<double>** local_data() const { return M; }
@@ -231,23 +231,23 @@ namespace hiop
     //do not use this unless you sure you know what you're doing
     inline std::complex<double>** get_M() { return M; }
     
-    virtual int_type m() const {return m_local_;}
-    virtual int_type n() const {return n_global_;}
+    virtual size_type m() const {return m_local_;}
+    virtual size_type n() const {return n_global_;}
 #ifdef HIOP_DEEPCHECKS
     virtual bool assertSymmetry(double tol=1e-16) const;
 #endif
   private:
     std::complex<double>** M; //local storage
-    int_type n_global_; //total / global number of columns
+    size_type n_global_; //total / global number of columns
     int m_local_, n_local_; //local number of rows and cols, respectively
-    int_type glob_jl_, glob_ju_;
+    size_type glob_jl_, glob_ju_;
     MPI_Comm comm_; 
     int myrank_;
     
     mutable std::complex<double>* buff_mxnlocal_;  
     
     //this is very private do not touch :)
-    int_type max_rows_;
+    size_type max_rows_;
   private:
     hiopMatrixComplexDense() {};
     /** copy constructor, for internal/private use only (it doesn't copy the values) */

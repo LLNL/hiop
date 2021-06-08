@@ -72,7 +72,7 @@ namespace hiop
 class hiopVectorRajaPar : public hiopVector
 {
 public:
-  hiopVectorRajaPar(const int_type& glob_n, std::string mem_space, int_type* col_part=NULL, MPI_Comm comm=MPI_COMM_SELF);
+  hiopVectorRajaPar(const size_type& glob_n, std::string mem_space, index_type* col_part=NULL, MPI_Comm comm=MPI_COMM_SELF);
   virtual ~hiopVectorRajaPar();
 
   virtual void setToZero();
@@ -197,7 +197,7 @@ public:
   virtual void print(){} ///< @todo Temporary to surpress warnings, will be removed.
 
   /* more accessers */
-  inline int_type get_local_size() const { return n_local_; }
+  inline size_type get_local_size() const { return n_local_; }
   inline double* local_data_host() { return data_host_; }
   inline const double* local_data_host_const() const { return data_host_; }
   inline double* local_data() { return data_dev_; }
@@ -209,8 +209,8 @@ public:
   void copyToDev() const;
   void copyFromDev() const;
   
-  virtual int_type numOfElemsLessThan(const double &val) const;
-  virtual int_type numOfElemsAbsLessThan(const double &val) const;      
+  virtual size_type numOfElemsLessThan(const double &val) const;
+  virtual size_type numOfElemsAbsLessThan(const double &val) const;      
 
   virtual void set_array_from_to(hiopInterfaceBase::NonlinearityType* arr, 
                                  const int start, 
@@ -227,8 +227,8 @@ private:
   MPI_Comm comm_;
   double* data_host_;
   double* data_dev_;
-  int_type glob_il_, glob_iu_;
-  int_type n_local_;
+  size_type glob_il_, glob_iu_;
+  size_type n_local_;
   /** copy constructor, for internal/private use only (it doesn't copy the elements.) */
   hiopVectorRajaPar(const hiopVectorRajaPar&);
 

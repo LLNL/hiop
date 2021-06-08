@@ -58,7 +58,7 @@ public:
     mDe->copyFrom(*m.mDe);
   }
 
-  virtual void copyRowsFrom(const hiopMatrix& src_in, const int_type* rows_idxs, int_type n_rows)
+  virtual void copyRowsFrom(const hiopMatrix& src_in, const index_type* rows_idxs, size_type n_rows)
   {
     const hiopMatrixMDS& src = dynamic_cast<const hiopMatrixMDS&>(src_in);
     mSp->copyRowsFrom(*src.mSp, rows_idxs, n_rows);
@@ -109,7 +109,7 @@ public:
   {
     assert(false && "not supported");
   }
-  virtual void addSubDiagonal(const double& alpha, int_type start, const hiopVector& d_)
+  virtual void addSubDiagonal(const double& alpha, index_type start, const hiopVector& d_)
   {
     assert(false && "not supported");
   }
@@ -219,10 +219,10 @@ public:
     return m;
   }
 
-  virtual inline int_type m() const {return mSp->m();}
-  virtual inline int_type n() const {return mSp->n()+mDe->n();}
-  inline int_type n_sp() const {return mSp->n();}
-  inline int_type n_de() const {return  mDe->n();}
+  virtual inline size_type m() const {return mSp->m();}
+  virtual inline size_type n() const {return mSp->n()+mDe->n();}
+  inline size_type n_sp() const {return mSp->n();}
+  inline size_type n_de() const {return  mDe->n();}
 
   inline const hiopMatrixSparse* sp_mat() const { return mSp; }
   inline const hiopMatrixDense* de_mat() const { return mDe; }
@@ -293,7 +293,7 @@ public:
     mDe->copyFrom(*m.mDe);
   }
 
-  virtual void copyRowsFrom(const hiopMatrix& src_in, const int_type* rows_idxs, int_type n_rows)
+  virtual void copyRowsFrom(const hiopMatrix& src_in, const index_type* rows_idxs, size_type n_rows)
   {
     const hiopMatrixSymBlockDiagMDS& src = dynamic_cast<const hiopMatrixSymBlockDiagMDS&>(src_in);
     mSp->copyRowsFrom(src, rows_idxs, n_rows);
@@ -340,7 +340,7 @@ public:
   {
     assert(false && "not supported");
   }
-  virtual void addSubDiagonal(const double& alpha, int_type start, const hiopVector& d_)
+  virtual void addSubDiagonal(const double& alpha, index_type start, const hiopVector& d_)
   {
     assert(false && "not supported");
   }
@@ -448,10 +448,10 @@ public:
     return m;
   }
 
-  virtual inline int_type m() const {return n();}
-  virtual inline int_type n() const {return mSp->n()+mDe->n();}
-  inline int_type n_sp() const {return mSp->n();}
-  inline int_type n_de() const {return  mDe->n();}
+  virtual inline size_type m() const {return n();}
+  virtual inline size_type n() const {return mSp->n()+mDe->n();}
+  inline size_type n_sp() const {return mSp->n();}
+  inline size_type n_de() const {return  mDe->n();}
 
   inline const hiopMatrixSparse* sp_mat() const { return mSp; }
   inline const hiopMatrixDense* de_mat() const { return mDe; }

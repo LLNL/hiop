@@ -7,9 +7,9 @@
 
 using namespace hiop;
 
-static bool self_check(int_type n, double obj_value);
+static bool self_check(size_type n, double obj_value);
 
-static bool parse_arguments(int argc, char **argv, int_type& n, bool& self_check)
+static bool parse_arguments(int argc, char **argv, size_type& n, bool& self_check)
 {
 
   //  printf("%s    %s \n", argv[1], argv[2]);
@@ -71,7 +71,7 @@ int main(int argc, char **argv)
     return 1;
   }
 #endif
-  bool selfCheck; int_type n;
+  bool selfCheck; size_type n;
   if(!parse_arguments(argc, argv, n, selfCheck)) { usage(argv[0]); return 1;}
 
   bool convex_obj = false;
@@ -115,10 +115,10 @@ int main(int argc, char **argv)
 }
 
 
-static bool self_check(int_type n, double objval)
+static bool self_check(size_type n, double objval)
 {
 #define num_n_saved 3 //keep this is sync with n_saved and objval_saved
-  const int_type n_saved[] = {50, 500, 5000};
+  const size_type n_saved[] = {50, 500, 5000};
   const double objval_saved[] = { -1.58349999995100e+03, -1.53428124950100e+03, -1.04209374500105e+03};
 
 #define relerr 1e-6

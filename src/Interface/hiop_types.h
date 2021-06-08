@@ -14,8 +14,8 @@ typedef int hiop_size_type;
 #ifdef HIOP_USE_MPI
 #include "mpi.h"
 // MPI_Datatype corresponding to the above types should be specified below
-#define MPI_HIOP_INDEX_TYPE MPI_INT;
-#define MPI_HIOP_SIZE_TYPE MPI_INT;
+#define MPI_HIOP_INDEX_TYPE MPI_INT
+#define MPI_HIOP_SIZE_TYPE MPI_INT
 #endif
 
 //
@@ -24,8 +24,7 @@ typedef int hiop_size_type;
 #ifdef __cplusplus
 namespace hiop
 {
-  using index_type = int; //hiop_index_type;
-  using size_type  = int; //hiop_size_type;
-  using int_type   = int;
+  using index_type = hiop_index_type;
+  using size_type  = hiop_size_type;
 }
 #endif

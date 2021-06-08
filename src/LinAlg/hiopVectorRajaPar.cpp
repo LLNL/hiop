@@ -78,8 +78,8 @@ namespace hiop
 {
 // Define type aliases
 using real_type = double;
-using local_index_type = int_type;
-using global_index_type = int_type;
+using local_index_type = index_type;
+using global_index_type = index_type;
 
 // Define constants
 static constexpr real_type zero = 0.0;
@@ -102,9 +102,9 @@ static constexpr real_type one  = 1.0;
 
 
 hiopVectorRajaPar::hiopVectorRajaPar(
-  const int_type& glob_n,
+  const size_type& glob_n,
   std::string mem_space /* = "HOST" */,
-  int_type* col_part /* = NULL */,
+  index_type* col_part /* = NULL */,
   MPI_Comm comm /* = MPI_COMM_NULL */)
   : hiopVector(),
     mem_space_(mem_space),
@@ -527,8 +527,8 @@ void hiopVectorRajaPar::copy_from_two_vec_w_pattern(const hiopVector& c,
   const hiopVectorIntRaja& ix1 = dynamic_cast<const hiopVectorIntRaja&>(c_map);
   const hiopVectorIntRaja& ix2 = dynamic_cast<const hiopVectorIntRaja&>(d_map);
   
-  int_type n1_local = v1.n_local_;
-  int_type n2_local = v2.n_local_;
+  size_type n1_local = v1.n_local_;
+  size_type n2_local = v2.n_local_;
 
 #ifdef HIOP_DEEPCHECKS
   assert(n1_local + n2_local == n_local_);
@@ -538,8 +538,8 @@ void hiopVectorRajaPar::copy_from_two_vec_w_pattern(const hiopVector& c,
   double*  vd1 = v1.data_dev_;
   double*  vd2 = v2.data_dev_;
 
-  const int_type* id1 = ix1.local_data_const();
-  const int_type* id2 = ix2.local_data_const();
+  const index_type* id1 = ix1.local_data_const();
+  const index_type* id2 = ix2.local_data_const();
   
   int n1_local_int = (int) n1_local;
   int n2_local_int = (int) n2_local;
@@ -578,8 +578,8 @@ void hiopVectorRajaPar::copy_to_two_vec_w_pattern(hiopVector& c,
   const hiopVectorIntRaja& ix1 = dynamic_cast<const hiopVectorIntRaja&>(c_map);
   const hiopVectorIntRaja& ix2 = dynamic_cast<const hiopVectorIntRaja&>(d_map);
   
-  int_type n1_local = v1.n_local_;
-  int_type n2_local = v2.n_local_;
+  size_type n1_local = v1.n_local_;
+  size_type n2_local = v2.n_local_;
 
 #ifdef HIOP_DEEPCHECKS
   assert(n1_local + n2_local == n_local_);
@@ -588,8 +588,8 @@ void hiopVectorRajaPar::copy_to_two_vec_w_pattern(hiopVector& c,
   double*   dd = data_dev_;
   double*  vd1 = v1.data_dev_;
   double*  vd2 = v2.data_dev_;
-  const int_type* id1 = ix1.local_data_const();
-  const int_type* id2 = ix2.local_data_const();
+  const index_type* id1 = ix1.local_data_const();
+  const index_type* id2 = ix2.local_data_const();
   
   RAJA::forall< hiop_raja_exec >(
     RAJA::RangeSegment(0, (int)n1_local),
@@ -1902,21 +1902,21 @@ void hiopVectorRajaPar::copyFromDev() const
   resmgr.copy(data_host, data_dev_);
 }
 
-int_type hiopVectorRajaPar::numOfElemsLessThan(const double &val) const
+size_type hiopVectorRajaPar::numOfElemsLessThan(const double &val) const
 {  
   double* data = data_dev_;
-  RAJA::ReduceSum<hiop_raja_reduce, int_type> sum(0);
+  RAJA::ReduceSum<hiop_raja_reduce, size_type> sum(0);
   RAJA::forall<hiop_raja_exec>( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       sum += (data[i]<val);
     });
 
-  int_type nrm = sum.get();
+  size_type nrm = sum.get();
 
 #ifdef HIOP_USE_MPI
-  int_type nrm_global;
-  int ierr = MPI_Allreduce(&nrm, &nrm_global, 1, MPI_INT, MPI_SUM, comm_);
+  size_type nrm_global;
+  int ierr = MPI_Allreduce(&nrm, &nrm_global, 1, MPI_HIOP_SIZE_TYPE, MPI_SUM, comm_);
   assert(MPI_SUCCESS == ierr);
   nrm = nrm_global;
 #endif
@@ -1924,21 +1924,21 @@ int_type hiopVectorRajaPar::numOfElemsLessThan(const double &val) const
   return nrm;
 }
 
-int_type hiopVectorRajaPar::numOfElemsAbsLessThan(const double &val) const
+size_type hiopVectorRajaPar::numOfElemsAbsLessThan(const double &val) const
 {  
   double* data = data_dev_;
-  RAJA::ReduceSum<hiop_raja_reduce, int_type> sum(0);
+  RAJA::ReduceSum<hiop_raja_reduce, size_type> sum(0);
   RAJA::forall<hiop_raja_exec>( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       sum += (fabs(data[i])<val);
     });
 
-  int_type nrm = sum.get();
+  size_type nrm = sum.get();
 
 #ifdef HIOP_USE_MPI
-  int_type nrm_global;
-  int ierr = MPI_Allreduce(&nrm, &nrm_global, 1, MPI_INT, MPI_SUM, comm_);
+  size_type nrm_global;
+  int ierr = MPI_Allreduce(&nrm, &nrm_global, 1, MPI_HIOP_SIZE_TYPE, MPI_SUM, comm_);
   assert(MPI_SUCCESS == ierr);
   nrm = nrm_global;
 #endif

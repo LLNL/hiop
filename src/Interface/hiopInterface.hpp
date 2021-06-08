@@ -49,7 +49,7 @@
 #ifndef HIOP_INTERFACE_BASE
 #define HIOP_INTERFACE_BASE
 
-#include "hiop_types.h"
+#include "hiop_defs.hpp"
 #include "hiopMPI.hpp"
 
 namespace hiop

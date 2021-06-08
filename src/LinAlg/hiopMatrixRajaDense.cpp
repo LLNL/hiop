@@ -109,12 +109,12 @@ namespace hiop
 #endif
 
 
-hiopMatrixRajaDense::hiopMatrixRajaDense(const int_type& m, 
-                                         const int_type& glob_n,
+hiopMatrixRajaDense::hiopMatrixRajaDense(const size_type& m, 
+                                         const size_type& glob_n,
                                          std::string mem_space, 
-                                         int_type* col_part /* = nullptr */, 
+                                         index_type* col_part /* = nullptr */, 
                                          MPI_Comm comm /* = MPI_COMM_SELF */, 
-                                         const int_type& m_max_alloc /* = -1 */) 
+                                         const size_type& m_max_alloc /* = -1 */) 
   : hiopMatrixDense(m, glob_n, comm),
     mem_space_(mem_space),
     buff_mxnlocal_host_(nullptr)
@@ -343,7 +343,7 @@ void hiopMatrixRajaDense::copyRowsFrom(
  * 
  * @todo Document this function better.
  */
-void hiopMatrixRajaDense::copyRowsFrom(const hiopMatrix& src_mat, const int_type* rows_idxs, int_type n_rows)
+void hiopMatrixRajaDense::copyRowsFrom(const hiopMatrix& src_mat, const index_type* rows_idxs, size_type n_rows)
 {
   const hiopMatrixRajaDense& src = dynamic_cast<const hiopMatrixRajaDense&>(src_mat);
   assert(n_global_==src.n_global_);
@@ -438,7 +438,7 @@ void hiopMatrixRajaDense::copyFromMatrixBlock(const hiopMatrixDense& srcmat, con
  * 
  * @todo Document this better.
  */
-void hiopMatrixRajaDense::shiftRows(int_type shift)
+void hiopMatrixRajaDense::shiftRows(size_type shift)
 {
   if(shift == 0)
     return;
@@ -491,21 +491,21 @@ void hiopMatrixRajaDense::shiftRows(int_type shift)
 }
 
 /// Replaces a row in this matrix with the elements of a vector
-void hiopMatrixRajaDense::replaceRow(int_type row, const hiopVector& vec)
+void hiopMatrixRajaDense::replaceRow(index_type row, const hiopVector& vec)
 {
   const auto& rvec = dynamic_cast<const hiopVectorRajaPar&>(vec);
   auto& rm = umpire::ResourceManager::getInstance();
   RAJA::View<double, RAJA::Layout<2>> Mview(this->data_dev_, m_local_, n_local_);
   assert(row >= 0);
   assert(row < m_local_);
-  int_type vec_size = rvec.get_local_size();
+  size_type vec_size = rvec.get_local_size();
   rm.copy(&Mview(row, 0),
           const_cast<double*>(rvec.local_data_const()),
           (vec_size >= n_local_ ? n_local_ : vec_size)*sizeof(double));
 }
 
 /// Overwrites the values in row_vec with those from a specified row in this matrix
-void hiopMatrixRajaDense::getRow(int_type irow, hiopVector& row_vec)
+void hiopMatrixRajaDense::getRow(index_type irow, hiopVector& row_vec)
 {
   auto& rm = umpire::ResourceManager::getInstance();
   RAJA::View<double, RAJA::Layout<2>> Mview(this->data_dev_, m_local_, n_local_);
@@ -1102,11 +1102,11 @@ void hiopMatrixRajaDense::addDiagonal(const double& value)
  */
 void hiopMatrixRajaDense::addSubDiagonal(
   const double& alpha,
-  int_type start,
+  index_type start,
   const hiopVector& dvec)
 {
   const hiopVectorRajaPar& d = dynamic_cast<const hiopVectorRajaPar&>(dvec);
-  int_type dlen=d.get_size();
+  size_type dlen=d.get_size();
 #ifdef HIOP_DEEPCHECKS
   assert(start>=0);
   assert(start+dlen<=n_local_);

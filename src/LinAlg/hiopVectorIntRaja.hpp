@@ -67,12 +67,12 @@ namespace hiop
 class hiopVectorIntRaja : public hiopVectorInt
 {
 private:
-  int_type *buf_host_;
-  int_type *buf_;
+  index_type *buf_host_;
+  index_type *buf_;
   std::string mem_space_;
 
 public:
-  hiopVectorIntRaja(int_type sz, std::string mem_space="HOST");
+  hiopVectorIntRaja(size_type sz, std::string mem_space="HOST");
 
   ~hiopVectorIntRaja();
 
@@ -80,13 +80,13 @@ public:
    * @brief Access constant data at element _i_ on the _host_. To access data
    * on the device, you must first call _copyFromDev_.
    */
-  const int_type& operator[] (int_type i) const override;
+  const index_type& operator[] (index_type i) const override;
 
   /**
    * @brief Access data at element _i_ on the _host_. To access data on the
    * device, you must first call _copyFromDev_.
    */
-  int_type& operator[] (int_type i) override;
+  index_type& operator[] (index_type i) override;
 
   /**
    * @brief Copy array data from the device.
@@ -102,13 +102,13 @@ public:
    */
   void copyToDev() const;
 
-  inline int_type* local_data_host() { return buf_host_; }
+  inline index_type* local_data_host() { return buf_host_; }
 
-  inline const int_type* local_data_host_const() const { return buf_host_; }
+  inline const index_type* local_data_host_const() const { return buf_host_; }
 
-  inline int_type* local_data() { return buf_; }
+  inline index_type* local_data() { return buf_; }
 
-  inline const int_type* local_data_const() const { return buf_; }
+  inline const index_type* local_data_const() const { return buf_; }
 };
 
 } // namespace hiop

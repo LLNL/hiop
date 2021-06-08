@@ -580,7 +580,7 @@ evalNlpAndLogErrors(const hiopIterate& it, const hiopResidual& resid, const doub
 {
   nlp->runStats.tmSolverInternal.start();
 
-  int_type n=nlp->n_complem(), m=nlp->m();
+  size_type n=nlp->n_complem(), m=nlp->m();
   //the one norms
   //double nrmDualBou=it.normOneOfBoundDuals();
   //double nrmDualEqu=it.normOneOfEqualityDuals();

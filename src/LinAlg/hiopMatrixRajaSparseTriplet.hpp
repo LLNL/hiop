@@ -81,7 +81,7 @@ public:
   virtual void setToConstant(double c);
   virtual void copyFrom(const hiopMatrixSparse& dm);
 
-  virtual void copyRowsFrom(const hiopMatrix& src, const int_type* rows_idxs, int_type n_rows);
+  virtual void copyRowsFrom(const hiopMatrix& src, const index_type* rows_idxs, size_type n_rows);
   
   virtual void timesVec(double beta,  hiopVector& y,
 			double alpha, const hiopVector& x) const;
@@ -101,7 +101,7 @@ public:
 
   virtual void addDiagonal(const double& alpha, const hiopVector& d_);
   virtual void addDiagonal(const double& value);
-  virtual void addSubDiagonal(const double& alpha, int_type start, const hiopVector& d_);
+  virtual void addSubDiagonal(const double& alpha, index_type start, const hiopVector& d_);
   /* add to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements of
    * 'd_' (source) starting at index 'start_on_src_vec'. The number of elements added is 'num_elems' 
    * when num_elems>=0, or the remaining elems on 'd_' starting at 'start_on_src_vec'. */
@@ -146,36 +146,36 @@ public:
 					    hiopMatrixDense& W) const;
 
   virtual void copyRowsBlockFrom(const hiopMatrix& src_gen,
-                                 const int_type& rows_src_idx_st,
-                                 const int_type& n_rows,
-                                 const int_type& rows_dest_idx_st,
-                                 const int_type& dest_nnz_st)
+                                 const index_type& rows_src_idx_st,
+                                 const size_type& n_rows,
+                                 const index_type& rows_dest_idx_st,
+                                 const size_type& dest_nnz_st)
   {
     assert(false && "not needed / implemented");
   }
 
   virtual void copySubmatrixFrom(const hiopMatrix& src_gen,
-                                 const int_type& dest_row_st,
-                                 const int_type& dest_col_st,
-                                 const int_type& dest_nnz_st,
+                                 const index_type& dest_row_st,
+                                 const index_type& dest_col_st,
+                                 const size_type& dest_nnz_st,
                                  const bool offdiag_only = false)
   {
     assert(false && "not needed / implemented");
   }
     
   virtual void copySubmatrixFromTrans(const hiopMatrix& src_gen,
-                                      const int_type& dest_row_st,
-                                      const int_type& dest_col_st,
-                                      const int_type& dest_nnz_st,
+                                      const index_type& dest_row_st,
+                                      const index_type& dest_col_st,
+                                      const size_type& dest_nnz_st,
                                       const bool offdiag_only = false)
   {
     assert(false && "not needed / implemented");
   }  
   
   virtual void setSubmatrixToConstantDiag_w_colpattern(const double& scalar,
-                                                       const int_type& dest_row_st,
-                                                       const int_type& dest_col_st,
-                                                       const int_type& dest_nnz_st,
+                                                       const index_type& dest_row_st,
+                                                       const index_type& dest_col_st,
+                                                       const size_type& dest_nnz_st,
                                                        const int &nnz_to_copy,
                                                        const hiopVector& ix)
   {
@@ -183,9 +183,9 @@ public:
   }
 
   virtual void setSubmatrixToConstantDiag_w_rowpattern(const double& scalar,
-                                                       const int_type& dest_row_st,
-                                                       const int_type& dest_col_st,
-                                                       const int_type& dest_nnz_st,
+                                                       const index_type& dest_row_st,
+                                                       const index_type& dest_col_st,
+                                                       const size_type& dest_nnz_st,
                                                        const int &nnz_to_copy,
                                                        const hiopVector& ix)
   {
@@ -193,18 +193,18 @@ public:
   }
 
   virtual void copyDiagMatrixToSubblock(const double& src_val,
-                                        const int_type& dest_row_st,
-                                        const int_type& dest_col_st,
-                                        const int_type& dest_nnz_st,
+                                        const index_type& dest_row_st,
+                                        const index_type& dest_col_st,
+                                        const size_type& dest_nnz_st,
                                         const int &nnz_to_copy)
   {
     assert(false && "not needed / implemented");
   }
 
   virtual void copyDiagMatrixToSubblock_w_pattern(const hiopVector& x,
-                                                  const int_type& dest_row_st,
-                                                  const int_type& dest_col_st,
-                                                  const int_type& dest_nnz_st,
+                                                  const index_type& dest_row_st,
+                                                  const index_type& dest_col_st,
+                                                  const size_type& dest_nnz_st,
                                                   const int &nnz_to_copy,
                                                   const hiopVector& pattern)
   {
@@ -241,7 +241,7 @@ public:
     assert(false && "not needed / implemented");
   }
 
-  virtual int_type numberOfOffDiagNonzeros() const {assert("not implemented"&&0);return 0;};
+  virtual size_type numberOfOffDiagNonzeros() const {assert("not implemented"&&0);return 0;};
 
   virtual void set_Jac_FR(const hiopMatrixSparse& Jac_c,
                           const hiopMatrixSparse& Jac_d,
@@ -387,7 +387,7 @@ public:
     return true;
   }
   
-  virtual int_type numberOfOffDiagNonzeros() const
+  virtual size_type numberOfOffDiagNonzeros() const
   {
     assert(false && "not needed / implemented");
     return 0;

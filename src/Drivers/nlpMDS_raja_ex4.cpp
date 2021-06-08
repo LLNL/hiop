@@ -18,7 +18,6 @@
   #define RAJA_LAMBDA [=]
 #endif
 
-
 using namespace hiop;
 
 Ex4::Ex4(int ns_in, int nd_in, std::string mem_space)
@@ -115,7 +114,7 @@ void Ex4::initialize()
   Md_->setToConstant(-1.0);
 }
 
-bool Ex4::get_prob_sizes(int_type& n, int_type& m)
+bool Ex4::get_prob_sizes(size_type& n, size_type& m)
 { 
   n = 2*ns_ + nd_;
   m = ns_ + 3*( haveIneq_ ? 1 : 0 ); 
@@ -127,7 +126,7 @@ bool Ex4::get_prob_sizes(int_type& n, int_type& m)
  * @todo register pointers with umpire in case they need to be copied
  * from device to host.
  */
-bool Ex4::get_vars_info(const int_type& n, double *xlow, double* xupp, NonlinearityType* type)
+bool Ex4::get_vars_info(const size_type& n, double *xlow, double* xupp, NonlinearityType* type)
 {
   //assert(n>=4 && "number of variables should be greater than 4 for this example");
   assert(n == 2*ns_+nd_);
@@ -218,7 +217,7 @@ bool Ex4::get_vars_info(const int_type& n, double *xlow, double* xupp, Nonlinear
  * @param[out] cupp - inequality constraint upper bound
  * @param[out] type - constraint type
  */
-bool Ex4::get_cons_info(const int_type& m, double* clow, double* cupp, NonlinearityType* type)
+bool Ex4::get_cons_info(const size_type& m, double* clow, double* cupp, NonlinearityType* type)
 {
   assert(m == ns_ + 3*haveIneq_);
   bool haveIneq = haveIneq_; ///< Cannot capture member variable in RAJA lambda
@@ -261,7 +260,7 @@ bool Ex4::get_sparse_dense_blocks_info(int& nx_sparse, int& nx_dense,
   return true;
 }
 
-bool Ex4::eval_f(const int_type& n, const double* x, bool new_x, double& obj_value)
+bool Ex4::eval_f(const size_type& n, const double* x, bool new_x, double& obj_value)
 {
   //assert(ns_>=4);
   assert(Q_->n()==nd_); assert(Q_->m()==nd_);
@@ -314,8 +313,8 @@ bool Ex4::eval_f(const int_type& n, const double* x, bool new_x, double& obj_val
  * @param[in] x ?
  * @param[in] cons ?
  */
-bool Ex4::eval_cons(const int_type& n, const int_type& m, 
-    const int_type& num_cons, const int_type* idx_cons_in,
+bool Ex4::eval_cons(const size_type& n, const size_type& m, 
+    const size_type& num_cons, const index_type* idx_cons_in,
     const double* x, bool new_x, double* cons)
 {
   const double* s = x+ns_;
@@ -324,16 +323,16 @@ bool Ex4::eval_cons(const int_type& n, const int_type& m,
   assert(num_cons==ns_ || num_cons==3*haveIneq_);
 
   // Temporary solution: Move idx_cons array to GPU, works with UM and PINNED only
-  int_type* idx_cons = nullptr;
+  index_type* idx_cons = nullptr;
   auto& resmgr = umpire::ResourceManager::getInstance();
   if(mem_space_ == "DEFAULT")
   {
-    idx_cons = new int_type[num_cons];
+    idx_cons = new index_type[num_cons];
   }
   else
   {
     umpire::Allocator allocator = resmgr.getAllocator(mem_space_);
-    idx_cons = static_cast<int_type*>(allocator.allocate(num_cons * sizeof(int_type)));
+    idx_cons = static_cast<index_type*>(allocator.allocate(num_cons * sizeof(index_type)));
   }
 
   for(int i=0; i<num_cons; ++i)
@@ -407,7 +406,7 @@ bool Ex4::eval_cons(const int_type& n, const int_type& m,
 }
 
 //sum 0.5 {x_i*(x_{i}-1) : i=1,...,ns_} + 0.5 y'*Qd*y + 0.5 s^T s
-bool Ex4::eval_grad_f(const int_type& n, const double* x, bool new_x, double* gradf)
+bool Ex4::eval_grad_f(const size_type& n, const double* x, bool new_x, double* gradf)
 {
   //! assert(ns_>=4); assert(Q_->n()==ns_/4); assert(Q_->m()==ns_/4);
   //x_i - 0.5 
@@ -454,26 +453,26 @@ bool Ex4::eval_grad_f(const int_type& n, const double* x, bool new_x, double* gr
  * This method runs on GPU.
  * 
  */
-bool Ex4::eval_Jac_cons(const int_type& n, const int_type& m, 
-    const int_type& num_cons, const int_type* idx_cons_in,
+bool Ex4::eval_Jac_cons(const size_type& n, const size_type& m, 
+    const size_type& num_cons, const index_type* idx_cons_in,
     const double* x, bool new_x,
-    const int_type& nsparse, const int_type& ndense, 
+    const size_type& nsparse, const size_type& ndense, 
     const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
     double* JacD)
 {
   assert(num_cons==ns_ || num_cons==3*haveIneq_);
 
   // Temporary solution: Move idx_cons array to GPU, works with UM and PINNED only
-  int_type* idx_cons = nullptr;
+  index_type* idx_cons = nullptr;
   auto& resmgr = umpire::ResourceManager::getInstance();
   if(mem_space_ == "DEFAULT")
   {
-    idx_cons = new int_type[num_cons];
+    idx_cons = new index_type[num_cons];
   }
   else
   {
     umpire::Allocator allocator = resmgr.getAllocator(mem_space_);
-    idx_cons = static_cast<int_type*>(allocator.allocate(num_cons * sizeof(int_type)));
+    idx_cons = static_cast<index_type*>(allocator.allocate(num_cons * sizeof(index_type)));
   }
 
   for(int i=0; i<num_cons; ++i)
@@ -590,10 +589,10 @@ bool Ex4::eval_Jac_cons(const int_type& n, const int_type& m,
 }
 
 /// Hessian evaluation
-bool Ex4::eval_Hess_Lagr(const int_type& n, const int_type& m, 
+bool Ex4::eval_Hess_Lagr(const size_type& n, const size_type& m, 
     const double* x, bool new_x, const double& obj_factor,
     const double* lambda, bool new_lambda,
-    const int_type& nsparse, const int_type& ndense, 
+    const size_type& nsparse, const size_type& ndense, 
     const int& nnzHSS, int* iHSS, int* jHSS, double* MHSS, 
     double* HDD,
     int& nnzHSD, int* iHSD, int* jHSD, double* MHSD)
@@ -637,7 +636,7 @@ bool Ex4::eval_Hess_Lagr(const int_type& n, const int_type& m,
 }
 
 /* Implementation of the primal starting point specification */
-bool Ex4::get_starting_point(const int_type& global_n, double* x0)
+bool Ex4::get_starting_point(const size_type& global_n, double* x0)
 {
   assert(global_n==2*ns_+nd_); 
   RAJA::forall<ex4_raja_exec>(RAJA::RangeSegment(0, global_n),
@@ -648,7 +647,7 @@ bool Ex4::get_starting_point(const int_type& global_n, double* x0)
   return true;
 }
 
-bool Ex4::get_starting_point(const int_type& n, const int_type& m,
+bool Ex4::get_starting_point(const size_type& n, const size_type& m,
     double* x0,
     bool& duals_avail,
     double* z_bndL0, double* z_bndU0,
@@ -739,7 +738,7 @@ void Ex4::set_solution_duals(const double* zl_vec, const double* zu_vec, const d
 }
 
 /** all constraints evaluated in here */
-bool Ex4OneCallCons::eval_cons(const int_type& n, const int_type& m, 
+bool Ex4OneCallCons::eval_cons(const size_type& n, const size_type& m, 
     const double* x, bool new_x, double* cons)
 {
   assert(3*haveIneq_+ns_ == m);
@@ -816,9 +815,9 @@ bool Ex4OneCallCons::eval_cons(const int_type& n, const int_type& m,
  * This method runs on GPU.
  * 
  */
-bool Ex4OneCallCons::eval_Jac_cons(const int_type& n, const int_type& m, 
+bool Ex4OneCallCons::eval_Jac_cons(const size_type& n, const size_type& m, 
     const double* x, bool new_x,
-    const int_type& nsparse, const int_type& ndense, 
+    const size_type& nsparse, const size_type& ndense, 
     const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
     double* JacD)
 {

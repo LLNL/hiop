@@ -82,8 +82,8 @@ using namespace hiop;
  * Creates legacy HiOp vector by default, RAJA vector when memory space
  * is specified.
  */
-hiopVector* LinearAlgebraFactory::createVector(const int_type& glob_n,
-                                               int_type* col_part,
+hiopVector* LinearAlgebraFactory::createVector(const size_type& glob_n,
+                                               index_type* col_part,
                                                MPI_Comm comm)
 {
   if(mem_space_ == "DEFAULT")
@@ -108,7 +108,7 @@ hiopVector* LinearAlgebraFactory::createVector(const int_type& glob_n,
  * Creates int vector with operator new by default, RAJA vector when memory space
  * is specified.
  */
-hiopVectorInt* LinearAlgebraFactory::createVectorInt(int_type size)
+hiopVectorInt* LinearAlgebraFactory::createVectorInt(size_type size)
 {
   if(mem_space_ == "DEFAULT")
   {
@@ -132,11 +132,11 @@ hiopVectorInt* LinearAlgebraFactory::createVectorInt(int_type size)
  * Creates legacy HiOp dense matrix by default, RAJA vector when memory space
  * is specified.
  */
-hiopMatrixDense* LinearAlgebraFactory::createMatrixDense(const int_type& m,
-                                                         const int_type& glob_n,
-                                                         int_type* col_part,
+hiopMatrixDense* LinearAlgebraFactory::createMatrixDense(const size_type& m,
+                                                         const size_type& glob_n,
+                                                         index_type* col_part,
                                                          MPI_Comm comm,
-                                                         const int_type& m_max_alloc)
+                                                         const size_type& m_max_alloc)
 {
   if(mem_space_ == "DEFAULT")
   {
@@ -159,9 +159,9 @@ hiopMatrixDense* LinearAlgebraFactory::createMatrixDense(const int_type& m,
  * @brief Creates an instance of a sparse matrix of the appropriate implementation
  * depending on the build.
  */
-hiopMatrixSparse* LinearAlgebraFactory::createMatrixSparse(int_type rows,
-                                                           int_type cols,
-                                                           int_type nnz)
+hiopMatrixSparse* LinearAlgebraFactory::createMatrixSparse(size_type rows,
+                                                           size_type cols,
+                                                           size_type nnz)
 {
   if (mem_space_ == "DEFAULT")
   {
@@ -183,7 +183,7 @@ hiopMatrixSparse* LinearAlgebraFactory::createMatrixSparse(int_type rows,
  * @brief Creates an instance of a symmetric sparse matrix of the appropriate
  * implementation depending on the build.
  */
-hiopMatrixSparse* LinearAlgebraFactory::createMatrixSymSparse(int_type size, int_type nnz)
+hiopMatrixSparse* LinearAlgebraFactory::createMatrixSymSparse(size_type size, size_type nnz)
 {
   if (mem_space_ == "DEFAULT")
   {
@@ -204,7 +204,7 @@ hiopMatrixSparse* LinearAlgebraFactory::createMatrixSymSparse(int_type size, int
 /**
  * @brief Static method to create a raw C array
  */
-double* LinearAlgebraFactory::createRawArray(int_type n)
+double* LinearAlgebraFactory::createRawArray(size_type n)
 {
   if (mem_space_ == "DEFAULT") {
     return new double[n];

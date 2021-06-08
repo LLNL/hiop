@@ -48,7 +48,7 @@ namespace hiop
     virtual void setToConstant(double c);
     virtual void setToConstant(std::complex<double> c);
 
-    void copyRowsFrom(const hiopMatrix& src, const int_type* rows_idxs, int_type n_rows)
+    void copyRowsFrom(const hiopMatrix& src, const index_type* rows_idxs, size_type n_rows)
     {
       assert(false && "not yet implemented");
     }
@@ -100,7 +100,7 @@ namespace hiop
       assert(false && "not yet implemented");
     }
 
-    virtual void addSubDiagonal(const double& alpha, int_type start_on_dest_diag, const hiopVector& d_)
+    virtual void addSubDiagonal(const double& alpha, index_type start_on_dest_diag, const hiopVector& d_)
     {
       assert(false && "not yet implemented");
     }
@@ -191,9 +191,9 @@ namespace hiop
 		       int maxRows=-1, int maxCols=-1, int rank=-1) const;
 
     /* number of rows */
-    virtual int_type m() const { return stM->m(); }
+    virtual size_type m() const { return stM->m(); }
     /* number of columns */
-    virtual int_type n() const { return stM->n(); }
+    virtual size_type n() const { return stM->n(); }
 
 #ifdef HIOP_DEEPCHECKS
     /* check symmetry */
@@ -231,7 +231,7 @@ namespace hiop
     {
       stM->copyFrom(irow_, jcol_, values_);
     }
-    inline int_type numberOfNonzeros() const { return stM->numberOfNonzeros(); }
+    inline size_type numberOfNonzeros() const { return stM->numberOfNonzeros(); }
     inline hiopMatrixSparseTripletStorage<int, std::complex<double> >* storage() const { return stM; }
   private:
     hiopMatrixSparseTripletStorage<int, std::complex<double> > *stM;

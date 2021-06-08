@@ -9,9 +9,9 @@
 
 using namespace hiop;
 
-static bool self_check(int_type n, double obj_value);
+static bool self_check(size_type n, double obj_value);
 
-static bool parse_arguments(int argc, char **argv, int_type& n, double& distortion_ratio, bool& self_check)
+static bool parse_arguments(int argc, char **argv, size_type& n, double& distortion_ratio, bool& self_check)
 {
   n = 20000; distortion_ratio=1.; self_check=false; //default options
 
@@ -67,7 +67,7 @@ int main(int argc, char **argv)
   err = MPI_Comm_size(MPI_COMM_WORLD,&numRanks); assert(MPI_SUCCESS==err);
   if(0==rank) printf("Support for MPI is enabled\n");
 #endif
-  bool selfCheck; int_type mesh_size; double ratio;
+  bool selfCheck; size_type mesh_size; double ratio;
   if(!parse_arguments(argc, argv, mesh_size, ratio, selfCheck)) { usage(argv[0]); return 1;}
   
   Ex1Interface problem(mesh_size, ratio);
@@ -103,10 +103,10 @@ int main(int argc, char **argv)
   return 0;
 }
 
-static bool self_check(int_type n, double objval)
+static bool self_check(size_type n, double objval)
 {
 #define num_n_saved 3 //keep this is sync with n_saved and objval_saved
-  const int_type n_saved[] = {500, 5000, 50000}; 
+  const size_type n_saved[] = {500, 5000, 50000}; 
   const double objval_saved[] = {8.6156700e-2, 8.6156106e-02, 8.6161001e-02};
 
 #define relerr 1e-6

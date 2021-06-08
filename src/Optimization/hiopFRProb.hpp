@@ -83,39 +83,39 @@ public:
   hiopFRProbSparse(hiopAlgFilterIPMBase& solver_base);
   virtual ~hiopFRProbSparse();
 
-  virtual bool get_prob_sizes(int_type& n, int_type& m);
-  virtual bool get_vars_info(const int_type& n, double *xlow, double* xupp, NonlinearityType* type);
-  virtual bool get_cons_info(const int_type& m, double* clow, double* cupp, NonlinearityType* type);
+  virtual bool get_prob_sizes(size_type& n, size_type& m);
+  virtual bool get_vars_info(const size_type& n, double *xlow, double* xupp, NonlinearityType* type);
+  virtual bool get_cons_info(const size_type& m, double* clow, double* cupp, NonlinearityType* type);
   virtual bool get_sparse_blocks_info(int& nx,
                                       int& nnz_sparse_Jaceq,
                                       int& nnz_sparse_Jacineq,
                                       int& nnz_sparse_Hess_Lagr);
 
-  virtual bool eval_f(const int_type& n, const double* x, bool new_x, double& obj_value);
-  virtual bool eval_cons(const int_type& n,
-                         const int_type& m,
-                         const int_type& num_cons,
-                         const int_type* idx_cons,
+  virtual bool eval_f(const size_type& n, const double* x, bool new_x, double& obj_value);
+  virtual bool eval_cons(const size_type& n,
+                         const size_type& m,
+                         const size_type& num_cons,
+                         const index_type* idx_cons,
                          const double* x,
                          bool new_x,
                          double* cons);
-  virtual bool eval_cons(const int_type& n,
-                         const int_type& m,
+  virtual bool eval_cons(const size_type& n,
+                         const size_type& m,
                          const double* x,
                          bool new_x,
                          double* cons);
-  virtual bool eval_grad_f(const int_type& n, const double* x, bool new_x, double* gradf);
-  virtual bool eval_Jac_cons(const int_type& n, const int_type& m,
-                             const int_type& num_cons,
-                             const int_type* idx_cons,
+  virtual bool eval_grad_f(const size_type& n, const double* x, bool new_x, double* gradf);
+  virtual bool eval_Jac_cons(const size_type& n, const size_type& m,
+                             const size_type& num_cons,
+                             const index_type* idx_cons,
                              const double* x,
                              bool new_x,
                              const int& nnzJacS,
                              int* iJacS,
                              int* jJacS,
                              double* MJacS);
-  virtual bool eval_Jac_cons(const int_type& n,
-                             const int_type& m,
+  virtual bool eval_Jac_cons(const size_type& n,
+                             const size_type& m,
                              const double* x,
                              bool new_x,
                              const int& nnzJacS,
@@ -123,8 +123,8 @@ public:
                              int* jJacS,
                              double* MJacS);
 
-  virtual bool get_starting_point(const int_type& n,
-                                  const int_type& m,
+  virtual bool get_starting_point(const size_type& n,
+                                  const size_type& m,
                                   double* x0,
                                   bool& duals_avail,
                                   double* z_bndL0,
@@ -133,8 +133,8 @@ public:
                                   bool& slack_avail,
                                   double* ineq_slack = nullptr);
 
-  virtual bool eval_Hess_Lagr(const int_type& n,
-                              const int_type& m,
+  virtual bool eval_Hess_Lagr(const size_type& n,
+                              const size_type& m,
                               const double* x,
                               bool new_x,
                               const double& obj_factor,
@@ -177,16 +177,16 @@ public:
                             double& alpha_du,
                             double& alpha_pr);
 private:
-  int_type n_;
-  int_type m_;
+  size_type n_;
+  size_type m_;
 
-  int_type n_x_;
-  int_type m_eq_;
-  int_type m_ineq_;
+  size_type n_x_;
+  size_type m_eq_;
+  size_type m_ineq_;
 
-  int_type nnz_Jac_c_;
-  int_type nnz_Jac_d_;
-  int_type nnz_Hess_Lag_;
+  size_type nnz_Jac_c_;
+  size_type nnz_Jac_d_;
+  size_type nnz_Hess_Lag_;
 
   hiopAlgFilterIPMBase& solver_base_;
   hiopNlpSparse* nlp_base_;
