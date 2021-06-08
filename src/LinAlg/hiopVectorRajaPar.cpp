@@ -1452,11 +1452,11 @@ int hiopVectorRajaPar::allPositive()
 {
   double* data = data_dev_;
   RAJA::ReduceMin< hiop_raja_reduce, double > minimum(one);
-  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
-		RAJA_LAMBDA(RAJA::Index_type i)
-    {
-      minimum.min(data[i]);
-		});
+  RAJA::forall< hiop_raja_exec >(RAJA::RangeSegment(0, n_local_),
+                                 RAJA_LAMBDA(RAJA::Index_type i)
+                                 {
+                                   minimum.min(data[i]);
+                                 });
   int allPos = minimum.get() > zero ? 1 : 0;
 
 #ifdef HIOP_USE_MPI

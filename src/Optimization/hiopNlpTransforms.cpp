@@ -119,7 +119,13 @@ index_type* hiopFixedVarsRemover::allocRSVectorDistrib()
   assert(nRanks==nlen-1);
 #endif
   //first gather on all ranks the number of variables fixed on each rank
-  ierr = MPI_Allgather(&n_fixed_vars_local, 1, MPI_INT, rsVecDistrib+1, 1, MPI_INT, comm);
+  ierr = MPI_Allgather(&n_fixed_vars_local,
+                       1,
+                       MPI_HIOP_SIZE_TYPE,
+                       rsVecDistrib+1,
+                       1,
+                       MPI_HIOP_INDEX_TYPE,
+                       comm);
   assert(ierr==MPI_SUCCESS);
 #else
   assert(nlen==1);
@@ -130,9 +136,9 @@ index_type* hiopFixedVarsRemover::allocRSVectorDistrib()
     rsVecDistrib[r] += rsVecDistrib[r-1];
   
   //finally substract these from the full-space index vector distribution 
-  for(int r=0; r<nlen; r++)
+  for(int r=0; r<nlen; r++) {
     rsVecDistrib[r] = fs_vec_distrib[r]-rsVecDistrib[r];
-
+  }
   assert(rsVecDistrib[0]==0);
 #ifdef HIOP_DEEPCHECKS
   assert(rsVecDistrib[nlen-1]==n_rs);
