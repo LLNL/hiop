@@ -366,8 +366,12 @@ public:
   inline size_type n_post_local()  { return n_vars_local; }
   inline size_type n_pre_local()  { return n_vars_local; }
 
+  inline hiopVector* apply_to_x(hiopVector& x)
+  {
+    return hiopNlpTransformation::apply_to_x(x);
+  }
   inline void apply_to_x(hiopVector& x_in, hiopVector& x_out){}
-
+  
   /// @brief return the scaling fact for objective
   inline double get_obj_scale() const {return scale_factor_obj;}
 
@@ -505,8 +509,15 @@ public:
   inline size_type n_post_local()  { return n_vars_local; }
   inline size_type n_pre_local()  { return n_vars_local; }
   inline bool setup() { return true; }
-  
-  inline void apply_to_x(hiopVector& x_in, hiopVector& x_out){}
+
+  inline hiopVector* apply_to_x(hiopVector& x)
+  {
+    return hiopNlpTransformation::apply_to_x(x);
+  }
+
+  inline void apply_to_x(hiopVector& x_in, hiopVector& x_out)
+  {
+  }
 
   void relax(const double& bound_relax_perturb,
              hiopVector& xl,

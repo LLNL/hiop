@@ -314,8 +314,8 @@ bool Ex4::eval_f(const size_type& n, const double* x, bool new_x, double& obj_va
  * @param[in] cons ?
  */
 bool Ex4::eval_cons(const size_type& n, const size_type& m, 
-    const size_type& num_cons, const index_type* idx_cons_in,
-    const double* x, bool new_x, double* cons)
+                    const size_type& num_cons, const index_type* idx_cons_in,
+                    const double* x, bool new_x, double* cons)
 {
   const double* s = x+ns_;
   const double* y = x+2*ns_;

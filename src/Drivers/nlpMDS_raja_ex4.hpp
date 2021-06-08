@@ -91,9 +91,13 @@ public:
    * @param[in] x ?
    * @param[in] cons ?
    */
-  virtual bool eval_cons(const size_type& n, const size_type& m, 
-			 const size_type& num_cons, const index_type_type* idx_cons,  
-			 const double* x, bool new_x, double* cons);
+  bool eval_cons(const size_type& n,
+                 const size_type& m, 
+                 const size_type& num_cons,
+                 const index_type* idx_cons,  
+                 const double* x,
+                 bool new_x,
+                 double* cons);
 
   bool eval_cons(const size_type& n,
                  const size_type& m, 
@@ -127,11 +131,17 @@ public:
                              double* MJacS, 
                              double* JacD);
 
-  virtual bool eval_Jac_cons(const size_type& n, const size_type& m, 
-        const double* x, bool new_x,
-        const size_type& nsparse, const size_type& ndense, 
-        const size_type& nnzJacS, index_type* iJacS, index_type* jJacS, double* MJacS, 
-        double* JacD)
+  virtual bool eval_Jac_cons(const size_type& n,
+                             const size_type& m, 
+                             const double* x,
+                             bool new_x,
+                             const size_type& nsparse,
+                             const size_type& ndense, 
+                             const size_type& nnzJacS,
+                             index_type* iJacS,
+                             index_type* jJacS,
+                             double* MJacS, 
+                             double* JacD)
   {
     //return false so that HiOp will rely on the Jacobian evaluator defined above
     return false;
@@ -212,7 +222,7 @@ class Ex4OneCallCons : public Ex4
 
     /** all constraints evaluated in here */
     bool eval_cons(const size_type& n, const size_type& m, 
-        const double* x, bool new_x, double* cons);
+                   const double* x, bool new_x, double* cons);
 
     virtual bool eval_Jac_cons(const size_type& n,
                                const size_type& m, 

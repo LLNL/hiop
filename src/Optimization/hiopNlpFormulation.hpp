@@ -524,9 +524,9 @@ public:
   }
 
   /** const accessors */
-  inline const int get_nnz_Jaceq()  const { return m_nnz_sparse_Jaceq; }
-  inline const int get_nnz_Jacineq()  const { return m_nnz_sparse_Jacineq; }
-  inline const int get_nnz_Hess_Lagr()  const { return m_nnz_sparse_Hess_Lagr; }
+  inline int get_nnz_Jaceq()  const { return m_nnz_sparse_Jaceq; }
+  inline int get_nnz_Jacineq()  const { return m_nnz_sparse_Jacineq; }
+  inline int get_nnz_Hess_Lagr()  const { return m_nnz_sparse_Hess_Lagr; }
   
 private:
   hiopInterfaceSparse& interface;
