@@ -132,6 +132,30 @@ real_type* VectorTestsRajaPar::createLocalBuffer(local_ordinal_type N, real_type
   return buffer;
 }
 
+local_ordinal_type* VectorTestsRajaPar::createIdxBuffer(local_ordinal_type N, local_ordinal_type val)
+{
+  auto& resmgr = umpire::ResourceManager::getInstance();
+  umpire::Allocator hal = resmgr.getAllocator("HOST");
+  local_ordinal_type* buffer = static_cast<local_ordinal_type*>(
+		               hal.allocate(N*sizeof(local_ordinal_type)));
+
+  // Set buffer elements to the initial value
+  for(local_ordinal_type i = 0; i < N; ++i)
+    buffer[i] = val;
+  buffer[N-1] = 0;
+#ifdef HIOP_USE_GPU
+  umpire::Allocator dal = resmgr.getAllocator("DEVICE");
+  local_ordinal_type* dev_buffer = static_cast<local_ordinal_type*>(
+		                   dal.allocate(N*sizeof(local_ordinal_type)));
+  resmgr.copy(dev_buffer, buffer, N*sizeof(local_ordinal_type));
+  hal.deallocate(buffer);
+  return dev_buffer;
+#endif
+
+  return buffer;
+}
+
+
 /// Wrap delete command
 void VectorTestsRajaPar::deleteLocalBuffer(real_type* buffer)
 {

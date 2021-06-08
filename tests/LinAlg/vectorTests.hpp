@@ -64,6 +64,7 @@
 #include <functional>
 
 #include <hiopVector.hpp>
+#include <hiopVectorInt.hpp>
 #include <hiopLinAlgFactory.hpp>
 #include "testBase.hpp"
 
@@ -182,10 +183,30 @@ public:
     v.copyFrom(from);
     int fail = verifyAnswer(&v, one);
 
-    const real_type* from_buffer = createLocalBuffer(N, three);
+    real_type* from_buffer = createLocalBuffer(N, three);
     v.copyFrom(from_buffer);
     fail += verifyAnswer(&v, three);
 
+    // createIdxBuffer creates an int* with value 1, except the N-1 
+    // component with value 0
+    local_ordinal_type* idx_buffer = createIdxBuffer(N,1);
+    setLocalElement(&from, 0, two);
+    v.copyFrom(idx_buffer, from);
+ 
+    fail += verifyAnswer(&v,
+      [=] (local_ordinal_type i) -> real_type
+      {
+        return (i == N-1) ? two : one;
+      });
+    
+    real_type* from_buffer_new = from.local_data(); 
+    v.copyFrom(idx_buffer, from_buffer_new);
+    fail += verifyAnswer(&v,
+      [=] (local_ordinal_type i) -> real_type
+      {
+        return (i == N-1) ? two : one;
+      });
+    deleteLocalBuffer(from_buffer);
     printMessage(fail, __func__, rank);
     return reduceReturn(fail, &v);
   }
@@ -372,6 +393,99 @@ public:
 
     printMessage(fail, __func__, rank);
     return reduceReturn(fail, &from);
+  }
+
+  /**
+   * @brief Test vector method for copying data from another two vectors
+   * 
+   * @pre Vectors are not distributed.
+   * @pre Memory space for hiop::LinearAlgebraFactory is set appropriately
+   */  
+  bool vector_copy_from_two_vec( hiop::hiopVector& cd,
+                                 hiop::hiopVector& c,
+                                 hiop::hiopVectorInt& c_map,
+                                 hiop::hiopVector& d,
+                                 hiop::hiopVectorInt& d_map,
+                                 const int rank=0)
+  {
+    const local_ordinal_type cd_size = getLocalSize(&cd);
+    const local_ordinal_type c_size = getLocalSize(&c);
+    const local_ordinal_type d_size = getLocalSize(&d);
+    const hiopInt c_map_size = c_map.size();
+    const hiopInt d_map_size = d_map.size();
+    assert(c_size == c_map_size && "size doesn't match");
+    assert(d_size == d_map_size && "size doesn't match");
+    assert(c_size + d_size == cd_size && "size doesn't match");
+
+    const real_type c_val = one;
+    const real_type d_val = two;
+ 
+    c.setToConstant(c_val);
+    d.setToConstant(d_val);
+    for(hiopInt i = 0; i < c_size; ++i) {
+      c_map[i] = (hiopInt) i;
+    }
+    for(hiopInt i = 0; i < d_size; ++i) {
+      d_map[i] = (hiopInt) (i + c_size);
+    }
+    c_map.copyToDev();
+    d_map.copyToDev();
+
+    cd.copy_from_two_vec_w_pattern(c, c_map, d, d_map);
+
+    int fail = verifyAnswer(&cd,
+      [=] (local_ordinal_type i) -> real_type
+      {
+        return i < c_size ? c_val : d_val;
+      });
+
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &cd);
+  }
+
+  /**
+   * @brief Test vector method for copying data to another two vectors
+   * 
+   * @pre Vectors are not distributed.
+   * @pre Memory space for hiop::LinearAlgebraFactory is set appropriately
+   */  
+  bool vector_copy_to_two_vec( hiop::hiopVector& cd,
+                               hiop::hiopVector& c,
+                               hiop::hiopVectorInt& c_map,
+                               hiop::hiopVector& d,
+                               hiop::hiopVectorInt& d_map,
+                               const int rank=0)
+  {
+    const local_ordinal_type cd_size = getLocalSize(&cd);
+    const local_ordinal_type c_size = getLocalSize(&c);
+    const local_ordinal_type d_size = getLocalSize(&d);
+    const hiopInt c_map_size = c_map.size();
+    const hiopInt d_map_size = d_map.size();
+    assert(c_size == c_map_size && "size doesn't match");
+    assert(d_size == d_map_size && "size doesn't match");
+    assert(c_size + d_size == cd_size && "size doesn't match");
+
+    const real_type cd_val = two;
+ 
+    c.setToZero();
+    d.setToZero();
+    for(hiopInt i = 0; i < c_size; ++i) {
+      c_map[i] = (hiopInt) i;
+    }
+    for(hiopInt i = 0; i < d_size; ++i) {
+      d_map[i] = (hiopInt) (i + c_size);
+    }
+    c_map.copyToDev();
+    d_map.copyToDev();
+
+    cd.setToConstant(cd_val);
+    cd.copy_to_two_vec_w_pattern(c, c_map, d, d_map);
+
+    int fail = verifyAnswer(&c, cd_val);
+    fail += verifyAnswer(&d, cd_val);
+
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &cd);
   }
 
   /**
@@ -1897,6 +2011,7 @@ protected:
   virtual const real_type* getLocalDataConst(const hiop::hiopVector* x) = 0;
   virtual void setLocalElement(hiop::hiopVector* x, local_ordinal_type i, real_type val) = 0;
   virtual real_type* createLocalBuffer(local_ordinal_type N, real_type val) = 0;
+  virtual local_ordinal_type* createIdxBuffer(local_ordinal_type N, local_ordinal_type val) = 0;
   virtual void deleteLocalBuffer(real_type* buffer) = 0;
   virtual bool reduceReturn(int failures, hiop::hiopVector* x) = 0;
 };

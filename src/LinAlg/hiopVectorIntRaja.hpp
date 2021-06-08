@@ -67,34 +67,34 @@ namespace hiop
 class hiopVectorIntRaja : public hiopVectorInt
 {
 private:
-  int *buf_host_;
-  int *buf_;
+  hiopInt *buf_host_;
+  hiopInt *buf_;
   std::string mem_space_;
 
 public:
-  hiopVectorIntRaja(int sz, std::string mem_space="HOST");
+  hiopVectorIntRaja(hiopInt sz, std::string mem_space="HOST");
 
   ~hiopVectorIntRaja();
 
   /**
    * @brief Access constant data at element _i_ on the _host_.
    */
-  virtual const int* data_host() const override;
+  virtual const hiopInt* data_host() const override;
 
   /**
    * @brief Access data at element _i_ on the _host_.
    */
-  virtual int* data_host() override;
+  virtual hiopInt* data_host() override;
 
   /**
    * @brief Access constant data at element _i_ on the _device_.
    */
-  virtual const int* data() const override;
+  virtual const hiopInt* data() const override;
 
   /**
    * @brief Access data at element _i_ on the _device_.
    */
-  virtual int* data() override;
+  virtual hiopInt* data() override;
 
   /**
    * @brief Copy array data from the device.
@@ -109,7 +109,6 @@ public:
    * @note This is a no-op if the memory space is _host_ or _uvm_.
    */
   virtual void copy_to_dev() override;
-
 };
 
 } // namespace hiop

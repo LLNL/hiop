@@ -732,7 +732,145 @@ void hiopMatrixSparseTriplet::print(FILE* file, const char* msg/*=NULL*/,
   }
 }
 
+/*
+*  extend original Jac to [Jac -I I]
+*/
+void hiopMatrixSparseTriplet::set_Jac_FR(const hiopMatrixSparse& Jac_c,
+                                         const hiopMatrixSparse& Jac_d,
+                                         int* iJacS,
+                                         int* jJacS,
+                                         double* MJacS)
+{
+  const auto& J_c = dynamic_cast<const hiopMatrixSparseTriplet&>(Jac_c);
+  const auto& J_d = dynamic_cast<const hiopMatrixSparseTriplet&>(Jac_d);
+    
+  // shortcut to the original Jac
+  const int *irow_c = J_c.i_row();
+  const int *jcol_c = J_c.j_col();
+  const int *irow_d = J_d.i_row();
+  const int *jcol_d = J_d.j_col();
 
+  // assuming original Jac is sorted!
+  int nnz_Jac_c = J_c.numberOfNonzeros();
+  int nnz_Jac_d = J_d.numberOfNonzeros();
+  int m_c = J_c.m();
+  int m_d = J_d.m();
+  int n_c = J_c.n();
+  int n_d = J_d.n();
+  assert(n_c == n_d);
+
+  int nnz_Jac_c_new = nnz_Jac_c + 2*m_c;
+  int nnz_Jac_d_new = nnz_Jac_d + 2*m_d;
+
+  assert(nnz_ == nnz_Jac_c_new + nnz_Jac_d_new);
+  
+  if(J_c.row_starts_ == nullptr){
+    J_c.row_starts_ = J_c.allocAndBuildRowStarts();
+  }
+  assert(J_c.row_starts_);
+  
+  if(J_d.row_starts_ == nullptr){
+    J_d.row_starts_ = J_d.allocAndBuildRowStarts();
+  }
+  assert(J_d.row_starts_);
+    
+  // extend Jac to the p and n parts --- sparsity
+  if(iJacS != nullptr && jJacS != nullptr) {
+    int k = 0;
+  
+    // Jac for c(x) - p + n
+    const int* J_c_col = J_c.j_col();
+    for(int i = 0; i < m_c; ++i) {
+      int k_base = J_c.row_starts_->idx_start_[i];
+    
+      // copy from base Jac_c
+      while(k_base < J_c.row_starts_->idx_start_[i+1]) {
+        iRow_[k] = iJacS[k] = i;
+        jCol_[k] = jJacS[k] = J_c_col[k_base];
+        k++;
+        k_base++;
+      }
+      
+      // extra parts for p and n
+      iRow_[k] = iJacS[k] = i;
+      jCol_[k] = jJacS[k] = n_c + i;
+      k++;
+      
+      iRow_[k] = iJacS[k] = i;
+      jCol_[k] = jJacS[k] = n_c + m_c + i;
+      k++;
+    }
+
+    // Jac for d(x) - p + n
+    const int* J_d_col = J_d.j_col();
+    for(int i = 0; i < m_d; ++i) {
+      int k_base = J_d.row_starts_->idx_start_[i];
+    
+      // copy from base Jac_d
+      while(k_base < J_d.row_starts_->idx_start_[i+1]) {
+        iRow_[k] = iJacS[k] = i + m_c;
+        jCol_[k] = jJacS[k] = J_d_col[k_base];
+        k++;
+        k_base++;
+      }
+      
+      // extra parts for p and n
+      iRow_[k] = iJacS[k] = i + m_c;
+      jCol_[k] = jJacS[k] = n_d + 2*m_c + i;
+      k++;
+      
+      iRow_[k] = iJacS[k] = i + m_c;
+      jCol_[k] = jJacS[k] = n_d + 2*m_c + m_d + i;
+      k++;
+    }
+    assert(k == nnz_);
+  }
+  
+  // extend Jac to the p and n parts --- element
+  if(MJacS != nullptr) {    
+    int k = 0;
+
+    // Jac for c(x) - p + n
+    const double* J_c_val = J_c.M();
+    for(int i = 0; i < m_c; ++i) {
+      int k_base = J_c.row_starts_->idx_start_[i];
+    
+      // copy from base Jac_c
+      while(k_base < J_c.row_starts_->idx_start_[i+1]) {
+        values_[k] = MJacS[k] = J_c_val[k_base];
+        k++;
+        k_base++;
+      }
+      
+      // extra parts for p and n
+      values_[k] = MJacS[k] = -1.0;
+      k++;
+      values_[k] = MJacS[k] =  1.0;
+      k++;
+    }
+
+    // Jac for d(x) - p + n
+    const double* J_d_val = J_d.M();
+    for(int i = 0; i < m_d; ++i) {
+      int k_base = J_d.row_starts_->idx_start_[i];
+      int nnz_in_row = J_d.row_starts_->idx_start_[i+1] - k_base;
+    
+      // copy from base Jac_d
+      while(k_base < J_d.row_starts_->idx_start_[i+1]) {
+        values_[k] = MJacS[k] = J_d_val[k_base];
+        k++;
+        k_base++;
+      }
+      
+      // extra parts for p and n
+      values_[k] = MJacS[k] = -1.0;
+      k++;
+      values_[k] = MJacS[k] =  1.0;
+      k++;
+    }
+    assert(k == nnz_);
+  }
+}
 
 /**********************************************************************************
   * Sparse symmetric matrix in triplet format. Only the lower triangle is stored
@@ -985,7 +1123,7 @@ void hiopMatrixSparseTriplet::setSubmatrixToConstantDiag_w_rowpattern(const doub
 }
 
 
-long long hiopMatrixSymSparseTriplet::numberOfOffDiagNonzeros()
+long long hiopMatrixSymSparseTriplet::numberOfOffDiagNonzeros() const
 {
   if(-1==nnz_offdiag_){
     nnz_offdiag_= nnz_;
@@ -1137,6 +1275,104 @@ void hiopMatrixSparseTriplet::convertToCSR(int &csr_nnz,
   delete [] diag_defined; diag_defined = nullptr;
   delete [] index_covert_extra_Diag2CSR_temp; index_covert_extra_Diag2CSR_temp = nullptr;
 
+}
+
+/*
+*  extend original Jac to [Jac -I I]
+*/
+void hiopMatrixSymSparseTriplet::set_Hess_FR(const hiopMatrixSparse& Hess,
+                                             int* iHSS,
+                                             int* jHSS,
+                                             double* MHSS,
+                                             const hiopVector& add_diag)
+{
+  const auto& Hess_base = dynamic_cast<const hiopMatrixSymSparseTriplet&>(Hess);
+
+  // assuming original Hess is sorted, and in upper-triangle format
+  int nnz_h = Hess_base.numberOfNonzeros();
+
+  int m_h = Hess.m();
+  int n_h = Hess.n();
+  assert(n_h == m_h);
+
+  int nnz_h_FR = n_h + Hess_base.numberOfOffDiagNonzeros() ;
+
+  assert(nnz_ == nnz_h_FR);
+  
+  if(Hess_base.row_starts_ == nullptr){
+    Hess_base.row_starts_ = Hess_base.allocAndBuildRowStarts();
+  }
+  assert(Hess_base.row_starts_);
+
+  // extend Hess to the p and n parts --- sparsity
+  // sparsity may change due to te new obj term zeta*DR^2.*(x-x_ref)
+  if(iHSS != nullptr && jHSS != nullptr) {
+    int k = 0;
+  
+    const int* Hess_row = Hess_base.i_row();
+    const int* Hess_col = Hess_base.j_col();
+    for(int i = 0; i < m_h; ++i) {
+      int k_base = Hess_base.row_starts_->idx_start_[i];
+      int nnz_in_row = Hess_base.row_starts_->idx_start_[i+1] - k_base;
+    
+      // insert diagonal entry due to the new obj term
+      iRow_[k] = iHSS[k] = i;
+      jCol_[k] = jHSS[k] = i;
+      k++;
+      
+      if(nnz_in_row > 0 && Hess_row[k_base] == Hess_col[k_base]) {
+        // first nonzero in this row is a diagonal term 
+        // skip it since we have already defined the diagonal nonezero
+        k_base++;
+      }
+
+      // copy from base Hess
+      while(k_base < Hess_base.row_starts_->idx_start_[i+1]) {
+        iRow_[k] = iHSS[k] = i;
+        jCol_[k] = jHSS[k] = Hess_col[k_base];
+        k++;
+        k_base++;
+      }
+    }
+    assert(k == nnz_);
+  }
+  
+  // extend Hess to the p and n parts --- element
+  if(MHSS != nullptr) {    
+    int k = 0;
+  
+    const int* Hess_row = Hess_base.i_row();
+    const int* Hess_col = Hess_base.j_col();
+    const double* Hess_val = Hess_base.M();
+    const hiopVectorPar& diag_x = dynamic_cast<const hiopVectorPar&>(add_diag);
+    assert(m_h == diag_x.get_size());
+    const double* diag_data = diag_x.local_data_const();
+
+    for(int i = 0; i < m_h; ++i) {
+      int k_base = Hess_base.row_starts_->idx_start_[i];
+      int nnz_in_row = Hess_base.row_starts_->idx_start_[i+1] - k_base;
+    
+      // add diagonal entry due to the new obj term
+      values_[k] = MHSS[k] = diag_data[k];
+      
+      if(nnz_in_row > 0 && Hess_row[k_base] == Hess_col[k_base]) {
+        // first nonzero in this row is a diagonal term 
+        // add this element to the existing diag term
+        values_[k] += Hess_val[k_base];
+        MHSS[k] = values_[k];
+        k_base++;
+      }
+      k++;
+
+      // copy off-diag entries from base Hess
+      while(k_base < Hess_base.row_starts_->idx_start_[i+1]) {
+        values_[k] = MHSS[k] = Hess_val[k_base];
+        k++;
+        k_base++;
+      }
+    }
+    assert(k == nnz_);
+  }
 }
 
 

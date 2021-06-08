@@ -57,26 +57,27 @@
 
 namespace hiop
 {
+typedef long long hiopInt;
 
 class hiopVectorInt
 {
 protected:
-  int sz_;
+  hiopInt sz_;
 
 public:
-  hiopVectorInt(int sz) : sz_(sz) { }
+  hiopVectorInt(hiopInt sz) : sz_(sz) { }
   virtual ~hiopVectorInt() { }
 
-  virtual int size() const
+  virtual hiopInt size() const
   {
     return sz_;
   }
 
-  virtual const int* data() const = 0;
-  virtual const int* data_host() const = 0;
+  virtual const hiopInt* data() const = 0;
+  virtual const hiopInt* data_host() const = 0;
 
-  virtual int* data() = 0;
-  virtual int* data_host() = 0;
+  virtual hiopInt* data() = 0;
+  virtual hiopInt* data_host() = 0;
 
   virtual void copy_from_dev() {}
   virtual void copy_to_dev() {}

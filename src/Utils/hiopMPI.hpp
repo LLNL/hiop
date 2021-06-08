@@ -59,5 +59,8 @@
   #ifndef MPI_COMM_SELF
     #define MPI_COMM_SELF 0
   #endif
+  #ifndef MPI_COMM_WORLD
+    #define MPI_COMM_WORLD 0
+  #endif 
   #include <cstddef>
 #endif 
