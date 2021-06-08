@@ -23,6 +23,7 @@ foreach(libtype shared static)
       $<TARGET_OBJECTS:hiopLinAlg>
       $<TARGET_OBJECTS:hiopOptimization>
       $<TARGET_OBJECTS:hiopUtils>
+      $<TARGET_OBJECTS:hiopInterface>
       $<$<BOOL:${HIOP_BUILD_SHARED}>:$<TARGET_OBJECTS:hiopInterface>>
       )
     target_link_libraries(hiop_${libtype} PUBLIC hiop_tpl)

@@ -288,6 +288,36 @@ void hiopVectorRajaPar::copyFrom(const double* local_array)
   }
 }
 
+void hiopVectorRajaPar::copyFrom(const int* index_in_src, const hiopVector& vec)
+{
+  const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(vec);
+  int nv = v.get_local_size();
+  double* dd = data_dev_;
+  double* vd = v.data_dev_;
+  int* id = const_cast<int*>(index_in_src);
+
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      assert(id[i]<nv);
+      dd[i] = vd[id[i]];
+    });
+}
+
+void hiopVectorRajaPar::copyFrom(const int* index_in_src, const double* vec)
+{
+  assert(vec);
+  double* dd = data_dev_;
+  double* vd = const_cast<double*>(vec);
+  int* id = const_cast<int*>(index_in_src);
+
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      dd[i] = vd[id[i]];
+    });
+}
+
 /**
  * @brief Copy `nv` elements from array `v` to this vector starting from `start_index_in_this`
  * 

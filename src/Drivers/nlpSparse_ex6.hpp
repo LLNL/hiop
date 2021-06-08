@@ -34,13 +34,14 @@ public:
   virtual bool get_vars_info(const long long& n, double *xlow, double* xupp, NonlinearityType* type);
   virtual bool get_cons_info(const long long& m, double* clow, double* cupp, NonlinearityType* type);
   virtual bool get_sparse_blocks_info(int& nx,
-					    int& nnz_sparse_Jaceq, int& nnz_sparse_Jacineq,
-					    int& nnz_sparse_Hess_Lagr);
+                                      int& nnz_sparse_Jaceq, int& nnz_sparse_Jacineq,
+                                      int& nnz_sparse_Hess_Lagr);
 
   virtual bool eval_f(const long long& n, const double* x, bool new_x, double& obj_value);
   virtual bool eval_cons(const long long& n, const long long& m,
 			 const long long& num_cons, const long long* idx_cons,
 			 const double* x, bool new_x, double* cons);
+  
   virtual bool eval_cons(const long long& n, const long long& m,
 			 const double* x, bool new_x,
 			 double* cons);
