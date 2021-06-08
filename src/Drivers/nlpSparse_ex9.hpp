@@ -8,14 +8,6 @@
 #ifndef HIOP_EXAMPLE_EX9
 #define  HIOP_EXAMPLE_EX9
 
-#ifdef HIOP_USE_MPI
-#include "mpi.h"
-#else
-#define MPI_Comm int
-#define MPI_COMM_WORLD 0
-#endif
-
-
 /* This is the full problem defined directly in hiopSparse to test the result of hiopAlgPriDecomp
  * Base case from Ex6. 
  *  min   sum 1/4* { (x_{i}-1)^4 : i=1,...,n} + sum_{i=1^S} 1/S *  min_y 0.5 || y - x ||^2
@@ -68,22 +60,22 @@ public:
     }
     for(int i=0;i<nx_;i++) x0_[i] = 1.0;
   }
-  bool get_prob_sizes(long long& n, long long& m)
+  bool get_prob_sizes(size_type& n, size_type& m)
   { n=n_vars; m=n_cons; return true; }
 
 
-  bool get_vars_info(const long long& n, double *xlow, double* xupp, NonlinearityType* type)
+  bool get_vars_info(const size_type& n, double *xlow, double* xupp, NonlinearityType* type)
   {
     assert(n==n_vars);
-    for(long long i=0; i<nx_; i++) {
+    for(size_type i=0; i<nx_; i++) {
       if(i==0) { xlow[i]=-1e20; xupp[i]=1e20; type[i]=hiopNonlinear; continue; }
       if(i==1) { xlow[i]= 0.0;  xupp[i]=1e20; type[i]=hiopNonlinear; continue; }
       if(i==2) { xlow[i]= 1.5;  xupp[i]=10.0; type[i]=hiopNonlinear; continue; }
       //this is for x_4, x_5, ... , x_n (i>=3), which are bounded only from below
       xlow[i]= 0.5; xupp[i]=1e20; type[i]=hiopNonlinear;
     }
-    for(long long i=0; i<S_; i++) {
-      for(long long j=0; j<nx_; j++) {
+    for(size_type i=0; i<S_; i++) {
+      for(size_type j=0; j<nx_; j++) {
         if(j==0){xlow[nx_+i*nx_] = 0.; xupp[nx_+i*nx_] = 1e20;type[i]=hiopNonlinear;continue;}
         xlow[nx_+i*nx_+j] = -1e+20; xupp[nx_+i*nx_+j] = +1e+20; type[i]=hiopNonlinear; 
       }
@@ -97,18 +89,18 @@ public:
     delete[] x0_;
   }
 
-  bool get_cons_info(const long long& m, double* clow, double* cupp, NonlinearityType* type)
+  bool get_cons_info(const size_type& m, double* clow, double* cupp, NonlinearityType* type)
   {
     assert(m==n_cons);
-    long long conidx{0};
+    size_type conidx{0};
     clow[conidx]= 10.0;    cupp[conidx]= 10.0;      type[conidx++]=hiopInterfaceBase::hiopLinear;
     clow[conidx]= 5.0;     cupp[conidx]= 1e20;      type[conidx++]=hiopInterfaceBase::hiopLinear;
-    for(long long i=3; i<nx_; i++) {
+    for(size_type i=3; i<nx_; i++) {
       clow[conidx] = 1.0;   cupp[conidx]= 2*nx_;  type[conidx++]=hiopInterfaceBase::hiopLinear;
     }
     if(nx_>3){assert(conidx==2+nx_-3);}//nx_-1
-    for(long long i=0;i<S_;i++) { 
-      for(long long j=0;j<nx_-1;j++) {
+    for(size_type i=0;i<S_;i++) { 
+      for(size_type j=0;j<nx_-1;j++) {
         clow[conidx+nx_*i+j] = 0.;
         cupp[conidx+nx_*i+j] = 1e20;
       }
@@ -130,7 +122,7 @@ public:
     return true;
   }
 
-  bool eval_f(const long long& n, const double* x, bool new_x, double& obj_value)
+  bool eval_f(const size_type& n, const double* x, bool new_x, double& obj_value)
   {
     assert(n==n_vars);
     obj_value=0.;
@@ -146,7 +138,7 @@ public:
     return true;
   }
 
-  bool eval_grad_f(const long long& n, const double* x, bool new_x, double* gradf)
+  bool eval_grad_f(const size_type& n, const double* x, bool new_x, double* gradf)
   {
     assert(n==n_vars);
     for(int i=0;i<n_vars;i++) {
@@ -168,8 +160,8 @@ public:
 
   /* Four constraints no matter how large n is */
   // This constraint attempts to use existing functions
-  bool eval_cons(const long long& n, 
-                 const long long& m,
+  bool eval_cons(const size_type& n, 
+                 const size_type& m,
                  const double* x, 
                  bool new_x, 
                  double* cons)
@@ -181,7 +173,7 @@ public:
     //local contributions to the constraints in cons are reset
     for(auto j=0;j<m; j++) cons[j]=0.;
 
-    long long conidx{0};
+    size_type conidx{0};
     //compute the constraint one by one.
     // --- constraint 1 body --->  4*x_1 + 2*x_2 == 10
     cons[conidx++] += 4*x[0] + 2*x[1];
@@ -210,37 +202,37 @@ public:
     return true;
   }
   
-  bool eval_cons(const long long& n, 
-                 const long long& m,
-                 const long long& num_cons, 
-                 const long long* idx_cons,
+  bool eval_cons(const size_type& n, 
+                 const size_type& m,
+                 const size_type& num_cons, 
+                 const index_type* idx_cons,
                  const double* x, 
                  bool new_x, 
                  double* cons)
   {
     return false;
   }
-  bool eval_Jac_cons(const long long& n, 
-                     const long long& m,
-                     const long long& num_cons, 
-                     const long long* idx_cons,
+  bool eval_Jac_cons(const size_type& n, 
+                     const size_type& m,
+                     const size_type& num_cons, 
+                     const index_type* idx_cons,
                      const double* x, 
                      bool new_x,
-                     const int& nnzJacS, 
-                     int* iJacS, 
-                     int* jJacS, 
+                     const size_type& nnzJacS, 
+                     index_type* iJacS, 
+                     index_type* jJacS, 
                      double* MJacS)
   {
     return false;
   }
 
-  bool eval_Jac_cons(const long long& n, 
-                     const long long& m,
+  bool eval_Jac_cons(const size_type& n, 
+                     const size_type& m,
                      const double* x, 
                      bool new_x,
-                     const int& nnzJacS, 
-                     int* iJacS, 
-                     int* jJacS, 
+                     const size_type& nnzJacS, 
+                     index_type* iJacS, 
+                     index_type* jJacS, 
                      double* MJacS)
   {
     assert(n==n_vars); assert(m==n_cons);
@@ -250,7 +242,7 @@ public:
     assert(nnzJacS == 2*(nx_-1)+S_*(2*(nx_-1)+nx_));
 
     int nnzit{0};
-    long long conidx{0};
+    size_type conidx{0};
 
     if(iJacS!=NULL && jJacS!=NULL) {
       // --- constraint 1 body --->  4*x_1 + 2*x_2 == 10
@@ -323,16 +315,16 @@ public:
     return true;
   }
 
-  bool eval_Hess_Lagr(const long long& n, 
-                      const long long& m,
+  bool eval_Hess_Lagr(const size_type& n, 
+                      const size_type& m,
                       const double* x, 
                       bool new_x, 
                       const double& obj_factor,
                       const double* lambda, 
                       bool new_lambda,
-                      const int& nnzHSS, 
-                      int* iHSS, 
-                      int* jHSS, 
+                      const size_type& nnzHSS, 
+                      index_type* iHSS, 
+                      index_type* jHSS, 
                       double* MHSS)
   {
     //assert(nnzHSS == nx_+S_*nx_*2+S_*nx_);
@@ -380,7 +372,7 @@ public:
 
   //bool get_MPI_comm(MPI_Comm& comm_out) { comm_out=MPI_COMM_SELF; return true;};
 
-  bool get_starting_point(const long long& n, double* x0)
+  bool get_starting_point(const size_type& n, double* x0)
   {
     assert(n==n_vars);
     for(auto i=0; i<n; i++) {

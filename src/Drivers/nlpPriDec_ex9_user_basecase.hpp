@@ -15,7 +15,7 @@ public:
     delete rec_evaluator_;
   }
 
-  bool eval_f(const long long& n, const double* x, bool new_x, double& obj_value)
+  bool eval_f(const size_type& n, const double* x, bool new_x, double& obj_value)
   {
     if(!Ex6::eval_f(n, x, new_x, obj_value)) {
       return false;
@@ -28,7 +28,7 @@ public:
     return true;
   }
 
-  bool eval_grad_f(const long long& n, const double* x, bool new_x, double* gradf)
+  bool eval_grad_f(const size_type& n, const double* x, bool new_x, double* gradf)
   {
     if(!Ex6::eval_grad_f(n, x, new_x, gradf)) {
       return false;
@@ -41,7 +41,7 @@ public:
     return true;
   }
 
-  bool eval_Hess_Lagr(const long long& n, const long long& m,
+  bool eval_Hess_Lagr(const size_type& n, const size_type& m,
                       const double* x, bool new_x, const double& obj_factor,
                       const double* lambda, bool new_lambda,
                       const int& nnzHSS, int* iHSS, int* jHSS, double* MHSS)
@@ -69,6 +69,7 @@ public:
 		           hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator)
   {
     rec_evaluator_ = evaluator;
+    return true;
   }
 
   void set_include(const bool include)
@@ -86,7 +87,7 @@ public:
   }
 
   
-  void get_rec_obj(const long long& n, const double* x, double& obj_value)
+  void get_rec_obj(const size_type& n, const double* x, double& obj_value)
   {
     bool temp = rec_evaluator_->eval_f(n, x, false, obj_value);
   }

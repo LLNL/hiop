@@ -7,7 +7,6 @@
 #include <cassert>
 #include <cstring> //for memcpy
 #include <vector>
-#include "hiopMPI.hpp"
 
 namespace hiop
 {

@@ -7,13 +7,6 @@
 #include "hiopNlpFormulation.hpp"
 #include "hiopAlgFilterIPM.hpp"
 
-#ifdef HIOP_USE_MPI
-#include "mpi.h"
-#else
-#define MPI_COMM_WORLD 0
-#define MPI_Comm int
-#endif
-
 #include <cassert>
 #include <cstring> //for memcpy
 #include <cstdio>
@@ -36,7 +29,6 @@
  * This should produce the analytical solution of x* = 0
  */
 
-
 using namespace hiop;
 class Ex8 : public hiop::hiopInterfaceDenseConstraints
 {
@@ -56,25 +48,25 @@ public:
 
   virtual ~Ex8();
   
-  bool get_prob_sizes(long long& n, long long& m);
+  bool get_prob_sizes(size_type& n, size_type& m);
 
-  virtual bool get_vars_info(const long long& n, double *xlow, double* xupp, NonlinearityType* type);
+  virtual bool get_vars_info(const size_type& n, double *xlow, double* xupp, NonlinearityType* type);
 
-  virtual bool get_cons_info(const long long& m, double* clow, double* cupp, NonlinearityType* type);
+  virtual bool get_cons_info(const size_type& m, double* clow, double* cupp, NonlinearityType* type);
   
-  virtual bool eval_f(const long long& n, const double* x, bool new_x, double& obj_value);
+  virtual bool eval_f(const size_type& n, const double* x, bool new_x, double& obj_value);
   
-  virtual bool eval_cons(const long long& n, const long long& m, 
-			 const long long& num_cons, const long long* idx_cons,  
+  virtual bool eval_cons(const size_type& n, const size_type& m, 
+			 const size_type& num_cons, const index_type* idx_cons,  
 			 const double* x, bool new_x, double* cons);
  
   //sum 0.5 {(x_i-1)*(x_{i}-1) : i=1,...,ns} 
-  virtual bool eval_grad_f(const long long& n, const double* x, bool new_x, double* gradf);
+  virtual bool eval_grad_f(const size_type& n, const double* x, bool new_x, double* gradf);
 
   // Implementation of the primal starting point specification //
-  virtual bool get_starting_point(const long long& global_n, double* x0_);
+  virtual bool get_starting_point(const size_type& global_n, double* x0_);
 
-  virtual bool get_starting_point(const long long& n, const long long& m,
+  virtual bool get_starting_point(const size_type& n, const size_type& m,
 				  double* x0_,
 				  bool& duals_avail,
 				  double* z_bndL0, double* z_bndU0,
@@ -82,15 +74,14 @@ public:
 
   // pass the COMM_SELF communicator since this example is only intended to run inside 1 MPI process //
   virtual bool get_MPI_comm(MPI_Comm& comm_out);
-  virtual bool eval_Jac_cons(const long long& n, const long long& m,
-	                     const long long& num_cons, const long long* idx_cons,  
+  virtual bool eval_Jac_cons(const size_type& n, const size_type& m,
+	                     const size_type& num_cons, const index_type* idx_cons,  
 			     const double* x, bool new_x, double* Jac); 
 
   virtual bool quad_is_defined();
 
   virtual bool set_quadratic_terms(const int& n, 
-		                   hiopInterfacePriDecProblem::
-				         RecourseApproxEvaluator* evaluator);
+		                   hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator);
   
   virtual bool set_include(bool include);
 
