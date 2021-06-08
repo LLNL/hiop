@@ -9,6 +9,9 @@
 #include <vector>
 #include <numeric>
 #include <cassert>
+#include <sstream>
+#include <iostream>     // std::cout, std::fixed
+#include <iomanip>      // std::setprecision
 
 #include "hiopCppStdUtils.hpp"
 namespace hiop
@@ -700,35 +703,59 @@ void hiopMatrixSparseTriplet::print(FILE* file, const char* msg/*=NULL*/,
 
   int max_elems = maxRows>=0 ? maxRows : nnz_;
   max_elems = std::min(max_elems, nnz_);
-
+  
   if(myrank_==rank || rank==-1) {
-
+    std::stringstream ss;
     if(NULL==msg) {
       if(numranks>1) {
-        fprintf(file,
-                "matrix of size %d %d and nonzeros %d, printing %d elems (on rank=%d)\n",
-                m(), n(), numberOfNonzeros(), max_elems, myrank_);
+        //fprintf(file,
+        //        "matrix of size %d %d and nonzeros %d, printing %d elems (on rank=%d)\n",
+        //        m(), n(), numberOfNonzeros(), max_elems, myrank_);
+        ss << "matrix of size " << m() << " " << n() << " and nonzeros " 
+           << numberOfNonzeros() << ", printing " <<  max_elems << " elems (on rank="
+           << myrank_ << ")" << std::endl;
       } else {
-        fprintf(file,
-                "matrix of size %d %d and nonzeros %d, printing %d elems\n",
-                m(), n(), numberOfNonzeros(), max_elems);
+        ss << "matrix of size " << m() << " " << n() << " and nonzeros " 
+           << numberOfNonzeros() << ", printing " <<  max_elems << " elems" << std::endl;
+        // fprintf(file,
+        //      "matrix of size %d %d and nonzeros %d, printing %d elems\n",
+        //      m(), n(), numberOfNonzeros(), max_elems);
       }
     } else {
-      fprintf(file, "%s ", msg);
+      ss << msg << " ";
+      //fprintf(file, "%s ", msg);
     }
 
     // using matlab indices
-    fprintf(file, "iRow_=[");
-    for(int it=0; it<max_elems; it++)  fprintf(file, "%d; ", iRow_[it]+1);
-    fprintf(file, "];\n");
+    //fprintf(file, "iRow_=[");
+    ss << "iRow_=[";
+    for(int it=0; it<max_elems; it++) {
+      //fprintf(file, "%d; ", iRow_[it]+1);
+      ss << iRow_[it]+1 << "; ";
+    }
+    //fprintf(file, "];\n");
+    ss << "];" << std::endl;
 
-    fprintf(file, "jCol_=[");
-    for(int it=0; it<max_elems; it++)  fprintf(file, "%d; ", jCol_[it]+1);
-    fprintf(file, "];\n");
+    //fprintf(file, "jCol_=[");
+    ss << "jCol_=[";
+    for(int it=0; it<max_elems; it++) {
+      //fprintf(file, "%d; ", jCol_[it]+1);
+      ss << jCol_[it]+1 << "; ";
+    }
+    //fprintf(file, "];\n");
+    ss << "];" << std::endl;
+    
+    //fprintf(file, "v=[");
+    ss << "v=[";
+    ss << std::scientific << std::setprecision(16);
+    for(int it=0; it<max_elems; it++) {
+      //fprintf(file, "%22.16e; ", values_[it]);
+      ss << values_[it] << "; ";
+    }
+    //fprintf(file, "];\n");
+    ss << "];" << std::endl;
 
-    fprintf(file, "v=[");
-    for(int it=0; it<max_elems; it++)  fprintf(file, "%22.16e; ", values_[it]);
-    fprintf(file, "];\n");
+    fprintf(file, "%s", ss.str().c_str());
   }
 }
 
