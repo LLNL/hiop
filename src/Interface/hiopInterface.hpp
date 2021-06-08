@@ -49,24 +49,8 @@
 #ifndef HIOP_INTERFACE_BASE
 #define HIOP_INTERFACE_BASE
 
-#include "hiop_defs.hpp"
-
-#ifdef HIOP_USE_MPI
-#include "mpi.h"
-
-#else
-#ifndef MPI_Comm
-#define MPI_Comm int
-#endif
-
-#ifndef MPI_COMM_SELF
-#define MPI_COMM_SELF 0
-#endif
-
-#ifndef MPI_COMM_WORLD
-#define MPI_COMM_WORLD 0
-#endif 
-#endif
+#include "hiop_types.h"
+#include "hiopMPI.hpp"
 
 namespace hiop
 {
@@ -140,7 +124,7 @@ public:
    * @param n global number of variables
    * @param m number of constraints
    */
-  virtual bool get_prob_sizes(int_type& n, int_type& m)=0;
+  virtual bool get_prob_sizes(size_type& n, size_type& m)=0;
   
   /** Specifies bounds on the variables.
    *    
@@ -152,7 +136,7 @@ public:
    * @param[out] type array of indicating whether the variables enters the objective 
    * linearily, quadratically, or general nonlinearily. Momentarily not used by HiOp
    */
-  virtual bool get_vars_info(const int_type& n, double *xlow, double* xupp, NonlinearityType* type)=0;
+  virtual bool get_vars_info(const size_type& n, double *xlow, double* xupp, NonlinearityType* type)=0;
   
   /** Specififes the bounds on the constraints.
    *
@@ -164,7 +148,7 @@ public:
    * @param[out] type array of indicating whether the constraint is linear, quadratic, or general
    * nonlinear. Momentarily not used by HiOp
    */
-  virtual bool get_cons_info(const int_type& m, double* clow, double* cupp, NonlinearityType* type)=0;
+  virtual bool get_cons_info(const size_type& m, double* clow, double* cupp, NonlinearityType* type)=0;
 
   /** Method the evaluation of the objective function.
    *  
@@ -177,7 +161,7 @@ public:
    * @note When MPI is enabled, each rank returns the objective value in @p obj_value. @p x points to 
    * the local entries and the function is responsible for knowing the local buffer size.
    */
-  virtual bool eval_f(const int_type& n, const double* x, bool new_x, double& obj_value)=0;
+  virtual bool eval_f(const size_type& n, const double* x, bool new_x, double& obj_value)=0;
   
   /** Method for the evaluation of the gradient of objective.
    *  
@@ -190,7 +174,7 @@ public:
    *
    *  @note When MPI is enabled, each rank should access only the local buffers @p x and @p gradf.
    */
-  virtual bool eval_grad_f(const int_type& n, const double* x, bool new_x, double* gradf)=0;
+  virtual bool eval_grad_f(const size_type& n, const double* x, bool new_x, double* gradf)=0;
 
   /** Evaluates a subset of the constraints @p cons(@p x). The subset is of size
    *  @p num_cons and is described by indexes in the @p idx_cons array. The method will be called at each
@@ -208,10 +192,10 @@ public:
    *  
    *  @note When MPI is enabled, every rank populates @p cons since the constraints are not distributed.
    */
-  virtual bool eval_cons(const int_type& n,
-                         const int_type& m, 
-			 const int_type& num_cons,
-                         const int_type* idx_cons,  
+  virtual bool eval_cons(const size_type& n,
+                         const size_type& m, 
+			 const size_type& num_cons,
+                         const index_type* idx_cons,  
 			 const double* x,
                          bool new_x, 
 			 double* cons)=0;
@@ -231,8 +215,8 @@ public:
    * 
    *  @note When MPI is enabled, every rank populates @p cons since the constraints are not distributed.
    */
-  virtual bool eval_cons(const int_type& n,
-                         const int_type& m, 
+  virtual bool eval_cons(const size_type& n,
+                         const size_type& m, 
 			 const double* x,
                          bool new_x, 
 			 double* cons)
@@ -254,7 +238,7 @@ public:
    * 
    * The caller manages memory associated with @p cols, which is an array of size NumRanks+1 
    */
-  virtual bool get_vecdistrib_info(int_type global_n, int_type* cols) {
+  virtual bool get_vecdistrib_info(size_type global_n, index_type* cols) {
     return false; //defaults to serial 
   }
 
@@ -272,7 +256,7 @@ public:
    * this method.
    *
    */
-  virtual bool get_starting_point(const int_type&n, double* x0)
+  virtual bool get_starting_point(const size_type&n, double* x0)
   {
     return false;
   }
@@ -300,8 +284,8 @@ public:
    * will be removed in a future release.
    * 
    */
-  virtual bool get_starting_point(const int_type& n,
-                                  const int_type& m,
+  virtual bool get_starting_point(const size_type& n,
+                                  const size_type& m,
                                   double* x0,
                                   bool& duals_avail,
                                   double* z_bndL0, double* z_bndU0,
@@ -329,11 +313,11 @@ public:
    *
    */
   virtual void solution_callback(hiopSolveStatus status,
-				 int_type n,
+				 size_type n,
                                  const double* x,
 				 const double* z_L,
 				 const double* z_U,
-				 int_type m,
+				 size_type m,
                                  const double* g,
 				 const double* lambda,
 				 double obj_value)
@@ -414,10 +398,10 @@ public:
    *
    * Parameters: see eval_cons
    */
-  virtual bool eval_Jac_cons(const int_type& n,
-                             const int_type& m, 
-                             const int_type& num_cons,
-                             const int_type* idx_cons,
+  virtual bool eval_Jac_cons(const size_type& n,
+                             const size_type& m, 
+                             const size_type& num_cons,
+                             const index_type* idx_cons,
                              const double* x,
                              bool new_x,
                              double* Jac) = 0;
@@ -434,8 +418,8 @@ public:
    * TODO: build an example (new one-call Nlp formulation derived from ex2) to illustrate this 
    * feature and to test HiOp's internal implementation of eq.-ineq. spliting.
    */
-  virtual bool eval_Jac_cons(const int_type& n,
-                             const int_type& m,
+  virtual bool eval_Jac_cons(const size_type& n,
+                             const size_type& m,
                              const double* x,
                              bool new_x,
                              double* Jac)
@@ -503,17 +487,17 @@ public:
    * non-null; but they will not be both null.
    * 
    */
-  virtual bool eval_Jac_cons(const int_type& n,
-                             const int_type& m, 
-			     const int_type& num_cons,
-                             const int_type* idx_cons,
+  virtual bool eval_Jac_cons(const size_type& n,
+                             const size_type& m, 
+			     const size_type& num_cons,
+                             const index_type* idx_cons,
 			     const double* x,
                              bool new_x,
-			     const int_type& nsparse,
-                             const int_type& ndense, 
-			     const int_type& nnzJacS,
-                             int_type* iJacS,
-                             int_type* jJacS,
+			     const size_type& nsparse,
+                             const size_type& ndense, 
+			     const size_type& nnzJacS,
+                             index_type* iJacS,
+                             index_type* jJacS,
                              double* MJacS, 
 			     double* JacD) = 0;
   /** Evaluates the Jacobian of equality and inequality constraints in one call. This Jacobian is
@@ -548,15 +532,15 @@ public:
    * HiOp will call this method whenever the implementer/user returns false from the 'eval_Jac_cons'
    * (which is called for equalities and inequalities separately) above.
    */
-  virtual bool eval_Jac_cons(const int_type& n,
-                             const int_type& m, 
+  virtual bool eval_Jac_cons(const size_type& n,
+                             const size_type& m, 
 			     const double* x,
                              bool new_x,
-			     const int_type& nsparse,
-                             const int_type& ndense, 
-			     const int_type& nnzJacS,
-                             int_type* iJacS,
-                             int_type* jJacS,
+			     const size_type& nsparse,
+                             const size_type& ndense, 
+			     const size_type& nnzJacS,
+                             index_type* iJacS,
+                             index_type* jJacS,
                              double* MJacS, 
 			     double* JacD)
   {
@@ -577,23 +561,23 @@ public:
    * 1)-5) from 'eval_Jac_cons' applies to xxxHSS and HDD arrays
    * 6) The order is multipliers is: lambda=[lambda_eq, lambda_ineq]
    */
-  virtual bool eval_Hess_Lagr(const int_type& n,
-                              const int_type& m, 
+  virtual bool eval_Hess_Lagr(const size_type& n,
+                              const size_type& m, 
 			      const double* x,
                               bool new_x,
                               const double& obj_factor,
 			      const double* lambda,
                               bool new_lambda,
-			      const int_type& nsparse,
-                              const int_type& ndense, 
-			      const int_type& nnzHSS,
-                              int_type* iHSS,
-                              int_type* jHSS,
+			      const size_type& nsparse,
+                              const size_type& ndense, 
+			      const size_type& nnzHSS,
+                              index_type* iHSS,
+                              index_type* jHSS,
                               double* MHSS, 
 			      double* HDD,
-			      int_type& nnzHSD,
-                              int_type* iHSD,
-                              int_type* jHSD,
+			      size_type& nnzHSD,
+                              index_type* iHSD,
+                              index_type* jHSD,
                               double* MHSD) = 0;
 };
 
@@ -621,10 +605,10 @@ public:
   /** Get the number of variables and constraints, nonzeros
    * and get the number of nonzeros in Jacobian and Heesian
   */
-  virtual bool get_sparse_blocks_info(int_type& nx,
-                                      int_type& nnz_sparse_Jaceq,
-                                      int_type& nnz_sparse_Jacineq,
-                                      int_type& nnz_sparse_Hess_Lagr) = 0;
+  virtual bool get_sparse_blocks_info(size_type& nx,
+                                      size_type& nnz_sparse_Jaceq,
+                                      size_type& nnz_sparse_Jacineq,
+                                      size_type& nnz_sparse_Hess_Lagr) = 0;
 
   /** Evaluates the sparse Jacobian of constraints.
    *
@@ -639,15 +623,15 @@ public:
    * the sparse Jacobian.
    *
    */
-  virtual bool eval_Jac_cons(const int_type& n,
-                             const int_type& m,
-                             const int_type& num_cons,
-                             const int_type* idx_cons,
+  virtual bool eval_Jac_cons(const size_type& n,
+                             const size_type& m,
+                             const size_type& num_cons,
+                             const index_type* idx_cons,
                              const double* x,
                              bool new_x,
-                             const int_type& nnzJacS,
-                             int* iJacS,
-                             int_type* jJacS,
+                             const size_type& nnzJacS,
+                             index_type* iJacS,
+                             index_type* jJacS,
                              double* MJacS) = 0;
 
   /** Evaluates the sparse Jacobian of equality and inequality constraints in one call.
@@ -675,13 +659,13 @@ public:
    * HiOp will call this method whenever the implementer/user returns false from the 'eval_Jac_cons'
    * (which is called for equalities and inequalities separately) above.
    */
-  virtual bool eval_Jac_cons(const int_type& n,
-                             const int_type& m,
+  virtual bool eval_Jac_cons(const size_type& n,
+                             const size_type& m,
                              const double* x,
                              bool new_x,
-                             const int_type& nnzJacS,
-                             int_type* iJacS,
-                             int_type* jJacS,
+                             const size_type& nnzJacS,
+                             index_type* iJacS,
+                             index_type* jJacS,
                              double* MJacS)
   {
     return false;
@@ -692,16 +676,16 @@ public:
    * @note 1)-4) from 'eval_Jac_cons' applies to xxxHSS
    * @note 5) The order of multipliers is: lambda=[lambda_eq, lambda_ineq]
    */
-  virtual bool eval_Hess_Lagr(const int_type& n,
-                              const int_type& m,
+  virtual bool eval_Hess_Lagr(const size_type& n,
+                              const size_type& m,
                               const double* x,
                               bool new_x,
                               const double& obj_factor,
                               const double* lambda,
                               bool new_lambda,
-                              const int_type& nnzHSS,
-                              int_type* iHSS,
-                              int_type* jHSS,
+                              const size_type& nnzHSS,
+                              index_type* iHSS,
+                              index_type* jHSS,
                               double* MHSS) = 0;
 
 
