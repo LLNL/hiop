@@ -222,16 +222,6 @@ public:
                                  const int end, 
                                  const hiopInterfaceBase::NonlinearityType arr_src) const;
 
-  virtual void set_array_from_to(hiopInterfaceBase::NonlinearityType* arr, 
-                                 const int start, 
-                                 const int end, 
-                                 const hiopInterfaceBase::NonlinearityType* arr_src,
-                                 const int start_src) const;
-  virtual void set_array_from_to(hiopInterfaceBase::NonlinearityType* arr, 
-                                 const int start, 
-                                 const int end, 
-                                 const hiopInterfaceBase::NonlinearityType arr_src) const;
-
 private:
   std::string mem_space_;
   MPI_Comm comm_;
