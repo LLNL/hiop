@@ -289,6 +289,36 @@ void hiopVectorRajaPar::copyFrom(const double* local_array)
   }
 }
 
+void hiopVectorRajaPar::copyFrom(const int* index_in_src, const hiopVector& vec)
+{
+  const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(vec);
+  int nv = v.get_local_size();
+  double* dd = data_dev_;
+  double* vd = v.data_dev_;
+  int* id = const_cast<int*>(index_in_src);
+
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      assert(id[i]<nv);
+      dd[i] = vd[id[i]];
+    });
+}
+
+void hiopVectorRajaPar::copyFrom(const int* index_in_src, const double* vec)
+{
+  assert(vec);
+  double* dd = data_dev_;
+  double* vd = const_cast<double*>(vec);
+  int* id = const_cast<int*>(index_in_src);
+
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      dd[i] = vd[id[i]];
+    });
+}
+
 /**
  * @brief Copy `nv` elements from array `v` to this vector starting from `start_index_in_this`
  * 
@@ -507,6 +537,7 @@ void hiopVectorRajaPar::copy_from_two_vec_w_pattern(const hiopVector& c,
   double*   dd = data_dev_;
   double*  vd1 = v1.data_dev_;
   double*  vd2 = v2.data_dev_;
+
   const int_type* id1 = ix1.local_data_const();
   const int_type* id2 = ix2.local_data_const();
   
@@ -1914,7 +1945,7 @@ int_type hiopVectorRajaPar::numOfElemsAbsLessThan(const double &val) const
 
   return nrm;
 }
- 
+
 void hiopVectorRajaPar::set_array_from_to(hiopInterfaceBase::NonlinearityType* arr, 
                                           const int start, 
                                           const int end, 

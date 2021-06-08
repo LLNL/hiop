@@ -20,7 +20,7 @@ module use -a $PROJ_DIR/src/spack/share/spack/modules/$SPACK_ARCH/
 ) 2>&1 1>&/dev/null
 source $PROJ_DIR/src/spack/share/spack/setup-env.sh
 
-export MY_NVCC_ARCH="sm_60"
+export MY_NVCC_ARCH="60"
 export NVBLAS_CONFIG_FILE=$PROJ_DIR/$MY_CLUSTER/nvblas.conf
 module load gcc/7.3.0
 module load cuda/10.2.89

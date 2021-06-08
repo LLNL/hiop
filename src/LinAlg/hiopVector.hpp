@@ -79,6 +79,9 @@ public:
   /// @brief Copy the 'n' elements of v starting at 'start_index_in_v' into 'this'
   virtual void copy_from_starting_at(const double* v, int start_index_in_v, int n) = 0;
 
+  /// @brief Copy from the indices in index_in_src in v
+  virtual void copyFrom(const int* index_in_src, const hiopVector& v) = 0;
+  virtual void copyFrom(const int* index_in_src, const double* v) = 0;
   /*
    * @brief Copy from 'v' starting at 'start_idx_src' to 'this' starting at 'start_idx_dest'
    *

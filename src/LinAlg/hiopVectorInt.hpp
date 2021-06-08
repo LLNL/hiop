@@ -58,6 +58,7 @@
 
 namespace hiop
 {
+typedef long long hiopInt;
 
 class hiopVectorInt
 {

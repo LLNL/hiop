@@ -109,7 +109,6 @@ public:
   inline int_type* local_data() { return buf_; }
 
   inline const int_type* local_data_const() const { return buf_; }
-
 };
 
 } // namespace hiop

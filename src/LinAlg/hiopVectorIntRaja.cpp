@@ -59,8 +59,8 @@ namespace hiop
 {
 
 hiopVectorIntRaja::hiopVectorIntRaja(int_type sz, std::string mem_space)
-  : hiopVectorInt(sz)
-  , mem_space_(mem_space)
+  : hiopVectorInt(sz),
+    mem_space_(mem_space)
 {
 #ifndef HIOP_USE_GPU
   mem_space_ = "HOST";
@@ -73,8 +73,7 @@ hiopVectorIntRaja::hiopVectorIntRaja(int_type sz, std::string mem_space)
   {
     umpire::Allocator hostalloc = resmgr.getAllocator("HOST");
     buf_host_ = static_cast<int_type*>(hostalloc.allocate(sz_*sizeof(int_type)));
-  }
-  else
+  } else
   {
     buf_host_ = buf_;
   }

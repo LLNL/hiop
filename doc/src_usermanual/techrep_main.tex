@@ -431,8 +431,6 @@ Examples of how to use these functions can be found in the standalone drivers in
 
 %\subsubsection{Additional interface methods}
 %\Hi's C++ interface provides methods to retrieve the optimal solution and the intermediate iterates.
-%
-%[[ to do ]]
 
 \subsubsection{Calling \Hi for a \texttt{hiopInterfaceDenseConstraints} formulation}
 Once an implementation of the \texttt{hiop::hiopInterfaceDenseConstraints} abstract interface class containing the user's NLP representation is available, the  user code needs to create a \Hi problem formulation that encapsulate the NLP representation, instantiate an optimization algorithm class, and start the numerical optimization process. Assuming that the NLP representation is implemented in a class named \texttt{NlpEx1} (deriving \texttt{hiop::hiopInterfaceDenseConstraints}), the aforementioned sequence of steps can be performed by:
@@ -707,16 +705,45 @@ double obj_value = solver.getObjective();  //get objective
 \end{lstlisting}
 
 
+\subsection{Structured NLPs suitable to primal decomposition (PriDe) schemes}\label{sec:pride}
 
-%%%%%%
+\Hi also offers parallel solution capabilities for NLPs that have separable objective terms. More specifically,
+\begin{align}
+&&&&\min_{x\in\mathbb{R}^n} & \hspace{0.5cm} f(x) + \sum_{i=1}^K r_i(x) &&&& \label{prideobj}\\
+&&&&\textnormal{s.t.} &\hspace{0.5cm}  c(x)=c_E &[y_c]&&&\\
+&&[v_l]&&& \hspace{0.5cm} d_l \leq d(x) \leq d_u  &[v_u]&&&\label{prideineq} \\
+&&[z_u]&&& \hspace{0.5cm} x_l \leq x \leq x_u & [z_u] &&&\label{pridebounds}
+\end{align}
+Mathematically, the above problem is identical (and has the same specification as the NLP~\eqref{obj}-\eqref{bounds}), with the exception of the so-called ``recourse`` terms $r_i(x)$ appearing in the objective. Each of these functions are real-valued, $r_i:\mathbb{R}^n\rightarrow \mathbb{R}$, for all $i\in\{1,2,\ldots, K\}$, and can be of various order of differentiability. As of now, the recourse functions $r_i(x)$ need to be continuous and differentiable (but can have discountinous first derivative). The more general case in which $r_i(x)$ is only Lipschitz continuous is currently under development and can be made available by the developers of \Hi on user's request.
 
-%1. mention GPUs
+The input in which \Hi expects for this class of problems is a bit different than for NLPs of the form~\eqref{obj}-\eqref{bounds} and MDS NLPs introduced in the previous section. This is mainly caused by the specifics of the primal decomposition algorithm/solver that was purposedly develop to solve to solve~\eqref{prideobj}-\eqref{pridebounds} for large $K$ ($K=O(10^6)$) efficiently on a massively parallel computing platform. Nevertheless, for smaller $K$, problems of form~\eqref{prideobj}-\eqref{pridebounds} can be solved with \Hi using the sparse and MDS input interfaces.
 
-%2. Newton IPM for MDS
+The primal decomposition algorithm requires a separation or breakdown of the evaluation of~\eqref{prideobj}-\eqref{pridebounds} into the following computational ``units``
+\begin{itemize}
+\item[1.] solving the so-called ``master problem`` of the form
+  \begin{align}
+&&&&\min_{x\in\mathbb{R}^n} & \hspace{0.5cm} f(x) + q(x) &&&& \label{pridemobj}\\
+&&&&\textnormal{s.t.} &\hspace{0.5cm}  c(x)=c_E &[y_c]&&&\\
+&&[v_l]&&& \hspace{0.5cm} d_l \leq d(x) \leq d_u  &[v_u]&&&\label{pridemineq} \\
+&&[z_u]&&& \hspace{0.5cm} x_l \leq x \leq x_u & [z_u] &&&\label{pridembounds}
+  \end{align}
+for a given real function $q(x)$ whose evaluation together with its gradient and sparse Hessian evaluations are provided by \Hi;
+\item[2.] evaluating the recourse functions $r_i(x)$ and their gradients $\nabla r_i(x)$, for all $i\in\{1,2,\ldots, K\}$.
+\end{itemize}
+We stress that it is the user's responsibility to perform 1 and 2 above. In regards to 1, the function $q(x)$ (and its first and second order derivatives) will be provided by \Hi as explained below. The funtion $q(x)$ is an approximation of the recourse $R(x):=\sum_{i=1}^K r_i(x)$ from~\eqref{pridemobj}-\eqref{pridembounds}, which is built based on the function and gradient evaluations performed at 2.
 
-%3. primal dual restart
+The user can safely assume that $q(x)$ is a strictly  convex quadratic function (however the function may be only convex and nonquadratic in a future version of \Hi). \Hi assumes that the user can solve the master problem~\eqref{pridemobj}-\eqref{pridembounds} in some efficient way and that the user can return the optimal vector.
 
+\bigskip
 
+As this part of the solver is under development, the interested parties should consult \texttt{nlpPriDec\_ex8} under the \texttt{Drivers} directory and should also feel free to contact the developers.
+
+%[[to do:]] describe C++ interface 
+%
+%\bigskip
+%
+%[[to do:]] elaborate on the master-solver-workers asynchronous parallelism.
+%Master runs on rank 0. Solver runs on rank 1. Workers runs on ranks $2, \ldots, N_P$.
 
 \subsection{Specifying a starting point for the optimization process}
 
