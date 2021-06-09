@@ -58,9 +58,9 @@
 namespace hiop
 {
 
-hiopVectorIntRaja::hiopVectorIntRaja(hiopInt sz, std::string mem_space)
-  : hiopVectorInt(sz)
-  , mem_space_(mem_space)
+hiopVectorIntRaja::hiopVectorIntRaja(size_type sz, std::string mem_space)
+  : hiopVectorInt(sz),
+    mem_space_(mem_space)
 {
 #ifndef HIOP_USE_GPU
   mem_space_ = "HOST";
@@ -68,13 +68,12 @@ hiopVectorIntRaja::hiopVectorIntRaja(hiopInt sz, std::string mem_space)
 
   auto& resmgr = umpire::ResourceManager::getInstance();
   umpire::Allocator devalloc = resmgr.getAllocator(mem_space_);
-  buf_ = static_cast<hiopInt*>(devalloc.allocate(sz_*sizeof(hiopInt)));
+  buf_ = static_cast<index_type*>(devalloc.allocate(sz_*sizeof(index_type)));
   if(mem_space_ == "DEVICE")
   {
     umpire::Allocator hostalloc = resmgr.getAllocator("HOST");
-    buf_host_ = static_cast<hiopInt*>(hostalloc.allocate(sz_*sizeof(hiopInt)));
-  }
-  else
+    buf_host_ = static_cast<index_type*>(hostalloc.allocate(sz_*sizeof(index_type)));
+  } else
   {
     buf_host_ = buf_;
   }
@@ -94,12 +93,12 @@ hiopVectorIntRaja::~hiopVectorIntRaja()
   buf_ = nullptr;
 }
 
-const hiopInt& hiopVectorIntRaja::operator[] (hiopInt i) const
+const index_type& hiopVectorIntRaja::operator[] (index_type i) const
 {
   return buf_host_[i];
 }
 
-hiopInt& hiopVectorIntRaja::operator[] (hiopInt i)
+index_type& hiopVectorIntRaja::operator[] (index_type i)
 {
   return buf_host_[i];
 }

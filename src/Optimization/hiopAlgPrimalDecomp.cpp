@@ -599,7 +599,7 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
       return run_single();//call the serial solver
     }
     if(my_rank_==0) {
-      printf("total number of recourse problems  %d\n", S_);
+      printf("total number of recourse problems  %lu\n", S_);
       printf("total ranks %d\n",comm_size_);
     }
     //initial point for now set to all zero
@@ -1096,7 +1096,7 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
  */
 hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
 {
-  printf("total number of recourse problems  %d\n", S_);
+  printf("total number of recourse problems  %lu\n", S_);
   // initial point for now set to all zero
   x_->setToZero();
       

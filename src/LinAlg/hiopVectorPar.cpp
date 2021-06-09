@@ -62,7 +62,7 @@ namespace hiop
 {
 
 
-hiopVectorPar::hiopVectorPar(const long long& glob_n, long long* col_part/*=NULL*/, MPI_Comm comm/*=MPI_COMM_NULL*/)
+hiopVectorPar::hiopVectorPar(const size_type& glob_n, index_type* col_part/*=NULL*/, MPI_Comm comm/*=MPI_COMM_NULL*/)
   : comm_(comm)
 {
   n_ = glob_n;
@@ -646,7 +646,7 @@ void hiopVectorPar::axdzpy_w_pattern( double alpha, const hiopVector& x_, const 
 
 void hiopVectorPar::addConstant( double c )
 {
-  for(long long i=0; i<n_local_; i++) data_[i]+=c;
+  for(size_type i=0; i<n_local_; i++) data_[i]+=c;
 }
 
 void  hiopVectorPar::addConstant_w_patternSelect(double c, const hiopVector& ix_)
@@ -770,7 +770,7 @@ double hiopVectorPar::linearDampingTerm_local(const hiopVector& ixleft,
   assert(n_local_==(dynamic_cast<const hiopVectorPar&>(ixright) ).n_local_);
 #endif
   double term=0.0;
-  for(long long i=0; i<n_local_; i++) {
+  for(size_type i=0; i<n_local_; i++) {
     if(ixl[i]==1. && ixr[i]==0.) term += data_[i];
   }
   term *= mu; 
@@ -834,7 +834,7 @@ bool hiopVectorPar::projectIntoBounds_local(const hiopVector& xl_, const hiopVec
   const double small_double = std::numeric_limits<double>::min() * 100;
 
   double aux, aux2;
-  for(long long i=0; i<n_local_; i++) {
+  for(size_type i=0; i<n_local_; i++) {
     if(ixl[i]!=0 && ixu[i]!=0) {
       if(xl[i]>xu[i]) return false;
         aux=kappa2*(xu[i]-xl[i])-small_double;
@@ -981,7 +981,7 @@ void hiopVectorPar::adjustDuals_plh(const hiopVector& x_,
   const double* ix = (dynamic_cast<const hiopVectorPar&>(ix_)).local_data_const();
   double* z=data_; //the dual
   double a,b;
-  for(long long i=0; i<n_local_; i++) {
+  for(size_type i=0; i<n_local_; i++) {
     if(ix[i]==1.) {
       a=mu/x[i]; b=a/kappa; a=a*kappa;
       if(*z<b) 
@@ -999,19 +999,19 @@ void hiopVectorPar::adjustDuals_plh(const hiopVector& x_,
 
 bool hiopVectorPar::isnan_local() const
 {
-  for(long long i=0; i<n_local_; i++) if(std::isnan(data_[i])) return true;
+  for(size_type i=0; i<n_local_; i++) if(std::isnan(data_[i])) return true;
   return false;
 }
 
 bool hiopVectorPar::isinf_local() const
 {
-  for(long long i=0; i<n_local_; i++) if(std::isinf(data_[i])) return true;
+  for(size_type i=0; i<n_local_; i++) if(std::isinf(data_[i])) return true;
   return false;
 }
 
 bool hiopVectorPar::isfinite_local() const
 {
-  for(long long i=0; i<n_local_; i++) if(0==std::isfinite(data_[i])) return false;
+  for(size_type i=0; i<n_local_; i++) if(0==std::isfinite(data_[i])) return false;
   return true;
 }
 
@@ -1036,9 +1036,9 @@ void hiopVectorPar::print(FILE* file, const char* msg/*=NULL*/, int max_elems/*=
 
     if(NULL==msg) {
       if(numranks>1)
-	fprintf(file, "vector of size %lld, printing %d elems (on rank=%d)\n", n_, max_elems, myrank_);
+	fprintf(file, "vector of size %d, printing %d elems (on rank=%d)\n", n_, max_elems, myrank_);
       else
-	fprintf(file, "vector of size %lld, printing %d elems (serial)\n", n_, max_elems);
+	fprintf(file, "vector of size %d, printing %d elems (serial)\n", n_, max_elems);
     } else {
       fprintf(file, "%s ", msg);
     }    
@@ -1050,18 +1050,18 @@ void hiopVectorPar::print(FILE* file, const char* msg/*=NULL*/, int max_elems/*=
 }
 
 
-long long hiopVectorPar::numOfElemsLessThan(const double &val) const
+size_type hiopVectorPar::numOfElemsLessThan(const double &val) const
 {
-  long long ret_num = 0;
-  for(long long i=0; i<n_local_; i++) {
+  size_type ret_num = 0;
+  for(size_type i=0; i<n_local_; i++) {
     if(data_[i]<val) {
       ret_num++;
     }
   }
 
 #ifdef HIOP_USE_MPI
-  long long ret_num_global;
-  int ierr=MPI_Allreduce(&ret_num, &ret_num_global, 1, MPI_LONG_LONG, MPI_SUM, comm_);
+  size_type ret_num_global;
+  int ierr = MPI_Allreduce(&ret_num, &ret_num_global, 1, MPI_HIOP_SIZE_TYPE, MPI_SUM, comm_);
   assert(MPI_SUCCESS==ierr);
   ret_num = ret_num_global;
 #endif
@@ -1069,18 +1069,18 @@ long long hiopVectorPar::numOfElemsLessThan(const double &val) const
   return ret_num;
 }
 
-long long hiopVectorPar::numOfElemsAbsLessThan(const double &val) const
+size_type hiopVectorPar::numOfElemsAbsLessThan(const double &val) const
 {
-  long long ret_num = 0;
-  for(long long i=0; i<n_local_; i++) {
+  size_type ret_num = 0;
+  for(size_type i=0; i<n_local_; i++) {
     if(fabs(data_[i])<val) {
       ret_num++;
     }
   }
 
 #ifdef HIOP_USE_MPI
-  long long ret_num_global;
-  int ierr=MPI_Allreduce(&ret_num, &ret_num_global, 1, MPI_LONG_LONG, MPI_SUM, comm_);
+  size_type ret_num_global;
+  int ierr=MPI_Allreduce(&ret_num, &ret_num_global, 1, MPI_HIOP_SIZE_TYPE, MPI_SUM, comm_);
   assert(MPI_SUCCESS==ierr);
   ret_num = ret_num_global;
 #endif

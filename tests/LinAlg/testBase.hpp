@@ -65,7 +65,7 @@ namespace hiop { namespace tests {
 
 using real_type             = double;
 using local_ordinal_type    = int;
-using global_ordinal_type   = long long;
+using global_ordinal_type   = int;
 
 static const real_type zero = 0.0;
 static const real_type quarter = 0.25;

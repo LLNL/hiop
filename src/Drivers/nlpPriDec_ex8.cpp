@@ -64,7 +64,7 @@ Ex8::~Ex8()
   delete evaluator_;
 }
  
-bool Ex8::get_prob_sizes(long long& n, long long& m)
+bool Ex8::get_prob_sizes(size_type& n, size_type& m)
 { 
   n=ns;
   m=0; 
@@ -72,7 +72,7 @@ bool Ex8::get_prob_sizes(long long& n, long long& m)
 }
 
 
-bool Ex8::get_vars_info(const long long& n, double *xlow, double* xupp, NonlinearityType* type)
+bool Ex8::get_vars_info(const size_type& n, double *xlow, double* xupp, NonlinearityType* type)
 {
   //assert(n>=4 && "number of variables should be greater than 4 for this example");
   assert(n==ns);
@@ -91,13 +91,13 @@ bool Ex8::get_vars_info(const long long& n, double *xlow, double* xupp, Nonlinea
 };
 
 
-bool Ex8::get_cons_info(const long long& m, double* clow, double* cupp, NonlinearityType* type)
+bool Ex8::get_cons_info(const size_type& m, double* clow, double* cupp, NonlinearityType* type)
 {
   assert(m==0);
   return true;
 };
 
-bool Ex8::eval_f(const long long& n, const double* x, bool new_x, double& obj_value)
+bool Ex8::eval_f(const size_type& n, const double* x, bool new_x, double& obj_value)
 {
   obj_value=0.;//x[0]*(x[0]-1.);
   //sum 0.5 {(x_i-1)*(x_{i}-1) : i=1,...,ns} 
@@ -112,10 +112,10 @@ bool Ex8::eval_f(const long long& n, const double* x, bool new_x, double& obj_va
 };
 
 
-bool Ex8::eval_cons(const long long& n, 
-		    const long long& m, 
-                    const long long& num_cons, 
-		    const long long* idx_cons,  
+bool Ex8::eval_cons(const size_type& n, 
+		    const size_type& m, 
+                    const size_type& num_cons, 
+		    const index_type* idx_cons,  
 		    const double* x, 
 		    bool new_x, 
 		    double* cons)
@@ -124,7 +124,7 @@ bool Ex8::eval_cons(const long long& n,
   return true;
 };
  
-bool Ex8::eval_grad_f(const long long& n, const double* x, bool new_x, double* gradf)
+bool Ex8::eval_grad_f(const size_type& n, const double* x, bool new_x, double* gradf)
 {
   //! assert(ns>=4); assert(Q->n()==ns/4); assert(Q->m()==ns/4);
   for(int i=0; i<n; i++) {
@@ -137,15 +137,15 @@ bool Ex8::eval_grad_f(const long long& n, const double* x, bool new_x, double* g
   return true;
 };
 
-bool Ex8::get_starting_point(const long long& global_n, double* x0_)
+bool Ex8::get_starting_point(const size_type& global_n, double* x0_)
 {
   assert(global_n==ns); 
   for(int i=0; i<global_n; i++) x0_[i]= 2.;
   return true;
 };
 
-bool Ex8::get_starting_point(const long long& n, 
-		             const long long& m,
+bool Ex8::get_starting_point(const size_type& n, 
+		             const size_type& m,
 			     double* x0_,
 			     bool& duals_avail,
 			     double* z_bndL0, 
@@ -159,9 +159,13 @@ bool Ex8::get_starting_point(const long long& n,
 
 bool Ex8::get_MPI_comm(MPI_Comm& comm_out) { comm_out=MPI_COMM_SELF; return true;};
 
-bool Ex8::eval_Jac_cons(const long long& n, const long long& m,
-	                        const long long& num_cons, const long long* idx_cons,  
-			        const double* x, bool new_x, double* Jac) 
+bool Ex8::eval_Jac_cons(const size_type& n,
+                        const size_type& m,
+                        const size_type& num_cons,
+                        const index_type* idx_cons,  
+                        const double* x,
+                        bool new_x,
+                        double* Jac) 
 {
   assert(m==0);
   return true;

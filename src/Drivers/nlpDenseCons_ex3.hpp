@@ -15,6 +15,9 @@
 #include <cstdio>
 #include <cmath>
 
+using size_type = hiop::size_type;
+using index_type = hiop::index_type;
+
 /* Problem test with fixed variables and related corner cases.
  *  min   sum 1/4* { (x_{i}-1)^4 : i=1,...,n}
  *  s.t.  
@@ -39,9 +42,9 @@ public:
 #endif
   
     // set up vector distribution for primal variables - easier to store it as a member in this simple example
-    col_partition = new long long[comm_size+1];
-    long long quotient=n_vars/comm_size;
-    long long remainder=n_vars-comm_size*quotient;
+    col_partition = new index_type[comm_size+1];
+    size_type quotient=n_vars/comm_size;
+    size_type remainder=n_vars-comm_size*quotient;
 
     int i=0;
     col_partition[i++]=0;
@@ -60,14 +63,14 @@ public:
     delete[] col_partition;
   };
 
-  virtual bool get_prob_sizes(long long& n, long long& m)
+  virtual bool get_prob_sizes(size_type& n, size_type& m)
   { n=n_vars; m=n_cons; return true; }
 
-  virtual bool get_vars_info(const long long& n, double *xlow, double* xupp, NonlinearityType* type)
+  virtual bool get_vars_info(const size_type& n, double *xlow, double* xupp, NonlinearityType* type)
   {
     assert(n>=4 && "number of variables should be greater than 4 for this example");
-    long long i_local;
-    for(long long i=col_partition[my_rank]; i<col_partition[my_rank+1]; i++) {
+    index_type i_local;
+    for(index_type i=col_partition[my_rank]; i<col_partition[my_rank+1]; i++) {
       i_local=idx_global2local(n,i);
       if(i==0) { xlow[i_local]= 1.5; xupp[i_local]=1.50; type[i_local]=hiopNonlinear; continue; }
       if(i==1) { xlow[i_local]= 0.0; xupp[i_local]=1e20;type[i_local]=hiopNonlinear; continue; }
@@ -80,7 +83,7 @@ public:
   return true;
 }
 
-  virtual bool get_cons_info(const long long& m, double* clow, double* cupp, NonlinearityType* type)
+  virtual bool get_cons_info(const size_type& m, double* clow, double* cupp, NonlinearityType* type)
   {
     assert(m==n_cons);
     clow[0]= n_vars+1; cupp[0]= n_vars+1;  type[0]=hiopInterfaceBase::hiopLinear;
@@ -88,9 +91,9 @@ public:
     return true;
   }
 
-  virtual bool eval_f(const long long& n, const double* x, bool new_x, double& obj_value)
+  virtual bool eval_f(const size_type& n, const double* x, bool new_x, double& obj_value)
   {
-    long long n_local=col_partition[my_rank+1]-col_partition[my_rank];
+    size_type n_local=col_partition[my_rank+1]-col_partition[my_rank];
     obj_value=0.; 
     for(int i=0;i<n_local;i++) obj_value += 0.25*pow(x[i]-1., 4);
 #ifdef HIOP_USE_MPI
@@ -101,8 +104,8 @@ public:
     return true;
   }
 
-  virtual bool eval_cons(const long long& n, const long long& m, 
-			 const long long& num_cons, const long long* idx_cons,  
+  virtual bool eval_cons(const size_type& n, const size_type& m, 
+			 const size_type& num_cons, const index_type* idx_cons,  
 			 const double* x, bool new_x, double* cons)
   {
     assert(n==n_vars); assert(m==n_cons); assert(n_cons==2);
@@ -115,7 +118,7 @@ public:
       
       // --- constraint 1 body ---> sum x_i = n+1
       if(idx_cons[itcon]==0) {
-	long long n_local=col_partition[my_rank+1]-col_partition[my_rank];
+	size_type n_local=col_partition[my_rank+1]-col_partition[my_rank];
 	//loop over local x in local indexes and add its entries to the result
 	for(int i=0;i<n_local;i++) cons[itcon] += x[i];
 	continue; //done with this constraint
@@ -125,7 +128,7 @@ public:
       if(idx_cons[itcon]==1) {
 	int i_local;
 	//loop over local x in global indexes 
-	for(long long i_global=col_partition[my_rank]; i_global<col_partition[my_rank+1]; i_global++) {
+	for(size_type i_global=col_partition[my_rank]; i_global<col_partition[my_rank+1]; i_global++) {
 	  i_local=idx_global2local(n,i_global);
 	  //x_1 has a different contribution to constraint 2 than the rest
 	  if(i_global==0) cons[itcon] += 2*x[i_local]; 
@@ -145,20 +148,20 @@ public:
     return true;
   }
   
-  virtual bool eval_grad_f(const long long& n, const double* x, bool new_x, double* gradf)
+  virtual bool eval_grad_f(const size_type& n, const double* x, bool new_x, double* gradf)
   {
-    long long n_local=col_partition[my_rank+1]-col_partition[my_rank];
+    size_type n_local=col_partition[my_rank+1]-col_partition[my_rank];
     for(int i=0;i<n_local;i++) gradf[i] = pow(x[i]-1.,3);
     return true;
   }
  
-  virtual bool eval_Jac_cons(const long long& n, const long long& m,
-                             const long long& num_cons, const long long* idx_cons,
+  virtual bool eval_Jac_cons(const size_type& n, const size_type& m,
+                             const size_type& num_cons, const index_type* idx_cons,
                              const double* x, bool new_x, double* Jac)
   {
 
     assert(n==n_vars); assert(m==n_cons); 
-    long long n_local=col_partition[my_rank+1]-col_partition[my_rank];
+    size_type n_local=col_partition[my_rank+1]-col_partition[my_rank];
     int i;
     //here we will iterate over the local indexes, however we still need to work with the
     //global indexes to correctly determine the entries in the Jacobian corresponding
@@ -185,7 +188,7 @@ public:
     return true;
   };
 
-  virtual bool get_vecdistrib_info(long long global_n, long long* cols)
+  virtual bool get_vecdistrib_info(size_type global_n, index_type* cols)
   {
     if(global_n==n_vars) {
       for(int i=0; i<=comm_size; i++) {
@@ -198,10 +201,10 @@ public:
     return true;
   }
 
-  virtual bool get_starting_point(const long long& global_n, double* x0)
+  virtual bool get_starting_point(const size_type& global_n, double* x0)
   {
     assert(global_n==n_vars); 
-    long long n_local=col_partition[my_rank+1]-col_partition[my_rank];
+    size_type n_local=col_partition[my_rank+1]-col_partition[my_rank];
     for(int i=0; i<n_local; i++)
       x0[i]=0.0;
     return true;
@@ -211,9 +214,9 @@ private:
   int n_vars, n_cons;
   MPI_Comm comm;
   int my_rank, comm_size;
-  long long* col_partition;
+  index_type* col_partition;
 public:
-  inline long long idx_local2global(long long global_n, int idx_local) 
+  inline size_type idx_local2global(size_type global_n, index_type idx_local) 
   { 
     assert(idx_local + col_partition[my_rank]<col_partition[my_rank+1]);
     if(global_n==n_vars)
@@ -221,12 +224,12 @@ public:
     assert(false && "you shouldn't need global index for a vector of this size.");
     return -1;
   }
-  inline int idx_global2local(long long global_n, long long idx_global)
+  inline index_type idx_global2local(size_type global_n, index_type idx_global)
   {
     assert(idx_global>=col_partition[my_rank]   && "global index does not belong to this rank");
     assert(idx_global< col_partition[my_rank+1] && "global index does not belong to this rank");
     assert(global_n==n_vars && "your global_n does not match the number of variables?");
-    return (int) (idx_global-col_partition[my_rank]);
+    return (idx_global-col_partition[my_rank]);
   }
 };
 #endif

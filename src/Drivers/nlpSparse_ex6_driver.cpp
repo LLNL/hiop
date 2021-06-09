@@ -7,9 +7,9 @@
 
 using namespace hiop;
 
-static bool self_check(long long n, double obj_value);
+static bool self_check(size_type n, double obj_value);
 
-static bool parse_arguments(int argc, char **argv, long long& n, double &scal,  bool& self_check)
+static bool parse_arguments(int argc, char **argv, size_type& n, double &scal,  bool& self_check)
 {
 
   //  printf("%s    %s \n", argv[1], argv[2]);
@@ -85,7 +85,7 @@ int main(int argc, char **argv)
     return 1;
   }
 #endif
-  bool selfCheck; long long n;
+  bool selfCheck; size_type n;
   double scal;
 
   if(!parse_arguments(argc, argv, n, scal, selfCheck)) { usage(argv[0]); return 1;}
@@ -137,10 +137,10 @@ int main(int argc, char **argv)
 }
 
 
-static bool self_check(long long n, double objval)
+static bool self_check(size_type n, double objval)
 {
 #define num_n_saved 3 //keep this is sync with n_saved and objval_saved
-  const long long n_saved[] = {50, 500, 5000};
+  const size_type n_saved[] = {50, 500, 5000};
   const double objval_saved[] = {1.10351564683176e-01, 1.10351566513480e-01, 1.10351578644469e-01};
 
 #define relerr 1e-6
@@ -149,7 +149,7 @@ static bool self_check(long long n, double objval)
     if(n_saved[it]==n) {
       found=true;
       if(fabs( (objval_saved[it]-objval)/(1+objval_saved[it])) > relerr) {
-	printf("selfcheck failure. Objective (%18.12e) does not agree (%d digits) with the saved value (%18.12e) for n=%lld.\n",
+	printf("selfcheck failure. Objective (%18.12e) does not agree (%d digits) with the saved value (%18.12e) for n=%d.\n",
 	       objval, -(int)log10(relerr), objval_saved[it], n);
 	return false;
       } else {
@@ -160,7 +160,7 @@ static bool self_check(long long n, double objval)
   }
 
   if(!found) {
-    printf("selfcheck: driver does not have the objective for n=%lld saved. BTW, obj=%18.12e was obtained for this n.\n", n, objval);
+    printf("selfcheck: driver does not have the objective for n=%d saved. BTW, obj=%18.12e was obtained for this n.\n", n, objval);
     return false;
   }
 

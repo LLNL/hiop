@@ -109,14 +109,14 @@ public:
     memcpy(xi_,xi, nS_*sizeof(double));
   }
 
-  bool get_prob_sizes(long long& n, long long& m)
+  bool get_prob_sizes(size_type& n, size_type& m)
   {
     n = ny_;
     m = ny_; 
     return true; 
   }
 
-  bool get_vars_info(const long long& n, double *xlow, double* xupp, NonlinearityType* type)
+  bool get_vars_info(const size_type& n, double *xlow, double* xupp, NonlinearityType* type)
   {
     // y_1 bounded
     xlow[0] = 0.;
@@ -128,7 +128,7 @@ public:
     return true;
   }
 
-  bool get_cons_info(const long long& m, double* clow, double* cupp, NonlinearityType* type)
+  bool get_cons_info(const size_type& m, double* clow, double* cupp, NonlinearityType* type)
   {
     assert(m == ny_);
     for(int i=0;i<ny_-1;i++) {
@@ -164,7 +164,7 @@ public:
     return true;
   }
 
-  bool eval_f(const long long& n, const double* x, bool new_x, double& obj_value)
+  bool eval_f(const size_type& n, const double* x, bool new_x, double& obj_value)
   {
     assert(ny_==n);
     obj_value = 0.;
@@ -175,10 +175,10 @@ public:
     return true;
   }
  
-  virtual bool eval_cons(const long long& n, 
-                         const long long& m, 
-                         const long long& num_cons, 
-                         const long long* idx_cons,  
+  virtual bool eval_cons(const size_type& n, 
+                         const size_type& m, 
+                         const size_type& num_cons, 
+                         const index_type* idx_cons,  
                          const double* x, 
                          bool new_x, 
                          double* cons)
@@ -210,7 +210,7 @@ public:
   }
   
   //  r_i(x;\xi^i) = 1/S *  min_y 0.5 || y - x ||^2 such that 
-  bool eval_grad_f(const long long& n, const double* x, bool new_x, double* gradf)
+  bool eval_grad_f(const size_type& n, const double* x, bool new_x, double* gradf)
   {
     assert(ny_==n);    
     for(int i=0;i<nx_;i++) gradf[i] = (x[i]-x_[i])/double(S_);
@@ -218,17 +218,17 @@ public:
     return true;
   }
  
-  virtual bool eval_Jac_cons(const long long& n, 
-                             const long long& m, 
-                             const long long& num_cons, 
-                             const long long* idx_cons,
+  virtual bool eval_Jac_cons(const size_type& n, 
+                             const size_type& m, 
+                             const size_type& num_cons, 
+                             const index_type* idx_cons,
                              const double* x, 
                              bool new_x,
-                             const long long& nsparse, 
-                             const long long& ndense, 
+                             const size_type& nsparse, 
+                             const size_type& ndense, 
                              const int& nnzJacS, 
-                             int* iJacS, 
-                             int* jJacS, 
+                             index_type* iJacS, 
+                             index_type* jJacS, 
                              double* MJacS, 
                              double* JacD)
   {
@@ -363,15 +363,15 @@ public:
     return true;
   }
   
-  bool eval_Hess_Lagr(const long long& n, 
-                      const long long& m, 
+  bool eval_Hess_Lagr(const size_type& n, 
+                      const size_type& m, 
                       const double* x, 
                       bool new_x, 
                       const double& obj_factor,
                       const double* lambda, 
                       bool new_lambda,
-                      const long long& nsparse, 
-                      const long long& ndense, 
+                      const size_type& nsparse, 
+                      const size_type& ndense, 
                       const int& nnzHSS, 
                       int* iHSS, 
                       int* jHSS, 
@@ -407,15 +407,15 @@ public:
   }
 
   /* Implementation of the primal starting point specification */
-  bool get_starting_point(const long long& global_n, double* x0)
+  bool get_starting_point(const size_type& global_n, double* x0)
   {    
     assert(global_n==nx_);
     for(int i=0; i<global_n; i++) x0[i]=1.;
     return true;
   }
 
-  bool get_starting_point(const long long& n, 
-                          const long long& m,
+  bool get_starting_point(const size_type& n, 
+                          const size_type& m,
                           double* x0,
                           bool& duals_avail,
                           double* z_bndL0, 
