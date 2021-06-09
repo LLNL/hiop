@@ -93,7 +93,7 @@ hiopVectorIntRaja::~hiopVectorIntRaja()
   buf_ = nullptr;
 }
 
-void hiopVectorIntRaja::copyFromDev() const
+void hiopVectorIntRaja::copy_from_dev() const
 {
   if (buf_ != buf_host_)
   {
@@ -102,7 +102,7 @@ void hiopVectorIntRaja::copyFromDev() const
   }
 }
 
-void hiopVectorIntRaja::copyToDev() const
+void hiopVectorIntRaja::copy_to_dev() const
 {
   if (buf_ != buf_host_)
   {

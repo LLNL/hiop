@@ -430,8 +430,8 @@ public:
     for(local_ordinal_type i = 0; i < d_size; ++i) {
       d_map.local_data_host()[i] = i + c_size;
     }
-    c_map.copyToDev();
-    d_map.copyToDev();
+    c_map.copy_to_dev();
+    d_map.copy_to_dev();
 
     cd.copy_from_two_vec_w_pattern(c, c_map, d, d_map);
 
@@ -479,8 +479,8 @@ public:
     for(local_ordinal_type i = 0; i < d_size; ++i) {
       d_map.local_data_host()[i] = i + c_size;
     }
-    c_map.copyToDev();
-    d_map.copyToDev();
+    c_map.copy_to_dev();
+    d_map.copy_to_dev();
 
     cd.setToConstant(cd_val);
     cd.copy_to_two_vec_w_pattern(c, c_map, d, d_map);

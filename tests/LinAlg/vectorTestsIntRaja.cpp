@@ -63,7 +63,7 @@ int VectorTestsIntRaja::getLocalElement(hiop::hiopVectorInt* xvec, int idx) cons
 {
   if(auto* x = dynamic_cast<hiop::hiopVectorIntRaja*>(xvec))
   {
-    x->copyFromDev();
+    x->copy_from_dev();
     return x->local_data_host_const()[idx];
   }
   else
@@ -77,9 +77,9 @@ void VectorTestsIntRaja::setLocalElement(hiop::hiopVectorInt* xvec, int idx, int
 {
   if(auto* x = dynamic_cast<hiop::hiopVectorIntRaja*>(xvec))
   {
-    x->copyFromDev();
+    x->copy_from_dev();
     x->local_data_host()[idx] = value;
-    x->copyToDev();
+    x->copy_to_dev();
   }
   else
   {

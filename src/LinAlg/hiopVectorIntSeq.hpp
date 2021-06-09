@@ -70,8 +70,8 @@ public:
 
   ~hiopVectorIntSeq();
 
-  virtual void copyToDev() const {}
-  virtual void copyFromDev() const {}
+  virtual void copy_to_dev() const {}
+  virtual void copy_from_dev() const {}
 
   virtual index_type* local_data() { return buf_; }
 

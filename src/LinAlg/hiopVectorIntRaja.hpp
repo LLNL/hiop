@@ -81,14 +81,14 @@ public:
    *
    * @note This is a no-op if the memory space is _host_ or _uvm_.
    */
-  void copyFromDev() const;
+  void copy_from_dev() const;
 
   /**
    * @brief Copy array data to the device.
    *
    * @note This is a no-op if the memory space is _host_ or _uvm_.
    */
-  void copyToDev() const;
+  void copy_to_dev() const;
 
   inline index_type* local_data_host() { return buf_host_; }
 

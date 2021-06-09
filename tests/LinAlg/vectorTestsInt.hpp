@@ -95,7 +95,7 @@ public:
       setLocalElement(&x, i, 0);
 
     x.local_data_host()[idx] = x_val;
-    x.copyToDev();
+    x.copy_to_dev();
     if (getLocalElement(&x, idx) != x_val)
       fail++;
 
