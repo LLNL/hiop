@@ -93,16 +93,6 @@ hiopVectorIntRaja::~hiopVectorIntRaja()
   buf_ = nullptr;
 }
 
-const index_type& hiopVectorIntRaja::operator[] (index_type i) const
-{
-  return buf_host_[i];
-}
-
-index_type& hiopVectorIntRaja::operator[] (index_type i)
-{
-  return buf_host_[i];
-}
-
 void hiopVectorIntRaja::copyFromDev() const
 {
   if (buf_ != buf_host_)

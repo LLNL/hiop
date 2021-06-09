@@ -64,9 +64,7 @@ int VectorTestsIntRaja::getLocalElement(hiop::hiopVectorInt* xvec, int idx) cons
   if(auto* x = dynamic_cast<hiop::hiopVectorIntRaja*>(xvec))
   {
     x->copyFromDev();
-    /// @remark I don't think there's a more direct way to get at the
-    /// underlying data other than *(&x[0]+idx), which is disgusting...
-    return (*x)[idx];
+    return x->local_data_host_const()[idx];
   }
   else
   {
@@ -80,9 +78,7 @@ void VectorTestsIntRaja::setLocalElement(hiop::hiopVectorInt* xvec, int idx, int
   if(auto* x = dynamic_cast<hiop::hiopVectorIntRaja*>(xvec))
   {
     x->copyFromDev();
-    /// @remark I don't think there's a more direct way to get at the
-    /// underlying data other than *(&x[0]+idx) = value, which is disgusting...
-    (*x)[idx] = value;
+    x->local_data_host()[idx] = value;
     x->copyToDev();
   }
   else

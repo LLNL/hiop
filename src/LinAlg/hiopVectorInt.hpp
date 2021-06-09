@@ -80,9 +80,6 @@ public:
 
   virtual void copyToDev() const = 0;
   virtual void copyFromDev() const = 0;
-  
-  virtual const index_type& operator[] (index_type i) const = 0;
-  virtual index_type& operator[] (index_type i) = 0;
 };
 
 } // namespace hiop

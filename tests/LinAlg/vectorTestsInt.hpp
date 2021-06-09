@@ -94,8 +94,8 @@ public:
     for(int i=0; i<x.size(); i++)
       setLocalElement(&x, i, 0);
 
-    setLocalElement(&x, idx, x_val); //x[idx] = x_val;
-    
+    x.local_data_host()[idx] = x_val;
+    x.copyToDev();
     if (getLocalElement(&x, idx) != x_val)
       fail++;
 
@@ -104,7 +104,7 @@ public:
   }
 
   /**
-   * Ensure that const operator[] correctly _returns_ value at specified index.
+   * Ensure that const data access correctly _returns_ value at specified index.
    */
   virtual bool vectorGetElement(hiop::hiopVectorInt& x) const
   {
@@ -115,7 +115,7 @@ public:
       setLocalElement(&x, i, 0);
     setLocalElement(&x, idx, x_val);
 
-    if (x[idx] != x_val)
+    if (x.local_data_host_const()[idx] != x_val)
       fail++;
 
     printMessage(fail, __func__);

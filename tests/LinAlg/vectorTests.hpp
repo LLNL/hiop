@@ -425,10 +425,10 @@ public:
     d.setToConstant(d_val);
 
     for(local_ordinal_type i = 0; i < c_size; ++i) {
-      c_map[i] = i;
+      c_map.local_data_host()[i] = i;
     }
     for(local_ordinal_type i = 0; i < d_size; ++i) {
-      d_map[i] = i + c_size;
+      d_map.local_data_host()[i] = i + c_size;
     }
     c_map.copyToDev();
     d_map.copyToDev();
@@ -474,10 +474,10 @@ public:
     d.setToZero();
 
     for(local_ordinal_type i = 0; i < c_size; ++i) {
-      c_map[i] = i;
+      c_map.local_data_host()[i] = i;
     }
     for(local_ordinal_type i = 0; i < d_size; ++i) {
-      d_map[i] = i + c_size;
+      d_map.local_data_host()[i] = i + c_size;
     }
     c_map.copyToDev();
     d_map.copyToDev();
