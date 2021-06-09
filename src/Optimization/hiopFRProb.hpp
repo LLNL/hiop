@@ -241,72 +241,72 @@ public:
                                             int& nnz_sparse_Hess_Lagr_SS,
                                             int& nnz_sparse_Hess_Lagr_SD);
 
-  virtual bool eval_Jac_cons(const long long& n, 
-                             const long long& m,
+  virtual bool eval_Jac_cons(const size_type& n,
+                             const size_type& m,
                              const double* x,
                              bool new_x,
-                             const long long& nsparse,
-                             const long long& ndense,
-                             const int& nnzJacS,
-                             int* iJacS,
-                             int* jJacS,
+                             const size_type& nsparse,
+                             const size_type& ndense,
+                             const size_type& nnzJacS,
+                             index_type* iJacS,
+                             index_type* jJacS,
                              double* MJacS,
                              double* JacD);
 
-  virtual bool eval_Jac_cons(const long long& n, 
-                             const long long& m,
-                             const long long& num_cons,
-                             const long long* idx_cons,
+  virtual bool eval_Jac_cons(const size_type& n,
+                             const size_type& m,
+                             const size_type& num_cons,
+                             const index_type* idx_cons,
                              const double* x,
                              bool new_x,
-                             const long long& nsparse,
-                             const long long& ndense,
-                             const int& nnzJacS,
-                             int* iJacS,
-                             int* jJacS,
+                             const size_type& nsparse,
+                             const size_type& ndense,
+                             const size_type& nnzJacS,
+                             index_type* iJacS,
+                             index_type* jJacS,
                              double* MJacS,
                              double* JacD);
   
-  virtual bool eval_Hess_Lagr(const long long& n,
-                              const long long& m,
+  virtual bool eval_Hess_Lagr(const size_type& n,
+                              const size_type& m,
                               const double* x,
                               bool new_x,
                               const double& obj_factor,
                               const double* lambda,
                               bool new_lambda,
-                              const long long& nsparse,
-                              const long long& ndense,
-                              const int& nnzHSS,
-                              int* iHSS,
-                              int* jHSS,
+                              const size_type& nsparse,
+                              const size_type& ndense,
+                              const size_type& nnzHSS,
+                              index_type* iHSS,
+                              index_type* jHSS,
                               double* MHSS,
                               double* HDD,
-                              int& nnzHSD,
-                              int* iHSD,
-                              int* jHSD,
+                              size_type& nnzHSD,
+                              index_type* iHSD,
+                              index_type* jHSD,
                               double* MHSD);
 
-  virtual bool get_prob_sizes(long long& n, long long& m);
-  virtual bool get_vars_info(const long long& n, double *xlow, double* xupp, NonlinearityType* type);
-  virtual bool get_cons_info(const long long& m, double* clow, double* cupp, NonlinearityType* type);
+  virtual bool get_prob_sizes(size_type& n, size_type& m);
+  virtual bool get_vars_info(const size_type& n, double *xlow, double* xupp, NonlinearityType* type);
+  virtual bool get_cons_info(const size_type& m, double* clow, double* cupp, NonlinearityType* type);
 
-  virtual bool eval_f(const long long& n, const double* x, bool new_x, double& obj_value);
-  virtual bool eval_cons(const long long& n,
-                         const long long& m,
-                         const long long& num_cons,
-                         const long long* idx_cons,
+  virtual bool eval_f(const size_type& n, const double* x, bool new_x, double& obj_value);
+  virtual bool eval_cons(const size_type& n,
+                         const size_type& m,
+                         const size_type& num_cons,
+                         const index_type* idx_cons,
                          const double* x,
                          bool new_x,
                          double* cons);
-  virtual bool eval_cons(const long long& n,
-                         const long long& m,
+  virtual bool eval_cons(const size_type& n,
+                         const size_type& m,
                          const double* x,
                          bool new_x,
                          double* cons);
-  virtual bool eval_grad_f(const long long& n, const double* x, bool new_x, double* gradf);
+  virtual bool eval_grad_f(const size_type& n, const double* x, bool new_x, double* gradf);
 
-  virtual bool get_starting_point(const long long& n,
-                                  const long long& m,
+  virtual bool get_starting_point(const size_type& n,
+                                  const size_type& m,
                                   double* x0,
                                   double* z_bndL0, 
                                   double* z_bndU0,
@@ -347,21 +347,21 @@ public:
                             double& alpha_du,
                             double& alpha_pr);
 private:
-  long long n_;
-  long long n_sp_;
-  long long n_de_;
-  long long m_;
+  size_type n_;
+  size_type n_sp_;
+  size_type n_de_;
+  size_type m_;
 
-  long long n_x_;
-  long long n_x_sp_;
-  long long n_x_de_;
-  long long m_eq_;
-  long long m_ineq_;
+  size_type n_x_;
+  size_type n_x_sp_;
+  size_type n_x_de_;
+  size_type m_eq_;
+  size_type m_ineq_;
 
-  long long nnz_sp_Jac_c_;
-  long long nnz_sp_Jac_d_;
-  long long nnz_sp_Hess_Lagr_SS_;
-  long long nnz_sp_Hess_Lagr_SD_;
+  size_type nnz_sp_Jac_c_;
+  size_type nnz_sp_Jac_d_;
+  size_type nnz_sp_Hess_Lagr_SS_;
+  size_type nnz_sp_Hess_Lagr_SD_;
 
   hiopAlgFilterIPMBase& solver_base_;
   hiopNlpMDS* nlp_base_;

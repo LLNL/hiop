@@ -740,14 +740,14 @@ hiopFRProbMDS::~hiopFRProbMDS()
   delete Hess_cd_;
 }
 
-bool hiopFRProbMDS::get_prob_sizes(long long& n, long long& m)
+bool hiopFRProbMDS::get_prob_sizes(size_type& n, size_type& m)
 {
   n = n_;
   m = m_;
   return true;
 }
 
-bool hiopFRProbMDS::get_vars_info(const long long& n, double *xlow, double* xupp, NonlinearityType* type)
+bool hiopFRProbMDS::get_vars_info(const size_type& n, double *xlow, double* xupp, NonlinearityType* type)
 {
   assert(n == n_);
 
@@ -773,7 +773,7 @@ bool hiopFRProbMDS::get_vars_info(const long long& n, double *xlow, double* xupp
   return true;
 }
 
-bool hiopFRProbMDS::get_cons_info(const long long& m, double* clow, double* cupp, NonlinearityType* type)
+bool hiopFRProbMDS::get_cons_info(const size_type& m, double* clow, double* cupp, NonlinearityType* type)
 {
   assert(m == m_);
   assert(m_eq_ + m_ineq_ == m_);
@@ -816,7 +816,7 @@ bool hiopFRProbMDS::get_sparse_dense_blocks_info(int& nx_sparse,
   return true;
 }
 
-bool hiopFRProbMDS::eval_f(const long long& n, const double* x, bool new_x, double& obj_value)
+bool hiopFRProbMDS::eval_f(const size_type& n, const double* x, bool new_x, double& obj_value)
 {
   assert(n == n_);
   obj_value = 0.;
@@ -840,7 +840,7 @@ bool hiopFRProbMDS::eval_f(const long long& n, const double* x, bool new_x, doub
   return true;
 }
 
-bool hiopFRProbMDS::eval_grad_f(const long long& n, const double* x, bool new_x, double* gradf)
+bool hiopFRProbMDS::eval_grad_f(const size_type& n, const double* x, bool new_x, double* gradf)
 {
   assert(n == n_);
 
@@ -865,10 +865,10 @@ bool hiopFRProbMDS::eval_grad_f(const long long& n, const double* x, bool new_x,
   return true;
 }
 
-bool hiopFRProbMDS::eval_cons(const long long& n,
-                              const long long& m,
-                              const long long& num_cons,
-                              const long long* idx_cons,
+bool hiopFRProbMDS::eval_cons(const size_type& n,
+                              const size_type& m,
+                              const size_type& num_cons,
+                              const index_type* idx_cons,
                               const double* x,
                               bool new_x,
                               double* cons)
@@ -876,8 +876,8 @@ bool hiopFRProbMDS::eval_cons(const long long& n,
   return false;
 }
 
-bool hiopFRProbMDS::eval_cons(const long long& n,
-                              const long long& m,
+bool hiopFRProbMDS::eval_cons(const size_type& n,
+                              const size_type& m,
                               const double* x,
                               bool new_x,
                               double* cons)
@@ -910,18 +910,17 @@ bool hiopFRProbMDS::eval_cons(const long long& n,
   return true;
 }
 
-bool hiopFRProbMDS::eval_Jac_cons(const long long& n, 
-            
-                                  const long long& m,
-                                  const long long& num_cons,
-                                  const long long* idx_cons,
+bool hiopFRProbMDS::eval_Jac_cons(const size_type& n,
+                                  const size_type& m,
+                                  const size_type& num_cons,
+                                  const index_type* idx_cons,
                                   const double* x, 
                                   bool new_x,
-                                  const long long& nsparse,
-                                  const long long& ndense,
-                                  const int& nnzJacS,
-                                  int* iJacS,
-                                  int* jJacS,
+                                  const size_type& nsparse,
+                                  const size_type& ndense,
+                                  const size_type& nnzJacS,
+                                  index_type* iJacS,
+                                  index_type* jJacS,
                                   double* MJacS,
                                   double* JacD)
 {
@@ -929,13 +928,13 @@ bool hiopFRProbMDS::eval_Jac_cons(const long long& n,
 }
 
 /// @pre assuming Jac of the original prob is sorted
-bool hiopFRProbMDS::eval_Jac_cons(const long long& n, 
-                                  const long long& m,
+bool hiopFRProbMDS::eval_Jac_cons(const size_type& n, 
+                                  const size_type& m,
                                   const double* x,
                                   bool new_x,
-                                  const long long& nsparse,
-                                  const long long& ndense,
-                                  const int& nnzJacS,
+                                  const size_type& nsparse,
+                                  const size_type& ndense,
+                                  const size_type& nnzJacS,
                                   int* iJacS,
                                   int* jJacS,
                                   double* MJacS,
@@ -967,8 +966,8 @@ bool hiopFRProbMDS::eval_Jac_cons(const long long& n,
   return true;
 }
 
-bool hiopFRProbMDS::get_starting_point(const long long& n,
-                                       const long long& m,
+bool hiopFRProbMDS::get_starting_point(const size_type& n,
+                                       const size_type& m,
                                        double* x0,
                                        double* z_bndL0, 
                                        double* z_bndU0,
@@ -1245,23 +1244,23 @@ bool hiopFRProbMDS::force_update(double obj_value,
   return true;
 }
 
-bool hiopFRProbMDS::eval_Hess_Lagr(const long long& n,
-                                   const long long& m,
+bool hiopFRProbMDS::eval_Hess_Lagr(const size_type& n,
+                                   const size_type& m,
                                    const double* x,
                                    bool new_x,
                                    const double& obj_factor,
                                    const double* lambda,
                                    bool new_lambda,
-                                   const long long& nsparse,
-                                   const long long& ndense,
-                                   const int& nnzHSS,
-                                   int* iHSS,
-                                   int* jHSS,
+                                   const size_type& nsparse,
+                                   const size_type& ndense,
+                                   const size_type& nnzHSS,
+                                   index_type* iHSS,
+                                   index_type* jHSS,
                                    double* MHSS,
                                    double* HDD,
-                                   int& nnzHSD,
-                                   int* iHSD,
-                                   int* jHSD,
+                                   size_type& nnzHSD,
+                                   index_type* iHSD,
+                                   index_type* jHSD,
                                    double* MHSD)
 {
   assert(nnzHSS == nnz_sp_Hess_Lagr_SS_);

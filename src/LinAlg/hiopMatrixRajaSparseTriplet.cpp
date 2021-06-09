@@ -1096,9 +1096,13 @@ void hiopMatrixRajaSparseTriplet::set_Jac_FR(const hiopMatrixSparse& Jac_c,
   }
   assert(J_d.row_starts_host);
   int* Jd_row_st = J_d.row_starts_host->idx_start_;
-    
+
   // extend Jac to the p and n parts --- sparsity
   if(iJacS != nullptr && jJacS != nullptr) {
+    // local copy for RAJA access
+    int* iRow = iRow_;
+    int* jCol = jCol_;
+
     // Jac for c(x) - p + n
     RAJA::forall<hiop_raja_exec>(
       RAJA::RangeSegment(0, m_c),
@@ -1109,19 +1113,19 @@ void hiopMatrixRajaSparseTriplet::set_Jac_FR(const hiopMatrixSparse& Jac_c,
 
         // copy from base Jac_c
         while(k_base < Jc_row_st[i+1]) {
-          iRow_[k] = iJacS[k] = i;
-          jCol_[k] = jJacS[k] = jcol_c[k_base];
+          iRow[k] = iJacS[k] = i;
+          jCol[k] = jJacS[k] = jcol_c[k_base];
           k++;
           k_base++;
         }
 
         // extra parts for p and n
-        iRow_[k] = iJacS[k] = i;
-        jCol_[k] = jJacS[k] = n_c + i;
+        iRow[k] = iJacS[k] = i;
+        jCol[k] = jJacS[k] = n_c + i;
         k++;
         
-        iRow_[k] = iJacS[k] = i;
-        jCol_[k] = jJacS[k] = n_c + m_c + i;
+        iRow[k] = iJacS[k] = i;
+        jCol[k] = jJacS[k] = n_c + m_c + i;
         k++;
       }
     );
@@ -1136,19 +1140,19 @@ void hiopMatrixRajaSparseTriplet::set_Jac_FR(const hiopMatrixSparse& Jac_c,
 
         // copy from base Jac_c
         while(k_base < Jd_row_st[i+1]) {
-          iRow_[k] = iJacS[k] = m_c + i;
-          jCol_[k] = jJacS[k] = jcol_d[k_base];
+          iRow[k] = iJacS[k] = m_c + i;
+          jCol[k] = jJacS[k] = jcol_d[k_base];
           k++;
           k_base++;
         }
 
         // extra parts for p and n
-        iRow_[k] = iJacS[k] = m_c + i;
-        jCol_[k] = jJacS[k] = n_d + 2*m_c + i;
+        iRow[k] = iJacS[k] = m_c + i;
+        jCol[k] = jJacS[k] = n_d + 2*m_c + i;
         k++;
         
-        iRow_[k] = iJacS[k] = m_c + i;
-        jCol_[k] = jJacS[k] = n_d + 2*m_c + m_d + i;
+        iRow[k] = iJacS[k] = m_c + i;
+        jCol[k] = jJacS[k] = n_d + 2*m_c + m_d + i;
         k++;
       }
     );
@@ -1156,6 +1160,10 @@ void hiopMatrixRajaSparseTriplet::set_Jac_FR(const hiopMatrixSparse& Jac_c,
 
   // extend Jac to the p and n parts --- element
   if(MJacS != nullptr) {
+
+    // local copy for RAJA access
+    double* values = values_;
+
     const double* J_c_val = J_c.values_;
     const double* J_d_val = J_d.values_;
 
@@ -1169,16 +1177,16 @@ void hiopMatrixRajaSparseTriplet::set_Jac_FR(const hiopMatrixSparse& Jac_c,
 
         // copy from base Jac_c
         while(k_base < Jc_row_st[i+1]) {
-          values_[k] = MJacS[k] = J_c_val[k_base];
+          values[k] = MJacS[k] = J_c_val[k_base];
           k++;
           k_base++;
         }
 
         // extra parts for p and n
-        values_[k] = MJacS[k] = -1.0;
+        values[k] = MJacS[k] = -1.0;
         k++;
         
-        values_[k] = MJacS[k] =  1.0;
+        values[k] = MJacS[k] =  1.0;
         k++;
       }
     );
@@ -1193,16 +1201,16 @@ void hiopMatrixRajaSparseTriplet::set_Jac_FR(const hiopMatrixSparse& Jac_c,
 
         // copy from base Jac_c
         while(k_base < Jd_row_st[i+1]) {
-          values_[k] = MJacS[k] = J_d_val[k_base];
+          values[k] = MJacS[k] = J_d_val[k_base];
           k++;
           k_base++;
         }
 
         // extra parts for p and n
-        values_[k] = MJacS[k] = -1.0;
+        values[k] = MJacS[k] = -1.0;
         k++;
         
-        values_[k] = MJacS[k] =  1.0;
+        values[k] = MJacS[k] =  1.0;
         k++;
       }
     );
@@ -1372,7 +1380,7 @@ startingAtAddSubDiagonalToStartingAt(int diag_src_start,
 }
 
 
-long long hiopMatrixRajaSymSparseTriplet::numberOfOffDiagNonzeros() const 
+size_type hiopMatrixRajaSymSparseTriplet::numberOfOffDiagNonzeros() const 
 {
   if(-1==nnz_offdiag_){
     nnz_offdiag_= nnz_;
