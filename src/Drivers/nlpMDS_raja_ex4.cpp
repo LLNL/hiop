@@ -190,10 +190,12 @@ bool Ex4::get_vars_info(const long long& n, double *xlow, double* xupp, Nonlinea
       }
     });
 
-  for (int i = 0; i<n; ++i)
-  {
-    type[i] = hiopNonlinear;
-  }
+  // Must be a sequential host policy for now
+  RAJA::forall<RAJA::loop_exec>(RAJA::RangeSegment(0, n),
+    [=] (RAJA::Index_type i)
+    {
+      type[i] = hiopNonlinear;
+    });
   return true;
 }
 
@@ -227,10 +229,12 @@ bool Ex4::get_cons_info(const long long& m, double* clow, double* cupp, Nonlinea
       }
     });
 
-  for (int i = 0; i<m; ++i)
-  {
-    type[i] = hiopNonlinear;
-  }
+  // Must be a sequential host policy for now
+  RAJA::forall<RAJA::loop_exec>(RAJA::RangeSegment(0, m),
+    [=] (RAJA::Index_type i)
+    {
+      type[i] = hiopNonlinear;
+    });
 
   return true;
 }

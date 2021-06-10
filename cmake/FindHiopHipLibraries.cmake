@@ -50,5 +50,5 @@ message(STATUS "HIP include directories: ${hip_includes}")
 get_target_property(hip_libraries hiop_hip INTERFACE_LINK_LIBRARIES)
 message(STATUS "HIP linked libraries: ${hip_libraries}")
 
-install(TARGETS hiop_hip EXPORT hiop-targets)
+install(TARGETS Hipblas hiop_hip EXPORT hiop-targets)
 
