@@ -415,7 +415,7 @@ public:
    * @breif this += alpha * subdiag
    *
    * @note this test checks all three overloads:
-   *   - addSubDiagonal(const double&, long long, const hiopVector&)
+   *   - addSubDiagonal(const double&, int_type, const hiopVector&)
    *   - addSubDiagonal(int, const double&, const hiopVector&, int, int)
    *   - addSubDiagonal(int, int, const double&)
    */

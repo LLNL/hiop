@@ -442,6 +442,15 @@ if (HIOP_WITH_MAKETEST)
     add_test(NAME NlpSparse7_1 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex7.exe>" "500" "-selfcheck")
   endif(HIOP_SPARSE)
 
+  if(HIOP_USE_MPI)
+    add_test(NAME NlpPriDec8_1 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpPriDec_ex8.exe>" "-selfcheck")
+    add_test(NAME NlpPriDec8_mpi COMMAND ${MPICMD} -n 2 "$<TARGET_FILE:nlpPriDec_ex8.exe>" "-selfcheck")
+    if(HIOP_SPARSE)
+      add_test(NAME NlpPriDec9_1 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpPriDec_ex9.exe>" "-selfcheck")    
+      add_test(NAME NlpPriDec9_mpi COMMAND ${MPICMD} -n 2 "$<TARGET_FILE:nlpPriDec_ex9.exe>" "-selfcheck")
+    endif(HIOP_SPARSE)
+  endif(HIOP_USE_MPI)
+
   if(HIOP_WITH_VALGRIND_TESTS)
     string(REPLACE ";" " " runcmd_str "${RUNCMD}")
     add_test(

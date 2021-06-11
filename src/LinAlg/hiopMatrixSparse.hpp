@@ -81,7 +81,7 @@ public:
   virtual void setToConstant(double c) = 0;
   virtual void copyFrom(const hiopMatrixSparse& dm) = 0;
 
-  virtual void copyRowsFrom(const hiopMatrix& src, const long long* rows_idxs, long long n_rows) = 0;
+  virtual void copyRowsFrom(const hiopMatrix& src, const index_type* rows_idxs, size_type n_rows) = 0;
 
   virtual void timesVec(double beta, hiopVector& y, double alpha, const hiopVector& x) const = 0;
   virtual void timesVec(double beta, double* y, double alpha, const double* x) const = 0;
@@ -97,7 +97,7 @@ public:
 
   virtual void addDiagonal(const double& alpha, const hiopVector& d_) = 0;
   virtual void addDiagonal(const double& value) = 0;
-  virtual void addSubDiagonal(const double& alpha, long long start, const hiopVector& d_) = 0;
+  virtual void addSubDiagonal(const double& alpha, index_type start, const hiopVector& d_) = 0;
   /* add to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements of
    * 'd_' (source) starting at index 'start_on_src_vec'. The number of elements added is 'num_elems'
    * when num_elems>=0, or the remaining elems on 'd_' starting at 'start_on_src_vec'. */
@@ -155,8 +155,8 @@ public:
    * @pre Otherwise, this function may replace the non-zero values and nonzero patterns for the undesired elements.
    */
   virtual void copyRowsBlockFrom(const hiopMatrix& src_gen,
-                                         const long long& rows_src_idx_st, const long long& n_rows,
-                                         const long long& rows_dest_idx_st, const long long& dest_nnz_st
+                                         const index_type& rows_src_idx_st, const size_type& n_rows,
+                                         const index_type& rows_dest_idx_st, const size_type& dest_nnz_st
                                          ) = 0;
 
   /**
@@ -166,8 +166,8 @@ public:
    *
    */
   virtual void copyDiagMatrixToSubblock(const double& src_val,
-                                        const long long& row_dest_st, const long long& col_dest_st,
-                                        const long long& dest_nnz_st, const int &nnz_to_copy) = 0;
+                                        const index_type& row_dest_st, const index_type& col_dest_st,
+                                        const size_type& dest_nnz_st, const int &nnz_to_copy) = 0;
 
   virtual double max_abs_value() = 0;
 
@@ -192,23 +192,37 @@ public:
   virtual hiopMatrixSparse* alloc_clone() const = 0;
   virtual hiopMatrixSparse* new_copy() const = 0;
 
-  virtual int* i_row() = 0;
-  virtual int* j_col() = 0;
+  virtual index_type* i_row() = 0;
+  virtual index_type* j_col() = 0;
   virtual double* M()  = 0;
-  virtual const int* i_row() const = 0;
-  virtual const int* j_col() const = 0;
+  virtual const index_type* i_row() const = 0;
+  virtual const index_type* j_col() const = 0;
   virtual const double* M()  const = 0;
-  virtual long long numberOfOffDiagNonzeros() = 0;
+  virtual size_type numberOfOffDiagNonzeros() const = 0;
+  
+  /// @brief build Jac for FR problem, from the base problem `Jac_c` and `Jac_d`. Set sparsity if `task`=0, otherwise set values
+  virtual void set_Jac_FR(const hiopMatrixSparse& Jac_c,
+                          const hiopMatrixSparse& Jac_d,
+                          int* iJacS,
+                          int* jJacS,
+                          double* MJacS) = 0;
 
-  inline long long m() const
+  /// @brief build Hess for FR problem, from the base problem `Hess`. Set sparsity if `task`=0, otherwise set values
+  virtual void set_Hess_FR(const hiopMatrixSparse& Hess,
+                           int* iHSS,
+                           int* jHSS,
+                           double* MHSS,
+                           const hiopVector& add_diag) = 0;
+
+  inline size_type m() const
   {
     return nrows_;
   }
-  inline long long n() const
+  inline size_type n() const
   {
     return ncols_;
   }
-  inline long long numberOfNonzeros() const
+  inline size_type numberOfNonzeros() const
   {
     return nnz_;
   }
@@ -221,9 +235,9 @@ public:
   virtual bool checkIndexesAreOrdered() const = 0;
 #endif
 protected:
-  int nrows_;   ///< number of rows
-  int ncols_;   ///< number of columns
-  int nnz_;     ///< number of nonzero entries
+  size_type nrows_;   ///< number of rows
+  size_type ncols_;   ///< number of columns
+  size_type nnz_;     ///< number of nonzero entries
 };
 
 }   // namespace hiop

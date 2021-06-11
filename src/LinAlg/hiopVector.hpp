@@ -50,6 +50,8 @@
 
 #include <cstdio>
 #include <cassert>
+#include "hiopInterface.hpp"
+#include "hiopVectorInt.hpp"
 
 namespace hiop
 {
@@ -77,6 +79,9 @@ public:
   /// @brief Copy the 'n' elements of v starting at 'start_index_in_v' into 'this'
   virtual void copy_from_starting_at(const double* v, int start_index_in_v, int n) = 0;
 
+  /// @brief Copy from the indices in index_in_src in v
+  virtual void copyFrom(const int* index_in_src, const hiopVector& v) = 0;
+  virtual void copyFrom(const int* index_in_src, const double* v) = 0;
   /*
    * @brief Copy from 'v' starting at 'start_idx_src' to 'this' starting at 'start_idx_dest'
    *
@@ -98,6 +103,18 @@ public:
   /// @brief Copy the entries in 'this' where corresponding 'ix' is nonzero, to v starting at start_index in 'v'.
   virtual void copyToStartingAt_w_pattern(hiopVector& v, int start_index_in_dest, const hiopVector& ix) const = 0;
   
+  /// @brief Copy the entries in `c` and `d` to `this`, according to the mapping in `c_map` and `d_map`
+  virtual void copy_from_two_vec_w_pattern(const hiopVector& c, 
+                                           const hiopVectorInt& c_map, 
+                                           const hiopVector& d, 
+                                           const hiopVectorInt& d_map) = 0;
+
+  /// @brief Copy the entries in `this` to `c` and `d`, according to the mapping `c_map` and `d_map`
+  virtual void copy_to_two_vec_w_pattern(hiopVector& c, 
+                                         const hiopVectorInt& c_map, 
+                                         hiopVector& d, 
+                                         const hiopVectorInt& d_map) const = 0;
+
   /**
    * copy 'this' (source) starting at 'start_idx_in_src' to 'dest' starting at index 'int start_idx_dest' 
    * If num_elems>=0, 'num_elems' will be copied; if num_elems<0, elements will be copied till the end of
@@ -239,8 +256,8 @@ public:
   virtual hiopVector* alloc_clone() const = 0;
   /// @brief allocates a vector that mirrors this, and copies the values
   virtual hiopVector* new_copy () const = 0;
-  virtual long long get_size() const { return n_; }
-  virtual long long get_local_size() const = 0;
+  virtual size_type get_size() const { return n_; }
+  virtual size_type get_local_size() const = 0;
   virtual double* local_data() = 0;
   virtual const double* local_data_const() const = 0;
   virtual double* local_data_host() = 0;
@@ -252,12 +269,22 @@ public:
   virtual void copyFromDev() const = 0;
   
   /// @brief get number of values that are less than the given value 'val'
-  virtual long long numOfElemsLessThan(const double &val) const = 0;
+  virtual size_type numOfElemsLessThan(const double &val) const = 0;
   /// @brief get number of values whose absolute value are less than the given value 'val'
-  virtual long long numOfElemsAbsLessThan(const double &val) const = 0;  
+  virtual size_type numOfElemsAbsLessThan(const double &val) const = 0;  
 
+  /// @brief set int array 'arr', starting at `start` and ending at `end`, to the values in `arr_src` from 'start_src`
+  virtual void set_array_from_to(hiopInterfaceBase::NonlinearityType* arr, 
+                                 const int start, 
+                                 const int end, 
+                                 const hiopInterfaceBase::NonlinearityType* arr_src,
+                                 const int start_src) const = 0;
+  virtual void set_array_from_to(hiopInterfaceBase::NonlinearityType* arr, 
+                                 const int start, 
+                                 const int end, 
+                                 const hiopInterfaceBase::NonlinearityType arr_src) const = 0;
 protected:
-  long long n_; //we assume sequential data
+  size_type n_; //we assume sequential data
 
 protected:
   hiopVector(const hiopVector& v) : n_(v.n_) {};

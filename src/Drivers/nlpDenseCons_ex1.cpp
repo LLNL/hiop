@@ -7,7 +7,7 @@
 using namespace hiop;
 
 Ex1Meshing1D::Ex1Meshing1D(double a, double b, 
-			   long long glob_n, double r, 
+			   size_type glob_n, double r, 
 			   MPI_Comm comm_)
 {
   _a=a; _b=b; _r=r;
@@ -18,8 +18,8 @@ Ex1Meshing1D::Ex1Meshing1D(double a, double b,
   ierr = MPI_Comm_rank(comm, &my_rank); assert(MPI_SUCCESS==ierr);
 #endif
   // set up vector distribution for primal variables - easier to store it as a member in this simple example
-  col_partition = new long long[comm_size+1];
-  long long quotient=glob_n/comm_size, remainder=glob_n-comm_size*quotient;
+  col_partition = new index_type[comm_size+1];
+  size_type quotient=glob_n/comm_size, remainder=glob_n-comm_size*quotient;
   
   int i=0; col_partition[i]=0; i++;
   while(i<=remainder) { col_partition[i] = col_partition[i-1]+quotient+1; i++; }
@@ -34,11 +34,11 @@ Ex1Meshing1D::Ex1Meshing1D(double a, double b,
   double m1=2*_r / ((1+_r)*glob_n);
   double h =2*(1-_r) / (1+_r) / (glob_n-1) / glob_n;
 
-  long long glob_n_start=col_partition[my_rank], glob_n_end=col_partition[my_rank+1]-1;
+  size_type glob_n_start=col_partition[my_rank], glob_n_end=col_partition[my_rank+1]-1;
 
   double* mass = _mass->local_data(); //local slice
   double rescale = _b-_a;
-  for(long long k=glob_n_start; k<=glob_n_end; k++) {
+  for(size_type k=glob_n_start; k<=glob_n_end; k++) {
     mass[k-glob_n_start] = (m1 + (k-glob_n_start)*h) * rescale;
     //printf(" proc %d k=%d  mass[k]=%g\n", my_rank, k, mass[k-glob_n_start]);
   }
@@ -52,7 +52,7 @@ Ex1Meshing1D::~Ex1Meshing1D()
   delete _mass;
 }
 
-bool Ex1Meshing1D::get_vecdistrib_info(long long global_n, long long* cols)
+bool Ex1Meshing1D::get_vecdistrib_info(size_type global_n, index_type* cols)
 {
   for(int i=0; i<=comm_size; i++) cols[i] = col_partition[i];
   return true;
@@ -63,7 +63,7 @@ void Ex1Meshing1D::applyM(DiscretizedFunction& f)
 }
 
 //converts the local indexes to global indexes
-long long Ex1Meshing1D::getGlobalIndex(long long i_local) const
+index_type Ex1Meshing1D::getGlobalIndex(index_type i_local) const
 {
   assert(0<=i_local); 
   assert(i_local < col_partition[my_rank+1]-col_partition[my_rank]);
@@ -71,7 +71,7 @@ long long Ex1Meshing1D::getGlobalIndex(long long i_local) const
   return i_local+col_partition[my_rank];
 }
 
-long long Ex1Meshing1D::getLocalIndex(long long i_global) const
+index_type Ex1Meshing1D::getLocalIndex(index_type i_global) const
 {
   assert(i_global >= col_partition[my_rank]);
   assert(i_global <  col_partition[my_rank+1]);
@@ -81,14 +81,14 @@ long long Ex1Meshing1D::getLocalIndex(long long i_global) const
 //for a function c(t), for given global index in the discretization 
 // returns the corresponding continuous argument 't', which is in this 
 // case the middle of the discretization interval.
-double Ex1Meshing1D::getFunctionArgument(long long i_global) const
+double Ex1Meshing1D::getFunctionArgument(index_type i_global) const
 {
   assert(i_global >= col_partition[my_rank]);
   assert(i_global <  col_partition[my_rank+1]);
 
-  const long & k = i_global;
+  const index_type & k = i_global;
 
-  long long glob_n = size();
+  size_type glob_n = size();
   double m1=2*_r / ((1+_r)*glob_n);
   double h =2*(1-_r) / (1+_r) / (glob_n-1) / glob_n;
 
@@ -154,7 +154,7 @@ double DiscretizedFunction::twonorm() const
 
 
 //converts the local indexes to global indexes
-long long DiscretizedFunction::getGlobalIndex(long long i_local) const
+index_type DiscretizedFunction::getGlobalIndex(index_type i_local) const
 {
   return _mesh->getGlobalIndex(i_local);
 }
@@ -162,15 +162,15 @@ long long DiscretizedFunction::getGlobalIndex(long long i_local) const
 //for a function c(t), for given global index in the discretization 
 // returns the corresponding continuous argument 't', which is in this 
 // case the middle of the discretization interval.
-double DiscretizedFunction::getFunctionArgument(long long i_global) const
+double DiscretizedFunction::getFunctionArgument(index_type i_global) const
 {
   return _mesh->getFunctionArgument(i_global);
 }
 
 //set the function value for a given global index
-void DiscretizedFunction::setFunctionValue(long long i_global, const double& value)
+void DiscretizedFunction::setFunctionValue(index_type i_global, const double& value)
 {
-  long long i_local=_mesh->getLocalIndex(i_global);
+  index_type i_local=_mesh->getLocalIndex(i_global);
   this->data_[i_local]=value;
 }
 
@@ -186,7 +186,7 @@ void Ex1Interface::set_c()
 {
   for(int i_local=0; i_local<n_local; i_local++) {
     //this will be based on 'my_rank', thus, different ranks get the appropriate global indexes
-    long long n_global = c->getGlobalIndex(i_local); 
+    size_type n_global = c->getGlobalIndex(i_local); 
     double t = c->getFunctionArgument(n_global);
     //if(t<=0.1) c->setFunctionValue(n_global, 1-10.*t);
     double cval;

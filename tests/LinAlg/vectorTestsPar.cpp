@@ -112,6 +112,15 @@ real_type* VectorTestsPar::createLocalBuffer(local_ordinal_type N, real_type val
   return buffer;
 }
 
+local_ordinal_type* VectorTestsPar::createIdxBuffer(local_ordinal_type N, local_ordinal_type val)
+{
+  local_ordinal_type* buffer = new local_ordinal_type[N];
+  for(local_ordinal_type i = 0; i < N; ++i)
+    buffer[i] = val;
+  buffer[N-1] = 0;
+  return buffer;
+}
+
 /// Wrap delete command
 void VectorTestsPar::deleteLocalBuffer(real_type* buffer)
 {

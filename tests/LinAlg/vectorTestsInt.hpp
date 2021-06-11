@@ -94,7 +94,8 @@ public:
     for(int i=0; i<x.size(); i++)
       setLocalElement(&x, i, 0);
 
-    x[idx] = x_val;
+    setLocalElement(&x, idx, x_val); //x[idx] = x_val;
+    
     if (getLocalElement(&x, idx) != x_val)
       fail++;
 

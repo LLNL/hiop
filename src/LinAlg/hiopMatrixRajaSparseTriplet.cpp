@@ -402,7 +402,7 @@ void hiopMatrixRajaSparseTriplet::addDiagonal(const double& value)
 {
   assert(false && "not needed");
 }
-void hiopMatrixRajaSparseTriplet::addSubDiagonal(const double& alpha, long long start, const hiopVector& d_)
+void hiopMatrixRajaSparseTriplet::addSubDiagonal(const double& alpha, index_type start, const hiopVector& d_)
 {
   assert(false && "not needed");
 }
@@ -497,7 +497,7 @@ void hiopMatrixRajaSparseTriplet::row_max_abs_value(hiopVector& ret_vec)
   double* values = values_;
 
   RAJA::forall<hiop_raja_exec>(
-    RAJA::RangeSegment(0, num_rows+1),
+    RAJA::RangeSegment(0, num_rows),
     RAJA_LAMBDA(RAJA::Index_type row_id)
     {
       for(int itnz=idx_start[row_id]; itnz<idx_start[row_id+1]; itnz++) {
@@ -865,8 +865,8 @@ hiopMatrixRajaSparseTriplet::allocAndBuildRowStarts() const
  * @todo Better document this function.
  */
 void hiopMatrixRajaSparseTriplet::copyRowsFrom(const hiopMatrix& src_gen,
-					       const long long* rows_idxs,
-					       long long n_rows)
+					       const index_type* rows_idxs,
+					       size_type n_rows)
 {
   const hiopMatrixRajaSparseTriplet& src = dynamic_cast<const hiopMatrixRajaSparseTriplet&>(src_gen);
   assert(this->m() == n_rows);

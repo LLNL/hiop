@@ -1,6 +1,13 @@
-set(hiopInterface_SRC
-  chiopInterface.cpp
+if(HIOP_BUILD_SHARED)
+ set(hiopInterface_SRC
+    hiopInterfacePrimalDecomp.cpp	
+    chiopInterface.cpp
   )
+else()
+ set(hiopInterface_SRC
+    hiopInterfacePrimalDecomp.cpp	
+  )
+endif()
 
 set(hiopInterface_INTERFACE_HEADERS
   chiopInterface.hpp
@@ -14,6 +21,4 @@ install(
   DESTINATION include
   )
 
-if(HIOP_BUILD_SHARED)
-  add_library(hiopInterface OBJECT ${hiopInterface_SRC})
-endif()
+add_library(hiopInterface OBJECT ${hiopInterface_SRC})

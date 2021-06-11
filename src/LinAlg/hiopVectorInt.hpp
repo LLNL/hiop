@@ -1,6 +1,5 @@
 // Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
-// Written by Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
@@ -55,25 +54,35 @@
  *
  */
 
+#include "hiop_defs.hpp"
+
 namespace hiop
 {
 
 class hiopVectorInt
 {
 protected:
-  int sz_;
+  size_type sz_;
 
 public:
-  hiopVectorInt(int sz) : sz_(sz) { }
+  hiopVectorInt(size_type sz) : sz_(sz) { }
   virtual ~hiopVectorInt() { }
 
-  virtual int size() const
+  virtual size_type size() const
   {
     return sz_;
   }
 
-  virtual const int& operator[] (int i) const = 0;
-  virtual int& operator[] (int i) = 0;
+  virtual index_type* local_data() = 0;
+  virtual const index_type* local_data_const() const = 0;
+  virtual index_type* local_data_host() = 0;
+  virtual const index_type* local_data_host_const() const = 0;
+
+  virtual void copyToDev() const = 0;
+  virtual void copyFromDev() const = 0;
+  
+  virtual const index_type& operator[] (index_type i) const = 0;
+  virtual index_type& operator[] (index_type i) = 0;
 };
 
 } // namespace hiop

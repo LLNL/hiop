@@ -100,16 +100,20 @@ public:
    * Default constructor 
    * Check inertia condition to determine if a factorization is acceptable or not
    */
-  hiopFactAcceptorIC(hiopPDPerturbation* p, const long long n_required_neg_eig)
-  : hiopFactAcceptor(p),
-    n_required_neg_eig_(n_required_neg_eig)
+  hiopFactAcceptorIC(hiopPDPerturbation* p, const size_type n_required_neg_eig)
+    : hiopFactAcceptor(p),
+      n_required_neg_eig_(n_required_neg_eig)
   {}
 
   virtual ~hiopFactAcceptorIC() 
   {}
    
-  virtual int requireReFactorization(const hiopNlpFormulation& nlp, const int& n_neg_eig, 
-                                     double& delta_wx, double& delta_wd, double& delta_cc, double& delta_cd);
+  virtual int requireReFactorization(const hiopNlpFormulation& nlp,
+                                     const int& n_neg_eig, 
+                                     double& delta_wx,
+                                     double& delta_wd,
+                                     double& delta_cc,
+                                     double& delta_cd);
  
 protected:
   int n_required_neg_eig_;    

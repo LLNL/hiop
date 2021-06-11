@@ -4,7 +4,7 @@
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
 // is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause). 
-// Please also read ?Additional BSD Notice? below.
+// Please also read "Additional BSD Notice" below.
 //
 // Redistribution and use in source and binary forms, with or without modification, 
 // are permitted provided that the following conditions are met:
@@ -70,6 +70,8 @@
 #include "hiopRunStats.hpp"
 #include "hiopLogger.hpp"
 #include "hiopOptions.hpp"
+
+#include "hiopVectorInt.hpp"
 
 #include <cstring>
 
@@ -208,22 +210,22 @@ public:
   inline hiopInterfaceBase::NonlinearityType* get_cons_ineq_type() const {return cons_ineq_type;}
   
   /** const accessors */
-  inline long long n() const      {return n_vars;}
-  inline long long m() const      {return n_cons;}
-  inline long long m_eq() const   {return n_cons_eq;}
-  inline long long m_ineq() const {return n_cons_ineq;}
-  inline long long n_low() const  {return n_bnds_low;}
-  inline long long n_upp() const  {return n_bnds_upp;}
-  inline long long m_ineq_low() const {return n_ineq_low;}
-  inline long long m_ineq_upp() const {return n_ineq_upp;}
-  inline long long n_complem()  const {return m_ineq_low()+m_ineq_upp()+n_low()+n_upp();}
+  inline size_type n() const      {return n_vars;}
+  inline size_type m() const      {return n_cons;}
+  inline size_type m_eq() const   {return n_cons_eq;}
+  inline size_type m_ineq() const {return n_cons_ineq;}
+  inline size_type n_low() const  {return n_bnds_low;}
+  inline size_type n_upp() const  {return n_bnds_upp;}
+  inline size_type m_ineq_low() const {return n_ineq_low;}
+  inline size_type m_ineq_upp() const {return n_ineq_upp;}
+  inline size_type n_complem()  const {return m_ineq_low()+m_ineq_upp()+n_low()+n_upp();}
 
-  inline long long n_local() const
+  inline size_type n_local() const
   {
     return xl->get_local_size();
   }
-  inline long long n_low_local() const {return n_bnds_low_local;}
-  inline long long n_upp_local() const {return n_bnds_upp_local;}
+  inline size_type n_low_local() const {return n_bnds_low_local;}
+  inline size_type n_upp_local() const {return n_bnds_upp_local;}
 
   /* methods for transforming the internal objects to corresponding user objects */
   inline double user_obj(double hiop_f) { return nlp_transformations.apply_inv_to_obj(hiop_f); }
@@ -240,25 +242,6 @@ public:
 			  double* zl_a,
 			  double* zu_a,
 			  double* lambda_a);
-  
-  /* packs constraint rhs or constraint multipliers into one array based on the internal mappings 
-   * 'cons_eq_mapping_'and 'cons_ineq_mapping_ */
-  void copy_EqIneq_to_cons(const hiopVector& yc,
-			   const hiopVector& yd,
-			   int num_cons, //size of 'cons'
-			   double* cons);
-  
-  /* packs constraint rhs or constraint multipliers into hiopVector based on the internal mappings 
-   * 'cons_eq_mapping_'and 'cons_ineq_mapping_ */
-  void copy_EqIneq_to_cons(const hiopVector& yc,
-			   const hiopVector& yd,
-			   hiopVector& cons);
-
-  /* unpacks constraint rhs or constraint multipliers into hiopVector based on the internal mappings
-   * 'cons_eq_mapping_'and 'cons_ineq_mapping_ */
-  void copy_cons_to_EqIneq(hiopVector& yc_in,
-                           hiopVector& yd_in,
-                           const hiopVector& cons);
 
   /// @brief return the scaling fact for objective
   double get_obj_scale() const;
@@ -283,9 +266,9 @@ protected:
 
   /* problem data */
   //various dimensions
-  long long n_vars, n_cons, n_cons_eq, n_cons_ineq;
-  long long n_bnds_low, n_bnds_low_local, n_bnds_upp, n_bnds_upp_local, n_ineq_low, n_ineq_upp;
-  long long n_bnds_lu, n_ineq_lu;
+  size_type n_vars, n_cons, n_cons_eq, n_cons_ineq;
+  size_type n_bnds_low, n_bnds_low_local, n_bnds_upp, n_bnds_upp_local, n_ineq_low, n_ineq_upp;
+  size_type n_bnds_lu, n_ineq_lu;
   hiopVector *xl, *xu, *ixu, *ixl; //these will/can be global, memory distributed
   hiopInterfaceBase::NonlinearityType* vars_type; //C array containing the types for local vars
 
@@ -296,7 +279,7 @@ protected:
   hiopInterfaceBase::NonlinearityType* cons_ineq_type;
   
   // keep track of the constraints indexes in the original, user's formulation
-  long long *cons_eq_mapping_, *cons_ineq_mapping_; 
+  hiopVectorInt *cons_eq_mapping_, *cons_ineq_mapping_; 
 
   //options for which this class was setup
   std::string strFixedVars; //"none", "fixed", "relax"
@@ -310,7 +293,7 @@ protected:
 
 #ifdef HIOP_USE_MPI
   //inter-process distribution of vectors
-  long long* vec_distrib;
+  index_type* vec_distrib;
 #endif
 
   /* User provided interface */
@@ -461,8 +444,8 @@ public:
     assert(0==nnz_sparse_Hess_Lagr_SD);
     return new hiopMatrixSymBlockDiagMDS(nx_sparse, nx_dense, nnz_sparse_Hess_Lagr_SS);
   }
-  virtual long long nx_sp() const { return nx_sparse; }
-  virtual long long nx_de() const { return nx_dense; }
+  virtual size_type nx_sp() const { return nx_sparse; }
+  virtual size_type nx_de() const { return nx_dense; }
 private:
   hiopInterfaceMDS& interface;
   int nx_sparse, nx_dense;
@@ -529,7 +512,7 @@ public:
   {
     return new hiopMatrixSymSparseTriplet(n_vars, m_nnz_sparse_Hess_Lagr);
   }
-  virtual long long nx() const { return n_vars; }
+  virtual size_type nx() const { return n_vars; }
 
   //not inherited from NlpFormulation
 
@@ -541,9 +524,9 @@ public:
   }
 
   /** const accessors */
-  inline const int get_nnz_Jaceq()  const { return m_nnz_sparse_Jaceq; }
-  inline const int get_nnz_Jacineq()  const { return m_nnz_sparse_Jacineq; }
-  inline const int get_nnz_Hess_Lagr()  const { return m_nnz_sparse_Hess_Lagr; }
+  inline int get_nnz_Jaceq()  const { return m_nnz_sparse_Jaceq; }
+  inline int get_nnz_Jacineq()  const { return m_nnz_sparse_Jacineq; }
+  inline int get_nnz_Hess_Lagr()  const { return m_nnz_sparse_Hess_Lagr; }
   
 private:
   hiopInterfaceSparse& interface;

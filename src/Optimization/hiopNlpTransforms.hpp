@@ -4,7 +4,7 @@
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
 // is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause). 
-// Please also read “Additional BSD Notice” below.
+// Please also read "Additional BSD Notice" below.
 //
 // Redistribution and use in source and binary forms, with or without modification, 
 // are permitted provided that the following conditions are met:
@@ -82,11 +82,11 @@ public:
   virtual bool setup() = 0;
 
   /* number of vars in the NLP after the transformation */
-  virtual long long n_post()=0;
-  virtual long long n_post_local()=0;
+  virtual size_type n_post()=0;
+  virtual size_type n_post_local()=0;
   /* number of vars in the NLP to which the transformation is to be applied */
-  virtual long long n_pre()=0;
-  virtual long long n_pre_local()=0;
+  virtual size_type n_pre()=0;
+  virtual size_type n_pre_local()=0;
 
   /* transforms variable vector, from transformed ones to original ones*/
   virtual inline hiopVector* apply_inv_to_x(hiopVector& x, const bool& new_x) { return &x; };
@@ -147,8 +147,8 @@ public:
   hiopFixedVarsRemover(const hiopVector& xl,
                        const hiopVector& xu,
                        const double& fixedVarTol,
-                       const long long& numFixedVars,
-                       const long long& numFixedVars_local);
+                       const size_type& numFixedVars,
+                       const size_type& numFixedVars_local);
   ~hiopFixedVarsRemover();
 public:
   /** inherited from the parent class */
@@ -157,12 +157,12 @@ public:
   virtual inline bool setup() {return true;}
 
   /* number of vars in the NLP after the tranformation */
-  virtual inline long long n_post() { return rs_n(); }
+  virtual inline size_type n_post() { return rs_n(); }
   /* number of vars in the NLP to which the tranformation is to be applied */
-  virtual inline long long n_pre () { return fs_n(); }
+  virtual inline size_type n_pre () { return fs_n(); }
 
-  virtual inline long long n_post_local() { return rs_n_local(); }
-  virtual inline long long n_pre_local() { return fs_n_local(); }
+  virtual inline size_type n_post_local() { return rs_n_local(); }
+  virtual inline size_type n_pre_local() { return fs_n_local(); }
 
   /* from reduced space to full space */
   inline hiopVector* apply_inv_to_x(hiopVector& x, const bool& new_x) 
@@ -253,19 +253,19 @@ public:
   bool setupConstraintsPart(const int& neq, const int& nineq);
 #ifdef HIOP_USE_MPI
   /* saves the inter-process distribution of (primal) vectors distribution */
-  void setFSVectorDistrib(long long* vec_distrib,int num_ranks);
+  void setFSVectorDistrib(index_type* vec_distrib,int num_ranks);
   /* allocates and returns the reduced-space column partitioning to be used internally by HiOp */
-  long long* allocRSVectorDistrib();
+  index_type* allocRSVectorDistrib();
   inline void setMPIComm(const MPI_Comm& commIn) { comm = commIn; }
 #endif
   /* "copies" a full space vector to a reduced space vector */
   void copyFsToRs(const hiopVector& fsVec,  hiopVector& rsVec);
   void copyFsToRs(const hiopInterfaceBase::NonlinearityType* fs, hiopInterfaceBase::NonlinearityType* rs);
   
-  inline long long fs_n() const { return n_fs;}
-  inline long long rs_n() const { return n_rs;}
-  inline long long fs_n_local() const { assert(xl_fs); return xl_fs->get_local_size(); }
-  inline long long rs_n_local() const { assert(xl_fs); return fs_n_local()-n_fixed_vars_local;}
+  inline size_type fs_n() const { return n_fs;}
+  inline size_type rs_n() const { return n_rs;}
+  inline size_type fs_n_local() const { assert(xl_fs); return xl_fs->get_local_size(); }
+  inline size_type rs_n_local() const { assert(xl_fs); return fs_n_local()-n_fixed_vars_local;}
 protected: 
 #if 0 //old interface
   void applyToArray   (const double* vec_rs, double* vec_fs);
@@ -277,13 +277,13 @@ protected:
   void applyToMatrix   (const double* M_rs, const int& m_in, double* M_fs);
   void applyInvToMatrix(const double* M_fs, const int& m_in, double* M_rs);
 protected:
-  long long n_fixed_vars_local;
-  long long n_fixed_vars;
+  size_type n_fixed_vars_local;
+  size_type n_fixed_vars;
 
   double fixedVarTol;
 
-  long long n_fs; //full-space n
-  long long n_rs; //reduced-space n
+  size_type n_fs; //full-space n
+  size_type n_rs; //reduced-space n
 
   //working buffer used to hold the full-space (user's) vector of decision variables and other optimiz objects
   hiopVector*x_fs, *grad_fs;
@@ -302,7 +302,7 @@ protected:
   hiopVector* x_rs_ref_;
   hiopVector* grad_rs_ref;
 #ifdef HIOP_USE_MPI
-  std::vector<long long> fs_vec_distrib;
+  std::vector<index_type> fs_vec_distrib;
   MPI_Comm comm;
 #endif
   
@@ -313,17 +313,17 @@ class hiopFixedVarsRelaxer : public hiopNlpTransformation
 public: 
   hiopFixedVarsRelaxer(const hiopVector& xl,
                        const hiopVector& xu,
-                       const long long& numFixedVars,
-                       const long long& numFixedVars_local);
+                       const size_type& numFixedVars,
+                       const size_type& numFixedVars_local);
   virtual ~hiopFixedVarsRelaxer();
 
   /* number of vars in the NLP after the tranformation */
-  inline long long n_post()  { /*assert(xl_copy);*/ return n_vars; } //xl_copy->get_size(); }
+  inline size_type n_post()  { /*assert(xl_copy);*/ return n_vars; } //xl_copy->get_size(); }
   /* number of vars in the NLP to which the tranformation is to be applied */
-  virtual long long n_pre () { /*assert(xl_copy);*/ return n_vars; } //xl_copy->get_size(); }
+  virtual size_type n_pre () { /*assert(xl_copy);*/ return n_vars; } //xl_copy->get_size(); }
 
-  inline long long n_post_local()  { return n_vars_local; } //xl_copy->get_local_size(); }
-  inline long long n_pre_local()  { return n_vars_local; } //xl_copy->get_local_size(); }
+  inline size_type n_post_local()  { return n_vars_local; } //xl_copy->get_local_size(); }
+  inline size_type n_pre_local()  { return n_vars_local; } //xl_copy->get_local_size(); }
 
   inline bool setup() { return true; }
 
@@ -331,7 +331,7 @@ public:
 	     hiopVector& xl, hiopVector& xu);
 private:
   hiopVector*xl_copy, *xu_copy;
-  long long  n_vars; int n_vars_local;
+  size_type  n_vars; int n_vars_local;
 };
 
 /** 
@@ -349,8 +349,8 @@ public:
                         hiopVector& gradf,
                         hiopMatrix& Jac_c, 
                         hiopMatrix& Jac_d, 
-                        long long *cons_eq_mapping, 
-                        long long *cons_ineq_mapping);
+                        index_type* cons_eq_mapping, 
+                        index_type* cons_ineq_mapping);
   ~hiopNLPObjGradScaling();
 public:
   /** inherited from the parent class */
@@ -359,15 +359,19 @@ public:
   virtual inline bool setup() {return true;}
 
   /* number of vars in the NLP after the tranformation */
-  inline long long n_post()  { return n_vars; } 
+  inline size_type n_post()  { return n_vars; } 
   /* number of vars in the NLP to which the tranformation is to be applied */
-  virtual long long n_pre () { return n_vars; } 
+  virtual size_type n_pre () { return n_vars; } 
 
-  inline long long n_post_local()  { return n_vars_local; }
-  inline long long n_pre_local()  { return n_vars_local; }
+  inline size_type n_post_local()  { return n_vars_local; }
+  inline size_type n_pre_local()  { return n_vars_local; }
 
+  inline hiopVector* apply_to_x(hiopVector& x)
+  {
+    return hiopNlpTransformation::apply_to_x(x);
+  }
   inline void apply_to_x(hiopVector& x_in, hiopVector& x_out){}
-
+  
   /// @brief return the scaling fact for objective
   inline double get_obj_scale() const {return scale_factor_obj;}
 
@@ -479,8 +483,8 @@ protected:
 #endif  
 
 private:
-  long long n_vars, n_vars_local;
-  long long n_eq, n_ineq;
+  size_type n_vars, n_vars_local;
+  size_type n_eq, n_ineq;
   double scale_factor_obj;
   hiopVector *scale_factor_c, *scale_factor_d, *scale_factor_cd;
 #if 0
@@ -500,13 +504,20 @@ public:
                     const hiopVector& du);
   virtual ~hiopBoundsRelaxer();
 
-  inline long long n_post()  { /*assert(xl_copy);*/ return n_vars; }
-  virtual long long n_pre () { /*assert(xl_copy);*/ return n_vars; }
-  inline long long n_post_local()  { return n_vars_local; }
-  inline long long n_pre_local()  { return n_vars_local; }
+  inline size_type n_post()  { /*assert(xl_copy);*/ return n_vars; }
+  virtual size_type n_pre () { /*assert(xl_copy);*/ return n_vars; }
+  inline size_type n_post_local()  { return n_vars_local; }
+  inline size_type n_pre_local()  { return n_vars_local; }
   inline bool setup() { return true; }
-  
-  inline void apply_to_x(hiopVector& x_in, hiopVector& x_out){}
+
+  inline hiopVector* apply_to_x(hiopVector& x)
+  {
+    return hiopNlpTransformation::apply_to_x(x);
+  }
+
+  inline void apply_to_x(hiopVector& x_in, hiopVector& x_out)
+  {
+  }
 
   void relax(const double& bound_relax_perturb,
              hiopVector& xl,
@@ -519,9 +530,9 @@ private:
   hiopVector* xu_ori;
   hiopVector* dl_ori;
   hiopVector* du_ori;
-  long long n_vars; 
-  long long n_vars_local;
-  long long n_ineq;
+  size_type n_vars; 
+  size_type n_vars_local;
+  size_type n_ineq;
 };
 
 
@@ -538,8 +549,8 @@ public:
   };
 
   inline bool setup() { return true; }
-  inline void setUserNlpNumVars(const long long& n_vars) { n_vars_usernlp = n_vars; }
-  inline void setUserNlpNumLocalVars(const long long& n_vars) { n_vars_local_usernlp = n_vars; }
+  inline void setUserNlpNumVars(const size_type& n_vars) { n_vars_usernlp = n_vars; }
+  inline void setUserNlpNumLocalVars(const size_type& n_vars) { n_vars_local_usernlp = n_vars; }
   inline void append(hiopNlpTransformation* t) { list_trans_.push_back(t); }
   inline void clear() { 
     std::list<hiopNlpTransformation*>::iterator it;
@@ -549,7 +560,7 @@ public:
   }
 
   /* number of vars in the NLP after the tranformation */
-  inline virtual long long n_post() 
+  inline virtual size_type n_post() 
   { 
 #ifdef HIOP_DEEPCHECKS
       assert(n_vars_usernlp>0);
@@ -563,7 +574,7 @@ public:
       return list_trans_.back()->n_post(); 
     }
   }
-  inline virtual long long n_post_local() 
+  inline virtual size_type n_post_local() 
   { 
 #ifdef HIOP_DEEPCHECKS
       assert(n_vars_usernlp>0);
@@ -579,7 +590,7 @@ public:
     }
   }
   /* number of vars in the NLP to which the tranformation is to be applied */
-  inline virtual long long n_pre() 
+  inline virtual size_type n_pre() 
   { 
 #ifdef HIOP_DEEPCHECKS
       assert(n_vars_usernlp>0);
@@ -594,7 +605,7 @@ public:
     }
   }
   /* number of local vars in the NLP to which the tranformation is to be applied */
-  inline virtual long long n_pre_local() 
+  inline virtual size_type n_pre_local() 
   { 
 #ifdef HIOP_DEEPCHECKS
     assert(n_vars_usernlp>0);
@@ -760,7 +771,7 @@ public:
 
 private:
   std::list<hiopNlpTransformation*> list_trans_;
-  long long  n_vars_usernlp, n_vars_local_usernlp;
+  size_type  n_vars_usernlp, n_vars_local_usernlp;
 };
 
 }

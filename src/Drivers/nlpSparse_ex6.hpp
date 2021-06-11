@@ -5,12 +5,8 @@
 
 #include <cassert>
 
-#ifdef HIOP_USE_MPI
-#include "mpi.h"
-#else
-#define MPI_COMM_WORLD 0
-#define MPI_Comm int
-#endif
+using size_type = hiop::size_type;
+using index_type = hiop::index_type;
 
 /* Test with bounds and constraints of all types. For some reason this
  *  example is not very well behaved numerically.
@@ -30,36 +26,37 @@ public:
   Ex6(int n, double scal_in);
   virtual ~Ex6();
 
-  virtual bool get_prob_sizes(long long& n, long long& m);
-  virtual bool get_vars_info(const long long& n, double *xlow, double* xupp, NonlinearityType* type);
-  virtual bool get_cons_info(const long long& m, double* clow, double* cupp, NonlinearityType* type);
-  virtual bool get_sparse_blocks_info(int& nx,
-					    int& nnz_sparse_Jaceq, int& nnz_sparse_Jacineq,
-					    int& nnz_sparse_Hess_Lagr);
+  virtual bool get_prob_sizes(size_type& n, size_type& m);
+  virtual bool get_vars_info(const size_type& n, double *xlow, double* xupp, NonlinearityType* type);
+  virtual bool get_cons_info(const size_type& m, double* clow, double* cupp, NonlinearityType* type);
+  
+  virtual bool get_sparse_blocks_info(size_type& nx, size_type& nnz_sparse_Jaceq,
+                                      size_type& nnz_sparse_Jacineq,
+                                      size_type& nnz_sparse_Hess_Lagr);
 
-  virtual bool eval_f(const long long& n, const double* x, bool new_x, double& obj_value);
-  virtual bool eval_cons(const long long& n, const long long& m,
-			 const long long& num_cons, const long long* idx_cons,
-			 const double* x, bool new_x, double* cons);
-  virtual bool eval_cons(const long long& n, const long long& m,
+  virtual bool eval_f(const size_type& n, const double* x, bool new_x, double& obj_value);
+  virtual bool eval_cons(const size_type& n, const size_type& m,
+                         const size_type& num_cons, const index_type* idx_cons,
+                         const double* x, bool new_x, double* cons);
+  virtual bool eval_cons(const size_type& n, const size_type& m,
 			 const double* x, bool new_x,
 			 double* cons);
-  virtual bool eval_grad_f(const long long& n, const double* x, bool new_x, double* gradf);
-  virtual bool eval_Jac_cons(const long long& n, const long long& m,
-			     const long long& num_cons, const long long* idx_cons,
-			     const double* x, bool new_x,
-			     const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS);
-  virtual bool eval_Jac_cons(const long long& n, const long long& m,
-			     const double* x, bool new_x,
-			     const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS);
-  virtual bool get_starting_point(const long long&n, double* x0);
-  virtual bool eval_Hess_Lagr(const long long& n, const long long& m,
+  virtual bool eval_grad_f(const size_type& n, const double* x, bool new_x, double* gradf);
+  virtual bool eval_Jac_cons(const size_type& n, const size_type& m,
+                             const size_type& num_cons, const index_type* idx_cons,
+                             const double* x, bool new_x,
+                             const size_type& nnzJacS, index_type* iJacS, index_type* jJacS, double* MJacS);
+  virtual bool eval_Jac_cons(const size_type& n, const size_type& m,
+                             const double* x, bool new_x,
+                             const size_type& nnzJacS, index_type* iJacS, index_type* jJacS, double* MJacS);
+  virtual bool get_starting_point(const size_type&n, double* x0);
+  virtual bool eval_Hess_Lagr(const size_type& n, const size_type& m,
 			      const double* x, bool new_x, const double& obj_factor,
 			      const double* lambda, bool new_lambda,
-			      const int& nnzHSS, int* iHSS, int* jHSS, double* MHSS);
+			      const size_type& nnzHSS, index_type* iHSS, index_type* jHSS, double* MHSS);
 
 private:
-  int n_vars, n_cons;
+  size_type n_vars, n_cons;
   double scal;
 };
 #endif
