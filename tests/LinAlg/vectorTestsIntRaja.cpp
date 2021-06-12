@@ -61,13 +61,10 @@ namespace hiop { namespace tests {
 
 int VectorTestsIntRaja::getLocalElement(hiop::hiopVectorInt* xvec, int idx) const
 {
-  if(auto* x = dynamic_cast<hiop::hiopVectorIntRaja*>(xvec))
-  {
+  if(auto* x = dynamic_cast<hiop::hiopVectorIntRaja*>(xvec)) {
     x->copy_from_dev();
     return x->local_data_host_const()[idx];
-  }
-  else
-  {
+  } else {
     assert(false && "Wrong type of vector passed into `VectorTestsIntRaja::getLocalElement`!");
   }
   return 0;
@@ -75,14 +72,11 @@ int VectorTestsIntRaja::getLocalElement(hiop::hiopVectorInt* xvec, int idx) cons
 
 void VectorTestsIntRaja::setLocalElement(hiop::hiopVectorInt* xvec, int idx, int value) const
 {
-  if(auto* x = dynamic_cast<hiop::hiopVectorIntRaja*>(xvec))
-  {
+  if(auto* x = dynamic_cast<hiop::hiopVectorIntRaja*>(xvec)) {
     x->copy_from_dev();
     x->local_data_host()[idx] = value;
     x->copy_to_dev();
-  }
-  else
-  {
+  } else {
     assert(false && "Wrong type of vector passed into `VectorTestsIntRaja::setLocalElement`!");
   }
 }

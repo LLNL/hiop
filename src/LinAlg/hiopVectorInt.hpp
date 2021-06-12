@@ -78,8 +78,8 @@ public:
   virtual index_type* local_data_host() = 0;
   virtual const index_type* local_data_host_const() const = 0;
 
-  virtual void copy_to_dev() const = 0;
-  virtual void copy_from_dev() const = 0;
+  virtual void copy_to_dev() = 0;
+  virtual void copy_from_dev() = 0;
 };
 
 } // namespace hiop

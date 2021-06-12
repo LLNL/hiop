@@ -61,24 +61,18 @@ namespace hiop { namespace tests {
 
 int VectorTestsIntSeq::getLocalElement(hiop::hiopVectorInt* xvec, int idx) const
 {
-  if(auto* x = dynamic_cast<hiop::hiopVectorIntSeq*>(xvec))
-  {
+  if(auto* x = dynamic_cast<hiop::hiopVectorIntSeq*>(xvec)) {
     return x->local_data_host_const()[idx];
-  }
-  else
-  {
+  } else {
     assert(false && "Wrong type of vector passed into `VectorTestsIntSeq::getLocalElement`!");
   }
 }
 
 void VectorTestsIntSeq::setLocalElement(hiop::hiopVectorInt* xvec, int idx, int value) const
 {
-  if(auto* x = dynamic_cast<hiop::hiopVectorIntSeq*>(xvec))
-  {
+  if(auto* x = dynamic_cast<hiop::hiopVectorIntSeq*>(xvec)) {
     x->local_data_host()[idx] = value;
-  }
-  else
-  {
+  } else {
     assert(false && "Wrong type of vector passed into `VectorTestsIntSeq::setLocalElement`!");
   }
 }
