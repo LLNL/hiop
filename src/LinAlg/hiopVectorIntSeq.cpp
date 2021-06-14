@@ -68,14 +68,4 @@ hiopVectorIntSeq::~hiopVectorIntSeq()
   delete[] buf_;
 }
 
-const index_type& hiopVectorIntSeq::operator[] (index_type i) const
-{
-  return buf_[i];
-}
-
-index_type& hiopVectorIntSeq::operator[] (index_type i)
-{
-  return buf_[i];
-}
-
 } // namespace hiop

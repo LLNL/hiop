@@ -254,10 +254,10 @@ void hiopVectorPar::copy_from_two_vec_w_pattern(const hiopVector& c,
 
   //concatanate multipliers -> copy into whole lambda array 
   for(int i=0; i<c_size; ++i) {
-    arr[c_map[i]] = c_arr[i];
+    arr[c_map.local_data_host_const()[i]] = c_arr[i];
   }
   for(int i=0; i<d_size; ++i) {
-    arr[d_map[i]] = d_arr[i];
+    arr[d_map.local_data_host_const()[i]] = d_arr[i];
   }                                               
 }
 
@@ -282,10 +282,10 @@ void hiopVectorPar::copy_to_two_vec_w_pattern(hiopVector& c,
 
   //concatanate multipliers -> copy into whole lambda array 
   for(int i=0; i<c_size; ++i) {
-    c_arr[i] = arr[c_map[i]];
+    c_arr[i] = arr[c_map.local_data_host_const()[i]];
   }
   for(int i=0; i<d_size; ++i) {
-    d_arr[i] = arr[d_map[i]];
+    d_arr[i] = arr[d_map.local_data_host_const()[i]];
   }                                               
 }
 

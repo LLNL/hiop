@@ -70,8 +70,8 @@ public:
 
   ~hiopVectorIntSeq();
 
-  virtual void copyToDev() const {}
-  virtual void copyFromDev() const {}
+  virtual void copy_to_dev() {}
+  virtual void copy_from_dev() {}
 
   virtual index_type* local_data() { return buf_; }
 
@@ -80,10 +80,6 @@ public:
   virtual inline index_type* local_data_host() { return local_data(); }
 
   virtual inline const index_type* local_data_host_const() const { return local_data_const(); }
-
-  const index_type& operator[] (index_type i) const override;
-
-  index_type& operator[] (index_type i) override;
 };
 
 } // namespace hiop

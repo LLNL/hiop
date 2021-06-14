@@ -69,12 +69,10 @@ hiopVectorIntRaja::hiopVectorIntRaja(size_type sz, std::string mem_space)
   auto& resmgr = umpire::ResourceManager::getInstance();
   umpire::Allocator devalloc = resmgr.getAllocator(mem_space_);
   buf_ = static_cast<index_type*>(devalloc.allocate(sz_*sizeof(index_type)));
-  if(mem_space_ == "DEVICE")
-  {
+  if(mem_space_ == "DEVICE") {
     umpire::Allocator hostalloc = resmgr.getAllocator("HOST");
     buf_host_ = static_cast<index_type*>(hostalloc.allocate(sz_*sizeof(index_type)));
-  } else
-  {
+  } else {
     buf_host_ = buf_;
   }
 }
@@ -84,8 +82,7 @@ hiopVectorIntRaja::~hiopVectorIntRaja()
   auto& resmgr = umpire::ResourceManager::getInstance();
   umpire::Allocator devalloc = resmgr.getAllocator(mem_space_);
   devalloc.deallocate(buf_);
-  if (mem_space_ == "DEVICE")
-  {
+  if (mem_space_ == "DEVICE") {
     umpire::Allocator hostalloc = resmgr.getAllocator("HOST");
     hostalloc.deallocate(buf_host_);
   }
@@ -93,29 +90,17 @@ hiopVectorIntRaja::~hiopVectorIntRaja()
   buf_ = nullptr;
 }
 
-const index_type& hiopVectorIntRaja::operator[] (index_type i) const
+void hiopVectorIntRaja::copy_from_dev()
 {
-  return buf_host_[i];
-}
-
-index_type& hiopVectorIntRaja::operator[] (index_type i)
-{
-  return buf_host_[i];
-}
-
-void hiopVectorIntRaja::copyFromDev() const
-{
-  if (buf_ != buf_host_)
-  {
+  if (buf_ != buf_host_) {
     auto& resmgr = umpire::ResourceManager::getInstance();
     resmgr.copy(buf_host_, buf_);
   }
 }
 
-void hiopVectorIntRaja::copyToDev() const
+void hiopVectorIntRaja::copy_to_dev()
 {
-  if (buf_ != buf_host_)
-  {
+  if (buf_ != buf_host_) {
     auto& resmgr = umpire::ResourceManager::getInstance();
     resmgr.copy(buf_, buf_host_);
   }
