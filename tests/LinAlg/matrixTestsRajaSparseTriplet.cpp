@@ -61,6 +61,7 @@
 #include <hiopVectorRajaPar.hpp>
 #include <hiopMatrixRajaSparseTriplet.hpp>
 #include "matrixTestsRajaSparseTriplet.hpp"
+#include "hiopVectorIntRaja.hpp"
 
 namespace hiop{ namespace tests {
 
@@ -350,5 +351,26 @@ void MatrixTestsRajaSparseTriplet::maybeCopyFromDev(hiop::hiopMatrixSparse* mat)
   { }
 }
 
+int MatrixTestsRajaSparseTriplet::getLocalElement(hiop::hiopVectorInt* xvec, int idx) const
+{
+  if(auto* x = dynamic_cast<hiop::hiopVectorIntRaja*>(xvec)) {
+    x->copy_from_dev();
+    return x->local_data_host_const()[idx];
+  } else {
+    assert(false && "Wrong type of vector passed into `MatrixTestsRajaSparseTriplet::getLocalElement`!");
+  }
+  return 0;
+}
+
+void MatrixTestsRajaSparseTriplet::setLocalElement(hiop::hiopVectorInt* xvec, int idx, int value) const
+{
+  if(auto* x = dynamic_cast<hiop::hiopVectorIntRaja*>(xvec)) {
+    x->copy_from_dev();
+    x->local_data_host()[idx] = value;
+    x->copy_to_dev();
+  } else {
+    assert(false && "Wrong type of vector passed into `MatrixTestsRajaSparseTriplet::setLocalElement`!");
+  }
+}
 
 }} // namespace hiop::tests

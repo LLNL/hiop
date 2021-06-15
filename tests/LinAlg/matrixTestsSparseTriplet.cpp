@@ -59,6 +59,7 @@
 #include <cstring>
 #include <hiopMatrix.hpp>
 #include "matrixTestsSparseTriplet.hpp"
+#include <hiopVectorIntSeq.hpp>
 
 namespace hiop{ namespace tests {
 
@@ -389,6 +390,24 @@ int MatrixTestsSparseTriplet::copyRowsBlockFrom(hiop::hiopMatrixSparse& src_gen,
 
   printMessage(fail, __func__);
   return fail;
+}
+
+int MatrixTestsSparseTriplet::getLocalElement(hiop::hiopVectorInt* xvec, int idx) const
+{
+  if(auto* x = dynamic_cast<hiop::hiopVectorIntSeq*>(xvec)) {
+    return x->local_data_host_const()[idx];
+  } else {
+    assert(false && "Wrong type of vector passed into `MatrixTestsSparseTriplet::getLocalElement`!");
+  }
+}
+
+void MatrixTestsSparseTriplet::setLocalElement(hiop::hiopVectorInt* xvec, int idx, int value) const
+{
+  if(auto* x = dynamic_cast<hiop::hiopVectorIntSeq*>(xvec)) {
+    x->local_data_host()[idx] = value;
+  } else {
+    assert(false && "Wrong type of vector passed into `MatrixTestsSparseTriplet::setLocalElement`!");
+  }
 }
 
 }} // namespace hiop::tests

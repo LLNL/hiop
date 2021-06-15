@@ -64,6 +64,7 @@
 #include <hiopMatrixSparseTriplet.hpp>
 #include <hiopMatrixRajaSparseTriplet.hpp>
 #include <hiopVectorPar.hpp>
+#include <hiopVectorInt.hpp>
 #include "testBase.hpp"
 
 namespace hiop { namespace tests {
@@ -943,7 +944,7 @@ public:
   }
 
   /// @brief Copies rows from another sparse matrix into this one, according to the patten `select`. ith row of A = select[i]_th row of B 
-  int matrix_copy_rows_from( hiop::hiopMatrixSparse& A, hiop::hiopMatrixSparse& B, local_ordinal_type& select)
+  int matrix_copy_rows_from( hiop::hiopMatrixSparse& A, hiop::hiopMatrixSparse& B, hiop::hiopVectorInt& select)
   {
     const local_ordinal_type* A_iRow = getRowIndices(&A);
     const local_ordinal_type* A_jCol = getColumnIndices(&A);
@@ -964,9 +965,13 @@ public:
     A.setToConstant(A_val);
     B.setToConstant(B_val);
 
+    for(int i=0; i<select.size(); i++) {
+      setLocalElement(&select, i, 2*i);
+    }
+
     int fail{0};
 
-    A.copyRowsFrom(B, &select, n_A_rows);
+    A.copyRowsFrom(B, select.local_data_const(), n_A_rows);
 
     //FIXME_NY
     fail += verifyAnswer(&A, two),    
@@ -1216,6 +1221,9 @@ private:
   virtual local_ordinal_type* numNonzerosPerCol(hiop::hiopMatrixSparse* mat) = 0;
   virtual void maybeCopyToDev(hiop::hiopMatrixSparse*) = 0;
   virtual void maybeCopyFromDev(hiop::hiopMatrixSparse*) = 0;
+
+  virtual int getLocalElement(hiop::hiopVectorInt*, int) const = 0;
+  virtual void setLocalElement(hiop::hiopVectorInt*, int, int) const = 0;
 
 public:
   /**

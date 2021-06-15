@@ -62,10 +62,12 @@
 #include <hiopOptions.hpp>
 #include <hiopLinAlgFactory.hpp>
 #include <hiopVector.hpp>
+#include <hiopVectorIntSeq.hpp>
 #include <hiopMatrixDenseRowMajor.hpp>
 #include "LinAlg/matrixTestsSparseTriplet.hpp"
 
 #ifdef HIOP_USE_RAJA
+#include <hiopVectorIntRaja.hpp>
 #include <hiopVectorRajaPar.hpp>
 #include <hiopMatrixRajaDense.hpp>
 #include "LinAlg/matrixTestsRajaSparseTriplet.hpp"
@@ -166,14 +168,10 @@ int main(int argc, char** argv)
     fail += test.matrix_copy_subdiagonal_from(m3xn3_dense, *m3xn3_sparse, vec_m);
     fail += test.matrix_set_subdiagonal_to(m3xn3_dense, *m3xn3_sparse);
     
-    local_ordinal_type *select = new local_ordinal_type[M_local];
-    for(auto i=0; i<M_local; i++){
-      select[i] = 2*i;
-    }
-    fail += test.matrix_copy_rows_from(*mxn_sparse, *m2xn_sparse, *select);
+    hiop::hiopVectorIntSeq select(M_local);
+    fail += test.matrix_copy_rows_from(*mxn_sparse, *m2xn_sparse, select);
 
     // Remove testing objects
-    delete [] select;
     delete mxn_sparse;
     delete m2xn_sparse;
     delete m3xn3_sparse;
@@ -261,25 +259,11 @@ int main(int argc, char** argv)
     // functions used to build large sparse matrix from small pieces
     fail += test.matrix_copy_subdiagonal_from(m3xn3_dense, *m3xn3_sparse, vec_m);
     fail += test.matrix_set_subdiagonal_to(m3xn3_dense, *m3xn3_sparse);
-    
-    local_ordinal_type *select = new local_ordinal_type[M_local];
-    for(auto i=0; i<M_local; i++){
-      select[i] = 2*i;
-    }
-    
-
-
-    local_ordinal_type *select_host = new local_ordinal_type[M_local];
-    for(auto i=0; i<M_local; i++){
-      select_host[i] = 2*i;
-    }
-    hiop::hiopVectorIntRaja select(N_global, mem_space);
-    select.copy_from(select_host);
   
-    fail += test.matrix_copy_rows_from(*mxn_sparse, *m2xn_sparse, *select);
+    hiop::hiopVectorIntRaja select(M_local, mem_space);
+    fail += test.matrix_copy_rows_from(*mxn_sparse, *m2xn_sparse, select);
 
     // Remove testing objects
-    delete [] select_host;
     delete mxn_sparse;
     delete m2xn_sparse;
     delete m3xn3_sparse;

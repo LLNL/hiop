@@ -102,6 +102,9 @@ private:
   virtual local_ordinal_type* numNonzerosPerCol(hiop::hiopMatrixSparse* mat);
   virtual void maybeCopyToDev(hiop::hiopMatrixSparse*);
   virtual void maybeCopyFromDev(hiop::hiopMatrixSparse*);
+
+  virtual int getLocalElement(hiop::hiopVectorInt*, int) const;
+  virtual void setLocalElement(hiop::hiopVectorInt*, int, int) const;
 public:
   virtual void initializeMatrix(hiop::hiopMatrixSparse* mat, local_ordinal_type entries_per_row);
 };
