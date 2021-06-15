@@ -942,7 +942,39 @@ public:
     return fail;
   }
 
+  /// @brief Copies rows from another sparse matrix into this one, according to the patten `select`. ith row of A = select[i]_th row of B 
+  int matrix_copy_rows_from( hiop::hiopMatrixSparse& A, hiop::hiopMatrixSparse& B, local_ordinal_type& select)
+  {
+    const local_ordinal_type* A_iRow = getRowIndices(&A);
+    const local_ordinal_type* A_jCol = getColumnIndices(&A);
+    const local_ordinal_type A_nnz = A.numberOfNonzeros();
 
+    const local_ordinal_type* B_iRow = getRowIndices(&B);
+    const local_ordinal_type* B_jCol = getColumnIndices(&B);
+    const local_ordinal_type B_nnz = B.numberOfNonzeros();
+
+    int n_A_rows = A.m();
+    int n_B_rows = B.m();    
+    assert(A.n() == B.n());
+    assert(n_A_rows <= n_B_rows);
+
+    const real_type A_val = one;
+    const real_type B_val = two;
+
+    A.setToConstant(A_val);
+    B.setToConstant(B_val);
+
+    int fail{0};
+
+    A.copyRowsFrom(B, &select, n_A_rows);
+
+    //FIXME_NY
+    fail += verifyAnswer(&A, two),    
+    
+    printMessage(fail, __func__);
+    return fail;
+
+  }
 
   /// @todo add implementation of `startingAtAddSubDiagonalToStartingAt`
   /// for abstract sparse matrix interface and all sparse matrix classes, 

@@ -663,21 +663,24 @@ void hiopMatrixRajaSparseTriplet::copy_to(hiopMatrixDense& W)
   W.setToZero();
   
   RAJA::View<double, RAJA::Layout<2>> WM(W.local_data(), W.m(), W.n());
-
-  if(row_starts_host==NULL)
-    row_starts_host = allocAndBuildRowStarts();
-  assert(row_starts_host);
   
-  int* idx_start = row_starts_host->idx_start_;
+  int nnz = nnz_;
+  int nrows = nrows_;
+  int ncols = ncols_;
   int* jCol = jCol_;
+  int* iRow = iRow_;
   double* values = values_;
-  RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, this->nrows_),
+  
+  // atomic is needed to prevent data race from ocurring;
+  RAJA::forall<hiop_raja_exec>(
+    RAJA::RangeSegment(0, nnz),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
-      for(int k=idx_start[i]; k<idx_start[i+1]; k++)
-      {
-        WM(i, jCol[k]) += values[k];
-      }
+      assert(iRow[i] < nrows);
+      assert(jCol[i] < ncols);
+      
+      RAJA::AtomicRef<double, hiop_raja_atomic> yy(&WM(iRow[i], jCol[i]));
+      yy += values[i];
     }
   );
 }
@@ -958,11 +961,14 @@ hiopMatrixRajaSparseTriplet::allocAndBuildRowStarts() const
 /**
  * @brief Copies rows from another sparse matrix into this one.
  * 
- * @todo Better document this function.
+ * @pre 'src' is sorted
+ * @pre 'this' has exactly 'n_rows' rows
+ * @pre 'src' and 'this' must have same number of columns
+ * @pre number of rows in 'src' must be at least the number of rows in 'this'
  */
 void hiopMatrixRajaSparseTriplet::copyRowsFrom(const hiopMatrix& src_gen,
-					       const index_type* rows_idxs,
-					       size_type n_rows)
+                                               const index_type* rows_idxs,
+                                               size_type n_rows)
 {
   const hiopMatrixRajaSparseTriplet& src = dynamic_cast<const hiopMatrixRajaSparseTriplet&>(src_gen);
   assert(this->m() == n_rows);
@@ -974,45 +980,66 @@ void hiopMatrixRajaSparseTriplet::copyRowsFrom(const hiopMatrix& src_gen,
   const int* jCol_src = src.j_col();
   const double* values_src = src.M();
   int nnz_src = src.numberOfNonzeros();
-  int itnz_src=0;
-  int itnz_dest=0;
-  //int iterators should suffice
-  for(int row_dest=0; row_dest<n_rows; ++row_dest)
-  {
-    const int& row_src = rows_idxs[row_dest];
+  int itnz_src = 0;
+  int itnz_dst = 0;
 
-    while(itnz_src<nnz_src && iRow_src[itnz_src]<row_src)
-    {
-      #ifdef HIOP_DEEPCHECKS
-      if(itnz_src>0)
-      {
-	      assert(iRow_src[itnz_src]>=iRow_src[itnz_src-1] && "row indexes are not sorted");
-	      if(iRow_src[itnz_src]==iRow_src[itnz_src-1])
-	        assert(jCol_src[itnz_src] >= jCol_src[itnz_src-1] && "col indexes are not sorted");
-      }
-      #endif
-      ++itnz_src;
-    }
-
-    while(itnz_src<nnz_src && iRow_src[itnz_src]==row_src)
-    {
-      assert(itnz_dest < nnz_);
-      #ifdef HIOP_DEEPCHECKS
-      if(itnz_src>0)
-      {
-      	assert(iRow_src[itnz_src]>=iRow_src[itnz_src-1] && "row indexes are not sorted");
-	      if(iRow_src[itnz_src]==iRow_src[itnz_src-1])
-	        assert(jCol_src[itnz_src] >= jCol_src[itnz_src-1] && "col indexes are not sorted");
-      }
-      #endif
-      iRow_[itnz_dest] = row_dest;//iRow_src[itnz_src];
-      jCol_[itnz_dest] = jCol_src[itnz_src];
-      values_[itnz_dest++] = values_src[itnz_src++];
-      
-      assert(itnz_dest <= nnz_);
-    }
+  int m_src = src.m();
+  if(src.row_starts_host == nullptr){
+    src.row_starts_host = src.allocAndBuildRowStarts();
   }
-  assert(itnz_dest == nnz_);
+  assert(src.row_starts_host);
+  int* src_row_st = src.row_starts_host->idx_start_;
+
+  // local copy of member variable/function, for RAJA access
+  int* iRow = iRow_;
+  int* jCol = jCol_;
+  double* values = values_;
+  int nnz_dst = numberOfNonzeros();
+
+  if(row_starts_host == nullptr){
+    row_starts_host = new RowStartsInfo(nrows_, mem_space_);
+    assert(row_starts_host);
+  }
+  int* dst_row_st = row_starts_host->idx_start_;
+  
+  RAJA::forall<hiop_raja_exec>(
+    RAJA::RangeSegment(0, n_rows+1),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      dst_row_st[i] = 0;
+    }
+  );
+  
+  // comput nnz in each row
+  RAJA::forall<hiop_raja_exec>(
+    RAJA::RangeSegment(0, n_rows),
+    RAJA_LAMBDA(RAJA::Index_type row_dst)
+    {
+      const int row_src = rows_idxs[row_dst];
+      dst_row_st[row_dst+1] = src_row_st[row_src+1] - src_row_st[row_src];
+    }
+  );
+
+  RAJA::inclusive_scan_inplace<hiop_raja_exec>(dst_row_st,dst_row_st+n_rows+1,RAJA::operators::plus<int>());
+
+  RAJA::forall<hiop_raja_exec>(
+    RAJA::RangeSegment(0, n_rows),
+    RAJA_LAMBDA(RAJA::Index_type row_dst)
+    {
+      const int row_src = rows_idxs[row_dst];
+      int k_dst = dst_row_st[row_dst];
+      int k_src = src_row_st[row_src];
+  
+      // copy from src
+      while(k_src < src_row_st[row_src+1]) {
+        iRow[k_dst] = row_dst;
+        jCol[k_dst] = jCol_src[k_src];
+        values[k_dst] = values_src[k_src];
+        k_dst++;
+        k_src++;
+      }
+    }
+  );
 }
   
 /// @brief Prints the contents of this function to a file.
