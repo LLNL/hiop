@@ -300,6 +300,113 @@ public:
     return fail;
   }
 
+  /// @brief test for mathod that set a sub-diagonal block from a vector
+  bool matrix_copy_subdiagonal_from(hiop::hiopMatrixDense& W,
+                                    hiop::hiopMatrixSparse& A,
+                                    hiop::hiopVector& x,
+                                    const int rank=0)
+  {    
+    assert(A.m() == W.m()); // W has same dimension as A
+    assert(A.n() == W.n()); // W has same dimension as A
+  
+    auto nnz  = A.numberOfNonzeros();
+    auto dim_x = x.get_size();
+    auto num_row_A = A.m();
+    assert(num_row_A >= dim_x);
+    
+    const real_type A_val = two;
+    const real_type x_val = three;
+    int fail = 0;
+
+    x.setToConstant(x_val);
+    A.setToConstant(A_val);
+    
+    // replace the last `dim_x` values to a diagonal sub matrix
+    A.copySubDiagonalFrom(num_row_A-dim_x, dim_x, x, nnz-dim_x);
+
+    // copy to a dense matrix
+    A.copy_to(W);
+
+    const auto* iRow = getRowIndices(&A);
+    const auto* jCol = getColumnIndices(&A);
+      
+    fail += verifyAnswer(&W,
+      [=] (local_ordinal_type i, local_ordinal_type j) -> real_type
+      {
+        double ans = zero;
+        const bool indexExists = find_unsorted_pair(i, j, iRow, jCol, nnz-dim_x);
+        if(indexExists) {
+          if(i==j && i>=num_row_A-dim_x) {
+            // this ele is also defined in vector x as well
+            ans = x_val + A_val;
+          } else {
+            // this ele doesn't change
+            ans = A_val;
+          }
+        } else if(i==j && i>=num_row_A-dim_x) {
+          // this ele comes vector x
+          ans = x_val; 
+        }
+        return ans;
+      }
+    );
+
+    printMessage(fail, __func__, rank);
+    return fail;
+  }
+  
+    /// @brief test for mathod that set a sub-diagonal block from a vector
+  bool matrix_set_subdiagonal_to(hiop::hiopMatrixDense& W,
+                                 hiop::hiopMatrixSparse& A,
+                                 const int rank=0)
+  {    
+    assert(A.m() == W.m()); // W has same dimension as A
+    assert(A.n() == W.n()); // W has same dimension as A
+  
+    auto nnz  = A.numberOfNonzeros();
+    auto num_row_A = A.m();
+    int num_diag_ele = num_row_A/2;
+    
+    const real_type A_val = two;
+    const real_type x_val = three;
+    int fail = 0;
+
+    A.setToConstant(A_val);
+    
+    // replace the last `dim_x` values to a diagonal sub matrix
+    A.setSubDiagonalTo(num_row_A-num_diag_ele, num_diag_ele, x_val, nnz-num_diag_ele);
+
+    // copy to a dense matrix
+    A.copy_to(W);
+
+    const auto* iRow = getRowIndices(&A);
+    const auto* jCol = getColumnIndices(&A);
+      
+    fail += verifyAnswer(&W,
+      [=] (local_ordinal_type i, local_ordinal_type j) -> real_type
+      {
+        double ans = zero;
+        const bool indexExists = find_unsorted_pair(i, j, iRow, jCol, nnz-num_diag_ele);
+        if(indexExists) {
+          if(i==j && i>=num_row_A-num_diag_ele) {
+            // this ele is also defined in vector x as well
+            ans = x_val + A_val;
+          } else {
+            // this ele doesn't change
+            ans = A_val;
+          }
+        } else if(i==j && i>=num_row_A-num_diag_ele) {
+          // this ele comes vector x
+          ans = x_val; 
+        }
+        return ans;
+      }
+    );
+
+    printMessage(fail, __func__, rank);
+    return fail;
+  }
+  
   /**
    * @brief Test for method [W] += A * D^(-1) * A^T
    * 
@@ -984,7 +1091,7 @@ public:
   {
     assert(A.m() == W.m()); // W has same dimension as A
     assert(A.n() == W.n()); // W has same dimension as A
-    assert(C.n() == D.n()); // W has same dimension as A
+    assert(C.n() == D.n()); // C has same number of cols as D
 
     int fail = 0;
     const real_type C_val = half;
@@ -1006,7 +1113,7 @@ public:
 
     A.set_Jac_FR(C, D, A.i_row(), A.j_col(), A.M());
 
-    // copy to dense matrix
+    // copy to a dense matrix
     A.copy_to(W);
 
     const local_ordinal_type* iRow = getRowIndices(&A);

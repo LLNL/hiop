@@ -410,6 +410,59 @@ void hiopMatrixRajaSparseTriplet::addSubDiagonal(const double& alpha, index_type
   assert(false && "not needed");
 }
 
+void hiopMatrixRajaSparseTriplet::copySubDiagonalFrom(const index_type& start_on_dest_diag,
+                                                      const size_type& num_elems,
+                                                      const hiopVector& d_,
+                                                      const index_type& start_on_nnz_idx,
+                                                      double scal)
+{
+  const hiopVectorRajaPar& vd = dynamic_cast<const hiopVectorRajaPar&>(d_);
+  assert(num_elems<=vd.get_size());
+  assert(start_on_dest_diag>=0 && start_on_dest_diag+num_elems<=this->nrows_);
+  const double* v = vd.local_data_const();
+
+  // local copy for RAJA access
+  int* iRow = iRow_;
+  int* jCol = jCol_;
+  double* values = values_;
+
+  RAJA::forall<hiop_raja_exec>(
+    RAJA::RangeSegment(0, num_elems),
+    RAJA_LAMBDA(RAJA::Index_type row_src)
+    {
+      const index_type row_dest = row_src + start_on_dest_diag;
+      const index_type nnz_dest = row_src + start_on_nnz_idx;
+      iRow[nnz_dest] = jCol[nnz_dest] = row_dest;
+      values[nnz_dest] = scal*v[row_src];
+    }
+  );
+}
+
+void hiopMatrixRajaSparseTriplet::setSubDiagonalTo(const index_type& start_on_dest_diag,
+                                                   const size_type& num_elems,
+                                                   const double& c,
+                                                   const index_type& start_on_nnz_idx)
+{
+  assert(start_on_dest_diag>=0 && start_on_dest_diag+num_elems<=this->nrows_);
+
+  // local copy for RAJA access
+  int* iRow = iRow_;
+  int* jCol = jCol_;
+  double* values = values_;
+
+  RAJA::forall<hiop_raja_exec>(
+    RAJA::RangeSegment(0, num_elems),
+    RAJA_LAMBDA(RAJA::Index_type row_src)
+    {
+      const index_type  row_dest = row_src + start_on_dest_diag;
+      const index_type  nnz_dest = row_src + start_on_nnz_idx;
+      iRow[nnz_dest] = row_dest;
+      jCol[nnz_dest] = row_dest;
+      values[nnz_dest] = c;
+    }
+  );
+}
+
 void hiopMatrixRajaSparseTriplet::addMatrix(double alpha, const hiopMatrix& X)
 {
   assert(false && "not needed");

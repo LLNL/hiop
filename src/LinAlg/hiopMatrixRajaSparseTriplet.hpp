@@ -120,19 +120,19 @@ public:
   /* add to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements of
   * 'd_' (source) starting at index 'start_on_src_vec'. The number of elements added is 'num_elems', scaled by 'scal'
   */
-  virtual void copySubDiagonalFrom(const long long& start_on_dest_diag,
-                                   const long long& num_elems,
+  virtual void copySubDiagonalFrom(const index_type& start_on_dest_diag,
+                                   const size_type& num_elems,
                                    const hiopVector& d_,
-                                   const long long& start_on_nnz_idx,
-                                   double scal=1.0) {assert(0 && "FIXME_NY");}
+                                   const index_type& start_on_nnz_idx,
+                                   double scal);
 
   /* add constant 'c' to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements.
   * The number of elements added is 'num_elems'
   */
-  virtual void setSubDiagonalTo(const long long& start_on_dest_diag,
-                                const long long& num_elems,
+  virtual void setSubDiagonalTo(const index_type& start_on_dest_diag,
+                                const size_type& num_elems,
                                 const double& c,
-                                const long long& start_on_nnz_idx) {assert(0 && "FIXME_NY");}
+                                const index_type& start_on_nnz_idx);
 
   virtual void addMatrix(double alpha, const hiopMatrix& X);
 
