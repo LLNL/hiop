@@ -996,31 +996,32 @@ void hiopMatrixRajaSparseTriplet::copyRowsFrom(const hiopMatrix& src_gen,
   double* values = values_;
   int nnz_dst = numberOfNonzeros();
 
+  // this function only set up sparsity in the first run. Sparsity won't change after the first run.
   if(row_starts_host == nullptr){
     row_starts_host = new RowStartsInfo(nrows_, mem_space_);
     assert(row_starts_host);
-  }
-  int* dst_row_st = row_starts_host->idx_start_;
-  
-  RAJA::forall<hiop_raja_exec>(
-    RAJA::RangeSegment(0, n_rows+1),
-    RAJA_LAMBDA(RAJA::Index_type i)
-    {
-      dst_row_st[i] = 0;
-    }
-  );
-  
-  // comput nnz in each row
-  RAJA::forall<hiop_raja_exec>(
-    RAJA::RangeSegment(0, n_rows),
-    RAJA_LAMBDA(RAJA::Index_type row_dst)
-    {
-      const int row_src = rows_idxs[row_dst];
-      dst_row_st[row_dst+1] = src_row_st[row_src+1] - src_row_st[row_src];
-    }
-  );
+    int* dst_row_st_init = row_starts_host->idx_start_;
 
-  RAJA::inclusive_scan_inplace<hiop_raja_exec>(dst_row_st,dst_row_st+n_rows+1,RAJA::operators::plus<int>());
+    RAJA::forall<hiop_raja_exec>(
+      RAJA::RangeSegment(0, n_rows+1),
+      RAJA_LAMBDA(RAJA::Index_type i)
+      {
+        dst_row_st_init[i] = 0;
+      }
+    );
+    // comput nnz in each row from source
+    RAJA::forall<hiop_raja_exec>(
+      RAJA::RangeSegment(0, n_rows),
+      RAJA_LAMBDA(RAJA::Index_type row_dst)
+      {
+        const int row_src = rows_idxs[row_dst];
+        dst_row_st_init[row_dst+1] = src_row_st[row_src+1] - src_row_st[row_src];
+      }
+    );
+    RAJA::inclusive_scan_inplace<hiop_raja_exec>(dst_row_st_init,dst_row_st_init+n_rows+1,RAJA::operators::plus<int>());
+  }
+
+  int* dst_row_st = row_starts_host->idx_start_;
 
   RAJA::forall<hiop_raja_exec>(
     RAJA::RangeSegment(0, n_rows),
@@ -1041,7 +1042,117 @@ void hiopMatrixRajaSparseTriplet::copyRowsFrom(const hiopMatrix& src_gen,
     }
   );
 }
+
+/**
+ * @brief Copy 'n_rows' rows started from 'rows_src_idx_st' (array of size 'n_rows') from 'src' to the destination,
+ * which starts from the 'rows_dst_idx_st'th row in 'this'
+ *
+ * @pre 'this' must have exactly, or more than 'n_rows' rows
+ * @pre 'this' must have exactly, or more cols than 'src'
+ */
+void hiopMatrixRajaSparseTriplet::copyRowsBlockFrom(const hiopMatrix& src_gen,
+                                                    const index_type& rows_src_idx_st,
+                                                    const size_type& n_rows,
+                                                    const index_type& rows_dst_idx_st,
+                                                    const size_type& dest_nnz_st)
+{
+  const hiopMatrixRajaSparseTriplet& src = dynamic_cast<const hiopMatrixRajaSparseTriplet&>(src_gen);
+  assert(this->numberOfNonzeros() >= src.numberOfNonzeros());
+  assert(this->n() >= src.n());
+  assert(n_rows + rows_src_idx_st <= src.m());
+  assert(n_rows + rows_dst_idx_st <= this->m());
+
+  const int* iRow_src = src.i_row();
+  const int* jCol_src = src.j_col();
+  const double* values_src = src.M();
+  int nnz_src = src.numberOfNonzeros();
+  int itnz_src = 0;
+  int itnz_dst = 0;
+
+  // local copy of member variable/function, for RAJA access
+  int* iRow = iRow_;
+  int* jCol = jCol_;
+  double* values = values_;
+  int nnz_dst = numberOfNonzeros();
+  int n_rows_src = src.m();
+  int n_rows_dst = this->m();
+
+  if(src.row_starts_host == nullptr){
+    src.row_starts_host = src.allocAndBuildRowStarts();
+  }
+  assert(src.row_starts_host);
+  int* src_row_st = src.row_starts_host->idx_start_;
+
+  // this function only set up sparsity in the first run. Sparsity won't change after the first run.
+  if(row_starts_host == nullptr){
+    row_starts_host = new RowStartsInfo(n_rows_dst, mem_space_);
+    assert(row_starts_host);
+    int* dst_row_st_init = row_starts_host->idx_start_;
+
+    RAJA::forall<hiop_raja_exec>(
+      RAJA::RangeSegment(0, n_rows_dst+1),
+      RAJA_LAMBDA(RAJA::Index_type i)
+      {
+        dst_row_st_init[i] = 0;
+      }
+    );
+  }
+
+  int* dst_row_st = row_starts_host->idx_start_;
+  auto& rm = umpire::ResourceManager::getInstance();
+  umpire::Allocator hostalloc = rm.getAllocator("HOST");
   
+  int *next_row_nnz = static_cast<int*>(hostalloc.allocate(sizeof(int)));
+
+  rm.copy(next_row_nnz, dst_row_st+1+rows_dst_idx_st, 1*sizeof(int));
+
+  if(next_row_nnz[0] == 0) {
+    // comput nnz in each row from source
+    RAJA::forall<hiop_raja_exec>(
+      RAJA::RangeSegment(0, n_rows),
+      RAJA_LAMBDA(RAJA::Index_type row_add)
+      {
+        const int row_src = rows_src_idx_st + row_add;
+        const int row_dst = rows_dst_idx_st + row_add;
+        dst_row_st[row_dst+1] = src_row_st[row_src+1] - src_row_st[row_src];
+      }
+    );
+    RAJA::inclusive_scan_inplace<hiop_raja_exec>(dst_row_st,dst_row_st+n_rows+1,RAJA::operators::plus<int>());
+  }
+
+  RAJA::forall<hiop_raja_exec>(
+    RAJA::RangeSegment(0, n_rows),
+    RAJA_LAMBDA(RAJA::Index_type row_add)
+    {
+      const int row_src = rows_src_idx_st + row_add;
+      const int row_dst = rows_dst_idx_st + row_add;
+      int k_src = src_row_st[row_src];
+      int k_dst = dst_row_st[row_dst];
+  
+      // copy from src
+      while(k_src < src_row_st[row_src+1]) {
+        iRow[k_dst] = row_dst;
+        jCol[k_dst] = jCol_src[k_src];
+        values[k_dst] = values_src[k_src];
+        k_dst++;
+        k_src++;
+      }
+    }
+  );
+//  delete [] next_row_nnz;
+hostalloc.deallocate(next_row_nnz);
+}
+
+
+
+
+
+
+
+
+
+
+
 /// @brief Prints the contents of this function to a file.
 void hiopMatrixRajaSparseTriplet::print(FILE* file,
                                         const char* msg/*=NULL*/, 

@@ -148,11 +148,7 @@ int main(int argc, char** argv)
 
     fail += test.matrixTimesMatTrans(*mxn_sparse, *m2xn_sparse, mxm2_dense);
     fail += test.matrixAddMDinvNtransToSymDeMatUTri(*mxn_sparse, *m2xn_sparse, vec_n, W_dense, i_offset, j_offset);
-    
-    // copy the 1st row of mxn_sparse to the last row.
-    // replace the nonzero index from "nnz-entries_per_row"
-    fail += test.copyRowsBlockFrom(*mxn_sparse, *m2xn_sparse,0, 1, M_global-1, mxn_sparse->numberOfNonzeros()-entries_per_row);
-
+  
     // copy sparse matrix to a dense matrix
     hiop::hiopMatrixDenseRowMajor mxn_dense(M_global, N_global);
     fail += test.matrix_copy_to(mxn_dense, *mxn_sparse);
@@ -170,6 +166,10 @@ int main(int argc, char** argv)
     
     hiop::hiopVectorIntSeq select(M_local);
     fail += test.matrix_copy_rows_from(*mxn_sparse, *m2xn_sparse, select);
+
+    // copy the 1st row of mxn_sparse to the last row in m2xn_sparse
+    // replace the nonzero index from "nnz-entries_per_row"
+    fail += test.copy_rows_block_from(*mxn_sparse, *m2xn_sparse,0, 1, M_global-1, mxn_sparse->numberOfNonzeros()-entries_per_row);
 
     // Remove testing objects
     delete mxn_sparse;
@@ -262,6 +262,10 @@ int main(int argc, char** argv)
   
     hiop::hiopVectorIntRaja select(M_local, mem_space);
     fail += test.matrix_copy_rows_from(*mxn_sparse, *m2xn_sparse, select);
+
+    // copy the 1st row of mxn_sparse to the last row in m2xn_sparse
+    // replace the nonzero index from "nnz-entries_per_row"
+    fail += test.copy_rows_block_from(*mxn_sparse, *m2xn_sparse,0, 1, M_global-1, mxn_sparse->numberOfNonzeros()-entries_per_row);
 
     // Remove testing objects
     delete mxn_sparse;

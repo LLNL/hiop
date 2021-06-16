@@ -175,6 +175,32 @@ int MatrixTestsRajaSparseTriplet::verifyAnswer(hiop::hiopMatrixSparse* A, const 
   return fail;
 }
 
+/**
+ *  * @brief Verifies values of the sparse matrix *only at indices already defined by the sparsity pattern*
+ *   * This may seem misleading, but verify answer does not check *every* value of the matrix,
+ *    * but only `nnz` elements with index from nnz_st to nnz_ed
+ *     *
+ *      */
+[[nodiscard]]
+int MatrixTestsRajaSparseTriplet::verifyAnswer(hiop::hiopMatrix* A, local_ordinal_type nnz_st, local_ordinal_type nnz_ed, const double answer)
+{
+  if(A == nullptr)
+    return 1;
+  auto mat = dynamic_cast<hiop::hiopMatrixRajaSparseTriplet*>(A);
+  mat->copyFromDev();
+  const local_ordinal_type nnz = mat->numberOfNonzeros();
+  const real_type* values = mat->M_host();
+  int fail = 0;
+  for (local_ordinal_type i=nnz_st; i<nnz_ed; i++)
+  {
+    if (!isEqual(values[i], answer))
+    {
+      fail++;
+    }
+  }
+  return fail;
+}
+
 /*
  * Pass a function-like object to calculate the expected
  * answer dynamically, based on the row and column

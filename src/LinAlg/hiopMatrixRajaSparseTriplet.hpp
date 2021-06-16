@@ -184,7 +184,7 @@ public:
                                  const index_type& rows_src_idx_st,
                                  const size_type& n_rows,
                                  const index_type& rows_dest_idx_st,
-                                 const size_type& dest_nnz_st) {assert(0 && "FIXME_NY");}
+                                 const size_type& dest_nnz_st);
   
   /**
   * @brief Copy matrix 'src_gen', into 'this' as a submatrix from corner 'dest_row_st' and 'dest_col_st'

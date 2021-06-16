@@ -1027,13 +1027,12 @@ public:
   * @pre User must know the nonzero pattern of A and B. Assume non-zero patterns of A and B wont change, and A is a submatrix of B
   * @pre Otherwise, this function may replace the non-zero values and nonzero patterns for the undesired elements.
   */
-  int
-  copyRowsBlockFrom(
-    hiop::hiopMatrixSparse& A,
-    hiop::hiopMatrixSparse& B,
-    local_ordinal_type A_rows_st, local_ordinal_type n_rows,
-    local_ordinal_type B_rows_st, local_ordinal_type B_nnz_st
-    )
+  int copy_rows_block_from(hiop::hiopMatrixSparse& A,
+                           hiop::hiopMatrixSparse& B,
+                           local_ordinal_type A_rows_st,
+                           local_ordinal_type n_rows,
+                           local_ordinal_type B_rows_st,
+                           local_ordinal_type B_nnz_st)
   {
     const local_ordinal_type* A_iRow = getRowIndices(&A);
     const local_ordinal_type* A_jCol = getColumnIndices(&A);
