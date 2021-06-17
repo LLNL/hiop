@@ -20,6 +20,7 @@ set(hiopOptimization_SPARSE_SRC
 
 set(hiopOptimization_INTERFACE_HEADERS
   hiopAlgFilterIPM.hpp
+  hiopAlgPrimalDecomp.hpp
   hiopDualsUpdater.hpp
   hiopFactAcceptor.hpp
   hiopFilter.hpp
