@@ -13,7 +13,9 @@ set(hiopInterface_INTERFACE_HEADERS
   chiopInterface.hpp
   hiopInterface.h
   hiopInterface.hpp
+  hiopInterfacePrimalDecomp.hpp
   hiopVersion.hpp
+  hiop_types.h
   )
 
 install(
