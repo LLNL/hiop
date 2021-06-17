@@ -91,7 +91,6 @@ public:
    */
   virtual void copy_to(hiopMatrixDense& W) = 0;
 
-  // Unit test is missing. FIXME_NY
   virtual void copyRowsFrom(const hiopMatrix& src, const index_type* rows_idxs, size_type n_rows) = 0;
 
   virtual void timesVec(double beta, hiopVector& y, double alpha, const hiopVector& x) const = 0;

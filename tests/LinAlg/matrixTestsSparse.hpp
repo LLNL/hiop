@@ -973,7 +973,6 @@ public:
 
     A.copyRowsFrom(B, select.local_data_const(), n_A_rows);
 
-    //FIXME_NY
     fail += verifyAnswer(&A, two),    
     
     printMessage(fail, __func__);
