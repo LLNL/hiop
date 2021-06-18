@@ -984,7 +984,7 @@ void hiopMatrixRajaSparseTriplet::copyRowsFrom(const hiopMatrix& src_gen,
   int itnz_dst = 0;
 
   int m_src = src.m();
-  if(src.row_starts_host == nullptr){
+  if(src.row_starts_host == nullptr) {
     src.row_starts_host = src.allocAndBuildRowStarts();
   }
   assert(src.row_starts_host);
@@ -997,7 +997,7 @@ void hiopMatrixRajaSparseTriplet::copyRowsFrom(const hiopMatrix& src_gen,
   int nnz_dst = numberOfNonzeros();
 
   // this function only set up sparsity in the first run. Sparsity won't change after the first run.
-  if(row_starts_host == nullptr){
+  if(row_starts_host == nullptr) {
     row_starts_host = new RowStartsInfo(nrows_, mem_space_);
     assert(row_starts_host);
     int* dst_row_st_init = row_starts_host->idx_start_;
@@ -1077,14 +1077,14 @@ void hiopMatrixRajaSparseTriplet::copyRowsBlockFrom(const hiopMatrix& src_gen,
   int n_rows_src = src.m();
   int n_rows_dst = this->m();
 
-  if(src.row_starts_host == nullptr){
+  if(src.row_starts_host == nullptr) {
     src.row_starts_host = src.allocAndBuildRowStarts();
   }
   assert(src.row_starts_host);
   int* src_row_st = src.row_starts_host->idx_start_;
 
   // this function only set up sparsity in the first run. Sparsity won't change after the first run.
-  if(row_starts_host == nullptr){
+  if(row_starts_host == nullptr) {
     row_starts_host = new RowStartsInfo(n_rows_dst, mem_space_);
     assert(row_starts_host);
     int* dst_row_st_init = row_starts_host->idx_start_;
