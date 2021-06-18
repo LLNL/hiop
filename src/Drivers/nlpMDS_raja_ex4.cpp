@@ -190,7 +190,7 @@ bool Ex4::get_vars_info(const size_type& n, double *xlow, double* xupp, Nonlinea
       }
     });
 
-  // Must be a sequential host policy for now
+  // Use a sequential policy for host computations for now
   RAJA::forall<RAJA::loop_exec>(RAJA::RangeSegment(0, n),
     [=] (RAJA::Index_type i)
     {
