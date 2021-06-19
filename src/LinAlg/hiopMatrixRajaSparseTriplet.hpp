@@ -117,6 +117,23 @@ public:
     assert(false && "not needed / implemented");
   }
 
+  /* add to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements of
+  * 'vec_d' (source) starting at index 'start_on_src_vec'. The number of elements added is 'num_elems', scaled by 'scal'
+  */
+  virtual void copySubDiagonalFrom(const index_type& start_on_dest_diag,
+                                   const size_type& num_elems,
+                                   const hiopVector& vec_d,
+                                   const index_type& start_on_nnz_idx,
+                                   double scal);
+
+  /* add constant 'c' to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements.
+  * The number of elements added is 'num_elems'
+  */
+  virtual void setSubDiagonalTo(const index_type& start_on_dest_diag,
+                                const size_type& num_elems,
+                                const double& c,
+                                const index_type& start_on_nnz_idx);
+
   virtual void addMatrix(double alpha, const hiopMatrix& X);
 
   /* block of W += alpha*transpose(this) */
@@ -152,28 +169,46 @@ public:
                                  const size_type& n_rows,
                                  const index_type& rows_dest_idx_st,
                                  const size_type& dest_nnz_st)
-  {
-    assert(false && "not needed / implemented");
-  }
-
+                                 const size_type& dest_nnz_st);
+  
+  /**
+  * @brief Copy matrix 'src_gen', into 'this' as a submatrix from corner 'dest_row_st' and 'dest_col_st'
+  * The non-zero elements start from 'dest_nnz_st' will be replaced by the new elements. 
+  * When `offdiag_only` is set to true, only the off-diagonal part of `src_gen` is copied.
+  *
+  * @pre 'this' must have enough rows and cols after row 'dest_row_st' and col 'dest_col_st'
+  * @pre 'dest_nnz_st' + the number of non-zeros in the copied matrix must be less or equal to 
+  * this->numOfNumbers()
+  * @pre User must know the nonzero pattern of src and dest matrices. The method assumes 
+  * that non-zero patterns does not change between calls and that 'src_gen' is a valid
+  *  submatrix of 'this'
+  * @pre: this function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
+  */
   virtual void copySubmatrixFrom(const hiopMatrix& src_gen,
                                  const index_type& dest_row_st,
                                  const index_type& dest_col_st,
                                  const size_type& dest_nnz_st,
-                                 const bool offdiag_only = false)
-  {
-    assert(false && "not needed / implemented");
-  }
-    
+                                 const bool offdiag_only = false);
+
+  /**
+  * @brief Copy the transpose of matrix 'src_gen', into 'this' as a submatrix from corner 
+  * 'dest_row_st' and 'dest_col_st'.
+  * The non-zero elements start from 'dest_nnz_st' will be replaced by the new elements.
+  * When `offdiag_only` is set to true, only the off-diagonal part of `src_gen` is copied.
+  * 
+  * @pre: this function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
+  */
   virtual void copySubmatrixFromTrans(const hiopMatrix& src_gen,
                                       const index_type& dest_row_st,
                                       const index_type& dest_col_st,
                                       const size_type& dest_nnz_st,
-                                      const bool offdiag_only = false)
-  {
-    assert(false && "not needed / implemented");
-  }  
-  
+                                      const bool offdiag_only = false);
+
+  /**
+  * @brief Copy the selected cols/rows of a diagonal matrix (a constant 'scalar' times identity),
+  * into 'this' as a submatrix from corner 'dest_row_st' and 'dest_col_st'
+  * The non-zero elements start from 'dest_nnz_st' will be replaced by the new elements.
+  */
   virtual void setSubmatrixToConstantDiag_w_colpattern(const double& scalar,
                                                        const index_type& dest_row_st,
                                                        const index_type& dest_col_st,

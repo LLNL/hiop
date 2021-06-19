@@ -507,7 +507,6 @@ bool hiopNlpFormulation::apply_scaling(hiopVector& c, hiopVector& d, hiopVector&
   nlp_scaling = new hiopNLPObjGradScaling(max_grad, c, d, gradf, Jac_c, Jac_d,
                                           cons_eq_mapping_->local_data(), cons_ineq_mapping_->local_data());
   
-  // FIXME NY: scale the constraint lb and ub  
   c_rhs = nlp_scaling->apply_to_cons_eq(*c_rhs, n_cons_eq);
   dl = nlp_scaling->apply_to_cons_ineq(*dl, n_cons_ineq);
   du = nlp_scaling->apply_to_cons_ineq(*du, n_cons_ineq);
