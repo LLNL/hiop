@@ -1082,6 +1082,164 @@ public:
   }
 
   /**
+  * @brief Copy matrix 'B' into `A` as a subblock starting from the corner point ('A_rows_st', 'A_cols_st').
+  * The non-zero elements start from 'B_nnz_st' will be replaced by the new elements.
+  *
+  * @pre 'A' must have exactly, or more than 'n_rows' rows after row 'A_rows_st'
+  * @pre 'B' must have exactly, or more than 'n_rows' rows after row 'B_rows_st'
+  * @pre 'B_nnz_st' + the number of non-zeros in the copied the rows must be less or equal to B.nnz
+  * @pre User must know the nonzero pattern of A and B. Assume non-zero patterns of A and B wont change, and A is a submatrix of B
+  * @pre Otherwise, this function may replace the non-zero values and nonzero patterns for the undesired elements.
+  */
+  int matrix_copy_submatrix_from(hiop::hiopMatrixDense& W,
+                                 hiop::hiopMatrixSparse& A,
+                                 hiop::hiopMatrixSparse& B,
+                                 local_ordinal_type A_rows_st,
+                                 local_ordinal_type A_cols_st,
+                                 local_ordinal_type A_nnz_st,
+                                 const int rank = 0)
+  {
+    assert(A.m() == W.m()); // W has same dimension as A
+    assert(A.n() == W.n()); // W has same dimension as A
+
+    assert(A.m() >= B.m() + A_rows_st);
+    assert(A.n() >= B.n() + A_cols_st);
+
+    const local_ordinal_type nnz_A_need_to_copy = A.numberOfNonzeros();
+    assert(B.numberOfNonzeros()+A_nnz_st <= A.numberOfNonzeros());
+
+    const real_type A_val = one;
+    const real_type B_val = two;
+
+    A.setToConstant(A_val);
+    B.setToConstant(B_val);
+
+    int fail{0};
+
+    A.copySubmatrixFrom(B, A_rows_st, A_cols_st, A_nnz_st);
+
+    // copy to a dense matrix
+    A.copy_to(W);
+
+    const auto* iRow = getRowIndices(&A);
+    const auto* jCol = getColumnIndices(&A);
+    auto nnz = A.numberOfNonzeros();
+
+    const auto* B_iRow = getRowIndices(&B);
+    const auto* B_jCol = getColumnIndices(&B);
+    auto B_nnz = B.numberOfNonzeros();
+    const auto B_m = B.m();
+    const auto B_n = B.n();
+  
+    fail += verifyAnswer(&W,
+      [=] (local_ordinal_type i, local_ordinal_type j) -> real_type
+      {
+        double ans = zero;
+
+        {
+          const bool indexExists_in_A = find_unsorted_pair(i, j, iRow, jCol, nnz);
+          const bool indexExists_in_B = find_unsorted_pair(i-A_rows_st, j-A_cols_st, B_iRow, B_jCol, B_nnz);
+          const bool indexExists_in_A_not_replaced_by_B = (   find_unsorted_pair(i, j, iRow, jCol, 0, A_nnz_st) 
+                                                           || find_unsorted_pair(i, j, iRow, jCol, A_nnz_st+B_nnz, nnz));
+          if(indexExists_in_A_not_replaced_by_B && indexExists_in_B) {
+            // this ele comes from sparse matrix A and B        
+            ans = B_val + A_val;
+          } else if(indexExists_in_B) {
+              // this ele comes from sparse matrix B
+            ans = B_val;
+          } else if(indexExists_in_A) {
+            // this ele comes from sparse matrix A
+            ans = A_val;
+          }
+        }
+        return ans;
+      }
+    );
+
+    printMessage(fail, __func__);
+    return fail;
+  }
+  
+  /**
+  * @brief Copy trnaspose of matrix 'B' into `A` as a subblock starting from the corner point ('A_rows_st', 'A_cols_st').
+  * The non-zero elements start from 'B_nnz_st' will be replaced by the new elements.
+  *
+  * @pre 'A' must have exactly, or more than 'n_rows' rows after row 'A_rows_st'
+  * @pre 'B' must have exactly, or more than 'n_rows' rows after row 'B_rows_st'
+  * @pre 'B_nnz_st' + the number of non-zeros in the copied the rows must be less or equal to B.nnz
+  * @pre User must know the nonzero pattern of A and B. Assume non-zero patterns of A and B wont change, and A is a submatrix of B
+  * @pre Otherwise, this function may replace the non-zero values and nonzero patterns for the undesired elements.
+  */
+  int matrix_copy_submatrix_from_trans(hiop::hiopMatrixDense& W,
+                                       hiop::hiopMatrixSparse& A,
+                                       hiop::hiopMatrixSparse& B,
+                                       local_ordinal_type A_rows_st,
+                                       local_ordinal_type A_cols_st,
+                                       local_ordinal_type A_nnz_st,
+                                       const int rank = 0)
+  {
+    assert(A.m() == W.m()); // W has same dimension as A
+    assert(A.n() == W.n()); // W has same dimension as A
+
+    assert(A.m() >= B.m() + A_rows_st);
+    assert(A.n() >= B.n() + A_cols_st);
+
+    const local_ordinal_type nnz_A_need_to_copy = A.numberOfNonzeros();
+    assert(B.numberOfNonzeros()+A_nnz_st <= A.numberOfNonzeros());
+
+    const real_type A_val = one;
+    const real_type B_val = two;
+
+    A.setToConstant(A_val);
+    B.setToConstant(B_val);
+
+    int fail{0};
+
+    A.copySubmatrixFromTrans(B, A_rows_st, A_cols_st, A_nnz_st);
+
+    // copy to a dense matrix
+    A.copy_to(W);
+
+    const auto* iRow = getRowIndices(&A);
+    const auto* jCol = getColumnIndices(&A);
+    auto nnz = A.numberOfNonzeros();
+
+    const auto* B_iRow = getRowIndices(&B);
+    const auto* B_jCol = getColumnIndices(&B);
+    auto B_nnz = B.numberOfNonzeros();
+    const auto B_m = B.m();
+    const auto B_n = B.n();
+  
+    fail += verifyAnswer(&W,
+      [=] (local_ordinal_type i, local_ordinal_type j) -> real_type
+      {
+        double ans = zero;
+
+        {
+          const bool indexExists_in_A = find_unsorted_pair(i, j, iRow, jCol, nnz);
+          const bool indexExists_in_B = find_unsorted_pair(j-A_cols_st, i-A_rows_st, B_iRow, B_jCol, B_nnz);
+          const bool indexExists_in_A_not_replaced_by_B = (   find_unsorted_pair(i, j, iRow, jCol, 0, A_nnz_st) 
+                                                           || find_unsorted_pair(i, j, iRow, jCol, A_nnz_st+B_nnz, nnz));
+          if(indexExists_in_A_not_replaced_by_B && indexExists_in_B) {
+            // this ele comes from sparse matrix A and B        
+            ans = B_val + A_val;
+          } else if(indexExists_in_B) {
+              // this ele comes from sparse matrix B
+            ans = B_val;
+          } else if(indexExists_in_A) {
+            // this ele comes from sparse matrix A
+            ans = A_val;
+          }
+        }
+        return ans;
+      }
+    );
+
+    printMessage(fail, __func__);
+    return fail;
+  }
+  
+  /**
   * @brief copy a sparse matrix into a dense matrix
   * 
   * @pre 'A' must have same dim as `W`
@@ -1235,6 +1393,19 @@ private:
   static bool find_unsorted_pair(int valA, int valB, const int* arrA, const int* arrB, size_t arrslen)
   {
     for (int i = 0; i < arrslen; i++)
+    {
+      if (arrA[i] == valA && arrB[i] == valB)
+      {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // linearly scans an unsorted array within range [nnz_st, nnz_ed)
+  static bool find_unsorted_pair(int valA, int valB, const int* arrA, const int* arrB, size_t idx_st, size_t idx_ed)
+  {
+    for (int i = idx_st; i < idx_ed; i++)
     {
       if (arrA[i] == valA && arrB[i] == valB)
       {
