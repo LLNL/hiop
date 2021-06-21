@@ -6,17 +6,9 @@
 #include <hiopMatrixDenseRowMajor.hpp>
 #include <hiopMatrixRajaDense.hpp>
 
-#ifdef HIOP_USE_GPU
-  #include "cuda.h"
-  #define RAJA_CUDA_BLOCK_SIZE 128
-  using ex4_raja_exec   = RAJA::cuda_exec<RAJA_CUDA_BLOCK_SIZE>;
-  using ex4_raja_reduce = RAJA::cuda_reduce;
-  #define RAJA_LAMBDA [=] __device__
-#else
-  using ex4_raja_exec   = RAJA::omp_parallel_for_exec;
-  using ex4_raja_reduce = RAJA::omp_reduce;
-  #define RAJA_LAMBDA [=]
-#endif
+#include <hiop_raja_defs.hpp>
+using ex4_raja_exec = hiop::hiop_raja_exec;
+using ex4_raja_reduce = hiop::hiop_raja_reduce;
 
 using namespace hiop;
 
@@ -198,9 +190,9 @@ bool Ex4::get_vars_info(const size_type& n, double *xlow, double* xupp, Nonlinea
       }
     });
 
-  /// Using OpenMP execution policy for nonlinearity type setting
-  RAJA::forall<RAJA::omp_parallel_for_exec>(RAJA::RangeSegment(0, n),
-    [=](RAJA::Index_type i)
+  // Use a sequential policy for host computations for now
+  RAJA::forall<RAJA::loop_exec>(RAJA::RangeSegment(0, n),
+    [=] (RAJA::Index_type i)
     {
       type[i] = hiopNonlinear;
     });
@@ -237,9 +229,9 @@ bool Ex4::get_cons_info(const size_type& m, double* clow, double* cupp, Nonlinea
       }
     });
 
-  /// Using OpenMP execution policy for nonlinearity type setting
-  RAJA::forall<RAJA::omp_parallel_for_exec>(RAJA::RangeSegment(0, m),
-    [=](RAJA::Index_type i)
+  // Must be a sequential host policy for now
+  RAJA::forall<RAJA::loop_exec>(RAJA::RangeSegment(0, m),
+    [=] (RAJA::Index_type i)
     {
       type[i] = hiopNonlinear;
     });

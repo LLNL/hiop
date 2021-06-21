@@ -63,6 +63,7 @@
 #include <RAJA/RAJA.hpp>
 
 #include "hiop_blasdefs.hpp"
+#include "hiop_raja_defs.hpp"
 
 #include <algorithm> //for std::min
 #include <cmath> //for std::isfinite
@@ -72,19 +73,6 @@
 
 namespace hiop
 {
-#ifdef HIOP_USE_GPU
-  #include "cuda.h"
-  using hiop_raja_exec   = RAJA::cuda_exec<128>;
-  using hiop_raja_reduce = RAJA::cuda_reduce;
-  using hiop_raja_atomic = RAJA::cuda_atomic;
-  #define RAJA_LAMBDA [=] __device__
-#else
-  using hiop_raja_exec   = RAJA::omp_parallel_for_exec;
-  using hiop_raja_reduce = RAJA::omp_reduce;
-  using hiop_raja_atomic = RAJA::omp_atomic;
-  #define RAJA_LAMBDA [=]
-#endif
-
 
 /// @brief Constructs a hiopMatrixRajaSparseTriplet with the given dimensions and memory space
 hiopMatrixRajaSparseTriplet::hiopMatrixRajaSparseTriplet(int rows,
