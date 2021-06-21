@@ -18,19 +18,13 @@ module use -a $MODULESHOME/modulefiles/apps
 module use -a $MODULESHOME/modulefiles/libs
 module use -a $PROJ_DIR/src/spack/share/spack/modules/$SPACK_ARCH/
 ) 2>&1 1>&/dev/null
-source $PROJ_DIR/src/spack/share/spack/setup-env.sh
 
-export MY_NVCC_ARCH="60"
+source $PROJ_DIR/src/spack/share/spack/setup-env.sh
+spack env activate hiop-v0-4-4-deps-marianas
 export NVBLAS_CONFIG_FILE=$PROJ_DIR/$MY_CLUSTER/nvblas.conf
+
 module load gcc/7.3.0
 module load cuda/10.2.89
 module load openmpi/3.1.3
-module load cmake-3.18.4-gcc-7.3.0-fuktvvh
-module load magma-2.5.4-gcc-7.3.0-vgkvbvm
-module load openblas-0.3.12-gcc-7.3.0-dzz6rfy
-module load raja/0.13.0-gcc-7.3.0-pwmbk4o
-module load umpire-4.1.2-gcc-7.3.0-qqotfxd
-module load suite-sparse/5.8.1-gcc-7.3.0-uivxrx7
-module load coinhsl/2015.06.23-gcc-7.3.0-kvdofab
-module load metis-5.1.0-gcc-7.3.0-ymmhgpk
-module load camp-0.1.0-gcc-7.3.0-lfmsuz3
+
+export EXTRA_CMAKE_ARGS="$EXTRA_CMAKE_ARGS -DCMAKE_CUDA_ARCHITECTURES=60"
