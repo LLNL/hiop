@@ -1388,14 +1388,14 @@ void hiopMatrixRajaSparseTriplet::copySubmatrixFromTrans(const hiopMatrix& src_g
   assert(m_rows + dest_row_st <= this->m());
   assert(dest_nnz_st + src.numberOfNonzeros() <= this->numberOfNonzeros());
 
-  const int* src_iRow = src.i_row();
-  const int* src_jCol = src.j_col();
+  const int* src_iRow = src.j_col();
+  const int* src_jCol = src.i_row();
   const double* src_val = src.M();
   int src_nnz = src.numberOfNonzeros();
 
   // local copy of member variable/function, for RAJA access
-  int* iRow = jCol_;
-  int* jCol = iRow_; 
+  int* iRow = iRow_;
+  int* jCol = jCol_;
   double* values = values_;
 
   RAJA::forall<hiop_raja_exec>(
