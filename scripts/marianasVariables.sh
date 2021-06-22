@@ -4,7 +4,6 @@ fi
 export MY_CLUSTER="marianas"
 export PROJ_DIR=/qfs/projects/exasgd
 export APPS_DIR=/share/apps
-export SPACK_ARCH=linux-centos7-broadwell
 
 #  NOTE: The following is required when running from Gitlab CI via slurm job
 source /etc/profile.d/modules.sh
@@ -17,7 +16,8 @@ module use -a $MODULESHOME/modulefiles/development/compilers
 module use -a $MODULESHOME/modulefiles/development/tools
 module use -a $MODULESHOME/modulefiles/apps
 module use -a $MODULESHOME/modulefiles/libs
-module use -a $PROJ_DIR/src/spack/share/spack/modules/$SPACK_ARCH/
+module use -a /qfs/projects/exasgd/src/spack/share/spack/modules/linux-centos7-broadwell/
+module use -a /qfs/projects/exasgd/src/spack/share/spack/modules/linux-centos7-x86_64/
 ) 2>&1 1>&/dev/null
 
 export NVBLAS_CONFIG_FILE=$PROJ_DIR/$MY_CLUSTER/nvblas.conf
