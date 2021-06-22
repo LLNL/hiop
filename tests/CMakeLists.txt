@@ -18,12 +18,13 @@ if(HIOP_USE_RAJA)
   set(testMatrixSymSparse_SRC ${testMatrixSymSparse_SRC} LinAlg/matrixTestsRajaSymSparseTriplet.cpp)
 endif()
 
-if(HIOP_USE_GPU)
-  set_source_files_properties(testVector.cpp LinAlg/vectorTestsRajaPar.cpp PROPERTIES LANGUAGE CUDA)
-  set_source_files_properties(testVector.cpp LinAlg/vectorTestsIntRaja.cpp PROPERTIES LANGUAGE CUDA)
-  set_source_files_properties(testMatrixDense.cpp LinAlg/matrixTestsRajaDense.cpp PROPERTIES LANGUAGE CUDA)
-  set_source_files_properties(testMatrixSparse.cpp LinAlg/matrixTestsRajaSparseTriplet.cpp PROPERTIES LANGUAGE CUDA)
-  set_source_files_properties(testMatrixSymSparse.cpp LinAlg/matrixTestsRajaSymSparseTriplet.cpp PROPERTIES LANGUAGE CUDA)
+if(HIOP_USE_GPU AND HIOP_USE_CUDA)
+  set(cuda_sources testVector.cpp LinAlg/vectorTestsRajaPar.cpp
+      testVector.cpp LinAlg/vectorTestsIntRaja.cpp
+      testMatrixDense.cpp LinAlg/matrixTestsRajaDense.cpp
+      testMatrixSparse.cpp LinAlg/matrixTestsRajaSparseTriplet.cpp
+      testMatrixSymSparse.cpp LinAlg/matrixTestsRajaSymSparseTriplet.cpp)
+  set_source_files_properties(${cuda_sources} PROPERTIES LANGUAGE CUDA)
 endif()
 
 # Build vector test
@@ -41,4 +42,3 @@ target_link_libraries(testMatrixSparse PRIVATE HiOp::HiOp)
 # Build symmetric sparse matrix test
 add_executable(testMatrixSymSparse ${testMatrixSymSparse_SRC})
 target_link_libraries(testMatrixSymSparse PRIVATE HiOp::HiOp)
-
