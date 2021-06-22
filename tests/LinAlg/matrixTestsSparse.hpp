@@ -940,7 +940,7 @@ public:
   }
 
   /**
-  * @brief copy a sparse matrix into dense matrix
+  * @brief copy a sparse matrix into a dense matrix
   * 
   * @pre 'A' must have same dim as `W`
   */
@@ -949,16 +949,16 @@ public:
     assert(A.m() == W.m()); // W has same dimension as A
     assert(A.n() == W.n()); // W has same dimension as A
     
-    const auto A_val = one;
-    const auto W_val = two;
+    const real_type A_val = one;
+    const real_type W_val = two;
     W.setToConstant(W_val);
     
     A.copy_to(W);
     
     int fail = 0;
-    const auto* iRow = getRowIndices(&A);
-    const auto* jCol = getColumnIndices(&A);
-    auto nnz = A.numberOfNonzeros();
+    const local_ordinal_type* iRow = getRowIndices(&A);
+    const local_ordinal_type* jCol = getColumnIndices(&A);
+    const local_ordinal_type nnz = A.numberOfNonzeros();
     fail += verifyAnswer(&W,
       [=] (local_ordinal_type i, local_ordinal_type j) -> real_type
       {
@@ -987,32 +987,31 @@ public:
     assert(C.n() == D.n()); // W has same dimension as A
 
     int fail = 0;
-    const auto C_val = half;
-    const auto D_val = two;
+    const real_type C_val = half;
+    const real_type D_val = two;
 
     C.setToConstant(C_val);
     D.setToConstant(D_val);
 
-
-    const auto* C_iRow = getRowIndices(&C);
-    const auto* C_jCol = getColumnIndices(&C);
-    auto C_nnz = C.numberOfNonzeros();
-    const auto* D_iRow = getRowIndices(&D);
-    const auto* D_jCol = getColumnIndices(&D);
-    auto D_nnz = D.numberOfNonzeros();
-    int mC = C.m();
-    int mD = D.m();
-    int nC = C.n();
-    int nD = D.n();
+    const local_ordinal_type* C_iRow = getRowIndices(&C);
+    const local_ordinal_type* C_jCol = getColumnIndices(&C);
+    const local_ordinal_type C_nnz = C.numberOfNonzeros();
+    const local_ordinal_type* D_iRow = getRowIndices(&D);
+    const local_ordinal_type* D_jCol = getColumnIndices(&D);
+    const local_ordinal_type D_nnz = D.numberOfNonzeros();
+    const local_ordinal_type mC = C.m();
+    const local_ordinal_type mD = D.m();
+    const local_ordinal_type nC = C.n();
+    const local_ordinal_type nD = D.n();
 
     A.set_Jac_FR(C, D, A.i_row(), A.j_col(), A.M());
 
     // copy to dense matrix
     A.copy_to(W);
 
-    const auto* iRow = getRowIndices(&A);
-    const auto* jCol = getColumnIndices(&A);
-    auto nnz = A.numberOfNonzeros();
+    const local_ordinal_type* iRow = getRowIndices(&A);
+    const local_ordinal_type* jCol = getColumnIndices(&A);
+    const local_ordinal_type nnz = A.numberOfNonzeros();
 
     fail += verifyAnswer(&W,
       [=] (local_ordinal_type i, local_ordinal_type j) -> real_type

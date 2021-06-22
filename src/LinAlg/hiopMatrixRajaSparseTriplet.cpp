@@ -1085,13 +1085,13 @@ void hiopMatrixRajaSparseTriplet::set_Jac_FR(const hiopMatrixSparse& Jac_c,
 
   assert(nnz_ == nnz_Jac_c_new + nnz_Jac_d_new);
   
-  if(J_c.row_starts_host == nullptr){
+  if(J_c.row_starts_host == nullptr) {
     J_c.row_starts_host = J_c.allocAndBuildRowStarts();
   }
   assert(J_c.row_starts_host);
   int* Jc_row_st = J_c.row_starts_host->idx_start_;
 
-  if(J_d.row_starts_host == nullptr){
+  if(J_d.row_starts_host == nullptr) {
     J_d.row_starts_host = J_d.allocAndBuildRowStarts();
   }
   assert(J_d.row_starts_host);
@@ -1382,7 +1382,7 @@ startingAtAddSubDiagonalToStartingAt(int diag_src_start,
 
 size_type hiopMatrixRajaSymSparseTriplet::numberOfOffDiagNonzeros() const 
 {
-  if(-1==nnz_offdiag_){
+  if(-1==nnz_offdiag_) {
     nnz_offdiag_= nnz_;
     int *irow = iRow_;
     int *jcol = jCol_;
@@ -1391,7 +1391,7 @@ size_type hiopMatrixRajaSymSparseTriplet::numberOfOffDiagNonzeros() const
       RAJA::RangeSegment(0, nnz_),
       RAJA_LAMBDA(RAJA::Index_type i)
       {
-        if (irow[i]==jcol[i]){
+        if (irow[i]==jcol[i]) {
           sum += 1; 
         }
       }
@@ -1532,7 +1532,7 @@ void hiopMatrixRajaSymSparseTriplet::set_Hess_FR(const hiopMatrixSparse& Hess,
 
   // extend Hess to the p and n parts --- element
   if(MHSS != nullptr) {    
-    if(M1.row_starts_host==NULL){
+    if(M1.row_starts_host==NULL) {
       copyFromDev();
       M1.row_starts_host = M1.allocAndBuildRowStarts();
     }
