@@ -12,6 +12,7 @@ module use -a /share/apps/modules/tools
 module use -a /share/apps/modules/compilers
 module use -a /share/apps/modules/mpi
 module use -a /etc/modulefiles
+module use -a /qfs/projects/exasgd/src/spack/share/modules/linux-rhel7-power9le
 
 # Load spack-built modules
 # arpack-ng@3.8.0%gcc@7.4.0+mpi+shared arch=linux-rhel7-power9le
