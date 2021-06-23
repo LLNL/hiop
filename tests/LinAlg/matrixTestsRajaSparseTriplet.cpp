@@ -176,11 +176,10 @@ int MatrixTestsRajaSparseTriplet::verifyAnswer(hiop::hiopMatrixSparse* A, const 
 }
 
 /**
- *  * @brief Verifies values of the sparse matrix *only at indices already defined by the sparsity pattern*
- *   * This may seem misleading, but verify answer does not check *every* value of the matrix,
- *    * but only `nnz` elements with index from nnz_st to nnz_ed
- *     *
- *      */
+ * @brief Verifies values of the sparse matrix *only at indices already defined by the sparsity pattern*
+ * This may seem misleading, but verify answer does not check *every* value of the matrix,
+ * but only `nnz` elements with index from nnz_st to nnz_ed
+ */
 [[nodiscard]]
 int MatrixTestsRajaSparseTriplet::verifyAnswer(hiop::hiopMatrix* A, local_ordinal_type nnz_st, local_ordinal_type nnz_ed, const double answer)
 {
