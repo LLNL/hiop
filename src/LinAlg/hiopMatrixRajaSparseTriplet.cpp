@@ -980,8 +980,6 @@ void hiopMatrixRajaSparseTriplet::copyRowsFrom(const hiopMatrix& src_gen,
   const int* jCol_src = src.j_col();
   const double* values_src = src.M();
   int nnz_src = src.numberOfNonzeros();
-  int itnz_src = 0;
-  int itnz_dst = 0;
 
   int m_src = src.m();
   if(src.row_starts_host == nullptr) {
@@ -1066,8 +1064,6 @@ void hiopMatrixRajaSparseTriplet::copyRowsBlockFrom(const hiopMatrix& src_gen,
   const int* jCol_src = src.j_col();
   const double* values_src = src.M();
   int nnz_src = src.numberOfNonzeros();
-  int itnz_src = 0;
-  int itnz_dst = 0;
 
   // local copy of member variable/function, for RAJA access
   int* iRow = iRow_;
