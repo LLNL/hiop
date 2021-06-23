@@ -335,27 +335,27 @@ The above optimization problem~\eqref{obj}-\eqref{bounds} can be specified by us
 All the methods of this section are ``pure'' virtual in \texttt{hiop::hiopInterfaceDenseConstraints} abstract class  and need to be provided by the user implementation.
 
 \begin{lstlisting} 
-bool get_prob_sizes(long long& n, long long& m);
+bool get_prob_sizes(size_type& n, size_type& m);
 \end{lstlisting} 
 \noindent Provides the number of decision variables and the number of constraints ($m=m_E+m_I$).
 
 
 \begin{lstlisting} 
-bool get_vars_info(const long long& n, double *xlow, double* xupp, 
+bool get_vars_info(const size_type& n, double *xlow, double* xupp, 
                    NonlinearityType* type);
 \end{lstlisting} 
 
 \noindent Provides the lower and upper bounds $x_l$ and $x_u$ on the decision variables. When a variable (let us say the $i^{th}$) has no lower or/and upper bounds, the  $i^{th}$ entry of xlow and/or xupp should be less than $-1e20$ or/and larger than $1e20$, respectively. The last argument is not used and can set to any value of the enum \texttt{hiop::hiopInterfaceDenseConstraints::NonlinearityType}.
 
 \begin{lstlisting} 
-bool get_cons_info(const long long& m, double* clow, double* cupp, 
+bool get_cons_info(const size_type& m, double* clow, double* cupp, 
                    NonlinearityType* type);
 \end{lstlisting}
 \noindent Similar to the above, but for the inequality bounds $d_l$ and $d_u$. For equalities, set the corresponding entries in clow and cupp equal to the desired value (from $c_E$).
 
 
 \begin{lstlisting} 
-bool eval_f(const long long& n, 
+bool eval_f(const size_type& n, 
             const double* x, bool new_x, 
             double& obj_value);
 \end{lstlisting} 
@@ -363,7 +363,7 @@ bool eval_f(const long long& n,
 \noindent Implement this method to compute the function value $f(x)$ in \texttt{obj\_value} for the provided decision variables $x$. The input argument \texttt{new\_x} specifies whether the variables $x$ have been changed since the previous call of one of the \texttt{eval\_} methods. Use this argument to ``buffer'' the objective and gradients function and derivative evaluations when this is possible.
 
 \begin{lstlisting} 
-bool eval_grad_f(const long long& n, 
+bool eval_grad_f(const size_type& n, 
                  const double* x, bool new_x, 
                  double* gradf);
 \end{lstlisting} 
@@ -371,9 +371,9 @@ bool eval_grad_f(const long long& n,
 \noindent Same as above but for $\nabla f(x)$.
 
 \begin{lstlisting} 
- bool eval_cons(const long long& n, const long long& m, 
-                const long long& num_cons,
-				    const long long* idx_cons, const double* x, 
+ bool eval_cons(const size_type& n, const size_type& m, 
+                const size_type& num_cons,
+				    const index_type* idx_cons, const double* x, 
 			       bool new_x, double* cons);
 \end{lstlisting} 
 
@@ -381,8 +381,8 @@ bool eval_grad_f(const long long& n,
 
 \begin{lstlisting} 
 bool 
-eval_Jac_cons(const long long& n, const long long& m, 
-			     const long long& num_cons, const long long* idx_cons,  
+eval_Jac_cons(const size_type& n, const size_type& m, 
+			     const size_type& num_cons, const index_type* idx_cons,  
 			     const double* x, bool new_x,
 			     double* Jac);
 \end{lstlisting} 
@@ -417,9 +417,9 @@ bool get_MPI_comm(MPI_Comm& comm_out) ;
 \noindent Use this method to specify the MPI communicator to be used by \Hi. It has a default implementation that will provide \texttt{MPI\_COMM\_WORLD}.
 
 
-%\noindent  \begin{verbatim}bool get_vecdistrib_info(long long global_n, long long* cols) \end{verbatim}
+%\noindent  \begin{verbatim}bool get_vecdistrib_info(size_type global_n, size_type* cols) \end{verbatim}
 \begin{lstlisting}
-bool get_vecdistrib_info(long long global_n, long long* cols);
+bool get_vecdistrib_info(size_type global_n, size_type* cols);
 \end{lstlisting}
 
 \noindent Use this method to specify the data distribution of the data of the problem that has storage depending on $n$. \Hi will call the implementation of this method to obtain the partitioning/distribution of an hypothetical vector of size \texttt{global\_n} across the MPI ranks. The array \texttt{cols} is of dimension number of ranks plus one and should be populated such that \texttt{cols[r]} and \texttt{cols[r+1]-1} specify the start and end indexes of the slice stored on rank $r$ in the hypothetical vector.  It has a default implementation that will returns \texttt{false}, indicating that \Hi should run in serial.
@@ -540,13 +540,13 @@ The above optimization problem~\eqref{mdsobj}--\eqref{mdsbounds} can be specifie
 \warningcp{Note:} Unless stated otherwise, all the functions that return \texttt{bool} should return \texttt{false} when an error occurs, otherwise should return \texttt{true}.
 
 \begin{lstlisting} 
-bool get_prob_sizes(long long& n, long long& m);
+bool get_prob_sizes(size_type& n, size_type& m);
 \end{lstlisting} 
 \noindent Provides the number of decision variables and the number of constraints ($m=m_E+m_I$).
 
 
 \begin{lstlisting} 
-bool get_vars_info(const long long& n, double *xlow, double* xupp, 
+bool get_vars_info(const size_type& n, double *xlow, double* xupp, 
                    NonlinearityType* type);
 \end{lstlisting} 
 
@@ -554,7 +554,7 @@ bool get_vars_info(const long long& n, double *xlow, double* xupp,
 
 
 \begin{lstlisting} 
-bool get_cons_info(const long long& m, double* clow, double* cupp, 
+bool get_cons_info(const size_type& m, double* clow, double* cupp, 
                    NonlinearityType* type);
 \end{lstlisting}
 \noindent Similar to the above, but for the inequality bounds $d_l$ and $d_u$. For equalities, set the corresponding entries in clow and cupp equal to the desired value (from $c_E$).
@@ -569,7 +569,7 @@ bool get_sparse_dense_blocks_info(int& nx_sparse, int& nx_dense,
 \noindent Specifies the number of nonzero elements in the  \textit{sparse blocks} of the Jacobians of the constraints and of the Hessian of the Lagrangian, see~\eqref{mdsJac} and~\eqref{mdsHess}, respectively. The last parameter \texttt{nnz\_sparse\_Hess\_Lagr\_SD} is not used momentarily and should be set to zero.
 
 \begin{lstlisting} 
-bool eval_f(const long long& n, 
+bool eval_f(const size_type& n, 
             const double* x, bool new_x, 
             double& obj_value);
 \end{lstlisting} 
@@ -577,7 +577,7 @@ bool eval_f(const long long& n,
 \noindent Implement this method to compute the function value $f(x)$ in \texttt{obj\_value} for the provided decision variables $x$. The input argument \texttt{new\_x} specifies whether the variables $x$ have been changed since the previous call of one of the \texttt{eval\_} methods. Use this argument to ``buffer'' the objective and gradients function and derivative evaluations when this is possible.
 
 \begin{lstlisting} 
-bool eval_grad_f(const long long& n, 
+bool eval_grad_f(const size_type& n, 
                  const double* x, bool new_x, 
                  double* gradf);
 \end{lstlisting} 
@@ -585,20 +585,20 @@ bool eval_grad_f(const long long& n,
 \noindent Same as above but for $\nabla f(x)$.
 
 \begin{lstlisting} 
- bool eval_cons(const long long& n, const long long& m, 
-                const long long& num_cons,
-		const long long* idx_cons, const double* x, 
+ bool eval_cons(const size_type& n, const size_type& m, 
+                const size_type& num_cons,
+		const index_type* idx_cons, const double* x, 
 		bool new_x, double* cons);
 \end{lstlisting} 
 
 \noindent Implement this method to provide the value of the constraints $c(x)$ and/or $d(x)$. The input parameter \texttt{num\_cons} specifies how many constraints (out of \texttt{m}) needs to evaluated; \texttt{idx\_cons} array specifies the indexes, which are zero-based, of the constraints  and is of size \texttt{num\_cons}. These values should be provided in \texttt{cons}, which is also an array of size \texttt{num\_cons}.
 
 \begin{lstlisting} 
-eval_Jac_cons(const long long& n, const long long& m, 
-			     const long long& num_cons, const long long* idx_cons,
+eval_Jac_cons(const size_type& n, const size_type& m, 
+			     const size_type& num_cons, const index_type* idx_cons,
 			     const double* x, bool new_x,
-			     const long long& nsparse, const long long& ndense, 
-			     const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
+			     const size_type& nsparse, const size_type& ndense, 
+			     const size_type& nnzJacS, index_type* iJacS, index_type* jJacS, double* MJacS, 
 			     double* JacD);
 \end{lstlisting} 
 
@@ -628,10 +628,10 @@ Parameters:
 
 
 \begin{lstlisting}
-bool eval_Jac_cons(const long long& n, const long long& m, 
+bool eval_Jac_cons(const size_type& n, const size_type& m, 
 			          const double* x, bool new_x,
-			          const long long& nsparse, const long long& ndense, 
-			          const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
+			          const size_type& nsparse, const size_type& ndense, 
+			          const size_type& nnzJacS, index_type* iJacS, index_type* jJacS, double* MJacS, 
 			          double* JacD);
 \end{lstlisting} 
 
@@ -661,13 +661,13 @@ The main difference from the above \texttt{eval\_Jac\_cons} is that the implemen
 \warningcp{Note:} Notes 1-5 from the previous, two-call \texttt{eval\_Jac\_cons} applies here as well.
     
 \begin{lstlisting} 
-bool eval_Hess_Lagr(const long long& n, const long long& m, 
+bool eval_Hess_Lagr(const size_type& n, const size_type& m, 
 			      const double* x, bool new_x, const double& obj_factor,
 			      const double* lambda, bool new_lambda,
-			      const long long& nsparse, const long long& ndense, 
-			      const int& nnzHSS, int* iHSS, int* jHSS, double* MHSS, 
+			      const size_type& nsparse, const size_type& ndense, 
+			      const size_type& nnzHSS, index_type* iHSS, index_type* jHSS, double* MHSS, 
 			      double* HDD,
-			      int& nnzHSD, int* iHSD, int* jHSD, double* MHSD);
+			      size_type& nnzHSD, index_type* iHSD, index_type* jHSD, double* MHSD);
 \end{lstlisting} 
 
 \noindent Evaluates the Hessian of the Lagrangian function in three structural blocks given by the MDS structure of the problem. The arguments \texttt{nnzHSS}, \texttt{iHSS}, \texttt{jHSS}, and \texttt{MHSS} hold  $\nabla^2 L(x_s,x_s)$ from~\eqref{mdsHess}. The argument \texttt{HDD} stores $\nabla^2 L(x_d,x_d)$ from~\eqref{mdsHess}. 
@@ -750,7 +750,7 @@ As this part of the solver is under development, the interested parties should c
 The user  can  provide an initial primal or primal-dual point implementing the method \texttt{get\_starting\_point} of the NLP specification interfaces \texttt{hiopInterfaceDenseConstraints} or \texttt{hiopInterfaceMDS}. 
 
 \begin{lstlisting} 
-bool get_starting_point(const long long& n, const long long& m,
+bool get_starting_point(const size_type& n, const size_type& m,
                         double* x0,
                         bool& duals_avail,
                         double* z_bndL0, double* z_bndU0,
@@ -760,7 +760,7 @@ bool get_starting_point(const long long& n, const long long& m,
 A second method is offered to user to provide an initial primal starting point. This method will be soon deprecated as its functionality is a subset of the method above and should be avoided.
 
 \begin{lstlisting} 
-bool get_starting_point(const long long& n, double* x0);
+bool get_starting_point(const size_type& n, double* x0);
 \end{lstlisting} 
 
 Parameters:

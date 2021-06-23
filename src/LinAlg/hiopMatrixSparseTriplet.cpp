@@ -349,6 +349,29 @@ void hiopMatrixSparseTriplet::copyFrom(const hiopMatrixSparse& dm)
   assert(false && "this is to be implemented - method def too vague for now");
 }
 
+/// @brief copy to 3 arrays.
+/// @pre these 3 arrays are not nullptr
+void hiopMatrixSparseTriplet::copy_to(int* irow, int* jcol, double* val)
+{
+  assert(irow && jcol && val);
+  memcpy(irow, iRow_, nnz_*sizeof(int));
+  memcpy(jcol, jCol_, nnz_*sizeof(int));
+  memcpy(val, values_, nnz_*sizeof(double));
+}
+
+void hiopMatrixSparseTriplet::copy_to(hiopMatrixDense& W)
+{
+  assert(W.m() == nrows_);
+  assert(W.n() == ncols_);
+  W.setToZero();
+  double* WM = W.local_data();
+  int n_W = W.n();
+  
+  for(int k=0; k<nnz_; k++) {
+    WM[ iRow_[k]*n_W + jCol_[k]] += values_[k];
+  }
+}
+
 #ifdef HIOP_DEEPCHECKS
 bool hiopMatrixSparseTriplet::checkIndexesAreOrdered() const
 {
@@ -1303,7 +1326,7 @@ void hiopMatrixSparseTriplet::convertToCSR(int &csr_nnz,
 }
 
 /*
-*  extend original Jac to [Jac -I I]
+*  extend original Hess to [Hess+diag_term]
 */
 void hiopMatrixSymSparseTriplet::set_Hess_FR(const hiopMatrixSparse& Hess,
                                              int* iHSS,
@@ -1311,6 +1334,10 @@ void hiopMatrixSymSparseTriplet::set_Hess_FR(const hiopMatrixSparse& Hess,
                                              double* MHSS,
                                              const hiopVector& add_diag)
 {
+  if (nnz_ == 0) {
+    return;
+  }
+  
   const auto& Hess_base = dynamic_cast<const hiopMatrixSymSparseTriplet&>(Hess);
 
   // assuming original Hess is sorted, and in upper-triangle format
@@ -1319,8 +1346,10 @@ void hiopMatrixSymSparseTriplet::set_Hess_FR(const hiopMatrixSparse& Hess,
   int m_h = Hess.m();
   int n_h = Hess.n();
   assert(n_h == m_h);
-
-  int nnz_h_FR = n_h + Hess_base.numberOfOffDiagNonzeros() ;
+  
+  // note that n_h can be zero, i.e., original hess is empty. 
+  // Hence we use add_diag.get_size() to detect the length of x in the base problem
+  int nnz_h_FR = add_diag.get_size() + Hess_base.numberOfOffDiagNonzeros() ;
 
   assert(nnz_ == nnz_h_FR);
   
@@ -1336,29 +1365,39 @@ void hiopMatrixSymSparseTriplet::set_Hess_FR(const hiopMatrixSparse& Hess,
   
     const int* Hess_row = Hess_base.i_row();
     const int* Hess_col = Hess_base.j_col();
-    for(int i = 0; i < m_h; ++i) {
-      int k_base = Hess_base.row_starts_->idx_start_[i];
-      int nnz_in_row = Hess_base.row_starts_->idx_start_[i+1] - k_base;
-    
-      // insert diagonal entry due to the new obj term
-      iRow_[k] = iHSS[k] = i;
-      jCol_[k] = jHSS[k] = i;
-      k++;
+    if(m_h > 0) {
+      for(int i = 0; i < m_h; ++i) {
+        int k_base = Hess_base.row_starts_->idx_start_[i];
+        int nnz_in_row = Hess_base.row_starts_->idx_start_[i+1] - k_base;
       
-      if(nnz_in_row > 0 && Hess_row[k_base] == Hess_col[k_base]) {
-        // first nonzero in this row is a diagonal term 
-        // skip it since we have already defined the diagonal nonezero
-        k_base++;
-      }
-
-      // copy from base Hess
-      while(k_base < Hess_base.row_starts_->idx_start_[i+1]) {
+        // insert diagonal entry due to the new obj term
         iRow_[k] = iHSS[k] = i;
-        jCol_[k] = jHSS[k] = Hess_col[k_base];
+        jCol_[k] = jHSS[k] = i;
         k++;
-        k_base++;
+        
+        if(nnz_in_row > 0 && Hess_row[k_base] == Hess_col[k_base]) {
+          // first nonzero in this row is a diagonal term 
+          // skip it since we have already defined the diagonal nonezero
+          k_base++;
+        }
+
+        // copy from base Hess
+        while(k_base < Hess_base.row_starts_->idx_start_[i+1]) {
+          iRow_[k] = iHSS[k] = i;
+          jCol_[k] = jHSS[k] = Hess_col[k_base];
+          k++;
+          k_base++;
+        }
+      }
+    } else {
+      // hess in the base problem is empty. just insert the new elements
+      for(int i = 0; i < add_diag.get_size(); ++i) {
+        iRow_[k] = iHSS[k] = i;
+        jCol_[k] = jHSS[k] = i;
+        k++;      
       }
     }
+
     assert(k == nnz_);
   }
   
@@ -1370,31 +1409,39 @@ void hiopMatrixSymSparseTriplet::set_Hess_FR(const hiopMatrixSparse& Hess,
     const int* Hess_col = Hess_base.j_col();
     const double* Hess_val = Hess_base.M();
     const hiopVectorPar& diag_x = dynamic_cast<const hiopVectorPar&>(add_diag);
-    assert(m_h == diag_x.get_size());
+    assert(m_h == 0 || m_h == diag_x.get_size());
     const double* diag_data = diag_x.local_data_const();
 
-    for(int i = 0; i < m_h; ++i) {
-      int k_base = Hess_base.row_starts_->idx_start_[i];
-      int nnz_in_row = Hess_base.row_starts_->idx_start_[i+1] - k_base;
-    
-      // add diagonal entry due to the new obj term
-      values_[k] = MHSS[k] = diag_data[k];
+    if(m_h > 0) {
+      for(int i = 0; i < m_h; ++i) {
+        int k_base = Hess_base.row_starts_->idx_start_[i];
+        int nnz_in_row = Hess_base.row_starts_->idx_start_[i+1] - k_base;
       
-      if(nnz_in_row > 0 && Hess_row[k_base] == Hess_col[k_base]) {
-        // first nonzero in this row is a diagonal term 
-        // add this element to the existing diag term
-        values_[k] += Hess_val[k_base];
-        MHSS[k] = values_[k];
-        k_base++;
-      }
-      k++;
-
-      // copy off-diag entries from base Hess
-      while(k_base < Hess_base.row_starts_->idx_start_[i+1]) {
-        values_[k] = MHSS[k] = Hess_val[k_base];
+        // add diagonal entry due to the new obj term
+        values_[k] = MHSS[k] = diag_data[i];
+        
+        if(nnz_in_row > 0 && Hess_row[k_base] == Hess_col[k_base]) {
+          // first nonzero in this row is a diagonal term 
+          // add this element to the existing diag term
+          values_[k] += Hess_val[k_base];
+          MHSS[k] = values_[k];
+          k_base++;
+        }
         k++;
-        k_base++;
+
+        // copy off-diag entries from base Hess
+        while(k_base < Hess_base.row_starts_->idx_start_[i+1]) {
+          values_[k] = MHSS[k] = Hess_val[k_base];
+          k++;
+          k_base++;
+        }
       }
+    } else {
+      // hess in the base problem is empty. just insert the new elements
+      for(int i = 0; i < add_diag.get_size(); ++i) {
+        values_[k] = MHSS[k] = diag_data[k];
+        k++;      
+      }      
     }
     assert(k == nnz_);
   }

@@ -96,7 +96,7 @@ RecourseApproxEvaluator(const int nc,
  * n is the total dimension of x and not really used in the function
  */
 bool hiopInterfacePriDecProblem::RecourseApproxEvaluator::
-eval_f(const long long& n, const double* x, bool new_x, double& obj_value)
+eval_f(const size_type& n, const double* x, bool new_x, double& obj_value)
 {
   //assert(nc>=4);
   //sum 0.5 {(x_i-1)*(x_{i}-1) : i=1,...,nc} 
@@ -117,7 +117,7 @@ eval_f(const long long& n, const double* x, bool new_x, double& obj_value)
  
 // grad is assumed to be of the length n, of the entire x
 bool hiopInterfacePriDecProblem::RecourseApproxEvaluator::
-eval_grad(const long long& n, const double* x, bool new_x, double* grad)
+eval_grad(const size_type& n, const double* x, bool new_x, double* grad)
 {
   assert(rgrad_!=NULL);
   double* rgrad_arr = rgrad_->local_data();
@@ -144,7 +144,7 @@ eval_grad(const long long& n, const double* x, bool new_x, double* grad)
  * Careful when implementing in the full problem  
  */
 bool hiopInterfacePriDecProblem::RecourseApproxEvaluator::
-eval_hess(const long long& n, const hiopVector& x, bool new_x, hiopVector& hess)
+eval_hess(const size_type& n, const hiopVector& x, bool new_x, hiopVector& hess)
 {
   assert(rgrad_!=NULL);
   assert(rhess_->get_local_size()==hess.get_local_size());

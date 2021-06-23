@@ -272,6 +272,7 @@ public:
     fail += verifyAnswer(&x, two);
     deleteLocalBuffer(zero_buffer);
 
+    delete zero;
     printMessage(fail, __func__, rank);
     return reduceReturn(fail, &x);
   }
@@ -391,6 +392,7 @@ public:
     zero->copyToStarting(to, 0);
     fail += verifyAnswer(&to, to_val);
 
+    delete zero;
     printMessage(fail, __func__, rank);
     return reduceReturn(fail, &from);
   }
@@ -661,7 +663,7 @@ public:
         return isValueCopied ? from_val : to_val;
       });
 
-    
+    delete zero;
     printMessage(fail, __func__, rank);
     return reduceReturn(fail, &to);
   }

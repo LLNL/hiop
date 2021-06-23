@@ -75,6 +75,13 @@ public:
   virtual void copyFrom(const hiopMatrixDense& dm){assert(false && "not implemented in base class");}
   virtual void copyFrom(const double* buffer){assert(false && "not implemented in base class");}
 
+  /**
+   *  @brief copy to a double array
+   * 
+   *  @pre double array is big enough to hold all the values from this dense matrix
+   */
+  virtual void copy_to(double* buffer){assert(false && "not implemented in base class");}
+
   virtual void timesVec(double beta,  hiopVector& y,
 			double alpha, const hiopVector& x) const{assert(false && "not implemented in base class");}
   /* same as above for mostly internal use - avoid using it */
@@ -210,6 +217,10 @@ public:
   virtual void replaceRow(index_type row, const hiopVector& vec){assert(false && "not implemented in base class");}
   /// @brief copies row 'irow' in the vector 'row_vec' (sizes should match)
   virtual void getRow(index_type irow, hiopVector& row_vec){assert(false && "not implemented in base class");}
+
+  /// @brief build Hess for FR problem, from the base problem `Hess`.
+  virtual void set_Hess_FR(const hiopMatrixDense& Hess, const hiopVector& add_diag_de){assert(false && "not implemented in base class");}
+
 #ifdef HIOP_DEEPCHECKS
   virtual void overwriteUpperTriangleWithLower(){assert(false && "not implemented in base class");}
   virtual void overwriteLowerTriangleWithUpper(){assert(false && "not implemented in base class");}

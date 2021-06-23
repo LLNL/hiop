@@ -103,7 +103,7 @@ namespace hiop
       n_neg_eig = -1;
     } else if(n_neg_eig_11 > 0) {
       n_neg_eig += n_neg_eig_11;
-      nlp_->log->printf(hovWarning,
+      nlp_->log->printf(hovScalars,
                 "KKT_MDS_XYcYd linsys: Detected negative eigenvalues in (1,1) sparse block.\n");
     }
     return n_neg_eig;

@@ -128,11 +128,11 @@ public:
 
     ~RecourseApproxEvaluator();
 
-    bool eval_f(const long long& n, const double* x, bool new_x, double& obj_value);
+    bool eval_f(const size_type& n, const double* x, bool new_x, double& obj_value);
  
-    bool eval_grad(const long long& n, const double* x, bool new_x, double* grad);
+    bool eval_grad(const size_type& n, const double* x, bool new_x, double* grad);
 
-    bool eval_hess(const long long& n, const hiopVector& x, bool new_x, hiopVector& hess);
+    bool eval_hess(const size_type& n, const hiopVector& x, bool new_x, hiopVector& hess);
   
     virtual bool get_MPI_comm(MPI_Comm& comm_out);
     

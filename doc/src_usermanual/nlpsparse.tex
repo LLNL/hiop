@@ -33,27 +33,27 @@ The above optimization problem~\eqref{spobj}-\eqref{spbounds} can be specified b
 All the methods of this section are ``pure'' virtual in \texttt{hiop::hiopInterfaceSparse} abstract class  and need to be provided by the user implementation.
 
 \begin{lstlisting} 
-bool get_prob_sizes(long long& n, long long& m);
+bool get_prob_sizes(size_type& n, size_type& m);
 \end{lstlisting} 
 \noindent Provides the number of decision variables and the number of constraints ($m=m_E+m_I$).
 
 
 \begin{lstlisting} 
-bool get_vars_info(const long long& n, double *xlow, double* xupp, 
+bool get_vars_info(const size_type& n, double *xlow, double* xupp, 
                    NonlinearityType* type);
 \end{lstlisting} 
 
 \noindent Provides the lower and upper bounds $x_l$ and $x_u$ on the decision variables. When a variable (let us say the $i^{th}$) has no lower or/and upper bounds, the  $i^{th}$ entry of xlow and/or xupp should be less than $-1e20$ or/and larger than $1e20$, respectively. The last argument is not used and can set to any value of the enum \texttt{hiop::hiopInterface::NonlinearityType}.
 
 \begin{lstlisting} 
-bool get_cons_info(const long long& m, double* clow, double* cupp, 
+bool get_cons_info(const size_type& m, double* clow, double* cupp, 
                    NonlinearityType* type);
 \end{lstlisting}
 \noindent Similar to the above, but for the inequality bounds $d_l$ and $d_u$. For equalities, set the corresponding entries in clow and cupp equal to the desired value (from $c_E$).
 
 
 \begin{lstlisting} 
-bool eval_f(const long long& n, 
+bool eval_f(const size_type& n, 
             const double* x, bool new_x, 
             double& obj_value);
 \end{lstlisting} 
@@ -61,7 +61,7 @@ bool eval_f(const long long& n,
 \noindent Implement this method to compute the function value $f(x)$ in \texttt{obj\_value} for the provided decision variables $x$. The input argument \texttt{new\_x} specifies whether the variables $x$ have been changed since the previous call of one of the \texttt{eval\_} methods. Use this argument to ``buffer'' the objective and gradients function and derivative evaluations when this is possible.
 
 \begin{lstlisting} 
-bool eval_grad_f(const long long& n, 
+bool eval_grad_f(const size_type& n, 
                  const double* x, bool new_x, 
                  double* gradf);
 \end{lstlisting} 
@@ -70,9 +70,9 @@ bool eval_grad_f(const long long& n,
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{lstlisting} 
- bool eval_cons(const long long& n, const long long& m, 
-                const long long& num_cons,
-				    const long long* idx_cons, const double* x, 
+ bool eval_cons(const size_type& n, const size_type& m, 
+                const size_type& num_cons,
+				    const index_type* idx_cons, const double* x, 
 			       bool new_x, double* cons);
 \end{lstlisting} 
 
@@ -83,10 +83,10 @@ bool eval_grad_f(const long long& n,
 
 \begin{lstlisting} 
 bool 
-eval_Jac_cons(const long long& n, const long long& m, 
-			     const long long& num_cons, const long long* idx_cons,  
+eval_Jac_cons(const size_type& n, const size_type& m, 
+			     const size_type& num_cons, const index_type* idx_cons,  
 			     const double* x, bool new_x,
-			     const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS);
+			     const size_type& nnzJacS, index_type* iJacS, index_type* jJacS, double* MJacS);
 \end{lstlisting} 
 
 \noindent Implement this method to provide the Jacobian of a subset of the  constraints $c(x)$ and/or $d(x)$ in \texttt{Jac}; this subset is specified by the array \texttt{idx\_cons}. The last three arguments should be used to specify the Jacobian information in sparse triplet format.  \texttt{iJacS} and \texttt{jJacS} needs to be jointly sorted: by indexes in \texttt{iJacS} and, for equal (row) indexes in \texttt{iJacS}, by indexes in \texttt{jJacS}.
@@ -102,9 +102,9 @@ Notes for implementer of this method:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{lstlisting}
-bool eval_Jac_cons(const long long& n, const long long& m, 
+bool eval_Jac_cons(const size_type& n, const size_type& m, 
 			          const double* x, bool new_x,
-			          const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS);
+			          const size_type& nnzJacS, index_type* iJacS, index_type* jJacS, double* MJacS);
 \end{lstlisting} 
 
 \noindent Evaluates the Jacobian of equality and inequality constraints \textit{in one call}. 
@@ -134,11 +134,11 @@ The main difference from the above \texttt{eval\_Jac\_cons} is that the implemen
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{lstlisting} 
-bool eval_Hess_Lagr(const long long& n, const long long& m, 
+bool eval_Hess_Lagr(const size_type& n, const size_type& m, 
 			      const double* x, bool new_x, const double& obj_factor,
 			      const double* lambda, bool new_lambda,
-			      const long long& nsparse, const long long& ndense, 
-			      const int& nnzHSS, int* iHSS, int* jHSS, double* MHSS)
+			      const size_type& nsparse, const size_type& ndense, 
+			      const size_type& nnzHSS, index_type* iHSS, index_type* jHSS, double* MHSS)
 \end{lstlisting} 
 
 \noindent Evaluates the Hessian of the Lagrangian function as a sparse matrix in triplet format. 

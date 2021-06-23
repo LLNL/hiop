@@ -162,6 +162,15 @@ const real_type* MatrixTestsRajaDense::getLocalDataConst(hiop::hiopMatrixDense* 
   return amat->local_data_const();
 }
 
+/// Returns pointer to local data block of matrix _A_ in current memory space.
+real_type* MatrixTestsRajaDense::getLocalData(hiop::hiopMatrixDense* A)
+{
+  auto* amat = dynamic_cast<hiop::hiopMatrixRajaDense*>(A);
+  if(amat == nullptr)
+    THROW_NULL_DEREF;
+  return amat->local_data();
+}
+
 /// Reduce return output: Every rank returns failure if any individual rank fails
 bool MatrixTestsRajaDense::reduceReturn(int failures, hiop::hiopMatrixDense* A)
 {

@@ -623,6 +623,64 @@ bool hiopNlpFormulation::get_starting_point(hiopVector& x0_for_hiop,
   return bret;
 }
 
+bool hiopNlpFormulation::get_starting_point(hiopVector& x0_for_hiop,
+                                            hiopVector& zL0_for_hiop,
+                                            hiopVector& zU0_for_hiop,
+                                            hiopVector& yc0_for_hiop,
+                                            hiopVector& yd0_for_hiop,
+                                            hiopVector& d0,
+                                            hiopVector& vl0,
+                                            hiopVector& vu0)
+{
+  bool bret; 
+
+  hiopVector* lambdas = hiop::LinearAlgebraFactory::createVector(yc0_for_hiop.get_size() + yd0_for_hiop.get_size());
+  
+  hiopVector* x0_for_user = nlp_transformations.apply_inv_to_x(x0_for_hiop, true);
+  double* zL0_for_user = zL0_for_hiop.local_data();
+  double* zU0_for_user = zU0_for_hiop.local_data();
+  double* lambda_for_user = lambdas->local_data();
+  double* d_for_user = d0.local_data();
+  double* vl_for_user = vl0.local_data();
+  double* vu_for_user = vu0.local_data();
+  
+  bret = interface_base.get_starting_point(nlp_transformations.n_pre(),
+                                           n_cons,
+                                           x0_for_user->local_data(),
+                                           zL0_for_user,
+                                           zU0_for_user,
+                                           lambda_for_user,
+                                           d_for_user,
+                                           vl_for_user,
+                                           vu_for_user);
+  {
+    double* yc0d = yc0_for_hiop.local_data();
+    double* yd0d = yd0_for_hiop.local_data();
+
+    assert(n_cons_eq   == yc0_for_hiop.get_size() && "when did the cons change?");
+    assert(n_cons_ineq == yd0_for_hiop.get_size() && "when did the cons change?");
+    assert(n_cons_eq+n_cons_ineq == n_cons);
+    
+    //copy back 
+    lambdas->copy_to_two_vec_w_pattern(yc0_for_hiop, *cons_eq_mapping_, yd0_for_hiop, *cons_ineq_mapping_);
+  }
+  
+  if(!bret) {
+    bret = interface_base.get_starting_point(nlp_transformations.n_pre(), x0_for_user->local_data());
+  }
+  
+  if(bret) {
+    nlp_transformations.apply_to_x(*x0_for_user, x0_for_hiop);
+  }
+
+  /* delete the temporary buffers */
+  delete lambdas;
+
+  return bret;
+}
+
+
+
 bool hiopNlpFormulation::eval_c(hiopVector& x, bool new_x, hiopVector& c)
 {
   hiopVector* xx = nlp_transformations.apply_inv_to_x(x, new_x);

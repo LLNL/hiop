@@ -30,6 +30,8 @@ public:
   virtual void setToZero();
   virtual void setToConstant(double c);
   virtual void copyFrom(const hiopMatrixSparse& dm);
+  virtual void copy_to(int* irow, int* jcol, double* val);
+  virtual void copy_to(hiopMatrixDense& W);
 
   virtual void copyRowsFrom(const hiopMatrix& src, const index_type* rows_idxs, size_type n_rows);
 
@@ -231,12 +233,15 @@ public:
                             std::unordered_map<int,int> &extra_diag_nnz_map);
 
   virtual size_type numberOfOffDiagNonzeros() const {assert("not implemented"&&0);return 0;};
+
+  /// @brief extend base problem Jac to the Jac in feasibility problem
   virtual void set_Jac_FR(const hiopMatrixSparse& Jac_c,
                           const hiopMatrixSparse& Jac_d,
                           int* iJacS,
                           int* jJacS,
                           double* MJacS);
 
+  /// @brief extend base problem Hess to the Hess in feasibility problem
   virtual void set_Hess_FR(const hiopMatrixSparse& Hess,
                            int* iHSS,
                            int* jHSS,
@@ -348,12 +353,14 @@ public:
 
   virtual size_type numberOfOffDiagNonzeros() const;
 
+  /// @brief extend base problem Jac to the Jac in feasibility problem
   virtual void set_Jac_FR(const hiopMatrixSparse& Jac_c,
                           const hiopMatrixSparse& Jac_d,
                           int* iJacS,
                           int* jJacS,
                           double* MJacS){assert("not implemented"&&0);};
 
+  /// @brief extend base problem Hess to the Hess in feasibility problem
   virtual void set_Hess_FR(const hiopMatrixSparse& Hess,
                            int* iHSS,
                            int* jHSS,

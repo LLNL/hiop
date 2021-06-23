@@ -193,12 +193,12 @@ public:
    *  @note When MPI is enabled, every rank populates @p cons since the constraints are not distributed.
    */
   virtual bool eval_cons(const size_type& n,
-                         const size_type& m, 
-			 const size_type& num_cons,
-                         const index_type* idx_cons,  
-			 const double* x,
-                         bool new_x, 
-			 double* cons)=0;
+                         const size_type& m,
+                         const size_type& num_cons,
+                         const index_type* idx_cons,
+                         const double* x,
+                         bool new_x,
+                         double* cons)=0;
   
   /** Evaluates the constraints body @p cons(@p x), both equalities and inequalities, in one call. 
    *
@@ -216,10 +216,10 @@ public:
    *  @note When MPI is enabled, every rank populates @p cons since the constraints are not distributed.
    */
   virtual bool eval_cons(const size_type& n,
-                         const size_type& m, 
-			 const double* x,
-                         bool new_x, 
-			 double* cons)
+                         const size_type& m,
+                         const double* x,
+                         bool new_x,
+                         double* cons)
   {
     return false;
   }
@@ -262,7 +262,7 @@ public:
   }
   
   /**
-   * Method provides a primal or a primal-dual primal-dual starting point. This point is subject 
+   * Method provides a primal or a primal-dual starting point. This point is subject 
    * to internal adjustments in HiOp.
    *
    * If the user (implementer of this method) has good estimates only of the primal variables,
@@ -288,13 +288,34 @@ public:
                                   const size_type& m,
                                   double* x0,
                                   bool& duals_avail,
-                                  double* z_bndL0, double* z_bndU0,
+                                  double* z_bndL0, 
+                                  double* z_bndU0,
                                   double* lambda0,
                                   bool& slacks_avail,
                                   double* ineq_slack)
   {
     duals_avail = false;
     slacks_avail = false;
+    return false;
+  }
+
+  /**
+   * Method provides a primal-dual starting point for warm start. This point is subject 
+   * to internal adjustments in HiOp.
+   *
+   * User provides starting point for all the iterate variable used in HiOp.
+   * 
+   */
+  virtual bool get_starting_point(const size_type& n,
+                                  const size_type& m,
+                                  double* x0,
+                                  double* z_bndL0, 
+                                  double* z_bndU0,
+                                  double* lambda0,
+                                  double* ineq_slack,
+                                  double* vl0,
+                                  double* vu0)
+  {
     return false;
   }
 
@@ -313,14 +334,14 @@ public:
    *
    */
   virtual void solution_callback(hiopSolveStatus status,
-				 size_type n,
+                                 size_type n,
                                  const double* x,
-				 const double* z_L,
-				 const double* z_U,
-				 size_type m,
+                                 const double* z_L,
+                                 const double* z_U,
+                                 size_type m,
                                  const double* g,
-				 const double* lambda,
-				 double obj_value)
+                                 const double* lambda,
+                                 double obj_value)
   {
   }
 
@@ -457,10 +478,10 @@ public:
 
   virtual bool get_sparse_dense_blocks_info(int& nx_sparse,
                                             int& nx_dense,
-					    int& nnz_sparse_Jaceq,
+                                            int& nnz_sparse_Jaceq,
                                             int& nnz_sparse_Jacineq,
-					    int& nnz_sparse_Hess_Lagr_SS, 
-					    int& nnz_sparse_Hess_Lagr_SD) = 0; 
+                                            int& nnz_sparse_Hess_Lagr_SS,
+                                            int& nnz_sparse_Hess_Lagr_SD) = 0; 
 
   /** Evaluates the Jacobian of constraints split in the sparse (triplet format) and 
    * dense matrices (rows storage)
@@ -488,18 +509,18 @@ public:
    * 
    */
   virtual bool eval_Jac_cons(const size_type& n,
-                             const size_type& m, 
-			     const size_type& num_cons,
+                             const size_type& m,
+                             const size_type& num_cons,
                              const index_type* idx_cons,
-			     const double* x,
+                             const double* x,
                              bool new_x,
-			     const size_type& nsparse,
-                             const size_type& ndense, 
-			     const size_type& nnzJacS,
+                             const size_type& nsparse,
+                             const size_type& ndense,
+                             const size_type& nnzJacS,
                              index_type* iJacS,
                              index_type* jJacS,
-                             double* MJacS, 
-			     double* JacD) = 0;
+                             double* MJacS,
+                             double* JacD) = 0;
   /** Evaluates the Jacobian of equality and inequality constraints in one call. This Jacobian is
    * mixed dense-sparse (MDS), which means is structurally split in the sparse (triplet format) and 
    * dense matrices (rows storage)
@@ -533,16 +554,16 @@ public:
    * (which is called for equalities and inequalities separately) above.
    */
   virtual bool eval_Jac_cons(const size_type& n,
-                             const size_type& m, 
-			     const double* x,
+                             const size_type& m,
+                             const double* x,
                              bool new_x,
-			     const size_type& nsparse,
-                             const size_type& ndense, 
-			     const size_type& nnzJacS,
+                             const size_type& nsparse,
+                             const size_type& ndense,
+                             const size_type& nnzJacS,
                              index_type* iJacS,
                              index_type* jJacS,
-                             double* MJacS, 
-			     double* JacD)
+                             double* MJacS,
+                             double* JacD)
   {
     return false;
   }
@@ -562,20 +583,20 @@ public:
    * 6) The order is multipliers is: lambda=[lambda_eq, lambda_ineq]
    */
   virtual bool eval_Hess_Lagr(const size_type& n,
-                              const size_type& m, 
-			      const double* x,
+                              const size_type& m,
+                              const double* x,
                               bool new_x,
                               const double& obj_factor,
-			      const double* lambda,
+                              const double* lambda,
                               bool new_lambda,
-			      const size_type& nsparse,
-                              const size_type& ndense, 
-			      const size_type& nnzHSS,
+                              const size_type& nsparse,
+                              const size_type& ndense,
+                              const size_type& nnzHSS,
                               index_type* iHSS,
                               index_type* jHSS,
-                              double* MHSS, 
-			      double* HDD,
-			      size_type& nnzHSD,
+                              double* MHSS,
+                              double* HDD,
+                              size_type& nnzHSD,
                               index_type* iHSD,
                               index_type* jHSD,
                               double* MHSD) = 0;
