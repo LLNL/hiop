@@ -97,6 +97,7 @@ EOD
 done
 
 set -xv
+set -e
 
 # If MY_CLUSTER is not set by user, try to discover it from environment
 if [[ ! -v MY_CLUSTER ]]
@@ -113,6 +114,8 @@ elif [[ $MY_CLUSTER =~ dl* ]]; then
 fi
 
 module purge
+
+source ./scripts/generateNvblasConfigFile.sh
 
 # If we have modules/variables defined for the current cluster, use them
 if [ -f "./scripts/$(echo $MY_CLUSTER)Variables.sh" ]; then

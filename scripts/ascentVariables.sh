@@ -5,6 +5,7 @@ fi
 
 export MY_CLUSTER=ascent
 export PROJ_DIR=/gpfs/wolf/proj-shared/csc359
+BUILDDIR=${BUILDDIR:-$PWD/build}
 
 module use /gpfs/wolf/proj-shared/csc359/src/spack/share/spack/modules/linux-rhel7-power9le
 
@@ -61,14 +62,7 @@ export CC=/sw/ascent/gcc/7.4.0/bin/gcc
 export CXX=/sw/ascent/gcc/7.4.0/bin/g++
 export FC=/sw/ascent/gcc/7.4.0/bin/gfortran
 
-if [[ ! -f $BUILDDIR/nvblas.conf ]]; then
-  cat > $BUILDDIR/nvblas.conf <<-EOD
-  NVBLAS_LOGFILE  nvblas.log
-  NVBLAS_CPU_BLAS_LIB /autofs/nccsopen-svm1_sw/ascent/.swci/1-compute/opt/spack/20180914/linux-rhel7-ppc64le/gcc-7.4.0/openblas-0.3.9-cjxfkk67xpigoo4qo77tzvigloabwuvr/lib/libopenblas.so
-  NVBLAS_GPU_LIST ALL
-  NVBLAS_TILE_DIM 2048
-  NVBLAS_AUTOPIN_MEM_ENABLED
-EOD
-fi
-export NVBLAS_CONFIG_FILE=$BUILDDIR/nvblas.conf
+# Create nvblas configuration file in build directory based on path to blas library
+generateNvblasConfigFile $BUILDDIR $OPENBLAS_LIBRARY_DIR/libopenblas.so
+
 EXTRA_CMAKE_ARGS="$EXTRA_CMAKE_ARGS -DCMAKE_CUDA_ARCHITECTURES=70 -DHIOP_TEST_WITH_BSUB=ON"

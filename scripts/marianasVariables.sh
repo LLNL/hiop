@@ -4,13 +4,12 @@ fi
 export MY_CLUSTER="marianas"
 export PROJ_DIR=/qfs/projects/exasgd
 export APPS_DIR=/share/apps
+BUILDDIR=${BUILDDIR:-$PWD/build}
 
 #  NOTE: The following is required when running from Gitlab CI via slurm job
 source /etc/profile.d/modules.sh
 module use -a /qfs/projects/exasgd/src/spack/share/spack/modules/linux-centos7-broadwell/
 module use -a /qfs/projects/exasgd/src/spack/share/spack/modules/linux-centos7-x86_64/
-
-export NVBLAS_CONFIG_FILE=$PROJ_DIR/$MY_CLUSTER/nvblas.conf
 
 # Load spack-built modules
 # arpack-ng@3.8.0%gcc@7.3.0+mpi+shared arch=linux-centos7-broadwell
@@ -72,5 +71,8 @@ module load exasgd-zfp/0.5.5/gcc-7.3.0-h3p6smb
 module load gcc/7.3.0
 module load cuda/10.2.89
 module load openmpi/3.1.3
+
+# Create nvblas configuration file in build directory based on path to blas library
+generateNvblasConfigFile $BUILDDIR $OPENBLAS_LIBRARY_DIR/libopenblas.so
 
 export EXTRA_CMAKE_ARGS="$EXTRA_CMAKE_ARGS -DCMAKE_CUDA_ARCHITECTURES=60"
