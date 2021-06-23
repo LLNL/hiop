@@ -328,7 +328,9 @@ The above optimization problem~\eqref{obj}-\eqref{bounds} can be specified by us
 
  We present next the methods of this abstract class that needs to be implemented in order to specify the parts D1-D3 of the optimization problem. 
 
-\warningcp{Note:} All the functions that return \texttt{bool} should return \texttt{false} when an error occurs, otherwise should return \texttt{true}.
+ \warningcp{Note:} All the functions that return \texttt{bool} should return \texttt{false} when an error occurs, otherwise should return \texttt{true}.
+
+ \warningcp{Note:} The C++ interface uses the integer types \texttt{size\_type} and \texttt{index\_type}.  The type \texttt{hiop::size\_type} is used for container (\textit{e.g.,} NLPs, vectors, matrices, etc.) sizes and generally holds a nonnegative integer. The \texttt{hiop::index\_type} type should be used for indexes within containers and is generally holding a nonnegative integer. These two types are defined within \Hi namespace (see \texttt{hiop\_defs.h}) and currently set to \texttt{int}. This choice allows a streamlined integration (that is, type conversions are not needed and arrays of indexes can be reused) with the low level linear algebra libraries, such as sparse and dense linear solver libraries, which generally use \texttt{int}.
 
 \subsubsection{Specifying the optimization problem}
 
