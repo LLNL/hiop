@@ -248,17 +248,19 @@ public:
                                         const index_type& dest_row_st,
                                         const index_type& dest_col_st,
                                         const size_type& dest_nnz_st,
-                                        const int &nnz_to_copy){assert(0 && "not implemented");}
+                                        const int &nnz_to_copy);
 
   /** 
-   * @brief same as @copyDiagMatrixToSubblock, but copies only diagonal entries specified by 'pattern' 
-   */
-  virtual void copyDiagMatrixToSubblock_w_pattern(const hiopVector& x,
+  * @brief same as @copyDiagMatrixToSubblock, but copies only diagonal entries specified by pattern `ix`
+  * @pre 'ix' has same size as `dx`
+  * @pre 'ix` has exactly `nnz_to_copy` nonzeros
+  */
+  virtual void copyDiagMatrixToSubblock_w_pattern(const hiopVector& dx,
                                                   const index_type& dest_row_st,
                                                   const index_type& dest_col_st,
                                                   const size_type& dest_nnz_st,
                                                   const int &nnz_to_copy,
-                                                  const hiopVector& pattern) {assert(0 && "not implemented");}
+                                                  const hiopVector& ix);
   
   virtual double max_abs_value();
 

@@ -1496,7 +1496,135 @@ void hiopMatrixRajaSparseTriplet::copySubmatrixFromTrans(const hiopMatrix& src_g
       }
     }
   );
+}
 
+/**
+* @brief Copy a diagonal matrix to destination.
+* This diagonal matrix is 'src_val'*identity matrix with size 'n_rows'x'n_rows'.
+* The destination is updated from the start row 'row_dest_st' and start column 'col_dest_st'.
+*/
+void hiopMatrixRajaSparseTriplet::copyDiagMatrixToSubblock(const double& src_val,
+                                                           const index_type& dest_row_st,
+                                                           const index_type& col_dest_st,
+                                                           const size_type& dest_nnz_st,
+                                                           const size_type &nnz_to_copy)
+{
+  assert(this->numberOfNonzeros() >= nnz_to_copy+dest_nnz_st);
+  assert(this->n() >= nnz_to_copy);
+  assert(nnz_to_copy + dest_row_st <= this->m());
+  assert(nnz_to_copy + col_dest_st <= this->n());
+
+  int itnz_src = 0;
+  int itnz_dest = dest_nnz_st;
+  for(auto ele_add=0; ele_add<nnz_to_copy; ++ele_add) {
+    iRow_[itnz_dest] = dest_row_st + ele_add;
+    jCol_[itnz_dest] = col_dest_st + ele_add;
+    values_[itnz_dest++] = src_val;
+  }
+
+  // local copy of member variable/function, for RAJA access
+  int* iRow = iRow_;
+  int* jCol = jCol_;
+  double* values = values_;
+
+  RAJA::forall<hiop_raja_exec>(
+    RAJA::RangeSegment(0, nnz_to_copy),
+    RAJA_LAMBDA(RAJA::Index_type ele_add)
+    {
+      int itnz_dest = dest_nnz_st + ele_add;
+      iRow[itnz_dest] = dest_row_st + ele_add;
+      jCol[itnz_dest] = col_dest_st + ele_add;
+      values[itnz_dest] = src_val;
+    }
+  );
+}
+
+/** 
+* @brief same as @copyDiagMatrixToSubblock, but copies only diagonal entries specified by pattern `ix`
+* @pre 'ix' has same size as `dx`
+* @pre 'ix` has exactly `nnz_to_copy` nonzeros
+*/
+void hiopMatrixRajaSparseTriplet::copyDiagMatrixToSubblock_w_pattern(const hiopVector& dx,
+                                                                     const index_type& dest_row_st,
+                                                                     const index_type& dest_col_st,
+                                                                     const size_type& dest_nnz_st,
+                                                                     const int &nnz_to_copy,
+                                                                     const hiopVector& ix)
+void hiopMatrixSparseTriplet::
+
+{
+  assert(this->numberOfNonzeros() >= nnz_to_copy+dest_nnz_st);
+  assert(this->n() >= nnz_to_copy);
+  assert(nnz_to_copy + dest_row_st <= this->m());
+  assert(nnz_to_copy + dest_col_st <= this->n());
+  assert(ix.get_local_size() == dx.get_local_size());
+
+  const hiopVectorRajaPar& selected = dynamic_cast<const hiopVectorRajaPar&>(ix);
+  const hiopVectorRajaPar& xx = dynamic_cast<const hiopVectorRajaPar&>(dx);
+  const double *x = xx.local_data_const();
+  const double *pattern = selected.local_data_const();
+
+  int dest_k = dest_nnz_st;
+  int n = ix.get_local_size();
+  int nnz_find=0;
+
+  // local copy of member variable/function, for RAJA access
+  int* iRow = iRow_;
+  int* jCol = jCol_;
+  double* values = values_;
+
+#ifdef HIOP_DEEPCHECKS
+  RAJA::ReduceSum<hiop_raja_reduce, int> sum(0);
+  RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, n),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      sum += self_dev[i] * self_dev[i];
+      if(pattern[i]!=0.0){
+        sum++;
+      }
+    });
+  int nrm = sum.get();
+  assert(nrm == nnz_to_copy);
+#endif
+
+  auto& resmgr = umpire::ResourceManager::getInstance();
+  umpire::Allocator devalloc = resmgr.getAllocator(mem_space_);
+  int* m1_row_start = static_cast<int*>(devalloc.allocate((n+1)*sizeof(int)));
+
+  RAJA::forall<hiop_raja_exec>(
+    RAJA::RangeSegment(0, n+1),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      if(i==0) {
+        m1_row_start[i] = 0;
+      } else {
+        // from i=1..n
+        if(pattern[i-1]!=0.0){
+          m1_row_start[i] = 1;
+        } else {
+          m1_row_start[i] = 0;        
+        }
+      }
+    }
+  );
+  RAJA::inclusive_scan_inplace<hiop_raja_exec>(m1_row_start,m1_row_start+n+1,RAJA::operators::plus<int>());
+
+  RAJA::forall<hiop_raja_exec>(
+    RAJA::RangeSegment(1, n+1),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      if(m1_row_start[i] != m1_row_start[i-1]){
+        int ele_add = m1_row_start[i] - 1;
+        assert(ele_add>=0 && ele_add<nnz_to_copy);
+        int itnz_dest = dest_nnz_st + ele_add;
+        iRow[itnz_dest] = dest_row_st + ele_add;
+        jCol[itnz_dest] = col_dest_st + ele_add;
+        values[itnz_dest] = src_val;        
+      }
+    }
+  );
+
+  evalloc.deallocate(m1_row_start);
 }
 
 /**********************************************************************************
