@@ -52,7 +52,7 @@ module load exasgd-texinfo/6.5/gcc-7.4.0-w4cx3wo
 module load exasgd-umpire/4.1.2/cuda-10.2.89/gcc-7.4.0-cgd3l7m
 
 # Load system modules
-module load cuda/11.0.2
+module load cuda/10.2.89
 module load gcc/7.4.0
 module load spectrum-mpi/10.3.1.2-20200121
 module load cmake/3.18.2
