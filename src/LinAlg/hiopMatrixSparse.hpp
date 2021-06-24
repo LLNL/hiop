@@ -235,16 +235,27 @@ public:
                                       const bool offdiag_only = false) = 0;
 
   /**
-   * @brief Copy a diagonal matrix to destination.
-   * This diagonal matrix is 'src_val'*identity matrix with size 'src_size'x'src_size'.
-   * The destination is defined from the start row 'row_dest_st' and start column 'col_dest_st'.
-   *
-   */
+  * @brief Copy a diagonal matrix to destination.
+  * This diagonal matrix is 'src_val'*identity matrix with size 'nnz_to_copy'x'nnz_to_copy'.
+  * The destination is updated from the start row 'row_dest_st' and start column 'col_dest_st'. USE WITH CAUTION!
+  */
   virtual void copyDiagMatrixToSubblock(const double& src_val,
-                                        const index_type& row_dest_st, 
-                                        const index_type& col_dest_st,
-                                        const size_type& dest_nnz_st, 
+                                        const index_type& dest_row_st,
+                                        const index_type& dest_col_st,
+                                        const size_type& dest_nnz_st,
                                         const int &nnz_to_copy) = 0;
+
+  /** 
+  * @brief same as @copyDiagMatrixToSubblock, but copies only diagonal entries specified by pattern `ix`. USE WITH CAUTION!
+  * @pre 'ix' has same size as `dx`
+  * @pre 'ix` has exactly `nnz_to_copy` nonzeros
+  */
+  virtual void copyDiagMatrixToSubblock_w_pattern(const hiopVector& dx,
+                                                  const index_type& dest_row_st,
+                                                  const index_type& dest_col_st,
+                                                  const size_type& dest_nnz_st,
+                                                  const int &nnz_to_copy,
+                                                  const hiopVector& ix) = 0;
 
   virtual double max_abs_value() = 0;
 
