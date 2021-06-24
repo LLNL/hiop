@@ -943,11 +943,11 @@ public:
   * @brief Copy matrix 'B' into `A` as a subblock starting from the corner point ('A_rows_st', 'A_cols_st').
   * The non-zero elements start from 'B_nnz_st' will be replaced by the new elements.
   *
-  * @pre 'A' must have exactly, or more than 'n_rows' rows after row 'A_rows_st'
-  * @pre 'B' must have exactly, or more than 'n_rows' rows after row 'B_rows_st'
+  * @pre 'A' must have exactly, or more than 'B.n_rows' rows after row 'A_rows_st'
+  * @pre 'A' must have exactly, or more than 'B.n_cols' cols after row 'A_cols_st'
   * @pre 'B_nnz_st' + the number of non-zeros in the copied the rows must be less or equal to B.nnz
-  * @pre User must know the nonzero pattern of A and B. Assume non-zero patterns of A and B wont change, and A is a submatrix of B
-  * @pre Otherwise, this function may replace the non-zero values and nonzero patterns for the undesired elements.
+  * @pre User must know the nonzero pattern of A and B. We assume the non-zero patterns of A and B stay the same, and B is a submatrix of A.
+  * @pre This function may replace the non-zero values and nonzero patterns of A. 
   */
   int matrix_copy_submatrix_from(hiop::hiopMatrixDense& W,
                                  hiop::hiopMatrixSparse& A,
@@ -1019,14 +1019,14 @@ public:
   }
   
   /**
-  * @brief Copy trnaspose of matrix 'B' into `A` as a subblock starting from the corner point ('A_rows_st', 'A_cols_st').
+  * @brief Copy the transpose of matrix 'B' into `A` as a subblock starting from the corner point ('A_rows_st', 'A_cols_st').
   * The non-zero elements start from 'B_nnz_st' will be replaced by the new elements.
   *
-  * @pre 'A' must have exactly, or more than 'n_rows' rows after row 'A_rows_st'
-  * @pre 'B' must have exactly, or more than 'n_rows' rows after row 'B_rows_st'
+  * @pre 'A' must have exactly, or more than 'B.n_cols' rows after row 'A_rows_st'
+  * @pre 'A' must have exactly, or more than 'B.n_rows' cols after row 'A_cols_st'
   * @pre 'B_nnz_st' + the number of non-zeros in the copied the rows must be less or equal to B.nnz
-  * @pre User must know the nonzero pattern of A and B. Assume non-zero patterns of A and B wont change, and A is a submatrix of B
-  * @pre Otherwise, this function may replace the non-zero values and nonzero patterns for the undesired elements.
+  * @pre User must know the nonzero pattern of A and B. We assume the non-zero patterns of A and B stay the same, and the transpose of B is a submatrix of A.
+  * @pre This function may replace the non-zero values and nonzero patterns of A. 
   */
   int matrix_copy_submatrix_from_trans(hiop::hiopMatrixDense& W,
                                        hiop::hiopMatrixSparse& A,
