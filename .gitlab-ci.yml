@@ -79,7 +79,6 @@
 stages:
   - build
   - default_build
-  - full_build
   - test
 
 # For PNNL CI
@@ -104,39 +103,6 @@ build_on_newell:
   <<: *pnnl_script_definition
   rules:
     - if: '$CI_PROJECT_ROOT_NAMESPACE == "exasgd"'
-
-newell_full_build_matrix:
-  stage: full_build
-  dependencies:
-    - build_on_newell
-    - build_on_marianas
-  variables:
-    SLURM_Q: "newell"
-    MY_CLUSTER: "newell"
-    TIMELIMIT: '30:00'
-    FULL_BUILD_MATRIX: 1
-    FULL_BUILD_MATRIX_PARALLEL: 1
-  <<: *pnnl_tags_definition
-  <<: *pnnl_script_definition
-  timeout: 30m
-  rules:
-    - if: '$CI_PROJECT_ROOT_NAMESPACE == "exasgd" && $CI_PIPELINE_SOURCE == "schedule"'
-      when: always
-      allow_failure: false
-    - if: '$CI_PROJECT_ROOT_NAMESPACE == "exasgd"'
-      when: manual
-      allow_failure: true
-  parallel:
-    matrix:
-      # These variables represent the indices of cmake options arrays that
-      # will be used in a given build. See scripts/fullBuildMatrix.sh for more
-      # details.
-      - CI_RAJAOP: [0, 1]
-        CI_GPUOP: [0, 1]
-        CI_KRONREDOP: [0, 1]
-        CI_MPIOP: [0, 1]
-        CI_SPARSEOP: [0, 1]
-# ---
 
 # For Ascent CI
 build_on_login_node:
