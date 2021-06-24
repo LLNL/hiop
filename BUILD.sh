@@ -114,6 +114,8 @@ fi
 
 module purge
 
+source ./scripts/generateNvblasConfigFile.sh
+
 # If we have modules/variables defined for the current cluster, use them
 if [ -f "./scripts/$(echo $MY_CLUSTER)Variables.sh" ]; then
   source "./scripts/$(echo $MY_CLUSTER)Variables.sh"
