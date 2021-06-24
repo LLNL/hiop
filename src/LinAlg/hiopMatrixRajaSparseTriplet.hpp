@@ -241,8 +241,8 @@ public:
 
   /**
   * @brief Copy a diagonal matrix to destination.
-  * This diagonal matrix is 'src_val'*identity matrix with size 'n_rows'x'n_rows'.
-  * The destination is updated from the start row 'row_dest_st' and start column 'col_dest_st'.
+  * This diagonal matrix is 'src_val'*identity matrix with size 'nnz_to_copy'x'nnz_to_copy'.
+  * The destination is updated from the start row 'row_dest_st' and start column 'col_dest_st'. USE WITH CAUTION!
   */
   virtual void copyDiagMatrixToSubblock(const double& src_val,
                                         const index_type& dest_row_st,
@@ -251,7 +251,7 @@ public:
                                         const int &nnz_to_copy);
 
   /** 
-  * @brief same as @copyDiagMatrixToSubblock, but copies only diagonal entries specified by pattern `ix`
+  * @brief same as @copyDiagMatrixToSubblock, but copies only diagonal entries specified by pattern `ix`. USE WITH CAUTION!
   * @pre 'ix' has same size as `dx`
   * @pre 'ix` has exactly `nnz_to_copy` nonzeros
   */

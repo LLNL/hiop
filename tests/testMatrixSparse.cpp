@@ -180,9 +180,23 @@ int main(int argc, char** argv)
     hiop::hiopMatrixSparse* m4xn4_sparse = 
       hiop::LinearAlgebraFactory::create_matrix_sparse(mem_space, 2*M_global+N_global, 2*M_global+N_global, nnz4);
     test.initializeMatrix(m4xn4_sparse, entries_per_row);
-
     fail += test.matrix_copy_submatrix_from(m4xn4_dense, *m4xn4_sparse, *mxn_sparse, M_global, 2*M_global, nnz4-nnz);
+    
+    // reset the sparsity, since previous function may change the sparsity
+    test.initializeMatrix(m4xn4_sparse, entries_per_row);
     fail += test.matrix_copy_submatrix_from_trans(m4xn4_dense, *m4xn4_sparse, *mxn_sparse, M_global, 2*(M_global), nnz4-nnz);
+
+    hiop::hiopVectorPar v_patern(N_global);
+    local_ordinal_type nnz_to_replace = M_global;
+    assert(N_global>nnz_to_replace);
+
+    // reset the sparsity, since previous function may change the sparsity
+    test.initializeMatrix(m4xn4_sparse, entries_per_row);
+    fail += test.matrix_copy_diag_matrix_to_subblock(m4xn4_dense, *m4xn4_sparse, M_global, 2*M_global, nnz4-2*nnz, nnz);
+    
+    // reset the sparsity, since previous function may change the sparsity
+    test.initializeMatrix(m4xn4_sparse, entries_per_row);
+    fail += test.matrix_copy_diag_matrix_to_subblock_w_pattern(m4xn4_dense, *m4xn4_sparse, vec_n, v_patern, M_global, 2*M_global, nnz4-2*nnz, nnz_to_replace);
 
     // Remove testing objects
     delete mxn_sparse;
@@ -287,10 +301,26 @@ int main(int argc, char** argv)
     assert(nnz4 < (2*M_global+N_global)*(2*M_global+N_global));
     hiop::hiopMatrixSparse* m4xn4_sparse = 
       hiop::LinearAlgebraFactory::create_matrix_sparse(mem_space, 2*M_global+N_global, 2*M_global+N_global, nnz4);
-    test.initializeMatrix(m4xn4_sparse, entries_per_row);
 
+    // reset the sparsity, since previous function may change the sparsity
+    test.initializeMatrix(m4xn4_sparse, entries_per_row);
     fail += test.matrix_copy_submatrix_from(m4xn4_dense, *m4xn4_sparse, *mxn_sparse, M_global, 2*M_global, nnz4-nnz);
+    
+    // reset the sparsity, since previous function may change the sparsity
+    test.initializeMatrix(m4xn4_sparse, entries_per_row);
     fail += test.matrix_copy_submatrix_from_trans(m4xn4_dense, *m4xn4_sparse, *mxn_sparse, M_global, 2*(M_global), nnz4-nnz);
+
+    hiop::hiopVectorRajaPar v_patern(N_global, mem_space);
+    local_ordinal_type nnz_to_replace = M_global;
+    assert(N_global>nnz_to_replace);
+
+    // reset the sparsity, since previous function may change the sparsity
+    test.initializeMatrix(m4xn4_sparse, entries_per_row);
+    fail += test.matrix_copy_diag_matrix_to_subblock(m4xn4_dense, *m4xn4_sparse, M_global, 2*M_global, nnz4-2*nnz, nnz);
+    
+    // reset the sparsity, since previous function may change the sparsity
+    test.initializeMatrix(m4xn4_sparse, entries_per_row);
+    fail += test.matrix_copy_diag_matrix_to_subblock_w_pattern(m4xn4_dense, *m4xn4_sparse, vec_n, v_patern, M_global, 2*M_global, nnz4-2*nnz, nnz_to_replace);
 
     // Remove testing objects
     delete mxn_sparse;

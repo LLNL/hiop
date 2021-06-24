@@ -1550,8 +1550,6 @@ void hiopMatrixRajaSparseTriplet::copyDiagMatrixToSubblock_w_pattern(const hiopV
                                                                      const size_type& dest_nnz_st,
                                                                      const int &nnz_to_copy,
                                                                      const hiopVector& ix)
-void hiopMatrixSparseTriplet::
-
 {
   assert(this->numberOfNonzeros() >= nnz_to_copy+dest_nnz_st);
   assert(this->n() >= nnz_to_copy);
@@ -1578,9 +1576,8 @@ void hiopMatrixSparseTriplet::
   RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, n),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
-      sum += self_dev[i] * self_dev[i];
       if(pattern[i]!=0.0){
-        sum++;
+        sum = sum+1;
       }
     });
   int nrm = sum.get();
@@ -1618,8 +1615,8 @@ void hiopMatrixSparseTriplet::
         assert(ele_add>=0 && ele_add<nnz_to_copy);
         int itnz_dest = dest_nnz_st + ele_add;
         iRow[itnz_dest] = dest_row_st + ele_add;
-        jCol[itnz_dest] = col_dest_st + ele_add;
-        values[itnz_dest] = src_val;        
+        jCol[itnz_dest] = dest_col_st + ele_add;
+        values[itnz_dest] = x[i-1];        
       }
     }
   );
