@@ -457,10 +457,10 @@ public:
   /** const accessors */
   virtual size_type nx_sp() const { return nx_sparse; }
   virtual size_type nx_de() const { return nx_dense; }
-  inline const int get_nnz_sp_Jaceq()  const { return nnz_sparse_Jaceq; }
-  inline const int get_nnz_sp_Jacineq()  const { return nnz_sparse_Jacineq; }
-  inline const int get_nnz_sp_Hess_Lagr_SS()  const { return nnz_sparse_Hess_Lagr_SS; }
-  inline const int get_nnz_sp_Hess_Lagr_SD()  const { return nnz_sparse_Hess_Lagr_SD; }
+  inline int get_nnz_sp_Jaceq()  const { return nnz_sparse_Jaceq; }
+  inline int get_nnz_sp_Jacineq()  const { return nnz_sparse_Jacineq; }
+  inline int get_nnz_sp_Hess_Lagr_SS()  const { return nnz_sparse_Hess_Lagr_SS; }
+  inline int get_nnz_sp_Hess_Lagr_SD()  const { return nnz_sparse_Hess_Lagr_SD; }
 
 private:
   hiopInterfaceMDS& interface;

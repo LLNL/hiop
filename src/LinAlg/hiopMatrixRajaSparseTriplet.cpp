@@ -327,7 +327,6 @@ timesMatTrans(double beta, hiopMatrix& Wmat, double alpha, const hiopMatrix& M2m
   const hiopMatrixRajaSparseTriplet& M1 = *this;
   
   const int m1 = M1.nrows_;
-  const int nx = M1.ncols_;
   const int m2 = M2.nrows_;
   assert(nx==M1.ncols_);
   assert(nx==M2.ncols_);
@@ -336,9 +335,6 @@ timesMatTrans(double beta, hiopMatrix& Wmat, double alpha, const hiopMatrix& M2m
   assert(m1==W.m());
   assert(m2==W.n());
 
-  int M1nnz = M1.nnz_;
-  int M2nnz = M2.nnz_;
-    
   //double** WM = W.get_M();
   RAJA::View<double, RAJA::Layout<2>> WM(W.local_data(), W.m(), W.n());
 
@@ -612,7 +608,6 @@ void hiopMatrixRajaSparseTriplet::copy_to(hiopMatrixDense& W)
     row_starts_host = allocAndBuildRowStarts();
   assert(row_starts_host);
   
-  int num_rows = this->nrows_;
   int* idx_start = row_starts_host->idx_start_;
   int* jCol = jCol_;
   double* values = values_;
@@ -772,7 +767,6 @@ addMDinvNtransToSymDeMatUTri(int row_dest_start,
   const hiopMatrixRajaSparseTriplet& M1 = *this;
   
   const int m1 = M1.nrows_;
-  const int nx = M1.ncols_;
   const int m2 = M2.nrows_;
   assert(nx==M2.ncols_);
   assert(D.get_size() == nx);
@@ -1053,9 +1047,7 @@ void hiopMatrixRajaSparseTriplet::set_Jac_FR(const hiopMatrixSparse& Jac_c,
   const auto& J_d = dynamic_cast<const hiopMatrixRajaSparseTriplet&>(Jac_d);
     
   // shortcut to the original Jac
-  const int *irow_c = J_c.iRow_;
   const int *jcol_c = J_c.jCol_;
-  const int *irow_d = J_d.iRow_;
   const int *jcol_d = J_d.jCol_;
 
   // assuming original Jac is sorted!
@@ -1069,7 +1061,6 @@ void hiopMatrixRajaSparseTriplet::set_Jac_FR(const hiopMatrixSparse& Jac_c,
   assert(ncols_ == n_c + 2*m_c + 2*m_d);
 
   int nnz_Jac_c_new = nnz_Jac_c + 2*m_c;
-  int nnz_Jac_d_new = nnz_Jac_d + 2*m_d;
 
   assert(nnz_ == nnz_Jac_c_new + nnz_Jac_d_new);
   

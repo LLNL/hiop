@@ -158,11 +158,28 @@ public:
   /* Implementation of the primal starting point specification */
   bool get_starting_point(const size_type& global_n, double* x0);
 
-  bool get_starting_point(const size_type& n, const size_type& m,
-      double* x0,
-      bool& duals_avail,
-      double* z_bndL0, double* z_bndU0,
-      double* lambda0);
+  bool get_starting_point(const size_type& n,
+                          const size_type& m,
+                          double* x0,
+                          bool& duals_avail,
+                          double* z_bndL0,
+                          double* z_bndU0,
+                          double* lambda0,
+                          bool& slacks_avail,
+                          double* ineq_slack);
+
+  bool get_starting_point(const size_type& n,
+                          const size_type& m,
+                          double* x0,
+                          double* z_bndL0, 
+                          double* z_bndU0,
+                          double* lambda0,
+                          double* ineq_slack,
+                          double* vl0,
+                          double* vu0)
+  {
+    return false;
+  }
 
   /* The public methods below are not part of hiopInterface. They are a proxy
    * for user's (front end) code to set solutions from a previous solve. 
