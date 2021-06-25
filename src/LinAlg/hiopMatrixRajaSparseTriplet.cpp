@@ -213,10 +213,10 @@ void hiopMatrixRajaSparseTriplet::timesVec(double beta,
       y[i] *= beta;
     });
 
-#ifndef NDEBUG
-  auto nrs = nrows_;
-  auto ncs = ncols_;
-#endif
+  // nrs and ncs are used in assert statements only
+  auto nrs __attribute__ ((unused)) = nrows_;
+  auto ncs __attribute__ ((unused)) = ncols_;
+
   auto irw = iRow_;
   auto jcl = jCol_;
   auto vls = values_;
@@ -280,10 +280,10 @@ void hiopMatrixRajaSparseTriplet::transTimesVec(double beta,
       y[i] *= beta;
     });
   
-#ifndef NDEBUG
-  int num_rows = nrows_;
-  int num_cols = ncols_;
-#endif
+  // num_rows and num_columns are used in assert statements only
+  int num_rows __attribute__ ((unused)) = nrows_;
+  int num_cols __attribute__ ((unused)) = ncols_;
+
   int* iRow = iRow_;
   int* jCol = jCol_;
   double* values = values_;
@@ -324,13 +324,10 @@ timesMatTrans(double beta, hiopMatrix& Wmat, double alpha, const hiopMatrix& M2m
 {
   auto& W = dynamic_cast<hiopMatrixDense&>(Wmat);
   const auto& M2 = dynamic_cast<const hiopMatrixRajaSparseTriplet&>(M2mat);
-  const hiopMatrixRajaSparseTriplet& M1 = *this;
   
-  const int m1 = M1.nrows_;
+  const int m1 = nrows_;
   const int m2 = M2.nrows_;
-  assert(nx==M1.ncols_);
-  assert(nx==M2.ncols_);
-  assert(M2.ncols_ == nx);
+  assert(ncols_ == M2.ncols_);
 
   assert(m1==W.m());
   assert(m2==W.n());
@@ -339,20 +336,24 @@ timesMatTrans(double beta, hiopMatrix& Wmat, double alpha, const hiopMatrix& M2m
   RAJA::View<double, RAJA::Layout<2>> WM(W.local_data(), W.m(), W.n());
 
   // TODO: allocAndBuildRowStarts -> should create row_starts_host internally (name='prepareRowStarts' ?)
-  if(M1.row_starts_host==NULL)
-    M1.row_starts_host = M1.allocAndBuildRowStarts();
-  assert(M1.row_starts_host);
+  if(this->row_starts_host == nullptr)
+    this->row_starts_host = this->allocAndBuildRowStarts();
+  assert(this->row_starts_host);
 
   if(M2.row_starts_host==NULL)
     M2.row_starts_host = M2.allocAndBuildRowStarts();
   assert(M2.row_starts_host);
 
-  int* M1_idx_start = M1.row_starts_host->idx_start_;
+  // M1nnz and M2nnz are used in assert statements only
+  int M1nnz __attribute__((unused)) = this->nnz_;
+  int M2nnz __attribute__((unused)) = M2.nnz_;   
+  
+  int* M1_idx_start = this->row_starts_host->idx_start_;
   int* M2_idx_start = M2.row_starts_host->idx_start_;
 
-  int* M1jCol = M1.jCol_;
+  int* M1jCol = this->jCol_;
   int* M2jCol = M2.jCol_;
-  double* M1values = M1.values_;
+  double* M1values = this->values_;
   double* M2values = M2.values_;
 
   RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, m1),
@@ -362,13 +363,13 @@ timesMatTrans(double beta, hiopMatrix& Wmat, double alpha, const hiopMatrix& M2m
       {
         // dest[i,j] = weigthed_dotprod(M1_row_i,M2_row_j)
         double acc = 0.;
-        int ki=M1_idx_start[i];
-        int kj=M2_idx_start[j];
+        int ki = M1_idx_start[i];
+        int kj = M2_idx_start[j];
         
         while(ki<M1_idx_start[i+1] && kj<M2_idx_start[j+1])
         {
-          assert(ki<M1nnz);
-          assert(kj<M2nnz);
+          assert(ki < M1nnz);
+          assert(kj < M2nnz);
 
           if(M1jCol[ki] == M2jCol[kj])
           {
@@ -670,13 +671,13 @@ addMDinvMtransToDiagBlockOfSymDeMatUTri(int rowAndCol_dest_start,
   const hiopVector& D, hiopMatrixDense& W) const
 {
   const int row_dest_start = rowAndCol_dest_start, col_dest_start = rowAndCol_dest_start;
-#ifndef NDEBUG
-  int n = this->nrows_;
-  int num_non_zero = this->nnz_;
-#endif
-  assert(row_dest_start>=0 && row_dest_start+n<=W.m());
-  assert(col_dest_start>=0 && col_dest_start+nrows_<=W.n());
-  assert(D.get_size() == this->ncols_);
+
+  // nnz is used in assert statements only
+  int nnz __attribute__ ((unused)) = this->nnz_;
+
+  assert(row_dest_start >= 0 && row_dest_start+nrows_ <= W.m());
+  assert(col_dest_start >= 0 && col_dest_start+nrows_ <= W.n());
+  assert(D.get_size() == ncols_);
   RAJA::View<double, RAJA::Layout<2>> WM(W.local_data(), W.m(), W.n());
   const double* DM = D.local_data_const();
   
@@ -684,11 +685,11 @@ addMDinvMtransToDiagBlockOfSymDeMatUTri(int rowAndCol_dest_start,
     row_starts_host = allocAndBuildRowStarts();
   assert(row_starts_host);
 
-  int num_rows = this->nrows_;
+  int nrows = this->nrows_;
   int* idx_start = row_starts_host->idx_start_;
   int* jCol = jCol_;
   double* values = values_;
-  RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, this->nrows_),
+  RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, nrows),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       //j==i
@@ -700,17 +701,17 @@ addMDinvMtransToDiagBlockOfSymDeMatUTri(int rowAndCol_dest_start,
       WM(i + row_dest_start, i + col_dest_start) += alpha*acc;
 
       //j>i
-      for(int j=i+1; j<num_rows; j++)
+      for(int j = i+1; j < nrows; j++)
       {
         //dest[i,j] = weigthed_dotprod(this_row_i,this_row_j)
         acc = 0.;
 
-        int ki=idx_start[i];
-        int kj=idx_start[j];
-        while(ki<idx_start[i+1] && kj<idx_start[j+1])
+        int ki = idx_start[i];
+        int kj = idx_start[j];
+        while(ki < idx_start[i+1] && kj < idx_start[j+1])
         {
-          assert(ki < num_non_zero);
-          assert(kj < num_non_zero);
+          assert(ki < nnz);
+          assert(kj < nnz);
           if(jCol[ki] == jCol[kj])
           {
             acc += values[ki] / DM[jCol[ki]] * values[kj];
@@ -764,12 +765,11 @@ addMDinvNtransToSymDeMatUTri(int row_dest_start,
                              hiopMatrixDense& W) const
 {
   const auto& M2 = dynamic_cast<const hiopMatrixRajaSparseTriplet&>(M2mat);
-  const hiopMatrixRajaSparseTriplet& M1 = *this;
   
-  const int m1 = M1.nrows_;
+  const int m1 = nrows_;
   const int m2 = M2.nrows_;
-  assert(nx==M2.ncols_);
-  assert(D.get_size() == nx);
+  assert(ncols_ == M2.ncols_);
+  assert(D.get_size() == ncols_);
 
   //does it fit in W ?
   assert(row_dest_start>=0 && row_dest_start+m1<=W.m());
@@ -780,25 +780,25 @@ addMDinvNtransToSymDeMatUTri(int row_dest_start,
   const double* DM = D.local_data_const();
 
   // TODO: allocAndBuildRowStarts -> should create row_starts_host internally (name='prepareRowStarts' ?)
-  if(M1.row_starts_host==NULL)
-    M1.row_starts_host = M1.allocAndBuildRowStarts();
-  assert(M1.row_starts_host);
+  if(this->row_starts_host==NULL)
+    this->row_starts_host = this->allocAndBuildRowStarts();
+  assert(this->row_starts_host);
 
   if(M2.row_starts_host==NULL)
     M2.row_starts_host = M2.allocAndBuildRowStarts();
   assert(M2.row_starts_host);
 
-  int* M1_idx_start = M1.row_starts_host->idx_start_;
+  int* M1_idx_start = this->row_starts_host->idx_start_;
   int* M2_idx_start = M2.row_starts_host->idx_start_;
-#ifndef NDEBUG
-  int M1nnz = M1.nnz_;
-  int M2nnz = M2.nnz_;
-#endif
-  int* M1jCol = M1.jCol_;
+
+  // M1nnz and M2nnz are used in assert statements only
+  int M1nnz __attribute__ ((unused)) = this->nnz_;
+  int M2nnz __attribute__ ((unused)) = M2.nnz_;
+
+  int* M1jCol = this->jCol_;
   int* M2jCol = M2.jCol_;
-  double* M1values = M1.values_;
+  double* M1values = this->values_;
   double* M2values = M2.values_;
-  int* jCol = jCol_;
   RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, m1),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
@@ -806,17 +806,17 @@ addMDinvNtransToSymDeMatUTri(int row_dest_start,
       {
         // dest[i,j] = weigthed_dotprod(M1_row_i,M2_row_j)
         double acc = 0.;
-        int ki=M1_idx_start[i];
-        int kj=M2_idx_start[j];
+        int ki = M1_idx_start[i];
+        int kj = M2_idx_start[j];
         
         while(ki<M1_idx_start[i+1] && kj<M2_idx_start[j+1])
         {
-          assert(ki<M1nnz);
-          assert(kj<M2nnz);
+          assert(ki < M1nnz);
+          assert(kj < M2nnz);
 
           if(M1jCol[ki] == M2jCol[kj])
           {
-            acc += M1values[ki] / DM[jCol[ki]] * M2values[kj];
+            acc += M1values[ki] / DM[M1jCol[ki]] * M2values[kj];
             ki++;
             kj++;
           }
@@ -1062,7 +1062,7 @@ void hiopMatrixRajaSparseTriplet::set_Jac_FR(const hiopMatrixSparse& Jac_c,
 
   int nnz_Jac_c_new = nnz_Jac_c + 2*m_c;
 
-  assert(nnz_ == nnz_Jac_c_new + nnz_Jac_d_new);
+  assert(nnz_ == nnz_Jac_c_new + nnz_Jac_d + 2*m_d);
   
   if(J_c.row_starts_host == nullptr) {
     J_c.row_starts_host = J_c.allocAndBuildRowStarts();
@@ -1234,10 +1234,11 @@ timesVec(double beta, double* y, double alpha, const double* x) const
   auto iRow = this->iRow_;
   auto jCol = this->jCol_;
   auto values = this->values_;
-#ifndef NDEBUG
-  auto nrows = this->nrows_;
-  auto ncols = this->ncols_;
-#endif
+
+  // nrows and ncols are used in assert statements only
+  auto nrows __attribute__ ((unused)) = this->nrows_;
+  auto ncols __attribute__ ((unused)) = this->ncols_;
+
   RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, nnz_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
