@@ -235,6 +235,32 @@ public:
                                       const bool offdiag_only = false) = 0;
 
   /**
+  * @brief Copy selected columns of a diagonal matrix (a constant 'scalar' times identity),
+  * into 'this' as a submatrix from corner 'dest_row_st' and 'dest_col_st'
+  * The non-zero elements start from 'dest_nnz_st' will be replaced by the new elements.
+  * @pre: this function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
+  */
+  virtual void setSubmatrixToConstantDiag_w_colpattern(const double& scalar,
+                                                       const index_type& dest_row_st,
+                                                       const index_type& dest_col_st,
+                                                       const size_type& dest_nnz_st,
+                                                       const int &nnz_to_copy,
+                                                       const hiopVector& ix) = 0;
+
+  /**
+  * @brief Copy selected rows of a diagonal matrix (a constant 'scalar' times identity),
+  * into 'this' as a submatrix from corner 'dest_row_st' and 'dest_col_st'
+  * The non-zero elements start from 'dest_nnz_st' will be replaced by the new elements.
+  * @pre: this function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
+  */
+  virtual void setSubmatrixToConstantDiag_w_rowpattern(const double& scalar,
+                                                       const index_type& dest_row_st,
+                                                       const index_type& dest_col_st,
+                                                       const size_type& dest_nnz_st,
+                                                       const int &nnz_to_copy,
+                                                       const hiopVector& ix) = 0;
+
+  /**
   * @brief Copy a diagonal matrix to destination.
   * This diagonal matrix is 'src_val'*identity matrix with size 'nnz_to_copy'x'nnz_to_copy'.
   * The destination is updated from the start row 'row_dest_st' and start column 'col_dest_st'. USE WITH CAUTION!
