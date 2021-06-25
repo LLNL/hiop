@@ -30,10 +30,11 @@ $ export MY_CLUSTER=newell # or marianas or ascent
 $ source ./scripts/${MY_CLUSTER}Variables.sh
 $ mkdir build && cd build
 $ cmake ..
-$ ccmake . # Optional, if you would like to further configure the build
 $ make -j 16
 $ make test
-```
+
+Optionally, you may want to modify default CMake configuration with
+`ccmake` or `cmake-gui` tools.
 
 # Reproducing CI Builds
 
@@ -536,4 +537,3 @@ $> mpiexec -np 2 ./src/Drivers/nlpDenseCons_ex1.exe
 $> mpiexec -np 2 ./src/Drivers/nlpDenseCons_ex2.exe 
 $> mpiexec -np 2 ./src/Drivers/nlpDenseCons_ex3.exe 
 ```
-
