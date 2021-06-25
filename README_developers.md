@@ -18,6 +18,48 @@ $ git checkout -b my-bug-fix
 - Keep pull requests focused on single issue
 - Whenever possible squash all commits on merge
 
+# Quickstart on CI Platforms
+
+If you are developing HiOp on one of our supported platforms, you may want to
+use the dependencies we have already installed there. In that case, you may
+source the respective variables script we have configured for that platform:
+
+```console
+$ cd /path/to/hiop
+$ export MY_CLUSTER=newell # or marianas or ascent
+$ source ./scripts/${MY_CLUSTER}Variables.sh
+$ mkdir build && cd build
+$ cmake ..
+$ ccmake . # Optional, if you would like to further configure the build
+$ make -j 16
+$ make test
+```
+
+# Reproducing CI Builds
+
+To reproduce the exact build configuration used in our continuous integration
+configuration, you may use the following workflow on a supported CI cluster (one
+of Ascent, Newell, or Marianas):
+
+```console
+$ cd /path/to/hiop
+$ export MY_CLUSTER=newell # or marianas or ascent
+$ ./BUILD.sh
+```
+
+Or if you would like to have all the modules loaded in your interactive session:
+```console
+$ cd /path/to/hiop
+$ export MY_CLUSTER=newell # or marianas or ascent
+$ source ./scripts/${MY_CLUSTER}Variables.sh
+$ mkdir build && cd build
+$ cmake -C ../scripts/defaultCIBuild.cmake ..
+$ make -j 16
+$ make test
+```
+
+Note that this workflow is not encouraged for development, but just reproducing
+the build we use for continuous integration.
 
 
 # Style Guidelines
