@@ -1513,8 +1513,8 @@ void hiopMatrixRajaSparseTriplet::setSubmatrixToConstantDiag_w_colpattern(const 
                                                                           const int &nnz_to_copy,
                                                                           const hiopVector& ix)
 {
-  assert(ix.get_local_size() + dest_row_st <= this->m());
-  assert(nnz_to_copy + dest_col_st <= this->n() );
+  assert(ix.get_local_size() + dest_col_st <= this->n());
+  assert(nnz_to_copy + dest_row_st <= this->m() );
   assert(dest_nnz_st + nnz_to_copy <= this->numberOfNonzeros());
 
   const hiopVectorRajaPar& selected= dynamic_cast<const hiopVectorRajaPar&>(ix);
