@@ -1606,7 +1606,8 @@ void hiopMatrixRajaSymSparseTriplet::set_Hess_FR(const hiopMatrixSparse& Hess,
 
   assert(n1==m1);
   assert(n2==m2);
-  
+  assert(m2<=m1);
+
   // note that nnz2 can be zero, i.e., original hess is empty. 
   // Hence we use add_diag.get_size() to detect the length of x in the base problem
   assert(m_row==m2 || m2==0);
@@ -1623,7 +1624,7 @@ void hiopMatrixRajaSymSparseTriplet::set_Hess_FR(const hiopMatrixSparse& Hess,
 
   const int* M2iRow = M2.i_row();
   const int* M2jCol = M2.j_col();
-    
+
   // extend Hess to the p and n parts --- sparsity
   // sparsity may change due to te new obj term zeta*DR^2.*(x-x_ref)
   if(iHSS != nullptr && jHSS != nullptr) {
@@ -1636,14 +1637,16 @@ void hiopMatrixRajaSymSparseTriplet::set_Hess_FR(const hiopMatrixSparse& Hess,
       umpire::Allocator devalloc = resmgr.getAllocator(mem_space_);
       int* m1_row_start = static_cast<int*>(devalloc.allocate((m1+1)*sizeof(int)));
 
+      // compute nnz from the new term of obj zeta*DR^2.*(x-x_ref)
       RAJA::forall<hiop_raja_exec>(
         RAJA::RangeSegment(0, m1+1),
         RAJA_LAMBDA(RAJA::Index_type i)
         {
-          if(i>0)
+          if(i>0 && i<m2+1) {
             m1_row_start[i] = 1;
-          else 
-           m1_row_start[i] = 0;
+          } else { 
+            m1_row_start[i] = 0;
+          }
         }
       );
 
@@ -1663,7 +1666,7 @@ void hiopMatrixRajaSymSparseTriplet::set_Hess_FR(const hiopMatrixSparse& Hess,
           }
         }
       );
-      
+     
       RAJA::inclusive_scan_inplace<hiop_raja_exec>(m1_row_start,m1_row_start+m1+1,RAJA::operators::plus<int>());
       
       RAJA::forall<hiop_raja_exec>(
