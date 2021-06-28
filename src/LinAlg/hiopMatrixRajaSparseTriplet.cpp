@@ -664,9 +664,9 @@ void hiopMatrixRajaSparseTriplet::copy_to(hiopMatrixDense& W)
   
   RAJA::View<double, RAJA::Layout<2>> WM(W.local_data(), W.m(), W.n());
   
-  int nnz = nnz_;
-  int nrows = nrows_;
-  int ncols = ncols_;
+  int nnz = this->nnz_;
+  int nrows = this->nrows_;
+  int ncols = this->ncols_;
   int* jCol = jCol_;
   int* iRow = iRow_;
   double* values = values_;
