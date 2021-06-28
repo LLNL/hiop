@@ -214,8 +214,10 @@ void hiopMatrixRajaSparseTriplet::timesVec(double beta,
     });
 
   // nrs and ncs are used in assert statements only
-  auto nrs __attribute__ ((unused)) = nrows_;
-  auto ncs __attribute__ ((unused)) = ncols_;
+#ifndef NDEBUG
+  auto nrs = nrows_;
+  auto ncs = ncols_;
+#endif
 
   auto irw = iRow_;
   auto jcl = jCol_;
@@ -281,8 +283,10 @@ void hiopMatrixRajaSparseTriplet::transTimesVec(double beta,
     });
   
   // num_rows and num_columns are used in assert statements only
-  int num_rows __attribute__ ((unused)) = nrows_;
-  int num_cols __attribute__ ((unused)) = ncols_;
+#ifndef NDEBUG
+  int num_rows = nrows_;
+  int num_cols = ncols_;
+#endif
 
   int* iRow = iRow_;
   int* jCol = jCol_;
@@ -345,9 +349,11 @@ timesMatTrans(double beta, hiopMatrix& Wmat, double alpha, const hiopMatrix& M2m
   assert(M2.row_starts_host);
 
   // M1nnz and M2nnz are used in assert statements only
-  int M1nnz __attribute__((unused)) = this->nnz_;
-  int M2nnz __attribute__((unused)) = M2.nnz_;   
-  
+#ifndef NDEBUG
+  int M1nnz = this->nnz_;
+  int M2nnz = M2.nnz_;   
+#endif
+
   int* M1_idx_start = this->row_starts_host->idx_start_;
   int* M2_idx_start = M2.row_starts_host->idx_start_;
 
@@ -673,7 +679,9 @@ addMDinvMtransToDiagBlockOfSymDeMatUTri(int rowAndCol_dest_start,
   const int row_dest_start = rowAndCol_dest_start, col_dest_start = rowAndCol_dest_start;
 
   // nnz is used in assert statements only
-  int nnz __attribute__ ((unused)) = this->nnz_;
+#ifndef NDEBUG
+  int nnz = this->nnz_;
+#endif
 
   assert(row_dest_start >= 0 && row_dest_start+nrows_ <= W.m());
   assert(col_dest_start >= 0 && col_dest_start+nrows_ <= W.n());
@@ -792,8 +800,10 @@ addMDinvNtransToSymDeMatUTri(int row_dest_start,
   int* M2_idx_start = M2.row_starts_host->idx_start_;
 
   // M1nnz and M2nnz are used in assert statements only
-  int M1nnz __attribute__ ((unused)) = this->nnz_;
-  int M2nnz __attribute__ ((unused)) = M2.nnz_;
+#ifndef NDEBUG
+  int M1nnz = this->nnz_;
+  int M2nnz = M2.nnz_;
+#endif
 
   int* M1jCol = this->jCol_;
   int* M2jCol = M2.jCol_;
@@ -1236,8 +1246,10 @@ timesVec(double beta, double* y, double alpha, const double* x) const
   auto values = this->values_;
 
   // nrows and ncols are used in assert statements only
-  auto nrows __attribute__ ((unused)) = this->nrows_;
-  auto ncols __attribute__ ((unused)) = this->ncols_;
+#ifndef NDEBUG
+  auto nrows = this->nrows_;
+  auto ncols = this->ncols_;
+#endif
 
   RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, nnz_),
     RAJA_LAMBDA(RAJA::Index_type i)
