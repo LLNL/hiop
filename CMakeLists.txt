@@ -9,7 +9,7 @@ if (POLICY CMP0074)
   cmake_policy(SET CMP0074 NEW)
 endif ()
 
-project (hiop VERSION "0.4.1")
+project (hiop VERSION "0.4.3")
 
 string(TIMESTAMP HIOP_RELEASE_DATE "%Y-%m-%d")
 
@@ -197,8 +197,8 @@ if(HIOP_USE_GPU)
         "\nGPU is enabled, but both CUDA and HIP are disabled. "
         "If you would like to enable a particular GPU "
         "platform, set one of the following variables to ON: "
-        "\n* EXAGO_ENABLE_CUDA"
-        "\n* EXAGO_ENABLE_HIP"
+        "\n* HIOP_USE_CUDA"
+        "\n* HIOP_USE_HIP"
     )
   endif()
 endif(HIOP_USE_GPU)
