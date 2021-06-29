@@ -32,9 +32,9 @@ $ mkdir build && cd build
 $ cmake ..
 $ make -j 16
 $ make test
-
+```
 Optionally, you may want to modify default CMake configuration with
-`ccmake` or `cmake-gui` tools.
+`ccmake` or `cmake-gui` tools before executing `make` command.
 
 # Reproducing CI Builds
 
