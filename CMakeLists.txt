@@ -216,13 +216,11 @@ if(HIOP_USE_RAJA)
   target_link_libraries(hiop_tpl INTERFACE umpire RAJA)
 endif()
 
-#KS code
 if (HIOP_USE_CUSOLVER)
   set(HIOP_KLU_DIR CACHE PATH "Path to KLU directory")
   include(FindKLU)
   target_link_libraries(hiop_tpl INTERFACE KLU)
 endif()
-
 
 if(HIOP_WITH_KRON_REDUCTION)
   set(HIOP_UMFPACK_DIR CACHE PATH "Path to UMFPACK directory")
