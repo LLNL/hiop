@@ -4,8 +4,11 @@ Default CMake cache for building in CI with most options enabled and a sane
 default value for CUDA architectures.
 
 #]]
-message(STATUS "Enabling both shared and static libraries")
-set(HIOP_BUILD_SHARED ON CACHE BOOL "")
+message(WARNING "
+    HIOP_BUILD_SHARED is being disabled, becuase it is currently not funcitonal
+    when HIOP_USE_CUSOLVER is enabled.
+")
+set(HIOP_BUILD_SHARED OFF CACHE BOOL "")
 set(HIOP_BUILD_STATIC ON CACHE BOOL "")
 
 set(ENABLE_TESTS ON CACHE BOOL "")
@@ -17,6 +20,7 @@ set(HIOP_USE_UMPIRE ON CACHE BOOL "")
 set(HIOP_WITH_KRON_REDUCTION ON CACHE BOOL "")
 set(HIOP_USE_GPU ON CACHE BOOL "")
 set(HIOP_USE_CUDA ON CACHE BOOL "")
+set(HIOP_USE_CUSOLVER ON CACHE BOOL "")
 
 message(STATUS "Enabling HiOp's Sparse Interface")
 set(HIOP_SPARSE ON CACHE BOOL "")

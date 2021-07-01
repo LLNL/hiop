@@ -61,6 +61,10 @@ module load cuda/10.2
 module load openmpi/3.1.5
 module load cmake/3.19.6
 
+unset ZFP_ROOT
+unset METIS_ROOT
+unset MPI_ROOT
+
 [ -f $PWD/nvblas.conf ] && rm $PWD/nvblas.conf
 cat > $PWD/nvblas.conf <<-EOD
 NVBLAS_LOGFILE  nvblas.log
