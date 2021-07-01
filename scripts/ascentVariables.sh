@@ -1,12 +1,3 @@
-
-if [ ! -v BUILDDIR ]; then
-  echo BUILDDIR is not set! Your paths may be misconfigured.
-fi
-
-export MY_CLUSTER=ascent
-export PROJ_DIR=/gpfs/wolf/proj-shared/csc359
-BUILDDIR=${BUILDDIR:-$PWD/build}
-
 module use /gpfs/wolf/proj-shared/csc359/src/spack/share/spack/modules/linux-rhel7-power9le
 
 module purge
@@ -62,7 +53,15 @@ export CC=/sw/ascent/gcc/7.4.0/bin/gcc
 export CXX=/sw/ascent/gcc/7.4.0/bin/g++
 export FC=/sw/ascent/gcc/7.4.0/bin/gfortran
 
-# Create nvblas configuration file in build directory based on path to blas library
-generateNvblasConfigFile $BUILDDIR $OPENBLAS_LIBRARY_DIR/libopenblas.so
+[ -f $PWD/nvblas.conf ] && rm $PWD/nvblas.conf
+cat > $PWD/nvblas.conf <<-EOD
+NVBLAS_LOGFILE  nvblas.log
+NVBLAS_CPU_BLAS_LIB $OPENBLAS_LIBRARY_DIR/libopenblas.so
+NVBLAS_GPU_LIST ALL
+NVBLAS_TILE_DIM 2048
+NVBLAS_AUTOPIN_MEM_ENABLED
+EOD
+export NVBLAS_CONFIG_FILE=$PWD/nvblas.conf
+echo "Generated $PWD/nvblas.conf"
 
 EXTRA_CMAKE_ARGS="$EXTRA_CMAKE_ARGS -DCMAKE_CUDA_ARCHITECTURES=70 -DHIOP_TEST_WITH_BSUB=ON"

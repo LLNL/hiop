@@ -1,11 +1,3 @@
-if [ ! -v BUILDDIR ]; then
-  echo BUILDDIR is not set! Your paths may be misconfigured.
-fi
-export MY_CLUSTER="marianas"
-export PROJ_DIR=/qfs/projects/exasgd
-export APPS_DIR=/share/apps
-BUILDDIR=${BUILDDIR:-$PWD/build}
-
 #  NOTE: The following is required when running from Gitlab CI via slurm job
 source /etc/profile.d/modules.sh
 module use -a /qfs/projects/exasgd/src/spack/share/spack/modules/linux-centos7-broadwell/
@@ -72,7 +64,15 @@ module load gcc/7.3.0
 module load cuda/10.2.89
 module load openmpi/3.1.3
 
-# Create nvblas configuration file in build directory based on path to blas library
-generateNvblasConfigFile $BUILDDIR $OPENBLAS_LIBRARY_DIR/libopenblas.so
+[ -f $PWD/nvblas.conf ] && rm $PWD/nvblas.conf
+cat > $PWD/nvblas.conf <<-EOD
+NVBLAS_LOGFILE  nvblas.log
+NVBLAS_CPU_BLAS_LIB $OPENBLAS_LIBRARY_DIR/libopenblas.so
+NVBLAS_GPU_LIST ALL
+NVBLAS_TILE_DIM 2048
+NVBLAS_AUTOPIN_MEM_ENABLED
+EOD
+export NVBLAS_CONFIG_FILE=$PWD/nvblas.conf
+echo "Generated $PWD/nvblas.conf"
 
 export EXTRA_CMAKE_ARGS="$EXTRA_CMAKE_ARGS -DCMAKE_CUDA_ARCHITECTURES=60"
