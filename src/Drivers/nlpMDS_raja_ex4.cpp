@@ -639,12 +639,18 @@ bool Ex4::get_starting_point(const size_type& global_n, double* x0)
   return true;
 }
 
-bool Ex4::get_starting_point(const size_type& n, const size_type& m,
-    double* x0,
-    bool& duals_avail,
-    double* z_bndL0, double* z_bndU0,
-    double* lambda0)
+bool Ex4::get_starting_point(const size_type& n, 
+                             const size_type& m,
+                             double* x0,
+                             bool& duals_avail,
+                             double* z_bndL0,
+                             double* z_bndU0,
+                             double* lambda0,
+                             bool& slacks_avail,
+                             double* )
 {
+  slacks_avail = false;
+  
   if(sol_x_ && sol_zl_ && sol_zu_ && sol_lambda_)
   {
     duals_avail = true;

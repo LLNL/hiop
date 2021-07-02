@@ -1273,11 +1273,15 @@ void hiopVectorRajaPar::negate()
  * 
  * @pre this[i] != 0 forall i
  * @post `this` is overwritten
+ * 
+ * @todo Consider having HiOp-wide `small_real` constant defined.
  */
 void hiopVectorRajaPar::invert()
 {
 #ifdef HIOP_DEEPCHECKS
+#ifndef NDEBUG
   const double small_real = 1e-35;
+#endif
 #endif
   double *data = data_dev_;
   RAJA::forall< hiop_raja_exec >(RAJA::RangeSegment(0, n_local_),
