@@ -471,7 +471,7 @@ if (HIOP_WITH_MAKETEST)
 
   if(HIOP_SPARSE)
     add_test(NAME NlpSparse6_1 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex6.exe>" "500" "-selfcheck")
-    add_test(NAME NlpSparse7_1 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex7.exe>" "500" "-selfcheck")
+    #add_test(NAME NlpSparse7_1 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex7.exe>" "500" "-selfcheck")
   endif(HIOP_SPARSE)
 
   if(HIOP_USE_MPI)
