@@ -44,6 +44,17 @@ if((NOT HIOP_BUILD_SHARED) AND (NOT HIOP_BUILD_STATIC))
   set(HIOP_BUILD_STATIC ON)
 endif()
 
+if(HIOP_USE_STRUMPACK)
+  message(WARNING "HIOP_USE_STRUMPACK is enabled, but this option is not
+  thoroughly tested and will likely be removed in a future release of HiOp.
+  For more information on this, please open an issue here:
+  https://github.com/LLNL/hiop/issues.")
+  message(WARNING "HIOP_BUILD_SHARED is being disabled due to HIOP_USE_STRUMPACK
+  being enabled.")
+  set(HIOP_BUILD_STATIC ON)
+  set(HIOP_BUILD_SHARED OFF)
+endif()
+
 # This is the default library which HiOp::HiOp will point to. Try to use
 # shared by default. Users should only link to HiOp::HiOp.
 set(hiop_default_library_type "SHARED")
@@ -446,7 +457,13 @@ if (HIOP_WITH_MAKETEST)
 
   if(HIOP_SPARSE)
     add_test(NAME NlpSparse6_1 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex6.exe>" "500" "-selfcheck")
-    add_test(NAME NlpSparse7_1 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex7.exe>" "500" "-selfcheck")
+    if(HIOP_USE_CUSOLVER)
+      message(WARNING "
+      HiOp test driver 'NlpSparse7_1' is being skipped because HIOP_USE_CUSOLVER
+      is enabled. This is a temporary solution.")
+    else()
+      add_test(NAME NlpSparse7_1 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex7.exe>" "500" "-selfcheck")
+    endif()
   endif(HIOP_SPARSE)
 
   if(HIOP_USE_MPI)
