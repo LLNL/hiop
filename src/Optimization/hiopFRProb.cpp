@@ -138,6 +138,16 @@ hiopFRProbSparse::~hiopFRProbSparse()
   delete Hess_cd_;
 }
 
+bool hiopFRProbSparse::get_MPI_comm(MPI_Comm& comm_out) 
+{ 
+#ifdef HIOP_USE_MPI
+  comm_out = nlp_base_->get_comm();
+#else
+  comm_out = MPI_COMM_WORLD;
+#endif
+  return true;
+}
+
 bool hiopFRProbSparse::get_prob_sizes(size_type& n, size_type& m)
 {
   n = n_;
@@ -738,6 +748,16 @@ hiopFRProbMDS::~hiopFRProbMDS()
   
   delete Jac_cd_;
   delete Hess_cd_;
+}
+
+bool hiopFRProbMDS::get_MPI_comm(MPI_Comm& comm_out) 
+{ 
+#ifdef HIOP_USE_MPI
+  comm_out = nlp_base_->get_comm();
+#else
+  comm_out = MPI_COMM_WORLD;
+#endif
+  return true;
 }
 
 bool hiopFRProbMDS::get_prob_sizes(size_type& n, size_type& m)
