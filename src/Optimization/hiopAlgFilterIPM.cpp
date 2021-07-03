@@ -1222,7 +1222,7 @@ void hiopAlgFilterIPMQuasiNewton::outputIteration(int lsStatus, int lsNum, int u
     else strcpy(stepType, "?");
 
     if(use_soc && lsStatus >= 1 && lsStatus <= 3) {
-      stepType[0] = (char) toupper(stepType[0]);
+      stepType[0] = (char) ::toupper(stepType[0]);
     }
 
     if(use_fr){
@@ -1873,7 +1873,7 @@ void hiopAlgFilterIPMNewton::outputIteration(int lsStatus, int lsNum, int use_so
     else strcpy(stepType, "?");
 
     if(use_soc && lsStatus >= 1 && lsStatus <= 3) {
-      stepType[0] = (char) toupper(stepType[0]);
+      stepType[0] = (char) ::toupper(stepType[0]);
     }
 
     if(use_fr){
