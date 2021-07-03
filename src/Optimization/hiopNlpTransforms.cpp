@@ -55,7 +55,7 @@
  */
  
 #include "hiopNlpTransforms.hpp"
-#include "hiopLinAlgFactory.hpp"
+#include "hiopNlpFormulation.hpp"
 
 #include <cmath>
 namespace hiop
@@ -377,7 +377,8 @@ relax(const double& bound_relax_perturb, hiopVector& xl, hiopVector& xu, hiopVec
 /**
 * For class hiopNLPObjGradScaling
 */
-hiopNLPObjGradScaling::hiopNLPObjGradScaling(const double max_grad, 
+hiopNLPObjGradScaling::hiopNLPObjGradScaling(hiopNlpFormulation* nlp,
+                                             const double& max_grad, 
                                              hiopVector& c, 
                                              hiopVector& d, 
                                              hiopVector& gradf,
@@ -390,14 +391,14 @@ hiopNLPObjGradScaling::hiopNLPObjGradScaling(const double max_grad,
         n_eq(c.get_size()), n_ineq(d.get_size())
 {
   scale_factor_obj = max_grad/gradf.infnorm();
-  if(scale_factor_obj>1.)
-  {
+  if(scale_factor_obj>1.) {
     scale_factor_obj=1.;
   }
   
   scale_factor_c = c.new_copy();
   scale_factor_d = d.new_copy();
-  scale_factor_cd = LinearAlgebraFactory::createVector(n_eq + n_ineq);
+  scale_factor_cd = LinearAlgebraFactory::create_vector(nlp->options->GetString("mem_space"),
+                                                        n_eq + n_ineq);
 
   Jac_c.row_max_abs_value(*scale_factor_c);
   scale_factor_c->scale(1./max_grad);

@@ -70,10 +70,14 @@ public:
   /**
    * @brief Static method to create vector
    */
-  static hiopVector* createVector(const size_type& glob_n,
-                                  index_type* col_part = NULL,
-                                  MPI_Comm comm = MPI_COMM_SELF); 
+  //static hiopVector* createVector(const size_type& glob_n,
+  //                              index_type* col_part = NULL,
+  //                              MPI_Comm comm = MPI_COMM_SELF); 
 
+  static hiopVector* create_vector(const std::string& mem_space,
+                                   const size_type& glob_n,
+                                   index_type* col_part = NULL,
+                                   MPI_Comm comm = MPI_COMM_SELF);
   /**
    * @brief Static method to create local int vector.
    */
@@ -88,6 +92,11 @@ public:
                                             index_type* col_part = NULL,
                                             MPI_Comm comm = MPI_COMM_SELF,
                                             const size_type& m_max_alloc = -1);
+  static hiopMatrixDense* create_matrix_dense(const std::string& mem_space,                                              
+                                              const size_type& glob_n,
+                                              index_type* col_part = NULL,
+                                              MPI_Comm comm = MPI_COMM_SELF,
+                                              const size_type& m_max_alloc = -1);
   /**
    * @brief Static method to create a sparse matrix
    */
@@ -109,7 +118,7 @@ public:
   static void deleteRawArray(double* a);
 
   /// Method to set memory space ID
-  static void set_mem_space(const std::string& mem_space);
+  //static void set_mem_space(const std::string& mem_space);
 
   /// Return memory space ID
   inline static std::string get_mem_space()

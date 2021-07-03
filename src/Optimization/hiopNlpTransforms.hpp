@@ -67,6 +67,8 @@
 namespace hiop
 {
 
+class hiopNlpFormulation;
+  
 /** Template class for internal NLP manipulation/transformation.
  *
  * Examples of such transformations are removing fix variables, relaxing fixed 
@@ -98,34 +100,34 @@ public:
     assert(x_in.local_data() == x_out.local_data());
   }
 
-  virtual inline double apply_inv_to_obj                  (double& f_in) { return f_in;} 
+  virtual inline double apply_inv_to_obj          (double& f_in) { return f_in;} 
   virtual inline double apply_to_obj              (double& f_in) { return f_in;} 
 
-  virtual inline hiopVector* apply_inv_to_grad_obj        (hiopVector& grad_in) { return &grad_in; }
+  virtual inline hiopVector* apply_inv_to_grad_obj(hiopVector& grad_in) { return &grad_in; }
   virtual inline hiopVector* apply_to_grad_obj    (hiopVector& grad_in) { return &grad_in; }
 
-  virtual inline hiopVector* apply_inv_to_cons_eq         (hiopVector& c_in, const int& m_in) { return &c_in; }
+  virtual inline hiopVector* apply_inv_to_cons_eq (hiopVector& c_in, const int& m_in) { return &c_in; }
   virtual inline hiopVector* apply_to_cons_eq     (hiopVector& c_in, const int& m_in) { return &c_in; }
-  virtual inline hiopVector* apply_inv_to_cons_ineq       (hiopVector& c_in, const int& m_in) { return &c_in; }
-  virtual inline hiopVector* apply_to_cons_ineq   (hiopVector& c_in, const int& m_in) { return &c_in; }
+  virtual inline hiopVector* apply_inv_to_cons_ineq(hiopVector& c_in, const int& m_in) { return &c_in; }
+  virtual inline hiopVector* apply_to_cons_ineq    (hiopVector& c_in, const int& m_in) { return &c_in; }
   
   //the following two are for when the underlying NLP formulation works with full body constraints,
   //that is, evaluates both equalities and inequalities at once (a.k.a. one-call constraints and
   //and Jacobian evaluations)
-  virtual inline hiopVector* apply_inv_to_cons            (hiopVector&  cons_in, const int& m_in) { return &cons_in; }
+  virtual inline hiopVector* apply_inv_to_cons    (hiopVector&  cons_in, const int& m_in) { return &cons_in; }
   virtual inline hiopVector* apply_to_cons        (hiopVector&  cons_in, const int& m_in) { return &cons_in; }
 
-  virtual inline hiopMatrix* apply_inv_to_jacob_eq        (hiopMatrix& Jac_in, const int& m_in) { return &Jac_in; }
+  virtual inline hiopMatrix* apply_inv_to_jacob_eq(hiopMatrix& Jac_in, const int& m_in) { return &Jac_in; }
   virtual inline hiopMatrix* apply_to_jacob_eq    (hiopMatrix& Jac_in, const int& m_in) { return &Jac_in; }
 
-  virtual inline hiopMatrix* apply_inv_to_jacob_ineq      (hiopMatrix& Jac_in, const int& m_in) { return &Jac_in; }
-  virtual inline hiopMatrix* apply_to_jacob_ineq  (hiopMatrix& Jac_in, const int& m_in) { return &Jac_in; }  
+  virtual inline hiopMatrix* apply_inv_to_jacob_ineq(hiopMatrix& Jac_in, const int& m_in) { return &Jac_in; }
+  virtual inline hiopMatrix* apply_to_jacob_ineq    (hiopMatrix& Jac_in, const int& m_in) { return &Jac_in; }  
 
-  virtual inline hiopMatrix* apply_inv_to_jacob_cons      (hiopMatrix& Jac_in, const int& m_in) { return &Jac_in; }
+  virtual inline hiopMatrix* apply_inv_to_jacob_cons(hiopMatrix& Jac_in, const int& m_in) { return &Jac_in; }
   virtual inline hiopMatrix* apply_to_jacob_cons  (hiopMatrix& Jac_in, const int& m_in) { return &Jac_in; } 
 
-  virtual inline hiopMatrix* apply_inv_to_larg_hess       (hiopMatrix& Hess_in, const int& m_in) { return &Hess_in; }
-  virtual inline hiopMatrix* apply_to_larg_hess   (hiopMatrix& Hess_in, const int& m_in) { return &Hess_in; }
+  virtual inline hiopMatrix* apply_inv_to_larg_hess(hiopMatrix& Hess_in, const int& m_in) { return &Hess_in; }
+  virtual inline hiopMatrix* apply_to_larg_hess    (hiopMatrix& Hess_in, const int& m_in) { return &Hess_in; }
   
 public:
   hiopNlpTransformation(){};
@@ -343,7 +345,8 @@ private:
 class hiopNLPObjGradScaling : public hiopNlpTransformation
 {
 public:
-  hiopNLPObjGradScaling(const double max_grad, 
+  hiopNLPObjGradScaling(hiopNlpFormulation* nlp,
+                        const double& max_grad, 
                         hiopVector& c, 
                         hiopVector& d, 
                         hiopVector& gradf,

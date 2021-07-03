@@ -998,8 +998,8 @@ int hiopKKTLinSysLowRank::solveWithRefin(hiopMatrixDense& M, hiopVector& rhs)
   // 2. check residual
   //
   hiopVector* x = rhs.alloc_clone();
-  hiopVector* dx    = hiop::LinearAlgebraFactory::createVector(N);
-  hiopVector* resid = hiop::LinearAlgebraFactory::createVector(N);
+  hiopVector* dx    = rhs.alloc_clone();
+  hiopVector* resid = rhs.alloc_clone();
   int nIterRefin=0;double nrmResid;
   int info;
   const int MAX_ITER_REFIN=3;

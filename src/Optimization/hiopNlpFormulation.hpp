@@ -406,11 +406,11 @@ public:
   hiopNlpMDS(hiopInterfaceMDS& interface_, const char* option_file = nullptr)
     : hiopNlpFormulation(interface_, option_file), interface(interface_)
   {
-    _buf_lambda = LinearAlgebraFactory::createVector(0);
+    buf_lambda_ = LinearAlgebraFactory::create_vector(options->GetString("mem_space"), 0);
   }
   virtual ~hiopNlpMDS() 
   {
-    delete _buf_lambda;
+    delete buf_lambda_;
   }
 
   virtual bool finalizeInitialization();
@@ -468,7 +468,7 @@ private:
   int nnz_sparse_Jaceq, nnz_sparse_Jacineq;
   int nnz_sparse_Hess_Lagr_SS, nnz_sparse_Hess_Lagr_SD;
 
-  hiopVector* _buf_lambda;
+  hiopVector* buf_lambda_;
 };
 
 
@@ -485,11 +485,11 @@ public:
     : hiopNlpFormulation(interface_, option_file), interface(interface_),
       num_jac_eval_{0}, num_hess_eval_{0}
   {
-    _buf_lambda = LinearAlgebraFactory::createVector(0);
+    buf_lambda_ = LinearAlgebraFactory::create_vector(options->GetString("mem_space"), 0);
   }
   virtual ~hiopNlpSparse()
   {
-    delete _buf_lambda;
+    delete buf_lambda_;
   }
 
   virtual bool finalizeInitialization();
@@ -532,11 +532,15 @@ public:
 
   //not inherited from NlpFormulation
 
-  //Allocates a non-MPI vector with size given by the size of primal plus dual (for both equality and inequality) spaces
+  /**
+   * @brief Allocates a non-MPI vector with size given by the size of primal plus dual spaces.
+   * The dual space corresponds to  both equality and inequality constraints.
+   */
   virtual hiopVector* alloc_primal_dual_vec() const
   {
     assert(n_cons == n_cons_eq+n_cons_ineq);
-    return LinearAlgebraFactory::createVector(n_vars + n_cons);
+    return LinearAlgebraFactory::create_vector(options->GetString("mem_space"),
+                                               n_vars + n_cons);
   }
 
   /** const accessors */
@@ -551,7 +555,7 @@ private:
   int num_jac_eval_;
   int num_hess_eval_;
 
-  hiopVector* _buf_lambda;
+  hiopVector* buf_lambda_;
 };
 
 }

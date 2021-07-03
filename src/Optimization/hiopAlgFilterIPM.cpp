@@ -310,7 +310,7 @@ void hiopAlgFilterIPMBase::reloadOptions()
   perf_report_kkt_ = "on"==hiop::tolower(nlp->options->GetString("time_kkt"));
 
   // Set memory space for computations
-  hiop::LinearAlgebraFactory::set_mem_space(nlp->options->GetString("mem_space"));
+  //hiop::LinearAlgebraFactory::set_mem_space(nlp->options->GetString("mem_space"));
 }
 
 void hiopAlgFilterIPMBase::resetSolverStatus()

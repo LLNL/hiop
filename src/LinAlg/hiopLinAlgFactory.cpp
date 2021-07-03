@@ -51,6 +51,7 @@
  *
  * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
  * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
+ * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
  * 
  */
 #include <algorithm>
@@ -74,7 +75,10 @@
 
 #include "hiopLinAlgFactory.hpp"
 
+#include "hiopCppStdUtils.hpp"
 using namespace hiop;
+
+std::string LinearAlgebraFactory::mem_space_ = "DEFAULT";
 
 /**
  * @brief Method to create vector.
@@ -82,18 +86,36 @@ using namespace hiop;
  * Creates legacy HiOp vector by default, RAJA vector when memory space
  * is specified.
  */
-hiopVector* LinearAlgebraFactory::createVector(const size_type& glob_n,
-                                               index_type* col_part,
-                                               MPI_Comm comm)
+// hiopVector* LinearAlgebraFactory::createVector(const size_type& glob_n,
+//                                                index_type* col_part,
+//                                                MPI_Comm comm)
+// {
+//   if(mem_space_ == "DEFAULT")
+//   {
+//     return new hiopVectorPar(glob_n, col_part, comm);
+//   }
+//   else
+//   {
+// #ifdef HIOP_USE_RAJA
+//     return new hiopVectorRajaPar(glob_n, mem_space_, col_part, comm);
+// #else
+//     assert(false && "requested memory space not available because Hiop was not"
+//            "built with RAJA support");
+//     return new hiopVectorPar(glob_n, col_part, comm);
+// #endif
+//   }
+// }
+
+hiopVector* LinearAlgebraFactory::create_vector(const std::string& mem_space,
+                                                const size_type& glob_n,
+                                                index_type* col_part,
+                                                MPI_Comm comm)
 {
-  if(mem_space_ == "DEFAULT")
-  {
+  if(toupper(mem_space) == "DEFAULT") {
     return new hiopVectorPar(glob_n, col_part, comm);
-  }
-  else
-  {
+  } else {
 #ifdef HIOP_USE_RAJA
-    return new hiopVectorRajaPar(glob_n, mem_space_, col_part, comm);
+    return new hiopVectorRajaPar(glob_n, mem_space, col_part, comm);
 #else
     assert(false && "requested memory space not available because Hiop was not"
            "built with RAJA support");
@@ -101,6 +123,7 @@ hiopVector* LinearAlgebraFactory::createVector(const size_type& glob_n,
 #endif
   }
 }
+
 
 /**
  * @brief Method to create local int vector.
@@ -236,13 +259,3 @@ void LinearAlgebraFactory::deleteRawArray(double* a)
 #endif
   }
 }
-
-
-void LinearAlgebraFactory::set_mem_space(const std::string& mem_space)
-{
-  mem_space_ = mem_space;
-  // HiOp options turn all strings to lowercase. Umpire wants uppercase.
-  transform(mem_space_.begin(), mem_space_.end(), mem_space_.begin(), ::toupper);
-}
-
-std::string LinearAlgebraFactory::mem_space_ = "DEFAULT";
