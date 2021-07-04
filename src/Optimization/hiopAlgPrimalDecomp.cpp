@@ -18,8 +18,8 @@ namespace hiop
     ReqRecourseApprox() : ReqRecourseApprox(1) {}
     ReqRecourseApprox(const int& n)
     {
-      n_=n;
-      buffer = LinearAlgebraFactory::createVector(n_+1);
+      n_ = n;
+      buffer = LinearAlgebraFactory::create_vector("DEFAULT", n_+1);
     }
 
     int test() 
@@ -92,32 +92,37 @@ namespace hiop
 
 
 
-hiopAlgPrimalDecomposition::HessianApprox::
-HessianApprox() : 
-  HessianApprox(-1) 
+hiopAlgPrimalDecomposition::HessianApprox::HessianApprox(hiopInterfacePriDecProblem* priDecProb)
+  : HessianApprox(-1, priDecProb)
 {
 }
 
-hiopAlgPrimalDecomposition::HessianApprox::
-HessianApprox(const int& n)
+  hiopAlgPrimalDecomposition::HessianApprox::HessianApprox(const int& n,
+                                                           hiopInterfacePriDecProblem* priDecProb)
+    : priDecProb_(priDecProb)
 {
   n_=n;
   fkm1 = 1e20;
-  fk = 1e20; 
-  xkm1 = LinearAlgebraFactory::createVector(n_);// x at k-1 step, the current step is k
-  skm1 = LinearAlgebraFactory::createVector(n_);// s_{k-1} = x_k - x_{k-1}
-  ykm1 = LinearAlgebraFactory::createVector(n_);// y_{k-1} = g_k - g_{k-1}
-  gkm1 = LinearAlgebraFactory::createVector(n_);// g_{k-1}
+  fk = 1e20;
+  // x at k-1 step, the current step is k
+  xkm1 = LinearAlgebraFactory::create_vector(priDecProb_->get_mem_space(), n_);
+  // s_{k-1} = x_k - x_{k-1}
+  skm1 = LinearAlgebraFactory::create_vector(priDecProb_->get_mem_space(), n_);
+  // y_{k-1} = g_k - g_{k-1}
+  ykm1 = LinearAlgebraFactory::create_vector(priDecProb_->get_mem_space(), n_);
+  // g_{k-1}
+  gkm1 = LinearAlgebraFactory::create_vector(priDecProb_->get_mem_space(), n_);
 }
 
-hiopAlgPrimalDecomposition::HessianApprox::
-HessianApprox(const int& n,const double ratio):HessianApprox(n)
+hiopAlgPrimalDecomposition::HessianApprox::HessianApprox(const int& n,
+                                                         const double ratio,
+                                                         hiopInterfacePriDecProblem* priDecProb)
+  : HessianApprox(n, priDecProb)
 {
   ratio_=ratio;
 }
 
-hiopAlgPrimalDecomposition::HessianApprox::
-~HessianApprox()
+hiopAlgPrimalDecomposition::HessianApprox::~HessianApprox()
 {
   //delete[] xkm1;
   delete xkm1;
@@ -127,8 +132,7 @@ hiopAlgPrimalDecomposition::HessianApprox::
 }
 
 /* n_ is the dimension of x, hence the dimension of g_k, skm1, etc */
-void hiopAlgPrimalDecomposition::HessianApprox::
-set_n(const int n)
+void hiopAlgPrimalDecomposition::HessianApprox::set_n(const int n)
 {
   n_=n;
 }
@@ -139,7 +143,7 @@ set_xkm1(const hiopVector& xk)
 {
   if(xkm1==NULL) {
     assert(n_!=-1);
-    xkm1 = LinearAlgebraFactory::createVector(n_);
+    xkm1 = LinearAlgebraFactory::create_vector(priDecProb_->get_mem_space(), n_);
   } else {
     xkm1->copyFromStarting(0, xk.local_data_const(), n_);
   }
@@ -151,7 +155,7 @@ set_gkm1(const hiopVector& grad)
 {
   if(gkm1==NULL) {
     assert(n_!=-1);
-    gkm1 = LinearAlgebraFactory::createVector(n_);
+    gkm1 = LinearAlgebraFactory::create_vector(priDecProb_->get_mem_space(), n_);
   } else {
     gkm1->copyFromStarting(0, grad.local_data_const(), n_);
   }
@@ -163,7 +167,7 @@ initialize(const double f_val, const hiopVector& xk, const hiopVector& grad)
   fk = f_val;
   if(xkm1==NULL) {
     assert(n_!=-1);
-    xkm1 = LinearAlgebraFactory::createVector(n_);
+    xkm1 = LinearAlgebraFactory::create_vector(priDecProb_->get_mem_space(), n_);
     //xkm1 = new double[n_];
   } else {
     xkm1->copyFromStarting(0, xk.local_data_const(), n_);
@@ -171,7 +175,7 @@ initialize(const double f_val, const hiopVector& xk, const hiopVector& grad)
   }
   if(gkm1==NULL) {
     assert(n_!=-1);
-    gkm1 = LinearAlgebraFactory::createVector(n_);
+    gkm1 = LinearAlgebraFactory::create_vector(priDecProb_->get_mem_space(), n_);
   } else {
     gkm1->copyFromStarting(0, grad.local_data_const(), n_);
   }
@@ -227,12 +231,12 @@ update_ratio()
 {
   double rk = fkm1;
 
-  hiopVector* temp;
-  temp = LinearAlgebraFactory::createVector(gkm1->get_local_size()); 
+  //TODO: use a member class hiopVector to avoid repeatead allocs/deallocs
+  hiopVector* temp = LinearAlgebraFactory::create_vector(priDecProb_->get_mem_space(), gkm1->get_local_size()); 
   temp->copyFrom(*gkm1);   
   rk += temp->dotProductWith(*skm1);
   rk += 0.5*alpha_*(skm1->twonorm())*(skm1->twonorm()); 
-
+  delete temp;
   //printf("recourse estimate inside HessianApprox %18.12e\n",rk);
   double rho_k = (fkm1-fk)/(fkm1-rk);
   if(ver_ >=outlevel2) {
@@ -352,9 +356,9 @@ double hiopAlgPrimalDecomposition::HessianApprox::check_convergence_grad(const h
   double temp3 = 0.;
   double temp4 = 0.;
   
- 
+  //TODO: use a class member for 'temp' to avoid allocs/deallocs
   hiopVector* temp;
-  temp = LinearAlgebraFactory::createVector(skm1->get_local_size()); 
+  temp = LinearAlgebraFactory::create_vector(priDecProb_->get_mem_space(), skm1->get_local_size()); 
   temp->copyFrom(*skm1);  
   temp->scale(-alpha_);
   temp4 = temp->twonorm()*temp->twonorm();
@@ -369,6 +373,7 @@ double hiopAlgPrimalDecomposition::HessianApprox::check_convergence_grad(const h
   if(ver_ >=outlevel2) {
     printf("temp1  %18.12e, temp2 %18.12e, temp3 %18.12e, temp4 %18.12e\n",temp1,temp2,temp3,temp4);
   }
+  delete temp;
   return convg;
 }
 // stopping criteria based on function value change
@@ -377,16 +382,18 @@ double hiopAlgPrimalDecomposition::HessianApprox::check_convergence_fcn()
   double predicted_decrease = 0.;
 
   assert(n_==gkm1->get_local_size());
+  //TODO: use a class member for 'temp' to avoid allocs/deallocs
   hiopVector* temp;
-  temp = LinearAlgebraFactory::createVector(gkm1->get_local_size()); 
+  temp = LinearAlgebraFactory::create_vector(priDecProb_->get_mem_space(), gkm1->get_local_size()); 
   temp->copyFrom(*gkm1);   
   predicted_decrease += temp->dotProductWith(*skm1);
   predicted_decrease += 0.5*alpha_*(skm1->twonorm())*(skm1->twonorm()); 
 
   if(ver_ >=outlevel2) {
-    printf("predicted decrease  %18.12e",predicted_decrease);
+    printf("predicted decrease  %18.12e", predicted_decrease);
   }
   predicted_decrease = fabs(predicted_decrease);
+  delete temp;
   return predicted_decrease;
 }
 
@@ -399,13 +406,13 @@ double hiopAlgPrimalDecomposition::HessianApprox::
 compute_base(const double val, const double rval)
 {
   double rec_appx = rval;
-  
+  //TODO: use a class member for 'temp' to avoid allocs/deallocs
   hiopVector* temp;
-  temp = LinearAlgebraFactory::createVector(gkm1->get_local_size()); 
+  temp = LinearAlgebraFactory::create_vector(priDecProb_->get_mem_space(), gkm1->get_local_size()); 
   temp->copyFrom(*gkm1);   
   rec_appx += temp->dotProductWith(*skm1);
   rec_appx += 0.5*alpha_*(skm1->twonorm())*(skm1->twonorm()); 
-
+  delete temp;
   return val-rec_appx;
 }
 
@@ -465,7 +472,7 @@ hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
     request_ = new MPI_Request[4];   
   #endif
   //x_ = new double[n_];
-  x_ = LinearAlgebraFactory::createVector(n_);
+    x_ = LinearAlgebraFactory::create_vector(master_prob_->get_mem_space(), n_);
 }
 
 hiopAlgPrimalDecomposition::
@@ -497,7 +504,7 @@ hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
   }
   request_ = new MPI_Request[4];   
 #endif
-  x_ = LinearAlgebraFactory::createVector(n_);
+  x_ = LinearAlgebraFactory::create_vector(master_prob_->get_mem_space(), n_);
 }
 
 
@@ -550,12 +557,12 @@ double hiopAlgPrimalDecomposition::
 step_size_inf(const int nc, const hiopVector& x, const hiopVector& x0)
 {
   double step = -1e20;
-  hiopVector* temp;
-  temp = LinearAlgebraFactory::createVector(x.get_local_size()); 
-  temp->copyFrom(x);   
-  temp->axpy(-1.0,x0); 
+  hiopVector* temp = x.new_copy();
+  //temp = LinearAlgebraFactory::create_vector(x.get_local_size()); 
+  //temp->copyFrom(x);   
+  temp->axpy(-1.0, x0); 
   step = temp->infnorm();
-
+  delete temp;
   return step;
 }
 
@@ -612,23 +619,23 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
     //double grad_r[nc_];
 
     hiopVector* grad_r;
-    grad_r = LinearAlgebraFactory::createVector(nc_); 
+    grad_r = x_->alloc_clone(); 
     grad_r->setToZero(); 
     double* grad_r_vec=grad_r->local_data();
   
     hiopVector* hess_appx;
-    hess_appx = LinearAlgebraFactory::createVector(nc_); 
+    hess_appx = grad_r->alloc_clone();
     double* hess_appx_vec=hess_appx->local_data_host();
    
     hiopVector* x0;
-    x0 = LinearAlgebraFactory::createVector(nc_);
+    x0 = grad_r->alloc_clone();
     x0->setToZero(); 
     double* x0_vec=x0->local_data_host();
     
     //local recourse terms for each evaluator, defined accross all processors
     double rec_val = 0.;
     hiopVector* grad_acc;
-    grad_acc = LinearAlgebraFactory::createVector(nc_);
+    grad_acc = grad_r->alloc_clone();
     grad_acc->setToZero(); 
     double* grad_acc_vec=grad_acc->local_data();
 
@@ -636,7 +643,7 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
     //for(int i=0; i<nc_; i++) grad_acc[i] = 0.;
 
     //hess_appx_2 is declared by all ranks while only rank 0 uses it
-    HessianApprox*  hess_appx_2 = new HessianApprox(nc_,alpha_ratio_);
+    HessianApprox* hess_appx_2 = new HessianApprox(nc_, alpha_ratio_, master_prob_);
     if(ver_ >= outlevel3) {
       hess_appx_2->set_verbosity(ver_);
     }
@@ -811,7 +818,7 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
         // int cur_idx = 0;
         // Receive the index of the contingency to evaluate
         int mpi_test_flag = 0;
-        int ierr = MPI_Recv(&cont_i, 1, MPI_INT, rank_master, 1,comm_world_, &status_);
+        int ierr = MPI_Recv(&cont_i, 1, MPI_INT, rank_master, 1, comm_world_, &status_);
         assert(MPI_SUCCESS == ierr);  
         cont_idx[0] = cont_i;
         // printf("contingency index %d, rank %d)\n",cont_idx[0],my_rank_);
@@ -819,9 +826,6 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
         rec_val = 0.;
 
 	grad_acc->setToZero();
-        //for(int i=0; i<nc_; i++) {
-        //  grad_acc[i] = 0.;
-        //}
         double aux=0.;
 
         if(nc_<n_) {
@@ -849,7 +853,7 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
         }
         //printf("recourse value: is %18.12e)\n", rec_val);
 	hiopVector* grad_aux;
-        grad_aux = LinearAlgebraFactory::createVector(nc_);
+        grad_aux = x0->alloc_clone();
         grad_aux->setToZero(); 
 
         for(int ri=0; ri<cont_idx.size(); ri++) {
@@ -859,8 +863,6 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
             //todo
           }
           grad_acc->axpy(1.0, *grad_aux);
-          //for(int i=0; i<nc_; i++)
-          //  grad_acc[i] += grad_aux[i];
         }
         rec_prob[my_rank_]->set_value(rec_val);
 
@@ -910,7 +912,7 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
             }
             //printf("recourse value: is %18.12e)\n", rec_val);
 	    hiopVector* grad_aux;
-            grad_aux = LinearAlgebraFactory::createVector(nc_);
+            grad_aux = x0->alloc_clone();
             grad_aux->setToZero(); 
             //double grad_aux[nc_];
             for(int ri=0; ri<cont_idx.size(); ri++) {
@@ -1106,25 +1108,22 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
   double rval = 0.;
   //double grad_r[nc_];
   hiopVector* grad_r;
-  grad_r = LinearAlgebraFactory::createVector(nc_); 
+  grad_r = x_->alloc_clone(); 
   double* grad_r_vec=grad_r->local_data_host();
   
   hiopVector* hess_appx;
-  hess_appx = LinearAlgebraFactory::createVector(nc_); 
+  hess_appx = grad_r->alloc_clone();
   double* hess_appx_vec=hess_appx->local_data_host();
  
-  hiopVector* x0;
-  x0 = LinearAlgebraFactory::createVector(nc_); 
-  double* x0_vec=x0->local_data_host();
+  hiopVector* x0 = grad_r->alloc_clone();
+  double* x0_vec = x0->local_data_host();
  
   for(int i=0; i<nc_; i++) {
     grad_r_vec[i] = 0.;
   }
 
   //hess_appx_2 has to be declared by all ranks while only rank 0 uses it
-  HessianApprox*  hess_appx_2 = new HessianApprox(nc_,alpha_ratio_);
-
-
+  HessianApprox* hess_appx_2 = new HessianApprox(nc_, alpha_ratio_, master_prob_);
 
   hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator = new hiopInterfacePriDecProblem::
                                                            RecourseApproxEvaluator(nc_,S_,xc_idx_);
@@ -1180,9 +1179,9 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
       }
       rval += aux;
       //assert("for debugging" && false); //for debugging purpose
-    
-      hiopVector* grad_aux;
-      grad_aux = LinearAlgebraFactory::createVector(nc_);
+
+      //TODO: allocate this outside the loop
+      hiopVector* grad_aux = grad_r->alloc_clone();
       grad_aux->setToZero(); 
       //double grad_aux[nc_];
       bret = master_prob_->eval_grad_rterm(idx_temp, nc_, x0_vec, *grad_aux);
@@ -1193,6 +1192,7 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
       //for(int i=0; i<nc_; i++) {
       //  grad_r_vec[i] += grad_aux[i];
       //}
+      delete grad_aux;
     }        
     if(ver_ >=outlevel2) {
       printf("real rval %18.12e\n",rval);

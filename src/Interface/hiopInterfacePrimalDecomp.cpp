@@ -8,7 +8,7 @@ RecourseApproxEvaluator(int nc) : RecourseApproxEvaluator(nc, nc)  //nc_ <= nx, 
 }
 
 hiopInterfacePriDecProblem::RecourseApproxEvaluator::
-~RecourseApproxEvaluator( ) 
+~RecourseApproxEvaluator() 
 {
   delete rgrad_;
   delete rhess_;
@@ -63,7 +63,9 @@ RecourseApproxEvaluator(const int nc,
   rhess_ = rgrad_->alloc_clone();
   x0_ = rgrad_->alloc_clone();
   xc_idx_ = new int[nc_];
-  for(int i=0;i<nc_;i++) xc_idx_[i] = i;
+  for(int i=0; i<nc_; i++) {
+    xc_idx_[i] = i;
+  }
 
   rgrad_->copyFromStarting(0, rgrad.local_data_const(), nc);
   rhess_->copyFromStarting(0, rhess.local_data_const(), nc);
