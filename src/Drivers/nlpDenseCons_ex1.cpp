@@ -25,7 +25,7 @@ Ex1Meshing1D::Ex1Meshing1D(double a, double b,
   while(i<=remainder) { col_partition[i] = col_partition[i-1]+quotient+1; i++; }
   while(i<=comm_size) { col_partition[i] = col_partition[i-1]+quotient;   i++; }
 
-  _mass = LinearAlgebraFactory::createVector(glob_n, col_partition, comm);
+  _mass = LinearAlgebraFactory::create_vector("DEFAULT", glob_n, col_partition, comm);
 
   //if(my_rank==0) printf("reminder=%d quotient=%d\n", remainder, quotient);
   //printf("left=%d right=%d\n", col_partition[my_rank], col_partition[my_rank+1]);

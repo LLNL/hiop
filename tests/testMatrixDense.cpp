@@ -159,9 +159,9 @@ static int runTests(const char* mem_space, MPI_Comm comm)
 
   T test;
 
-  hiopOptions options;
-  options.SetStringValue("mem_space", mem_space);
-  LinearAlgebraFactory::set_mem_space(mem_space);
+  //hiopOptions options;
+  //options.SetStringValue("mem_space", mem_space);
+  //LinearAlgebraFactory::set_mem_space(mem_space);
 
   int fail = 0;
 
@@ -212,11 +212,11 @@ static int runTests(const char* mem_space, MPI_Comm comm)
   // x_<size>_[non-distributed]
   //
   // Distributed vectors:
-  hiopVector* x_n = LinearAlgebraFactory::createVector(N_global, n_partition, comm);
+  hiopVector* x_n = LinearAlgebraFactory::create_vector(mem_space, N_global, n_partition, comm);
 
   // Non-distributed vectors
-  hiopVector* x_n_nodist = LinearAlgebraFactory::createVector(N_local);
-  hiopVector* x_m_nodist = LinearAlgebraFactory::createVector(M_local);
+  hiopVector* x_n_nodist = LinearAlgebraFactory::create_vector(mem_space, N_local);
+  hiopVector* x_m_nodist = LinearAlgebraFactory::create_vector(mem_space, M_local);
 
 
   fail += test.matrixSetToZero(*A_mxn, rank);
