@@ -110,8 +110,13 @@ hiopFRProbSparse::hiopFRProbSparse(hiopAlgFilterIPMBase& solver_base)
   hiopMatrixSparse* Hess_base = dynamic_cast<hiopMatrixSparse*>(solver_base_.get_Hess_Lagr());
   nnz_Hess_Lag_ = n_x_ + Hess_base->numberOfOffDiagNonzeros();
   
-  Jac_cd_ = LinearAlgebraFactory::createMatrixSparse(m_, n_, nnz_Jac_c_ + nnz_Jac_d_);
-  Hess_cd_ = LinearAlgebraFactory::createMatrixSymSparse(n_, nnz_Hess_Lag_);
+  Jac_cd_ = LinearAlgebraFactory::create_matrix_sparse(nlp_base_->options->GetString("mem_space"),
+                                                       m_,
+                                                       n_,
+                                                       nnz_Jac_c_ + nnz_Jac_d_);
+  Hess_cd_ = LinearAlgebraFactory::create_matrix_sym_sparse(nlp_base_->options->GetString("mem_space"),
+                                                            n_,
+                                                            nnz_Hess_Lag_);
   
   // set mu0 to be the maximun of the current barrier parameter mu and norm_inf(|c|)*/
   theta_ref_ = solver_base_.get_resid()->get_theta(); //at current point, i.e., reference point

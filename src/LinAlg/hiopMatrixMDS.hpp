@@ -28,7 +28,7 @@ class hiopMatrixMDS : public hiopMatrix
 public:
   hiopMatrixMDS(int rows, int cols_sparse, int cols_dense, int nnz_sparse, const std::string& mem_space)
   {
-    mSp = LinearAlgebraFactory::createMatrixSparse(rows, cols_sparse, nnz_sparse);
+    mSp = LinearAlgebraFactory::create_matrix_sparse(mem_space, rows, cols_sparse, nnz_sparse);
     mDe = LinearAlgebraFactory::create_matrix_dense(mem_space, rows, cols_dense);
   }
   virtual ~hiopMatrixMDS()
@@ -276,7 +276,7 @@ class hiopMatrixSymBlockDiagMDS : public hiopMatrix
 public:
   hiopMatrixSymBlockDiagMDS(int n_sparse, int n_dense, int nnz_sparse, const std::string& mem_space)
   {
-    mSp = LinearAlgebraFactory::createMatrixSymSparse(n_sparse, nnz_sparse);
+    mSp = LinearAlgebraFactory::create_matrix_sym_sparse(mem_space, n_sparse, nnz_sparse);
     mDe = LinearAlgebraFactory::create_matrix_dense(mem_space, n_dense, n_dense);
   }
   virtual ~hiopMatrixSymBlockDiagMDS()

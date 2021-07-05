@@ -93,34 +93,27 @@ public:
   /**
    * @brief Static method to create a sparse matrix
    */
-  static hiopMatrixSparse* createMatrixSparse(size_type rows, size_type cols, size_type nnz);
+  static hiopMatrixSparse* create_matrix_sparse(const std::string& mem_space,
+                                                size_type rows,
+                                                size_type cols,
+                                                size_type nnz);
 
   /**
    * @brief Static method to create a symmetric sparse matrix
    */
-  static hiopMatrixSparse* createMatrixSymSparse(size_type size, size_type nnz);
+  static hiopMatrixSparse* create_matrix_sym_sparse(const std::string& mem_space,
+                                                    size_type size,
+                                                    size_type nnz);
   
   /**
    * @brief Static method to create a raw C array
    */
-  static double* createRawArray(size_type n);
+  static double* create_raw_array(const std::string& mem_space, size_type n);
 
   /**
    * @brief Static method to delete a raw C array
    */
-  static void deleteRawArray(double* a);
-
-  /// Method to set memory space ID
-  //static void set_mem_space(const std::string& mem_space);
-
-  /// Return memory space ID
-  inline static std::string get_mem_space()
-  {
-    return mem_space_;
-  }
-
-private:
-  static std::string mem_space_;
+  static void delete_raw_array(const std::string& mem_space, double* a);
 };
 
 } // namespace hiop

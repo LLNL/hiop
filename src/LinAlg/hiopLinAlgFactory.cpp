@@ -78,8 +78,6 @@
 #include "hiopCppStdUtils.hpp"
 using namespace hiop;
 
-std::string LinearAlgebraFactory::mem_space_ = "DEFAULT";
-
 /**
  * @brief Method to create vector.
  * 
@@ -114,12 +112,9 @@ hiopVector* LinearAlgebraFactory::create_vector(const std::string& mem_space,
 hiopVectorInt* LinearAlgebraFactory::create_vector_int(const std::string& mem_space,
                                                        size_type size)
 {
-  if(mem_space_ == "DEFAULT")
-  {
+  if(toupper(mem_space) == "DEFAULT") {
     return new hiopVectorIntSeq(size);
-  }
-  else
-  {
+  } else {
 #ifdef HIOP_USE_RAJA
     return new hiopVectorIntRaja(size, mem_space_);
 #else
@@ -143,12 +138,9 @@ hiopMatrixDense* LinearAlgebraFactory::create_matrix_dense(const std::string& me
                                                            MPI_Comm comm,
                                                            const size_type& m_max_alloc)
 {
-  if(mem_space_ == "DEFAULT")
-  {
+  if(toupper(mem_space) == "DEFAULT") {
     return new hiopMatrixDenseRowMajor(m, glob_n, col_part, comm, m_max_alloc);
-  }
-  else
-  {
+  } else {
 #ifdef HIOP_USE_RAJA
     return new hiopMatrixRajaDense(m, glob_n, mem_space_, col_part, comm, m_max_alloc);
 #else
@@ -164,16 +156,14 @@ hiopMatrixDense* LinearAlgebraFactory::create_matrix_dense(const std::string& me
  * @brief Creates an instance of a sparse matrix of the appropriate implementation
  * depending on the build.
  */
-hiopMatrixSparse* LinearAlgebraFactory::createMatrixSparse(size_type rows,
-                                                           size_type cols,
-                                                           size_type nnz)
+hiopMatrixSparse* LinearAlgebraFactory::create_matrix_sparse(const std::string& mem_space,
+                                                             size_type rows,
+                                                             size_type cols,
+                                                             size_type nnz)
 {
-  if (mem_space_ == "DEFAULT")
-  {
+  if(toupper(mem_space) == "DEFAULT") {
     return new hiopMatrixSparseTriplet(rows, cols, nnz);
-  }
-  else
-  {
+  } else {
 #ifdef HIOP_USE_RAJA
     return new hiopMatrixRajaSparseTriplet(rows, cols, nnz, mem_space_);
 #else
@@ -188,14 +178,13 @@ hiopMatrixSparse* LinearAlgebraFactory::createMatrixSparse(size_type rows,
  * @brief Creates an instance of a symmetric sparse matrix of the appropriate
  * implementation depending on the build.
  */
-hiopMatrixSparse* LinearAlgebraFactory::createMatrixSymSparse(size_type size, size_type nnz)
+hiopMatrixSparse* LinearAlgebraFactory::create_matrix_sym_sparse(const std::string& mem_space,
+                                                                 size_type size,
+                                                                 size_type nnz)
 {
-  if (mem_space_ == "DEFAULT")
-  {
+  if(toupper(mem_space) == "DEFAULT") {
     return new hiopMatrixSymSparseTriplet(size, nnz);
-  }
-  else
-  {
+  } else {
 #ifdef HIOP_USE_RAJA
     return new hiopMatrixRajaSymSparseTriplet(size, nnz, mem_space_);
 #else
@@ -209,9 +198,9 @@ hiopMatrixSparse* LinearAlgebraFactory::createMatrixSymSparse(size_type size, si
 /**
  * @brief Static method to create a raw C array
  */
-double* LinearAlgebraFactory::createRawArray(size_type n)
+double* LinearAlgebraFactory::create_raw_array(const std::string& mem_space, size_type n)
 {
-  if (mem_space_ == "DEFAULT") {
+  if(toupper(mem_space) == "DEFAULT") {
     return new double[n];
   } else {
 #ifdef HIOP_USE_RAJA
@@ -229,9 +218,9 @@ double* LinearAlgebraFactory::createRawArray(size_type n)
 /**
  * @brief Static method to delete a raw C array
  */
-void LinearAlgebraFactory::deleteRawArray(double* a)
+void LinearAlgebraFactory::delete_raw_array(const std::string& mem_space, double* a)
 {
-  if (mem_space_ == "DEFAULT") {
+  if (toupper(mem_space) == "DEFAULT") {
     delete [] a;
   } else {
 #ifdef HIOP_USE_RAJA
