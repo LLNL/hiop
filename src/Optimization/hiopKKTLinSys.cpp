@@ -796,8 +796,7 @@ hiopKKTLinSysLowRank::hiopKKTLinSysLowRank(hiopNlpFormulation* nlp)
   nlpD = dynamic_cast<hiopNlpDenseConstraints*>(nlp_);
 
   _kxn_mat = nlpD->alloc_multivector_primal(nlpD->m()); //!opt
-
-  assert("DEFAULT" == nlpD->options->GetString("mem_space"));
+  assert("DEFAULT" == toupper(nlpD->options->GetString("mem_space")));
   N = LinearAlgebraFactory::create_matrix_dense(nlpD->options->GetString("mem_space"),
                                                 nlpD->m(),
                                                 nlpD->m());
