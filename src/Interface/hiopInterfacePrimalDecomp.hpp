@@ -77,7 +77,7 @@ public:
   virtual hiopSolveStatus solve_master(hiopVector& x,
                                        const bool& include_r,
                                        const double& rval = 0, 
-		                       const double* grad = 0,
+                                       const double* grad = 0,
                                        const double*hess = 0) = 0;
 
   virtual bool eval_f_rterm(size_t idx, const int& n, const double* x, double& rval) = 0;
