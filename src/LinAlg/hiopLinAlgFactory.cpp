@@ -86,26 +86,6 @@ std::string LinearAlgebraFactory::mem_space_ = "DEFAULT";
  * Creates legacy HiOp vector by default, RAJA vector when memory space
  * is specified.
  */
-// hiopVector* LinearAlgebraFactory::createVector(const size_type& glob_n,
-//                                                index_type* col_part,
-//                                                MPI_Comm comm)
-// {
-//   if(mem_space_ == "DEFAULT")
-//   {
-//     return new hiopVectorPar(glob_n, col_part, comm);
-//   }
-//   else
-//   {
-// #ifdef HIOP_USE_RAJA
-//     return new hiopVectorRajaPar(glob_n, mem_space_, col_part, comm);
-// #else
-//     assert(false && "requested memory space not available because Hiop was not"
-//            "built with RAJA support");
-//     return new hiopVectorPar(glob_n, col_part, comm);
-// #endif
-//   }
-// }
-
 hiopVector* LinearAlgebraFactory::create_vector(const std::string& mem_space,
                                                 const size_type& glob_n,
                                                 index_type* col_part,
@@ -131,7 +111,8 @@ hiopVector* LinearAlgebraFactory::create_vector(const std::string& mem_space,
  * Creates int vector with operator new by default, RAJA vector when memory space
  * is specified.
  */
-hiopVectorInt* LinearAlgebraFactory::createVectorInt(size_type size)
+hiopVectorInt* LinearAlgebraFactory::create_vector_int(const std::string& mem_space,
+                                                       size_type size)
 {
   if(mem_space_ == "DEFAULT")
   {

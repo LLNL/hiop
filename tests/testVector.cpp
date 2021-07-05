@@ -234,8 +234,8 @@ int runTests(const char* mem_space, MPI_Comm comm)
   hiopVector* y = LinearAlgebraFactory::create_vector(mem_space, Nglobal, n_partition, comm);
   hiopVector* z = LinearAlgebraFactory::create_vector(mem_space, Nglobal, n_partition, comm);
   
-  hiopVectorInt* v_map = LinearAlgebraFactory::createVectorInt(Mlocal);
-  hiopVectorInt* v2_map = LinearAlgebraFactory::createVectorInt(Mlocal);
+  hiopVectorInt* v_map = LinearAlgebraFactory::create_vector_int(mem_space, Mlocal);
+  hiopVectorInt* v2_map = LinearAlgebraFactory::create_vector_int(mem_space, Mlocal);
   
   int fail = 0;
 
@@ -331,16 +331,16 @@ int runIntTests(const char* mem_space)
   using hiop::tests::global_ordinal_type;
 
   T test;
-
-  hiopOptions options;
-  options.SetStringValue("mem_space", mem_space);
+  test.set_mem_space(mem_space);
+  //hiopOptions options;
+  //options.SetStringValue("mem_space", mem_space);
   //LinearAlgebraFactory::set_mem_space(mem_space);
 
   int fail = 0;
 
   const int sz = 100;
 
-  auto* x = LinearAlgebraFactory::createVectorInt(sz);
+  auto* x = LinearAlgebraFactory::create_vector_int(mem_space, sz);
 
   fail += test.vectorSize(*x, sz);
   fail += test.vectorGetElement(*x);

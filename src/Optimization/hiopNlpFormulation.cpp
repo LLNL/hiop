@@ -394,8 +394,8 @@ bool hiopNlpFormulation::finalizeInitialization()
   dl    = LinearAlgebraFactory::create_vector(mem_space, n_cons_ineq);
   du    = LinearAlgebraFactory::create_vector(mem_space, n_cons_ineq);
   cons_ineq_type = new  hiopInterfaceBase::NonlinearityType[n_cons_ineq];
-  cons_eq_mapping_   = LinearAlgebraFactory::createVectorInt(n_cons_eq);
-  cons_ineq_mapping_ = LinearAlgebraFactory::createVectorInt(n_cons_ineq);
+  cons_eq_mapping_   = LinearAlgebraFactory::create_vector_int(mem_space, n_cons_eq);
+  cons_ineq_mapping_ = LinearAlgebraFactory::create_vector_int(mem_space, n_cons_ineq);
 
   /* copy lower and upper bounds - constraints */
   double *dlvec=dl->local_data_host(), *duvec=du->local_data_host();

@@ -70,18 +70,15 @@ public:
   /**
    * @brief Static method to create vector
    */
-  //static hiopVector* createVector(const size_type& glob_n,
-  //                              index_type* col_part = NULL,
-  //                              MPI_Comm comm = MPI_COMM_SELF); 
-
   static hiopVector* create_vector(const std::string& mem_space,
                                    const size_type& glob_n,
-                                   index_type* col_part = NULL,
+                                   index_type* col_part = nullptr,
                                    MPI_Comm comm = MPI_COMM_SELF);
   /**
    * @brief Static method to create local int vector.
    */
-  static hiopVectorInt* createVectorInt(size_type size);
+  static hiopVectorInt* create_vector_int(const std::string& mem_space,
+                                          size_type size);
 
   /**
    * @brief Static method to create a dense matrix.
