@@ -89,11 +89,12 @@ hiopVector* LinearAlgebraFactory::create_vector(const std::string& mem_space,
                                                 index_type* col_part,
                                                 MPI_Comm comm)
 {
-  if(toupper(mem_space) == "DEFAULT") {
+  const std::string mem_space_upper = toupper(mem_space);
+  if(mem_space_upper == "DEFAULT") {
     return new hiopVectorPar(glob_n, col_part, comm);
   } else {
 #ifdef HIOP_USE_RAJA
-    return new hiopVectorRajaPar(glob_n, mem_space, col_part, comm);
+    return new hiopVectorRajaPar(glob_n, mem_space_upper, col_part, comm);
 #else
     assert(false && "requested memory space not available because Hiop was not"
            "built with RAJA support");
@@ -112,11 +113,12 @@ hiopVector* LinearAlgebraFactory::create_vector(const std::string& mem_space,
 hiopVectorInt* LinearAlgebraFactory::create_vector_int(const std::string& mem_space,
                                                        size_type size)
 {
-  if(toupper(mem_space) == "DEFAULT") {
+  const std::string mem_space_upper = toupper(mem_space);
+  if(mem_space_upper == "DEFAULT") {
     return new hiopVectorIntSeq(size);
   } else {
 #ifdef HIOP_USE_RAJA
-    return new hiopVectorIntRaja(size, mem_space);
+    return new hiopVectorIntRaja(size, mem_space_upper);
 #else
     assert(false && "requested memory space not available because Hiop was not"
            "built with RAJA support");
@@ -138,11 +140,12 @@ hiopMatrixDense* LinearAlgebraFactory::create_matrix_dense(const std::string& me
                                                            MPI_Comm comm,
                                                            const size_type& m_max_alloc)
 {
-  if(toupper(mem_space) == "DEFAULT") {
+  const std::string mem_space_upper = toupper(mem_space);
+  if(mem_space_upper == "DEFAULT") {
     return new hiopMatrixDenseRowMajor(m, glob_n, col_part, comm, m_max_alloc);
   } else {
 #ifdef HIOP_USE_RAJA
-    return new hiopMatrixRajaDense(m, glob_n, mem_space, col_part, comm, m_max_alloc);
+    return new hiopMatrixRajaDense(m, glob_n, mem_space_upper, col_part, comm, m_max_alloc);
 #else
     assert(false && "requested memory space not available because Hiop was not"
            "built with RAJA support");
@@ -161,11 +164,12 @@ hiopMatrixSparse* LinearAlgebraFactory::create_matrix_sparse(const std::string& 
                                                              size_type cols,
                                                              size_type nnz)
 {
-  if(toupper(mem_space) == "DEFAULT") {
+  const std::string mem_space_upper = toupper(mem_space);
+  if(mem_space_upper == "DEFAULT") {
     return new hiopMatrixSparseTriplet(rows, cols, nnz);
   } else {
 #ifdef HIOP_USE_RAJA
-    return new hiopMatrixRajaSparseTriplet(rows, cols, nnz, mem_space);
+    return new hiopMatrixRajaSparseTriplet(rows, cols, nnz, mem_space_upper);
 #else
     assert(false && "requested memory space not available because Hiop was not"
            "built with RAJA support");
@@ -182,11 +186,12 @@ hiopMatrixSparse* LinearAlgebraFactory::create_matrix_sym_sparse(const std::stri
                                                                  size_type size,
                                                                  size_type nnz)
 {
-  if(toupper(mem_space) == "DEFAULT") {
+  const std::string mem_space_upper = toupper(mem_space);
+  if(mem_space_upper == "DEFAULT") {
     return new hiopMatrixSymSparseTriplet(size, nnz);
   } else {
 #ifdef HIOP_USE_RAJA
-    return new hiopMatrixRajaSymSparseTriplet(size, nnz, mem_space);
+    return new hiopMatrixRajaSymSparseTriplet(size, nnz, mem_space_upper);
 #else
     assert(false && "requested memory space not available because Hiop was not"
            "built with RAJA support");
@@ -200,12 +205,13 @@ hiopMatrixSparse* LinearAlgebraFactory::create_matrix_sym_sparse(const std::stri
  */
 double* LinearAlgebraFactory::create_raw_array(const std::string& mem_space, size_type n)
 {
-  if(toupper(mem_space) == "DEFAULT") {
+  const std::string mem_space_upper = toupper(mem_space);
+  if(mem_space_upper == "DEFAULT") {
     return new double[n];
   } else {
 #ifdef HIOP_USE_RAJA
     auto& resmgr = umpire::ResourceManager::getInstance();
-    umpire::Allocator al  = resmgr.getAllocator(mem_space);
+    umpire::Allocator al  = resmgr.getAllocator(mem_space_upper);
     return static_cast<double*>(al.allocate(n*sizeof(double)));
 #else
     assert(false && "requested memory space not available because Hiop was not"
@@ -220,12 +226,13 @@ double* LinearAlgebraFactory::create_raw_array(const std::string& mem_space, siz
  */
 void LinearAlgebraFactory::delete_raw_array(const std::string& mem_space, double* a)
 {
-  if (toupper(mem_space) == "DEFAULT") {
+  const std::string mem_space_upper = toupper(mem_space);
+  if(mem_space_upper == "DEFAULT") {
     delete [] a;
   } else {
 #ifdef HIOP_USE_RAJA
     auto& resmgr = umpire::ResourceManager::getInstance();
-    umpire::Allocator al  = resmgr.getAllocator(mem_space);
+    umpire::Allocator al  = resmgr.getAllocator(mem_space_upper);
     al.deallocate(a);
 #endif
   }
