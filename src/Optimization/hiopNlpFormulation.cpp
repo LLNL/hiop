@@ -1380,9 +1380,13 @@ bool hiopNlpMDS::eval_Jac_c_d_interface_impl(hiopVector& x,
   return true;
 }
 
-bool hiopNlpMDS::eval_Hess_Lagr(const hiopVector& x, bool new_x, const double& obj_factor,
-			      const hiopVector& lambda_eq, const hiopVector& lambda_ineq, bool new_lambdas,
-			      hiopMatrix& Hess_L)
+bool hiopNlpMDS::eval_Hess_Lagr(const hiopVector& x,
+                                bool new_x,
+                                const double& obj_factor,
+                                const hiopVector& lambda_eq,
+                                const hiopVector& lambda_ineq,
+                                bool new_lambdas,
+                                hiopMatrix& Hess_L)
 {
   hiopMatrixSymBlockDiagMDS* pHessL = dynamic_cast<hiopMatrixSymBlockDiagMDS*>(&Hess_L);
   assert(pHessL);
