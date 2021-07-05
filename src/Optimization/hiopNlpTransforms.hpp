@@ -130,8 +130,12 @@ public:
   virtual inline hiopMatrix* apply_to_larg_hess    (hiopMatrix& Hess_in, const int& m_in) { return &Hess_in; }
   
 public:
-  hiopNlpTransformation(){};
+  hiopNlpTransformation(hiopNlpFormulation* nlp)
+    : nlp_(nlp)
+  {};
   virtual ~hiopNlpTransformation() {};
+protected:
+  hiopNlpFormulation* nlp_;
 };
 
 /** Removes fixed variables from the NLP formulation.
@@ -146,7 +150,8 @@ public:
 class hiopFixedVarsRemover : public hiopNlpTransformation
 {
 public:
-  hiopFixedVarsRemover(const hiopVector& xl,
+  hiopFixedVarsRemover(hiopNlpFormulation* nlp,
+                       const hiopVector& xl,
                        const hiopVector& xu,
                        const double& fixedVarTol,
                        const size_type& numFixedVars,
@@ -313,7 +318,8 @@ protected:
 class hiopFixedVarsRelaxer : public hiopNlpTransformation
 {
 public: 
-  hiopFixedVarsRelaxer(const hiopVector& xl,
+  hiopFixedVarsRelaxer(hiopNlpFormulation* nlp,
+                       const hiopVector& xl,
                        const hiopVector& xu,
                        const size_type& numFixedVars,
                        const size_type& numFixedVars_local);
@@ -501,7 +507,8 @@ private:
 class hiopBoundsRelaxer : public hiopNlpTransformation
 {
 public: 
-  hiopBoundsRelaxer(const hiopVector& xl,
+  hiopBoundsRelaxer(hiopNlpFormulation* nlp,
+                    const hiopVector& xl,
                     const hiopVector& xu,
                     const hiopVector& dl,
                     const hiopVector& du);
@@ -543,7 +550,11 @@ private:
 class hiopNlpTransformations : public hiopNlpTransformation
 {
 public:
-  hiopNlpTransformations() : n_vars_usernlp(-1), n_vars_local_usernlp(-1) { };
+  hiopNlpTransformations(hiopNlpFormulation* nlp)
+    : hiopNlpTransformation(nlp),
+      n_vars_usernlp(-1),
+      n_vars_local_usernlp(-1)
+  {};
   virtual ~hiopNlpTransformations() 
   {
     std::list<hiopNlpTransformation*>::iterator it;

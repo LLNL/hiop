@@ -136,11 +136,12 @@ hiopVectorInt* LinearAlgebraFactory::create_vector_int(const std::string& mem_sp
  * Creates legacy HiOp dense matrix by default, RAJA vector when memory space
  * is specified.
  */
-hiopMatrixDense* LinearAlgebraFactory::createMatrixDense(const size_type& m,
-                                                         const size_type& glob_n,
-                                                         index_type* col_part,
-                                                         MPI_Comm comm,
-                                                         const size_type& m_max_alloc)
+hiopMatrixDense* LinearAlgebraFactory::create_matrix_dense(const std::string& mem_space,
+                                                           const size_type& m,
+                                                           const size_type& glob_n,
+                                                           index_type* col_part,
+                                                           MPI_Comm comm,
+                                                           const size_type& m_max_alloc)
 {
   if(mem_space_ == "DEFAULT")
   {

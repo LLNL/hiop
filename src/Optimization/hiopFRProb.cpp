@@ -708,8 +708,8 @@ hiopFRProbMDS::hiopFRProbMDS(hiopAlgFilterIPMBase& solver_base)
   nnz_sp_Hess_Lagr_SS_ = n_x_sp_ + Hess_SS->sp_mat()->numberOfOffDiagNonzeros();
   nnz_sp_Hess_Lagr_SD_ = 0;
 
-  Jac_cd_ = new hiopMatrixMDS(m_, n_sp_, n_de_, nnz_sp_Jac_c_+nnz_sp_Jac_d_);
-  Hess_cd_ = new hiopMatrixSymBlockDiagMDS(n_sp_, n_de_, nnz_sp_Hess_Lagr_SS_);
+  Jac_cd_ = new hiopMatrixMDS(m_, n_sp_, n_de_, nnz_sp_Jac_c_+nnz_sp_Jac_d_, nlp_base_->options->GetString("mem_space"));
+  Hess_cd_ = new hiopMatrixSymBlockDiagMDS(n_sp_, n_de_, nnz_sp_Hess_Lagr_SS_, nlp_base_->options->GetString("mem_space"));
 
   // set mu0 to be the maximun of the current barrier parameter mu and norm_inf(|c|)*/
   theta_ref_ = solver_base_.get_resid()->get_theta(); //at current point, i.e., reference point

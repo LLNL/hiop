@@ -65,9 +65,9 @@ namespace hiop
 
 hiopNlpFormulation::hiopNlpFormulation(hiopInterfaceBase& interface_, const char* option_file)
 #ifdef HIOP_USE_MPI
-  : mpi_init_called(false), interface_base(interface_)
+  : mpi_init_called(false), interface_base(interface_), nlp_transformations(this)
 #else 
-  : interface_base(interface_)
+  : interface_base(interface_), nlp_transformations(this)
 #endif
 {
   strFixedVars = ""; //uninitialized
@@ -290,7 +290,7 @@ bool hiopNlpFormulation::finalizeInitialization()
     if(options->GetString("fixed_var")=="remove") {
       log->printf(hovWarning, "Fixed variables will be removed internally.\n");
 
-      fixedVarsRemover = new hiopFixedVarsRemover(*xl, *xu, fixedVarTol, nfixed_vars, nfixed_vars_local);
+      fixedVarsRemover = new hiopFixedVarsRemover(this, *xl, *xu, fixedVarTol, nfixed_vars, nfixed_vars_local);
       
 
 #ifdef HIOP_USE_MPI
@@ -342,8 +342,8 @@ bool hiopNlpFormulation::finalizeInitialization()
     } else {
       if(options->GetString("fixed_var")=="relax" && options->GetNumeric("bound_relax_perturb") == 0.0) {
 	log->printf(hovWarning, "Fixed variables will be relaxed internally.\n");
-	auto* fixedVarsRelaxer = new hiopFixedVarsRelaxer(*xl, *xu,
-							  nfixed_vars, nfixed_vars_local);
+	auto* fixedVarsRelaxer =
+          new hiopFixedVarsRelaxer(this, *xl, *xu, nfixed_vars, nfixed_vars_local);
 	fixedVarsRelaxer->setup();
 	fixedVarsRelaxer->relax(options->GetNumeric("fixed_var_tolerance"),
 				options->GetNumeric("fixed_var_perturb"), *xl, *xu);
@@ -462,7 +462,7 @@ bool hiopNlpFormulation::finalizeInitialization()
 
   // relax bounds
   if(options->GetNumeric("bound_relax_perturb") > 0.0) {
-    auto* relax_bounds = new hiopBoundsRelaxer(*xl, *xu, *dl, *du);
+    auto* relax_bounds = new hiopBoundsRelaxer(this, *xl, *xu, *dl, *du);
     relax_bounds->setup();
     relax_bounds->relax(options->GetNumeric("bound_relax_perturb"), *xl, *xu, *dl, *du);
     nlp_transformations.append(relax_bounds);
@@ -1229,20 +1229,20 @@ hiopMatrixDense* hiopNlpDenseConstraints::alloc_multivector_primal(int nrows, in
   //if(true==interface.get_vecdistrib_info(n_vars,vec_distrib)) 
   if(vec_distrib)
   {
-    M = LinearAlgebraFactory::createMatrixDense(nrows, n_vars, vec_distrib, comm, maxrows);
+    M = LinearAlgebraFactory::create_matrix_dense("DEFAULT", nrows, n_vars, vec_distrib, comm, maxrows);
   } else {
     //the if is not really needed, but let's keep it clear, costs only a comparison
     if(-1==maxrows)
-      M = LinearAlgebraFactory::createMatrixDense(nrows, n_vars);   
+      M = LinearAlgebraFactory::create_matrix_dense("DEFAULT", nrows, n_vars);   
     else
-      M = LinearAlgebraFactory::createMatrixDense(nrows, n_vars, NULL, MPI_COMM_SELF, maxrows);
+      M = LinearAlgebraFactory::create_matrix_dense("DEFAULT", nrows, n_vars, NULL, MPI_COMM_SELF, maxrows);
   }
 #else
   //the if is not really needed, but let's keep it clear, costs only a comparison
   if(-1==maxrows)
-    M = LinearAlgebraFactory::createMatrixDense(nrows, n_vars);   
+    M = LinearAlgebraFactory::create_matrix_dense("DEFAULT", nrows, n_vars);   
   else
-    M = LinearAlgebraFactory::createMatrixDense(nrows, n_vars, NULL, MPI_COMM_SELF, maxrows);
+    M = LinearAlgebraFactory::create_matrix_dense("DEFAULT", nrows, n_vars, NULL, MPI_COMM_SELF, maxrows);
 #endif
   return M;
 }

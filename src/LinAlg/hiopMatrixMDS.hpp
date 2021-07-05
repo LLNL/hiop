@@ -26,10 +26,10 @@ namespace hiop
 class hiopMatrixMDS : public hiopMatrix
 {
 public:
-  hiopMatrixMDS(int rows, int cols_sparse, int cols_dense, int nnz_sparse)
+  hiopMatrixMDS(int rows, int cols_sparse, int cols_dense, int nnz_sparse, const std::string& mem_space)
   {
     mSp = LinearAlgebraFactory::createMatrixSparse(rows, cols_sparse, nnz_sparse);
-    mDe = LinearAlgebraFactory::createMatrixDense(rows, cols_dense);
+    mDe = LinearAlgebraFactory::create_matrix_dense(mem_space, rows, cols_dense);
   }
   virtual ~hiopMatrixMDS()
   {
@@ -274,10 +274,10 @@ private:
 class hiopMatrixSymBlockDiagMDS : public hiopMatrix
 {
 public:
-  hiopMatrixSymBlockDiagMDS(int n_sparse, int n_dense, int nnz_sparse)
+  hiopMatrixSymBlockDiagMDS(int n_sparse, int n_dense, int nnz_sparse, const std::string& mem_space)
   {
     mSp = LinearAlgebraFactory::createMatrixSymSparse(n_sparse, nnz_sparse);
-    mDe = LinearAlgebraFactory::createMatrixDense(n_dense, n_dense);
+    mDe = LinearAlgebraFactory::create_matrix_dense(mem_space, n_dense, n_dense);
   }
   virtual ~hiopMatrixSymBlockDiagMDS()
   {

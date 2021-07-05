@@ -84,12 +84,8 @@ public:
    * @brief Static method to create a dense matrix.
    * 
    */
-  static hiopMatrixDense* createMatrixDense(const size_type& m,
-                                            const size_type& glob_n,
-                                            index_type* col_part = NULL,
-                                            MPI_Comm comm = MPI_COMM_SELF,
-                                            const size_type& m_max_alloc = -1);
   static hiopMatrixDense* create_matrix_dense(const std::string& mem_space,                                              
+                                              const size_type& m,
                                               const size_type& glob_n,
                                               index_type* col_part = NULL,
                                               MPI_Comm comm = MPI_COMM_SELF,

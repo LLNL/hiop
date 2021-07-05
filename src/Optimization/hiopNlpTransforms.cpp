@@ -62,12 +62,14 @@ namespace hiop
 {
 
 hiopFixedVarsRemover::
-hiopFixedVarsRemover(const hiopVector& xl,
+hiopFixedVarsRemover(hiopNlpFormulation* nlp,
+                     const hiopVector& xl,
                      const hiopVector& xu,
                      const double& fixedVarTol_,
                      const size_type& numFixedVars,
                      const size_type& numFixedVars_local)
-  : n_fixed_vars_local(numFixedVars_local), fixedVarTol(fixedVarTol_),
+  : hiopNlpTransformation(nlp),
+    n_fixed_vars_local(numFixedVars_local), fixedVarTol(fixedVarTol_),
     Jacc_fs(NULL), Jacd_fs(NULL),
     fs2rs_idx_map(xl.get_local_size()),
     x_rs_ref_(nullptr), Jacc_rs_ref(NULL), Jacd_rs_ref(NULL)
@@ -174,17 +176,20 @@ bool hiopFixedVarsRemover::setupConstraintsPart(const int& neq, const int& nineq
   assert(Jacd_fs==NULL && "should not be allocated at this point");
 
 #ifdef HIOP_USE_MPI
-  if(fs_vec_distrib.size())
-  {
-    Jacc_fs = LinearAlgebraFactory::createMatrixDense(neq,   n_fs, fs_vec_distrib.data(), comm);
-    Jacd_fs = LinearAlgebraFactory::createMatrixDense(nineq, n_fs, fs_vec_distrib.data(), comm);
+  if(fs_vec_distrib.size()) {
+    Jacc_fs = LinearAlgebraFactory::
+      create_matrix_dense(nlp_->options->GetString("mem_space"),neq, n_fs, fs_vec_distrib.data(), comm);
+    Jacd_fs = LinearAlgebraFactory::
+      create_matrix_dense(nlp_->options->GetString("mem_space"), nineq, n_fs, fs_vec_distrib.data(), comm);
   } else {
-    Jacc_fs = LinearAlgebraFactory::createMatrixDense(neq,   n_fs, NULL, comm);
-    Jacd_fs = LinearAlgebraFactory::createMatrixDense(nineq, n_fs, NULL, comm);
+    Jacc_fs = LinearAlgebraFactory::
+      create_matrix_dense(nlp_->options->GetString("mem_space"), neq, n_fs, NULL, comm);
+    Jacd_fs = LinearAlgebraFactory::
+      create_matrix_dense(nlp_->options->GetString("mem_space"), nineq, n_fs, NULL, comm);
   }
 #else
-  Jacc_fs = LinearAlgebraFactory::createMatrixDense(neq,   n_fs);
-  Jacd_fs = LinearAlgebraFactory::createMatrixDense(nineq, n_fs);
+  Jacc_fs = LinearAlgebraFactory::create_matrix_dense(nlp_->options->GetString("mem_space"), neq, n_fs);
+  Jacd_fs = LinearAlgebraFactory::create_matrix_dense(nlp_->options->GetString("mem_space"), nineq, n_fs);
 #endif
   return true;
 }
@@ -280,11 +285,13 @@ void hiopFixedVarsRemover::applyInvToMatrix(const double* M_fs, const int& m_in,
 }
 
 hiopFixedVarsRelaxer::
-hiopFixedVarsRelaxer(const hiopVector& xl,
+hiopFixedVarsRelaxer(hiopNlpFormulation* nlp,
+                     const hiopVector& xl,
                      const hiopVector& xu,
                      const size_type& numFixedVars,
                      const size_type& numFixedVars_local)
-  : xl_copy(NULL), xu_copy(NULL), n_vars(xl.get_size()), n_vars_local(xl.get_local_size())
+  : hiopNlpTransformation(nlp),
+    xl_copy(NULL), xu_copy(NULL), n_vars(xl.get_size()), n_vars_local(xl.get_local_size())
 {
   //xl_copy = xl.new_copy(); // no need to copy at this point
   //xu_copy = xu.new_copy(); // no need to copy at this point
@@ -319,11 +326,13 @@ relax(const double& fixed_var_tol, const double& fixed_var_perturb, hiopVector& 
 }
 
 hiopBoundsRelaxer::
-hiopBoundsRelaxer(const hiopVector& xl,
+hiopBoundsRelaxer(hiopNlpFormulation* nlp,
+                  const hiopVector& xl,
                   const hiopVector& xu,
                   const hiopVector& dl,
                   const hiopVector& du)
-  : xl_ori(NULL), xu_ori(NULL), dl_ori(NULL), du_ori(NULL),
+  : hiopNlpTransformation(nlp),
+    xl_ori(NULL), xu_ori(NULL), dl_ori(NULL), du_ori(NULL),
     n_vars(xl.get_size()), n_vars_local(xl.get_local_size()),
     n_ineq(dl.get_size())
 {
@@ -386,9 +395,10 @@ hiopNLPObjGradScaling::hiopNLPObjGradScaling(hiopNlpFormulation* nlp,
                                              hiopMatrix& Jac_d, 
                                              index_type* cons_eq_mapping, 
                                              index_type* cons_ineq_mapping)
-      : n_vars(gradf.get_size()), n_vars_local(gradf.get_local_size()),
-        scale_factor_obj(1.),
-        n_eq(c.get_size()), n_ineq(d.get_size())
+  : hiopNlpTransformation(nlp),
+    n_vars(gradf.get_size()), n_vars_local(gradf.get_local_size()),
+    scale_factor_obj(1.),
+    n_eq(c.get_size()), n_ineq(d.get_size())
 {
   scale_factor_obj = max_grad/gradf.infnorm();
   if(scale_factor_obj>1.) {
@@ -397,7 +407,7 @@ hiopNLPObjGradScaling::hiopNLPObjGradScaling(hiopNlpFormulation* nlp,
   
   scale_factor_c = c.new_copy();
   scale_factor_d = d.new_copy();
-  scale_factor_cd = LinearAlgebraFactory::create_vector(nlp->options->GetString("mem_space"),
+  scale_factor_cd = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"),
                                                         n_eq + n_ineq);
 
   Jac_c.row_max_abs_value(*scale_factor_c);

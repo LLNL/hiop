@@ -294,7 +294,10 @@ protected:
   std::string strFixedVars; //"none", "fixed", "relax"
   double dFixedVarsTol;
 
-  //internal NLP transformations (currently fixing/relaxing variables implemented)
+  /**
+   * @brief Internal NLP transformations that supports fixing and relaxing variables as well as
+   * problem rescalings.
+   */
   hiopNlpTransformations nlp_transformations;
   
   //internal NLP transformations (currently gradient scaling implemented)
@@ -335,7 +338,10 @@ protected:
    */
   hiopVector* cons_lambdas_;
 private:
-  hiopNlpFormulation(const hiopNlpFormulation& s) : interface_base(s.interface_base) {};
+  hiopNlpFormulation(const hiopNlpFormulation& s)
+    : interface_base(s.interface_base),
+      nlp_transformations(this)
+  {};
 };
 
 /* *************************************************************************
@@ -436,22 +442,26 @@ public:
   virtual hiopMatrix* alloc_Jac_c() 
   {
     assert(n_vars == nx_sparse+nx_dense);
-    return new hiopMatrixMDS(n_cons_eq, nx_sparse, nx_dense, nnz_sparse_Jaceq);
+    return new hiopMatrixMDS(n_cons_eq, nx_sparse, nx_dense, nnz_sparse_Jaceq, options->GetString("mem_space"));
   }
   virtual hiopMatrix* alloc_Jac_d() 
   {
     assert(n_vars == nx_sparse+nx_dense);
-    return new hiopMatrixMDS(n_cons_ineq, nx_sparse, nx_dense, nnz_sparse_Jacineq);
+    return new hiopMatrixMDS(n_cons_ineq, nx_sparse, nx_dense, nnz_sparse_Jacineq, options->GetString("mem_space"));
   }
   virtual hiopMatrix* alloc_Jac_cons()
   {
     assert(n_vars == nx_sparse+nx_dense);
-    return new hiopMatrixMDS(n_cons, nx_sparse, nx_dense, nnz_sparse_Jaceq+nnz_sparse_Jacineq);
+    return new hiopMatrixMDS(n_cons,
+                             nx_sparse,
+                             nx_dense,
+                             nnz_sparse_Jaceq+nnz_sparse_Jacineq,
+                             options->GetString("mem_space"));
   }
   virtual hiopMatrix* alloc_Hess_Lagr()
   {
     assert(0==nnz_sparse_Hess_Lagr_SD);
-    return new hiopMatrixSymBlockDiagMDS(nx_sparse, nx_dense, nnz_sparse_Hess_Lagr_SS);
+    return new hiopMatrixSymBlockDiagMDS(nx_sparse, nx_dense, nnz_sparse_Hess_Lagr_SS, options->GetString("mem_space"));
   }
 
   /** const accessors */
