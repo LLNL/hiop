@@ -1947,13 +1947,11 @@ void hiopVectorRajaPar::set_array_from_to(hiopInterfaceBase::NonlinearityType* a
   if(end - start == 0)
     return;
   
-  hiopInterfaceBase::NonlinearityType* vv = const_cast<hiopInterfaceBase::NonlinearityType*>(arr_src); // <- cast away const
-
   RAJA::forall< hiop_raja_exec >(
     RAJA::RangeSegment(0, end-start),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
-      arr[start+i] = vv[start_src+i];
+      arr[start+i] = arr_src[start_src+i];
     }
   );
 
