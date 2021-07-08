@@ -2128,7 +2128,8 @@ bool hiopAlgFilterIPMBase::solve_feasibility_restoration(hiopKKTLinSys* kkt, hio
     nlpFR.options->SetStringValue("Hessian", "analytical_exact");
     nlpFR.options->SetStringValue("duals_update_type", "linear");
     nlpFR.options->SetStringValue("duals_init", "zero");
-    nlpFR.options->SetStringValue("compute_mode", "cpu");
+    nlpFR.options->SetStringValue("compute_mode", nlp->options->GetString("compute_mode").c_str());
+    nlpFR.options->SetStringValue("mem_space", nlp->options->GetString("mem_space").c_str());
     nlpFR.options->SetStringValue("KKTLinsys", "xdycyd");
     nlpFR.options->SetIntegerValue("verbosity_level", 0);
     nlpFR.options->SetStringValue("warm_start", "yes");
