@@ -69,6 +69,9 @@
 #ifdef HIOP_USE_STRUMPACK
 #include "hiopLinSolverSparseSTRUMPACK.hpp"
 #endif
+#ifdef HIOP_USE_PARDISO
+#include "hiopLinSolverSparsePARDISO.hpp"
+#endif
 #endif
 
 namespace hiop
@@ -368,8 +371,21 @@ bool hiopDualsLsqUpdateLinsysAugSparse::do_lsq_update(hiopIterate& iter,
 #endif // HIOP_USE_COINHSL
       }
 
+      if( (NULL == lin_sys_ && linear_solver == "auto") || linear_solver == "pardiso") {
+        //ma57 is not available or user requested pardiso
+#ifdef HIOP_USE_PARDISO              
+        hiopLinSolverIndefSparsePARDISO *p = new hiopLinSolverIndefSparsePARDISO(n, nnz, nlp_);
+        
+        nlp_->log->printf(hovSummary,
+                          "LSQ Duals Initialization --- KKT_SPARSE_XDYcYd linsys: using PARDISO on CPU as an "
+                          "indefinite solver, size %d (%d cons)\n",
+                          n, neq+nineq);        
+        lin_sys_ = p;
+#endif  // HIOP_USE_PARDISO
+      }
+
       if(NULL == lin_sys_) {
-        //ma57 not available or user requested strumpack
+        //ma57 and pardiso are not available or user requested strumpack
 #ifdef HIOP_USE_STRUMPACK
         assert((linear_solver == "strumpack" || linear_solver == "auto") &&
                "the value for duals_init_linear_solver_sparse is invalid and should have been corrected during "
@@ -420,6 +436,20 @@ bool hiopDualsLsqUpdateLinsysAugSparse::do_lsq_update(hiopIterate& iter,
         lin_sys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
       }
 #endif // HIOP_USE_COINHSL
+#ifdef HIOP_USE_PARDISO
+      if(NULL == lin_sys_) {
+        // we get here if strumpack and ma57 are not available or is available but the duals_init_linear_solver_sparse was
+        //set to be pardiso
+        assert((linear_solver == "pardiso" || linear_solver == "auto") &&
+               "the value for duals_init_linear_solver_sparse is invalid and should have been corrected during "
+               "options processing");
+        nlp_->log->printf(hovSummary,
+                          "LSQ Dual Initialization --- KKT_SPARSE_XDYcYd linsys: using PARDISO on CPU(!!!) size "
+                          "%d (%d cons)\n",
+                          n, neq+nineq);                             
+        lin_sys_ = new hiopLinSolverIndefSparsePARDISO(n, nnz, nlp_);
+      }
+#endif // HIOP_USE_PARDISO
     } // end of else  compute_mode=='cpu'
   }
   assert(lin_sys_ && "no sparse linear solver is available");

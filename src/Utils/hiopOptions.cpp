@@ -784,25 +784,25 @@ void hiopOptionsNLP::register_options()
   // for the other KKTLinsys (which are all symmetric), MA57 is chosen 'auto'matically for all compute
   // modes, unless the user overwrites this
   {
-    vector<string> range(3); range[0] = "auto"; range[1]="ma57"; range[2]="strumpack";
+    vector<string> range(4); range[0] = "auto"; range[1]="ma57"; range[2]="pardiso"; range[3]="strumpack";
     register_str_option("linear_solver_sparse",
                         "auto",
                         range,
-                        "Selects between MA57 and STRUMPACK for the sparse linear solves.");
+                        "Selects among MA57, PARDISO and STRUMPACK for the sparse linear solves.");
   }
 
   // choose linear solver for duals intializations for sparse NLP problems
   //  - when only CPU is used (compute_mode is cpu or HIOP_USE_GPU is off), MA57 is chosen by 'auto'
   //  - when GPU mode is on, STRUMPACK is chosen by 'auto' if available
-  //  - choosing option ma57 with GPU being on, it results in no device being used in the linear solve!
+  //  - choosing option ma57 or pardiso with GPU being on, it results in no device being used in the linear solve!
   {
-    vector<string> range(3); range[0] = "auto"; range[1]="ma57"; range[2]="strumpack";
+    vector<string> range(4); range[0] = "auto"; range[1]="ma57"; range[2]="pardiso"; range[3]="strumpack";
     register_str_option("duals_init_linear_solver_sparse",
                         "auto",
                         range,
-                        "Selects between MA57 and STRUMPACK for the sparse linear solves.");
+                        "Selects among MA57, PARDISO and STRUMPACK for the sparse linear solves.");
   }
-  
+
   //linsol_mode -> mostly related to magma and MDS linear algebra
   {
     vector<string> range(3); range[0]="stable"; range[1]="speculative"; range[2]="forcequick";
@@ -967,7 +967,7 @@ void hiopOptionsNLP::ensure_consistence()
   }
 
   if(GetString("KKTLinsys") == "full") {
-    if(GetString("linear_solver_sparse") == "ma57") {
+    if(GetString("linear_solver_sparse") == "ma57" || GetString("linear_solver_sparse") == "pardiso") {
       if(is_user_defined("linear_solver_sparse")) {
         log_printf(hovWarning,
                    "The option 'linear_solver_sparse=%s' is not valid with option 'KKTLinsys=full'. "
