@@ -281,19 +281,19 @@ void hiopOptions::registerOptions()
   // for the other KKTLinsys (which are all symmetric), MA57 is chosen 'auto'matically for all compute
   // modes, unless the user overwrites this
   {
-    vector<string> range(3); range[0] = "auto"; range[1]="ma57"; range[2]="strumpack";
+    vector<string> range(4); range[0] = "auto"; range[1]="ma57"; range[2]="pardiso"; range[3]="strumpack";
     registerStrOption("linear_solver_sparse", "auto", range,
-		      "Selects between MA57 and STRUMPACK for the sparse linear solves.");
+		      "Selects between MA57, PARDISO and STRUMPACK for the sparse linear solves.");
   }
 
   // choose linear solver for duals intializations for sparse NLP problems
   //  - when only CPU is used (compute_mode is cpu or HIOP_USE_GPU is off), MA57 is chosen by 'auto'
   //  - when GPU mode is on, STRUMPACK is chosen by 'auto' if available
-  //  - choosing option ma57 with GPU being on, it results in no device being used in the linear solve!
+  //  - choosing option ma57 or pardiso with GPU being on, it results in no device being used in the linear solve!
   {
-    vector<string> range(3); range[0] = "auto"; range[1]="ma57"; range[2]="strumpack";
+    vector<string> range(4); range[0] = "auto"; range[1]="ma57"; range[2]="pardiso"; range[3]="strumpack";
     registerStrOption("duals_init_linear_solver_sparse", "auto", range,
-		      "Selects between MA57 and STRUMPACK for the sparse linear solves.");
+		      "Selects between MA57, PARDISO and STRUMPACK for the sparse linear solves.");
   }
 
   //linsol_mode -> mostly related to magma and MDS linear algebra
