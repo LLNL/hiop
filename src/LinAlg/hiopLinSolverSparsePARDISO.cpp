@@ -63,7 +63,7 @@ namespace hiop
     : hiopLinSolverIndefSparse(n, nnz, nlp),
     kRowPtr_{nullptr}, jCol_{nullptr}, kVal_{nullptr},
     rhs_{nullptr},
-    n_{n}, nnz_{nnz}, is_initialized_{false}
+    n_{n}, nnz_{-1}, is_initialized_{false}
   {
     maxfct_ = 1; //max number of fact having same sparsity pattern to keep at the same time
     mnum_ = 1;   //actual matrix (as in index from 1 to maxfct)
@@ -97,8 +97,9 @@ namespace hiop
     assert(n_>0);
 
     kRowPtr_ = new int[n_+1]{0};
-  
-    // transfer triplet form to CSR form
+    nnz_ = 0;
+
+    // transfer triplet form to CSR upper triangular form
     // note that input is in lower triangular triplet form. First part is the sparse matrix, and the 2nd part are the additional diagonal elememts
     // the 1st part is sorted by row
     {
@@ -109,9 +110,8 @@ namespace hiop
       kRowPtr_[0]=0;
       for(int k=0;k<M.numberOfNonzeros()-n_;k++){
         if(M.i_row()[k]!=M.j_col()[k]){
-          kRowPtr_[M.i_row()[k]+1]++;
           kRowPtr_[M.j_col()[k]+1]++;
-          nnz_ += 2;
+          nnz_ += 1;
         }
       }
       // diagonal part
@@ -159,21 +159,16 @@ namespace hiop
           nnz_each_row_tmp[rowID_tmp]++;
           total_nnz_tmp++;
         }else{
-          nnz_tmp = nnz_each_row_tmp[rowID_tmp] + kRowPtr_[rowID_tmp];
-          jCol_[nnz_tmp] = colID_tmp;
-          kVal_[nnz_tmp] = M.M()[k];
-          index_covert_CSR2Triplet_[nnz_tmp] = k;
-
           nnz_tmp = nnz_each_row_tmp[colID_tmp] + kRowPtr_[colID_tmp];
           jCol_[nnz_tmp] = rowID_tmp;
           kVal_[nnz_tmp] = M.M()[k];
           index_covert_CSR2Triplet_[nnz_tmp] = k;
 
-          nnz_each_row_tmp[rowID_tmp]++;
           nnz_each_row_tmp[colID_tmp]++;
-          total_nnz_tmp += 2;
+          total_nnz_tmp += 1;
         }
       }
+
       // correct the missing diagonal term
       for(int i=0;i<n_;i++){
         if(nnz_each_row_tmp[i] != kRowPtr_[i+1]-kRowPtr_[i]){
@@ -248,7 +243,6 @@ namespace hiop
   int hiopLinSolverIndefSparsePARDISO::matrixChanged()
   {
     assert(n_==M.n() && M.n()==M.m());
-    assert(nnz_==M.numberOfNonzeros());
     assert(n_>0);
 
     nlp_->runStats.linsolv.tmFactTime.start();
