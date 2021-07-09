@@ -242,7 +242,7 @@ private:
 
   //indices of the coupled x in the full x
   int* xc_idx_;
-  //tolerance of the convergence stopping criteria
+  //tolerance of the convergence stopping criteria. TODO: user options from options file via hiopOptions
   double tol_ = 1e-8;
 
   //acceptable tolerance is used to terminate hiop if NLP residuals are below the 

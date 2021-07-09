@@ -924,13 +924,24 @@ bool hiopNlpFormulation::user_callback_iterate(int iter,
   //! zl and zu may have different sizes than what user expects since HiOp removes
   //! variables internally
   
-  return interface_base.iterate_callback(iter, obj_value, logbar_obj_value,
-					 (int)n_vars, x.local_data_const(),
-					 z_L.local_data_const(), z_U.local_data_const(),
-                                         (int)n_cons_ineq, s.local_data_const(),
-					 (int)n_cons, cons_body_->local_data_const(),
+  return interface_base.iterate_callback(iter, obj_value,
+                                         logbar_obj_value,
+					 (int)n_vars,
+                                         x.local_data_const(),
+					 z_L.local_data_const(),
+                                         z_U.local_data_const(),
+                                         (int)n_cons_ineq,
+                                         s.local_data_const(),
+					 (int)n_cons,
+                                         cons_body_->local_data_const(),
 					 cons_lambdas_->local_data_const(),
-					 inf_pr, inf_du, onenorm_pr, mu, alpha_du, alpha_pr,  ls_trials);
+					 inf_pr,
+                                         inf_du,
+                                         onenorm_pr,
+                                         mu,
+                                         alpha_du,
+                                         alpha_pr,
+                                         ls_trials);
 }
 
 bool hiopNlpFormulation::user_force_update(int iter,

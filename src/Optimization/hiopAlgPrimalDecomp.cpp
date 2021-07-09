@@ -134,7 +134,7 @@ hiopAlgPrimalDecomposition::HessianApprox::~HessianApprox()
 /* n_ is the dimension of x, hence the dimension of g_k, skm1, etc */
 void hiopAlgPrimalDecomposition::HessianApprox::set_n(const int n)
 {
-  n_=n;
+  n_ = n;
 }
 
 
@@ -226,8 +226,7 @@ update_hess_coeff(const hiopVector& xk,
  * User can provide a global maximum and minimum for alpha
  */
  
-void hiopAlgPrimalDecomposition::HessianApprox::
-update_ratio()
+void hiopAlgPrimalDecomposition::HessianApprox::update_ratio()
 {
   double rk = fkm1;
 
@@ -307,8 +306,7 @@ update_ratio_tr(const double rhok,
 /* currently provides multiple ways to compute alpha, one is to the BB alpha
  * or the alpha computed through the BarzilaiBorwein gradient method, a quasi-Newton method.
  */
-double hiopAlgPrimalDecomposition::HessianApprox::
-get_alpha_BB()
+double hiopAlgPrimalDecomposition::HessianApprox::get_alpha_BB()
 {
   double temp1 = 0.;
   double temp2 = 0.;
