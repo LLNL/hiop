@@ -61,7 +61,8 @@ public:
     : hiopLinSolverIndefDense(n, nlp)
   {
     ipiv = new int[n];
-    dwork = LinearAlgebraFactory::createVector(0);
+    //a "legacy" hiopVector within in the CPU memory space is sufficient 
+    dwork = LinearAlgebraFactory::create_vector("DEFAULT", 0);
   }
   virtual ~hiopLinSolverIndefDenseLapack()
   {
@@ -92,8 +93,7 @@ public:
     lwork=(int)dwork_tmp;
     if(lwork != dwork->get_size()) {
       delete dwork;
-      dwork = NULL;
-      dwork = LinearAlgebraFactory::createVector(lwork);
+      dwork = LinearAlgebraFactory::create_vector("DEFAULT", lwork);
     }
 
     bool rank_deficient=false;

@@ -64,15 +64,15 @@ namespace hiop {
 
   /// Constructor allocates dense system matrix
   hiopLinSolverIndefDense::hiopLinSolverIndefDense(int n, hiopNlpFormulation* nlp)
-    : M_(LinearAlgebraFactory::createMatrixDense(n, n))
   {
     nlp_ = nlp;
-    perf_report_ = "on"==hiop::tolower(nlp->options->GetString("time_kkt"));
+    perf_report_ = "on"==hiop::tolower(nlp_->options->GetString("time_kkt"));
+    M_ = LinearAlgebraFactory::create_matrix_dense(nlp_->options->GetString("mem_space"), n, n);
   }
 
   /// Default constructor is protected and should fail when called
   hiopLinSolverIndefDense::hiopLinSolverIndefDense()
-    : M_(LinearAlgebraFactory::createMatrixDense(0, 0))
+    : M_(nullptr)
   {
     assert(false);
   }

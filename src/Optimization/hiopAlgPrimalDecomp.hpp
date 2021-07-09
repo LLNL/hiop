@@ -80,7 +80,7 @@ public:
   
   /* Contains information of a previous solution step including function value 
    * and gradient. Used for storing the solution for the previous iteration
-   * This struct is intened for internal use of hiopAlgPrimalDecomposition class only
+   * This struct is intended for internal use of hiopAlgPrimalDecomposition class only
    */
   struct Prevsol{
     Prevsol(const int n, const double f, const double* grad, const double* x)
@@ -120,11 +120,11 @@ public:
    * This struct is intened for internal use of hiopAlgPrimalDecomposition class only
    */
   struct HessianApprox {
-    HessianApprox();
-    HessianApprox(const int& n);
+    HessianApprox(hiopInterfacePriDecProblem* priDecProb);
+    HessianApprox(const int& n, hiopInterfacePriDecProblem* priDecProb);
     
-    /* ratio_ is used to compute alpha in alpha_f */
-    HessianApprox(const int& n,const double ratio);
+    /* ratio is used to compute alpha in alpha_f */
+    HessianApprox(const int& n, const double ratio, hiopInterfacePriDecProblem* priDecProb);
 
     ~HessianApprox();
 
@@ -203,6 +203,7 @@ public:
     hiopVector* skm1;
     hiopVector* ykm1;
     size_t ver_=1;
+    hiopInterfacePriDecProblem* priDecProb_;
   };
 
 private:
@@ -241,8 +242,8 @@ private:
 
   //indices of the coupled x in the full x
   int* xc_idx_;
-  //tolerance of the convergence stopping criteria
-  double tol_=1e-8;
+  //tolerance of the convergence stopping criteria. TODO: user options from options file via hiopOptions
+  double tol_ = 1e-8;
 
   //acceptable tolerance is used to terminate hiop if NLP residuals are below the 
   //set value for 10 consecutive iterations

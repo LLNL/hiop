@@ -171,8 +171,10 @@ public:
     assert(linSys && "fail to get an object for correct linear system");
 
     int nx=rx.get_size(), nyc=ryc.get_size(), nyd=ryd.get_size();
-    if(rhsXYcYd == NULL) rhsXYcYd = LinearAlgebraFactory::createVector(nx+nyc+nyd);
-
+    if(rhsXYcYd == nullptr) {
+      rhsXYcYd = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"),
+                                                     nx+nyc+nyd);
+    }
     nlp_->log->write("RHS KKT XDycYd rx: ", rx,  hovIteration);
     nlp_->log->write("RHS KKT XDycYd ryc:", ryc, hovIteration);
     nlp_->log->write("RHS KKT XDycYd ryd:", ryd, hovIteration);
@@ -325,7 +327,10 @@ public:
     hiopLinSolverIndefDense* linSys = dynamic_cast<hiopLinSolverIndefDense*> (linSys_);
 
     int nx=rx.get_size(), nyc=ryc.get_size(), nyd=ryd.get_size();
-    if(rhsXDYcYd == NULL) rhsXDYcYd = LinearAlgebraFactory::createVector(nx+nyc+2*nyd);
+    if(rhsXDYcYd == nullptr) {
+      rhsXDYcYd = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"),
+                                                      nx+nyc+2*nyd);
+    }
 
     nlp_->log->write("RHS KKT XDycYd rx: ", rx,  hovMatrices);
     nlp_->log->write("RHS KKT XDycYd rd: ", rd,  hovMatrices);

@@ -76,7 +76,7 @@ public:
     if(nd_<0) nd=0;
     else nd = nd_;
 
-    Q  = hiop::LinearAlgebraFactory::createMatrixDense(nd,nd);
+    Q  = hiop::LinearAlgebraFactory::create_matrix_dense("DEFAULT", nd, nd);
     Q->setToConstant(1e-8);
     Q->addDiagonal(2.);
     double* Qa = Q->local_data();
@@ -87,7 +87,7 @@ public:
       Qa[(i+1)*nd+i] = 1.;
     }
 
-    Md = hiop::LinearAlgebraFactory::createMatrixDense(ns,nd);
+    Md = hiop::LinearAlgebraFactory::create_matrix_dense("DEFAULT", ns, nd);
     Md->setToConstant(-1.0);
 
     _buf_y = new double[nd];

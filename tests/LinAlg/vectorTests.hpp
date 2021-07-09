@@ -259,7 +259,7 @@ public:
       });
 
     // Testing copying from a zero size vector
-    hiop::hiopVector* zero = hiop::LinearAlgebraFactory::createVector(0);
+    hiop::hiopVector* zero = hiop::LinearAlgebraFactory::create_vector(mem_space_, 0);
     zero->setToConstant(one);
     x.setToConstant(two);
     x.copyFromStarting(0, *zero);
@@ -386,7 +386,7 @@ public:
       });
 
     // Testing copying from a zero size vector
-    hiop::hiopVector* zero = hiop::LinearAlgebraFactory::createVector(0);
+    hiop::hiopVector* zero = hiop::LinearAlgebraFactory::create_vector(mem_space_, 0);
     zero->setToConstant(one);
     to.setToConstant(to_val);
     zero->copyToStarting(to, 0);
@@ -523,7 +523,7 @@ public:
 
     // Iteratively checking various edge cases for calls to the function
   
-    hiop::hiopVector* zero = hiop::LinearAlgebraFactory::createVector(0);
+    hiop::hiopVector* zero = hiop::LinearAlgebraFactory::create_vector(mem_space_, 0);
 
     // Copying from a size 0 vector
     from.setToConstant(from_val);

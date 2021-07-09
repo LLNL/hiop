@@ -92,14 +92,14 @@ hiopFRProbSparse::hiopFRProbSparse(hiopAlgFilterIPMBase& solver_base)
   DR_->component_min(1.0);
 
   wrk_x_ = x_ref_->alloc_clone();
-  wrk_c_ = LinearAlgebraFactory::createVector(m_eq_);
-  wrk_d_ = LinearAlgebraFactory::createVector(m_ineq_);
-  wrk_eq_ = LinearAlgebraFactory::createVector(m_eq_);
-  wrk_ineq_ = LinearAlgebraFactory::createVector(m_ineq_);
-  wrk_cbody_ = LinearAlgebraFactory::createVector(m_eq_);
-  wrk_dbody_ = LinearAlgebraFactory::createVector(m_ineq_);
-  wrk_primal_ = LinearAlgebraFactory::createVector(n_);
-  wrk_dual_ = LinearAlgebraFactory::createVector(m_);
+  wrk_c_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), m_eq_);
+  wrk_d_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), m_ineq_);
+  wrk_eq_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), m_eq_);
+  wrk_ineq_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), m_ineq_);
+  wrk_cbody_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), m_eq_);
+  wrk_dbody_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), m_ineq_);
+  wrk_primal_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), n_);
+  wrk_dual_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), m_);
 
   // nnz for sparse matrices;
   nnz_Jac_c_ = nlp_base_->get_nnz_Jaceq() + 2 * m_eq_;
@@ -110,8 +110,13 @@ hiopFRProbSparse::hiopFRProbSparse(hiopAlgFilterIPMBase& solver_base)
   hiopMatrixSparse* Hess_base = dynamic_cast<hiopMatrixSparse*>(solver_base_.get_Hess_Lagr());
   nnz_Hess_Lag_ = n_x_ + Hess_base->numberOfOffDiagNonzeros();
   
-  Jac_cd_ = LinearAlgebraFactory::createMatrixSparse(m_, n_, nnz_Jac_c_ + nnz_Jac_d_);
-  Hess_cd_ = LinearAlgebraFactory::createMatrixSymSparse(n_, nnz_Hess_Lag_);
+  Jac_cd_ = LinearAlgebraFactory::create_matrix_sparse(nlp_base_->options->GetString("mem_space"),
+                                                       m_,
+                                                       n_,
+                                                       nnz_Jac_c_ + nnz_Jac_d_);
+  Hess_cd_ = LinearAlgebraFactory::create_matrix_sym_sparse(nlp_base_->options->GetString("mem_space"),
+                                                            n_,
+                                                            nnz_Hess_Lag_);
   
   // set mu0 to be the maximun of the current barrier parameter mu and norm_inf(|c|)*/
   theta_ref_ = solver_base_.get_resid()->get_theta(); //at current point, i.e., reference point
@@ -696,17 +701,17 @@ hiopFRProbMDS::hiopFRProbMDS(hiopAlgFilterIPMBase& solver_base)
   DR_->component_min(1.0);
 
   wrk_x_ = x_ref_->alloc_clone();
-  wrk_c_ = LinearAlgebraFactory::createVector(m_eq_);
-  wrk_d_ = LinearAlgebraFactory::createVector(m_ineq_);
-  wrk_eq_ = LinearAlgebraFactory::createVector(m_eq_);
-  wrk_ineq_ = LinearAlgebraFactory::createVector(m_ineq_);
-  wrk_cbody_ = LinearAlgebraFactory::createVector(m_eq_);
-  wrk_dbody_ = LinearAlgebraFactory::createVector(m_ineq_);
-  wrk_primal_ = LinearAlgebraFactory::createVector(n_);
-  wrk_dual_ = LinearAlgebraFactory::createVector(m_);
+  wrk_c_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), m_eq_);
+  wrk_d_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), m_ineq_);
+  wrk_eq_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), m_eq_);
+  wrk_ineq_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), m_ineq_);
+  wrk_cbody_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), m_eq_);
+  wrk_dbody_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), m_ineq_);
+  wrk_primal_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), n_);
+  wrk_dual_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), m_);
 
-  wrk_x_sp_ = LinearAlgebraFactory::createVector(n_x_sp_);
-  wrk_x_de_ = LinearAlgebraFactory::createVector(n_x_de_);
+  wrk_x_sp_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), n_x_sp_);
+  wrk_x_de_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), n_x_de_);
 
   // nnz for sparse matrices;
   nnz_sp_Jac_c_ = nlp_base_->get_nnz_sp_Jaceq() + 2 * m_eq_;
@@ -718,8 +723,8 @@ hiopFRProbMDS::hiopFRProbMDS(hiopAlgFilterIPMBase& solver_base)
   nnz_sp_Hess_Lagr_SS_ = n_x_sp_ + Hess_SS->sp_mat()->numberOfOffDiagNonzeros();
   nnz_sp_Hess_Lagr_SD_ = 0;
 
-  Jac_cd_ = new hiopMatrixMDS(m_, n_sp_, n_de_, nnz_sp_Jac_c_+nnz_sp_Jac_d_);
-  Hess_cd_ = new hiopMatrixSymBlockDiagMDS(n_sp_, n_de_, nnz_sp_Hess_Lagr_SS_);
+  Jac_cd_ = new hiopMatrixMDS(m_, n_sp_, n_de_, nnz_sp_Jac_c_+nnz_sp_Jac_d_, nlp_base_->options->GetString("mem_space"));
+  Hess_cd_ = new hiopMatrixSymBlockDiagMDS(n_sp_, n_de_, nnz_sp_Hess_Lagr_SS_, nlp_base_->options->GetString("mem_space"));
 
   // set mu0 to be the maximun of the current barrier parameter mu and norm_inf(|c|)*/
   theta_ref_ = solver_base_.get_resid()->get_theta(); //at current point, i.e., reference point

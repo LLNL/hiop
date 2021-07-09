@@ -158,10 +158,10 @@ static int runTests(const char* mem_space, MPI_Comm comm)
 #endif
 
   T test;
-
-  hiopOptions options;
-  options.SetStringValue("mem_space", mem_space);
-  LinearAlgebraFactory::set_mem_space(mem_space);
+  test.set_mem_space(mem_space);
+  //hiopOptions options;
+  //options.SetStringValue("mem_space", mem_space);
+  //LinearAlgebraFactory::set_mem_space(mem_space);
 
   int fail = 0;
 
@@ -191,32 +191,39 @@ static int runTests(const char* mem_space, MPI_Comm comm)
   }
 
   // Distributed matrices:
-  hiopMatrixDense* A_kxm = LinearAlgebraFactory::createMatrixDense(K_local, M_global, m_partition, comm);
-  hiopMatrixDense* A_kxn = LinearAlgebraFactory::createMatrixDense(K_local, N_global, n_partition, comm);
-  hiopMatrixDense* A_mxk = LinearAlgebraFactory::createMatrixDense(M_local, K_global, k_partition, comm);
-  hiopMatrixDense* A_mxn = LinearAlgebraFactory::createMatrixDense(M_local, N_global, n_partition, comm);
-  hiopMatrixDense* A_nxm = LinearAlgebraFactory::createMatrixDense(N_local, M_global, m_partition, comm);
-  hiopMatrixDense* B_mxn = LinearAlgebraFactory::createMatrixDense(M_local, N_global, n_partition, comm);
-  hiopMatrixDense* A_mxn_extra_row = LinearAlgebraFactory::createMatrixDense(M_local, N_global, n_partition, comm, M_local+1);
+  hiopMatrixDense* A_kxm =
+    LinearAlgebraFactory::create_matrix_dense(mem_space, K_local, M_global, m_partition, comm);
+  hiopMatrixDense* A_kxn =
+    LinearAlgebraFactory::create_matrix_dense(mem_space, K_local, N_global, n_partition, comm);
+  hiopMatrixDense* A_mxk =
+    LinearAlgebraFactory::create_matrix_dense(mem_space, M_local, K_global, k_partition, comm);
+  hiopMatrixDense* A_mxn =
+    LinearAlgebraFactory::create_matrix_dense(mem_space, M_local, N_global, n_partition, comm);
+  hiopMatrixDense* A_nxm =
+    LinearAlgebraFactory::create_matrix_dense(mem_space, N_local, M_global, m_partition, comm);
+  hiopMatrixDense* B_mxn =
+    LinearAlgebraFactory::create_matrix_dense(mem_space, M_local, N_global, n_partition, comm);
+  hiopMatrixDense* A_mxn_extra_row =
+    LinearAlgebraFactory::create_matrix_dense(mem_space, M_local, N_global, n_partition, comm, M_local+1);
 
   // Non-distributed matrices:
-  hiopMatrixDense* A_mxk_nodist = LinearAlgebraFactory::createMatrixDense(M_local, K_local);
-  hiopMatrixDense* A_mxm_nodist = LinearAlgebraFactory::createMatrixDense(M_local, M_local);
-  hiopMatrixDense* A_kxn_nodist = LinearAlgebraFactory::createMatrixDense(K_local, N_local);
-  hiopMatrixDense* A_kxm_nodist = LinearAlgebraFactory::createMatrixDense(K_local, M_local);
-  hiopMatrixDense* A_mxn_nodist = LinearAlgebraFactory::createMatrixDense(M_local, N_local);
-  hiopMatrixDense* A_nxn_nodist = LinearAlgebraFactory::createMatrixDense(N_local, N_local);
-  hiopMatrixDense* B_nxn_nodist = LinearAlgebraFactory::createMatrixDense(N_local, N_local);
+  hiopMatrixDense* A_mxk_nodist = LinearAlgebraFactory::create_matrix_dense(mem_space, M_local, K_local);
+  hiopMatrixDense* A_mxm_nodist = LinearAlgebraFactory::create_matrix_dense(mem_space, M_local, M_local);
+  hiopMatrixDense* A_kxn_nodist = LinearAlgebraFactory::create_matrix_dense(mem_space, K_local, N_local);
+  hiopMatrixDense* A_kxm_nodist = LinearAlgebraFactory::create_matrix_dense(mem_space, K_local, M_local);
+  hiopMatrixDense* A_mxn_nodist = LinearAlgebraFactory::create_matrix_dense(mem_space, M_local, N_local);
+  hiopMatrixDense* A_nxn_nodist = LinearAlgebraFactory::create_matrix_dense(mem_space, N_local, N_local);
+  hiopMatrixDense* B_nxn_nodist = LinearAlgebraFactory::create_matrix_dense(mem_space, N_local, N_local);
 
   // Vectors with shape of the form:
   // x_<size>_[non-distributed]
   //
   // Distributed vectors:
-  hiopVector* x_n = LinearAlgebraFactory::createVector(N_global, n_partition, comm);
+  hiopVector* x_n = LinearAlgebraFactory::create_vector(mem_space, N_global, n_partition, comm);
 
   // Non-distributed vectors
-  hiopVector* x_n_nodist = LinearAlgebraFactory::createVector(N_local);
-  hiopVector* x_m_nodist = LinearAlgebraFactory::createVector(M_local);
+  hiopVector* x_n_nodist = LinearAlgebraFactory::create_vector(mem_space, N_local);
+  hiopVector* x_m_nodist = LinearAlgebraFactory::create_vector(mem_space, M_local);
 
 
   fail += test.matrixSetToZero(*A_mxn, rank);

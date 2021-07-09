@@ -796,7 +796,10 @@ hiopKKTLinSysLowRank::hiopKKTLinSysLowRank(hiopNlpFormulation* nlp)
   nlpD = dynamic_cast<hiopNlpDenseConstraints*>(nlp_);
 
   _kxn_mat = nlpD->alloc_multivector_primal(nlpD->m()); //!opt
-  N = LinearAlgebraFactory::createMatrixDense(nlpD->m(),nlpD->m());
+  assert("DEFAULT" == toupper(nlpD->options->GetString("mem_space")));
+  N = LinearAlgebraFactory::create_matrix_dense(nlpD->options->GetString("mem_space"),
+                                                nlpD->m(),
+                                                nlpD->m());
 #ifdef HIOP_DEEPCHECKS
   Nmat=N->alloc_clone();
 #endif
@@ -998,8 +1001,8 @@ int hiopKKTLinSysLowRank::solveWithRefin(hiopMatrixDense& M, hiopVector& rhs)
   // 2. check residual
   //
   hiopVector* x = rhs.alloc_clone();
-  hiopVector* dx    = hiop::LinearAlgebraFactory::createVector(N);
-  hiopVector* resid = hiop::LinearAlgebraFactory::createVector(N);
+  hiopVector* dx    = rhs.alloc_clone();
+  hiopVector* resid = rhs.alloc_clone();
   int nIterRefin=0;double nrmResid;
   int info;
   const int MAX_ITER_REFIN=3;

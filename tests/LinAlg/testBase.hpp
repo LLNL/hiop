@@ -87,6 +87,19 @@ static const char * const  CLEAR     = "\033[0m";
 
 class TestBase
 {
+public:
+  TestBase()
+    : mem_space_("DEFAULT")
+  {
+  }
+  inline void set_mem_space(const std::string& mem_space)
+  {
+    mem_space_ = mem_space;
+  }
+  inline std::string get_mem_space() const
+  {
+    return mem_space_;
+  }
 protected:
   /// Returns true if two real numbers are equal within tolerance
   [[nodiscard]] static
@@ -117,7 +130,8 @@ protected:
       }
     }
   }
-
+protected:
+  std::string mem_space_;
 };
 
 }} // namespace hiop::tests

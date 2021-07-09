@@ -70,55 +70,50 @@ public:
   /**
    * @brief Static method to create vector
    */
-  static hiopVector* createVector(const size_type& glob_n,
-                                  index_type* col_part = NULL,
-                                  MPI_Comm comm = MPI_COMM_SELF); 
-
+  static hiopVector* create_vector(const std::string& mem_space,
+                                   const size_type& glob_n,
+                                   index_type* col_part = nullptr,
+                                   MPI_Comm comm = MPI_COMM_SELF);
   /**
    * @brief Static method to create local int vector.
    */
-  static hiopVectorInt* createVectorInt(size_type size);
+  static hiopVectorInt* create_vector_int(const std::string& mem_space,
+                                          size_type size);
 
   /**
    * @brief Static method to create a dense matrix.
    * 
    */
-  static hiopMatrixDense* createMatrixDense(const size_type& m,
-                                            const size_type& glob_n,
-                                            index_type* col_part = NULL,
-                                            MPI_Comm comm = MPI_COMM_SELF,
-                                            const size_type& m_max_alloc = -1);
+  static hiopMatrixDense* create_matrix_dense(const std::string& mem_space,                                              
+                                              const size_type& m,
+                                              const size_type& glob_n,
+                                              index_type* col_part = NULL,
+                                              MPI_Comm comm = MPI_COMM_SELF,
+                                              const size_type& m_max_alloc = -1);
   /**
    * @brief Static method to create a sparse matrix
    */
-  static hiopMatrixSparse* createMatrixSparse(size_type rows, size_type cols, size_type nnz);
+  static hiopMatrixSparse* create_matrix_sparse(const std::string& mem_space,
+                                                size_type rows,
+                                                size_type cols,
+                                                size_type nnz);
 
   /**
    * @brief Static method to create a symmetric sparse matrix
    */
-  static hiopMatrixSparse* createMatrixSymSparse(size_type size, size_type nnz);
+  static hiopMatrixSparse* create_matrix_sym_sparse(const std::string& mem_space,
+                                                    size_type size,
+                                                    size_type nnz);
   
   /**
    * @brief Static method to create a raw C array
    */
-  static double* createRawArray(size_type n);
+  static double* create_raw_array(const std::string& mem_space, size_type n);
 
   /**
    * @brief Static method to delete a raw C array
    */
-  static void deleteRawArray(double* a);
-
-  /// Method to set memory space ID
-  static void set_mem_space(const std::string& mem_space);
-
-  /// Return memory space ID
-  inline static std::string get_mem_space()
-  {
-    return mem_space_;
-  }
-
-private:
-  static std::string mem_space_;
+  static void delete_raw_array(const std::string& mem_space, double* a);
 };
 
 } // namespace hiop
