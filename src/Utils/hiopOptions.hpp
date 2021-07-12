@@ -86,8 +86,33 @@ public:
   }
   virtual void print(FILE* file, const char* msg=NULL) const;
 
+  /**
+   * Default name for the options file for the HiOp NLP solver o. If the file does not exist, 
+   * the options object will be created with default options. 
+   *
+   * When the PriDec solver is used and the worker (a.k.a., contingency or recourse) NLP solver
+   * is HiOp's NLP solver, this filename will be used by the worker NLP solver to load the options.
+   */
   static const char* default_filename;
-  static const char* default_filename_pridec;
+  
+  /**
+   * Default name for the options file for the PriDec solver. If the file does not exist, the
+   * options object will be created with default options.
+   * 
+   * This filename is not used by the master or worker NLP solvers employed by the PriDec solver.
+   */
+  static const char* default_filename_pridec_solver;
+
+  /**
+   * Default name for the options file for the master (a.k.a basecase) NLP solver within PriDec solver. 
+   * This is passed by the PriDec solver to the user's routine that solves the master NLP. The 
+   * filename can be changed in the PriDec solver options files via the option 'options_file_master_prob'.
+   *
+   * The behavior for the case when the file does not exist is dependent on the underlying NLP solver 
+   * used to solve the master. If the file does not exist and HiOp is used as a master solver, HiOp NLP 
+   * will create an option object with default option values. 
+   */
+  static const char* default_filename_pridec_masterNLP;
 protected:
   /* internal use only */
 

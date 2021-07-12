@@ -4,7 +4,6 @@
 
 #include <cassert>
 #include <cstring>
-#include <fstream>
 
 using namespace std;
 
@@ -470,16 +469,9 @@ hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
   #endif
   //x_ = new double[n_];
   x_ = LinearAlgebraFactory::createVector(n_);
-
-  ifstream f(hiopOptions::default_filename_pridec);
-  if(f.good()) {
-    f.close();
-    //use "hiop_pridec.options" if exists
-    options_ = new hiopOptions(hiopOptions::default_filename_pridec);
-  } else {
-    //use "hiop.options" - if it does not exist, built-in default options will be used
-    options_ = new hiopOptions(hiopOptions::default_filename);
-  }
+  
+  //use "hiop.options" - if the file does not exist, built-in default options will be used
+  options_ = new hiopOptions(hiopOptions::default_filename_pridec_solver);
 }
 
 hiopAlgPrimalDecomposition::
@@ -513,15 +505,8 @@ hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
 #endif
   x_ = LinearAlgebraFactory::createVector(n_);
 
-  ifstream f(hiopOptions::default_filename_pridec);
-  if(f.good()) {
-    f.close();
-    //use "hiop_pridec.options" if exists
-    options_ = new hiopOptions(hiopOptions::default_filename_pridec);
-  } else {
-    //use "hiop.options" - if it does not exist, built-in default options will be used
-    options_ = new hiopOptions(hiopOptions::default_filename);
-  }
+  //use "hiop.options" - if the file does not exist, built-in default options will be used
+  options_ = new hiopOptions(hiopOptions::default_filename_pridec_solver);
 }
 
 
@@ -564,10 +549,15 @@ bool hiopAlgPrimalDecomposition::stopping_criteria(const int it, const double co
   //gradient based stopping criteria
   if(convg<tol_){printf("reaching error tolerance, successfully found solution\n"); return true;}
   //stopping criteria based on the change in objective function
-  if(it == max_iter-1){printf("reached maximum iterations, optimization stops.\n"); return true;}
-
-  if(accp_count == 10){printf("reached acceptable tolerance of %18.12e for 10 iterations, " 
-		              "optimization stops.\n", accp_tol_); return true;}
+  if(it == max_iter-1) {
+    printf("reached maximum iterations, optimization stops.\n");
+    return true;
+  }
+  if(accp_count == 10) {
+    printf("reached acceptable tolerance of %18.12e for 10 iterations, optimization stops.\n",
+           accp_tol_);
+    return true;
+  }
   return false;
 }
   

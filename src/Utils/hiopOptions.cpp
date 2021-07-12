@@ -62,8 +62,9 @@ namespace hiop
 using namespace std;
   
 const char* hiopOptions::default_filename = "hiop.options";
-const char* hiopOptions::default_filename_pridec = "hiop_pridec.options";
-
+const char* hiopOptions::default_filename_pridec_solver = "hiop_pridec.options";
+const char* hiopOptions::default_filename_pridec_masterNLP = "hiop_pridec_master.options";
+  
 hiopOptions::hiopOptions(const char* szOptionsFilename/*=NULL*/)
   : log_(nullptr)
 {
@@ -390,8 +391,8 @@ void hiopOptions::registerOptions()
   //name of the options file to be used for master problem (by the NLP solver, e.g., HiOp or Ipopt or other)
   {
     register_str_option("options_file_master_prob",
-                        "",
-                        "options file for the NLP solver solving the master problem in PriDec solver");
+                        hiopOptions::default_filename_pridec_masterNLP,
+                        "Options file for the NLP solver solving the master problem in PriDec solver");
   }
 }
 

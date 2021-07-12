@@ -252,7 +252,6 @@ private:
   //real decrease over expected decrease ratio
   double rhok_ = 0.;
 protected:
-  static std::string options_default_filename;
   hiopOptions* options_;
   
 };

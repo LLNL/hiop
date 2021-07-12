@@ -84,7 +84,7 @@ public:
   virtual hiopSolveStatus solve_master(hiopVector& x,
                                        const bool& include_r,
                                        const double& rval = 0, 
-		                       const double* grad = 0,
+                                       const double* grad = 0,
                                        const double*hess = 0,
                                        const char* master_options_file=nullptr) = 0;
     
