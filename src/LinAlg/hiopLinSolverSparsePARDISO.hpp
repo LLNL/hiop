@@ -94,10 +94,6 @@ public:
    * exit is contains the solution(s).  */
   bool solve ( hiopVector& x_ );
 
-//protected:
-//  int* ipiv;
-//  hiopVector* dwork;
-
 private:
 
   int      m_;                         // number of rows of the whole matrix
@@ -139,6 +135,75 @@ public:
   virtual void firstCall();
 
 };
+
+class hiopLinSolverNonSymSparsePARDISO: public hiopLinSolverNonSymSparse
+{
+public:
+  hiopLinSolverNonSymSparsePARDISO(const int& n, const int& nnz, hiopNlpFormulation* nlp);
+
+  virtual ~hiopLinSolverNonSymSparsePARDISO();
+
+  /** Triggers a refactorization of the matrix, if necessary.
+   * Overload from base class. */
+  int matrixChanged();
+
+  /** solves a linear system.
+   * param 'x' is on entry the right hand side(s) of the system to be solved. On
+   * exit is contains the solution(s).  */
+  bool solve ( hiopVector& x_ );
+
+private:
+
+  int      m_;                         // number of rows of the whole matrix
+  int      n_;                         // number of cols of the whole matrix
+  int      nnz_;                       // number of nonzeros in the matrix
+
+  int     *kRowPtr_;                   // row pointer for nonzeros
+  int     *jCol_;                      // column indexes for nonzeros
+  double  *kVal_;                      // storage for sparse matrix
+
+  int *index_covert_CSR2Triplet_;
+  int *index_covert_extra_Diag2CSR_;
+  std::unordered_map<int,int> extra_diag_nnz_map;
+
+  int nFakeNegEigs_;
+
+  // pardiso parameters
+  void  *pt_[64]; 
+  int iparm_[64];
+  int num_threads_;
+  double dparm_[64];
+
+  int maxfct_;     //max number of fact having same sparsity pattern to keep at the same time
+  int mnum_;       //actual matrix (as in index from 1 to maxfct)
+  int msglvl_;     //messaging level
+  int mtype_;
+  int solver_;
+  int error_;
+  bool is_initialized_;
+
+  /* temporary storage for the factorization process */
+  double* nvec_; //temporary vec
+  double* sol_;  //solution
+  int sz_sol_;   //allocated size
+  
+  hiopVectorPar* rhs_;
+
+public:
+
+  /** called the very first time a matrix is factored. Allocates space
+   * for the factorization and performs ordering */
+  void firstCall();
+
+  void inline setFakeInertia(int nNegEigs)
+  {
+    nFakeNegEigs_ = nNegEigs;
+  }
+
+//friend class hiopLinSolverIndefSparsePARDISO;
+
+};
+
 
 } // end namespace
 #endif
