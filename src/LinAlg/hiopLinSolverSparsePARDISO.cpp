@@ -77,6 +77,13 @@ namespace hiop
 
   hiopLinSolverIndefSparsePARDISO::~hiopLinSolverIndefSparsePARDISO()
   {
+    /* Termination and release of memory */
+    int phase = -1; /* Release internal memory . */
+    pardiso_d(pt_ , &maxfct_, &mnum_, &mtype_, &phase,
+              &n_, kVal_, kRowPtr_, jCol_,
+              NULL, NULL, 
+              iparm_, &msglvl_, NULL, NULL, &error_, dparm_);
+
     if(kRowPtr_)
       delete [] kRowPtr_;
     if(jCol_)
@@ -215,8 +222,7 @@ namespace hiop
     if(var != NULL) {
       sscanf( var, "%d", &num_threads_ );
     } else {
-      printf("Set environment OMP_NUM_THREADS before using PARDISO.");
-      exit(1);
+      num_threads_ = 1;
     }
 
     iparm_[2] = num_threads_;
@@ -318,7 +324,6 @@ namespace hiop
               &n_, kVal_, kRowPtr_, jCol_,
               NULL, &nrhs, 
               iparm_, &msglvl_,
-              
               drhs, dx, &error_, dparm_);
 
     if ( error_ != 0) {
@@ -344,12 +349,19 @@ namespace hiop
     maxfct_ = 1; //max number of fact having same sparsity pattern to keep at the same time
     mnum_ = 1;   //actual matrix (as in index from 1 to maxfct)
     msglvl_ = 0; //messaging level
-    mtype_ = 11; //real and symmetric indefinite
+    mtype_ = 11; //real and unsymmetric
     solver_ = 0; //sparse direct solver
   }
 
   hiopLinSolverNonSymSparsePARDISO::~hiopLinSolverNonSymSparsePARDISO()
   {
+    /* Termination and release of memory */
+    int phase = -1; /* Release internal memory . */
+    pardiso_d(pt_ , &maxfct_, &mnum_, &mtype_, &phase,
+              &n_, kVal_, kRowPtr_, jCol_,
+              NULL, NULL, 
+              iparm_, &msglvl_, NULL, NULL, &error_, dparm_);
+
     if(kRowPtr_)
       delete [] kRowPtr_;
     if(jCol_)
@@ -398,8 +410,7 @@ namespace hiop
     if(var != NULL) {
       sscanf( var, "%d", &num_threads_ );
     } else {
-      printf("Set environment OMP_NUM_THREADS before using PARDISO.");
-      exit(1);
+      num_threads_ = 1;
     }
 
     iparm_[2] = num_threads_;
@@ -494,16 +505,15 @@ namespace hiop
               &n_, kVal_, kRowPtr_, jCol_,
               NULL, &nrhs, 
               iparm_, &msglvl_,
-              
               drhs, dx, &error_, dparm_);
 
     if ( error_ != 0) {
       printf ("PardisoSolver - ERROR during backsolve: %d\n", error_ );
-      assert(false);
+      return false;
     }
 
     nlp_->runStats.linsolv.tmTriuSolves.stop();
-    return 1;
+    return true;
   }
 
 } //end namespace hiop

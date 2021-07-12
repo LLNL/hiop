@@ -257,14 +257,13 @@ namespace hiop
 
       if(nlp_->options->GetString("compute_mode")=="cpu")
       {
-        nlp_->log->printf(hovScalars,
-                          "KKT_SPARSE_XYcYd linsys: alloc sparse solver with matrix size %d (%d cons)\n",
-                          n, neq+nineq);
-
         auto linear_solver = nlp_->options->GetString("linear_solver_sparse");
 
         if(linear_solver == "ma57" || linear_solver == "auto") {
 #ifdef HIOP_USE_COINHSL
+          nlp_->log->printf(hovScalars,
+                            "KKT_SPARSE_XYcYd linsys: alloc MA57 with matrix size %d (%d cons)\n",
+                            n, neq+nineq);
           linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
 #endif // HIOP_USE_COINHSL
         }
@@ -272,13 +271,19 @@ namespace hiop
         if( (NULL == linSys_ && linear_solver == "auto") || linear_solver == "pardiso") {
           //ma57 is not available or user requested pardiso
 #ifdef HIOP_USE_PARDISO
+          nlp_->log->printf(hovScalars,
+                            "KKT_SPARSE_XYcYd linsys: alloc PARDISO with matrix size %d (%d cons)\n",
+                            n, neq+nineq);
           linSys_ = new hiopLinSolverIndefSparsePARDISO(n, nnz, nlp_);
 #endif  // HIOP_USE_PARDISO          
         }
 
         if( (NULL == linSys_ && linear_solver == "auto") || linear_solver == "strumpack") {
-          //ma57 is not available or user requested strumpack
+          //ma57 and pardiso are not available or user requested strumpack
 #ifdef HIOP_USE_STRUMPACK              
+          nlp_->log->printf(hovScalars,
+                            "KKT_SPARSE_XYcYd linsys: alloc STRUMPACK with matrix size %d (%d cons)\n",
+                            n, neq+nineq);
           hiopLinSolverIndefSparseSTRUMPACK *p = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
           p->setFakeInertia(neq + nineq);
           linSys_ = p;        
@@ -607,8 +612,15 @@ namespace hiop
   hiopLinSolverNonSymSparse*
   hiopKKTLinSysSparseFull::determineAndCreateLinsys(const int &n, const int &n_con, const int &nnz)
   {
-    if(NULL==linSys_)
-    {
+    if(NULL==linSys_) {
+#ifdef HIOP_USE_PARDISO
+      nlp_->log->printf(hovWarning,
+                        "KKT_SPARSE_FULL_KKT linsys: alloc PARDISO size %d (%d cons) (safe_mode=%d)\n",
+                        n, n_con, safe_mode_);
+      hiopLinSolverNonSymSparsePARDISO *p = new hiopLinSolverNonSymSparsePARDISO(n, nnz, nlp_);
+      p->setFakeInertia(n_con);
+      linSys_ = p;
+#endif
 #ifdef HIOP_USE_STRUMPACK
       nlp_->log->printf(hovWarning,
                         "KKT_SPARSE_FULL_KKT linsys: alloc STRUMPACK size %d (%d cons) (safe_mode=%d)\n",
@@ -616,13 +628,14 @@ namespace hiop
       hiopLinSolverNonSymSparseSTRUMPACK *p = new hiopLinSolverNonSymSparseSTRUMPACK(n, nnz, nlp_);
       p->setFakeInertia(n_con);
       linSys_ = p;
-#else
-      nlp_->log->printf(hovError,
-                        "KKT_SPARSE_FULL_KKT linsys: cannot instantiate backend linear solver "
-                        "because HIOP was not built with STRUMPACK.\n");
-      assert(false);
-      return NULL;
 #endif
+      if(NULL==linSys_) {
+        nlp_->log->printf(hovError,
+                          "KKT_SPARSE_FULL_KKT linsys: cannot instantiate backend linear solver "
+                          "because HIOP was not built with STRUMPACK.\n");
+        assert(false);
+        return NULL;
+      }
     }
     return dynamic_cast<hiopLinSolverNonSymSparse*> (linSys_);
   }
