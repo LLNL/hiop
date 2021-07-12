@@ -59,6 +59,9 @@
 
 namespace hiop
 {
+  /*
+  *  PARDISO for symmetric indefinite sparse matrix
+  */
   hiopLinSolverIndefSparsePARDISO::hiopLinSolverIndefSparsePARDISO(const int& n, const int& nnz, hiopNlpFormulation* nlp)
     : hiopLinSolverIndefSparse(n, nnz, nlp),
     kRowPtr_{nullptr}, jCol_{nullptr}, kVal_{nullptr},
@@ -290,6 +293,182 @@ namespace hiop
   }
 
   bool hiopLinSolverIndefSparsePARDISO::solve(hiopVector& b)
+  {
+    assert(n_==M.n() && M.n()==M.m());
+    assert(n_>0);
+    assert(b.get_size()==M.n());
+
+    nlp_->runStats.linsolv.tmTriuSolves.start();
+
+    /* do backsolve */
+    hiopVectorPar* x = dynamic_cast<hiopVectorPar*>(&b);
+    assert(x != nullptr);
+    if(rhs_==nullptr) {
+      rhs_ = dynamic_cast<hiopVectorPar*>(x->new_copy());
+    } else {
+      rhs_->copyFrom(*x);
+    }
+    double* dx = x->local_data();
+    double* drhs = rhs_->local_data();
+
+    int phase = 33;
+    int nrhs = 1;
+  
+    pardiso_d(pt_ , &maxfct_, &mnum_, &mtype_, &phase,
+              &n_, kVal_, kRowPtr_, jCol_,
+              NULL, &nrhs, 
+              iparm_, &msglvl_,
+              
+              drhs, dx, &error_, dparm_);
+
+    if ( error_ != 0) {
+      printf ("PardisoSolver - ERROR during backsolve: %d\n", error_ );
+      assert(false);
+    }
+
+    nlp_->runStats.linsolv.tmTriuSolves.stop();
+    return 1;
+  }
+
+
+  /*
+  *  PARDISO for unsymmetric sparse matrix
+  */
+  hiopLinSolverNonSymSparsePARDISO::hiopLinSolverNonSymSparsePARDISO(const int& n, const int& nnz, hiopNlpFormulation* nlp)
+    : hiopLinSolverNonSymSparse(n, nnz, nlp),
+    kRowPtr_{nullptr}, jCol_{nullptr}, kVal_{nullptr},
+    nFakeNegEigs_{-1},
+    rhs_{nullptr},
+    n_{n}, nnz_{-1}, is_initialized_{false}
+  {
+    maxfct_ = 1; //max number of fact having same sparsity pattern to keep at the same time
+    mnum_ = 1;   //actual matrix (as in index from 1 to maxfct)
+    msglvl_ = 0; //messaging level
+    mtype_ = 11; //real and symmetric indefinite
+    solver_ = 0; //sparse direct solver
+  }
+
+  hiopLinSolverNonSymSparsePARDISO::~hiopLinSolverNonSymSparsePARDISO()
+  {
+    if(kRowPtr_)
+      delete [] kRowPtr_;
+    if(jCol_)
+      delete [] jCol_;
+    if(kVal_)
+      delete [] kVal_;
+    if(index_covert_CSR2Triplet_)
+      delete [] index_covert_CSR2Triplet_;
+    if(index_covert_extra_Diag2CSR_)
+      delete [] index_covert_extra_Diag2CSR_;
+    
+    if(rhs_) {
+      delete rhs_;
+    }
+    
+  }
+
+  void hiopLinSolverNonSymSparsePARDISO::firstCall()
+  {
+    assert(n_==M.n() && M.n()==M.m());
+    assert(n_>0);
+
+    // transfer triplet form to CSR form
+    // note that input is in lower triangular triplet form. First part is the sparse matrix, and the 2nd part are the additional diagonal elememts
+    // the 1st part is sorted by row
+
+    M.convertToCSR(nnz_, &kRowPtr_, &jCol_, &kVal_, &index_covert_CSR2Triplet_, &index_covert_extra_Diag2CSR_, extra_diag_nnz_map);
+
+    // need Fortran indexes
+    for( int i = 0; i < n_+1; i++) {
+      kRowPtr_[i] += 1;
+    }
+    for( int i = 0; i < nnz_; i++) {
+      jCol_[i] += 1;
+    }
+
+    /* initialize PARDISO */
+    pardisoinit_d(pt_, &mtype_, &solver_, iparm_, dparm_, &error_); 
+    if (error_!=0) {
+      std::cout << "PardisoSolver ERROR during pardisoinit:" << error_ << "." << std::endl;
+      assert(false);
+    }
+
+    /* Numbers of processors, value of OMP_NUM_THREADS */
+    char *var = getenv("OMP_NUM_THREADS");
+    if(var != NULL) {
+      sscanf( var, "%d", &num_threads_ );
+    } else {
+      printf("Set environment OMP_NUM_THREADS before using PARDISO.");
+      exit(1);
+    }
+
+    iparm_[2] = num_threads_;
+    iparm_[1] = 2;  // 2 is for metis, 0 for min degree
+    iparm_[7] = 3;  // # iterative refinements
+    iparm_[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
+    iparm_[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1; 
+                    // if needed, use 2 for advanced matchings and higer accuracy.
+    iparm_[23] = 1;  // Parallel Numerical Factorization 
+                    // (0=used in the last years, 1=two-level scheduling)
+
+    /* symbolic analysis from PARDISO */
+    int phase = 11; //analysis
+    int nrhs = 1;
+  
+    pardiso_d(pt_ , &maxfct_, &mnum_, &mtype_, &phase,
+              &n_, kVal_, kRowPtr_, jCol_,
+              NULL, &nrhs, 
+              iparm_, &msglvl_, NULL, NULL, &error_, dparm_);
+    if ( error_ != 0) {
+      printf ("PardisoSolver - ERROR during symbolic factorization: %d\n", error_ );
+      assert(false);
+    }
+  
+  }
+
+  int hiopLinSolverNonSymSparsePARDISO::matrixChanged()
+  {
+    assert(n_==M.n() && M.n()==M.m());
+    assert(n_>0);
+
+    nlp_->runStats.linsolv.tmFactTime.start();
+
+    if(!is_initialized_) {
+      this->firstCall();
+      is_initialized_ = true;
+    } else {
+      // update matrix
+      int rowID_tmp{0};
+      for(int k=0;k<nnz_;k++) {
+        kVal_[k] = M.M()[index_covert_CSR2Triplet_[k]];
+      }
+      for(auto p: extra_diag_nnz_map) {
+        kVal_[p.first] += M.M()[p.second];
+      }
+    }
+
+    /* do numerical factorization */
+    int phase = 22;
+    int nrhs = 1;
+  
+    pardiso_d(pt_ , &maxfct_, &mnum_, &mtype_, &phase,
+              &n_, kVal_, kRowPtr_, jCol_,
+              NULL, &nrhs, 
+              iparm_, &msglvl_, NULL, NULL, &error_, dparm_);
+
+    if ( error_ != 0) {
+      printf ("PardisoSolver - ERROR during numerical factorization: %d\n", error_ );
+      assert(false);
+    }
+
+    nlp_->runStats.linsolv.tmInertiaComp.start();
+    int negEigVal = nFakeNegEigs_;
+    nlp_->runStats.linsolv.tmInertiaComp.stop();
+
+    return negEigVal;
+  }
+
+  bool hiopLinSolverNonSymSparsePARDISO::solve(hiopVector& b)
   {
     assert(n_==M.n() && M.n()==M.m());
     assert(n_>0);
