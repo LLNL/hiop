@@ -202,7 +202,7 @@ int runTests(const char* mem_space, MPI_Comm comm)
 
   T test;
 
-  hiopOptions options;
+  hiopOptionsNLP options;
   options.SetStringValue("mem_space", mem_space);
   LinearAlgebraFactory::set_mem_space(mem_space);
 
@@ -328,7 +328,7 @@ int runIntTests(const char* mem_space)
 
   T test;
 
-  hiopOptions options;
+  hiopOptionsNLP options;
   options.SetStringValue("mem_space", mem_space);
   LinearAlgebraFactory::set_mem_space(mem_space);
 

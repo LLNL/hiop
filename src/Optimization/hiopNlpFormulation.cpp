@@ -91,7 +91,7 @@ hiopNlpFormulation::hiopNlpFormulation(hiopInterfaceBase& interface_, const char
   MPI_Comm comm = MPI_COMM_SELF;
 #endif
 
-  options = new hiopOptions(option_file);
+  options = new hiopOptionsNLP(option_file);
 
   hiopOutVerbosity hov = (hiopOutVerbosity) options->GetInteger("verbosity_level");
   log = new hiopLogger(this, stdout);

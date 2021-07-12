@@ -61,7 +61,7 @@ class hiopLogger;
 class hiopOptions
 {
 public:
-  hiopOptions(const char* szOptionsFilename=NULL);
+  hiopOptions();
   virtual ~hiopOptions();
 
   //Seters for options values that should be self explanatory with the exception of the last parameter.
@@ -81,7 +81,7 @@ public:
 
   void SetLog(hiopLogger* log_in)
   {
-    log_=log_in;
+    log_ = log_in;
     ensureConsistence();
   }
   virtual void print(FILE* file, const char* msg=NULL) const;
@@ -127,11 +127,11 @@ protected:
   /// register a string option that can take any value 
   void register_str_option(const std::string& name, const std::string& defaultValue, const char* description);
   
-  void registerOptions();
+  virtual void registerOptions() = 0;
 
   void loadFromFile(const char* szFilename);
 
-  void ensureConsistence();
+  virtual void ensureConsistence() = 0;
 
   //internal setter methods used to ensure consistence -- do not alter 'specifiedInFile' and 'specifiedAtRuntime'
   virtual bool set_val(const char* name, const double& value);
@@ -179,6 +179,35 @@ protected:
   hiopLogger* log_;
 };
 
+
+/**
+ * @brief Options class specialized for the NLP solver
+ *
+ */
+class hiopOptionsNLP : public hiopOptions
+{
+public:
+  hiopOptionsNLP(const char* opt_filename=nullptr);
+  virtual ~hiopOptionsNLP();
+protected:
+  virtual void registerOptions();
+  virtual void ensureConsistence();
+};
+
+  
+/**
+ * @brief Options class specialized for the PriDec solver
+ *
+ */
+class hiopOptionsPriDec : public hiopOptions
+{
+public:
+  hiopOptionsPriDec(const char* opt_filename=nullptr);
+  virtual ~hiopOptionsPriDec();
+protected:
+  virtual void registerOptions();
+  virtual void ensureConsistence();
+};
 
 } // ~namespace
 #endif 

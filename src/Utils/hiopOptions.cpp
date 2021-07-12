@@ -65,12 +65,9 @@ const char* hiopOptions::default_filename = "hiop.options";
 const char* hiopOptions::default_filename_pridec_solver = "hiop_pridec.options";
 const char* hiopOptions::default_filename_pridec_masterNLP = "hiop_pridec_master.options";
   
-hiopOptions::hiopOptions(const char* szOptionsFilename/*=NULL*/)
+hiopOptions::hiopOptions()
   : log_(nullptr)
 {
-  registerOptions();
-  loadFromFile(szOptionsFilename==nullptr ? hiopOptions::default_filename : szOptionsFilename);
-  ensureConsistence();
 }
 
 hiopOptions::~hiopOptions()
@@ -109,293 +106,6 @@ string hiopOptions::GetString (const char* name) const
   return option->val;
 }
 
-void hiopOptions::registerOptions()
-{
-  // TODO: add option for mu_target
-  registerNumOption("mu0", 1., 1e-16, 1000.,
-		    "Initial log-barrier parameter mu (default 1.)");
-  registerNumOption("kappa_mu", 0.2, 1e-8, 0.999,
-		    "Linear reduction coefficient for mu (default 0.2) (eqn (7) in Filt-IPM paper)");
-  registerNumOption("theta_mu", 1.5,  1.0,   2.0,
-		    "Exponential reduction coefficient for mu (default 1.5) (eqn (7) in Filt-IPM paper)");
-  registerNumOption("eta_phi", 1e-8, 0, 0.01, "Parameter of (suff. decrease) in Armijo Rule");
-  registerNumOption("tolerance", 1e-8, 1e-14, 1e-1,
-		    "Absolute error tolerance for the NLP (default 1e-8)");
-  registerNumOption("rel_tolerance", 0., 0., 0.1,
-		    "Error tolerance for the NLP relative to errors at the initial point. A null "
-		    "value disables this option (default 0.)");
-  registerNumOption("tau_min", 0.99, 0.9,  0.99999,
-		    "Fraction-to-the-boundary parameter used in the line-search to back-off a bit "
-		    "(see eqn (8) in the Filt-IPM paper) (default 0.99)");
-  registerNumOption("kappa_eps", 10., 1e-6, 1e+3,
-		    "mu is reduced when when log-bar error is below kappa_eps*mu (default 10.)");
-  registerNumOption("kappa1", 1e-2, 1e-16, 1e+0,
-		    "sufficiently-away-from-the-boundary projection parameter used in initialization (default 1e-2)");
-  registerNumOption("kappa2", 1e-2, 1e-16, 0.49999,
-		    "shift projection parameter used in initialization for double-bounded variables (default 1e-2)");
-  registerNumOption("smax", 100., 1., 1e+7,
-		    "multiplier threshold used in computing the scaling factors for the optimality error (default 100.)");
-
-  {
-    // 'duals_update_type' should be 'lsq' or 'linear' for  'Hessian=quasinewton_approx'
-    // 'duals_update_type' can only be 'linear' for Newton methods 'Hessian=analytical_exact'
-
-    //here will set the default value to 'lsq' and this will be adjusted later in 'ensureConsistency'
-    //to a valid value depending on the 'Hessian' value
-    vector<string> range(2); range[0]="lsq"; range[1]="linear";
-    registerStrOption("duals_update_type", "lsq", range,
-		      "Type of update of the multipliers of the eq. constraints "
-                      "(default is 'lsq' when 'Hessian' is 'quasinewton_approx' and "
-                      "'linear' when 'Hessian is 'analytical_exact')");
-
-    registerNumOption("recalc_lsq_duals_tol", 1e-6, 0, 1e10, 
-                      "Threshold for infeasibility under which LSQ computation of duals will be employed "
-                      "(requires 'duals_update_type' to be 'lsq'");
-  }
-
-  {
-    vector<string> range(2); range[0]="lsq"; range[1]="zero";
-    registerStrOption("duals_init", "lsq", range,
-		      "Type of initialization of the multipliers of the eq. cons. (default lsq)");
-
-    registerNumOption("duals_lsq_ini_max", 1e3, 1e-16, 1e+10, 
-                      "Max inf-norm allowed for initials duals computed with LSQ; if norm is greater, the duals for"
-                      "equality constraints will be set to zero.");
-
-  }
-
-  registerIntOption("max_iter", 3000, 1, 1e6, "Max number of iterations (default 3000)");
-
-  registerNumOption("acceptable_tolerance", 1e-6, 1e-14, 1e-1,
-		    "HiOp will terminate if the NLP residuals are below for 'acceptable_iterations' "
-		    "many consecutive iterations (default 1e-6)");
-  registerIntOption("acceptable_iterations", 10, 1, 1e6,
-		    "Number of iterations of acceptable tolerance after which HiOp terminates (default 10)");
-
-  registerNumOption("sigma0", 1., 0., 1e+7,
-		    "Initial value of the initial multiplier of the identity in the secant "
-		    "approximation (default 1.)");
-  {
-    vector<string> range(2); range[0] = "no"; range[1] = "yes";
-    registerStrOption("accept_every_trial_step", "no", range,
-		      "Disable line-search and take close-to-boundary step");
-  }
-  {
-    vector<string> range(5);
-    range[0]="sigma0"; range[1]="sty"; range[2]="sty_inv";
-    range[3]="snrm_ynrm";  range[4]="sty_srnm_ynrm";
-    registerStrOption("sigma_update_strategy", range[1], range,
-		      "Updating strategy for the multiplier of the identity in the secant "
-		      "approximation (default sty)");
-  }
-  registerIntOption("secant_memory_len", 6, 0, 256,
-		    "Size of the memory of the Hessian secant approximation");
-
-  registerIntOption("verbosity_level", 3, 0, 12,
-		    "Verbosity level: 0 no output (only errors), 1=0+warnings, 2=1 (reserved), "
-		    "3=2+optimization output, 4=3+scalars; larger values explained in hiopLogger.hpp");
-
-  {
-    vector<string> range(3); range[0]="remove"; range[1]="relax"; range[2]="none";
-    registerStrOption("fixed_var", "none", range,
-		      "Treatment of fixed variables: 'remove' from the problem, 'relax' bounds "
-		      "by 'fixed_var_perturb', or 'none', in which case the HiOp will terminate "
-		      "with an error message if fixed variables are detected (default 'none'). "
-                      "Value 'remove' is available only when 'compute_mode' is 'hybrid' or 'cpu'.");
-
-    registerNumOption("fixed_var_tolerance", 1e-15, 1e-30, 0.01,
-		      "A variable is considered fixed if |upp_bnd-low_bnd| < fixed_var_tolerance * "
-		      "max(abs(upp_bnd),1) (default 1e-15)");
-
-    registerNumOption("fixed_var_perturb", 1e-8, 1e-14, 0.1,
-		      "Perturbation of the lower and upper bounds for fixed variables relative "
-		      "to its magnitude: lower/upper_bound -=/+= max(abs(upper_bound),1)*"
-		      "fixed_var_perturb (default 1e-8)");
-  }
-
-  // warm_start
-  {
-    vector<string> range(2); range[0] = "no"; range[1] = "yes";
-    registerStrOption("warm_start", "no", range,
-                      "Wart start from the user provided primal-dual point. (default no)");    
-  }
-
-  // scaling
-  {
-    vector<string> range(2); range[0]="none"; range[1]="gradient";
-    registerStrOption("scaling_type", "gradient", range,
-		      "The method used for scaling the problem before solving it."
-		      "Setting this option to 'gradient' will scale the problem, guaranteeing the maximum "
-		      "gradient at the initial point is less or equal to scaling_max_grad (default 'gradient')");
-    
-    registerNumOption("scaling_max_grad", 100, 1e-20, 1e+20,
-		      "The problem will be rescaled if the inf-norm of the gradient at the starting point is "
-		      "larger than the value of this option (default 100)");
-  }
-  
-  // relax bound
-  {
-    registerNumOption("bound_relax_perturb", 1e-8, 0.0, 1e20,
-		      "Perturbation of the lower and upper bounds for variables and constraints relative"
-		      "to its magnitude: lower/upper_bound -=/+= bound_relax_perturb*max(abs(lower/upper_bound),1)*"
-		      "bound_relax_perturb (default 1e-8)");
-  }
-
-  // second order correction
-  {
-    registerIntOption("max_soc_iter", 4, 0, 1000000,
-		      "Max number of iterations in second order correction (default 4)");
-    
-    registerNumOption("kappa_soc", 0.99, 0.0, 1e+20,
-		      "Factor to decrease the constraint violation in second order correction.");
-  }
-
-  // feasibility restoration
-  {
-    registerNumOption("kappa_resto", 0.9, 0, 1.0,
-                      "Factor to decrease the constraint violation in feasibility restoration. (default 0.9)");
-
-    vector<string> range(2); range[0] = "no"; range[1] = "yes";
-    registerStrOption("force_resto", "no", range,
-                      "Force applying feasibility restoration phase");
-  }
-
-  //optimization method used
-  {
-    vector<string> range(2); range[0]="quasinewton_approx"; range[1]="analytical_exact";
-    registerStrOption("Hessian", "quasinewton_approx", range,
-		      "Type of Hessian used with the filter IPM: 'quasinewton_approx' built internally "
-		      "by HiOp (default option) or 'analytical_exact' provided by the user");
-  }
-  //linear algebra
-  {
-    vector<string> range(4); range[0] = "auto"; range[1]="xycyd"; range[2]="xdycyd"; range[3]="full";
-    registerStrOption("KKTLinsys", "auto", range,
-		      "Type of KKT linear system used internally: decided by HiOp 'auto' "
-		      "(default option), the more compact 'XYcYd, the more stable 'XDYcYd', or the "
-                      "full-size non-symmetric 'full'. The last three options are only available with "
-                      "'Hessian=analyticalExact'.");
-  }
-
-  //
-  // choose linear solver for  KKT solves 
-  //
-  // when KKTLinsys is 'full' only strumpack is available
-  // for the other KKTLinsys (which are all symmetric), MA57 is chosen 'auto'matically for all compute
-  // modes, unless the user overwrites this
-  {
-    vector<string> range(3); range[0] = "auto"; range[1]="ma57"; range[2]="strumpack";
-    registerStrOption("linear_solver_sparse", "auto", range,
-		      "Selects between MA57 and STRUMPACK for the sparse linear solves.");
-  }
-
-  // choose linear solver for duals intializations for sparse NLP problems
-  //  - when only CPU is used (compute_mode is cpu or HIOP_USE_GPU is off), MA57 is chosen by 'auto'
-  //  - when GPU mode is on, STRUMPACK is chosen by 'auto' if available
-  //  - choosing option ma57 with GPU being on, it results in no device being used in the linear solve!
-  {
-    vector<string> range(3); range[0] = "auto"; range[1]="ma57"; range[2]="strumpack";
-    registerStrOption("duals_init_linear_solver_sparse", "auto", range,
-		      "Selects between MA57 and STRUMPACK for the sparse linear solves.");
-  }
-
-  //linsol_mode -> mostly related to magma and MDS linear algebra
-  {
-    vector<string> range(3); range[0]="stable"; range[1]="speculative"; range[2]="forcequick";
-    registerStrOption("linsol_mode", "stable", range,
-                      "'stable'=using stable factorization; "
-                      "'speculative'=try faster linear solvers when is detected to be safe "
-                      "to do so (experimental) ; "
-                      "'forcequick'=rely on faster solvers on all situations "
-                      "(experimental, avoid)");
-  }
-
-  //factorization acceptor
-  {
-    vector<string> range(2); range[0] = "inertia_correction"; range[1]="inertia_free";
-    registerStrOption("fact_acceptor", "inertia_correction", range,
-                      "The criteria used to accept a factorization: "
-                      " inertia_correction (default option) --- check if inertia is correct. "
-                      " inertia_free --- to be updated");
-  }  
-  //computations
-  {
-    vector<string> range(4); range[0]="auto"; range[1]="cpu"; range[2]="hybrid"; range[3]="gpu";
-    registerStrOption("compute_mode", "auto", range,
-		      "'auto', 'cpu', 'hybrid', 'gpu'; 'hybrid'=linear solver on gpu; 'auto' will decide between "
-		      "'cpu', 'gpu' and 'hybrid' based on the other options passed");
-  }
-  //inertia correction and Jacobian regularization
-  {
-    //Hessian related
-    registerNumOption("delta_w_min_bar", 1e-20, 0, 1000.,
-		      "Smallest perturbation of the Hessian block for inertia correction");
-    registerNumOption("delta_w_max_bar", 1e+20, 1e-40, 1e+40,
-		      "Largest perturbation of the Hessian block for inertia correction");
-    registerNumOption("delta_0_bar", 1e-4, 0, 1e+40,
-		      "First perturbation of the Hessian block for inertia correction");
-    registerNumOption("kappa_w_minus", 1./3, 1e-20, 1-1e-20,
-		      "Factor to decrease the most recent successful perturbation for inertia correction");
-    registerNumOption("kappa_w_plus", 8., 1+1e-20, 1e+40,
-		      "Factor to increase perturbation when it did not provide correct "
-		      "inertia correction (not first iteration)");
-    registerNumOption("kappa_w_plus_bar", 100., 1+1e-20, 1e+40,
-		      "Factor to increase perturbation when it did not provide correct "
-		      "inertia correction (first iteration when scale not known)");
-    //Jacobian related
-    registerNumOption("delta_c_bar", 1e-8, 1e-20, 1e+40,
-		      "Factor for regularization for potentially rank-deficient Jacobian "
-		      "(delta_c=delta_c_bar*mu^kappa_c");
-    registerNumOption("kappa_c", 0.25, 0., 1e+40,
-		      "Exponent of mu when computing regularization for potentially rank-deficient "
-		      "Jacobian (delta_c=delta_c_bar*mu^kappa_c)");
-
-  }
-  // perfromance profiling
-  {
-    vector<string> range(2);
-    range[0] = "on";
-    range[1] = "off";
-    registerStrOption("time_kkt", "off", range,
-		      "turn on/off performance timers and reporting of the computational constituents of the "
-		      "KKT solve process");
-  }
-
-  //other options
-  {
-    vector<string> range(2); range[0]="no"; range[1]="yes";
-    registerStrOption("write_kkt", range[0], range,
-		      "write internal KKT linear system (matrix, rhs, sol) to file (default 'no')");
-  }
-
-  // memory space selection
-  {
-#ifdef HIOP_USE_RAJA
-    vector<string> range(4);
-    range[0] = "default";
-    range[1] = "host";
-    range[2] = "device";
-    range[3] = "um";
-#else
-    vector<string> range(1);
-    range[0] = "default";
-#endif
-    registerStrOption("mem_space", range[0], range,
-    "Determines the memory space in which future linear algebra objects will be created");
-  }
-
-  //
-  // Primal decomposition (PriDec) solver
-  //
-  
-  //name of the options file to be used for master problem (by the NLP solver, e.g., HiOp or Ipopt or other)
-  {
-    register_str_option("options_file_master_prob",
-                        hiopOptions::default_filename_pridec_masterNLP,
-                        "Options file for the NLP solver solving the master problem in PriDec solver");
-  }
-}
-
 void hiopOptions::registerNumOption(const std::string& name, double defaultValue,
 				    double low, double upp, const char* description)
 {
@@ -423,120 +133,8 @@ void hiopOptions::registerIntOption(const std::string& name,
   mOptions_[name]=new OptionInt(defaultValue, low, upp, description);
 }
 
-void hiopOptions::ensureConsistence()
+static inline std::string &ltrim(std::string &s)
 {
-  //check that the values of different options are consistent
-  //do not check is the values of a particular option is valid; this is done in the Set methods
-  double eps_tol_accep = GetNumeric("acceptable_tolerance");
-  double eps_tol  =      GetNumeric("tolerance");
-  if(eps_tol_accep < eps_tol) {
-    if(is_user_defined("acceptable_tolerance")) {
-      log_printf(hovWarning,
-                 "There is no reason to set 'acceptable_tolerance' tighter than 'tolerance'. "
-                 "Will set the two to 'tolerance'.\n");
-      set_val("acceptable_tolerance", eps_tol);
-    }
-  }
-
-  if(GetString("Hessian")=="quasinewton_approx") {
-    string strKKT = GetString("KKTLinsys");
-    if(strKKT=="xycyd" || strKKT=="xdycyd" || strKKT=="full") {
-      if(is_user_defined("Hessian")) {
-        log_printf(hovWarning,
-                   "The option 'KKTLinsys=%s' is not valid with 'Hessian=quasiNewtonApprox'. "
-                   "Will use 'KKTLinsys=auto'\n", strKKT.c_str());
-        set_val("KKTLinsys", "auto");
-      }
-    }
-  }
-
-  if(GetString("Hessian")=="analytical_exact") {
-    string duals_update_type = GetString("duals_update_type");
-    if("linear" != duals_update_type) {
-      // 'duals_update_type' should be 'lsq' or 'linear' for  'Hessian=quasinewton_approx'
-      // 'duals_update_type' can only be 'linear' for Newton methods 'Hessian=analytical_exact'
-
-      //warn only if these are defined by the user (option file or via SetXXX methods)
-      if(is_user_defined("duals_update_type")) {
-        log_printf(hovWarning,
-                   "The option 'duals_update_type=%s' is not valid with 'Hessian=analytical_exact'. "
-                   "Will use 'duals_update_type=linear'.\n",
-                   duals_update_type.c_str());
-      }
-      set_val("duals_update_type", "linear");
-    }
-  }
-
-  if(GetString("KKTLinsys") == "full") {
-    if(GetString("linear_solver_sparse") == "ma57") {
-      if(is_user_defined("linear_solver_sparse")) {
-        log_printf(hovWarning,
-                   "The option 'linear_solver_sparse=%s' is not valid with option 'KKTLinsys=full'. "
-                   " Will use 'linear_solver_sparse=auto'.\n",
-                   GetString("linear_solver_sparse").c_str());
-      }
-      set_val("linear_solver_sparse", "auto");
-    }
-  }
-  
-// When RAJA is not enabled ...
-#ifndef HIOP_USE_RAJA
-  if(GetString("compute_mode")=="gpu") {
-    if(is_user_defined("compute_mode")) {
-      log_printf(hovWarning,
-                 "option compute_mode=gpu was changed to 'hybrid' since HiOp was built without "
-                 "RAJA/Umpire support.\n");
-    }
-    set_val("compute_mode", "hybrid");
-  }
-  if(GetString("mem_space")!="default") {
-    std::string memory_space = GetString("mem_space");
-    if(is_user_defined("compute_mode")) {
-      log_printf(hovWarning,
-                 "option mem_space=%s was changed to 'default' since HiOp was built without "
-                 "RAJA/Umpire support.\n", memory_space.c_str());
-    }
-    set_val("mem_space", "default");
-  }
-#endif
-
-  // No hybrid or GPU compute mode if HiOp is built without GPU linear solvers
-#ifndef HIOP_USE_GPU
-  if(GetString("compute_mode")=="hybrid") {
-
-    if(is_user_defined("compute_mode")) {
-      log_printf(hovWarning,
-                 "option compute_mode=hybrid was changed to 'cpu' since HiOp was built without "
-                 "GPU support.\n");
-    }
-    set_val("compute_mode", "cpu");
-  }
-  if(GetString("compute_mode")=="gpu") {
-    log_printf(hovWarning,
-	       "option compute_mode=gpu was changed to 'cpu' since HiOp was built without "
-	       "GPU support.\n");
-    set_val("compute_mode", "cpu");
-  }
-  
-  if(GetString("compute_mode")=="auto") {
-    set_val("compute_mode", "cpu");
-  }
-#endif
-
-  // No removing of fixed variables in GPU compute mode ...
-  if(GetString("compute_mode")=="gpu") {
-    if(GetString("fixed_var")=="remove") {
-      
-      log_printf(hovWarning,
-                 "option fixed_var=remove was changed to 'relax' since only 'relax'"
-                 "is supported in GPU compute mode.\n");
-      set_val("fixed_var", "relax");
-    }
-  }
-
-}
-
-static inline std::string &ltrim(std::string &s) {
   //s.erase(s.begin(), std::find_if(s.begin(), s.end(),
   //          std::not1(std::ptr_fun<int, int>(std::isspace))));
   s.erase(s.begin(),
@@ -887,6 +485,485 @@ void hiopOptions::OptionStr::print(FILE* f) const
     for(int i=0; i<range.size(); i++) ssRange << range[i] << " ";
     fprintf(f, "%s \t# (string) one of [%s] [%s]", val.c_str(), ssRange.str().c_str(), descr.c_str());
   }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// hiopOptionsNLP
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+hiopOptionsNLP::hiopOptionsNLP(const char* opt_filename/*=nullptr*/)
+  : hiopOptions()
+{
+  registerOptions();
+  loadFromFile(opt_filename==nullptr ? hiopOptions::default_filename : opt_filename);
+  ensureConsistence();
+}
+hiopOptionsNLP::~hiopOptionsNLP()
+{
+}
+
+void hiopOptionsNLP::registerOptions()
+{
+  // TODO: add option for mu_target
+  registerNumOption("mu0", 1., 1e-16, 1000.,
+		    "Initial log-barrier parameter mu (default 1.)");
+  registerNumOption("kappa_mu", 0.2, 1e-8, 0.999,
+		    "Linear reduction coefficient for mu (default 0.2) (eqn (7) in Filt-IPM paper)");
+  registerNumOption("theta_mu", 1.5,  1.0,   2.0,
+		    "Exponential reduction coefficient for mu (default 1.5) (eqn (7) in Filt-IPM paper)");
+  registerNumOption("eta_phi", 1e-8, 0, 0.01, "Parameter of (suff. decrease) in Armijo Rule");
+  registerNumOption("tolerance", 1e-8, 1e-14, 1e-1,
+		    "Absolute error tolerance for the NLP (default 1e-8)");
+  registerNumOption("rel_tolerance", 0., 0., 0.1,
+		    "Error tolerance for the NLP relative to errors at the initial point. A null "
+		    "value disables this option (default 0.)");
+  registerNumOption("tau_min", 0.99, 0.9,  0.99999,
+		    "Fraction-to-the-boundary parameter used in the line-search to back-off a bit "
+		    "(see eqn (8) in the Filt-IPM paper) (default 0.99)");
+  registerNumOption("kappa_eps", 10., 1e-6, 1e+3,
+		    "mu is reduced when when log-bar error is below kappa_eps*mu (default 10.)");
+  registerNumOption("kappa1", 1e-2, 1e-16, 1e+0,
+		    "sufficiently-away-from-the-boundary projection parameter used in initialization (default 1e-2)");
+  registerNumOption("kappa2", 1e-2, 1e-16, 0.49999,
+		    "shift projection parameter used in initialization for double-bounded variables (default 1e-2)");
+  registerNumOption("smax", 100., 1., 1e+7,
+		    "multiplier threshold used in computing the scaling factors for the optimality error (default 100.)");
+
+  {
+    // 'duals_update_type' should be 'lsq' or 'linear' for  'Hessian=quasinewton_approx'
+    // 'duals_update_type' can only be 'linear' for Newton methods 'Hessian=analytical_exact'
+
+    //here will set the default value to 'lsq' and this will be adjusted later in 'ensureConsistency'
+    //to a valid value depending on the 'Hessian' value
+    vector<string> range(2); range[0]="lsq"; range[1]="linear";
+    registerStrOption("duals_update_type", "lsq", range,
+		      "Type of update of the multipliers of the eq. constraints "
+                      "(default is 'lsq' when 'Hessian' is 'quasinewton_approx' and "
+                      "'linear' when 'Hessian is 'analytical_exact')");
+
+    registerNumOption("recalc_lsq_duals_tol", 1e-6, 0, 1e10, 
+                      "Threshold for infeasibility under which LSQ computation of duals will be employed "
+                      "(requires 'duals_update_type' to be 'lsq'");
+  }
+
+  {
+    vector<string> range(2); range[0]="lsq"; range[1]="zero";
+    registerStrOption("duals_init", "lsq", range,
+		      "Type of initialization of the multipliers of the eq. cons. (default lsq)");
+
+    registerNumOption("duals_lsq_ini_max", 1e3, 1e-16, 1e+10, 
+                      "Max inf-norm allowed for initials duals computed with LSQ; if norm is greater, the duals for"
+                      "equality constraints will be set to zero.");
+
+  }
+
+  registerIntOption("max_iter", 3000, 1, 1e6, "Max number of iterations (default 3000)");
+
+  registerNumOption("acceptable_tolerance", 1e-6, 1e-14, 1e-1,
+		    "HiOp will terminate if the NLP residuals are below for 'acceptable_iterations' "
+		    "many consecutive iterations (default 1e-6)");
+  registerIntOption("acceptable_iterations", 10, 1, 1e6,
+		    "Number of iterations of acceptable tolerance after which HiOp terminates (default 10)");
+
+  registerNumOption("sigma0", 1., 0., 1e+7,
+		    "Initial value of the initial multiplier of the identity in the secant "
+		    "approximation (default 1.)");
+  {
+    vector<string> range(2); range[0] = "no"; range[1] = "yes";
+    registerStrOption("accept_every_trial_step", "no", range,
+		      "Disable line-search and take close-to-boundary step");
+  }
+  {
+    vector<string> range(5);
+    range[0]="sigma0"; range[1]="sty"; range[2]="sty_inv";
+    range[3]="snrm_ynrm";  range[4]="sty_srnm_ynrm";
+    registerStrOption("sigma_update_strategy", range[1], range,
+		      "Updating strategy for the multiplier of the identity in the secant "
+		      "approximation (default sty)");
+  }
+  registerIntOption("secant_memory_len", 6, 0, 256,
+		    "Size of the memory of the Hessian secant approximation");
+
+  registerIntOption("verbosity_level", 3, 0, 12,
+		    "Verbosity level: 0 no output (only errors), 1=0+warnings, 2=1 (reserved), "
+		    "3=2+optimization output, 4=3+scalars; larger values explained in hiopLogger.hpp");
+
+  {
+    vector<string> range(3); range[0]="remove"; range[1]="relax"; range[2]="none";
+    registerStrOption("fixed_var", "none", range,
+		      "Treatment of fixed variables: 'remove' from the problem, 'relax' bounds "
+		      "by 'fixed_var_perturb', or 'none', in which case the HiOp will terminate "
+		      "with an error message if fixed variables are detected (default 'none'). "
+                      "Value 'remove' is available only when 'compute_mode' is 'hybrid' or 'cpu'.");
+
+    registerNumOption("fixed_var_tolerance", 1e-15, 1e-30, 0.01,
+		      "A variable is considered fixed if |upp_bnd-low_bnd| < fixed_var_tolerance * "
+		      "max(abs(upp_bnd),1) (default 1e-15)");
+
+    registerNumOption("fixed_var_perturb", 1e-8, 1e-14, 0.1,
+		      "Perturbation of the lower and upper bounds for fixed variables relative "
+		      "to its magnitude: lower/upper_bound -=/+= max(abs(upper_bound),1)*"
+		      "fixed_var_perturb (default 1e-8)");
+  }
+
+  // warm_start
+  {
+    vector<string> range(2); range[0] = "no"; range[1] = "yes";
+    registerStrOption("warm_start", "no", range,
+                      "Wart start from the user provided primal-dual point. (default no)");    
+  }
+
+  // scaling
+  {
+    vector<string> range(2); range[0]="none"; range[1]="gradient";
+    registerStrOption("scaling_type", "gradient", range,
+		      "The method used for scaling the problem before solving it."
+		      "Setting this option to 'gradient' will scale the problem, guaranteeing the maximum "
+		      "gradient at the initial point is less or equal to scaling_max_grad (default 'gradient')");
+    
+    registerNumOption("scaling_max_grad", 100, 1e-20, 1e+20,
+		      "The problem will be rescaled if the inf-norm of the gradient at the starting point is "
+		      "larger than the value of this option (default 100)");
+  }
+  
+  // relax bound
+  {
+    registerNumOption("bound_relax_perturb", 1e-8, 0.0, 1e20,
+		      "Perturbation of the lower and upper bounds for variables and constraints relative"
+		      "to its magnitude: lower/upper_bound -=/+= bound_relax_perturb*max(abs(lower/upper_bound),1)*"
+		      "bound_relax_perturb (default 1e-8)");
+  }
+
+  // second order correction
+  {
+    registerIntOption("max_soc_iter", 4, 0, 1000000,
+		      "Max number of iterations in second order correction (default 4)");
+    
+    registerNumOption("kappa_soc", 0.99, 0.0, 1e+20,
+		      "Factor to decrease the constraint violation in second order correction.");
+  }
+
+  // feasibility restoration
+  {
+    registerNumOption("kappa_resto", 0.9, 0, 1.0,
+                      "Factor to decrease the constraint violation in feasibility restoration. (default 0.9)");
+
+    vector<string> range(2); range[0] = "no"; range[1] = "yes";
+    registerStrOption("force_resto", "no", range,
+                      "Force applying feasibility restoration phase");
+  }
+
+  //optimization method used
+  {
+    vector<string> range(2); range[0]="quasinewton_approx"; range[1]="analytical_exact";
+    registerStrOption("Hessian", "quasinewton_approx", range,
+		      "Type of Hessian used with the filter IPM: 'quasinewton_approx' built internally "
+		      "by HiOp (default option) or 'analytical_exact' provided by the user");
+  }
+  //linear algebra
+  {
+    vector<string> range(4); range[0] = "auto"; range[1]="xycyd"; range[2]="xdycyd"; range[3]="full";
+    registerStrOption("KKTLinsys", "auto", range,
+		      "Type of KKT linear system used internally: decided by HiOp 'auto' "
+		      "(default option), the more compact 'XYcYd, the more stable 'XDYcYd', or the "
+                      "full-size non-symmetric 'full'. The last three options are only available with "
+                      "'Hessian=analyticalExact'.");
+  }
+
+  //
+  // choose linear solver for  KKT solves 
+  //
+  // when KKTLinsys is 'full' only strumpack is available
+  // for the other KKTLinsys (which are all symmetric), MA57 is chosen 'auto'matically for all compute
+  // modes, unless the user overwrites this
+  {
+    vector<string> range(3); range[0] = "auto"; range[1]="ma57"; range[2]="strumpack";
+    registerStrOption("linear_solver_sparse", "auto", range,
+		      "Selects between MA57 and STRUMPACK for the sparse linear solves.");
+  }
+
+  // choose linear solver for duals intializations for sparse NLP problems
+  //  - when only CPU is used (compute_mode is cpu or HIOP_USE_GPU is off), MA57 is chosen by 'auto'
+  //  - when GPU mode is on, STRUMPACK is chosen by 'auto' if available
+  //  - choosing option ma57 with GPU being on, it results in no device being used in the linear solve!
+  {
+    vector<string> range(3); range[0] = "auto"; range[1]="ma57"; range[2]="strumpack";
+    registerStrOption("duals_init_linear_solver_sparse", "auto", range,
+		      "Selects between MA57 and STRUMPACK for the sparse linear solves.");
+  }
+
+  //linsol_mode -> mostly related to magma and MDS linear algebra
+  {
+    vector<string> range(3); range[0]="stable"; range[1]="speculative"; range[2]="forcequick";
+    registerStrOption("linsol_mode", "stable", range,
+                      "'stable'=using stable factorization; "
+                      "'speculative'=try faster linear solvers when is detected to be safe "
+                      "to do so (experimental) ; "
+                      "'forcequick'=rely on faster solvers on all situations "
+                      "(experimental, avoid)");
+  }
+
+  //factorization acceptor
+  {
+    vector<string> range(2); range[0] = "inertia_correction"; range[1]="inertia_free";
+    registerStrOption("fact_acceptor", "inertia_correction", range,
+                      "The criteria used to accept a factorization: "
+                      " inertia_correction (default option) --- check if inertia is correct. "
+                      " inertia_free --- to be updated");
+  }  
+  //computations
+  {
+    vector<string> range(4); range[0]="auto"; range[1]="cpu"; range[2]="hybrid"; range[3]="gpu";
+    registerStrOption("compute_mode", "auto", range,
+		      "'auto', 'cpu', 'hybrid', 'gpu'; 'hybrid'=linear solver on gpu; 'auto' will decide between "
+		      "'cpu', 'gpu' and 'hybrid' based on the other options passed");
+  }
+  //inertia correction and Jacobian regularization
+  {
+    //Hessian related
+    registerNumOption("delta_w_min_bar", 1e-20, 0, 1000.,
+		      "Smallest perturbation of the Hessian block for inertia correction");
+    registerNumOption("delta_w_max_bar", 1e+20, 1e-40, 1e+40,
+		      "Largest perturbation of the Hessian block for inertia correction");
+    registerNumOption("delta_0_bar", 1e-4, 0, 1e+40,
+		      "First perturbation of the Hessian block for inertia correction");
+    registerNumOption("kappa_w_minus", 1./3, 1e-20, 1-1e-20,
+		      "Factor to decrease the most recent successful perturbation for inertia correction");
+    registerNumOption("kappa_w_plus", 8., 1+1e-20, 1e+40,
+		      "Factor to increase perturbation when it did not provide correct "
+		      "inertia correction (not first iteration)");
+    registerNumOption("kappa_w_plus_bar", 100., 1+1e-20, 1e+40,
+		      "Factor to increase perturbation when it did not provide correct "
+		      "inertia correction (first iteration when scale not known)");
+    //Jacobian related
+    registerNumOption("delta_c_bar", 1e-8, 1e-20, 1e+40,
+		      "Factor for regularization for potentially rank-deficient Jacobian "
+		      "(delta_c=delta_c_bar*mu^kappa_c");
+    registerNumOption("kappa_c", 0.25, 0., 1e+40,
+		      "Exponent of mu when computing regularization for potentially rank-deficient "
+		      "Jacobian (delta_c=delta_c_bar*mu^kappa_c)");
+
+  }
+  // perfromance profiling
+  {
+    vector<string> range(2);
+    range[0] = "on";
+    range[1] = "off";
+    registerStrOption("time_kkt", "off", range,
+		      "turn on/off performance timers and reporting of the computational constituents of the "
+		      "KKT solve process");
+  }
+
+  //other options
+  {
+    vector<string> range(2); range[0]="no"; range[1]="yes";
+    registerStrOption("write_kkt", range[0], range,
+		      "write internal KKT linear system (matrix, rhs, sol) to file (default 'no')");
+  }
+
+  // memory space selection
+  {
+#ifdef HIOP_USE_RAJA
+    vector<string> range(4);
+    range[0] = "default";
+    range[1] = "host";
+    range[2] = "device";
+    range[3] = "um";
+#else
+    vector<string> range(1);
+    range[0] = "default";
+#endif
+    registerStrOption("mem_space", range[0], range,
+    "Determines the memory space in which future linear algebra objects will be created");
+  }
+}
+
+void hiopOptionsNLP::ensureConsistence()
+{
+  //check that the values of different options are consistent
+  //do not check is the values of a particular option is valid; this is done in the Set methods
+  double eps_tol_accep = GetNumeric("acceptable_tolerance");
+  double eps_tol  =      GetNumeric("tolerance");
+  if(eps_tol_accep < eps_tol) {
+    if(is_user_defined("acceptable_tolerance")) {
+      log_printf(hovWarning,
+                 "There is no reason to set 'acceptable_tolerance' tighter than 'tolerance'. "
+                 "Will set the two to 'tolerance'.\n");
+      set_val("acceptable_tolerance", eps_tol);
+    }
+  }
+
+  if(GetString("Hessian")=="quasinewton_approx") {
+    string strKKT = GetString("KKTLinsys");
+    if(strKKT=="xycyd" || strKKT=="xdycyd" || strKKT=="full") {
+      if(is_user_defined("Hessian")) {
+        log_printf(hovWarning,
+                   "The option 'KKTLinsys=%s' is not valid with 'Hessian=quasiNewtonApprox'. "
+                   "Will use 'KKTLinsys=auto'\n", strKKT.c_str());
+        set_val("KKTLinsys", "auto");
+      }
+    }
+  }
+
+  if(GetString("Hessian")=="analytical_exact") {
+    string duals_update_type = GetString("duals_update_type");
+    if("linear" != duals_update_type) {
+      // 'duals_update_type' should be 'lsq' or 'linear' for  'Hessian=quasinewton_approx'
+      // 'duals_update_type' can only be 'linear' for Newton methods 'Hessian=analytical_exact'
+
+      //warn only if these are defined by the user (option file or via SetXXX methods)
+      if(is_user_defined("duals_update_type")) {
+        log_printf(hovWarning,
+                   "The option 'duals_update_type=%s' is not valid with 'Hessian=analytical_exact'. "
+                   "Will use 'duals_update_type=linear'.\n",
+                   duals_update_type.c_str());
+      }
+      set_val("duals_update_type", "linear");
+    }
+  }
+
+  if(GetString("KKTLinsys") == "full") {
+    if(GetString("linear_solver_sparse") == "ma57") {
+      if(is_user_defined("linear_solver_sparse")) {
+        log_printf(hovWarning,
+                   "The option 'linear_solver_sparse=%s' is not valid with option 'KKTLinsys=full'. "
+                   " Will use 'linear_solver_sparse=auto'.\n",
+                   GetString("linear_solver_sparse").c_str());
+      }
+      set_val("linear_solver_sparse", "auto");
+    }
+  }
+  
+// When RAJA is not enabled ...
+#ifndef HIOP_USE_RAJA
+  if(GetString("compute_mode")=="gpu") {
+    if(is_user_defined("compute_mode")) {
+      log_printf(hovWarning,
+                 "option compute_mode=gpu was changed to 'hybrid' since HiOp was built without "
+                 "RAJA/Umpire support.\n");
+    }
+    set_val("compute_mode", "hybrid");
+  }
+  if(GetString("mem_space")!="default") {
+    std::string memory_space = GetString("mem_space");
+    if(is_user_defined("compute_mode")) {
+      log_printf(hovWarning,
+                 "option mem_space=%s was changed to 'default' since HiOp was built without "
+                 "RAJA/Umpire support.\n", memory_space.c_str());
+    }
+    set_val("mem_space", "default");
+  }
+#endif
+
+  // No hybrid or GPU compute mode if HiOp is built without GPU linear solvers
+#ifndef HIOP_USE_GPU
+  if(GetString("compute_mode")=="hybrid") {
+
+    if(is_user_defined("compute_mode")) {
+      log_printf(hovWarning,
+                 "option compute_mode=hybrid was changed to 'cpu' since HiOp was built without "
+                 "GPU support.\n");
+    }
+    set_val("compute_mode", "cpu");
+  }
+  if(GetString("compute_mode")=="gpu") {
+    log_printf(hovWarning,
+	       "option compute_mode=gpu was changed to 'cpu' since HiOp was built without "
+	       "GPU support.\n");
+    set_val("compute_mode", "cpu");
+  }
+  
+  if(GetString("compute_mode")=="auto") {
+    set_val("compute_mode", "cpu");
+  }
+#endif
+
+  // No removing of fixed variables in GPU compute mode ...
+  if(GetString("compute_mode")=="gpu") {
+    if(GetString("fixed_var")=="remove") {
+      
+      log_printf(hovWarning,
+                 "option fixed_var=remove was changed to 'relax' since only 'relax'"
+                 "is supported in GPU compute mode.\n");
+      set_val("fixed_var", "relax");
+    }
+  }
+
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// hiopOptionsPriDec
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+hiopOptionsPriDec::hiopOptionsPriDec(const char* opt_filename/*=nullptr*/)
+  : hiopOptions()
+{
+  registerOptions();
+  loadFromFile(opt_filename==nullptr ? hiopOptions::default_filename_pridec_solver : opt_filename);
+  ensureConsistence();
+}
+hiopOptionsPriDec::~hiopOptionsPriDec()
+{
+}
+
+void hiopOptionsPriDec::registerOptions()
+{
+  //
+  // Primal decomposition (PriDec) solver
+  //
+  
+  //name of the options file to be passed to the master solver (by the NLP solver, e.g., HiOp or Ipopt or other)
+  {
+    register_str_option("options_file_master_prob",
+                        hiopOptions::default_filename_pridec_masterNLP,
+                        "Options file for the NLP solver solving the master problem in PriDec solver");
+  }
+
+  //
+  // convergence and stopping criteria
+  //
+  {
+    //TODO: Frank check these and add others as needed in the primal decomposition algorithm
+    registerNumOption("tolerance", 1e-4, 1e-14, 1e-1,
+                      "Absolute error tolerance for the PriDec solver (default 1e-4)");
+    
+    //registerNumOption("rel_tolerance", 0., 0., 0.1,
+    //                  "Error tolerance for the NLP relative to errors at the initial point. A null "
+    //                  "value disables this option (default 0.)");
+
+    registerNumOption("acceptable_tolerance", 1e-2, 1e-14, 1e-1,
+                      "HiOp PriDec terminates if the xxx Frank xxx are below for 'acceptable_iterations' "
+		    "many consecutive iterations (default 1e-2)");
+    registerIntOption("acceptable_iterations", 25, 1, 1e6,
+                      "Number of iterations of acceptable tolerance after which HiOp terminates (default 26)");
+
+    registerIntOption("max_iter", 30000, 1, 1e9, "Max number of iterations (default 30000)");
+  }
+
+  //
+  // misc options 
+  //
+  //TODO: Frank check these and add others as needed 
+  registerIntOption("verbosity_level", 3, 0, 12,
+		    "Verbosity level: 0 no output (only errors), 1=0+warnings, 2=1 (reserved), "
+		    "3=2+optimization output, 4=3+scalars; larger values explained in hiopLogger.hpp");
+}
+
+void hiopOptionsPriDec::ensureConsistence()
+{
+  //check that the values of different options are consistent
+  //do not check is the values of a particular option is valid; this is done in the Set methods
+  double eps_tol_accep = GetNumeric("acceptable_tolerance");
+  double eps_tol  =      GetNumeric("tolerance");
+  if(eps_tol_accep < eps_tol) {
+    if(is_user_defined("acceptable_tolerance")) {
+      log_printf(hovWarning,
+                 "There is no reason to set 'acceptable_tolerance' tighter than 'tolerance'. "
+                 "Will set the two to 'tolerance'.\n");
+      set_val("acceptable_tolerance", eps_tol);
+    }
+  }
+
+
+
 }
 
 
