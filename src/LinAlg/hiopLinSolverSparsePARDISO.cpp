@@ -77,6 +77,13 @@ namespace hiop
 
   hiopLinSolverIndefSparsePARDISO::~hiopLinSolverIndefSparsePARDISO()
   {
+    /* Termination and release of memory */
+    int phase = -1; /* Release internal memory . */
+    pardiso_d(pt_ , &maxfct_, &mnum_, &mtype_, &phase,
+              &n_, kVal_, kRowPtr_, jCol_,
+              NULL, NULL, 
+              iparm_, &msglvl_, NULL, NULL, &error_, dparm_);
+
     if(kRowPtr_)
       delete [] kRowPtr_;
     if(jCol_)
@@ -344,12 +351,19 @@ namespace hiop
     maxfct_ = 1; //max number of fact having same sparsity pattern to keep at the same time
     mnum_ = 1;   //actual matrix (as in index from 1 to maxfct)
     msglvl_ = 0; //messaging level
-    mtype_ = 11; //real and symmetric indefinite
+    mtype_ = 11; //real and unsymmetric
     solver_ = 0; //sparse direct solver
   }
 
   hiopLinSolverNonSymSparsePARDISO::~hiopLinSolverNonSymSparsePARDISO()
   {
+    /* Termination and release of memory */
+    int phase = -1; /* Release internal memory . */
+    pardiso_d(pt_ , &maxfct_, &mnum_, &mtype_, &phase,
+              &n_, kVal_, kRowPtr_, jCol_,
+              NULL, NULL, 
+              iparm_, &msglvl_, NULL, NULL, &error_, dparm_);
+
     if(kRowPtr_)
       delete [] kRowPtr_;
     if(jCol_)
