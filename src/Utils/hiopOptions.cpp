@@ -60,13 +60,15 @@ namespace hiop
 {
 
 using namespace std;
-const char* szDefaultFilename = "hiop.options";
+  
+const char* hiopOptions::default_filename = "hiop.options";
+const char* hiopOptions::default_filename_pridec = "hiop_pridec.options";
 
-  hiopOptions::hiopOptions(const char* szOptionsFilename/*=NULL*/)
-    : log_(nullptr)
+hiopOptions::hiopOptions(const char* szOptionsFilename/*=NULL*/)
+  : log_(nullptr)
 {
   registerOptions();
-  loadFromFile(szOptionsFilename==NULL?szDefaultFilename:szOptionsFilename);
+  loadFromFile(szOptionsFilename==nullptr ? hiopOptions::default_filename : szOptionsFilename);
   ensureConsistence();
 }
 
@@ -380,6 +382,17 @@ void hiopOptions::registerOptions()
     registerStrOption("mem_space", range[0], range,
     "Determines the memory space in which future linear algebra objects will be created");
   }
+
+  //
+  // Primal decomposition (PriDec) solver
+  //
+  
+  //name of the options file to be used for master problem (by the NLP solver, e.g., HiOp or Ipopt or other)
+  {
+    register_str_option("options_file_master_prob",
+                        "",
+                        "options file for the NLP solver solving the master problem in PriDec solver");
+  }
 }
 
 void hiopOptions::registerNumOption(const std::string& name, double defaultValue,
@@ -392,6 +405,12 @@ void hiopOptions::registerStrOption(const std::string& name, const std::string& 
 				    const std::vector<std::string>& range, const char* description)
 {
   mOptions_[name]=new OptionStr(defaultValue, range, description);
+}
+
+void hiopOptions::register_str_option(const std::string& name, const std::string& defaultValue, const char* description)
+{
+  vector<string> empty_range; //empty range for a OptionStr means the option can take any values
+  mOptions_[name] = new OptionStr(defaultValue, empty_range, description);
 }
 
 void hiopOptions::registerIntOption(const std::string& name,
@@ -537,14 +556,14 @@ void hiopOptions::loadFromFile(const char* filename)
 
   ifstream input( filename );
 
-  if(input.fail())
-    if(strcmp(szDefaultFilename, filename)) {
+  if(input.fail()) {
+    if(strcmp(default_filename, filename)) {
       log_printf(hovError,
 		 "Failed to read option file '%s'. Hiop will use default options.\n",
 		 filename);
       return;
     }
-
+  }
   string line; string name, value;
   for( std::string line; getline( input, line ); ) {
 
@@ -749,9 +768,11 @@ bool hiopOptions::set_val(const char* name, const char* value_in)
       transform(value.begin(), value.end(), value.begin(), ::tolower);
       //see if it is in the range (of supported values)
       bool inrange=false;
-      for(int it=0; it<option->range.size() && !inrange; it++) inrange = (option->range[it]==value);
+      for(int it=0; it<option->range.size() && !inrange; it++) {
+        inrange = (option->range[it]==value);
+      }
 
-      if(!inrange) {
+      if(!inrange && !option->range.empty()) {
         assert(false && "incorrect use of internal 'set_val': value out of range\n");
       } else {
         option->val = value;
@@ -782,28 +803,36 @@ bool hiopOptions::SetStringValue (const char* name,  const char* value, const bo
 	}
       }
 
-      if(setFromFile)
-	option->specifiedInFile=true;
-
+      if(setFromFile) {
+	option->specifiedInFile = true;
+      }
       string strValue(value);
       transform(strValue.begin(), strValue.end(), strValue.begin(), ::tolower);
       //see if it is in the range (of supported values)
       bool inrange=false;
-      for(int it=0; it<option->range.size() && !inrange; it++) inrange = (option->range[it]==strValue);
+      for(int it=0; it<option->range.size() && !inrange; it++) {
+        inrange = (option->range[it]==strValue);
+      }
 
-      if(!inrange) {
+      //empty range means the option can take any value and no range check is needed
+      if(!inrange && !option->range.empty()) {
 	stringstream ssRange; ssRange << " ";
-	for(int it=0; it<option->range.size(); it++) ssRange << option->range[it] << " ";
+	for(int it=0; it<option->range.size(); it++) {
+          ssRange << option->range[it] << " ";
+        }
 
 	log_printf(hovWarning,
 		    "Hiop: value '%s' for option '%s' must be one of [%s]. Default value "
 		   "'%s' will be used.\n", value, name, ssRange.str().c_str(), option->val.c_str());
-      } else option->val = strValue;
+      } else {
+        option->val = strValue;
+      }
     }
   } else {
     log_printf(hovWarning,
-		"Hiop does not understand option '%s' and will ignore its value '%s'.\n",
-		name, value);
+               "Hiop does not understand option '%s' and will ignore its value '%s'.\n",
+               name,
+               value);
   }
   ensureConsistence();
   return true;
@@ -849,9 +878,14 @@ void hiopOptions::OptionInt::print(FILE* f) const
 
 void hiopOptions::OptionStr::print(FILE* f) const
 {
-  stringstream ssRange; ssRange << " ";
-  for(int i=0; i<range.size(); i++) ssRange << range[i] << " ";
-  fprintf(f, "%s \t# (string) one of [%s] [%s]", val.c_str(), ssRange.str().c_str(), descr.c_str());
+  //empty range means the string option is not bound to a range of values
+  if(range.empty()) {
+    fprintf(f, "%s \t# (string) [%s]", val.c_str(), descr.c_str());
+  } else {
+    stringstream ssRange; ssRange << " ";
+    for(int i=0; i<range.size(); i++) ssRange << range[i] << " ";
+    fprintf(f, "%s \t# (string) one of [%s] [%s]", val.c_str(), ssRange.str().c_str(), descr.c_str());
+  }
 }
 
 

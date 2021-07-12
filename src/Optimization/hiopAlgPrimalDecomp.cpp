@@ -2,8 +2,11 @@
 #include "hiopAlgPrimalDecomp.hpp"
 #include "hiopInterfacePrimalDecomp.hpp"
 
-#include <cstring>
 #include <cassert>
+#include <cstring>
+#include <fstream>
+
+using namespace std;
 
 namespace hiop
 {
@@ -352,7 +355,6 @@ double hiopAlgPrimalDecomposition::HessianApprox::check_convergence_grad(const h
   double temp3 = 0.;
   double temp4 = 0.;
   
- 
   hiopVector* temp;
   temp = LinearAlgebraFactory::createVector(skm1->get_local_size()); 
   temp->copyFrom(*skm1);  
@@ -450,7 +452,9 @@ hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
   nc_ = n_;
   xc_idx_ = new int[nc_];
   
-  for(int i=0;i<nc_;i++) xc_idx_[i] = i;
+  for(int i=0; i<nc_; i++) {
+    xc_idx_[i] = i;
+  }
   //determine rank and rank type
   //only two rank types for now, master and evaluator/worker
 
@@ -466,6 +470,16 @@ hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
   #endif
   //x_ = new double[n_];
   x_ = LinearAlgebraFactory::createVector(n_);
+
+  ifstream f(hiopOptions::default_filename_pridec);
+  if(f.good()) {
+    f.close();
+    //use "hiop_pridec.options" if exists
+    options_ = new hiopOptions(hiopOptions::default_filename_pridec);
+  } else {
+    //use "hiop.options" - if it does not exist, built-in default options will be used
+    options_ = new hiopOptions(hiopOptions::default_filename);
+  }
 }
 
 hiopAlgPrimalDecomposition::
@@ -498,12 +512,23 @@ hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
   request_ = new MPI_Request[4];   
 #endif
   x_ = LinearAlgebraFactory::createVector(n_);
+
+  ifstream f(hiopOptions::default_filename_pridec);
+  if(f.good()) {
+    f.close();
+    //use "hiop_pridec.options" if exists
+    options_ = new hiopOptions(hiopOptions::default_filename_pridec);
+  } else {
+    //use "hiop.options" - if it does not exist, built-in default options will be used
+    options_ = new hiopOptions(hiopOptions::default_filename);
+  }
 }
 
 
 hiopAlgPrimalDecomposition::~hiopAlgPrimalDecomposition()
 {
   delete x_;
+  delete options_;
 }
 
 
@@ -652,12 +677,16 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
     int end_signal = 0;
     double t1 = 0;
     double t2 = 0; 
-    hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator = new hiopInterfacePriDecProblem::
-                                                             RecourseApproxEvaluator(nc_,S_,xc_idx_);
+    hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator =
+      new hiopInterfacePriDecProblem::RecourseApproxEvaluator(nc_, S_, xc_idx_);
+    
     double* x_vec = x_->local_data();
+
+    std::string options_file_master_prob;
 
     // Outer loop starts
     for(int it=0; it<max_iter;it++) {
+      
       if(my_rank_==0) {
         t1 = MPI_Wtime(); 
       }
@@ -666,7 +695,9 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
         // printf("my rank for solver  %d\n", my_rank_);
         // solve master problem base case on master and iteration 0
 
-        solver_status_ = master_prob_->solve_master(*x_,false);
+        options_file_master_prob = options_->GetString("options_file_master_prob");
+        
+        solver_status_ = master_prob_->solve_master(*x_, false, 0, 0, 0, options_file_master_prob.c_str());
         // to do, what if solve fails?
         if(solver_status_){     
 
@@ -685,9 +716,9 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
       int ierr = MPI_Bcast(x_vec, n_, MPI_DOUBLE, rank_master, comm_world_);
       assert(ierr == MPI_SUCCESS);
 
-      // assert("for debugging" && false); //for debugging purpose
+      //
       // set up recourse problem send/recv interface
-      
+      //
       std::vector<ReqRecourseApprox* > rec_prob;
       ReqRecourseApprox* p=NULL;
       for(int r=0; r<comm_size_;r++) {
@@ -1034,9 +1065,12 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
         if(!bret) {
           //todo
         }
-
+        
+        options_file_master_prob = options_->GetString("options_file_master_prob");
+        
         //printf("solving full problem starts, iteration %d \n",it);
-        solver_status_ = master_prob_->solve_master(*x_,true);
+        solver_status_ = master_prob_->solve_master(*x_, true, 0, 0, 0, options_file_master_prob.c_str());
+
         if(ver_ >=outlevel2) {
           printf("solved full problem with objective %18.12e\n", master_prob_->get_objective());
           fflush(stdout);
@@ -1124,10 +1158,8 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
   //hess_appx_2 has to be declared by all ranks while only rank 0 uses it
   HessianApprox*  hess_appx_2 = new HessianApprox(nc_,alpha_ratio_);
 
-
-
-  hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator = new hiopInterfacePriDecProblem::
-                                                           RecourseApproxEvaluator(nc_,S_,xc_idx_);
+  hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator =
+    new hiopInterfacePriDecProblem::RecourseApproxEvaluator(nc_, S_, xc_idx_);
 
   double base_val = 0.; // base case objective value 
   double recourse_val = 0.;  // recourse objective value
@@ -1136,16 +1168,18 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
   double convg_f = 1e20;
   double convg_g = 1e20;
   double* x_vec = x_->local_data(); 
-  
+
+  std::string options_file_master_prob;
 
   // Outer loop starts
   for(int it=0; it<max_iter;it++) {
     //printf("iteration  %d\n", it);
     // solve the base case
 
-    if(it==0) { 
-      //solve master problem base case(solver rank supposed to do it)
-      solver_status_ = master_prob_->solve_master(*x_,false);
+    if(it==0) {
+      options_file_master_prob = options_->GetString("options_file_master_prob");
+      //solve master problem base case(solver rank supposed to do it)        
+      solver_status_ = master_prob_->solve_master(*x_, false, 0, 0, 0, options_file_master_prob.c_str());
       // to do, what if solve fails?
       if(solver_status_) {     
       }
@@ -1267,8 +1301,9 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
     if(!bret) {
       //todo
     }
+    options_file_master_prob = options_->GetString("options_file_master_prob");
     //printf("solving full problem starts, iteration %d \n",it);
-    solver_status_ = master_prob_->solve_master(*x_,true);
+    solver_status_ = master_prob_->solve_master(*x_, true, 0, 0, 0, options_file_master_prob.c_str());
     
     dinf = step_size_inf(nc_, *x_, *x0); 
 

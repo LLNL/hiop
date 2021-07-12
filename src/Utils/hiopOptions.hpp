@@ -85,12 +85,23 @@ public:
     ensureConsistence();
   }
   virtual void print(FILE* file, const char* msg=NULL) const;
+
+  static const char* default_filename;
+  static const char* default_filename_pridec;
 protected:
   /* internal use only */
 
   void registerNumOption(const std::string& name, double defaultValue, double rangeLo, double rangeUp, const char* description);
   void registerIntOption(const std::string& name, int    defaultValue, int    rangeLo, int    rangeUp, const char* description);
-  void registerStrOption(const std::string& name, const std::string& defaultValue, const std::vector<std::string>& range, const char* description);
+
+  /// register a string option with a predetermined range
+  void registerStrOption(const std::string& name,
+                         const std::string& defaultValue,
+                         const std::vector<std::string>& range,
+                         const char* description);
+  /// register a string option that can take any value 
+  void register_str_option(const std::string& name, const std::string& defaultValue, const char* description);
+  
   void registerOptions();
 
   void loadFromFile(const char* szFilename);

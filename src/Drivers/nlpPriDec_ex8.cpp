@@ -42,7 +42,7 @@ Ex8::Ex8(int ns_, int S_, int nc_)
   nc = nc_;
 }
 
-	
+
 Ex8::Ex8(int ns_, int S_, int nc_,bool include_)
     : Ex8(ns_,S_,nc_)
 {
@@ -113,12 +113,12 @@ bool Ex8::eval_f(const size_type& n, const double* x, bool new_x, double& obj_va
 
 
 bool Ex8::eval_cons(const size_type& n, 
-		    const size_type& m, 
+                    const size_type& m, 
                     const size_type& num_cons, 
-		    const index_type* idx_cons,  
-		    const double* x, 
-		    bool new_x, 
-		    double* cons)
+                    const index_type* idx_cons,  
+                    const double* x, 
+                    bool new_x, 
+                    double* cons)
 {
   assert(num_cons==0);
   return true;
@@ -145,12 +145,12 @@ bool Ex8::get_starting_point(const size_type& global_n, double* x0_)
 };
 
 bool Ex8::get_starting_point(const size_type& n, 
-		             const size_type& m,
-			     double* x0_,
-			     bool& duals_avail,
-			     double* z_bndL0, 
-			     double* z_bndU0,
-			     double* lambda0)
+                             const size_type& m,
+                             double* x0_,
+                             bool& duals_avail,
+                             double* z_bndL0, 
+                             double* z_bndU0,
+                             double* lambda0)
 {
   duals_avail = false;
   return false;
@@ -178,7 +178,7 @@ bool Ex8::quad_is_defined()
 };
 
 bool Ex8::set_quadratic_terms(const int& n, 
-		              hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator)
+                              hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator)
 {
   assert(nc == n);
   evaluator_ = evaluator;
@@ -193,10 +193,11 @@ bool Ex8::set_include(bool include)
 
 hiopSolveStatus PriDecMasterProblemEx8::
 solve_master(hiopVector& x, 
-	     const bool& include_r, 
-	     const double& rval/* = 0*/,
-	     const double* grad/*=0*/, 
-	     const double* hess/*=0*/)
+             const bool& include_r, 
+             const double& rval/* = 0*/,
+             const double* grad/*=0*/, 
+             const double* hess/*=0*/,
+             const char* master_options_file/*=nullptr*/)
 {
   obj_=-1e+20;
   hiopSolveStatus status;
@@ -257,7 +258,7 @@ bool PriDecMasterProblemEx8::eval_f_rterm(size_t idx, const int& n,const  double
 {
   rval = 0.;
   for(int i=0; i<n; i++) {
-    if(i==idx) {	    
+    if(i==idx) {   
       rval += (x[i]+S_)*(x[i]+S_);
     } else {
       rval += x[i]*x[i];
@@ -274,7 +275,7 @@ bool PriDecMasterProblemEx8::eval_grad_rterm(size_t idx, const int& n, double* x
   assert(nc_ == n);
   double* grad_vec = grad.local_data();
   for(int i=0; i<n; i++) {
-    if(i==idx) {	    
+    if(i==idx) {   
       grad_vec[i] = (x[i]+S_)/S_;
     } else {
       grad_vec[i] = x[i]/S_;
@@ -284,8 +285,7 @@ bool PriDecMasterProblemEx8::eval_grad_rterm(size_t idx, const int& n, double* x
 }; 
 
 bool PriDecMasterProblemEx8::
-set_recourse_approx_evaluator(const int n, 
-		              hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator)
+set_recourse_approx_evaluator(const int n, hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator)
 {  
    my_nlp->set_quadratic_terms( n, evaluator);
    return true; 

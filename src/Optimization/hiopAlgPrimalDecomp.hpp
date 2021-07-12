@@ -2,7 +2,6 @@
 #define HIOP_PRIDECOMP
 
 #include "hiopInterfacePrimalDecomp.hpp"
-//#include <cassert>
 #include <cstdio>
 #include <vector>
 #include <chrono>
@@ -10,6 +9,7 @@
 #include <cmath>
 #include "hiopMPI.hpp"
 
+#include "hiopOptions.hpp"
 
 namespace hiop
 {
@@ -103,7 +103,6 @@ public:
     double get_f(){return f_;}
     double* get_grad(){return grad_;}
     double* get_x(){return x_;}
-
   private:
     int n_;
     double f_;
@@ -124,7 +123,7 @@ public:
     HessianApprox(const int& n);
     
     /* ratio_ is used to compute alpha in alpha_f */
-    HessianApprox(const int& n,const double ratio);
+    HessianApprox(const int& n, const double ratio);
 
     ~HessianApprox();
 
@@ -147,15 +146,16 @@ public:
      * and the estimate change. Trust-region algorithms use a set heuristics to update alpha_k
      * based on rhok
      * rk: m(p_k)
-     * The condition |x-x_{k-1}| = \Delatk is replaced by measuring the ratio of quadratic
+     * The condition |x-x_{k-1}| = \Deltak is replaced by measuring the ratio of quadratic
      * objective and linear objective. 
      * User can provide a global maximum and minimum for alpha
      */
     void update_ratio();
 
-    //a trust region way of updating alpha ratio
-    //rkm1: true recourse value at {k-1}
-    //rk: true recourse value at k
+    /** A trust-region way of updating alpha ratio
+     *  rkm1: true recourse value at {k-1}
+     *  rk: true recourse value at k
+     */
     void update_ratio_tr(const double rhok, const double rkm1, const double rk, 
                          const double alpha_g_ratio, double& alpha_ratio);
 
@@ -204,9 +204,7 @@ public:
     hiopVector* ykm1;
     size_t ver_=1;
   };
-
-private:
-   
+private: 
 #ifdef HIOP_USE_MPI
   MPI_Request* request_;
   MPI_Status status_; 
@@ -253,6 +251,10 @@ private:
   double alpha_ratio_=1.0;
   //real decrease over expected decrease ratio
   double rhok_ = 0.;
+protected:
+  static std::string options_default_filename;
+  hiopOptions* options_;
+  
 };
 
 } //end of namespace

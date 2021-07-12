@@ -66,28 +66,30 @@ public:
   {
   }
 
+  
   /** 
    * Solves the master problem consisting of the basecase problem plus the recourse terms.
    * The recourse terms have been added by the outer optimization loop (hiopAlgPrimalDecomposition)
-   * via the 'add_' methods below
+   * via the 'add_' methods below. (this does not appear to be case case anymore TODO)
+   *
    * @param x : output, will contain the primal optimal solution of the master
+   * TO DO: document the rest of the parameters, even though it appears that no calls with non-default 
+   * 3rd, 4th, and 5th parameters are made. 
+   *
+   * @param master_options_file : input string specifying the name of the options file the NLP solver
+   * should use when solving the master problem. A null value indicates that the NLP solver should use
+   * its default options file. 
    * 
    */
-  virtual hiopSolveStatus solve_master(hiopVector& x,const bool& include_r, const double& rval=0, 
-		                       const double* grad=0,const double*hess =0) = 0;
-
+  virtual hiopSolveStatus solve_master(hiopVector& x,
+                                       const bool& include_r,
+                                       const double& rval = 0, 
+		                       const double* grad = 0,
+                                       const double*hess = 0,
+                                       const char* master_options_file=nullptr) = 0;
+    
   virtual bool eval_f_rterm(size_t idx, const int& n, const double* x, double& rval) = 0;
   virtual bool eval_grad_rterm(size_t idx, const int& n, double* x, hiopVector& grad) = 0;
-
-  //
-  // Documentation here
-  //
-  //virtual bool set_quadratic_regularization(const int& n, const double* x, const double& rval,const double* grad,
-  //		                    const double* hess) = 0;
-  
-  //virtual bool set_recourse_approx_evaluator(const int n, int S, const std::vector<int>& list,
-  //                                             const double& rval, const double* rgrad, 
-  //		                               const double* rhess, const double* x0);
 
 
   /** 
