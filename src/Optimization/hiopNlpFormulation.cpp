@@ -93,11 +93,10 @@ hiopNlpFormulation::hiopNlpFormulation(hiopInterfaceBase& interface_, const char
 
   options = new hiopOptionsNLP(option_file);
 
-  hiopOutVerbosity hov = (hiopOutVerbosity) options->GetInteger("verbosity_level");
-  log = new hiopLogger(this, stdout);
+  //logger will output on stdout on rank 0 of the MPI 'comm' communicator
+  log = new hiopLogger(options, stdout, 0, comm);
 
   options->SetLog(log);
-  //log->write(NULL, *options, hovSummary);//! comment this at some point
 
   runStats = hiopRunStats(comm);
 

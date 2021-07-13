@@ -876,6 +876,10 @@ void hiopOptionsNLP::register_options()
                         range[0],
                         range,
                         "write internal KKT linear system (matrix, rhs, sol) to file (default 'no')");
+    register_str_option("print_options",
+                        "no", // default value for the option
+                        vector<string>({"yes", "no"}), // range
+                        "prints options before algorithm starts (default 'no')");
   }
   
   // memory space selection
@@ -1040,7 +1044,10 @@ void hiopOptionsPriDec::register_options()
   //
   {
     //TODO: Frank check these and add others as needed in the primal decomposition algorithm
-    register_num_option("tolerance", 1e-4, 1e-14, 1e-1,
+    register_num_option("tolerance",
+                        1e-4,
+                        1e-14,
+                        1e-1,
                         "Absolute error tolerance for the PriDec solver (default 1e-4)");
     
     //register_num_option("rel_tolerance", 0., 0., 0.1,
@@ -1072,6 +1079,12 @@ void hiopOptionsPriDec::register_options()
                       12,
                       "Verbosity level: 0 no output (only errors), 1=0+warnings, 2=1 (reserved), "
                       "3=2+optimization output, 4=3+scalars; larger values explained in hiopLogger.hpp");
+  
+  register_str_option("print_options",
+                      "no", // default value for the option
+                      vector<string>({"yes", "no"}), // range
+                      "Prints options before algorithm starts (default 'no')");
+  
 }
 
 void hiopOptionsPriDec::ensure_consistence()

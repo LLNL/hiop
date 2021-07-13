@@ -5,7 +5,7 @@
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
 // is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause). 
-// Please also read “Additional BSD Notice” below.
+// Please also read "Additional BSD Notice" below.
 //
 // Redistribution and use in source and binary forms, with or without modification, 
 // are permitted provided that the following conditions are met:
@@ -53,6 +53,7 @@
 
 #include <cstdio>
 #include <cstdarg>
+#include <cassert>
 
 namespace hiop
 {
@@ -86,8 +87,16 @@ enum hiopOutVerbosity {
 class hiopLogger
 {
 public:
-  hiopLogger(hiopNlpFormulation* nlp, FILE* f, int masterrank=0) 
-    : _f(f), _nlp(nlp),  _master_rank(masterrank) {};
+  hiopLogger(hiopOptions* options, FILE* f, int masterrank=0, MPI_Comm comm_wrld=MPI_COMM_WORLD) 
+    : options_(options), f_(f), master_rank_(masterrank)
+  {
+#ifdef HIOP_USE_MPI
+    int ierr = MPI_Comm_rank(comm_wrld, &my_rank_);
+    assert(MPI_SUCCESS == ierr);
+#else
+    my_rank_ = 0;
+#endif
+  };
   virtual ~hiopLogger() {};
   /* outputs a vector. loggerid indicates which logger should be used, by default stdout*/
   void write(const char* msg, const hiopVector& vec,          hiopOutVerbosity v, int loggerid=0);
@@ -104,17 +113,19 @@ public:
   //only for loggerid=0 for now
   void printf(hiopOutVerbosity v, const char* format, ...); 
 
-  /* This static method is to be used before NLP created its internal instance of hiopLogger. To be
-   * used for displaying errors (on stderr) that occur during initialization of the NLP class 
+  /**
+   * This static method is to be used before NLP created its internal instance of hiopLogger. To be used
+   * for displaying errors (on stderr) that occur during initialization of the NLP or PriDec solver class. 
    */
   static void printf_error(hiopOutVerbosity v, const char* format, ...); 
 
 protected:
-  FILE* _f;
-  char _buff[1024];
-  hiopNlpFormulation* _nlp;
+  hiopOptions* options_;
+  FILE* f_;
+  char buff_[4096];
 private:
-  int _master_rank;
+  int master_rank_;
+  int my_rank_;
 };
 }
 #endif
