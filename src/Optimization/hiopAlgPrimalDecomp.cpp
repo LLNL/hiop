@@ -470,7 +470,7 @@ hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
   //x_ = new double[n_];
   x_ = LinearAlgebraFactory::createVector(n_);
   
-  //use "hiop.options" - if the file does not exist, built-in default options will be used
+  //use "hiop_pridec.options" - if the file does not exist, built-in default options will be used
   options_ = new hiopOptionsPriDec(hiopOptions::default_filename_pridec_solver);
 }
 
@@ -505,10 +505,9 @@ hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
 #endif
   x_ = LinearAlgebraFactory::createVector(n_);
 
-  //use "hiop.options" - if the file does not exist, built-in default options will be used
+  //use "hiop_pridec.options" - if the file does not exist, built-in default options will be used
   options_ = new hiopOptionsPriDec(hiopOptions::default_filename_pridec_solver);
 }
-
 
 hiopAlgPrimalDecomposition::~hiopAlgPrimalDecomposition()
 {

@@ -82,7 +82,7 @@ public:
   void SetLog(hiopLogger* log_in)
   {
     log_ = log_in;
-    ensureConsistence();
+    ensure_consistence();
   }
   virtual void print(FILE* file, const char* msg=NULL) const;
 
@@ -115,23 +115,22 @@ public:
   static const char* default_filename_pridec_masterNLP;
 protected:
   /* internal use only */
-
-  void registerNumOption(const std::string& name, double defaultValue, double rangeLo, double rangeUp, const char* description);
-  void registerIntOption(const std::string& name, int    defaultValue, int    rangeLo, int    rangeUp, const char* description);
+  void register_num_option(const std::string& name, double defaultValue, double rangeLo, double rangeUp, const char* descr);
+  void register_int_option(const std::string& name, int defaultValue, int rangeLo, int rangeUp, const char* descr);
 
   /// register a string option with a predetermined range
-  void registerStrOption(const std::string& name,
-                         const std::string& defaultValue,
-                         const std::vector<std::string>& range,
-                         const char* description);
+  void register_str_option(const std::string& name,
+                           const std::string& defaultValue,
+                           const std::vector<std::string>& range,
+                           const char* description);
   /// register a string option that can take any value 
   void register_str_option(const std::string& name, const std::string& defaultValue, const char* description);
   
-  virtual void registerOptions() = 0;
+  virtual void register_options() = 0;
 
-  void loadFromFile(const char* szFilename);
+  void load_from_file(const char* szFilename);
 
-  virtual void ensureConsistence() = 0;
+  virtual void ensure_consistence() = 0;
 
   //internal setter methods used to ensure consistence -- do not alter 'specifiedInFile' and 'specifiedAtRuntime'
   virtual bool set_val(const char* name, const double& value);
@@ -190,8 +189,8 @@ public:
   hiopOptionsNLP(const char* opt_filename=nullptr);
   virtual ~hiopOptionsNLP();
 protected:
-  virtual void registerOptions();
-  virtual void ensureConsistence();
+  virtual void register_options();
+  virtual void ensure_consistence();
 };
 
   
@@ -205,8 +204,8 @@ public:
   hiopOptionsPriDec(const char* opt_filename=nullptr);
   virtual ~hiopOptionsPriDec();
 protected:
-  virtual void registerOptions();
-  virtual void ensureConsistence();
+  virtual void register_options();
+  virtual void ensure_consistence();
 };
 
 } // ~namespace
