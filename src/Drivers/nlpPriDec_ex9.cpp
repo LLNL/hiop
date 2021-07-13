@@ -46,8 +46,11 @@ PriDecMasterProblemEx9::solve_master(hiopVector& x,
     assert(basecase_->quad_is_defined());
   }
   
-  hiopNlpSparse nlp(*basecase_);
-    
+  hiopNlpSparse nlp(*basecase_, master_options_file);
+
+  //
+  // any of the options below can be overwritten by specifying them in the 'hiop_pridec_master.options' file
+  //
   //nlp.options->SetStringValue("compute_mode", "hybrid");
   //nlp.options->SetStringValue("dualsUpdateType", "linear");
 

@@ -215,8 +215,11 @@ solve_master(hiopVector& x,
   }
   // check to see if the resource value and gradient are correct
   //printf("recourse value: is %18.12e)\n", rval_);
-  hiopNlpDenseConstraints nlp(*my_nlp);
+  hiopNlpDenseConstraints nlp(*my_nlp, master_options_file);
 
+  //
+  // any of the options below can be overwritten by specifying them in the 'hiop_pridec_master.options' file
+  //
   nlp.options->SetStringValue("duals_update_type", "linear"); 
   nlp.options->SetStringValue("duals_init", "zero"); // "lsq" or "zero"
   nlp.options->SetStringValue("compute_mode", "cpu");
