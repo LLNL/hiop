@@ -9,6 +9,7 @@ set(hiopLinAlg_INTERFACE_HEADERS
   hiopLinSolverIndefSparseMA57.hpp
   hiopLinSolverMA86Z.hpp
   hiopLinSolverSparseSTRUMPACK.hpp
+  hiopLinSolverSparsePARDISO.hpp
   hiopLinSolverUMFPACKZ.hpp
   hiopMatrix.hpp
   hiopMatrixComplexDense.hpp
@@ -62,6 +63,10 @@ set(hiopLinAlg_STRUMPACK_SRC
   hiopLinSolverSparseSTRUMPACK.cpp
   )
 
+set(hiopLinAlg_PARDISO_SRC
+  hiopLinSolverSparsePARDISO.cpp
+  )
+
 set(hiopLinAlg_KRON_REDUCTION_SRC
   hiopLinSolverUMFPACKZ.cpp
   )
@@ -74,6 +79,9 @@ if(HIOP_SPARSE)
     if(HIOP_USE_STRUMPACK)
       list(APPEND hiopLinAlg_SRC ${hiopLinAlg_STRUMPACK_SRC})
     endif(HIOP_USE_STRUMPACK)
+    if(HIOP_USE_PARDISO)
+      list(APPEND hiopLinAlg_SRC ${hiopLinAlg_PARDISO_SRC})
+    endif(HIOP_USE_PARDISO)
 endif()
 
 # Add RAJA/Umpire sources when enabled
