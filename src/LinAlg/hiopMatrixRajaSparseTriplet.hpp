@@ -202,13 +202,13 @@ public:
                                  const index_type& dest_row_st,
                                  const index_type& dest_col_st,
                                  const size_type& dest_nnz_st,
-                                 const bool offdiag_only = false) {assert(0 && "FIXME_NY");}
+                                 const bool offdiag_only = false) {assert(0 && "not implemented");}
     
   virtual void copySubmatrixFromTrans(const hiopMatrix& src_gen,
                                       const index_type& dest_row_st,
                                       const index_type& dest_col_st,
                                       const size_type& dest_nnz_st,
-                                      const bool offdiag_only = false) {assert(0 && "FIXME_NY");}
+                                      const bool offdiag_only = false) {assert(0 && "not implemented");}
 
   /**
   * @brief Copy the selected cols/rows of a diagonal matrix (a constant 'scalar' times identity),
@@ -220,14 +220,14 @@ public:
                                                        const index_type& dest_col_st,
                                                        const size_type& dest_nnz_st,
                                                        const int &nnz_to_copy,
-                                                       const hiopVector& ix) {assert(0 && "FIXME_NY");}
+                                                       const hiopVector& ix) {assert(0 && "not implemented");}
 
   virtual void setSubmatrixToConstantDiag_w_rowpattern(const double& scalar,
                                                        const index_type& dest_row_st,
                                                        const index_type& dest_col_st,
                                                        const size_type& dest_nnz_st,
                                                        const int &nnz_to_copy,
-                                                       const hiopVector& ix) {assert(0 && "FIXME_NY");}
+                                                       const hiopVector& ix) {assert(0 && "not implemented");}
 
   /**
   * @brief Copy a diagonal matrix to destination.
@@ -238,7 +238,7 @@ public:
                                         const index_type& dest_row_st,
                                         const index_type& dest_col_st,
                                         const size_type& dest_nnz_st,
-                                        const int &nnz_to_copy){assert(0 && "FIXME_NY");}
+                                        const int &nnz_to_copy){assert(0 && "not implemented");}
 
   /** 
    * @brief same as @copyDiagMatrixToSubblock, but copies only diagonal entries specified by 'pattern' 
@@ -248,7 +248,7 @@ public:
                                                   const index_type& dest_col_st,
                                                   const size_type& dest_nnz_st,
                                                   const int &nnz_to_copy,
-                                                  const hiopVector& pattern) {assert(0 && "FIXME_NY");}
+                                                  const hiopVector& pattern) {assert(0 && "not implemented");}
   
   virtual double max_abs_value();
 
@@ -275,7 +275,7 @@ public:
                             int **csr_jCol,
                             double **csr_kVal,
                             int **index_covert_CSR2Triplet,
-                            int **index_covert_extra_Diag2CSR) {assert(0 && "FIXME_NY");}
+                            int **index_covert_extra_Diag2CSR) {assert(0 && "not implemented");}
 
   virtual size_type numberOfOffDiagNonzeros() const {assert("not implemented"&&0);return 0;};
 
