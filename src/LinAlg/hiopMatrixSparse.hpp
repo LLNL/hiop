@@ -81,9 +81,14 @@ public:
   virtual void setToConstant(double c) = 0;
   virtual void copyFrom(const hiopMatrixSparse& dm) = 0;
   
-  /// @brief copy the nonzeros into 3 arrays, in their triplet form.
+  /* @brief copy the nonzeros into 3 arrays, in their triplet form. 
+   * This function is not used right now. Unit test is missing.
+   */
   virtual void copy_to(int* irow, int* jcol, double* val) = 0;
-  /// @brief copy the matrix into a dense matrix
+
+  /* @brief copy the matrix into a dense matrix
+   * This function is not used right now. Unit test is missing.
+   */
   virtual void copy_to(hiopMatrixDense& W) = 0;
 
   virtual void copyRowsFrom(const hiopMatrix& src, const index_type* rows_idxs, size_type n_rows) = 0;
@@ -115,6 +120,23 @@ public:
   {
     assert(false && "not needed / implemented");
   }
+
+  /* add to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements of
+  * 'd_' (source) starting at index 'start_on_src_vec'. The number of elements added is 'num_elems', scaled by 'scal'
+  */
+  virtual void copySubDiagonalFrom(const index_type& start_on_dest_diag,
+                                   const size_type& num_elems,
+                                   const hiopVector& d_,
+                                   const index_type& start_on_nnz_idx,
+                                   double scal=1.0) = 0;
+
+  /* add constant 'c' to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements.
+  * The number of elements added is 'num_elems'
+  */
+  virtual void setSubDiagonalTo(const index_type& start_on_dest_diag,
+                                const size_type& num_elems,
+                                const double& c,
+                                const index_type& start_on_nnz_idx) = 0;
 
   virtual void addMatrix(double alpha, const hiopMatrix& X) = 0;
 
