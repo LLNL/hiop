@@ -209,6 +209,8 @@ int main(int argc, char** argv)
     fail += test.matrixStartingAtAddSubDiagonalToStartingAt(vec_m, *m_sym);
 
     fail += test.matrix_set_Hess_FR(mxm_dense, *m2_sym, *m_sym, vec_m);
+    
+// FIXME_NY    fail += test.matrix_number_of_offdiag_nonzeros(*m_sym);
 
     // Destroy testing objects
     delete m_sym;

@@ -171,10 +171,21 @@ int main(int argc, char** argv)
     // replace the nonzero index from "nnz-entries_per_row"
     fail += test.copy_rows_block_from(*mxn_sparse, *m2xn_sparse,0, 1, M_global-1, mxn_sparse->numberOfNonzeros()-entries_per_row);
 
+    // create a bigger matrix, to test copy_submatrix_from and opy_submatrix_from_trans
+    hiop::hiopMatrixDenseRowMajor m4xn4_dense(2*M_global+N_global, 2*M_global+N_global);
+    local_ordinal_type nnz4 = entries_per_row*(2*M_global+N_global);
+    assert(nnz4 < (2*M_global+N_global)*(2*M_global+N_global));
+    hiop::hiopMatrixSparse* m4xn4_sparse = hiop::LinearAlgebraFactory::createMatrixSparse(2*M_global+N_global, 2*M_global+N_global, nnz4);
+    test.initializeMatrix(m4xn4_sparse, entries_per_row);
+
+    fail += test.matrix_copy_submatrix_from(m4xn4_dense, *m4xn4_sparse, *mxn_sparse, M_global, 2*M_global, nnz4-nnz);
+    fail += test.matrix_copy_submatrix_from_trans(m4xn4_dense, *m4xn4_sparse, *mxn_sparse, M_global, 2*(M_global), nnz4-nnz);
+
     // Remove testing objects
     delete mxn_sparse;
     delete m2xn_sparse;
     delete m3xn3_sparse;
+    delete m4xn4_sparse;
   
   }
 
@@ -268,11 +279,22 @@ int main(int argc, char** argv)
     // replace the nonzero index from "nnz-entries_per_row"
     fail += test.copy_rows_block_from(*mxn_sparse, *m2xn_sparse,0, 1, M_global-1, mxn_sparse->numberOfNonzeros()-entries_per_row);
 
+    // create a bigger matrix, to test copy_submatrix_from and opy_submatrix_from_trans
+    hiop::hiopMatrixRajaDense m4xn4_dense(2*M_global+N_global, 2*M_global+N_global,mem_space);
+    local_ordinal_type nnz4 = entries_per_row*(2*M_global+N_global);
+    assert(nnz4 < (2*M_global+N_global)*(2*M_global+N_global));
+    hiop::hiopMatrixSparse* m4xn4_sparse = hiop::LinearAlgebraFactory::createMatrixSparse(2*M_global+N_global, 2*M_global+N_global, nnz4);
+    test.initializeMatrix(m4xn4_sparse, entries_per_row);
+
+    fail += test.matrix_copy_submatrix_from(m4xn4_dense, *m4xn4_sparse, *mxn_sparse, M_global, 2*M_global, nnz4-nnz);
+    fail += test.matrix_copy_submatrix_from_trans(m4xn4_dense, *m4xn4_sparse, *mxn_sparse, M_global, 2*(M_global), nnz4-nnz);
+
     // Remove testing objects
     delete mxn_sparse;
     delete mxn_sparse_2;
     delete m2xn_sparse;
     delete m3xn3_sparse;
+    delete m4xn4_sparse;
 
     // Set memory space back to default value
     options.SetStringValue("mem_space", "default");

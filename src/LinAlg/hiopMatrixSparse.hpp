@@ -91,6 +91,9 @@ public:
    */
   virtual void copy_to(hiopMatrixDense& W) = 0;
 
+  /* @brief copy `n_rows` rows from `src` into `this`, i.e., the ith row of this is copied from the rows_idx[i]_th row in `src`
+  *  @pre: this function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
+  */
   virtual void copyRowsFrom(const hiopMatrix& src, const index_type* rows_idxs, size_type n_rows) = 0;
 
   virtual void timesVec(double beta, hiopVector& y, double alpha, const hiopVector& x) const = 0;
@@ -123,6 +126,7 @@ public:
 
   /* add to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements of
   * 'd_' (source) starting at index 'start_on_src_vec'. The number of elements added is 'num_elems', scaled by 'scal'
+  * @pre: this function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
   */
   virtual void copySubDiagonalFrom(const index_type& start_on_dest_diag,
                                    const size_type& num_elems,
@@ -130,8 +134,11 @@ public:
                                    const index_type& start_on_nnz_idx,
                                    double scal=1.0) = 0;
 
-  /* add constant 'c' to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements.
+  /* 
+  * @brief: add constant 'c' to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements.
   * The number of elements added is 'num_elems'
+  *
+  * @pre: this function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
   */
   virtual void setSubDiagonalTo(const index_type& start_on_dest_diag,
                                 const size_type& num_elems,
@@ -180,11 +187,45 @@ public:
    * @pre 'dest_nnz_st' + the number of non-zeros in the copied the rows must be less or equal to this->numOfNumbers()
    * @pre User must know the nonzero pattern of src and dest matrices. Assume non-zero patterns of these two wont change, and 'src_gen' is a submatrix of 'this'
    * @pre Otherwise, this function may replace the non-zero values and nonzero patterns for the undesired elements.
+   * @pre: this function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
    */
   virtual void copyRowsBlockFrom(const hiopMatrix& src_gen,
                                          const index_type& rows_src_idx_st, const size_type& n_rows,
                                          const index_type& rows_dest_idx_st, const size_type& dest_nnz_st
                                          ) = 0;
+
+  /**
+  * @brief Copy matrix 'src_gen', into 'this' as a submatrix from corner 'dest_row_st' and 'dest_col_st'
+  * The non-zero elements start from 'dest_nnz_st' will be replaced by the new elements. 
+  * When `offdiag_only` is set to true, only the off-diagonal part of `src_gen` is copied.
+  *
+  * @pre 'this' must have enough rows and cols after row 'dest_row_st' and col 'dest_col_st'
+  * @pre 'dest_nnz_st' + the number of non-zeros in the copied matrix must be less or equal to 
+  * this->numOfNumbers()
+  * @pre User must know the nonzero pattern of src and dest matrices. The method assumes 
+  * that non-zero patterns does not change between calls and that 'src_gen' is a valid
+  *  submatrix of 'this'
+  * @pre: this function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
+  */
+  virtual void copySubmatrixFrom(const hiopMatrix& src_gen,
+                                 const index_type& dest_row_st,
+                                 const index_type& dest_col_st,
+                                 const size_type& dest_nnz_st,
+                                 const bool offdiag_only = false) = 0;
+
+  /**
+  * @brief Copy the transpose of matrix 'src_gen', into 'this' as a submatrix from corner 
+  * 'dest_row_st' and 'dest_col_st'.
+  * The non-zero elements start from 'dest_nnz_st' will be replaced by the new elements.
+  * When `offdiag_only` is set to true, only the off-diagonal part of `src_gen` is copied.
+  * 
+  * @pre: this function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
+  */
+  virtual void copySubmatrixFromTrans(const hiopMatrix& src_gen,
+                                      const index_type& dest_row_st,
+                                      const index_type& dest_col_st,
+                                      const size_type& dest_nnz_st,
+                                      const bool offdiag_only = false) = 0;
 
   /**
    * @brief Copy a diagonal matrix to destination.
