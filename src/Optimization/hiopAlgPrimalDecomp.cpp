@@ -612,6 +612,10 @@ bool hiopAlgPrimalDecomposition::stopping_criteria(const int it, const double co
   //stopping criteria based on the change in objective function
   if(it == max_iter-1) {
     printf("reached maximum iterations, optimization stops.\n");
+    //TODO: Frank
+    // the above line should look like
+    //log_->printf(hovSummary, "reached maximum iterations, optimization stops.\n");
+
     return true;
   }
   if(accp_count == 10) {
@@ -803,6 +807,9 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
           int ierr = MPI_Send(&cur_idx, 1, MPI_INT, r, 1,comm_world_);
           assert(MPI_SUCCESS == ierr);  
           //printf("rank %d to get contingency index  %d\n", r,cur_idx);
+          //TODO: Frank
+          // you can enable the above printf above a certain "verbosity" level
+          // log_->printf(hovIteration, "rank %d to get contingency index  %d\n", r, cur_idx);
           idx += 1;
         }
         int mpi_test_flag; // for testing if the send/recv is completed
