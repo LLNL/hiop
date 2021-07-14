@@ -81,9 +81,14 @@ public:
   virtual void setToConstant(double c) = 0;
   virtual void copyFrom(const hiopMatrixSparse& dm) = 0;
   
-  /// @brief copy the nonzeros into 3 arrays, in their triplet form.
+  /* @brief copy the nonzeros into 3 arrays, in their triplet form. 
+   * This function is not used right now. Unit test is missing.
+   */
   virtual void copy_to(int* irow, int* jcol, double* val) = 0;
-  /// @brief copy the matrix into a dense matrix
+
+  /* @brief copy the matrix into a dense matrix
+   * This function is not used right now. Unit test is missing.
+   */
   virtual void copy_to(hiopMatrixDense& W) = 0;
 
   /* @brief copy `n_rows` rows from `src` into `this`, i.e., the ith row of this is copied from the rows_idx[i]_th row in `src`

@@ -97,6 +97,9 @@ public:
   virtual inline index_type* local_data() { return buf_; }
 
   virtual inline const index_type* local_data_const() const { return buf_; }
+  
+  virtual void copy_from(const index_type* v_local);
+
 };
 
 } // namespace hiop
