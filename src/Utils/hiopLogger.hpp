@@ -50,6 +50,7 @@
 #define HIOP_LOGGER
 
 #include "hiop_defs.hpp"
+#include "hiopMPI.hpp"
 
 #include <cstdio>
 #include <cstdarg>

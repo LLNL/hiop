@@ -670,7 +670,7 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
   hiopSolveStatus hiopAlgPrimalDecomposition::run()
   {
     if(options_->GetString("print_options") == "yes") {
-      //log_->write(NULL, *nlp->options, hovSummary);
+      log_->write(nullptr, *options_, hovSummary);
     }
     if(comm_size_==1) {
       return run_single();//call the serial solver
@@ -1174,7 +1174,7 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
 hiopSolveStatus hiopAlgPrimalDecomposition::run()
 {
   if(options_->GetString("print_options") == "yes") {
-    //log_->write(NULL, *nlp->options, hovSummary);
+    log_->write(nullptr, *options_, hovSummary);
   }
   return run_single();//call the serial solver
 }
