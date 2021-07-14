@@ -894,7 +894,9 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
   ////////////////////////////////////////////////////////////////////////////////////
 
   nlp->log->printf(hovSummary, "===============\nHiop SOLVER\n===============\n");
-  nlp->log->write(NULL, *nlp->options, hovSummary);
+  if(nlp->options->GetString("print_options") == "yes") {
+    nlp->log->write(nullptr, *nlp->options, hovSummary);
+  }
 
 #ifdef HIOP_USE_MPI
   nlp->log->printf(hovSummary, "Using %d MPI ranks.\n", nlp->get_num_ranks());
@@ -1336,7 +1338,9 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
   ////////////////////////////////////////////////////////////////////////////////////
 
   nlp->log->printf(hovSummary, "===============\nHiop SOLVER\n===============\n");
-  nlp->log->write(NULL, *nlp->options, hovSummary);
+  if(nlp->options->GetString("print_options") == "yes") {
+    nlp->log->write(nullptr, *nlp->options, hovSummary);
+  }
 
 #ifdef HIOP_USE_MPI
   nlp->log->printf(hovSummary, "Using %d MPI ranks.\n", nlp->get_num_ranks());

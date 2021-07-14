@@ -1,9 +1,66 @@
-//include header file
+// Copyright (c) 2017, Lawrence Livermore National Security, LLC.
+// Produced at the Lawrence Livermore National Laboratory (LLNL).
+// LLNL-CODE-742473. All rights reserved.
+//
+// This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp
+// is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause).
+// Please also read "Additional BSD Notice" below.
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted provided that the following conditions are met:
+// i. Redistributions of source code must retain the above copyright notice, this list
+// of conditions and the disclaimer below.
+// ii. Redistributions in binary form must reproduce the above copyright notice,
+// this list of conditions and the disclaimer (as noted below) in the documentation and/or
+// other materials provided with the distribution.
+// iii. Neither the name of the LLNS/LLNL nor the names of its contributors may be used to
+// endorse or promote products derived from this software without specific prior written
+// permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
+// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+// OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
+// SHALL LAWRENCE LIVERMORE NATIONAL SECURITY, LLC, THE U.S. DEPARTMENT OF ENERGY OR
+// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+// OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+// AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
+// EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
+// Additional BSD Notice
+// 1. This notice is required to be provided under our contract with the U.S. Department
+// of Energy (DOE). This work was produced at Lawrence Livermore National Laboratory under
+// Contract No. DE-AC52-07NA27344 with the DOE.
+// 2. Neither the United States Government nor Lawrence Livermore National Security, LLC
+// nor any of their employees, makes any warranty, express or implied, or assumes any
+// liability or responsibility for the accuracy, completeness, or usefulness of any
+// information, apparatus, product, or process disclosed, or represents that its use would
+// not infringe privately-owned rights.
+// 3. Also, reference herein to any specific commercial products, process, or services by
+// trade name, trademark, manufacturer or otherwise does not necessarily constitute or
+// imply its endorsement, recommendation, or favoring by the United States Government or
+// Lawrence Livermore National Security, LLC. The views and opinions of authors expressed
+// herein do not necessarily state or reflect those of the United States Government or
+// Lawrence Livermore National Security, LLC, and shall not be used for advertising or
+// product endorsement purposes.
+
+/**
+ * @file hiopAlgPrimalDecomp.cpp
+ *
+ * @author Jingyi "Frank" Wang <wang125@llnl.gov>, LLNL
+ *
+ */
+
+
 #include "hiopAlgPrimalDecomp.hpp"
 #include "hiopInterfacePrimalDecomp.hpp"
+#include "hiopLogger.hpp"
 
-#include <cstring>
 #include <cassert>
+#include <cstring>
+
+using namespace std;
 
 namespace hiop
 {
@@ -352,7 +409,6 @@ double hiopAlgPrimalDecomposition::HessianApprox::check_convergence_grad(const h
   double temp3 = 0.;
   double temp4 = 0.;
   
- 
   hiopVector* temp;
   temp = LinearAlgebraFactory::createVector(skm1->get_local_size()); 
   temp->copyFrom(*skm1);  
@@ -450,12 +506,15 @@ hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
   nc_ = n_;
   xc_idx_ = new int[nc_];
   
-  for(int i=0;i<nc_;i++) xc_idx_[i] = i;
+  for(int i=0; i<nc_; i++) {
+    xc_idx_[i] = i;
+  }
   //determine rank and rank type
   //only two rank types for now, master and evaluator/worker
 
   #ifdef HIOP_USE_MPI
     int ierr = MPI_Comm_rank(comm_world, &my_rank_); assert(ierr == MPI_SUCCESS);
+    // TODO: Frank: shouldn't we use comm_world on the next call
     int ret = MPI_Comm_size(MPI_COMM_WORLD, &comm_size_); assert(ret==MPI_SUCCESS);
     if(my_rank_==0) { 
       my_rank_type_ = 0;
@@ -466,6 +525,12 @@ hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
   #endif
   //x_ = new double[n_];
   x_ = LinearAlgebraFactory::createVector(n_);
+  
+  //use "hiop_pridec.options" - if the file does not exist, built-in default options will be used
+  options_ = new hiopOptionsPriDec(hiopOptions::default_filename_pridec_solver);
+
+  //logger will be created with stdout, outputing on rank 0 of the 'comm_world' MPI communicator
+  log_ = new hiopLogger(options_, stdout, 0, comm_world);
 }
 
 hiopAlgPrimalDecomposition::
@@ -489,6 +554,7 @@ hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
 
 #ifdef HIOP_USE_MPI
   int ierr = MPI_Comm_rank(comm_world, &my_rank_); assert(ierr == MPI_SUCCESS);
+  // TODO: Frank: shouldn't we use comm_world on the next call
   int ret = MPI_Comm_size(MPI_COMM_WORLD, &comm_size_); assert(ret==MPI_SUCCESS);
   if(my_rank_==0) { 
     my_rank_type_ = 0;
@@ -498,14 +564,19 @@ hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
   request_ = new MPI_Request[4];   
 #endif
   x_ = LinearAlgebraFactory::createVector(n_);
-}
 
+  //use "hiop_pridec.options" - if the file does not exist, built-in default options will be used
+  options_ = new hiopOptionsPriDec(hiopOptions::default_filename_pridec_solver);
+
+  //logger will be created with stdout, outputing on rank 0 of the 'comm_world' MPI communicator
+  log_ = new hiopLogger(options_, stdout, 0, comm_world);
+}
 
 hiopAlgPrimalDecomposition::~hiopAlgPrimalDecomposition()
 {
   delete x_;
+  delete options_;
 }
-
 
 double hiopAlgPrimalDecomposition::getObjective() const
 {
@@ -539,10 +610,19 @@ bool hiopAlgPrimalDecomposition::stopping_criteria(const int it, const double co
   //gradient based stopping criteria
   if(convg<tol_){printf("reaching error tolerance, successfully found solution\n"); return true;}
   //stopping criteria based on the change in objective function
-  if(it == max_iter-1){printf("reached maximum iterations, optimization stops.\n"); return true;}
+  if(it == max_iter-1) {
+    printf("reached maximum iterations, optimization stops.\n");
+    //TODO: Frank
+    // the above line should look like
+    //log_->printf(hovSummary, "reached maximum iterations, optimization stops.\n");
 
-  if(accp_count == 10){printf("reached acceptable tolerance of %18.12e for 10 iterations, " 
-		              "optimization stops.\n", accp_tol_); return true;}
+    return true;
+  }
+  if(accp_count == 10) {
+    printf("reached acceptable tolerance of %18.12e for 10 iterations, optimization stops.\n",
+           accp_tol_);
+    return true;
+  }
   return false;
 }
   
@@ -558,7 +638,6 @@ step_size_inf(const int nc, const hiopVector& x, const hiopVector& x0)
 
   return step;
 }
-
 
 void hiopAlgPrimalDecomposition::set_max_iteration(const int max_it)  
 {
@@ -594,7 +673,9 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
 #ifdef HIOP_USE_MPI
   hiopSolveStatus hiopAlgPrimalDecomposition::run()
   {
-
+    if(options_->GetString("print_options") == "yes") {
+      log_->write(nullptr, *options_, hovSummary);
+    }
     if(comm_size_==1) {
       return run_single();//call the serial solver
     }
@@ -652,12 +733,16 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
     int end_signal = 0;
     double t1 = 0;
     double t2 = 0; 
-    hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator = new hiopInterfacePriDecProblem::
-                                                             RecourseApproxEvaluator(nc_,S_,xc_idx_);
+    hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator =
+      new hiopInterfacePriDecProblem::RecourseApproxEvaluator(nc_, S_, xc_idx_);
+    
     double* x_vec = x_->local_data();
+
+    std::string options_file_master_prob;
 
     // Outer loop starts
     for(int it=0; it<max_iter;it++) {
+      
       if(my_rank_==0) {
         t1 = MPI_Wtime(); 
       }
@@ -666,7 +751,9 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
         // printf("my rank for solver  %d\n", my_rank_);
         // solve master problem base case on master and iteration 0
 
-        solver_status_ = master_prob_->solve_master(*x_,false);
+        options_file_master_prob = options_->GetString("options_file_master_prob");
+        
+        solver_status_ = master_prob_->solve_master(*x_, false, 0, 0, 0, options_file_master_prob.c_str());
         // to do, what if solve fails?
         if(solver_status_){     
 
@@ -685,9 +772,9 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
       int ierr = MPI_Bcast(x_vec, n_, MPI_DOUBLE, rank_master, comm_world_);
       assert(ierr == MPI_SUCCESS);
 
-      // assert("for debugging" && false); //for debugging purpose
+      //
       // set up recourse problem send/recv interface
-      
+      //
       std::vector<ReqRecourseApprox* > rec_prob;
       ReqRecourseApprox* p=NULL;
       for(int r=0; r<comm_size_;r++) {
@@ -720,6 +807,9 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
           int ierr = MPI_Send(&cur_idx, 1, MPI_INT, r, 1,comm_world_);
           assert(MPI_SUCCESS == ierr);  
           //printf("rank %d to get contingency index  %d\n", r,cur_idx);
+          //TODO: Frank
+          // you can enable the above printf above a certain "verbosity" level
+          // log_->printf(hovIteration, "rank %d to get contingency index  %d\n", r, cur_idx);
           idx += 1;
         }
         int mpi_test_flag; // for testing if the send/recv is completed
@@ -1034,9 +1124,12 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
         if(!bret) {
           //todo
         }
-
+        
+        options_file_master_prob = options_->GetString("options_file_master_prob");
+        
         //printf("solving full problem starts, iteration %d \n",it);
-        solver_status_ = master_prob_->solve_master(*x_,true);
+        solver_status_ = master_prob_->solve_master(*x_, true, 0, 0, 0, options_file_master_prob.c_str());
+
         if(ver_ >=outlevel2) {
           printf("solved full problem with objective %18.12e\n", master_prob_->get_objective());
           fflush(stdout);
@@ -1085,10 +1178,13 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
     }
   }
 #else
-  hiopSolveStatus hiopAlgPrimalDecomposition::run()
-  {
-    return run_single();//call the serial solver
+hiopSolveStatus hiopAlgPrimalDecomposition::run()
+{
+  if(options_->GetString("print_options") == "yes") {
+    log_->write(nullptr, *options_, hovSummary);
   }
+  return run_single();//call the serial solver
+}
 #endif
 
 
@@ -1124,10 +1220,8 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
   //hess_appx_2 has to be declared by all ranks while only rank 0 uses it
   HessianApprox*  hess_appx_2 = new HessianApprox(nc_,alpha_ratio_);
 
-
-
-  hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator = new hiopInterfacePriDecProblem::
-                                                           RecourseApproxEvaluator(nc_,S_,xc_idx_);
+  hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator =
+    new hiopInterfacePriDecProblem::RecourseApproxEvaluator(nc_, S_, xc_idx_);
 
   double base_val = 0.; // base case objective value 
   double recourse_val = 0.;  // recourse objective value
@@ -1136,16 +1230,18 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
   double convg_f = 1e20;
   double convg_g = 1e20;
   double* x_vec = x_->local_data(); 
-  
+
+  std::string options_file_master_prob;
 
   // Outer loop starts
   for(int it=0; it<max_iter;it++) {
     //printf("iteration  %d\n", it);
     // solve the base case
 
-    if(it==0) { 
-      //solve master problem base case(solver rank supposed to do it)
-      solver_status_ = master_prob_->solve_master(*x_,false);
+    if(it==0) {
+      options_file_master_prob = options_->GetString("options_file_master_prob");
+      //solve master problem base case(solver rank supposed to do it)        
+      solver_status_ = master_prob_->solve_master(*x_, false, 0, 0, 0, options_file_master_prob.c_str());
       // to do, what if solve fails?
       if(solver_status_) {     
       }
@@ -1267,8 +1363,9 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
     if(!bret) {
       //todo
     }
+    options_file_master_prob = options_->GetString("options_file_master_prob");
     //printf("solving full problem starts, iteration %d \n",it);
-    solver_status_ = master_prob_->solve_master(*x_,true);
+    solver_status_ = master_prob_->solve_master(*x_, true, 0, 0, 0, options_file_master_prob.c_str());
     
     dinf = step_size_inf(nc_, *x_, *x0); 
 
