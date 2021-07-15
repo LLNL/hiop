@@ -80,8 +80,6 @@ public:
 
   virtual void copy_to_dev() = 0;
   virtual void copy_from_dev() = 0;
-  
-  virtual void copy_from(const index_type* v_local) = 0;
 };
 
 } // namespace hiop

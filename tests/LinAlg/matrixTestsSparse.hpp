@@ -64,7 +64,6 @@
 #include <hiopMatrixSparseTriplet.hpp>
 #include <hiopMatrixRajaSparseTriplet.hpp>
 #include <hiopVectorPar.hpp>
-#include <hiopVectorInt.hpp>
 #include "testBase.hpp"
 
 namespace hiop { namespace tests {
@@ -301,113 +300,6 @@ public:
     return fail;
   }
 
-  /// @brief test for mathod that set a sub-diagonal block from a vector
-  bool matrix_copy_subdiagonal_from(hiop::hiopMatrixDense& W,
-                                    hiop::hiopMatrixSparse& A,
-                                    hiop::hiopVector& x,
-                                    const int rank=0)
-  {    
-    assert(A.m() == W.m()); // W has same dimension as A
-    assert(A.n() == W.n()); // W has same dimension as A
-  
-    auto nnz  = A.numberOfNonzeros();
-    auto dim_x = x.get_size();
-    auto num_row_A = A.m();
-    assert(num_row_A >= dim_x);
-    
-    const real_type A_val = two;
-    const real_type x_val = three;
-    int fail = 0;
-
-    x.setToConstant(x_val);
-    A.setToConstant(A_val);
-    
-    // replace the last `dim_x` values to a diagonal sub matrix
-    A.copySubDiagonalFrom(num_row_A-dim_x, dim_x, x, nnz-dim_x);
-
-    // copy to a dense matrix
-    A.copy_to(W);
-
-    const auto* iRow = getRowIndices(&A);
-    const auto* jCol = getColumnIndices(&A);
-      
-    fail += verifyAnswer(&W,
-      [=] (local_ordinal_type i, local_ordinal_type j) -> real_type
-      {
-        double ans = zero;
-        const bool indexExists = find_unsorted_pair(i, j, iRow, jCol, nnz-dim_x);
-        if(indexExists) {
-          if(i==j && i>=num_row_A-dim_x) {
-            // this ele is also defined in vector x as well
-            ans = x_val + A_val;
-          } else {
-            // this ele doesn't change
-            ans = A_val;
-          }
-        } else if(i==j && i>=num_row_A-dim_x) {
-          // this ele comes vector x
-          ans = x_val; 
-        }
-        return ans;
-      }
-    );
-
-    printMessage(fail, __func__, rank);
-    return fail;
-  }
-  
-    /// @brief test for mathod that set a sub-diagonal block from a vector
-  bool matrix_set_subdiagonal_to(hiop::hiopMatrixDense& W,
-                                 hiop::hiopMatrixSparse& A,
-                                 const int rank=0)
-  {    
-    assert(A.m() == W.m()); // W has same dimension as A
-    assert(A.n() == W.n()); // W has same dimension as A
-  
-    auto nnz  = A.numberOfNonzeros();
-    auto num_row_A = A.m();
-    int num_diag_ele = num_row_A/2;
-    
-    const real_type A_val = two;
-    const real_type x_val = three;
-    int fail = 0;
-
-    A.setToConstant(A_val);
-    
-    // replace the last `dim_x` values to a diagonal sub matrix
-    A.setSubDiagonalTo(num_row_A-num_diag_ele, num_diag_ele, x_val, nnz-num_diag_ele);
-
-    // copy to a dense matrix
-    A.copy_to(W);
-
-    const auto* iRow = getRowIndices(&A);
-    const auto* jCol = getColumnIndices(&A);
-      
-    fail += verifyAnswer(&W,
-      [=] (local_ordinal_type i, local_ordinal_type j) -> real_type
-      {
-        double ans = zero;
-        const bool indexExists = find_unsorted_pair(i, j, iRow, jCol, nnz-num_diag_ele);
-        if(indexExists) {
-          if(i==j && i>=num_row_A-num_diag_ele) {
-            // this ele is also defined in vector x as well
-            ans = x_val + A_val;
-          } else {
-            // this ele doesn't change
-            ans = A_val;
-          }
-        } else if(i==j && i>=num_row_A-num_diag_ele) {
-          // this ele comes vector x
-          ans = x_val; 
-        }
-        return ans;
-      }
-    );
-
-    printMessage(fail, __func__, rank);
-    return fail;
-  }
-  
   /**
    * @brief Test for method [W] += A * D^(-1) * A^T
    * 
@@ -943,42 +835,7 @@ public:
     return fail;
   }
 
-  /// @brief Copies rows from another sparse matrix into this one, according to the patten `select`. ith row of A = select[i]_th row of B 
-  int matrix_copy_rows_from( hiop::hiopMatrixSparse& A, hiop::hiopMatrixSparse& B, hiop::hiopVectorInt& select)
-  {
-    const local_ordinal_type* A_iRow = getRowIndices(&A);
-    const local_ordinal_type* A_jCol = getColumnIndices(&A);
-    const local_ordinal_type A_nnz = A.numberOfNonzeros();
 
-    const local_ordinal_type* B_iRow = getRowIndices(&B);
-    const local_ordinal_type* B_jCol = getColumnIndices(&B);
-    const local_ordinal_type B_nnz = B.numberOfNonzeros();
-
-    int n_A_rows = A.m();
-    int n_B_rows = B.m();    
-    assert(A.n() == B.n());
-    assert(n_A_rows <= n_B_rows);
-
-    const real_type A_val = one;
-    const real_type B_val = two;
-
-    A.setToConstant(A_val);
-    B.setToConstant(B_val);
-
-    for(int i=0; i<select.size(); i++) {
-      setLocalElement(&select, i, 2*i);
-    }
-
-    int fail{0};
-
-    A.copyRowsFrom(B, select.local_data_const(), n_A_rows);
-
-    fail += verifyAnswer(&A, two),    
-    
-    printMessage(fail, __func__);
-    return fail;
-
-  }
 
   /// @todo add implementation of `startingAtAddSubDiagonalToStartingAt`
   /// for abstract sparse matrix interface and all sparse matrix classes, 
@@ -1026,12 +883,13 @@ public:
   * @pre User must know the nonzero pattern of A and B. Assume non-zero patterns of A and B wont change, and A is a submatrix of B
   * @pre Otherwise, this function may replace the non-zero values and nonzero patterns for the undesired elements.
   */
-  int copy_rows_block_from(hiop::hiopMatrixSparse& A,
-                           hiop::hiopMatrixSparse& B,
-                           local_ordinal_type A_rows_st,
-                           local_ordinal_type n_rows,
-                           local_ordinal_type B_rows_st,
-                           local_ordinal_type B_nnz_st)
+  int
+  copyRowsBlockFrom(
+    hiop::hiopMatrixSparse& A,
+    hiop::hiopMatrixSparse& B,
+    local_ordinal_type A_rows_st, local_ordinal_type n_rows,
+    local_ordinal_type B_rows_st, local_ordinal_type B_nnz_st
+    )
   {
     const local_ordinal_type* A_iRow = getRowIndices(&A);
     const local_ordinal_type* A_jCol = getColumnIndices(&A);
@@ -1126,7 +984,7 @@ public:
   {
     assert(A.m() == W.m()); // W has same dimension as A
     assert(A.n() == W.n()); // W has same dimension as A
-    assert(C.n() == D.n()); // C has same number of cols as D
+    assert(C.n() == D.n()); // W has same dimension as A
 
     int fail = 0;
     const real_type C_val = half;
@@ -1148,7 +1006,7 @@ public:
 
     A.set_Jac_FR(C, D, A.i_row(), A.j_col(), A.M());
 
-    // copy to a dense matrix
+    // copy to dense matrix
     A.copy_to(W);
 
     const local_ordinal_type* iRow = getRowIndices(&A);
@@ -1219,9 +1077,6 @@ private:
   virtual local_ordinal_type* numNonzerosPerCol(hiop::hiopMatrixSparse* mat) = 0;
   virtual void maybeCopyToDev(hiop::hiopMatrixSparse*) = 0;
   virtual void maybeCopyFromDev(hiop::hiopMatrixSparse*) = 0;
-
-  virtual int getLocalElement(hiop::hiopVectorInt*, int) const = 0;
-  virtual void setLocalElement(hiop::hiopVectorInt*, int, int) const = 0;
 
 public:
   /**

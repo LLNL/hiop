@@ -90,7 +90,7 @@ private:
   virtual const local_ordinal_type* getColumnIndices(const hiop::hiopMatrixSparse* a);
   virtual local_ordinal_type getLocalSize(const hiop::hiopVector *x) override;
   virtual int verifyAnswer(hiop::hiopMatrixSparse* A, real_type answer) override;
-  virtual int verifyAnswer(hiop::hiopMatrix* A, local_ordinal_type nnz_st, local_ordinal_type nnz_ed, const double answer);
+  virtual int verifyAnswer(hiop::hiopMatrix* A, local_ordinal_type nnz_st, local_ordinal_type nnz_ed, const double answer) {assert(false);return 0;};
   virtual int verifyAnswer(
       hiop::hiopMatrixDense* A,
       std::function<real_type(local_ordinal_type, local_ordinal_type)> expect) override;
@@ -102,9 +102,6 @@ private:
   virtual local_ordinal_type* numNonzerosPerCol(hiop::hiopMatrixSparse* mat);
   virtual void maybeCopyToDev(hiop::hiopMatrixSparse*);
   virtual void maybeCopyFromDev(hiop::hiopMatrixSparse*);
-
-  virtual int getLocalElement(hiop::hiopVectorInt*, int) const;
-  virtual void setLocalElement(hiop::hiopVectorInt*, int, int) const;
 public:
   virtual void initializeMatrix(hiop::hiopMatrixSparse* mat, local_ordinal_type entries_per_row);
 };

@@ -56,7 +56,7 @@ public:
    * when num_elems>=0, or the remaining elems on 'd_' starting at 'start_on_src_vec'. */
   virtual void addSubDiagonal(int start_on_dest_diag,
                               const double& alpha,
-                              const hiopVector& d_,
+			      const hiopVector& d_,
                               int start_on_src_vec,
                               int num_elems=-1)
   {
@@ -89,10 +89,10 @@ public:
   /* block of W += alpha*transpose(this), where W is dense */
   virtual void transAddToSymDenseMatrixUpperTriangle(int row_dest_start,
                                                      int col_dest_start,
-                                                     double alpha,
+						     double alpha,
                                                      hiopMatrixDense& W) const;
   virtual void addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start,
-                                                             double alpha,
+							     double alpha,
                                                              hiopMatrixDense& W) const
   {
     assert(false && "counterpart method of hiopMatrixSymSparseTriplet should be used");
@@ -102,7 +102,7 @@ public:
                                                               double alpha,
                                                               hiopMatrixSparse& W) const
   {
-    assert(false && "counterpart method of hiopMatrixSymSparseTriplet should be used");
+    assert(false && "implemented only for symmetric matrices");
   }
 
   /* diag block of W += alpha * M * D^{-1} * transpose(M), where M=this

@@ -62,12 +62,10 @@
 #include <hiopOptions.hpp>
 #include <hiopLinAlgFactory.hpp>
 #include <hiopVector.hpp>
-#include <hiopVectorIntSeq.hpp>
 #include <hiopMatrixDenseRowMajor.hpp>
 #include "LinAlg/matrixTestsSparseTriplet.hpp"
 
 #ifdef HIOP_USE_RAJA
-#include <hiopVectorIntRaja.hpp>
 #include <hiopVectorRajaPar.hpp>
 #include <hiopMatrixRajaDense.hpp>
 #include "LinAlg/matrixTestsRajaSparseTriplet.hpp"
@@ -118,7 +116,7 @@ int main(int argc, char** argv)
     fail += test.matrix_row_max_abs_value(*mxn_sparse, vec_m);
     fail += test.matrix_scale_row(*mxn_sparse, vec_m);
     fail += test.matrixIsFinite(*mxn_sparse);
-  
+
     // Need a dense matrix to store the output of the following tests
     global_ordinal_type W_delta = M_global * 10;
     hiop::hiopMatrixDenseRowMajor W_dense(N_global + W_delta, N_global + W_delta);
@@ -148,8 +146,12 @@ int main(int argc, char** argv)
 
     fail += test.matrixTimesMatTrans(*mxn_sparse, *m2xn_sparse, mxm2_dense);
     fail += test.matrixAddMDinvNtransToSymDeMatUTri(*mxn_sparse, *m2xn_sparse, vec_n, W_dense, i_offset, j_offset);
-  
-    // copy sparse matrix to a dense matrix
+    
+    // copy the 1st row of mxn_sparse to the last row.
+    // replace the nonzero index from "nnz-entries_per_row"
+    fail += test.copyRowsBlockFrom(*mxn_sparse, *m2xn_sparse,0, 1, M_global-1, mxn_sparse->numberOfNonzeros()-entries_per_row);
+
+    // copy sparse matrix to dense matrix
     hiop::hiopMatrixDenseRowMajor mxn_dense(M_global, N_global);
     fail += test.matrix_copy_to(mxn_dense, *mxn_sparse);
   
@@ -159,17 +161,6 @@ int main(int argc, char** argv)
     hiop::hiopMatrixSparse* m3xn3_sparse = 
       hiop::LinearAlgebraFactory::createMatrixSparse(M_global+M2, N_global+2*(M_global+M2), nnz3);
     fail += test.matrix_set_Jac_FR(m3xn3_dense, *m3xn3_sparse, *mxn_sparse, *m2xn_sparse);
-
-    // functions used to build large sparse matrix from small pieces
-    fail += test.matrix_copy_subdiagonal_from(m3xn3_dense, *m3xn3_sparse, vec_m);
-    fail += test.matrix_set_subdiagonal_to(m3xn3_dense, *m3xn3_sparse);
-    
-    hiop::hiopVectorIntSeq select(M_local);
-    fail += test.matrix_copy_rows_from(*mxn_sparse, *m2xn_sparse, select);
-
-    // copy the 1st row of mxn_sparse to the last row in m2xn_sparse
-    // replace the nonzero index from "nnz-entries_per_row"
-    fail += test.copy_rows_block_from(*mxn_sparse, *m2xn_sparse,0, 1, M_global-1, mxn_sparse->numberOfNonzeros()-entries_per_row);
 
     // Remove testing objects
     delete mxn_sparse;
@@ -256,21 +247,8 @@ int main(int argc, char** argv)
       hiop::LinearAlgebraFactory::createMatrixSparse(M_global+M2, N_global+2*(M_global+M2), nnz3);
     fail += test.matrix_set_Jac_FR(m3xn3_dense, *m3xn3_sparse, *mxn_sparse, *m2xn_sparse);
 
-    // functions used to build large sparse matrix from small pieces
-    fail += test.matrix_copy_subdiagonal_from(m3xn3_dense, *m3xn3_sparse, vec_m);
-    fail += test.matrix_set_subdiagonal_to(m3xn3_dense, *m3xn3_sparse);
-  
-    hiop::hiopVectorIntRaja select(M_local, mem_space);
-    hiop::hiopMatrixSparse* mxn_sparse_2 = hiop::LinearAlgebraFactory::createMatrixSparse(M_local, N_local, nnz);
-    fail += test.matrix_copy_rows_from(*mxn_sparse_2, *m2xn_sparse, select);
-
-    // copy the 1st row of mxn_sparse to the last row in m2xn_sparse
-    // replace the nonzero index from "nnz-entries_per_row"
-    fail += test.copy_rows_block_from(*mxn_sparse, *m2xn_sparse,0, 1, M_global-1, mxn_sparse->numberOfNonzeros()-entries_per_row);
-
     // Remove testing objects
     delete mxn_sparse;
-    delete mxn_sparse_2;
     delete m2xn_sparse;
     delete m3xn3_sparse;
 

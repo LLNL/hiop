@@ -106,13 +106,4 @@ void hiopVectorIntRaja::copy_to_dev()
   }
 }
 
-void hiopVectorIntRaja::copy_from(const index_type* v_local)
-{
-  if(v_local) {
-    auto& resmgr = umpire::ResourceManager::getInstance();
-    index_type* data = const_cast<index_type*>(v_local);
-    resmgr.copy(buf_, data, sz_*sizeof(index_type));
-  }
-}
-
 } // namespace hiop

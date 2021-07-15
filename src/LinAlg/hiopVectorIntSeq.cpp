@@ -54,7 +54,6 @@
  */
 
 #include "hiopVectorIntSeq.hpp"
-#include <cstring> //for memcpy
 
 namespace hiop
 {
@@ -68,12 +67,5 @@ hiopVectorIntSeq::~hiopVectorIntSeq()
 {
   delete[] buf_;
 }
-
-void hiopVectorIntSeq::copy_from(const index_type* v_local)
-{
-  if(v_local)
-    memcpy(buf_, v_local, sz_*sizeof(index_type));
-}
-
 
 } // namespace hiop

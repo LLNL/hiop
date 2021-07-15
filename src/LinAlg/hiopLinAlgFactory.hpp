@@ -108,16 +108,6 @@ public:
    */
   static void deleteRawArray(double* a);
 
-  /**
-   * @brief Static method to create a raw C Index array
-   */
-  static index_type* createRawIndexArray(size_type n);
-
-  /**
-   * @brief Static method to delete a raw C array
-   */
-  static void deleteRawIndexArray(index_type* a);
-
   /// Method to set memory space ID
   static void set_mem_space(const std::string& mem_space);
 

@@ -122,33 +122,6 @@ public:
     return fail;
   }
 
-  virtual bool vector_copy_from(hiop::hiopVectorInt& x, hiop::hiopVectorInt& y) const
-  {
-    int fail = 0;
-    const int idx = x.size()/2;
-    const int x_val = 1;
-    const int y_val = 1;
-
-    for(int i=0; i<x.size(); i++) {
-      setLocalElement(&x, i, x_val);
-    }
-    
-    for(int i=0; i<y.size(); i++) {
-      setLocalElement(&y, i, y_val);
-    }
-    
-    x.copy_from(y.local_data_const());
-
-    for(int i=0; i<x.size(); i++) {
-      if (x.local_data_host_const()[i] != y_val) {
-        fail++;
-      }
-    }
-
-    printMessage(fail, __func__);
-    return fail;
-  }
-
 private:
   virtual int getLocalElement(hiop::hiopVectorInt*, int) const = 0;
   virtual void setLocalElement(hiop::hiopVectorInt*, int, int) const = 0;

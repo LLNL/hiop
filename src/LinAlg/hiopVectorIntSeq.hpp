@@ -80,9 +80,6 @@ public:
   virtual inline index_type* local_data_host() { return local_data(); }
 
   virtual inline const index_type* local_data_host_const() const { return local_data_const(); }
-  
-  virtual void copy_from(const index_type* v_local);
-
 };
 
 } // namespace hiop
