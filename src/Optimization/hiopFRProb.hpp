@@ -82,6 +82,7 @@ class hiopFRProbSparse : public hiopInterfaceSparse
 public:
   hiopFRProbSparse(hiopAlgFilterIPMBase& solver_base);
   virtual ~hiopFRProbSparse();
+  virtual bool get_MPI_comm(MPI_Comm& comm_out);
 
   virtual bool get_prob_sizes(size_type& n, size_type& m);
   virtual bool get_vars_info(const size_type& n, double *xlow, double* xupp, NonlinearityType* type);
@@ -233,6 +234,7 @@ class hiopFRProbMDS : public hiopInterfaceMDS
 public:
   hiopFRProbMDS(hiopAlgFilterIPMBase& solver_base);
   virtual ~hiopFRProbMDS();
+  virtual bool get_MPI_comm(MPI_Comm& comm_out);
 
   virtual bool get_sparse_dense_blocks_info(int& nx_sparse, 
                                             int& nx_dense,
