@@ -184,7 +184,7 @@ public:
   /* The public methods below are not part of hiopInterface. They are a proxy
    * for user's (front end) code to set solutions from a previous solve. 
    *
-   * Same behaviour can be achieved internally (in this class ) if desired by 
+   * Same behaviour can be achieved internally (in this class) if desired by 
    * overriding @solution_callback and @get_starting_point
    */
   void set_solution_primal(const double* x_vec);

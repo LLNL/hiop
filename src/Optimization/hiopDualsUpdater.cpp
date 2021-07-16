@@ -139,17 +139,28 @@ hiopDualsLsqUpdateLinsysRedDense::hiopDualsLsqUpdateLinsysRedDense(hiopNlpFormul
     mixmi_(nullptr),
     mxm_(nullptr)
 {
-  mexme_ = LinearAlgebraFactory::createMatrixDense(nlp_->m_eq(), nlp_->m_eq());
-  mexmi_ = LinearAlgebraFactory::createMatrixDense(nlp_->m_eq(), nlp_->m_ineq());
-  mixmi_ = LinearAlgebraFactory::createMatrixDense(nlp_->m_ineq(), nlp_->m_ineq());
-  mxm_   = LinearAlgebraFactory::createMatrixDense(nlp_->m(), nlp_->m());
+  mexme_ = LinearAlgebraFactory::create_matrix_dense(nlp_->options->GetString("mem_space"),
+                                                     nlp_->m_eq(),
+                                                     nlp_->m_eq());
+  mexmi_ = LinearAlgebraFactory::create_matrix_dense(nlp_->options->GetString("mem_space"),
+                                                     nlp_->m_eq(),
+                                                     nlp_->m_ineq());
+  mixmi_ = LinearAlgebraFactory::create_matrix_dense(nlp_->options->GetString("mem_space"),
+                                                     nlp_->m_ineq(),
+                                                     nlp_->m_ineq());
+  mxm_ = LinearAlgebraFactory::create_matrix_dense(nlp_->options->GetString("mem_space"),
+                                                   nlp_->m(),
+                                                   nlp_->m());
   
-  rhs_    = LinearAlgebraFactory::createVector(nlp_->m());
+  rhs_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"),
+                                             nlp_->m());
   
 #ifdef HIOP_DEEPCHECKS
   M_copy_ = nullptr; //delayed allocation 
   rhs_copy_ = rhs_->alloc_clone(); 
-  mixme_ = LinearAlgebraFactory::createMatrixDense(nlp_->m_ineq(), nlp_->m_eq());
+  mixme_ = LinearAlgebraFactory::create_matrix_dense(nlp_->options->GetString("mem_space"),
+                                                     nlp_->m_ineq(),
+                                                     nlp_->m_eq());
 #endif
 }
 
@@ -310,7 +321,8 @@ hiopDualsLsqUpdateLinsysAugSparse::hiopDualsLsqUpdateLinsysAugSparse(hiopNlpForm
 #ifndef HIOP_SPARSE
   assert(0 && "should not reach here!");
 #endif // HIOP_SPARSE
-  rhs_ = LinearAlgebraFactory::createVector(nlp_->n() + nlp_->m_ineq() + nlp_->m());
+  rhs_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"),
+                                            nlp_->n() + nlp_->m_ineq() + nlp_->m());
 }
 
 hiopDualsLsqUpdateLinsysAugSparse::~hiopDualsLsqUpdateLinsysAugSparse()
