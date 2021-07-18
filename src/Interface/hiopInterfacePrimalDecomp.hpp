@@ -113,6 +113,14 @@ public:
    * In the cases where only RecourseApproxEvaluator is needed, a shell hiopInterfacePriDecProblem
    * is still required to be created.
    */
+
+  // Notes:
+  // since this class allocates vectors, it (as well as hiopInterfacePriDecProblem) needs to be aware of the memory space
+  //
+  // Solutions
+  //1. pass the mem space to hiopInterfacePriDecProblem's constructors (kinda complicates user code)
+  //2. rely only on alloc_clone and new_copy of the hiopVector objects passed in the methods -- need to delete some of the constructors
+  //3. move this to the algorithm class and delay its creation until the master problem's mem space is clear 
   class RecourseApproxEvaluator
   {
   public:
@@ -122,8 +130,12 @@ public:
     
     RecourseApproxEvaluator(const int nc, const int S, const int* list);
   
-    RecourseApproxEvaluator(const int nc, const int S, const double& rval, const hiopVector& rgrad, 
-                            const hiopVector& rhess, const hiopVector& x0);
+    RecourseApproxEvaluator(const int nc,
+                            const int S,
+                            const double& rval,
+                            const hiopVector& rgrad, 
+                            const hiopVector& rhess,
+                            const hiopVector& x0);
   
     RecourseApproxEvaluator(int nc,int S, const int* list,
                             const double& rval, const hiopVector& rgrad, 
@@ -149,14 +161,14 @@ public:
     double get_rval() const;
     hiopVector* get_rgrad() const;
     hiopVector* get_rhess() const;
-    hiopVector* get_x0() const; 
+    hiopVector* get_x0() const;
     int* get_xc_idx() const; 
 
   protected:
     int nc_,S_;
+    //TODO: this may need to by a hiopVectorInt since seems to get on the device eventually.
     int* xc_idx_;
     double rval_;
-    //double* rgrad_;
     hiopVector* rgrad_;
     hiopVector* rhess_; //diagonal Hessian vector
     hiopVector* x0_; //current solution
