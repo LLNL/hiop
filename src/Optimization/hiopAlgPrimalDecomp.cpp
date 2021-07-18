@@ -570,8 +570,6 @@ hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
   request_ = new MPI_Request[4];   
 #endif
   x_ = LinearAlgebraFactory::create_vector(master_prob_->get_mem_space(), n_);
-}
-
 
   //use "hiop_pridec.options" - if the file does not exist, built-in default options will be used
   options_ = new hiopOptionsPriDec(hiopOptions::default_filename_pridec_solver);

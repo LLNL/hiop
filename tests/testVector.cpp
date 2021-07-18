@@ -205,16 +205,10 @@ int runTests(const char* mem_space, MPI_Comm comm)
 
   T test;
 
-<<<<<<< HEAD
-  hiopOptionsNLP options;
-  options.SetStringValue("mem_space", mem_space);
-  LinearAlgebraFactory::set_mem_space(mem_space);
-=======
   test.set_mem_space(mem_space);
   //hiopOptions options;
   //options.SetStringValue("mem_space", mem_space);
   //LinearAlgebraFactory::set_mem_space(mem_space);
->>>>>>> develop
 
   global_ordinal_type Nlocal = 1000;
   global_ordinal_type Mlocal = 500;
@@ -337,17 +331,10 @@ int runIntTests(const char* mem_space)
   using hiop::tests::global_ordinal_type;
 
   T test;
-<<<<<<< HEAD
-
-  hiopOptionsNLP options;
-  options.SetStringValue("mem_space", mem_space);
-  LinearAlgebraFactory::set_mem_space(mem_space);
-=======
   test.set_mem_space(mem_space);
   //hiopOptions options;
   //options.SetStringValue("mem_space", mem_space);
   //LinearAlgebraFactory::set_mem_space(mem_space);
->>>>>>> develop
 
   int fail = 0;
 
