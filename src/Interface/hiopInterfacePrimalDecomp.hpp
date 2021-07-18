@@ -60,6 +60,7 @@ public:
    */
   hiopInterfacePriDecProblem(MPI_Comm comm_world=MPI_COMM_WORLD)
   {
+    mem_space_ = "DEFAULT";
   }
 
   virtual ~hiopInterfacePriDecProblem()
@@ -87,7 +88,7 @@ public:
                                        const double* grad = 0,
                                        const double*hess = 0,
                                        const char* master_options_file=nullptr) = 0;
-    
+
   virtual bool eval_f_rterm(size_t idx, const int& n, const double* x, double& rval) = 0;
   virtual bool eval_grad_rterm(size_t idx, const int& n, double* x, hiopVector& grad) = 0;
 
@@ -159,10 +160,23 @@ public:
     hiopVector* rgrad_;
     hiopVector* rhess_; //diagonal Hessian vector
     hiopVector* x0_; //current solution
+
+    //TODO
+    //this is for temporary use - will be removed once the options and logger will be refactored
+    //to work with this class
+    std::string mem_space_;
   };
   
   virtual bool set_recourse_approx_evaluator(const int n, RecourseApproxEvaluator* evaluator)=0;
-  
+
+  //TODO
+  //this is for temporary use - will be removed once the options and logger will be refactored
+  //to work with this class
+  inline std::string get_mem_space() const
+  {
+    return mem_space_;
+  }
+  std::string mem_space_;
 };
   
 } //end of namespace

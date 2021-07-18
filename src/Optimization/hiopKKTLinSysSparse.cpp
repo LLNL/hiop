@@ -123,7 +123,8 @@ namespace hiop
 
       //build the diagonal Hx = Dx + delta_wx
       if(NULL == Hx_) {
-        Hx_ = LinearAlgebraFactory::createVector(nx); assert(Hx_);
+        Hx_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), nx);
+        assert(Hx_);
       }
       Hx_->startingAtCopyFromStartingAt(0, *Dx_, 0);
 
@@ -189,7 +190,10 @@ namespace hiop
     int nx=rx.get_size(), nyc=ryc.get_size(), nyd=ryd.get_size();
     int nxsp=Hx_->get_size();
     assert(nxsp==nx);
-    if(rhs_ == NULL) rhs_ = LinearAlgebraFactory::createVector(nx+nyc+nyd);
+    if(rhs_ == NULL) {
+      rhs_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"),
+                                                 nx+nyc+nyd);
+    }
 
     nlp_->log->write("RHS KKT_SPARSE_XYcYd rx: ", rx,  hovIteration);
     nlp_->log->write("RHS KKT_SPARSE_XYcYd ryc:", ryc, hovIteration);
@@ -349,7 +353,8 @@ namespace hiop
 
       //build the diagonal Hx = Dx + delta_wx
       if(NULL == Hx_) {
-        Hx_ = LinearAlgebraFactory::createVector(nx); assert(Hx_);
+        Hx_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), nx);
+        assert(Hx_);
       }
       Hx_->startingAtCopyFromStartingAt(0, *Dx_, 0);
 
@@ -360,7 +365,8 @@ namespace hiop
 
       //build the diagonal Hd = Dd + delta_wd
       if(NULL == Hd_) {
-        Hd_ = LinearAlgebraFactory::createVector(nd); assert(Hd_);
+        Hd_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), nd);
+        assert(Hd_);
       }
       Hd_->startingAtCopyFromStartingAt(0, *Dd_, 0);
       Hd_->addConstant(delta_wd);
@@ -408,7 +414,10 @@ namespace hiop
     int nx=rx.get_size(), nd=rd.get_size(), nyc=ryc.get_size(), nyd=ryd.get_size();
     int nxsp=Hx_->get_size();
     assert(nxsp==nx);
-    if(rhs_ == NULL) rhs_ = LinearAlgebraFactory::createVector(nx+nd+nyc+nyd);
+    if(rhs_ == NULL) {
+      rhs_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"),
+                                                 nx+nd+nyc+nyd);
+    }
 
     nlp_->log->write("RHS KKT_SPARSE_XDYcYd rx: ", rx,  hovIteration);
     nlp_->log->write("RHS KKT_SPARSE_XDYcYd rx: ", rd,  hovIteration);
@@ -662,7 +671,8 @@ namespace hiop
 
       //build the diagonal Hx = delta_wx
       if(nullptr == Hx_) {
-        Hx_ = LinearAlgebraFactory::createVector(nx); assert(Hx_);
+        Hx_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), nx);
+        assert(Hx_);
       }
       Hx_->setToZero();
       Hx_->addConstant(delta_wx);
@@ -670,7 +680,8 @@ namespace hiop
 
       //build the diagonal Hd = delta_wd
       if(nullptr == Hd_) {
-        Hd_ = LinearAlgebraFactory::createVector(nd); assert(Hd_);
+        Hd_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), nd);
+        assert(Hd_);
       }
       Hd_->setToZero();
       Hd_->addConstant(delta_wd);
@@ -719,7 +730,9 @@ namespace hiop
     assert(nxsp==nx);
     int n = nx + neq + nineq + nd + ndl + ndu + nxl + nxu + ndl + ndu + nxl + nxu;
 
-    if(rhs_ == NULL) rhs_ = LinearAlgebraFactory::createVector(n);
+    if(rhs_ == nullptr) {
+      rhs_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), n);
+    }
 
     {//write to log
       nlp_->log->write("RHS KKT_SPARSE_FULL rx: ", rx,  hovIteration);

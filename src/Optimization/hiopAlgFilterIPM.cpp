@@ -310,7 +310,7 @@ void hiopAlgFilterIPMBase::reloadOptions()
   perf_report_kkt_ = "on"==hiop::tolower(nlp->options->GetString("time_kkt"));
 
   // Set memory space for computations
-  hiop::LinearAlgebraFactory::set_mem_space(nlp->options->GetString("mem_space"));
+  //hiop::LinearAlgebraFactory::set_mem_space(nlp->options->GetString("mem_space"));
 }
 
 void hiopAlgFilterIPMBase::resetSolverStatus()
@@ -1224,7 +1224,7 @@ void hiopAlgFilterIPMQuasiNewton::outputIteration(int lsStatus, int lsNum, int u
     else strcpy(stepType, "?");
 
     if(use_soc && lsStatus >= 1 && lsStatus <= 3) {
-      stepType[0] = (char) toupper(stepType[0]);
+      stepType[0] = (char) ::toupper(stepType[0]);
     }
 
     if(use_fr){
@@ -1877,7 +1877,7 @@ void hiopAlgFilterIPMNewton::outputIteration(int lsStatus, int lsNum, int use_so
     else strcpy(stepType, "?");
 
     if(use_soc && lsStatus >= 1 && lsStatus <= 3) {
-      stepType[0] = (char) toupper(stepType[0]);
+      stepType[0] = (char) ::toupper(stepType[0]);
     }
 
     if(use_fr){
