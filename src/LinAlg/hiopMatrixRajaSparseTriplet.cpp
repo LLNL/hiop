@@ -70,9 +70,7 @@
 #include <cstring>
 
 #include <cassert>
-#include <iterator>
-#include <numeric>
-#include <vector>
+// #include <numeric> //std::inclusive_scan is only available after C++17
 
 namespace hiop
 {
