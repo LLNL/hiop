@@ -76,7 +76,7 @@ public:
   
   void set_acceptable_tolerance(const double tol);
  
-  double step_size_inf(const int nc, const hiopVector& x, const hiopVector& x0);
+  double step_size_inf(const int nc, const int* idx, const hiopVector& x, const hiopVector& x0);
   
   /* Contains information of a previous solution step including function value 
    * and gradient. Used for storing the solution for the previous iteration
