@@ -1476,37 +1476,38 @@ void hiopMatrixRajaSymSparseTriplet::set_Hess_FR(const hiopMatrixSparse& Hess,
     
     if(m2 > 0) {
       if(M1.row_starts_==nullptr) {
-        int* m1_row_nnz = new int[m1+1](0);
-        
-        // nonzeros from the new obj term zeta*DR^2.*(x-x_ref)
-        for(int i=0; i< m2; i++) {
-          m1_row_nnz[i] = 1;
-        }
+        M1.row_starts_ = new RowStartsInfo(m1, mem_space_);
+        int* M1_row_start_host = M1.row_starts_->idx_start_host_;
 
-        // nonzeros from the base Hessian
-        for(int i=0; i< m2; i++) {
-          int k_base = M2_row_start_host[i];
-          int nnz_in_row_base = M2_row_start_host[i+1] - k_base;
-
-          if(nnz_in_row_base > 0 && M2iRow_host[k_base] == M2jCol_host[k_base]) {
-            // first nonzero in this row is a diagonal term (Hess is in upper triangular form)
-            // skip it since we will defined the diagonal nonezero
-            m1_row_nnz[i+1] += nnz_in_row_base-1;
-          } else {
-            m1_row_nnz[i+1] += nnz_in_row_base;
+        for(int i=0; i< m1+1; i++) {
+          M1_row_start_host[i] = 0;
+          
+          if(i>0 && i< m2+1) {
+            // nonzeros from the new obj term zeta*DR^2.*(x-x_ref)
+            M1_row_start_host[i] += 1;
+            
+            { // nonzeros from the base Hessian
+              int k_base = M2_row_start_host[i-1];
+              int nnz_in_row_base = M2_row_start_host[i] - k_base;
+              
+              if(nnz_in_row_base > 0 && M2iRow_host[k_base] == M2jCol_host[k_base]) {
+                // first nonzero in this row is a diagonal term (Hess is in upper triangular form)
+                // skip it since we will defined the diagonal nonezero
+                M1_row_start_host[i] += nnz_in_row_base-1;
+              } else {
+                M1_row_start_host[i] += nnz_in_row_base;
+              }
+            }  
           }
         }
+
         // std::inclusive_scan is only available after C++17
         // std::inclusive_scan(m1_row_nnz,m1_row_nnz+m1+1,M1.row_starts_->idx_start_host_);
-        int* M1_row_start_host = M1.row_starts_->idx_start_host_;
-        M1_row_start[0] = 0;
         for(int i=1; i< m1+1; i++) {
-          m1_row_nnz[i] = m1_row_nnz[i] + m1_row_nnz[i-1];
-          M1_row_start_host[i] =  m1_row_nnz[i];
+          M1_row_start_host[i] += M1_row_start_host[i-1];
         }
         
         M1.row_starts_->copy_to_dev();
-        delete [] m1_row_nnz;
       }
       int* M1_row_start = M1.row_starts_->idx_start_; 
       
