@@ -449,7 +449,7 @@ addMDinvNtransToSymDeMatUTri(int row_dest_start, int col_dest_start,
                              const hiopVector& D, const hiopMatrixSparse& M2mat,
                              hiopMatrixDense& W) const
 {
-  const auto& M2 = dynamic_cast<const hiopMatrixSparseTriplet&>(M2mat);
+  const hiopMatrixSparseTriplet& M2 = dynamic_cast<const hiopMatrixSparseTriplet&>(M2mat);
   const hiopMatrixSparseTriplet& M1 = *this;
   const int m1 = M1.nrows_, nx = M1.ncols_, m2 = M2.nrows_;
   assert(nx==M1.ncols_);
@@ -462,7 +462,7 @@ addMDinvNtransToSymDeMatUTri(int row_dest_start, int col_dest_start,
   assert(col_dest_start>=0 && col_dest_start+m2<=W.n());
 
   double* WM = W.local_data();
-  auto m_W = W.m();
+  int m_W = W.m();
   
   const double* DM = D.local_data_const();
 
