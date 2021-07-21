@@ -537,3 +537,4 @@ $> mpiexec -np 2 ./src/Drivers/nlpDenseCons_ex1.exe
 $> mpiexec -np 2 ./src/Drivers/nlpDenseCons_ex2.exe 
 $> mpiexec -np 2 ./src/Drivers/nlpDenseCons_ex3.exe 
 ```
+
