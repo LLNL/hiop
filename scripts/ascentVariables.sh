@@ -39,8 +39,8 @@ module load exasgd-readline/8.1/gcc-7.4.0-vqamj6w
 module load exasgd-suite-sparse/5.8.1/gcc-7.4.0-zggphid
 # texinfo@6.5%gcc@7.4.0 patches=12f6edb0c6b270b8c8dba2ce17998c580db01182d871ee32b7b6e4129bd1d23a,1732115f651cff98989cb0215d8f64da5e0f7911ebf0c13b064920f088f2ffe1 arch=linux-rhel7-power9le
 module load exasgd-texinfo/6.5/gcc-7.4.0-w4cx3wo
-# umpire@4.1.2%gcc@7.4.0+c+cuda~deviceconst~examples~fortran~hip~ipo~numa+openmp~shared amdgpu_target=none build_type=RelWithDebInfo cuda_arch=none patches=7d912d31cd293df005ba74cb96c6f3e32dc3d84afff49b14509714283693db08 tests=none arch=linux-rhel7-power9le
-module load exasgd-umpire/4.1.2/cuda-10.2.89/gcc-7.4.0-cgd3l7m
+# 4q6czdk umpire@5.0.1+c+cuda~deviceconst~examples~fortran~hip~ipo~numa+openmp~shared amdgpu_target=none build_type=RelWithDebInfo cuda_arch=none tests=none
+module load exasgd-umpire/5.0.1/cuda-10.2.89/gcc-7.4.0-4q6czdk
 
 # Load system modules
 module load cuda/10.2.89

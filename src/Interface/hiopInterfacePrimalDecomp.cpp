@@ -84,7 +84,9 @@ RecourseApproxEvaluator(const int nc,
                         const hiopVector& rhess, 
                         const hiopVector& x0,
                         const std::string& mem_space)
-  : nc_(nc), S_(S)
+  : nc_(nc),
+    S_(S),
+    mem_space_(mem_space)
 {
   //assert(S>=nc);
   rval_ = rval;
