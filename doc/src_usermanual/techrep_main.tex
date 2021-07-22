@@ -1023,7 +1023,7 @@ This option takes double values in $[0, 10^{20}]$ and has a default value $10^{-
 
 \medskip
 
-\subsection{Miscellaneous options}
+\subsubsection{Miscellaneous options}
 
 \noindent \textbf{print\_options}: string option with ``yes`` or ``no`` values deciding whether the options should be printed on the output before solver (re)starts. Default value ``no''.
 
@@ -1055,7 +1055,21 @@ Here we list the options that are recognized by the \Hi's PriDec solver.
 
 -- to follow --
 
-\subsection{Miscellaneous options}
+\subsubsection{Miscellaneous options}
+
+%% memory space selection aaaa
+
+\noindent \textbf{mem\_space}: specifies the primary memory space in which PriDec solver's internal linear algebra objects will be created:
+\begin{itemize}
+\item ``default'' (default): allocations are done by \Hi in the cpu's memory space;
+\item ``host'':  allocations via Umpire in Umpire's ``HOST'' memory space, typically CPU memory;
+\item ``device'': allocations via Umpire in Umpire's ``DEVICE'' device memory space;
+\item ``um'': allocations via Umpire's unified memory model, know as ``UM''.
+\end{itemize}
+\warningcp{} The memory space for PriDec solver must match the memory space used by the master NLP solver, otherwise undefined behaviour will occur. This consistency is not checked by HiOp since it is impossible to do so when black-box NLP solvers are used for the master problem. It is the user's responsibility to ensure that the memory spaces match. When HiOp is used a master solver, the PriDec solver's \texttt{mem\_space} option must match the master HiOp's option \texttt{mem\_space}. When a CPU master solver is used with PriDec solver, the PriDec's \texttt{mem\_space} option must be set to ``default''.
+
+
+\medskip
 
 \noindent \textbf{print\_options}: string option with ``yes`` or ``no`` values deciding whether the options should be printed on the output before solver (re)starts. Default value ``no''.
 
