@@ -552,12 +552,12 @@ bool hiopAlgPrimalDecomposition::stopping_criteria(const int it, const double co
 }
   
 double hiopAlgPrimalDecomposition::
-step_size_inf(const int nc, const hiopVector& x, const hiopVector& x0)
+step_size_inf(const int nc, const int* idx, const hiopVector& x, const hiopVector& x0)
 {
   double step = -1e20;
-  hiopVector* temp = x.new_copy();
-  //temp = LinearAlgebraFactory::create_vector(x.get_local_size()); 
-  //temp->copyFrom(x);   
+  hiopVector* temp;
+  temp = LinearAlgebraFactory::create_vector(master_prob_->get_mem_space(), x0.get_local_size()); 
+  temp->copyFrom(idx, x);   
   temp->axpy(-1.0, x0); 
   step = temp->infnorm();
   delete temp;
@@ -617,18 +617,18 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
     //double grad_r[nc_];
 
     hiopVector* grad_r;
-    grad_r = x_->alloc_clone(); 
+    grad_r =LinearAlgebraFactory::create_vector(master_prob_->get_mem_space(), nc_) ; 
     grad_r->setToZero(); 
     double* grad_r_vec=grad_r->local_data();
   
     hiopVector* hess_appx;
     hess_appx = grad_r->alloc_clone();
-    double* hess_appx_vec=hess_appx->local_data_host();
+    double* hess_appx_vec=hess_appx->local_data();
    
     hiopVector* x0;
     x0 = grad_r->alloc_clone();
     x0->setToZero(); 
-    double* x0_vec=x0->local_data_host();
+    double* x0_vec=x0->local_data();
     
     //local recourse terms for each evaluator, defined accross all processors
     double rec_val = 0.;
@@ -1054,7 +1054,7 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
           printf( "Elapsed time for entire iteration %d is %f\n",it, t2 - t1 );  
         }
         // print out the iteration from the master rank
-	dinf = step_size_inf(nc_, *x_, *x0);
+	dinf = step_size_inf(nc_, xc_idx_, *x_, *x0);
 	
 
       } else {
@@ -1106,15 +1106,15 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
   double rval = 0.;
   //double grad_r[nc_];
   hiopVector* grad_r;
-  grad_r = x_->alloc_clone(); 
+  grad_r =LinearAlgebraFactory::create_vector(master_prob_->get_mem_space(), nc_) ; 
   double* grad_r_vec=grad_r->local_data_host();
   
   hiopVector* hess_appx;
   hess_appx = grad_r->alloc_clone();
-  double* hess_appx_vec=hess_appx->local_data_host();
+  double* hess_appx_vec=hess_appx->local_data();
  
   hiopVector* x0 = grad_r->alloc_clone();
-  double* x0_vec = x0->local_data_host();
+  double* x0_vec = x0->local_data();
  
   for(int i=0; i<nc_; i++) {
     grad_r_vec[i] = 0.;
@@ -1268,7 +1268,7 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
     //printf("solving full problem starts, iteration %d \n",it);
     solver_status_ = master_prob_->solve_master(*x_,true);
     
-    dinf = step_size_inf(nc_, *x_, *x0); 
+    dinf = step_size_inf(nc_, xc_idx_, *x_, *x0); 
 
     // print solution x at the end of a full solve
     if(ver_ >=outlevel2) {

@@ -80,7 +80,8 @@ RecourseApproxEvaluator(const int nc,
                         const hiopVector& rgrad, 
                         const hiopVector& rhess, 
                         const hiopVector& x0)
-  : nc_(nc), S_(S)
+  : nc_(nc), S_(S),
+    mem_space_("DEFAULT")
 {
   //assert(S>=nc);
   rval_ = rval;
