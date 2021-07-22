@@ -176,11 +176,14 @@ public:
    * This struct is intened for internal use of hiopAlgPrimalDecomposition class only
    */
   struct HessianApprox {
-    HessianApprox(hiopInterfacePriDecProblem* priDecProb);
-    HessianApprox(const int& n, hiopInterfacePriDecProblem* priDecProb);
+    HessianApprox(hiopInterfacePriDecProblem* priDecProb, hiopOptions* options_pridec);
+    HessianApprox(const int& n, hiopInterfacePriDecProblem* priDecProb, hiopOptions* options_pridec);
     
     /* ratio is used to compute alpha in alpha_f */
-    HessianApprox(const int& n, const double ratio, hiopInterfacePriDecProblem* priDecProb);
+    HessianApprox(const int& n,
+                  const double ratio,
+                  hiopInterfacePriDecProblem* priDecProb,
+                  hiopOptions* options_pridec);
 
     ~HessianApprox();
 
@@ -261,6 +264,7 @@ public:
     hiopVector* ykm1;
     size_t ver_=1;
     hiopInterfacePriDecProblem* priDecProb_;
+    hiopOptions* options_;
   };
 private: 
 #ifdef HIOP_USE_MPI

@@ -48,7 +48,7 @@ Ex8::Ex8(int ns_, int S_, int nc_,bool include_)
 {
   include_r = include_;
   if(include_r) {
-    evaluator_ = new hiopInterfacePriDecProblem::RecourseApproxEvaluator(nc_);
+    evaluator_ = new hiopInterfacePriDecProblem::RecourseApproxEvaluator(nc_, "default");
   }
 }
 

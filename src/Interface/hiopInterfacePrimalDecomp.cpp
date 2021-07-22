@@ -3,7 +3,8 @@
 
 using namespace hiop;
 hiopInterfacePriDecProblem::RecourseApproxEvaluator::
-RecourseApproxEvaluator(int nc) : RecourseApproxEvaluator(nc, nc)  //nc_ <= nx, nd=S
+RecourseApproxEvaluator(int nc, const std::string& mem_space)
+  : RecourseApproxEvaluator(nc, nc, mem_space)  //nc_ <= nx, nd=S
 {
 }
 
@@ -16,9 +17,9 @@ hiopInterfacePriDecProblem::RecourseApproxEvaluator::
 }
 
 hiopInterfacePriDecProblem::RecourseApproxEvaluator::
-RecourseApproxEvaluator(int nc, int S) 
+RecourseApproxEvaluator(int nc, int S, const std::string& mem_space) 
   : nc_(nc), S_(S), rval_(0.), //nc = nx, nd=S
-    mem_space_("DEFAULT")
+    mem_space_(mem_space)
 {
   assert(S>=nc);
   xc_idx_ = new int[nc_];
@@ -31,9 +32,10 @@ RecourseApproxEvaluator(int nc, int S)
 hiopInterfacePriDecProblem::RecourseApproxEvaluator::
 RecourseApproxEvaluator(const int nc, 
                         const int S, 
-                        const int* list)
+                        const int* list,
+                        const std::string& mem_space)
   : nc_(nc), S_(S), rval_(0.), rgrad_(NULL), rhess_(NULL), x0_(NULL),
-    mem_space_("DEFAULT")
+    mem_space_(mem_space)
 {
   rgrad_ = LinearAlgebraFactory::create_vector(mem_space_, nc);
   rhess_ = rgrad_->alloc_clone();
@@ -52,9 +54,10 @@ RecourseApproxEvaluator(const int nc,
                         const double& rval, 
                         const hiopVector& rgrad, 
                         const hiopVector& rhess, 
-                        const hiopVector& x0)
+                        const hiopVector& x0,
+                        const std::string& mem_space)
   : nc_(nc), S_(S),
-    mem_space_("DEFAULT")
+    mem_space_(mem_space)
 {
   //assert(S>=nc);
   rval_ = rval;
@@ -79,7 +82,8 @@ RecourseApproxEvaluator(const int nc,
                         const double& rval, 
                         const hiopVector& rgrad, 
                         const hiopVector& rhess, 
-                        const hiopVector& x0)
+                        const hiopVector& x0,
+                        const std::string& mem_space)
   : nc_(nc), S_(S)
 {
   //assert(S>=nc);

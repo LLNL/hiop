@@ -60,7 +60,6 @@ public:
    */
   hiopInterfacePriDecProblem(MPI_Comm comm_world=MPI_COMM_WORLD)
   {
-    mem_space_ = "DEFAULT";
   }
 
   virtual ~hiopInterfacePriDecProblem()
@@ -124,22 +123,27 @@ public:
   class RecourseApproxEvaluator
   {
   public:
-    RecourseApproxEvaluator(int nc);
+    RecourseApproxEvaluator(int nc, const std::string& mem_space);
  
-    RecourseApproxEvaluator(int nc, int S);
+    RecourseApproxEvaluator(int nc, int S, const std::string& mem_space);
     
-    RecourseApproxEvaluator(const int nc, const int S, const int* list);
+    RecourseApproxEvaluator(const int nc, const int S, const int* list, const std::string& mem_space);
   
     RecourseApproxEvaluator(const int nc,
                             const int S,
                             const double& rval,
                             const hiopVector& rgrad, 
                             const hiopVector& rhess,
-                            const hiopVector& x0);
+                            const hiopVector& x0,
+                            const std::string& mem_space);
   
-    RecourseApproxEvaluator(int nc,int S, const int* list,
-                            const double& rval, const hiopVector& rgrad, 
-                            const hiopVector& rhess, const hiopVector& x0);
+    RecourseApproxEvaluator(int nc,int S,
+                            const int* list,
+                            const double& rval,
+                            const hiopVector& rgrad, 
+                            const hiopVector& rhess,
+                            const hiopVector& x0,
+                            const std::string& mem_space);
 
     ~RecourseApproxEvaluator();
 
@@ -163,7 +167,6 @@ public:
     hiopVector* get_rhess() const;
     hiopVector* get_x0() const;
     int* get_xc_idx() const; 
-
   protected:
     int nc_,S_;
     //TODO: this may need to by a hiopVectorInt since seems to get on the device eventually.
@@ -173,22 +176,12 @@ public:
     hiopVector* rhess_; //diagonal Hessian vector
     hiopVector* x0_; //current solution
 
-    //TODO
-    //this is for temporary use - will be removed once the options and logger will be refactored
-    //to work with this class
+    /// memory space of the PriDec solver (must match the memory space of the NLP solver)
     std::string mem_space_;
   };
   
   virtual bool set_recourse_approx_evaluator(const int n, RecourseApproxEvaluator* evaluator)=0;
 
-  //TODO
-  //this is for temporary use - will be removed once the options and logger will be refactored
-  //to work with this class
-  inline std::string get_mem_space() const
-  {
-    return mem_space_;
-  }
-  std::string mem_space_;
 };
   
 } //end of namespace

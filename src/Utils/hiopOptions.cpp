@@ -1040,6 +1040,27 @@ void hiopOptionsPriDec::register_options()
   }
 
   //
+  // portability
+  //
+  {
+#ifdef HIOP_USE_RAJA
+    vector<string> range(4);
+    range[0] = "default";
+    range[1] = "host";
+    range[2] = "device";
+    range[3] = "um";
+#else
+    vector<string> range(1);
+    range[0] = "default";
+#endif
+    register_str_option("mem_space",
+                        range[0],
+                        range,
+                        "Determines the memory space used by PriDec solver for linear algebra objects. Must match the "
+                        "the memory space in which the master solve is going to be done.");
+  }
+  
+  //
   // convergence and stopping criteria
   //
   {
