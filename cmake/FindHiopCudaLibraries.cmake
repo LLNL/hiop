@@ -15,7 +15,7 @@ target_link_libraries(hiop_cuda INTERFACE
   cusparse
   cusolver
   cudart
-  cublasLt
+  cublas
   )
 
 install(TARGETS hiop_cuda EXPORT hiop-targets)
