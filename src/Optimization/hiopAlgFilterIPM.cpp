@@ -1058,12 +1058,13 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
     //
     //this is the linesearch loop
     //
+    double min_ls_step_size = nlp->options->GetNumeric("min_step_size");
     while(true) {
       nlp->runStats.tmSolverInternal.start(); //---
 
       // check the step against the minimum step size, but accept small
       // fractionToTheBdry since these may occur for tight bounds at the first iteration(s)
-      if(!iniStep && _alpha_primal<1e-16) {
+      if(!iniStep && _alpha_primal<min_ls_step_size) {
         nlp->log->write("Panic: minimum step size reached. The problem may be infeasible or the "
                         "gradient inaccurate. Try to restore feasibility.",hovError);
         solver_status_ = Steplength_Too_Small;
@@ -1625,12 +1626,13 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
       //
       // linesearch loop
       //
+      double min_ls_step_size = nlp->options->GetNumeric("min_step_size");
       while(true) {
         nlp->runStats.tmSolverInternal.start(); //---
 
         // check the step against the minimum step size, but accept small
         // fractionToTheBdry since these may occur for tight bounds at the first iteration(s)
-        if(!iniStep && _alpha_primal<1e-16) {
+        if(!iniStep && _alpha_primal<min_ls_step_size) {
 
           if(linsol_safe_mode_on) {
             nlp->log->write("Panic: minimum step size reached. The problem may be infeasible or the "
