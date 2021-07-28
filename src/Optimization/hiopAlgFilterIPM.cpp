@@ -837,6 +837,13 @@ void hiopAlgFilterIPMBase::displayTerminationMsg()
 		       strStatsReport.c_str());
       break;
     }
+  case Infeasible_Problem:
+    {
+      nlp->log->printf(hovSummary,
+                       "Inaccurate gradients/Jacobians or locally infeasible problem.\n%s\n",
+                       strStatsReport.c_str());
+      break;
+    }
   default:
     {
       nlp->log->printf(hovSummary, "Do not know why HiOp stopped. This shouldn't happen. :)\n%s\n",
@@ -2139,6 +2146,7 @@ bool hiopAlgFilterIPMBase::solve_feasibility_restoration(hiopKKTLinSys* kkt, hio
     nlpFR.options->SetStringValue("KKTLinsys", "xdycyd");
     nlpFR.options->SetIntegerValue("verbosity_level", 0);
     nlpFR.options->SetStringValue("warm_start", "yes");
+    nlpFR.options->SetNumericValue("bound_relax_perturb", 0.0);
 
     // set mu0 to be the maximun of the current barrier parameter mu and norm_inf(|c|)*/
     double theta_ref = resid->getInfeasInfNorm(); //at current point, i.e., reference point
@@ -2191,7 +2199,7 @@ bool hiopAlgFilterIPMBase::solve_feasibility_restoration(hiopKKTLinSys* kkt, hio
       } else {
         it_trial->setEqualityDualsToConstant(0.);
       }
-    } else if(FR_status == Solve_Success) {
+    } else if(FR_status == Solve_Success || FR_status == Solve_Acceptable_Level) {
       solver_status_ = Infeasible_Problem;
       return false;
     } else {
