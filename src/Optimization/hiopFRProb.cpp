@@ -792,8 +792,8 @@ bool hiopFRProbMDS::get_vars_info(const size_type& n, double *xlow, double* xupp
   wrk_primal_->copyTo(xupp);
 
   wrk_primal_->set_array_from_to(type, 0, n_, hiopLinear);
-  wrk_primal_->set_array_from_to(type, x_sp_st_, x_sp_st_+n_x_sp_, var_type, x_sp_st_);
-  wrk_primal_->set_array_from_to(type, x_de_st_, x_de_st_+n_x_de_, var_type, x_de_st_);
+  wrk_primal_->set_array_from_to(type, x_sp_st_, x_sp_st_+n_x_sp_, var_type, 0);
+  wrk_primal_->set_array_from_to(type, x_de_st_, x_de_st_+n_x_de_, var_type, n_x_sp_);
   
   return true;
 }
