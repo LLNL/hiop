@@ -642,12 +642,12 @@ void hiopOptionsNLP::register_options()
     vector<string> range(2); range[0] = "no"; range[1] = "yes";
     register_str_option("accept_every_trial_step", "no", range, "Disable line-search and take close-to-boundary step");
     
-    registerNumOption("min_step_size",
-                      1e-16,
-                      0.,
-                      1e6,
-                      "Minimum step size allowed in line-search (default 1e-16). If step size is less than this number, " 
-                      "feasibility restoration problem is activated.");
+    register_num_option("min_step_size",
+                        1e-16,
+                        0.,
+                        1e6,
+                        "Minimum step size allowed in line-search (default 1e-16). If step size is less than this number, " 
+                        "feasibility restoration problem is activated.");
   }
   {
     vector<string> range(5);
