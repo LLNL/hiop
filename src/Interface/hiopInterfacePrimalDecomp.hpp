@@ -58,7 +58,7 @@ public:
   /** 
    * Constructor
    */
-  hiopInterfacePriDecProblem(MPI_Comm comm_world=MPI_COMM_WORLD)
+  hiopInterfacePriDecProblem()
   {
   }
 
@@ -70,7 +70,7 @@ public:
   /** 
    * Solves the master problem consisting of the basecase problem plus the recourse terms.
    * The recourse terms have been added by the outer optimization loop (hiopAlgPrimalDecomposition)
-   * via the 'add_' methods below. (this does not appear to be case case anymore TODO)
+   * via the 'add_' methods below. (this does not appear to be case anymore Frank TODO)
    *
    * @param x : output, will contain the primal optimal solution of the master
    * TO DO: document the rest of the parameters, even though it appears that no calls with non-default 
@@ -85,7 +85,7 @@ public:
                                        const bool& include_r,
                                        const double& rval = 0, 
                                        const double* grad = 0,
-                                       const double*hess = 0,
+                                       const double* hess = 0,
                                        const char* master_options_file=nullptr) = 0;
 
   virtual bool eval_f_rterm(size_t idx, const int& n, const double* x, double& rval) = 0;

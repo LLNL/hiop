@@ -1070,30 +1070,33 @@ void hiopOptionsPriDec::register_options()
                         1e-14,
                         1e-1,
                         "Absolute error tolerance for the PriDec solver (default 1e-4)");
-    
+
+    //TODO: Frank see if this makes sense for PriDec solver
     //register_num_option("rel_tolerance", 0., 0., 0.1,
     //                  "Error tolerance for the NLP relative to errors at the initial point. A null "
     //                  "value disables this option (default 0.)");
-
+    
+    //TODO: Frank implement this functionality in PriDec solver
     register_num_option("acceptable_tolerance",
                         1e-2,
                         1e-14,
                         1e-1,
-                        "HiOp PriDec terminates if the xxx Frank xxx are below for 'acceptable_iterations' "
+                        "HiOp PriDec terminates if the xxx TODO Frank xxx are below for 'acceptable_iterations' "
                         "many consecutive iterations (default 1e-2)");
+    //TODO: Frank implement this functionality in PriDec solver
     register_int_option("acceptable_iterations",
                         25,
                         1,
                         1e6,
                         "Number of iterations of acceptable tolerance after which HiOp terminates (default 26)");
-    
+    //TODO: Frank implement this functionality in PriDec solver
     register_int_option("max_iter", 30000, 1, 1e9, "Max number of iterations (default 30000)");
   }
   
   //
   // misc options 
   //
-  //TODO: Frank check these and add others as needed 
+  //TODO: Frank check/implement these in PriDecSolver and add others as needed 
   register_int_option("verbosity_level",
                       3,
                       0,

@@ -101,21 +101,21 @@ protected:
 class PriDecMasterProblemEx8 : public hiopInterfacePriDecProblem
 {
 public:
-  PriDecMasterProblemEx8(int n,
-                         int S,
-                         MPI_Comm comm_world=MPI_COMM_WORLD)
-    : hiopInterfacePriDecProblem(comm_world),
-      n_(n), S_(S),obj_(-1e20),sol_(NULL)
+  PriDecMasterProblemEx8(int n, int S)
+    : n_(n),
+      S_(S),
+      obj_(-1e20),
+      sol_(nullptr)
   {
     nc_ = n;
     my_nlp = new Ex8(n_,S_);   
   }
-  PriDecMasterProblemEx8(int n,
-                         int S,
-                         int nc,
-                         MPI_Comm comm_world=MPI_COMM_WORLD)
-    : hiopInterfacePriDecProblem(comm_world),
-      n_(n), S_(S),nc_(nc),obj_(-1e20),sol_(NULL)
+  PriDecMasterProblemEx8(int n, int S, int nc)
+    : n_(n),
+      S_(S),
+      nc_(nc),
+      obj_(-1e20),
+      sol_(nullptr)
   {
     my_nlp = new Ex8(n,S,nc);   
   }

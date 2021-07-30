@@ -815,7 +815,7 @@ The user can control \Hi's options in two ways:
 The NLP solvers load options from the file \texttt{hiop.options}. The PriDec solver will look for and load options from up to three files:
 \begin{itemize}
 \item \texttt{hiop\_pridec.options} specifies options for the \textbf{PriDec} algorithm/solver
-\item \texttt{hiop\_pridec\_master.options} specifies options for the NLP solver used to solve the \textbf{master} problem. This master NLP solver does not necessarily have to be one of \Hi's NLP solvers. The name of this file can be controlled via the string option \texttt{options\_file\_master\_prob} of the PriDec solver.
+\item \texttt{hiop\_pridec\_master.options} specifies options for the NLP solver used to solve the \textbf{master} problem. This master NLP solver does not necessarily have to be one of \Hi's NLP solvers. The name of this file can be controlled via the string option \texttt{options\_file\_master\_prob} of the PriDec solver, in \texttt{hiop\_pridec.options}.
 \item \texttt{hiop.options} specifies the options for the \textbf{worker} NLP solver. This applies only when the worker NLP solver is one of the \Hi's solvers. This file will not be used by worker solvers other than \Hi; they will use their default option files.
 \end{itemize}
 

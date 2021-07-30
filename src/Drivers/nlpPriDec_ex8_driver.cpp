@@ -129,8 +129,8 @@ int main(int argc, char **argv)
     return 1;
   }
 
-  PriDecMasterProblemEx8 pridec_problem(nx, S, nc,MPI_COMM_WORLD);
-  hiop::hiopAlgPrimalDecomposition pridec_solver(&pridec_problem, nc,list,MPI_COMM_WORLD);
+  PriDecMasterProblemEx8 pridec_problem(nx, S, nc);
+  hiop::hiopAlgPrimalDecomposition pridec_solver(&pridec_problem, nc, list, MPI_COMM_WORLD);
 
   auto status = pridec_solver.run();
 
