@@ -2147,6 +2147,7 @@ bool hiopAlgFilterIPMBase::solve_feasibility_restoration(hiopKKTLinSys* kkt, hio
     nlpFR.options->SetIntegerValue("verbosity_level", 0);
     nlpFR.options->SetStringValue("warm_start", "yes");
     nlpFR.options->SetNumericValue("bound_relax_perturb", 0.0);
+    nlpFR.options->SetStringValue("scaling_type", "none");
 
     // set mu0 to be the maximun of the current barrier parameter mu and norm_inf(|c|)*/
     double theta_ref = resid->getInfeasInfNorm(); //at current point, i.e., reference point
