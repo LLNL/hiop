@@ -58,40 +58,38 @@ public:
   /** 
    * Constructor
    */
-  hiopInterfacePriDecProblem(MPI_Comm comm_world=MPI_COMM_WORLD)
+  hiopInterfacePriDecProblem()
   {
-    mem_space_ = "DEFAULT";
   }
 
   virtual ~hiopInterfacePriDecProblem()
   {
   }
 
+  
   /** 
    * Solves the master problem consisting of the basecase problem plus the recourse terms.
    * The recourse terms have been added by the outer optimization loop (hiopAlgPrimalDecomposition)
-   * via the 'add_' methods below
+   * via the 'add_' methods below. (this does not appear to be case anymore Frank TODO)
+   *
    * @param x : output, will contain the primal optimal solution of the master
+   * TO DO: document the rest of the parameters, even though it appears that no calls with non-default 
+   * 3rd, 4th, and 5th parameters are made. 
+   *
+   * @param master_options_file : input string specifying the name of the options file the NLP solver
+   * should use when solving the master problem. A null value indicates that the NLP solver should use
+   * its default options file. 
    * 
    */
   virtual hiopSolveStatus solve_master(hiopVector& x,
                                        const bool& include_r,
                                        const double& rval = 0, 
                                        const double* grad = 0,
-                                       const double*hess = 0) = 0;
+                                       const double* hess = 0,
+                                       const char* master_options_file=nullptr) = 0;
 
   virtual bool eval_f_rterm(size_t idx, const int& n, const double* x, double& rval) = 0;
   virtual bool eval_grad_rterm(size_t idx, const int& n, double* x, hiopVector& grad) = 0;
-
-  //
-  // Documentation here
-  //
-  //virtual bool set_quadratic_regularization(const int& n, const double* x, const double& rval,const double* grad,
-  //		                    const double* hess) = 0;
-  
-  //virtual bool set_recourse_approx_evaluator(const int n, int S, const std::vector<int>& list,
-  //                                             const double& rval, const double* rgrad, 
-  //		                               const double* rhess, const double* x0);
 
 
   /** 
@@ -114,21 +112,38 @@ public:
    * In the cases where only RecourseApproxEvaluator is needed, a shell hiopInterfacePriDecProblem
    * is still required to be created.
    */
+
+  // Notes:
+  // since this class allocates vectors, it (as well as hiopInterfacePriDecProblem) needs to be aware of the memory space
+  //
+  // Solutions
+  //1. pass the mem space to hiopInterfacePriDecProblem's constructors (kinda complicates user code)
+  //2. rely only on alloc_clone and new_copy of the hiopVector objects passed in the methods -- need to delete some of the constructors
+  //3. move this to the algorithm class and delay its creation until the master problem's mem space is clear 
   class RecourseApproxEvaluator
   {
   public:
-    RecourseApproxEvaluator(int nc);
+    RecourseApproxEvaluator(int nc, const std::string& mem_space);
  
-    RecourseApproxEvaluator(int nc, int S);
+    RecourseApproxEvaluator(int nc, int S, const std::string& mem_space);
     
-    RecourseApproxEvaluator(const int nc, const int S, const int* list);
+    RecourseApproxEvaluator(const int nc, const int S, const int* list, const std::string& mem_space);
   
-    RecourseApproxEvaluator(const int nc, const int S, const double& rval, const hiopVector& rgrad, 
-                            const hiopVector& rhess, const hiopVector& x0);
+    RecourseApproxEvaluator(const int nc,
+                            const int S,
+                            const double& rval,
+                            const hiopVector& rgrad, 
+                            const hiopVector& rhess,
+                            const hiopVector& x0,
+                            const std::string& mem_space);
   
-    RecourseApproxEvaluator(int nc,int S, const int* list,
-                            const double& rval, const hiopVector& rgrad, 
-                            const hiopVector& rhess, const hiopVector& x0);
+    RecourseApproxEvaluator(int nc,int S,
+                            const int* list,
+                            const double& rval,
+                            const hiopVector& rgrad, 
+                            const hiopVector& rhess,
+                            const hiopVector& x0,
+                            const std::string& mem_space);
 
     ~RecourseApproxEvaluator();
 
@@ -150,34 +165,23 @@ public:
     double get_rval() const;
     hiopVector* get_rgrad() const;
     hiopVector* get_rhess() const;
-    hiopVector* get_x0() const; 
+    hiopVector* get_x0() const;
     int* get_xc_idx() const; 
-
   protected:
     int nc_,S_;
+    //TODO: this may need to by a hiopVectorInt since seems to get on the device eventually.
     int* xc_idx_;
     double rval_;
-    //double* rgrad_;
     hiopVector* rgrad_;
     hiopVector* rhess_; //diagonal Hessian vector
     hiopVector* x0_; //current solution
 
-    //TODO
-    //this is for temporary use - will be removed once the options and logger will be refactored
-    //to work with this class
+    /// memory space of the PriDec solver (must match the memory space of the NLP solver)
     std::string mem_space_;
   };
   
   virtual bool set_recourse_approx_evaluator(const int n, RecourseApproxEvaluator* evaluator)=0;
 
-  //TODO
-  //this is for temporary use - will be removed once the options and logger will be refactored
-  //to work with this class
-  inline std::string get_mem_space() const
-  {
-    return mem_space_;
-  }
-  std::string mem_space_;
 };
   
 } //end of namespace

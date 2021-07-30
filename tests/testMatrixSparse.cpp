@@ -78,7 +78,7 @@ int main(int argc, char** argv)
   if(argc > 1)
     std::cout << "Executable " << argv[0] << " doesn't take any input.";
 
-  hiop::hiopOptions options;
+  hiop::hiopOptionsNLP options;
 
   local_ordinal_type M_local = 5;
   local_ordinal_type N_local = 10*M_local;

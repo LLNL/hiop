@@ -1,9 +1,66 @@
-//include header file
+// Copyright (c) 2017, Lawrence Livermore National Security, LLC.
+// Produced at the Lawrence Livermore National Laboratory (LLNL).
+// LLNL-CODE-742473. All rights reserved.
+//
+// This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp
+// is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause).
+// Please also read "Additional BSD Notice" below.
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted provided that the following conditions are met:
+// i. Redistributions of source code must retain the above copyright notice, this list
+// of conditions and the disclaimer below.
+// ii. Redistributions in binary form must reproduce the above copyright notice,
+// this list of conditions and the disclaimer (as noted below) in the documentation and/or
+// other materials provided with the distribution.
+// iii. Neither the name of the LLNS/LLNL nor the names of its contributors may be used to
+// endorse or promote products derived from this software without specific prior written
+// permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
+// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+// OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
+// SHALL LAWRENCE LIVERMORE NATIONAL SECURITY, LLC, THE U.S. DEPARTMENT OF ENERGY OR
+// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+// OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+// AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
+// EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
+// Additional BSD Notice
+// 1. This notice is required to be provided under our contract with the U.S. Department
+// of Energy (DOE). This work was produced at Lawrence Livermore National Laboratory under
+// Contract No. DE-AC52-07NA27344 with the DOE.
+// 2. Neither the United States Government nor Lawrence Livermore National Security, LLC
+// nor any of their employees, makes any warranty, express or implied, or assumes any
+// liability or responsibility for the accuracy, completeness, or usefulness of any
+// information, apparatus, product, or process disclosed, or represents that its use would
+// not infringe privately-owned rights.
+// 3. Also, reference herein to any specific commercial products, process, or services by
+// trade name, trademark, manufacturer or otherwise does not necessarily constitute or
+// imply its endorsement, recommendation, or favoring by the United States Government or
+// Lawrence Livermore National Security, LLC. The views and opinions of authors expressed
+// herein do not necessarily state or reflect those of the United States Government or
+// Lawrence Livermore National Security, LLC, and shall not be used for advertising or
+// product endorsement purposes.
+
+/**
+ * @file hiopAlgPrimalDecomp.cpp
+ *
+ * @author Jingyi "Frank" Wang <wang125@llnl.gov>, LLNL
+ *
+ */
+
+
 #include "hiopAlgPrimalDecomp.hpp"
 #include "hiopInterfacePrimalDecomp.hpp"
+#include "hiopLogger.hpp"
 
-#include <cstring>
 #include <cassert>
+#include <cstring>
+
+using namespace std;
 
 namespace hiop
 {
@@ -19,6 +76,7 @@ namespace hiop
     ReqRecourseApprox(const int& n)
     {
       n_ = n;
+      //TODO: Frank, it think this needs to stay on the CPU since it is only used by MPI
       buffer = LinearAlgebraFactory::create_vector("DEFAULT", n_+1);
     }
 
@@ -92,34 +150,37 @@ namespace hiop
 
 
 
-hiopAlgPrimalDecomposition::HessianApprox::HessianApprox(hiopInterfacePriDecProblem* priDecProb)
-  : HessianApprox(-1, priDecProb)
+hiopAlgPrimalDecomposition::HessianApprox::
+HessianApprox(hiopInterfacePriDecProblem* priDecProb, hiopOptions* options_pridec)
+  : HessianApprox(-1, priDecProb, options_pridec)
 {
 }
 
   hiopAlgPrimalDecomposition::HessianApprox::HessianApprox(const int& n,
-                                                           hiopInterfacePriDecProblem* priDecProb)
-    : priDecProb_(priDecProb)
+                                                           hiopInterfacePriDecProblem* priDecProb,
+                                                           hiopOptions* options_pridec)
+    : priDecProb_(priDecProb), options_(options_pridec)
 {
   n_=n;
   fkm1 = 1e20;
   fk = 1e20;
   // x at k-1 step, the current step is k
-  xkm1 = LinearAlgebraFactory::create_vector(priDecProb_->get_mem_space(), n_);
+  xkm1 = LinearAlgebraFactory::create_vector(options_->GetString("mem_space"), n_);
   // s_{k-1} = x_k - x_{k-1}
-  skm1 = LinearAlgebraFactory::create_vector(priDecProb_->get_mem_space(), n_);
+  skm1 = xkm1->alloc_clone();
   // y_{k-1} = g_k - g_{k-1}
-  ykm1 = LinearAlgebraFactory::create_vector(priDecProb_->get_mem_space(), n_);
+  ykm1 = xkm1->alloc_clone();
   // g_{k-1}
-  gkm1 = LinearAlgebraFactory::create_vector(priDecProb_->get_mem_space(), n_);
+  gkm1 = xkm1->alloc_clone();
 }
 
 hiopAlgPrimalDecomposition::HessianApprox::HessianApprox(const int& n,
                                                          const double ratio,
-                                                         hiopInterfacePriDecProblem* priDecProb)
-  : HessianApprox(n, priDecProb)
+                                                         hiopInterfacePriDecProblem* priDecProb,
+                                                         hiopOptions* options_pridec)
+  : HessianApprox(n, priDecProb, options_pridec)
 {
-  ratio_=ratio;
+  ratio_ = ratio;
 }
 
 hiopAlgPrimalDecomposition::HessianApprox::~HessianApprox()
@@ -143,7 +204,7 @@ set_xkm1(const hiopVector& xk)
 {
   if(xkm1==NULL) {
     assert(n_!=-1);
-    xkm1 = LinearAlgebraFactory::create_vector(priDecProb_->get_mem_space(), n_);
+    xkm1 = LinearAlgebraFactory::create_vector(options_->GetString("mem_space"), n_);
   } else {
     xkm1->copyFromStarting(0, xk.local_data_const(), n_);
   }
@@ -155,7 +216,7 @@ set_gkm1(const hiopVector& grad)
 {
   if(gkm1==NULL) {
     assert(n_!=-1);
-    gkm1 = LinearAlgebraFactory::create_vector(priDecProb_->get_mem_space(), n_);
+    gkm1 = LinearAlgebraFactory::create_vector(options_->GetString("mem_space"), n_);
   } else {
     gkm1->copyFromStarting(0, grad.local_data_const(), n_);
   }
@@ -167,7 +228,7 @@ initialize(const double f_val, const hiopVector& xk, const hiopVector& grad)
   fk = f_val;
   if(xkm1==NULL) {
     assert(n_!=-1);
-    xkm1 = LinearAlgebraFactory::create_vector(priDecProb_->get_mem_space(), n_);
+    xkm1 = LinearAlgebraFactory::create_vector(options_->GetString("mem_space"), n_);
     //xkm1 = new double[n_];
   } else {
     xkm1->copyFromStarting(0, xk.local_data_const(), n_);
@@ -175,15 +236,17 @@ initialize(const double f_val, const hiopVector& xk, const hiopVector& grad)
   }
   if(gkm1==NULL) {
     assert(n_!=-1);
-    gkm1 = LinearAlgebraFactory::create_vector(priDecProb_->get_mem_space(), n_);
+    gkm1 = LinearAlgebraFactory::create_vector(options_->GetString("mem_space"), n_);
   } else {
     gkm1->copyFromStarting(0, grad.local_data_const(), n_);
   }
   if(skm1==NULL) {
+    //TODO: Frank, dont we need to allocate here?
     assert(n_!=-1);
     skm1->copyFromStarting(0, xk.local_data_const(), n_);
   }
   if(ykm1==NULL) {
+    //TODO: Frank, dont we need to allocate here?
     assert(n_!=-1);
     ykm1->copyFromStarting(0, xk.local_data_const(), n_);
   }
@@ -231,7 +294,7 @@ void hiopAlgPrimalDecomposition::HessianApprox::update_ratio()
   double rk = fkm1;
 
   //TODO: use a member class hiopVector to avoid repeatead allocs/deallocs
-  hiopVector* temp = LinearAlgebraFactory::create_vector(priDecProb_->get_mem_space(), gkm1->get_local_size()); 
+  hiopVector* temp = LinearAlgebraFactory::create_vector(options_->GetString("mem_space"), gkm1->get_local_size()); 
   temp->copyFrom(*gkm1);   
   rk += temp->dotProductWith(*skm1);
   rk += 0.5*alpha_*(skm1->twonorm())*(skm1->twonorm()); 
@@ -356,7 +419,7 @@ double hiopAlgPrimalDecomposition::HessianApprox::check_convergence_grad(const h
   
   //TODO: use a class member for 'temp' to avoid allocs/deallocs
   hiopVector* temp;
-  temp = LinearAlgebraFactory::create_vector(priDecProb_->get_mem_space(), skm1->get_local_size()); 
+  temp = LinearAlgebraFactory::create_vector(options_->GetString("mem_space"), skm1->get_local_size()); 
   temp->copyFrom(*skm1);  
   temp->scale(-alpha_);
   temp4 = temp->twonorm()*temp->twonorm();
@@ -382,7 +445,7 @@ double hiopAlgPrimalDecomposition::HessianApprox::check_convergence_fcn()
   assert(n_==gkm1->get_local_size());
   //TODO: use a class member for 'temp' to avoid allocs/deallocs
   hiopVector* temp;
-  temp = LinearAlgebraFactory::create_vector(priDecProb_->get_mem_space(), gkm1->get_local_size()); 
+  temp = LinearAlgebraFactory::create_vector(options_->GetString("mem_space"), gkm1->get_local_size()); 
   temp->copyFrom(*gkm1);   
   predicted_decrease += temp->dotProductWith(*skm1);
   predicted_decrease += 0.5*alpha_*(skm1->twonorm())*(skm1->twonorm()); 
@@ -406,7 +469,7 @@ compute_base(const double val, const double rval)
   double rec_appx = rval;
   //TODO: use a class member for 'temp' to avoid allocs/deallocs
   hiopVector* temp;
-  temp = LinearAlgebraFactory::create_vector(priDecProb_->get_mem_space(), gkm1->get_local_size()); 
+  temp = LinearAlgebraFactory::create_vector(options_->GetString("mem_space"), gkm1->get_local_size()); 
   temp->copyFrom(*gkm1);   
   rec_appx += temp->dotProductWith(*skm1);
   rec_appx += 0.5*alpha_*(skm1->twonorm())*(skm1->twonorm()); 
@@ -454,13 +517,17 @@ hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
   // if no coupling indices are specified, assume the entire x is coupled
   nc_ = n_;
   xc_idx_ = new int[nc_];
-  
-  for(int i=0;i<nc_;i++) xc_idx_[i] = i;
+
+  //TODO: Frank, it looks like xc_idx_ is involved in device computations and need to be made a hiopVectorInt
+  for(int i=0; i<nc_; i++) {
+    xc_idx_[i] = i;
+  }
   //determine rank and rank type
   //only two rank types for now, master and evaluator/worker
 
   #ifdef HIOP_USE_MPI
     int ierr = MPI_Comm_rank(comm_world, &my_rank_); assert(ierr == MPI_SUCCESS);
+    // TODO: Frank: shouldn't we use comm_world on the next call
     int ret = MPI_Comm_size(MPI_COMM_WORLD, &comm_size_); assert(ret==MPI_SUCCESS);
     if(my_rank_==0) { 
       my_rank_type_ = 0;
@@ -469,8 +536,14 @@ hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
     }
     request_ = new MPI_Request[4];   
   #endif
-  //x_ = new double[n_];
-    x_ = LinearAlgebraFactory::create_vector(master_prob_->get_mem_space(), n_);
+  
+  //use "hiop_pridec.options" - if the file does not exist, built-in default options will be used
+  options_ = new hiopOptionsPriDec(hiopOptions::default_filename_pridec_solver);
+
+  //logger will be created with stdout, outputing on rank 0 of the 'comm_world' MPI communicator
+  log_ = new hiopLogger(options_, stdout, 0, comm_world);
+
+  x_ = LinearAlgebraFactory::create_vector(options_->GetString("mem_space"), n_);
 }
 
 hiopAlgPrimalDecomposition::
@@ -494,6 +567,7 @@ hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
 
 #ifdef HIOP_USE_MPI
   int ierr = MPI_Comm_rank(comm_world, &my_rank_); assert(ierr == MPI_SUCCESS);
+  // TODO: Frank: shouldn't we use comm_world on the next call
   int ret = MPI_Comm_size(MPI_COMM_WORLD, &comm_size_); assert(ret==MPI_SUCCESS);
   if(my_rank_==0) { 
     my_rank_type_ = 0;
@@ -502,15 +576,20 @@ hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
   }
   request_ = new MPI_Request[4];   
 #endif
-  x_ = LinearAlgebraFactory::create_vector(master_prob_->get_mem_space(), n_);
-}
+  //use "hiop_pridec.options" - if the file does not exist, built-in default options will be used
+  options_ = new hiopOptionsPriDec(hiopOptions::default_filename_pridec_solver);
 
+  //logger will be created with stdout, outputing on rank 0 of the 'comm_world' MPI communicator
+  log_ = new hiopLogger(options_, stdout, 0, comm_world);
+
+  x_ = LinearAlgebraFactory::create_vector(options_->GetString("mem_space"), n_);
+}
 
 hiopAlgPrimalDecomposition::~hiopAlgPrimalDecomposition()
 {
   delete x_;
+  delete options_;
 }
-
 
 double hiopAlgPrimalDecomposition::getObjective() const
 {
@@ -544,10 +623,19 @@ bool hiopAlgPrimalDecomposition::stopping_criteria(const int it, const double co
   //gradient based stopping criteria
   if(convg<tol_){printf("reaching error tolerance, successfully found solution\n"); return true;}
   //stopping criteria based on the change in objective function
-  if(it == max_iter-1){printf("reached maximum iterations, optimization stops.\n"); return true;}
+  if(it == max_iter-1) {
+    printf("reached maximum iterations, optimization stops.\n");
+    //TODO: Frank
+    // the above line should look like
+    //log_->printf(hovSummary, "reached maximum iterations, optimization stops.\n");
 
-  if(accp_count == 10){printf("reached acceptable tolerance of %18.12e for 10 iterations, " 
-		              "optimization stops.\n", accp_tol_); return true;}
+    return true;
+  }
+  if(accp_count == 10) {
+    printf("reached acceptable tolerance of %18.12e for 10 iterations, optimization stops.\n",
+           accp_tol_);
+    return true;
+  }
   return false;
 }
   
@@ -556,14 +644,13 @@ step_size_inf(const int nc, const int* idx, const hiopVector& x, const hiopVecto
 {
   double step = -1e20;
   hiopVector* temp;
-  temp = LinearAlgebraFactory::create_vector(master_prob_->get_mem_space(), x0.get_local_size()); 
+  temp = LinearAlgebraFactory::create_vector(options_->GetString("mem_space"), x0.get_local_size()); 
   temp->copyFrom(idx, x);   
   temp->axpy(-1.0, x0); 
   step = temp->infnorm();
   delete temp;
   return step;
 }
-
 
 void hiopAlgPrimalDecomposition::set_max_iteration(const int max_it)  
 {
@@ -599,7 +686,9 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
 #ifdef HIOP_USE_MPI
   hiopSolveStatus hiopAlgPrimalDecomposition::run()
   {
-
+    if(options_->GetString("print_options") == "yes") {
+      log_->write(nullptr, *options_, hovSummary);
+    }
     if(comm_size_==1) {
       return run_single();//call the serial solver
     }
@@ -617,7 +706,7 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
     //double grad_r[nc_];
 
     hiopVector* grad_r;
-    grad_r =LinearAlgebraFactory::create_vector(master_prob_->get_mem_space(), nc_) ; 
+    grad_r =LinearAlgebraFactory::create_vector(options_->GetString("mem_space"), nc_) ; 
     grad_r->setToZero(); 
     double* grad_r_vec=grad_r->local_data();
   
@@ -641,7 +730,7 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
     //for(int i=0; i<nc_; i++) grad_acc[i] = 0.;
 
     //hess_appx_2 is declared by all ranks while only rank 0 uses it
-    HessianApprox* hess_appx_2 = new HessianApprox(nc_, alpha_ratio_, master_prob_);
+    HessianApprox* hess_appx_2 = new HessianApprox(nc_, alpha_ratio_, master_prob_, options_);
     if(ver_ >= outlevel3) {
       hess_appx_2->set_verbosity(ver_);
     }
@@ -657,12 +746,16 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
     int end_signal = 0;
     double t1 = 0;
     double t2 = 0; 
-    hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator = new hiopInterfacePriDecProblem::
-                                                             RecourseApproxEvaluator(nc_,S_,xc_idx_);
+    hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator =
+      new hiopInterfacePriDecProblem::RecourseApproxEvaluator(nc_, S_, xc_idx_, options_->GetString("mem_space"));
+    
     double* x_vec = x_->local_data();
+
+    std::string options_file_master_prob;
 
     // Outer loop starts
     for(int it=0; it<max_iter;it++) {
+      
       if(my_rank_==0) {
         t1 = MPI_Wtime(); 
       }
@@ -671,7 +764,9 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
         // printf("my rank for solver  %d\n", my_rank_);
         // solve master problem base case on master and iteration 0
 
-        solver_status_ = master_prob_->solve_master(*x_,false);
+        options_file_master_prob = options_->GetString("options_file_master_prob");
+        
+        solver_status_ = master_prob_->solve_master(*x_, false, 0, 0, 0, options_file_master_prob.c_str());
         // to do, what if solve fails?
         if(solver_status_){     
 
@@ -690,9 +785,9 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
       int ierr = MPI_Bcast(x_vec, n_, MPI_DOUBLE, rank_master, comm_world_);
       assert(ierr == MPI_SUCCESS);
 
-      // assert("for debugging" && false); //for debugging purpose
+      //
       // set up recourse problem send/recv interface
-      
+      //
       std::vector<ReqRecourseApprox* > rec_prob;
       ReqRecourseApprox* p=NULL;
       for(int r=0; r<comm_size_;r++) {
@@ -725,6 +820,9 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
           int ierr = MPI_Send(&cur_idx, 1, MPI_INT, r, 1,comm_world_);
           assert(MPI_SUCCESS == ierr);  
           //printf("rank %d to get contingency index  %d\n", r,cur_idx);
+          //TODO: Frank
+          // you can enable the above printf above a certain "verbosity" level
+          // log_->printf(hovIteration, "rank %d to get contingency index  %d\n", r, cur_idx);
           idx += 1;
         }
         int mpi_test_flag; // for testing if the send/recv is completed
@@ -1034,9 +1132,12 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
         if(!bret) {
           //todo
         }
-
+        
+        options_file_master_prob = options_->GetString("options_file_master_prob");
+        
         //printf("solving full problem starts, iteration %d \n",it);
-        solver_status_ = master_prob_->solve_master(*x_,true);
+        solver_status_ = master_prob_->solve_master(*x_, true, 0, 0, 0, options_file_master_prob.c_str());
+
         if(ver_ >=outlevel2) {
           printf("solved full problem with objective %18.12e\n", master_prob_->get_objective());
           fflush(stdout);
@@ -1085,10 +1186,13 @@ void hiopAlgPrimalDecomposition::set_initial_alpha_ratio(const double alpha)
     }
   }
 #else
-  hiopSolveStatus hiopAlgPrimalDecomposition::run()
-  {
-    return run_single();//call the serial solver
+hiopSolveStatus hiopAlgPrimalDecomposition::run()
+{
+  if(options_->GetString("print_options") == "yes") {
+    log_->write(nullptr, *options_, hovSummary);
   }
+  return run_single();//call the serial solver
+}
 #endif
 
 
@@ -1106,7 +1210,7 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
   double rval = 0.;
   //double grad_r[nc_];
   hiopVector* grad_r;
-  grad_r =LinearAlgebraFactory::create_vector(master_prob_->get_mem_space(), nc_) ; 
+  grad_r =LinearAlgebraFactory::create_vector(options_->GetString("mem_space"), nc_) ; 
   double* grad_r_vec=grad_r->local_data_host();
   
   hiopVector* hess_appx;
@@ -1115,16 +1219,17 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
  
   hiopVector* x0 = grad_r->alloc_clone();
   double* x0_vec = x0->local_data();
- 
+
+  //TODO: Frank, this is CPU loop, needs to be done via a hiopVector method
   for(int i=0; i<nc_; i++) {
     grad_r_vec[i] = 0.;
   }
 
   //hess_appx_2 has to be declared by all ranks while only rank 0 uses it
-  HessianApprox* hess_appx_2 = new HessianApprox(nc_, alpha_ratio_, master_prob_);
-
-  hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator = new hiopInterfacePriDecProblem::
-                                                           RecourseApproxEvaluator(nc_,S_,xc_idx_);
+  HessianApprox* hess_appx_2 = new HessianApprox(nc_, alpha_ratio_, master_prob_, options_);
+  
+  hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator =
+    new hiopInterfacePriDecProblem::RecourseApproxEvaluator(nc_, S_, xc_idx_, options_->GetString("mem_space"));
 
   double base_val = 0.; // base case objective value 
   double recourse_val = 0.;  // recourse objective value
@@ -1133,16 +1238,18 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
   double convg_f = 1e20;
   double convg_g = 1e20;
   double* x_vec = x_->local_data(); 
-  
+
+  std::string options_file_master_prob;
 
   // Outer loop starts
   for(int it=0; it<max_iter;it++) {
     //printf("iteration  %d\n", it);
     // solve the base case
 
-    if(it==0) { 
-      //solve master problem base case(solver rank supposed to do it)
-      solver_status_ = master_prob_->solve_master(*x_,false);
+    if(it==0) {
+      options_file_master_prob = options_->GetString("options_file_master_prob");
+      //solve master problem base case(solver rank supposed to do it)        
+      solver_status_ = master_prob_->solve_master(*x_, false, 0, 0, 0, options_file_master_prob.c_str());
       // to do, what if solve fails?
       if(solver_status_) {     
       }
@@ -1265,8 +1372,9 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
     if(!bret) {
       //todo
     }
+    options_file_master_prob = options_->GetString("options_file_master_prob");
     //printf("solving full problem starts, iteration %d \n",it);
-    solver_status_ = master_prob_->solve_master(*x_,true);
+    solver_status_ = master_prob_->solve_master(*x_, true, 0, 0, 0, options_file_master_prob.c_str());
     
     dinf = step_size_inf(nc_, xc_idx_, *x_, *x0); 
 
