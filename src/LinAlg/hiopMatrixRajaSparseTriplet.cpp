@@ -1486,7 +1486,7 @@ void hiopMatrixRajaSymSparseTriplet::set_Hess_FR(const hiopMatrixSparse& Hess,
             
             { // nonzeros from the base Hessian
               index_type k_base = M2_row_start_host[i-1];
-              inindex_type nnz_in_row_base = M2_row_start_host[i] - k_base;
+              index_type nnz_in_row_base = M2_row_start_host[i] - k_base;
               
               if(nnz_in_row_base > 0 && M2iRow_host[k_base] == M2jCol_host[k_base]) {
                 // first nonzero in this row is a diagonal term (Hess is in upper triangular form)
