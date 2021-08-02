@@ -289,14 +289,16 @@ bool hiopFRProbSparse::eval_cons(const size_type& n,
   wrk_x_->copy_from_starting_at(x, 0, n_x_);
   nlp_base_->eval_c_d(*wrk_x_, new_x, *wrk_c_, *wrk_d_);
 
+  // compute FR equality constratint body c-pe+ne
   wrk_eq_->copy_from_starting_at(x, pe_st_, m_eq_);     //pe
-  wrk_eq_->copy_from_starting_at(x, ne_st_, m_eq_);     //ne
   wrk_c_->axpy(-1.0, *wrk_eq_);
+  wrk_eq_->copy_from_starting_at(x, ne_st_, m_eq_);     //ne
   wrk_c_->axpy(1.0, *wrk_eq_);
 
+  // compute FR inequality constratint body d-pi+ni
   wrk_ineq_->copy_from_starting_at(x, pi_st_, m_ineq_); //pi
-  wrk_ineq_->copy_from_starting_at(x, ni_st_, m_ineq_); //ni
   wrk_d_->axpy(-1.0, *wrk_ineq_);
+  wrk_ineq_->copy_from_starting_at(x, ni_st_, m_ineq_); //ni
   wrk_d_->axpy(1.0, *wrk_ineq_);
 
   // assemble the full vector
@@ -792,8 +794,8 @@ bool hiopFRProbMDS::get_vars_info(const size_type& n, double *xlow, double* xupp
   wrk_primal_->copyTo(xupp);
 
   wrk_primal_->set_array_from_to(type, 0, n_, hiopLinear);
-  wrk_primal_->set_array_from_to(type, x_sp_st_, x_sp_st_+n_x_sp_, var_type, x_sp_st_);
-  wrk_primal_->set_array_from_to(type, x_de_st_, x_de_st_+n_x_de_, var_type, x_de_st_);
+  wrk_primal_->set_array_from_to(type, x_sp_st_, x_sp_st_+n_x_sp_, var_type, 0);
+  wrk_primal_->set_array_from_to(type, x_de_st_, x_de_st_+n_x_de_, var_type, n_x_sp_);
   
   return true;
 }
@@ -910,20 +912,22 @@ bool hiopFRProbMDS::eval_cons(const size_type& n,
   assert(n == n_);
   assert(m == m_);
 
-  // evaluate c and d
+  // evaluate base case c and d
   wrk_primal_->copy_from_starting_at(x, 0, n_); // [xsp pe ne pi ni xde]
   wrk_primal_->startingAtCopyToStartingAt(x_sp_st_, *wrk_x_, 0, n_x_sp_);       // x = [xsp xde]
   wrk_primal_->startingAtCopyToStartingAt(x_de_st_, *wrk_x_, n_x_sp_, n_x_de_); // x = [xsp xde]
   nlp_base_->eval_c_d(*wrk_x_, new_x, *wrk_c_, *wrk_d_);
 
+  // compute FR equality constratint body c-pe+ne
   wrk_eq_->copy_from_starting_at(x, pe_st_, m_eq_);     //pe
-  wrk_eq_->copy_from_starting_at(x, ne_st_, m_eq_);     //ne
   wrk_c_->axpy(-1.0, *wrk_eq_);
+  wrk_eq_->copy_from_starting_at(x, ne_st_, m_eq_);     //ne
   wrk_c_->axpy(1.0, *wrk_eq_);
 
+  // compute FR inequality constratint body d-pi+ni
   wrk_ineq_->copy_from_starting_at(x, pi_st_, m_ineq_); //pi
-  wrk_ineq_->copy_from_starting_at(x, ni_st_, m_ineq_); //ni
   wrk_d_->axpy(-1.0, *wrk_ineq_);
+  wrk_ineq_->copy_from_starting_at(x, ni_st_, m_ineq_); //ni
   wrk_d_->axpy(1.0, *wrk_ineq_);
 
   // assemble the full vector
