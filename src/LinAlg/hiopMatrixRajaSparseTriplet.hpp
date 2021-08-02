@@ -300,15 +300,14 @@ protected:
 protected:
   struct RowStartsInfo
   {
-    int *idx_start_; //size num_rows+1
-    int *idx_start_host_; //size num_rows+1
-    int num_rows_;
+    index_type *idx_start_; //size num_rows+1
+    index_type *idx_start_host_; //size num_rows+1
+    size_type num_rows_;
     std::string mem_space_;
     RowStartsInfo()
       : idx_start_(NULL), num_rows_(0)
     {}
-    RowStartsInfo(int n_rows, std::string memspace);
-      //: idx_start(new int[n_rows+1]), num_rows(n_rows)
+    RowStartsInfo(size_type n_rows, std::string memspace);
     virtual ~RowStartsInfo();
     
     void copy_from_dev();

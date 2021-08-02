@@ -272,13 +272,13 @@ protected:
 protected:
   struct RowStartsInfo
   {
-    int *idx_start_; //size num_rows+1
-    int num_rows_;
+    index_type *idx_start_; //size num_rows+1
+    size_type num_rows_;
     RowStartsInfo()
       : idx_start_(NULL), num_rows_(0)
     {}
-    RowStartsInfo(int n_rows)
-      : idx_start_(new int[n_rows+1]), num_rows_(n_rows)
+    RowStartsInfo(size_type n_rows)
+      : idx_start_(new index_type[n_rows+1]), num_rows_(n_rows)
     {}
     virtual ~RowStartsInfo()
     {
