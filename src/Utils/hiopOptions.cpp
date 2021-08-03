@@ -648,6 +648,20 @@ void hiopOptionsNLP::register_options()
                         1e6,
                         "Minimum step size allowed in line-search (default 1e-16). If step size is less than this number, " 
                         "feasibility restoration problem is activated.");
+
+    register_num_option("theta_max_fact",
+                        1e+4,
+                        0.0,
+                        1e+7,
+                        "Maximum constraint violation (theta_max) is scaled by this fact before using in the fileter line-search "
+                        "algorithm (default 1e+4). (eqn (21) in Filt-IPM paper)");
+
+    register_num_option("theta_min_fact",
+                        1e-4,
+                        0.0,
+                        1e+7,
+                        "Minimum constraint violation (theta_min) is scaled by this fact before using in the fileter line-search "
+                        "algorithm (default 1e-4). (eqn (21) in Filt-IPM paper)");
   }
   {
     vector<string> range(5);
