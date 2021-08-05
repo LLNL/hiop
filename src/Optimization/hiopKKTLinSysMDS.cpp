@@ -402,7 +402,7 @@ namespace hiop
     bool switched_linsolvers = false;
 #ifdef HIOP_USE_MAGMA 
     if(safe_mode_) {
-      hiopLinSolverIndefDenseMagmaBuKa* p = dynamic_cast<hiopLinSolverIndefDenseMagmaBuKa*>(linSys_);
+      hiopLinSolverIndefDenseMagmaBuKaDev* p = dynamic_cast<hiopLinSolverIndefDenseMagmaBuKaDev*>(linSys_);
       if(p==NULL) {
         //we have a nopiv linear solver or linear solver has not been created yet
 	      if(linSys_) switched_linsolvers = true;
@@ -447,7 +447,7 @@ namespace hiop
 			    "KKT_MDS_XYcYd linsys: MagmaBuKa size %d (%d cons) (safe_mode=%d)\n", 
 			    n, neq+nineq, safe_mode_);
 	  
-	  linSys_ = new hiopLinSolverIndefDenseMagmaBuKa(n, nlp_);
+	  linSys_ = new hiopLinSolverIndefDenseMagmaBuKaDev(n, nlp_);
 	} else {
 
 	  auto hovLevel = hovScalars;

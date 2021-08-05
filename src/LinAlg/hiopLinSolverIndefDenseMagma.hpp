@@ -59,8 +59,8 @@ protected:
    * @pre The system matrix is factorized and, as a result, `ipiv` has been 
    * also updated properly.
    */
-  virtual bool compute_inertia(int n_in, int *ipiv, 
-			       int& posEigvals, int& negEigvals, int& zeroEigvals); 
+  virtual bool compute_inertia(int n, int *ipiv_in, int& posEig, int& negEig, int& zeroEig); 
+
 protected:
   int* ipiv_;
 
@@ -113,8 +113,7 @@ protected:
    * @pre The system matrix is factorized and, as a result, `ipiv` has been 
    * also updated properly.
    */
-  virtual bool compute_inertia(int n_in, int *ipiv, 
-			       int& posEigvals, int& negEigvals, int& zeroEigvals); 
+  virtual bool compute_inertia(int n, int *ipiv_in, int& posEig, int& negEig, int& zeroEig);
 protected:
   int* ipiv_;
   magmaDouble_ptr work_;
@@ -151,8 +150,7 @@ protected:
    * @pre The system matrix is factorized and, as a result, `ipiv` has been 
    * also correctly set 
    */
-  virtual bool compute_inertia(int n, int *ipiv_in, 
-			       int& posEigvals, int& negEigvals, int& zeroEigvals); 
+  virtual bool compute_inertia(int n, int *ipiv_in, int& posEig, int& negEig, int& zeroEig); 
 };
 
 
