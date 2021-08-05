@@ -24,7 +24,7 @@ endif()
 
 find_path(MAGMA_INCLUDE_DIR
   NAMES
-  magma.h
+  magma_v2.h
   PATHS
   ${MAGMA_DIR} $ENV{MAGMA_DIR} ${HIOP_MAGMA_DIR} ${MAGMA_LIBRARY_DIR}/..
   PATH_SUFFIXES
@@ -36,7 +36,7 @@ if(MAGMA_LIBRARY)
   target_include_directories(Magma INTERFACE ${MAGMA_INCLUDE_DIR})
   message(STATUS "Found Magma include: ${MAGMA_INCLUDE_DIR}")
   message(STATUS "Found Magma library: ${MAGMA_LIBRARY}")
-  add_definitions("-DHAVE_CUDA -DHAVE_CUBLAS")
+  install(TARGETS Magma EXPORT hiop-targets)
 else()
   message(STATUS "Magma was not found.")
 endif()

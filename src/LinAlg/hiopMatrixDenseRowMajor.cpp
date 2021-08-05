@@ -61,11 +61,12 @@
 namespace hiop
 {
 
-hiopMatrixDenseRowMajor::hiopMatrixDenseRowMajor(const long long& m, 
-				 const long long& glob_n, 
-				 long long* col_part/*=NULL*/, 
-				 MPI_Comm comm/*=MPI_COMM_SELF*/, 
-				 const long long& m_max_alloc/*=-1*/) : hiopMatrixDense(m, glob_n, comm)
+hiopMatrixDenseRowMajor::hiopMatrixDenseRowMajor(const size_type& m, 
+                                                 const size_type& glob_n, 
+                                                 index_type* col_part/*=NULL*/, 
+                                                 MPI_Comm comm/*=MPI_COMM_SELF*/, 
+                                                 const size_type& m_max_alloc/*=-1*/)
+  : hiopMatrixDense(m, glob_n, comm)
 {
   int P=0;
   if(col_part) {
@@ -154,6 +155,15 @@ void hiopMatrixDenseRowMajor::copyFrom(const double* buffer)
   }
 }
 
+void hiopMatrixDenseRowMajor::copy_to(double* buffer)
+{
+  if(NULL==buffer) {
+    return;
+  } else {
+    memcpy(buffer, M_[0], m_local_*n_local_*sizeof(double));
+  }
+}
+
 void hiopMatrixDenseRowMajor::copyRowsFrom(const hiopMatrixDense& srcmat, int num_rows, int row_dest)
 {
   const auto& src = dynamic_cast<const hiopMatrixDenseRowMajor&>(srcmat);
@@ -168,7 +178,7 @@ void hiopMatrixDenseRowMajor::copyRowsFrom(const hiopMatrixDense& srcmat, int nu
     memcpy(M_[row_dest], src.M_[0], n_local_*num_rows*sizeof(double));
 }
 
-void hiopMatrixDenseRowMajor::copyRowsFrom(const hiopMatrix& src_gen, const long long* rows_idxs, long long n_rows)
+void hiopMatrixDenseRowMajor::copyRowsFrom(const hiopMatrix& src_gen, const index_type* rows_idxs, size_type n_rows)
 {
   const auto& src = dynamic_cast<const hiopMatrixDenseRowMajor&>(src_gen);
   assert(n_global_==src.n_global_);
@@ -224,7 +234,7 @@ void hiopMatrixDenseRowMajor::copyFromMatrixBlock(const hiopMatrixDense& srcmat,
   }
 }
 
-void hiopMatrixDenseRowMajor::shiftRows(long long shift)
+void hiopMatrixDenseRowMajor::shiftRows(size_type shift)
 {
   if(shift==0) return;
   if(fabs(shift)==m_local_) return; //nothing to shift
@@ -265,19 +275,26 @@ void hiopMatrixDenseRowMajor::shiftRows(long long shift)
   }
 #endif
 }
-void hiopMatrixDenseRowMajor::replaceRow(long long row, const hiopVector& vec)
+void hiopMatrixDenseRowMajor::replaceRow(index_type row, const hiopVector& vec)
 {
   assert(row>=0); assert(row<m_local_);
-  long long vec_size=vec.get_local_size();
+  size_type vec_size=vec.get_local_size();
   memcpy(M_[row], vec.local_data_const(), (vec_size>=n_local_?n_local_:vec_size)*sizeof(double));
 }
 
-void hiopMatrixDenseRowMajor::getRow(long long irow, hiopVector& row_vec)
+void hiopMatrixDenseRowMajor::getRow(index_type irow, hiopVector& row_vec)
 {
   assert(irow>=0); assert(irow<m_local_);
   hiopVectorPar& vec=dynamic_cast<hiopVectorPar&>(row_vec);
   assert(n_local_==vec.get_local_size());
   memcpy(vec.local_data(), M_[irow], n_local_*sizeof(double));
+}
+
+void hiopMatrixDenseRowMajor::set_Hess_FR(const hiopMatrixDense& Hess, const hiopVector& add_diag_de)
+{
+  double one{1.0};
+  copyFrom(Hess);
+  addDiagonal(one, add_diag_de);
 }
 
 #ifdef HIOP_DEEPCHECKS
@@ -371,15 +388,13 @@ void hiopMatrixDenseRowMajor::print(FILE* f,
   }
 }
 
-#include <unistd.h>
-
 /*  y = beta * y + alpha * this * x  
  *
  * Sizes: y is m_local_, x is n_local_, the matrix is m_local_ x n_global_, and the
  * local chunk is m_local_ x n_local_ 
 */
-void hiopMatrixDenseRowMajor::timesVec(double beta, hiopVector& y_,
-			       double alpha, const hiopVector& x_) const
+void hiopMatrixDenseRowMajor::
+timesVec(double beta, hiopVector& y_, double alpha, const hiopVector& x_) const
 {
   hiopVectorPar& y = dynamic_cast<hiopVectorPar&>(y_);
   const hiopVectorPar& x = dynamic_cast<const hiopVectorPar&>(x_);
@@ -400,8 +415,8 @@ void hiopMatrixDenseRowMajor::timesVec(double beta, hiopVector& y_,
 #endif
 }
 
-void hiopMatrixDenseRowMajor::timesVec(double beta,  double* ya,
-			       double alpha, const double* xa) const
+void hiopMatrixDenseRowMajor::
+timesVec(double beta, double* ya, double alpha, const double* xa) const
 {
   char fortranTrans='T';
   int MM=m_local_, NN=n_local_, incx_y=1;
@@ -410,18 +425,16 @@ void hiopMatrixDenseRowMajor::timesVec(double beta,  double* ya,
   //only add beta*y on one processor (rank 0)
   if(myrank_!=0) beta=0.0; 
 #endif
-
   if( MM != 0 && NN != 0 ) {
     // the arguments seem reversed but so is trans='T' 
     // required since we keep the matrix row-wise, while the Fortran/BLAS expects them column-wise
-    DGEMV( &fortranTrans, &NN, &MM, &alpha, &M_[0][0], &NN,
-	    xa, &incx_y, &beta, ya, &incx_y );
+    DGEMV( &fortranTrans, &NN, &MM, &alpha, &M_[0][0], &NN, xa, &incx_y, &beta, ya, &incx_y );
   } else {
     if( MM != 0 ) {
       //y.scale( beta );
       if(beta != 1.) {
 	int one=1; 
-	DSCAL(&NN, &beta, ya, &one);
+	DSCAL(&MM, &beta, ya, &one);
       }
     } else {
       assert(MM==0);
@@ -438,8 +451,8 @@ void hiopMatrixDenseRowMajor::timesVec(double beta,  double* ya,
 }
 
 /* y = beta * y + alpha * transpose(this) * x */
-void hiopMatrixDenseRowMajor::transTimesVec(double beta, hiopVector& y_,
-				    double alpha, const hiopVector& x_) const
+void hiopMatrixDenseRowMajor::
+transTimesVec(double beta, hiopVector& y_, double alpha, const hiopVector& x_) const
 {
   hiopVectorPar& y = dynamic_cast<hiopVectorPar&>(y_);
   const hiopVectorPar& x = dynamic_cast<const hiopVectorPar&>(x_);
@@ -664,10 +677,10 @@ void hiopMatrixDenseRowMajor::addDiagonal(const double& value)
 {
   for(int i=0; i<n_local_; i++) M_[i][i] += value;
 }
-void hiopMatrixDenseRowMajor::addSubDiagonal(const double& alpha, long long start, const hiopVector& d_)
+void hiopMatrixDenseRowMajor::addSubDiagonal(const double& alpha, index_type start, const hiopVector& d_)
 {
   const hiopVectorPar& d = dynamic_cast<const hiopVectorPar&>(d_);
-  long long dlen=d.get_size();
+  size_type dlen=d.get_size();
 #ifdef HIOP_DEEPCHECKS
   assert(start>=0);
   assert(start+dlen<=n_local_);
@@ -680,8 +693,11 @@ void hiopMatrixDenseRowMajor::addSubDiagonal(const double& alpha, long long star
 /* add to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements of
  * 'd_' (source) starting at index 'start_on_src_vec'. The number of elements added is 'num_elems' 
  * when num_elems>=0, or the remaining elems on 'd_' starting at 'start_on_src_vec'. */
-void hiopMatrixDenseRowMajor::addSubDiagonal(int start_on_dest_diag, const double& alpha, 
-				     const hiopVector& d_, int start_on_src_vec, int num_elems/*=-1*/)
+void hiopMatrixDenseRowMajor::addSubDiagonal(int start_on_dest_diag,
+                                             const double& alpha, 
+                                             const hiopVector& d_,
+                                             int start_on_src_vec,
+                                             int num_elems/*=-1*/)
 {
   const hiopVectorPar& d = dynamic_cast<const hiopVectorPar&>(d_);
   if(num_elems<0) num_elems = d.get_size()-start_on_src_vec;
@@ -785,6 +801,48 @@ double hiopMatrixDenseRowMajor::max_abs_value()
   return maxvg;
 #endif
   return maxv;
+}
+
+void hiopMatrixDenseRowMajor::row_max_abs_value(hiopVector &ret_vec)
+{
+  char norm='M';
+  int one=1;
+  double maxv;
+  
+  hiopVectorPar& vec=dynamic_cast<hiopVectorPar&>(ret_vec);
+  assert(m_local_==vec.get_local_size());
+  
+  for(int irow=0; irow<m_local_; irow++)
+  {
+    maxv = DLANGE(&norm, &one, &n_local_, M_[0]+(irow*n_local_), &one, nullptr);
+#ifdef HIOP_USE_MPI
+    double maxvg;
+    int ierr=MPI_Allreduce(&maxv,&maxvg,1,MPI_DOUBLE,MPI_MAX,comm_); assert(ierr==MPI_SUCCESS);
+    maxv = maxvg;
+#endif
+    vec.local_data()[irow] = maxv;
+  }  
+}
+
+void hiopMatrixDenseRowMajor::scale_row(hiopVector &vec_scal, const bool inv_scale)
+{
+  char norm='M';
+  int one=1;
+  double scal;
+  
+  hiopVectorPar& vec=dynamic_cast<hiopVectorPar&>(vec_scal);
+  assert(m_local_==vec.get_local_size());
+  double* vd = vec.local_data();
+  
+  for(int irow=0; irow<m_local_; irow++)
+  {
+    if(inv_scale) {
+      scal = 1./vd[irow];
+    } else {
+      scal = vd[irow];
+    }
+    DSCAL(&n_local_, &scal, M_[0]+(irow*n_local_), &one);        
+  }  
 }
 
 #ifdef HIOP_DEEPCHECKS

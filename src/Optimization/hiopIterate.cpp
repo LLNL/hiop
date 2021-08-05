@@ -271,11 +271,13 @@ void hiopIterate::determineSlacks()
   sdu->axpy(-1., *d); 
   sdu->selectPattern(nlp->get_idu());
 
+#if 0
 #ifdef HIOP_DEEPCHECKS
   assert(sxl->allPositive_w_patternSelect(nlp->get_ixl()));
   assert(sxu->allPositive_w_patternSelect(nlp->get_ixu()));
   assert(sdl->allPositive_w_patternSelect(nlp->get_idl()));
   assert(sdu->allPositive_w_patternSelect(nlp->get_idu()));
+#endif
 #endif
 }
 
@@ -335,10 +337,16 @@ bool hiopIterate::takeStep_primals(const hiopIterate& iter, const hiopIterate& d
 {
   x->copyFrom(*iter.x); x->axpy(alphaprimal, *dir.x);
   d->copyFrom(*iter.d); d->axpy(alphaprimal, *dir.d);
+
+#if 1
+  determineSlacks();
+#else
   sxl->copyFrom(*iter.sxl); sxl->axpy(alphaprimal,*dir.sxl);
   sxu->copyFrom(*iter.sxu); sxu->axpy(alphaprimal,*dir.sxu);
   sdl->copyFrom(*iter.sdl); sdl->axpy(alphaprimal,*dir.sdl);
   sdu->copyFrom(*iter.sdu); sdu->axpy(alphaprimal,*dir.sdu);
+#endif // 1
+
 #ifdef HIOP_DEEPCHECKS
   assert(sxl->matchesPattern(nlp->get_ixl()));
   assert(sxu->matchesPattern(nlp->get_ixu()));
@@ -385,6 +393,88 @@ bool hiopIterate::updateDualsIneq(const hiopIterate& iter, const hiopIterate& di
   return true;
 }
 */
+
+int hiopIterate::adjust_small_slacks(hiopVector& slack, 
+                                     const hiopVector& bound, 
+                                     const hiopVector& slack_dual, 
+                                     const hiopVector& select,
+                                     const double& mu)
+{
+  int num_adjusted_slack = 0;
+  double zero=0.0;
+
+  //if(slack.get_local_size() > 0)
+  {
+    double slack_min;
+    double small_val = std::numeric_limits<double>::epsilon()* fmin(1., mu);
+    double scale_fact = pow(std::numeric_limits<double>::epsilon(), 0.75);
+
+    slack_min = slack.min_w_pattern(select);
+    if(slack_min < small_val) {
+      hiopVector* new_s = slack.new_copy();;
+      hiopVector* vec1 = slack.new_copy();;
+      hiopVector* vec2 = slack.new_copy();;
+
+      // correct variable bound to avoid numerical difficulty
+      new_s->addConstant_w_patternSelect(-small_val,select);
+      new_s->component_min(0.0);
+
+      num_adjusted_slack = new_s->numOfElemsLessThan(zero);
+
+      new_s->component_sgn();    // missing func
+      new_s->scale(-1.0);
+
+      slack.component_max(0.0);
+
+      vec1->setToConstant_w_patternSelect(mu, select);
+      vec1->componentDiv_w_selectPattern(slack_dual, select);
+
+      vec2->setToConstant_w_patternSelect(small_val, select);
+
+      vec1->component_max(*vec2);
+      vec1->axpy(-1.0, slack);
+
+      new_s->componentMult(*vec1);
+      new_s->axpy(1.0, slack);
+
+      vec1->setToConstant_w_patternSelect(1.0, select);
+      vec2->copyFrom(bound);
+      vec2->component_abs();  // missing func
+      vec1->component_max(*vec2);
+
+      vec1->scale(scale_fact);
+      vec1->axpy(1.0, slack);
+
+      new_s->component_min(*vec1);
+
+      slack.copyFrom(*new_s);
+
+//      slackselectPattern(select);
+#ifndef NDEBUG
+  assert(slack.matchesPattern(select));
+#endif
+      delete new_s;
+      delete vec1;
+      delete vec2;
+    }
+  }
+
+  return num_adjusted_slack;                      
+}
+
+
+int hiopIterate::adjust_small_slacks(const hiopIterate& iter_curr, const double& mu)
+{
+  int num_adjusted_slacks = 0;
+
+  num_adjusted_slacks += adjust_small_slacks(*sxl, nlp->get_xl(), *(iter_curr.get_zl()), (nlp->get_ixl()), mu);
+  num_adjusted_slacks += adjust_small_slacks(*sxu, nlp->get_xu(), *(iter_curr.get_zu()), (nlp->get_ixu()), mu);
+  num_adjusted_slacks += adjust_small_slacks(*sdl, nlp->get_dl(), *(iter_curr.get_vl()), (nlp->get_idl()), mu);
+  num_adjusted_slacks += adjust_small_slacks(*sdu, nlp->get_du(), *(iter_curr.get_vu()), (nlp->get_idu()), mu);
+
+  return num_adjusted_slacks;                      
+}
+
 
 bool hiopIterate::adjustDuals_primalLogHessian(const double& mu, const double& kappa_Sigma)
 {

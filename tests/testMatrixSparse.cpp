@@ -78,7 +78,7 @@ int main(int argc, char** argv)
   if(argc > 1)
     std::cout << "Executable " << argv[0] << " doesn't take any input.";
 
-  hiop::hiopOptions options;
+  hiop::hiopOptionsNLP options;
 
   local_ordinal_type M_local = 5;
   local_ordinal_type N_local = 10*M_local;
@@ -91,15 +91,17 @@ int main(int argc, char** argv)
 
   // Test sparse matrix
   {
+    const std::string mem_space = "DEFAULT";
     std::cout << "\nTesting hiopMatrixSparseTriplet\n";
     hiop::tests::MatrixTestsSparseTriplet test;
-
+    test.set_mem_space(mem_space);
+    
     // Establishing sparsity pattern and initializing Matrix
     local_ordinal_type entries_per_row = 5;
     local_ordinal_type nnz = M_local * entries_per_row;
 
     hiop::hiopMatrixSparse* mxn_sparse = 
-      hiop::LinearAlgebraFactory::createMatrixSparse(M_local, N_local, nnz);
+      hiop::LinearAlgebraFactory::create_matrix_sparse(mem_space, M_local, N_local, nnz);
     test.initializeMatrix(mxn_sparse, entries_per_row);
   
     hiop::hiopVectorPar vec_m(M_global);
@@ -113,6 +115,8 @@ int main(int argc, char** argv)
     fail += test.matrixTimesVec(*mxn_sparse, vec_m, vec_n);
     fail += test.matrixTransTimesVec(*mxn_sparse, vec_m, vec_n);
     fail += test.matrixMaxAbsValue(*mxn_sparse);
+    fail += test.matrix_row_max_abs_value(*mxn_sparse, vec_m);
+    fail += test.matrix_scale_row(*mxn_sparse, vec_m);
     fail += test.matrixIsFinite(*mxn_sparse);
 
     // Need a dense matrix to store the output of the following tests
@@ -130,10 +134,10 @@ int main(int argc, char** argv)
 
     // Initialise another sparse Matrix
     local_ordinal_type M2 = M_global * 2;
-    nnz = M2 * (entries_per_row);
+    local_ordinal_type nnz2 = M2 * (entries_per_row);
 
     hiop::hiopMatrixSparse* m2xn_sparse = 
-      hiop::LinearAlgebraFactory::createMatrixSparse(M2, N_global, nnz);
+      hiop::LinearAlgebraFactory::create_matrix_sparse(mem_space, M2, N_global, nnz2);
     test.initializeMatrix(m2xn_sparse, entries_per_row);
 
     hiop::hiopMatrixDenseRowMajor mxm2_dense(M_global, M2);
@@ -147,31 +151,46 @@ int main(int argc, char** argv)
     
     // copy the 1st row of mxn_sparse to the last row.
     // replace the nonzero index from "nnz-entries_per_row"
-    fail += test.copyRowsBlockFrom(*mxn_sparse, *m2xn_sparse,0, 1, M_global-1, mxn_sparse->numberOfNonzeros()-entries_per_row);
+    fail += test.copyRowsBlockFrom(*mxn_sparse,
+                                   *m2xn_sparse,
+                                   0,
+                                   1,
+                                   M_global-1,
+                                   mxn_sparse->numberOfNonzeros()-entries_per_row);
+
+    // copy sparse matrix to dense matrix
+    hiop::hiopMatrixDenseRowMajor mxn_dense(M_global, N_global);
+    fail += test.matrix_copy_to(mxn_dense, *mxn_sparse);
+  
+    // extend a sparse matrix [C;D] to [C -I I 0 0; D 0 0 -I I]
+    hiop::hiopMatrixDenseRowMajor m3xn3_dense(M_global+M2, N_global+2*(M_global+M2));
+    local_ordinal_type nnz3 = nnz + nnz2 + 2*M_global + 2*M2;
+    hiop::hiopMatrixSparse* m3xn3_sparse = 
+      hiop::LinearAlgebraFactory::create_matrix_sparse(mem_space, M_global+M2, N_global+2*(M_global+M2), nnz3);
+    fail += test.matrix_set_Jac_FR(m3xn3_dense, *m3xn3_sparse, *mxn_sparse, *m2xn_sparse);
 
     // Remove testing objects
     delete mxn_sparse;
     delete m2xn_sparse;
+    delete m3xn3_sparse;
   
   }
 
 #ifdef HIOP_USE_RAJA
   // Test RAJA sparse matrix
   {
+    const std::string mem_space = "DEVICE";
     std::cout << "\nTesting hiopMatrixRajaSparseTriplet\n";
 
-    options.SetStringValue("mem_space", "device");
-    hiop::LinearAlgebraFactory::set_mem_space(options.GetString("mem_space"));
-    std::string mem_space = hiop::LinearAlgebraFactory::get_mem_space();
-
     hiop::tests::MatrixTestsRajaSparseTriplet test;
+    test.set_mem_space(mem_space);
     
     // Establishing sparsity pattern and initializing Matrix
     local_ordinal_type entries_per_row = 5;
     local_ordinal_type nnz = M_local * entries_per_row;
 
     hiop::hiopMatrixSparse* mxn_sparse = 
-      hiop::LinearAlgebraFactory::createMatrixSparse(M_local, N_local, nnz);
+      hiop::LinearAlgebraFactory::create_matrix_sparse(mem_space, M_local, N_local, nnz);
 
     test.initializeMatrix(mxn_sparse, entries_per_row);
   
@@ -185,6 +204,8 @@ int main(int argc, char** argv)
     fail += test.matrixSetToZero(*mxn_sparse);
     fail += test.matrixSetToConstant(*mxn_sparse);
     fail += test.matrixMaxAbsValue(*mxn_sparse);
+    fail += test.matrix_row_max_abs_value(*mxn_sparse, vec_m);
+    fail += test.matrix_scale_row(*mxn_sparse, vec_m);
     fail += test.matrixIsFinite(*mxn_sparse);
     fail += test.matrixTimesVec(*mxn_sparse, vec_m, vec_n);
     fail += test.matrixTransTimesVec(*mxn_sparse, vec_m, vec_n);
@@ -204,11 +225,12 @@ int main(int argc, char** argv)
 
     // Initialise another sparse Matrix
     local_ordinal_type M2 = M_global * 2;
-    nnz = M2 * (entries_per_row);
+    local_ordinal_type nnz2 = M2 * (entries_per_row);
 
     /// @todo: use linear algebra factory for this
-    hiop::hiopMatrixRajaSparseTriplet m2xn_sparse(M2, N_global, nnz, mem_space);
-    test.initializeMatrix(&m2xn_sparse, entries_per_row);
+    hiop::hiopMatrixSparse* m2xn_sparse = 
+      hiop::LinearAlgebraFactory::create_matrix_sparse(mem_space, M2, N_global, nnz2);
+    test.initializeMatrix(m2xn_sparse, entries_per_row);
 
     hiop::hiopMatrixRajaDense mxm2_dense(M_global, M2, mem_space);
 
@@ -216,14 +238,24 @@ int main(int argc, char** argv)
     local_ordinal_type i_offset = 1;
     local_ordinal_type j_offset = M2 + 1;
 
-    fail += test.matrixTimesMatTrans(*mxn_sparse, m2xn_sparse, mxm2_dense);
-    fail += test.matrixAddMDinvNtransToSymDeMatUTri(*mxn_sparse, m2xn_sparse, vec_n, W_dense, i_offset, j_offset);
+    fail += test.matrixTimesMatTrans(*mxn_sparse, *m2xn_sparse, mxm2_dense);
+    fail += test.matrixAddMDinvNtransToSymDeMatUTri(*mxn_sparse, *m2xn_sparse, vec_n, W_dense, i_offset, j_offset);
+
+    // copy sparse matrix to dense matrix
+    hiop::hiopMatrixRajaDense mxn_dense(M_global, N_global, mem_space);
+    fail += test.matrix_copy_to(mxn_dense, *mxn_sparse);
+  
+    // extend a sparse matrix [C;D] to [C -I I 0 0; D 0 0 -I I]
+    hiop::hiopMatrixRajaDense m3xn3_dense(M_global+M2, N_global+2*(M_global+M2), mem_space);
+    local_ordinal_type nnz3 = nnz + nnz2 + 2*M_global + 2*M2;
+    hiop::hiopMatrixSparse* m3xn3_sparse = 
+      hiop::LinearAlgebraFactory::create_matrix_sparse(mem_space, M_global+M2, N_global+2*(M_global+M2), nnz3);
+    fail += test.matrix_set_Jac_FR(m3xn3_dense, *m3xn3_sparse, *mxn_sparse, *m2xn_sparse);
 
     // Remove testing objects
     delete mxn_sparse;
-
-    // Set memory space back to default value
-    options.SetStringValue("mem_space", "default");
+    delete m2xn_sparse;
+    delete m3xn3_sparse;
   }
 #endif
 

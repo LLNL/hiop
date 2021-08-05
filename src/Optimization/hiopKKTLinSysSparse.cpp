@@ -90,8 +90,9 @@ namespace hiop
     Jac_dSp_ = dynamic_cast<const hiopMatrixSparseTriplet*>(Jac_d_);
     if(!Jac_dSp_) { assert(false); return false; }
 
-    long long nx = HessSp_->n(), neq=Jac_cSp_->m(), nineq=Jac_dSp_->m();
-    int nnz = HessSp_->numberOfNonzeros() + Jac_cSp_->numberOfNonzeros() + Jac_dSp_->numberOfNonzeros() + nx + neq + nineq;
+    size_type nx = HessSp_->n(), neq=Jac_cSp_->m(), nineq=Jac_dSp_->m();
+    int nnz = HessSp_->numberOfNonzeros() + Jac_cSp_->numberOfNonzeros() + Jac_dSp_->numberOfNonzeros();
+    nnz += nx + neq + nineq;
 
     linSys_ = determineAndCreateLinsys(nx, neq, nineq, nnz);
         
@@ -112,14 +113,18 @@ namespace hiop
       Msys.setToZero();
 
       // copy Jac and Hes to the full iterate matrix
-      long long dest_nnz_st{0};
-      Msys.copyRowsBlockFrom(*HessSp_,  0,   nx,     0,      dest_nnz_st); dest_nnz_st += HessSp_->numberOfNonzeros();
-      Msys.copyRowsBlockFrom(*Jac_cSp_, 0,   neq,    nx,     dest_nnz_st); dest_nnz_st += Jac_cSp_->numberOfNonzeros();
-      Msys.copyRowsBlockFrom(*Jac_dSp_, 0,   nineq,  nx+neq, dest_nnz_st); dest_nnz_st += Jac_dSp_->numberOfNonzeros();
+      size_type dest_nnz_st{0};
+      Msys.copyRowsBlockFrom(*HessSp_,  0,   nx,     0,      dest_nnz_st);
+      dest_nnz_st += HessSp_->numberOfNonzeros();
+      Msys.copyRowsBlockFrom(*Jac_cSp_, 0,   neq,    nx,     dest_nnz_st);
+      dest_nnz_st += Jac_cSp_->numberOfNonzeros();
+      Msys.copyRowsBlockFrom(*Jac_dSp_, 0,   nineq,  nx+neq, dest_nnz_st);
+      dest_nnz_st += Jac_dSp_->numberOfNonzeros();
 
       //build the diagonal Hx = Dx + delta_wx
       if(NULL == Hx_) {
-        Hx_ = LinearAlgebraFactory::createVector(nx); assert(Hx_);
+        Hx_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), nx);
+        assert(Hx_);
       }
       Hx_->startingAtCopyFromStartingAt(0, *Dx_, 0);
 
@@ -160,8 +165,12 @@ namespace hiop
     } // end of update of the linear system
 
     //write matrix to file if requested
-    if(nlp_->options->GetString("write_kkt") == "yes") write_linsys_counter_++;
-    if(write_linsys_counter_>=0) csr_writer_.writeMatToFile(Msys, write_linsys_counter_); 
+    if(nlp_->options->GetString("write_kkt") == "yes") {
+      write_linsys_counter_++;
+    }
+    if(write_linsys_counter_>=0) {
+      csr_writer_.writeMatToFile(Msys, write_linsys_counter_, nx, neq, nineq);
+    }
 
     nlp_->runStats.tmSolverInternal.stop();
     return true;
@@ -181,7 +190,10 @@ namespace hiop
     int nx=rx.get_size(), nyc=ryc.get_size(), nyd=ryd.get_size();
     int nxsp=Hx_->get_size();
     assert(nxsp==nx);
-    if(rhs_ == NULL) rhs_ = LinearAlgebraFactory::createVector(nx+nyc+nyd);
+    if(rhs_ == NULL) {
+      rhs_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"),
+                                                 nx+nyc+nyd);
+    }
 
     nlp_->log->write("RHS KKT_SPARSE_XYcYd rx: ", rx,  hovIteration);
     nlp_->log->write("RHS KKT_SPARSE_XYcYd ryc:", ryc, hovIteration);
@@ -194,9 +206,9 @@ namespace hiop
     ryc.copyToStarting(*rhs_, nx);
     ryd.copyToStarting(*rhs_, nx+nyc);
 
-    if(write_linsys_counter_>=0)
+    if(write_linsys_counter_>=0) {
       csr_writer_.writeRhsToFile(*rhs_, write_linsys_counter_);
-
+    }
     nlp_->runStats.kkt.tmSolveRhsManip.stop();
 
     nlp_->runStats.kkt.tmSolveTriangular.start();
@@ -212,9 +224,9 @@ namespace hiop
 			nlp_->runStats.linsolv.get_summary_last_solve().c_str());
     }
 
-    if(write_linsys_counter_>=0)
+    if(write_linsys_counter_>=0) {
       csr_writer_.writeSolToFile(*rhs_, write_linsys_counter_);
-
+    }
     if(false==linsol_ok) return false;
 
     nlp_->runStats.kkt.tmSolveRhsManip.start();
@@ -309,7 +321,7 @@ namespace hiop
     Jac_dSp_ = dynamic_cast<const hiopMatrixSparseTriplet*>(Jac_d_);
     if(!Jac_dSp_) { assert(false); return false; }
     
-    long long nx = HessSp_->n(), nd=Jac_dSp_->m(), neq=Jac_cSp_->m(), nineq=Jac_dSp_->m();
+    size_type nx = HessSp_->n(), nd=Jac_dSp_->m(), neq=Jac_cSp_->m(), nineq=Jac_dSp_->m();
     int nnz = HessSp_->numberOfNonzeros() + Jac_cSp_->numberOfNonzeros() + Jac_dSp_->numberOfNonzeros() + nd + nx + nd + neq + nineq;
 
     linSys_ = determineAndCreateLinsys(nx, neq, nineq, nnz);
@@ -331,7 +343,7 @@ namespace hiop
       Msys.setToZero();
 
       // copy Jac and Hes to the full iterate matrix
-      long long dest_nnz_st{0};
+      size_type dest_nnz_st{0};
       Msys.copyRowsBlockFrom(*HessSp_,  0,   nx,     0,          dest_nnz_st); dest_nnz_st += HessSp_->numberOfNonzeros();
       Msys.copyRowsBlockFrom(*Jac_cSp_, 0,   neq,    nx+nd,      dest_nnz_st); dest_nnz_st += Jac_cSp_->numberOfNonzeros();
       Msys.copyRowsBlockFrom(*Jac_dSp_, 0,   nineq,  nx+nd+neq,  dest_nnz_st); dest_nnz_st += Jac_dSp_->numberOfNonzeros();
@@ -341,7 +353,8 @@ namespace hiop
 
       //build the diagonal Hx = Dx + delta_wx
       if(NULL == Hx_) {
-        Hx_ = LinearAlgebraFactory::createVector(nx); assert(Hx_);
+        Hx_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), nx);
+        assert(Hx_);
       }
       Hx_->startingAtCopyFromStartingAt(0, *Dx_, 0);
 
@@ -352,7 +365,8 @@ namespace hiop
 
       //build the diagonal Hd = Dd + delta_wd
       if(NULL == Hd_) {
-        Hd_ = LinearAlgebraFactory::createVector(nd); assert(Hd_);
+        Hd_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), nd);
+        assert(Hd_);
       }
       Hd_->startingAtCopyFromStartingAt(0, *Dd_, 0);
       Hd_->addConstant(delta_wd);
@@ -376,8 +390,12 @@ namespace hiop
     }
     
     //write matrix to file if requested
-    if(nlp_->options->GetString("write_kkt") == "yes") write_linsys_counter_++;
-    if(write_linsys_counter_>=0) csr_writer_.writeMatToFile(Msys, write_linsys_counter_); 
+    if(nlp_->options->GetString("write_kkt") == "yes") {
+      write_linsys_counter_++;
+    }
+    if(write_linsys_counter_>=0) {
+      csr_writer_.writeMatToFile(Msys, write_linsys_counter_, nx, neq, nineq);
+    }
 
     return true;
   }
@@ -396,7 +414,10 @@ namespace hiop
     int nx=rx.get_size(), nd=rd.get_size(), nyc=ryc.get_size(), nyd=ryd.get_size();
     int nxsp=Hx_->get_size();
     assert(nxsp==nx);
-    if(rhs_ == NULL) rhs_ = LinearAlgebraFactory::createVector(nx+nd+nyc+nyd);
+    if(rhs_ == NULL) {
+      rhs_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"),
+                                                 nx+nd+nyc+nyd);
+    }
 
     nlp_->log->write("RHS KKT_SPARSE_XDYcYd rx: ", rx,  hovIteration);
     nlp_->log->write("RHS KKT_SPARSE_XDYcYd rx: ", rd,  hovIteration);
@@ -553,7 +574,7 @@ namespace hiop
     Jac_dSp_ = dynamic_cast<const hiopMatrixSparseTriplet*>(Jac_d_);
     if(!Jac_dSp_) { assert(false); return false; }
     
-    long long nx = HessSp_->n(), nd=Jac_dSp_->m(), neq=Jac_cSp_->m(), nineq=Jac_dSp_->m(),
+    size_type nx = HessSp_->n(), nd=Jac_dSp_->m(), neq=Jac_cSp_->m(), nineq=Jac_dSp_->m(),
               ndl = nlp_->m_ineq_low(), ndu = nlp_->m_ineq_upp(), nxl = nlp_->n_low(), nxu = nlp_->n_upp();
 
     // note that hess may be saved as a triangular matrix
@@ -590,11 +611,12 @@ namespace hiop
       Msys.setToZero();
 
       // copy Jac and Hes to the full iterate matrix, use Dx_ and Dd_ as temp vector
-      long long dest_nnz_st{0};
+      size_type dest_nnz_st{0};
 
       // H is triangular
       // [   H   Jc^T  Jd^T | 0 |  0   0  -I   I   |  0   0   0   0  ] [  dx]   [    rx    ]
-      Msys.copySubmatrixFrom(*HessSp_, 0, 0, dest_nnz_st); dest_nnz_st += HessSp_->numberOfNonzeros();
+      Msys.copySubmatrixFrom(*HessSp_, 0, 0, dest_nnz_st, true); dest_nnz_st += HessSp_->numberOfOffDiagNonzeros();
+      Msys.copySubmatrixFromTrans(*HessSp_, 0, 0, dest_nnz_st); dest_nnz_st += HessSp_->numberOfNonzeros();
 
       Msys.copySubmatrixFromTrans(*Jac_cSp_, 0, nx, dest_nnz_st); dest_nnz_st += Jac_cSp_->numberOfNonzeros();
       Msys.copySubmatrixFromTrans(*Jac_dSp_, 0, nx+neq, dest_nnz_st); dest_nnz_st += Jac_dSp_->numberOfNonzeros();
@@ -649,7 +671,8 @@ namespace hiop
 
       //build the diagonal Hx = delta_wx
       if(nullptr == Hx_) {
-        Hx_ = LinearAlgebraFactory::createVector(nx); assert(Hx_);
+        Hx_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), nx);
+        assert(Hx_);
       }
       Hx_->setToZero();
       Hx_->addConstant(delta_wx);
@@ -657,7 +680,8 @@ namespace hiop
 
       //build the diagonal Hd = delta_wd
       if(nullptr == Hd_) {
-        Hd_ = LinearAlgebraFactory::createVector(nd); assert(Hd_);
+        Hd_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), nd);
+        assert(Hd_);
       }
       Hd_->setToZero();
       Hd_->addConstant(delta_wd);
@@ -675,8 +699,12 @@ namespace hiop
     }
  
     //write matrix to file if requested
-    if(nlp_->options->GetString("write_kkt") == "yes") write_linsys_counter_++;
-    if(write_linsys_counter_>=0) csr_writer_.writeMatToFile(Msys, write_linsys_counter_); 
+    if(nlp_->options->GetString("write_kkt") == "yes") {
+      write_linsys_counter_++;
+    }
+    if(write_linsys_counter_>=0) {
+      csr_writer_.writeMatToFile(Msys, write_linsys_counter_, nx, neq, nineq);
+    }
 
     return true;
   }
@@ -696,13 +724,15 @@ namespace hiop
 
     nlp_->runStats.kkt.tmSolveRhsManip.start();
 
-    long long nx=rx.get_size(), nd=rd.get_size(), neq=ryc.get_size(), nineq=ryd.get_size(),
+    size_type nx=rx.get_size(), nd=rd.get_size(), neq=ryc.get_size(), nineq=ryd.get_size(),
               ndl = nlp_->m_ineq_low(), ndu = nlp_->m_ineq_upp(), nxl = nlp_->n_low(), nxu = nlp_->n_upp();
-    long long nxsp=Hx_->get_size();
+    size_type nxsp=Hx_->get_size();
     assert(nxsp==nx);
     int n = nx + neq + nineq + nd + ndl + ndu + nxl + nxu + ndl + ndu + nxl + nxu;
 
-    if(rhs_ == NULL) rhs_ = LinearAlgebraFactory::createVector(n);
+    if(rhs_ == nullptr) {
+      rhs_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), n);
+    }
 
     {//write to log
       nlp_->log->write("RHS KKT_SPARSE_FULL rx: ", rx,  hovIteration);

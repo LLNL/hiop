@@ -184,6 +184,97 @@ double hiopKKTLinSys::errorKKT(const hiopResidual* resid, const hiopIterate* sol
 
 #endif
 
+bool hiopKKTLinSys::compute_directions_for_full_space(const hiopResidual* resid,
+                                                      hiopIterate* dir)
+{
+  const hiopResidual &r=*resid;
+
+  /***********************************************************************
+   * compute the rest of the directions
+   *
+   */
+  //dsxl = rxl + dx  and dzl= [Sxl]^{-1} ( - Zl*dsxl + rszl)
+  if(nlp_->n_low_local()) {
+    dir->sxl->copyFrom(*r.rxl);
+    dir->sxl->axpy( 1.0,*dir->x);
+    dir->sxl->selectPattern(nlp_->get_ixl());
+
+    dir->zl->copyFrom(*r.rszl);
+    dir->zl->axzpy(-1.0,*iter_->zl,*dir->sxl);
+    dir->zl->componentDiv_w_selectPattern(*iter_->sxl, nlp_->get_ixl());
+  } else {
+    dir->sxl->setToZero();
+    dir->zl->setToZero();
+  }
+
+  //dir->sxl->print();
+  //dir->zl->print();
+  //dsxu = rxu - dx and dzu = [Sxu]^{-1} ( - Zu*dsxu + rszu)
+  if(nlp_->n_upp_local()) {
+    dir->sxu->copyFrom(*r.rxu);
+    dir->sxu->axpy(-1.0,*dir->x);
+    dir->sxu->selectPattern(nlp_->get_ixu());
+
+    dir->zu->copyFrom(*r.rszu);
+    dir->zu->axzpy(-1.0,*iter_->zu,*dir->sxu);
+    dir->zu->selectPattern(nlp_->get_ixu());
+    dir->zu->componentDiv_w_selectPattern(*iter_->sxu, nlp_->get_ixu());
+  } else {
+    dir->sxu->setToZero();
+    dir->zu->setToZero();
+  }
+
+  //dir->sxu->print();
+  //dir->zu->print();
+  //dsdl = rdl + dd and dvl = [Sdl]^{-1} ( - Vl*dsdl + rsvl)
+  if(nlp_->m_ineq_low()) {
+    dir->sdl->copyFrom(*r.rdl);
+    dir->sdl->axpy( 1.0,*dir->d);
+    dir->sdl->selectPattern(nlp_->get_idl());
+
+    dir->vl->copyFrom(*r.rsvl);
+    dir->vl->axzpy(-1.0,*iter_->vl,*dir->sdl);
+    dir->vl->selectPattern(nlp_->get_idl());
+    dir->vl->componentDiv_w_selectPattern(*iter_->sdl, nlp_->get_idl());
+  } else {
+    dir->sdl->setToZero();
+    dir->vl->setToZero();
+  }
+
+  //dsdu = rdu - dd and dvu = [Sdu]^{-1} ( - Vu*dsdu + rsvu )
+  if(nlp_->m_ineq_upp()>0) {
+    dir->sdu->copyFrom(*r.rdu);
+    dir->sdu->axpy(-1.0,*dir->d);
+    dir->sdu->selectPattern(nlp_->get_idu());
+
+    dir->vu->copyFrom(*r.rsvu);
+    dir->vu->axzpy(-1.0,*iter_->vu,*dir->sdu);
+    dir->vu->selectPattern(nlp_->get_idu());
+    dir->vu->componentDiv_w_selectPattern(*iter_->sdu, nlp_->get_idu());
+  } else {
+    dir->sdu->setToZero();
+    dir->vu->setToZero();
+  }
+
+#ifdef HIOP_DEEPCHECKS
+  assert(dir->sxl->matchesPattern(nlp_->get_ixl()));
+  assert(dir->sxu->matchesPattern(nlp_->get_ixu()));
+  assert(dir->sdl->matchesPattern(nlp_->get_idl()));
+  assert(dir->sdu->matchesPattern(nlp_->get_idu()));
+  assert(dir->zl->matchesPattern(nlp_->get_ixl()));
+  assert(dir->zu->matchesPattern(nlp_->get_ixu()));
+  assert(dir->vl->matchesPattern(nlp_->get_idl()));
+  assert(dir->vu->matchesPattern(nlp_->get_idu()));
+
+  //CHECK THE SOLUTION
+  errorKKT(resid,dir);
+#endif
+
+  return true;
+}
+
+
+
 int hiopKKTLinSysCurvCheck::factorizeWithCurvCheck()
 {
   return linSys_->matrixChanged();
@@ -314,8 +405,8 @@ bool hiopKKTLinSysCompressedXYcYd::update(const hiopIterate* iter,
 }
 
 
-bool hiopKKTLinSysCompressedXYcYd::computeDirections(const hiopResidual* resid, 
-						     hiopIterate* dir)
+bool hiopKKTLinSysCompressedXYcYd::computeDirections(const hiopResidual* resid,
+                                                     hiopIterate* dir)
 {
   nlp_->runStats.tmSolverInternal.start();
   nlp_->runStats.kkt.tmSolveRhsManip.start();
@@ -411,77 +502,8 @@ bool hiopKKTLinSysCompressedXYcYd::computeDirections(const hiopResidual* resid,
     return false;
   }
 
-  /***********************************************************************
-   * compute the rest of the directions
-   *
-   */
-  //dsxl = rxl + dx  and dzl= [Sxl]^{-1} ( - Zl*dsxl + rszl)
-  if(nlp_->n_low_local()) {
-    dir->sxl->copyFrom(*r.rxl); dir->sxl->axpy( 1.0,*dir->x); dir->sxl->selectPattern(nlp_->get_ixl());
+  bool bret = compute_directions_for_full_space(resid, dir);
 
-    dir->zl->copyFrom(*r.rszl); dir->zl->axzpy(-1.0,*iter_->zl,*dir->sxl);
-    dir->zl->componentDiv_w_selectPattern(*iter_->sxl, nlp_->get_ixl());
-  } else {
-    dir->sxl->setToZero(); dir->zl->setToZero();
-  }
-
-  //dir->sxl->print();
-  //dir->zl->print();
-  //dsxu = rxu - dx and dzu = [Sxu]^{-1} ( - Zu*dsxu + rszu)
-  if(nlp_->n_upp_local()) {
-    dir->sxu->copyFrom(*r.rxu); dir->sxu->axpy(-1.0,*dir->x);
-    dir->sxu->selectPattern(nlp_->get_ixu());
-
-    dir->zu->copyFrom(*r.rszu); dir->zu->axzpy(-1.0,*iter_->zu,*dir->sxu);
-    dir->zu->selectPattern(nlp_->get_ixu());
-    dir->zu->componentDiv_w_selectPattern(*iter_->sxu, nlp_->get_ixu());
-  } else {
-    dir->sxu->setToZero(); dir->zu->setToZero();
-  }
-
-  //dir->sxu->print();
-  //dir->zu->print();
-  //dsdl = rdl + dd and dvl = [Sdl]^{-1} ( - Vl*dsdl + rsvl)
-  if(nlp_->m_ineq_low()) {
-    dir->sdl->copyFrom(*r.rdl); dir->sdl->axpy( 1.0,*dir->d);
-    dir->sdl->selectPattern(nlp_->get_idl());
-
-    dir->vl->copyFrom(*r.rsvl); dir->vl->axzpy(-1.0,*iter_->vl,*dir->sdl);
-    dir->vl->selectPattern(nlp_->get_idl());
-    dir->vl->componentDiv_w_selectPattern(*iter_->sdl, nlp_->get_idl());
-  } else {
-    dir->sdl->setToZero(); dir->vl->setToZero();
-  }
-
-  //dir->sdl->print();
-  // dir->vl->print();
-  //dsdu = rdu - dd and dvu = [Sdu]^{-1} ( - Vu*dsdu + rsvu )
-  if(nlp_->m_ineq_upp()>0) {
-    dir->sdu->copyFrom(*r.rdu); dir->sdu->axpy(-1.0,*dir->d);
-    dir->sdu->selectPattern(nlp_->get_idu());
-
-    dir->vu->copyFrom(*r.rsvu); dir->vu->axzpy(-1.0,*iter_->vu,*dir->sdu);
-    dir->vu->selectPattern(nlp_->get_idu());
-    dir->vu->componentDiv_w_selectPattern(*iter_->sdu, nlp_->get_idu());
-  } else {
-    dir->sdu->setToZero(); dir->vu->setToZero();
-  }
-
-  //dir->sdu->print();
-  //dir->vu->print();
-#ifdef HIOP_DEEPCHECKS
-  assert(dir->sxl->matchesPattern(nlp_->get_ixl()));
-  assert(dir->sxu->matchesPattern(nlp_->get_ixu()));
-  assert(dir->sdl->matchesPattern(nlp_->get_idl()));
-  assert(dir->sdu->matchesPattern(nlp_->get_idu()));
-  assert(dir->zl->matchesPattern(nlp_->get_ixl()));
-  assert(dir->zu->matchesPattern(nlp_->get_ixu()));
-  assert(dir->vl->matchesPattern(nlp_->get_idl()));
-  assert(dir->vu->matchesPattern(nlp_->get_idu()));
-
-  //CHECK THE SOLUTION
-  errorKKT(resid,dir);
-#endif
   nlp_->runStats.kkt.tmSolveRhsManip.stop();
   nlp_->runStats.tmSolverInternal.stop();
   return true;
@@ -694,79 +716,8 @@ bool hiopKKTLinSysCompressedXDYcYd::computeDirections(const hiopResidual* resid,
 
   if(false==sol_ok) return sol_ok;
 
-  /***********************************************************************
-   * compute the rest of the directions
-   *
-   */
-  //dsxl = rxl + dx  and dzl= [Sxl]^{-1} ( - Zl*dsxl + rszl)
-  if(nlp_->n_low_local()) {
-    dir->sxl->copyFrom(*r.rxl); dir->sxl->axpy( 1.0,*dir->x); dir->sxl->selectPattern(nlp_->get_ixl());
+  bool bret = compute_directions_for_full_space(resid, dir);
 
-    dir->zl->copyFrom(*r.rszl); dir->zl->axzpy(-1.0,*iter_->zl,*dir->sxl);
-    dir->zl->componentDiv_w_selectPattern(*iter_->sxl, nlp_->get_ixl());
-  } else {
-    dir->sxl->setToZero(); dir->zl->setToZero();
-  }
-
-  //dir->sxl->print();
-  //dir->zl->print();
-  //dsxu = rxu - dx and dzu = [Sxu]^{-1} ( - Zu*dsxu + rszu)
-  if(nlp_->n_upp_local()) {
-    dir->sxu->copyFrom(*r.rxu);
-    dir->sxu->axpy(-1.0,*dir->x);
-    dir->sxu->selectPattern(nlp_->get_ixu());
-
-    dir->zu->copyFrom(*r.rszu);
-    dir->zu->axzpy(-1.0,*iter_->zu,*dir->sxu);
-    dir->zu->selectPattern(nlp_->get_ixu());
-    dir->zu->componentDiv_w_selectPattern(*iter_->sxu, nlp_->get_ixu());
-  } else {
-    dir->sxu->setToZero(); dir->zu->setToZero();
-  }
-
-  //dir->sxu->print();
-  //dir->zu->print();
-  //dsdl = rdl + dd and dvl = [Sdl]^{-1} ( - Vl*dsdl + rsvl)
-  if(nlp_->m_ineq_low()) {
-    dir->sdl->copyFrom(*r.rdl);
-    dir->sdl->axpy( 1.0,*dir->d);
-    dir->sdl->selectPattern(nlp_->get_idl());
-
-    dir->vl->copyFrom(*r.rsvl);
-    dir->vl->axzpy(-1.0,*iter_->vl,*dir->sdl);
-    dir->vl->selectPattern(nlp_->get_idl());
-    dir->vl->componentDiv_w_selectPattern(*iter_->sdl, nlp_->get_idl());
-  } else {
-    dir->sdl->setToZero(); dir->vl->setToZero();
-  }
-
-  //dsdu = rdu - dd and dvu = [Sdu]^{-1} ( - Vu*dsdu + rsvu )
-  if(nlp_->m_ineq_upp()>0) {
-    dir->sdu->copyFrom(*r.rdu);
-    dir->sdu->axpy(-1.0,*dir->d);
-    dir->sdu->selectPattern(nlp_->get_idu());
-
-    dir->vu->copyFrom(*r.rsvu);
-    dir->vu->axzpy(-1.0,*iter_->vu,*dir->sdu);
-    dir->vu->selectPattern(nlp_->get_idu());
-    dir->vu->componentDiv_w_selectPattern(*iter_->sdu, nlp_->get_idu());
-  } else {
-    dir->sdu->setToZero(); dir->vu->setToZero();
-  }
-
-#ifdef HIOP_DEEPCHECKS
-  assert(dir->sxl->matchesPattern(nlp_->get_ixl()));
-  assert(dir->sxu->matchesPattern(nlp_->get_ixu()));
-  assert(dir->sdl->matchesPattern(nlp_->get_idl()));
-  assert(dir->sdu->matchesPattern(nlp_->get_idu()));
-  assert(dir->zl->matchesPattern(nlp_->get_ixl()));
-  assert(dir->zu->matchesPattern(nlp_->get_ixu()));
-  assert(dir->vl->matchesPattern(nlp_->get_idl()));
-  assert(dir->vu->matchesPattern(nlp_->get_idu()));
-
-  //CHECK THE SOLUTION
-  errorKKT(resid,dir);
-#endif
   nlp_->runStats.kkt.tmSolveRhsManip.stop();
   nlp_->runStats.tmSolverInternal.stop();
   return true;
@@ -845,7 +796,10 @@ hiopKKTLinSysLowRank::hiopKKTLinSysLowRank(hiopNlpFormulation* nlp)
   nlpD = dynamic_cast<hiopNlpDenseConstraints*>(nlp_);
 
   _kxn_mat = nlpD->alloc_multivector_primal(nlpD->m()); //!opt
-  N = LinearAlgebraFactory::createMatrixDense(nlpD->m(),nlpD->m());
+  assert("DEFAULT" == toupper(nlpD->options->GetString("mem_space")));
+  N = LinearAlgebraFactory::create_matrix_dense(nlpD->options->GetString("mem_space"),
+                                                nlpD->m(),
+                                                nlpD->m());
 #ifdef HIOP_DEEPCHECKS
   Nmat=N->alloc_clone();
 #endif
@@ -1047,8 +1001,8 @@ int hiopKKTLinSysLowRank::solveWithRefin(hiopMatrixDense& M, hiopVector& rhs)
   // 2. check residual
   //
   hiopVector* x = rhs.alloc_clone();
-  hiopVector* dx    = hiop::LinearAlgebraFactory::createVector(N);
-  hiopVector* resid = hiop::LinearAlgebraFactory::createVector(N);
+  hiopVector* dx    = rhs.alloc_clone();
+  hiopVector* resid = rhs.alloc_clone();
   int nIterRefin=0;double nrmResid;
   int info;
   const int MAX_ITER_REFIN=3;
@@ -1287,9 +1241,9 @@ errorCompressedLinsys(const hiopVector& rx, const hiopVector& ryc, const hiopVec
   aux=RX->twonorm();
   derr=fmax(derr,aux);
   nlp_->log->printf(hovLinAlgScalars, "  >>>  rx=%g\n", aux);
-  //if(aux>1e-8) {
-  //nlp_->log->write("Low rank Hessian is:", *Hess, hovLinAlgScalars);
-  //}
+  // if(aux>1e-8) {
+  // nlp_->log->write("Low rank Hessian is:", *Hess, hovLinAlgScalars);
+  // }
   delete RX; RX=NULL;
 
   hiopVector* RC=ryc.new_copy();

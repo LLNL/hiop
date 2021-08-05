@@ -52,6 +52,7 @@
  * @author Robert Rutherford <robert.rutherford@pnnl.gov>, PNNL
  * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
  * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
+ * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
  *
  */
 #pragma once
@@ -82,19 +83,19 @@ class hiopMatrixRajaDense : public hiopMatrixDense
 {
 public:
 
-  hiopMatrixRajaDense(
-    const long long& m, 
-		const long long& glob_n,
-    std::string mem_space, 
-		long long* col_part = NULL, 
-		MPI_Comm comm = MPI_COMM_SELF, 
-		const long long& m_max_alloc = -1);
+  hiopMatrixRajaDense(const size_type& m, 
+                      const size_type& glob_n,
+                      std::string mem_space, 
+                      index_type* col_part = NULL, 
+                      MPI_Comm comm = MPI_COMM_SELF, 
+                      const size_type& m_max_alloc = -1);
   virtual ~hiopMatrixRajaDense();
 
   virtual void setToZero();
   virtual void setToConstant(double c);
   virtual void copyFrom(const hiopMatrixDense& dm);
   virtual void copyFrom(const double* buffer);
+  virtual void copy_to(double* buffer);
 
   virtual void timesVec(double beta,  hiopVector& y,
 			double alpha, const hiopVector& x) const;
@@ -146,7 +147,7 @@ public:
 
   virtual void addDiagonal(const double& alpha, const hiopVector& d_);
   virtual void addDiagonal(const double& value);
-  virtual void addSubDiagonal(const double& alpha, long long start_on_dest_diag, const hiopVector& d_);
+  virtual void addSubDiagonal(const double& alpha, index_type start_on_dest_diag, const hiopVector& d_);
   
   /** 
    * @brief add to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements of
@@ -194,6 +195,10 @@ public:
 
   virtual double max_abs_value();
 
+  virtual void row_max_abs_value(hiopVector &ret_vec);
+
+  virtual void scale_row(hiopVector &vec_scal, const bool inv_scale=false);
+
   virtual bool isfinite() const;
   
   //virtual void print(int maxRows=-1, int maxCols=-1, int rank=-1) const;
@@ -214,7 +219,7 @@ public:
    * @pre 'src' and 'this' must have same number of columns
    * @pre number of rows in 'src' must be at least the number of rows in 'this'
    */
-  void copyRowsFrom(const hiopMatrix& src_gen, const long long* rows_idxs, long long n_rows);
+  void copyRowsFrom(const hiopMatrix& src_gen, const index_type* rows_idxs, size_type n_rows);
   
   /// @brief copies 'src' into this as a block starting at (i_block_start,j_block_start)
   void copyBlockFromMatrix(const long i_block_start, const long j_block_start,
@@ -226,24 +231,28 @@ public:
    */
   void copyFromMatrixBlock(const hiopMatrixDense& src, const int i_src_block_start, const int j_src_block_start);
   /// @brief  shift<0 -> up; shift>0 -> down
-  void shiftRows(long long shift);
-  void replaceRow(long long row, const hiopVector& vec);
+  void shiftRows(size_type shift);
+  void replaceRow(index_type row, const hiopVector& vec);
   /// @brief copies row 'irow' in the vector 'row_vec' (sizes should match)
-  void getRow(long long irow, hiopVector& row_vec);
+  void getRow(index_type irow, hiopVector& row_vec);
+
+  /// @brief build Hess for FR problem, from the base problem `Hess`.
+  virtual void set_Hess_FR(const hiopMatrixDense& Hess, const hiopVector& add_diag_de);
+
 #ifdef HIOP_DEEPCHECKS
   void overwriteUpperTriangleWithLower();
   void overwriteLowerTriangleWithUpper();
 #endif
-  virtual long long get_local_size_n() const { return n_local_; }
-  virtual long long get_local_size_m() const { return m_local_; }
+  virtual size_type get_local_size_n() const { return n_local_; }
+  virtual size_type get_local_size_m() const { return m_local_; }
   virtual MPI_Comm get_mpi_comm() const { return comm_; }
 
   inline double* local_data_host() const {return data_host_; }
   double* local_data() {return data_dev_; }
   double* local_data_const() const { return data_dev_; }
 public:
-  virtual long long m() const {return m_local_;}
-  virtual long long n() const {return n_global_;}
+  virtual size_type m() const {return m_local_;}
+  virtual size_type n() const {return n_global_;}
 #ifdef HIOP_DEEPCHECKS
   virtual bool assertSymmetry(double tol=1e-16) const;
 #endif
@@ -256,8 +265,8 @@ private:
   double* data_host_; ///< pointer to host mirror of matrix data
   double* data_dev_;  ///< pointer to memory space of matrix data
   int n_local_;       ///< local number of columns
-  long long glob_jl_; ///< global index of first column in the local data block
-  long long glob_ju_; ///< global index of first column in the next data block
+  size_type glob_jl_; ///< global index of first column in the local data block
+  size_type glob_ju_; ///< global index of first column in the next data block
 
   double* yglob_host_;
   double* ya_host_;
@@ -265,7 +274,7 @@ private:
   mutable double* buff_mxnlocal_host_; ///< host data buffer
 
   //this is very private do not touch :)
-  long long max_rows_;
+  size_type max_rows_;
 
 private:
   hiopMatrixRajaDense() {};

@@ -1,5 +1,8 @@
 // The C interface header used by the user. This needs a detailed user documentation.
 
+//include hiop index and size types
+#include "hiop_types.h"
+
 typedef struct cHiopProblem {
   void *refcppHiop; // Pointer to the cpp object
   void *hiopinterface;
@@ -7,31 +10,31 @@ typedef struct cHiopProblem {
   void *user_data; 
   double *solution;
   double obj_value;
-  int (*get_starting_point)(long long n_, double* x0, void* jprob); 
-  int (*get_prob_sizes)(long long* n_, long long* m_, void* jprob); 
-  int (*get_vars_info)(long long n, double *xlow_, double* xupp_, void* jprob);
-  int (*get_cons_info)(long long m, double *clow_, double* cupp_, void* jprob);
-  int (*eval_f)(int n, double* x, int new_x, double* obj, void* jprob);
-  int (*eval_grad_f)(long long n, double* x, int new_x, double* gradf, void* jprob);
-  int (*eval_cons)(long long n, long long m,
+  int (*get_starting_point)(hiop_size_type n_, double* x0, void* jprob); 
+  int (*get_prob_sizes)(hiop_size_type* n_, hiop_size_type* m_, void* jprob); 
+  int (*get_vars_info)(hiop_size_type n, double *xlow_, double* xupp_, void* jprob);
+  int (*get_cons_info)(hiop_size_type m, double *clow_, double* cupp_, void* jprob);
+  int (*eval_f)(hiop_size_type n, double* x, int new_x, double* obj, void* jprob);
+  int (*eval_grad_f)(hiop_size_type n, double* x, int new_x, double* gradf, void* jprob);
+  int (*eval_cons)(hiop_size_type n, hiop_size_type m,
     double* x, int new_x, 
     double* cons, void* jprob);
-  int (*get_sparse_dense_blocks_info)(int* nx_sparse, int* nx_dense,
-    int* nnz_sparse_Jaceq, int* nnz_sparse_Jacineq,
-    int* nnz_sparse_Hess_Lagr_SS, 
-    int* nnz_sparse_Hess_Lagr_SD, void* jprob);
-  int (*eval_Jac_cons)(long long n, long long m,
+  int (*get_sparse_dense_blocks_info)(hiop_size_type* nx_sparse, hiop_size_type* nx_dense,
+    hiop_size_type* nnz_sparse_Jaceq, hiop_size_type* nnz_sparse_Jacineq,
+    hiop_size_type* nnz_sparse_Hess_Lagr_SS, 
+    hiop_size_type* nnz_sparse_Hess_Lagr_SD, void* jprob);
+  int (*eval_Jac_cons)(hiop_size_type n, hiop_size_type m,
     double* x, int new_x,
-    long long nsparse, long long ndense, 
-    int nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
+    hiop_size_type nsparse, hiop_size_type ndense, 
+    hiop_size_type nnzJacS, hiop_index_type* iJacS, hiop_index_type* jJacS, double* MJacS, 
     double* JacD, void *jprob);
-  int (*eval_Hess_Lagr)(long long n, long long m,
+  int (*eval_Hess_Lagr)(hiop_size_type n, hiop_size_type m,
     double* x, int new_x, double obj_factor,
     double* lambda, int new_lambda,
-    long long nsparse, long long ndense, 
-    int nnzHSS, int* iHSS, int* jHSS, double* MHSS, 
+    hiop_size_type nsparse, hiop_size_type ndense, 
+    hiop_size_type nnzHSS, hiop_index_type* iHSS, hiop_index_type* jHSS, double* MHSS, 
     double* HDD,
-    int nnzHSD, int* iHSD, int* jHSD, double* MHSD, void* jprob);
+    hiop_size_type nnzHSD, hiop_index_type* iHSD, hiop_index_type* jHSD, double* MHSD, void* jprob);
 } cHiopProblem;
 extern int hiop_createProblem(cHiopProblem *problem);
 extern int hiop_solveProblem(cHiopProblem *problem);

@@ -15,7 +15,7 @@ int main(int argv, char** argc)
 {
   //instantiate a HiOp problem
   //
-  Ex6 hiopNlp(3);
+  Ex6 hiopNlp(3,1.0);
   //
   //create
 
@@ -50,9 +50,11 @@ int main(int argv, char** argc)
   app->Options()->SetNumericValue("bound_push", 1e-8);
   //app->Options()->SetNumericValue("slack_bound_push", 1e-24);
   app->Options()->SetNumericValue("bound_relax_factor", 0.);
-  app->Options()->SetNumericValue("constr_mult_init_max", 0.001);
+  //app->Options()->SetNumericValue("constr_mult_init_max", 0.001);
   app->Options()->SetNumericValue("kappa1", 1e-8);
   app->Options()->SetNumericValue("kappa2", 1e-8);
+  
+  app->Options()->SetStringValue("duals_init", "zero");
 
  //app->Options()->SetStringValue("output_file", "ipopt.out");
   //app->Options()->SetStringValue("derivative_test", "second-order"); //"only-second-order"

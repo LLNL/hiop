@@ -64,6 +64,7 @@
 #include <functional>
 
 #include <hiopVector.hpp>
+#include <hiopVectorInt.hpp>
 #include <hiopLinAlgFactory.hpp>
 #include "testBase.hpp"
 
@@ -182,10 +183,30 @@ public:
     v.copyFrom(from);
     int fail = verifyAnswer(&v, one);
 
-    const real_type* from_buffer = createLocalBuffer(N, three);
+    real_type* from_buffer = createLocalBuffer(N, three);
     v.copyFrom(from_buffer);
     fail += verifyAnswer(&v, three);
 
+    // createIdxBuffer creates an int* with value 1, except the N-1 
+    // component with value 0
+    local_ordinal_type* idx_buffer = createIdxBuffer(N,1);
+    setLocalElement(&from, 0, two);
+    v.copyFrom(idx_buffer, from);
+ 
+    fail += verifyAnswer(&v,
+      [=] (local_ordinal_type i) -> real_type
+      {
+        return (i == N-1) ? two : one;
+      });
+    
+    real_type* from_buffer_new = from.local_data(); 
+    v.copyFrom(idx_buffer, from_buffer_new);
+    fail += verifyAnswer(&v,
+      [=] (local_ordinal_type i) -> real_type
+      {
+        return (i == N-1) ? two : one;
+      });
+    deleteLocalBuffer(from_buffer);
     printMessage(fail, __func__, rank);
     return reduceReturn(fail, &v);
   }
@@ -238,7 +259,7 @@ public:
       });
 
     // Testing copying from a zero size vector
-    hiop::hiopVector* zero = hiop::LinearAlgebraFactory::createVector(0);
+    hiop::hiopVector* zero = hiop::LinearAlgebraFactory::create_vector(mem_space_, 0);
     zero->setToConstant(one);
     x.setToConstant(two);
     x.copyFromStarting(0, *zero);
@@ -251,6 +272,7 @@ public:
     fail += verifyAnswer(&x, two);
     deleteLocalBuffer(zero_buffer);
 
+    delete zero;
     printMessage(fail, __func__, rank);
     return reduceReturn(fail, &x);
   }
@@ -364,14 +386,112 @@ public:
       });
 
     // Testing copying from a zero size vector
-    hiop::hiopVector* zero = hiop::LinearAlgebraFactory::createVector(0);
+    hiop::hiopVector* zero = hiop::LinearAlgebraFactory::create_vector(mem_space_, 0);
     zero->setToConstant(one);
     to.setToConstant(to_val);
     zero->copyToStarting(to, 0);
     fail += verifyAnswer(&to, to_val);
 
+    delete zero;
     printMessage(fail, __func__, rank);
     return reduceReturn(fail, &from);
+  }
+
+  /**
+   * @brief Test vector method for copying data from another two vectors
+   * 
+   * @pre Vectors are not distributed.
+   * @pre Memory space for hiop::LinearAlgebraFactory is set appropriately
+   */  
+  bool vector_copy_from_two_vec( hiop::hiopVector& cd,
+                                 hiop::hiopVector& c,
+                                 hiop::hiopVectorInt& c_map,
+                                 hiop::hiopVector& d,
+                                 hiop::hiopVectorInt& d_map,
+                                 const int rank=0)
+  {
+    const local_ordinal_type cd_size = getLocalSize(&cd);
+    const local_ordinal_type c_size = getLocalSize(&c);
+    const local_ordinal_type d_size = getLocalSize(&d);
+    const local_ordinal_type c_map_size = c_map.size();
+    const local_ordinal_type d_map_size = d_map.size();
+
+    assert(c_size == c_map_size && "size doesn't match");
+    assert(d_size == d_map_size && "size doesn't match");
+    assert(c_size + d_size == cd_size && "size doesn't match");
+
+    const real_type c_val = one;
+    const real_type d_val = two;
+ 
+    c.setToConstant(c_val);
+    d.setToConstant(d_val);
+
+    for(local_ordinal_type i = 0; i < c_size; ++i) {
+      c_map.local_data_host()[i] = i;
+    }
+    for(local_ordinal_type i = 0; i < d_size; ++i) {
+      d_map.local_data_host()[i] = i + c_size;
+    }
+    c_map.copy_to_dev();
+    d_map.copy_to_dev();
+
+    cd.copy_from_two_vec_w_pattern(c, c_map, d, d_map);
+
+    int fail = verifyAnswer(&cd,
+      [=] (local_ordinal_type i) -> real_type
+      {
+        return i < c_size ? c_val : d_val;
+      });
+
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &cd);
+  }
+
+  /**
+   * @brief Test vector method for copying data to another two vectors
+   * 
+   * @pre Vectors are not distributed.
+   * @pre Memory space for hiop::LinearAlgebraFactory is set appropriately
+   */  
+  bool vector_copy_to_two_vec( hiop::hiopVector& cd,
+                               hiop::hiopVector& c,
+                               hiop::hiopVectorInt& c_map,
+                               hiop::hiopVector& d,
+                               hiop::hiopVectorInt& d_map,
+                               const int rank=0)
+  {
+    const local_ordinal_type cd_size = getLocalSize(&cd);
+    const local_ordinal_type c_size = getLocalSize(&c);
+    const local_ordinal_type d_size = getLocalSize(&d);
+
+    const local_ordinal_type c_map_size = c_map.size();
+    const local_ordinal_type d_map_size = d_map.size();
+    assert(c_size == c_map_size && "size doesn't match");
+    assert(d_size == d_map_size && "size doesn't match");
+    assert(c_size + d_size == cd_size && "size doesn't match");
+
+    const real_type cd_val = two;
+ 
+    c.setToZero();
+    d.setToZero();
+
+    for(local_ordinal_type i = 0; i < c_size; ++i) {
+      c_map.local_data_host()[i] = i;
+    }
+    for(local_ordinal_type i = 0; i < d_size; ++i) {
+      d_map.local_data_host()[i] = i + c_size;
+    }
+    c_map.copy_to_dev();
+    d_map.copy_to_dev();
+
+    cd.setToConstant(cd_val);
+    cd.copy_to_two_vec_w_pattern(c, c_map, d, d_map);
+
+    int fail = verifyAnswer(&c, cd_val);
+    fail += verifyAnswer(&d, cd_val);
+
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &cd);
   }
 
   /**
@@ -403,7 +523,7 @@ public:
 
     // Iteratively checking various edge cases for calls to the function
   
-    hiop::hiopVector* zero = hiop::LinearAlgebraFactory::createVector(0);
+    hiop::hiopVector* zero = hiop::LinearAlgebraFactory::create_vector(mem_space_, 0);
 
     // Copying from a size 0 vector
     from.setToConstant(from_val);
@@ -543,7 +663,7 @@ public:
         return isValueCopied ? from_val : to_val;
       });
 
-    
+    delete zero;
     printMessage(fail, __func__, rank);
     return reduceReturn(fail, &to);
   }
@@ -669,6 +789,157 @@ public:
 
     printMessage(fail, __func__, rank);
     return reduceReturn(fail, &v);
+  }
+
+  /**
+   * @brief Test: this[i] = min(this[i], constant)
+   */
+  bool vector_component_min(hiop::hiopVector& v, const int rank)
+  {
+    v.setToConstant(one);
+
+    v.component_min(half);
+
+    int fail = verifyAnswer(&v, half);
+    printMessage(fail, __func__, rank);
+
+    return reduceReturn(fail, &v);
+  }
+  
+  /**
+   * @brief Test: this[i] = min(this[i], x[i])
+   */
+  bool vector_component_min(hiop::hiopVector& v, hiop::hiopVector& x, const int rank)
+  {
+    assert(v.get_size() == x.get_size());
+    assert(getLocalSize(&v) == getLocalSize(&x));
+
+    v.setToConstant(one);
+    x.setToConstant(half);
+
+    v.component_min(x);
+
+    int fail = verifyAnswer(&v, half);
+    printMessage(fail, __func__, rank);
+
+    return reduceReturn(fail, &v);
+  }
+
+  /**
+   * @brief Test: this[i] = max(this[i], constant)
+   */
+  bool vector_component_max(hiop::hiopVector& v, const int rank)
+  {
+    v.setToConstant(one);
+
+    v.component_max(two);
+
+    int fail = verifyAnswer(&v, two);
+    printMessage(fail, __func__, rank);
+
+    return reduceReturn(fail, &v);
+  }
+  
+  /**
+   * @brief Test: this[i] = max(this[i], x[i])
+   */
+  bool vector_component_max(hiop::hiopVector& v, hiop::hiopVector& x, const int rank)
+  {
+    assert(v.get_size() == x.get_size());
+    assert(getLocalSize(&v) == getLocalSize(&x));
+
+    v.setToConstant(one);
+    x.setToConstant(two);
+
+    v.component_max(x);
+
+    int fail = verifyAnswer(&v, two);
+    printMessage(fail, __func__, rank);
+
+    return reduceReturn(fail, &v);
+  }
+
+  /**
+   * @brief Test: this[i] = abs(this[i])
+   */
+  bool vector_component_abs(hiop::hiopVector& x, const int rank)
+  {
+    const local_ordinal_type N = getLocalSize(&x);
+    static const real_type x_val = -quarter;
+
+    x.setToConstant(x_val);
+
+    const real_type expected = half;
+    if(rank == 0) {
+      setLocalElement(&x, N-1, expected);
+    }
+
+    x.component_abs();
+
+    const int fail = verifyAnswer(&x,
+      [=] (local_ordinal_type i) -> real_type
+      {
+        const bool isLastElementOnRank0 = (i == N-1 && rank == 0);
+        return isLastElementOnRank0 ? fabs(expected) : fabs(x_val);
+      });
+
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &x);
+  }
+
+  /**
+   * @brief Test: this[i] = sqrt(this[i])
+   */
+  bool vector_component_sqrt(hiop::hiopVector& x, const int rank)
+  {
+    const local_ordinal_type N = getLocalSize(&x);
+    static const real_type x_val = quarter;
+
+    x.setToConstant(x_val);
+
+    const real_type expected = two*two;
+    if(rank == 0) {
+      setLocalElement(&x, N-1, expected);
+    }
+
+    x.component_sqrt();
+
+    const int fail = verifyAnswer(&x,
+      [=] (local_ordinal_type i) -> real_type
+      {
+        const bool isLastElementOnRank0 = (i == N-1 && rank == 0);
+        return isLastElementOnRank0 ? fabs(two) : fabs(half);
+      });
+
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &x);
+  }
+  
+  /**
+   * @brief Test: this[i] = sgn(this[i])
+   */
+  bool vector_component_sgn(hiop::hiopVector& x, const int rank)
+  {
+    const local_ordinal_type N = getLocalSize(&x);
+    static const real_type x_val = -quarter;
+
+    x.setToConstant(x_val);
+
+    if(rank == 0) {
+      setLocalElement(&x, N-1, half);
+    }
+
+    x.component_sgn();
+
+    const int fail = verifyAnswer(&x,
+      [=] (local_ordinal_type i) -> real_type
+      {
+        const bool isLastElementOnRank0 = (i == N-1 && rank == 0);
+        return isLastElementOnRank0 ? one : -one;
+      });
+
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &x);
   }
 
   /**
@@ -999,6 +1270,28 @@ public:
 
   /**
    * @brief Test:
+   * sum{x[i]}
+   */
+  bool vector_sum_local(hiop::hiopVector& x, const int rank)
+  {
+    const local_ordinal_type N = getLocalSize(&x);
+
+    // Ensure that only N-1 elements of x are
+    // used in the log calculation
+    x.setToConstant(half);
+    setLocalElement(&x, N-1, two);
+
+    real_type expected = (N-1) * half + two;
+    real_type result = x.sum_local();
+
+    int fail = !isEqual(result, expected);
+
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &x);
+  }
+  
+  /**
+   * @brief Test:
    * if(pattern[i] == 1) this[i] += alpha /x[i] forall i 
    */
   bool vectorAddLogBarrierGrad(
@@ -1233,12 +1526,52 @@ public:
   }
 
   /**
-   * @warning This method is not yet implemented in HIOP
+   * @brief Test: min value in a vector
    */
-  bool vectorMin(const hiop::hiopVector& x, const int rank)
+  bool vectorMin(hiop::hiopVector& x, const int rank)
   {
-    (void)x; (void) rank;
-    printMessage(SKIP_TEST, __func__, rank);
+    const local_ordinal_type N = getLocalSize(&x);
+    int fail = 0;
+
+    x.setToConstant(two);
+    if (rank == 0)
+      setLocalElement(&x, N-1, -one);
+
+    fail += (x.min()!=-one);
+
+    x.setToConstant(one);
+    if (rank == 0)
+      setLocalElement(&x, N-1, two);
+
+    fail += (x.min()!=one);
+
+    printMessage(fail, __func__, rank);
+    return 0;
+  }
+
+  /**
+   * @brief Test: min value in a vector
+   */
+  bool vectorMin_w_pattern(hiop::hiopVector& x, 
+                           hiop::hiopVector& pattern,
+                           const int rank)
+  {
+    const local_ordinal_type N = getLocalSize(&x);
+    assert(N == getLocalSize(&pattern));
+
+    int fail = 0;
+
+    x.setToConstant(one);
+    if (rank == 0)
+      setLocalElement(&x, N-1, -one);
+    pattern.setToConstant(one);
+    fail += (x.min_w_pattern(pattern)!=-one);
+
+    if (rank == 0)
+      setLocalElement(&pattern, N-1, zero);
+    fail += (x.min_w_pattern(pattern)!=one);
+
+    printMessage(fail, __func__, rank);
     return 0;
   }
 
@@ -1684,6 +2017,7 @@ protected:
   virtual const real_type* getLocalDataConst(const hiop::hiopVector* x) = 0;
   virtual void setLocalElement(hiop::hiopVector* x, local_ordinal_type i, real_type val) = 0;
   virtual real_type* createLocalBuffer(local_ordinal_type N, real_type val) = 0;
+  virtual local_ordinal_type* createIdxBuffer(local_ordinal_type N, local_ordinal_type val) = 0;
   virtual void deleteLocalBuffer(real_type* buffer) = 0;
   virtual bool reduceReturn(int failures, hiop::hiopVector* x) = 0;
 };

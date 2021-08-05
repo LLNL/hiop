@@ -103,7 +103,7 @@ namespace hiop
       n_neg_eig = -1;
     } else if(n_neg_eig_11 > 0) {
       n_neg_eig += n_neg_eig_11;
-      nlp_->log->printf(hovWarning,
+      nlp_->log->printf(hovScalars,
                 "KKT_MDS_XYcYd linsys: Detected negative eigenvalues in (1,1) sparse block.\n");
     }
     return n_neg_eig;
@@ -168,8 +168,8 @@ namespace hiop
   }
 
 
-  bool  hiopKKTLinSysCompressedMDSXYcYd::updateMatrix( const double& delta_wx, const double& delta_wd,
-                                                       const double& delta_cc, const double& delta_cd)
+  bool hiopKKTLinSysCompressedMDSXYcYd::updateMatrix(const double& delta_wx, const double& delta_wd,
+                                                     const double& delta_cc, const double& delta_cd)
   {
     assert(linSys_);
     hiopLinSolverIndefDense* linSys = dynamic_cast<hiopLinSolverIndefDense*> (linSys_);
@@ -211,7 +211,8 @@ namespace hiop
 	
     //build the diagonal Hxs = Hsparse+Dxs
     if(NULL == Hxs_) {
-      Hxs_ = LinearAlgebraFactory::createVector(nxs); assert(Hxs_);
+      Hxs_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), nxs);
+      assert(Hxs_);
     }
     Hxs_->startingAtCopyFromStartingAt(0, *Dx_, 0);
 	
@@ -286,8 +287,12 @@ namespace hiop
     nlp_->runStats.kkt.tmUpdateLinsys.stop();
       
     //write matrix to file if requested
-    if(nlp_->options->GetString("write_kkt") == "yes") write_linsys_counter_++;
-    if(write_linsys_counter_>=0) csr_writer_.writeMatToFile(Msys, write_linsys_counter_); 
+    if(nlp_->options->GetString("write_kkt") == "yes") {
+      write_linsys_counter_++;
+    }
+    if(write_linsys_counter_>=0) {
+      csr_writer_.writeMatToFile(Msys, write_linsys_counter_, nxd+nxs, neq, nineq);
+    }
     
     return true;
   }
@@ -309,8 +314,12 @@ namespace hiop
     int nxsp=Hxs_->get_size(); assert(nxsp<=nx);
     int nxde = nlpMDS_->nx_de();
     assert(nxsp+nxde==nx);
-    if(rhs_ == NULL) rhs_ = LinearAlgebraFactory::createVector(nxde+nyc+nyd);
-    if(_buff_xs_==NULL) _buff_xs_ = LinearAlgebraFactory::createVector(nxsp);
+    if(rhs_ == NULL) {
+      rhs_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), nxde+nyc+nyd);
+    }
+    if(_buff_xs_==NULL) {
+      _buff_xs_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), nxsp);
+    }
 
     nlp_->log->write("RHS KKT_MDS_XYcYd rx: ", rx,  hovIteration);
     nlp_->log->write("RHS KKT_MDS_XYcYd ryc:", ryc, hovIteration);
@@ -340,11 +349,11 @@ namespace hiop
     //ths[nxde+nyc:nxde+nyc+nyd-1] = ryd
     ryd.copyToStarting(*rhs_, nxde+nyc);
 
-    if(write_linsys_counter_>=0) 
+    if(write_linsys_counter_>=0) {
       csr_writer_.writeRhsToFile(*rhs_, write_linsys_counter_);
-
+    }
+    
     nlp_->runStats.kkt.tmSolveRhsManip.stop();
-
     nlp_->runStats.kkt.tmSolveTriangular.start();
     
     // solve
@@ -357,9 +366,9 @@ namespace hiop
 			nlp_->runStats.linsolv.get_summary_last_solve().c_str());
     }
     
-    if(write_linsys_counter_>=0) 
+    if(write_linsys_counter_>=0) {
       csr_writer_.writeSolToFile(*rhs_, write_linsys_counter_);
-
+    }
     if(false==linsol_ok) return false;
 
     nlp_->runStats.kkt.tmSolveRhsManip.start();
@@ -368,7 +377,6 @@ namespace hiop
     rhs_->startingAtCopyToStartingAt(0,        dx,  nxsp, nxde);
     rhs_->startingAtCopyToStartingAt(nxde,     dyc, 0);   
     rhs_->startingAtCopyToStartingAt(nxde+nyc, dyd, 0);
-
 
     // compute dxs
     hiopVector& dxs = *_buff_xs_;

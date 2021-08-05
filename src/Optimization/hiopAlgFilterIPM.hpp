@@ -67,7 +67,7 @@ namespace hiop
 
 class hiopAlgFilterIPMBase {
 public:
-  hiopAlgFilterIPMBase(hiopNlpFormulation* nlp_);
+  hiopAlgFilterIPMBase(hiopNlpFormulation* nlp_, const bool within_FR = false);
   virtual ~hiopAlgFilterIPMBase();
 
   /** numerical optimization */
@@ -87,6 +87,24 @@ public:
   inline hiopSolveStatus getSolveStatus() const { return solver_status_; }
   /* returns the number of iterations */
   int getNumIterations() const;
+  
+  inline hiopNlpFormulation* get_nlp() const { return nlp; }
+  inline hiopIterate* get_it_curr() const { return it_curr; }
+  inline hiopIterate* get_it_trial() const { return it_trial; }
+  inline hiopIterate* get_dir() const { return dir; }
+  inline double get_mu() const { return _mu; }
+  inline hiopMatrix* get_Jac_c() const { return _Jac_c; }
+  inline hiopMatrix* get_Jac_d() const { return _Jac_d; }
+  inline hiopMatrix* get_Hess_Lagr() const { return _Hess_Lagr; }
+  inline hiopVector* get_c() const { return _c; }
+  inline hiopVector* get_d() const { return _d; }
+  inline hiopResidual* get_resid() const { return resid; }
+  inline bool filter_contains(const double theta, const double logbar_obj) const 
+  { 
+    return filter.contains(theta, logbar_obj); 
+  }
+  inline void set_alpha_primal(const double alpha_primal) { _alpha_primal = alpha_primal; }
+
 protected:
   bool evalNlp(hiopIterate& iter,
 	       double &f, hiopVector& c_, hiopVector& d_,
@@ -129,7 +147,26 @@ protected:
   bool updateLogBarrierParameters(const hiopIterate& it, const double& mu_curr, const double& tau_curr,
 				  double& mu_new, double& tau_new);
 
-  virtual void outputIteration(int lsStatus, int lsNum) = 0;
+  // second order correction
+  virtual int apply_second_order_correction(hiopKKTLinSys* kkt,
+                                            const double theta_curr,
+                                            const double theta_trial0,
+                                            bool &grad_phi_dx_computed,
+                                            double &grad_phi_dx,
+                                            int &num_adjusted_bounds);
+
+  // check if all the line search conditions are accepted or not
+  virtual int accept_line_search_conditions(const double theta_curr,
+                                            const double theta_trial,
+                                            const double alpha_primal,
+                                            bool &grad_phi_dx_computed,
+                                            double &grad_phi_dx);
+
+  /// @brief do feasibility restoration
+  virtual bool apply_feasibility_restoration(hiopKKTLinSys* kkt);
+  virtual bool solve_feasibility_restoration(hiopKKTLinSys* kkt, hiopNlpFormulation& nlpFR);
+
+  virtual void outputIteration(int lsStatus, int lsNum, int use_soc = 0, int use_fr = 0) = 0;
 
   //returns whether the algorithm should stop and set an appropriate solve status
   bool checkTermination(const double& _err_nlp, const int& iter_num, hiopSolveStatus& status);
@@ -138,6 +175,7 @@ protected:
   void resetSolverStatus();
   virtual void reInitializeNlpObjects();
   virtual void reloadOptions();
+
 private:
   void destructorPart();
 protected:
@@ -147,9 +185,10 @@ protected:
   hiopLogBarProblem* logbar;
 
   /* Iterate, search directions (managed by this (algorithm) class) */
-  hiopIterate*it_curr;
-  hiopIterate*it_trial;
+  hiopIterate* it_curr;
+  hiopIterate* it_trial;
   hiopIterate* dir;
+  hiopIterate* soc_dir;
 
   hiopResidual* resid, *resid_trial;
 
@@ -158,6 +197,7 @@ protected:
   double _err_nlp_optim0,_err_nlp_feas0,_err_nlp_complem0;//initial errors, not scaled by sd, sc, and sc
   double _err_log_optim, _err_log_feas, _err_log_complem;//not scaled by sd, sc, and sc
   double _err_nlp, _err_log; //max of the above (scaled)
+  double onenorm_pr_curr_; //one norm of the constraint infeasibility
 
   //class for updating the duals multipliers
   hiopDualsUpdater* dualsUpdate;
@@ -170,6 +210,7 @@ protected:
    */
   double _f_nlp, _f_log, _f_nlp_trial, _f_log_trial;
   hiopVector *_c,*_d, *_c_trial, *_d_trial;
+  hiopVector *c_soc, *d_soc;
   hiopVector* _grad_f, *_grad_f_trial; //gradient of the log-barrier objective function
   hiopMatrix* _Jac_c, *_Jac_c_trial; //Jacobian of c(x), the equality part
   hiopMatrix* _Jac_d, *_Jac_d_trial; //Jacobian of d(x), the inequality part
@@ -210,20 +251,24 @@ protected:
   //internal flags related to the state of the solver
   hiopSolveStatus solver_status_;
   int n_accep_iters_;
+  bool trial_is_rejected_by_filter;
 
   /* Flag for timing and timing breakdown report for the KKT solve */
   bool perf_report_kkt_;
+  
+  /* Flag to tell if this is a FR problem */
+  bool within_FR_;
 };
 
 class hiopAlgFilterIPMQuasiNewton : public hiopAlgFilterIPMBase
 {
 public:
-  hiopAlgFilterIPMQuasiNewton(hiopNlpDenseConstraints* nlp);
+  hiopAlgFilterIPMQuasiNewton(hiopNlpDenseConstraints* nlp, const bool within_FR = false);
   virtual ~hiopAlgFilterIPMQuasiNewton();
 
   virtual hiopSolveStatus run();
 private:
-  virtual void outputIteration(int lsStatus, int lsNum);
+  virtual void outputIteration(int lsStatus, int lsNum, int use_soc = 0, int use_fr = 0);
 private:
   hiopNlpDenseConstraints* nlpdc;
 private:
@@ -239,13 +284,13 @@ typedef hiopAlgFilterIPMQuasiNewton hiopAlgFilterIPM;
 class hiopAlgFilterIPMNewton : public hiopAlgFilterIPMBase
 {
 public:
-  hiopAlgFilterIPMNewton(hiopNlpFormulation* nlp);
+  hiopAlgFilterIPMNewton(hiopNlpFormulation* nlp, const bool within_FR = false);
   virtual ~hiopAlgFilterIPMNewton();
 
   virtual hiopSolveStatus run();
 
 private:
-  virtual void outputIteration(int lsStatus, int lsNum);
+  virtual void outputIteration(int lsStatus, int lsNum, int use_soc = 0, int use_fr = 0);
   virtual hiopKKTLinSys* decideAndCreateLinearSystem(hiopNlpFormulation* nlp);
   /// @brief get the method to decide if a factorization is acceptable or not
   virtual hiopFactAcceptor* decideAndCreateFactAcceptor(hiopPDPerturbation* p, hiopNlpFormulation* nlp);

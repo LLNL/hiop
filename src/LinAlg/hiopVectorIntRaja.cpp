@@ -58,53 +58,51 @@
 namespace hiop
 {
 
-hiopVectorIntRaja::hiopVectorIntRaja(int sz, std::string mem_space)
-  : hiopVectorInt(sz)
-  , mem_space_(mem_space)
+hiopVectorIntRaja::hiopVectorIntRaja(size_type sz, std::string mem_space)
+  : hiopVectorInt(sz),
+    mem_space_(mem_space)
 {
 #ifndef HIOP_USE_GPU
   mem_space_ = "HOST";
 #endif
 
   auto& resmgr = umpire::ResourceManager::getInstance();
-  umpire::Allocator devalloc  = resmgr.getAllocator(mem_space_);
-  buf_dev_ = static_cast<int*>(devalloc.allocate(sz_*sizeof(int)));
-  if(mem_space_ != "HOST")
-  {
+  umpire::Allocator devalloc = resmgr.getAllocator(mem_space_);
+  buf_ = static_cast<index_type*>(devalloc.allocate(sz_*sizeof(index_type)));
+  if(mem_space_ == "DEVICE") {
     umpire::Allocator hostalloc = resmgr.getAllocator("HOST");
-    buf_host_ = static_cast<int*>(hostalloc.allocate(sz_*sizeof(int)));
-  }
-  else
-  {
-    buf_host_ = buf_dev_;
+    buf_host_ = static_cast<index_type*>(hostalloc.allocate(sz_*sizeof(index_type)));
+  } else {
+    buf_host_ = buf_;
   }
 }
 
-const int& hiopVectorIntRaja::operator[] (int i) const
+hiopVectorIntRaja::~hiopVectorIntRaja()
 {
-  return buf_host_[i];
+  auto& resmgr = umpire::ResourceManager::getInstance();
+  umpire::Allocator devalloc = resmgr.getAllocator(mem_space_);
+  devalloc.deallocate(buf_);
+  if (mem_space_ == "DEVICE") {
+    umpire::Allocator hostalloc = resmgr.getAllocator("HOST");
+    hostalloc.deallocate(buf_host_);
+  }
+  buf_host_ = nullptr;
+  buf_ = nullptr;
 }
 
-int& hiopVectorIntRaja::operator[] (int i)
+void hiopVectorIntRaja::copy_from_dev()
 {
-  return buf_host_[i];
-}
-
-void hiopVectorIntRaja::copyFromDev() const
-{
-  if (buf_dev_ != buf_host_)
-  {
+  if (buf_ != buf_host_) {
     auto& resmgr = umpire::ResourceManager::getInstance();
-    resmgr.copy(buf_host_, buf_dev_);
+    resmgr.copy(buf_host_, buf_);
   }
 }
 
-void hiopVectorIntRaja::copyToDev() const
+void hiopVectorIntRaja::copy_to_dev()
 {
-  if (buf_dev_ != buf_host_)
-  {
+  if (buf_ != buf_host_) {
     auto& resmgr = umpire::ResourceManager::getInstance();
-    resmgr.copy(buf_dev_, buf_host_);
+    resmgr.copy(buf_, buf_host_);
   }
 }
 

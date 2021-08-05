@@ -1,5 +1,7 @@
 # Ignore files that are generated from the repository sources
 build
-src/Drivers/ipopt.opt
+build_*
+.vscode
+.DS_Store
 _dist-default-build
 _dist-DEBUG

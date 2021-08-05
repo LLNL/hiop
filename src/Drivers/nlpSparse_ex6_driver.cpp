@@ -7,26 +7,40 @@
 
 using namespace hiop;
 
-static bool self_check(long long n, double obj_value);
+static bool self_check(size_type n, double obj_value);
 
-static bool parse_arguments(int argc, char **argv, long long& n, bool& self_check)
+static bool parse_arguments(int argc, char **argv, size_type& n, double &scal,  bool& self_check)
 {
 
   //  printf("%s    %s \n", argv[1], argv[2]);
 
-  self_check=false; n = 3;
+  self_check=false; n = 3; scal = 1.0;
   switch(argc) {
   case 1:
     //no arguments
     return true;
     break;
+  case 4:
+    {
+      if(std::string(argv[3]) == "-selfcheck"){
+        self_check=true;
+        n = std::atoi(argv[1]);
+        scal = std::atof(argv[2]);
+        if(n<=0) return false;
+      } else {
+        return false;
+      }
+    }
   case 3: //2 arguments
     {
-      if(std::string(argv[2]) == "-selfcheck")
+      if(std::string(argv[2]) == "-selfcheck"){
         self_check=true;
-      else {
-        n = std::atoi(argv[2]);
+        n = std::atoi(argv[1]);
         if(n<=0) return false;
+      } else {
+        n = std::atoi(argv[1]);
+        if(n<=0) return false;
+        scal = std::atof(argv[2]); 
       }
     }
   case 2: //1 argument
@@ -40,7 +54,7 @@ static bool parse_arguments(int argc, char **argv, long long& n, bool& self_chec
     }
     break;
   default:
-    return false; //3 or more arguments
+    return false; //4 or more arguments
   }
 
   return true;
@@ -71,25 +85,28 @@ int main(int argc, char **argv)
     return 1;
   }
 #endif
-  bool selfCheck; long long n;
-  if(!parse_arguments(argc, argv, n, selfCheck)) { usage(argv[0]); return 1;}
+  bool selfCheck; size_type n;
+  double scal;
 
-  
-  Ex6 nlp_interface(n);
+  if(!parse_arguments(argc, argv, n, scal, selfCheck)) { usage(argv[0]); return 1;}
+
+  Ex6 nlp_interface(n, scal);
   hiopNlpSparse nlp(nlp_interface);
-  //nlp.options->SetStringValue("Hessian", "analytical_exact");
+  nlp.options->SetStringValue("Hessian", "analytical_exact");
   nlp.options->SetStringValue("duals_update_type", "linear"); // "lsq" or "linear" --> lsq hasn't been implemented yet.
                                                             // it will be forced to use "linear" internally.
-  nlp.options->SetStringValue("duals_init", "lsq"); // "lsq" or "zero"
+//  nlp.options->SetStringValue("duals_init", "zero"); // "lsq" or "zero"
   nlp.options->SetStringValue("compute_mode", "cpu");
 //  nlp.options->SetStringValue("compute_mode", "hybrid");
   nlp.options->SetStringValue("KKTLinsys", "xdycyd");
 //  nlp.options->SetStringValue("KKTLinsys", "full");
-  nlp.options->SetStringValue("write_kkt", "yes");
+//  nlp.options->SetStringValue("write_kkt", "yes");
 
 //  nlp.options->SetIntegerValue("max_iter", 100);
 //  nlp.options->SetNumericValue("kappa1", 1e-8);
 //  nlp.options->SetNumericValue("kappa2", 1e-8);
+  nlp.options->SetNumericValue("mu0", 0.1);
+//  nlp.options->SetStringValue("scaling_type", "none");
 
   hiopAlgFilterIPMNewton solver(&nlp);
   hiopSolveStatus status = solver.run();
@@ -120,10 +137,10 @@ int main(int argc, char **argv)
 }
 
 
-static bool self_check(long long n, double objval)
+static bool self_check(size_type n, double objval)
 {
 #define num_n_saved 3 //keep this is sync with n_saved and objval_saved
-  const long long n_saved[] = {50, 500, 5000};
+  const size_type n_saved[] = {50, 500, 5000};
   const double objval_saved[] = {1.10351564683176e-01, 1.10351566513480e-01, 1.10351578644469e-01};
 
 #define relerr 1e-6
@@ -132,7 +149,7 @@ static bool self_check(long long n, double objval)
     if(n_saved[it]==n) {
       found=true;
       if(fabs( (objval_saved[it]-objval)/(1+objval_saved[it])) > relerr) {
-	printf("selfcheck failure. Objective (%18.12e) does not agree (%d digits) with the saved value (%18.12e) for n=%lld.\n",
+	printf("selfcheck failure. Objective (%18.12e) does not agree (%d digits) with the saved value (%18.12e) for n=%d.\n",
 	       objval, -(int)log10(relerr), objval_saved[it], n);
 	return false;
       } else {
@@ -143,7 +160,7 @@ static bool self_check(long long n, double objval)
   }
 
   if(!found) {
-    printf("selfcheck: driver does not have the objective for n=%lld saved. BTW, obj=%18.12e was obtained for this n.\n", n, objval);
+    printf("selfcheck: driver does not have the objective for n=%d saved. BTW, obj=%18.12e was obtained for this n.\n", n, objval);
     return false;
   }
 

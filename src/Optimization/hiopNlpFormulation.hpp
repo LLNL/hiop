@@ -1,11 +1,10 @@
 // Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
-// Written by Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
 // is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause). 
-// Please also read “Additional BSD Notice” below.
+// Please also read "Additional BSD Notice" below.
 //
 // Redistribution and use in source and binary forms, with or without modification, 
 // are permitted provided that the following conditions are met:
@@ -46,6 +45,14 @@
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or 
 // product endorsement purposes.
 
+/**
+ * @file hiopNlpFormulation.hpp
+ *
+ * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
+ * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
+ *
+ */
+ 
 #ifndef HIOP_NLP_FORMULATION
 #define HIOP_NLP_FORMULATION
 
@@ -63,6 +70,8 @@
 #include "hiopRunStats.hpp"
 #include "hiopLogger.hpp"
 #include "hiopOptions.hpp"
+
+#include "hiopVectorInt.hpp"
 
 #include <cstring>
 
@@ -88,21 +97,23 @@ class hiopDualsLsqUpdate;
 class hiopNlpFormulation
 {
 public:
-  hiopNlpFormulation(hiopInterfaceBase& interface);
+  hiopNlpFormulation(hiopInterfaceBase& interface, const char* option_file = nullptr);
   virtual ~hiopNlpFormulation();
 
   virtual bool finalizeInitialization();
+  virtual bool apply_scaling(hiopVector& c, hiopVector& d, hiopVector& gradf, 
+                             hiopMatrix& Jac_c, hiopMatrix& Jac_d);
 
   /**
    * Wrappers for the interface calls. 
    * Can be overridden for specialized formulations required by the algorithm.
    */
   virtual bool eval_f(hiopVector& x, bool new_x, double& f);
-  virtual bool eval_grad_f(hiopVector& x, bool new_x, double* gradf);
+  virtual bool eval_grad_f(hiopVector& x, bool new_x, hiopVector& gradf);
   
-  virtual bool eval_c(hiopVector& x, bool new_x, double* c);
-  virtual bool eval_d(hiopVector& x, bool new_x, double* d);
-  virtual bool eval_c_d(hiopVector& x, bool new_x, double* c, double* d);
+  virtual bool eval_c(hiopVector& x, bool new_x, hiopVector& c);
+  virtual bool eval_d(hiopVector& x, bool new_x, hiopVector& d);
+  virtual bool eval_c_d(hiopVector& x, bool new_x, hiopVector& c, hiopVector& d);
   /* the implementation of the next two methods depends both on the interface and on the formulation */
   virtual bool eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& Jac_c)=0;
   virtual bool eval_Jac_d(hiopVector& x, bool new_x, hiopMatrix& Jac_d)=0;
@@ -113,15 +124,28 @@ protected:
 public:
   virtual bool eval_Hess_Lagr(const hiopVector& x, bool new_x, 
 			      const double& obj_factor,  
-			      const double* lambda_eq, 
-			      const double* lambda_ineq, 
+			      const hiopVector& lambda_eq, 
+			      const hiopVector& lambda_ineq, 
 			      bool new_lambdas, 
 			      hiopMatrix& Hess_L)=0;
   /* starting point */
   virtual bool get_starting_point(hiopVector& x0,
-				  bool& duals_avail,
-				  hiopVector& zL0, hiopVector& zU0,
-				  hiopVector& yc0, hiopVector& yd0);
+                                  bool& duals_avail,
+                                  hiopVector& zL0,
+                                  hiopVector& zU0,
+                                  hiopVector& yc0,
+                                  hiopVector& yd0,
+                                  bool& slacks_avail,
+                                  hiopVector& d0);
+
+  virtual bool get_starting_point(hiopVector& x0,
+                                  hiopVector& zL0,
+                                  hiopVector& zU0,
+                                  hiopVector& yc0,
+                                  hiopVector& yd0,
+                                  hiopVector& d0,
+                                  hiopVector& vl0,
+                                  hiopVector& vu0);
 
   /* Allocates the LSQ duals update class. */
   virtual hiopDualsLsqUpdate* alloc_duals_lsq_updater() = 0;
@@ -141,19 +165,43 @@ public:
   void user_callback_solution(hiopSolveStatus status,
 			      const hiopVector& x,
 			      const hiopVector& z_L, const hiopVector& z_U,
-			      const hiopVector& c, const hiopVector& d,
+			      hiopVector& c, hiopVector& d,
 			      const hiopVector& yc, const hiopVector& yd,
 			      double obj_value);
 
   virtual
   bool user_callback_iterate(int iter,
-			     double obj_value,
-			     const hiopVector& x,
-			     const hiopVector& z_L, const hiopVector& z_U,
-			     const hiopVector& c, const hiopVector& d,
-			     const hiopVector& yc, const hiopVector& yd,
-			     double inf_pr, double inf_du, double mu,
-			     double alpha_du, double alpha_pr, int ls_trials);
+                             double obj_value,
+                             double logbar_obj_value,
+                             const hiopVector& x,
+                             const hiopVector& z_L,
+                             const hiopVector& z_U,
+                             const hiopVector& s, // the slack for inequalities
+                             const hiopVector& c,
+                             const hiopVector& d,
+                             const hiopVector& yc,
+                             const hiopVector& yd,
+                             double inf_pr,
+                             double inf_du,
+                             double onenorm_pr,
+                             double mu,
+                             double alpha_du,
+                             double alpha_pr,
+                             int ls_trials);
+
+  virtual
+  bool user_force_update(int iter,
+                         double& obj_value,
+                         hiopVector& x,
+                         hiopVector& z_L,
+                         hiopVector& z_U,
+                         hiopVector& c,
+                         hiopVector& d,
+                         hiopVector& y_c,
+                         hiopVector& y_d,
+                         double& mu,
+                         double& alpha_du,
+                         double& alpha_pr);
   
   /** const accessors */
   inline const hiopVector& get_xl ()  const { return *xl;   }
@@ -166,30 +214,34 @@ public:
   inline const hiopVector& get_idu()  const { return *idu;  }
   inline const hiopVector& get_crhs() const { return *c_rhs;}
 
+  inline hiopInterfaceBase::NonlinearityType* get_var_type() const {return vars_type;}
+  inline hiopInterfaceBase::NonlinearityType* get_cons_eq_type() const {return cons_eq_type;}
+  inline hiopInterfaceBase::NonlinearityType* get_cons_ineq_type() const {return cons_ineq_type;}
+  
   /** const accessors */
-  inline long long n() const      {return n_vars;}
-  inline long long m() const      {return n_cons;}
-  inline long long m_eq() const   {return n_cons_eq;}
-  inline long long m_ineq() const {return n_cons_ineq;}
-  inline long long n_low() const  {return n_bnds_low;}
-  inline long long n_upp() const  {return n_bnds_upp;}
-  inline long long m_ineq_low() const {return n_ineq_low;}
-  inline long long m_ineq_upp() const {return n_ineq_upp;}
-  inline long long n_complem()  const {return m_ineq_low()+m_ineq_upp()+n_low()+n_upp();}
+  inline size_type n() const      {return n_vars;}
+  inline size_type m() const      {return n_cons;}
+  inline size_type m_eq() const   {return n_cons_eq;}
+  inline size_type m_ineq() const {return n_cons_ineq;}
+  inline size_type n_low() const  {return n_bnds_low;}
+  inline size_type n_upp() const  {return n_bnds_upp;}
+  inline size_type m_ineq_low() const {return n_ineq_low;}
+  inline size_type m_ineq_upp() const {return n_ineq_upp;}
+  inline size_type n_complem()  const {return m_ineq_low()+m_ineq_upp()+n_low()+n_upp();}
 
-  inline long long n_local() const
+  inline size_type n_local() const
   {
     return xl->get_local_size();
   }
-  inline long long n_low_local() const {return n_bnds_low_local;}
-  inline long long n_upp_local() const {return n_bnds_upp_local;}
+  inline size_type n_low_local() const {return n_bnds_low_local;}
+  inline size_type n_upp_local() const {return n_bnds_upp_local;}
 
   /* methods for transforming the internal objects to corresponding user objects */
-  inline double user_obj(double hiop_f) { return nlp_transformations.applyToObj(hiop_f); }
+  inline double user_obj(double hiop_f) { return nlp_transformations.apply_inv_to_obj(hiop_f); }
   inline void   user_x(hiopVector& hiop_x, double* user_x) 
   { 
     //double *hiop_xa = hiop_x.local_data();
-    hiopVector *x = nlp_transformations.applyTox(hiop_x,/*new_x=*/true); 
+    hiopVector *x = nlp_transformations.apply_inv_to_x(hiop_x,/*new_x=*/true); 
     //memcpy(user_x, user_xa, hiop_x.get_local_size()*sizeof(double));
     memcpy(user_x, x->local_data(), nlp_transformations.n_post_local()*sizeof(double));
   }
@@ -199,19 +251,9 @@ public:
 			  double* zl_a,
 			  double* zu_a,
 			  double* lambda_a);
-  
-  /* packs constraint rhs or constraint multipliers into one array based on the internal mappings 
-   * 'cons_eq_mapping_'and 'cons_ineq_mapping_ */
-  void copy_EqIneq_to_cons(const hiopVector& yc,
-			   const hiopVector& yd,
-			   int num_cons, //size of 'cons'
-			   double* cons);
-  
-  /* packs constraint rhs or constraint multipliers into hiopVector based on the internal mappings 
-   * 'cons_eq_mapping_'and 'cons_ineq_mapping_ */
-  void copy_EqIneq_to_cons(const hiopVector& yc,
-			   const hiopVector& yd,
-			   hiopVector& cons);
+
+  /// @brief return the scaling fact for objective
+  double get_obj_scale() const;
   
   /* outputing and debug-related functionality*/
   hiopLogger* log;
@@ -233,9 +275,9 @@ protected:
 
   /* problem data */
   //various dimensions
-  long long n_vars, n_cons, n_cons_eq, n_cons_ineq;
-  long long n_bnds_low, n_bnds_low_local, n_bnds_upp, n_bnds_upp_local, n_ineq_low, n_ineq_upp;
-  long long n_bnds_lu, n_ineq_lu;
+  size_type n_vars, n_cons, n_cons_eq, n_cons_ineq;
+  size_type n_bnds_low, n_bnds_low_local, n_bnds_upp, n_bnds_upp_local, n_ineq_low, n_ineq_upp;
+  size_type n_bnds_lu, n_ineq_lu;
   hiopVector *xl, *xu, *ixu, *ixl; //these will/can be global, memory distributed
   hiopInterfaceBase::NonlinearityType* vars_type; //C array containing the types for local vars
 
@@ -246,18 +288,24 @@ protected:
   hiopInterfaceBase::NonlinearityType* cons_ineq_type;
   
   // keep track of the constraints indexes in the original, user's formulation
-  long long *cons_eq_mapping_, *cons_ineq_mapping_; 
+  hiopVectorInt *cons_eq_mapping_, *cons_ineq_mapping_; 
 
   //options for which this class was setup
   std::string strFixedVars; //"none", "fixed", "relax"
   double dFixedVarsTol;
 
-  //internal NLP transformations (currently fixing/relaxing variables implemented)
+  /**
+   * @brief Internal NLP transformations that supports fixing and relaxing variables as well as
+   * problem rescalings.
+   */
   hiopNlpTransformations nlp_transformations;
+  
+  //internal NLP transformations (currently gradient scaling implemented)
+  hiopNLPObjGradScaling *nlp_scaling;
 
 #ifdef HIOP_USE_MPI
   //inter-process distribution of vectors
-  long long* vec_distrib;
+  index_type* vec_distrib;
 #endif
 
   /* User provided interface */
@@ -290,7 +338,10 @@ protected:
    */
   hiopVector* cons_lambdas_;
 private:
-  hiopNlpFormulation(const hiopNlpFormulation& s) : interface_base(s.interface_base) {};
+  hiopNlpFormulation(const hiopNlpFormulation& s)
+    : interface_base(s.interface_base),
+      nlp_transformations(this)
+  {};
 };
 
 /* *************************************************************************
@@ -301,7 +352,7 @@ private:
 class hiopNlpDenseConstraints : public hiopNlpFormulation
 {
 public:
-  hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& interface);
+  hiopNlpDenseConstraints(hiopInterfaceDenseConstraints& interface, const char* option_file = nullptr);
   virtual ~hiopNlpDenseConstraints();
 
   virtual bool finalizeInitialization();
@@ -319,8 +370,8 @@ public:
   virtual bool eval_Hess_Lagr(const hiopVector& x,
 			      bool new_x,
 			      const double& obj_factor, 
-			      const double* lambda_eq,
-			      const double* lambda_ineq,
+			      const hiopVector& lambda_eq,
+			      const hiopVector& lambda_ineq,
 			      bool new_lambda, 
 			      hiopMatrix& Hess_L)
   {
@@ -358,21 +409,20 @@ private:
 class hiopNlpMDS : public hiopNlpFormulation
 {
 public:
-  hiopNlpMDS(hiopInterfaceMDS& interface_)
-    : hiopNlpFormulation(interface_), interface(interface_)
+  hiopNlpMDS(hiopInterfaceMDS& interface_, const char* option_file = nullptr)
+    : hiopNlpFormulation(interface_, option_file), interface(interface_)
   {
-    _buf_lambda = LinearAlgebraFactory::createVector(0);
+    buf_lambda_ = LinearAlgebraFactory::create_vector(options->GetString("mem_space"), 0);
   }
   virtual ~hiopNlpMDS() 
   {
-    delete _buf_lambda;
+    delete buf_lambda_;
   }
 
   virtual bool finalizeInitialization();
 
   virtual bool eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& Jac_c);
   virtual bool eval_Jac_d(hiopVector& x, bool new_x, hiopMatrix& Jac_d);
-
 
 protected:
   //calls specific hiopInterfaceXXX::eval_Jac_cons and deals with specializations of hiopMatrix arguments
@@ -381,8 +431,8 @@ public:
   virtual bool eval_Hess_Lagr(const hiopVector& x,
 			      bool new_x,
 			      const double& obj_factor,
-			      const double* lambda_eq,
-			      const double* lambda_ineq,
+			      const hiopVector& lambda_eq,
+			      const hiopVector& lambda_ineq,
 			      bool new_lambdas,
 			      hiopMatrix& Hess_L);
   
@@ -392,32 +442,43 @@ public:
   virtual hiopMatrix* alloc_Jac_c() 
   {
     assert(n_vars == nx_sparse+nx_dense);
-    return new hiopMatrixMDS(n_cons_eq, nx_sparse, nx_dense, nnz_sparse_Jaceq);
+    return new hiopMatrixMDS(n_cons_eq, nx_sparse, nx_dense, nnz_sparse_Jaceq, options->GetString("mem_space"));
   }
   virtual hiopMatrix* alloc_Jac_d() 
   {
     assert(n_vars == nx_sparse+nx_dense);
-    return new hiopMatrixMDS(n_cons_ineq, nx_sparse, nx_dense, nnz_sparse_Jacineq);
+    return new hiopMatrixMDS(n_cons_ineq, nx_sparse, nx_dense, nnz_sparse_Jacineq, options->GetString("mem_space"));
   }
   virtual hiopMatrix* alloc_Jac_cons()
   {
     assert(n_vars == nx_sparse+nx_dense);
-    return new hiopMatrixMDS(n_cons, nx_sparse, nx_dense, nnz_sparse_Jaceq+nnz_sparse_Jacineq);
+    return new hiopMatrixMDS(n_cons,
+                             nx_sparse,
+                             nx_dense,
+                             nnz_sparse_Jaceq+nnz_sparse_Jacineq,
+                             options->GetString("mem_space"));
   }
   virtual hiopMatrix* alloc_Hess_Lagr()
   {
     assert(0==nnz_sparse_Hess_Lagr_SD);
-    return new hiopMatrixSymBlockDiagMDS(nx_sparse, nx_dense, nnz_sparse_Hess_Lagr_SS);
+    return new hiopMatrixSymBlockDiagMDS(nx_sparse, nx_dense, nnz_sparse_Hess_Lagr_SS, options->GetString("mem_space"));
   }
-  virtual long long nx_sp() const { return nx_sparse; }
-  virtual long long nx_de() const { return nx_dense; }
+
+  /** const accessors */
+  virtual size_type nx_sp() const { return nx_sparse; }
+  virtual size_type nx_de() const { return nx_dense; }
+  inline int get_nnz_sp_Jaceq()  const { return nnz_sparse_Jaceq; }
+  inline int get_nnz_sp_Jacineq()  const { return nnz_sparse_Jacineq; }
+  inline int get_nnz_sp_Hess_Lagr_SS()  const { return nnz_sparse_Hess_Lagr_SS; }
+  inline int get_nnz_sp_Hess_Lagr_SD()  const { return nnz_sparse_Hess_Lagr_SD; }
+
 private:
   hiopInterfaceMDS& interface;
   int nx_sparse, nx_dense;
   int nnz_sparse_Jaceq, nnz_sparse_Jacineq;
   int nnz_sparse_Hess_Lagr_SS, nnz_sparse_Hess_Lagr_SD;
 
-  hiopVector* _buf_lambda;
+  hiopVector* buf_lambda_;
 };
 
 
@@ -430,15 +491,15 @@ class hiopNlpSparse : public hiopNlpFormulation
 public:
   // TODO: notsure we need this
 
-  hiopNlpSparse(hiopInterfaceSparse& interface_)
-    : hiopNlpFormulation(interface_), interface(interface_),
+  hiopNlpSparse(hiopInterfaceSparse& interface_, const char* option_file = nullptr)
+    : hiopNlpFormulation(interface_, option_file), interface(interface_),
       num_jac_eval_{0}, num_hess_eval_{0}
   {
-    _buf_lambda = LinearAlgebraFactory::createVector(0);
+    buf_lambda_ = LinearAlgebraFactory::create_vector(options->GetString("mem_space"), 0);
   }
   virtual ~hiopNlpSparse()
   {
-    delete _buf_lambda;
+    delete buf_lambda_;
   }
 
   virtual bool finalizeInitialization();
@@ -454,8 +515,8 @@ public:
   virtual bool eval_Hess_Lagr(const hiopVector& x,
                             bool new_x,
                             const double& obj_factor,
-                            const double* lambda_eq,
-                            const double* lambda_ineq,
+                            const hiopVector& lambda_eq,
+                            const hiopVector& lambda_ineq,
                             bool new_lambdas,
                             hiopMatrix& Hess_L);
   /* Allocates the LSQ duals update class. */
@@ -477,16 +538,25 @@ public:
   {
     return new hiopMatrixSymSparseTriplet(n_vars, m_nnz_sparse_Hess_Lagr);
   }
-  virtual long long nx() const { return n_vars; }
+  virtual size_type nx() const { return n_vars; }
 
   //not inherited from NlpFormulation
 
-  //Allocates a non-MPI vector with size given by the size of primal plus dual (for both equality and inequality) spaces
+  /**
+   * @brief Allocates a non-MPI vector with size given by the size of primal plus dual spaces.
+   * The dual space corresponds to  both equality and inequality constraints.
+   */
   virtual hiopVector* alloc_primal_dual_vec() const
   {
     assert(n_cons == n_cons_eq+n_cons_ineq);
-    return LinearAlgebraFactory::createVector(n_vars + n_cons);
+    return LinearAlgebraFactory::create_vector(options->GetString("mem_space"),
+                                               n_vars + n_cons);
   }
+
+  /** const accessors */
+  inline int get_nnz_Jaceq()  const { return m_nnz_sparse_Jaceq; }
+  inline int get_nnz_Jacineq()  const { return m_nnz_sparse_Jacineq; }
+  inline int get_nnz_Hess_Lagr()  const { return m_nnz_sparse_Hess_Lagr; }
   
 private:
   hiopInterfaceSparse& interface;
@@ -495,7 +565,7 @@ private:
   int num_jac_eval_;
   int num_hess_eval_;
 
-  hiopVector* _buf_lambda;
+  hiopVector* buf_lambda_;
 };
 
 }

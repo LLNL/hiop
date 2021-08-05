@@ -82,9 +82,9 @@ hiopHessianLowRank::hiopHessianLowRank(hiopNlpDenseConstraints* nlp_, int max_me
   St = nlp->alloc_multivector_primal(0,l_max);
   Yt = St->alloc_clone(); //faster than nlp->alloc_multivector_primal(...);
   //these are local
-  L  = LinearAlgebraFactory::createMatrixDense(0,0);
-  D  = LinearAlgebraFactory::createVector(0);
-  V  = LinearAlgebraFactory::createMatrixDense(0,0);
+  L  = LinearAlgebraFactory::create_matrix_dense("DEFAULT", 0, 0);
+  D  = LinearAlgebraFactory::create_vector("DEFAULT", 0);
+  V  = LinearAlgebraFactory::create_matrix_dense("DEFAULT", 0, 0);
 
   //the previous iteration's objects are set to NULL
   _it_prev=NULL; _grad_f_prev=NULL; _Jac_c_prev=NULL; _Jac_d_prev=NULL;
@@ -109,7 +109,7 @@ hiopHessianLowRank::hiopHessianLowRank(hiopNlpDenseConstraints* nlp_, int max_me
   _n_vec1 = DhInv->alloc_clone();
   _n_vec2 = DhInv->alloc_clone();
 
-  _V_work_vec=LinearAlgebraFactory::createVector(0);
+  _V_work_vec=LinearAlgebraFactory::create_vector("DEFAULT", 0);
   _V_ipiv_vec=NULL; _V_ipiv_size=-1;
 
   
@@ -244,7 +244,7 @@ bool hiopHessianLowRank::update(const hiopIterate& it_curr, const hiopVector& gr
 #endif
   //on first call l_curr=-1
   if(l_curr>=0) {
-    long long n=grad_f_curr.get_size();
+    size_type n=grad_f_curr.get_size();
     //compute s_new = x_curr-x_prev
     hiopVector& s_new = new_n_vec1(n);  s_new.copyFrom(*it_curr.x); s_new.axpy(-1.,*_it_prev->x);
     double s_infnorm=s_new.infnorm();
@@ -362,12 +362,12 @@ bool hiopHessianLowRank::update(const hiopIterate& it_curr, const hiopVector& gr
  */
 void hiopHessianLowRank::updateInternalBFGSRepresentation()
 {
-  long long n=St->n(), l=St->m();
+  size_type n=St->n(), l=St->m();
 
   //grow L,D, andV if needed
-  if(L->m()!=l) { delete L; L=LinearAlgebraFactory::createMatrixDense(l,l);}
-  if(D->get_size()!=l) { delete D; D=LinearAlgebraFactory::createVector(l); }
-  if(V->m()!=2*l) {delete V; V=LinearAlgebraFactory::createMatrixDense(2*l,2*l); }
+  if(L->m()!=l) { delete L; L=LinearAlgebraFactory::create_matrix_dense("DEFAULT", l, l);}
+  if(D->get_size()!=l) { delete D; D=LinearAlgebraFactory::create_vector("DEFAULT", l); }
+  if(V->m()!=2*l) {delete V; V=LinearAlgebraFactory::create_matrix_dense("DEFAULT", 2*l, 2*l); }
 
   //-- block (2,2)
   hiopMatrixDense& DpYtDhInvY = new_lxl_mat1(l);
@@ -451,7 +451,7 @@ void hiopHessianLowRank::solve(const hiopVector& rhs_, hiopVector& x_)
 
   hiopVectorPar& x = dynamic_cast<hiopVectorPar&>(x_);
   const hiopVectorPar& rhsx = dynamic_cast<const hiopVectorPar&>(rhs_);
-  long long n=St->n(), l=St->m();
+  size_type n=St->n(), l=St->m();
 #ifdef HIOP_DEEPCHECKS
   assert(rhsx.get_size()==n);
   assert(x.get_size()==n);
@@ -507,8 +507,8 @@ symMatTimesInverseTimesMatTrans(double beta, hiopMatrixDense& W,
 {
   if(matrixChanged) updateInternalBFGSRepresentation();
 
-  long long n=St->n(), l=St->m();
-  long long k=W.m(); 
+  size_type n=St->n(), l=St->m();
+  size_type k=W.m(); 
   assert(X.m()==k);
   assert(X.n()==n);
 
@@ -603,8 +603,10 @@ void hiopHessianLowRank::factorizeV()
 
   lwork=(int)Vwork_tmp;
   if(lwork != _V_work_vec->get_size()) {
-    if(_V_work_vec!=NULL) delete _V_work_vec;  
-    _V_work_vec=LinearAlgebraFactory::createVector(lwork);
+    if(_V_work_vec!=NULL) {
+      delete _V_work_vec;
+    }
+    _V_work_vec = LinearAlgebraFactory::create_vector("DEFAULT", lwork);
   } else assert(_V_work_vec);
 
   DSYTRF(&uplo, &N, V->local_data(), &lda, _V_ipiv_vec, _V_work_vec->local_data(), &lwork, &info);
@@ -630,7 +632,7 @@ void hiopHessianLowRank::solveWithV(hiopVector& rhs_s, hiopVector& rhs_y)
 #ifdef HIOP_DEEPCHECKS
   nlp->log->write("hiopHessianLowRank::solveWithV: RHS IN 's' part: ", rhs_s, hovMatrices);
   nlp->log->write("hiopHessianLowRank::solveWithV: RHS IN 'y' part: ", rhs_y, hovMatrices);
-  hiopVector* rhs_saved= LinearAlgebraFactory::createVector(rhs_s.get_size()+rhs_y.get_size());
+  hiopVector* rhs_saved= LinearAlgebraFactory::create_vector("DEFAULT", rhs_s.get_size()+rhs_y.get_size());
   rhs_saved->copyFromStarting(0, rhs_s);
   rhs_saved->copyFromStarting(l, rhs_y);
 #endif
@@ -725,7 +727,7 @@ void hiopHessianLowRank::growL(const int& lmem_curr, const int& lmem_max, const 
 #endif
   //newL = [   L     0]
   //       [ Y^T*s   0]
-  hiopMatrixDense* newL = LinearAlgebraFactory::createMatrixDense(l+1,l+1);
+  hiopMatrixDense* newL = LinearAlgebraFactory::create_matrix_dense("DEFAULT", l+1, l+1);
   assert(newL);
   //copy from L to newL
   newL->copyBlockFromMatrix(0,0, *L);
@@ -750,7 +752,7 @@ void hiopHessianLowRank::growD(const int& lmem_curr, const int& lmem_max, const 
   assert(l==lmem_curr);
   assert(lmem_max>=l);
 
-  hiopVector* Dnew=LinearAlgebraFactory::createVector(l+1);
+  hiopVector* Dnew=LinearAlgebraFactory::create_vector("DEFAULT", l+1);
   double* Dnew_vec=Dnew->local_data();
   memcpy(Dnew_vec, D->local_data_const(), l*sizeof(double));
   Dnew_vec[l]=sTy;
@@ -813,7 +815,7 @@ hiopVector&  hiopHessianLowRank::new_l_vec1(int l)
   if(_l_vec1!=NULL) {
     delete _l_vec1;
   }
-  _l_vec1= LinearAlgebraFactory::createVector(l);
+  _l_vec1= LinearAlgebraFactory::create_vector("DEFAULT", l);
   return *_l_vec1;
 }
 hiopVector&  hiopHessianLowRank::new_l_vec2(int l)
@@ -823,7 +825,7 @@ hiopVector&  hiopHessianLowRank::new_l_vec2(int l)
   if(_l_vec2!=NULL) {
     delete _l_vec2;
   }
-  _l_vec2= LinearAlgebraFactory::createVector(l);
+  _l_vec2= LinearAlgebraFactory::create_vector("DEFAULT", l);
   return *_l_vec2;
 }
 
@@ -837,7 +839,7 @@ hiopMatrixDense& hiopHessianLowRank::new_lxl_mat1(int l)
       _lxl_mat1=NULL;
     }
   }
-  _lxl_mat1 = LinearAlgebraFactory::createMatrixDense(l,l);
+  _lxl_mat1 = LinearAlgebraFactory::create_matrix_dense("DEFAULT", l, l);
   return *_lxl_mat1;
 }
 hiopMatrixDense& hiopHessianLowRank::new_kx2l_mat1(int k, int l)
@@ -852,7 +854,7 @@ hiopMatrixDense& hiopHessianLowRank::new_kx2l_mat1(int k, int l)
       _kx2l_mat1=NULL;
     }
   }
-  _kx2l_mat1 = LinearAlgebraFactory::createMatrixDense(k,twol);
+  _kx2l_mat1 = LinearAlgebraFactory::create_matrix_dense("DEFAULT", k, twol);
   
   return *_kx2l_mat1;
 }
@@ -867,13 +869,13 @@ hiopMatrixDense& hiopHessianLowRank::new_kxl_mat1(int k, int l)
       _kxl_mat1=NULL;
     }
   }
-  _kxl_mat1 = LinearAlgebraFactory::createMatrixDense(k,l);
+  _kxl_mat1 = LinearAlgebraFactory::create_matrix_dense("DEFAULT", k, l);
   return *_kxl_mat1;
 }
 hiopMatrixDense& hiopHessianLowRank::new_S1(const hiopMatrixDense& X, const hiopMatrixDense& St)
 {
   //S1 is X*some_diag*S  (kxl). Here St=S^T is lxn and X is kxn (l BFGS memory size, k number of constraints)
-  long long k=X.m(), n=St.n(), l=St.m();
+  size_type k=X.m(), n=St.n(), l=St.m();
 #ifdef HIOP_DEEPCHECKS
   assert(n==X.n());
   if(_S1!=NULL) 
@@ -881,7 +883,7 @@ hiopMatrixDense& hiopHessianLowRank::new_S1(const hiopMatrixDense& X, const hiop
 #endif
   if(NULL!=_S1 && _S1->n()!=l) { delete _S1; _S1=NULL; }
   
-  if(NULL==_S1) _S1=LinearAlgebraFactory::createMatrixDense(k,l);
+  if(NULL==_S1) _S1=LinearAlgebraFactory::create_matrix_dense("DEFAULT", k, l);
 
   return *_S1;
 }
@@ -889,7 +891,7 @@ hiopMatrixDense& hiopHessianLowRank::new_S1(const hiopMatrixDense& X, const hiop
 hiopMatrixDense& hiopHessianLowRank::new_Y1(const hiopMatrixDense& X, const hiopMatrixDense& Yt)
 {
   //Y1 is X*somediag*Y (kxl). Here Yt=Y^T is lxn,  X is kxn
-  long long k=X.m(), n=Yt.n(), l=Yt.m();
+  size_type k=X.m(), n=Yt.n(), l=Yt.m();
 #ifdef HIOP_DEEPCHECKS
   assert(X.n()==n);
   if(_Y1!=NULL) assert(_Y1->m()==k);
@@ -897,13 +899,13 @@ hiopMatrixDense& hiopHessianLowRank::new_Y1(const hiopMatrixDense& X, const hiop
 
   if(NULL!=_Y1 && _Y1->n()!=l) { delete _Y1; _Y1=NULL; }
 
-  if(NULL==_Y1) _Y1=LinearAlgebraFactory::createMatrixDense(k,l);
+  if(NULL==_Y1) _Y1=LinearAlgebraFactory::create_matrix_dense("DEFAULT", k, l);
   return *_Y1;
 }
 #ifdef HIOP_DEEPCHECKS
 void hiopHessianLowRank::timesVecCmn(double beta, hiopVector& y, double alpha, const hiopVector& x, bool addLogTerm) 
 {
-  long long n=St->n();
+  size_type n=St->n();
   assert(l_curr==St->m());
   assert(y.get_size()==n);
   assert(St->get_local_size_n() == Yt->get_local_size_n());
@@ -1010,8 +1012,8 @@ symmMatTimesDiagTimesMatTrans_local(double beta, hiopMatrixDense& W,
 				    double alpha, const hiopMatrixDense& X,
 				    const hiopVector& d)
 {
-  long long k=W.m();
-  long long n=X.n();
+  size_type k=W.m();
+  size_type n=X.n();
   size_t n_local=X.get_local_size_n();
 
   assert(X.m()==k);
@@ -1096,8 +1098,8 @@ hiopHessianInvLowRank_obsolette::hiopHessianInvLowRank_obsolette(hiopNlpDenseCon
   St = nlp->alloc_multivector_primal(0,l_max);
   Yt = St->alloc_clone(); //faster than nlp->alloc_multivector_primal(...);
   //these are local
-  R  = LinearAlgebraFactory::createMatrixDense(0, 0);
-  D  = LinearAlgebraFactory::createVector(0);
+  R  = LinearAlgebraFactory::create_matrix_dense("DEFAULT", 0, 0);
+  D  = LinearAlgebraFactory::create_vector("DEFAULT", 0);
 
   //the previous iteration's objects are set to NULL
   _it_prev=NULL; _grad_f_prev=NULL; _Jac_c_prev=NULL; _Jac_d_prev=NULL;
@@ -1173,7 +1175,7 @@ update(const hiopIterate& it_curr, const hiopVector& grad_f_curr_,
 #endif
 
   if(l_curr>0) {
-    long long n=grad_f_curr.get_size();
+    size_type n=grad_f_curr.get_size();
     //compute s_new = x_curr-x_prev
     hiopVector& s_new = new_n_vec1(n);  s_new.copyFrom(*it_curr.x); s_new.axpy(-1.,*_it_prev->x);
     double s_infnorm=s_new.infnorm();
@@ -1294,7 +1296,7 @@ void hiopHessianInvLowRank_obsolette::apply(double beta, hiopVector& y_, double 
 {
   hiopVectorPar& y = dynamic_cast<hiopVectorPar&>(y_);
   const hiopVectorPar& x = dynamic_cast<const hiopVectorPar&>(x_);
-  long long n=St->n(), l=St->m();
+  size_type n=St->n(), l=St->m();
 #ifdef HIOP_DEEPCHECKS
   assert(y.get_size()==n);
   assert(x.get_size()==n);
@@ -1345,7 +1347,7 @@ void hiopHessianInvLowRank_obsolette::
 symmetricTimesMat(double beta, hiopMatrixDense& W,
 		  double alpha, const hiopMatrixDense& X)
 {
-  long long n=St->n(), l=St->m(), k=W.m();
+  size_type n=St->n(), l=St->m(), k=W.m();
   assert(n==H0->get_size());
   assert(k==W.n());
   assert(l==Yt->m());
@@ -1429,8 +1431,8 @@ symmMatTimesDiagTimesMatTrans_local(double beta, hiopMatrixDense& W,
 				    double alpha, const hiopMatrixDense& X,
 				    const hiopVector& d)
 {
-  long long k=W.m();
-  long long n=X.n();
+  size_type k=W.m();
+  size_type n=X.n();
   size_t n_local=X.get_local_size_n();
 
   assert(X.m()==k);
@@ -1575,7 +1577,7 @@ void hiopHessianInvLowRank_obsolette::growR(const int& lmem_curr, const int& lme
 #endif
   //newR = [ R S^T*y ]
   //       [ 0 s^T*y ]
-  hiopMatrixDense* newR = LinearAlgebraFactory::createMatrixDense(l+1,l+1);
+  hiopMatrixDense* newR = LinearAlgebraFactory::create_matrix_dense("DEFAULT", l+1, l+1);
   assert(newR);
   //copy from R to newR
   newR->copyBlockFromMatrix(0,0, *R);
@@ -1602,7 +1604,7 @@ void hiopHessianInvLowRank_obsolette::growD(const int& lmem_curr, const int& lme
   assert(l==lmem_curr);
   assert(lmem_max>l);
 
-  hiopVector* Dnew=LinearAlgebraFactory::createVector(l+1);
+  hiopVector* Dnew=LinearAlgebraFactory::create_vector("DEFAULT", l+1);
   double* Dnew_vec=Dnew->local_data();
   memcpy(Dnew_vec, D->local_data_const(), l*sizeof(double));
   Dnew_vec[l]=sTy;
@@ -1648,7 +1650,7 @@ void hiopHessianInvLowRank_obsolette::updateD(const double& sTy)
 hiopMatrixDense& hiopHessianInvLowRank_obsolette::new_S1(const hiopMatrixDense& St, const hiopMatrixDense& X)
 {
   //S1 is St*X^T (lxk), where St=S^T is lxn and X is kxn (l BFGS memory size, k number of constraints)
-  long long k=X.m(), n=St.n(), l=St.m();
+  size_type k=X.m(), n=St.n(), l=St.m();
 #ifdef HIOP_DEEPCHECKS
   assert(n==X.n());
   if(_S1!=NULL) 
@@ -1656,7 +1658,7 @@ hiopMatrixDense& hiopHessianInvLowRank_obsolette::new_S1(const hiopMatrixDense& 
 #endif
   if(NULL!=_S1 && _S1->n()!=l) { delete _S1; _S1=NULL; }
   
-  if(NULL==_S1) _S1=LinearAlgebraFactory::createMatrixDense(l,k);
+  if(NULL==_S1) _S1=LinearAlgebraFactory::create_matrix_dense("DEFAULT", l, k);
 
   return *_S1;
 }
@@ -1664,7 +1666,7 @@ hiopMatrixDense& hiopHessianInvLowRank_obsolette::new_S1(const hiopMatrixDense& 
 hiopMatrixDense& hiopHessianInvLowRank_obsolette::new_Y1(const hiopMatrixDense& Yt, const hiopMatrixDense& X)
 {
   //Y1 is Yt*H0*X^T = Y^T*H0*X^T, where Y^T is lxn, H0 is diag nxn, X is kxn
-  long long k=X.m(), n=Yt.n(), l=Yt.m();
+  size_type k=X.m(), n=Yt.n(), l=Yt.m();
 #ifdef HIOP_DEEPCHECKS
   assert(X.n()==n);
   if(_Y1!=NULL) assert(_Y1->n()==k);
@@ -1672,17 +1674,17 @@ hiopMatrixDense& hiopHessianInvLowRank_obsolette::new_Y1(const hiopMatrixDense& 
 
   if(NULL!=_Y1 && _Y1->n()!=l) { delete _Y1; _Y1=NULL; }
 
-  if(NULL==_Y1) _Y1=LinearAlgebraFactory::createMatrixDense(l,k);
+  if(NULL==_Y1) _Y1=LinearAlgebraFactory::create_matrix_dense("DEFAULT", l, k);
   return *_Y1;
 }
 hiopMatrixDense& hiopHessianInvLowRank_obsolette::new_DpYtH0Y(const hiopMatrixDense& Yt)
 {
-  long long l = Yt.m();
+  size_type l = Yt.m();
 #ifdef HIOP_DEEPCHECKS
   if(_DpYtH0Y!=NULL) assert(_DpYtH0Y->m()==_DpYtH0Y->n());
 #endif
   if(_DpYtH0Y!=NULL && _DpYtH0Y->m()!=l) {delete _DpYtH0Y; _DpYtH0Y=NULL;}
-  if(_DpYtH0Y==NULL) _DpYtH0Y=LinearAlgebraFactory::createMatrixDense(l,l);
+  if(_DpYtH0Y==NULL) _DpYtH0Y=LinearAlgebraFactory::create_matrix_dense("DEFAULT", l, l);
   return *_DpYtH0Y;
 }
 
@@ -1695,39 +1697,46 @@ hiopMatrixDense& hiopHessianInvLowRank_obsolette::new_S3(const hiopMatrixDense& 
   assert(Left.n()==l);
   if(_S3!=NULL) assert(_S3->m()<=l); //< when the representation grows, = when it doesn't
 #endif
-  if(_S3!=NULL && _S3->m()!=l) { delete _S3; _S3=NULL;}
+  if(_S3!=NULL && _S3->m()!=l) {
+    delete _S3;
+    _S3=NULL;
+  }
 
-  if(_S3==NULL) _S3 = LinearAlgebraFactory::createMatrixDense(l,k);
+  if(_S3==NULL) {
+    _S3 = LinearAlgebraFactory::create_matrix_dense("DEFAULT", l, k);
+  }
   return *_S3;
 }
 hiopVector&  hiopHessianInvLowRank_obsolette::new_l_vec1(int l)
 {
-  if(_l_vec1!=NULL && _l_vec1->get_size()==l) return *_l_vec1;
-  
+  if(_l_vec1!=NULL && _l_vec1->get_size()==l) {
+    return *_l_vec1;
+  }
   if(_l_vec1!=NULL) {
     delete _l_vec1;
   }
-  _l_vec1= LinearAlgebraFactory::createVector(l);
+  _l_vec1 = LinearAlgebraFactory::create_vector("DEFAULT", l);
   return *_l_vec1;
 }
 hiopVector&  hiopHessianInvLowRank_obsolette::new_l_vec2(int l)
 {
-  if(_l_vec2!=NULL && _l_vec2->get_size()==l) return *_l_vec2;
-  
+  if(_l_vec2!=NULL && _l_vec2->get_size()==l) {
+    return *_l_vec2;
+  }
   if(_l_vec2!=NULL) {
     delete _l_vec2;
   }
-  _l_vec2= LinearAlgebraFactory::createVector(l);
+  _l_vec2 = LinearAlgebraFactory::create_vector("DEFAULT", l);
   return *_l_vec2;
 }
 hiopVector&  hiopHessianInvLowRank_obsolette::new_l_vec3(int l)
 {
   if(_l_vec3!=NULL && _l_vec3->get_size()==l) return *_l_vec3;
   
-  if(_l_vec3!=NULL) {
+  if(_l_vec3 != NULL) {
     delete _l_vec3;
   }
-  _l_vec3= LinearAlgebraFactory::createVector(l);
+  _l_vec3 = LinearAlgebraFactory::create_vector("DEFAULT", l);
   return *_l_vec3;
 }
 

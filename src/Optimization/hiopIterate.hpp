@@ -87,6 +87,14 @@ public:
   virtual bool takeStep_duals(const hiopIterate& iter, const hiopIterate& dir,
 			      const double& alphaprimal, const double& alphadual);
 
+  /// @brief adjust small slack variables
+  virtual int adjust_small_slacks(const hiopIterate& iter_curr, const double& mu);
+  virtual int adjust_small_slacks(hiopVector& slack, 
+                                  const hiopVector& bound, 
+                                  const hiopVector& slack_dual, 
+                                  const hiopVector& select,
+                                  const double& mu);
+
   /**
    * Adjusts the signed duals to ensure the the logbar primal-dual Hessian is not arbitrarily
    * far away from the primal counterpart. This is eq. 16 in the filter IPM paper

@@ -63,6 +63,7 @@
 
 #include <hiopMPI.hpp>
 #include "hiopVector.hpp"
+#include "hiopVectorInt.hpp"
 
 namespace hiop
 {
@@ -71,7 +72,7 @@ namespace hiop
 class hiopVectorRajaPar : public hiopVector
 {
 public:
-  hiopVectorRajaPar(const long long& glob_n, std::string mem_space, long long* col_part=NULL, MPI_Comm comm=MPI_COMM_SELF);
+  hiopVectorRajaPar(const size_type& glob_n, std::string mem_space, index_type* col_part=NULL, MPI_Comm comm=MPI_COMM_SELF);
   virtual ~hiopVectorRajaPar();
 
   virtual void setToZero();
@@ -79,17 +80,37 @@ public:
   virtual void setToConstant_w_patternSelect(double c, const hiopVector& select);
   virtual void copyFrom(const hiopVector& v );
   virtual void copyFrom(const double* v_local_data); //v should be of length at least n_local
-  /** Copy the 'n' elements of v starting at 'start_index_in_src' in 'this' */
-  virtual void copyFromStarting(int start_index_in_src, const double* v, int n);
+
+  /// @brief Copy from the indices in index_in_src in v
+  virtual void copyFrom(const int* index_in_src, const hiopVector& v);
+  virtual void copyFrom(const int* index_in_src, const double* v);
+
+  /** Copy the 'n' elements of v starting at 'start_index_in_this' in 'this' */
+  virtual void copyFromStarting(int start_index_in_this, const double* v, int n);
   virtual void copyFromStarting(int start_index_in_src, const hiopVector& v);
+  /// @brief Copy the 'n' elements of v starting at 'start_index_in_v' into 'this'
+  virtual void copy_from_starting_at(const double* v, int start_index_in_v, int n);
   /* copy 'dest' starting at 'start_idx_dest' to 'this' starting at 'start_idx_src' */
   virtual void startingAtCopyFromStartingAt(int start_idx_src, const hiopVector& v, int start_idx_dest);
 
   virtual void copyTo(double* dest) const;
-  virtual void copyToStarting(int start_index_in_src, hiopVector& v);
+  virtual void copyToStarting(int start_index_in_src, hiopVector& v) const;
   /* Copy 'this' to v starting at start_index in 'v'. */
-  virtual void copyToStarting(hiopVector& v, int start_index_in_dest);
-  virtual void copyToStartingAt_w_pattern(hiopVector& v, int start_index_in_dest, const hiopVector& ix);
+  virtual void copyToStarting(hiopVector& v, int start_index_in_dest) const;
+  virtual void copyToStartingAt_w_pattern(hiopVector& v, int start_index_in_dest, const hiopVector& ix) const;
+
+  /// @brief Copy the entries in `c` and `d` to `this`, according to the mapping in `c_map` and `d_map`
+  virtual void copy_from_two_vec_w_pattern(const hiopVector& c, 
+                                           const hiopVectorInt& c_map, 
+                                           const hiopVector& d, 
+                                           const hiopVectorInt& d_map);
+
+  /// @brief Copy the entries in `this` to `c` and `d`, according to the mapping `c_map` and `d_map`
+  virtual void copy_to_two_vec_w_pattern(hiopVector& c, 
+                                         const hiopVectorInt& c_map, 
+                                         hiopVector& d, 
+                                         const hiopVectorInt& d_map) const;
+
   /* copy 'this' (source) starting at 'start_idx_in_src' to 'dest' starting at index 'int start_idx_dest' 
    * If num_elems>=0, 'num_elems' will be copied; if num_elems<0, elements will be copied till the end of
    * either source ('this') or destination ('dest') is reached
@@ -106,6 +127,13 @@ public:
   virtual void componentMult( const hiopVector& v );
   virtual void componentDiv ( const hiopVector& v );
   virtual void componentDiv_w_selectPattern( const hiopVector& v, const hiopVector& ix);
+  virtual void component_min(const double constant);
+  virtual void component_min(const hiopVector& v);
+  virtual void component_max(const double constant);
+  virtual void component_max(const hiopVector& v);
+  virtual void component_abs();
+  virtual void component_sgn();
+  virtual void component_sqrt();
   virtual void scale( double alpha );
   /** this += alpha * x */
   virtual void axpy  ( double alpha, const hiopVector& x );
@@ -117,10 +145,13 @@ public:
   /** Add c to the elements of this */
   virtual void addConstant( double c );
   virtual void addConstant_w_patternSelect(double c, const hiopVector& ix);
+  virtual double min() const;
   virtual void min( double& m, int& index ) const;
+  virtual double min_w_pattern(const hiopVector& select) const;  
   virtual void negate();
   virtual void invert();
   virtual double logBarrier_local(const hiopVector& select) const;
+  virtual double sum_local() const;
   virtual void addLogBarrierGrad(double alpha, const hiopVector& x, const hiopVector& select);
 
   virtual double linearDampingTerm_local(const hiopVector& ixl_select, const hiopVector& ixu_select, 
@@ -163,9 +194,10 @@ public:
   virtual bool isfinite_local() const;
   
   virtual void print(FILE*, const char* withMessage=NULL, int max_elems=-1, int rank=-1) const;
+  virtual void print(){} ///< @todo Temporary to surpress warnings, will be removed.
 
   /* more accessers */
-  inline long long get_local_size() const { return n_local_; }
+  inline size_type get_local_size() const { return n_local_; }
   inline double* local_data_host() { return data_host_; }
   inline const double* local_data_host_const() const { return data_host_; }
   inline double* local_data() { return data_dev_; }
@@ -177,16 +209,26 @@ public:
   void copyToDev() const;
   void copyFromDev() const;
   
-  virtual long long numOfElemsLessThan(const double &val) const;
-  virtual long long numOfElemsAbsLessThan(const double &val) const;      
+  virtual size_type numOfElemsLessThan(const double &val) const;
+  virtual size_type numOfElemsAbsLessThan(const double &val) const;      
+
+  virtual void set_array_from_to(hiopInterfaceBase::NonlinearityType* arr, 
+                                 const int start, 
+                                 const int end, 
+                                 const hiopInterfaceBase::NonlinearityType* arr_src,
+                                 const int start_src) const;
+  virtual void set_array_from_to(hiopInterfaceBase::NonlinearityType* arr, 
+                                 const int start, 
+                                 const int end, 
+                                 const hiopInterfaceBase::NonlinearityType arr_src) const;
 
 private:
   std::string mem_space_;
   MPI_Comm comm_;
   double* data_host_;
   double* data_dev_;
-  long long glob_il_, glob_iu_;
-  long long n_local_;
+  size_type glob_il_, glob_iu_;
+  size_type n_local_;
   /** copy constructor, for internal/private use only (it doesn't copy the elements.) */
   hiopVectorRajaPar(const hiopVectorRajaPar&);
 

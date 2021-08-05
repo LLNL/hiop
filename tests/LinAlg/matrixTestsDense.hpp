@@ -1,6 +1,5 @@
 // Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
-// Written by Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp
@@ -53,6 +52,7 @@
  * @author Jake Ryan <jake.ryan@pnnl.gov>, PNNL
  * @author Robert Rutherford <robert.rutherford@pnnl.gov>, PNNL
  * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
+ * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
  *
  */
 #pragma once
@@ -137,6 +137,30 @@ public:
 
     dst.copyFrom(src_buf);
     fail += verifyAnswer(&dst, src_val);
+
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &dst);
+  }
+
+  int matrix_copy_to(hiopMatrixDense &dst, hiopMatrixDense &src, const int rank)
+  {
+    assert(dst.n() == src.n() && "Did you pass in matrices of the same size?");
+    assert(dst.m() == src.m() && "Did you pass in matrices of the same size?");
+    assert(getNumLocRows(&dst) == getNumLocRows(&src) && "Did you pass in matrices of the same size?");
+    assert(getNumLocCols(&dst) == getNumLocCols(&src) && "Did you pass in matrices of the same size?");
+    const real_type src_val = one;
+
+    // Test copying to dest
+    src.setToConstant(src_val);
+    dst.setToZero();
+
+    // test copying src a raw buffer
+    const size_t buf_len = getNumLocRows(&dst) * getNumLocCols(&dst);
+    real_type* dst_buf = getLocalData(&dst);
+    dst.setToZero();
+
+    src.copy_to(dst_buf);
+    int fail = verifyAnswer(&dst, src_val);
 
     printMessage(fail, __func__, rank);
     return reduceReturn(fail, &dst);
@@ -415,7 +439,7 @@ public:
    * @breif this += alpha * subdiag
    *
    * @note this test checks all three overloads:
-   *   - addSubDiagonal(const double&, long long, const hiopVector&)
+   *   - addSubDiagonal(const double&, int_type, const hiopVector&)
    *   - addSubDiagonal(int, const double&, const hiopVector&, int, int)
    *   - addSubDiagonal(int, int, const double&)
    */
@@ -614,6 +638,62 @@ public:
     A.setToConstant(zero);
     if (rank == 0) setLocalElement(&A, last_row_idx, last_col_idx, -one);
     fail += A.max_abs_value() != one;
+
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &A);
+  }
+
+  /*
+   * Set bottom right value to ensure that all values
+   * are checked.
+   */
+  int matrix_row_max_abs_value(
+      hiop::hiopMatrixDense& A,
+      hiop::hiopVector& x,
+      const int rank)
+  {
+    const local_ordinal_type last_row_idx = getNumLocRows(&A)-1;
+    const local_ordinal_type last_col_idx = getNumLocCols(&A)-1;
+    int fail = 0;
+
+    // set the last element to -2, others are set to 1
+    A.setToConstant(one);
+    if (rank == 0) {
+      setLocalElement(&A, last_row_idx, last_col_idx, -two);
+    }
+    
+    A.row_max_abs_value(x);
+    
+    fail += verifyAnswer(&x,
+      [=] (local_ordinal_type i) -> real_type
+      {
+        const bool is_last_row = (i == last_row_idx);
+        return is_last_row ? two : one;
+      });
+
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &A);
+  }
+
+  /*
+   * scale each row of A
+   */
+  int matrix_scale_row(
+      hiop::hiopMatrixDense& A,
+      hiop::hiopVector& x,
+      const int rank)
+  {
+    const real_type A_val = two;
+    const real_type x_val = three;
+    int fail = 0;
+
+    x.setToConstant(x_val);
+    A.setToConstant(A_val);
+
+    A.scale_row(x,false);
+
+    real_type expected = A_val*x_val;
+    fail += verifyAnswer(&A, expected);
 
     printMessage(fail, __func__, rank);
     return reduceReturn(fail, &A);
@@ -842,6 +922,39 @@ public:
           // before being copied over
           if (i == dst_m && j == dst_n && rank == 0)
               return zero;
+          else
+              return src_val;
+      });
+
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &dst);
+  }
+
+  int matrix_set_Hess_FR(hiopMatrixDense& src, hiopMatrixDense& dst, hiopVector& diag, const int rank=0)
+  {
+    assert(src.n() == src.m() && "Src mat must be square mat");
+    assert(src.n() == dst.n() && "Src mat must be equal to dst mat");
+    assert(src.m() == dst.m() && "Src mat must be equal to dst mat");
+    assert(src.m() == diag.get_size() && "Wrong vec size");
+    const local_ordinal_type dst_m = getNumLocRows(&dst);
+    const local_ordinal_type dst_n = getNumLocCols(&dst);
+    const local_ordinal_type src_m = getNumLocRows(&src);
+    const local_ordinal_type src_n = getNumLocCols(&src);
+
+    const real_type src_val = one;
+    const real_type diag_val = two;
+    src.setToConstant(src_val);
+    diag.setToConstant(diag_val);
+
+    dst.set_Hess_FR(src, diag);
+    
+    const int fail = verifyAnswer(&dst,
+      [=] (local_ordinal_type i, local_ordinal_type j) -> real_type
+      {
+          // This is the element set to zero in src
+          // before being copied over
+          if (i == j && rank == 0)
+              return src_val + diag_val;
           else
               return src_val;
       });
@@ -1090,6 +1203,7 @@ protected:
       local_ordinal_type i,
       local_ordinal_type j) = 0;
   virtual const real_type* getLocalDataConst(hiop::hiopMatrixDense* a) = 0;
+  virtual real_type* getLocalData(hiop::hiopMatrixDense* a) = 0;
   virtual int verifyAnswer(hiop::hiopMatrixDense* A, real_type answer) = 0;
   virtual int verifyAnswer(
       hiop::hiopMatrixDense* A,

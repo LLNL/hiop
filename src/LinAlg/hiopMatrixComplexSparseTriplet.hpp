@@ -48,7 +48,7 @@ namespace hiop
     virtual void setToConstant(double c);
     virtual void setToConstant(std::complex<double> c);
 
-    void copyRowsFrom(const hiopMatrix& src, const long long* rows_idxs, long long n_rows)
+    void copyRowsFrom(const hiopMatrix& src, const index_type* rows_idxs, size_type n_rows)
     {
       assert(false && "not yet implemented");
     }
@@ -100,7 +100,7 @@ namespace hiop
       assert(false && "not yet implemented");
     }
 
-    virtual void addSubDiagonal(const double& alpha, long long start_on_dest_diag, const hiopVector& d_)
+    virtual void addSubDiagonal(const double& alpha, index_type start_on_dest_diag, const hiopVector& d_)
     {
       assert(false && "not yet implemented");
     }
@@ -168,7 +168,11 @@ namespace hiop
     }
     
     virtual double max_abs_value();
-    
+
+    virtual void row_max_abs_value(hiopVector &ret_vec){assert(0&&"not yet");}
+
+    virtual void scale_row(hiopVector &vec_scal, const bool inv_scale){assert(0&&"not yet");}
+
     /* return false is any of the entry is a nan, inf, or denormalized */
     virtual bool isfinite() const
     {
@@ -187,9 +191,9 @@ namespace hiop
 		       int maxRows=-1, int maxCols=-1, int rank=-1) const;
 
     /* number of rows */
-    virtual long long m() const { return stM->m(); }
+    virtual size_type m() const { return stM->m(); }
     /* number of columns */
-    virtual long long n() const { return stM->n(); }
+    virtual size_type n() const { return stM->n(); }
 
 #ifdef HIOP_DEEPCHECKS
     /* check symmetry */
@@ -201,7 +205,7 @@ namespace hiop
 #endif
     // these are not part of the hiopMatrix
 
-        //Builds/extracts submatrix nrows x ncols with rows and cols specified by row_idxs and cols_idx
+    //Builds/extracts submatrix nrows x ncols with rows and cols specified by row_idxs and cols_idx
     //Assumes 
     // - 'this' is unsymmetric
     // - 'row_idxs' and 'col_idxs' are ordered
@@ -227,7 +231,7 @@ namespace hiop
     {
       stM->copyFrom(irow_, jcol_, values_);
     }
-    inline long long numberOfNonzeros() const { return stM->numberOfNonzeros(); }
+    inline size_type numberOfNonzeros() const { return stM->numberOfNonzeros(); }
     inline hiopMatrixSparseTripletStorage<int, std::complex<double> >* storage() const { return stM; }
   private:
     hiopMatrixSparseTripletStorage<int, std::complex<double> > *stM;

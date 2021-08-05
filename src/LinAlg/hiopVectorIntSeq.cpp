@@ -58,19 +58,14 @@
 namespace hiop
 {
 
-hiopVectorIntSeq::hiopVectorIntSeq(int sz) : hiopVectorInt(sz)
+hiopVectorIntSeq::hiopVectorIntSeq(size_type sz) : hiopVectorInt(sz)
 {
-  buf_ = new int[sz_];
+  buf_ = new index_type[sz_];
 }
 
-const int& hiopVectorIntSeq::operator[] (int i) const
+hiopVectorIntSeq::~hiopVectorIntSeq()
 {
-  return buf_[i];
-}
-
-int& hiopVectorIntSeq::operator[] (int i)
-{
-  return buf_[i];
+  delete[] buf_;
 }
 
 } // namespace hiop

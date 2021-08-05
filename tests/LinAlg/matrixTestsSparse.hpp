@@ -190,7 +190,7 @@ public:
     return fail;
   }
 
-  /// @brief Test function that returns matrix element with maximum absolute value
+  /// @brief Test function that returns max-norm of each row in this matrix
   bool matrixMaxAbsValue(
       hiop::hiopMatrixSparse& A,
       const int rank=0)
@@ -217,7 +217,68 @@ public:
     printMessage(fail, __func__);
     return fail;
   }
-  
+
+  /// @brief Test function that returns matrix element with maximum absolute value
+  bool matrix_row_max_abs_value(
+      hiop::hiopMatrixSparse& A,
+      hiop::hiopVector& x,
+      const int rank=0)
+  {
+    const local_ordinal_type nnz = A.numberOfNonzeros();
+    const local_ordinal_type* iRow = getRowIndices(&A);
+    const local_ordinal_type* jCol = getColumnIndices(&A);
+    auto val = getMatrixData(&A);
+    
+    const local_ordinal_type last_row_idx = A.m()-1;
+
+    int fail = 0;
+
+    // the largest absolute value is allocated in the end of this sparse matrix
+    A.setToConstant(one);
+    maybeCopyFromDev(&A);
+    val[nnz - 1] = -two;
+    maybeCopyToDev(&A);
+    
+    A.row_max_abs_value(x);
+    
+    fail += verifyAnswer(&x,
+      [=] (local_ordinal_type i) -> real_type
+      {
+        const bool is_last_row = (i == last_row_idx);
+        return is_last_row ? two : one;
+      });
+
+    printMessage(fail, __func__);
+    return fail;
+  }
+
+  /// @brief Test function that scale each row of A
+  bool matrix_scale_row(
+      hiop::hiopMatrixSparse& A,
+      hiop::hiopVector& x,
+      const int rank=0)
+  {
+    const local_ordinal_type nnz = A.numberOfNonzeros();
+    const local_ordinal_type* iRow = getRowIndices(&A);
+    const local_ordinal_type* jCol = getColumnIndices(&A);
+    auto val = getMatrixData(&A);
+    
+    const real_type A_val = two;
+    const real_type x_val = three;
+    int fail = 0;
+
+    x.setToConstant(x_val);
+    A.setToConstant(A_val);
+
+    A.scale_row(x,false);
+
+    real_type expected = A_val*x_val;
+    fail += verifyAnswer(&A, expected);
+
+    printMessage(fail, __func__, rank);
+    return fail;
+  }
+
   /// @brief Test method that checks if matrix elements are finite
   bool matrixIsFinite(hiop::hiopMatrixSparse& A)
   {
@@ -305,7 +366,7 @@ public:
 
           // Counting nonzero terms of the matrix product innermost loop
           // \sum_k A_ik * A^T_jk / D_kk
-          while(iRow[rs_di] == d_i && iRow[rs_dj] == d_j)
+          while(rs_di < nnz && rs_dj < nnz && iRow[rs_di] == d_i && iRow[rs_dj] == d_j)
           {
             if(jCol[rs_di] == jCol[rs_dj])
             {
@@ -319,7 +380,7 @@ public:
             else
             {
               rs_dj++;
-            }
+            }            
           }
           return W_val + (alpha * A_val * A_val / d_val * count);
         }
@@ -387,7 +448,7 @@ public:
 
         // Counting nonzero terms of the matrix product innermost loop
         // \sum_k A_ik * B^T_jk 
-        while(A_iRow[rs_di] == d_i && B_iRow[rs_dj] == d_j)
+        while(rs_di < A_nnz && rs_dj < B_nnz && A_iRow[rs_di] == d_i && B_iRow[rs_dj] == d_j)
         {
           if(A_jCol[rs_di] == B_jCol[rs_dj])
           {
@@ -486,7 +547,7 @@ public:
 
           // Counting nonzero terms of the matrix product innermost loop
           // \sum_k A_ik * B^T_jk / D_kk
-          while(A_iRow[rs_di] == d_i && B_iRow[rs_dj] == d_j)
+          while(rs_di < A_nnz && rs_dj < B_nnz && A_iRow[rs_di] == d_i && B_iRow[rs_dj] == d_j)
           {
             if(A_jCol[rs_di] == B_jCol[rs_dj])
             {
@@ -876,6 +937,117 @@ public:
     printMessage(fail, __func__);
     return fail;
 
+  }
+
+  /**
+  * @brief copy a sparse matrix into a dense matrix
+  * 
+  * @pre 'A' must have same dim as `W`
+  */
+  bool matrix_copy_to( hiop::hiopMatrixDense& W, hiop::hiopMatrixSparse& A, const int rank = 0)
+  {
+    assert(A.m() == W.m()); // W has same dimension as A
+    assert(A.n() == W.n()); // W has same dimension as A
+    
+    const real_type A_val = one;
+    const real_type W_val = two;
+    W.setToConstant(W_val);
+    
+    A.copy_to(W);
+    
+    int fail = 0;
+    const local_ordinal_type* iRow = getRowIndices(&A);
+    const local_ordinal_type* jCol = getColumnIndices(&A);
+    const local_ordinal_type nnz = A.numberOfNonzeros();
+    fail += verifyAnswer(&W,
+      [=] (local_ordinal_type i, local_ordinal_type j) -> real_type
+      {
+        const bool indexExists = find_unsorted_pair(i, j, iRow, jCol, nnz);
+        return (indexExists) ? A_val: zero;
+      }
+    );
+    printMessage(fail, __func__);
+    return fail;
+  }
+
+  /**
+  * @brief set matrix `A` as [C -I I 0 0; D 0 0 -I I]
+  * 
+  * @pre 'C' must have same number of cols as `D`
+  * @pre nnz of 'A' is predetermined
+  */
+  bool matrix_set_Jac_FR( hiop::hiopMatrixDense& W,
+                          hiop::hiopMatrixSparse& A,
+                          hiop::hiopMatrixSparse& C,
+                          hiop::hiopMatrixSparse& D,
+                          const int rank = 0)
+  {
+    assert(A.m() == W.m()); // W has same dimension as A
+    assert(A.n() == W.n()); // W has same dimension as A
+    assert(C.n() == D.n()); // W has same dimension as A
+
+    int fail = 0;
+    const real_type C_val = half;
+    const real_type D_val = two;
+
+    C.setToConstant(C_val);
+    D.setToConstant(D_val);
+
+    const local_ordinal_type* C_iRow = getRowIndices(&C);
+    const local_ordinal_type* C_jCol = getColumnIndices(&C);
+    const local_ordinal_type C_nnz = C.numberOfNonzeros();
+    const local_ordinal_type* D_iRow = getRowIndices(&D);
+    const local_ordinal_type* D_jCol = getColumnIndices(&D);
+    const local_ordinal_type D_nnz = D.numberOfNonzeros();
+    const local_ordinal_type mC = C.m();
+    const local_ordinal_type mD = D.m();
+    const local_ordinal_type nC = C.n();
+    const local_ordinal_type nD = D.n();
+
+    A.set_Jac_FR(C, D, A.i_row(), A.j_col(), A.M());
+
+    // copy to dense matrix
+    A.copy_to(W);
+
+    const local_ordinal_type* iRow = getRowIndices(&A);
+    const local_ordinal_type* jCol = getColumnIndices(&A);
+    const local_ordinal_type nnz = A.numberOfNonzeros();
+
+    fail += verifyAnswer(&W,
+      [=] (local_ordinal_type i, local_ordinal_type j) -> real_type
+      {
+        double ans = zero;
+        // this ele comes from sparse matrix C
+        if(i<mC && j<nC) {
+          const bool indexExists = find_unsorted_pair(i, j, C_iRow, C_jCol, C_nnz);
+          if(indexExists) {
+            ans = C_val;
+          } 
+        } else if(i<mC+mD && j<nD) {
+          // this ele comes from sparse matrix D
+          const bool indexExists = find_unsorted_pair(i-mC, j, D_iRow, D_jCol, D_nnz);
+           if(indexExists) {
+            ans = D_val;
+          } 
+        } else if(i<mC && j == i+nC) {
+          // this is -I in [C -I I 0 0]
+          ans = -one;
+        } else if(i<mC && j == i+nC+mC) {
+          // this is I in [C -I I 0 0]
+          ans = one;
+        } else if(i>=mC && i<mC+mD && j == nC+mC+i) {
+          // this is -I in [D 0 0 -I I]
+          ans = -one;
+        } else if(i>=mC && i<mC+mD && j == nC+mC+mD+i) {
+          // this is I in [D 0 0 -I I]
+          ans = one;
+        }
+        return ans;
+      }
+    );
+
+    printMessage(fail, __func__, rank);
+    return fail;
   }
 
 private:

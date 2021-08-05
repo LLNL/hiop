@@ -26,10 +26,10 @@ namespace hiop
 class hiopMatrixMDS : public hiopMatrix
 {
 public:
-  hiopMatrixMDS(int rows, int cols_sparse, int cols_dense, int nnz_sparse)
+  hiopMatrixMDS(int rows, int cols_sparse, int cols_dense, int nnz_sparse, const std::string& mem_space)
   {
-    mSp = LinearAlgebraFactory::createMatrixSparse(rows, cols_sparse, nnz_sparse);
-    mDe = LinearAlgebraFactory::createMatrixDense(rows, cols_dense);
+    mSp = LinearAlgebraFactory::create_matrix_sparse(mem_space, rows, cols_sparse, nnz_sparse);
+    mDe = LinearAlgebraFactory::create_matrix_dense(mem_space, rows, cols_dense);
   }
   virtual ~hiopMatrixMDS()
   {
@@ -58,7 +58,7 @@ public:
     mDe->copyFrom(*m.mDe);
   }
 
-  virtual void copyRowsFrom(const hiopMatrix& src_in, const long long* rows_idxs, long long n_rows)
+  virtual void copyRowsFrom(const hiopMatrix& src_in, const index_type* rows_idxs, size_type n_rows)
   {
     const hiopMatrixMDS& src = dynamic_cast<const hiopMatrixMDS&>(src_in);
     mSp->copyRowsFrom(*src.mSp, rows_idxs, n_rows);
@@ -109,7 +109,7 @@ public:
   {
     assert(false && "not supported");
   }
-  virtual void addSubDiagonal(const double& alpha, long long start, const hiopVector& d_)
+  virtual void addSubDiagonal(const double& alpha, index_type start, const hiopVector& d_)
   {
     assert(false && "not supported");
   }
@@ -170,7 +170,25 @@ public:
   {
     return std::max(mSp->max_abs_value(), mDe->max_abs_value());
   }
+  
+  virtual void row_max_abs_value(hiopVector &ret_vec)
+  {
+    auto ret_vec_dense = ret_vec.new_copy();
+    
+    mSp->row_max_abs_value(ret_vec);
+    mDe->row_max_abs_value(*ret_vec_dense);
+    
+    ret_vec.component_max(*ret_vec_dense);
+        
+    delete ret_vec_dense;
+  }
 
+  virtual void scale_row(hiopVector &vec_scal, const bool inv_scale)
+  {
+    mSp->scale_row(vec_scal, inv_scale);
+    mDe->scale_row(vec_scal, inv_scale);
+  }
+  
   virtual bool isfinite() const
   {
     return mSp->isfinite() && mDe->isfinite();
@@ -201,10 +219,10 @@ public:
     return m;
   }
 
-  virtual inline long long m() const {return mSp->m();}
-  virtual inline long long n() const {return mSp->n()+mDe->n();}
-  inline long long n_sp() const {return mSp->n();}
-  inline long long n_de() const {return  mDe->n();}
+  virtual inline size_type m() const {return mSp->m();}
+  virtual inline size_type n() const {return mSp->n()+mDe->n();}
+  inline size_type n_sp() const {return mSp->n();}
+  inline size_type n_de() const {return  mDe->n();}
 
   inline const hiopMatrixSparse* sp_mat() const { return mSp; }
   inline const hiopMatrixDense* de_mat() const { return mDe; }
@@ -223,6 +241,14 @@ public:
     return mSp->M();
   }
   inline double* de_local_data() { return mDe->local_data(); }
+
+  /// @brief extend base problem Jac to the Jac in feasibility problem
+  virtual void set_Jac_FR(const hiopMatrixMDS& Jac_c,
+                          const hiopMatrixMDS& Jac_d,
+                          int* iJacS,
+                          int* jJacS,
+                          double* MJacS,
+                          double* JacD);
 
 #ifdef HIOP_DEEPCHECKS
   virtual bool assertSymmetry(double tol=1e-16) const { return false; }
@@ -248,10 +274,10 @@ private:
 class hiopMatrixSymBlockDiagMDS : public hiopMatrix
 {
 public:
-  hiopMatrixSymBlockDiagMDS(int n_sparse, int n_dense, int nnz_sparse)
+  hiopMatrixSymBlockDiagMDS(int n_sparse, int n_dense, int nnz_sparse, const std::string& mem_space)
   {
-    mSp = LinearAlgebraFactory::createMatrixSymSparse(n_sparse, nnz_sparse);
-    mDe = LinearAlgebraFactory::createMatrixDense(n_dense, n_dense);
+    mSp = LinearAlgebraFactory::create_matrix_sym_sparse(mem_space, n_sparse, nnz_sparse);
+    mDe = LinearAlgebraFactory::create_matrix_dense(mem_space, n_dense, n_dense);
   }
   virtual ~hiopMatrixSymBlockDiagMDS()
   {
@@ -275,7 +301,7 @@ public:
     mDe->copyFrom(*m.mDe);
   }
 
-  virtual void copyRowsFrom(const hiopMatrix& src_in, const long long* rows_idxs, long long n_rows)
+  virtual void copyRowsFrom(const hiopMatrix& src_in, const index_type* rows_idxs, size_type n_rows)
   {
     const hiopMatrixSymBlockDiagMDS& src = dynamic_cast<const hiopMatrixSymBlockDiagMDS&>(src_in);
     mSp->copyRowsFrom(src, rows_idxs, n_rows);
@@ -322,7 +348,7 @@ public:
   {
     assert(false && "not supported");
   }
-  virtual void addSubDiagonal(const double& alpha, long long start, const hiopVector& d_)
+  virtual void addSubDiagonal(const double& alpha, index_type start, const hiopVector& d_)
   {
     assert(false && "not supported");
   }
@@ -382,6 +408,24 @@ public:
     return std::max(mSp->max_abs_value(), mDe->max_abs_value());
   }
 
+  virtual void row_max_abs_value(hiopVector &ret_vec)
+  {
+    auto ret_vec_dense = ret_vec.new_copy();
+    
+    mSp->row_max_abs_value(ret_vec);
+    mDe->row_max_abs_value(*ret_vec_dense);
+    
+    ret_vec.component_max(*ret_vec_dense);
+        
+    delete ret_vec_dense;  
+  }
+
+  virtual void scale_row(hiopVector &vec_scal, const bool inv_scale)
+  {
+    mSp->scale_row(vec_scal, inv_scale);
+    mDe->scale_row(vec_scal, inv_scale);
+  }
+
   virtual bool isfinite() const
   {
     return mSp->isfinite() && mDe->isfinite();
@@ -412,10 +456,10 @@ public:
     return m;
   }
 
-  virtual inline long long m() const {return n();}
-  virtual inline long long n() const {return mSp->n()+mDe->n();}
-  inline long long n_sp() const {return mSp->n();}
-  inline long long n_de() const {return  mDe->n();}
+  virtual inline size_type m() const {return n();}
+  virtual inline size_type n() const {return mSp->n()+mDe->n();}
+  inline size_type n_sp() const {return mSp->n();}
+  inline size_type n_de() const {return  mDe->n();}
 
   inline const hiopMatrixSparse* sp_mat() const { return mSp; }
   inline const hiopMatrixDense* de_mat() const { return mDe; }
@@ -425,6 +469,15 @@ public:
   inline int* sp_jcol() { return mSp->j_col(); }
   inline double* sp_M() { return mSp->M(); }
   inline double* de_local_data() { return mDe->local_data(); }
+
+  /// @brief build Hess for FR problem, from the base problem `Hess`.
+  virtual void set_Hess_FR(const hiopMatrixSymBlockDiagMDS& Hess,
+                           int* iHSS,
+                           int* jHSS,
+                           double* MHSS,
+                           double* MHDD,
+                           const hiopVector& add_diag_sp,
+                           const hiopVector& add_diag_de);
 
 #ifdef HIOP_DEEPCHECKS
   virtual bool assertSymmetry(double tol=1e-16) const

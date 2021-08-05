@@ -37,11 +37,11 @@ if(METIS_LIBRARY)
   target_link_libraries(METIS INTERFACE ${METIS_LIBRARY})
   target_include_directories(METIS INTERFACE ${METIS_INCLUDE_DIR})
   message(STATUS "Found METIS library: ${METIS_LIBRARY}")
+  install(TARGETS METIS EXPORT hiop-targets)
 else()
   message(STATUS "METIS was not found.")
 endif()
 
 set(METIS_INCLUDE_DIR CACHE PATH "Path to metis.h")
 set(METIS_LIBRARY CACHE PATH "Path to metis library")
-#set(METIS_LIBRARIES CACHE PATH "Path to metis library")
 
