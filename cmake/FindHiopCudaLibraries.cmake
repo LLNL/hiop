@@ -9,7 +9,6 @@ add_library(hiop_cuda INTERFACE)
 
 find_package(CUDAToolkit REQUIRED)
 
-# Note : unsure if building both static + shared at same time breaks this.
 if(HIOP_BUILD_SHARED)
   target_link_libraries(hiop_cuda INTERFACE 
     CUDA::cusparse
