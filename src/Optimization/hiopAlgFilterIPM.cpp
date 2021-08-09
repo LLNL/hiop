@@ -304,6 +304,10 @@ void hiopAlgFilterIPMBase::reloadOptions()
   //logbar Hessian
   kappa_Sigma = 1e10; 
   _tau=fmax(tau_min,1.0-_mu);
+
+  theta_max_fact_ = nlp->options->GetNumeric("theta_max_fact");
+  theta_min_fact_ = nlp->options->GetNumeric("theta_min_fact");
+
   theta_max = 1e7; //temporary - will be updated after ini pt is computed
   theta_min = 1e7; //temporary - will be updated after ini pt is computed
 
@@ -925,8 +929,8 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
 
   iter_num=0; nlp->runStats.nIter=iter_num;
 
-  theta_max=1e+4*fmax(1.0,resid->get_theta());
-  theta_min=1e-4*fmax(1.0,resid->get_theta());
+  theta_max = theta_max_fact_*fmax(1.0,resid->get_theta());
+  theta_min = theta_min_fact_*fmax(1.0,resid->get_theta());
 
   hiopKKTLinSysLowRank* kkt=new hiopKKTLinSysLowRank(nlp);
 
@@ -1373,8 +1377,8 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
   iter_num=0; nlp->runStats.nIter=iter_num;
   bool disableLS = nlp->options->GetString("accept_every_trial_step")=="yes";
 
-  theta_max=1e+4*fmax(1.0,resid->get_theta());
-  theta_min=1e-4*fmax(1.0,resid->get_theta());
+  theta_max = theta_max_fact_*fmax(1.0,resid->get_theta());
+  theta_min = theta_min_fact_*fmax(1.0,resid->get_theta());
 
   hiopKKTLinSys* kkt = decideAndCreateLinearSystem(nlp);
   assert(kkt != NULL);
