@@ -2,8 +2,8 @@
 
 namespace hiop
 {
-  hiopLinSolverIndefDenseMagmaBuKaDev::hiopLinSolverIndefDenseMagmaBuKaDev(int n, hiopNlpFormulation* nlp_)
-    : hiopLinSolverIndefDense(n, nlp_), work_(NULL)
+  hiopLinSolverIndefDenseMagmaBuKa::hiopLinSolverIndefDenseMagmaBuKa(int n, hiopNlpFormulation* nlp_)
+    : hiopLinSolverIndefDense(n, nlp_)
   {
     magma_int_t ndevices;
     magma_device_t devices[MagmaMaxGPUs];
@@ -22,52 +22,49 @@ namespace hiop
     ldda_ = magma_roundup(n, align );  // multiple of 32 by default
     lddb_ = ldda_;
 
+    magmaRet = magma_malloc((void**)&dinert_, 3*sizeof(int));
+    assert(MAGMA_SUCCESS == magmaRet);
+
+
+    magmaRet = magma_imalloc_pinned(&ipiv_, ldda_);
+    assert(MAGMA_SUCCESS == magmaRet);
+
     std::string mem_space = nlp_->options->GetString("mem_space");
-    if(mem_space == "default" || mem_space == "host")
-    {
+    if(mem_space == "default" || mem_space == "host") {
       magmaRet = magma_dmalloc(&device_M_, n*ldda_);
       assert(MAGMA_SUCCESS == magmaRet);
       magmaRet = magma_dmalloc(&device_rhs_, nrhs*lddb_ );
       assert(MAGMA_SUCCESS == magmaRet);
-      //magmaRet = magma_imalloc(&ipiv_, ldda_);
-      magmaRet = magma_imalloc_pinned(&ipiv_, ldda_);
-      assert(MAGMA_SUCCESS == magmaRet);
-      magmaRet = magma_dmalloc(&work_, ldda_);
-      assert(MAGMA_SUCCESS == magmaRet);
-    }
-    else
-    {
+    } else {
       device_M_   = nullptr;
       device_rhs_ = nullptr;
-      ipiv_ = new int[n];
-      work_ = new double[n];
-      ldda_ = n;
-      lddb_ = ldda_;
     }
   }
 
-  hiopLinSolverIndefDenseMagmaBuKaDev::~hiopLinSolverIndefDenseMagmaBuKaDev()
+  hiopLinSolverIndefDenseMagmaBuKa::~hiopLinSolverIndefDenseMagmaBuKa()
   {
     std::string mem_space = nlp_->options->GetString("mem_space");
-    if(mem_space == "default" || mem_space == "host")
-    {
+    if(mem_space == "default" || mem_space == "host") {
       magma_free(device_M_);
       magma_free(device_rhs_);
-      magma_free(work_);
-      magma_free(ipiv_);
     } else {
-      delete[] work_;
-      delete[] ipiv_;
+
     }
+
+    magma_free(ipiv_);
+    magma_free(dinert_);
+
     magma_queue_destroy(magma_device_queue_);
     magma_device_queue_ = NULL;
   }
   /** Triggers a refactorization of the matrix, if necessary. */
-  int hiopLinSolverIndefDenseMagmaBuKaDev::matrixChanged()
+  int hiopLinSolverIndefDenseMagmaBuKa::matrixChanged()
   {
     assert(M_->n() == M_->m());
     int N=M_->n(), lda = N, info;
-    if(N==0) return 0;
+    if(N==0) {
+      return 0;
+    }
 
     nlp_->runStats.linsolv.tmFactTime.start();
 
@@ -75,22 +72,18 @@ namespace hiop
 
     magma_uplo_t uplo=MagmaLower; // M is upper in C++ so it's lower in fortran
 
-    printf("NNNNNNNNNNNNN=%d\n", N);
-
     std::string mem_space = nlp_->options->GetString("mem_space");
-    if(mem_space == "default" || mem_space == "host")
-    {
+    if(mem_space == "default" || mem_space == "host") {
       nlp_->runStats.linsolv.tmDeviceTransfer.start();
       magma_dsetmatrix(N, N, M_->local_data(), lda, device_M_, ldda_, magma_device_queue_);
       nlp_->runStats.linsolv.tmDeviceTransfer.stop();
     }
-    else
-    {
+    else {
       device_M_   = M_->local_data();
     }
 
     //
-    //query sizes
+    //factorization
     //
     magma_dsytrf_gpu(uplo, N, device_M_, ldda_, ipiv_, &info );
 
@@ -104,7 +97,7 @@ namespace hiop
       return -1;
     } else {
       if(info>0) {
-	nlp_->log->printf(hovError,
+	nlp_->log->printf(hovWarning,
 			 "hiopLinSolverMagmaBuka error: %d entry in the factorization's diagonal\n"
 			 "is exactly zero. Division by zero will occur if it a solve is attempted.\n",
 			 info);
@@ -119,35 +112,23 @@ namespace hiop
       return -1;
     }
 
-    if(nullEigVal>0) return -1;
+    if(nullEigVal>0) {
+      return -1;
+    }
     return negEigVal;
   }
 
-  bool hiopLinSolverIndefDenseMagmaBuKaDev::
-  compute_inertia(int N, int *ipiv, int& posEigVal, int& negEigVal, int& nullEigVal)
+  bool hiopLinSolverIndefDenseMagmaBuKa::
+  compute_inertia(int N, int* ipiv, int& posEigVal, int& negEigVal, int& nullEigVal)
   {
-    //double det[2];
     int inert[3];
-    //int job = 110;
     int info, retcode;
 
     nlp_->runStats.linsolv.tmInertiaComp.start();
 
-    //if(NULL==work_) {
-    // work_ = new double[N];
-    //}
+    info = magmablas_dsiinertia(N, device_M_, ldda_, ipiv, dinert_, magma_device_queue_);
 
-    //determinant if only for logging/output/curiosity purposes
-    //magma_dsidi(M_->local_data(), N, N, ipiv, det, inert, work_, job, &info);
-
-    int* dinert;
-    retcode = magma_malloc((void**)&dinert, 3*sizeof(int));
-    assert(MAGMA_SUCCESS == retcode);
-
-    info = magmablas_dsiinertia(N, device_M_, ldda_, ipiv_, dinert, magma_device_queue_);
-
-    magma_getvector(3, sizeof(int), dinert, 1, inert, 1, magma_device_queue_);
-    magma_free(dinert);
+    magma_getvector(3, sizeof(int), dinert_, 1, inert, 1, magma_device_queue_);
 
 
     if(0!=info) {
@@ -162,221 +143,12 @@ namespace hiop
     negEigVal = inert[1];
     nullEigVal = inert[2];
     
-    nlp_->log->printf(hovWarning, 
+    nlp_->log->printf(hovScalars,
                       "BuKa dsidi eigs: pos/neg/null  %d %d %d \n", 
                       posEigVal,
                       negEigVal,
                       nullEigVal);
     fflush(stdout);
-    nlp_->runStats.linsolv.tmInertiaComp.stop();
-    return info==0;
-  }
-
-  bool hiopLinSolverIndefDenseMagmaBuKaDev::solve(hiopVector& x)
-  {
-    assert(M_->n() == M_->m());
-    assert(x.get_size() == M_->n());
-    int N = M_->n();
-    int LDA = N;
-    int LDB = N;
-    int NRHS = 1;
-    if(N == 0) {
-      return true;
-    }
-
-    std::string mem_space = nlp_->options->GetString("mem_space");
-    if(mem_space == "default" || mem_space == "host")
-    {
-      nlp_->runStats.linsolv.tmDeviceTransfer.start();
-      magma_dsetmatrix(N, NRHS, x.local_data(), LDB, device_rhs_, lddb_, magma_device_queue_);
-      nlp_->runStats.linsolv.tmDeviceTransfer.stop();
-    }
-    else
-    {
-      device_rhs_ = x.local_data();
-    }
-
-
-    nlp_->runStats.linsolv.tmTriuSolves.start();
-    
-    magma_uplo_t uplo=MagmaLower; // M is upper in C++ so it's lower in fortran
-    int info;
-    magma_dsytrs_gpu(uplo, N, NRHS, device_M_, ldda_, ipiv_, device_rhs_, lddb_, &info, magma_device_queue_);
-
-    if(info<0) {
-      nlp_->log->printf(hovError, "hiopLinSolverMagmaBuKa: (LAPACK) DSYTRS returned error %d\n", info);
-      assert(false);
-    } else if(info>0) {
-      nlp_->log->printf(hovError, "hiopLinSolverMagmaBuKa: (LAPACK) DSYTRS returned warning %d\n", info);
-    }
-    nlp_->runStats.linsolv.tmTriuSolves.stop();
-
-    if(mem_space == "default" || mem_space == "host")
-    {
-      nlp_->runStats.linsolv.tmDeviceTransfer.start();
-      magma_dgetmatrix(N, NRHS, device_rhs_, lddb_, x.local_data(), LDB, magma_device_queue_);
-      nlp_->runStats.linsolv.tmDeviceTransfer.stop();
-    }
-
-
-    return info==0;
-  }
-
-  hiopLinSolverIndefDenseMagmaBuKa::hiopLinSolverIndefDenseMagmaBuKa(int n, hiopNlpFormulation* nlp_)
-    : hiopLinSolverIndefDense(n, nlp_), work_(NULL)
-  {
-    ipiv_ = new int[n];
-  }
-
-  hiopLinSolverIndefDenseMagmaBuKa::~hiopLinSolverIndefDenseMagmaBuKa()
-  {
-    delete [] work_;
-    delete [] ipiv_;
-  }
-
-  /** Triggers a refactorization of the matrix, if necessary. */
-  int hiopLinSolverIndefDenseMagmaBuKa::matrixChanged()
-  {
-    assert(M_->n() == M_->m());
-    int N=M_->n(), lda = N, info;
-    if(N==0) return 0;
-
-    nlp_->runStats.linsolv.tmFactTime.start();
-
-    double gflops = FLOPS_DPOTRF( N )  / 1e9;
-
-    magma_uplo_t uplo=MagmaLower; // M is upper in C++ so it's lower in fortran
-
-    //
-    //query sizes
-    //
-    magma_dsytrf(uplo, N, M_->local_data(), lda, ipiv_, &info );
-
-    nlp_->runStats.linsolv.tmFactTime.stop();
-    nlp_->runStats.linsolv.flopsFact = gflops / nlp_->runStats.linsolv.tmFactTime.getElapsedTime() / 1000.;
-
-    if(info<0) {
-      nlp_->log->printf(hovError,
-		       "hiopLinSolverMagmaBuka error: %d argument to dsytrf has an illegal value.\n",
-		       -info);
-      return -1;
-    } else {
-      if(info>0) {
-	nlp_->log->printf(hovScalars,
-			 "hiopLinSolverMagmaBuka error: %d entry in the factorization's diagonal\n"
-			 "is exactly zero. Division by zero will occur if it a solve is attempted.\n",
-			 info);
-	//matrix is singular
-	return -1;
-      }
-    }
-    assert(info==0);
-    int negEigVal, posEigVal, nullEigVal;
-
-    if(!compute_inertia(N, ipiv_, posEigVal, negEigVal, nullEigVal)) {
-      return -1;
-    }
-
-    if(nullEigVal>0) return -1;
-    return negEigVal;
-  }
-  
-  bool hiopLinSolverIndefDenseMagmaBuKa_old::compute_inertia(int N, 
-                                                             int *ipiv,
-                                                             int& posEigVal, 
-                                                             int& negEigVal, 
-                                                             int& nullEigVal)
-  {
-    negEigVal=0;
-    posEigVal=0;
-    nullEigVal=0;
-
-    nlp_->runStats.linsolv.tmInertiaComp.start();
-    //
-    // Compute the inertia. Only negative eigenvalues are returned.
-    // Code originally written by M. Schanen for PIPS based on
-    // LINPACK's dsidi Fortran routine (http://www.netlib.org/linpack/dsidi.f)
-    // 04/08/2020 - petra: fixed the test for non-positive pivots (was only for negative pivots)
-    double t=0;
-
-    double* MM = M_->local_data();
-
-    for(int k=0; k<N; k++) {
-      //c       2 by 2 block
-      //c       use det (d  s)  =  (d/t * c - t) * t  ,  t = dabs(s)
-      //c               (s  c)
-      //c       to avoid underflow/overflow troubles.
-      //c       take two passes through scaling.  use  t  for flag.
-      double d = MM[N*k + k];
-      if(ipiv[k] <= 0) {
-        if(t==0) {
-          assert(k+1<N);
-          if(k+1<N) {
-            t=fabs(MM[N*k + (k+1)]);
-            d=(d/t) * MM[N*(k+1) + (k+1)]-t;
-          }
-        } else {
-          d=t;
-          t=0.;
-        }
-      }
-      //printf("d = %22.14e \n", d);
-      //if(d<0) negEigVal++;
-      if(d < -1e-14) {
-        negEigVal++;
-      } else if(d < 1e-14) {
-        nullEigVal++;
-        //break;
-      } else {
-        posEigVal++;
-      }
-    }
-    // std::cout << "Using Magma factorization ...\n";
-    // std::cout << "Matrix inertia =(" << posEigVal << ", " << nullEigVal << ", " << negEigVal << ")\n";
-    //printf("MagmaBuKa Eigs (pos,null,neg)=(%d,%d,%d)\n", posEigVal, nullEigVal, negEigVal);
-    nlp_->runStats.linsolv.tmInertiaComp.stop();
-
-    return true;
-  }
-
-  bool hiopLinSolverIndefDenseMagmaBuKa::compute_inertia(int N, 
-                                                         int *ipiv,
-                                                         int& posEigVal, 
-                                                         int& negEigVal, 
-                                                         int& nullEigVal)
-  {
-    double det[2];
-    int inert[3];
-    int job = 100;
-    int info;
-
-    nlp_->runStats.linsolv.tmInertiaComp.start();
-
-    if(NULL==work_) {
-      work_ = new double[N];
-    }
-
-    //determinant if only for logging/output/curiosity purposes
-    magma_dsidi(M_->local_data(), N, N, ipiv, det, inert, work_, job, &info);
-    if(0!=info) {
-      nlp_->log->printf(hovError, 
-                        "Magma dsidi inertia computation failed with [%d] (MagmaBuKa)\n",
-                        info);
-      posEigVal = negEigVal = nullEigVal = -1;
-      return false;
-    }
-
-    posEigVal = inert[0];
-    negEigVal = inert[1];
-    nullEigVal = inert[2];
-    
-    //printf("SIDI ON : det = %g\n", det[0] * std::pow(10, det[1]));
-    nlp_->log->printf(hovScalars, 
-                      "BuKa dsidi eigs: pos/neg/null  %d %d %d \n", 
-                      posEigVal,
-                      negEigVal,
-                      nullEigVal);
-    //fflush(stdout);
     nlp_->runStats.linsolv.tmInertiaComp.stop();
     return info==0;
   }
@@ -389,24 +161,42 @@ namespace hiop
     int LDA = N;
     int LDB = N;
     int NRHS = 1;
-    if(N == 0) return true;
+    if(N == 0) {
+      return true;
+    }
+
+    std::string mem_space = nlp_->options->GetString("mem_space");
+    if(mem_space == "default" || mem_space == "host") {
+      nlp_->runStats.linsolv.tmDeviceTransfer.start();
+      magma_dsetmatrix(N, NRHS, x.local_data(), LDB, device_rhs_, lddb_, magma_device_queue_);
+      nlp_->runStats.linsolv.tmDeviceTransfer.stop();
+    } else {
+      device_rhs_ = x.local_data();
+    }
 
     nlp_->runStats.linsolv.tmTriuSolves.start();
     
-    char uplo='L'; // M is upper in C++ so it's lower in fortran
+    magma_uplo_t uplo=MagmaLower; // M is upper in C++ so it's lower in fortran
     int info;
-    DSYTRS(&uplo, &N, &NRHS, M_->local_data(), &LDA, ipiv_, x.local_data(), &LDB, &info);
+    magma_dsytrs_gpu(uplo, N, NRHS, device_M_, ldda_, ipiv_, device_rhs_, lddb_, &info, magma_device_queue_);
 
     if(info<0) {
-      nlp_->log->printf(hovError, "hiopLinSolverMagmaBuKa: (LAPACK) DSYTRS returned error %d\n", info);
+      nlp_->log->printf(hovError, "hiopLinSolverMagmaBuKa: DSYTRS_GPU returned error %d\n", info);
       assert(false);
     } else if(info>0) {
-      nlp_->log->printf(hovError, "hiopLinSolverMagmaBuKa: (LAPACK) DSYTRS returned warning %d\n", info);
+      nlp_->log->printf(hovWarning, "hiopLinSolverMagmaBuKa: DSYTRS_GPU returned warning %d\n", info);
     }
     nlp_->runStats.linsolv.tmTriuSolves.stop();
 
+    if(mem_space == "default" || mem_space == "host") {
+      nlp_->runStats.linsolv.tmDeviceTransfer.start();
+      magma_dgetmatrix(N, NRHS, device_rhs_, lddb_, x.local_data(), LDB, magma_device_queue_);
+      nlp_->runStats.linsolv.tmDeviceTransfer.stop();
+    }
+
     return info==0;
   }
+
 
   /*******************************************************************************************************
    * MAGMA indefinite solver without pivoting (fast)
@@ -618,5 +408,136 @@ namespace hiop
 
     return true;
   }
+
+#if 0
+  hiopLinSolverIndefDenseMagmaBuKa_old2::hiopLinSolverIndefDenseMagmaBuKa_old2(int n, hiopNlpFormulation* nlp_)
+    : hiopLinSolverIndefDense(n, nlp_), work_(NULL)
+  {
+    ipiv_ = new int[n];
+  }
+
+  hiopLinSolverIndefDenseMagmaBuKa_old2::~hiopLinSolverIndefDenseMagmaBuKa_old2()
+  {
+    delete [] work_;
+    delete [] ipiv_;
+  }
+
+  /** Triggers a refactorization of the matrix, if necessary. */
+  int hiopLinSolverIndefDenseMagmaBuKa_old2::matrixChanged()
+  {
+    assert(M_->n() == M_->m());
+    int N=M_->n(), lda = N, info;
+    if(N==0) return 0;
+
+    nlp_->runStats.linsolv.tmFactTime.start();
+
+    double gflops = FLOPS_DPOTRF( N )  / 1e9;
+
+    magma_uplo_t uplo=MagmaLower; // M is upper in C++ so it's lower in fortran
+
+    //
+    //query sizes
+    //
+    magma_dsytrf(uplo, N, M_->local_data(), lda, ipiv_, &info );
+
+    nlp_->runStats.linsolv.tmFactTime.stop();
+    nlp_->runStats.linsolv.flopsFact = gflops / nlp_->runStats.linsolv.tmFactTime.getElapsedTime() / 1000.;
+
+    if(info<0) {
+      nlp_->log->printf(hovError,
+		       "hiopLinSolverMagmaBuka error: %d argument to dsytrf has an illegal value.\n",
+		       -info);
+      return -1;
+    } else {
+      if(info>0) {
+	nlp_->log->printf(hovScalars,
+			 "hiopLinSolverMagmaBuka error: %d entry in the factorization's diagonal\n"
+			 "is exactly zero. Division by zero will occur if it a solve is attempted.\n",
+			 info);
+	//matrix is singular
+	return -1;
+      }
+    }
+    assert(info==0);
+    int negEigVal, posEigVal, nullEigVal;
+
+    if(!compute_inertia(N, ipiv_, posEigVal, negEigVal, nullEigVal)) {
+      return -1;
+    }
+
+    if(nullEigVal>0) return -1;
+    return negEigVal;
+  }
+  
+
+  bool hiopLinSolverIndefDenseMagmaBuKa_old2::compute_inertia(int N, 
+                                                              int *ipiv,
+                                                              int& posEigVal, 
+                                                              int& negEigVal, 
+                                                              int& nullEigVal)
+  {
+    double det[2];
+    int inert[3];
+    int job = 100;
+    int info;
+
+    nlp_->runStats.linsolv.tmInertiaComp.start();
+
+    if(NULL==work_) {
+      work_ = new double[N];
+    }
+
+    //determinant if only for logging/output/curiosity purposes
+    magma_dsidi(M_->local_data(), N, N, ipiv, det, inert, work_, job, &info);
+    if(0!=info) {
+      nlp_->log->printf(hovError, 
+                        "Magma dsidi inertia computation failed with [%d] (MagmaBuKa)\n",
+                        info);
+      posEigVal = negEigVal = nullEigVal = -1;
+      return false;
+    }
+
+    posEigVal = inert[0];
+    negEigVal = inert[1];
+    nullEigVal = inert[2];
+    
+    //printf("SIDI ON : det = %g\n", det[0] * std::pow(10, det[1]));
+    nlp_->log->printf(hovScalars, 
+                      "BuKa dsidi eigs: pos/neg/null  %d %d %d \n", 
+                      posEigVal,
+                      negEigVal,
+                      nullEigVal);
+    //fflush(stdout);
+    nlp_->runStats.linsolv.tmInertiaComp.stop();
+    return info==0;
+  }
+
+  bool hiopLinSolverIndefDenseMagmaBuKa_old2::solve(hiopVector& x)
+  {
+    assert(M_->n() == M_->m());
+    assert(x.get_size() == M_->n());
+    int N = M_->n();
+    int LDA = N;
+    int LDB = N;
+    int NRHS = 1;
+    if(N == 0) return true;
+
+    nlp_->runStats.linsolv.tmTriuSolves.start();
+    
+    char uplo='L'; // M is upper in C++ so it's lower in fortran
+    int info;
+    DSYTRS(&uplo, &N, &NRHS, M_->local_data(), &LDA, ipiv_, x.local_data(), &LDB, &info);
+
+    if(info<0) {
+      nlp_->log->printf(hovError, "hiopLinSolverMagmaBuKa: (LAPACK) DSYTRS returned error %d\n", info);
+      assert(false);
+    } else if(info>0) {
+      nlp_->log->printf(hovError, "hiopLinSolverMagmaBuKa: (LAPACK) DSYTRS returned warning %d\n", info);
+    }
+    nlp_->runStats.linsolv.tmTriuSolves.stop();
+
+    return info==0;
+  }
+#endif //0
 
 } // end namespace
