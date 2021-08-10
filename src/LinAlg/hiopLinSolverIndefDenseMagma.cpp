@@ -1,5 +1,7 @@
 #include "hiopLinSolverIndefDenseMagma.hpp"
 
+#include "hiopMatrixRajaDense.hpp"
+
 namespace hiop
 {
   hiopLinSolverIndefDenseMagmaBuKa::hiopLinSolverIndefDenseMagmaBuKa(int n, hiopNlpFormulation* nlp_)
@@ -18,8 +20,9 @@ namespace hiop
     int magmaRet;
 
     const int align=32;
+    ldda_ = magma_roundup(n, align );  // multiple of 'align', small power of 2 (i.e., 32)
+    
     const int nrhs=1;
-    ldda_ = magma_roundup(n, align );  // multiple of 32 by default
     lddb_ = ldda_;
 
     magmaRet = magma_malloc((void**)&dinert_, 3*sizeof(int));
@@ -38,6 +41,11 @@ namespace hiop
     } else {
       device_M_   = nullptr;
       device_rhs_ = nullptr;
+      //overwrite leading dimensions so that it aligns with the internal representation from
+      //HiOp RAJA dense matrix
+      ldda_ = n;
+      lddb_ = ldda_;
+
     }
   }
 
@@ -47,8 +55,6 @@ namespace hiop
     if(mem_space == "default" || mem_space == "host") {
       magma_free(device_M_);
       magma_free(device_rhs_);
-    } else {
-
     }
 
     magma_free(ipiv_);
@@ -77,8 +83,12 @@ namespace hiop
       nlp_->runStats.linsolv.tmDeviceTransfer.start();
       magma_dsetmatrix(N, N, M_->local_data(), lda, device_M_, ldda_, magma_device_queue_);
       nlp_->runStats.linsolv.tmDeviceTransfer.stop();
-    }
-    else {
+    } else {
+#ifdef HIOP_DEEPCHECKS
+      hiopMatrixRajaDense* M = dynamic_cast<hiopMatrixRajaDense*>(M_);
+      fflush(stdout);
+      assert(M && "a RajaDense matrix is expected");
+#endif
       device_M_   = M_->local_data();
     }
 
@@ -92,13 +102,13 @@ namespace hiop
 
     if(info<0) {
       nlp_->log->printf(hovError,
-		       "hiopLinSolverMagmaBuka error: %d argument to dsytrf has an illegal value.\n",
+		       "hiopLinSolverMagmaBuka error: argument %d to dsytrf has an illegal value.\n",
 		       -info);
       return -1;
     } else {
       if(info>0) {
 	nlp_->log->printf(hovWarning,
-			 "hiopLinSolverMagmaBuka error: %d entry in the factorization's diagonal\n"
+			 "hiopLinSolverMagmaBuka error: entry %d in the factorization's diagonal\n"
 			 "is exactly zero. Division by zero will occur if it a solve is attempted.\n",
 			 info);
 	//matrix is singular
@@ -222,17 +232,16 @@ namespace hiop
     lddb_ = ldda_;
 
     std::string mem_space = nlp_->options->GetString("mem_space");
-    if(mem_space == "default" || mem_space == "host")
-    {
+    if(mem_space == "default" || mem_space == "host") {
       magmaRet = magma_dmalloc(&device_M_, n*ldda_);
       assert(MAGMA_SUCCESS == magmaRet);
       magmaRet = magma_dmalloc(&device_rhs_, nrhs*lddb_ );
       assert(MAGMA_SUCCESS == magmaRet);
-    }
-    else
-    {
+    } else  {
       device_M_   = nullptr;
       device_rhs_ = nullptr;
+      //overwrite leading dimensions so that it aligns with the internal representation from
+      //HiOp RAJA dense matrix
       ldda_ = n;
       lddb_ = ldda_;
     }
@@ -241,8 +250,7 @@ namespace hiop
   hiopLinSolverIndefDenseMagmaNopiv::~hiopLinSolverIndefDenseMagmaNopiv()
   {
     std::string mem_space = nlp_->options->GetString("mem_space");
-    if(mem_space == "default" || mem_space == "host")
-    {
+    if(mem_space == "default" || mem_space == "host") {
       magma_free(device_M_);
       magma_free(device_rhs_);
     }
@@ -255,7 +263,9 @@ namespace hiop
   {
     assert(M_->n() == M_->m());
     int N=M_->n(), LDA = N, LDB=N;
-    if(N==0) return true;
+    if(N==0) {
+      return true;
+    }
 
     magma_int_t info; 
 
@@ -264,14 +274,16 @@ namespace hiop
     double gflops = FLOPS_DPOTRF( N ) / 1e9;
 
     std::string mem_space = nlp_->options->GetString("mem_space");
-    if(mem_space == "default" || mem_space == "host")
-    {
+    if(mem_space == "default" || mem_space == "host") {
       nlp_->runStats.linsolv.tmDeviceTransfer.start();
       magma_dsetmatrix(N, N,    M_->local_data(), LDA, device_M_,  ldda_, magma_device_queue_);
       nlp_->runStats.linsolv.tmDeviceTransfer.stop();
-    }
-    else
-    {
+    } else {
+#ifdef HIOP_DEEPCHECKS
+      hiopMatrixRajaDense* M = dynamic_cast<hiopMatrixRajaDense*>(M_);
+      fflush(stdout);
+      assert(M && "a RajaDense matrix is expected");
+#endif
       device_M_   = M_->local_data();
     }
     nlp_->runStats.linsolv.tmFactTime.start();
@@ -357,7 +369,9 @@ namespace hiop
     assert(M_->n() == M_->m());
     assert(x.get_size()==M_->n());
     int N=M_->n(), LDA = N, LDB=N;
-    if(N==0) return true;
+    if(N==0) {
+      return true;
+    }
 
     magma_int_t info; 
 
@@ -367,14 +381,11 @@ namespace hiop
     double gflops = FLOPS_DPOTRS(N, NRHS) / 1e9;
 
     std::string mem_space = nlp_->options->GetString("mem_space");
-    if(mem_space == "default" || mem_space == "host")
-    {
+    if(mem_space == "default" || mem_space == "host") {
       nlp_->runStats.linsolv.tmDeviceTransfer.start();
       magma_dsetmatrix(N, NRHS, x.local_data(),   LDB, device_rhs_, lddb_, magma_device_queue_);
       nlp_->runStats.linsolv.tmDeviceTransfer.stop();
-    }
-    else
-    {
+    } else {
       device_rhs_ = x.local_data();
     }
     
@@ -399,8 +410,7 @@ namespace hiop
       return false;
     }
 
-    if(mem_space == "default" || mem_space == "host")
-    {
+    if(mem_space == "default" || mem_space == "host") {
       nlp_->runStats.linsolv.tmDeviceTransfer.start();
       magma_dgetmatrix(N, NRHS, device_rhs_, lddb_, x.local_data(), LDB, magma_device_queue_);
       nlp_->runStats.linsolv.tmDeviceTransfer.stop();

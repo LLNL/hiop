@@ -31,11 +31,13 @@ namespace hiop {
  * a numerically stable factorization with decent peak performance on large matrices.
  * 
  * @note: The option "compute_mode" decides whether this class is instantiated (values
- * "gpu" and "hybrid"); otherwise, the CPU, LAPACK-based counterpart linear solver 
+ * "gpu" and "hybrid"); otherwise, for "cpu", the LAPACK-based counterpart linear solver 
  * class is used. However, this class works with all the values for "mem_space" option. 
  * Regardless of the value of the "mem_space" option (and when instructed by the 
- * "compute_mode" option mentioned above) this class will always offload to the device 
- * the factorization and the solve with the triangular factors. 
+ * "compute_mode" option mentioned above) this class will always perform the factorization 
+ * and the triangular solves on the device. The host-device communication will be minimal 
+ * (only scalars) for gpu compute mode; under hybrid compute mode, the class will offload 
+ * the matrix and rhs to the device.
  * 
  */
 
