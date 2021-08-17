@@ -61,6 +61,13 @@ struct hiopVersion
       false;
 #endif
 
+  static constexpr bool usePARDISO =
+#ifdef HIOP_USE_PARDISO
+      true;
+#else
+      false;
+#endif
+
   static inline void version(int& major, int& minor, int& patch)
   {
     major = std::atoi(HIOP_VERSION_MAJOR);
@@ -86,6 +93,7 @@ struct hiopVersion
       << "\nSparse: " << fmt(useSparse)
       << "\nCOINHSL: " << fmt(useCOINHSL)
       << "\nSTRUMPACK: " << fmt(useSTRUMPACK)
+      << "\nPARDISO: " << fmt(usePARDISO)
       << "\n";
     return ss.str();
   }
