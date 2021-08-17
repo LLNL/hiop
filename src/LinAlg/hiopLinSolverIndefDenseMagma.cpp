@@ -67,7 +67,9 @@ namespace hiop
   int hiopLinSolverIndefDenseMagmaBuKa::matrixChanged()
   {
     assert(M_->n() == M_->m());
-    int N=M_->n(), lda = N, info;
+    int N=M_->n();
+    int lda = N;
+    int info;
     if(N==0) {
       return 0;
     }
@@ -132,7 +134,8 @@ namespace hiop
   compute_inertia(int N, int* ipiv, int& posEigVal, int& negEigVal, int& nullEigVal)
   {
     int inert[3];
-    int info, retcode;
+    int info;
+    int retcode;
 
     nlp_->runStats.linsolv.tmInertiaComp.start();
 
@@ -262,13 +265,14 @@ namespace hiop
   int hiopLinSolverIndefDenseMagmaNopiv::matrixChanged()
   {
     assert(M_->n() == M_->m());
-    int N=M_->n(), LDA = N, LDB=N;
+    int N=M_->n();
+    int LDA = N;
+    int LDB=N;
     if(N==0) {
       return true;
     }
 
     magma_int_t info; 
-
     magma_uplo_t uplo=MagmaLower; // M is upper in C++ so it's lower in fortran
 
     double gflops = FLOPS_DPOTRF( N ) / 1e9;
@@ -368,13 +372,14 @@ namespace hiop
   {
     assert(M_->n() == M_->m());
     assert(x.get_size()==M_->n());
-    int N=M_->n(), LDA = N, LDB=N;
+    int N=M_->n();
+    int LDA = N;
+    int LDB=N;
     if(N==0) {
       return true;
     }
 
-    magma_int_t info; 
-
+    magma_int_t info;
     magma_uplo_t uplo=MagmaLower; // M is upper in C++ so it's lower in fortran
     magma_int_t NRHS=1;
 
@@ -436,9 +441,11 @@ namespace hiop
   int hiopLinSolverIndefDenseMagmaBuKa_old2::matrixChanged()
   {
     assert(M_->n() == M_->m());
-    int N=M_->n(), lda = N, info;
-    if(N==0) return 0;
-
+    int N=M_->n();
+    int lda = N, info;
+    if(N==0) {
+      return 0;
+    }
     nlp_->runStats.linsolv.tmFactTime.start();
 
     double gflops = FLOPS_DPOTRF( N )  / 1e9;
