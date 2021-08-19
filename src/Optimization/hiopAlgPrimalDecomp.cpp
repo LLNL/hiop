@@ -295,12 +295,7 @@ void hiopAlgPrimalDecomposition::HessianApprox::update_ratio()
 {
   double rk = fkm1+fkm1_lin;
 
-  //TODO: use a member class hiopVector to avoid repeatead allocs/deallocs
-  //hiopVector* temp = LinearAlgebraFactory::create_vector(options_->GetString("mem_space"), gkm1->get_local_size()); 
-  //temp->copyFrom(*gkm1);   
-  //rk += temp->dotProductWith(*skm1);
   rk += 0.5*alpha_*(skm1->twonorm())*(skm1->twonorm()); 
-  //delete temp;
   //printf("recourse estimate inside HessianApprox %18.12e\n",rk);
   double rho_k = (fkm1-fk)/(fkm1-rk);
   
@@ -376,12 +371,7 @@ update_ratio(const double base_v, const double base_vm1)
 {
   double rk = fkm1+fkm1_lin;
 
-  //TODO: use a member class hiopVector to avoid repeatead allocs/deallocs
-  //hiopVector* temp = LinearAlgebraFactory::create_vector(options_->GetString("mem_space"), gkm1->get_local_size()); 
-  //temp->copyFrom(*gkm1);   
-  //rk += temp->dotProductWith(*skm1);
   rk += 0.5*alpha_*(skm1->twonorm())*(skm1->twonorm()); 
-  //delete temp;
   //printf("recourse estimate inside HessianApprox %18.12e\n",rk);
   double rho_k = (base_vm1+fkm1-fk-base_v)/(fkm1+base_vm1-rk-base_v);
    
@@ -493,7 +483,6 @@ double hiopAlgPrimalDecomposition::HessianApprox::check_convergence_grad(const h
   double temp3 = 0.;
   double temp4 = 0.;
   
-  //TODO: use a class member for 'temp' to avoid allocs/deallocs
   hiopVector* temp;
   temp = LinearAlgebraFactory::create_vector(options_->GetString("mem_space"), skm1->get_local_size()); 
   temp->copyFrom(*skm1);  
@@ -523,11 +512,6 @@ check_convergence_fcn(const double base_v, const double base_vm1)
   double predicted_decrease = fkm1_lin;
 
   assert(n_==gkm1->get_local_size());
-  //TODO: use a class member for 'temp' to avoid allocs/deallocs
-  //hiopVector* temp;
-  //temp = LinearAlgebraFactory::create_vector(options_->GetString("mem_space"), gkm1->get_local_size()); 
-  //temp->copyFrom(*gkm1);   
-  //predicted_decrease += temp->dotProductWith(*skm1);
   predicted_decrease += 0.5*alpha_*(skm1->twonorm())*(skm1->twonorm()); 
 
   if(ver_ >=outlevel2) {
@@ -535,7 +519,6 @@ check_convergence_fcn(const double base_v, const double base_vm1)
   }
   predicted_decrease += base_v - base_vm1;
   predicted_decrease = fabs(predicted_decrease);
-  //delete temp;
   return predicted_decrease;
 }
 
@@ -548,11 +531,6 @@ double hiopAlgPrimalDecomposition::HessianApprox::
 compute_base(const double val)
 {
   double rec_appx = fkm1+fkm1_lin;
-  //TODO: use a class member for 'temp' to avoid allocs/deallocs
-  //hiopVector* temp;
-  //temp = LinearAlgebraFactory::create_vector(options_->GetString("mem_space"), gkm1->get_local_size()); 
-  //temp->copyFrom(*gkm1);   
-  //rec_appx += temp->dotProductWith(*skm1);
   rec_appx += 0.5*alpha_*(skm1->twonorm())*(skm1->twonorm()); 
   //delete temp;
   return val-rec_appx;
@@ -867,7 +845,7 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
 
         }
         if(ver_ >=outlevel3) {
-	  x_->print();
+          x_->print();
           //for(int i=0;i<n_;i++) printf("x %d %18.12e ",i,x_[i]);
           //printf("\n ");
         }
@@ -987,7 +965,7 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
 
         }
         rval /= S_;
-	grad_r->scale(1.0/S_);
+        grad_r->scale(1.0/S_);
         // send end signal to all evaluators
         int cur_idx = -1;
         for(int r=1; r< comm_size_;r++) {
@@ -1253,11 +1231,7 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
         }
 
         if(ver_ >=outlevel3) {
-	  x_->print();
-          //for(int i=0;i<n_;i++) {
-          //  printf("x%d %18.12e ",i,x_[i]);
-          //}
-          //printf(" \n");
+          x_->print();
         }
         t2 = MPI_Wtime(); 
         if(ver_ >=outlevel2) {

@@ -168,7 +168,7 @@ public:
   {
     assert(ny_==n);
     obj_value = 0.;
-    for(int i=0;i<n;i++) {
+    for(int i=0;i<n; i++) {
       obj_value += (x[i]-x_[i])*(x[i]-x_[i]);
     }
     obj_value *= 0.5;
@@ -213,8 +213,9 @@ public:
   bool eval_grad_f(const size_type& n, const double* x, bool new_x, double* gradf)
   {
     assert(ny_==n);    
-    for(int i=0;i<nx_;i++) gradf[i] = (x[i]-x_[i]);
-
+    for(int i=0;i<nx_; i++) {
+      gradf[i] = (x[i]-x_[i]);
+    }
     return true;
   }
  

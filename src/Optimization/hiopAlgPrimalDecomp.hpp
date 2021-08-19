@@ -266,7 +266,7 @@ public:
 
   private:
     int n_;
-    double alpha_=1e6;  
+    double alpha_ = 1e6;  
     double ratio_ = 1.0;
     double tr_ratio_ = 1.0;
     double ratio_min = 0.5;  
@@ -281,7 +281,7 @@ public:
     hiopVector* gkm1;
     hiopVector* skm1;
     hiopVector* ykm1;
-    size_t ver_= 2;
+    size_t ver_ = 2; //output level for HessianApprox class
     hiopInterfacePriDecProblem* priDecProb_;
     hiopOptions* options_;
   };
@@ -329,7 +329,7 @@ private:
   //consecutive iteration count where NLP residual is lower than acceptable tolerance
   int accp_count = 0;
   //initial alpha_ratio if used
-  double alpha_ratio_=1.0;
+  double alpha_ratio_ = 1.0;
   
   double alpha_min_ = 1e-5;  
   double alpha_max_ = 1e6;  
