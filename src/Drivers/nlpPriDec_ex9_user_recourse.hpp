@@ -171,7 +171,7 @@ public:
     for(int i=0;i<n;i++) {
       obj_value += (x[i]-x_[i])*(x[i]-x_[i]);
     }
-    obj_value *= 0.5/double(S_);
+    obj_value *= 0.5;
     return true;
   }
  
@@ -213,7 +213,7 @@ public:
   bool eval_grad_f(const size_type& n, const double* x, bool new_x, double* gradf)
   {
     assert(ny_==n);    
-    for(int i=0;i<nx_;i++) gradf[i] = (x[i]-x_[i])/double(S_);
+    for(int i=0;i<nx_;i++) gradf[i] = (x[i]-x_[i]);
 
     return true;
   }
@@ -390,7 +390,7 @@ public:
     }
     // need lambda
     if(MHSS!=NULL) {
-      for(int i=0;i<nsparse_;i++) MHSS[i] =  obj_factor/double(S_); //what is this?     
+      for(int i=0;i<nsparse_;i++) MHSS[i] =  obj_factor; //what is this?     
       MHSS[0] += 2*lambda[m-1];
       for(int i=1;i<nsparse_;i++) {
         MHSS[i] += lambda[m-1]* 2.; //what is this?     
@@ -399,7 +399,7 @@ public:
     if(HDD!=NULL){
       //HDD size: ndense_*ndense_
       for(int i=0; i<ndense;i++) {
-        HDD[ndense*i+i] = obj_factor/double(S_);
+        HDD[ndense*i+i] = obj_factor;
         HDD[ndense*i+i] += 2*lambda[m-1];
       }
     }
@@ -435,7 +435,7 @@ public:
   bool compute_gradx(const int n, const double* y, double*  gradx)
   {
     assert(nx_==n);
-    for(int i=0;i<nx_;i++) gradx[i] = (x_[i]-y[i])/double(S_);
+    for(int i=0;i<nx_;i++) gradx[i] = (x_[i]-y[i]);
     return true;
   };
 

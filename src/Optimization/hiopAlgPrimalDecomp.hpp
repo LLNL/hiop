@@ -127,6 +127,10 @@ public:
 
   void set_initial_alpha_ratio(const double ratio);
     
+  void set_alpha_min(const double alp_min); 
+   
+  void set_alpha_max(const double alp_max);
+  
   void set_max_iteration(const int max_it); 
   
   void set_tolerance(const double tol);
@@ -219,6 +223,12 @@ public:
     void update_ratio_tr(const double rhok, const double rkm1, const double rk, 
                          const double alpha_g_ratio, double& alpha_ratio);
 
+    // updating ratio_ using both base case and recourse objective function
+    void update_ratio(const double base_v, const double base_vm1);
+
+    void update_ratio_tr(const double rhok, double& alpha_ratio);
+
+
     /* currently provides multiple ways to compute alpha, one is to the BB alpha
      * or the alpha computed through the BarzilaiBorwein gradient method, a quasi-Newton method.
      */
@@ -232,11 +242,16 @@ public:
      */ 
     double get_alpha_f(const hiopVector& gk);
 
+    /* Computing alpha through alpha = alpha_*ratio_
+     * Not based on function information
+     */ 
+    double get_alpha_tr();
+    
     /* Function to check convergence based gradient 
      */
     double check_convergence_grad(const hiopVector& gk);
-    double check_convergence_fcn();
-    double compute_base(const double val, const double rval);
+    double check_convergence_fcn(const double base_v, const double base_vm1);
+    double compute_base(const double val);
 
     // setting the output level for the Hessian approximation 
     void set_verbosity(const int i); 
@@ -246,23 +261,27 @@ public:
     void set_alpha_ratio_max(const double alp_ratio_max);
 
     void set_alpha_min(const double alp_min); 
-    
+   
     void set_alpha_max(const double alp_max);
+
   private:
     int n_;
-    double alpha_=1.0;  
+    double alpha_=1e6;  
     double ratio_ = 1.0;
+    double tr_ratio_ = 1.0;
     double ratio_min = 0.5;  
     double ratio_max = 5.0;  
     double alpha_min = 1e-5;  
-    double alpha_max = 1e10;  
+    double alpha_max = 1e6;  
+
     double fk; 
     double fkm1;
+    double fkm1_lin;
     hiopVector* xkm1;
     hiopVector* gkm1;
     hiopVector* skm1;
     hiopVector* ykm1;
-    size_t ver_=1;
+    size_t ver_= 2;
     hiopInterfacePriDecProblem* priDecProb_;
     hiopOptions* options_;
   };
@@ -311,6 +330,10 @@ private:
   int accp_count = 0;
   //initial alpha_ratio if used
   double alpha_ratio_=1.0;
+  
+  double alpha_min_ = 1e-5;  
+  double alpha_max_ = 1e6;  
+  
   //real decrease over expected decrease ratio
   double rhok_ = 0.;
 protected:

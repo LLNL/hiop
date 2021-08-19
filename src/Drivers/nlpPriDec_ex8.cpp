@@ -268,7 +268,7 @@ bool PriDecMasterProblemEx8::eval_f_rterm(size_t idx, const int& n,const  double
     }
   }
   rval *= 0.5;
-  rval /= S_;
+  //rval /= S_;
   return true;
 };
 
@@ -279,9 +279,9 @@ bool PriDecMasterProblemEx8::eval_grad_rterm(size_t idx, const int& n, double* x
   double* grad_vec = grad.local_data();
   for(int i=0; i<n; i++) {
     if(i==idx) {   
-      grad_vec[i] = (x[i]+S_)/S_;
+      grad_vec[i] = (x[i]+S_);
     } else {
-      grad_vec[i] = x[i]/S_;
+      grad_vec[i] = x[i];
     }
   }
   return true;
