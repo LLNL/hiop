@@ -223,6 +223,8 @@ protected:
   double theta_max;
   //1e-4*max{1,\theta(x_0)} used in the switching condition during the line search
   double theta_min;
+  double theta_max_fact_;
+  double theta_min_fact_;
 
   /*** Algorithm's parameters ***/
   double mu0;           //intial mu

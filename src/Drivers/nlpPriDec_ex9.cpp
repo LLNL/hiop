@@ -32,7 +32,8 @@ PriDecMasterProblemEx9::solve_master(hiopVector& x,
                                      const bool& include_r,
                                      const double& rval/*=0*/, 
                                      const double* grad/*=0*/,
-                                     const double*hess /*=0*/)
+                                     const double*hess /*=0*/,
+                                     const char* master_options_file/*=nullptr*/)
 {
   obj_=-1e+20;
   hiopSolveStatus status;
@@ -45,8 +46,11 @@ PriDecMasterProblemEx9::solve_master(hiopVector& x,
     assert(basecase_->quad_is_defined());
   }
   
-  hiopNlpSparse nlp(*basecase_);
-    
+  hiopNlpSparse nlp(*basecase_, master_options_file);
+
+  //
+  // any of the options below can be overwritten by specifying them in the 'hiop_pridec_master.options' file
+  //
   //nlp.options->SetStringValue("compute_mode", "hybrid");
   //nlp.options->SetStringValue("dualsUpdateType", "linear");
 
@@ -174,7 +178,7 @@ bool PriDecMasterProblemEx9::eval_grad_rterm(size_t idx, const int& n, double* x
   assert(nx_==n);
   double* grad_vec = grad.local_data();
   for(int i=0;i<n;i++) { 
-    grad_vec[i] = (x[i]-y_[i])/S_;
+    grad_vec[i] = (x[i]-y_[i]);
   }
   return true;
 };

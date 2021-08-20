@@ -174,7 +174,7 @@ int main(int argc, char** argv)
   if(argc > 1)
     std::cout << "Executable " << argv[0] << " doesn't take any input.";
 
-  hiop::hiopOptions options;
+  hiop::hiopOptionsNLP options;
 
   local_ordinal_type M_local = 50;
 
@@ -185,9 +185,11 @@ int main(int argc, char** argv)
 
   // Test sparse matrix
   {
+    const std::string mem_space = "DEFAULT";
     std::cout << "\nTesting hiopMatrixSymSparseTriplet\n";
     hiop::tests::MatrixTestsSymSparseTriplet test;
-
+    test.set_mem_space(mem_space);
+    
     // Establishing sparsity pattern and initializing Matrix
     local_ordinal_type entries_per_row = 5;
     local_ordinal_type nnz = M_global * entries_per_row;
@@ -197,12 +199,12 @@ int main(int argc, char** argv)
     hiop::hiopMatrixDenseRowMajor mxm_dense(2 * M_global, 2 * M_global);
 
     hiop::hiopMatrixSparse* m_sym = 
-      hiop::LinearAlgebraFactory::createMatrixSymSparse(M_global, nnz);
+      hiop::LinearAlgebraFactory::create_matrix_sym_sparse(mem_space, M_global, nnz);
     initializeSymSparseMat(m_sym);
 
     local_ordinal_type nnz_m2 = m_sym->numberOfOffDiagNonzeros() + M_global;
     hiop::hiopMatrixSparse* m2_sym = 
-      hiop::LinearAlgebraFactory::createMatrixSymSparse(2*M_global, nnz_m2);
+      hiop::LinearAlgebraFactory::create_matrix_sym_sparse(mem_space, 2*M_global, nnz_m2);
 
     fail += test.matrixTimesVec(*m_sym, vec_m, vec_m_2);
     fail += test.matrixAddUpperTriangleToSymDenseMatrixUpperTriangle(mxm_dense, *m_sym);
@@ -218,13 +220,11 @@ int main(int argc, char** argv)
 #ifdef HIOP_USE_RAJA
   // Test RAJA sparse matrix
   {
+    const std::string mem_space = "DEVICE";
     std::cout << "\nTesting hiopMatrixRajaSymSparseTriplet\n";
 
-    options.SetStringValue("mem_space", "device");
-    hiop::LinearAlgebraFactory::set_mem_space(options.GetString("mem_space"));
-    std::string mem_space = hiop::LinearAlgebraFactory::get_mem_space();
-
     hiop::tests::MatrixTestsRajaSymSparseTriplet test;
+    test.set_mem_space(mem_space);
     
     // Establishing sparsity pattern and initializing Matrix
     local_ordinal_type entries_per_row = 5;
@@ -235,12 +235,12 @@ int main(int argc, char** argv)
     hiop::hiopMatrixRajaDense mxm_dense(2 * M_global, 2 * M_global, mem_space);
 
     hiop::hiopMatrixSparse* m_sym = 
-      hiop::LinearAlgebraFactory::createMatrixSymSparse(M_local, nnz);
+      hiop::LinearAlgebraFactory::create_matrix_sym_sparse(mem_space, M_local, nnz);
     initializeRajaSymSparseMat(m_sym);
 
     local_ordinal_type nnz_m2 = m_sym->numberOfOffDiagNonzeros() + M_global;
     hiop::hiopMatrixSparse* m2_sym = 
-      hiop::LinearAlgebraFactory::createMatrixSymSparse(2*M_global, nnz_m2);
+      hiop::LinearAlgebraFactory::create_matrix_sym_sparse(mem_space, 2*M_global, nnz_m2);
 
     fail += test.matrixTimesVec(*m_sym, vec_m, vec_m_2);
     fail += test.matrixAddUpperTriangleToSymDenseMatrixUpperTriangle(mxm_dense, *m_sym);
@@ -251,18 +251,12 @@ int main(int argc, char** argv)
     // Destroy testing objects
     delete m_sym;
     delete m2_sym;
-
-    // Set memory space back to default value
-    options.SetStringValue("mem_space", "default");
   }
 #endif
 
-  if(fail)
-  {
+  if(fail) {
     std::cout << "\n" << fail << " sparse matrix tests failed!\n\n";
-  }
-  else
-  {
+  } else {
     std::cout << "\nAll sparse matrix tests passed!\n\n";
   }
 

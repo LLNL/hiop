@@ -304,13 +304,17 @@ void hiopAlgFilterIPMBase::reloadOptions()
   //logbar Hessian
   kappa_Sigma = 1e10; 
   _tau=fmax(tau_min,1.0-_mu);
+
+  theta_max_fact_ = nlp->options->GetNumeric("theta_max_fact");
+  theta_min_fact_ = nlp->options->GetNumeric("theta_min_fact");
+
   theta_max = 1e7; //temporary - will be updated after ini pt is computed
   theta_min = 1e7; //temporary - will be updated after ini pt is computed
 
   perf_report_kkt_ = "on"==hiop::tolower(nlp->options->GetString("time_kkt"));
 
   // Set memory space for computations
-  hiop::LinearAlgebraFactory::set_mem_space(nlp->options->GetString("mem_space"));
+  //hiop::LinearAlgebraFactory::set_mem_space(nlp->options->GetString("mem_space"));
 }
 
 void hiopAlgFilterIPMBase::resetSolverStatus()
@@ -837,6 +841,13 @@ void hiopAlgFilterIPMBase::displayTerminationMsg()
 		       strStatsReport.c_str());
       break;
     }
+  case Infeasible_Problem:
+    {
+      nlp->log->printf(hovSummary,
+                       "Inaccurate gradients/Jacobians or locally infeasible problem.\n%s\n",
+                       strStatsReport.c_str());
+      break;
+    }
   default:
     {
       nlp->log->printf(hovSummary, "Do not know why HiOp stopped. This shouldn't happen. :)\n%s\n",
@@ -894,7 +905,9 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
   ////////////////////////////////////////////////////////////////////////////////////
 
   nlp->log->printf(hovSummary, "===============\nHiop SOLVER\n===============\n");
-  nlp->log->write(NULL, *nlp->options, hovSummary);
+  if(nlp->options->GetString("print_options") == "yes") {
+    nlp->log->write(nullptr, *nlp->options, hovSummary);
+  }
 
 #ifdef HIOP_USE_MPI
   nlp->log->printf(hovSummary, "Using %d MPI ranks.\n", nlp->get_num_ranks());
@@ -916,8 +929,8 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
 
   iter_num=0; nlp->runStats.nIter=iter_num;
 
-  theta_max=1e+4*fmax(1.0,resid->get_theta());
-  theta_min=1e-4*fmax(1.0,resid->get_theta());
+  theta_max = theta_max_fact_*fmax(1.0,resid->get_theta());
+  theta_min = theta_min_fact_*fmax(1.0,resid->get_theta());
 
   hiopKKTLinSysLowRank* kkt=new hiopKKTLinSysLowRank(nlp);
 
@@ -1056,12 +1069,13 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
     //
     //this is the linesearch loop
     //
+    double min_ls_step_size = nlp->options->GetNumeric("min_step_size");
     while(true) {
       nlp->runStats.tmSolverInternal.start(); //---
 
       // check the step against the minimum step size, but accept small
       // fractionToTheBdry since these may occur for tight bounds at the first iteration(s)
-      if(!iniStep && _alpha_primal<1e-16) {
+      if(!iniStep && _alpha_primal<min_ls_step_size) {
         nlp->log->write("Panic: minimum step size reached. The problem may be infeasible or the "
                         "gradient inaccurate. Try to restore feasibility.",hovError);
         solver_status_ = Steplength_Too_Small;
@@ -1222,7 +1236,7 @@ void hiopAlgFilterIPMQuasiNewton::outputIteration(int lsStatus, int lsNum, int u
     else strcpy(stepType, "?");
 
     if(use_soc && lsStatus >= 1 && lsStatus <= 3) {
-      stepType[0] = (char) toupper(stepType[0]);
+      stepType[0] = (char) ::toupper(stepType[0]);
     }
 
     if(use_fr){
@@ -1336,7 +1350,9 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
   ////////////////////////////////////////////////////////////////////////////////////
 
   nlp->log->printf(hovSummary, "===============\nHiop SOLVER\n===============\n");
-  nlp->log->write(NULL, *nlp->options, hovSummary);
+  if(nlp->options->GetString("print_options") == "yes") {
+    nlp->log->write(nullptr, *nlp->options, hovSummary);
+  }
 
 #ifdef HIOP_USE_MPI
   nlp->log->printf(hovSummary, "Using %d MPI ranks.\n", nlp->get_num_ranks());
@@ -1361,8 +1377,8 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
   iter_num=0; nlp->runStats.nIter=iter_num;
   bool disableLS = nlp->options->GetString("accept_every_trial_step")=="yes";
 
-  theta_max=1e+4*fmax(1.0,resid->get_theta());
-  theta_min=1e-4*fmax(1.0,resid->get_theta());
+  theta_max = theta_max_fact_*fmax(1.0,resid->get_theta());
+  theta_min = theta_min_fact_*fmax(1.0,resid->get_theta());
 
   hiopKKTLinSys* kkt = decideAndCreateLinearSystem(nlp);
   assert(kkt != NULL);
@@ -1621,12 +1637,13 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
       //
       // linesearch loop
       //
+      double min_ls_step_size = nlp->options->GetNumeric("min_step_size");
       while(true) {
         nlp->runStats.tmSolverInternal.start(); //---
 
         // check the step against the minimum step size, but accept small
         // fractionToTheBdry since these may occur for tight bounds at the first iteration(s)
-        if(!iniStep && _alpha_primal<1e-16) {
+        if(!iniStep && _alpha_primal<min_ls_step_size) {
 
           if(linsol_safe_mode_on) {
             nlp->log->write("Panic: minimum step size reached. The problem may be infeasible or the "
@@ -1873,7 +1890,7 @@ void hiopAlgFilterIPMNewton::outputIteration(int lsStatus, int lsNum, int use_so
     else strcpy(stepType, "?");
 
     if(use_soc && lsStatus >= 1 && lsStatus <= 3) {
-      stepType[0] = (char) toupper(stepType[0]);
+      stepType[0] = (char) ::toupper(stepType[0]);
     }
 
     if(use_fr){
@@ -2128,10 +2145,13 @@ bool hiopAlgFilterIPMBase::solve_feasibility_restoration(hiopKKTLinSys* kkt, hio
     nlpFR.options->SetStringValue("Hessian", "analytical_exact");
     nlpFR.options->SetStringValue("duals_update_type", "linear");
     nlpFR.options->SetStringValue("duals_init", "zero");
-    nlpFR.options->SetStringValue("compute_mode", "cpu");
+    nlpFR.options->SetStringValue("compute_mode", nlp->options->GetString("compute_mode").c_str());
+    nlpFR.options->SetStringValue("mem_space", nlp->options->GetString("mem_space").c_str());
     nlpFR.options->SetStringValue("KKTLinsys", "xdycyd");
     nlpFR.options->SetIntegerValue("verbosity_level", 0);
     nlpFR.options->SetStringValue("warm_start", "yes");
+    nlpFR.options->SetNumericValue("bound_relax_perturb", 0.0);
+    nlpFR.options->SetStringValue("scaling_type", "none");
 
     // set mu0 to be the maximun of the current barrier parameter mu and norm_inf(|c|)*/
     double theta_ref = resid->getInfeasInfNorm(); //at current point, i.e., reference point
@@ -2184,7 +2204,7 @@ bool hiopAlgFilterIPMBase::solve_feasibility_restoration(hiopKKTLinSys* kkt, hio
       } else {
         it_trial->setEqualityDualsToConstant(0.);
       }
-    } else if(FR_status == Solve_Success) {
+    } else if(FR_status == Solve_Success || FR_status == Solve_Acceptable_Level) {
       solver_status_ = Infeasible_Problem;
       return false;
     } else {

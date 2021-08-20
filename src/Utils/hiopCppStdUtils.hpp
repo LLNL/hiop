@@ -62,6 +62,17 @@ namespace hiop {
     std::transform(str_in.begin(), str_in.end(), str_in.begin(), ::tolower);
   }
 
+  static inline std::string toupper(const std::string& str_in)
+  {
+    auto str_out = str_in;
+    std::transform(str_out.begin(), str_out.end(), str_out.begin(), ::toupper);
+    return str_out;
+  }
+  static inline void toupper(std::string& str_in)
+  {
+    std::transform(str_in.begin(), str_in.end(), str_in.begin(), ::toupper);
+  }
+
   // Function to reorder elements of arr[] according to index[]
   template<class T> inline void reorder(T *arr, std::vector<int> index, int n)
   {

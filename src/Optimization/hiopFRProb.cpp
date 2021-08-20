@@ -92,14 +92,14 @@ hiopFRProbSparse::hiopFRProbSparse(hiopAlgFilterIPMBase& solver_base)
   DR_->component_min(1.0);
 
   wrk_x_ = x_ref_->alloc_clone();
-  wrk_c_ = LinearAlgebraFactory::createVector(m_eq_);
-  wrk_d_ = LinearAlgebraFactory::createVector(m_ineq_);
-  wrk_eq_ = LinearAlgebraFactory::createVector(m_eq_);
-  wrk_ineq_ = LinearAlgebraFactory::createVector(m_ineq_);
-  wrk_cbody_ = LinearAlgebraFactory::createVector(m_eq_);
-  wrk_dbody_ = LinearAlgebraFactory::createVector(m_ineq_);
-  wrk_primal_ = LinearAlgebraFactory::createVector(n_);
-  wrk_dual_ = LinearAlgebraFactory::createVector(m_);
+  wrk_c_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), m_eq_);
+  wrk_d_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), m_ineq_);
+  wrk_eq_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), m_eq_);
+  wrk_ineq_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), m_ineq_);
+  wrk_cbody_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), m_eq_);
+  wrk_dbody_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), m_ineq_);
+  wrk_primal_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), n_);
+  wrk_dual_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), m_);
 
   // nnz for sparse matrices;
   nnz_Jac_c_ = nlp_base_->get_nnz_Jaceq() + 2 * m_eq_;
@@ -110,8 +110,13 @@ hiopFRProbSparse::hiopFRProbSparse(hiopAlgFilterIPMBase& solver_base)
   hiopMatrixSparse* Hess_base = dynamic_cast<hiopMatrixSparse*>(solver_base_.get_Hess_Lagr());
   nnz_Hess_Lag_ = n_x_ + Hess_base->numberOfOffDiagNonzeros();
   
-  Jac_cd_ = LinearAlgebraFactory::createMatrixSparse(m_, n_, nnz_Jac_c_ + nnz_Jac_d_);
-  Hess_cd_ = LinearAlgebraFactory::createMatrixSymSparse(n_, nnz_Hess_Lag_);
+  Jac_cd_ = LinearAlgebraFactory::create_matrix_sparse(nlp_base_->options->GetString("mem_space"),
+                                                       m_,
+                                                       n_,
+                                                       nnz_Jac_c_ + nnz_Jac_d_);
+  Hess_cd_ = LinearAlgebraFactory::create_matrix_sym_sparse(nlp_base_->options->GetString("mem_space"),
+                                                            n_,
+                                                            nnz_Hess_Lag_);
   
   // set mu0 to be the maximun of the current barrier parameter mu and norm_inf(|c|)*/
   theta_ref_ = solver_base_.get_resid()->get_theta(); //at current point, i.e., reference point
@@ -136,6 +141,16 @@ hiopFRProbSparse::~hiopFRProbSparse()
   delete DR_;
   delete Jac_cd_;
   delete Hess_cd_;
+}
+
+bool hiopFRProbSparse::get_MPI_comm(MPI_Comm& comm_out) 
+{ 
+#ifdef HIOP_USE_MPI
+  comm_out = nlp_base_->get_comm();
+#else
+  comm_out = MPI_COMM_WORLD;
+#endif
+  return true;
 }
 
 bool hiopFRProbSparse::get_prob_sizes(size_type& n, size_type& m)
@@ -274,14 +289,16 @@ bool hiopFRProbSparse::eval_cons(const size_type& n,
   wrk_x_->copy_from_starting_at(x, 0, n_x_);
   nlp_base_->eval_c_d(*wrk_x_, new_x, *wrk_c_, *wrk_d_);
 
+  // compute FR equality constratint body c-pe+ne
   wrk_eq_->copy_from_starting_at(x, pe_st_, m_eq_);     //pe
-  wrk_eq_->copy_from_starting_at(x, ne_st_, m_eq_);     //ne
   wrk_c_->axpy(-1.0, *wrk_eq_);
+  wrk_eq_->copy_from_starting_at(x, ne_st_, m_eq_);     //ne
   wrk_c_->axpy(1.0, *wrk_eq_);
 
+  // compute FR inequality constratint body d-pi+ni
   wrk_ineq_->copy_from_starting_at(x, pi_st_, m_ineq_); //pi
-  wrk_ineq_->copy_from_starting_at(x, ni_st_, m_ineq_); //ni
   wrk_d_->axpy(-1.0, *wrk_ineq_);
+  wrk_ineq_->copy_from_starting_at(x, ni_st_, m_ineq_); //ni
   wrk_d_->axpy(1.0, *wrk_ineq_);
 
   // assemble the full vector
@@ -686,17 +703,17 @@ hiopFRProbMDS::hiopFRProbMDS(hiopAlgFilterIPMBase& solver_base)
   DR_->component_min(1.0);
 
   wrk_x_ = x_ref_->alloc_clone();
-  wrk_c_ = LinearAlgebraFactory::createVector(m_eq_);
-  wrk_d_ = LinearAlgebraFactory::createVector(m_ineq_);
-  wrk_eq_ = LinearAlgebraFactory::createVector(m_eq_);
-  wrk_ineq_ = LinearAlgebraFactory::createVector(m_ineq_);
-  wrk_cbody_ = LinearAlgebraFactory::createVector(m_eq_);
-  wrk_dbody_ = LinearAlgebraFactory::createVector(m_ineq_);
-  wrk_primal_ = LinearAlgebraFactory::createVector(n_);
-  wrk_dual_ = LinearAlgebraFactory::createVector(m_);
+  wrk_c_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), m_eq_);
+  wrk_d_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), m_ineq_);
+  wrk_eq_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), m_eq_);
+  wrk_ineq_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), m_ineq_);
+  wrk_cbody_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), m_eq_);
+  wrk_dbody_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), m_ineq_);
+  wrk_primal_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), n_);
+  wrk_dual_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), m_);
 
-  wrk_x_sp_ = LinearAlgebraFactory::createVector(n_x_sp_);
-  wrk_x_de_ = LinearAlgebraFactory::createVector(n_x_de_);
+  wrk_x_sp_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), n_x_sp_);
+  wrk_x_de_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), n_x_de_);
 
   // nnz for sparse matrices;
   nnz_sp_Jac_c_ = nlp_base_->get_nnz_sp_Jaceq() + 2 * m_eq_;
@@ -708,8 +725,8 @@ hiopFRProbMDS::hiopFRProbMDS(hiopAlgFilterIPMBase& solver_base)
   nnz_sp_Hess_Lagr_SS_ = n_x_sp_ + Hess_SS->sp_mat()->numberOfOffDiagNonzeros();
   nnz_sp_Hess_Lagr_SD_ = 0;
 
-  Jac_cd_ = new hiopMatrixMDS(m_, n_sp_, n_de_, nnz_sp_Jac_c_+nnz_sp_Jac_d_);
-  Hess_cd_ = new hiopMatrixSymBlockDiagMDS(n_sp_, n_de_, nnz_sp_Hess_Lagr_SS_);
+  Jac_cd_ = new hiopMatrixMDS(m_, n_sp_, n_de_, nnz_sp_Jac_c_+nnz_sp_Jac_d_, nlp_base_->options->GetString("mem_space"));
+  Hess_cd_ = new hiopMatrixSymBlockDiagMDS(n_sp_, n_de_, nnz_sp_Hess_Lagr_SS_, nlp_base_->options->GetString("mem_space"));
 
   // set mu0 to be the maximun of the current barrier parameter mu and norm_inf(|c|)*/
   theta_ref_ = solver_base_.get_resid()->get_theta(); //at current point, i.e., reference point
@@ -740,6 +757,16 @@ hiopFRProbMDS::~hiopFRProbMDS()
   delete Hess_cd_;
 }
 
+bool hiopFRProbMDS::get_MPI_comm(MPI_Comm& comm_out) 
+{ 
+#ifdef HIOP_USE_MPI
+  comm_out = nlp_base_->get_comm();
+#else
+  comm_out = MPI_COMM_WORLD;
+#endif
+  return true;
+}
+
 bool hiopFRProbMDS::get_prob_sizes(size_type& n, size_type& m)
 {
   n = n_;
@@ -767,8 +794,8 @@ bool hiopFRProbMDS::get_vars_info(const size_type& n, double *xlow, double* xupp
   wrk_primal_->copyTo(xupp);
 
   wrk_primal_->set_array_from_to(type, 0, n_, hiopLinear);
-  wrk_primal_->set_array_from_to(type, x_sp_st_, x_sp_st_+n_x_sp_, var_type, x_sp_st_);
-  wrk_primal_->set_array_from_to(type, x_de_st_, x_de_st_+n_x_de_, var_type, x_de_st_);
+  wrk_primal_->set_array_from_to(type, x_sp_st_, x_sp_st_+n_x_sp_, var_type, 0);
+  wrk_primal_->set_array_from_to(type, x_de_st_, x_de_st_+n_x_de_, var_type, n_x_sp_);
   
   return true;
 }
@@ -885,20 +912,22 @@ bool hiopFRProbMDS::eval_cons(const size_type& n,
   assert(n == n_);
   assert(m == m_);
 
-  // evaluate c and d
+  // evaluate base case c and d
   wrk_primal_->copy_from_starting_at(x, 0, n_); // [xsp pe ne pi ni xde]
   wrk_primal_->startingAtCopyToStartingAt(x_sp_st_, *wrk_x_, 0, n_x_sp_);       // x = [xsp xde]
   wrk_primal_->startingAtCopyToStartingAt(x_de_st_, *wrk_x_, n_x_sp_, n_x_de_); // x = [xsp xde]
   nlp_base_->eval_c_d(*wrk_x_, new_x, *wrk_c_, *wrk_d_);
 
+  // compute FR equality constratint body c-pe+ne
   wrk_eq_->copy_from_starting_at(x, pe_st_, m_eq_);     //pe
-  wrk_eq_->copy_from_starting_at(x, ne_st_, m_eq_);     //ne
   wrk_c_->axpy(-1.0, *wrk_eq_);
+  wrk_eq_->copy_from_starting_at(x, ne_st_, m_eq_);     //ne
   wrk_c_->axpy(1.0, *wrk_eq_);
 
+  // compute FR inequality constratint body d-pi+ni
   wrk_ineq_->copy_from_starting_at(x, pi_st_, m_ineq_); //pi
-  wrk_ineq_->copy_from_starting_at(x, ni_st_, m_ineq_); //ni
   wrk_d_->axpy(-1.0, *wrk_ineq_);
+  wrk_ineq_->copy_from_starting_at(x, ni_st_, m_ineq_); //ni
   wrk_d_->axpy(1.0, *wrk_ineq_);
 
   // assemble the full vector

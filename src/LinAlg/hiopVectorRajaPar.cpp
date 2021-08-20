@@ -1947,9 +1947,14 @@ void hiopVectorRajaPar::set_array_from_to(hiopInterfaceBase::NonlinearityType* a
   if(end - start == 0)
     return;
   
-  auto& rm = umpire::ResourceManager::getInstance();
-  hiopInterfaceBase::NonlinearityType* vv = const_cast<hiopInterfaceBase::NonlinearityType*>(arr_src); // <- cast away const
-  rm.copy(arr+start, vv+start+start_src, (end-start)*sizeof(hiopInterfaceBase::NonlinearityType));
+  RAJA::forall< hiop_raja_exec >(
+    RAJA::RangeSegment(0, end-start),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      arr[start+i] = arr_src[start_src+i];
+    }
+  );
+
 }
 
 void hiopVectorRajaPar::set_array_from_to(hiopInterfaceBase::NonlinearityType* arr, 

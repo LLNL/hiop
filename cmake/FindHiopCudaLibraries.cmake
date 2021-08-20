@@ -9,13 +9,20 @@ add_library(hiop_cuda INTERFACE)
 
 find_package(CUDAToolkit REQUIRED)
 
-target_link_libraries(hiop_cuda INTERFACE 
-  culibos
-  nvblas
-  cusparse
-  cudart
-  cublasLt
-  )
+if(HIOP_BUILD_SHARED)
+  target_link_libraries(hiop_cuda INTERFACE 
+    CUDA::cusparse
+    CUDA::cudart
+    CUDA::cublasLt
+    )
+endif()
+if(HIOP_BUILD_STATIC)
+  target_link_libraries(hiop_cuda INTERFACE 
+    CUDA::cusparse_static
+    CUDA::cudart_static
+    CUDA::cublasLt_static
+    )
+endif()
 
 install(TARGETS hiop_cuda EXPORT hiop-targets)
 

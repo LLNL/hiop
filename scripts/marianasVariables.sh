@@ -27,7 +27,7 @@ module load exasgd-gmp/6.2.1/gcc-7.3.0-uimke6b
 # ipopt@3.12.10%gcc@7.3.0+coinhsl~debug~metis~mumps arch=linux-centos7-broadwell
 module load exasgd-ipopt/3.12.10/gcc-7.3.0-kyxesp7
 # magma@2.5.4%gcc@7.3.0+cuda+fortran~ipo+shared build_type=RelWithDebInfo cuda_arch=60 arch=linux-centos7-broadwell
-module load exasgd-magma/2.5.4/cuda-10.2.89/gcc-7.3.0-25cv4mc
+module load exasgd-magma/2.6.1/cuda-10.2.89/gcc-7.3.0-2ejikvd
 # metis@5.1.0%gcc@7.3.0~gdb~int64~real64+shared build_type=Release patches=4991da938c1d3a1d3dea78e49bbebecba00273f98df2a656e38b83d55b281da1,b1225da886605ea558db7ac08dd8054742ea5afe5ed61ad4d0fe7a495b1270d2 arch=linux-centos7-broadwell
 module load exasgd-metis/5.1.0/gcc-7.3.0-232rotu
 # mpfr@4.1.0%gcc@7.3.0 arch=linux-centos7-broadwell
@@ -54,8 +54,8 @@ module load exasgd-strumpack/5.1.1/cuda-10.2.89/openmpi-3.1.3/gcc-7.3.0-4fqr6cn
 module load exasgd-suite-sparse/5.10.1/gcc-7.3.0-kj6x5bx
 # texinfo@6.5%gcc@7.3.0 patches=12f6edb0c6b270b8c8dba2ce17998c580db01182d871ee32b7b6e4129bd1d23a,1732115f651cff98989cb0215d8f64da5e0f7911ebf0c13b064920f088f2ffe1 arch=linux-centos7-broadwell
 module load exasgd-texinfo/6.5/gcc-7.3.0-l44ipkv
-# umpire@4.1.2%gcc@7.3.0+c+cuda~deviceconst~examples~fortran~ipo~numa+openmp~rocm~shared amdgpu_target=none build_type=RelWithDebInfo cuda_arch=none patches=135bbc7d2f371531f432672b115ac0a407968aabfffc5b8a941db9b493dbf81f,7d912d31cd293df005ba74cb96c6f3e32dc3d84afff49b14509714283693db08 tests=none arch=linux-centos7-broadwell
-module load exasgd-umpire/4.1.2/cuda-10.2.89/gcc-7.3.0-3uphncx
+# klfftqf umpire@5.0.1+c+cuda~deviceconst~examples~fortran~ipo~numa+openmp~rocm~shared amdgpu_target=none build_type=RelWithDebInfo cuda_arch=none patches=135bbc7d2f371531f432672b115ac0a407968aabfffc5b8a941db9b493dbf81f tests=none
+module load exasgd-umpire/5.0.1/cuda-10.2.89/gcc-7.3.0-klfftqf
 # zfp@0.5.5%gcc@7.3.0~aligned~c~cuda~fasthash~fortran~ipo~openmp~profile~python+shared~strided~twoway bsws=64 build_type=RelWithDebInfo cuda_arch=none arch=linux-centos7-broadwell
 module load exasgd-zfp/0.5.5/gcc-7.3.0-h3p6smb
 

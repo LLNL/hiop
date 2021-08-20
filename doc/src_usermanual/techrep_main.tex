@@ -263,7 +263,7 @@ By using multithreadead BLAS and LAPACK libraries, \textit{e.g.}, INTEL MKL, Got
 \end{verbatim}
 
 \subsection{Prerequisites} 
-\Hi is written in C++11. At minimum, \Hi  requires BLAS and LAPACK, however, the more advanced solvers require additional dependencies (MPI, RAJA and Umpire, CUDA, MAGMA, CoinHSL, STRUMPACK, etc.). The CMake-based build system of \Hi generally detects these prerequisites automatically and warns the user when such prerequisites are missing.
+\Hi is written in C++11. At minimum, \Hi  requires BLAS and LAPACK, however, the more advanced solvers require additional dependencies (MPI, RAJA and Umpire, CUDA, MAGMA, CoinHSL, PARDISO, STRUMPACK, etc.). The CMake-based build system of \Hi generally detects these prerequisites automatically and warns the user when such prerequisites are missing.
 
 At this point the build system only supports macOS and Linux operating systems. On the other hand, other than the build system, \Hi's code is  platform independent and should run fine on Windows as well.
 
@@ -799,14 +799,10 @@ In addition, a shared dynamic load library can be also built by using \texttt{HI
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \section{Solver options}
-\Hi  prints all the available user options and their values on the standard output. 
-
-\warningcp{} Each option i. should be of one of types numeric/double, integer, and string; ii. has a value associated; iii. possess a range of values;  and, iv. has a default value. 
-
-The user can set \Hi's options in two ways:
+The user can control \Hi's options in two ways:
 \begin{itemize}
-\item via \texttt{hiop.options} file that should be placed in the same directory where the application driver using \Hi is executed. The format of the \texttt{hiop.options} is very basic, each of its lines should contain a single pair \texttt{ option\_name option\_value}. Lines that begin with '\#' are discarded. The option value is checked to have the correct type (numeric, integer, or string) and to be in the expected range. If the checks fail, then the option is set to the default value and a warning message is displayed.
-\item at runtime via the \Hi's API using the \texttt{options} member of the \texttt{hiop::hiopInterfaceDenseConstraints} or \texttt{hiop::hiopInterfaceMDS} classes. This object has three methods that allows the user to set options based on their types:
+\item via the options file(s) that should be placed in the same directory where the application driver using \Hi is executed. The format of an option file is very basic, each of its lines should contain a single pair \texttt{ option\_name option\_value}. Lines that begin with '\#' or consist of only white characters are discarded. The option value is checked to have the correct type (numeric, integer, or string) and to be in the expected range. If the checks fail, then the option is set to the default value and a warning message is displayed.
+\item at runtime via the \Hi's API using the \texttt{options} member of the various NLP formulation and PriDec solver classes. The options object has three methods that allows the user to set options based on their types:
 \begin{lstlisting}
  bool SetNumericValue(const char* name, const double& value);
  bool SetIntegerValue(const char* name, const int& value);
@@ -814,9 +810,24 @@ The user can set \Hi's options in two ways:
 \end{lstlisting}
 \end{itemize}
 
-\warningcp{Note:} Options set in \texttt{hiop.options} file at runtime overwrite options set at runtime via the above API.
+\warningcp{} Each option i. should be of one of types numeric/double, integer, and string; ii. has a value associated; iii. may have a range of values;  and, iv. has a default value. 
 
-\subsection{Termination criteria and output}
+The NLP solvers load options from the file \texttt{hiop.options}. The PriDec solver will look for and load options from up to three files:
+\begin{itemize}
+\item \texttt{hiop\_pridec.options} specifies options for the \textbf{PriDec} algorithm/solver
+\item \texttt{hiop\_pridec\_master.options} specifies options for the NLP solver used to solve the \textbf{master} problem. This master NLP solver does not necessarily have to be one of \Hi's NLP solvers. The name of this file can be controlled via the string option \texttt{options\_file\_master\_prob} of the PriDec solver, in \texttt{hiop\_pridec.options}.
+\item \texttt{hiop.options} specifies the options for the \textbf{worker} NLP solver. This applies only when the worker NLP solver is one of the \Hi's solvers. This file will not be used by worker solvers other than \Hi; they will use their default option files.
+\end{itemize}
+
+For example, when the PriDec solver is used with \Hi's NLP solvers for both the master and the worker subproblems, the user should create the three options files above to customize the PriDec, master, and worker solvers. As another example, when Ipopt is used for both master and worker subproblems, the user should use the default ``ipopt.opt`` file for the worker and use ``hiop\_pridec\_master.options'' for Ipopt options for the master subproblem (or, if another file needs to be used, change the name of the master options file via \texttt{options\_file\_master\_prob} in PriDec's \texttt{hiop\_pridec.options} option file).
+
+\warningcp{Note:} If an option file is not present, \Hi will use default values (unless the user changes the options at runtime via the API).
+
+\warningcp{Note:} Options set in the options files overwrite options set at runtime via the above API.
+
+\subsection{Options for NLP solvers}
+
+\subsubsection{Termination criteria and output}
 
 \noindent \textbf{tolerance}: maximum (absolute)  NLP optimality error allowed at the optimal solution. Double values in $[10^{-14},0.1]$. Default value: $10^{-8}$. 
 
@@ -837,7 +848,7 @@ Double values in $[10^{-14},0.1]$. Default value $10^{-6}$.
 
 \noindent \textbf{verbosity\_level}: integer between $0$ and $12$ specifying the verbosity of \Hi's output. A value of $0$ disables any output (but still outputs fatal errors). A value of $1$ also outputs warnings. The value of $2$ is reserved for future use. A value of $3$ will also output a table with \Hi's convergence metrics at each iteration. A value of $4$ and higher will display additional info related to the internals of the algorithm and is generally used only for debugging/development purposes. The higher the value the more verbose the output will be.
 
-\subsection{Algorithm selection and parameters}
+\subsubsection{Algorithm selection and parameters}
 
 \noindent \textbf{mu0}: initial log-barrier parameter mu. Double values in $[10^{-6},10^3]$. Default value: $1.0$. 
 
@@ -919,7 +930,7 @@ Double values in $[10^{-14},0.1]$. Default value $10^{-6}$.
 
 \noindent \textbf{secant\_memory\_len}: size of the memory (number of $(s,y)$ pairs) of the Hessian secant approximation. Integer values between $0$ and $256$. Default value $6$.
 
-\subsection{Linear algebra computational kernels}
+\subsubsection{Linear algebra computational kernels}
 
 \noindent \textbf{KKTLinsys}: type of KKT linear system \textit{formulation} used internally:
 \begin{itemize}
@@ -962,7 +973,7 @@ Double values in $[10^{-14},0.1]$. Default value $10^{-6}$.
 
 \medskip
 
-\subsection{Problem preprocessing}
+\subsubsection{Problem preprocessing}
 
 
 \noindent \textbf{fixed\_var}: treatment of  variables that are detected to be fixed (according to the tolerance specified by ``fixed\_var\_tolerance''):
@@ -1012,6 +1023,55 @@ This option takes double values in $[0, 10^{20}]$ and has a default value $10^{-
 
 \medskip
 
+\subsubsection{Miscellaneous options}
+
+\noindent \textbf{print\_options}: string option with ``yes`` or ``no`` values deciding whether the options should be printed on the output before solver (re)starts. Default value ``no''.
+
+
+\subsection{Options for PriDec solver}
+Here we list the options that are recognized by the \Hi's PriDec solver.
+
+\subsubsection{Termination criteria and output}
+
+\noindent \textbf{tolerance}: maximum (absolute)  TODO: Frank explanation here. Double values in $[10^{-14},0.1]$. Default value: $10^{-8}$. 
+
+\medskip
+
+%\noindent \textbf{acceptable\_tolerance}: HiOp will terminate if the inf-norm of the NLP optimality residuals is below this value for \texttt{acceptable\_iterations} many consecutive iterations. Double values in $[10^{-14},0.1]$. Default value $10^{-6}$.
+
+\medskip
+
+\noindent \textbf{max\_iter}: maximum number of iterations. Integer values between $1$ to $10^6$. Default value: $3\,000$.
+
+\medskip
+
+%\noindent \textbf{acceptable\_iterations}: number of iterations passing the acceptable tolerance (see \textbf{acceptable\_tolerance}) after which HiOp terminates. Integer values between $1$ and $10^6$. Default value $15$.
+
+\medskip
+
+\noindent \textbf{verbosity\_level}: integer between $0$ and $12$ specifying the verbosity of \Hi's output. A value of $0$ disables any output (but still outputs fatal errors). A value of $1$ also outputs warnings. The value of $2$ is reserved for future use. A value of $3$ will also output a table with \Hi's convergence metrics at each iteration. A value of $4$ and higher will display additional info related to the internals of the algorithm and is generally used only for debugging/development purposes. The higher the value the more verbose the output will be.
+
+\subsubsection{Algorithm selection and parameters}
+
+-- to follow --
+
+\subsubsection{Miscellaneous options}
+
+%% memory space selection aaaa
+
+\noindent \textbf{mem\_space}: specifies the primary memory space in which PriDec solver's internal linear algebra objects will be created:
+\begin{itemize}
+\item ``default'' (default): allocations are done by \Hi in the cpu's memory space;
+\item ``host'':  allocations via Umpire in Umpire's ``HOST'' memory space, typically CPU memory;
+\item ``device'': allocations via Umpire in Umpire's ``DEVICE'' device memory space;
+\item ``um'': allocations via Umpire's unified memory model, know as ``UM''.
+\end{itemize}
+\warningcp{} The memory space for PriDec solver must match the memory space used by the master NLP solver, otherwise undefined behaviour will occur. This consistency is not checked by HiOp since it is impossible to do so when black-box NLP solvers are used for the master problem. It is the user's responsibility to ensure that the memory spaces match. When HiOp is used a master solver, the PriDec solver's \texttt{mem\_space} option must match the master HiOp's option \texttt{mem\_space}. When a CPU master solver is used with PriDec solver, the PriDec's \texttt{mem\_space} option must be set to ``default''.
+
+
+\medskip
+
+\noindent \textbf{print\_options}: string option with ``yes`` or ``no`` values deciding whether the options should be printed on the output before solver (re)starts. Default value ``no''.
 
 %\input{old_stuff}
 

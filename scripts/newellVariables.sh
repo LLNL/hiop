@@ -27,7 +27,7 @@ module load exasgd-gmp/6.2.1/gcc-7.4.0-6svtfvr
 # ipopt@3.12.10%gcc@7.4.0+coinhsl~debug~metis~mumps arch=linux-rhel7-power9le
 module load exasgd-ipopt/3.12.10/gcc-7.4.0-sfzycsu
 # magma@2.5.4%gcc@7.4.0+cuda+fortran~ipo+shared build_type=RelWithDebInfo cuda_arch=70 arch=linux-rhel7-power9le
-module load exasgd-magma/2.5.4/cuda-10.2.89-system/gcc-7.4.0-bikffe2
+module load exasgd-magma/2.6.1/cuda-10.2.89-system/gcc-7.4.0-4bah4e6
 # metis@5.1.0%gcc@7.4.0~gdb~int64~real64+shared build_type=Release patches=4991da938c1d3a1d3dea78e49bbebecba00273f98df2a656e38b83d55b281da1,b1225da886605ea558db7ac08dd8054742ea5afe5ed61ad4d0fe7a495b1270d2 arch=linux-rhel7-power9le
 module load exasgd-metis/5.1.0/gcc-7.4.0-7cjo5kb
 # mpfr@4.1.0%gcc@7.4.0 arch=linux-rhel7-power9le
@@ -50,16 +50,16 @@ module load exasgd-strumpack/5.1.1/cuda-10.2.89-system/openmpi-3.1.5/gcc-7.4.0-x
 module load exasgd-suite-sparse/5.8.1/gcc-7.4.0-ij4zlyb
 # texinfo@6.5%gcc@7.4.0 patches=12f6edb0c6b270b8c8dba2ce17998c580db01182d871ee32b7b6e4129bd1d23a,1732115f651cff98989cb0215d8f64da5e0f7911ebf0c13b064920f088f2ffe1 arch=linux-rhel7-power9le
 module load exasgd-texinfo/6.5/gcc-7.4.0-r24oezq
-# umpire@4.1.1%gcc@7.4.0+c+cuda~deviceconst~examples~fortran~ipo~numa+openmp~rocm~shared amdgpu_target=none build_type=RelWithDebInfo cuda_arch=none patches=135bbc7d2f371531f432672b115ac0a407968aabfffc5b8a941db9b493dbf81f,7d912d31cd293df005ba74cb96c6f3e32dc3d84afff49b14509714283693db08 tests=none arch=linux-rhel7-power9le
-module load exasgd-umpire/4.1.1/cuda-10.2.89-system/gcc-7.4.0-njlsagd
+# mdo4fae54inzb44c47zks5gdyuepfa5z umpire@5.0.1+c+cuda~deviceconst~examples~fortran~ipo~numa+openmp~rocm~shared amdgpu_target=none build_type=RelWithDebInfo cuda_arch=none patches=135bbc7d2f371531f432672b115ac0a407968aabfffc5b8a941db9b493dbf81f tests=none
+module load exasgd-umpire/5.0.1/cuda-10.2.89-system/gcc-7.4.0-mdo4fae
 # zfp@0.5.5%gcc@7.4.0~aligned~c~cuda~fasthash~fortran~ipo~openmp~profile~python+shared~strided~twoway bsws=64 build_type=RelWithDebInfo cuda_arch=none arch=linux-rhel7-power9le
 module load exasgd-zfp/0.5.5/gcc-7.4.0-av4beua
+module load exasgd-cmake/3.20.3/gcc-7.4.0-ya4c7w7
 
 # Load system modules
 module load gcc/7.4.0
 module load cuda/10.2
 module load openmpi/3.1.5
-module load cmake/3.19.6
 
 [ -f $PWD/nvblas.conf ] && rm $PWD/nvblas.conf
 cat > $PWD/nvblas.conf <<-EOD
