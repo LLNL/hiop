@@ -178,7 +178,7 @@ bool PriDecMasterProblemEx9::eval_grad_rterm(size_t idx, const int& n, double* x
   assert(nx_==n);
   double* grad_vec = grad.local_data();
   for(int i=0;i<n;i++) { 
-    grad_vec[i] = (x[i]-y_[i])/S_;
+    grad_vec[i] = (x[i]-y_[i]);
   }
   return true;
 };
