@@ -261,7 +261,7 @@ int main(int argc, char** argv)
     fail += test.matrix_set_subdiagonal_to(m3xn3_dense, *m3xn3_sparse);
   
     hiop::hiopVectorIntRaja select(M_local, mem_space);
-    hiop::hiopMatrixSparse* mxn_sparse_2 = hiop::LinearAlgebraFactory::createMatrixSparse(M_local, N_local, nnz);
+    hiop::hiopMatrixSparse* mxn_sparse_2 = hiop::LinearAlgebraFactory::create_matrix_sparse(mem_space, M_local, N_local, nnz);
     fail += test.matrix_copy_rows_from(*mxn_sparse_2, *m2xn_sparse, select);
 
     // copy the 1st row of mxn_sparse to the last row in m2xn_sparse
