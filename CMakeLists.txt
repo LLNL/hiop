@@ -9,7 +9,7 @@ if (POLICY CMP0074)
   cmake_policy(SET CMP0074 NEW)
 endif ()
 
-project (hiop VERSION "0.4.3")
+project (hiop VERSION "0.4.6")
 
 string(TIMESTAMP HIOP_RELEASE_DATE "%Y-%m-%d")
 
@@ -37,6 +37,8 @@ option(HIOP_USE_STRUMPACK "Build with STRUMPACK backend for sparse linear algebr
 option(HIOP_USE_PARDISO "Build with PARDISO backend for sparse linear algebra" OFF)
 option(HIOP_WITH_VALGRIND_TESTS "Run valgrind on certain integration tests" OFF)
 option(HIOP_BUILD_DOCUMENTATION "Build HiOp documentation via Doxygen" ON)
+
+set(HIOP_CTEST_LAUNCH_COMMAND "" CACHE STRING "Manually override launch commands used when running CTest")
 
 # Ensure at least one library type is being built!
 if((NOT HIOP_BUILD_SHARED) AND (NOT HIOP_BUILD_STATIC))
@@ -376,6 +378,13 @@ else()
   else()
     set(RUNCMD "") # No special command is needed to run this program  
   endif()
+endif()
+
+if(NOT (HIOP_CTEST_LAUNCH_COMMAND STREQUAL ""))
+  message(STATUS "Manually overriding launch command for CTest with \"${HIOP_CTEST_LAUNCH_COMMAND}\"")
+  string(REPLACE " " ";" TMP_RUNCMD "${HIOP_CTEST_LAUNCH_COMMAND}")
+  set(RUNCMD ${TMP_RUNCMD})
+  set(MPICMD ${TMP_RUNCMD})
 endif()
 
 ##########################################################
