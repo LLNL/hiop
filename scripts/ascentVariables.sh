@@ -19,8 +19,7 @@ module load exasgd-ipopt/3.12.10/gcc-7.4.0-tj6jbm2
 module load exasgd-libsigsegv/2.13/gcc-7.4.0-garv4jn
 # libtool@2.4.6%gcc@7.4.0 arch=linux-rhel7-power9le
 module load exasgd-libtool/2.4.6/gcc-7.4.0-lbasl6y
-# magma@2.5.4%gcc@7.4.0+cuda+fortran~ipo+shared build_type=RelWithDebInfo cuda_arch=70 arch=linux-rhel7-power9le
-module load exasgd-magma/2.5.4/cuda-10.2.89/gcc-7.4.0-oltcefd
+module load exasgd-magma/2.6.1/cuda-10.2.89-system/gcc-7.4.0-exkqayg
 # metis@5.1.0%gcc@7.4.0~gdb~int64~real64+shared build_type=Release patches=4991da938c1d3a1d3dea78e49bbebecba00273f98df2a656e38b83d55b281da1,b1225da886605ea558db7ac08dd8054742ea5afe5ed61ad4d0fe7a495b1270d2 arch=linux-rhel7-power9le
 module load exasgd-metis/5.1.0/gcc-7.4.0-7cjo5kb
 # mpfr@4.1.0%gcc@7.4.0 arch=linux-rhel7-power9le

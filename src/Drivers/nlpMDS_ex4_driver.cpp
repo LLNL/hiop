@@ -141,18 +141,33 @@ int main(int argc, char **argv)
   hiopAlgFilterIPMNewton solver(&nlp);
   status = solver.run();
   obj_value = solver.getObjective();
+
+  int ret_code = 0; //0 success, -1 failure
   
 
-  if(selfCheck && has_empty_sp_row) {
+  if(selfCheck) { // && has_empty_sp_row) {
     if(fabs(obj_value-(-4.9994888159755632e+01))>1e-6) {
       printf("selfcheck: objective mismatch for Ex4 MDS problem with 400 sparse variables and 100 "
 	     "dense variables did. BTW, obj=%18.12e was returned by HiOp.\n", obj_value);
-      return -1;
+      ret_code = -1;
+    } else {
+      printf("selfcheck passed\n");
+      ret_code = 0;
     }
-  } else if(status<0) {
-    if(rank==0)
-      printf("solver returned negative solve status: %d (with objective is %18.12e)\n", status, obj_value);
-    return -1;
+
+  } else {
+    if(status<0) {
+      if(rank==0) {
+        printf("solver returned negative solve status: %d (objective is %18.12e)\n", status, obj_value);
+      } 
+      ret_code = -1;
+    } else {
+      if(rank==0) {
+        printf("solver returned successfully: objective is %18.12e)\n", obj_value);
+      } 
+      ret_code = 0;
+
+    } 
   }
 
 #if 0
@@ -225,6 +240,5 @@ int main(int argc, char **argv)
 #ifdef HIOP_USE_MPI
   MPI_Finalize();
 #endif
-
-  return 0;
+  return ret_code;
 }

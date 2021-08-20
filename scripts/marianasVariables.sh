@@ -27,7 +27,7 @@ module load exasgd-gmp/6.2.1/gcc-7.3.0-uimke6b
 # ipopt@3.12.10%gcc@7.3.0+coinhsl~debug~metis~mumps arch=linux-centos7-broadwell
 module load exasgd-ipopt/3.12.10/gcc-7.3.0-kyxesp7
 # magma@2.5.4%gcc@7.3.0+cuda+fortran~ipo+shared build_type=RelWithDebInfo cuda_arch=60 arch=linux-centos7-broadwell
-module load exasgd-magma/2.5.4/cuda-10.2.89/gcc-7.3.0-25cv4mc
+module load exasgd-magma/2.6.1/cuda-10.2.89/gcc-7.3.0-2ejikvd
 # metis@5.1.0%gcc@7.3.0~gdb~int64~real64+shared build_type=Release patches=4991da938c1d3a1d3dea78e49bbebecba00273f98df2a656e38b83d55b281da1,b1225da886605ea558db7ac08dd8054742ea5afe5ed61ad4d0fe7a495b1270d2 arch=linux-centos7-broadwell
 module load exasgd-metis/5.1.0/gcc-7.3.0-232rotu
 # mpfr@4.1.0%gcc@7.3.0 arch=linux-centos7-broadwell
