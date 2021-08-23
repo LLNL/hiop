@@ -423,8 +423,8 @@ void hiopMatrixRajaSparseTriplet::copySubDiagonalFrom(const index_type& start_on
   const double* v = vd.local_data_const();
 
   // local copy for RAJA access
-  int* iRow = iRow_;
-  int* jCol = jCol_;
+  index_type* iRow = iRow_;
+  index_type* jCol = jCol_;
   double* values = values_;
 
   RAJA::forall<hiop_raja_exec>(
@@ -447,8 +447,8 @@ void hiopMatrixRajaSparseTriplet::setSubDiagonalTo(const index_type& start_on_de
   assert(start_on_dest_diag>=0 && start_on_dest_diag+num_elems<=this->nrows_);
 
   // local copy for RAJA access
-  int* iRow = iRow_;
-  int* jCol = jCol_;
+  index_type* iRow = iRow_;
+  index_type* jCol = jCol_;
   double* values = values_;
 
   RAJA::forall<hiop_raja_exec>(
@@ -665,11 +665,11 @@ void hiopMatrixRajaSparseTriplet::copy_to(hiopMatrixDense& W)
   
   RAJA::View<double, RAJA::Layout<2>> WM(W.local_data(), W.m(), W.n());
   
-  int nnz = this->nnz_;
-  int nrows = this->nrows_;
-  int ncols = this->ncols_;
-  int* jCol = jCol_;
-  int* iRow = iRow_;
+  size_type nnz = this->nnz_;
+  size_type nrows = this->nrows_;
+  size_type ncols = this->ncols_;
+  index_type* jCol = jCol_;
+  index_type* iRow = iRow_;
   double* values = values_;
   
   // atomic is needed to prevent data race from ocurring;
@@ -976,20 +976,20 @@ void hiopMatrixRajaSparseTriplet::copyRowsFrom(const hiopMatrix& src_gen,
   const int* iRow_src = src.i_row();
   const int* jCol_src = src.j_col();
   const double* values_src = src.M();
-  int nnz_src = src.numberOfNonzeros();
+  size_type nnz_src = src.numberOfNonzeros();
 
-  int m_src = src.m();
+  size_type m_src = src.m();
   if(src.row_starts_ == nullptr) {
     src.row_starts_ = src.allocAndBuildRowStarts();
   }
   assert(src.row_starts_);
-  int* src_row_st_host = src.row_starts_->idx_start_host_;
+  index_type* src_row_st_host = src.row_starts_->idx_start_host_;
 
   // local copy of member variable/function, for RAJA access
-  int* iRow = iRow_;
-  int* jCol = jCol_;
+  index_type* iRow = iRow_;
+  index_type* jCol = jCol_;
   double* values = values_;
-  int nnz_dst = numberOfNonzeros();
+  size_type nnz_dst = numberOfNonzeros();
 
   // this function only set up sparsity in the first run. Sparsity won't change after the first run.
   if(row_starts_ == nullptr) {
@@ -1018,16 +1018,16 @@ void hiopMatrixRajaSparseTriplet::copyRowsFrom(const hiopMatrix& src_gen,
     row_starts_->copy_to_dev();
   }
 
-  int* dst_row_st = row_starts_->idx_start_;
-  int* src_row_st = src.row_starts_->idx_start_;
+  index_type* dst_row_st = row_starts_->idx_start_;
+  index_type* src_row_st = src.row_starts_->idx_start_;
 
   RAJA::forall<hiop_raja_exec>(
     RAJA::RangeSegment(0, n_rows),
     RAJA_LAMBDA(RAJA::Index_type row_dst)
     {
-      const int row_src = rows_idxs[row_dst];
-      int k_dst = dst_row_st[row_dst];
-      int k_src = src_row_st[row_src];
+      const index_type row_src = rows_idxs[row_dst];
+      index_type k_dst = dst_row_st[row_dst];
+      index_type k_src = src_row_st[row_src];
   
       // copy from src
       while(k_src < src_row_st[row_src+1]) {
