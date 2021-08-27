@@ -57,7 +57,7 @@ namespace hiop
       magma_free(device_rhs_);
     }
 
-    magma_free(ipiv_);
+    magma_free_pinned(ipiv_);
     magma_free(dinert_);
 
     magma_queue_destroy(magma_device_queue_);
