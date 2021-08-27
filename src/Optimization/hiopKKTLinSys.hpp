@@ -79,6 +79,14 @@ public:
 		      const hiopVector* grad_f,
 		      const hiopMatrix* Jac_c, const hiopMatrix* Jac_d, hiopMatrix* Hess) = 0;
 
+  /* update the regularization based on inertia-free approach */  
+  virtual bool inertia_free_update(const size_type num_factor,
+                                   const hiopIterate* dir,
+                                   const hiopVector* grad_f,
+                                   const hiopMatrix* Jac_c,
+                                   const hiopMatrix* Jac_d,
+                                   hiopMatrix* Hess) = 0;
+  
   /* forms the residual of the underlying linear system, uses the factorization
    * computed by 'update' to compute the "reduced-space" search directions by solving
    * with the factors, then computes the "full-space" directions */
@@ -143,12 +151,23 @@ public:
   {if(linSys_) delete linSys_;}
 
   virtual bool update(const hiopIterate* iter,
-                    const hiopVector* grad_f,
-                    const hiopMatrix* Jac_c, const hiopMatrix* Jac_d, hiopMatrix* Hess) = 0;
+                      const hiopVector* grad_f,
+                      const hiopMatrix* Jac_c,
+                      const hiopMatrix* Jac_d,
+                      hiopMatrix* Hess) = 0;
+
+  /* update the regularization based on inertia-free approach */  
+  virtual bool inertia_free_update(const size_type num_factor,
+                                   const hiopIterate* dir,
+                                   const hiopVector* grad_f,
+                                   const hiopMatrix* Jac_c,
+                                   const hiopMatrix* Jac_d,
+                                   hiopMatrix* Hess) = 0;
 
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction) = 0;
 
-  virtual bool factorize();
+  virtual bool factorize(const bool keep_delta = false,
+                         const size_type num_factor = 0);
   
   /**
    * @brief factorize the matrix and check curvature
@@ -158,8 +177,10 @@ public:
   /** 
    * @brief updates the iterate matrix, given regularizations 'delta_wx', 'delta_wd', 'delta_cc' and 'delta_cd'.
    */
-  virtual bool updateMatrix(const double& delta_wx, const double& delta_wd,
-                            const double& delta_cc, const double& delta_cd) = 0;
+  virtual bool build_kkt_matrix(const double& delta_wx,
+                                const double& delta_wd,
+                                const double& delta_cc,
+                                const double& delta_cd) = 0;
 
   hiopLinSolver* linSys_;
 
@@ -170,28 +191,53 @@ class hiopKKTLinSysCompressed : public hiopKKTLinSysCurvCheck
 {
 public:
   hiopKKTLinSysCompressed(hiopNlpFormulation* nlp)
-    : hiopKKTLinSysCurvCheck(nlp), Dx_(NULL), rx_tilde_(NULL)
+    : hiopKKTLinSysCurvCheck(nlp),
+      Dx_(nullptr),
+      rx_tilde_(nullptr),
+      Dd_(nullptr),
+      x_wrk_(nullptr),
+      d_wrk_(nullptr)
   {
     Dx_ = nlp->alloc_primal_vec();
-    assert(Dx_ != NULL);
+    assert(Dx_ != nullptr);
     rx_tilde_  = Dx_->alloc_clone();
+    Dd_ = nlp->alloc_dual_ineq_vec();  
   }
   virtual ~hiopKKTLinSysCompressed()
   {
     delete Dx_;
     delete rx_tilde_;
+    delete Dd_;
+    if(x_wrk_) {
+      delete x_wrk_;
+    }
+    if(d_wrk_) {
+      delete d_wrk_;
+    }
   }
   virtual bool update(const hiopIterate* iter,
 		      const hiopVector* grad_f,
 		      const hiopMatrix* Jac_c, const hiopMatrix* Jac_d, hiopMatrix* Hess) = 0;
 
+  virtual bool inertia_free_update(const size_type num_factor,
+                                   const hiopIterate* dir,
+                                   const hiopVector* grad_f,
+                                   const hiopMatrix* Jac_c,
+                                   const hiopMatrix* Jac_d,
+                                   hiopMatrix* Hess);
+
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction) = 0;
 
-  virtual bool updateMatrix(const double& delta_wx, const double& delta_wd,
-                            const double& delta_cc, const double& delta_cd) = 0;
+  virtual bool build_kkt_matrix(const double& delta_wx,
+                                const double& delta_wd,
+                                const double& delta_cc,
+                                const double& delta_cd) = 0;
 protected:
   hiopVector* Dx_;
+  hiopVector* Dd_;
   hiopVector* rx_tilde_;
+  hiopVector* x_wrk_;
+  hiopVector* d_wrk_;
 };
 
 /* Provides the functionality for reducing the KKT linear system to the
@@ -217,8 +263,10 @@ public:
 
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction);
 
-  virtual bool updateMatrix(const double& delta_wx, const double& delta_wd,
-                            const double& delta_cc, const double& delta_cd) = 0;
+  virtual bool build_kkt_matrix(const double& delta_wx,
+                                const double& delta_wd,
+                                const double& delta_cc,
+                                const double& delta_cd) = 0;
 
   virtual bool solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
                                hiopVector& dx, hiopVector& dyc, hiopVector& dyd) = 0;
@@ -261,8 +309,10 @@ public:
 
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction);
 
-  virtual bool updateMatrix(const double& delta_wx, const double& delta_wd,
-                            const double& delta_cc, const double& delta_cd) = 0;
+  virtual bool build_kkt_matrix(const double& delta_wx,
+                                const double& delta_wd,
+                                const double& delta_cc,
+                                const double& delta_cd) = 0;
 
   virtual bool solveCompressed(hiopVector& rx, hiopVector& rd, 
                                hiopVector& ryc, hiopVector& ryd,
@@ -277,9 +327,8 @@ public:
 #endif
 
 protected:
-  hiopVector *Dd_;
-  hiopVector *rd_tilde_;
-protected:
+  hiopVector* rd_tilde_;
+
 #ifdef HIOP_DEEPCHECKS
   //y=beta*y+alpha*H*x
   virtual void HessianTimesVec_noLogBarrierTerm(double beta, hiopVector& y,
@@ -316,8 +365,14 @@ public:
 		      const hiopMatrixDense* Jac_c, const hiopMatrixDense* Jac_d,
 		      hiopHessianLowRank* Hess);
 
-  virtual bool updateMatrix(const double& delta_wx, const double& delta_wd,
-                            const double& delta_cc, const double& delta_cd) {assert(false && "not yet implemented");return false;}
+  virtual bool build_kkt_matrix(const double& delta_wx,
+                                const double& delta_wd,
+                                const double& delta_cc,
+                                const double& delta_cd) 
+  {
+    assert(false && "not yet implemented");
+    return false;
+  }
 
   /* Solves the system corresponding to directions for x, yc, and yd, namely
    * [ H_BFGS + Dx   Jc^T  Jd^T   ] [ dx]   [ rx_tilde ]
@@ -403,10 +458,22 @@ public:
                       const hiopVector* grad_f,
                       const hiopMatrix* Jac_c, const hiopMatrix* Jac_d, hiopMatrix* Hess);
 
+  virtual bool inertia_free_update(const size_type num_factor,
+                                   const hiopIterate* dir,
+                                   const hiopVector* grad_f,
+                                   const hiopMatrix* Jac_c,
+                                   const hiopMatrix* Jac_d,
+                                   hiopMatrix* Hess)
+  {
+    assert(false && "not implemented yet!");
+  }
+
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction);
 
-  virtual bool updateMatrix(const double& delta_wx, const double& delta_wd,
-                            const double& delta_cc, const double& delta_cd) = 0;  
+  virtual bool build_kkt_matrix(const double& delta_wx,
+                                const double& delta_wd,
+                                const double& delta_cc,
+                                const double& delta_cd) = 0;
   
   virtual bool solve( hiopVector& rx, hiopVector& ryc, hiopVector& ryd, hiopVector& rd,
                       hiopVector& rdl, hiopVector& rdu, hiopVector& rxl, hiopVector& rxu,

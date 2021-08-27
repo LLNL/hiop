@@ -1310,13 +1310,12 @@ hiopFactAcceptor* hiopAlgFilterIPMNewton::
 decideAndCreateFactAcceptor(hiopPDPerturbation* p, hiopNlpFormulation* nlp)
 {
   std::string strKKT = nlp->options->GetString("fact_acceptor");
-  if(strKKT == "inertia_correction")
+  
+  if(strKKT == "inertia_free")
   {
-    return new hiopFactAcceptorIC(p,nlp->m_eq()+nlp->m_ineq());
-  }else{
-    assert(false &&
-    "Inertia-free approach hasn't been implemented yet.");
-    return new hiopFactAcceptorIC(p,nlp->m_eq()+nlp->m_ineq());
+    return new hiopFactAcceptorInertiaFreeDWD(p, nlp->m_eq()+nlp->m_ineq());
+  } else {
+    return new hiopFactAcceptorIC(p, nlp->m_eq()+nlp->m_ineq());
   } 
 }
 
@@ -1571,36 +1570,53 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
       //
       // solve for search directions
       //
-      if(!kkt->computeDirections(resid, dir)) {
+      size_type num_refact = 0;
+      while(1) {
+        if(!kkt->computeDirections(resid, dir)) {
 
-        nlp->runStats.kkt.start_optimiz_iteration();
+          nlp->runStats.kkt.start_optimiz_iteration();
 
-        if(linsol_safe_mode_on) {
-          nlp->log->write("Unrecoverable error in step computation (solve)[1]. Will exit here.", hovError);
-          return solver_status_ = Err_Step_Computation;
-        } else {
-          if(linsol_forcequick) {
-            nlp->log->write("Unrecoverable error in step computation (solve)[2]. Will exit here.", hovError);
+          if(linsol_safe_mode_on) {
+            nlp->log->write("Unrecoverable error in step computation (solve)[1]. Will exit here.", hovError);
             return solver_status_ = Err_Step_Computation;
+          } else {
+            if(linsol_forcequick) {
+              nlp->log->write("Unrecoverable error in step computation (solve)[2]. Will exit here.", hovError);
+              return solver_status_ = Err_Step_Computation;
+            }
+            linsol_safe_mode_on = true;
+            linsol_safe_mode_lastiter = iter_num;
+
+            nlp->log->printf(hovWarning,
+                            "Requesting additional accuracy and stability from the KKT linear system "
+                            "at iteration %d (safe mode ON)\n", iter_num);
+
+            // repeat linear solve (computeDirections) in safe mode (meaning additional accuracy
+            // and stability is requested)
+            continue;
+
           }
-          linsol_safe_mode_on = true;
-          linsol_safe_mode_lastiter = iter_num;
+        } // end of if(!kkt->computeDirections(resid, dir))
 
-          nlp->log->printf(hovWarning,
-                           "Requesting additional accuracy and stability from the KKT linear system "
-                           "at iteration %d (safe mode ON)\n", iter_num);
-
-          // repeat linear solve (computeDirections) in safe mode (meaning additional accuracy
-          // and stability is requested)
-          continue;
-
+        //at this point all is good in terms of searchDirections computations as far as the linear solve
+        //is concerned; the search direction can be of ascent because some fast factorizations do not
+        //support inertia calculation; this case will be handled later on in this loop
+        //( //! todo nopiv inertia calculation ))
+        
+        if(nlp->options->GetString("fact_acceptor") == "inertia_free") {
+          bret = kkt->inertia_free_update(num_refact, dir, _grad_f, _Jac_c, _Jac_d, _Hess_Lagr);
+          if(bret) {
+            // inertia-free test fails. Refactorization with new regularization has been applied
+            num_refact++;
+          } else {
+            // pass inertia-free test. Accept this trial iter.
+            break;
+          }
+        } else {
+          break;
         }
-      } // end of if(!kkt->computeDirections(resid, dir))
-
-      //at this point all is good in terms of searchDirections computations as far as the linear solve
-      //is concerned; the search direction can be of ascent because some fast factorizations do not
-      //support inertia calculation; this case will be handled later on in this loop
-      //( //! todo nopiv inertia calculation ))
+      }
+      
       nlp->runStats.kkt.end_optimiz_iteration();
 
       if(perf_report_kkt_) {

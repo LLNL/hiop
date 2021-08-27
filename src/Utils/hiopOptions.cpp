@@ -818,7 +818,14 @@ void hiopOptionsNLP::register_options()
                         "inertia_correction",
                         range,
                         "The criteria used to accept a factorization: inertia_correction (default option) "
-                        " inertia_free (to be supported soon)");
+                        "and inertia_free.");
+    register_num_option("neg_curv_test_fact",
+                        1e-11,
+                        0.,
+                        1e+20,
+                        "Apply curvature test to check if a factorization is acceptable. "
+                        "This is the scaling factor which used to determines if the "
+                        "direction is considered to be sufficiently positive. (1e-11 by default)");
   }  
   //computations
   {

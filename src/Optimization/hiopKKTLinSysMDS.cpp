@@ -168,7 +168,7 @@ namespace hiop
   }
 
 
-  bool hiopKKTLinSysCompressedMDSXYcYd::updateMatrix(const double& delta_wx, const double& delta_wd,
+  bool hiopKKTLinSysCompressedMDSXYcYd::build_kkt_matrix(const double& delta_wx, const double& delta_wd,
                                                      const double& delta_cc, const double& delta_cd)
   {
     assert(linSys_);

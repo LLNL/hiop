@@ -78,7 +78,7 @@ public:
   hiopKKTLinSysCompressedSparseXYcYd(hiopNlpFormulation* nlp);
   virtual ~hiopKKTLinSysCompressedSparseXYcYd();
 
-  virtual bool updateMatrix(const double& delta_wx, const double& delta_wd,
+  virtual bool build_kkt_matrix(const double& delta_wx, const double& delta_wd,
                             const double& delta_cc, const double& delta_cd);
 
   virtual bool solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
@@ -138,7 +138,7 @@ public:
   hiopKKTLinSysCompressedSparseXDYcYd(hiopNlpFormulation* nlp);
   virtual ~hiopKKTLinSysCompressedSparseXDYcYd();
 
-  virtual bool updateMatrix(const double& delta_wx, const double& delta_wd,
+  virtual bool build_kkt_matrix(const double& delta_wx, const double& delta_wd,
                             const double& delta_cc, const double& delta_cd);
 
   virtual bool solveCompressed(hiopVector& rx, hiopVector& rd, hiopVector& ryc, hiopVector& ryd,
@@ -209,7 +209,7 @@ public:
 
   virtual ~hiopKKTLinSysSparseFull();
 
-  virtual bool updateMatrix(const double& delta_wx, const double& delta_wd,
+  virtual bool build_kkt_matrix(const double& delta_wx, const double& delta_wd,
                             const double& delta_cc, const double& delta_cd);
 
   bool solve(hiopVector& rx, hiopVector& ryc, hiopVector& ryd, hiopVector& rd,

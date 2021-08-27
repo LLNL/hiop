@@ -81,7 +81,7 @@ namespace hiop
     delete Hx_;
   }
 
-  bool hiopKKTLinSysCompressedSparseXYcYd::updateMatrix(const double& delta_wx, const double& delta_wd,
+  bool hiopKKTLinSysCompressedSparseXYcYd::build_kkt_matrix(const double& delta_wx, const double& delta_wd,
                                                         const double& delta_cc, const double& delta_cd)
   {
     HessSp_ = dynamic_cast<hiopMatrixSymSparseTriplet*>(Hess_);
@@ -348,7 +348,7 @@ namespace hiop
     delete Hd_;
   }
 
-  bool hiopKKTLinSysCompressedSparseXDYcYd::updateMatrix(const double& delta_wx, const double& delta_wd,
+  bool hiopKKTLinSysCompressedSparseXDYcYd::build_kkt_matrix(const double& delta_wx, const double& delta_wd,
                                                          const double& delta_cc, const double& delta_cd)
   {
     HessSp_ = dynamic_cast<hiopMatrixSymSparseTriplet*>(Hess_);
@@ -640,7 +640,7 @@ namespace hiop
     return dynamic_cast<hiopLinSolverNonSymSparse*> (linSys_);
   }
 
-  bool hiopKKTLinSysSparseFull::updateMatrix(const double& delta_wx, const double& delta_wd,
+  bool hiopKKTLinSysSparseFull::build_kkt_matrix(const double& delta_wx, const double& delta_wd,
                                              const double& delta_cc, const double& delta_cd)
   {
     HessSp_ = dynamic_cast<hiopMatrixSymSparseTriplet*>(Hess_);

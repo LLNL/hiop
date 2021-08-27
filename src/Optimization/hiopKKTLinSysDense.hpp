@@ -82,7 +82,7 @@ public:
     delete rhsXYcYd;
   }
 
-  virtual bool updateMatrix(const double& delta_wx, const double& delta_wd,
+  virtual bool build_kkt_matrix(const double& delta_wx, const double& delta_wd,
                             const double& delta_cc, const double& delta_cd)
   {
     assert(nlp_);
@@ -242,7 +242,7 @@ public:
   * [    Jc        0     0      0    ] [dyc] = [   ryc    ]
   * [    Jd       -I     0      0    ] [dyd]   [   ryd    ]
   */
-  virtual bool updateMatrix( const double& delta_wx, const double& delta_wd,
+  virtual bool build_kkt_matrix( const double& delta_wx, const double& delta_wd,
                              const double& delta_cc, const double& delta_cd)
   {
     assert(nlp_);
