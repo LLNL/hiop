@@ -280,7 +280,7 @@ int hiopKKTLinSysCurvCheck::factorizeWithCurvCheck()
   return linSys_->matrixChanged();
 }
 
-bool hiopKKTLinSysCurvCheck::factorize(const bool keep_delta, const size_type num_factor)
+bool hiopKKTLinSysCurvCheck::factorize()
 {
   assert(nlp_);
 
@@ -290,30 +290,10 @@ bool hiopKKTLinSysCurvCheck::factorize(const bool keep_delta, const size_type nu
   int continue_re_fact;
 
   double delta_wx, delta_wd, delta_cc, delta_cd;
-  if(!keep_delta) {
-    if(!perturb_calc_->compute_initial_deltas(delta_wx, delta_wd, delta_cc, delta_cd)) {
-      nlp_->log->printf(hovWarning, "linsys: Regularization perturbation on new linsys failed.\n");
-      return false;
-    }
-  } else {
-    if(num_factor > max_refactorizaion) {
-      nlp_->log->printf(hovError,
-                        "Reached max number (%d) of refactorization within an outer iteration.\n",
-                        max_refactorizaion);
-      return false;
-    }
-    num_refactorizaion = num_factor;
-    perturb_calc_->get_curr_perturbations(delta_wx, delta_wd, delta_cc, delta_cd);
-    int non_singular_mat = 1;
-
-#ifdef HIOP_DEEPCHECKS
-    this->build_kkt_matrix(delta_wx, delta_wd, delta_cc, delta_cd);
-    non_singular_mat = factorizeWithCurvCheck();
-    assert(non_singular_mat>=0);
-#endif
-    continue_re_fact = fact_acceptor_->requireReFactorization(*nlp_, non_singular_mat, delta_wx, delta_wd, delta_cc, delta_cd, true);
+  if(!perturb_calc_->compute_initial_deltas(delta_wx, delta_wd, delta_cc, delta_cd)) {
+    nlp_->log->printf(hovWarning, "linsys: Regularization perturbation on new linsys failed.\n");
+    return false;
   }
-
 
   while(num_refactorizaion<=max_refactorizaion) {
     assert(delta_wx == delta_wd && "something went wrong with IC");
@@ -324,7 +304,6 @@ bool hiopKKTLinSysCurvCheck::factorize(const bool keep_delta, const size_type nu
     // the update of the linear system, including IC perturbations
     this->build_kkt_matrix(delta_wx, delta_wd, delta_cc, delta_cd);
 
-    nlp_->runStats.linsolv.start_linsolve();
     nlp_->runStats.kkt.tmUpdateInnerFact.start();
 
     // factorization
@@ -354,18 +333,47 @@ bool hiopKKTLinSysCurvCheck::factorize(const bool keep_delta, const size_type nu
   return true;
 }
 
+bool hiopKKTLinSysCurvCheck::factorize_inertia_free()
+{
+  assert(nlp_);
+
+  int non_singular_mat = 1;
+  int continue_re_fact;
+
+  double delta_wx, delta_wd, delta_cc, delta_cd;
+  perturb_calc_->get_curr_perturbations(delta_wx, delta_wd, delta_cc, delta_cd);
+
+#ifdef HIOP_DEEPCHECKS
+    this->build_kkt_matrix(delta_wx, delta_wd, delta_cc, delta_cd);
+    non_singular_mat = factorizeWithCurvCheck();
+    assert(non_singular_mat>=0);
+#endif
+  continue_re_fact = fact_acceptor_->requireReFactorization(*nlp_, non_singular_mat, delta_wx, delta_wd, delta_cc, delta_cd, true);
+
+  assert(delta_wx == delta_wd && "something went wrong with IC");
+  assert(delta_cc == delta_cd && "something went wrong with IC");
+  nlp_->log->printf(hovScalars, "linsys: delta_w=%12.5e delta_c=%12.5e \n", delta_wx, delta_cc);
+
+  // the update of the linear system, including IC perturbations
+  this->build_kkt_matrix(delta_wx, delta_wd, delta_cc, delta_cd);
+
+  nlp_->runStats.kkt.tmUpdateInnerFact.start();
+
+  // factorization
+  int n_neg_eig = factorizeWithCurvCheck();
+
+  nlp_->runStats.kkt.tmUpdateInnerFact.stop();
+
+  return true;
+}
+
 
 ////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
 // hiopKKTLinSysCompressed
 ////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
-bool hiopKKTLinSysCompressed::inertia_free_update(const size_type num_factor,
-                                                  const hiopIterate* dir,
-                                                  const hiopVector* grad_f,
-                                                  const hiopMatrix* Jac_c,
-                                                  const hiopMatrix* Jac_d,
-                                                  hiopMatrix* Hess)
+bool hiopKKTLinSysCompressed::test_direction(const hiopIterate* dir, hiopMatrix* Hess)
 {
   bool retval;
   nlp_->runStats.tmSolverInternal.start();
@@ -386,7 +394,6 @@ bool hiopKKTLinSysCompressed::inertia_free_update(const size_type num_factor,
   double dbl_wrk;
   double delta_wx, delta_wd, delta_cc, delta_cd;
   perturb_calc_->get_curr_perturbations(delta_wx, delta_wd, delta_cc, delta_cd);
-
 
   /* compute xWx = x(H+Dx_)x (for primal var [x,d] */
   Hess_->timesVec(0.0, *x_wrk_, 1.0, *sol_x);
@@ -410,16 +417,15 @@ bool hiopKKTLinSysCompressed::inertia_free_update(const size_type num_factor,
 
   if(dWd < xs_nrmsq * nlp_->options->GetNumeric("neg_curv_test_fact")) {
     // have negative curvature. Add regularization and re-factorize the matrix
-    retval = factorize(true, num_factor);
+    retval = false;
   } else {
     // have positive curvature. Accept this factoraizaiton and direction.
-    retval = false;
+    retval = true;
   }
 
   nlp_->runStats.tmSolverInternal.stop();
   return retval;
 }
-
 
 ////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////

@@ -1310,13 +1310,20 @@ hiopFactAcceptor* hiopAlgFilterIPMNewton::
 decideAndCreateFactAcceptor(hiopPDPerturbation* p, hiopNlpFormulation* nlp)
 {
   std::string strKKT = nlp->options->GetString("fact_acceptor");
-  
   if(strKKT == "inertia_free")
   {
     return new hiopFactAcceptorInertiaFreeDWD(p, nlp->m_eq()+nlp->m_ineq());
   } else {
+
+
     return new hiopFactAcceptorIC(p, nlp->m_eq()+nlp->m_ineq());
   } 
+}
+
+hiopFactAcceptor* hiopAlgFilterIPMNewtonInertiaFree::
+decideAndCreateFactAcceptor(hiopPDPerturbation* p, hiopNlpFormulation* nlp)
+{
+  return new hiopFactAcceptorInertiaFreeDWD(p, nlp->m_eq()+nlp->m_ineq());
 }
 
 hiopSolveStatus hiopAlgFilterIPMNewton::run()
@@ -1558,66 +1565,28 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
           linsol_safe_mode_lastiter = iter_num;
 
           nlp->log->printf(hovWarning,
-                           "Requesting additional accuracy and stability from the KKT linear system "
-                           "at iteration %d (safe mode ON)\n", iter_num);
+                          "Requesting additional accuracy and stability from the KKT linear system "
+                          "at iteration %d (safe mode ON)\n", iter_num);
 
           // repeat linear solve (computeDirections) in safe mode (meaning additional accuracy
           // and stability is requested)
           continue;
         }
       } // end of if(!kkt->update(it_curr, _grad_f, _Jac_c, _Jac_d, _Hess_Lagr))
-
-      //
-      // solve for search directions
-      //
-      size_type num_refact = 0;
-      while(1) {
-        if(!kkt->computeDirections(resid, dir)) {
-
-          nlp->runStats.kkt.start_optimiz_iteration();
-
-          if(linsol_safe_mode_on) {
-            nlp->log->write("Unrecoverable error in step computation (solve)[1]. Will exit here.", hovError);
-            return solver_status_ = Err_Step_Computation;
-          } else {
-            if(linsol_forcequick) {
-              nlp->log->write("Unrecoverable error in step computation (solve)[2]. Will exit here.", hovError);
-              return solver_status_ = Err_Step_Computation;
-            }
-            linsol_safe_mode_on = true;
-            linsol_safe_mode_lastiter = iter_num;
-
-            nlp->log->printf(hovWarning,
-                            "Requesting additional accuracy and stability from the KKT linear system "
-                            "at iteration %d (safe mode ON)\n", iter_num);
-
-            // repeat linear solve (computeDirections) in safe mode (meaning additional accuracy
-            // and stability is requested)
-            continue;
-
-          }
-        } // end of if(!kkt->computeDirections(resid, dir))
-
-        //at this point all is good in terms of searchDirections computations as far as the linear solve
-        //is concerned; the search direction can be of ascent because some fast factorizations do not
-        //support inertia calculation; this case will be handled later on in this loop
-        //( //! todo nopiv inertia calculation ))
-        
-        if(nlp->options->GetString("fact_acceptor") == "inertia_free") {
-          bret = kkt->inertia_free_update(num_refact, dir, _grad_f, _Jac_c, _Jac_d, _Hess_Lagr);
-          if(bret) {
-            // inertia-free test fails. Refactorization with new regularization has been applied
-            num_refact++;
-          } else {
-            // pass inertia-free test. Accept this trial iter.
-            break;
-          }
-        } else {
-          break;
-        }
-      }
       
       nlp->runStats.kkt.end_optimiz_iteration();
+      
+      if(nlp->options->GetString("fact_acceptor") == "inertia_correction"){
+        if(!compute_search_direction(kkt, linsol_safe_mode_on, linsol_safe_mode_lastiter, linsol_forcequick, iter_num)) {
+          continue;
+        } 
+      } else {
+        if(!compute_search_direction_inertia_free(kkt, linsol_safe_mode_on, linsol_safe_mode_lastiter, linsol_forcequick, iter_num)) {
+          continue;
+        }         
+      }
+
+      nlp->runStats.kkt.start_optimiz_iteration();
 
       if(perf_report_kkt_) {
         nlp->log->printf(hovSummary, "%s", nlp->runStats.kkt.get_summary_last_iter().c_str());
@@ -2228,6 +2197,180 @@ bool hiopAlgFilterIPMBase::solve_feasibility_restoration(hiopKKTLinSys* kkt, hio
       return false;
     }
   } 
+  return true;
+}
+
+
+bool hiopAlgFilterIPMNewton::compute_search_direction(hiopKKTLinSys* kkt,
+                                                      bool& linsol_safe_mode_on,
+                                                      int& linsol_safe_mode_lastiter,
+                                                      const bool linsol_forcequick,
+                                                      const int iter_num)
+{
+  nlp->runStats.kkt.start_optimiz_iteration();
+
+  //
+  // solve for search directions
+  //
+  if(!kkt->computeDirections(resid, dir)) {
+
+    nlp->runStats.kkt.start_optimiz_iteration();
+
+    if(linsol_safe_mode_on) {
+      nlp->log->write("Unrecoverable error in step computation (solve)[1]. Will exit here.", hovError);
+      return solver_status_ = Err_Step_Computation;
+    } else {
+      if(linsol_forcequick) {
+        nlp->log->write("Unrecoverable error in step computation (solve)[2]. Will exit here.", hovError);
+        return solver_status_ = Err_Step_Computation;
+      }
+      linsol_safe_mode_on = true;
+      linsol_safe_mode_lastiter = iter_num;
+
+      nlp->log->printf(hovWarning,
+                      "Requesting additional accuracy and stability from the KKT linear system "
+                      "at iteration %d (safe mode ON)\n", iter_num);
+
+      // repeat linear solve (computeDirections) in safe mode (meaning additional accuracy
+      // and stability is requested)
+      return false;
+    }
+  } // end of if(!kkt->computeDirections(resid, dir))
+
+  //at this point all is good in terms of searchDirections computations as far as the linear solve
+  //is concerned; the search direction can be of ascent because some fast factorizations do not
+  //support inertia calculation; this case will be handled later on in this loop
+  //( //! todo nopiv inertia calculation ))
+
+  nlp->runStats.kkt.end_optimiz_iteration();
+  return true;
+}
+
+bool hiopAlgFilterIPMNewton::compute_search_direction_inertia_free(hiopKKTLinSys* kkt,
+                                                                   bool& linsol_safe_mode_on,
+                                                                   int& linsol_safe_mode_lastiter,
+                                                                   const bool linsol_forcequick,
+                                                                   const int iter_num)
+{
+  nlp->runStats.kkt.start_optimiz_iteration();
+  size_type num_refact = 0;
+  const size_t max_refactorizaion = 10;
+
+  while(true)
+  {
+    //
+    // solve for search directions
+    //
+    if(!kkt->computeDirections(resid, dir)) {
+
+      nlp->runStats.kkt.start_optimiz_iteration();
+
+      if(linsol_safe_mode_on) {
+        nlp->log->write("Unrecoverable error in step computation (solve)[1]. Will exit here.", hovError);
+        return solver_status_ = Err_Step_Computation;
+      } else {
+        if(linsol_forcequick) {
+          nlp->log->write("Unrecoverable error in step computation (solve)[2]. Will exit here.", hovError);
+          return solver_status_ = Err_Step_Computation;
+        }
+        linsol_safe_mode_on = true;
+        linsol_safe_mode_lastiter = iter_num;
+
+        nlp->log->printf(hovWarning,
+                        "Requesting additional accuracy and stability from the KKT linear system "
+                        "at iteration %d (safe mode ON)\n", iter_num);
+
+        // repeat linear solve (computeDirections) in safe mode (meaning additional accuracy
+        // and stability is requested)
+        return false;
+      }
+    } // end of if(!kkt->computeDirections(resid, dir))
+
+    //at this point all is good in terms of searchDirections computations as far as the linear solve
+    //is concerned; the search direction can be of ascent because some fast factorizations do not
+    //support inertia calculation; this case will be handled later on in this loop
+    //( //! todo nopiv inertia calculation ))
+
+    if(kkt->test_direction(dir, _Hess_Lagr)) {
+      break;
+    } else {
+      if(num_refact >= max_refactorizaion) {
+        nlp->log->printf(hovError,
+                         "Reached max number (%d) of refactorization within an outer iteration.\n",
+                         max_refactorizaion);
+        return false;
+      }
+      kkt->factorize_inertia_free();
+      num_refact++;
+      nlp->runStats.kkt.nUpdateICCorr++;
+    }
+  }
+
+  return true;
+}
+
+
+
+bool hiopAlgFilterIPMNewtonInertiaFree::compute_search_direction(hiopKKTLinSys* kkt,
+                                                                 bool& linsol_safe_mode_on,
+                                                                 int& linsol_safe_mode_lastiter,
+                                                                 const bool linsol_forcequick,
+                                                                 const int iter_num)
+{
+  nlp->runStats.kkt.start_optimiz_iteration();
+  size_type num_refact = 0;
+  const size_t max_refactorizaion = 10;
+
+  while(true)
+  {
+    //
+    // solve for search directions
+    //
+    if(!kkt->computeDirections(resid, dir)) {
+
+      nlp->runStats.kkt.start_optimiz_iteration();
+
+      if(linsol_safe_mode_on) {
+        nlp->log->write("Unrecoverable error in step computation (solve)[1]. Will exit here.", hovError);
+        return solver_status_ = Err_Step_Computation;
+      } else {
+        if(linsol_forcequick) {
+          nlp->log->write("Unrecoverable error in step computation (solve)[2]. Will exit here.", hovError);
+          return solver_status_ = Err_Step_Computation;
+        }
+        linsol_safe_mode_on = true;
+        linsol_safe_mode_lastiter = iter_num;
+
+        nlp->log->printf(hovWarning,
+                        "Requesting additional accuracy and stability from the KKT linear system "
+                        "at iteration %d (safe mode ON)\n", iter_num);
+
+        // repeat linear solve (computeDirections) in safe mode (meaning additional accuracy
+        // and stability is requested)
+        return false;
+      }
+    } // end of if(!kkt->computeDirections(resid, dir))
+
+    //at this point all is good in terms of searchDirections computations as far as the linear solve
+    //is concerned; the search direction can be of ascent because some fast factorizations do not
+    //support inertia calculation; this case will be handled later on in this loop
+    //( //! todo nopiv inertia calculation ))
+
+    if(kkt->test_direction(dir, _Hess_Lagr)) {
+      break;
+    } else {
+      if(num_refact >= max_refactorizaion) {
+        nlp->log->printf(hovError,
+                         "Reached max number (%d) of refactorization within an outer iteration.\n",
+                         max_refactorizaion);
+        return false;
+      }
+      kkt->factorize_inertia_free();
+      num_refact++;
+      nlp->runStats.kkt.nUpdateICCorr++;
+    }
+  }
+
   return true;
 }
 

@@ -78,20 +78,17 @@ public:
   virtual bool update(const hiopIterate* iter,
 		      const hiopVector* grad_f,
 		      const hiopMatrix* Jac_c, const hiopMatrix* Jac_d, hiopMatrix* Hess) = 0;
-
-  /* update the regularization based on inertia-free approach */  
-  virtual bool inertia_free_update(const size_type num_factor,
-                                   const hiopIterate* dir,
-                                   const hiopVector* grad_f,
-                                   const hiopMatrix* Jac_c,
-                                   const hiopMatrix* Jac_d,
-                                   hiopMatrix* Hess) = 0;
   
   /* forms the residual of the underlying linear system, uses the factorization
    * computed by 'update' to compute the "reduced-space" search directions by solving
    * with the factors, then computes the "full-space" directions */
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction) = 0;
   virtual bool compute_directions_for_full_space(const hiopResidual* resid, hiopIterate* direction);
+
+  virtual bool factorize_inertia_free() = 0;
+
+  /* curvature test for inertia-free approach */  
+  virtual bool test_direction(const hiopIterate* dir, hiopMatrix* Hess) = 0;
 
   virtual void set_PD_perturb_calc(hiopPDPerturbation* p)
   {
@@ -156,18 +153,14 @@ public:
                       const hiopMatrix* Jac_d,
                       hiopMatrix* Hess) = 0;
 
-  /* update the regularization based on inertia-free approach */  
-  virtual bool inertia_free_update(const size_type num_factor,
-                                   const hiopIterate* dir,
-                                   const hiopVector* grad_f,
-                                   const hiopMatrix* Jac_c,
-                                   const hiopMatrix* Jac_d,
-                                   hiopMatrix* Hess) = 0;
-
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction) = 0;
 
-  virtual bool factorize(const bool keep_delta = false,
-                         const size_type num_factor = 0);
+  virtual bool factorize();
+  
+  virtual bool factorize_inertia_free();
+
+  /* curvature test for inertia-free approach */  
+  virtual bool test_direction(const hiopIterate* dir, hiopMatrix* Hess) = 0;
   
   /**
    * @brief factorize the matrix and check curvature
@@ -219,12 +212,7 @@ public:
 		      const hiopVector* grad_f,
 		      const hiopMatrix* Jac_c, const hiopMatrix* Jac_d, hiopMatrix* Hess) = 0;
 
-  virtual bool inertia_free_update(const size_type num_factor,
-                                   const hiopIterate* dir,
-                                   const hiopVector* grad_f,
-                                   const hiopMatrix* Jac_c,
-                                   const hiopMatrix* Jac_d,
-                                   hiopMatrix* Hess);
+  virtual bool test_direction(const hiopIterate* dir, hiopMatrix* Hess);
 
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction) = 0;
 
@@ -458,12 +446,7 @@ public:
                       const hiopVector* grad_f,
                       const hiopMatrix* Jac_c, const hiopMatrix* Jac_d, hiopMatrix* Hess);
 
-  virtual bool inertia_free_update(const size_type num_factor,
-                                   const hiopIterate* dir,
-                                   const hiopVector* grad_f,
-                                   const hiopMatrix* Jac_c,
-                                   const hiopMatrix* Jac_d,
-                                   hiopMatrix* Hess)
+  virtual bool test_direction(const hiopIterate* dir, hiopMatrix* Hess)
   {
     assert(false && "not implemented yet!");
   }

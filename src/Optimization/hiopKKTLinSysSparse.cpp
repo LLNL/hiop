@@ -524,7 +524,7 @@ namespace hiop
       if(nlp_->options->GetString("compute_mode")=="cpu")
       {
         nlp_->log->printf(hovWarning,
-                         "KKT_SPARSE_XYcYd linsys: alloc sparse solver with matrix size %d (%d cons)\n",
+                         "KKT_SPARSE_XDYcYd linsys: alloc sparse solver with matrix size %d (%d cons)\n",
                           n, neq+nineq);
 
         auto linear_solver = nlp_->options->GetString("linear_solver_sparse");
