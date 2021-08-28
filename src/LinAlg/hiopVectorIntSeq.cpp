@@ -75,5 +75,18 @@ void hiopVectorIntSeq::copy_from(const index_type* v_local)
     memcpy(buf_, v_local, sz_*sizeof(index_type));
 }
 
+void hiopVectorIntSeq::set_to_zero()
+{
+  for(index_type i=0; i<sz_; ++i) {
+    buf_[i] = 0;
+  }
+}
+
+void hiopVectorIntSeq::set_to_constant(const index_type c)
+{
+  for(index_type i=0; i<sz_; ++i) {
+    buf_[i] = c;
+  }
+}
 
 } // namespace hiop

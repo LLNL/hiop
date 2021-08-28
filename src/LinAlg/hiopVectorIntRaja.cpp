@@ -115,4 +115,21 @@ void hiopVectorIntRaja::copy_from(const index_type* v_local)
   }
 }
 
+void hiopVectorIntRaja::set_to_zero()
+{
+  auto& rm = umpire::ResourceManager::getInstance();
+  rm.memset(buf_, 0);
+}
+
+/// Set all vector elements to constant c
+void hiopVectorIntRaja::set_to_constant(const index_type c)
+{
+  index_type* data = buf_;
+  RAJA::forall< hiop_raja_exec >(RAJA::RangeSegment(0, sz_),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      data[i] = c;
+    });
+}
+
 } // namespace hiop

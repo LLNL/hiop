@@ -77,4 +77,13 @@ void VectorTestsIntSeq::setLocalElement(hiop::hiopVectorInt* xvec, int idx, int 
   }
 }
 
+void VectorTestsIntSeq::setLocalElement(hiop::hiopVectorInt* xvec, int value) const
+{
+  if(auto* x = dynamic_cast<hiop::hiopVectorIntSeq*>(xvec)) {
+    x->set_to_constant(value);
+  } else {
+    assert(false && "Wrong type of vector passed into `VectorTestsIntSeq::setLocalElement`!");
+  }
+}
+
 }} // namespace hiop::tests

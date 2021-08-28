@@ -81,4 +81,14 @@ void VectorTestsIntRaja::setLocalElement(hiop::hiopVectorInt* xvec, int idx, int
   }
 }
 
+void VectorTestsIntRaja::setLocalElement(hiop::hiopVectorInt* xvec, int value) const
+{
+  if(auto* x = dynamic_cast<hiop::hiopVectorIntRaja*>(xvec)) {
+    x->set_to_constant(value);
+    x->copy_from_dev();
+  } else {
+    assert(false && "Wrong type of vector passed into `VectorTestsIntRaja::setLocalElement`!");
+  }
+}
+
 }} // namespace hiop::tests
