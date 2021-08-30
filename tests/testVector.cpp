@@ -346,7 +346,11 @@ int runIntTests(const char* mem_space)
   fail += test.vectorGetElement(*x);
   fail += test.vectorSetElement(*x);
 
+  auto* y = LinearAlgebraFactory::create_vector_int(mem_space, sz);
+  fail += test.vector_copy_from(*x, *y);
+  
   delete x;
+  delete y;
 
   return fail;
 }
