@@ -297,13 +297,7 @@ bool Ex4::eval_f(const size_type& n, const double* x, bool new_x, double& obj_va
 }
 
 /**
- * @todo figure out which of these pointers (if any) will need to be
- * copied over to device when this is fully running on device.
- * @todo find descriptoins of parameters (perhaps from ipopt interface?).
- *
- * @param[in] idx_cons ?
- * @param[in] x ?
- * @param[in] cons ?
+ * All pointers resides on the device. 
  */
 bool Ex4::eval_cons(const size_type& n, const size_type& m, 
                     const size_type& num_cons, const index_type* idx_cons_in,
@@ -314,34 +308,15 @@ bool Ex4::eval_cons(const size_type& n, const size_type& m,
 
   assert(num_cons==ns_ || num_cons==3*haveIneq_);
 
-  // Temporary solution: Move idx_cons array to GPU, works with UM and PINNED only
-  index_type* idx_cons = nullptr;
-  auto& resmgr = umpire::ResourceManager::getInstance();
-  if(mem_space_ == "DEFAULT")
-  {
-    idx_cons = new index_type[num_cons];
-  }
-  else
-  {
-    umpire::Allocator allocator = resmgr.getAllocator(mem_space_);
-    idx_cons = static_cast<index_type*>(allocator.allocate(num_cons * sizeof(index_type)));
-  }
-
-  for(int i=0; i<num_cons; ++i)
-  {
-    idx_cons[i] = idx_cons_in[i];
-  }
-
   int ns = ns_; ///< Cannot capture member inside RAJA lambda
   int nd = nd_; ///< Cannot capture member inside RAJA lambda
   
   // equality constraints
-  if(num_cons == ns_ && ns_ > 0)
-  {
+  if(num_cons == ns_ && ns_ > 0) {
     RAJA::forall<ex4_raja_exec>(RAJA::RangeSegment(0, num_cons),
       RAJA_LAMBDA(RAJA::Index_type irow)
       {
-        const int con_idx = (int) idx_cons[irow];
+        const int con_idx = (int) idx_cons_in[irow];
         if(con_idx < ns)
         {
           //equalities: x+s - Md_ y = 0
@@ -353,14 +328,16 @@ bool Ex4::eval_cons(const size_type& n, const size_type& m,
 
   /// @todo This is parallelizing only 3 iterations
   // inequality constraints
-  if(num_cons == 3 && haveIneq_)
-  {
+  if(num_cons == 3 && haveIneq_) {
     RAJA::forall<ex4_raja_exec>(RAJA::RangeSegment(0, num_cons),
       RAJA_LAMBDA(RAJA::Index_type irow)
       {
-        const int con_idx = (int) idx_cons[irow];
+        assert(ns>=0);
+        const int con_idx = (int) idx_cons_in[irow];
+        assert(con_idx>=0);
         assert(con_idx < ns+3);
-        const int conineq_idx=con_idx - ns;
+        const int conineq_idx = con_idx - ns;
+
         if(conineq_idx==0)
         {
           cons[conineq_idx] = x[0];
@@ -379,20 +356,10 @@ bool Ex4::eval_cons(const size_type& n, const size_type& m,
         }
         else
         {
+          assert(conineq_idx>=0);
           assert(false);
         }
       });
-  }
-
-  // Temporary solution: Move idx_cons array to GPU, works with UM and PINNED only
-  if(mem_space_ == "DEFAULT")
-  {
-    delete [] idx_cons;
-  }
-  else
-  {
-    umpire::Allocator allocator = resmgr.getAllocator(mem_space_);
-    allocator.deallocate(idx_cons);
   }
   return true;
 }
@@ -445,32 +412,21 @@ bool Ex4::eval_grad_f(const size_type& n, const double* x, bool new_x, double* g
  * This method runs on GPU.
  * 
  */
-bool Ex4::eval_Jac_cons(const size_type& n, const size_type& m, 
-    const size_type& num_cons, const index_type* idx_cons_in,
-    const double* x, bool new_x,
-    const size_type& nsparse, const size_type& ndense, 
-    const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
-    double* JacD)
+bool Ex4::eval_Jac_cons(const size_type& n,
+                        const size_type& m, 
+                        const size_type& num_cons, 
+                        const index_type* idx_cons,
+                        const double* x, 
+                        bool new_x,
+                        const size_type& nsparse, 
+                        const size_type& ndense, 
+                        const int& nnzJacS, 
+                        int* iJacS, 
+                        int* jJacS, 
+                        double* MJacS, 
+                        double* JacD)
 {
   assert(num_cons==ns_ || num_cons==3*haveIneq_);
-
-  // Temporary solution: Move idx_cons array to GPU, works with UM and PINNED only
-  index_type* idx_cons = nullptr;
-  auto& resmgr = umpire::ResourceManager::getInstance();
-  if(mem_space_ == "DEFAULT")
-  {
-    idx_cons = new index_type[num_cons];
-  }
-  else
-  {
-    umpire::Allocator allocator = resmgr.getAllocator(mem_space_);
-    idx_cons = static_cast<index_type*>(allocator.allocate(num_cons * sizeof(index_type)));
-  }
-
-  for(int i=0; i<num_cons; ++i)
-  {
-    idx_cons[i] = idx_cons_in[i];
-  }
 
   int ns = ns_; ///< Cannot capture member inside RAJA lambda
   
@@ -536,47 +492,26 @@ bool Ex4::eval_Jac_cons(const size_type& n, const size_type& m,
   } // if(iJacS!=NULL && jJacS!=NULL)
 
   //dense Jacobian w.r.t y
-  if(JacD!=NULL) 
+  if(JacD!=nullptr) 
   {
-    if(num_cons == ns_ && ns_ > static_cast<int>(idx_cons[0]))
-    {
-      //assert(num_cons==ns_);
-      auto& rm = umpire::ResourceManager::getInstance();
-      if(mem_space_ == "DEFAULT")
-        memcpy(JacD, Md_->local_data_const(), ns_*nd_*sizeof(double));
-      else
-        rm.copy(JacD, Md_->local_data_const(), ns_*nd_*sizeof(double));
+    if(num_cons == ns_) {// && ns_ > static_cast<int>(idx_cons[0]))
+      umpire::ResourceManager::getInstance().copy(JacD, Md_->local_data_const(), ns_*nd_*sizeof(double));
     }
 
-    if(num_cons==3 && haveIneq_ && ns_>0)
-    {
-      for(int itrow=0; itrow<num_cons; itrow++)
-      {
-        const int con_idx = static_cast<int>(idx_cons[itrow]);
-        //do an in place fill-in for the ineq Jacobian corresponding to e^T
-        assert(con_idx-ns_==0 || con_idx-ns_==1 || con_idx-ns_==2);
-        assert(num_cons==3);
-        //double* J = JacD[con_idx-ns_];
-        double* J = JacD + nd_*(con_idx-ns_);
-        RAJA::forall<ex4_raja_exec>(RAJA::RangeSegment(0, nd_),
-          RAJA_LAMBDA(RAJA::Index_type i)
-          {
-            J[i] = 1.0;
-          });
-      }
+    if(num_cons==3 && haveIneq_ && ns_>0) {
+      int nd = nd_; ///< Cannot capture member inside RAJA lambda
+      
+      RAJA::forall<ex4_raja_exec>(RAJA::RangeSegment(0, num_cons*nd_),
+        RAJA_LAMBDA(RAJA::Index_type i)
+        {
+          assert(0 == idx_cons[0]-ns);
+          assert(1 == idx_cons[1]-ns);
+          assert(2 == idx_cons[2]-ns);
+          JacD[nd*(idx_cons[0]-ns)+i] = 1.0;
+        });
     }
-  } // if(JacD != nullptr)
+  } // end of if(JacD != nullptr)
 
-  // Temporary solution: Move idx_cons array to GPU, works with UM and PINNED only
-  if(mem_space_ == "DEFAULT")
-  {
-    delete [] idx_cons;
-  }
-  else
-  {
-    umpire::Allocator allocator = resmgr.getAllocator(mem_space_);
-    allocator.deallocate(idx_cons);
-  }
   return true;
 }
 
@@ -651,30 +586,27 @@ bool Ex4::get_starting_point(const size_type& n,
 {
   slacks_avail = false;
   
-  if(sol_x_ && sol_zl_ && sol_zu_ && sol_lambda_)
-  {
+  if(sol_x_ && sol_zl_ && sol_zu_ && sol_lambda_) {
     duals_avail = true;
 
-    if(mem_space_ == "DEFAULT")
-    {
-      memcpy(x0, sol_x_, n);
-      memcpy(z_bndL0, sol_zl_, n);
-      memcpy(z_bndU0, sol_zu_, n);
+    // if(mem_space_ == "DEFAULT")
+    // {
+    //   memcpy(x0, sol_x_, n);
+    //   memcpy(z_bndL0, sol_zl_, n);
+    //   memcpy(z_bndU0, sol_zu_, n);
 
-      memcpy(lambda0, sol_lambda_, m);
-    }
-    else
-    {
-      auto& resmgr = umpire::ResourceManager::getInstance();
-      resmgr.copy(x0, sol_x_, n);
-      resmgr.copy(z_bndL0, sol_zl_, n);
-      resmgr.copy(z_bndU0, sol_zu_, n);
-
-      resmgr.copy(lambda0, sol_lambda_, m);
-    }
-  }
-  else
-  {
+    //   memcpy(lambda0, sol_lambda_, m);
+    // }
+    // else
+    // {
+    auto& resmgr = umpire::ResourceManager::getInstance();
+    resmgr.copy(x0, sol_x_, n);
+    resmgr.copy(z_bndL0, sol_zl_, n);
+    resmgr.copy(z_bndU0, sol_zu_, n);
+    
+    resmgr.copy(lambda0, sol_lambda_, m);
+    // }
+  } else {
     duals_avail = false;
     return false;
   }
@@ -881,10 +813,7 @@ bool Ex4OneCallCons::eval_Jac_cons(const size_type& n, const size_type& m,
   {
     //just copy the dense Jacobian corresponding to equalities
     auto& rm = umpire::ResourceManager::getInstance();
-    if(mem_space_ == "DEFAULT")
-      memcpy(JacD, Md_->local_data_const(), ns_*nd_*sizeof(double));
-    else
-      rm.copy(JacD, Md_->local_data_const(), ns_*nd_*sizeof(double));
+    rm.copy(JacD, Md_->local_data_const(), ns_*nd_*sizeof(double));
 
     if(haveIneq_)
     {
