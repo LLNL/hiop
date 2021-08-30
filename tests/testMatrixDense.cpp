@@ -224,7 +224,9 @@ static int runTests(const char* mem_space, MPI_Comm comm)
   // Non-distributed vectors
   hiopVector* x_n_nodist = LinearAlgebraFactory::create_vector(mem_space, N_local);
   hiopVector* x_m_nodist = LinearAlgebraFactory::create_vector(mem_space, M_local);
-
+ 
+  //indexes vectors
+  hiopVectorInt* rows_idxs = LinearAlgebraFactory::create_vector_int(mem_space, M_local);
 
   fail += test.matrixSetToZero(*A_mxn, rank);
   fail += test.matrixSetToConstant(*A_mxn, rank);
@@ -267,7 +269,7 @@ static int runTests(const char* mem_space, MPI_Comm comm)
 
   fail += test.matrixAppendRow(*A_mxn_extra_row, *x_n, rank);
   fail += test.matrixCopyRowsFrom(*A_kxn, *A_mxn, rank);
-  fail += test.matrixCopyRowsFromSelect(*A_mxn, *A_kxn, rank);
+  fail += test.matrixCopyRowsFromSelect(*A_mxn, *A_kxn, *rows_idxs, rank);
   fail += test.matrixShiftRows(*A_mxn, rank);
   fail += test.matrixReplaceRow(*A_mxn, *x_n, rank);
   fail += test.matrixGetRow(*A_mxn, *x_n, rank);
@@ -289,6 +291,7 @@ static int runTests(const char* mem_space, MPI_Comm comm)
   delete x_n;
   delete x_n_nodist;
   delete x_m_nodist;
+  delete rows_idxs;
   delete[] m_partition;
   delete[] n_partition;
   delete[] k_partition;
