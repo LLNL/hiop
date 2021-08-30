@@ -1,11 +1,10 @@
 // Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
-// Written by Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp
 // is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause).
-// Please also read “Additional BSD Notice” below.
+// Please also read "Additional BSD Notice" below.
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -49,6 +48,8 @@
 /**
  * @file hiopMatrixRajaSparseTriplet.cpp
  *
+ * @author Cosmin G. Petra <petra1@lnnl.gov>, LNNL
+ * @author Nai-Yuan Chiang <chiang7@lnnl.gov>, LNNL
  * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
  * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
  * @author Cameron Rutherford <robert.rutherford@pnnl.gov>, PNNL
@@ -924,13 +925,15 @@ hiopMatrixRajaSparseTriplet::allocAndBuildRowStarts() const
     return rsi;
   }
 
+  this->copyFromDev();
+
   // build rsi on the host, then copy it to the device for simplicity
   int it_triplet = 0;
   rsi->idx_start_host_[0] = 0;
 
   for(int i = 1; i <= this->nrows_; i++)
   {
-    rsi->idx_start_host_[i]=rsi->idx_start_host_[i-1];
+    rsi->idx_start_host_[i] = rsi->idx_start_host_[i-1];
     
     while(it_triplet < this->nnz_ && this->iRow_host_[it_triplet] == i - 1)
     {

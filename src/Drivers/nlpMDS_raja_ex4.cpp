@@ -235,7 +235,6 @@ bool Ex4::get_cons_info(const size_type& m, double* clow, double* cupp, Nonlinea
     {
       type[i] = hiopNonlinear;
     });
-
   return true;
 }
 
