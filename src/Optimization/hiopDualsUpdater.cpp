@@ -389,54 +389,53 @@ bool hiopDualsLsqUpdateLinsysAugSparse::do_lsq_update(hiopIterate& iter,
 
       if(NULL == lin_sys_) {
         //ma57 not available or user requested strumpack
-#if defined(HIOP_USE_STRUMPACK) || defined(HIOP_USE_CUSOLVER)
+#if defined(HIOP_USE_STRUMPACK)
         assert((linear_solver == "strumpack" || linear_solver == "auto") &&
                "the value for duals_init_linear_solver_sparse is invalid and should have been corrected during "
                "options processing");
-#ifdef HIOP_USE_CUSOLVER           
-  hiopLinSolverIndefSparseCUSOLVER *p = new hiopLinSolverIndefSparseCUSOLVER(n, nnz, nlp_);
-        nlp_->log->printf(hovSummary,
-                          "LSQ Duals Initialization --- KKT_SPARSE_XDYcYd linsys: using CUSOLVER, enforcing GPU as an "
-                          "indefinite solver, size %d (%d cons)\n",
-                          n, neq+nineq);
-#else      
         hiopLinSolverIndefSparseSTRUMPACK *p = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
         nlp_->log->printf(hovSummary,
                           "LSQ Duals Initialization --- KKT_SPARSE_XDYcYd linsys: using STRUMPACK on CPU as an "
                           "indefinite solver, size %d (%d cons)\n",
                           n, neq+nineq);
-#endif        
         
         p->setFakeInertia(neq + nineq);
         lin_sys_ = p;
         
 #endif  // HIOP_USE_STRUMPACK
       }
-    } else {
+    } //KS: /end of CPU mode/ do not put CU SOLVER anywhere above this!!!!!
+else {
       //
       // we're on device
       //
-#if defined(HIOP_USE_STRUMPACK) || defined(HIOP_USE_CUSOLVER)
-      if(linear_solver == "strumpack" || linear_solver == "auto") {
-#ifdef HIOP_USE_CUSOLVER
+#ifdef HIOP_USE_CUSOLVER //thia ia our first choice on the device!
+        assert((linear_solver == "cusolver" || linear_solver == "auto") &&
+               "the value for duals_init_linear_solver_sparse is invalid and should have been corrected during "
+               "options processing");
         hiopLinSolverIndefSparseCUSOLVER *p = new hiopLinSolverIndefSparseCUSOLVER(n, nnz, nlp_);
    nlp_->log->printf(hovSummary,
                           "LSQ Dual Initialization --- KKT_SPARSE_XDYcYd linsys: using CUSOLVER on device as an "
                           "indefinite solver, size %d (%d cons)\n",
                           n, neq+nineq);
-#else        
+        p->setFakeInertia(neq + nineq);
+        lin_sys_ = p;
+#endif 
+#if defined(HIOP_USE_STRUMPACK)
+
+      if(NULL == lin_sys_) {
+      if(linear_solver == "strumpack" || linear_solver == "auto") {
         hiopLinSolverIndefSparseSTRUMPACK *p = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
    nlp_->log->printf(hovSummary,
                           "LSQ Dual Initialization --- KKT_SPARSE_XDYcYd linsys: using STRUMPACK on device as an "
                           "indefinite solver, size %d (%d cons)\n",
-                          n, neq+nineq);
-#endif     
+                          n, neq+nineq);    
         
         p->setFakeInertia(neq + nineq);
         lin_sys_ = p;
-      }
+      }//lin solver is strumpack or auto
+}
 #endif  // HIOP_USE_STRUMPACK
-      
 #ifdef HIOP_USE_COINHSL
       if(NULL == lin_sys_) {
         // we get here if strumpack is not available or is available but the duals_init_linear_solver_sparse was
@@ -466,7 +465,7 @@ bool hiopDualsLsqUpdateLinsysAugSparse::do_lsq_update(hiopIterate& iter,
       }
 #endif // HIOP_USE_PARDISO
     } // end of else  compute_mode=='cpu'
-  }
+  }//if linsys
   assert(lin_sys_ && "no sparse linear solver is available");
   hiopLinSolverIndefSparse* linSys = dynamic_cast<hiopLinSolverIndefSparse*> (lin_sys_);
   assert(linSys);

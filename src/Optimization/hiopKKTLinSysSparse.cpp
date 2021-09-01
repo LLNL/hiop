@@ -319,13 +319,11 @@ namespace hiop
         
         p->setFakeInertia(neq + nineq);
         linSys_ = p;
-#else
-#ifdef HIOP_USE_COINHSL
+#elif  HIOP_USE_COINHSL
         nlp_->log->printf(hovScalars,
                           "KKT_SPARSE_XYcYd linsys: alloc MA57 on CPU size %d (%d cons)\n",
                           n, neq+nineq);                             
         linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
-#endif // HIOP_USE_COINHSL
       
         if(NULL == linSys_) {
 #ifdef HIOP_USE_PARDISO
@@ -567,27 +565,30 @@ namespace hiop
 #endif  // HIOP_USE_STRUMPACK        
         }
       }else{
-#if  defined(HIOP_USE_STRUMPACK) ||  defined(HIOP_USE_CUSOLVER)        
-//KS: I am lazy
-#ifdef HIOP_USE_CUSOLVER      
+//we are on the GPU. Our first choice is always cuSolver
+#if  defined(HIOP_USE_CUSOLVER)        
         hiopLinSolverIndefSparseCUSOLVER *p = new hiopLinSolverIndefSparseCUSOLVER(n, nnz, nlp_);
         auto verbosity = hovScalars;
         nlp_->log->printf(verbosity,
                           "KKT_SPARSE_XDYcYd linsys: alloc CUSOLVER size %d (%d cons) (safe_mode=%d)\n",
                           n, neq+nineq, safe_mode_);
-#elif defined(HIOP_USE_STRUMPACK)
-  hiopLinSolverIndefSparseSTRUMPACK *p = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
-        auto verbosity = hovScalars;
-        nlp_->log->printf(verbosity,
-                          "KKT_SPARSE_XDYcYd linsys: alloc STRUMPACK size %d (%d cons) (safe_mode=%d)\n",
-                          n, neq+nineq, safe_mode_);
-#endif      
-  //print it as a warning if safe mode is on
         if(safe_mode_) verbosity  = hovWarning;
         
         p->setFakeInertia(neq + nineq);
         linSys_ = p;
 #else
+#if defined(HIOP_USE_STRUMPACK)
+  hiopLinSolverIndefSparseSTRUMPACK *p = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
+        auto verbosity = hovScalars;
+        nlp_->log->printf(verbosity,
+                          "KKT_SPARSE_XDYcYd linsys: alloc STRUMPACK size %d (%d cons) (safe_mode=%d)\n",
+                          n, neq+nineq, safe_mode_);
+        if(safe_mode_) verbosity  = hovWarning;
+        
+        p->setFakeInertia(neq + nineq);
+        linSys_ = p;
+#endif      
+  //print it as a warning if safe mode is on
 #ifdef HIOP_USE_COINHSL
         nlp_->log->printf(hovScalars,
                           "KKT_SPARSE_XDYcYd linsys: alloc MA57 on CPU size %d (%d cons)\n",
@@ -636,29 +637,29 @@ namespace hiop
   hiopKKTLinSysSparseFull::determineAndCreateLinsys(const int &n, const int &n_con, const int &nnz)
   {
     if(NULL==linSys_) {
-#ifdef HIOP_USE_PARDISO
+#ifdef HIOP_USE_CUSOLVER
+      nlp_->log->printf(hovWarning,
+                        "KKT_SPARSE_FULL_KKT linsys: alloc CUSOLVER size %d (%d cons) (safe_mode=%d)\n",
+                        n, n_con, safe_mode_);
+      hiopLinSolverNonSymSparseCUSOLVER *p = new hiopLinSolverNonSymSparseCUSOLVER(n, nnz, nlp_);
+      p->setFakeInertia(n_con);
+      linSys_ = p;
+#elif HIOP_USE_PARDISO
       nlp_->log->printf(hovWarning,
                         "KKT_SPARSE_FULL_KKT linsys: alloc PARDISO size %d (%d cons) (safe_mode=%d)\n",
                         n, n_con, safe_mode_);
       hiopLinSolverNonSymSparsePARDISO *p = new hiopLinSolverNonSymSparsePARDISO(n, nnz, nlp_);
       p->setFakeInertia(n_con);
       linSys_ = p;
-#endif
-#if defined(HIOP_USE_STRUMPACK) || defined(HIOP_USE_CUSOLVER)
-#ifdef HIOP_USE_CUSOLVER
-      nlp_->log->printf(hovWarning,
-                        "KKT_SPARSE_FULL_KKT linsys: alloc CUSOLVER size %d (%d cons) (safe_mode=%d)\n",
-                        n, n_con, safe_mode_);
-      hiopLinSolverNonSymSparseCUSOLVER *p = new hiopLinSolverNonSymSparseCUSOLVER(n, nnz, nlp_);
-#elif  
+#elif defined(HIOP_USE_STRUMPACK)
+ 
       hiopLinSolverNonSymSparseSTRUMPACK *p = new hiopLinSolverNonSymSparseSTRUMPACK(n, nnz, nlp_);
       nlp_->log->printf(hovWarning,
                         "KKT_SPARSE_FULL_KKT linsys: alloc STRUMPACK size %d (%d cons) (safe_mode=%d)\n",
                         n, n_con, safe_mode_);
-#endif      
       p->setFakeInertia(n_con);
       linSys_ = p;
-#endif // STRUMPACK/CUSOLVER
+#endif // CUSOLVER
       if(NULL==linSys_) {
         nlp_->log->printf(hovError,
                           "KKT_SPARSE_FULL_KKT linsys: cannot instantiate backend linear solver "
