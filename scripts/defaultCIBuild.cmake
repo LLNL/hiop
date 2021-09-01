@@ -5,7 +5,12 @@ default value for CUDA architectures.
 
 #]]
 message(STATUS "Enabling both shared and static libraries")
-set(HIOP_BUILD_SHARED ON CACHE BOOL "")
+#set(HIOP_BUILD_SHARED ON CACHE BOOL "")
+message(WARNING "
+    HIOP_BUILD_SHARED is being disabled, becuase it is currently not funcitonal
+    when STRUMPACK is enabled.
+")
+set(HIOP_BUILD_SHARED OFF CACHE BOOL "") # Kasia, enable shared lib builds once you decouple STRUMPACK from cuSolver
 set(HIOP_BUILD_STATIC ON CACHE BOOL "")
 
 set(ENABLE_TESTS ON CACHE BOOL "")
