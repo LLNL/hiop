@@ -2107,7 +2107,7 @@ bool hiopAlgFilterIPMBase::apply_feasibility_restoration(hiopKKTLinSys* kkt)
       } else {
         // this is Sparse linear system
         hiopFRProbSparse nlp_fr_interface(*this);
-        hiopNlpSparse nlpFR(nlp_fr_interface, "hiop_fr.options");
+   hiopNlpSparse nlpFR(nlp_fr_interface, "hiop_fr.options");
         return solve_feasibility_restoration(kkt, nlpFR);
       }
     } else {

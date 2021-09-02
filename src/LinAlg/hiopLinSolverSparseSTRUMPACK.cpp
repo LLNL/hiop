@@ -223,7 +223,7 @@ namespace hiop
 
   int hiopLinSolverIndefSparseSTRUMPACK::matrixChanged()
   {
-    assert(n_==M.n() && M.n()==M.m());
+  assert(n_==M.n() && M.n()==M.m());
     assert(n_>0);
 
     nlp_->runStats.linsolv.tmFactTime.start();

@@ -93,7 +93,7 @@ namespace hiop
 
   int hiopLinSolverIndefSparseMA57::matrixChanged()
   {
-    assert(m_n==M.n() && M.n()==M.m());
+  assert(m_n==M.n() && M.n()==M.m());
     assert(m_nnz==M.numberOfNonzeros());
     assert(m_n>0);
 

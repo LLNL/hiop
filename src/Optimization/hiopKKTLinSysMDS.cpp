@@ -79,7 +79,6 @@ namespace hiop
     int neq = Jac_cMDS_->m(), nineq = Jac_dMDS_->m();
     //factorization
     int n_neg_eig = hiopKKTLinSysCurvCheck::factorizeWithCurvCheck();
-
     int n_neg_eig_11 = 0;
     if(n_neg_eig>=0) {
       // 'n_neg_eig' is the number of negative eigenvalues of the "dense" (reduced) KKT

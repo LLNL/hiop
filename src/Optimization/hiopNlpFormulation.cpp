@@ -92,9 +92,7 @@ hiopNlpFormulation::hiopNlpFormulation(hiopInterfaceBase& interface_, const char
   //fake communicator (defined by hiop)
   MPI_Comm comm = MPI_COMM_SELF;
 #endif
-
   options = new hiopOptionsNLP(option_file);
-
   //logger will output on stdout on rank 0 of the MPI 'comm' communicator
   log = new hiopLogger(options, stdout, 0, comm);
 

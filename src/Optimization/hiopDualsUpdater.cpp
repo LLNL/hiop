@@ -501,7 +501,6 @@ else {
     */
     nlp_->log->write("LSQ Dual Initialization --- KKT_SPARSE_XDYcYd linsys:", Msys, hovMatrices);
   }
-
   int ret_val = linSys->matrixChanged();
 
   if(ret_val<0) {

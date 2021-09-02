@@ -597,6 +597,7 @@ hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
   #endif
   
   //use "hiop_pridec.options" - if the file does not exist, built-in default options will be used
+printf("KS here Priumal Decomp \n");
   options_ = new hiopOptionsPriDec(hiopOptions::default_filename_pridec_solver);
 
   //logger will be created with stdout, outputing on rank 0 of the 'comm_world' MPI communicator
