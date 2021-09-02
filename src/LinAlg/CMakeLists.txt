@@ -103,7 +103,7 @@ endif()
 if(HIOP_USE_GPU)
   list(APPEND hiopLinAlg_SRC ${hiopLinAlg_GPU_SRC})
   if(HIOP_USE_CUDA)
-    set_source_files_properties(${hiopLinAlg_RAJA_SRC} PROPERTIES LANGUAGE CUDA)
+    set_source_files_properties(${hiopLinAlg_RAJA_SRC} ${hiopLinAlg_CUSOLVER_SRC} PROPERTIES LANGUAGE CUDA)
   endif()
 endif()
 

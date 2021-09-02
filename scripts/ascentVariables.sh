@@ -40,6 +40,8 @@ module load exasgd-suite-sparse/5.8.1/gcc-7.4.0-zggphid
 module load exasgd-texinfo/6.5/gcc-7.4.0-w4cx3wo
 # 4q6czdk umpire@5.0.1+c+cuda~deviceconst~examples~fortran~hip~ipo~numa+openmp~shared amdgpu_target=none build_type=RelWithDebInfo cuda_arch=none tests=none
 module load exasgd-umpire/5.0.1/cuda-10.2.89/gcc-7.4.0-4q6czdk
+#
+module load exasgd-strumpack/5.1.1/cuda-10.1.243/spectrum-mpi-10.3.1.2-20200121/gcc-7.4.0-a4l5d6w
 
 # Load system modules
 module load cuda/10.2.89
