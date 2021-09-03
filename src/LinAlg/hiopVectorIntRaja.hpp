@@ -56,9 +56,6 @@
  */
 
 #include "hiopVectorInt.hpp"
-#include <umpire/Allocator.hpp>
-#include <umpire/ResourceManager.hpp>
-#include <RAJA/RAJA.hpp>
 #include <string>
 
 namespace hiop

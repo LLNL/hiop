@@ -54,6 +54,11 @@
  */
 
 #include "hiopVectorIntRaja.hpp"
+#include <umpire/Allocator.hpp>
+#include <umpire/ResourceManager.hpp>
+
+#include <RAJA/RAJA.hpp>
+#include "hiop_raja_defs.hpp"
 
 namespace hiop
 {
@@ -125,7 +130,7 @@ void hiopVectorIntRaja::set_to_zero()
 void hiopVectorIntRaja::set_to_constant(const index_type c)
 {
   index_type* data = buf_;
-  RAJA::forall< hiop_raja_exec >(RAJA::RangeSegment(0, sz_),
+  RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, sz_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       data[i] = c;
