@@ -21,7 +21,7 @@ find_package(CUDAToolkit REQUIRED)
 
 if(HIOP_BUILD_SHARED)
   target_link_libraries(hiop_cuda INTERFACE 
-    CUDA::nvblas # shared only
+    nvblas # shared only
     CUDA::cusparse
     CUDA::cudart
     cublas
