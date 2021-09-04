@@ -317,24 +317,5 @@ private:
   hiopAlgFilterIPMNewton& operator=(const hiopAlgFilterIPMNewton&) {return *this;};
 };
 
-class hiopAlgFilterIPMNewtonInertiaFree : public hiopAlgFilterIPMNewton
-{
-public:
-  hiopAlgFilterIPMNewtonInertiaFree(hiopNlpFormulation* nlp, const bool within_FR = false)
-    :hiopAlgFilterIPMNewton(nlp, within_FR)
-  {}
-  virtual ~hiopAlgFilterIPMNewtonInertiaFree();
-
-protected:
-  virtual hiopFactAcceptor* decideAndCreateFactAcceptor(hiopPDPerturbation* p, hiopNlpFormulation* nlp);
-
-  virtual bool compute_search_direction(hiopKKTLinSys* kkt,
-                                        bool& linsol_safe_mode_on,
-                                        int& linsol_safe_mode_lastiter,
-                                        const bool linsol_forcequick,
-                                        const int iter_num);
-
-};
-
 } //end of namespace
 #endif
