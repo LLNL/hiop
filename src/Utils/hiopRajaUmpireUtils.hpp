@@ -60,29 +60,14 @@
 
 //UMPIRE is always enabled with RAJA
 #if defined(HIOP_USE_RAJA)
-  #include <algorithm>
-  #include <string>
-  #include <sstream>  
-  #include <cassert>
 
-
-#include <cmath>
-#include <cstring> //for memcpy
-#include <algorithm>
-#include <cassert>
-
-#include "hiop_blasdefs.hpp"
-
-#include <limits>
-#include <cstddef>
-
+#include <string>
+#include <sstream>  
 
 #include <umpire/Allocator.hpp>
 #include <umpire/ResourceManager.hpp>
 
 #include <RAJA/RAJA.hpp>
-
-//#include "hiop_raja_defs.hpp"
 
 namespace hiop {
   /** 
@@ -96,8 +81,9 @@ namespace hiop {
     if(rm.hasAllocator(address)) {
       auto found_allocator = rm.getAllocator(address);
       std::stringstream ss;
-      ss << "Allocator " << found_allocator.getName(); 
-
+      ss << "Allocated on '" << found_allocator.getName() << "'   ";
+      ss << "Platform " << static_cast<int>(found_allocator.getPlatform()) << "   "; 
+      ss << "Size [" << found_allocator.getSize(address) << "]";
       return ss.str();
     } else {
       return std::string("__not_managed_by_umpire__");

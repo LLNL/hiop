@@ -109,7 +109,7 @@ int main(int argc, char **argv)
   magma_init();
 #endif
 
-  // Set memory space where to create models
+  // Set memory space where to create models and perform NLP solve
   std::string mem_space = "device";
 
   bool selfCheck, one_call_cons;

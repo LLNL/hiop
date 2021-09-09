@@ -48,8 +48,8 @@
 /**
  * @file hiopMatrixRajaSparseTriplet.hpp
  *
- * @author Cosmin G. Petra <petra1@lnnl.gov>, LNNL
  * @author Nai-Yuan Chiang <chiang7@lnnl.gov>, LNNL
+ * @author Cosmin G. Petra <petra1@lnnl.gov>, LNNL
  * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
  * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
  * @author Cameron Rutherford <robert.rutherford@pnnl.gov>, PNNL
