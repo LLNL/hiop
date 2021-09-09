@@ -1,3 +1,63 @@
+// Copyright (c) 2017, Lawrence Livermore National Security, LLC.
+// Produced at the Lawrence Livermore National Laboratory (LLNL).
+// LLNL-CODE-742473. All rights reserved.
+//
+// This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp
+// is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause).
+// Please also read "Additional BSD Notice" below.
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted provided that the following conditions are met:
+// i. Redistributions of source code must retain the above copyright notice, this list
+// of conditions and the disclaimer below.
+// ii. Redistributions in binary form must reproduce the above copyright notice,
+// this list of conditions and the disclaimer (as noted below) in the documentation and/or
+// other materials provided with the distribution.
+// iii. Neither the name of the LLNS/LLNL nor the names of its contributors may be used to
+// endorse or promote products derived from this software without specific prior written
+// permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
+// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+// OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
+// SHALL LAWRENCE LIVERMORE NATIONAL SECURITY, LLC, THE U.S. DEPARTMENT OF ENERGY OR
+// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+// OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+// AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
+// EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
+// Additional BSD Notice
+// 1. This notice is required to be provided under our contract with the U.S. Department
+// of Energy (DOE). This work was produced at Lawrence Livermore National Laboratory under
+// Contract No. DE-AC52-07NA27344 with the DOE.
+// 2. Neither the United States Government nor Lawrence Livermore National Security, LLC
+// nor any of their employees, makes any warranty, express or implied, or assumes any
+// liability or responsibility for the accuracy, completeness, or usefulness of any
+// information, apparatus, product, or process disclosed, or represents that its use would
+// not infringe privately-owned rights.
+// 3. Also, reference herein to any specific commercial products, process, or services by
+// trade name, trademark, manufacturer or otherwise does not necessarily constitute or
+// imply its endorsement, recommendation, or favoring by the United States Government or
+// Lawrence Livermore National Security, LLC. The views and opinions of authors expressed
+// herein do not necessarily state or reflect those of the United States Government or
+// Lawrence Livermore National Security, LLC, and shall not be used for advertising or
+// product endorsement purposes.
+
+/**
+ * @file nlpMDS_raja_ex4.hpp
+ *
+ * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
+ * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
+ * @author Cameron Rutherford <robert.rutherford@pnnl.gov>, PNNL
+ * @author Jake K. Ryan <jake.ryan@pnnl.gov>, PNNL
+ * @author Cosmin G. Petra <petra1@lnnl.gov>, LNNL
+ * @author Nai-Yuan Chiang <chiang7@lnnl.gov>, LNNL
+ *
+ */
+
+
 #ifndef HIOP_EXAMPLE_RAJA_EX4
 #define HIOP_EXAMPLE_RAJA_EX4
 
@@ -23,7 +83,8 @@
 using size_type = hiop::size_type;
 using index_type = hiop::index_type;
 
-/* Problem test for the linear algebra of Mixed Dense-Sparse NLPs
+/**
+ * Problem test for the linear algebra of Mixed Dense-Sparse NLPs
  *  min   sum 0.5 {x_i*(x_{i}-1) : i=1,...,ns} + 0.5 y'*Qd*y + 0.5 s^T s
  *  s.t.  x+s + Md y = 0, i=1,...,ns
  *        [-2  ]    [ x_1 + e^T s]   [e^T]      [ 2 ]
@@ -41,6 +102,14 @@ using index_type = hiop::index_type;
  *
  * Coding of the problem in MDS HiOp input: order of variables need to be [x,s,y] 
  * since [x,s] are the so-called sparse variables and y are the dense variables
+ * 
+ * @note All the pointers "managed by UMPIRE" are allocated by HiOp using UMPIRE's
+ * API. As a result, they can be on the host, on the device, or in the unified
+ * memory (um) space; this memory space is specified via option "mem_space" of HiOp. 
+ * It is the responsibility of the implementers of the HiOp's interfaces (such as 
+ * the hiop::hiopInterfaceMDS used in this example) to access the "managed by UMPIRE"
+ * pointers in way consistent with "mem_space" HiOp option.
+ * 
  */
 
 class Ex4 : public hiop::hiopInterfaceMDS
@@ -55,41 +124,73 @@ public:
 
   virtual ~Ex4();
   
+  /**
+   * @brief Number of variables and constraints.
+   */ 
   bool get_prob_sizes(size_type& n, size_type& m);
 
   /**
-   * @todo will param _type_ live on host or device?
-   * @todo register pointers with umpire in case they need to be copied
-   * from device to host.
+   * @brief Get types and bounds on the variables. 
+   * 
+   * @param[in] n number of variables
+   * @param[out] ixlow array with lower bounds (managed by UMPIRE)
+   * @param[out] ixupp array with upper bounds (managed by UMPIRE)
+   * @param[out] type array with the variable types (on host)
    */
   bool get_vars_info(const size_type& n, double *xlow, double* xupp, NonlinearityType* type);
 
   /**
-   * @todo fill out param descriptions below to determine whether or not
-   * they will reside on device and will have to be accessed/assigned to 
-   * in a RAJA kernel
-   *
-   * @param[out] m ?
-   * @param[out] clow ?
-   * @param[out] cupp ?
-   * @param[out] type ?
+   * Get types and bounds corresponding to constraints. An equality constraint is specified
+   * by setting the lower and upper bounds equal.
+   * 
+   * @param[in] m Number of constraints
+   * @param[out] iclow array with lower bounds (managed by UMPIRE)
+   * @param[out] icupp array with upper bounds (managed by UMPIRE)
+   * @param[out] type array with the variable types (on host)
    */
   bool get_cons_info(const size_type& m, double* clow, double* cupp, NonlinearityType* type);
 
-  bool get_sparse_dense_blocks_info(int& nx_sparse, int& nx_dense,
-				    int& nnz_sparse_Jace, int& nnz_sparse_Jaci,
-				    int& nnz_sparse_Hess_Lagr_SS, int& nnz_sparse_Hess_Lagr_SD);
+  /**
+   *  Returns the sizes and number of nonzeros of the sparse and dense blocks within MDS
+   *
+   * @param[out] nx_sparse number of sparse variables
+   * @param[out] nx_ense number of dense variables
+   * @param[out] nnz_sparse_Jace number of nonzeros in the Jacobian of the equalities w.r.t. 
+   * sparse variables 
+   * @param[out] nnz_sparse_Jaci number of nonzeros in the Jacobian of the inequalities w.r.t. 
+   * sparse variables 
+   * @param[out] nnz_sparse_Hess_Lagr_SS number of nonzeros in the (sparse) Hessian w.r.t. 
+   * sparse variables
+   * @param[out] nnz_sparse_Hess_Lagr_SD reserved, always set to 0
+   */
+  bool get_sparse_dense_blocks_info(int& nx_sparse, 
+                                    int& nx_dense,
+                                    int& nnz_sparse_Jace, 
+                                    int& nnz_sparse_Jaci,
+                                    int& nnz_sparse_Hess_Lagr_SS, 
+                                    int& nnz_sparse_Hess_Lagr_SD);
   
+  /**
+   * Evaluate objective. 
+   * 
+   * @param[in] n number of variables
+   * @param[in] x array with the optimization variables or point at which to evaluate 
+   * (managed by UMPIRE)
+   * @param[in] new_x indicates whether any of the other eval functions have been 
+   * evaluated previously (false) or not (true)
+   * @param[out] obj_value the objective function value.
+   */
   bool eval_f(const size_type& n, const double* x, bool new_x, double& obj_value);
 
   /**
-   * @todo figure out which of these pointers (if any) will need to be
-   * copied over to device when this is fully running on device.
-   * @todo find descriptoins of parameters (perhaps from ipopt interface?).
+   * Evaluate a subset of the constraints specified by idx_cons
    *
-   * @param[in] idx_cons ?
-   * @param[in] x ?
-   * @param[in] cons ?
+   * @param[in] num_cons number of constraints to evaluate (size of idx_cons array)
+   * @param[in] idx_cons indexes of the constraints to evaluate (managed by UMPIRE)
+   * @param[in] x the point at which to evaluate (managed by UMPIRE) 
+   * @param[in] new_x indicates whether any of the other eval functions have been 
+   * evaluated previously (false) or not (true)
+   * @param[out] cons array with values of the constraints (managed by UMPIRE, size num_cons) 
    */
   bool eval_cons(const size_type& n,
                  const size_type& m, 
@@ -109,13 +210,37 @@ public:
     return false;
   }
 
-  //sum 0.5 {x_i*(x_{i}-1) : i=1,...,ns} + 0.5 y'*Qd*y + 0.5 s^T s
+  /**
+   * Evaluation of the gradient of the objective. 
+   *
+   * @param[in] n number of variables
+   * @param[in] x array with the optimization variables or point at which to evaluate
+   * (managed by UMPIRE)
+   * @param[in] new_x indicates whether any of the other eval functions have been 
+   * evaluated previously (false) or not (true)
+   * @param[out] gradf array with the values of the gradient (managed by UMPIRE) 
+   */
   bool eval_grad_f(const size_type& n, const double* x, bool new_x, double* gradf);
 
   /**
-   * @todo This method will probably always have to run on the CPU side since
-   * the var _nnzit_ is loop-dependent and cannot be run in parallel with the
-   * other loop iterations.
+   * Evaluates the Jacobian of the constraints. The first few arguments are identical to eval_cons.
+   * Please check the user manual for a detailed discussion of how the last four arguments are
+   * expected to behave. 
+   *
+   * @param[in] n number of variables
+   * @param[in] m Number of constraints
+   * @param[in] num_cons number of constraints to evaluate (size of idx_cons array)
+   * @param[in] idx_cons indexes of the constraints to evaluate (managed by UMPIRE)
+   * @param[in] x the point at which to evaluate (managed by UMPIRE)
+   * @param[in] new_x indicates whether any of the other eval functions have been 
+   * evaluated previously (false) or not (true)
+   * @param[in] nsparse number of sparse variables
+   * @param[in] ndense number of dense variables
+   * @param[in] nnzJacS number of nonzeros in the sparse Jacobian
+   * @param[out] iJacS array of row indexes in the sparse Jacobian (managed by UMPIRE)
+   * @param[out] jJacS array of column indexes in the sparse Jacobian (managed by UMPIRE)
+   * @param[out] MJacS array of nonzero values in the sparse Jacobian (managed by UMPIRE)
+   * @param[out] JacD array with the values of the dense Jacobian (managed by UMPIRE)
    */
   virtual bool eval_Jac_cons(const size_type& n,
                              const size_type& m, 
@@ -131,6 +256,7 @@ public:
                              double* MJacS, 
                              double* JacD);
 
+  /// Similar to the above, but not used in this example.
   virtual bool eval_Jac_cons(const size_type& n,
                              const size_type& m, 
                              const double* x,
@@ -147,13 +273,53 @@ public:
     return false;
   }
 
-  bool eval_Hess_Lagr(const size_type& n, const size_type& m, 
-      const double* x, bool new_x, const double& obj_factor,
-      const double* lambda, bool new_lambda,
-      const size_type& nsparse, const size_type& ndense, 
-      const size_type& nnzHSS, index_type* iHSS, index_type* jHSS, double* MHSS, 
-      double* HDD,
-      size_type& nnzHSD, index_type* iHSD, index_type* jHSD, double* MHSD);
+  /**
+   * Evaluate the Hessian of the Lagrangian function. Please consult the user manual for a 
+   * detailed discussion of the form the Lagrangian function takes.
+   * 
+   * @param[in] n number of variables
+   * @param[in] m Number of constraints
+   * @param[in] x the point at which to evaluate (managed by UMPIRE)
+   * @param[in] new_x indicates whether any of the other eval functions have been
+   * evaluated previously (false) or not (true)
+   * @param[in] obj_factor scalar that multiplies the objective term in the Lagrangian function
+   * @param[in] lambda array with values of the multipliers used by the Lagrangian function
+   * @param[in] new_lambda indicates whether lambda  values changed since last call
+   * @param[in] nsparse number of sparse variables
+   * @param[in] ndense number of dense variables
+   * @param[in] nnzHSS number of nonzeros in the (sparse) Hessian w.r.t. sparse variables 
+   * @param[out] iHSS array of row indexes in the Hessian w.r.t. sparse variables (on the 
+   * device)
+   * @param[out] jHSS array of column indexes in the Hessian w.r.t. sparse variables 
+   * (managed by UMPIRE)
+   * @param[out] MHSS array of nonzero values in the Hessian w.r.t. sparse variables
+   * (managed by UMPIRE)
+   * @param[out] HDDD array with the values of the Hessian w.r.t. to dense variables 
+   * (managed by UMPIRE)
+   * @param[out] iHSD is reserved and should not be accessed 
+   * @param[out] jHSD is reserved and should not be accessed 
+   * @param[out] MHSD is reserved and should not be accessed
+   * @param[out] HHSD is reserved and should not be accessed
+
+   */
+  bool eval_Hess_Lagr(const size_type& n, 
+                      const size_type& m, 
+                      const double* x, 
+                      bool new_x, 
+                      const double& obj_factor,
+                      const double* lambda, 
+                      bool new_lambda,
+                      const size_type& nsparse, 
+                      const size_type& ndense, 
+                      const size_type& nnzHSS, 
+                      index_type* iHSS, 
+                      index_type* jHSS, 
+                      double* MHSS, 
+                      double* HDD,
+                      size_type& nnzHSD, 
+                      index_type* iHSD, 
+                      index_type* jHSD, 
+                      double* MHSD);
 
   /* Implementation of the primal starting point specification */
   bool get_starting_point(const size_type& global_n, double* x0);
