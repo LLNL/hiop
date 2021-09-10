@@ -7,14 +7,14 @@
 /** Nonlinear *highly nonconvex* and *rank deficient* problem test for the Filter IPM
  * Newton of HiOp. It uses a Sparse NLP formulation. The problem is based on Ex6.
  *
- *  min   -(2*convex_obj-1)*sum 1/4* { (x_{i}-1)^4 : i=1,...,n} + 0.5x^Tx
+ *  min   (2*convex_obj-1)*scal*sum 1/4* { (x_{i}-1)^4 : i=1,...,n} + 0.5x^Tx
  *  s.t.
  *            4*x_1 + 2*x_2                     == 10
  *        5<= 2*x_1         + x_3
  *        1<= 2*x_1                 + 0.5*x_i   <= 2*n, for i=4,...,n
  *        x_1 free
  *        0.0 <= x_2
- *        1.5 <= x_3 <= 10
+ *        1.0 <= x_3 <= 10
  *        x_i >=0.5, i=4,...,n
  *
  * Optionally, one can add the following constraints to obtain a rank-deficient Jacobian
@@ -24,11 +24,12 @@
  *
  *
  */
-Ex7::Ex7(int n, bool convex_obj, bool rankdefic_Jac_eq, bool rankdefic_Jac_ineq)
+Ex7::Ex7(int n, bool convex_obj, bool rankdefic_Jac_eq, bool rankdefic_Jac_ineq, double scal_neg_obj)
   : convex_obj_{convex_obj},
     rankdefic_eq_(rankdefic_Jac_eq),
     rankdefic_ineq_(rankdefic_Jac_ineq),
     n_vars{n},
+    scal_neg_obj_{scal_neg_obj},
     n_cons{2}
 {
   assert(n>=3);
@@ -52,11 +53,28 @@ bool Ex7::get_vars_info(const size_type& n, double *xlow, double* xupp, Nonlinea
 {
   assert(n==n_vars);
   for(index_type i=0; i<n; i++) {
-    if(i==0) { xlow[i]=-1e20; xupp[i]=1e20; type[i]=hiopNonlinear; continue; }
-    if(i==1) { xlow[i]= 0.0;  xupp[i]=1e20; type[i]=hiopNonlinear; continue; }
-    if(i==2) { xlow[i]= 1.5;  xupp[i]=10.0 ;type[i]=hiopNonlinear; continue; }
+    if(i==0) {
+      xlow[i] = -1e20;
+      xupp[i] = 1e20;
+      type[i] = hiopNonlinear;
+      continue;
+      }
+    if(i==1) {
+      xlow[i] = 0.0;
+      xupp[i] =1e20;
+      type[i] = hiopNonlinear;
+      continue;
+      }
+    if(i==2) { 
+      xlow[i] = 1.0;
+      xupp[i] = 10.0;
+      type[i] = hiopNonlinear;
+      continue;
+    }
     //this is for x_4, x_5, ... , x_n (i>=3), which are bounded only from below
-    xlow[i]= 0.5; xupp[i]=1e20;type[i]=hiopNonlinear;
+    xlow[i] = 0.5;
+    xupp[i] = 1e20;
+    type[i] = hiopNonlinear;
   }
   return true;
 }
@@ -68,17 +86,23 @@ bool Ex7::get_cons_info(const size_type& m, double* clow, double* cupp, Nonlinea
   clow[conidx]= 10.0;    cupp[conidx]= 10.0;      type[conidx++]=hiopInterfaceBase::hiopLinear;
   clow[conidx]= 5.0;     cupp[conidx]= 1e20;      type[conidx++]=hiopInterfaceBase::hiopLinear;
   for(index_type i=3; i<n_vars; i++) {
-    clow[conidx] = 1.0;   cupp[conidx]= 2*n_vars; type[conidx++]=hiopInterfaceBase::hiopLinear;
+    clow[conidx] = 1.0;
+    cupp[conidx]= 2*n_vars;
+    type[conidx++]=hiopInterfaceBase::hiopLinear;
   }
 
   if(rankdefic_ineq_) {
     // [-inf] <= 4*x_1 + 2*x_3 <= [ 19 ]
-    clow[conidx] = -1e+20;   cupp[conidx] = 19.;  type[conidx++]=hiopInterfaceBase::hiopNonlinear;
+    clow[conidx] = -1e+20;
+    cupp[conidx] = 19.;
+    type[conidx++]=hiopInterfaceBase::hiopNonlinear;
   }
 
   if(rankdefic_eq_) {
     //  4*x_1 + 2*x_2 == 10
-    clow[conidx] = 10;    cupp[conidx] = 10;   type[conidx++]=hiopInterfaceBase::hiopNonlinear;
+    clow[conidx] = 10;
+    cupp[conidx] = 10;
+    type[conidx++]=hiopInterfaceBase::hiopNonlinear;
   }
   assert(conidx==m);
   return true;
@@ -99,15 +123,18 @@ bool Ex7::eval_f(const size_type& n, const double* x, bool new_x, double& obj_va
 {
   assert(n==n_vars);
   obj_value=0.;
-  for(auto i=0;i<n;i++) obj_value += (2*convex_obj_-1)*0.25*pow(x[i]-1., 4) + 0.5*pow(x[i], 2);
-
+  for(auto i=0;i<n;i++) {
+    obj_value += (2*convex_obj_-1) * scal_neg_obj_ * 0.25 * pow(x[i]-1., 4) + 0.5 * pow(x[i], 2);
+  }
   return true;
 }
 
 bool Ex7::eval_grad_f(const size_type& n, const double* x, bool new_x, double* gradf)
 {
   assert(n==n_vars);
-  for(auto i=0;i<n;i++) gradf[i] = (2*convex_obj_-1)*pow(x[i]-1.,3) + x[i];
+  for(auto i=0;i<n;i++) {
+    gradf[i] = (2*convex_obj_-1) * scal_neg_obj_ * pow(x[i]-1.,3) + x[i];
+  }
   return true;
 }
 
@@ -280,7 +307,9 @@ bool Ex7::eval_Hess_Lagr(const size_type& n,
     }
 
     if(MHSS!=NULL) {
-      for(int i=0; i<n; i++) MHSS[i] = obj_factor * ( (2*convex_obj_-1) * 3*pow(x[i]-1., 2) + 1);
+      for(int i=0; i<n; i++) {
+        MHSS[i] = obj_factor * ( (2*convex_obj_-1) * scal_neg_obj_ * 3 * pow(x[i]-1., 2) + 1);
+      }
     }
     return true;
 }
@@ -288,7 +317,8 @@ bool Ex7::eval_Hess_Lagr(const size_type& n,
 bool Ex7::get_starting_point(const size_type& n, double* x0)
 {
   assert(n==n_vars);
-  for(auto i=0; i<n; i++)
+  for(auto i=0; i<n; i++) {
     x0[i]=0.0;
+  }
   return true;
 }

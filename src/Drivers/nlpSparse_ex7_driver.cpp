@@ -103,15 +103,16 @@ int main(int argc, char **argv)
   }
 
   bool convex_obj = false;
-  bool rankdefic_Jac_eq = false;
-  bool rankdefic_Jac_ineq = false;
+  bool rankdefic_Jac_eq = true;
+  bool rankdefic_Jac_ineq = true;
+  double scal_neg_obj = 0.1;
 
-  Ex7 nlp_interface(n,convex_obj,rankdefic_Jac_eq,rankdefic_Jac_ineq);
+  Ex7 nlp_interface(n,convex_obj,rankdefic_Jac_eq,rankdefic_Jac_ineq, scal_neg_obj);
   hiopNlpSparse nlp(nlp_interface);
   nlp.options->SetStringValue("compute_mode", "cpu");
   nlp.options->SetStringValue("KKTLinsys", "xdycyd");
   if(inertia_free) {
-    nlp.options->SetStringValue("fact_acceptor", "inertia_free");    
+    nlp.options->SetStringValue("fact_acceptor", "inertia_free");
   }
 //  nlp.options->SetIntegerValue("max_iter", 100);
 //  nlp.options->SetNumericValue("kappa1", 1e-8);
@@ -141,7 +142,6 @@ int main(int argc, char **argv)
   MPI_Finalize();
 #endif
 
-
   return 0;
 }
 
@@ -149,13 +149,8 @@ int main(int argc, char **argv)
 static bool self_check(size_type n, double objval, const bool inertia_free)
 {
 #define num_n_saved 3 //keep this is sync with n_saved and objval_saved
-  const size_type n_saved[] = {50, 500, 5000};
-  double objval_saved[] = { -1.58349999995100e+03, -1.53428124950100e+03, -1.04209374500105e+03};
-  if(inertia_free) {
-    objval_saved[0] = 8.6822576e+00;
-    objval_saved[1] = 5.7901005e+01;
-    objval_saved[2] = 5.5008848e+02;
-  }
+  const size_type n_saved[] = {50, 500, 10000};
+  const double objval_saved[] = { 8.7754974e+00,  6.4322371e+01,  1.2369786e+03};
 
 #define relerr 1e-6
   bool found=false;

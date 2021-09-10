@@ -26,14 +26,14 @@ using index_type = hiop::index_type;
 /** Nonlinear *highly nonconvex* and *rank deficient* problem test for the Filter IPM
  * Newton of HiOp. It uses a Sparse NLP formulation. The problem is based on Ex6.
  *
- *  min   -(2*convex_obj-1)*sum 1/4* { (x_{i}-1)^4 : i=1,...,n} + 0.5x^Tx
+ *  min   (2*convex_obj-1)*scal*sum 1/4* { (x_{i}-1)^4 : i=1,...,n} + 0.5x^Tx
  *  s.t.
  *            4*x_1 + 2*x_2                     == 10
  *        5<= 2*x_1         + x_3
  *        1<= 2*x_1                 + 0.5*x_i   <= 2*n, for i=4,...,n
  *        x_1 free
  *        0.0 <= x_2
- *        1.5 <= x_3 <= 10
+ *        1.0 <= x_3 <= 10
  *        x_i >=0.5, i=4,...,n
  *
  * Optionally, one can add the following constraints to obtain a rank-deficient Jacobian
@@ -46,7 +46,7 @@ using index_type = hiop::index_type;
 class Ex7 : public hiop::hiopInterfaceSparse
 {
 public:
-  Ex7(int n, bool convex_obj, bool rankdefic_Jac_eq, bool rankdefic_Jac_ineq);
+  Ex7(int n, bool convex_obj, bool rankdefic_Jac_eq, bool rankdefic_Jac_ineq,  double scal_neg_obj = 1.0);
   virtual ~Ex7();
 
   virtual bool get_prob_sizes(size_type& n, size_type& m);
@@ -81,6 +81,7 @@ public:
 private:
   int n_vars, n_cons;
   bool convex_obj_, rankdefic_eq_, rankdefic_ineq_;
+  double scal_neg_obj_;
 };
 
 #endif
