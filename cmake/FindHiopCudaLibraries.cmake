@@ -9,16 +9,6 @@ add_library(hiop_cuda INTERFACE)
 
 find_package(CUDAToolkit REQUIRED)
 
-# # Uncomment for old workaround
-# target_link_libraries(hiop_cuda INTERFACE 
-#   culibos
-#   nvblas
-#   cusparse
-#   cusolver
-#   cudart
-#   cublasLt
-#   )
-
 if(HIOP_BUILD_SHARED)
   target_link_libraries(hiop_cuda INTERFACE 
     nvblas # shared only
