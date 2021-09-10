@@ -82,6 +82,12 @@ public:
   virtual void copy_from_dev() = 0;
   
   virtual void copy_from(const index_type* v_local) = 0;
+  
+  /// @brief Set all elements to zero.
+  virtual void set_to_zero() = 0;
+
+  /// @brief Set all elements  to  c
+  virtual void set_to_constant( const index_type c ) = 0;
 };
 
 } // namespace hiop
