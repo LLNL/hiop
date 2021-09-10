@@ -1,6 +1,5 @@
 // Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
-// Written by Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
@@ -45,6 +44,14 @@
 // herein do not necessarily state or reflect those of the United States Government or 
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or 
 // product endorsement purposes.
+
+/**
+ * @file hiopNlpFormulation.cpp
+ *
+ * @author Cosmin G. Petra <petra1@lnnl.gov>, LNNL
+ * @author Nai-Yuan Chiang <chiang7@lnnl.gov>, LNNL
+ *
+ */
 
 #include "hiopNlpFormulation.hpp"
 #include "hiopHessianLowRank.hpp"
@@ -225,18 +232,8 @@ bool hiopNlpFormulation::finalizeInitialization()
   // get variable info and transfer to host for preprocessing
   bret=interface_base.get_vars_info(n_vars, xl->local_data(), xu->local_data(), vars_type); 
   assert(bret);
-  xl->copyFromDev(); xu->copyFromDev();
-
-//#ifdef HIOP_USE_RAJA
-//  fflush(stdout);
-//  log->printf(hovWarning, 
-//              "aaa xl='%s'|'%s' xu='%s'|'%s'\n", 
-//              get_umpire_mem_address_info(xl->local_data_host()).c_str(),
-//              get_umpire_mem_address_info(xl->local_data()).c_str(),
-//              get_umpire_mem_address_info(xu->local_data_host()).c_str(),
-//              get_umpire_mem_address_info(xu->local_data()).c_str());
-//  fflush(stdout);
-//#endif
+  xl->copyFromDev(); 
+  xu->copyFromDev();
 
   //allocate and build ixl(ow) and ix(upp) vectors
   delete ixl;
