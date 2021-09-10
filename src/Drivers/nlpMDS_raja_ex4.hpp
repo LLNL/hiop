@@ -103,12 +103,14 @@ using index_type = hiop::index_type;
  * Coding of the problem in MDS HiOp input: order of variables need to be [x,s,y] 
  * since [x,s] are the so-called sparse variables and y are the dense variables
  * 
- * @note All the pointers "managed by UMPIRE" are allocated by HiOp using UMPIRE's
- * API. As a result, they can be on the host, on the device, or in the unified
- * memory (um) space; this memory space is specified via option "mem_space" of HiOp. 
- * It is the responsibility of the implementers of the HiOp's interfaces (such as 
- * the hiop::hiopInterfaceMDS used in this example) to access the "managed by UMPIRE"
- * pointers in way consistent with "mem_space" HiOp option.
+ * @note All pointers marked as "managed by Umpire" are allocated by HiOp using the
+ * Umpire's API. They all are addresses in the same memory space; however, the memory 
+ * space can be host (typically CPU), device (typically GPU), or unified memory (um) 
+ * spaces as per Umpire specification. The selection of the memory space is done via 
+ * the option "mem_space" of HiOp. It is the responsibility of the implementers of 
+ * the HiOp's interfaces (such as the hiop::hiopInterfaceMDS used in this example) to 
+ * work with the "managed by Umpire" pointers in the same memory space as the one 
+ * specified by the "mem_space" option.
  * 
  */
 
@@ -133,8 +135,8 @@ public:
    * @brief Get types and bounds on the variables. 
    * 
    * @param[in] n number of variables
-   * @param[out] ixlow array with lower bounds (managed by UMPIRE)
-   * @param[out] ixupp array with upper bounds (managed by UMPIRE)
+   * @param[out] ixlow array with lower bounds (managed by Umpire)
+   * @param[out] ixupp array with upper bounds (managed by Umpire)
    * @param[out] type array with the variable types (on host)
    */
   bool get_vars_info(const size_type& n, double *xlow, double* xupp, NonlinearityType* type);
@@ -144,8 +146,8 @@ public:
    * by setting the lower and upper bounds equal.
    * 
    * @param[in] m Number of constraints
-   * @param[out] iclow array with lower bounds (managed by UMPIRE)
-   * @param[out] icupp array with upper bounds (managed by UMPIRE)
+   * @param[out] iclow array with lower bounds (managed by Umpire)
+   * @param[out] icupp array with upper bounds (managed by Umpire)
    * @param[out] type array with the variable types (on host)
    */
   bool get_cons_info(const size_type& m, double* clow, double* cupp, NonlinearityType* type);
@@ -156,9 +158,9 @@ public:
    * @param[out] nx_sparse number of sparse variables
    * @param[out] nx_ense number of dense variables
    * @param[out] nnz_sparse_Jace number of nonzeros in the Jacobian of the equalities w.r.t. 
-   * sparse variables 
+   *                             sparse variables 
    * @param[out] nnz_sparse_Jaci number of nonzeros in the Jacobian of the inequalities w.r.t. 
-   * sparse variables 
+   *                             sparse variables 
    * @param[out] nnz_sparse_Hess_Lagr_SS number of nonzeros in the (sparse) Hessian w.r.t. 
    * sparse variables
    * @param[out] nnz_sparse_Hess_Lagr_SD reserved, always set to 0
@@ -175,9 +177,9 @@ public:
    * 
    * @param[in] n number of variables
    * @param[in] x array with the optimization variables or point at which to evaluate 
-   * (managed by UMPIRE)
+   *              (managed by Umpire)
    * @param[in] new_x indicates whether any of the other eval functions have been 
-   * evaluated previously (false) or not (true)
+   * evaluated previously (false) or not (true) at x
    * @param[out] obj_value the objective function value.
    */
   bool eval_f(const size_type& n, const double* x, bool new_x, double& obj_value);
@@ -186,11 +188,11 @@ public:
    * Evaluate a subset of the constraints specified by idx_cons
    *
    * @param[in] num_cons number of constraints to evaluate (size of idx_cons array)
-   * @param[in] idx_cons indexes of the constraints to evaluate (managed by UMPIRE)
-   * @param[in] x the point at which to evaluate (managed by UMPIRE) 
-   * @param[in] new_x indicates whether any of the other eval functions have been 
-   * evaluated previously (false) or not (true)
-   * @param[out] cons array with values of the constraints (managed by UMPIRE, size num_cons) 
+   * @param[in] idx_cons indexes of the constraints to evaluate (managed by Umpire)
+   * @param[in] x the point at which to evaluate (managed by Umpire) 
+   * @param[in] new_x indicates whether any of the other eval functions have been evaluated 
+   *            previously (false) or not (true) at x
+   * @param[out] cons array with values of the constraints (managed by Umpire, size num_cons) 
    */
   bool eval_cons(const size_type& n,
                  const size_type& m, 
@@ -215,32 +217,32 @@ public:
    *
    * @param[in] n number of variables
    * @param[in] x array with the optimization variables or point at which to evaluate
-   * (managed by UMPIRE)
-   * @param[in] new_x indicates whether any of the other eval functions have been 
-   * evaluated previously (false) or not (true)
-   * @param[out] gradf array with the values of the gradient (managed by UMPIRE) 
+   *              (managed by Umpire)
+   * @param[in] new_x indicates whether any of the other eval functions have been evaluated 
+   *             previously (false) or not (true) at x
+   * @param[out] gradf array with the values of the gradient (managed by Umpire) 
    */
   bool eval_grad_f(const size_type& n, const double* x, bool new_x, double* gradf);
 
   /**
-   * Evaluates the Jacobian of the constraints. The first few arguments are identical to eval_cons.
-   * Please check the user manual for a detailed discussion of how the last four arguments are
-   * expected to behave. 
+   * Evaluates the Jacobian of the constraints. Please check the user manual and the 
+   * documentation of hiop::hiopInterfaceMDS for a detailed discussion of how the last 
+   * four arguments are expected to behave. 
    *
    * @param[in] n number of variables
    * @param[in] m Number of constraints
    * @param[in] num_cons number of constraints to evaluate (size of idx_cons array)
-   * @param[in] idx_cons indexes of the constraints to evaluate (managed by UMPIRE)
-   * @param[in] x the point at which to evaluate (managed by UMPIRE)
-   * @param[in] new_x indicates whether any of the other eval functions have been 
-   * evaluated previously (false) or not (true)
+   * @param[in] idx_cons indexes of the constraints to evaluate (managed by Umpire)
+   * @param[in] x the point at which to evaluate (managed by Umpire)
+   * @param[in] new_x indicates whether any of the other eval functions have been evaluated 
+   *                  previously (false) or not (true) at x
    * @param[in] nsparse number of sparse variables
    * @param[in] ndense number of dense variables
    * @param[in] nnzJacS number of nonzeros in the sparse Jacobian
-   * @param[out] iJacS array of row indexes in the sparse Jacobian (managed by UMPIRE)
-   * @param[out] jJacS array of column indexes in the sparse Jacobian (managed by UMPIRE)
-   * @param[out] MJacS array of nonzero values in the sparse Jacobian (managed by UMPIRE)
-   * @param[out] JacD array with the values of the dense Jacobian (managed by UMPIRE)
+   * @param[out] iJacS array of row indexes in the sparse Jacobian (managed by Umpire)
+   * @param[out] jJacS array of column indexes in the sparse Jacobian (managed by Umpire)
+   * @param[out] MJacS array of nonzero values in the sparse Jacobian (managed by Umpire)
+   * @param[out] JacD array with the values of the dense Jacobian (managed by Umpire)
    */
   virtual bool eval_Jac_cons(const size_type& n,
                              const size_type& m, 
@@ -279,23 +281,23 @@ public:
    * 
    * @param[in] n number of variables
    * @param[in] m Number of constraints
-   * @param[in] x the point at which to evaluate (managed by UMPIRE)
-   * @param[in] new_x indicates whether any of the other eval functions have been
-   * evaluated previously (false) or not (true)
+   * @param[in] x the point at which to evaluate (managed by Umpire)
+   * @param[in] new_x indicates whether any of the other eval functions have been evaluated 
+   *                  previously (false) or not (true) at x
    * @param[in] obj_factor scalar that multiplies the objective term in the Lagrangian function
    * @param[in] lambda array with values of the multipliers used by the Lagrangian function
    * @param[in] new_lambda indicates whether lambda  values changed since last call
    * @param[in] nsparse number of sparse variables
    * @param[in] ndense number of dense variables
    * @param[in] nnzHSS number of nonzeros in the (sparse) Hessian w.r.t. sparse variables 
-   * @param[out] iHSS array of row indexes in the Hessian w.r.t. sparse variables (on the 
-   * device)
+   * @param[out] iHSS array of row indexes in the Hessian w.r.t. sparse variables
+   *                  (managed by Umpire)
    * @param[out] jHSS array of column indexes in the Hessian w.r.t. sparse variables 
-   * (managed by UMPIRE)
+   *                  (managed by Umpire)
    * @param[out] MHSS array of nonzero values in the Hessian w.r.t. sparse variables
-   * (managed by UMPIRE)
+   *                  (managed by Umpire)
    * @param[out] HDDD array with the values of the Hessian w.r.t. to dense variables 
-   * (managed by UMPIRE)
+   *                  (managed by Umpire)
    * @param[out] iHSD is reserved and should not be accessed 
    * @param[out] jHSD is reserved and should not be accessed 
    * @param[out] MHSD is reserved and should not be accessed

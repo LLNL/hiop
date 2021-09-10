@@ -372,7 +372,8 @@ bool Ex4::eval_cons(const size_type& n,
   
   // equality constraints
   if(num_cons == ns_ && ns_ > 0) {
-    RAJA::forall<ex4_raja_exec>(RAJA::RangeSegment(0, num_cons),
+    RAJA::forall<ex4_raja_exec>(
+      RAJA::RangeSegment(0, num_cons),
       RAJA_LAMBDA(RAJA::Index_type irow)
       {
         const int con_idx = (int) idx_cons_in[irow];
@@ -382,13 +383,15 @@ bool Ex4::eval_cons(const size_type& n,
           cons[con_idx] = x[con_idx] + s[con_idx];
         }
       });
+
     Md_->timesVec(1.0, cons, 1.0, y);
   }
 
   /// @todo This is parallelizing only 3 iterations
   // inequality constraints
   if(num_cons == 3 && haveIneq_) {
-    RAJA::forall<ex4_raja_exec>(RAJA::RangeSegment(0, num_cons),
+    RAJA::forall<ex4_raja_exec>(
+      RAJA::RangeSegment(0, num_cons),
       RAJA_LAMBDA(RAJA::Index_type irow)
       {
         assert(ns>=0);
@@ -428,7 +431,8 @@ bool Ex4::eval_grad_f(const size_type& n, const double* x, bool new_x, double* g
 {
   //! assert(ns_>=4); assert(Q_->n()==ns_/4); assert(Q_->m()==ns_/4);
   //x_i - 0.5 
-  RAJA::forall<ex4_raja_exec>(RAJA::RangeSegment(0, ns_),
+  RAJA::forall<ex4_raja_exec>(
+    RAJA::RangeSegment(0, ns_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       gradf[i] = x[i] - 0.5;
@@ -442,7 +446,8 @@ bool Ex4::eval_grad_f(const size_type& n, const double* x, bool new_x, double* g
   //s
   const double* s=x+ns_;
   double* gradf_s = gradf+ns_;
-  RAJA::forall<ex4_raja_exec>(RAJA::RangeSegment(0, ns_),
+  RAJA::forall<ex4_raja_exec>(
+    RAJA::RangeSegment(0, ns_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       gradf_s[i] = s[i];
@@ -495,7 +500,8 @@ bool Ex4::eval_Jac_cons(const size_type& n,
     if(num_cons==ns_ && ns_>0)
     {
       assert(2*ns_==nnzJacS);
-      RAJA::forall<ex4_raja_exec>(RAJA::RangeSegment(0, num_cons),
+      RAJA::forall<ex4_raja_exec>(
+        RAJA::RangeSegment(0, num_cons),
         RAJA_LAMBDA(RAJA::Index_type itrow)
         {
           const int con_idx = (int) idx_cons[itrow];
@@ -509,8 +515,9 @@ bool Ex4::eval_Jac_cons(const size_type& n,
           //s
           iJacS[2*itrow+1] = con_idx;
           jJacS[2*itrow+1] = con_idx + ns;
-          if(MJacS != nullptr)
+          if(MJacS != nullptr) {
             MJacS[2*itrow+1] = 1.0;
+          }
         });
     }
 
@@ -519,7 +526,8 @@ bool Ex4::eval_Jac_cons(const size_type& n,
     {
       assert(ns_+3==nnzJacS);
       // Loop over all matrix nonzeros
-      RAJA::forall<ex4_raja_exec>(RAJA::RangeSegment(0, ns_+3),
+      RAJA::forall<ex4_raja_exec>(
+        RAJA::RangeSegment(0, ns_+3),
         RAJA_LAMBDA(RAJA::Index_type tid)
         {
           if(tid==0)
@@ -529,17 +537,14 @@ bool Ex4::eval_Jac_cons(const size_type& n,
             if(MJacS != nullptr)
               MJacS[tid] = 1.0;
             assert(idx_cons[0] == ns);
-          }
-          else if(tid > ns)
+          } else if(tid > ns)
           {
             iJacS[tid] = tid - ns;
             jJacS[tid] = tid - ns;
             if(MJacS != nullptr)
               MJacS[tid] = 1.0;
             assert(idx_cons[1] == ns + 1 && idx_cons[2] == ns + 2);
-          }
-          else
-          {
+          } else {
             iJacS[tid] = 0;
             jJacS[tid] = ns + tid - 1;
             if(MJacS != nullptr)
@@ -560,7 +565,8 @@ bool Ex4::eval_Jac_cons(const size_type& n,
     if(num_cons==3 && haveIneq_ && ns_>0) {
       int nd = nd_; ///< Cannot capture member inside RAJA lambda
       
-      RAJA::forall<ex4_raja_exec>(RAJA::RangeSegment(0, num_cons*nd_),
+      RAJA::forall<ex4_raja_exec>(
+        RAJA::RangeSegment(0, num_cons*nd_),
         RAJA_LAMBDA(RAJA::Index_type i)
         {
           assert(0 == idx_cons[0]-ns);
@@ -592,7 +598,8 @@ bool Ex4::eval_Hess_Lagr(const size_type& n, const size_type& m,
 
   if(iHSS!=NULL && jHSS!=NULL)
   {
-    RAJA::forall<ex4_raja_exec>(RAJA::RangeSegment(0, 2*ns_),
+    RAJA::forall<ex4_raja_exec>(
+      RAJA::RangeSegment(0, 2*ns_),
       RAJA_LAMBDA(RAJA::Index_type i)
       {
         iHSS[i] = jHSS[i] = i;
@@ -601,7 +608,8 @@ bool Ex4::eval_Hess_Lagr(const size_type& n, const size_type& m,
 
   if(MHSS!=NULL)
   {
-    RAJA::forall<ex4_raja_exec>(RAJA::RangeSegment(0, 2*ns_),
+    RAJA::forall<ex4_raja_exec>(
+      RAJA::RangeSegment(0, 2*ns_),
       RAJA_LAMBDA(RAJA::Index_type i)
       {
         MHSS[i] = obj_factor;
@@ -612,7 +620,8 @@ bool Ex4::eval_Hess_Lagr(const size_type& n, const size_type& m,
   {
     const int nx_dense_squared = nd_*nd_;
     const double* Qv = Q_->local_data();
-    RAJA::forall<ex4_raja_exec>(RAJA::RangeSegment(0, nx_dense_squared),
+    RAJA::forall<ex4_raja_exec>(
+      RAJA::RangeSegment(0, nx_dense_squared),
       RAJA_LAMBDA(RAJA::Index_type i)
       {
         HDD[i] = obj_factor*Qv[i];
@@ -625,7 +634,8 @@ bool Ex4::eval_Hess_Lagr(const size_type& n, const size_type& m,
 bool Ex4::get_starting_point(const size_type& global_n, double* x0)
 {
   assert(global_n==2*ns_+nd_); 
-  RAJA::forall<ex4_raja_exec>(RAJA::RangeSegment(0, global_n),
+  RAJA::forall<ex4_raja_exec>(
+    RAJA::RangeSegment(0, global_n),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       x0[i] = 1.;
@@ -648,23 +658,13 @@ bool Ex4::get_starting_point(const size_type& n,
   if(sol_x_ && sol_zl_ && sol_zu_ && sol_lambda_) {
     duals_avail = true;
 
-    // if(mem_space_ == "DEFAULT")
-    // {
-    //   memcpy(x0, sol_x_, n);
-    //   memcpy(z_bndL0, sol_zl_, n);
-    //   memcpy(z_bndU0, sol_zu_, n);
-
-    //   memcpy(lambda0, sol_lambda_, m);
-    // }
-    // else
-    // {
     auto& resmgr = umpire::ResourceManager::getInstance();
     resmgr.copy(x0, sol_x_, n);
     resmgr.copy(z_bndL0, sol_zl_, n);
     resmgr.copy(z_bndU0, sol_zu_, n);
     
     resmgr.copy(lambda0, sol_lambda_, m);
-    // }
+
   } else {
     duals_avail = false;
     return false;
@@ -727,8 +727,11 @@ void Ex4::set_solution_duals(const double* zl_vec, const double* zu_vec, const d
 }
 
 /** all constraints evaluated in here */
-bool Ex4OneCallCons::eval_cons(const size_type& n, const size_type& m, 
-    const double* x, bool new_x, double* cons)
+bool Ex4OneCallCons::eval_cons(const size_type& n, 
+                               const size_type& m, 
+                               const double* x, 
+                               bool new_x, 
+                               double* cons)
 {
   assert(3*haveIneq_+ns_ == m);
   assert(2*ns_ + nd_     == n);
@@ -742,7 +745,8 @@ bool Ex4OneCallCons::eval_cons(const size_type& n, const size_type& m,
   /// @todo determine whether this outter loop should be raja lambda, or
   /// if the inner loops should each be kernels, or if a more complex
   /// kernel execution policy should be used.
-  RAJA::forall<ex4_raja_exec>(RAJA::RangeSegment(0, m),
+  RAJA::forall<ex4_raja_exec>(
+    RAJA::RangeSegment(0, m),
     RAJA_LAMBDA(RAJA::Index_type con_idx)
     {
       if(con_idx<ns)
@@ -817,7 +821,8 @@ bool Ex4OneCallCons::eval_Jac_cons(const size_type& n, const size_type& m,
   if(iJacS!=NULL && jJacS!=NULL)
   {
     // Compute equality constraints Jacobian
-    RAJA::forall<ex4_raja_exec>(RAJA::RangeSegment(0, ns_),
+    RAJA::forall<ex4_raja_exec>(
+      RAJA::RangeSegment(0, ns_),
       RAJA_LAMBDA(RAJA::Index_type itrow)
       {
         //sparse Jacobian eq w.r.t. x and s
@@ -838,26 +843,22 @@ bool Ex4OneCallCons::eval_Jac_cons(const size_type& n, const size_type& m,
     if(haveIneq_ && ns_>0) 
     {
       // Loop over all matrix nonzeros
-      RAJA::forall<ex4_raja_exec>(RAJA::RangeSegment(0, ns_+3),
+      RAJA::forall<ex4_raja_exec>(
+        RAJA::RangeSegment(0, ns_+3),
         RAJA_LAMBDA(RAJA::Index_type tid)
         {
           const int offset = 2*ns;
-          if(tid==0)
-          {
+          if(tid==0) {
             iJacS[tid+offset] = ns;
             jJacS[tid+offset] = 0;
             if(MJacS != nullptr)
               MJacS[tid+offset] = 1.0;
-          }
-          else if(tid>ns)
-          {
+          } else if(tid>ns) {
             iJacS[tid+offset] = tid;
             jJacS[tid+offset] = tid-ns;
             if(MJacS != nullptr)
               MJacS[tid+offset] = 1.0;
-          }
-          else
-          {
+          } else {
             iJacS[tid+offset] = ns;
             jJacS[tid+offset] = ns+tid-1;
             if(MJacS != nullptr)
@@ -880,7 +881,8 @@ bool Ex4OneCallCons::eval_Jac_cons(const size_type& n, const size_type& m,
       //do an in place fill-in for the ineq Jacobian corresponding to e^T
       //double* J = JacD[ns_];
       double* J = JacD + ns_*nd_;
-      RAJA::forall<ex4_raja_exec>(RAJA::RangeSegment(0, 3*nd_),
+      RAJA::forall<ex4_raja_exec>(
+        RAJA::RangeSegment(0, 3*nd_),
         RAJA_LAMBDA(RAJA::Index_type i)
         {
           J[i] = 1.0;

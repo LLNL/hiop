@@ -58,7 +58,7 @@
 
 #pragma once
 
-//UMPIRE is always enabled with RAJA
+//Umpire is always enabled with RAJA
 #if defined(HIOP_USE_RAJA)
 
 #include <string>
@@ -71,8 +71,8 @@
 
 namespace hiop {
   /** 
-   *  Returns a string with information UMPIRE keeps about the address passed as the argument, 
-   *  or the "__not_managed_by_umpire__" if UMPIRE does not have a record of the address.
+   *  Returns a string with information Umpire keeps about the address passed as the argument, 
+   *  or the "__not_managed_by_umpire__" if Umpire does not have a record of the address.
    *
    */
   std::string get_umpire_mem_address_info(void* address)
@@ -86,7 +86,7 @@ namespace hiop {
       ss << "Size [" << found_allocator.getSize(address) << "]";
       return ss.str();
     } else {
-      return std::string("__not_managed_by_umpire__");
+      return std::string("__not_managed_by_Umpire__");
     }
 
   }
