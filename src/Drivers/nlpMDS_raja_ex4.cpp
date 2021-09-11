@@ -339,6 +339,7 @@ bool Ex4::eval_cons(const size_type& n, const size_type& m,
 
   int ns = ns_; ///< Cannot capture member inside RAJA lambda
   int nd = nd_; ///< Cannot capture member inside RAJA lambda
+  bool empty_sp_row = empty_sp_row_;
   
   // equality constraints
   if(num_cons == ns_ && ns_ > 0)
@@ -374,7 +375,7 @@ bool Ex4::eval_cons(const size_type& n, const size_type& m,
         }
         else if(conineq_idx==1)
         {
-          if(empty_sp_row_) {
+          if(empty_sp_row) {
             cons[conineq_idx] = 0.0;
           } else {
             cons[conineq_idx] = x[1];
@@ -384,7 +385,9 @@ bool Ex4::eval_cons(const size_type& n, const size_type& m,
         else if(conineq_idx==2)
         {
           cons[conineq_idx] = x[2];
-          for(int i=0; i<nd; i++) cons[conineq_idx] += y[i];
+          for(int i=0; i<nd; i++) {
+            cons[conineq_idx] += y[i];
+          }
         }
         else
         {
@@ -785,6 +788,7 @@ bool Ex4OneCallCons::eval_cons(const size_type& n, const size_type& m,
   int ns = ns_; ///< Cannot capture member inside RAJA lambda
   int nd = nd_; ///< Cannot capture member inside RAJA lambda
   bool haveIneq = haveIneq_;
+  bool empty_sp_row = empty_sp_row_;
   
   /// @todo determine whether this outter loop should be raja lambda, or
   /// if the inner loops should each be kernels, or if a more complex
@@ -811,7 +815,7 @@ bool Ex4OneCallCons::eval_cons(const size_type& n, const size_type& m,
         }
         else if(con_idx==ns+1)
         {
-          if(empty_sp_row_) {
+          if(empty_sp_row) {
             cons[con_idx] = 0.0;
           } else {
             cons[con_idx] = x[1];
