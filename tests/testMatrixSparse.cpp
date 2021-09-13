@@ -178,7 +178,7 @@ int main(int argc, char** argv)
     local_ordinal_type nnz4 = entries_per_row*(2*M_global+N_global);
     assert(nnz4 < (2*M_global+N_global)*(2*M_global+N_global));
     hiop::hiopMatrixSparse* m4xn4_sparse = 
-      hiop::LinearAlgebraFactory::createMatrixSparse(mem_space, 2*M_global+N_global, 2*M_global+N_global, nnz4);
+      hiop::LinearAlgebraFactory::create_matrix_sparse(mem_space, 2*M_global+N_global, 2*M_global+N_global, nnz4);
     test.initializeMatrix(m4xn4_sparse, entries_per_row);
 
     fail += test.matrix_copy_submatrix_from(m4xn4_dense, *m4xn4_sparse, *mxn_sparse, M_global, 2*M_global, nnz4-nnz);
@@ -286,7 +286,7 @@ int main(int argc, char** argv)
     local_ordinal_type nnz4 = entries_per_row*(2*M_global+N_global);
     assert(nnz4 < (2*M_global+N_global)*(2*M_global+N_global));
     hiop::hiopMatrixSparse* m4xn4_sparse = 
-      hiop::LinearAlgebraFactory::createMatrixSparse(mem_space, 2*M_global+N_global, 2*M_global+N_global, nnz4);
+      hiop::LinearAlgebraFactory::create_matrix_sparse(mem_space, 2*M_global+N_global, 2*M_global+N_global, nnz4);
     test.initializeMatrix(m4xn4_sparse, entries_per_row);
 
     fail += test.matrix_copy_submatrix_from(m4xn4_dense, *m4xn4_sparse, *mxn_sparse, M_global, 2*M_global, nnz4-nnz);

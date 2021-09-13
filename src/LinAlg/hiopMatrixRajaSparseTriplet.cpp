@@ -1079,62 +1079,6 @@ void hiopMatrixRajaSparseTriplet::copyRowsBlockFrom(const hiopMatrix& src_gen,
   size_type n_rows_src = src.m();
   size_type n_rows_dst = this->m();
 
-  if(src.row_starts_host == nullptr) {
-    src.row_starts_host = src.allocAndBuildRowStarts();
-  }
-  assert(src.row_starts_host);
-  index_type* src_row_st = src.row_starts_host->idx_start_;
-
-  // this function only set up sparsity in the first run. Sparsity won't change after the first run.
-  if(row_starts_host == nullptr) {
-    row_starts_host = new RowStartsInfo(n_rows_dst, mem_space_);
-    assert(row_starts_host);
-    index_type* dst_row_st_init = row_starts_host->idx_start_;
-
-    RAJA::forall<hiop_raja_exec>(
-      RAJA::RangeSegment(0, n_rows_dst+1),
-      RAJA_LAMBDA(RAJA::Index_type i)
-      {
-	      assert(iRow_src[itnz_src]>=iRow_src[itnz_src-1] && "row indexes are not sorted");
-	      if(iRow_src[itnz_src]==iRow_src[itnz_src-1])
-	        assert(jCol_src[itnz_src] >= jCol_src[itnz_src-1] && "col indexes are not sorted");
-      }
-    }
-  );
-}
-
-/**
- * @brief Copy 'n_rows' rows started from 'rows_src_idx_st' (array of size 'n_rows') from 'src' to the destination,
- * which starts from the 'rows_dst_idx_st'th row in 'this'
- *
- * @pre 'this' must have exactly, or more than 'n_rows' rows
- * @pre 'this' must have exactly, or more cols than 'src'
- */
-void hiopMatrixRajaSparseTriplet::copyRowsBlockFrom(const hiopMatrix& src_gen,
-                                                    const index_type& rows_src_idx_st,
-                                                    const size_type& n_rows,
-                                                    const index_type& rows_dst_idx_st,
-                                                    const size_type& dest_nnz_st)
-{
-  const hiopMatrixRajaSparseTriplet& src = dynamic_cast<const hiopMatrixRajaSparseTriplet&>(src_gen);
-  assert(this->numberOfNonzeros() >= src.numberOfNonzeros());
-  assert(this->n() >= src.n());
-  assert(n_rows + rows_src_idx_st <= src.m());
-  assert(n_rows + rows_dst_idx_st <= this->m());
-
-  const index_type* iRow_src = src.i_row();
-  const index_type* jCol_src = src.j_col();
-  const double* values_src = src.M();
-  size_type nnz_src = src.numberOfNonzeros();
-
-  // local copy of member variable/function, for RAJA access
-  index_type* iRow = iRow_;
-  index_type* jCol = jCol_;
-  double* values = values_;
-  size_type nnz_dst = numberOfNonzeros();
-  size_type n_rows_src = src.m();
-  size_type n_rows_dst = this->m();
-
   if(src.row_starts_ == nullptr) {
     src.row_starts_ = src.allocAndBuildRowStarts();
   }
