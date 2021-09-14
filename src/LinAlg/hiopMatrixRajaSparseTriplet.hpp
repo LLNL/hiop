@@ -259,7 +259,7 @@ public:
                                                   const index_type& dest_row_st,
                                                   const index_type& dest_col_st,
                                                   const size_type& dest_nnz_st,
-                                                  const int &nnz_to_copy,
+                                                  const size_type &nnz_to_copy,
                                                   const hiopVector& ix);
   
   virtual double max_abs_value();
