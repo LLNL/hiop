@@ -1514,8 +1514,8 @@ void hiopMatrixRajaSparseTriplet::copyDiagMatrixToSubblock(const double& src_val
   assert(nnz_to_copy + dest_row_st <= this->m());
   assert(nnz_to_copy + col_dest_st <= this->n());
 
-  int itnz_src = 0;
-  int itnz_dest = dest_nnz_st;
+  index_type itnz_src = 0;
+  index_type itnz_dest = dest_nnz_st;
   for(auto ele_add=0; ele_add<nnz_to_copy; ++ele_add) {
     iRow_[itnz_dest] = dest_row_st + ele_add;
     jCol_[itnz_dest] = col_dest_st + ele_add;
@@ -1523,15 +1523,15 @@ void hiopMatrixRajaSparseTriplet::copyDiagMatrixToSubblock(const double& src_val
   }
 
   // local copy of member variable/function, for RAJA access
-  int* iRow = iRow_;
-  int* jCol = jCol_;
+  index_type* iRow = iRow_;
+  index_type* jCol = jCol_;
   double* values = values_;
 
   RAJA::forall<hiop_raja_exec>(
     RAJA::RangeSegment(0, nnz_to_copy),
     RAJA_LAMBDA(RAJA::Index_type ele_add)
     {
-      int itnz_dest = dest_nnz_st + ele_add;
+      index_type itnz_dest = dest_nnz_st + ele_add;
       iRow[itnz_dest] = dest_row_st + ele_add;
       jCol[itnz_dest] = col_dest_st + ele_add;
       values[itnz_dest] = src_val;
@@ -1562,17 +1562,15 @@ void hiopMatrixRajaSparseTriplet::copyDiagMatrixToSubblock_w_pattern(const hiopV
   const double *x = xx.local_data_const();
   const double *pattern = selected.local_data_const();
 
-  int dest_k = dest_nnz_st;
-  int n = ix.get_local_size();
-  int nnz_find=0;
+  size_type n = ix.get_local_size();
 
   // local copy of member variable/function, for RAJA access
-  int* iRow = iRow_;
-  int* jCol = jCol_;
+  index_type* iRow = iRow_;
+  index_type* jCol = jCol_;
   double* values = values_;
 
 #ifdef HIOP_DEEPCHECKS
-  RAJA::ReduceSum<hiop_raja_reduce, int> sum(0);
+  RAJA::ReduceSum<hiop_raja_reduce, size_type> sum(0);
   RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, n),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
@@ -1580,13 +1578,13 @@ void hiopMatrixRajaSparseTriplet::copyDiagMatrixToSubblock_w_pattern(const hiopV
         sum = sum+1;
       }
     });
-  int nrm = sum.get();
+  size_type nrm = sum.get();
   assert(nrm == nnz_to_copy);
 #endif
 
   auto& resmgr = umpire::ResourceManager::getInstance();
   umpire::Allocator devalloc = resmgr.getAllocator(mem_space_);
-  int* m1_row_start = static_cast<int*>(devalloc.allocate((n+1)*sizeof(int)));
+  index_type* m1_row_start = static_cast<index_type*>(devalloc.allocate((n+1)*sizeof(index_type)));
 
   RAJA::forall<hiop_raja_exec>(
     RAJA::RangeSegment(0, n+1),
@@ -1611,9 +1609,9 @@ void hiopMatrixRajaSparseTriplet::copyDiagMatrixToSubblock_w_pattern(const hiopV
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       if(m1_row_start[i] != m1_row_start[i-1]){
-        int ele_add = m1_row_start[i] - 1;
+        index_type ele_add = m1_row_start[i] - 1;
         assert(ele_add>=0 && ele_add<nnz_to_copy);
-        int itnz_dest = dest_nnz_st + ele_add;
+        index_type itnz_dest = dest_nnz_st + ele_add;
         iRow[itnz_dest] = dest_row_st + ele_add;
         jCol[itnz_dest] = dest_col_st + ele_add;
         values[itnz_dest] = x[i-1];        
