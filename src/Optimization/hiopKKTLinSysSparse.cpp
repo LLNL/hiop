@@ -81,8 +81,10 @@ namespace hiop
     delete Hx_;
   }
 
-  bool hiopKKTLinSysCompressedSparseXYcYd::build_kkt_matrix(const double& delta_wx, const double& delta_wd,
-                                                        const double& delta_cc, const double& delta_cd)
+  bool hiopKKTLinSysCompressedSparseXYcYd::build_kkt_matrix(const double& delta_wx,
+                                                            const double& delta_wd,
+                                                            const double& delta_cc,
+                                                            const double& delta_cd)
   {
     HessSp_ = dynamic_cast<hiopMatrixSymSparseTriplet*>(Hess_);
     if(!HessSp_) { assert(false); return false; }
@@ -348,8 +350,10 @@ namespace hiop
     delete Hd_;
   }
 
-  bool hiopKKTLinSysCompressedSparseXDYcYd::build_kkt_matrix(const double& delta_wx, const double& delta_wd,
-                                                         const double& delta_cc, const double& delta_cd)
+  bool hiopKKTLinSysCompressedSparseXDYcYd::build_kkt_matrix(const double& delta_wx,
+                                                             const double& delta_wd,
+                                                             const double& delta_cc,
+                                                             const double& delta_cd)
   {
     HessSp_ = dynamic_cast<hiopMatrixSymSparseTriplet*>(Hess_);
     if(!HessSp_) { assert(false); return false; }
@@ -640,8 +644,10 @@ namespace hiop
     return dynamic_cast<hiopLinSolverNonSymSparse*> (linSys_);
   }
 
-  bool hiopKKTLinSysSparseFull::build_kkt_matrix(const double& delta_wx, const double& delta_wd,
-                                             const double& delta_cc, const double& delta_cd)
+  bool hiopKKTLinSysSparseFull::build_kkt_matrix(const double& delta_wx,
+                                                 const double& delta_wd,
+                                                 const double& delta_cc,
+                                                 const double& delta_cd)
   {
     HessSp_ = dynamic_cast<hiopMatrixSymSparseTriplet*>(Hess_);
     if(!HessSp_) { assert(false); return false; }

@@ -41,6 +41,9 @@ using index_type = hiop::index_type;
  *  s.t.  [-inf] <= 4*x_1 + 2*x_3 <= [ 19 ]                  (rnkdef-con1)
  *        4*x_1 + 2*x_2 == 10                                (rnkdef-con2)
  *
+ *  other parameters are:
+ *  convex_obj: set to 1 to have a convex problem, otherwise set it to 0
+ *  scale_quartic_obj_term: scaling factor for the quartic term in the objective (1.0 by default).
  *
  */
 class Ex7 : public hiop::hiopInterfaceSparse

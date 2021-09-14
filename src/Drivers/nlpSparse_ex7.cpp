@@ -22,6 +22,9 @@
  *  s.t.  [-inf] <= 4*x_1 + 2*x_3 <= [ 19 ]                  (rnkdef-con1)
  *        4*x_1 + 2*x_2 == 10                                (rnkdef-con2)
  *
+ *  other parameters are:
+ *  convex_obj: set to 1 to have a convex problem, otherwise set it to 0.
+ *  scale_quartic_obj_term: scaling factor for the quartic term in the objective (1.0 by default).
  *
  */
 Ex7::Ex7(int n, bool convex_obj, bool rankdefic_Jac_eq, bool rankdefic_Jac_ineq, double scal_neg_obj)

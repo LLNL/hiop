@@ -824,7 +824,7 @@ void hiopOptionsNLP::register_options()
                         0.,
                         1e+20,
                         "Apply curvature test to check if a factorization is acceptable. "
-                        "This is the scaling factor which used to determines if the "
+                        "This is the scaling factor used to determines if the "
                         "direction is considered to be sufficiently positive. (1e-11 by default)");
   }  
   //computations
