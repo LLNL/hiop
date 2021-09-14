@@ -1514,14 +1514,6 @@ void hiopMatrixRajaSparseTriplet::copyDiagMatrixToSubblock(const double& src_val
   assert(nnz_to_copy + dest_row_st <= this->m());
   assert(nnz_to_copy + col_dest_st <= this->n());
 
-  index_type itnz_src = 0;
-  index_type itnz_dest = dest_nnz_st;
-  for(auto ele_add=0; ele_add<nnz_to_copy; ++ele_add) {
-    iRow_[itnz_dest] = dest_row_st + ele_add;
-    jCol_[itnz_dest] = col_dest_st + ele_add;
-    values_[itnz_dest++] = src_val;
-  }
-
   // local copy of member variable/function, for RAJA access
   index_type* iRow = iRow_;
   index_type* jCol = jCol_;
@@ -1548,7 +1540,7 @@ void hiopMatrixRajaSparseTriplet::copyDiagMatrixToSubblock_w_pattern(const hiopV
                                                                      const index_type& dest_row_st,
                                                                      const index_type& dest_col_st,
                                                                      const size_type& dest_nnz_st,
-                                                                     const int &nnz_to_copy,
+                                                                     const size_type &nnz_to_copy,
                                                                      const hiopVector& ix)
 {
   assert(this->numberOfNonzeros() >= nnz_to_copy+dest_nnz_st);
@@ -1559,8 +1551,9 @@ void hiopMatrixRajaSparseTriplet::copyDiagMatrixToSubblock_w_pattern(const hiopV
 
   const hiopVectorRajaPar& selected = dynamic_cast<const hiopVectorRajaPar&>(ix);
   const hiopVectorRajaPar& xx = dynamic_cast<const hiopVectorRajaPar&>(dx);
-  const double *x = xx.local_data_const();
-  const double *pattern = selected.local_data_const();
+  const double* x = xx.local_data_const();
+//  const double* pattern = selected.local_data_const();
+  const double* pattern_host = selected.local_data_host_const();
 
   size_type n = ix.get_local_size();
 
@@ -1582,35 +1575,53 @@ void hiopMatrixRajaSparseTriplet::copyDiagMatrixToSubblock_w_pattern(const hiopV
   assert(nrm == nnz_to_copy);
 #endif
 
-  auto& resmgr = umpire::ResourceManager::getInstance();
-  umpire::Allocator devalloc = resmgr.getAllocator(mem_space_);
-  index_type* m1_row_start = static_cast<index_type*>(devalloc.allocate((n+1)*sizeof(index_type)));
+  hiopVectorInt* vec_row_start = LinearAlgebraFactory::create_vector_int(mem_space_, n+1);
+  index_type* row_start_host = vec_row_start->local_data_host();
+  index_type* row_start_dev = vec_row_start->local_data();
+
+  row_start_host[0] = 0;
+  for(index_type row_idx = 1; row_idx < n+1; row_idx++) {
+    if(pattern_host[row_idx-1]!=0.0) {
+      row_start_host[row_idx] = row_start_host[row_idx-1] + 1;
+    } else {
+      row_start_host[row_idx] = row_start_host[row_idx-1];
+    }
+  }
+  vec_row_start->copy_to_dev();
+
+//  delete vec_row_start;
+
+#if 0
+//  auto& resmgr = umpire::ResourceManager::getInstance();
+//  umpire::Allocator devalloc = resmgr.getAllocator(mem_space_);
+//  index_type* row_start_dev = static_cast<index_type*>(devalloc.allocate((n+1)*sizeof(index_type)));
 
   RAJA::forall<hiop_raja_exec>(
     RAJA::RangeSegment(0, n+1),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       if(i==0) {
-        m1_row_start[i] = 0;
+        row_start_dev[i] = 0;
       } else {
         // from i=1..n
         if(pattern[i-1]!=0.0){
-          m1_row_start[i] = 1;
+          row_start_dev[i] = 1;
         } else {
-          m1_row_start[i] = 0;        
+          row_start_dev[i] = 0;        
         }
       }
     }
   );
-  RAJA::inclusive_scan_inplace<hiop_raja_exec>(m1_row_start,m1_row_start+n+1,RAJA::operators::plus<int>());
+  RAJA::inclusive_scan_inplace<hiop_raja_exec>(row_start_dev,row_start_dev+n+1,RAJA::operators::plus<int>());
+#endif
 
   RAJA::forall<hiop_raja_exec>(
     RAJA::RangeSegment(1, n+1),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
-      if(m1_row_start[i] != m1_row_start[i-1]){
-        index_type ele_add = m1_row_start[i] - 1;
-        assert(ele_add>=0 && ele_add<nnz_to_copy);
+      if(row_start_dev[i] != row_start_dev[i-1]){
+        index_type ele_add = row_start_dev[i] - 1;
+        assert(ele_add >= 0 && ele_add < nnz_to_copy);
         index_type itnz_dest = dest_nnz_st + ele_add;
         iRow[itnz_dest] = dest_row_st + ele_add;
         jCol[itnz_dest] = dest_col_st + ele_add;
@@ -1619,7 +1630,7 @@ void hiopMatrixRajaSparseTriplet::copyDiagMatrixToSubblock_w_pattern(const hiopV
     }
   );
 
-  evalloc.deallocate(m1_row_start);
+//  evalloc.deallocate(row_start_dev);
 }
 
 /**********************************************************************************
