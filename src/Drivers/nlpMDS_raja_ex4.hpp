@@ -84,7 +84,21 @@ using size_type = hiop::size_type;
 using index_type = hiop::index_type;
 
 /**
- * Problem test for the linear algebra of Mixed Dense-Sparse NLPs
+ *  Problem test for the linear algebra of Mixed Dense-Sparse NLPs
+ *
+ * If 'empty_sp_row' is set to true, the following MDS NLP is solved
+ *
+ *  min   sum 0.5 {x_i*(x_{i}-1) : i=1,...,ns} + 0.5 y'*Qd*y + 0.5 s^T s
+ *  s.t.  x+s + Md y = 0, i=1,...,ns
+ *        [-2  ]    [ x_1 + e^T s]   [e^T]      [ 2 ]
+ *        [-inf] <= [            ] + [e^T] y <= [ 2 ]
+ *        [-2  ]    [ x_3        ]   [e^T]      [inf]
+ *        x <= 3
+ *        s>=0
+ *        -4 <=y_1 <=4, the rest of y are free
+ *
+ * Otherwise (second inequality involves a sparse variable):
+ *
  *  min   sum 0.5 {x_i*(x_{i}-1) : i=1,...,ns} + 0.5 y'*Qd*y + 0.5 s^T s
  *  s.t.  x+s + Md y = 0, i=1,...,ns
  *        [-2  ]    [ x_1 + e^T s]   [e^T]      [ 2 ]
@@ -117,12 +131,12 @@ using index_type = hiop::index_type;
 class Ex4 : public hiop::hiopInterfaceMDS
 {
 public:
-  Ex4(int ns_in, std::string mem_space)
-    : Ex4(ns_in, ns_in, mem_space)
+  Ex4(int ns_in, std::string mem_space, bool empty_sp_row = false)
+    : Ex4(ns_in, ns_in, mem_space, empty_sp_row)
   {
   }
   
-  Ex4(int ns_in, int nd_in, std::string mem_space);
+  Ex4(int ns_in, int nd_in, std::string mem_space, bool empty_sp_row = false);
 
   virtual ~Ex4();
   
@@ -374,13 +388,16 @@ protected:
   double* sol_zl_;
   double* sol_zu_;
   double* sol_lambda_;
+
+  /* indicate if problem has empty row in constraint Jacobian */
+  bool empty_sp_row_;
 };
 
 class Ex4OneCallCons : public Ex4
 {
   public:
-    Ex4OneCallCons(int ns_in, std::string mem_space)
-      : Ex4(ns_in, mem_space)
+    Ex4OneCallCons(int ns_in, std::string mem_space, bool empty_sp_row = false)
+      : Ex4(ns_in, mem_space, empty_sp_row)
     {
     }
 
@@ -401,7 +418,7 @@ class Ex4OneCallCons : public Ex4
                    bool new_x,
                    double* cons)
     {
-      //return false so that HiOp will rely on the on-call constraint evaluator defined below
+      //return false so that HiOp will rely on the one-call constraint evaluator defined below
       return false;
     }
 

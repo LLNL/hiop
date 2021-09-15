@@ -17,10 +17,10 @@
 using namespace hiop;
 
 static bool parse_arguments(int argc, char **argv,
-			    bool& self_check,
-			    size_type& n_sp,
-			    size_type& n_de,
-			    bool& one_call_cons,
+                            bool& self_check,
+                            size_type& n_sp,
+                            size_type& n_de,
+                            bool& one_call_cons,
                             bool& empty_sp_row)
 {
   self_check=false;

@@ -515,7 +515,7 @@ public:
 		 const size_type& num_cons, const index_type* idx_cons,  
 		 const double* x, bool new_x, double* cons)
   {
-    //return false so that HiOp will rely on the on-call constraint evaluator defined below
+    //return false so that HiOp will rely on the one-call constraint evaluator defined below
     return false;
   }
   /** all constraints evaluated in here */

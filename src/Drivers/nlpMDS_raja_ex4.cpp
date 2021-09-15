@@ -71,13 +71,14 @@ using ex4_raja_reduce = hiop::hiop_raja_reduce;
 
 using namespace hiop;
 
-Ex4::Ex4(int ns_in, int nd_in, std::string mem_space)
+Ex4::Ex4(int ns_in, int nd_in, std::string mem_space, bool empty_sp_row)
   : mem_space_(mem_space), 
     ns_(ns_in),
     sol_x_(NULL),
     sol_zl_(NULL),
     sol_zu_(NULL),
-    sol_lambda_(NULL)
+    sol_lambda_(NULL),
+    empty_sp_row_(empty_sp_row)
 {
   // Make sure mem_space_ is uppercase
   transform(mem_space_.begin(), mem_space_.end(), mem_space_.begin(), ::toupper);
@@ -304,7 +305,11 @@ bool Ex4::get_sparse_dense_blocks_info(int& nx_sparse, int& nx_dense,
   nx_sparse = 2*ns_;
   nx_dense = nd_;
   nnz_sparse_Jace = 2*ns_;
-  nnz_sparse_Jaci = (ns_==0 || !haveIneq_) ? 0 : 3+ns_;
+  if(empty_sp_row_) {
+    nnz_sparse_Jaci = (ns_==0 || !haveIneq_) ? 0 : 2+ns_;
+  } else {
+    nnz_sparse_Jaci = (ns_==0 || !haveIneq_) ? 0 : 3+ns_;      
+  }
   nnz_sparse_Hess_Lagr_SS = 2*ns_;
   nnz_sparse_Hess_Lagr_SD = 0.;
   return true;
@@ -369,6 +374,7 @@ bool Ex4::eval_cons(const size_type& n,
 
   int ns = ns_; ///< Cannot capture member inside RAJA lambda
   int nd = nd_; ///< Cannot capture member inside RAJA lambda
+  bool empty_sp_row = empty_sp_row_;
   
   // equality constraints
   if(num_cons == ns_ && ns_ > 0) {
@@ -408,13 +414,19 @@ bool Ex4::eval_cons(const size_type& n,
         }
         else if(conineq_idx==1)
         {
-          cons[conineq_idx] = x[1];
+          if(empty_sp_row) {
+            cons[conineq_idx] = 0.0;
+          } else {
+            cons[conineq_idx] = x[1];
+          }
           for(int i=0; i<nd; i++) cons[conineq_idx] += y[i];
         }
         else if(conineq_idx==2)
         {
           cons[conineq_idx] = x[2];
-          for(int i=0; i<nd; i++) cons[conineq_idx] += y[i];
+          for(int i=0; i<nd; i++) {
+            cons[conineq_idx] += y[i];
+          }
         }
         else
         {
@@ -522,36 +534,66 @@ bool Ex4::eval_Jac_cons(const size_type& n,
     }
 
     // Compute inequality constraints Jacobian
-    if(num_cons==3 && haveIneq_ && ns_>0) 
-    {
-      assert(ns_+3==nnzJacS);
-      // Loop over all matrix nonzeros
-      RAJA::forall<ex4_raja_exec>(
-        RAJA::RangeSegment(0, ns_+3),
-        RAJA_LAMBDA(RAJA::Index_type tid)
-        {
-          if(tid==0)
+    if(num_cons==3 && haveIneq_ && ns_>0) {
+      if(!empty_sp_row_) {
+        assert(ns_+3==nnzJacS);
+        // Loop over all matrix nonzeros
+        RAJA::forall<ex4_raja_exec>(
+          RAJA::RangeSegment(0, ns_+3),
+          RAJA_LAMBDA(RAJA::Index_type tid)
           {
-            iJacS[tid] = 0;
-            jJacS[tid] = 0;
-            if(MJacS != nullptr)
-              MJacS[tid] = 1.0;
-            assert(idx_cons[0] == ns);
-          } else if(tid > ns)
-          {
-            iJacS[tid] = tid - ns;
-            jJacS[tid] = tid - ns;
-            if(MJacS != nullptr)
-              MJacS[tid] = 1.0;
-            assert(idx_cons[1] == ns + 1 && idx_cons[2] == ns + 2);
-          } else {
-            iJacS[tid] = 0;
-            jJacS[tid] = ns + tid - 1;
-            if(MJacS != nullptr)
-              MJacS[tid] = 1.0;
+            if(tid==0) {
+              iJacS[tid] = 0;
+              jJacS[tid] = 0;
+              if(MJacS != nullptr)
+                MJacS[tid] = 1.0;
+              assert(idx_cons[0] == ns);
+            } else if(tid > ns) {
+              iJacS[tid] = tid - ns;
+              jJacS[tid] = tid - ns;
+              if(MJacS != nullptr)
+                MJacS[tid] = 1.0;
+              assert(idx_cons[1] == ns + 1 && idx_cons[2] == ns + 2);
+            } else {
+              iJacS[tid] = 0;
+              jJacS[tid] = ns + tid - 1;
+              if(MJacS != nullptr)
+                MJacS[tid] = 1.0;
+            }
           }
-        });
-
+        );
+      } else { //empty_sp_row_ == true
+        assert(ns_+2==nnzJacS);
+        // Loop over all matrix nonzeros
+        RAJA::forall<ex4_raja_exec>(
+          RAJA::RangeSegment(0, ns_+2),
+          RAJA_LAMBDA(RAJA::Index_type tid)
+          {
+            if(tid==0) { 
+              // x_1
+              iJacS[tid] = 0;
+              jJacS[tid] = 0;
+              if(MJacS != nullptr) {
+                MJacS[tid] = 1.0;
+              }
+              assert(idx_cons[0] == ns);
+            } else if(tid > ns) {
+              // x_3
+              iJacS[tid] = 2;
+              jJacS[tid] = 2;
+              if(MJacS != nullptr)
+                MJacS[tid] = 1.0;
+              assert(idx_cons[1] == ns + 1 && idx_cons[2] == ns + 2);
+            } else {
+              // s
+              iJacS[tid] = 0;
+              jJacS[tid] = ns + tid - 1;
+              if(MJacS != nullptr)
+                MJacS[tid] = 1.0;
+            }
+          }
+        );
+      } // end of if  empty_sp_row_
     } // if(num_cons==3 && haveIneq_)
   } // if(iJacS!=NULL && jJacS!=NULL)
 
@@ -741,6 +783,7 @@ bool Ex4OneCallCons::eval_cons(const size_type& n,
   int ns = ns_; ///< Cannot capture member inside RAJA lambda
   int nd = nd_; ///< Cannot capture member inside RAJA lambda
   bool haveIneq = haveIneq_;
+  bool empty_sp_row = empty_sp_row_;
   
   /// @todo determine whether this outter loop should be raja lambda, or
   /// if the inner loops should each be kernels, or if a more complex
@@ -768,7 +811,11 @@ bool Ex4OneCallCons::eval_cons(const size_type& n,
         }
         else if(con_idx==ns+1)
         {
-          cons[con_idx] = x[1];
+          if(empty_sp_row) {
+            cons[con_idx] = 0.0;
+          } else {
+            cons[con_idx] = x[1];
+          }
           for(int i=0; i<nd; i++)
             cons[con_idx] += y[i];
         }
@@ -840,31 +887,66 @@ bool Ex4OneCallCons::eval_Jac_cons(const size_type& n, const size_type& m,
       });
 
     // Compute inequality constraints Jacobian
-    if(haveIneq_ && ns_>0) 
-    {
-      // Loop over all matrix nonzeros
-      RAJA::forall<ex4_raja_exec>(
-        RAJA::RangeSegment(0, ns_+3),
-        RAJA_LAMBDA(RAJA::Index_type tid)
-        {
-          const int offset = 2*ns;
-          if(tid==0) {
-            iJacS[tid+offset] = ns;
-            jJacS[tid+offset] = 0;
-            if(MJacS != nullptr)
-              MJacS[tid+offset] = 1.0;
-          } else if(tid>ns) {
-            iJacS[tid+offset] = tid;
-            jJacS[tid+offset] = tid-ns;
-            if(MJacS != nullptr)
-              MJacS[tid+offset] = 1.0;
-          } else {
-            iJacS[tid+offset] = ns;
-            jJacS[tid+offset] = ns+tid-1;
-            if(MJacS != nullptr)
-              MJacS[tid+offset] = 1.0;
+    if(haveIneq_ && ns_>0) {
+      if(!empty_sp_row_) {
+        // Loop over all matrix nonzeros
+        RAJA::forall<ex4_raja_exec>(
+          RAJA::RangeSegment(0, ns_+3),
+          RAJA_LAMBDA(RAJA::Index_type tid)
+          {
+            const int offset = 2*ns;
+            if(tid==0) {
+              iJacS[tid+offset] = ns;
+              jJacS[tid+offset] = 0;
+              if(MJacS != nullptr) {
+                MJacS[tid+offset] = 1.0;
+              }
+            } else if(tid>ns) {
+              iJacS[tid+offset] = tid;
+              jJacS[tid+offset] = tid-ns;
+              if(MJacS != nullptr) { 
+                MJacS[tid+offset] = 1.0;
+              }
+            } else {
+              iJacS[tid+offset] = ns;
+              jJacS[tid+offset] = ns+tid-1;
+              if(MJacS != nullptr) {
+                MJacS[tid+offset] = 1.0;
+              }
+            }
           }
-        });
+        );
+      } else { // empty_sp_row_ == true
+        // Loop over all matrix nonzeros
+        RAJA::forall<ex4_raja_exec>(
+          RAJA::RangeSegment(0, ns_+2),
+          RAJA_LAMBDA(RAJA::Index_type tid)
+          {
+            const int offset = 2*ns;
+            if(tid==0) {
+              // x_1
+              iJacS[tid+offset] = ns;
+              jJacS[tid+offset] = 0;
+              if(MJacS != nullptr) {
+                MJacS[tid+offset] = 1.0;
+              }
+            } else if(tid>ns) {
+              // x_3
+              iJacS[tid+offset] = tid+1;
+              jJacS[tid+offset] = 2;
+              if(MJacS != nullptr) { 
+                MJacS[tid+offset] = 1.0;
+              }
+            } else {
+              iJacS[tid+offset] = ns;
+              jJacS[tid+offset] = ns + tid - 1;
+              if(MJacS != nullptr) {
+                MJacS[tid+offset] = 1.0;
+              }
+            }
+          }
+        );        
+      } // end of if empty_sp_row_
     } // if(haveIneq_)
   } // if(iJacS!=NULL && jJacS!=NULL)
 
