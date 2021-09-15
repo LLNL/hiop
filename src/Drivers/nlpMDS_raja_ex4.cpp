@@ -1,3 +1,62 @@
+// Copyright (c) 2017, Lawrence Livermore National Security, LLC.
+// Produced at the Lawrence Livermore National Laboratory (LLNL).
+// LLNL-CODE-742473. All rights reserved.
+//
+// This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp
+// is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause).
+// Please also read "Additional BSD Notice" below.
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted provided that the following conditions are met:
+// i. Redistributions of source code must retain the above copyright notice, this list
+// of conditions and the disclaimer below.
+// ii. Redistributions in binary form must reproduce the above copyright notice,
+// this list of conditions and the disclaimer (as noted below) in the documentation and/or
+// other materials provided with the distribution.
+// iii. Neither the name of the LLNS/LLNL nor the names of its contributors may be used to
+// endorse or promote products derived from this software without specific prior written
+// permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
+// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+// OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
+// SHALL LAWRENCE LIVERMORE NATIONAL SECURITY, LLC, THE U.S. DEPARTMENT OF ENERGY OR
+// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+// OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+// AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
+// EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
+// Additional BSD Notice
+// 1. This notice is required to be provided under our contract with the U.S. Department
+// of Energy (DOE). This work was produced at Lawrence Livermore National Laboratory under
+// Contract No. DE-AC52-07NA27344 with the DOE.
+// 2. Neither the United States Government nor Lawrence Livermore National Security, LLC
+// nor any of their employees, makes any warranty, express or implied, or assumes any
+// liability or responsibility for the accuracy, completeness, or usefulness of any
+// information, apparatus, product, or process disclosed, or represents that its use would
+// not infringe privately-owned rights.
+// 3. Also, reference herein to any specific commercial products, process, or services by
+// trade name, trademark, manufacturer or otherwise does not necessarily constitute or
+// imply its endorsement, recommendation, or favoring by the United States Government or
+// Lawrence Livermore National Security, LLC. The views and opinions of authors expressed
+// herein do not necessarily state or reflect those of the United States Government or
+// Lawrence Livermore National Security, LLC, and shall not be used for advertising or
+// product endorsement purposes.
+
+/**
+ * @file nlpMDS_raja_ex4.cpp
+ *
+ * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
+ * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
+ * @author Cameron Rutherford <robert.rutherford@pnnl.gov>, PNNL
+ * @author Jake K. Ryan <jake.ryan@pnnl.gov>, PNNL
+ * @author Cosmin G. Petra <petra1@lnnl.gov>, LNNL
+ * @author Nai-Yuan Chiang <chiang7@lnnl.gov>, LNNL
+ *
+ */
+
 #include "nlpMDS_raja_ex4.hpp"
 
 #include <umpire/Allocator.hpp>
@@ -236,7 +295,6 @@ bool Ex4::get_cons_info(const size_type& m, double* clow, double* cupp, Nonlinea
     {
       type[i] = hiopNonlinear;
     });
-
   return true;
 }
 
@@ -301,72 +359,53 @@ bool Ex4::eval_f(const size_type& n, const double* x, bool new_x, double& obj_va
   return true;
 }
 
-/**
- * @todo figure out which of these pointers (if any) will need to be
- * copied over to device when this is fully running on device.
- * @todo find descriptoins of parameters (perhaps from ipopt interface?).
- *
- * @param[in] idx_cons ?
- * @param[in] x ?
- * @param[in] cons ?
- */
-bool Ex4::eval_cons(const size_type& n, const size_type& m, 
-                    const size_type& num_cons, const index_type* idx_cons_in,
-                    const double* x, bool new_x, double* cons)
+bool Ex4::eval_cons(const size_type& n, 
+                    const size_type& m, 
+                    const size_type& num_cons, 
+                    const index_type* idx_cons_in,
+                    const double* x, 
+                    bool new_x, 
+                    double* cons)
 {
   const double* s = x+ns_;
   const double* y = x+2*ns_;
 
   assert(num_cons==ns_ || num_cons==3*haveIneq_);
 
-  // Temporary solution: Move idx_cons array to GPU, works with UM and PINNED only
-  index_type* idx_cons = nullptr;
-  auto& resmgr = umpire::ResourceManager::getInstance();
-  if(mem_space_ == "DEFAULT")
-  {
-    idx_cons = new index_type[num_cons];
-  }
-  else
-  {
-    umpire::Allocator allocator = resmgr.getAllocator(mem_space_);
-    idx_cons = static_cast<index_type*>(allocator.allocate(num_cons * sizeof(index_type)));
-  }
-
-  for(int i=0; i<num_cons; ++i)
-  {
-    idx_cons[i] = idx_cons_in[i];
-  }
-
   int ns = ns_; ///< Cannot capture member inside RAJA lambda
   int nd = nd_; ///< Cannot capture member inside RAJA lambda
   bool empty_sp_row = empty_sp_row_;
   
   // equality constraints
-  if(num_cons == ns_ && ns_ > 0)
-  {
-    RAJA::forall<ex4_raja_exec>(RAJA::RangeSegment(0, num_cons),
+  if(num_cons == ns_ && ns_ > 0) {
+    RAJA::forall<ex4_raja_exec>(
+      RAJA::RangeSegment(0, num_cons),
       RAJA_LAMBDA(RAJA::Index_type irow)
       {
-        const int con_idx = (int) idx_cons[irow];
+        const int con_idx = (int) idx_cons_in[irow];
         if(con_idx < ns)
         {
           //equalities: x+s - Md_ y = 0
           cons[con_idx] = x[con_idx] + s[con_idx];
         }
       });
+
     Md_->timesVec(1.0, cons, 1.0, y);
   }
 
   /// @todo This is parallelizing only 3 iterations
   // inequality constraints
-  if(num_cons == 3 && haveIneq_)
-  {
-    RAJA::forall<ex4_raja_exec>(RAJA::RangeSegment(0, num_cons),
+  if(num_cons == 3 && haveIneq_) {
+    RAJA::forall<ex4_raja_exec>(
+      RAJA::RangeSegment(0, num_cons),
       RAJA_LAMBDA(RAJA::Index_type irow)
       {
-        const int con_idx = (int) idx_cons[irow];
+        assert(ns>=0);
+        const int con_idx = (int) idx_cons_in[irow];
+        assert(con_idx>=0);
         assert(con_idx < ns+3);
-        const int conineq_idx=con_idx - ns;
+        const int conineq_idx = con_idx - ns;
+
         if(conineq_idx==0)
         {
           cons[conineq_idx] = x[0];
@@ -391,20 +430,10 @@ bool Ex4::eval_cons(const size_type& n, const size_type& m,
         }
         else
         {
+          assert(conineq_idx>=0);
           assert(false);
         }
       });
-  }
-
-  // Temporary solution: Move idx_cons array to GPU, works with UM and PINNED only
-  if(mem_space_ == "DEFAULT")
-  {
-    delete [] idx_cons;
-  }
-  else
-  {
-    umpire::Allocator allocator = resmgr.getAllocator(mem_space_);
-    allocator.deallocate(idx_cons);
   }
   return true;
 }
@@ -414,7 +443,8 @@ bool Ex4::eval_grad_f(const size_type& n, const double* x, bool new_x, double* g
 {
   //! assert(ns_>=4); assert(Q_->n()==ns_/4); assert(Q_->m()==ns_/4);
   //x_i - 0.5 
-  RAJA::forall<ex4_raja_exec>(RAJA::RangeSegment(0, ns_),
+  RAJA::forall<ex4_raja_exec>(
+    RAJA::RangeSegment(0, ns_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       gradf[i] = x[i] - 0.5;
@@ -428,7 +458,8 @@ bool Ex4::eval_grad_f(const size_type& n, const double* x, bool new_x, double* g
   //s
   const double* s=x+ns_;
   double* gradf_s = gradf+ns_;
-  RAJA::forall<ex4_raja_exec>(RAJA::RangeSegment(0, ns_),
+  RAJA::forall<ex4_raja_exec>(
+    RAJA::RangeSegment(0, ns_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       gradf_s[i] = s[i];
@@ -457,32 +488,21 @@ bool Ex4::eval_grad_f(const size_type& n, const double* x, bool new_x, double* g
  * This method runs on GPU.
  * 
  */
-bool Ex4::eval_Jac_cons(const size_type& n, const size_type& m, 
-    const size_type& num_cons, const index_type* idx_cons_in,
-    const double* x, bool new_x,
-    const size_type& nsparse, const size_type& ndense, 
-    const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
-    double* JacD)
+bool Ex4::eval_Jac_cons(const size_type& n,
+                        const size_type& m, 
+                        const size_type& num_cons, 
+                        const index_type* idx_cons,
+                        const double* x, 
+                        bool new_x,
+                        const size_type& nsparse, 
+                        const size_type& ndense, 
+                        const int& nnzJacS, 
+                        int* iJacS, 
+                        int* jJacS, 
+                        double* MJacS, 
+                        double* JacD)
 {
   assert(num_cons==ns_ || num_cons==3*haveIneq_);
-
-  // Temporary solution: Move idx_cons array to GPU, works with UM and PINNED only
-  index_type* idx_cons = nullptr;
-  auto& resmgr = umpire::ResourceManager::getInstance();
-  if(mem_space_ == "DEFAULT")
-  {
-    idx_cons = new index_type[num_cons];
-  }
-  else
-  {
-    umpire::Allocator allocator = resmgr.getAllocator(mem_space_);
-    idx_cons = static_cast<index_type*>(allocator.allocate(num_cons * sizeof(index_type)));
-  }
-
-  for(int i=0; i<num_cons; ++i)
-  {
-    idx_cons[i] = idx_cons_in[i];
-  }
 
   int ns = ns_; ///< Cannot capture member inside RAJA lambda
   
@@ -492,7 +512,8 @@ bool Ex4::eval_Jac_cons(const size_type& n, const size_type& m,
     if(num_cons==ns_ && ns_>0)
     {
       assert(2*ns_==nnzJacS);
-      RAJA::forall<ex4_raja_exec>(RAJA::RangeSegment(0, num_cons),
+      RAJA::forall<ex4_raja_exec>(
+        RAJA::RangeSegment(0, num_cons),
         RAJA_LAMBDA(RAJA::Index_type itrow)
         {
           const int con_idx = (int) idx_cons[itrow];
@@ -506,14 +527,14 @@ bool Ex4::eval_Jac_cons(const size_type& n, const size_type& m,
           //s
           iJacS[2*itrow+1] = con_idx;
           jJacS[2*itrow+1] = con_idx + ns;
-          if(MJacS != nullptr)
+          if(MJacS != nullptr) {
             MJacS[2*itrow+1] = 1.0;
+          }
         });
     }
 
     // Compute inequality constraints Jacobian
-    if(num_cons==3 && haveIneq_ && ns_>0) 
-    {
+    if(num_cons==3 && haveIneq_ && ns_>0) {
       if(!empty_sp_row_) {
         assert(ns_+3==nnzJacS);
         // Loop over all matrix nonzeros
@@ -541,7 +562,7 @@ bool Ex4::eval_Jac_cons(const size_type& n, const size_type& m,
             }
           }
         );
-      } else {
+      } else { //empty_sp_row_ == true
         assert(ns_+2==nnzJacS);
         // Loop over all matrix nonzeros
         RAJA::forall<ex4_raja_exec>(
@@ -572,52 +593,32 @@ bool Ex4::eval_Jac_cons(const size_type& n, const size_type& m,
             }
           }
         );
-      }
+      } // end of if  empty_sp_row_
     } // if(num_cons==3 && haveIneq_)
   } // if(iJacS!=NULL && jJacS!=NULL)
 
   //dense Jacobian w.r.t y
-  if(JacD!=NULL) 
+  if(JacD!=nullptr) 
   {
-    if(num_cons == ns_ && ns_ > static_cast<int>(idx_cons[0]))
-    {
-      //assert(num_cons==ns_);
-      auto& rm = umpire::ResourceManager::getInstance();
-      if(mem_space_ == "DEFAULT")
-        memcpy(JacD, Md_->local_data_const(), ns_*nd_*sizeof(double));
-      else
-        rm.copy(JacD, Md_->local_data_const(), ns_*nd_*sizeof(double));
+    if(num_cons == ns_) {// && ns_ > static_cast<int>(idx_cons[0]))
+      umpire::ResourceManager::getInstance().copy(JacD, Md_->local_data_const(), ns_*nd_*sizeof(double));
     }
 
-    if(num_cons==3 && haveIneq_ && ns_>0)
-    {
-      for(int itrow=0; itrow<num_cons; itrow++)
-      {
-        const int con_idx = static_cast<int>(idx_cons[itrow]);
-        //do an in place fill-in for the ineq Jacobian corresponding to e^T
-        assert(con_idx-ns_==0 || con_idx-ns_==1 || con_idx-ns_==2);
-        assert(num_cons==3);
-        //double* J = JacD[con_idx-ns_];
-        double* J = JacD + nd_*(con_idx-ns_);
-        RAJA::forall<ex4_raja_exec>(RAJA::RangeSegment(0, nd_),
-          RAJA_LAMBDA(RAJA::Index_type i)
-          {
-            J[i] = 1.0;
-          });
-      }
+    if(num_cons==3 && haveIneq_ && ns_>0) {
+      int nd = nd_; ///< Cannot capture member inside RAJA lambda
+      
+      RAJA::forall<ex4_raja_exec>(
+        RAJA::RangeSegment(0, num_cons*nd_),
+        RAJA_LAMBDA(RAJA::Index_type i)
+        {
+          assert(0 == idx_cons[0]-ns);
+          assert(1 == idx_cons[1]-ns);
+          assert(2 == idx_cons[2]-ns);
+          JacD[nd*(idx_cons[0]-ns)+i] = 1.0;
+        });
     }
-  } // if(JacD != nullptr)
+  } // end of if(JacD != nullptr)
 
-  // Temporary solution: Move idx_cons array to GPU, works with UM and PINNED only
-  if(mem_space_ == "DEFAULT")
-  {
-    delete [] idx_cons;
-  }
-  else
-  {
-    umpire::Allocator allocator = resmgr.getAllocator(mem_space_);
-    allocator.deallocate(idx_cons);
-  }
   return true;
 }
 
@@ -639,7 +640,8 @@ bool Ex4::eval_Hess_Lagr(const size_type& n, const size_type& m,
 
   if(iHSS!=NULL && jHSS!=NULL)
   {
-    RAJA::forall<ex4_raja_exec>(RAJA::RangeSegment(0, 2*ns_),
+    RAJA::forall<ex4_raja_exec>(
+      RAJA::RangeSegment(0, 2*ns_),
       RAJA_LAMBDA(RAJA::Index_type i)
       {
         iHSS[i] = jHSS[i] = i;
@@ -648,7 +650,8 @@ bool Ex4::eval_Hess_Lagr(const size_type& n, const size_type& m,
 
   if(MHSS!=NULL)
   {
-    RAJA::forall<ex4_raja_exec>(RAJA::RangeSegment(0, 2*ns_),
+    RAJA::forall<ex4_raja_exec>(
+      RAJA::RangeSegment(0, 2*ns_),
       RAJA_LAMBDA(RAJA::Index_type i)
       {
         MHSS[i] = obj_factor;
@@ -659,7 +662,8 @@ bool Ex4::eval_Hess_Lagr(const size_type& n, const size_type& m,
   {
     const int nx_dense_squared = nd_*nd_;
     const double* Qv = Q_->local_data();
-    RAJA::forall<ex4_raja_exec>(RAJA::RangeSegment(0, nx_dense_squared),
+    RAJA::forall<ex4_raja_exec>(
+      RAJA::RangeSegment(0, nx_dense_squared),
       RAJA_LAMBDA(RAJA::Index_type i)
       {
         HDD[i] = obj_factor*Qv[i];
@@ -672,7 +676,8 @@ bool Ex4::eval_Hess_Lagr(const size_type& n, const size_type& m,
 bool Ex4::get_starting_point(const size_type& global_n, double* x0)
 {
   assert(global_n==2*ns_+nd_); 
-  RAJA::forall<ex4_raja_exec>(RAJA::RangeSegment(0, global_n),
+  RAJA::forall<ex4_raja_exec>(
+    RAJA::RangeSegment(0, global_n),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       x0[i] = 1.;
@@ -692,30 +697,17 @@ bool Ex4::get_starting_point(const size_type& n,
 {
   slacks_avail = false;
   
-  if(sol_x_ && sol_zl_ && sol_zu_ && sol_lambda_)
-  {
+  if(sol_x_ && sol_zl_ && sol_zu_ && sol_lambda_) {
     duals_avail = true;
 
-    if(mem_space_ == "DEFAULT")
-    {
-      memcpy(x0, sol_x_, n);
-      memcpy(z_bndL0, sol_zl_, n);
-      memcpy(z_bndU0, sol_zu_, n);
+    auto& resmgr = umpire::ResourceManager::getInstance();
+    resmgr.copy(x0, sol_x_, n);
+    resmgr.copy(z_bndL0, sol_zl_, n);
+    resmgr.copy(z_bndU0, sol_zu_, n);
+    
+    resmgr.copy(lambda0, sol_lambda_, m);
 
-      memcpy(lambda0, sol_lambda_, m);
-    }
-    else
-    {
-      auto& resmgr = umpire::ResourceManager::getInstance();
-      resmgr.copy(x0, sol_x_, n);
-      resmgr.copy(z_bndL0, sol_zl_, n);
-      resmgr.copy(z_bndU0, sol_zu_, n);
-
-      resmgr.copy(lambda0, sol_lambda_, m);
-    }
-  }
-  else
-  {
+  } else {
     duals_avail = false;
     return false;
   }
@@ -777,8 +769,11 @@ void Ex4::set_solution_duals(const double* zl_vec, const double* zu_vec, const d
 }
 
 /** all constraints evaluated in here */
-bool Ex4OneCallCons::eval_cons(const size_type& n, const size_type& m, 
-    const double* x, bool new_x, double* cons)
+bool Ex4OneCallCons::eval_cons(const size_type& n, 
+                               const size_type& m, 
+                               const double* x, 
+                               bool new_x, 
+                               double* cons)
 {
   assert(3*haveIneq_+ns_ == m);
   assert(2*ns_ + nd_     == n);
@@ -793,7 +788,8 @@ bool Ex4OneCallCons::eval_cons(const size_type& n, const size_type& m,
   /// @todo determine whether this outter loop should be raja lambda, or
   /// if the inner loops should each be kernels, or if a more complex
   /// kernel execution policy should be used.
-  RAJA::forall<ex4_raja_exec>(RAJA::RangeSegment(0, m),
+  RAJA::forall<ex4_raja_exec>(
+    RAJA::RangeSegment(0, m),
     RAJA_LAMBDA(RAJA::Index_type con_idx)
     {
       if(con_idx<ns)
@@ -872,7 +868,8 @@ bool Ex4OneCallCons::eval_Jac_cons(const size_type& n, const size_type& m,
   if(iJacS!=NULL && jJacS!=NULL)
   {
     // Compute equality constraints Jacobian
-    RAJA::forall<ex4_raja_exec>(RAJA::RangeSegment(0, ns_),
+    RAJA::forall<ex4_raja_exec>(
+      RAJA::RangeSegment(0, ns_),
       RAJA_LAMBDA(RAJA::Index_type itrow)
       {
         //sparse Jacobian eq w.r.t. x and s
@@ -919,7 +916,7 @@ bool Ex4OneCallCons::eval_Jac_cons(const size_type& n, const size_type& m,
             }
           }
         );
-      } else {
+      } else { // empty_sp_row_ == true
         // Loop over all matrix nonzeros
         RAJA::forall<ex4_raja_exec>(
           RAJA::RangeSegment(0, ns_+2),
@@ -949,7 +946,7 @@ bool Ex4OneCallCons::eval_Jac_cons(const size_type& n, const size_type& m,
             }
           }
         );        
-      }
+      } // end of if empty_sp_row_
     } // if(haveIneq_)
   } // if(iJacS!=NULL && jJacS!=NULL)
 
@@ -958,10 +955,7 @@ bool Ex4OneCallCons::eval_Jac_cons(const size_type& n, const size_type& m,
   {
     //just copy the dense Jacobian corresponding to equalities
     auto& rm = umpire::ResourceManager::getInstance();
-    if(mem_space_ == "DEFAULT")
-      memcpy(JacD, Md_->local_data_const(), ns_*nd_*sizeof(double));
-    else
-      rm.copy(JacD, Md_->local_data_const(), ns_*nd_*sizeof(double));
+    rm.copy(JacD, Md_->local_data_const(), ns_*nd_*sizeof(double));
 
     if(haveIneq_)
     {
@@ -969,7 +963,8 @@ bool Ex4OneCallCons::eval_Jac_cons(const size_type& n, const size_type& m,
       //do an in place fill-in for the ineq Jacobian corresponding to e^T
       //double* J = JacD[ns_];
       double* J = JacD + ns_*nd_;
-      RAJA::forall<ex4_raja_exec>(RAJA::RangeSegment(0, 3*nd_),
+      RAJA::forall<ex4_raja_exec>(
+        RAJA::RangeSegment(0, 3*nd_),
         RAJA_LAMBDA(RAJA::Index_type i)
         {
           J[i] = 1.0;

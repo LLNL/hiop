@@ -282,7 +282,7 @@ This will compile, build the static library and example executables, perform a c
 
 \subsection{Support of host-device computations using (generic)CPU-(NVIDIA)GPU hardware}
 
-Starting version 0.3, \Hi offers support for offloading computations to NVIDIA GPU accelerators. This feature is available only when solving NLPs in the mixed dense-sparse (MDS) form. First, support for GPUs should be enabled during the build by using \texttt{-DHIOP\_USE\_GPU} option with \texttt{cmake}, which will result in using the GPU accelerators for the internal linear solves; in addition, the options \texttt{-DHIOP\_USE\_RAJA} and \texttt{-DHIOP\_USE\_UMPIRE} will employ RAJA portability abstraction to perform the remaining linear algebra computations on the device or on the host (with OpenMP acceleration).
+Starting version 0.3, \Hi offers support for offloading computations to NVIDIA GPU accelerators when solving NLPs in the mixed dense-sparse (MDS) form. Support for GPUs should be enabled during the build by using \texttt{-DHIOP\_USE\_GPU} option with \texttt{cmake}, which will result in using the GPU accelerators for the internal linear solves; in addition, the options \texttt{-DHIOP\_USE\_RAJA} will employ RAJA portability abstraction to perform the remaining linear algebra computations on the GPU device or on the host (with OpenMP acceleration). When RAJA is enabled, \Hi can be instructed to use Umpire as memory manager (see option \texttt{mem\_space}). As of v0.5, the combination of RAJA and Umpire enables \Hi to perform iterations of the Newton IPM solver solely on the device by setting option \texttt{mem\_space} to \texttt{device} and option \texttt{compute\_mode} to \texttt{gpu}. 
 
 \Hi's \texttt{cmake} build system is quite versatile to find the dependencies required to offload computations to the device GPUs since was developed and tested on a few GPU-enabled HPC platforms at Oak Ridge, Lawrence Livermore, and Pacific Northwest National Laboratories. These dependencies consist of CUDA library version 10.1 or later and a recent Magma linear solver library (as well as a physical NVIDIA GPU device). \Hi offers an extensive build support for using customized NVIDIA libraries and/or Magma solver as well as for advanced troubleshooting. The user is referred to \texttt{cmake/FindHiopCudaLibraries.cmake} and \texttt{cmake/FindMagma.cmake} scripts.
 
@@ -492,7 +492,11 @@ As mentioned above we make a couple of assumptions on the block structure of the
 
 The optimization problem~\eqref{mdsobj}--\eqref{mdsbounds} is transformed internally by \Hi to an equivalent form that is more amenable to the use of interior-point methods as described on~\cite[Section~3]{petra2019memory}. Furthermore, HiOp implements the filter line-search interior-point algorithm of W{\"a}chter and Biegler~\cite{waecther_05_ipopt,waecther_05_ipopt2} (also implemented by IPOPT~\cite{waecther_05_ipopt0}) and makes explicit use of second-order derivatives/Hessians.
 
-Starting version 0.3, \Hi offers support for NVIDIA GPU computations acceleration. This feature is available only when solving NLPs in the mixed dense-sparse (MDS) form and should be enabled during the build by using \texttt{-DHIOP\_USE\_GPU} option with \texttt{cmake}. \Hi's \texttt{cmake} build system is quite versatile to find the dependencies required to offload computations to the device GPUs since was developed and tested on a few GPU-enabled HPC platforms at Oak Ridge, Lawrence Livermore, and Pacific Northwestern National Laboratories. These dependencies consist of CUDA library version 10.1 or later and a recent Magma linear solver library (as well as an NVIDIA GPU). If offloading computations to the device is not desired, the user can switch it off and perform only CPU (host) computations by setting \Hi's option \texttt{compute\_mode} to \texttt{cpu}. The Newton interior-point solver for MDS problems offers ample device/GPU (and limited CPU/multicore) fine-grain parallelism, however it does not offer support of interprocess/internode parallelism.
+\Hi offers support for NVIDIA GPU acceleration. This feature is available only when solving NLPs in the mixed dense-sparse (MDS) form and should be enabled during the build by using \texttt{-DHIOP\_USE\_GPU} option with \texttt{cmake}. \Hi's \texttt{cmake} build system is quite versatile to find the dependencies required to offload computations to the device GPUs since was developed and tested on a few GPU-enabled HPC platforms at Oak Ridge, Lawrence Livermore, and Pacific Northwestern National Laboratories. These dependencies consist of CUDA library and Magma linear solver library.
+%If offloading computations to the device is not desired, the user can switch it off and perform only CPU (host) computations by setting \Hi's option \texttt{compute\_mode} to \texttt{cpu}.
+The Newton interior-point solver for MDS problems offers the possibility to perform the linear algebra and the great majority of the optimization computations on the device; this can be achieved by setting option \texttt{compute\_mode} to \texttt{gpu} and the option \texttt{mem\_space} to \texttt{device}. This combination of the two options will require the problem evaluation functions implemented by the user (see Section~\ref{sec:mds:cpp} below) to run on the device. If the user code does not support this, then \Hi should be used with \texttt{compute\_mode} set to \texttt{hybrid} and the option \texttt{mem\_space} set to \texttt{default}; this combination will offload the majority of linear algebra and optimization computations to the device. The \Hi's RAJA version of Example 4 (see \texttt{src/Drivers/nlpMDS\_ex4\_raja\_driver.cpp}) provides an example of implementing a MDS NLP so that it that can be solved by running \Hi's Newton solver on the device (\textit{i.e.}, \texttt{compute\_mode} set to \texttt{gpu} and with \texttt{mem\_space} set to \texttt{device}).
+
+We note that MDS NLPs have no support for coarse grain (interprocess/internode) parallelism.
 
 %After a careful manipulation of the equations, which is described in detail in~\cite{petra2019memory}, also see~\cite{wachter2006implementation}, the interior-point solver needs to perform computations that can roughly categorized as 
 %\begin{itemize}
@@ -510,6 +514,8 @@ Starting version 0.3, \Hi offers support for NVIDIA GPU computations acceleratio
 %    \left[\begin{array}{c}  r_{x_s} \\ r_{x_d} \\ r_{y_c} \\  r_{y_d}\end{array}\right]
 %\end{align}
 %\end{itemize}
+
+\medskip
 
 The following quantities are required by \Hi:
 \begin{itemize}
@@ -532,7 +538,7 @@ We remark that  $\nabla^2 L(x_d,x_s)$ has a so-called MDS structure in the sense
 \item[D4] the simple bounds $x_l$ and $x_u$, the inequalities bounds: $d_l$ and $d_u$, and the right-hand size of the equality constraints $c_E$.
 \end{itemize}
 
-\subsubsection{The C++ interface}
+\subsubsection{The C++ interface}\label{sec:mds:cpp}
 The above optimization problem~\eqref{mdsobj}--\eqref{mdsbounds} can be specified by using the C++ interface, namely by deriving and providing an implementation for the \texttt{hiop::hiopInterfaceMDS} abstract class.
 
  We present next the methods of this abstract class that needs to be implemented in order to specify the parts D1-D4 of the optimization problem. All the methods of this section are ``pure'' virtual in \texttt{hiop::hiopInterfaceMDS} abstract class  and need to be provided by the user implementation.
@@ -685,6 +691,8 @@ bool eval_Hess_Lagr(const size_type& n, const size_type& m,
 %that sparse symmOnly upper triangular nonzero entries should be specified, accessed, and maintained. The Hessian and the symmetric KKT systems are implemented as symmetric matrices. Users only need to provide the upper triangle nonzero entries to Hessian. 
 
 \warningcp{Note:} The array \texttt{lambda} contains  the multipliers of constraints. These multipliers come have the same order as the constraints in \texttt{eval\_cons} (this is a new behavior introduced in \Hi v0.4).
+
+\warningcp{Device computations:} \Hi supports full device/GPU acceleration for MDS NLPs. To achieve this, the user can use option \texttt{compute\_mode} set to \texttt{gpu} and option \texttt{mem\_space} set to \texttt{device}. However, the user needs to be able to evaluate the model on the device. The rule of thumb is that all the \textit{pointer} arguments of the callback methods of this section will be on the device (with a few exceptions) so that the user can populate the arrays on the device. This is illustrated and discussed in detail in \texttt{src/Drivers/nlpMDS\_raja\_ex4.hpp}, which is part of the RAJA Example 4 (see \texttt{src/Drivers/nlpMDS\_ex4\_raja\_driver.cpp}) that is capable of running completely in the device memory space with minimal host-device transfer.
 
 \subsubsection{Calling \Hi for a \texttt{hiopInterfaceMDS} formulation}
 Once an implementation of the \texttt{hiop::hiopInterfaceMDS} abstract interface class containing the user's NLP representation is available, the  user code needs to create a \Hi problem formulation that encapsulate the NLP representation, instantiate an optimization algorithm class, and start the numerical optimization process. 
@@ -956,7 +964,7 @@ Double values in $[10^{-14},0.1]$. Default value $10^{-6}$.
 \item ``auto'' (default): identical to ``hybrid'';
 \item ``cpu'': run everything on the CPU;
 \item ``hybrid'':  \Hi will decide internally based on the type of NLP problem solved and other options which computational kernels will be offloaded to GPU. It usually runs the expensive linear solves on GPU but the remaining computations on the host/CPU;
-\item ``gpu'': run the all the computational kernels on the device; some computations (\textit{e.g.}, logic and control loop) will run on CPU. Introduced as of v0.4, this compute mode is experimental, should be used only by advanced users.
+\item ``gpu'': run the all the computational kernels on the device; some computations (\textit{e.g.}, logic and control loop) will run on CPU. It is fully tested with MDS NLPs; for other NLPs this option is experimental, should be used only by advanced users (as of v0.5). This option requires Umpire to be used as the memory manager with \texttt{mem\_space} option being set to \texttt{device} or \texttt{um}.
 \end{itemize}
 
 \medskip
@@ -967,7 +975,7 @@ Double values in $[10^{-14},0.1]$. Default value $10^{-6}$.
 \begin{itemize}
 \item ``default'' (default): allocations are done by \Hi in the cpu's memory space;
 \item ``host'':  allocations via Umpire in Umpire's ``HOST'' memory space, typically CPU memory;
-\item ``device'': allocations via Umpire in Umpire's ``DEVICE'' device memory space;
+\item ``device'': allocations via Umpire in Umpire's ``DEVICE'' device memory space; the option is supported only for MDS NLPs and requires the user's model evaluation on the device;
 \item ``um'': allocations via Umpire's unified memory model, know as ``UM''.
 \end{itemize}
 

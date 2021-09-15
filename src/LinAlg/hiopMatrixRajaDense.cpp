@@ -314,17 +314,15 @@ void hiopMatrixRajaDense::copyRowsFrom(
  * @brief Copies rows from a source matrix to this matrix.
  * 
  * @param[in] src_mat - source matrix
- * @param[in] rows_idxs - indices of rows in src_mat to be copied
+ * @param[in] rows_idxs - indices of rows in src_mat to be copied; a device pointer to an array 
+ * of n_rows indeces
  * @param[in] n_rows - number of rows to be copied
  * 
  * @pre `src_mat` and `this` have same number of columns and partitioning.
  * @pre m_local_ == n_rows <= src_mat.m_local_
  * 
- * @todo Maybe add precondition specifying that _rows_idxs_ should be managed
- * by Umpire? Array _rows_idxs_ is allocated in hiopNlpFormulation class.
- * 
- * @todo Document this function better.
  */
+
 void hiopMatrixRajaDense::copyRowsFrom(const hiopMatrix& src_mat, const index_type* rows_idxs, size_type n_rows)
 {
   const hiopMatrixRajaDense& src = dynamic_cast<const hiopMatrixRajaDense&>(src_mat);
@@ -333,16 +331,17 @@ void hiopMatrixRajaDense::copyRowsFrom(const hiopMatrix& src_mat, const index_ty
   assert(n_rows<=src.m_local_);
   assert(n_rows == m_local_);
 
-  // todo //! opt -> copy multiple (consecutive rows at the time -> maybe keep blocks of eq and ineq,
-  //instead of indexes)
-
-  //int i should suffice for dense matrices
-  auto& rm = umpire::ResourceManager::getInstance();
   RAJA::View<double, RAJA::Layout<2>> Mview(this->data_dev_, m_local_, n_local_);
   RAJA::View<const double, RAJA::Layout<2>> Sview(src.data_dev_, src.m_local_, src.n_local_);
+  
   for(int i=0; i<n_rows; ++i)
   {
-    rm.copy(&Mview(i, 0), const_cast<double*>(&Sview(rows_idxs[i], 0)), n_local_ * sizeof(double));
+    //rm.copy(&Mview(i, 0), const_cast<double*>(&Sview(rows_idxs[i], 0)), n_local_ * sizeof(double));
+    RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, n_local_),
+    RAJA_LAMBDA(RAJA::Index_type j)
+    {
+      Mview(i, j) = Sview(rows_idxs[i], j);
+    });
   }
 }
   
@@ -357,8 +356,8 @@ void hiopMatrixRajaDense::copyRowsFrom(const hiopMatrix& src_mat, const index_ty
  * of this matrix.
  * @pre This method should only be used with non-distributed matrices.
  */
-void hiopMatrixRajaDense::copyBlockFromMatrix(const long i_start, const long j_start,
-					  const hiopMatrixDense& srcmat)
+void hiopMatrixRajaDense::
+copyBlockFromMatrix(const long i_start, const long j_start, const hiopMatrixDense& srcmat)
 {
   const auto& src = dynamic_cast<const hiopMatrixRajaDense&>(srcmat);
   assert(n_local_==n_global_ && "this method should be used only in 'serial' mode");

@@ -109,8 +109,8 @@ int main(int argc, char **argv)
   magma_init();
 #endif
 
-  // Set memory space where to create models
-  std::string mem_space = "um";
+  // Set memory space where to create models and perform NLP solve
+  std::string mem_space = "device";
 
   bool selfCheck, one_call_cons;
   bool has_empty_sp_row;
@@ -134,6 +134,7 @@ int main(int argc, char **argv)
     my_nlp = new Ex4(n_sp, n_de, mem_space);
   }
 
+
   hiopNlpMDS nlp(*my_nlp);
 
   nlp.options->SetStringValue("duals_update_type", "linear");
@@ -150,6 +151,7 @@ int main(int argc, char **argv)
   nlp.options->SetNumericValue("tolerance", 1e-5);
 
   hiopAlgFilterIPMNewton solver(&nlp);
+
   status = solver.run();
   obj_value = solver.getObjective();
   
