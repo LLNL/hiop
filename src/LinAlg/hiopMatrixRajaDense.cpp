@@ -295,6 +295,10 @@ void hiopMatrixRajaDense::copyRowsFrom(
   int num_rows,
   int row_dest)
 {
+  if(num_rows==0) {
+    return;
+  } 
+
   const auto& src = dynamic_cast<const hiopMatrixRajaDense&>(srcmat);
 #ifdef HIOP_DEEPCHECKS
   assert(row_dest >= 0);
