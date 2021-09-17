@@ -10,11 +10,11 @@ using index_type = hiop::index_type;
 
 /* Test with bounds and constraints of all types. For some reason this
  *  example is not very well behaved numerically.
- *  min   sum 1/4* { (x_{i}-1)^4 : i=1,...,n}
+ *  min   sum scal*1/4* { (x_{i}-1)^4 : i=1,...,n}
  *  s.t.
- *            4*x_1 + 2*x_2                     == 10
- *        5<= 2*x_1         + x_3
- *        1<= 2*x_1                 + 0.5*x_4   <= 2*n, for i=4,...,n
+ *             scal * 4*x_1 + 2*x_2                     == scal*10
+ *  scal * 5<= scal * 2*x_1         + x_3
+ *  scal * 1<= scal * 2*x_1                 + 0.5*x_i   <= scal*2*n, for i=4,...,n
  *        x_1 free
  *        0.0 <= x_2
  *        1.5 <= x_3 <= 10
