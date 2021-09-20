@@ -51,6 +51,8 @@
 #include <cmath>
 #include <cassert>
 #include <cstdlib>
+#include <limits>
+
 namespace hiop
 {
 
