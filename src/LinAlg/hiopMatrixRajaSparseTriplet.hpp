@@ -197,7 +197,7 @@ public:
   * @pre User must know the nonzero pattern of src and dest matrices. The method assumes 
   * that non-zero patterns does not change between calls and that 'src_gen' is a valid
   *  submatrix of 'this'
-  * @pre: this function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
+  * @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
   */
   virtual void copySubmatrixFrom(const hiopMatrix& src_gen,
                                  const index_type& dest_row_st,
@@ -211,7 +211,7 @@ public:
   * The non-zero elements start from 'dest_nnz_st' will be replaced by the new elements.
   * When `offdiag_only` is set to true, only the off-diagonal part of `src_gen` is copied.
   * 
-  * @pre: this function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
+  * @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
   */
   virtual void copySubmatrixFromTrans(const hiopMatrix& src_gen,
                                       const index_type& dest_row_st,

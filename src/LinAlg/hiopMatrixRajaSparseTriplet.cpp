@@ -412,7 +412,7 @@ void hiopMatrixRajaSparseTriplet::addSubDiagonal(const double& alpha, index_type
 }
 
 /// @brief: set a subdiagonal block, whose diagonal values come from the input vector `vec_d`
-/// @pre: this function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
+/// @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
 void hiopMatrixRajaSparseTriplet::copySubDiagonalFrom(const index_type& start_on_dest_diag,
                                                       const size_type& num_elems,
                                                       const hiopVector& vec_d,
@@ -442,7 +442,7 @@ void hiopMatrixRajaSparseTriplet::copySubDiagonalFrom(const index_type& start_on
 }
 
 /// @brief: set a subdiagonal block, whose diagonal values are set to `c`
-/// @pre: this function does NOT preserve the sorted row/col indices. USE WITH CAUTION!!
+/// @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!!
 void hiopMatrixRajaSparseTriplet::setSubDiagonalTo(const index_type& start_on_dest_diag,
                                                    const size_type& num_elems,
                                                    const double& c,
@@ -966,7 +966,7 @@ hiopMatrixRajaSparseTriplet::allocAndBuildRowStarts() const
  * @pre 'this' has exactly 'n_rows' rows
  * @pre 'src' and 'this' must have same number of columns
  * @pre number of rows in 'src' must be at least the number of rows in 'this'
- * @pre: this function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
+ * @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
  */
 void hiopMatrixRajaSparseTriplet::copyRowsFrom(const hiopMatrix& src_gen,
                                                const index_type* rows_idxs,
@@ -1052,7 +1052,7 @@ void hiopMatrixRajaSparseTriplet::copyRowsFrom(const hiopMatrix& src_gen,
  *
  * @pre 'this' must have exactly, or more than 'n_rows' rows
  * @pre 'this' must have exactly, or more cols than 'src'
- * @pre: this function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
+ * @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
  */
 void hiopMatrixRajaSparseTriplet::copyRowsBlockFrom(const hiopMatrix& src_gen,
                                                     const index_type& rows_src_idx_st,
@@ -1413,8 +1413,8 @@ void hiopMatrixRajaSparseTriplet::set_Jac_FR(const hiopMatrixSparse& Jac_c,
   copyFromDev();
 }
 
-/// @brief copy a submatix from another matrix. 
-/// @pre: this function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
+/// @brief copy a submatrix from another matrix. 
+/// @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
 void hiopMatrixRajaSparseTriplet::copySubmatrixFrom(const hiopMatrix& src_gen,
                                                     const index_type& dest_row_st,
                                                     const index_type& dest_col_st,
@@ -1454,8 +1454,8 @@ void hiopMatrixRajaSparseTriplet::copySubmatrixFrom(const hiopMatrix& src_gen,
   );
 }
 
-/// @brief copy a submatix from a transpose of another matrix. 
-/// @pre: this function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
+/// @brief copy a submatrix from a transpose of another matrix. 
+/// @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
 void hiopMatrixRajaSparseTriplet::copySubmatrixFromTrans(const hiopMatrix& src_gen,
                                                          const index_type& dest_row_st,
                                                          const index_type& dest_col_st,
