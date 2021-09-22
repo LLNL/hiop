@@ -148,8 +148,10 @@ public:
   virtual void addMatrix(double alpha, const hiopMatrix& X) = 0;
 
   /* block of W += alpha*transpose(this) */
-  virtual void transAddToSymDenseMatrixUpperTriangle(
-    int row_dest_start, int col_dest_start, double alpha, hiopMatrixDense& W) const = 0;
+  virtual void transAddToSymDenseMatrixUpperTriangle(int row_dest_start, 
+                                                     int col_dest_start, 
+                                                     double alpha, 
+                                                     hiopMatrixDense& W) const = 0;
   virtual void addUpperTriangleToSymDenseMatrixUpperTriangle(
     int diag_start, double alpha, hiopMatrixDense& W) const = 0;
 
@@ -175,8 +177,12 @@ public:
    * the (strictly) lower triangular  elements (these are ignored later on since only the upper
    * triangular part of W will be accessed)
    */
-  virtual void addMDinvNtransToSymDeMatUTri(int row_dest_start, int col_dest_start,
-    const double& alpha, const hiopVector& D, const hiopMatrixSparse& N, hiopMatrixDense& W) const = 0;
+  virtual void addMDinvNtransToSymDeMatUTri(int row_dest_start, 
+                                            int col_dest_start,
+                                            const double& alpha, 
+                                            const hiopVector& D, 
+                                            const hiopMatrixSparse& N, 
+                                            hiopMatrixDense& W) const = 0;
 
   /**
    * @brief Copy 'n_rows' rows from matrix 'src_gen', started from 'rows_src_idx_st', to the rows started from 'B_rows_st' in 'this'.
@@ -190,9 +196,10 @@ public:
    * @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
    */
   virtual void copyRowsBlockFrom(const hiopMatrix& src_gen,
-                                         const index_type& rows_src_idx_st, const size_type& n_rows,
-                                         const index_type& rows_dest_idx_st, const size_type& dest_nnz_st
-                                         ) = 0;
+                                 const index_type& rows_src_idx_st, 
+                                 const size_type& n_rows,
+                                 const index_type& rows_dest_idx_st, 
+                                 const size_type& dest_nnz_st) = 0;
 
   /**
   * @brief Copy matrix 'src_gen', into 'this' as a submatrix from corner 'dest_row_st' and 'dest_col_st'
@@ -234,8 +241,10 @@ public:
    *
    */
   virtual void copyDiagMatrixToSubblock(const double& src_val,
-                                        const index_type& row_dest_st, const index_type& col_dest_st,
-                                        const size_type& dest_nnz_st, const int &nnz_to_copy) = 0;
+                                        const index_type& row_dest_st, 
+                                        const index_type& col_dest_st,
+                                        const size_type& dest_nnz_st, 
+                                        const int &nnz_to_copy) = 0;
 
   virtual double max_abs_value() = 0;
 
@@ -246,15 +255,21 @@ public:
   virtual bool isfinite() const = 0;
 
   // virtual void print(int maxRows=-1, int maxCols=-1, int rank=-1) const;
-  virtual void print(FILE* f = NULL, const char* msg = NULL, int maxRows = -1, int maxCols = -1,
-    int rank = -1) const = 0;
+  virtual void print(FILE* f = NULL, 
+                     const char* msg = NULL, 
+                     int maxRows = -1, 
+                     int maxCols = -1,
+                     int rank = -1) const = 0;
 
   /* extract subdiagonal from 'this' (source) and adds the entries to 'vec_dest' starting at
    * index 'vec_start'. If num_elems>=0, 'num_elems' are copied; otherwise copies as many as
    * are available in 'vec_dest' starting at 'vec_start'
    */
-  virtual void startingAtAddSubDiagonalToStartingAt(int diag_src_start, const double& alpha,
-					    hiopVector& vec_dest, int vec_start, int num_elems=-1) const = 0;
+  virtual void startingAtAddSubDiagonalToStartingAt(int diag_src_start, 
+                                                    const double& alpha,
+                                                    hiopVector& vec_dest, 
+                                                    int vec_start, 
+                                                    int num_elems=-1) const = 0;
 
 
   virtual hiopMatrixSparse* alloc_clone() const = 0;
