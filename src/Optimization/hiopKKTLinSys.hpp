@@ -449,6 +449,7 @@ public:
   virtual bool test_direction(const hiopIterate* dir, hiopMatrix* Hess)
   {
     assert(false && "not implemented yet!");
+    return false;
   }
 
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction);
