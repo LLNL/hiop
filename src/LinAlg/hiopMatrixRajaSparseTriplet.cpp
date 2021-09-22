@@ -412,13 +412,15 @@ void hiopMatrixRajaSparseTriplet::addSubDiagonal(const double& alpha, index_type
   assert(false && "not needed");
 }
 
+/// @brief: set a subdiagonal block, whose diagonal values come from the input vector `vec_d`
+/// @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
 void hiopMatrixRajaSparseTriplet::copySubDiagonalFrom(const index_type& start_on_dest_diag,
                                                       const size_type& num_elems,
-                                                      const hiopVector& d_,
+                                                      const hiopVector& vec_d,
                                                       const index_type& start_on_nnz_idx,
                                                       double scal)
 {
-  const hiopVectorRajaPar& vd = dynamic_cast<const hiopVectorRajaPar&>(d_);
+  const hiopVectorRajaPar& vd = dynamic_cast<const hiopVectorRajaPar&>(vec_d);
   assert(num_elems<=vd.get_size());
   assert(start_on_dest_diag>=0 && start_on_dest_diag+num_elems<=this->nrows_);
   const double* v = vd.local_data_const();
@@ -440,6 +442,8 @@ void hiopMatrixRajaSparseTriplet::copySubDiagonalFrom(const index_type& start_on
   );
 }
 
+/// @brief: set a subdiagonal block, whose diagonal values are set to `c`
+/// @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!!
 void hiopMatrixRajaSparseTriplet::setSubDiagonalTo(const index_type& start_on_dest_diag,
                                                    const size_type& num_elems,
                                                    const double& c,
@@ -965,6 +969,7 @@ hiopMatrixRajaSparseTriplet::allocAndBuildRowStarts() const
  * @pre 'this' has exactly 'n_rows' rows
  * @pre 'src' and 'this' must have same number of columns
  * @pre number of rows in 'src' must be at least the number of rows in 'this'
+ * @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
  */
 void hiopMatrixRajaSparseTriplet::copyRowsFrom(const hiopMatrix& src_gen,
                                                const index_type* rows_idxs,
@@ -1050,6 +1055,7 @@ void hiopMatrixRajaSparseTriplet::copyRowsFrom(const hiopMatrix& src_gen,
  *
  * @pre 'this' must have exactly, or more than 'n_rows' rows
  * @pre 'this' must have exactly, or more cols than 'src'
+ * @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
  */
 void hiopMatrixRajaSparseTriplet::copyRowsBlockFrom(const hiopMatrix& src_gen,
                                                     const index_type& rows_src_idx_st,
@@ -1136,16 +1142,6 @@ void hiopMatrixRajaSparseTriplet::copyRowsBlockFrom(const hiopMatrix& src_gen,
   );
 //  delete [] next_row_nnz;
 }
-
-
-
-
-
-
-
-
-
-
 
 /// @brief Prints the contents of this function to a file.
 void hiopMatrixRajaSparseTriplet::print(FILE* file,
@@ -1420,6 +1416,89 @@ void hiopMatrixRajaSparseTriplet::set_Jac_FR(const hiopMatrixSparse& Jac_c,
   copyFromDev();
 }
 
+/// @brief copy a submatrix from another matrix. 
+/// @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
+void hiopMatrixRajaSparseTriplet::copySubmatrixFrom(const hiopMatrix& src_gen,
+                                                    const index_type& dest_row_st,
+                                                    const index_type& dest_col_st,
+                                                    const size_type& dest_nnz_st,
+                                                    const bool offdiag_only)
+{
+  const hiopMatrixRajaSparseTriplet& src = dynamic_cast<const hiopMatrixRajaSparseTriplet&>(src_gen);
+  auto m_rows = src.m();
+  auto n_cols = src.n();
+
+  assert(this->numberOfNonzeros() >= src.numberOfNonzeros());
+  assert(n_cols + dest_col_st <= this->n() );
+  assert(m_rows + dest_row_st <= this->m());
+  assert(dest_nnz_st + src.numberOfNonzeros() <= this->numberOfNonzeros());
+
+  const index_type* src_iRow = src.i_row();
+  const index_type* src_jCol = src.j_col();
+  const double* src_val = src.M();
+  size_type src_nnz = src.numberOfNonzeros();
+
+  // local copy of member variable/function, for RAJA access
+  index_type* iRow = iRow_;
+  index_type* jCol = jCol_;
+  double* values = values_;
+
+  RAJA::forall<hiop_raja_exec>(
+    RAJA::RangeSegment(0, src_nnz),
+    RAJA_LAMBDA(RAJA::Index_type src_k)
+    {
+      if(!offdiag_only || src_iRow[src_k]!=src_jCol[src_k]) {
+        index_type dest_k = dest_nnz_st + src_k;
+        iRow[dest_k] = dest_row_st + src_iRow[src_k];
+        jCol[dest_k] = dest_col_st + src_jCol[src_k];
+        values[dest_k] = src_val[src_k];
+      }
+    }
+  );
+}
+
+/// @brief copy a submatrix from a transpose of another matrix. 
+/// @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
+void hiopMatrixRajaSparseTriplet::copySubmatrixFromTrans(const hiopMatrix& src_gen,
+                                                         const index_type& dest_row_st,
+                                                         const index_type& dest_col_st,
+                                                         const size_type& dest_nnz_st,
+                                                         const bool offdiag_only)
+{
+  const hiopMatrixRajaSparseTriplet& src = dynamic_cast<const hiopMatrixRajaSparseTriplet&>(src_gen);
+  auto m_rows = src.m();
+  auto n_cols = src.n();
+
+  assert(this->numberOfNonzeros() >= src.numberOfNonzeros());
+  assert(n_cols + dest_col_st <= this->n() );
+  assert(m_rows + dest_row_st <= this->m());
+  assert(dest_nnz_st + src.numberOfNonzeros() <= this->numberOfNonzeros());
+
+  const index_type* src_iRow = src.j_col();
+  const index_type* src_jCol = src.i_row();
+  const double* src_val = src.M();
+  size_type src_nnz = src.numberOfNonzeros();
+
+  // local copy of member variable/function, for RAJA access
+  index_type* iRow = iRow_;
+  index_type* jCol = jCol_;
+  double* values = values_;
+
+  RAJA::forall<hiop_raja_exec>(
+    RAJA::RangeSegment(0, src_nnz),
+    RAJA_LAMBDA(RAJA::Index_type src_k)
+    {
+      if(!offdiag_only || src_iRow[src_k]!=src_jCol[src_k]) {
+        index_type dest_k = dest_nnz_st + src_k;  
+        iRow[dest_k] = dest_row_st + src_iRow[src_k];
+        jCol[dest_k] = dest_col_st + src_jCol[src_k];
+        values[dest_k] = src_val[src_k];
+      }
+    }
+  );
+
+}
+
 /**********************************************************************************
   * Sparse symmetric matrix in triplet format. Only the UPPER triangle is stored
   **********************************************************************************/
@@ -1583,7 +1662,6 @@ startingAtAddSubDiagonalToStartingAt(int diag_src_start,
       }
     });
 }
-
 
 size_type hiopMatrixRajaSymSparseTriplet::numberOfOffDiagNonzeros() const 
 {
