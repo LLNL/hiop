@@ -4,17 +4,22 @@ The sparse NLP formulation supports sparse optimization problems and requires He
 &&&&\min_{x\in\mathbb{R}^n} & \hspace{0.5cm} f(x) &&&& \label{spobj}\\
 &&&&\textnormal{s.t.} &\hspace{0.5cm}  c(x)=c_E &[y_c]&&&\\
 &&[v_l]&&& \hspace{0.5cm} d_l \leq d(x) \leq d_u  &[v_u]&&&\label{spineq} \\
-&&[z_u]&&& \hspace{0.5cm} x_l \leq x \leq x_u & [z_u] &&&\label{spbounds}
+&&[z_l]&&& \hspace{0.5cm} x_l \leq x \leq x_u & [z_u] &&&\label{spbounds}
 \end{align}
 Here $f:\mathbb{R}^n\rightarrow\mathbb{R}$, $c:\mathbb{R}^n\rightarrow\mathbb{R}^{m_E}$, $d:\mathbb{R}^n\rightarrow\mathbb{R}^{m_I}$. The bounds appearing in the inequality constraints~\eqref{ineq} are assumed to be $d^l\in\mathbb{R}^{m_I}\cup\{-\infty\}$, $d^u\in\mathbb{R}^{m_I}\cup\{+\infty\}$, $d_i^l < d_i^u$, and at least of one of $d_i^l$ and $d_i^u$ are finite for all $i\in\{1,\ldots,m_I\}$. The bounds in~\eqref{bounds} are such that $x^l\in\mathbb{R}^{n}\cup\{-\infty\}$, $x^u\in\mathbb{R}^{n}\cup\{+\infty\}$, and $x_i^l < x_i^u$, $i\in\{1,\ldots,n\}$. The quantities insides brackets are the Lagrange multipliers of the constraints. Whenever a bound is infinite, the corresponding multiplier is by convention zero.
+Internally, a slack variable $s$ is introduced and the inequality constraints~\eqref{spineq} are replaced by additional equality constraints and boundary constraints:
+\begin{align}
+&&&&& \hspace{0.5cm} d(x) = s &[y_d]&&& \\
+&&[v_l]&&& \hspace{0.5cm} d_l \leq s \leq d_u  &[v_u]&&&\label{spineq_s} 
+\end{align}
 
-The following quantities are required by \Hi:
+As a result, \Hi requires the user to provide the following quantities:
 \begin{itemize}
 \item[D1] objective and constraint functions $f(x)$, $c(x)$, $d(x)$;
 \item[D2] the first-order derivatives of the above: $\nabla f(x)$, $Jc(x)$, $Jd(x)$;
 \item[D3] The Hessian of the Lagrangian
   \begin{align}
-\nabla^2 L(x)& = \lambda_0 \nabla^2 f(x) + \sum_{i=1}^{m_E} \lambda_i^E \nabla^2 c_i(x) + \sum_{i=1}^{m_I} \lambda_i^I \nabla^2 d_i(x).\label{spHess}
+\nabla^2 L(x)& = \nabla^2 f(x) + \sum_{i=1}^{m_E} y_{c,i} \nabla^2 c_i(x) + \sum_{i=1}^{m_I} y_{d,i} \nabla^2 d_i(x).\label{spHess}
 \end{align}
 \item[D4] the simple bounds $x_l$ and $x_u$, the inequalities bounds: $d_l$ and $d_u$, and the right-hand size of the equality constraints $c_E$.
 \end{itemize}
@@ -84,9 +89,10 @@ bool eval_grad_f(const size_type& n,
 \begin{lstlisting} 
 bool 
 eval_Jac_cons(const size_type& n, const size_type& m, 
-			     const size_type& num_cons, const index_type* idx_cons,  
-			     const double* x, bool new_x,
-			     const size_type& nnzJacS, index_type* iJacS, index_type* jJacS, double* MJacS);
+              const size_type& num_cons, const index_type* idx_cons,  
+              const double* x, bool new_x,
+              const size_type& nnzJacS, index_type* iJacS, index_type* jJacS,
+              double* MJacS);
 \end{lstlisting} 
 
 \noindent Implement this method to provide the Jacobian of a subset of the  constraints $c(x)$ and/or $d(x)$ in \texttt{Jac}; this subset is specified by the array \texttt{idx\_cons}. The last three arguments should be used to specify the Jacobian information in sparse triplet format.  \texttt{iJacS} and \texttt{jJacS} needs to be jointly sorted: by indexes in \texttt{iJacS} and, for equal (row) indexes in \texttt{iJacS}, by indexes in \texttt{jJacS}.
@@ -102,9 +108,11 @@ Notes for implementer of this method:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{lstlisting}
-bool eval_Jac_cons(const size_type& n, const size_type& m, 
-			          const double* x, bool new_x,
-			          const size_type& nnzJacS, index_type* iJacS, index_type* jJacS, double* MJacS);
+bool
+eval_Jac_cons(const size_type& n, const size_type& m, 
+              const double* x, bool new_x,
+              const size_type& nnzJacS, index_type* iJacS, index_type* jJacS,
+              double* MJacS);
 \end{lstlisting} 
 
 \noindent Evaluates the Jacobian of equality and inequality constraints \textit{in one call}. 
@@ -134,11 +142,13 @@ The main difference from the above \texttt{eval\_Jac\_cons} is that the implemen
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{lstlisting} 
-bool eval_Hess_Lagr(const size_type& n, const size_type& m, 
-			      const double* x, bool new_x, const double& obj_factor,
-			      const double* lambda, bool new_lambda,
-			      const size_type& nsparse, const size_type& ndense, 
-			      const size_type& nnzHSS, index_type* iHSS, index_type* jHSS, double* MHSS)
+bool
+eval_Hess_Lagr(const size_type& n, const size_type& m, 
+               const double* x, bool new_x, const double& obj_factor,
+               const double* lambda, bool new_lambda,
+               const size_type& nsparse, const size_type& ndense, 
+               const size_type& nnzHSS, index_type* iHSS, index_type* jHSS,
+               double* MHSS)
 \end{lstlisting} 
 
 \noindent Evaluates the Hessian of the Lagrangian function as a sparse matrix in triplet format. 
