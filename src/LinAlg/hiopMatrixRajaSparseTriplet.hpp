@@ -1,11 +1,10 @@
 // Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
-// Written by Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp
 // is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause).
-// Please also read “Additional BSD Notice” below.
+// Please also read "Additional BSD Notice" below.
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -49,6 +48,8 @@
 /**
  * @file hiopMatrixRajaSparseTriplet.hpp
  *
+ * @author Nai-Yuan Chiang <chiang7@lnnl.gov>, LNNL
+ * @author Cosmin G. Petra <petra1@lnnl.gov>, LNNL
  * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
  * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
  * @author Cameron Rutherford <robert.rutherford@pnnl.gov>, PNNL
@@ -118,11 +119,11 @@ public:
   }
 
   /* add to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements of
-  * 'd_' (source) starting at index 'start_on_src_vec'. The number of elements added is 'num_elems', scaled by 'scal'
+  * 'vec_d' (source) starting at index 'start_on_src_vec'. The number of elements added is 'num_elems', scaled by 'scal'
   */
   virtual void copySubDiagonalFrom(const index_type& start_on_dest_diag,
                                    const size_type& num_elems,
-                                   const hiopVector& d_,
+                                   const hiopVector& vec_d,
                                    const index_type& start_on_nnz_idx,
                                    double scal);
 
@@ -197,18 +198,27 @@ public:
   * @pre User must know the nonzero pattern of src and dest matrices. The method assumes 
   * that non-zero patterns does not change between calls and that 'src_gen' is a valid
   *  submatrix of 'this'
+  * @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
   */
   virtual void copySubmatrixFrom(const hiopMatrix& src_gen,
                                  const index_type& dest_row_st,
                                  const index_type& dest_col_st,
                                  const size_type& dest_nnz_st,
-                                 const bool offdiag_only = false) {assert(0 && "not implemented");}
-    
+                                 const bool offdiag_only = false);
+
+  /**
+  * @brief Copy the transpose of matrix 'src_gen', into 'this' as a submatrix from corner 
+  * 'dest_row_st' and 'dest_col_st'.
+  * The non-zero elements start from 'dest_nnz_st' will be replaced by the new elements.
+  * When `offdiag_only` is set to true, only the off-diagonal part of `src_gen` is copied.
+  * 
+  * @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
+  */
   virtual void copySubmatrixFromTrans(const hiopMatrix& src_gen,
                                       const index_type& dest_row_st,
                                       const index_type& dest_col_st,
                                       const size_type& dest_nnz_st,
-                                      const bool offdiag_only = false) {assert(0 && "not implemented");}
+                                      const bool offdiag_only = false);
 
   /**
   * @brief Copy the selected cols/rows of a diagonal matrix (a constant 'scalar' times identity),

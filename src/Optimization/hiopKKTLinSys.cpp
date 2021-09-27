@@ -287,10 +287,11 @@ bool hiopKKTLinSysCurvCheck::factorize()
   // factorization + inertia correction if needed
   const size_t max_refactorizaion = 10;
   size_t num_refactorizaion = 0;
+  int continue_re_fact;
 
   double delta_wx, delta_wd, delta_cc, delta_cd;
   if(!perturb_calc_->compute_initial_deltas(delta_wx, delta_wd, delta_cc, delta_cd)) {
-    nlp_->log->printf(hovWarning, "linsys: IC perturbation on new linsys failed.\n");
+    nlp_->log->printf(hovWarning, "linsys: Regularization perturbation on new linsys failed.\n");
     return false;
   }
 
@@ -301,9 +302,8 @@ bool hiopKKTLinSysCurvCheck::factorize()
             delta_wx, delta_cc, num_refactorizaion);
 
     // the update of the linear system, including IC perturbations
-    this->updateMatrix(delta_wx, delta_wd, delta_cc, delta_cd);
+    this->build_kkt_matrix(delta_wx, delta_wd, delta_cc, delta_cd);
 
-    nlp_->runStats.linsolv.start_linsolve();
     nlp_->runStats.kkt.tmUpdateInnerFact.start();
 
     // factorization
@@ -311,13 +311,11 @@ bool hiopKKTLinSysCurvCheck::factorize()
 
     nlp_->runStats.kkt.tmUpdateInnerFact.stop();
 
-    int continue_re_fact = fact_acceptor_->requireReFactorization(*nlp_, n_neg_eig, delta_wx, delta_wd, delta_cc, delta_cd);
+    continue_re_fact = fact_acceptor_->requireReFactorization(*nlp_, n_neg_eig, delta_wx, delta_wd, delta_cc, delta_cd);
     
-    if(-1==continue_re_fact)
-    {
+    if(-1==continue_re_fact) {
       return false;
-    }else if(0==continue_re_fact)
-    {
+    } else if(0==continue_re_fact) {
       break;
     }
 
@@ -335,7 +333,99 @@ bool hiopKKTLinSysCurvCheck::factorize()
   return true;
 }
 
+bool hiopKKTLinSysCurvCheck::factorize_inertia_free()
+{
+  assert(nlp_);
 
+  int non_singular_mat = 1;
+  int continue_re_fact;
+
+  double delta_wx, delta_wd, delta_cc, delta_cd;
+  perturb_calc_->get_curr_perturbations(delta_wx, delta_wd, delta_cc, delta_cd);
+
+#ifdef HIOP_DEEPCHECKS
+    this->build_kkt_matrix(delta_wx, delta_wd, delta_cc, delta_cd);
+    non_singular_mat = factorizeWithCurvCheck();
+    assert(non_singular_mat>=0);
+#endif
+  continue_re_fact = fact_acceptor_->requireReFactorization(*nlp_, non_singular_mat, delta_wx, delta_wd, delta_cc, delta_cd, true);
+
+  assert(delta_wx == delta_wd && "something went wrong with IC");
+  assert(delta_cc == delta_cd && "something went wrong with IC");
+  nlp_->log->printf(hovScalars, "linsys: delta_w=%12.5e delta_c=%12.5e \n", delta_wx, delta_cc);
+
+  // the update of the linear system, including IC perturbations
+  this->build_kkt_matrix(delta_wx, delta_wd, delta_cc, delta_cd);
+
+  nlp_->runStats.kkt.tmUpdateInnerFact.start();
+
+  // factorization
+  int n_neg_eig = factorizeWithCurvCheck();
+
+  nlp_->runStats.kkt.tmUpdateInnerFact.stop();
+
+  return true;
+}
+
+
+////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+// hiopKKTLinSysCompressed
+////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+bool hiopKKTLinSysCompressed::test_direction(const hiopIterate* dir, hiopMatrix* Hess)
+{
+  bool retval;
+  nlp_->runStats.tmSolverInternal.start();
+
+  if(!x_wrk_) {
+    x_wrk_ = nlp_->alloc_primal_vec();
+    x_wrk_->setToZero();
+  }
+  if(!d_wrk_) {
+    d_wrk_ = nlp_->alloc_dual_ineq_vec();
+    d_wrk_->setToZero();
+  }
+
+  hiopVector* sol_x = dir->get_x();
+  hiopVector* sol_d = dir->get_d();
+  double dWd = 0;
+  double xs_nrmsq = 0.0;
+  double dbl_wrk;
+  double delta_wx, delta_wd, delta_cc, delta_cd;
+  perturb_calc_->get_curr_perturbations(delta_wx, delta_wd, delta_cc, delta_cd);
+
+  /* compute xWx = x(H+Dx_)x (for primal var [x,d] */
+  Hess_->timesVec(0.0, *x_wrk_, 1.0, *sol_x);
+  dWd += x_wrk_->dotProductWith(*sol_x);
+  
+  x_wrk_->copyFrom(*sol_x);
+  x_wrk_->componentMult(*Dx_);
+  x_wrk_->axpy(delta_wx, *sol_x);
+  dWd += x_wrk_->dotProductWith(*sol_x);
+
+  d_wrk_->copyFrom(*sol_d);
+  d_wrk_->componentMult(*Dd_);
+  d_wrk_->axpy(delta_wd, *sol_d);
+  dWd += d_wrk_->dotProductWith(*sol_d);
+
+  /* compute rhs for the dWd test */
+  dbl_wrk = sol_x->twonorm();
+  xs_nrmsq += dbl_wrk*dbl_wrk;
+  dbl_wrk = sol_d->twonorm();
+  xs_nrmsq += dbl_wrk*dbl_wrk;
+
+  if(dWd < xs_nrmsq * nlp_->options->GetNumeric("neg_curv_test_fact")) {
+    // have negative curvature. Add regularization and re-factorize the matrix
+    retval = false;
+  } else {
+    // have positive curvature. Accept this factoraizaiton and direction.
+    retval = true;
+  }
+
+  nlp_->runStats.tmSolverInternal.stop();
+  return retval;
+}
 
 ////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
@@ -393,8 +483,14 @@ bool hiopKKTLinSysCompressedXYcYd::update(const hiopIterate* iter,
   Dx_->axdzpy_w_pattern(1.0, *iter_->zu, *iter_->sxu, nlp_->get_ixu());
   nlp_->log->write("Dx in KKT", *Dx_, hovMatrices);
 
-  // Dd=(Sdl)^{-1}Vu + (Sdu)^{-1}Vu is computed in the IC loop since we need to
-  // add delta_wd and then invert
+  // Dd=(Sdl)^{-1}Vu + (Sdu)^{-1}Vu
+  Dd_->setToZero();
+  Dd_->axdzpy_w_pattern(1.0, *iter_->vl, *iter_->sdl, nlp_->get_idl());
+  Dd_->axdzpy_w_pattern(1.0, *iter_->vu, *iter_->sdu, nlp_->get_idu());
+  nlp_->log->write("Dd in KKT", *Dd_, hovMatrices);
+#ifdef HIOP_DEEPCHECKS
+    assert(true==Dd_->allPositive());
+#endif
   nlp_->runStats.kkt.tmUpdateInit.stop();
 
   //factorization + inertia correction if needed
@@ -403,7 +499,6 @@ bool hiopKKTLinSysCompressedXYcYd::update(const hiopIterate* iter,
   nlp_->runStats.tmSolverInternal.stop();
   return retval;
 }
-
 
 bool hiopKKTLinSysCompressedXYcYd::computeDirections(const hiopResidual* resid,
                                                      hiopIterate* dir)
@@ -580,15 +675,15 @@ errorCompressedLinsys(const hiopVector& rx, const hiopVector& ryc, const hiopVec
 hiopKKTLinSysCompressedXDYcYd::hiopKKTLinSysCompressedXDYcYd(hiopNlpFormulation* nlp)
   : hiopKKTLinSysCompressed(nlp)
 {
-  Dd_ = dynamic_cast<hiopVector*>(nlp_->alloc_dual_ineq_vec());
-  assert(Dd_ != NULL);
+//  Dd_ = dynamic_cast<hiopVector*>(nlp_->alloc_dual_ineq_vec());
+//  assert(Dd_ != NULL);
 
   rd_tilde_ = Dd_->alloc_clone();
 }
 
 hiopKKTLinSysCompressedXDYcYd::~hiopKKTLinSysCompressedXDYcYd()
 {
-  delete Dd_;
+//  delete Dd_;
   delete rd_tilde_;
 }
 
@@ -846,6 +941,7 @@ update(const hiopIterate* iter,
 #ifdef HIOP_DEEPCHECKS
   assert(true==Dd_inv_->allPositive());
 #endif
+  Dd_->copyFrom(*Dd_inv_);
   Dd_inv_->invert();
 
   nlp_->runStats.tmSolverInternal.stop();

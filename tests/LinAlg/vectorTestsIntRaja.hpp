@@ -47,7 +47,7 @@
 // product endorsement purposes.
 
 /**
- * @file vectorTestsIntSeq.hpp
+ * @file vectorTestsIntRaja.hpp
  *
  * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
  *
@@ -73,6 +73,7 @@ public:
 private:
   virtual int getLocalElement(hiop::hiopVectorInt*, int) const;
   virtual void setLocalElement(hiop::hiopVectorInt*, int, int) const;
+  virtual void setLocalElement(hiop::hiopVectorInt*, int) const;
 };
 
 }} // namespace hiop::tests

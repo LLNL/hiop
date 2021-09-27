@@ -54,6 +54,11 @@
  */
 
 #include "hiopVectorIntRaja.hpp"
+#include <umpire/Allocator.hpp>
+#include <umpire/ResourceManager.hpp>
+
+#include <RAJA/RAJA.hpp>
+#include "hiop_raja_defs.hpp"
 
 namespace hiop
 {
@@ -113,6 +118,23 @@ void hiopVectorIntRaja::copy_from(const index_type* v_local)
     index_type* data = const_cast<index_type*>(v_local);
     resmgr.copy(buf_, data, sz_*sizeof(index_type));
   }
+}
+
+void hiopVectorIntRaja::set_to_zero()
+{
+  auto& rm = umpire::ResourceManager::getInstance();
+  rm.memset(buf_, 0);
+}
+
+/// Set all vector elements to constant c
+void hiopVectorIntRaja::set_to_constant(const index_type c)
+{
+  index_type* data = buf_;
+  RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, sz_),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      data[i] = c;
+    });
 }
 
 } // namespace hiop

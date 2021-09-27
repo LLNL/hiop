@@ -129,13 +129,8 @@ public:
     const int x_val = 1;
     const int y_val = 1;
 
-    for(int i=0; i<x.size(); i++) {
-      setLocalElement(&x, i, x_val);
-    }
-    
-    for(int i=0; i<y.size(); i++) {
-      setLocalElement(&y, i, y_val);
-    }
+    setLocalElement(&x, x_val);
+    setLocalElement(&y, y_val);
     
     x.copy_from(y.local_data_const());
 
@@ -152,6 +147,7 @@ public:
 private:
   virtual int getLocalElement(hiop::hiopVectorInt*, int) const = 0;
   virtual void setLocalElement(hiop::hiopVectorInt*, int, int) const = 0;
+  virtual void setLocalElement(hiop::hiopVectorInt*, int) const = 0;
 };
 
 }} // namespace hiop::tests

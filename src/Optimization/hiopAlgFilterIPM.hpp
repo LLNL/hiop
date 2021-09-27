@@ -291,11 +291,23 @@ public:
 
   virtual hiopSolveStatus run();
 
-private:
+protected:
   virtual void outputIteration(int lsStatus, int lsNum, int use_soc = 0, int use_fr = 0);
   virtual hiopKKTLinSys* decideAndCreateLinearSystem(hiopNlpFormulation* nlp);
   /// @brief get the method to decide if a factorization is acceptable or not
   virtual hiopFactAcceptor* decideAndCreateFactAcceptor(hiopPDPerturbation* p, hiopNlpFormulation* nlp);
+
+  virtual bool compute_search_direction(hiopKKTLinSys* kkt,
+                                        bool& linsol_safe_mode_on,
+                                        int& linsol_safe_mode_lastiter,
+                                        const bool linsol_forcequick,
+                                        const int iter_num);
+
+  virtual bool compute_search_direction_inertia_free(hiopKKTLinSys* kkt,
+                                                     bool& linsol_safe_mode_on,
+                                                     int& linsol_safe_mode_lastiter,
+                                                     const bool linsol_forcequick,
+                                                     const int iter_num);
 
   hiopPDPerturbation pd_perturb_;
   hiopFactAcceptor* fact_acceptor_;

@@ -814,29 +814,34 @@ public:
    * specified by index array `row_idxs`.
    *
    */
-  int matrixCopyRowsFromSelect(
-      hiopMatrixDense& dst,
-      hiopMatrixDense& src,
-      const int rank)
+  int matrixCopyRowsFromSelect(hiopMatrixDense& dst,
+                               hiopMatrixDense& src,
+                               hiopVectorInt& rows_idxs,
+                               const int rank)
   {
     assert(dst.n() == src.n());
     assert(getNumLocCols(&dst) == getNumLocCols(&src));
     const real_type dst_val = one;
     const real_type src_val = two;
     const local_ordinal_type num_rows_to_copy = getNumLocRows(&dst);
+    assert(num_rows_to_copy == rows_idxs.size());
     assert(num_rows_to_copy <= src.m());
 
     // Test copying continuous rows from matrix
     dst.setToConstant(dst_val);
     src.setToConstant(src_val);
-    global_ordinal_type *row_idxs = new global_ordinal_type[num_rows_to_copy];
-    for (global_ordinal_type i = 0; i < num_rows_to_copy; ++i)
-      row_idxs[i] = i;
-    row_idxs[0] = num_rows_to_copy - 1;
-    row_idxs[num_rows_to_copy - 1] = 0;
+
+    index_type* rows_idxs_arr = rows_idxs.local_data_host();
+    for (index_type i = 0; i < num_rows_to_copy; ++i) {
+      rows_idxs_arr[i] = i;
+    }
+    rows_idxs_arr[0] = num_rows_to_copy - 1;
+    rows_idxs_arr[num_rows_to_copy - 1] = 0;
+    rows_idxs.copy_to_dev();
+
     setLocalRow(&src, num_rows_to_copy - 1, zero);
 
-    dst.copyRowsFrom(src, row_idxs, num_rows_to_copy);
+    dst.copyRowsFrom(src, rows_idxs.local_data(), num_rows_to_copy);
 
     int fail = verifyAnswer(&dst,
       [=](local_ordinal_type i, local_ordinal_type j) -> real_type
@@ -845,7 +850,6 @@ public:
         return i == 0 ? zero : src_val;
       });
 
-    delete [] row_idxs;
     printMessage(fail, __func__, rank);
     return reduceReturn(fail, &dst);
   }

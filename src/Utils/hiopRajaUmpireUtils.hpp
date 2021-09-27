@@ -5,7 +5,7 @@
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
 // is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause). 
-// Please also read “Additional BSD Notice” below.
+// Please also read "Additional BSD Notice" below.
 //
 // Redistribution and use in source and binary forms, with or without modification, 
 // are permitted provided that the following conditions are met:
@@ -47,46 +47,51 @@
 // product endorsement purposes.
 
 /**
- * @file hiopVectorIntSeq.cpp
- *
- * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
+ * @file hiopRajaUmpireUtils.hpp
+ * 
+ * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
  *
  */
 
-#include "hiopVectorIntSeq.hpp"
-#include <cstring> //for memcpy
+#ifndef HIOP_RAJA_UMPIRE_UTILS
+#define HIOP_RAJA_UMPIRE_UTILS
 
-namespace hiop
-{
+#pragma once
 
-hiopVectorIntSeq::hiopVectorIntSeq(size_type sz) : hiopVectorInt(sz)
-{
-  buf_ = new index_type[sz_];
-}
+//Umpire is always enabled with RAJA
+#if defined(HIOP_USE_RAJA)
 
-hiopVectorIntSeq::~hiopVectorIntSeq()
-{
-  delete[] buf_;
-}
+#include <string>
+#include <sstream>  
 
-void hiopVectorIntSeq::copy_from(const index_type* v_local)
-{
-  if(v_local)
-    memcpy(buf_, v_local, sz_*sizeof(index_type));
-}
+#include <umpire/Allocator.hpp>
+#include <umpire/ResourceManager.hpp>
 
-void hiopVectorIntSeq::set_to_zero()
-{
-  for(index_type i=0; i<sz_; ++i) {
-    buf_[i] = 0;
+#include <RAJA/RAJA.hpp>
+
+namespace hiop {
+  /** 
+   *  Returns a string with information Umpire keeps about the address passed as the argument, 
+   *  or the "__not_managed_by_umpire__" if Umpire does not have a record of the address.
+   *
+   */
+  std::string get_umpire_mem_address_info(void* address)
+  {
+    auto& rm = umpire::ResourceManager::getInstance();
+    if(rm.hasAllocator(address)) {
+      auto found_allocator = rm.getAllocator(address);
+      std::stringstream ss;
+      ss << "Allocated on '" << found_allocator.getName() << "'   ";
+      ss << "Platform " << static_cast<int>(found_allocator.getPlatform()) << "   "; 
+      ss << "Size [" << found_allocator.getSize(address) << "]";
+      return ss.str();
+    } else {
+      return std::string("__not_managed_by_Umpire__");
+    }
+
   }
-}
 
-void hiopVectorIntSeq::set_to_constant(const index_type c)
-{
-  for(index_type i=0; i<sz_; ++i) {
-    buf_[i] = c;
-  }
-}
 
+#endif // HIOP_USE_RAJA
+#endif // HIOP_RAJA_UMPIRE_UTILS
 } // namespace hiop
