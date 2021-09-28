@@ -1552,7 +1552,6 @@ void hiopMatrixRajaSparseTriplet::copyDiagMatrixToSubblock_w_pattern(const hiopV
   const hiopVectorRajaPar& selected = dynamic_cast<const hiopVectorRajaPar&>(ix);
   const hiopVectorRajaPar& xx = dynamic_cast<const hiopVectorRajaPar&>(dx);
   const double* x = xx.local_data_const();
-//  const double* pattern = selected.local_data_const();
   const double* pattern_host = selected.local_data_host_const();
 
   size_type n = ix.get_local_size();
