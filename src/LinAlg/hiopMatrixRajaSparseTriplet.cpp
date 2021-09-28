@@ -62,6 +62,7 @@
 #include <umpire/Allocator.hpp>
 #include <umpire/ResourceManager.hpp>
 #include <RAJA/RAJA.hpp>
+#include "hiopLinAlgFactory.hpp"
 
 #include "hiop_blasdefs.hpp"
 #include "hiop_raja_defs.hpp"
@@ -1540,7 +1541,7 @@ void hiopMatrixRajaSparseTriplet::copyDiagMatrixToSubblock_w_pattern(const hiopV
                                                                      const index_type& dest_row_st,
                                                                      const index_type& dest_col_st,
                                                                      const size_type& dest_nnz_st,
-                                                                     const size_type &nnz_to_copy,
+                                                                     const size_type& nnz_to_copy,
                                                                      const hiopVector& ix)
 {
   assert(this->numberOfNonzeros() >= nnz_to_copy+dest_nnz_st);
@@ -1562,12 +1563,13 @@ void hiopMatrixRajaSparseTriplet::copyDiagMatrixToSubblock_w_pattern(const hiopV
   double* values = values_;
 
 #ifdef HIOP_DEEPCHECKS
+  const double* pattern = selected.local_data_const();
   RAJA::ReduceSum<hiop_raja_reduce, size_type> sum(0);
   RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, n),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       if(pattern[i]!=0.0){
-        sum = sum+1;
+        sum += 1;
       }
     });
   size_type nrm = sum.get();
