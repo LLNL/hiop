@@ -132,7 +132,7 @@ backgroundcolor=\color{lbcolor},
 \vspace{3cm}
 
   {\huge\bfseries \Hi\ -- User Guide} \\[14pt]
-  {\large\bfseries version 0.4.1}
+  {\large\bfseries version 0.5}
 
 \vspace{3cm}
 
@@ -154,7 +154,7 @@ Lawrence Livermore National Laboratory}}}\\[10pt]
 \vspace{4.75cm}
 
  \textcolor{violet}{{\large\bfseries Oct 15, 2017} \\
-{\large\bfseries Updated April 12, 2021}}
+{\large\bfseries Updated  Sept 28, 2021}}
 
 \vspace{0.75cm}
 
@@ -347,7 +347,7 @@ bool get_vars_info(const size_type& n, double *xlow, double* xupp,
                    NonlinearityType* type);
 \end{lstlisting} 
 
-\noindent Provides the lower and upper bounds $x_l$ and $x_u$ on the decision variables. When a variable (let us say the $i^{th}$) has no lower or/and upper bounds, the  $i^{th}$ entry of xlow and/or xupp should be less than $-1e20$ or/and larger than $1e20$, respectively. The last argument is not used and can set to any value of the enum \texttt{hiop::hiopInterfaceDenseConstraints::NonlinearityType}.
+\noindent Provides the lower and upper bounds $x_l$ and $x_u$ on the decision variables. When a variable (let us say the $i^{th}$) has no lower or/and upper bounds, the  $i^{th}$ entry of xlow and/or xupp should be less than $-1^{20}$ or/and larger than $1^{20}$, respectively. The last argument is not used and can set to any value of the enum \texttt{hiop::hiopInterfaceDenseConstraints::NonlinearityType}.
 
 \begin{lstlisting} 
 bool get_cons_info(const size_type& m, double* clow, double* cupp, 
@@ -558,7 +558,7 @@ bool get_vars_info(const size_type& n, double *xlow, double* xupp,
                    NonlinearityType* type);
 \end{lstlisting} 
 
-\noindent Provides the lower and upper bounds $x_l$ and $x_u$ on the decision variables. When a variable (let us say the $i^{th}$) has no lower or/and upper bounds, the  $i^{th}$ entry of xlow and/or xupp should be less than $-1e20$ or/and larger than $1e20$, respectively. The last argument is not used and can set to any value of the enum \texttt{hiop::hiopInterfaceDenseConstraints::NonlinearityType}.
+\noindent Provides the lower and upper bounds $x_l$ and $x_u$ on the decision variables. When a variable (let us say the $i^{th}$) has no lower or/and upper bounds, the  $i^{th}$ entry of xlow and/or xupp should be less than $-1^{20}$ or/and larger than $1^{20}$, respectively. The last argument is not used and can set to any value of the enum \texttt{hiop::hiopInterfaceDenseConstraints::NonlinearityType}.
 
 
 \begin{lstlisting} 
@@ -603,11 +603,12 @@ bool eval_grad_f(const size_type& n,
 
 \begin{lstlisting} 
 eval_Jac_cons(const size_type& n, const size_type& m, 
-			     const size_type& num_cons, const index_type* idx_cons,
-			     const double* x, bool new_x,
-			     const size_type& nsparse, const size_type& ndense, 
-			     const size_type& nnzJacS, index_type* iJacS, index_type* jJacS, double* MJacS, 
-			     double* JacD);
+              const size_type& num_cons, const index_type* idx_cons,
+              const double* x, bool new_x,
+              const size_type& nsparse, const size_type& ndense,
+              const size_type& nnzJacS,
+              index_type* iJacS, index_type* jJacS, double* MJacS, 
+              double* JacD);
 \end{lstlisting} 
 
 %\noindent Implement this method to provide the Jacobian of a subset of the  constraints $c(x)$ and/or $d(x)$ in \texttt{Jac}; as above this subset is specified by the array \texttt{idx\_cons}. To set the $(i,j)$ entry of the Jacobian to $v$, one can use  \texttt{Jac[i][j]=v;}. Alternatively,  if you have a contiguous row-wise array storage of the Jacobian, simply (mem)copy it in \texttt{Jac[0]}. 
@@ -637,10 +638,11 @@ Parameters:
 
 \begin{lstlisting}
 bool eval_Jac_cons(const size_type& n, const size_type& m, 
-			          const double* x, bool new_x,
-			          const size_type& nsparse, const size_type& ndense, 
-			          const size_type& nnzJacS, index_type* iJacS, index_type* jJacS, double* MJacS, 
-			          double* JacD);
+                   const double* x, bool new_x,
+                   const size_type& nsparse, const size_type& ndense,
+                   const size_type& nnzJacS,
+                   index_type* iJacS, index_type* jJacS, double* MJacS,
+                   double* JacD);
 \end{lstlisting} 
 
 \noindent Evaluates the Jacobian of equality and inequality constraints \textit{in one call}. This Jacobian is mixed dense-sparse (MDS), which means is structurally split in the sparse (triplet format) and dense matrices (contiguous rows storage)
@@ -670,12 +672,14 @@ The main difference from the above \texttt{eval\_Jac\_cons} is that the implemen
     
 \begin{lstlisting} 
 bool eval_Hess_Lagr(const size_type& n, const size_type& m, 
-			      const double* x, bool new_x, const double& obj_factor,
-			      const double* lambda, bool new_lambda,
-			      const size_type& nsparse, const size_type& ndense, 
-			      const size_type& nnzHSS, index_type* iHSS, index_type* jHSS, double* MHSS, 
-			      double* HDD,
-			      size_type& nnzHSD, index_type* iHSD, index_type* jHSD, double* MHSD);
+                    const double* x, bool new_x, const double& obj_factor,
+                    const double* lambda, bool new_lambda,
+                    const size_type& nsparse, const size_type& ndense, 
+                    const size_type& nnzHSS,
+                    index_type* iHSS, index_type* jHSS, double* MHSS, 
+                    double* HDD,
+                    size_type& nnzHSD, index_type* iHSD, index_type* jHSD,
+                    double* MHSD);
 \end{lstlisting} 
 
 \noindent Evaluates the Hessian of the Lagrangian function in three structural blocks given by the MDS structure of the problem. The arguments \texttt{nnzHSS}, \texttt{iHSS}, \texttt{jHSS}, and \texttt{MHSS} hold  $\nabla^2 L(x_s,x_s)$ from~\eqref{mdsHess}. The argument \texttt{HDD} stores $\nabla^2 L(x_d,x_d)$ from~\eqref{mdsHess}. 
@@ -717,16 +721,16 @@ double obj_value = solver.getObjective();  //get objective
 
 \subsection{Structured NLPs suitable to primal decomposition (PriDe) schemes}\label{sec:pride}
 
-\Hi also offers parallel solution capabilities for NLPs that have separable objective terms. More specifically,
+Starting v0.5, \Hi also offers parallel computing capabilities via the PriDec solver for NLPs with separable objective terms in the form of:
 \begin{align}
 &&&&\min_{x\in\mathbb{R}^n} & \hspace{0.5cm} f(x) + \sum_{i=1}^K r_i(x) &&&& \label{prideobj}\\
-&&&&\textnormal{s.t.} &\hspace{0.5cm}  c(x)=c_E &[y_c]&&&\\
-&&[v_l]&&& \hspace{0.5cm} d_l \leq d(x) \leq d_u  &[v_u]&&&\label{prideineq} \\
-&&[z_u]&&& \hspace{0.5cm} x_l \leq x \leq x_u & [z_u] &&&\label{pridebounds}
+&&&&\textnormal{s.t.} &\hspace{0.5cm}  c(x)=c_E,  &[y_c]&&&\\
+&&[v_l]&&& \hspace{0.5cm} d_l \leq d(x) \leq d_u,  &[v_u]&&&\label{prideineq} \\
+&&[z_u]&&& \hspace{0.5cm} x_l \leq x \leq x_u. & [z_u] &&&\label{pridebounds}
 \end{align}
-Mathematically, the above problem is identical (and has the same specification as the NLP~\eqref{obj}-\eqref{bounds}), with the exception of the so-called ``recourse`` terms $r_i(x)$ appearing in the objective. Each of these functions are real-valued, $r_i:\mathbb{R}^n\rightarrow \mathbb{R}$, for all $i\in\{1,2,\ldots, K\}$, and can be of various order of differentiability. As of now, the recourse functions $r_i(x)$ need to be continuous and differentiable (but can have discountinous first derivative). The more general case in which $r_i(x)$ is only Lipschitz continuous is currently under development and can be made available by the developers of \Hi on user's request.
+Mathematically, the above problem is identical (and has the same specification as the NLP~\eqref{obj}-\eqref{bounds}), with the exception of the so-called ``recourse`` terms $r_i(x)$ appearing in the objective. Each of these functions are real-valued, $r_i:\mathbb{R}^n\rightarrow \mathbb{R}$, for all $i\in\{1,2,\ldots, K\}$, and can be of various order of differentiability. As of now, the recourse functions $r_i(x)$ need to be continuous and differentiable (but can have discontinuous first derivative). It is possible that the more general case in which $r_i(x)$ is only Lipschitz continuous can be still handled (with convergence guarantees). The users are encouraged to contact \Hi developers for the latest developements in this area. 
 
-The input in which \Hi expects for this class of problems is a bit different than for NLPs of the form~\eqref{obj}-\eqref{bounds} and MDS NLPs introduced in the previous section. This is mainly caused by the specifics of the primal decomposition algorithm/solver that was purposedly develop to solve to solve~\eqref{prideobj}-\eqref{pridebounds} for large $K$ ($K=O(10^6)$) efficiently on a massively parallel computing platform. Nevertheless, for smaller $K$, problems of form~\eqref{prideobj}-\eqref{pridebounds} can be solved with \Hi using the sparse and MDS input interfaces.
+The input in which \Hi expects for this class of problems is a bit different than for NLPs of the form~\eqref{obj}-\eqref{bounds} and MDS NLPs introduced in the previous sections. This is mainly caused by the specifics of the primal decomposition algorithm/solver that was purposedly develop to solve to solve~\eqref{prideobj}-\eqref{pridebounds} for large $K$ ($K=O(10^6)$) efficiently on a massively parallel computing platform. Nevertheless, for smaller $K$, problems of form~\eqref{prideobj}-\eqref{pridebounds} can be solved with \Hi using the sparse and MDS input interfaces.
 
 The primal decomposition algorithm requires a separation or breakdown of the evaluation of~\eqref{prideobj}-\eqref{pridebounds} into the following computational ``units``
 \begin{itemize}
@@ -737,16 +741,16 @@ The primal decomposition algorithm requires a separation or breakdown of the eva
 &&[v_l]&&& \hspace{0.5cm} d_l \leq d(x) \leq d_u  &[v_u]&&&\label{pridemineq} \\
 &&[z_u]&&& \hspace{0.5cm} x_l \leq x \leq x_u & [z_u] &&&\label{pridembounds}
   \end{align}
-for a given real function $q(x)$ whose evaluation together with its gradient and sparse Hessian evaluations are provided by \Hi;
+for a given real function $q(x)$ whose evaluation together with its gradient and sparse Hessian evaluations are provided by \Hi PriDec solver;
 \item[2.] evaluating the recourse functions $r_i(x)$ and their gradients $\nabla r_i(x)$, for all $i\in\{1,2,\ldots, K\}$.
 \end{itemize}
-We stress that it is the user's responsibility to perform 1 and 2 above. In regards to 1, the function $q(x)$ (and its first and second order derivatives) will be provided by \Hi as explained below. The funtion $q(x)$ is an approximation of the recourse $R(x):=\sum_{i=1}^K r_i(x)$ from~\eqref{pridemobj}-\eqref{pridembounds}, which is built based on the function and gradient evaluations performed at 2.
+We stress that it is the user's responsibility to perform the steps 1 and 2 above. In regards to 1, the function $q(x)$ (and its first and second order derivatives) will be provided by \Hi as explained below. The funtion $q(x)$ is an approximation of the recourse $R(x):=\sum_{i=1}^K r_i(x)$ from~\eqref{pridemobj}-\eqref{pridembounds}, which is built based on the function and gradient evaluations performed at 2.
 
-The user can safely assume that $q(x)$ is a strictly  convex quadratic function (however the function may be only convex and nonquadratic in a future version of \Hi). \Hi assumes that the user can solve the master problem~\eqref{pridemobj}-\eqref{pridembounds} in some efficient way and that the user can return the optimal vector.
+The user can safely assume that $q(x)$ is a strictly  convex quadratic function (however the function may be only convex and nonquadratic in a future version of \Hi). \Hi assumes that the user can solve the master problem~\eqref{pridemobj}-\eqref{pridembounds} in some efficient way and that the user can return the optimal solution vector.
 
 \bigskip
 
-As this part of the solver is under development, the interested parties should consult \texttt{nlpPriDec\_ex8} under the \texttt{Drivers} directory and should also feel free to contact the developers.
+The PriDec solver is part of v0.5 as a release candidate. The next major release of \Hi will address a couple of limitations related to switching between memory spaces, profile and tune the memory-distributed parallel performance at extreme scales, and improve documentation. The users interested in \Hi's PriDec solver should use consult \texttt{nlpPriDec\_ex8} and \texttt{nlpPriDec\_ex9} examples under the \texttt{Drivers} directory and should also feel free to contact the developers.
 
 %[[to do:]] describe C++ interface 
 %
@@ -1037,31 +1041,32 @@ This option takes double values in $[0, 10^{20}]$ and has a default value $10^{-
 
 
 \subsection{Options for PriDec solver}
+
 Here we list the options that are recognized by the \Hi's PriDec solver.
 
-\subsubsection{Termination criteria and output}
+%% \subsubsection{Termination criteria and output}
 
-\noindent \textbf{tolerance}: maximum (absolute)  TODO: Frank explanation here. Double values in $[10^{-14},0.1]$. Default value: $10^{-8}$. 
+%% \noindent \textbf{tolerance}: maximum (absolute)  TODO: Frank explanation here. Double values in $[10^{-14},0.1]$. Default value: $10^{-8}$. 
 
-\medskip
+%% \medskip
 
-%\noindent \textbf{acceptable\_tolerance}: HiOp will terminate if the inf-norm of the NLP optimality residuals is below this value for \texttt{acceptable\_iterations} many consecutive iterations. Double values in $[10^{-14},0.1]$. Default value $10^{-6}$.
+%% %\noindent \textbf{acceptable\_tolerance}: HiOp will terminate if the inf-norm of the NLP optimality residuals is below this value for \texttt{acceptable\_iterations} many consecutive iterations. Double values in $[10^{-14},0.1]$. Default value $10^{-6}$.
 
-\medskip
+%% \medskip
 
-\noindent \textbf{max\_iter}: maximum number of iterations. Integer values between $1$ to $10^6$. Default value: $3\,000$.
+%% \noindent \textbf{max\_iter}: maximum number of iterations. Integer values between $1$ to $10^6$. Default value: $3\,000$.
 
-\medskip
+%% \medskip
 
-%\noindent \textbf{acceptable\_iterations}: number of iterations passing the acceptable tolerance (see \textbf{acceptable\_tolerance}) after which HiOp terminates. Integer values between $1$ and $10^6$. Default value $15$.
+%% %\noindent \textbf{acceptable\_iterations}: number of iterations passing the acceptable tolerance (see \textbf{acceptable\_tolerance}) after which HiOp terminates. Integer values between $1$ and $10^6$. Default value $15$.
 
-\medskip
+%% \medskip
 
-\noindent \textbf{verbosity\_level}: integer between $0$ and $12$ specifying the verbosity of \Hi's output. A value of $0$ disables any output (but still outputs fatal errors). A value of $1$ also outputs warnings. The value of $2$ is reserved for future use. A value of $3$ will also output a table with \Hi's convergence metrics at each iteration. A value of $4$ and higher will display additional info related to the internals of the algorithm and is generally used only for debugging/development purposes. The higher the value the more verbose the output will be.
+%% \noindent \textbf{verbosity\_level}: integer between $0$ and $12$ specifying the verbosity of \Hi's output. A value of $0$ disables any output (but still outputs fatal errors). A value of $1$ also outputs warnings. The value of $2$ is reserved for future use. A value of $3$ will also output a table with \Hi's convergence metrics at each iteration. A value of $4$ and higher will display additional info related to the internals of the algorithm and is generally used only for debugging/development purposes. The higher the value the more verbose the output will be.
 
-\subsubsection{Algorithm selection and parameters}
-
--- to follow --
+%\subsubsection{Algorithm selection and parameters}
+%
+%-- to follow --
 
 \subsubsection{Miscellaneous options}
 

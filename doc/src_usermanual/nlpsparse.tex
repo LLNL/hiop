@@ -48,7 +48,7 @@ bool get_vars_info(const size_type& n, double *xlow, double* xupp,
                    NonlinearityType* type);
 \end{lstlisting} 
 
-\noindent Provides the lower and upper bounds $x_l$ and $x_u$ on the decision variables. When a variable (let us say the $i^{th}$) has no lower or/and upper bounds, the  $i^{th}$ entry of xlow and/or xupp should be less than $-1e20$ or/and larger than $1e20$, respectively. The last argument is not used and can set to any value of the enum \texttt{hiop::hiopInterface::NonlinearityType}.
+\noindent Provides the lower and upper bounds $x_l$ and $x_u$ on the decision variables. When a variable (let us say the $i^{th}$) has no lower or/and upper bounds, the  $i^{th}$ entry of xlow and/or xupp should be less than $-1^{20}$ or/and larger than $1^{20}$, respectively. The last argument is not used and can set to any value of the enum \texttt{hiop::hiopInterface::NonlinearityType}.
 
 \begin{lstlisting} 
 bool get_cons_info(const size_type& m, double* clow, double* cupp, 
