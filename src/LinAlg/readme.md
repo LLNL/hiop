@@ -61,7 +61,7 @@ Triplet format is momentarily used for sparse matrices. The index arrays `i` and
  
  Please remark that this does not allow duplicated entries. In a couple of places, HiOp may internally relax this requirement; however, this is  documented at the method level; otherwise, the precondition of sorted (i,j) entries holds for all other methods related to sparse matrices.
  
-HiOp offers support for converting sparse triplet format to  compressed sparse row (CSR) format, which, for example, is used with STRUMPACK linear solver. It is worth mentioning that HiOp will also sort the arrays used by the CSR format based on the same rule, which seems to increase robustness with the third party linear solvers that require the CSR format.
+HiOp offers support for converting sparse triplet format to compressed sparse row (CSR) format, which, for example, is used with PARDISO and STRUMPACK linear solvers. It is worth mentioning that HiOp will also sort the arrays used by the CSR format based on the same rule, which seems to increase robustness with the third party linear solvers that require the CSR format.
 
 ### *Symmetric* sparse matrices 
 Only upper triangular nonzero entries should be specified, accessed, and maintained.

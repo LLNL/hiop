@@ -61,6 +61,7 @@
 #include <hiopVectorRajaPar.hpp>
 #include <hiopMatrixRajaSparseTriplet.hpp>
 #include "matrixTestsRajaSparseTriplet.hpp"
+#include "hiopVectorIntRaja.hpp"
 
 namespace hiop{ namespace tests {
 
@@ -168,6 +169,33 @@ int MatrixTestsRajaSparseTriplet::verifyAnswer(hiop::hiopMatrixSparse* A, const 
     if (!isEqual(values[i], answer))
     {
       printf("Failed. %f != %f.\n", values[i], answer);
+      fail++;
+    }
+  }
+  return fail;
+}
+
+/**
+ * @brief Verifies a range of nonzeros in a sparse matrix, starting from index "nnz_from" to index "nnz_to"-1.
+ */
+[[nodiscard]]
+int MatrixTestsRajaSparseTriplet::verifyAnswer(hiop::hiopMatrix* A, local_ordinal_type nnz_from, local_ordinal_type nnz_to, const double answer)
+{
+  if(A == nullptr) {
+    return 1;
+  }
+  auto mat = dynamic_cast<hiop::hiopMatrixRajaSparseTriplet*>(A);
+  mat->copyFromDev();
+  const local_ordinal_type nnz = mat->numberOfNonzeros();
+  if(nnz_to-nnz_from > nnz) {
+    return 1;
+  }
+  const real_type* values = mat->M_host();
+  int fail = 0;
+  for (local_ordinal_type i=nnz_from; i<nnz_to; i++)
+  {
+    if (!isEqual(values[i], answer))
+    {
       fail++;
     }
   }
@@ -350,5 +378,26 @@ void MatrixTestsRajaSparseTriplet::maybeCopyFromDev(hiop::hiopMatrixSparse* mat)
   { }
 }
 
+int MatrixTestsRajaSparseTriplet::getLocalElement(hiop::hiopVectorInt* xvec, int idx) const
+{
+  if(auto* x = dynamic_cast<hiop::hiopVectorIntRaja*>(xvec)) {
+    x->copy_from_dev();
+    return x->local_data_host_const()[idx];
+  } else {
+    assert(false && "Wrong type of vector passed into `MatrixTestsRajaSparseTriplet::getLocalElement`!");
+  }
+  return 0;
+}
+
+void MatrixTestsRajaSparseTriplet::setLocalElement(hiop::hiopVectorInt* xvec, int idx, int value) const
+{
+  if(auto* x = dynamic_cast<hiop::hiopVectorIntRaja*>(xvec)) {
+    x->copy_from_dev();
+    x->local_data_host()[idx] = value;
+    x->copy_to_dev();
+  } else {
+    assert(false && "Wrong type of vector passed into `MatrixTestsRajaSparseTriplet::setLocalElement`!");
+  }
+}
 
 }} // namespace hiop::tests

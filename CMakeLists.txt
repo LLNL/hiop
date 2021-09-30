@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.15)
+cmake_minimum_required (VERSION 3.18)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -9,7 +9,7 @@ if (POLICY CMP0074)
   cmake_policy(SET CMP0074 NEW)
 endif ()
 
-project (hiop VERSION "0.4.1")
+project (hiop VERSION "0.5.0")
 
 string(TIMESTAMP HIOP_RELEASE_DATE "%Y-%m-%d")
 
@@ -34,18 +34,53 @@ option(HIOP_BUILD_STATIC "Build static library" ON)
 option(HIOP_SPARSE "Build with sparse linear algebra" ON)
 option(HIOP_USE_COINHSL "Build with sparse linear algebra" ON)
 option(HIOP_USE_STRUMPACK "Build with STRUMPACK backend for sparse linear algebra" OFF)
+option(HIOP_USE_PARDISO "Build with PARDISO backend for sparse linear algebra" OFF)
 option(HIOP_WITH_VALGRIND_TESTS "Run valgrind on certain integration tests" OFF)
 option(HIOP_BUILD_DOCUMENTATION "Build HiOp documentation via Doxygen" ON)
+
+set(HIOP_CTEST_LAUNCH_COMMAND "" CACHE STRING "Manually override launch commands used when running CTest")
+
+# Ensure at least one library type is being built!
+if((NOT HIOP_BUILD_SHARED) AND (NOT HIOP_BUILD_STATIC))
+  message(WARNING "Must build at least one of SHARED or STATIC libraries!")
+  message(WARNING "Enabling HIOP_BUILD_STATIC.")
+  set(HIOP_BUILD_STATIC ON)
+endif()
+
+# This is the default library which HiOp::HiOp will point to. Try to use
+# shared by default. Users should only link to HiOp::HiOp.
+set(hiop_default_library_type "SHARED")
+if(NOT HIOP_BUILD_SHARED)
+  set(hiop_default_library_type "STATIC")
+endif()
+string(TOLOWER
+  ${hiop_default_library_type}
+  hiop_default_library_type_lower
+  )
+set(hiop_default_library_name
+  "hiop_${hiop_default_library_type_lower}"
+  )
+mark_as_advanced(FORCE
+  hiop_default_library_type
+  hiop_default_library_type_lower
+  )
 
 if(HIOP_BUILD_SHARED)
   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 endif()
 
-if(HIOP_USE_GPU)
-  option(HIOP_USE_MAGMA "Use Magma linear algebra" ON)
-endif()
+include(CMakeDependentOption)
+cmake_dependent_option(
+  HIOP_USE_CUDA "Build with support for CUDA" OFF "HIOP_USE_GPU" OFF
+)
+cmake_dependent_option(
+  HIOP_USE_HIP "Build with support for HIP" OFF "HIOP_USE_GPU" OFF
+)
+cmake_dependent_option(
+  HIOP_USE_MAGMA "Use Magma linear algebra" ON "HIOP_USE_GPU" OFF
+)
 
-add_library(hiop_math INTERFACE)
+add_library(hiop_tpl INTERFACE)
 add_library(hiop_options INTERFACE)
 add_library(hiop_warnings INTERFACE)
 
@@ -56,7 +91,7 @@ if(HIOP_USE_MPI)
     set(CMAKE_C_COMPILER ${MPI_C_COMPILER})
   endif(NOT DEFINED MPI_CXX_COMPILER)
   include_directories(${MPI_CXX_ADDITIONAL_INCLUDE_DIRS} ${MPI_CXX_COMPILER_INCLUDE_DIRS})
-  target_link_libraries(hiop_math INTERFACE MPI::MPI_CXX)
+  target_link_libraries(hiop_tpl INTERFACE MPI::MPI_CXX)
   set(HIOP_EXTRA_MPI_FLAGS "" CACHE STRING "Extra arguments to mpiexec when running tests")
 endif(HIOP_USE_MPI)
 
@@ -113,32 +148,62 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 endif()
 
 if(HIOP_DEVELOPER_MODE)
-  target_link_libraries(hiop_math INTERFACE hiop_options hiop_warnings)
+  target_link_libraries(hiop_tpl INTERFACE hiop_options hiop_warnings)
 endif()
 
+if(NOT (HIOP_USE_GPU AND HIOP_USE_HIP))
+  find_package(OpenMP)
+  target_link_libraries(hiop_tpl INTERFACE OpenMP::OpenMP_CXX)
+endif()
+
+if(NOT DEFINED BLAS_LIBRARIES)
+  find_package(BLAS REQUIRED)
+  target_link_libraries(hiop_tpl INTERFACE ${BLAS_LIBRARIES})
+  message(STATUS "Found BLAS libraries: ${BLAS_LIBRARIES}")
+endif(NOT DEFINED BLAS_LIBRARIES)
+
+if(NOT DEFINED LAPACK_LIBRARIES)
+  # in case the toolchain defines them
+  find_package(LAPACK REQUIRED)
+endif(NOT DEFINED LAPACK_LIBRARIES)
+target_link_libraries(hiop_tpl INTERFACE ${LAPACK_LIBRARIES})
+message(STATUS "Using LAPACK libraries: ${LAPACK_LIBRARIES}")
+
 if(HIOP_USE_GPU)
-  include(CheckLanguage)
-  enable_language(CUDA)
-  check_language(CUDA)
-
-  if(NOT DEFINED CMAKE_CUDA_STANDARD)
-    set(CMAKE_CUDA_STANDARD 11)
-    set(CMAKE_CUDA_STANDARD_REQUIRED ON)
-  endif()
-
-  if(HIOP_NVCC_ARCH)
-    set(CMAKE_CUDA_FLAGS "-arch=${HIOP_NVCC_ARCH}")
-    message(STATUS "Using CUDA arch ${HIOP_NVCC_ARCH}")
-  else()
-    set(CMAKE_CUDA_FLAGS "-arch=sm_35")
-    message(STATUS "Using CUDA arch sm_35")
-  endif()
-  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-extended-lambda")
-
   set(HIOP_MAGMA_DIR CACHE PATH "Path to Magma directory")
+  if(HIOP_USE_CUDA)
+    include(CheckLanguage)
+    enable_language(CUDA)
+    check_language(CUDA)
 
-  include(FindHiopCudaLibraries)
-  target_link_libraries(hiop_math INTERFACE hiop_cuda)
+    if(NOT DEFINED CMAKE_CUDA_STANDARD)
+      set(CMAKE_CUDA_STANDARD 11)
+      set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+    endif()
+
+    if(NOT CMAKE_CUDA_ARCHITECTURES)
+      set(CMAKE_CUDA_ARCHITECTURES 35)
+    endif()
+    set(CMAKE_CUDA_FLAGS "--expt-extended-lambda")
+    set(HIOP_MAGMA_DIR CACHE PATH "Path to Magma directory")
+    include(FindHiopMagma)
+    include(FindHiopCudaLibraries)
+    target_link_libraries(hiop_tpl INTERFACE hiop_cuda)
+    target_link_libraries(hiop_cuda INTERFACE Magma)
+  elseif(HIOP_USE_HIP)
+    include(FindHiopHipLibraries)
+    add_definitions(-DHAVE_HIP) # For hipmagma
+    target_link_libraries(hiop_tpl INTERFACE hiop_hip)
+  else()
+    message(
+      FATAL_ERROR
+        "\nGPU is enabled, but both CUDA and HIP are disabled. "
+        "If you would like to enable a particular GPU "
+        "platform, set one of the following variables to ON: "
+        "\n* HIOP_USE_CUDA"
+        "\n* HIOP_USE_HIP"
+    )
+  endif()
 endif(HIOP_USE_GPU)
 
 if(HIOP_USE_RAJA)
@@ -150,38 +215,19 @@ if(HIOP_USE_RAJA)
   find_package(umpire CONFIG
     PATHS ${umpire_DIR} ${umpire_DIR}/share/umpire/cmake
     REQUIRED)
+  target_link_libraries(hiop_tpl INTERFACE umpire RAJA)
 endif()
 
 if(HIOP_WITH_KRON_REDUCTION)
   set(HIOP_UMFPACK_DIR CACHE PATH "Path to UMFPACK directory")
   include(FindUMFPACK)
-  target_link_libraries(hiop_math INTERFACE UMFPACK)
+  target_link_libraries(hiop_tpl INTERFACE UMFPACK)
 
   # metis needed (5.x needed by umfpack)
   set(HIOP_METIS_DIR CACHE PATH "Path to METIS directory")
   include(FindHiopMETIS)
-  target_link_libraries(hiop_math INTERFACE METIS)
+  target_link_libraries(hiop_tpl INTERFACE METIS)
 endif(HIOP_WITH_KRON_REDUCTION)
-
-find_package(OpenMP)
-target_link_libraries(hiop_math INTERFACE OpenMP::OpenMP_CXX)
-
-if(NOT DEFINED BLAS_LIBRARIES)
-  find_package(BLAS REQUIRED)
-  target_link_libraries(hiop_math INTERFACE ${BLAS_LIBRARIES})
-  message(STATUS "Found BLAS libraries: ${BLAS_LIBRARIES}")
-endif(NOT DEFINED BLAS_LIBRARIES)
-
-if(NOT DEFINED LAPACK_LIBRARIES)
-  # in case the toolchain defines them
-  find_package(LAPACK REQUIRED)
-endif(NOT DEFINED LAPACK_LIBRARIES)
-target_link_libraries(hiop_math INTERFACE ${LAPACK_LIBRARIES})
-message(STATUS "Using LAPACK libraries: ${LAPACK_LIBRARIES}")
-
-if(HIOP_USE_RAJA)
-  target_link_libraries(hiop_math INTERFACE umpire RAJA)
-endif()
 
 if(HIOP_SPARSE)
   if(NOT TARGET METIS)
@@ -192,8 +238,8 @@ if(HIOP_SPARSE)
     set(HIOP_COINHSL_DIR CACHE PATH "Path to COINHSL directory")
     include(FindHiopCOINHSL)
     if(COINHSL_LIBRARY AND METIS_LIBRARY)
-      target_link_libraries(hiop_math INTERFACE METIS)
-      target_link_libraries(hiop_math INTERFACE COINHSL)
+      target_link_libraries(hiop_tpl INTERFACE METIS)
+      target_link_libraries(hiop_tpl INTERFACE COINHSL)
     else()
       if(NOT METIS_LIBRARY)
         message(STATUS "Cannot find METIS, which is required by COINHSL.")
@@ -205,11 +251,11 @@ if(HIOP_SPARSE)
   if(HIOP_USE_STRUMPACK)
     set(HIOP_STRUMPACK_DIR CACHE PATH "Path to STRUMPACK directory")
     include(FindHiopSTRUMPACK)
-    target_link_libraries(hiop_math INTERFACE STRUMPACK)
+    target_link_libraries(hiop_tpl INTERFACE STRUMPACK)
 
     if(STRUMPACK_LIBRARIES AND METIS_LIBRARY)
-      target_link_libraries(hiop_math INTERFACE METIS)
-      target_link_libraries(hiop_math INTERFACE ${STRUMPACK_LIBRARIES})  
+      target_link_libraries(hiop_tpl INTERFACE METIS)
+      target_link_libraries(hiop_tpl INTERFACE ${STRUMPACK_LIBRARIES})  
     else()
       if(STRUMPACK_LIBRARIES)
         message(STATUS "Cannot find METIS, which is required by STRUMPACK.")
@@ -218,14 +264,36 @@ if(HIOP_SPARSE)
     endif()  
   endif(HIOP_USE_STRUMPACK)
 
-  if(NOT HIOP_USE_COINHSL AND NOT HIOP_USE_STRUMPACK )
+  if(HIOP_USE_PARDISO)
+    set(HIOP_PARDISO_DIR CACHE PATH "Path to PARDISO directory")
+    include(FindHiopPARDISO)
+    if(PARDISO_LIBRARY AND METIS_LIBRARY)
+      target_link_libraries(hiop_tpl INTERFACE METIS)
+      target_link_libraries(hiop_tpl INTERFACE PARDISO)
+    else()
+      if(NOT METIS_LIBRARY)
+        message(STATUS "Cannot find METIS, which is required by PARDISO.")
+      endif()
+      set(HIOP_USE_PARDISO OFF CACHE BOOL "Build without PARDISO" FORCE)
+    endif()
+  endif(HIOP_USE_PARDISO)
+
+  if(NOT HIOP_USE_COINHSL AND NOT HIOP_USE_STRUMPACK AND NOT HIOP_USE_PARDISO)
     set(HIOP_SPARSE OFF CACHE BOOL "Build without sparse linear algebra" FORCE)
-    message(STATUS "Cannot find COINHSL nor STRUMPACK for sparse linear algebra, and the option HIOP_SPARSE will be disabled")
-  endif(NOT HIOP_USE_COINHSL AND NOT HIOP_USE_STRUMPACK )
+    message(STATUS "Cannot find COINHSL, STRUMPACK nor PARDISO for sparse linear algebra, and the option HIOP_SPARSE will be disabled")
+  endif(NOT HIOP_USE_COINHSL AND NOT HIOP_USE_STRUMPACK AND NOT HIOP_USE_PARDISO)
 else(HIOP_SPARSE)
   set(HIOP_USE_COINHSL OFF CACHE BOOL "Build without COINHSL" FORCE)
   set(HIOP_USE_STRUMPACK OFF CACHE BOOL "Build without STRUMPACK" FORCE)
+  set(HIOP_USE_PARDISO OFF CACHE BOOL "Build without PARDISO" FORCE)
 endif(HIOP_SPARSE)
+
+# It simplifies linking against metis to set an internal variable
+if(HIOP_SPARSE OR HIOP_WITH_KRON_REDUCTION)
+  set(HIOP_USE_METIS ON CACHE BOOL "Link against METIS library ${METIS_LIBRARY}" FORCE)
+else()
+  set(HIOP_USE_METIS OFF CACHE BOOL "Link against METIS library: ${METIS_LIBRARY}" FORCE)
+endif()
 
 # The binary dir is already a global include directory
 configure_file(
@@ -242,11 +310,7 @@ include_directories(src/Utils)
 #!!!this include needs to ALWAYS be the last!!!
 include_directories(src/_Internals)
 
-add_subdirectory(src/Interface)
-add_subdirectory(src/Optimization)
-add_subdirectory(src/LinAlg)
-add_subdirectory(src/Drivers)
-add_subdirectory(src/Utils)
+add_subdirectory(src)
 
 if(HIOP_BUILD_DOCUMENTATION)
   include(cmake/HiOpDoxygenConfig.cmake)
@@ -264,90 +328,36 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
   set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/_dist-${CMAKE_BUILD_TYPE}")
 endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 
-if(HIOP_BUILD_STATIC)
-  add_library(hiop STATIC
-    $<TARGET_OBJECTS:hiopOptimization>
-    $<TARGET_OBJECTS:hiopLinAlg>
-    $<TARGET_OBJECTS:hiopUtils>)
-  if(HIOP_WITH_KRON_REDUCTION)
-    target_sources(hiop PUBLIC $<TARGET_OBJECTS:hiopKronRed>)
-  endif(HIOP_WITH_KRON_REDUCTION)
-  target_link_libraries(hiop PUBLIC hiop_math)
-  install(TARGETS hiop DESTINATION lib)
-endif()
+##########################################################
+#  EXPORTING
+##########################################################
 
-if(HIOP_BUILD_SHARED)
-  add_library(hiop_shared SHARED $<TARGET_OBJECTS:hiopOptimization>
-    $<TARGET_OBJECTS:hiopLinAlg>
-    $<TARGET_OBJECTS:hiopUtils>
-    $<TARGET_OBJECTS:chiopInterface>)
-  set_target_properties(hiop_shared PROPERTIES OUTPUT_NAME hiop)
-  if(HIOP_WITH_KRON_REDUCTION)
-    target_sources(hiop_shared PUBLIC $<TARGET_OBJECTS:hiopKronRed>)
-  endif(HIOP_WITH_KRON_REDUCTION)
-  target_link_libraries(hiop_shared PUBLIC hiop_math)
-  install(TARGETS hiop_shared DESTINATION lib)
-endif()
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+  HiOpConfigVersion.cmake
+  VERSION ${CMAKE_PROJECT_VERSION}
+  COMPATIBILITY AnyNewerVersion)
+
+install(TARGETS hiop_tpl EXPORT hiop-targets)
+
+# Export libhiop
+install(EXPORT hiop-targets
+  FILE HiOpTargets.cmake
+  NAMESPACE HiOp::
+  DESTINATION
+  share/hiop/cmake)
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/HiOpConfig.cmake.in
+  "${CMAKE_CURRENT_BINARY_DIR}/HiOpConfig.cmake"
+  @ONLY
+  )
+
+install(FILES
+  ${CMAKE_CURRENT_BINARY_DIR}/HiOpConfig.cmake
+  ${CMAKE_CURRENT_BINARY_DIR}/HiOpConfigVersion.cmake
+  DESTINATION share/hiop/cmake)
 
 add_subdirectory(tests)
-
-install(FILES src/Interface/hiopInterface.hpp
-  src/Interface/chiopInterface.hpp
-  src/Interface/hiopInterface.h
-  src/Interface/hiopVersion.hpp
-  src/Optimization/hiopNlpFormulation.hpp
-  src/Optimization/hiopNlpTransforms.hpp
-  src/Optimization/hiopAlgFilterIPM.hpp
-  src/Optimization/hiopIterate.hpp
-  src/Optimization/hiopResidual.hpp
-  src/Optimization/hiopKKTLinSys.hpp
-  src/Optimization/hiopPDPerturbation.hpp
-  src/Optimization/hiopLogBarProblem.hpp
-  src/Optimization/hiopFilter.hpp
-  src/Optimization/hiopHessianLowRank.hpp
-  src/Optimization/hiopDualsUpdater.hpp
-  src/Optimization/hiopFactAcceptor.hpp
-  src/LinAlg/hiopVector.hpp
-  src/LinAlg/hiopVectorPar.hpp
-  src/LinAlg/hiopVectorInt.hpp
-  src/LinAlg/hiopVectorIntSeq.hpp
-  src/LinAlg/hiopMatrix.hpp
-  src/LinAlg/hiopMatrixDenseRowMajor.hpp
-  src/LinAlg/hiopMatrixDense.hpp
-  src/LinAlg/hiopMatrixMDS.hpp
-  src/LinAlg/hiopMatrixSparse.hpp
-  src/LinAlg/hiopMatrixSparseTriplet.hpp
-  src/LinAlg/hiopMatrixSparseTripletStorage.hpp
-  src/LinAlg/hiopMatrixMDS.hpp
-  src/LinAlg/hiopMatrixComplexSparseTriplet.hpp
-  src/LinAlg/hiopMatrixComplexDense.hpp
-  src/LinAlg/hiopLinSolver.hpp
-  src/LinAlg/hiopLinSolverIndefDenseLapack.hpp
-  src/LinAlg/hiopLinSolverUMFPACKZ.hpp
-  src/LinAlg/hiopLinSolverIndefSparseMA57.hpp
-  src/LinAlg/hiopLinAlgFactory.hpp
-  src/Utils/hiopRunStats.hpp
-  src/Utils/hiopLogger.hpp
-  src/Utils/hiopCSR_IO.hpp
-  src/Utils/hiopTimer.hpp
-  src/Utils/hiopOptions.hpp
-  src/Utils/hiopKronReduction.hpp
-  src/Utils/hiopMPI.hpp
-  src/Utils/hiopCppStdUtils.hpp
-  src/LinAlg/hiop_blasdefs.hpp
-  src/Drivers/IpoptAdapter.hpp
-  ${CMAKE_BINARY_DIR}/hiop_defs.hpp
-  ${CMAKE_BINARY_DIR}/FortranCInterface.hpp
-  DESTINATION include)
-
-if(HIOP_USE_RAJA)
-  install(FILES
-    src/LinAlg/hiopVectorIntRaja.hpp
-    src/LinAlg/hiopVectorRajaPar.hpp
-    src/LinAlg/hiopMatrixRajaDense.hpp
-    src/LinAlg/hiopMatrixRajaSparseTriplet.hpp
-    DESTINATION include)
-endif()
 
 set(STRIP_TABLE_CMD "awk '/Problem Summary/ { while (!match($0, /termination/)){ if(match($0, /^[ ]+[0-9]/)) { print $0; } getline } }'")
 # If running in a BSUB allocaation, use jrun commands and make sure we are
@@ -368,6 +378,13 @@ else()
   else()
     set(RUNCMD "") # No special command is needed to run this program  
   endif()
+endif()
+
+if(NOT (HIOP_CTEST_LAUNCH_COMMAND STREQUAL ""))
+  message(STATUS "Manually overriding launch command for CTest with \"${HIOP_CTEST_LAUNCH_COMMAND}\"")
+  string(REPLACE " " ";" TMP_RUNCMD "${HIOP_CTEST_LAUNCH_COMMAND}")
+  set(RUNCMD ${TMP_RUNCMD})
+  set(MPICMD ${TMP_RUNCMD})
 endif()
 
 ##########################################################
@@ -407,6 +424,9 @@ if (HIOP_WITH_MAKETEST)
   add_test(NAME NlpMixedDenseSparse4_2 COMMAND ${RUNCMD} bash -c "$<TARGET_FILE:nlpMDS_ex4.exe> 400 100 1 -selfcheck \
     | ${STRIP_TABLE_CMD} \
     | tee ${PROJECT_BINARY_DIR}/mds4_2.out")
+  
+  add_test(NAME NlpMixedDenseSparse4_3 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpMDS_ex4.exe>" "400" "100" "0" "-empty_sp_row" "-selfcheck")
+
   if(HIOP_USE_RAJA)
     add_test(NAME NlpMixedDenseSparseRaja4_1 COMMAND ${RUNCMD} bash -c "$<TARGET_FILE:nlpMDS_ex4_raja.exe> 400 100 0 -selfcheck \
       | ${STRIP_TABLE_CMD} \
@@ -414,7 +434,8 @@ if (HIOP_WITH_MAKETEST)
     add_test(NAME NlpMixedDenseSparseRaja4_2 COMMAND ${RUNCMD} bash -c "$<TARGET_FILE:nlpMDS_ex4_raja.exe> 400 100 1 -selfcheck \
       | ${STRIP_TABLE_CMD} \
       | tee ${PROJECT_BINARY_DIR}/mds4_raja_2.out")
-
+    add_test(NAME NlpMixedDenseSparseRaja4_3 COMMAND ${RUNCMD} bash -c "$<TARGET_FILE:nlpMDS_ex4_raja.exe> 400 100 0 -empty_sp_row -selfcheck")
+    
     if(HIOP_DEEPCHECKS)
       foreach(iter 1 2)
         add_test(
@@ -428,30 +449,41 @@ if (HIOP_WITH_MAKETEST)
           echo 'Output tables have a different number of iterations!'
           exit 1
           fi")
-          add_test(
-            NAME "CompareExample4_ElementWise_${iter}"
-            COMMAND bash -c "\
-            join ${PROJECT_BINARY_DIR}/mds4_${iter}.out ${PROJECT_BINARY_DIR}/mds4_raja_${iter}.out \
-            | ${PROJECT_SOURCE_DIR}/tests/testEx4CompareIterations.awk")
-          endforeach()
-        endif(HIOP_DEEPCHECKS)
-      endif()
+        add_test(
+          NAME "CompareExample4_ElementWise_${iter}"
+          COMMAND bash -c "\
+          join ${PROJECT_BINARY_DIR}/mds4_${iter}.out ${PROJECT_BINARY_DIR}/mds4_raja_${iter}.out \
+          | ${PROJECT_SOURCE_DIR}/tests/testEx4CompareIterations.awk")
+      endforeach()
+    endif(HIOP_DEEPCHECKS)
+  endif()
 
   add_test(NAME NlpMixedDenseSparse5_1 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpMDS_ex5.exe>" "400" "100" "-selfcheck")
 
   if(HIOP_SPARSE)
     add_test(NAME NlpSparse6_1 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex6.exe>" "500" "-selfcheck")
     add_test(NAME NlpSparse7_1 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex7.exe>" "500" "-selfcheck")
+    add_test(NAME NlpSparse7_2 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex7.exe>" "500" "-inertiafree" "-selfcheck")
   endif(HIOP_SPARSE)
 
+  if(HIOP_USE_MPI)
+    add_test(NAME NlpPriDec8_1 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpPriDec_ex8.exe>" "-selfcheck")
+    add_test(NAME NlpPriDec8_mpi COMMAND ${MPICMD} -n 2 "$<TARGET_FILE:nlpPriDec_ex8.exe>" "-selfcheck")
+    if(HIOP_SPARSE)
+      add_test(NAME NlpPriDec9_1 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpPriDec_ex9.exe>" "-selfcheck")    
+      add_test(NAME NlpPriDec9_mpi COMMAND ${MPICMD} -n 2 "$<TARGET_FILE:nlpPriDec_ex9.exe>" "-selfcheck")
+    endif(HIOP_SPARSE)
+  endif(HIOP_USE_MPI)
+
   if(HIOP_WITH_VALGRIND_TESTS)
+    string(REPLACE ";" " " runcmd_str "${RUNCMD}")
     add_test(
       NAME NlpDenseCons1_5H_Valgrind
-      COMMAND bash -c "${RUNCMD} ${HIOP_VALGRIND_CMD} $<TARGET_FILE:nlpDenseCons_ex1.exe> 500 1.0 -selfcheck"
+      COMMAND bash -c "${runcmd_str} ${HIOP_VALGRIND_CMD} $<TARGET_FILE:nlpDenseCons_ex1.exe> 500 1.0 -selfcheck"
       )
     add_test(
       NAME NlpMixedDenseSparse4_1_Valgrind
-      COMMAND bash -c "${RUNCMD} ${HIOP_VALGRIND_CMD} $<TARGET_FILE:nlpMDS_ex4.exe> 400 100 0 -selfcheck"
+      COMMAND bash -c "${runcmd_str} ${HIOP_VALGRIND_CMD} $<TARGET_FILE:nlpMDS_ex4.exe> 400 100 0 -selfcheck"
       )
   endif()
 

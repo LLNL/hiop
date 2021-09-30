@@ -11,12 +11,12 @@
 
 using namespace hiop;
 
-static bool self_check(long long n, double obj_value);
+static bool self_check(size_type n, double obj_value);
 
 static bool parse_arguments(int argc, char **argv,
 			    bool& self_check,
-			    long long& n_sp,
-			    long long& n_de,
+			    size_type& n_sp,
+			    size_type& n_de,
 			    bool& rdJac)
 {
   self_check = rdJac = false;
@@ -108,7 +108,7 @@ int main(int argc, char **argv)
 #endif
 
   bool selfCheck, rdJac;
-  long long n_sp, n_de;
+  size_type n_sp, n_de;
   if(!parse_arguments(argc, argv, selfCheck, n_sp, n_de, rdJac)) {
     usage(argv[0]);
     return 1;

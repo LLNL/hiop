@@ -54,6 +54,9 @@
 #ifdef HIOP_USE_STRUMPACK
 #include "hiopLinSolverSparseSTRUMPACK.hpp"
 #endif
+#ifdef HIOP_USE_PARDISO
+#include "hiopLinSolverSparsePARDISO.hpp"
+#endif
 #endif
 
 namespace hiop
@@ -78,8 +81,10 @@ namespace hiop
     delete Hx_;
   }
 
-  bool hiopKKTLinSysCompressedSparseXYcYd::updateMatrix(const double& delta_wx, const double& delta_wd,
-                                                        const double& delta_cc, const double& delta_cd)
+  bool hiopKKTLinSysCompressedSparseXYcYd::build_kkt_matrix(const double& delta_wx,
+                                                            const double& delta_wd,
+                                                            const double& delta_cc,
+                                                            const double& delta_cd)
   {
     HessSp_ = dynamic_cast<hiopMatrixSymSparseTriplet*>(Hess_);
     if(!HessSp_) { assert(false); return false; }
@@ -90,7 +95,7 @@ namespace hiop
     Jac_dSp_ = dynamic_cast<const hiopMatrixSparseTriplet*>(Jac_d_);
     if(!Jac_dSp_) { assert(false); return false; }
 
-    long long nx = HessSp_->n(), neq=Jac_cSp_->m(), nineq=Jac_dSp_->m();
+    size_type nx = HessSp_->n(), neq=Jac_cSp_->m(), nineq=Jac_dSp_->m();
     int nnz = HessSp_->numberOfNonzeros() + Jac_cSp_->numberOfNonzeros() + Jac_dSp_->numberOfNonzeros();
     nnz += nx + neq + nineq;
 
@@ -113,7 +118,7 @@ namespace hiop
       Msys.setToZero();
 
       // copy Jac and Hes to the full iterate matrix
-      long long dest_nnz_st{0};
+      size_type dest_nnz_st{0};
       Msys.copyRowsBlockFrom(*HessSp_,  0,   nx,     0,      dest_nnz_st);
       dest_nnz_st += HessSp_->numberOfNonzeros();
       Msys.copyRowsBlockFrom(*Jac_cSp_, 0,   neq,    nx,     dest_nnz_st);
@@ -123,7 +128,8 @@ namespace hiop
 
       //build the diagonal Hx = Dx + delta_wx
       if(NULL == Hx_) {
-        Hx_ = LinearAlgebraFactory::createVector(nx); assert(Hx_);
+        Hx_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), nx);
+        assert(Hx_);
       }
       Hx_->startingAtCopyFromStartingAt(0, *Dx_, 0);
 
@@ -189,7 +195,10 @@ namespace hiop
     int nx=rx.get_size(), nyc=ryc.get_size(), nyd=ryd.get_size();
     int nxsp=Hx_->get_size();
     assert(nxsp==nx);
-    if(rhs_ == NULL) rhs_ = LinearAlgebraFactory::createVector(nx+nyc+nyd);
+    if(rhs_ == NULL) {
+      rhs_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"),
+                                                 nx+nyc+nyd);
+    }
 
     nlp_->log->write("RHS KKT_SPARSE_XYcYd rx: ", rx,  hovIteration);
     nlp_->log->write("RHS KKT_SPARSE_XYcYd ryc:", ryc, hovIteration);
@@ -245,37 +254,89 @@ namespace hiop
   hiopLinSolverIndefSparse*
   hiopKKTLinSysCompressedSparseXYcYd::determineAndCreateLinsys(int nx, int neq, int nineq, int nnz)
   {
-    if(NULL==linSys_) {
+    if(nullptr==linSys_) {
       int n = nx + neq + nineq;
 
-      if(nlp_->options->GetString("compute_mode")=="cpu")
+      if(nlp_->options->GetString("compute_mode") == "cpu")
       {
-        nlp_->log->printf(hovScalars,
-                          "KKT_SPARSE_XYcYd linsys: alloc MA57 size %d (%d cons)\n",
-                          n, neq+nineq);
-#ifdef HIOP_USE_COINHSL        
-        linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
+        auto linear_solver = nlp_->options->GetString("linear_solver_sparse");
+
+        if(linear_solver == "ma57" || linear_solver == "auto") {
+#ifdef HIOP_USE_COINHSL
+          nlp_->log->printf(hovScalars,
+                            "KKT_SPARSE_XYcYd linsys: alloc MA57 with matrix size %d (%d cons)\n",
+                            n, neq+nineq);
+          linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
 #endif // HIOP_USE_COINHSL
-      }else{
+        }
+
+        if( (nullptr == linSys_ && linear_solver == "auto") || linear_solver == "pardiso") {
+          //ma57 is not available or user requested pardiso
+#ifdef HIOP_USE_PARDISO
+          nlp_->log->printf(hovScalars,
+                            "KKT_SPARSE_XYcYd linsys: alloc PARDISO with matrix size %d (%d cons)\n",
+                            n, neq+nineq);
+          linSys_ = new hiopLinSolverIndefSparsePARDISO(n, nnz, nlp_);
+#endif  // HIOP_USE_PARDISO          
+        }
+
+        if( (nullptr == linSys_ && linear_solver == "auto") || linear_solver == "strumpack") {
+          //ma57 and pardiso are not available or user requested strumpack
+#ifdef HIOP_USE_STRUMPACK              
+          nlp_->log->printf(hovScalars,
+                            "KKT_SPARSE_XYcYd linsys: alloc STRUMPACK with matrix size %d (%d cons)\n",
+                            n, neq+nineq);
+          hiopLinSolverIndefSparseSTRUMPACK *p = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
+          p->setFakeInertia(neq + nineq);
+          linSys_ = p;        
+#endif  // HIOP_USE_STRUMPACK        
+        }
+      } else {
+        //
+        // on device: compute_mode is hybrid, auto, or gpu
+        //
+        assert(nullptr==linSys_);
+
+        //At this point the only supported GPU sparse solver is STRUMPACK. 
+
+        //We expect new GPU sparse solvers to be added. These should take precedence over STRUMPACK
+        //in the instantiation logic below whenever it is ambiguous which GPU solver to instantiate,
+        //for example when "linear_solver_sparse" option is auto.
+
 #ifdef HIOP_USE_STRUMPACK        
         hiopLinSolverIndefSparseSTRUMPACK *p = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
 
         //print it as a warning if safe mode is on
-        auto verbosity = hovScalars;
-        if(safe_mode_) verbosity  = hovWarning;
+        auto verbosity = safe_mode_ ? hovWarning : hovScalars;
+
         nlp_->log->printf(verbosity,
                           "KKT_SPARSE_XYcYd linsys: alloc STRUMPACK size %d (%d cons) (safe_mode=%d)\n",
                           n, neq+nineq, safe_mode_);
         
         p->setFakeInertia(neq + nineq);
         linSys_ = p;
-#else
-#ifdef HIOP_USE_COINHSL
-        nlp_->log->printf(hovScalars,
-                          "KKT_SPARSE_XYcYd linsys: alloc MA57 on CPU size %d (%d cons)\n",
-                          n, neq+nineq);                             
-        linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
-#endif // HIOP_USE_COINHSL
+#else 
+        //Return NULL (and assert) if a GPU sparse linear solver is not present
+        assert(linSys_!=nullptr &&
+               "HiOp was built without a sparse linear solver for GPU/device and cannot run on the "
+               "device as instructed by the 'compute_mode' option. Change the 'compute_mode' to "
+               " 'cpu' (from hiopKKTLinSysCompressedSparseXYcYd)"); 
+        return nullptr;
+// #ifdef HIOP_USE_COINHSL
+//         nlp_->log->printf(hovScalars,
+//                           "KKT_SPARSE_XYcYd linsys: alloc MA57 on CPU size %d (%d cons)\n",
+//                           n, neq+nineq);                             
+//         linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
+// #endif // HIOP_USE_COINHSL
+      
+//         if(NULL == linSys_) {
+// #ifdef HIOP_USE_PARDISO
+//           nlp_->log->printf(hovScalars,
+//                             "KKT_SPARSE_XYcYd linsys: alloc PARDISO on CPU size %d (%d cons)\n",
+//                             n, neq+nineq);                             
+//           linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
+// #endif // HIOP_USE_PARDISO
+//        }
 #endif // HIOP_USE_STRUMPACK
       }
       assert(linSys_&& "KKT_SPARSE_XYcYd linsys: cannot instantiate backend linear solver");
@@ -305,8 +366,10 @@ namespace hiop
     delete Hd_;
   }
 
-  bool hiopKKTLinSysCompressedSparseXDYcYd::updateMatrix(const double& delta_wx, const double& delta_wd,
-                                                         const double& delta_cc, const double& delta_cd)
+  bool hiopKKTLinSysCompressedSparseXDYcYd::build_kkt_matrix(const double& delta_wx,
+                                                             const double& delta_wd,
+                                                             const double& delta_cc,
+                                                             const double& delta_cd)
   {
     HessSp_ = dynamic_cast<hiopMatrixSymSparseTriplet*>(Hess_);
     if(!HessSp_) { assert(false); return false; }
@@ -317,7 +380,7 @@ namespace hiop
     Jac_dSp_ = dynamic_cast<const hiopMatrixSparseTriplet*>(Jac_d_);
     if(!Jac_dSp_) { assert(false); return false; }
     
-    long long nx = HessSp_->n(), nd=Jac_dSp_->m(), neq=Jac_cSp_->m(), nineq=Jac_dSp_->m();
+    size_type nx = HessSp_->n(), nd=Jac_dSp_->m(), neq=Jac_cSp_->m(), nineq=Jac_dSp_->m();
     int nnz = HessSp_->numberOfNonzeros() + Jac_cSp_->numberOfNonzeros() + Jac_dSp_->numberOfNonzeros() + nd + nx + nd + neq + nineq;
 
     linSys_ = determineAndCreateLinsys(nx, neq, nineq, nnz);
@@ -339,7 +402,7 @@ namespace hiop
       Msys.setToZero();
 
       // copy Jac and Hes to the full iterate matrix
-      long long dest_nnz_st{0};
+      size_type dest_nnz_st{0};
       Msys.copyRowsBlockFrom(*HessSp_,  0,   nx,     0,          dest_nnz_st); dest_nnz_st += HessSp_->numberOfNonzeros();
       Msys.copyRowsBlockFrom(*Jac_cSp_, 0,   neq,    nx+nd,      dest_nnz_st); dest_nnz_st += Jac_cSp_->numberOfNonzeros();
       Msys.copyRowsBlockFrom(*Jac_dSp_, 0,   nineq,  nx+nd+neq,  dest_nnz_st); dest_nnz_st += Jac_dSp_->numberOfNonzeros();
@@ -349,7 +412,8 @@ namespace hiop
 
       //build the diagonal Hx = Dx + delta_wx
       if(NULL == Hx_) {
-        Hx_ = LinearAlgebraFactory::createVector(nx); assert(Hx_);
+        Hx_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), nx);
+        assert(Hx_);
       }
       Hx_->startingAtCopyFromStartingAt(0, *Dx_, 0);
 
@@ -360,7 +424,8 @@ namespace hiop
 
       //build the diagonal Hd = Dd + delta_wd
       if(NULL == Hd_) {
-        Hd_ = LinearAlgebraFactory::createVector(nd); assert(Hd_);
+        Hd_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), nd);
+        assert(Hd_);
       }
       Hd_->startingAtCopyFromStartingAt(0, *Dd_, 0);
       Hd_->addConstant(delta_wd);
@@ -408,7 +473,10 @@ namespace hiop
     int nx=rx.get_size(), nd=rd.get_size(), nyc=ryc.get_size(), nyd=ryd.get_size();
     int nxsp=Hx_->get_size();
     assert(nxsp==nx);
-    if(rhs_ == NULL) rhs_ = LinearAlgebraFactory::createVector(nx+nd+nyc+nyd);
+    if(rhs_ == NULL) {
+      rhs_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"),
+                                                 nx+nd+nyc+nyd);
+    }
 
     nlp_->log->write("RHS KKT_SPARSE_XDYcYd rx: ", rx,  hovIteration);
     nlp_->log->write("RHS KKT_SPARSE_XDYcYd rx: ", rd,  hovIteration);
@@ -469,25 +537,56 @@ namespace hiop
   hiopLinSolverIndefSparse*
   hiopKKTLinSysCompressedSparseXDYcYd::determineAndCreateLinsys(int nx, int neq, int nineq, int nnz)
   {
-
-    if(NULL==linSys_) {
+    if(nullptr==linSys_) {
       int n = nx + nineq + neq + nineq;
 
       if(nlp_->options->GetString("compute_mode")=="cpu")
       {
         nlp_->log->printf(hovWarning,
-			    "KKT_SPARSE_XDYcYd linsys: alloc MA57 size %d (%d cons)\n",
-			    n, neq+nineq);
-#ifdef HIOP_USE_COINHSL			    
+                         "KKT_SPARSE_XDYcYd linsys: alloc sparse solver with matrix size %d (%d cons)\n",
+                          n, neq+nineq);
+
+        auto linear_solver = nlp_->options->GetString("linear_solver_sparse");
+
+        if(linear_solver == "ma57" || linear_solver == "auto") {
+#ifdef HIOP_USE_COINHSL
           linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
-#endif // HIOP_USE_COINHSL          
+#endif // HIOP_USE_COINHSL
+        }
+
+        if( (nullptr == linSys_ && linear_solver == "auto") || linear_solver == "pardiso") {
+          //ma57 is not available or user requested pardiso
+#ifdef HIOP_USE_PARDISO
+          linSys_ = new hiopLinSolverIndefSparsePARDISO(n, nnz, nlp_);
+#endif  // HIOP_USE_PARDISO          
+        }
+
+        if( (nullptr == linSys_ && linear_solver == "auto") || linear_solver == "strumpack") {
+          //ma57 is not available or user requested strumpack
+#ifdef HIOP_USE_STRUMPACK              
+          hiopLinSolverIndefSparseSTRUMPACK *p = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
+          p->setFakeInertia(neq + nineq);
+          linSys_ = p;        
+#endif  // HIOP_USE_STRUMPACK        
+        }
       }else{
-#ifdef HIOP_USE_STRUMPACK        
+
+        //
+        // on device: compute_mode is hybrid, auto, or gpu
+        //
+        assert(nullptr==linSys_);
+
+        //At this point the only supported GPU sparse solver is STRUMPACK. 
+        //We expect new GPU sparse solvers to be added. These should take precedence over STRUMPACK
+        //in the instantiation logic below whenever it is ambiguous which GPU solver to instantiate,
+        //for example when "linear_solver_sparse" option is auto.
+
+#ifdef HIOP_USE_STRUMPACK   
         hiopLinSolverIndefSparseSTRUMPACK *p = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
 
         //print it as a warning if safe mode is on
-        auto verbosity = hovScalars;
-        if(safe_mode_) verbosity  = hovWarning;
+        auto verbosity = safe_mode_ ? hovWarning : hovScalars;
+
         nlp_->log->printf(verbosity,
                           "KKT_SPARSE_XDYcYd linsys: alloc STRUMPACK size %d (%d cons) (safe_mode=%d)\n",
                           n, neq+nineq, safe_mode_);
@@ -495,12 +594,29 @@ namespace hiop
         p->setFakeInertia(neq + nineq);
         linSys_ = p;
 #else
-#ifdef HIOP_USE_COINHSL
-        nlp_->log->printf(hovScalars,
-                          "KKT_SPARSE_XDYcYd linsys: alloc MA57 on CPU size %d (%d cons)\n",
-                          n, neq+nineq);                             
-        linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
-#endif // HIOP_USE_COINHSL
+        //Return nullptr (and assert) if a GPU sparse linear solver is not present
+        assert(linSys_!=nullptr &&
+               "HiOp was built without a sparse linear solver for GPU/device and cannot run on the "
+               "device as instructed by the 'compute_mode' option. Change the 'compute_mode' to "
+               "'cpu' (from hiopKKTLinSysCompressedSparseXDYcYd)"); 
+        return nullptr;
+
+
+// #ifdef HIOP_USE_COINHSL
+//         nlp_->log->printf(hovScalars,
+//                           "KKT_SPARSE_XDYcYd linsys: alloc MA57 on CPU size %d (%d cons)\n",
+//                           n, neq+nineq);                             
+//         linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
+// #endif // HIOP_USE_COINHSL
+      
+//         if(nullptr == linSys_) {
+// #ifdef HIOP_USE_PARDISO
+//           nlp_->log->printf(hovScalars,
+//                             "KKT_SPARSE_XYcYd linsys: alloc PARDISO on CPU size %d (%d cons)\n",
+//                             n, neq+nineq);                             
+//           linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
+// #endif // HIOP_USE_PARDISO
+//         }
 #endif // HIOP_USE_STRUMPACK
       }
       assert(linSys_&& "KKT_SPARSE_XDYcYd linsys: cannot instantiate backend linear solver");
@@ -533,8 +649,15 @@ namespace hiop
   hiopLinSolverNonSymSparse*
   hiopKKTLinSysSparseFull::determineAndCreateLinsys(const int &n, const int &n_con, const int &nnz)
   {
-    if(NULL==linSys_)
-    {
+    if(nullptr==linSys_) {
+#ifdef HIOP_USE_PARDISO
+      nlp_->log->printf(hovWarning,
+                        "KKT_SPARSE_FULL_KKT linsys: alloc PARDISO size %d (%d cons) (safe_mode=%d)\n",
+                        n, n_con, safe_mode_);
+      hiopLinSolverNonSymSparsePARDISO *p = new hiopLinSolverNonSymSparsePARDISO(n, nnz, nlp_);
+      p->setFakeInertia(n_con);
+      linSys_ = p;
+#else
 #ifdef HIOP_USE_STRUMPACK
       nlp_->log->printf(hovWarning,
                         "KKT_SPARSE_FULL_KKT linsys: alloc STRUMPACK size %d (%d cons) (safe_mode=%d)\n",
@@ -542,19 +665,24 @@ namespace hiop
       hiopLinSolverNonSymSparseSTRUMPACK *p = new hiopLinSolverNonSymSparseSTRUMPACK(n, nnz, nlp_);
       p->setFakeInertia(n_con);
       linSys_ = p;
-#else
-      nlp_->log->printf(hovError,
-                        "KKT_SPARSE_FULL_KKT linsys: cannot instantiate backend linear solver "
-                        "because HIOP was not built with STRUMPACK.\n");
-      assert(false);
-      return NULL;
-#endif
+#endif //HIOP_USE_STRUMPACK
+#endif //HIOP_USE_PARDISO
+
+      if(nullptr==linSys_) {
+        nlp_->log->printf(hovError,
+                          "KKT_SPARSE_FULL_KKT linsys: cannot instantiate backend linear solver "
+                          "because HIOP was not built with STRUMPACK or PARDISO.\n");
+        assert(false);
+        return nullptr;
+      }
     }
     return dynamic_cast<hiopLinSolverNonSymSparse*> (linSys_);
   }
 
-  bool hiopKKTLinSysSparseFull::updateMatrix(const double& delta_wx, const double& delta_wd,
-                                             const double& delta_cc, const double& delta_cd)
+  bool hiopKKTLinSysSparseFull::build_kkt_matrix(const double& delta_wx,
+                                                 const double& delta_wd,
+                                                 const double& delta_cc,
+                                                 const double& delta_cd)
   {
     HessSp_ = dynamic_cast<hiopMatrixSymSparseTriplet*>(Hess_);
     if(!HessSp_) { assert(false); return false; }
@@ -565,7 +693,7 @@ namespace hiop
     Jac_dSp_ = dynamic_cast<const hiopMatrixSparseTriplet*>(Jac_d_);
     if(!Jac_dSp_) { assert(false); return false; }
     
-    long long nx = HessSp_->n(), nd=Jac_dSp_->m(), neq=Jac_cSp_->m(), nineq=Jac_dSp_->m(),
+    size_type nx = HessSp_->n(), nd=Jac_dSp_->m(), neq=Jac_cSp_->m(), nineq=Jac_dSp_->m(),
               ndl = nlp_->m_ineq_low(), ndu = nlp_->m_ineq_upp(), nxl = nlp_->n_low(), nxu = nlp_->n_upp();
 
     // note that hess may be saved as a triangular matrix
@@ -602,7 +730,7 @@ namespace hiop
       Msys.setToZero();
 
       // copy Jac and Hes to the full iterate matrix, use Dx_ and Dd_ as temp vector
-      long long dest_nnz_st{0};
+      size_type dest_nnz_st{0};
 
       // H is triangular
       // [   H   Jc^T  Jd^T | 0 |  0   0  -I   I   |  0   0   0   0  ] [  dx]   [    rx    ]
@@ -662,7 +790,8 @@ namespace hiop
 
       //build the diagonal Hx = delta_wx
       if(nullptr == Hx_) {
-        Hx_ = LinearAlgebraFactory::createVector(nx); assert(Hx_);
+        Hx_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), nx);
+        assert(Hx_);
       }
       Hx_->setToZero();
       Hx_->addConstant(delta_wx);
@@ -670,7 +799,8 @@ namespace hiop
 
       //build the diagonal Hd = delta_wd
       if(nullptr == Hd_) {
-        Hd_ = LinearAlgebraFactory::createVector(nd); assert(Hd_);
+        Hd_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), nd);
+        assert(Hd_);
       }
       Hd_->setToZero();
       Hd_->addConstant(delta_wd);
@@ -713,13 +843,15 @@ namespace hiop
 
     nlp_->runStats.kkt.tmSolveRhsManip.start();
 
-    long long nx=rx.get_size(), nd=rd.get_size(), neq=ryc.get_size(), nineq=ryd.get_size(),
+    size_type nx=rx.get_size(), nd=rd.get_size(), neq=ryc.get_size(), nineq=ryd.get_size(),
               ndl = nlp_->m_ineq_low(), ndu = nlp_->m_ineq_upp(), nxl = nlp_->n_low(), nxu = nlp_->n_upp();
-    long long nxsp=Hx_->get_size();
+    size_type nxsp=Hx_->get_size();
     assert(nxsp==nx);
     int n = nx + neq + nineq + nd + ndl + ndu + nxl + nxu + ndl + ndu + nxl + nxu;
 
-    if(rhs_ == NULL) rhs_ = LinearAlgebraFactory::createVector(n);
+    if(rhs_ == nullptr) {
+      rhs_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), n);
+    }
 
     {//write to log
       nlp_->log->write("RHS KKT_SPARSE_FULL rx: ", rx,  hovIteration);

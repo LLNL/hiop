@@ -5,7 +5,7 @@
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
 // is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause). 
-// Please also read “Additional BSD Notice” below.
+// Please also read "Additional BSD Notice" below.
 //
 // Redistribution and use in source and binary forms, with or without modification, 
 // are permitted provided that the following conditions are met:
@@ -55,19 +55,21 @@
  */
  
 #include "hiopNlpTransforms.hpp"
-#include "hiopLinAlgFactory.hpp"
+#include "hiopNlpFormulation.hpp"
 
 #include <cmath>
 namespace hiop
 {
 
 hiopFixedVarsRemover::
-hiopFixedVarsRemover(const hiopVector& xl,
+hiopFixedVarsRemover(hiopNlpFormulation* nlp,
+                     const hiopVector& xl,
                      const hiopVector& xu,
                      const double& fixedVarTol_,
-                     const long long& numFixedVars,
-                     const long long& numFixedVars_local)
-  : n_fixed_vars_local(numFixedVars_local), fixedVarTol(fixedVarTol_),
+                     const size_type& numFixedVars,
+                     const size_type& numFixedVars_local)
+  : hiopNlpTransformation(nlp),
+    n_fixed_vars_local(numFixedVars_local), fixedVarTol(fixedVarTol_),
     Jacc_fs(NULL), Jacd_fs(NULL),
     fs2rs_idx_map(xl.get_local_size()),
     x_rs_ref_(nullptr), Jacc_rs_ref(NULL), Jacd_rs_ref(NULL)
@@ -93,18 +95,18 @@ hiopFixedVarsRemover::~hiopFixedVarsRemover()
 
 #ifdef HIOP_USE_MPI
 /* saves the inter-process distribution of (primal) vectors distribution */
-void hiopFixedVarsRemover::setFSVectorDistrib(long long* vec_distrib_in, int num_ranks)
+void hiopFixedVarsRemover::setFSVectorDistrib(index_type* vec_distrib_in, int num_ranks)
 {
   assert(vec_distrib_in!=NULL);
   fs_vec_distrib.resize(num_ranks+1);
   std::copy(vec_distrib_in, vec_distrib_in+num_ranks+1, fs_vec_distrib.begin());
 };
 /* allocates and returns the reduced-space column partitioning to be used internally by HiOp */
-long long* hiopFixedVarsRemover::allocRSVectorDistrib()
+index_type* hiopFixedVarsRemover::allocRSVectorDistrib()
 {
-  int nlen = fs_vec_distrib.size(); //nlen==nranks+1
+  size_t nlen = fs_vec_distrib.size(); //nlen==nranks+1
   assert(nlen>=1);
-  long long* rsVecDistrib = new long long[nlen];
+  index_type* rsVecDistrib = new index_type[nlen];
   rsVecDistrib[0]=0;
 #ifdef HIOP_DEEPCHECKS
   assert(fs_vec_distrib[0]==0);
@@ -119,7 +121,13 @@ long long* hiopFixedVarsRemover::allocRSVectorDistrib()
   assert(nRanks==nlen-1);
 #endif
   //first gather on all ranks the number of variables fixed on each rank
-  ierr = MPI_Allgather(&n_fixed_vars_local, 1, MPI_LONG_LONG_INT, rsVecDistrib+1, 1, MPI_LONG_LONG_INT, comm);
+  ierr = MPI_Allgather(&n_fixed_vars_local,
+                       1,
+                       MPI_HIOP_SIZE_TYPE,
+                       rsVecDistrib+1,
+                       1,
+                       MPI_HIOP_INDEX_TYPE,
+                       comm);
   assert(ierr==MPI_SUCCESS);
 #else
   assert(nlen==1);
@@ -130,9 +138,9 @@ long long* hiopFixedVarsRemover::allocRSVectorDistrib()
     rsVecDistrib[r] += rsVecDistrib[r-1];
   
   //finally substract these from the full-space index vector distribution 
-  for(int r=0; r<nlen; r++)
+  for(int r=0; r<nlen; r++) {
     rsVecDistrib[r] = fs_vec_distrib[r]-rsVecDistrib[r];
-
+  }
   assert(rsVecDistrib[0]==0);
 #ifdef HIOP_DEEPCHECKS
   assert(rsVecDistrib[nlen-1]==n_rs);
@@ -168,17 +176,20 @@ bool hiopFixedVarsRemover::setupConstraintsPart(const int& neq, const int& nineq
   assert(Jacd_fs==NULL && "should not be allocated at this point");
 
 #ifdef HIOP_USE_MPI
-  if(fs_vec_distrib.size())
-  {
-    Jacc_fs = LinearAlgebraFactory::createMatrixDense(neq,   n_fs, fs_vec_distrib.data(), comm);
-    Jacd_fs = LinearAlgebraFactory::createMatrixDense(nineq, n_fs, fs_vec_distrib.data(), comm);
+  if(fs_vec_distrib.size()) {
+    Jacc_fs = LinearAlgebraFactory::
+      create_matrix_dense(nlp_->options->GetString("mem_space"),neq, n_fs, fs_vec_distrib.data(), comm);
+    Jacd_fs = LinearAlgebraFactory::
+      create_matrix_dense(nlp_->options->GetString("mem_space"), nineq, n_fs, fs_vec_distrib.data(), comm);
   } else {
-    Jacc_fs = LinearAlgebraFactory::createMatrixDense(neq,   n_fs, NULL, comm);
-    Jacd_fs = LinearAlgebraFactory::createMatrixDense(nineq, n_fs, NULL, comm);
+    Jacc_fs = LinearAlgebraFactory::
+      create_matrix_dense(nlp_->options->GetString("mem_space"), neq, n_fs, NULL, comm);
+    Jacd_fs = LinearAlgebraFactory::
+      create_matrix_dense(nlp_->options->GetString("mem_space"), nineq, n_fs, NULL, comm);
   }
 #else
-  Jacc_fs = LinearAlgebraFactory::createMatrixDense(neq,   n_fs);
-  Jacd_fs = LinearAlgebraFactory::createMatrixDense(nineq, n_fs);
+  Jacc_fs = LinearAlgebraFactory::create_matrix_dense(nlp_->options->GetString("mem_space"), neq, n_fs);
+  Jacd_fs = LinearAlgebraFactory::create_matrix_dense(nlp_->options->GetString("mem_space"), nineq, n_fs);
 #endif
   return true;
 }
@@ -237,7 +248,7 @@ void hiopFixedVarsRemover::apply_to_vector(const hiopVector* vec_fs, hiopVector*
 void hiopFixedVarsRemover::applyToMatrix(const double* M_rs, const int& m_in, double* M_fs)
 {
   int rs_idx;
-  const int nfs = fs2rs_idx_map.size();
+  const size_t nfs = fs2rs_idx_map.size();
   assert(nfs == fs_n_local());
   const int nrs = rs_n_local();
 
@@ -259,7 +270,7 @@ void hiopFixedVarsRemover::applyToMatrix(const double* M_rs, const int& m_in, do
 void hiopFixedVarsRemover::applyInvToMatrix(const double* M_fs, const int& m_in, double* M_rs)
 {
   int rs_idx;
-  const int nfs = fs2rs_idx_map.size();
+  const size_t nfs = fs2rs_idx_map.size();
   assert(nfs == fs_n_local());
   const int nrs = rs_n_local();
 
@@ -274,11 +285,13 @@ void hiopFixedVarsRemover::applyInvToMatrix(const double* M_fs, const int& m_in,
 }
 
 hiopFixedVarsRelaxer::
-hiopFixedVarsRelaxer(const hiopVector& xl,
+hiopFixedVarsRelaxer(hiopNlpFormulation* nlp,
+                     const hiopVector& xl,
                      const hiopVector& xu,
-                     const long long& numFixedVars,
-                     const long long& numFixedVars_local)
-  : xl_copy(NULL), xu_copy(NULL), n_vars(xl.get_size()), n_vars_local(xl.get_local_size())
+                     const size_type& numFixedVars,
+                     const size_type& numFixedVars_local)
+  : hiopNlpTransformation(nlp),
+    xl_copy(NULL), xu_copy(NULL), n_vars(xl.get_size()), n_vars_local(xl.get_local_size())
 {
   //xl_copy = xl.new_copy(); // no need to copy at this point
   //xu_copy = xu.new_copy(); // no need to copy at this point
@@ -294,9 +307,9 @@ void hiopFixedVarsRelaxer::
 relax(const double& fixed_var_tol, const double& fixed_var_perturb, hiopVector& xl, hiopVector& xu)
 {
   double *xla=xl.local_data(), *xua=xu.local_data(), *v;
-  long long n=xl.get_local_size();
+  size_type n=xl.get_local_size();
   double xuabs;
-  for(long long i=0; i<n; i++) {
+  for(index_type i=0; i<n; i++) {
     xuabs = fabs(xua[i]);
     if(fabs(xua[i]-xla[i])<= fixed_var_tol*fmax(1.,xuabs)) {
 
@@ -313,11 +326,13 @@ relax(const double& fixed_var_tol, const double& fixed_var_perturb, hiopVector& 
 }
 
 hiopBoundsRelaxer::
-hiopBoundsRelaxer(const hiopVector& xl,
+hiopBoundsRelaxer(hiopNlpFormulation* nlp,
+                  const hiopVector& xl,
                   const hiopVector& xu,
                   const hiopVector& dl,
                   const hiopVector& du)
-  : xl_ori(NULL), xu_ori(NULL), dl_ori(NULL), du_ori(NULL),
+  : hiopNlpTransformation(nlp),
+    xl_ori(NULL), xu_ori(NULL), dl_ori(NULL), du_ori(NULL),
     n_vars(xl.get_size()), n_vars_local(xl.get_local_size()),
     n_ineq(dl.get_size())
 {
@@ -371,37 +386,39 @@ relax(const double& bound_relax_perturb, hiopVector& xl, hiopVector& xu, hiopVec
 /**
 * For class hiopNLPObjGradScaling
 */
-hiopNLPObjGradScaling::hiopNLPObjGradScaling(const double max_grad, 
+hiopNLPObjGradScaling::hiopNLPObjGradScaling(hiopNlpFormulation* nlp,
+                                             const double& max_grad, 
                                              hiopVector& c, 
                                              hiopVector& d, 
                                              hiopVector& gradf,
                                              hiopMatrix& Jac_c, 
                                              hiopMatrix& Jac_d, 
-                                             long long *cons_eq_mapping, 
-                                             long long *cons_ineq_mapping)
-      : n_vars(gradf.get_size()), n_vars_local(gradf.get_local_size()),
-        scale_factor_obj(1.),
-        n_eq(c.get_size()), n_ineq(d.get_size())
+                                             index_type* cons_eq_mapping, 
+                                             index_type* cons_ineq_mapping)
+  : hiopNlpTransformation(nlp),
+    n_vars(gradf.get_size()), n_vars_local(gradf.get_local_size()),
+    scale_factor_obj(1.),
+    n_eq(c.get_size()), n_ineq(d.get_size())
 {
   scale_factor_obj = max_grad/gradf.infnorm();
-  if(scale_factor_obj>1.)
-  {
+  if(scale_factor_obj>1.) {
     scale_factor_obj=1.;
   }
   
   scale_factor_c = c.new_copy();
   scale_factor_d = d.new_copy();
-  scale_factor_cd = LinearAlgebraFactory::createVector(n_eq + n_ineq);
-  
+  scale_factor_cd = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"),
+                                                        n_eq + n_ineq);
+
   Jac_c.row_max_abs_value(*scale_factor_c);
+  scale_factor_c->scale(1./max_grad);
+  scale_factor_c->component_max(1.0);
   scale_factor_c->invert();
-  scale_factor_c->scale(max_grad);
-  scale_factor_c->component_min(1.0);
 
   Jac_d.row_max_abs_value(*scale_factor_d);
+  scale_factor_d->scale(1./max_grad);
+  scale_factor_d->component_max(1.0);
   scale_factor_d->invert();
-  scale_factor_d->scale(max_grad);
-  scale_factor_d->component_min(1.0);
 
   const double* eq_arr = scale_factor_c->local_data_const();
   const double* ineq_arr = scale_factor_d->local_data_const();

@@ -1,4 +1,6 @@
 #cmakedefine HIOP_USE_GPU
+#cmakedefine HIOP_USE_CUDA
+#cmakedefine HIOP_USE_HIP
 #cmakedefine HIOP_USE_MPI
 #cmakedefine HIOP_USE_MAGMA
 #cmakedefine HIOP_USE_RAJA
@@ -6,6 +8,7 @@
 #cmakedefine HIOP_SPARSE
 #cmakedefine HIOP_USE_COINHSL
 #cmakedefine HIOP_USE_STRUMPACK
+#cmakedefine HIOP_USE_PARDISO
 #define HIOP_VERSION  "@PROJECT_VERSION@"
 #define HIOP_VERSION_MAJOR "@PROJECT_VERSION_MAJOR@"
 #define HIOP_VERSION_MINOR "@PROJECT_VERSION_MINOR@"
@@ -13,3 +16,5 @@
 
 /// Date of build with the format "%Y-%m-%d"
 #define HIOP_RELEASE_DATE "@HIOP_RELEASE_DATE@"
+
+#include "hiop_types.h"

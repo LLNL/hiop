@@ -100,7 +100,7 @@ public:
    * 
    * @pre _this_ is local/non-distributed
    */
-  virtual void addSubDiagonal(const double& alpha, long long start_on_dest_diag, const hiopVector& d) = 0;
+  virtual void addSubDiagonal(const double& alpha, index_type start_on_dest_diag, const hiopVector& d) = 0;
 
   /** 
    * @brief subdigonal(this) += alpha*d *
@@ -168,7 +168,7 @@ public:
    * @pre 'src' and 'this' must have same number of columns
    * @pre number of rows in 'src' must be at least the number of rows in 'this'
    */
-  virtual void copyRowsFrom(const hiopMatrix& src, const long long* rows_idxs, long long n_rows) = 0;
+  virtual void copyRowsFrom(const hiopMatrix& src, const index_type* rows_idxs, size_type n_rows) = 0;
  
   virtual double max_abs_value() = 0;
 
@@ -205,10 +205,10 @@ public:
   virtual void print(FILE* f=NULL, const char* msg=NULL, int maxRows=-1, int maxCols=-1, int rank=-1) const = 0;
 
   /// @brief number of rows
-  virtual long long m() const = 0;
+  virtual size_type m() const = 0;
 
   /// @brief number of columns
-  virtual long long n() const = 0;
+  virtual size_type n() const = 0;
 #ifdef HIOP_DEEPCHECKS
   /** 
    * @brief Checks symmetry for locally/non-distributed matrices: returns true if the absolute difference

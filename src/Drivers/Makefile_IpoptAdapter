@@ -39,8 +39,10 @@ OBJS =  IpoptAdapter_driver.o
 ADDLIBS =
 
 # CHANGEME: Additional flags for compilation (e.g., include flags)
-ADDINCFLAGS = -I/home/petra1/work/projects/hiop/_dist-DEBUG/include/
+#ADDINCFLAGS = -I/home/petra1/work/projects/hiop/_dist-DEBUG/include/
 #ADDINCFLAGS = -I/Users/petra1/work/projects/hiop/_dist-DEBUG/include/
+# ny-VM
+ADDINCFLAGS = -I/home/nai/project/hiop/_dist-DEBUG/include/
 
 ##########################################################################
 #  Usually, you don't have to change anything below.  Note that if you   #
@@ -51,24 +53,32 @@ ADDINCFLAGS = -I/home/petra1/work/projects/hiop/_dist-DEBUG/include/
 CXX = g++
 
 # C++ Compiler options
-CXXFLAGS = -g -pipe -Wparentheses -Wreturn-type -Wcast-qual -Wall -Wpointer-arith -Wwrite-strings -Wconversion -Wno-unknown-pragmas -Wno-long-long -m64 -I/home/petra1/intel_mkl2019/compilers_and_libraries_2019.2.187/linux/mkl/include -fopenmp -fPIC -lgomp  -DIPOPT_BUILD
+#CXXFLAGS = -g -pipe -Wparentheses -Wreturn-type -Wcast-qual -Wall -Wpointer-arith -Wwrite-strings -Wconversion -Wno-unknown-pragmas -Wno-long-long -m64 -I/home/petra1/intel_mkl2019/compilers_and_libraries_2019.2.187/linux/mkl/include -fopenmp -fPIC -lgomp  -DIPOPT_BUILD
 # mac
 #CXXFLAGS = -g -pipe -Wparentheses -Wreturn-type -Wcast-qual -Wall -Wpointer-arith -Wwrite-strings -Wconversion -Wno-unknown-pragmas -Wno-long-long -m64 -I/home/petra1/intel_mkl2019/compilers_and_libraries_2019.2.187/linux/mkl/include -fPIC -DIPOPT_BUILD 
+# ny-VM
+CXXFLAGS = -g -pipe -Wparentheses -Wreturn-type -Wcast-qual -Wall -Wpointer-arith -Wwrite-strings -Wconversion -Wno-unknown-pragmas -Wno-long-long -m64 -fopenmp -fPIC -lgomp  -DIPOPT_BUILD
 
 # additional C++ Compiler options for linking
-CXXLINKFLAGS =  -Wl,--rpath -Wl,/home/petra1/work/projects/gocompet/Ipopt-gollnlp/build/lib
+#CXXLINKFLAGS =  -Wl,--rpath -Wl,/home/petra1/work/projects/gocompet/Ipopt-gollnlp/build/lib
 #mac
 #CXXLINKFLAGS =  -Wl,-rpath -Wl,/Users/petra1/work/projects/go-compet/Ipopt-gollnlp/build/lib/
+# ny-VM
+CXXLINKFLAGS = -Wl,--rpath -Wl,/home/nai/software/coin-or/lib
 
 # Include directories (we use the CYGPATH_W variables to allow compilation with Windows compilers)
-INCL = `PKG_CONFIG_PATH=/home/petra1/work/projects/gocompet/Ipopt-gollnlp/build/lib64/pkgconfig:/home/petra1/work/projects/gocompet/Ipopt-gollnlp/build/lib/pkgconfig:/home/petra1/work/projects/gocompet/Ipopt-gollnlp/build/share/pkgconfig:/home/petra1/intel_mkl2019/compilers_and_libraries_2019.2.187/linux/mkl/bin/pkgconfig:/home/petra1/intel_mkl2019/compilers_and_libraries_2019.2.187/linux/mkl/bin/pkgconfig pkg-config --cflags ipopt` $(ADDINCFLAGS)
+#INCL = `PKG_CONFIG_PATH=/home/petra1/work/projects/gocompet/Ipopt-gollnlp/build/lib64/pkgconfig:/home/petra1/work/projects/gocompet/Ipopt-gollnlp/build/lib/pkgconfig:/home/petra1/work/projects/gocompet/Ipopt-gollnlp/build/share/pkgconfig:/home/petra1/intel_mkl2019/compilers_and_libraries_2019.2.187/linux/mkl/bin/pkgconfig:/home/petra1/intel_mkl2019/compilers_and_libraries_2019.2.187/linux/mkl/bin/pkgconfig pkg-config --cflags ipopt` $(ADDINCFLAGS)
 #mac
 #INCL = -I`$(CYGPATH_W) /Users/petra1/work/projects/go-compet/Ipopt-gollnlp/build/include/coin`  -I/Users/petra1/work/projects/go-compet/Ipopt-gollnlp/build/include/coin/ThirdParty  -I/Users/petra1/work/projects/go-compet/Ipopt-gollnlp/build/include/coin/ThirdParty   $(ADDINCFLAGS)
+# ny-VN
+INCL = `PKG_CONFIG_PATH=/home/nai/software/coin-or/lib/pkgconfig pkg-config --cflags ipopt` $(ADDINCFLAGS)
 
 # Linker flags
-LIBS = `PKG_CONFIG_PATH=/home/petra1/work/projects/gocompet/Ipopt-gollnlp/build/lib64/pkgconfig:/home/petra1/work/projects/gocompet/Ipopt-gollnlp/build/lib/pkgconfig:/home/petra1/work/projects/gocompet/Ipopt-gollnlp/build/share/pkgconfig:/home/petra1/intel_mkl2019/compilers_and_libraries_2019.2.187/linux/mkl/bin/pkgconfig:/home/petra1/intel_mkl2019/compilers_and_libraries_2019.2.187/linux/mkl/bin/pkgconfig pkg-config --libs ipopt` -ldl /home/petra1/work/projects/hiop/_dist-DEBUG/lib/libhiop.a
+#LIBS = `PKG_CONFIG_PATH=/home/petra1/work/projects/gocompet/Ipopt-gollnlp/build/lib64/pkgconfig:/home/petra1/work/projects/gocompet/Ipopt-gollnlp/build/lib/pkgconfig:/home/petra1/work/projects/gocompet/Ipopt-gollnlp/build/share/pkgconfig:/home/petra1/intel_mkl2019/compilers_and_libraries_2019.2.187/linux/mkl/bin/pkgconfig:/home/petra1/intel_mkl2019/compilers_and_libraries_2019.2.187/linux/mkl/bin/pkgconfig pkg-config --libs ipopt` -ldl /home/petra1/work/projects/hiop/_dist-DEBUG/lib/libhiop.a
 #mac
 #LIBS = -L/Users/petra1/work/projects/go-compet/Ipopt-gollnlp/build/lib -lipopt  -L/Users/petra1/work/projects/go-compet/Ipopt-gollnlp/build/lib -lcoinhsl -framework Accelerate -framework Accelerate -L/usr/local/Cellar/gcc/9.2.0_1/lib/gcc/9/gcc/x86_64-apple-darwin18/9.2.0 -L/usr/local/Cellar/gcc/9.2.0_1/lib/gcc/9/gcc/x86_64-apple-darwin18/9.2.0/../../.. -lgfortran -lSystem -lquadmath -lm  -L/Users/petra1/work/projects/go-compet/Ipopt-gollnlp/build/lib -lcoinmetis  -framework Accelerate -framework Accelerate -lm  -ldl /Users/petra1/work/projects/hiop/_dist-DEBUG/lib/libhiop.a
+# ny-VM
+LIBS = `PKG_CONFIG_PATH=/home/nai/software/coin-or/lib/pkgconfig pkg-config --libs ipopt` -llapack -lgfortran -lpthread -lblas -ldl -lm /home/nai/project/hiop/_dist-DEBUG/lib/libhiop.a
 
 # The following is necessary under cygwin, if native compilers are used
 CYGPATH_W = echo

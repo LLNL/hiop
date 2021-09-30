@@ -80,8 +80,21 @@ public:
   virtual void setToZero() = 0;
   virtual void setToConstant(double c) = 0;
   virtual void copyFrom(const hiopMatrixSparse& dm) = 0;
+  
+  /* @brief copy the nonzeros into 3 arrays, in their triplet form. 
+   * This function is not used right now. Unit test is missing.
+   */
+  virtual void copy_to(int* irow, int* jcol, double* val) = 0;
 
-  virtual void copyRowsFrom(const hiopMatrix& src, const long long* rows_idxs, long long n_rows) = 0;
+  /* @brief copy the matrix into a dense matrix
+   * This function is not used right now. Unit test is missing.
+   */
+  virtual void copy_to(hiopMatrixDense& W) = 0;
+
+  /* @brief copy `n_rows` rows from `src` into `this`, i.e., the ith row of this is copied from the rows_idx[i]_th row in `src`
+  *  @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
+  */
+  virtual void copyRowsFrom(const hiopMatrix& src, const index_type* rows_idxs, size_type n_rows) = 0;
 
   virtual void timesVec(double beta, hiopVector& y, double alpha, const hiopVector& x) const = 0;
   virtual void timesVec(double beta, double* y, double alpha, const double* x) const = 0;
@@ -97,7 +110,7 @@ public:
 
   virtual void addDiagonal(const double& alpha, const hiopVector& d_) = 0;
   virtual void addDiagonal(const double& value) = 0;
-  virtual void addSubDiagonal(const double& alpha, long long start, const hiopVector& d_) = 0;
+  virtual void addSubDiagonal(const double& alpha, index_type start, const hiopVector& d_) = 0;
   /* add to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements of
    * 'd_' (source) starting at index 'start_on_src_vec'. The number of elements added is 'num_elems'
    * when num_elems>=0, or the remaining elems on 'd_' starting at 'start_on_src_vec'. */
@@ -111,11 +124,34 @@ public:
     assert(false && "not needed / implemented");
   }
 
+  /* add to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements of
+  * 'd_' (source) starting at index 'start_on_src_vec'. The number of elements added is 'num_elems', scaled by 'scal'
+  * @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
+  */
+  virtual void copySubDiagonalFrom(const index_type& start_on_dest_diag,
+                                   const size_type& num_elems,
+                                   const hiopVector& d_,
+                                   const index_type& start_on_nnz_idx,
+                                   double scal=1.0) = 0;
+
+  /* 
+  * @brief: add constant 'c' to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements.
+  * The number of elements added is 'num_elems'
+  *
+  * @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
+  */
+  virtual void setSubDiagonalTo(const index_type& start_on_dest_diag,
+                                const size_type& num_elems,
+                                const double& c,
+                                const index_type& start_on_nnz_idx) = 0;
+
   virtual void addMatrix(double alpha, const hiopMatrix& X) = 0;
 
   /* block of W += alpha*transpose(this) */
-  virtual void transAddToSymDenseMatrixUpperTriangle(
-    int row_dest_start, int col_dest_start, double alpha, hiopMatrixDense& W) const = 0;
+  virtual void transAddToSymDenseMatrixUpperTriangle(int row_dest_start, 
+                                                     int col_dest_start, 
+                                                     double alpha, 
+                                                     hiopMatrixDense& W) const = 0;
   virtual void addUpperTriangleToSymDenseMatrixUpperTriangle(
     int diag_start, double alpha, hiopMatrixDense& W) const = 0;
 
@@ -141,8 +177,12 @@ public:
    * the (strictly) lower triangular  elements (these are ignored later on since only the upper
    * triangular part of W will be accessed)
    */
-  virtual void addMDinvNtransToSymDeMatUTri(int row_dest_start, int col_dest_start,
-    const double& alpha, const hiopVector& D, const hiopMatrixSparse& N, hiopMatrixDense& W) const = 0;
+  virtual void addMDinvNtransToSymDeMatUTri(int row_dest_start, 
+                                            int col_dest_start,
+                                            const double& alpha, 
+                                            const hiopVector& D, 
+                                            const hiopMatrixSparse& N, 
+                                            hiopMatrixDense& W) const = 0;
 
   /**
    * @brief Copy 'n_rows' rows from matrix 'src_gen', started from 'rows_src_idx_st', to the rows started from 'B_rows_st' in 'this'.
@@ -153,11 +193,46 @@ public:
    * @pre 'dest_nnz_st' + the number of non-zeros in the copied the rows must be less or equal to this->numOfNumbers()
    * @pre User must know the nonzero pattern of src and dest matrices. Assume non-zero patterns of these two wont change, and 'src_gen' is a submatrix of 'this'
    * @pre Otherwise, this function may replace the non-zero values and nonzero patterns for the undesired elements.
+   * @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
    */
   virtual void copyRowsBlockFrom(const hiopMatrix& src_gen,
-                                         const long long& rows_src_idx_st, const long long& n_rows,
-                                         const long long& rows_dest_idx_st, const long long& dest_nnz_st
-                                         ) = 0;
+                                 const index_type& rows_src_idx_st, 
+                                 const size_type& n_rows,
+                                 const index_type& rows_dest_idx_st, 
+                                 const size_type& dest_nnz_st) = 0;
+
+  /**
+  * @brief Copy matrix 'src_gen', into 'this' as a submatrix from corner 'dest_row_st' and 'dest_col_st'
+  * The non-zero elements start from 'dest_nnz_st' will be replaced by the new elements. 
+  * When `offdiag_only` is set to true, only the off-diagonal part of `src_gen` is copied.
+  *
+  * @pre 'this' must have enough rows and cols after row 'dest_row_st' and col 'dest_col_st'
+  * @pre 'dest_nnz_st' + the number of non-zeros in the copied matrix must be less or equal to 
+  * this->numOfNumbers()
+  * @pre User must know the nonzero pattern of src and dest matrices. The method assumes 
+  * that non-zero patterns does not change between calls and that 'src_gen' is a valid
+  *  submatrix of 'this'
+  * @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
+  */
+  virtual void copySubmatrixFrom(const hiopMatrix& src_gen,
+                                 const index_type& dest_row_st,
+                                 const index_type& dest_col_st,
+                                 const size_type& dest_nnz_st,
+                                 const bool offdiag_only = false) = 0;
+
+  /**
+  * @brief Copy the transpose of matrix 'src_gen', into 'this' as a submatrix from corner 
+  * 'dest_row_st' and 'dest_col_st'.
+  * The non-zero elements start from 'dest_nnz_st' will be replaced by the new elements.
+  * When `offdiag_only` is set to true, only the off-diagonal part of `src_gen` is copied.
+  * 
+  * @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
+  */
+  virtual void copySubmatrixFromTrans(const hiopMatrix& src_gen,
+                                      const index_type& dest_row_st,
+                                      const index_type& dest_col_st,
+                                      const size_type& dest_nnz_st,
+                                      const bool offdiag_only = false) = 0;
 
   /**
    * @brief Copy a diagonal matrix to destination.
@@ -166,8 +241,10 @@ public:
    *
    */
   virtual void copyDiagMatrixToSubblock(const double& src_val,
-                                        const long long& row_dest_st, const long long& col_dest_st,
-                                        const long long& dest_nnz_st, const int &nnz_to_copy) = 0;
+                                        const index_type& row_dest_st, 
+                                        const index_type& col_dest_st,
+                                        const size_type& dest_nnz_st, 
+                                        const int &nnz_to_copy) = 0;
 
   virtual double max_abs_value() = 0;
 
@@ -178,37 +255,57 @@ public:
   virtual bool isfinite() const = 0;
 
   // virtual void print(int maxRows=-1, int maxCols=-1, int rank=-1) const;
-  virtual void print(FILE* f = NULL, const char* msg = NULL, int maxRows = -1, int maxCols = -1,
-    int rank = -1) const = 0;
+  virtual void print(FILE* f = NULL, 
+                     const char* msg = NULL, 
+                     int maxRows = -1, 
+                     int maxCols = -1,
+                     int rank = -1) const = 0;
 
   /* extract subdiagonal from 'this' (source) and adds the entries to 'vec_dest' starting at
    * index 'vec_start'. If num_elems>=0, 'num_elems' are copied; otherwise copies as many as
    * are available in 'vec_dest' starting at 'vec_start'
    */
-  virtual void startingAtAddSubDiagonalToStartingAt(int diag_src_start, const double& alpha,
-					    hiopVector& vec_dest, int vec_start, int num_elems=-1) const = 0;
+  virtual void startingAtAddSubDiagonalToStartingAt(int diag_src_start, 
+                                                    const double& alpha,
+                                                    hiopVector& vec_dest, 
+                                                    int vec_start, 
+                                                    int num_elems=-1) const = 0;
 
 
   virtual hiopMatrixSparse* alloc_clone() const = 0;
   virtual hiopMatrixSparse* new_copy() const = 0;
 
-  virtual int* i_row() = 0;
-  virtual int* j_col() = 0;
+  virtual index_type* i_row() = 0;
+  virtual index_type* j_col() = 0;
   virtual double* M()  = 0;
-  virtual const int* i_row() const = 0;
-  virtual const int* j_col() const = 0;
+  virtual const index_type* i_row() const = 0;
+  virtual const index_type* j_col() const = 0;
   virtual const double* M()  const = 0;
-  virtual long long numberOfOffDiagNonzeros() = 0;
+  virtual size_type numberOfOffDiagNonzeros() const = 0;
+  
+  /// @brief build Jac for FR problem, from the base problem `Jac_c` and `Jac_d`. Set sparsity if `task`=0, otherwise set values
+  virtual void set_Jac_FR(const hiopMatrixSparse& Jac_c,
+                          const hiopMatrixSparse& Jac_d,
+                          int* iJacS,
+                          int* jJacS,
+                          double* MJacS) = 0;
 
-  inline long long m() const
+  /// @brief build Hess for FR problem, from the base problem `Hess`.
+  virtual void set_Hess_FR(const hiopMatrixSparse& Hess,
+                           int* iHSS,
+                           int* jHSS,
+                           double* MHSS,
+                           const hiopVector& add_diag) = 0;
+
+  inline size_type m() const
   {
     return nrows_;
   }
-  inline long long n() const
+  inline size_type n() const
   {
     return ncols_;
   }
-  inline long long numberOfNonzeros() const
+  inline size_type numberOfNonzeros() const
   {
     return nnz_;
   }
@@ -221,9 +318,9 @@ public:
   virtual bool checkIndexesAreOrdered() const = 0;
 #endif
 protected:
-  int nrows_;   ///< number of rows
-  int ncols_;   ///< number of columns
-  int nnz_;     ///< number of nonzero entries
+  size_type nrows_;   ///< number of rows
+  size_type ncols_;   ///< number of columns
+  size_type nnz_;     ///< number of nonzero entries
 };
 
 }   // namespace hiop

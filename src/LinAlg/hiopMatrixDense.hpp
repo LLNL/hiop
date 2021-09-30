@@ -60,7 +60,7 @@ namespace hiop
 class hiopMatrixDense : public hiopMatrix
 {
 public:
-  hiopMatrixDense(const long long& m, const long long& glob_n, MPI_Comm comm = MPI_COMM_SELF)
+  hiopMatrixDense(const size_type& m, const size_type& glob_n, MPI_Comm comm = MPI_COMM_SELF)
       : m_local_(m)
       , n_global_(glob_n)
       , comm_(comm)
@@ -74,6 +74,13 @@ public:
   virtual void setToConstant(double c){assert(false && "not implemented in base class");}
   virtual void copyFrom(const hiopMatrixDense& dm){assert(false && "not implemented in base class");}
   virtual void copyFrom(const double* buffer){assert(false && "not implemented in base class");}
+
+  /**
+   *  @brief copy to a double array
+   * 
+   *  @pre double array is big enough to hold all the values from this dense matrix
+   */
+  virtual void copy_to(double* buffer){assert(false && "not implemented in base class");}
 
   virtual void timesVec(double beta,  hiopVector& y,
 			double alpha, const hiopVector& x) const{assert(false && "not implemented in base class");}
@@ -122,7 +129,7 @@ public:
 
   virtual void addDiagonal(const double& alpha, const hiopVector& d_){assert(false && "not implemented in base class");}
   virtual void addDiagonal(const double& value){assert(false && "not implemented in base class");}
-  virtual void addSubDiagonal(const double& alpha, long long start_on_dest_diag, const hiopVector& d_){assert(false && "not implemented in base class");}
+  virtual void addSubDiagonal(const double& alpha, index_type start_on_dest_diag, const hiopVector& d_){assert(false && "not implemented in base class");}
   
   /** 
    * @brief add to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements of
@@ -194,7 +201,7 @@ public:
    * @pre 'src' and 'this' must have same number of columns
    * @pre number of rows in 'src' must be at least the number of rows in 'this'
    */
-  virtual void copyRowsFrom(const hiopMatrix& src_gen, const long long* rows_idxs, long long n_rows){assert(false && "not implemented in base class");}
+  virtual void copyRowsFrom(const hiopMatrix& src_gen, const index_type* rows_idxs, size_type n_rows){assert(false && "not implemented in base class");}
   
   /// @brief copies 'src' into this as a block starting at (i_block_start,j_block_start)
   virtual void copyBlockFromMatrix(const long i_block_start, const long j_block_start,
@@ -206,23 +213,27 @@ public:
    */
   virtual void copyFromMatrixBlock(const hiopMatrixDense& src, const int i_src_block_start, const int j_src_block_start){assert(false && "not implemented in base class");}
   /// @brief  shift<0 -> up; shift>0 -> down
-  virtual void shiftRows(long long shift){assert(false && "not implemented in base class");}
-  virtual void replaceRow(long long row, const hiopVector& vec){assert(false && "not implemented in base class");}
+  virtual void shiftRows(size_type shift){assert(false && "not implemented in base class");}
+  virtual void replaceRow(index_type row, const hiopVector& vec){assert(false && "not implemented in base class");}
   /// @brief copies row 'irow' in the vector 'row_vec' (sizes should match)
-  virtual void getRow(long long irow, hiopVector& row_vec){assert(false && "not implemented in base class");}
+  virtual void getRow(index_type irow, hiopVector& row_vec){assert(false && "not implemented in base class");}
+
+  /// @brief build Hess for FR problem, from the base problem `Hess`.
+  virtual void set_Hess_FR(const hiopMatrixDense& Hess, const hiopVector& add_diag_de){assert(false && "not implemented in base class");}
+
 #ifdef HIOP_DEEPCHECKS
   virtual void overwriteUpperTriangleWithLower(){assert(false && "not implemented in base class");}
   virtual void overwriteLowerTriangleWithUpper(){assert(false && "not implemented in base class");}
 #endif
-  virtual long long get_local_size_n() const {assert(false && "not implemented in base class"); return -1;}
-  virtual long long get_local_size_m() const {assert(false && "not implemented in base class"); return -1;}
+  virtual size_type get_local_size_n() const {assert(false && "not implemented in base class"); return -1;}
+  virtual size_type get_local_size_m() const {assert(false && "not implemented in base class"); return -1;}
   virtual MPI_Comm get_mpi_comm() const { return comm_; }
 
   virtual double* local_data_const() const {assert(false && "not implemented in base class"); return nullptr;}
   virtual double* local_data() {assert(false && "not implemented in base class"); return nullptr;}
 public:
-  virtual long long m() const {return m_local_;}
-  virtual long long n() const {return n_global_;}
+  virtual size_type m() const {return m_local_;}
+  virtual size_type n() const {return n_global_;}
 #ifdef HIOP_DEEPCHECKS
   virtual bool assertSymmetry(double tol=1e-16) const
   {
@@ -231,8 +242,8 @@ public:
   }
 #endif
 protected:
-  long long n_global_; //total / global number of columns
-  int m_local_;
+  size_type n_global_; //total / global number of columns
+  size_type m_local_;
   MPI_Comm comm_;
   int myrank_;
 

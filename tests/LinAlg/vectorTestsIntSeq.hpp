@@ -74,6 +74,7 @@ public:
 private:
   virtual int getLocalElement(hiop::hiopVectorInt*, int) const;
   virtual void setLocalElement(hiop::hiopVectorInt*, int, int) const;
+  virtual void setLocalElement(hiop::hiopVectorInt*, int) const;
 };
 
 }} // namespace hiop::tests

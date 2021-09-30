@@ -56,9 +56,6 @@
  */
 
 #include "hiopVectorInt.hpp"
-#include <umpire/Allocator.hpp>
-#include <umpire/ResourceManager.hpp>
-#include <RAJA/RAJA.hpp>
 #include <string>
 
 namespace hiop
@@ -67,21 +64,44 @@ namespace hiop
 class hiopVectorIntRaja : public hiopVectorInt
 {
 private:
-  int *buf_host_;
-  int *buf_dev_;
+  index_type *buf_host_;
+  index_type *buf_;
   std::string mem_space_;
 
 public:
-  hiopVectorIntRaja(int sz, std::string mem_space="HOST");
+  hiopVectorIntRaja(size_type sz, std::string mem_space="HOST");
 
-  const int& operator[] (int i) const override;
+  ~hiopVectorIntRaja();
 
-  int& operator[] (int i) override;
+  /**
+   * @brief Copy array data from the device.
+   *
+   * @note This is a no-op if the memory space is _host_ or _uvm_.
+   */
+  void copy_from_dev();
 
-  void copyFromDev() const;
+  /**
+   * @brief Copy array data to the device.
+   *
+   * @note This is a no-op if the memory space is _host_ or _uvm_.
+   */
+  void copy_to_dev();
 
-  void copyToDev() const;
+  virtual inline index_type* local_data_host() { return buf_host_; }
 
+  virtual inline const index_type* local_data_host_const() const { return buf_host_; }
+
+  virtual inline index_type* local_data() { return buf_; }
+
+  virtual inline const index_type* local_data_const() const { return buf_; }
+  
+  virtual void copy_from(const index_type* v_local);
+
+  /// @brief Set all elements to zero.
+  virtual void set_to_zero();
+
+  /// @brief Set all elements  to  c
+  virtual void set_to_constant(const index_type c);
 };
 
 } // namespace hiop

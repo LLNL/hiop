@@ -68,17 +68,18 @@ class hiopMatrixDenseRowMajor : public hiopMatrixDense
 {
 public:
 
-  hiopMatrixDenseRowMajor(const long long& m, 
-		  const long long& glob_n, 
-		  long long* col_part=NULL, 
+  hiopMatrixDenseRowMajor(const size_type& m, 
+		  const size_type& glob_n, 
+		  index_type* col_part=NULL, 
 		  MPI_Comm comm=MPI_COMM_SELF, 
-		  const long long& m_max_alloc=-1);
+		  const size_type& m_max_alloc=-1);
   virtual ~hiopMatrixDenseRowMajor();
 
   virtual void setToZero();
   virtual void setToConstant(double c);
   virtual void copyFrom(const hiopMatrixDense& dm);
   virtual void copyFrom(const double* buffer);
+  virtual void copy_to(double* buffer);
 
   virtual void timesVec(double beta,  hiopVector& y,
 			double alpha, const hiopVector& x) const;
@@ -130,7 +131,7 @@ public:
 
   virtual void addDiagonal(const double& alpha, const hiopVector& d_);
   virtual void addDiagonal(const double& value);
-  virtual void addSubDiagonal(const double& alpha, long long start_on_dest_diag, const hiopVector& d_);
+  virtual void addSubDiagonal(const double& alpha, index_type start_on_dest_diag, const hiopVector& d_);
   
   /** 
    * @brief add to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements of
@@ -195,7 +196,7 @@ public:
    * @pre 'src' and 'this' must have same number of columns
    * @pre number of rows in 'src' must be at least the number of rows in 'this'
    */
-  void copyRowsFrom(const hiopMatrix& src_gen, const long long* rows_idxs, long long n_rows);
+  void copyRowsFrom(const hiopMatrix& src_gen, const index_type* rows_idxs, size_type n_rows);
   
   /// @brief copies 'src' into this as a block starting at (i_block_start,j_block_start)
   void copyBlockFromMatrix(const long i_block_start, const long j_block_start,
@@ -207,16 +208,20 @@ public:
    */
   void copyFromMatrixBlock(const hiopMatrixDense& src, const int i_src_block_start, const int j_src_block_start);
   /// @brief  shift<0 -> up; shift>0 -> down
-  void shiftRows(long long shift);
-  void replaceRow(long long row, const hiopVector& vec);
+  void shiftRows(size_type shift);
+  void replaceRow(index_type row, const hiopVector& vec);
   /// @brief copies row 'irow' in the vector 'row_vec' (sizes should match)
-  void getRow(long long irow, hiopVector& row_vec);
+  void getRow(index_type irow, hiopVector& row_vec);
+
+  /// @brief build Hess for FR problem, from the base problem `Hess`.
+  virtual void set_Hess_FR(const hiopMatrixDense& Hess, const hiopVector& add_diag_de);
+
 #ifdef HIOP_DEEPCHECKS
   void overwriteUpperTriangleWithLower();
   void overwriteLowerTriangleWithUpper();
 #endif
-  virtual long long get_local_size_n() const { return n_local_; }
-  virtual long long get_local_size_m() const { return m_local_; }
+  virtual size_type get_local_size_n() const { return n_local_; }
+  virtual size_type get_local_size_m() const { return m_local_; }
   virtual MPI_Comm get_mpi_comm() const { return comm_; }
 
   double* local_data_const() const {return M_[0]; }
@@ -225,20 +230,20 @@ protected:
   //do not use this unless you sure you know what you're doing
   inline double** get_M() { return M_; }
 public:
-  virtual long long m() const {return m_local_;}
-  virtual long long n() const {return n_global_;}
+  virtual size_type m() const {return m_local_;}
+  virtual size_type n() const {return n_global_;}
 #ifdef HIOP_DEEPCHECKS
   virtual bool assertSymmetry(double tol=1e-16) const;
 #endif
 private:
   double** M_; //local storage
   int n_local_; //local number of rows and cols, respectively
-  long long glob_jl_, glob_ju_;
+  size_type glob_jl_, glob_ju_;
 
   mutable double* buff_mxnlocal_;  
 
   //this is very private do not touch :)
-  long long max_rows_;
+  size_type max_rows_;
 private:
   hiopMatrixDenseRowMajor() {};
   /** copy constructor, for internal/private use only (it doesn't copy the values) */

@@ -266,7 +266,7 @@ public:
   hiopDualsLsqUpdateLinsysRedDenseSymPD(hiopNlpFormulation* nlp)
     : hiopDualsLsqUpdateLinsysRedDense(nlp)
   {
-    M_ = LinearAlgebraFactory::createMatrixDense(nlp_->m(), nlp_->m());  
+    M_ = LinearAlgebraFactory::create_matrix_dense(nlp->options->GetString("mem_space"), nlp_->m(), nlp_->m());  
   }
   
   virtual ~hiopDualsLsqUpdateLinsysRedDenseSymPD()

@@ -1,0 +1,40 @@
+name: Spack Builds
+
+on: [push]
+
+jobs:
+  hiop_spack_builds:
+    runs-on: ubuntu-latest
+    container: spack/ubuntu-bionic
+    strategy:
+      matrix:
+        spack_spec:
+          - hiop@develop+mpi~raja~shared~kron~sparse ^openmpi
+          - hiop@develop~mpi~raja~shared~kron~sparse
+          - hiop@develop~mpi+raja~shared~kron~sparse
+
+            # We will need coinhsl for this, but what are the rules for using
+            # a coinhsl tarball?
+            # - hiop@develop~mpi~raja~shared~kron+sparse
+
+    name: Build HiOp with Spack
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Build Environment
+        env:
+          SPACK_SPEC: ${{ matrix.spack_spec }}
+
+        # Note that x86 is used here because the e4s buildcache has many builds
+        # cached for ubuntu 18.04 with target x86, the lowest common denominator
+        # for x86 systems. This allows us to use far more prebuilt packages,
+        # which should speed up the builds by quite a bit.
+        run: |
+          ls && pwd && \
+          . /opt/spack/share/spack/setup-env.sh && \
+          spack mirror add e4s https://cache.e4s.io && \
+          spack buildcache keys -it && \
+          spack spec $SPACK_SPEC target=x86_64 && \
+          spack install --fail-fast $SPACK_SPEC target=x86_64
+

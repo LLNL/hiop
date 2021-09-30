@@ -180,7 +180,7 @@ private:
   hiopVector *_l_vec1, *_l_vec2, *_n_vec1, *_n_vec2, *_2l_vec1;
   hiopVector& new_l_vec1(int l);
   hiopVector& new_l_vec2(int l);
-  inline hiopVector& new_n_vec1(long long n)
+  inline hiopVector& new_n_vec1(size_type n)
   {
 #ifdef HIOP_DEEPCHECKS
     assert(_n_vec1!=NULL);
@@ -188,7 +188,7 @@ private:
 #endif
     return *_n_vec1;
   }
-  inline hiopVector& new_n_vec2(long long n)
+  inline hiopVector& new_n_vec2(size_type n)
   {
 #ifdef HIOP_DEEPCHECKS
     assert(_n_vec2!=NULL);
@@ -199,7 +199,7 @@ private:
   inline hiopVector& new_2l_vec1(int l) {
     if(_2l_vec1!=NULL && _2l_vec1->get_size()==2*l) return *_2l_vec1;
     if(_2l_vec1!=NULL) delete _2l_vec1;
-    _2l_vec1=LinearAlgebraFactory::createVector(2*l);
+    _2l_vec1=LinearAlgebraFactory::create_vector(nlp->options->GetString("mem_space"), 2*l);
     return *_2l_vec1;
   }
 private:
@@ -278,7 +278,7 @@ public:
   {
     assert(false && "not provided because it is not needed");
   }
-  virtual void addSubDiagonal(const double& alpha, long long start, const hiopVector& d_)
+  virtual void addSubDiagonal(const double& alpha, index_type start, const hiopVector& d_)
   {
     assert(false && "not provided because it is not needed");
   }
@@ -331,7 +331,7 @@ public:
     assert(false && "not provided because it is not needed");
   }
 
-  void copyRowsFrom(const hiopMatrix& src_in, const long long* rows_idxs, long long n_rows)
+  void copyRowsFrom(const hiopMatrix& src_in, const index_type* rows_idxs, size_type n_rows)
   {
     assert(false && "not needed / should not be used");
   }
@@ -356,9 +356,9 @@ public:
   }
 
   /* number of rows */
-  virtual long long m() const { assert(false && "not provided because it is not needed"); return 0; }
+  virtual size_type m() const { assert(false && "not provided because it is not needed"); return 0; }
   /* number of columns */
-  virtual long long n() const { assert(false && "not provided because it is not needed"); return 0; }
+  virtual size_type n() const { assert(false && "not provided because it is not needed"); return 0; }
 #ifdef HIOP_DEEPCHECKS
   /* check symmetry */
   virtual bool assertSymmetry(double tol=1e-16) const { return true; }
@@ -451,7 +451,7 @@ private:
   hiopVector& new_l_vec1(int l);
   hiopVector& new_l_vec2(int l);
   hiopVector& new_l_vec3(int l);
-  inline hiopVector& new_n_vec1(long long n)
+  inline hiopVector& new_n_vec1(size_type n)
   {
 #ifdef HIOP_DEEPCHECKS
     assert(_n_vec1!=NULL);
@@ -459,7 +459,7 @@ private:
 #endif
     return *_n_vec1;
   }
-  inline hiopVector& new_n_vec2(long long n)
+  inline hiopVector& new_n_vec2(size_type n)
   {
 #ifdef HIOP_DEEPCHECKS
     assert(_n_vec2!=NULL);

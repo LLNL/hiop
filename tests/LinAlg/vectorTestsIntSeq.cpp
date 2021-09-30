@@ -61,28 +61,27 @@ namespace hiop { namespace tests {
 
 int VectorTestsIntSeq::getLocalElement(hiop::hiopVectorInt* xvec, int idx) const
 {
-  if(auto* x = dynamic_cast<hiop::hiopVectorIntSeq*>(xvec))
-  {
-    /// @remark I don't think there's a more direct way to get at the
-    /// underlying data other than *(&x[0]+idx), which is disgusting...
-    return (*x)[idx];
-  }
-  else
-  {
+  if(auto* x = dynamic_cast<hiop::hiopVectorIntSeq*>(xvec)) {
+    return x->local_data_host_const()[idx];
+  } else {
     assert(false && "Wrong type of vector passed into `VectorTestsIntSeq::getLocalElement`!");
   }
 }
 
 void VectorTestsIntSeq::setLocalElement(hiop::hiopVectorInt* xvec, int idx, int value) const
 {
-  if(auto* x = dynamic_cast<hiop::hiopVectorIntSeq*>(xvec))
-  {
-    /// @remark I don't think there's a more direct way to get at the
-    /// underlying data other than *(&x[0]+idx), which is disgusting...
-    (*x)[idx] = value;
+  if(auto* x = dynamic_cast<hiop::hiopVectorIntSeq*>(xvec)) {
+    x->local_data_host()[idx] = value;
+  } else {
+    assert(false && "Wrong type of vector passed into `VectorTestsIntSeq::setLocalElement`!");
   }
-  else
-  {
+}
+
+void VectorTestsIntSeq::setLocalElement(hiop::hiopVectorInt* xvec, int value) const
+{
+  if(auto* x = dynamic_cast<hiop::hiopVectorIntSeq*>(xvec)) {
+    x->set_to_constant(value);
+  } else {
     assert(false && "Wrong type of vector passed into `VectorTestsIntSeq::setLocalElement`!");
   }
 }

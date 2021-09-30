@@ -1,6 +1,5 @@
 // Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
-// Written by Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp
@@ -159,10 +158,10 @@ static int runTests(const char* mem_space, MPI_Comm comm)
 #endif
 
   T test;
-
-  hiopOptions options;
-  options.SetStringValue("mem_space", mem_space);
-  LinearAlgebraFactory::set_mem_space(mem_space);
+  test.set_mem_space(mem_space);
+  //hiopOptions options;
+  //options.SetStringValue("mem_space", mem_space);
+  //LinearAlgebraFactory::set_mem_space(mem_space);
 
   int fail = 0;
 
@@ -192,32 +191,42 @@ static int runTests(const char* mem_space, MPI_Comm comm)
   }
 
   // Distributed matrices:
-  hiopMatrixDense* A_kxm = LinearAlgebraFactory::createMatrixDense(K_local, M_global, m_partition, comm);
-  hiopMatrixDense* A_kxn = LinearAlgebraFactory::createMatrixDense(K_local, N_global, n_partition, comm);
-  hiopMatrixDense* A_mxk = LinearAlgebraFactory::createMatrixDense(M_local, K_global, k_partition, comm);
-  hiopMatrixDense* A_mxn = LinearAlgebraFactory::createMatrixDense(M_local, N_global, n_partition, comm);
-  hiopMatrixDense* A_nxm = LinearAlgebraFactory::createMatrixDense(N_local, M_global, m_partition, comm);
-  hiopMatrixDense* B_mxn = LinearAlgebraFactory::createMatrixDense(M_local, N_global, n_partition, comm);
-  hiopMatrixDense* A_mxn_extra_row = LinearAlgebraFactory::createMatrixDense(M_local, N_global, n_partition, comm, M_local+1);
+  hiopMatrixDense* A_kxm =
+    LinearAlgebraFactory::create_matrix_dense(mem_space, K_local, M_global, m_partition, comm);
+  hiopMatrixDense* A_kxn =
+    LinearAlgebraFactory::create_matrix_dense(mem_space, K_local, N_global, n_partition, comm);
+  hiopMatrixDense* A_mxk =
+    LinearAlgebraFactory::create_matrix_dense(mem_space, M_local, K_global, k_partition, comm);
+  hiopMatrixDense* A_mxn =
+    LinearAlgebraFactory::create_matrix_dense(mem_space, M_local, N_global, n_partition, comm);
+  hiopMatrixDense* A_nxm =
+    LinearAlgebraFactory::create_matrix_dense(mem_space, N_local, M_global, m_partition, comm);
+  hiopMatrixDense* B_mxn =
+    LinearAlgebraFactory::create_matrix_dense(mem_space, M_local, N_global, n_partition, comm);
+  hiopMatrixDense* A_mxn_extra_row =
+    LinearAlgebraFactory::create_matrix_dense(mem_space, M_local, N_global, n_partition, comm, M_local+1);
 
   // Non-distributed matrices:
-  hiopMatrixDense* A_mxk_nodist = LinearAlgebraFactory::createMatrixDense(M_local, K_local);
-  hiopMatrixDense* A_mxm_nodist = LinearAlgebraFactory::createMatrixDense(M_local, M_local);
-  hiopMatrixDense* A_kxn_nodist = LinearAlgebraFactory::createMatrixDense(K_local, N_local);
-  hiopMatrixDense* A_kxm_nodist = LinearAlgebraFactory::createMatrixDense(K_local, M_local);
-  hiopMatrixDense* A_mxn_nodist = LinearAlgebraFactory::createMatrixDense(M_local, N_local);
-  hiopMatrixDense* A_nxn_nodist = LinearAlgebraFactory::createMatrixDense(N_local, N_local);
+  hiopMatrixDense* A_mxk_nodist = LinearAlgebraFactory::create_matrix_dense(mem_space, M_local, K_local);
+  hiopMatrixDense* A_mxm_nodist = LinearAlgebraFactory::create_matrix_dense(mem_space, M_local, M_local);
+  hiopMatrixDense* A_kxn_nodist = LinearAlgebraFactory::create_matrix_dense(mem_space, K_local, N_local);
+  hiopMatrixDense* A_kxm_nodist = LinearAlgebraFactory::create_matrix_dense(mem_space, K_local, M_local);
+  hiopMatrixDense* A_mxn_nodist = LinearAlgebraFactory::create_matrix_dense(mem_space, M_local, N_local);
+  hiopMatrixDense* A_nxn_nodist = LinearAlgebraFactory::create_matrix_dense(mem_space, N_local, N_local);
+  hiopMatrixDense* B_nxn_nodist = LinearAlgebraFactory::create_matrix_dense(mem_space, N_local, N_local);
 
   // Vectors with shape of the form:
   // x_<size>_[non-distributed]
   //
   // Distributed vectors:
-  hiopVector* x_n = LinearAlgebraFactory::createVector(N_global, n_partition, comm);
+  hiopVector* x_n = LinearAlgebraFactory::create_vector(mem_space, N_global, n_partition, comm);
 
   // Non-distributed vectors
-  hiopVector* x_n_nodist = LinearAlgebraFactory::createVector(N_local);
-  hiopVector* x_m_nodist = LinearAlgebraFactory::createVector(M_local);
-
+  hiopVector* x_n_nodist = LinearAlgebraFactory::create_vector(mem_space, N_local);
+  hiopVector* x_m_nodist = LinearAlgebraFactory::create_vector(mem_space, M_local);
+ 
+  //indexes vectors
+  hiopVectorInt* rows_idxs = LinearAlgebraFactory::create_vector_int(mem_space, M_local);
 
   fail += test.matrixSetToZero(*A_mxn, rank);
   fail += test.matrixSetToConstant(*A_mxn, rank);
@@ -240,6 +249,8 @@ static int runTests(const char* mem_space, MPI_Comm comm)
     // Not part of hiopMatrix interface, specific to matrixTestsDenseRowMajor
     fail += test.matrixCopyBlockFromMatrix(*A_mxm_nodist, *A_kxn_nodist);
     fail += test.matrixCopyFromMatrixBlock(*A_kxn_nodist, *A_mxm_nodist);
+    
+    fail += test.matrix_set_Hess_FR(*A_nxn_nodist, *B_nxn_nodist, *x_n_nodist);
   }
 
   fail += test.matrixTransTimesMat(*A_mxk_nodist, *A_kxn, *A_mxn, rank);
@@ -254,10 +265,11 @@ static int runTests(const char* mem_space, MPI_Comm comm)
 
   // specific to matrixTestsDenseRowMajor
   fail += test.matrixCopyFrom(*A_mxn, *B_mxn, rank);
+  fail += test.matrix_copy_to(*A_mxn, *B_mxn, rank);
 
   fail += test.matrixAppendRow(*A_mxn_extra_row, *x_n, rank);
   fail += test.matrixCopyRowsFrom(*A_kxn, *A_mxn, rank);
-  fail += test.matrixCopyRowsFromSelect(*A_mxn, *A_kxn, rank);
+  fail += test.matrixCopyRowsFromSelect(*A_mxn, *A_kxn, *rows_idxs, rank);
   fail += test.matrixShiftRows(*A_mxn, rank);
   fail += test.matrixReplaceRow(*A_mxn, *x_n, rank);
   fail += test.matrixGetRow(*A_mxn, *x_n, rank);
@@ -275,9 +287,11 @@ static int runTests(const char* mem_space, MPI_Comm comm)
   delete A_kxm_nodist;
   delete A_mxn_nodist;
   delete A_nxn_nodist;
+  delete B_nxn_nodist;
   delete x_n;
   delete x_n_nodist;
   delete x_m_nodist;
+  delete rows_idxs;
   delete[] m_partition;
   delete[] n_partition;
   delete[] k_partition;

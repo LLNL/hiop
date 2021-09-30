@@ -18,11 +18,9 @@
 #
 # - MAKE_CMD command the script will use to run makefiles
 # - CTEST_CMD command the script will use to run ctest
-# - FULL_BUILD_MATRIX (bool) test all possible builds
 # - BUILDDIR path to temp build directory
 # - EXTRA_CMAKE_ARGS extra arguments passed to CMake
 # - MY_CLUSTER determines cluster-specific variables to use
-# - BUILDMATRIX_LOGFILE path to file where builds will be logged
 
 export BASE_PATH=$(dirname $0)
 export MAKE_CMD=${MAKE_CMD:-'make -j 8'}
@@ -54,13 +52,6 @@ trap 'cleanup $? $LINENO' EXIT
 while [[ $# -gt 0 ]]
 do
   case $1 in
-    --full-build-matrix)
-      echo
-      echo Running full build matrix
-      echo
-      export FULL_BUILD_MATRIX=1
-      shift
-      ;;
     --build-only|-B)
       echo
       echo Building only
@@ -88,7 +79,6 @@ do
       
         --build-only          Only build, don't test
         --test-only           Only run tests, don't build
-        --full-build-matrix   Run entire matrix of build configurations
         --help                Show this message
 EOD
       exit 1
@@ -128,18 +118,12 @@ fi
 # Fail fast if we can't find NVBLAS_CONFIG_FILE since it's needed for all GPU builds
 if [[ ! -v NVBLAS_CONFIG_FILE ]] || [[ ! -f "$NVBLAS_CONFIG_FILE" ]]
 then
-  echo "Please provide file 'nvblas.conf' in $BUILDDIR or set variable to desired location."
+  echo "Please provide file 'nvblas.conf' or set variable to desired location."
   exit 1
 fi
 
 module list
 
-if [[ $FULL_BUILD_MATRIX -eq 1 ]]; then
-  source ./scripts/fullBuildMatrix.sh
-  buildMatrix $TEST
-  exit $?
-else
-  source ./scripts/defaultBuild.sh
-  defaultBuild
-  exit $?
-fi
+source ./scripts/defaultBuild.sh
+defaultBuild
+exit $?

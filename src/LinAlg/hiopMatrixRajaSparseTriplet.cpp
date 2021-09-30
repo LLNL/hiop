@@ -1,11 +1,10 @@
 // Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
-// Written by Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp
 // is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause).
-// Please also read “Additional BSD Notice” below.
+// Please also read "Additional BSD Notice" below.
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -49,6 +48,8 @@
 /**
  * @file hiopMatrixRajaSparseTriplet.cpp
  *
+ * @author Nai-Yuan Chiang <chiang7@lnnl.gov>, LNNL
+ * @author Cosmin G. Petra <petra1@lnnl.gov>, LNNL
  * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
  * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
  * @author Cameron Rutherford <robert.rutherford@pnnl.gov>, PNNL
@@ -63,28 +64,17 @@
 #include <RAJA/RAJA.hpp>
 
 #include "hiop_blasdefs.hpp"
+#include "hiop_raja_defs.hpp"
 
 #include <algorithm> //for std::min
 #include <cmath> //for std::isfinite
 #include <cstring>
 
 #include <cassert>
+// #include <numeric> //std::inclusive_scan is only available after C++17
 
 namespace hiop
 {
-#ifdef HIOP_USE_GPU
-  #include "cuda.h"
-  using hiop_raja_exec   = RAJA::cuda_exec<128>;
-  using hiop_raja_reduce = RAJA::cuda_reduce;
-  using hiop_raja_atomic = RAJA::cuda_atomic;
-  #define RAJA_LAMBDA [=] __device__
-#else
-  using hiop_raja_exec   = RAJA::omp_parallel_for_exec;
-  using hiop_raja_reduce = RAJA::omp_reduce;
-  using hiop_raja_atomic = RAJA::omp_atomic;
-  #define RAJA_LAMBDA [=]
-#endif
-
 
 /// @brief Constructs a hiopMatrixRajaSparseTriplet with the given dimensions and memory space
 hiopMatrixRajaSparseTriplet::hiopMatrixRajaSparseTriplet(int rows,
@@ -92,7 +82,7 @@ hiopMatrixRajaSparseTriplet::hiopMatrixRajaSparseTriplet(int rows,
                                                          int _nnz,
                                                          std::string memspace)
   : hiopMatrixSparse(rows, cols, _nnz),
-    row_starts_host(NULL),
+    row_starts_(nullptr), 
     mem_space_(memspace)
 {
   if(rows==0 || cols==0)
@@ -133,7 +123,7 @@ hiopMatrixRajaSparseTriplet::hiopMatrixRajaSparseTriplet(int rows,
 /// @brief Destructor for hiopMatrixRajaSparseTriplet
 hiopMatrixRajaSparseTriplet::~hiopMatrixRajaSparseTriplet()
 {
-  delete row_starts_host;
+  delete row_starts_;
   auto& resmgr = umpire::ResourceManager::getInstance();
   umpire::Allocator devAlloc = resmgr.getAllocator(mem_space_);
   umpire::Allocator hostAlloc = resmgr.getAllocator("HOST");
@@ -225,10 +215,12 @@ void hiopMatrixRajaSparseTriplet::timesVec(double beta,
       y[i] *= beta;
     });
 
+  // nrs and ncs are used in assert statements only
 #ifndef NDEBUG
   auto nrs = nrows_;
   auto ncs = ncols_;
 #endif
+
   auto irw = iRow_;
   auto jcl = jCol_;
   auto vls = values_;
@@ -292,10 +284,12 @@ void hiopMatrixRajaSparseTriplet::transTimesVec(double beta,
       y[i] *= beta;
     });
   
+  // num_rows and num_columns are used in assert statements only
 #ifndef NDEBUG
   int num_rows = nrows_;
   int num_cols = ncols_;
 #endif
+
   int* iRow = iRow_;
   int* jCol = jCol_;
   double* values = values_;
@@ -336,39 +330,38 @@ timesMatTrans(double beta, hiopMatrix& Wmat, double alpha, const hiopMatrix& M2m
 {
   auto& W = dynamic_cast<hiopMatrixDense&>(Wmat);
   const auto& M2 = dynamic_cast<const hiopMatrixRajaSparseTriplet&>(M2mat);
-  const hiopMatrixRajaSparseTriplet& M1 = *this;
   
-  const int m1 = M1.nrows_;
-  const int nx = M1.ncols_;
+  const int m1 = nrows_;
   const int m2 = M2.nrows_;
-  assert(nx==M1.ncols_);
-  assert(nx==M2.ncols_);
-  assert(M2.ncols_ == nx);
+  assert(ncols_ == M2.ncols_);
 
   assert(m1==W.m());
   assert(m2==W.n());
 
-  int M1nnz = M1.nnz_;
-  int M2nnz = M2.nnz_;
-    
   //double** WM = W.get_M();
   RAJA::View<double, RAJA::Layout<2>> WM(W.local_data(), W.m(), W.n());
 
-  // TODO: allocAndBuildRowStarts -> should create row_starts_host internally (name='prepareRowStarts' ?)
-  if(M1.row_starts_host==NULL)
-    M1.row_starts_host = M1.allocAndBuildRowStarts();
-  assert(M1.row_starts_host);
+  // TODO: allocAndBuildRowStarts -> should create row_starts_ internally (name='prepareRowStarts' ?)
+  if(this->row_starts_ == nullptr)
+    this->row_starts_ = this->allocAndBuildRowStarts();
+  assert(this->row_starts_);
 
-  if(M2.row_starts_host==NULL)
-    M2.row_starts_host = M2.allocAndBuildRowStarts();
-  assert(M2.row_starts_host);
+  if(M2.row_starts_==NULL)
+    M2.row_starts_ = M2.allocAndBuildRowStarts();
+  assert(M2.row_starts_);
 
-  int* M1_idx_start = M1.row_starts_host->idx_start_;
-  int* M2_idx_start = M2.row_starts_host->idx_start_;
+  // M1nnz and M2nnz are used in assert statements only
+#ifndef NDEBUG
+  int M1nnz = this->nnz_;
+  int M2nnz = M2.nnz_;   
+#endif
 
-  int* M1jCol = M1.jCol_;
+  index_type* M1_idx_start = this->row_starts_->idx_start_;
+  index_type* M2_idx_start = M2.row_starts_->idx_start_;
+
+  int* M1jCol = this->jCol_;
   int* M2jCol = M2.jCol_;
-  double* M1values = M1.values_;
+  double* M1values = this->values_;
   double* M2values = M2.values_;
 
   RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, m1),
@@ -378,13 +371,13 @@ timesMatTrans(double beta, hiopMatrix& Wmat, double alpha, const hiopMatrix& M2m
       {
         // dest[i,j] = weigthed_dotprod(M1_row_i,M2_row_j)
         double acc = 0.;
-        int ki=M1_idx_start[i];
-        int kj=M2_idx_start[j];
+        index_type ki = M1_idx_start[i];
+        index_type kj = M2_idx_start[j];
         
         while(ki<M1_idx_start[i+1] && kj<M2_idx_start[j+1])
         {
-          assert(ki<M1nnz);
-          assert(kj<M2nnz);
+          assert(ki < M1nnz);
+          assert(kj < M2nnz);
 
           if(M1jCol[ki] == M2jCol[kj])
           {
@@ -414,9 +407,66 @@ void hiopMatrixRajaSparseTriplet::addDiagonal(const double& value)
 {
   assert(false && "not needed");
 }
-void hiopMatrixRajaSparseTriplet::addSubDiagonal(const double& alpha, long long start, const hiopVector& d_)
+void hiopMatrixRajaSparseTriplet::addSubDiagonal(const double& alpha, index_type start, const hiopVector& d_)
 {
   assert(false && "not needed");
+}
+
+/// @brief: set a subdiagonal block, whose diagonal values come from the input vector `vec_d`
+/// @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
+void hiopMatrixRajaSparseTriplet::copySubDiagonalFrom(const index_type& start_on_dest_diag,
+                                                      const size_type& num_elems,
+                                                      const hiopVector& vec_d,
+                                                      const index_type& start_on_nnz_idx,
+                                                      double scal)
+{
+  const hiopVectorRajaPar& vd = dynamic_cast<const hiopVectorRajaPar&>(vec_d);
+  assert(num_elems<=vd.get_size());
+  assert(start_on_dest_diag>=0 && start_on_dest_diag+num_elems<=this->nrows_);
+  const double* v = vd.local_data_const();
+
+  // local copy for RAJA access
+  index_type* iRow = iRow_;
+  index_type* jCol = jCol_;
+  double* values = values_;
+
+  RAJA::forall<hiop_raja_exec>(
+    RAJA::RangeSegment(0, num_elems),
+    RAJA_LAMBDA(RAJA::Index_type row_src)
+    {
+      const index_type row_dest = row_src + start_on_dest_diag;
+      const index_type nnz_dest = row_src + start_on_nnz_idx;
+      iRow[nnz_dest] = jCol[nnz_dest] = row_dest;
+      values[nnz_dest] = scal*v[row_src];
+    }
+  );
+}
+
+/// @brief: set a subdiagonal block, whose diagonal values are set to `c`
+/// @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!!
+void hiopMatrixRajaSparseTriplet::setSubDiagonalTo(const index_type& start_on_dest_diag,
+                                                   const size_type& num_elems,
+                                                   const double& c,
+                                                   const index_type& start_on_nnz_idx)
+{
+  assert(start_on_dest_diag>=0 && start_on_dest_diag+num_elems<=this->nrows_);
+
+  // local copy for RAJA access
+  index_type* iRow = iRow_;
+  index_type* jCol = jCol_;
+  double* values = values_;
+
+  RAJA::forall<hiop_raja_exec>(
+    RAJA::RangeSegment(0, num_elems),
+    RAJA_LAMBDA(RAJA::Index_type row_src)
+    {
+      const index_type  row_dest = row_src + start_on_dest_diag;
+      const index_type  nnz_dest = row_src + start_on_nnz_idx;
+      iRow[nnz_dest] = row_dest;
+      jCol[nnz_dest] = row_dest;
+      values[nnz_dest] = c;
+    }
+  );
 }
 
 void hiopMatrixRajaSparseTriplet::addMatrix(double alpha, const hiopMatrix& X)
@@ -492,24 +542,27 @@ void hiopMatrixRajaSparseTriplet::row_max_abs_value(hiopVector& ret_vec)
 #endif
   assert(ret_vec.get_size() == nrows_);
   ret_vec.setToZero();
-  
+  if(0 == nrows_) {
+    return;
+  } 
+ 
   auto& vec = dynamic_cast<hiopVectorRajaPar&>(ret_vec);
   double* vd = vec.local_data();
 
-  if(row_starts_host==NULL) {
-    row_starts_host = allocAndBuildRowStarts();
+  if(row_starts_==NULL) {
+    row_starts_ = allocAndBuildRowStarts();
   }
-  assert(row_starts_host);
+  assert(row_starts_);
 
   int num_rows = this->nrows_;
-  int* idx_start = row_starts_host->idx_start_;
+  index_type* idx_start = row_starts_->idx_start_;
   double* values = values_;
 
   RAJA::forall<hiop_raja_exec>(
-    RAJA::RangeSegment(0, num_rows+1),
+    RAJA::RangeSegment(0, num_rows),
     RAJA_LAMBDA(RAJA::Index_type row_id)
     {
-      for(int itnz=idx_start[row_id]; itnz<idx_start[row_id+1]; itnz++) {
+      for(index_type itnz=idx_start[row_id]; itnz<idx_start[row_id+1]; itnz++) {
         double abs_val = fabs(values[itnz]);
         vd[row_id] = (vd[row_id] > abs_val) ? vd[row_id] : abs_val;
       }
@@ -598,6 +651,46 @@ void hiopMatrixRajaSparseTriplet::copyFrom(const hiopMatrixSparse& dm)
   assert(false && "this is to be implemented - method def too vague for now");
 }
 
+/// @brief copy to 3 arrays.
+/// @pre these 3 arrays are not nullptr
+void hiopMatrixRajaSparseTriplet::copy_to(int* irow, int* jcol, double* val)
+{
+  assert(irow && jcol && val);
+  auto& resmgr = umpire::ResourceManager::getInstance();
+  resmgr.copy(irow, iRow_);
+  resmgr.copy(jcol, jCol_);
+  resmgr.copy(val, values_);
+}
+
+void hiopMatrixRajaSparseTriplet::copy_to(hiopMatrixDense& W)
+{
+  assert(W.m() == nrows_);
+  assert(W.n() == ncols_);
+  W.setToZero();
+  
+  RAJA::View<double, RAJA::Layout<2>> WM(W.local_data(), W.m(), W.n());
+  
+  size_type nnz = this->nnz_;
+  size_type nrows = this->nrows_;
+  size_type ncols = this->ncols_;
+  index_type* jCol = jCol_;
+  index_type* iRow = iRow_;
+  double* values = values_;
+  
+  // atomic is needed to prevent data race from ocurring;
+  RAJA::forall<hiop_raja_exec>(
+    RAJA::RangeSegment(0, nnz),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      assert(iRow[i] < nrows);
+      assert(jCol[i] < ncols);
+      
+      RAJA::AtomicRef<double, hiop_raja_atomic> yy(&WM(iRow[i], jCol[i]));
+      yy += values[i];
+    }
+  );
+}
+
 #ifdef HIOP_DEEPCHECKS
 /// @brief Ensures the rows and column triplet entries are ordered.
 bool hiopMatrixRajaSparseTriplet::checkIndexesAreOrdered() const
@@ -646,47 +739,49 @@ addMDinvMtransToDiagBlockOfSymDeMatUTri(int rowAndCol_dest_start,
   const hiopVector& D, hiopMatrixDense& W) const
 {
   const int row_dest_start = rowAndCol_dest_start, col_dest_start = rowAndCol_dest_start;
+
+  // nnz is used in assert statements only
 #ifndef NDEBUG
-  int n = this->nrows_;
-  int num_non_zero = this->nnz_;
+  int nnz = this->nnz_;
 #endif
-  assert(row_dest_start>=0 && row_dest_start+n<=W.m());
-  assert(col_dest_start>=0 && col_dest_start+nrows_<=W.n());
-  assert(D.get_size() == this->ncols_);
+
+  assert(row_dest_start >= 0 && row_dest_start+nrows_ <= W.m());
+  assert(col_dest_start >= 0 && col_dest_start+nrows_ <= W.n());
+  assert(D.get_size() == ncols_);
   RAJA::View<double, RAJA::Layout<2>> WM(W.local_data(), W.m(), W.n());
   const double* DM = D.local_data_const();
   
-  if(row_starts_host==NULL)
-    row_starts_host = allocAndBuildRowStarts();
-  assert(row_starts_host);
+  if(row_starts_==NULL)
+    row_starts_ = allocAndBuildRowStarts();
+  assert(row_starts_);
 
-  int num_rows = this->nrows_;
-  int* idx_start = row_starts_host->idx_start_;
+  int nrows = this->nrows_;
+  index_type* idx_start = row_starts_->idx_start_;
   int* jCol = jCol_;
   double* values = values_;
-  RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, this->nrows_),
+  RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, nrows),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       //j==i
       double acc = 0.;
-      for(int k=idx_start[i]; k<idx_start[i+1]; k++)
+      for(index_type k=idx_start[i]; k<idx_start[i+1]; k++)
       {
         acc += values[k] / DM[jCol[k]] * values[k];
       }
       WM(i + row_dest_start, i + col_dest_start) += alpha*acc;
 
       //j>i
-      for(int j=i+1; j<num_rows; j++)
+      for(int j = i+1; j < nrows; j++)
       {
         //dest[i,j] = weigthed_dotprod(this_row_i,this_row_j)
         acc = 0.;
 
-        int ki=idx_start[i];
-        int kj=idx_start[j];
-        while(ki<idx_start[i+1] && kj<idx_start[j+1])
+        index_type ki = idx_start[i];
+        index_type kj = idx_start[j];
+        while(ki < idx_start[i+1] && kj < idx_start[j+1])
         {
-          assert(ki < num_non_zero);
-          assert(kj < num_non_zero);
+          assert(ki < nnz);
+          assert(kj < nnz);
           if(jCol[ki] == jCol[kj])
           {
             acc += values[ki] / DM[jCol[ki]] * values[kj];
@@ -740,13 +835,11 @@ addMDinvNtransToSymDeMatUTri(int row_dest_start,
                              hiopMatrixDense& W) const
 {
   const auto& M2 = dynamic_cast<const hiopMatrixRajaSparseTriplet&>(M2mat);
-  const hiopMatrixRajaSparseTriplet& M1 = *this;
   
-  const int m1 = M1.nrows_;
-  const int nx = M1.ncols_;
+  const int m1 = nrows_;
   const int m2 = M2.nrows_;
-  assert(nx==M2.ncols_);
-  assert(D.get_size() == nx);
+  assert(ncols_ == M2.ncols_);
+  assert(D.get_size() == ncols_);
 
   //does it fit in W ?
   assert(row_dest_start>=0 && row_dest_start+m1<=W.m());
@@ -756,26 +849,28 @@ addMDinvNtransToSymDeMatUTri(int row_dest_start,
   RAJA::View<double, RAJA::Layout<2>> WM(W.local_data(), W.m(), W.n());
   const double* DM = D.local_data_const();
 
-  // TODO: allocAndBuildRowStarts -> should create row_starts_host internally (name='prepareRowStarts' ?)
-  if(M1.row_starts_host==NULL)
-    M1.row_starts_host = M1.allocAndBuildRowStarts();
-  assert(M1.row_starts_host);
+  // TODO: allocAndBuildRowStarts -> should create row_starts_ internally (name='prepareRowStarts' ?)
+  if(this->row_starts_==NULL)
+    this->row_starts_ = this->allocAndBuildRowStarts();
+  assert(this->row_starts_);
 
-  if(M2.row_starts_host==NULL)
-    M2.row_starts_host = M2.allocAndBuildRowStarts();
-  assert(M2.row_starts_host);
+  if(M2.row_starts_==NULL)
+    M2.row_starts_ = M2.allocAndBuildRowStarts();
+  assert(M2.row_starts_);
 
-  int* M1_idx_start = M1.row_starts_host->idx_start_;
-  int* M2_idx_start = M2.row_starts_host->idx_start_;
+  index_type* M1_idx_start = this->row_starts_->idx_start_;
+  index_type* M2_idx_start = M2.row_starts_->idx_start_;
+
+  // M1nnz and M2nnz are used in assert statements only
 #ifndef NDEBUG
-  int M1nnz = M1.nnz_;
+  int M1nnz = this->nnz_;
   int M2nnz = M2.nnz_;
 #endif
-  int* M1jCol = M1.jCol_;
+
+  int* M1jCol = this->jCol_;
   int* M2jCol = M2.jCol_;
-  double* M1values = M1.values_;
+  double* M1values = this->values_;
   double* M2values = M2.values_;
-  int* jCol = jCol_;
   RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, m1),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
@@ -783,17 +878,17 @@ addMDinvNtransToSymDeMatUTri(int row_dest_start,
       {
         // dest[i,j] = weigthed_dotprod(M1_row_i,M2_row_j)
         double acc = 0.;
-        int ki=M1_idx_start[i];
-        int kj=M2_idx_start[j];
+        index_type ki = M1_idx_start[i];
+        index_type kj = M2_idx_start[j];
         
         while(ki<M1_idx_start[i+1] && kj<M2_idx_start[j+1])
         {
-          assert(ki<M1nnz);
-          assert(kj<M2nnz);
+          assert(ki < M1nnz);
+          assert(kj < M2nnz);
 
           if(M1jCol[ki] == M2jCol[kj])
           {
-            acc += M1values[ki] / DM[jCol[ki]] * M2values[kj];
+            acc += M1values[ki] / DM[M1jCol[ki]] * M2values[kj];
             ki++;
             kj++;
           }
@@ -828,20 +923,21 @@ hiopMatrixRajaSparseTriplet::allocAndBuildRowStarts() const
 {
   assert(nrows_ >= 0);
 
-  RowStartsInfo* rsi = new RowStartsInfo(nrows_, "HOST"); assert(rsi);
-  RowStartsInfo* rsi_dev = new RowStartsInfo(nrows_, mem_space_); assert(rsi_dev);
+  RowStartsInfo* rsi = new RowStartsInfo(nrows_, mem_space_); assert(rsi);
   if(nrows_<=0)
   {
-    delete rsi;
-    return rsi_dev;
+    return rsi;
   }
+
+  this->copyFromDev();
 
   // build rsi on the host, then copy it to the device for simplicity
   int it_triplet = 0;
-  rsi->idx_start_[0] = 0;
+  rsi->idx_start_host_[0] = 0;
+
   for(int i = 1; i <= this->nrows_; i++)
   {
-    rsi->idx_start_[i]=rsi->idx_start_[i-1];
+    rsi->idx_start_host_[i] = rsi->idx_start_host_[i-1];
     
     while(it_triplet < this->nnz_ && this->iRow_host_[it_triplet] == i - 1)
     {
@@ -854,28 +950,30 @@ hiopMatrixRajaSparseTriplet::allocAndBuildRowStarts() const
           assert(jCol_host_[it_triplet-1] < jCol_host_[it_triplet] && "col indices are not sorted");
       }
 #endif
-      rsi->idx_start_[i]++;
+      rsi->idx_start_host_[i]++;
       it_triplet++;
     }
-    assert(rsi->idx_start_[i] == it_triplet);
+    assert(rsi->idx_start_host_[i] == it_triplet);
   }
   assert(it_triplet==this->nnz_);
 
-  auto& rm = umpire::ResourceManager::getInstance();
-  rm.copy(rsi_dev->idx_start_, rsi->idx_start_);
+  rsi->copy_to_dev();
 
-  delete rsi;
-  return rsi_dev;
+  return rsi;
 }
 
 /**
  * @brief Copies rows from another sparse matrix into this one.
  * 
- * @todo Better document this function.
+ * @pre 'src' is sorted
+ * @pre 'this' has exactly 'n_rows' rows
+ * @pre 'src' and 'this' must have same number of columns
+ * @pre number of rows in 'src' must be at least the number of rows in 'this'
+ * @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
  */
 void hiopMatrixRajaSparseTriplet::copyRowsFrom(const hiopMatrix& src_gen,
-					       const long long* rows_idxs,
-					       long long n_rows)
+                                               const index_type* rows_idxs,
+                                               size_type n_rows)
 {
   const hiopMatrixRajaSparseTriplet& src = dynamic_cast<const hiopMatrixRajaSparseTriplet&>(src_gen);
   assert(this->m() == n_rows);
@@ -886,48 +984,165 @@ void hiopMatrixRajaSparseTriplet::copyRowsFrom(const hiopMatrix& src_gen,
   const int* iRow_src = src.i_row();
   const int* jCol_src = src.j_col();
   const double* values_src = src.M();
-  int nnz_src = src.numberOfNonzeros();
-  int itnz_src=0;
-  int itnz_dest=0;
-  //int iterators should suffice
-  for(int row_dest=0; row_dest<n_rows; ++row_dest)
-  {
-    const int& row_src = rows_idxs[row_dest];
+  size_type nnz_src = src.numberOfNonzeros();
 
-    while(itnz_src<nnz_src && iRow_src[itnz_src]<row_src)
-    {
-      #ifdef HIOP_DEEPCHECKS
-      if(itnz_src>0)
-      {
-	      assert(iRow_src[itnz_src]>=iRow_src[itnz_src-1] && "row indexes are not sorted");
-	      if(iRow_src[itnz_src]==iRow_src[itnz_src-1])
-	        assert(jCol_src[itnz_src] >= jCol_src[itnz_src-1] && "col indexes are not sorted");
-      }
-      #endif
-      ++itnz_src;
-    }
-
-    while(itnz_src<nnz_src && iRow_src[itnz_src]==row_src)
-    {
-      assert(itnz_dest < nnz_);
-      #ifdef HIOP_DEEPCHECKS
-      if(itnz_src>0)
-      {
-      	assert(iRow_src[itnz_src]>=iRow_src[itnz_src-1] && "row indexes are not sorted");
-	      if(iRow_src[itnz_src]==iRow_src[itnz_src-1])
-	        assert(jCol_src[itnz_src] >= jCol_src[itnz_src-1] && "col indexes are not sorted");
-      }
-      #endif
-      iRow_[itnz_dest] = row_dest;//iRow_src[itnz_src];
-      jCol_[itnz_dest] = jCol_src[itnz_src];
-      values_[itnz_dest++] = values_src[itnz_src++];
-      
-      assert(itnz_dest <= nnz_);
-    }
+  size_type m_src = src.m();
+  if(src.row_starts_ == nullptr) {
+    src.row_starts_ = src.allocAndBuildRowStarts();
   }
-  assert(itnz_dest == nnz_);
-}
+  assert(src.row_starts_);
+  index_type* src_row_st_host = src.row_starts_->idx_start_host_;
+
+  // local copy of member variable/function, for RAJA access
+  index_type* iRow = iRow_;
+  index_type* jCol = jCol_;
+  double* values = values_;
+  size_type nnz_dst = numberOfNonzeros();
+
+  // this function only set up sparsity in the first run. Sparsity won't change after the first run.
+  if(row_starts_ == nullptr) {
+    row_starts_ = new RowStartsInfo(nrows_, mem_space_);
+    assert(row_starts_);
+    index_type* dst_row_start_host = row_starts_->idx_start_host_;
+
+    dst_row_start_host[0] = 0;
+    auto& resmgr = umpire::ResourceManager::getInstance();
+    umpire::Allocator hostalloc = resmgr.getAllocator("HOST");
+    index_type* row_src_host = static_cast<index_type*>(hostalloc.allocate(1 * sizeof(index_type)));
+
+    for(index_type row_dst=0; row_dst<nrows_; row_dst++) {
+      // comput nnz in each row from source
+      //const index_type row_src = rows_idxs[row_dst];
+      resmgr.copy(row_src_host, const_cast<index_type*>(rows_idxs+row_dst), 1*sizeof(index_type));
+      dst_row_start_host[row_dst+1] = src_row_st_host[row_src_host[0]+1] - src_row_st_host[row_src_host[0]];            
+    }
+
+    hostalloc.deallocate(row_src_host);
+
+    // std::inclusive_scan is only available after C++17
+    for(index_type row_dst = 1; row_dst < nrows_+1; row_dst++) {
+      dst_row_start_host[row_dst] += dst_row_start_host[row_dst-1];
+    }
+    row_starts_->copy_to_dev();
+  }
+
+  index_type* dst_row_st = row_starts_->idx_start_;
+  index_type* src_row_st = src.row_starts_->idx_start_;
+
+  RAJA::forall<hiop_raja_exec>(
+    RAJA::RangeSegment(0, n_rows),
+    RAJA_LAMBDA(RAJA::Index_type row_dst)
+    {
+      const index_type row_src = rows_idxs[row_dst];
+      index_type k_dst = dst_row_st[row_dst];
+      index_type k_src = src_row_st[row_src];
   
+      // copy from src
+      while(k_src < src_row_st[row_src+1]) {
+        iRow[k_dst] = row_dst;
+        jCol[k_dst] = jCol_src[k_src];
+        values[k_dst] = values_src[k_src];
+        k_dst++;
+        k_src++;
+      }
+    }
+  );
+}
+
+/**
+ * @brief Copy 'n_rows' rows started from 'rows_src_idx_st' (array of size 'n_rows') from 'src' to the destination,
+ * which starts from the 'rows_dst_idx_st'th row in 'this'
+ *
+ * @pre 'this' must have exactly, or more than 'n_rows' rows
+ * @pre 'this' must have exactly, or more cols than 'src'
+ * @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
+ */
+void hiopMatrixRajaSparseTriplet::copyRowsBlockFrom(const hiopMatrix& src_gen,
+                                                    const index_type& rows_src_idx_st,
+                                                    const size_type& n_rows,
+                                                    const index_type& rows_dst_idx_st,
+                                                    const size_type& dest_nnz_st)
+{
+  const hiopMatrixRajaSparseTriplet& src = dynamic_cast<const hiopMatrixRajaSparseTriplet&>(src_gen);
+  assert(this->numberOfNonzeros() >= src.numberOfNonzeros());
+  assert(this->n() >= src.n());
+  assert(n_rows + rows_src_idx_st <= src.m());
+  assert(n_rows + rows_dst_idx_st <= this->m());
+
+  const index_type* iRow_src = src.i_row();
+  const index_type* jCol_src = src.j_col();
+  const double* values_src = src.M();
+  size_type nnz_src = src.numberOfNonzeros();
+
+  // local copy of member variable/function, for RAJA access
+  index_type* iRow = iRow_;
+  index_type* jCol = jCol_;
+  double* values = values_;
+  size_type nnz_dst = numberOfNonzeros();
+  size_type n_rows_src = src.m();
+  size_type n_rows_dst = this->m();
+
+  if(src.row_starts_ == nullptr) {
+    src.row_starts_ = src.allocAndBuildRowStarts();
+  }
+  assert(src.row_starts_);
+  index_type* src_row_st_host = src.row_starts_->idx_start_host_;
+
+  // this function only set up sparsity in the first run. Sparsity won't change after the first run.
+  if(row_starts_ == nullptr) {
+    row_starts_ = new RowStartsInfo(n_rows_dst, mem_space_);
+    assert(row_starts_);
+    index_type* dst_row_st_init_host = row_starts_->idx_start_host_;
+
+    for(index_type row_dst = 0; row_dst < n_rows_dst+1; row_dst++) {
+      dst_row_st_init_host[row_dst] = 0;
+    }
+    row_starts_->copy_to_dev();
+  }
+
+  index_type* dst_row_st_host = row_starts_->idx_start_host_;
+  size_type next_row_nnz = dst_row_st_host[rows_dst_idx_st+1];
+
+  if(next_row_nnz == 0) {  
+    // compute nnz in each row from source
+    for(index_type row_add = 0; row_add < n_rows; row_add++) {
+      const index_type row_src = rows_src_idx_st + row_add;
+      const index_type row_dst = rows_dst_idx_st + row_add;
+      dst_row_st_host[row_dst+1] = src_row_st_host[row_src+1] - src_row_st_host[row_src];      
+    }
+    
+    // std::inclusive_scan is only available after C++17
+    for(index_type row_dst = 1; row_dst < nrows_+1; row_dst++) {
+      dst_row_st_host[row_dst] += dst_row_st_host[row_dst-1];
+    }
+    row_starts_->copy_to_dev();
+  }
+
+  index_type* dst_row_st = row_starts_->idx_start_;
+  index_type* src_row_st = src.row_starts_->idx_start_;
+  
+  RAJA::forall<hiop_raja_exec>(
+    RAJA::RangeSegment(0, n_rows),
+    RAJA_LAMBDA(RAJA::Index_type row_add)
+    {
+      const index_type row_src = rows_src_idx_st + row_add;
+      const index_type row_dst = rows_dst_idx_st + row_add;
+      index_type k_src = src_row_st[row_src];
+      index_type k_dst = dst_row_st[row_dst];
+  
+      // copy from src
+      while(k_src < src_row_st[row_src+1]) {
+        iRow[k_dst] = row_dst;
+        jCol[k_dst] = jCol_src[k_src];
+        values[k_dst] = values_src[k_src];
+        k_dst++;
+        k_src++;
+      }
+    }
+  );
+//  delete [] next_row_nnz;
+}
+
 /// @brief Prints the contents of this function to a file.
 void hiopMatrixRajaSparseTriplet::print(FILE* file,
                                         const char* msg/*=NULL*/, 
@@ -995,21 +1210,294 @@ void hiopMatrixRajaSparseTriplet::copyFromDev() const
   }
 }
 
-hiopMatrixRajaSparseTriplet::RowStartsInfo::RowStartsInfo(int n_rows, std::string memspace)
+hiopMatrixRajaSparseTriplet::RowStartsInfo::RowStartsInfo(size_type n_rows, std::string memspace)
   : num_rows_(n_rows), mem_space_(memspace)
 {
-  auto& rm = umpire::ResourceManager::getInstance();
-  umpire::Allocator alloc = rm.getAllocator(mem_space_);
-  idx_start_ = static_cast<int*>(alloc.allocate((num_rows_ + 1) * sizeof(int)));
+  auto& resmgr = umpire::ResourceManager::getInstance();
+  umpire::Allocator alloc = resmgr.getAllocator(mem_space_);
+  idx_start_ = static_cast<index_type*>(alloc.allocate((num_rows_ + 1) * sizeof(index_type)));
+  if(mem_space_ == "DEVICE") {
+    umpire::Allocator hostalloc = resmgr.getAllocator("HOST");
+    idx_start_host_ = static_cast<index_type*>(hostalloc.allocate((num_rows_ + 1) * sizeof(index_type)));
+  } else {
+    idx_start_host_ = idx_start_;
+  }
 }
 
 hiopMatrixRajaSparseTriplet::RowStartsInfo::~RowStartsInfo()
 {
-  auto& rm = umpire::ResourceManager::getInstance();
-  umpire::Allocator alloc = rm.getAllocator(mem_space_);
-  alloc.deallocate(idx_start_);
+  auto& resmgr = umpire::ResourceManager::getInstance();
+  umpire::Allocator devalloc = resmgr.getAllocator(mem_space_);
+  devalloc.deallocate(idx_start_);
+  if (mem_space_ == "DEVICE") {
+    umpire::Allocator hostalloc = resmgr.getAllocator("HOST");
+    hostalloc.deallocate(idx_start_host_);
+  }
+  idx_start_host_ = nullptr;
+  idx_start_ = nullptr;
 }
 
+void hiopMatrixRajaSparseTriplet::RowStartsInfo::copy_from_dev()
+{
+  if (idx_start_ != idx_start_host_) {
+    auto& resmgr = umpire::ResourceManager::getInstance();
+    resmgr.copy(idx_start_host_, idx_start_);
+  }
+}
+
+void hiopMatrixRajaSparseTriplet::RowStartsInfo::copy_to_dev()
+{
+  if (idx_start_ != idx_start_host_) {
+    auto& resmgr = umpire::ResourceManager::getInstance();
+    resmgr.copy(idx_start_, idx_start_host_);
+  }
+}
+
+/*
+*  extend original Jac to [Jac -I I]
+*/
+void hiopMatrixRajaSparseTriplet::set_Jac_FR(const hiopMatrixSparse& Jac_c,
+                                             const hiopMatrixSparse& Jac_d,
+                                             int* iJacS,
+                                             int* jJacS,
+                                             double* MJacS)
+{
+  const auto& J_c = dynamic_cast<const hiopMatrixRajaSparseTriplet&>(Jac_c);
+  const auto& J_d = dynamic_cast<const hiopMatrixRajaSparseTriplet&>(Jac_d);
+    
+  // shortcut to the original Jac
+  const int *jcol_c = J_c.jCol_;
+  const int *jcol_d = J_d.jCol_;
+
+  // assuming original Jac is sorted!
+  int nnz_Jac_c = J_c.numberOfNonzeros();
+  int nnz_Jac_d = J_d.numberOfNonzeros();
+  int m_c = J_c.nrows_;
+  int m_d = J_d.nrows_;
+  int n_c = J_c.ncols_;
+  int n_d = J_d.ncols_;
+  assert(n_c == n_d);
+  assert(ncols_ == n_c + 2*m_c + 2*m_d);
+
+  int nnz_Jac_c_new = nnz_Jac_c + 2*m_c;
+
+  assert(nnz_ == nnz_Jac_c_new + nnz_Jac_d + 2*m_d);
+  
+  if(J_c.row_starts_ == nullptr) {
+    J_c.row_starts_ = J_c.allocAndBuildRowStarts();
+  }
+  assert(J_c.row_starts_);
+  index_type* Jc_row_st = J_c.row_starts_->idx_start_;
+
+  if(J_d.row_starts_ == nullptr) {
+    J_d.row_starts_ = J_d.allocAndBuildRowStarts();
+  }
+  assert(J_d.row_starts_);
+  index_type* Jd_row_st = J_d.row_starts_->idx_start_;
+
+  // extend Jac to the p and n parts --- sparsity
+  if(iJacS != nullptr && jJacS != nullptr) {
+    // local copy for RAJA access
+    int* iRow = iRow_;
+    int* jCol = jCol_;
+
+    // Jac for c(x) - p + n
+    RAJA::forall<hiop_raja_exec>(
+      RAJA::RangeSegment(0, m_c),
+      RAJA_LAMBDA(RAJA::Index_type i)
+      {
+        index_type k_base = Jc_row_st[i];
+        index_type k = k_base + 2*i; // append 2 nnz in each row
+
+        // copy from base Jac_c
+        while(k_base < Jc_row_st[i+1]) {
+          iRow[k] = iJacS[k] = i;
+          jCol[k] = jJacS[k] = jcol_c[k_base];
+          k++;
+          k_base++;
+        }
+
+        // extra parts for p and n
+        iRow[k] = iJacS[k] = i;
+        jCol[k] = jJacS[k] = n_c + i;
+        k++;
+        
+        iRow[k] = iJacS[k] = i;
+        jCol[k] = jJacS[k] = n_c + m_c + i;
+        k++;
+      }
+    );
+
+    // Jac for d(x) - p + n
+    RAJA::forall<hiop_raja_exec>(
+      RAJA::RangeSegment(0, m_d),
+      RAJA_LAMBDA(RAJA::Index_type i)
+      {
+        index_type k_base = Jd_row_st[i];
+        index_type k = nnz_Jac_c_new + k_base + 2*i; // append 2 nnz in each row
+
+        // copy from base Jac_c
+        while(k_base < Jd_row_st[i+1]) {
+          iRow[k] = iJacS[k] = m_c + i;
+          jCol[k] = jJacS[k] = jcol_d[k_base];
+          k++;
+          k_base++;
+        }
+
+        // extra parts for p and n
+        iRow[k] = iJacS[k] = m_c + i;
+        jCol[k] = jJacS[k] = n_d + 2*m_c + i;
+        k++;
+        
+        iRow[k] = iJacS[k] = m_c + i;
+        jCol[k] = jJacS[k] = n_d + 2*m_c + m_d + i;
+        k++;
+      }
+    );
+  }
+
+  // extend Jac to the p and n parts --- element
+  if(MJacS != nullptr) {
+
+    // local copy for RAJA access
+    double* values = values_;
+
+    const double* J_c_val = J_c.values_;
+    const double* J_d_val = J_d.values_;
+
+    // Jac for c(x) - p + n
+    RAJA::forall<hiop_raja_exec>(
+      RAJA::RangeSegment(0, m_c),
+      RAJA_LAMBDA(RAJA::Index_type i)
+      {
+        index_type k_base = Jc_row_st[i];
+        index_type k = k_base + 2*i; // append 2 nnz in each row
+
+        // copy from base Jac_c
+        while(k_base < Jc_row_st[i+1]) {
+          values[k] = MJacS[k] = J_c_val[k_base];
+          k++;
+          k_base++;
+        }
+
+        // extra parts for p and n
+        values[k] = MJacS[k] = -1.0;
+        k++;
+        
+        values[k] = MJacS[k] =  1.0;
+        k++;
+      }
+    );
+
+    // Jac for d(x) - p + n
+    RAJA::forall<hiop_raja_exec>(
+      RAJA::RangeSegment(0, m_d),
+      RAJA_LAMBDA(RAJA::Index_type i)
+      {
+        index_type k_base = Jd_row_st[i];
+        index_type k = nnz_Jac_c_new + k_base + 2*i; // append 2 nnz in each row
+
+        // copy from base Jac_c
+        while(k_base < Jd_row_st[i+1]) {
+          values[k] = MJacS[k] = J_d_val[k_base];
+          k++;
+          k_base++;
+        }
+
+        // extra parts for p and n
+        values[k] = MJacS[k] = -1.0;
+        k++;
+        
+        values[k] = MJacS[k] =  1.0;
+        k++;
+      }
+    );
+  }
+  copyFromDev();
+}
+
+/// @brief copy a submatrix from another matrix. 
+/// @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
+void hiopMatrixRajaSparseTriplet::copySubmatrixFrom(const hiopMatrix& src_gen,
+                                                    const index_type& dest_row_st,
+                                                    const index_type& dest_col_st,
+                                                    const size_type& dest_nnz_st,
+                                                    const bool offdiag_only)
+{
+  const hiopMatrixRajaSparseTriplet& src = dynamic_cast<const hiopMatrixRajaSparseTriplet&>(src_gen);
+  auto m_rows = src.m();
+  auto n_cols = src.n();
+
+  assert(this->numberOfNonzeros() >= src.numberOfNonzeros());
+  assert(n_cols + dest_col_st <= this->n() );
+  assert(m_rows + dest_row_st <= this->m());
+  assert(dest_nnz_st + src.numberOfNonzeros() <= this->numberOfNonzeros());
+
+  const index_type* src_iRow = src.i_row();
+  const index_type* src_jCol = src.j_col();
+  const double* src_val = src.M();
+  size_type src_nnz = src.numberOfNonzeros();
+
+  // local copy of member variable/function, for RAJA access
+  index_type* iRow = iRow_;
+  index_type* jCol = jCol_;
+  double* values = values_;
+
+  RAJA::forall<hiop_raja_exec>(
+    RAJA::RangeSegment(0, src_nnz),
+    RAJA_LAMBDA(RAJA::Index_type src_k)
+    {
+      if(!offdiag_only || src_iRow[src_k]!=src_jCol[src_k]) {
+        index_type dest_k = dest_nnz_st + src_k;
+        iRow[dest_k] = dest_row_st + src_iRow[src_k];
+        jCol[dest_k] = dest_col_st + src_jCol[src_k];
+        values[dest_k] = src_val[src_k];
+      }
+    }
+  );
+}
+
+/// @brief copy a submatrix from a transpose of another matrix. 
+/// @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
+void hiopMatrixRajaSparseTriplet::copySubmatrixFromTrans(const hiopMatrix& src_gen,
+                                                         const index_type& dest_row_st,
+                                                         const index_type& dest_col_st,
+                                                         const size_type& dest_nnz_st,
+                                                         const bool offdiag_only)
+{
+  const hiopMatrixRajaSparseTriplet& src = dynamic_cast<const hiopMatrixRajaSparseTriplet&>(src_gen);
+  auto m_rows = src.m();
+  auto n_cols = src.n();
+
+  assert(this->numberOfNonzeros() >= src.numberOfNonzeros());
+  assert(n_cols + dest_col_st <= this->n() );
+  assert(m_rows + dest_row_st <= this->m());
+  assert(dest_nnz_st + src.numberOfNonzeros() <= this->numberOfNonzeros());
+
+  const index_type* src_iRow = src.j_col();
+  const index_type* src_jCol = src.i_row();
+  const double* src_val = src.M();
+  size_type src_nnz = src.numberOfNonzeros();
+
+  // local copy of member variable/function, for RAJA access
+  index_type* iRow = iRow_;
+  index_type* jCol = jCol_;
+  double* values = values_;
+
+  RAJA::forall<hiop_raja_exec>(
+    RAJA::RangeSegment(0, src_nnz),
+    RAJA_LAMBDA(RAJA::Index_type src_k)
+    {
+      if(!offdiag_only || src_iRow[src_k]!=src_jCol[src_k]) {
+        index_type dest_k = dest_nnz_st + src_k;  
+        iRow[dest_k] = dest_row_st + src_iRow[src_k];
+        jCol[dest_k] = dest_col_st + src_jCol[src_k];
+        values[dest_k] = src_val[src_k];
+      }
+    }
+  );
+
+}
 
 /**********************************************************************************
   * Sparse symmetric matrix in triplet format. Only the UPPER triangle is stored
@@ -1048,10 +1536,13 @@ timesVec(double beta, double* y, double alpha, const double* x) const
   auto iRow = this->iRow_;
   auto jCol = this->jCol_;
   auto values = this->values_;
+
+  // nrows and ncols are used in assert statements only
 #ifndef NDEBUG
   auto nrows = this->nrows_;
   auto ncols = this->ncols_;
 #endif
+
   RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, nnz_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
@@ -1170,6 +1661,216 @@ startingAtAddSubDiagonalToStartingAt(int diag_src_start,
         }
       }
     });
+}
+
+size_type hiopMatrixRajaSymSparseTriplet::numberOfOffDiagNonzeros() const 
+{
+  if(-1==nnz_offdiag_) {
+    nnz_offdiag_= nnz_;
+    int *irow = iRow_;
+    int *jcol = jCol_;
+    RAJA::ReduceSum<hiop_raja_reduce, int> sum(0);
+    RAJA::forall<hiop_raja_exec>(
+      RAJA::RangeSegment(0, nnz_),
+      RAJA_LAMBDA(RAJA::Index_type i)
+      {
+        if (irow[i]==jcol[i]) {
+          sum += 1; 
+        }
+      }
+    );
+    nnz_offdiag_ -= static_cast<int>(sum.get());
+  }
+
+  return nnz_offdiag_;
+}
+
+/*
+*  extend original Hess to [Hess+diag_term]
+*/
+void hiopMatrixRajaSymSparseTriplet::set_Hess_FR(const hiopMatrixSparse& Hess,
+                                                 int* iHSS,
+                                                 int* jHSS,
+                                                 double* MHSS,
+                                                 const hiopVector& add_diag)
+{
+  if (nnz_ == 0) {
+    return;
+  }
+  
+  hiopMatrixRajaSymSparseTriplet& M1 = *this;
+  const hiopMatrixRajaSymSparseTriplet& M2 = dynamic_cast<const hiopMatrixRajaSymSparseTriplet&>(Hess);
+
+  // assuming original Hess is sorted, and in upper-triangle format
+  const int m1 = M1.m();
+  const int n1 = M1.n();
+  const int m2 = M2.m();
+  const int n2 = M2.n();
+  int m_row = add_diag.get_size();
+
+  assert(n1==m1);
+  assert(n2==m2);
+  assert(m2<=m1);
+
+  // note that nnz2 can be zero, i.e., original hess is empty. 
+  // Hence we use add_diag.get_size() to detect the length of x in the base problem
+  assert(m_row==m2 || m2==0);
+  
+  int nnz1 = m_row + M2.numberOfOffDiagNonzeros();
+  int nnz2 = M2.numberOfNonzeros();
+
+  assert(nnz_ == nnz1);
+
+  if(M2.row_starts_==NULL)
+    M2.row_starts_ = M2.allocAndBuildRowStarts();
+  assert(M2.row_starts_);
+  index_type* M2_row_start_host = M2.row_starts_->idx_start_host_;
+  const int* M2iRow_host = M2.i_row_host();
+  const int* M2jCol_host = M2.j_col_host();
+
+  index_type* M2_row_start = M2.row_starts_->idx_start_;
+  const int* M2iRow = M2.i_row();
+  const int* M2jCol = M2.j_col();
+
+  // extend Hess to the p and n parts --- sparsity
+  // sparsity may change due to te new obj term zeta*DR^2.*(x-x_ref)
+  if(iHSS != nullptr && jHSS != nullptr) {
+
+    int* M1iRow = M1.i_row();
+    int* M1jCol = M1.j_col();
+    
+    if(m2 > 0) {
+      if(M1.row_starts_==nullptr) {
+        M1.row_starts_ = new RowStartsInfo(m1, mem_space_);
+        int* M1_row_start_host = M1.row_starts_->idx_start_host_;
+
+        for(int i=0; i< m1+1; i++) {
+          M1_row_start_host[i] = 0;
+          
+          if(i>0 && i< m2+1) {
+            // nonzeros from the new obj term zeta*DR^2.*(x-x_ref)
+            M1_row_start_host[i] += 1;
+            
+            { // nonzeros from the base Hessian
+              index_type k_base = M2_row_start_host[i-1];
+              index_type nnz_in_row_base = M2_row_start_host[i] - k_base;
+              
+              if(nnz_in_row_base > 0 && M2iRow_host[k_base] == M2jCol_host[k_base]) {
+                // first nonzero in this row is a diagonal term (Hess is in upper triangular form)
+                // skip it since we will defined the diagonal nonezero
+                M1_row_start_host[i] += nnz_in_row_base-1;
+              } else {
+                M1_row_start_host[i] += nnz_in_row_base;
+              }
+            }  
+          }
+        }
+
+        // std::inclusive_scan is only available after C++17
+        // std::inclusive_scan(m1_row_nnz,m1_row_nnz+m1+1,M1.row_starts_->idx_start_host_);
+        for(int i=1; i< m1+1; i++) {
+          M1_row_start_host[i] += M1_row_start_host[i-1];
+        }
+        
+        M1.row_starts_->copy_to_dev();
+      }
+      index_type* M1_row_start = M1.row_starts_->idx_start_; 
+      
+      
+      RAJA::forall<hiop_raja_exec>(
+        RAJA::RangeSegment(0, m2),
+        RAJA_LAMBDA(RAJA::Index_type i)
+        {
+          index_type k = M1_row_start[i];
+          index_type k_base = M2_row_start[i];
+          size_type nnz_in_row = M2_row_start[i+1] - k_base;
+
+          // insert diagonal entry due to the new obj term
+          M1iRow[k] = iHSS[k] = i;
+          M1jCol[k] = jHSS[k] = i;
+          k++;
+
+          if(nnz_in_row > 0 && M2iRow[k_base] == M2jCol[k_base]) {
+            // first nonzero in this row is a diagonal term 
+            // skip it since we have defined the diagonal nonezero
+            k_base++;
+          }
+  
+          // copy from base Hess
+          while(k_base < M2_row_start[i+1]) {
+            M1iRow[k] = iHSS[k] = i;
+            M1jCol[k] = jHSS[k] = M2jCol[k_base];
+            k++;
+            k_base++;
+          }
+        }
+      );
+
+    } else {
+      // hess in the base problem is empty. just insert the new diag elements
+      RAJA::forall<hiop_raja_exec>(
+        RAJA::RangeSegment(0, m_row),
+        RAJA_LAMBDA(RAJA::Index_type i)
+        {
+          M1iRow[i] = iHSS[i] = i;
+          M1jCol[i] = jHSS[i] = i;
+        }
+      );
+    }
+  }
+
+  // extend Hess to the p and n parts --- element
+  if(MHSS != nullptr) {    
+    assert(M1.row_starts_);
+    index_type* M1_row_start = M1.row_starts_->idx_start_;
+
+    double* M1values = M1.M();
+    const double* M2values = M2.M();
+  
+    const auto& diag_x = dynamic_cast<const hiopVectorRajaPar&>(add_diag);  
+    const double* diag_data = add_diag.local_data_const();
+  
+    if(m2 > 0) {
+      RAJA::forall<hiop_raja_exec>(
+        RAJA::RangeSegment(0, m2),
+        RAJA_LAMBDA(RAJA::Index_type i)
+        {
+          index_type k = M1_row_start[i];
+          index_type k_base = M2_row_start[i];
+          size_type nnz_in_row_base = M2_row_start[i+1] - k_base;
+
+          // insert diagonal entry due to the new obj term
+          M1values[k] = MHSS[k] = diag_data[i];
+
+          if(nnz_in_row_base > 0 && M2iRow[k_base] == M2jCol[k_base]) {
+            // first nonzero in this row is a diagonal term 
+            // add it since we will defined the diagonal nonezero
+            M1values[k] += M2values[k_base];
+            MHSS[k] = M1values[k];
+            k_base++;
+          }
+          k++;
+  
+          // copy from base Hess
+          while(k_base < M2_row_start[i+1]) {
+            M1values[k] = MHSS[k] = M2values[k_base];
+            k++;
+            k_base++;
+          }
+        }
+      );
+    } else {
+      // hess in the base problem is empty. just insert the new diag elements
+      RAJA::forall<hiop_raja_exec>(
+        RAJA::RangeSegment(0, m_row),
+        RAJA_LAMBDA(RAJA::Index_type i)
+        {
+          M1values[i] = MHSS[i] = diag_data[i];
+        }
+      );
+    }
+  }
+  copyFromDev();
 }
 
 } //end of namespace

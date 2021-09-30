@@ -82,6 +82,10 @@ public:
     return fail;
   }
 
+  /**
+   * Ensure that non-const operator[] correctly _assigns_ to the underlying
+   * data.
+   */
   virtual bool vectorSetElement(hiop::hiopVectorInt& x) const
   {
     int fail = 0;
@@ -90,7 +94,8 @@ public:
     for(int i=0; i<x.size(); i++)
       setLocalElement(&x, i, 0);
 
-    x[idx] = x_val;
+    x.local_data_host()[idx] = x_val;
+    x.copy_to_dev();
     if (getLocalElement(&x, idx) != x_val)
       fail++;
 
@@ -98,6 +103,9 @@ public:
     return fail;
   }
 
+  /**
+   * Ensure that const data access correctly _returns_ value at specified index.
+   */
   virtual bool vectorGetElement(hiop::hiopVectorInt& x) const
   {
     int fail = 0;
@@ -107,8 +115,30 @@ public:
       setLocalElement(&x, i, 0);
     setLocalElement(&x, idx, x_val);
 
-    if (x[idx] != x_val)
+    if (x.local_data_host_const()[idx] != x_val)
       fail++;
+
+    printMessage(fail, __func__);
+    return fail;
+  }
+
+  virtual bool vector_copy_from(hiop::hiopVectorInt& x, hiop::hiopVectorInt& y) const
+  {
+    int fail = 0;
+    const int idx = x.size()/2;
+    const int x_val = 1;
+    const int y_val = 1;
+
+    setLocalElement(&x, x_val);
+    setLocalElement(&y, y_val);
+    
+    x.copy_from(y.local_data_const());
+
+    for(int i=0; i<x.size(); i++) {
+      if (x.local_data_host_const()[i] != y_val) {
+        fail++;
+      }
+    }
 
     printMessage(fail, __func__);
     return fail;
@@ -117,6 +147,7 @@ public:
 private:
   virtual int getLocalElement(hiop::hiopVectorInt*, int) const = 0;
   virtual void setLocalElement(hiop::hiopVectorInt*, int, int) const = 0;
+  virtual void setLocalElement(hiop::hiopVectorInt*, int) const = 0;
 };
 
 }} // namespace hiop::tests

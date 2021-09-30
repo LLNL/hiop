@@ -22,31 +22,31 @@ extern "C" {
     double *solution;
     double obj_value;
     // HiOp callback function wrappers
-    int (*get_starting_point)(long long n_, double* x0, void* user_data); 
-    int (*get_prob_sizes)(long long* n_, long long* m_, void* user_data); 
-    int (*get_vars_info)(long long n, double *xlow_, double* xupp_, void* user_data);
-    int (*get_cons_info)(long long m, double *clow_, double* cupp_, void* user_data);
-    int (*eval_f)(int n, double* x, int new_x, double* obj, void* user_data);
-    int (*eval_grad_f)(long long n, double* x, int new_x, double* gradf, void* user_data);
-    int (*eval_cons)(long long n, long long m,
+    int (*get_starting_point)(size_type n_, double* x0, void* user_data); 
+    int (*get_prob_sizes)(size_type* n_, size_type* m_, void* user_data); 
+    int (*get_vars_info)(size_type n, double *xlow_, double* xupp_, void* user_data);
+    int (*get_cons_info)(size_type m, double *clow_, double* cupp_, void* user_data);
+    int (*eval_f)(size_type n, double* x, int new_x, double* obj, void* user_data);
+    int (*eval_grad_f)(size_type n, double* x, int new_x, double* gradf, void* user_data);
+    int (*eval_cons)(size_type n, size_type m,
       double* x, int new_x, 
       double* cons, void* user_data);
-    int (*get_sparse_dense_blocks_info)(int* nx_sparse, int* nx_dense,
-      int* nnz_sparse_Jaceq, int* nnz_sparse_Jacineq,
-      int* nnz_sparse_Hess_Lagr_SS, 
-      int* nnz_sparse_Hess_Lagr_SD, void* user_data);
-    int (*eval_Jac_cons)(long long n, long long m,
+    int (*get_sparse_dense_blocks_info)(hiop_size_type* nx_sparse, hiop_size_type* nx_dense,
+      hiop_size_type* nnz_sparse_Jaceq, hiop_size_type* nnz_sparse_Jacineq,
+      hiop_size_type* nnz_sparse_Hess_Lagr_SS, 
+      hiop_size_type* nnz_sparse_Hess_Lagr_SD, void* user_data);
+    int (*eval_Jac_cons)(size_type n, size_type m,
       double* x, int new_x,
-      long long nsparse, long long ndense, 
-      int nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
+      size_type nsparse, size_type ndense, 
+      int nnzJacS, hiop_index_type* iJacS, hiop_index_type* jJacS, double* MJacS, 
       double* JacD, void *user_data);
-    int (*eval_Hess_Lagr)(long long n, long long m,
+    int (*eval_Hess_Lagr)(size_type n, size_type m,
       double* x, int new_x, double obj_factor,
       double* lambda, int new_lambda,
-      long long nsparse, long long ndense, 
-      int nnzHSS, int* iHSS, int* jHSS, double* MHSS, 
+      size_type nsparse, size_type ndense, 
+      hiop_size_type nnzHSS, hiop_index_type* iHSS, hiop_index_type* jHSS, double* MHSS, 
       double* HDD,
-      int nnzHSD, int* iHSD, int* jHSD, double* MHSD, void* user_data);
+      hiop_size_type nnzHSD, hiop_index_type* iHSD, hiop_index_type* jHSD, double* MHSD, void* user_data);
   } cHiopProblem;
 }
 
@@ -64,75 +64,75 @@ class cppUserProblem : public hiopInterfaceMDS
     {
     }
     // HiOp callbacks calling the C wrappers
-    bool get_prob_sizes(long long& n_, long long& m_) 
+    bool get_prob_sizes(size_type& n_, size_type& m_) 
     {
       cprob->get_prob_sizes(&n_, &m_, cprob->user_data);
       return true;
     };
-    bool get_starting_point(const long long& n, double *x0)
+    bool get_starting_point(const size_type& n, double *x0)
     {
       cprob->get_starting_point(n, x0, cprob->user_data);
       return true;
     };
-    bool get_vars_info(const long long& n, double *xlow_, double* xupp_, NonlinearityType* type)
+    bool get_vars_info(const size_type& n, double *xlow_, double* xupp_, NonlinearityType* type)
     {
-      for(long long i=0; i<n; ++i) type[i]=hiopNonlinear;
+      for(size_type i=0; i<n; ++i) type[i]=hiopNonlinear;
       cprob->get_vars_info(n, xlow_, xupp_, cprob->user_data);
       return true;
     };
-    bool get_cons_info(const long long& m, double* clow, double* cupp, NonlinearityType* type)
+    bool get_cons_info(const size_type& m, double* clow, double* cupp, NonlinearityType* type)
     {
-      for(long long i=0; i<m; ++i) type[i]=hiopNonlinear;
+      for(size_type i=0; i<m; ++i) type[i]=hiopNonlinear;
       cprob->get_cons_info(m, clow, cupp, cprob->user_data);
       return true;
     };
-    bool eval_f(const long long& n, const double* x, bool new_x, double& obj_value)
+    bool eval_f(const size_type& n, const double* x, bool new_x, double& obj_value)
     {
       cprob->eval_f(n, (double *) x, 0, &obj_value, cprob->user_data);
       return true;
     };
 
-    bool eval_grad_f(const long long& n, const double* x, bool new_x, double* gradf)
+    bool eval_grad_f(const size_type& n, const double* x, bool new_x, double* gradf)
     {
       cprob->eval_grad_f(n, (double *) x, 0, gradf, cprob->user_data);
 
       return true;
     };
-    bool eval_cons(const long long& n, const long long& m,
-      const long long& num_cons, const long long* idx_cons,  
+    bool eval_cons(const size_type& n, const size_type& m,
+      const size_type& num_cons, const hiop_index_type* idx_cons,  
       const double* x, bool new_x, 
       double* cons)
     {
       return false;
     };
-    bool eval_cons(const long long& n, const long long& m, 
+    bool eval_cons(const size_type& n, const size_type& m, 
       const double* x, bool new_x, double* cons)
     {
       cprob->eval_cons(n, m, (double *) x, new_x, cons, cprob->user_data);
       return true;
     };
-    bool get_sparse_dense_blocks_info(int& nx_sparse, int& nx_dense,
-      int& nnz_sparse_Jaceq, int& nnz_sparse_Jacineq,
-      int& nnz_sparse_Hess_Lagr_SS, 
-      int& nnz_sparse_Hess_Lagr_SD)
+    bool get_sparse_dense_blocks_info(hiop_size_type& nx_sparse, hiop_size_type& nx_dense,
+      hiop_size_type& nnz_sparse_Jaceq, hiop_size_type& nnz_sparse_Jacineq,
+      hiop_size_type& nnz_sparse_Hess_Lagr_SS, 
+      hiop_size_type& nnz_sparse_Hess_Lagr_SD)
     {
       cprob->get_sparse_dense_blocks_info(&nx_sparse, &nx_dense, &nnz_sparse_Jaceq, &nnz_sparse_Jacineq, 
                                           &nnz_sparse_Hess_Lagr_SS, &nnz_sparse_Hess_Lagr_SD, cprob->user_data);
       return true;
     };
-    bool eval_Jac_cons(const long long& n, const long long& m,
-      const long long& num_cons, const long long* idx_cons,
+    bool eval_Jac_cons(const size_type& n, const size_type& m,
+      const size_type& num_cons, const hiop_index_type* idx_cons,
       const double* x, bool new_x,
-      const long long& nsparse, const long long& ndense, 
-      const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
+      const size_type& nsparse, const size_type& ndense, 
+      const hiop_size_type& nnzJacS, hiop_index_type* iJacS, hiop_index_type* jJacS, double* MJacS, 
       double* JacD)
     {
       return false;
     };
-    bool eval_Jac_cons(const long long& n, const long long& m,
+    bool eval_Jac_cons(const size_type& n, const size_type& m,
       const double* x, bool new_x,
-      const long long& nsparse, const long long& ndense, 
-      const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
+      const size_type& nsparse, const size_type& ndense, 
+      const hiop_size_type& nnzJacS, hiop_index_type* iJacS, hiop_index_type* jJacS, double* MJacS, 
       double* JacD)
     {
       cprob->eval_Jac_cons(n, m, (double *) x, new_x, nsparse, ndense, 
@@ -140,13 +140,13 @@ class cppUserProblem : public hiopInterfaceMDS
                            JacD, cprob->user_data);
       return true;
     };
-    bool eval_Hess_Lagr(const long long& n, const long long& m,
+    bool eval_Hess_Lagr(const size_type& n, const size_type& m,
       const double* x, bool new_x, const double& obj_factor,
       const double* lambda, bool new_lambda,
-      const long long& nsparse, const long long& ndense, 
-      const int& nnzHSS, int* iHSS, int* jHSS, double* MHSS, 
+      const size_type& nsparse, const size_type& ndense, 
+      const hiop_size_type& nnzHSS, hiop_index_type* iHSS, hiop_index_type* jHSS, double* MHSS, 
       double* HDD,
-      int& nnzHSD, int* iHSD, int* jHSD, double* MHSD)
+      hiop_size_type& nnzHSD, hiop_index_type* iHSD, hiop_index_type* jHSD, double* MHSD)
     {
       //Note: lambda is not used since all the constraints are linear and, therefore, do 
       //not contribute to the Hessian of the Lagrangian

@@ -1,11 +1,10 @@
 // Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
-// Written by Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
 // is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause). 
-// Please also read “Additional BSD Notice” below.
+// Please also read "Additional BSD Notice" below.
 //
 // Redistribution and use in source and binary forms, with or without modification, 
 // are permitted provided that the following conditions are met:
@@ -46,23 +45,19 @@
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or 
 // product endorsement purposes.
 
+/**
+ * @file hiopInterface.hpp
+ *
+ * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
+ * @author Nai-Yuan Chiang <chiang7@lnnl.gov>, LNNL
+ *
+ */
+
 #ifndef HIOP_INTERFACE_BASE
 #define HIOP_INTERFACE_BASE
 
 #include "hiop_defs.hpp"
-
-#ifdef HIOP_USE_MPI
-#include "mpi.h"
-
-#else
-#ifndef MPI_Comm
-#define MPI_Comm int
-#endif
-
-#ifndef MPI_COMM_WORLD
-#define MPI_COMM_WORLD 0
-#endif 
-#endif
+#include "hiopMPI.hpp"
 
 namespace hiop
 {
@@ -95,6 +90,7 @@ enum hiopSolveStatus {
   Invalid_UserOption=-13,
   Invalid_Number=-14,
   Error_In_User_Function=-15,
+  Error_In_FR =-16,
   
   //ungraceful errors and returns
   Exception_Unrecoverable=-100,
@@ -119,7 +115,21 @@ enum hiopSolveStatus {
  *  Three possible implementations are for sparse NLPs (hiopInterfaceSparse), 
  *  mixed dense-sparse NLPs (hiopInterfaceMDS), and NLPs with small 
  *  number of global constraints (hiopInterfaceDenseConstraints).
- *  
+ *
+ * @note Please take notice of the following notes regarding the implementation of 
+ * hiop::hiopInterfaceMDS on the device. All pointers marked as "managed by Umpire" 
+ * are allocated by HiOp using the Umpire's API. They all are addresses in the 
+ * same memory space; however, the memory space can be host (typically CPU), 
+ * device (typically GPU), or unified memory (um) spaces as per Umpire 
+ * specification. The selection of the memory space is done via the option 
+ * "mem_space" of HiOp. It is the responsibility of the implementers of the 
+ * HiOp's interfaces to work with the "managed by Umpire" pointers in the same 
+ * memory space as the one specified by the "mem_space" option. 
+ * 
+ * @note The above note does not currently apply to the NLP interfaces
+ * hiop::hiopInterfaceDenseConstraints and hiop::hiopInterfaceSparse) and the pointers
+ * marked as "managed by Umpire" are in the host/CPU memory space (subject to change
+ * in future versions of HiOp).
  */
 class hiopInterfaceBase
 {
@@ -135,57 +145,58 @@ public:
    * @param n global number of variables
    * @param m number of constraints
    */
-  virtual bool get_prob_sizes(long long& n, long long& m)=0;
+  virtual bool get_prob_sizes(size_type& n, size_type& m)=0;
   
   /** Specifies bounds on the variables.
    *    
    * @param[in] n global number of constraints
    * @param[out] xlow array of lower bounds. A value of -1e20 or less means no lower 
-   * bound is present
+   *                  bound is present (managed by Umpire)
    * @param[out] xupp array of upper bounds. A value of 1e20 or more means no upper 
-   * bound is present
+   *                  bound is present  (managed by Umpire)
    * @param[out] type array of indicating whether the variables enters the objective 
-   * linearily, quadratically, or general nonlinearily. Momentarily not used by HiOp
+   *                  linearily, quadratically, or general nonlinearily. Momentarily 
+   *                  all bounds should be marked as nonlinear (allocated on host).
    */
-  virtual bool get_vars_info(const long long& n, double *xlow, double* xupp, NonlinearityType* type)=0;
+  virtual bool get_vars_info(const size_type& n, double *xlow, double* xupp, NonlinearityType* type)=0;
   
   /** Specififes the bounds on the constraints.
    *
    * @param[in] m number of constraints
    * @param[out] clow array of lower bounds for constraints. A value of -1e20 or less means no lower 
-   * bound is present
+   *                  bound is present (managed by Umpire)
    * @param[out] cupp array of upper bounds for constraints. A value of 1e20 or more means no upper 
-   * bound is present
+   *                  bound is present (managed by Umpire)
    * @param[out] type array of indicating whether the constraint is linear, quadratic, or general
-   * nonlinear. Momentarily not used by HiOp
+   *                  nonlinear. Momentarily all bounds should be marked as nonlinear (allocated on host).
    */
-  virtual bool get_cons_info(const long long& m, double* clow, double* cupp, NonlinearityType* type)=0;
+  virtual bool get_cons_info(const size_type& m, double* clow, double* cupp, NonlinearityType* type)=0;
 
   /** Method the evaluation of the objective function.
    *  
    * @param[in] n global size of the problem
-   * @param[in] x array with the local entries of the primal variable
+   * @param[in] x array with the local entries of the primal variable (managed by Umpire)
    * @param[in] new_x whether x has been changed from the previous calls to other evaluation methods
-   * (gradient, constraints, Jacobian, and Hessian),
+   *                  (gradient, constraints, Jacobian, and Hessian).
    * @param[out] obj_value the value of the objective function at @p x
    *
    * @note When MPI is enabled, each rank returns the objective value in @p obj_value. @p x points to 
    * the local entries and the function is responsible for knowing the local buffer size.
    */
-  virtual bool eval_f(const long long& n, const double* x, bool new_x, double& obj_value)=0;
+  virtual bool eval_f(const size_type& n, const double* x, bool new_x, double& obj_value)=0;
   
   /** Method for the evaluation of the gradient of objective.
    *  
    * @param[in] n global size of the problem
-   * @param[in] x array with the local entries of the primal variable
+   * @param[in] x array with the local entries of the primal variable  (managed by Umpire)
    * @param[in] new_x whether x has been changed from the previous calls to other evaluation methods
-   * (function, constraints, Jacobian, and Hessian),
-   * @param[out] gradf the entries of the gradient of the objective function at @p x, local
-   * to the MPI rank.
+   * (                function, constraints, Jacobian, and Hessian)
+   * @param[out] gradf the entries of the gradient of the objective function at @p x, local to the 
+   * MPI rank (managed by Umpire)
    *
    *  @note When MPI is enabled, each rank should access only the local buffers @p x and @p gradf.
    */
-  virtual bool eval_grad_f(const long long& n, const double* x, bool new_x, double* gradf)=0;
+  virtual bool eval_grad_f(const size_type& n, const double* x, bool new_x, double* gradf)=0;
 
   /** Evaluates a subset of the constraints @p cons(@p x). The subset is of size
    *  @p num_cons and is described by indexes in the @p idx_cons array. The method will be called at each
@@ -195,27 +206,30 @@ public:
    *   @param[in] n the global number of variables
    *   @param[in] m the number of constraints
    *   @param[in] num_cons the number constraints/size of subset to be evaluated
-   *   @param[in] idx_cons: indexes in {1,2,...,m} of the constraints to be evaluated
-   *   @param[in] x the point where the constraints need to be evaluated
+   *   @param[in] idx_cons: indexes in {1,2,...,m} of the constraints to be evaluated  (managed by Umpire)
+   *   @param[in] x the point where the constraints need to be evaluated  (managed by Umpire)
    *   @param[in] new_x whether x has been changed from the previous call to f, grad_f, or Jac
-   *   @param[out] cons: array of size num_cons containing the value of the  constraints indicated by 
-   * @p idx_cons
+   *   @param[out] cons array of size num_cons containing the value of the  constraints indicated by 
+   *                    @p idx_cons  (managed by Umpire)
    *  
    *  @note When MPI is enabled, every rank populates @p cons since the constraints are not distributed.
    */
-  virtual bool eval_cons(const long long& n, const long long& m, 
-			 const long long& num_cons, const long long* idx_cons,  
-			 const double* x, bool new_x, 
-			 double* cons)=0;
+  virtual bool eval_cons(const size_type& n,
+                         const size_type& m,
+                         const size_type& num_cons,
+                         const index_type* idx_cons,
+                         const double* x,
+                         bool new_x,
+                         double* cons)=0;
   
   /** Evaluates the constraints body @p cons(@p x), both equalities and inequalities, in one call. 
    *
    *   @param[in] n the global number of variables
    *   @param[in] m the number of constraints
-   *   @param[in] x the point where the constraints need to be evaluated
+   *   @param[in] x the point where the constraints need to be evaluated  (managed by Umpire)
    *   @param[in] new_x whether x has been changed from the previous call to f, grad_f, or Jac
-   *   @param[out] cons: array of size num_cons containing the value of the  constraints indicated by 
-   * @p idx_cons
+   *   @param[out] cons array of size num_cons containing the value of the  constraints indicated by 
+   *                     @p idx_cons  (managed by Umpire)
    *
    * HiOp will first call the other hiopInterfaceBase::eval_cons() twice. If the implementer/user wants the 
    * functionality  of this "one-call" overload, he should return false from the other 
@@ -223,12 +237,19 @@ public:
    * 
    *  @note When MPI is enabled, every rank populates @p cons since the constraints are not distributed.
    */
-  virtual bool eval_cons(const long long& n, const long long& m, 
-			 const double* x, bool new_x, 
-			 double* cons) { return false; }
+  virtual bool eval_cons(const size_type& n,
+                         const size_type& m,
+                         const double* x,
+                         bool new_x,
+                         double* cons)
+  {
+    return false;
+  }
   
   /** Passes the communicator, defaults to MPI_COMM_WORLD (dummy for non-MPI builds)  */
   virtual bool get_MPI_comm(MPI_Comm& comm_out) { comm_out=MPI_COMM_WORLD; return true;}
+  
+
 
   /**  
    * Method for column partitioning specification for distributed memory vectors. Process P owns 
@@ -239,7 +260,7 @@ public:
    * 
    * The caller manages memory associated with @p cols, which is an array of size NumRanks+1 
    */
-  virtual bool get_vecdistrib_info(long long global_n, long long* cols) {
+  virtual bool get_vecdistrib_info(size_type global_n, index_type* cols) {
     return false; //defaults to serial 
   }
 
@@ -257,13 +278,13 @@ public:
    * this method.
    *
    */
-  virtual bool get_starting_point(const long long&n, double* x0)
+  virtual bool get_starting_point(const size_type&n, double* x0)
   {
     return false;
   }
   
   /**
-   * Method provides a primal or a primal-dual primal-dual starting point. This point is subject 
+   * Method provides a primal or a primal-dual starting point. This point is subject 
    * to internal adjustments in HiOp.
    *
    * If the user (implementer of this method) has good estimates only of the primal variables,
@@ -285,11 +306,37 @@ public:
    * will be removed in a future release.
    * 
    */
-  virtual bool get_starting_point(const long long& n, const long long& m,
-				  double* x0,
-				  bool& duals_avail,
-				  double* z_bndL0, double* z_bndU0,
-				  double* lambda0)
+  virtual bool get_starting_point(const size_type& n,
+                                  const size_type& m,
+                                  double* x0,
+                                  bool& duals_avail,
+                                  double* z_bndL0, 
+                                  double* z_bndU0,
+                                  double* lambda0,
+                                  bool& slacks_avail,
+                                  double* ineq_slack)
+  {
+    duals_avail = false;
+    slacks_avail = false;
+    return false;
+  }
+
+  /**
+   * Method provides a primal-dual starting point for warm start. This point is subject 
+   * to internal adjustments in HiOp.
+   *
+   * User provides starting point for all the iterate variable used in HiOp.
+   * 
+   */
+  virtual bool get_starting_point(const size_type& n,
+                                  const size_type& m,
+                                  double* x0,
+                                  double* z_bndL0, 
+                                  double* z_bndU0,
+                                  double* lambda0,
+                                  double* ineq_slack,
+                                  double* vl0,
+                                  double* vu0)
   {
     return false;
   }
@@ -309,12 +356,16 @@ public:
    *
    */
   virtual void solution_callback(hiopSolveStatus status,
-				 int n, const double* x,
-				 const double* z_L,
-				 const double* z_U,
-				 int m, const double* g,
-				 const double* lambda,
-				 double obj_value) { };
+                                 size_type n,
+                                 const double* x,
+                                 const double* z_L,
+                                 const double* z_U,
+                                 size_type m,
+                                 const double* g,
+                                 const double* lambda,
+                                 double obj_value)
+  {
+  }
 
   /** 
    * Callback for the (end of) iteration. This method is not called during the line-searche
@@ -323,18 +374,49 @@ public:
    * @note If the user (implementer) of this methods returns false, HiOp will stop the 
    * the optimization with hiop::hiopSolveStatus ::User_Stopped return code.
    */
-  virtual bool iterate_callback(int iter, double obj_value,
-				int n, const double* x,
-				const double* z_L,
-				const double* z_U,
-				int m, const double* g,
-				const double* lambda,
-				double inf_pr, double inf_du,
-				double mu,
-				double alpha_du, double alpha_pr,
-				int ls_trials) {return true;}
+  virtual bool iterate_callback(int iter,
+                                double obj_value,
+                                double logbar_obj_value,
+                                int n,
+                                const double* x,
+                                const double* z_L,
+                                const double* z_U,
+                                int m_ineq,
+                                const double* s,
+                                int m,
+                                const double* g,
+                                const double* lambda,
+                                double inf_pr,
+                                double inf_du,
+                                double onenorm_pr_,
+                                double mu,
+                                double alpha_du,
+                                double alpha_pr,
+                                int ls_trials)
+  {
+    return true;
+  }
   
-
+  /**
+   * A wildcard function used to change the variables and other values
+   *
+   * @note If the user (implementer) of this methods returns false, HiOp will stop the
+   * the optimization with hiop::hiopSolveStatus ::User_Stopped return code.
+   */
+  virtual bool force_update(double obj_value,
+                            const int n,
+                            double* x,
+                            double* z_L,
+                            double* z_U,
+                            const int m,
+                            double* g,
+                            double* lambda,
+                            double& mu,
+                            double& alpha_du,
+                            double& alpha_pr)
+  {
+    return true;
+  }
 
 private:
   hiopInterfaceBase(const hiopInterfaceBase& ) {};
@@ -359,9 +441,12 @@ public:
    *
    * Parameters: see eval_cons
    */
-  virtual bool eval_Jac_cons(const long long& n, const long long& m, 
-                             const long long& num_cons, const long long* idx_cons,
-                             const double* x, bool new_x,
+  virtual bool eval_Jac_cons(const size_type& n,
+                             const size_type& m, 
+                             const size_type& num_cons,
+                             const index_type* idx_cons,
+                             const double* x,
+                             bool new_x,
                              double* Jac) = 0;
   
   /**
@@ -376,15 +461,18 @@ public:
    * TODO: build an example (new one-call Nlp formulation derived from ex2) to illustrate this 
    * feature and to test HiOp's internal implementation of eq.-ineq. spliting.
    */
-  virtual bool eval_Jac_cons(const long long& n, const long long& m,
-                             const double* x, bool new_x,
+  virtual bool eval_Jac_cons(const size_type& n,
+                             const size_type& m,
+                             const double* x,
+                             bool new_x,
                              double* Jac)
   {
     return false;
   }
 };
 
-/** Specialized interface for NLPs having mixed DENSE and sparse (MDS) blocks in the 
+/** 
+ * Specialized interface for NLPs having mixed DENSE and sparse (MDS) blocks in the 
  * Jacobian and Hessian. 
  * 
  * More specifically, this interface is for specifying optimization problem in x
@@ -392,17 +480,16 @@ public:
  * xd have dense derivatives
  *
  * min f(x) s.t. g(x) <= or = 0, lb<=x<=ub 
- * 
  * such that 
  *  - Jacobian w.r.t. xs and LagrHessian w.r.t. (xs,xs) are sparse 
  *  - Jacobian w.r.t. xd and LagrHessian w.r.t. (xd,xd) are dense 
  *  - LagrHessian w.r.t (xs,xd) is zero (later this assumption will be relaxed)
  *
- * Notes
- * 1) HiOp expects the sparse variables first and then the dense variables. In many cases,
+ * @note HiOp expects the sparse variables first and then the dense variables. In many cases,
  * the implementer has to (inconviniently) keep a map between his internal variables 
- * indexes and the indexes HiOp  
- * 2) this interface is 'local' in the sense that data is not assumed to be 
+ * indexes and the indexes HiOp.
+ * 
+ * @note This interface is 'local' in the sense that data is not assumed to be 
  * distributed across MPI ranks ('get_vecdistrib_info' should return 'false')
  *
  */
@@ -410,113 +497,186 @@ class hiopInterfaceMDS : public hiopInterfaceBase {
 public:
   hiopInterfaceMDS() {};
   virtual ~hiopInterfaceMDS() {};
+  
+  /**
+   *  Returns the sizes and number of nonzeros of the sparse and dense blocks within MDS
+   *
+   * @param[out] nx_sparse number of sparse variables
+   * @param[out] nx_ense number of dense variables
+   * @param[out] nnz_sparse_Jace number of nonzeros in the Jacobian of the equalities w.r.t. 
+   *             sparse variables 
+   * @param[out] nnz_sparse_Jaci number of nonzeros in the Jacobian of the inequalities w.r.t. 
+   *             sparse variables 
+   * @param[out] nnz_sparse_Hess_Lagr_SS number of nonzeros in the (sparse) Hessian w.r.t. 
+   *             sparse variables
+   * @param[out] nnz_sparse_Hess_Lagr_SD reserved, should be set to 0
+   */
+  virtual bool get_sparse_dense_blocks_info(int& nx_sparse,
+                                            int& nx_dense,
+                                            int& nnz_sparse_Jaceq,
+                                            int& nnz_sparse_Jacineq,
+                                            int& nnz_sparse_Hess_Lagr_SS,
+                                            int& nnz_sparse_Hess_Lagr_SD) = 0; 
 
-  virtual bool get_sparse_dense_blocks_info(int& nx_sparse, int& nx_dense,
-					    int& nnz_sparse_Jaceq, int& nnz_sparse_Jacineq,
-					    int& nnz_sparse_Hess_Lagr_SS, 
-					    int& nnz_sparse_Hess_Lagr_SD) = 0; 
-
-  /** Evaluates the Jacobian of constraints split in the sparse (triplet format) and 
+  /** 
+   * Evaluates the Jacobian of constraints split in the sparse (triplet format) and 
    * dense matrices (rows storage)
    *
    * This method is called twice per Jacobian evaluation, once for equalities and once for
    * inequalities (see 'eval_cons' for more information). It is advantageous to provide
    * this method when the underlying NLP's constraints come naturally split in equalities
-   * and inequalities. When it is not convinient to do so, use 'eval_Jac_cons' below.
+   * and inequalities. When it is not convenient to do so, use 'eval_Jac_cons' below.
    *
-   * Parameters: 
-   *  - first six: see eval_cons (in parent class)
-   *  - nnzJacS, iJacS, jJacS, MJacS: number of nonzeros, (i,j) indexes, and values of 
-   * the sparse Jacobian
-   *  - JacD: dense Jacobian as a contiguous array storing the matrix by rows
+   * @param[in] n number of variables
+   * @param[in] m Number of constraints
+   * @param[in] num_cons number of constraints to evaluate (size of idx_cons array)
+   * @param[in] idx_cons indexes of the constraints to evaluate (managed by Umpire)
+   * @param[in] x the point at which to evaluate (managed by Umpire)
+   * @param[in] new_x indicates whether any of the other eval functions have been evaluated 
+   *                  previously (false) or not (true) at x
+   * @param[in] nsparse number of sparse variables
+   * @param[in] ndense number of dense variables
+   * @param[in] nnzJacS number of nonzeros in the sparse Jacobian
+   * @param[out] iJacS array of row indexes in the sparse Jacobian (managed by Umpire)
+   * @param[out] jJacS array of column indexes in the sparse Jacobian (managed by Umpire)
+   * @param[out] MJacS array of nonzero values in the sparse Jacobian (managed by Umpire)
+   * @param[out] JacD array with the values of the dense Jacobian (managed by Umpire)
    * 
-   * Notes for implementer of this method: 
+   * The implementer of this method should be aware of the following observations.
    * 1) 'JacD' parameter will be always non-null
    * 2) When 'iJacS' and 'jJacS' are non-null, the implementer should provide the (i,j) 
    * indexes. 
    * 3) When 'MJacS' is non-null, the implementer should provide the values corresponding to 
    * entries specified by 'iJacS' and 'jJacS'
    * 4) 'iJacS' and 'jJacS' are both either non-null or null during a call.
-   * 5) Both 'iJacS'/'jJacS' and 'MJacS' can be non-null during the same call or only one of them 
-   * non-null; but they will not be both null.
-   * 
+   * 5) Both 'iJacS'/'jJacS' and 'MJacS' can be non-null during the same call or only one of 
+   * them non-null; but they will not be both null.
    */
-  virtual bool eval_Jac_cons(const long long& n, const long long& m, 
-			     const long long& num_cons, const long long* idx_cons,
-			     const double* x, bool new_x,
-			     const long long& nsparse, const long long& ndense, 
-			     const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
-			     double* JacD) = 0;
-  /** Evaluates the Jacobian of equality and inequality constraints in one call. This Jacobian is
+  virtual bool eval_Jac_cons(const size_type& n,
+                             const size_type& m,
+                             const size_type& num_cons,
+                             const index_type* idx_cons,
+                             const double* x,
+                             bool new_x,
+                             const size_type& nsparse,
+                             const size_type& ndense,
+                             const size_type& nnzJacS,
+                             index_type* iJacS,
+                             index_type* jJacS,
+                             double* MJacS,
+                             double* JacD) = 0;
+  
+  /** 
+   * Evaluates the Jacobian of equality and inequality constraints in one call. This Jacobian is
    * mixed dense-sparse (MDS), which means is structurally split in the sparse (triplet format) and 
    * dense matrices (rows storage)
    *
    * The main difference from the above 'eval_Jac_cons' is that the implementer/user of this 
    * method does not have to split the constraints into equalities and inequalities; instead,
-   * HiOp does this internally.
-   *
-   * Parameters: 
-   *  - first four: number of variables, number of constraints, (primal) variables at which the
-   * Jacobian should be evaluated, and boolean flag indicating whether the variables 'x' have
-   * changed since a previous call to ny of the function and derivative evaluations.
-   *  - nsparse and ndense: number of sparse and dense variables, respectively; must add 
-   * up to 'n'
-   *  - nnzJacS, iJacS, jJacS, MJacS: number of nonzeros, (i,j) indexes, and values of 
-   * the sparse Jacobian block; indexes are within the sparse Jacobian block (not within 
-   * the entire Jacobian)
-   *  - JacD: dense Jacobian block as a contiguous array storing the matrix by rows
+   * HiOp does this internally.  HiOp will call this method whenever the implementer/user returns 
+   * false from the 'eval_Jac_cons' above (which is called for equalities and inequalities separately).
+   * 
+   * @param[in] n number of variables
+   * @param[in] m Number of constraints
+   * @param[in] x the point at which to evaluate (managed by Umpire)
+   * @param[in] new_x indicates whether any of the other eval functions have been evaluated previously 
+   *                  (false) or not (true) at x
+   * @param[in] nsparse number of sparse variables
+   * @param[in] ndense number of dense variables
+   * @param[in] nnzJacS number of nonzeros in the sparse Jacobian
+   * @param[out] iJacS array of row indexes in the sparse Jacobian (managed by Umpire)
+   * @param[out] jJacS array of column indexes in the sparse Jacobian (managed by Umpire)
+   * @param[out] MJacS array of nonzero values in the sparse Jacobian (managed by Umpire)
+   * @param[out] JacD array with the values of the dense Jacobian (managed by Umpire)
    * 
    * Notes for implementer of this method: 
-   * 1) 'JacD' parameter will be always non-null
-   * 2) When 'iJacS' and 'jJacS' are non-null, the implementer should provide the (i,j) 
-   * indexes. 
+   * 1) 'JacD' parameter will be always non-null.
+   * 2) When 'iJacS' and 'jJacS' are non-null, the implementer should provide the (i,j) indexes.
    * 3) When 'MJacS' is non-null, the implementer should provide the values corresponding to 
-   * entries specified by 'iJacS' and 'jJacS'
+   * entries specified by 'iJacS' and 'jJacS' (managed by Umpire).
    * 4) 'iJacS' and 'jJacS' are both either non-null or null during a call.
    * 5) Both 'iJacS'/'jJacS' and 'MJacS' can be non-null during the same call or only one of them 
-   * non-null; but they will not be both null.
-   * 
-   * HiOp will call this method whenever the implementer/user returns false from the 'eval_Jac_cons'
-   * (which is called for equalities and inequalities separately) above.
+   * non-null; but they will not be both null. 
    */
-  virtual bool eval_Jac_cons(const long long& n, const long long& m, 
-			     const double* x, bool new_x,
-			     const long long& nsparse, const long long& ndense, 
-			     const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 
-			     double* JacD)
+  virtual bool eval_Jac_cons(const size_type& n,
+                             const size_type& m,
+                             const double* x,
+                             bool new_x,
+                             const size_type& nsparse,
+                             const size_type& ndense,
+                             const size_type& nnzJacS,
+                             index_type* iJacS,
+                             index_type* jJacS,
+                             double* MJacS,
+                             double* JacD)
   {
     return false;
   }
 
   
-  /** Evaluates the Hessian of the Lagrangian function in 3 structural blocks
-   * - HSS is the Hessian w.r.t.(xs,xs)
-   * - HDD is the Hessian w.r.t.(xd,xd)
-   * - HSD is the Hessian w.r.t (xs,xd) 
+  /** 
+   * Evaluates the Hessian of the Lagrangian function in 3 structural blocks: HSS is the Hessian 
+   * w.r.t. (xs,xs),  HDD is the Hessian w.r.t. (xd,xd), and HSD is the Hessian w.r.t (xs,xd).
+   * Please consult the user manual for a details on the form the Lagrangian function takes.
    *
-   * Note: HSD is for now assumed to be zero. The implementer should return nnzHSD=0
+   * @note HSD is for now assumed to be zero. The implementer should return nnzHSD=0
    * during the first call to 'eval_Hess_Lagr'. On subsequent calls, HiOp will pass the 
    * triplet arrays for HSD set to NULL and the implementer (obviously) should not use them.
-   *
+   * 
+   * @param[in] n number of variables
+   * @param[in] m Number of constraints
+   * @param[in] x the point at which to evaluate (managed by Umpire)
+   * @param[in] new_x indicates whether any of the other eval functions have been evaluated 
+   *                  previously (false) or not (true) at x
+   * @param[in] obj_factor scalar that multiplies the objective term in the Lagrangian function
+   * @param[in] lambda array with values of the multipliers used by the Lagrangian function
+   * @param[in] new_lambda indicates whether lambda  values changed since last call
+   * @param[in] nsparse number of sparse variables
+   * @param[in] ndense number of dense variables
+   * @param[in] nnzHSS number of nonzeros in the (sparse) Hessian w.r.t. sparse variables 
+   * @param[out] iHSS array of row indexes in the Hessian w.r.t. sparse variables (managed by
+   *                  Umpire)
+   * @param[out] jHSS array of column indexes in the Hessian w.r.t. sparse variables 
+   *                  (managed by Umpire)
+   * @param[out] MHSS array of nonzero values in the Hessian w.r.t. sparse variables
+   *                  (managed by Umpire)
+   * @param[out] HDDD array with the values of the Hessian w.r.t. to dense variables 
+   *                  (managed by Umpire)
+   * @param[out] iHSD is reserved and should not be accessed 
+   * @param[out] jHSD is reserved and should not be accessed 
+   * @param[out] MHSD is reserved and should not be accessed
+   * @param[out] HHSD is reserved and should not be accessed
+   * 
    * Notes 
-   * 1)-5) from 'eval_Jac_cons' applies to xxxHSS and HDD arrays
+   * 1)-5) from 'eval_Jac_cons' apply to xxxHSS and HDD arrays
    * 6) The order is multipliers is: lambda=[lambda_eq, lambda_ineq]
    */
-  virtual bool eval_Hess_Lagr(const long long& n, const long long& m, 
-			      const double* x, bool new_x, const double& obj_factor,
-			      const double* lambda, bool new_lambda,
-			      const long long& nsparse, const long long& ndense, 
-			      const int& nnzHSS, int* iHSS, int* jHSS, double* MHSS, 
-			      double* HDD,
-			      int& nnzHSD, int* iHSD, int* jHSD, double* MHSD) = 0;
+  virtual bool eval_Hess_Lagr(const size_type& n,
+                              const size_type& m,
+                              const double* x,
+                              bool new_x,
+                              const double& obj_factor,
+                              const double* lambda,
+                              bool new_lambda,
+                              const size_type& nsparse,
+                              const size_type& ndense,
+                              const size_type& nnzHSS,
+                              index_type* iHSS,
+                              index_type* jHSS,
+                              double* MHSS,
+                              double* HDD,
+                              size_type& nnzHSD,
+                              index_type* iHSD,
+                              index_type* jHSD,
+                              double* MHSD) = 0;
 };
 
 
-/** Specialized interface for NLPs with sparse blocks in the Jacobian and Hessian.
+/** Specialized interface for NLPs with sparse Jacobian and Hessian matrices.
  *
  * More specifically, this interface is for specifying optimization problem:
  *
- * min f(x) s.t. g(x) <= or = 0, lb<=x<=ub
+ * min f(x) s.t. g(x) <=, =, or >= 0, lb<=x<=ub
  *
  * such that Jacobian w.r.t. x and Hessian of the Lagrangian w.r.t. x are sparse
  *
@@ -535,9 +695,10 @@ public:
   /** Get the number of variables and constraints, nonzeros
    * and get the number of nonzeros in Jacobian and Heesian
   */
-  virtual bool get_sparse_blocks_info(int& nx,
-                                      int& nnz_sparse_Jaceq, int& nnz_sparse_Jacineq,
-                                      int& nnz_sparse_Hess_Lagr) = 0;
+  virtual bool get_sparse_blocks_info(size_type& nx,
+                                      size_type& nnz_sparse_Jaceq,
+                                      size_type& nnz_sparse_Jacineq,
+                                      size_type& nnz_sparse_Hess_Lagr) = 0;
 
   /** Evaluates the sparse Jacobian of constraints.
    *
@@ -552,10 +713,16 @@ public:
    * the sparse Jacobian.
    *
    */
-  virtual bool eval_Jac_cons(const long long& n, const long long& m,
-                             const long long& num_cons, const long long* idx_cons,
-                             const double* x, bool new_x,
-                             const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS) = 0;
+  virtual bool eval_Jac_cons(const size_type& n,
+                             const size_type& m,
+                             const size_type& num_cons,
+                             const index_type* idx_cons,
+                             const double* x,
+                             bool new_x,
+                             const size_type& nnzJacS,
+                             index_type* iJacS,
+                             index_type* jJacS,
+                             double* MJacS) = 0;
 
   /** Evaluates the sparse Jacobian of equality and inequality constraints in one call.
    *
@@ -582,19 +749,39 @@ public:
    * HiOp will call this method whenever the implementer/user returns false from the 'eval_Jac_cons'
    * (which is called for equalities and inequalities separately) above.
    */
-  virtual bool eval_Jac_cons(const long long& n, const long long& m,
-                             const double* x, bool new_x,
-                             const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS){ return false; }
+  virtual bool eval_Jac_cons(const size_type& n,
+                             const size_type& m,
+                             const double* x,
+                             bool new_x,
+                             const size_type& nnzJacS,
+                             index_type* iJacS,
+                             index_type* jJacS,
+                             double* MJacS)
+  {
+    return false;
+  }
 
   /** Evaluates the sparse Hessian of the Lagrangian function.
    *
    * @note 1)-4) from 'eval_Jac_cons' applies to xxxHSS
    * @note 5) The order of multipliers is: lambda=[lambda_eq, lambda_ineq]
    */
-  virtual bool eval_Hess_Lagr(const long long& n, const long long& m,
-                              const double* x, bool new_x, const double& obj_factor,
-                              const double* lambda, bool new_lambda,
-                              const int& nnzHSS, int* iHSS, int* jHSS, double* MHSS) = 0;
+  virtual bool eval_Hess_Lagr(const size_type& n,
+                              const size_type& m,
+                              const double* x,
+                              bool new_x,
+                              const double& obj_factor,
+                              const double* lambda,
+                              bool new_lambda,
+                              const size_type& nnzHSS,
+                              index_type* iHSS,
+                              index_type* jHSS,
+                              double* MHSS) = 0;
+
+
+  /** Specifying the get_MPI_comm code defined in the base class
+   */
+  virtual bool get_MPI_comm(MPI_Comm& comm_out) { comm_out=MPI_COMM_SELF; return true;}
 
 };
 

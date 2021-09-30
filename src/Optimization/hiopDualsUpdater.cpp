@@ -4,7 +4,7 @@
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
 // is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause). 
-// Please also read “Additional BSD Notice” below.
+// Please also read "Additional BSD Notice" below.
 //
 // Redistribution and use in source and binary forms, with or without modification, 
 // are permitted provided that the following conditions are met:
@@ -68,6 +68,9 @@
 #endif
 #ifdef HIOP_USE_STRUMPACK
 #include "hiopLinSolverSparseSTRUMPACK.hpp"
+#endif
+#ifdef HIOP_USE_PARDISO
+#include "hiopLinSolverSparsePARDISO.hpp"
 #endif
 #endif
 
@@ -139,17 +142,28 @@ hiopDualsLsqUpdateLinsysRedDense::hiopDualsLsqUpdateLinsysRedDense(hiopNlpFormul
     mixmi_(nullptr),
     mxm_(nullptr)
 {
-  mexme_ = LinearAlgebraFactory::createMatrixDense(nlp_->m_eq(), nlp_->m_eq());
-  mexmi_ = LinearAlgebraFactory::createMatrixDense(nlp_->m_eq(), nlp_->m_ineq());
-  mixmi_ = LinearAlgebraFactory::createMatrixDense(nlp_->m_ineq(), nlp_->m_ineq());
-  mxm_   = LinearAlgebraFactory::createMatrixDense(nlp_->m(), nlp_->m());
+  mexme_ = LinearAlgebraFactory::create_matrix_dense(nlp_->options->GetString("mem_space"),
+                                                     nlp_->m_eq(),
+                                                     nlp_->m_eq());
+  mexmi_ = LinearAlgebraFactory::create_matrix_dense(nlp_->options->GetString("mem_space"),
+                                                     nlp_->m_eq(),
+                                                     nlp_->m_ineq());
+  mixmi_ = LinearAlgebraFactory::create_matrix_dense(nlp_->options->GetString("mem_space"),
+                                                     nlp_->m_ineq(),
+                                                     nlp_->m_ineq());
+  mxm_ = LinearAlgebraFactory::create_matrix_dense(nlp_->options->GetString("mem_space"),
+                                                   nlp_->m(),
+                                                   nlp_->m());
   
-  rhs_    = LinearAlgebraFactory::createVector(nlp_->m());
+  rhs_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"),
+                                             nlp_->m());
   
 #ifdef HIOP_DEEPCHECKS
   M_copy_ = nullptr; //delayed allocation 
   rhs_copy_ = rhs_->alloc_clone(); 
-  mixme_ = LinearAlgebraFactory::createMatrixDense(nlp_->m_ineq(), nlp_->m_eq());
+  mixme_ = LinearAlgebraFactory::create_matrix_dense(nlp_->options->GetString("mem_space"),
+                                                     nlp_->m_ineq(),
+                                                     nlp_->m_eq());
 #endif
 }
 
@@ -310,7 +324,8 @@ hiopDualsLsqUpdateLinsysAugSparse::hiopDualsLsqUpdateLinsysAugSparse(hiopNlpForm
 #ifndef HIOP_SPARSE
   assert(0 && "should not reach here!");
 #endif // HIOP_SPARSE
-  rhs_ = LinearAlgebraFactory::createVector(nlp_->n() + nlp_->m_ineq() + nlp_->m());
+  rhs_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"),
+                                            nlp_->n() + nlp_->m_ineq() + nlp_->m());
 }
 
 hiopDualsLsqUpdateLinsysAugSparse::~hiopDualsLsqUpdateLinsysAugSparse()
@@ -333,38 +348,111 @@ bool hiopDualsLsqUpdateLinsysAugSparse::do_lsq_update(hiopIterate& iter,
   int n = nx + nineq + neq + nineq; 
 
   int nnz = nx + nd + Jac_cSp.numberOfNonzeros() + Jac_dSp.numberOfNonzeros() + nd + (nx + nd + neq + nineq);
+
+  auto compute_mode = nlp_->options->GetString("compute_mode");
+#ifndef HIOP_USE_GPU
+    assert(compute_mode == "cpu" &&
+           "the value for compute_mode is invalid and should have been corrected during user options processing");
+#endif
   
   if(!lin_sys_) {
-    if(nlp_->options->GetString("compute_mode")=="cpu") {
-      nlp_->log->printf(hovSummary,
-                        "LSQ Dual Initialization --- KKT_SPARSE_XYcYd linsys: MA57 size %d (%d cons)\n",
-                        n, neq+nineq);
+    auto linear_solver = nlp_->options->GetString("duals_init_linear_solver_sparse");
+    
+    if(compute_mode == "cpu") {
+
+      if(linear_solver == "ma57" || linear_solver == "auto") {
 #ifdef HIOP_USE_COINHSL
-      lin_sys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
-#endif // HIOP_USE_COINHSL          
-    } else { //we're on device
-#ifdef HIOP_USE_STRUMPACK        
-      hiopLinSolverIndefSparseSTRUMPACK *p = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
+        nlp_->log->printf(hovSummary,
+                          "LSQ Dual Initialization --- KKT_SPARSE_XYcYd linsys: MA57 size %d (%d cons)\n",
+                          n, neq+nineq);
+        
+        lin_sys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
       
-      nlp_->log->printf(hovSummary,
-                        "LSQ Dual Initialization --- KKT_SPARSE_XDYcYd linsys: using STRUMPACK as an "
-                        "indefinite solver, size %d (%d cons) (safe_mode=%d)\n",
-                        n, neq+nineq);
-      
-      p->setFakeInertia(neq + nineq);
-      lin_sys_ = p;
-#else
-#ifdef HIOP_USE_COINHSL
-      nlp_->log->printf(hovSummary,
-                        "LSQ Dual Initialization --- KKT_SPARSE_XDYcYd linsys: using MA57 on CPU size "
-                        "%d (%d cons)\n",
-                        n, neq+nineq);                             
-      lin_sys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
 #endif // HIOP_USE_COINHSL
-#endif // HIOP_USE_STRUMPACK
-    }
+      }
+
+      if( (NULL == lin_sys_ && linear_solver == "auto") || linear_solver == "pardiso") {
+        //ma57 is not available or user requested pardiso
+#ifdef HIOP_USE_PARDISO              
+        hiopLinSolverIndefSparsePARDISO *p = new hiopLinSolverIndefSparsePARDISO(n, nnz, nlp_);
+        
+        nlp_->log->printf(hovSummary,
+                          "LSQ Duals Initialization --- KKT_SPARSE_XDYcYd linsys: using PARDISO on CPU as an "
+                          "indefinite solver, size %d (%d cons)\n",
+                          n, neq+nineq);        
+        lin_sys_ = p;
+#endif  // HIOP_USE_PARDISO
+      }
+
+      if(NULL == lin_sys_) {
+        //ma57 and pardiso are not available or user requested strumpack
+#ifdef HIOP_USE_STRUMPACK
+        assert((linear_solver == "strumpack" || linear_solver == "auto") &&
+               "the value for duals_init_linear_solver_sparse is invalid and should have been corrected during "
+               "options processing");
+              
+        hiopLinSolverIndefSparseSTRUMPACK *p = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
+        
+        nlp_->log->printf(hovSummary,
+                          "LSQ Duals Initialization --- KKT_SPARSE_XDYcYd linsys: using STRUMPACK on CPU as an "
+                          "indefinite solver, size %d (%d cons)\n",
+                          n, neq+nineq);
+        
+        p->setFakeInertia(neq + nineq);
+        lin_sys_ = p;
+        
+#endif  // HIOP_USE_STRUMPACK
+      }
+    } else {
+      //
+      // we're on device
+      //
+#ifdef HIOP_USE_STRUMPACK
+      if(linear_solver == "strumpack" || linear_solver == "auto") {
+
+        hiopLinSolverIndefSparseSTRUMPACK *p = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
+        
+        nlp_->log->printf(hovSummary,
+                          "LSQ Dual Initialization --- KKT_SPARSE_XDYcYd linsys: using STRUMPACK on device as an "
+                          "indefinite solver, size %d (%d cons)\n",
+                          n, neq+nineq);
+        
+        p->setFakeInertia(neq + nineq);
+        lin_sys_ = p;
+      }
+#endif  // HIOP_USE_STRUMPACK
+      
+#ifdef HIOP_USE_COINHSL
+      if(NULL == lin_sys_) {
+        // we get here if strumpack is not available or is available but the duals_init_linear_solver_sparse was
+        //set to be ma57
+        assert((linear_solver == "ma57" || linear_solver == "auto") &&
+               "the value for duals_init_linear_solver_sparse is invalid and should have been corrected during "
+               "options processing");
+        nlp_->log->printf(hovSummary,
+                          "LSQ Dual Initialization --- KKT_SPARSE_XDYcYd linsys: using MA57 on CPU(!!!) size "
+                          "%d (%d cons)\n",
+                          n, neq+nineq);                             
+        lin_sys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
+      }
+#endif // HIOP_USE_COINHSL
+#ifdef HIOP_USE_PARDISO
+      if(NULL == lin_sys_) {
+        // we get here if strumpack and ma57 are not available or is available but the duals_init_linear_solver_sparse was
+        //set to be pardiso
+        assert((linear_solver == "pardiso" || linear_solver == "auto") &&
+               "the value for duals_init_linear_solver_sparse is invalid and should have been corrected during "
+               "options processing");
+        nlp_->log->printf(hovSummary,
+                          "LSQ Dual Initialization --- KKT_SPARSE_XDYcYd linsys: using PARDISO on CPU(!!!) size "
+                          "%d (%d cons)\n",
+                          n, neq+nineq);                             
+        lin_sys_ = new hiopLinSolverIndefSparsePARDISO(n, nnz, nlp_);
+      }
+#endif // HIOP_USE_PARDISO
+    } // end of else  compute_mode=='cpu'
   }
-  
+  assert(lin_sys_ && "no sparse linear solver is available");
   hiopLinSolverIndefSparse* linSys = dynamic_cast<hiopLinSolverIndefSparse*> (lin_sys_);
   assert(linSys);
 
@@ -374,7 +462,7 @@ bool hiopDualsLsqUpdateLinsysAugSparse::do_lsq_update(hiopIterate& iter,
     Msys.setToZero();
 
     // copy Jac and Hes to the full iterate matrix
-    long long dest_nnz_st{0};
+    size_type dest_nnz_st{0};
     Msys.copyDiagMatrixToSubblock(1., 0, 0, dest_nnz_st, nx+nd);
     dest_nnz_st += nx+nd;
     Msys.copyRowsBlockFrom(Jac_cSp, 0,   neq,    nx+nd,      dest_nnz_st);

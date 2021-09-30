@@ -5,6 +5,9 @@
 #include "hiopMatrixComplexDense.hpp"
 
 #include <iostream>
+#include <sstream>
+#include <iostream>     // std::cout, std::fixed
+#include <iomanip>      // std::setprecision
 
 namespace hiop
 {
@@ -472,16 +475,23 @@ namespace hiop
     if(file==NULL) file=stdout;
     
     if(myrank_==rank || rank==-1) {
-      
+      std::stringstream ss;
       if(NULL==msg) {
-	if(numranks>1)
-	  fprintf(file, "matrix of size %lld %lld and nonzeros %lld, printing %d elems (on rank=%d)\n", 
+	if(numranks>1) {
+	  fprintf(file, "matrix of size %d %d and nonzeros %d, printing %d elems (on rank=%d)\n", 
 		  m(), n(), numberOfNonzeros(), max_elems, myrank_);
-	else
-	  fprintf(file, "matrix of size %lld %lld and nonzeros %lld, printing %d elems\n", 
-		  m(), n(), numberOfNonzeros(), max_elems);
+          ss << "matrix of size " << m() << " " << n() << " and nonzeros " 
+             << numberOfNonzeros() << ", printing " <<  max_elems << " elems (on rank="
+             << myrank_ << ")" << std::endl;
+        } else {
+	  //fprintf(file, "matrix of size %d %d and nonzeros %d, printing %d elems\n", 
+          //	  m(), n(), numberOfNonzeros(), max_elems);
+          ss << "matrix of size " << m() << " " << n() << " and nonzeros " 
+             << numberOfNonzeros() << ", printing " <<  max_elems << " elems" << std::endl;
+        }
       } else {
-	fprintf(file, "%s ", msg);
+          ss << msg << " ";
+          //fprintf(file, "%s ", msg);
       }    
 
 #ifdef AAAAA      
@@ -501,8 +511,19 @@ namespace hiop
       fprintf(file, "];\n");
     
 #else
-      for(int it=0; it<max_elems; it++)  
-	fprintf(file, "[%3d,%3d] = %.6g+%.6gi\n", stM->irow[it]+1, stM->jcol[it]+1, stM->values[it].real(), stM->values[it].imag());
+      for(int it=0; it<max_elems; it++) {  
+	// fprintf(file,
+        //         "[%3d,%3d] = %.6g+%.6gi\n",
+        //         stM->irow[it]+1,
+        //         stM->jcol[it]+1,
+        //         stM->values[it].real(),
+        //         stM->values[it].imag());
+        ss << "[" << stM->irow[it]+1 << "," << stM->jcol[it]+1 << " = "
+           << std::setprecision(6)
+           << stM->values[it].real() << "+"
+           << stM->values[it].imag() << ";" << std::endl;
+      }
+      fprintf(file, "%s", ss.str().c_str());
 #endif
     }
 }

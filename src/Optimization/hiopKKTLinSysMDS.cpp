@@ -103,7 +103,7 @@ namespace hiop
       n_neg_eig = -1;
     } else if(n_neg_eig_11 > 0) {
       n_neg_eig += n_neg_eig_11;
-      nlp_->log->printf(hovWarning,
+      nlp_->log->printf(hovScalars,
                 "KKT_MDS_XYcYd linsys: Detected negative eigenvalues in (1,1) sparse block.\n");
     }
     return n_neg_eig;
@@ -168,8 +168,10 @@ namespace hiop
   }
 
 
-  bool  hiopKKTLinSysCompressedMDSXYcYd::updateMatrix( const double& delta_wx, const double& delta_wd,
-                                                       const double& delta_cc, const double& delta_cd)
+  bool hiopKKTLinSysCompressedMDSXYcYd::build_kkt_matrix(const double& delta_wx, 
+                                                         const double& delta_wd,
+                                                         const double& delta_cc,
+                                                         const double& delta_cd)
   {
     assert(linSys_);
     hiopLinSolverIndefDense* linSys = dynamic_cast<hiopLinSolverIndefDense*> (linSys_);
@@ -211,7 +213,8 @@ namespace hiop
 	
     //build the diagonal Hxs = Hsparse+Dxs
     if(NULL == Hxs_) {
-      Hxs_ = LinearAlgebraFactory::createVector(nxs); assert(Hxs_);
+      Hxs_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), nxs);
+      assert(Hxs_);
     }
     Hxs_->startingAtCopyFromStartingAt(0, *Dx_, 0);
 	
@@ -313,8 +316,12 @@ namespace hiop
     int nxsp=Hxs_->get_size(); assert(nxsp<=nx);
     int nxde = nlpMDS_->nx_de();
     assert(nxsp+nxde==nx);
-    if(rhs_ == NULL) rhs_ = LinearAlgebraFactory::createVector(nxde+nyc+nyd);
-    if(_buff_xs_==NULL) _buff_xs_ = LinearAlgebraFactory::createVector(nxsp);
+    if(rhs_ == NULL) {
+      rhs_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), nxde+nyc+nyd);
+    }
+    if(_buff_xs_==NULL) {
+      _buff_xs_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), nxsp);
+    }
 
     nlp_->log->write("RHS KKT_MDS_XYcYd rx: ", rx,  hovIteration);
     nlp_->log->write("RHS KKT_MDS_XYcYd ryc:", ryc, hovIteration);

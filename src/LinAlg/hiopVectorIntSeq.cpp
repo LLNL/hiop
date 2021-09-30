@@ -54,23 +54,39 @@
  */
 
 #include "hiopVectorIntSeq.hpp"
+#include <cstring> //for memcpy
 
 namespace hiop
 {
 
-hiopVectorIntSeq::hiopVectorIntSeq(int sz) : hiopVectorInt(sz)
+hiopVectorIntSeq::hiopVectorIntSeq(size_type sz) : hiopVectorInt(sz)
 {
-  buf_ = new int[sz_];
+  buf_ = new index_type[sz_];
 }
 
-const int& hiopVectorIntSeq::operator[] (int i) const
+hiopVectorIntSeq::~hiopVectorIntSeq()
 {
-  return buf_[i];
+  delete[] buf_;
 }
 
-int& hiopVectorIntSeq::operator[] (int i)
+void hiopVectorIntSeq::copy_from(const index_type* v_local)
 {
-  return buf_[i];
+  if(v_local)
+    memcpy(buf_, v_local, sz_*sizeof(index_type));
+}
+
+void hiopVectorIntSeq::set_to_zero()
+{
+  for(index_type i=0; i<sz_; ++i) {
+    buf_[i] = 0;
+  }
+}
+
+void hiopVectorIntSeq::set_to_constant(const index_type c)
+{
+  for(index_type i=0; i<sz_; ++i) {
+    buf_[i] = c;
+  }
 }
 
 } // namespace hiop

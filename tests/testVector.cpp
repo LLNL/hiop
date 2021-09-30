@@ -96,11 +96,14 @@ int main(int argc, char** argv)
 
 #ifdef HIOP_USE_MPI
   int err;
-  err  = MPI_Init(&argc, &argv);     assert(MPI_SUCCESS == err);
+  err  = MPI_Init(&argc, &argv);
+  assert(MPI_SUCCESS == err);
   comm = MPI_COMM_WORLD;
-  err  = MPI_Comm_rank(comm, &rank); assert(MPI_SUCCESS == err);
-  if(0 == rank && MPI_SUCCESS == err)
+  err  = MPI_Comm_rank(comm, &rank);
+  assert(MPI_SUCCESS == err);
+  if(0 == rank && MPI_SUCCESS == err) {
     std::cout << "\nRunning MPI enabled tests ...\n";
+  }
 #endif
 
   int fail = 0;
@@ -202,9 +205,10 @@ int runTests(const char* mem_space, MPI_Comm comm)
 
   T test;
 
-  hiopOptions options;
-  options.SetStringValue("mem_space", mem_space);
-  LinearAlgebraFactory::set_mem_space(mem_space);
+  test.set_mem_space(mem_space);
+  //hiopOptions options;
+  //options.SetStringValue("mem_space", mem_space);
+  //LinearAlgebraFactory::set_mem_space(mem_space);
 
   global_ordinal_type Nlocal = 1000;
   global_ordinal_type Mlocal = 500;
@@ -221,13 +225,17 @@ int runTests(const char* mem_space, MPI_Comm comm)
     m_partition[i] = i*Mlocal;
   }
 
-  hiopVector* a = LinearAlgebraFactory::createVector(Nglobal, n_partition, comm);
-  hiopVector* b = LinearAlgebraFactory::createVector(Nglobal, n_partition, comm);
-  hiopVector* v_smaller = LinearAlgebraFactory::createVector(Mlocal);
-  hiopVector* v = LinearAlgebraFactory::createVector(Nlocal);
-  hiopVector* x = LinearAlgebraFactory::createVector(Nglobal, n_partition, comm);
-  hiopVector* y = LinearAlgebraFactory::createVector(Nglobal, n_partition, comm);
-  hiopVector* z = LinearAlgebraFactory::createVector(Nglobal, n_partition, comm);
+  hiopVector* a = LinearAlgebraFactory::create_vector(mem_space, Nglobal, n_partition, comm);
+  hiopVector* b = LinearAlgebraFactory::create_vector(mem_space, Nglobal, n_partition, comm);
+  hiopVector* v_smaller = LinearAlgebraFactory::create_vector(mem_space, Mlocal);
+  hiopVector* v2_smaller = LinearAlgebraFactory::create_vector(mem_space, Mlocal);
+  hiopVector* v = LinearAlgebraFactory::create_vector(mem_space, Nlocal);
+  hiopVector* x = LinearAlgebraFactory::create_vector(mem_space, Nglobal, n_partition, comm);
+  hiopVector* y = LinearAlgebraFactory::create_vector(mem_space, Nglobal, n_partition, comm);
+  hiopVector* z = LinearAlgebraFactory::create_vector(mem_space, Nglobal, n_partition, comm);
+  
+  hiopVectorInt* v_map = LinearAlgebraFactory::create_vector_int(mem_space, Mlocal);
+  hiopVectorInt* v2_map = LinearAlgebraFactory::create_vector_int(mem_space, Mlocal);
   
   int fail = 0;
 
@@ -244,6 +252,8 @@ int runTests(const char* mem_space, MPI_Comm comm)
     fail += test.vectorStartingAtCopyFromStartingAt(*v_smaller, *v);
     fail += test.vectorCopyToStarting(*v, *v_smaller);
     fail += test.vectorStartingAtCopyToStartingAt(*v, *v_smaller);
+    fail += test.vector_copy_from_two_vec(*v, *v_smaller, *v_map, *v2_smaller, *v2_map);
+    fail += test.vector_copy_to_two_vec(*v, *v_smaller, *v_map, *v2_smaller, *v2_map);
   }
 
   fail += test.vectorSelectPattern(*x, *y, rank);
@@ -257,6 +267,7 @@ int runTests(const char* mem_space, MPI_Comm comm)
   fail += test.vector_component_max(*x, *y, rank);
   fail += test.vector_component_abs(*x, rank);
   fail += test.vector_component_sgn(*x, rank);
+  fail += test.vector_component_sqrt(*x, rank);
   fail += test.vectorOnenorm(*x, rank);
   fail += test.vectorTwonorm(*x, rank);
   fail += test.vectorInfnorm(*x, rank);
@@ -272,6 +283,7 @@ int runTests(const char* mem_space, MPI_Comm comm)
   fail += test.vectorNegate(*x, rank);
   fail += test.vectorInvert(*x, rank);
   fail += test.vectorLogBarrier(*x, *y, rank);
+  fail += test.vector_sum_local(*x, rank);
   fail += test.vectorAddLogBarrierGrad(*x, *y, *z, rank);
   fail += test.vectorLinearDampingTerm(*x, *y, *z, rank);
   fail += test.vectorAddLinearDampingTerm(*x, *y, *z, rank);
@@ -297,11 +309,14 @@ int runTests(const char* mem_space, MPI_Comm comm)
 
   delete a;
   delete b;
-  delete v_smaller;
   delete v;
   delete x;
   delete y;
   delete z;
+  delete v_map;
+  delete v2_map;
+  delete v_smaller;
+  delete v2_smaller;
   delete[] m_partition;
   delete[] n_partition;
 
@@ -316,22 +331,26 @@ int runIntTests(const char* mem_space)
   using hiop::tests::global_ordinal_type;
 
   T test;
-
-  hiopOptions options;
-  options.SetStringValue("mem_space", mem_space);
-  LinearAlgebraFactory::set_mem_space(mem_space);
+  test.set_mem_space(mem_space);
+  //hiopOptions options;
+  //options.SetStringValue("mem_space", mem_space);
+  //LinearAlgebraFactory::set_mem_space(mem_space);
 
   int fail = 0;
 
   const int sz = 100;
 
-  auto* x = LinearAlgebraFactory::createVectorInt(sz);
+  auto* x = LinearAlgebraFactory::create_vector_int(mem_space, sz);
 
   fail += test.vectorSize(*x, sz);
   fail += test.vectorGetElement(*x);
   fail += test.vectorSetElement(*x);
 
+  auto* y = LinearAlgebraFactory::create_vector_int(mem_space, sz);
+  fail += test.vector_copy_from(*x, *y);
+  
   delete x;
+  delete y;
 
   return fail;
 }
