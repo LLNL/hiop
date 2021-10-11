@@ -192,6 +192,11 @@ hiopMatrixRajaDense::hiopMatrixRajaDense(const hiopMatrixRajaDense& dm)
     data_host_  = static_cast<double*>(hostalloc.allocate(n_local_*max_rows_*sizeof(double)));
     yglob_host_ = static_cast<double*>(hostalloc.allocate(m_local_ * sizeof(double)));
     ya_host_    = static_cast<double*>(hostalloc.allocate(m_local_ * sizeof(double)));
+    buff_mxnlocal_host_ = nullptr;
+    if(dm.buff_mxnlocal_host_ != nullptr)
+    {
+      buff_mxnlocal_host_ = static_cast<double*>(hostalloc.allocate(sizeof(double)*max_rows_*n_local_));
+    }
   }
   else
   {
@@ -199,6 +204,11 @@ hiopMatrixRajaDense::hiopMatrixRajaDense(const hiopMatrixRajaDense& dm)
     // If memory space is not on device, these buffers are allocated in memory space
     yglob_host_ = static_cast<double*>(devalloc.allocate(m_local_ * sizeof(double)));
     ya_host_    = static_cast<double*>(devalloc.allocate(m_local_ * sizeof(double)));
+    buff_mxnlocal_host_ = nullptr;
+    if(dm.buff_mxnlocal_host_ != nullptr)
+    {
+      buff_mxnlocal_host_ = static_cast<double*>(devalloc.allocate(sizeof(double)*max_rows_*n_local_));
+    }
   }
 }
 
