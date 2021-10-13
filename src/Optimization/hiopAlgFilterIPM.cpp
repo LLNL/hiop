@@ -358,16 +358,6 @@ startingProcedure(hiopIterate& it_ini,
     warmstart_avail = duals_avail = slacks_avail = false;
   }
 
-  nlp->runStats.tmSolverInternal.start();
-  nlp->runStats.tmStartingPoint.start();
-
-  if(!warmstart_avail) {
-    it_ini.projectPrimalsXIntoBounds(kappa1, kappa2);
-  }
-
-  nlp->runStats.tmStartingPoint.stop();
-  nlp->runStats.tmSolverInternal.stop();
-
   // before evaluating the NLP, make sure that iterate, including dual variables are initialized
   // to zero; many of these will be updated later in this method, but we want to make sure
   // that the user's NLP evaluator functions, in particular the Hessian of the Lagrangian,
@@ -387,7 +377,20 @@ startingProcedure(hiopIterate& it_ini,
     return false;
   }
 
-  if(nlp->apply_scaling(c, d, gradf, Jac_c, Jac_d)){
+  bool do_nlp_scaling = nlp->apply_scaling(c, d, gradf, Jac_c, Jac_d);
+
+  nlp->runStats.tmSolverInternal.start();
+  nlp->runStats.tmStartingPoint.start();
+
+  if(!warmstart_avail) {
+    it_ini.projectPrimalsXIntoBounds(kappa1, kappa2);
+  }
+
+  nlp->runStats.tmStartingPoint.stop();
+  nlp->runStats.tmSolverInternal.stop();
+
+
+  if(do_nlp_scaling){
     // do function evaluation again after add scaling
     if(!this->evalNlp_noHess(it_ini, f, c, d, gradf, Jac_c, Jac_d)) {
       nlp->log->printf(hovError, "Failure in evaluating user provided NLP functions.");
