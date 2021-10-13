@@ -18,19 +18,20 @@ double** WM = W.get_M();
 WM[6][9] = -17.;
 ```
 ### *Symmetric* dense matrices 
-`hiopMatrixDense` is also used for symmetric dense matrices by enforcing `n()==m()`. The general rule is to store, update, and maintain the matrix such that `M(i,j)==M(j,i)`. This will allow the methods of  `hiopMatrixDense` to work for symmetric matrices as well.
+`hiopMatrixDense` is also used for symmetric dense matrices by enforcing `n()==m()`. The general rule for users (such as in providing symmetric matrices to HiOp via the interface(s)) is to provide both the lower and upper triangle elements (so that `M(i,j)==M(j,i)`). 
 
-However, `hiopMatrixDense` is also used as storage for the matrix of symmetric linear systems. In this case, for efficiency purposes only the **upper triangle** is updated and maintained via the following methods in `hiopMatrix` (the abstract/interface inherited by all matrix classes)
+However, internally, the `hiopMatrixDense` class may only store the **upper triangle** when it is used as a holder for KKT linearization systems. This is done for efficiency purposes. 
+
 ```cpp
 /* block of W += alpha*this
- * For efficiency, only upper triangular matrix is updated since this will be eventually sent to LAPACK
+ * For efficiency, only upper triangular matrix is updated since this will be eventually sent to LAPACK or MAGMA
  * Preconditions: 
  *  1. 'this' has to fit in the upper triangle of W 
  *  2. W.n() == W.m()
  */
  virtual void addToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start, double alpha, hiopMatrixDense& W) const;
  /* block of W += alpha*transpose(this)
- * For efficiency, only upper triangular matrix is updated since this will be eventually sent to LAPACK
+ * For efficiency, only upper triangular matrix is updated since this will be eventually sent to LAPACK or MAGMA
  * Preconditions: 
  *  1. transpose of 'this' has to fit in the upper triangle of W 
  *  2. W.n() == W.m()
