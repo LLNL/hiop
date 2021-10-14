@@ -138,13 +138,13 @@ namespace hiop
     int inert[3];
     int info;
     int retcode;
+    magma_uplo_t uplo=MagmaLower; // M is upper in C++ so it's lower in fortran
 
     nlp_->runStats.linsolv.tmInertiaComp.start();
 
-    info = magmablas_dsiinertia(N, device_M_, ldda_, ipiv, dinert_, magma_device_queue_);
+    info = magmablas_dsiinertia(uplo, N, device_M_, ldda_, ipiv, dinert_, magma_device_queue_);
 
     magma_getvector(3, sizeof(int), dinert_, 1, inert, 1, magma_device_queue_);
-
 
     if(0!=info) {
       nlp_->log->printf(hovError, 
