@@ -224,6 +224,10 @@ if(HIOP_USE_GPU)
 endif(HIOP_USE_GPU)
 
 if(HIOP_USE_RAJA)
+  # CAMP is always needed when RAJA is enabled
+  message("${RAJA_DIR}")
+  # need to include the "tpl" folder for camp; folder from the installation doesn't work, e.g., ${RAJA_DIR}/include or ${RAJA_DIR}/include/camp"
+  include_directories(${RAJA_DIR}/../../tpl/camp/include)
   # Look for CMake configuration file in RAJA installation
   find_package(RAJA CONFIG
     PATHS ${RAJA_DIR} ${RAJA_DIR}/share/raja/cmake

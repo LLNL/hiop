@@ -75,6 +75,13 @@
 #include <cassert>
 // #include <numeric> //std::inclusive_scan is only available after C++17
 
+#define MY_RAJA_GPU_BLOCK_SIZE 128
+
+using my_raja_exec   = RAJA::cuda_exec<MY_RAJA_GPU_BLOCK_SIZE>;
+
+#define RAJA_LAMBDA [=] __device__
+
+
 namespace hiop
 {
 
@@ -2137,6 +2144,7 @@ void hiopMatrixRajaSymSparseTriplet::set_Hess_FR(const hiopMatrixSparse& Hess,
   const int* M2iRow_host = M2.i_row_host();
   const int* M2jCol_host = M2.j_col_host();
 
+  index_type* M1_row_start{nullptr};
   index_type* M2_row_start = M2.row_starts_->idx_start_;
   const int* M2iRow = M2.i_row();
   const int* M2jCol = M2.j_col();
@@ -2152,7 +2160,7 @@ void hiopMatrixRajaSymSparseTriplet::set_Hess_FR(const hiopMatrixSparse& Hess,
       if(M1.row_starts_==nullptr) {
         M1.row_starts_ = new RowStartsInfo(m1, mem_space_);
 
-      index_type* M1_row_start = M1.row_starts_->idx_start_;       
+        M1_row_start = M1.row_starts_->idx_start_;       
 
 #if 0 // cpu code due to the RAJA::scan bug
         index_type* M2_row_start_host = M2.row_starts_->idx_start_host_;
@@ -2187,40 +2195,40 @@ void hiopMatrixRajaSymSparseTriplet::set_Hess_FR(const hiopMatrixSparse& Hess,
         }
         
         M1.row_starts_->copy_to_dev();
-      }
 #else
-      RAJA::forall<hiop_raja_exec>(
-        RAJA::RangeSegment(0, m1+1),
-        RAJA_LAMBDA(RAJA::Index_type i)
-        {
-          if(i>0) {
-            M1_row_start[i] = 1;
-          } else {
-            M1_row_start[i] = 0;
+        RAJA::forall<hiop_raja_exec>(
+          RAJA::RangeSegment(0, m1+1),
+          RAJA_LAMBDA(RAJA::Index_type i)
+          {
+            if(i>0) {
+              M1_row_start[i] = 1;
+            } else {
+              M1_row_start[i] = 0;
+            }
           }
-        }
-      );
+        );
 
-      RAJA::forall<hiop_raja_exec>(
-        RAJA::RangeSegment(0, m2),
-        RAJA_LAMBDA(RAJA::Index_type i)
-        {
-          index_type k_base = M2_row_start[i];
-          index_type nnz_in_row = M2_row_start[i+1] - k_base;
+        RAJA::forall<hiop_raja_exec>(
+          RAJA::RangeSegment(0, m2),
+          RAJA_LAMBDA(RAJA::Index_type i)
+          {
+            index_type k_base = M2_row_start[i];
+            index_type nnz_in_row = M2_row_start[i+1] - k_base;
 
-          if(nnz_in_row > 0 && M2iRow[k_base] == M2jCol[k_base]) {
-            // first nonzero in this row is a diagonal term 
-            // skip it since we will defined the diagonal nonezero
-            M1_row_start[i+1] += nnz_in_row-1;
-          } else {
-            M1_row_start[i+1] += nnz_in_row;
+            if(nnz_in_row > 0 && M2iRow[k_base] == M2jCol[k_base]) {
+              // first nonzero in this row is a diagonal term 
+              // skip it since we will defined the diagonal nonezero
+              M1_row_start[i+1] += nnz_in_row-1;
+            } else {
+              M1_row_start[i+1] += nnz_in_row;
+            }
           }
-        }
-      );
+        );
 
-      RAJA::inclusive_scan_inplace<hiop_raja_exec>(RAJA::make_span(M1_row_start,m1+1), RAJA::operators::plus<int>());
+      RAJA::inclusive_scan_inplace<hiop_raja_exec>(RAJA::make_span(M1_row_start,m1+1), RAJA::operators::plus<index_type>());
 #endif
-      
+      }
+
       RAJA::forall<hiop_raja_exec>(
         RAJA::RangeSegment(0, m2),
         RAJA_LAMBDA(RAJA::Index_type i)
