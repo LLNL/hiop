@@ -67,9 +67,10 @@ module load exasgd-texinfo/6.5/gcc-7.4.0-do3jrb5
 # umpire@6.0.0%gcc@7.4.0+c+cuda~deviceconst~examples~fortran~ipo~numa+openmp~rocm~shared amdgpu_target=none build_type=RelWithDebInfo cuda_arch=70 tests=none arch=linux-rhel7-power9le
 module load exasgd-umpire/6.0.0/cuda-11.0.194/gcc-7.4.0-2suiwkb
 # zlib@1.2.11%gcc@7.4.0+optimize+pic+shared arch=linux-rhel7-power9le
-module load exasgd-zlib/1.2.11/gcc-7.4.0-vnk3szsLoad system modules
+module load exasgd-zlib/1.2.11/gcc-7.4.0-vnk3szs
 
-module load cuda/10.2.89
+#Load system modules
+module load cuda/11.0.1
 module load gcc/7.4.0
 module load spectrum-mpi/10.3.1.2-20200121
 module load cmake/3.18.2
