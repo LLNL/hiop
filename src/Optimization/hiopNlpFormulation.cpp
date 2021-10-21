@@ -256,25 +256,29 @@ bool hiopNlpFormulation::finalizeInitialization()
 #endif
 
   for(int i=0;i<nlocal; i++) {
-    if(xl_vec[i]>-1e20) { 
-      ixl_vec[i]=1.; 
+    if(xl_vec[i] > -1e20) {
+      ixl_vec[i] = 1.;
       n_bnds_low_local++;
-      if(xu_vec[i]< 1e20) {
+      if(xu_vec[i] < 1e20) {
         n_bnds_lu++;
       }
-    } else ixl_vec[i]=0.;
+    } else {
+      ixl_vec[i]=0.;
+    }
 
-    if(xu_vec[i]< 1e20) { 
-      ixu_vec[i]=1.; 
+    if(xu_vec[i] < 1e20) {
+      ixu_vec[i] = 1.;
       n_bnds_upp_local++;
-    } else ixu_vec[i]=0.;
+    } else {
+      ixu_vec[i]=0.;
+    }
 
 #ifdef HIOP_DEEPCHECKS
     assert(xl_vec[i] <= xu_vec[i] && "please fix the inconsistent bounds, otherwise the problem is infeasible");
 #endif
 
     //if(xl_vec[i]==xu_vec[i]) {
-    if(fabs(xl_vec[i]-xu_vec[i]) <= fixedVarTol*fmax(1.,fabs(xu_vec[i]))) {
+    if( xu_vec[i]<1e20 && fabs(xl_vec[i]-xu_vec[i]) <= fixedVarTol*fmax(1.,fabs(xu_vec[i]))) {
       nfixed_vars_local++;
     } else {
 #ifdef HIOP_DEEPCHECKS
