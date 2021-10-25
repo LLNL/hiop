@@ -1504,7 +1504,8 @@ void hiopMatrixRajaSparseTriplet::copySubmatrixFromTrans(const hiopMatrix& src_g
 * into 'this' as a submatrix from corner 'dest_row_st' and 'dest_col_st'
 * The non-zero elements start from 'dest_nnz_st' will be replaced by the new elements.
 *
-* @pre: this function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
+* @pre The diagonal entries in the destination need to be contiguous in the sparse triplet arrays of the destinations.
+* @pre this function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
 */
 void hiopMatrixRajaSparseTriplet::setSubmatrixToConstantDiag_w_colpattern(const double& scalar,
                                                                           const index_type& dest_row_st,
@@ -1606,7 +1607,8 @@ void hiopMatrixRajaSparseTriplet::setSubmatrixToConstantDiag_w_colpattern(const 
 * into 'this' as a submatrix from corner 'dest_row_st' and 'dest_col_st'
 * The non-zero elements start from 'dest_nnz_st' will be replaced by the new elements.
 *
-* @pre: this function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
+* @pre The diagonal entries in the destination need to be contiguous in the sparse triplet arrays of the destinations.
+* @pre this function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
 */
 void hiopMatrixRajaSparseTriplet::setSubmatrixToConstantDiag_w_rowpattern(const double& scalar,
                                                                           const index_type& dest_row_st,
