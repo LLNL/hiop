@@ -1035,7 +1035,7 @@ void hiopMatrixRajaSparseTriplet::copyRowsFrom(const hiopMatrix& src_gen,
       dst_row_start_host[row_dst] += dst_row_start_host[row_dst-1];
     }
     row_starts_->copy_to_dev();
-#else
+#else // use RAJA::inclusive_scan
     index_type* src_row_st = src.row_starts_->idx_start_;
     index_type* dst_row_st_init = row_starts_->idx_start_;
 
@@ -1154,7 +1154,7 @@ void hiopMatrixRajaSparseTriplet::copyRowsBlockFrom(const hiopMatrix& src_gen,
     }
     row_starts_->copy_to_dev();
   }
-#else
+#else // use RAJA::inclusive_scan
   if(row_starts_ == nullptr) {
     row_starts_ = new RowStartsInfo(n_rows_dst, mem_space_);
     assert(row_starts_);
@@ -1637,7 +1637,7 @@ void hiopMatrixRajaSparseTriplet::setSubmatrixToConstantDiag_w_colpattern(const 
     }
   );
   RAJA::inclusive_scan_inplace<hiop_raja_exec>(RAJA::make_span(row_start_dev,n+1), RAJA::operators::plus<index_type>());
-#else 
+#else // cpu code
   const double* pattern_host = selected.local_data_host_const();
 
   hiopVectorInt* vec_row_start = LinearAlgebraFactory::create_vector_int(mem_space_, n+1);
@@ -1738,7 +1738,7 @@ void hiopMatrixRajaSparseTriplet::setSubmatrixToConstantDiag_w_rowpattern(const 
     }
   );
   RAJA::inclusive_scan_inplace<hiop_raja_exec>(RAJA::make_span(row_start_dev,n+1), RAJA::operators::plus<index_type>());
-#else
+#else // cpu code
   const double* pattern_host = selected.local_data_host_const();
 
   hiopVectorInt* vec_row_start = LinearAlgebraFactory::create_vector_int(mem_space_, n+1);
@@ -1879,7 +1879,7 @@ void hiopMatrixRajaSparseTriplet::copyDiagMatrixToSubblock_w_pattern(const hiopV
     }
   );
   RAJA::inclusive_scan_inplace<hiop_raja_exec>(RAJA::make_span(row_start_dev,n+1), RAJA::operators::plus<index_type>());
-#else
+#else // cpu code
   const double* pattern_host = selected.local_data_host_const();
 
   hiopVectorInt* vec_row_start = LinearAlgebraFactory::create_vector_int(mem_space_, n+1);
@@ -2195,7 +2195,7 @@ void hiopMatrixRajaSymSparseTriplet::set_Hess_FR(const hiopMatrixSparse& Hess,
         }
         
         M1.row_starts_->copy_to_dev();
-#else
+#else // RAJA code
         RAJA::forall<hiop_raja_exec>(
           RAJA::RangeSegment(0, m1+1),
           RAJA_LAMBDA(RAJA::Index_type i)
