@@ -1501,8 +1501,11 @@ void hiopMatrixRajaSparseTriplet::copySubmatrixFromTrans(const hiopMatrix& src_g
 
 /**
 * @brief Copy a diagonal matrix to destination.
-* This diagonal matrix is 'src_val'*identity matrix with size 'n_rows'x'n_rows'.
+* This diagonal matrix is 'src_val'*identity matrix with size 'nnz_to_copy'x'nnz_to_copy'.
 * The destination is updated from the start row 'row_dest_st' and start column 'col_dest_st'.
+% At the destination, 'nnz_to_copy` nonzeros starting from index `dest_nnz_st` will be replaced.
+* @pre The diagonal entries in the destination need to be contiguous in the sparse triplet arrays of the destinations.
+* @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
 */
 void hiopMatrixRajaSparseTriplet::copyDiagMatrixToSubblock(const double& src_val,
                                                            const index_type& dest_row_st,
@@ -1533,29 +1536,32 @@ void hiopMatrixRajaSparseTriplet::copyDiagMatrixToSubblock(const double& src_val
 }
 
 /** 
-* @brief same as @copyDiagMatrixToSubblock, but copies only diagonal entries specified by pattern `ix`
-* @pre 'ix' has same size as `dx`
-* @pre 'ix` has exactly `nnz_to_copy` nonzeros
+* @brief same as @copyDiagMatrixToSubblock, but copies only diagonal entries specified by `pattern`.
+% At the destination, 'nnz_to_copy` nonzeros starting from index `dest_nnz_st` will be replaced.
+* @pre The added entries in the destination need to be contiguous in the sparse triplet arrays of the destinations.
+* @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
+* @pre 'pattern' has same size as `dx`
+* @pre 'pattern` has exactly `nnz_to_copy` nonzeros
 */
 void hiopMatrixRajaSparseTriplet::copyDiagMatrixToSubblock_w_pattern(const hiopVector& dx,
                                                                      const index_type& dest_row_st,
                                                                      const index_type& dest_col_st,
                                                                      const size_type& dest_nnz_st,
                                                                      const size_type& nnz_to_copy,
-                                                                     const hiopVector& ix)
+                                                                     const hiopVector& pattern)
 {
   assert(this->numberOfNonzeros() >= nnz_to_copy+dest_nnz_st);
   assert(this->n() >= nnz_to_copy);
   assert(nnz_to_copy + dest_row_st <= this->m());
   assert(nnz_to_copy + dest_col_st <= this->n());
-  assert(ix.get_local_size() == dx.get_local_size());
+  assert(pattern.get_local_size() == dx.get_local_size());
 
-  const hiopVectorRajaPar& selected = dynamic_cast<const hiopVectorRajaPar&>(ix);
+  const hiopVectorRajaPar& selected = dynamic_cast<const hiopVectorRajaPar&>(pattern);
   const hiopVectorRajaPar& xx = dynamic_cast<const hiopVectorRajaPar&>(dx);
   const double* x = xx.local_data_const();
   const double* pattern_host = selected.local_data_host_const();
 
-  size_type n = ix.get_local_size();
+  size_type n = pattern.get_local_size();
 
   // local copy of member variable/function, for RAJA access
   index_type* iRow = iRow_;
@@ -1589,8 +1595,6 @@ void hiopMatrixRajaSparseTriplet::copyDiagMatrixToSubblock_w_pattern(const hiopV
     }
   }
   vec_row_start->copy_to_dev();
-
-//  delete vec_row_start;
 
 #if 0
 //  auto& resmgr = umpire::ResourceManager::getInstance();
@@ -1632,6 +1636,7 @@ void hiopMatrixRajaSparseTriplet::copyDiagMatrixToSubblock_w_pattern(const hiopV
   );
 
 //  evalloc.deallocate(row_start_dev);
+  delete vec_row_start;
 }
 
 /**********************************************************************************
