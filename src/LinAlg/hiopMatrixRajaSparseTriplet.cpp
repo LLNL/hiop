@@ -1503,7 +1503,7 @@ void hiopMatrixRajaSparseTriplet::copySubmatrixFromTrans(const hiopMatrix& src_g
 * @brief Copy a diagonal matrix to destination.
 * This diagonal matrix is 'src_val'*identity matrix with size 'nnz_to_copy'x'nnz_to_copy'.
 * The destination is updated from the start row 'row_dest_st' and start column 'col_dest_st'.
-% At the destination, 'nnz_to_copy` nonzeros starting from index `dest_nnz_st` will be replaced.
+* At the destination, 'nnz_to_copy` nonzeros starting from index `dest_nnz_st` will be replaced.
 * @pre The diagonal entries in the destination need to be contiguous in the sparse triplet arrays of the destinations.
 * @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
 */
@@ -1537,7 +1537,7 @@ void hiopMatrixRajaSparseTriplet::copyDiagMatrixToSubblock(const double& src_val
 
 /** 
 * @brief same as @copyDiagMatrixToSubblock, but copies only diagonal entries specified by `pattern`.
-% At the destination, 'nnz_to_copy` nonzeros starting from index `dest_nnz_st` will be replaced.
+* At the destination, 'nnz_to_copy` nonzeros starting from index `dest_nnz_st` will be replaced.
 * @pre The added entries in the destination need to be contiguous in the sparse triplet arrays of the destinations.
 * @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
 * @pre 'pattern' has same size as `dx`

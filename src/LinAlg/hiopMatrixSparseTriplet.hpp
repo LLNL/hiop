@@ -200,7 +200,7 @@ public:
 
   /** 
   * @brief same as @copyDiagMatrixToSubblock, but copies only diagonal entries specified by `pattern`.
-  % At the destination, 'nnz_to_copy` nonzeros starting from index `dest_nnz_st` will be replaced.
+  * At the destination, 'nnz_to_copy` nonzeros starting from index `dest_nnz_st` will be replaced.
   * @pre The added entries in the destination need to be contiguous in the sparse triplet arrays of the destinations.
   * @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
   * @pre 'pattern' has same size as `x`. 
