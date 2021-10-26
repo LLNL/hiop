@@ -1569,12 +1569,12 @@ void hiopMatrixRajaSparseTriplet::copyDiagMatrixToSubblock_w_pattern(const hiopV
   double* values = values_;
 
 #ifdef HIOP_DEEPCHECKS
-  const double* pattern = selected.local_data_const();
+  const double* pattern_dev = selected.local_data_const();
   RAJA::ReduceSum<hiop_raja_reduce, size_type> sum(0);
   RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, n),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
-      if(pattern[i]!=0.0){
+      if(pattern_dev[i]!=0.0){
         sum += 1;
       }
     });
