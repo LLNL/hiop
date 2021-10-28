@@ -235,16 +235,33 @@ public:
                                       const bool offdiag_only = false) = 0;
 
   /**
-   * @brief Copy a diagonal matrix to destination.
-   * This diagonal matrix is 'src_val'*identity matrix with size 'src_size'x'src_size'.
-   * The destination is defined from the start row 'row_dest_st' and start column 'col_dest_st'.
-   *
-   */
+  * @brief Copy a diagonal matrix to destination.
+  * This diagonal matrix is 'src_val'*identity matrix with size 'nnz_to_copy'x'nnz_to_copy'.
+  * The destination is updated from the start row 'row_dest_st' and start column 'col_dest_st'.
+  * At the destination, 'nnz_to_copy` nonzeros starting from index `dest_nnz_st` will be replased.
+  * @pre The diagonal entries in the destination need to be contiguous in the sparse triplet arrays of the destinations.
+  * @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
+  */
   virtual void copyDiagMatrixToSubblock(const double& src_val,
-                                        const index_type& row_dest_st, 
-                                        const index_type& col_dest_st,
-                                        const size_type& dest_nnz_st, 
-                                        const int &nnz_to_copy) = 0;
+                                        const index_type& dest_row_st,
+                                        const index_type& dest_col_st,
+                                        const size_type& dest_nnz_st,
+                                        const size_type &nnz_to_copy) = 0;
+
+  /** 
+  * @brief same as @copyDiagMatrixToSubblock, but copies only diagonal entries specified by `pattern`.
+  * At the destination, 'nnz_to_copy` nonzeros starting from index `dest_nnz_st` will be replaced.
+  * @pre The added entries in the destination need to be contiguous in the sparse triplet arrays of the destinations.
+  * @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
+  * @pre 'pattern' has same size as `x`. 
+  * @pre 'pattern` has exactly `nnz_to_copy` nonzeros.
+  */
+  virtual void copyDiagMatrixToSubblock_w_pattern(const hiopVector& dx,
+                                                  const index_type& dest_row_st,
+                                                  const index_type& dest_col_st,
+                                                  const size_type& dest_nnz_st,
+                                                  const size_type& nz_to_copy,
+                                                  const hiopVector& pattern) = 0;
 
   virtual double max_abs_value() = 0;
 

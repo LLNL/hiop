@@ -241,24 +241,32 @@ public:
 
   /**
   * @brief Copy a diagonal matrix to destination.
-  * This diagonal matrix is 'src_val'*identity matrix with size 'n_rows'x'n_rows'.
+  * This diagonal matrix is 'src_val'*identity matrix with size 'nnz_to_copy'x'nnz_to_copy'.
   * The destination is updated from the start row 'row_dest_st' and start column 'col_dest_st'.
+  * At the destination, 'nnz_to_copy` nonzeros starting from index `dest_nnz_st` will be replased.
+  * @pre The diagonal entries in the destination need to be contiguous in the sparse triplet arrays of the destinations.
+  * @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
   */
   virtual void copyDiagMatrixToSubblock(const double& src_val,
                                         const index_type& dest_row_st,
                                         const index_type& dest_col_st,
                                         const size_type& dest_nnz_st,
-                                        const int &nnz_to_copy){assert(0 && "not implemented");}
+                                        const int &nnz_to_copy);
 
   /** 
-   * @brief same as @copyDiagMatrixToSubblock, but copies only diagonal entries specified by 'pattern' 
-   */
-  virtual void copyDiagMatrixToSubblock_w_pattern(const hiopVector& x,
+  * @brief same as @copyDiagMatrixToSubblock, but copies only diagonal entries specified by `pattern`.
+  * At the destination, 'nnz_to_copy` nonzeros starting from index `dest_nnz_st` will be replaced.
+  * @pre The added entries in the destination need to be contiguous in the sparse triplet arrays of the destinations.
+  * @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
+  * @pre 'pattern' has same size as `dx`
+  * @pre 'pattern` has exactly `nnz_to_copy` nonzeros
+  */
+  virtual void copyDiagMatrixToSubblock_w_pattern(const hiopVector& dx,
                                                   const index_type& dest_row_st,
                                                   const index_type& dest_col_st,
                                                   const size_type& dest_nnz_st,
-                                                  const int &nnz_to_copy,
-                                                  const hiopVector& pattern) {assert(0 && "not implemented");}
+                                                  const size_type& nnz_to_copy,
+                                                  const hiopVector& pattern);
   
   virtual double max_abs_value();
 
