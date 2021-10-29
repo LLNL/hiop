@@ -1,5 +1,9 @@
 #  NOTE: The following is required when running from Gitlab CI via slurm job
 source /etc/profile.d/modules.sh
+module unload cmake
+module unload metis
+module unload cuda
+
 module use -a /usr/share/Modules/modulefiles
 module use -a /share/apps/modules/tools
 module use -a /share/apps/modules/compilers

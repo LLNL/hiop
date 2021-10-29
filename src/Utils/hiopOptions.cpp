@@ -767,7 +767,7 @@ void hiopOptionsNLP::register_options()
   }
   //linear algebra
   {
-    vector<string> range(4); range[0] = "auto"; range[1]="xycyd"; range[2]="xdycyd"; range[3]="full";
+    vector<string> range(5); range[0] = "auto"; range[1]="xycyd"; range[2]="xdycyd"; range[3]="full"; range[4]     ="HybridCholCG";
     register_str_option("KKTLinsys",
                         "auto",
                         range,
@@ -784,7 +784,7 @@ void hiopOptionsNLP::register_options()
   // for the other KKTLinsys (which are all symmetric), MA57 is chosen 'auto'matically for all compute
   // modes, unless the user overwrites this
   {
-    vector<string> range(4); range[0] = "auto"; range[1]="ma57"; range[2]="pardiso"; range[3]="strumpack";
+    vector<string> range(5); range[0] = "auto"; range[1]="ma57"; range[2]="pardiso"; range[3]="strumpack"; range[4]     ="CuCholCG";
     register_str_option("linear_solver_sparse",
                         "auto",
                         range,
@@ -796,7 +796,7 @@ void hiopOptionsNLP::register_options()
   //  - when GPU mode is on, STRUMPACK is chosen by 'auto' if available
   //  - choosing option ma57 or pardiso with GPU being on, it results in no device being used in the linear solve!
   {
-    vector<string> range(4); range[0] = "auto"; range[1]="ma57"; range[2]="pardiso"; range[3]="strumpack";
+    vector<string> range(5); range[0] = "auto"; range[1]="ma57"; range[2]="pardiso"; range[3]="strumpack"; range[4]="CuCholCG";
     register_str_option("duals_init_linear_solver_sparse",
                         "auto",
                         range,

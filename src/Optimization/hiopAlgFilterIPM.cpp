@@ -1295,8 +1295,9 @@ decideAndCreateLinearSystem(hiopNlpFormulation* nlp)
       if(strKKT == "full")
         return new hiopKKTLinSysSparseFull(nlp);
       else if(strKKT == "xdycyd")
+        return new hiopKKTLinSysCompressedSparseXDYcYd(nlp);
+      else if(strKKT == "HybridCholCG")
         return new hiopKKTLinSysHybridSparseXDYcYd(nlp);
-        // return new hiopKKTLinSysCompressedSparseXDYcYd(nlp);
       else //'auto' or 'XYcYd'
         return new hiopKKTLinSysCompressedSparseXYcYd(nlp);
 #endif
