@@ -51,6 +51,7 @@
 #include "hiopKKTLinSysDense.hpp"
 #include "hiopKKTLinSysMDS.hpp"
 #include "hiopKKTLinSysSparse.hpp"
+#include "hiopHybLinSysSparse.hpp"
 #include "hiopFRProb.hpp"
 
 #include "hiopCppStdUtils.hpp"

@@ -16,6 +16,7 @@ set(hiopOptimization_SRC
 
 set(hiopOptimization_SPARSE_SRC
   hiopKKTLinSysSparse.cpp
+  hiopHybLinSysSparse.cpp #TODO: need separate option for hybrid
   )
 
 set(hiopOptimization_INTERFACE_HEADERS
@@ -30,6 +31,7 @@ set(hiopOptimization_INTERFACE_HEADERS
   hiopKKTLinSysDense.hpp
   hiopKKTLinSysMDS.hpp
   hiopKKTLinSysSparse.hpp
+  hiopHybLinSysSparse.hpp #TODO: have to create option
   hiopLogBarProblem.hpp
   hiopNlpFormulation.hpp
   hiopNlpTransforms.hpp

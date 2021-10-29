@@ -72,51 +72,51 @@ namespace hiop
  *  - Dx is diagonal corresponding to x variable in the log-barrier diagonal Dx, respectively
  *
  */
-class hiopKKTLinSysCompressedSparseXYcYd : public hiopKKTLinSysCompressedXYcYd
-{
-public:
-  hiopKKTLinSysCompressedSparseXYcYd(hiopNlpFormulation* nlp);
-  virtual ~hiopKKTLinSysCompressedSparseXYcYd();
+// class hiopKKTLinSysCompressedSparseXYcYd : public hiopKKTLinSysCompressedXYcYd
+// {
+// public:
+//   hiopKKTLinSysCompressedSparseXYcYd(hiopNlpFormulation* nlp);
+//   virtual ~hiopKKTLinSysCompressedSparseXYcYd();
 
-  virtual bool build_kkt_matrix(const double& delta_wx,
-                                const double& delta_wd,
-                                const double& delta_cc,
-                                const double& delta_cd);
+//   virtual bool build_kkt_matrix(const double& delta_wx,
+//                                 const double& delta_wd,
+//                                 const double& delta_cc,
+//                                 const double& delta_cd);
 
-  virtual bool solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
-                               hiopVector& dx, hiopVector& dyc, hiopVector& dyd);
+//   virtual bool solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
+//                                hiopVector& dx, hiopVector& dyc, hiopVector& dyd);
 
-protected:
-  hiopVector *rhs_; //[rx_tilde, ryc_tilde, ryd_tilde]
+// protected:
+//   hiopVector *rhs_; //[rx_tilde, ryc_tilde, ryd_tilde]
 
-  //
-  //from the parent class we also use
-  //
-  //  hiopVectorPar *Dd_inv;
-  //  hiopVectorPar *ryd_tilde;
+//   //
+//   //from the parent class we also use
+//   //
+//   //  hiopVectorPar *Dd_inv;
+//   //  hiopVectorPar *ryd_tilde;
 
-  //from the parent's parent class (hiopKKTLinSysCompressed) we also use
-  //  hiopVectorPar *Dx;
-  //  hiopVectorPar *rx_tilde;
+//   //from the parent's parent class (hiopKKTLinSysCompressed) we also use
+//   //  hiopVectorPar *Dx;
+//   //  hiopVectorPar *rx_tilde;
 
-  // Keeps Hx = HessSp_->sp_mat() + Dxs (Dx=log-barrier diagonal for x)
-  hiopVector *Hx_;
+//   // Keeps Hx = HessSp_->sp_mat() + Dxs (Dx=log-barrier diagonal for x)
+//   hiopVector *Hx_;
 
-  //just dynamic_cast-ed pointers
-  hiopNlpSparse* nlpSp_;
-  hiopMatrixSparse* HessSp_;
-  const hiopMatrixSparse* Jac_cSp_;
-  const hiopMatrixSparse* Jac_dSp_;
+//   //just dynamic_cast-ed pointers
+//   hiopNlpSparse* nlpSp_;
+//   hiopMatrixSparse* HessSp_;
+//   const hiopMatrixSparse* Jac_cSp_;
+//   const hiopMatrixSparse* Jac_dSp_;
 
-  // -1 when disabled; otherwise acts like a counter, 0,1,... incremented each time
-  // 'solveCompressed' is called; activated by the 'write_kkt' option
-  int write_linsys_counter_;
-  hiopCSR_IO csr_writer_;
+//   // -1 when disabled; otherwise acts like a counter, 0,1,... incremented each time
+//   // 'solveCompressed' is called; activated by the 'write_kkt' option
+//   int write_linsys_counter_;
+//   hiopCSR_IO csr_writer_;
 
-private:
-  //placeholder for the code that decides which linear solver to used based on safe_mode_
-  hiopLinSolverIndefSparse* determineAndCreateLinsys(int nxd, int neq, int nineq, int nnz);
-};
+// private:
+//   //placeholder for the code that decides which linear solver to used based on safe_mode_
+//   hiopLinSolverIndefSparse* determineAndCreateLinsys(int nxd, int neq, int nineq, int nnz);
+// };
 
 
 /*
@@ -206,45 +206,45 @@ private:
  *  - H is a sparse Hessian matrix
  *
  */
-class hiopKKTLinSysSparseFull : public hiopKKTLinSysFull
-{
-public:
-  hiopKKTLinSysSparseFull(hiopNlpFormulation* nlp);
+// class hiopKKTLinSysSparseFull : public hiopKKTLinSysFull
+// {
+// public:
+//   hiopKKTLinSysSparseFull(hiopNlpFormulation* nlp);
 
-  virtual ~hiopKKTLinSysSparseFull();
+//   virtual ~hiopKKTLinSysSparseFull();
 
-  virtual bool build_kkt_matrix(const double& delta_wx,
-                                const double& delta_wd,
-                                const double& delta_cc,
-                                const double& delta_cd);
+//   virtual bool build_kkt_matrix(const double& delta_wx,
+//                                 const double& delta_wd,
+//                                 const double& delta_cc,
+//                                 const double& delta_cd);
 
-  bool solve(hiopVector& rx, hiopVector& ryc, hiopVector& ryd, hiopVector& rd,
-             hiopVector& rvl, hiopVector& rvu, hiopVector& rzl, hiopVector& rzu,
-             hiopVector& rsdl, hiopVector& rsdu, hiopVector& rsxl, hiopVector& rsxu,
-             hiopVector& dx, hiopVector& dyc, hiopVector& dyd, hiopVector& dd,
-             hiopVector& dvl, hiopVector& dvu, hiopVector& dzl, hiopVector& dzu,
-             hiopVector& dsdl, hiopVector& dsdu, hiopVector& dsxl, hiopVector& dsxu);
+//   bool solve(hiopVector& rx, hiopVector& ryc, hiopVector& ryd, hiopVector& rd,
+//              hiopVector& rvl, hiopVector& rvu, hiopVector& rzl, hiopVector& rzu,
+//              hiopVector& rsdl, hiopVector& rsdu, hiopVector& rsxl, hiopVector& rsxu,
+//              hiopVector& dx, hiopVector& dyc, hiopVector& dyd, hiopVector& dd,
+//              hiopVector& dvl, hiopVector& dvu, hiopVector& dzl, hiopVector& dzu,
+//              hiopVector& dsdl, hiopVector& dsdu, hiopVector& dsxl, hiopVector& dsxu);
 
-protected:
-  hiopVector *rhs_;
+// protected:
+//   hiopVector *rhs_;
 
-  hiopVector *Hx_, *Hd_;
+//   hiopVector *Hx_, *Hd_;
 
-  //just dynamic_cast-ed pointers
-  hiopNlpSparse* nlpSp_;
-  hiopMatrixSparse* HessSp_;
-  const hiopMatrixSparse* Jac_cSp_;
-  const hiopMatrixSparse* Jac_dSp_;
+//   //just dynamic_cast-ed pointers
+//   hiopNlpSparse* nlpSp_;
+//   hiopMatrixSparse* HessSp_;
+//   const hiopMatrixSparse* Jac_cSp_;
+//   const hiopMatrixSparse* Jac_dSp_;
 
-  // -1 when disabled; otherwise acts like a counter, 0,1,... incremented each time
-  // 'solve' is called; activated by the 'write_kkt' option
-  int write_linsys_counter_;
-  hiopCSR_IO csr_writer_;
+//   // -1 when disabled; otherwise acts like a counter, 0,1,... incremented each time
+//   // 'solve' is called; activated by the 'write_kkt' option
+//   int write_linsys_counter_;
+//   hiopCSR_IO csr_writer_;
 
-private:
-  //placeholder for the code that decides which linear solver to used based on safe_mode_
-  hiopLinSolverNonSymSparse* determineAndCreateLinsys(const int &n, const int &n_con, const int &nnz);
-};
+// private:
+//   //placeholder for the code that decides which linear solver to used based on safe_mode_
+//   hiopLinSolverNonSymSparse* determineAndCreateLinsys(const int &n, const int &n_con, const int &nnz);
+// };
 
 } // end of namespace
 
