@@ -43,7 +43,7 @@ if(HIOP_SPARSE)
   add_executable(nlpSparse_ex6.exe nlpSparse_ex6.cpp nlpSparse_ex6_driver.cpp)
   target_link_libraries(nlpSparse_ex6.exe HiOp::HiOp)
 
-  add_executable(nlpHybrid_ex6.exe nlpSparse_ex6.cpp nlpHybrid_ex6_driver.cpp)
+  add_executable(nlpHybrid_ex6.exe nlpSparse_ex6b.cpp nlpHybrid_ex6_driver.cpp)
     target_link_libraries(nlpHybrid_ex6.exe HiOp::HiOp)
     
     add_executable(nlpSparse_ex7.exe nlpSparse_ex7.cpp nlpSparse_ex7_driver.cpp)

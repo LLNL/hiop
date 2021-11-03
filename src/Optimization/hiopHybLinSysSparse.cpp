@@ -382,10 +382,10 @@ namespace hiop
     
     size_type nx = HessSp_->n(), nd=Jac_dSp_->m(), neq=Jac_cSp_->m(), nineq=Jac_dSp_->m();
     int nnz = HessSp_->numberOfNonzeros() + Jac_cSp_->numberOfNonzeros() + Jac_dSp_->numberOfNonzeros() + nd + nx + nd + neq + nineq;
-Jac_cSp_->print();
-Jac_dSp_->print();
     linSys_ = determineAndCreateLinsys(nx, neq, nineq, nnz);
-    
+
+HessSp_->print();
+
     hiopLinSolverIndefSparse* linSys = dynamic_cast<hiopLinSolverIndefSparse*> (linSys_);
     assert(linSys);
 
@@ -416,6 +416,7 @@ Jac_dSp_->print();
         Hx_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), nx);
         assert(Hx_);
       }
+      
       Hx_->startingAtCopyFromStartingAt(0, *Dx_, 0);
 
       //a good time to add the IC 'delta_wx' perturbation

@@ -1,4 +1,4 @@
-#include "nlpSparse_ex6.hpp"
+#include "nlpSparse_ex6b.hpp"
 #include "hiopNlpFormulation.hpp"
 #include "hiopAlgFilterIPM.hpp"
 
@@ -99,7 +99,7 @@ int main(int argc, char **argv)
   nlp.options->SetStringValue("compute_mode", "cpu");
 //  nlp.options->SetStringValue("compute_mode", "hybrid");
  // nlp.options->SetStringValue("KKTLinsys", "xdycyd");
-  nlp.options->SetStringValue("KKTLinsys", "HybridCholCG");
+  nlp.options->SetStringValue("KKTLinsys", "hybridcholcg");
 //  nlp.options->SetStringValue("KKTLinsys", "full");
 //  nlp.options->SetStringValue("write_kkt", "yes");
 
