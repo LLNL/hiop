@@ -98,7 +98,8 @@ int main(int argc, char **argv)
 //  nlp.options->SetStringValue("duals_init", "zero"); // "lsq" or "zero"
   nlp.options->SetStringValue("compute_mode", "cpu");
 //  nlp.options->SetStringValue("compute_mode", "hybrid");
-  nlp.options->SetStringValue("KKTLinsys", "xdycyd");
+ // nlp.options->SetStringValue("KKTLinsys", "xdycyd");
+  nlp.options->SetStringValue("KKTLinsys", "HybridCholCG");
 //  nlp.options->SetStringValue("KKTLinsys", "full");
 //  nlp.options->SetStringValue("write_kkt", "yes");
 
