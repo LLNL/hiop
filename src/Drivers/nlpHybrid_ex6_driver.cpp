@@ -140,9 +140,9 @@ int main(int argc, char **argv)
 
 static bool self_check(size_type n, double objval)
 {
-#define num_n_saved 3 //keep this is sync with n_saved and objval_saved
-  const size_type n_saved[] = {50, 500, 5000};
-  const double objval_saved[] = {1.10351564683176e-01, 1.10351566513480e-01, 1.10351578644469e-01};
+#define num_n_saved 4 //keep this is sync with n_saved and objval_saved
+  const size_type n_saved[] = {5, 50, 500, 5000};
+  const double objval_saved[] = {1.103515596227e-01, 1.10351564683176e-01, 1.10351566513480e-01, 1.10351578644469e-01};
 
 #define relerr 1e-6
   bool found=false;
