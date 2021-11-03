@@ -164,6 +164,7 @@ protected:
 
   /// @brief do feasibility restoration
   virtual bool apply_feasibility_restoration(hiopKKTLinSys* kkt);
+  virtual bool solve_soft_feasibility_restoration(hiopKKTLinSys* kkt);
   virtual bool solve_feasibility_restoration(hiopKKTLinSys* kkt, hiopNlpFormulation& nlpFR);
   virtual bool reset_var_from_fr_sol(hiopKKTLinSys* kkt, bool reset_dual = false);
 

@@ -141,6 +141,8 @@ public:
   inline double get_nrmInf_bar_complem() const {return nrmInf_bar_complem;}
   inline double get_nrmOne_nlp_feasib() const {return nrmOne_nlp_feasib;}
   inline double get_nrmOne_bar_feasib() const {return nrmOne_bar_feasib;}
+  inline double get_nrmOne_nlp_optim() const {return nrmOne_nlp_optim;}
+  inline double get_nrmOne_bar_optim() const {return nrmOne_bar_optim;}
   inline hiopNlpFormulation * get_nlp() const {return nlp;}
   
   void copyFrom(const hiopResidual& resid_src);
@@ -168,7 +170,11 @@ private:
   
   /** storage for the one norm of [ryc,ryd]. This is the one norm of constraint violations.
   */ 
-  double nrmOne_nlp_feasib, nrmOne_bar_feasib;
+  double nrmOne_nlp_feasib;
+  double nrmOne_bar_feasib;
+  double nrmOne_nlp_optim;
+  double nrmOne_bar_optim;
+  
 
   // and associated info from problem formulation
   hiopNlpFormulation * nlp;
