@@ -61,10 +61,11 @@ bool Ex6::get_sparse_blocks_info(size_type& nx,
                                  size_type& nnz_sparse_Jacineq,
                                  size_type& nnz_sparse_Hess_Lagr)
 {
+printf("Setting number of non zeros\n");
     nx = n_vars;;
     nnz_sparse_Jaceq = 2;
     nnz_sparse_Jacineq = 2 + 2*(n_vars-3);
-    nnz_sparse_Hess_Lagr = n_vars;
+    nnz_sparse_Hess_Lagr = n_vars+1;
     return true;
 }
 
