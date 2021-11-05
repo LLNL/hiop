@@ -65,7 +65,7 @@ printf("Setting number of non zeros\n");
     nx = n_vars;;
     nnz_sparse_Jaceq = 2;
     nnz_sparse_Jacineq = 2 + 2*(n_vars-3);
-    nnz_sparse_Hess_Lagr = n_vars+1;
+    nnz_sparse_Hess_Lagr = n_vars;
     return true;
 }
 
@@ -195,19 +195,19 @@ bool Ex6::eval_Hess_Lagr(const size_type& n, const size_type& m,
 {
 
     iHSS[0] = jHSS[0] = 0;
-    iHSS[1] = 0;
-    jHSS[1] = 1;
+   // iHSS[1] = 0;
+   // jHSS[1] = 1;
     if(iHSS!=NULL && jHSS!=NULL) {
       for(int i=1; i<n; i++){
-        iHSS[i+1] = jHSS[i+1] = i;
+        iHSS[i] = jHSS[i] = i;
       }
     }
 
     if(MHSS!=NULL) {
       MHSS[0]= scal * obj_factor * 3*pow(x[0]-1., 2);
-      MHSS[1]=1.0;
+      // MHSS[1]=1.0;
       for(int i=1; i<n; i++){
-        MHSS[i+1] = scal * obj_factor * 3*pow(x[i]-1., 2);
+        MHSS[i] = scal * obj_factor * 3*pow(x[i]-1., 2);
       }
     }
     return true;
