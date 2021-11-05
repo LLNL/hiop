@@ -329,6 +329,11 @@ public:
     return timesVec(beta, y, alpha, x);
   }
 
+  //This method takes an implicitly stored symmetric matrix
+  //(upper triangular part only) and returns mat where it is stored explicitly
+  //is stored explicitly
+virtual void explicitlySymmetrize(hiopMatrixSparseTriplet mat);
+
   virtual void transAddToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start,
 				     double alpha, hiopMatrixDense& W) const;
 

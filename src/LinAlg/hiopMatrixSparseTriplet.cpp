@@ -962,6 +962,12 @@ void hiopMatrixSymSparseTriplet::timesVec(double beta,  double* y,
   }
 }
 
+void hiopMatrixSymSparseTriplet::explicitlySymmetrize(hiopMatrixSparseTriplet mat) 
+{
+  mat.nnz_=2*nnz_-nrows_;
+  mat.nrows_=mat.ncols_=nrows_;
+}
+
 hiopMatrixSparse* hiopMatrixSymSparseTriplet::alloc_clone() const
 {
   assert(nrows_ == ncols_);
