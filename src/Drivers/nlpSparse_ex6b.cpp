@@ -198,8 +198,8 @@ bool Ex6::eval_Hess_Lagr(const size_type& n, const size_type& m,
     iHSS[1] = 0;
     jHSS[1] = 1;
     if(iHSS!=NULL && jHSS!=NULL) {
-      for(int i=2; i<n; i++){
-        iHSS[i] = jHSS[i] = i;
+      for(int i=1; i<n; i++){
+        iHSS[i+1] = jHSS[i+1] = i;
       }
     }
 
