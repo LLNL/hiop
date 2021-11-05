@@ -62,10 +62,10 @@ bool Ex6::get_sparse_blocks_info(size_type& nx,
                                  size_type& nnz_sparse_Hess_Lagr)
 {
 printf("Setting number of non zeros\n");
-    nx = n_vars;;
+    nx = n_vars;
     nnz_sparse_Jaceq = 2;
     nnz_sparse_Jacineq = 2 + 2*(n_vars-3);
-    nnz_sparse_Hess_Lagr = n_vars;
+    nnz_sparse_Hess_Lagr = n_vars+1;
     return true;
 }
 
@@ -194,10 +194,10 @@ bool Ex6::eval_Hess_Lagr(const size_type& n, const size_type& m,
                          const size_type& nnzHSS, index_type* iHSS, index_type* jHSS, double* MHSS)
 {
 
-    iHSS[0] = jHSS[0] = 0;
-   // iHSS[1] = 0;
-   // jHSS[1] = 1;
     if(iHSS!=NULL && jHSS!=NULL) {
+      iHSS[0] = jHSS[0] = 0;
+      iHSS[1] = 0;
+      jHSS[1] = 1;
       for(int i=1; i<n; i++){
         iHSS[i] = jHSS[i] = i;
       }
@@ -205,7 +205,7 @@ bool Ex6::eval_Hess_Lagr(const size_type& n, const size_type& m,
 
     if(MHSS!=NULL) {
       MHSS[0]= scal * obj_factor * 3*pow(x[0]-1., 2);
-      // MHSS[1]=1.0;
+      MHSS[1]=1.0;
       for(int i=1; i<n; i++){
         MHSS[i] = scal * obj_factor * 3*pow(x[i]-1., 2);
       }
