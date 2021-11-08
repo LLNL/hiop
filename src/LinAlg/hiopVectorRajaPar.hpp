@@ -81,10 +81,28 @@ public:
   virtual void copyFrom(const hiopVector& v );
   virtual void copyFrom(const double* v_local_data); //v should be of length at least n_local
 
-  /// @brief Copy from the indices in index_in_src in v
-  virtual void copyFrom(const int* index_in_src, const hiopVector& v);
-  virtual void copyFrom(const int* index_in_src, const double* v);
+  /**
+   * @brief Copy from src the elements specified by the indices in index_in_src. 
+   *
+   * @pre All vectors must reside in the same memory space. 
+   * @pre Size of src must be greater or equal than size of this
+   * @pre Size of index_in_src must be equal to size of this
+   * @pre Elements of index_in_src must be valid (zero-based) indexes in src
+   *
+   */
+  virtual void copy_from(const hiopVector& src, const hiopVectorInt& index_in_src);
 
+  /**
+   * @brief Copy from src the elements specified by the indices in index_in_src. 
+   *
+   * @pre All vectors and arrays must reside in the same memory space. 
+   * @pre Size of src must be greater or equal than size of this
+   * @pre Size of index_in_src must be equal to size of this
+   * @pre Elements of index_in_src must be valid (zero-based) indexes in src
+   *
+   */
+  virtual void copy_from(const double* src, const hiopVectorInt& index_in_src);
+  
   /** Copy the 'n' elements of v starting at 'start_index_in_this' in 'this' */
   virtual void copyFromStarting(int start_index_in_this, const double* v, int n);
   virtual void copyFromStarting(int start_index_in_src, const hiopVector& v);

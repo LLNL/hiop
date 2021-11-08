@@ -59,7 +59,11 @@ namespace hiop
 class hiopVector
 {
 public:
-  hiopVector() { n_=0;}
+  hiopVector()
+    : n_(0),
+      is_attached_(false)
+  {
+  }
   virtual ~hiopVector() {};
   /// @brief Set all elements to zero.
   virtual void setToZero() = 0;
@@ -67,6 +71,17 @@ public:
   virtual void setToConstant( double c ) = 0;
   /// @brief Set all elements that are not zero in ix to  c, and the rest to 0
   virtual void setToConstant_w_patternSelect( double c, const hiopVector& ix)=0;
+
+  /**
+   * Attaches this to the double array pdata in the sense that pdata will be used as the internal 
+   * container array (of size n). The pointer pdata will not be deleted when the class' destructor is called.
+   * 
+   * Note that this method only supports local/non-distributed vectors.
+   *
+   * @pre The input double pointer pdata must be allocated to hold at least n doubles.
+   */
+  virtual void attach_to(double* pdata, int n) = 0;
+  
   // TODO: names of copyTo/FromStarting methods are quite confusing 
   //maybe startingAtCopyFromStartingAt startingAtCopyToStartingAt ?
   /// @brief Copy the elements of v
@@ -79,9 +94,28 @@ public:
   /// @brief Copy the 'n' elements of v starting at 'start_index_in_v' into 'this'
   virtual void copy_from_starting_at(const double* v, int start_index_in_v, int n) = 0;
 
-  /// @brief Copy from the indices in index_in_src in v
-  virtual void copyFrom(const int* index_in_src, const hiopVector& v) = 0;
-  virtual void copyFrom(const int* index_in_src, const double* v) = 0;
+  /**
+   * @brief Copy from src the elements specified by the indices in index_in_src. 
+   *
+   * @pre All vectors must reside in the same memory space. 
+   * @pre Size of src must be greater or equal than size of this
+   * @pre Size of index_in_src must be equal to size of this
+   * @pre Elements of index_in_src must be valid (zero-based) indexes in src
+   *
+   */
+  virtual void copy_from_indexes(const hiopVector& src, const hiopVectorInt& index_in_src) = 0;
+
+  /**
+   * @brief Copy from src the elements specified by the indices in index_in_src. 
+   *
+   * @pre All vectors and arrays must reside in the same memory space. 
+   * @pre Size of src must be greater or equal than size of this
+   * @pre Size of index_in_src must be equal to size of this
+   * @pre Elements of index_in_src must be valid (zero-based) indexes in src
+   *
+   */
+  virtual void copy_from_indexes(const double* src, const hiopVectorInt& index_in_src) = 0;
+  
   /*
    * @brief Copy from 'v' starting at 'start_idx_src' to 'this' starting at 'start_idx_dest'
    *
@@ -165,9 +199,23 @@ public:
   virtual void component_sqrt() = 0;
 
   /// @brief Scale each element of this  by the constant alpha
-  virtual void scale( double alpha ) = 0;
+  virtual void scale(double alpha) = 0;
   /// @brief this += alpha * x
-  virtual void axpy  ( double alpha, const hiopVector& x ) = 0;
+  virtual void axpy(double alpha, const hiopVector& x) = 0;
+
+  /**
+   * @brief Performs axpy, this += alpha*x, on the indexes in this specified by i.
+   * 
+   * @param alpha scaling factor 
+   * @param x vector of doubles to be axpy-ed to this (size equal to size of i and less than or equal to size of this)
+   * @param i vector of indexes in this to which the axpy operation is performed (size equal to size of x and less than 
+   * or equal to size of this)
+   *
+   * @pre The entries of i must be valid (zero-based) indexes in this
+   *
+   */
+  virtual void axpy(double alpha, const hiopVector& x, const hiopVectorInt& i) = 0;
+  
   /// @brief this += alpha * x * z
   virtual void axzpy ( double alpha, const hiopVector& x, const hiopVector& z ) = 0;
   /// @brief this += alpha * x / z
@@ -285,7 +333,7 @@ public:
                                  const hiopInterfaceBase::NonlinearityType arr_src) const = 0;
 protected:
   size_type n_; //we assume sequential data
-
+  bool is_attached_;
 protected:
   hiopVector(const hiopVector& v) : n_(v.n_) {};
 };

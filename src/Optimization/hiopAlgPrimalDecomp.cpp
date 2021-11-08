@@ -76,7 +76,7 @@ namespace hiop
     ReqRecourseApprox(const int& n)
     {
       n_ = n;
-      //TODO: Frank, it think this needs to stay on the CPU since it is only used by MPI
+      //TODO: Frank, I think this needs to stay on the CPU since it is only used by MPI
       buffer = LinearAlgebraFactory::create_vector("DEFAULT", n_+1);
     }
 
@@ -576,12 +576,7 @@ hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
   n_ = master_prob_->get_num_vars();
   // if no coupling indices are specified, assume the entire x is coupled
   nc_ = n_;
-  xc_idx_ = new int[nc_];
 
-  //TODO: Frank, it looks like xc_idx_ is involved in device computations and need to be made a hiopVectorInt
-  for(int i=0; i<nc_; i++) {
-    xc_idx_[i] = i;
-  }
   //determine rank and rank type
   //only two rank types for now, master and evaluator/worker
 
@@ -603,6 +598,9 @@ hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
   log_ = new hiopLogger(options_, stdout, 0, comm_world);
 
   x_ = LinearAlgebraFactory::create_vector(options_->GetString("mem_space"), n_);
+
+  xc_idx_ = LinearAlgebraFactory::create_vector_int(options_->GetString("mem_space"), nc_);
+  xc_idx_->linspace(0,1);
 }
 
 hiopAlgPrimalDecomposition::
@@ -617,10 +615,6 @@ hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
   S_ = master_prob_->get_num_rterms();
   n_ = master_prob_->get_num_vars();
 
-  xc_idx_ = new int[nc_];
-  for(int i=0; i<nc; i++) {
-    xc_idx_[i] = xc_index[i];
-  }
   //determine rank and rank type
   //only two rank types for now, master and evaluator/worker
 
@@ -641,10 +635,14 @@ hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
   log_ = new hiopLogger(options_, stdout, 0, comm_world);
 
   x_ = LinearAlgebraFactory::create_vector(options_->GetString("mem_space"), n_);
+
+  xc_idx_ = LinearAlgebraFactory::create_vector_int(options_->GetString("mem_space"), nc_);
+  xc_idx_->copy_from(xc_index);
 }
 
 hiopAlgPrimalDecomposition::~hiopAlgPrimalDecomposition()
 {
+  delete xc_idx_;
   delete x_;
   delete options_;
 }
@@ -698,12 +696,11 @@ bool hiopAlgPrimalDecomposition::stopping_criteria(const int it, const double co
 }
   
 double hiopAlgPrimalDecomposition::
-step_size_inf(const int nc, const int* idx, const hiopVector& x, const hiopVector& x0)
+step_size_inf(const int nc, const hiopVectorInt& idx, const hiopVector& x, const hiopVector& x0)
 {
   double step = -1e20;
-  hiopVector* temp;
-  temp = LinearAlgebraFactory::create_vector(options_->GetString("mem_space"), x0.get_local_size()); 
-  temp->copyFrom(idx, x);   
+  hiopVector* temp = LinearAlgebraFactory::create_vector(options_->GetString("mem_space"), x0.get_local_size()); 
+  temp->copy_from_indexes(x, idx); 
   temp->axpy(-1.0, x0); 
   //step = temp->infnorm();
   step = temp->twonorm();
@@ -820,7 +817,7 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
     double t1 = 0;
     double t2 = 0; 
     hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator =
-      new hiopInterfacePriDecProblem::RecourseApproxEvaluator(nc_, S_, xc_idx_, options_->GetString("mem_space"));
+      new hiopInterfacePriDecProblem::RecourseApproxEvaluator(nc_, S_, xc_idx_->local_data(), options_->GetString("mem_space"));
     
     double* x_vec = x_->local_data();
 
@@ -980,7 +977,7 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
 
       //evaluators
       if(my_rank_ != 0) {
-        /* old sychronous implmentation of contingencist
+        /* old sychronous implementation of contingencies
          * int cpr = S_/(comm_size_-1); //contingency per rank
          * int cr = S_%(comm_size_-1); //contingency remained
          * printf("my rank start evaluating work %d)\n",my_rank_);
@@ -1002,17 +999,10 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
         double aux=0.;
 
         if(nc_<n_) {
-          assert(xc_idx_[0]>=0);// if nc==0, why bother using this code?
-	  x0->copyFrom(xc_idx_,*x_);
-          //for(int i=0;i<nc_;i++) {
-          //  x0_vec[i] = x_vec[xc_idx_[i]];
-          //}
+	  x0->copy_from_indexes(*x_, *xc_idx_);
         } else {
           assert(nc_==n_);
           x0->copyFromStarting(0, *x_);
-          //for(int i=0;i<nc_;i++) {
-          //  x0_vec[i] = x_[i];
-          //}
         }
         for(int ri=0; ri<cont_idx.size(); ri++) {
           aux = 0.;
@@ -1058,20 +1048,13 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
             }
             rec_val = 0.;
 	    grad_acc->setToZero();
-            //for(int i=0; i<nc_; i++) {
-            //  grad_acc[i] = 0.;
-            //}
+
             double aux=0.;
-            //double x0[nc_]; 
             if(nc_<n_) {
-              assert(xc_idx_[0]>=0);// if nc==0, why bother using this code?
-	      x0->copyFrom(xc_idx_,*x_);
+	      x0->copy_from_indexes(*x_, *xc_idx_);
             } else {
               assert(nc_==n_);
               x0->copyFromStarting(0, *x_);
-              //for(int i=0;i<nc_;i++) {
-              // x0_vec[i] = x_[i];
-              //}
             }
             for(int ri=0; ri<cont_idx.size(); ri++) {
               aux = 0.;
@@ -1133,17 +1116,10 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
 	}
     
         if(nc_<n_) {
-          assert(xc_idx_[0]>=0);// if nc==0, why bother using this code?
-	  x0->copyFrom(xc_idx_,*x_);
-          //for(int i=0;i<nc_;i++) {
-          //  x0_vec[i] = x_vec[xc_idx_[i]];
-          //}
+	  x0->copy_from_indexes(*x_, *xc_idx_);
         } else {
           assert(nc_==n_);
           x0->copyFromStarting(0, *x_);
-          //for(int i=0;i<nc_;i++) {
-          //  x0_vec[i] = x_[i];
-          //}
         }
 
         if(it==0) {
@@ -1238,7 +1214,7 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
           printf( "Elapsed time for entire iteration %d is %f\n",it, t2 - t1 );  
         }
         // print out the iteration from the master rank
-	dinf = step_size_inf(nc_, xc_idx_, *x_, *x0);
+	dinf = step_size_inf(nc_, *xc_idx_, *x_, *x0);
 	
 
       } else {
@@ -1311,7 +1287,7 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
   hess_appx_2->set_alpha_max(alpha_max_);
   
   hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator =
-    new hiopInterfacePriDecProblem::RecourseApproxEvaluator(nc_, S_, xc_idx_, options_->GetString("mem_space"));
+    new hiopInterfacePriDecProblem::RecourseApproxEvaluator(nc_, S_, xc_idx_->local_data(), options_->GetString("mem_space"));
 
   double base_val = 0.; // base case objective value 
   double base_valm1 = 0.; // base case objective value from previous iteration
@@ -1353,8 +1329,7 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
     int idx = 0;
     if(nc_<n_) {
       //printf("xc_idx %d ",xc_idx_[0]);
-      assert(xc_idx_[0]>=0);// if nc==0, why bother using this code?
-      x0->copyFrom(xc_idx_,*x_);
+      x0->copy_from_indexes(*x_, *xc_idx_);
     } else {
       assert(nc_==n_);
       x0->copyFromStarting(0, *x_);
@@ -1469,7 +1444,7 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
     //printf("solving full problem starts, iteration %d \n",it);
     solver_status_ = master_prob_->solve_master(*x_, true, 0, 0, 0, options_file_master_prob.c_str());
     
-    dinf = step_size_inf(nc_, xc_idx_, *x_, *x0); 
+    dinf = step_size_inf(nc_, *xc_idx_, *x_, *x0); 
 
     // print solution x at the end of a full solve
     if(ver_ >=outlevel3) {

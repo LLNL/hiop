@@ -266,23 +266,27 @@ void hiopVectorRajaPar::copyFrom(const hiopVector& vec)
  */
 void hiopVectorRajaPar::copyFrom(const double* local_array)
 {
-  if(local_array)
-  {
+  if(local_array) {
     auto& rm = umpire::ResourceManager::getInstance();
     double* data = const_cast<double*>(local_array);
     rm.copy(data_dev_, data, n_local_*sizeof(double));
   }
 }
 
-void hiopVectorRajaPar::copyFrom(const int* index_in_src, const hiopVector& vec)
+/// @brief Copy from vec the elements specified by the indices in index_in_src. 
+void hiopVectorRajaPar::copy_from(const hiopVector& vec, const hiopVectorInt& index_in_src)
 {
   const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(vec);
+  const hiopVectorIntRaja& indexes = dynamic_cast<const hiopVectorIntRaja&>(index_in_src);
   int nv = v.get_local_size();
+
+  assert(indexes.size() == n_local_);
+  
   double* dd = data_dev_;
   double* vd = v.data_dev_;
-  int* id = const_cast<int*>(index_in_src);
+  index_type* id = const_cast<index_type*>(indexes.local_data());
 
-  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >(RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       assert(id[i]<nv);
@@ -290,14 +294,18 @@ void hiopVectorRajaPar::copyFrom(const int* index_in_src, const hiopVector& vec)
     });
 }
 
-void hiopVectorRajaPar::copyFrom(const int* index_in_src, const double* vec)
+/// @brief Copy from vec the elements specified by the indices in index_in_src
+void hiopVectorRajaPar::copy_from(const double* vec, const hiopVectorInt& index_in_src)
 {
+  const hiopVectorIntRaja& indexes = dynamic_cast<const hiopVectorIntRaja&>(index_in_src);
+  assert(indexes.size() == n_local_);
+  
   assert(vec);
   double* dd = data_dev_;
   double* vd = const_cast<double*>(vec);
-  int* id = const_cast<int*>(index_in_src);
+  index_type* id = const_cast<index_type*>(indexes.local_data());
 
-  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >(RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       dd[i] = vd[id[i]];
