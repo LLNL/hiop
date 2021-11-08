@@ -9,54 +9,60 @@ using namespace hiop;
 
 static bool self_check(size_type n, double obj_value);
 
-static bool parse_arguments(int argc, char **argv, size_type& n, double &scal,  bool& self_check)
+static bool parse_arguments(int argc, char **argv, size_type& n, double &scal,  bool& self_check, bool& use_pardiso)
 {
 
   //  printf("%s    %s \n", argv[1], argv[2]);
 
-  self_check=false; n = 3; scal = 1.0;
+  self_check = false;
+  use_pardiso = false;
+  n = 3;
+  scal = 1.0;
   switch(argc) {
   case 1:
     //no arguments
     return true;
     break;
-  case 4:
+  case 5: //4 arguments
     {
-      if(std::string(argv[3]) == "-selfcheck"){
-        self_check=true;
-        n = std::atoi(argv[1]);
-        scal = std::atof(argv[2]);
-        if(n<=0) return false;
-      } else {
-        return false;
+      if(std::string(argv[4]) == "-selfcheck") {
+        self_check = true;
       }
+    }
+  case 4: //3 arguments
+    {
+      if(std::string(argv[3]) == "-selfcheck") {
+        self_check = true;
+      } else if(std::string(argv[3]) == "-pardiso") {
+#ifndef HIOP_USE_PARDISO
+        use_pardiso = true;
+#endif
+      } 
     }
   case 3: //2 arguments
     {
-      if(std::string(argv[2]) == "-selfcheck"){
-        self_check=true;
-        n = std::atoi(argv[1]);
-        if(n<=0) return false;
+      if(std::string(argv[2]) == "-selfcheck") {
+        self_check = true;
+      } else if(std::string(argv[2]) == "-pardiso") {
+        use_pardiso = true;
       } else {
-        n = std::atoi(argv[1]);
-        if(n<=0) return false;
         scal = std::atof(argv[2]); 
       }
     }
   case 2: //1 argument
     {
-      if(std::string(argv[1]) == "-selfcheck")
-        self_check=true;
-      else {
-        n = std::atoi(argv[1]);
-        if(n<=0) return false;
+      n = std::atoi(argv[1]);
+      if(n<=0) {
+        return false;
       }
     }
     break;
   default:
     return false; //4 or more arguments
   }
-
+  if(self_check) {
+    scal = 1.0;
+  }
   return true;
 };
 
@@ -64,9 +70,11 @@ static void usage(const char* exeName)
 {
   printf("hiOp driver %s that solves a synthetic convex problem of variable size.\n", exeName);
   printf("Usage: \n");
-  printf("  '$ %s problem_size -selfcheck'\n", exeName);
+  printf("  '$ %s problem_size scal_fact -selfcheck'\n", exeName);
   printf("Arguments:\n");
   printf("  'problem_size': number of decision variables [optional, default is 50]\n");
+  printf("  'scal_fact': scaling factor used for objective function and constraints [optional, default is 1.0]\n");
+  printf("  '-pardiso': use pardiso as the linear solver [optional]\n");
   printf("  '-selfcheck': compares the optimal objective with a previously saved value for the problem specified by 'problem_size'. [optional]\n");
 }
 
@@ -85,10 +93,12 @@ int main(int argc, char **argv)
     return 1;
   }
 #endif
-  bool selfCheck; size_type n;
+  bool selfCheck;
+  bool use_pardiso;
+  size_type n;
   double scal;
 
-  if(!parse_arguments(argc, argv, n, scal, selfCheck)) { usage(argv[0]); return 1;}
+  if(!parse_arguments(argc, argv, n, scal, selfCheck, use_pardiso)) { usage(argv[0]); return 1;}
 
   Ex6 nlp_interface(n, scal);
   hiopNlpSparse nlp(nlp_interface);
@@ -108,6 +118,9 @@ int main(int argc, char **argv)
   nlp.options->SetNumericValue("mu0", 0.1);
 //  nlp.options->SetStringValue("scaling_type", "none");
 
+  if(use_pardiso) {
+    nlp.options->SetStringValue("linear_solver_sparse", "pardiso");
+  }
   hiopAlgFilterIPMNewton solver(&nlp);
   hiopSolveStatus status = solver.run();
 
