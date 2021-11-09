@@ -875,9 +875,9 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
         rval = 0.;
 	grad_r->setToZero();
         
-        int* cont_idx = new int[S_];
-        for(int i=0;i<S_;i++) {
-          cont_idx[i]=i;
+	std::vector<int> cont_idx(S_);
+        for(int i=0; i<S_; i++) {
+          cont_idx[i] = i;
         }
         // The number of contigencies should be larger than the number of processors
         // Otherwise not implemented yet
@@ -898,7 +898,7 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
         }
         int mpi_test_flag; // for testing if the send/recv is completed
         // Posting initial receive of recourse solutions from evaluators
-        for(int r=1; r< comm_size_;r++) {
+        for(int r=1; r<comm_size_; r++) {
           //int cur_idx = cont_idx[idx];
           rec_prob[r]->post_recv(2,r,comm_world_);// 2 is the tag, r is the rank source 
           //printf("receive flag for contingency value %d)\n", mpi_test_flag);
@@ -914,7 +914,7 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
         int last_loop = 0;
         //printf("total idx %d\n", S_);
         t2 = MPI_Wtime(); 
-        if(ver_ >=outlevel2) {
+        if(ver_>=outlevel2) {
           printf( "Elapsed time for iteration %d for misc is %f\n",it, t2 - t1 );  
         }
         while(idx<=S_ || last_loop) { 
@@ -965,7 +965,7 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
         grad_r->scale(1.0/S_);
         // send end signal to all evaluators
         int cur_idx = -1;
-        for(int r=1; r< comm_size_;r++) {
+        for(int r=1; r<comm_size_; r++) {
           req_cont_idx->set_idx(-1);
           req_cont_idx->post_send(1,r,comm_world_);
         }

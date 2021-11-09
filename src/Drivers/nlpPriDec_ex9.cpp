@@ -169,6 +169,7 @@ bool PriDecMasterProblemEx9::eval_f_rterm(size_t idx, const int& n, const double
   #endif
 
   delete[] xi;
+  delete ex9_recourse;
   return true;
 };
 

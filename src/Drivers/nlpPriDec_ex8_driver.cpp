@@ -142,6 +142,9 @@ int main(int argc, char **argv)
       printf("Solve was successfull. Optimal value: %12.5e\n",
              pridec_solver.getObjective());
   }
+
+  delete[] list;
+  
   if(selfCheck) {
     if(rank==0) {
       if(!self_check(nx,S, pridec_solver.getObjective()))
