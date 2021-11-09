@@ -60,8 +60,7 @@ class hiopVector
 {
 public:
   hiopVector()
-    : n_(0),
-      is_attached_(false)
+    : n_(0)
   {
   }
   virtual ~hiopVector() {};
@@ -72,16 +71,6 @@ public:
   /// @brief Set all elements that are not zero in ix to  c, and the rest to 0
   virtual void setToConstant_w_patternSelect( double c, const hiopVector& ix)=0;
 
-  /**
-   * Attaches this to the double array pdata in the sense that pdata will be used as the internal 
-   * container array (of size n). The pointer pdata will not be deleted when the class' destructor is called.
-   * 
-   * Note that this method only supports local/non-distributed vectors.
-   *
-   * @pre The input double pointer pdata must be allocated to hold at least n doubles.
-   */
-  virtual void attach_to(double* pdata, int n) = 0;
-  
   // TODO: names of copyTo/FromStarting methods are quite confusing 
   //maybe startingAtCopyFromStartingAt startingAtCopyToStartingAt ?
   /// @brief Copy the elements of v
@@ -333,9 +322,12 @@ public:
                                  const hiopInterfaceBase::NonlinearityType arr_src) const = 0;
 protected:
   size_type n_; //we assume sequential data
-  bool is_attached_;
 protected:
-  hiopVector(const hiopVector& v) : n_(v.n_) {};
+  /// for internal use only; derived classes may use copy constructor and always allocate data_
+  hiopVector(const hiopVector& v)
+    : n_(v.n_)
+  {
+  };
 };
 
 }

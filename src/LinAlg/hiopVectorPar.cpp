@@ -87,30 +87,21 @@ hiopVectorPar::hiopVectorPar(const size_type& glob_n, index_type* col_part/*=NUL
   data_ = new double[n_local_];
 }
 
+/// internal use only: allocates data_
 hiopVectorPar::hiopVectorPar(const hiopVectorPar& v)
 {
-  n_local_=v.n_local_; n_ = v.n_;
-  glob_il_=v.glob_il_; glob_iu_=v.glob_iu_;
-  comm_=v.comm_;
-  data_=new double[n_local_];  
-}
-
-void hiopVectorPar::attach_to(double* pdata, int n)
-{
-  n_ = n;
-  n_local_ = n_;
-  glob_il_ = 0;
-  glob_iu_ = n_;
-  data_ = pdata;
-  is_attached_ = true;
+  n_local_ = v.n_local_;
+  n_ = v.n_;
+  glob_il_ = v.glob_il_;
+  glob_iu_ = v.glob_iu_;
+  comm_ = v.comm_;
+  data_ = new double[n_local_];  
 }
   
 hiopVectorPar::~hiopVectorPar()
 {
-  if(~is_attached_) {
-    delete[] data_;
-    data_=NULL;
-  }
+  delete[] data_;
+  data_ = nullptr;
 }
 
 hiopVector* hiopVectorPar::alloc_clone() const
@@ -602,7 +593,7 @@ void hiopVectorPar::axpy(double alpha, const hiopVector& x, const hiopVectorInt&
   
   for(int j=0; j<idxs.size(); ++j) {
     assert(id[j]<n_local_);
-    data_[id[j]] = xd[j];
+    data_[id[j]] += alpha*xd[j];
   }
 
 }

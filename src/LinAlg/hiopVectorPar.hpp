@@ -72,14 +72,6 @@ public:
   virtual void setToConstant( double c );
   virtual void setToConstant_w_patternSelect(double c, const hiopVector& select);
 
-  /**
-   * Attaches this to the double array pdata in the sense that pdata will be used as the internal 
-   * container array (of size n). The pointer pdata will not be deleted when the class' destructor is called.
-   * 
-   * @pre The input double pointer pdata must be allocated to hold at least n doubles.
-   */
-  virtual void attach_to(double* pdata, int n);
-
   virtual void copyFrom(const hiopVector& v );
   virtual void copyFrom(const double* v_local_data); //v should be of length at least n_local_
   

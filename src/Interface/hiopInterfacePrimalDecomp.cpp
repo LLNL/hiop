@@ -11,9 +11,12 @@ RecourseApproxEvaluator(int nc, const std::string& mem_space)
 hiopInterfacePriDecProblem::RecourseApproxEvaluator::
 ~RecourseApproxEvaluator() 
 {
+  delete xc_idx_;
   delete rgrad_;
   delete rhess_;
-  delete x0_;  
+  delete x0_;
+  delete vec_work_coupling_;
+  delete vec_work_basecase_;
 }
 
 hiopInterfacePriDecProblem::RecourseApproxEvaluator::
@@ -28,6 +31,8 @@ RecourseApproxEvaluator(int nc, int S, const std::string& mem_space)
   rgrad_ = LinearAlgebraFactory::create_vector(mem_space_, nc);
   rhess_ = rgrad_->alloc_clone();
   x0_ = rgrad_->alloc_clone();
+  vec_work_coupling_ = rgrad_->alloc_clone();
+  vec_work_basecase_ = nullptr;
 }
 
 hiopInterfacePriDecProblem::RecourseApproxEvaluator::
@@ -41,7 +46,9 @@ RecourseApproxEvaluator(const int nc,
   rgrad_ = LinearAlgebraFactory::create_vector(mem_space_, nc);
   rhess_ = rgrad_->alloc_clone();
   x0_ = rgrad_->alloc_clone();
-
+  vec_work_coupling_ = rgrad_->alloc_clone();
+  vec_work_basecase_ = nullptr;
+  
   xc_idx_ = LinearAlgebraFactory::create_vector_int(mem_space_, nc);
   xc_idx_->copy_from(list);
 }
@@ -63,7 +70,9 @@ RecourseApproxEvaluator(const int nc,
   rhess_ = rgrad_->alloc_clone();
 
   x0_ = rgrad_->alloc_clone();
-
+  vec_work_coupling_ = rgrad_->alloc_clone();
+  vec_work_basecase_ = nullptr;
+  
   xc_idx_ = LinearAlgebraFactory::create_vector_int(mem_space_, nc);
   xc_idx_->linspace(0,1);
 
@@ -90,7 +99,9 @@ RecourseApproxEvaluator(const int nc,
   rgrad_ = LinearAlgebraFactory::create_vector(mem_space_, nc);
   rhess_ = rgrad_->alloc_clone();
   x0_ = rgrad_->alloc_clone();
-
+  vec_work_coupling_ = rgrad_->alloc_clone();
+  vec_work_basecase_ = nullptr;
+ 
   xc_idx_ = LinearAlgebraFactory::create_vector_int(mem_space_, nc);
   xc_idx_->copy_from(list);
 
@@ -109,18 +120,17 @@ bool hiopInterfacePriDecProblem::RecourseApproxEvaluator::
 eval_f(const size_type& n, const double* x, bool new_x, double& obj_value)
 {
   assert(rgrad_!=NULL);
+
   obj_value += rval_;
 
-  //TODO: have a buffer_x member in the class, of type hiopVector;
-  //      allocate once and reuse to avoid repeated allocations
-  hiopVector* temp = rgrad_->alloc_clone(); 
-  temp->copy_from_indexes(x, *xc_idx_);   
-  temp->axpy(-1.0, *x0_);
-  obj_value += temp->dotProductWith(*rgrad_);
+  hiopVector& v = *vec_work_coupling_;
+  v.copy_from_indexes(x, *xc_idx_);   
+  v.axpy(-1.0, *x0_);
+  obj_value += v.dotProductWith(*rgrad_);
 
-  temp->componentMult(*temp);
-  obj_value += 0.5*temp->dotProductWith(*rhess_);
-  delete temp;
+  v.componentMult(v);
+  obj_value += 0.5*v.dotProductWith(*rhess_);
+
   return true;
 }
  
@@ -129,36 +139,35 @@ bool hiopInterfacePriDecProblem::RecourseApproxEvaluator::
 eval_grad(const size_type& n, const double* x, bool new_x, double* grad)
 {
   assert(rgrad_!=NULL);
-  double* rgrad_arr = rgrad_->local_data();
-  double* rhess_arr = rhess_->local_data();
-  double* x0_arr = x0_->local_data();
   
-  //TODO: have a buffer_x member in the class, of type hiopVector;
-  //      allocate once and reuse to avoid repeated allocations
-  hiopVector* temp = rgrad_->alloc_clone(); 
-  temp->copy_from_indexes(x, *xc_idx_);
-  temp->axpy(-1.0, *x0_);
-  temp->componentMult(*rhess_);
-  temp->axpy(1.0, *rgrad_);
+  hiopVector& v = *vec_work_coupling_;
+  // v = x-x0
+  v.copy_from_indexes(x, *xc_idx_);
+  v.axpy(-1.0, *x0_);
 
-  //TODO: this is cpu code
-  //for(int i=0; i<nc_; i++) {
-  //  grad[xc_idx_[i]] += temp->local_data()[i];
-  //}
+  // v = Hess*(x-x0)
+  v.componentMult(*rhess_);
 
-  hiopVector* grad_vec = LinearAlgebraFactory::create_vector(mem_space_, 0);
-  grad_vec->attach_to(grad, n);
+  // v =  Hess*(x-x0) + grad
+  v.axpy(1.0, *rgrad_);
+
+  if(nullptr == vec_work_basecase_) {
+    vec_work_basecase_ = LinearAlgebraFactory::create_vector(mem_space_, n);
+  }
+
+  hiopVector& grad_vec = *vec_work_basecase_;
+  grad_vec.copyFrom(grad);
+  //add the recourse gradient to the basecase gradient
+  grad_vec.axpy(1.0, v, *xc_idx_);
   
-  grad_vec->axpy(1.0, *temp, *xc_idx_);
-  delete grad_vec;
+  grad_vec.copyTo(grad);
   
-  delete temp;
   return true;
 }
 
 /**
  * Hessian evaluation is different since it's hard to decipher the 
- * sepcific Lagrangian arrangement at this level
+ * specific Lagrangian arrangement at this level
  * So hess currently is a vector of nc_ length 
  * Careful when implementing in the full problem  
  */
