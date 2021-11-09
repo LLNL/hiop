@@ -1283,8 +1283,8 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
   double rval = 0.;
   //double grad_r[nc_];
   hiopVector* grad_r;
-  grad_r =LinearAlgebraFactory::create_vector(options_->GetString("mem_space"), nc_) ; 
-  double* grad_r_vec=grad_r->local_data_host();
+  grad_r = LinearAlgebraFactory::create_vector(options_->GetString("mem_space"), nc_) ; 
+  double* grad_r_vec = grad_r->local_data_host();
   
   hiopVector* hess_appx;
   hess_appx = grad_r->alloc_clone();
@@ -1334,9 +1334,9 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
     rval = 0.;
     grad_r->setToZero();
 
-    int* cont_idx = new int[S_];
-    for(int i=0;i<S_;i++) {
-      cont_idx[i]=i;
+    std::vector<int> cont_idx(S_);
+    for(int i=0; i<S_; i++) {
+      cont_idx[i] = i;
     }
     // The number of contigencies should be larger than the number of processors, which is 1
     // idx is the next contingency to be sent out from the master
@@ -1353,7 +1353,7 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
       double aux=0.;
       bret = master_prob_->eval_f_rterm(idx_temp, nc_, x0_vec, aux); //need to add extra time here
       if(!bret) {
-            //todo
+	//todo
       }
       rval += aux;
       //assert("for debugging" && false); //for debugging purpose
@@ -1473,7 +1473,13 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
     //printf("count  %d \n", accp_count);
     if(stopping_criteria(it, convg)){break;}
   }
-    return Solve_Success;    
+
+  delete grad_r;
+  delete hess_appx;
+  delete x0;
+  delete hess_appx_2;
+  delete evaluator;
+  return Solve_Success;    
 }
 
 }//end namespace
