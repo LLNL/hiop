@@ -384,9 +384,15 @@ namespace hiop
     int nnz = HessSp_->numberOfNonzeros() + Jac_cSp_->numberOfNonzeros() + Jac_dSp_->numberOfNonzeros() + nd + nx + nd + neq + nineq;
     linSys_ = determineAndCreateLinsys(nx, neq, nineq, nnz);
 
-    HessSp_->print();
-    hiopMatrixSparseTriplet* un_sym_mat =
-    (dynamic_cast<hiopMatrixSymSparseTriplet*>(Hess_))->explicitlySymmetrize(); 
+   //HessSp_->print();
+    
+    auto* HessSp_Triplet = dynamic_cast<hiopMatrixSymSparseTriplet*>(Hess_);
+    
+    auto* un_sym_mat =
+    dynamic_cast<hiopMatrixSparseTriplet*>(HessSp_Triplet->explicitlySymmetrize());
+    
+   un_sym_mat->print(); 
+    
     hiopLinSolverIndefSparse* linSys = dynamic_cast<hiopLinSolverIndefSparse*> (linSys_);
     assert(linSys);
 

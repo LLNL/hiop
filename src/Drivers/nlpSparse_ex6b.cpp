@@ -6,7 +6,7 @@
 
 /* Test with bounds and constraints of all types. For some reason this
  *  example is not very well behaved numerically.
- *  min   sum scal*1/4* { (x_{i}-1)^4 : i=1,...,n} +x_1*x_2
+ *  min   sum scal*1/4* { (x_{i}-1)^4 : i=1,...,n} +x_1*x_3
  *
  *  s.t.
  *             scal * 4*x_1 + 2*x_2                     == scal*10
@@ -74,7 +74,7 @@ bool Ex6::eval_f(const size_type& n, const double* x, bool new_x, double& obj_va
   assert(n==n_vars);
   obj_value=0.;
   for(auto i=0;i<n;i++) obj_value += scal*0.25*pow(x[i]-1., 4);
-obj_value+=x[0]*x[1];
+obj_value+=x[0]*x[2];
   return true;
 }
 
@@ -82,8 +82,8 @@ bool Ex6::eval_grad_f(const size_type& n, const double* x, bool new_x, double* g
 {
   assert(n==n_vars);
   for(auto i=0;i<n;i++) gradf[i] = scal*pow(x[i]-1.,3);
-  gradf[0]+=x[1];
-  gradf[1]+=x[0];
+  gradf[0]+=x[2];
+  gradf[2]+=x[0];
   return true;
 }
 
@@ -197,7 +197,7 @@ bool Ex6::eval_Hess_Lagr(const size_type& n, const size_type& m,
     if(iHSS!=NULL && jHSS!=NULL) {
       iHSS[0] = jHSS[0] = 0;
       iHSS[1] = 0;
-      jHSS[1] = 1;
+      jHSS[1] = 2;
       for(int i=1; i<n; i++){
         iHSS[i+1] = jHSS[i+1] = i;
       }

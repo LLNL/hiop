@@ -986,12 +986,14 @@ hiopMatrixSparse* hiopMatrixSymSparseTriplet::explicitlySymmetrize()
   size_type rows=nrows_;
   size_type un_sym_nnz=2*nnz-rows;
 
+
   hiopMatrixSparse* un_sym= 
     LinearAlgebraFactory::create_matrix_sparse("DEFAULT", rows, rows, un_sym_nnz);
   hiopMatrixSparseTriplet* un_sym_mat = dynamic_cast<hiopMatrixSparseTriplet*>(un_sym);
+
   //first create the new entries
   int i=0,nnzCount=0;
-  for(i=0;i<nnz;i++)
+  for(i=0;i<=nnz;i++)
   {
       un_sym_mat->i_row()[nnzCount]=iRow_[i];
       un_sym_mat->j_col()[nnzCount]=jCol_[i];
@@ -1005,29 +1007,30 @@ hiopMatrixSparse* hiopMatrixSymSparseTriplet::explicitlySymmetrize()
         nnzCount++; 
       }
   }
+
 //now sort them
   int rev=0,tempInd=0;
   double temp=0;
 
-for (i=1;i<nnzCount-2;i++)
+for (i=1;i<=nnzCount-2;i++)
 {
-  for (int j=i;j<nnzCount-2;j++)
+  for (int j=i;j<=nnzCount-2;j++)
   {
+    printf("i = %d, j = %d \n", i, j);
     if (un_sym_mat->i_row()[j] > un_sym_mat->i_row()[j+1]) rev=1;
     if (un_sym_mat->i_row()[j] == un_sym_mat->i_row()[j+1] && 
         un_sym_mat->j_col()[j] > un_sym_mat->j_col()[j+1]) rev=1;
     if (rev) //we need to switch the entries
     {
-      printf("Switching entry %d and %d\n", j, j+1);
       tempInd=un_sym_mat->i_row()[j];
-      un_sym_mat->i_row()[j]=un_sym_mat->i_row()[j+1];
       un_sym_mat->i_row()[j+1]=tempInd;
+      un_sym_mat->i_row()[j]=un_sym_mat->i_row()[j+1];
       tempInd=un_sym_mat->j_col()[j];
-      un_sym_mat->j_col()[j]=un_sym_mat->j_col()[j+1];
       un_sym_mat->j_col()[j+1]=tempInd;
+      un_sym_mat->j_col()[j]=un_sym_mat->j_col()[j+1];
       temp=un_sym_mat->M()[j];
-      un_sym_mat->M()[j]=un_sym_mat->M()[j+1];
       un_sym_mat->M()[j+1]=temp;
+      un_sym_mat->M()[j]=un_sym_mat->M()[j+1];
       rev=0;
     }
   }
