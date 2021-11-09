@@ -330,10 +330,19 @@ public:
   {
     return timesVec(beta, y, alpha, x);
   }
+/*
+  @brief A method on symmetric matrix with the upper triangular part stored and
+  creates an indentical matrix where the lower triangular part is stored explicitly
 
-  //This method takes an implicitly stored symmetric matrix
-  //(upper triangular part only) and returns mat where it is stored explicitly
-  //is stored explicitly
+  @pre 
+  @param _this_ is a hiopMatrixSymSparseTriplet 
+  (a symmetric matrix with where the upper triangular part is stored in COO)
+
+  @post
+  @param _this_ is a symmetric matrix in COO with upper triangular part stored
+  @param un_sym_mat is a hiopMatrixSparseTriplet
+  a symmetric matrix stored explicitly (unsymmetric format) in COO
+  */
 hiopMatrixSparse* explicitlySymmetrize();
 
   virtual void transAddToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start,

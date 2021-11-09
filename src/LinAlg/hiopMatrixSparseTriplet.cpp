@@ -975,6 +975,10 @@ void hiopMatrixSymSparseTriplet::timesVec(double beta,  double* y,
       y[jCol_[i]] += alpha * x[iRow_[i]] * values_[i];
   }
 }
+
+
+
+
 hiopMatrixSparse* hiopMatrixSymSparseTriplet::explicitlySymmetrize() 
 { 
 

@@ -386,8 +386,7 @@ namespace hiop
 
     HessSp_->print();
     hiopMatrixSparseTriplet* un_sym_mat =
-      dynamic_cast<hiopMatrixSymSparseTriplet*>(HessSp_)->explicitlySymmetrize();
-    
+    (dynamic_cast<hiopMatrixSymSparseTriplet*>(Hess_))->explicitlySymmetrize(); 
     hiopLinSolverIndefSparse* linSys = dynamic_cast<hiopLinSolverIndefSparse*> (linSys_);
     assert(linSys);
 
