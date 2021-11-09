@@ -32,7 +32,7 @@ hiopMatrixSparseTriplet::hiopMatrixSparseTriplet(int rows, int cols, int nnz)
   values_ = new double[nnz_];
 }
 /*
-hiopMatrixSparseTriplet::hiopMatrixSparseTriplet(hiopMatrixSymSparseTriplet& mat)
+hiopMatrixSparseTriplet::hiopMatrixSparseTriplet(hiopMatrixSymSparseTriplet* mat)
   : row_starts_(nullptr)
 {
 
@@ -975,9 +975,9 @@ void hiopMatrixSymSparseTriplet::timesVec(double beta,  double* y,
       y[jCol_[i]] += alpha * x[iRow_[i]] * values_[i];
   }
 }
-/*
 hiopMatrixSparse* hiopMatrixSymSparseTriplet::explicitlySymmetrize() 
 { 
+
   size_type nnz=nnz_;
   size_type rows=nrows_;
   size_type un_sym_nnz=2*nnz-rows;
@@ -990,20 +990,21 @@ hiopMatrixSparse* hiopMatrixSymSparseTriplet::explicitlySymmetrize()
   int i=0,nnzCount=0;
   for(i=0;i<=nnz;i++)
   {
-      un_sym_mat->iRow_[nnzCount]=iRow_[i];
-      un_sym_mat->jCol_[nnzCount]=jCol_[i];
-      un_sym_mat->values_[nnzCount]=values_[i];
+      un_sym_mat->i_row()[nnzCount]=iRow_[i];
+      un_sym_mat->j_col()[nnzCount]=jCol_[i];
+      un_sym_mat->M()[nnzCount]=values_[i];
       nnzCount++;
       if (iRow_[i] != jCol_[i])
       {
-        un_sym_mat->jCol_[nnzCount]=iRow_[i]; 
-        un_sym_mat->iRow_[nnzCount]=jCol_[i];
-        un_sym_mat->values_[nnzCount]=values_[i];
+        un_sym_mat->j_col()[nnzCount]=iRow_[i]; 
+        un_sym_mat->i_row()[nnzCount]=jCol_[i];
+        un_sym_mat->M()[nnzCount]=values_[i];
         nnzCount++; 
       }
+      
   }
 
-  //now sort them
+//now sort them
   int rev=0,tempInd=0;
   double temp=0;
 
@@ -1011,28 +1012,28 @@ for (i=1;i<=nnzCount-2;i++)
 {
   for (int j=i;j<=nnzCount-2;j++)
   {
-    if (un_sym_mat->iRow_[j] > un_sym_mat->iRow_[j+1]) rev=1;
-    if (un_sym_mat->iRow_[j] == un_sym_mat->iRow_[j+1] && 
-        un_sym_mat->jCol_[j] > un_sym_mat->jCol_[j+1]) rev=1;
+    if (un_sym_mat->i_row()[j] > un_sym_mat->i_row()[j+1]) rev=1;
+    if (un_sym_mat->i_row()[j] == un_sym_mat->i_row()[j+1] && 
+        un_sym_mat->j_col()[j] > un_sym_mat->j_col()[j+1]) rev=1;
     if (rev) //we need to switch the entries
     {
-      tempInd=un_sym_mat->iRow_[j];
-      un_sym_mat->iRow_[j+1]=tempInd;
-      un_sym_mat->iRow_[j]=un_sym_mat->iRow_[j+1];
-      tempInd=un_sym_mat->jCol_[j];
-      un_sym_mat->jCol_[j+1]=tempInd;
-      un_sym_mat->jCol_[j]=mat.jCol_[j+1];
-      temp=un_sym_mat->values_[j];
-      un_sym_mat->values_[j+1]=temp;
-      un_sym_mat->values_[j]=un_sym_mat->values_[j+1];
+      tempInd=un_sym_mat->i_row()[j];
+      un_sym_mat->i_row()[j+1]=tempInd;
+      un_sym_mat->i_row()[j]=un_sym_mat->i_row()[j+1];
+      tempInd=un_sym_mat->j_col()[j];
+      un_sym_mat->j_col()[j+1]=tempInd;
+      un_sym_mat->j_col()[j]=un_sym_mat->j_col()[j+1];
+      temp=un_sym_mat->M()[j];
+      un_sym_mat->M()[j+1]=temp;
+      un_sym_mat->M()[j]=un_sym_mat->M()[j+1];
       rev=0;
     }
   }
 }
 return un_sym_mat;
+
 }
 
-*/
 hiopMatrixSparse* hiopMatrixSymSparseTriplet::alloc_clone() const
 {
   assert(nrows_ == ncols_);

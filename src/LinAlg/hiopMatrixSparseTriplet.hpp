@@ -25,7 +25,7 @@ class hiopMatrixSparseTriplet : public hiopMatrixSparse
 {
 public:
   hiopMatrixSparseTriplet(int rows, int cols, int nnz);
-  //hiopMatrixSparseTriplet(hiopMatrixSymSparseTriplet& mat);
+  //hiopMatrixSparseTriplet(hiopMatrixSymSparseTriplet* mat);
   virtual ~hiopMatrixSparseTriplet();
   
 
@@ -334,7 +334,7 @@ public:
   //This method takes an implicitly stored symmetric matrix
   //(upper triangular part only) and returns mat where it is stored explicitly
   //is stored explicitly
-// hiopMatrixSparse* explicitlySymmetrize();
+hiopMatrixSparse* explicitlySymmetrize();
 
   virtual void transAddToSymDenseMatrixUpperTriangle(int row_dest_start, int col_dest_start,
 				     double alpha, hiopMatrixDense& W) const;
