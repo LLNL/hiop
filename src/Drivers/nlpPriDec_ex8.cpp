@@ -61,7 +61,7 @@ Ex8::Ex8(int ns_, int S_, bool include, hiopInterfacePriDecProblem::RecourseAppr
 
 Ex8::~Ex8()
 {
-  delete evaluator_;
+  //delete evaluator_;
 }
  
 bool Ex8::get_prob_sizes(size_type& n, size_type& m)

@@ -76,10 +76,13 @@ namespace hiop
     ReqRecourseApprox(const int& n)
     {
       n_ = n;
-      //TODO: Frank, I think this needs to stay on the CPU since it is only used by MPI
       buffer = LinearAlgebraFactory::create_vector("DEFAULT", n_+1);
+      request_ = MPI_REQUEST_NULL;
     }
-
+    virtual ~ReqRecourseApprox()
+    {
+      delete buffer;
+    }
     int test() 
     {
       int mpi_test_flag; MPI_Status mpi_status;
@@ -645,6 +648,8 @@ hiopAlgPrimalDecomposition::~hiopAlgPrimalDecomposition()
   delete xc_idx_;
   delete x_;
   delete options_;
+  delete log_;
+  delete [] request_;
 }
 
 double hiopAlgPrimalDecomposition::getObjective() const
@@ -772,25 +777,22 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
     //double grad_r[nc_];
 
     hiopVector* grad_r;
-    grad_r =LinearAlgebraFactory::create_vector(options_->GetString("mem_space"), nc_) ; 
+    grad_r = LinearAlgebraFactory::create_vector(options_->GetString("mem_space"), nc_) ; 
     grad_r->setToZero(); 
     double* grad_r_vec=grad_r->local_data();
   
-    hiopVector* hess_appx;
-    hess_appx = grad_r->alloc_clone();
-    double* hess_appx_vec=hess_appx->local_data();
+    hiopVector* hess_appx = grad_r->alloc_clone();
+    double* hess_appx_vec = hess_appx->local_data();
    
-    hiopVector* x0;
-    x0 = grad_r->alloc_clone();
+    hiopVector* x0 = grad_r->alloc_clone();
     x0->setToZero(); 
     double* x0_vec=x0->local_data();
     
     //local recourse terms for each evaluator, defined accross all processors
     double rec_val = 0.;
-    hiopVector* grad_acc;
-    grad_acc = grad_r->alloc_clone();
+    hiopVector* grad_acc = grad_r->alloc_clone();
     grad_acc->setToZero(); 
-    double* grad_acc_vec=grad_acc->local_data();
+    double* grad_acc_vec = grad_acc->local_data();
 
     //double grad_acc[nc_];
     //for(int i=0; i<nc_; i++) grad_acc[i] = 0.;
@@ -816,8 +818,8 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
     int end_signal = 0;
     double t1 = 0;
     double t2 = 0; 
-    hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator =
-      new hiopInterfacePriDecProblem::RecourseApproxEvaluator(nc_, S_, xc_idx_->local_data(), options_->GetString("mem_space"));
+    hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator = new hiopInterfacePriDecProblem::
+      RecourseApproxEvaluator(nc_, S_, xc_idx_->local_data(), options_->GetString("mem_space"));
     
     double* x_vec = x_->local_data();
 
@@ -860,10 +862,8 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
       // set up recourse problem send/recv interface
       //
       std::vector<ReqRecourseApprox* > rec_prob;
-      ReqRecourseApprox* p=NULL;
       for(int r=0; r<comm_size_;r++) {
-        p = new ReqRecourseApprox(nc_);
-        rec_prob.push_back(p);
+        rec_prob.push_back(new ReqRecourseApprox(nc_));
       }
       
       ReqContingencyIdx* req_cont_idx = new ReqContingencyIdx(0);
@@ -1015,8 +1015,7 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
           rec_val += aux;
         }
         //printf("recourse value: is %18.12e)\n", rec_val);
-	hiopVector* grad_aux;
-        grad_aux = x0->alloc_clone();
+	hiopVector* grad_aux = x0->alloc_clone();
         grad_aux->setToZero(); 
 
         for(int ri=0; ri<cont_idx.size(); ri++) {
@@ -1029,6 +1028,8 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
         }
         rec_prob[my_rank_]->set_value(rec_val);
 
+	delete grad_aux;
+	
         rec_prob[my_rank_]->set_grad(grad_acc_vec);
         rec_prob[my_rank_]->post_send(2, rank_master, comm_world_);
 
@@ -1067,10 +1068,9 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
               rec_val += aux;
             }
             //printf("recourse value: is %18.12e)\n", rec_val);
-	    hiopVector* grad_aux;
-            grad_aux = x0->alloc_clone();
+	    hiopVector* grad_aux = x0->alloc_clone();
             grad_aux->setToZero(); 
-            //double grad_aux[nc_];
+
             for(int ri=0; ri<cont_idx.size(); ri++) {
               int idx_temp = cont_idx[ri];
               bret = master_prob_->eval_grad_rterm(idx_temp, nc_, x0_vec, *grad_aux);
@@ -1092,7 +1092,9 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
         
             //post recv for new index
             req_cont_idx->post_recv(1, rank_master, comm_world_);
-            //ierr = MPI_Irecv(&cont_idx[0], 1, MPI_INT, rank_master, 1, comm_world_, &request_[0]); 	  
+            //ierr = MPI_Irecv(&cont_idx[0], 1, MPI_INT, rank_master, 1, comm_world_, &request_[0]);
+
+	    delete grad_aux;
           }
         }
       }
@@ -1232,12 +1234,24 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
       ierr = MPI_Bcast(&end_signal, 1, MPI_INT, rank_master, comm_world_);
       assert(ierr == MPI_SUCCESS);
       
-     
+      for(auto it : rec_prob) {
+	delete it;
+      }
+
+      delete req_cont_idx;
+      
       if(end_signal) {
         break;
       }
-
     }
+
+    delete grad_r;
+    delete hess_appx;
+    delete x0;
+    delete grad_acc;
+    delete hess_appx_2;
+    delete evaluator;
+    
     if(my_rank_==0) {
       return solver_status_;
     } else {
