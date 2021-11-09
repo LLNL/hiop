@@ -2246,21 +2246,32 @@ bool hiopAlgFilterIPMBase::solve_soft_feasibility_restoration(hiopKKTLinSys* kkt
   }
 
   // shortcut
-  hiopVector *c_soft =  c_soc;
-  hiopVector *d_soft =  d_soc;
+//  hiopVector *c_soft =  c_soc;
+//  hiopVector *d_soft =  d_soc;
   hiopIterate *soft_dir = soc_dir;
 
   double kkt_err_curr = resid->get_nrmOne_bar_optim() + resid->get_nrmOne_bar_feasib();;
   double kkt_err_trial;
   double alpha_primal_soft;
   double alpha_dual_soft;
+  double infeas_nrm_soft;
 
   bool bret = false;
 
   while(num_soft_fr < max_soft_fr_iter) {
     // solve for search directions
-    if(num_soft_fr == 1) {
+    if(num_soft_fr == 0) {
       soft_dir->copyFrom(*dir);
+      _c_trial->copyFrom(*_c);
+      _d_trial->copyFrom(*_d);
+
+      // set initial c/d for soc
+      //_c_trial->copyFrom(nlp->get_crhs());
+      //_c_trial->axpy(-1.0, *_c);
+
+      //_d_trial->copyFrom(*it_curr->get_d());
+      //_d_trial->axpy(-1.0, *_d);
+
       bret = true;
     } else {
       //evaluate the problem at the trial iterate (functions only)
@@ -2269,13 +2280,15 @@ bool hiopAlgFilterIPMBase::solve_soft_feasibility_restoration(hiopKKTLinSys* kkt
         return Error_In_User_Function;
       }
       // compute rhs for soc. Use resid_trial since it hasn't been used
-      resid_trial->update_soc(*it_trial, *c_soft, *d_soft, *_grad_f,*_Jac_c,*_Jac_d, *logbar);      
+      resid_trial->update(*it_trial, _f_nlp_trial, *_c_trial, *_d_trial, *_grad_f,*_Jac_c,*_Jac_d, *logbar);      
       bret = kkt->computeDirections(resid_trial, soft_dir); 
     }    
     assert(bret);
 
     // Compute step size
     bret = it_curr->fractionToTheBdry(*soft_dir, _tau, alpha_primal_soft, alpha_dual_soft); 
+    alpha_primal_soft = std::min(alpha_primal_soft,alpha_dual_soft);
+    alpha_dual_soft = alpha_primal_soft;
     assert(bret);
 
     // Compute trial point
@@ -2288,21 +2301,30 @@ bool hiopAlgFilterIPMBase::solve_soft_feasibility_restoration(hiopKKTLinSys* kkt
       return Error_In_User_Function;
     }
 
+    //reuse function values ? use trial c d in dual update? FIXME_NY
+//    _f_nlp=_f_nlp_trial; hiopVector* pvec=_c_trial; _c_trial=_c; _c=pvec; pvec=_d_trial; _d_trial=_d; _d=pvec;
+
+    //update and adjust the duals
+    bret = dualsUpdate->go(*it_curr, *it_trial,
+                           _f_nlp_trial, *_c_trial, *_d_trial, *_grad_f, *_Jac_c, *_Jac_d, *soft_dir,
+                           alpha_primal_soft, alpha_dual_soft, _mu, kappa_Sigma, infeas_nrm_soft);
+    assert(bret);
+
     logbar->updateWithNlpInfo_trial_funcOnly(*it_trial, _f_nlp_trial, *_c_trial, *_d_trial);
         
     //compute primal-dual error at trial point.
-    resid_trial->update_soc(*it_trial, *c_soft, *d_soft, *_grad_f,*_Jac_c,*_Jac_d, *logbar);
+    resid_trial->update(*it_trial, _f_nlp_trial, *_c_trial, *_d_trial, *_grad_f,*_Jac_c,*_Jac_d, *logbar);
     kkt_err_trial = resid_trial->get_nrmOne_bar_optim() + resid_trial->get_nrmOne_bar_feasib();
 
     // sufficient reduction in the KKT error is not achieved, return
-    if(kkt_err_curr > kappa_f * kkt_err_trial) {
+    if(kkt_err_trial > kappa_f * kkt_err_curr) {
       bret = false;
       break;
     }
 
     //update current iterate (do a fast swap of the pointers)
-    hiopIterate* pit=it_curr; it_curr=it_trial; it_trial=pit;
-    kkt_err_curr = kkt_err_trial;
+//    hiopIterate* pit=it_curr; it_curr=it_trial; it_trial=pit;
+//    kkt_err_curr = kkt_err_trial;
         
     //check filter condition
     double theta_trial = resid_trial->get_nrmOne_bar_feasib();

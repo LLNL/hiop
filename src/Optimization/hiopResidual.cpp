@@ -441,7 +441,7 @@ void hiopResidual::update_soc(const hiopIterate& it,
   logprob.addNonLogBarTermsToGrad_x(1.0, *rx);
   rx->negate();
   nrmInf_bar_optim = fmax(nrmInf_bar_optim, rx->infnorm_local());
-  nrmOne_nlp_optim += rx->onenorm();
+  nrmOne_bar_optim += rx->onenorm();
   
   // rd 
   rd->copyFrom(*it.yd);
@@ -453,7 +453,7 @@ void hiopResidual::update_soc(const hiopIterate& it,
   nlp->log->printf(hovScalars,"NLP resid [update]: inf norm rd=%22.17e\n", buf);
   logprob.addNonLogBarTermsToGrad_d(-1.0,*rd);
   nrmInf_bar_optim = fmax(nrmInf_bar_optim, rd->infnorm_local());
-  nrmOne_nlp_optim += rd->onenorm();
+  nrmOne_bar_optim += rd->onenorm();
   
   //ryc for soc: \alpha*c + c_trial
   ryc->copyFrom(c_soc);
