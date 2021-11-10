@@ -284,7 +284,7 @@ void hiopVectorRajaPar::copy_from(const hiopVector& vec, const hiopVectorInt& in
   
   double* dd = data_dev_;
   double* vd = v.data_dev_;
-  index_type* id = const_cast<index_type*>(indexes.local_data());
+  index_type* id = const_cast<index_type*>(indexes.local_data_const());
 
   RAJA::forall< hiop_raja_exec >(RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
@@ -303,7 +303,7 @@ void hiopVectorRajaPar::copy_from(const double* vec, const hiopVectorInt& index_
   assert(vec);
   double* dd = data_dev_;
   double* vd = const_cast<double*>(vec);
-  index_type* id = const_cast<index_type*>(indexes.local_data());
+  index_type* id = const_cast<index_type*>(indexes.local_data_const());
 
   RAJA::forall< hiop_raja_exec >(RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
@@ -320,7 +320,7 @@ void hiopVectorRajaPar::copy_from_indexes(const hiopVector& vv, const hiopVector
 
   assert(indexes.size() == n_local_);
   
-  index_type* id = const_cast<index_type*>(indexes.local_data());
+  index_type* id = const_cast<index_type*>(indexes.local_data_const());
   double* dd = data_dev_;
   double* vd = v.data_dev_;
 
@@ -343,13 +343,13 @@ void hiopVectorRajaPar::copy_from_indexes(const double* vv, const hiopVectorInt&
 
   const hiopVectorIntRaja& indexes = dynamic_cast<const hiopVectorIntRaja&>(index_in_src);
   assert(indexes.size() == n_local_);
-  index_type* id = const_cast<index_type*>(indexes.local_data());
+  index_type* id = const_cast<index_type*>(indexes.local_data_const());
   double* dd = data_dev_;
   
   RAJA::forall< hiop_raja_exec >(RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
-      dd[i] = vd[id[i]];
+      dd[i] = vv[id[i]];
     }); 
 }
 
@@ -1143,7 +1143,7 @@ void hiopVectorRajaPar::axpy(double alpha, const hiopVector& xvec, const hiopVec
   
   double* dd = data_dev_;
   double* xd = const_cast<double*>(x.data_dev_);
-  index_type* id = const_cast<index_type*>(idxs.local_data());
+  index_type* id = const_cast<index_type*>(idxs.local_data_const());
 
   RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
