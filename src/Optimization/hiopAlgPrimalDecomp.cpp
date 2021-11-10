@@ -649,7 +649,9 @@ hiopAlgPrimalDecomposition::~hiopAlgPrimalDecomposition()
   delete x_;
   delete options_;
   delete log_;
+#ifdef HIOP_USE_MPI
   delete [] request_;
+#endif
 }
 
 double hiopAlgPrimalDecomposition::getObjective() const
