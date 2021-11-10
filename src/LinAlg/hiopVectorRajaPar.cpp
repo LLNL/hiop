@@ -312,6 +312,48 @@ void hiopVectorRajaPar::copy_from(const double* vec, const hiopVectorInt& index_
     });
 }
 
+/// @brief Copy from vec the elements specified by the indices in index_in_src
+void hiopVectorRajaPar::copy_from_indexes(const hiopVector& vv, const hiopVectorInt& index_in_src)
+{
+  const hiopVectorIntRaja& indexes = dynamic_cast<const hiopVectorIntRaja&>(index_in_src);
+  const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(vv);
+
+  assert(indexes.size() == n_local_);
+  
+  index_type* id = const_cast<index_type*>(indexes.local_data());
+  double* dd = data_dev_;
+  double* vd = v.data_dev_;
+
+  int nv = v.get_local_size();
+  
+  RAJA::forall< hiop_raja_exec >(RAJA::RangeSegment(0, n_local_),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      assert(id[i]<nv);
+      dd[i] = vd[id[i]];
+    });  
+}
+
+/// @brief Copy from vec the elements specified by the indices in index_in_src
+void hiopVectorRajaPar::copy_from_indexes(const double* vv, const hiopVectorInt& index_in_src)
+{
+  if(nullptr==vv) {
+    return;
+  }
+
+  const hiopVectorIntRaja& indexes = dynamic_cast<const hiopVectorIntRaja&>(index_in_src);
+  assert(indexes.size() == n_local_);
+  index_type* id = const_cast<index_type*>(indexes.local_data());
+  double* dd = data_dev_;
+  
+  RAJA::forall< hiop_raja_exec >(RAJA::RangeSegment(0, n_local_),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      dd[i] = vd[id[i]];
+    }); 
+}
+
+
 /**
  * @brief Copy `nv` elements from array `v` to this vector starting from `start_index_in_this`
  * 
@@ -1086,6 +1128,29 @@ void hiopVectorRajaPar::axpy(double alpha, const hiopVector& xvec)
     {
       // y := a * x + y
       yd[i] = alpha * xd[i] + yd[i];
+    });
+}
+
+/// @brief Performs axpy, this += alpha*x, on the indexes in this specified by i.
+void hiopVectorRajaPar::axpy(double alpha, const hiopVector& xvec, const hiopVectorInt& i)
+{
+  const hiopVectorRajaPar& x = dynamic_cast<const hiopVectorRajaPar&>(xvec);
+  const hiopVectorIntRaja& idxs = dynamic_cast<const hiopVectorIntRaja&>(i);
+
+  assert(x.get_size()==i.size());
+  assert(x.get_local_size()==i.size());
+  assert(i.size()<=n_local_);
+  
+  double* dd = data_dev_;
+  double* xd = const_cast<double*>(x.data_dev_);
+  index_type* id = const_cast<index_type*>(idxs.local_data());
+
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      assert(id[i]<n_local_);
+      // y := a * x + y
+      dd[id[i]] = alpha * xd[i] + dd[id[i]];
     });
 }
 
