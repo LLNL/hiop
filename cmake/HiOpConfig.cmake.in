@@ -26,6 +26,7 @@ if(@HIOP_USE_RAJA@ AND NOT TARGET RAJA)
 endif()
 
 set(HiOp::SPARSE @HIOP_SPARSE@ CACHE BOOL "indicates if hiop sparse is enabled")
+set(HiOp::USE_COINHSL @HIOP_USE_COINHSL@ CACHE BOOL "indicates if coinhsl is enabled")
 
 if(@HIOP_USE_GPU@)
   if(@HIOP_USE_CUDA@)
