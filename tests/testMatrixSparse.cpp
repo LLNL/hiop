@@ -198,11 +198,6 @@ int main(int argc, char** argv)
     test.initializeMatrix(m4xn4_sparse, entries_per_row);
     fail += test.matrix_copy_diag_matrix_to_subblock_w_pattern(m4xn4_dense, *m4xn4_sparse, vec_n, v_patern, M_global, 2*M_global, nnz4-2*nnz, nnz_to_replace);
 
-    // reset the sparsity, since previous function may change the sparsity
-    test.initializeMatrix(m4xn4_sparse, entries_per_row);
-    fail += test.matrix_set_submatrix_to_constant_diag_w_colpattern(m4xn4_dense, *m4xn4_sparse, v_patern, M_global, 2*M_global, nnz4-2*nnz, nnz_to_replace);
-    fail += test.matrix_set_submatrix_to_constant_diag_w_rowpattern(m4xn4_dense, *m4xn4_sparse, v_patern, M_global, 2*M_global, nnz4-2*nnz, nnz_to_replace);
-
     // Remove testing objects
     delete mxn_sparse;
     delete m2xn_sparse;
@@ -326,11 +321,6 @@ int main(int argc, char** argv)
     // reset the sparsity, since previous function may change the sparsity
     test.initializeMatrix(m4xn4_sparse, entries_per_row);
     fail += test.matrix_copy_diag_matrix_to_subblock_w_pattern(m4xn4_dense, *m4xn4_sparse, vec_n, v_patern, M_global, 2*M_global, nnz4-2*nnz, nnz_to_replace);
-
-    // reset the sparsity, since previous function may change the sparsity
-    test.initializeMatrix(m4xn4_sparse, entries_per_row);
-    fail += test.matrix_set_submatrix_to_constant_diag_w_colpattern(m4xn4_dense, *m4xn4_sparse, v_patern, M_global, 2*M_global, nnz4-2*nnz, nnz_to_replace);
-    fail += test.matrix_set_submatrix_to_constant_diag_w_rowpattern(m4xn4_dense, *m4xn4_sparse, v_patern, M_global, 2*M_global, nnz4-2*nnz, nnz_to_replace);
 
     // Remove testing objects
     delete mxn_sparse;

@@ -170,31 +170,21 @@ public:
                                       const bool offdiag_only = false);
 
   /**
-  * @brief Copy selected columns of a diagonal matrix (a constant 'scalar' times identity),
+  * @brief Copy the selected cols/rows of a diagonal matrix (a constant 'scalar' times identity),
   * into 'this' as a submatrix from corner 'dest_row_st' and 'dest_col_st'
   * The non-zero elements start from 'dest_nnz_st' will be replaced by the new elements.
-  * @pre The diagonal entries in the destination need to be contiguous in the sparse triplet arrays of the destinations.
-  * @pre this function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
   */
   virtual void setSubmatrixToConstantDiag_w_colpattern(const double& scalar,
                                                        const index_type& dest_row_st,
                                                        const index_type& dest_col_st,
                                                        const size_type& dest_nnz_st,
-                                                       const size_type& nnz_to_copy,
+                                                       const int &nnz_to_copy,
                                                        const hiopVector& ix);
-
-  /**
-  * @brief Copy selected rows of a diagonal matrix (a constant 'scalar' times identity),
-  * into 'this' as a submatrix from corner 'dest_row_st' and 'dest_col_st'
-  * The non-zero elements start from 'dest_nnz_st' will be replaced by the new elements.
-  * @pre The diagonal entries in the destination need to be contiguous in the sparse triplet arrays of the destinations.
-  * @pre this function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
-  */
   virtual void setSubmatrixToConstantDiag_w_rowpattern(const double& scalar,
                                                        const index_type& dest_row_st,
                                                        const index_type& dest_col_st,
                                                        const size_type& dest_nnz_st,
-                                                       const size_type& nnz_to_copy,
+                                                       const int &nnz_to_copy,
                                                        const hiopVector& ix);
 
   /**

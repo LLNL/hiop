@@ -1116,7 +1116,7 @@ void hiopMatrixSparseTriplet::setSubmatrixToConstantDiag_w_colpattern(const doub
                                                                       const index_type& dest_row_st,
                                                                       const index_type& dest_col_st,
                                                                       const size_type& dest_nnz_st,
-                                                                      const size_type& nnz_to_copy,
+                                                                      const int &nnz_to_copy,
                                                                       const hiopVector& ix)
 {
   assert(ix.get_local_size() + dest_row_st <= this->m());
@@ -1146,7 +1146,7 @@ void hiopMatrixSparseTriplet::setSubmatrixToConstantDiag_w_rowpattern(const doub
                                                                       const index_type& dest_row_st,
                                                                       const index_type& dest_col_st,
                                                                       const size_type& dest_nnz_st,
-                                                                      const size_type& nnz_to_copy,
+                                                                      const int &nnz_to_copy,
                                                                       const hiopVector& ix)
 {
   assert(nnz_to_copy + dest_row_st <= this->m());
