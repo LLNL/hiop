@@ -1278,7 +1278,7 @@ public:
   * @pre 'A' must have exactly, or more than 'nnz_to_copy' rows after row 'A_cols_st'
   * @pre The input diagonal matrix is 'src_val'*identity matrix with size 'nnz_to_copy'x'nnz_to_copy'.
   * @pre User must know the nonzero pattern of A.
-  * @pre Otherwise, this function may replace the non-zero values and nonzero patterns for the undesired elements.
+  * @pre This function may replace the non-zero values and nonzero patterns for the undesired elements.
   * @pre Allow up-to two elements setting to the same position in the sparse matrix.  
   * 
   */
@@ -1309,9 +1309,9 @@ public:
     // copy to a dense matrix
     A.copy_to(W);
 
-    const auto* iRow = getRowIndices(&A);
-    const auto* jCol = getColumnIndices(&A);
-    auto nnz = A.numberOfNonzeros();
+    const local_ordinal_type* iRow = getRowIndices(&A);
+    const local_ordinal_type* jCol = getColumnIndices(&A);
+    const local_ordinal_type nnz = A.numberOfNonzeros();
   
     fail += verifyAnswer(&W,
       [=] (local_ordinal_type i, local_ordinal_type j) -> real_type
@@ -1348,8 +1348,9 @@ public:
   * @pre 'A' must have exactly, or more than 'nnz_to_copy' rows after row 'A_cols_st'
   * @pre The input diagonal matrix has leading diagonal elements from the nonzeros from `D`, i.e., `pattern` decides the non-zero pattern
   * @pre The index vector `pattern` has same length as `D`, and `nnz_to_copy` nonzeros.
-  * @pre User must know the nonzero pattern of A and B. Assume non-zero patterns of A and B wont change, and A is a submatrix of B
-  * @pre Otherwise, this function may replace the non-zero values and nonzero patterns for the undesired elements.
+  * @pre User must know the nonzero pattern of A.
+  * @pre Assuming the non-zero pattern of A won't change after the first call of this function
+  * @pre This function may replace the non-zero values and nonzero patterns for the undesired elements.
   * @pre Allow up-to two elements setting to the same position in the sparse matrix.  
   */
   int matrix_copy_diag_matrix_to_subblock_w_pattern(hiop::hiopMatrixDense& W,
@@ -1409,6 +1410,174 @@ public:
         } else if(indexExists_in_B) {
             // this ele comes from diagonal matrix
           ans = D_val;
+        } else if(indexExists_in_A) {
+          // this ele comes from sparse matrix A
+          ans = A_val;
+        }
+        return ans;
+      }
+    );
+
+    printMessage(fail, __func__);
+    return fail;
+  }
+
+  /**
+  * @brief Copy selected columns from a diagonal matrix into `A` as a subblock starting from the corner point ('A_rows_st', 'A_cols_st').
+  * The non-zero elements start from 'A_nnz_st' will be replaced by the new elements. 
+  *
+  * @pre 'A' must have exactly, or more than 'getLocalSize(pattern)' rows after row 'A_rows_st'
+  * @pre 'A' must have exactly, or more than 'nnz_to_copy' columns after column 'A_cols_st'
+  * @pre The index vector `pattern` has `nnz_to_copy` nonzeros.
+  * @pre User must know the nonzero pattern of A.
+  * @pre Assuming the non-zero pattern of A won't change after the first call of this function
+  * @pre Otherwise, this function may replace the non-zero values and nonzero patterns for the undesired elements.
+  * @pre Allow up-to two elements setting to the same position in the sparse matrix.  
+  */
+  int matrix_set_submatrix_to_constant_diag_w_colpattern(hiop::hiopMatrixDense& W,
+                                                         hiop::hiopMatrixSparse& A,
+                                                         hiop::hiopVector& pattern,
+                                                         local_ordinal_type A_rows_st,
+                                                         local_ordinal_type A_cols_st,
+                                                         local_ordinal_type A_nnz_st,
+                                                         local_ordinal_type nnz_to_copy,
+                                                         const int rank = 0)
+  {
+    assert(A.m() == W.m()); // W has same dimension as A
+    assert(A.n() == W.n()); // W has same dimension as A
+  
+    const local_ordinal_type N = getLocalSize(&pattern);
+  
+    assert(A.m() >= N + A_rows_st);
+    assert(A.n() >= nnz_to_copy + A_cols_st);
+      
+    assert(nnz_to_copy+A_nnz_st <= A.numberOfNonzeros());
+    
+    const real_type A_val = half;
+    const real_type scal_val = two;
+
+    A.setToConstant(A_val);
+    pattern.setToConstant(zero);
+    if (rank== 0) {
+      for(int i=0; i<nnz_to_copy; i++) {
+        setLocalElement(&pattern, N - i - 1, one);
+      }
+    }
+
+    int fail{0};
+    A.setSubmatrixToConstantDiag_w_colpattern(scal_val, A_rows_st, A_cols_st, A_nnz_st, nnz_to_copy, pattern);
+
+    // copy to a dense matrix
+    A.copy_to(W);
+
+    const local_ordinal_type* iRow = getRowIndices(&A);
+    const local_ordinal_type* jCol = getColumnIndices(&A);
+    const local_ordinal_type nnz = A.numberOfNonzeros();
+
+    const double *ix_v = pattern.local_data_host_const();
+  
+    fail += verifyAnswer(&W,
+      [=] (local_ordinal_type i, local_ordinal_type j) -> real_type
+      {
+        double ans = zero;
+        const int i_src = i - A_rows_st;
+        const int j_src = j - A_cols_st;
+        const bool i_in_B = (i_src >= 0 && i_src < N );
+        const bool j_in_B = (j_src >= 0 && j_src < nnz_to_copy);
+        const bool indexExists_in_A = find_unsorted_pair(i, j, iRow, jCol, nnz);
+        const bool indexExists_in_B = i_in_B && j_in_B && (ix_v[i_src]!=0.0 && j_src == nnz_to_copy + i_src - N);
+        const bool indexExists_in_A_not_replaced_by_B = (   find_unsorted_pair(i, j, iRow, jCol, 0, A_nnz_st) 
+                                                         || find_unsorted_pair(i, j, iRow, jCol, A_nnz_st+nnz_to_copy, nnz));
+        if(indexExists_in_A_not_replaced_by_B && indexExists_in_B) {
+          // this ele comes from sparse matrix A and B        
+          ans = scal_val + A_val;
+        } else if(indexExists_in_B) {
+            // this ele comes from diagonal matrix
+          ans = scal_val;
+        } else if(indexExists_in_A) {
+          // this ele comes from sparse matrix A
+          ans = A_val;
+        }
+        return ans;
+      }
+    );
+
+    printMessage(fail, __func__);
+    return fail;
+  }
+
+  /**
+  * @brief Copy selected rowsß from a diagonal matrix into `A` as a subblock starting from the corner point ('A_rows_st', 'A_cols_st').
+  * The non-zero elements start from 'A_nnz_st' will be replaced by the new elements. 
+  *
+  * @pre 'A' must have exactly, or more than 'getLocalSize(pattern)' columns after column 'A_col_st'
+  * @pre 'A' must have exactly, or more than 'nnz_to_copy' columns after column 'A_rowsß_st'
+  * @pre The index vector `pattern` has `nnz_to_copy` nonzeros.
+  * @pre User must know the nonzero pattern of A.
+  * @pre Assuming the non-zero pattern of A won't change after the first call of this function
+  * @pre Otherwise, this function may replace the non-zero values and nonzero patterns for the undesired elements.
+  * @pre Allow up-to two elements setting to the same position in the sparse matrix.  
+  */
+  int matrix_set_submatrix_to_constant_diag_w_rowpattern(hiop::hiopMatrixDense& W,
+                                                         hiop::hiopMatrixSparse& A,
+                                                         hiop::hiopVector& pattern,
+                                                         local_ordinal_type A_rows_st,
+                                                         local_ordinal_type A_cols_st,
+                                                         local_ordinal_type A_nnz_st,
+                                                         local_ordinal_type nnz_to_copy,
+                                                         const int rank = 0)
+  {
+    assert(A.m() == W.m()); // W has same dimension as A
+    assert(A.n() == W.n()); // W has same dimension as A
+  
+    const local_ordinal_type N = getLocalSize(&pattern);
+  
+    assert(A.n() >= N + A_cols_st);
+    assert(A.m() >= nnz_to_copy + A_rows_st);
+      
+    assert(nnz_to_copy+A_nnz_st <= A.numberOfNonzeros());
+    
+    const real_type A_val = half;
+    const real_type scal_val = two;
+
+    A.setToConstant(A_val);
+    pattern.setToConstant(zero);
+    if (rank== 0) {
+      for(int i=0; i<nnz_to_copy; i++) {
+        setLocalElement(&pattern, N - i - 1, one);
+      }
+    }
+
+    int fail{0};
+    A.setSubmatrixToConstantDiag_w_rowpattern(scal_val, A_rows_st, A_cols_st, A_nnz_st, nnz_to_copy, pattern);
+
+    // copy to a dense matrix
+    A.copy_to(W);
+
+    const local_ordinal_type* iRow = getRowIndices(&A);
+    const local_ordinal_type* jCol = getColumnIndices(&A);
+    const local_ordinal_type nnz = A.numberOfNonzeros();
+
+    const double *ix_v = pattern.local_data_host_const();
+  
+    fail += verifyAnswer(&W,
+      [=] (local_ordinal_type i, local_ordinal_type j) -> real_type
+      {
+        double ans = zero;
+        const int i_src = i - A_rows_st;
+        const int j_src = j - A_cols_st;
+        const bool i_in_B = (i_src >= 0 && i_src < nnz_to_copy);
+        const bool j_in_B = (j_src >= 0 && j_src < N);
+        const bool indexExists_in_A = find_unsorted_pair(i, j, iRow, jCol, nnz);
+        const bool indexExists_in_B = i_in_B && j_in_B && (ix_v[j_src]!=0.0 && i_src == nnz_to_copy + j_src - N);
+        const bool indexExists_in_A_not_replaced_by_B = (   find_unsorted_pair(i, j, iRow, jCol, 0, A_nnz_st) 
+                                                         || find_unsorted_pair(i, j, iRow, jCol, A_nnz_st+nnz_to_copy, nnz));
+        if(indexExists_in_A_not_replaced_by_B && indexExists_in_B) {
+          // this ele comes from sparse matrix A and B        
+          ans = scal_val + A_val;
+        } else if(indexExists_in_B) {
+            // this ele comes from diagonal matrix
+          ans = scal_val;
         } else if(indexExists_in_A) {
           // this ele comes from sparse matrix A
           ans = A_val;
