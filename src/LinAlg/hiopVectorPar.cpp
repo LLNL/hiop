@@ -1051,14 +1051,20 @@ void hiopVectorPar::print(FILE* file, const char* msg/*=NULL*/, int max_elems/*=
 
 hiopMatrixSparse* hiopVectorPar::diagMat()
 {
-  size_type len = this->get_local_size();
+  printf("start diag function\n");
+  
+  size_type len = n_local_;
+  
+  printf("matrix size is %d\n", len);
 
   hiopMatrixSparse* Dmat= 
     LinearAlgebraFactory::create_matrix_sparse("DEFAULT", len, len, len);
-
+  printf("sparse creating successful\n");
   hiopMatrixSparseTriplet* sparseDiag = dynamic_cast<hiopMatrixSparseTriplet*>(Dmat);
+
   for (int i=0; i<len; i++)
   {
+    printf("creating entry %d\n",i);
     sparseDiag->i_row()[i] = i;
     sparseDiag->j_col()[i] = i;
     sparseDiag->M()[i] = data_[i];

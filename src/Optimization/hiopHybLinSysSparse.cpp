@@ -396,8 +396,16 @@ namespace hiop
     //Jac_cSp_->print();
     //Jac_dSp_->print();
     
-    
-    auto* Hx_mat = Hx_->sp
+    auto* Hx_par = dynamic_cast<hiopVectorPar*>(Hx_);
+    auto* Hd_par = dynamic_cast<hiopVectorPar*>(Hd_);
+   
+    printf("casting successfull\n");
+
+    auto* Hx_mat = Hx_par->diagMat();
+    auto* Hd_mat = Hd_par->diagMat();
+
+    Hx_mat->print();
+    Hd_mat->print();
     
     hiopLinSolverIndefSparse* linSys = dynamic_cast<hiopLinSolverIndefSparse*> (linSys_);
     assert(linSys);
