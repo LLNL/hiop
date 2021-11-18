@@ -53,6 +53,9 @@
 #include "hiopVector.hpp"
 #include "hiopVectorInt.hpp"
 
+  
+#include "hiopMatrixSparseTriplet.hpp"
+
 #include <cstdio>
 
 namespace hiop
@@ -237,7 +240,20 @@ public:
                                  const int start, 
                                  const int end, 
                                  const hiopInterfaceBase::NonlinearityType arr_src) const;
- 
+
+/*
+  @brief A method on a diagonal matrix stored as a vector that changes is to
+  sparse matrix in COO
+        
+  @pre 
+  @param _this_ is a hiopVectorPar (representing a diagonal matrix) 
+  
+  @post
+  @param _this_ is a hiopVectorPar (representing a diagonal matrix) 
+  @param sparseDiag is a diagonal matrix stored as a sparse matrix in COO
+*/
+
+  hiopMatrixSparse* diagMat();
 protected:
   MPI_Comm comm_;
   double* data_;

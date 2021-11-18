@@ -388,13 +388,20 @@ namespace hiop
     
     auto* HessSp_Triplet = dynamic_cast<hiopMatrixSymSparseTriplet*>(Hess_);
     
-    auto* un_sym_mat =
+    auto* Hess_unsym =
     dynamic_cast<hiopMatrixSparseTriplet*>(HessSp_Triplet->explicitlySymmetrize());
     
-   un_sym_mat->print(); 
+   //Hess_unsym->print(); 
+
+    //Jac_cSp_->print();
+    //Jac_dSp_->print();
+    
+    
+    auto* Hx_mat = Hx_->sp
     
     hiopLinSolverIndefSparse* linSys = dynamic_cast<hiopLinSolverIndefSparse*> (linSys_);
     assert(linSys);
+
 
     hiopMatrixSparseTriplet& Msys = linSys->sysMatrix();
     if(perf_report_) {

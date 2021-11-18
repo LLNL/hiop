@@ -46,7 +46,7 @@
 // product endorsement purposes.
 
 #include "hiopVectorPar.hpp"
-
+#include "hiopLinAlgFactory.hpp"
 #include <cmath>
 #include <cstring> //for memcpy
 #include <algorithm>
@@ -1049,8 +1049,24 @@ void hiopVectorPar::print(FILE* file, const char* msg/*=NULL*/, int max_elems/*=
   }
 }
 
+hiopMatrixSparse* hiopVectorPar::diagMat()
+{
+  size_type len = this->get_local_size();
 
-size_type hiopVectorPar::numOfElemsLessThan(const double &val) const
+  hiopMatrixSparse* Dmat= 
+    LinearAlgebraFactory::create_matrix_sparse("DEFAULT", len, len, len);
+
+  hiopMatrixSparseTriplet* sparseDiag = dynamic_cast<hiopMatrixSparseTriplet*>(Dmat);
+  for (int i=0; i<len; i++)
+  {
+    sparseDiag->i_row()[i] = i;
+    sparseDiag->j_col()[i] = i;
+    sparseDiag->M()[i] = data_[i];
+  }
+
+}
+
+  size_type hiopVectorPar::numOfElemsLessThan(const double &val) const
 {
   size_type ret_num = 0;
   for(size_type i=0; i<n_local_; i++) {
