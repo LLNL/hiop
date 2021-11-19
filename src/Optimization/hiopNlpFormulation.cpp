@@ -944,7 +944,7 @@ void hiopNlpFormulation::user_callback_solution(hiopSolveStatus status,
                                    (int)n_cons,
                                    cons_body_->local_data_const(),
                                    cons_lambdas_->local_data_const(),
-                                   obj_value);
+                                   obj_value/this->get_obj_scale());
 }
 
 bool hiopNlpFormulation::user_callback_iterate(int iter,
@@ -988,7 +988,7 @@ bool hiopNlpFormulation::user_callback_iterate(int iter,
   //! variables internally
 
   return interface_base.iterate_callback(iter,
-                                         obj_value,
+                                         obj_value/this->get_obj_scale(),
                                          logbar_obj_value,
                                          (int)n_vars,
                                          x.local_data_const(),
@@ -1043,7 +1043,7 @@ bool hiopNlpFormulation::user_force_update(int iter,
   //! zl and zu may have different sizes than what user expects since HiOp removes
   //! variables internally
 
-  retval = interface_base.force_update(obj_value,
+  retval = interface_base.force_update(obj_value/this->get_obj_scale(),
                                        (int)n_vars,
                                        x.local_data(),
                                        z_L.local_data(),
