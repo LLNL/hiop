@@ -153,8 +153,8 @@ void hiopVectorPar::copy_from_indexes(const hiopVector& vv, const hiopVectorInt&
   assert(indexes.size() == n_local_);
   
   const index_type* index_arr = indexes.local_data_const();
-  int nv = v.get_local_size();
-  for(int i=0; i<n_local_; i++) {
+  size_type nv = v.get_local_size();
+  for(index_type i=0; i<n_local_; i++) {
     assert(index_arr[i]<nv);
     this->data_[i] = v.data_[index_arr[i]];
   }
@@ -236,7 +236,9 @@ void hiopVectorPar::copyToStarting(hiopVector& v_, int start_index/*_in_dest*/) 
   memcpy(v.data_+start_index, data_, n_local_*sizeof(double)); 
 }
 
-void hiopVectorPar::copyToStartingAt_w_pattern(hiopVector& v_, int start_index/*_in_dest*/, const hiopVector& select) const
+void hiopVectorPar::copyToStartingAt_w_pattern(hiopVector& v_,
+                                               index_type start_index/*_in_dest*/,
+                                               const hiopVector& select) const
 {
   const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_);
   const hiopVectorPar& ix = dynamic_cast<const hiopVectorPar&>(select);
@@ -244,8 +246,10 @@ void hiopVectorPar::copyToStartingAt_w_pattern(hiopVector& v_, int start_index/*
   const double* ix_vec = ix.data_;
   int find_nnz = 0;
   
-  for(int i=0; i<n_local_; i++)
-    if(ix_vec[i]==1.) v.data_[start_index+(find_nnz++)] = data_[i];
+  for(index_type i=0; i<n_local_; i++)
+    if(ix_vec[i]==1.) {
+      v.data_[start_index+(find_nnz++)] = data_[i];
+    }
   assert(find_nnz + start_index <= v.n_local_);
 }
 
@@ -339,8 +343,11 @@ startingAtCopyToStartingAt(int start_idx_in_src, hiopVector& dest_, int start_id
   memcpy(dest.data_+start_idx_dest, this->data_+start_idx_in_src, num_elems*sizeof(double));
 }
 
-void hiopVectorPar::
-startingAtCopyToStartingAt_w_pattern(int start_idx_in_src, hiopVector& dest_, int start_idx_dest, const hiopVector& selec_dest, int num_elems/*=-1*/) const
+void hiopVectorPar::startingAtCopyToStartingAt_w_pattern(index_type start_idx_in_src,
+                                                         hiopVector& dest_,
+                                                         index_type start_idx_dest,
+                                                         const hiopVector& selec_dest,
+                                                         size_type num_elems/*=-1*/) const
 {
   assert(start_idx_in_src>=0 && start_idx_in_src<=n_local_);
   const hiopVectorPar& dest = dynamic_cast<hiopVectorPar&>(dest_);
@@ -575,7 +582,7 @@ void hiopVectorPar::axpy(double alpha, const hiopVector& x_in)
 {
   const hiopVectorPar& x = dynamic_cast<const hiopVectorPar&>(x_in);
   int one = 1;
-  int n=n_local_;
+  int n = n_local_;
   DAXPY( &n, &alpha, x.data_, &one, data_, &one );
 }
 
@@ -591,7 +598,7 @@ void hiopVectorPar::axpy(double alpha, const hiopVector& x, const hiopVectorInt&
   const double* xd = xx.local_data_const();
   const index_type* id = idxs.local_data_const();
   
-  for(int j=0; j<idxs.size(); ++j) {
+  for(index_type j=0; j<idxs.size(); ++j) {
     assert(id[j]<n_local_);
     data_[id[j]] += alpha*xd[j];
   }

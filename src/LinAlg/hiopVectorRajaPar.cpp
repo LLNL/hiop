@@ -278,7 +278,7 @@ void hiopVectorRajaPar::copy_from(const hiopVector& vec, const hiopVectorInt& in
 {
   const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(vec);
   const hiopVectorIntRaja& indexes = dynamic_cast<const hiopVectorIntRaja&>(index_in_src);
-  int nv = v.get_local_size();
+  size_type nv = v.get_local_size();
 
   assert(indexes.size() == n_local_);
   
@@ -324,7 +324,7 @@ void hiopVectorRajaPar::copy_from_indexes(const hiopVector& vv, const hiopVector
   double* dd = data_dev_;
   double* vd = v.data_dev_;
 
-  int nv = v.get_local_size();
+  size_type nv = v.get_local_size();
   
   RAJA::forall< hiop_raja_exec >(RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
@@ -700,8 +700,11 @@ void hiopVectorRajaPar::startingAtCopyToStartingAt(
   rm.copy(dest.data_dev_ + start_idx_dest, this->data_dev_ + start_idx_in_src, num_elems*sizeof(double));
 }
 
-void hiopVectorRajaPar::
-startingAtCopyToStartingAt_w_pattern(int start_idx_in_src, hiopVector& destination, int start_idx_dest, const hiopVector& selec_dest, int num_elems/*=-1*/) const
+void hiopVectorRajaPar::startingAtCopyToStartingAt_w_pattern(index_type start_idx_in_src,
+                                                             hiopVector& destination,
+                                                             index_type start_idx_dest,
+                                                             const hiopVector& selec_dest,
+                                                             size_type num_elems/*=-1*/) const
 {
 #if 0  
   hiopVectorRajaPar& dest = dynamic_cast<hiopVectorRajaPar&>(destination);

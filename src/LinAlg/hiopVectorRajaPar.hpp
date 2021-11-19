@@ -155,12 +155,14 @@ public:
    * If num_elems>=0, 'num_elems' will be copied; if num_elems<0, elements will be copied till the end of
    * either source ('this') or destination ('dest') is reached
    * if 'selec_dest' is given, the values are copy to 'dest' where the corresponding entry in 'selec_dest' is nonzero */
-  virtual void startingAtCopyToStartingAt(int start_idx_in_src, hiopVector& dest, int start_idx_dest, int num_elems=-1) const;
-  virtual void startingAtCopyToStartingAt_w_pattern(int start_idx_in_src,
+  virtual void startingAtCopyToStartingAt(index_type start_idx_in_src,
+                                          hiopVector& dest, index_type start_idx_dest,
+                                          size_type num_elems=-1) const;
+  virtual void startingAtCopyToStartingAt_w_pattern(index_type start_idx_in_src,
                                                     hiopVector& dest,
-                                                    int start_idx_dest,
+                                                    index_type start_idx_dest,
                                                     const hiopVector& selec_dest,
-                                                    int num_elems=-1) const;
+                                                    size_type num_elems=-1) const;
 
   virtual double twonorm() const;
   virtual double dotProductWith( const hiopVector& v ) const;
