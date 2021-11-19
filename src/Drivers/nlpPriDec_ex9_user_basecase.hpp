@@ -12,7 +12,6 @@ public:
 
   virtual ~PriDecBasecaseProblemEx9()
   {
-    delete rec_evaluator_;
   }
 
   bool eval_f(const size_type& n, const double* x, bool new_x, double& obj_value)

@@ -46,6 +46,7 @@
 // product endorsement purposes.
 
 #include "hiopVectorPar.hpp"
+#include "hiopVectorIntSeq.hpp"
 
 #include <cmath>
 #include <cstring> //for memcpy
@@ -85,16 +86,22 @@ hiopVectorPar::hiopVectorPar(const size_type& glob_n, index_type* col_part/*=NUL
 
   data_ = new double[n_local_];
 }
+
+/// internal use only: allocates data_
 hiopVectorPar::hiopVectorPar(const hiopVectorPar& v)
 {
-  n_local_=v.n_local_; n_ = v.n_;
-  glob_il_=v.glob_il_; glob_iu_=v.glob_iu_;
-  comm_=v.comm_;
-  data_=new double[n_local_];  
+  n_local_ = v.n_local_;
+  n_ = v.n_;
+  glob_il_ = v.glob_il_;
+  glob_iu_ = v.glob_iu_;
+  comm_ = v.comm_;
+  data_ = new double[n_local_];  
 }
+  
 hiopVectorPar::~hiopVectorPar()
 {
-  delete[] data_; data_=NULL;
+  delete[] data_;
+  data_ = nullptr;
 }
 
 hiopVector* hiopVectorPar::alloc_clone() const
@@ -137,21 +144,31 @@ void hiopVectorPar::copyFrom(const double* v_local_data )
     memcpy(this->data_, v_local_data, n_local_*sizeof(double));
 }
 
-void hiopVectorPar::copyFrom(const int* index_in_src, const hiopVector& v_)
+/// @brief Copy from vec the elements specified by the indices in index_in_src
+void hiopVectorPar::copy_from_indexes(const hiopVector& vv, const hiopVectorInt& index_in_src)
 {
-  const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_);
-  int nv = v.get_local_size();
-  for(int i=0; i<n_local_; i++) {
-    assert(index_in_src[i]<nv);
-    this->data_[i] = v.data_[index_in_src[i]];
+  const hiopVectorIntSeq& indexes = dynamic_cast<const hiopVectorIntSeq&>(index_in_src);
+  const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(vv);
+
+  assert(indexes.size() == n_local_);
+  
+  const index_type* index_arr = indexes.local_data_const();
+  size_type nv = v.get_local_size();
+  for(index_type i=0; i<n_local_; i++) {
+    assert(index_arr[i]<nv);
+    this->data_[i] = v.data_[index_arr[i]];
   }
 }
 
-void hiopVectorPar::copyFrom(const int* index_in_src, const double* v_)
+/// @brief Copy from vec the elements specified by the indices in index_in_src
+void hiopVectorPar::copy_from_indexes(const double* vv, const hiopVectorInt& index_in_src)
 {
-  if(v_) {
+  if(vv) {
+    const hiopVectorIntSeq& indexes = dynamic_cast<const hiopVectorIntSeq&>(index_in_src);
+    const index_type* index_arr = indexes.local_data_const();
+    assert(indexes.size() == n_local_);
     for(int i=0; i<n_local_; i++) {
-      this->data_[i] = v_[index_in_src[i]];
+      this->data_[i] = vv[index_arr[i]];
     }
   }
 }
@@ -219,7 +236,9 @@ void hiopVectorPar::copyToStarting(hiopVector& v_, int start_index/*_in_dest*/) 
   memcpy(v.data_+start_index, data_, n_local_*sizeof(double)); 
 }
 
-void hiopVectorPar::copyToStartingAt_w_pattern(hiopVector& v_, int start_index/*_in_dest*/, const hiopVector& select) const
+void hiopVectorPar::copyToStartingAt_w_pattern(hiopVector& v_,
+                                               index_type start_index/*_in_dest*/,
+                                               const hiopVector& select) const
 {
   const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_);
   const hiopVectorPar& ix = dynamic_cast<const hiopVectorPar&>(select);
@@ -227,8 +246,10 @@ void hiopVectorPar::copyToStartingAt_w_pattern(hiopVector& v_, int start_index/*
   const double* ix_vec = ix.data_;
   int find_nnz = 0;
   
-  for(int i=0; i<n_local_; i++)
-    if(ix_vec[i]==1.) v.data_[start_index+(find_nnz++)] = data_[i];
+  for(index_type i=0; i<n_local_; i++)
+    if(ix_vec[i]==1.) {
+      v.data_[start_index+(find_nnz++)] = data_[i];
+    }
   assert(find_nnz + start_index <= v.n_local_);
 }
 
@@ -322,8 +343,11 @@ startingAtCopyToStartingAt(int start_idx_in_src, hiopVector& dest_, int start_id
   memcpy(dest.data_+start_idx_dest, this->data_+start_idx_in_src, num_elems*sizeof(double));
 }
 
-void hiopVectorPar::
-startingAtCopyToStartingAt_w_pattern(int start_idx_in_src, hiopVector& dest_, int start_idx_dest, const hiopVector& selec_dest, int num_elems/*=-1*/) const
+void hiopVectorPar::startingAtCopyToStartingAt_w_pattern(index_type start_idx_in_src,
+                                                         hiopVector& dest_,
+                                                         index_type start_idx_dest,
+                                                         const hiopVector& selec_dest,
+                                                         size_type num_elems/*=-1*/) const
 {
   assert(start_idx_in_src>=0 && start_idx_in_src<=n_local_);
   const hiopVectorPar& dest = dynamic_cast<hiopVectorPar&>(dest_);
@@ -554,13 +578,32 @@ void hiopVectorPar::scale(double num)
   DSCAL(&n, &num, data_, &one);
 }
 
-void hiopVectorPar::axpy(double alpha, const hiopVector& x_)
+void hiopVectorPar::axpy(double alpha, const hiopVector& x_in)
 {
-  const hiopVectorPar& x = dynamic_cast<const hiopVectorPar&>(x_);
-  int one = 1; int n=n_local_;
+  const hiopVectorPar& x = dynamic_cast<const hiopVectorPar&>(x_in);
+  int one = 1;
+  int n = n_local_;
   DAXPY( &n, &alpha, x.data_, &one, data_, &one );
 }
 
+/// @brief Performs axpy, this += alpha*x, on the indexes in this specified by i.
+void hiopVectorPar::axpy(double alpha, const hiopVector& x, const hiopVectorInt& i)
+{
+  const hiopVectorPar& xx = dynamic_cast<const hiopVectorPar&>(x);
+  const hiopVectorIntSeq& idxs = dynamic_cast<const hiopVectorIntSeq&>(i);
+
+  assert(x.get_local_size() == idxs.size());
+  assert(n_local_ >= idxs.size());
+
+  const double* xd = xx.local_data_const();
+  const index_type* id = idxs.local_data_const();
+  
+  for(index_type j=0; j<idxs.size(); ++j) {
+    assert(id[j]<n_local_);
+    data_[id[j]] += alpha*xd[j];
+  }
+
+}
 void hiopVectorPar::axzpy(double alpha, const hiopVector& x_, const hiopVector& z_)
 {
   const hiopVectorPar& vx = dynamic_cast<const hiopVectorPar&>(x_);

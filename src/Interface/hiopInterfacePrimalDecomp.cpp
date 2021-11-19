@@ -11,9 +11,12 @@ RecourseApproxEvaluator(int nc, const std::string& mem_space)
 hiopInterfacePriDecProblem::RecourseApproxEvaluator::
 ~RecourseApproxEvaluator() 
 {
+  delete xc_idx_;
   delete rgrad_;
   delete rhess_;
-  delete x0_;  
+  delete x0_;
+  delete vec_work_coupling_;
+  delete vec_work_basecase_;
 }
 
 hiopInterfacePriDecProblem::RecourseApproxEvaluator::
@@ -22,11 +25,14 @@ RecourseApproxEvaluator(int nc, int S, const std::string& mem_space)
     mem_space_(mem_space)
 {
   assert(S>=nc);
-  xc_idx_ = new int[nc_];
-  for(int i=0;i<nc_;i++) xc_idx_[i] = i;
+  xc_idx_ = LinearAlgebraFactory::create_vector_int(mem_space_, nc);
+  xc_idx_->linspace(0,1);
+  
   rgrad_ = LinearAlgebraFactory::create_vector(mem_space_, nc);
   rhess_ = rgrad_->alloc_clone();
   x0_ = rgrad_->alloc_clone();
+  vec_work_coupling_ = rgrad_->alloc_clone();
+  vec_work_basecase_ = nullptr;
 }
 
 hiopInterfacePriDecProblem::RecourseApproxEvaluator::
@@ -40,12 +46,11 @@ RecourseApproxEvaluator(const int nc,
   rgrad_ = LinearAlgebraFactory::create_vector(mem_space_, nc);
   rhess_ = rgrad_->alloc_clone();
   x0_ = rgrad_->alloc_clone();
-  //assert(list.size()==nc_);
-  xc_idx_ = new int[nc_];
+  vec_work_coupling_ = rgrad_->alloc_clone();
+  vec_work_basecase_ = nullptr;
   
-  for(int i=0;i<nc_;i++) {
-    xc_idx_[i] = list[i];
-  }
+  xc_idx_ = LinearAlgebraFactory::create_vector_int(mem_space_, nc);
+  xc_idx_->copy_from(list);
 }
 
 hiopInterfacePriDecProblem::RecourseApproxEvaluator::
@@ -62,13 +67,14 @@ RecourseApproxEvaluator(const int nc,
   //assert(S>=nc);
   rval_ = rval;
   rgrad_ = LinearAlgebraFactory::create_vector(mem_space_, nc);
-  //rgrad_ = new double[nc];
   rhess_ = rgrad_->alloc_clone();
+
   x0_ = rgrad_->alloc_clone();
-  xc_idx_ = new int[nc_];
-  for(int i=0; i<nc_; i++) {
-    xc_idx_[i] = i;
-  }
+  vec_work_coupling_ = rgrad_->alloc_clone();
+  vec_work_basecase_ = nullptr;
+  
+  xc_idx_ = LinearAlgebraFactory::create_vector_int(mem_space_, nc);
+  xc_idx_->linspace(0,1);
 
   rgrad_->copyFromStarting(0, rgrad.local_data_const(), nc);
   rhess_->copyFromStarting(0, rhess.local_data_const(), nc);
@@ -93,11 +99,13 @@ RecourseApproxEvaluator(const int nc,
   rgrad_ = LinearAlgebraFactory::create_vector(mem_space_, nc);
   rhess_ = rgrad_->alloc_clone();
   x0_ = rgrad_->alloc_clone();
-  xc_idx_ = new int[nc_];
-  for(int i=0;i<nc_;i++) xc_idx_[i] = list[i];
+  vec_work_coupling_ = rgrad_->alloc_clone();
+  vec_work_basecase_ = nullptr;
+ 
+  xc_idx_ = LinearAlgebraFactory::create_vector_int(mem_space_, nc);
+  xc_idx_->copy_from(list);
 
   rgrad_->copyFromStarting(0, rgrad.local_data_const(), nc);
-  //memcpy(rgrad_,rgrad, nc*sizeof(double));
   rhess_->copyFromStarting(0, rhess.local_data_const(), nc);
   x0_->copyFromStarting(0, x0.local_data_const(), nc);
 }
@@ -112,18 +120,17 @@ bool hiopInterfacePriDecProblem::RecourseApproxEvaluator::
 eval_f(const size_type& n, const double* x, bool new_x, double& obj_value)
 {
   assert(rgrad_!=NULL);
+
   obj_value += rval_;
 
-  //TODO: have a buffer_x member in the class, of type hiopVector;
-  //      allocate once and reuse to avoid repeated allocations
-  hiopVector* temp = rgrad_->alloc_clone(); 
-  temp->copyFrom(xc_idx_,x);   
-  temp->axpy(-1.0,*x0_);
-  obj_value += temp->dotProductWith(*rgrad_);
+  hiopVector& v = *vec_work_coupling_;
+  v.copy_from_indexes(x, *xc_idx_);   
+  v.axpy(-1.0, *x0_);
+  obj_value += v.dotProductWith(*rgrad_);
 
-  temp->componentMult(*temp);
-  obj_value += 0.5*temp->dotProductWith(*rhess_);
-  delete temp;
+  v.componentMult(v);
+  obj_value += 0.5*v.dotProductWith(*rhess_);
+
   return true;
 }
  
@@ -132,29 +139,35 @@ bool hiopInterfacePriDecProblem::RecourseApproxEvaluator::
 eval_grad(const size_type& n, const double* x, bool new_x, double* grad)
 {
   assert(rgrad_!=NULL);
-  double* rgrad_arr = rgrad_->local_data();
-  double* rhess_arr = rhess_->local_data();
-  double* x0_arr = x0_->local_data();
   
-  //TODO: have a buffer_x member in the class, of type hiopVector;
-  //      allocate once and reuse to avoid repeated allocations
-  hiopVector* temp = rgrad_->alloc_clone(); 
-  temp->copyFrom(xc_idx_,x);
-  temp->axpy(-1.0,*x0_);
-  temp->componentMult(*rhess_);
-  temp->axpy(1.0,*rgrad_);
+  hiopVector& v = *vec_work_coupling_;
+  // v = x-x0
+  v.copy_from_indexes(x, *xc_idx_);
+  v.axpy(-1.0, *x0_);
 
-  //TODO: this is cpu code
-  for(int i=0; i<nc_; i++) {
-    grad[xc_idx_[i]] += temp->local_data()[i];
+  // v = Hess*(x-x0)
+  v.componentMult(*rhess_);
+
+  // v =  Hess*(x-x0) + grad
+  v.axpy(1.0, *rgrad_);
+
+  if(nullptr == vec_work_basecase_) {
+    vec_work_basecase_ = LinearAlgebraFactory::create_vector(mem_space_, n);
   }
-  delete temp;
+
+  hiopVector& grad_vec = *vec_work_basecase_;
+  grad_vec.copyFrom(grad);
+  //add the recourse gradient to the basecase gradient
+  grad_vec.axpy(1.0, v, *xc_idx_);
+  
+  grad_vec.copyTo(grad);
+  
   return true;
 }
 
 /**
  * Hessian evaluation is different since it's hard to decipher the 
- * sepcific Lagrangian arrangement at this level
+ * specific Lagrangian arrangement at this level
  * So hess currently is a vector of nc_ length 
  * Careful when implementing in the full problem  
  */
@@ -201,7 +214,6 @@ void hiopInterfacePriDecProblem::RecourseApproxEvaluator::set_rhess(const int n,
   rhess_->copyFromStarting(0, rhess.local_data_const(), nc_);
 }
 
-
 void hiopInterfacePriDecProblem::RecourseApproxEvaluator::set_x0(const int n, const hiopVector& x0)
 {
   assert(n == nc_);
@@ -209,14 +221,6 @@ void hiopInterfacePriDecProblem::RecourseApproxEvaluator::set_x0(const int n, co
     x0_ = LinearAlgebraFactory::create_vector(mem_space_, nc_);
   }
   x0_->copyFromStarting(0, x0.local_data_const(), nc_);
-}
-
-void hiopInterfacePriDecProblem::RecourseApproxEvaluator::set_xc_idx(const int* idx)
-{
-  if(xc_idx_==NULL){ 
-    xc_idx_ = new int[nc_];
-  }
-  for(int i=0;i<nc_;i++) xc_idx_[i] = idx[i];
 }
 
 int hiopInterfacePriDecProblem::RecourseApproxEvaluator::get_S() const 
@@ -242,11 +246,6 @@ hiopVector* hiopInterfacePriDecProblem::RecourseApproxEvaluator::get_rhess() con
 hiopVector* hiopInterfacePriDecProblem::RecourseApproxEvaluator::get_x0() const 
 {
   return x0_;
-}
-
-int* hiopInterfacePriDecProblem::RecourseApproxEvaluator::get_xc_idx() const 
-{
-  return xc_idx_;
 }
 
 

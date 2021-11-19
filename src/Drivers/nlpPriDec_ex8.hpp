@@ -121,6 +121,7 @@ public:
   }
   virtual ~PriDecMasterProblemEx8()
   {
+    delete[] sol_;
     delete my_nlp;
   }
   
