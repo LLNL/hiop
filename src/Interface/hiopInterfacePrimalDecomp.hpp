@@ -159,23 +159,27 @@ public:
     void set_rgrad(const int n, const hiopVector& rgrad);
     void set_rhess(const int n, const hiopVector& rhess);
     void set_x0(const int n, const hiopVector& x0);
-    void set_xc_idx(const int* idx);
+    //void set_xc_idx(const int* idx);
 
     int get_S() const; 
     double get_rval() const;
     hiopVector* get_rgrad() const;
     hiopVector* get_rhess() const;
     hiopVector* get_x0() const;
-    int* get_xc_idx() const; 
   protected:
-    int nc_,S_;
-    //TODO: this may need to by a hiopVectorInt since seems to get on the device eventually.
-    int* xc_idx_;
+    int nc_, S_;
+    hiopVectorInt* xc_idx_;
     double rval_;
     hiopVector* rgrad_;
     hiopVector* rhess_; //diagonal Hessian vector
     hiopVector* x0_; //current solution
 
+    /// working buffer in the size of coupling variables (same size as x0_, rgrad_, and rhess_)
+    hiopVector* vec_work_coupling_;
+
+    /// working buffer in the size of the basecase (primal variables)
+    hiopVector* vec_work_basecase_;
+    
     /// memory space of the PriDec solver (must match the memory space of the NLP solver)
     std::string mem_space_;
   };

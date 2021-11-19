@@ -61,7 +61,6 @@ Ex8::Ex8(int ns_, int S_, bool include, hiopInterfacePriDecProblem::RecourseAppr
 
 Ex8::~Ex8()
 {
-  delete evaluator_;
 }
  
 bool Ex8::get_prob_sizes(size_type& n, size_type& m)
@@ -247,11 +246,11 @@ solve_master(hiopVector& x,
     printf("solver returned negative solve status: %d (with objective is %18.12e)\n", status, obj_);
     return status;
   }
-  if(sol_==NULL) {
+  if(sol_ == nullptr) {
     sol_ = new double[n_];
   }
 
-  memcpy(sol_,x_vec, n_*sizeof(double));
+  memcpy(sol_, x_vec, n_*sizeof(double));
   //assert("for debugging" && false); //for debugging purpose
   return Solve_Success;
 

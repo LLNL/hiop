@@ -122,6 +122,22 @@ public:
     return fail;
   }
 
+  virtual bool vector_linspace(hiop::hiopVectorInt& x) const
+  {
+    int fail = 0;
+
+    x.set_to_constant(1);
+    x.linspace(0, 2);
+
+    for(int i=0; i<x.size(); i++) {
+      if(getLocalElement(&x, i) != 2*i) {
+        ++fail;
+      }
+    }
+    printMessage(fail, __func__);
+    return fail;
+  }
+  
   virtual bool vector_copy_from(hiop::hiopVectorInt& x, hiop::hiopVectorInt& y) const
   {
     int fail = 0;

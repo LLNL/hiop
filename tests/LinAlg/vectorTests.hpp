@@ -187,27 +187,46 @@ public:
     v.copyFrom(from_buffer);
     fail += verifyAnswer(&v, three);
 
-    // createIdxBuffer creates an int* with value 1, except the N-1 
-    // component with value 0
-    local_ordinal_type* idx_buffer = createIdxBuffer(N,1);
-    setLocalElement(&from, 0, two);
-    v.copyFrom(idx_buffer, from);
+    deleteLocalBuffer(from_buffer);
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &v);
+  }
+
+    /*
+   * Test for function that copies to v the entries of from specified by idxs.
+   */
+  bool vector_copy_from_indexes(hiop::hiopVector& v, hiop::hiopVector& from, hiop::hiopVectorInt& idxs)
+  {
+    local_ordinal_type N = getLocalSize(&v);
+    assert(v.get_size() == idxs.size());
+    assert(N == idxs.size()); 
+    assert(N <= getLocalSize(&from));
+
+    //copy indexes 0, 1, 2, ..., N (copy first N entries of from)
+    idxs.linspace(0, 1);
+    
+    v.setToConstant(three);
+    
+    from.setToConstant(one);
+    setLocalElement(&from, N-1, two);
+    
+    v.copy_from_indexes(from, idxs);
  
-    fail += verifyAnswer(&v,
+    int fail = verifyAnswer(&v,
       [=] (local_ordinal_type i) -> real_type
       {
         return (i == N-1) ? two : one;
       });
     
-    real_type* from_buffer_new = from.local_data(); 
-    v.copyFrom(idx_buffer, from_buffer_new);
+    real_type* from_buffer = from.local_data(); 
+    v.copy_from_indexes(from_buffer, idxs);
     fail += verifyAnswer(&v,
       [=] (local_ordinal_type i) -> real_type
       {
         return (i == N-1) ? two : one;
       });
-    deleteLocalBuffer(from_buffer);
-    printMessage(fail, __func__, rank);
+
+    printMessage(fail, __func__);
     return reduceReturn(fail, &v);
   }
 
