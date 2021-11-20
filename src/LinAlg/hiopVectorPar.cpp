@@ -1051,6 +1051,7 @@ void hiopVectorPar::print(FILE* file, const char* msg/*=NULL*/, int max_elems/*=
 
 hiopMatrixSparse* hiopVectorPar::diagMat()
 {
+  /* dummy implementation
   printf("start diag function\n");
   
   size_type len = n_local_;
@@ -1069,7 +1070,7 @@ hiopMatrixSparse* hiopVectorPar::diagMat()
     sparseDiag->j_col()[i] = i;
     sparseDiag->M()[i] = data_[i];
   }
-
+*/
 }
 
   size_type hiopVectorPar::numOfElemsLessThan(const double &val) const

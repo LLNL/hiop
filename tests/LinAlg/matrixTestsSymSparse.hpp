@@ -209,6 +209,18 @@ public:
     return fail;
   }
 
+  /// @brief Matrix A is symmetric with upper triangular part stored
+  /// Matrix B is a symmetric matrix in unsymmetric format
+  /// Verify that matrix A and B are equivalent
+  /// Run over entries in A, if diagonal check it exists in B, 
+  /// if it's offdiagonal check it exists in B and that it exists under the diagonal
+
+  bool matrix_check_symmetry(hiop::hiopMatrixSparse& A,
+                          hiop::hiopMatrixSparse& B,
+                          const int rank = 0)
+  {
+
+  }
   /// @brief copy sublok `B` into `A`, and add diagonal `diag` to `A`, `W` is a buffer used to verify solution
   bool matrix_set_Hess_FR(hiop::hiopMatrixDense& W,
                           hiop::hiopMatrixSparse& A,

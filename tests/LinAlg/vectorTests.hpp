@@ -1810,6 +1810,29 @@ public:
   }
 
   /**
+   * @brief Test that a sparse triplet _dTrip_ is equivalent to 
+   * diag(_x_)
+   */
+  bool vectorTestDiag(
+      hiop::hiopVector& x,
+      hiop::hiopMatrixSparse& dTrip,
+      const int rank)
+  {/*
+    assert(dTrip != nullptr);
+    assert(x != nullptr);
+    int fail = 0;
+    size_type len = getLocalSize(&x);
+    for(int i=0; i<len; i++)
+    {
+      if (dTrip->M()[i] != x->data_[i]) fail++;
+      if (dTrip->i_row()[i] != i) fail++;
+      if (dTrip->j_col()[i] != i) fail++;
+    }
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &x);
+  */
+  }
+  /**
    * @brief Test that hiop correctly adjusts based on the
    * hessian of the duals function
    */
@@ -1986,6 +2009,12 @@ public:
 
     return local_fail;
   }
+
+  /**
+   * @brief Verifies:
+   * \forall x in _local_ vector data at index i,
+   *    x == expect(i)
+   */
 
   /**
    * @brief Verifies:
