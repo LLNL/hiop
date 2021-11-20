@@ -358,7 +358,7 @@ public:
                         hiopVector& gradf,
                         hiopMatrix& Jac_c, 
                         hiopMatrix& Jac_d, 
-                        hiopVectorInt&  cons_eq_mapping, 
+                        hiopVectorInt& cons_eq_mapping, 
                         hiopVectorInt& cons_ineq_mapping);
   ~hiopNLPObjGradScaling();
 public:
