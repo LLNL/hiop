@@ -71,12 +71,31 @@ public:
   virtual void setToZero();
   virtual void setToConstant( double c );
   virtual void setToConstant_w_patternSelect(double c, const hiopVector& select);
+
   virtual void copyFrom(const hiopVector& v );
   virtual void copyFrom(const double* v_local_data); //v should be of length at least n_local_
   
-  /// @brief Copy from the indices in index_in_src in v
-  virtual void copyFrom(const int* index_in_src, const hiopVector& v);
-  virtual void copyFrom(const int* index_in_src, const double* v);
+  /**
+   * @brief Copy from src the elements specified by the indices in index_in_src. 
+   *
+   * @pre All vectors must reside in the same memory space. 
+   * @pre Size of src must be greater or equal than size of this
+   * @pre Size of index_in_src must be equal to size of this
+   * @pre Elements of index_in_src must be valid (zero-based) indexes in src
+   *
+   */
+  virtual void copy_from_indexes(const hiopVector& src, const hiopVectorInt& index_in_src);
+
+  /**
+   * @brief Copy from src the elements specified by the indices in index_in_src. 
+   *
+   * @pre All vectors and arrays must reside in the same memory space. 
+   * @pre Size of src must be greater or equal than size of this
+   * @pre Size of index_in_src must be equal to size of this
+   * @pre Elements of index_in_src must be valid (zero-based) indexes in src
+   *
+   */
+  virtual void copy_from_indexes(const double* src, const hiopVectorInt& index_in_src);
   
   /// @brief Copy the 'n' elements of v starting at 'start_index_in_this' in 'this'
   virtual void copyFromStarting(int start_index_in_this, const double* v, int n);
@@ -127,7 +146,11 @@ public:
 					  hiopVector& dest,
 					  int start_idx_dest,
 					  int num_elems=-1) const;
-  virtual void startingAtCopyToStartingAt_w_pattern(int start_idx_in_src, hiopVector& dest, int start_idx_dest, const hiopVector& selec_dest, int num_elems=-1) const;
+  
+  virtual void startingAtCopyToStartingAt_w_pattern(int start_idx_in_src,
+                                                    hiopVector& dest, int start_idx_dest,
+                                                    const hiopVector& selec_dest,
+                                                    int num_elems=-1) const;
 
   virtual double twonorm() const;
   virtual double dotProductWith( const hiopVector& v ) const;
@@ -149,6 +172,20 @@ public:
   virtual void scale( double alpha );
   /// @brief this += alpha * x
   virtual void axpy  ( double alpha, const hiopVector& x );
+
+  /**
+   * @brief Performs axpy, this += alpha*x, on the indexes in this specified by i.
+   * 
+   * @param alpha scaling factor 
+   * @param x vector of doubles to be axpy-ed to this (size equal to size of i and less than or equal to size of this)
+   * @param i vector of indexes in this to which the axpy operation is performed (size equal to size of x and less than 
+   * or equal to size of this)
+   *
+   * @pre The entries of i must be valid (zero-based) indexes in this
+   *
+   */
+  virtual void axpy(double alpha, const hiopVector& x, const hiopVectorInt& i);
+  
   /// @brief this += alpha * x * z
   virtual void axzpy ( double alpha, const hiopVector& x, const hiopVector& z );
   /// @brief this += alpha * x / z

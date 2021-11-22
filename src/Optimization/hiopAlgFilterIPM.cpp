@@ -389,14 +389,11 @@ startingProcedure(hiopIterate& it_ini,
   nlp->runStats.tmStartingPoint.stop();
   nlp->runStats.tmSolverInternal.stop();
 
-
-  if(do_nlp_scaling){
-    // do function evaluation again after add scaling
-    if(!this->evalNlp_noHess(it_ini, f, c, d, gradf, Jac_c, Jac_d)) {
-      nlp->log->printf(hovError, "Failure in evaluating user provided NLP functions.");
-      assert(false);
-      return false;
-    }
+  // do function evaluation again after we adjust the primals and/or add scaling
+  if(!this->evalNlp_noHess(it_ini, f, c, d, gradf, Jac_c, Jac_d)) {
+    nlp->log->printf(hovError, "Failure in evaluating user provided NLP functions.");
+    assert(false);
+    return false;
   }
 
   nlp->runStats.tmSolverInternal.start();

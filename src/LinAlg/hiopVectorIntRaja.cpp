@@ -137,4 +137,24 @@ void hiopVectorIntRaja::set_to_constant(const index_type c)
     });
 }
 
+/**
+ * @brief Set the vector entries to be a linear space of starting at i0 containing evenly 
+ * incremented integers up to i0+(n-1)di, when n is the length of this vector
+ *
+ * @pre The elements of the linear space should not overflow the index_type type
+ *  
+ * @param i0 the starting element in the linear space (entry 0 in vector)
+ * @param di the increment for subsequent entries in the vector
+ *
+ */ 
+void hiopVectorIntRaja::linspace(const index_type& i0, const index_type& di)
+{
+  index_type* data = buf_;
+  RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, sz_),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      data[i] = i0+i*di;
+    });
+}
+  
 } // namespace hiop

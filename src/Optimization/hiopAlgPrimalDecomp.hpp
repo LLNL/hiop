@@ -81,7 +81,7 @@ enum MPIout {
   outlevel4=4  //print details about the algorithm
 }; 
 
-/* The main mpi engine for solving a class of problems with primal decomposition. 
+/* The main MPI solver for solving a class of problems with primal decomposition. 
  * The master problem is the user defined class that should be able to solve both
  * the base case and full problem depending whether a recourse approximation is 
  * included. 
@@ -93,15 +93,33 @@ class hiopAlgPrimalDecomposition
 {
 public:
 
-  //constructor
+  /**
+   * Creates a primal decomposition algorithm for the primal decomposable problem
+   * passed as an argument
+   *
+   * @param prob_in the primal decomposable problem
+   * @param comm_world the communicator whose ranks should be used to schedule the tasks
+   * (subproblems of the primal decomposable problem prob_in)
+   */
   hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
-                             MPI_Comm comm_world=MPI_COMM_WORLD);
+                             MPI_Comm comm_world = MPI_COMM_WORLD);
 
+  /**
+   * Creates a primal decomposition algorithm for the primal decomposable problem
+   * passed as an argument
+   *
+   * @param prob_in the primal decomposable problem
+   * @param nc the number of coupling variables
+   * @param xc_index array on the device  with the the indexes of the coupling variables 
+   * in the full vector (primal) variables for the basecase/master problem within the primal 
+   * decomposable problem prob_in.
+   * @param comm_world the communicator whose ranks should be used to schedule the tasks
+   * (subproblems of the primal decomposable problem prob_in)
+   */
   hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
                              const int nc, 
                              const int* xc_index,
-                             MPI_Comm comm_world=MPI_COMM_WORLD);
-
+                             MPI_Comm comm_world = MPI_COMM_WORLD);
 
   virtual ~hiopAlgPrimalDecomposition();
 
@@ -141,7 +159,7 @@ public:
   
   void set_acceptable_count(const int count);
  
-  double step_size_inf(const int nc, const int* idx, const hiopVector& x, const hiopVector& x0);
+  double step_size_inf(const int nc, const hiopVectorInt& idx, const hiopVector& x, const hiopVector& x0);
   
   /* Contains information of a previous solution step including function value 
    * and gradient. Used for storing the solution for the previous iteration
@@ -331,9 +349,10 @@ private:
   //level of output through the MPI engine
   size_t ver_ = 1;
 
-  //indices of the coupled x in the full x
-  int* xc_idx_;
-  //tolerance of the convergence stopping criteria. User options from options file via hiop_pridec.options. 
+  /// Indices of the coupled x in the full x of the basecase/master problem
+  hiopVectorInt* xc_idx_;
+  
+  //tolerance of the convergence stopping criteria. User options from options file via hiop_pridec.options
   double tol_ = 1e-8;
 
   //acceptable tolerance is used to terminate hiop if NLP residuals are below the 
