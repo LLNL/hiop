@@ -872,8 +872,8 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
        
        	log_->write(nullptr, *x_, hovFcnEval);
 	
-	base_val = master_prob_->get_objective();
-	base_valm1 = master_prob_->get_objective();
+        base_val = master_prob_->get_objective();
+        base_valm1 = master_prob_->get_objective();
       }
 
       // send base case solutions to all ranks
@@ -940,7 +940,7 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
         int last_loop = 0;
         //printf("total idx %d\n", S_);
         t2 = MPI_Wtime(); 
-	
+        
         log_->printf(hovFcnEval, "Elapsed time for entire iteration %d is %f\n",it, t2 - t1);
         
         while(idx<=S_ || last_loop) { 
@@ -1138,19 +1138,19 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
           MPI_Wait(&req_cont_idx->request_, &status_);
         }
         
-	recourse_val = rval;
+        recourse_val = rval;
 
         log_->printf(hovSummary, "real rval %18.12e\n",rval);
         
-	MPI_Status mpi_status; 
+        MPI_Status mpi_status; 
 
         for(int i=0; i<nc_; i++) {
           hess_appx_vec[i] = 1.0;
-	}
+        }
     
         if(nc_<n_) {
           assert(xc_idx_[0]>=0);// if nc==0, why bother using this code?
-	  x0->copyFrom(xc_idx_,*x_);
+          x0->copyFrom(xc_idx_,*x_);
           //for(int i=0;i<nc_;i++) {
           //  x0_vec[i] = x_vec[xc_idx_[i]];
           //}
@@ -1169,16 +1169,16 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
           //double alp_temp = hess_appx_2->get_alpha_tr();
           log_->printf(hovSummary, "alpd %18.12e\n",alp_temp);
           
-	  for(int i=0; i<nc_; i++) {
+          for(int i=0; i<nc_; i++) {
             hess_appx_vec[i] = alp_temp;
-	  }
+          }
         } else {
           //grad_r->print();
 
-	  hess_appx_2->update_hess_coeff(*x0, *grad_r, rval);
+          hess_appx_2->update_hess_coeff(*x0, *grad_r, rval);
           //update base case objective, this requires updated skm1 and ykm1
-	  base_valm1 = base_val;
-	  base_val = hess_appx_2->compute_base(master_prob_->get_objective());
+          base_valm1 = base_val;
+          base_val = hess_appx_2->compute_base(master_prob_->get_objective());
 
           //hess_appx_2->update_ratio();
           hess_appx_2->update_ratio(base_val, base_valm1);
@@ -1195,7 +1195,7 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
           convg = std::min(convg_f,convg_g);
           for(int i=0; i<nc_; i++) {
             hess_appx_vec[i] = alp_temp;
-	  }
+          }
 
         }
 
@@ -1208,10 +1208,10 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
           log_->printf(hovSummary, "iteration           objective                   residual                   "   
              "step_size                   convg\n");
           
-	  log_->printf(hovSummary, "%d              %18.12e            %18.12e           %18.12e         " 
+          log_->printf(hovSummary, "%d              %18.12e            %18.12e           %18.12e         " 
              "%18.12e\n", it, base_val+recourse_val, convg_f, dinf, convg_g);
           
-	  fflush(stdout);
+          fflush(stdout);
         }
 
         assert(evaluator->get_rgrad()!=NULL);// should be defined
