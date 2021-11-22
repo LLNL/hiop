@@ -85,7 +85,9 @@ enum MPIout {
  * The master problem is the user defined class that should be able to solve both
  * the base case and full problem depending whether a recourse approximation is 
  * included. 
- *
+ * Available options to be set in hiop_pridec.options file:
+ * mem_space, alpha_max, alpha_min, tolerance, acceptable_tolerance, acceptable_iterations, 
+ * max_iter, verbosity_level, print_options.
  */
 class hiopAlgPrimalDecomposition
 {
@@ -121,7 +123,7 @@ public:
   /* returns the number of iterations, meaning how many times the master was solved */
   int getNumIterations() const;
 
-  bool stopping_criteria(const int it, const double convg);
+  bool stopping_criteria(const int it, const double convg, const int accp_count);
 
   void set_verbosity(const int i);
 
@@ -136,6 +138,8 @@ public:
   void set_tolerance(const double tol);
   
   void set_acceptable_tolerance(const double tol);
+  
+  void set_acceptable_count(const int count);
  
   double step_size_inf(const int nc, const int* idx, const hiopVector& x, const hiopVector& x0);
   
@@ -180,14 +184,20 @@ public:
    * This struct is intened for internal use of hiopAlgPrimalDecomposition class only
    */
   struct HessianApprox {
-    HessianApprox(hiopInterfacePriDecProblem* priDecProb, hiopOptions* options_pridec);
-    HessianApprox(const int& n, hiopInterfacePriDecProblem* priDecProb, hiopOptions* options_pridec);
+    HessianApprox(hiopInterfacePriDecProblem* priDecProb, 
+		  hiopOptions* options_pridec,
+		  MPI_Comm comm_world=MPI_COMM_WORLD);
+    HessianApprox(const int& n, 
+		  hiopInterfacePriDecProblem* priDecProb, 
+		  hiopOptions* options_pridec,
+		  MPI_Comm comm_world=MPI_COMM_WORLD);
     
     /* ratio is used to compute alpha in alpha_f */
     HessianApprox(const int& n,
                   const double ratio,
                   hiopInterfacePriDecProblem* priDecProb,
-                  hiopOptions* options_pridec);
+                  hiopOptions* options_pridec,
+		  MPI_Comm comm_world=MPI_COMM_WORLD);
 
     ~HessianApprox();
 
@@ -283,7 +293,9 @@ public:
     hiopVector* ykm1;
     size_t ver_ = 2; //output level for HessianApprox class
     hiopInterfacePriDecProblem* priDecProb_;
-    hiopOptions* options_;
+    hiopOptions* options_;  // options is dependent on pridec options, no user set up yet
+    hiopLogger* log_;
+    MPI_Comm comm_world_;
   };
 private: 
 #ifdef HIOP_USE_MPI
@@ -297,8 +309,9 @@ private:
   //master/solver(0), or worker(1:total rank)
 
   //maximum number of outer iterations, user specified
-  int max_iter = 200;
-  
+  int max_iter_ = 200;
+  int it_ = -1;
+
   //pointer to the problem to be solved (passed as argument)
   hiopInterfacePriDecProblem* master_prob_;
   hiopSolveStatus solver_status_;
@@ -320,14 +333,14 @@ private:
 
   //indices of the coupled x in the full x
   int* xc_idx_;
-  //tolerance of the convergence stopping criteria. TODO: user options from options file via hiopOptions
+  //tolerance of the convergence stopping criteria. User options from options file via hiop_pridec.options. 
   double tol_ = 1e-8;
 
   //acceptable tolerance is used to terminate hiop if NLP residuals are below the 
-  //set value for 10 consecutive iterations
+  //default value for 10 consecutive iterations
   double accp_tol_ = 1e-6;
   //consecutive iteration count where NLP residual is lower than acceptable tolerance
-  int accp_count = 0;
+  int accp_count_ = 10;
   //initial alpha_ratio if used
   double alpha_ratio_ = 1.0;
   
@@ -336,6 +349,7 @@ private:
   
   //real decrease over expected decrease ratio
   double rhok_ = 0.;
+
 protected:
   hiopOptions* options_;
   hiopLogger* log_;
