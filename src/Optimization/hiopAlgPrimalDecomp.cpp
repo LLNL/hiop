@@ -156,7 +156,7 @@ namespace hiop
 hiopAlgPrimalDecomposition::HessianApprox::
 HessianApprox(hiopInterfacePriDecProblem* priDecProb, 
               hiopOptions* options_pridec,
-	      MPI_Comm comm_world)
+              MPI_Comm comm_world)
   : HessianApprox(-1, priDecProb, options_pridec, comm_world)
 {
   comm_world_ = comm_world;
@@ -167,7 +167,7 @@ hiopAlgPrimalDecomposition::HessianApprox::
 HessianApprox(const int& n,
               hiopInterfacePriDecProblem* priDecProb,
               hiopOptions* options_pridec,
-	      MPI_Comm comm_world)
+              MPI_Comm comm_world)
     : priDecProb_(priDecProb), options_(options_pridec), comm_world_(comm_world)
 {
   n_=n;
@@ -192,7 +192,7 @@ HessianApprox(const int& n,
               const double ratio,
               hiopInterfacePriDecProblem* priDecProb,
               hiopOptions* options_pridec,
-	      MPI_Comm comm_world)
+              MPI_Comm comm_world)
   : HessianApprox(n, priDecProb, options_pridec, comm_world)
 {
   ratio_ = ratio;
@@ -871,8 +871,8 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
 
         }
        
-       	log_->write(nullptr, *x_, hovFcnEval);
-	
+        log_->write(nullptr, *x_, hovFcnEval);
+
         base_val = master_prob_->get_objective();
         base_valm1 = master_prob_->get_objective();
       }
@@ -1166,7 +1166,7 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
           double alp_temp = hess_appx_2->get_alpha_f(*grad_r);
           //double alp_temp = hess_appx_2->get_alpha_tr();
           
-	  //double alp_temp2 = hess_appx_2->get_alpha_BB();
+          //double alp_temp2 = hess_appx_2->get_alpha_BB();
           log_->printf(hovSummary, "alpd %18.12e\n",alp_temp);
           //printf("alpd BB %18.12e\n",alp_temp2);
           convg_g = hess_appx_2->check_convergence_grad(*grad_r);
@@ -1380,7 +1380,7 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
 
     rval /= S_;
     grad_r->scale(1.0/S_);
-	
+
     log_->printf(hovSummary, "real rval %18.12e\n",rval);
     
     recourse_val = rval;

@@ -203,19 +203,19 @@ public:
    */
   struct HessianApprox {
     HessianApprox(hiopInterfacePriDecProblem* priDecProb, 
-		  hiopOptions* options_pridec,
-		  MPI_Comm comm_world=MPI_COMM_WORLD);
+                  hiopOptions* options_pridec,
+                  MPI_Comm comm_world=MPI_COMM_WORLD);
     HessianApprox(const int& n, 
-		  hiopInterfacePriDecProblem* priDecProb, 
-		  hiopOptions* options_pridec,
-		  MPI_Comm comm_world=MPI_COMM_WORLD);
+                  hiopInterfacePriDecProblem* priDecProb, 
+                  hiopOptions* options_pridec,
+                  MPI_Comm comm_world=MPI_COMM_WORLD);
     
     /* ratio is used to compute alpha in alpha_f */
     HessianApprox(const int& n,
                   const double ratio,
                   hiopInterfacePriDecProblem* priDecProb,
                   hiopOptions* options_pridec,
-		  MPI_Comm comm_world=MPI_COMM_WORLD);
+                  MPI_Comm comm_world=MPI_COMM_WORLD);
 
     ~HessianApprox();
 
