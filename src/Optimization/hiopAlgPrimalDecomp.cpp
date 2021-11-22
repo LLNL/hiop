@@ -943,7 +943,7 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
 	
         log_->printf(hovFcnEval, "Elapsed time for entire iteration %d is %f\n",it, t2 - t1);
         
-	while(idx<=S_ || last_loop) { 
+        while(idx<=S_ || last_loop) { 
           for(int r=1; r< comm_size_;r++) {
             int mpi_test_flag = rec_prob[r]->test();
             if(mpi_test_flag && (finish_flag[r]==0)) {// receive completed
@@ -1141,7 +1141,8 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
 	recourse_val = rval;
 
         log_->printf(hovSummary, "real rval %18.12e\n",rval);
-        MPI_Status mpi_status; 
+        
+	MPI_Status mpi_status; 
 
         for(int i=0; i<nc_; i++) {
           hess_appx_vec[i] = 1.0;
@@ -1182,7 +1183,7 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
           //hess_appx_2->update_ratio();
           hess_appx_2->update_ratio(base_val, base_valm1);
           
-	  double alp_temp = hess_appx_2->get_alpha_f(*grad_r);
+          double alp_temp = hess_appx_2->get_alpha_f(*grad_r);
           //double alp_temp = hess_appx_2->get_alpha_tr();
           //double alp_temp2 = hess_appx_2->get_alpha_BB();
           log_->printf(hovSummary, "alpd %18.12e\n",alp_temp);
@@ -1206,9 +1207,11 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
         if(it>0) {
           log_->printf(hovSummary, "iteration           objective                   residual                   "   
              "step_size                   convg\n");
-          log_->printf(hovSummary, "%d              %18.12e            %18.12e           %18.12e         " 
+          
+	  log_->printf(hovSummary, "%d              %18.12e            %18.12e           %18.12e         " 
              "%18.12e\n", it, base_val+recourse_val, convg_f, dinf, convg_g);
-          fflush(stdout);
+          
+	  fflush(stdout);
         }
 
         assert(evaluator->get_rgrad()!=NULL);// should be defined
@@ -1231,11 +1234,11 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
 
         log_->write(nullptr, *x_, hovFcnEval);
         
-	t2 = MPI_Wtime(); 
+        t2 = MPI_Wtime(); 
         log_->printf(hovFcnEval, "Elapsed time for entire iteration %d is %f\n",it, t2 - t1);
         
-	// print out the iteration from the master rank
-	dinf = step_size_inf(nc_, xc_idx_, *x_, *x0);
+        // print out the iteration from the master rank
+        dinf = step_size_inf(nc_, xc_idx_, *x_, *x0);
 
       } else {
         // evaluator ranks do nothing     
