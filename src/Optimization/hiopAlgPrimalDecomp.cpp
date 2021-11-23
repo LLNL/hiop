@@ -659,7 +659,7 @@ hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
   set_verbosity(options_->GetInteger("verbosity_level"));
   //logger will be created with stdout, outputing on rank 0 of the 'comm_world' MPI communicator
   log_ = new hiopLogger(options_, stdout, 0, comm_world);
- 
+
   x_ = LinearAlgebraFactory::create_vector(options_->GetString("mem_space"), n_);
 
   xc_idx_ = LinearAlgebraFactory::create_vector_int(options_->GetString("mem_space"), nc_);
