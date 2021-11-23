@@ -157,7 +157,10 @@ hiopAlgPrimalDecomposition::HessianApprox::
 HessianApprox(hiopInterfacePriDecProblem* priDecProb, 
               hiopOptions* options_pridec,
               MPI_Comm comm_world)
-  : HessianApprox(-1, priDecProb, options_pridec, comm_world)
+  : HessianApprox(-1, 
+		  priDecProb, 
+		  options_pridec, 
+		  comm_world)
 {
   comm_world_ = comm_world;
   log_ = new hiopLogger(options_, stdout, 0, comm_world);
@@ -168,7 +171,9 @@ HessianApprox(const int& n,
               hiopInterfacePriDecProblem* priDecProb,
               hiopOptions* options_pridec,
               MPI_Comm comm_world)
-    : priDecProb_(priDecProb), options_(options_pridec), comm_world_(comm_world)
+    : priDecProb_(priDecProb), 
+      options_(options_pridec), 
+      comm_world_(comm_world)
 {
   n_=n;
   fkm1 = 1e20;
@@ -599,10 +604,10 @@ hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
   assert(alpha_max_ > alpha_min_);
 
   set_verbosity(options_->GetInteger("verbosity_level"));
- 
+
   //logger will be created with stdout, outputing on rank 0 of the 'comm_world' MPI communicator
   log_ = new hiopLogger(options_, stdout, 0, comm_world);
- 
+
   x_ = LinearAlgebraFactory::create_vector(options_->GetString("mem_space"), n_);
 
   xc_idx_ = LinearAlgebraFactory::create_vector_int(options_->GetString("mem_space"), nc_);
@@ -654,7 +659,7 @@ hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
   set_verbosity(options_->GetInteger("verbosity_level"));
   //logger will be created with stdout, outputing on rank 0 of the 'comm_world' MPI communicator
   log_ = new hiopLogger(options_, stdout, 0, comm_world);
-  
+ 
   x_ = LinearAlgebraFactory::create_vector(options_->GetString("mem_space"), n_);
 
   xc_idx_ = LinearAlgebraFactory::create_vector_int(options_->GetString("mem_space"), nc_);

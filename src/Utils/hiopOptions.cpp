@@ -1094,14 +1094,14 @@ void hiopOptionsPriDec::register_options()
   {
     register_num_option("alpha_max",
                         1e6,
-                        1e14,
                         1,
+                        1e14,
                         "Upper bound of quadratic coefficient alpha (default 1e6)");
 
     register_num_option("alpha_min",
                         1e-5,
-                        1e3,
                         1e-8,
+                        1e3,
                         "Lower bound of quadratic coefficient alpha (default 1e6)");
 
       
@@ -1120,7 +1120,7 @@ void hiopOptionsPriDec::register_options()
                         1e-3,
                         1e-14,
                         1e-1,
-                        "HiOp PriDec terminates if the error is below 'accpetable tolerance' for 'acceptable_iterations' "
+                        "HiOp PriDec terminates if the error is below 'accdptable tolerance' for 'acceptable_iterations' "
                         "many consecutive iterations (default 1e-3)");
     
     register_int_option("acceptable_iterations",
