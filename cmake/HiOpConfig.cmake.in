@@ -25,6 +25,8 @@ if(@HIOP_USE_RAJA@ AND NOT TARGET RAJA)
   find_package(umpire PATHS @umpire_DIR@)
 endif()
 
+set(HiOp::SPARSE @HIOP_SPARSE@ CACHE BOOL "indicates if hiop sparse is enabled")
+
 if(@HIOP_USE_GPU@)
   if(@HIOP_USE_CUDA@)
     include(CheckLanguage)
