@@ -393,8 +393,8 @@ hiopNLPObjGradScaling::hiopNLPObjGradScaling(hiopNlpFormulation* nlp,
                                              hiopVector& gradf,
                                              hiopMatrix& Jac_c, 
                                              hiopMatrix& Jac_d, 
-                                             index_type* cons_eq_mapping, 
-                                             index_type* cons_ineq_mapping)
+                                             hiopVectorInt& cons_eq_mapping, 
+                                             hiopVectorInt& cons_ineq_mapping)
   : hiopNlpTransformation(nlp),
     n_vars(gradf.get_size()), n_vars_local(gradf.get_local_size()),
     scale_factor_obj(1.),
@@ -424,12 +424,8 @@ hiopNLPObjGradScaling::hiopNLPObjGradScaling(hiopNlpFormulation* nlp,
   const double* ineq_arr = scale_factor_d->local_data_const();
   double* scale_factor_cd_arr = scale_factor_cd->local_data();
 
-  for(int i=0; i<n_eq; ++i) {
-    scale_factor_cd_arr[cons_eq_mapping[i]] = eq_arr[i];
-  }
-  for(int i=0; i<n_ineq; ++i) {
-    scale_factor_cd_arr[cons_ineq_mapping[i]] = ineq_arr[i];
-  }
+  scale_factor_cd->copy_from_two_vec_w_pattern(*scale_factor_c, cons_eq_mapping, *scale_factor_d, cons_ineq_mapping);
+
 }
 
 hiopNLPObjGradScaling::~hiopNLPObjGradScaling()
