@@ -384,7 +384,8 @@ update_ratio(const double base_v, const double base_vm1)
   //printf("recourse estimate inside HessianApprox %18.12e\n",rk);
   double rho_k = (base_vm1+fkm1-fk-base_v)/(fkm1+base_vm1-rk-base_v);
    
-  log_->printf(hovSummary,"previuos base  %18.12e, current base %18.12e, previuos val  %18.12e, real val %18.12e, predicted val %18.12e, rho_k %18.12e\n",base_vm1,base_v,fkm1,fk,rk,rho_k);
+  log_->printf(hovSummary,"previuos base  %18.12e, current base %18.12e, previuos val  %18.12e," 
+               " real val %18.12e, predicted val %18.12e, rho_k %18.12e\n",base_vm1,base_v,fkm1,fk,rk,rho_k);
   
   //using a trust region criteria for adjusting ratio
   update_ratio_tr(rho_k, ratio_);
@@ -496,7 +497,7 @@ double hiopAlgPrimalDecomposition::HessianApprox::check_convergence_grad(const h
   double convg = temp1/temp2;
   //ykm1->print();
   log_->printf(hovScalars,"alpha  %18.12e \n",alpha_);
-  log_->printf(hovScalars,"temp1  %18.12e, temp2 %18.12e, temp3 %18.12e, temp4 %18.12e\n",temp1,temp2,temp3,temp4);
+  log_->printf(hovScalars,"temp1  %18.12e, temp2 %18.12e, temp3 %18.12e, temp4 %18.12e\n", temp1, temp2, temp3, temp4);
   delete temp;
   return convg;
 }

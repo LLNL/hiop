@@ -1120,7 +1120,7 @@ void hiopOptionsPriDec::register_options()
                         1e-3,
                         1e-14,
                         1e-1,
-                        "HiOp PriDec terminates if the error is below 'accdptable tolerance' for 'acceptable_iterations' "
+                        "HiOp PriDec terminates if the error is below 'acceptable tolerance' for 'acceptable_iterations' "
                         "many consecutive iterations (default 1e-3)");
     
     register_int_option("acceptable_iterations",
