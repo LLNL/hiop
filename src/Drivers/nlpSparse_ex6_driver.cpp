@@ -117,7 +117,7 @@ int main(int argc, char **argv)
   size_type n;
   double scal;
 
-  if(!parse_arguments(argc, argv, n, scal, selfCheck, use_pardiso)) { usage(argv[0]); return 1;}
+  if(!parse_arguments(argc, argv, n, scal, selfCheck, use_pardiso, force_fr)) { usage(argv[0]); return 1;}
 
   Ex6 nlp_interface(n, scal);
   hiopNlpSparse nlp(nlp_interface);

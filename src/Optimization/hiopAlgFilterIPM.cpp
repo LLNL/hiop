@@ -1692,10 +1692,12 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
       }
       // post line-search: filter is augmented whenever the switching condition or Armijo rule do not
       // hold for the trial point that was just accepted
-      if(nlp->options->GetString("force_resto")=="yes" && !within_FR_) {
-        bool fr_converged = apply_feasibility_restoration(kkt);
-        if(!fr_converged) {
-          break;
+      if(nlp->options->GetString("force_resto")=="yes" && !within_FR_ && iter_num == 1) {
+        use_fr = apply_feasibility_restoration(kkt);
+        if(use_fr) {
+          // continue iterations if FR is accepted
+          solver_status_ = NlpSolve_Pending;
+	  break;
         }
       } else if(lsStatus==1) {
 
