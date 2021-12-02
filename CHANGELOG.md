@@ -4,7 +4,7 @@ All notable changes to HiOp will be documented in this file.
 ## Version 0.5.3: xSDK compliance (Dec 3, 2021)
 
  xSDK compliance 
- - 
+ 
 ## Version 0.5.2: xSDK compliance and misc bug fixes (Dec 2, 2021)
 
  - fixed bugs in the IPM solver: gradient scaling on CUDA, unscaled objective in the  user callbacks, lambda capture fix in axpy for ROCm
