@@ -1147,11 +1147,12 @@ void hiopVectorRajaPar::axpy(double alpha, const hiopVector& xvec, const hiopVec
   double* dd = data_dev_;
   double* xd = const_cast<double*>(x.data_dev_);
   index_type* id = const_cast<index_type*>(idxs.local_data_const());
+  auto tmp_n_local = n_local_;
 
   RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
-      assert(id[i]<n_local_);
+      assert(id[i]<tmp_n_local);
       // y := a * x + y
       dd[id[i]] = alpha * xd[i] + dd[id[i]];
     });
