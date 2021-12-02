@@ -1092,32 +1092,43 @@ void hiopOptionsPriDec::register_options()
   // convergence and stopping criteria
   //
   {
+    register_num_option("alpha_max",
+                        1e6,
+                        1,
+                        1e14,
+                        "Upper bound of quadratic coefficient alpha (default 1e6)");
+
+    register_num_option("alpha_min",
+                        1e-5,
+                        1e-8,
+                        1e3,
+                        "Lower bound of quadratic coefficient alpha (default 1e6)");
+
+      
     //TODO: Frank check these and add others as needed in the primal decomposition algorithm
     register_num_option("tolerance",
-                        1e-4,
+                        1e-5,
                         1e-14,
                         1e-1,
-                        "Absolute error tolerance for the PriDec solver (default 1e-4)");
+                        "Absolute error tolerance for the PriDec solver (default 1e-5)");
 
-    //TODO: Frank see if this makes sense for PriDec solver
     //register_num_option("rel_tolerance", 0., 0., 0.1,
     //                  "Error tolerance for the NLP relative to errors at the initial point. A null "
     //                  "value disables this option (default 0.)");
     
-    //TODO: Frank implement this functionality in PriDec solver
     register_num_option("acceptable_tolerance",
-                        1e-2,
+                        1e-3,
                         1e-14,
                         1e-1,
-                        "HiOp PriDec terminates if the xxx TODO Frank xxx are below for 'acceptable_iterations' "
-                        "many consecutive iterations (default 1e-2)");
-    //TODO: Frank implement this functionality in PriDec solver
+                        "HiOp PriDec terminates if the error is below 'acceptable tolerance' for 'acceptable_iterations' "
+                        "many consecutive iterations (default 1e-3)");
+    
     register_int_option("acceptable_iterations",
                         25,
                         1,
                         1e6,
-                        "Number of iterations of acceptable tolerance after which HiOp terminates (default 26)");
-    //TODO: Frank implement this functionality in PriDec solver
+                        "Number of iterations of acceptable tolerance after which HiOp terminates (default 25)");
+    
     register_int_option("max_iter", 30000, 1, 1e9, "Max number of iterations (default 30000)");
   }
   
@@ -1126,7 +1137,7 @@ void hiopOptionsPriDec::register_options()
   //
   //TODO: Frank check/implement these in PriDecSolver and add others as needed 
   register_int_option("verbosity_level",
-                      3,
+                      2,
                       0,
                       12,
                       "Verbosity level: 0 no output (only errors), 1=0+warnings, 2=1 (reserved), "
@@ -1155,6 +1166,18 @@ void hiopOptionsPriDec::ensure_consistence()
   }
 }
 
+void hiopOptionsPriDec::print(FILE* file, const char* msg) const
+{
+  if(nullptr==msg) fprintf(file, "#\n# Hiop PriDec Solver options\n#\n");
+  else          fprintf(file, "%s ", msg);
 
+  map<string,Option*>::const_iterator it = mOptions_.begin();
+  for(; it!=mOptions_.end(); it++) {
+    fprintf(file, "%s ", it->first.c_str());
+    it->second->print(file);
+    fprintf(file, "\n");
+  }
+  fprintf(file, "# end of Hiop PriDec Solver options\n\n");
+}
 
 } //~end namespace

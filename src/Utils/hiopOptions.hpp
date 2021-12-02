@@ -203,6 +203,9 @@ class hiopOptionsPriDec : public hiopOptions
 public:
   hiopOptionsPriDec(const char* opt_filename=nullptr);
   virtual ~hiopOptionsPriDec();
+  
+  void print(FILE* file, const char* msg=NULL) const;
+
 protected:
   virtual void register_options();
   virtual void ensure_consistence();
