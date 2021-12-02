@@ -319,9 +319,11 @@ void hiopAlgPrimalDecomposition::HessianApprox::update_ratio()
   double rho_k = (fkm1-fk)/(fkm1-rk);
   
   
-  if(ver_ >=outlevel2) {
-    printf("previuos val  %18.12e, real val %18.12e, predicted val %18.12e, rho_k %18.12e\n",fkm1,fk,rk,rho_k);
-  }
+  log_->printf(hovSummary, " previous val  %18.12e,", fkm1);
+  log_->printf(hovSummary, " real val %18.12e,", fk);
+  log_->printf(hovSummary, " predicted val %18.12e,", rk);
+  log_->printf(hovSummary, " rho_k %18.12e\n", rho_k);
+  
   //a measure for when alpha should be decreasing (in addition to being good approximation)
   double quanorm = 0.; double gradnorm=0.;
   quanorm += skm1->dotProductWith(*skm1);
@@ -384,8 +386,12 @@ update_ratio(const double base_v, const double base_vm1)
   //printf("recourse estimate inside HessianApprox %18.12e\n",rk);
   double rho_k = (base_vm1+fkm1-fk-base_v)/(fkm1+base_vm1-rk-base_v);
    
-  log_->printf(hovSummary,"previuos base  %18.12e, current base %18.12e, previuos val  %18.12e," 
-               " real val %18.12e, predicted val %18.12e, rho_k %18.12e\n",base_vm1,base_v,fkm1,fk,rk,rho_k);
+  log_->printf(hovSummary, "previous base  %18.12e,", base_vm1);
+  log_->printf(hovSummary, " current base %18.12e,", base_v); 
+  log_->printf(hovSummary, " previous val  %18.12e,", fkm1);
+  log_->printf(hovSummary, " real val %18.12e,", fk);
+  log_->printf(hovSummary, " predicted val %18.12e,", rk);
+  log_->printf(hovSummary, " rho_k %18.12e\n", rho_k);
   
   //using a trust region criteria for adjusting ratio
   update_ratio_tr(rho_k, ratio_);
@@ -496,8 +502,12 @@ double hiopAlgPrimalDecomposition::HessianApprox::check_convergence_grad(const h
 
   double convg = temp1/temp2;
   //ykm1->print();
-  log_->printf(hovScalars,"alpha  %18.12e \n",alpha_);
-  log_->printf(hovScalars,"temp1  %18.12e, temp2 %18.12e, temp3 %18.12e, temp4 %18.12e\n", temp1, temp2, temp3, temp4);
+  log_->printf(hovScalars, "alpha  %18.12e \n",alpha_);
+  log_->printf(hovScalars, "temp1  %18.12e,", temp1);
+  log_->printf(hovScalars, " temp2 %18.12e,", temp2);
+  log_->printf(hovScalars, " temp3 %18.12e,", temp3);
+  log_->printf(hovScalars, " temp4 %18.12e\n", temp4);
+  
   delete temp;
   return convg;
 }
@@ -718,8 +728,8 @@ bool hiopAlgPrimalDecomposition::stopping_criteria(const int it, const double co
     return true;
   }
   if(accp_count == accp_count_) {
-    log_->printf(hovSummary, "reached acceptable tolerance of %18.12e for %d iterations, optimization stops.\n",accp_count_,
-           accp_tol_);
+    log_->printf(hovSummary, "reached acceptable tolerance of %18.12e", accp_count_);
+    log_->printf(hovSummary, " for %d iterations, optimization stops.\n", accp_tol_);
     return true;
   }
   return false;
@@ -838,7 +848,7 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
     }
 
     double base_val = 0.; // base case objective value
-    double base_valm1 = 0.; // base case objective value from the previuos step 
+    double base_valm1 = 0.; // base case objective value from the previous step 
     double recourse_val = 0.;  // recourse objective value
     double dinf = 0.; // step size 
 
@@ -1133,7 +1143,7 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
         
         recourse_val = rval;
 
-        log_->printf(hovSummary, "real rval %18.12e\n",rval);
+        log_->printf(hovSummary, "real rval %18.12e\n", rval);
         
         MPI_Status mpi_status; 
 
@@ -1153,7 +1163,7 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
           hess_appx_2->initialize(rval, *x0, *grad_r);
           double alp_temp = hess_appx_2->get_alpha_f(*grad_r);
           //double alp_temp = hess_appx_2->get_alpha_tr();
-          log_->printf(hovSummary, "alpd %18.12e\n",alp_temp);
+          log_->printf(hovSummary, "alpd %18.12e\n", alp_temp);
           
           for(int i=0; i<nc_; i++) {
             hess_appx_vec[i] = alp_temp;
@@ -1173,12 +1183,12 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
           //double alp_temp = hess_appx_2->get_alpha_tr();
           
           //double alp_temp2 = hess_appx_2->get_alpha_BB();
-          log_->printf(hovSummary, "alpd %18.12e\n",alp_temp);
+          log_->printf(hovSummary, "alpd %18.12e\n", alp_temp);
           //printf("alpd BB %18.12e\n",alp_temp2);
           convg_g = hess_appx_2->check_convergence_grad(*grad_r);
-          log_->printf(hovSummary,"gradient convergence measure %18.12e\n",convg_g);
+          log_->printf(hovSummary,"gradient convergence measure %18.12e\n", convg_g);
           convg_f = hess_appx_2->check_convergence_fcn(base_val, base_valm1);
-          log_->printf(hovSummary,"function val convergence measure %18.12e\n",convg_f);
+          log_->printf(hovSummary,"function val convergence measure %18.12e\n", convg_f);
           convg = std::min(convg_f,convg_g);
           for(int i=0; i<nc_; i++) {
             hess_appx_vec[i] = alp_temp;
@@ -1237,7 +1247,7 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
         accp_count = 0;
       }
 
-      if(stopping_criteria(it, convg,accp_count)) {
+      if(stopping_criteria(it, convg, accp_count)) {
         end_signal = 1; 
       }
       ierr = MPI_Bcast(&end_signal, 1, MPI_INT, rank_master, comm_world_);
@@ -1387,7 +1397,7 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
     rval /= S_;
     grad_r->scale(1.0/S_);
 
-    log_->printf(hovSummary, "real rval %18.12e\n",rval);
+    log_->printf(hovSummary, "real rval %18.12e\n", rval);
     
     recourse_val = rval;
 
@@ -1399,7 +1409,7 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
       hess_appx_2->initialize(rval, *x0, *grad_r);
       double alp_temp = hess_appx_2->get_alpha_f(*grad_r);
       //double alp_temp = hess_appx_2->get_alpha_tr();
-      log_->printf(hovSummary, "alpd %18.12e\n",alp_temp);
+      log_->printf(hovSummary, "alpd %18.12e\n", alp_temp);
       
       for(int i=0; i<nc_; i++) {
         hess_appx_vec[i] = alp_temp;
@@ -1415,15 +1425,15 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
       
       double alp_temp = hess_appx_2->get_alpha_f(*grad_r);
       //double alp_temp = hess_appx_2->get_alpha_tr();
-      log_->printf(hovSummary, "alpd %18.12e\n",alp_temp);
+      log_->printf(hovSummary, "alpd %18.12e\n", alp_temp);
       
       convg_g = hess_appx_2->check_convergence_grad(*grad_r);
 
-      log_->printf(hovSummary, "convergence measure %18.12e\n",convg_g);
+      log_->printf(hovSummary, "convergence measure %18.12e\n", convg_g);
       
       convg_f = hess_appx_2->check_convergence_fcn(base_val, base_valm1);
      
-      log_->printf(hovSummary, "function val convergence measure %18.12e\n",convg_f);
+      log_->printf(hovSummary, "function val convergence measure %18.12e\n", convg_f);
      
       convg = std::min(convg_f,convg_g);
       for(int i=0; i<nc_; i++) {
