@@ -1,7 +1,14 @@
 # Change Log
 All notable changes to HiOp will be documented in this file.
 
-## Version 0.5.1: Scaling factor fix (Oct 21, 2021)
+## Version 0.5.2: xSDK compliance and misc bug fixes (Dec 3, 2021)
+
+ - xSDK compliance 
+ - fixed bugs in the IPM solver: gradient scaling on CUDA, unscaled objective in the  user callbacks, lambda capture fix in axpy for ROCm
+ - exported sparse config in cmake
+ - added user options for the algorithm parameters in PriDec solver
+ 
+## Version 0.5.1: Objective scaling factor fix (Oct 21, 2021)
 
 Modified the computation of the scaling factor to use the user-specified initial point
 
