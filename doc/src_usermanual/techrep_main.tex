@@ -1043,28 +1043,33 @@ This option takes double values in $[0, 10^{20}]$ and has a default value $10^{-
 \subsection{Options for PriDec solver}
 
 Here we list the options that are recognized by the \Hi's PriDec solver.
+ \subsubsection{Termination criteria and output}
 
-%% \subsubsection{Termination criteria and output}
+ \noindent \textbf{tolerance}: maximum (absolute) error measured by the decrease (predicted by the quadratic model) of objective value. Double values in $[10^{-14},0.1]$. Default value: $10^{-5}$.
 
-%% \noindent \textbf{tolerance}: maximum (absolute)  TODO: Frank explanation here. Double values in $[10^{-14},0.1]$. Default value: $10^{-8}$. 
+  \medskip
 
-%% \medskip
+  \noindent \textbf{acceptable\_tolerance}: PriDec solver will terminate if the inf-norm of the decrease in objective value is below this value for \texttt{acceptable\_iterations} many consecutive iterations. Double values in $[10^{-14},0.1]$. Default value $10^{-3}$.
 
-%% %\noindent \textbf{acceptable\_tolerance}: HiOp will terminate if the inf-norm of the NLP optimality residuals is below this value for \texttt{acceptable\_iterations} many consecutive iterations. Double values in $[10^{-14},0.1]$. Default value $10^{-6}$.
+  \medskip
 
-%% \medskip
+  \noindent \textbf{max\_iter}: maximum number of iterations. Integer values between $1$ to $10^6$. Default value: $3\,000$.
 
-%% \noindent \textbf{max\_iter}: maximum number of iterations. Integer values between $1$ to $10^6$. Default value: $3\,000$.
+  \medskip
 
-%% \medskip
+  \noindent \textbf{acceptable\_iterations}: number of iterations passing the acceptable tolerance (see \textbf{acceptable\_tolerance}) after which PriDec solver terminates. Integer values between $1$ and $10^6$. Default value $25$.
 
-%% %\noindent \textbf{acceptable\_iterations}: number of iterations passing the acceptable tolerance (see \textbf{acceptable\_tolerance}) after which HiOp terminates. Integer values between $1$ and $10^6$. Default value $15$.
+  \medskip
 
-%% \medskip
+ \noindent \textbf{verbosity\_level}: integer between $0$ and $12$ specifying the verbosity of \Hi's output. A value of $0$ disables any output (but still outputs fatal errors). A value of $1$ also outputs warnings. The value of $2$ is reserved for future use. A value of $3$ will also output a table with PriDec solver's convergence metrics and trust-region type of measure of the quality of the approximation model at each iteration. A value of $4$ and higher will display additional info related to the internals of the algorithm and is generally used only for debugging/development purposes. The higher the value the more verbose the output will be.
 
-%% \noindent \textbf{verbosity\_level}: integer between $0$ and $12$ specifying the verbosity of \Hi's output. A value of $0$ disables any output (but still outputs fatal errors). A value of $1$ also outputs warnings. The value of $2$ is reserved for future use. A value of $3$ will also output a table with \Hi's convergence metrics at each iteration. A value of $4$ and higher will display additional info related to the internals of the algorithm and is generally used only for debugging/development purposes. The higher the value the more verbose the output will be.
 
-%\subsubsection{Algorithm selection and parameters}
+\subsubsection{Algorithm selection and parameters}
+  \noindent \textbf{alpha\_min}: lower bound for the scalar quadratic coefficient in the approximation model of the objective. It is a global value and has higher priority than the update rule of alpha. Double values in $[10^{-8},10^3]$. Default value: $10^{-5}$.
+
+  \medskip
+
+  \noindent \textbf{alpha\_max}: upper bound for the scalar quadratic coefficient in the approximation model of the objective. It is a global value and has higher priority than the update rule of alpha. Double values in $[1,10^14]$. Default value: $10^6$. An assert error will be reported if \textbf{alpha\_min} is bigger than \textbf{alpha\_max}.
 %
 %-- to follow --
 
