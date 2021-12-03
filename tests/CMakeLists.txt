@@ -42,3 +42,16 @@ target_link_libraries(testMatrixSparse PRIVATE HiOp::HiOp)
 # Build symmetric sparse matrix test
 add_executable(testMatrixSymSparse ${testMatrixSymSparse_SRC})
 target_link_libraries(testMatrixSymSparse PRIVATE HiOp::HiOp)
+
+if(HIOP_USE_CUDA)
+  set(testTargets
+    testVector
+    testMatrixDense
+    testMatrixSparse
+    testMatrixSymSparse
+    )
+  foreach(target ${testTargets})
+    set_property(TARGET ${target}
+                 PROPERTY CUDA_SEPARABLE_COMPILATION ON)
+  endforeach()
+endif()
