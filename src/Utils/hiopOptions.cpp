@@ -64,6 +64,7 @@ using namespace std;
 const char* hiopOptions::default_filename = "hiop.options";
 const char* hiopOptions::default_filename_pridec_solver = "hiop_pridec.options";
 const char* hiopOptions::default_filename_pridec_masterNLP = "hiop_pridec_master.options";
+const char* hiopOptions::default_filename_fr = "hiop_fr.options";
   
 hiopOptions::hiopOptions()
   : log_(nullptr)
@@ -746,6 +747,11 @@ void hiopOptionsNLP::register_options()
 
   // feasibility restoration
   {
+    //name of the options file to be passed to the FR solver
+    register_str_option("options_file_fr_prob",
+                        hiopOptions::default_filename_fr,
+                        "Options file for the FR solver.");
+
     register_num_option("kappa_resto",
                         0.9,
                         0,

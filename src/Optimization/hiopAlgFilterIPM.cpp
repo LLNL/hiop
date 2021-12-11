@@ -2088,7 +2088,7 @@ bool hiopAlgFilterIPMBase::apply_feasibility_restoration(hiopKKTLinSys* kkt)
       } else {
         // this is Sparse linear system
         hiopFRProbSparse nlp_fr_interface(*this);
-        hiopNlpSparse nlpFR(nlp_fr_interface, "hiop_fr.options");
+        hiopNlpSparse nlpFR(nlp_fr_interface, nlp->options->GetString("options_file_fr_prob").c_str());
         fr_solved = solve_feasibility_restoration(kkt, nlpFR);
         if(fr_solved) {
           // FR successes, update it_trial->x and it_trial->d to the next search point
@@ -2100,7 +2100,7 @@ bool hiopAlgFilterIPMBase::apply_feasibility_restoration(hiopKKTLinSys* kkt)
     } else {
       // this is MDS system
       hiopFRProbMDS nlp_fr_interface(*this);
-      hiopNlpMDS nlpFR(nlp_fr_interface, "hiop_fr.options");
+      hiopNlpMDS nlpFR(nlp_fr_interface, nlp->options->GetString("options_file_fr_prob").c_str());
       fr_solved =  solve_feasibility_restoration(kkt, nlpFR);
       if(fr_solved) {
         // FR successes, update it_trial->x and it_trial->d to the next search point
