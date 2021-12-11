@@ -136,6 +136,7 @@ int main(int argc, char **argv)
 //  nlp.options->SetNumericValue("kappa2", 1e-8);
   nlp.options->SetNumericValue("mu0", 0.1);
 //  nlp.options->SetStringValue("scaling_type", "none");
+  nlp.options->SetStringValue("options_file_fr_prob", "hiop_fr_ci.options");
 
   if(use_pardiso) {
     nlp.options->SetStringValue("linear_solver_sparse", "pardiso");
