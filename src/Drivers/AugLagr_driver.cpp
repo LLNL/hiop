@@ -33,8 +33,8 @@ static bool self_check(long long n, double obj_value);
 
 static bool parse_arguments(int argc, char **argv, long long& n, double& distortion_ratio, bool& self_check)
 {
-  n = 20000; distortion_ratio=1.; self_check=false; //default options
-
+  n = 10; distortion_ratio=1.; self_check=false; //default options
+  
   switch(argc) {
   case 1:
     //no arguments
@@ -82,7 +82,10 @@ int main(int argc, char **argv)
   int rank=0, numRanks=1;
   bool selfCheck; long long mesh_size; double ratio;
   if(!parse_arguments(argc, argv, mesh_size, ratio, selfCheck)) { usage(argv[0]); return 1;}
-  
+
+#ifdef HIOP_USE_MPI
+  MPI_Init(&argc, &argv);
+#endif  
   Ex1Interface problem(mesh_size, ratio);
   hiop2IpoptTNLP nlp_ipopt(&problem);
   //if(rank==0) printf("nlp formulation created\n");
@@ -91,7 +94,13 @@ int main(int argc, char **argv)
   //nlp.options->SetNumericValue("tolerance", 1e-4);
   //nlp.options->SetStringValue("dualsInitialization",  "zero");
   //nlp.options->SetIntegerValue("max_iter", 2);
-  
+
+
+  //auto ipoptApp = IpoptApplicationFactory();
+  //ApplicationReturnStatus st = ipoptApp->Initialize();
+  //st = ipoptApp->OptimizeTNLP(&nlp_ipopt);
+
+
   hiop::hiopAugLagrSolver solver(&nlp_ipopt);
   hiop::hiopSolveStatus status = solver.run();
   double objective = solver.getObjective();

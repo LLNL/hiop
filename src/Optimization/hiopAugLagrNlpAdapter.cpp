@@ -263,6 +263,8 @@ bool hiopAugLagrNlpAdapter::eval_penalty_jac(const double *x_in, bool new_x)
       int *jCol = _penaltyFcn_jacobian->get_jCol();
       bool bret = nlp_in->eval_jac_g((Ipopt::Index)n_vars, nullptr, new_x,
                               (Ipopt::Index)m_cons, nnz_jac, iRow, jCol, nullptr);
+
+
       assert(bret);
       initializedStructure = true;
     }
@@ -272,7 +274,7 @@ bool hiopAugLagrNlpAdapter::eval_penalty_jac(const double *x_in, bool new_x)
     bool bret = nlp_in->eval_jac_g((Ipopt::Index)n_vars, x_in, new_x,
                               (Ipopt::Index)m_cons, nnz_jac, nullptr, nullptr, values);
     assert(bret);
-    
+      
     return bret;
 }
 
@@ -309,7 +311,7 @@ bool hiopAugLagrNlpAdapter::eval_f(const long long& n, const double* x_in,
 
     //f(x) - lam^t p(x) + rho ||p(x)||^2
     obj_value = obj_nlp - lagr_term + penalty_term;
-    
+
     runStats.tmEvalObj.stop();
     runStats.nEvalObj++;
 
@@ -465,7 +467,7 @@ bool hiopAugLagrNlpAdapter::get_nlp_info(Index& n, Index& m,
     //  error: invalid initialization of non-const reference of type 'long long int&'
     //  from an rvalue of type 'long long int'
     //       get_prob_sizes(n, m);
-         
+
     //hiop::hiopInterfaceDenseConstraints
     long long n_, m_;
     get_prob_sizes(n_, m_);
@@ -560,6 +562,7 @@ bool hiopAugLagrNlpAdapter::eval_h(Index n, const Number* x, bool new_x, Number 
     {
       // copy structure from _hessian
       _hessian->getStructure(iRow, jCol);
+
     }
     else if (values != NULL)
     {
@@ -762,14 +765,14 @@ bool hiopAugLagrNlpAdapter::eval_residuals(const long long& n, const double* x_i
     }
 
     std::string name = "z_L.txt";
-    FILE *f33=fopen(name.c_str(),"w");
-    _zLowIpopt->print(f33);
-    fclose(f33);
+    //FILE *f33=fopen(name.c_str(),"w");
+    //_zLowIpopt->print(f33);
+    //fclose(f33);
 
     name = "z_u.txt";
-    FILE *f331=fopen(name.c_str(),"w");
-    _zUppIpopt->print(f331);
-    fclose(f331);
+    //FILE *f331=fopen(name.c_str(),"w");
+    //_zUppIpopt->print(f331);
+    //fclose(f331);
 
     //project gradient onto rectangular box [l,u]
     // remove gradient with respect to the fixed variables, such that l=u

@@ -72,6 +72,8 @@ private:
   */
   void transAAplusB(hiopMatrixSparse &C, vector<vector<int>> &vvCols_C, vector<vector<double>> &vvValues_C, bool structureNotInitialized, double alpha, const hiopMatrixSparse &A, double beta, const hiopMatrixSparse &B);
 
+  void transAAplusB2(hiopMatrixSparse &C, vector<vector<int>> &vvCols_C, vector<vector<double>> &vvValues_C, bool structureNotInitialized, double alpha, const hiopMatrixSparse &A, double beta, const hiopMatrixSparse &B);
+
   /** 
    Append scaled jacobian and identity (blocks 2-1 and 2-2)
    to the sparse matrix H containing only H_xx block
