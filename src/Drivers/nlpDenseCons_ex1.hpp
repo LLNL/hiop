@@ -23,6 +23,8 @@
  *        integral(x:[0,1]) = 0.5
  *        0.1 <= x(t) <= 1.0, for all t in [0,1].
  *
+ *        sum[(x_i-x_1)^2] >= 0.1
+ * 
  * Here c(t) = 1-t*10, for 0<=t<=1/10,
  *              0,     for 1/10<=t<=1.
  * The inner products are L2.
@@ -67,9 +69,10 @@ public:
   MPI_Comm get_comm() const { return comm; }
 
   virtual void applyM(DiscretizedFunction& f);
-protected:
+
 
   hiop::hiopVectorPar* _mass; //the length or the mass of the elements
+protected:
   double _a,_b; //end points
   double _r; //distortion ratio
 
@@ -130,7 +133,7 @@ public:
     delete _mesh;
   }
   bool get_prob_sizes(long long& n, long long& m)
-  { n=n_vars; m=1; return true; }
+  { n=n_vars; m=2; return true; }
 
   bool get_vars_info(const long long& n, double *xlow, double* xupp, NonlinearityType* type)
   {
@@ -141,9 +144,10 @@ public:
   }
   bool get_cons_info(const long long& m, double* clow, double* cupp, NonlinearityType* type)
   {
-    assert(m==1);
+    assert(m==2);
     
     clow[0]= 0.5; cupp[0]= 0.5; type[0]=hiopInterfaceBase::hiopLinear;
+    clow[1]= 0.1; cupp[1]= 1e22; type[1]=hiopInterfaceBase::hiopLinear;
     return true;
   }
   bool eval_f(const long long& n, const double* x_in, bool new_x, double& obj_value)
@@ -165,8 +169,6 @@ public:
     _mesh->applyM(*x);
     x->copyTo(gradf);
 
-    //x->copyFrom(x_in);
-    //x->print(stdout);
     return true;
   }
   /** Sum(x[i])<=10 and sum(x[i])>= 1  (we pretend are different)
@@ -179,9 +181,21 @@ public:
     assert(n==n_vars); 
     if(0==num_cons) return true; //this may happen when Hiop asks for inequalities, which we don't have in this example
 
-    assert(num_cons==1);
+    assert(num_cons>=1);
     x->copyFrom(x_in);
     cons[0] = x->integral();
+    
+    double* xd = x->local_data();
+
+    if(num_cons>1)
+    {
+
+      cons[1] = 0;
+      for(int i=1; i<n; i++) {
+        const double aux = x_in[i]-x_in[0];
+        cons[1] += 0.5*aux*aux;
+      }
+    }
     return true;
   }
 
@@ -191,11 +205,79 @@ public:
   {
     assert(n==n_vars); 
     if(0==num_cons) return true; //this may happen when Hiop asks for inequalities, which we don't have in this example
-    assert(1==num_cons);
+    assert(num_cons>=1);
     //use x as auxiliary
     x->setToConstant(1.);
     _mesh->applyM(*x);
     x->copyTo(Jac[0]);
+
+    if(idx_cons[0]!=0)
+    {
+
+      double* xd = x->local_data();
+      Jac[0][0] = 0.;
+      for(int i=1; i<n; i++) {
+        const double aux = x_in[i]-x_in[0];
+        Jac[0][i]  = aux;
+        Jac[0][0] -= aux;
+      }
+    }
+    return true;
+  }
+
+  bool eval_Hess_Lagr(const long long& n,
+                      const long long& m,
+                      const double* x,
+                      bool new_x,
+                      const double& obj_factor,
+                      const double* lambda,
+                      bool new_lambda,
+                      const long long& nnzHSS,
+                      int* iHSS,
+                      int* jHSS,
+                      double* MHSS)
+  {
+    printf("m===== %d   nnz=%d \n", m, nnzHSS);
+    if(lambda) printf("obj_factor=%.5e   lambda %.5e  %.5e \n", obj_factor, lambda[0], lambda[1]);
+    //assert(nnzHSS == 2*n-1);
+    assert(n == n_vars);
+    
+    assert(m==2);
+
+    
+    if(iHSS!=NULL) {
+      assert(jHSS!=NULL);
+      iHSS[0] = 0;
+      jHSS[0] = 0;
+      
+      for(int i=1; i<n; ++i)
+      {
+        int it=2*(i-1)+1;
+        
+        iHSS[it]=i;
+        jHSS[it]=0;
+
+        iHSS[it+1]=i;
+        jHSS[it+1]=i;
+      }
+    }
+    if(MHSS!=NULL) {
+      MHSS[0] = obj_factor * _mesh->_mass->local_data()[0];
+      for(int i=1; i<n; ++i)
+      {
+        int it=2*(i-1)+1;
+        MHSS[it] = -lambda[1];
+        
+        it=it+1;
+        MHSS[it] = obj_factor * _mesh->_mass->local_data()[i];
+        MHSS[it] += lambda[1];
+
+        MHSS[0] += lambda[1];
+              
+      }
+
+    }
+    
     return true;
   }
 

@@ -44,7 +44,7 @@ public:
       return false;
     n = (int)nvars; m=(int)ncons;
     nnz_jac_g = n*m;
-    nnz_h_lag=0;
+    nnz_h_lag=2*n-1;
     index_style = TNLP::C_STYLE;
     return true;
   }
@@ -62,7 +62,7 @@ public:
     if(bSuccess) {
       types=new hiopInterfaceBase::NonlinearityType[m];
       bSuccess = hiopNLP->get_cons_info(mll, g_l, g_u, types);
-      delete types;
+      delete[] types;
     }
     return bSuccess;
   }
@@ -150,7 +150,12 @@ public:
   virtual bool eval_h(Index n, const Number* x, bool new_x,
                       Number obj_factor, Index m, const Number* lambda,
                       bool new_lambda, Index nele_hess, Index* iRow,
-                      Index* jCol, Number* values) { return false; }
+                      Index* jCol, Number* values)
+  {
+    bool bret = hiopNLP->eval_Hess_Lagr(n, 2, x, new_x, obj_factor, lambda, new_lambda, nele_hess, iRow, jCol, values);
+    assert(bret);
+    return bret;
+  }
 
   /* This method is called when the algorithm is complete so the TNLP can store/write the solution */
   virtual void finalize_solution(SolverReturn status,

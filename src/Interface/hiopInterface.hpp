@@ -228,7 +228,7 @@ private:
   hiopInterfaceBase(const hiopInterfaceBase& ) {};
   void operator=(const hiopInterfaceBase&) {};
 };
-
+  
 /** Specialized interface for NLPs with 'global' but few constraints. 
  */
 class hiopInterfaceDenseConstraints : public hiopInterfaceBase 
@@ -248,6 +248,18 @@ public:
 			     const long long& num_cons, const long long* idx_cons,  
 			     const double* x, bool new_x,
 			     double** Jac) = 0;
+
+  virtual bool eval_Hess_Lagr(const long long& n,
+                              const long long& m,
+                              const double* x,
+                              bool new_x,
+                              const double& obj_factor,
+                              const double* lambda,
+                              bool new_lambda,
+                              const long long& nnzHSS,
+                              int* iHSS,
+                              int* jHSS,
+                              double* MHSS) {return false;}
 };
 
 }
