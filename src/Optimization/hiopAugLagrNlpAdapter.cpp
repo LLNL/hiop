@@ -3,6 +3,9 @@
 #include "hiopMatrixSparse.hpp"
 #include "hiopAugLagrHessian.hpp"
 
+#include "IpIpoptCalculatedQuantities.hpp"
+
+
 #ifdef HIOP_USE_MPI
 #include "mpi.h"
 #else 
@@ -13,6 +16,7 @@
 #include <cstring>      // memcpy
 #include <cassert>
 #include <iostream>
+
 
 namespace hiop
 {
@@ -41,7 +45,7 @@ hiopAugLagrNlpAdapter::hiopAugLagrNlpAdapter(NLP_CLASS_IN* nlp_in_):
     log(new hiopLogger(options, stdout, 0))
 {
     options->SetLog(log);
-   
+    nlp_error_ = 1e+6;
     // initializes the member variables
     initialize();
 }
@@ -311,7 +315,7 @@ bool hiopAugLagrNlpAdapter::eval_f(const long long& n, const double* x_in,
 
     //f(x) - lam^t p(x) + rho ||p(x)||^2
     obj_value = obj_nlp - lagr_term + penalty_term;
-
+    
     runStats.tmEvalObj.stop();
     runStats.nEvalObj++;
 
@@ -329,7 +333,6 @@ bool hiopAugLagrNlpAdapter::eval_f_user(const long long& n, const double* x_in,
     // evaluate the original NLP objective f(x), uses only firs n_vars entries of x_in
     bool bret = nlp_in->eval_f((Ipopt::Index)n_vars, x_in, new_x, obj_value); 
     assert(bret);
-    
     runStats.tmEvalObj.stop();
 
     return bret;
@@ -363,7 +366,7 @@ bool hiopAugLagrNlpAdapter::eval_grad_Lagr(const long long& n, const double* x_i
     /****************************************************/
     //TODO new_x
     if (true) eval_penalty_jac(x_in, new_x);
-
+    
     /**************************************************/
     /**    Compute Lagrangian term contribution       */
     /**     gradLagr = gradLagr - Jac' * lambda       */ 
@@ -374,7 +377,6 @@ bool hiopAugLagrNlpAdapter::eval_grad_Lagr(const long long& n, const double* x_i
     assert(_penaltyFcn_jacobian->n() == n_vars);
 
     _penaltyFcn_jacobian->transTimesVec(1.0, gradLagr, -1.0, lambda_data);
-    
     //Add the Jacobian w.r.t the slack variables (_penaltyFcn_jacobian contains
     //only the jacobian w.r.t original x, we need to add Jac w.r.t slacks)
     //The structure of the La Jacobian is following (Note that Je, Ji
@@ -387,7 +389,6 @@ bool hiopAugLagrNlpAdapter::eval_grad_Lagr(const long long& n, const double* x_i
         // gradLagr(n_vars:end) = 0 - (-I) * lambda_ineq
         gradLagr[n_vars + i] += lambda_data[cons_ineq_mapping[i]];
     }
-    
     return true;
 }
 
@@ -618,6 +619,8 @@ void hiopAugLagrNlpAdapter::finalize_solution(SolverReturn status, Index n,
 
     //cache the number of IPOPT iterations
     _numItersIpopt = ip_data->iter_count();
+
+    nlp_error_ = ip_cq->curr_nlp_error();
     return;
 }
     /***********************************************************************
@@ -749,7 +752,7 @@ bool hiopAugLagrNlpAdapter::eval_residuals(const long long& n, const double* x_i
     /**************************************************/
     //TODO: we could use new_x = false here, since the penalty is already evaluated
     //and cached in #_penaltyFcn
-     //eval_grad_Lagr(n, x_in, new_x, grad); //TODO: new_x
+    //eval_grad_Lagr(n, x_in, new_x, grad); //TODO: new_x
 
     // std::cerr << "grad_f = [";
     // for(int it=0; it<n_vars+n_slacks; it++)  fprintf(stderr, "%22.16e ; ", grad[it]);
@@ -761,17 +764,17 @@ bool hiopAugLagrNlpAdapter::eval_residuals(const long long& n, const double* x_i
     //      of the error at iteration 0, they are obtain as a subproblem solution
     for (int i = 0; i < n; i++)
     {
-        grad[i] += zU_in[i] - zL_in[i];
+      grad[i] += (zU_in[i] - zL_in[i]);
     }
 
     std::string name = "z_L.txt";
     //FILE *f33=fopen(name.c_str(),"w");
-    //_zLowIpopt->print(f33);
+    //_zLowIpopt->print(stdout);
     //fclose(f33);
 
     name = "z_u.txt";
     //FILE *f331=fopen(name.c_str(),"w");
-    //_zUppIpopt->print(f331);
+    //_zUppIpopt->print(stdout);
     //fclose(f331);
 
     //project gradient onto rectangular box [l,u]

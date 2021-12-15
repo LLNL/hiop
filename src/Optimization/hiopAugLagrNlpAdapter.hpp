@@ -344,7 +344,9 @@ protected:
     hiopVectorPar *_solutionIpopt; ///< cached Ipopt solution from finalize_solution()
     hiopVectorPar *_zLowIpopt, *_zUppIpopt; ///< cached Ipopt multipliers for the bounds
     int _numItersIpopt; ///< cached number of Ipopt iterations
-
+public:
+  double nlp_error_;
+protected:
     //working memory for internal evaluations of the AL functions
     //motivation to have in on class level is to avoid alloc/dealloc
     //during each call of the evaluation routines

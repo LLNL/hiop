@@ -59,7 +59,7 @@ private:
   void displayTerminationMsgIpopt(ApplicationReturnStatus st);
 
 
-private:
+public: // #fix me
   hiopAugLagrNlpAdapter *subproblem;    ///< instance of the AL problem with options
   IpoptApplication *ipoptApp;           ///< instance of Ipopt solver
   hiopAlgFilterIPM *hiopSolver;         ///< instance of hiop solver

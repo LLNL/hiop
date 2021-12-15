@@ -74,9 +74,10 @@ void hiopAugLagrSolver::reloadOptions()
   _alpha = 1./_RHO0; ///< positive constants
   _eps_tol_feas0  = 1e-1 * _alpha; ///< required feasibility of the subproblem
   _eps_tol_optim0 = 1e-2 * pow(_alpha, 0.1); ///< required optimality tolerance of the subproblem
-  _eps_tol_feas0  = _eps_tol_feas0;  //1e-3;
-  _eps_tol_optim0 = _eps_tol_optim0; //1e-3;
-  
+
+  //_eps_tol_feas0  = _eps_tol_feas0;  //1e-3;
+  //_eps_tol_optim0 = _eps_tol_optim0; //1e-3;
+
   _eps_tol_feas  = _eps_tol_feas0;
   _eps_tol_optim = _eps_tol_optim0;
 }
@@ -151,7 +152,7 @@ hiopSolveStatus hiopAugLagrSolver::run()
    
   name = "resid" + std::to_string(_iter_num) + ".txt";
   FILE *f43=fopen(name.c_str(),"w");
-  residual->print(f43);
+  //residual->print(f43);
   fclose(f43);
 
   //check termination conditions   
@@ -211,9 +212,11 @@ hiopSolveStatus hiopAugLagrSolver::run()
     subproblemSolver.getSolution(_it_curr->local_data());
     subproblemSolver.getSolution_duals(_zL->local_data(), _zU->local_data());
 
+    const double subprob_nlp_err = subproblemSolver.subproblem->nlp_error_;
+    
     std::string name = "iter" + std::to_string(_iter_num+1) + ".txt";
     FILE *f3=fopen(name.c_str(),"w");
-    _it_curr->print(f3);
+    //_it_curr->print(f3);
     fclose(f3);
 
     nlp->log->printf(hovIteration, "Iter[%d] -> full iterate:", _iter_num);
@@ -238,7 +241,11 @@ hiopSolveStatus hiopAugLagrSolver::run()
     //TODO: probably doesn't need to re-evaluate Ipopt's fcns
     evalNlp(_it_curr, _f_nlp);
     evalNlpErrors(_it_curr, _zL, _zU, residual, _err_feas, _err_optim);
+
+    //xxx
+    _err_optim = subprob_nlp_err;
     
+    //
     nlp->log->printf(hovScalars, "AugLagrSolver[%d]: Subproblem optimality error %.5e\n", _iter_num+1, _err_optim);
     nlp->log->printf(hovScalars, "AugLagrSolver[%d]: Subproblem feasibility error is %.5e\n", _iter_num+1, _err_feas);
    
@@ -258,7 +265,9 @@ hiopSolveStatus hiopAugLagrSolver::run()
     if(checkTermination(_err_feas, _err_optim, _iter_num, _solverStatus)) {
         break; //terminate the loop
     }
-
+    
+    //printf("aaa _eps_tol_optim = %.5e _eps_tol_feas=%.5e  _alpha=%.5e\n", _eps_tol_optim, _eps_tol_feas, _alpha);
+    //printf("aaa  _err_optim    = %.5e _err_feas    =%.5e\n", _err_optim, _err_feas);
     /************************************************
      * update rho and lambdas
      ************************************************/
@@ -277,7 +286,6 @@ hiopSolveStatus hiopAugLagrSolver::run()
         //_eps_tol_feas *= pow(_alpha, 0.9);
         _eps_tol_optim *= 0.5;
         _eps_tol_feas *= 0.9;
-        
     }
     else
     {

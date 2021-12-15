@@ -237,8 +237,7 @@ public:
                       int* jHSS,
                       double* MHSS)
   {
-    printf("m===== %d   nnz=%d \n", m, nnzHSS);
-    if(lambda) printf("obj_factor=%.5e   lambda %.5e  %.5e \n", obj_factor, lambda[0], lambda[1]);
+    //if(lambda) printf("obj_factor=%.5e   lambda %.5e  %.5e \n", obj_factor, lambda[0], lambda[1]);
     //assert(nnzHSS == 2*n-1);
     assert(n == n_vars);
     

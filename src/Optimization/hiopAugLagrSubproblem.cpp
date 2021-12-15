@@ -107,6 +107,7 @@ hiopSolveStatus hiopAugLagrSubproblem::solveSubproblem_ipopt()
   //negative switch_iter disables QN
   if (SWITCH_IT >= 0 && subproblem_iter > SWITCH_IT) 
   {
+    assert(false);
       subproblem->log->printf(hovWarning, "hipAugLagrSubproblem: switching to the Quasi-Newton mode!\n");
       ipoptApp->Options()->SetStringValue("hessian_approximation", "limited-memory");
       ipoptApp->Options()->SetIntegerValue("limited_memory_max_history", 6);
