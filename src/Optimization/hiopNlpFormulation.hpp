@@ -204,37 +204,37 @@ public:
                          double& alpha_pr);
   
   /** const accessors */
-  inline const hiopVector& get_xl ()  const { return *xl;   }
-  inline const hiopVector& get_xu ()  const { return *xu;   }
-  inline const hiopVector& get_ixl()  const { return *ixl;  }
-  inline const hiopVector& get_ixu()  const { return *ixu;  }
-  inline const hiopVector& get_dl ()  const { return *dl;   }
-  inline const hiopVector& get_du ()  const { return *du;   }
-  inline const hiopVector& get_idl()  const { return *idl;  }
-  inline const hiopVector& get_idu()  const { return *idu;  }
-  inline const hiopVector& get_crhs() const { return *c_rhs;}
+  inline const hiopVector& get_xl ()  const { return *xl_;   }
+  inline const hiopVector& get_xu ()  const { return *xu_;   }
+  inline const hiopVector& get_ixl()  const { return *ixl_;  }
+  inline const hiopVector& get_ixu()  const { return *ixu_;  }
+  inline const hiopVector& get_dl ()  const { return *dl_;   }
+  inline const hiopVector& get_du ()  const { return *du_;   }
+  inline const hiopVector& get_idl()  const { return *idl_;  }
+  inline const hiopVector& get_idu()  const { return *idu_;  }
+  inline const hiopVector& get_crhs() const { return *c_rhs_;}
 
-  inline hiopInterfaceBase::NonlinearityType* get_var_type() const {return vars_type;}
-  inline hiopInterfaceBase::NonlinearityType* get_cons_eq_type() const {return cons_eq_type;}
-  inline hiopInterfaceBase::NonlinearityType* get_cons_ineq_type() const {return cons_ineq_type;}
+  inline hiopInterfaceBase::NonlinearityType* get_var_type() const {return vars_type_;}
+  inline hiopInterfaceBase::NonlinearityType* get_cons_eq_type() const {return cons_eq_type_;}
+  inline hiopInterfaceBase::NonlinearityType* get_cons_ineq_type() const {return cons_ineq_type_;}
   
   /** const accessors */
-  inline size_type n() const      {return n_vars;}
-  inline size_type m() const      {return n_cons;}
-  inline size_type m_eq() const   {return n_cons_eq;}
-  inline size_type m_ineq() const {return n_cons_ineq;}
-  inline size_type n_low() const  {return n_bnds_low;}
-  inline size_type n_upp() const  {return n_bnds_upp;}
-  inline size_type m_ineq_low() const {return n_ineq_low;}
-  inline size_type m_ineq_upp() const {return n_ineq_upp;}
+  inline size_type n() const      {return n_vars_;}
+  inline size_type m() const      {return n_cons_;}
+  inline size_type m_eq() const   {return n_cons_eq_;}
+  inline size_type m_ineq() const {return n_cons_ineq_;}
+  inline size_type n_low() const  {return n_bnds_low_;}
+  inline size_type n_upp() const  {return n_bnds_upp_;}
+  inline size_type m_ineq_low() const {return n_ineq_low_;}
+  inline size_type m_ineq_upp() const {return n_ineq_upp_;}
   inline size_type n_complem()  const {return m_ineq_low()+m_ineq_upp()+n_low()+n_upp();}
 
   inline size_type n_local() const
   {
-    return xl->get_local_size();
+    return xl_->get_local_size();
   }
-  inline size_type n_low_local() const {return n_bnds_low_local;}
-  inline size_type n_upp_local() const {return n_bnds_upp_local;}
+  inline size_type n_low_local() const {return n_bnds_low_local_;}
+  inline size_type n_upp_local() const {return n_bnds_upp_local_;}
 
   /* methods for transforming the internal objects to corresponding user objects */
   inline double user_obj(double hiop_f) { return nlp_transformations.apply_inv_to_obj(hiop_f); }
@@ -267,6 +267,17 @@ public:
   inline int      get_num_ranks() const { return num_ranks; }
 #endif
 protected:
+  /* Preprocess bounds in a form supported by the NLP formulation. Returns counts of
+   * the variables with lower, upper, and lower and lower bounds, as well of the fixed 
+   * variables. 
+   */
+  virtual bool process_bounds(size_type& n_bnds_low,
+                              size_type& n_bnds_upp,
+                              size_type& n_bnds_lu,
+                              size_type& nfixed_vars);
+  /* Preprocess constraints in a form supported the NLP formulation. */
+  virtual bool process_constraints();
+protected:
 #ifdef HIOP_USE_MPI
   MPI_Comm comm;
   int rank, num_ranks;
@@ -275,17 +286,26 @@ protected:
 
   /* problem data */
   //various dimensions
-  size_type n_vars, n_cons, n_cons_eq, n_cons_ineq;
-  size_type n_bnds_low, n_bnds_low_local, n_bnds_upp, n_bnds_upp_local, n_ineq_low, n_ineq_upp;
-  size_type n_bnds_lu, n_ineq_lu;
-  hiopVector *xl, *xu, *ixu, *ixl; //these will/can be global, memory distributed
-  hiopInterfaceBase::NonlinearityType* vars_type; //C array containing the types for local vars
+  size_type n_vars_;
+  size_type n_cons_;
+  size_type n_cons_eq_;
+  size_type n_cons_ineq_;
+  size_type n_bnds_low_;
+  size_type n_bnds_low_local_;
+  size_type n_bnds_upp_;
+  size_type n_bnds_upp_local_;
+  size_type n_ineq_low_;
+  size_type n_ineq_upp_;
+  size_type n_bnds_lu_;
+  size_type n_ineq_lu_;
+  hiopVector *xl_, *xu_, *ixu_, *ixl_; //these will/can be global, memory distributed
+  hiopInterfaceBase::NonlinearityType* vars_type_; //C array containing the types for local vars
 
-  hiopVector *c_rhs; //local
-  hiopInterfaceBase::NonlinearityType* cons_eq_type;
+  hiopVector *c_rhs_; //local
+  hiopInterfaceBase::NonlinearityType* cons_eq_type_;
 
-  hiopVector *dl, *du,  *idl, *idu; //these will be local
-  hiopInterfaceBase::NonlinearityType* cons_ineq_type;
+  hiopVector *dl_, *du_,  *idl_, *idu_; //these will be local
+  hiopInterfaceBase::NonlinearityType* cons_ineq_type_;
   
   // keep track of the constraints indexes in the original, user's formulation
   hiopVectorInt *cons_eq_mapping_, *cons_ineq_mapping_; 
@@ -305,7 +325,7 @@ protected:
 
 #ifdef HIOP_USE_MPI
   //inter-process distribution of vectors
-  index_type* vec_distrib;
+  index_type* vec_distrib_;
 #endif
 
   /* User provided interface */
@@ -441,18 +461,18 @@ public:
   
   virtual hiopMatrix* alloc_Jac_c() 
   {
-    assert(n_vars == nx_sparse+nx_dense);
-    return new hiopMatrixMDS(n_cons_eq, nx_sparse, nx_dense, nnz_sparse_Jaceq, options->GetString("mem_space"));
+    assert(n_vars_ == nx_sparse+nx_dense);
+    return new hiopMatrixMDS(n_cons_eq_, nx_sparse, nx_dense, nnz_sparse_Jaceq, options->GetString("mem_space"));
   }
   virtual hiopMatrix* alloc_Jac_d() 
   {
-    assert(n_vars == nx_sparse+nx_dense);
-    return new hiopMatrixMDS(n_cons_ineq, nx_sparse, nx_dense, nnz_sparse_Jacineq, options->GetString("mem_space"));
+    assert(n_vars_ == nx_sparse+nx_dense);
+    return new hiopMatrixMDS(n_cons_ineq_, nx_sparse, nx_dense, nnz_sparse_Jacineq, options->GetString("mem_space"));
   }
   virtual hiopMatrix* alloc_Jac_cons()
   {
-    assert(n_vars == nx_sparse+nx_dense);
-    return new hiopMatrixMDS(n_cons,
+    assert(n_vars_ == nx_sparse+nx_dense);
+    return new hiopMatrixMDS(n_cons_,
                              nx_sparse,
                              nx_dense,
                              nnz_sparse_Jaceq+nnz_sparse_Jacineq,
@@ -524,21 +544,21 @@ public:
   
   virtual hiopMatrix* alloc_Jac_c()
   {
-    return new hiopMatrixSparseTriplet(n_cons_eq, n_vars, m_nnz_sparse_Jaceq);
+    return new hiopMatrixSparseTriplet(n_cons_eq_, n_vars_, m_nnz_sparse_Jaceq);
   }
   virtual hiopMatrix* alloc_Jac_d()
   {
-    return new hiopMatrixSparseTriplet(n_cons_ineq, n_vars, m_nnz_sparse_Jacineq);
+    return new hiopMatrixSparseTriplet(n_cons_ineq_, n_vars_, m_nnz_sparse_Jacineq);
   }
   virtual hiopMatrix* alloc_Jac_cons()
   {
-    return new hiopMatrixSparseTriplet(n_cons, n_vars, m_nnz_sparse_Jaceq + m_nnz_sparse_Jacineq);
+    return new hiopMatrixSparseTriplet(n_cons_, n_vars_, m_nnz_sparse_Jaceq + m_nnz_sparse_Jacineq);
   }
   virtual hiopMatrix* alloc_Hess_Lagr()
   {
-    return new hiopMatrixSymSparseTriplet(n_vars, m_nnz_sparse_Hess_Lagr);
+    return new hiopMatrixSymSparseTriplet(n_vars_, m_nnz_sparse_Hess_Lagr);
   }
-  virtual size_type nx() const { return n_vars; }
+  virtual size_type nx() const { return n_vars_; }
 
   //not inherited from NlpFormulation
 
@@ -548,9 +568,9 @@ public:
    */
   virtual hiopVector* alloc_primal_dual_vec() const
   {
-    assert(n_cons == n_cons_eq+n_cons_ineq);
+    assert(n_cons_ == n_cons_eq_+n_cons_ineq_);
     return LinearAlgebraFactory::create_vector(options->GetString("mem_space"),
-                                               n_vars + n_cons);
+                                               n_vars_ + n_cons_);
   }
 
   /** const accessors */
