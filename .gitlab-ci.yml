@@ -88,7 +88,7 @@ build_on_marianas:
     SLURM_Q: "dl"
     MY_CLUSTER: "marianas"
     TIMELIMIT: '1:00:00'
-    SLURM_ARGS: --gres=gpu:1
+    SLURM_ARGS: --gres=gpu:1 --exclusive
   <<: *pnnl_tags_definition
   <<: *pnnl_script_definition
   rules:
@@ -100,7 +100,7 @@ build_on_newell:
     SLURM_Q: "newell_shared"
     MY_CLUSTER: "newell"
     TIMELIMIT: '1:00:00'
-    SLURM_ARGS: --gres=gpu:1
+    SLURM_ARGS: --gres=gpu:1 --exclusive
   <<: *pnnl_tags_definition
   <<: *pnnl_script_definition
   rules:
@@ -112,6 +112,7 @@ build_on_incline:
     SLURM_Q: incline
     MY_CLUSTER: incline
     TIMELIMIT: '1:00:00'
+    SLURM_ARGS: --exclusive
   <<: *pnnl_tags_definition
   <<: *pnnl_script_definition
   rules:
