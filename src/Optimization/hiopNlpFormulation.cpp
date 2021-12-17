@@ -426,8 +426,10 @@ bool hiopNlpFormulation::process_bounds(size_type& n_bnds_low,
                                         size_type& nfixed_vars)
 {
 
-  n_bnds_low = n_bnds_upp = 0;
+  n_bnds_low = 0;
+  n_bnds_upp = 0;
   n_bnds_lu = 0;
+  nfixed_vars = 0;
 
   double *ixl_vec = ixl_->local_data_host();
   double *ixu_vec = ixu_->local_data_host();
