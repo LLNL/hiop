@@ -237,13 +237,16 @@ public:
   inline size_type n_upp_local() const {return n_bnds_upp_local_;}
 
   /* methods for transforming the internal objects to corresponding user objects */
-  inline double user_obj(double hiop_f) { return nlp_transformations.apply_inv_to_obj(hiop_f); }
-  inline void   user_x(hiopVector& hiop_x, double* user_x) 
+  inline double user_obj(double hiop_f)
+  {
+    return nlp_transformations_.apply_inv_to_obj(hiop_f);
+  }
+  inline void user_x(hiopVector& hiop_x, double* user_x) 
   { 
     //double *hiop_xa = hiop_x.local_data();
-    hiopVector *x = nlp_transformations.apply_inv_to_x(hiop_x,/*new_x=*/true); 
+    hiopVector *x = nlp_transformations_.apply_inv_to_x(hiop_x,/*new_x=*/true); 
     //memcpy(user_x, user_xa, hiop_x.get_local_size()*sizeof(double));
-    memcpy(user_x, x->local_data(), nlp_transformations.n_post_local()*sizeof(double));
+    memcpy(user_x, x->local_data(), nlp_transformations_.n_post_local()*sizeof(double));
   }
 
   /* copies/unpacks duals of the bounds and of constraints from 'it' to the three arrays */
@@ -262,9 +265,18 @@ public:
   //prints a summary of the problem
   virtual void print(FILE* f=NULL, const char* msg=NULL, int rank=-1) const;
 #ifdef HIOP_USE_MPI
-  inline MPI_Comm get_comm() const { return comm; }
-  inline int      get_rank() const { return rank; }
-  inline int      get_num_ranks() const { return num_ranks; }
+  inline MPI_Comm get_comm() const
+  {
+    return comm_;
+  }
+  inline int get_rank() const
+  {
+    return rank_;
+  }
+  inline int get_num_ranks() const
+  {
+    return num_ranks_;
+  }
 #endif
 protected:
   /* Preprocess bounds in a form supported by the NLP formulation. Returns counts of
@@ -279,13 +291,13 @@ protected:
   virtual bool process_constraints();
 protected:
 #ifdef HIOP_USE_MPI
-  MPI_Comm comm;
-  int rank, num_ranks;
+  MPI_Comm comm_;
+  int rank_;
+  int num_ranks_;
   bool mpi_init_called;
 #endif
 
-  /* problem data */
-  //various dimensions
+  /* Problem data and dimensions */
   size_type n_vars_;
   size_type n_cons_;
   size_type n_cons_eq_;
@@ -311,17 +323,17 @@ protected:
   hiopVectorInt *cons_eq_mapping_, *cons_ineq_mapping_; 
 
   //options for which this class was setup
-  std::string strFixedVars; //"none", "fixed", "relax"
-  double dFixedVarsTol;
+  std::string strFixedVars_; //"none", "fixed", "relax"
+  double dFixedVarsTol_;
 
   /**
    * @brief Internal NLP transformations that supports fixing and relaxing variables as well as
    * problem rescalings.
    */
-  hiopNlpTransformations nlp_transformations;
+  hiopNlpTransformations nlp_transformations_;
   
   //internal NLP transformations (currently gradient scaling implemented)
-  hiopNLPObjGradScaling *nlp_scaling;
+  hiopNLPObjGradScaling *nlp_scaling_;
 
 #ifdef HIOP_USE_MPI
   //inter-process distribution of vectors
@@ -360,7 +372,7 @@ protected:
 private:
   hiopNlpFormulation(const hiopNlpFormulation& s)
     : interface_base(s.interface_base),
-      nlp_transformations(this)
+      nlp_transformations_(this)
   {};
 };
 
@@ -544,21 +556,24 @@ public:
   
   virtual hiopMatrix* alloc_Jac_c()
   {
-    return new hiopMatrixSparseTriplet(n_cons_eq_, n_vars_, m_nnz_sparse_Jaceq);
+    return new hiopMatrixSparseTriplet(n_cons_eq_, n_vars_, nnz_sparse_Jaceq_);
   }
   virtual hiopMatrix* alloc_Jac_d()
   {
-    return new hiopMatrixSparseTriplet(n_cons_ineq_, n_vars_, m_nnz_sparse_Jacineq);
+    return new hiopMatrixSparseTriplet(n_cons_ineq_, n_vars_, nnz_sparse_Jacineq_);
   }
   virtual hiopMatrix* alloc_Jac_cons()
   {
-    return new hiopMatrixSparseTriplet(n_cons_, n_vars_, m_nnz_sparse_Jaceq + m_nnz_sparse_Jacineq);
+    return new hiopMatrixSparseTriplet(n_cons_, n_vars_, nnz_sparse_Jaceq_ + nnz_sparse_Jacineq_);
   }
   virtual hiopMatrix* alloc_Hess_Lagr()
   {
-    return new hiopMatrixSymSparseTriplet(n_vars_, m_nnz_sparse_Hess_Lagr);
+    return new hiopMatrixSymSparseTriplet(n_vars_, nnz_sparse_Hess_Lagr_);
   }
-  virtual size_type nx() const { return n_vars_; }
+  virtual size_type nx() const
+  {
+    return n_vars_;
+  }
 
   //not inherited from NlpFormulation
 
@@ -570,18 +585,19 @@ public:
   {
     assert(n_cons_ == n_cons_eq_+n_cons_ineq_);
     return LinearAlgebraFactory::create_vector(options->GetString("mem_space"),
-                                               n_vars_ + n_cons_);
+                                               n_vars_+n_cons_);
   }
 
   /** const accessors */
-  inline int get_nnz_Jaceq()  const { return m_nnz_sparse_Jaceq; }
-  inline int get_nnz_Jacineq()  const { return m_nnz_sparse_Jacineq; }
-  inline int get_nnz_Hess_Lagr()  const { return m_nnz_sparse_Hess_Lagr; }
+  inline int get_nnz_Jaceq()  const { return nnz_sparse_Jaceq_; }
+  inline int get_nnz_Jacineq()  const { return nnz_sparse_Jacineq_; }
+  inline int get_nnz_Hess_Lagr()  const { return nnz_sparse_Hess_Lagr_; }
   
 private:
   hiopInterfaceSparse& interface;
-  int m_nnz_sparse_Jaceq, m_nnz_sparse_Jacineq;
-  int m_nnz_sparse_Hess_Lagr;
+  int nnz_sparse_Jaceq_;
+  int nnz_sparse_Jacineq_;
+  int nnz_sparse_Hess_Lagr_;
   int num_jac_eval_;
   int num_hess_eval_;
 
