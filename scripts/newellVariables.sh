@@ -97,3 +97,4 @@ export NVBLAS_CONFIG_FILE=$PWD/nvblas.conf
 echo "Generated $PWD/nvblas.conf"
 
 export EXTRA_CMAKE_ARGS="$EXTRA_CMAKE_ARGS -DCMAKE_CUDA_ARCHITECTURES=70"
+export CMAKE_CACHE_SCRIPT=gcc-cuda.cmake

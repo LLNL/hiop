@@ -49,7 +49,7 @@
         export SLURM_Q=`perl $WORKDIR/scripts/findIdleDLNodes.pl`
       fi
 
-      sbatch -A EXASGD -p $SLURM_Q -t $TIMELIMIT --gres=gpu:1 -o output -e output $WORKDIR/BUILD.sh
+      sbatch -A EXASGD --exclusive -N 1 -n 8 -p $SLURM_Q -t $TIMELIMIT $SLURM_ARGS -o output -e output $WORKDIR/BUILD.sh $BUILD_SCRIPT_ARGS
       res=1
       set +xv
       while :;
@@ -88,6 +88,7 @@ build_on_marianas:
     SLURM_Q: "dl"
     MY_CLUSTER: "marianas"
     TIMELIMIT: '1:00:00'
+    SLURM_ARGS: --gres=gpu:1 --exclusive
   <<: *pnnl_tags_definition
   <<: *pnnl_script_definition
   rules:
@@ -99,6 +100,20 @@ build_on_newell:
     SLURM_Q: "newell_shared"
     MY_CLUSTER: "newell"
     TIMELIMIT: '1:00:00'
+    SLURM_ARGS: --gres=gpu:1 --exclusive
+  <<: *pnnl_tags_definition
+  <<: *pnnl_script_definition
+  rules:
+    - if: '$CI_PROJECT_ROOT_NAMESPACE == "exasgd"'
+
+build_on_incline:
+  stage: default_build
+  variables:
+    SLURM_Q: incline
+    MY_CLUSTER: incline
+    TIMELIMIT: '1:00:00'
+    SLURM_ARGS: --exclusive
+    BUILD_SCRIPT_ARGS: --build-only
   <<: *pnnl_tags_definition
   <<: *pnnl_script_definition
   rules:
