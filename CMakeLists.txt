@@ -40,6 +40,7 @@ option(HIOP_WITH_VALGRIND_TESTS "Run valgrind on certain integration tests" OFF)
 option(HIOP_BUILD_DOCUMENTATION "Build HiOp documentation via Doxygen" ON)
 
 set(HIOP_CTEST_LAUNCH_COMMAND "" CACHE STRING "Manually override launch commands used when running CTest")
+set(HIOP_EXTRA_LINK_FLAGS "" CACHE STRING "Manually pass extra flags to linker")
 
 # Ensure at least one library type is being built!
 if((NOT HIOP_BUILD_SHARED) AND (NOT HIOP_BUILD_STATIC))
@@ -84,6 +85,13 @@ cmake_dependent_option(
 add_library(hiop_tpl INTERFACE)
 add_library(hiop_options INTERFACE)
 add_library(hiop_warnings INTERFACE)
+
+if(NOT "${HIOP_EXTRA_LINK_FLAGS}" STREQUAL "")
+  foreach(FLAG ${HIOP_EXTRA_LINK_FLAGS})
+    add_link_options(${FLAG})
+    message(STATUS "Manually adding linker flag: ${FLAG}")
+  endforeach()
+endif()
 
 if(HIOP_USE_MPI)
   find_package(MPI REQUIRED)

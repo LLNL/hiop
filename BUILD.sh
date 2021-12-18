@@ -100,6 +100,8 @@ if [[ $MY_CLUSTER =~ newell* ]]; then
   export MY_CLUSTER=newell
 elif [[ $MY_CLUSTER =~ dl* ]]; then
   export MY_CLUSTER=marianas
+elif [[ $MY_CLUSTER =~ dmi* ]]; then
+  export MY_CLUSTER=incline
 fi
 
 module purge
@@ -115,11 +117,13 @@ if [ -z "$SLURM_SUBMIT_DIR" ]; then
     cd $BASE_PATH          || exit 1
 fi
 
-# Fail fast if we can't find NVBLAS_CONFIG_FILE since it's needed for all GPU builds
-if [[ ! -v NVBLAS_CONFIG_FILE ]] || [[ ! -f "$NVBLAS_CONFIG_FILE" ]]
-then
-  echo "Please provide file 'nvblas.conf' or set variable to desired location."
-  exit 1
+# Fail fast if we can't find NVBLAS_CONFIG_FILE since it's needed for all CUDA GPU builds
+if [[ ! $MY_CLUSTER =~ incline ]]; then
+  if [[ ! -v NVBLAS_CONFIG_FILE ]] || [[ ! -f "$NVBLAS_CONFIG_FILE" ]]
+  then
+    echo "Please provide file 'nvblas.conf' or set variable to desired location."
+    exit 1
+  fi
 fi
 
 module list
