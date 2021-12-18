@@ -49,7 +49,7 @@
         export SLURM_Q=`perl $WORKDIR/scripts/findIdleDLNodes.pl`
       fi
 
-      sbatch -A EXASGD --exclusive -N 1 -n 8 -p $SLURM_Q -t $TIMELIMIT $SLURM_ARGS -o output -e output $WORKDIR/BUILD.sh
+      sbatch -A EXASGD --exclusive -N 1 -n 8 -p $SLURM_Q -t $TIMELIMIT $SLURM_ARGS -o output -e output $WORKDIR/BUILD.sh $BUILD_SCRIPT_ARGS
       res=1
       set +xv
       while :;
@@ -113,6 +113,7 @@ build_on_incline:
     MY_CLUSTER: incline
     TIMELIMIT: '1:00:00'
     SLURM_ARGS: --exclusive
+    BUILD_SCRIPT_ARGS: --build-only
   <<: *pnnl_tags_definition
   <<: *pnnl_script_definition
   rules:
