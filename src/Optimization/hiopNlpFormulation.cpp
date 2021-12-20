@@ -1788,4 +1788,148 @@ bool hiopNlpSparse::finalizeInitialization()
   return hiopNlpFormulation::finalizeInitialization();
 }
 
+/////////////////////////////////////////////////////////////
+//   hiopNlpSparseIneq
+/////////////////////////////////////////////////////////////
+bool hiopNlpSparseIneq::finalizeInitialization()
+{
+  int nx = 0;
+  if(!interface.get_sparse_blocks_info(nx,
+                                       nnz_sparse_Jaceq_,
+                                       nnz_sparse_Jacineq_,
+                                       nnz_sparse_Hess_Lagr_)) {
+    return false;
+  }
+  assert(nx == n_vars_);
+  nnz_sparse_Jacineq_ += nnz_sparse_Jaceq_;
+  nnz_sparse_Jaceq_ = 0.;
+  
+
+  return hiopNlpFormulation::finalizeInitialization();
+  
+}
+
+bool hiopNlpSparseIneq::process_constraints()
+{
+  bool bret;
+  string mem_space = options->GetString("mem_space");
+
+  hiopVector* gl = LinearAlgebraFactory::create_vector(mem_space, n_cons_); 
+  hiopVector* gu = LinearAlgebraFactory::create_vector(mem_space, n_cons_);
+  hiopInterfaceBase::NonlinearityType* cons_type = new hiopInterfaceBase::NonlinearityType[n_cons_];
+
+  //get constraints information and transfer to host for pre-processing
+  bret = interface_base.get_cons_info(n_cons_, gl->local_data(), gu->local_data(), cons_type); 
+  assert(bret);
+  gl->copyFromDev(); gu->copyFromDev();
+
+  assert(gl->get_local_size()==n_cons_);
+  assert(gl->get_local_size()==n_cons_);
+
+  double* gl_vec = gl->local_data_host();
+  double* gu_vec = gu->local_data_host();
+  n_cons_eq_ = 0;
+  n_cons_ineq_ = n_cons_; 
+
+  delete c_rhs_; 
+  delete[] cons_eq_type_;
+  delete dl_;
+  delete du_;
+  delete[] cons_ineq_type_;
+  delete cons_eq_mapping_;
+  delete cons_ineq_mapping_;
+  
+  /* allocate c_rhs, dl, and du (all serial in this formulation) */
+  c_rhs_ = LinearAlgebraFactory::create_vector(mem_space, n_cons_eq_);
+  cons_eq_type_ = new hiopInterfaceBase::NonlinearityType[n_cons_eq_];
+  dl_ = LinearAlgebraFactory::create_vector(mem_space, n_cons_ineq_);
+  du_ = LinearAlgebraFactory::create_vector(mem_space, n_cons_ineq_);
+  cons_ineq_type_ = new  hiopInterfaceBase::NonlinearityType[n_cons_ineq_];
+  cons_eq_mapping_ = LinearAlgebraFactory::create_vector_int(mem_space, n_cons_eq_);
+  cons_ineq_mapping_ = LinearAlgebraFactory::create_vector_int(mem_space, n_cons_ineq_);
+
+  /* copy lower and upper bounds - constraints */
+  double* dl_vec = dl_->local_data_host();
+  double* du_vec = du_->local_data_host();
+
+  //double *c_rhsvec=c_rhs_->local_data_host();
+  //index_type *cons_eq_mapping = cons_eq_mapping_->local_data_host();
+  index_type *cons_ineq_mapping = cons_ineq_mapping_->local_data_host();
+
+  //
+  // two-sided relaxed bounds for equalities
+  //
+  eq_relax_value_ = options->GetNumeric("eq_relax_factor");
+
+  n_cons_eq_origNLP_ = 0;
+  for(int i=0;i<n_cons_; i++) {
+    cons_ineq_type_[i] = cons_type[i]; 
+    cons_ineq_mapping[i] = i;
+    
+    if(gl_vec[i]==gu_vec[i]) {
+      const double relax_value = eq_relax_value_ * std::max(fabs(gl_vec[i]), 1.);
+
+      dl_vec[i] = gl_vec[i]-relax_value;
+      du_vec[i] = gu_vec[i]+relax_value;
+      n_cons_eq_origNLP_++;
+    } else {
+#ifdef HIOP_DEEPCHECKS
+      assert(gl_vec[i] <= gu_vec[i] &&
+             "Detected inconsistent inequality constraints: the problem is infeasible.");
+#endif
+      dl_vec[i] = gl_vec[i]; 
+      du_vec[i] = gu_vec[i]; 
+    }
+  }
+
+  /* delete the temporary buffers */
+  delete gl; 
+  delete gu; 
+  delete[] cons_type;
+
+  delete idl_; 
+  delete idu_;
+  /* iterate over the inequalities and build the idl(ow) and idu(pp) vectors */
+  idl_ = dl_->alloc_clone(); 
+  idu_ = du_->alloc_clone();
+  n_ineq_low_ = 0;
+  n_ineq_upp_ = 0; 
+  n_ineq_lu_ = 0;
+
+  double* idl_vec= idl_->local_data_host(); 
+  double* idu_vec= idu_->local_data_host();
+  for(int i=0; i<n_cons_ineq_; i++) {
+    if(dl_vec[i]>-1e20) { 
+      idl_vec[i]=1.;
+      n_ineq_low_++; 
+      if(du_vec[i]< 1e20) {
+        n_ineq_lu_++;
+      }
+    } else {
+      //no lower bound on constraint
+      idl_vec[i]=0.;
+    }
+
+    if(du_vec[i]< 1e20) { 
+      idu_vec[i]=1.;
+      n_ineq_upp_++; 
+    } else {
+      //no upper bound on constraint
+      idu_vec[i]=0.;
+    }
+  }
+
+  if(n_cons_eq_origNLP_) {
+    std::string strEquality = n_cons_eq_origNLP_==1 ? "equality" : "equalities";
+    log->printf(hovSummary,
+                "%d %s will be treated as relaxed (two-sided) in%s.\n",
+                n_cons_eq_origNLP_,
+                strEquality.c_str(),
+                strEquality.c_str());
+    log->printf(hovScalars,
+                "Equality right-hand sides were relaxed by a factor of %.5e.\n",
+                eq_relax_value_);
+  }
+  return true;
+}
 };

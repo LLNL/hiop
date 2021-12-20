@@ -107,37 +107,80 @@ int main(int argc, char **argv)
   bool rankdefic_Jac_ineq = true;
   double scal_neg_obj = 0.1;
 
-  Ex7 nlp_interface(n,convex_obj,rankdefic_Jac_eq,rankdefic_Jac_ineq, scal_neg_obj);
-  hiopNlpSparse nlp(nlp_interface);
-  nlp.options->SetStringValue("compute_mode", "cpu");
-  nlp.options->SetStringValue("KKTLinsys", "xdycyd");
-  if(inertia_free) {
-    nlp.options->SetStringValue("fact_acceptor", "inertia_free");
-  }
+  {
+    Ex7 nlp_interface(n,convex_obj,rankdefic_Jac_eq,rankdefic_Jac_ineq, scal_neg_obj);
+    hiopNlpSparse nlp(nlp_interface);
+    nlp.options->SetStringValue("compute_mode", "cpu");
+    nlp.options->SetStringValue("KKTLinsys", "xdycyd");
+    if(inertia_free) {
+      nlp.options->SetStringValue("fact_acceptor", "inertia_free");
+    }
 //  nlp.options->SetIntegerValue("max_iter", 100);
 //  nlp.options->SetNumericValue("kappa1", 1e-8);
 //  nlp.options->SetNumericValue("kappa2", 1e-8);
 
-  hiopAlgFilterIPMNewton solver(&nlp);
-  hiopSolveStatus status = solver.run();
+    hiopAlgFilterIPMNewton solver(&nlp);
+    hiopSolveStatus status = solver.run();
 
-  double obj_value = solver.getObjective();
+    double obj_value = solver.getObjective();
 
-  if(status<0) {
-    if(rank==0) printf("solver returned negative solve status: %d (with objective is %18.12e)\n", status, obj_value);
-    return -1;
-  }
-
-  //this is used for "regression" testing when the driver is called with -selfcheck
-  if(selfCheck) {
-    if(!self_check(n, obj_value, inertia_free))
+    if(status<0) {
+      if(rank==0) printf("solver returned negative solve status: %d (with objective is %18.12e)\n", status, obj_value);
       return -1;
-  } else {
-    if(rank==0) {
-      printf("Optimal objective: %22.14e. Solver status: %d\n", obj_value, status);
+    }
+
+    //this is used for "regression" testing when the driver is called with -selfcheck
+    if(selfCheck) {
+      if(!self_check(n, obj_value, inertia_free))
+        return -1;
+    } else {
+      if(rank==0) {
+        printf("Optimal objective: %22.14e. Solver status: %d\n", obj_value, status);
+      }
     }
   }
+  
+  //
+  //same as above but with equalities relaxed as two-sided inequalities
+  //
+  {
+    Ex7 nlp_interface(n,convex_obj, rankdefic_Jac_eq, rankdefic_Jac_ineq, scal_neg_obj);
+    hiopNlpSparseIneq nlp(nlp_interface);
+    nlp.options->SetStringValue("compute_mode", "cpu");
+    nlp.options->SetStringValue("KKTLinsys", "xdycyd");
+    if(inertia_free) {
+      nlp.options->SetStringValue("fact_acceptor", "inertia_free");
+    }
+//  nlp.options->SetIntegerValue("max_iter", 100);
+//  nlp.options->SetNumericValue("kappa1", 1e-8);
+//  nlp.options->SetNumericValue("kappa2", 1e-8);
 
+    hiopAlgFilterIPMNewton solver(&nlp);
+    hiopSolveStatus status = solver.run();
+
+    double obj_value = solver.getObjective();
+
+    if(status<0) {
+      if(rank==0) {
+        printf("solver returned negative solve status with hiopNlpSparseIneq: "
+               "%d (with objective is %18.12e)\n",
+               status,
+               obj_value);
+      }
+      return -1;
+    }
+
+    //this is used for "regression" testing when the driver is called with -selfcheck
+    if(selfCheck) {
+      if(!self_check(n, obj_value, inertia_free))
+        return -1;
+    } else {
+      if(rank==0) {
+        printf("Optimal objective: %22.14e. Solver status: %d\n", obj_value, status);
+      }
+    }
+  }
+  
 #ifdef HIOP_USE_MPI
   MPI_Finalize();
 #endif
