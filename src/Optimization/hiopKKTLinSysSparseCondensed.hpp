@@ -1,6 +1,6 @@
 // Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
-// Written by Cosmin G. Petra, petra1@llnl.gov.
+// Written by Nai-Yuan Chiang, chiang7@llnl.gov and Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp
@@ -46,111 +46,82 @@
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or
 // product endorsement purposes.
 
-#ifndef HIOP_LINSOLVER
-#define HIOP_LINSOLVER
+#ifndef HIOP_KKTLINSYSSPARSECONDENSED
+#define HIOP_KKTLINSYSSPARSECONDENSED
 
-#include "hiopNlpFormulation.hpp"
-#include "hiopMatrix.hpp"
-#include "hiopMatrixDense.hpp"
-#include "hiopVector.hpp"
+#include "hiopKKTLinSysSparse.hpp"
 
-#include "hiop_blasdefs.hpp"
+/*
+ * Solves a sparse KKT linear system by exploiting the sparse structure, namely reduces 
+ * the so-called XYcYd KKT system 
+ * [  H  +  Dx    0    Jd^T ] [ dx]   [ rx_tilde ]
+ * [    0         Dd   -I   ] [ dd] = [ rd_tilde ]
+ * [    Jd       -I     0   ] [dyd]   [   ryd    ]
+ * into the condensed KKT system
+ * (H+Dx+Jd^T*Dd*Jd)dx = rx_tilde + Jd^T*Dd*ryd + Jd^T*rd_tilde
+ * dd = Jd*dx - ryd
+ * dyd = Dd*dd - rd_tilde = Dd*Jd*dx - Dd*ryd - rd_tilde
 
-#include "hiopCppStdUtils.hpp"
+ * where Jd is sparse Jacobians for inequalities, H is a sparse Hessian matrix, Dx is 
+ * log-barrier diagonal corresponding to x variables, Dd is the log-barrier diagonal 
+ * corresponding to the inequality slacks, and I is the identity matrix. 
+ *
+ * @note: the NLP is assumed to have no equality constraints (or have been relaxed to 
+ * two-sided inequality constraints).
+ *
+ */
 
 namespace hiop
 {
 
-/**
- * Abstract class for Linear Solvers used by HiOp
- * Specifies interface for linear solver arising in Interior-Point methods, thus,
- * the underlying assumptions are that the system's matrix is symmetric (positive
- * definite or indefinite).
- *
- * Implementations of this abstract class have the purpose of serving as wrappers
- * of existing CPU and GPU libraries for linear systems.
- *
- * Note:
- *  - solve(matrix) is not implemented
- */
-
-class hiopLinSolver
+class hiopKKTLinSysCondensedSparse : public hiopKKTLinSysCompressedSparseXDYcYd
 {
 public:
-  hiopLinSolver();
-  virtual ~hiopLinSolver();
+  hiopKKTLinSysCondensedSparse(hiopNlpFormulation* nlp);
+  virtual ~hiopKKTLinSysCondensedSparse();
 
-  /** Triggers a refactorization of the matrix, if necessary.
-   * Returns number of negative eigenvalues or -1 if null eigenvalues
-   * are encountered.
-   */
-  virtual int matrixChanged() = 0;
+  virtual bool build_kkt_matrix(const double& delta_wx,
+                                const double& delta_wd,
+                                const double& delta_cc,
+                                const double& delta_cd);
 
-  /** Solves a linear system.
-   * param 'x' is on entry the right hand side(s) of the system to be solved. On
-   * exit is contains the solution(s).
-   */
-  virtual bool solve ( hiopVector& x ) = 0;
-  virtual bool solve ( hiopMatrix& x ) { assert(false && "not yet supported"); return true;}
-public:
-  hiopNlpFormulation* nlp_;
-  bool perf_report_;
+  virtual bool solveCompressed(hiopVector& rx, hiopVector& rd, hiopVector& ryc, hiopVector& ryd,
+                               hiopVector& dx, hiopVector& dd, hiopVector& dyc, hiopVector& dyd);
+
+protected:
+  //
+  //from the parent class and its parents we also use
+  //
+
+  //right-hand side [rx_tilde, rd_tilde, ((ryc->empty)), ryd]
+  //  hiopVector *rhs_; 
+
+  
+  //  hiopVectorPar *Dd;
+  //  hiopVectorPar *ryd_tilde;
+
+  //from the parent's parent class (hiopKKTLinSysCompressed) we also use
+  //  hiopVectorPar *Dx;
+  //  hiopVectorPar *rx_tilde;
+
+  //keep Hx = Dx (Dx=log-barrier diagonal for x) + regularization
+  //keep Hd = Dd (Dd=log-barrier diagonal for slack variable) + regularization
+  //  hiopVector *Hx_, *Hd_;
+
+  //
+  //  hiopNlpSparse* nlpSp_;
+  //  hiopMatrixSparse* HessSp_;
+  //  const hiopMatrixSparse* Jac_cSp_;
+  //  const hiopMatrixSparse* Jac_dSp_;
+
+  // int write_linsys_counter_;
+  //  hiopCSR_IO csr_writer_;
+
+private:
+  //placeholder for the code that decides which linear solver to used based on safe_mode_
+  hiopLinSolverIndefSparse* determine_and_create_linsys(size_type nxd,  size_type nineq, size_type nnz);
 };
 
-/** Base class for Indefinite Dense Solvers */
-class hiopLinSolverIndefDense : public hiopLinSolver
-{
-public:
-  hiopLinSolverIndefDense(int n, hiopNlpFormulation* nlp);
-  virtual ~hiopLinSolverIndefDense();
-
-  hiopMatrixDense& sysMatrix();
-protected:
-  hiopMatrixDense* M_;
-protected:
-  hiopLinSolverIndefDense();
-};
-
-// for general non-symmetric Sparse Solvers
-/** Base class for non-symmetric Sparse Solvers */
-class hiopLinSolverSparseBase : public hiopLinSolver
-{
-public:
-  hiopLinSolverSparseBase(){};
-  ~hiopLinSolverSparseBase(){};
-};
-
-/** 
- * Base class for symmetric (indefinite or positive definite) sparse solvers 
- * TODO: change the name of this class to hiopLinSolverSymmSparse
- */
-class hiopLinSolverIndefSparse : public hiopLinSolverSparseBase
-{
-public:
-  hiopLinSolverIndefSparse(int n, int nnz, hiopNlpFormulation* nlp);
-  virtual ~hiopLinSolverIndefSparse();
-
-  inline hiopMatrixSymSparseTriplet& sysMatrix() { return M; }
-protected:
-  hiopMatrixSymSparseTriplet M;
-protected:
-  hiopLinSolverIndefSparse() : M(0,0) { assert(false); }
-};
-
-/** Base class for non-symmetric Sparse Solvers */
-class hiopLinSolverNonSymSparse : public hiopLinSolverSparseBase
-{
-public:
-  hiopLinSolverNonSymSparse(int n, int nnz, hiopNlpFormulation* nlp);
-  virtual ~hiopLinSolverNonSymSparse();
-
-  inline hiopMatrixSparseTriplet& sysMatrix() { return M; }
-protected:
-  hiopMatrixSparseTriplet M;
-protected:
-  hiopLinSolverNonSymSparse() : M(0,0,0) { assert(false); }
-};
-
-} //end namespace
+} // end of namespace
 
 #endif
