@@ -53,7 +53,7 @@
 
 /*
  * Solves a sparse KKT linear system by exploiting the sparse structure, namely reduces 
- * the so-called XYcYd KKT system 
+ * the so-called XDYcYd KKT system 
  * [  H  +  Dx    0    Jd^T ] [ dx]   [ rx_tilde ]
  * [    0         Dd   -I   ] [ dd] = [ rd_tilde ]
  * [    Jd       -I     0   ] [dyd]   [   ryd    ]
@@ -62,13 +62,31 @@
  * dd = Jd*dx - ryd
  * dyd = Dd*dd - rd_tilde = Dd*Jd*dx - Dd*ryd - rd_tilde
 
- * where Jd is sparse Jacobians for inequalities, H is a sparse Hessian matrix, Dx is 
+ * Here Jd is sparse Jacobians for inequalities, H is a sparse Hessian matrix, Dx is 
  * log-barrier diagonal corresponding to x variables, Dd is the log-barrier diagonal 
  * corresponding to the inequality slacks, and I is the identity matrix. 
  *
  * @note: the NLP is assumed to have no equality constraints (or have been relaxed to 
  * two-sided inequality constraints).
  *
+ *
+ * Dual regularization may be not enforced as it requires repeated divisions that are 
+ * to round-off error accumulation, but when it is enforced, the regularized XDYcYd KKT 
+ * system
+ * [  H+Dx+delta_wx*I         0         Jd^T     ] [ dx]   [ rx_tilde ]
+ * [          0         Dd+delta_wd*I   -I       ] [ dd] = [ rd_tilde ]
+ * [          Jd             -I         -delta_cd] [dyd]   [   ryd    ]
+ * is solved as:
+ * (notation) Dd2 = [ (Dd+delta_wd*I)^{-1} + delta_cd*I ]^{-1}
+ *
+ * dd = Jd*dx - delta_cd*dyd - ryd
+ *
+ * From (Dd+delta_wd*I)*dd - dyd = rd_tilde one can write
+ *   ->   (Dd+delta_wd*I)*(Jd*dx - delta_cd*dyd - ryd) - dyd = rd_tilde
+ *   ->   (I+ delta_cd*(Dd+delta_wd*I)) dyd = (Dd+delta_wd*I)*(Jd*dx - ryd) - rd_tilde 
+ * dyd = (I+ delta_cd*(Dd+delta_wd*I))^{-1} [ (Dd+delta_wd*I)*(Jd*dx - ryd) - rd_tilde ]
+ *
+ * (H+Dx+delta_wx*I + Jd^T * Dd2 * Jd) dx = rx_tilde + Jd^T*Dd2*(Dd+delta_wd*I)*ryd +  Jd^T*Dd2*rd_tilde
  */
 
 namespace hiop
@@ -117,9 +135,11 @@ protected:
   // int write_linsys_counter_;
   //  hiopCSR_IO csr_writer_;
 
+  /// Stores the diagonal Dd plus delta_wd*I as a vector
+  hiopVector* dd_pert_;
 private:
   //placeholder for the code that decides which linear solver to used based on safe_mode_
-  hiopLinSolverIndefSparse* determine_and_create_linsys(size_type nxd,  size_type nineq, size_type nnz);
+  hiopLinSolverIndefSparse* determine_and_create_linsys(size_type nxd, size_type nineq, size_type nnz);
 };
 
 } // end of namespace

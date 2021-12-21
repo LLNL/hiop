@@ -293,9 +293,14 @@ public:
 
 protected:
   virtual void outputIteration(int lsStatus, int lsNum, int use_soc = 0, int use_fr = 0);
+
+  /// @brief Decides and creates the KKT linear system based on user options and NLP formulation.
   virtual hiopKKTLinSys* decideAndCreateLinearSystem(hiopNlpFormulation* nlp);
-  /// @brief get the method to decide if a factorization is acceptable or not
-  virtual hiopFactAcceptor* decideAndCreateFactAcceptor(hiopPDPerturbation* p, hiopNlpFormulation* nlp);
+  
+  /// @brief Decides and creates regularization objects based on user options and NLP formulation.
+  virtual hiopFactAcceptor* decideAndCreateFactAcceptor(hiopPDPerturbation* p,
+                                                        hiopNlpFormulation* nlp,
+                                                        hiopKKTLinSys* kkt);
 
   virtual bool compute_search_direction(hiopKKTLinSys* kkt,
                                         bool& linsol_safe_mode_on,

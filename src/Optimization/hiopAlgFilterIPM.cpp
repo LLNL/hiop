@@ -1313,14 +1313,20 @@ decideAndCreateLinearSystem(hiopNlpFormulation* nlp)
 }
 
 hiopFactAcceptor* hiopAlgFilterIPMNewton::
-decideAndCreateFactAcceptor(hiopPDPerturbation* p, hiopNlpFormulation* nlp)
+decideAndCreateFactAcceptor(hiopPDPerturbation* p, hiopNlpFormulation* nlp, hiopKKTLinSys* kkt)
 {
   std::string strKKT = nlp->options->GetString("fact_acceptor");
   if(strKKT == "inertia_free")
   {
     return new hiopFactAcceptorInertiaFreeDWD(p, nlp->m_eq()+nlp->m_ineq());
   } else {
-    return new hiopFactAcceptorIC(p, nlp->m_eq()+nlp->m_ineq());
+    if(nullptr == dynamic_cast<hiopKKTLinSysCondensedSparse*>(kkt)) {
+      return new hiopFactAcceptorIC(p, nlp->m_eq()+nlp->m_ineq());
+    } else {
+      assert(nullptr != dynamic_cast<hiopNlpSparseIneq*>(nlp) &&
+             "wrong combination of optimization objects was created");
+      return new hiopFactAcceptorIC(p, 0);
+    }
   } 
 }
 
@@ -1393,7 +1399,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
     delete fact_acceptor_;
     fact_acceptor_ = nullptr;
   }
-  fact_acceptor_ = decideAndCreateFactAcceptor(&pd_perturb_,nlp);
+  fact_acceptor_ = decideAndCreateFactAcceptor(&pd_perturb_, nlp, kkt);
   kkt->set_fact_acceptor(fact_acceptor_);
   
   _alpha_primal = _alpha_dual = 0;

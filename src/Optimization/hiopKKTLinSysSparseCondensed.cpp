@@ -51,36 +51,42 @@
 #endif
 
 
-// #include "/home/petra1/work/installs/eigen-3.3.9/_install/include/eigen3/Eigen/Core"
-// #include "/home/petra1/work/installs/eigen-3.3.9/_install/include/eigen3/Eigen/Sparse"
+#include "/g/g15/petra1/eigen-3.3.9/_install/include/eigen3/Eigen/Core"
+#include "/g/g15/petra1/eigen-3.3.9/_install/include/eigen3/Eigen/Sparse"
 
-// // type alias
-// using Scalar = double;
-// using SparseMatrixCSC = Eigen::SparseMatrix<Scalar, Eigen::StorageOptions::ColMajor>;
-// using SparseMatrixCSR = Eigen::SparseMatrix<Scalar, Eigen::StorageOptions::RowMajor>;
-// using Triplet = Eigen::Triplet<Scalar>;
-// using VectorR = Eigen::Matrix<Scalar, Eigen::Dynamic, 1>;
+// type alias
+using Scalar = double;
+using SparseMatrixCSC = Eigen::SparseMatrix<Scalar, Eigen::StorageOptions::ColMajor>;
+using SparseMatrixCSR = Eigen::SparseMatrix<Scalar, Eigen::StorageOptions::RowMajor>;
+using Triplet = Eigen::Triplet<Scalar>;
+using VectorR = Eigen::Matrix<Scalar, Eigen::Dynamic, 1>;
 
 namespace hiop
 {
 
 hiopKKTLinSysCondensedSparse::hiopKKTLinSysCondensedSparse(hiopNlpFormulation* nlp)
-  : hiopKKTLinSysCompressedSparseXDYcYd(nlp)
+  : hiopKKTLinSysCompressedSparseXDYcYd(nlp),
+    dd_pert_(nullptr)
 {
 }
 
 hiopKKTLinSysCondensedSparse::~hiopKKTLinSysCondensedSparse()
 {
-  
+  delete dd_pert_;
 }
   
-bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& dwx,
-                                                    const double& dwd,
+bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
+                                                    const double& delta_wd_in,
                                                     const double& dcc,
                                                     const double& dcd)
 {
-  assert(0 == Jac_cSp_->m() &&
-         "Detected NLP with equality constraints. Please use hiopNlpSparseIneq formulation");
+
+  auto delta_wx = delta_wx_in;
+  auto delta_wd = delta_wd_in;
+  if(dcc>0) {
+    delta_wx += dcc;
+    delta_wd += dcc;
+  }
   
   HessSp_ = dynamic_cast<hiopMatrixSymSparseTriplet*>(Hess_);
   Jac_dSp_ = dynamic_cast<const hiopMatrixSparseTriplet*>(Jac_d_);
@@ -89,14 +95,180 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& dwx,
   if(nullptr==Jac_dSp_ || nullptr==HessSp_) {
     return false;
   }
+
+  assert(0 == Jac_c_->m() &&
+         "Detected NLP with equality constraints. Please use hiopNlpSparseIneq formulation");
   
   size_type nx = HessSp_->n();
   size_type nineq = Jac_dSp_->m();
-  int nnz = HessSp_->numberOfNonzeros() + Jac_cSp_->numberOfNonzeros() + Jac_dSp_->numberOfNonzeros();
-  nnz += nx + nineq;
+  assert(nineq == Dd_->get_size());
+  assert(nx = Dx_->get_size());
   
-//  linSys_ = determineAndCreateLinsys(nx, neq, nineq, nnz);
-  return hiopKKTLinSysCompressedSparseXDYcYd::build_kkt_matrix(dwx, dwd, dcc, dcd);
+  nlp_->runStats.kkt.tmUpdateLinsys.start();
+
+  hiopTimer t;
+  t.start();
+  
+  SparseMatrixCSC JacD(nineq, nx);
+  {
+    std::vector<Triplet> tripletList;
+    tripletList.reserve(Jac_dSp_->numberOfNonzeros());
+    for(int i = 0; i < Jac_dSp_->numberOfNonzeros(); i++) {
+      tripletList.push_back(Triplet(Jac_dSp_->i_row()[i],
+                                    Jac_dSp_->j_col()[i],
+                                    Jac_dSp_->M()[i]));
+    }
+    JacD.setFromTriplets(tripletList.begin(), tripletList.end());
+  }
+  t.stop();
+  nlp_->log->printf(hovSummary, "JacD took        %.3f sec\n", t.getElapsedTime());
+
+  t.reset(); t.start();
+  SparseMatrixCSC JacD_trans =  SparseMatrixCSC(JacD.transpose());
+  t.stop();
+  nlp_->log->printf(hovSummary, "JacD trans took       %.3f sec\n", t.getElapsedTime());
+
+  t.reset(); t.start();
+  if(nullptr == dd_pert_) {
+    dd_pert_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), nineq);
+  }
+  dd_pert_->copyFrom(*Dd_);
+  dd_pert_->addConstant(delta_wd);
+  t.stop(); 
+  nlp_->log->printf(hovSummary, "DD vec ops        %.3f sec\n", t.getElapsedTime());
+
+  
+  t.reset(); t.start();
+  SparseMatrixCSC Dd_mat(nineq, nineq);
+  {
+    std::vector<Triplet> tripletList;
+    tripletList.reserve(Dd_->get_size());
+    for(int i=0; i<Dd_->get_size(); i++) {
+      tripletList.push_back(Triplet(i, i, dd_pert_->local_data()[i]));
+    }
+    Dd_mat.setFromTriplets(tripletList.begin(), tripletList.end());
+  }
+  t.stop(); 
+  nlp_->log->printf(hovSummary, "Ddmat took       %.3f sec\n", t.getElapsedTime());
+
+  
+  t.reset(); t.start();
+  SparseMatrixCSC DdxJ = Dd_mat * JacD;
+  t.stop();
+  nlp_->log->printf(hovSummary, "DdxJ took         %.3f sec\n", t.getElapsedTime());
+
+  t.reset(); t.start();  
+  SparseMatrixCSC JtxDdxJ = JacD_trans * DdxJ;
+  t.stop();
+  nlp_->log->printf(hovSummary, "JtxDdxJ took       %.3f sec\n", t.getElapsedTime());
+
+
+  t.reset(); t.start();
+  SparseMatrixCSC H(nx, nx);
+  {
+    std::vector<Triplet> tripletList;
+    tripletList.reserve(HessSp_->numberOfNonzeros());
+    for(int i = 0; i < HessSp_->numberOfNonzeros(); i++) {
+      tripletList.push_back(Triplet(HessSp_->i_row()[i],
+                                    HessSp_->j_col()[i],
+                                    HessSp_->M()[i]));
+    }
+    H.setFromTriplets(tripletList.begin(), tripletList.end());
+  }
+  t.stop();
+  nlp_->log->printf(hovSummary, "H took        %.3f sec\n", t.getElapsedTime());
+
+  t.reset(); t.start(); 
+  SparseMatrixCSC KKTmat = H + JtxDdxJ;
+  t.stop();
+  nlp_->log->printf(hovSummary, "H  + JtxDdxJ took         %.3f sec\n", t.getElapsedTime());
+ 
+  t.reset(); t.start(); 
+  SparseMatrixCSC Dx_mat(nx, nx);
+  {
+    assert(Dx_->get_size() == nx);
+    std::vector<Triplet> tripletList;
+    tripletList.reserve(nx);
+    for(int i=0; i<nx; i++) {
+      tripletList.push_back(Triplet(i, i, Dx_->local_data()[i]+delta_wx));
+    }
+    Dx_mat.setFromTriplets(tripletList.begin(), tripletList.end());
+  }
+  t.stop();
+  nlp_->log->printf(hovSummary, "Dx_mat took         %.3f sec\n", t.getElapsedTime());
+
+  t.reset(); t.start(); 
+  KKTmat += Dx_mat;
+  t.stop();
+  nlp_->log->printf(hovSummary, "KKTmat += Dx_mat took         %.3f sec\n", t.getElapsedTime());
+
+  t.reset(); t.start(); 
+  KKTmat.makeCompressed();
+  t.stop();
+  nlp_->log->printf(hovSummary, "makeCompressed         %.3f sec\n", t.getElapsedTime());
+
+  t.reset(); t.start(); 
+  //count nnz in the lower triangle
+  size_type nnz_KKT_lowertri = 0;
+  for(int k=0; k<KKTmat.outerSize(); ++k) {
+    for(Eigen::SparseMatrix<double>::InnerIterator it(KKTmat, k); it; ++it) {
+      //it.value();
+      //it.row();   // row index
+      //it.col();   // col index (here it is equal to k)
+      //it.index(); // inner index, here it is equal to it.row()
+      if(it.row() >= it.col()) {
+        nnz_KKT_lowertri++;
+      }
+    }
+  }
+  t.stop();
+  nlp_->log->printf(hovSummary, "nnz_KKT_lowertri         %.3f sec\n", t.getElapsedTime());
+
+  
+  linSys_ = determine_and_create_linsys(nx, nineq, nnz_KKT_lowertri);
+  hiopLinSolverIndefSparse* linSys = dynamic_cast<hiopLinSolverIndefSparse*> (linSys_);
+  assert(linSys);
+
+  hiopMatrixSparseTriplet& Msys = linSys->sysMatrix();
+  assert(Msys.numberOfNonzeros() == nnz_KKT_lowertri);
+
+  t.reset(); t.start(); 
+  //populate Msys
+  size_type it_nnz = 0;
+  for(int k=0; k<KKTmat.outerSize(); ++k) {
+    for(Eigen::SparseMatrix<double>::InnerIterator it(KKTmat, k); it; ++it) {
+      //it.value();
+      //it.row();   // row index
+      //it.col();   // col index (here it is equal to k)
+      //it.index(); // inner index, here it is equal to it.row()
+      if(it.row() >= it.col()) {
+        Msys.i_row()[it_nnz] = it.row();
+        Msys.j_col()[it_nnz] = it.col();
+        Msys.M()[it_nnz++] = it.value();
+      }
+    }
+  }
+  t.stop();
+  nlp_->log->printf(hovSummary, "copy lowertri         %.3f sec\n", t.getElapsedTime());
+
+  nlp_->log->write("KKT_SPARSE_Compressed linsys:", Msys, hovMatrices);
+  nlp_->runStats.kkt.tmUpdateLinsys.stop();
+  
+  if(perf_report_) {
+    nlp_->log->printf(hovSummary,
+                      "KKT_SPARSE_Compressed linsys: Low-level linear system size %d nnz %d\n",
+                      Msys.n(),
+                      Msys.numberOfNonzeros());
+  }
+
+  //write matrix to file if requested
+  if(nlp_->options->GetString("write_kkt") == "yes") {
+    write_linsys_counter_++;
+  }
+  if(write_linsys_counter_>=0) {
+    csr_writer_.writeMatToFile(Msys, write_linsys_counter_, nx, 0, nineq);
+  }
+  return true; //xxx hiopKKTLinSysCompressedSparseXDYcYd::build_kkt_matrix(dwx, dwd, dcc, dcd);
 }
   
 bool hiopKKTLinSysCondensedSparse::solveCompressed(hiopVector& rx,
@@ -108,7 +280,81 @@ bool hiopKKTLinSysCondensedSparse::solveCompressed(hiopVector& rx,
                                                    hiopVector& dyc,
                                                    hiopVector& dyd)
 {
-  return hiopKKTLinSysCompressedSparseXDYcYd::solveCompressed(rx, rd, ryc, ryd, dx, dd, dyc, dyd);
+  assert(nlpSp_);
+  assert(HessSp_);
+  assert(Jac_dSp_);
+  assert(0 == ryc.get_size() && "this KKT does not support equality constraints");
+
+  size_type nx = rx.get_size();
+  size_type nd = rd.get_size();
+  size_type nyd = ryd.get_size();
+
+  nlp_->runStats.kkt.tmSolveRhsManip.start();
+  
+  if(rhs_ == NULL) {
+    rhs_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), nx);
+  }
+  assert(rhs_->get_size() == nx);
+
+  nlp_->log->write("RHS KKT_SPARSE_Condensed rx: ", rx,  hovIteration);
+  nlp_->log->write("RHS KKT_SPARSE_Condensed rx: ", rd,  hovIteration);
+  nlp_->log->write("RHS KKT_SPARSE_Condensed ryc:", ryc, hovIteration);
+  nlp_->log->write("RHS KKT_SPARSE_Condensed ryd:", ryd, hovIteration);
+
+  /* (H+Dx+Jd^T*(Dd+delta_wd*I)*Jd)dx = rx + Jd^T*Dd*ryd + Jd^T*rd
+   * dd = Jd*dx - ryd
+   * dyd = (Dd+delta_wd*I)*dd - rd = (Dd+delta_wd*I)*Jd*dx - (Dd+delta_wd*I)*ryd - rd
+   */
+  rhs_->copyFrom(rx);
+
+  //working buffers in the size of nineq/nd using output as storage
+  hiopVector& Dd_x_ryd = dyd;
+  Dd_x_ryd.copyFrom(ryd);
+  Dd_x_ryd.componentMult(*dd_pert_);
+
+  hiopVector& DD_x_ryd_plus_rd = Dd_x_ryd;
+  DD_x_ryd_plus_rd.axpy(1.0, rd);
+
+  Jac_dSp_->transTimesVec(1.0, *rhs_, 1.0, DD_x_ryd_plus_rd);
+
+  nlp_->runStats.kkt.tmSolveRhsManip.stop();
+  nlp_->runStats.kkt.tmSolveTriangular.start();
+  
+  //
+  // solve
+  //
+  bool linsol_ok = linSys_->solve(*rhs_);
+  nlp_->runStats.kkt.tmSolveTriangular.stop();
+  nlp_->runStats.linsolv.end_linsolve();
+  
+  if(perf_report_) {
+    nlp_->log->printf(hovSummary, "(summary for linear solver from KKT_SPARSE_Condensed)\n%s",
+                      nlp_->runStats.linsolv.get_summary_last_solve().c_str());
+  }
+  
+  if(write_linsys_counter_>=0)
+    csr_writer_.writeSolToFile(*rhs_, write_linsys_counter_);
+  
+  if(false==linsol_ok) return false;
+
+  nlp_->runStats.kkt.tmSolveRhsManip.start();
+  
+  dx.copyFrom(*rhs_);
+
+  dd.copyFrom(ryd);
+  Jac_dSp_->timesVec(-1.0, dd, 1.0, dx);
+
+  dyd.copyFrom(dd);
+  dyd.componentMult(*dd_pert_);
+  dyd.axpy(-1.0, rd);
+
+  nlp_->runStats.kkt.tmSolveRhsManip.stop();
+
+  nlp_->log->write("SOL KKT_SPARSE_Condensed dx: ", dx,  hovMatrices);
+  nlp_->log->write("SOL KKT_SPARSE_Condensed dd: ", dd,  hovMatrices);
+  nlp_->log->write("SOL KKT_SPARSE_Condensed dyc:", dyc, hovMatrices);
+  nlp_->log->write("SOL KKT_SPARSE_Condensed dyd:", dyd, hovMatrices);
+  return true; //xxx hiopKKTLinSysCompressedSparseXDYcYd::solveCompressed(rx, rd, ryc, ryd, dx, dd, dyc, dyd);
 }
 
 
@@ -119,7 +365,7 @@ hiopKKTLinSysCondensedSparse::determine_and_create_linsys(size_type nx, size_typ
     return dynamic_cast<hiopLinSolverIndefSparse*> (linSys_);
   }
   
-  int n = nx + nineq;
+  int n = nx;
   
   if(nlp_->options->GetString("compute_mode") == "cpu") {
     auto linear_solver = nlp_->options->GetString("linear_solver_sparse");
