@@ -53,6 +53,7 @@ set(hiopLinAlg_RAJA_SRC
 
 set(hiopLinAlg_GPU_SRC
   hiopLinSolverIndefDenseMagma.cpp
+  hiopLinSolverCholCuSparse.cpp
   )
 
 set(hiopLinAlg_MA57_SRC

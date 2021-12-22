@@ -18,6 +18,7 @@ if(HIOP_BUILD_SHARED)
 endif()
 if(HIOP_BUILD_STATIC)
   target_link_libraries(hiop_cuda INTERFACE 
+    CUDA::cusolver_static
     CUDA::cusparse_static
     CUDA::cudart_static
     CUDA::cublasLt_static

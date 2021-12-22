@@ -50,9 +50,14 @@
 #include "hiopLinSolverIndefSparseMA57.hpp"
 #endif
 
+#ifdef HIOP_USE_CUDA
+#include "hiopLinSolverCholCuSparse.hpp"
+#endif
 
-#include "/g/g15/petra1/eigen-3.3.9/_install/include/eigen3/Eigen/Core"
-#include "/g/g15/petra1/eigen-3.3.9/_install/include/eigen3/Eigen/Sparse"
+#include "/ccsopen/home/petra1/eigen-3.3.9/_install/include/eigen3/Eigen/Sparse"
+#include "/ccsopen/home/petra1/eigen-3.3.9/_install/include/eigen3/Eigen/Core"
+//#include "/g/g15/petra1/eigen-3.3.9/_install/include/eigen3/Eigen/Core"
+//#include "/g/g15/petra1/eigen-3.3.9/_install/include/eigen3/Eigen/Sparse"
 
 // type alias
 using Scalar = double;
@@ -392,7 +397,9 @@ hiopKKTLinSysCondensedSparse::determine_and_create_linsys(size_type nx, size_typ
     //
     assert(nullptr==linSys_);
     
-    //TODO: add cuSparse Cholesky
+#ifdef HIOP_USE_CUDA
+    linSys_ = new hiopLinSolverCholCuSparse(n, nnz, nlp_);
+#endif    
     
     //Return NULL (and assert) if a GPU sparse linear solver is not present
     assert(linSys_!=nullptr &&
