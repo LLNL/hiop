@@ -88,6 +88,9 @@ public:
    * exit is contains the solution(s).  
    */
   bool solve(hiopVector& x_in);
+
+  /// temp function: TODO remove
+  void set_csr(int m, int nnz, int* rp, int* cind, double* v);
 protected:
   /// Internal handle required by cuSPARSE functions
   cusparseHandle_t h_cusparse_;

@@ -67,7 +67,11 @@ namespace hiop
 hiopLinSolverCholCuSparse::hiopLinSolverCholCuSparse(const size_type& n, 
                                                      const size_type& nnz, 
                                                      hiopNlpFormulation* nlp)
-  : hiopLinSolverIndefSparse(n, nnz, nlp)
+  : hiopLinSolverIndefSparse(n, nnz, nlp),
+    nnz_(nnz),
+    rowptr_(nullptr),
+    colind_(nullptr),
+    values_(nullptr)
 {
   cusolverStatus_t ret;
   cusparseStatus_t ret_sp;
@@ -92,6 +96,13 @@ hiopLinSolverCholCuSparse::hiopLinSolverCholCuSparse(const size_type& n,
 
 hiopLinSolverCholCuSparse::~hiopLinSolverCholCuSparse()
 {
+  cudaError_t ret_cu = cudaFree(buf_fact_);
+  assert(ret_cu == cudaSuccess);
+  buf_fact_ = nullptr;
+
+  cudaFree(rowptr_);
+  cudaFree(colind_);
+  cudaFree(values_);
 
   cusparseDestroyMatDescr(mat_descr_);
   cusolverSpDestroyCsrcholInfo(info_);
@@ -99,6 +110,27 @@ hiopLinSolverCholCuSparse::~hiopLinSolverCholCuSparse()
   cusparseDestroy(h_cusparse_);
 }
 
+void hiopLinSolverCholCuSparse::set_csr(int m, int nnz, int*rp, int* cind, double* v)
+{
+  assert(m == M.n());
+  assert(nnz_ == nnz);
+  if(nullptr == rowptr_) {
+    cudaMalloc(&rowptr_, (m+1)*sizeof(int));
+
+    assert(nullptr == colind_);
+    cudaMalloc(&colind_, nnz*sizeof(int));
+
+    assert(nullptr == values_);
+    cudaMalloc(&values_, nnz*sizeof(double));
+  }
+  assert(rowptr_);
+  assert(colind_);
+  assert(values_);
+
+  cudaMemcpy(rowptr_, rp, (m+1)*sizeof(double), cudaMemcpyHostToDevice);
+  cudaMemcpy(colind_, cind, nnz*sizeof(int), cudaMemcpyHostToDevice);
+  cudaMemcpy(values_, v, nnz*sizeof(double), cudaMemcpyHostToDevice);
+}
 
 /* returns -1 if zero or negative pivots are encountered */
 int hiopLinSolverCholCuSparse::matrixChanged()
@@ -109,24 +141,31 @@ int hiopLinSolverCholCuSparse::matrixChanged()
   assert(m == M.n());
   
   cusolverStatus_t ret;
+  
+  if(nullptr == buf_fact_) {
+    //analysis -> pattern of L
+    ret = cusolverSpXcsrcholAnalysis(h_cusolver_, m, nnz_, mat_descr_, rowptr_, colind_, info_);
+    assert(ret == CUSOLVER_STATUS_SUCCESS);
+    
+    // buffer size
+    size_t internalData; // in BYTEs
+    ret = cusolverSpDcsrcholBufferInfo(h_cusolver_, 
+                                       m, 
+                                       nnz_, 
+                                       mat_descr_, 
+                                       values_, 
+                                       rowptr_, 
+                                       colind_, 
+                                       info_, 
+                                       &internalData,
+                                       &buf_fact_size_);
+    assert(ret == CUSOLVER_STATUS_SUCCESS);
+    
+    cudaError_t ret_cu = cudaMalloc(&buf_fact_, sizeof(unsigned char)*buf_fact_size_); 
+    assert(ret_cu == cudaSuccess);
+  }
 
-  ret = cusolverSpXcsrcholAnalysis(h_cusolver_, m, nnz_, mat_descr_, rowptr_, colind_, info_);
-  assert(ret == CUSOLVER_STATUS_SUCCESS);
-
-  size_t internalData; // in BYTEs
-  ret = cusolverSpDcsrcholBufferInfo(h_cusolver_, 
-                                     m, nnz_, 
-                                     mat_descr_, 
-                                     values_, 
-                                     rowptr_, 
-                                     colind_, 
-                                     info_, 
-                                     &internalData,
-                                     &buf_fact_size_);
-
-  cudaError_t ret_cu = cudaMalloc(&buf_fact_, sizeof(unsigned char)*buf_fact_size_); 
-  assert(ret_cu == cudaSuccess);
-
+  //factorize
   ret = cusolverSpDcsrcholFactor(h_cusolver_, 
                                  m,
                                  nnz_, 
@@ -136,6 +175,28 @@ int hiopLinSolverCholCuSparse::matrixChanged()
                                  colind_, 
                                  info_, 
                                  buf_fact_);
+  if(ret != CUSOLVER_STATUS_SUCCESS) {
+    // maybe regularization can help -> TODO: look into CUSOLVER return codes
+    nlp_->log->printf(hovWarning, 
+                      "hiopLinSolverCholCuSparse: factorization failed: CUSOLVER_STATUS=%d.\n",
+                      ret);
+    return -1;
+  }
+
+  const double zero_piv_tol = 1e-15;
+  int position = -1;
+  ret = cusolverSpDcsrcholZeroPivot(h_cusolver_, info_, zero_piv_tol, &position);
+
+  if(position>=0) {
+    nlp_->log->printf(hovWarning, 
+                      "hiopLinSolverCholCuSparse: the %dth pivot is <%.5e\n",
+                      position,
+                      zero_piv_tol);
+    return -1;
+  } else {
+    return 0;
+  }
+
 /*
 //hasZeroPivot();
 
@@ -146,9 +207,39 @@ int hiopLinSolverCholCuSparse::matrixChanged()
 
 bool hiopLinSolverCholCuSparse::solve(hiopVector& x_in)
 {
-  nlp_->runStats.linsolv.tmTriuSolves.start(); 
+  cusolverStatus_t ret;
 
+  nlp_->runStats.linsolv.tmTriuSolves.start(); 
+  int m = M.m();
+  assert(m == x_in.get_size());
+
+  //TODO make this a member to avoid repeated allocs/deallocs
+  hiopVector* b = x_in.new_copy();
+
+  double* b_dev;
+  cudaMalloc(&b_dev, m*sizeof(double));
+  cudaMemcpy(b_dev, b->local_data(), m*sizeof(double), cudaMemcpyHostToDevice);
+
+  double* x_dev;
+  cudaMalloc(&x_dev, m*sizeof(double));
+
+  //solve -> two triangular solves
+  ret = cusolverSpDcsrcholSolve(h_cusolver_, m, b_dev, x_dev, info_, buf_fact_);
+
+  cudaMemcpy(x_in.local_data(), x_dev, m*sizeof(double), cudaMemcpyDeviceToHost);
+
+  cudaFree(b_dev);
+  delete b;
+  cudaFree(x_dev);
   nlp_->runStats.linsolv.tmTriuSolves.stop(); 
+
+  if(ret != CUSOLVER_STATUS_SUCCESS) {
+    nlp_->log->printf(hovWarning,
+                      "hiopLinSolverCholCuSparse: solve failed: CUSOLVER_STATUS=%d.\n",
+                      ret);
+    return false;
+  }
+
   return true;
 }
   
