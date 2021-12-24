@@ -1090,7 +1090,7 @@ bool hiopNlpFormulation::user_force_update(int iter,
   assert(y_d.get_size() == n_cons_ineq_);
 
   // force update x
-  retval = interface_base.force_update_x((int)n_vars, x.local_data());
+  retval = interface_base.force_update_x((int)n_vars_, x.local_data());
   
   assert(retval);
 
