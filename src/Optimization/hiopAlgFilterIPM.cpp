@@ -2245,9 +2245,7 @@ bool hiopAlgFilterIPMBase::solve_soft_feasibility_restoration(hiopKKTLinSys* kkt
     d_soc = nlp->alloc_dual_ineq_vec();        
   }
 
-  // shortcut
-//  hiopVector *c_soft =  c_soc;
-//  hiopVector *d_soft =  d_soc;
+  // shortcut --- use soc_dir as a temporary solution
   hiopIterate *soft_dir = soc_dir;
 
   double kkt_err_curr = resid->get_nrmOne_bar_optim() + resid->get_nrmOne_bar_feasib();;
@@ -2264,13 +2262,6 @@ bool hiopAlgFilterIPMBase::solve_soft_feasibility_restoration(hiopKKTLinSys* kkt
       soft_dir->copyFrom(*dir);
       _c_trial->copyFrom(*_c);
       _d_trial->copyFrom(*_d);
-
-      // set initial c/d for soc
-      //_c_trial->copyFrom(nlp->get_crhs());
-      //_c_trial->axpy(-1.0, *_c);
-
-      //_d_trial->copyFrom(*it_curr->get_d());
-      //_d_trial->axpy(-1.0, *_d);
 
       bret = true;
     } else {
@@ -2301,9 +2292,6 @@ bool hiopAlgFilterIPMBase::solve_soft_feasibility_restoration(hiopKKTLinSys* kkt
       return Error_In_User_Function;
     }
 
-    //reuse function values ? use trial c d in dual update? FIXME_NY
-//    _f_nlp=_f_nlp_trial; hiopVector* pvec=_c_trial; _c_trial=_c; _c=pvec; pvec=_d_trial; _d_trial=_d; _d=pvec;
-
     //update and adjust the duals
     bret = dualsUpdate->go(*it_curr, *it_trial,
                            _f_nlp_trial, *_c_trial, *_d_trial, *_grad_f, *_Jac_c, *_Jac_d, *soft_dir,
@@ -2321,10 +2309,6 @@ bool hiopAlgFilterIPMBase::solve_soft_feasibility_restoration(hiopKKTLinSys* kkt
       bret = false;
       break;
     }
-
-    //update current iterate (do a fast swap of the pointers)
-//    hiopIterate* pit=it_curr; it_curr=it_trial; it_trial=pit;
-//    kkt_err_curr = kkt_err_trial;
         
     //check filter condition
     double theta_trial = resid_trial->get_nrmOne_bar_feasib();
