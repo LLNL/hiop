@@ -64,8 +64,18 @@
 #include <cusolverSp.h>
 #include <cusolverSp_LOWLEVEL_PREVIEW.h> 
 
+#include "/home/petra1/work/installs/eigen-3.3.9/_install/include/eigen3/Eigen/Core"
+#include "/home/petra1/work/installs/eigen-3.3.9/_install/include/eigen3/Eigen/Sparse"
+
 namespace hiop
 {
+
+ // type alias
+using Scalar = double;
+using SparseMatrixCSC = Eigen::SparseMatrix<Scalar, Eigen::StorageOptions::ColMajor>;
+using SparseMatrixCSR = Eigen::SparseMatrix<Scalar, Eigen::StorageOptions::RowMajor>;
+using Triplet = Eigen::Triplet<Scalar>;
+using VectorR = Eigen::Matrix<Scalar, Eigen::Dynamic, 1>; 
 
 /**
  * Wrapper class for cusolverSpXcsrchol Cholesky solver.
@@ -89,8 +99,14 @@ public:
    */
   bool solve(hiopVector& x_in);
 
-  /// temp function: TODO remove
-  void set_csr(int m, int nnz, int* rp, int* cind, double* v);
+  /// temporary function: TODO remove
+  void set_sys_mat(const SparseMatrixCSC& M)
+  {
+    *MMM_ = M;
+  }
+protected:
+  /// performs initial analysis, sparsity permutation, and rescaling
+  bool initial_setup();
 protected:
   /// Internal handle required by cuSPARSE functions
   cusparseHandle_t h_cusparse_;
@@ -104,19 +120,36 @@ protected:
   /// Number of nonzeros in the matrix sent to cuSOLVER
   size_type nnz_;
 
-  /// Array with row pointers (on device)
+  /// Array with row pointers of the matrix to be factorized (on device)
   int* rowptr_;
-  /// Array with column indexes (on device)
+  /// Array with column indexes of the matrix to be factorized (on device)
   int* colind_;
-  /// Array with values (on device)
+  /// Array with matrix original values (on device)
+  double* values_buf_;
+  /// Array with values of the matrix to be factorized (on device)
   double* values_;
   /// cuSPARSE matrix descriptor
   cusparseMatDescr_t mat_descr_;
 
-  /// Buffer required by the cuSOLVER Chol factor (on the device)
+  /// Buffer required by the cuSOLVER Chol factor (on device)
   unsigned char* buf_fact_;
   /// Size of the above array
   size_t buf_fact_size_;
+
+  /// Reordering permutation to promote sparsity of the factor (on device)
+  int* P_;
+  /// Transpose or inverse of the above permutation (on device)
+  int* PT_;
+  /// Buffer needed for permutation purposes (on host)
+  unsigned char * buf_perm_h_;
+  /// Permutation map for nonzeros (on device)
+  int* map_nnz_perm_;
+  //temporary
+  SparseMatrixCSR* MMM_;
+
+  /// internal buffers in the size of the linear system (on device)
+  double* rhs_buf1_;
+  double* rhs_buf2_;
 private:
   hiopLinSolverCholCuSparse() { assert(false); }
 };

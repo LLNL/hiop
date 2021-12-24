@@ -61,16 +61,10 @@
 #include "/home/petra1/work/installs/eigen-3.3.9/_install/include/eigen3/Eigen/Core"
 #include "/home/petra1/work/installs/eigen-3.3.9/_install/include/eigen3/Eigen/Sparse"
 
-// type alias
-using Scalar = double;
-using SparseMatrixCSC = Eigen::SparseMatrix<Scalar, Eigen::StorageOptions::ColMajor>;
-using SparseMatrixCSR = Eigen::SparseMatrix<Scalar, Eigen::StorageOptions::RowMajor>;
-using Triplet = Eigen::Triplet<Scalar>;
-using VectorR = Eigen::Matrix<Scalar, Eigen::Dynamic, 1>;
-
 namespace hiop
 {
 
+ 
 hiopKKTLinSysCondensedSparse::hiopKKTLinSysCondensedSparse(hiopNlpFormulation* nlp)
   : hiopKKTLinSysCompressedSparseXDYcYd(nlp),
     dd_pert_(nullptr)
@@ -113,8 +107,8 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   nlp_->runStats.kkt.tmUpdateLinsys.start();
 
   hiopTimer t;
-  t.start();
   
+  t.start();
   SparseMatrixCSC JacD(nineq, nx);
   {
     std::vector<Triplet> tripletList;
@@ -124,6 +118,7 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
                                     Jac_dSp_->j_col()[i],
                                     Jac_dSp_->M()[i]));
     }
+    
     JacD.setFromTriplets(tripletList.begin(), tripletList.end());
   }
   t.stop();
@@ -264,18 +259,14 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
         }
       }
     }
+    t.stop();
     if(perf_report_) nlp_->log->printf(hovSummary, "copy lowertri         %.3f sec\n", t.getElapsedTime());
   } else {
     hiopLinSolverCholCuSparse* linSys_cusolver = dynamic_cast<hiopLinSolverCholCuSparse*>(linSys);
     assert(linSys_cusolver);
-    linSys_cusolver->set_csr(KKTmat.rows(),
-                             KKTmat.nonZeros(),
-                             KKTmat.outerIndexPtr(),
-                             KKTmat.innerIndexPtr(),
-                             KKTmat.valuePtr());
+    linSys_cusolver->set_sys_mat(KKTmat);
     
   }
-  t.stop();
 
 
   nlp_->log->write("KKT_SPARSE_Condensed linsys:", Msys, hovMatrices);
