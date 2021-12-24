@@ -2091,7 +2091,7 @@ bool hiopAlgFilterIPMBase::apply_feasibility_restoration(hiopKKTLinSys* kkt)
         hiopNlpSparse nlpFR(nlp_fr_interface, nlp->options->GetString("options_file_fr_prob").c_str());
         fr_solved = solve_feasibility_restoration(kkt, nlpFR);
         if(fr_solved) {
-          // FR successes, update it_trial->x and it_trial->d to the next search point
+          // FR succeeds, update it_trial->x and it_trial->d to the next search point
           it_trial->get_x()->copyFrom(nlp_fr_interface.get_fr_sol_x());
           it_trial->get_d()->copyFrom(nlp_fr_interface.get_fr_sol_d());
           reset_var_from_fr_sol(kkt, reset_dual = true);
@@ -2103,7 +2103,7 @@ bool hiopAlgFilterIPMBase::apply_feasibility_restoration(hiopKKTLinSys* kkt)
       hiopNlpMDS nlpFR(nlp_fr_interface, nlp->options->GetString("options_file_fr_prob").c_str());
       fr_solved =  solve_feasibility_restoration(kkt, nlpFR);
       if(fr_solved) {
-        // FR successes, update it_trial->x and it_trial->d to the next search point
+        // FR succeeds, update it_trial->x and it_trial->d to the next search point
         it_trial->get_x()->copyFrom(nlp_fr_interface.get_fr_sol_x());
         it_trial->get_d()->copyFrom(nlp_fr_interface.get_fr_sol_d());
         reset_var_from_fr_sol(kkt, reset_dual = true);
@@ -2158,7 +2158,7 @@ bool hiopAlgFilterIPMBase::solve_feasibility_restoration(hiopKKTLinSys* kkt, hio
   hiopSolveStatus FR_status = solver.run();
 
   if(FR_status == User_Stopped) {
-    // FR successes
+    // FR succeeds
     return true;
   } else if(FR_status == Solve_Success || FR_status == Solve_Acceptable_Level) {
     solver_status_ = Infeasible_Problem;
@@ -2171,7 +2171,7 @@ bool hiopAlgFilterIPMBase::solve_feasibility_restoration(hiopKKTLinSys* kkt, hio
 
 bool hiopAlgFilterIPMBase::reset_var_from_fr_sol(hiopKKTLinSys* kkt, bool reset_dual)
 {
-  // FR successes, it_trial->x and it_trial->d have been updated. Now we update other values for the next iter
+  // FR succeeds, it_trial->x and it_trial->d have been updated. Now we update other values for the next iter
   if(!this->evalNlp_noHess(*it_trial, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d)) {
     nlp->log->printf(hovError, "Failure in evaluating user provided NLP functions.");
     assert(false);

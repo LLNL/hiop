@@ -102,6 +102,8 @@ hiopFRProbSparse::hiopFRProbSparse(hiopAlgFilterIPMBase& solver_base)
   wrk_dbody_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), m_ineq_);
   wrk_primal_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), n_);
   wrk_dual_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), m_);
+  last_x_ = x_ref_->alloc_clone();
+  last_d_ = wrk_d_->alloc_clone();
 
   // nnz for sparse matrices;
   nnz_Jac_c_ = nlp_base_->get_nnz_Jaceq() + 2 * m_eq_;
@@ -143,6 +145,12 @@ hiopFRProbSparse::~hiopFRProbSparse()
   delete DR_;
   delete Jac_cd_;
   delete Hess_cd_;
+  if(last_x_) {
+    delete last_x_;
+  }
+  if(last_d_) {
+    delete last_d_;
+  }
 }
 
 bool hiopFRProbSparse::get_MPI_comm(MPI_Comm& comm_out) 
@@ -570,8 +578,8 @@ bool hiopFRProbSparse::iterate_callback(int iter,
     // check (original) filter condition
     if(!solver_base_.filter_contains(onenorm_pr_, logbar_obj_value)) {
       // terminate FR
-      last_x_ = wrk_x_;
-      last_d_ = wrk_d_;
+      last_x_->copyFrom(*wrk_x_);
+      last_d_->copyFrom(*wrk_d_);
 /*      
       hiopIterate* it_next = solver_base_.get_it_trial();
 
@@ -708,6 +716,8 @@ hiopFRProbMDS::hiopFRProbMDS(hiopAlgFilterIPMBase& solver_base)
   wrk_dbody_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), m_ineq_);
   wrk_primal_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), n_);
   wrk_dual_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), m_);
+  last_x_ = x_ref_->alloc_clone();
+  last_d_ = wrk_d_->alloc_clone();
 
   wrk_x_sp_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), n_x_sp_);
   wrk_x_de_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), n_x_de_);
@@ -752,6 +762,12 @@ hiopFRProbMDS::~hiopFRProbMDS()
   
   delete Jac_cd_;
   delete Hess_cd_;
+  if(last_x_) {
+    delete last_x_;
+  }
+  if(last_d_) {
+    delete last_d_;
+  }
 }
 
 bool hiopFRProbMDS::get_MPI_comm(MPI_Comm& comm_out) 
@@ -1171,8 +1187,8 @@ bool hiopFRProbMDS::iterate_callback(int iter,
     // check (original) filter condition
     if(!solver_base_.filter_contains(onenorm_pr_, logbar_obj_value)) {
       // terminate FR
-      last_x_ = wrk_x_;
-      last_d_ = wrk_d_;
+      last_x_->copyFrom(*wrk_x_);
+      last_d_->copyFrom(*wrk_d_);
 /*
       hiopIterate* it_next = solver_base_.get_it_trial();
 
