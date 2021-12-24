@@ -1295,9 +1295,12 @@ decideAndCreateLinearSystem(hiopNlpFormulation* nlp)
         if(strKKT == "xdycyd") {
           return new hiopKKTLinSysCompressedSparseXDYcYd(nlp);
         } else {
-          //'auto' or 'XYcYd'
-          //return new hiopKKTLinSysCompressedSparseXYcYd(nlp);
-          return new hiopKKTLinSysCondensedSparse(nlp);
+          if(strKKT == "condensed") {
+            return new hiopKKTLinSysCondensedSparse(nlp);
+          } else {
+            //'auto' or 'XYcYd'
+            return new hiopKKTLinSysCompressedSparseXYcYd(nlp);
+          }
         }
       }
 #endif

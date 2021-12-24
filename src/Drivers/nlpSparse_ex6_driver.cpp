@@ -9,6 +9,11 @@ using namespace hiop;
 
 static bool self_check(size_type n, double obj_value);
 
+#include <cuda_runtime.h>
+#include <cusparse.h>
+#include <cusolverSp.h>
+#include <cusolverSp_LOWLEVEL_PREVIEW.h>
+
 static bool parse_arguments(int argc, char **argv, size_type& n, double &scal,  bool& self_check, bool& use_pardiso)
 {
 
@@ -81,6 +86,28 @@ static void usage(const char* exeName)
 
 int main(int argc, char **argv)
 {
+  /// Internal handle required by cuSPARSE functions
+  cusparseHandle_t h_cusparse_;
+  /// Internal handle required by cusolverSpXcsrchol
+  cusolverSpHandle_t h_cusolver_;
+  /// Internal struct required by cusolverSpXcsrchol
+  csrcholInfo_t info_;
+
+  cusolverStatus_t ret;
+  cusparseStatus_t ret_sp;
+  ret_sp = cusparseCreate(&h_cusparse_);
+  
+  printf("%d error\n", ret_sp);
+  
+  //assert(ret_sp == CUSPARSE_STATUS_SUCCESS);
+  
+  ret = cusolverSpCreate(&h_cusolver_);
+  assert(ret == CUSOLVER_STATUS_SUCCESS);
+  
+  
+
+
+
   int rank=0;
 #ifdef HIOP_USE_MPI
   MPI_Init(&argc, &argv);
@@ -101,7 +128,7 @@ int main(int argc, char **argv)
   if(!parse_arguments(argc, argv, n, scal, selfCheck, use_pardiso)) { usage(argv[0]); return 1;}
 
   Ex6 nlp_interface(n, scal);
-  hiopNlpSparseIneq nlp(nlp_interface);
+  hiopNlpSparseIneq nlp(nlp_interface); //TODO: reverse to hiopNlpSparse; maybe clean up the code->comments
   nlp.options->SetStringValue("Hessian", "analytical_exact");
   nlp.options->SetStringValue("duals_update_type", "linear"); // "lsq" or "linear" --> lsq hasn't been implemented yet.
                                                             // it will be forced to use "linear" internally.

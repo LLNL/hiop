@@ -776,13 +776,14 @@ void hiopOptionsNLP::register_options()
   }
   //linear algebra
   {
-    vector<string> range(4); range[0] = "auto"; range[1]="xycyd"; range[2]="xdycyd"; range[3]="full";
+    vector<string> range = {"auto", "xycyd", "xdycyd", "full", "condensed"};
     register_str_option("KKTLinsys",
                         "auto",
                         range,
-                        "Type of KKT linear system used internally: decided by HiOp 'auto' "
-                        "(default option), the more compact 'XYcYd, the more stable 'XDYcYd', or the "
-                        "full-size non-symmetric 'full'. The last three options are only available with "
+                        "Type of KKT linear system used internally: decided by HiOp 'auto' (default), "
+                        "the more compact 'XYcYd, the more stable 'XDYcYd', the full-size non-symmetric "
+                        "'full', or the condensed that uses Cholesky (available when no eq. constraints "
+                        "are present. The last four options are only available with "
                         "'Hessian=analyticalExact'.");
   }
 

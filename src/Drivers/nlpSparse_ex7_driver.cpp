@@ -125,7 +125,9 @@ int main(int argc, char **argv)
     double obj_value = solver.getObjective();
 
     if(status<0) {
-      if(rank==0) printf("solver returned negative solve status: %d (with objective is %18.12e)\n", status, obj_value);
+      if(rank==0) {
+        printf("solver returned negative solve status: %d (with objective is %18.12e)\n", status, obj_value);
+      }
       return -1;
     }
 
@@ -141,19 +143,23 @@ int main(int argc, char **argv)
   }
   
   //
-  //same as above but with equalities relaxed as two-sided inequalities
+  //same as above but with equalities relaxed as two-sided inequalities and using condensed linear system
   //
+#if defined(HIOP_USE_CUDA) || defined(HIOP_USE_COINHSL)
   {
     Ex7 nlp_interface(n,convex_obj, rankdefic_Jac_eq, rankdefic_Jac_ineq, scal_neg_obj);
     hiopNlpSparseIneq nlp(nlp_interface);
+#ifdef HIOP_USE_CUDA
+    nlp.options->SetStringValue("compute_mode", "hybrid");
+#else //HIOP_USE_COINHSL
+    //compute mode cpu will use MA57 by default
     nlp.options->SetStringValue("compute_mode", "cpu");
-    nlp.options->SetStringValue("KKTLinsys", "xdycyd");
+#endif
+
+    nlp.options->SetStringValue("KKTLinsys", "condensed");
     if(inertia_free) {
       nlp.options->SetStringValue("fact_acceptor", "inertia_free");
     }
-//  nlp.options->SetIntegerValue("max_iter", 100);
-//  nlp.options->SetNumericValue("kappa1", 1e-8);
-//  nlp.options->SetNumericValue("kappa2", 1e-8);
 
     hiopAlgFilterIPMNewton solver(&nlp);
     hiopSolveStatus status = solver.run();
@@ -180,6 +186,7 @@ int main(int argc, char **argv)
       }
     }
   }
+#endif //HIOP_USE_CUDA
   
 #ifdef HIOP_USE_MPI
   MPI_Finalize();

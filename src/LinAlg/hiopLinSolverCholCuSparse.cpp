@@ -69,17 +69,20 @@ hiopLinSolverCholCuSparse::hiopLinSolverCholCuSparse(const size_type& n,
                                                      hiopNlpFormulation* nlp)
   : hiopLinSolverIndefSparse(n, nnz, nlp),
     nnz_(nnz),
+    buf_fact_(nullptr),
     rowptr_(nullptr),
     colind_(nullptr),
     values_(nullptr)
 {
   cusolverStatus_t ret;
   cusparseStatus_t ret_sp;
+  
   ret_sp = cusparseCreate(&h_cusparse_);
   assert(ret_sp == CUSPARSE_STATUS_SUCCESS);
-
+  
   ret = cusolverSpCreate(&h_cusolver_);
   assert(ret == CUSOLVER_STATUS_SUCCESS);
+
   ret = cusolverSpCreateCsrcholInfo(&info_);
   assert(ret == CUSOLVER_STATUS_SUCCESS);
   
@@ -127,7 +130,7 @@ void hiopLinSolverCholCuSparse::set_csr(int m, int nnz, int*rp, int* cind, doubl
   assert(colind_);
   assert(values_);
 
-  cudaMemcpy(rowptr_, rp, (m+1)*sizeof(double), cudaMemcpyHostToDevice);
+  cudaMemcpy(rowptr_, rp, (m+1)*sizeof(int), cudaMemcpyHostToDevice);
   cudaMemcpy(colind_, cind, nnz*sizeof(int), cudaMemcpyHostToDevice);
   cudaMemcpy(values_, v, nnz*sizeof(double), cudaMemcpyHostToDevice);
 }
@@ -145,6 +148,8 @@ int hiopLinSolverCholCuSparse::matrixChanged()
   if(nullptr == buf_fact_) {
     //analysis -> pattern of L
     ret = cusolverSpXcsrcholAnalysis(h_cusolver_, m, nnz_, mat_descr_, rowptr_, colind_, info_);
+
+    printf("err %d\n", ret);
     assert(ret == CUSOLVER_STATUS_SUCCESS);
     
     // buffer size
@@ -178,8 +183,8 @@ int hiopLinSolverCholCuSparse::matrixChanged()
   if(ret != CUSOLVER_STATUS_SUCCESS) {
     // maybe regularization can help -> TODO: look into CUSOLVER return codes
     nlp_->log->printf(hovWarning, 
-                      "hiopLinSolverCholCuSparse: factorization failed: CUSOLVER_STATUS=%d.\n",
-                      ret);
+                      "hiopLinSolverCholCuSparse: factorization failed: CUSOLVER_STATUS=%d %d.\n",
+                      ret, CUSOLVER_STATUS_INVALID_VALUE);
     return -1;
   }
 
