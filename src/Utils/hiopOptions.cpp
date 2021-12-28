@@ -730,12 +730,21 @@ void hiopOptionsNLP::register_options()
                         "larger than the value of this option (default 100)");
   }
   
-  // relax bound
+  // relax bounds
   {
     register_num_option("bound_relax_perturb", 1e-8, 0.0, 1e20,
                         "Perturbation of the lower and upper bounds for variables and constraints relative"
                         "to its magnitude: lower/upper_bound -=/+= bound_relax_perturb*max(abs(lower/upper_bound),1)*"
                         "bound_relax_perturb (default 1e-8)");
+
+    //relax equalities internally to two-sided inequalties and pose the NLP as an NLP with inequalities only
+    register_num_option("eq_relax_factor",
+                        1e-8,
+                        1e-15,
+                        1.0,
+                        "Perturbation of the equalities to allow posing them as inequalities. This factor is "
+                        "relative to the maximum between the magnitude of the equalities rhs and 1.0. Used "
+                        "only by hiopNlpSparseIneq formulation class. (default 1e-8)");
   }
 
   // second order correction
@@ -891,7 +900,7 @@ void hiopOptionsNLP::register_options()
                         "Jacobian (delta_c=delta_c_bar*mu^kappa_c)");
 
   }
-  // perfromance profiling
+  // performance profiling
   {
     vector<string> range(2);
     range[0] = "on";

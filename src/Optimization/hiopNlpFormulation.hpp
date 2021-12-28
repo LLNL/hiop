@@ -521,8 +521,6 @@ private:
 class hiopNlpSparse : public hiopNlpFormulation
 {
 public:
-  // TODO: notsure we need this
-
   hiopNlpSparse(hiopInterfaceSparse& interface_, const char* option_file = nullptr)
     : hiopNlpFormulation(interface_, option_file), interface(interface_),
       num_jac_eval_{0}, num_hess_eval_{0}
@@ -593,7 +591,7 @@ public:
   inline int get_nnz_Jacineq()  const { return nnz_sparse_Jacineq_; }
   inline int get_nnz_Hess_Lagr()  const { return nnz_sparse_Hess_Lagr_; }
   
-private:
+protected:
   hiopInterfaceSparse& interface;
   int nnz_sparse_Jaceq_;
   int nnz_sparse_Jacineq_;
@@ -604,5 +602,33 @@ private:
   hiopVector* buf_lambda_;
 };
 
-}
+/**
+ * Specialized NLP formulation class that poses equalities as relaxed two-sided 
+ * inequalities
+ */
+class hiopNlpSparseIneq : public hiopNlpSparse
+{
+public:
+  hiopNlpSparseIneq(hiopInterfaceSparse& interface_, const char* option_file = nullptr)
+    : hiopNlpSparse(interface_, option_file),
+      n_cons_eq_origNLP_(0),
+      eq_relax_value_(1e-8)
+  {
+  }
+  virtual ~hiopNlpSparseIneq()
+  {
+  }
+  /* Preprocess constraints so that equalities are posed as relaxed two-sided inequalities. */
+  virtual bool process_constraints();
+
+  /* Perform initialization and preprocessing. */
+ virtual bool finalizeInitialization();
+protected:
+  /* Number of equalities in the original NLP formulation. */
+  size_type n_cons_eq_origNLP_;
+
+  /* Maximum violation of the equalities relative to the magnitude of the right-hand side. */
+  double eq_relax_value_;
+};
+} // end of namespace
 #endif
