@@ -1692,10 +1692,12 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
       }
       // post line-search: filter is augmented whenever the switching condition or Armijo rule do not
       // hold for the trial point that was just accepted
-      if(nlp->options->GetString("force_resto")=="yes" && !within_FR_) {
-        bool fr_converged = apply_feasibility_restoration(kkt);
-        if(!fr_converged) {
-          break;
+      if(nlp->options->GetString("force_resto")=="yes" && !within_FR_ && iter_num == 1) {
+        use_fr = apply_feasibility_restoration(kkt);
+        if(use_fr) {
+          // continue iterations if FR is accepted
+          solver_status_ = NlpSolve_Pending;
+	  break;
         }
       } else if(lsStatus==1) {
 
@@ -2073,7 +2075,9 @@ int hiopAlgFilterIPMBase::apply_second_order_correction(hiopKKTLinSys* kkt,
 
 bool hiopAlgFilterIPMBase::apply_feasibility_restoration(hiopKKTLinSys* kkt)
 {
-  if(!within_FR_) {
+  bool fr_solved = true;
+  bool reset_dual = true;
+  if(!within_FR_) {  
     hiopNlpMDS* nlpMDS = dynamic_cast<hiopNlpMDS*>(nlp);
     if (nlpMDS == nullptr) {
       hiopNlpSparse* nlpSp = dynamic_cast<hiopNlpSparse*>(nlp);
@@ -2084,111 +2088,132 @@ bool hiopAlgFilterIPMBase::apply_feasibility_restoration(hiopKKTLinSys* kkt)
       } else {
         // this is Sparse linear system
         hiopFRProbSparse nlp_fr_interface(*this);
-        hiopNlpSparse nlpFR(nlp_fr_interface, "hiop_fr.options");
-        return solve_feasibility_restoration(kkt, nlpFR);
+        hiopNlpSparse nlpFR(nlp_fr_interface, nlp->options->GetString("options_file_fr_prob").c_str());
+        fr_solved = solve_feasibility_restoration(kkt, nlpFR);
+        if(fr_solved) {
+          // FR succeeds, update it_trial->x and it_trial->d to the next search point
+          it_trial->get_x()->copyFrom(nlp_fr_interface.get_fr_sol_x());
+          it_trial->get_d()->copyFrom(nlp_fr_interface.get_fr_sol_d());
+          reset_var_from_fr_sol(kkt, reset_dual = true);
+        } 
       }
     } else {
       // this is MDS system
       hiopFRProbMDS nlp_fr_interface(*this);
-      hiopNlpMDS nlpFR(nlp_fr_interface, "hiop_fr.options");
-      return solve_feasibility_restoration(kkt, nlpFR);
-//      assert(0 && "feasibility problem hasn't support mds system yet.");
+      hiopNlpMDS nlpFR(nlp_fr_interface, nlp->options->GetString("options_file_fr_prob").c_str());
+      fr_solved =  solve_feasibility_restoration(kkt, nlpFR);
+      if(fr_solved) {
+        // FR succeeds, update it_trial->x and it_trial->d to the next search point
+        it_trial->get_x()->copyFrom(nlp_fr_interface.get_fr_sol_x());
+        it_trial->get_d()->copyFrom(nlp_fr_interface.get_fr_sol_d());
+        reset_var_from_fr_sol(kkt, reset_dual = true);
+      }
     }
   } else {
     // FR problem inside a FR problem, see equation (33)
-    // use wildcard function to update iterate
+    // use wildcard function to update primal variables x
+    it_trial->copyFrom(*it_curr);
     if(!nlp->user_force_update(iter_num,
                                _f_nlp,
-                               *it_curr->get_x(),
-                               *it_curr->get_zl(),
-                               *it_curr->get_zu(),
+                               *it_trial->get_x(),
+                               *it_trial->get_zl(),
+                               *it_trial->get_zu(),
                                *_c,
                                *_d,
-                               *it_curr->get_yc(),
-                               *it_curr->get_yd(), //lambda,
+                               *it_trial->get_yc(),
+                               *it_trial->get_yd(),
                                _mu,
                                _alpha_dual,
                                _alpha_primal)) {
       solver_status_ = Error_In_FR;
-      return false;
+      fr_solved = false;
+    } else {
+      reset_var_from_fr_sol(kkt, reset_dual = false);
     }
   }
-  return true;
+
+  return fr_solved;
 }
 
 bool hiopAlgFilterIPMBase::solve_feasibility_restoration(hiopKKTLinSys* kkt, hiopNlpFormulation& nlpFR)
 {
-  {
-    nlpFR.options->SetStringValue("Hessian", "analytical_exact");
-    nlpFR.options->SetStringValue("duals_update_type", "linear");
-    nlpFR.options->SetStringValue("duals_init", "zero");
-    nlpFR.options->SetStringValue("compute_mode", nlp->options->GetString("compute_mode").c_str());
-    nlpFR.options->SetStringValue("mem_space", nlp->options->GetString("mem_space").c_str());
-    nlpFR.options->SetStringValue("KKTLinsys", "xdycyd");
-    nlpFR.options->SetIntegerValue("verbosity_level", 0);
-    nlpFR.options->SetStringValue("warm_start", "yes");
-    nlpFR.options->SetNumericValue("bound_relax_perturb", 0.0);
-    nlpFR.options->SetStringValue("scaling_type", "none");
+  nlpFR.options->SetStringValue("Hessian", "analytical_exact");
+  nlpFR.options->SetStringValue("duals_update_type", "linear");
+  nlpFR.options->SetStringValue("duals_init", "zero");
+  nlpFR.options->SetStringValue("compute_mode", nlp->options->GetString("compute_mode").c_str());
+  nlpFR.options->SetStringValue("mem_space", nlp->options->GetString("mem_space").c_str());
+  nlpFR.options->SetStringValue("KKTLinsys", "xdycyd");
+  nlpFR.options->SetIntegerValue("verbosity_level", 0);
+  nlpFR.options->SetStringValue("warm_start", "yes");
+  nlpFR.options->SetNumericValue("bound_relax_perturb", 0.0);
+  nlpFR.options->SetStringValue("scaling_type", "none");
 
-    // set mu0 to be the maximun of the current barrier parameter mu and norm_inf(|c|)*/
-    double theta_ref = resid->getInfeasInfNorm(); //at current point, i.e., reference point
-    double mu_FR = std::max(_mu, theta_ref);
+  // set mu0 to be the maximun of the current barrier parameter mu and norm_inf(|c|)*/
+  double theta_ref = resid->getInfeasInfNorm(); //at current point, i.e., reference point
+  double mu_FR = std::max(_mu, theta_ref);
 
-    nlpFR.options->SetNumericValue("mu0", mu_FR);
+  nlpFR.options->SetNumericValue("mu0", mu_FR);
 
-    hiopAlgFilterIPMNewton solver(&nlpFR, true);  // solver fr problem
-    hiopSolveStatus FR_status = solver.run();
+  hiopAlgFilterIPMNewton solver(&nlpFR, true);  // solver fr problem
+  hiopSolveStatus FR_status = solver.run();
 
-    if(FR_status == User_Stopped) {
-      // FR successes, it_trial->x and it_trial->d has been updated to the next search point
-      // in the above solver.run()
-      if(!this->evalNlp_noHess(*it_trial, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d)) {
-        nlp->log->printf(hovError, "Failure in evaluating user provided NLP functions.");
-        assert(false);
-        return false;
+  if(FR_status == User_Stopped) {
+    // FR succeeds
+    return true;
+  } else if(FR_status == Solve_Success || FR_status == Solve_Acceptable_Level) {
+    solver_status_ = Infeasible_Problem;
+    return false;
+  } else {
+    solver_status_ = Error_In_FR;
+    return false;
+  }
+}
+
+bool hiopAlgFilterIPMBase::reset_var_from_fr_sol(hiopKKTLinSys* kkt, bool reset_dual)
+{
+  // FR succeeds, it_trial->x and it_trial->d have been updated. Now we update other values for the next iter
+  if(!this->evalNlp_noHess(*it_trial, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d)) {
+    nlp->log->printf(hovError, "Failure in evaluating user provided NLP functions.");
+    assert(false);
+    return false;
+  }
+  // determine other slacks
+  it_trial->determineSlacks();
+
+  // compute dx = x_{k+1} - x_k
+  dir->get_x()->copyFrom(*it_trial->get_x());
+  dir->get_x()->axpy(-1.0, *it_curr->get_x());
+  dir->get_d()->copyFrom(*it_trial->get_d());
+  dir->get_d()->axpy(-1.0, *it_curr->get_d());
+
+  if(reset_dual) {
+    // compute directions for bound duals (zl, zu, vl, vu)
+    kkt->compute_directions_for_full_space(resid, dir);
+
+    //LSQ-based initialization of yc and yd
+    if(0==dualsInitializ) {
+      //is the dualsUpdate already the LSQ-based updater?
+      hiopDualsLsqUpdate* updater = dynamic_cast<hiopDualsLsqUpdate*>(dualsUpdate);
+      bool deleteUpdater = false;
+      if(!updater) {
+        //updater = new hiopDualsLsqUpdate(nlp);
+        updater = nlp->alloc_duals_lsq_updater();
+        deleteUpdater = true;
       }
-      // determine other slacks
-      it_trial->determineSlacks();
-
-      // compute dx = x_{k+1} - x_k
-      dir->get_x()->copyFrom(*it_trial->get_x());
-      dir->get_x()->axpy(-1.0, *it_curr->get_x());
-      dir->get_d()->copyFrom(*it_trial->get_d());
-      dir->get_d()->axpy(-1.0, *it_curr->get_d());
-
-      // set step size to 1
-      _alpha_primal = 1.0;
-      _alpha_dual = 1.0;
-
-      // compute directions for bound duals (zl, zu, vl, vu)
-      kkt->compute_directions_for_full_space(resid, dir);
-
-      //LSQ-based initialization of yc and yd
-      if(0==dualsInitializ) {
-        //is the dualsUpdate already the LSQ-based updater?
-        hiopDualsLsqUpdate* updater = dynamic_cast<hiopDualsLsqUpdate*>(dualsUpdate);
-        bool deleteUpdater = false;
-        if(!updater) {
-          //updater = new hiopDualsLsqUpdate(nlp);
-          updater = nlp->alloc_duals_lsq_updater();
-          deleteUpdater = true;
-        }
-        //this will update yc and yd in it_trial
-        updater->computeInitialDualsEq(*it_trial, *_grad_f, *_Jac_c, *_Jac_d);
-        if(deleteUpdater) {
-          delete updater;
-        }
-      } else {
-        it_trial->setEqualityDualsToConstant(0.);
+      //this will update yc and yd in it_trial
+      updater->computeInitialDualsEq(*it_trial, *_grad_f, *_Jac_c, *_Jac_d);
+      if(deleteUpdater) {
+        delete updater;
       }
-    } else if(FR_status == Solve_Success || FR_status == Solve_Acceptable_Level) {
-      solver_status_ = Infeasible_Problem;
-      return false;
     } else {
-      solver_status_ = Error_In_FR;
-      return false;
+      it_trial->setEqualityDualsToConstant(0.);
     }
-  } 
+  }
+
+  // set step size to 1
+  _alpha_primal = 1.0;
+  _alpha_dual = 1.0;
+  
   return true;
 }
 

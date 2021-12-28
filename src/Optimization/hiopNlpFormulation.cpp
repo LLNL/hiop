@@ -1089,37 +1089,11 @@ bool hiopNlpFormulation::user_force_update(int iter,
   assert(y_c.get_size() == n_cons_eq_);
   assert(y_d.get_size() == n_cons_ineq_);
 
-  if(cons_lambdas_ == NULL) {
-    cons_lambdas_ = this->alloc_dual_vec();
-  }
-  cons_lambdas_->copy_from_two_vec_w_pattern(y_c, *cons_eq_mapping_, y_d, *cons_ineq_mapping_);
-
-  //concatenate 'c' and 'd' into user's constrainty body
-  if(cons_body_ == NULL) {
-    cons_body_ = cons_lambdas_->alloc_clone();
-  }
-  cons_body_->copy_from_two_vec_w_pattern(c, *cons_eq_mapping_, d, *cons_ineq_mapping_);
-
-  //! todo -> test this when fixed variables are removed -> the internal
-  //! zl and zu may have different sizes than what user expects since HiOp removes
-  //! variables internally
-
-  retval = interface_base.force_update(obj_value/this->get_obj_scale(),
-                                       (int)n_vars_,
-                                       x.local_data(),
-                                       z_L.local_data(),
-                                       z_U.local_data(),
-                                       (int)n_cons_,
-                                       cons_body_->local_data(),
-                                       cons_lambdas_->local_data(),
-                                       mu,
-                                       alpha_du,
-                                       alpha_pr);
+  // force update x
+  retval = interface_base.force_update_x((int)n_vars_, x.local_data());
+  
   assert(retval);
 
-  // unpack the full size vector
-  cons_body_->copy_to_two_vec_w_pattern(c, *cons_eq_mapping_, d, *cons_ineq_mapping_);
-  cons_lambdas_->copy_to_two_vec_w_pattern(y_c, *cons_eq_mapping_, y_d, *cons_ineq_mapping_);
   return true;
 }
 

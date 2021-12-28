@@ -87,7 +87,7 @@ public:
   virtual void print(FILE* file, const char* msg=NULL) const;
 
   /**
-   * Default name for the options file for the HiOp NLP solver o. If the file does not exist, 
+   * Default name for the options file for the HiOp NLP solver. If the file does not exist, 
    * the options object will be created with default options. 
    *
    * When the PriDec solver is used and the worker (a.k.a., contingency or recourse) NLP solver
@@ -113,6 +113,13 @@ public:
    * will create an option object with default option values. 
    */
   static const char* default_filename_pridec_masterNLP;
+
+  /**
+   * Default name for the options file for the feasibility restoration problem. If the file does not exist, 
+   * the options object will be created with default options. 
+   */
+  static const char* default_filename_fr;
+
 protected:
   /* internal use only */
   void register_num_option(const std::string& name, double defaultValue, double rangeLo, double rangeUp, const char* descr);
