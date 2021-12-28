@@ -142,6 +142,92 @@ private:
   hiopLinSolverIndefSparse* determine_and_create_linsys(size_type nxd, size_type nineq, size_type nnz);
 };
 
+#include "hiopMatrixSparseTriplet.hpp"
+class hiopMatrixSparseCSRStorage
+{
+public:
+  hiopMatrixSparseCSRStorage();
+  hiopMatrixSparseCSRStorage(size_type m, size_type n, size_type nnz);
+  virtual ~hiopMatrixSparseCSRStorage();
+
+  /**
+   * Forms a CSR matrix from a sparse matrix in triplet format. Returns false if the input formated 
+   * as expected (e.g., ordered by rows then by columns), otherwise returns true.
+   */
+  bool form_from(const hiopMatrixSparseTriplet& M);
+
+  /**
+   * Forms a CSR matrix representing the transpose of the sparse matrix in triplet format is passed as
+   * argument. Returns false if the input formated as expected (e.g., ordered by rows then by columns), 
+   * otherwise returns true.
+   */
+  bool form_transpose_from(const hiopMatrixSparseTriplet& M);
+
+  /**
+   * Computes M = X*D*Y, where X is the calling matrix class and D is a diagonal specified by a vector.
+   */
+  void times_diag_times_mat(const hiopVector& diag,
+                            const hiopMatrixSparseCSRStorage& Y,
+                            hiopMatrixSparseCSRStorage& M);
+//protected:
+  hiopMatrixSparseCSRStorage* times_diag_times_mat_init(const hiopMatrixSparseCSRStorage& Y);
+public:
+
+  inline index_type* irowptr() 
+  {
+    return irowptr_;
+  }
+  inline index_type* jcolind()
+  {
+    return jcolind_;
+  }
+  inline double* values()
+  {
+    return values_;
+  }
+
+  inline index_type* irowptr() const
+  {
+    return irowptr_;
+  }
+  inline index_type* jcolind() const
+  {
+    return jcolind_;
+  }
+  inline double* values() const
+  {
+    return values_;
+  }
+  
+  inline size_type m() const
+  {
+    return nrows_;
+  }
+  inline size_type n() const
+  {
+    return ncols_;
+  }
+  inline size_type nnz() const
+  {
+    return nnz_;
+  }
+  void print(FILE* file,
+             const char* msg=NULL,
+             int maxRows=-1,
+             int maxCols=-1,
+             int rank=-1) const;
+protected:
+  void alloc();
+  void dealloc();
+protected:
+  size_type nrows_;
+  size_type ncols_;
+  size_type nnz_;
+  index_type* irowptr_;
+  index_type* jcolind_;
+  double* values_;
+};
+  
 } // end of namespace
 
 #endif

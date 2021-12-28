@@ -91,6 +91,10 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   HessSp_ = dynamic_cast<hiopMatrixSymSparseTriplet*>(Hess_);
   Jac_dSp_ = dynamic_cast<const hiopMatrixSparseTriplet*>(Jac_d_);
   Jac_cSp_ = nullptr; //not used by this class
+
+
+  const hiopMatrixSparseTriplet* JacTriplet = dynamic_cast<const hiopMatrixSparseTriplet*>(Jac_d_);
+  
   assert(HessSp_ && Jac_dSp_);
   if(nullptr==Jac_dSp_ || nullptr==HessSp_) {
     return false;
@@ -129,6 +133,21 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   t.stop();
   if(perf_report_) nlp_->log->printf(hovSummary, "JacD trans took       %.3f sec\n", t.getElapsedTime());
 
+/******************************************************************************************/
+  hiopMatrixSparseCSRStorage Jac1;
+  Jac1.form_from(*JacTriplet);
+  //Jac1.print(stdout);
+  //std::cout << JacD << std::endl;
+
+  hiopMatrixSparseCSRStorage Jac1t;
+  Jac1t.form_transpose_from(*JacTriplet);
+  //Jac1t.print(stdout);
+  
+  //SparseMatrixCSR Jac2_trans = SparseMatrixCSR(JacD.transpose());
+  //std::cout << Jac2_trans << std::endl;
+
+/******************************************************************************************/
+  
   t.reset(); t.start();
   if(nullptr == dd_pert_) {
     dd_pert_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), nineq);
@@ -161,9 +180,17 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   t.reset(); t.start();  
   SparseMatrixCSC JtxDdxJ = JacD_trans * DdxJ;
   t.stop();
-  if(perf_report_) nlp_->log->printf(hovSummary, "JtxDdxJ took       %.3f sec\n", t.getElapsedTime());
+  if(perf_report_) nlp_->log->printf(hovSummary, "JtxDdxJ took      %.3f sec\n", t.getElapsedTime());
 
+/******************************************************************************************/
 
+  std::cout << JtxDdxJ << std::endl;
+  hiopMatrixSparseCSRStorage* JtDiagJ = Jac1t.times_diag_times_mat_init(Jac1);
+  Jac1t.times_diag_times_mat(*dd_pert_, Jac1,  *JtDiagJ);
+  JtDiagJ->print(stdout); //aaa
+/******************************************************************************************/
+  
+  
   t.reset(); t.start();
   SparseMatrixCSC H(nx, nx);
   {
@@ -422,5 +449,412 @@ hiopKKTLinSysCondensedSparse::determine_and_create_linsys(size_type nx, size_typ
   assert(linSys_&& "KKT_SPARSE_XYcYd linsys: cannot instantiate backend linear solver");
   return dynamic_cast<hiopLinSolverIndefSparse*> (linSys_);
 }
+
+/*******************************************************************************************************
+ * hiopMatrixSparseCSRStorage
+ *******************************************************************************************************/
+hiopMatrixSparseCSRStorage::hiopMatrixSparseCSRStorage()
+  : nrows_(0),
+    ncols_(0),
+    nnz_(0),
+    irowptr_(nullptr),
+    jcolind_(nullptr),
+    values_(nullptr)
+{
   
 }
+hiopMatrixSparseCSRStorage::hiopMatrixSparseCSRStorage(size_type m, size_type n, size_type nnz)
+  : nrows_(m),
+    ncols_(n),
+    nnz_(nnz),
+    irowptr_(nullptr),
+    jcolind_(nullptr),
+    values_(nullptr)
+{
+  alloc();
+}
+hiopMatrixSparseCSRStorage::~hiopMatrixSparseCSRStorage()
+{
+  dealloc();
+}
+
+void hiopMatrixSparseCSRStorage::alloc()
+{
+  assert(irowptr_ == nullptr);
+  assert(jcolind_ == nullptr);
+  assert(values_ == nullptr);
+
+  irowptr_ = new index_type[nrows_+1];
+  jcolind_ = new index_type[nnz_];
+  values_ = new double[nnz_];
+}
+
+
+void hiopMatrixSparseCSRStorage::dealloc()
+{
+  delete[] irowptr_;
+  delete[] jcolind_;
+  delete[] values_;
+  irowptr_ = nullptr;
+  jcolind_ = nullptr;
+  values_ = nullptr;
+}
+
+/**
+ * Forms a CSR matrix from a sparse matrix in triplet format. Returns false if the input formated 
+ * as expected (e.g., ordered by rows then by columns), otherwise returns true.
+*/
+bool hiopMatrixSparseCSRStorage::form_from(const hiopMatrixSparseTriplet& M)
+{
+  if(M.m()!=nrows_ || M.n()!=ncols_ || M.numberOfNonzeros()!=nnz_) {
+    dealloc();
+    
+    nrows_ = M.m();
+    ncols_ = M.n();
+    nnz_ = M.numberOfNonzeros();
+
+    alloc();
+  }
+
+  assert(nnz_>=0);
+  if(nnz_<=0) {
+    return true;
+  }
+  
+  assert(irowptr_);
+  assert(jcolind_);
+  assert(values_);
+
+  const index_type* Mirow = M.i_row();
+  const index_type* Mjcol = M.j_col();
+  const double* Mvalues  = M.M();
+
+  M.print(stdout);
+
+  //storage the row count
+  index_type w[nrows_];
+  for(int i=0; i<nrows_; ++i) {
+    w[i] = 0;
+  }
+  
+  for(int it=0; it<nnz_; ++it) {
+    const index_type row_idx = Mirow[it];
+
+#ifndef NDEBUG
+    if(it>0) {
+      assert(Mirow[it] >= Mirow[it-1] && "row indexes of the triplet format are not ordered.");
+      if(Mirow[it] == Mirow[it-1]) {
+        assert(Mjcol[it] > Mjcol[it-1] && "col indexes of the triplet format are not ordered or unique.");
+      }
+    }
+#endif
+    assert(row_idx<nrows_ && row_idx>=0);
+    assert(Mjcol[it]<ncols_ && Mjcol[it]>=0);
+
+    w[row_idx]++;
+
+    jcolind_[it] = Mjcol[it];
+    values_[it] = Mvalues[it];
+  }
+
+  irowptr_[0] = 0;
+  for(int i=0; i<nrows_; i++) {
+    irowptr_[i+1] = irowptr_[i] + w[i];
+  }
+  assert(irowptr_[nrows_] == nnz_);
+  return true;
+}
+
+/**
+ * Forms a CSR matrix representing the transpose of the sparse matrix in triplet format is passed as
+ * argument. Returns false if the input formated as expected (e.g., ordered by rows then by columns), 
+ * otherwise returns true.
+ */
+bool hiopMatrixSparseCSRStorage::form_transpose_from(const hiopMatrixSparseTriplet& M)
+{
+  if(M.m()!=ncols_ || M.n()!=nrows_ || M.numberOfNonzeros()!=nnz_) {
+    dealloc();
+    
+    nrows_ = M.n();
+    ncols_ = M.m();
+    nnz_ = M.numberOfNonzeros();
+
+    alloc();
+  }
+
+  assert(nnz_>=0);
+  if(nnz_<=0) {
+    return true;
+  }
+  
+  assert(irowptr_);
+  assert(jcolind_);
+  assert(values_);
+
+  const index_type* Mirow = M.i_row();
+  const index_type* Mjcol = M.j_col();
+  const double* Mvalues  = M.M();
+
+  //keeps counts of nz on each row of this (later will also store row starts)
+  index_type w[nrows_];
+  
+  // initialize nz per row to zero
+  for(index_type i=0; i<nrows_; ++i) {
+    w[i] = 0;
+  }
+  // count number of nonzeros in each row
+  for(index_type it=0; it<nnz_; ++it) {
+    assert(Mjcol[it]<nrows_);
+    w[Mjcol[it]]++;
+  }
+  // cum sum in irowptr_ and set w to the row starts
+  irowptr_[0] = 0;
+  for(int i=1; i<=nrows_; ++i) {
+    irowptr_[i] = irowptr_[i-1] + w[i-1];
+    w[i-1] = irowptr_[i-1];
+  }
+  assert(irowptr_[nrows_] = nnz_);
+  
+  //populate jcolind_ and values_
+  for(index_type it=0; it<nnz_; ++it) {
+    const index_type row_idx = Mjcol[it];
+    
+    //index in nonzeros of this (transposed)
+    const auto nz_idx = w[row_idx];
+    assert(nz_idx<nnz_);
+    
+    //assign col and value
+    jcolind_[nz_idx] = Mirow[it];
+    values_[nz_idx] = Mvalues[it];
+    assert(Mirow[it] < ncols_);
+    
+    //increase start for row 'row_idx'
+    w[row_idx]++;
+
+    assert(w[row_idx] <= irowptr_[row_idx+1]);
+  }
+ 
+#ifndef NDEBUG
+  for(int i=0; i<nrows_; i++) {
+    for(int itnz=irowptr_[i]+1; itnz<irowptr_[i+1]; ++itnz) {
+      assert(jcolind_[itnz] > jcolind_[itnz-1] && "something wrong: col indexes not sorted or not unique");
+    }
+  }
+#endif
+
+  return true;
+}
+
+
+void hiopMatrixSparseCSRStorage::print(FILE* file, const
+                                       char* msg/*=NULL*/,
+                                       int maxRows/*=-1*/,
+                                       int maxCols/*=-1*/,
+                                       int rank/*=-1*/) const
+{
+  int myrank_ = 0;
+  int numranks=1; //this is a local object => always print
+
+  if(file==NULL) file = stdout;
+
+  int max_elems = maxRows>=0 ? maxRows : nnz_;
+  max_elems = std::min(max_elems, nnz_);
+  
+  if(myrank_==rank || rank==-1) {
+    std::stringstream ss;
+    if(NULL==msg) {
+      if(numranks>1) {
+        //fprintf(file,
+        //        "matrix of size %d %d and nonzeros %d, printing %d elems (on rank=%d)\n",
+        //        m(), n(), numberOfNonzeros(), max_elems, myrank_);
+        ss << "matrix of size " << m() << " " << n() << " and nonzeros " 
+           << nnz() << ", printing " <<  max_elems << " elems (on rank="
+           << myrank_ << ")" << std::endl;
+      } else {
+        ss << "matrix of size " << m() << " " << n() << " and nonzeros " 
+           << nnz() << ", printing " <<  max_elems << " elems" << std::endl;
+        // fprintf(file,
+        //      "matrix of size %d %d and nonzeros %d, printing %d elems\n",
+        //      m(), n(), numberOfNonzeros(), max_elems);
+      }
+    } else {
+      ss << msg << " ";
+      //fprintf(file, "%s ", msg);
+    }
+
+    // using matlab indices
+    //fprintf(file, "iRow_=[");
+    ss << "iRow_=[";
+
+    index_type itnz=0;
+    for(int i=0; itnz<max_elems && i<nrows_; ++i) {
+      for(itnz=irowptr_[i]; itnz<irowptr_[i+1] && itnz<max_elems; itnz++) {
+        ss << (i+1) << "; ";
+      }
+    }
+    //fprintf(file, "];\n");
+    ss << "];" << std::endl;
+
+    //fprintf(file, "jCol_=[");
+    ss << "jCol_=[";
+    itnz = 0;
+    for(int i=0; itnz<max_elems && i<nrows_; ++i) {
+      for(itnz=irowptr_[i]; itnz<irowptr_[i+1] && itnz<max_elems; ++itnz) {
+        ss << (jcolind_[itnz]+1) << "; ";
+      }
+    }
+    //fprintf(file, "];\n");
+    ss << "];" << std::endl;
+    
+    //fprintf(file, "v=[");
+    ss << "v=[";
+    ss << std::scientific << std::setprecision(16);
+    itnz = 0;
+    for(int i=0; itnz<max_elems && i<nrows_; ++i) {
+      for(itnz=irowptr_[i]; itnz<irowptr_[i+1] && itnz<max_elems; ++itnz) {
+        ss << values_[itnz] << "; ";
+      }
+    }
+    //fprintf(file, "];\n");
+    ss << "];" << std::endl;
+    
+    fprintf(file, "%s", ss.str().c_str());
+  }
+}
+
+void hiopMatrixSparseCSRStorage::
+times_diag_times_mat(const hiopVector& diag,
+                     const hiopMatrixSparseCSRStorage& Y,
+                     hiopMatrixSparseCSRStorage& M)
+{
+  const index_type* irowptrY = Y.irowptr();
+  const index_type* jcolindY = Y.jcolind();
+  const double* valuesY = Y.values();
+  
+  const index_type* irowptrX = irowptr_;
+  const index_type* jcolindX = jcolind_;
+  const double* valuesX = values_;
+
+  index_type* irowptrM = M.irowptr();
+  index_type* jcolindM = M.jcolind();
+  double* valuesM = M.values();
+  
+  const index_type m = this->m();
+  const index_type n = Y.n();
+
+  const index_type K = this->n();
+  assert(Y.m() == K);
+  assert(diag.get_size() == K);
+
+  const double* d = diag.local_data_const();
+
+  double* W = new double[n];
+  char* flag=new char[n];
+
+  for(int it=0; it<n; it++) W[it] = 0.0;
+
+  int nnzM=0;
+  for(int i=0; i<m; i++) {
+    memset(flag, 0, m);
+
+    assert(nnzM<M.nnz());
+    //start row i of AtDA
+    irowptrM[i]=nnzM;
+    
+    for(int px=irowptrX[i]; px<irowptrX[i+1]; px++) { 
+      const auto k = jcolindX[px]; //X[i,k] is non-zero
+      assert(k<K);
+      
+      const double val = valuesX[px]*d[k];
+
+      //iterate the row k of Y and scatter the values into W
+      for(int py=irowptrY[k]; py<irowptrY[k+1]; py++) {
+	const auto j = jcolindY[py];
+        assert(j<n);
+        
+	//we have A[k,j]
+	if(flag[j]==0) {
+          assert(nnzM<M.nnz());
+          
+	  jcolindM[nnzM++]=j;
+	  flag[j]=1;
+	}
+	
+	W[j] += (valuesY[py]*val);
+      }
+    }
+    //gather the values into the i-th row M
+    for(int p=irowptrM[i]; p<nnzM; p++) {
+      const auto j = jcolindM[p];
+      valuesM[p] = W[j];
+      W[j] = 0.0;
+    }
+  }
+  irowptrM[n] = nnzM;
+  delete[] W;
+  delete[] flag;
+}
+
+/**
+ *  M = X*D*Y -> computes nnz in M and allocates M 
+ * By convention, M is mxn, X is mxK, Y is Kxn, and D is size K.
+ * 
+ * The algorithm uses the fact that the sparsity pattern of the i-th row of M is
+ *           K
+ * M_{i*} = sum x_{ik} Y_{j*}   (see Tim Davis book p.17)
+ *          k=1
+ * Therefore, to get sparsity pattern of the i-th row of M:
+ *  1. we iterate over nonzeros (i,k) in the i-th row of X
+ *  2. for each such k we iterate over the nonzeros (k,j) in the k-th row of Y and 
+ *  3. count (i,j) as nonzero of M 
+ */
+hiopMatrixSparseCSRStorage* hiopMatrixSparseCSRStorage::
+times_diag_times_mat_init(const hiopMatrixSparseCSRStorage& Y)
+{
+  const index_type* irowptrY = Y.irowptr();
+  const index_type* jcolindY = Y.jcolind();
+
+  const index_type* irowptrX = irowptr_;
+  const index_type* jcolindX = jcolind_;
+
+  const index_type m = this->m();
+  const index_type n = Y.n();
+
+  const index_type K = this->n();
+  assert(Y.m() == K);
+  
+  index_type nnzM = 0;
+  // count the number of entries in the result M
+  char* flag = new char[m];
+  for(int i=0; i<m; i++) {
+    //reset flag 
+    memset(flag, 0, m*sizeof(char));
+
+    for(int pt=irowptrX[i]; pt<irowptrX[i+1]; pt++) {
+      //X[i,k] is nonzero
+      const index_type k = jcolindX[pt];
+      assert(k<K);
+
+      //add the nonzero pattern of row k of Y to M
+      for(int p=irowptrY[k]; p<irowptrY[k+1]; p++) {
+	const index_type j = jcolindY[p];
+        assert(j<n);
+        
+        //Y[k,j] is non zero, hence M[i,j] is non zero
+	if(flag[j]==0) {
+          //only count once
+	  nnzM++;
+	  flag[j]=1;
+	}
+      }
+    }
+  }
+  assert(nnzM>=0); //overflow?!?
+
+  delete[] flag;
+
+  //allocate result M
+  return new hiopMatrixSparseCSRStorage(m, n, nnzM);
+}
+
+} // end of namespace
