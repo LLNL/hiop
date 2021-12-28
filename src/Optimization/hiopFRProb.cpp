@@ -68,7 +68,9 @@ namespace hiop
 *  Specialized interface for feasibility restoration problem with sparse blocks in the Jacobian and Hessian.
 */
 hiopFRProbSparse::hiopFRProbSparse(hiopAlgFilterIPMBase& solver_base)
-  : solver_base_(solver_base)
+  : solver_base_(solver_base), 
+    last_x_{nullptr}, 
+    last_d_{nullptr}
 {
   nlp_base_ = dynamic_cast<hiopNlpSparse*>(solver_base.get_nlp());
   n_x_ = nlp_base_->n();
@@ -100,6 +102,8 @@ hiopFRProbSparse::hiopFRProbSparse(hiopAlgFilterIPMBase& solver_base)
   wrk_dbody_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), m_ineq_);
   wrk_primal_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), n_);
   wrk_dual_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), m_);
+  last_x_ = x_ref_->alloc_clone();
+  last_d_ = wrk_d_->alloc_clone();
 
   // nnz for sparse matrices;
   nnz_Jac_c_ = nlp_base_->get_nnz_Jaceq() + 2 * m_eq_;
@@ -141,6 +145,12 @@ hiopFRProbSparse::~hiopFRProbSparse()
   delete DR_;
   delete Jac_cd_;
   delete Hess_cd_;
+  if(last_x_) {
+    delete last_x_;
+  }
+  if(last_d_) {
+    delete last_d_;
+  }
 }
 
 bool hiopFRProbSparse::get_MPI_comm(MPI_Comm& comm_out) 
@@ -568,6 +578,9 @@ bool hiopFRProbSparse::iterate_callback(int iter,
     // check (original) filter condition
     if(!solver_base_.filter_contains(onenorm_pr_, logbar_obj_value)) {
       // terminate FR
+      last_x_->copyFrom(*wrk_x_);
+      last_d_->copyFrom(*wrk_d_);
+/*      
       hiopIterate* it_next = solver_base_.get_it_trial();
 
       // set next iter->x to x from FR
@@ -575,7 +588,7 @@ bool hiopFRProbSparse::iterate_callback(int iter,
 
       // set next iter->d (the slack for ineqaulities) to s from FR
       it_next->get_d()->copyFrom(*wrk_d_);
-
+*/
       return false;
     }
   }
@@ -586,17 +599,7 @@ bool hiopFRProbSparse::iterate_callback(int iter,
   return true;
 }
 
-bool hiopFRProbSparse::force_update(double obj_value,
-                                    const int n,
-                                    double* x,
-                                    double* z_L,
-                                    double* z_U,
-                                    const int m,
-                                    double* g,
-                                    double* lambda,
-                                    double& mu,
-                                    double& alpha_du,
-                                    double& alpha_pr)
+bool hiopFRProbSparse::force_update_x(const int n, double* x)
 {
   // this function is used in FR in FR, see eq (33)
   assert( n == n_);
@@ -651,8 +654,8 @@ bool hiopFRProbSparse::force_update(double obj_value,
   wrk_d_->axpy(1.0, *wrk_ineq_);
 
   /*
-  * assemble x
-  */
+  * assemble x = [x pe ne pi ni
+  */      
   wrk_x_->copyToStarting(*wrk_primal_, 0);
   wrk_c_->copyToStarting(*wrk_primal_, n_x_);
   wrk_eq_->copyToStarting(*wrk_primal_, n_x_ + m_eq_);
@@ -673,7 +676,9 @@ bool hiopFRProbSparse::force_update(double obj_value,
 *  Specialized interface for feasibility restoration problem with MDS blocks in the Jacobian and Hessian.
 */
 hiopFRProbMDS::hiopFRProbMDS(hiopAlgFilterIPMBase& solver_base)
-  : solver_base_(solver_base)
+  : solver_base_(solver_base), 
+    last_x_{nullptr}, 
+    last_d_{nullptr}
 {
   nlp_base_ = dynamic_cast<hiopNlpMDS*>(solver_base.get_nlp());
   n_x_ = nlp_base_->n();
@@ -711,6 +716,8 @@ hiopFRProbMDS::hiopFRProbMDS(hiopAlgFilterIPMBase& solver_base)
   wrk_dbody_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), m_ineq_);
   wrk_primal_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), n_);
   wrk_dual_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), m_);
+  last_x_ = x_ref_->alloc_clone();
+  last_d_ = wrk_d_->alloc_clone();
 
   wrk_x_sp_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), n_x_sp_);
   wrk_x_de_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), n_x_de_);
@@ -755,6 +762,12 @@ hiopFRProbMDS::~hiopFRProbMDS()
   
   delete Jac_cd_;
   delete Hess_cd_;
+  if(last_x_) {
+    delete last_x_;
+  }
+  if(last_d_) {
+    delete last_d_;
+  }
 }
 
 bool hiopFRProbMDS::get_MPI_comm(MPI_Comm& comm_out) 
@@ -1174,6 +1187,9 @@ bool hiopFRProbMDS::iterate_callback(int iter,
     // check (original) filter condition
     if(!solver_base_.filter_contains(onenorm_pr_, logbar_obj_value)) {
       // terminate FR
+      last_x_->copyFrom(*wrk_x_);
+      last_d_->copyFrom(*wrk_d_);
+/*
       hiopIterate* it_next = solver_base_.get_it_trial();
 
       // set next iter->x to x from FR
@@ -1181,7 +1197,7 @@ bool hiopFRProbMDS::iterate_callback(int iter,
 
       // set next iter->d (the slack for ineqaulities) to s from FR
       it_next->get_d()->copyFrom(*wrk_d_);
-
+*/
       return false;
     }
   }
@@ -1192,17 +1208,7 @@ bool hiopFRProbMDS::iterate_callback(int iter,
   return true;
 }
 
-bool hiopFRProbMDS::force_update(double obj_value,
-                                 const int n,
-                                 double* x,
-                                 double* z_L,
-                                 double* z_U,
-                                 const int m,
-                                 double* g,
-                                 double* lambda,
-                                 double& mu,
-                                 double& alpha_du,
-                                 double& alpha_pr)
+bool hiopFRProbMDS::force_update_x(const int n, double* x)
 {
   // this function is used in FR in FR, see eq (33)
   assert( n == n_);
