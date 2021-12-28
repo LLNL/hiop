@@ -2077,7 +2077,15 @@ bool hiopAlgFilterIPMBase::apply_feasibility_restoration(hiopKKTLinSys* kkt)
 {
   bool fr_solved = true;
   bool reset_dual = true;
-  if(!within_FR_) {  
+  if(!within_FR_) {
+    // try soft FR first
+    bool is_soft_fr = solve_soft_feasibility_restoration(kkt);
+    if(is_soft_fr) {
+      // variables have already been updated inside the above function
+      return true;
+    }
+  
+    // continue robust FR
     hiopNlpMDS* nlpMDS = dynamic_cast<hiopNlpMDS*>(nlp);
     if (nlpMDS == nullptr) {
       hiopNlpSparse* nlpSp = dynamic_cast<hiopNlpSparse*>(nlp);
@@ -2217,6 +2225,104 @@ bool hiopAlgFilterIPMBase::reset_var_from_fr_sol(hiopKKTLinSys* kkt, bool reset_
   return true;
 }
 
+bool hiopAlgFilterIPMBase::solve_soft_feasibility_restoration(hiopKKTLinSys* kkt)
+{
+  int max_soft_fr_iter = 10; //nlp->options->GetInteger("max_soft_fr_iter");
+  double kappa_f = 0.999; //nlp->options->GetNumeric("kappa_f");
+  int num_soft_fr = 0;
+
+  if(max_soft_fr_iter == 0 || kappa_f == 0.0) {
+    return false;
+  }
+  
+  // use vectors from second order correction
+  if(!soc_dir) {
+    soc_dir = dir->alloc_clone();
+    if(nlp->options->GetString("KKTLinsys")=="full") {
+      soc_dir->selectPattern();
+    }      
+    c_soc = nlp->alloc_dual_eq_vec();
+    d_soc = nlp->alloc_dual_ineq_vec();        
+  }
+
+  // shortcut --- use soc_dir as a temporary solution
+  hiopIterate *soft_dir = soc_dir;
+
+  double kkt_err_curr = resid->get_nrmOne_bar_optim() + resid->get_nrmOne_bar_feasib();;
+  double kkt_err_trial;
+  double alpha_primal_soft;
+  double alpha_dual_soft;
+  double infeas_nrm_soft;
+
+  bool bret = false;
+
+  while(num_soft_fr < max_soft_fr_iter) {
+    // solve for search directions
+    if(num_soft_fr == 0) {
+      soft_dir->copyFrom(*dir);
+      _c_trial->copyFrom(*_c);
+      _d_trial->copyFrom(*_d);
+
+      bret = true;
+    } else {
+      //evaluate the problem at the trial iterate (functions only)
+      if(!this->evalNlp_funcOnly(*it_trial, _f_nlp_trial, *_c_trial, *_d_trial)) {
+        solver_status_ = Error_In_User_Function;
+        return Error_In_User_Function;
+      }
+      // compute rhs for soc. Use resid_trial since it hasn't been used
+      resid_trial->update(*it_trial, _f_nlp_trial, *_c_trial, *_d_trial, *_grad_f,*_Jac_c,*_Jac_d, *logbar);      
+      bret = kkt->computeDirections(resid_trial, soft_dir); 
+    }    
+    assert(bret);
+
+    // Compute step size
+    bret = it_curr->fractionToTheBdry(*soft_dir, _tau, alpha_primal_soft, alpha_dual_soft); 
+    alpha_primal_soft = std::min(alpha_primal_soft,alpha_dual_soft);
+    alpha_dual_soft = alpha_primal_soft;
+    assert(bret);
+
+    // Compute trial point
+    bret = it_trial->takeStep_primals(*it_curr, *soft_dir, alpha_primal_soft, alpha_dual_soft); 
+    assert(bret);
+
+    //evaluate the problem at the trial iterate (functions only)
+    if(!this->evalNlp_funcOnly(*it_trial, _f_nlp_trial, *_c_trial, *_d_trial)) {
+      solver_status_ = Error_In_User_Function;
+      return Error_In_User_Function;
+    }
+
+    //update and adjust the duals
+    bret = dualsUpdate->go(*it_curr, *it_trial,
+                           _f_nlp_trial, *_c_trial, *_d_trial, *_grad_f, *_Jac_c, *_Jac_d, *soft_dir,
+                           alpha_primal_soft, alpha_dual_soft, _mu, kappa_Sigma, infeas_nrm_soft);
+    assert(bret);
+
+    logbar->updateWithNlpInfo_trial_funcOnly(*it_trial, _f_nlp_trial, *_c_trial, *_d_trial);
+        
+    //compute primal-dual error at trial point.
+    resid_trial->update(*it_trial, _f_nlp_trial, *_c_trial, *_d_trial, *_grad_f,*_Jac_c,*_Jac_d, *logbar);
+    kkt_err_trial = resid_trial->get_nrmOne_bar_optim() + resid_trial->get_nrmOne_bar_feasib();
+
+    // sufficient reduction in the KKT error is not achieved, return
+    if(kkt_err_trial > kappa_f * kkt_err_curr) {
+      bret = false;
+      break;
+    }
+        
+    //check filter condition
+    double theta_trial = resid_trial->get_nrmOne_bar_feasib();
+    if(filter.contains(theta_trial,logbar->f_logbar_trial)) {
+      //it is in the filter, reject this trial point and continue the iterates
+      num_soft_fr++;
+    } else {
+      // continue the regular iterate from the trial point  
+      bret = true;
+      break;
+    }
+  }
+  return bret;
+}
 
 bool hiopAlgFilterIPMNewton::compute_search_direction(hiopKKTLinSys* kkt,
                                                       bool& linsol_safe_mode_on,

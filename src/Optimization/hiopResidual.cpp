@@ -158,6 +158,7 @@ int hiopResidual::update(const hiopIterate& it,
   nrmInf_nlp_optim = nrmInf_nlp_feasib = nrmInf_nlp_complem = 0;
   nrmInf_bar_optim = nrmInf_bar_feasib = nrmInf_bar_complem = 0;
   nrmOne_nlp_feasib = nrmOne_bar_feasib = 0.;
+  nrmOne_nlp_optim = nrmOne_bar_optim = 0.;
 
   size_type nx_loc=rx->get_local_size();
   const double&  mu=logprob.mu;
@@ -176,10 +177,12 @@ int hiopResidual::update(const hiopIterate& it,
   rx->axpy( 1.0, *it.zu);
   buf = rx->infnorm_local();
   nrmInf_nlp_optim = fmax(nrmInf_nlp_optim, buf);
+  nrmOne_nlp_optim += rx->onenorm();
   nlp->log->printf(hovScalars,"NLP resid [update]: inf norm rx=%22.17e\n", buf);
   logprob.addNonLogBarTermsToGrad_x(1.0, *rx);
   rx->negate();
   nrmInf_bar_optim = fmax(nrmInf_bar_optim, rx->infnorm_local());
+  nrmOne_bar_optim += rx->onenorm();
   //~ done with rx
   // rd 
   rd->copyFrom(*it.yd);
@@ -187,9 +190,11 @@ int hiopResidual::update(const hiopIterate& it,
   rd->axpy(-1.0, *it.vu);
   buf = rd->infnorm_local();
   nrmInf_nlp_optim = fmax(nrmInf_nlp_optim, buf);
+  nrmOne_nlp_optim += rd->onenorm();
   nlp->log->printf(hovScalars,"NLP resid [update]: inf norm rd=%22.17e\n", buf);
   logprob.addNonLogBarTermsToGrad_d(-1.0,*rd);
   nrmInf_bar_optim = fmax(nrmInf_bar_optim, rd->infnorm_local());
+  nrmOne_bar_optim += rd->onenorm();
   //ryc
   ryc->copyFrom(nlp->get_crhs());
   ryc->axpy(-1.0,c);
@@ -393,6 +398,8 @@ void hiopResidual::copyFrom(const hiopResidual& resid_src)
   nrmInf_bar_feasib = resid_src.get_nrmInf_bar_feasib();
   nrmOne_nlp_feasib = resid_src.get_nrmOne_nlp_feasib();
   nrmOne_bar_feasib = resid_src.get_nrmOne_bar_feasib();
+  nrmOne_nlp_optim = resid_src.get_nrmOne_nlp_optim();
+  nrmOne_bar_optim = resid_src.get_nrmOne_bar_optim();
   
   nlp = resid_src.nlp;
 }
@@ -410,6 +417,7 @@ void hiopResidual::update_soc(const hiopIterate& it,
   nrmInf_nlp_optim = nrmInf_nlp_feasib = nrmInf_nlp_complem = 0;
   nrmInf_bar_optim = nrmInf_bar_feasib = nrmInf_bar_complem = 0;
   nrmOne_nlp_feasib = nrmOne_bar_feasib = 0.;
+  nrmOne_nlp_optim = nrmOne_bar_optim = 0.;
 
   size_type nx_loc=rx->get_local_size();
   const double&  mu=logprob.mu;
@@ -428,10 +436,12 @@ void hiopResidual::update_soc(const hiopIterate& it,
   rx->axpy( 1.0, *it.zu);
   buf = rx->infnorm_local();
   nrmInf_nlp_optim = fmax(nrmInf_nlp_optim, buf);
+  nrmOne_nlp_optim += rx->onenorm();
   nlp->log->printf(hovScalars,"NLP resid [update]: inf norm rx=%22.17e\n", buf);
   logprob.addNonLogBarTermsToGrad_x(1.0, *rx);
   rx->negate();
   nrmInf_bar_optim = fmax(nrmInf_bar_optim, rx->infnorm_local());
+  nrmOne_bar_optim += rx->onenorm();
   
   // rd 
   rd->copyFrom(*it.yd);
@@ -439,9 +449,11 @@ void hiopResidual::update_soc(const hiopIterate& it,
   rd->axpy(-1.0, *it.vu);
   buf = rd->infnorm_local();
   nrmInf_nlp_optim = fmax(nrmInf_nlp_optim, buf);
+  nrmOne_nlp_optim += rd->onenorm();
   nlp->log->printf(hovScalars,"NLP resid [update]: inf norm rd=%22.17e\n", buf);
   logprob.addNonLogBarTermsToGrad_d(-1.0,*rd);
   nrmInf_bar_optim = fmax(nrmInf_bar_optim, rd->infnorm_local());
+  nrmOne_bar_optim += rd->onenorm();
   
   //ryc for soc: \alpha*c + c_trial
   ryc->copyFrom(c_soc);
