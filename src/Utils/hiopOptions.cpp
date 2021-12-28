@@ -793,7 +793,34 @@ void hiopOptionsNLP::register_options()
   }
 
   //
-  // choose linear solver for  KKT solves 
+  // choose linear solver for KKT solves 
+  //
+  // Choose from "direct" solver or "iterative" solver 
+  {
+    vector<string> range(2);
+    range[0] = "direct";
+    range[1] = "iterative";
+    register_str_option("KKT_linear_solver_method",
+                        "direct",
+                        range,
+                        "Selects between direct linear solver or iterative method.");
+  }
+
+  //
+  // Krylove iterative method
+  //
+  // This option is only valid when option "KKT_linear_solver" is set to "iterative"
+  {
+    vector<string> range(1);
+    range[0] = "pcg";
+    register_str_option("linear_solver_krylov",
+                        "pcg",
+                        range,
+                        "Use PCG as the Krylov iterative solver.");
+  }
+
+  //
+  // choose direct linear solver for sparse linear system on CPU
   //
   // when KKTLinsys is 'full' only strumpack is available
   // for the other KKTLinsys (which are all symmetric), MA57 is chosen 'auto'matically for all compute
