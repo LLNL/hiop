@@ -67,15 +67,16 @@
 #include "/home/petra1/work/installs/eigen-3.3.9/_install/include/eigen3/Eigen/Core"
 #include "/home/petra1/work/installs/eigen-3.3.9/_install/include/eigen3/Eigen/Sparse"
 
+#include "hiopKKTLinSysSparseCondensed.hpp"
 namespace hiop
 {
 
- // type alias
+// type alias
 using Scalar = double;
 using SparseMatrixCSC = Eigen::SparseMatrix<Scalar, Eigen::StorageOptions::ColMajor>;
 using SparseMatrixCSR = Eigen::SparseMatrix<Scalar, Eigen::StorageOptions::RowMajor>;
 using Triplet = Eigen::Triplet<Scalar>;
-using VectorR = Eigen::Matrix<Scalar, Eigen::Dynamic, 1>; 
+//using VectorR = Eigen::Matrix<Scalar, Eigen::Dynamic, 1>; 
 
 /**
  * Wrapper class for cusolverSpXcsrchol Cholesky solver.
@@ -100,7 +101,7 @@ public:
   bool solve(hiopVector& x_in);
 
   /// temporary function: TODO remove
-  void set_sys_mat(const SparseMatrixCSC& M)
+  void set_sys_mat(const SparseMatrixCSR& M)
   {
     *MMM_ = M;
   }
@@ -146,7 +147,7 @@ protected:
   int* map_nnz_perm_;
   //temporary
   SparseMatrixCSR* MMM_;
-
+  hiopMatrixSparseCSRStorage* mat_csr_;
   /// internal buffers in the size of the linear system (on device)
   double* rhs_buf1_;
   double* rhs_buf2_;

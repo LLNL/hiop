@@ -60,7 +60,7 @@
 //#include "/g/g15/petra1/eigen-3.3.9/_install/include/eigen3/Eigen/Sparse"
 #include "/home/petra1/work/installs/eigen-3.3.9/_install/include/eigen3/Eigen/Core"
 #include "/home/petra1/work/installs/eigen-3.3.9/_install/include/eigen3/Eigen/Sparse"
-
+#include "hiopMatrixSparseTripletStorage.hpp"
 namespace hiop
 {
 
@@ -75,6 +75,112 @@ hiopKKTLinSysCondensedSparse::~hiopKKTLinSysCondensedSparse()
 {
   delete dd_pert_;
 }
+
+SparseMatrixCSR* hiopKKTLinSysCondensedSparse::compute_linsys_eigen(const double& delta_wx)
+{
+  HessSp_ = dynamic_cast<hiopMatrixSymSparseTriplet*>(Hess_);
+  Jac_dSp_ = dynamic_cast<const hiopMatrixSparseTriplet*>(Jac_d_);
+  Jac_cSp_ = nullptr; //not used by this class
+  const hiopMatrixSparseTriplet* JacTriplet = dynamic_cast<const hiopMatrixSparseTriplet*>(Jac_d_);
+  size_type nx = HessSp_->n();
+  size_type nineq = Jac_dSp_->m();
+
+  hiopTimer t;
+  
+  t.start();
+  SparseMatrixCSR JacD(nineq, nx);
+  {
+    std::vector<Triplet> tripletList;
+    tripletList.reserve(Jac_dSp_->numberOfNonzeros());
+    for(int i = 0; i < Jac_dSp_->numberOfNonzeros(); i++) {
+      tripletList.push_back(Triplet(Jac_dSp_->i_row()[i],
+                                    Jac_dSp_->j_col()[i],
+                                    Jac_dSp_->M()[i]));
+    }
+    
+    JacD.setFromTriplets(tripletList.begin(), tripletList.end());
+  }
+  t.stop();
+  if(perf_report_) nlp_->log->printf(hovSummary, "JacD took        %.3f sec\n", t.getElapsedTime());
+
+  t.reset(); t.start();
+  SparseMatrixCSR JacD_trans =  SparseMatrixCSR(JacD.transpose());
+  t.stop();
+  if(perf_report_) nlp_->log->printf(hovSummary, "JacD trans took       %.3f sec\n", t.getElapsedTime());
+
+  
+  t.reset(); t.start();
+  SparseMatrixCSR Dd_mat(nineq, nineq);
+  {
+    std::vector<Triplet> tripletList;
+    tripletList.reserve(Dd_->get_size());
+    for(int i=0; i<Dd_->get_size(); i++) {
+      tripletList.push_back(Triplet(i, i, dd_pert_->local_data()[i]));
+    }
+    Dd_mat.setFromTriplets(tripletList.begin(), tripletList.end());
+  }
+  t.stop(); 
+  if(perf_report_) nlp_->log->printf(hovSummary, "Ddmat took       %.3f sec\n", t.getElapsedTime());
+
+  
+  t.reset(); t.start();
+  SparseMatrixCSR DdxJ = Dd_mat * JacD;
+  t.stop();
+  if(perf_report_) nlp_->log->printf(hovSummary, "DdxJ took         %.3f sec\n", t.getElapsedTime());
+
+  t.reset(); t.start();  
+  SparseMatrixCSR JtxDdxJ = JacD_trans * DdxJ;
+  t.stop();
+  if(perf_report_) nlp_->log->printf(hovSummary, "JtxDdxJ took      %.3f sec\n", t.getElapsedTime());
+
+  
+  t.reset(); t.start();
+  SparseMatrixCSR H(nx, nx);
+  {
+    std::vector<Triplet> tripletList;
+    tripletList.reserve(HessSp_->numberOfNonzeros());
+    for(int i = 0; i < HessSp_->numberOfNonzeros(); i++) {
+      tripletList.push_back(Triplet(HessSp_->i_row()[i],
+                                    HessSp_->j_col()[i],
+                                    HessSp_->M()[i]));
+    }
+    H.setFromTriplets(tripletList.begin(), tripletList.end());
+  }
+  t.stop();
+  if(perf_report_) nlp_->log->printf(hovSummary, "H took        %.3f sec\n", t.getElapsedTime());
+
+  t.reset(); t.start(); 
+  SparseMatrixCSR *KKTmat = new SparseMatrixCSR();
+  *KKTmat = H + JtxDdxJ;
+  t.stop();
+  if(perf_report_) nlp_->log->printf(hovSummary, "H  + JtxDdxJ took         %.3f sec\n", t.getElapsedTime());
+ 
+  t.reset(); t.start(); 
+  SparseMatrixCSR Dx_mat(nx, nx);
+  {
+    assert(Dx_->get_size() == nx);
+    std::vector<Triplet> tripletList;
+    tripletList.reserve(nx);
+    for(int i=0; i<nx; i++) {
+      tripletList.push_back(Triplet(i, i, Dx_->local_data()[i]+delta_wx));
+    }
+    Dx_mat.setFromTriplets(tripletList.begin(), tripletList.end());
+  }
+  t.stop();
+  if(perf_report_) nlp_->log->printf(hovSummary, "Dx_mat took         %.3f sec\n", t.getElapsedTime());
+
+  t.reset(); t.start(); 
+  *KKTmat += Dx_mat;
+  t.stop();
+  if(perf_report_) nlp_->log->printf(hovSummary, "KKTmat += Dx_mat took         %.3f sec\n", t.getElapsedTime());
+
+  t.reset(); t.start(); 
+  KKTmat->makeCompressed();
+  t.stop();
+  if(perf_report_) nlp_->log->printf(hovSummary, "makeCompressed         %.3f sec\n", t.getElapsedTime());
+
+  return KKTmat;
+}    
   
 bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
                                                     const double& delta_wd_in,
@@ -91,7 +197,6 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   HessSp_ = dynamic_cast<hiopMatrixSymSparseTriplet*>(Hess_);
   Jac_dSp_ = dynamic_cast<const hiopMatrixSparseTriplet*>(Jac_d_);
   Jac_cSp_ = nullptr; //not used by this class
-
 
   const hiopMatrixSparseTriplet* JacTriplet = dynamic_cast<const hiopMatrixSparseTriplet*>(Jac_d_);
   
@@ -111,142 +216,49 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   nlp_->runStats.kkt.tmUpdateLinsys.start();
 
   hiopTimer t;
-  
-  t.start();
-  SparseMatrixCSC JacD(nineq, nx);
-  {
-    std::vector<Triplet> tripletList;
-    tripletList.reserve(Jac_dSp_->numberOfNonzeros());
-    for(int i = 0; i < Jac_dSp_->numberOfNonzeros(); i++) {
-      tripletList.push_back(Triplet(Jac_dSp_->i_row()[i],
-                                    Jac_dSp_->j_col()[i],
-                                    Jac_dSp_->M()[i]));
-    }
-    
-    JacD.setFromTriplets(tripletList.begin(), tripletList.end());
-  }
-  t.stop();
-  if(perf_report_) nlp_->log->printf(hovSummary, "JacD took        %.3f sec\n", t.getElapsedTime());
 
-  t.reset(); t.start();
-  SparseMatrixCSC JacD_trans =  SparseMatrixCSC(JacD.transpose());
-  t.stop();
-  if(perf_report_) nlp_->log->printf(hovSummary, "JacD trans took       %.3f sec\n", t.getElapsedTime());
-
-/******************************************************************************************/
-  hiopMatrixSparseCSRStorage Jac1;
-  Jac1.form_from(*JacTriplet);
-  //Jac1.print(stdout);
-  //std::cout << JacD << std::endl;
-
-  hiopMatrixSparseCSRStorage Jac1t;
-  Jac1t.form_transpose_from(*JacTriplet);
-  //Jac1t.print(stdout);
-  
-  //SparseMatrixCSR Jac2_trans = SparseMatrixCSR(JacD.transpose());
-  //std::cout << Jac2_trans << std::endl;
-
-/******************************************************************************************/
-  
-  t.reset(); t.start();
   if(nullptr == dd_pert_) {
     dd_pert_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), nineq);
   }
   dd_pert_->copyFrom(*Dd_);
   dd_pert_->addConstant(delta_wd);
-  t.stop(); 
-  if(perf_report_) nlp_->log->printf(hovSummary, "DD vec ops        %.3f sec\n", t.getElapsedTime());
 
   
-  t.reset(); t.start();
-  SparseMatrixCSC Dd_mat(nineq, nineq);
-  {
-    std::vector<Triplet> tripletList;
-    tripletList.reserve(Dd_->get_size());
-    for(int i=0; i<Dd_->get_size(); i++) {
-      tripletList.push_back(Triplet(i, i, dd_pert_->local_data()[i]));
-    }
-    Dd_mat.setFromTriplets(tripletList.begin(), tripletList.end());
-  }
-  t.stop(); 
-  if(perf_report_) nlp_->log->printf(hovSummary, "Ddmat took       %.3f sec\n", t.getElapsedTime());
-
   
-  t.reset(); t.start();
-  SparseMatrixCSC DdxJ = Dd_mat * JacD;
-  t.stop();
-  if(perf_report_) nlp_->log->printf(hovSummary, "DdxJ took         %.3f sec\n", t.getElapsedTime());
 
-  t.reset(); t.start();  
-  SparseMatrixCSC JtxDdxJ = JacD_trans * DdxJ;
-  t.stop();
-  if(perf_report_) nlp_->log->printf(hovSummary, "JtxDdxJ took      %.3f sec\n", t.getElapsedTime());
+  SparseMatrixCSR* KKTmat = compute_linsys_eigen(delta_wx);
 
-/******************************************************************************************/
 
-  std::cout << JtxDdxJ << std::endl;
-  hiopMatrixSparseCSRStorage* JtDiagJ = Jac1t.times_diag_times_mat_init(Jac1);
-  Jac1t.times_diag_times_mat(*dd_pert_, Jac1,  *JtDiagJ);
-  JtDiagJ->print(stdout); //aaa
-/******************************************************************************************/
+  hiopMatrixSparseCSRStorage JacD;
+  JacD.form_from(*JacTriplet);
+  hiopMatrixSparseCSRStorage JacDt;
+  JacDt.form_transpose_from(*JacTriplet);
+
+  // compute J'*D*J
+  hiopMatrixSparseCSRStorage* JtDiagJ = JacDt.times_diag_times_mat_init(JacD);
+  JacDt.times_diag_times_mat(*dd_pert_, JacD,  *JtDiagJ);
+
+  // compute J'*D*J + H + Dx + delta_wx*I
+  hiopMatrixSparseCSRStorage* M_condensed = add_matrices_init(*JtDiagJ,
+                                                              *(dynamic_cast<hiopMatrixSymSparseTriplet*>(Hess_)),
+                                                              *Dx_,
+                                                              delta_wx);
   
-  
-  t.reset(); t.start();
-  SparseMatrixCSC H(nx, nx);
-  {
-    std::vector<Triplet> tripletList;
-    tripletList.reserve(HessSp_->numberOfNonzeros());
-    for(int i = 0; i < HessSp_->numberOfNonzeros(); i++) {
-      tripletList.push_back(Triplet(HessSp_->i_row()[i],
-                                    HessSp_->j_col()[i],
-                                    HessSp_->M()[i]));
-    }
-    H.setFromTriplets(tripletList.begin(), tripletList.end());
-  }
-  t.stop();
-  if(perf_report_) nlp_->log->printf(hovSummary, "H took        %.3f sec\n", t.getElapsedTime());
 
-  t.reset(); t.start(); 
-  SparseMatrixCSC KKTmat = H + JtxDdxJ;
-  t.stop();
-  if(perf_report_) nlp_->log->printf(hovSummary, "H  + JtxDdxJ took         %.3f sec\n", t.getElapsedTime());
- 
-  t.reset(); t.start(); 
-  SparseMatrixCSC Dx_mat(nx, nx);
-  {
-    assert(Dx_->get_size() == nx);
-    std::vector<Triplet> tripletList;
-    tripletList.reserve(nx);
-    for(int i=0; i<nx; i++) {
-      tripletList.push_back(Triplet(i, i, Dx_->local_data()[i]+delta_wx));
-    }
-    Dx_mat.setFromTriplets(tripletList.begin(), tripletList.end());
-  }
-  t.stop();
-  if(perf_report_) nlp_->log->printf(hovSummary, "Dx_mat took         %.3f sec\n", t.getElapsedTime());
-
-  t.reset(); t.start(); 
-  KKTmat += Dx_mat;
-  t.stop();
-  if(perf_report_) nlp_->log->printf(hovSummary, "KKTmat += Dx_mat took         %.3f sec\n", t.getElapsedTime());
-
-  t.reset(); t.start(); 
-  KKTmat.makeCompressed();
-  t.stop();
-  if(perf_report_) nlp_->log->printf(hovSummary, "makeCompressed         %.3f sec\n", t.getElapsedTime());
-
-  t.reset(); t.start(); 
-
+  delete M_condensed;
+  delete JtDiagJ;
   
   bool is_cusolver_on = nlp_->options->GetString("compute_mode") == "cpu" ? false : true;
+
   
   //count nnz in the lower triangle
   size_type nnz_KKT_lowertri = -1;
 
   if(!is_cusolver_on) {
+    SparseMatrixCSC KKTmat_csc = *KKTmat;
     nnz_KKT_lowertri = 0;
-    for(int k=0; k<KKTmat.outerSize(); ++k) {
-      for(Eigen::SparseMatrix<double>::InnerIterator it(KKTmat, k); it; ++it) {
+    for(int k=0; k<KKTmat_csc.outerSize(); ++k) {
+      for(Eigen::SparseMatrix<double>::InnerIterator it(KKTmat_csc, k); it; ++it) {
         //it.value();
         //it.row();   // row index
         //it.col();   // col index (here it is equal to k)
@@ -262,7 +274,7 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
     linSys_ = determine_and_create_linsys(nx, nineq, nnz_KKT_lowertri);
   } else {
 
-    linSys_ = determine_and_create_linsys(nx, nineq, KKTmat.nonZeros());
+    linSys_ = determine_and_create_linsys(nx, nineq, KKTmat->nonZeros());
   }
 
   hiopLinSolverIndefSparse* linSys = dynamic_cast<hiopLinSolverIndefSparse*> (linSys_);
@@ -275,10 +287,11 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
     assert(Msys.numberOfNonzeros() == nnz_KKT_lowertri);
     
     t.reset(); t.start(); 
-    
+
+    SparseMatrixCSC KKTmat_csc = *KKTmat;
     size_type it_nnz = 0;
-    for(int k=0; k<KKTmat.outerSize(); ++k) {
-      for(Eigen::SparseMatrix<double>::InnerIterator it(KKTmat, k); it; ++it) {
+    for(int k=0; k<KKTmat_csc.outerSize(); ++k) {
+      for(Eigen::SparseMatrix<double>::InnerIterator it(KKTmat_csc, k); it; ++it) {
         if(it.row() >= it.col()) {
           Msys.i_row()[it_nnz] = it.row();
           Msys.j_col()[it_nnz] = it.col();
@@ -291,10 +304,10 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   } else {
     hiopLinSolverCholCuSparse* linSys_cusolver = dynamic_cast<hiopLinSolverCholCuSparse*>(linSys);
     assert(linSys_cusolver);
-    linSys_cusolver->set_sys_mat(KKTmat);
+    linSys_cusolver->set_sys_mat(*KKTmat);
     
   }
-
+  delete KKTmat;
 
   nlp_->log->write("KKT_SPARSE_Condensed linsys:", Msys, hovMatrices);
   nlp_->runStats.kkt.tmUpdateLinsys.stop();
@@ -313,7 +326,195 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   if(write_linsys_counter_>=0) {
     csr_writer_.writeMatToFile(Msys, write_linsys_counter_, nx, 0, nineq);
   }
-  return true; //xxx hiopKKTLinSysCompressedSparseXDYcYd::build_kkt_matrix(dwx, dwd, dcc, dcd);
+  return true; 
+}
+
+
+
+hiopMatrixSparseCSRStorage* hiopKKTLinSysCondensedSparse::
+add_matrices_init(hiopMatrixSparseCSRStorage& JtDiagJ,
+                  hiopMatrixSymSparseTriplet& Hess,
+                  hiopVector& Dx,
+                  double delta_wx)
+{
+  size_type m = JtDiagJ.m();
+  assert(Hess.m() == m);
+  assert(Dx.get_size() == m);
+  size_type M_nnz = 0;
+
+  M_nnz += JtDiagJ.nnz();
+  M_nnz += Dx.get_size();
+  size_type H_nnz = Hess.numberOfNonzeros();
+  M_nnz += H_nnz;
+  // since Hess contains only the upper triangle, add the elements that would correspond to
+  // the strict lower triangle
+  index_type* H_irow = Hess.i_row();
+  index_type* H_jcol = Hess.j_col();
+  size_type H_nnz_lowtr = 0;
+  for(index_type it=0; it<H_nnz; ++it) {
+    assert(H_irow[it] <= H_jcol[it]);
+    if(H_irow[it]<H_jcol[it]) {
+      H_nnz_lowtr++;
+    } 
+  }
+  M_nnz += H_nnz_lowtr;
+
+  //build an array with indexes in H sparse arrays of the elements in the strictly lower triangle
+  std::vector<index_type> map_H_lowtr_idxs(H_nnz_lowtr);
+  H_nnz_lowtr = 0;
+  for(index_type it=0; it<H_nnz; ++it) {
+    if(H_irow[it]<H_jcol[it]) {
+      map_H_lowtr_idxs[H_nnz_lowtr++] = it;
+    } 
+  }
+  
+  //allocate space for the result M = JtDiagJ+Hess+Dx+delta_wx*I
+  index_type* M_irow = new index_type[M_nnz];
+  index_type* M_jcol = new index_type[M_nnz];
+
+  //
+  //populate (i,j) for M
+  //
+  int itnnz=0;
+
+  //populate with JtDiagJ
+  index_type* JtDJ_irowptr = JtDiagJ.irowptr();
+  index_type* JtDJ_jcolind = JtDiagJ.jcolind();
+  for(index_type i=0; i<m; i++) {
+    for(index_type p=JtDJ_irowptr[i]; p<JtDJ_irowptr[i+1]; ++p) {
+      const index_type j = JtDJ_jcolind[p];
+      M_irow[itnnz] = i;
+      M_jcol[itnnz] = j;
+      //M_values[itnnz] = JtDJ_values[p];
+      itnnz++;
+    }
+  }
+  assert(itnnz == JtDiagJ.nnz());
+
+  //populate with H (upper triangle)
+  memcpy(M_irow+itnnz, H_irow, H_nnz*sizeof(index_type));
+  memcpy(M_jcol+itnnz, H_jcol, H_nnz*sizeof(index_type));
+  //memcpy(M_values+itnnz, H_values, H_nnz*sizeof(double));
+  itnnz += H_nnz;
+
+  //populate with H (strictly lower triangle)
+  for(auto idx : map_H_lowtr_idxs) {
+    //flip row with col to put in the strictly lower triangle
+    M_irow[itnnz] = H_jcol[idx];
+    M_jcol[itnnz] = H_irow[idx];
+    //M_values[itnnz] = H_values[idx];
+    itnnz++; 
+  }
+  assert(itnnz == JtDiagJ.nnz()+H_nnz+H_nnz_lowtr);
+
+  //populate with D and delta_wx*I
+  const double* d_arr = Dx.local_data_const();
+  for(int i=0; i<m; i++) {
+    M_irow[itnnz] = i;
+    M_jcol[itnnz] = i;
+    //M_values[itnnz] = d_arr[i]+delta_wx;;
+    itnnz++; 
+  }
+  assert(itnnz == M_nnz);
+
+
+  //
+  // sort
+  //
+  std::vector<index_type> map_idxs_in_sorted(M_nnz);
+  std::iota(map_idxs_in_sorted.begin(), map_idxs_in_sorted.end(), 0);
+  sort(map_idxs_in_sorted.begin(), map_idxs_in_sorted.end(), 
+       [&](const int& i1, const int& i2) { 
+         if(M_irow[i1]<M_irow[i2]) return true;
+         if(M_irow[i1]>M_irow[i2]) return false;
+         return M_jcol[i1]<M_jcol[i2];
+       });
+
+  
+  printf("i="); for(auto i=0; i<M_nnz; i++) printf("%3d ", M_irow[map_idxs_in_sorted[i]]); printf("\n");
+  printf("j="); for(auto i=0; i<M_nnz; i++) printf("%3d ", M_jcol[map_idxs_in_sorted[i]]); printf("\n");
+  //aaa
+  //
+  // remove duplicates and update map_idxs_in_sorted
+  //
+  index_type itleft = 0;
+  index_type itright = 1;
+  index_type currI = M_irow[0];
+  index_type currJ = M_jcol[0];
+  while(itright <= M_nnz) {
+    while(itright<M_nnz && M_irow[itright]==currI && M_jcol[itright]==currJ) {
+      //for all duplicates the indexes in the sorted+unique array will be itleft
+      assert(itright<map_idxs_in_sorted.size());
+      map_idxs_in_sorted[itright] = itleft;
+      itright++;
+    }
+    //here itright points to the first elem not equal to (currI, currJ)
+    
+    //set (i,j) in the right location
+    M_irow[itleft] = currI;
+    M_jcol[itleft] = currJ;
+  
+    //update current (i,j)
+    if(itright<M_nnz) {
+      currI = M_irow[itright];
+      currJ = M_jcol[itright];
+    }
+    itright++;
+    itleft++;
+    assert(itleft<=M_nnz);
+    assert(itleft<itright);
+  }
+  assert(itright == M_nnz);
+  const size_type M_nnz_unique = itleft;
+
+  hiopMatrixSparseCSRStorage M(m, m, M_nnz_unique);
+  M.form_from(m, m, M_nnz_unique, M_irow, M_jcol);
+  
+  delete[] M_irow;
+  delete[] M_jcol;
+
+  //
+  //update the values in M
+  //
+  double* M_values = M.values();
+  memset(M_values, 0, M_nnz_unique*sizeof(double));
+
+  itnnz = 0;
+
+  double* JtDJ_values = JtDiagJ.values();
+  for(int it=0; it<JtDiagJ.nnz(); ++it) {
+    assert(map_idxs_in_sorted[itnnz] < M_nnz_unique);
+    M_values[map_idxs_in_sorted[itnnz]] = JtDJ_values[it];
+    itnnz++;
+  }
+  assert(itnnz == JtDiagJ.nnz());
+
+  double* H_values = Hess.M();
+  for(int it=0; it<H_nnz; ++it) {
+    assert(map_idxs_in_sorted[itnnz] < M_nnz_unique);
+    M_values[map_idxs_in_sorted[itnnz]] = H_values[it];
+    itnnz++;
+  }
+  assert(itnnz == JtDiagJ.nnz()+H_nnz);
+
+  //strictly lower triangle for H
+  for(int it=0; it<H_nnz_lowtr; ++it) {
+    assert(map_idxs_in_sorted[itnnz] < M_nnz_unique);
+    M_values[map_idxs_in_sorted[itnnz]] = H_values[map_H_lowtr_idxs[it]];
+    itnnz++;
+  }
+
+  // add D and delta_wx*I
+  for(int i=0; i<m; i++) {
+    assert(map_idxs_in_sorted[itnnz] < M_nnz_unique);
+    M_values[map_idxs_in_sorted[itnnz]] = d_arr[i]+delta_wx;
+    itnnz++; 
+  }
+  assert(itnnz == M_nnz);
+
+
+  M.print(stdout);
+  return nullptr;
 }
   
 bool hiopKKTLinSysCondensedSparse::solveCompressed(hiopVector& rx,
@@ -529,8 +730,6 @@ bool hiopMatrixSparseCSRStorage::form_from(const hiopMatrixSparseTriplet& M)
   const index_type* Mjcol = M.j_col();
   const double* Mvalues  = M.M();
 
-  M.print(stdout);
-
   //storage the row count
   index_type w[nrows_];
   for(int i=0; i<nrows_; ++i) {
@@ -562,6 +761,66 @@ bool hiopMatrixSparseCSRStorage::form_from(const hiopMatrixSparseTriplet& M)
     irowptr_[i+1] = irowptr_[i] + w[i];
   }
   assert(irowptr_[nrows_] == nnz_);
+  return true;
+}
+
+bool hiopMatrixSparseCSRStorage::form_from(const size_type m,
+                                           const size_type n,
+                                           const size_type nnz,
+                                           const index_type* Mirow,
+                                           const index_type* Mjcol)
+{
+    if(m!=nrows_ || n!=ncols_ || nnz!=nnz_) {
+    dealloc();
+    
+    nrows_ = m;
+    ncols_ = n;
+    nnz_ = nnz_;
+
+    alloc();
+  }
+
+  assert(nnz_>=0);
+  if(nnz_<=0) {
+    return true;
+  }
+  
+  assert(irowptr_);
+  assert(jcolind_);
+  assert(values_);
+
+  //storage for the row count
+  index_type w[nrows_];
+  for(int i=0; i<nrows_; ++i) {
+    w[i] = 0;
+  }
+  
+  for(int it=0; it<nnz_; ++it) {
+    const index_type row_idx = Mirow[it];
+
+#ifndef NDEBUG
+    if(it>0) {
+      assert(Mirow[it] >= Mirow[it-1] && "row indexes of the triplet format are not ordered.");
+      if(Mirow[it] == Mirow[it-1]) {
+        assert(Mjcol[it] > Mjcol[it-1] && "col indexes of the triplet format are not ordered or unique.");
+      }
+    }
+#endif
+    assert(row_idx<nrows_ && row_idx>=0);
+    assert(Mjcol[it]<ncols_ && Mjcol[it]>=0);
+
+    w[row_idx]++;
+
+    jcolind_[it] = Mjcol[it];
+    //values_[it] = Mvalues[it];
+  }
+
+  irowptr_[0] = 0;
+  for(int i=0; i<nrows_; i++) {
+    irowptr_[i+1] = irowptr_[i] + w[i];
+  }
+  assert(irowptr_[nrows_] == nnz_);
+
   return true;
 }
 

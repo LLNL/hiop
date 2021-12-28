@@ -50,6 +50,13 @@
 #define HIOP_KKTLINSYSSPARSECONDENSED
 
 #include "hiopKKTLinSysSparse.hpp"
+#include "/home/petra1/work/installs/eigen-3.3.9/_install/include/eigen3/Eigen/Core"
+#include "/home/petra1/work/installs/eigen-3.3.9/_install/include/eigen3/Eigen/Sparse"
+// type alias
+using Scalar = double;
+using SparseMatrixCSC = Eigen::SparseMatrix<Scalar, Eigen::StorageOptions::ColMajor>;
+using SparseMatrixCSR = Eigen::SparseMatrix<Scalar, Eigen::StorageOptions::RowMajor>;
+using Triplet = Eigen::Triplet<Scalar>;
 
 /*
  * Solves a sparse KKT linear system by exploiting the sparse structure, namely reduces 
@@ -92,56 +99,6 @@
 namespace hiop
 {
 
-class hiopKKTLinSysCondensedSparse : public hiopKKTLinSysCompressedSparseXDYcYd
-{
-public:
-  hiopKKTLinSysCondensedSparse(hiopNlpFormulation* nlp);
-  virtual ~hiopKKTLinSysCondensedSparse();
-
-  virtual bool build_kkt_matrix(const double& delta_wx,
-                                const double& delta_wd,
-                                const double& delta_cc,
-                                const double& delta_cd);
-
-  virtual bool solveCompressed(hiopVector& rx, hiopVector& rd, hiopVector& ryc, hiopVector& ryd,
-                               hiopVector& dx, hiopVector& dd, hiopVector& dyc, hiopVector& dyd);
-
-protected:
-  //
-  //from the parent class and its parents we also use
-  //
-
-  //right-hand side [rx_tilde, rd_tilde, ((ryc->empty)), ryd]
-  //  hiopVector *rhs_; 
-
-  
-  //  hiopVectorPar *Dd;
-  //  hiopVectorPar *ryd_tilde;
-
-  //from the parent's parent class (hiopKKTLinSysCompressed) we also use
-  //  hiopVectorPar *Dx;
-  //  hiopVectorPar *rx_tilde;
-
-  //keep Hx = Dx (Dx=log-barrier diagonal for x) + regularization
-  //keep Hd = Dd (Dd=log-barrier diagonal for slack variable) + regularization
-  //  hiopVector *Hx_, *Hd_;
-
-  //
-  //  hiopNlpSparse* nlpSp_;
-  //  hiopMatrixSparse* HessSp_;
-  //  const hiopMatrixSparse* Jac_cSp_;
-  //  const hiopMatrixSparse* Jac_dSp_;
-
-  // int write_linsys_counter_;
-  //  hiopCSR_IO csr_writer_;
-
-  /// Stores the diagonal Dd plus delta_wd*I as a vector
-  hiopVector* dd_pert_;
-private:
-  //placeholder for the code that decides which linear solver to used based on safe_mode_
-  hiopLinSolverIndefSparse* determine_and_create_linsys(size_type nxd, size_type nineq, size_type nnz);
-};
-
 #include "hiopMatrixSparseTriplet.hpp"
 class hiopMatrixSparseCSRStorage
 {
@@ -156,6 +113,12 @@ public:
    */
   bool form_from(const hiopMatrixSparseTriplet& M);
 
+  // same as above but do not work on values
+  bool form_from(const size_type m,
+                 const size_type n,
+                 const size_type nnz,
+                 const index_type* irow,
+                 const index_type* jcol);
   /**
    * Forms a CSR matrix representing the transpose of the sparse matrix in triplet format is passed as
    * argument. Returns false if the input formated as expected (e.g., ordered by rows then by columns), 
@@ -171,6 +134,7 @@ public:
                             hiopMatrixSparseCSRStorage& M);
 //protected:
   hiopMatrixSparseCSRStorage* times_diag_times_mat_init(const hiopMatrixSparseCSRStorage& Y);
+
 public:
 
   inline index_type* irowptr() 
@@ -227,6 +191,62 @@ protected:
   index_type* jcolind_;
   double* values_;
 };
+  
+class hiopKKTLinSysCondensedSparse : public hiopKKTLinSysCompressedSparseXDYcYd
+{
+public:
+  hiopKKTLinSysCondensedSparse(hiopNlpFormulation* nlp);
+  virtual ~hiopKKTLinSysCondensedSparse();
+
+  virtual bool build_kkt_matrix(const double& delta_wx,
+                                const double& delta_wd,
+                                const double& delta_cc,
+                                const double& delta_cd);
+
+  virtual bool solveCompressed(hiopVector& rx, hiopVector& rd, hiopVector& ryc, hiopVector& ryd,
+                               hiopVector& dx, hiopVector& dd, hiopVector& dyc, hiopVector& dyd);
+protected:
+  SparseMatrixCSR* compute_linsys_eigen(const double& dx);
+  hiopMatrixSparseCSRStorage* add_matrices_init(hiopMatrixSparseCSRStorage& JtDiagJ,
+                                                hiopMatrixSymSparseTriplet& HessSp_,
+                                                hiopVector& Dx_,
+                                                double delta_wx);
+protected:
+  //
+  //from the parent class and its parents we also use
+  //
+
+  //right-hand side [rx_tilde, rd_tilde, ((ryc->empty)), ryd]
+  //  hiopVector *rhs_; 
+
+  
+  //  hiopVectorPar *Dd;
+  //  hiopVectorPar *ryd_tilde;
+
+  //from the parent's parent class (hiopKKTLinSysCompressed) we also use
+  //  hiopVectorPar *Dx;
+  //  hiopVectorPar *rx_tilde;
+
+  //keep Hx = Dx (Dx=log-barrier diagonal for x) + regularization
+  //keep Hd = Dd (Dd=log-barrier diagonal for slack variable) + regularization
+  //  hiopVector *Hx_, *Hd_;
+
+  //
+  //  hiopNlpSparse* nlpSp_;
+  //  hiopMatrixSparse* HessSp_;
+  //  const hiopMatrixSparse* Jac_cSp_;
+  //  const hiopMatrixSparse* Jac_dSp_;
+
+  // int write_linsys_counter_;
+  //  hiopCSR_IO csr_writer_;
+
+  /// Stores the diagonal Dd plus delta_wd*I as a vector
+  hiopVector* dd_pert_;
+private:
+  //placeholder for the code that decides which linear solver to used based on safe_mode_
+  hiopLinSolverIndefSparse* determine_and_create_linsys(size_type nxd, size_type nineq, size_type nnz);
+};
+
   
 } // end of namespace
 
