@@ -100,10 +100,9 @@ public:
    */
   bool solve(hiopVector& x_in);
 
-  /// temporary function: TODO remove
-  void set_sys_mat(const SparseMatrixCSR& M)
+  inline void set_linsys_mat(hiopMatrixSparseCSRStorage* mat)
   {
-    *MMM_ = M;
+    mat_csr_ = mat;
   }
 protected:
   /// performs initial analysis, sparsity permutation, and rescaling
@@ -145,8 +144,7 @@ protected:
   unsigned char * buf_perm_h_;
   /// Permutation map for nonzeros (on device)
   int* map_nnz_perm_;
-  //temporary
-  SparseMatrixCSR* MMM_;
+  //TODO: temporary -> use the member matrix obj from the parent class
   hiopMatrixSparseCSRStorage* mat_csr_;
   /// internal buffers in the size of the linear system (on device)
   double* rhs_buf1_;

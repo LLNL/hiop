@@ -70,7 +70,7 @@ using PermutationMatrix = Ordering::PermutationType;
 hiopLinSolverCholCuSparse::hiopLinSolverCholCuSparse(const size_type& n, 
                                                      const size_type& nnz, 
                                                      hiopNlpFormulation* nlp)
-  : hiopLinSolverIndefSparse(n, nnz, nlp),
+  : hiopLinSolverIndefSparse(nlp),
     nnz_(nnz),
     buf_fact_(nullptr),
     rowptr_(nullptr),
@@ -80,7 +80,6 @@ hiopLinSolverCholCuSparse::hiopLinSolverCholCuSparse(const size_type& n,
     P_(nullptr),
     PT_(nullptr),
     map_nnz_perm_(nullptr),
-    MMM_(nullptr),
     buf_perm_h_(nullptr),
     rhs_buf1_(nullptr),
     rhs_buf2_(nullptr)
@@ -106,8 +105,6 @@ hiopLinSolverCholCuSparse::hiopLinSolverCholCuSparse(const size_type& n,
   assert(ret_sp == CUSPARSE_STATUS_SUCCESS);
   ret_sp = cusparseSetMatDiagType(mat_descr_, CUSPARSE_DIAG_TYPE_NON_UNIT);
   assert(ret_sp == CUSPARSE_STATUS_SUCCESS);
-
-  MMM_ = new SparseMatrixCSR(n,n);
 }
 
 hiopLinSolverCholCuSparse::~hiopLinSolverCholCuSparse()
@@ -123,9 +120,6 @@ hiopLinSolverCholCuSparse::~hiopLinSolverCholCuSparse()
   
   delete buf_perm_h_;
   buf_perm_h_ = nullptr;
-  
-  delete MMM_;
-  MMM_ = nullptr;
   
   cudaFree(buf_fact_);
   buf_fact_ = nullptr;
@@ -150,9 +144,9 @@ bool hiopLinSolverCholCuSparse::initial_setup()
 {
   cusolverStatus_t ret;
   assert(nullptr == buf_fact_);
-  size_type m = M.m();
-  assert(m == MMM_->rows() && m == MMM_->cols());
-  assert(nnz_ == MMM_->nonZeros());
+  size_type m = mat_csr_->m();
+  assert(m == mat_csr_->m() && m == mat_csr_->n());
+  assert(nnz_ == mat_csr_->nnz());
   
   //
   // allocate device CSR arrays; then 
@@ -185,14 +179,14 @@ bool hiopLinSolverCholCuSparse::initial_setup()
                                   mat_csr_->irowptr(),
                                   mat_csr_->jcolind(),
                                   mat_csr_->values());
-                                  
+  
     //
     // AMD reordering to improve the sparsity of the factor
     //
     PermutationMatrix P;
     Ordering ordering;
-    ordering(MMM_->selfadjointView<Eigen::Upper>(), P);
-    //ordering(M.selfadjointView<Eigen::Upper>(), P);
+    //ordering(MMM_->selfadjointView<Eigen::Upper>(), P);
+    ordering(M.selfadjointView<Eigen::Upper>(), P);
     
     const int* P_h = P.indices().data();
     int PT_h[m];
@@ -212,12 +206,14 @@ bool hiopLinSolverCholCuSparse::initial_setup()
     // get permutation buffer size
     size_t buf_size;
     assert(nullptr == buf_perm_h_);
+
     ret = cusolverSpXcsrperm_bufferSizeHost(h_cusolver_,
-                                            m, m,
+                                            m,
+                                            m,
                                             nnz_,
                                             mat_descr_,
-                                            MMM_->outerIndexPtr(),
-                                            MMM_->innerIndexPtr(),
+                                            mat_csr_->irowptr(),
+                                            mat_csr_->jcolind(),
                                             P_h,
                                             P_h,
                                             &buf_size);
@@ -227,9 +223,9 @@ bool hiopLinSolverCholCuSparse::initial_setup()
     //permuted CSR arrays (on host)
     int rowptr_perm_h[m+1];
     int colind_perm_h[nnz_];
-    
-    memcpy(rowptr_perm_h, MMM_->outerIndexPtr(), (m+1)*sizeof(int));
-    memcpy(colind_perm_h, MMM_->innerIndexPtr(), nnz_*sizeof(int));
+
+    memcpy(rowptr_perm_h, mat_csr_->irowptr(), (m+1)*sizeof(int));
+    memcpy(colind_perm_h, mat_csr_->jcolind(), nnz_*sizeof(int));
     
     //mapping (on host)
     int map_h[nnz_];
@@ -267,8 +263,10 @@ bool hiopLinSolverCholCuSparse::initial_setup()
     cudaMemcpy(colind_, colind_perm_h, nnz_*sizeof(int), cudaMemcpyHostToDevice);
 
   } else {
-    cudaMemcpy(rowptr_, MMM_->outerIndexPtr(), (m+1)*sizeof(int), cudaMemcpyHostToDevice);
-    cudaMemcpy(colind_, MMM_->innerIndexPtr(), nnz_*sizeof(int), cudaMemcpyHostToDevice);
+    //cudaMemcpy(rowptr_, MMM_->outerIndexPtr(), (m+1)*sizeof(int), cudaMemcpyHostToDevice);
+    //cudaMemcpy(colind_, MMM_->innerIndexPtr(), nnz_*sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy(rowptr_, mat_csr_->irowptr(), (m+1)*sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy(colind_, mat_csr_->jcolind(), nnz_*sizeof(int), cudaMemcpyHostToDevice);
     
     int map_h[nnz_];
     for(int i=0; i<nnz_; i++) {
@@ -303,7 +301,8 @@ bool hiopLinSolverCholCuSparse::initial_setup()
 
   // TODO: this call as well as values_buf_ storage will be removed when the matrix is
   //going to reside on the device
-  cudaMemcpy(values_buf_, MMM_->valuePtr(), nnz_*sizeof(double), cudaMemcpyHostToDevice);
+  //cudaMemcpy(values_buf_, MMM_->valuePtr(), nnz_*sizeof(double), cudaMemcpyHostToDevice);
+  cudaMemcpy(values_buf_, mat_csr_->values(), nnz_*sizeof(double), cudaMemcpyHostToDevice);
   
   // buffer size
   size_t internalData; // in BYTEs
@@ -329,9 +328,9 @@ int hiopLinSolverCholCuSparse::matrixChanged()
 {
   nlp_->runStats.linsolv.tmFactTime.start();
 
-  size_type m = M.m();
-  assert(m == M.n());
-  assert(nnz_ == MMM_->nonZeros());
+  size_type m = mat_csr_->m();
+  assert(m == mat_csr_->n());
+  assert(nnz_ == mat_csr_->nnz());
   
   hiopTimer t;
   cusolverStatus_t ret;
@@ -354,7 +353,7 @@ int hiopLinSolverCholCuSparse::matrixChanged()
   //
   // TODO: this call as well as values_buf_ storage will be removed when the matrix is
   //going to reside on the device
-  cudaMemcpy(values_buf_, MMM_->valuePtr(), nnz_*sizeof(double), cudaMemcpyHostToDevice);
+  cudaMemcpy(values_buf_, mat_csr_->values(), nnz_*sizeof(double), cudaMemcpyHostToDevice);
   //t.stop(); printf("fact hdcopy took %.4f sec\n", t.getElapsedTime());
   
   t.reset(); t.start();
@@ -429,7 +428,7 @@ bool hiopLinSolverCholCuSparse::solve(hiopVector& x_in)
   cusolverStatus_t ret;
 
   nlp_->runStats.linsolv.tmTriuSolves.start(); 
-  int m = M.m();
+  int m = mat_csr_->m();
   assert(m == x_in.get_size());
 
   if(!rhs_buf1_) {

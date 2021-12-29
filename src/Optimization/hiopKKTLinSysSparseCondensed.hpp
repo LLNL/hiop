@@ -162,7 +162,6 @@ public:
   {
     return values_;
   }
-  
   inline size_type m() const
   {
     return nrows_;
@@ -207,10 +206,18 @@ public:
                                hiopVector& dx, hiopVector& dd, hiopVector& dyc, hiopVector& dyd);
 protected:
   SparseMatrixCSR* compute_linsys_eigen(const double& dx);
+
+  /// Helper method for allocating and precomputing symbolically JacD'*Dd*JacD + H + Dx + delta_wx*I
   hiopMatrixSparseCSRStorage* add_matrices_init(hiopMatrixSparseCSRStorage& JtDiagJ,
                                                 hiopMatrixSymSparseTriplet& HessSp_,
                                                 hiopVector& Dx_,
                                                 double delta_wx);
+  /// Helper method for fast computation of JacD'*Dd*JacD + H + Dx + delta_wx*I
+  void add_matrices(hiopMatrixSparseCSRStorage& JtDiagJ,
+                    hiopMatrixSymSparseTriplet& HessSp,
+                    hiopVector& Dx_,
+                    double delta_wx,
+                    hiopMatrixSparseCSRStorage& M);
 protected:
   //
   //from the parent class and its parents we also use
@@ -242,6 +249,29 @@ protected:
 
   /// Stores the diagonal Dd plus delta_wd*I as a vector
   hiopVector* dd_pert_;
+
+  /// Member for JacD'*Dd*JacD
+  hiopMatrixSparseCSRStorage* JtDiagJ_;
+
+  /// Member for JacD'*Dd*JacD + H + Dx + delta_wx*I
+  hiopMatrixSparseCSRStorage* M_condensed_;
+
+  /**
+   * Maps indexes of the nonzeros in the union of the sparsity patterns of JacD'*Dd*JacD, H, and
+   * Dx + delta_wx*I, into the sorted CSR arrays of M_condensed_. Allows fast computation of
+   * the nonzeros of M_condensed_ from the nonzeros of JacD'*Dd*JacD, H, and
+   * Dx + delta_wx*I via add_matrices method. It is computed in add_matrices_init.
+   */
+  std::vector<index_type> map_idxs_in_sorted_;
+
+  /**
+   * Keeps the indexes of the nonzeros of the strictly lower triangle of H in the values array of H.
+   * It is built in add_matrices_init and reused in add_matrices to allow fast numerical computation
+   * of M_condensed_.
+   */
+  std::vector<index_type> map_H_lowtr_idxs_;
+
+
 private:
   //placeholder for the code that decides which linear solver to used based on safe_mode_
   hiopLinSolverIndefSparse* determine_and_create_linsys(size_type nxd, size_type nineq, size_type nnz);

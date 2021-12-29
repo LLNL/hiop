@@ -117,7 +117,7 @@ class hiopLinSolverSparseBase : public hiopLinSolver
 {
 public:
   hiopLinSolverSparseBase(){};
-  ~hiopLinSolverSparseBase(){};
+  virtual ~hiopLinSolverSparseBase(){};
 };
 
 /** 
@@ -132,9 +132,18 @@ public:
 
   inline hiopMatrixSymSparseTriplet& sysMatrix() { return M; }
 protected:
+  /* TODO: need to change type to a Sparse matrix to accomodate for CSR */
   hiopMatrixSymSparseTriplet M;
 protected:
-  hiopLinSolverIndefSparse() : M(0,0) { assert(false); }
+  /* Constructor for when the size of the system matrix is to be determined. */
+  hiopLinSolverIndefSparse(hiopNlpFormulation* nlp);
+
+  hiopLinSolverIndefSparse()
+    : M(0,0)
+  {
+    nlp_ = nullptr;
+    assert(false);
+  }
 };
 
 /** Base class for non-symmetric Sparse Solvers */
