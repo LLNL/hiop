@@ -85,7 +85,7 @@ namespace hiop
     if(mMat_) {
       assert(x.get_local_size() == mMat_->n());
       assert(y.get_local_size() == mMat_->m());
-      mMat_->timesVec(0.0, y, 1.0, x);      
+      mMat_->timesVec(0.0, y, 1.0, x);
     } else {
       y.copyFrom(x);
     }
@@ -97,7 +97,7 @@ namespace hiop
     if(mMat_) {
       assert(x.get_local_size() == mMat_->m());
       assert(y.get_local_size() == mMat_->n());
-      mMat_->transTimesVec(0.0, y, 1.0, x);      
+      mMat_->transTimesVec(0.0, y, 1.0, x);
     } else {
       y.copyFrom(x);
     }

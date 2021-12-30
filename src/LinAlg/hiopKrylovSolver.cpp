@@ -138,9 +138,6 @@ namespace hiop {
 
 bool hiopPCGSolver::solve(hiopVector& b)
 {
-//  assert(n_ == m_);
-//  assert(m_ == b.get_local_size());
-
   // rhs = 0 --> solution = 0
   double n2b = b.twonorm();
   if(n2b == 0.0) {
@@ -162,7 +159,7 @@ bool hiopPCGSolver::solve(hiopVector& b)
 
   //////////////////////////////////////////////////////////////////
   // Starting procedure
-  /////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////
   // starting point
   if(x0_) {
     xk_->copyFrom(*x0_);
@@ -172,10 +169,10 @@ bool hiopPCGSolver::solve(hiopVector& b)
 
   flag_ = 1;
   index_type imin = 0;        // iteration at which minimal residual is achieved
-  double tolb = tol_ * n2b;  // relative tolerance
-  
+  double tolb = tol_ * n2b;   // relative tolerance
+
   xmin_->copyFrom(*xk_);
-  
+
   // compute residual: b-KKT*xk
   A_opr_->times_vec(*res_, *xk_);
   res_->axpy(-1.0, b);
@@ -195,14 +192,13 @@ bool hiopPCGSolver::solve(hiopVector& b)
   
   double normrmin = normr;  // Two-norm of minimum residual
   double rho = 1.0;
-  size_type stagsteps = 0;       // stagnation of the method
+  size_type stagsteps = 0;  // stagnation of the method
   size_type moresteps = 0;
   double eps = std::numeric_limits<double>::epsilon();
   
   size_type maxmsteps = 100;//fmin(5, n_-maxit_);
   maxmsteps = 100;//fmin(floor(n_/50), maxmsteps);
   size_type maxstagsteps = 3;
-
 
   // main loop for PCG
   double alpha;
@@ -211,12 +207,12 @@ bool hiopPCGSolver::solve(hiopVector& b)
   index_type ii = 0;
   for(; ii < maxit_; ++ii) {
     if(ML_opr_) {
-      ML_opr_->times_vec(*yk_, *res_);     
+      ML_opr_->times_vec(*yk_, *res_);
     } else {
       yk_->copyFrom(*res_);
     }
     if(MR_opr_) {
-      MR_opr_->times_vec(*zk_, *yk_);      
+      MR_opr_->times_vec(*zk_, *yk_);
     } else {
       zk_->copyFrom(*yk_);
     }
@@ -256,7 +252,7 @@ bool hiopPCGSolver::solve(hiopVector& b)
       break;
     }
   
-    // Check for stagnation of the method    
+    // Check for stagnation of the method
     if(pk_->twonorm()*abs(alpha) < eps * xk_->twonorm()) {
       stagsteps++;
     } else {
@@ -311,8 +307,13 @@ bool hiopPCGSolver::solve(hiopVector& b)
   // returned solution is first with minimal residual
   if(flag_ == 0) {
     normr_rel = normr_act/n2b;
-    printf("CG converged: actual normResid=%g relResid=%g iter=%.1f\n", 
-	         normr_act, normr_rel, iter_);
+    if(nlp_) {
+      nlp_->log->printf(hovScalars, "PCG converged: actual normResid=%g relResid=%g iter=%.1f\n\n", 
+	                      normr_act, normr_rel, iter_);  
+    } else {
+      printf("PCG converged: actual normResid=%g relResid=%g iter=%.1f\n\n", 
+	           normr_act, normr_rel, iter_);
+    }
 
     b.copyFrom(*xk_);    
   } else {
@@ -332,11 +333,17 @@ bool hiopPCGSolver::solve(hiopVector& b)
       iter_ = ii + 1;
       normr_rel = normr_act / n2b;
     }
-
-    printf("PCG did NOT converged after %.1f iters. The solution from iter %.1f was returned.\n",
-           ii+1, imin);
-    printf("\t - Error code %d\n\t - Act res=%g\n\t - Rel res=%g \n\n", 
-           flag_, normr_act, normr_rel);
+    if(nlp_) {
+      nlp_->log->printf(hovScalars, "PCG did NOT converged after %.1f iters. The solution from iter %.1f was returned.\n",
+                        ii+1, imin);
+      nlp_->log->printf(hovScalars, "\t - Error code %d\n\t - Act res=%g\n\t - Rel res=%g \n\n", 
+                        flag_, normr_act, normr_rel);
+    } else {
+      printf("PCG did NOT converged after %.1f iters. The solution from iter %.1f was returned.\n",
+             ii+1, imin);
+      printf("\t - Error code %d\n\t - Act res=%g\n\t - Rel res=%g \n\n", 
+             flag_, normr_act, normr_rel);
+    }
   }
   return true; // return true for inertia-free approach
 }
