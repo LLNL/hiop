@@ -93,11 +93,6 @@ public:
   /** Set the initial guess for the Krylov solver */
   virtual bool set_x0(hiopVector& x0);
 
-  /** Actual mat-vec operations */
-  virtual void apply_A_times_vec(hiopVector& y, hiopVector& x);
-  virtual void apply_Mleft_solve_vec(hiopVector& y, hiopVector& x);
-  virtual void apply_Mright_solve_vec(hiopVector& y, hiopVector& x);
-
 public:
   hiopNlpFormulation* nlp_;
 

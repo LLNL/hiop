@@ -67,27 +67,16 @@ namespace hiop
   * hiopLinearOperator implementation
   **********************************************************************/
   hiopLinearOperator::hiopLinearOperator(hiopMatrix* mat)
-    : mMat_(mat),
-      kkt_linsys_(nullptr)
+    : mMat_(mat)
   {
   }
 
-  hiopLinearOperator::hiopLinearOperator(hiopKKTLinSys* kkt_linsys)
-    : mMat_(nullptr),
-      kkt_linsys_(kkt_linsys)
-  {
-  }
 
 /**********************************************************************
   * hiopMatVecOpr implementation
   **********************************************************************/
   hiopMatVecOpr::hiopMatVecOpr(hiopMatrix* mat)
     : hiopLinearOperator(mat)
-  {
-  }
-
-  hiopMatVecOpr::hiopMatVecOpr(hiopKKTLinSys* kkt_linsys)
-    : hiopLinearOperator(kkt_linsys)
   {
   }
 
@@ -98,19 +87,19 @@ namespace hiop
       assert(y.get_local_size() == mMat_->m());
       mMat_->timesVec(0.0, y, 1.0, x);      
     } else {
-      assert(0 && "cannot reach here!");
-//      kkt_linsys_->mat_times_vec(y,x);
+      y.copyFrom(x);
     }
     return true;
   }
 
-  bool hiopMatVecOpr::inv_times_vec(hiopVector& y, hiopVector& x)
+  bool hiopMatVecOpr::trans_times_vec(hiopVector& y, hiopVector& x)
   {
     if(mMat_) {
-      assert(0 && "cannot reach here!");
+      assert(x.get_local_size() == mMat_->m());
+      assert(y.get_local_size() == mMat_->n());
+      mMat_->transTimesVec(0.0, y, 1.0, x);      
     } else {
-      assert(0 && "cannot reach here!");
-//      kkt_linsys_->mat_sol_vec(y,x);
+      y.copyFrom(x);
     }
     return true;
   }

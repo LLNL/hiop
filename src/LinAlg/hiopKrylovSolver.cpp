@@ -89,27 +89,6 @@ namespace hiop {
     }
   }
 
-  void hiopKrylovSolver::apply_A_times_vec (hiopVector& y, hiopVector& x)
-  {
-    A_opr_->times_vec(y,x);
-  }
-
-  void hiopKrylovSolver::apply_Mleft_solve_vec(hiopVector& y, hiopVector& x)
-  {
-    ML_opr_->times_vec(y,x);
-  }
-
-  void hiopKrylovSolver::apply_Mright_solve_vec(hiopVector& y, hiopVector& x)
-  {
-    if(nullptr == MR_opr_) {
-      // just a identity precond
-      y.copyFrom(x);
-      return;
-    } else {
-      MR_opr_->inv_times_vec(y,x);
-    }
-  }
-
   bool hiopKrylovSolver::set_x0(hiopVector& x0)
   {
     if(x0_){
@@ -198,7 +177,7 @@ bool hiopPCGSolver::solve(hiopVector& b)
   xmin_->copyFrom(*xk_);
   
   // compute residual: b-KKT*xk
-  apply_A_times_vec(*res_, *xk_);
+  A_opr_->times_vec(*res_, *xk_);
   res_->axpy(-1.0, b);
   res_->scale(-1.0);               
   double normr = res_->twonorm();  // Norm of residual
@@ -231,8 +210,16 @@ bool hiopPCGSolver::solve(hiopVector& b)
   double pq;
   index_type ii = 0;
   for(; ii < maxit_; ++ii) {
-    apply_Mleft_solve_vec(*yk_, *res_);
-    apply_Mright_solve_vec(*zk_, *yk_);
+    if(ML_opr_) {
+      ML_opr_->times_vec(*yk_, *res_);     
+    } else {
+      yk_->copyFrom(*res_);
+    }
+    if(MR_opr_) {
+      MR_opr_->times_vec(*zk_, *yk_);      
+    } else {
+      zk_->copyFrom(*yk_);
+    }
     
     rho1 = rho;
     rho = res_->dotProductWith(*zk_);
@@ -255,7 +242,7 @@ bool hiopPCGSolver::solve(hiopVector& b)
       pk_->axpy(1.0, *zk_);      
     }
 
-    apply_A_times_vec(*qk_, *pk_);
+    A_opr_->times_vec(*qk_, *pk_);
     pq = pk_->dotProductWith(*qk_);
     
     if(pq <= 0.0 || abs(pq) > 1E+20) {
@@ -286,7 +273,7 @@ bool hiopPCGSolver::solve(hiopVector& b)
     // check for convergence
     if(normr <= tolb || stagsteps >= maxstagsteps || moresteps) {
       // update residual: b-KKT*xk
-      apply_A_times_vec(*res_,*xk_);
+      A_opr_->times_vec(*res_,*xk_);
       res_->axpy(-1.0,b);
       res_->scale(-1.0);        
       normr_act = res_->twonorm();
@@ -330,7 +317,7 @@ bool hiopPCGSolver::solve(hiopVector& b)
     b.copyFrom(*xk_);    
   } else {
     // update residual: b-KKT*xk
-    apply_A_times_vec(*res_, *xmin_);
+    A_opr_->times_vec(*res_, *xmin_);
     res_->axpy(-1.0, b);
     res_->scale(-1.0);        
     double normr_comp = res_->twonorm();
