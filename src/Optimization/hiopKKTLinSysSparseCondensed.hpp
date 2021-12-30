@@ -135,6 +135,10 @@ public:
 //protected:
   hiopMatrixSparseCSRStorage* times_diag_times_mat_init(const hiopMatrixSparseCSRStorage& Y);
 
+  void times_diag_times_mat_numeric(const hiopVector& diag,
+                                    const hiopMatrixSparseCSRStorage& Y,
+                                    hiopMatrixSparseCSRStorage& M);
+
 public:
 
   inline index_type* irowptr() 

@@ -133,22 +133,25 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   t.reset(); t.start();
   hiopMatrixSparseCSRStorage JacD;
   JacD.form_from(*Jac_triplet);
-  t.stop(); printf("JacD    took %.5f\n", t.getElapsedTime());
+  //t.stop(); printf("JacD    took %.5f\n", t.getElapsedTime());
 
   t.reset(); t.start();
   hiopMatrixSparseCSRStorage JacDt;
   JacDt.form_transpose_from(*Jac_triplet);
-  t.stop(); printf("JacDt   took %.5f\n", t.getElapsedTime());
+  //t.stop(); printf("JacDt   took %.5f\n", t.getElapsedTime());
 
   t.reset(); t.start();
   // compute J'*D*J
   if(nullptr == JtDiagJ_) {
     //perform the initial symbolic computation
     JtDiagJ_ = JacDt.times_diag_times_mat_init(JacD);
+    JacDt.times_diag_times_mat(*dd_pert_, JacD, *JtDiagJ_);
+  } else {
+    JacDt.times_diag_times_mat_numeric(*dd_pert_, JacD, *JtDiagJ_);
   }
   //perform the fast numeric multiplication
-  JacDt.times_diag_times_mat(*dd_pert_, JacD, *JtDiagJ_);
-  t.stop(); printf("J*D*J'  took %.5f\n", t.getElapsedTime());
+  //JacDt.times_diag_times_mat(*dd_pert_, JacD, *JtDiagJ_);
+  //t.stop(); printf("J*D*J'  took %.5f\n", t.getElapsedTime());
   
   
   t.reset(); t.start();
@@ -157,7 +160,7 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
     M_condensed_ = add_matrices_init(*JtDiagJ_, *Hess_triplet, *Dx_, delta_wx);
   }
   add_matrices(*JtDiagJ_, *Hess_triplet, *Dx_, delta_wx, *M_condensed_);
-  t.stop(); printf("add     took %.5f\n", t.getElapsedTime());
+  //t.stop(); printf("add     took %.5f\n", t.getElapsedTime());
   //
   // linear system update
   //
@@ -320,9 +323,10 @@ add_matrices_init(hiopMatrixSparseCSRStorage& JtDiagJ,
   assert(Hess.m() == m);
   assert(Dx.get_size() == m);
   size_type M_nnz = 0;
-
-  M_nnz += JtDiagJ.nnz();
-  M_nnz += Dx.get_size();
+  
+  size_type JtDJ_nnz = JtDiagJ.nnz();
+  M_nnz += JtDJ_nnz;
+  M_nnz += m;
   size_type H_nnz = Hess.numberOfNonzeros();
   M_nnz += H_nnz;
   // since Hess contains only the upper triangle, add the elements that would correspond to
@@ -339,11 +343,11 @@ add_matrices_init(hiopMatrixSparseCSRStorage& JtDiagJ,
   M_nnz += H_nnz_lowtr;
 
   //build an array with indexes in H sparse arrays of the elements in the strictly lower triangle
-  std::vector<index_type> map_H_lowtr_idxs(H_nnz_lowtr);
+  map_H_lowtr_idxs_.resize(H_nnz_lowtr);
   H_nnz_lowtr = 0;
   for(index_type it=0; it<H_nnz; ++it) {
     if(H_irow[it]<H_jcol[it]) {
-      map_H_lowtr_idxs[H_nnz_lowtr++] = it;
+      map_H_lowtr_idxs_[H_nnz_lowtr++] = it;
     } 
   }
   
@@ -361,6 +365,7 @@ add_matrices_init(hiopMatrixSparseCSRStorage& JtDiagJ,
   index_type* JtDJ_jcolind = JtDiagJ.jcolind();
   for(index_type i=0; i<m; i++) {
     for(index_type p=JtDJ_irowptr[i]; p<JtDJ_irowptr[i+1]; ++p) {
+      assert(itnnz<JtDJ_nnz);
       const index_type j = JtDJ_jcolind[p];
       M_irow[itnnz] = i;
       M_jcol[itnnz] = j;
@@ -377,14 +382,14 @@ add_matrices_init(hiopMatrixSparseCSRStorage& JtDiagJ,
   itnnz += H_nnz;
 
   //populate with H (strictly lower triangle)
-  for(auto idx : map_H_lowtr_idxs) {
+  for(auto idx : map_H_lowtr_idxs_) {
     //flip row with col to put in the strictly lower triangle
     M_irow[itnnz] = H_jcol[idx];
     M_jcol[itnnz] = H_irow[idx];
-    //M_values[itnnz] = H_values[idx];
+    assert(itnnz <JtDJ_nnz+H_nnz+H_nnz_lowtr);
     itnnz++; 
   }
-  assert(itnnz == JtDiagJ.nnz()+H_nnz+H_nnz_lowtr);
+  assert(itnnz == JtDJ_nnz+H_nnz+H_nnz_lowtr);
 
   //populate with D and delta_wx*I
   for(int i=0; i<m; i++) {
@@ -394,7 +399,7 @@ add_matrices_init(hiopMatrixSparseCSRStorage& JtDiagJ,
     itnnz++; 
   }
   assert(itnnz == M_nnz);
-
+  assert(itnnz == JtDJ_nnz+H_nnz+H_nnz_lowtr+m);
 
   //
   // sort
@@ -407,14 +412,7 @@ add_matrices_init(hiopMatrixSparseCSRStorage& JtDiagJ,
          if(M_irow[i1]>M_irow[i2]) return false;
          return M_jcol[i1]<M_jcol[i2];
        });
-
   
-  //printf("i="); for(auto i=0; i<M_nnz; i++) printf("%3d ", M_irow[map_idxs_in_sorted[i]]); printf("\n");
-  //printf("j="); for(auto i=0; i<M_nnz; i++) printf("%3d ", M_jcol[map_idxs_in_sorted[i]]); printf("\n");
-  //aaa printf("    "); for(auto i=0; i<M_nnz; i++) printf("%3d ", i); printf("\n");
-  //printf("i  ="); for(auto i=0; i<M_nnz; i++) printf("%3d ", M_irow[i]); printf("\n");
-  //printf("j  ="); for(auto i=0; i<M_nnz; i++) printf("%3d ", M_jcol[i]); printf("\n");
-  //printf("sor="); for(auto i=0; i<M_nnz; i++) printf("%3d ", idxs_sorted[i]); printf("\n");
   //shuffle elements
   index_type* buff_i = new index_type[M_nnz];
 
@@ -436,13 +434,7 @@ add_matrices_init(hiopMatrixSparseCSRStorage& JtDiagJ,
   M_jcol = buff_j;
 
   map_idxs_in_sorted_.resize(M_nnz);
-
-  // aaa printf("sorted\n");
-  // aaa printf("    "); for(auto i=0; i<M_nnz; i++) printf("%3d ", i); printf("\n");
-  // aaa printf("i  ="); for(auto i=0; i<M_nnz; i++) printf("%3d ", M_irow[i]); printf("\n");
-  // aaa printf("j  ="); for(auto i=0; i<M_nnz; i++) printf("%3d ", M_jcol[i]); printf("\n");
-  // aaa printf("map="); for(auto i=0; i<M_nnz; i++) printf("%3d ", map_idxs_in_sorted_[i]); printf("\n");
-  
+ 
   //
   // remove duplicates and update map_idxs_in_sorted_
   //
@@ -457,9 +449,6 @@ add_matrices_init(hiopMatrixSparseCSRStorage& JtDiagJ,
     while(itright<M_nnz && M_irow[itright]==currI && M_jcol[itright]==currJ) {
       
       assert(itright<map_idxs_in_sorted_.size());
-
-      // aaa printf("(i,j) (%3d,%3d) -> nz pos %3d   <-from nz pos %3d (coming from pos %3d in unsorted)\n",
-      //      currI, currJ, itleft, itright, idxs_sorted[itright]);
 
       //all duplicates will have the indexes in the sorted+unique array equal to itleft
       map_idxs_in_sorted_[idxs_sorted[itright]] = itleft;
@@ -480,11 +469,7 @@ add_matrices_init(hiopMatrixSparseCSRStorage& JtDiagJ,
     //update current (i,j) 
     currI = M_irow[itright];
     currJ = M_jcol[itright];
-    
-
-    // aaa printf("(i,j)-(%3d,%3d) -> nz pos %3d   <-from nz pos %3d (coming from pos %3d in unsorted)\n",
-    //       currI, currJ, itleft, itright, idxs_sorted[itright]);
-    
+       
     //before incrementing itright, update map_idxs_in_sorted_ for it    
     map_idxs_in_sorted_[idxs_sorted[itright]] = itleft;
 
@@ -496,13 +481,6 @@ add_matrices_init(hiopMatrixSparseCSRStorage& JtDiagJ,
   
   const size_type M_nnz_unique = itleft;
   
-  // aaa printf("    "); for(auto i=0; i<M_nnz_unique; i++) printf("%3d ", i); printf("\n");
-  // aaa printf("i  ="); for(auto i=0; i<M_nnz_unique; i++) printf("%3d ", M_irow[i]); printf("\n");
-  // aaa printf("j  ="); for(auto i=0; i<M_nnz_unique; i++) printf("%3d ", M_jcol[i]); printf("\n");
-  // aaa printf("map="); for(auto i=0; i<M_nnz; i++) printf("%3d ", map_idxs_in_sorted_[i]); printf("\n");
-  
-  
-
   hiopMatrixSparseCSRStorage* M = new hiopMatrixSparseCSRStorage(m, m, M_nnz_unique);
   M->form_from(m, m, M_nnz_unique, M_irow, M_jcol);
   
@@ -519,8 +497,6 @@ void hiopKKTLinSysCondensedSparse::add_matrices(hiopMatrixSparseCSRStorage& JtDi
 {
   const size_type M_nnz_dupl = map_idxs_in_sorted_.size();
   const size_type M_nnz = M.nnz();
-
-  printf("aaa %d %d\n", M_nnz, M_nnz_dupl);
   assert(M_nnz<=M_nnz_dupl);
 
   const size_type JtDJ_nnz = JtDiagJ.nnz();
@@ -528,6 +504,8 @@ void hiopKKTLinSysCondensedSparse::add_matrices(hiopMatrixSparseCSRStorage& JtDi
   const size_type H_nnz = Hess.numberOfNonzeros();
   const size_type m = Dx.get_size();
   assert(M_nnz_dupl == JtDJ_nnz+H_nnz+H_nnz_lowtr+m);
+
+
   
   //
   //update the values in M
@@ -1182,7 +1160,7 @@ times_diag_times_mat(const hiopVector& diag,
     memset(flag, 0, m);
 
     assert(nnzM<M.nnz());
-    //start row i of AtDA
+    //start row i of M
     irowptrM[i]=nnzM;
     
     for(int px=irowptrX[i]; px<irowptrX[i+1]; px++) { 
@@ -1218,6 +1196,59 @@ times_diag_times_mat(const hiopVector& diag,
   delete[] W;
   delete[] flag;
 }
+void hiopMatrixSparseCSRStorage::
+times_diag_times_mat_numeric(const hiopVector& diag,
+                             const hiopMatrixSparseCSRStorage& Y,
+                             hiopMatrixSparseCSRStorage& M)
+{
+  const index_type* irowptrY = Y.irowptr();
+  const index_type* jcolindY = Y.jcolind();
+  const double* valuesY = Y.values();
+  
+  const index_type* irowptrX = irowptr_;
+  const index_type* jcolindX = jcolind_;
+  const double* valuesX = values_;
+
+  index_type* irowptrM = M.irowptr();
+  index_type* jcolindM = M.jcolind();
+  double* valuesM = M.values();
+  
+  const index_type m = this->m();
+  const index_type n = Y.n();
+
+  const index_type K = this->n();
+  assert(Y.m() == K);
+  assert(diag.get_size() == K);
+
+  const double* d = diag.local_data_const();
+
+  double* W = new double[n];
+
+  for(int it=0; it<n; it++) W[it] = 0.0;
+
+  for(int i=0; i<m; i++) {
+    for(int px=irowptrX[i]; px<irowptrX[i+1]; px++) { 
+      const auto k = jcolindX[px]; //X[i,k] is non-zero
+      assert(k<K);
+      
+      const double val = valuesX[px]*d[k];
+
+      //iterate the row k of Y and scatter the values into W
+      for(int py=irowptrY[k]; py<irowptrY[k+1]; py++) {
+        assert(jcolindY[py]<n);        
+	W[jcolindY[py]] += (valuesY[py]*val);
+      }
+    }
+    //gather the values into the i-th row M
+    for(int p=irowptrM[i]; p<irowptrM[i+1]; ++p) {
+      const auto j = jcolindM[p];
+      valuesM[p] = W[j];
+      W[j] = 0.0;
+    }
+  }
+  delete[] W;
+}
+
 
 /**
  *  M = X*D*Y -> computes nnz in M and allocates M 

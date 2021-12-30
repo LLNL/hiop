@@ -163,16 +163,18 @@ bool hiopLinSolverCholCuSparse::initial_setup()
 
   assert(nullptr == values_);
   cudaMalloc(&values_, nnz_*sizeof(double));
-
   
   assert(rowptr_);
   assert(colind_);
   assert(values_buf_);
   assert(values_);
 
+  hiopTimer t;
+
   bool dopermutation = true;
   if(dopermutation) {
-
+    t.reset(); t.start();
+    
     Eigen::Map<SparseMatrixCSR> M(mat_csr_->m(),
                                   mat_csr_->m(),
                                   mat_csr_->nnz(),
@@ -187,13 +189,18 @@ bool hiopLinSolverCholCuSparse::initial_setup()
     Ordering ordering;
     //ordering(MMM_->selfadjointView<Eigen::Upper>(), P);
     ordering(M.selfadjointView<Eigen::Upper>(), P);
-    
+
+    t.stop(); printf("aaa ordering           took %.4f sec\n", t.getElapsedTime());
+
+    t.reset(); t.start();
     const int* P_h = P.indices().data();
     int PT_h[m];
     for(int i=0; i<m; i++) {
       PT_h[P_h[i]] = i;
     }
-    
+    t.stop(); printf("aaa ordering transpose took %.4f sec\n", t.getElapsedTime());
+
+    t.reset(); t.start();
     assert(nullptr == P_);
     cudaMalloc(&P_, m*sizeof(int));
     cudaMemcpy(P_, P_h, m*sizeof(int), cudaMemcpyHostToDevice);
@@ -201,12 +208,13 @@ bool hiopLinSolverCholCuSparse::initial_setup()
     assert(nullptr == PT_);
     cudaMalloc(&PT_, m*sizeof(int));
     cudaMemcpy(PT_, PT_h, m*sizeof(int), cudaMemcpyHostToDevice);
-    
+    t.stop(); printf("aaa ordering copy dev  took %.4f sec\n", t.getElapsedTime());
     
     // get permutation buffer size
     size_t buf_size;
     assert(nullptr == buf_perm_h_);
 
+    t.reset(); t.start();
     ret = cusolverSpXcsrperm_bufferSizeHost(h_cusolver_,
                                             m,
                                             m,
@@ -218,21 +226,37 @@ bool hiopLinSolverCholCuSparse::initial_setup()
                                             P_h,
                                             &buf_size);
     assert(ret == CUSOLVER_STATUS_SUCCESS);
+    t.stop(); printf("aaa SpXcsrperm buffer  took %.4f sec\n", t.getElapsedTime());
+    
     buf_perm_h_ = new unsigned char[buf_size];
+    printf("buf_perm_h allocated on  host for  %d buf_size aaa\n", buf_size); fflush(stdout);
     
     //permuted CSR arrays (on host)
-    int rowptr_perm_h[m+1];
-    int colind_perm_h[nnz_];
+    int* rowptr_perm_h = new int[m+1];
 
+    printf("rowptr_perm_h done nnz %d aaa\n", nnz_); fflush(stdout);
+    
+    int* colind_perm_h = new int[nnz_];
+    printf("have row and col arrays allocated on  host for  %d nnz aaa\n", nnz_); fflush(stdout);
+    assert(rowptr_perm_h);
+    assert(colind_perm_h);
     memcpy(rowptr_perm_h, mat_csr_->irowptr(), (m+1)*sizeof(int));
     memcpy(colind_perm_h, mat_csr_->jcolind(), nnz_*sizeof(int));
+
+    printf("starting iota for  %d nnz aaa\n", nnz_); fflush(stdout);
     
     //mapping (on host)
-    int map_h[nnz_];
+    int* map_h = new int[nnz_];
+
+    printf("map_h created for  %d nnz aaa\n", nnz_); fflush(stdout);
+    
     for(int i=0; i<nnz_; i++) {
       map_h[i] = i;
     }
+
+    printf("mapping on host created for %d nnz aaa\n", nnz_); fflush(stdout);
     
+    t.reset(); t.start();
     ret = cusolverSpXcsrpermHost(h_cusolver_,
                                  m,
                                  m,
@@ -245,6 +269,7 @@ bool hiopLinSolverCholCuSparse::initial_setup()
                                  map_h,
                                  buf_perm_h_);
     assert(ret == CUSOLVER_STATUS_SUCCESS);
+    t.stop(); printf("aaa SpXcsrperm        took %.4f sec\n", t.getElapsedTime());
     
     delete[] buf_perm_h_;
     buf_perm_h_ = nullptr;
@@ -253,7 +278,7 @@ bool hiopLinSolverCholCuSparse::initial_setup()
     cudaMalloc(&map_nnz_perm_, nnz_*sizeof(int));
     //transfer the permutation map for nonzeros on device
     cudaMemcpy(map_nnz_perm_, map_h, nnz_*sizeof(int),  cudaMemcpyHostToDevice);
-
+    delete[] map_h;
     // transfer the CSR index arrays on device
     //
     //values_ not needed here and will be updated in matrixChanged()
@@ -261,6 +286,9 @@ bool hiopLinSolverCholCuSparse::initial_setup()
     //cudaMemcpy(colind_, MMM_->innerIndexPtr(), nnz_*sizeof(int), cudaMemcpyHostToDevice);
     cudaMemcpy(rowptr_, rowptr_perm_h, (m+1)*sizeof(int), cudaMemcpyHostToDevice);
     cudaMemcpy(colind_, colind_perm_h, nnz_*sizeof(int), cudaMemcpyHostToDevice);
+
+    delete[] colind_perm_h;
+    delete[] rowptr_perm_h;
 
   } else {
     //cudaMemcpy(rowptr_, MMM_->outerIndexPtr(), (m+1)*sizeof(int), cudaMemcpyHostToDevice);
@@ -326,6 +354,8 @@ bool hiopLinSolverCholCuSparse::initial_setup()
 /* returns -1 if zero or negative pivots are encountered */
 int hiopLinSolverCholCuSparse::matrixChanged()
 {
+
+  printf("aaa matrixChanged\n");
   nlp_->runStats.linsolv.tmFactTime.start();
 
   size_type m = mat_csr_->m();
@@ -344,7 +374,7 @@ int hiopLinSolverCholCuSparse::matrixChanged()
       return -1;
     }
     t.stop();
-    printf("initial setup took %.3f sec\n", t.getElapsedTime());
+    printf("initial setup took %.4f sec\n", t.getElapsedTime());
   }
 
   t.reset(); t.start();
@@ -354,7 +384,7 @@ int hiopLinSolverCholCuSparse::matrixChanged()
   // TODO: this call as well as values_buf_ storage will be removed when the matrix is
   //going to reside on the device
   cudaMemcpy(values_buf_, mat_csr_->values(), nnz_*sizeof(double), cudaMemcpyHostToDevice);
-  //t.stop(); printf("fact hdcopy took %.4f sec\n", t.getElapsedTime());
+  t.stop(); printf("fact hdcopy took %.4f sec\n", t.getElapsedTime());
   
   t.reset(); t.start();
   //permute nonzeros
@@ -375,7 +405,7 @@ int hiopLinSolverCholCuSparse::matrixChanged()
 
   cusparseGather(h_cusparse_, vecY, vecX);
 #endif
-  //t.stop(); printf("fact numperm took %.4f sec\n", t.getElapsedTime());
+  t.stop(); printf("fact nz perm took %.4f sec\n", t.getElapsedTime());
 
   t.reset(); t.start();
   //
@@ -400,9 +430,9 @@ int hiopLinSolverCholCuSparse::matrixChanged()
 
   const double zero_piv_tol = 1e-16;
   int position = -1;
-  //ret = cusolverSpDcsrcholZeroPivot(h_cusolver_, info_, zero_piv_tol, &position);
+  ret = cusolverSpDcsrcholZeroPivot(h_cusolver_, info_, zero_piv_tol, &position);
 
-  //t.stop(); printf("fact num  took %.4f sec\n", t.getElapsedTime());
+  t.stop(); printf("fact num  took %.4f sec\n", t.getElapsedTime());
   
   if(position>=0) {
     nlp_->log->printf(hovWarning, 
@@ -414,10 +444,6 @@ int hiopLinSolverCholCuSparse::matrixChanged()
     return 0;
   }
 
-/*
-//hasZeroPivot();
-
-*/
   nlp_->runStats.linsolv.tmFactTime.stop();
   return 0;
 }
@@ -448,7 +474,9 @@ bool hiopLinSolverCholCuSparse::solve(hiopVector& x_in)
   //t.stop(); printf("solve perm1 %.4f\n", t.getElapsedTime());
   
   t.reset(); t.start();
+  //
   //solve -> two triangular solves
+  //
   ret = cusolverSpDcsrcholSolve(h_cusolver_, m, rhs_buf2_, rhs_buf1_, info_, buf_fact_);
   //t.stop(); printf("solve solve %.4f\n", t.getElapsedTime());
 
