@@ -11,6 +11,7 @@ set(hiopLinAlg_INTERFACE_HEADERS
   hiopLinSolverSparseSTRUMPACK.hpp
   hiopLinSolverSparsePARDISO.hpp
   hiopLinSolverUMFPACKZ.hpp
+  hiopLinSolverCholCuSparse.hpp
   hiopMatrix.hpp
   hiopMatrixComplexDense.hpp
   hiopMatrixComplexSparseTriplet.hpp

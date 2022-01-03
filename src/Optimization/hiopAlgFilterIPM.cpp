@@ -1323,13 +1323,16 @@ decideAndCreateFactAcceptor(hiopPDPerturbation* p, hiopNlpFormulation* nlp, hiop
   {
     return new hiopFactAcceptorInertiaFreeDWD(p, nlp->m_eq()+nlp->m_ineq());
   } else {
-    if(nullptr == dynamic_cast<hiopKKTLinSysCondensedSparse*>(kkt)) {
-      return new hiopFactAcceptorIC(p, nlp->m_eq()+nlp->m_ineq());
-    } else {
+#ifdef HIOP_SPARSE    
+    if(nullptr != dynamic_cast<hiopKKTLinSysCondensedSparse*>(kkt)) {
+      // for LinSysCondensedSparse correct inertia is different
       assert(nullptr != dynamic_cast<hiopNlpSparseIneq*>(nlp) &&
              "wrong combination of optimization objects was created");
-      return new hiopFactAcceptorIC(p, 0);
+      return new hiopFactAcceptorIC(p, 0);      
     }
+#endif    
+    return new hiopFactAcceptorIC(p, nlp->m_eq()+nlp->m_ineq());
+
   } 
 }
 
