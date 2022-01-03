@@ -52,21 +52,33 @@
  *
  */
 
-#ifndef AAA //HIOP_USE_CUDA
-
 #include "hiopLinSolverCholCuSparse.hpp"
+
+#ifdef HIOP_USE_CUDA
 
 #include <cuda_runtime.h>
 #include <cusparse.h>
 #include <cusolverSp.h>
 #include <cusolverSp_LOWLEVEL_PREVIEW.h>
 
-namespace hiop
-{
+//this is for testing purposes only - will be removed once we have a better solution for ordering
+//#define HIOP_USE_EIGEN
 
+#ifdef HIOP_USE_EIGEN
+#include "/home/petra1/work/installs/eigen-3.3.9/_install/include/eigen3/Eigen/Core"
+#include "/home/petra1/work/installs/eigen-3.3.9/_install/include/eigen3/Eigen/Sparse"
+
+using Scalar = double;
+//using SparseMatrixCSC = Eigen::SparseMatrix<Scalar, Eigen::StorageOptions::ColMajor>;
+using SparseMatrixCSR = Eigen::SparseMatrix<Scalar, Eigen::StorageOptions::RowMajor>;
+//using Triplet = Eigen::Triplet<Scalar>;
 using Ordering = Eigen::AMDOrdering<SparseMatrixCSR::StorageIndex>;
 using PermutationMatrix = Ordering::PermutationType;
+#endif
 
+namespace hiop
+{
+  
 hiopLinSolverCholCuSparse::hiopLinSolverCholCuSparse(const size_type& n, 
                                                      const size_type& nnz, 
                                                      hiopNlpFormulation* nlp)
@@ -80,7 +92,6 @@ hiopLinSolverCholCuSparse::hiopLinSolverCholCuSparse(const size_type& n,
     P_(nullptr),
     PT_(nullptr),
     map_nnz_perm_(nullptr),
-    buf_perm_h_(nullptr),
     rhs_buf1_(nullptr),
     rhs_buf2_(nullptr)
 {
@@ -118,9 +129,6 @@ hiopLinSolverCholCuSparse::~hiopLinSolverCholCuSparse()
   cudaFree(map_nnz_perm_);
   map_nnz_perm_ = nullptr;
   
-  delete buf_perm_h_;
-  buf_perm_h_ = nullptr;
-  
   cudaFree(buf_fact_);
   buf_fact_ = nullptr;
 
@@ -140,6 +148,32 @@ hiopLinSolverCholCuSparse::~hiopLinSolverCholCuSparse()
   cusparseDestroy(h_cusparse_);
 }
 
+bool hiopLinSolverCholCuSparse::do_symb_analysis(const size_type n,
+                                                 const size_type nnz,
+                                                 const index_type* rowptr,
+                                                 const index_type* colind,
+                                                 const double* value,
+                                                 index_type*  perm)
+{
+  auto ordering = nlp_->options->GetString("linear_solver_sparse_ordering");
+  cusolverStatus_t ret;
+
+  nlp_->log->printf(hovScalars, "Chol CuSolver: using '%s' as ordering strategy.\n", ordering.c_str());
+  
+  if("metis" == ordering) {
+    const int64_t *options = nullptr; //use default METIS options
+    ret = cusolverSpXcsrmetisndHost(h_cusolver_, n, nnz, mat_descr_, rowptr, colind, options, perm);
+    assert(ret == CUSOLVER_STATUS_SUCCESS);
+  } else if ("symamd" == ordering) {
+    ret = cusolverSpXcsrsymamdHost(h_cusolver_, n, nnz, mat_descr_, rowptr, colind, perm);
+    assert(ret == CUSOLVER_STATUS_SUCCESS);
+  } else {
+    assert("symrcm" == ordering && "unrecognized option for sparse solver ordering");
+    ret = cusolverSpXcsrsymrcmHost(h_cusolver_, n, nnz, mat_descr_, rowptr, colind, perm);
+  }
+  return (ret == CUSOLVER_STATUS_SUCCESS);
+}
+
 bool hiopLinSolverCholCuSparse::initial_setup()
 {
   cusolverStatus_t ret;
@@ -147,7 +181,7 @@ bool hiopLinSolverCholCuSparse::initial_setup()
   size_type m = mat_csr_->m();
   assert(m == mat_csr_->m() && m == mat_csr_->n());
   assert(nnz_ == mat_csr_->nnz());
-  
+
   //
   // allocate device CSR arrays; then 
   // copy row and col arrays to the device
@@ -168,39 +202,52 @@ bool hiopLinSolverCholCuSparse::initial_setup()
   assert(colind_);
   assert(values_buf_);
   assert(values_);
-
+ 
   hiopTimer t;
+  std::stringstream ss_log;
 
-  bool dopermutation = true;
+  //
+  // compute permutation to promote sparsity in the factors
+  //
+  const bool dopermutation = true;
   if(dopermutation) {
     t.reset(); t.start();
+
+    int* P_h = new index_type[m];
+#ifndef HIOP_USE_EIGEN
+    do_symb_analysis(mat_csr_->m(),
+                     mat_csr_->nnz(),
+                     mat_csr_->irowptr(),
+                     mat_csr_->jcolind(),
+                     mat_csr_->values(),
+                     P_h);
+    ss_log << "\tOrdering: CUDA '" << nlp_->options->GetString("linear_solver_sparse_ordering") << "': ";
     
+#else
+    // old code that uses Eigen to compute AMD
     Eigen::Map<SparseMatrixCSR> M(mat_csr_->m(),
-                                  mat_csr_->m(),
-                                  mat_csr_->nnz(),
-                                  mat_csr_->irowptr(),
-                                  mat_csr_->jcolind(),
-                                  mat_csr_->values());
-  
-    //
-    // AMD reordering to improve the sparsity of the factor
-    //
+                                   mat_csr_->m(),
+                                   mat_csr_->nnz(),
+                                   mat_csr_->irowptr(),
+                                   mat_csr_->jcolind(),
+                                   mat_csr_->values());
+    
     PermutationMatrix P;
     Ordering ordering;
-    //ordering(MMM_->selfadjointView<Eigen::Upper>(), P);
     ordering(M.selfadjointView<Eigen::Upper>(), P);
+    memcpy(P_h, P.indices().data(), m*sizeof(int));
+    ss_log << "\tOrdering: EIGEN AMD: ";
+#endif    
+    t.stop();
+    ss_log << std::fixed << std::setprecision(4) << t.getElapsedTime() << " sec\n";
 
-    t.stop(); printf("aaa ordering           took %.4f sec\n", t.getElapsedTime());
-
-    t.reset(); t.start();
-    const int* P_h = P.indices().data();
-    int PT_h[m];
+    //compute transpose/inverse permutation
+    index_type* PT_h = new index_type[m];
     for(int i=0; i<m; i++) {
       PT_h[P_h[i]] = i;
     }
-    t.stop(); printf("aaa ordering transpose took %.4f sec\n", t.getElapsedTime());
 
-    t.reset(); t.start();
+    //transfer permutation and its transpose to the device
     assert(nullptr == P_);
     cudaMalloc(&P_, m*sizeof(int));
     cudaMemcpy(P_, P_h, m*sizeof(int), cudaMemcpyHostToDevice);
@@ -208,13 +255,10 @@ bool hiopLinSolverCholCuSparse::initial_setup()
     assert(nullptr == PT_);
     cudaMalloc(&PT_, m*sizeof(int));
     cudaMemcpy(PT_, PT_h, m*sizeof(int), cudaMemcpyHostToDevice);
-    t.stop(); printf("aaa ordering copy dev  took %.4f sec\n", t.getElapsedTime());
-    
+    delete[] PT_h;
+
     // get permutation buffer size
     size_t buf_size;
-    assert(nullptr == buf_perm_h_);
-
-    t.reset(); t.start();
     ret = cusolverSpXcsrperm_bufferSizeHost(h_cusolver_,
                                             m,
                                             m,
@@ -226,37 +270,26 @@ bool hiopLinSolverCholCuSparse::initial_setup()
                                             P_h,
                                             &buf_size);
     assert(ret == CUSOLVER_STATUS_SUCCESS);
-    t.stop(); printf("aaa SpXcsrperm buffer  took %.4f sec\n", t.getElapsedTime());
     
-    buf_perm_h_ = new unsigned char[buf_size];
-    printf("buf_perm_h allocated on  host for  %d buf_size aaa\n", buf_size); fflush(stdout);
+    // temporary buffer needed for permutation purposes (on host)
+    unsigned char* buf_perm_h = new unsigned char[buf_size];
     
-    //permuted CSR arrays (on host)
+    //compute permuted CSR arrays (on host)
     int* rowptr_perm_h = new int[m+1];
-
-    printf("rowptr_perm_h done nnz %d aaa\n", nnz_); fflush(stdout);
-    
     int* colind_perm_h = new int[nnz_];
-    printf("have row and col arrays allocated on  host for  %d nnz aaa\n", nnz_); fflush(stdout);
     assert(rowptr_perm_h);
     assert(colind_perm_h);
     memcpy(rowptr_perm_h, mat_csr_->irowptr(), (m+1)*sizeof(int));
     memcpy(colind_perm_h, mat_csr_->jcolind(), nnz_*sizeof(int));
-
-    printf("starting iota for  %d nnz aaa\n", nnz_); fflush(stdout);
     
     //mapping (on host)
     int* map_h = new int[nnz_];
-
-    printf("map_h created for  %d nnz aaa\n", nnz_); fflush(stdout);
-    
     for(int i=0; i<nnz_; i++) {
       map_h[i] = i;
     }
 
-    printf("mapping on host created for %d nnz aaa\n", nnz_); fflush(stdout);
-    
-    t.reset(); t.start();
+    t.reset();
+    t.start();
     ret = cusolverSpXcsrpermHost(h_cusolver_,
                                  m,
                                  m,
@@ -267,12 +300,12 @@ bool hiopLinSolverCholCuSparse::initial_setup()
                                  P_h,
                                  P_h,
                                  map_h,
-                                 buf_perm_h_);
+                                 buf_perm_h);
     assert(ret == CUSOLVER_STATUS_SUCCESS);
-    t.stop(); printf("aaa SpXcsrperm        took %.4f sec\n", t.getElapsedTime());
-    
-    delete[] buf_perm_h_;
-    buf_perm_h_ = nullptr;
+    t.stop();
+    ss_log << "\tcsrpermHost: " << t.getElapsedTime() << " sec" << std::endl;
+    delete[] P_h;
+    delete[] buf_perm_h;
     
     assert(nullptr == map_nnz_perm_);
     cudaMalloc(&map_nnz_perm_, nnz_*sizeof(int));
@@ -320,18 +353,21 @@ bool hiopLinSolverCholCuSparse::initial_setup()
     cudaMalloc(&PT_, m*sizeof(int));
     cudaMemcpy(PT_, PT_h, m*sizeof(int), cudaMemcpyHostToDevice);
   }
-  
+
+  t.reset();
+  t.start();
   //
   //analysis -> pattern of L
   //
   ret = cusolverSpXcsrcholAnalysis(h_cusolver_, m, nnz_, mat_descr_, rowptr_, colind_, info_);
   assert(ret == CUSOLVER_STATUS_SUCCESS);
+  t.stop();
+  ss_log << "\tcsrcholAnalysis: " << t.getElapsedTime() << " sec" << std::endl;
 
   // TODO: this call as well as values_buf_ storage will be removed when the matrix is
   //going to reside on the device
-  //cudaMemcpy(values_buf_, MMM_->valuePtr(), nnz_*sizeof(double), cudaMemcpyHostToDevice);
   cudaMemcpy(values_buf_, mat_csr_->values(), nnz_*sizeof(double), cudaMemcpyHostToDevice);
-  
+
   // buffer size
   size_t internalData; // in BYTEs
   ret = cusolverSpDcsrcholBufferInfo(h_cusolver_, 
@@ -345,26 +381,26 @@ bool hiopLinSolverCholCuSparse::initial_setup()
                                      &internalData,
                                      &buf_fact_size_);
   assert(ret == CUSOLVER_STATUS_SUCCESS);
+
+  if(perf_report_) {
+    nlp_->log->printf(hovSummary, "CholCuSolver: initial setup times: \n%s", ss_log.str().c_str());
+  }
   
   cudaError_t ret_cu = cudaMalloc(&buf_fact_, sizeof(unsigned char)*buf_fact_size_); 
   assert(ret_cu == cudaSuccess);
+  
   return true;
 }
   
 /* returns -1 if zero or negative pivots are encountered */
 int hiopLinSolverCholCuSparse::matrixChanged()
 {
-
-  printf("aaa matrixChanged\n");
-  nlp_->runStats.linsolv.tmFactTime.start();
-
   size_type m = mat_csr_->m();
   assert(m == mat_csr_->n());
   assert(nnz_ == mat_csr_->nnz());
-  
-  hiopTimer t;
   cusolverStatus_t ret;
-  
+
+  hiopTimer t;
   if(nullptr == buf_fact_) {
 
     t.start();
@@ -374,20 +410,27 @@ int hiopLinSolverCholCuSparse::matrixChanged()
       return -1;
     }
     t.stop();
-    printf("initial setup took %.4f sec\n", t.getElapsedTime());
+    if(perf_report_) {
+
+      nlp_->log->printf(hovSummary,
+                        "CholCuSolver: initial setup total %.4f sec (includes device transfer)\n",
+                        t.getElapsedTime());
+    }
   }
 
-  t.reset(); t.start();
   // copy the nonzeros to the device
   // row pointers and col indexes do not change and need not be copied to device
   //
   // TODO: this call as well as values_buf_ storage will be removed when the matrix is
   //going to reside on the device
+  nlp_->runStats.linsolv.tmDeviceTransfer.start();
   cudaMemcpy(values_buf_, mat_csr_->values(), nnz_*sizeof(double), cudaMemcpyHostToDevice);
-  t.stop(); printf("fact hdcopy took %.4f sec\n", t.getElapsedTime());
+  nlp_->runStats.linsolv.tmDeviceTransfer.stop();
   
-  t.reset(); t.start();
+  nlp_->runStats.linsolv.tmFactTime.start();
+  //
   //permute nonzeros
+  //
 #if 1  
   cusparseDgthr(h_cusparse_, nnz_, values_buf_, values_, map_nnz_perm_, CUSPARSE_INDEX_BASE_ZERO);
 #else
@@ -405,9 +448,7 @@ int hiopLinSolverCholCuSparse::matrixChanged()
 
   cusparseGather(h_cusparse_, vecY, vecX);
 #endif
-  t.stop(); printf("fact nz perm took %.4f sec\n", t.getElapsedTime());
-
-  t.reset(); t.start();
+  
   //
   //cuSOLVER factorization
   //
@@ -421,18 +462,22 @@ int hiopLinSolverCholCuSparse::matrixChanged()
                                  info_, 
                                  buf_fact_);
   if(ret != CUSOLVER_STATUS_SUCCESS) {
-    // maybe regularization can help -> TODO: look into CUSOLVER return codes
+    // this does not return error when the factorization fails numerically
     nlp_->log->printf(hovWarning, 
                       "hiopLinSolverCholCuSparse: factorization failed: CUSOLVER_STATUS=%d.\n",
                       ret);
     return -1;
   }
+  nlp_->runStats.linsolv.tmFactTime.stop();
 
-  const double zero_piv_tol = 1e-16;
+  //
+  // check for zero or negative pivots
+  //
+  nlp_->runStats.linsolv.tmInertiaComp.start();
+  const double zero_piv_tol = 2e-16;
   int position = -1;
   ret = cusolverSpDcsrcholZeroPivot(h_cusolver_, info_, zero_piv_tol, &position);
-
-  t.stop(); printf("fact num  took %.4f sec\n", t.getElapsedTime());
+  nlp_->runStats.linsolv.tmInertiaComp.stop();
   
   if(position>=0) {
     nlp_->log->printf(hovWarning, 
@@ -440,11 +485,7 @@ int hiopLinSolverCholCuSparse::matrixChanged()
                       position,
                       zero_piv_tol);
     return -1;
-  } else {
-    return 0;
-  }
-
-  nlp_->runStats.linsolv.tmFactTime.stop();
+  } 
   return 0;
 }
 
@@ -453,7 +494,6 @@ bool hiopLinSolverCholCuSparse::solve(hiopVector& x_in)
   hiopTimer t;
   cusolverStatus_t ret;
 
-  nlp_->runStats.linsolv.tmTriuSolves.start(); 
   int m = mat_csr_->m();
   assert(m == x_in.get_size());
 
@@ -464,33 +504,28 @@ bool hiopLinSolverCholCuSparse::solve(hiopVector& x_in)
     cudaMalloc(&rhs_buf2_, m*sizeof(double));
   }
 
-  t.reset(); t.start();
+  nlp_->runStats.linsolv.tmDeviceTransfer.start();
   cudaMemcpy(rhs_buf1_, x_in.local_data(), m*sizeof(double), cudaMemcpyHostToDevice);
-  //t.stop(); printf("solve hdcpy %.4f\n", t.getElapsedTime());
+  nlp_->runStats.linsolv.tmDeviceTransfer.stop();
 
-  t.reset(); t.start();
+  nlp_->runStats.linsolv.tmTriuSolves.start(); 
   // b = P*b
   cusparseDgthr(h_cusparse_, m, rhs_buf1_, rhs_buf2_, P_, CUSPARSE_INDEX_BASE_ZERO);
-  //t.stop(); printf("solve perm1 %.4f\n", t.getElapsedTime());
-  
-  t.reset(); t.start();
+
   //
   //solve -> two triangular solves
   //
   ret = cusolverSpDcsrcholSolve(h_cusolver_, m, rhs_buf2_, rhs_buf1_, info_, buf_fact_);
-  //t.stop(); printf("solve solve %.4f\n", t.getElapsedTime());
 
-  t.reset(); t.start();
+
   //x = P'*x
   cusparseDgthr(h_cusparse_, m, rhs_buf1_, rhs_buf2_, PT_, CUSPARSE_INDEX_BASE_ZERO);
-  //t.stop(); printf("solve perm2 %.4f\n", t.getElapsedTime());
-
-  t.reset(); t.start();
+  nlp_->runStats.linsolv.tmTriuSolves.stop();
+  
   //transfer to host
+  nlp_->runStats.linsolv.tmDeviceTransfer.start();
   cudaMemcpy(x_in.local_data(), rhs_buf2_, m*sizeof(double), cudaMemcpyDeviceToHost);
-  //t.stop(); printf("solve dhcopy %.4f\n", t.getElapsedTime());
- 
-  nlp_->runStats.linsolv.tmTriuSolves.stop(); 
+  nlp_->runStats.linsolv.tmDeviceTransfer.stop();
 
   if(ret != CUSOLVER_STATUS_SUCCESS) {
     nlp_->log->printf(hovWarning,

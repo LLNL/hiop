@@ -55,28 +55,18 @@
 #ifndef HIOP_LINSOLVER_CHOL_CUSP
 #define HIOP_LINSOLVER_CHOL_CUSP
 
-#ifndef AAA //HIOP_USE_CUDA
-
 #include "hiopLinSolver.hpp"
+
+#ifdef HIOP_USE_CUDA
 
 #include <cuda_runtime.h>
 #include <cusparse.h>
 #include <cusolverSp.h>
 #include <cusolverSp_LOWLEVEL_PREVIEW.h> 
 
-#include "/home/petra1/work/installs/eigen-3.3.9/_install/include/eigen3/Eigen/Core"
-#include "/home/petra1/work/installs/eigen-3.3.9/_install/include/eigen3/Eigen/Sparse"
-
 #include "hiopKKTLinSysSparseCondensed.hpp"
 namespace hiop
 {
-
-// type alias
-using Scalar = double;
-using SparseMatrixCSC = Eigen::SparseMatrix<Scalar, Eigen::StorageOptions::ColMajor>;
-using SparseMatrixCSR = Eigen::SparseMatrix<Scalar, Eigen::StorageOptions::RowMajor>;
-using Triplet = Eigen::Triplet<Scalar>;
-//using VectorR = Eigen::Matrix<Scalar, Eigen::Dynamic, 1>; 
 
 /**
  * Wrapper class for cusolverSpXcsrchol Cholesky solver.
@@ -107,6 +97,14 @@ public:
 protected:
   /// performs initial analysis, sparsity permutation, and rescaling
   bool initial_setup();
+
+  /// computes the sparsity-promoting ordering based on the user options (device path)
+  bool do_symb_analysis(const size_type n,
+                        const size_type nnz,
+                        const index_type* rowptr,
+                        const index_type* colind,
+                        const double* value,
+                        index_type* perm);
 protected:
   /// Internal handle required by cuSPARSE functions
   cusparseHandle_t h_cusparse_;
@@ -140,8 +138,6 @@ protected:
   int* P_;
   /// Transpose or inverse of the above permutation (on device)
   int* PT_;
-  /// Buffer needed for permutation purposes (on host)
-  unsigned char * buf_perm_h_;
   /// Permutation map for nonzeros (on device)
   int* map_nnz_perm_;
   //TODO: temporary -> use the member matrix obj from the parent class

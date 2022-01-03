@@ -783,7 +783,7 @@ void hiopOptionsNLP::register_options()
                         "Type of KKT linear system used internally: decided by HiOp 'auto' (default), "
                         "the more compact 'XYcYd, the more stable 'XDYcYd', the full-size non-symmetric "
                         "'full', or the condensed that uses Cholesky (available when no eq. constraints "
-                        "are present. The last four options are only available with "
+                        "are present). The last four options are available only with "
                         "'Hessian=analyticalExact'.");
   }
 
@@ -813,6 +813,21 @@ void hiopOptionsNLP::register_options()
                         "Selects among MA57, PARDISO and STRUMPACK for the sparse linear solves.");
   }
 
+  // choose sparsity permutation (to reduce nz in the factors). This option is available only when using
+  // Cholesky linear solvers
+  // - metis: use CUDA function csrmetisnd, which is a wrapper of METIS_NodeND; requires linking with
+  // libmetis_static.a (64-bit metis-5.1.0) (Host execution)
+  // - symamd: use sym. approx. min. degree algorithm as implemented by CUDA csrsymamd function
+  // (Host execution)
+  // - symrcm: use symmetric reverse Cuthill-McKee as implemented by CUDA csrsymrcm (Host execution)
+  vector<string> range = { "metis", "symamd", "symrcm"};
+  register_str_option("linear_solver_sparse_ordering",
+                      range[1], //default is AMD since metis seems to crash sometimes
+                      range,
+                      "permutation to promote sparsity in the (Chol) factorization: 'metis' based on a "
+                      "wrapper of METIS_NodeND, 'symamd' (default) and 'symrcm' are the well-known approx. "
+                      "min. degree and reverse Cuthill-McKee orderings in their symmetric form.");
+  
   //linsol_mode -> mostly related to magma and MDS linear algebra
   {
     vector<string> range(3); range[0]="stable"; range[1]="speculative"; range[2]="forcequick";

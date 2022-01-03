@@ -50,56 +50,14 @@
 #define HIOP_KKTLINSYSSPARSECONDENSED
 
 #include "hiopKKTLinSysSparse.hpp"
-#include "/home/petra1/work/installs/eigen-3.3.9/_install/include/eigen3/Eigen/Core"
-#include "/home/petra1/work/installs/eigen-3.3.9/_install/include/eigen3/Eigen/Sparse"
-// type alias
-using Scalar = double;
-using SparseMatrixCSC = Eigen::SparseMatrix<Scalar, Eigen::StorageOptions::ColMajor>;
-using SparseMatrixCSR = Eigen::SparseMatrix<Scalar, Eigen::StorageOptions::RowMajor>;
-using Triplet = Eigen::Triplet<Scalar>;
-
-/*
- * Solves a sparse KKT linear system by exploiting the sparse structure, namely reduces 
- * the so-called XDYcYd KKT system 
- * [  H  +  Dx    0    Jd^T ] [ dx]   [ rx_tilde ]
- * [    0         Dd   -I   ] [ dd] = [ rd_tilde ]
- * [    Jd       -I     0   ] [dyd]   [   ryd    ]
- * into the condensed KKT system
- * (H+Dx+Jd^T*Dd*Jd)dx = rx_tilde + Jd^T*Dd*ryd + Jd^T*rd_tilde
- * dd = Jd*dx - ryd
- * dyd = Dd*dd - rd_tilde = Dd*Jd*dx - Dd*ryd - rd_tilde
-
- * Here Jd is sparse Jacobians for inequalities, H is a sparse Hessian matrix, Dx is 
- * log-barrier diagonal corresponding to x variables, Dd is the log-barrier diagonal 
- * corresponding to the inequality slacks, and I is the identity matrix. 
- *
- * @note: the NLP is assumed to have no equality constraints (or have been relaxed to 
- * two-sided inequality constraints).
- *
- *
- * Dual regularization may be not enforced as it requires repeated divisions that are 
- * to round-off error accumulation, but when it is enforced, the regularized XDYcYd KKT 
- * system
- * [  H+Dx+delta_wx*I         0         Jd^T     ] [ dx]   [ rx_tilde ]
- * [          0         Dd+delta_wd*I   -I       ] [ dd] = [ rd_tilde ]
- * [          Jd             -I         -delta_cd] [dyd]   [   ryd    ]
- * is solved as:
- * (notation) Dd2 = [ (Dd+delta_wd*I)^{-1} + delta_cd*I ]^{-1}
- *
- * dd = Jd*dx - delta_cd*dyd - ryd
- *
- * From (Dd+delta_wd*I)*dd - dyd = rd_tilde one can write
- *   ->   (Dd+delta_wd*I)*(Jd*dx - delta_cd*dyd - ryd) - dyd = rd_tilde
- *   ->   (I+ delta_cd*(Dd+delta_wd*I)) dyd = (Dd+delta_wd*I)*(Jd*dx - ryd) - rd_tilde 
- * dyd = (I+ delta_cd*(Dd+delta_wd*I))^{-1} [ (Dd+delta_wd*I)*(Jd*dx - ryd) - rd_tilde ]
- *
- * (H+Dx+delta_wx*I + Jd^T * Dd2 * Jd) dx = rx_tilde + Jd^T*Dd2*(Dd+delta_wd*I)*ryd +  Jd^T*Dd2*rd_tilde
- */
+#include "hiopMatrixSparseTriplet.hpp"
 
 namespace hiop
 {
 
-#include "hiopMatrixSparseTriplet.hpp"
+/**
+ * Wrapper class for CSR (to be moved and "upgraded" to hiopMatrixSparseCSR)
+ */
 class hiopMatrixSparseCSRStorage
 {
 public:
@@ -194,7 +152,44 @@ protected:
   index_type* jcolind_;
   double* values_;
 };
-  
+
+/**
+ * Solves a sparse KKT linear system by exploiting the sparse structure, namely reduces 
+ * the so-called XDYcYd KKT system 
+ * [  H  +  Dx    0    Jd^T ] [ dx]   [ rx_tilde ]
+ * [    0         Dd   -I   ] [ dd] = [ rd_tilde ]
+ * [    Jd       -I     0   ] [dyd]   [   ryd    ]
+ * into the condensed KKT system
+ * (H+Dx+Jd^T*Dd*Jd)dx = rx_tilde + Jd^T*Dd*ryd + Jd^T*rd_tilde
+ * dd = Jd*dx - ryd
+ * dyd = Dd*dd - rd_tilde = Dd*Jd*dx - Dd*ryd - rd_tilde
+
+ * Here Jd is sparse Jacobians for inequalities, H is a sparse Hessian matrix, Dx is 
+ * log-barrier diagonal corresponding to x variables, Dd is the log-barrier diagonal 
+ * corresponding to the inequality slacks, and I is the identity matrix. 
+ *
+ * @note: the NLP is assumed to have no equality constraints (or have been relaxed to 
+ * two-sided inequality constraints).
+ *
+ *
+ * Dual regularization may be not enforced as it requires repeated divisions that are 
+ * to round-off error accumulation, but when it is enforced, the regularized XDYcYd KKT 
+ * system
+ * [  H+Dx+delta_wx*I         0         Jd^T     ] [ dx]   [ rx_tilde ]
+ * [          0         Dd+delta_wd*I   -I       ] [ dd] = [ rd_tilde ]
+ * [          Jd             -I         -delta_cd] [dyd]   [   ryd    ]
+ * is solved as:
+ * (notation) Dd2 = [ (Dd+delta_wd*I)^{-1} + delta_cd*I ]^{-1}
+ *
+ * dd = Jd*dx - delta_cd*dyd - ryd
+ *
+ * From (Dd+delta_wd*I)*dd - dyd = rd_tilde one can write
+ *   ->   (Dd+delta_wd*I)*(Jd*dx - delta_cd*dyd - ryd) - dyd = rd_tilde
+ *   ->   (I+ delta_cd*(Dd+delta_wd*I)) dyd = (Dd+delta_wd*I)*(Jd*dx - ryd) - rd_tilde 
+ * dyd = (I+ delta_cd*(Dd+delta_wd*I))^{-1} [ (Dd+delta_wd*I)*(Jd*dx - ryd) - rd_tilde ]
+ *
+ * (H+Dx+delta_wx*I + Jd^T * Dd2 * Jd) dx = rx_tilde + Jd^T*Dd2*(Dd+delta_wd*I)*ryd +  Jd^T*Dd2*rd_tilde
+ */
 class hiopKKTLinSysCondensedSparse : public hiopKKTLinSysCompressedSparseXDYcYd
 {
 public:
@@ -209,7 +204,6 @@ public:
   virtual bool solveCompressed(hiopVector& rx, hiopVector& rd, hiopVector& ryc, hiopVector& ryd,
                                hiopVector& dx, hiopVector& dd, hiopVector& dyc, hiopVector& dyd);
 protected:
-  SparseMatrixCSR* compute_linsys_eigen(const double& dx);
 
   /// Helper method for allocating and precomputing symbolically JacD'*Dd*JacD + H + Dx + delta_wx*I
   hiopMatrixSparseCSRStorage* add_matrices_init(hiopMatrixSparseCSRStorage& JtDiagJ,
