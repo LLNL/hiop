@@ -9,11 +9,12 @@ using namespace hiop;
 
 static bool self_check(size_type n, double obj_value, const bool inertia_free);
 
-static bool parse_arguments(int argc, char **argv, size_type& n, bool& self_check, bool& inertia_free)
+static bool parse_arguments(int argc,
+                            char **argv,
+                            size_type& n,
+                            bool& self_check,
+                            bool& inertia_free)
 {
-
-  //  printf("%s    %s \n", argv[1], argv[2]);
-
   self_check = false;
   n = 3;
   inertia_free = false;
@@ -77,7 +78,8 @@ static void usage(const char* exeName)
   printf("Arguments:\n");
   printf("  'problem_size': number of decision variables [optional, default is 50]\n");
   printf("  '-inertiafree': indicate if inertia free approach should be used [optional]\n");
-  printf("  '-selfcheck': compares the optimal objective with a previously saved value for the problem specified by 'problem_size'. [optional]\n");
+  printf("  '-selfcheck': compares the optimal objective with a previously saved value for the "
+         "problem specified by 'problem_size'. [optional]\n");
 }
 
 
@@ -107,6 +109,7 @@ int main(int argc, char **argv)
   bool rankdefic_Jac_ineq = true;
   double scal_neg_obj = 0.1;
 
+  //first test
   {
     Ex7 nlp_interface(n,convex_obj,rankdefic_Jac_eq,rankdefic_Jac_ineq, scal_neg_obj);
     hiopNlpSparse nlp(nlp_interface);
@@ -115,9 +118,6 @@ int main(int argc, char **argv)
     if(inertia_free) {
       nlp.options->SetStringValue("fact_acceptor", "inertia_free");
     }
-//  nlp.options->SetIntegerValue("max_iter", 100);
-//  nlp.options->SetNumericValue("kappa1", 1e-8);
-//  nlp.options->SetNumericValue("kappa2", 1e-8);
 
     hiopAlgFilterIPMNewton solver(&nlp);
     hiopSolveStatus status = solver.run();
@@ -157,9 +157,9 @@ int main(int argc, char **argv)
 #endif
 
     nlp.options->SetStringValue("KKTLinsys", "condensed");
-    if(inertia_free) {
-      nlp.options->SetStringValue("fact_acceptor", "inertia_free");
-    }
+    //if(inertia_free) {
+    //  nlp.options->SetStringValue("fact_acceptor", "inertia_free");
+    //}
 
     hiopAlgFilterIPMNewton solver(&nlp);
     hiopSolveStatus status = solver.run();
@@ -168,8 +168,7 @@ int main(int argc, char **argv)
 
     if(status<0) {
       if(rank==0) {
-        printf("solver returned negative solve status with hiopNlpSparseIneq: "
-               "%d (with objective is %18.12e)\n",
+        printf("solver returned negative solve status with hiopNlpSparseIneq: %d (obj. is %18.12e)\n",
                status,
                obj_value);
       }

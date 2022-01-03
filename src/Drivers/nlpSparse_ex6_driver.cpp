@@ -9,16 +9,13 @@ using namespace hiop;
 
 static bool self_check(size_type n, double obj_value);
 
-#include <cuda_runtime.h>
-#include <cusparse.h>
-#include <cusolverSp.h>
-#include <cusolverSp_LOWLEVEL_PREVIEW.h>
-
-static bool parse_arguments(int argc, char **argv, size_type& n, double &scal,  bool& self_check, bool& use_pardiso)
+static bool parse_arguments(int argc,
+                            char **argv,
+                            size_type& n,
+                            double &scal,
+                            bool& self_check,
+                            bool& use_pardiso)
 {
-
-  //  printf("%s    %s \n", argv[1], argv[2]);
-
   self_check = false;
   use_pardiso = false;
   n = 3;
@@ -78,36 +75,16 @@ static void usage(const char* exeName)
   printf("  '$ %s problem_size scal_fact -selfcheck'\n", exeName);
   printf("Arguments:\n");
   printf("  'problem_size': number of decision variables [optional, default is 50]\n");
-  printf("  'scal_fact': scaling factor used for objective function and constraints [optional, default is 1.0]\n");
+  printf("  'scal_fact': scaling factor used for objective function and constraints [optional, "
+         "default is 1.0]\n");
   printf("  '-pardiso': use pardiso as the linear solver [optional]\n");
-  printf("  '-selfcheck': compares the optimal objective with a previously saved value for the problem specified by 'problem_size'. [optional]\n");
+  printf("  '-selfcheck': compares the optimal objective with a previously saved value for the "
+         "problem specified by 'problem_size'. [optional]\n");
 }
 
 
 int main(int argc, char **argv)
 {
-  /// Internal handle required by cuSPARSE functions
-  cusparseHandle_t h_cusparse_;
-  /// Internal handle required by cusolverSpXcsrchol
-  cusolverSpHandle_t h_cusolver_;
-  /// Internal struct required by cusolverSpXcsrchol
-  csrcholInfo_t info_;
-
-  cusolverStatus_t ret;
-  cusparseStatus_t ret_sp;
-  ret_sp = cusparseCreate(&h_cusparse_);
-  
-  printf("%d error\n", ret_sp);
-  
-  //assert(ret_sp == CUSPARSE_STATUS_SUCCESS);
-  
-  ret = cusolverSpCreate(&h_cusolver_);
-  assert(ret == CUSOLVER_STATUS_SUCCESS);
-  
-  
-
-
-
   int rank=0;
 #ifdef HIOP_USE_MPI
   MPI_Init(&argc, &argv);
@@ -128,22 +105,21 @@ int main(int argc, char **argv)
   if(!parse_arguments(argc, argv, n, scal, selfCheck, use_pardiso)) { usage(argv[0]); return 1;}
 
   Ex6 nlp_interface(n, scal);
-  hiopNlpSparseIneq nlp(nlp_interface); //TODO: reverse to hiopNlpSparse; maybe clean up the code->comments
+  hiopNlpSparse nlp(nlp_interface); 
   nlp.options->SetStringValue("Hessian", "analytical_exact");
-  nlp.options->SetStringValue("duals_update_type", "linear"); // "lsq" or "linear" --> lsq hasn't been implemented yet.
-                                                            // it will be forced to use "linear" internally.
-//  nlp.options->SetStringValue("duals_init", "zero"); // "lsq" or "zero"
+  
+  // "lsq" or "linear" 
+  nlp.options->SetStringValue("duals_update_type", "linear"); 
+  //nlp.options->SetStringValue("duals_init", "zero"); // "lsq" or "zero"
+  
   nlp.options->SetStringValue("compute_mode", "cpu");
-//  nlp.options->SetStringValue("compute_mode", "hybrid");
+  //nlp.options->SetStringValue("compute_mode", "hybrid");
   nlp.options->SetStringValue("KKTLinsys", "xdycyd");
-//  nlp.options->SetStringValue("KKTLinsys", "full");
-//  nlp.options->SetStringValue("write_kkt", "yes");
+  //nlp.options->SetStringValue("KKTLinsys", "full");
+  //nlp.options->SetStringValue("write_kkt", "yes");
 
-//  nlp.options->SetIntegerValue("max_iter", 100);
-//  nlp.options->SetNumericValue("kappa1", 1e-8);
-//  nlp.options->SetNumericValue("kappa2", 1e-8);
   nlp.options->SetNumericValue("mu0", 0.1);
-//  nlp.options->SetStringValue("scaling_type", "none");
+  //nlp.options->SetStringValue("scaling_type", "none");
 
   if(use_pardiso) {
     nlp.options->SetStringValue("linear_solver_sparse", "pardiso");
@@ -152,9 +128,12 @@ int main(int argc, char **argv)
   hiopSolveStatus status = solver.run();
 
   double obj_value = solver.getObjective();
-
   if(status<0) {
-    if(rank==0) printf("solver returned negative solve status: %d (with objective is %18.12e)\n", status, obj_value);
+    if(rank==0) {
+      printf("solver returned negative solve status: %d (obj. is %18.12e)\n",
+             status,
+             obj_value);
+    }
     return -1;
   }
 

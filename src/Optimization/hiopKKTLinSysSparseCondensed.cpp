@@ -166,12 +166,22 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   // TODO should have same code for different compute modes (remove is_cusolver_on)
   
   bool is_cusolver_on = nlp_->options->GetString("compute_mode") == "cpu" ? false : true;
+#ifndef HIOP_USE_CUDA
+  if(is_cusolver_on) {
+    nlp_->log->printf(hovWarning,
+                      "hiopKKTLinSysCondensedSparse: HiOp was built without CUDA and will use a CPU "
+                      "linear solver (MA57)\n");
+    is_cusolver_on = false;
+  }
+#endif  
   if(is_cusolver_on) {
     linSys_ = determine_and_create_linsys(nx, nineq, M_condensed_->nnz());
-    
+
+#ifdef HIOP_USE_CUDA    
     hiopLinSolverCholCuSparse* linSys_cusolver = dynamic_cast<hiopLinSolverCholCuSparse*>(linSys_);
     assert(linSys_cusolver);
     linSys_cusolver->set_linsys_mat(M_condensed_);
+#endif    
     
   } else {
     //compute mode cpu -> use update MA57 linear solver's matrix
