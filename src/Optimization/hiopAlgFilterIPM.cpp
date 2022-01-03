@@ -1397,8 +1397,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
   assert(kkt != NULL);
   kkt->set_PD_perturb_calc(&pd_perturb_);
 
-  if(fact_acceptor_)
-  {
+  if(fact_acceptor_) {
     delete fact_acceptor_;
     fact_acceptor_ = nullptr;
   }
@@ -1518,6 +1517,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
     //this will cache the primal infeasibility norm for (re)use in the dual updating
     double infeas_nrm_trial;
 
+    nlp->runStats.kkt.start_optimiz_iteration();
     //
     // this is the linear solve (computeDirections) loop that iterates at most two times
     //
@@ -1525,7 +1525,6 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
     // linear solve with safe mode (=addtl accuracy and stability) off failed; second times with safe mode on
     //  - one time when the linear solve with the safe mode off is successfull (descent search direction)
     //
-
     {
       if(linsol_forcequick) {
         linsol_safe_mode_on = false;
@@ -1544,16 +1543,11 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 
     for(int linsolve=1; linsolve<=2; ++linsolve) {
 
-      nlp->runStats.kkt.start_optimiz_iteration();
-
       kkt->set_safe_mode(linsol_safe_mode_on);
       //
       //update the Hessian and kkt system; usually a matrix factorization occurs
       //
       if(!kkt->update(it_curr, _grad_f, _Jac_c, _Jac_d, _Hess_Lagr)) {
-
-        nlp->runStats.kkt.end_optimiz_iteration();
-
         if(linsol_safe_mode_on) {
           nlp->log->write("Unrecoverable error in step computation (factorization) [1]. Will exit here.",
                           hovError);
@@ -1581,7 +1575,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
         }
       } // end of if(!kkt->update(it_curr, _grad_f, _Jac_c, _Jac_d, _Hess_Lagr))
       
-      nlp->runStats.kkt.end_optimiz_iteration();
+      
       
       if(nlp->options->GetString("fact_acceptor") == "inertia_correction"){
         if(!compute_search_direction(kkt, linsol_safe_mode_on, linsol_safe_mode_lastiter, linsol_forcequick, iter_num)) {
@@ -1593,8 +1587,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
         }         
       }
 
-      nlp->runStats.kkt.start_optimiz_iteration();
-
+      nlp->runStats.kkt.end_optimiz_iteration();
       if(perf_report_kkt_) {
         nlp->log->printf(hovSummary, "%s", nlp->runStats.kkt.get_summary_last_iter().c_str());
       }
@@ -1803,7 +1796,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
     iter_num++;
     nlp->runStats.nIter=iter_num;
 
-    // fr problem has already updated dual, slacks and NLP fynctuins
+    // fr problem has already updated dual, slacks and NLP functions
     if(!use_fr) {
       // update and adjust the duals
       // this needs to be done before evalNlp_derivOnly so that the user's NLP functions
@@ -2214,14 +2207,10 @@ bool hiopAlgFilterIPMNewton::compute_search_direction(hiopKKTLinSys* kkt,
                                                       const bool linsol_forcequick,
                                                       const int iter_num)
 {
-  nlp->runStats.kkt.start_optimiz_iteration();
-
   //
   // solve for search directions
   //
   if(!kkt->computeDirections(resid, dir)) {
-
-    nlp->runStats.kkt.start_optimiz_iteration();
 
     if(linsol_safe_mode_on) {
       nlp->log->write("Unrecoverable error in step computation (solve)[1]. Will exit here.", hovError);
@@ -2249,7 +2238,6 @@ bool hiopAlgFilterIPMNewton::compute_search_direction(hiopKKTLinSys* kkt,
   //support inertia calculation; this case will be handled later on in this loop
   //( //! todo nopiv inertia calculation ))
 
-  nlp->runStats.kkt.end_optimiz_iteration();
   return true;
 }
 
@@ -2259,7 +2247,6 @@ bool hiopAlgFilterIPMNewton::compute_search_direction_inertia_free(hiopKKTLinSys
                                                                    const bool linsol_forcequick,
                                                                    const int iter_num)
 {
-  nlp->runStats.kkt.start_optimiz_iteration();
   size_type num_refact = 0;
   const size_t max_refactorizaion = 10;
 
@@ -2269,8 +2256,6 @@ bool hiopAlgFilterIPMNewton::compute_search_direction_inertia_free(hiopKKTLinSys
     // solve for search directions
     //
     if(!kkt->computeDirections(resid, dir)) {
-
-      nlp->runStats.kkt.start_optimiz_iteration();
 
       if(linsol_safe_mode_on) {
         nlp->log->write("Unrecoverable error in step computation (solve)[1]. Will exit here.", hovError);
