@@ -105,6 +105,15 @@ protected:
                         const index_type* colind,
                         const double* value,
                         index_type* perm);
+  
+  /** 
+   * Permutes an array accordingly to given permutation. All pointers are on device and
+   * the method executes on device.
+   */
+  bool permute_vec(int n,
+                   /*const*/ double* vec_in,
+                   /*const*/ index_type* permutation,
+                   double* vec_out);
 protected:
   /// Internal handle required by cuSPARSE functions
   cusparseHandle_t h_cusparse_;

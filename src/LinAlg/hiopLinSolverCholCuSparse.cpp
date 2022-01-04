@@ -429,25 +429,10 @@ int hiopLinSolverCholCuSparse::matrixChanged()
   
   nlp_->runStats.linsolv.tmFactTime.start();
   //
-  //permute nonzeros
+  //permute nonzeros in values_buf_ into values_ accordingly to map_nnz_perm_
   //
-#if 1  
-  cusparseDgthr(h_cusparse_, nnz_, values_buf_, values_, map_nnz_perm_, CUSPARSE_INDEX_BASE_ZERO);
-#else
-  //the permuted array of nonzeros
-  cusparseSpVecDescr_t values_descr;
-  //original nonzeros
-  cusparseDnVecDescr_t values_buf;
-  
-  // Create sparse vector
-  cusparseCreateSpVec(&vecX, nnz_, nnz_, map_nnz_perm_, values_,
-                      CUSPARSE_INDEX_32I,
-                      CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F);
-  // Create dense vector 
-  cusparseCreateDnVec(&vecY, nnz_, values_buf_, CUDA_R_32F);
-
-  cusparseGather(h_cusparse_, vecY, vecX);
-#endif
+  //cusparseDgthr(h_cusparse_, nnz_, values_buf_, values_, map_nnz_perm_, CUSPARSE_INDEX_BASE_ZERO);
+  permute_vec(nnz_, values_buf_, map_nnz_perm_, values_);
   
   //
   //cuSOLVER factorization
@@ -510,16 +495,17 @@ bool hiopLinSolverCholCuSparse::solve(hiopVector& x_in)
 
   nlp_->runStats.linsolv.tmTriuSolves.start(); 
   // b = P*b
-  cusparseDgthr(h_cusparse_, m, rhs_buf1_, rhs_buf2_, P_, CUSPARSE_INDEX_BASE_ZERO);
+  //cusparseDgthr(h_cusparse_, m, rhs_buf1_, rhs_buf2_, P_, CUSPARSE_INDEX_BASE_ZERO);
+  permute_vec(m, rhs_buf1_, P_, rhs_buf2_);
 
   //
   //solve -> two triangular solves
   //
   ret = cusolverSpDcsrcholSolve(h_cusolver_, m, rhs_buf2_, rhs_buf1_, info_, buf_fact_);
 
-
   //x = P'*x
-  cusparseDgthr(h_cusparse_, m, rhs_buf1_, rhs_buf2_, PT_, CUSPARSE_INDEX_BASE_ZERO);
+  //cusparseDgthr(h_cusparse_, m, rhs_buf1_, rhs_buf2_, PT_, CUSPARSE_INDEX_BASE_ZERO);
+  permute_vec(m, rhs_buf1_, PT_, rhs_buf2_);
   nlp_->runStats.linsolv.tmTriuSolves.stop();
   
   //transfer to host
@@ -536,7 +522,35 @@ bool hiopLinSolverCholCuSparse::solve(hiopVector& x_in)
 
   return true;
 }
+
+bool hiopLinSolverCholCuSparse::permute_vec(int n, double* vec_in, index_type* perm, double* vec_out)
+{
+  cusparseStatus_t ret;
+   //the descr of the array going to be permuted
+  cusparseSpVecDescr_t v_out;
+  //original nonzeros
+  cusparseDnVecDescr_t v_in;
   
+  // Create sparse vector (output)
+  ret = cusparseCreateSpVec(&v_out,
+                            n,
+                            n,
+                            perm,
+                            vec_out,
+                            CUSPARSE_INDEX_32I,
+                            CUSPARSE_INDEX_BASE_ZERO,
+                            CUDA_R_64F);
+  assert(CUSPARSE_STATUS_SUCCESS == ret);
+  
+  // Create dense vector (input)
+  ret = cusparseCreateDnVec(&v_in, n, vec_in, CUDA_R_64F);
+  assert(CUSPARSE_STATUS_SUCCESS == ret);
+  
+  ret = cusparseGather(h_cusparse_, v_in, v_out);
+  assert(CUSPARSE_STATUS_SUCCESS == ret);
+  return (CUSPARSE_STATUS_SUCCESS == ret);
+}
+
 } // end of namespace
 
 #endif //HIOP_USE_CUDA
