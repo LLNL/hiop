@@ -431,7 +431,6 @@ int hiopLinSolverCholCuSparse::matrixChanged()
   //
   //permute nonzeros in values_buf_ into values_ accordingly to map_nnz_perm_
   //
-  //cusparseDgthr(h_cusparse_, nnz_, values_buf_, values_, map_nnz_perm_, CUSPARSE_INDEX_BASE_ZERO);
   permute_vec(nnz_, values_buf_, map_nnz_perm_, values_);
   
   //
@@ -495,7 +494,6 @@ bool hiopLinSolverCholCuSparse::solve(hiopVector& x_in)
 
   nlp_->runStats.linsolv.tmTriuSolves.start(); 
   // b = P*b
-  //cusparseDgthr(h_cusparse_, m, rhs_buf1_, rhs_buf2_, P_, CUSPARSE_INDEX_BASE_ZERO);
   permute_vec(m, rhs_buf1_, P_, rhs_buf2_);
 
   //
@@ -504,7 +502,6 @@ bool hiopLinSolverCholCuSparse::solve(hiopVector& x_in)
   ret = cusolverSpDcsrcholSolve(h_cusolver_, m, rhs_buf2_, rhs_buf1_, info_, buf_fact_);
 
   //x = P'*x
-  //cusparseDgthr(h_cusparse_, m, rhs_buf1_, rhs_buf2_, PT_, CUSPARSE_INDEX_BASE_ZERO);
   permute_vec(m, rhs_buf1_, PT_, rhs_buf2_);
   nlp_->runStats.linsolv.tmTriuSolves.stop();
   
@@ -526,7 +523,8 @@ bool hiopLinSolverCholCuSparse::solve(hiopVector& x_in)
 bool hiopLinSolverCholCuSparse::permute_vec(int n, double* vec_in, index_type* perm, double* vec_out)
 {
   cusparseStatus_t ret;
-   //the descr of the array going to be permuted
+#if CUSPARSE_VERSION >= 11700
+  //the descr of the array going to be permuted
   cusparseSpVecDescr_t v_out;
   //original nonzeros
   cusparseDnVecDescr_t v_in;
@@ -548,6 +546,12 @@ bool hiopLinSolverCholCuSparse::permute_vec(int n, double* vec_in, index_type* p
   
   ret = cusparseGather(h_cusparse_, v_in, v_out);
   assert(CUSPARSE_STATUS_SUCCESS == ret);
+  
+#else //CUSPARSE_VERSION < 11700
+  
+  ret = cusparseDgthr(h_cusparse_, n, vec_in, vec_out, perm, CUSPARSE_INDEX_BASE_ZERO);
+  assert(CUSPARSE_STATUS_SUCCESS == ret);
+#endif 
   return (CUSPARSE_STATUS_SUCCESS == ret);
 }
 
