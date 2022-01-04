@@ -184,7 +184,7 @@ int main(int argc, char **argv)
   double* x       = hiop::LinearAlgebraFactory::create_raw_array(mem_space,n_vars);
   double* zl      = hiop::LinearAlgebraFactory::create_raw_array(mem_space,n_vars);
   double* zu      = hiop::LinearAlgebraFactory::create_raw_array(mem_space,n_vars);
-  double* lambdas = hiop::LinearAlgebraFactory::create_raw_array(mem_space,n_vars);
+  double* lambdas = hiop::LinearAlgebraFactory::create_raw_array(mem_space,n_cons);
 
   solver.getSolution(x);
   solver.getDualSolutions(zl, zu, lambdas);
