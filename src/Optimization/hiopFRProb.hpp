@@ -166,17 +166,11 @@ public:
                                 double alpha_pr,
                                 int ls_trials);
 
-  virtual bool force_update(double obj_value,
-                            const int n,
-                            double* x,
-                            double* z_L,
-                            double* z_U,
-                            const int m,
-                            double* g,
-                            double* lambda,
-                            double& mu,
-                            double& alpha_du,
-                            double& alpha_pr);
+  virtual bool force_update_x(const int n, double* x);
+
+  virtual const hiopVector& get_fr_sol_x ()  const { return *last_x_; }
+  virtual const hiopVector& get_fr_sol_d ()  const { return *last_d_; }
+
 private:
   size_type n_;
   size_type m_;
@@ -206,6 +200,9 @@ private:
 
   hiopMatrixSparse* Jac_cd_;
   hiopMatrixSparse* Hess_cd_;
+
+  hiopVector* last_x_;
+  hiopVector* last_d_;
 
   double zeta_;
   double theta_ref_;
@@ -337,17 +334,11 @@ public:
                                 double alpha_pr,
                                 int ls_trials);
 
-  virtual bool force_update(double obj_value,
-                            const int n,
-                            double* x,
-                            double* z_L,
-                            double* z_U,
-                            const int m,
-                            double* g,
-                            double* lambda,
-                            double& mu,
-                            double& alpha_du,
-                            double& alpha_pr);
+  virtual bool force_update_x(const int n, double* x);
+
+  virtual const hiopVector& get_fr_sol_x ()  const { return *last_x_; }
+  virtual const hiopVector& get_fr_sol_d ()  const { return *last_d_; }
+
 private:
   size_type n_;
   size_type n_sp_;
@@ -385,6 +376,9 @@ private:
   
   hiopMatrixMDS* Jac_cd_;
   hiopMatrixSymBlockDiagMDS* Hess_cd_;
+
+  hiopVector* last_x_;
+  hiopVector* last_d_;
 
   double zeta_;
   double theta_ref_;

@@ -398,22 +398,12 @@ public:
   }
   
   /**
-   * A wildcard function used to change the variables and other values
+   * A wildcard function used to change the primal variables
    *
    * @note If the user (implementer) of this methods returns false, HiOp will stop the
-   * the optimization with hiop::hiopSolveStatus ::User_Stopped return code.
+   * the optimization with hiop::hiopSolveStatus::User_Stopped return code.
    */
-  virtual bool force_update(double obj_value,
-                            const int n,
-                            double* x,
-                            double* z_L,
-                            double* z_U,
-                            const int m,
-                            double* g,
-                            double* lambda,
-                            double& mu,
-                            double& alpha_du,
-                            double& alpha_pr)
+  virtual bool force_update_x(const int n, double* x)
   {
     return true;
   }

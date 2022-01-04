@@ -118,12 +118,11 @@ int main(int argc, char **argv)
     if(inertia_free) {
       nlp.options->SetStringValue("fact_acceptor", "inertia_free");
     }
-
     hiopAlgFilterIPMNewton solver(&nlp);
     hiopSolveStatus status = solver.run();
-
+    
     double obj_value = solver.getObjective();
-
+    
     if(status<0) {
       if(rank==0) {
         printf("solver returned negative solve status: %d (with objective is %18.12e)\n", status, obj_value);
@@ -157,6 +156,7 @@ int main(int argc, char **argv)
 #endif
 
     nlp.options->SetStringValue("KKTLinsys", "condensed");
+    //disregard inertia_free command parameter since it is not yet supported
     //if(inertia_free) {
     //  nlp.options->SetStringValue("fact_acceptor", "inertia_free");
     //}
