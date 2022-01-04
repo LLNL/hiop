@@ -181,10 +181,10 @@ int main(int argc, char **argv)
   size_type n_vars, n_cons;
   my_nlp->get_prob_sizes(n_vars, n_cons);
 
-  double* x       = hiop::LinearAlgebraFactory::createRawArray(n_vars);
-  double* zl      = hiop::LinearAlgebraFactory::createRawArray(n_vars);
-  double* zu      = hiop::LinearAlgebraFactory::createRawArray(n_vars);
-  double* lambdas = hiop::LinearAlgebraFactory::createRawArray(n_cons);
+  double* x       = hiop::LinearAlgebraFactory::create_raw_array(mem_space,n_vars);
+  double* zl      = hiop::LinearAlgebraFactory::create_raw_array(mem_space,n_vars);
+  double* zu      = hiop::LinearAlgebraFactory::create_raw_array(mem_space,n_vars);
+  double* lambdas = hiop::LinearAlgebraFactory::create_raw_array(mem_space,n_vars);
 
   solver.getSolution(x);
   solver.getDualSolutions(zl, zu, lambdas);
