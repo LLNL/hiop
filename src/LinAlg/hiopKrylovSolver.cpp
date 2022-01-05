@@ -72,34 +72,42 @@ namespace hiop {
                                      hiopLinearOperator* Mright_opr,
                                      hiopVector* x0)
     : nlp_{nlp},
+      x0_constant_{0.0},
       A_opr_{A_opr}, 
       ML_opr_{Mleft_opr},
       MR_opr_{Mright_opr},
-      x0_{nullptr}
+      xk_{nullptr}
   {
     if(x0) {
-      x0_ = x0->new_copy();
+      xk_ = x0->new_copy();
     }
   }
   
   hiopKrylovSolver::~hiopKrylovSolver()
   {
-    if(x0_) {
-      delete x0_;
-    }
+    delete xk_;
   }
 
   bool hiopKrylovSolver::set_x0(hiopVector& x0)
   {
-    if(x0_){
-      // just a identity precond
-      x0_->copyFrom(x0);
+    if(xk_){
+      xk_->copyFrom(x0);
     } else {
-      x0_ = x0.new_copy();
+      xk_ = x0.new_copy();
     }
     return true;
   }
 
+  bool hiopKrylovSolver::set_x(const double xval)
+  {
+    if(xk_){
+      xk_->setToConstant(xval);
+    } else {
+      x0_constant_ = xval;
+    }
+    return true;
+  }
+  
   /*
   * class hiopPCGSolver
   */
@@ -113,7 +121,6 @@ namespace hiop {
       maxit_{100},
       iter_{0.0},
       flag_{-1},
-      xk_{nullptr},
       xmin_{nullptr},
       res_{nullptr},
       yk_{nullptr},
@@ -125,15 +132,12 @@ namespace hiop {
 
   hiopPCGSolver::~hiopPCGSolver()
   {
-    if(xk_) {
-      delete xk_;
-      delete xmin_;
-      delete res_;
-      delete yk_;
-      delete zk_;
-      delete pk_;
-      delete qk_;
-    }
+    delete xmin_;
+    delete res_;
+    delete yk_;
+    delete zk_;
+    delete pk_;
+    delete qk_;
   }
 
 bool hiopPCGSolver::solve(hiopVector& b)
@@ -143,12 +147,11 @@ bool hiopPCGSolver::solve(hiopVector& b)
   if(n2b == 0.0) {
     b.setToZero();
     flag_ = 0;
-    iter_ = 0.;    
+    iter_ = 0.;
     return true;
   }
 
-  if(xk_==nullptr) {
-    xk_ = b.alloc_clone();    //iterate x
+  if(xmin_==nullptr) {
     xmin_ = b.alloc_clone();  //iterate which has minimal residual so far
     res_ = b.alloc_clone();   //minimal residual iterate 
     yk_ = b.alloc_clone();    //work vectors
@@ -161,10 +164,9 @@ bool hiopPCGSolver::solve(hiopVector& b)
   // Starting procedure
   //////////////////////////////////////////////////////////////////
   // starting point
-  if(x0_) {
-    xk_->copyFrom(*x0_);
-  } else {
-    xk_->setToZero();
+  if(xk_==nullptr) {
+    xk_ = b.alloc_clone();    //iterate x
+    xk_->setToConstant(x0_constant_);
   }
 
   flag_ = 1;
@@ -223,6 +225,7 @@ bool hiopPCGSolver::solve(hiopVector& b)
     //check for stagnation!!!
     if((rho == 0) || abs(rho) > 1E+20) {
       flag_ = 4;
+      iter_ = ii + 1;
       break;
     }
 
@@ -232,6 +235,7 @@ bool hiopPCGSolver::solve(hiopVector& b)
       double beta = rho / rho1;
       if(beta == 0 || abs(beta) > 1E+20) {
         flag_ = 4;
+        iter_ = ii + 1;
         break;
       }
       pk_->scale(beta);
@@ -243,12 +247,14 @@ bool hiopPCGSolver::solve(hiopVector& b)
     
     if(pq <= 0.0 || abs(pq) > 1E+20) {
       flag_ = 4;
+      iter_ = ii + 1;
       break;
     } else {
       alpha = rho / pq;
     }
     if(abs(alpha) > 1E+20) {
       flag_ = 4;
+      iter_ = ii + 1;
       break;
     }
   
@@ -300,6 +306,7 @@ bool hiopPCGSolver::solve(hiopVector& b)
     }
     if(stagsteps >= maxstagsteps) {
       flag_ = 3;
+      iter_ = ii + 1;
       break;
     }
   } // end of for(; ii < maxit_; ++ii)
@@ -331,6 +338,7 @@ bool hiopPCGSolver::solve(hiopVector& b)
     } else {
       b.copyFrom(*xk_);
       iter_ = ii + 1;
+      imin = iter_;
       normr_rel = normr_act / n2b;
     }
     if(nlp_) {

@@ -11,7 +11,7 @@ set(testMatrixSparse_SRC testMatrixSparse.cpp LinAlg/matrixTestsSparseTriplet.cp
 set(testMatrixSymSparse_SRC testMatrixSymSparse.cpp LinAlg/matrixTestsSymSparseTriplet.cpp)
 
 # Set sources for symmetric sparse matrix tests
-set(testKrylov_SRC testKrylov_ex1.cpp)
+set(testPCG_SRC test_pcg.cpp)
 
 # Check if using RAJA and Umpire and add RAJA sources
 if(HIOP_USE_RAJA)
@@ -46,5 +46,5 @@ target_link_libraries(testMatrixSparse PRIVATE HiOp::HiOp)
 add_executable(testMatrixSymSparse ${testMatrixSymSparse_SRC})
 target_link_libraries(testMatrixSymSparse PRIVATE HiOp::HiOp)
 
-add_executable(testKrylov_ex1 ${testKrylov_SRC})
-target_link_libraries(testKrylov_ex1 PRIVATE HiOp::HiOp)
+add_executable(test_pcg ${testPCG_SRC})
+target_link_libraries(test_pcg PRIVATE HiOp::HiOp)

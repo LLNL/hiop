@@ -93,6 +93,9 @@ public:
   /** Set the initial guess for the Krylov solver */
   virtual bool set_x0(hiopVector& x0);
 
+  /** Set the iterate to a constant value */
+  virtual bool set_x(const double xval);
+
 public:
   hiopNlpFormulation* nlp_;
 
@@ -104,7 +107,8 @@ protected:
   hiopLinearOperator* ML_opr_;
   hiopLinearOperator* MR_opr_;
 
-  hiopVector* x0_;
+  hiopVector* xk_;
+  double x0_constant_;
 };
 
 /** 
@@ -136,7 +140,6 @@ protected:
   double iter_;
   int flag_;
 
-  hiopVector* xk_;
   hiopVector* xmin_;
   hiopVector* res_;
   hiopVector* yk_;

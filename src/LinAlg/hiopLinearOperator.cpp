@@ -64,19 +64,10 @@ namespace hiop
 {
 
 /**********************************************************************
-  * hiopLinearOperator implementation
-  **********************************************************************/
-  hiopLinearOperator::hiopLinearOperator(hiopMatrix* mat)
-    : mMat_(mat)
-  {
-  }
-
-
-/**********************************************************************
   * hiopMatVecOpr implementation
   **********************************************************************/
   hiopMatVecOpr::hiopMatVecOpr(hiopMatrix* mat)
-    : hiopLinearOperator(mat)
+    : mMat_(mat)
   {
   }
 

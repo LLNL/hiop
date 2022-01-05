@@ -72,17 +72,14 @@ class hiopKKTLinSys;
 class hiopLinearOperator
 {
 public:
-  hiopLinearOperator(hiopMatrix* mat);
-  virtual ~hiopLinearOperator() {};
+  hiopLinearOperator(){};
+  virtual ~hiopLinearOperator(){};
 
   /** y = Mat * x */
   virtual bool times_vec(hiopVector& y, hiopVector& x) = 0;
 
   /** y = Mat' * x */
-  virtual bool trans_times_vec(hiopVector& y, hiopVector& x) {return false;};
-
-protected:
-  hiopMatrix* mMat_;
+  virtual bool trans_times_vec(hiopVector& y, hiopVector& x) = 0;
 };
 
 /** 
@@ -90,7 +87,7 @@ protected:
  * with both the matrix and vector being on the same processor.
  */
 class hiopMatVecOpr : public hiopLinearOperator {
- public:
+public:
   hiopMatVecOpr(hiopMatrix* mat);
   virtual ~hiopMatVecOpr() {};
 
@@ -100,6 +97,8 @@ class hiopMatVecOpr : public hiopLinearOperator {
   /** y = Mat' * x */
   virtual bool trans_times_vec(hiopVector& y, hiopVector& x);
 
+protected:
+  hiopMatrix* mMat_;
 };
 
 };
