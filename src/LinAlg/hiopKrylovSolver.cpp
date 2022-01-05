@@ -66,46 +66,42 @@ namespace hiop {
   /*
   * class hiopKrylovSolver
   */
-  hiopKrylovSolver::hiopKrylovSolver(hiopNlpFormulation* nlp,
+  hiopKrylovSolver::hiopKrylovSolver(int n,
+                                     const std::string& mem_space,
                                      hiopLinearOperator* A_opr,
                                      hiopLinearOperator* Mleft_opr,
                                      hiopLinearOperator* Mright_opr,
-                                     hiopVector* x0)
-    : nlp_{nlp},
-      x0_constant_{0.0},
+                                     const hiopVector* x0)
+    : mem_space_(mem_space),
       A_opr_{A_opr}, 
       ML_opr_{Mleft_opr},
       MR_opr_{Mright_opr},
-      xk_{nullptr}
+      x0_{nullptr},
+      nlp_{nlp},
   {
+    x0_ = hiop::LinearAlgebraFactory::create_vector(mem_space_, n);
     if(x0) {
-      xk_ = x0->new_copy();
+      assert(x0->get_size() == x0_->get_size());
+      x0_->copyFrom(*x0);
+    } else {
+      x0_->setToZero();
     }
   }
   
   hiopKrylovSolver::~hiopKrylovSolver()
   {
-    delete xk_;
+    delete x0_;
   }
 
-  bool hiopKrylovSolver::set_x0(const hiopVector& x0)
+  void hiopKrylovSolver::set_x0(const hiopVector& x0)
   {
-    if(xk_){
-      xk_->copyFrom(x0);
-    } else {
-      xk_ = x0.new_copy();
-    }
-    return true;
+    assert(x0->get_size() == x0_->get_size());
+    x0_->copyFrom(x0);
   }
 
-  bool hiopKrylovSolver::set_x(const double xval)
+  void hiopKrylovSolver::set_x0(const double xval)
   {
-    if(xk_){
-      xk_->setToConstant(xval);
-    } else {
-      x0_constant_ = xval;
-    }
-    return true;
+    x0_->setToConstant(xval);
   }
   
   /*
@@ -163,12 +159,10 @@ bool hiopPCGSolver::solve(hiopVector& b)
   //////////////////////////////////////////////////////////////////
   // Starting procedure
   //////////////////////////////////////////////////////////////////
-  // starting point
-  if(xk_==nullptr) {
-    xk_ = b.alloc_clone();    //iterate x
-    xk_->setToConstant(x0_constant_);
-  }
 
+  assert(x0_);
+  hiopVector* xk_ = x0_;
+  
   flag_ = 1;
   index_type imin = 0;        // iteration at which minimal residual is achieved
   double tolb = tol_ * n2b;   // relative tolerance
@@ -341,6 +335,8 @@ bool hiopPCGSolver::solve(hiopVector& b)
       imin = iter_;
       normr_rel = normr_act / n2b;
     }
+
+    //TODO: remove any logging/outputing code (move to driver)
     if(nlp_) {
       nlp_->log->printf(hovScalars, "PCG did NOT converged after %.1f iters. The solution from iter %.1f was returned.\n",
                         ii+1, imin);

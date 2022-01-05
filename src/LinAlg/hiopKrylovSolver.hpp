@@ -77,11 +77,12 @@ namespace hiop
 class hiopKrylovSolver
 {
 public:
-  hiopKrylovSolver(hiopNlpFormulation* nlp,
-                   hiopLinearOperator* A_opr = nullptr,
+  hiopKrylovSolver(int n,
+                   const std::string& mem_space,
+                   hiopLinearOperator* A_opr,
                    hiopLinearOperator* Mleft_opr = nullptr,
                    hiopLinearOperator* Mright_opr = nullptr,
-                   hiopVector* x0 = nullptr);
+                   const hiopVector* x0 = nullptr);
   virtual ~hiopKrylovSolver();
 
   /** Solves a linear system.
@@ -91,24 +92,51 @@ public:
   virtual bool solve(hiopVector& x) = 0;
 
   /** Set the initial guess for the Krylov solver */
-  virtual bool set_x0(const hiopVector& x0);
+  virtual void set_x0(const hiopVector& x0);
 
   /** Set the iterate to a constant value */
-  virtual bool set_x(const double xval);
+  virtual void set_x0(double xval);
 
-public:
-  hiopNlpFormulation* nlp_;
+  ///
+  virtual void set_max_num_iter(int num_iter);
 
+  /** Return statistic convergence stats */
+  virtual double get_sol_errrel();
+
+  ///
+  virtual double get_sol_errabs();
+
+  ///
+  virtual double get_num_iter();
+
+  ///
+  virtual std::string get_convergence_info() = 0;
+
+  /**
+   * Convergence flag: 0 for success, the other codes depending on the Krylov method
+   * used. Concrete message about the convergence can be obtained from 
+   * get_convergence_info.
+   */
+  virtual int get_convergence_flag() = 0;
 protected:
-  /** MatVec operation involving system matrix*/
+  void 
+protected:
+
+  /// Memory space
+  std::string mem_space_;
+  
+  /// Linear operator to apply the linear system matrix to a residual/vector
   hiopLinearOperator* A_opr_;
 
-  /** MatVec ops for left and right preconditioner */
+  /// Left preconditioner
   hiopLinearOperator* ML_opr_;
+  
+  /// Right preconditioners
   hiopLinearOperator* MR_opr_;
 
-  hiopVector* xk_;
-  double x0_constant_;
+  hiopVector* x0_;
+
+  hiopNlpFormulation* nlp_;
 };
 
 /** 
@@ -118,11 +146,11 @@ class hiopPCGSolver : public hiopKrylovSolver
 {
 public:
   /** initialization constructor */
-  hiopPCGSolver(hiopNlpFormulation* nlp,
-                hiopLinearOperator* A_opr = nullptr,
+  hiopPCGSolver(hiopLinearOperator* A_opr,
                 hiopLinearOperator* Mleft_opr = nullptr,
                 hiopLinearOperator* Mright_opr = nullptr,
-                hiopVector* x0 = nullptr);
+                const hiopVector* x0 = nullptr,
+                hiopNlpFormulation* nlp);
   virtual ~hiopPCGSolver();
 
   /** Solves a linear system.
@@ -132,9 +160,6 @@ public:
   virtual bool solve(hiopVector& x);
 
 protected:
-//  size_type n_;
-//  size_type m_;
-
   const double tol_;
   size_type maxit_;
   double iter_;
