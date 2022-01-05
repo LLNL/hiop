@@ -88,7 +88,7 @@ namespace hiop {
     delete xk_;
   }
 
-  bool hiopKrylovSolver::set_x0(hiopVector& x0)
+  bool hiopKrylovSolver::set_x0(const hiopVector& x0)
   {
     if(xk_){
       xk_->copyFrom(x0);

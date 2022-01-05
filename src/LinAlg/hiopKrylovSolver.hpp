@@ -91,7 +91,7 @@ public:
   virtual bool solve(hiopVector& x) = 0;
 
   /** Set the initial guess for the Krylov solver */
-  virtual bool set_x0(hiopVector& x0);
+  virtual bool set_x0(const hiopVector& x0);
 
   /** Set the iterate to a constant value */
   virtual bool set_x(const double xval);
