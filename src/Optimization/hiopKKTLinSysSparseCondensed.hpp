@@ -66,12 +66,12 @@ public:
   virtual ~hiopMatrixSparseCSRStorage();
 
   /**
-   * Forms a CSR matrix from a sparse matrix in triplet format. Returns false if the input formated 
-   * as expected (e.g., ordered by rows then by columns), otherwise returns true.
+   * Forms a CSR matrix from a sparse matrix in triplet format. Assumes input is ordered by
+   * rows then by columns.
    */
   bool form_from(const hiopMatrixSparseTriplet& M);
 
-  // same as above but do not work on values
+  /// Same as above but does not updates values
   bool form_from(const size_type m,
                  const size_type n,
                  const size_type nnz,

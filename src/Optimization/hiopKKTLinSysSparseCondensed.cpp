@@ -775,9 +775,9 @@ void hiopMatrixSparseCSRStorage::dealloc()
 }
 
 /**
- * Forms a CSR matrix from a sparse matrix in triplet format. Returns false if the input formated 
- * as expected (e.g., ordered by rows then by columns), otherwise returns true.
-*/
+ * Forms a CSR matrix from a sparse matrix in triplet format. Assumes input is ordered by
+ * rows then by columns.
+ */
 bool hiopMatrixSparseCSRStorage::form_from(const hiopMatrixSparseTriplet& M)
 {
   if(M.m()!=nrows_ || M.n()!=ncols_ || M.numberOfNonzeros()!=nnz_) {
@@ -804,10 +804,7 @@ bool hiopMatrixSparseCSRStorage::form_from(const hiopMatrixSparseTriplet& M)
   const double* Mvalues  = M.M();
 
   //storage the row count
-  index_type w[nrows_];
-  for(int i=0; i<nrows_; ++i) {
-    w[i] = 0;
-  }
+  std::vector<index_type> w(nrows_, 0);
   
   for(int it=0; it<nnz_; ++it) {
     const index_type row_idx = Mirow[it];
@@ -863,10 +860,7 @@ bool hiopMatrixSparseCSRStorage::form_from(const size_type m,
   assert(values_);
 
   //storage for the row count
-  index_type w[nrows_];
-  for(int i=0; i<nrows_; ++i) {
-    w[i] = 0;
-  }
+  std::vector<index_type> w(nrows_, 0);
   
   for(int it=0; it<nnz_; ++it) {
     const index_type row_idx = Mirow[it];
