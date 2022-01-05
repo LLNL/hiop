@@ -353,7 +353,6 @@ bool hiopPCGSolver::solve(hiopVector& b)
       maxit_{100},
       iter_{0.0},
       flag_{-1},
-      xk_{nullptr},
       xmin_{nullptr},
       res_{nullptr},
       pk_{nullptr},
@@ -369,19 +368,16 @@ bool hiopPCGSolver::solve(hiopVector& b)
 
   hiopBiCGStabSolver::~hiopBiCGStabSolver()
   {
-    if(xk_) {
-      delete xk_;
-      delete xmin_;
-      delete res_;
-      delete pk_;
-      delete ph_;
-      delete v_;
-      delete xhalf_;
-      delete sk_;
-      delete sh_;
-      delete t_;
-      delete rt_;
-    }
+    delete xmin_;
+    delete res_;
+    delete pk_;
+    delete ph_;
+    delete v_;
+    delete xhalf_;
+    delete sk_;
+    delete sh_;
+    delete t_;
+    delete rt_;
   }
 
 bool hiopBiCGStabSolver::solve(hiopVector& b)
@@ -395,8 +391,7 @@ bool hiopBiCGStabSolver::solve(hiopVector& b)
     return true;
   }
 
-  if(xk_==nullptr) {
-    xk_ = b.alloc_clone();    //iterate x
+  if(xmin_==nullptr) {
     xmin_ = b.alloc_clone();  //iterate which has minimal residual so far
     res_ = b.alloc_clone();   //minimal residual iterate 
     pk_ = b.alloc_clone();    //work vectors
@@ -413,10 +408,10 @@ bool hiopBiCGStabSolver::solve(hiopVector& b)
   // Starting procedure
   //////////////////////////////////////////////////////////////////
   // starting point
-  if(x0_) {
-    xk_->copyFrom(*x0_);
-  } else {
-    xk_->setToZero();
+  // starting point
+  if(xk_==nullptr) {
+    xk_ = b.alloc_clone();    //iterate x
+    xk_->setToConstant(x0_constant_);
   }
 
   flag_ = 1;

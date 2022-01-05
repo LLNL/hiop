@@ -203,7 +203,6 @@ protected:
   double iter_;
   int flag_;
 
-  hiopVector* xk_;
   hiopVector* xmin_;
   hiopVector* res_;
   hiopVector* pk_;
