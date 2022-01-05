@@ -76,10 +76,10 @@ public:
   virtual ~hiopLinearOperator(){};
 
   /** y = Mat * x */
-  virtual bool times_vec(hiopVector& y, hiopVector& x) = 0;
+  virtual bool times_vec(hiopVector& y, const hiopVector& x) = 0;
 
   /** y = Mat' * x */
-  virtual bool trans_times_vec(hiopVector& y, hiopVector& x) = 0;
+  virtual bool trans_times_vec(hiopVector& y, const hiopVector& x) = 0;
 };
 
 /** 
@@ -92,10 +92,10 @@ public:
   virtual ~hiopMatVecOpr() {};
 
   /** y = Mat * x */
-  virtual bool times_vec(hiopVector& y, hiopVector& x);
+  virtual bool times_vec(hiopVector& y, const hiopVector& x);
 
   /** y = Mat' * x */
-  virtual bool trans_times_vec(hiopVector& y, hiopVector& x);
+  virtual bool trans_times_vec(hiopVector& y, const hiopVector& x);
 
 protected:
   hiopMatrix* mMat_;

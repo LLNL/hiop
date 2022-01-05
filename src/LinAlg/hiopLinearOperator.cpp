@@ -71,7 +71,7 @@ namespace hiop
   {
   }
 
-  bool hiopMatVecOpr::times_vec(hiopVector& y, hiopVector& x)
+  bool hiopMatVecOpr::times_vec(hiopVector& y, const hiopVector& x)
   {
     if(mMat_) {
       assert(x.get_local_size() == mMat_->n());
@@ -83,7 +83,7 @@ namespace hiop
     return true;
   }
 
-  bool hiopMatVecOpr::trans_times_vec(hiopVector& y, hiopVector& x)
+  bool hiopMatVecOpr::trans_times_vec(hiopVector& y, const hiopVector& x)
   {
     if(mMat_) {
       assert(x.get_local_size() == mMat_->m());
