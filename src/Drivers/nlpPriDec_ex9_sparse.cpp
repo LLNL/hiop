@@ -145,7 +145,7 @@ bool PriDecMasterProblemEx9Sparse::eval_f_rterm(size_t idx, const int& n, const 
   nlp.options->SetStringValue("compute_mode", "cpu");
 #endif
   //nlp.options->SetStringValue("time_kkt", "on");
-  nlp.options->SetIntegerValue("verbosity_level", 3);
+  nlp.options->SetIntegerValue("verbosity_level", 1);
   nlp.options->SetNumericValue("mu0", 1e-1);
   //nlp.options->SetNumericValue("tolerance", 1e-5);
 
