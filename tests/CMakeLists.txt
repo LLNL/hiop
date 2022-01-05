@@ -10,6 +10,9 @@ set(testMatrixSparse_SRC testMatrixSparse.cpp LinAlg/matrixTestsSparseTriplet.cp
 # Set sources for symmetric sparse matrix tests
 set(testMatrixSymSparse_SRC testMatrixSymSparse.cpp LinAlg/matrixTestsSymSparseTriplet.cpp)
 
+# Set sources for BiCGStab
+set(testBiCGStab_SRC testKrylov_bicgstab.cpp)
+
 # Set sources for symmetric sparse matrix tests
 set(testPCG_SRC test_pcg.cpp)
 
@@ -48,3 +51,6 @@ target_link_libraries(testMatrixSymSparse PRIVATE HiOp::HiOp)
 
 add_executable(test_pcg ${testPCG_SRC})
 target_link_libraries(test_pcg PRIVATE HiOp::HiOp)
+
+add_executable(test_bicgstab ${testBiCGStab_SRC})
+target_link_libraries(test_bicgstab PRIVATE HiOp::HiOp)

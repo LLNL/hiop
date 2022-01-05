@@ -176,6 +176,45 @@ protected:
   hiopVector* qk_;
 };
 
+/** 
+ * a Krylov solver class implementing the BiCGStab framework
+ */
+class hiopBiCGStabSolver : public hiopKrylovSolver
+{
+public:
+  /** initialization constructor */
+  hiopBiCGStabSolver(hiopNlpFormulation* nlp,
+                hiopLinearOperator* A_opr = nullptr,
+                hiopLinearOperator* Mleft_opr = nullptr,
+                hiopLinearOperator* Mright_opr = nullptr,
+                hiopVector* x0 = nullptr);
+  virtual ~hiopBiCGStabSolver();
+
+  /** Solves a linear system.
+   * param 'x' is on entry the right hand side(s) of the system to be solved. On
+   * exit is contains the solution(s).
+   */
+  virtual bool solve(hiopVector& x);
+
+protected:
+
+  const double tol_;
+  size_type maxit_;
+  double iter_;
+  int flag_;
+
+  hiopVector* xk_;
+  hiopVector* xmin_;
+  hiopVector* res_;
+  hiopVector* pk_;
+  hiopVector* ph_;
+  hiopVector* v_;
+  hiopVector* xhalf_;
+  hiopVector* sk_;
+  hiopVector* sh_;
+  hiopVector* t_;
+  hiopVector* rt_;
+};
 
 } //end namespace
 
