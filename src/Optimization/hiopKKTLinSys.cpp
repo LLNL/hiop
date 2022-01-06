@@ -464,6 +464,7 @@ bool hiopKKTLinSysCompressedXYcYd::update(const hiopIterate* iter,
                                           const hiopMatrix* Jac_c, const hiopMatrix* Jac_d,
                                           hiopMatrix* Hess)
 {
+  nlp_->runStats.linsolv.start_linsolve();
   nlp_->runStats.tmSolverInternal.start();
   nlp_->runStats.kkt.tmUpdateInit.start();
 
@@ -601,6 +602,7 @@ bool hiopKKTLinSysCompressedXYcYd::computeDirections(const hiopResidual* resid,
 
   nlp_->runStats.kkt.tmSolveRhsManip.stop();
   nlp_->runStats.tmSolverInternal.stop();
+  nlp_->runStats.linsolv.end_linsolve();
   return true;
 }
 
@@ -692,6 +694,7 @@ bool hiopKKTLinSysCompressedXDYcYd::update( const hiopIterate* iter,
                                             const hiopMatrix* Jac_c, const hiopMatrix* Jac_d,
                                             hiopMatrix* Hess)
 {
+  nlp_->runStats.linsolv.start_linsolve();
   nlp_->runStats.tmSolverInternal.start();
 
   iter_ = iter;
@@ -815,6 +818,7 @@ bool hiopKKTLinSysCompressedXDYcYd::computeDirections(const hiopResidual* resid,
 
   nlp_->runStats.kkt.tmSolveRhsManip.stop();
   nlp_->runStats.tmSolverInternal.stop();
+  nlp_->runStats.linsolv.end_linsolve();
   return true;
 }
 
@@ -1389,7 +1393,7 @@ bool hiopKKTLinSysFull::update( const hiopIterate* iter,
   Jac_c_ = Jac_c; 
   Jac_d_ = Jac_d;
   Hess_=Hess;
-
+  nlp_->runStats.linsolv.start_linsolve();
   nlp_->runStats.tmSolverInternal.start();
 
   // factorization + inertia correction if needed
@@ -1419,10 +1423,9 @@ bool hiopKKTLinSysFull::computeDirections(const hiopResidual* resid,
                       *dir->vl, *dir->vu, *dir->zl, *dir->zu,
                       *dir->sdl, *dir->sdu, *dir->sxl, *dir->sxu);
 
-  if(false==sol_ok) return sol_ok;
-
+  nlp_->runStats.linsolv.end_linsolve();
   nlp_->runStats.tmSolverInternal.stop();
-  return true;
+  return sol_ok;
 }
 
 

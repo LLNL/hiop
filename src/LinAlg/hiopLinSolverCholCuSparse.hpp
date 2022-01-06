@@ -1,11 +1,10 @@
 // Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
-// Written by Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp
 // is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause).
-// Please also read “Additional BSD Notice” below.
+// Please also read "Additional BSD Notice" below.
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -46,119 +45,121 @@
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or
 // product endorsement purposes.
 
-#ifndef HIOP_LINSOLVER
-#define HIOP_LINSOLVER
+/**
+ * @file hiopLinSolverCholCuSparse.hpp
+ *
+ * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
+ *
+ */
 
-#include "hiopNlpFormulation.hpp"
-#include "hiopMatrix.hpp"
-#include "hiopMatrixDense.hpp"
-#include "hiopVector.hpp"
+#ifndef HIOP_LINSOLVER_CHOL_CUSP
+#define HIOP_LINSOLVER_CHOL_CUSP
 
-#include "hiop_blasdefs.hpp"
+#include "hiopLinSolver.hpp"
 
-#include "hiopCppStdUtils.hpp"
+#ifdef HIOP_USE_CUDA
 
+#include <cuda_runtime.h>
+#include <cusparse.h>
+#include <cusolverSp.h>
+#include <cusolverSp_LOWLEVEL_PREVIEW.h> 
+
+#include "hiopKKTLinSysSparseCondensed.hpp"
 namespace hiop
 {
 
 /**
- * Abstract class for Linear Solvers used by HiOp
- * Specifies interface for linear solver arising in Interior-Point methods, thus,
- * the underlying assumptions are that the system's matrix is symmetric (positive
- * definite or indefinite).
- *
- * Implementations of this abstract class have the purpose of serving as wrappers
- * of existing CPU and GPU libraries for linear systems.
- *
- * Note:
- *  - solve(matrix) is not implemented
+ * Wrapper class for cusolverSpXcsrchol Cholesky solver.
  */
 
-class hiopLinSolver
+class hiopLinSolverCholCuSparse: public hiopLinSolverIndefSparse
 {
 public:
-  hiopLinSolver();
-  virtual ~hiopLinSolver();
+  hiopLinSolverCholCuSparse(const size_type& n, const size_type& nnz, hiopNlpFormulation* nlp);
+  virtual ~hiopLinSolverCholCuSparse();
 
-  /** Triggers a refactorization of the matrix, if necessary.
-   * Returns number of negative eigenvalues or -1 if null eigenvalues
-   * are encountered.
+  /**
+   * Triggers a refactorization of the matrix, if necessary.   
+   * Returns -1 if zero or negative pivots are encountered 
    */
-  virtual int matrixChanged() = 0;
+  int matrixChanged();
 
   /** Solves a linear system.
    * param 'x' is on entry the right hand side(s) of the system to be solved. On
-   * exit is contains the solution(s).
+   * exit is contains the solution(s).  
    */
-  virtual bool solve ( hiopVector& x ) = 0;
-  virtual bool solve ( hiopMatrix& x ) { assert(false && "not yet supported"); return true;}
-public:
-  hiopNlpFormulation* nlp_;
-  bool perf_report_;
-};
+  bool solve(hiopVector& x_in);
 
-/** Base class for Indefinite Dense Solvers */
-class hiopLinSolverIndefDense : public hiopLinSolver
-{
-public:
-  hiopLinSolverIndefDense(int n, hiopNlpFormulation* nlp);
-  virtual ~hiopLinSolverIndefDense();
-
-  hiopMatrixDense& sysMatrix();
-protected:
-  hiopMatrixDense* M_;
-protected:
-  hiopLinSolverIndefDense();
-};
-
-// for general non-symmetric Sparse Solvers
-/** Base class for non-symmetric Sparse Solvers */
-class hiopLinSolverSparseBase : public hiopLinSolver
-{
-public:
-  hiopLinSolverSparseBase(){};
-  virtual ~hiopLinSolverSparseBase(){};
-};
-
-/** 
- * Base class for symmetric (indefinite or positive definite) sparse solvers 
- * TODO: change the name of this class to hiopLinSolverSymmSparse
- */
-class hiopLinSolverIndefSparse : public hiopLinSolverSparseBase
-{
-public:
-  hiopLinSolverIndefSparse(int n, int nnz, hiopNlpFormulation* nlp);
-  virtual ~hiopLinSolverIndefSparse();
-
-  inline hiopMatrixSymSparseTriplet& sysMatrix() { return M; }
-protected:
-  /* TODO: need to change type to a Sparse matrix to accomodate for CSR */
-  hiopMatrixSymSparseTriplet M;
-protected:
-  /* Constructor for when the size of the system matrix is to be determined. */
-  hiopLinSolverIndefSparse(hiopNlpFormulation* nlp);
-
-  hiopLinSolverIndefSparse()
-    : M(0,0)
+  inline void set_linsys_mat(hiopMatrixSparseCSRStorage* mat)
   {
-    assert(false);
+    mat_csr_ = mat;
   }
+protected:
+  /// performs initial analysis, sparsity permutation, and rescaling
+  bool initial_setup();
+
+  /// computes the sparsity-promoting ordering based on the user options (device path)
+  bool do_symb_analysis(const size_type n,
+                        const size_type nnz,
+                        const index_type* rowptr,
+                        const index_type* colind,
+                        const double* value,
+                        index_type* perm);
+  
+  /** 
+   * Permutes an array accordingly to given permutation. All pointers are on device and
+   * the method executes on device.
+   */
+  bool permute_vec(int n,
+                   /*const*/ double* vec_in,
+                   /*const*/ index_type* permutation,
+                   double* vec_out);
+protected:
+  /// Internal handle required by cuSPARSE functions
+  cusparseHandle_t h_cusparse_;
+
+  /// Internal handle required by cusolverSpXcsrchol
+  cusolverSpHandle_t h_cusolver_;
+
+  /// Internal struct required by cusolverSpXcsrchol
+  csrcholInfo_t info_;
+
+  /// Number of nonzeros in the matrix sent to cuSOLVER
+  size_type nnz_;
+
+  /// Array with row pointers of the matrix to be factorized (on device)
+  int* rowptr_;
+  /// Array with column indexes of the matrix to be factorized (on device)
+  int* colind_;
+  /// Array with matrix original values (on device)
+  double* values_buf_;
+  /// Array with values of the matrix to be factorized (on device)
+  double* values_;
+  /// cuSPARSE matrix descriptor
+  cusparseMatDescr_t mat_descr_;
+
+  /// Buffer required by the cuSOLVER Chol factor (on device)
+  unsigned char* buf_fact_;
+  /// Size of the above array
+  size_t buf_fact_size_;
+
+  /// Reordering permutation to promote sparsity of the factor (on device)
+  int* P_;
+  /// Transpose or inverse of the above permutation (on device)
+  int* PT_;
+  /// Permutation map for nonzeros (on device)
+  int* map_nnz_perm_;
+  //TODO: temporary -> use the member matrix obj from the parent class
+  hiopMatrixSparseCSRStorage* mat_csr_;
+  /// internal buffers in the size of the linear system (on device)
+  double* rhs_buf1_;
+  double* rhs_buf2_;
+private:
+  hiopLinSolverCholCuSparse() { assert(false); }
 };
 
-/** Base class for non-symmetric Sparse Solvers */
-class hiopLinSolverNonSymSparse : public hiopLinSolverSparseBase
-{
-public:
-  hiopLinSolverNonSymSparse(int n, int nnz, hiopNlpFormulation* nlp);
-  virtual ~hiopLinSolverNonSymSparse();
 
-  inline hiopMatrixSparseTriplet& sysMatrix() { return M; }
-protected:
-  hiopMatrixSparseTriplet M;
-protected:
-  hiopLinSolverNonSymSparse() : M(0,0,0) { assert(false); }
-};
+} // end of namespace
 
-} //end namespace
-
-#endif
+#endif //HIOP_USE_CUDA
+#endif //HIOP_LINSOLVER_CHOL_CUSP

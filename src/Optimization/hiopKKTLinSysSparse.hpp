@@ -122,7 +122,7 @@ private:
 /*
  * Solves KKTLinSysCompressedXDYcYd by exploiting the sparse structure
  *
- * In general, the so-called XYcYd system has the form
+ * In general, the so-called XDYcYd system has the form
  * [  H  +  Dx    0    Jc^T  Jd^T   ] [ dx]   [ rx_tilde ]
  * [    0         Dd    0     -I    ] [ dd]   [ rd_tilde ]
  * [    Jc        0     0      0    ] [dyc] = [   ryc    ]

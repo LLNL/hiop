@@ -106,7 +106,7 @@ namespace hiop
 
     hiopMatrixSparseTriplet& Msys = linSys->sysMatrix();
     if(perf_report_) {
-      nlp_->log->printf(hovScalars,
+      nlp_->log->printf(hovSummary,
 			"KKT_Sparse_XYcYd linsys: Low-level linear system size: %d\n",
 			Msys.n());
     }
