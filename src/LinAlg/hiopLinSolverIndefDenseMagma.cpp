@@ -87,9 +87,11 @@ namespace hiop
       nlp_->runStats.linsolv.tmDeviceTransfer.stop();
     } else {
 #ifdef HIOP_DEEPCHECKS
+#ifdef HIOP_USE_RAJA
       hiopMatrixRajaDense* M = dynamic_cast<hiopMatrixRajaDense*>(M_);
       fflush(stdout);
       assert(M && "a RajaDense matrix is expected");
+#endif
 #endif
       device_M_   = M_->local_data();
     }
@@ -284,9 +286,11 @@ namespace hiop
       nlp_->runStats.linsolv.tmDeviceTransfer.stop();
     } else {
 #ifdef HIOP_DEEPCHECKS
+#ifdef HIOP_USE_RAJA      
       hiopMatrixRajaDense* M = dynamic_cast<hiopMatrixRajaDense*>(M_);
       fflush(stdout);
       assert(M && "a RajaDense matrix is expected");
+#endif
 #endif
       device_M_   = M_->local_data();
     }

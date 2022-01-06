@@ -9,11 +9,12 @@ using namespace hiop;
 
 static bool self_check(size_type n, double obj_value, const bool inertia_free);
 
-static bool parse_arguments(int argc, char **argv, size_type& n, bool& self_check, bool& inertia_free)
+static bool parse_arguments(int argc,
+                            char **argv,
+                            size_type& n,
+                            bool& self_check,
+                            bool& inertia_free)
 {
-
-  //  printf("%s    %s \n", argv[1], argv[2]);
-
   self_check = false;
   n = 3;
   inertia_free = false;
@@ -77,7 +78,8 @@ static void usage(const char* exeName)
   printf("Arguments:\n");
   printf("  'problem_size': number of decision variables [optional, default is 50]\n");
   printf("  '-inertiafree': indicate if inertia free approach should be used [optional]\n");
-  printf("  '-selfcheck': compares the optimal objective with a previously saved value for the problem specified by 'problem_size'. [optional]\n");
+  printf("  '-selfcheck': compares the optimal objective with a previously saved value for the "
+         "problem specified by 'problem_size'. [optional]\n");
 }
 
 
@@ -107,6 +109,7 @@ int main(int argc, char **argv)
   bool rankdefic_Jac_ineq = true;
   double scal_neg_obj = 0.1;
 
+  //first test
   {
     Ex7 nlp_interface(n,convex_obj,rankdefic_Jac_eq,rankdefic_Jac_ineq, scal_neg_obj);
     hiopNlpSparse nlp(nlp_interface);
@@ -115,17 +118,15 @@ int main(int argc, char **argv)
     if(inertia_free) {
       nlp.options->SetStringValue("fact_acceptor", "inertia_free");
     }
-//  nlp.options->SetIntegerValue("max_iter", 100);
-//  nlp.options->SetNumericValue("kappa1", 1e-8);
-//  nlp.options->SetNumericValue("kappa2", 1e-8);
-
     hiopAlgFilterIPMNewton solver(&nlp);
     hiopSolveStatus status = solver.run();
-
+    
     double obj_value = solver.getObjective();
-
+    
     if(status<0) {
-      if(rank==0) printf("solver returned negative solve status: %d (with objective is %18.12e)\n", status, obj_value);
+      if(rank==0) {
+        printf("solver returned negative solve status: %d (with objective is %18.12e)\n", status, obj_value);
+      }
       return -1;
     }
 
@@ -141,19 +142,24 @@ int main(int argc, char **argv)
   }
   
   //
-  //same as above but with equalities relaxed as two-sided inequalities
+  //same as above but with equalities relaxed as two-sided inequalities and using condensed linear system
   //
+#if defined(HIOP_USE_CUDA) || defined(HIOP_USE_COINHSL)
   {
     Ex7 nlp_interface(n,convex_obj, rankdefic_Jac_eq, rankdefic_Jac_ineq, scal_neg_obj);
     hiopNlpSparseIneq nlp(nlp_interface);
+#ifdef HIOP_USE_CUDA
+    nlp.options->SetStringValue("compute_mode", "hybrid");
+#else //HIOP_USE_COINHSL
+    //compute mode cpu will use MA57 by default
     nlp.options->SetStringValue("compute_mode", "cpu");
-    nlp.options->SetStringValue("KKTLinsys", "xdycyd");
-    if(inertia_free) {
-      nlp.options->SetStringValue("fact_acceptor", "inertia_free");
-    }
-//  nlp.options->SetIntegerValue("max_iter", 100);
-//  nlp.options->SetNumericValue("kappa1", 1e-8);
-//  nlp.options->SetNumericValue("kappa2", 1e-8);
+#endif
+
+    nlp.options->SetStringValue("KKTLinsys", "condensed");
+    //disregard inertia_free command parameter since it is not yet supported
+    //if(inertia_free) {
+    //  nlp.options->SetStringValue("fact_acceptor", "inertia_free");
+    //}
 
     hiopAlgFilterIPMNewton solver(&nlp);
     hiopSolveStatus status = solver.run();
@@ -162,8 +168,7 @@ int main(int argc, char **argv)
 
     if(status<0) {
       if(rank==0) {
-        printf("solver returned negative solve status with hiopNlpSparseIneq: "
-               "%d (with objective is %18.12e)\n",
+        printf("solver returned negative solve status with hiopNlpSparseIneq: %d (obj. is %18.12e)\n",
                status,
                obj_value);
       }
@@ -180,6 +185,7 @@ int main(int argc, char **argv)
       }
     }
   }
+#endif //HIOP_USE_CUDA
   
 #ifdef HIOP_USE_MPI
   MPI_Finalize();

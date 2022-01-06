@@ -11,6 +11,7 @@ set(hiopLinAlg_INTERFACE_HEADERS
   hiopLinSolverSparseSTRUMPACK.hpp
   hiopLinSolverSparsePARDISO.hpp
   hiopLinSolverUMFPACKZ.hpp
+  hiopLinSolverCholCuSparse.hpp
   hiopMatrix.hpp
   hiopMatrixComplexDense.hpp
   hiopMatrixComplexSparseTriplet.hpp
@@ -53,6 +54,7 @@ set(hiopLinAlg_RAJA_SRC
 
 set(hiopLinAlg_GPU_SRC
   hiopLinSolverIndefDenseMagma.cpp
+  hiopLinSolverCholCuSparse.cpp
   )
 
 set(hiopLinAlg_MA57_SRC

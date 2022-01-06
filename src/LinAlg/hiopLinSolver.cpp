@@ -95,10 +95,16 @@ namespace hiop {
     nlp_ = nlp;
     perf_report_ = "on"==hiop::tolower(nlp->options->GetString("time_kkt"));
   }
+  hiopLinSolverIndefSparse::hiopLinSolverIndefSparse(hiopNlpFormulation* nlp)
+    : M(0,0)
+  {
+    nlp_ = nlp;
+    perf_report_ = "on"==hiop::tolower(nlp->options->GetString("time_kkt"));
+  }
   hiopLinSolverIndefSparse::~hiopLinSolverIndefSparse()
   {
   }
-
+  
   hiopLinSolverNonSymSparse::hiopLinSolverNonSymSparse(int n, int nnz, hiopNlpFormulation* nlp)
     : M(n,n,nnz)
   {
