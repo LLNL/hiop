@@ -72,12 +72,18 @@ namespace hiop {
                                      hiopLinearOperator* Mleft_opr,
                                      hiopLinearOperator* Mright_opr,
                                      const hiopVector* x0)
-    : mem_space_(mem_space),
+    : tol_{1e-8},
+      maxit_{100},
+      iter_{-1.},
+      flag_{-1},
+      abs_resid_{-1.},
+      rel_resid_{-1.},
+      n_{n},
+      mem_space_(mem_space),
       A_opr_{A_opr}, 
       ML_opr_{Mleft_opr},
       MR_opr_{Mright_opr},
-      x0_{nullptr},
-      nlp_{nlp},
+      x0_{nullptr}
   {
     x0_ = hiop::LinearAlgebraFactory::create_vector(mem_space_, n);
     if(x0) {
@@ -95,7 +101,7 @@ namespace hiop {
 
   void hiopKrylovSolver::set_x0(const hiopVector& x0)
   {
-    assert(x0->get_size() == x0_->get_size());
+    assert(x0.get_size() == x0_->get_size());
     x0_->copyFrom(x0);
   }
 
@@ -107,16 +113,13 @@ namespace hiop {
   /*
   * class hiopPCGSolver
   */
-  hiopPCGSolver::hiopPCGSolver(hiopNlpFormulation* nlp,
+  hiopPCGSolver::hiopPCGSolver(int n,
+                               const std::string& mem_space,
                                hiopLinearOperator* A_opr,
                                hiopLinearOperator* Mleft_opr,
                                hiopLinearOperator* Mright_opr,
-                               hiopVector* x0)
-    : hiopKrylovSolver(nlp, A_opr, Mleft_opr, Mright_opr, x0),
-      tol_{1e-8},
-      maxit_{100},
-      iter_{0.0},
-      flag_{-1},
+                               const hiopVector* x0)
+    : hiopKrylovSolver(n, mem_space, A_opr, Mleft_opr, Mright_opr, x0),
       xmin_{nullptr},
       res_{nullptr},
       yk_{nullptr},
@@ -174,15 +177,14 @@ bool hiopPCGSolver::solve(hiopVector& b)
   res_->axpy(-1.0, b);
   res_->scale(-1.0);               
   double normr = res_->twonorm();  // Norm of residual
-  double normr_act = normr;
-  double normr_rel;
+  abs_resid_ = normr;
 
   // initial guess is good enough
   if(normr <= tolb) { 
     b.copyFrom(*xk_);
     flag_ = 0;
     iter_ = 0.;
-    normr_rel = normr / n2b;
+    rel_resid_ = normr / n2b;
     return true;
   }
   
@@ -264,7 +266,7 @@ bool hiopPCGSolver::solve(hiopVector& b)
     res_->axpy(-alpha, *qk_);
     
     normr = res_->twonorm();
-    normr_act = normr;
+    abs_resid_ = normr;
 
     // check for convergence
     if(normr <= tolb || stagsteps >= maxstagsteps || moresteps) {
@@ -272,9 +274,9 @@ bool hiopPCGSolver::solve(hiopVector& b)
       A_opr_->times_vec(*res_,*xk_);
       res_->axpy(-1.0,b);
       res_->scale(-1.0);        
-      normr_act = res_->twonorm();
+      abs_resid_ = res_->twonorm();
 
-      if(normr_act <= tolb) { 
+      if(abs_resid_ <= tolb) { 
         b.copyFrom(*xk_);
         flag_ = 0;
         iter_ = ii + 1;
@@ -293,8 +295,8 @@ bool hiopPCGSolver::solve(hiopVector& b)
       }
     }
     // update minimal norm
-    if(normr_act < normrmin) {
-      normrmin = normr_act;
+    if(abs_resid_ < normrmin) {
+      normrmin = abs_resid_;
       xmin_->copyFrom(*xk_);
       imin = ii;
     }
@@ -307,15 +309,9 @@ bool hiopPCGSolver::solve(hiopVector& b)
 
   // returned solution is first with minimal residual
   if(flag_ == 0) {
-    normr_rel = normr_act/n2b;
-    if(nlp_) {
-      nlp_->log->printf(hovScalars, "PCG converged: actual normResid=%g relResid=%g iter=%.1f\n\n", 
-	                      normr_act, normr_rel, iter_);  
-    } else {
-      printf("PCG converged: actual normResid=%g relResid=%g iter=%.1f\n\n", 
-	           normr_act, normr_rel, iter_);
-    }
-
+    rel_resid_ = abs_resid_/n2b;
+    ss_info_ << "PCG converged: actual normResid=" << abs_resid_ << " relResid=" << rel_resid_ 
+             << " iter=" << iter_ << std::endl;
     b.copyFrom(*xk_);    
   } else {
     // update residual: b-KKT*xk
@@ -324,30 +320,22 @@ bool hiopPCGSolver::solve(hiopVector& b)
     res_->scale(-1.0);        
     double normr_comp = res_->twonorm();
     
-    if(normr_comp <= normr_act) {
+    if(normr_comp <= abs_resid_) {
       b.copyFrom(*xmin_);
       iter_ = imin + 1;
-      normr_act = normr_comp;
-      normr_rel = normr_comp / n2b;
+      abs_resid_ = normr_comp;
+      rel_resid_ = normr_comp / n2b;
     } else {
       b.copyFrom(*xk_);
       iter_ = ii + 1;
       imin = iter_;
-      normr_rel = normr_act / n2b;
+      rel_resid_ = abs_resid_ / n2b;
     }
 
-    //TODO: remove any logging/outputing code (move to driver)
-    if(nlp_) {
-      nlp_->log->printf(hovScalars, "PCG did NOT converged after %.1f iters. The solution from iter %.1f was returned.\n",
-                        ii+1, imin);
-      nlp_->log->printf(hovScalars, "\t - Error code %d\n\t - Act res=%g\n\t - Rel res=%g \n\n", 
-                        flag_, normr_act, normr_rel);
-    } else {
-      printf("PCG did NOT converged after %.1f iters. The solution from iter %.1f was returned.\n",
-             ii+1, imin);
-      printf("\t - Error code %d\n\t - Act res=%g\n\t - Rel res=%g \n\n", 
-             flag_, normr_act, normr_rel);
-    }
+    ss_info_ << "PCG did NOT converged after " << ii+1 << " iters. The solution from iter " 
+             << imin << "was returned." << std::endl;
+    ss_info_ << "\t - Error code " << flag_ << "\n\t - Act res=" << abs_resid_ << "n\t - Rel res="
+             << rel_resid_ << std::endl;
   }
   return true; // return true for inertia-free approach
 }

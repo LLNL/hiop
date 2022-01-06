@@ -91,37 +91,45 @@ public:
    */
   virtual bool solve(hiopVector& x) = 0;
 
-  /** Set the initial guess for the Krylov solver */
+  /// Set the initial guess for the Krylov solver
   virtual void set_x0(const hiopVector& x0);
 
-  /** Set the iterate to a constant value */
+  /// Set the iterate to a constant value
   virtual void set_x0(double xval);
 
-  ///
-  virtual void set_max_num_iter(int num_iter);
+  /// Set the maximun number of iteration
+  inline virtual void set_max_num_iter(int num_iter) {maxit_ = num_iter;}
 
-  /** Return statistic convergence stats */
-  virtual double get_sol_errrel();
+  /// Return the absolute residual at the end of Krylov solver
+  inline virtual double get_sol_abs_resid() {return abs_resid_;}
 
-  ///
-  virtual double get_sol_errabs();
+  /// Return the relative residual at the end of Krylov solver
+  inline virtual double get_sol_rel_resid() {return rel_resid_;}
 
-  ///
-  virtual double get_num_iter();
+  /// Return the number of iterations at the end of Krylov solver
+  inline virtual double get_sol_num_iter() {return iter_;}
 
-  ///
-  virtual std::string get_convergence_info() = 0;
+  /// Return the message about the convergence
+  inline virtual std::string get_convergence_info() {return ss_info_.str();}
 
   /**
    * Convergence flag: 0 for success, the other codes depending on the Krylov method
    * used. Concrete message about the convergence can be obtained from 
    * get_convergence_info.
    */
-  virtual int get_convergence_flag() = 0;
-protected:
-  void 
+  inline virtual int get_convergence_flag() {return flag_;}
+
 protected:
 
+  const double tol_;          // convergence tolerence
+  size_type maxit_;           // maximun number of iteratiions
+  double iter_;               // number of iterations at convergence
+  int flag_;                  // convergence flag
+  double abs_resid_;          // absolute residual
+  double rel_resid_;          // relative residual
+  const size_type n_;         // size of the rhs
+  std::stringstream ss_info_; // message about the convergence 
+  
   /// Memory space
   std::string mem_space_;
   
@@ -134,9 +142,8 @@ protected:
   /// Right preconditioners
   hiopLinearOperator* MR_opr_;
 
+  /// Vector used to save the initial value
   hiopVector* x0_;
-
-  hiopNlpFormulation* nlp_;
 };
 
 /** 
@@ -146,11 +153,12 @@ class hiopPCGSolver : public hiopKrylovSolver
 {
 public:
   /** initialization constructor */
-  hiopPCGSolver(hiopLinearOperator* A_opr,
+  hiopPCGSolver(int n,
+                const std::string& mem_space,
+                hiopLinearOperator* A_opr,
                 hiopLinearOperator* Mleft_opr = nullptr,
                 hiopLinearOperator* Mright_opr = nullptr,
-                const hiopVector* x0 = nullptr,
-                hiopNlpFormulation* nlp);
+                const hiopVector* x0 = nullptr);
   virtual ~hiopPCGSolver();
 
   /** Solves a linear system.
@@ -160,11 +168,6 @@ public:
   virtual bool solve(hiopVector& x);
 
 protected:
-  const double tol_;
-  size_type maxit_;
-  double iter_;
-  int flag_;
-
   hiopVector* xmin_;
   hiopVector* res_;
   hiopVector* yk_;
