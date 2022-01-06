@@ -165,7 +165,6 @@ int main(int argc, char **argv)
     delete A_mat;
     delete Minv_mat;
     delete rhs;
-    return 0;
   }
   
 #ifdef HIOP_USE_RAJA
@@ -206,9 +205,7 @@ int main(int argc, char **argv)
     delete Minv_opr;
     delete A_mat;
     delete Minv_mat;
-    delete rhs;
-    return 0;  
-    
+    delete rhs;    
   }
 #endif
  
