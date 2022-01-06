@@ -343,16 +343,13 @@ bool hiopPCGSolver::solve(hiopVector& b)
   /*
   * class hiopPCGSolver
   */
-  hiopBiCGStabSolver::hiopBiCGStabSolver(hiopNlpFormulation* nlp,
+  hiopBiCGStabSolver::hiopBiCGStabSolver(int n,
+                                         const std::string& mem_space,
                                          hiopLinearOperator* A_opr,
                                          hiopLinearOperator* Mleft_opr,
                                          hiopLinearOperator* Mright_opr,
-                                         hiopVector* x0)
-    : hiopKrylovSolver(nlp, A_opr, Mleft_opr, Mright_opr, x0),
-      tol_{1e-8},
-      maxit_{100},
-      iter_{0.0},
-      flag_{-1},
+                                         const hiopVector* x0)
+    : hiopKrylovSolver(n, mem_space, A_opr, Mleft_opr, Mright_opr, x0),
       xmin_{nullptr},
       res_{nullptr},
       pk_{nullptr},
@@ -407,12 +404,9 @@ bool hiopBiCGStabSolver::solve(hiopVector& b)
   //////////////////////////////////////////////////////////////////
   // Starting procedure
   //////////////////////////////////////////////////////////////////
-  // starting point
-  // starting point
-  if(xk_==nullptr) {
-    xk_ = b.alloc_clone();    //iterate x
-    xk_->setToConstant(x0_constant_);
-  }
+
+  assert(x0_);
+  hiopVector* xk_ = x0_;
 
   flag_ = 1;
   double imin = 0.;        // iteration at which minimal residual is achieved
@@ -425,15 +419,15 @@ bool hiopBiCGStabSolver::solve(hiopVector& b)
   res_->axpy(-1.0, b);
   res_->scale(-1.0);               
   double normr = res_->twonorm();  // Norm of residual
-  double normr_act = normr;
-  double normr_rel;
+  abs_resid_ = normr;
+  double rel_resid_;
 
   // initial guess is good enough
   if(normr <= tolb) { 
     b.copyFrom(*xk_);
     flag_ = 0;
     iter_ = 0.;
-    normr_rel = normr / n2b;
+    rel_resid_ = normr / n2b;
     return true;
   }
   
@@ -519,7 +513,7 @@ bool hiopBiCGStabSolver::solve(hiopVector& b)
     sk_->axpy(-alpha, *v_);
     
     normr = sk_->twonorm();
-    normr_act = normr;
+    abs_resid_ = normr;
 
     // check for convergence
     if(normr <= tolb || stagsteps >= maxstagsteps || moresteps) {
@@ -527,9 +521,9 @@ bool hiopBiCGStabSolver::solve(hiopVector& b)
       A_opr_->times_vec(*sk_,*xhalf_);
       sk_->axpy(-1.0,b);
       sk_->scale(-1.0);        
-      normr_act = sk_->twonorm();
+      abs_resid_ = sk_->twonorm();
 
-      if(normr_act <= tolb) { 
+      if(abs_resid_ <= tolb) { 
         xk_->copyFrom(*xhalf_);
         flag_ = 0;
         iter_ = ii + 1 - 0.5;
@@ -554,8 +548,8 @@ bool hiopBiCGStabSolver::solve(hiopVector& b)
       break;
     }
     // update minimal norm
-    if(normr_act < normrmin) {
-      normrmin = normr_act;
+    if(abs_resid_ < normrmin) {
+      normrmin = abs_resid_;
       xmin_->copyFrom(*xhalf_);
       imin = ii + 1 - 0.5;
     }
@@ -600,7 +594,7 @@ bool hiopBiCGStabSolver::solve(hiopVector& b)
     res_->axpy(-omega, *t_);
     
     normr = res_->twonorm();
-    normr_act = normr;
+    abs_resid_ = normr;
 
     // check for convergence
     if(normr <= tolb || stagsteps >= maxstagsteps || moresteps) {
@@ -608,9 +602,9 @@ bool hiopBiCGStabSolver::solve(hiopVector& b)
       A_opr_->times_vec(*res_,*xk_);
       res_->axpy(-1.0,b);
       res_->scale(-1.0);        
-      normr_act = res_->twonorm();
+      abs_resid_ = res_->twonorm();
 
-      if(normr_act <= tolb) { 
+      if(abs_resid_ <= tolb) { 
         flag_ = 0;
         iter_ = ii + 1;
         break;
@@ -630,8 +624,8 @@ bool hiopBiCGStabSolver::solve(hiopVector& b)
     }
 
     // update minimal norm
-    if(normr_act < normrmin) {
-      normrmin = normr_act;
+    if(abs_resid_ < normrmin) {
+      normrmin = abs_resid_;
       xmin_->copyFrom(*xk_);
       imin = ii + 1;
     }
@@ -646,15 +640,9 @@ bool hiopBiCGStabSolver::solve(hiopVector& b)
 
   // returned solution is first with minimal residual
   if(flag_ == 0) {
-    normr_rel = normr_act/n2b;
-    if(nlp_) {
-      nlp_->log->printf(hovScalars, "BiCGStab converged: actual normResid=%g relResid=%g iter=%.1f\n\n", 
-	                      normr_act, normr_rel, iter_);  
-    } else {
-      printf("BiCGStab converged: actual normResid=%g relResid=%g iter=%.1f\n\n", 
-	           normr_act, normr_rel, iter_);
-    }
-
+    rel_resid_ = abs_resid_/n2b;
+    ss_info_ << "BiCGStab converged: actual normResid=" << abs_resid_ << " relResid=" << rel_resid_ 
+             << " iter=" << iter_ << std::endl;
     b.copyFrom(*xk_);    
   } else {
     // update residual: b-KKT*xk
@@ -663,28 +651,22 @@ bool hiopBiCGStabSolver::solve(hiopVector& b)
     res_->scale(-1.0);        
     double normr_comp = res_->twonorm();
     
-    if(normr_comp <= normr_act) {
+    if(normr_comp <= abs_resid_) {
       b.copyFrom(*xmin_);
       iter_ = imin + 1;
-      normr_act = normr_comp;
-      normr_rel = normr_comp / n2b;
+      abs_resid_ = normr_comp;
+      rel_resid_ = normr_comp / n2b;
     } else {
       b.copyFrom(*xk_);
       iter_ = ii + 1;
       imin = iter_;
-      normr_rel = normr_act / n2b;
+      rel_resid_ = abs_resid_ / n2b;
     }
-    if(nlp_) {
-      nlp_->log->printf(hovScalars, "BiCGStab did NOT converged after %.1f iters. The solution from iter %.1f was returned.\n",
-                        (double)ii+1, imin);
-      nlp_->log->printf(hovScalars, "\t - Error code %d\n\t - Act res=%g\n\t - Rel res=%g \n\n", 
-                        flag_, normr_act, normr_rel);
-    } else {
-      printf("BiCGStab did NOT converged after %.1f iters. The solution from iter %.1f was returned.\n",
-             (double)ii+1, imin);
-      printf("\t - Error code %d\n\t - Act res=%g\n\t - Rel res=%g \n\n", 
-             flag_, normr_act, normr_rel);
-    }
+
+    ss_info_ << "BiCGStab did NOT converged after " << ii+1 << " iters. The solution from iter " 
+             << imin << " was returned." << std::endl;
+    ss_info_ << "\t - Error code " << flag_ << "\n\t - Act res=" << abs_resid_ << "n\t - Rel res="
+             << rel_resid_ << std::endl;
   }
   return true; // return true for inertia-free approach
 }

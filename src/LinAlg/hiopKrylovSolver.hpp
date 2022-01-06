@@ -183,11 +183,12 @@ class hiopBiCGStabSolver : public hiopKrylovSolver
 {
 public:
   /** initialization constructor */
-  hiopBiCGStabSolver(hiopNlpFormulation* nlp,
-                hiopLinearOperator* A_opr = nullptr,
-                hiopLinearOperator* Mleft_opr = nullptr,
-                hiopLinearOperator* Mright_opr = nullptr,
-                hiopVector* x0 = nullptr);
+  hiopBiCGStabSolver(int n,
+                     const std::string& mem_space,
+                     hiopLinearOperator* A_opr,
+                     hiopLinearOperator* Mleft_opr = nullptr,
+                     hiopLinearOperator* Mright_opr = nullptr,
+                     const hiopVector* x0 = nullptr);
   virtual ~hiopBiCGStabSolver();
 
   /** Solves a linear system.
@@ -197,12 +198,6 @@ public:
   virtual bool solve(hiopVector& x);
 
 protected:
-
-  const double tol_;
-  size_type maxit_;
-  double iter_;
-  int flag_;
-
   hiopVector* xmin_;
   hiopVector* res_;
   hiopVector* pk_;

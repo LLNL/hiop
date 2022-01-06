@@ -11,7 +11,7 @@ set(testMatrixSparse_SRC testMatrixSparse.cpp LinAlg/matrixTestsSparseTriplet.cp
 set(testMatrixSymSparse_SRC testMatrixSymSparse.cpp LinAlg/matrixTestsSymSparseTriplet.cpp)
 
 # Set sources for BiCGStab
-set(testBiCGStab_SRC testKrylov_bicgstab.cpp)
+set(testBiCGStab_SRC test_bicgstab.cpp)
 
 # Set sources for symmetric sparse matrix tests
 set(testPCG_SRC test_pcg.cpp)
