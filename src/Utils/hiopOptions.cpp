@@ -794,7 +794,7 @@ void hiopOptionsNLP::register_options()
   }
 
   //
-  // choose linear solver for  KKT solves 
+  // choose direct linear solver for sparse linear system on CPU
   //
   // when KKTLinsys is 'full' only strumpack is available
   // for the other KKTLinsys (which are all symmetric), MA57 is chosen 'auto'matically for all compute

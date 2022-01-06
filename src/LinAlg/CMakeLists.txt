@@ -29,6 +29,8 @@ set(hiopLinAlg_INTERFACE_HEADERS
   hiopVectorIntSeq.hpp
   hiopVectorPar.hpp
   hiopVectorRajaPar.hpp
+  hiopLinearOperator.hpp
+  hiopKrylovSolver.hpp
   )
 
 # Set linear algebra common source files
@@ -43,6 +45,8 @@ set(hiopLinAlg_SRC
   hiopMatrixSparseTripletStorage.cpp
   hiopMatrixSparseTriplet.cpp
   hiopMatrixComplexSparseTriplet.cpp
+  hiopLinearOperator.cpp
+  hiopKrylovSolver.cpp
 )
 
 set(hiopLinAlg_RAJA_SRC
