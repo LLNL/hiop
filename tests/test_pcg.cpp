@@ -4,6 +4,7 @@
 #include "hiopLinearOperator.hpp"
 
 #include "hiopMatrixSparseTriplet.hpp"
+#include "hiopMatrixRajaSparseTriplet.hpp"
 
 #include <cstdlib>
 #include <string>
@@ -116,6 +117,15 @@ void initializeRajaSymSparseMat(hiop::hiopMatrixSparse* mat, bool is_diag_pred)
 
 int main(int argc, char **argv)
 {
+  int rank=0, numRanks=1;
+#ifdef HIOP_USE_MPI
+  int err;
+  err = MPI_Init(&argc, &argv);                  assert(MPI_SUCCESS==err);
+  err = MPI_Comm_rank(MPI_COMM_WORLD,&rank);     assert(MPI_SUCCESS==err);
+  err = MPI_Comm_size(MPI_COMM_WORLD,&numRanks); assert(MPI_SUCCESS==err);
+  if(0==rank) printf("Support for MPI is enabled\n");
+#endif
+
   size_type n = 50;
   
   if(argc>1) {
@@ -157,7 +167,7 @@ int main(int argc, char **argv)
     
     bool is_solved = pcg_solver.solve(*rhs);
 
-    std::cout << pcg_solver.get_convergence_info() << std::endl;
+    std::cout << mem_space << ": " << pcg_solver.get_convergence_info() << std::endl;
 
     // Destroy testing objects
     delete A_opr;
@@ -170,7 +180,7 @@ int main(int argc, char **argv)
 #ifdef HIOP_USE_RAJA
   // with RAJA
   {
-    std::string mem_space = "UM";
+    std::string mem_space = "DEVICE";
 
     size_type M_local = n;
     size_type N_local = M_local;
@@ -198,7 +208,7 @@ int main(int argc, char **argv)
     
     bool is_solved = pcg_solver.solve(*rhs);
 
-    std::cout << pcg_solver.get_convergence_info() << std::endl;
+    std::cout << mem_space << ": " << pcg_solver.get_convergence_info() << std::endl;
 
     // Destroy testing objects
     delete A_opr;
@@ -208,7 +218,11 @@ int main(int argc, char **argv)
     delete rhs;    
   }
 #endif
- 
+
+#ifdef HIOP_USE_MPI
+  MPI_Finalize();
+#endif
+  
   
 }
 

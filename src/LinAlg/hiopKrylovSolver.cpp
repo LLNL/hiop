@@ -333,7 +333,7 @@ bool hiopPCGSolver::solve(hiopVector& b)
     }
 
     ss_info_ << "PCG did NOT converged after " << ii+1 << " iters. The solution from iter " 
-             << imin << "was returned." << std::endl;
+             << imin << " was returned." << std::endl;
     ss_info_ << "\t - Error code " << flag_ << "\n\t - Act res=" << abs_resid_ << "n\t - Rel res="
              << rel_resid_ << std::endl;
   }
