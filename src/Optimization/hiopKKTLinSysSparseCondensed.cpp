@@ -45,6 +45,12 @@
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or
 // product endorsement purposes.
 
+/**
+ * @file hiopKKTLinSysSparseCondensed.cpp
+ *
+ * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
+ */
+
 #include "hiopKKTLinSysSparseCondensed.hpp"
 #ifdef HIOP_USE_COINHSL
 #include "hiopLinSolverIndefSparseMA57.hpp"
@@ -892,9 +898,8 @@ bool hiopMatrixSparseCSRStorage::form_from(const size_type m,
 }
 
 /**
- * Forms a CSR matrix representing the transpose of the sparse matrix in triplet format is passed as
- * argument. Returns false if the input formated as expected (e.g., ordered by rows then by columns), 
- * otherwise returns true.
+ * Forms a CSR matrix representing the transpose of the sparse matrix in triplet format 
+ * passed as argument. Assumes triplet format is ordered by rows then by columns.
  */
 bool hiopMatrixSparseCSRStorage::form_transpose_from(const hiopMatrixSparseTriplet& M)
 {

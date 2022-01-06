@@ -141,7 +141,6 @@ protected:
   hiopLinSolverIndefSparse()
     : M(0,0)
   {
-    nlp_ = nullptr;
     assert(false);
   }
 };

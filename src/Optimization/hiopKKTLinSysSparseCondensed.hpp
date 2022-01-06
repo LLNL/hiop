@@ -1,6 +1,5 @@
 // Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
-// Written by Nai-Yuan Chiang, chiang7@llnl.gov and Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp
@@ -46,6 +45,12 @@
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or
 // product endorsement purposes.
 
+/**
+ * @file hiopKKTLinSysSparseCondensed.hpp
+ *
+ * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
+ */
+
 #ifndef HIOP_KKTLINSYSSPARSECONDENSED
 #define HIOP_KKTLINSYSSPARSECONDENSED
 
@@ -78,14 +83,14 @@ public:
                  const index_type* irow,
                  const index_type* jcol);
   /**
-   * Forms a CSR matrix representing the transpose of the sparse matrix in triplet format is passed as
-   * argument. Returns false if the input formated as expected (e.g., ordered by rows then by columns), 
-   * otherwise returns true.
+   * Forms a CSR matrix representing the transpose of the input sparse matrix in triplet 
+   * format passed as argument. Assumes triplet input is ordered by rows then by columns.
    */
   bool form_transpose_from(const hiopMatrixSparseTriplet& M);
 
   /**
-   * Computes M = X*D*Y, where X is the calling matrix class and D is a diagonal specified by a vector.
+   * Computes M = X*D*Y, where X is the calling matrix class and D is a diagonal specified by 
+   * a vector.
    */
   void times_diag_times_mat(const hiopVector& diag,
                             const hiopMatrixSparseCSRStorage& Y,
@@ -171,24 +176,26 @@ protected:
  * @note: the NLP is assumed to have no equality constraints (or have been relaxed to 
  * two-sided inequality constraints).
  *
- *
  * Dual regularization may be not enforced as it requires repeated divisions that are 
- * to round-off error accumulation, but when it is enforced, the regularized XDYcYd KKT 
- * system
+ * prone to round-off error accumulation. When/If the class is going to be updated to
+ * use dual regularization, the regularized XDYcYd KKT system reads:
  * [  H+Dx+delta_wx*I         0         Jd^T     ] [ dx]   [ rx_tilde ]
  * [          0         Dd+delta_wd*I   -I       ] [ dd] = [ rd_tilde ]
  * [          Jd             -I         -delta_cd] [dyd]   [   ryd    ]
- * is solved as:
- * (notation) Dd2 = [ (Dd+delta_wd*I)^{-1} + delta_cd*I ]^{-1}
+ *
+ * (notation) Dd2 = [ I+delta_cd*(Dd+delta_wd*I) ]^{-1}
+ * (notation) Dd3 = Dd2*(Dd+delta_wd*I)
  *
  * dd = Jd*dx - delta_cd*dyd - ryd
  *
  * From (Dd+delta_wd*I)*dd - dyd = rd_tilde one can write
  *   ->   (Dd+delta_wd*I)*(Jd*dx - delta_cd*dyd - ryd) - dyd = rd_tilde
- *   ->   (I+ delta_cd*(Dd+delta_wd*I)) dyd = (Dd+delta_wd*I)*(Jd*dx - ryd) - rd_tilde 
- * dyd = (I+ delta_cd*(Dd+delta_wd*I))^{-1} [ (Dd+delta_wd*I)*(Jd*dx - ryd) - rd_tilde ]
+ *   ->   [I+delta_cd*(Dd+delta_wd*I)] dyd = (Dd+delta_wd*I)*(Jd*dx - ryd) - rd_tilde 
+ * dyd = (I+delta_cd*(Dd+delta_wd*I))^{-1} [ (Dd+delta_wd*I)*(Jd*dx - ryd) - rd_tilde ]
+ * dyd =               Dd2                 [ (Dd+delta_wd*I)*(Jd*dx - ryd) - rd_tilde ]
+ * dyd = Dd3*Jd*dx - Dd3*ryd - Dd2 rd_tilde 
  *
- * (H+Dx+delta_wx*I + Jd^T * Dd2 * Jd) dx = rx_tilde + Jd^T*Dd2*(Dd+delta_wd*I)*ryd +  Jd^T*Dd2*rd_tilde
+ * (H+Dx+delta_wx*I + Jd^T * Dd3 * Jd) dx = rx_tilde + Jd^T*Dd3*ryd +  Jd^T*Dd2*rd_tilde
  */
 class hiopKKTLinSysCondensedSparse : public hiopKKTLinSysCompressedSparseXDYcYd
 {

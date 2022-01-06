@@ -179,7 +179,7 @@ bool hiopLinSolverCholCuSparse::initial_setup()
   cusolverStatus_t ret;
   assert(nullptr == buf_fact_);
   size_type m = mat_csr_->m();
-  assert(m == mat_csr_->m() && m == mat_csr_->n());
+  assert(m == mat_csr_->n());
   assert(nnz_ == mat_csr_->nnz());
 
   //
@@ -213,7 +213,7 @@ bool hiopLinSolverCholCuSparse::initial_setup()
   if(dopermutation) {
     t.reset(); t.start();
 
-    int* P_h = new index_type[m];
+    auto* P_h = new index_type[m];
 #ifndef HIOP_USE_EIGEN
     do_symb_analysis(mat_csr_->m(),
                      mat_csr_->nnz(),
@@ -249,12 +249,12 @@ bool hiopLinSolverCholCuSparse::initial_setup()
 
     //transfer permutation and its transpose to the device
     assert(nullptr == P_);
-    cudaMalloc(&P_, m*sizeof(int));
-    cudaMemcpy(P_, P_h, m*sizeof(int), cudaMemcpyHostToDevice);
+    cudaMalloc(&P_, m*sizeof(index_type));
+    cudaMemcpy(P_, P_h, m*sizeof(index_type), cudaMemcpyHostToDevice);
     
     assert(nullptr == PT_);
-    cudaMalloc(&PT_, m*sizeof(int));
-    cudaMemcpy(PT_, PT_h, m*sizeof(int), cudaMemcpyHostToDevice);
+    cudaMalloc(&PT_, m*sizeof(index_type));
+    cudaMemcpy(PT_, PT_h, m*sizeof(index_type), cudaMemcpyHostToDevice);
     delete[] PT_h;
 
     // get permutation buffer size
@@ -346,12 +346,12 @@ bool hiopLinSolverCholCuSparse::initial_setup()
     }
   
     assert(nullptr == P_);
-    cudaMalloc(&P_, m*sizeof(int));
-    cudaMemcpy(P_, P_h, m*sizeof(int), cudaMemcpyHostToDevice);
+    cudaMalloc(&P_, m*sizeof(index_type));
+    cudaMemcpy(P_, P_h, m*sizeof(index_type), cudaMemcpyHostToDevice);
     
     assert(nullptr == PT_);
-    cudaMalloc(&PT_, m*sizeof(int));
-    cudaMemcpy(PT_, PT_h, m*sizeof(int), cudaMemcpyHostToDevice);
+    cudaMalloc(&PT_, m*sizeof(index_type));
+    cudaMemcpy(PT_, PT_h, m*sizeof(index_type), cudaMemcpyHostToDevice);
   }
 
   t.reset();
