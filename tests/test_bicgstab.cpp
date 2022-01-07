@@ -145,8 +145,8 @@ int main(int argc, char **argv)
     size_type N_local = M_local;
     size_type nnz = M_local + M_local-1 + M_local-2;
 
-    hiop::hiopVectorPar rhs(N_local);
-    rhs.setToConstant(1.0);
+    hiop::hiopVector* rhs = hiop::LinearAlgebraFactory::create_vector(mem_space, N_local);
+    rhs->setToConstant(1.0);
 
     // create a sysmetric matrix (only upper triangular part is needed by hiop)
     // it is an upper tridiagonal matrix
@@ -165,7 +165,7 @@ int main(int argc, char **argv)
 
     hiopBiCGStabSolver bicgstab_solver(N_local, mem_space, A_opr, Minv_opr, nullptr, nullptr);
 
-    bool is_solved = bicgstab_solver.solve(rhs);
+    bool is_solved = bicgstab_solver.solve(*rhs);
 
     std::cout << mem_space << ": " << bicgstab_solver.get_convergence_info() << std::endl;
 
@@ -205,7 +205,7 @@ int main(int argc, char **argv)
     
     hiopBiCGStabSolver bicgstab_solver(N_local, mem_space, A_opr, Minv_opr, nullptr, nullptr);
 
-    bool is_solved = bicgstab_solver.solve(rhs);
+    bool is_solved = bicgstab_solver.solve(*rhs);
 
     std::cout << mem_space << ": " << bicgstab_solver.get_convergence_info() << std::endl;
 
