@@ -851,7 +851,7 @@ bool hiopMatrixSparseCSRStorage::form_from(const size_type m,
     
     nrows_ = m;
     ncols_ = n;
-    nnz_ = nnz_;
+    nnz_ = nnz;
 
     alloc();
   }
