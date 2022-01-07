@@ -203,9 +203,7 @@ protected:
   hiopVector* pk_;
   hiopVector* ph_;
   hiopVector* v_;
-  hiopVector* xhalf_;
   hiopVector* sk_;
-  hiopVector* sh_;
   hiopVector* t_;
   hiopVector* rt_;
 };

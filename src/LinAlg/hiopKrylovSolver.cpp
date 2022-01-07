@@ -355,9 +355,7 @@ bool hiopPCGSolver::solve(hiopVector& b)
       pk_{nullptr},
       ph_{nullptr},
       v_{nullptr},
-      xhalf_{nullptr},
       sk_{nullptr},
-      sh_{nullptr},
       t_{nullptr},
       rt_{nullptr}
   {
@@ -370,9 +368,7 @@ bool hiopPCGSolver::solve(hiopVector& b)
     delete pk_;
     delete ph_;
     delete v_;
-    delete xhalf_;
     delete sk_;
-    delete sh_;
     delete t_;
     delete rt_;
   }
@@ -394,9 +390,7 @@ bool hiopBiCGStabSolver::solve(hiopVector& b)
     pk_ = b.alloc_clone();    //work vectors
     ph_ = b.alloc_clone();    //work vectors
     v_ = b.alloc_clone();    //work vectors
-    xhalf_ = b.alloc_clone();    //work vectors 
     sk_ = b.alloc_clone();    //work vectors
-    sh_ = b.alloc_clone();    //work vectors
     t_ = b.alloc_clone();    //work vectors
     rt_ = b.alloc_clone();    //work vectors
   }
@@ -506,9 +500,8 @@ bool hiopBiCGStabSolver::solve(hiopVector& b)
       stagsteps = 0;
     }
 
-    // new PCG iter
-    xhalf_->copyFrom(*xk_);
-    xhalf_->axpy(alpha, *ph_);
+    // new BICGStab iter
+    xk_->axpy(alpha, *ph_);
     sk_->copyFrom(*res_);
     sk_->axpy(-alpha, *v_);
     
@@ -518,13 +511,12 @@ bool hiopBiCGStabSolver::solve(hiopVector& b)
     // check for convergence
     if(normr <= tolb || stagsteps >= maxstagsteps || moresteps) {
       // update residual: b-KKT*xk
-      A_opr_->times_vec(*sk_,*xhalf_);
+      A_opr_->times_vec(*sk_,*xk_);
       sk_->axpy(-1.0,b);
       sk_->scale(-1.0);        
       abs_resid_ = sk_->twonorm();
 
       if(abs_resid_ <= tolb) { 
-        xk_->copyFrom(*xhalf_);
         flag_ = 0;
         iter_ = ii + 1 - 0.5;
         break;
@@ -535,7 +527,7 @@ bool hiopBiCGStabSolver::solve(hiopVector& b)
         moresteps++;
         if(moresteps >= maxmsteps) {
           // tol is too small
-          b.copyFrom(*xhalf_);
+          b.copyFrom(*xk_);
           flag_ = 3;
           iter_ = ii + 1 - 0.5;
           break;
@@ -550,20 +542,20 @@ bool hiopBiCGStabSolver::solve(hiopVector& b)
     // update minimal norm
     if(abs_resid_ < normrmin) {
       normrmin = abs_resid_;
-      xmin_->copyFrom(*xhalf_);
+      xmin_->copyFrom(*xk_);
       imin = ii + 1 - 0.5;
     }
 
     if(ML_opr_) {
-      ML_opr_->times_vec(*sh_, *sk_);
+      ML_opr_->times_vec(*ph_, *sk_);
     } else {
-      sh_->copyFrom(*sk_);
+      ph_->copyFrom(*sk_);
     }
     if(MR_opr_) {
-      MR_opr_->times_vec(*sh_, *sh_);
+      MR_opr_->times_vec(*ph_, *ph_);
     }
 
-    A_opr_->times_vec(*t_, *sh_);
+    A_opr_->times_vec(*t_, *ph_);
 
     double tt = t_->dotProductWith(*t_);
     
@@ -581,15 +573,14 @@ bool hiopBiCGStabSolver::solve(hiopVector& b)
       break;
     }
 
-    if(sh_->twonorm()*abs(omega) < eps * xhalf_->twonorm()) {
+    if(ph_->twonorm()*abs(omega) < eps * xk_->twonorm()) {
       stagsteps++;
     } else {
       stagsteps = 0;
     }
 
-    // new PCG iter
-    xk_->copyFrom(*xhalf_);
-    xk_->axpy(omega, *sh_);
+    // new BICGStab iter
+    xk_->axpy(omega, *ph_);
     res_->copyFrom(*sk_);
     res_->axpy(-omega, *t_);
     
