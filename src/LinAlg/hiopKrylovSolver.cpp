@@ -340,4 +340,328 @@ bool hiopPCGSolver::solve(hiopVector& b)
   return true; // return true for inertia-free approach
 }
 
+  /*
+  * class hiopPCGSolver
+  */
+  hiopBiCGStabSolver::hiopBiCGStabSolver(int n,
+                                         const std::string& mem_space,
+                                         hiopLinearOperator* A_opr,
+                                         hiopLinearOperator* Mleft_opr,
+                                         hiopLinearOperator* Mright_opr,
+                                         const hiopVector* x0)
+    : hiopKrylovSolver(n, mem_space, A_opr, Mleft_opr, Mright_opr, x0),
+      xmin_{nullptr},
+      res_{nullptr},
+      pk_{nullptr},
+      ph_{nullptr},
+      v_{nullptr},
+      sk_{nullptr},
+      t_{nullptr},
+      rt_{nullptr}
+  {
+  }
+
+  hiopBiCGStabSolver::~hiopBiCGStabSolver()
+  {
+    delete xmin_;
+    delete res_;
+    delete pk_;
+    delete ph_;
+    delete v_;
+    delete sk_;
+    delete t_;
+    delete rt_;
+  }
+
+bool hiopBiCGStabSolver::solve(hiopVector& b)
+{
+  // rhs = 0 --> solution = 0
+  double n2b = b.twonorm();
+  if(n2b == 0.0) {
+    b.setToZero();
+    flag_ = 0;
+    iter_ = 0.;    
+    return true;
+  }
+
+  if(xmin_==nullptr) {
+    xmin_ = b.alloc_clone();  //iterate which has minimal residual so far
+    res_ = b.alloc_clone();   //minimal residual iterate 
+    pk_ = b.alloc_clone();    //work vectors
+    ph_ = b.alloc_clone();    //work vectors
+    v_ = b.alloc_clone();    //work vectors
+    sk_ = b.alloc_clone();    //work vectors
+    t_ = b.alloc_clone();    //work vectors
+    rt_ = b.alloc_clone();    //work vectors
+  }
+
+  //////////////////////////////////////////////////////////////////
+  // Starting procedure
+  //////////////////////////////////////////////////////////////////
+
+  assert(x0_);
+  hiopVector* xk_ = x0_;
+
+  flag_ = 1;
+  double imin = 0.;        // iteration at which minimal residual is achieved
+  double tolb = tol_ * n2b;   // relative tolerance
+
+  xmin_->copyFrom(*xk_);
+
+  // compute residual: b-KKT*xk
+  A_opr_->times_vec(*res_, *xk_);
+  res_->axpy(-1.0, b);
+  res_->scale(-1.0);               
+  double normr = res_->twonorm();  // Norm of residual
+  abs_resid_ = normr;
+  double rel_resid_;
+
+  // initial guess is good enough
+  if(normr <= tolb) { 
+    b.copyFrom(*xk_);
+    flag_ = 0;
+    iter_ = 0.;
+    rel_resid_ = normr / n2b;
+    return true;
+  }
+  
+  rt_->copyFrom(*res_);
+  double normrmin = normr;  // Two-norm of minimum residual
+  double rho = 1.0;
+  double omega = 1.0;
+  size_type stagsteps = 0;  // stagnation of the method
+  size_type moresteps = 0;
+  double eps = std::numeric_limits<double>::epsilon();
+  
+  size_type maxmsteps = 100;//fmin(5, n_-maxit_);
+  maxmsteps = 100;//fmin(floor(n_/50), maxmsteps);
+  size_type maxstagsteps = 3;
+
+  // main loop for BICGStab
+  double alpha;
+  double rho1;
+  index_type ii = 0;
+  for(; ii < maxit_; ++ii) {
+    rho1 = rho;
+    rho = rt_->dotProductWith(*res_);
+
+    //check for stagnation!!!
+    if((rho == 0) || abs(rho) > 1E+20) {
+      flag_ = 4;
+      iter_ = ii + 1 - 0.5;
+      break;
+    }
+
+    if(ii == 0) {
+      pk_->copyFrom(*res_);
+    } else {
+      double beta = rho / rho1 * (alpha / omega);
+      if(beta == 0 || abs(beta) > 1E+20) {
+        flag_ = 4;
+        iter_ = ii + 1 - 0.5;
+        break;
+      }
+      pk_->axpy(-omega, *v_);  
+      pk_->scale(beta);
+      pk_->axpy(1.0, *res_);      
+    }
+
+    if(ML_opr_) {
+      ML_opr_->times_vec(*ph_, *pk_);
+    } else {
+      ph_->copyFrom(*pk_);
+    }
+    if(MR_opr_) {
+      MR_opr_->times_vec(*ph_, *ph_);
+    }
+
+    A_opr_->times_vec(*v_, *ph_);
+    
+    double rtv = rt_->dotProductWith(*v_);
+    
+    if(rtv == 0.0 || abs(rtv) > 1E+20) {
+      flag_ = 4;
+      iter_ = ii + 1 - 0.5;
+      break;
+    }
+
+    alpha = rho / rtv;
+
+    if(abs(alpha) > 1E+20) {
+      flag_ = 4;
+      iter_ = ii + 1 - 0.5;
+      break;
+    }
+  
+    // Check for stagnation of the method
+    if(ph_->twonorm()*abs(alpha) < eps * xk_->twonorm()) {
+      stagsteps++;
+    } else {
+      stagsteps = 0;
+    }
+
+    // new BICGStab iter
+    xk_->axpy(alpha, *ph_);
+    sk_->copyFrom(*res_);
+    sk_->axpy(-alpha, *v_);
+    
+    normr = sk_->twonorm();
+    abs_resid_ = normr;
+
+    // check for convergence
+    if(normr <= tolb || stagsteps >= maxstagsteps || moresteps) {
+      // update residual: b-KKT*xk
+      A_opr_->times_vec(*sk_,*xk_);
+      sk_->axpy(-1.0,b);
+      sk_->scale(-1.0);        
+      abs_resid_ = sk_->twonorm();
+
+      if(abs_resid_ <= tolb) { 
+        flag_ = 0;
+        iter_ = ii + 1 - 0.5;
+        break;
+      } else {
+        if(stagsteps >= maxstagsteps && moresteps == 0) {
+          stagsteps = 0;
+        }
+        moresteps++;
+        if(moresteps >= maxmsteps) {
+          // tol is too small
+          b.copyFrom(*xk_);
+          flag_ = 3;
+          iter_ = ii + 1 - 0.5;
+          break;
+        }
+      }
+    }
+    if(stagsteps >= maxstagsteps) {
+      iter_ = ii + 1 - 0.5;
+      flag_ = 3;
+      break;
+    }
+    // update minimal norm
+    if(abs_resid_ < normrmin) {
+      normrmin = abs_resid_;
+      xmin_->copyFrom(*xk_);
+      imin = ii + 1 - 0.5;
+    }
+
+    if(ML_opr_) {
+      ML_opr_->times_vec(*ph_, *sk_);
+    } else {
+      ph_->copyFrom(*sk_);
+    }
+    if(MR_opr_) {
+      MR_opr_->times_vec(*ph_, *ph_);
+    }
+
+    A_opr_->times_vec(*t_, *ph_);
+
+    double tt = t_->dotProductWith(*t_);
+    
+    if(tt == 0.0 || abs(tt) > 1E+20) {
+      iter_ = ii + 1;
+      flag_ = 4;
+      break;
+    }
+
+    omega = t_->dotProductWith(*sk_) / tt;
+
+    if(abs(omega) > 1E+20) {
+      iter_ = ii + 1;
+      flag_ = 4;
+      break;
+    }
+
+    if(ph_->twonorm()*abs(omega) < eps * xk_->twonorm()) {
+      stagsteps++;
+    } else {
+      stagsteps = 0;
+    }
+
+    // new BICGStab iter
+    xk_->axpy(omega, *ph_);
+    res_->copyFrom(*sk_);
+    res_->axpy(-omega, *t_);
+    
+    normr = res_->twonorm();
+    abs_resid_ = normr;
+
+    // check for convergence
+    if(normr <= tolb || stagsteps >= maxstagsteps || moresteps) {
+      // update residual: b-KKT*xk
+      A_opr_->times_vec(*res_,*xk_);
+      res_->axpy(-1.0,b);
+      res_->scale(-1.0);        
+      abs_resid_ = res_->twonorm();
+
+      if(abs_resid_ <= tolb) { 
+        flag_ = 0;
+        iter_ = ii + 1;
+        break;
+      } else {
+        if(stagsteps >= maxstagsteps && moresteps == 0) {
+          stagsteps = 0;
+        }
+        moresteps++;
+        if(moresteps >= maxmsteps) {
+          // tol is too small
+          b.copyFrom(*xk_);
+          flag_ = 3;
+          iter_ = ii + 1;
+          break;
+        }
+      }
+    }
+
+    // update minimal norm
+    if(abs_resid_ < normrmin) {
+      normrmin = abs_resid_;
+      xmin_->copyFrom(*xk_);
+      imin = ii + 1;
+    }
+
+    if(stagsteps >= maxstagsteps) {
+      iter_ = ii + 1 - 0.5;
+      flag_ = 3;
+      break;
+    }
+
+  } // end of for(; ii < maxit_; ++ii)
+
+  // returned solution is first with minimal residual
+  if(flag_ == 0) {
+    rel_resid_ = abs_resid_/n2b;
+    ss_info_ << "BiCGStab converged: actual normResid=" << abs_resid_ << " relResid=" << rel_resid_ 
+             << " iter=" << iter_ << std::endl;
+    b.copyFrom(*xk_);    
+  } else {
+    // update residual: b-KKT*xk
+    A_opr_->times_vec(*res_, *xmin_);
+    res_->axpy(-1.0, b);
+    res_->scale(-1.0);        
+    double normr_comp = res_->twonorm();
+    
+    if(normr_comp <= abs_resid_) {
+      b.copyFrom(*xmin_);
+      iter_ = imin + 1;
+      abs_resid_ = normr_comp;
+      rel_resid_ = normr_comp / n2b;
+    } else {
+      b.copyFrom(*xk_);
+      iter_ = ii + 1;
+      imin = iter_;
+      rel_resid_ = abs_resid_ / n2b;
+    }
+
+    ss_info_ << "BiCGStab did NOT converged after " << ii+1 << " iters. The solution from iter " 
+             << imin << " was returned." << std::endl;
+    ss_info_ << "\t - Error code " << flag_ << "\n\t - Act res=" << abs_resid_ << "n\t - Rel res="
+             << rel_resid_ << std::endl;
+  }
+  return true; // return true for inertia-free approach
+}
+
+
+
 } // namespace hiop
