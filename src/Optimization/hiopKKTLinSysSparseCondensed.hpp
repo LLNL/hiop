@@ -279,7 +279,7 @@ protected:
 
 private:
   //placeholder for the code that decides which linear solver to used based on safe_mode_
-  hiopLinSolverIndefSparse* determine_and_create_linsys(size_type nxd, size_type nineq, size_type nnz);
+  hiopLinSolverSymSparse* determine_and_create_linsys(size_type nxd, size_type nineq, size_type nnz);
 };
 
   

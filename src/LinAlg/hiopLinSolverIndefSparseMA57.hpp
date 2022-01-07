@@ -101,7 +101,7 @@ extern "C" {
 
 
 /** Wrapper for MA57 */
-class hiopLinSolverIndefSparseMA57: public hiopLinSolverIndefSparse
+class hiopLinSolverIndefSparseMA57: public hiopLinSolverSymSparse
 {
 public:
   hiopLinSolverIndefSparseMA57(const int& n, const int& nnz, hiopNlpFormulation* nlp);

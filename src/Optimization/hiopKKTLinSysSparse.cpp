@@ -101,29 +101,31 @@ namespace hiop
 
     linSys_ = determineAndCreateLinsys(nx, neq, nineq, nnz);
         
-    hiopLinSolverIndefSparse* linSys = dynamic_cast<hiopLinSolverIndefSparse*> (linSys_);
+    auto* linSys = dynamic_cast<hiopLinSolverSymSparse*> (linSys_);
     assert(linSys);
 
-    hiopMatrixSparseTriplet& Msys = linSys->sysMatrix();
+    auto* Msys = dynamic_cast<hiopMatrixSparseTriplet*>(linSys->sysMatrix());
+    assert(Msys);
+    
     if(perf_report_) {
       nlp_->log->printf(hovSummary,
 			"KKT_Sparse_XYcYd linsys: Low-level linear system size: %d\n",
-			Msys.n());
+			Msys->n());
     }
 
     // update linSys system matrix, including IC perturbations
     {
       nlp_->runStats.kkt.tmUpdateLinsys.start();
       
-      Msys.setToZero();
+      Msys->setToZero();
 
       // copy Jac and Hes to the full iterate matrix
       size_type dest_nnz_st{0};
-      Msys.copyRowsBlockFrom(*HessSp_,  0,   nx,     0,      dest_nnz_st);
+      Msys->copyRowsBlockFrom(*HessSp_,  0,   nx,     0,      dest_nnz_st);
       dest_nnz_st += HessSp_->numberOfNonzeros();
-      Msys.copyRowsBlockFrom(*Jac_cSp_, 0,   neq,    nx,     dest_nnz_st);
+      Msys->copyRowsBlockFrom(*Jac_cSp_, 0,   neq,    nx,     dest_nnz_st);
       dest_nnz_st += Jac_cSp_->numberOfNonzeros();
-      Msys.copyRowsBlockFrom(*Jac_dSp_, 0,   nineq,  nx+neq, dest_nnz_st);
+      Msys->copyRowsBlockFrom(*Jac_dSp_, 0,   nineq,  nx+neq, dest_nnz_st);
       dest_nnz_st += Jac_dSp_->numberOfNonzeros();
 
       //build the diagonal Hx = Dx + delta_wx
@@ -136,10 +138,10 @@ namespace hiop
       //a good time to add the IC 'delta_wx' perturbation
       Hx_->addConstant(delta_wx);
 
-      Msys.copySubDiagonalFrom(0, nx, *Hx_, dest_nnz_st); dest_nnz_st += nx;
+      Msys->copySubDiagonalFrom(0, nx, *Hx_, dest_nnz_st); dest_nnz_st += nx;
 
       //add -delta_cc to diagonal block linSys starting at (nx, nx)
-      Msys.setSubDiagonalTo(nx, neq, -delta_cc, dest_nnz_st); dest_nnz_st += neq;
+      Msys->setSubDiagonalTo(nx, neq, -delta_cc, dest_nnz_st); dest_nnz_st += neq;
 
       /* we've just done above the (1,1) and (2,2) blocks of
       *
@@ -162,10 +164,10 @@ namespace hiop
       Dd_inv_->invert();
       Dd_inv_->addConstant(delta_cd);
 
-      Msys.copySubDiagonalFrom(nx+neq, nineq, *Dd_inv_, dest_nnz_st, -1); dest_nnz_st += nineq;
+      Msys->copySubDiagonalFrom(nx+neq, nineq, *Dd_inv_, dest_nnz_st, -1); dest_nnz_st += nineq;
 
 
-      nlp_->log->write("KKT_SPARSE_XYcYd linsys:", Msys, hovMatrices);
+      nlp_->log->write("KKT_SPARSE_XYcYd linsys:", *Msys, hovMatrices);
       nlp_->runStats.kkt.tmUpdateLinsys.stop();
     } // end of update of the linear system
 
@@ -174,7 +176,7 @@ namespace hiop
       write_linsys_counter_++;
     }
     if(write_linsys_counter_>=0) {
-      csr_writer_.writeMatToFile(Msys, write_linsys_counter_, nx, neq, nineq);
+      csr_writer_.writeMatToFile(*Msys, write_linsys_counter_, nx, neq, nineq);
     }
 
     nlp_->runStats.tmSolverInternal.stop();
@@ -251,7 +253,7 @@ namespace hiop
     return true;
   }
 
-  hiopLinSolverIndefSparse*
+  hiopLinSolverSymSparse*
   hiopKKTLinSysCompressedSparseXYcYd::determineAndCreateLinsys(int nx, int neq, int nineq, int nnz)
   {
     if(nullptr==linSys_) {
@@ -341,7 +343,7 @@ namespace hiop
       }
       assert(linSys_&& "KKT_SPARSE_XYcYd linsys: cannot instantiate backend linear solver");
     }
-    return dynamic_cast<hiopLinSolverIndefSparse*> (linSys_);
+    return dynamic_cast<hiopLinSolverSymSparse*> (linSys_);
   }
 
 
@@ -385,30 +387,35 @@ namespace hiop
 
     linSys_ = determineAndCreateLinsys(nx, neq, nineq, nnz);
     
-    hiopLinSolverIndefSparse* linSys = dynamic_cast<hiopLinSolverIndefSparse*> (linSys_);
+    auto* linSys = dynamic_cast<hiopLinSolverSymSparse*> (linSys_);
     assert(linSys);
 
-    hiopMatrixSparseTriplet& Msys = linSys->sysMatrix();
+    auto* Msys = dynamic_cast<hiopMatrixSparseTriplet*>(linSys->sysMatrix());
+    assert(Msys);
     if(perf_report_) {
       nlp_->log->printf(hovSummary,
 			"KKT_SPARSE_XDYcYd linsys: Low-level linear system size: %d\n",
-			Msys.n());
+			Msys->n());
     }
 
     // update linSys system matrix, including IC perturbations
     {
       nlp_->runStats.kkt.tmUpdateLinsys.start();
 
-      Msys.setToZero();
+      Msys->setToZero();
 
       // copy Jac and Hes to the full iterate matrix
       size_type dest_nnz_st{0};
-      Msys.copyRowsBlockFrom(*HessSp_,  0,   nx,     0,          dest_nnz_st); dest_nnz_st += HessSp_->numberOfNonzeros();
-      Msys.copyRowsBlockFrom(*Jac_cSp_, 0,   neq,    nx+nd,      dest_nnz_st); dest_nnz_st += Jac_cSp_->numberOfNonzeros();
-      Msys.copyRowsBlockFrom(*Jac_dSp_, 0,   nineq,  nx+nd+neq,  dest_nnz_st); dest_nnz_st += Jac_dSp_->numberOfNonzeros();
+      Msys->copyRowsBlockFrom(*HessSp_,  0,   nx,     0,          dest_nnz_st);
+      dest_nnz_st += HessSp_->numberOfNonzeros();
+      Msys->copyRowsBlockFrom(*Jac_cSp_, 0,   neq,    nx+nd,      dest_nnz_st);
+      dest_nnz_st += Jac_cSp_->numberOfNonzeros();
+      Msys->copyRowsBlockFrom(*Jac_dSp_, 0,   nineq,  nx+nd+neq,  dest_nnz_st);
+      dest_nnz_st += Jac_dSp_->numberOfNonzeros();
 
       // minus identity matrix for slack variables
-      Msys.copyDiagMatrixToSubblock(-1., nx+nd+neq, nx, dest_nnz_st, nineq); dest_nnz_st += nineq;
+      Msys->copyDiagMatrixToSubblock(-1., nx+nd+neq, nx, dest_nnz_st, nineq);
+      dest_nnz_st += nineq;
 
       //build the diagonal Hx = Dx + delta_wx
       if(NULL == Hx_) {
@@ -420,7 +427,8 @@ namespace hiop
       //a good time to add the IC 'delta_wx' perturbation
       Hx_->addConstant(delta_wx);
 
-      Msys.copySubDiagonalFrom(0, nx, *Hx_, dest_nnz_st); dest_nnz_st += nx;
+      Msys->copySubDiagonalFrom(0, nx, *Hx_, dest_nnz_st);
+      dest_nnz_st += nx;
 
       //build the diagonal Hd = Dd + delta_wd
       if(NULL == Hd_) {
@@ -429,13 +437,16 @@ namespace hiop
       }
       Hd_->startingAtCopyFromStartingAt(0, *Dd_, 0);
       Hd_->addConstant(delta_wd);
-      Msys.copySubDiagonalFrom(nx, nd, *Hd_, dest_nnz_st); dest_nnz_st += nd;
+      Msys->copySubDiagonalFrom(nx, nd, *Hd_, dest_nnz_st);
+      dest_nnz_st += nd;
 
       //add -delta_cc to diagonal block linSys starting at (nx+nd, nx+nd)
-      Msys.setSubDiagonalTo(nx+nd, neq, -delta_cc, dest_nnz_st); dest_nnz_st += neq;
+      Msys->setSubDiagonalTo(nx+nd, neq, -delta_cc, dest_nnz_st);
+      dest_nnz_st += neq;
 
       //add -delta_cd to diagonal block linSys starting at (nx+nd+neq, nx+nd+neq)
-      Msys.setSubDiagonalTo(nx+nd+neq, nineq, -delta_cd, dest_nnz_st); dest_nnz_st += nineq;
+      Msys->setSubDiagonalTo(nx+nd+neq, nineq, -delta_cd, dest_nnz_st);
+      dest_nnz_st += nineq;
 
       /* we've just done
       *
@@ -444,7 +455,7 @@ namespace hiop
       * [    Jc             0        -delta_cc  0       ] [dyc] = [   ryc    ]
       * [    Jd            -I           0    -delta_cd  ] [dyd]   [   ryd    ]
 	  */
-      nlp_->log->write("KKT_SPARSE_XDYcYd linsys:", Msys, hovMatrices);
+      nlp_->log->write("KKT_SPARSE_XDYcYd linsys:", *Msys, hovMatrices);
       nlp_->runStats.kkt.tmUpdateLinsys.stop();
     }
     
@@ -453,7 +464,7 @@ namespace hiop
       write_linsys_counter_++;
     }
     if(write_linsys_counter_>=0) {
-      csr_writer_.writeMatToFile(Msys, write_linsys_counter_, nx, neq, nineq);
+      csr_writer_.writeMatToFile(*Msys, write_linsys_counter_, nx, neq, nineq);
     }
 
     return true;
@@ -534,7 +545,7 @@ namespace hiop
     return true;
   }
 
-  hiopLinSolverIndefSparse*
+  hiopLinSolverSymSparse*
   hiopKKTLinSysCompressedSparseXDYcYd::determineAndCreateLinsys(int nx, int neq, int nineq, int nnz)
   {
     if(nullptr==linSys_) {
@@ -621,7 +632,7 @@ namespace hiop
       }
       assert(linSys_&& "KKT_SPARSE_XDYcYd linsys: cannot instantiate backend linear solver");
     }
-    return dynamic_cast<hiopLinSolverIndefSparse*> (linSys_);
+    return dynamic_cast<hiopLinSolverSymSparse*> (linSys_);
   }
 
 
@@ -713,80 +724,119 @@ namespace hiop
 
     linSys_ = determineAndCreateLinsys(n, required_num_neg_eig, nnz);
 
-    hiopLinSolverNonSymSparse* linSys = dynamic_cast<hiopLinSolverNonSymSparse*> (linSys_);
+    auto* linSys = dynamic_cast<hiopLinSolverNonSymSparse*> (linSys_);
     assert(linSys);   
 
-    hiopMatrixSparseTriplet& Msys = linSys->sysMatrix();
+    auto* Msys = dynamic_cast<hiopMatrixSparseTriplet*>(linSys->sysMatrix());
+    assert(Msys);
     if(perf_report_) {
       nlp_->log->printf(hovSummary,
 			"KKT_SPARSE_FULL linsys: Low-level linear system size: %d\n",
-			Msys.n());
+			Msys->n());
     }
 
     // update linSys system matrix, including IC perturbations
     {
       nlp_->runStats.kkt.tmUpdateLinsys.start();
 
-      Msys.setToZero();
+      Msys->setToZero();
 
       // copy Jac and Hes to the full iterate matrix, use Dx_ and Dd_ as temp vector
       size_type dest_nnz_st{0};
 
       // H is triangular
       // [   H   Jc^T  Jd^T | 0 |  0   0  -I   I   |  0   0   0   0  ] [  dx]   [    rx    ]
-      Msys.copySubmatrixFrom(*HessSp_, 0, 0, dest_nnz_st, true); dest_nnz_st += HessSp_->numberOfOffDiagNonzeros();
-      Msys.copySubmatrixFromTrans(*HessSp_, 0, 0, dest_nnz_st); dest_nnz_st += HessSp_->numberOfNonzeros();
+      Msys->copySubmatrixFrom(*HessSp_, 0, 0, dest_nnz_st, true);
+      dest_nnz_st += HessSp_->numberOfOffDiagNonzeros();
+      Msys->copySubmatrixFromTrans(*HessSp_, 0, 0, dest_nnz_st);
+      dest_nnz_st += HessSp_->numberOfNonzeros();
 
-      Msys.copySubmatrixFromTrans(*Jac_cSp_, 0, nx, dest_nnz_st); dest_nnz_st += Jac_cSp_->numberOfNonzeros();
-      Msys.copySubmatrixFromTrans(*Jac_dSp_, 0, nx+neq, dest_nnz_st); dest_nnz_st += Jac_dSp_->numberOfNonzeros();
-      Msys.setSubmatrixToConstantDiag_w_colpattern(-1., 0, n3st+ndl+ndu, dest_nnz_st, nxl, nlp_->get_ixl()); dest_nnz_st += nxl;
-      Msys.setSubmatrixToConstantDiag_w_colpattern(1., 0, n3st+ndl+ndu+nxl, dest_nnz_st, nxu, nlp_->get_ixu()); dest_nnz_st += nxu;
+      Msys->copySubmatrixFromTrans(*Jac_cSp_, 0, nx, dest_nnz_st);
+      dest_nnz_st += Jac_cSp_->numberOfNonzeros();
+      Msys->copySubmatrixFromTrans(*Jac_dSp_, 0, nx+neq, dest_nnz_st);
+      dest_nnz_st += Jac_dSp_->numberOfNonzeros();
+      Msys->setSubmatrixToConstantDiag_w_colpattern(-1., 0, n3st+ndl+ndu, dest_nnz_st, nxl, nlp_->get_ixl());
+      dest_nnz_st += nxl;
+      Msys->setSubmatrixToConstantDiag_w_colpattern(1., 0, n3st+ndl+ndu+nxl, dest_nnz_st, nxu, nlp_->get_ixu());
+      dest_nnz_st += nxu;
 
       // [  Jc    0     0   | 0 |  0   0   0   0   |  0   0   0   0  ] [ dyc] = [   ryc    ]
-      Msys.copySubmatrixFrom(*Jac_cSp_, nx, 0, dest_nnz_st); dest_nnz_st += Jac_cSp_->numberOfNonzeros();
+      Msys->copySubmatrixFrom(*Jac_cSp_, nx, 0, dest_nnz_st);
+      dest_nnz_st += Jac_cSp_->numberOfNonzeros();
 
       // [  Jd    0     0   |-I |  0   0   0   0   |  0   0   0   0  ] [ dyd]   [   ryd    ]
-      Msys.copySubmatrixFrom(*Jac_dSp_, nx+neq, 0, dest_nnz_st); dest_nnz_st += Jac_dSp_->numberOfNonzeros();
-      Msys.copyDiagMatrixToSubblock(-1., nx+neq, n2st, dest_nnz_st, nd); dest_nnz_st += nd;
+      Msys->copySubmatrixFrom(*Jac_dSp_, nx+neq, 0, dest_nnz_st);
+      dest_nnz_st += Jac_dSp_->numberOfNonzeros();
+      Msys->copyDiagMatrixToSubblock(-1., nx+neq, n2st, dest_nnz_st, nd);
+      dest_nnz_st += nd;
 
       // [  0     0    -I   | 0 |  -I  I   0   0   |  0   0   0   0  ] [  dd]   [    rd    ]
-      Msys.copyDiagMatrixToSubblock(-1., n2st, nx+neq, dest_nnz_st, nd); dest_nnz_st += nd;
-      Msys.setSubmatrixToConstantDiag_w_colpattern(-1., n2st, n3st, dest_nnz_st, ndl, nlp_->get_idl()); dest_nnz_st += ndl;
-      Msys.setSubmatrixToConstantDiag_w_colpattern(1., n2st, n3st+ndl, dest_nnz_st, ndu, nlp_->get_idu()); dest_nnz_st += ndu;
+      Msys->copyDiagMatrixToSubblock(-1., n2st, nx+neq, dest_nnz_st, nd);
+      dest_nnz_st += nd;
+      Msys->setSubmatrixToConstantDiag_w_colpattern(-1., n2st, n3st, dest_nnz_st, ndl, nlp_->get_idl());
+      dest_nnz_st += ndl;
+      Msys->setSubmatrixToConstantDiag_w_colpattern(1., n2st, n3st+ndl, dest_nnz_st, ndu, nlp_->get_idu());
+      dest_nnz_st += ndu;
 
       // part3
       // [  0     0     0   |-I |  0   0   0   0   |  I   0   0   0  ] [ dvl]   [   rvl    ]
-      Msys.setSubmatrixToConstantDiag_w_rowpattern(-1., n3st, n2st, dest_nnz_st, ndl, nlp_->get_idl()); dest_nnz_st += ndl;
-      Msys.copyDiagMatrixToSubblock(1., n3st, n4st, dest_nnz_st, ndl); dest_nnz_st += ndl;
+      Msys->setSubmatrixToConstantDiag_w_rowpattern(-1., n3st, n2st, dest_nnz_st, ndl, nlp_->get_idl());
+      dest_nnz_st += ndl;
+      Msys->copyDiagMatrixToSubblock(1., n3st, n4st, dest_nnz_st, ndl);
+      dest_nnz_st += ndl;
 
       // [  0     0     0   | I |  0   0   0   0   |  0   I   0   0  ] [ dvu]   [   rvu    ]
-      Msys.setSubmatrixToConstantDiag_w_rowpattern(1., n3st+ndl, n2st, dest_nnz_st, ndu, nlp_->get_idu()); dest_nnz_st += ndu;
-      Msys.copyDiagMatrixToSubblock(1., n3st+ndl, n4st+ndl, dest_nnz_st, ndu); dest_nnz_st += ndu;
+      Msys->setSubmatrixToConstantDiag_w_rowpattern(1., n3st+ndl, n2st, dest_nnz_st, ndu, nlp_->get_idu());
+      dest_nnz_st += ndu;
+      Msys->copyDiagMatrixToSubblock(1., n3st+ndl, n4st+ndl, dest_nnz_st, ndu);
+      dest_nnz_st += ndu;
 
       // [ -I     0     0   | 0 |  0   0   0   0   |  0   0   I   0  ] [ dzl]   [   rzl    ]
-      Msys.setSubmatrixToConstantDiag_w_rowpattern(-1., n3st+ndl+ndu, 0, dest_nnz_st, nxl, nlp_->get_ixl()); dest_nnz_st += nxl;
-      Msys.copyDiagMatrixToSubblock(1., n3st+ndl+ndu, n4st+ndl+ndu, dest_nnz_st, nxl); dest_nnz_st += nxl;
+      Msys->setSubmatrixToConstantDiag_w_rowpattern(-1., n3st+ndl+ndu, 0, dest_nnz_st, nxl, nlp_->get_ixl());
+      dest_nnz_st += nxl;
+      Msys->copyDiagMatrixToSubblock(1., n3st+ndl+ndu, n4st+ndl+ndu, dest_nnz_st, nxl);
+      dest_nnz_st += nxl;
 
       // [  I     0     0   | 0 |  0   0   0   0   |  0   0   0   I  ] [ dzu]   [   rzu    ]
-      Msys.setSubmatrixToConstantDiag_w_rowpattern(1., n3st+ndl+ndu+nxl, 0, dest_nnz_st, nxu, nlp_->get_ixu()); dest_nnz_st += nxu;
-      Msys.copyDiagMatrixToSubblock(1., n3st+ndl+ndu+nxl, n4st+ndl+ndu+nxl, dest_nnz_st, nxu); dest_nnz_st += nxu;
+      Msys->setSubmatrixToConstantDiag_w_rowpattern(1., n3st+ndl+ndu+nxl, 0, dest_nnz_st, nxu, nlp_->get_ixu());
+      dest_nnz_st += nxu;
+      Msys->copyDiagMatrixToSubblock(1., n3st+ndl+ndu+nxl, n4st+ndl+ndu+nxl, dest_nnz_st, nxu);
+      dest_nnz_st += nxu;
 
       // part 4
       // [  0     0     0   | 0 | Sl^d 0   0   0   | Vl   0   0   0  ] [dsdl]   [  rsdl    ]
-      Msys.copyDiagMatrixToSubblock_w_pattern(*iter_->sdl, n4st, n3st, dest_nnz_st, ndl, nlp_->get_idl()); dest_nnz_st += ndl;
-      Msys.copyDiagMatrixToSubblock_w_pattern(*iter_->vl, n4st, n4st, dest_nnz_st, ndl, nlp_->get_idl()); dest_nnz_st += ndl;
+      Msys->copyDiagMatrixToSubblock_w_pattern(*iter_->sdl, n4st, n3st, dest_nnz_st, ndl, nlp_->get_idl());
+      dest_nnz_st += ndl;
+      Msys->copyDiagMatrixToSubblock_w_pattern(*iter_->vl, n4st, n4st, dest_nnz_st, ndl, nlp_->get_idl());
+      dest_nnz_st += ndl;
 
       // [  0     0     0   | 0 |  0  Su^d 0   0   |  0  Vu   0   0  ] [dsdu]   [  rsdu    ]
-      Msys.copyDiagMatrixToSubblock_w_pattern(*iter_->sdu, n4st+ndl, n3st+ndl, dest_nnz_st, ndu, nlp_->get_idu()); dest_nnz_st += ndu;
-      Msys.copyDiagMatrixToSubblock_w_pattern(*iter_->vu, n4st+ndl, n4st+ndl, dest_nnz_st, ndu, nlp_->get_idu()); dest_nnz_st += ndu;
+      Msys->copyDiagMatrixToSubblock_w_pattern(*iter_->sdu, n4st+ndl, n3st+ndl, dest_nnz_st, ndu, nlp_->get_idu());
+      dest_nnz_st += ndu;
+      Msys->copyDiagMatrixToSubblock_w_pattern(*iter_->vu, n4st+ndl, n4st+ndl, dest_nnz_st, ndu, nlp_->get_idu());
+      dest_nnz_st += ndu;
 
       // [  0     0     0   | 0 |  0   0  Sl^x 0   |  0   0  Zl   0  ] [dsxl]   [  rsxl    ]
-      Msys.copyDiagMatrixToSubblock_w_pattern(*iter_->sxl, n4st+ndl+ndu, n3st+ndl+ndu, dest_nnz_st, nxl, nlp_->get_ixl()); dest_nnz_st += nxl;
-      Msys.copyDiagMatrixToSubblock_w_pattern(*iter_->zl, n4st+ndl+ndu, n4st+ndl+ndu, dest_nnz_st, nxl, nlp_->get_ixl()); dest_nnz_st += nxl;
+      Msys->copyDiagMatrixToSubblock_w_pattern(*iter_->sxl, n4st+ndl+ndu, n3st+ndl+ndu, dest_nnz_st, nxl, nlp_->get_ixl());
+      dest_nnz_st += nxl;
+      Msys->copyDiagMatrixToSubblock_w_pattern(*iter_->zl, n4st+ndl+ndu, n4st+ndl+ndu, dest_nnz_st, nxl, nlp_->get_ixl());
+      dest_nnz_st += nxl;
 
       // [  0     0     0   | 0 |  0   0   0  Su^x |  0   0   0  Zu  ] [dsxu]   [  rsxu    ]
-      Msys.copyDiagMatrixToSubblock_w_pattern(*iter_->sxu, n4st+ndl+ndu+nxl, n3st+ndl+ndu+nxl, dest_nnz_st, nxu, nlp_->get_ixu()); dest_nnz_st += nxu;
-      Msys.copyDiagMatrixToSubblock_w_pattern(*iter_->zu, n4st+ndl+ndu+nxl, n4st+ndl+ndu+nxl, dest_nnz_st, nxu, nlp_->get_ixu()); dest_nnz_st += nxu;
+      Msys->copyDiagMatrixToSubblock_w_pattern(*iter_->sxu,
+                                               n4st+ndl+ndu+nxl,
+                                               n3st+ndl+ndu+nxl,
+                                               dest_nnz_st,
+                                               nxu,
+                                               nlp_->get_ixu());
+      dest_nnz_st += nxu;
+      Msys->copyDiagMatrixToSubblock_w_pattern(*iter_->zu,
+                                               n4st+ndl+ndu+nxl,
+                                               n4st+ndl+ndu+nxl,
+                                               dest_nnz_st,
+                                               nxu,
+                                               nlp_->get_ixu());
+      dest_nnz_st += nxu;
 
       //build the diagonal Hx = delta_wx
       if(nullptr == Hx_) {
@@ -795,7 +845,7 @@ namespace hiop
       }
       Hx_->setToZero();
       Hx_->addConstant(delta_wx);
-      Msys.copySubDiagonalFrom(0, nx, *Hx_, dest_nnz_st); dest_nnz_st += nx;
+      Msys->copySubDiagonalFrom(0, nx, *Hx_, dest_nnz_st); dest_nnz_st += nx;
 
       //build the diagonal Hd = delta_wd
       if(nullptr == Hd_) {
@@ -804,16 +854,19 @@ namespace hiop
       }
       Hd_->setToZero();
       Hd_->addConstant(delta_wd);
-      Msys.copySubDiagonalFrom(n2st, nd, *Hd_, dest_nnz_st); dest_nnz_st += nd;
+      Msys->copySubDiagonalFrom(n2st, nd, *Hd_, dest_nnz_st);
+      dest_nnz_st += nd;
 
       //add -delta_cc to diagonal block linSys starting at (nx, nx)
-      Msys.setSubDiagonalTo(nx, neq, -delta_cc, dest_nnz_st); dest_nnz_st += neq;
+      Msys->setSubDiagonalTo(nx, neq, -delta_cc, dest_nnz_st);
+      dest_nnz_st += neq;
 
       //add -delta_cd to diagonal block linSys starting at (nx+neq, nx+neq)
-      Msys.setSubDiagonalTo(nx+neq, nineq, -delta_cd, dest_nnz_st); dest_nnz_st += nineq;
+      Msys->setSubDiagonalTo(nx+neq, nineq, -delta_cd, dest_nnz_st);
+      dest_nnz_st += nineq;
 
       assert(dest_nnz_st==nnz);
-      nlp_->log->write("KKT_SPARSE_FULL linsys:", Msys, hovMatrices);
+      nlp_->log->write("KKT_SPARSE_FULL linsys:", *Msys, hovMatrices);
       nlp_->runStats.kkt.tmUpdateLinsys.stop();
     }
  
@@ -822,7 +875,7 @@ namespace hiop
       write_linsys_counter_++;
     }
     if(write_linsys_counter_>=0) {
-      csr_writer_.writeMatToFile(Msys, write_linsys_counter_, nx, neq, nineq);
+      csr_writer_.writeMatToFile(*Msys, write_linsys_counter_, nx, neq, nineq);
     }
 
     return true;

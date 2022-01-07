@@ -82,7 +82,7 @@ namespace hiop
 hiopLinSolverCholCuSparse::hiopLinSolverCholCuSparse(const size_type& n, 
                                                      const size_type& nnz, 
                                                      hiopNlpFormulation* nlp)
-  : hiopLinSolverIndefSparse(nlp),
+  : hiopLinSolverSymSparse(nlp),
     nnz_(nnz),
     buf_fact_(nullptr),
     rowptr_(nullptr),

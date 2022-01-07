@@ -46,12 +46,18 @@
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or
 // product endorsement purposes.
 
+/**
+ * @file hiopLinSolver.hpp
+ *
+ * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
+ * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
+ *
+ */
+
 #include "hiopLinSolver.hpp"
 
-#include "hiopMatrixDense.hpp"
-
 #include "hiopOptions.hpp"
-#include <hiopLinAlgFactory.hpp>
+#include "hiopLinAlgFactory.hpp"
 
 namespace hiop {
   hiopLinSolver::hiopLinSolver()
@@ -89,30 +95,28 @@ namespace hiop {
     return *M_;
   }
 
-  hiopLinSolverIndefSparse::hiopLinSolverIndefSparse(int n, int nnz, hiopNlpFormulation* nlp)
-    : M(n,nnz)
+  hiopLinSolverSymSparse::hiopLinSolverSymSparse(int n, int nnz, hiopNlpFormulation* nlp)
   {
+    //we default to triplet matrix for now; derived classes using CSR matrices will not call
+    //this constructor (will call the 1-parameter constructor below) so they avoid creating
+    //the triplet matrix
+    M_ = new hiopMatrixSparseTriplet(n, n, nnz);
     nlp_ = nlp;
     perf_report_ = "on"==hiop::tolower(nlp->options->GetString("time_kkt"));
   }
-  hiopLinSolverIndefSparse::hiopLinSolverIndefSparse(hiopNlpFormulation* nlp)
-    : M(0,0)
+
+  hiopLinSolverSymSparse::hiopLinSolverSymSparse(hiopNlpFormulation* nlp)
   {
+    M_ = nullptr;
     nlp_ = nlp;
     perf_report_ = "on"==hiop::tolower(nlp->options->GetString("time_kkt"));
-  }
-  hiopLinSolverIndefSparse::~hiopLinSolverIndefSparse()
-  {
   }
   
   hiopLinSolverNonSymSparse::hiopLinSolverNonSymSparse(int n, int nnz, hiopNlpFormulation* nlp)
-    : M(n,n,nnz)
   {
+    M_ = new hiopMatrixSparseTriplet(n, n, nnz);
     nlp_ = nlp;
     perf_report_ = "on"==hiop::tolower(nlp->options->GetString("time_kkt"));
-  }
-  hiopLinSolverNonSymSparse::~hiopLinSolverNonSymSparse()
-  {
   }
 
 } // namespace hiop

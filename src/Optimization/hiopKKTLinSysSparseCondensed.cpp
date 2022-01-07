@@ -208,20 +208,20 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
     }
 
     assert(linSys_);
-    hiopLinSolverIndefSparse* linSys = dynamic_cast<hiopLinSolverIndefSparse*> (linSys_);
+    auto* linSys = dynamic_cast<hiopLinSolverSymSparse*> (linSys_);
 
-    hiopMatrixSparseTriplet& Msys = linSys->sysMatrix();
-    //assert(Msys.numberOfNonzeros() == M_condensed_->nnz());
-    assert(Msys.m() == M_condensed_->m());
+    auto* Msys = dynamic_cast<hiopMatrixSparseTriplet*>(linSys->sysMatrix());
+    assert(Msys);
+    assert(Msys->m() == M_condensed_->m());
 
     index_type itnz = 0;
-    for(index_type i=0; i<Msys.m(); ++i) {
+    for(index_type i=0; i<Msys->m(); ++i) {
       for(index_type p=M_condensed_->irowptr()[i]; p<M_condensed_->irowptr()[i+1]; ++p) {
         const index_type j = M_condensed_->jcolind()[p];
         if(i<=j) {
-          Msys.i_row()[itnz] = i;
-          Msys.j_col()[itnz] = j;
-          Msys.M()[itnz] = M_condensed_->values()[p];
+          Msys->i_row()[itnz] = i;
+          Msys->j_col()[itnz] = j;
+          Msys->M()[itnz] = M_condensed_->values()[p];
           itnz++; 
         }
       }
@@ -575,11 +575,11 @@ bool hiopKKTLinSysCondensedSparse::solveCompressed(hiopVector& rx,
 }
 
 
-hiopLinSolverIndefSparse*
+hiopLinSolverSymSparse*
 hiopKKTLinSysCondensedSparse::determine_and_create_linsys(size_type nx, size_type nineq, size_type nnz)
 {   
   if(linSys_) {
-    return dynamic_cast<hiopLinSolverIndefSparse*> (linSys_);
+    return dynamic_cast<hiopLinSolverSymSparse*> (linSys_);
   }
   
   int n = nx;
@@ -620,7 +620,7 @@ hiopKKTLinSysCondensedSparse::determine_and_create_linsys(size_type nx, size_typ
   }
   
   assert(linSys_&& "KKT_SPARSE_XYcYd linsys: cannot instantiate backend linear solver");
-  return dynamic_cast<hiopLinSolverIndefSparse*> (linSys_);
+  return dynamic_cast<hiopLinSolverSymSparse*> (linSys_);
 }
 
 #if 0

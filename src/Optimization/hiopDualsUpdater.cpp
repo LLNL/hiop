@@ -463,7 +463,7 @@ bool hiopDualsLsqUpdateLinsysAugSparse::do_lsq_update(hiopIterate& iter,
     } // end of else  compute_mode=='cpu'
   }
   assert(lin_sys_ && "no sparse linear solver is available");
-  hiopLinSolverIndefSparse* linSys = dynamic_cast<hiopLinSolverIndefSparse*> (lin_sys_);
+  hiopLinSolverSymSparse* linSys = dynamic_cast<hiopLinSolverSymSparse*> (lin_sys_);
   assert(linSys);
 
   t.stop();
@@ -471,7 +471,7 @@ bool hiopDualsLsqUpdateLinsysAugSparse::do_lsq_update(hiopIterate& iter,
 
   t.reset();
   t.start();
-  hiopMatrixSparseTriplet& Msys = linSys->sysMatrix();
+  hiopMatrixSparse& Msys = *(linSys->sysMatrix());
   // update linSys system matrix
   {
     Msys.setToZero();
