@@ -8,8 +8,8 @@
 //basecase sparse NLP
 #include "nlpPriDec_ex9_user_basecase.hpp"
 
-//recourse MDS NLP
-#include "nlpPriDec_ex9_user_sparse_raja_rec.hpp"
+//recourse Sparse NLP
+#include "nlpPriDec_ex9_user_recourse_sparse_raja.hpp"
 
 /**
  *

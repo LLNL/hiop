@@ -8,9 +8,8 @@
 //basecase sparse NLP
 #include "nlpPriDec_ex9_user_basecase.hpp"
 
-//recourse MDS NLP
-#include "nlpPriDec_ex9_user_sparserec.hpp"
-
+//recourse sparse NLP
+#include "nlpPriDec_ex9_user_recourse_sparse.hpp"
 /**
  *
  * An example of the use of hiop::hiopInterfacePriDecProblem interface of HiOp.

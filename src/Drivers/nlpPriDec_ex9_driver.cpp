@@ -147,6 +147,8 @@ int main(int argc, char **argv)
   //pridec_solver.set_max_iteration(5);
   auto status = pridec_solver.run();
   
+  int it = pridec_solver.getNumIterations();
+  printf("number of iterations %d\n", it);
   if(status!=Solve_Success) {
     if(rank==0) {
       printf("Solve was NOT successfull.");

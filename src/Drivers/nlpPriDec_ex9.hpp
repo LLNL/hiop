@@ -9,7 +9,7 @@
 #include "nlpPriDec_ex9_user_basecase.hpp"
 
 //recourse MDS NLP
-#include "nlpPriDec_ex9_user_recourse.hpp"
+#include "nlpPriDec_ex9_user_recourse_MDS.hpp"
 
 /**
  *

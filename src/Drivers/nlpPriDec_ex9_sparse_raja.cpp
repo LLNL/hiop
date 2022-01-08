@@ -115,13 +115,13 @@ set_recourse_approx_evaluator(const int n,
   return true; 
 }
 
+// all the memory management is done through umpire in the PriDecRecourseProblemEx9Sparse class
 bool PriDecMasterProblemEx9Sparse::eval_f_rterm(size_t idx, const int& n, const double* x, double& rval)
 {
   assert(nx_==n);
   rval=-1e+20;
   hiopSolveStatus status;
   double* xi;
-  double* x_local;
   
 #ifdef HIOP_USE_MPI
   double t3 =  MPI_Wtime(); 
@@ -129,29 +129,14 @@ bool PriDecMasterProblemEx9Sparse::eval_f_rterm(size_t idx, const int& n, const 
 #endif 
   
   // xi can be set below 
-  //xi = new double[nS_]; 
-  xi = LinearAlgebraFactory::create_raw_array(mem_space_, nS_);
-  x_local = LinearAlgebraFactory::create_raw_array(mem_space_, nx_);
-  //for(int i=0;i<nS_;i++) xi[i] = 1.; // if uses create_raw_array can you use for?
+  xi = new double[nS_]; 
+  for(int i=0;i<nS_;i++) xi[i] = 1.; 
   //xi[ny_-1] = double(idx/100.0+1.);
-  RAJA::forall<ex9_raja_exec>(RAJA::RangeSegment(0, nS_),
-    RAJA_LAMBDA(RAJA::Index_type i)
-    {
-      xi[i] = 1.0;
-    });
-
-  RAJA::forall<ex9_raja_exec>(RAJA::RangeSegment(0, nx_),
-    RAJA_LAMBDA(RAJA::Index_type i)
-    {
-      x_local[i] = x[i];
-    });
 
   PriDecRecourseProblemEx9Sparse* ex9_recourse;
-  
   //printf("Constructor of recourse\n");
 
-
-  ex9_recourse = new PriDecRecourseProblemEx9Sparse(nc_, nS_, S_, x_local, xi, mem_space_);
+  ex9_recourse = new PriDecRecourseProblemEx9Sparse(nc_, nS_, S_, x, xi, mem_space_);
   
   //printf("Constructor of recourse complete\n");
   // set a few contingencies to have different sparse structure
@@ -183,20 +168,11 @@ bool PriDecMasterProblemEx9Sparse::eval_f_rterm(size_t idx, const int& n, const 
   status = solver.run();
   
   rval = solver.getObjective();  
-  double* y_local = LinearAlgebraFactory::create_raw_array(mem_space_, ny_);
   if(y_==NULL) {
-    //y_ = LinearAlgebraFactory::create_raw_array(mem_space_, ny_);
     y_ = new double[ny_];
   }
-  solver.getSolution(y_local);
+  solver.getSolution(y_);
   
-  RAJA::forall<ex9_raja_exec>(RAJA::RangeSegment(0, ny_),
-    RAJA_LAMBDA(RAJA::Index_type i)
-    {
-      y_[i] = y_local[i];
-    });
-
-
   #ifdef HIOP_USE_MPI
   // uncomment if want to monitor contingency computing time
   /* t4 =  MPI_Wtime(); 
@@ -207,7 +183,7 @@ bool PriDecMasterProblemEx9Sparse::eval_f_rterm(size_t idx, const int& n, const 
   */
   #endif
 
-  //delete[] xi;
+  delete[] xi;
   delete ex9_recourse;
   return true;
 };

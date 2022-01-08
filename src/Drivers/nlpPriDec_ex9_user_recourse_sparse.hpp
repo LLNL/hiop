@@ -288,34 +288,6 @@ public:
       }
       assert(nnzit==nnzJacS);
     }
-    //dense Jacobian w.r.t ydense
-    //it has row number of m
-    /*
-    if(JacD!=NULL) {
-      for(int itrow=0; itrow<num_cons; itrow++) {
-        const int con_idx = (int) idx_cons[itrow];
-        if(con_idx==nsparse_-1) {
-          JacD[(nx_-nsparse_)*con_idx+(con_idx-nsparse_+1)] = 1.0;
-        } else if (con_idx>nsparse_-1 && con_idx!=m-1) {
-          JacD[(ny_-nsparse_)*con_idx+(con_idx-nsparse_)] = -1.0;
-          JacD[(ny_-nsparse_)*con_idx+(con_idx-nsparse_)+1] = 1.0;
-        } else if(con_idx==m-1) {
-          if(nsparse_<=nS_) {
-              //cons[m-1] += (x[i] + xi_[i])*(x[i] + xi_[i]);
-            for(int i=nsparse_; i<nS_;i++) {
-              JacD[(ny_-nsparse_)*con_idx+i-nsparse_] = 2*(x[i] + xi_[i]);
-            }
-            for(int i=nS_; i<m;i++) {
-              JacD[(ny_-nsparse_)*con_idx+i-nsparse_] = 2*x[i] ;
-            }
-          } else {
-            for(int i=nsparse_; i<m;i++) {
-              JacD[(ny_-nsparse_)*con_idx+i-nsparse_] = 2*x[i] ;	
-            }
-          }
-        }
-      }
-    }*/
     //assert("for debugging" && false); //for debugging purpose
     return true;
   }

@@ -85,10 +85,16 @@ public:
     //for(int i=0;i<nx_;i++) printf("x_vec %d %18.12e ",i,x_vec[i]);
     xi_ = static_cast<double*>(allocator.allocate(nS_ * sizeof(double)));
     x_ = static_cast<double*>(allocator.allocate(nx_ * sizeof(double)));
-    
+   
+    auto* str = allocator.getAllocationStrategy();
+    resmgr.registerAllocation(x_vec, {x_vec,nx_*sizeof(double),str});
+    resmgr.registerAllocation(xi_vec, {xi_vec,nS_*sizeof(double),str});
+
     resmgr.copy(x_, x_vec);
     resmgr.copy(xi_, xi_vec);
-  
+ 
+    resmgr.deregisterAllocation(x_vec); 
+    resmgr.deregisterAllocation(xi_vec); 
     //for(int i=0;i<nx_;i++) printf("x_ %d %18.12e ",i,x_[i]);
     
     //assert("for debugging" && false); //for debugging purpose
@@ -120,9 +126,15 @@ public:
     xi_ = static_cast<double*>(allocator.allocate(nS_ * sizeof(double)));
     x_ = static_cast<double*>(allocator.allocate(nx_ * sizeof(double)));
     
+    auto* str = allocator.getAllocationStrategy();
+    resmgr.registerAllocation(x_vec, {x_vec,nx_*sizeof(double),str});
+    resmgr.registerAllocation(xi_vec, {xi_vec,nS_*sizeof(double),str});
+    
     resmgr.copy(x_, x_vec);
     resmgr.copy(xi_, xi_vec);
   
+    resmgr.deregisterAllocation(x_vec); 
+    resmgr.deregisterAllocation(xi_vec); 
     //assert("for debugging" && false); //for debugging purpose
     //nsparse_ = int(nx_*sparse_ratio);
     idx_ = idx;
@@ -141,7 +153,8 @@ public:
     allocator.deallocate(x_);
   }
 
-  /// Set the basecase solution `x`
+  // Set the basecase solution `x`
+  // Assuming 'x' is not assigned by umpire 
   void set_x(const double* x)
   {
     auto* x_vec = const_cast<double*>(x);
@@ -151,7 +164,10 @@ public:
     if(x_==NULL) {
       x_ = static_cast<double*>(allocator.allocate(nx_ * sizeof(double)));
     }
-    resmgr.copy(x_, x_vec);  // should a size be added?
+    auto* str = allocator.getAllocationStrategy();
+    resmgr.registerAllocation(x_vec, {x_vec,nx_*sizeof(double),str});
+    resmgr.copy(x_, x_vec);  
+    resmgr.deregisterAllocation(x_vec); 
   }
 
   /// Set the "sample" vector \xi
@@ -164,7 +180,10 @@ public:
     if(xi_ == NULL) {
       xi_ = static_cast<double*>(allocator.allocate(nS_ * sizeof(double)));
     }
+    auto* str = allocator.getAllocationStrategy();
+    resmgr.registerAllocation(xi_vec, {xi_vec,nS_*sizeof(double),str});
     resmgr.copy(xi_, xi_vec);
+    resmgr.deregisterAllocation(xi_vec); 
   }
 
   bool get_prob_sizes(size_type& n, size_type& m)
@@ -346,30 +365,29 @@ public:
       return true;
     }
 
-
-    int nnzit_global = 0;
+    index_type* nnzit = new index_type[1] ; 
+    nnzit[0] = 0;
     if(iJacS!=NULL && jJacS!=NULL) {
       RAJA::forall<ex9_raja_exec>(RAJA::RangeSegment(0, num_cons),
         [=] __device__ (RAJA::Index_type itrow)
       {
-        //int nnzit = nnzit_global;
         const int con_idx = (int) idx_cons[itrow];
         if(con_idx<ny_-1) {
           //sparse Jacobian eq w.r.t. x and s
           //yk
           iJacS[2*itrow] = con_idx;
           jJacS[2*itrow] = con_idx; //-1
-          //nnzit += 1;
+          //nnzit[0] = nnzit[0] + 1;
 
           //yk+1
           iJacS[2*itrow+1] = con_idx;
           jJacS[2*itrow+1] = con_idx+1; //1
-          //nnzit++;
+          //nnzit[0] += 1;
         } else if (con_idx==m-1) { 
 	  assert(itrow==m-1);
           iJacS[2*(m-1)] = m-1;
           jJacS[2*(m-1)] = 0;
-          //nnzit++;
+          nnzit[0] += 1;
           //cons[m-1] = (1-x[0]+xi_[0]);
           
           //RAJA::forall<ex9_raja_exec>(RAJA::RangeSegment(1, m),
@@ -378,18 +396,18 @@ public:
 	  for (int i=1; i<m; i++) {
 	    iJacS[2*(m-1)+i] = m-1;
             jJacS[2*(m-1)+i] = i;
+	    nnzit[0] += 1;
           }
-            //nnzit++;
               //cons[m-1] += x[i]*x[i];
-          //});
           //sparse Jacobian ineq w.r.t x and s
         }
       });
       assert(2*(m-1)+m==nnzJacS);
+      //assert(nnzit[0]==nnzJacS);
     }
     //values for sparse Jacobian if requested by the solver
     if(MJacS!=NULL) {
-      //int nnzit=0;
+      nnzit[0] = 0;
       RAJA::forall<ex9_raja_exec>(RAJA::RangeSegment(0, num_cons),
        [=] __device__ (RAJA::Index_type itrow)
       {
@@ -398,67 +416,35 @@ public:
           //sparse Jacobian eq w.r.t. x and s
           //yk+1
           MJacS[2*itrow] = -1.;
-          //nnzit++;
+          nnzit[0] += 1;
           //yk
           MJacS[2*itrow+1] = 1.;
-          //nnzit++;
+          nnzit[0] += 1;
         } else if (con_idx==m-1) {
           assert(itrow==m-1);
 	  MJacS[2*(m-1)] = -2*(1-x[0]+xi_[0]);
-          //nnzit++;
+          nnzit[0] += 1;
           //cons[m-1] = (1-x[0]+xi_[0])^2;
 	  assert(m>=nS_);
-          //RAJA::forall<ex9_raja_exec>(RAJA::RangeSegment(1,nS_),
-          //  [=] __device__(RAJA::Index_type i)
-	  //{
-          for(int i=1; i<nS_; i++) {
+	  for(int i=1; i<nS_; i++)
+	  {
             MJacS[2*(m-1)+i] = 2*(x[i]+xi_[i]);
-          }
-            //nnzit++;
+            nnzit[0] += 1;
+	  }
             //cons[m-1] += (x[i] + xi_[i])*(x[i] + xi_[i]);
-          //});
-          //RAJA::forall<ex9_raja_exec>(RAJA::RangeSegment(nS_, m),
-          //  [=] __device__ (RAJA::Index_type i)
-	  //{
-          for(int i=nS_; i<m; i++) {
+	  for(int i=nS_; i<m; i++)
+	  {
             MJacS[2*(m-1)+i] = 2*x[i];
-          }
-            //nnzit++;
+            nnzit[0] += 1;
             //cons[m-1] += x[i]*x[i];
-          //});
+          }
           //sparse Jacobian ineq w.r.t x and s
         }
       });
       assert(2*(m-1)+m==nnzJacS);
+      //assert(nnzit[0]==nnzJacS);
     }
-    //dense Jacobian w.r.t ydense
-    //it has row number of m
-    /*
-    if(JacD!=NULL) {
-      for(int itrow=0; itrow<num_cons; itrow++) {
-        const int con_idx = (int) idx_cons[itrow];
-        if(con_idx==nsparse_-1) {
-          JacD[(nx_-nsparse_)*con_idx+(con_idx-nsparse_+1)] = 1.0;
-        } else if (con_idx>nsparse_-1 && con_idx!=m-1) {
-          JacD[(ny_-nsparse_)*con_idx+(con_idx-nsparse_)] = -1.0;
-          JacD[(ny_-nsparse_)*con_idx+(con_idx-nsparse_)+1] = 1.0;
-        } else if(con_idx==m-1) {
-          if(nsparse_<=nS_) {
-              //cons[m-1] += (x[i] + xi_[i])*(x[i] + xi_[i]);
-            for(int i=nsparse_; i<nS_;i++) {
-              JacD[(ny_-nsparse_)*con_idx+i-nsparse_] = 2*(x[i] + xi_[i]);
-            }
-            for(int i=nS_; i<m;i++) {
-              JacD[(ny_-nsparse_)*con_idx+i-nsparse_] = 2*x[i] ;
-            }
-          } else {
-            for(int i=nsparse_; i<m;i++) {
-              JacD[(ny_-nsparse_)*con_idx+i-nsparse_] = 2*x[i] ;	
-            }
-          }
-        }
-      }
-    }*/
+    delete[] nnzit;
     //assert("for debugging" && false); //for debugging purpose
     return true;
   }
