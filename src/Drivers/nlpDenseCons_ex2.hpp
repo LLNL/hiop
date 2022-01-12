@@ -31,7 +31,7 @@ using index_type = hiop::index_type;
 class Ex2 : public hiop::hiopInterfaceDenseConstraints
 {
 public: 
-  Ex2(int n);
+  Ex2(int n, bool unconstrained = false);
   virtual ~Ex2();
 
   virtual bool get_prob_sizes(size_type& n, size_type& m);
@@ -39,13 +39,21 @@ public:
   virtual bool get_cons_info(const size_type& m, double* clow, double* cupp, NonlinearityType* type);
 
   virtual bool eval_f(const size_type& n, const double* x, bool new_x, double& obj_value);
-  virtual bool eval_cons(const size_type& n, const size_type& m, 
-			 const size_type& num_cons, const index_type* idx_cons,  
-			 const double* x, bool new_x, double* cons);
+  virtual bool eval_cons(const size_type& n,
+                         const size_type& m,
+                         const size_type& num_cons,
+                         const index_type* idx_cons,
+                         const double* x,
+                         bool new_x,
+                         double* cons);
   virtual bool eval_grad_f(const size_type& n, const double* x, bool new_x, double* gradf);
-  virtual bool eval_Jac_cons(const size_type& n, const size_type& m,
-                             const size_type& num_cons, const index_type* idx_cons,  
-                             const double* x, bool new_x, double* Jac);
+  virtual bool eval_Jac_cons(const size_type& n,
+                             const size_type& m,
+                             const size_type& num_cons,
+                             const index_type* idx_cons,  
+                             const double* x,
+                             bool new_x,
+                             double* Jac);
 
   virtual bool get_vecdistrib_info(size_type global_n, index_type* cols);
 
@@ -75,25 +83,28 @@ public:
   				int ls_trials) {if(iter==3)return false;printf("%g %g\n", x[0], x[1]); return true;}
   */
 private:
-  size_type n_vars, n_cons;
+  size_type n_vars_, n_cons_;
   MPI_Comm comm;
-  int my_rank, comm_size;
-  index_type* col_partition;
+  int my_rank;
+  int comm_size;
+  index_type* col_partition_;
+  bool unconstrained_;
 public:
   inline index_type idx_local2global(size_type global_n, index_type idx_local) 
   { 
-    assert(idx_local + col_partition[my_rank]<col_partition[my_rank+1]);
-    if(global_n==n_vars)
-      return idx_local + col_partition[my_rank]; 
+    assert(idx_local + col_partition_[my_rank]<col_partition_[my_rank+1]);
+    if(global_n==n_vars_) {
+      return idx_local + col_partition_[my_rank];
+    }
     assert(false && "you shouldn't need global index for a vector of this size.");
     return -1;
   }
   inline index_type idx_global2local(size_type global_n, index_type idx_global)
   {
-    assert(idx_global>=col_partition[my_rank]   && "global index does not belong to this rank");
-    assert(idx_global< col_partition[my_rank+1] && "global index does not belong to this rank");
-    assert(global_n==n_vars && "your global_n does not match the number of variables?");
-    return (idx_global-col_partition[my_rank]);
+    assert(idx_global>=col_partition_[my_rank]   && "global index does not belong to this rank");
+    assert(idx_global< col_partition_[my_rank+1] && "global index does not belong to this rank");
+    assert(global_n==n_vars_ && "your global_n does not match the number of variables?");
+    return (idx_global-col_partition_[my_rank]);
   }
 };
 #endif
