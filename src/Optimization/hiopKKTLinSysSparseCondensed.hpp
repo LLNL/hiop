@@ -342,7 +342,6 @@ public:
   }
   virtual ~hiopKKTMatVecOpr()
   {
-    delete xyc_;
     delete xdx_;
     delete xdd_;
     delete xdyd_;
@@ -401,7 +400,6 @@ private:
   hiopKKTLinSysCondensedSparse* kkt_;
   hiopKKTMatVecOpr()
     : kkt_(nullptr),
-      xyc_(nullptr),
       xdx_(nullptr),
       xdd_(nullptr),
       xdyd_(nullptr),
@@ -413,7 +411,6 @@ private:
   }
   hiopVector* xdx_;
   hiopVector* xdd_;
-  hiopVector* xyc_;
   hiopVector* xdyd_;
   hiopVector* yrx_;
   hiopVector* yrd_;

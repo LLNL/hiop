@@ -548,6 +548,9 @@ bool hiopLinSolverCholCuSparse::permute_vec(int n, double* vec_in, index_type* p
   
   ret = cusparseGather(h_cusparse_, v_in, v_out);
   assert(CUSPARSE_STATUS_SUCCESS == ret);
+
+  cusparseDestroySpVec(v_out);
+  cusparseDestroyDnVec(v_in);
   
 #else //CUSPARSE_VERSION < 11700
   
