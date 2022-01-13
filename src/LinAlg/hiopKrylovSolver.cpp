@@ -72,7 +72,7 @@ namespace hiop {
                                      hiopLinearOperator* Mleft_opr,
                                      hiopLinearOperator* Mright_opr,
                                      const hiopVector* x0)
-    : tol_{1e-8},
+    : tol_{1e-0},
       maxit_{100},
       iter_{-1.},
       flag_{-1},
@@ -204,6 +204,7 @@ bool hiopPCGSolver::solve(hiopVector& b)
   double pq;
   index_type ii = 0;
   for(; ii < maxit_; ++ii) {
+    
     if(ML_opr_) {
       ML_opr_->times_vec(*yk_, *res_);
     } else {
@@ -218,7 +219,7 @@ bool hiopPCGSolver::solve(hiopVector& b)
     rho1 = rho;
     rho = res_->dotProductWith(*zk_);
 
-    //check for stagnation!!!
+    //check for stagnation
     if((rho == 0) || abs(rho) > 1E+20) {
       flag_ = 4;
       iter_ = ii + 1;
@@ -442,11 +443,12 @@ bool hiopBiCGStabSolver::solve(hiopVector& b)
   double rho1;
   index_type ii = 0;
   for(; ii < maxit_; ++ii) {
+    
     rho1 = rho;
     rho = rt_->dotProductWith(*res_);
 
-    //check for stagnation!!!
-    if((rho == 0) || abs(rho) > 1E+20) {
+    //check for stagnation
+    if((rho == 0) || abs(rho) > 1E+40) {
       flag_ = 4;
       iter_ = ii + 1 - 0.5;
       break;
@@ -456,7 +458,7 @@ bool hiopBiCGStabSolver::solve(hiopVector& b)
       pk_->copyFrom(*res_);
     } else {
       double beta = rho / rho1 * (alpha / omega);
-      if(beta == 0 || abs(beta) > 1E+20) {
+      if(beta == 0 || abs(beta) > 1E+40) {
         flag_ = 4;
         iter_ = ii + 1 - 0.5;
         break;
@@ -479,7 +481,7 @@ bool hiopBiCGStabSolver::solve(hiopVector& b)
     
     double rtv = rt_->dotProductWith(*v_);
     
-    if(rtv == 0.0 || abs(rtv) > 1E+20) {
+    if(rtv == 0.0 || abs(rtv) > 1E+40) {
       flag_ = 4;
       iter_ = ii + 1 - 0.5;
       break;
@@ -659,7 +661,7 @@ bool hiopBiCGStabSolver::solve(hiopVector& b)
     ss_info_ << "\t - Error code " << flag_ << "\n\t - Act res=" << abs_resid_ << "n\t - Rel res="
              << rel_resid_ << std::endl;
   }
-  return true; // return true for inertia-free approach
+  return true;
 }
 
 
