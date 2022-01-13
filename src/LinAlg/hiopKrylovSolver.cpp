@@ -46,13 +46,17 @@
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or
 // product endorsement purposes.
 
-/* implements the Krylov iterative solver
+/*
 * @file hiopKrylovSolver.cpp
 * @ingroup LinearSolvers
 * @author Nai-Yuan Chiang <chiang7@lnnl.gov>, LNNL
 * @author Cosmin G. Petra <petra1@lnnl.gov>, LNNL
 */
 
+/**
+ * Implementation of Krylov solvers 
+ */
+   
 #include "hiopKrylovSolver.hpp"
 
 #include "hiopVector.hpp"
@@ -72,8 +76,8 @@ namespace hiop {
                                      hiopLinearOperator* Mleft_opr,
                                      hiopLinearOperator* Mright_opr,
                                      const hiopVector* x0)
-    : tol_{1e-0},
-      maxit_{100},
+    : tol_{1e-10},
+      maxit_{10},
       iter_{-1.},
       flag_{-1},
       abs_resid_{-1.},
@@ -423,6 +427,9 @@ bool hiopBiCGStabSolver::solve(hiopVector& b)
     flag_ = 0;
     iter_ = 0.;
     rel_resid_ = normr / n2b;
+    abs_resid_ = normr;
+    ss_info_ << "BiCGStab converged: actual normResid=" << abs_resid_ << " relResid=" << rel_resid_ 
+             << " iter=" << iter_ << std::endl;
     return true;
   }
   
