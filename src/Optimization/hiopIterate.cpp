@@ -423,7 +423,7 @@ int hiopIterate::adjust_small_slacks(hiopVector& slack,
 
       num_adjusted_slack = new_s->numOfElemsLessThan(zero);
 
-      new_s->component_sgn();    // missing func
+      new_s->component_sgn();
       new_s->scale(-1.0);
 
       slack.component_max(0.0);
@@ -441,7 +441,7 @@ int hiopIterate::adjust_small_slacks(hiopVector& slack,
 
       vec1->setToConstant_w_patternSelect(1.0, select);
       vec2->copyFrom(bound);
-      vec2->component_abs();  // missing func
+      vec2->component_abs();
       vec1->component_max(*vec2);
 
       vec1->scale(scale_fact);
@@ -451,7 +451,6 @@ int hiopIterate::adjust_small_slacks(hiopVector& slack,
 
       slack.copyFrom(*new_s);
 
-//      slackselectPattern(select);
 #ifndef NDEBUG
   assert(slack.matchesPattern(select));
 #endif

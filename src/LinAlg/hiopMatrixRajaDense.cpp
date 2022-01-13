@@ -371,7 +371,7 @@ void hiopMatrixRajaDense::copyRowsFrom(const hiopMatrix& src_mat, const index_ty
  * @pre This method should only be used with non-distributed matrices.
  */
 void hiopMatrixRajaDense::
-copyBlockFromMatrix(const long i_start, const long j_start, const hiopMatrixDense& srcmat)
+copyBlockFromMatrix(const index_type i_start, const index_type j_start, const hiopMatrixDense& srcmat)
 {
   const auto& src = dynamic_cast<const hiopMatrixRajaDense&>(srcmat);
   assert(n_local_==n_global_ && "this method should be used only in 'serial' mode");
@@ -391,7 +391,7 @@ copyBlockFromMatrix(const long i_start, const long j_start, const hiopMatrixDens
   RAJA::View<double, RAJA::Layout<2>> Mview(this->data_dev_, m_local_, n_local_);
   RAJA::View<double, RAJA::Layout<2>> Sview(src.data_dev_, src.m_local_, src.n_local_);
   const size_t buffsize = src.n_local_ * sizeof(double);
-  for(long ii=0; ii<src.m_local_; ii++)
+  for(index_type ii=0; ii<src.m_local_; ii++)
     rm.copy(&Mview(ii + i_start, j_start), &Sview(ii, 0), buffsize);
 }
 

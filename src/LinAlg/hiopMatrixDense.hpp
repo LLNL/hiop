@@ -204,7 +204,7 @@ public:
   virtual void copyRowsFrom(const hiopMatrix& src_gen, const index_type* rows_idxs, size_type n_rows){assert(false && "not implemented in base class");}
   
   /// @brief copies 'src' into this as a block starting at (i_block_start,j_block_start)
-  virtual void copyBlockFromMatrix(const long i_block_start, const long j_block_start,
+  virtual void copyBlockFromMatrix(const index_type i_block_start, const index_type j_block_start,
 			   const hiopMatrixDense& src){assert(false && "not implemented in base class");}
   
   /**
@@ -242,8 +242,8 @@ public:
   }
 #endif
 protected:
-  size_type n_global_; //total / global number of columns
   size_type m_local_;
+  size_type n_global_; //total / global number of columns
   MPI_Comm comm_;
   int myrank_;
 
