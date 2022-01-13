@@ -196,7 +196,7 @@ void hiopMatrixDenseRowMajor::copyRowsFrom(const hiopMatrix& src_gen, const inde
 }
 
   
-void hiopMatrixDenseRowMajor::copyBlockFromMatrix(const long i_start, const long j_start,
+void hiopMatrixDenseRowMajor::copyBlockFromMatrix(const index_type i_start, const index_type j_start,
 					  const hiopMatrixDense& srcmat)
 {
   const auto& src = dynamic_cast<const hiopMatrixDenseRowMajor&>(srcmat);
@@ -213,8 +213,8 @@ void hiopMatrixDenseRowMajor::copyBlockFromMatrix(const long i_start, const long
   assert(j_start<n_local_ || !n_local_);
   assert(i_start>=0); assert(j_start>=0);
 #endif
-  const size_t buffsize=src.n_local_*sizeof(double);
-  for(long ii=0; ii<src.m_local_; ii++)
+  const size_t buffsize = src.n_local_*sizeof(double);
+  for(index_type ii=0; ii<src.m_local_; ii++)
     memcpy(M_[ii+i_start]+j_start, src.M_[ii], buffsize);
 }
 

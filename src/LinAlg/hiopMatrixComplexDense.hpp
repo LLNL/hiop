@@ -207,7 +207,7 @@ namespace hiop
     }
     /* copies 'src' into this as a block starting at (i_block_start,j_block_start) */
     /* copyMatrixAsBlock */
-    void copyBlockFromMatrix(const long i_block_start, const long j_block_start,
+    void copyBlockFromMatrix(const index_type i_block_start, const index_type j_block_start,
 			     const hiopMatrixComplexDense& src)      
     {
       assert(false && "not yet implemented");

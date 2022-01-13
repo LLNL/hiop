@@ -199,7 +199,7 @@ public:
   void copyRowsFrom(const hiopMatrix& src_gen, const index_type* rows_idxs, size_type n_rows);
   
   /// @brief copies 'src' into this as a block starting at (i_block_start,j_block_start)
-  void copyBlockFromMatrix(const long i_block_start, const long j_block_start,
+  void copyBlockFromMatrix(const index_type i_block_start, const index_type j_block_start,
 			   const hiopMatrixDense& src);
   
   /**

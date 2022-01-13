@@ -835,7 +835,7 @@ void hiopVectorPar::addLinearDampingTerm(const hiopVector& ixleft,
   assert(n_local_==(dynamic_cast<const hiopVectorPar&>(ixright) ).n_local_);
 #endif
 
-  for(long i=0; i<n_local_; i++) {
+  for(index_type i=0; i<n_local_; i++) {
     v[i] = alpha*v[i] + (ixl[i]-ixr[i])*ct;
   }
 }
