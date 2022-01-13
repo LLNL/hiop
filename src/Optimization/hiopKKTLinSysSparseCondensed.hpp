@@ -236,20 +236,19 @@ protected:
   
   /// Helper method for allocating and precomputing symbolically JacD'*Dd*JacD + H + Dx + delta_wx*I
   hiopMatrixSparseCSRStorage* add_matrices_init(hiopMatrixSparseCSRStorage& JtDiagJ,
-                                                hiopMatrixSymSparseTriplet& HessSp_,
-                                                hiopVector& Dx_,
+                                                hiopMatrixSymSparseTriplet& HessSp,
+                                                hiopVector& Dx,
                                                 double delta_wx);
   /// Helper method for fast computation of JacD'*Dd*JacD + H + Dx + delta_wx*I
   void add_matrices(hiopMatrixSparseCSRStorage& JtDiagJ,
                     hiopMatrixSymSparseTriplet& HessSp,
-                    hiopVector& Dx_,
+                    hiopVector& Dx,
                     double delta_wx,
                     hiopMatrixSparseCSRStorage& M);
 protected:
-  //
-  //from the parent class and its parents we also use
-  //
-
+  ////
+  ////from the parent class and its parents we also use
+  ////
   //right-hand side [rx_tilde, rd_tilde, ((ryc->empty)), ryd]
   //  hiopVector *rhs_; 
 
@@ -273,9 +272,6 @@ protected:
 
   // int write_linsys_counter_;
   //  hiopCSR_IO csr_writer_;
-
-  /// Stores the diagonal Dd plus delta_wd*I as a vector
-  hiopVector* dd_pert_;
 
   /// Member for JacD'*Dd*JacD
   hiopMatrixSparseCSRStorage* JtDiagJ_;
@@ -333,7 +329,7 @@ public:
   {
     const hiopMatrixSparse* Jac_d = kkt_->Jac_dSp_;
     const hiopMatrixSparse* Hess = kkt_->HessSp_;
-    const hiopVector* Dd_pert = kkt_->dd_pert_;
+    const hiopVector* Dd_pert = kkt_->Hd_;
     const hiopVector* Dx = kkt_->Dx_;
     
     xdx_ = Dx->alloc_clone();
@@ -359,7 +355,7 @@ public:
   {
     const hiopMatrixSparse* Jac_d = kkt_->Jac_dSp_;
     const hiopMatrixSparse* Hess = kkt_->HessSp_;
-    const hiopVector* Dd_pert = kkt_->dd_pert_;
+    const hiopVector* Dd_pert = kkt_->Hd_;
     const hiopVector* Dx = kkt_->Dx_;
     const double& delta_wx = kkt_->delta_wx_;
 
@@ -439,7 +435,7 @@ public:
   {
     const hiopMatrixSparse* Jac_d = kkt_->Jac_dSp_;
     const hiopMatrixSparse* Hess = kkt_->HessSp_;
-    const hiopVector* Dd_pert = kkt_->dd_pert_;
+    const hiopVector* Dd_pert = kkt_->Hd_;
     const hiopVector* Dx = kkt_->Dx_;
     const size_type nx = Hess->n();
     const size_type nineq = Jac_d->m();
@@ -470,7 +466,7 @@ public:
     bool bret;
     const hiopMatrixSparse* Jac_d = kkt_->Jac_dSp_;
     const hiopMatrixSparse* Hess = kkt_->HessSp_;
-    const hiopVector* Dd_pert = kkt_->dd_pert_;
+    const hiopVector* Dd_pert = kkt_->Hd_;
     const hiopVector* Dx = kkt_->Dx_;
     const size_type nx = Hess->n();
     const size_type nineq = Jac_d->m();

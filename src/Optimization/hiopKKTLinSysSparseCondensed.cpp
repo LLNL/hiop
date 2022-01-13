@@ -67,7 +67,6 @@ namespace hiop
  
 hiopKKTLinSysCondensedSparse::hiopKKTLinSysCondensedSparse(hiopNlpFormulation* nlp)
   : hiopKKTLinSysCompressedSparseXDYcYd(nlp),
-    dd_pert_(nullptr),
     JtDiagJ_(nullptr),
     M_condensed_(nullptr),
     delta_wx_(0.),
@@ -86,7 +85,6 @@ hiopKKTLinSysCondensedSparse::~hiopKKTLinSysCondensedSparse()
   delete krylov_mat_opr_;
   delete M_condensed_;
   delete JtDiagJ_;
-  delete dd_pert_;
 }
 
 bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
@@ -129,11 +127,11 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   
   nlp_->runStats.kkt.tmUpdateLinsys.start();
 
-  if(nullptr == dd_pert_) {
-    dd_pert_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), nineq);
+  if(nullptr == Hd_) {
+    Hd_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), nineq);
   }
-  dd_pert_->copyFrom(*Dd_);  
-  dd_pert_->addConstant(delta_wd);
+  Hd_->copyFrom(*Dd_);  
+  Hd_->addConstant(delta_wd);
   //
   // compute condensed linear system J'*D*J + H + Dx + delta_wx*I
   //
@@ -156,19 +154,19 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
     //perform the initial allocation 
     JtDiagJ_ = JacDt.times_diag_times_mat_init(JacD);
     //perform symbolic (determine sparsity pattern) and numerical multiplication
-    JacDt.times_diag_times_mat(*dd_pert_, JacD, *JtDiagJ_);
+    JacDt.times_diag_times_mat(*Hd_, JacD, *JtDiagJ_);
   } else {
     //perform numerical multiplication
-    JacDt.times_diag_times_mat_numeric(*dd_pert_, JacD, *JtDiagJ_);
+    JacDt.times_diag_times_mat_numeric(*Hd_, JacD, *JtDiagJ_);
   }
   //t.stop(); printf("J*D*J'  took %.5f\n", t.getElapsedTime());
   
   t.reset(); t.start();
   // compute J'*D*J + H + Dx + delta_wx*I
   if(nullptr == M_condensed_) {
-    M_condensed_ = add_matrices_init(*JtDiagJ_, *Hess_triplet, *Dx_, delta_wx);
+    M_condensed_ = add_matrices_init(*JtDiagJ_, *Hess_triplet, *Dx_, delta_wx_);
   }
-  add_matrices(*JtDiagJ_, *Hess_triplet, *Dx_, delta_wx, *M_condensed_);
+  add_matrices(*JtDiagJ_, *Hess_triplet, *Dx_, delta_wx_, *M_condensed_);
   //t.stop(); printf("add     took %.5f\n", t.getElapsedTime());
 
   
@@ -529,7 +527,7 @@ bool hiopKKTLinSysCondensedSparse::solve_compressed_direct(hiopVector& rx,
   //working buffers in the size of nineq/nd using output as storage
   hiopVector& Dd_x_ryd = dyd;
   Dd_x_ryd.copyFrom(ryd);
-  Dd_x_ryd.componentMult(*dd_pert_);
+  Dd_x_ryd.componentMult(*Hd_);
 
   hiopVector& DD_x_ryd_plus_rd = Dd_x_ryd;
   DD_x_ryd_plus_rd.axpy(1.0, rd);
@@ -561,7 +559,7 @@ bool hiopKKTLinSysCondensedSparse::solve_compressed_direct(hiopVector& rx,
   Jac_dSp_->timesVec(-1.0, dd, 1.0, dx);
 
   dyd.copyFrom(dd);
-  dyd.componentMult(*dd_pert_);
+  dyd.componentMult(*Hd_);
   dyd.axpy(-1.0, rd);
 
   nlp_->runStats.kkt.tmSolveRhsManip.stop();
@@ -730,7 +728,7 @@ SparseMatrixCSR* hiopKKTLinSysCondensedSparse::compute_linsys_eigen(const double
     std::vector<Triplet> tripletList;
     tripletList.reserve(Dd_->get_size());
     for(int i=0; i<Dd_->get_size(); i++) {
-      tripletList.push_back(Triplet(i, i, dd_pert_->local_data()[i]));
+      tripletList.push_back(Triplet(i, i, Hd_->local_data()[i]));
     }
     Dd_mat.setFromTriplets(tripletList.begin(), tripletList.end());
   }
