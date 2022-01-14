@@ -953,7 +953,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
   bool bret=true; int lsStatus=-1, lsNum=0;
   int use_soc = 0;
   int use_fr = 0;
-  int num_adjusted_bounds = 0;
+  int num_adjusted_slacks = 0;
   solver_status_ = NlpSolve_Pending;
   while(true) {
 
@@ -1087,7 +1087,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
         break;
       }
       bret = it_trial->takeStep_primals(*it_curr, *dir, _alpha_primal, _alpha_dual); assert(bret);
-      num_adjusted_bounds = it_trial->adjust_small_slacks(*it_curr, _mu);
+      num_adjusted_slacks = it_trial->adjust_small_slacks(*it_curr, _mu);
       nlp->runStats.tmSolverInternal.stop(); //---
 
       //evaluate the problem at the trial iterate (functions only)
@@ -1117,11 +1117,11 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
       if(iniStep && theta<=theta_trial) {
         bool grad_phi_dx_soc_computed = false;
         double grad_phi_dx_soc = 0.0;
-        int num_adjusted_bounds_soc = 0;
+        int num_adjusted_slacks_soc = 0;
         lsStatus = apply_second_order_correction(kkt, theta, theta_trial,
-                                                 grad_phi_dx_soc_computed, grad_phi_dx_soc, num_adjusted_bounds_soc);
+                                                 grad_phi_dx_soc_computed, grad_phi_dx_soc, num_adjusted_slacks_soc);
         if(lsStatus>0) {
-          num_adjusted_bounds = num_adjusted_bounds_soc;
+          num_adjusted_slacks = num_adjusted_slacks_soc;
           grad_phi_dx_computed = grad_phi_dx_soc_computed;
           grad_phi_dx = grad_phi_dx_soc;
           use_soc = 1;
@@ -1136,8 +1136,13 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
     } //end of while for the linesearch loop
     nlp->runStats.tmSolverInternal.stop();
 
-    if(num_adjusted_bounds > 0) {
-      nlp->log->printf(hovWarning, "%d slacks are too small. Adjust corresponding variable bounds!\n", num_adjusted_bounds);
+    // adjust slacks and bounds if necessary
+    if(num_adjusted_slacks > 0) {
+      nlp->log->printf(hovWarning, "%d slacks are too small. Adjust corresponding variable slacks!\n", num_adjusted_slacks);
+      nlp->adjust_bounds(*it_trial);
+      //compute infeasibility theta at trial point, since bounds changed --- note that the returned value won't change
+      double theta_temp = resid->compute_nlp_infeasib_onenorm(*it_trial, *_c_trial, *_d_trial);
+      assert(theta_temp == theta_trial);
     }
 
     //post line-search stuff
@@ -1424,7 +1429,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
   int lsStatus=-1, lsNum=0;
   int use_soc = 0;
   int use_fr = 0;
-  int num_adjusted_bounds = 0;
+  int num_adjusted_slacks = 0;
 
   int linsol_safe_mode_lastiter = -1;
   bool linsol_safe_mode_on = "stable"==hiop::tolower(nlp->options->GetString("linsol_mode"));
@@ -1653,7 +1658,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
           }
         }
         bret = it_trial->takeStep_primals(*it_curr, *dir, _alpha_primal, _alpha_dual); assert(bret);
-        num_adjusted_bounds = it_trial->adjust_small_slacks(*it_curr, _mu);
+        num_adjusted_slacks = it_trial->adjust_small_slacks(*it_curr, _mu);
         nlp->runStats.tmSolverInternal.stop(); //---
 
         //evaluate the problem at the trial iterate (functions only)
@@ -1688,11 +1693,11 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
         if(iniStep && theta<=theta_trial) {
           bool grad_phi_dx_soc_computed = false;
           double grad_phi_dx_soc = 0.0;
-          int num_adjusted_bounds_soc = 0;
+          int num_adjusted_slacks_soc = 0;
           lsStatus = apply_second_order_correction(kkt, theta, theta_trial, 
-                                                   grad_phi_dx_soc_computed, grad_phi_dx_soc, num_adjusted_bounds_soc);
+                                                   grad_phi_dx_soc_computed, grad_phi_dx_soc, num_adjusted_slacks_soc);
           if(lsStatus>0) {
-            num_adjusted_bounds = num_adjusted_bounds_soc;
+            num_adjusted_slacks = num_adjusted_slacks_soc;
             grad_phi_dx_computed = grad_phi_dx_soc_computed;
             grad_phi_dx = grad_phi_dx_soc;
             use_soc = 1;
@@ -1707,9 +1712,16 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
       } //end of while for the linesearch loop
       nlp->runStats.tmSolverInternal.stop();
 
-      if(num_adjusted_bounds > 0) {
-        nlp->log->printf(hovWarning, "%d slacks are too small. Adjust corresponding variable bounds!\n", num_adjusted_bounds);
+      // adjust slacks and bounds if necessary
+      if(num_adjusted_slacks > 0) {
+        nlp->log->printf(hovWarning, "%d slacks are too small. Adjust corresponding variable slacks!\n", 
+                         num_adjusted_slacks);
+        nlp->adjust_bounds(*it_trial);
+        //compute infeasibility theta at trial point, since bounds changed --- note that the returned value won't change
+        double theta_temp = resid->compute_nlp_infeasib_onenorm(*it_trial, *_c_trial, *_d_trial);
+        assert(theta_temp == theta_trial);
       }
+
       // post line-search: filter is augmented whenever the switching condition or Armijo rule do not
       // hold for the trial point that was just accepted
       if(nlp->options->GetString("force_resto")=="yes" && !within_FR_ && iter_num == 1) {
@@ -1717,7 +1729,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
         if(use_fr) {
           // continue iterations if FR is accepted
           solver_status_ = NlpSolve_Pending;
-	  break;
+          break;
         }
       } else if(lsStatus==1) {
 
@@ -2005,7 +2017,7 @@ int hiopAlgFilterIPMBase::apply_second_order_correction(hiopKKTLinSys* kkt,
                                                         const double theta_trial0,
                                                         bool &grad_phi_dx_computed,
                                                         double &grad_phi_dx,
-                                                        int &num_adjusted_bounds)
+                                                        int &num_adjusted_slacks)
 {
   int max_soc_iter = nlp->options->GetInteger("max_soc_iter");
   double kappa_soc = nlp->options->GetNumeric("kappa_soc");
@@ -2064,7 +2076,7 @@ int hiopAlgFilterIPMBase::apply_second_order_correction(hiopKKTLinSys* kkt,
     // Compute trial point
     bret = it_trial->takeStep_primals(*it_curr, *soc_dir, alpha_primal_soc, alpha_dual_soc); 
     assert(bret);
-    num_adjusted_bounds = it_trial->adjust_small_slacks(*it_curr, _mu);
+    num_adjusted_slacks = it_trial->adjust_small_slacks(*it_curr, _mu);
 
     //evaluate the problem at the trial iterate (functions only)
     if(!this->evalNlp_funcOnly(*it_trial, _f_nlp_trial, *_c_trial, *_d_trial)) {

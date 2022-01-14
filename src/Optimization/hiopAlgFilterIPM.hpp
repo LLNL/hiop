@@ -153,7 +153,7 @@ protected:
                                             const double theta_trial0,
                                             bool &grad_phi_dx_computed,
                                             double &grad_phi_dx,
-                                            int &num_adjusted_bounds);
+                                            int &num_adjusted_slacks);
 
   // check if all the line search conditions are accepted or not
   virtual int accept_line_search_conditions(const double theta_curr,
