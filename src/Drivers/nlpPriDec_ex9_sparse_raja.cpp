@@ -83,7 +83,9 @@ PriDecMasterProblemEx9Sparse::solve_master(hiopVector& x,
   solver.getSolution(x_vec);
 
   if(status<0) {
-    printf("solver returned negative solve status: %d (with objective is %18.12e)\n", status, solver.getObjective());
+    nlp.log->printf(hovError, 
+                    "solver returned negative solve status: %d (with objective is %18.12e)\n", 
+                    status, solver.getObjective());
     return status;
   }
   
@@ -130,7 +132,9 @@ bool PriDecMasterProblemEx9Sparse::eval_f_rterm(size_t idx, const int& n, const 
   
   // xi can be set below 
   xi = new double[nS_]; 
-  for(int i=0;i<nS_;i++) xi[i] = 1.; 
+  for(int i=0; i<nS_; i++) { 
+    xi[i] = 1.; 
+  }
   //xi[ny_-1] = double(idx/100.0+1.);
 
   PriDecRecourseProblemEx9Sparse* ex9_recourse;
@@ -212,7 +216,7 @@ inline size_t PriDecMasterProblemEx9Sparse::get_num_vars() const
 void PriDecMasterProblemEx9Sparse::get_solution(double* x) const
 {
   assert(sol_!=NULL);
-  memcpy(x,sol_, nx_*sizeof(double));
+  memcpy(x, sol_, nx_*sizeof(double));
 };
 
 double PriDecMasterProblemEx9Sparse::get_objective()

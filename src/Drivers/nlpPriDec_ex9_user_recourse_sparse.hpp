@@ -53,7 +53,6 @@ public:
 
     //assert("for debugging" && false); //for debugging purpose
     memcpy(x_,x, nx_*sizeof(double));
-    for(int i=0;i<nx_;i++) printf(" %d %18.12e ",i,x_[i]);
     //nsparse_ = int(nx_*sparse_ratio);
   }
 

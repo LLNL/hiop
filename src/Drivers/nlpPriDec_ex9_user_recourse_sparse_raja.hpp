@@ -195,20 +195,27 @@ public:
 
   bool get_vars_info(const size_type& n, double *xlow, double* xupp, NonlinearityType* type)
   {
-    // y_1 bounded
-    xlow[0] = 0.;
-   
-    xupp[0] = 1e20;
-    RAJA::forall<ex9_raja_exec>(RAJA::RangeSegment(1, n),
-    RAJA_LAMBDA(RAJA::Index_type i)
-    {
-      xlow[i] = -1e+20;
-    });
 
     RAJA::forall<ex9_raja_exec>(RAJA::RangeSegment(1, n),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
-      xupp[i] = 1e+20;
+      if(i == 0) {
+        xlow[0] = 0.; //y_1 bounded
+      } 
+      else {
+        xlow[i] = -1e+20;
+      }
+    });
+
+    RAJA::forall<ex9_raja_exec>(RAJA::RangeSegment(0, n),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      if(i == 0) {
+        xupp[0] = 1e20;
+      }
+      else {
+        xupp[i] = 1e+20;
+      }
     });
 
     RAJA::forall<RAJA::loop_exec>(RAJA::RangeSegment(0, n),
@@ -223,16 +230,20 @@ public:
   bool get_cons_info(const size_type& m, double* clow, double* cupp, NonlinearityType* type)
   {
     assert(m == ny_);
-    RAJA::forall<ex9_raja_exec>(RAJA::RangeSegment(0, ny_-1),
+    RAJA::forall<ex9_raja_exec>(RAJA::RangeSegment(0, ny_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
-      clow[i] = 0.;
-      cupp[i] = 1e20;
+      if(i == ny_-1) {
+        clow[ny_-1] = 1.; 
+        cupp[ny_-1] = 1e20;
+      } else {
+        clow[i] = 0.;
+        cupp[i] = 1e20;
+      }
     });
 
     //clow[ny_-1] = 0.;
-    clow[ny_-1] = 1.; 
-    cupp[ny_-1] = 1e20;
+
     return true;
   }
 
