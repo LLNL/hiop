@@ -258,8 +258,11 @@ public:
   /// @brief return the scaling fact for objective
   double get_obj_scale() const;
 
-  /// @brief addjust variable/constraint bounds according to `it`
+  /// @brief adjust variable/constraint bounds according to the given iteration.
   void adjust_bounds(const hiopIterate& it);
+
+  /// @brief reset variable/constraint bounds in the elastic_mode
+  void reset_bounds(double bound_relax_perturb);
 
   /* outputing and debug-related functionality*/
   hiopLogger* log;
@@ -336,7 +339,11 @@ protected:
   hiopNlpTransformations nlp_transformations_;
   
   //internal NLP transformations (currently gradient scaling implemented)
-  hiopNLPObjGradScaling *nlp_scaling_;
+  hiopNLPObjGradScaling* nlp_scaling_;
+
+  /// @brief internal NLP transformations that relaxes the bounds
+  hiopBoundsRelaxer* relax_bounds_;
+  
 
 #ifdef HIOP_USE_MPI
   //inter-process distribution of vectors

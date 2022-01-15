@@ -927,7 +927,37 @@ void hiopOptionsNLP::register_options()
                         "turn on/off performance timers and reporting of the computational constituents of the "
                         "KKT solve process");
   }
-  
+
+  // elastic mode
+  {
+    vector<string> range(2);
+    range[0] = "yes";
+    range[1] = "no";
+    register_str_option("elastic_mode",
+                        "no",
+                        range,
+                        "Turn on/off elastic mode. If elastic mode is on, HiOp tightens the bound relaxations "
+                        "during the iterations.");
+
+    register_num_option("elastic_mode_bound_relax_initial",
+                        1e-2,
+                        1e-20,
+                        1e+3,
+                        "Initial bound relaxation factor in the elastic mode (default: 1e-2). "
+                        "This value must be less or equal to elastic_mode_bound_relax_initial. "
+                        "If user provides elastic_mode_bound_relax_initial > elastic_mode_bound_relax_last, "
+                        "HiOp will use the default values for both parameters.");
+
+    register_num_option("elastic_mode_bound_relax_final",
+                        1e-8,
+                        1e-20,
+                        1e+3,
+                        "Final/minimum bound relaxation factor in the elastic mode (default: 1e-8). "
+                        "This value must be less or equal to elastic_mode_bound_relax_initial. "
+                        "If user provides elastic_mode_bound_relax_initial > elastic_mode_bound_relax_last, "
+                        "HiOp will use the default values for both parameters.");
+  }
+
   //other options
   {
     vector<string> range(2); range[0]="no"; range[1]="yes";

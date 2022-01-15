@@ -144,7 +144,7 @@ protected:
 
   virtual double thetaLogBarrier(const hiopIterate& it, const hiopResidual& resid, const double& mu);
 
-  bool updateLogBarrierParameters(const hiopIterate& it, const double& mu_curr, const double& tau_curr,
+  bool updateLogBarrierParameters(hiopIterate& it, const double& mu_curr, const double& tau_curr,
 				  double& mu_new, double& tau_new);
 
   // second order correction

@@ -577,13 +577,37 @@ bool hiopAlgFilterIPMBase::evalNlp_HessOnly(hiopIterate& iter,
 }
 
 bool hiopAlgFilterIPMBase::
-updateLogBarrierParameters(const hiopIterate& it, const double& mu_curr, const double& tau_curr,
+updateLogBarrierParameters(hiopIterate& it, const double& mu_curr, const double& tau_curr,
 			   double& mu_new, double& tau_new)
 {
   double new_mu = fmax(eps_tol/10, fmin(kappa_mu*mu_curr, pow(mu_curr,theta_mu)));
-  if(fabs(new_mu-mu_curr)<1e-16) return false;
+  if(fabs(new_mu-mu_curr)<1e-16) {
+    return false;
+  }
   mu_new  = new_mu;
   tau_new = fmax(tau_min,1.0-mu_new);
+  
+  if(nlp->options->GetString("elastic_mode")=="yes") {
+    double bound_relax_perturb = mu_new / mu0 * nlp->options->GetNumeric("elastic_mode_bound_relax_initial");
+    const double bound_relax_perturb_max = nlp->options->GetNumeric("elastic_mode_bound_relax_final");
+    if(bound_relax_perturb < bound_relax_perturb_max) {
+      bound_relax_perturb = bound_relax_perturb_max;
+    }
+    nlp->log->printf(hovWarning, "Tighen the variable/constraint bounds.\n");
+    nlp->reset_bounds(bound_relax_perturb);
+
+    it.determineSlacks();
+    double num_adjusted_slacks = it.adjust_small_slacks(it, mu_new);
+    if(num_adjusted_slacks > 0) {
+      nlp->log->printf(hovWarning, "%d slacks are too small after tightening the bounds. "
+                       "Adjust corresponding slacks!\n", num_adjusted_slacks);
+      nlp->adjust_bounds(it);
+      //compute infeasibility theta at trial point, since both slacks and bounds are modified 
+      double theta_temp = resid->compute_nlp_infeasib_onenorm(*it_trial, *_c_trial, *_d_trial);
+      // FIXME: do we need to use the updated errors in the outerlayer, or it will be calculated in the later LS steps?
+    }
+  }
+  
   return true;
 }
 
@@ -613,21 +637,20 @@ evalNlpAndLogErrors(const hiopIterate& it, const hiopResidual& resid, const doub
   nlp->log->printf(hovScalars, "nrmOneDualEqu %g   nrmOneDualBo %g\n", nrmDualEqu, nrmDualBou);
   if(nrmDualBou>1e+10) {
     nlp->log->printf(hovWarning, "Unusually large bound dual variables (norm1=%g) occured, "
-		     "which may cause numerical instabilities if it persists. Convergence "
-		     " issues or inacurate optimal solutions may be experienced. Possible causes: "
-		     " tight bounds or bad scaling of the optimization variables.\n",
-		     nrmDualBou);
+                     "which may cause numerical instabilities if it persists. Convergence "
+                     " issues or inacurate optimal solutions may be experienced. Possible causes: "
+                     " tight bounds or bad scaling of the optimization variables.\n",
+                     nrmDualBou);
     if(nlp->options->GetString("fixed_var")=="remove") {
       nlp->log->printf(hovWarning, "For example, increase 'fixed_var_tolerance' to remove "
-		       "additional variables.\n");
+                       "additional variables.\n");
+    } else if(nlp->options->GetString("fixed_var")=="relax") {
+        nlp->log->printf(hovWarning, "For example, increase 'fixed_var_tolerance' to relax "
+                         "aditional (tight) variables and/or increase 'fixed_var_perturb' "
+                         "to decrease the tightness.\n");
     } else {
-      if(nlp->options->GetString("fixed_var")=="relax") {
-	nlp->log->printf(hovWarning, "For example, increase 'fixed_var_tolerance' to relax "
-			 "aditional (tight) variables and/or increase 'fixed_var_perturb' "
-			 "to decrease the tightness.\n");
-      } else
-	nlp->log->printf(hovWarning, "Potential fixes: fix or relax variables with tight bounds "
-			 "(see 'fixed_var' option) or rescale variables.\n");
+      nlp->log->printf(hovWarning, "Potential fixes: fix or relax variables with tight bounds "
+                       "(see 'fixed_var' option) or rescale variables.\n");
     }
   }
 
@@ -1150,8 +1173,8 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
     if(lsStatus==1) {
       //need to check switching cond and Armijo to decide if filter is augmented
       if(!grad_phi_dx_computed) {
-	grad_phi_dx = logbar->directionalDerivative(*dir);
-	grad_phi_dx_computed=true;
+        grad_phi_dx = logbar->directionalDerivative(*dir);
+        grad_phi_dx_computed=true;
       }
 
       //this is the actual switching condition

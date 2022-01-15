@@ -383,6 +383,35 @@ relax(const double& bound_relax_perturb, hiopVector& xl, hiopVector& xu, hiopVec
 
 }
 
+void hiopBoundsRelaxer::
+relax_from_ori(const double& bound_relax_perturb, hiopVector& xl, hiopVector& xu, hiopVector& dl, hiopVector& du)
+{
+  xl.copyFrom(*xl_ori);
+  xl.component_abs();
+  xl.component_max(1.);
+  xl.scale(-bound_relax_perturb);
+  xl.axpy(1.0, *xl_ori);
+
+  xu.copyFrom(*xu_ori);
+  xu.component_abs();
+  xu.component_max(1.);
+  xu.scale(bound_relax_perturb);
+  xu.axpy(1.0, *xu_ori);
+
+  dl.copyFrom(*dl_ori);
+  dl.component_abs();
+  dl.component_max(1.);
+  dl.scale(-bound_relax_perturb);
+  dl.axpy(1.0, *dl_ori);
+
+  du.copyFrom(*du_ori);
+  du.component_abs();
+  du.component_max(1.);
+  du.scale(bound_relax_perturb);
+  du.axpy(1.0, *du_ori);
+}
+
+
 /**
 * For class hiopNLPObjGradScaling
 */
