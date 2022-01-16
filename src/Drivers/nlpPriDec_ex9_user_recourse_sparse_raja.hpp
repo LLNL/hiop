@@ -52,7 +52,6 @@ public:
     //umpire::Allocator allocator 
     //  = resmgr.getAllocator(mem_space_ == "DEFAULT" ? "HOST" : mem_space_);
 
-    printf("Check umpire success\n");
     assert(nS_>=1);
     assert(nx_>=nS_);  // ny=nx=n
     assert(S_>=1);
@@ -376,8 +375,11 @@ public:
       return true;
     }
 
-    index_type* nnzit = new index_type[1] ; 
-    nnzit[0] = 0;
+    //auto& resmgr = umpire::ResourceManager::getInstance();
+    //umpire::Allocator allocator = resmgr.getAllocator(mem_space_);
+    //index_type*  nnzit = static_cast<index_type*>(allocator.allocate(1 * sizeof(index_type)));
+    //resmgr.memset(nnzit, 0);
+    
     if(iJacS!=NULL && jJacS!=NULL) {
       RAJA::forall<ex9_raja_exec>(RAJA::RangeSegment(0, num_cons),
         [=] __device__ (RAJA::Index_type itrow)
@@ -398,7 +400,7 @@ public:
 	  assert(itrow==m-1);
           iJacS[2*(m-1)] = m-1;
           jJacS[2*(m-1)] = 0;
-          nnzit[0] += 1;
+          //nnzit[0] += 1;
           //cons[m-1] = (1-x[0]+xi_[0]);
           
           //RAJA::forall<ex9_raja_exec>(RAJA::RangeSegment(1, m),
@@ -407,7 +409,7 @@ public:
 	  for (int i=1; i<m; i++) {
 	    iJacS[2*(m-1)+i] = m-1;
             jJacS[2*(m-1)+i] = i;
-	    nnzit[0] += 1;
+	    //nnzit[0] += 1;
           }
               //cons[m-1] += x[i]*x[i];
           //sparse Jacobian ineq w.r.t x and s
@@ -418,7 +420,7 @@ public:
     }
     //values for sparse Jacobian if requested by the solver
     if(MJacS!=NULL) {
-      nnzit[0] = 0;
+      //nnzit[0] = 0;
       RAJA::forall<ex9_raja_exec>(RAJA::RangeSegment(0, num_cons),
        [=] __device__ (RAJA::Index_type itrow)
       {
@@ -427,26 +429,26 @@ public:
           //sparse Jacobian eq w.r.t. x and s
           //yk+1
           MJacS[2*itrow] = -1.;
-          nnzit[0] += 1;
+          //nnzit[0] += 1;
           //yk
           MJacS[2*itrow+1] = 1.;
-          nnzit[0] += 1;
+          //nnzit[0] += 1;
         } else if (con_idx==m-1) {
           assert(itrow==m-1);
 	  MJacS[2*(m-1)] = -2*(1-x[0]+xi_[0]);
-          nnzit[0] += 1;
+          //nnzit[0] += 1;
           //cons[m-1] = (1-x[0]+xi_[0])^2;
 	  assert(m>=nS_);
 	  for(int i=1; i<nS_; i++)
 	  {
             MJacS[2*(m-1)+i] = 2*(x[i]+xi_[i]);
-            nnzit[0] += 1;
+            //nnzit[0] += 1;
 	  }
             //cons[m-1] += (x[i] + xi_[i])*(x[i] + xi_[i]);
 	  for(int i=nS_; i<m; i++)
 	  {
             MJacS[2*(m-1)+i] = 2*x[i];
-            nnzit[0] += 1;
+            //nnzit[0] += 1;
             //cons[m-1] += x[i]*x[i];
           }
           //sparse Jacobian ineq w.r.t x and s
@@ -455,7 +457,7 @@ public:
       assert(2*(m-1)+m==nnzJacS);
       //assert(nnzit[0]==nnzJacS);
     }
-    delete[] nnzit;
+    //allocator.deallocate(nnzit);
     //assert("for debugging" && false); //for debugging purpose
     return true;
   }

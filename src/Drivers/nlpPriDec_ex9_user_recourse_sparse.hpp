@@ -332,7 +332,9 @@ public:
   bool get_starting_point(const size_type& global_n, double* x0)
   {    
     assert(global_n==nx_);
-    for(int i=0; i<global_n; i++) x0[i]=1.;
+    for(int i=0; i<global_n; i++){
+      x0[i] = 1.;
+    }
     return true;
   }
 
@@ -357,7 +359,9 @@ public:
   bool compute_gradx(const int n, const double* y, double*  gradx)
   {
     assert(nx_==n);
-    for(int i=0;i<nx_;i++) gradx[i] = (x_[i]-y[i]);
+    for(int i=0; i<nx_; i++){
+      gradx[i] = (x_[i]-y[i]);
+    }
     return true;
   };
 
