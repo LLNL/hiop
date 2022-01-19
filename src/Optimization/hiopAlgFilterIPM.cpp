@@ -588,20 +588,27 @@ updateLogBarrierParameters(hiopIterate& it, const double& mu_curr, const double&
   tau_new = fmax(tau_min,1.0-mu_new);
   
   if(nlp->options->GetString("elastic_mode")=="yes") {
-    double bound_relax_perturb = mu_new / mu0 * nlp->options->GetNumeric("elastic_mode_bound_relax_initial");
-    const double bound_relax_perturb_max = nlp->options->GetNumeric("elastic_mode_bound_relax_final");
-    if(bound_relax_perturb < bound_relax_perturb_max) {
-      bound_relax_perturb = bound_relax_perturb_max;
+    const double target_mu = nlp->options->GetNumeric("tolerance");
+    const double bound_relax_perturb_init = nlp->options->GetNumeric("elastic_mode_bound_relax_initial");
+    const double bound_relax_perturb_min = nlp->options->GetNumeric("elastic_mode_bound_relax_final");
+    double bound_relax_perturb =  (mu_new - target_mu) / (mu0 - target_mu) * (bound_relax_perturb_init-bound_relax_perturb_min) 
+                                + bound_relax_perturb_min;
+//    bound_relax_perturb = 0.995*mu_new;
+    if(bound_relax_perturb > bound_relax_perturb_init) {
+      bound_relax_perturb = bound_relax_perturb_init;
     }
-    nlp->log->printf(hovWarning, "Tighen the variable/constraint bounds.\n");
+    if(bound_relax_perturb < bound_relax_perturb_min) {
+      bound_relax_perturb = bound_relax_perturb_min;
+    }
+    nlp->log->printf(hovWarning, "Tighen the variable/constraint bounds --- %10.6g\n", bound_relax_perturb);
     nlp->reset_bounds(bound_relax_perturb);
 
     it.determineSlacks();
-    double num_adjusted_slacks = it.adjust_small_slacks(it, mu_new);
+    int num_adjusted_slacks = it.adjust_small_slacks(it, mu_new);
     if(num_adjusted_slacks > 0) {
-      nlp->log->printf(hovWarning, "%d slacks are too small after tightening the bounds. "
+      nlp->log->printf(hovWarning, "updateLogBarrierParameters: %d slacks are too small after tightening the bounds. "
                        "Adjust corresponding slacks!\n", num_adjusted_slacks);
-      nlp->adjust_bounds(it);
+//      nlp->adjust_bounds(it);
       //compute infeasibility theta at trial point, since both slacks and bounds are modified 
       double theta_temp = resid->compute_nlp_infeasib_onenorm(*it_trial, *_c_trial, *_d_trial);
       // FIXME: do we need to use the updated errors in the outerlayer, or it will be calculated in the later LS steps?
