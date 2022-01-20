@@ -565,7 +565,11 @@ public:
   virtual hiopMatrix* alloc_Jac_c()
   {
     return LinearAlgebraFactory::create_matrix_sparse(options->GetString("mem_space"), n_cons_eq_, n_vars_, nnz_sparse_Jaceq_);
+<<<<<<< HEAD
     //return new hiopMatrixSparseTriplet(n_cons_eq_, n_vars_, nnz_sparse_Jaceq_);
+=======
+//    return new hiopMatrixSparseTriplet(n_cons_eq_, n_vars_, nnz_sparse_Jaceq_);
+>>>>>>> d58c87a (try a different solution)
   }
   virtual hiopMatrix* alloc_Jac_d()
   {

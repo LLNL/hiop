@@ -109,12 +109,14 @@ hiopAlgFilterIPMBase::hiopAlgFilterIPMBase(hiopNlpFormulation* nlp_, const bool 
 
   //parameter based initialization
   if(duals_update_type==0) {
-    dualsUpdate = nlp->alloc_duals_lsq_updater();
+    dualsUpdate_ = nlp->alloc_duals_lsq_updater();
   } else if(duals_update_type==1) {
-    dualsUpdate = new hiopDualsNewtonLinearUpdate(nlp);
+    dualsUpdate_ = new hiopDualsNewtonLinearUpdate(nlp);
   } else {
     assert(false && "duals_update_type has an unrecognized value");
   }
+
+  bound_relax_perturb_last_ = nlp->options->GetNumeric("elastic_mode_bound_relax_initial");
 
   resetSolverStatus();
 }
@@ -144,7 +146,7 @@ void hiopAlgFilterIPMBase::destructorPart()
 
   if(logbar) delete logbar;
 
-  if(dualsUpdate) delete dualsUpdate;
+  if(dualsUpdate_) delete dualsUpdate_;
 
   if(c_soc) {
     delete c_soc;
@@ -182,7 +184,7 @@ hiopAlgFilterIPMBase::~hiopAlgFilterIPMBase()
 
   if(logbar) delete logbar;
 
-  if(dualsUpdate) delete dualsUpdate;
+  if(dualsUpdate_) delete dualsUpdate_;
 
   if(c_soc) {
     delete c_soc;
@@ -249,11 +251,11 @@ void hiopAlgFilterIPMBase::reInitializeNlpObjects()
   //parameter based initialization
   if(duals_update_type==0) {
     //lsq update
-    //dualsUpdate = new hiopDualsLsqUpdate(nlp);
-    dualsUpdate = nlp->alloc_duals_lsq_updater();
+    //dualsUpdate_ = new hiopDualsLsqUpdate(nlp);
+    dualsUpdate_ = nlp->alloc_duals_lsq_updater();
   } else {
     if(duals_update_type==1) {
-      dualsUpdate = new hiopDualsNewtonLinearUpdate(nlp);
+      dualsUpdate_ = new hiopDualsNewtonLinearUpdate(nlp);
     } else { assert(false && "duals_update_type has an unrecognized value"); }
   }
 }
@@ -426,8 +428,8 @@ startingProcedure(hiopIterate& it_ini,
     if(0==dualsInitializ) {
       //LSQ-based initialization of yc and yd
 
-      //is the dualsUpdate already the LSQ-based updater?
-      hiopDualsLsqUpdate* updater = dynamic_cast<hiopDualsLsqUpdate*>(dualsUpdate);
+      //is the dualsUpdate_ already the LSQ-based updater?
+      hiopDualsLsqUpdate* updater = dynamic_cast<hiopDualsLsqUpdate*>(dualsUpdate_);
       bool deleteUpdater = false;
       if(updater == NULL) {
 	//updater = new hiopDualsLsqUpdate(nlp);
@@ -591,9 +593,16 @@ updateLogBarrierParameters(hiopIterate& it, const double& mu_curr, const double&
     const double target_mu = nlp->options->GetNumeric("tolerance");
     const double bound_relax_perturb_init = nlp->options->GetNumeric("elastic_mode_bound_relax_initial");
     const double bound_relax_perturb_min = nlp->options->GetNumeric("elastic_mode_bound_relax_final");
-    double bound_relax_perturb =  (mu_new - target_mu) / (mu0 - target_mu) * (bound_relax_perturb_init-bound_relax_perturb_min) 
-                                + bound_relax_perturb_min;
+    double bound_relax_perturb;
+    bound_relax_perturb =  (mu_new - target_mu) / (mu0 - target_mu) * (bound_relax_perturb_init-bound_relax_perturb_min) 
+                           + bound_relax_perturb_min;
+    
+    // tune 1
 //    bound_relax_perturb = 0.995*mu_new;
+
+    // tune 2
+    bound_relax_perturb = fmin(bound_relax_perturb, 0.995*bound_relax_perturb_last_);
+
     if(bound_relax_perturb > bound_relax_perturb_init) {
       bound_relax_perturb = bound_relax_perturb_init;
     }
@@ -601,17 +610,43 @@ updateLogBarrierParameters(hiopIterate& it, const double& mu_curr, const double&
       bound_relax_perturb = bound_relax_perturb_min;
     }
     nlp->log->printf(hovWarning, "Tighen the variable/constraint bounds --- %10.6g\n", bound_relax_perturb);
+
+//    std::cout<<"x"<<std::endl;
+//    it.get_x()->print();
+//    std::cout<<"sxl"<<std::endl;
+//    it.get_sxl()->print();
+//    std::cout<<"xl"<<std::endl;
+//    nlp->get_xl().print();
+
     nlp->reset_bounds(bound_relax_perturb);
 
+//    std::cout<<"after modify bounds:\nxl"<<std::endl;
+//    nlp->get_xl().print();
+
     it.determineSlacks();
+
+//    std::cout<<"recompute slacks:\nsxl"<<std::endl;
+//    it.get_sxl()->print();
+
     int num_adjusted_slacks = it.adjust_small_slacks(it, mu_new);
-    if(num_adjusted_slacks > 0) {
+    if(num_adjusted_slacks > 0) {    
+//      std::cout<<"after adjust small slacks:\nsxl"<<std::endl;
+//      it.get_sxl()->print();
+
       nlp->log->printf(hovWarning, "updateLogBarrierParameters: %d slacks are too small after tightening the bounds. "
                        "Adjust corresponding slacks!\n", num_adjusted_slacks);
+
+    // tune 3
 //      nlp->adjust_bounds(it);
+
+//      std::cout<<"after adjust bounds:\nxl"<<std::endl;
+//      nlp->get_xl().print();
+      
       //compute infeasibility theta at trial point, since both slacks and bounds are modified 
       double theta_temp = resid->compute_nlp_infeasib_onenorm(*it_trial, *_c_trial, *_d_trial);
-      // FIXME: do we need to use the updated errors in the outerlayer, or it will be calculated in the later LS steps?
+
+      bool bret = it.adjustDuals_primalLogHessian(mu_new,kappa_Sigma);
+      assert(bret);
     }
   }
   
@@ -1223,7 +1258,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
     //it_trial->takeStep_duals(*it_curr, *dir, _alpha_primal, _alpha_dual); assert(bret);
     //bret = it_trial->adjustDuals_primalLogHessian(_mu,kappa_Sigma); assert(bret);
     assert(infeas_nrm_trial>=0 && "this should not happen");
-    bret = dualsUpdate->go(*it_curr, *it_trial,
+    bret = dualsUpdate_->go(*it_curr, *it_trial,
 			   _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d, *dir,
 			   _alpha_primal, _alpha_dual, _mu, kappa_Sigma, infeas_nrm_trial); assert(bret);
 
@@ -1858,7 +1893,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
       // this needs to be done before evalNlp_derivOnly so that the user's NLP functions
       // get the updated duals
       assert(infeas_nrm_trial>=0 && "this should not happen");
-      bret = dualsUpdate->go(*it_curr, *it_trial,
+      bret = dualsUpdate_->go(*it_curr, *it_trial,
                              _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d, *dir,
                              _alpha_primal, _alpha_dual, _mu, kappa_Sigma, infeas_nrm_trial);
       assert(bret);
@@ -2261,8 +2296,8 @@ bool hiopAlgFilterIPMBase::reset_var_from_fr_sol(hiopKKTLinSys* kkt, bool reset_
 
     //LSQ-based initialization of yc and yd
     if(0==dualsInitializ) {
-      //is the dualsUpdate already the LSQ-based updater?
-      hiopDualsLsqUpdate* updater = dynamic_cast<hiopDualsLsqUpdate*>(dualsUpdate);
+      //is the dualsUpdate_ already the LSQ-based updater?
+      hiopDualsLsqUpdate* updater = dynamic_cast<hiopDualsLsqUpdate*>(dualsUpdate_);
       bool deleteUpdater = false;
       if(!updater) {
         //updater = new hiopDualsLsqUpdate(nlp);
@@ -2354,7 +2389,7 @@ bool hiopAlgFilterIPMBase::solve_soft_feasibility_restoration(hiopKKTLinSys* kkt
     }
 
     //update and adjust the duals
-    bret = dualsUpdate->go(*it_curr, *it_trial,
+    bret = dualsUpdate_->go(*it_curr, *it_trial,
                            _f_nlp_trial, *_c_trial, *_d_trial, *_grad_f, *_Jac_c, *_Jac_d, *soft_dir,
                            alpha_primal_soft, alpha_dual_soft, _mu, kappa_Sigma, infeas_nrm_soft);
     assert(bret);

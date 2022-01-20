@@ -202,7 +202,7 @@ protected:
   double onenorm_pr_curr_; //one norm of the constraint infeasibility
 
   //class for updating the duals multipliers
-  hiopDualsUpdater* dualsUpdate;
+  hiopDualsUpdater* dualsUpdate_;
 
   /* Log-barrier problem data
    *  The algorithm manages these and updates them by calling the
@@ -251,6 +251,8 @@ protected:
   int dualsInitializ;  //type of initialization for the duals of constraints: 0 LSQ (default), 1 set to zero
   int accep_n_it;      //after how many iterations with acceptable tolerance should the alg. stop
   double eps_tol_accep;//acceptable tolerance
+
+  double bound_relax_perturb_last_;
 
   //internal flags related to the state of the solver
   hiopSolveStatus solver_status_;

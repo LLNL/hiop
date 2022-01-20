@@ -1062,7 +1062,7 @@ bool hiopVectorPar::isfinite_local() const
   return true;
 }
 
-void hiopVectorPar::print()
+void hiopVectorPar::print() const
 {
   int max_elems = n_local_;
   for(int it=0; it<max_elems; it++) {
