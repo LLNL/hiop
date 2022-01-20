@@ -193,7 +193,7 @@ public:
   }
 
   bool get_vars_info(const size_type& n, double *xlow, double* xupp, NonlinearityType* type)
-  {
+  { /*
     for (int i=0; i<n; i++) {
       if(i == 0) {
         xlow[i] = 0.; //y_1 bounded
@@ -211,8 +211,8 @@ public:
         xupp[i] = 1e+20;
       }
     }
-
-    /*
+    */
+    
     RAJA::forall<ex9_raja_exec>(RAJA::RangeSegment(0, n),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
@@ -234,7 +234,7 @@ public:
         xupp[i] = 1e+20;
       }
     });
-*/
+
     RAJA::forall<RAJA::loop_exec>(RAJA::RangeSegment(0, n),
     [=] (RAJA::Index_type i)
     {
