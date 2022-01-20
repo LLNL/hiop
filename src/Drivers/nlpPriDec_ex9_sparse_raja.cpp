@@ -155,7 +155,7 @@ bool PriDecMasterProblemEx9Sparse::eval_f_rterm(size_t idx, const int& n, const 
   //nlp.options->SetStringValue("dualsInitialization", "zero");
   nlp.options->SetStringValue("Hessian", "analytical_exact");
 #ifdef HIOP_USE_GPU
-  nlp.options->SetStringValue("compute_mode", "hybrid");
+  //nlp.options->SetStringValue("compute_mode", "hybrid");
   nlp.options->SetStringValue("compute_mode", "cpu");
 #else  
   nlp.options->SetStringValue("compute_mode", "cpu");

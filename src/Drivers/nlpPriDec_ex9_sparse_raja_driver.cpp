@@ -133,6 +133,7 @@ int main(int argc, char **argv)
 
   // Set memory space where to create models and perform NLP solve
   std::string mem_space = "UM";
+  //std::string mem_space = "DEFAULT";
   //std::string mem_space = "HOST";
   
   int nx = 20; //nx == ny for this problem
