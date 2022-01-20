@@ -80,11 +80,11 @@ int main(int argc, char **argv)
 
   {
     hiopAlgFilterIPM solver(&nlp);
-/*
+
     nlp.options->SetStringValue("fixed_var", "remove");
     status = solver.run();
     obj_value = solver.getObjective();
-*/
+
     //change options and resolve
     nlp.options->SetStringValue("fixed_var", "relax");
     status = solver.run();

@@ -598,11 +598,14 @@ updateLogBarrierParameters(hiopIterate& it, const double& mu_curr, const double&
                            + bound_relax_perturb_min;
     
     // tune 1
-//    bound_relax_perturb = 0.995*mu_new;
-
+    bound_relax_perturb = 0.995*mu_new;
+//    std::cout << bound_relax_perturb << std::endl;
+  
     // tune 2
-    bound_relax_perturb = fmin(bound_relax_perturb, 0.995*bound_relax_perturb_last_);
+//    bound_relax_perturb = fmin(bound_relax_perturb, 0.995*bound_relax_perturb_last_);
+//    bound_relax_perturb = fmin(bound_relax_perturb, 0.995*mu_new);
 
+//    std::cout << bound_relax_perturb << std::endl;
     if(bound_relax_perturb > bound_relax_perturb_init) {
       bound_relax_perturb = bound_relax_perturb_init;
     }
@@ -637,7 +640,7 @@ updateLogBarrierParameters(hiopIterate& it, const double& mu_curr, const double&
                        "Adjust corresponding slacks!\n", num_adjusted_slacks);
 
     // tune 3
-//      nlp->adjust_bounds(it);
+      nlp->adjust_bounds(it);
 
 //      std::cout<<"after adjust bounds:\nxl"<<std::endl;
 //      nlp->get_xl().print();
