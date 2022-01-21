@@ -414,7 +414,7 @@ private:
       yrd_(nullptr),
       yryd_(nullptr)
   {
-    assert(false);
+    assert(false && "this constructor should not be used");
   }
   hiopVector* xdx_;
   hiopVector* xdd_;
@@ -422,7 +422,6 @@ private:
   hiopVector* yrx_;
   hiopVector* yrd_;
   hiopVector* yryd_;  
->>>>>>> develop
 };
 
 class hiopKKTPrecondOpr : public hiopLinearOperator
