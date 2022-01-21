@@ -793,8 +793,8 @@ namespace hiop
         Hx_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), nx);
         assert(Hx_);
       }
-      Hx_->setToZero();
-      Hx_->addConstant(delta_wx);
+      //Hx_->setToZero();
+      Hx_->setToConstant(delta_wx);
       Msys.copySubDiagonalFrom(0, nx, *Hx_, dest_nnz_st); dest_nnz_st += nx;
 
       //build the diagonal Hd = delta_wd
@@ -802,8 +802,8 @@ namespace hiop
         Hd_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), nd);
         assert(Hd_);
       }
-      Hd_->setToZero();
-      Hd_->addConstant(delta_wd);
+      //Hd_->setToZero();
+      Hd_->setToConstant(delta_wd);
       Msys.copySubDiagonalFrom(n2st, nd, *Hd_, dest_nnz_st); dest_nnz_st += nd;
 
       //add -delta_cc to diagonal block linSys starting at (nx, nx)

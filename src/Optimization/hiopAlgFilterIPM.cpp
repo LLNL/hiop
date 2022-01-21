@@ -849,6 +849,13 @@ void hiopAlgFilterIPMBase::displayTerminationMsg()
                        strStatsReport.c_str());
       break;
     }
+  case Err_Step_Computation:
+  {
+      nlp->log->printf(hovSummary,
+                       "Error in step computation/linear algebra (unrecoverable)\n%s\n",
+                       strStatsReport.c_str());
+      break;
+  }
   default:
     {
       nlp->log->printf(hovSummary, "Do not know why HiOp stopped. This shouldn't happen. :)\n%s\n",
@@ -859,14 +866,11 @@ void hiopAlgFilterIPMBase::displayTerminationMsg()
   };
 }
 
-
-
-
-
-
-
-
-hiopAlgFilterIPMQuasiNewton::hiopAlgFilterIPMQuasiNewton(hiopNlpDenseConstraints* nlp_, const bool within_FR)
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// hiopAlgFilterIPMQuasiNewton
+///////////////////////////////////////////////////////////////////////////////////////////////////
+hiopAlgFilterIPMQuasiNewton::hiopAlgFilterIPMQuasiNewton(hiopNlpDenseConstraints* nlp_,
+                                                         const bool within_FR)
   : hiopAlgFilterIPMBase(nlp_, within_FR)
 {
   nlpdc = nlp_;
@@ -1271,23 +1275,24 @@ hiopAlgFilterIPMNewton::~hiopAlgFilterIPMNewton()
 hiopKKTLinSys* hiopAlgFilterIPMNewton::
 decideAndCreateLinearSystem(hiopNlpFormulation* nlp)
 {
-  //hiopNlpMDS* nlpMDS = NULL;
+  //hiopNlpMDS* nlpMDS = nullptr;
   hiopNlpMDS* nlpMDS = dynamic_cast<hiopNlpMDS*>(nlp);
 
-  if(NULL == nlpMDS)
+  if(nullptr == nlpMDS)
   {
     hiopNlpSparse* nlpSp = dynamic_cast<hiopNlpSparse*>(nlp);
-    if(NULL == nlpSp)
-    {
+    if(nullptr == nlpSp) {
       // this is dense linear system. This is the default case.
       std::string strKKT = nlp->options->GetString("KKTLinsys");
-      if(strKKT == "xdycyd")
+      if(strKKT == "xdycyd") {
         return new hiopKKTLinSysDenseXDYcYd(nlp);
-      else //'auto' or 'XYcYd'
+      } else {
+        //'auto' or 'XYcYd'
         return new hiopKKTLinSysDenseXYcYd(nlp);
+      }
     } else {
 #ifdef HIOP_SPARSE
-      // this is Sparse linear system
+      // this is sparse linear system
       std::string strKKT = nlp->options->GetString("KKTLinsys");
       if(strKKT == "full") {
         return new hiopKKTLinSysSparseFull(nlp);
@@ -1312,7 +1317,7 @@ decideAndCreateLinearSystem(hiopNlpFormulation* nlp)
 	 "Could not match linear algebra to NLP formulation. Likely, HiOp was"
 	 "not built with all linear algebra modules/options");
 
-  return NULL;
+  return nullptr;
 }
 
 hiopFactAcceptor* hiopAlgFilterIPMNewton::
@@ -1360,7 +1365,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
   if(!pd_perturb_.initialize(nlp)) {
     return SolveInitializationError;
   }
-
+  
   ////////////////////////////////////////////////////////////////////////////////////
   // run baby run
   ////////////////////////////////////////////////////////////////////////////////////
@@ -1387,8 +1392,6 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
   resid->update(*it_curr,_f_nlp, *_c, *_d,*_grad_f,*_Jac_c,*_Jac_d, *logbar);
 
   nlp->log->write("First residual-------------", *resid, hovIteration);
-  //nlp->log->printf(hovSummary, "Iter[%d] -> full iterate -------------", iter_num);
-  //nlp->log->write("", *it_curr, hovSummary);
 
   iter_num=0; nlp->runStats.nIter=iter_num;
   bool disableLS = nlp->options->GetString("accept_every_trial_step")=="yes";
@@ -1519,7 +1522,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 
     //this will cache the primal infeasibility norm for (re)use in the dual updating
     double infeas_nrm_trial;
-
+    
     nlp->runStats.kkt.start_optimiz_iteration();
     //
     // this is the linear solve (computeDirections) loop that iterates at most two times
@@ -1565,6 +1568,8 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
             return solver_status_ = Err_Step_Computation;
           }
 
+          //turn on safe mode to repeat linear solve (kkt->update(...) and kkt->computeDirections(...)
+          //(meaning additional accuracy and stability is requested, possibly from a new kkt class)
           linsol_safe_mode_on = true;
           linsol_safe_mode_lastiter = iter_num;
 
@@ -1572,24 +1577,28 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
                           "Requesting additional accuracy and stability from the KKT linear system "
                           "at iteration %d (safe mode ON)\n", iter_num);
 
-          // repeat linear solve (computeDirections) in safe mode (meaning additional accuracy
-          // and stability is requested)
+          // return false and use safe mode to repeat linear solve (kkt->update(...) and kkt->computeDirections(...)
+          // (meaning additional accuracy and stability is requested, possibly from a new kkt class)
           continue;
         }
       } // end of if(!kkt->update(it_curr, _grad_f, _Jac_c, _Jac_d, _Hess_Lagr))
       
-      
-      
       if(nlp->options->GetString("fact_acceptor") == "inertia_correction"){
+        //compute_search_direction call below updates linsol safe mode flag
         if(!compute_search_direction(kkt, linsol_safe_mode_on, linsol_safe_mode_lastiter, linsol_forcequick, iter_num)) {
+          // safe mode was turned on; linear solve (kkt->update(...) and kkt->computeDirections(...)
+          // (meaning additional accuracy and stability is requested, possibly from a new kkt class)
           continue;
         } 
       } else {
+        //compute_search_direction call below updates linsol safe mode flag
         if(!compute_search_direction_inertia_free(kkt, linsol_safe_mode_on, linsol_safe_mode_lastiter, linsol_forcequick, iter_num)) {
+          // safe mode was turned on; linear solve (kkt->update(...) and kkt->computeDirections(...)
+          // (meaning additional accuracy and stability is requested, possibly from a new kkt class)
           continue;
         }         
-      }
-
+      } 
+      
       nlp->runStats.kkt.end_optimiz_iteration();
       if(perf_report_kkt_) {
         nlp->log->printf(hovSummary, "%s", nlp->runStats.kkt.get_summary_last_iter().c_str());
@@ -1831,7 +1840,6 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 
     nlp->log->printf(hovIteration, "Iter[%d] -> full iterate:", iter_num);
     nlp->log->write("", *it_curr, hovIteration);
-
     nlp->runStats.tmSolverInternal.stop(); //-----
 
     //notify logbar about the changes
@@ -2361,8 +2369,8 @@ bool hiopAlgFilterIPMNewton::compute_search_direction(hiopKKTLinSys* kkt,
                       "Requesting additional accuracy and stability from the KKT linear system "
                       "at iteration %d (safe mode ON)\n", iter_num);
 
-      // repeat linear solve (computeDirections) in safe mode (meaning additional accuracy
-      // and stability is requested)
+      // return false and use safe mode to repeat linear solve (kkt->update(...) and kkt->computeDirections(...)
+      // (meaning additional accuracy and stability is requested, possibly from a new kkt class)
       return false;
     }
   } // end of if(!kkt->computeDirections(resid, dir))
@@ -2370,7 +2378,6 @@ bool hiopAlgFilterIPMNewton::compute_search_direction(hiopKKTLinSys* kkt,
   //at this point all is good in terms of searchDirections computations as far as the linear solve
   //is concerned; the search direction can be of ascent because some fast factorizations do not
   //support inertia calculation; this case will be handled later on in this loop
-  //( //! todo nopiv inertia calculation ))
 
   return true;
 }
@@ -2382,7 +2389,7 @@ bool hiopAlgFilterIPMNewton::compute_search_direction_inertia_free(hiopKKTLinSys
                                                                    const int iter_num)
 {
   size_type num_refact = 0;
-  const size_t max_refactorizaion = 10;
+  const size_t max_refactorization = 10;
 
   while(true)
   {
@@ -2406,8 +2413,8 @@ bool hiopAlgFilterIPMNewton::compute_search_direction_inertia_free(hiopKKTLinSys
                         "Requesting additional accuracy and stability from the KKT linear system "
                         "at iteration %d (safe mode ON)\n", iter_num);
 
-        // repeat linear solve (computeDirections) in safe mode (meaning additional accuracy
-        // and stability is requested)
+        // return false and use safe mode to repeat linear solve (kkt->update(...) and kkt->computeDirections(...)
+        // (meaning additional accuracy and stability is requested, possibly from a new kkt class)
         return false;
       }
     } // end of if(!kkt->computeDirections(resid, dir))
@@ -2420,10 +2427,10 @@ bool hiopAlgFilterIPMNewton::compute_search_direction_inertia_free(hiopKKTLinSys
     if(kkt->test_direction(dir, _Hess_Lagr)) {
       break;
     } else {
-      if(num_refact >= max_refactorizaion) {
+      if(num_refact >= max_refactorization) {
         nlp->log->printf(hovError,
                          "Reached max number (%d) of refactorization within an outer iteration.\n",
-                         max_refactorizaion);
+                         max_refactorization);
         return false;
       }
       kkt->factorize_inertia_free();
