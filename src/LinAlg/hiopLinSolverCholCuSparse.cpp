@@ -226,11 +226,11 @@ bool hiopLinSolverCholCuSparse::initial_setup()
 #else
     // old code that uses Eigen to compute AMD
     Eigen::Map<SparseMatrixCSR> M(mat_csr_->m(),
-                                   mat_csr_->m(),
-                                   mat_csr_->nnz(),
-                                   mat_csr_->irowptr(),
-                                   mat_csr_->jcolind(),
-                                   mat_csr_->values());
+                                  mat_csr_->m(),
+                                  mat_csr_->nnz(),
+                                  mat_csr_->irowptr(),
+                                  mat_csr_->jcolind(),
+                                  mat_csr_->values());
     
     PermutationMatrix P;
     Ordering ordering;
@@ -404,11 +404,13 @@ int hiopLinSolverCholCuSparse::matrixChanged()
   if(nullptr == buf_fact_) {
 
     t.start();
+    nlp_->runStats.linsolv.tmFactTime.start();
     if(!initial_setup()) {
       nlp_->log->printf(hovError, 
                         "hiopLinSolverCholCuSparse: initial setup failed.\n");
       return -1;
     }
+    nlp_->runStats.linsolv.tmFactTime.stop();
     t.stop();
     if(perf_report_) {
 
@@ -426,7 +428,7 @@ int hiopLinSolverCholCuSparse::matrixChanged()
   nlp_->runStats.linsolv.tmDeviceTransfer.start();
   cudaMemcpy(values_buf_, mat_csr_->values(), nnz_*sizeof(double), cudaMemcpyHostToDevice);
   nlp_->runStats.linsolv.tmDeviceTransfer.stop();
-  
+ 
   nlp_->runStats.linsolv.tmFactTime.start();
   //
   //permute nonzeros in values_buf_ into values_ accordingly to map_nnz_perm_
@@ -458,14 +460,14 @@ int hiopLinSolverCholCuSparse::matrixChanged()
   // check for zero or negative pivots
   //
   nlp_->runStats.linsolv.tmInertiaComp.start();
-  const double zero_piv_tol = 2e-16;
+  const double zero_piv_tol = 1e-24;
   int position = -1;
   ret = cusolverSpDcsrcholZeroPivot(h_cusolver_, info_, zero_piv_tol, &position);
   nlp_->runStats.linsolv.tmInertiaComp.stop();
   
   if(position>=0) {
     nlp_->log->printf(hovWarning, 
-                      "hiopLinSolverCholCuSparse: the %dth pivot is <%.5e\n",
+                      "hiopLinSolverCholCuSparse: the %dth pivot is <=%.5e\n",
                       position,
                       zero_piv_tol);
     return -1;
@@ -509,7 +511,7 @@ bool hiopLinSolverCholCuSparse::solve(hiopVector& x_in)
   nlp_->runStats.linsolv.tmDeviceTransfer.start();
   cudaMemcpy(x_in.local_data(), rhs_buf2_, m*sizeof(double), cudaMemcpyDeviceToHost);
   nlp_->runStats.linsolv.tmDeviceTransfer.stop();
-
+  
   if(ret != CUSOLVER_STATUS_SUCCESS) {
     nlp_->log->printf(hovWarning,
                       "hiopLinSolverCholCuSparse: solve failed: CUSOLVER_STATUS=%d.\n",
@@ -546,6 +548,9 @@ bool hiopLinSolverCholCuSparse::permute_vec(int n, double* vec_in, index_type* p
   
   ret = cusparseGather(h_cusparse_, v_in, v_out);
   assert(CUSPARSE_STATUS_SUCCESS == ret);
+
+  cusparseDestroySpVec(v_out);
+  cusparseDestroyDnVec(v_in);
   
 #else //CUSPARSE_VERSION < 11700
   
