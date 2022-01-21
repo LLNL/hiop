@@ -173,12 +173,12 @@ namespace hiop
     return negEigVal;
   }
 
-  bool hiopLinSolverIndefSparseMA57::solve ( hiopVector& x_ )
+  bool hiopLinSolverIndefSparseMA57::solve ( hiopVector& x_in )
   {
     assert(m_n==M_->n() && M_->n()==M_->m());
     assert(m_nnz==M_->numberOfNonzeros());
     assert(m_n>0);
-    assert(x_.get_size()==M_->n());
+    assert(x_in.get_size()==M_->n());
 
     nlp_->runStats.linsolv.tmTriuSolves.start();
 
@@ -186,14 +186,16 @@ namespace hiop
     int one = 1;
     m_icntl[9-1] = 1; // do one step of iterative refinement
 
-    hiopVectorPar* x = dynamic_cast<hiopVectorPar*>(&x_);
+    hiopVectorPar* x = dynamic_cast<hiopVectorPar*>(&x_in);
     assert(x!=nullptr);
     
     if(nullptr==rhs_) {
-      rhs_ = dynamic_cast<hiopVectorPar*>(x->new_copy());
-      
+      rhs_ = dynamic_cast<hiopVectorPar*>(x->new_copy());  
       assert(nullptr==resid_); 
       resid_ = dynamic_cast<hiopVectorPar*>(x->new_copy());
+    } else {
+      rhs_->copyFrom(*x);
+      resid_->copyFrom(*x);
     }
     double* dx = x->local_data();
     double* drhs = rhs_->local_data();
