@@ -218,7 +218,6 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
     hiopLinSolverIndefSparse* linSys = dynamic_cast<hiopLinSolverIndefSparse*> (linSys_);
 
     hiopMatrixSparseTriplet& Msys = linSys->sysMatrix();
-    //assert(Msys.numberOfNonzeros() == M_condensed_->nnz());
     assert(Msys.m() == M_condensed_->m());
 
     index_type itnz = 0;
@@ -589,14 +588,14 @@ bool hiopKKTLinSysCondensedSparse::solveCompressed(hiopVector& rx,
 
   nlp_->runStats.kkt.tmSolveRhsManip.start();
 
-  // this is rhs used by the direct solve
+  // this is rhs used by the direct "condensed" solve
   if(rhs_ == NULL) {
     rhs_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), nx);
   }
   assert(rhs_->get_size() == nx);
 
   nlp_->log->write("RHS KKT_SPARSE_Condensed rx: ", rx,  hovIteration);
-  nlp_->log->write("RHS KKT_SPARSE_Condensed rx: ", rd,  hovIteration);
+  nlp_->log->write("RHS KKT_SPARSE_Condensed rd: ", rd,  hovIteration);
   nlp_->log->write("RHS KKT_SPARSE_Condensed ryc:", ryc, hovIteration);
   nlp_->log->write("RHS KKT_SPARSE_Condensed ryd:", ryd, hovIteration);
 #if 0
@@ -607,6 +606,7 @@ bool hiopKKTLinSysCondensedSparse::solveCompressed(hiopVector& rx,
     krylov_mat_opr_ = new hiopKKTMatVecOpr(this);
     krylov_prec_opr_ = new hiopKKTPrecondOpr(this);
     krylov_rhs_xdycyd_ = new hiopVectorPar(nx+nd+nyd);
+    //TODO: memory space device
     bicgstab_ = new hiopBiCGStabSolver(nx+nd+nyd, "DEFAULT", krylov_mat_opr_, krylov_prec_opr_);
   }
   
@@ -621,7 +621,7 @@ bool hiopKKTLinSysCondensedSparse::solveCompressed(hiopVector& rx,
     if(bicgstab_->get_sol_abs_resid()>1e-8 && bicgstab_->get_sol_rel_resid()>1e-8) {
       nlp_->log->printf(hovWarning, "%s", bicgstab_->get_convergence_info().c_str());
     }
-    //always return true for now (later we will handle large residuals)
+    //always return true for now (TODO: break under large residuals)
     bret = true;
   }
 

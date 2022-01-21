@@ -225,6 +225,13 @@ public:
                                hiopVector& dyc,
                                hiopVector& dyd);
 protected:
+  /**
+   * Solves the compressed XDYcYd system by using direct solves with Cholesky factors of the 
+   * condensed linear system and appropriately manipulate the XDYcYD rhs/sol to condensed rhs/sol.
+   * 
+   * The method is used as a preconditioner solve in the Krylov-based iterative refinement from
+   * solve_compressed method.
+   */
   virtual bool solve_compressed_direct(hiopVector& rx,
                                        hiopVector& rd,
                                        hiopVector& ryc,
