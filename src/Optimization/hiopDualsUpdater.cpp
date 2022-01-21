@@ -596,7 +596,9 @@ bool hiopDualsLsqUpdateLinsysRedDenseSymPD::solve_with_factors(hiopVector& r)
 #ifdef HIOP_DEEPCHECKS
   assert(M_->m()==M_->n());
 #endif
-  if(M_->m()==0) return 0;
+  if(M_->m()==0) {
+    return true;
+  }
   char uplo='L'; //we have upper triangular in C++, but this is lower in fortran
   int N=M_->n(), lda=N, nrhs=1, info;
   DPOTRS(&uplo,&N, &nrhs, M_->local_data(), &lda, r.local_data(), &lda, &info);
@@ -616,7 +618,9 @@ bool hiopDualsLsqUpdateLinsysRedDenseSymPD::factorize_mat()
 #ifdef HIOP_DEEPCHECKS
   assert(M_->m()==M_->n());
 #endif
-  if(M_->m()==0) return 0;
+  if(M_->m()==0) {
+    return true;
+  }
   char uplo='L'; int N=M_->n(), lda=N, info;
   DPOTRF(&uplo, &N, M_->local_data(), &lda, &info);
   if(info>0) {

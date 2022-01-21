@@ -56,6 +56,7 @@
 
 #include "hiopKKTLinSysSparse.hpp"
 #include "hiopMatrixSparseTriplet.hpp"
+#include "hiopKrylovSolver.hpp"
 
 namespace hiop
 {
@@ -102,6 +103,8 @@ public:
                                     const hiopMatrixSparseCSRStorage& Y,
                                     hiopMatrixSparseCSRStorage& M);
 
+  /// Extract the diagonal 
+  void get_diagonal(hiopVector& diag) const;
 public:
 
   inline index_type* irowptr() 
@@ -197,6 +200,11 @@ protected:
  *
  * (H+Dx+delta_wx*I + Jd^T * Dd3 * Jd) dx = rx_tilde + Jd^T*Dd3*ryd +  Jd^T*Dd2*rd_tilde
  */
+
+// forward decls
+class hiopKKTMatVecOpr;
+class hiopKKTPrecondOpr;
+  
 class hiopKKTLinSysCondensedSparse : public hiopKKTLinSysCompressedSparseXDYcYd
 {
 public:
@@ -208,26 +216,46 @@ public:
                                 const double& delta_cc,
                                 const double& delta_cd);
 
-  virtual bool solveCompressed(hiopVector& rx, hiopVector& rd, hiopVector& ryc, hiopVector& ryd,
-                               hiopVector& dx, hiopVector& dd, hiopVector& dyc, hiopVector& dyd);
+  virtual bool solveCompressed(hiopVector& rx,
+                               hiopVector& rd,
+                               hiopVector& ryc,
+                               hiopVector& ryd,
+                               hiopVector& dx,
+                               hiopVector& dd,
+                               hiopVector& dyc,
+                               hiopVector& dyd);
 protected:
-
+  /**
+   * Solves the compressed XDYcYd system by using direct solves with Cholesky factors of the 
+   * condensed linear system and appropriately manipulate the XDYcYD rhs/sol to condensed rhs/sol.
+   * 
+   * The method is used as a preconditioner solve in the Krylov-based iterative refinement from
+   * solve_compressed method.
+   */
+  virtual bool solve_compressed_direct(hiopVector& rx,
+                                       hiopVector& rd,
+                                       hiopVector& ryc,
+                                       hiopVector& ryd,
+                                       hiopVector& dx,
+                                       hiopVector& dd,
+                                       hiopVector& dyc,
+                                       hiopVector& dyd);
+  
   /// Helper method for allocating and precomputing symbolically JacD'*Dd*JacD + H + Dx + delta_wx*I
   hiopMatrixSparseCSRStorage* add_matrices_init(hiopMatrixSparseCSRStorage& JtDiagJ,
-                                                hiopMatrixSymSparseTriplet& HessSp_,
-                                                hiopVector& Dx_,
+                                                hiopMatrixSymSparseTriplet& HessSp,
+                                                hiopVector& Dx,
                                                 double delta_wx);
   /// Helper method for fast computation of JacD'*Dd*JacD + H + Dx + delta_wx*I
   void add_matrices(hiopMatrixSparseCSRStorage& JtDiagJ,
                     hiopMatrixSymSparseTriplet& HessSp,
-                    hiopVector& Dx_,
+                    hiopVector& Dx,
                     double delta_wx,
                     hiopMatrixSparseCSRStorage& M);
 protected:
-  //
-  //from the parent class and its parents we also use
-  //
-
+  ////
+  ////from the parent class and its parents we also use
+  ////
   //right-hand side [rx_tilde, rd_tilde, ((ryc->empty)), ryd]
   //  hiopVector *rhs_; 
 
@@ -252,9 +280,6 @@ protected:
   // int write_linsys_counter_;
   //  hiopCSR_IO csr_writer_;
 
-  /// Stores the diagonal Dd plus delta_wd*I as a vector
-  hiopVector* dd_pert_;
-
   /// Member for JacD'*Dd*JacD
   hiopMatrixSparseCSRStorage* JtDiagJ_;
 
@@ -276,12 +301,218 @@ protected:
    */
   std::vector<index_type> map_H_lowtr_idxs_;
 
+  /// Inertia correction perturbations used in the (last) factorization
+  double delta_wx_;
 
+  /// Matrix operator performing mat-vec with the XDYcYd KKT linear system matrix
+  hiopKKTMatVecOpr* krylov_mat_opr_;
+
+  /// Preconditioner operator that solves with the factors of the condensed system via the
+  /// solve_compressed_direct method
+  hiopKKTPrecondOpr* krylov_prec_opr_;
+
+  /// Temporary vector to be used in the Krylov solve;
+  hiopVector* krylov_rhs_xdycyd_;
+
+  /// BiCGStab solver
+  hiopBiCGStabSolver* bicgstab_;
 private:
   //placeholder for the code that decides which linear solver to used based on safe_mode_
   hiopLinSolverSymSparse* determine_and_create_linsys(size_type nxd, size_type nineq, size_type nnz);
+
+  friend class hiopKKTMatVecOpr;
+  friend class hiopKKTPrecondOpr;
 };
 
+/** 
+ * Krylov linear operator and preconditioner for the condensed KKT linsys
+ */
+
+class hiopKKTMatVecOpr : public hiopLinearOperator
+{
+public:
+  hiopKKTMatVecOpr(hiopKKTLinSysCondensedSparse* kkt)
+    : kkt_(kkt)
+  {
+    const hiopMatrixSparse* Jac_d = kkt_->Jac_dSp_;
+    const hiopMatrixSparse* Hess = kkt_->HessSp_;
+    const hiopVector* Dd_pert = kkt_->Hd_;
+    const hiopVector* Dx = kkt_->Dx_;
+    
+    xdx_ = Dx->alloc_clone();
+    xdd_ = Dd_pert->alloc_clone();
+    xdyd_ = Dd_pert->alloc_clone();
+
+    yrx_ = xdx_->alloc_clone();
+    yrd_ = xdd_->alloc_clone();
+    yryd_ = xdyd_->alloc_clone();
+  }
+  virtual ~hiopKKTMatVecOpr()
+  {
+    delete xdx_;
+    delete xdd_;
+    delete xdyd_;
+    delete yrx_;
+    delete yrd_;
+    delete yryd_;
+  }
+  /** y = KKT * x */
+  virtual bool times_vec(hiopVector& y, const hiopVector& x)
+  {
+    const hiopMatrixSparse* Jac_d = kkt_->Jac_dSp_;
+    const hiopMatrixSparse* Hess = kkt_->HessSp_;
+    const hiopVector* Dd_pert = kkt_->Hd_;
+    const hiopVector* Dx = kkt_->Dx_;
+    const double& delta_wx = kkt_->delta_wx_;
+
+    const size_type nx = Hess->n();
+    const size_type nineq = Jac_d->m();
+
+    assert(x.get_size() == y.get_size());
+    assert(nx+2*nineq == x.get_size());
+    
+    xdx_->startingAtCopyFromStartingAt(0, x, 0);
+    xdd_->startingAtCopyFromStartingAt(0, x, nx);
+    xdyd_->startingAtCopyFromStartingAt(0, x, nx+nineq);
+
+    // yrx = (H+Dx+delta_wx*I)*xdx + Jd^T*xdyd
+    yrx_->copyFrom(*xdx_);
+    yrx_->componentMult(*Dx);
+    yrx_->axpy(delta_wx, *xdx_);
+    Hess->timesVec(1.0, *yrx_, 1.0, *xdx_);
+    Jac_d->transTimesVec(1.0, *yrx_, 1.0, *xdyd_);
+    yrx_->copyToStarting(y, 0);
+
+    // yrd = (Dd+delta_wd*I)*xdd - dyd
+    yrd_->copyFrom(*xdd_);
+    yrd_->componentMult(*Dd_pert);
+    yrd_->axpy(-1.0, *xdyd_);
+    yrd_->copyToStarting(y, nx);
+
+    // yryd = Jd*xdx - xdd 
+    yryd_->copyFrom(*xdd_);
+    Jac_d->timesVec(-1.0, *yryd_, 1.0, *xdx_);
+    yryd_->copyToStarting(y, nx+nineq);
+
+    return true;
+  }
+
+  /** y = KKT' * x */
+  virtual bool trans_times_vec(hiopVector& y, const hiopVector& x)
+  {
+    //KKT has a symmetric linear system matrix
+    return times_vec(y, x);
+  }
+private:
+  hiopKKTLinSysCondensedSparse* kkt_;
+  hiopKKTMatVecOpr()
+    : kkt_(nullptr),
+      xdx_(nullptr),
+      xdd_(nullptr),
+      xdyd_(nullptr),
+      yrx_(nullptr),
+      yrd_(nullptr),
+      yryd_(nullptr)
+  {
+    assert(false);
+  }
+  hiopVector* xdx_;
+  hiopVector* xdd_;
+  hiopVector* xdyd_;
+  hiopVector* yrx_;
+  hiopVector* yrd_;
+  hiopVector* yryd_;  
+>>>>>>> develop
+};
+
+class hiopKKTPrecondOpr : public hiopLinearOperator
+{
+public:
+  hiopKKTPrecondOpr(hiopKKTLinSysCondensedSparse* kkt)
+    : kkt_(kkt),
+      xyc_(nullptr),
+      xdx_(nullptr),
+      xdd_(nullptr),
+      xdyd_(nullptr),
+      yrx_(nullptr),
+      yrd_(nullptr),
+      yryd_(nullptr)
+  {
+    const hiopMatrixSparse* Jac_d = kkt_->Jac_dSp_;
+    const hiopMatrixSparse* Hess = kkt_->HessSp_;
+    const hiopVector* Dd_pert = kkt_->Hd_;
+    const hiopVector* Dx = kkt_->Dx_;
+    const size_type nx = Hess->n();
+    const size_type nineq = Jac_d->m();
+
+    xdx_ = Dx->alloc_clone();
+    //dummy xyc (also used for ryc)
+    xyc_ = new hiopVectorPar(0);
+    xdd_ = Dd_pert->alloc_clone();
+    xdyd_ = Dd_pert->alloc_clone();
+
+    yrx_ = xdx_->alloc_clone();
+    yrd_ = xdd_->alloc_clone();
+    yryd_ = xdyd_->alloc_clone();
+  }
+  virtual ~hiopKKTPrecondOpr()
+  {
+    delete xyc_;
+    delete xdx_;
+    delete xdd_;
+    delete xdyd_;
+    delete yrx_;
+    delete yrd_;
+    delete yryd_;
+  }
+  /** y = KKT * x */
+  virtual bool times_vec(hiopVector& y, const hiopVector& x)
+  {
+    bool bret;
+    const hiopMatrixSparse* Jac_d = kkt_->Jac_dSp_;
+    const hiopMatrixSparse* Hess = kkt_->HessSp_;
+    const hiopVector* Dd_pert = kkt_->Hd_;
+    const hiopVector* Dx = kkt_->Dx_;
+    const size_type nx = Hess->n();
+    const size_type nineq = Jac_d->m();
+
+    assert(x.get_size() == y.get_size());
+    assert(nx+2*nineq == x.get_size());
+    
+    xdx_->startingAtCopyFromStartingAt(0, x, 0);
+    xdd_->startingAtCopyFromStartingAt(0, x, nx);
+    xdyd_->startingAtCopyFromStartingAt(0, x, nx+nineq);
+
+    bret = kkt_->solve_compressed_direct(*xdx_, *xdd_, *xyc_, *xdyd_, *yrx_, *yrd_, *xyc_, *yryd_); 
+    
+    yrx_->copyToStarting(y, 0);
+    yrd_->copyToStarting(y, nx);
+    yryd_->copyToStarting(y, nx+nineq);
+
+    return bret;
+  }
+
+  /** y = KKT' * x */
+  virtual bool trans_times_vec(hiopVector& y, const hiopVector& x)
+  {
+    //KKT has a symmetric linear system matrix
+    return times_vec(y, x);
+  }
+private:
+  hiopKKTLinSysCondensedSparse* kkt_;
+  hiopKKTPrecondOpr()
+    : kkt_(nullptr)
+  {
+    assert(false);
+  }
+  hiopVector* xdx_;
+  hiopVector* xdd_;
+  hiopVector* xyc_;
+  hiopVector* xdyd_;
+  hiopVector* yrx_;
+  hiopVector* yrd_;
+  hiopVector* yryd_;
+};  
   
 } // end of namespace
 
