@@ -18,7 +18,10 @@ namespace hiop
       m_dwork{nullptr},
       m_ipessimism{1.05},
       m_rpessimism{1.05},
-      m_n{n}, m_nnz{nnz}
+      m_n{n},
+      m_nnz{nnz},
+      rhs_{nullptr},
+      resid_{nullptr}
   {
     FNAME(ma57id)( m_cntl, m_icntl );
 
@@ -45,21 +48,16 @@ namespace hiop
   }
   hiopLinSolverIndefSparseMA57::~hiopLinSolverIndefSparseMA57()
   {
-    if(m_irowM)
-      delete [] m_irowM;
-    if(m_jcolM)
-      delete [] m_jcolM;
+    delete [] m_irowM;
+    delete [] m_jcolM;
+    delete [] m_ifact;
+    delete [] m_fact;
+    delete [] m_keep;
+    delete[] m_iwork;
+    delete[] m_dwork;
+    delete resid_;
+    delete rhs_;
 
-    if(m_ifact)
-      delete [] m_ifact;
-    if(m_fact)
-      delete [] m_fact;
-    if(m_keep)
-      delete [] m_keep;
-    if(m_iwork)
-      delete[] m_iwork;
-    if(m_dwork)
-      delete[] m_dwork;
   }
 
 
@@ -69,6 +67,8 @@ namespace hiop
     assert(m_nnz==M_->numberOfNonzeros());
     assert(m_n>0);
 
+    assert(nullptr==m_irowM);
+    
     m_irowM = new int[m_nnz];
     m_jcolM = new int[m_nnz];
     for(int k=0;k<m_nnz;k++){
@@ -90,7 +90,6 @@ namespace hiop
 
     m_lifact = (int) (m_ipessimism * m_info[9]);
     m_ifact  = new int[m_lifact];
-
   }
 
 
@@ -104,7 +103,8 @@ namespace hiop
 
     if( !m_keep ) this->firstCall();
 
-    bool done{false}, is_singular{false};
+    bool done{false};
+    bool is_singular{false};
     int num_tries{0};
 
     do {
@@ -162,10 +162,11 @@ namespace hiop
     nlp_->runStats.linsolv.tmInertiaComp.start();
     
     int negEigVal{0};
-    if(is_singular)
-  	  negEigVal = -1;
-    else
-	  negEigVal = m_info[24-1];
+    if(is_singular) {
+      negEigVal = -1;
+    } else {
+      negEigVal = m_info[24-1];
+    }
 
     nlp_->runStats.linsolv.tmInertiaComp.stop();
 
@@ -186,12 +187,17 @@ namespace hiop
     m_icntl[9-1] = 1; // do one step of iterative refinement
 
     hiopVectorPar* x = dynamic_cast<hiopVectorPar*>(&x_);
-    assert(x != NULL);
-    hiopVectorPar* rhs = dynamic_cast<hiopVectorPar*>(x->new_copy());
-    hiopVectorPar* resid = dynamic_cast<hiopVectorPar*>(x->new_copy());
+    assert(x!=nullptr);
+    
+    if(nullptr==rhs_) {
+      rhs_ = dynamic_cast<hiopVectorPar*>(x->new_copy());
+      
+      assert(nullptr==resid_); 
+      resid_ = dynamic_cast<hiopVectorPar*>(x->new_copy());
+    }
     double* dx = x->local_data();
-    double* drhs = rhs->local_data();
-    double* dresid = resid->local_data();
+    double* drhs = rhs_->local_data();
+    double* dresid = resid_->local_data();
 
     //    FNAME(ma57cd)( &job, &m_n, m_fact, &m_lfact, m_ifact, &m_lifact,
     //          &one, drhs, &m_n, m_dwork, &m_n, m_iwork, m_icntl, m_info );
@@ -208,8 +214,6 @@ namespace hiop
 
     nlp_->runStats.linsolv.tmTriuSolves.stop();
 
-    delete rhs; 
-    delete resid;
     return m_info[0]==0;
   }
 

@@ -116,12 +116,7 @@ public:
    * exit is contains the solution(s).  */
   bool solve ( hiopVector& x_ );
 
-//protected:
-//  int* ipiv;
-//  hiopVector* dwork;
-
 private:
-
   int     m_icntl[20];
   int     m_info[40];
   double  m_cntl[5];
@@ -130,8 +125,12 @@ private:
   int      m_n;                         // dimension of the whole matrix
   int      m_nnz;                       // number of nonzeros in the matrix
 
-  int     *m_irowM, *m_jcolM;           // index array for the factorization
-//  double  *m_M;                         // storage for the original matrix
+  /// row indexes used by the factorization
+  int* m_irowM;
+  
+  /// col indexes used by the factorization
+  int* m_jcolM;           
+  // note: the values array is reused (from the sys matrix)
 
   int     m_lkeep, *m_keep;             // temporary storage
   int     m_lifact, *m_ifact, m_lfact;  // temporary storage for the factorization process
@@ -141,10 +140,11 @@ private:
   int *m_iwork;
   double *m_dwork;
 
-  /** store as a sparse symmetric indefinite matrix */
-//  const hiopMatrixSymSparseTriplet& m_sys_mat;
+  /// Right-hand side working array 
+  hiopVector* rhs_;
 
-
+  /// Working array used for residual computation 
+  hiopVector* resid_;
 public:
 
   /** called the very first time a matrix is factored. Allocates space
