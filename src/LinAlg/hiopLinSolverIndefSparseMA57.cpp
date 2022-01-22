@@ -23,7 +23,7 @@ namespace hiop
       rhs_{nullptr},
       resid_{nullptr}
   {
-    FNAME(ma57id)( m_cntl, m_icntl );
+    FNAME(ma57id)( cntl_, icntl_ );
 
     /*
     * initialize MA57 parameters
