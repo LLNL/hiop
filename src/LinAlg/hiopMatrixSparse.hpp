@@ -68,9 +68,9 @@ class hiopMatrixSparse : public hiopMatrix
 {
 public:
   hiopMatrixSparse(int rows, int cols, int nnz)
-      : nrows_(rows)
-      , ncols_(cols)
-      , nnz_(nnz)
+    : nrows_(rows),
+      ncols_(cols),
+      nnz_(nnz)
   {
   }
   virtual ~hiopMatrixSparse()
@@ -82,7 +82,9 @@ public:
   virtual void copyFrom(const hiopMatrixSparse& dm) = 0;
   
   /* @brief copy the nonzeros into 3 arrays, in their triplet form. 
-   * This function is not used right now. Unit test is missing.
+   * This function is not used right now. 
+   * 
+   * TODO: Unit test is missing.
    */
   virtual void copy_to(int* irow, int* jcol, double* val) = 0;
 
@@ -91,9 +93,11 @@ public:
    */
   virtual void copy_to(hiopMatrixDense& W) = 0;
 
-  /* @brief copy `n_rows` rows from `src` into `this`, i.e., the ith row of this is copied from the rows_idx[i]_th row in `src`
-  *  @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
-  */
+  /* @brief copy `n_rows` rows from `src` into `this`, i.e., the ith row of this is copied from 
+   * the rows_idx[i]_th row in `src`.
+   * 
+   *  @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
+   */
   virtual void copyRowsFrom(const hiopMatrix& src, const index_type* rows_idxs, size_type n_rows) = 0;
 
   virtual void timesVec(double beta, hiopVector& y, double alpha, const hiopVector& x) const = 0;
@@ -263,7 +267,8 @@ public:
                                                        const hiopVector& ix) = 0;
 
   /**
-  * @brief Copy a diagonal matrix to destination.
+  * @brief Sets the diagonal of a subblock of `this` to a constant times identity matrix.
+  * 
   * This diagonal matrix is 'src_val'*identity matrix with size 'nnz_to_copy'x'nnz_to_copy'.
   * The destination is updated from the start row 'row_dest_st' and start column 'col_dest_st'.
   * At the destination, 'nnz_to_copy` nonzeros starting from index `dest_nnz_st` will be replased.
@@ -315,7 +320,7 @@ public:
                                                     hiopVector& vec_dest, 
                                                     int vec_start, 
                                                     int num_elems=-1) const = 0;
-
+  
 
   virtual hiopMatrixSparse* alloc_clone() const = 0;
   virtual hiopMatrixSparse* new_copy() const = 0;
