@@ -117,28 +117,32 @@ public:
   bool solve ( hiopVector& x_ );
 
 private:
-  int     m_icntl[20];
-  int     m_info[40];
-  double  m_cntl[5];
-  double  m_rinfo[20];
+  int     icntl_[20];
+  int     info_[40];
+  double  cntl_[5];
+  double  rinfo_[20];
 
-  int      m_n;                         // dimension of the whole matrix
-  int      m_nnz;                       // number of nonzeros in the matrix
+  int     n_;                         // dimension of the whole matrix
+  int     nnz_;                       // number of nonzeros in the matrix
 
   /// row indexes used by the factorization
-  int* m_irowM;
+  int* irowM_;
   
   /// col indexes used by the factorization
-  int* m_jcolM;           
+  int* jcolM_;           
   // note: the values array is reused (from the sys matrix)
 
-  int     m_lkeep, *m_keep;             // temporary storage
-  int     m_lifact, *m_ifact, m_lfact;  // temporary storage for the factorization process
-  double *m_fact;                       // storage for the factors
-  double  m_ipessimism, m_rpessimism;   // amounts by which to increase allocated factorization space
+  int     lkeep_;                     // temporary storage
+  int*    keep_;                      // temporary storage
+  int     lifact_;                    // temporary storage
+  int*    ifact_;                     // temporary storage
+  int     lfact_;                     // temporary storage for the factorization process
+  double* fact_;                      // storage for the factors
+  double  ipessimism_;                // amounts by which to increase allocated factorization space
+  double  rpessimism_;                // amounts by which to increase allocated factorization space
 
-  int *m_iwork;
-  double *m_dwork;
+  int* iwork_;
+  double* dwork_;
 
   /// Right-hand side working array 
   hiopVector* rhs_;
