@@ -149,6 +149,7 @@ public:
                                 const double& c,
                                 const index_type& start_on_nnz_idx) = 0;
 
+  /// @brief this += alpha*X
   virtual void addMatrix(double alpha, const hiopMatrix& X) = 0;
 
   /* block of W += alpha*transpose(this) */

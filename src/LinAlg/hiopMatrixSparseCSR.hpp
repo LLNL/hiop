@@ -314,11 +314,12 @@ public:
   /////////////////////////////////////////////////////////////////////
   // 1. should these be made available to the parent hiopMatrixSparse?
   // 2. 3-calls functionality?
+  // 3. Use __all, __symb, __num suffixes?
 
   /**
    * @brief Extracts the diagonal entries of `this` matrix into the vector passed as argument
    *
-   * @pre `this` matrix needs to be symmetric and of same size as `diag_out`
+   * @pre `this` matrix needs to be symmetric and of same size(s) as `diag_out`
    */
   virtual void extract_diagonal(hiopVector& diag_out)
   {
@@ -334,66 +335,69 @@ public:
   ///
 
   /**
-   * Allocates a CSR matrix capable of storing the multiplication result of M = X*D*Y, where X 
-   * is the calling matrix class (`this`) and D is a diagonal matrix specified by an input 
-   * vector `diag`.
+   * Allocates a CSR matrix capable of storing the multiplication result of M = X*Y, where X 
+   * is the calling matrix class (`this`) and Y is the `Y` argument of the method.
    *
+   * @note Should be used in conjunction with `times_mat_symbolic` and `times_mat_numeric`
+   * 
    * @pre The dimensions of the matrices should be consistent with the multiplication.
    * 
    */
-  hiopMatrixSparseCSR* times_diag_times_mat_alloc(const hiopVector& diag,
-                                                 const hiopMatrixSparseCSR& Y)
+  hiopMatrixSparseCSR* times_mat_alloc(const hiopMatrixSparseCSR& Y) const
   {
     assert(false && "wip");
   }  
   
   /**
-   * Computes sparsity pattern and numerical values of M = X*D*Y, where X is the calling 
-   * matrix class (`this`) and D is a diagonal matrix specified by an input vector `diag`.
+   * Computes sparsity pattern, meaning computes row pointers and column indexes of `M`,
+   * of M = X*Y, where X is the calling matrix class (`this`) and Y is the second argument. 
    *
-   * @note Both the sparsity pattern (row pointers and column indexes) and the nonzero values of
-   * the input/output argument `M` are updated.
-   *
+   * @note Specializations of this class may only be able to compute the sparsity pattern in
+   * tandem with the numerical multiplications (for example, because of API limitations). 
+   * In this cases, the `times_mat_numeric` will take over sparsity computations and the 
+   * arrays with row pointers and column indexes may be uninitialized after this call.
+   * 
    * @pre The dimensions of the matrices should be consistent with the multiplication.
+   * 
    * @pre The internal arrays of `M` should have enough storage to hold the sparsity 
    * pattern (row pointers and column indexes) and values of the multiplication result. 
-   * This preallocation can be done by calling `times_diag_times_mat_init` previously.
+   * This preallocation can be done by calling `times_mat_alloc` prior to this method.
    * 
    */
-  void times_diag_times_mat(const hiopVector& diag,
-                            const hiopMatrixSparseCSR& Y,
-                            hiopMatrixSparseCSR& M)
+  void times_mat_symbolic(hiopMatrixSparseCSR& M, const hiopMatrixSparseCSR& Y) const
   {
     assert(false && "wip");
   }  
 
   /**
-   * Computes numerical values of M = X*D*Y, where X is the calling matrix class (`this`) 
-   * and D is a diagonal matrix specified by an input vector `diag`.
+   * Computes (numerical values of) M = beta*M + alpha*X*D*Y, where X is the calling matrix
+   * class (`this`), beta and alpha are scalars passed as arguments, and M and Y are matrices
+   * of appropriate sizes passed as arguments.
    *
-   * @note Only the nonzero values of the input/output argument `M` are updated since
-   * the method assumes the index arrays (row pointers and column indexes) of `M` already
-   * contain the sparsity pattern of the multiplication result.
+   * @note Generally, only the nonzero values of the input/output argument `M` are updated 
+   * since the sparsity pattern (row pointers and column indexes) of `M` should have been
+   * already computed by `times_mat_symbolic`. Some specializations of this method may be
+   * restricted to performing both phases in inside this method. 
    *
    * @pre The dimensions of the matrices should be consistent with the multiplication.
-   * @pre The internal index arrays (row pointers and column indexes) of `M` should match the 
-   * sparsity pattern of the multiplication result. This can be obtained by calling the method
-   * `time_diag_times_mat` previously.
+   *
    * @pre The indexes arrays of `this`, `Y`, and `M` should not have changed since the 
    * last call to `times_diag_times_mat`.
    * 
    * Example of usage:
    * //initially allocate and compute M
-   * auto* M = X.times_diag_times_mat_alloc(D, Y);
-   * X.times_diag_times_mat(D, Y, M);
+   * auto* M = X.times_mat_alloc(Y);
+   * X.times_mat_symbolic(M, Y);
+   * X.times_mat_numeric(0.0, M, 1.0, Y);
    * ... calculations ....
-   * //if only nonzero entries in X, Y, and D have changed, call the fast multiplication routine
-   * X.times_diag_times_numeric(D, Y, M);
+   * //if only nonzero entries of X and Y have changed, call the fast multiplication routine
+   * X.times_mat_numeric(0.0, M, 1.0, Y);
    * 
    */
-  void times_diag_times_mat_numeric(const hiopVector& diag,
-                                    const hiopMatrixSparseCSR& Y,
-                                    hiopMatrixSparseCSR& M)
+  void times_mat_numeric(double beta,
+                         hiopMatrixSparseCSR& M,
+                         double alpha,
+                         const hiopMatrixSparseCSR& Y)
   {
     assert(false && "wip");
   }  
@@ -405,7 +409,7 @@ public:
    */
 
   //// note: cusparseXcoo2csr + on the device cudamemcpy
-  void form_from(const hiopMatrixSparseTriplet& M)
+  void form_from_symbolic(const hiopMatrixSparseTriplet& M)
   {
     assert(false && "wip");
   }
@@ -417,55 +421,80 @@ public:
 
   
   /**
-   * Builds `this` as the CSR representation of the triplet matrix `M`.
+   * Builds `this` as the CSR representation of the transpose of the triplet 
+   * matrix `M`.
    */
   //// note: cusparseCsr2cscEx2
-  void form_transpose_from(const hiopMatrixSparseTriplet& M)
+  void form_from_transpose_symbolic(const hiopMatrixSparseTriplet& M)
   {
     assert(false && "wip");
   }
-  void form_transpose_from_numeric(const hiopMatrixSparseTriplet& M)
+  void form_from_transpose_numeric(const hiopMatrixSparseTriplet& M)
   {
     assert(false && "wip");
   }
 
   /**
-   * Allocates and returns CSR matrix `M` capable of holding M = alpha*X+*beta*Y, 
-   * where X is the calling matrix class (`this`) and Y is the argument passed 
-   * to the method.
+   * (Re)Initializes `this` to a diagonal matrix with diagonal entries given by D
    */
-  hiopMatrixSparseCSR* add_matrix_alloc(const hiopMatrixSparseCSR& Y)
+  void form_diag_from_symbolic(const hiopVector& D)
+  {
+    assert(false && "wip");
+  }
+  
+  /**
+   * Sets the diagonal entries of `this` equal to entries of D
+   * 
+   * @pre Length of `D` should be equal to size(s) of `this`
+   * 
+   * @pre `this` should be a diagonal matrix (in CSR format) with storage for
+   * all the diagonal entries, which can be ensured by calling the sister method
+   * `form_diag_from_symbolic`
+   */
+  void form_diag_from_numeric(const hiopVector& D)
+  {
+    assert(false && "wip");
+  }
+  
+  /**
+   * Allocates and returns CSR matrix `M` capable of holding M = X+Y, where X is 
+   * the calling matrix class (`this`) and Y is the argument passed to the method.
+   */
+  hiopMatrixSparseCSR* add_matrix_alloc(const hiopMatrixSparseCSR& Y) const
   {
     assert(false && "wip");
   }
 
   /**
-   * Performs matrix addition M = alpha*X+*beta*Y both symbolically (i.e., updates the
-   * row pointers and column indexes arrays) and numerically.
+   * Computes sparsity pattern of M = X+Y (i.e., populates the row pointers and 
+   * column indexes arrays) of `M`.
    * 
-   * 
+   * @pre `this` and `Y` should hold matrices of identical dimensions.
    *
    */
 
   //// note cusparseXcsrgeam2
-  void add_matrix(const double& alpha,
-                  const hiopMatrixSparseCSR& Y,
-                  const double& beta,
-                  hiopMatrixSparseCSR& M)
+  void add_matrix_symbolic(hiopMatrixSparseCSR& M,
+                           const hiopMatrixSparseCSR& Y) const
   {
     assert(false && "wip");
   }
 
-    /**
-   * Performs matrix addition M = alpha*X+*beta*Y numerically
+  /**
+   * Performs matrix addition M = gamma*M + alpha*X + beta*Y numerically, where
+   * X is `this` and gamma, alpha, and beta are scalars.
    * 
+   * @pre `M`, `this` and `Y` should hold matrices of identical dimensions.
    * 
+   * @pre `M` and `X+Y` should have identical sparsity pattern, namely the 
+   * `add_matrix_symbolic` should have been called previously.
    *
    */
-  void add_matrix_numeric(const double& alpha,
+  void add_matrix_numeric(double gamma,
+                          hiopMatrixSparseCSR& M,
+                          double alpha,
                           const hiopMatrixSparseCSR& Y,
-                          const double& beta,
-                          hiopMatrixSparseCSR& M)
+                          double beta) const
   {
     assert(false && "wip");
   }
