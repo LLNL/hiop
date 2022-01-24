@@ -72,7 +72,7 @@ namespace hiop
  * Wrapper class for cusolverSpXcsrchol Cholesky solver.
  */
 
-class hiopLinSolverCholCuSparse: public hiopLinSolverIndefSparse
+class hiopLinSolverCholCuSparse: public hiopLinSolverSymSparse
 {
 public:
   hiopLinSolverCholCuSparse(const size_type& n, const size_type& nnz, hiopNlpFormulation* nlp);

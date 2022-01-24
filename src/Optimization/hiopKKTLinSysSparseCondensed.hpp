@@ -318,7 +318,7 @@ protected:
   hiopBiCGStabSolver* bicgstab_;
 private:
   //placeholder for the code that decides which linear solver to used based on safe_mode_
-  hiopLinSolverIndefSparse* determine_and_create_linsys(size_type nxd, size_type nineq, size_type nnz);
+  hiopLinSolverSymSparse* determine_and_create_linsys(size_type nxd, size_type nineq, size_type nnz);
 
   friend class hiopKKTMatVecOpr;
   friend class hiopKKTPrecondOpr;
@@ -414,7 +414,7 @@ private:
       yrd_(nullptr),
       yryd_(nullptr)
   {
-    assert(false);
+    assert(false && "this constructor should not be used");
   }
   hiopVector* xdx_;
   hiopVector* xdd_;
