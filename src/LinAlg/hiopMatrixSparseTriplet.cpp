@@ -214,11 +214,11 @@ void hiopMatrixSparseTriplet::addSubDiagonal(const double& alpha, index_type sta
 
 void hiopMatrixSparseTriplet::copySubDiagonalFrom(const index_type& start_on_dest_diag,
                                                   const size_type& num_elems,
-                                                  const hiopVector& d_,
+                                                  const hiopVector& d_in,
                                                   const index_type& start_on_nnz_idx,
                                                   double scal)
 {
-  const hiopVectorPar& vd = dynamic_cast<const hiopVectorPar&>(d_);
+  const hiopVector& vd = dynamic_cast<const hiopVector&>(d_in);
   assert(num_elems<=vd.get_size());
   assert(start_on_dest_diag>=0 && start_on_dest_diag+num_elems<=this->nrows_);
   const double* v = vd.local_data_const();
@@ -616,10 +616,12 @@ void hiopMatrixSparseTriplet::copyRowsFrom(const hiopMatrix& src_gen,
  * @pre 'this' must have exactly, or more cols than 'src'
  */
 void hiopMatrixSparseTriplet::copyRowsBlockFrom(const hiopMatrix& src_gen,
-                                         const index_type& rows_src_idx_st, const size_type& n_rows,
-                                         const index_type& rows_dest_idx_st, const size_type& dest_nnz_st)
+                                                const index_type& rows_src_idx_st, 
+                                                const size_type& n_rows,
+                                                const index_type& rows_dest_idx_st, 
+                                                const size_type& dest_nnz_st)
 {
-  const hiopMatrixSparseTriplet& src = dynamic_cast<const hiopMatrixSparseTriplet&>(src_gen);
+  const hiopMatrixSparse& src = dynamic_cast<const hiopMatrixSparse&>(src_gen);
   assert(this->numberOfNonzeros() >= src.numberOfNonzeros());
   assert(this->n() >= src.n());
   assert(n_rows + rows_src_idx_st <= src.m());
