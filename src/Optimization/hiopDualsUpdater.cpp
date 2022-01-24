@@ -344,11 +344,17 @@ bool hiopDualsLsqUpdateLinsysAugSparse::do_lsq_update(hiopIterate& iter,
   const hiopMatrixSparse& Jac_cSp = dynamic_cast<const hiopMatrixSparse&>(jac_c);
   const hiopMatrixSparse& Jac_dSp = dynamic_cast<const hiopMatrixSparse&>(jac_d);
 
+  hiopTimer t;
+  std::stringstream ss_log;
+  
   int nx = Jac_cSp.n(), nd=Jac_dSp.m(), neq=Jac_cSp.m(), nineq=Jac_dSp.m();
   int n = nx + nineq + neq + nineq; 
 
   int nnz = nx + nd + Jac_cSp.numberOfNonzeros() + Jac_dSp.numberOfNonzeros() + nd + (nx + nd + neq + nineq);
 
+  t.reset();
+  t.start();
+  
   auto compute_mode = nlp_->options->GetString("compute_mode");
 #ifndef HIOP_USE_GPU
     assert(compute_mode == "cpu" &&
@@ -365,7 +371,8 @@ bool hiopDualsLsqUpdateLinsysAugSparse::do_lsq_update(hiopIterate& iter,
         nlp_->log->printf(hovSummary,
                           "LSQ Dual Initialization --- KKT_SPARSE_XYcYd linsys: MA57 size %d (%d cons)\n",
                           n, neq+nineq);
-        
+
+        ss_log << "LSQ with MA57: create ";
         lin_sys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
       
 #endif // HIOP_USE_COINHSL
@@ -373,7 +380,8 @@ bool hiopDualsLsqUpdateLinsysAugSparse::do_lsq_update(hiopIterate& iter,
 
       if( (NULL == lin_sys_ && linear_solver == "auto") || linear_solver == "pardiso") {
         //ma57 is not available or user requested pardiso
-#ifdef HIOP_USE_PARDISO              
+#ifdef HIOP_USE_PARDISO
+        ss_log << "LSQ with PARDISO: create ";
         hiopLinSolverIndefSparsePARDISO *p = new hiopLinSolverIndefSparsePARDISO(n, nnz, nlp_);
         
         nlp_->log->printf(hovSummary,
@@ -390,7 +398,7 @@ bool hiopDualsLsqUpdateLinsysAugSparse::do_lsq_update(hiopIterate& iter,
         assert((linear_solver == "strumpack" || linear_solver == "auto") &&
                "the value for duals_init_linear_solver_sparse is invalid and should have been corrected during "
                "options processing");
-              
+        ss_log << "LSQ with STRUMPACK: create ";     
         hiopLinSolverIndefSparseSTRUMPACK *p = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
         
         nlp_->log->printf(hovSummary,
@@ -409,7 +417,7 @@ bool hiopDualsLsqUpdateLinsysAugSparse::do_lsq_update(hiopIterate& iter,
       //
 #ifdef HIOP_USE_STRUMPACK
       if(linear_solver == "strumpack" || linear_solver == "auto") {
-
+        ss_log << "LSQ with STRUMPACK (dev): create ";
         hiopLinSolverIndefSparseSTRUMPACK *p = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
         
         nlp_->log->printf(hovSummary,
@@ -432,7 +440,8 @@ bool hiopDualsLsqUpdateLinsysAugSparse::do_lsq_update(hiopIterate& iter,
         nlp_->log->printf(hovSummary,
                           "LSQ Dual Initialization --- KKT_SPARSE_XDYcYd linsys: using MA57 on CPU(!!!) size "
                           "%d (%d cons)\n",
-                          n, neq+nineq);                             
+                          n, neq+nineq);
+        ss_log << "LSQ with MA57 (dev): create ";
         lin_sys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
       }
 #endif // HIOP_USE_COINHSL
@@ -446,17 +455,23 @@ bool hiopDualsLsqUpdateLinsysAugSparse::do_lsq_update(hiopIterate& iter,
         nlp_->log->printf(hovSummary,
                           "LSQ Dual Initialization --- KKT_SPARSE_XDYcYd linsys: using PARDISO on CPU(!!!) size "
                           "%d (%d cons)\n",
-                          n, neq+nineq);                             
+                          n, neq+nineq);
+        ss_log << "LSQ with PARDISO (dev): create ";
         lin_sys_ = new hiopLinSolverIndefSparsePARDISO(n, nnz, nlp_);
       }
 #endif // HIOP_USE_PARDISO
     } // end of else  compute_mode=='cpu'
   }
   assert(lin_sys_ && "no sparse linear solver is available");
-  hiopLinSolverIndefSparse* linSys = dynamic_cast<hiopLinSolverIndefSparse*> (lin_sys_);
+  hiopLinSolverSymSparse* linSys = dynamic_cast<hiopLinSolverSymSparse*> (lin_sys_);
   assert(linSys);
 
-  hiopMatrixSparseTriplet& Msys = linSys->sysMatrix();
+  t.stop();
+  ss_log << std::fixed << std::setprecision(4) << t.getElapsedTime() << " sec\n";
+
+  t.reset();
+  t.start();
+  hiopMatrixSparse& Msys = *(linSys->sysMatrix());
   // update linSys system matrix
   {
     Msys.setToZero();
@@ -487,14 +502,22 @@ bool hiopDualsLsqUpdateLinsysAugSparse::do_lsq_update(hiopIterate& iter,
     */
     nlp_->log->write("LSQ Dual Initialization --- KKT_SPARSE_XDYcYd linsys:", Msys, hovMatrices);
   }
+  t.stop();
+  ss_log << "   update linsys " << t.getElapsedTime() << " sec\n";
 
+  t.reset();
+  t.start();
   int ret_val = linSys->matrixChanged();
-
+  t.stop();
+  ss_log << "   factor linsys " << t.getElapsedTime() << " sec\n";
+  
   if(ret_val<0) {
     nlp_->log->printf(hovError, "dual lsq update: error %d in the factorization.\n", ret_val);
     return false;
   } 
-  
+
+  t.reset();
+  t.start();
   // compute rhs_=[rhsx, rhss, rhsc_, rhsd_]. 
   // rhsx = - [ \nabla f(xk) - zk_l + zk_u  ]
   // rhss = - [ -vk_l + vk_u ]
@@ -516,17 +539,22 @@ bool hiopDualsLsqUpdateLinsysAugSparse::do_lsq_update(hiopIterate& iter,
 
   //solve for this rhs_
   bool linsol_ok = lin_sys_->solve(*rhs_);
+
   if(!linsol_ok) {
     nlp_->log->printf(hovWarning, "dual lsq update: error in the solution process (sparse).\n");
     iter.get_yc()->setToZero();
     iter.get_yd()->setToZero();
-    return true;
+  } else {
+    //update yc and yd in iter_plus
+    rhs_->copyToStarting(nx+nd, *iter.get_yc());
+    rhs_->copyToStarting(nx+nd+neq, *iter.get_yd());
   }
+  t.stop();
+  ss_log << "   solve linsys " << t.getElapsedTime() << " sec\n";
 
-  //update yc and yd in iter_plus
-  rhs_->copyToStarting(nx+nd, *iter.get_yc());
-  rhs_->copyToStarting(nx+nd+neq, *iter.get_yd());
-
+  if("on" == nlp_->options->GetString("time_kkt")) {
+    nlp_->log->printf(hovSummary, "%s", ss_log.str().c_str());
+  }
   return true;
 }
 
@@ -568,7 +596,9 @@ bool hiopDualsLsqUpdateLinsysRedDenseSymPD::solve_with_factors(hiopVector& r)
 #ifdef HIOP_DEEPCHECKS
   assert(M_->m()==M_->n());
 #endif
-  if(M_->m()==0) return 0;
+  if(M_->m()==0) {
+    return true;
+  }
   char uplo='L'; //we have upper triangular in C++, but this is lower in fortran
   int N=M_->n(), lda=N, nrhs=1, info;
   DPOTRS(&uplo,&N, &nrhs, M_->local_data(), &lda, r.local_data(), &lda, &info);
@@ -588,7 +618,9 @@ bool hiopDualsLsqUpdateLinsysRedDenseSymPD::factorize_mat()
 #ifdef HIOP_DEEPCHECKS
   assert(M_->m()==M_->n());
 #endif
-  if(M_->m()==0) return 0;
+  if(M_->m()==0) {
+    return true;
+  }
   char uplo='L'; int N=M_->n(), lda=N, info;
   DPOTRF(&uplo, &N, M_->local_data(), &lda, &info);
   if(info>0) {

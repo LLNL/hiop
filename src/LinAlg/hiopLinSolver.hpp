@@ -46,6 +46,14 @@
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or
 // product endorsement purposes.
 
+/**
+ * @file hiopLinSolver.hpp
+ *
+ * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
+ * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
+ *
+ */
+
 #ifndef HIOP_LINSOLVER
 #define HIOP_LINSOLVER
 
@@ -62,16 +70,9 @@ namespace hiop
 {
 
 /**
- * Abstract class for Linear Solvers used by HiOp
- * Specifies interface for linear solver arising in Interior-Point methods, thus,
- * the underlying assumptions are that the system's matrix is symmetric (positive
- * definite or indefinite).
- *
- * Implementations of this abstract class have the purpose of serving as wrappers
- * of existing CPU and GPU libraries for linear systems.
- *
- * Note:
- *  - solve(matrix) is not implemented
+ * Abstract class specifying the linear solver interface needed by interior-point 
+ * methods of HiOp. Implementations of this abstract class should be wrappers
+ * of existing CPU and GPU libraries for solving linear systems.
  */
 
 class hiopLinSolver
@@ -86,12 +87,27 @@ public:
    */
   virtual int matrixChanged() = 0;
 
-  /** Solves a linear system.
-   * param 'x' is on entry the right hand side(s) of the system to be solved. On
-   * exit is contains the solution(s).
+  /** 
+   * Method to solve the linear system once the factorization phase has been 
+   * completed by matrixChanged().
+   * 
+   * @param x is on entry the right-hand side of the system to be solved. On exit 
+   * it contains the solution.
    */
-  virtual bool solve ( hiopVector& x ) = 0;
-  virtual bool solve ( hiopMatrix& x ) { assert(false && "not yet supported"); return true;}
+  virtual bool solve(hiopVector& x) = 0;
+  
+  /**
+   * Method to solve the linear system with multiple right-hand sides once the 
+   * factorization phase has been completed by matrixChanged().
+   * 
+   * @param x contains on entry the right-hand side(s) of the system to be solved
+   * and storesthe solutions on exit.
+   */
+  virtual bool solve(hiopMatrix& x)
+  {
+    assert(false && "not yet supported");
+    return false;
+  }
 public:
   hiopNlpFormulation* nlp_;
   bool perf_report_;
@@ -111,41 +127,65 @@ protected:
   hiopLinSolverIndefDense();
 };
 
-// for general non-symmetric Sparse Solvers
-/** Base class for non-symmetric Sparse Solvers */
+
+/** 
+ * Base class for symmetric and non-symmetric linear systems/solvers 
+ */
 class hiopLinSolverSparseBase : public hiopLinSolver
 {
 public:
-  hiopLinSolverSparseBase(){};
-  ~hiopLinSolverSparseBase(){};
+  hiopLinSolverSparseBase()
+    : M_(nullptr)
+  {
+  };
+  virtual ~hiopLinSolverSparseBase()
+  {
+    delete M_;
+  };
+  inline hiopMatrixSparse* sysMatrix()
+  {
+    return M_;
+  }
+protected:
+  hiopMatrixSparse* M_;
 };
 
-/** Base class for Indefinite Sparse Solvers */
-class hiopLinSolverIndefSparse : public hiopLinSolverSparseBase
+/** 
+ * Base class for symmetric (indefinite or positive definite) sparse solvers 
+ */
+class hiopLinSolverSymSparse : public hiopLinSolverSparseBase
 {
 public:
-  hiopLinSolverIndefSparse(int n, int nnz, hiopNlpFormulation* nlp);
-  virtual ~hiopLinSolverIndefSparse();
+  hiopLinSolverSymSparse(int n, int nnz, hiopNlpFormulation* nlp);
+  virtual ~hiopLinSolverSymSparse()
+  {
+  }
+protected:
+  /* Constructor for when the size of the system matrix is to be determined. */
+  hiopLinSolverSymSparse(hiopNlpFormulation* nlp);
 
-  inline hiopMatrixSymSparseTriplet& sysMatrix() { return M; }
-protected:
-  hiopMatrixSymSparseTriplet M;
-protected:
-  hiopLinSolverIndefSparse() : M(0,0) { assert(false); }
+  hiopLinSolverSymSparse()
+  {
+    assert(false);
+  }
 };
 
-/** Base class for non-symmetric Sparse Solvers */
+/** 
+ * Base class for non-symmetric sparse solvers 
+*/
 class hiopLinSolverNonSymSparse : public hiopLinSolverSparseBase
 {
 public:
   hiopLinSolverNonSymSparse(int n, int nnz, hiopNlpFormulation* nlp);
-  virtual ~hiopLinSolverNonSymSparse();
-
-  inline hiopMatrixSparseTriplet& sysMatrix() { return M; }
+  virtual ~hiopLinSolverNonSymSparse()
+  {
+  }
+  
 protected:
-  hiopMatrixSparseTriplet M;
-protected:
-  hiopLinSolverNonSymSparse() : M(0,0,0) { assert(false); }
+  hiopLinSolverNonSymSparse()
+  {
+    assert(false);
+  }
 };
 
 } //end namespace

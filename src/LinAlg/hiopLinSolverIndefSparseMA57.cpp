@@ -5,141 +5,144 @@
 namespace hiop
 {
   hiopLinSolverIndefSparseMA57::hiopLinSolverIndefSparseMA57(const int& n, const int& nnz, hiopNlpFormulation* nlp)
-    : hiopLinSolverIndefSparse(n, nnz, nlp),
-    m_irowM{nullptr}, m_jcolM{nullptr},
-//    m_M{nullptr},
-    m_lifact{0}, m_ifact{nullptr}, m_lfact{0}, m_fact{nullptr},
-    m_lkeep{0}, m_keep{nullptr},
-    m_iwork{nullptr}, m_dwork{nullptr},
-    m_ipessimism{1.05}, m_rpessimism{1.05},
-    m_n{n}, m_nnz{nnz}
+    : hiopLinSolverSymSparse(n, nnz, nlp),
+      irowM_{nullptr},
+      jcolM_{nullptr},
+      lifact_{0},
+      ifact_{nullptr},
+      lfact_{0},
+      fact_{nullptr},
+      lkeep_{0},
+      keep_{nullptr},
+      iwork_{nullptr},
+      dwork_{nullptr},
+      ipessimism_{1.05},
+      rpessimism_{1.05},
+      n_{n},
+      nnz_{nnz},
+      rhs_{nullptr},
+      resid_{nullptr}
   {
-//    m_ipiv = new int[n];
-//    m_dwork = LinearAlgebraFactory::createVector(0);
-
-    FNAME(ma57id)( m_cntl, m_icntl );
+    FNAME(ma57id)( cntl_, icntl_ );
 
     /*
     * initialize MA57 parameters
     */
-    m_icntl[1-1] = 0;       // don't print warning messages
-    m_icntl[2-1] = 0;       // no Warning messages
-    m_icntl[4-1] = 1;       // no statistics messages
-    m_icntl[5-1] = 0;       // no Print messages.
-    m_icntl[6-1] = 2;       // 2 use MC47;
-                            // 3 min degree ordering as in MA27;
-                            // 4 use Metis;
-                            // 5 automatic choice(MA47 or Metis);
-    m_icntl[7-1] = 1;       // Pivoting strategy.
-    m_icntl[9-1] = 10;      // up to 10 steps of iterative refinement
-    m_icntl[11-1] = 16;
-    m_icntl[12-1] = 16;
-    m_icntl[15-1] = 0;
-    m_icntl[16-1] = 0;
+    icntl_[1-1] = 0;       // don't print warning messages
+    icntl_[2-1] = 0;       // no Warning messages
+    icntl_[4-1] = 1;       // no statistics messages
+    icntl_[5-1] = 0;       // no Print messages.
+    icntl_[6-1] = 2;       // 2 use MC47;
+                           // 3 min degree ordering as in MA27;
+                           // 4 use Metis;
+                           // 5 automatic choice(MA47 or Metis);
+    icntl_[7-1] = 1;       // Pivoting strategy.
+    icntl_[9-1] = 10;      // up to 10 steps of iterative refinement
+    icntl_[11-1] = 16;
+    icntl_[12-1] = 16;
+    icntl_[15-1] = 0;
+    icntl_[16-1] = 0;
 
-    m_cntl[1-1] = 1e-8;     // pivot tolerance
+    cntl_[1-1] = 1e-8;     // pivot tolerance
 
   }
   hiopLinSolverIndefSparseMA57::~hiopLinSolverIndefSparseMA57()
   {
-    if(m_irowM)
-      delete [] m_irowM;
-    if(m_jcolM)
-      delete [] m_jcolM;
+    delete [] irowM_;
+    delete [] jcolM_;
+    delete [] ifact_;
+    delete [] fact_;
+    delete [] keep_;
+    delete [] iwork_;
+    delete [] dwork_;
+    delete resid_;
+    delete rhs_;
 
-    if(m_ifact)
-      delete [] m_ifact;
-    if(m_fact)
-      delete [] m_fact;
-    if(m_keep)
-      delete [] m_keep;
-    if(m_iwork)
-      delete[] m_iwork;
-    if(m_dwork)
-      delete[] m_dwork;
   }
 
 
   void hiopLinSolverIndefSparseMA57::firstCall()
   {
-    assert(m_n==M.n() && M.n()==M.m());
-    assert(m_nnz==M.numberOfNonzeros());
-    assert(m_n>0);
+    assert(n_==M_->n() && M_->n()==M_->m());
+    assert(nnz_==M_->numberOfNonzeros());
+    assert(n_>0);
 
-    m_irowM = new int[m_nnz];
-    m_jcolM = new int[m_nnz];
-    for(int k=0;k<m_nnz;k++){
-      m_irowM[k] = M.i_row()[k]+1;
-      m_jcolM[k] = M.j_col()[k]+1;
+    assert(nullptr==irowM_);
+    
+    irowM_ = new int[nnz_];
+    jcolM_ = new int[nnz_];
+    for(int k=0; k<nnz_; k++){
+      irowM_[k] = M_->i_row()[k]+1;
+      jcolM_[k] = M_->j_col()[k]+1;
     }
 
-    m_lkeep = ( m_nnz > m_n ) ? (5 * m_n + 2 *m_nnz + 42) : (6 * m_n + m_nnz + 42);
-    m_keep = new int[m_lkeep]{0}; // Initialize to 0 as otherwise MA57ED can sometimes fail
+    lkeep_ = ( nnz_ > n_ ) ? (5 * n_ + 2 * nnz_ + 42) : (6 * n_ + nnz_ + 42);
+    keep_ = new int[lkeep_]{0}; // Initialize to 0 as otherwise MA57ED can sometimes fail
 
-    m_iwork = new int[5 * m_n];
-    m_dwork = new double[m_n];
+    iwork_ = new int[5 * n_];
+    dwork_ = new double[n_];
     
 
-    FNAME(ma57ad)( &m_n, &m_nnz, m_irowM, m_jcolM, &m_lkeep, m_keep, m_iwork, m_icntl, m_info, m_rinfo );
+    FNAME(ma57ad)( &n_, &nnz_, irowM_, jcolM_, &lkeep_, keep_, iwork_, icntl_, info_, rinfo_ );
         
-    m_lfact = (int) (m_rpessimism * m_info[8]);
-    m_fact  = new double[m_lfact];
+    lfact_ = (int) (rpessimism_ * info_[8]);
+    fact_  = new double[lfact_];
 
-    m_lifact = (int) (m_ipessimism * m_info[9]);
-    m_ifact  = new int[m_lifact];
-
+    lifact_ = (int) (ipessimism_ * info_[9]);
+    ifact_  = new int[lifact_];
   }
 
 
   int hiopLinSolverIndefSparseMA57::matrixChanged()
   {
-    assert(m_n==M.n() && M.n()==M.m());
-    assert(m_nnz==M.numberOfNonzeros());
-    assert(m_n>0);
+    assert(n_==M_->n() && M_->n()==M_->m());
+    assert(nnz_==M_->numberOfNonzeros());
+    assert(n_>0);
 
     nlp_->runStats.linsolv.tmFactTime.start();
 
-    if( !m_keep ) this->firstCall();
+    if( !keep_ ) this->firstCall();
 
-    bool done{false}, is_singular{false};
+    bool done{false};
+    bool is_singular{false};
     int num_tries{0};
 
     do {
-      FNAME(ma57bd)( &m_n, &m_nnz, M.M(), m_fact, &m_lfact, m_ifact,
-	     &m_lifact, &m_lkeep, m_keep, m_iwork, m_icntl, m_cntl, m_info, m_rinfo );
+      FNAME(ma57bd)( &n_, &nnz_, M_->M(), fact_, &lfact_, ifact_,
+	     &lifact_, &lkeep_, keep_, iwork_, icntl_, cntl_, info_, rinfo_ );
 
-      switch( m_info[0] ) {
+      switch( info_[0] ) {
         case 0:
           done = true;
           break;
         case -3: {
           //Failure due to insufficient REAL space on a call to MA57B/BD
           int ic{0}, intTemp{0};
-          int lnfact = (int) (m_info[16] * m_rpessimism);
+          int lnfact = (int) (info_[16] * rpessimism_);
           double * newfact = new double[lnfact];
 
-          FNAME(ma57ed)( &m_n, &ic, m_keep,
-                m_fact, &m_info[1], newfact, &lnfact,
-                m_ifact, &m_info[1], &intTemp, &m_lifact,
-                m_info );
+          FNAME(ma57ed)( &n_, &ic, keep_,
+                fact_, &info_[1], newfact, &lnfact,
+                ifact_, &info_[1], &intTemp, &lifact_,
+                info_ );
 
-          delete [] m_fact;
-          m_fact = newfact;
-          m_lfact = lnfact;
-          m_rpessimism *= 1.1;
+          delete [] fact_;
+          fact_ = newfact;
+          lfact_ = lnfact;
+          rpessimism_ *= 1.1;
           };
           break;
         case -4: {
           // Failure due to insufficient INTEGER space on a call to MA57B/BD
           int ic = 1;
-          int lnifact = (int) (m_info[17] * m_ipessimism);
+          int lnifact = (int) (info_[17] * ipessimism_);
           int * nifact = new int[ lnifact ];
-          FNAME(ma57ed)( &m_n, &ic, m_keep, m_fact, &m_lfact, m_fact, &m_lfact,
-               m_ifact, &m_lifact, nifact, &lnifact, m_info );
-          delete [] m_ifact;
-          m_ifact = nifact;
-          m_lifact = lnifact;
-          m_ipessimism *= 1.1;
+          FNAME(ma57ed)( &n_, &ic, keep_, fact_, &lfact_, fact_, &lfact_,
+               ifact_, &lifact_, nifact, &lnifact, info_ );
+          delete [] ifact_;
+          ifact_ = nifact;
+          lifact_ = lnifact;
+          ipessimism_ *= 1.1;
           };
           break;
         case 4: {
@@ -149,64 +152,74 @@ namespace hiop
           };
           break;
         default:
-          if( m_info[0] >= 0 ) done = true;
+          if( info_[0] >= 0 ) done = true;
           assert( "unknown error!" && 0 );
       } // end switch
       num_tries++;
     } while( !done );
 
+    nlp_->runStats.linsolv.tmFactTime.stop();
     nlp_->runStats.linsolv.tmInertiaComp.start();
     
     int negEigVal{0};
-    if(is_singular)
-  	  negEigVal = -1;
-    else
-	  negEigVal = m_info[24-1];
+    if(is_singular) {
+      negEigVal = -1;
+    } else {
+      negEigVal = info_[24-1];
+    }
 
     nlp_->runStats.linsolv.tmInertiaComp.stop();
 
     return negEigVal;
   }
 
-  bool hiopLinSolverIndefSparseMA57::solve ( hiopVector& x_ )
+  bool hiopLinSolverIndefSparseMA57::solve ( hiopVector& x_in )
   {
-    assert(m_n==M.n() && M.n()==M.m());
-    assert(m_nnz==M.numberOfNonzeros());
-    assert(m_n>0);
-    assert(x_.get_size()==M.n());
+    assert(n_==M_->n() && M_->n()==M_->m());
+    assert(nnz_==M_->numberOfNonzeros());
+    assert(n_>0);
+    assert(x_in.get_size()==M_->n());
 
     nlp_->runStats.linsolv.tmTriuSolves.start();
 
     int job = 1; // full solve
     int one = 1;
-    m_icntl[9-1] = 1; // do one step of iterative refinement
+    icntl_[9-1] = 1; // do one step of iterative refinement
 
-    hiopVector* x = dynamic_cast<hiopVector*>(&x_);
-    assert(x != NULL);
-    hiopVector* rhs = dynamic_cast<hiopVector*>(x->new_copy());
-    hiopVector* resid = dynamic_cast<hiopVector*>(x->new_copy());
+    hiopVector* x = dynamic_cast<hiopVector*>(&x_in);
+    assert(x!=nullptr);
+    
+    if(nullptr==rhs_) {
+      rhs_ = dynamic_cast<hiopVector*>(x->new_copy());  
+      assert(rhs_);
+      assert(nullptr==resid_); 
+      resid_ = dynamic_cast<hiopVector*>(x->new_copy());
+      assert(resid_);
+    } else {
+      rhs_->copyFrom(*x);
+      resid_->copyFrom(*x);
+    }
+
     double* dx = x->local_data();
-    double* drhs = rhs->local_data();
-    double* dresid = resid->local_data();
+    double* drhs = rhs_->local_data();
+    double* dresid = resid_->local_data();
 
-//    FNAME(ma57cd)( &job, &m_n, m_fact, &m_lfact, m_ifact, &m_lifact,
-//    	   &one, drhs, &m_n, m_dwork, &m_n, m_iwork, m_icntl, m_info );
+    //    FNAME(ma57cd)( &job, &n_, fact_, &lfact_, ifact_, &lifact_,
+    //          &one, drhs, &n_, dwork_, &n_, iwork_, icntl_, info_ );
 
-    FNAME(ma57dd)( &job, &m_n, &m_nnz, M.M(), m_irowM, m_jcolM,
-        m_fact, &m_lfact, m_ifact, &m_lifact, drhs, dx,
-        dresid, m_dwork, m_iwork, m_icntl, m_cntl, m_info, m_rinfo );
+    FNAME(ma57dd)( &job, &n_, &nnz_, M_->M(), irowM_, jcolM_,
+        fact_, &lfact_, ifact_, &lifact_, drhs, dx,
+        dresid, dwork_, iwork_, icntl_, cntl_, info_, rinfo_ );
 
-    if (m_info[0]<0){
-      nlp_->log->printf(hovError, "hiopLinSolverIndefSparseMA57: MA57 returned error %d\n", m_info[0]);
-    } else if(m_info[0]>0) {
-      nlp_->log->printf(hovError, "hiopLinSolverIndefSparseMA57: MA57 returned warning %d\n", m_info[0]);
+    if (info_[0]<0){
+      nlp_->log->printf(hovError, "hiopLinSolverIndefSparseMA57: MA57 returned error %d\n", info_[0]);
+    } else if(info_[0]>0) {
+      nlp_->log->printf(hovError, "hiopLinSolverIndefSparseMA57: MA57 returned warning %d\n", info_[0]);
     }
 
     nlp_->runStats.linsolv.tmTriuSolves.stop();
 
-    delete rhs; rhs=nullptr;
-    delete resid; resid=nullptr;
-    return m_info[0]==0;
+    return info_[0]==0;
   }
 
 } //end namespace hiop

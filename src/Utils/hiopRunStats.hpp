@@ -209,7 +209,7 @@ public:
   inline std::string get_summary_last_solve() const
   {
     std::stringstream ss;
-    ss <<  std::fixed << std::setprecision(3);
+    ss <<  std::fixed << std::setprecision(6);
       //<< "Total LinSolve time=" << tmWholeLinSolve.getElapsedTime() << " sec " 
     //<< std::endl;
 

@@ -11,6 +11,7 @@ set(hiopLinAlg_INTERFACE_HEADERS
   hiopLinSolverSparseSTRUMPACK.hpp
   hiopLinSolverSparsePARDISO.hpp
   hiopLinSolverUMFPACKZ.hpp
+  hiopLinSolverCholCuSparse.hpp
   hiopMatrix.hpp
   hiopMatrixComplexDense.hpp
   hiopMatrixComplexSparseTriplet.hpp
@@ -28,6 +29,8 @@ set(hiopLinAlg_INTERFACE_HEADERS
   hiopVectorIntSeq.hpp
   hiopVectorPar.hpp
   hiopVectorRajaPar.hpp
+  hiopLinearOperator.hpp
+  hiopKrylovSolver.hpp
   )
 
 # Set linear algebra common source files
@@ -42,6 +45,8 @@ set(hiopLinAlg_SRC
   hiopMatrixSparseTripletStorage.cpp
   hiopMatrixSparseTriplet.cpp
   hiopMatrixComplexSparseTriplet.cpp
+  hiopLinearOperator.cpp
+  hiopKrylovSolver.cpp
 )
 
 set(hiopLinAlg_RAJA_SRC
@@ -53,6 +58,7 @@ set(hiopLinAlg_RAJA_SRC
 
 set(hiopLinAlg_GPU_SRC
   hiopLinSolverIndefDenseMagma.cpp
+  hiopLinSolverCholCuSparse.cpp
   )
 
 set(hiopLinAlg_MA57_SRC

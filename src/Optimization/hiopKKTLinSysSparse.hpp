@@ -115,14 +115,14 @@ protected:
 
 private:
   //placeholder for the code that decides which linear solver to used based on safe_mode_
-  hiopLinSolverIndefSparse* determineAndCreateLinsys(int nxd, int neq, int nineq, int nnz);
+  hiopLinSolverSymSparse* determineAndCreateLinsys(int nxd, int neq, int nineq, int nnz);
 };
 
 
 /*
  * Solves KKTLinSysCompressedXDYcYd by exploiting the sparse structure
  *
- * In general, the so-called XYcYd system has the form
+ * In general, the so-called XDYcYd system has the form
  * [  H  +  Dx    0    Jc^T  Jd^T   ] [ dx]   [ rx_tilde ]
  * [    0         Dd    0     -I    ] [ dd]   [ rd_tilde ]
  * [    Jc        0     0      0    ] [dyc] = [   ryc    ]
@@ -178,7 +178,7 @@ protected:
 
 private:
   //placeholder for the code that decides which linear solver to used based on safe_mode_
-  hiopLinSolverIndefSparse* determineAndCreateLinsys(int nxd, int neq, int nineq, int nnz);
+  hiopLinSolverSymSparse* determineAndCreateLinsys(int nxd, int neq, int nineq, int nnz);
 };
 
 

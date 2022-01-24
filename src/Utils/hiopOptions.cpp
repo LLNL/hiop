@@ -782,18 +782,19 @@ void hiopOptionsNLP::register_options()
   }
   //linear algebra
   {
-    vector<string> range(4); range[0] = "auto"; range[1]="xycyd"; range[2]="xdycyd"; range[3]="full";
+    vector<string> range = {"auto", "xycyd", "xdycyd", "full", "condensed"};
     register_str_option("KKTLinsys",
                         "auto",
                         range,
-                        "Type of KKT linear system used internally: decided by HiOp 'auto' "
-                        "(default option), the more compact 'XYcYd, the more stable 'XDYcYd', or the "
-                        "full-size non-symmetric 'full'. The last three options are only available with "
+                        "Type of KKT linear system used internally: decided by HiOp 'auto' (default), "
+                        "the more compact 'XYcYd, the more stable 'XDYcYd', the full-size non-symmetric "
+                        "'full', or the condensed that uses Cholesky (available when no eq. constraints "
+                        "are present). The last four options are available only with "
                         "'Hessian=analyticalExact'.");
   }
 
   //
-  // choose linear solver for  KKT solves 
+  // choose direct linear solver for sparse linear system on CPU
   //
   // when KKTLinsys is 'full' only strumpack is available
   // for the other KKTLinsys (which are all symmetric), MA57 is chosen 'auto'matically for all compute
@@ -818,6 +819,21 @@ void hiopOptionsNLP::register_options()
                         "Selects among MA57, PARDISO and STRUMPACK for the sparse linear solves.");
   }
 
+  // choose sparsity permutation (to reduce nz in the factors). This option is available only when using
+  // Cholesky linear solvers
+  // - metis: use CUDA function csrmetisnd, which is a wrapper of METIS_NodeND; requires linking with
+  // libmetis_static.a (64-bit metis-5.1.0) (Host execution)
+  // - symamd: use sym. approx. min. degree algorithm as implemented by CUDA csrsymamd function
+  // (Host execution)
+  // - symrcm: use symmetric reverse Cuthill-McKee as implemented by CUDA csrsymrcm (Host execution)
+  vector<string> range = { "metis", "symamd", "symrcm"};
+  register_str_option("linear_solver_sparse_ordering",
+                      range[1], //default is AMD since metis seems to crash sometimes
+                      range,
+                      "permutation to promote sparsity in the (Chol) factorization: 'metis' based on a "
+                      "wrapper of METIS_NodeND, 'symamd' (default) and 'symrcm' are the well-known approx. "
+                      "min. degree and reverse Cuthill-McKee orderings in their symmetric form.");
+  
   //linsol_mode -> mostly related to magma and MDS linear algebra
   {
     vector<string> range(3); range[0]="stable"; range[1]="speculative"; range[2]="forcequick";

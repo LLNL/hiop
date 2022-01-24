@@ -46,77 +46,61 @@
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or
 // product endorsement purposes.
 
+/* implements the linear solver class using the PARDISO solver
+* @file hiopLinearOperator.hpp
+* @ingroup LinearSolvers
+* @author Nai-Yuan Chiang <chiang7@lnnl.gov>, LNNL
+* @author Cosmin G. Petra <petra1@lnnl.gov>, LNNL
+*/
+
+#ifndef HIOP_MATVECOPR
+#define HIOP_MATVECOPR
+
+#include "hiopVector.hpp"
+#include "hiopMatrix.hpp"
+
+namespace hiop
+{
+
+// forward declaration
+class hiopKKTLinSys;
+
 /**
- * @file hiopLinSolver.hpp
- *
- * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
- * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
- *
+ * The abstract interface to a mat-vec operation required by 
+ * the iterative solvers.
  */
+class hiopLinearOperator
+{
+public:
+  hiopLinearOperator(){};
+  virtual ~hiopLinearOperator(){};
 
-#include "hiopLinSolver.hpp"
+  /** y = Mat * x */
+  virtual bool times_vec(hiopVector& y, const hiopVector& x) = 0;
 
-#include "hiopOptions.hpp"
-#include "hiopLinAlgFactory.hpp"
+  /** y = Mat' * x */
+  virtual bool trans_times_vec(hiopVector& y, const hiopVector& x) = 0;
+};
 
-namespace hiop {
-  hiopLinSolver::hiopLinSolver()
-    : nlp_(NULL), perf_report_(false)
-  {
-  }
-  hiopLinSolver::~hiopLinSolver()
-  {
-  }
+/** 
+ * An implementation of the abstract class @hiopLinearOperator that performs a mat-vec operation
+ * with both the matrix and vector being on the same processor.
+ */
+class hiopMatVecOpr : public hiopLinearOperator {
+public:
+  hiopMatVecOpr(hiopMatrix* mat);
+  virtual ~hiopMatVecOpr() {};
 
-  /// Constructor allocates dense system matrix
-  hiopLinSolverIndefDense::hiopLinSolverIndefDense(int n, hiopNlpFormulation* nlp)
-  {
-    nlp_ = nlp;
-    perf_report_ = "on"==hiop::tolower(nlp_->options->GetString("time_kkt"));
-    M_ = LinearAlgebraFactory::create_matrix_dense(nlp_->options->GetString("mem_space"), n, n);
-  }
+  /** y = Mat * x */
+  virtual bool times_vec(hiopVector& y, const hiopVector& x);
 
-  /// Default constructor is protected and should fail when called
-  hiopLinSolverIndefDense::hiopLinSolverIndefDense()
-    : M_(nullptr)
-  {
-    assert(false);
-  }
+  /** y = Mat' * x */
+  virtual bool trans_times_vec(hiopVector& y, const hiopVector& x);
 
-  /// Destructor deletes the system matrix
-  hiopLinSolverIndefDense::~hiopLinSolverIndefDense()
-  {
-    delete M_;
-  }
+protected:
+  hiopMatrix* mMat_;
+};
 
-  /// Method to return reference to the system matrix
-  hiopMatrixDense& hiopLinSolverIndefDense::sysMatrix()
-  {
-    return *M_;
-  }
+};
 
-  hiopLinSolverSymSparse::hiopLinSolverSymSparse(int n, int nnz, hiopNlpFormulation* nlp)
-  {
-    //we default to triplet matrix for now; derived classes using CSR matrices will not call
-    //this constructor (will call the 1-parameter constructor below) so they avoid creating
-    //the triplet matrix
-    M_ = new hiopMatrixSparseTriplet(n, n, nnz);
-    nlp_ = nlp;
-    perf_report_ = "on"==hiop::tolower(nlp->options->GetString("time_kkt"));
-  }
-
-  hiopLinSolverSymSparse::hiopLinSolverSymSparse(hiopNlpFormulation* nlp)
-  {
-    M_ = nullptr;
-    nlp_ = nlp;
-    perf_report_ = "on"==hiop::tolower(nlp->options->GetString("time_kkt"));
-  }
-  
-  hiopLinSolverNonSymSparse::hiopLinSolverNonSymSparse(int n, int nnz, hiopNlpFormulation* nlp)
-  {
-    M_ = new hiopMatrixSparseTriplet(n, n, nnz);
-    nlp_ = nlp;
-    perf_report_ = "on"==hiop::tolower(nlp->options->GetString("time_kkt"));
-  }
-
-} // namespace hiop
+#endif

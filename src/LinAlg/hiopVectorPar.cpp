@@ -835,7 +835,7 @@ void hiopVectorPar::addLinearDampingTerm(const hiopVector& ixleft,
   assert(n_local_==(dynamic_cast<const hiopVectorPar&>(ixright) ).n_local_);
 #endif
 
-  for(long i=0; i<n_local_; i++) {
+  for(index_type i=0; i<n_local_; i++) {
     v[i] = alpha*v[i] + (ixl[i]-ixr[i])*ct;
   }
 }
@@ -1061,8 +1061,10 @@ bool hiopVectorPar::isfinite_local() const
 void hiopVectorPar::print()
 {
   int max_elems = n_local_;
-  for(int it=0; it<max_elems; it++)  
+  for(int it=0; it<max_elems; it++) {
     printf("vec [%d] = %1.16e\n",it+1,data_[it]);
+  }
+  printf("\n");
 }
 
 void hiopVectorPar::print(FILE* file, const char* msg/*=NULL*/, int max_elems/*=-1*/, int rank/*=-1*/) const 
