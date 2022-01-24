@@ -3,16 +3,11 @@
 #include "hiopAlgFilterIPM.hpp"
 
 #include <RAJA/RAJA.hpp>
-/*
-  todo:
-  - generate S vectors \xi (each of size nS) from U[-0.25, 0.25]
-*/
 
 using ex9_raja_exec = hiop::hiop_raja_exec;
 using ex9_raja_reduce = hiop::hiop_raja_reduce;
 using namespace hiop;
 
-	
 PriDecMasterProblemEx9Sparse::
 PriDecMasterProblemEx9Sparse(size_t nx, size_t ny, size_t nS, size_t S, std::string mem_space) 
   : nx_(nx), 
@@ -46,7 +41,7 @@ PriDecMasterProblemEx9Sparse::solve_master(hiopVector& x,
 {
   obj_=-1e+20;
   hiopSolveStatus status;
-  if(basecase_==NULL) {
+  if(basecase_==nullptr) {
     basecase_ = new PriDecBasecaseProblemEx9(nx_);
   }
   basecase_->set_include(include_r);
@@ -60,8 +55,6 @@ PriDecMasterProblemEx9Sparse::solve_master(hiopVector& x,
   //
   // any of the options below can be overwritten by specifying them in the 'hiop_pridec_master.options' file
   //
-  //nlp.options->SetStringValue("compute_mode", "hybrid");
-  //nlp.options->SetStringValue("dualsUpdateType", "linear");
 
   //nlp.options->SetStringValue("fixed_var", "relax");
   nlp.options->SetStringValue("Hessian", "analytical_exact");
@@ -89,13 +82,10 @@ PriDecMasterProblemEx9Sparse::solve_master(hiopVector& x,
     return status;
   }
   
-  // print x
-  // for(int i=0;i<nx_;i++) printf(" %d %18.12e ",i,x[i]);
-    
-  if(sol_==NULL) {
+  if(sol_==nullptr) {
     sol_ = new double[nx_];
   }
-  memcpy(sol_,x_vec, nx_*sizeof(double));
+  memcpy(sol_, x_vec, nx_*sizeof(double));
   
   //compute the recourse estimate
   if(include_r) {
@@ -172,7 +162,7 @@ bool PriDecMasterProblemEx9Sparse::eval_f_rterm(size_t idx, const int& n, const 
   status = solver.run();
   
   rval = solver.getObjective();  
-  if(y_==NULL) {
+  if(y_==nullptr) {
     y_ = new double[ny_];
   }
   solver.getSolution(y_);
@@ -197,7 +187,7 @@ bool PriDecMasterProblemEx9Sparse::eval_grad_rterm(size_t idx, const int& n, dou
 {
   assert(nx_==n);
   double* grad_vec = grad.local_data();
-  for(int i=0;i<n;i++) { 
+  for(int i=0; i<n; i++) { 
     grad_vec[i] = (x[i]-y_[i]);
   }
   return true;
@@ -215,7 +205,7 @@ inline size_t PriDecMasterProblemEx9Sparse::get_num_vars() const
 
 void PriDecMasterProblemEx9Sparse::get_solution(double* x) const
 {
-  assert(sol_!=NULL);
+  assert(sol_!=nullptr);
   memcpy(x, sol_, nx_*sizeof(double));
 };
 

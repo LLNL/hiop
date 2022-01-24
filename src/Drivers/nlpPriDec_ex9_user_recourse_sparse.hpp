@@ -28,7 +28,12 @@ using index_type = hiop::index_type;
 class PriDecRecourseProblemEx9Sparse : public hiop::hiopInterfaceSparse
 {
 public:
-  PriDecRecourseProblemEx9Sparse(int n, int nS, int S): nx_(n), nS_(nS),S_(S),x_(nullptr),xi_(nullptr)
+  PriDecRecourseProblemEx9Sparse(int n, int nS, int S)
+    : nx_(n), 
+      nS_(nS),
+      S_(S),
+      x_(nullptr),
+      xi_(nullptr)
   {
     assert(nS_>=1);
     assert(nx_>=nS_);  // ny=nx=n
@@ -40,7 +45,10 @@ public:
                                 int nS, 
                                 int S, 
                                 const double* x,
-                                const double* xi): nx_(n), nS_(nS), S_(S)
+                                const double* xi)
+    : nx_(n), 
+      nS_(nS), 
+      S_(S)
   {
     assert(nS_>=1);
     assert(nx_>=nS_);  // ny=nx=n
@@ -48,12 +56,10 @@ public:
 
     ny_ = nx_;
     xi_ = new double[nS_];
-    memcpy(xi_,xi, nS_*sizeof(double));
+    memcpy(xi_, xi, nS_*sizeof(double));
     x_ = new double[nx_];
 
-    //assert("for debugging" && false); //for debugging purpose
-    memcpy(x_,x, nx_*sizeof(double));
-    //nsparse_ = int(nx_*sparse_ratio);
+    memcpy(x_, x, nx_*sizeof(double));
   }
 
   PriDecRecourseProblemEx9Sparse(int n, 
@@ -61,7 +67,10 @@ public:
                                  int S, 
                                  int idx,
                                  const double* x,
-                                 const double* xi): nx_(n), nS_(nS), S_(S)
+                                 const double* xi)
+    : nx_(n), 
+      nS_(nS), 
+      S_(S)
   {
     assert(nS_>=1);
     assert(nx_>=nS_);  // ny=nx=n
@@ -69,12 +78,10 @@ public:
 
     ny_ = nx_;
     xi_ = new double[nS_];
-    memcpy(xi_,xi, nS_*sizeof(double));
+    memcpy(xi_, xi, nS_*sizeof(double));
     x_ = new double[nx_];
 
-    //assert("for debugging" && false); //for debugging purpose
     memcpy(x_,x, nx_*sizeof(double));
-    //nsparse_ = int(nx_*sparse_ratio);
     idx_ = idx;
   }
 
@@ -90,7 +97,7 @@ public:
     if(x_==NULL) {
       x_ = new double[nx_]; 
     }
-    memcpy(x_,x, nx_*sizeof(double));
+    memcpy(x_, x, nx_*sizeof(double));
   }
 
   /// Set the "sample" vector \xi
@@ -99,7 +106,7 @@ public:
     if(xi_==NULL) {
       xi_ = new double[nS_];     
     }
-    memcpy(xi_,xi, nS_*sizeof(double));
+    memcpy(xi_, xi, nS_*sizeof(double));
   }
 
   bool get_prob_sizes(size_type& n, size_type& m)
@@ -114,17 +121,22 @@ public:
     // y_1 bounded
     xlow[0] = 0.;
     xupp[0] = 1e20;
-    for(int i=1; i<n; ++i) xlow[i] = -1e+20;
-    for(int i=1; i<n; ++i) xupp[i] = +1e+20;
-    for(int i=0; i<n; ++i) type[i]=hiopNonlinear;
-    //assert(false && "not implemented");
+    for(int i=1; i<n; ++i) {
+      xlow[i] = -1e+20;
+    }
+    for(int i=1; i<n; ++i) {
+      xupp[i] = +1e+20;
+    }
+    for(int i=0; i<n; ++i) {
+      type[i]=hiopNonlinear;
+    }
     return true;
   }
 
   bool get_cons_info(const size_type& m, double* clow, double* cupp, NonlinearityType* type)
   {
     assert(m == ny_);
-    for(int i=0;i<ny_-1;i++) {
+    for(int i=0; i<ny_-1; i++) {
       clow[i] = 0.;
       cupp[i] = 1e20;
     }
@@ -175,7 +187,9 @@ public:
       return true;
     }
 
-    for(auto j=0;j<m; j++) cons[j]=0.;
+    for(auto j=0;j<m; j++) {
+      cons[j]=0.;
+    }
 
     for(int irow=0; irow<num_cons; irow++) {
       const int con_idx = (int) idx_cons[irow];
@@ -199,7 +213,7 @@ public:
   bool eval_grad_f(const size_type& n, const double* x, bool new_x, double* gradf)
   {
     assert(ny_==n);    
-    for(int i=0;i<nx_; i++) {
+    for(int i=0; i<nx_; i++) {
       gradf[i] = (x[i]-x_[i]);
     }
     return true;
@@ -306,25 +320,20 @@ public:
     assert(nnzHSS==m);
     //    r_i(x;\xi^i) = 1/S *  min_y 0.5 || y - x ||^2 such that 
     if(iHSS!=NULL && jHSS!=NULL) {
-      for(int i=0; i<m; i++) iHSS[i] = jHSS[i] = i;     
+      for(int i=0; i<m; i++) {
+        iHSS[i] = jHSS[i] = i;
+      }
     }
     // need lambda
     if(MHSS!=NULL) {
-      for(int i=0;i<m;i++) MHSS[i] =  obj_factor; //what is this?     
+      for(int i=0;i<m;i++) {
+        MHSS[i] =  obj_factor;
+      }
       MHSS[0] += 2*lambda[m-1];
       for(int i=1;i<m;i++) {
-        MHSS[i] += lambda[m-1]* 2.; //what is this?     
+        MHSS[i] += lambda[m-1]* 2.;
       } 
     }
-    /*
-    if(HDD!=NULL){
-      //HDD size: ndense_*ndense_
-      for(int i=0; i<ndense;i++) {
-        HDD[ndense*i+i] = obj_factor;
-        HDD[ndense*i+i] += 2*lambda[m-1];
-      }
-    }
-    */
     return true;
   }
 
@@ -346,7 +355,6 @@ public:
                           double* z_bndU0,
                           double* lambda0)
   {
-    //assert(false && "not implemented");
     return false;
   }
 
@@ -359,7 +367,7 @@ public:
   bool compute_gradx(const int n, const double* y, double*  gradx)
   {
     assert(nx_==n);
-    for(int i=0; i<nx_; i++){
+    for(int i=0; i<nx_; i++) {
       gradx[i] = (x_[i]-y[i]);
     }
     return true;
@@ -383,8 +391,6 @@ protected:
   int nS_;
   int S_;
   int idx_;
-  //double sparse_ratio = 0.7;
-  //int nsparse_;
 };
 
 #endif

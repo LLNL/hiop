@@ -81,7 +81,6 @@ public:
     auto& resmgr = umpire::ResourceManager::getInstance();
     umpire::Allocator allocator = resmgr.getAllocator(mem_space_);
     
-    //for(int i=0;i<nx_;i++) printf("x_vec %d %18.12e ",i,x_vec[i]);
     xi_ = static_cast<double*>(allocator.allocate(nS_ * sizeof(double)));
     x_ = static_cast<double*>(allocator.allocate(nx_ * sizeof(double)));
    
@@ -94,9 +93,6 @@ public:
  
     resmgr.deregisterAllocation(x_vec); 
     resmgr.deregisterAllocation(xi_vec); 
-    //for(int i=0;i<nx_;i++) printf("x_ %d %18.12e ",i,x_[i]);
-    
-    //assert("for debugging" && false); //for debugging purpose
   }
 
   PriDecRecourseProblemEx9Sparse(int n, 
@@ -134,8 +130,6 @@ public:
   
     resmgr.deregisterAllocation(x_vec); 
     resmgr.deregisterAllocation(xi_vec); 
-    //assert("for debugging" && false); //for debugging purpose
-    //nsparse_ = int(nx_*sparse_ratio);
     idx_ = idx;
   }
 
@@ -143,10 +137,11 @@ public:
   {
     auto& resmgr = umpire::ResourceManager::getInstance();
     umpire::Allocator allocator;
-    if(mem_space_ == "DEFAULT")
+    if(mem_space_ == "DEFAULT") {
       allocator = resmgr.getAllocator("HOST");
-    else
+    } else {
       allocator = resmgr.getAllocator(mem_space_);
+    }
 
     allocator.deallocate(xi_);
     allocator.deallocate(x_);
@@ -222,7 +217,6 @@ public:
     {
       type[i] = hiopNonlinear;
     });
-    //assert(false && "not implemented");
     return true;
   }
 
@@ -292,7 +286,7 @@ public:
                  const index_type* idx_cons,  
                  const double* x, 
                  bool new_x, 
-                  double* cons)
+                 double* cons)
   {
     assert(n==ny_); assert(m==ny_);
     assert(num_cons==ny_||num_cons==0);
@@ -497,15 +491,6 @@ public:
         MHSS[i] += lambda[m-1]* 2.; //what is this?     
       }); 
     }
-    /*
-    if(HDD!=NULL){
-      //HDD size: ndense_*ndense_
-      for(int i=0; i<ndense;i++) {
-        HDD[ndense*i+i] = obj_factor;
-        HDD[ndense*i+i] += 2*lambda[m-1];
-      }
-    }
-    */
     return true;
   }
 
@@ -570,7 +555,7 @@ public:
    */
   bool get_MPI_comm(MPI_Comm& comm_out) 
   {
-    comm_out=MPI_COMM_SELF;
+    comm_out = MPI_COMM_SELF;
     return true;
   }
 
@@ -583,8 +568,6 @@ protected:
   int S_;
   int idx_;
   std::string mem_space_;
-  //double sparse_ratio = 0.7;
-  //int nsparse_;
 };
 
 #endif
