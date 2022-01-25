@@ -206,6 +206,7 @@ HessianApprox(const int& n,
 hiopAlgPrimalDecomposition::HessianApprox::~HessianApprox()
 {
   //delete[] xkm1;
+  delete log_;
   delete xkm1;
   delete skm1;
   delete ykm1;

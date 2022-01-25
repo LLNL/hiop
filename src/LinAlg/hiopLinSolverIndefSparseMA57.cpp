@@ -186,17 +186,20 @@ namespace hiop
     int one = 1;
     icntl_[9-1] = 1; // do one step of iterative refinement
 
-    hiopVectorPar* x = dynamic_cast<hiopVectorPar*>(&x_in);
+    hiopVector* x = dynamic_cast<hiopVector*>(&x_in);
     assert(x!=nullptr);
     
     if(nullptr==rhs_) {
-      rhs_ = dynamic_cast<hiopVectorPar*>(x->new_copy());  
+      rhs_ = dynamic_cast<hiopVector*>(x->new_copy());  
+      assert(rhs_);
       assert(nullptr==resid_); 
-      resid_ = dynamic_cast<hiopVectorPar*>(x->new_copy());
+      resid_ = dynamic_cast<hiopVector*>(x->new_copy());
+      assert(resid_);
     } else {
       rhs_->copyFrom(*x);
       resid_->copyFrom(*x);
     }
+
     double* dx = x->local_data();
     double* drhs = rhs_->local_data();
     double* dresid = resid_->local_data();

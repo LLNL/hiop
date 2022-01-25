@@ -1,4 +1,4 @@
-#include "nlpPriDec_ex9.hpp"
+#include "nlpPriDec_ex9_sparse.hpp"
 //the solver
 #include "hiopAlgPrimalDecomp.hpp"
 
@@ -139,7 +139,7 @@ int main(int argc, char **argv)
   }
   
   
-  PriDecMasterProblemEx9 pridec_problem(nx, nx, nS, S);
+  PriDecMasterProblemEx9Sparse pridec_problem(nx, nx, nS, S);
   hiop::hiopAlgPrimalDecomposition pridec_solver(&pridec_problem, MPI_COMM_WORLD);
   pridec_solver.set_initial_alpha_ratio(0.5);
   pridec_solver.set_alpha_min(0.3);

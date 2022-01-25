@@ -86,13 +86,13 @@ namespace hiop
                                                             const double& delta_cc,
                                                             const double& delta_cd)
   {
-    HessSp_ = dynamic_cast<hiopMatrixSymSparseTriplet*>(Hess_);
+    HessSp_ = dynamic_cast<hiopMatrixSparse*>(Hess_);
     if(!HessSp_) { assert(false); return false; }
 
-    Jac_cSp_ = dynamic_cast<const hiopMatrixSparseTriplet*>(Jac_c_);
+    Jac_cSp_ = dynamic_cast<const hiopMatrixSparse*>(Jac_c_);
     if(!Jac_cSp_) { assert(false); return false; }
 
-    Jac_dSp_ = dynamic_cast<const hiopMatrixSparseTriplet*>(Jac_d_);
+    Jac_dSp_ = dynamic_cast<const hiopMatrixSparse*>(Jac_d_);
     if(!Jac_dSp_) { assert(false); return false; }
 
     size_type nx = HessSp_->n(), neq=Jac_cSp_->m(), nineq=Jac_dSp_->m();
