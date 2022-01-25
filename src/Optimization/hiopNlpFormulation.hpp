@@ -554,19 +554,23 @@ public:
   
   virtual hiopMatrix* alloc_Jac_c()
   {
-    return new hiopMatrixSparseTriplet(n_cons_eq_, n_vars_, nnz_sparse_Jaceq_);
+    return LinearAlgebraFactory::create_matrix_sparse(options->GetString("mem_space"), n_cons_eq_, n_vars_, nnz_sparse_Jaceq_);
+    //return new hiopMatrixSparseTriplet(n_cons_eq_, n_vars_, nnz_sparse_Jaceq_);
   }
   virtual hiopMatrix* alloc_Jac_d()
   {
-    return new hiopMatrixSparseTriplet(n_cons_ineq_, n_vars_, nnz_sparse_Jacineq_);
+    return LinearAlgebraFactory::create_matrix_sparse(options->GetString("mem_space"), n_cons_ineq_, n_vars_, nnz_sparse_Jacineq_);
+//	  return new hiopMatrixSparseTriplet(n_cons_ineq_, n_vars_, nnz_sparse_Jacineq_);
   }
   virtual hiopMatrix* alloc_Jac_cons()
   {
-    return new hiopMatrixSparseTriplet(n_cons_, n_vars_, nnz_sparse_Jaceq_ + nnz_sparse_Jacineq_);
+    return LinearAlgebraFactory::create_matrix_sparse(options->GetString("mem_space"),n_cons_, n_vars_, nnz_sparse_Jaceq_ + nnz_sparse_Jacineq_);
+    //return new hiopMatrixSparseTriplet(n_cons_, n_vars_, nnz_sparse_Jaceq_ + nnz_sparse_Jacineq_);
   }
   virtual hiopMatrix* alloc_Hess_Lagr()
   {
-    return new hiopMatrixSymSparseTriplet(n_vars_, nnz_sparse_Hess_Lagr_);
+    return LinearAlgebraFactory::create_matrix_sym_sparse(options->GetString("mem_space"),n_vars_, nnz_sparse_Hess_Lagr_);
+    //return new hiopMatrixSymSparseTriplet(n_vars_, nnz_sparse_Hess_Lagr_);
   }
   virtual size_type nx() const
   {
