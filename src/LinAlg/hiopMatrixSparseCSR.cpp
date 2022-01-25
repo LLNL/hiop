@@ -19,7 +19,8 @@ namespace hiop
 {
 
 hiopMatrixSparseCSR::hiopMatrixSparseCSR(size_type rows, size_type cols, size_type nnz)
-  : hiopMatrixSparse(rows, cols, nnz)
+  : hiopMatrixSparse(rows, cols, nnz),
+    buf_col_(nullptr)
 {
   if(rows==0 || cols==0) {
     assert(nnz_==0 && "number of nonzeros must be zero when any of the dimensions are 0");
@@ -33,6 +34,7 @@ hiopMatrixSparseCSR::hiopMatrixSparseCSR(size_type rows, size_type cols, size_ty
 
 hiopMatrixSparseCSR::~hiopMatrixSparseCSR()
 {
+  delete[] buf_col_;
   delete[] irowptr_;
   delete[] jcolind_;
   delete[] values_;
@@ -388,6 +390,190 @@ void hiopMatrixSparseCSR::print(FILE* file, const char* msg/*=nullptr*/,
     ss << "];" << std::endl;
 
     fprintf(file, "%s", ss.str().c_str());
+  }
+}
+
+
+//M = X*D*Y -> computes nnz in M and allocates M 
+//By convention, M is mxn, X is mxK and Y is Kxn
+hiopMatrixSparseCSR* hiopMatrixSparseCSR::times_mat_alloc(const hiopMatrixSparseCSR& Y) const
+{
+  const index_type* irowptrY = Y.i_row();
+  const index_type* jcolindY = Y.j_col();
+
+  const index_type* irowptrX = irowptr_;
+  const index_type* jcolindX = jcolind_;
+
+  const index_type m = this->m();
+  const index_type n = Y.n();
+
+  const index_type K = this->n();
+  assert(Y.m() == K);
+  
+  index_type nnzM = 0;
+    // count the number of entries in the result M
+  char* flag = new char[m];
+  for(int i=0; i<m; i++) {
+    //reset flag 
+    memset(flag, 0, m*sizeof(char));
+
+    for(int pt=irowptrX[i]; pt<irowptrX[i+1]; pt++) {
+      //X[i,k] is nonzero
+      const index_type k = jcolindX[pt];
+      assert(k<K);
+
+      //add the nonzero pattern of row k of Y to M
+      for(int p=irowptrY[k]; p<irowptrY[k+1]; p++) {
+	const index_type j = jcolindY[p];
+        assert(j<n);
+        
+        //Y[k,j] is non zero, hence M[i,j] is non zero
+	if(flag[j]==0) {
+          //only count once
+	  nnzM++;
+	  flag[j]=1;
+	}
+      }
+    }
+  }
+  assert(nnzM>=0); //overflow?!?
+
+  delete[] flag;
+
+  //allocate result M
+  return new hiopMatrixSparseCSR(m, n, nnzM);
+} 
+
+/**
+ *  M = X*D*Y -> computes nnz in M and allocates M 
+ * By convention, M is mxn, X is mxK, Y is Kxn, and D is size K.
+ * 
+ * The algorithm uses the fact that the sparsity pattern of the i-th row of M is
+ *           K
+ * M_{i*} = sum x_{ik} Y_{j*}   (see Tim Davis book p.17)
+ *          k=1
+ * Therefore, to get sparsity pattern of the i-th row of M:
+ *  1. we iterate over nonzeros (i,k) in the i-th row of X
+ *  2. for each such k we iterate over the nonzeros (k,j) in the k-th row of Y and 
+ *  3. count (i,j) as nonzero of M 
+ */
+void hiopMatrixSparseCSR::times_mat_symbolic(hiopMatrixSparseCSR& M,
+                                             const hiopMatrixSparseCSR& Y) const
+{
+  const index_type* irowptrY = Y.i_row();
+  const index_type* jcolindY = Y.j_col();
+  const double* valuesY = Y.M();
+  
+  const index_type* irowptrX = irowptr_;
+  const index_type* jcolindX = jcolind_;
+  const double* valuesX = values_;
+
+  index_type* irowptrM = M.i_row();
+  index_type* jcolindM = M.j_col();
+  double* valuesM = M.M();
+  
+  const index_type m = this->m();
+  const index_type n = Y.n();
+
+  const index_type K = this->n();
+  assert(Y.m() == K);
+
+  if(nullptr == M.buf_col_) {
+    M.buf_col_ = new double[n];
+  }
+  double* W = M.buf_col_;
+  
+  char* flag=new char[n];
+
+  for(int it=0; it<n; it++) {
+    W[it] = 0.0;
+  }
+
+  int nnzM=0;
+  for(int i=0; i<m; i++) {
+    memset(flag, 0, m);
+
+    assert(nnzM<M.numberOfNonzeros());
+    //start row i of M
+    irowptrM[i]=nnzM;
+    
+    for(int px=irowptrX[i]; px<irowptrX[i+1]; px++) { 
+      const auto k = jcolindX[px]; //X[i,k] is non-zero
+      assert(k<K);
+      
+      //const double val = valuesX[px]*d[k];
+
+      //iterate the row k of Y and scatter the values into W
+      for(int py=irowptrY[k]; py<irowptrY[k+1]; py++) {
+	const auto j = jcolindY[py];
+        assert(j<n);
+        
+	//we have M[k,j] nonzero; add it if not already added
+	if(flag[j]==0) {
+          assert(nnzM<M.numberOfNonzeros());
+          
+	  jcolindM[nnzM++]=j;
+	  flag[j]=1;
+	}
+        //W[j] += (valuesY[py]*val);
+      }
+    }
+  }
+  irowptrM[n] = nnzM;
+  delete[] flag;
+}
+
+void hiopMatrixSparseCSR::times_mat_numeric(double beta,
+                                            hiopMatrixSparseCSR& M,
+                                            double alpha,
+                                            const hiopMatrixSparseCSR& Y)
+{
+  const index_type* irowptrY = Y.i_row();
+  const index_type* jcolindY = Y.j_col();
+  const double* valuesY = Y.M();
+  
+  const index_type* irowptrX = irowptr_;
+  const index_type* jcolindX = jcolind_;
+  const double* valuesX = values_;
+
+  index_type* irowptrM = M.i_row();
+  index_type* jcolindM = M.j_col();
+  double* valuesM = M.M();
+  
+  const index_type m = this->m();
+  const index_type n = Y.n();
+
+  const index_type K = this->n();
+  assert(Y.m() == K);
+
+  if(nullptr == M.buf_col_) {
+    M.buf_col_ = new double[n];
+  }
+  double* W = M.buf_col_;
+
+  for(int it=0; it<n; it++) {
+    W[it] = 0.0;
+  }
+
+  for(int i=0; i<m; i++) {
+    for(int px=irowptrX[i]; px<irowptrX[i+1]; px++) { 
+      const auto k = jcolindX[px]; //X[i,k] is non-zero
+      assert(k<K);
+      
+      const double val = valuesX[px];
+
+      //iterate the row k of Y and scatter the values into W
+      for(int py=irowptrY[k]; py<irowptrY[k+1]; py++) {
+        assert(jcolindY[py]<n);        
+	W[jcolindY[py]] += (valuesY[py]*val);
+      }
+    }
+    //gather the values into the i-th row M
+    for(int p=irowptrM[i]; p<irowptrM[i+1]; ++p) {
+      const auto j = jcolindM[p];
+      valuesM[p] = W[j];
+      W[j] = 0.0;
+    }
   }
 }
 

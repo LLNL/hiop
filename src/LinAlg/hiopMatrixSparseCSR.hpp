@@ -343,10 +343,7 @@ public:
    * @pre The dimensions of the matrices should be consistent with the multiplication.
    * 
    */
-  hiopMatrixSparseCSR* times_mat_alloc(const hiopMatrixSparseCSR& Y) const
-  {
-    assert(false && "wip");
-  }  
+  hiopMatrixSparseCSR* times_mat_alloc(const hiopMatrixSparseCSR& Y) const;
   
   /**
    * Computes sparsity pattern, meaning computes row pointers and column indexes of `M`,
@@ -364,10 +361,7 @@ public:
    * This preallocation can be done by calling `times_mat_alloc` prior to this method.
    * 
    */
-  void times_mat_symbolic(hiopMatrixSparseCSR& M, const hiopMatrixSparseCSR& Y) const
-  {
-    assert(false && "wip");
-  }  
+  void times_mat_symbolic(hiopMatrixSparseCSR& M, const hiopMatrixSparseCSR& Y) const;  
 
   /**
    * Computes (numerical values of) M = beta*M + alpha*X*D*Y, where X is the calling matrix
@@ -397,12 +391,7 @@ public:
   void times_mat_numeric(double beta,
                          hiopMatrixSparseCSR& M,
                          double alpha,
-                         const hiopMatrixSparseCSR& Y)
-  {
-    assert(false && "wip");
-  }  
-
-
+                         const hiopMatrixSparseCSR& Y);
 
   /**
    * Builds `this` as the CSR representation of the triplet matrix `M`.
@@ -513,21 +502,26 @@ protected:
   index_type* jcolind_;
 
   /// Nonzero values
-  double* values_; 
+  double* values_;
+
+  /// Working buffer in the size of columns, allocated on demand and reused by some methods
+  double* buf_col_;
 
 private:
   hiopMatrixSparseCSR()
     : hiopMatrixSparse(0, 0, 0),
       irowptr_(nullptr),
       jcolind_(nullptr),
-      values_(nullptr)
+      values_(nullptr),
+      buf_col_(nullptr)
   {
   }
   hiopMatrixSparseCSR(const hiopMatrixSparseCSR&)
     : hiopMatrixSparse(0, 0, 0),
       irowptr_(nullptr),
       jcolind_(nullptr),
-      values_(nullptr)
+      values_(nullptr),
+      buf_col_(nullptr)
   {
     assert(false);
   }
