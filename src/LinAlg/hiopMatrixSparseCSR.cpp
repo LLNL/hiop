@@ -20,26 +20,64 @@ namespace hiop
 
 hiopMatrixSparseCSR::hiopMatrixSparseCSR(size_type rows, size_type cols, size_type nnz)
   : hiopMatrixSparse(rows, cols, nnz),
-    buf_col_(nullptr)
+    buf_col_(nullptr),
+    row_starts_(nullptr)
 {
   if(rows==0 || cols==0) {
     assert(nnz_==0 && "number of nonzeros must be zero when any of the dimensions are 0");
     nnz_ = 0;
+  } else {
+    alloc();
   }
-
-  irowptr_ = new index_type[nrows_];
-  jcolind_ = new index_type[nnz_];
-  values_ = new double[nnz_];
 }
 
+hiopMatrixSparseCSR::hiopMatrixSparseCSR()
+  : hiopMatrixSparse(0, 0, 0),
+    irowptr_(nullptr),
+    jcolind_(nullptr),
+    values_(nullptr),
+    buf_col_(nullptr),
+    row_starts_(nullptr)
+{
+}
+
+  
 hiopMatrixSparseCSR::~hiopMatrixSparseCSR()
 {
+  dealloc();
+}
+
+void hiopMatrixSparseCSR::alloc()
+{
+  assert(irowptr_ == nullptr);
+  assert(jcolind_ == nullptr);
+  assert(values_ == nullptr);
+
+  irowptr_ = new index_type[nrows_+1];
+  jcolind_ = new index_type[nnz_];
+  values_ = new double[nnz_];
+
+  assert(buf_col_ == nullptr);
+  //buf_col_ remains null since it is allocated on demand
+  assert(row_starts_ == nullptr);
+  //row_starts_ remains null since it is allocated on demand
+}
+
+
+void hiopMatrixSparseCSR::dealloc()
+{
+  delete[] row_starts_;
   delete[] buf_col_;
   delete[] irowptr_;
   delete[] jcolind_;
   delete[] values_;
+  row_starts_ = nullptr;
+  buf_col_ = nullptr;
+  irowptr_ = nullptr;
+  jcolind_ = nullptr;
+  values_ = nullptr;
 }
-
+  
 void hiopMatrixSparseCSR::setToZero()
 {
   for(index_type i=0; i<nnz_; i++)
@@ -303,6 +341,72 @@ void hiopMatrixSparseCSR::copyRowsBlockFrom(const hiopMatrix& src_gen,
   assert(n_rows + rows_src_idx_st <= src.m());
   assert(n_rows + rows_dest_idx_st <= this->m());
 
+  assert(false && "not yet implemented");
+}
+
+void hiopMatrixSparseCSR::copySubmatrixFrom(const hiopMatrix& src_gen,
+                                            const index_type& dest_row_st,
+                                            const index_type& dest_col_st,
+                                            const size_type& dest_nnz_st,
+                                            const bool offdiag_only)
+{
+  const hiopMatrixSparseCSR& src = dynamic_cast<const hiopMatrixSparseCSR&>(src_gen);
+  auto m_rows = src.m();
+  auto n_cols = src.n();
+
+  assert(this->numberOfNonzeros() >= src.numberOfNonzeros());
+  assert(n_cols + dest_col_st <= this->n() );
+  assert(m_rows + dest_row_st <= this->m());
+  assert(dest_nnz_st <= this->numberOfNonzeros());
+
+  assert(false && "not yet implemented");
+}
+
+void hiopMatrixSparseCSR::copySubmatrixFromTrans(const hiopMatrix& src_gen,
+                                                 const index_type& dest_row_st,
+                                                 const index_type& dest_col_st,
+                                                 const size_type& dest_nnz_st,
+                                                 const bool offdiag_only)
+{
+  const auto& src = dynamic_cast<const hiopMatrixSparseCSR&>(src_gen);
+  auto m_rows = src.n();
+  auto n_cols = src.m();
+
+  assert(this->numberOfNonzeros() >= src.numberOfNonzeros());
+  assert(n_cols + dest_col_st <= this->n() );
+  assert(m_rows + dest_row_st <= this->m());
+  assert(dest_nnz_st <= this->numberOfNonzeros());
+
+  assert(false && "not yet implemented");
+}
+
+void hiopMatrixSparseCSR::
+setSubmatrixToConstantDiag_w_colpattern(const double& scalar,
+                                        const index_type& dest_row_st,
+                                        const index_type& dest_col_st,
+                                        const size_type& dest_nnz_st,
+                                        const size_type& nnz_to_copy,
+                                        const hiopVector& ix)
+{
+  assert(ix.get_local_size() + dest_row_st <= this->m());
+  assert(nnz_to_copy + dest_col_st <= this->n() );
+  assert(dest_nnz_st + nnz_to_copy <= this->numberOfNonzeros());
+  
+  assert(false && "not yet implemented");
+}
+
+void hiopMatrixSparseCSR::
+setSubmatrixToConstantDiag_w_rowpattern(const double& scalar,
+                                        const index_type& dest_row_st,
+                                        const index_type& dest_col_st,
+                                        const size_type& dest_nnz_st,
+                                        const size_type& nnz_to_copy,
+                                        const hiopVector& ix)
+{
+  assert(nnz_to_copy + dest_row_st <= this->m());
+  assert(ix.get_local_size() + dest_col_st <= this->n() );
+  assert(dest_nnz_st + nnz_to_copy <= this->numberOfNonzeros());
+  
   assert(false && "not yet implemented");
 }
 
@@ -574,6 +678,191 @@ void hiopMatrixSparseCSR::times_mat_numeric(double beta,
       valuesM[p] = W[j];
       W[j] = 0.0;
     }
+  }
+}
+
+void hiopMatrixSparseCSR::form_from_symbolic(const hiopMatrixSparseTriplet& M)
+{
+  if(M.m()!=nrows_ || M.n()!=ncols_ || M.numberOfNonzeros()!=nnz_) {
+    dealloc();
+    
+    nrows_ = M.m();
+    ncols_ = M.n();
+    nnz_ = M.numberOfNonzeros();
+
+    alloc();
+  }
+
+  assert(nnz_>=0);
+  if(nnz_<=0) {
+    return;
+  }
+  
+  assert(irowptr_);
+  assert(jcolind_);
+  assert(values_);
+
+  const index_type* Mirow = M.i_row();
+  const index_type* Mjcol = M.j_col();
+
+  //storage the row count
+  std::vector<index_type> w(nrows_, 0);
+  
+  for(int it=0; it<nnz_; ++it) {
+    const index_type row_idx = Mirow[it];
+
+#ifndef NDEBUG
+    if(it>0) {
+      assert(Mirow[it] >= Mirow[it-1] && "row indexes of the triplet format are not ordered.");
+      if(Mirow[it] == Mirow[it-1]) {
+        assert(Mjcol[it] > Mjcol[it-1] && "col indexes of the triplet format are not ordered or unique.");
+      }
+    }
+#endif
+    assert(row_idx<nrows_ && row_idx>=0);
+    assert(Mjcol[it]<ncols_ && Mjcol[it]>=0);
+
+    w[row_idx]++;
+
+    jcolind_[it] = Mjcol[it];
+  }
+
+  irowptr_[0] = 0;
+  for(int i=0; i<nrows_; i++) {
+    irowptr_[i+1] = irowptr_[i] + w[i];
+  }
+  assert(irowptr_[nrows_] == nnz_);
+}
+
+void hiopMatrixSparseCSR::form_from_numeric(const hiopMatrixSparseTriplet& M)
+{
+  assert(irowptr_ && jcolind_ && values_);
+  assert(nrows_ == M.m());
+  assert(ncols_ == M.n());
+  assert(nnz_ == M.numberOfNonzeros());
+
+  memcpy(values_, M.M(), nnz_*sizeof(double));
+}
+
+void hiopMatrixSparseCSR::form_transpose_from_symbolic(const hiopMatrixSparseTriplet& M)
+{
+  if(M.m()!=ncols_ || M.n()!=nrows_ || M.numberOfNonzeros()!=nnz_) {
+    dealloc();
+    
+    nrows_ = M.n();
+    ncols_ = M.m();
+    nnz_ = M.numberOfNonzeros();
+
+    alloc();
+  }
+
+  assert(nnz_>=0);
+  if(nnz_<=0) {
+    return;
+  }
+  
+  assert(irowptr_);
+  assert(jcolind_);
+  assert(values_);
+
+  const index_type* Mirow = M.i_row();
+  const index_type* Mjcol = M.j_col();
+  const double* Mvalues  = M.M();
+
+  assert(nullptr == row_starts_);
+  row_starts_ = new index_type[nrows_];
+
+  //in this method we use the row_starts_ as working buffer to count nz on each row of `this`
+  //at the end of this method row_starts_ keeps row starts, used by the numeric method to
+  //speed up computations
+  {
+    index_type* w = row_starts_;
+    
+    // initialize nz per row to zero
+    for(index_type i=0; i<nrows_; ++i) {
+      w[i] = 0;
+    }
+    // count number of nonzeros in each row
+    for(index_type it=0; it<nnz_; ++it) {
+      assert(Mjcol[it]<nrows_);
+      w[Mjcol[it]]++;
+    }
+  
+    // cum sum in irowptr_ and set w to the row starts
+    irowptr_[0] = 0;
+    for(int i=1; i<=nrows_; ++i) {
+      irowptr_[i] = irowptr_[i-1] + w[i-1];
+      w[i-1] = irowptr_[i-1];
+    }
+    //here row_starts_(==w) contains the row starts
+  }
+  assert(irowptr_[nrows_] = nnz_);
+  
+  //populate jcolind_ and values_
+  for(index_type it=0; it<nnz_; ++it) {
+    const index_type row_idx = Mjcol[it];
+    
+    //index in nonzeros of this (transposed)
+    const auto nz_idx = row_starts_[row_idx];
+    assert(nz_idx<nnz_);
+    
+    //assign col and value
+    jcolind_[nz_idx] = Mirow[it];
+    //values_[nz_idx] = Mvalues[it];
+    assert(Mirow[it] < ncols_);
+    
+    //increase start for row 'row_idx'
+    row_starts_[row_idx]++;
+
+    assert(row_starts_[row_idx] <= irowptr_[row_idx+1]);
+  }
+
+  //rollback row_starts_
+  for(int i=1; i<nrows_; ++i) {
+    row_starts_[i-1] = row_starts_[i];
+  }
+}
+
+void hiopMatrixSparseCSR::form_transpose_from_numeric(const hiopMatrixSparseTriplet& M)
+{
+  assert(irowptr_ && jcolind_ && values_ && row_starts_);
+  assert(nrows_ == M.n());
+  assert(ncols_ == M.m());
+  assert(nnz_ == M.numberOfNonzeros());
+  
+#ifndef NDEBUG
+  for(int i=0; i<nrows_; i++) {
+    for(int itnz=irowptr_[i]+1; itnz<irowptr_[i+1]; ++itnz) {
+      assert(jcolind_[itnz] > jcolind_[itnz-1] &&
+             "something wrong: col indexes not sorted or not unique");
+    }
+  }
+#endif
+  const index_type* Mirow = M.i_row();
+  const index_type* Mjcol = M.j_col();
+  const double* Mvalues  = M.M();
+
+  //populate values_
+  for(index_type it=0; it<nnz_; ++it) {
+    const index_type row_idx = Mjcol[it];
+    
+    //index in nonzeros of this (transposed)
+    const auto nz_idx = row_starts_[row_idx];
+    assert(nz_idx<nnz_);
+    
+    //assign col and value
+    values_[nz_idx] = Mvalues[it];
+    assert(Mirow[it] < ncols_);
+    
+    //increase start for row 'row_idx'
+    row_starts_[row_idx]++;
+
+    assert(row_starts_[row_idx] <= irowptr_[row_idx+1]);
+  }
+
+  //rollback row_starts_
+  for(int i=1; i<nrows_; ++i) {
+    row_starts_[i-1] = row_starts_[i];
   }
 }
 

@@ -56,6 +56,7 @@
 
 #include "hiopKKTLinSysSparse.hpp"
 #include "hiopMatrixSparseTriplet.hpp"
+#include "hiopMatrixSparseCSR.hpp"
 #include "hiopKrylovSolver.hpp"
 
 namespace hiop

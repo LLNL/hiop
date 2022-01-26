@@ -141,6 +141,10 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   t.reset(); t.start();
   hiopMatrixSparseCSRStorage JacD;
   JacD.form_from(*Jac_triplet);
+
+  hiopMatrixSparseCSR JacD_;
+  JacD_.form_from_symbolic(*Jac_triplet);
+  JacD_.form_from_numeric(*Jac_triplet);
   //t.stop(); printf("JacD    took %.5f\n", t.getElapsedTime());
 
   t.reset(); t.start();

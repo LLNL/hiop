@@ -22,6 +22,7 @@ class hiopMatrixSparseCSR : public hiopMatrixSparse
 {
 public:
   hiopMatrixSparseCSR(int num_rows, int num_cols, int nnz);
+  hiopMatrixSparseCSR();
   virtual ~hiopMatrixSparseCSR();
 
   virtual void setToZero();
@@ -394,34 +395,48 @@ public:
                          const hiopMatrixSparseCSR& Y);
 
   /**
-   * Builds `this` as the CSR representation of the triplet matrix `M`.
+   * Allocates and populates the sparsity pattern of `this` as the CSR representation 
+   * of the triplet matrix `M`.
+   * 
+   * @pre The input argument should have the nonzeros sorted by row and then by column
+   * indexes.
    */
-
   //// note: cusparseXcoo2csr + on the device cudamemcpy
-  void form_from_symbolic(const hiopMatrixSparseTriplet& M)
-  {
-    assert(false && "wip");
-  }
-  //// note: only device cuda memcpy
-  void form_from_numeric(const hiopMatrixSparseTriplet& M)
-  {
-    assert(false && "wip");
-  }
+  void form_from_symbolic(const hiopMatrixSparseTriplet& M);
 
+  /**
+   * Copies the numerical values of the triplet matrix M into the CSR matrix `this`
+   *
+   * @pre The sparsity pattern (row pointers and column indexes arrays) of `this` should be 
+   * allocated and populated, possibly by a previous call to `form_from_symbolic`
+   *
+   * @pre The input argument should have the nonzeros sorted by row and then by column
+   * indexes.
+   */
+  //// note: only device cuda memcpy
+  void form_from_numeric(const hiopMatrixSparseTriplet& M);
   
   /**
-   * Builds `this` as the CSR representation of the transpose of the triplet 
-   * matrix `M`.
+   * Allocates and populates the sparsity pattern of `this` as the CSR representation 
+   * of transpose of the triplet matrix `M`.
+   * 
+   * @pre The input argument should have the nonzeros sorted by row and then by column
+   * indexes.
    */
   //// note: cusparseCsr2cscEx2
-  void form_from_transpose_symbolic(const hiopMatrixSparseTriplet& M)
-  {
-    assert(false && "wip");
-  }
-  void form_from_transpose_numeric(const hiopMatrixSparseTriplet& M)
-  {
-    assert(false && "wip");
-  }
+  void form_transpose_from_symbolic(const hiopMatrixSparseTriplet& M);
+  
+  /**
+   * Copies the numerical values of the transpose of the triplet matrix M into the 
+   * CSR matrix `this`
+   *
+   * @pre The sparsity pattern (row pointers and column indexes arrays) of `this` should be 
+   * allocated and populated, possibly by a previous call to `form_transpose_from_symbolic`
+   *
+   * @pre The input argument should have the nonzeros sorted by row and then by column
+   * indexes.
+   */  
+  void form_transpose_from_numeric(const hiopMatrixSparseTriplet& M);
 
   /**
    * (Re)Initializes `this` to a diagonal matrix with diagonal entries given by D
@@ -491,6 +506,10 @@ public:
   /////////////////////////////////////////////////////////////////////
   // end of new CSR-specific methods
   /////////////////////////////////////////////////////////////////////
+
+private:
+  void alloc();
+  void dealloc();
 protected:
 
   //// inherits nrows_, ncols_, and nnz_ from parent hiopSparseMatrix
@@ -507,23 +526,22 @@ protected:
   /// Working buffer in the size of columns, allocated on demand and reused by some methods
   double* buf_col_;
 
+  /**
+   * Storage for the row starts used by `form_transpose_from_xxx` methods (allocated on 
+   * demand, only the above mentioned methods are called)
+   */
+  index_type* row_starts_;
+  
 private:
-  hiopMatrixSparseCSR()
-    : hiopMatrixSparse(0, 0, 0),
-      irowptr_(nullptr),
-      jcolind_(nullptr),
-      values_(nullptr),
-      buf_col_(nullptr)
-  {
-  }
   hiopMatrixSparseCSR(const hiopMatrixSparseCSR&)
     : hiopMatrixSparse(0, 0, 0),
       irowptr_(nullptr),
       jcolind_(nullptr),
       values_(nullptr),
-      buf_col_(nullptr)
+      buf_col_(nullptr),
+      row_starts_(nullptr)
   {
-    assert(false);
+    assert(false && "copy constructor disabled");
   }
 };
 
