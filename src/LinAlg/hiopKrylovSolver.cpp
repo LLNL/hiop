@@ -5,7 +5,7 @@
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp
 // is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause).
-// Please also read “Additional BSD Notice” below.
+// Please also read "Aditional BSD Notice" below.
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -224,7 +224,7 @@ bool hiopPCGSolver::solve(hiopVector& b)
     rho = res_->dotProductWith(*zk_);
 
     //check for stagnation
-    if((rho == 0) || abs(rho) > 1E+20) {
+    if((rho == 0) || fabs(rho) > 1E+20) {
       flag_ = 4;
       iter_ = ii + 1;
       break;
@@ -234,7 +234,7 @@ bool hiopPCGSolver::solve(hiopVector& b)
       pk_->copyFrom(*zk_);
     } else {
       double beta = rho / rho1;
-      if(beta == 0 || abs(beta) > 1E+20) {
+      if(beta == 0 || fabs(beta) > 1E+20) {
         flag_ = 4;
         iter_ = ii + 1;
         break;
@@ -246,21 +246,21 @@ bool hiopPCGSolver::solve(hiopVector& b)
     A_opr_->times_vec(*qk_, *pk_);
     pq = pk_->dotProductWith(*qk_);
     
-    if(pq <= 0.0 || abs(pq) > 1E+20) {
+    if(pq <= 0.0 || fabs(pq) > 1E+20) {
       flag_ = 4;
       iter_ = ii + 1;
       break;
     } else {
       alpha = rho / pq;
     }
-    if(abs(alpha) > 1E+20) {
+    if(fabs(alpha) > 1E+20) {
       flag_ = 4;
       iter_ = ii + 1;
       break;
     }
   
     // Check for stagnation of the method
-    if(pk_->twonorm()*abs(alpha) < eps * xk_->twonorm()) {
+    if(pk_->twonorm()*fabs(alpha) < eps * xk_->twonorm()) {
       stagsteps++;
     } else {
       stagsteps = 0;
@@ -381,7 +381,7 @@ bool hiopPCGSolver::solve(hiopVector& b)
 
 bool hiopBiCGStabSolver::solve(hiopVector& b)
 {
-  ss_info_ = std::stringstream("");
+  std::stringstream().swap(ss_info_);
   // rhs = 0 --> solution = 0
   const double n2b = b.twonorm();
   if(n2b == 0.0) {
@@ -460,7 +460,7 @@ bool hiopBiCGStabSolver::solve(hiopVector& b)
     rho = rt_->dotProductWith(*res_);
 
     //check for stagnation
-    if((rho == 0) || abs(rho) > 1E+40) {
+    if((rho == 0) || fabs(rho) > 1E+40) {
       flag_ = 4;
       iter_ = ii + 1 - 0.5;
       break;
@@ -470,7 +470,7 @@ bool hiopBiCGStabSolver::solve(hiopVector& b)
       pk_->copyFrom(*res_);
     } else {
       double beta = rho / rho1 * (alpha / omega);
-      if(beta == 0 || abs(beta) > 1E+40) {
+      if(beta == 0 || fabs(beta) > 1E+40) {
         flag_ = 4;
         iter_ = ii + 1 - 0.5;
         break;
@@ -493,7 +493,7 @@ bool hiopBiCGStabSolver::solve(hiopVector& b)
     
     double rtv = rt_->dotProductWith(*v_);
     
-    if(rtv == 0.0 || abs(rtv) > 1E+40) {
+    if(rtv == 0.0 || fabs(rtv) > 1E+40) {
       flag_ = 4;
       iter_ = ii + 1 - 0.5;
       break;
@@ -501,14 +501,14 @@ bool hiopBiCGStabSolver::solve(hiopVector& b)
 
     alpha = rho / rtv;
 
-    if(abs(alpha) > 1E+20) {
+    if(fabs(alpha) > 1E+20) {
       flag_ = 4;
       iter_ = ii + 1 - 0.5;
       break;
     }
   
     // Check for stagnation of the method
-    if(ph_->twonorm()*abs(alpha) < eps * xk_->twonorm()) {
+    if(ph_->twonorm()*fabs(alpha) < eps * xk_->twonorm()) {
       stagsteps++;
     } else {
       stagsteps = 0;
@@ -573,7 +573,7 @@ bool hiopBiCGStabSolver::solve(hiopVector& b)
 
     double tt = t_->dotProductWith(*t_);
     
-    if(tt == 0.0 || abs(tt) > 1E+20) {
+    if(tt == 0.0 || fabs(tt) > 1E+20) {
       iter_ = ii + 1;
       flag_ = 4;
       break;
@@ -581,13 +581,13 @@ bool hiopBiCGStabSolver::solve(hiopVector& b)
 
     omega = t_->dotProductWith(*sk_) / tt;
 
-    if(abs(omega) > 1E+20) {
+    if(fabs(omega) > 1E+20) {
       iter_ = ii + 1;
       flag_ = 4;
       break;
     }
 
-    if(ph_->twonorm()*abs(omega) < eps * xk_->twonorm()) {
+    if(ph_->twonorm()*fabs(omega) < eps * xk_->twonorm()) {
       stagsteps++;
     } else {
       stagsteps = 0;
