@@ -589,67 +589,55 @@ updateLogBarrierParameters(hiopIterate& it, const double& mu_curr, const double&
   mu_new  = new_mu;
   tau_new = fmax(tau_min,1.0-mu_new);
   
-  if(nlp->options->GetString("elastic_mode")=="yes") {
+  if(nlp->options->GetString("elastic_mode")!="none") {
     const double target_mu = nlp->options->GetNumeric("tolerance");
     const double bound_relax_perturb_init = nlp->options->GetNumeric("elastic_mode_bound_relax_initial");
     const double bound_relax_perturb_min = nlp->options->GetNumeric("elastic_mode_bound_relax_final");
     double bound_relax_perturb;
-    bound_relax_perturb =  (mu_new - target_mu) / (mu0 - target_mu) * (bound_relax_perturb_init-bound_relax_perturb_min) 
-                           + bound_relax_perturb_min;
     
-    // tune 1
-    bound_relax_perturb = 0.995*mu_new;
-//    std::cout << bound_relax_perturb << std::endl;
-  
-    // tune 2
-//    bound_relax_perturb = fmin(bound_relax_perturb, 0.995*bound_relax_perturb_last_);
-//    bound_relax_perturb = fmin(bound_relax_perturb, 0.995*mu_new);
+    if(nlp->options->GetString("elastic_bound_strategy")=="mu_scaled") {
+      bound_relax_perturb = 0.995*mu_new;
+    } else if(nlp->options->GetString("elastic_bound_strategy")=="mu_projected") {
+      bound_relax_perturb =  (mu_new - target_mu) / (mu0 - target_mu) * (bound_relax_perturb_init-bound_relax_perturb_min) 
+                           + bound_relax_perturb_min;
+    }
 
-//    std::cout << bound_relax_perturb << std::endl;
     if(bound_relax_perturb > bound_relax_perturb_init) {
       bound_relax_perturb = bound_relax_perturb_init;
     }
+
     if(bound_relax_perturb < bound_relax_perturb_min) {
       bound_relax_perturb = bound_relax_perturb_min;
     }
-    nlp->log->printf(hovWarning, "Tighen the variable/constraint bounds --- %10.6g\n", bound_relax_perturb);
 
-//    std::cout<<"x"<<std::endl;
-//    it.get_x()->print();
-//    std::cout<<"sxl"<<std::endl;
-//    it.get_sxl()->print();
-//    std::cout<<"xl"<<std::endl;
-//    nlp->get_xl().print();
+    nlp->log->printf(hovLinAlgScalars, "Tighen the variable/constraint bounds --- %10.6g\n", bound_relax_perturb);
 
     nlp->reset_bounds(bound_relax_perturb);
 
-//    std::cout<<"after modify bounds:\nxl"<<std::endl;
-//    nlp->get_xl().print();
+    if(nlp->options->GetString("elastic_mode")!="tighten_bound") {
+      assert(nlp->options->GetString("elastic_mode")=="correct_it" || 
+             nlp->options->GetString("elastic_mode")=="correct_it_adjust_bound");
+      // recompute slacks according to the new bounds
+      it.determineSlacks();
 
-    it.determineSlacks();
+      // adjust small/negative slacks
+      int num_adjusted_slacks = it.adjust_small_slacks(it, mu_new);
+      if(num_adjusted_slacks > 0) {    
+        nlp->log->printf(hovLinAlgScalars, "updateLogBarrierParameters: %d slacks are too small after tightening the bounds. "
+                        "Adjust corresponding slacks!\n", num_adjusted_slacks);
 
-//    std::cout<<"recompute slacks:\nsxl"<<std::endl;
-//    it.get_sxl()->print();
-
-    int num_adjusted_slacks = it.adjust_small_slacks(it, mu_new);
-    if(num_adjusted_slacks > 0) {    
-//      std::cout<<"after adjust small slacks:\nsxl"<<std::endl;
-//      it.get_sxl()->print();
-
-      nlp->log->printf(hovWarning, "updateLogBarrierParameters: %d slacks are too small after tightening the bounds. "
-                       "Adjust corresponding slacks!\n", num_adjusted_slacks);
-
-    // tune 3
-      nlp->adjust_bounds(it);
-
-//      std::cout<<"after adjust bounds:\nxl"<<std::endl;
-//      nlp->get_xl().print();
-      
-      //compute infeasibility theta at trial point, since both slacks and bounds are modified 
-      double theta_temp = resid->compute_nlp_infeasib_onenorm(*it_trial, *_c_trial, *_d_trial);
-
-      bool bret = it.adjustDuals_primalLogHessian(mu_new,kappa_Sigma);
-      assert(bret);
+        // adjust bounds according to `it`
+        if(nlp->options->GetString("elastic_mode")=="correct_it_adjust_bound") {
+          nlp->adjust_bounds(it);
+        }
+        
+        //compute infeasibility theta at trial point, since slacks and/or bounds are modified 
+        double theta_temp = resid->compute_nlp_infeasib_onenorm(*it_trial, *_c_trial, *_d_trial);
+        
+        // adjust duals
+        bool bret = it.adjustDuals_primalLogHessian(mu_new,kappa_Sigma);
+        assert(bret);
+      }
     }
   }
   

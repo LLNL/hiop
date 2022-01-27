@@ -930,18 +930,28 @@ void hiopOptionsNLP::register_options()
 
   // elastic mode
   {
-    vector<string> range(2);
-    range[0] = "yes";
-    range[1] = "no";
+    vector<string> range = { "none", "tighten_bound", "correct_it", "correct_it_adjust_bound"};
     register_str_option("elastic_mode",
-                        "no",
+                        "none",
                         range,
-                        "Turn on/off elastic mode. If elastic mode is on, HiOp tightens the bound relaxations "
-                        "during the iterations.");
+                        "Type of elastic mode used with the HiOp: 'none' does not use elastic mode (default option); "
+                        "'tighten_bound' tightens the bounds when `mu` changes; "
+                        "'correct_it' tightens the bounds and corrects the slacks and slack duals when `mu` changes; "
+                        "'correct_it_adjust_bound' tightens the bounds, corrects the slacks and slack duals, "
+                        "and adjusts the bounds again from the modified iterate");
+
+    range = {"mu_projected", "mu_scaled"};
+    register_str_option("elastic_bound_strategy",
+                        "mu_projected",
+                        range,
+                        "Strategy used to tighen the bounds, when `mu` changes. "
+                        "'mu_projected' sets the new bound relax factor to `(new_mu-target_mu) / (init_mu-target_mu) "
+                        "* (bound_relax_perturb_init-bound_relax_perturb_final) + bound_relax_perturb_min; "
+                        "'mu_scaled' sets the new bound relax factor to `0.995*new_mu`.");
 
     register_num_option("elastic_mode_bound_relax_initial",
                         1e-2,
-                        1e-20,
+                        1e-8,
                         1e-1,
                         "Initial bound relaxation factor in the elastic mode (default: 1e-2). "
                         "This value must be less or equal to elastic_mode_bound_relax_initial. "
@@ -950,7 +960,7 @@ void hiopOptionsNLP::register_options()
 
     register_num_option("elastic_mode_bound_relax_final",
                         1e-12,
-                        1e-20,
+                        1e-16,
                         1e-1,
                         "Final/minimum bound relaxation factor in the elastic mode (default: 1e-8). "
                         "This value must be less or equal to elastic_mode_bound_relax_final. "
