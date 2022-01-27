@@ -1030,10 +1030,10 @@ void hiopVectorPar::adjustDuals_plh(const hiopVector& x_,
       if(*z<b) {
         *z=b;
       } else { //z[i]>=b
-	      if(a<=b) {
+        if(a<=b) {
           *z=b;
         } else { //a>b
-	        if(a<*z) {
+          if(a<*z) {
             *z=a;
           }
           //else a>=z[i] then *z=*z (z[i] does not need adjustment)
