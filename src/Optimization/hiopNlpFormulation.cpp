@@ -397,7 +397,7 @@ bool hiopNlpFormulation::finalizeInitialization()
   if(options->GetNumeric("bound_relax_perturb") > 0.0) {
     relax_bounds_ = new hiopBoundsRelaxer(this, *xl_, *xu_, *dl_, *du_);
     relax_bounds_->setup();
-    if(options->GetString("elastic_mode") == "no") {
+    if(options->GetString("elastic_mode") == "none") {
       relax_bounds_->relax(options->GetNumeric("bound_relax_perturb"), *xl_, *xu_, *dl_, *du_);
     } else {
       relax_bounds_->relax(options->GetNumeric("elastic_mode_bound_relax_initial"), *xl_, *xu_, *dl_, *du_);    
