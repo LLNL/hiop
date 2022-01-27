@@ -425,8 +425,6 @@ int hiopIterate::adjust_small_var_slacks(hiopVector& slack,
     slack_min = slack.min_w_pattern(select);
     if(slack_min < small_val) {
       sx_arg1_->copyFrom(slack);
-      sx_arg2_->copyFrom(slack);
-      sx_arg3_->copyFrom(slack);
 
       // correct variable bound to avoid numerical difficulty
       sx_arg1_->addConstant_w_patternSelect(-small_val,select);
@@ -488,8 +486,6 @@ int hiopIterate::adjust_small_con_slacks(hiopVector& slack,
     slack_min = slack.min_w_pattern(select);
     if(slack_min < small_val) {
       sd_arg1_->copyFrom(slack);
-      sd_arg2_->copyFrom(slack);
-      sd_arg3_->copyFrom(slack);
 
       // correct variable bound to avoid numerical difficulty
       sd_arg1_->addConstant_w_patternSelect(-small_val,select);
