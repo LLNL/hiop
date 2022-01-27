@@ -82,24 +82,24 @@ hiopIterate::hiopIterate(const hiopNlpFormulation* nlp_)
 
 hiopIterate::~hiopIterate()
 {
-  if(x) delete x;
-  if(d) delete d;
-  if(sxl) delete sxl;
-  if(sxu) delete sxu;
-  if(sdl) delete sdl;
-  if(sdu) delete sdu;
+  delete x;
+  delete d;
+  delete sxl;
+  delete sxu;
+  delete sdl;
+  delete sdu;
   delete sx_arg1_;
   delete sx_arg2_;
   delete sx_arg3_;
   delete sd_arg1_;
   delete sd_arg2_;
   delete sd_arg3_;
-  if(yc) delete yc;
-  if(yd) delete yd;
-  if(zl) delete zl;
-  if(zu) delete zu;
-  if(vl) delete vl;
-  if(vu) delete vu;
+  delete yc;
+  delete yd;
+  delete zl;
+  delete zu;
+  delete vl;
+  delete vu;
 }
 
 /* cloning and copying */
