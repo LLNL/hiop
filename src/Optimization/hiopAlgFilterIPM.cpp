@@ -116,8 +116,6 @@ hiopAlgFilterIPMBase::hiopAlgFilterIPMBase(hiopNlpFormulation* nlp_, const bool 
     assert(false && "duals_update_type has an unrecognized value");
   }
 
-  bound_relax_perturb_last_ = nlp->options->GetNumeric("elastic_mode_bound_relax_initial");
-
   resetSolverStatus();
 }
 void hiopAlgFilterIPMBase::destructorPart()

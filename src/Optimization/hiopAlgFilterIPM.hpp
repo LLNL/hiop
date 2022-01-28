@@ -252,8 +252,6 @@ protected:
   int accep_n_it;      //after how many iterations with acceptable tolerance should the alg. stop
   double eps_tol_accep;//acceptable tolerance
 
-  double bound_relax_perturb_last_;
-
   //internal flags related to the state of the solver
   hiopSolveStatus solver_status_;
   int n_accep_iters_;
