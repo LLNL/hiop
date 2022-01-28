@@ -112,9 +112,17 @@ public:
 
   virtual void timesMatTrans(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const = 0;
 
-  virtual void addDiagonal(const double& alpha, const hiopVector& d_) = 0;
+  /**
+   * Adds alpha times the i-th entry of `D` to the i-th diagonal of `this`. 
+   * 
+   * @pre Sparse matrices should have the diagonal entries allocated as nonzeros.
+   * @pre `this` is expected to be symmetric.
+   * @pre Size of `D` should match the size(s) of `M`.
+   *
+   */
+  virtual void addDiagonal(const double& alpha, const hiopVector& D) = 0;
   virtual void addDiagonal(const double& value) = 0;
-  virtual void addSubDiagonal(const double& alpha, index_type start, const hiopVector& d_) = 0;
+  virtual void addSubDiagonal(const double& alpha, index_type start, const hiopVector& D) = 0;
   /* add to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements of
    * 'd_' (source) starting at index 'start_on_src_vec'. The number of elements added is 'num_elems'
    * when num_elems>=0, or the remaining elems on 'd_' starting at 'start_on_src_vec'. */

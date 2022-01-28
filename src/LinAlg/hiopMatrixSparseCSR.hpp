@@ -322,10 +322,18 @@ public:
    *
    * @pre `this` matrix needs to be symmetric and of same size(s) as `diag_out`
    */
-  virtual void extract_diagonal(hiopVector& diag_out)
+  virtual void extract_diagonal(hiopVector& diag_out) const
   {
     assert(false && "wip");
   }
+
+  /**
+   * Sets the diagonal of `this` to the constant `val`. If `val` is zero, the sparsity pattern
+   * of `this` is not altered.
+   *
+   * @pre  `this` is expected to store the diagonal entries as nonzero elements.
+   */
+  virtual void set_diagonal(const double& val);
 
   /// Notes:
   /// cusparseSpGEMM_workEstimation  cusparseSpGEMM_compute
@@ -394,6 +402,13 @@ public:
                          double alpha,
                          const hiopMatrixSparseCSR& Y);
 
+  /// @brief Column scaling or right multiplication by a diagonal: `this`=`this`*D
+  void scale_cols(const hiopVector& D);
+
+  /// @brief Row scaling or left multiplication by a diagonal: `this`=D*`this`
+  void scale_rows(const hiopVector& D);
+
+  
   /**
    * Allocates and populates the sparsity pattern of `this` as the CSR representation 
    * of the triplet matrix `M`.
@@ -439,12 +454,9 @@ public:
   void form_transpose_from_numeric(const hiopMatrixSparseTriplet& M);
 
   /**
-   * (Re)Initializes `this` to a diagonal matrix with diagonal entries given by D
+   * (Re)Initializes `this` to a diagonal matrix with diagonal entries given by D.
    */
-  void form_diag_from_symbolic(const hiopVector& D)
-  {
-    assert(false && "wip");
-  }
+  void form_diag_from_symbolic(const hiopVector& D);
   
   /**
    * Sets the diagonal entries of `this` equal to entries of D
@@ -455,19 +467,13 @@ public:
    * all the diagonal entries, which can be ensured by calling the sister method
    * `form_diag_from_symbolic`
    */
-  void form_diag_from_numeric(const hiopVector& D)
-  {
-    assert(false && "wip");
-  }
+  void form_diag_from_numeric(const hiopVector& D);
   
   /**
    * Allocates and returns CSR matrix `M` capable of holding M = X+Y, where X is 
    * the calling matrix class (`this`) and Y is the argument passed to the method.
    */
-  hiopMatrixSparseCSR* add_matrix_alloc(const hiopMatrixSparseCSR& Y) const
-  {
-    assert(false && "wip");
-  }
+  hiopMatrixSparseCSR* add_matrix_alloc(const hiopMatrixSparseCSR& Y) const;
 
   /**
    * Computes sparsity pattern of M = X+Y (i.e., populates the row pointers and 
@@ -478,11 +484,7 @@ public:
    */
 
   //// note cusparseXcsrgeam2
-  void add_matrix_symbolic(hiopMatrixSparseCSR& M,
-                           const hiopMatrixSparseCSR& Y) const
-  {
-    assert(false && "wip");
-  }
+  void add_matrix_symbolic(hiopMatrixSparseCSR& M, const hiopMatrixSparseCSR& Y) const;
 
   /**
    * Performs matrix addition M = gamma*M + alpha*X + beta*Y numerically, where
@@ -498,10 +500,7 @@ public:
                           hiopMatrixSparseCSR& M,
                           double alpha,
                           const hiopMatrixSparseCSR& Y,
-                          double beta) const
-  {
-    assert(false && "wip");
-  }
+                          double beta) const;
 
   /////////////////////////////////////////////////////////////////////
   // end of new CSR-specific methods

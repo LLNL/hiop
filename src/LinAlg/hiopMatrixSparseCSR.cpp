@@ -20,6 +20,9 @@ namespace hiop
 
 hiopMatrixSparseCSR::hiopMatrixSparseCSR(size_type rows, size_type cols, size_type nnz)
   : hiopMatrixSparse(rows, cols, nnz),
+    irowptr_(nullptr),
+    jcolind_(nullptr),
+    values_(nullptr),
     buf_col_(nullptr),
     row_starts_(nullptr)
 {
@@ -80,13 +83,15 @@ void hiopMatrixSparseCSR::dealloc()
   
 void hiopMatrixSparseCSR::setToZero()
 {
-  for(index_type i=0; i<nnz_; i++)
+  for(index_type i=0; i<nnz_; i++) {
     values_[i] = 0.;
+  }
 }
 void hiopMatrixSparseCSR::setToConstant(double c)
 {
-  for(index_type i=0; i<nnz_; i++)
+  for(index_type i=0; i<nnz_; i++) {
     values_[i] = c;
+  }
 }
 
 /** y = beta * y + alpha * this * x */
@@ -167,9 +172,22 @@ void hiopMatrixSparseCSR::timesMatTrans(double beta,
   assert(false && "not needed");
 }
 
-void hiopMatrixSparseCSR::addDiagonal(const double& alpha, const hiopVector& d_)
+void hiopMatrixSparseCSR::addDiagonal(const double& alpha, const hiopVector& D)
 {
-  assert(false && "not needed");
+  assert(irowptr_ && jcolind_ && values_);
+  assert(D.get_size() == nrows_);
+  assert(D.get_size() == ncols_);
+  
+  const double* Da = D.local_data_const();
+  
+  for(index_type i=0; i<nrows_; ++i) {
+    for(index_type pt=irowptr_[i]; pt<irowptr_[i+1]; ++pt) {
+      if(jcolind_[pt]==i) {
+        values_[pt] += alpha*Da[i];
+        break;
+      }
+    }
+  }
 }
 
 void hiopMatrixSparseCSR::addDiagonal(const double& value)
@@ -516,10 +534,11 @@ hiopMatrixSparseCSR* hiopMatrixSparseCSR::times_mat_alloc(const hiopMatrixSparse
   
   index_type nnzM = 0;
     // count the number of entries in the result M
-  char* flag = new char[m];
+  char* flag = new char[n];
+  
   for(int i=0; i<m; i++) {
     //reset flag 
-    memset(flag, 0, m*sizeof(char));
+    memset(flag, 0, n*sizeof(char));
 
     for(int pt=irowptrX[i]; pt<irowptrX[i+1]; pt++) {
       //X[i,k] is nonzero
@@ -541,7 +560,6 @@ hiopMatrixSparseCSR* hiopMatrixSparseCSR::times_mat_alloc(const hiopMatrixSparse
     }
   }
   assert(nnzM>=0); //overflow?!?
-
   delete[] flag;
 
   //allocate result M
@@ -578,10 +596,11 @@ void hiopMatrixSparseCSR::times_mat_symbolic(hiopMatrixSparseCSR& M,
   
   const index_type m = this->m();
   const index_type n = Y.n();
-
+  assert(M.m()==m && M.n()==n);
+  
   const index_type K = this->n();
   assert(Y.m() == K);
-
+  
   if(nullptr == M.buf_col_) {
     M.buf_col_ = new double[n];
   }
@@ -595,9 +614,8 @@ void hiopMatrixSparseCSR::times_mat_symbolic(hiopMatrixSparseCSR& M,
 
   int nnzM=0;
   for(int i=0; i<m; i++) {
-    memset(flag, 0, m);
+    memset(flag, 0, n);
 
-    assert(nnzM<M.numberOfNonzeros());
     //start row i of M
     irowptrM[i]=nnzM;
     
@@ -612,7 +630,7 @@ void hiopMatrixSparseCSR::times_mat_symbolic(hiopMatrixSparseCSR& M,
 	const auto j = jcolindY[py];
         assert(j<n);
         
-	//we have M[k,j] nonzero; add it if not already added
+	//we have M[k,j] nonzero
 	if(flag[j]==0) {
           assert(nnzM<M.numberOfNonzeros());
           
@@ -623,7 +641,7 @@ void hiopMatrixSparseCSR::times_mat_symbolic(hiopMatrixSparseCSR& M,
       }
     }
   }
-  irowptrM[n] = nnzM;
+  irowptrM[m] = nnzM;
   delete[] flag;
 }
 
@@ -646,10 +664,25 @@ void hiopMatrixSparseCSR::times_mat_numeric(double beta,
   
   const index_type m = this->m();
   const index_type n = Y.n();
-
+  assert(M.m()==m && M.n()==n);
+  
   const index_type K = this->n();
   assert(Y.m() == K);
 
+  if(beta!=1.0) {
+    int NN = M.numberOfNonzeros();
+    if(beta==0.0) {
+      //just in case M comes uninitialized
+      for(index_type i=0; i<NN; ++i) {
+        valuesM[i] = 0.0;
+      }
+    } else {
+      //since beta is nonzero, we assume M is initialized
+      int inc = 1;
+      DSCAL(&NN, &beta, valuesM, &inc);
+    }
+  }
+  
   if(nullptr == M.buf_col_) {
     M.buf_col_ = new double[n];
   }
@@ -675,7 +708,7 @@ void hiopMatrixSparseCSR::times_mat_numeric(double beta,
     //gather the values into the i-th row M
     for(int p=irowptrM[i]; p<irowptrM[i+1]; ++p) {
       const auto j = jcolindM[p];
-      valuesM[p] = W[j];
+      valuesM[p] += alpha*W[j];
       W[j] = 0.0;
     }
   }
@@ -797,7 +830,7 @@ void hiopMatrixSparseCSR::form_transpose_from_symbolic(const hiopMatrixSparseTri
     //here row_starts_(==w) contains the row starts
   }
   assert(irowptr_[nrows_] = nnz_);
-  
+
   //populate jcolind_ and values_
   for(index_type it=0; it<nnz_; ++it) {
     const index_type row_idx = Mjcol[it];
@@ -806,7 +839,7 @@ void hiopMatrixSparseCSR::form_transpose_from_symbolic(const hiopMatrixSparseTri
     const auto nz_idx = row_starts_[row_idx];
     assert(nz_idx<nnz_);
     
-    //assign col and value
+    //assign col
     jcolind_[nz_idx] = Mirow[it];
     //values_[nz_idx] = Mvalues[it];
     assert(Mirow[it] < ncols_);
@@ -818,9 +851,18 @@ void hiopMatrixSparseCSR::form_transpose_from_symbolic(const hiopMatrixSparseTri
   }
 
   //rollback row_starts_
-  for(int i=1; i<nrows_; ++i) {
-    row_starts_[i-1] = row_starts_[i];
+  for(int i=nrows_-1; i>=1; --i) {
+    row_starts_[i] = row_starts_[i-1];
   }
+  row_starts_[0]=0;
+#ifndef NDEBUG
+  for(int i=0; i<nrows_; i++) {
+    for(int itnz=irowptr_[i]+1; itnz<irowptr_[i+1]; ++itnz) {
+      assert(jcolind_[itnz] > jcolind_[itnz-1] &&
+             "something wrong: col indexes not sorted or not unique");
+    }
+  }
+#endif
 }
 
 void hiopMatrixSparseCSR::form_transpose_from_numeric(const hiopMatrixSparseTriplet& M)
@@ -850,7 +892,7 @@ void hiopMatrixSparseCSR::form_transpose_from_numeric(const hiopMatrixSparseTrip
     const auto nz_idx = row_starts_[row_idx];
     assert(nz_idx<nnz_);
     
-    //assign col and value
+    //set value
     values_[nz_idx] = Mvalues[it];
     assert(Mirow[it] < ncols_);
     
@@ -860,11 +902,328 @@ void hiopMatrixSparseCSR::form_transpose_from_numeric(const hiopMatrixSparseTrip
     assert(row_starts_[row_idx] <= irowptr_[row_idx+1]);
   }
 
-  //rollback row_starts_
-  for(int i=1; i<nrows_; ++i) {
-    row_starts_[i-1] = row_starts_[i];
+  for(int i=nrows_-1; i>=1; --i) {
+    row_starts_[i] = row_starts_[i-1];
+  }
+  row_starts_[0]=0;
+}
+
+void hiopMatrixSparseCSR::form_diag_from_symbolic(const hiopVector& D)
+{
+  int m = D.get_size();
+  if(m!=ncols_ || m!=nrows_ || m!=nnz_) {
+    dealloc();
+    
+    nrows_ = m;
+    ncols_ = m;
+    nnz_ = m;
+
+    alloc();
+  }
+
+  assert(irowptr_);
+  assert(jcolind_);
+  assert(values_);
+
+  const double* da = D.local_data_const();
+
+  for(index_type i=0; i<m; i++) {
+    irowptr_[i] = i;
+    jcolind_[i] = i;
+  }
+  irowptr_[m] = m;
+}
+
+void hiopMatrixSparseCSR::form_diag_from_numeric(const hiopVector& D)
+{
+  assert(D.get_size()==ncols_ && D.get_size()==nrows_ && D.get_size()==nnz_);
+  memcpy(values_, D.local_data_const(), nrows_*sizeof(double));
+}
+
+///Column scaling or right multiplication by a diagonal: `this`=`this`*D
+void hiopMatrixSparseCSR::scale_cols(const hiopVector& D)
+{
+  assert(ncols_ == D.get_size());
+  const double* Da = D.local_data_const();  
+  
+  for(index_type i=0; i<nrows_; ++i) {
+    for(index_type pt=irowptr_[i]; pt<irowptr_[i+1]; ++pt) {
+      values_[pt] *= Da[jcolind_[pt]];
+    }
+  }
+
+}
+
+/// @brief Row scaling or left multiplication by a diagonal: `this`=D*`this`
+void hiopMatrixSparseCSR::scale_rows(const hiopVector& D)
+{
+  assert(nrows_ == D.get_size());
+  const double* Da = D.local_data_const();
+  
+  for(index_type i=0; i<nrows_; ++i) {
+    for(index_type pt=irowptr_[i]; pt<irowptr_[i+1]; ++pt) {
+      values_[pt] *= Da[i];
+    }
   }
 }
 
+// sparsity pattern of M=X+Y, where X is `this`
+hiopMatrixSparseCSR* hiopMatrixSparseCSR::add_matrix_alloc(const hiopMatrixSparseCSR& Y) const
+{
+  assert(nrows_ == Y.m());
+  assert(ncols_ == Y.n());
+  const index_type* irowptrY = Y.i_row();
+  const index_type* jcolindY = Y.j_col();
+
+  const index_type* irowptrX = irowptr_;
+  const index_type* jcolindX = jcolind_;
+
+  // count the number of entries in the result M
+  index_type nnzM = 0;
+  
+  for(int i=0; i<nrows_; i++) {
+
+    // add nx pattern of rows i of X and Y ordered by col indexes
+
+    index_type ptX = irowptrX[i];
+    index_type ptY = irowptrY[i];
+
+    while(ptX<irowptrX[i+1] && ptY<irowptrY[i+1]) {
+      const index_type jX = jcolindX[ptX];
+      const index_type jY = jcolindY[ptY];
+      assert(jX<ncols_);
+      assert(jY<ncols_);
+
+      nnzM++;
+      if(jX<jY) {
+        ptX++;
+      } else {
+        if(jX==jY) {
+          ptX++;
+          ptY++;
+        } else {
+          // jX>jY
+          ptY++;
+        }
+      }     
+    } // end of while
+    assert(ptX==irowptrX[i+1] || ptY==irowptrY[i+1]);
+    for(; ptX<irowptrX[i+1]; ++ptX) {
+      nnzM++;
+    }
+    for(; ptY<irowptrY[i+1]; ++ptY) {
+      nnzM++;
+    }
+    
+  } // end of for over rows
+  assert(nnzM>=0); //overflow?!?
+
+  //allocate result M
+  return new hiopMatrixSparseCSR(nrows_, ncols_, nnzM);
+}
+
+/**
+ * Computes sparsity pattern of M = X+Y (i.e., populates the row pointers and 
+ * column indexes arrays) of `M`.
+ *
+ */
+void hiopMatrixSparseCSR::add_matrix_symbolic(hiopMatrixSparseCSR& M, const hiopMatrixSparseCSR& Y) const
+{
+  assert(nrows_ == Y.m());
+  assert(ncols_ == Y.n());
+  const index_type* irowptrY = Y.i_row();
+  const index_type* jcolindY = Y.j_col();
+
+  const index_type* irowptrX = irowptr_;
+  const index_type* jcolindX = jcolind_;
+
+  index_type* irowptrM = M.i_row();
+  index_type* jcolindM = M.j_col();
+
+
+  // counter for nz in M 
+  index_type itnnzM = 0;
+  
+  for(int i=0; i<nrows_; i++) {
+
+    irowptrM[i] = itnnzM;
+    
+    // add nx pattern of rows i of X and Y ordered by col indexes
+
+    index_type ptX = irowptrX[i];
+    index_type ptY = irowptrY[i];
+
+    while(ptX<irowptrX[i+1] && ptY<irowptrY[i+1]) {
+      const index_type jX = jcolindX[ptX];
+      const index_type jY = jcolindY[ptY];
+      assert(jX<ncols_);
+      assert(jY<ncols_);
+      assert(itnnzM<M.numberOfNonzeros());
+      
+      if(jX<jY) {
+        jcolindM[itnnzM] = jX;
+        ptX++;
+      } else {
+        if(jX==jY) {
+          jcolindM[itnnzM] = jX;
+          ptX++;
+          ptY++;
+        } else {
+          // jX>jY
+          jcolindM[itnnzM] = jY;
+          ptY++;
+        }
+      }
+      itnnzM++;
+    } // end of while
+    assert(ptX==irowptrX[i+1] || ptY==irowptrY[i+1]);
+    for(; ptX<irowptrX[i+1]; ++ptX) {
+      const index_type jX = jcolindX[ptX];
+      assert(jX<ncols_);
+      assert(itnnzM<M.numberOfNonzeros());
+      
+      jcolindM[itnnzM] = jX;
+      itnnzM++;
+    }
+    for(; ptY<irowptrY[i+1]; ++ptY) {
+      const index_type jY = jcolindY[ptY];
+      assert(jY<ncols_);
+      assert(itnnzM<M.numberOfNonzeros());
+      
+      jcolindM[itnnzM] = jY;
+      itnnzM++;
+    }
+    assert(itnnzM<=M.numberOfNonzeros());
+  } // end of for over rows
+  assert(itnnzM<=M.numberOfNonzeros());
+  irowptrM[nrows_] = itnnzM;
+}
+
+/**
+ * Performs matrix addition M = gamma*M + alpha*X + beta*Y numerically
+ */
+void hiopMatrixSparseCSR::hiopMatrixSparseCSR::add_matrix_numeric(double gamma,
+                                                                  hiopMatrixSparseCSR& M,
+                                                                  double alpha,
+                                                                  const hiopMatrixSparseCSR& Y,
+                                                                  double beta) const
+{
+  assert(nrows_ == Y.m());
+  assert(ncols_ == Y.n());
+  const index_type* irowptrY = Y.i_row();
+  const index_type* jcolindY = Y.j_col();
+  const double* valuesY = Y.M();
+  const index_type* irowptrX = irowptr_;
+  const index_type* jcolindX = jcolind_;
+  const double* valuesX = values_;
+  
+#ifdef HIOP_DEEP_CHECKING
+  index_type* irowptrM = M.i_row();
+  index_type* jcolindM = M.j_col();
+#endif
+  double* valuesM = M.M();
+
+  
+  int nnzM = M.numberOfNonzeros();
+  if(gamma==0.0) {
+    for(auto i=0; i<nnzM; i++) {
+      valuesM[i] = 0.0;
+    }
+  } else if(gamma!=1.0) {
+    int inc = 1;
+    DSCAL(&nnzM, &gamma, valuesM, &inc);
+  }
+  
+  // counter for nz in M 
+  index_type itnnzM = 0;
+  
+  for(int i=0; i<nrows_; i++) {
+#ifdef HIOP_DEEP_CHECKING
+    assert(irowptrM[i] == itnnzM);
+#endif    
+    // iterate same order as in symbolic function
+    // row i of M contains ordered merging of col indexes of row i of X and rowi of Y 
+
+    index_type ptX = irowptrX[i];
+    index_type ptY = irowptrY[i];
+
+    // follow sorted merge of the col indexes of X and Y to update values of M
+    while(ptX<irowptrX[i+1] && ptY<irowptrY[i+1]) {
+
+      const index_type jX = jcolindX[ptX];
+      const index_type jY = jcolindY[ptY];
+      assert(jX<ncols_);
+      assert(jY<ncols_);
+
+      assert(itnnzM<M.numberOfNonzeros());
+      
+      if(jX<jY) {
+        
+#ifdef HIOP_DEEP_CHECKING
+        assert(jX==jcolindM[itnnzM]);
+#endif        
+        valuesM[itnnzM] += alpha*valuesX[ptX];
+        ptX++;
+      } else {
+        if(jX==jY) {
+#ifdef HIOP_DEEP_CHECKING
+          assert(jX==jcolindM[itnnzM]);
+#endif
+          valuesM[itnnzM] += alpha*valuesX[ptX] + beta*valuesY[ptY];
+          ptX++;
+          ptY++;
+        } else {
+          // jX>jY
+#ifdef HIOP_DEEP_CHECKING          
+          assert(jY==jcolindM[itnnzM]);
+#endif
+          valuesM[itnnzM] += beta*valuesY[ptY];
+          ptY++;
+        }
+      }
+      itnnzM++;
+    } // end of while "sorted merge" iteration 
+    assert(ptX==irowptrX[i+1] || ptY==irowptrY[i+1]);
+
+    // iterate over remaining col indexes of (i row of) X
+    for(; ptX<irowptrX[i+1]; ++ptX) {
+      const index_type jX = jcolindX[ptX];
+      assert(jX<ncols_);
+#ifdef HIOP_DEEP_CHECKING            
+      assert(jX==jcolindM[itnnzM]);
+#endif      
+      assert(itnnzM<M.numberOfNonzeros());
+
+      valuesM[itnnzM] += alpha*valuesX[ptX];
+      itnnzM++;
+    }
+
+    // iterate over remaining col indexes of (i row of) X
+    for(; ptY<irowptrY[i+1]; ++ptY) {
+      const index_type jY = jcolindY[ptY];
+      assert(jY<ncols_);
+      assert(itnnzM<M.numberOfNonzeros());
+#ifdef HIOP_DEEP_CHECKING
+      assert(jY==jcolindM[itnnzM]);
+#endif
+      valuesM[itnnzM] += beta*valuesY[ptY];
+      itnnzM++;
+    }
+  } // end of for over rows
+  assert(itnnzM == M.numberOfNonzeros());
+}
+
+void hiopMatrixSparseCSR::set_diagonal(const double& val)
+{
+  assert(irowptr_ && jcolind_ && values_);
+  for(index_type i=0; i<nrows_; ++i) {
+    for(index_type pt=irowptr_[i]; pt<irowptr_[i+1]; ++pt) {
+      if(jcolind_[pt]==i) {
+        values_[pt] = val;
+        break;
+      }
+    }
+  }
+}
 } //end of namespace
 

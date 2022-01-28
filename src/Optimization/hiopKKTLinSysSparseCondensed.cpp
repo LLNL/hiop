@@ -1,4 +1,4 @@
-// Copyright (c) 2017, Lawrence Livermore National Security, LLC.
+// Copyrightf (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
 // LLNL-CODE-742473. All rights reserved.
 //
@@ -132,6 +132,9 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   }
   Hd_->copyFrom(*Dd_);  
   Hd_->addConstant(delta_wd);
+
+#if 1
+  
   //
   // compute condensed linear system J'*D*J + H + Dx + delta_wx*I
   //
@@ -141,17 +144,44 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   t.reset(); t.start();
   hiopMatrixSparseCSRStorage JacD;
   JacD.form_from(*Jac_triplet);
+  t.stop(); printf("JacD-stor    took %.5f\n", t.getElapsedTime());
+  //Jac_triplet->print();
 
+  ////////////////////////////////
+  t.reset(); t.start();
   hiopMatrixSparseCSR JacD_;
   JacD_.form_from_symbolic(*Jac_triplet);
   JacD_.form_from_numeric(*Jac_triplet);
-  //t.stop(); printf("JacD    took %.5f\n", t.getElapsedTime());
+  t.stop(); printf("JacD-symb    took %.5f\n", t.getElapsedTime());
+  //JacD_.print();
+  ////////////////////////////////
 
+  /////////////////////////////////
+  t.reset(); t.start();
+  JacD_.form_from_numeric(*Jac_triplet);
+  t.stop(); printf("JacD-nume    took %.5f\n", t.getElapsedTime());
+  //////////////////////////////////
+  
   t.reset(); t.start();
   hiopMatrixSparseCSRStorage JacDt;
   JacDt.form_transpose_from(*Jac_triplet);
-  //t.stop(); printf("JacDt   took %.5f\n", t.getElapsedTime());
+  t.stop(); printf("JacDt-stor   took %.5f\n", t.getElapsedTime());
 
+  ///////////////////////////////////
+  t.reset(); t.start();
+  hiopMatrixSparseCSR JacDt_;
+  JacDt_.form_transpose_from_symbolic(*Jac_triplet);
+  //JacDt_.print();
+  JacDt_.form_transpose_from_numeric(*Jac_triplet);  
+  t.stop(); printf("JacDt-symb   took %.5f\n", t.getElapsedTime());
+  ///////////////////////////////////
+
+  ///////////////////////////////////
+  t.reset(); t.start();
+  JacDt_.form_transpose_from_numeric(*Jac_triplet);
+  t.stop(); printf("JacDt-nume   took %.5f\n", t.getElapsedTime());
+  ///////////////////////////////////
+  
   t.reset(); t.start();
   // compute J'*D*J
   if(nullptr == JtDiagJ_) {
@@ -163,7 +193,90 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
     //perform numerical multiplication
     JacDt.times_diag_times_mat_numeric(*Hd_, JacD, *JtDiagJ_);
   }
-  //t.stop(); printf("J*D*J'  took %.5f\n", t.getElapsedTime());
+  t.stop(); printf("J*D*J'-stor  took %.5f\n", t.getElapsedTime());
+
+  /////////////////////////////// SYMBOLIC ///////
+  t.reset(); t.start();
+
+  // D * J
+  //nothing to do symbolically since we just numerically scale columns of Jt by D 
+  
+  // Jt* (D*J)
+  hiopMatrixSparseCSR* JtDiagJ__ = JacDt_.times_mat_alloc(JacD_);
+  JacDt_.times_mat_symbolic(*JtDiagJ__, JacD_);
+  t.stop(); printf("J*D*J'-symb  took %.5f\n", t.getElapsedTime());
+  /////////////////////////////////////////
+  
+
+  /////////////////////////NUMERIC //////////////////////////////////////
+  t.reset(); t.start();
+  // Jt * D
+  JacD_.scale_rows(*Hd_);
+  // (Jt*D) * J
+  JacDt_.times_mat_numeric(0.0, *JtDiagJ__, 1.0, JacD_);
+  
+  //printf("JacDt ----- \n");
+  //JacDt.print(stdout);
+  //printf("----\n");
+  //JacDt_.print();
+
+  //printf("Jt Diag ----- \n");
+  //JtDiag_->print();
+  
+  t.stop(); printf("J*D*J'-nume  took %.5f\n", t.getElapsedTime());
+  //printf("Jt Diag J ----- \n");
+  //JtDiagJ__->print();
+  //printf("----\n");
+  //JtDiagJ_->print(stdout);
+  ////////////////////////////////////////////////////////////////////
+  
+  ////////////////////////// A D D /////////////////////////////////////////
+  t.reset(); t.start();
+  hiopMatrixSparseCSR Hess_upper;
+  Hess_upper.form_from_symbolic(*Hess_triplet);
+  hiopMatrixSparseCSR Hess_lower;
+  Hess_lower.form_transpose_from_symbolic(*Hess_triplet);
+
+  //printf(" lo %d,%d   up %d,%d  nnz %d|%d\n",
+  //       Hess_upper.m(), Hess_upper.n(), Hess_lower.m(), Hess_lower.n(),
+  //       Hess_upper.numberOfNonzeros(), Hess_lower.numberOfNonzeros());
+  auto* Hess_ = Hess_lower.add_matrix_alloc(Hess_upper);
+  Hess_lower.add_matrix_symbolic(*Hess_, Hess_upper);
+
+  auto* M_condensed__tmp = Hess_->add_matrix_alloc(*JtDiagJ__);
+  Hess_->add_matrix_symbolic(*M_condensed__tmp, *JtDiagJ__);
+
+  //ensure storage for nonzeros diagonal is allocated by adding (symbolically)
+  //a diagonal matrix
+  hiopMatrixSparseCSR Diag;
+  Diag.form_diag_from_symbolic(*Dx_);
+  auto* M_condensed__ = M_condensed__tmp->add_matrix_alloc(Diag);
+  M_condensed__tmp->add_matrix_symbolic(*M_condensed__, Diag);
+  delete M_condensed__tmp;
+  t.stop(); printf("ADD-symb  took %.5f\n", t.getElapsedTime());
+
+//  -------------------------------
+  
+  t.reset(); t.start();
+  Hess_upper.form_from_numeric(*Hess_triplet);
+  Hess_upper.set_diagonal(0.0);
+  Hess_lower.form_transpose_from_numeric(*Hess_triplet);
+  Hess_lower.add_matrix_numeric(0.0, *Hess_, 1.0, Hess_upper, 1.0);
+
+  M_condensed__->setToZero();
+  if(delta_wx>0) {
+    M_condensed__->set_diagonal(delta_wx);
+  }
+  M_condensed__->addDiagonal(1.0, *Dx_);
+  
+  
+  Hess_->add_matrix_numeric(1.0, *M_condensed__, 1.0, *JtDiagJ__, 1.0);  
+  
+  t.stop(); printf("ADD-nume  took %.5f\n", t.getElapsedTime());
+  ///////////////////////////////////////////////////////////////////
+
+  delete JtDiagJ__;
+  delete Hess_;
   
   t.reset(); t.start();
   // compute J'*D*J + H + Dx + delta_wx*I
@@ -171,9 +284,18 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
     M_condensed_ = add_matrices_init(*JtDiagJ_, *Hess_triplet, *Dx_, delta_wx_);
   }
   add_matrices(*JtDiagJ_, *Hess_triplet, *Dx_, delta_wx_, *M_condensed_);
-  //t.stop(); printf("add     took %.5f\n", t.getElapsedTime());
+  t.stop(); printf("add     took %.5f\n", t.getElapsedTime());
 
-  
+
+  //M_condensed_->print(stdout);
+  //M_condensed__->print();
+
+  assert(M_condensed_->nnz() == M_condensed__->numberOfNonzeros());
+  assert(M_condensed__->m() == M_condensed_->m());
+  memcpy(M_condensed_->irowptr(), M_condensed__->i_row(), (1+M_condensed__->m())*sizeof(index_type));
+  memcpy(M_condensed_->jcolind(), M_condensed__->j_col(), M_condensed__->numberOfNonzeros()*sizeof(index_type));
+  memcpy(M_condensed_->values(), M_condensed__->M(), M_condensed__->numberOfNonzeros()*sizeof(double));
+  delete M_condensed__;
   //
   // linear system matrix update
   //
@@ -238,6 +360,8 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
     }
   }
   nlp_->runStats.kkt.tmUpdateLinsys.stop();
+  
+#endif
   
   if(perf_report_) {
     nlp_->log->printf(hovSummary,
