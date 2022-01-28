@@ -57,6 +57,12 @@ namespace hiop
 {
 
 hiopIterate::hiopIterate(const hiopNlpFormulation* nlp_)
+  : sx_arg1_{nullptr},
+    sx_arg2_{nullptr},
+    sx_arg3_{nullptr},
+    sd_arg1_{nullptr},
+    sd_arg2_{nullptr},
+    sd_arg3_{nullptr}
 {
   nlp = nlp_;
   x = nlp->alloc_primal_vec();
@@ -65,12 +71,6 @@ hiopIterate::hiopIterate(const hiopNlpFormulation* nlp_)
   sxu = x->alloc_clone();
   sdl = d->alloc_clone();
   sdu = d->alloc_clone();
-  sx_arg1_ = x->alloc_clone();
-  sx_arg2_ = x->alloc_clone();
-  sx_arg3_ = x->alloc_clone();
-  sd_arg1_ = d->alloc_clone();
-  sd_arg2_ = d->alloc_clone();
-  sd_arg3_ = d->alloc_clone();
   //duals
   yc = nlp->alloc_dual_eq_vec();
   yd = d->alloc_clone();
@@ -408,11 +408,14 @@ bool hiopIterate::updateDualsIneq(const hiopIterate& iter, const hiopIterate& di
 }
 */
 
-int hiopIterate::adjust_small_var_slacks(hiopVector& slack,
-                                         const hiopVector& bound,
-                                         const hiopVector& slack_dual,
-                                         const hiopVector& select,
-                                         const double& mu)
+int hiopIterate::adjust_small_slacks(hiopVector& slack,
+                                     const hiopVector& bound,
+                                     const hiopVector& slack_dual,
+                                     const hiopVector& select,
+                                     const double& mu,
+                                     hiopVector* arg1,
+                                     hiopVector* arg2,
+                                     hiopVector* arg3)
 {
   int num_adjusted_slack = 0;
   double zero=0.0;
@@ -422,43 +425,54 @@ int hiopIterate::adjust_small_var_slacks(hiopVector& slack,
     double small_val = std::numeric_limits<double>::epsilon()* fmin(1., mu);
     double scale_fact = pow(std::numeric_limits<double>::epsilon(), 0.75);
 
+    /**
+     * if slack < small_val,
+     * new_slack = last_slack + min( max(mu/slack_dual,small_val), scale_fact * max(1.0,|bound|) ), 
+     */
     slack_min = slack.min_w_pattern(select);
     if(slack_min < small_val) {
-      sx_arg1_->copyFrom(slack);
+      
+      if(nullptr==arg1) {
+        arg1 = slack.alloc_clone();
+        arg2 = slack.alloc_clone();
+        arg3 = slack.alloc_clone();
+      }
+      
+      arg1->copyFrom(slack);
 
       // correct variable bound to avoid numerical difficulty
-      sx_arg1_->addConstant_w_patternSelect(-small_val,select);
-      sx_arg1_->component_min(0.0);
+      arg1->addConstant_w_patternSelect(-small_val,select);
+      arg1->component_min(0.0);
 
-      num_adjusted_slack = sx_arg1_->numOfElemsLessThan(zero);
+      num_adjusted_slack = arg1->numOfElemsLessThan(zero);
 
-      sx_arg1_->component_sgn();
-      sx_arg1_->scale(-1.0);
+      arg1->component_sgn();
+      arg1->scale(-1.0);
 
       slack.component_max(0.0);
 
-      sx_arg2_->setToConstant_w_patternSelect(mu, select);
-      sx_arg2_->componentDiv_w_selectPattern(slack_dual, select);
+      arg2->setToConstant_w_patternSelect(mu, select);
+      arg2->componentDiv_w_selectPattern(slack_dual, select);
 
-      sx_arg3_->setToConstant_w_patternSelect(small_val, select);
+      arg3->setToConstant_w_patternSelect(small_val, select);
 
-      sx_arg2_->component_max(*sx_arg3_);
-      sx_arg2_->axpy(-1.0, slack);
+      arg2->component_max(*arg3);
+      arg2->axpy(-1.0, slack);
 
-      sx_arg1_->componentMult(*sx_arg2_);
-      sx_arg1_->axpy(1.0, slack);
+      arg1->componentMult(*arg2);
+      arg1->axpy(1.0, slack);
 
-      sx_arg2_->setToConstant_w_patternSelect(1.0, select);
-      sx_arg3_->copyFrom(bound);
-      sx_arg3_->component_abs();
-      sx_arg2_->component_max(*sx_arg3_);
+      arg2->setToConstant_w_patternSelect(1.0, select);
+      arg3->copyFrom(bound);
+      arg3->component_abs();
+      arg2->component_max(*arg3);
 
-      sx_arg2_->scale(scale_fact);
-      sx_arg2_->axpy(1.0, slack);
+      arg2->scale(scale_fact);
+      arg2->axpy(1.0, slack);
 
-      sx_arg1_->component_min(*sx_arg2_);
+      arg1->component_min(*arg2);
 
-      slack.copyFrom(*sx_arg1_);
+      slack.copyFrom(*arg1);
 
 #ifndef NDEBUG
   assert(slack.matchesPattern(select));
@@ -468,77 +482,19 @@ int hiopIterate::adjust_small_var_slacks(hiopVector& slack,
 
   return num_adjusted_slack;                      
 }
-
-int hiopIterate::adjust_small_con_slacks(hiopVector& slack, 
-                                         const hiopVector& bound, 
-                                         const hiopVector& slack_dual, 
-                                         const hiopVector& select,
-                                         const double& mu)
-{
-  int num_adjusted_slack = 0;
-  double zero=0.0;
-
-  if(slack.get_size() > 0) {
-    double slack_min;
-    double small_val = std::numeric_limits<double>::epsilon()* fmin(1., mu);
-    double scale_fact = pow(std::numeric_limits<double>::epsilon(), 0.75);
-
-    slack_min = slack.min_w_pattern(select);
-    if(slack_min < small_val) {
-      sd_arg1_->copyFrom(slack);
-
-      // correct variable bound to avoid numerical difficulty
-      sd_arg1_->addConstant_w_patternSelect(-small_val,select);
-      sd_arg1_->component_min(0.0);
-
-      num_adjusted_slack = sd_arg1_->numOfElemsLessThan(zero);
-
-      sd_arg1_->component_sgn();
-      sd_arg1_->scale(-1.0);
-
-      slack.component_max(0.0);
-
-      sd_arg2_->setToConstant_w_patternSelect(mu, select);
-      sd_arg2_->componentDiv_w_selectPattern(slack_dual, select);
-
-      sd_arg3_->setToConstant_w_patternSelect(small_val, select);
-
-      sd_arg2_->component_max(*sd_arg3_);
-      sd_arg2_->axpy(-1.0, slack);
-
-      sd_arg1_->componentMult(*sd_arg2_);
-      sd_arg1_->axpy(1.0, slack);
-
-      sd_arg2_->setToConstant_w_patternSelect(1.0, select);
-      sd_arg3_->copyFrom(bound);
-      sd_arg3_->component_abs();
-      sd_arg2_->component_max(*sd_arg3_);
-
-      sd_arg2_->scale(scale_fact);
-      sd_arg2_->axpy(1.0, slack);
-
-      sd_arg1_->component_min(*sd_arg2_);
-
-      slack.copyFrom(*sd_arg1_);
-
-#ifndef NDEBUG
-  assert(slack.matchesPattern(select));
-#endif
-    }
-  }
-
-  return num_adjusted_slack;                      
-}
-
 
 int hiopIterate::adjust_small_slacks(const hiopIterate& iter_curr, const double& mu)
 {
   int num_adjusted_slacks = 0;
 
-  num_adjusted_slacks += adjust_small_var_slacks(*sxl, nlp->get_xl(), *(iter_curr.get_zl()), (nlp->get_ixl()), mu);
-  num_adjusted_slacks += adjust_small_var_slacks(*sxu, nlp->get_xu(), *(iter_curr.get_zu()), (nlp->get_ixu()), mu);
-  num_adjusted_slacks += adjust_small_con_slacks(*sdl, nlp->get_dl(), *(iter_curr.get_vl()), (nlp->get_idl()), mu);
-  num_adjusted_slacks += adjust_small_con_slacks(*sdu, nlp->get_du(), *(iter_curr.get_vu()), (nlp->get_idu()), mu);
+  num_adjusted_slacks += adjust_small_slacks(*sxl, nlp->get_xl(), *(iter_curr.get_zl()), (nlp->get_ixl()), mu,
+                                             sx_arg1_, sx_arg2_, sx_arg3_);
+  num_adjusted_slacks += adjust_small_slacks(*sxu, nlp->get_xu(), *(iter_curr.get_zu()), (nlp->get_ixu()), mu,
+                                             sx_arg1_, sx_arg2_, sx_arg3_);
+  num_adjusted_slacks += adjust_small_slacks(*sdl, nlp->get_dl(), *(iter_curr.get_vl()), (nlp->get_idl()), mu,
+                                             sd_arg1_, sd_arg2_, sd_arg3_);
+  num_adjusted_slacks += adjust_small_slacks(*sdu, nlp->get_du(), *(iter_curr.get_vu()), (nlp->get_idu()), mu,
+                                             sd_arg1_, sd_arg2_, sd_arg3_);
 
   return num_adjusted_slacks;                      
 }

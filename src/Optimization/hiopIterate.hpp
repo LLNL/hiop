@@ -89,18 +89,6 @@ public:
 
   /// @brief adjust slack variables if they are negative, or if they are positive but too small
   virtual int adjust_small_slacks(const hiopIterate& iter_curr, const double& mu);
-  /// @brief adjust slack variables sxl or sxu, i.e., introduced by variable bounds
-  virtual int adjust_small_var_slacks(hiopVector& slack, 
-                                      const hiopVector& bound, 
-                                      const hiopVector& slack_dual, 
-                                      const hiopVector& select,
-                                      const double& mu);
-  /// @brief adjust slack variables sdl or sdu, i.e., introduced by inequality constraints
-  virtual int adjust_small_con_slacks(hiopVector& slack, 
-                                      const hiopVector& bound, 
-                                      const hiopVector& slack_dual, 
-                                      const hiopVector& select,
-                                      const double& mu);
 
   /**
    * Adjusts the signed duals to ensure the the logbar primal-dual Hessian is not arbitrarily
@@ -209,6 +197,20 @@ private:
   //associated info from problem formulation
   const hiopNlpFormulation * nlp;
 private:
+  /**
+   * @brief adjust slack variables if they are negative, or if they are positive but too small
+   * if slack < small_val, compute new_slack as
+   *   new_slack = last_slack + min( max(mu/slack_dual,small_val), scale_fact * max(1.0,|bound|) )
+   */
+  virtual int adjust_small_slacks(hiopVector& slack, 
+                                  const hiopVector& bound, 
+                                  const hiopVector& slack_dual, 
+                                  const hiopVector& select,
+                                  const double& mu,
+                                  hiopVector* arg1,
+                                  hiopVector* arg2,
+                                  hiopVector* arg3);
+
   hiopIterate() {};
   hiopIterate(const hiopIterate&) {};
   hiopIterate& operator=(const hiopIterate& o) {return *this;}
