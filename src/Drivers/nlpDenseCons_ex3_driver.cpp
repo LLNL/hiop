@@ -67,7 +67,7 @@ int main(int argc, char **argv)
   if(!parse_arguments(argc, argv, n, selfCheck)) { usage(argv[0]); return 1;}
 
   double obj_value;
-  bool do_second_round = false;
+  bool do_second_round = true;
   
   hiopSolveStatus status;
 
@@ -80,7 +80,6 @@ int main(int argc, char **argv)
 
   {
     hiopAlgFilterIPM solver(&nlp);
-
     nlp.options->SetStringValue("fixed_var", "remove");
     status = solver.run();
     obj_value = solver.getObjective();
