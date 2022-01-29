@@ -87,13 +87,8 @@ public:
   virtual bool takeStep_duals(const hiopIterate& iter, const hiopIterate& dir,
 			      const double& alphaprimal, const double& alphadual);
 
-  /// @brief adjust small slack variables
+  /// @brief adjust slack variables if they are negative, or if they are positive but too small
   virtual int adjust_small_slacks(const hiopIterate& iter_curr, const double& mu);
-  virtual int adjust_small_slacks(hiopVector& slack, 
-                                  const hiopVector& bound, 
-                                  const hiopVector& slack_dual, 
-                                  const hiopVector& select,
-                                  const double& mu);
 
   /**
    * Adjusts the signed duals to ensure the the logbar primal-dual Hessian is not arbitrarily
@@ -178,20 +173,44 @@ public:
 
 private:
   /** Primal variables */
-  hiopVector*x;         //the original decision x
-  hiopVector*d;         //the adtl decisions d, d=d(x)
-  hiopVector*sxl,*sxu;  //slacks for x
-  hiopVector*sdl,*sdu;  //slacks for d
+  hiopVector* x;        //the original decision x
+  hiopVector* d;        //the adtl decisions d, d=d(x)
+  hiopVector* sxl;      //slacks for x. in x: x-sxl=xl
+  hiopVector* sxu;      //slacks for x. in x: x+sxu=xu
+  hiopVector* sdl;      //slacks for d. in d: d-sdl=dl
+  hiopVector* sdu;      //slacks for d. in d: d+sdu=du
+  hiopVector* sx_arg1_; //workspace for slacks for x
+  hiopVector* sx_arg2_; //workspace for slacks for x
+  hiopVector* sx_arg3_; //workspace for slacks for x
+  hiopVector* sd_arg1_; //workspace for slacks for d
+  hiopVector* sd_arg2_; //workspace for slacks for d
+  hiopVector* sd_arg3_; //workspace for slacks for d
 
   /** Dual variables */
-  hiopVector*yc;       //for c(x)=crhs
-  hiopVector*yd;       //for d(x)-d=0
-  hiopVector*zl,*zu;   //for slacks eq. in x: x-sxl=xl, x+sxu=xu
-  hiopVector*vl,*vu;   //for slack eq. in d, e.g., d-sdl=dl
+  hiopVector* yc;   //for c(x)=crhs
+  hiopVector* yd;   //for d(x)-d=0
+  hiopVector* zl;   //for slacks eq. in x: x-sxl=xl
+  hiopVector* zu;   //for slacks eq. in x: x+sxu=xu
+  hiopVector* vl;   //for slacks eq. in d: d-sdl=dl
+  hiopVector* vu;   //for slacks eq. in d: d+sdu=du
 private:
   //associated info from problem formulation
   const hiopNlpFormulation * nlp;
 private:
+  /**
+   * @brief adjust slack variables if they are negative, or if they are positive but too small
+   * if slack < small_val, compute new_slack as
+   *   new_slack = last_slack + min( max(mu/slack_dual,small_val), scale_fact * max(1.0,|bound|) )
+   */
+  virtual int adjust_small_slacks(hiopVector& slack, 
+                                  const hiopVector& bound, 
+                                  const hiopVector& slack_dual, 
+                                  const hiopVector& select,
+                                  const double& mu,
+                                  hiopVector& arg1,
+                                  hiopVector& arg2,
+                                  hiopVector& arg3);
+
   hiopIterate() {};
   hiopIterate(const hiopIterate&) {};
   hiopIterate& operator=(const hiopIterate& o) {return *this;}
