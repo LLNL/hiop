@@ -257,7 +257,10 @@ public:
 
   /// @brief return the scaling fact for objective
   double get_obj_scale() const;
-  
+
+  /// @brief addjust variable/constraint bounds according to `it`
+  void adjust_bounds(const hiopIterate& it);
+
   /* outputing and debug-related functionality*/
   hiopLogger* log;
   hiopRunStats runStats;

@@ -1131,6 +1131,22 @@ double hiopNlpFormulation::get_obj_scale() const
   return 1.0;
 }
 
+void hiopNlpFormulation::adjust_bounds(const hiopIterate& it)
+{
+  xl_->copyFrom(*it.get_x());
+  xl_->axpy(-1.0, *it.get_sxl());
+
+  xu_->copyFrom(*it.get_x());
+  xu_->axpy(1.0, *it.get_sxu());
+
+  dl_->copyFrom(*it.get_d());
+  dl_->axpy(-1.0, *it.get_sdl());
+
+  du_->copyFrom(*it.get_d());
+  du_->axpy(1.0, *it.get_sdu());
+}
+
+
 /* ***********************************************************************************
  *    hiopNlpDenseConstraints class implementation 
  * ***********************************************************************************
