@@ -413,9 +413,9 @@ int hiopIterate::adjust_small_slacks(hiopVector& slack,
                                      const hiopVector& slack_dual,
                                      const hiopVector& select,
                                      const double& mu,
-                                     hiopVector* arg1,
-                                     hiopVector* arg2,
-                                     hiopVector* arg3)
+                                     hiopVector& arg1,
+                                     hiopVector& arg2,
+                                     hiopVector& arg3)
 {
   int num_adjusted_slack = 0;
   double zero=0.0;
@@ -432,47 +432,41 @@ int hiopIterate::adjust_small_slacks(hiopVector& slack,
     slack_min = slack.min_w_pattern(select);
     if(slack_min < small_val) {
       
-      if(nullptr==arg1) {
-        arg1 = slack.alloc_clone();
-        arg2 = slack.alloc_clone();
-        arg3 = slack.alloc_clone();
-      }
-      
-      arg1->copyFrom(slack);
+      arg1.copyFrom(slack);
 
       // correct variable bound to avoid numerical difficulty
-      arg1->addConstant_w_patternSelect(-small_val,select);
-      arg1->component_min(0.0);
+      arg1.addConstant_w_patternSelect(-small_val,select);
+      arg1.component_min(0.0);
 
-      num_adjusted_slack = arg1->numOfElemsLessThan(zero);
+      num_adjusted_slack = arg1.numOfElemsLessThan(zero);
 
-      arg1->component_sgn();
-      arg1->scale(-1.0);
+      arg1.component_sgn();
+      arg1.scale(-1.0);
 
       slack.component_max(0.0);
 
-      arg2->setToConstant_w_patternSelect(mu, select);
-      arg2->componentDiv_w_selectPattern(slack_dual, select);
+      arg2.setToConstant_w_patternSelect(mu, select);
+      arg2.componentDiv_w_selectPattern(slack_dual, select);
 
-      arg3->setToConstant_w_patternSelect(small_val, select);
+      arg3.setToConstant_w_patternSelect(small_val, select);
 
-      arg2->component_max(*arg3);
-      arg2->axpy(-1.0, slack);
+      arg2.component_max(arg3);
+      arg2.axpy(-1.0, slack);
 
-      arg1->componentMult(*arg2);
-      arg1->axpy(1.0, slack);
+      arg1.componentMult(arg2);
+      arg1.axpy(1.0, slack);
 
-      arg2->setToConstant_w_patternSelect(1.0, select);
-      arg3->copyFrom(bound);
-      arg3->component_abs();
-      arg2->component_max(*arg3);
+      arg2.setToConstant_w_patternSelect(1.0, select);
+      arg3.copyFrom(bound);
+      arg3.component_abs();
+      arg2.component_max(arg3);
 
-      arg2->scale(scale_fact);
-      arg2->axpy(1.0, slack);
+      arg2.scale(scale_fact);
+      arg2.axpy(1.0, slack);
 
-      arg1->component_min(*arg2);
+      arg1.component_min(arg2);
 
-      slack.copyFrom(*arg1);
+      slack.copyFrom(arg1);
 
 #ifndef NDEBUG
   assert(slack.matchesPattern(select));
@@ -487,14 +481,23 @@ int hiopIterate::adjust_small_slacks(const hiopIterate& iter_curr, const double&
 {
   int num_adjusted_slacks = 0;
 
+  if(nullptr==sx_arg1_) {
+    sx_arg1_ = sxl->alloc_clone();
+    sx_arg2_ = sxl->alloc_clone();
+    sx_arg3_ = sxl->alloc_clone();    
+    sd_arg1_ = sdl->alloc_clone();
+    sd_arg2_ = sdl->alloc_clone();
+    sd_arg3_ = sdl->alloc_clone();
+  }
+
   num_adjusted_slacks += adjust_small_slacks(*sxl, nlp->get_xl(), *(iter_curr.get_zl()), (nlp->get_ixl()), mu,
-                                             sx_arg1_, sx_arg2_, sx_arg3_);
+                                             *sx_arg1_, *sx_arg2_, *sx_arg3_);
   num_adjusted_slacks += adjust_small_slacks(*sxu, nlp->get_xu(), *(iter_curr.get_zu()), (nlp->get_ixu()), mu,
-                                             sx_arg1_, sx_arg2_, sx_arg3_);
+                                             *sx_arg1_, *sx_arg2_, *sx_arg3_);
   num_adjusted_slacks += adjust_small_slacks(*sdl, nlp->get_dl(), *(iter_curr.get_vl()), (nlp->get_idl()), mu,
-                                             sd_arg1_, sd_arg2_, sd_arg3_);
+                                             *sd_arg1_, *sd_arg2_, *sd_arg3_);
   num_adjusted_slacks += adjust_small_slacks(*sdu, nlp->get_du(), *(iter_curr.get_vu()), (nlp->get_idu()), mu,
-                                             sd_arg1_, sd_arg2_, sd_arg3_);
+                                             *sd_arg1_, *sd_arg2_, *sd_arg3_);
 
   return num_adjusted_slacks;                      
 }

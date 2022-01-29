@@ -207,9 +207,9 @@ private:
                                   const hiopVector& slack_dual, 
                                   const hiopVector& select,
                                   const double& mu,
-                                  hiopVector* arg1,
-                                  hiopVector* arg2,
-                                  hiopVector* arg3);
+                                  hiopVector& arg1,
+                                  hiopVector& arg2,
+                                  hiopVector& arg3);
 
   hiopIterate() {};
   hiopIterate(const hiopIterate&) {};
