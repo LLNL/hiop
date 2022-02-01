@@ -962,7 +962,7 @@ void hiopOptionsNLP::register_options()
                         1e-12,
                         1e-16,
                         1e-1,
-                        "Final/minimum bound relaxation factor in the elastic mode (default: 1e-8). "
+                        "Final/minimum bound relaxation factor in the elastic mode (default: 1e-12). "
                         "This value must be less or equal to elastic_mode_bound_relax_final. "
                         "If user provides elastic_mode_bound_relax_final > elastic_mode_bound_relax_last, "
                         "HiOp will use the default values for both parameters.");
