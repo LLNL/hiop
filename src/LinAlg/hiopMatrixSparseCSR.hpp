@@ -16,7 +16,10 @@ namespace hiop
  * @brief Sparse matrix of doubles in compressed row format for use on CPU/host. Data
  * is not (memory, MPI) distributed.
  *
- * Note: most of the methods are not implemented (TODO) as this is work in progress.
+ * @note The methods of this class expect and maintains unique and ordered column indexes 
+ * within the same row. 
+ *
+ * Note: most of the methods are not implemented (TODO) as this is work in progress (wip).
  */
 class hiopMatrixSparseCSR : public hiopMatrixSparse
 {
@@ -358,12 +361,17 @@ public:
    * Computes sparsity pattern, meaning computes row pointers and column indexes of `M`,
    * of M = X*Y, where X is the calling matrix class (`this`) and Y is the second argument. 
    *
+   * @note The output matrix `M` will have unique and ordered column indexes (with the same
+   * row)
+   *
    * @note Specializations of this class may only be able to compute the sparsity pattern in
    * tandem with the numerical multiplications (for example, because of API limitations). 
    * In this cases, the `times_mat_numeric` will take over sparsity computations and the 
    * arrays with row pointers and column indexes may be uninitialized after this call.
    * 
    * @pre The dimensions of the matrices should be consistent with the multiplication.
+   * 
+   * @pre The column indexes within the same row must be unique and ordered for `Y`.
    * 
    * @pre The internal arrays of `M` should have enough storage to hold the sparsity 
    * pattern (row pointers and column indexes) and values of the multiplication result. 
@@ -383,6 +391,9 @@ public:
    * restricted to performing both phases in inside this method. 
    *
    * @pre The dimensions of the matrices should be consistent with the multiplication.
+   *
+   * @pre The column indexes within the same row must be unique and ordered both for input
+   * matrices and result matrix `M`.
    *
    * @pre The indexes arrays of `this`, `Y`, and `M` should not have changed since the 
    * last call to `times_diag_times_mat`.
@@ -502,6 +513,8 @@ public:
                           const hiopMatrixSparseCSR& Y,
                           double beta) const;
 
+  /// @brief Performs a quick check and returns false if the CSR indexes are not ordered
+  bool check_csr_is_ordered();
   /////////////////////////////////////////////////////////////////////
   // end of new CSR-specific methods
   /////////////////////////////////////////////////////////////////////
