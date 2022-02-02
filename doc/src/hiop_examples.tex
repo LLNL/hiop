@@ -1,0 +1,79 @@
+\documentclass[11pt,letterpaper]{article}
+
+\usepackage[utf8]{inputenc}
+
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{algorithm}
+\usepackage{algcompatible}
+\usepackage{comment}
+
+\usepackage{graphicx}
+\usepackage{xcolor}
+
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks,%
+    citecolor=green,%
+    filecolor=black,%
+    linkcolor=red,%
+    urlcolor=blue
+}
+
+\bibliographystyle{unsrt}
+
+\title{$ $
+\\[-100pt] Solving Saddle Point Linear Systems}
+\author{Shaked Regev and Kasia \'{S}wirydowicz}
+
+\newcommand{\pmat}[1]{\begin{pmatrix}#1\end{pmatrix}}
+\newcommand{\bmat}[1]{\begin{bmatrix}#1\end{bmatrix}}
+\newcommand{\Red}[1]{\textcolor{red}#1}
+
+\begin{document}
+
+\section{Example 1 --- A Dense Example}
+\section{Example 2 --- A Dense Example}
+\section{Example 3 --- A Dense Example}
+\section{Example 4 --- A MDS Example}
+\section{Example 5 --- A MDS Example}
+
+\section{Example 6 --- A Convex Sparse Example}
+\begin{align}
+&&&&\min_{x\in\mathbb{R}^n} & \hspace{0.5cm} \frac{a}{4}\sum_{i=1}^{n} (x_i-1)^4 &&&& \label{ex6:obj}\\
+&&&&\textnormal{s.t.} &\hspace{0.5cm}  4ax_1+2ax_2 = 10a &&&& \label{ex6:eq1}\\
+&&&&& \hspace{0.5cm} 5a \leq  2ax_1 + ax_3                 &&&& \label{ex6:ineq1}\\
+&&&&& \hspace{0.5cm}  a \leq  2ax_1       + 0.5ax_i \leq 2an &&&& \label{ex6:ineq2}\\
+&&&&& \hspace{0.5cm}  x_1~free, &&&& \label{ex6:varb1}\\
+&&&&& \hspace{0.5cm}  0.0 \leq x_2, &&&& \label{ex6:varb2}\\
+&&&&& \hspace{0.5cm}  1.5 \leq x_3 \leq 10  &&&& \label{ex6:varb3}\\
+&&&&& \hspace{0.5cm}  0.5 \leq x_i, &\forall i=4,...,n               &&& \label{ex6:varb4}
+\end{align}
+
+Here $n\geq3$ and $a>0$ are parameters which can be turned via user's inputs. If they are not specified by the user, they are set to the default values, $n=3$ and $a=1.0$.
+
+The analytical solution is obtained at $x_1=1.75$, $x_2=x_3=1.5$, and $x_i=1$ for $i\geq 4$. The objective value is $0.110352$.
+File nlpSparse\_ex6\_driver.cpp provides more details about the usage of this example.
+
+\section{Example 7 --- A Nonconvex Sparse Example}
+\begin{align}
+    &&&&\min_{x\in\mathbb{R}^n} & \hspace{0.5cm} -\frac{a}{4}\sum_{i=1}^{n} (x_i-1)^4 + 0.5\sum_{i=1}^{n} x_i^2&&&& \label{ex7:obj}\\
+    &&&&\textnormal{s.t.} &\hspace{0.5cm}  4x_1+2x_2 = 10 &&&& \label{ex7:eq1}\\
+    &&&&& \hspace{0.5cm}  4x_1+2x_2 = 10 &&&& \label{ex7:defeq}\\
+    &&&&& \hspace{0.5cm}  5 \leq  2x_1 + x_3                 &&&& \label{ex7:ineq1}\\
+    &&&&& \hspace{0.5cm}          4x_1      + 2x_3   \leq 19 &&&& \label{ex7:defineq}\\
+    &&&&& \hspace{0.5cm}  1 \leq  2x_1      + 0.5x_i \leq 2n &&&& \label{ex7:ineq2}\\
+    &&&&& \hspace{0.5cm}  x_1~free, &&&& \label{ex7:varb1}\\
+    &&&&& \hspace{0.5cm}  0.0 \leq x_2, &&&& \label{ex7:varb2}\\
+    &&&&& \hspace{0.5cm}  1.5 \leq x_3 \leq 10  &&&& \label{ex7:varb3}\\
+    &&&&& \hspace{0.5cm}  0.5 \leq x_i, &\forall i=4,...,n    &&& \label{ex7:varb4}
+\end{align}
+
+Here $n\geq3$ and $a>0$ are parameters which can be turned via user's inputs. If they are not specified by the user, they are set to the default values, $n=3$ and $a=0.1$. Note that the equality constraints \eqref{ex7:eq1} and \eqref{ex7:defeq} are duplicate. As a result, the constraint Jacobian matrix is rank deficient and may introduce numerical difficulties. File nlpSparse\_ex7\_driver.cpp provides more details about the usage of this example.
+
+
+\section{Example 8 --- A Primal Decomposition Example}
+\section{Example 9 --- A Primal Decomposition Example}
+
+\end{document}
