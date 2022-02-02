@@ -115,7 +115,7 @@ protected:
 
 private:
   //placeholder for the code that decides which linear solver to used based on safe_mode_
-  hiopLinSolverIndefSparse* determineAndCreateLinsys(int nxd, int neq, int nineq, int nnz);
+  hiopLinSolverSymSparse* determineAndCreateLinsys(int nxd, int neq, int nineq, int nnz);
 };
 
 
@@ -178,7 +178,7 @@ protected:
 
 private:
   //placeholder for the code that decides which linear solver to used based on safe_mode_
-  hiopLinSolverIndefSparse* determineAndCreateLinsys(int nxd, int neq, int nineq, int nnz);
+  hiopLinSolverSymSparse* determineAndCreateLinsys(int nxd, int neq, int nineq, int nnz);
 };
 
 

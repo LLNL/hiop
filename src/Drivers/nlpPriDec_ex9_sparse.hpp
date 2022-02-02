@@ -1,5 +1,5 @@
-#ifndef HIOP_EXAMPLE_EX9
-#define HIOP_EXAMPLE_EX9
+#ifndef HIOP_EXAMPLE_EX9_SPARSE
+#define HIOP_EXAMPLE_EX9_SPARSE
 
 #include <hiopVectorInt.hpp>
 //base interface (NLP specification for primal decomposable problems)
@@ -8,9 +8,8 @@
 //basecase sparse NLP
 #include "nlpPriDec_ex9_user_basecase.hpp"
 
-//recourse MDS NLP
-#include "nlpPriDec_ex9_user_recourse_MDS.hpp"
-
+//recourse sparse NLP
+#include "nlpPriDec_ex9_user_recourse_sparse.hpp"
 /**
  *
  * An example of the use of hiop::hiopInterfacePriDecProblem interface of HiOp.
@@ -63,12 +62,12 @@
  */
 
 using namespace hiop;
-class PriDecMasterProblemEx9 : public hiop::hiopInterfacePriDecProblem
+class PriDecMasterProblemEx9Sparse : public hiop::hiopInterfacePriDecProblem
 {
 public:
-  PriDecMasterProblemEx9(size_t nx, size_t ny, size_t nS, size_t S);
+  PriDecMasterProblemEx9Sparse(size_t nx, size_t ny, size_t nS, size_t S);
   
-  virtual ~PriDecMasterProblemEx9();
+  virtual ~PriDecMasterProblemEx9Sparse();
 
   hiop::hiopSolveStatus solve_master(hiopVector& x,
                                      const bool& include_r,

@@ -109,9 +109,9 @@ hiopAlgFilterIPMBase::hiopAlgFilterIPMBase(hiopNlpFormulation* nlp_, const bool 
 
   //parameter based initialization
   if(duals_update_type==0) {
-    dualsUpdate = nlp->alloc_duals_lsq_updater();
+    dualsUpdate_ = nlp->alloc_duals_lsq_updater();
   } else if(duals_update_type==1) {
-    dualsUpdate = new hiopDualsNewtonLinearUpdate(nlp);
+    dualsUpdate_ = new hiopDualsNewtonLinearUpdate(nlp);
   } else {
     assert(false && "duals_update_type has an unrecognized value");
   }
@@ -144,7 +144,7 @@ void hiopAlgFilterIPMBase::destructorPart()
 
   if(logbar) delete logbar;
 
-  if(dualsUpdate) delete dualsUpdate;
+  if(dualsUpdate_) delete dualsUpdate_;
 
   if(c_soc) {
     delete c_soc;
@@ -182,7 +182,7 @@ hiopAlgFilterIPMBase::~hiopAlgFilterIPMBase()
 
   if(logbar) delete logbar;
 
-  if(dualsUpdate) delete dualsUpdate;
+  if(dualsUpdate_) delete dualsUpdate_;
 
   if(c_soc) {
     delete c_soc;
@@ -249,11 +249,11 @@ void hiopAlgFilterIPMBase::reInitializeNlpObjects()
   //parameter based initialization
   if(duals_update_type==0) {
     //lsq update
-    //dualsUpdate = new hiopDualsLsqUpdate(nlp);
-    dualsUpdate = nlp->alloc_duals_lsq_updater();
+    //dualsUpdate_ = new hiopDualsLsqUpdate(nlp);
+    dualsUpdate_ = nlp->alloc_duals_lsq_updater();
   } else {
     if(duals_update_type==1) {
-      dualsUpdate = new hiopDualsNewtonLinearUpdate(nlp);
+      dualsUpdate_ = new hiopDualsNewtonLinearUpdate(nlp);
     } else { assert(false && "duals_update_type has an unrecognized value"); }
   }
 }
@@ -426,8 +426,8 @@ startingProcedure(hiopIterate& it_ini,
     if(0==dualsInitializ) {
       //LSQ-based initialization of yc and yd
 
-      //is the dualsUpdate already the LSQ-based updater?
-      hiopDualsLsqUpdate* updater = dynamic_cast<hiopDualsLsqUpdate*>(dualsUpdate);
+      //is the dualsUpdate_ already the LSQ-based updater?
+      hiopDualsLsqUpdate* updater = dynamic_cast<hiopDualsLsqUpdate*>(dualsUpdate_);
       bool deleteUpdater = false;
       if(updater == NULL) {
 	//updater = new hiopDualsLsqUpdate(nlp);
@@ -577,13 +577,67 @@ bool hiopAlgFilterIPMBase::evalNlp_HessOnly(hiopIterate& iter,
 }
 
 bool hiopAlgFilterIPMBase::
-updateLogBarrierParameters(const hiopIterate& it, const double& mu_curr, const double& tau_curr,
+updateLogBarrierParameters(hiopIterate& it, const double& mu_curr, const double& tau_curr,
 			   double& mu_new, double& tau_new)
 {
   double new_mu = fmax(eps_tol/10, fmin(kappa_mu*mu_curr, pow(mu_curr,theta_mu)));
-  if(fabs(new_mu-mu_curr)<1e-16) return false;
+  if(fabs(new_mu-mu_curr)<1e-16) {
+    return false;
+  }
   mu_new  = new_mu;
   tau_new = fmax(tau_min,1.0-mu_new);
+  
+  if(nlp->options->GetString("elastic_mode")!="none") {
+    const double target_mu = nlp->options->GetNumeric("tolerance");
+    const double bound_relax_perturb_init = nlp->options->GetNumeric("elastic_mode_bound_relax_initial");
+    const double bound_relax_perturb_min = nlp->options->GetNumeric("elastic_mode_bound_relax_final");
+    double bound_relax_perturb;
+    
+    if(nlp->options->GetString("elastic_bound_strategy")=="mu_scaled") {
+      bound_relax_perturb = 0.995*mu_new;
+    } else if(nlp->options->GetString("elastic_bound_strategy")=="mu_projected") {
+      bound_relax_perturb =  (mu_new - target_mu) / (mu0 - target_mu) * (bound_relax_perturb_init-bound_relax_perturb_min) 
+                           + bound_relax_perturb_min;
+    }
+
+    if(bound_relax_perturb > bound_relax_perturb_init) {
+      bound_relax_perturb = bound_relax_perturb_init;
+    }
+
+    if(bound_relax_perturb < bound_relax_perturb_min) {
+      bound_relax_perturb = bound_relax_perturb_min;
+    }
+
+    nlp->log->printf(hovLinAlgScalars, "Tighen the variable/constraint bounds --- %10.6g\n", bound_relax_perturb);
+
+    nlp->reset_bounds(bound_relax_perturb);
+
+    if(nlp->options->GetString("elastic_mode")!="tighten_bound") {
+      assert(nlp->options->GetString("elastic_mode")=="correct_it" || 
+             nlp->options->GetString("elastic_mode")=="correct_it_adjust_bound");
+      // recompute slacks according to the new bounds
+      it.determineSlacks();
+
+      // adjust small/negative slacks
+      int num_adjusted_slacks = it.adjust_small_slacks(it, mu_new);
+      if(num_adjusted_slacks > 0) {    
+        nlp->log->printf(hovLinAlgScalars, "updateLogBarrierParameters: %d slacks are too small after tightening the bounds. "
+                        "Adjust corresponding slacks!\n", num_adjusted_slacks);
+
+        // adjust bounds according to `it`
+        if(nlp->options->GetString("elastic_mode")=="correct_it_adjust_bound") {
+          nlp->adjust_bounds(it);
+        }
+        
+        // adjust duals
+        bool bret = it.adjustDuals_primalLogHessian(mu_new,kappa_Sigma);
+        assert(bret);
+      }
+    }
+    //compute infeasibility theta at trial point, since slacks and/or bounds are modified 
+    double theta_temp = resid->compute_nlp_infeasib_onenorm(*it_trial, *_c_trial, *_d_trial);
+  }
+  
   return true;
 }
 
@@ -613,21 +667,20 @@ evalNlpAndLogErrors(const hiopIterate& it, const hiopResidual& resid, const doub
   nlp->log->printf(hovScalars, "nrmOneDualEqu %g   nrmOneDualBo %g\n", nrmDualEqu, nrmDualBou);
   if(nrmDualBou>1e+10) {
     nlp->log->printf(hovWarning, "Unusually large bound dual variables (norm1=%g) occured, "
-		     "which may cause numerical instabilities if it persists. Convergence "
-		     " issues or inacurate optimal solutions may be experienced. Possible causes: "
-		     " tight bounds or bad scaling of the optimization variables.\n",
-		     nrmDualBou);
+                     "which may cause numerical instabilities if it persists. Convergence "
+                     " issues or inacurate optimal solutions may be experienced. Possible causes: "
+                     " tight bounds or bad scaling of the optimization variables.\n",
+                     nrmDualBou);
     if(nlp->options->GetString("fixed_var")=="remove") {
       nlp->log->printf(hovWarning, "For example, increase 'fixed_var_tolerance' to remove "
-		       "additional variables.\n");
+                       "additional variables.\n");
+    } else if(nlp->options->GetString("fixed_var")=="relax") {
+        nlp->log->printf(hovWarning, "For example, increase 'fixed_var_tolerance' to relax "
+                         "aditional (tight) variables and/or increase 'fixed_var_perturb' "
+                         "to decrease the tightness.\n");
     } else {
-      if(nlp->options->GetString("fixed_var")=="relax") {
-	nlp->log->printf(hovWarning, "For example, increase 'fixed_var_tolerance' to relax "
-			 "aditional (tight) variables and/or increase 'fixed_var_perturb' "
-			 "to decrease the tightness.\n");
-      } else
-	nlp->log->printf(hovWarning, "Potential fixes: fix or relax variables with tight bounds "
-			 "(see 'fixed_var' option) or rescale variables.\n");
+      nlp->log->printf(hovWarning, "Potential fixes: fix or relax variables with tight bounds "
+                       "(see 'fixed_var' option) or rescale variables.\n");
     }
   }
 
@@ -953,7 +1006,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
   bool bret=true; int lsStatus=-1, lsNum=0;
   int use_soc = 0;
   int use_fr = 0;
-  int num_adjusted_bounds = 0;
+  int num_adjusted_slacks = 0;
   solver_status_ = NlpSolve_Pending;
   while(true) {
 
@@ -1087,7 +1140,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
         break;
       }
       bret = it_trial->takeStep_primals(*it_curr, *dir, _alpha_primal, _alpha_dual); assert(bret);
-      num_adjusted_bounds = it_trial->adjust_small_slacks(*it_curr, _mu);
+      num_adjusted_slacks = it_trial->adjust_small_slacks(*it_curr, _mu);
       nlp->runStats.tmSolverInternal.stop(); //---
 
       //evaluate the problem at the trial iterate (functions only)
@@ -1117,11 +1170,11 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
       if(iniStep && theta<=theta_trial) {
         bool grad_phi_dx_soc_computed = false;
         double grad_phi_dx_soc = 0.0;
-        int num_adjusted_bounds_soc = 0;
+        int num_adjusted_slacks_soc = 0;
         lsStatus = apply_second_order_correction(kkt, theta, theta_trial,
-                                                 grad_phi_dx_soc_computed, grad_phi_dx_soc, num_adjusted_bounds_soc);
+                                                 grad_phi_dx_soc_computed, grad_phi_dx_soc, num_adjusted_slacks_soc);
         if(lsStatus>0) {
-          num_adjusted_bounds = num_adjusted_bounds_soc;
+          num_adjusted_slacks = num_adjusted_slacks_soc;
           grad_phi_dx_computed = grad_phi_dx_soc_computed;
           grad_phi_dx = grad_phi_dx_soc;
           use_soc = 1;
@@ -1136,8 +1189,18 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
     } //end of while for the linesearch loop
     nlp->runStats.tmSolverInternal.stop();
 
-    if(num_adjusted_bounds > 0) {
-      nlp->log->printf(hovWarning, "%d slacks are too small. Adjust corresponding variable bounds!\n", num_adjusted_bounds);
+    // adjust slacks and bounds if necessary
+    if(num_adjusted_slacks > 0) {
+      nlp->log->printf(hovWarning, "%d slacks are too small. Adjust corresponding variable slacks!\n", num_adjusted_slacks);
+      nlp->adjust_bounds(*it_trial);
+      //compute infeasibility theta at trial point, since bounds changed --- note that the returned value won't change
+      double theta_temp = resid->compute_nlp_infeasib_onenorm(*it_trial, *_c_trial, *_d_trial);
+#ifndef NDEBUG
+        if(0==use_soc) {
+          // TODO: check why this assertion fails
+          //assert(theta_temp == theta_trial);
+        }
+#endif
     }
 
     //post line-search stuff
@@ -1145,8 +1208,8 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
     if(lsStatus==1) {
       //need to check switching cond and Armijo to decide if filter is augmented
       if(!grad_phi_dx_computed) {
-	grad_phi_dx = logbar->directionalDerivative(*dir);
-	grad_phi_dx_computed=true;
+        grad_phi_dx = logbar->directionalDerivative(*dir);
+        grad_phi_dx_computed=true;
       }
 
       //this is the actual switching condition
@@ -1188,7 +1251,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
     //it_trial->takeStep_duals(*it_curr, *dir, _alpha_primal, _alpha_dual); assert(bret);
     //bret = it_trial->adjustDuals_primalLogHessian(_mu,kappa_Sigma); assert(bret);
     assert(infeas_nrm_trial>=0 && "this should not happen");
-    bret = dualsUpdate->go(*it_curr, *it_trial,
+    bret = dualsUpdate_->go(*it_curr, *it_trial,
 			   _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d, *dir,
 			   _alpha_primal, _alpha_dual, _mu, kappa_Sigma, infeas_nrm_trial); assert(bret);
 
@@ -1424,7 +1487,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
   int lsStatus=-1, lsNum=0;
   int use_soc = 0;
   int use_fr = 0;
-  int num_adjusted_bounds = 0;
+  int num_adjusted_slacks = 0;
 
   int linsol_safe_mode_lastiter = -1;
   bool linsol_safe_mode_on = "stable"==hiop::tolower(nlp->options->GetString("linsol_mode"));
@@ -1653,7 +1716,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
           }
         }
         bret = it_trial->takeStep_primals(*it_curr, *dir, _alpha_primal, _alpha_dual); assert(bret);
-        num_adjusted_bounds = it_trial->adjust_small_slacks(*it_curr, _mu);
+        num_adjusted_slacks = it_trial->adjust_small_slacks(*it_curr, _mu);
         nlp->runStats.tmSolverInternal.stop(); //---
 
         //evaluate the problem at the trial iterate (functions only)
@@ -1688,11 +1751,11 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
         if(iniStep && theta<=theta_trial) {
           bool grad_phi_dx_soc_computed = false;
           double grad_phi_dx_soc = 0.0;
-          int num_adjusted_bounds_soc = 0;
+          int num_adjusted_slacks_soc = 0;
           lsStatus = apply_second_order_correction(kkt, theta, theta_trial, 
-                                                   grad_phi_dx_soc_computed, grad_phi_dx_soc, num_adjusted_bounds_soc);
+                                                   grad_phi_dx_soc_computed, grad_phi_dx_soc, num_adjusted_slacks_soc);
           if(lsStatus>0) {
-            num_adjusted_bounds = num_adjusted_bounds_soc;
+            num_adjusted_slacks = num_adjusted_slacks_soc;
             grad_phi_dx_computed = grad_phi_dx_soc_computed;
             grad_phi_dx = grad_phi_dx_soc;
             use_soc = 1;
@@ -1707,9 +1770,21 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
       } //end of while for the linesearch loop
       nlp->runStats.tmSolverInternal.stop();
 
-      if(num_adjusted_bounds > 0) {
-        nlp->log->printf(hovWarning, "%d slacks are too small. Adjust corresponding variable bounds!\n", num_adjusted_bounds);
+      // adjust slacks and bounds if necessary
+      if(num_adjusted_slacks > 0) {
+        nlp->log->printf(hovWarning, "%d slacks are too small. Adjust corresponding variable slacks!\n", 
+                         num_adjusted_slacks);
+        nlp->adjust_bounds(*it_trial);
+        //compute infeasibility theta at trial point, since bounds changed --- note that the returned value won't change
+        double theta_temp = resid->compute_nlp_infeasib_onenorm(*it_trial, *_c_trial, *_d_trial);
+#ifndef NDEBUG
+        if(0==use_soc) {
+          // TODO: check why this assertion fails
+//          assert(theta_temp == theta_trial);
+        }
+#endif
       }
+
       // post line-search: filter is augmented whenever the switching condition or Armijo rule do not
       // hold for the trial point that was just accepted
       if(nlp->options->GetString("force_resto")=="yes" && !within_FR_ && iter_num == 1) {
@@ -1717,7 +1792,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
         if(use_fr) {
           // continue iterations if FR is accepted
           solver_status_ = NlpSolve_Pending;
-	  break;
+          break;
         }
       } else if(lsStatus==1) {
 
@@ -1816,7 +1891,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
       // this needs to be done before evalNlp_derivOnly so that the user's NLP functions
       // get the updated duals
       assert(infeas_nrm_trial>=0 && "this should not happen");
-      bret = dualsUpdate->go(*it_curr, *it_trial,
+      bret = dualsUpdate_->go(*it_curr, *it_trial,
                              _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d, *dir,
                              _alpha_primal, _alpha_dual, _mu, kappa_Sigma, infeas_nrm_trial);
       assert(bret);
@@ -2005,7 +2080,7 @@ int hiopAlgFilterIPMBase::apply_second_order_correction(hiopKKTLinSys* kkt,
                                                         const double theta_trial0,
                                                         bool &grad_phi_dx_computed,
                                                         double &grad_phi_dx,
-                                                        int &num_adjusted_bounds)
+                                                        int &num_adjusted_slacks)
 {
   int max_soc_iter = nlp->options->GetInteger("max_soc_iter");
   double kappa_soc = nlp->options->GetNumeric("kappa_soc");
@@ -2064,7 +2139,7 @@ int hiopAlgFilterIPMBase::apply_second_order_correction(hiopKKTLinSys* kkt,
     // Compute trial point
     bret = it_trial->takeStep_primals(*it_curr, *soc_dir, alpha_primal_soc, alpha_dual_soc); 
     assert(bret);
-    num_adjusted_bounds = it_trial->adjust_small_slacks(*it_curr, _mu);
+    num_adjusted_slacks = it_trial->adjust_small_slacks(*it_curr, _mu);
 
     //evaluate the problem at the trial iterate (functions only)
     if(!this->evalNlp_funcOnly(*it_trial, _f_nlp_trial, *_c_trial, *_d_trial)) {
@@ -2219,8 +2294,8 @@ bool hiopAlgFilterIPMBase::reset_var_from_fr_sol(hiopKKTLinSys* kkt, bool reset_
 
     //LSQ-based initialization of yc and yd
     if(0==dualsInitializ) {
-      //is the dualsUpdate already the LSQ-based updater?
-      hiopDualsLsqUpdate* updater = dynamic_cast<hiopDualsLsqUpdate*>(dualsUpdate);
+      //is the dualsUpdate_ already the LSQ-based updater?
+      hiopDualsLsqUpdate* updater = dynamic_cast<hiopDualsLsqUpdate*>(dualsUpdate_);
       bool deleteUpdater = false;
       if(!updater) {
         //updater = new hiopDualsLsqUpdate(nlp);
@@ -2312,7 +2387,7 @@ bool hiopAlgFilterIPMBase::solve_soft_feasibility_restoration(hiopKKTLinSys* kkt
     }
 
     //update and adjust the duals
-    bret = dualsUpdate->go(*it_curr, *it_trial,
+    bret = dualsUpdate_->go(*it_curr, *it_trial,
                            _f_nlp_trial, *_c_trial, *_d_trial, *_grad_f, *_Jac_c, *_Jac_d, *soft_dir,
                            alpha_primal_soft, alpha_dual_soft, _mu, kappa_Sigma, infeas_nrm_soft);
     assert(bret);

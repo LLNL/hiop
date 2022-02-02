@@ -257,7 +257,13 @@ public:
 
   /// @brief return the scaling fact for objective
   double get_obj_scale() const;
-  
+
+  /// @brief adjust variable/constraint bounds according to the given iteration.
+  void adjust_bounds(const hiopIterate& it);
+
+  /// @brief reset variable/constraint bounds in the elastic_mode
+  void reset_bounds(double bound_relax_perturb);
+
   /* outputing and debug-related functionality*/
   hiopLogger* log;
   hiopRunStats runStats;
@@ -333,7 +339,11 @@ protected:
   hiopNlpTransformations nlp_transformations_;
   
   //internal NLP transformations (currently gradient scaling implemented)
-  hiopNLPObjGradScaling *nlp_scaling_;
+  hiopNLPObjGradScaling* nlp_scaling_;
+
+  /// @brief internal NLP transformations that relaxes the bounds
+  hiopBoundsRelaxer* relax_bounds_;
+  
 
 #ifdef HIOP_USE_MPI
   //inter-process distribution of vectors
@@ -554,19 +564,23 @@ public:
   
   virtual hiopMatrix* alloc_Jac_c()
   {
-    return new hiopMatrixSparseTriplet(n_cons_eq_, n_vars_, nnz_sparse_Jaceq_);
+    return LinearAlgebraFactory::create_matrix_sparse(options->GetString("mem_space"), n_cons_eq_, n_vars_, nnz_sparse_Jaceq_);
+    //return new hiopMatrixSparseTriplet(n_cons_eq_, n_vars_, nnz_sparse_Jaceq_);
   }
   virtual hiopMatrix* alloc_Jac_d()
   {
-    return new hiopMatrixSparseTriplet(n_cons_ineq_, n_vars_, nnz_sparse_Jacineq_);
+    return LinearAlgebraFactory::create_matrix_sparse(options->GetString("mem_space"), n_cons_ineq_, n_vars_, nnz_sparse_Jacineq_);
+	  //return new hiopMatrixSparseTriplet(n_cons_ineq_, n_vars_, nnz_sparse_Jacineq_);
   }
   virtual hiopMatrix* alloc_Jac_cons()
   {
-    return new hiopMatrixSparseTriplet(n_cons_, n_vars_, nnz_sparse_Jaceq_ + nnz_sparse_Jacineq_);
+    return LinearAlgebraFactory::create_matrix_sparse(options->GetString("mem_space"),n_cons_, n_vars_, nnz_sparse_Jaceq_ + nnz_sparse_Jacineq_);
+    //return new hiopMatrixSparseTriplet(n_cons_, n_vars_, nnz_sparse_Jaceq_ + nnz_sparse_Jacineq_);
   }
   virtual hiopMatrix* alloc_Hess_Lagr()
   {
-    return new hiopMatrixSymSparseTriplet(n_vars_, nnz_sparse_Hess_Lagr_);
+    return LinearAlgebraFactory::create_matrix_sym_sparse(options->GetString("mem_space"),n_vars_, nnz_sparse_Hess_Lagr_);
+    //return new hiopMatrixSymSparseTriplet(n_vars_, nnz_sparse_Hess_Lagr_);
   }
   virtual size_type nx() const
   {

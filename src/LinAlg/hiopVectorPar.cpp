@@ -1027,14 +1027,18 @@ void hiopVectorPar::adjustDuals_plh(const hiopVector& x_,
   for(size_type i=0; i<n_local_; i++) {
     if(ix[i]==1.) {
       a=mu/x[i]; b=a/kappa; a=a*kappa;
-      if(*z<b) 
-	*z=b;
-      else //z[i]>=b
-	if(a<=b) 
-	  *z=b;
-	else //a>b
-	  if(a<*z) *z=a;
+      if(*z<b) {
+        *z=b;
+      } else { //z[i]>=b
+        if(a<=b) {
+          *z=b;
+        } else { //a>b
+          if(a<*z) {
+            *z=a;
+          }
           //else a>=z[i] then *z=*z (z[i] does not need adjustment)
+        }
+      }
     }
     z++;
   }
@@ -1058,7 +1062,7 @@ bool hiopVectorPar::isfinite_local() const
   return true;
 }
 
-void hiopVectorPar::print()
+void hiopVectorPar::print() const
 {
   int max_elems = n_local_;
   for(int it=0; it<max_elems; it++) {

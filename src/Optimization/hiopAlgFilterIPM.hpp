@@ -144,7 +144,7 @@ protected:
 
   virtual double thetaLogBarrier(const hiopIterate& it, const hiopResidual& resid, const double& mu);
 
-  bool updateLogBarrierParameters(const hiopIterate& it, const double& mu_curr, const double& tau_curr,
+  bool updateLogBarrierParameters(hiopIterate& it, const double& mu_curr, const double& tau_curr,
 				  double& mu_new, double& tau_new);
 
   // second order correction
@@ -153,7 +153,7 @@ protected:
                                             const double theta_trial0,
                                             bool &grad_phi_dx_computed,
                                             double &grad_phi_dx,
-                                            int &num_adjusted_bounds);
+                                            int &num_adjusted_slacks);
 
   // check if all the line search conditions are accepted or not
   virtual int accept_line_search_conditions(const double theta_curr,
@@ -202,7 +202,7 @@ protected:
   double onenorm_pr_curr_; //one norm of the constraint infeasibility
 
   //class for updating the duals multipliers
-  hiopDualsUpdater* dualsUpdate;
+  hiopDualsUpdater* dualsUpdate_;
 
   /* Log-barrier problem data
    *  The algorithm manages these and updates them by calling the

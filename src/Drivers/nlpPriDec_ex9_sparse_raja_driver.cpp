@@ -1,10 +1,14 @@
-#include "nlpPriDec_ex9.hpp"
+#include "nlpPriDec_ex9_sparse_raja.hpp"
 //the solver
 #include "hiopAlgPrimalDecomp.hpp"
 
 #ifdef HIOP_USE_GPU
 #include "magma_v2.h"
 #endif
+
+#include <umpire/Allocator.hpp>
+#include <umpire/ResourceManager.hpp>
+#include <RAJA/RAJA.hpp>
 
 #include <cstdlib>
 #include <string>
@@ -127,6 +131,11 @@ int main(int argc, char **argv)
   magma_init();
 #endif
 
+  // Set memory space where to create models and perform NLP solve
+  std::string mem_space = "UM";
+  //std::string mem_space = "DEFAULT";
+  //std::string mem_space = "HOST";
+  
   int nx = 20; //nx == ny for this problem
   int nS = 5; // number of \xi
   int S = 5;
@@ -139,7 +148,7 @@ int main(int argc, char **argv)
   }
   
   
-  PriDecMasterProblemEx9 pridec_problem(nx, nx, nS, S);
+  PriDecMasterProblemEx9Sparse pridec_problem(nx, nx, nS, S, mem_space);
   hiop::hiopAlgPrimalDecomposition pridec_solver(&pridec_problem, MPI_COMM_WORLD);
   pridec_solver.set_initial_alpha_ratio(0.5);
   pridec_solver.set_alpha_min(0.3);
