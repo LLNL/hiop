@@ -110,7 +110,7 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   auto delta_wd = delta_wd_in;
   if(dcc!=0) {
     //give a warning since we do only enforce dual reg. approximately for now
-    nlp_->log->printf(hovWarning, "LinSysCondensed: dual reg. %.6e (primal %.6e %.6e)\n", dcc, delta_wx, delta_wd);
+    //nlp_->log->printf(hovWarning, "LinSysCondensed: dual reg. %.6e (primal %.6e %.6e)\n", dcc, delta_wx, delta_wd);
     assert(dcc == dcd);
     delta_wx += fabs(dcc);
     delta_wd += fabs(dcc);
@@ -202,14 +202,14 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
     assert(nullptr == JacDt_);
     JacDt_ = new hiopMatrixSparseCSR();
     JacDt_->form_transpose_from_symbolic(*Jac_triplet);
-    t.stop(); printf("JacD JacDt-symb    took %.5f\n", t.getElapsedTime());
+    //t.stop(); printf("JacD JacDt-symb    took %.5f\n", t.getElapsedTime());
   }
 
   // numeric conversion from triplet to CSR
   t.reset(); t.start();
   JacD_->form_from_numeric(*Jac_triplet);
   JacDt_->form_transpose_from_numeric(*Jac_triplet);  
-  t.stop(); printf("JacD JacDt-nume    took %.5f\n", t.getElapsedTime());
+  //t.stop(); printf("JacD JacDt-nume    took %.5f\n", t.getElapsedTime());
   
   //symbolic multiplication for JacD'*D*J
   if(nullptr == JtDiagJ_) {
@@ -221,7 +221,7 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
     // Jt* (D*J)  (D is not used since it does not change the sparsity pattern)
     JtDiagJ_ = JacDt_->times_mat_alloc(*JacD_);
     JacDt_->times_mat_symbolic(*JtDiagJ_, *JacD_);
-    t.stop(); printf("J*D*J'-symb  took %.5f\n", t.getElapsedTime());
+    //t.stop(); printf("J*D*J'-symb  took %.5f\n", t.getElapsedTime());
 #if USE_OLD_CODE
     assert(JtDiagJ_->numberOfNonzeros() == JtDiagJsto_->nnz());
 #endif    
@@ -233,7 +233,7 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   JacD_->scale_rows(*Hd_);
   // (Jt*D) * J
   JacDt_->times_mat_numeric(0.0, *JtDiagJ_, 1.0, *JacD_);
-  t.stop(); printf("J*D*J'-nume  took %.5f\n", t.getElapsedTime());
+  //t.stop(); printf("J*D*J'-nume  took %.5f\n", t.getElapsedTime());
   
 #ifdef HIOP_DEEPCHECKS
   JtDiagJ_->check_csr_is_ordered();
@@ -268,7 +268,7 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
     M_condensed_tmp->add_matrix_symbolic(*M_condensed_, Diag);
     delete M_condensed_tmp;
 
-    t.stop(); printf("ADD-symb  took %.5f\n", t.getElapsedTime());
+    //t.stop(); printf("ADD-symb  took %.5f\n", t.getElapsedTime());
   }
 
 
@@ -286,7 +286,7 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
 
   Hess_csr_->add_matrix_numeric(1.0, *M_condensed_, 1.0, *JtDiagJ_, 1.0);  
   
-  t.stop(); printf("ADD-nume  took %.5f\n", t.getElapsedTime());
+  //t.stop(); printf("ADD-nume  took %.5f\n", t.getElapsedTime());
 #endif  //NEW_CODE
 
 
