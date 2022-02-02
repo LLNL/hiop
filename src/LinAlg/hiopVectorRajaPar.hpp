@@ -255,7 +255,7 @@ public:
   virtual bool isfinite_local() const;
   
   virtual void print(FILE*, const char* withMessage=NULL, int max_elems=-1, int rank=-1) const;
-  virtual void print(){} ///< @todo Temporary to surpress warnings, will be removed.
+  virtual void print() const{} ///< @todo Temporary to surpress warnings, will be removed.
 
   /* more accessers */
   inline size_type get_local_size() const { return n_local_; }

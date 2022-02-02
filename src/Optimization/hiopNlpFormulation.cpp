@@ -136,6 +136,7 @@ hiopNlpFormulation::hiopNlpFormulation(hiopInterfaceBase& interface_, const char
   cons_Jac_ =  nullptr;
   cons_lambdas_ = nullptr;
   nlp_scaling_ = nullptr;
+  relax_bounds_ = nullptr;
 }
 
 hiopNlpFormulation::~hiopNlpFormulation()
@@ -173,7 +174,7 @@ hiopNlpFormulation::~hiopNlpFormulation()
   delete cons_body_;
   delete cons_Jac_;
   delete cons_lambdas_;
-//  if(nlp_scaling_) delete nlp_scaling_;  // deleted inside nlp_transformations_
+  /// nlp_scaling_ and relax_bounds_ are deleted inside nlp_transformations_
 }
 
 bool hiopNlpFormulation::finalizeInitialization()
@@ -335,10 +336,14 @@ bool hiopNlpFormulation::finalizeInitialization()
       
       nlp_transformations_.append(fixedVarsRemover);
     } else {
+      /*
+      * Relax fixed variables according to 2 conditions:
+      * 1. bound_relax_perturb==0.0: Relax fixed variables according to fixed_var_perturb and fixed_var_tolerance.
+      *    Other variables are not relaxed. hiopFixedVarsRelaxer is used to relax fixed var
+      * 2. bound_relax_perturb!=0.0: Later we will use hiopBoundsRelaxer to relax the variable and inequlity bounds, 
+      *    according to bound_relax_perturb. It will also relax the fixed variables, hence we can skip relax fixed var here.
+      */
       if(options->GetString("fixed_var")=="relax" && options->GetNumeric("bound_relax_perturb") == 0.0) {
-        //
-        // Relax fixed variables
-        //
         log->printf(hovWarning, "Fixed variables will be relaxed internally.\n");
         auto* fixedVarsRelaxer =
           new hiopFixedVarsRelaxer(this, *xl_, *xu_, nfixed_vars, nfixed_vars_local);
@@ -390,10 +395,14 @@ bool hiopNlpFormulation::finalizeInitialization()
   // relax bounds for simple bounds and constraints)
   //
   if(options->GetNumeric("bound_relax_perturb") > 0.0) {
-    auto* relax_bounds = new hiopBoundsRelaxer(this, *xl_, *xu_, *dl_, *du_);
-    relax_bounds->setup();
-    relax_bounds->relax(options->GetNumeric("bound_relax_perturb"), *xl_, *xu_, *dl_, *du_);
-    nlp_transformations_.append(relax_bounds);
+    relax_bounds_ = new hiopBoundsRelaxer(this, *xl_, *xu_, *dl_, *du_);
+    relax_bounds_->setup();
+    if(options->GetString("elastic_mode") == "none") {
+      relax_bounds_->relax(options->GetNumeric("bound_relax_perturb"), *xl_, *xu_, *dl_, *du_);
+    } else {
+      relax_bounds_->relax(options->GetNumeric("elastic_mode_bound_relax_initial"), *xl_, *xu_, *dl_, *du_);    
+    }
+    nlp_transformations_.append(relax_bounds_);
   }
 
   // Copy data from host mirror to the device memory space
@@ -1146,6 +1155,10 @@ void hiopNlpFormulation::adjust_bounds(const hiopIterate& it)
   du_->axpy(1.0, *it.get_sdu());
 }
 
+void hiopNlpFormulation::reset_bounds(double bound_relax_perturb)
+{
+  relax_bounds_->relax_from_ori(bound_relax_perturb, *xl_, *xu_, *dl_, *du_);
+}
 
 /* ***********************************************************************************
  *    hiopNlpDenseConstraints class implementation 

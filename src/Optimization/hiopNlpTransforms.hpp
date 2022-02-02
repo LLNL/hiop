@@ -535,6 +535,12 @@ public:
              hiopVector& dl,
              hiopVector& du);
 
+  void relax_from_ori(const double& bound_relax_perturb,
+                      hiopVector& xl,
+                      hiopVector& xu,
+                      hiopVector& dl,
+                      hiopVector& du);
+
 private:
   hiopVector* xl_ori;
   hiopVector* xu_ori;
