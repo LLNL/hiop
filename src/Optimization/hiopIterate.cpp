@@ -502,7 +502,6 @@ int hiopIterate::adjust_small_slacks(const hiopIterate& iter_curr, const double&
   return num_adjusted_slacks;                      
 }
 
-
 bool hiopIterate::adjustDuals_primalLogHessian(const double& mu, const double& kappa_Sigma)
 {
   zl->adjustDuals_plh(*sxl,nlp->get_ixl(),mu,kappa_Sigma);

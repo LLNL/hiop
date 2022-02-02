@@ -144,7 +144,7 @@ protected:
 
   virtual double thetaLogBarrier(const hiopIterate& it, const hiopResidual& resid, const double& mu);
 
-  bool updateLogBarrierParameters(const hiopIterate& it, const double& mu_curr, const double& tau_curr,
+  bool updateLogBarrierParameters(hiopIterate& it, const double& mu_curr, const double& tau_curr,
 				  double& mu_new, double& tau_new);
 
   // second order correction
@@ -202,7 +202,7 @@ protected:
   double onenorm_pr_curr_; //one norm of the constraint infeasibility
 
   //class for updating the duals multipliers
-  hiopDualsUpdater* dualsUpdate;
+  hiopDualsUpdater* dualsUpdate_;
 
   /* Log-barrier problem data
    *  The algorithm manages these and updates them by calling the
