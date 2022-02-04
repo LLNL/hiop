@@ -140,6 +140,7 @@ target_compile_options(hiop_warnings
   -Wnull-dereference
   -Wdouble-promotion  # Warn on implicit conversion from
                       # float to double
+  -Wconversion
   )
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
