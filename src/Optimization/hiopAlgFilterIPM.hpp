@@ -298,6 +298,37 @@ protected:
 
   /// @brief Decides and creates the KKT linear system based on user options and NLP formulation.
   virtual hiopKKTLinSys* decideAndCreateLinearSystem(hiopNlpFormulation* nlp);
+
+  /**
+   * Switch to the safer (more stable) KKT formulation and linear solver. 
+   * 
+   * This is currently done only for `hiopNlpSparseIneq` NLP formulation. In this case 
+   * `hiopKKTLinSysCondensedSparse` is the quick KKT formulation and `hiopKKTLinSysCompressedSparseXDYcYd`
+   * is the safe KKT formulation. For other combinations of NLP and KKT formulations the method
+   * returns the KKT passed as argument.
+   */
+  virtual hiopKKTLinSys* switch_to_safer_KKT(hiopKKTLinSys* kkt_curr,
+                                            const double& mu,
+                                            const int& iter_num,
+                                            const bool& linsol_safe_mode_on,
+                                            const int& linsol_safe_mode_max_iters,
+                                            int& linsol_safe_mode_last_iter_switched_on,
+                                            double& theta_mu,
+                                            double& kappa_mu,
+                                            bool& switched);
+
+  /**
+   * Switch to the quick KKT formulation and linear solver is switching conditions are met. 
+   */
+  virtual hiopKKTLinSys* switch_to_fast_KKT(hiopKKTLinSys* kkt_curr,
+                                            const double& mu,
+                                            const int& iter_num,
+                                            bool& linsol_safe_mode_on,
+                                            int& linsol_safe_mode_max_iters,
+                                            int& linsol_safe_mode_last_iter_switched_on,
+                                            double& theta_mu,
+                                            double& kappa_mu,
+                                            bool& switched);
   
   /// @brief Decides and creates regularization objects based on user options and NLP formulation.
   virtual hiopFactAcceptor* decideAndCreateFactAcceptor(hiopPDPerturbation* p,
@@ -306,16 +337,14 @@ protected:
 
   virtual bool compute_search_direction(hiopKKTLinSys* kkt,
                                         bool& linsol_safe_mode_on,
-                                        int& linsol_safe_mode_lastiter,
                                         const bool linsol_forcequick,
                                         const int iter_num);
 
   virtual bool compute_search_direction_inertia_free(hiopKKTLinSys* kkt,
                                                      bool& linsol_safe_mode_on,
-                                                     int& linsol_safe_mode_lastiter,
                                                      const bool linsol_forcequick,
                                                      const int iter_num);
-
+protected:
   hiopPDPerturbation pd_perturb_;
   hiopFactAcceptor* fact_acceptor_;
 private:

@@ -55,7 +55,6 @@
 namespace hiop
 {
 
-#ifdef HIOP_DEEPCHECKS
 //computes the solve error for the KKT Linear system; used only for correctness checking
 double hiopKKTLinSys::errorKKT(const hiopResidual* resid, const hiopIterate* sol)
 {
@@ -181,8 +180,6 @@ double hiopKKTLinSys::errorKKT(const hiopResidual* resid, const hiopIterate* sol
 
   return derr;
 }
-
-#endif
 
 bool hiopKKTLinSys::compute_directions_for_full_space(const hiopResidual* resid,
                                                       hiopIterate* dir)

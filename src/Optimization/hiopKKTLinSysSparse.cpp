@@ -591,27 +591,37 @@ namespace hiop
         //We expect new GPU sparse solvers to be added. These should take precedence over STRUMPACK
         //in the instantiation logic below whenever it is ambiguous which GPU solver to instantiate,
         //for example when "linear_solver_sparse" option is auto.
-
-#ifdef HIOP_USE_STRUMPACK   
-        hiopLinSolverIndefSparseSTRUMPACK *p = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
-
-        //print it as a warning if safe mode is on
-        auto verbosity = safe_mode_ ? hovWarning : hovScalars;
-
-        nlp_->log->printf(verbosity,
-                          "KKT_SPARSE_XDYcYd linsys: alloc STRUMPACK size %d (%d cons) (safe_mode=%d)\n",
-                          n, neq+nineq, safe_mode_);
         
-        p->setFakeInertia(neq + nineq);
-        linSys_ = p;
-#else
-        //Return nullptr (and assert) if a GPU sparse linear solver is not present
-        assert(linSys_!=nullptr &&
-               "HiOp was built without a sparse linear solver for GPU/device and cannot run on the "
-               "device as instructed by the 'compute_mode' option. Change the 'compute_mode' to "
-               "'cpu' (from hiopKKTLinSysCompressedSparseXDYcYd)"); 
-        return nullptr;
+        // Note: return CPU linear solver hiopLinSolverIndefSparseMA57 when NLP formulation is
+        // `hiopKKTLinSysCondensedSparse` since this is required under hybrid and gpu compute mode when
+        // the linear solver safe mode kicks in the outer optimization loop
+        if(nlp_->options->GetString("KKTLinsys")=="condensed") {
+          assert(safe_mode_ && "this should happen only under safe mode");
+          linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
+        } else {
+#ifdef HIOP_USE_STRUMPACK   
+          auto *p = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
 
+          //print it as a warning if safe mode is on
+          auto verbosity = safe_mode_ ? hovWarning : hovScalars;
+          
+          nlp_->log->printf(verbosity,
+                            "KKT_SPARSE_XDYcYd linsys: alloc STRUMPACK size %d (%d cons) (safe_mode=%d)\n",
+                            n, neq+nineq, safe_mode_);
+          
+          p->setFakeInertia(neq + nineq);
+          linSys_ = p;
+#else
+          //Return nullptr (and assert) if a GPU sparse linear solver is not present
+          
+          assert(linSys_!=nullptr &&
+                 "HiOp was built without a sparse linear solver for GPU/device and cannot run on the "
+                 "device as instructed by the 'compute_mode' option. Change the 'compute_mode' to "
+                 "'cpu' (message from hiopKKTLinSysCompressedSparseXDYcYd)"); 
+          return nullptr;
+
+          //linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
+        }
 
 // #ifdef HIOP_USE_COINHSL
 //         nlp_->log->printf(hovScalars,

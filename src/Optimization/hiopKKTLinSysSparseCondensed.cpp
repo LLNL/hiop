@@ -96,7 +96,7 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   auto delta_wd = delta_wd_in;
   if(dcc!=0) {
     //give a warning since we do only enforce dual reg. approximately for now
-    nlp_->log->printf(hovWarning, "LinSysCondensed: dual reg. %.6e (primal %.6e %.6e)\n", dcc, delta_wx, delta_wd);
+    nlp_->log->printf(hovWarning, "LinSysCondensed: dual reg. %.6e primal %.6e %.6e\n", dcc, delta_wx, delta_wd);
     assert(dcc == dcd);
     delta_wx += fabs(dcc);
     delta_wd += fabs(dcc);
@@ -616,14 +616,26 @@ bool hiopKKTLinSysCondensedSparse::solveCompressed(hiopVector& rx,
   rd.copyToStarting(*krylov_rhs_xdycyd_, nx);
   ryd.copyToStarting(*krylov_rhs_xdycyd_, nx+nd);
 
+  const double tol_mu = 1e-2;
+  double tol = std::min(mu_*tol_mu, 1e-6);
+  bicgstab_->set_tol(tol);
   bicgstab_->set_x0(0.0);
   
   bret = bicgstab_->solve(*krylov_rhs_xdycyd_);
   if(!bret) {
-    if(bicgstab_->get_sol_abs_resid()>1e-8 && bicgstab_->get_sol_rel_resid()>1e-8) {
-      nlp_->log->printf(hovWarning, "%s", bicgstab_->get_convergence_info().c_str());
+    nlp_->log->printf(hovWarning, "%s", bicgstab_->get_convergence_info().c_str());
+
+    double tola = 10*mu_;
+    double tolr = mu_*1e-1;
+
+    if(bicgstab_->get_sol_rel_resid()>tolr || bicgstab_->get_sol_abs_resid()>tola) {
+      return false;
     }
-    //always return true for now (TODO: break under large residuals)
+    
+    //error out if one of the residuals is large
+    if(bicgstab_->get_sol_abs_resid()>1e-2 || bicgstab_->get_sol_rel_resid()>1e-2) {
+      return false;
+    }
     bret = true;
   }
 

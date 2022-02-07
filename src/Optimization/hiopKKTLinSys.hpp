@@ -65,23 +65,35 @@ class hiopKKTLinSys
 {
 public:
   hiopKKTLinSys(hiopNlpFormulation* nlp)
-    : nlp_(nlp), iter_(NULL), grad_f_(NULL), Jac_c_(NULL), Jac_d_(NULL), Hess_(NULL),
-      perturb_calc_(NULL), safe_mode_(true)
+    : nlp_(nlp),
+      iter_(NULL),
+      grad_f_(NULL),
+      Jac_c_(NULL),
+      Jac_d_(NULL),
+      Hess_(NULL),
+      perturb_calc_(NULL),
+      safe_mode_(true)
   {
     perf_report_ = "on"==hiop::tolower(nlp_->options->GetString("time_kkt"));
+    mu_ = nlp_->options->GetNumeric("mu0");
   }
   virtual ~hiopKKTLinSys()
-  { }
-  /* updates the parts in KKT system that are dependent on the iterate.
+  {
+  }
+  
+  /**
+   * Updates the parts in KKT system that are dependent on the iterate.
    * It may trigger a refactorization for direct linear systems, or it may not do
-   * anything, for example, LowRank linear system */
+   * anything, for example, LowRank KKT linear system 
+   */
   virtual bool update(const hiopIterate* iter,
 		      const hiopVector* grad_f,
 		      const hiopMatrix* Jac_c, const hiopMatrix* Jac_d, hiopMatrix* Hess) = 0;
   
-  /* forms the residual of the underlying linear system, uses the factorization
-   * computed by 'update' to compute the "reduced-space" search directions by solving
-   * with the factors, then computes the "full-space" directions */
+  /**
+   * Forms the residual of the underlying linear system. It uses the factorization
+   * computed by `update` to compute the "reduced-space" (i.e., compressed, condensed, etc.) 
+   * search directions by solving with the factors, then computes the "full-space" directions */
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction) = 0;
   virtual bool compute_directions_for_full_space(const hiopResidual* resid, hiopIterate* direction);
 
@@ -104,10 +116,51 @@ public:
   {
     safe_mode_ = val;
   }
-#ifdef HIOP_DEEPCHECKS
-  //computes the solve error for the KKT Linear system; used only for correctness checking
-  virtual double errorKKT(const hiopResidual* resid, const hiopIterate* sol);
 
+  /// @brief Sets the log barrier parameter `mu`
+  inline void set_logbar_mu(double mu)
+  {
+    mu_ = mu;
+  }
+
+  /**
+   * Returns the absolute residual norm at the last KKT solve.
+   *
+   * The returned norm can be an only hint/approximation of the true residual norm in cases the last 
+   * solve is successful. If the KKT solve fails (i.e., one of the `compute_directions` methods fails)
+   * the KKT class should return a good approximation of the norm of residual; if this is not feasible,
+   * it is better to return an optimistic underestimate (lower than the true residual norm) so that the 
+   * IPM does not activate agressive regularization strategies unnecessarily.
+   */
+  virtual double get_resid_norm_abs() const
+  {
+    return 0.0;
+  }
+  
+  /**
+   * Returns the relative residual norm at the last KKT solve.
+   *
+   * The returned norm can be an only hint/approximation of the true residual norm in cases the last 
+   * solve is successful. If the KKT solve fails (i.e., one of the `compute_directions` methods fails)
+   * the KKT class should return a good approximation of the norm of residual; if this is not feasible,
+   * it is better to return an optimistic underestimate (lower than the true residual norm) so that the 
+   * IPM does not activate agressive regularization strategies unnecessarily.
+   */
+  virtual double get_resid_norm_rel() const
+  {
+    return 0.0;
+  }
+
+  /**
+   * Compute the inf norm of residual for the KKT linear system. 
+   *
+   * This is not currently used by the IPM algorithm since small-enough residual error 
+   * for the inner linear system, as reported by the linear solver, is indicative of
+   * small KKT error. The method is called under HIOP_DEEPCHECKS to report residuals of 
+   * large inf-norm.
+   */
+  virtual double errorKKT(const hiopResidual* resid, const hiopIterate* sol);
+  
 protected:
   /** 
    * @brief y=beta*y+alpha*H*x
@@ -123,8 +176,6 @@ protected:
     Hess_->timesVec(beta, y, alpha, x);
   }
 
-
-#endif
 protected:
   hiopNlpFormulation* nlp_;
   const hiopIterate* iter_;
@@ -135,6 +186,7 @@ protected:
   hiopFactAcceptor* fact_acceptor_;  
   bool perf_report_;
   bool safe_mode_;
+  double mu_;
 };
 
 class hiopKKTLinSysCurvCheck : public hiopKKTLinSys
@@ -142,10 +194,13 @@ class hiopKKTLinSysCurvCheck : public hiopKKTLinSys
 public:
   hiopKKTLinSysCurvCheck(hiopNlpFormulation* nlp)
     : hiopKKTLinSys(nlp), linSys_{nullptr}
-  {}
+  {
+  }
 
   virtual ~hiopKKTLinSysCurvCheck()
-  {if(linSys_) delete linSys_;}
+  {
+    delete linSys_;
+  }
 
   virtual bool update(const hiopIterate* iter,
                       const hiopVector* grad_f,
