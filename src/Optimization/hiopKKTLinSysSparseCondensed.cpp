@@ -1,10 +1,10 @@
-// Copyright (c) 2017, Lawrence Livermore National Security, LLC.
+// Copyrightf (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
 // LLNL-CODE-742473. All rights reserved.
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp
 // is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause).
-// Please also read “Additional BSD Notice” below.
+// Please also read "Additional BSD Notice" below.
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -67,7 +67,14 @@ namespace hiop
  
 hiopKKTLinSysCondensedSparse::hiopKKTLinSysCondensedSparse(hiopNlpFormulation* nlp)
   : hiopKKTLinSysCompressedSparseXDYcYd(nlp),
+    JacD_(nullptr),
+    JacDt_(nullptr),
+    JtDiagJsto_(nullptr),
     JtDiagJ_(nullptr),
+    Hess_lower_csr_(nullptr),
+    Hess_upper_csr_(nullptr),
+    Hess_csr_(nullptr),
+    M_condensedsto_(nullptr),
     M_condensed_(nullptr),
     delta_wx_(0.),
     krylov_mat_opr_(nullptr),
@@ -83,8 +90,15 @@ hiopKKTLinSysCondensedSparse::~hiopKKTLinSysCondensedSparse()
   delete krylov_rhs_xdycyd_;
   delete krylov_prec_opr_;
   delete krylov_mat_opr_;
+  delete M_condensedsto_;
   delete M_condensed_;
+  delete JtDiagJsto_;
   delete JtDiagJ_;
+  delete JacDt_;
+  delete JacD_;
+  delete Hess_csr_;
+  delete Hess_upper_csr_;
+  delete Hess_lower_csr_;
 }
 
 bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
@@ -95,8 +109,7 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   auto delta_wx = delta_wx_in;
   auto delta_wd = delta_wd_in;
   if(dcc!=0) {
-    //give a warning since we do only enforce dual reg. approximately for now
-    nlp_->log->printf(hovWarning, "LinSysCondensed: dual reg. %.6e primal %.6e %.6e\n", dcc, delta_wx, delta_wd);
+    //nlp_->log->printf(hovWarning, "LinSysCondensed: dual reg. %.6e primal %.6e %.6e\n", dcc, delta_wx, delta_wd);
     assert(dcc == dcd);
     delta_wx += fabs(dcc);
     delta_wd += fabs(dcc);
@@ -132,44 +145,166 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   }
   Hd_->copyFrom(*Dd_);  
   Hd_->addConstant(delta_wd);
+
+#define USE_OLD_CODE 0
+#define USE_NEW_CODE 1  
+  
   //
   // compute condensed linear system J'*D*J + H + Dx + delta_wx*I
   //
 
   hiopTimer t;
 
+#if USE_OLD_CODE  
   t.reset(); t.start();
   hiopMatrixSparseCSRStorage JacD;
   JacD.form_from(*Jac_triplet);
-  //t.stop(); printf("JacD    took %.5f\n", t.getElapsedTime());
+  t.stop(); printf("JacD-stor    took %.5f\n", t.getElapsedTime());
+  //Jac_triplet->print();
 
   t.reset(); t.start();
   hiopMatrixSparseCSRStorage JacDt;
   JacDt.form_transpose_from(*Jac_triplet);
-  //t.stop(); printf("JacDt   took %.5f\n", t.getElapsedTime());
+  t.stop(); printf("JacDt-stor   took %.5f\n", t.getElapsedTime());
 
-  t.reset(); t.start();
   // compute J'*D*J
-  if(nullptr == JtDiagJ_) {
+  t.reset(); t.start();
+  if(nullptr == JtDiagJsto_) {
     //perform the initial allocation 
-    JtDiagJ_ = JacDt.times_diag_times_mat_init(JacD);
+    JtDiagJsto_ = JacDt.times_diag_times_mat_init(JacD);
     //perform symbolic (determine sparsity pattern) and numerical multiplication
-    JacDt.times_diag_times_mat(*Hd_, JacD, *JtDiagJ_);
+    JacDt.times_diag_times_mat(*Hd_, JacD, *JtDiagJsto_);
+    
   } else {
     //perform numerical multiplication
-    JacDt.times_diag_times_mat_numeric(*Hd_, JacD, *JtDiagJ_);
+    JacDt.times_diag_times_mat_numeric(*Hd_, JacD, *JtDiagJsto_);
   }
-  //t.stop(); printf("J*D*J'  took %.5f\n", t.getElapsedTime());
-  
+  t.stop(); printf("J*D*J'-stor  took %.5f\n", t.getElapsedTime());
+
   t.reset(); t.start();
   // compute J'*D*J + H + Dx + delta_wx*I
-  if(nullptr == M_condensed_) {
-    M_condensed_ = add_matrices_init(*JtDiagJ_, *Hess_triplet, *Dx_, delta_wx_);
+  if(nullptr == M_condensedsto_) {
+    M_condensedsto_ = add_matrices_init(*JtDiagJsto_, *Hess_triplet, *Dx_, delta_wx_);
   }
-  add_matrices(*JtDiagJ_, *Hess_triplet, *Dx_, delta_wx_, *M_condensed_);
-  //t.stop(); printf("add     took %.5f\n", t.getElapsedTime());
+  add_matrices(*JtDiagJsto_, *Hess_triplet, *Dx_, delta_wx_, *M_condensedsto_);
+  t.stop(); printf("add     took %.5f\n", t.getElapsedTime());
+#endif //OLD_CODE
 
+#if USE_NEW_CODE  
+  // symbolic conversion from triplet to CSR
+  if(nullptr == JacD_) {
+    t.reset(); t.start();
+    JacD_ = new hiopMatrixSparseCSR();
+    JacD_->form_from_symbolic(*Jac_triplet);
+    //JacD_.print();
+
+    assert(nullptr == JacDt_);
+    JacDt_ = new hiopMatrixSparseCSR();
+    JacDt_->form_transpose_from_symbolic(*Jac_triplet);
+    //t.stop(); printf("JacD JacDt-symb    took %.5f\n", t.getElapsedTime());
+  }
+
+  // numeric conversion from triplet to CSR
+  t.reset(); t.start();
+  JacD_->form_from_numeric(*Jac_triplet);
+  JacDt_->form_transpose_from_numeric(*Jac_triplet);  
+  //t.stop(); printf("JacD JacDt-nume    took %.5f\n", t.getElapsedTime());
   
+  //symbolic multiplication for JacD'*D*J
+  if(nullptr == JtDiagJ_) {
+    t.reset(); t.start();
+    
+    // D * J
+    //nothing to do symbolically since we just numerically scale columns of Jt by D 
+  
+    // Jt* (D*J)  (D is not used since it does not change the sparsity pattern)
+    JtDiagJ_ = JacDt_->times_mat_alloc(*JacD_);
+    JacDt_->times_mat_symbolic(*JtDiagJ_, *JacD_);
+    //t.stop(); printf("J*D*J'-symb  took %.5f\n", t.getElapsedTime());
+#if USE_OLD_CODE
+    assert(JtDiagJ_->numberOfNonzeros() == JtDiagJsto_->nnz());
+#endif    
+  }
+  
+  //numeric multiplication for JacD'*D*J
+  t.reset(); t.start();
+  // Jt * D
+  JacD_->scale_rows(*Hd_);
+  // (Jt*D) * J
+  JacDt_->times_mat_numeric(0.0, *JtDiagJ_, 1.0, *JacD_);
+  //t.stop(); printf("J*D*J'-nume  took %.5f\n", t.getElapsedTime());
+  
+#ifdef HIOP_DEEPCHECKS
+  JtDiagJ_->check_csr_is_ordered();
+#endif
+  
+  if(nullptr == M_condensed_) {
+    assert(nullptr == Hess_upper_csr_);
+    Hess_upper_csr_ = new hiopMatrixSparseCSR();
+    Hess_upper_csr_->form_from_symbolic(*Hess_triplet);
+
+    assert(nullptr == Hess_lower_csr_);
+    Hess_lower_csr_ = new hiopMatrixSparseCSR();;
+    Hess_lower_csr_->form_transpose_from_symbolic(*Hess_triplet);
+
+    assert(Hess_lower_csr_->numberOfNonzeros() == Hess_upper_csr_->numberOfNonzeros());
+
+    assert(nullptr == Hess_csr_);
+    Hess_csr_ = Hess_lower_csr_->add_matrix_alloc(*Hess_upper_csr_);
+    Hess_lower_csr_->add_matrix_symbolic(*Hess_csr_, *Hess_upper_csr_);
+
+    
+    //a temporary matrix needed to form sparsity pattern of M_condensed_
+    auto* M_condensed_tmp = Hess_csr_->add_matrix_alloc(*JtDiagJ_);
+    Hess_csr_->add_matrix_symbolic(*M_condensed_tmp, *JtDiagJ_);
+    
+    //ensure storage for nonzeros diagonal is allocated by adding (symbolically)
+    //a diagonal matrix
+    hiopMatrixSparseCSR Diag;
+    Diag.form_diag_from_symbolic(*Dx_);
+
+    M_condensed_ = M_condensed_tmp->add_matrix_alloc(Diag);
+    M_condensed_tmp->add_matrix_symbolic(*M_condensed_, Diag);
+    delete M_condensed_tmp;
+
+    //t.stop(); printf("ADD-symb  took %.5f\n", t.getElapsedTime());
+  }
+
+
+  t.reset(); t.start();
+  Hess_upper_csr_->form_from_numeric(*Hess_triplet);
+  Hess_upper_csr_->set_diagonal(0.0);
+  Hess_lower_csr_->form_transpose_from_numeric(*Hess_triplet);
+  Hess_lower_csr_->add_matrix_numeric(0.0, *Hess_csr_, 1.0, *Hess_upper_csr_, 1.0);
+
+  M_condensed_->setToZero();
+  if(delta_wx>0) {
+    M_condensed_->set_diagonal(delta_wx);
+  }
+  M_condensed_->addDiagonal(1.0, *Dx_);
+
+  Hess_csr_->add_matrix_numeric(1.0, *M_condensed_, 1.0, *JtDiagJ_, 1.0);  
+  
+  //t.stop(); printf("ADD-nume  took %.5f\n", t.getElapsedTime());
+#endif  //NEW_CODE
+
+
+#if USE_OLD_CODE  
+  int nnz_condensed = M_condensedsto_->nnz();
+#else
+  int nnz_condensed = M_condensed_->numberOfNonzeros();
+#endif
+
+  //toggle on (use values from new code) or off (use values from old)  
+#if 1
+  nnz_condensed = M_condensed_->numberOfNonzeros();
+  delete M_condensedsto_;
+  M_condensedsto_ = new hiopMatrixSparseCSRStorage(M_condensed_->m(), M_condensed_->m(), nnz_condensed);
+
+  memcpy(M_condensedsto_->irowptr(), M_condensed_->i_row(), (1+M_condensed_->m())*sizeof(index_type));
+  memcpy(M_condensedsto_->jcolind(), M_condensed_->j_col(), M_condensed_->numberOfNonzeros()*sizeof(index_type));
+  memcpy(M_condensedsto_->values(), M_condensed_->M(), M_condensed_->numberOfNonzeros()*sizeof(double));
+#endif
   //
   // linear system matrix update
   //
@@ -188,12 +323,12 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   }
 #endif  
   if(is_cusolver_on) {
-    linSys_ = determine_and_create_linsys(nx, nineq, M_condensed_->nnz());
+    linSys_ = determine_and_create_linsys(nx, nineq, M_condensedsto_->nnz());
 
 #ifdef HIOP_USE_CUDA    
     hiopLinSolverCholCuSparse* linSys_cusolver = dynamic_cast<hiopLinSolverCholCuSparse*>(linSys_);
     assert(linSys_cusolver);
-    linSys_cusolver->set_linsys_mat(M_condensed_);
+    linSys_cusolver->set_linsys_mat(M_condensedsto_);
 #endif    
     
   } else {
@@ -202,10 +337,10 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
     if(nullptr == linSys_) {
       
       index_type itnz = 0;
-      for(index_type i=0; i<M_condensed_->m(); ++i) {
+      for(index_type i=0; i<M_condensedsto_->m(); ++i) {
 
-        for(index_type p=M_condensed_->irowptr()[i]; p<M_condensed_->irowptr()[i+1]; ++p) {
-          const index_type j = M_condensed_->jcolind()[p];
+        for(index_type p=M_condensedsto_->irowptr()[i]; p<M_condensedsto_->irowptr()[i+1]; ++p) {
+          const index_type j = M_condensedsto_->jcolind()[p];
           if(i<=j) {
             itnz++; 
           }
@@ -216,20 +351,18 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
 
     assert(linSys_);
     auto* linSys = dynamic_cast<hiopLinSolverSymSparse*> (linSys_);
-
-
     auto* Msys = dynamic_cast<hiopMatrixSparseTriplet*>(linSys->sysMatrix());
     assert(Msys);
-    assert(Msys->m() == M_condensed_->m());
+    assert(Msys->m() == M_condensedsto_->m());
 
     index_type itnz = 0;
     for(index_type i=0; i<Msys->m(); ++i) {
-      for(index_type p=M_condensed_->irowptr()[i]; p<M_condensed_->irowptr()[i+1]; ++p) {
-        const index_type j = M_condensed_->jcolind()[p];
+      for(index_type p=M_condensedsto_->irowptr()[i]; p<M_condensedsto_->irowptr()[i+1]; ++p) {
+        const index_type j = M_condensedsto_->jcolind()[p];
         if(i<=j) {
           Msys->i_row()[itnz] = i;
           Msys->j_col()[itnz] = j;
-          Msys->M()[itnz] = M_condensed_->values()[p];
+          Msys->M()[itnz] = M_condensedsto_->values()[p];
           itnz++; 
         }
       }
@@ -241,7 +374,7 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
     nlp_->log->printf(hovSummary,
                       "KKT_SPARSE_Condensed linsys: Low-level linear system size %d nnz %d\n",
                       nx, 
-                      M_condensed_->nnz());
+                      M_condensedsto_->nnz());
   }
 
   //write matrix to file if requested
@@ -447,8 +580,6 @@ void hiopKKTLinSysCondensedSparse::add_matrices(hiopMatrixSparseCSRStorage& JtDi
   const size_type H_nnz = Hess.numberOfNonzeros();
   const size_type m = Dx.get_size();
   assert(M_nnz_dupl == JtDJ_nnz+H_nnz+H_nnz_lowtr+m);
-
-
   
   //
   //update the values in M

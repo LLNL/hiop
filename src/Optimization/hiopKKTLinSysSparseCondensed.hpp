@@ -56,6 +56,7 @@
 
 #include "hiopKKTLinSysSparse.hpp"
 #include "hiopMatrixSparseTriplet.hpp"
+#include "hiopMatrixSparseCSR.hpp"
 #include "hiopKrylovSolver.hpp"
 
 namespace hiop
@@ -280,11 +281,28 @@ protected:
   // int write_linsys_counter_;
   //  hiopCSR_IO csr_writer_;
 
+  /// Member for JacD in CSR format
+  hiopMatrixSparseCSR* JacD_;
+  
+  /// Member for JacD' in CSR format
+  hiopMatrixSparseCSR* JacDt_;
+
+  /// Member for lower triangular part of Hess in CSR
+  hiopMatrixSparseCSR* Hess_lower_csr_;
+
+  /// Member for upper triangular part of Hess
+  hiopMatrixSparseCSR* Hess_upper_csr_;
+  
+  /// Member for Hess
+  hiopMatrixSparseCSR* Hess_csr_;
+  
   /// Member for JacD'*Dd*JacD
-  hiopMatrixSparseCSRStorage* JtDiagJ_;
+  hiopMatrixSparseCSRStorage* JtDiagJsto_;
+  hiopMatrixSparseCSR* JtDiagJ_;
 
   /// Member for JacD'*Dd*JacD + H + Dx + delta_wx*I
-  hiopMatrixSparseCSRStorage* M_condensed_;
+  hiopMatrixSparseCSRStorage* M_condensedsto_;
+  hiopMatrixSparseCSR* M_condensed_;
 
   /**
    * Maps indexes of the nonzeros in the union of the sparsity patterns of JacD'*Dd*JacD, H, and
