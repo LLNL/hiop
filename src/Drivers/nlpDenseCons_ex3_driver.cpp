@@ -78,6 +78,14 @@ int main(int argc, char **argv)
   // relax var/con bounds before solving the problem
   nlp.options->SetNumericValue("bound_relax_perturb", 1e-10);
 
+  //keep multipliers small
+  nlp.options->SetStringValue("elastic_mode", "correct_it_adjust_bound");
+  nlp.options->SetNumericValue("elastic_mode_bound_relax_final", 1e-12);
+  nlp.options->SetNumericValue("elastic_mode_bound_relax_initial", 1e-2);
+
+  //quasi-Newton tolerance is smaller than the default
+  nlp.options->SetNumericValue("tolerance", 1e-6);
+
   {
     hiopAlgFilterIPM solver(&nlp);
     nlp.options->SetStringValue("fixed_var", "remove");
@@ -133,7 +141,7 @@ static bool self_check(size_type n, double objval)
 {
 #define num_n_saved 3 //keep this is sync with n_saved and objval_saved
   const size_type n_saved[] = {500, 5000, 50000}; 
-  const double objval_saved[] = {2.05788282767327e+00, 2.02870382737020e+01, 2.02578703828247e+02};
+  const double objval_saved[] = {2.057860427672e+00, 2.02870382737020e+01, 2.02578703828247e+02};
 
 #define relerr 1e-6
   bool found=false;
