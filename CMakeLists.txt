@@ -140,6 +140,7 @@ target_compile_options(hiop_warnings
   -Wnull-dereference
   -Wdouble-promotion  # Warn on implicit conversion from
                       # float to double
+  -Wconversion
   )
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
@@ -158,6 +159,7 @@ endif()
 
 if(HIOP_DEVELOPER_MODE)
   target_link_libraries(hiop_tpl INTERFACE hiop_options hiop_warnings)
+  install(TARGETS hiop_options hiop_warnings EXPORT hiop-targets)
 endif()
 
 if(NOT (HIOP_USE_GPU AND HIOP_USE_HIP))
