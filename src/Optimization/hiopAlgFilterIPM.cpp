@@ -1058,34 +1058,31 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
     if(_err_log<=kappa_eps * _mu) {
       //update mu and tau (fraction-to-boundary)
       bret = updateLogBarrierParameters(*it_curr, _mu, _tau, _mu, _tau);
-      if(!bret) break; //no update is necessary
-      nlp->log->printf(hovScalars, "Iter[%d] barrier params reduced: mu=%g tau=%g\n", iter_num, _mu, _tau);
+      if(bret) {
+       
+        nlp->log->printf(hovScalars, "Iter[%d] barrier params reduced: mu=%g tau=%g\n", iter_num, _mu, _tau);
 
-      //update only logbar problem  and residual (the NLP didn't change)
-      logbar->updateWithNlpInfo(*it_curr, _mu, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d);
-
-      //! should perform only a partial update since NLP didn't change
-      resid->update(*it_curr,_f_nlp, *_c, *_d,*_grad_f,*_Jac_c,*_Jac_d, *logbar);
-      bret = evalNlpAndLogErrors(*it_curr, *resid, _mu,
-				 _err_nlp_optim, _err_nlp_feas, _err_nlp_complem, _err_nlp,
-				 _err_log_optim, _err_log_feas, _err_log_complem, _err_log);
-      if(!bret) {
-	solver_status_ = Error_In_User_Function;
-	return Error_In_User_Function;
+        //update only logbar problem  and residual (the NLP didn't change)
+        logbar->updateWithNlpInfo(*it_curr, _mu, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d);
+        
+        //! should perform only a partial update since NLP didn't change
+        resid->update(*it_curr,_f_nlp, *_c, *_d,*_grad_f,*_Jac_c,*_Jac_d, *logbar);
+        bret = evalNlpAndLogErrors(*it_curr, *resid, _mu,
+                                   _err_nlp_optim, _err_nlp_feas, _err_nlp_complem, _err_nlp,
+                                   _err_log_optim, _err_log_feas, _err_log_complem, _err_log);
+        if(!bret) {
+          solver_status_ = Error_In_User_Function;
+          return Error_In_User_Function;
+        }
+        nlp->log->printf(hovScalars,
+                         "  Nlp    errs: pr-infeas:%23.17e   dual-infeas:%23.17e  comp:%23.17e  overall:%23.17e\n",
+                         _err_nlp_feas, _err_nlp_optim, _err_nlp_complem, _err_nlp);
+        nlp->log->printf(hovScalars,
+                         "  LogBar errs: pr-infeas:%23.17e   dual-infeas:%23.17e  comp:%23.17e  overall:%23.17e\n",
+                         _err_log_feas, _err_log_optim, _err_log_complem, _err_log);
+        
+        filter.reinitialize(theta_max);
       }
-      nlp->log->printf(hovScalars,
-		       "  Nlp    errs: pr-infeas:%23.17e   dual-infeas:%23.17e  comp:%23.17e  overall:%23.17e\n",
-		       _err_nlp_feas, _err_nlp_optim, _err_nlp_complem, _err_nlp);
-      nlp->log->printf(hovScalars,
-		       "  LogBar errs: pr-infeas:%23.17e   dual-infeas:%23.17e  comp:%23.17e  overall:%23.17e\n",
-		       _err_log_feas, _err_log_optim, _err_log_complem, _err_log);
-
-      filter.reinitialize(theta_max);
-      /*recheck residuals at the first iteration in case the starting pt is  very good
-      * if(iter_num==0) {
-      *   continue;
-      * }
-      */
     }
     nlp->log->printf(hovScalars, "Iter[%d] logbarObj=%23.17e (mu=%12.5e)\n", iter_num, logbar->f_logbar,_mu);
     /****************************************************
@@ -1680,32 +1677,34 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
     if(_err_log<=kappa_eps * _mu) {
       //update mu and tau (fraction-to-boundary)
       bret = updateLogBarrierParameters(*it_curr, _mu, _tau, _mu, _tau);
-      if(!bret) break; //no update is necessary
-      nlp->log->printf(hovScalars, "Iter[%d] barrier params reduced: mu=%g tau=%g\n", iter_num, _mu, _tau);
+      if(bret) {
 
-      //update only logbar problem  and residual (the NLP didn't change)
-      logbar->updateWithNlpInfo(*it_curr, _mu, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d);
-
-      //! should perform only a partial update since NLP didn't change
-      resid->update(*it_curr,_f_nlp, *_c, *_d,*_grad_f,*_Jac_c,*_Jac_d, *logbar);
-
-      bret = evalNlpAndLogErrors(*it_curr, *resid, _mu,
-				 _err_nlp_optim, _err_nlp_feas, _err_nlp_complem, _err_nlp,
-				 _err_log_optim, _err_log_feas, _err_log_complem, _err_log);
-      if(!bret) {
-        solver_status_ = Error_In_User_Function;
-        return Error_In_User_Function;
+        nlp->log->printf(hovScalars, "Iter[%d] barrier params reduced: mu=%g tau=%g\n", iter_num, _mu, _tau);
+        
+        //update only logbar problem  and residual (the NLP didn't change)
+        logbar->updateWithNlpInfo(*it_curr, _mu, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d);
+        
+        //! should perform only a partial update since NLP didn't change
+        resid->update(*it_curr,_f_nlp, *_c, *_d,*_grad_f,*_Jac_c,*_Jac_d, *logbar);
+        
+        bret = evalNlpAndLogErrors(*it_curr, *resid, _mu,
+                                   _err_nlp_optim, _err_nlp_feas, _err_nlp_complem, _err_nlp,
+                                   _err_log_optim, _err_log_feas, _err_log_complem, _err_log);
+        if(!bret) {
+          solver_status_ = Error_In_User_Function;
+          return Error_In_User_Function;
+        }
+        nlp->log->
+          printf(hovScalars,
+                 "  Nlp    errs: pr-infeas:%23.17e   dual-infeas:%23.17e  comp:%23.17e  overall:%23.17e\n",
+                 _err_nlp_feas, _err_nlp_optim, _err_nlp_complem, _err_nlp);
+        nlp->log->
+          printf(hovScalars,
+                 "  LogBar errs: pr-infeas:%23.17e   dual-infeas:%23.17e  comp:%23.17e  overall:%23.17e\n",
+                 _err_log_feas, _err_log_optim, _err_log_complem, _err_log);
+        
+        filter.reinitialize(theta_max);
       }
-      nlp->log->
-        printf(hovScalars,
-               "  Nlp    errs: pr-infeas:%23.17e   dual-infeas:%23.17e  comp:%23.17e  overall:%23.17e\n",
-               _err_nlp_feas, _err_nlp_optim, _err_nlp_complem, _err_nlp);
-      nlp->log->
-        printf(hovScalars,
-               "  LogBar errs: pr-infeas:%23.17e   dual-infeas:%23.17e  comp:%23.17e  overall:%23.17e\n",
-               _err_log_feas, _err_log_optim, _err_log_complem, _err_log);
-
-      filter.reinitialize(theta_max);
     }
     nlp->log->printf(hovScalars, "Iter[%d] logbarObj=%23.17e (mu=%12.5e)\n", iter_num, logbar->f_logbar,_mu);
     /****************************************************
