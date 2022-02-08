@@ -144,8 +144,17 @@ protected:
 
   virtual double thetaLogBarrier(const hiopIterate& it, const hiopResidual& resid, const double& mu);
 
-  bool updateLogBarrierParameters(hiopIterate& it, const double& mu_curr, const double& tau_curr,
-				  double& mu_new, double& tau_new);
+  /**
+   * Reduces log barrier parameters `mu` and `tau`  and returns true if it was possible to reduce them. The
+   * parameter `mu` may reach its min value and may not be reduced (same for `tau`), in which case the 
+   * method returns false.
+   */
+  bool update_log_barrier_params(hiopIterate& it,
+                                 const double& mu_curr,
+                                 const double& tau_curr,
+                                 const bool& elastic_mode_on,
+                                 double& mu_new,
+                                 double& tau_new);
 
   // second order correction
   virtual int apply_second_order_correction(hiopKKTLinSys* kkt,

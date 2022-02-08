@@ -576,9 +576,12 @@ bool hiopAlgFilterIPMBase::evalNlp_HessOnly(hiopIterate& iter,
   return true;
 }
 
-bool hiopAlgFilterIPMBase::
-updateLogBarrierParameters(hiopIterate& it, const double& mu_curr, const double& tau_curr,
-			   double& mu_new, double& tau_new)
+bool hiopAlgFilterIPMBase::update_log_barrier_params(hiopIterate& it,
+                                                     const double& mu_curr,
+                                                     const double& tau_curr,
+                                                     const bool& elastic_mode_on,
+                                                     double& mu_new,
+                                                     double& tau_new)
 {
   double new_mu = fmax(eps_tol/10, fmin(kappa_mu*mu_curr, pow(mu_curr,theta_mu)));
   if(fabs(new_mu-mu_curr)<1e-16) {
@@ -587,7 +590,7 @@ updateLogBarrierParameters(hiopIterate& it, const double& mu_curr, const double&
   mu_new  = new_mu;
   tau_new = fmax(tau_min,1.0-mu_new);
   
-  if(nlp->options->GetString("elastic_mode")!="none") {
+  if(elastic_mode_on) {
     const double target_mu = nlp->options->GetNumeric("tolerance");
     const double bound_relax_perturb_init = nlp->options->GetNumeric("elastic_mode_bound_relax_initial");
     const double bound_relax_perturb_min = nlp->options->GetNumeric("elastic_mode_bound_relax_final");
@@ -596,7 +599,7 @@ updateLogBarrierParameters(hiopIterate& it, const double& mu_curr, const double&
     if(nlp->options->GetString("elastic_bound_strategy")=="mu_scaled") {
       bound_relax_perturb = 0.995*mu_new;
     } else if(nlp->options->GetString("elastic_bound_strategy")=="mu_projected") {
-      bound_relax_perturb =  (mu_new - target_mu) / (mu0 - target_mu) * (bound_relax_perturb_init-bound_relax_perturb_min) 
+      bound_relax_perturb =  (mu_new - target_mu) / (mu0 - target_mu) * (bound_relax_perturb_init-bound_relax_perturb_min)
                            + bound_relax_perturb_min;
     }
 
@@ -608,7 +611,7 @@ updateLogBarrierParameters(hiopIterate& it, const double& mu_curr, const double&
       bound_relax_perturb = bound_relax_perturb_min;
     }
 
-    nlp->log->printf(hovLinAlgScalars, "Tighen the variable/constraint bounds --- %10.6g\n", bound_relax_perturb);
+    nlp->log->printf(hovLinAlgScalars, "Tighen variable/constraint bounds --- %10.6g\n", bound_relax_perturb);
 
     nlp->reset_bounds(bound_relax_perturb);
 
@@ -621,8 +624,10 @@ updateLogBarrierParameters(hiopIterate& it, const double& mu_curr, const double&
       // adjust small/negative slacks
       int num_adjusted_slacks = it.adjust_small_slacks(it, mu_new);
       if(num_adjusted_slacks > 0) {    
-        nlp->log->printf(hovLinAlgScalars, "updateLogBarrierParameters: %d slacks are too small after tightening the bounds. "
-                        "Adjust corresponding slacks!\n", num_adjusted_slacks);
+        nlp->log->printf(hovLinAlgScalars,
+                         "update_log_barrier_params: %d slacks are too small after tightening the bounds. "
+                        "Adjust corresponding slacks!\n",
+                         num_adjusted_slacks);
 
         // adjust bounds according to `it`
         if(nlp->options->GetString("elastic_mode")=="correct_it_adjust_bound") {
@@ -636,7 +641,7 @@ updateLogBarrierParameters(hiopIterate& it, const double& mu_curr, const double&
     }
     //compute infeasibility theta at trial point, since slacks and/or bounds are modified 
     double theta_temp = resid->compute_nlp_infeasib_onenorm(*it_trial, *_c_trial, *_d_trial);
-  }
+  } // end of if elastic_mode_on
   
   return true;
 }
@@ -1007,6 +1012,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
   int use_soc = 0;
   int use_fr = 0;
   int num_adjusted_slacks = 0;
+  bool elastic_mode_on = nlp->options->GetString("elastic_mode")!="none";
   solver_status_ = NlpSolve_Pending;
   while(true) {
 
@@ -1055,33 +1061,39 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
     /************************************************
      * update mu and other parameters
      ************************************************/
-    if(_err_log<=kappa_eps * _mu) {
+    while(_err_log<=kappa_eps * _mu) {
       //update mu and tau (fraction-to-boundary)
-      bret = updateLogBarrierParameters(*it_curr, _mu, _tau, _mu, _tau);
-      if(bret) {
-       
-        nlp->log->printf(hovScalars, "Iter[%d] barrier params reduced: mu=%g tau=%g\n", iter_num, _mu, _tau);
+      auto mu_updated = update_log_barrier_params(*it_curr, _mu, _tau, elastic_mode_on, _mu, _tau);
+      if(!mu_updated) {
+        break;
+      }
+      nlp->log->printf(hovScalars, "Iter[%d] barrier params reduced: mu=%g tau=%g\n", iter_num, _mu, _tau);
+      
+      //update only logbar problem  and residual (the NLP didn't change)
+      logbar->updateWithNlpInfo(*it_curr, _mu, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d);
+      
+      //! should perform only a partial update since NLP didn't change
+      resid->update(*it_curr,_f_nlp, *_c, *_d,*_grad_f,*_Jac_c,*_Jac_d, *logbar);
+      bret = evalNlpAndLogErrors(*it_curr, *resid, _mu,
+                                 _err_nlp_optim, _err_nlp_feas, _err_nlp_complem, _err_nlp,
+                                 _err_log_optim, _err_log_feas, _err_log_complem, _err_log);
+      if(!bret) {
+        solver_status_ = Error_In_User_Function;
+        return Error_In_User_Function;
+      }
+      nlp->log->printf(hovScalars,
+                       "  Nlp    errs: pr-infeas:%23.17e   dual-infeas:%23.17e  comp:%23.17e  overall:%23.17e\n",
+                       _err_nlp_feas, _err_nlp_optim, _err_nlp_complem, _err_nlp);
+      nlp->log->printf(hovScalars,
+                       "  LogBar errs: pr-infeas:%23.17e   dual-infeas:%23.17e  comp:%23.17e  overall:%23.17e\n",
+                       _err_log_feas, _err_log_optim, _err_log_complem, _err_log);
+      
+      filter.reinitialize(theta_max);
 
-        //update only logbar problem  and residual (the NLP didn't change)
-        logbar->updateWithNlpInfo(*it_curr, _mu, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d);
-        
-        //! should perform only a partial update since NLP didn't change
-        resid->update(*it_curr,_f_nlp, *_c, *_d,*_grad_f,*_Jac_c,*_Jac_d, *logbar);
-        bret = evalNlpAndLogErrors(*it_curr, *resid, _mu,
-                                   _err_nlp_optim, _err_nlp_feas, _err_nlp_complem, _err_nlp,
-                                   _err_log_optim, _err_log_feas, _err_log_complem, _err_log);
-        if(!bret) {
-          solver_status_ = Error_In_User_Function;
-          return Error_In_User_Function;
-        }
-        nlp->log->printf(hovScalars,
-                         "  Nlp    errs: pr-infeas:%23.17e   dual-infeas:%23.17e  comp:%23.17e  overall:%23.17e\n",
-                         _err_nlp_feas, _err_nlp_optim, _err_nlp_complem, _err_nlp);
-        nlp->log->printf(hovScalars,
-                         "  LogBar errs: pr-infeas:%23.17e   dual-infeas:%23.17e  comp:%23.17e  overall:%23.17e\n",
-                         _err_log_feas, _err_log_optim, _err_log_complem, _err_log);
-        
-        filter.reinitialize(theta_max);
+      if(elastic_mode_on) {
+        //reduce mu only once under elastic mode so that bounds do not get tighten too agressively,
+        //which may result in small steps and invocation of FR
+        break;
       }
     }
     nlp->log->printf(hovScalars, "Iter[%d] logbarObj=%23.17e (mu=%12.5e)\n", iter_num, logbar->f_logbar,_mu);
@@ -1617,7 +1629,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
   int linsol_safe_mode_last_iter_switched_on = 100000;
   bool linsol_safe_mode_on = "stable"==hiop::tolower(nlp->options->GetString("linsol_mode"));
   bool linsol_forcequick = "forcequick"==hiop::tolower(nlp->options->GetString("linsol_mode"));
-
+  bool elastic_mode_on = nlp->options->GetString("elastic_mode")!="none";
   solver_status_ = NlpSolve_Pending;
   while(true) {
 
@@ -1674,36 +1686,42 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
     /************************************************
      * update mu and other parameters
      ************************************************/
-    if(_err_log<=kappa_eps * _mu) {
+    while(_err_log<=kappa_eps * _mu) {
       //update mu and tau (fraction-to-boundary)
-      bret = updateLogBarrierParameters(*it_curr, _mu, _tau, _mu, _tau);
-      if(bret) {
-
-        nlp->log->printf(hovScalars, "Iter[%d] barrier params reduced: mu=%g tau=%g\n", iter_num, _mu, _tau);
+      auto mu_updated = update_log_barrier_params(*it_curr, _mu, _tau, elastic_mode_on, _mu, _tau);
+      if(!mu_updated) {
+        break;
+      }
+      nlp->log->printf(hovScalars, "Iter[%d] barrier params reduced: mu=%g tau=%g\n", iter_num, _mu, _tau);
         
-        //update only logbar problem  and residual (the NLP didn't change)
-        logbar->updateWithNlpInfo(*it_curr, _mu, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d);
-        
-        //! should perform only a partial update since NLP didn't change
-        resid->update(*it_curr,_f_nlp, *_c, *_d,*_grad_f,*_Jac_c,*_Jac_d, *logbar);
-        
-        bret = evalNlpAndLogErrors(*it_curr, *resid, _mu,
-                                   _err_nlp_optim, _err_nlp_feas, _err_nlp_complem, _err_nlp,
-                                   _err_log_optim, _err_log_feas, _err_log_complem, _err_log);
-        if(!bret) {
-          solver_status_ = Error_In_User_Function;
-          return Error_In_User_Function;
-        }
-        nlp->log->
-          printf(hovScalars,
-                 "  Nlp    errs: pr-infeas:%23.17e   dual-infeas:%23.17e  comp:%23.17e  overall:%23.17e\n",
-                 _err_nlp_feas, _err_nlp_optim, _err_nlp_complem, _err_nlp);
-        nlp->log->
-          printf(hovScalars,
-                 "  LogBar errs: pr-infeas:%23.17e   dual-infeas:%23.17e  comp:%23.17e  overall:%23.17e\n",
-                 _err_log_feas, _err_log_optim, _err_log_complem, _err_log);
-        
-        filter.reinitialize(theta_max);
+      //update only logbar problem  and residual (the NLP didn't change)
+      logbar->updateWithNlpInfo(*it_curr, _mu, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d);
+      
+      //! should perform only a partial update since NLP didn't change
+      resid->update(*it_curr,_f_nlp, *_c, *_d,*_grad_f,*_Jac_c,*_Jac_d, *logbar);
+      
+      bret = evalNlpAndLogErrors(*it_curr, *resid, _mu,
+                                 _err_nlp_optim, _err_nlp_feas, _err_nlp_complem, _err_nlp,
+                                 _err_log_optim, _err_log_feas, _err_log_complem, _err_log);
+      if(!bret) {
+        solver_status_ = Error_In_User_Function;
+        return Error_In_User_Function;
+      }
+      nlp->log->
+        printf(hovScalars,
+               "  Nlp    errs: pr-infeas:%23.17e   dual-infeas:%23.17e  comp:%23.17e  overall:%23.17e\n",
+               _err_nlp_feas, _err_nlp_optim, _err_nlp_complem, _err_nlp);
+      nlp->log->
+        printf(hovScalars,
+               "  LogBar errs: pr-infeas:%23.17e   dual-infeas:%23.17e  comp:%23.17e  overall:%23.17e\n",
+               _err_log_feas, _err_log_optim, _err_log_complem, _err_log);
+      
+      filter.reinitialize(theta_max);
+      
+      if(elastic_mode_on) {
+        //reduce mu only once under elastic mode so that bounds do not get tighten too agressively,
+        //which may result in small steps and invocation of FR
+        break;
       }
     }
     nlp->log->printf(hovScalars, "Iter[%d] logbarObj=%23.17e (mu=%12.5e)\n", iter_num, logbar->f_logbar,_mu);
