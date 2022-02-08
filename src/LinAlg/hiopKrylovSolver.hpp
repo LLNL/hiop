@@ -100,6 +100,16 @@ public:
   /// Set the maximun number of iteration
   inline virtual void set_max_num_iter(int num_iter) {maxit_ = num_iter;}
 
+  /**
+   * Set Krylov solver tolerance relative to norm of the right-hand side, meaning 
+   * that the solver will stop when two-norm of the residual is less than the tolerance
+   * times two-norm of the right-hand side.
+   */
+  inline virtual void set_tol(double tol)
+  {
+    tol_ = tol;
+  }
+  
   /// Return the absolute residual at the end of Krylov solver
   inline virtual double get_sol_abs_resid() {return abs_resid_;}
 
@@ -121,7 +131,7 @@ public:
 
 protected:
 
-  const double tol_;          // convergence tolerence
+  double tol_;                // convergence tolerence
   size_type maxit_;           // maximun number of iteratiions
   double iter_;               // number of iterations at convergence
   int flag_;                  // convergence flag
