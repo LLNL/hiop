@@ -7,7 +7,7 @@
 \usepackage{amssymb}
 \usepackage{algorithm}
 \usepackage{algcompatible}
-\usepackage{comment}
+%\usepackage{comment}
 
 \usepackage{graphicx}
 \usepackage{xcolor}
@@ -33,11 +33,11 @@
 
 \begin{document}
 
-\section{Example 1 --- A Dense Example}
-\section{Example 2 --- A Dense Example}
-\section{Example 3 --- A Dense Example}
-\section{Example 4 --- A MDS Example}
-\section{Example 5 --- A MDS Example}
+%\section{Example 1 --- A Dense Example}
+%\section{Example 2 --- A Dense Example}
+%\section{Example 3 --- A Dense Example}
+%\section{Example 4 --- A MDS Example}
+%\section{Example 5 --- A MDS Example}
 
 \section{Example 6 --- A Convex Sparse Example}
 \begin{align}
@@ -45,16 +45,15 @@
 &&&&\textnormal{s.t.} &\hspace{0.5cm}  4ax_1+2ax_2 = 10a &&&& \label{ex6:eq1}\\
 &&&&& \hspace{0.5cm} 5a \leq  2ax_1 + ax_3                 &&&& \label{ex6:ineq1}\\
 &&&&& \hspace{0.5cm}  a \leq  2ax_1       + 0.5ax_i \leq 2an &&&& \label{ex6:ineq2}\\
-&&&&& \hspace{0.5cm}  x_1~free, &&&& \label{ex6:varb1}\\
+&&&&& \hspace{0.5cm}  x_1~\textnormal{free}, &&&& \label{ex6:varb1}\\
 &&&&& \hspace{0.5cm}  0.0 \leq x_2, &&&& \label{ex6:varb2}\\
 &&&&& \hspace{0.5cm}  1.5 \leq x_3 \leq 10  &&&& \label{ex6:varb3}\\
-&&&&& \hspace{0.5cm}  0.5 \leq x_i, &\forall i=4,...,n               &&& \label{ex6:varb4}
+&&&&& \hspace{0.5cm}  0.5 \leq x_i, \ \forall i=4,...,n               &&& \label{ex6:varb4}
 \end{align}
 
-Here $n\geq3$ and $a>0$ are parameters which can be tuned via user's inputs. If they are not specified by the user, they are set to the default values, $n=3$ and $a=1.0$.
+Here $n\geq3$ and $a>0$ are parameters that can be modified via Ex6 driver's command arguments. Their default values are $n=3$ and $a=1.0$.
 
-The analytical solution is obtained at $x_1=1.75$, $x_2=x_3=1.5$, and $x_i=1$ for $i\geq 4$. The objective value is $0.110352$.
-File nlpSparse\_ex6\_driver.cpp provides more details about the usage of this example.
+The analytical optimal solution is  $x_1=1.75$, $x_2=x_3=1.5$, and $x_i=1$ for $i\in \{4,5,\ldots,n\}$. The objective value is $0.110352$. The file nlpSparse\_ex6\_driver.cpp provides more details about how to use HiOp to solve instances of this example/test problem.
 
 \section{Example 7 --- A Nonconvex Sparse Example}
 \begin{align}
@@ -64,16 +63,16 @@ File nlpSparse\_ex6\_driver.cpp provides more details about the usage of this ex
     &&&&& \hspace{0.5cm}  5 \leq  2x_1 + x_3                 &&&& \label{ex7:ineq1}\\
     &&&&& \hspace{0.5cm}          4x_1      + 2x_3   \leq 19 &&&& \label{ex7:defineq}\\
     &&&&& \hspace{0.5cm}  1 \leq  2x_1      + 0.5x_i \leq 2n &&&& \label{ex7:ineq2}\\
-    &&&&& \hspace{0.5cm}  x_1~free, &&&& \label{ex7:varb1}\\
+    &&&&& \hspace{0.5cm}  x_1~\textnormal{free}, &&&& \label{ex7:varb1}\\
     &&&&& \hspace{0.5cm}  0.0 \leq x_2, &&&& \label{ex7:varb2}\\
     &&&&& \hspace{0.5cm}  1.5 \leq x_3 \leq 10  &&&& \label{ex7:varb3}\\
-    &&&&& \hspace{0.5cm}  0.5 \leq x_i, &\forall i=4,...,n    &&& \label{ex7:varb4}
+    &&&&& \hspace{0.5cm}  0.5 \leq x_i, \ \forall i=4,...,n    &&& \label{ex7:varb4}
 \end{align}
 
-Here $n\geq3$ and $a>0$ are parameters which can be tuned via user's inputs. If they are not specified by the user, they are set to the default values, $n=3$ and $a=0.1$. Note that the equality constraints \eqref{ex7:eq1} and \eqref{ex7:defeq} are duplicate. As a result, the constraint Jacobian matrix is rank deficient and may introduce numerical difficulties. File nlpSparse\_ex7\_driver.cpp provides more details about the usage of this example.
+Here $n\geq3$ and $a>0$ are parameters which can be tuned via Ex6 driver's command arguments. Their default values are  $n=3$ and $a=0.1$. Note that the equality constraints \eqref{ex7:eq1} and \eqref{ex7:defeq} are duplicate. This is done on purpose to make the constraint Jacobian matrix rank deficient and to stress test HiOp on this numerically difficult, nonconvex problem. The file nlpSparse\_ex7\_driver.cpp provides more details about how to use HiOp in various configurations to solve instances of this example/test problem.
 
 
-\section{Example 8 --- A Primal Decomposition Example}
-\section{Example 9 --- A Primal Decomposition Example}
+%\section{Example 8 --- A Primal Decomposition Example}
+%\section{Example 9 --- A Primal Decomposition Example}
 
 \end{document}
