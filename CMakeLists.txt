@@ -40,6 +40,8 @@ option(HIOP_WITH_VALGRIND_TESTS "Run valgrind on certain integration tests" OFF)
 option(HIOP_BUILD_DOCUMENTATION "Build HiOp documentation via Doxygen" ON)
 
 set(HIOP_CTEST_LAUNCH_COMMAND "" CACHE STRING "Manually override launch commands used when running CTest")
+set(HIOP_CTEST_OUTPUT_DIR ${PROJECT_BINARY_DIR} CACHE PATH "Directory where CTest outputs are saved")
+mark_as_advanced(HIOP_CTEST_OUTPUT_DIR) # Hide this var as the default will be overriden rarely
 set(HIOP_EXTRA_LINK_FLAGS "" CACHE STRING "Manually pass extra flags to linker")
 
 # Ensure at least one library type is being built!
@@ -432,20 +434,20 @@ if (HIOP_WITH_MAKETEST)
 
   add_test(NAME NlpMixedDenseSparse4_1 COMMAND ${RUNCMD} bash -c "$<TARGET_FILE:nlpMDS_ex4.exe> 400 100 0 -selfcheck \
     | ${STRIP_TABLE_CMD} \
-    | tee ${PROJECT_BINARY_DIR}/mds4_1.out")
+    | tee ${HIOP_CTEST_OUTPUT_DIR}/mds4_1.out")
   add_test(NAME NlpMixedDenseSparse4_2 COMMAND ${RUNCMD} bash -c "$<TARGET_FILE:nlpMDS_ex4.exe> 400 100 1 -selfcheck \
     | ${STRIP_TABLE_CMD} \
-    | tee ${PROJECT_BINARY_DIR}/mds4_2.out")
+    | tee ${HIOP_CTEST_OUTPUT_DIR}/mds4_2.out")
   
   add_test(NAME NlpMixedDenseSparse4_3 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpMDS_ex4.exe>" "400" "100" "0" "-empty_sp_row" "-selfcheck")
 
   if(HIOP_USE_RAJA)
     add_test(NAME NlpMixedDenseSparseRaja4_1 COMMAND ${RUNCMD} bash -c "$<TARGET_FILE:nlpMDS_ex4_raja.exe> 400 100 0 -selfcheck \
       | ${STRIP_TABLE_CMD} \
-      | tee ${PROJECT_BINARY_DIR}/mds4_raja_1.out")
+      | tee ${HIOP_CTEST_OUTPUT_DIR}/mds4_raja_1.out")
     add_test(NAME NlpMixedDenseSparseRaja4_2 COMMAND ${RUNCMD} bash -c "$<TARGET_FILE:nlpMDS_ex4_raja.exe> 400 100 1 -selfcheck \
       | ${STRIP_TABLE_CMD} \
-      | tee ${PROJECT_BINARY_DIR}/mds4_raja_2.out")
+      | tee ${HIOP_CTEST_OUTPUT_DIR}/mds4_raja_2.out")
     add_test(NAME NlpMixedDenseSparseRaja4_3 COMMAND ${RUNCMD} bash -c "$<TARGET_FILE:nlpMDS_ex4_raja.exe> 400 100 0 -empty_sp_row -selfcheck")
     
     if(HIOP_DEEPCHECKS)
@@ -453,7 +455,7 @@ if (HIOP_WITH_MAKETEST)
         add_test(
           NAME "CompareExample4_NumIterations_${iter}" 
           COMMAND bash -c "\
-          if [[ $(wc -l ${PROJECT_BINARY_DIR}/mds4_${iter}.out|cut -f1 -d' ') == $(wc -l ${PROJECT_BINARY_DIR}/mds4_raja_${iter}.out|cut -f1 -d' ') ]]
+          if [[ $(wc -l ${HIOP_CTEST_OUTPUT_DIR}/mds4_${iter}.out|cut -f1 -d' ') == $(wc -l ${HIOP_CTEST_OUTPUT_DIR}/mds4_raja_${iter}.out|cut -f1 -d' ') ]]
           then
           echo 'Output tables have the same number of iterations.'
           exit 0
@@ -464,7 +466,7 @@ if (HIOP_WITH_MAKETEST)
         add_test(
           NAME "CompareExample4_ElementWise_${iter}"
           COMMAND bash -c "\
-          join ${PROJECT_BINARY_DIR}/mds4_${iter}.out ${PROJECT_BINARY_DIR}/mds4_raja_${iter}.out \
+          join ${HIOP_CTEST_OUTPUT_DIR}/mds4_${iter}.out ${HIOP_CTEST_OUTPUT_DIR}/mds4_raja_${iter}.out \
           | ${PROJECT_SOURCE_DIR}/tests/testEx4CompareIterations.awk")
       endforeach()
     endif(HIOP_DEEPCHECKS)
