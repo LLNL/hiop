@@ -823,7 +823,11 @@ bool hiopKKTLinSysCompressedXDYcYd::computeDirections(const hiopResidual* resid,
   nlp_->runStats.kkt.tmResid.stop();
 #endif
 
-  if(false==sol_ok) return sol_ok;
+  if(false == sol_ok) {
+    nlp_->runStats.tmSolverInternal.stop();
+    nlp_->runStats.linsolv.end_linsolve();
+    return false;
+  }
   
   bool bret = compute_directions_for_full_space(resid, dir);
   

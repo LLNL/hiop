@@ -179,7 +179,6 @@ namespace hiop
       csr_writer_.writeMatToFile(*Msys, write_linsys_counter_, nx, neq, nineq);
     }
 
-    nlp_->runStats.tmSolverInternal.stop();
     return true;
   }
 
