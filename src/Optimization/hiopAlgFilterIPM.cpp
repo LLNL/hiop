@@ -1521,6 +1521,14 @@ decideAndCreateFactAcceptor(hiopPDPerturbation* p, hiopNlpFormulation* nlp, hiop
   std::string strKKT = nlp->options->GetString("fact_acceptor");
   if(strKKT == "inertia_free")
   {
+#ifdef HIOP_SPARSE    
+    if(nullptr != dynamic_cast<hiopKKTLinSysCondensedSparse*>(kkt)) {
+      // for LinSysCondensedSparse correct inertia is different
+      assert(nullptr != dynamic_cast<hiopNlpSparseIneq*>(nlp) &&
+             "wrong combination of optimization objects was created");
+      return new hiopFactAcceptorInertiaFreeDWD(p, 0);      
+    }
+#endif
     return new hiopFactAcceptorInertiaFreeDWD(p, nlp->m_eq()+nlp->m_ineq());
   } else {
 #ifdef HIOP_SPARSE    
