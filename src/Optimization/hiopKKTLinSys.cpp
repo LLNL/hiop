@@ -361,7 +361,8 @@ bool hiopKKTLinSysCurvCheck::factorize_inertia_free()
   size_t num_refactorization = 0;
 
   while(num_refactorization<=max_refactorization && solver_flag < 0) {
-                      
+    nlp_->log->printf(hovWarning, "linsys: matrix becomes singular after adding primal regularization!\n");
+
     continue_re_fact = fact_acceptor_->requireReFactorization(*nlp_, solver_flag, delta_wx, delta_wd, delta_cc, delta_cd);
     
     if(-1==continue_re_fact) {
