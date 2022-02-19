@@ -282,8 +282,8 @@ bool hiopKKTLinSysCurvCheck::factorize()
   assert(nlp_);
 
   // factorization + inertia correction if needed
-  const size_t max_refactorizaion = 10;
-  size_t num_refactorizaion = 0;
+  const size_t max_refactorization = 10;
+  size_t num_refactorization = 0;
   int continue_re_fact;
 
   double delta_wx, delta_wd, delta_cc, delta_cd;
@@ -292,11 +292,11 @@ bool hiopKKTLinSysCurvCheck::factorize()
     return false;
   }
 
-  while(num_refactorizaion<=max_refactorizaion) {
+  while(num_refactorization <= max_refactorization) {
     assert(delta_wx == delta_wd && "something went wrong with IC");
     assert(delta_cc == delta_cd && "something went wrong with IC");
     nlp_->log->printf(hovScalars, "linsys: delta_w=%12.5e delta_c=%12.5e (ic %d)\n",
-            delta_wx, delta_cc, num_refactorizaion);
+            delta_wx, delta_cc, num_refactorization);
 
     // the update of the linear system, including IC perturbations
     this->build_kkt_matrix(delta_wx, delta_wd, delta_cc, delta_cd);
@@ -317,14 +317,14 @@ bool hiopKKTLinSysCurvCheck::factorize()
     }
 
     // will do an inertia correction
-    num_refactorizaion++;
+    num_refactorization++;
     nlp_->runStats.kkt.nUpdateICCorr++;
   } // end of IC loop
 
-  if(num_refactorizaion>max_refactorizaion) {
+  if(num_refactorization>max_refactorization) {
     nlp_->log->printf(hovError,
         "Reached max number (%d) of refactorization within an outer iteration.\n",
-              max_refactorizaion);
+              max_refactorization);
     return false;
   }
   return true;
@@ -340,11 +340,6 @@ bool hiopKKTLinSysCurvCheck::factorize_inertia_free()
   double delta_wx, delta_wd, delta_cc, delta_cd;
   perturb_calc_->get_curr_perturbations(delta_wx, delta_wd, delta_cc, delta_cd);
 
-#ifdef HIOP_DEEPCHECKS
-    this->build_kkt_matrix(delta_wx, delta_wd, delta_cc, delta_cd);
-    non_singular_mat = factorizeWithCurvCheck();
-    assert(non_singular_mat>=0);
-#endif
   continue_re_fact = fact_acceptor_->requireReFactorization(*nlp_, non_singular_mat, delta_wx, delta_wd, delta_cc, delta_cd, true);
 
   assert(delta_wx == delta_wd && "something went wrong with IC");
@@ -357,7 +352,42 @@ bool hiopKKTLinSysCurvCheck::factorize_inertia_free()
   nlp_->runStats.kkt.tmUpdateInnerFact.start();
 
   // factorization
-  int n_neg_eig = factorizeWithCurvCheck();
+  int solver_flag = factorizeWithCurvCheck();
+  
+  // if solver_flag<0, matrix becomes singular, or not pd (in condensed system) after adding regularization
+  // this should not happen, but some linear solver may have numerical difficulty.
+  // adding more regularization till it succeeds
+  const size_t max_refactorization = 10;
+  size_t num_refactorization = 0;
+
+  while(num_refactorization<=max_refactorization && solver_flag < 0) {
+    nlp_->log->printf(hovWarning, "linsys: matrix becomes singular after adding primal regularization!\n");
+
+    continue_re_fact = fact_acceptor_->requireReFactorization(*nlp_, solver_flag, delta_wx, delta_wd, delta_cc, delta_cd);
+    
+    if(-1==continue_re_fact) {
+      return false;
+    } else {
+      // this while loop is used to correct singularity
+      assert(1==continue_re_fact);
+    }
+      
+    nlp_->log->printf(hovScalars, "linsys: delta_w=%12.5e delta_c=%12.5e \n", delta_wx, delta_cc);
+  
+    // the update of the linear system, including IC perturbations
+    this->build_kkt_matrix(delta_wx, delta_wd, delta_cc, delta_cd);
+
+    nlp_->runStats.kkt.tmUpdateInnerFact.start();
+
+    // factorization
+    solver_flag = factorizeWithCurvCheck();
+
+    nlp_->runStats.kkt.tmUpdateInnerFact.stop();
+
+    // will do an inertia correction
+    num_refactorization++;
+    nlp_->runStats.kkt.nUpdateICCorr++;
+  } // end of IC loop
 
   nlp_->runStats.kkt.tmUpdateInnerFact.stop();
 
