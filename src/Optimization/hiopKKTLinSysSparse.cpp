@@ -179,7 +179,6 @@ namespace hiop
       csr_writer_.writeMatToFile(*Msys, write_linsys_counter_, nx, neq, nineq);
     }
 
-    nlp_->runStats.tmSolverInternal.stop();
     return true;
   }
 
@@ -218,12 +217,12 @@ namespace hiop
     }
     nlp_->runStats.kkt.tmSolveRhsManip.stop();
 
-    nlp_->runStats.kkt.tmSolveTriangular.start();
+    nlp_->runStats.kkt.tmSolveInner.start();
     //
     // solve
     //
     bool linsol_ok = linSys_->solve(*rhs_);
-    nlp_->runStats.kkt.tmSolveTriangular.stop();
+    nlp_->runStats.kkt.tmSolveInner.stop();
     nlp_->runStats.linsolv.end_linsolve();
 
     if(perf_report_) {
@@ -507,13 +506,12 @@ namespace hiop
 
     nlp_->runStats.kkt.tmSolveRhsManip.stop();
 
-    nlp_->runStats.kkt.tmSolveTriangular.start();
-
+    nlp_->runStats.kkt.tmSolveInner.start();
     //
     // solve
     //
     bool linsol_ok = linSys_->solve(*rhs_);
-    nlp_->runStats.kkt.tmSolveTriangular.stop();
+    nlp_->runStats.kkt.tmSolveInner.stop();
     nlp_->runStats.linsolv.end_linsolve();
 
     if(perf_report_) {
@@ -949,11 +947,11 @@ namespace hiop
 
     nlp_->runStats.kkt.tmSolveRhsManip.stop();
 
-    nlp_->runStats.kkt.tmSolveTriangular.start();
+    nlp_->runStats.kkt.tmSolveInner.start();
 
     // solve
     bool linsol_ok = linSys_->solve(*rhs_);
-    nlp_->runStats.kkt.tmSolveTriangular.stop();
+    nlp_->runStats.kkt.tmSolveInner.stop();
     nlp_->runStats.linsolv.end_linsolve();
 
     if(perf_report_) {

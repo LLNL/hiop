@@ -184,6 +184,7 @@ double hiopKKTLinSys::errorKKT(const hiopResidual* resid, const hiopIterate* sol
 bool hiopKKTLinSys::compute_directions_for_full_space(const hiopResidual* resid,
                                                       hiopIterate* dir)
 {
+  nlp_->runStats.kkt.tmSolveRhsManip.start();
   const hiopResidual &r=*resid;
 
   /***********************************************************************
@@ -252,8 +253,10 @@ bool hiopKKTLinSys::compute_directions_for_full_space(const hiopResidual* resid,
     dir->sdu->setToZero();
     dir->vu->setToZero();
   }
-
+  nlp_->runStats.kkt.tmSolveRhsManip.stop();
+  
 #ifdef HIOP_DEEPCHECKS
+  nlp_->runStats.kkt.tmResid.start();
   assert(dir->sxl->matchesPattern(nlp_->get_ixl()));
   assert(dir->sxu->matchesPattern(nlp_->get_ixu()));
   assert(dir->sdl->matchesPattern(nlp_->get_idl()));
@@ -265,6 +268,7 @@ bool hiopKKTLinSys::compute_directions_for_full_space(const hiopResidual* resid,
 
   //CHECK THE SOLUTION
   errorKKT(resid,dir);
+  nlp_->runStats.kkt.tmResid.stop();
 #endif
 
   return true;
@@ -488,7 +492,8 @@ hiopKKTLinSysCompressedXYcYd::~hiopKKTLinSysCompressedXYcYd()
 
 bool hiopKKTLinSysCompressedXYcYd::update(const hiopIterate* iter,
                                           const hiopVector* grad_f,
-                                          const hiopMatrix* Jac_c, const hiopMatrix* Jac_d,
+                                          const hiopMatrix* Jac_c,
+                                          const hiopMatrix* Jac_d,
                                           hiopMatrix* Hess)
 {
   nlp_->runStats.linsolv.start_linsolve();
@@ -530,7 +535,7 @@ bool hiopKKTLinSysCompressedXYcYd::update(const hiopIterate* iter,
 
 bool hiopKKTLinSysCompressedXYcYd::computeDirections(const hiopResidual* resid,
                                                      hiopIterate* dir)
-{
+{ 
   nlp_->runStats.tmSolverInternal.start();
   nlp_->runStats.kkt.tmSolveRhsManip.start();
 
@@ -592,42 +597,46 @@ bool hiopKKTLinSysCompressedXYcYd::computeDirections(const hiopResidual* resid,
 
   //now the final ryd_tilde += Dd^{-1}*ryd2
   ryd_tilde_->axzpy(1.0, ryd2, *Dd_inv_);
-
+  
+  nlp_->runStats.kkt.tmSolveRhsManip.stop();
+  
 #ifdef HIOP_DEEPCHECKS
+  nlp_->runStats.kkt.tmResid.start();
   hiopVector* rx_tilde_save=rx_tilde_->new_copy();
   hiopVector* ryc_save=r.ryc->new_copy();
   hiopVector* ryd_tilde_save=ryd_tilde_->new_copy();
+  nlp_->runStats.kkt.tmResid.stop();
 #endif
 
-  nlp_->runStats.kkt.tmSolveRhsManip.stop();
   /***********************************************************************
    * solve the compressed system
    * (be aware that rx_tilde is reused/modified inside this function)
    ***********************************************************************/
   bool sol_ok = solveCompressed(*rx_tilde_, *r.ryc, *ryd_tilde_, *dir->x, *dir->yc, *dir->yd);
-
+  
   nlp_->runStats.kkt.tmSolveRhsManip.start();
   //recover dir->d = (D)^{-1}*(dir->yd + ryd2)
   dir->d->copyFrom(ryd2);
   dir->d->axpy(1.0,*dir->yd);
   dir->d->componentMult(*Dd_inv_);
-
+  nlp_->runStats.kkt.tmSolveRhsManip.stop();
   //dir->d->print();
 
 #ifdef HIOP_DEEPCHECKS
+  nlp_->runStats.kkt.tmResid.start();
   errorCompressedLinsys(*rx_tilde_save,*ryc_save,*ryd_tilde_save, *dir->x, *dir->yc, *dir->yd);
   delete rx_tilde_save;
   delete ryc_save;
   delete ryd_tilde_save;
+  nlp_->runStats.kkt.tmResid.stop();
 #endif
 
   if(false==sol_ok) {
     return false;
   }
 
-  bool bret = compute_directions_for_full_space(resid, dir);
+  bool bret = compute_directions_for_full_space(resid, dir);  
 
-  nlp_->runStats.kkt.tmSolveRhsManip.stop();
   nlp_->runStats.tmSolverInternal.stop();
   nlp_->runStats.linsolv.end_linsolve();
   return true;
@@ -718,12 +727,14 @@ hiopKKTLinSysCompressedXDYcYd::~hiopKKTLinSysCompressedXDYcYd()
 
 bool hiopKKTLinSysCompressedXDYcYd::update( const hiopIterate* iter,
                                             const hiopVector* grad_f,
-                                            const hiopMatrix* Jac_c, const hiopMatrix* Jac_d,
+                                            const hiopMatrix* Jac_c,
+                                            const hiopMatrix* Jac_d,
                                             hiopMatrix* Hess)
 {
   nlp_->runStats.linsolv.start_linsolve();
   nlp_->runStats.tmSolverInternal.start();
-
+  nlp_->runStats.kkt.tmUpdateInit.start();
+  
   iter_ = iter;
   grad_f_ = dynamic_cast<const hiopVectorPar*>(grad_f);
   Jac_c_ = Jac_c; Jac_d_ = Jac_d;
@@ -746,9 +757,10 @@ bool hiopKKTLinSysCompressedXDYcYd::update( const hiopIterate* iter,
   Dd_->axdzpy_w_pattern(1.0, *iter_->vu, *iter_->sdu, nlp_->get_idu());
   nlp_->log->write("Dd in KKT", *Dd_, hovMatrices);
 #ifdef HIOP_DEEPCHECKS
-    assert(true==Dd_->allPositive());
+  assert(true==Dd_->allPositive());
 #endif
-
+  nlp_->runStats.kkt.tmUpdateInit.stop();
+  
   //factorization + inertia correction if needed
   bool retval = factorize();
 
@@ -809,23 +821,26 @@ bool hiopKKTLinSysCompressedXDYcYd::computeDirections(const hiopResidual* resid,
     rd_tilde_->axdzpy_w_pattern(-1.0, rd2, *iter_->sdu, nlp_->get_idu());
   }
   nlp_->log->write("Dd (in computeDirections)", *Dd_, hovMatrices);
-
+  
+  nlp_->runStats.kkt.tmSolveRhsManip.stop();
+  
 #ifdef HIOP_DEEPCHECKS
+  nlp_->runStats.kkt.tmResid.start();
   hiopVector* rx_tilde_save = rx_tilde_->new_copy();
   hiopVector* rd_tilde_save = rd_tilde_->new_copy();
   hiopVector* ryc_save = r.ryc->new_copy();
   hiopVector* ryd_save = r.ryd->new_copy();
+  nlp_->runStats.kkt.tmResid.stop();
 #endif
-
-  nlp_->runStats.kkt.tmSolveRhsManip.stop();
-
+  
   /***********************************************************************
    * solve the compressed system
    * (be aware that rx_tilde is reused/modified inside this function)
    ***********************************************************************/
   bool sol_ok = solveCompressed(*rx_tilde_, *rd_tilde_, *r.ryc, *r.ryd, *dir->x, *dir->d, *dir->yc, *dir->yd);
-
+  
 #ifdef HIOP_DEEPCHECKS
+  nlp_->runStats.kkt.tmResid.start();
   double derr =
     errorCompressedLinsys(*rx_tilde_save, *rd_tilde_save, *ryc_save, *ryd_save,
 			  *dir->x, *dir->d, *dir->yc, *dir->yd);
@@ -835,15 +850,17 @@ bool hiopKKTLinSysCompressedXDYcYd::computeDirections(const hiopResidual* resid,
   delete ryc_save;
   delete rd_tilde_save;
   delete ryd_save;
+  nlp_->runStats.kkt.tmResid.stop();
 #endif
 
-  nlp_->runStats.kkt.tmSolveRhsManip.start();
-
-  if(false==sol_ok) return sol_ok;
-
+  if(false == sol_ok) {
+    nlp_->runStats.tmSolverInternal.stop();
+    nlp_->runStats.linsolv.end_linsolve();
+    return false;
+  }
+  
   bool bret = compute_directions_for_full_space(resid, dir);
-
-  nlp_->runStats.kkt.tmSolveRhsManip.stop();
+  
   nlp_->runStats.tmSolverInternal.stop();
   nlp_->runStats.linsolv.end_linsolve();
   return true;
@@ -1409,10 +1426,11 @@ double hiopKKTLinSysLowRank::solveError(const hiopMatrixDense& M,  const hiopVec
 // hiopKKTLinSysFull
 ////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
-bool hiopKKTLinSysFull::update( const hiopIterate* iter,
-                                const hiopVector* grad_f,
-                                const hiopMatrix* Jac_c, const hiopMatrix* Jac_d,
-                                hiopMatrix* Hess)
+bool hiopKKTLinSysFull::update(const hiopIterate* iter,
+                               const hiopVector* grad_f,
+                               const hiopMatrix* Jac_c,
+                               const hiopMatrix* Jac_d,
+                               hiopMatrix* Hess)
 {
   
   iter_ = iter;

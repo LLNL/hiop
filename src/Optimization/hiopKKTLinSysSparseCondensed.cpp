@@ -106,6 +106,8 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
                                                     const double& dcc,
                                                     const double& dcd)
 {
+  nlp_->runStats.kkt.tmUpdateInit.start();
+  
   auto delta_wx = delta_wx_in;
   auto delta_wd = delta_wd_in;
   if(dcc!=0) {
@@ -126,6 +128,7 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   
   assert(HessSp_ && Jac_dSp_);
   if(nullptr==Jac_dSp_ || nullptr==HessSp_) {
+    nlp_->runStats.kkt.tmUpdateInit.stop();
     //incorrect linear algebra objects were provided to this class
     return false;
   }
@@ -138,7 +141,7 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   assert(nineq == Dd_->get_size());
   assert(nx == Dx_->get_size());
   
-  nlp_->runStats.kkt.tmUpdateLinsys.start();
+  
 
   if(nullptr == Hd_) {
     Hd_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), nineq);
@@ -146,6 +149,9 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   Hd_->copyFrom(*Dd_);  
   Hd_->addConstant(delta_wd);
 
+  nlp_->runStats.kkt.tmUpdateInit.stop();
+  nlp_->runStats.kkt.tmUpdateLinsys.start();
+  
 #define USE_OLD_CODE 0
 #define USE_NEW_CODE 1  
   
@@ -645,8 +651,6 @@ bool hiopKKTLinSysCondensedSparse::solve_compressed_direct(hiopVector& rx,
   size_type nd = rd.get_size();
   size_type nyd = ryd.get_size();
 
-  nlp_->runStats.kkt.tmSolveRhsManip.start();
-  
   assert(rhs_);
   assert(rhs_->get_size() == nx);
 
@@ -666,25 +670,14 @@ bool hiopKKTLinSysCondensedSparse::solve_compressed_direct(hiopVector& rx,
 
   Jac_dSp_->transTimesVec(1.0, *rhs_, 1.0, DD_x_ryd_plus_rd);
 
-  nlp_->runStats.kkt.tmSolveRhsManip.stop();
-  nlp_->runStats.kkt.tmSolveTriangular.start();
-  
   //
   // solve
   //
   bool linsol_ok = linSys_->solve(*rhs_);
-  nlp_->runStats.kkt.tmSolveTriangular.stop();
-  nlp_->runStats.linsolv.end_linsolve();
   
-  if(perf_report_) {
-    nlp_->log->printf(hovSummary, "(summary for linear solver from KKT_SPARSE_Condensed(direct))\n%s",
-                      nlp_->runStats.linsolv.get_summary_last_solve().c_str());
+  if(false==linsol_ok) {
+    return false;
   }
-  
-  if(false==linsol_ok) return false;
-
-  nlp_->runStats.kkt.tmSolveRhsManip.start();
-  
   dx.copyFrom(*rhs_);
 
   dd.copyFrom(ryd);
@@ -693,9 +686,6 @@ bool hiopKKTLinSysCondensedSparse::solve_compressed_direct(hiopVector& rx,
   dyd.copyFrom(dd);
   dyd.componentMult(*Hd_);
   dyd.axpy(-1.0, rd);
-
-  nlp_->runStats.kkt.tmSolveRhsManip.stop();
-
   return true;
 }
 
@@ -714,12 +704,12 @@ bool hiopKKTLinSysCondensedSparse::solveCompressed(hiopVector& rx,
   assert(0 == ryc.get_size() && "this KKT does not support equality constraints");
 
   bool bret;
+
+  nlp_->runStats.kkt.tmSolveInner.start();
   
   size_type nx = rx.get_size();
   size_type nd = rd.get_size();
   size_type nyd = ryd.get_size();
-
-  nlp_->runStats.kkt.tmSolveRhsManip.start();
 
   // this is rhs used by the direct "condensed" solve
   if(rhs_ == NULL) {
@@ -733,6 +723,7 @@ bool hiopKKTLinSysCondensedSparse::solveCompressed(hiopVector& rx,
   nlp_->log->write("RHS KKT_SPARSE_Condensed ryd:", ryd, hovIteration);
 #if 0
   bret = solve_compressed_direct(rx, rd, ryc, ryd, dx, dd, dyc, dyd);
+  nlp_->runStats.kkt.tmSolveInner.stop();
 #else
   
   if(nullptr == krylov_mat_opr_) {
@@ -746,23 +737,25 @@ bool hiopKKTLinSysCondensedSparse::solveCompressed(hiopVector& rx,
   rx.copyToStarting(*krylov_rhs_xdycyd_, 0);
   rd.copyToStarting(*krylov_rhs_xdycyd_, nx);
   ryd.copyToStarting(*krylov_rhs_xdycyd_, nx+nd);
-
+  
   const double tol_mu = 1e-2;
   double tol = std::min(mu_*tol_mu, 1e-6);
   bicgstab_->set_tol(tol);
   bicgstab_->set_x0(0.0);
   
   bret = bicgstab_->solve(*krylov_rhs_xdycyd_);
+  nlp_->runStats.kkt.nIterRefinInner += bicgstab_->get_sol_num_iter();
+  nlp_->runStats.kkt.tmSolveInner.stop();
   if(!bret) {
     nlp_->log->printf(hovWarning, "%s", bicgstab_->get_convergence_info().c_str());
 
     double tola = 10*mu_;
     double tolr = mu_*1e-1;
-
+    
     if(bicgstab_->get_sol_rel_resid()>tolr || bicgstab_->get_sol_abs_resid()>tola) {
       return false;
     }
-    
+
     //error out if one of the residuals is large
     if(bicgstab_->get_sol_abs_resid()>1e-2 || bicgstab_->get_sol_rel_resid()>1e-2) {
       return false;
@@ -770,17 +763,25 @@ bool hiopKKTLinSysCondensedSparse::solveCompressed(hiopVector& rx,
     bret = true;
   }
 
+  nlp_->runStats.kkt.tmSolveRhsManip.start();
   dx.startingAtCopyFromStartingAt(0, *krylov_rhs_xdycyd_, 0);
   dd.startingAtCopyFromStartingAt(0, *krylov_rhs_xdycyd_, nx);
   dyd.startingAtCopyFromStartingAt(0, *krylov_rhs_xdycyd_, nx+nd);
+  nlp_->runStats.kkt.tmSolveRhsManip.stop();
   
 #endif
 
+  
+  if(perf_report_) {
+    nlp_->log->printf(hovSummary, "(summary for linear solver from KKT_SPARSE_Condensed(direct))\n%s",
+                      nlp_->runStats.linsolv.get_summary_last_solve().c_str());
+  }
+
+  
   nlp_->log->write("SOL KKT_SPARSE_Condensed dx: ", dx,  hovMatrices);
   nlp_->log->write("SOL KKT_SPARSE_Condensed dd: ", dd,  hovMatrices);
   nlp_->log->write("SOL KKT_SPARSE_Condensed dyc:", dyc, hovMatrices);
   nlp_->log->write("SOL KKT_SPARSE_Condensed dyd:", dyd, hovMatrices);
-
   return bret;
 }
 
