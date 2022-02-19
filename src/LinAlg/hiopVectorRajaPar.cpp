@@ -1918,9 +1918,9 @@ void hiopVectorRajaPar::print(FILE* file, const char* msg/*=NULL*/, int max_elem
     if(NULL==msg)
     {
       if(numranks>1)
-	      fprintf(file, "vector of size %lld, printing %d elems (on rank=%d)\n", n_, max_elems, myrank);
+	      fprintf(file, "vector of size %d, printing %d elems (on rank=%d)\n", n_, max_elems, myrank);
       else
-	      fprintf(file, "vector of size %lld, printing %d elems (serial)\n", n_, max_elems);
+	      fprintf(file, "vector of size %d, printing %d elems (serial)\n", n_, max_elems);
     }
     else
     {

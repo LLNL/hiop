@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 if (POLICY CMP0074)
   cmake_policy(SET CMP0074 NEW)
@@ -181,9 +182,9 @@ target_link_libraries(hiop_tpl INTERFACE ${LAPACK_LIBRARIES})
 message(STATUS "Using LAPACK libraries: ${LAPACK_LIBRARIES}")
 
 if(HIOP_USE_GPU)
+  include(CheckLanguage)
   set(HIOP_MAGMA_DIR CACHE PATH "Path to Magma directory")
   if(HIOP_USE_CUDA)
-    include(CheckLanguage)
     enable_language(CUDA)
     check_language(CUDA)
 
