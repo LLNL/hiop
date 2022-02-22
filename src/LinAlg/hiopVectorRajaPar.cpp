@@ -60,6 +60,7 @@
 
 #include <cmath>
 #include <cstring> //for memcpy
+#include <sstream>
 #include <algorithm>
 #include <cassert>
 
@@ -1917,10 +1918,14 @@ void hiopVectorRajaPar::print(FILE* file, const char* msg/*=NULL*/, int max_elem
 
     if(NULL==msg)
     {
+      std::stringstream ss;
+      ss << "vector of size " << n_ << ", printing " << max_elems << " elems ";
       if(numranks>1)
-	      fprintf(file, "vector of size %d, printing %d elems (on rank=%d)\n", n_, max_elems, myrank);
+        ss << "(on rank=" << myrank << ")";
       else
-	      fprintf(file, "vector of size %d, printing %d elems (serial)\n", n_, max_elems);
+        ss << "(serial)";
+      ss << "\n";
+      fprintf(file, "%s", ss.str().c_str());
     }
     else
     {

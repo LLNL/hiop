@@ -437,17 +437,17 @@ void hiopMatrixRajaDense::shiftRows(size_type shift)
 {
   if(shift == 0)
     return;
-  if(std::fabs(shift) == m_local_)
+  if(abs(shift) == m_local_)
     return; //nothing to shift
   if(m_local_ <= 1)
     return; //nothing to shift
   
-  assert(std::fabs(shift) < m_local_);
+  assert(abs(shift) < m_local_);
 
   //at this point m_local_ should be >=2
   assert(m_local_ >= 2);
   //and
-  assert(m_local_ - std::fabs(shift) >= 1);
+  assert(m_local_ - abs(shift) >= 1);
 #if defined(HIOP_DEEPCHECKS) && !defined(NDEBUG)
   copyFromDev();
   double test1 = 8.3, test2 = -98.3;
@@ -1365,7 +1365,7 @@ double hiopMatrixRajaDense::max_abs_value()
   RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, n_local_ * m_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
-      norm.max(std::fabs(dd[i]));
+      norm.max(fabs(dd[i]));
     });
   double maxv = static_cast<double>(norm.get());
 
@@ -1403,7 +1403,7 @@ void hiopMatrixRajaDense::row_max_abs_value(hiopVector &ret_vec)
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       for(int j = 0; j < n_local; j++) {
-        double abs_val = std::fabs(Mview(i, j));
+        double abs_val = fabs(Mview(i, j));
         vd[i] = (vd[i] > abs_val) ? vd[i] : abs_val;
       }
     }
@@ -1465,7 +1465,7 @@ bool hiopMatrixRajaDense::assertSymmetry(double tol) const
     {
       double ij = Mview(i, j);
       double ji = Mview(j, i);
-      double relerr= std::fabs(ij - ji) /  (1 + std::fabs(ij));
+      double relerr= fabs(ij - ji) /  (1 + fabs(ij));
       assert(relerr < tol);
       if(relerr >= tol)
 	      any += 1;

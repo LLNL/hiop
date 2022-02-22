@@ -70,6 +70,7 @@
 #include <algorithm> //for std::min
 #include <cmath> //for std::isfinite
 #include <cstring>
+#include <sstream>
 
 #include <cassert>
 // #include <numeric> //std::inclusive_scan is only available after C++17
@@ -1162,12 +1163,14 @@ void hiopMatrixRajaSparseTriplet::print(FILE* file,
   if(myrank_==rank || rank==-1) {
 
     if(NULL==msg) {
+      std::stringstream ss;
+      ss << "matrix of size " << m() << " " << n() << " and nonzeros "
+        << numberOfNonzeros() << ", printing " << max_elems
+        << " elems";
       if(numranks>1)
-        fprintf(file, "matrix of size %d %d and nonzeros %d, printing %d elems (on rank=%d)\n",
-		m(), n(), numberOfNonzeros(), max_elems, myrank_);
-      else
-        fprintf(file, "matrix of size %d %d and nonzeros %d, printing %d elems\n",
-		m(), n(), numberOfNonzeros(), max_elems);
+        ss << " (on rank=" << myrank_ << ")";
+      ss << "\n";
+      fprintf(file, "%s", ss.str().c_str());
     } else {
       fprintf(file, "%s ", msg);
     }    
