@@ -1,6 +1,6 @@
-module use /gpfs/wolf/proj-shared/csc359/src/spack/share/spack/modules/linux-rhel7-power9le
-
 module purge
+
+module use -a /gpfs/wolf/csc359/proj-shared/src/spack/share/spack/modules/linux-rhel8-power9le
 
 # Load spack-built modules
 # autoconf@2.69%gcc@9.1.0 patches=35c4492,7793209,a49dd5b arch=linux-rhel8-power9le
@@ -43,8 +43,6 @@ module load openblas-0.3.19-gcc-9.1.0-c6nslyv
 module load perl-5.30.1-gcc-9.1.0-qmsmncp
 # raja@0.14.0%gcc@9.1.0+cuda~examples~exercises~ipo+openmp~rocm+shared~tests build_type=RelWithDebInfo cuda_arch=70 arch=linux-rhel8-power9le
 module load raja-0.14.0-gcc-9.1.0-ili5h35
-# spectrum-mpi@10.4.0.3-20210112%gcc@9.1.0 arch=linux-rhel8-power9le
-module load spectrum-mpi-10.4.0.3-20210112-gcc-9.1.0-toxtmdx
 # suite-sparse@5.10.1%gcc@9.1.0~cuda~graphblas~openmp+pic~tbb arch=linux-rhel8-power9le
 module load suite-sparse-5.10.1-gcc-9.1.0-nlk7pqe
 # texinfo@6.5%gcc@9.1.0 patches=12f6edb,1732115 arch=linux-rhel8-power9le
@@ -54,6 +52,10 @@ module load umpire-6.0.0-gcc-9.1.0-bosktbw
 
 #Load system modules
 module load gcc/9.1.0
+module load spectrum-mpi/10.4.0.3-20210112
+export CC=/sw/ascent/gcc/9.1.0-3/bin/gcc
+export CXX=/sw/ascent/gcc/9.1.0-3/bin/g++
+export FC=/sw/ascent/gcc/9.1.0-3/bin/gfortran
 
 [ -f $PWD/nvblas.conf ] && rm $PWD/nvblas.conf
 cat > $PWD/nvblas.conf <<-EOD
