@@ -1167,8 +1167,9 @@ void hiopMatrixRajaSparseTriplet::print(FILE* file,
       ss << "matrix of size " << m() << " " << n() << " and nonzeros "
         << numberOfNonzeros() << ", printing " << max_elems
         << " elems";
-      if(numranks>1)
+      if(numranks>1) {
         ss << " (on rank=" << myrank_ << ")";
+      }
       ss << "\n";
       fprintf(file, "%s", ss.str().c_str());
     } else {

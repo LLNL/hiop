@@ -853,7 +853,7 @@ double hiopVectorRajaPar::infnorm_local() const
   RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
-      norm.max(std::abs(data[i]));
+      norm.max(abs(data[i]));
     });
   return norm.get();
 }
@@ -889,7 +889,7 @@ double hiopVectorRajaPar::onenorm_local() const
   RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
-      sum += std::abs(data[i]);
+      sum += abs(data[i]);
     });
   return sum.get();
 }
@@ -1366,7 +1366,7 @@ void hiopVectorRajaPar::invert()
     RAJA_LAMBDA(RAJA::Index_type i)
     {
 #ifdef HIOP_DEEPCHECKS
-      assert(std::abs(data[i]) > small_real);
+      assert(abs(data[i]) > small_real);
 #endif
       data[i] = one/data[i];
     });
@@ -1920,10 +1920,12 @@ void hiopVectorRajaPar::print(FILE* file, const char* msg/*=NULL*/, int max_elem
     {
       std::stringstream ss;
       ss << "vector of size " << n_ << ", printing " << max_elems << " elems ";
-      if(numranks>1)
+      if(numranks>1) {
         ss << "(on rank=" << myrank << ")";
-      else
+      }
+      else {
         ss << "(serial)";
+      }
       ss << "\n";
       fprintf(file, "%s", ss.str().c_str());
     }
