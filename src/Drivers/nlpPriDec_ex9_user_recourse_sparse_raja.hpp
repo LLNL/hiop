@@ -383,7 +383,7 @@ public:
     if(iJacS!=NULL && jJacS!=NULL) {
       const auto d_ny = ny_;
       RAJA::forall<ex9_raja_exec>(RAJA::RangeSegment(0, num_cons),
-        [=] __device__ (RAJA::Index_type itrow)
+        RAJA_LAMBDA (RAJA::Index_type itrow)
       {
         const int con_idx = (int) idx_cons[itrow];
         if(con_idx<d_ny-1) {
@@ -425,7 +425,7 @@ public:
       const auto *d_xi = xi_;
       const auto d_nS = nS_;
       RAJA::forall<ex9_raja_exec>(RAJA::RangeSegment(0, num_cons),
-       [=] __device__ (RAJA::Index_type itrow)
+       RAJA_LAMBDA (RAJA::Index_type itrow)
       {
         const int con_idx = (int) idx_cons[itrow];
         if(con_idx<m-1) {
