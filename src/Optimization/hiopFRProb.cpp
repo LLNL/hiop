@@ -124,8 +124,9 @@ hiopFRProbSparse::hiopFRProbSparse(hiopAlgFilterIPMBase& solver_base)
   
   // set mu0 to be the maximun of the current barrier parameter mu and norm_inf(|c|)*/
   theta_ref_ = solver_base_.get_resid()->get_theta(); //at current point, i.e., reference point
+  nrmInf_feas_ref_ = solver_base_.get_resid()->get_nrmInf_bar_feasib();
   mu_ = solver_base.get_mu();
-  mu_ = std::max(mu_, solver_base_.get_resid()->get_nrmInf_bar_feasib());
+  mu_ = std::max(mu_, nrmInf_feas_ref_);
 
   zeta_ = std::sqrt(mu_);
   rho_ = 1000; // FIXME: make this as an user option
@@ -570,13 +571,20 @@ bool hiopFRProbSparse::iterate_callback(int iter,
   theta_ori += wrk_cbody_->onenorm();
   theta_ori += wrk_dbody_->onenorm();
 
+  double nrmInf_feas_ori = 0.0;
+  nrmInf_feas_ori = fmax(wrk_cbody_->infnorm(), wrk_dbody_->infnorm());
+
   // check if restoration phase should be discontinued
+  double max_nrmInf_feas = nlp_base_->options->GetNumeric("kappa_resto") * nrmInf_feas_ref_;
 
   // termination condition 1) theta_curr <= kappa_resto*theta_ref
-  if(theta_ori <= nlp_base_->options->GetNumeric("kappa_resto")*theta_ref_ && iter>0) {
+  if(nrmInf_feas_ori <= max_nrmInf_feas && iter>0) {
     // termination condition 2) (theta and logbar) are not in the original filter
     // check (original) filter condition
-    if(!solver_base_.filter_contains(onenorm_pr_, logbar_obj_value)) {
+    double trial_obj_ori = obj_base_; // obj_base_ has been updated in the FR loop
+    double trial_bar_obj_ori = solver_base_.get_logbar()->compute_trial_logbar(*wrk_x_, obj_base_, *(solver_base_.get_it_trial()));
+
+    if(!solver_base_.filter_contains(theta_ori, trial_bar_obj_ori)) {
       // terminate FR
       last_x_->copyFrom(*wrk_x_);
       last_d_->copyFrom(*wrk_d_);

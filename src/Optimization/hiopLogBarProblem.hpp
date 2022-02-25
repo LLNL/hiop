@@ -131,6 +131,20 @@ public:
     nlp->runStats.tmSolverInternal.stop();
   }
 
+  inline double 
+  compute_trial_logbar(const hiopVector& xref, const double &f, hiopIterate& iter_trial)
+  {
+    nlp->runStats.tmSolverInternal.start();
+
+    double retval_f_logbar_trial = f - mu * iter_trial.evalLogBarrier(xref);
+    if(kappa_d>0.) {
+      retval_f_logbar_trial += iter_trial.linearDampingTerm(mu,kappa_d);
+    }
+    nlp->runStats.tmSolverInternal.stop();
+
+    return retval_f_logbar_trial;
+  }
+
   /* @brief Adds beta*(damping terms) to the gradient `gradx` w.r.t. x */
   inline void addNonLogBarTermsToGrad_x(const double& beta, hiopVector& gradx) const
   {

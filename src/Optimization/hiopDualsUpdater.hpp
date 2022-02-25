@@ -117,6 +117,19 @@ public:
                   const hiopIterate& search_dir, const double& alpha_primal, const double& alpha_dual,
                   const double& mu, const double& kappa_sigma, const double& infeas_nrm_trial);
 
+  /** LSQ update of the constraints duals (yc and yd). Source file describe the math. */
+  virtual bool go(hiopIterate& it_ini,
+                  const hiopVector& grad_f,
+                  const hiopMatrix& jac_c,
+                  const hiopMatrix& jac_d)
+  {
+    //nlp_->log->printf(hovSummary,
+    //                  "LSQ Dual Initialization --- Dense linsys: size %d (%d eq-cons)\n",
+    //                  nlp_->m_eq()+nlp_->m_ineq(), nlp_->m_eq());  
+    bool bret = do_lsq_update(it_ini,grad_f,jac_c,jac_d);
+    return bret;
+  }
+                  
   /** LSQ-based initialization of the  constraints duals (yc and yd). Source file describes the math. */
   virtual inline bool computeInitialDualsEq(hiopIterate& it_ini,
                                             const hiopVector& grad_f,

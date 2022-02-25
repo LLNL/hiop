@@ -1879,6 +1879,10 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
       }
     } // end of the linear solve (computeDirections) loop
 
+    if(NlpSolve_Pending!=solver_status_) {
+      break; //failure of the line search or user stopped.
+    }
+
     nlp->log->printf(hovScalars,
 		     "Iter[%d] -> accepted step primal=[%17.11e] dual=[%17.11e]\n",
 		     iter_num, _alpha_primal, _alpha_dual);
@@ -2193,6 +2197,7 @@ bool hiopAlgFilterIPMBase::apply_feasibility_restoration(hiopKKTLinSys* kkt)
         hiopNlpSparse nlpFR(nlp_fr_interface, nlp->options->GetString("options_file_fr_prob").c_str());
         fr_solved = solve_feasibility_restoration(kkt, nlpFR);
         if(fr_solved) {
+          nlp->log->printf(hovSummary, "FR problem provides sufficient reduction in primal feasibility! Now apply LSQ to reset duals.\n");
           // FR succeeds, update it_trial->x and it_trial->d to the next search point
           it_trial->get_x()->copyFrom(nlp_fr_interface.get_fr_sol_x());
           it_trial->get_d()->copyFrom(nlp_fr_interface.get_fr_sol_d());
@@ -2205,6 +2210,7 @@ bool hiopAlgFilterIPMBase::apply_feasibility_restoration(hiopKKTLinSys* kkt)
       hiopNlpMDS nlpFR(nlp_fr_interface, nlp->options->GetString("options_file_fr_prob").c_str());
       fr_solved =  solve_feasibility_restoration(kkt, nlpFR);
       if(fr_solved) {
+        nlp->log->printf(hovSummary, "FR problem provides sufficient reduction in primal feasibility! Now apply LSQ to reset duals.\n");
         // FR succeeds, update it_trial->x and it_trial->d to the next search point
         it_trial->get_x()->copyFrom(nlp_fr_interface.get_fr_sol_x());
         it_trial->get_d()->copyFrom(nlp_fr_interface.get_fr_sol_d());
@@ -2230,6 +2236,7 @@ bool hiopAlgFilterIPMBase::apply_feasibility_restoration(hiopKKTLinSys* kkt)
       solver_status_ = Error_In_FR;
       fr_solved = false;
     } else {
+      nlp->log->printf(hovSummary, "FR problem converged! Now apply LSQ to reset duals.\n");
       reset_var_from_fr_sol(kkt, reset_dual = false);
     }
   }
@@ -2292,18 +2299,19 @@ bool hiopAlgFilterIPMBase::reset_var_from_fr_sol(hiopKKTLinSys* kkt, bool reset_
     // compute directions for bound duals (zl, zu, vl, vu)
     kkt->compute_directions_for_full_space(resid, dir);
 
-    //LSQ-based initialization of yc and yd
-    if(0==dualsInitializ) {
-      //is the dualsUpdate_ already the LSQ-based updater?
+    // TODO: set this as a user option. Now we set duals to 0.0 as the default option
+    bool reset_dual_from_lsq_after_FR = false;
+
+    if(reset_dual_from_lsq_after_FR) {
+      // solve a LSQ to update yc and yd
       hiopDualsLsqUpdate* updater = dynamic_cast<hiopDualsLsqUpdate*>(dualsUpdate_);
       bool deleteUpdater = false;
       if(!updater) {
-        //updater = new hiopDualsLsqUpdate(nlp);
         updater = nlp->alloc_duals_lsq_updater();
         deleteUpdater = true;
       }
       //this will update yc and yd in it_trial
-      updater->computeInitialDualsEq(*it_trial, *_grad_f, *_Jac_c, *_Jac_d);
+      updater->go(*it_trial, *_grad_f, *_Jac_c, *_Jac_d);
       if(deleteUpdater) {
         delete updater;
       }
