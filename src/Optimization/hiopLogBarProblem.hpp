@@ -130,7 +130,10 @@ public:
 
     nlp->runStats.tmSolverInternal.stop();
   }
-
+  
+  /* compute and return the log-barrier objective from the given primal variable xref.
+  *  The primal variables in object iter_trial are reset to the given point xref.
+  */
   inline double 
   compute_trial_logbar(const hiopVector& xref, const double &f, hiopIterate& iter_trial)
   {

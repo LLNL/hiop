@@ -582,6 +582,8 @@ bool hiopFRProbSparse::iterate_callback(int iter,
     // termination condition 2) (theta and logbar) are not in the original filter
     // check (original) filter condition
     double trial_obj_ori = obj_base_; // obj_base_ has been updated in the FR loop
+    
+    // compute the original logbar objective from the trial point given by the FR problem
     double trial_bar_obj_ori = solver_base_.get_logbar()->compute_trial_logbar(*wrk_x_, obj_base_, *(solver_base_.get_it_trial()));
 
     if(!solver_base_.filter_contains(theta_ori, trial_bar_obj_ori)) {
