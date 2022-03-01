@@ -853,7 +853,7 @@ double hiopVectorRajaPar::infnorm_local() const
   RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
-      norm.max(abs(data[i]));
+      norm.max(fabs(data[i]));
     });
   return norm.get();
 }
@@ -889,7 +889,7 @@ double hiopVectorRajaPar::onenorm_local() const
   RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
-      sum += abs(data[i]);
+      sum += fabs(data[i]);
     });
   return sum.get();
 }
@@ -1366,7 +1366,7 @@ void hiopVectorRajaPar::invert()
     RAJA_LAMBDA(RAJA::Index_type i)
     {
 #ifdef HIOP_DEEPCHECKS
-      assert(abs(data[i]) > small_real);
+      assert(fabs(data[i]) > small_real);
 #endif
       data[i] = one/data[i];
     });
@@ -2004,7 +2004,7 @@ size_type hiopVectorRajaPar::numOfElemsAbsLessThan(const double &val) const
   RAJA::forall<hiop_raja_exec>( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
-      sum += (fabs(data[i])<val);
+      sum += static_cast<size_type>(fabs(data[i]) < val);
     });
 
   size_type nrm = sum.get();
