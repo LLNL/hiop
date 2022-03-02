@@ -65,6 +65,7 @@ int VectorTestsIntSeq::getLocalElement(hiop::hiopVectorInt* xvec, int idx) const
     return x->local_data_host_const()[idx];
   } else {
     assert(false && "Wrong type of vector passed into `VectorTestsIntSeq::getLocalElement`!");
+    return 0;
   }
 }
 

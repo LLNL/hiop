@@ -87,7 +87,7 @@ build_on_marianas:
   variables:
     SLURM_Q: "dl"
     MY_CLUSTER: "marianas"
-    TIMELIMIT: '1:00:00'
+    TIMELIMIT: '1:30:00'
     SLURM_ARGS: --gres=gpu:1 --exclusive
   <<: *pnnl_tags_definition
   <<: *pnnl_script_definition
@@ -107,6 +107,7 @@ build_on_newell:
     - if: '$CI_PROJECT_ROOT_NAMESPACE == "exasgd"'
 
 build_on_incline:
+  allow_failure: true
   stage: default_build
   variables:
     SLURM_Q: incline
