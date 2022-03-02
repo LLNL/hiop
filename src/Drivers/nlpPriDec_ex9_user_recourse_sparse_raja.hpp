@@ -223,12 +223,13 @@ public:
   bool get_cons_info(const size_type& m, double* clow, double* cupp, NonlinearityType* type)
   {
     assert(m == ny_);
+    const auto d_ny = ny_;
     RAJA::forall<ex9_raja_exec>(RAJA::RangeSegment(0, ny_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
-      if(i == ny_-1) {
-        clow[ny_-1] = 1.; 
-        cupp[ny_-1] = 1e20;
+      if(i == d_ny-1) {
+        clow[d_ny-1] = 1.; 
+        cupp[d_ny-1] = 1e20;
       } else {
         clow[i] = 0.;
         cupp[i] = 1e20;
@@ -260,10 +261,11 @@ public:
     assert(ny_==n);
     obj_value = 0.;
     RAJA::ReduceSum<ex9_raja_reduce, double> aux(0); //why do we need reducesum?
+    const auto d_x = x_;
     RAJA::forall<ex9_raja_exec>(RAJA::RangeSegment(0, n),
       RAJA_LAMBDA(RAJA::Index_type i)
       {
-        aux += (x[i]-x_[i])*(x[i]-x_[i]);
+        aux += (x[i]-d_x[i])*(x[i]-d_x[i]);
       });
 
     obj_value += aux.get();
@@ -300,6 +302,9 @@ public:
         cons[i]=0.;
       });
 
+    const auto *d_xi = xi_;
+    const auto d_nx = nx_;
+    const auto d_nS = nS_;
     RAJA::forall<ex9_raja_exec>(RAJA::RangeSegment(0, num_cons),
       RAJA_LAMBDA(RAJA::Index_type irow)
     {
@@ -308,18 +313,18 @@ public:
         cons[con_idx] = x[con_idx+1]-x[con_idx];
       } else {
         assert(con_idx==m-1);
-        cons[m-1] = (1-x[0]+xi_[0])*(1-x[0]+xi_[0]);
+        cons[m-1] = (1-x[0]+d_xi[0])*(1-x[0]+d_xi[0]);
      //   RAJA::forall<ex9_raja_exec>(RAJA::RangeSegment(1, nS_),
      //     RAJA_LAMBDA(RAJA::Index_type i)
      //	{
-        for (int i=1; i< nS_; i++) {
-          cons[m-1] += (x[i] + xi_[i])*(x[i] + xi_[i]);
+        for (int i=1; i< d_nS; i++) {
+          cons[m-1] += (x[i] + d_xi[i])*(x[i] + d_xi[i]);
         }
         //});
         //RAJA::forall<ex9_raja_exec>(RAJA::RangeSegment(nS_, nx_),
         //  RAJA_LAMBDA(RAJA::Index_type i)
 	//{
-        for (int i=nS_; i< nx_; i++) {
+        for (int i=d_nS; i< d_nx; i++) {
 	  cons[m-1] += x[i]*x[i];
         }
         //});
@@ -332,10 +337,11 @@ public:
   bool eval_grad_f(const size_type& n, const double* x, bool new_x, double* gradf)
   {
     assert(ny_==n);    
+    const auto d_x = x_;
     RAJA::forall<ex9_raja_exec>(RAJA::RangeSegment(0, nx_),
       RAJA_LAMBDA(RAJA::Index_type i)
     {
-      gradf[i] = (x[i]-x_[i]);
+      gradf[i] = (x[i]-d_x[i]);
     });
     return true;
   }
@@ -375,11 +381,12 @@ public:
     //resmgr.memset(nnzit, 0);
     
     if(iJacS!=NULL && jJacS!=NULL) {
+      const auto d_ny = ny_;
       RAJA::forall<ex9_raja_exec>(RAJA::RangeSegment(0, num_cons),
-        [=] __device__ (RAJA::Index_type itrow)
+        RAJA_LAMBDA (RAJA::Index_type itrow)
       {
         const int con_idx = (int) idx_cons[itrow];
-        if(con_idx<ny_-1) {
+        if(con_idx<d_ny-1) {
           //sparse Jacobian eq w.r.t. x and s
           //yk
           iJacS[2*itrow] = con_idx;
@@ -415,8 +422,10 @@ public:
     //values for sparse Jacobian if requested by the solver
     if(MJacS!=NULL) {
       //nnzit[0] = 0;
+      const auto *d_xi = xi_;
+      const auto d_nS = nS_;
       RAJA::forall<ex9_raja_exec>(RAJA::RangeSegment(0, num_cons),
-       [=] __device__ (RAJA::Index_type itrow)
+       RAJA_LAMBDA (RAJA::Index_type itrow)
       {
         const int con_idx = (int) idx_cons[itrow];
         if(con_idx<m-1) {
@@ -429,17 +438,17 @@ public:
           //nnzit[0] += 1;
         } else if (con_idx==m-1) {
           assert(itrow==m-1);
-	  MJacS[2*(m-1)] = -2*(1-x[0]+xi_[0]);
+	  MJacS[2*(m-1)] = -2*(1-x[0]+d_xi[0]);
           //nnzit[0] += 1;
           //cons[m-1] = (1-x[0]+xi_[0])^2;
-	  assert(m>=nS_);
-	  for(int i=1; i<nS_; i++)
+	  assert(m>=d_nS);
+	  for(int i=1; i<d_nS; i++)
 	  {
-            MJacS[2*(m-1)+i] = 2*(x[i]+xi_[i]);
+            MJacS[2*(m-1)+i] = 2*(x[i]+d_xi[i]);
             //nnzit[0] += 1;
 	  }
             //cons[m-1] += (x[i] + xi_[i])*(x[i] + xi_[i]);
-	  for(int i=nS_; i<m; i++)
+	  for(int i=d_nS; i<m; i++)
 	  {
             MJacS[2*(m-1)+i] = 2*x[i];
             //nnzit[0] += 1;
@@ -541,10 +550,11 @@ public:
   bool compute_gradx(const int n, const double* y, double*  gradx)
   {
     assert(nx_==n);
+    const auto *d_x = x_;
     RAJA::forall<ex9_raja_exec>(RAJA::RangeSegment(0, nx_),
       RAJA_LAMBDA(RAJA::Index_type i)
     {
-      gradx[i] = (x_[i]-y[i]);
+      gradx[i] = (d_x[i]-y[i]);
     });
     return true;
   };

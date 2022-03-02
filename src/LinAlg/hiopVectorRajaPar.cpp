@@ -60,6 +60,7 @@
 
 #include <cmath>
 #include <cstring> //for memcpy
+#include <sstream>
 #include <algorithm>
 #include <cassert>
 
@@ -852,7 +853,7 @@ double hiopVectorRajaPar::infnorm_local() const
   RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
-      norm.max(std::abs(data[i]));
+      norm.max(fabs(data[i]));
     });
   return norm.get();
 }
@@ -888,7 +889,7 @@ double hiopVectorRajaPar::onenorm_local() const
   RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
-      sum += std::abs(data[i]);
+      sum += fabs(data[i]);
     });
   return sum.get();
 }
@@ -1365,7 +1366,7 @@ void hiopVectorRajaPar::invert()
     RAJA_LAMBDA(RAJA::Index_type i)
     {
 #ifdef HIOP_DEEPCHECKS
-      assert(std::abs(data[i]) > small_real);
+      assert(fabs(data[i]) > small_real);
 #endif
       data[i] = one/data[i];
     });
@@ -1917,10 +1918,16 @@ void hiopVectorRajaPar::print(FILE* file, const char* msg/*=NULL*/, int max_elem
 
     if(NULL==msg)
     {
-      if(numranks>1)
-	      fprintf(file, "vector of size %lld, printing %d elems (on rank=%d)\n", n_, max_elems, myrank);
-      else
-	      fprintf(file, "vector of size %lld, printing %d elems (serial)\n", n_, max_elems);
+      std::stringstream ss;
+      ss << "vector of size " << n_ << ", printing " << max_elems << " elems ";
+      if(numranks>1) {
+        ss << "(on rank=" << myrank << ")";
+      }
+      else {
+        ss << "(serial)";
+      }
+      ss << "\n";
+      fprintf(file, "%s", ss.str().c_str());
     }
     else
     {
@@ -1997,7 +2004,7 @@ size_type hiopVectorRajaPar::numOfElemsAbsLessThan(const double &val) const
   RAJA::forall<hiop_raja_exec>( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
-      sum += (fabs(data[i])<val);
+      sum += static_cast<size_type>(fabs(data[i]) < val);
     });
 
   size_type nrm = sum.get();

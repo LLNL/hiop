@@ -13,7 +13,7 @@ defaultBuild()
     echo
     local SRCDIR=$PWD
     pushd $BUILDDIR || exit 1
-    cmake -C $SRCDIR/scripts/$CMAKE_CACHE_SCRIPT $EXTRA_CMAKE_ARGS .. || exit 1
+    eval "cmake -C $SRCDIR/scripts/$CMAKE_CACHE_SCRIPT $EXTRA_CMAKE_ARGS .." || exit 1
     $MAKE_CMD || exit 1
     popd
   fi
