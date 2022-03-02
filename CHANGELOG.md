@@ -1,6 +1,18 @@
 # Change Log
 All notable changes to HiOp will be documented in this file.
 
+## Version 0.5.4: Elastic mode, Krylov solvers, and misc bug fixes (March 2, 2022)
+New algorithmic features related to the NLP solver(s) and associated linear algebra KKT systems
+
+ - soft feasibility restoration
+ - Relaxer of equality constraints at the NLP formulation level
+ - Krylov interfaces and implementation for CG and BiCGStab (ready for device computations)
+ - protype of the condensed linear system and initial Krylov-based iterative refinement
+ - update of the Magma solver class for the latest Magma API
+ - elastic mode
+ 
+This release also includes several bug fixes.
+
 ## Version 0.5.3: xSDK compliance (Dec 3, 2021)
 
  xSDK compliance 
