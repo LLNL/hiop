@@ -428,3 +428,6 @@ if (HIOP_WITH_MAKETEST)
   add_test(NAME SparseMatrixTest  COMMAND ${RUNCMD} "$<TARGET_FILE:testMatrixSparse>")
   add_test(NAME SymmetricSparseMatrixTest COMMAND ${RUNCMD} "$<TARGET_FILE:testMatrixSymSparse>")
 endif(HIOP_WITH_MAKETEST)
+
+# Test drivers in the form of user applications
+add_subdirectory(src/Drivers)

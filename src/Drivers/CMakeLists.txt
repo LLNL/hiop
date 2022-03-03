@@ -5,7 +5,7 @@ include_directories(PriDec)
 include_directories(IpoptAdapter)
 
 install(
-  FILES IpoptAdapter.hpp
+  FILES IpoptAdapter/IpoptAdapter.hpp
   DESTINATION include
   )
 
