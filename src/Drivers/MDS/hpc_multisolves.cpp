@@ -1,4 +1,4 @@
-#include "nlpMDS_ex4.hpp"
+#include "nlpMDS_EX1.hpp"
 #include "hiopNlpFormulation.hpp"
 #include "hiopAlgFilterIPM.hpp"
 
@@ -15,7 +15,7 @@
 
 using namespace hiop; 
 
-/** The driver performs multiple solves per MPI process using Ex4 
+/** The driver performs multiple solves per MPI process using MDS EX1 
  *
  * Intended to be used to test intra-node CPU cores affinity or GPU streams multiprocessing
  *
@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
     hiopSolveStatus status;
     
     //user's NLP -> implementation of hiop::hiopInterfaceMDS
-    Ex4* my_nlp = new Ex4(n_sp, n_de);
+    MDSEX1* my_nlp = new MDSEX1(n_sp, n_de);
     
     hiopNlpMDS nlp(*my_nlp);
     hiopAlgFilterIPMNewton solver(&nlp);

@@ -2,9 +2,8 @@
 
 #include "IpoptAdapter.hpp"
 
-//use HiOp's MDSEX1 - mixed dense-sparse QP
-//#include "nlpMDS_EX1.hpp"
-#include "nlpMDS_EX2.hpp"
+//use HiOp's SparseEX1 - sparse NLP
+#include "nlpSparse_EX1.hpp"
 
 #include <iostream>
 
@@ -16,18 +15,17 @@ int main(int argv, char** argc)
 {
   //instantiate a HiOp problem
   //
-//  MDSEX2 hiopNlp(300,100,true,true);
-  MDSEX2 hiopNlp(0,3,false,false,false);
+  SparseEX1 hiopNlp(3,1.0);
   //
-  //create 
+  //create
 
   //int n_sp = 12, n_de = 10;
   //MDSEX2 hiopNlp(n_sp, n_de);
-  
+
   // Create a new instance of the Ipopt nlp
   //  (use a SmartPtr, not raw)
-  SmartPtr<TNLP> mynlp = new hiopMDS2IpoptTNLP(&hiopNlp);
-  
+  SmartPtr<TNLP> mynlp = new hiopSparse2IpoptTNLP(&hiopNlp);
+
   // Create a new instance of IpoptApplication
   //  (use a SmartPtr, not raw)
   // We are using the factory, since this allows us to compile this
@@ -35,14 +33,14 @@ int main(int argv, char** argc)
   SmartPtr<IpoptApplication> app = IpoptApplicationFactory();
 
   //
-  // HiOp-compatible Ipopt Options (Ipopt behaves or should behave like HiOp) 
+  // HiOp-compatible Ipopt Options (Ipopt behaves or should behave like HiOp)
   //
   // app->Options()->SetStringValue("recalc_y", "no");
   // app->Options()->SetStringValue("mu_strategy", "monotone");
   // app->Options()->SetNumericValue("bound_push", 1e-2);
   // app->Options()->SetNumericValue("bound_relax_factor", 0.);
   // app->Options()->SetNumericValue("constr_mult_init_max", 0.001);
-  
+
 
   //app->Options()->SetNumericValue("tol", 1e-7);
   app->Options()->SetStringValue("recalc_y", "no");
@@ -52,10 +50,13 @@ int main(int argv, char** argc)
   app->Options()->SetNumericValue("bound_push", 1e-8);
   //app->Options()->SetNumericValue("slack_bound_push", 1e-24);
   app->Options()->SetNumericValue("bound_relax_factor", 0.);
-  app->Options()->SetNumericValue("constr_mult_init_max", 0.001);
+  //app->Options()->SetNumericValue("constr_mult_init_max", 0.001);
+  app->Options()->SetNumericValue("kappa1", 1e-8);
+  app->Options()->SetNumericValue("kappa2", 1e-8);
   
-  
-  //app->Options()->SetStringValue("output_file", "ipopt.out");
+  app->Options()->SetStringValue("duals_init", "zero");
+
+ //app->Options()->SetStringValue("output_file", "ipopt.out");
   //app->Options()->SetStringValue("derivative_test", "second-order"); //"only-second-order"
   // Initialize the IpoptApplication and process the options
   ApplicationReturnStatus status;
@@ -64,19 +65,19 @@ int main(int argv, char** argc)
       std::cout << std::endl << std::endl << "*** Error during initialization!" << std::endl;
       return (int) status;
     }
-  
+
   // Ask Ipopt to solve the problem
    status = app->OptimizeTNLP(mynlp);
-   
+
    if( status == Solve_Succeeded ) {
      std::cout << std::endl << std::endl << "*** The problem solved!" << std::endl;
    } else  {
      std::cout << std::endl << std::endl << "*** The problem FAILED!" << std::endl;
    }
-   
+
    // As the SmartPtrs go out of scope, the reference count
    // will be decremented and the objects will automatically
    // be deleted.
-   
+
    return (int) status;
 }

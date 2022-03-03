@@ -1,4 +1,4 @@
-#include "nlpDenseCons_ex1.hpp"
+#include "nlpDenseCons_EX1.hpp"
 
 #include <cmath>
 #include <cstdio>

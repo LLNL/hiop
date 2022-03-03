@@ -524,16 +524,16 @@ $> make -j4; make install; make test
 ```shell
 $> rm -rf *; cmake -DHIOP_USE_MPI=ON -DHIOP_DEEPCHECKS=ON -DCMAKE_BUILD_TYPE=DEBUG ..
 $> make -j4
-$> mpiexec -np 2 valgrind ./src/Drivers/nlpDenseCons_ex1.exe 
-$> mpiexec -np 2 valgrind ./src/Drivers/nlpDenseCons_ex2.exe 
-$> mpiexec -np 2 valgrind ./src/Drivers/nlpDenseCons_ex3.exe 
+$> mpiexec -np 2 valgrind ./src/Drivers/nlpDenseCons_EX1.exe 
+$> mpiexec -np 2 valgrind ./src/Drivers/nlpDenseCons_EX2.exe 
+$> mpiexec -np 2 valgrind ./src/Drivers/nlpDenseCons_EX3.exe 
 ```
 
 ## 3. clang with fsanitize group checks reports no warning and no errors. MacOS only (Optional).
 ```shell
 $> rm -rf *; CC=clang CXX=clang++ cmake -DCMAKE_CXX_FLAGS="-fsanitize=nullability,undefined,integer,alignment" -DHIOP_USE_MPI=ON -DHIOP_DEEPCHECKS=ON -DCMAKE_BUILD_TYPE=DEBUG ..
 $> make -j4 
-$> mpiexec -np 2 ./src/Drivers/nlpDenseCons_ex1.exe 
-$> mpiexec -np 2 ./src/Drivers/nlpDenseCons_ex2.exe 
-$> mpiexec -np 2 ./src/Drivers/nlpDenseCons_ex3.exe 
+$> mpiexec -np 2 ./src/Drivers/nlpDenseCons_EX1.exe 
+$> mpiexec -np 2 ./src/Drivers/nlpDenseCons_EX2.exe 
+$> mpiexec -np 2 ./src/Drivers/nlpDenseCons_EX3.exe 
 ```

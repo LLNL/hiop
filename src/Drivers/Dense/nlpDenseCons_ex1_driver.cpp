@@ -2,7 +2,7 @@
 #include "hiopInterface.hpp"
 #include "hiopAlgFilterIPM.hpp"
 
-#include "nlpDenseCons_ex1.hpp"
+#include "nlpDenseCons_EX1.hpp"
 
 #include <cstdlib>
 #include <string>

@@ -1,4 +1,4 @@
-#include "nlpDenseCons_ex2.hpp"
+#include "nlpDenseCons_EX2.hpp"
 
 #include <cmath>
 #include <cstring> //for memcpy

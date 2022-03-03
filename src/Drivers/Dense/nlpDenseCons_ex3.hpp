@@ -1,5 +1,5 @@
-#ifndef HIOP_EXAMPLE_EX3
-#define  HIOP_EXAMPLE_EX3
+#ifndef HIOP_EXAMPLE_DENSE_EX3
+#define  HIOP_EXAMPLE_DENSE_EX3
 
 #include "hiopInterface.hpp"
 

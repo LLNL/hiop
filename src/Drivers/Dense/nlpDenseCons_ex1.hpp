@@ -1,5 +1,5 @@
-#ifndef HIOP_EXAMPLE_EX1
-#define  HIOP_EXAMPLE_EX1
+#ifndef HIOP_EXAMPLE_DENSE_EX1
+#define  HIOP_EXAMPLE_DENSE_EX1
 
 #include "hiopVector.hpp"
 #include "hiopLinAlgFactory.hpp"

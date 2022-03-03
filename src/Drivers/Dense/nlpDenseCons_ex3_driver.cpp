@@ -1,4 +1,4 @@
-#include "nlpDenseCons_ex3.hpp"
+#include "nlpDenseCons_EX3.hpp"
 #include "hiopNlpFormulation.hpp"
 #include "hiopAlgFilterIPM.hpp"
 
