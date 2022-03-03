@@ -384,7 +384,6 @@ install(FILES
 
 add_subdirectory(tests)
 
-set(STRIP_TABLE_CMD "awk '/Problem Summary/ { while (!match($0, /termination/)){ if(match($0, /^[ ]+[0-9]/)) { print $0; } getline } }'")
 # If running in a BSUB allocaation, use jrun commands and make sure we are
 # requesting the correct resources.
 if(HIOP_TEST_WITH_BSUB)
@@ -428,103 +427,4 @@ if (HIOP_WITH_MAKETEST)
   endif(HIOP_USE_MPI)
   add_test(NAME SparseMatrixTest  COMMAND ${RUNCMD} "$<TARGET_FILE:testMatrixSparse>")
   add_test(NAME SymmetricSparseMatrixTest COMMAND ${RUNCMD} "$<TARGET_FILE:testMatrixSymSparse>")
-  add_test(NAME NlpDenseCons1_5H  COMMAND ${RUNCMD} "$<TARGET_FILE:nlpDenseCons_ex1.exe>"  "500" "1.0" "-selfcheck")
-  add_test(NAME NlpDenseCons1_5K  COMMAND ${RUNCMD} "$<TARGET_FILE:nlpDenseCons_ex1.exe>" "5000" "1.0" "-selfcheck")
-  add_test(NAME NlpDenseCons1_50K COMMAND ${RUNCMD} "$<TARGET_FILE:nlpDenseCons_ex1.exe>" "50000" "1.0" "-selfcheck")
-  if(HIOP_USE_MPI)
-    add_test(NAME NlpDenseCons1_50K_mpi COMMAND ${MPICMD} -n 2 "$<TARGET_FILE:nlpDenseCons_ex1.exe>" "50000" "1.0" "-selfcheck")
-  endif(HIOP_USE_MPI)
-  add_test(NAME NlpDenseCons2_5H    COMMAND  ${RUNCMD} "$<TARGET_FILE:nlpDenseCons_ex2.exe>"   "500" "-selfcheck")
-  add_test(NAME NlpDenseCons2_5K    COMMAND  ${RUNCMD} "$<TARGET_FILE:nlpDenseCons_ex2.exe>"  "5000" "-selfcheck")
-  add_test(NAME NlpDenseCons2_UN_5K COMMAND  ${RUNCMD} "$<TARGET_FILE:nlpDenseCons_ex2.exe>"  "5000" "-unconstrained" "-selfcheck")
-  add_test(NAME NlpDenseCons3_5H    COMMAND  ${RUNCMD} "$<TARGET_FILE:nlpDenseCons_ex3.exe>"   "500" "-selfcheck")
-  add_test(NAME NlpDenseCons3_5K    COMMAND  ${RUNCMD} "$<TARGET_FILE:nlpDenseCons_ex3.exe>"  "5000" "-selfcheck")
-  add_test(NAME NlpDenseCons3_50K   COMMAND  ${RUNCMD} "$<TARGET_FILE:nlpDenseCons_ex3.exe>" "50000" "-selfcheck")
-  if(HIOP_USE_MPI)
-    add_test(NAME NlpDenseCons3_50K_mpi COMMAND ${MPICMD} -n 2 "$<TARGET_FILE:nlpDenseCons_ex3.exe>" "50000" "-selfcheck")
-  endif(HIOP_USE_MPI)
-
-  add_test(NAME NlpMixedDenseSparse4_1 COMMAND ${RUNCMD} bash -c "$<TARGET_FILE:nlpMDS_ex4.exe> 400 100 0 -selfcheck \
-    | ${STRIP_TABLE_CMD} \
-    | tee ${HIOP_CTEST_OUTPUT_DIR}/mds4_1.out")
-  add_test(NAME NlpMixedDenseSparse4_2 COMMAND ${RUNCMD} bash -c "$<TARGET_FILE:nlpMDS_ex4.exe> 400 100 1 -selfcheck \
-    | ${STRIP_TABLE_CMD} \
-    | tee ${HIOP_CTEST_OUTPUT_DIR}/mds4_2.out")
-  
-  add_test(NAME NlpMixedDenseSparse4_3 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpMDS_ex4.exe>" "400" "100" "0" "-empty_sp_row" "-selfcheck")
-
-  if(HIOP_USE_RAJA)
-    add_test(NAME NlpMixedDenseSparseRaja4_1 COMMAND ${RUNCMD} bash -c "$<TARGET_FILE:nlpMDS_ex4_raja.exe> 400 100 0 -selfcheck \
-      | ${STRIP_TABLE_CMD} \
-      | tee ${HIOP_CTEST_OUTPUT_DIR}/mds4_raja_1.out")
-    add_test(NAME NlpMixedDenseSparseRaja4_2 COMMAND ${RUNCMD} bash -c "$<TARGET_FILE:nlpMDS_ex4_raja.exe> 400 100 1 -selfcheck \
-      | ${STRIP_TABLE_CMD} \
-      | tee ${HIOP_CTEST_OUTPUT_DIR}/mds4_raja_2.out")
-    add_test(NAME NlpMixedDenseSparseRaja4_3 COMMAND ${RUNCMD} bash -c "$<TARGET_FILE:nlpMDS_ex4_raja.exe> 400 100 0 -empty_sp_row -selfcheck")
-    
-    if(HIOP_DEEPCHECKS)
-      foreach(iter 1 2)
-        add_test(
-          NAME "CompareExample4_NumIterations_${iter}" 
-          COMMAND bash -c "\
-          if [[ $(wc -l ${HIOP_CTEST_OUTPUT_DIR}/mds4_${iter}.out|cut -f1 -d' ') == $(wc -l ${HIOP_CTEST_OUTPUT_DIR}/mds4_raja_${iter}.out|cut -f1 -d' ') ]]
-          then
-          echo 'Output tables have the same number of iterations.'
-          exit 0
-          else
-          echo 'Output tables have a different number of iterations!'
-          exit 1
-          fi")
-        add_test(
-          NAME "CompareExample4_ElementWise_${iter}"
-          COMMAND bash -c "\
-          join ${HIOP_CTEST_OUTPUT_DIR}/mds4_${iter}.out ${HIOP_CTEST_OUTPUT_DIR}/mds4_raja_${iter}.out \
-          | ${PROJECT_SOURCE_DIR}/tests/testEx4CompareIterations.awk")
-      endforeach()
-    endif(HIOP_DEEPCHECKS)
-  endif()
-
-  add_test(NAME NlpMixedDenseSparse5_1 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpMDS_ex5.exe>" "400" "100" "-selfcheck")
-
-  if(HIOP_SPARSE)
-    add_test(NAME NlpSparse6_1 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex6.exe>" "500" "-selfcheck")
-    add_test(NAME NlpSparse6_2 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex6.exe>" "500" "-fr" "-selfcheck")
-    if(HIOP_USE_CUDA)
-      add_test(NAME NlpSparse6_3 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex6.exe>" "500" "-cusolver" "-selfcheck")
-    endif(HIOP_USE_CUDA)
-    if(HIOP_USE_PARDISO)
-      add_test(NAME NlpSparse6_4 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex6.exe>" "500" "-pardiso" "-selfcheck")
-    endif(HIOP_USE_PARDISO)
-    add_test(NAME NlpSparse7_1 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex7.exe>" "500" "-selfcheck")
-    add_test(NAME NlpSparse7_2 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex7.exe>" "500" "-inertiafree" "-selfcheck")
-    if(HIOP_USE_CUDA)
-      add_test(NAME NlpSparse7_3 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex7.exe>" "500" "-cusolver" "-inertiafree" "-selfcheck")
-    endif(HIOP_USE_CUDA)
-    add_test(NAME NlpSparse10_1 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex10.exe>" "500" "-selfcheck")
-  endif(HIOP_SPARSE)
-
-  if(HIOP_USE_MPI)
-    add_test(NAME NlpPriDec8_1 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpPriDec_ex8.exe>" "-selfcheck")
-    add_test(NAME NlpPriDec8_mpi COMMAND ${MPICMD} -n 2 "$<TARGET_FILE:nlpPriDec_ex8.exe>" "-selfcheck")
-    if(HIOP_SPARSE)
-      add_test(NAME NlpPriDec9_1 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpPriDec_ex9.exe>" "-selfcheck")    
-      add_test(NAME NlpPriDec9_mpi COMMAND ${MPICMD} -n 2 "$<TARGET_FILE:nlpPriDec_ex9.exe>" "-selfcheck")
-    endif(HIOP_SPARSE)
-  endif(HIOP_USE_MPI)
-
-  if(HIOP_WITH_VALGRIND_TESTS)
-    string(REPLACE ";" " " runcmd_str "${RUNCMD}")
-    add_test(
-      NAME NlpDenseCons1_5H_Valgrind
-      COMMAND bash -c "${runcmd_str} ${HIOP_VALGRIND_CMD} $<TARGET_FILE:nlpDenseCons_ex1.exe> 500 1.0 -selfcheck"
-      )
-    add_test(
-      NAME NlpMixedDenseSparse4_1_Valgrind
-      COMMAND bash -c "${runcmd_str} ${HIOP_VALGRIND_CMD} $<TARGET_FILE:nlpMDS_ex4.exe> 400 100 0 -selfcheck"
-      )
-  endif()
-
-  if(HIOP_BUILD_SHARED AND NOT HIOP_USE_GPU)
-    add_test(NAME NlpMixedDenseSparseCinterface COMMAND ${RUNCMD} "$<TARGET_FILE:nlpMDS_cex4.exe>")
-  endif()
 endif(HIOP_WITH_MAKETEST)

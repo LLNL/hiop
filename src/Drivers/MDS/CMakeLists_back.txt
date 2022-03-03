@@ -1,0 +1,27 @@
+add_executable(nlpMDS_ex4.exe nlpMDS_ex4_driver.cpp)
+target_link_libraries(nlpMDS_ex4.exe HiOp::HiOp)
+
+if(HIOP_USE_RAJA)
+  if(HIOP_USE_GPU AND HIOP_USE_CUDA)
+    set_source_files_properties(
+      nlpMDS_raja_ex4.cpp 
+      nlpMDS_ex4_raja_driver.cpp 
+      PROPERTIES LANGUAGE CUDA
+    )
+  endif()
+  add_executable(nlpMDS_ex4_raja.exe nlpMDS_ex4_raja_driver.cpp nlpMDS_raja_ex4.cpp)
+  target_link_libraries(nlpMDS_ex4_raja.exe HiOp::HiOp)
+endif()
+
+add_executable(nlpMDS_ex5.exe nlpMDS_ex5_driver.cpp)
+target_link_libraries(nlpMDS_ex5.exe HiOp::HiOp)
+
+if(HIOP_USE_MPI)
+  add_executable(hpc_multisolves.exe hpc_multisolves.cpp)
+  target_link_libraries(hpc_multisolves.exe HiOp::HiOp)
+endif()
+
+if(HIOP_BUILD_SHARED)
+  add_executable(nlpMDS_cex4.exe nlpMDS_ex4.c)
+  target_link_libraries(nlpMDS_cex4.exe HiOp::HiOp)
+endif()
