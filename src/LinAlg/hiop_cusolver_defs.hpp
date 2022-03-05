@@ -62,8 +62,6 @@
 #include <cuda_runtime.h>
 #include "cusolverSp_LOWLEVEL_PREVIEW.h"
 
-#include "klu.h"
-
 
 extern "C" {
   /*

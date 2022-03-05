@@ -264,8 +264,8 @@ namespace hiop
     //KLU 
     klu_defaults(&Common_) ;
 
-    //modify as you please
-    //TODO: consider making a part of setup options that can be called from a user side
+    // TODO: consider making this a part of setup options so that user can
+    // set up these values. For now, we keep them hard-wired. 
     Common_.btf = 0;
     Common_.ordering = 1; //COLAMD; use 0 for AMD
     Common_.tol = 0.1;
@@ -317,7 +317,7 @@ namespace hiop
       mia_[i] += mia_[i-1];
     } 
 
-    int* Mshifts = (int*) calloc (n,sizeof(int));
+    std::vector<int> Mshifts(n, 0);
     for(int i = 0;i<n;++i) {
 
       //go through EACH COLUMN OF L first
@@ -337,7 +337,6 @@ namespace hiop
         Mshifts[row]++;
       }
     }
-    free(Mshifts);
     return 0;
   }
 
@@ -374,26 +373,24 @@ namespace hiop
 
     mia_ = (int*) calloc(sizeof(int), (n_+1));
     mja_ = (int*) calloc(sizeof(int), nnzM);
-    int* Lp = (int*) malloc((n_+1) * sizeof(int));
-    int* Li = (int*) malloc(nnzL * sizeof(int));
-    //we cant use NULL instrad od Lx and Ux because it causes SEG FAULT. It seems like a waste of memory though.      
-    double* Lx = (double*) malloc(nnzL * sizeof(double));
-    int* Up = (int*) malloc((n_+1) * sizeof(int));
-    int* Ui = (int*) malloc(nnzU * sizeof(int));
-    double* Ux = (double*) malloc(nnzU * sizeof(double));
-
+    int* Lp = new int[n_+1];
+    int* Li = new int[nnzL];
+    //we cant use NULL instrad od Lx and Ux because it causes SEG FAULT. It seems like a waste of memory though.
+    double* Lx = new double[nnzL];
+    int* Up = new int[n_+1];
+    int* Ui = new int[nnzU];
+    double* Ux = new double[nnzU];
     int ok = klu_extract(Numeric_, Symbolic_, Lp, Li, Lx, Up, Ui, Ux, 
                          NULL, NULL, NULL, 
                          NULL, NULL, 
                          NULL, NULL, &Common_);
-
     createM(n_, nnzL, Lp, Li,nnzU, Up, Ui);
-    free(Lp); 
-    free(Li); 
-    free(Lx);
-    free(Up); 
-    free(Ui); 
-    free(Ux);
+    delete[] Lp;
+    delete[] Li;
+    delete[] Lx;
+    delete[] Up;
+    delete[] Ui;
+    delete[] Ux;
 
     /* setup GLU */ 
     sp_status_ = cusolverSpDgluSetup(handle_cusolver_,
@@ -480,8 +477,8 @@ namespace hiop
       }
       // somehow update the matrix not sure how
 
-      //call newfactorization if necessart
-      //update the GPU matrix
+      // call new factorization if necessary
+      // update the GPU matrix
 
       checkCudaErrors(cudaMemcpy(da_, kVal_, sizeof(double) * nnz_, cudaMemcpyHostToDevice));
       //re-factor here
@@ -708,9 +705,8 @@ namespace hiop
 
     klu_defaults(&Common_) ;
 
-    //modify as you please
-    //KS: consider making a part of setup options that can be called from a user side
-
+    // TODO: consider making a part of setup options that can be called from a user side
+    // For now, keeping these options hard-wired
     Common_.btf = 0;
     Common_.ordering = 1;//COLAMD; use 0 for AMD
     Common_.tol = 0.1;
@@ -768,24 +764,24 @@ namespace hiop
     mia_ = (int*) calloc(sizeof(int), (n_+1));
     mja_ = (int*) calloc(sizeof(int), nnzM);
 
-    int* Lp = (int*) malloc((n_+1) * sizeof(int));
-    int* Li = (int*) malloc(nnzL * sizeof(int));
-    //we cant use NULL instrad od Lx and Ux because it causes SEG FAULT. It seems like a waste of memory though.      
-    double* Lx = (double*) malloc(nnzL * sizeof(double));
-    int* Up = (int*) malloc((n_+1) * sizeof(int));
-    int* Ui = (int*) malloc(nnzU * sizeof(int));
-    double* Ux = (double*) malloc(nnzU * sizeof(double));
-
+    int* Lp = new int[n_+1];
+    int* Li = new int[nnzL];
+    //we cant use NULL instrad od Lx and Ux because it causes SEG FAULT. It seems like a waste of memory though.
+    double* Lx = new double[nnzL];
+    int* Up = new int[n_+1];
+    int* Ui = new int[nnzU];
+    double* Ux = new double[nnzU];
     int ok = klu_extract(Numeric_, Symbolic_, Lp, Li, Lx, Up, Ui, Ux, 
                          NULL, NULL, NULL, 
                          NULL, NULL, 
                          NULL, NULL, &Common_);
-
     createM(n_, nnzL, Lp, Li,nnzU, Up, Ui);
-    free(Lp); free(Li); 
-    free(Lx);
-    free(Up); free(Ui); 
-    free(Ux);
+    delete[] Lp;
+    delete[] Li;
+    delete[] Lx;
+    delete[] Up;
+    delete[] Ui;
+    delete[] Ux;
 
     /* setup GLU */ 
     sp_status_ = cusolverSpDgluSetup(handle_cusolver_,

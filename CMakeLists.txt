@@ -37,7 +37,6 @@ option(HIOP_SPARSE "Build with sparse linear algebra" ON)
 option(HIOP_USE_COINHSL "Build with sparse linear algebra" ON)
 option(HIOP_USE_PARDISO "Build with PARDISO backend for sparse linear algebra" OFF)
 option(HIOP_USE_STRUMPACK "Build with STRUMPACK backend for sparse linear algebra" OFF)
-#option(HIOP_USE_CUSOLVER "Build with cuSolver backend for sparse linear algebra" ON)
 option(HIOP_WITH_VALGRIND_TESTS "Run valgrind on certain integration tests" OFF)
 option(HIOP_BUILD_DOCUMENTATION "Build HiOp documentation via Doxygen" ON)
 

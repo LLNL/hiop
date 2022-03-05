@@ -60,11 +60,8 @@
 #include "klu.h"
 /** implements the linear solver class using nvidia_ cuSolver (GLU refactorization)
  *
- i* @ingroup LinearSolvers
+ * @ingroup LinearSolvers
  */
-#if defined(HIOP_USE_RAJA)
-//#include "hiopRajaUmpireUtils.hpp"
-#endif
 
 namespace hiop
 {
