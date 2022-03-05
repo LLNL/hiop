@@ -379,8 +379,13 @@ namespace hiop
    */
   hiopKKTLinSysCompressedSparseXDYcYd::hiopKKTLinSysCompressedSparseXDYcYd(hiopNlpFormulation* nlp)
     : hiopKKTLinSysCompressedXDYcYd(nlp), rhs_{nullptr},
-      Hx_{nullptr}, Hd_{nullptr}, HessSp_{nullptr}, Jac_cSp_{nullptr}, Jac_dSp_{nullptr},
-      write_linsys_counter_(-1), csr_writer_(nlp)
+      Hx_{nullptr},
+      Hd_{nullptr},
+      HessSp_{nullptr}, 
+      Jac_cSp_{nullptr}, 
+      Jac_dSp_{nullptr},
+      write_linsys_counter_(-1), 
+      csr_writer_(nlp)
   {
     nlpSp_ = dynamic_cast<hiopNlpSparse*>(nlp_);
     assert(nlpSp_);
@@ -397,7 +402,7 @@ namespace hiop
                                                              const double& delta_wd,
                                                              const double& delta_cc,
                                                              const double& delta_cd)
-  {
+  {    
     HessSp_ = dynamic_cast<hiopMatrixSymSparseTriplet*>(Hess_);
     if(!HessSp_) { assert(false); return false; }
 
@@ -681,8 +686,6 @@ namespace hiop
     }
     return dynamic_cast<hiopLinSolverSymSparse*> (linSys_);
   }
-
-
 
   /* *************************************************************************
    * For class hiopKKTLinSysSparseFull
