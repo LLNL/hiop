@@ -57,7 +57,6 @@
 namespace hiop
 {
 
-
 /*
  * Solves KKTLinSysCompressedXYcYd by exploiting the sparse structure
  *
