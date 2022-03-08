@@ -893,7 +893,7 @@ bool hiopKKTLinSysCompressedXDYcYd::computeDirections(const hiopResidual* resid,
 }
 
 
-bool hiopKKTLinSysCompressedXDYcYd::compute_directions_w_IR(const hiopResidual* resid, hiopIterate* dir)
+bool hiopKKTLinSysCompressed::compute_directions_w_IR(const hiopResidual* resid, hiopIterate* dir)
 {
   nlp_->runStats.tmSolverInternal.start();
   const hiopResidual &r=*resid;

@@ -157,6 +157,7 @@ public:
 
   friend class hiopResidual;
   friend class hiopKKTLinSys;
+  friend class hiopKKTLinSysCompressed;
   friend class hiopKKTLinSysCompressedXYcYd;
   friend class hiopKKTLinSysCompressedXDYcYd;
   friend class hiopKKTLinSysDenseXYcYd;
