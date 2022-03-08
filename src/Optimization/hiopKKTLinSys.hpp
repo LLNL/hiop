@@ -280,7 +280,7 @@ public:
   virtual bool test_direction(const hiopIterate* dir, hiopMatrix* Hess);
 
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction) = 0;
-  virtual bool compute_directions_w_IR(const hiopResidual* resid, hiopIterate* direction) = 0;
+  virtual bool compute_directions_w_IR(const hiopResidual* resid, hiopIterate* direction);
 
   virtual bool build_kkt_matrix(const double& delta_wx,
                                 const double& delta_wd,
@@ -316,11 +316,11 @@ public:
 
 
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction);
-  virtual bool compute_directions_w_IR(const hiopResidual* resid, hiopIterate* direction)
-  {
-    assert(false && "not yet implemented");
-    return false;
-  }
+//  virtual bool compute_directions_w_IR(const hiopResidual* resid, hiopIterate* direction)
+//  {
+//    assert(false && "not yet implemented");
+//    return false;
+//  }
 
   virtual bool build_kkt_matrix(const double& delta_wx,
                                 const double& delta_wd,
@@ -367,7 +367,7 @@ public:
                       const hiopMatrix* Jac_c, const hiopMatrix* Jac_d, hiopMatrix* Hess);
 
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction);
-  virtual bool compute_directions_w_IR(const hiopResidual* resid, hiopIterate* direction);
+//  virtual bool compute_directions_w_IR(const hiopResidual* resid, hiopIterate* direction);
 
   virtual bool build_kkt_matrix(const double& delta_wx,
                                 const double& delta_wd,
