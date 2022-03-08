@@ -2651,7 +2651,7 @@ bool hiopAlgFilterIPMNewton::compute_search_direction(hiopKKTLinSys* kkt,
   //
   // solve for search directions
   //
-  if(!kkt->computeDirections(resid, dir)) {
+  if(!kkt->compute_directions_w_IR(resid, dir)) {
 
     if(linsol_safe_mode_on) {
       nlp->log->write("Unrecoverable error in step computation (solve)[1]. Will exit here.", hovError);
