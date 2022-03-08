@@ -189,6 +189,7 @@ protected:
 
   /// Temporary vector to be used in the iterative refinement solve;
   hiopVector* ir_rhs_;
+  hiopVector* ir_x0_;
 
   /// iterative refinement from BiCGStab solver
   hiopBiCGStabSolver* bicgIR_;
@@ -615,6 +616,8 @@ public:
   /** y = KKT' * x */
   virtual bool trans_times_vec(hiopVector& y, const hiopVector& x);
 
+  inline void reset_curr_iter(const hiopIterate* iter) {iter_ = iter;}
+
 private:
   hiopKKTLinSys* kkt_;
   const hiopIterate* iter_;
@@ -727,7 +730,9 @@ private:
   }
   
   bool split_x_to_build_it(const hiopVector& x);
+  bool split_x_to_build_res(const hiopVector& x);
   bool combine_res_to_build_y(hiopVector& y);
+  bool combine_dir_to_build_y(hiopVector& y);
 
   hiopVector* dx_;
   hiopVector* dd_;

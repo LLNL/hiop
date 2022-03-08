@@ -67,6 +67,7 @@ hiopKKTLinSys::hiopKKTLinSys(hiopNlpFormulation* nlp)
     kkt_opr_(nullptr),
     prec_opr_(nullptr),
     ir_rhs_(nullptr),
+    ir_x0_(nullptr),
     bicgIR_(nullptr)      
 {
   perf_report_ = "on"==hiop::tolower(nlp_->options->GetString("time_kkt"));
@@ -78,6 +79,7 @@ hiopKKTLinSys::~hiopKKTLinSys()
   delete kkt_opr_;
   delete prec_opr_;
   delete ir_rhs_;
+  delete ir_x0_;
   delete bicgIR_;
 }
 
@@ -912,8 +914,11 @@ bool hiopKKTLinSysCompressedXDYcYd::compute_directions_w_IR(const hiopResidual* 
     kkt_opr_ = new hiopFullKKTOpr(this, iter_, resid, dir);
     prec_opr_ = new hiopCompressPrecondOpr(this, iter_, resid, dir);
     ir_rhs_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), dim_rhs);
+    ir_x0_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), dim_rhs);
     bicgIR_ = new hiopBiCGStabSolver(dim_rhs, "DEFAULT", kkt_opr_, prec_opr_);
   }
+
+  kkt_opr_->reset_curr_iter(iter_);
 
   // form the rhs for the sparse linSys  
   nlp_->runStats.kkt.tmSolveRhsManip.start();
@@ -931,12 +936,42 @@ bool hiopKKTLinSysCompressedXDYcYd::compute_directions_w_IR(const hiopResidual* 
   resid->rsvu->copyToStarting(*ir_rhs_, nx+nd+nyc+nyd+nx+nx+nd+nd+nx+nx+nd);
   nlp_->runStats.kkt.tmSolveRhsManip.stop();
   
+  // build x0
+  iter_->x->copyToStarting(*ir_x0_,   0);
+  iter_->d->copyToStarting(*ir_x0_,   nx);
+  iter_->yc->copyToStarting(*ir_x0_,  nx+nd);
+  iter_->yd->copyToStarting(*ir_x0_,  nx+nd+nyc);
+  iter_->sxl->copyToStarting(*ir_x0_,  nx+nd+nyc+nyd);
+  iter_->sxu->copyToStarting(*ir_x0_,  nx+nd+nyc+nyd+nx);
+  iter_->sdl->copyToStarting(*ir_x0_,  nx+nd+nyc+nyd+nx+nx);
+  iter_->sdu->copyToStarting(*ir_x0_,  nx+nd+nyc+nyd+nx+nx+nd);
+  iter_->zl->copyToStarting(*ir_x0_, nx+nd+nyc+nyd+nx+nx+nd+nd);
+  iter_->zu->copyToStarting(*ir_x0_, nx+nd+nyc+nyd+nx+nx+nd+nd+nx);
+  iter_->vl->copyToStarting(*ir_x0_, nx+nd+nyc+nyd+nx+nx+nd+nd+nx+nx);
+  iter_->vu->copyToStarting(*ir_x0_, nx+nd+nyc+nyd+nx+nx+nd+nd+nx+nx+nd);
+  
+  
   const double tol_mu = 1e-2;
   double tol = std::min(mu_*tol_mu, 1e-6);
   bicgIR_->set_tol(tol);
+  bicgIR_->set_x0(*ir_x0_);
   bicgIR_->set_x0(0.0);
 
   bool bret = bicgIR_->solve(*ir_rhs_);
+
+  // assemble dir from ir solution  
+  dir->x->startingAtCopyFromStartingAt(0,   *ir_rhs_, 0);
+  dir->d->startingAtCopyFromStartingAt(0,   *ir_rhs_, nx);
+  dir->yc->startingAtCopyFromStartingAt(0,  *ir_rhs_, nx+nd);
+  dir->yd->startingAtCopyFromStartingAt(0,  *ir_rhs_, nx+nd+nyc);
+  dir->sxl->startingAtCopyFromStartingAt(0, *ir_rhs_, nx+nd+nyc+nyd);
+  dir->sxu->startingAtCopyFromStartingAt(0, *ir_rhs_, nx+nd+nyc+nyd+nx);
+  dir->sdl->startingAtCopyFromStartingAt(0, *ir_rhs_, nx+nd+nyc+nyd+nx+nx);
+  dir->sdu->startingAtCopyFromStartingAt(0, *ir_rhs_, nx+nd+nyc+nyd+nx+nx+nd);
+  dir->zl->startingAtCopyFromStartingAt(0,  *ir_rhs_, nx+nd+nyc+nyd+nx+nx+nd+nd);
+  dir->zu->startingAtCopyFromStartingAt(0,  *ir_rhs_, nx+nd+nyc+nyd+nx+nx+nd+nd+nx);
+  dir->vl->startingAtCopyFromStartingAt(0,  *ir_rhs_, nx+nd+nyc+nyd+nx+nx+nd+nd+nx+nx);
+  dir->vu->startingAtCopyFromStartingAt(0,  *ir_rhs_, nx+nd+nyc+nyd+nx+nx+nd+nd+nx+nx+nd);
 
   nlp_->runStats.kkt.nIterRefinInner += bicgIR_->get_sol_num_iter();
   nlp_->runStats.kkt.tmSolveInner.stop();
@@ -1807,6 +1842,27 @@ bool hiopCompressPrecondOpr::split_x_to_build_it(const hiopVector& x)
   return true;
 }
 
+bool hiopCompressPrecondOpr::split_x_to_build_res(const hiopVector& x)
+{
+  size_type nx = dx_->get_size();
+  size_type neq = dyc_->get_size();
+  size_type nineq = dyd_->get_size();
+
+  yrx_->startingAtCopyFromStartingAt(0,   x, 0);
+  yrd_->startingAtCopyFromStartingAt(0,   x, nx);
+  yryc_->startingAtCopyFromStartingAt(0,  x, nx+nineq);
+  yryd_->startingAtCopyFromStartingAt(0,  x, nx+nineq+neq);
+  yrsxl_->startingAtCopyFromStartingAt(0, x, nx+nineq+neq+nineq);
+  yrsxu_->startingAtCopyFromStartingAt(0, x, nx+nineq+neq+nineq+nx);
+  yrsdl_->startingAtCopyFromStartingAt(0, x, nx+nineq+neq+nineq+nx+nx);
+  yrsdu_->startingAtCopyFromStartingAt(0, x, nx+nineq+neq+nineq+nx+nx+nineq);
+  yrzl_->startingAtCopyFromStartingAt(0,  x, nx+nineq+neq+nineq+nx+nx+nineq+nineq);
+  yrzu_->startingAtCopyFromStartingAt(0,  x, nx+nineq+neq+nineq+nx+nx+nineq+nineq+nx);
+  yrvl_->startingAtCopyFromStartingAt(0,  x, nx+nineq+neq+nineq+nx+nx+nineq+nineq+nx+nx);
+  yrvu_->startingAtCopyFromStartingAt(0,  x, nx+nineq+neq+nineq+nx+nx+nineq+nineq+nx+nx+nineq);
+  return true;
+}
+
 bool hiopCompressPrecondOpr::combine_res_to_build_y(hiopVector& y)
 {
   size_type nx = dx_->get_size();
@@ -1828,13 +1884,37 @@ bool hiopCompressPrecondOpr::combine_res_to_build_y(hiopVector& y)
   return true;
 }
 
+bool hiopCompressPrecondOpr::combine_dir_to_build_y(hiopVector& y)
+{
+  size_type nx = dx_->get_size();
+  size_type neq = dyc_->get_size();
+  size_type nineq = dyd_->get_size();
+
+  dx_->copyToStarting(   y, 0);
+  dd_->copyToStarting(   y, nx);
+  dyc_->copyToStarting(  y, nx+nineq);
+  dyd_->copyToStarting(  y, nx+nineq+neq);
+  dsxl_->copyToStarting( y, nx+nineq+neq+nineq);
+  dsxu_->copyToStarting( y, nx+nineq+neq+nineq+nx);
+  dsdl_->copyToStarting( y, nx+nineq+neq+nineq+nx+nx);
+  dsdu_->copyToStarting( y, nx+nineq+neq+nineq+nx+nx+nineq);
+  dzl_->copyToStarting(  y, nx+nineq+neq+nineq+nx+nx+nineq+nineq);
+  dzu_->copyToStarting(  y, nx+nineq+neq+nineq+nx+nx+nineq+nineq+nx);
+  dvl_->copyToStarting(  y, nx+nineq+neq+nineq+nx+nx+nineq+nineq+nx+nx);
+  dvu_->copyToStarting(  y, nx+nineq+neq+nineq+nx+nx+nineq+nineq+nx+nx+nineq);
+  return true;
+}
+
 bool hiopCompressPrecondOpr::times_vec(hiopVector& y, const hiopVector& x)
 {
-  bool bret = split_x_to_build_it(x);
+  bool bret;
+//  bret = split_x_to_build_it(x);
+  bret = split_x_to_build_res(x);
 
   bret = kkt_->computeDirections(resid_, dir_); 
 
-  bret = combine_res_to_build_y(y);
+//  bret = combine_res_to_build_y(y);
+  bret = combine_dir_to_build_y(y);
   return true;
 }
 
