@@ -978,6 +978,8 @@ bool hiopKKTLinSysCompressed::compute_directions_w_IR(const hiopResidual* resid,
   if(!bret) {
     nlp_->log->printf(hovWarning, "%s", bicgIR_->get_convergence_info().c_str());
 
+    // accept the stpe since this is IR
+    /*
     double tola = 10*mu_;
     double tolr = mu_*1e-1;
     
@@ -993,6 +995,7 @@ bool hiopKKTLinSysCompressed::compute_directions_w_IR(const hiopResidual* resid,
       nlp_->runStats.linsolv.end_linsolve();
       return false;
     }
+    */
     bret = true;
   }
 
