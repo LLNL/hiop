@@ -21,7 +21,10 @@ namespace hiop
       n_{n},
       nnz_{nnz},
       rhs_{nullptr},
-      resid_{nullptr}
+      resid_{nullptr},
+      pivot_tol_{1e-8},
+      pivot_max_{1e-4},
+      pivot_changed_{false}
   {
     FNAME(ma57id)( cntl_, icntl_ );
 
@@ -32,7 +35,7 @@ namespace hiop
     icntl_[2-1] = 0;       // no Warning messages
     icntl_[4-1] = 1;       // no statistics messages
     icntl_[5-1] = 0;       // no Print messages.
-    icntl_[6-1] = 2;       // 2 use MC47;
+    icntl_[6-1] = 5;       // 2 use MC47;
                            // 3 min degree ordering as in MA27;
                            // 4 use Metis;
                            // 5 automatic choice(MA47 or Metis);
@@ -43,7 +46,7 @@ namespace hiop
     icntl_[15-1] = 0;
     icntl_[16-1] = 0;
 
-    cntl_[1-1] = 1e-8;     // pivot tolerance
+    cntl_[1-1] = pivot_tol_;     // pivot tolerance
 
   }
   hiopLinSolverIndefSparseMA57::~hiopLinSolverIndefSparseMA57()
@@ -129,7 +132,6 @@ namespace hiop
           delete [] fact_;
           fact_ = newfact;
           lfact_ = lnfact;
-          rpessimism_ *= 1.1;
           };
           break;
         case -4: {
@@ -137,12 +139,13 @@ namespace hiop
           int ic = 1;
           int lnifact = (int) (info_[17] * ipessimism_);
           int * nifact = new int[ lnifact ];
-          FNAME(ma57ed)( &n_, &ic, keep_, fact_, &lfact_, fact_, &lfact_,
-               ifact_, &lifact_, nifact, &lnifact, info_ );
+          FNAME(ma57ed)( &n_, &ic, keep_, 
+                fact_, &lfact_, fact_, &lfact_,
+               ifact_, &lifact_, nifact, &lnifact,
+               info_ );
           delete [] ifact_;
           ifact_ = nifact;
           lifact_ = lnifact;
-          ipessimism_ *= 1.1;
           };
           break;
         case 4: {
@@ -204,8 +207,9 @@ namespace hiop
     double* drhs = rhs_->local_data();
     double* dresid = resid_->local_data();
 
-    //    FNAME(ma57cd)( &job, &n_, fact_, &lfact_, ifact_, &lifact_,
-    //          &one, drhs, &n_, dwork_, &n_, iwork_, icntl_, info_ );
+//    FNAME(ma57cd)( &job, &n_, fact_, &lfact_, ifact_, &lifact_,
+//                   &one, drhs, &n_, dwork_, &n_, iwork_, icntl_, info_ );
+//    x->copyFrom(*rhs_);
 
     FNAME(ma57dd)( &job, &n_, &nnz_, M_->M(), irowM_, jcolM_,
         fact_, &lfact_, ifact_, &lifact_, drhs, dx,
@@ -222,4 +226,13 @@ namespace hiop
     return info_[0]==0;
   }
 
+  bool hiopLinSolverIndefSparseMA57::increase_pivot_tol()
+  {
+    pivot_changed_ = false;
+    if(pivot_tol_ < pivot_max_) {
+      pivot_tol_ = fmin(pivot_max_, pow(pivot_tol_, 0.75));
+      pivot_changed_ = true;
+    }    
+    return pivot_changed_;
+  }
 } //end namespace hiop

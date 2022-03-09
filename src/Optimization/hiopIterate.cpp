@@ -249,7 +249,7 @@ void hiopIterate::normOneOfDuals(double& nrm1Eq, double& nrm1Bnd) const
   nrm1Bnd=nrm1_global;
 #endif
   nrm1Bnd += vl->onenorm_local() + vu->onenorm_local();
-  nrm1Eq   = nrm1Bnd + yc->onenorm_local() + yd->onenorm_local();
+  nrm1Eq   = yc->onenorm_local() + yd->onenorm_local();
 }
 
 void hiopIterate::selectPattern()

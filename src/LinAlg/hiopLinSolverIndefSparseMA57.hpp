@@ -149,12 +149,21 @@ private:
 
   /// Working array used for residual computation 
   hiopVector* resid_;
+  
+  /// parameters to control pivoting
+  double pivot_tol_;
+  double pivot_max_;
+  bool pivot_changed_;
+
 public:
 
   /** called the very first time a matrix is factored. Allocates space
    * for the factorization and performs ordering */
   virtual void firstCall();
 //  virtual void diagonalChanged( int idiag, int extent );
+
+  // increase pivot tolarence
+  virtual bool increase_pivot_tol();
 
 };
 
