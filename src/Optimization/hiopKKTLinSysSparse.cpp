@@ -552,8 +552,8 @@ namespace hiop
       if(nlp_->options->GetString("compute_mode")=="cpu")
       {
         nlp_->log->printf(hovWarning,
-            "KKT_SPARSE_XDYcYd linsys: alloc sparse solver with matrix size %d (%d cons)\n",
-            n, neq+nineq);
+                          "KKT_SPARSE_XDYcYd linsys: alloc sparse solver with matrix size %d (%d cons)\n",
+                          n, neq+nineq);
 
         auto linear_solver = nlp_->options->GetString("linear_solver_sparse");
 
@@ -604,15 +604,16 @@ namespace hiop
 #else
         //Return nullptr (and assert) if a GPU sparse linear solver is not present
         assert(linSys_!=nullptr &&
-            "HiOp was built without a sparse linear solver for GPU/device and cannot run on the "
-            "device as instructed by the 'compute_mode' option. Change the 'compute_mode' to "
-            "'cpu' (from hiopKKTLinSysCompressedSparseXDYcYd)"); 
+               "HiOp was built without a sparse linear solver for GPU/device and cannot run on the "
+               "device as instructed by the 'compute_mode' option. Change the 'compute_mode' to "
+               "'cpu' (from hiopKKTLinSysCompressedSparseXDYcYd)"); 
         return nullptr;
 #endif
 #ifdef HIOP_USE_COINHSL
         nlp_->log->printf(hovScalars,
                           "KKT_SPARSE_XDYcYd linsys: alloc MA57 on CPU size %d (%d cons)\n",
-                          n, neq+nineq);                             
+                          n,
+                          neq+nineq);                             
         linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
 #endif // HIOP_USE_COINHSL
 
@@ -620,7 +621,8 @@ namespace hiop
 #ifdef HIOP_USE_PARDISO
           nlp_->log->printf(hovScalars,
                             "KKT_SPARSE_XYcYd linsys: alloc PARDISO on CPU size %d (%d cons)\n",
-                            n, neq+nineq);                             
+                            n,
+                            neq+nineq);                             
           linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
 #endif // HIOP_USE_PARDISO
         }
@@ -661,14 +663,18 @@ namespace hiop
 #ifdef HIOP_USE_CUSOLVER
       nlp_->log->printf(hovWarning,
                         "KKT_SPARSE_FULL_KKT linsys: alloc CUSOLVER size %d (%d cons) (safe_mode=%d)\n",
-                        n, n_con, safe_mode_);
+                        n,
+                        n_con,
+                        safe_mode_);
       hiopLinSolverNonSymSparseCUSOLVER *p = new hiopLinSolverNonSymSparseCUSOLVER(n, nnz, nlp_);
       p->setFakeInertia(n_con);
       linSys_ = p;
 #elif HIOP_USE_PARDISO
       nlp_->log->printf(hovWarning,
                         "KKT_SPARSE_FULL_KKT linsys: alloc PARDISO size %d (%d cons) (safe_mode=%d)\n",
-                        n, n_con, safe_mode_);
+                        n,
+                        n_con,
+                        safe_mode_);
       hiopLinSolverNonSymSparsePARDISO *p = new hiopLinSolverNonSymSparsePARDISO(n, nnz, nlp_);
       p->setFakeInertia(n_con);
       linSys_ = p;
@@ -677,7 +683,9 @@ namespace hiop
       hiopLinSolverNonSymSparseSTRUMPACK *p = new hiopLinSolverNonSymSparseSTRUMPACK(n, nnz, nlp_);
       nlp_->log->printf(hovWarning,
                         "KKT_SPARSE_FULL_KKT linsys: alloc STRUMPACK size %d (%d cons) (safe_mode=%d)\n",
-                        n, n_con, safe_mode_);
+                        n,
+                        n_con,
+                        safe_mode_);
       p->setFakeInertia(n_con);
       linSys_ = p;
 #endif // CUSOLVER
@@ -706,8 +714,14 @@ namespace hiop
     Jac_dSp_ = dynamic_cast<const hiopMatrixSparseTriplet*>(Jac_d_);
     if(!Jac_dSp_) { assert(false); return false; }
 
-    size_type nx = HessSp_->n(), nd=Jac_dSp_->m(), neq=Jac_cSp_->m(), nineq=Jac_dSp_->m(),
-                   ndl = nlp_->m_ineq_low(), ndu = nlp_->m_ineq_upp(), nxl = nlp_->n_low(), nxu = nlp_->n_upp();
+    size_type nx = HessSp_->n(); 
+    size_type nd = Jac_dSp_->m();
+    size_type neq = Jac_cSp_->m();
+    size_type nineq=Jac_dSp_->m();
+    size_type ndl = nlp_->m_ineq_low();
+    size_type ndu = nlp_->m_ineq_upp();
+    size_type nxl = nlp_->n_low();
+    size_type nxu = nlp_->n_upp();
 
     // note that hess may be saved as a triangular matrix
     int n1st = 0;
@@ -950,7 +964,7 @@ namespace hiop
 
     if(perf_report_) {
       nlp_->log->printf(hovSummary, "(summary for linear solver from KKT_SPARSE_XDYcYd)\n%s",
-	  nlp_->runStats.linsolv.get_summary_last_solve().c_str());
+      nlp_->runStats.linsolv.get_summary_last_solve().c_str());
     }
 
     if(write_linsys_counter_>=0)

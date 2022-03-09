@@ -141,17 +141,17 @@ namespace hiop
       /* private function: creates a cuSolver data structure from KLU data structures. */
 
       int createM(const int n, 
-          const int nnzL, 
-          const int* Lp, 
-          const int* Li,
-          const int nnzU, 
-          const int* Up, 
-          const int* Ui);
-      template <typename T>
-          void hiopCheckCudaError(T result,
-          char const *const func,
-          const char *const file,
-          int const line);
+                  const int nnzL, 
+                  const int* Lp, 
+                  const int* Li,
+                  const int nnzU, 
+                  const int* Up, 
+                  const int* Ui);
+                  template <typename T>
+                  void hiopCheckCudaError(T result,
+                  char const *const func,
+                  const char *const file,
+                  int const line);
     public:
 
       /** called the very first time a matrix is factored. Perform KLU factorization, allocate all aux variables */

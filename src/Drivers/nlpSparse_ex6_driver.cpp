@@ -151,8 +151,7 @@ int main(int argc, char **argv)
   size_type n;
   double scal;
 
-  if(!parse_arguments(argc, argv, n, scal, selfCheck, use_pardiso, use_cusolver, force_fr))
-  {
+  if(!parse_arguments(argc, argv, n, scal, selfCheck, use_pardiso, use_cusolver, force_fr)) {
     usage(argv[0]);
 #ifdef HIOP_USE_MPI
     MPI_Finalize();

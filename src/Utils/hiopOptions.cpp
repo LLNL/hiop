@@ -804,7 +804,7 @@ void hiopOptionsNLP::register_options()
     register_str_option("linear_solver_sparse",
                         "auto",
                         range,
-                        "Selects among MA57, PARDISO, STRUMPACK and cuSOLVER for the sparse linear solves.");
+                        "Selects among MA57, PARDISO, STRUMPACK, and cuSOLVER for the sparse linear solves.");
   }
 
   // choose linear solver for duals intializations for sparse NLP problems
@@ -812,12 +812,12 @@ void hiopOptionsNLP::register_options()
   //  - when GPU mode is on, STRUMPACK is chosen by 'auto' if available
   //  - choosing option ma57 or pardiso with GPU being on, it results in no device being used in the linear solve!
   {
-    vector<string> range {"auto", "ma57", "pardiso", "strumpack", "cusolver"};
+    vector<string> range {"auto", "ma57", "pardiso", "cusolver", "strumpack"};
 
     register_str_option("duals_init_linear_solver_sparse",
                         "auto",
                         range,
-                        "Selects among MA57, PARDISO, STRUMPACK and cuSOLVER for the sparse linear solves.");
+                        "Selects among MA57, PARDISO, cuSOLVER, and STRUMPACK for the sparse linear solves.");
   }
 
   // choose sparsity permutation (to reduce nz in the factors). This option is available only when using

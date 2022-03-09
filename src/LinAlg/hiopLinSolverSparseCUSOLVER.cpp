@@ -65,13 +65,13 @@ namespace hiop
 {
   hiopLinSolverIndefSparseCUSOLVER::hiopLinSolverIndefSparseCUSOLVER(const int& n, const int& nnz, hiopNlpFormulation* nlp)
     : hiopLinSolverSymSparse(n, nnz, nlp),
-    kRowPtr_{nullptr},
-    jCol_{nullptr},
-    kVal_{nullptr},
-    index_covert_CSR2Triplet_{nullptr},
-    index_covert_extra_Diag2CSR_{nullptr},
-    n_{n},
-    nnz_{0}
+      kRowPtr_{nullptr},
+      jCol_{nullptr},
+      kVal_{nullptr},
+      index_covert_CSR2Triplet_{nullptr},
+      index_covert_extra_Diag2CSR_{nullptr},
+      n_{n},
+      nnz_{0}
   {
   }
 
@@ -611,9 +611,9 @@ namespace hiop
                                                  const int* Ui)
   {
     int row;
-    for(int i = 0;i<n;++i) {
+    for(int i = 0; i<n; ++i) {
       //go through EACH COLUMN OF L first
-      for(int j = Lp[i];j<Lp[i+1];++j) {
+      for(int j = Lp[i]; j < Lp[i+1]; ++j) {
         row = Li[j];
         //BUT dont count dia_gonal twice, important
         if(row != i){
@@ -621,22 +621,22 @@ namespace hiop
         }
       }
       //then each column of U
-      for(int j = Up[i];j<Up[i+1];++j) {
+      for(int j = Up[i]; j < Up[i+1]; ++j) {
         row = Ui[j];
         mia_[row+1]++;
       }
     }
     //then organize mia_;
     mia_[0] = 0;
-    for(int i=1;i<n+1;i++) {
+    for(int i = 1; i < n+1; ++i) {
       mia_[i] += mia_[i - 1];
     } 
 
     int* Mshifts = (int*) calloc (n, sizeof(int));
-    for(int i = 0;i<n;++i) {
+    for(int i = 0; i < n; ++i) {
 
       //go through EACH COLUMN OF L first
-      for(int j = Lp[i];j<Lp[i+1];++j) {
+      for(int j = Lp[i]; j < Lp[i+1]; ++j) {
         row = Li[j];
         if(row != i){
           //place (row, i) where it belongs!
@@ -645,7 +645,7 @@ namespace hiop
         }
       }
       //each column of U next
-      for(int j = Up[i];j<Up[i+1];++j) {
+      for(int j = Up[i]; j < Up[i+1]; ++j) {
         row = Ui[j];
         mja_[mia_[row] + Mshifts[row]] = i;
         Mshifts[row]++;
@@ -771,11 +771,23 @@ namespace hiop
     int* Up = new int[n_+1];
     int* Ui = new int[nnzU];
     double* Ux = new double[nnzU];
-    int ok = klu_extract(Numeric_, Symbolic_, Lp, Li, Lx, Up, Ui, Ux, 
-                         NULL, NULL, NULL, 
-                         NULL, NULL, 
-                         NULL, NULL, &Common_);
-    createM(n_, nnzL, Lp, Li,nnzU, Up, Ui);
+    int ok = klu_extract(Numeric_, 
+                         Symbolic_,
+                         Lp,
+                         Li,
+                         Lx,
+                         Up,
+                         Ui,
+                         Ux, 
+                         NULL,
+                         NULL,
+                         NULL, 
+                         NULL,
+                         NULL, 
+                         NULL,
+                         NULL,
+                         &Common_);
+    createM(n_, nnzL, Lp, Li, nnzU, Up, Ui);
     delete[] Lp;
     delete[] Li;
     delete[] Lx;
