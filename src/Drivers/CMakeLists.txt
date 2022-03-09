@@ -45,6 +45,9 @@ if(HIOP_SPARSE)
 
     add_executable(nlpSparse_ex7.exe nlpSparse_ex7.cpp nlpSparse_ex7_driver.cpp)
     target_link_libraries(nlpSparse_ex7.exe HiOp::HiOp)
+
+    add_executable(nlpSparse_ex10.exe nlpSparse_ex10.cpp nlpSparse_ex10_driver.cpp)
+    target_link_libraries(nlpSparse_ex10.exe HiOp::HiOp)
 endif()
 
 if(HIOP_BUILD_SHARED)
