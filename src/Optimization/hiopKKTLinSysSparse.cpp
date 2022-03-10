@@ -202,7 +202,7 @@ namespace hiop
     assert(nxsp==nx);
     if(rhs_ == NULL) {
       rhs_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"),
-                                            	   nx+nyc+nyd);
+                                                 nx+nyc+nyd);
     }
 
     nlp_->log->write("RHS KKT_SPARSE_XYcYd rx: ", rx,  hovIteration);
@@ -231,7 +231,7 @@ namespace hiop
 
     if(perf_report_) {
       nlp_->log->printf(hovSummary, "(summary for linear solver from KKT_SPARSE_XYcYd)\n%s",
-	  nlp_->runStats.linsolv.get_summary_last_solve().c_str());
+      nlp_->runStats.linsolv.get_summary_last_solve().c_str());
     }
 
     if(write_linsys_counter_>=0) {
@@ -354,10 +354,10 @@ namespace hiop
     : hiopKKTLinSysCompressedXDYcYd(nlp), rhs_{nullptr},
       Hx_{nullptr}, Hd_{nullptr}, HessSp_{nullptr}, Jac_cSp_{nullptr}, Jac_dSp_{nullptr},
       write_linsys_counter_(-1), csr_writer_(nlp)
-    {
-      nlpSp_ = dynamic_cast<hiopNlpSparse*>(nlp_);
-      assert(nlpSp_);
-    }
+  {
+    nlpSp_ = dynamic_cast<hiopNlpSparse*>(nlp_);
+    assert(nlpSp_);
+  }
 
   hiopKKTLinSysCompressedSparseXDYcYd::~hiopKKTLinSysCompressedSparseXDYcYd()
   {
@@ -583,8 +583,10 @@ namespace hiop
         hiopLinSolverIndefSparseCUSOLVER *p = new hiopLinSolverIndefSparseCUSOLVER(n, nnz, nlp_);
         auto verbosity = hovScalars;
         nlp_->log->printf(verbosity,
-            "KKT_SPARSE_XDYcYd linsys: alloc CUSOLVER size %d (%d cons) (safe_mode=%d)\n",
-            n, neq+nineq, safe_mode_);
+                          "KKT_SPARSE_XDYcYd linsys: alloc CUSOLVER size %d (%d cons) (safe_mode=%d)\n",
+                          n,
+                          neq+nineq,
+                          safe_mode_);
         if(safe_mode_) verbosity  = hovWarning;
 
         p->setFakeInertia(neq + nineq);
@@ -732,10 +734,10 @@ namespace hiop
 
     int required_num_neg_eig = neq+nineq;
     int nnz = HessSp_->numberOfNonzeros() + HessSp_->numberOfOffDiagNonzeros()
-      + 2*Jac_cSp_->numberOfNonzeros() + 2*Jac_dSp_->numberOfNonzeros()
-      + 2*(nd + ndl + ndu + nxl + nxu + ndl + ndu + nxl + nxu)
-      + ndl + ndu + nxl + nxu
-      + n_reg;
+              + 2*Jac_cSp_->numberOfNonzeros() + 2*Jac_dSp_->numberOfNonzeros()
+              + 2*(nd + ndl + ndu + nxl + nxu + ndl + ndu + nxl + nxu)
+              + ndl + ndu + nxl + nxu
+              + n_reg;
 
     linSys_ = determineAndCreateLinsys(n, required_num_neg_eig, nnz);
 

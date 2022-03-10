@@ -1056,6 +1056,18 @@ void hiopOptionsNLP::ensure_consistence()
       set_val("linear_solver_sparse", "auto");
     }
   }
+
+#ifndef HIOP_USE_CUDA
+  if(GetString("linear_solver_sparse") == "cusolver") {
+    if(is_user_defined("linear_solver_sparse")) {
+        log_printf(hovWarning,
+                   "The option 'linear_solver_sparse=%s' is not valid without CUDA support enabled."
+                   " Will use 'linear_solver_sparse=auto'.\n",
+                   GetString("linear_solver_sparse").c_str());
+    }
+      set_val("linear_solver_sparse", "auto");
+  }
+#endif // HIOP_USE_CUDA
   
 // When RAJA is not enabled ...
 #ifndef HIOP_USE_RAJA
