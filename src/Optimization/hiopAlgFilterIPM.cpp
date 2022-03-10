@@ -2197,7 +2197,7 @@ bool hiopAlgFilterIPMBase::apply_feasibility_restoration(hiopKKTLinSys* kkt)
         hiopNlpSparse nlpFR(nlp_fr_interface, nlp->options->GetString("options_file_fr_prob").c_str());
         fr_solved = solve_feasibility_restoration(kkt, nlpFR);
         if(fr_solved) {
-          nlp->log->printf(hovSummary, "FR problem provides sufficient reduction in primal feasibility! Now apply LSQ to reset duals.\n");
+          nlp->log->printf(hovScalars, "FR problem provides sufficient reduction in primal feasibility!\n");
           // FR succeeds, update it_trial->x and it_trial->d to the next search point
           it_trial->get_x()->copyFrom(nlp_fr_interface.get_fr_sol_x());
           it_trial->get_d()->copyFrom(nlp_fr_interface.get_fr_sol_d());
@@ -2210,7 +2210,7 @@ bool hiopAlgFilterIPMBase::apply_feasibility_restoration(hiopKKTLinSys* kkt)
       hiopNlpMDS nlpFR(nlp_fr_interface, nlp->options->GetString("options_file_fr_prob").c_str());
       fr_solved =  solve_feasibility_restoration(kkt, nlpFR);
       if(fr_solved) {
-        nlp->log->printf(hovSummary, "FR problem provides sufficient reduction in primal feasibility! Now apply LSQ to reset duals.\n");
+        nlp->log->printf(hovScalars, "FR problem provides sufficient reduction in primal feasibility!\n");
         // FR succeeds, update it_trial->x and it_trial->d to the next search point
         it_trial->get_x()->copyFrom(nlp_fr_interface.get_fr_sol_x());
         it_trial->get_d()->copyFrom(nlp_fr_interface.get_fr_sol_d());
@@ -2285,6 +2285,8 @@ bool hiopAlgFilterIPMBase::reset_var_from_fr_sol(hiopKKTLinSys* kkt, bool reset_
     nlp->log->printf(hovError, "Failure in evaluating user provided NLP functions.");
     assert(false);
     return false;
+  } else {
+    nlp->log->printf(hovScalars, "FR: Update slacks and duals from the modified primals.\n");
   }
   // determine other slacks
   it_trial->determineSlacks();

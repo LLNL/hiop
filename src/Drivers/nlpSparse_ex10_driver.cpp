@@ -7,7 +7,7 @@
 
 using namespace hiop;
 
-static bool self_check(size_type n, double obj_value);
+static bool self_check(size_type n, double obj_value, hiopSolveStatus status);
 
 static bool parse_arguments(int argc,
                             char **argv,
@@ -41,6 +41,8 @@ static bool parse_arguments(int argc,
         ineq_feas = true;
       } else if(std::string(argv[6]) == "-ineq_infeas") {
         ineq_infeas = true;
+      } else if(std::string(argv[6]) == "-selfcheck") {
+        self_check = true;
       }
     }
   case 6: //5 arguments
@@ -53,6 +55,8 @@ static bool parse_arguments(int argc,
         ineq_feas = true;
       } else if(std::string(argv[5]) == "-ineq_infeas") {
         ineq_infeas = true;
+      } else if(std::string(argv[5]) == "-selfcheck") {
+        self_check = true;
       }
     }
   case 5: //4 arguments
@@ -65,6 +69,8 @@ static bool parse_arguments(int argc,
         ineq_feas = true;
       } else if(std::string(argv[4]) == "-ineq_infeas") {
         ineq_infeas = true;
+      } else if(std::string(argv[4]) == "-selfcheck") {
+        self_check = true;
       }
     }
   case 4: //3 arguments
@@ -77,6 +83,8 @@ static bool parse_arguments(int argc,
         ineq_feas = true;
       } else if(std::string(argv[3]) == "-ineq_infeas") {
         ineq_infeas = true;
+      } else if(std::string(argv[3]) == "-selfcheck") {
+        self_check = true;
       }
     }
   case 3: //2 arguments
@@ -89,9 +97,12 @@ static bool parse_arguments(int argc,
         ineq_feas = true;
       } else if(std::string(argv[2]) == "-ineq_infeas") {
         ineq_infeas = true;
+      } else if(std::string(argv[2]) == "-selfcheck") {
+        self_check = true;
       } else {
-        scala_a = std::atof(argv[2]); 
-      }
+        scala_a = std::atof(argv[2]);
+        assert(scala_a > 0.0);
+      } 
     }
   case 2: //1 argument
     {
@@ -109,8 +120,8 @@ static bool parse_arguments(int argc,
     scala_a = 1e-6;
     eq_feas = false;
     eq_infeas = false;
-    ineq_feas = true;
-    ineq_infeas = false;
+    ineq_feas = false;
+    ineq_infeas = true;
   }
   return true;
 };
@@ -128,7 +139,7 @@ static void usage(const char* exeName)
   printf("  '-eq_feas': include feasible inequality constraints, with rank deficient Jacobian [optional, default is no]\n");
   printf("  '-eq_infeas': include infeasible inequality constraints, with rank deficient Jacobian [optional, default is no]\n");
   printf("  '-selfcheck': compares the optimal objective with a previously saved value for the "
-         "problem specified by 'problem_size' and `-eq_feas` is set to `yes` internally. [optional]\n");
+         "problem specified by 'problem_size'. `-ineq_feas` is set to `yes` internally. [optional]\n");
 }
 
 
@@ -184,8 +195,9 @@ int main(int argc, char **argv)
 
   //this is used for "regression" testing when the driver is called with -selfcheck
   if(selfCheck) {
-    if(!self_check(n, obj_value))
+    if(!self_check(n, obj_value, status)) {
       return -1;
+    }
   } else {
     if(rank==0) {
       printf("Optimal objective: %22.14e. Solver status: %d\n", obj_value, status);
@@ -200,23 +212,28 @@ int main(int argc, char **argv)
 }
 
 
-static bool self_check(size_type n, double objval)
+static bool self_check(size_type n, double objval, hiopSolveStatus status)
 {
 #define num_n_saved 3 //keep this is sync with n_saved and objval_saved
   const size_type n_saved[] = {50, 500, 5000};
-  const double objval_saved[] = {1.10351564683176e-01, 1.10351566513480e-01, 1.10351578644469e-01};
+  const double objval_saved[] = {7.56537851801013e+00, 8.28428402098675e+01, 7.19392250597535e+02};
 
 #define relerr 1e-6
+  if(status != hiopSolveStatus::Infeasible_Problem) {
+    printf("selfcheck: driver expects an infeasible problem, but HiOp return code is %d \n", status);
+    return false;
+  }
+
   bool found=false;
   for(int it=0; it<num_n_saved; it++) {
     if(n_saved[it]==n) {
       found=true;
       if(fabs( (objval_saved[it]-objval)/(1+objval_saved[it])) > relerr) {
-	printf("selfcheck failure. Objective (%18.12e) does not agree (%d digits) with the saved value (%18.12e) for n=%d.\n",
-	       objval, -(int)log10(relerr), objval_saved[it], n);
-	return false;
+        printf("selfcheck failure. Objective (%18.12e) does not agree (%d digits) with the saved value (%18.12e) for n=%d.\n", 
+              objval, -(int)log10(relerr), objval_saved[it], n);
+        return false;
       } else {
-	printf("selfcheck success (%d digits)\n",  -(int)log10(relerr));
+        printf("selfcheck success (%d digits)\n",  -(int)log10(relerr));
       }
       break;
     }
