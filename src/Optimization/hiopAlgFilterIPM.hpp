@@ -93,7 +93,7 @@ public:
   inline hiopNlpFormulation* get_nlp() const { return nlp; }
   inline hiopIterate* get_it_curr() const { return it_curr; }
   inline hiopIterate* get_it_trial() const { return it_trial; }
-  inline hiopIterate* get_it_trial() { return it_trial; }
+  inline hiopIterate* get_it_trial_nonconst() { return it_trial; }
   inline hiopIterate* get_dir() const { return dir; }
   inline double get_mu() const { return _mu; }
   inline hiopMatrix* get_Jac_c() const { return _Jac_c; }

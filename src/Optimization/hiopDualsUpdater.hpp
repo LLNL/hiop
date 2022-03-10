@@ -129,7 +129,7 @@ public:
     bool bret = do_lsq_update(it_ini,grad_f,jac_c,jac_d);
     return bret;
   }
-                  
+
   /** LSQ-based initialization of the  constraints duals (yc and yd). Source file describes the math. */
   virtual inline bool computeInitialDualsEq(hiopIterate& it_ini,
                                             const hiopVector& grad_f,

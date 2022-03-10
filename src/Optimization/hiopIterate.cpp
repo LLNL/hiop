@@ -538,7 +538,7 @@ double hiopIterate::evalLogBarrier(const hiopVector& xref)
   double barrier;
   x->copyFrom(xref);
   determineSlacks();
-  
+
   barrier = sxl->logBarrier_local(nlp->get_ixl());
   barrier+= sxu->logBarrier_local(nlp->get_ixu());
 #ifdef HIOP_USE_MPI
