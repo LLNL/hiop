@@ -471,77 +471,76 @@ namespace hiop
   bool hiopKKTLinSysCompressedSparseXDYcYd::
   solveCompressed(hiopVector& rx, hiopVector& rd, hiopVector& ryc, hiopVector& ryd,
                   hiopVector& dx, hiopVector& dd, hiopVector& dyc, hiopVector& dyd)
-    {
-      if(!nlpSp_)   { assert(false); return false; }
-      if(!HessSp_)  { assert(false); return false; }
-      if(!Jac_cSp_) { assert(false); return false; }
-      if(!Jac_dSp_) { assert(false); return false; }
+  {
+    if(!nlpSp_)   { assert(false); return false; }
+    if(!HessSp_)  { assert(false); return false; }
+    if(!Jac_cSp_) { assert(false); return false; }
+    if(!Jac_dSp_) { assert(false); return false; }
 
-      nlp_->runStats.kkt.tmSolveRhsManip.start();
+    nlp_->runStats.kkt.tmSolveRhsManip.start();
 
-      int nx=rx.get_size(), nd=rd.get_size(), nyc=ryc.get_size(), nyd=ryd.get_size();
-      int nxsp=Hx_->get_size();
-      assert(nxsp==nx);
-      if(rhs_ == NULL) {
-        rhs_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"),
-                                                   nx+nd+nyc+nyd);
-      }
-
-      nlp_->log->write("RHS KKT_SPARSE_XDYcYd rx: ", rx,  hovIteration);
-      nlp_->log->write("RHS KKT_SPARSE_XDYcYd rx: ", rd,  hovIteration);
-      nlp_->log->write("RHS KKT_SPARSE_XDYcYd ryc:", ryc, hovIteration);
-      nlp_->log->write("RHS KKT_SPARSE_XDYcYd ryd:", ryd, hovIteration);
-
-      //
-      // form the rhs for the sparse linSys
-      //
-      rx.copyToStarting(*rhs_, 0);
-      rd.copyToStarting(*rhs_, nx);
-      ryc.copyToStarting(*rhs_, nx+nd);
-      ryd.copyToStarting(*rhs_, nx+nd+nyc);
-
-      if(write_linsys_counter_>=0)
-        csr_writer_.writeRhsToFile(*rhs_, write_linsys_counter_);
-
-      nlp_->runStats.kkt.tmSolveRhsManip.stop();
-
-      nlp_->runStats.kkt.tmSolveTriangular.start();
-
-      //
-      // solve
-      //
-      bool linsol_ok = linSys_->solve(*rhs_);
-      nlp_->runStats.kkt.tmSolveTriangular.stop();
-      nlp_->runStats.linsolv.end_linsolve();
-
-      if(perf_report_) {
-        nlp_->log->printf(hovSummary, "(summary for linear solver from KKT_SPARSE_XDYcYd)\n%s",
-                          nlp_->runStats.linsolv.get_summary_last_solve().c_str());
-      }
-
-      if(write_linsys_counter_>=0)
-        csr_writer_.writeSolToFile(*rhs_, write_linsys_counter_);
-
-      if(false==linsol_ok) return false;
-
-      nlp_->runStats.kkt.tmSolveRhsManip.start();
-
-      //
-      // unpack
-      //
-      rhs_->startingAtCopyToStartingAt(0,         dx,  0);
-      rhs_->startingAtCopyToStartingAt(nx,        dd,  0);
-      rhs_->startingAtCopyToStartingAt(nx+nd,     dyc, 0);
-      rhs_->startingAtCopyToStartingAt(nx+nd+nyc, dyd, 0);
-
-      nlp_->log->write("SOL KKT_SPARSE_XDYcYd dx: ", dx,  hovMatrices);
-      nlp_->log->write("SOL KKT_SPARSE_XDYcYd dd: ", dd,  hovMatrices);
-      nlp_->log->write("SOL KKT_SPARSE_XDYcYd dyc:", dyc, hovMatrices);
-      nlp_->log->write("SOL KKT_SPARSE_XDYcYd dyd:", dyd, hovMatrices);
-
-      nlp_->runStats.kkt.tmSolveRhsManip.stop();
-      return true;
+    int nx=rx.get_size(), nd=rd.get_size(), nyc=ryc.get_size(), nyd=ryd.get_size();
+    int nxsp=Hx_->get_size();
+    assert(nxsp==nx);
+    if(rhs_ == NULL) {
+      rhs_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"),
+                                                 nx+nd+nyc+nyd);
     }
+
+    nlp_->log->write("RHS KKT_SPARSE_XDYcYd rx: ", rx,  hovIteration);
+    nlp_->log->write("RHS KKT_SPARSE_XDYcYd rx: ", rd,  hovIteration);
+    nlp_->log->write("RHS KKT_SPARSE_XDYcYd ryc:", ryc, hovIteration);
+    nlp_->log->write("RHS KKT_SPARSE_XDYcYd ryd:", ryd, hovIteration);
+
+    //
+    // form the rhs for the sparse linSys
+    //
+    rx.copyToStarting(*rhs_, 0);
+    rd.copyToStarting(*rhs_, nx);
+    ryc.copyToStarting(*rhs_, nx+nd);
+    ryd.copyToStarting(*rhs_, nx+nd+nyc);
+
+    if(write_linsys_counter_>=0) {
+      csr_writer_.writeRhsToFile(*rhs_, write_linsys_counter_);
+    }
+    nlp_->runStats.kkt.tmSolveRhsManip.stop();
+
+    nlp_->runStats.kkt.tmSolveTriangular.start();
+
+    //
+    // solve
+    //
+    bool linsol_ok = linSys_->solve(*rhs_);
+    nlp_->runStats.kkt.tmSolveTriangular.stop();
+    nlp_->runStats.linsolv.end_linsolve();
+
+    if(perf_report_) {
+      nlp_->log->printf(hovSummary, "(summary for linear solver from KKT_SPARSE_XDYcYd)\n%s",
+                        nlp_->runStats.linsolv.get_summary_last_solve().c_str());
+    }
+
+    if(write_linsys_counter_>=0) {
+      csr_writer_.writeSolToFile(*rhs_, write_linsys_counter_);
+    }
+    if(false==linsol_ok) return false;
+
+    nlp_->runStats.kkt.tmSolveRhsManip.start();
+
+    //
+    // unpack
+    //
+    rhs_->startingAtCopyToStartingAt(0,         dx,  0);
+    rhs_->startingAtCopyToStartingAt(nx,        dd,  0);
+    rhs_->startingAtCopyToStartingAt(nx+nd,     dyc, 0);
+    rhs_->startingAtCopyToStartingAt(nx+nd+nyc, dyd, 0);
+    nlp_->log->write("SOL KKT_SPARSE_XDYcYd dx: ", dx,  hovMatrices);
+    nlp_->log->write("SOL KKT_SPARSE_XDYcYd dd: ", dd,  hovMatrices);
+    nlp_->log->write("SOL KKT_SPARSE_XDYcYd dyc:", dyc, hovMatrices);
+    nlp_->log->write("SOL KKT_SPARSE_XDYcYd dyd:", dyd, hovMatrices);
+
+    nlp_->runStats.kkt.tmSolveRhsManip.stop();
+    return true;
+  }
 
   hiopLinSolverSymSparse*
   hiopKKTLinSysCompressedSparseXDYcYd::determineAndCreateLinsys(int nx, int neq, int nineq, int nnz)
