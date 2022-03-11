@@ -83,7 +83,7 @@ namespace hiop
       bool solve ( hiopVector& x_ );
 
       /** Multiple rhs not supported yet */
-      virtual bool solve(hiopMatrix& x) 
+      virtual bool solve(hiopMatrix& /* x */) 
       { 
         assert(false && "not yet supported");
         return false;
@@ -92,13 +92,13 @@ namespace hiop
       int newKLUfactorization();
     private:
 
-      int      m_;// number of rows of the whole matrix
-      int      n_;// number of cols of the whole matrix
-      int      nnz_;// number of nonzeros in the matrix
+      int      m_;   // number of rows of the whole matrix
+      int      n_;   // number of cols of the whole matrix
+      int      nnz_; // number of nonzeros in the matrix
 
-      int* kRowPtr_;// row pointer for nonzeros
-      int* jCol_;// column indexes for nonzeros
-      double* kVal_;// storage for sparse matrix
+      int* kRowPtr_; // row pointer for nonzeros
+      int* jCol_;    // column indexes for nonzeros
+      double* kVal_; // storage for sparse matrix
 
       int* index_covert_CSR2Triplet_;
       int* index_covert_extra_Diag2CSR_;
@@ -108,28 +108,28 @@ namespace hiop
 
       cusolverStatus_t sp_status_;
       cusparseHandle_t handle_ = 0;
-      cusolverSpHandle_t handle_cusolver_ = NULL;
+      cusolverSpHandle_t handle_cusolver_ = nullptr;
       cublasHandle_t handle_cublas_;
 
       cusparseMatDescr_t descr_A_, descr_M_;
-      csrluInfoHost_t info_lu_ = NULL;
-      csrgluInfo_t info_M_ = NULL;
+      csrluInfoHost_t info_lu_ = nullptr;
+      csrgluInfo_t info_M_ = nullptr;
 
       size_t buffer_size_;
       size_t size_M_;
       double* d_work_;
       int ite_refine_succ_ = 0;
-      double r_nrminf_; //, x_nrminf, b_nrminf;
+      double r_nrminf_;
 
 
       // KLU stuff
       int klu_status_;
       klu_common Common_;
-      klu_symbolic* Symbolic_ = NULL;
-      klu_numeric* Numeric_ = NULL;
+      klu_symbolic* Symbolic_ = nullptr;
+      klu_numeric* Numeric_ = nullptr;
       /*pieces of M */
-      int* mia_ = NULL; 
-      int*  mja_ = NULL;
+      int* mia_ = nullptr; 
+      int*  mja_ = nullptr;
 
       /* for GPU data */
       double* da_;
@@ -147,11 +147,11 @@ namespace hiop
                   const int nnzU, 
                   const int* Up, 
                   const int* Ui);
-                  template <typename T>
-                  void hiopCheckCudaError(T result,
-                  char const *const func,
-                  const char *const file,
-                  int const line);
+
+      template <typename T>
+      void hiopCheckCudaError(T result,
+                              const char *const file,
+                              int const line);
     public:
 
       /** called the very first time a matrix is factored. Perform KLU factorization, allocate all aux variables */
@@ -180,10 +180,10 @@ namespace hiop
       /** solves a linear system.
        * param 'x' is on entry the right hand side(s) of the system to be solved. On
        * exit is contains the solution(s).  */
-      bool solve ( hiopVector& x_ );
+      bool solve (hiopVector& x);
 
       /** Multiple rhs not supported yet */
-      virtual bool solve(hiopMatrix& x) 
+      virtual bool solve(hiopMatrix& /* x */) 
       { 
         assert(false && "not yet supported");
         return false;
@@ -206,33 +206,34 @@ namespace hiop
       std::unordered_map<int,int> extra_dia_g_nnz_map;
 
       int nFakeNegEigs_;
+
       /** needed for CUSOLVER and KLU */
 
       cusolverStatus_t sp_status_;
       cusparseHandle_t handle_ = 0;
-      cusolverSpHandle_t handle_cusolver_ = NULL;
+      cusolverSpHandle_t handle_cusolver_ = nullptr;
       cublasHandle_t handle_cublas_;
 
       cusparseMatDescr_t descr_A_, descr_M_;
-      csrluInfoHost_t info_lu_ = NULL;
-      csrgluInfo_t info_M_ = NULL;
+      csrluInfoHost_t info_lu_ = nullptr;
+      csrgluInfo_t info_M_ = nullptr;
 
       size_t buffer_size_;
       size_t size_M_;
       double* d_work_;
       int ite_refine_succ_ = 0;
-      double r_nrminf_; //, x_nrminf, b_nrminf;
+      double r_nrminf_;
 
 
       // KLU stuff
       int klu_status_;
       klu_common Common_;
-      klu_symbolic* Symbolic_ = NULL;
-      klu_numeric* Numeric_ = NULL;
+      klu_symbolic* Symbolic_ = nullptr;
+      klu_numeric* Numeric_ = nullptr;
       int Atype;
       /*pieces of M */
-      int* mia_ = NULL;
-      int* mja_ = NULL;
+      int* mia_ = nullptr;
+      int* mja_ = nullptr;
       /*GPU vatiables */
       double* da_;
       int* dia_; 
@@ -252,7 +253,6 @@ namespace hiop
 
       template <typename T>
       void hiopCheckCudaError(T result,
-                              char const *const func,
                               const char *const file,
                               int const line);
 
@@ -260,7 +260,6 @@ namespace hiop
 
       /** called the very first time a matrix is factored. */
       void firstCall();
-      //  virtual void dia_gonalChanged( int idia_g, int extent );
 
       void inline setFakeInertia(int nNegEigs)
       {
@@ -271,6 +270,6 @@ namespace hiop
 
   };
 
-}//namespace hiop
+} //namespace hiop
 
 #endif

@@ -59,7 +59,7 @@
 #include <sstream>  
 
 
-#define checkCudaErrors(val) hiopCheckCudaError((val), #val, __FILE__, __LINE__)
+#define checkCudaErrors(val) hiopCheckCudaError((val), __FILE__, __LINE__)
 
 namespace hiop
 {
@@ -77,21 +77,11 @@ namespace hiop
 
   hiopLinSolverIndefSparseCUSOLVER::~hiopLinSolverIndefSparseCUSOLVER()
   {
-    if(kRowPtr_) {
-      delete [] kRowPtr_;
-    }
-    if(jCol_) {
-      delete [] jCol_;
-    }
-    if(kVal_) {
-      delete [] kVal_;
-    }
-    if(index_covert_CSR2Triplet_) {
-      delete [] index_covert_CSR2Triplet_;
-    }
-    if(index_covert_extra_Diag2CSR_) {
-      delete [] index_covert_extra_Diag2CSR_;
-    }
+    delete [] kRowPtr_;
+    delete [] jCol_;
+    delete [] kVal_;
+    delete [] index_covert_CSR2Triplet_;
+    delete [] index_covert_extra_Diag2CSR_;
     //KS: make sure we delete the GPU variables
     cudaFree(dia_);
     cudaFree(da_);
@@ -110,28 +100,24 @@ namespace hiop
 
     klu_free_symbolic(&Symbolic_, &Common_) ;
     klu_free_numeric(&Numeric_, &Common_) ;
-    if(mia_ != NULL){ 
-      free(mia_);
-    }
-    if(mja_ != NULL){ 
-      free(mja_);
-    }
+    free(mia_);
+    free(mja_);
   }
 
   // Error checking utility for CUDA
   //KS: might later become part of src/Utils, putting it here for now
 
   template <typename T>
-    void hiopLinSolverIndefSparseCUSOLVER::hiopCheckCudaError(T result,
-                                                              char const *const func,
-                                                              const char *const file,
-                                                              int const line)
-    {
-      if (result) {
-        nlp_->log->printf(hovError, "CUDA error at %s:%d, error# %d\n", file, line, result);
-        exit(EXIT_FAILURE);
-      }
+  void hiopLinSolverIndefSparseCUSOLVER::hiopCheckCudaError(T result,
+                                                            const char *const file,
+                                                            int const line)
+  {
+    if (result) {
+      nlp_->log->printf(hovError, "CUDA error at %s:%d, error# %d\n", file, line, result);
+      exit(EXIT_FAILURE);
     }
+  }
+
   void hiopLinSolverIndefSparseCUSOLVER::firstCall()
   {
 
@@ -274,12 +260,12 @@ namespace hiop
     //allocate gpu data
     free(mia_); 
     free(mja_);
-    mia_ = NULL; 
-    mja_ = NULL;
+    mia_ = nullptr; 
+    mja_ = nullptr;
     cudaFree(devx_);
     cudaFree(devr_);
-    devx_ = NULL;
-    devr_ = NULL;
+    devx_ = nullptr;
+    devr_ = nullptr;
     checkCudaErrors(cudaMalloc(&devx_, n_ * sizeof(double)));
     checkCudaErrors(cudaMalloc(&devr_, n_ * sizeof(double)));
     this->newKLUfactorization();
@@ -288,10 +274,10 @@ namespace hiop
   //helper private function needed for format conversion
 
   int hiopLinSolverIndefSparseCUSOLVER::createM(const int n, 
-                                                const int nnzL, 
+                                                const int /* nnzL */, 
                                                 const int* Lp, 
                                                 const int* Li,
-                                                const int nnzU, 
+                                                const int /* nnzU */, 
                                                 const int* Up, 
                                                 const int* Ui){
 
@@ -347,14 +333,14 @@ namespace hiop
     klu_free_symbolic(&Symbolic_, &Common_) ;
     klu_free_numeric(&Numeric_, &Common_) ;
     Symbolic_ = klu_analyze(n_, kRowPtr_, jCol_, &Common_) ;
-    if(Symbolic_ == NULL) {
-      nlp_->log->printf(hovError, "symbolic NULL\n");
+    if(Symbolic_ == nullptr) {
+      nlp_->log->printf(hovError, "symbolic nullptr\n");
       return -1;
     }
 
     Numeric_ = klu_factor(kRowPtr_, jCol_, kVal_, Symbolic_, &Common_);
-    if(Numeric_ == NULL) {
-      nlp_->log->printf(hovError, "printf matrix size: %d numeric NULL \n", n_);
+    if(Numeric_ == nullptr) {
+      nlp_->log->printf(hovError, "printf matrix size: %d numeric nullptr \n", n_);
       return -1;
     }
     // get sizes
@@ -362,28 +348,25 @@ namespace hiop
     const int nnzU = Numeric_->unz;
 
     const int nnzM = (nnzL + nnzU - n_);
+
     /* parse the factorization */
 
-    if(mia_ != NULL) {
-      free(mia_);
-    }
-    if(mja_ != NULL) {
-      free(mja_);
-    }
+    free(mia_);
+    free(mja_);
 
     mia_ = (int*) calloc(sizeof(int), (n_+1));
     mja_ = (int*) calloc(sizeof(int), nnzM);
     int* Lp = new int[n_+1];
     int* Li = new int[nnzL];
-    //we cant use NULL instrad od Lx and Ux because it causes SEG FAULT. It seems like a waste of memory though.
+    //we cant use nullptr instrad od Lx and Ux because it causes SEG FAULT. It seems like a waste of memory though.
     double* Lx = new double[nnzL];
     int* Up = new int[n_+1];
     int* Ui = new int[nnzU];
     double* Ux = new double[nnzU];
     int ok = klu_extract(Numeric_, Symbolic_, Lp, Li, Lx, Up, Ui, Ux, 
-                         NULL, NULL, NULL, 
-                         NULL, NULL, 
-                         NULL, NULL, &Common_);
+                         nullptr, nullptr, nullptr, 
+                         nullptr, nullptr, 
+                         nullptr, nullptr, &Common_);
     createM(n_, nnzL, Lp, Li,nnzU, Up, Ui);
     delete[] Lp;
     delete[] Li;
@@ -412,9 +395,7 @@ namespace hiop
                                           &size_M_);
     assert(CUSOLVER_STATUS_SUCCESS == sp_status_);
     buffer_size_ = size_M_;
-    if(d_work_ != NULL) { 
-      cudaFree(d_work_);
-    }
+    cudaFree(d_work_);
     cudaMalloc((void **)&d_work_, buffer_size_);
     sp_status_ = cusolverSpDgluAnalysis(handle_cusolver_,
                                         info_M_,
@@ -422,15 +403,9 @@ namespace hiop
     assert(CUSOLVER_STATUS_SUCCESS == sp_status_);
 
     //now make sure the space is allocated for A on the GPU (but dont copy)
-    if(da_ != NULL) { 
-      cudaFree(da_); 
-    }
-    if(dja_ != NULL) {
-      cudaFree(da_);
-    }
-    if(dia_ != NULL) { 
-      cudaFree(dia_);
-    }
+    cudaFree(da_); 
+    cudaFree(da_);
+    cudaFree(dia_);
     checkCudaErrors(cudaMalloc(&da_, nnz_ * sizeof(double)));
     checkCudaErrors(cudaMalloc(&dja_, nnz_ * sizeof(int)));
     checkCudaErrors(cudaMalloc(&dia_, (n_ +1)* sizeof(int)));
@@ -514,9 +489,9 @@ namespace hiop
 
     hiopVector* rhs = x.new_copy();
     double* dx = x.local_data();
-    double* drhs_ = rhs->local_data();
+    double* drhs = rhs->local_data();
 
-    checkCudaErrors(cudaMemcpy(devr_, drhs_, sizeof(double) * n_, cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(devr_, drhs, sizeof(double) * n_, cudaMemcpyHostToDevice));
 
     //solve HERE
 
@@ -561,21 +536,11 @@ namespace hiop
 
   hiopLinSolverNonSymSparseCUSOLVER::~hiopLinSolverNonSymSparseCUSOLVER()
   {
-    if(kRowPtr_){
-      delete [] kRowPtr_;
-    }
-    if(jCol_){
-      delete [] jCol_;
-    }
-    if(kVal_){
-      delete [] kVal_;
-    }
-    if(index_covert_CSR2Triplet_){
-      delete [] index_covert_CSR2Triplet_;
-    }
-    if(index_covert_extra_Diag2CSR_){
-      delete [] index_covert_extra_Diag2CSR_;
-    }
+    delete [] kRowPtr_;
+    delete [] jCol_;
+    delete [] kVal_;
+    delete [] index_covert_CSR2Triplet_;
+    delete [] index_covert_extra_Diag2CSR_;
     //KS: make sure we delete the GPU variables
     cudaFree(dia_);
     cudaFree(da_);
@@ -594,19 +559,15 @@ namespace hiop
 
     klu_free_symbolic(&Symbolic_, &Common_) ;
     klu_free_numeric(&Numeric_, &Common_) ;
-    if(mia_ != NULL){ 
-      free(mia_);
-    }
-    if(mja_ != NULL){ 
-      free(mja_);
-    }
+    free(mia_);
+    free(mja_);
   }
 
   int hiopLinSolverNonSymSparseCUSOLVER::createM(const int n, 
-                                                 const int nnzL, 
+                                                 const int /* nnzL */, 
                                                  const int* Lp, 
                                                  const int* Li,
-                                                 const int nnzU, 
+                                                 const int /* nnzU */, 
                                                  const int* Up, 
                                                  const int* Ui)
   {
@@ -656,16 +617,15 @@ namespace hiop
   }
 
   template <typename T>
-    void hiopLinSolverNonSymSparseCUSOLVER::hiopCheckCudaError(T result,
-                                                               char const *const func,
-                                                               const char *const file,
-                                                               int const line)
-    {
-      if (result) {
-        nlp_->log->printf(hovError, "CUDA error at %s:%d, error# %d\n", file, line, result);
-        exit(EXIT_FAILURE);
-      }
+  void hiopLinSolverNonSymSparseCUSOLVER::hiopCheckCudaError(T result,
+                                                             const char *const file,
+                                                             int const line)
+  {
+    if (result) {
+      nlp_->log->printf(hovError, "CUDA error at %s:%d, error# %d\n", file, line, result);
+      exit(EXIT_FAILURE);
     }
+  }
 
   void hiopLinSolverNonSymSparseCUSOLVER::firstCall()
   {
@@ -676,6 +636,10 @@ namespace hiop
     // note that input is in lower triangular triplet form. First part is the sparse matrix, and the 2nd part are the additional dia_gonal elememts
     // the 1st part is sorted by row
     hiop::hiopMatrixSparseTriplet* M_triplet = dynamic_cast<hiop::hiopMatrixSparseTriplet*>(M_);
+    if(M_triplet == nullptr) {
+      nlp_->log->printf(hovError, "M_triplet is nullptr");
+      return;
+    }
 
     M_triplet->convertToCSR(nnz_, &kRowPtr_, &jCol_, &kVal_, &index_covert_CSR2Triplet_, &index_covert_extra_Diag2CSR_, extra_dia_g_nnz_map);
 
@@ -715,13 +679,13 @@ namespace hiop
 
     free(mia_); 
     free(mja_);
-    mia_ = NULL;
-    mja_ = NULL;
+    mia_ = nullptr;
+    mja_ = nullptr;
     //allocate gpu data
     cudaFree(devx_);
     cudaFree(devr_);
-    devx_ = NULL;
-    devr_ = NULL;
+    devx_ = nullptr;
+    devr_ = nullptr;
     checkCudaErrors(cudaMalloc(&devx_, n_ * sizeof(double)));
     checkCudaErrors(cudaMalloc(&devr_, n_ * sizeof(double)));
     this->newKLUfactorization();
@@ -733,20 +697,19 @@ namespace hiop
 
     Symbolic_ = klu_analyze(n_, kRowPtr_, jCol_, &Common_) ;
 
-    if(Symbolic_ == NULL){
-      nlp_->log->printf(hovError, "symbolic NULL");
+    if(Symbolic_ == nullptr){
+      nlp_->log->printf(hovError, "symbolic nullptr");
       return -1;
     }
 
     Numeric_ = klu_factor(kRowPtr_, jCol_, kVal_, Symbolic_, &Common_);
-    if(Numeric_ == NULL){
-      nlp_->log->printf(hovError, "numeric  NULL");
+    if(Numeric_ == nullptr){
+      nlp_->log->printf(hovError, "numeric  nullptr");
       return -1;
     }
 
 
     // get sizes
-
 
     const int nnzL = Numeric_->lnz;
     const int nnzU = Numeric_->unz;
@@ -754,19 +717,15 @@ namespace hiop
     const int nnzM = (nnzL+nnzU-n_);
     /* parse the factorization */
 
-    if(mia_ != NULL){ 
-      free(mia_);
-    }
-    if(mja_ != NULL){ 
-      free(mja_);
-    }
+    free(mia_);
+    free(mja_);
 
     mia_ = (int*) calloc(sizeof(int), (n_+1));
     mja_ = (int*) calloc(sizeof(int), nnzM);
 
     int* Lp = new int[n_+1];
     int* Li = new int[nnzL];
-    //we cant use NULL instrad od Lx and Ux because it causes SEG FAULT. It seems like a waste of memory though.
+    //we cant use nullptr instrad od Lx and Ux because it causes SEG FAULT. It seems like a waste of memory though.
     double* Lx = new double[nnzL];
     int* Up = new int[n_+1];
     int* Ui = new int[nnzU];
@@ -779,13 +738,13 @@ namespace hiop
                          Up,
                          Ui,
                          Ux, 
-                         NULL,
-                         NULL,
-                         NULL, 
-                         NULL,
-                         NULL, 
-                         NULL,
-                         NULL,
+                         nullptr,
+                         nullptr,
+                         nullptr, 
+                         nullptr,
+                         nullptr, 
+                         nullptr,
+                         nullptr,
                          &Common_);
     createM(n_, nnzL, Lp, Li, nnzU, Up, Ui);
     delete[] Lp;
@@ -816,9 +775,7 @@ namespace hiop
 
     assert(CUSOLVER_STATUS_SUCCESS == sp_status_);
     buffer_size_ = size_M_;
-    if(d_work_ != NULL) {
-      cudaFree(d_work_);
-    }
+    cudaFree(d_work_);
     checkCudaErrors(cudaMalloc((void **)&d_work_, buffer_size_));
     sp_status_ = cusolverSpDgluAnalysis(handle_cusolver_,
                                         info_M_,
@@ -826,20 +783,14 @@ namespace hiop
     assert(CUSOLVER_STATUS_SUCCESS == sp_status_);
 
     //now make sure the space is allocated for A on the GPU (but dont copy)
-    if(da_ != NULL) {
-      cudaFree(da_); 
-    }
-    if(dja_ != NULL) {
-      cudaFree(da_);
-    }
-    if(dia_ != NULL) {
-      cudaFree(dia_);
-    }
+    cudaFree(da_); 
+    cudaFree(da_);
+    cudaFree(dia_);
     checkCudaErrors(cudaMalloc(&da_, nnz_ * sizeof(double)));
     checkCudaErrors(cudaMalloc(&dja_, nnz_ * sizeof(int)));
     checkCudaErrors(cudaMalloc(&dia_, (n_ +1)* sizeof(int)));
     //dont free d_ia -> size is n+1 so doesnt matter
-    if(dia_ == NULL) {
+    if(dia_ == nullptr) {
       checkCudaErrors(cudaMalloc(&dia_, (n_+1) * sizeof(int)));
     }
     checkCudaErrors(cudaMemcpy(da_, kVal_, sizeof(double) * nnz_, cudaMemcpyHostToDevice));
@@ -916,14 +867,14 @@ namespace hiop
     nlp_->runStats.linsolv.tmTriuSolves.start();
 
     hiopVectorPar* x = dynamic_cast<hiopVectorPar*>(&x_);
-    assert(x != NULL);
+    assert(x != nullptr);
     hiopVectorPar* rhs = dynamic_cast<hiopVectorPar*>(x->new_copy());
     x->copyToDev();
     double* dx = x->local_data();
     //rhs->copyToDev();
-    double* drhs_ = rhs->local_data();
-    //    double* devr_ = rhs->local_data();
-    checkCudaErrors(cudaMemcpy(devr_, drhs_, sizeof(double) * n_, cudaMemcpyHostToDevice));
+    double* drhs = rhs->local_data();
+    // double* devr_ = rhs->local_data();
+    checkCudaErrors(cudaMemcpy(devr_, drhs, sizeof(double) * n_, cudaMemcpyHostToDevice));
 
     //solve HERE
 
