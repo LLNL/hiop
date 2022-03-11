@@ -13,22 +13,41 @@ static bool parse_arguments(int argc,
                             char **argv,
                             size_type& n,
                             bool& self_check,
-                            bool& inertia_free)
+                            bool& inertia_free,
+                            bool& use_cusolver)
 {
   self_check = false;
   n = 3;
   inertia_free = false;
+  use_cusolver = false;
   switch(argc) {
   case 1:
     //no arguments
     return true;
     break;
+  case 5: //4 arguments
+    {
+      if(std::string(argv[4]) == "-selfcheck") {
+        self_check = true;    
+      } else if(std::string(argv[4]) == "-inertiafree") {
+        inertia_free = true;
+      } else if(std::string(argv[4]) == "-cusolver") {
+        use_cusolver = true;
+      } else {
+        n = std::atoi(argv[4]);
+        if(n<=0) {
+          return false;
+        }
+      }
+    }
   case 4: //3 arguments
     {
       if(std::string(argv[3]) == "-selfcheck") {
         self_check = true;    
       } else if(std::string(argv[3]) == "-inertiafree") {
         inertia_free = true;
+      } else if(std::string(argv[3]) == "-cusolver") {
+        use_cusolver = true;
       } else {
         n = std::atoi(argv[3]);
         if(n<=0) {
@@ -42,6 +61,8 @@ static bool parse_arguments(int argc,
         self_check = true;    
       } else if(std::string(argv[2]) == "-inertiafree") {
         inertia_free = true;
+      } else if(std::string(argv[2]) == "-cusolver") {
+        use_cusolver = true;
       } else {
         n = std::atoi(argv[2]);
         if(n<=0) {
@@ -55,6 +76,8 @@ static bool parse_arguments(int argc,
         self_check = true;    
       } else if(std::string(argv[1]) == "-inertiafree") {
         inertia_free = true;
+      } else if(std::string(argv[1]) == "-cusolver") {
+        use_cusolver = true;
       } else {
         n = std::atoi(argv[1]);
         if(n<=0) {
@@ -64,8 +87,16 @@ static bool parse_arguments(int argc,
     }
     break;
   default:
-    return false; //3 or more arguments
+    return false; // 4 or more arguments
   }
+
+#ifndef HIOP_USE_CUDA
+  if(use_cusolver) {
+    printf("HiOp built without CUDA support. ");
+    printf("Using default instead of cuSOLVER ...\n");
+    use_cusolver = false;
+  }
+#endif
 
   return true;
 };
@@ -80,6 +111,7 @@ static void usage(const char* exeName)
   printf("  '-inertiafree': indicate if inertia free approach should be used [optional]\n");
   printf("  '-selfcheck': compares the optimal objective with a previously saved value for the "
          "problem specified by 'problem_size'. [optional]\n");
+  printf("  '-cusolver': use cuSOLVER linear solver [optional]\n");
 }
 
 
@@ -97,10 +129,15 @@ int main(int argc, char **argv)
     return 1;
   }
 #endif
-  bool selfCheck; size_type n;
-  bool inertia_free; 
-  if(!parse_arguments(argc, argv, n, selfCheck, inertia_free)) { 
+  bool selfCheck = false;
+  size_type n = 50;
+  bool inertia_free = false;
+  bool use_cusolver = false;
+  if(!parse_arguments(argc, argv, n, selfCheck, inertia_free, use_cusolver)) { 
     usage(argv[0]);
+#ifdef HIOP_USE_MPI
+    MPI_Finalize();
+#endif
     return 1;
   }
 
@@ -118,6 +155,10 @@ int main(int argc, char **argv)
     if(inertia_free) {
       nlp.options->SetStringValue("fact_acceptor", "inertia_free");
     }
+    if(use_cusolver) {
+      nlp.options->SetStringValue("linear_solver_sparse", "cusolver");
+      nlp.options->SetStringValue("compute_mode", "hybrid");
+    }
     hiopAlgFilterIPMNewton solver(&nlp);
     hiopSolveStatus status = solver.run();
     
@@ -127,13 +168,20 @@ int main(int argc, char **argv)
       if(rank==0) {
         printf("solver returned negative solve status: %d (with objective is %18.12e)\n", status, obj_value);
       }
+#ifdef HIOP_USE_MPI
+      MPI_Finalize();
+#endif
       return -1;
     }
 
     //this is used for "regression" testing when the driver is called with -selfcheck
     if(selfCheck) {
-      if(!self_check(n, obj_value, inertia_free))
+      if(!self_check(n, obj_value, inertia_free)) {
+#ifdef HIOP_USE_MPI
+        MPI_Finalize();
+#endif
         return -1;
+      }
     } else {
       if(rank==0) {
         printf("Optimal objective: %22.14e. Solver status: %d\n", obj_value, status);
@@ -144,22 +192,16 @@ int main(int argc, char **argv)
   //
   //same as above but with equalities relaxed as two-sided inequalities and using condensed linear system
   //
-#if defined(HIOP_USE_CUDA) || defined(HIOP_USE_COINHSL)
+#ifdef HIOP_USE_COINHSL
   {
     Ex7 nlp_interface(n,convex_obj, rankdefic_Jac_eq, rankdefic_Jac_ineq, scal_neg_obj);
     hiopNlpSparseIneq nlp(nlp_interface);
-#ifdef HIOP_USE_CUDA
-    nlp.options->SetStringValue("compute_mode", "hybrid");
-#else //HIOP_USE_COINHSL
     //compute mode cpu will use MA57 by default
-    nlp.options->SetStringValue("compute_mode", "cpu");
-#endif
-
     nlp.options->SetStringValue("KKTLinsys", "condensed");
-    //disregard inertia_free command parameter since it is not yet supported
-    //if(inertia_free) {
-    //  nlp.options->SetStringValue("fact_acceptor", "inertia_free");
-    //}
+    nlp.options->SetStringValue("compute_mode", "cpu");
+    if(use_cusolver) {
+      nlp.options->SetStringValue("compute_mode", "hybrid");
+    }
 
     hiopAlgFilterIPMNewton solver(&nlp);
     hiopSolveStatus status = solver.run();
@@ -172,20 +214,27 @@ int main(int argc, char **argv)
                status,
                obj_value);
       }
+#ifdef HIOP_USE_MPI
+      MPI_Finalize();
+#endif
       return -1;
     }
 
     //this is used for "regression" testing when the driver is called with -selfcheck
     if(selfCheck) {
-      if(!self_check(n, obj_value, inertia_free))
+      if(!self_check(n, obj_value, inertia_free)) {
+#ifdef HIOP_USE_MPI
+        MPI_Finalize();
+#endif
         return -1;
+      }
     } else {
       if(rank==0) {
         printf("Optimal objective: %22.14e. Solver status: %d\n", obj_value, status);
       }
     }
   }
-#endif //HIOP_USE_CUDA
+#endif //HIOP_USE_COINHSL
   
 #ifdef HIOP_USE_MPI
   MPI_Finalize();
