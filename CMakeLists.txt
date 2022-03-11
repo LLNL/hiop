@@ -35,8 +35,8 @@ option(HIOP_BUILD_SHARED "Build shared library" OFF)
 option(HIOP_BUILD_STATIC "Build static library" ON)
 option(HIOP_SPARSE "Build with sparse linear algebra" ON)
 option(HIOP_USE_COINHSL "Build with sparse linear algebra" ON)
-option(HIOP_USE_STRUMPACK "Build with STRUMPACK backend for sparse linear algebra" OFF)
 option(HIOP_USE_PARDISO "Build with PARDISO backend for sparse linear algebra" OFF)
+option(HIOP_USE_STRUMPACK "Build with STRUMPACK backend for sparse linear algebra" OFF)
 option(HIOP_WITH_VALGRIND_TESTS "Run valgrind on certain integration tests" OFF)
 option(HIOP_BUILD_DOCUMENTATION "Build HiOp documentation via Doxygen" ON)
 
@@ -83,6 +83,9 @@ cmake_dependent_option(
 )
 cmake_dependent_option(
   HIOP_USE_MAGMA "Use Magma linear algebra" ON "HIOP_USE_GPU" OFF
+)
+cmake_dependent_option(
+  HIOP_USE_CUSOLVER "Build with cuSolver linear algebra" ON "HIOP_USE_CUDA" OFF
 )
 
 add_library(hiop_tpl INTERFACE)
@@ -231,6 +234,14 @@ if(HIOP_USE_RAJA)
     REQUIRED)
   target_link_libraries(hiop_tpl INTERFACE umpire RAJA)
 endif()
+
+# KLU needed with cuSolver. TODO: make this an optional dependency
+if (HIOP_USE_CUSOLVER)
+  set(HIOP_KLU_DIR CACHE PATH "Path to KLU directory")
+  include(FindKLU)
+  target_link_libraries(hiop_tpl INTERFACE KLU)
+endif()
+
 
 if(HIOP_WITH_KRON_REDUCTION)
   set(HIOP_UMFPACK_DIR CACHE PATH "Path to UMFPACK directory")
@@ -478,11 +489,17 @@ if (HIOP_WITH_MAKETEST)
   if(HIOP_SPARSE)
     add_test(NAME NlpSparse6_1 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex6.exe>" "500" "-selfcheck")
     add_test(NAME NlpSparse6_2 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex6.exe>" "500" "-fr" "-selfcheck")
+    if(HIOP_USE_CUDA)
+      add_test(NAME NlpSparse6_3 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex6.exe>" "500" "-cusolver" "-selfcheck")
+    endif(HIOP_USE_CUDA)
     if(HIOP_USE_PARDISO)
-      add_test(NAME NlpSparse6_3 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex6.exe>" "500" "-pardiso" "-selfcheck")
+      add_test(NAME NlpSparse6_4 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex6.exe>" "500" "-pardiso" "-selfcheck")
     endif(HIOP_USE_PARDISO)
     add_test(NAME NlpSparse7_1 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex7.exe>" "500" "-selfcheck")
     add_test(NAME NlpSparse7_2 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex7.exe>" "500" "-inertiafree" "-selfcheck")
+    if(HIOP_USE_CUDA)
+      add_test(NAME NlpSparse7_3 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex7.exe>" "500" "-cusolver" "-selfcheck")
+    endif(HIOP_USE_CUDA)
   endif(HIOP_SPARSE)
 
   if(HIOP_USE_MPI)
