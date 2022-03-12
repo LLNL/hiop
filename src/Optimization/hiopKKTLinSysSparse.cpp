@@ -296,49 +296,77 @@ namespace hiop
 #endif  // HIOP_USE_STRUMPACK        
         }
       } else {
-        // on device
-#ifdef HIOP_USE_CUSOLVER
 
-        hiopLinSolverIndefSparseCUSOLVER *p = new hiopLinSolverIndefSparseCUSOLVER(n, nnz, nlp_);
+        //
+        // on device: compute_mode is hybrid, auto, or gpu
+        //
+        assert(nullptr==linSys_);
 
-        //print it as a warning if safe mode is on
-        auto verbosity = hovScalars;
-        if(safe_mode_) verbosity  = hovWarning;
-        nlp_->log->printf(verbosity,
-                          "KKT_SPARSE_XYcYd linsys: alloc CUSOLVER size %d (%d cons) (safe_mode=%d)\n",
-                          n, neq+nineq, safe_mode_);
-
-        p->setFakeInertia(neq + nineq);
-        linSys_ = p;
-#elif defined(HIOP_USE_STRUMPACK)        
-        hiopLinSolverIndefSparseSTRUMPACK *p = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
-
-        //print it as a warning if safe mode is on
-        auto verbosity = safe_mode_ ? hovWarning : hovScalars;
-
-        nlp_->log->printf(verbosity,
-                          "KKT_SPARSE_XYcYd linsys: alloc STRUMPACK size %d (%d cons) (safe_mode=%d)\n",
-                          n, neq+nineq, safe_mode_);
-
-        p->setFakeInertia(neq + nineq);
-        linSys_ = p;
-#elif  defined(HIOP_USE_COINHSL)
-        nlp_->log->printf(hovScalars,
-                          "KKT_SPARSE_XYcYd linsys: alloc MA57 on CPU size %d (%d cons)\n",
-                          n, neq+nineq);                             
-        linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
-
-        if(NULL == linSys_) {
-#ifdef HIOP_USE_PARDISO
-          nlp_->log->printf(hovScalars,
-                            "KKT_SPARSE_XYcYd linsys: alloc PARDISO on CPU size %d (%d cons)\n",
-                            n, neq+nineq);                             
+        //At this point the only supported GPU sparse solver is STRUMPACK. 
+        //We expect new GPU sparse solvers to be added. These should take precedence over STRUMPACK
+        //in the instantiation logic below whenever it is ambiguous which GPU solver to instantiate,
+        //for example when "linear_solver_sparse" option is auto.
+        
+        // Note: return CPU linear solver hiopLinSolverIndefSparseMA57 when NLP formulation is
+        // `hiopKKTLinSysCondensedSparse` since this is required under hybrid and gpu compute mode when
+        // the linear solver safe mode kicks in the outer optimization loop
+        if(nlp_->options->GetString("KKTLinsys")=="condensed") {
+          assert(safe_mode_ && "this should happen only under safe mode");
           linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
-#endif // HIOP_USE_PARDISO
+        } else {
+          //we are on the GPU. Our first choice is always cuSolver
+#if  defined(HIOP_USE_CUSOLVER)        
+          hiopLinSolverIndefSparseCUSOLVER *p = new hiopLinSolverIndefSparseCUSOLVER(n, nnz, nlp_);
+          auto verbosity = hovScalars;
+          nlp_->log->printf(verbosity,
+                            "KKT_SPARSE_XDYcYd linsys: alloc CUSOLVER size %d (%d cons) (safe_mode=%d)\n",
+                            n,
+                            neq+nineq,
+                            safe_mode_);
+         if(safe_mode_) verbosity  = hovWarning;
+
+         p->setFakeInertia(neq + nineq);
+         linSys_ = p;
+#else
+#if defined(HIOP_USE_STRUMPACK)
+          hiopLinSolverIndefSparseSTRUMPACK *p = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
+          auto verbosity = hovScalars;
+          nlp_->log->printf(verbosity,
+              "KKT_SPARSE_XDYcYd linsys: alloc STRUMPACK size %d (%d cons) (safe_mode=%d)\n",
+              n, neq+nineq, safe_mode_);
+          if(safe_mode_) verbosity  = hovWarning;
+
+          p->setFakeInertia(neq + nineq);
+          linSys_ = p;
+#else
+          //Return nullptr (and assert) if a GPU sparse linear solver is not present
+          assert(linSys_!=nullptr &&
+                "HiOp was built without a sparse linear solver for GPU/device and cannot run on the "
+                "device as instructed by the 'compute_mode' option. Change the 'compute_mode' to "
+                "'cpu' (from hiopKKTLinSysCompressedSparseXDYcYd)"); 
+          return nullptr;
+#endif
+#endif // HIOP_USE_CUSOLVER/STRUMPACK
+          // Add interface to cuSolver/KLU linear solver
         }
-#endif // HIOP_USE_CUSOLVER
+
+// #ifdef HIOP_USE_COINHSL
+//           nlp_->log->printf(hovScalars,
+//                            "KKT_SPARSE_XDYcYd linsys: alloc MA57 on CPU size %d (%d cons)\n",
+//                             n, neq+nineq);                             
+//           linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
+// #endif // HIOP_USE_COINHSL
+      
+//        if(nullptr == linSys_) {
+// #ifdef HIOP_USE_PARDISO
+//          nlp_->log->printf(hovScalars,
+//                            "KKT_SPARSE_XYcYd linsys: alloc PARDISO on CPU size %d (%d cons)\n",
+//                            n, neq+nineq);                             
+//          linSys_ = new hiopLinSolverIndefSparsePARDISO(n, nnz, nlp_);
+// #endif // HIOP_USE_PARDISO
+//          }
       }
-      assert(linSys_&& "KKT_SPARSE_XYcYd linsys: cannot instantiate backend linear solver");
+      assert(linSys_&& "KKT_SPARSE_XDYcYd linsys: cannot instantiate backend linear solver");
     }
     return dynamic_cast<hiopLinSolverSymSparse*> (linSys_);
   }
@@ -595,62 +623,63 @@ namespace hiop
           linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
         } else {
 
-        //we are on the GPU. Our first choice is always cuSolver
+          //we are on the GPU. Our first choice is always cuSolver
 #if  defined(HIOP_USE_CUSOLVER)        
-        hiopLinSolverIndefSparseCUSOLVER *p = new hiopLinSolverIndefSparseCUSOLVER(n, nnz, nlp_);
-        auto verbosity = hovScalars;
-        nlp_->log->printf(verbosity,
-                          "KKT_SPARSE_XDYcYd linsys: alloc CUSOLVER size %d (%d cons) (safe_mode=%d)\n",
-                          n,
-                          neq+nineq,
-                          safe_mode_);
-        if(safe_mode_) verbosity  = hovWarning;
+          hiopLinSolverIndefSparseCUSOLVER *p = new hiopLinSolverIndefSparseCUSOLVER(n, nnz, nlp_);
+          auto verbosity = hovScalars;
+          nlp_->log->printf(verbosity,
+                            "KKT_SPARSE_XDYcYd linsys: alloc CUSOLVER size %d (%d cons) (safe_mode=%d)\n",
+                            n,
+                            neq+nineq,
+                            safe_mode_);
+          if(safe_mode_) verbosity  = hovWarning;
 
-        p->setFakeInertia(neq + nineq);
-        linSys_ = p;
+          p->setFakeInertia(neq + nineq);
+          linSys_ = p;
 #else
 #if defined(HIOP_USE_STRUMPACK)
-        hiopLinSolverIndefSparseSTRUMPACK *p = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
-        auto verbosity = hovScalars;
-        nlp_->log->printf(verbosity,
-            "KKT_SPARSE_XDYcYd linsys: alloc STRUMPACK size %d (%d cons) (safe_mode=%d)\n",
-            n, neq+nineq, safe_mode_);
-        if(safe_mode_) verbosity  = hovWarning;
+          hiopLinSolverIndefSparseSTRUMPACK *p = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
+          auto verbosity = hovScalars;
+          nlp_->log->printf(verbosity,
+              "KKT_SPARSE_XDYcYd linsys: alloc STRUMPACK size %d (%d cons) (safe_mode=%d)\n",
+              n, neq+nineq, safe_mode_);
+          if(safe_mode_) verbosity  = hovWarning;
 
-        p->setFakeInertia(neq + nineq);
-        linSys_ = p;
+          p->setFakeInertia(neq + nineq);
+          linSys_ = p;
 #else
-        //Return nullptr (and assert) if a GPU sparse linear solver is not present
-        assert(linSys_!=nullptr &&
-               "HiOp was built without a sparse linear solver for GPU/device and cannot run on the "
-               "device as instructed by the 'compute_mode' option. Change the 'compute_mode' to "
-               "'cpu' (from hiopKKTLinSysCompressedSparseXDYcYd)"); 
-        return nullptr;
+          //Return nullptr (and assert) if a GPU sparse linear solver is not present
+          assert(linSys_!=nullptr &&
+                "HiOp was built without a sparse linear solver for GPU/device and cannot run on the "
+                "device as instructed by the 'compute_mode' option. Change the 'compute_mode' to "
+                "'cpu' (from hiopKKTLinSysCompressedSparseXDYcYd)"); 
+          return nullptr;
 #endif
-
+#endif //HIOP_USE_CUSOLVER
 //#ifdef HIOP_USE_COINHSL
-//        nlp_->log->printf(hovScalars,
-//                          "KKT_SPARSE_XDYcYd linsys: alloc MA57 on CPU size %d (%d cons)\n",
-//                          n,
-//                         neq+nineq);                             
-//        linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
+//         nlp_->log->printf(hovScalars,
+//                            "KKT_SPARSE_XDYcYd linsys: alloc MA57 on CPU size %d (%d cons)\n",
+//                            n,
+//                           neq+nineq);                             
+//         linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
 //#endif // HIOP_USE_COINHSL
 
-//        if(NULL == linSys_) {
+//          if(NULL == linSys_) {
 //#ifdef HIOP_USE_PARDISO
-//          nlp_->log->printf(hovScalars,
-//                            "KKT_SPARSE_XYcYd linsys: alloc PARDISO on CPU size %d (%d cons)\n",
-//                            n,
-//                            neq+nineq);                             
-//          linSys_ = new hiopLinSolverIndefSparsePARDISO(n, nnz, nlp_);
+//            nlp_->log->printf(hovScalars,
+//                              "KKT_SPARSE_XYcYd linsys: alloc PARDISO on CPU size %d (%d cons)\n",
+//                              n,
+//                              neq+nineq);                             
+//           linSys_ = new hiopLinSolverIndefSparsePARDISO(n, nnz, nlp_);
 //#endif // HIOP_USE_PARDISO
-//        }
+//          }
 //#endif // HIOP_USE_CUSOLVER/STRUMPACK
-//      // Add interface to cuSolver/KLU linear solver
+          // Add interface to cuSolver/KLU linear solver
+        }
       }
       assert(linSys_&& "KKT_SPARSE_XDYcYd linsys: cannot instantiate backend linear solver");
     }
-      return dynamic_cast<hiopLinSolverSymSparse*> (linSys_);
+    return dynamic_cast<hiopLinSolverSymSparse*> (linSys_);
   }
 
 
