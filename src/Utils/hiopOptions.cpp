@@ -160,7 +160,6 @@ void hiopOptions::load_from_file(const char* filename)
   }
 
   ifstream input( filename );
-
   if(input.fail()) {
     if(strcmp(default_filename, filename)) {
       log_printf(hovWarning,
@@ -800,11 +799,12 @@ void hiopOptionsNLP::register_options()
   // for the other KKTLinsys (which are all symmetric), MA57 is chosen 'auto'matically for all compute
   // modes, unless the user overwrites this
   {
-    vector<string> range(4); range[0] = "auto"; range[1]="ma57"; range[2]="pardiso"; range[3]="strumpack";
+    vector<string> range {"auto", "ma57", "pardiso", "strumpack", "cusolver"};
+
     register_str_option("linear_solver_sparse",
                         "auto",
                         range,
-                        "Selects among MA57, PARDISO and STRUMPACK for the sparse linear solves.");
+                        "Selects among MA57, PARDISO, STRUMPACK, and cuSOLVER for the sparse linear solves.");
   }
 
   // choose linear solver for duals intializations for sparse NLP problems
@@ -812,11 +812,12 @@ void hiopOptionsNLP::register_options()
   //  - when GPU mode is on, STRUMPACK is chosen by 'auto' if available
   //  - choosing option ma57 or pardiso with GPU being on, it results in no device being used in the linear solve!
   {
-    vector<string> range(4); range[0] = "auto"; range[1]="ma57"; range[2]="pardiso"; range[3]="strumpack";
+    vector<string> range {"auto", "ma57", "pardiso", "cusolver", "strumpack"};
+
     register_str_option("duals_init_linear_solver_sparse",
                         "auto",
                         range,
-                        "Selects among MA57, PARDISO and STRUMPACK for the sparse linear solves.");
+                        "Selects among MA57, PARDISO, cuSOLVER, and STRUMPACK for the sparse linear solves.");
   }
 
   // choose sparsity permutation (to reduce nz in the factors). This option is available only when using
@@ -1055,6 +1056,18 @@ void hiopOptionsNLP::ensure_consistence()
       set_val("linear_solver_sparse", "auto");
     }
   }
+
+#ifndef HIOP_USE_CUDA
+  if(GetString("linear_solver_sparse") == "cusolver") {
+    if(is_user_defined("linear_solver_sparse")) {
+        log_printf(hovWarning,
+                   "The option 'linear_solver_sparse=%s' is not valid without CUDA support enabled."
+                   " Will use 'linear_solver_sparse=auto'.\n",
+                   GetString("linear_solver_sparse").c_str());
+    }
+      set_val("linear_solver_sparse", "auto");
+  }
+#endif // HIOP_USE_CUDA
   
 // When RAJA is not enabled ...
 #ifndef HIOP_USE_RAJA

@@ -10,6 +10,7 @@ set(hiopLinAlg_INTERFACE_HEADERS
   hiopLinSolverMA86Z.hpp
   hiopLinSolverSparseSTRUMPACK.hpp
   hiopLinSolverSparsePARDISO.hpp
+  hiopLinSolverSparseCUSOLVER.hpp
   hiopLinSolverUMFPACKZ.hpp
   hiopLinSolverCholCuSparse.hpp
   hiopMatrix.hpp
@@ -60,7 +61,6 @@ set(hiopLinAlg_RAJA_SRC
 
 set(hiopLinAlg_GPU_SRC
   hiopLinSolverIndefDenseMagma.cpp
-  hiopLinSolverCholCuSparse.cpp
   )
 
 set(hiopLinAlg_MA57_SRC
@@ -73,6 +73,11 @@ set(hiopLinAlg_STRUMPACK_SRC
 
 set(hiopLinAlg_PARDISO_SRC
   hiopLinSolverSparsePARDISO.cpp
+)
+
+set(hiopLinAlg_CUSOLVER_SRC
+  hiopLinSolverSparseCUSOLVER.cpp
+  #hiopLinSolverCholCuSparse.cpp
   )
 
 set(hiopLinAlg_KRON_REDUCTION_SRC
@@ -90,6 +95,13 @@ if(HIOP_SPARSE)
     if(HIOP_USE_PARDISO)
       list(APPEND hiopLinAlg_SRC ${hiopLinAlg_PARDISO_SRC})
     endif(HIOP_USE_PARDISO)
+    if(HIOP_USE_CUSOLVER)
+      list(APPEND hiopLinAlg_SRC ${hiopLinAlg_CUSOLVER_SRC})
+    endif(HIOP_USE_CUSOLVER)
+    # TODO: Make KLU optional dependency of cuSOLVER LU factorization
+    if(HIOP_USE_CUDA)
+      list(APPEND hiopLinAlg_SRC hiopLinSolverCholCuSparse.cpp)
+    endif(HIOP_USE_CUDA)
 endif()
 
 # Add RAJA/Umpire sources when enabled
@@ -103,7 +115,7 @@ endif()
 if(HIOP_USE_GPU)
   list(APPEND hiopLinAlg_SRC ${hiopLinAlg_GPU_SRC})
   if(HIOP_USE_CUDA)
-    set_source_files_properties(${hiopLinAlg_RAJA_SRC} PROPERTIES LANGUAGE CUDA)
+    set_source_files_properties(${hiopLinAlg_RAJA_SRC} ${hiopLinAlg_CUSOLVER_SRC} hiopLinSolverCholCuSparse.cpp PROPERTIES LANGUAGE CUDA)
   endif()
 endif()
 

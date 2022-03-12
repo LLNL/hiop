@@ -61,7 +61,7 @@ using namespace strumpack;
 namespace hiop
 {
   hiopLinSolverIndefSparseSTRUMPACK::hiopLinSolverIndefSparseSTRUMPACK(const int& n, const int& nnz, hiopNlpFormulation* nlp)
-    : hiopLinSolverIndefSparse(n, nnz, nlp),
+    : hiopLinSolverSymSparse(n, nnz, nlp),
       kRowPtr_{nullptr},jCol_{nullptr},kVal_{nullptr},index_covert_CSR2Triplet_{nullptr},index_covert_extra_Diag2CSR_{nullptr},
       n_{n}, nnz_{0}
   {}

@@ -237,15 +237,15 @@ void hiopMatrixDenseRowMajor::copyFromMatrixBlock(const hiopMatrixDense& srcmat,
 void hiopMatrixDenseRowMajor::shiftRows(size_type shift)
 {
   if(shift==0) return;
-  if(fabs(shift)==m_local_) return; //nothing to shift
+  if(abs(shift)==m_local_) return; //nothing to shift
   if(m_local_<=1) return; //nothing to shift
   
-  assert(fabs(shift)<m_local_); 
+  assert(abs(shift)<m_local_);
 
   //at this point m_local_ should be >=2
   assert(m_local_>=2);
   //and
-  assert(m_local_-fabs(shift)>=1);
+  assert(m_local_-abs(shift)>=1);
 #ifdef HIOP_DEEPCHECKS
   double test1=8.3, test2=-98.3;
   if(n_local_>0) {

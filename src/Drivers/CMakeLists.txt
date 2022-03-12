@@ -45,6 +45,9 @@ if(HIOP_SPARSE)
 
     add_executable(nlpSparse_ex7.exe nlpSparse_ex7.cpp nlpSparse_ex7_driver.cpp)
     target_link_libraries(nlpSparse_ex7.exe HiOp::HiOp)
+
+    add_executable(nlpSparse_ex10.exe nlpSparse_ex10.cpp nlpSparse_ex10_driver.cpp)
+    target_link_libraries(nlpSparse_ex10.exe HiOp::HiOp)
 endif()
 
 if(HIOP_BUILD_SHARED)
@@ -66,12 +69,13 @@ if(HIOP_USE_MPI AND HIOP_SPARSE)
   target_link_libraries(nlpSparse_ex9.exe HiOp::HiOp)
 
   if(HIOP_USE_RAJA)
+    if(HIOP_USE_CUDA)
       set_source_files_properties(
-	nlpPriDec_ex9_sparse_raja.cpp 
-	nlpPriDec_ex9_sparse_raja_driver.cpp 
-        PROPERTIES LANGUAGE CUDA
-      )
-      add_executable(nlpPriDec_ex9_sparse_raja.exe nlpPriDec_ex9_sparse_raja_driver.cpp nlpPriDec_ex9_sparse_raja.cpp nlpSparse_ex6.cpp)
-      target_link_libraries(nlpPriDec_ex9_sparse_raja.exe HiOp::HiOp)
+        nlpPriDec_ex9_sparse_raja.cpp 
+        nlpPriDec_ex9_sparse_raja_driver.cpp 
+        PROPERTIES LANGUAGE CUDA)
+    endif()
+    add_executable(nlpPriDec_ex9_sparse_raja.exe nlpPriDec_ex9_sparse_raja_driver.cpp nlpPriDec_ex9_sparse_raja.cpp nlpSparse_ex6.cpp)
+    target_link_libraries(nlpPriDec_ex9_sparse_raja.exe HiOp::HiOp)
   endif()
 endif()

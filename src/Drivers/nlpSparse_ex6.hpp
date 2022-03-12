@@ -55,6 +55,29 @@ public:
 			      const double* lambda, bool new_lambda,
 			      const size_type& nnzHSS, index_type* iHSS, index_type* jHSS, double* MHSS);
 
+  // not implemented
+  virtual bool get_starting_point(const size_type&,
+                                  const size_type&,
+                                  double*,
+                                  bool&,
+                                  double*, 
+                                  double*,
+                                  double*,
+                                  bool&,
+                                  double*)
+  { return false; }
+
+  virtual bool get_starting_point(const size_type&,
+                                  const size_type&,
+                                  double*,
+                                  double*, 
+                                  double*,
+                                  double*,
+                                  double*,
+                                  double*,
+                                  double*)
+  { return false; }
+
 private:
   size_type n_vars, n_cons;
   double scal;
