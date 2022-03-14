@@ -308,8 +308,6 @@ namespace hiop
         nlp_->log->printf(verbosity,
                           "KKT_SPARSE_XYcYd linsys: alloc CUSOLVER size %d (%d cons) (safe_mode=%d)\n",
                           n, neq+nineq, safe_mode_);
-
-        p->setFakeInertia(neq + nineq);
         linSys_ = p;
 #elif defined(HIOP_USE_STRUMPACK)        
         hiopLinSolverIndefSparseSTRUMPACK *p = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
@@ -588,8 +586,6 @@ namespace hiop
                           neq+nineq,
                           safe_mode_);
         if(safe_mode_) verbosity  = hovWarning;
-
-        p->setFakeInertia(neq + nineq);
         linSys_ = p;
 #else
 #if defined(HIOP_USE_STRUMPACK)
@@ -668,7 +664,6 @@ namespace hiop
                         n_con,
                         safe_mode_);
       hiopLinSolverNonSymSparseCUSOLVER *p = new hiopLinSolverNonSymSparseCUSOLVER(n, nnz, nlp_);
-      p->setFakeInertia(n_con);
       linSys_ = p;
 #elif HIOP_USE_PARDISO
       nlp_->log->printf(hovWarning,

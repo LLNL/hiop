@@ -168,6 +168,7 @@ int main(int argc, char **argv)
   nlp.options->SetStringValue("compute_mode", "cpu");
   nlp.options->SetStringValue("KKTLinsys", "xdycyd");
   nlp.options->SetStringValue("write_kkt", "yes");
+  nlp.options->SetStringValue("fact_acceptor", "inertia_free"); // <~ Temporary hack
 
   nlp.options->SetNumericValue("mu0", 0.1);
   nlp.options->SetStringValue("options_file_fr_prob", "hiop_fr_ci.options");

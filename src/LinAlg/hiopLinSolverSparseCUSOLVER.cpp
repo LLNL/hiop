@@ -473,10 +473,7 @@ namespace hiop
                                         d_work_);
       //end of factor
     }    
-    nlp_->runStats.linsolv.tmInertiaComp.start();
-    int negEigVal = nFakeNegEigs_;
-    nlp_->runStats.linsolv.tmInertiaComp.stop();
-    return negEigVal;
+    return 0;
   }
 
   bool hiopLinSolverIndefSparseCUSOLVER::solve ( hiopVector& x )
@@ -851,11 +848,7 @@ namespace hiop
       //end of factor
     }
 
-
-    nlp_->runStats.linsolv.tmInertiaComp.start();
-    int negEigVal = nFakeNegEigs_;
-    nlp_->runStats.linsolv.tmInertiaComp.stop();
-    return negEigVal;
+    return 0;
   }
 
   bool hiopLinSolverNonSymSparseCUSOLVER::solve(hiopVector& x_)

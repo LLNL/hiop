@@ -428,7 +428,6 @@ else {
                           "indefinite solver, size %d (%d cons)\n",
                           n,
                           neq+nineq);
-        p->setFakeInertia(neq + nineq);
         lin_sys_ = p;
 #endif 
 #if defined(HIOP_USE_STRUMPACK)

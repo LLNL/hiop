@@ -103,7 +103,7 @@ namespace hiop
       int* index_covert_CSR2Triplet_;
       int* index_covert_extra_Diag2CSR_;
 
-      int nFakeNegEigs_;
+      // int nFakeNegEigs_;
       /** needed for cuSolver **/
 
       cusolverStatus_t sp_status_;
@@ -157,13 +157,7 @@ namespace hiop
       /** called the very first time a matrix is factored. Perform KLU factorization, allocate all aux variables */
       virtual void firstCall();
 
-      void inline setFakeInertia(int nNegEigs)
-      {
-        nFakeNegEigs_ = nNegEigs;
-      }
-
       friend class hiopLinSolverNonSymSparseCUSOLVER;
-
   };
 
   class hiopLinSolverNonSymSparseCUSOLVER: public hiopLinSolverNonSymSparse
@@ -205,7 +199,7 @@ namespace hiop
       int* index_covert_extra_Diag2CSR_;
       std::unordered_map<int,int> extra_dia_g_nnz_map;
 
-      int nFakeNegEigs_;
+      // int nFakeNegEigs_;
 
       /** needed for CUSOLVER and KLU */
 
@@ -261,13 +255,7 @@ namespace hiop
       /** called the very first time a matrix is factored. */
       void firstCall();
 
-      void inline setFakeInertia(int nNegEigs)
-      {
-        nFakeNegEigs_ = nNegEigs;
-      }
-
       friend class hiopLinSolverIndefSparseCUSOLVER;
-
   };
 
 } //namespace hiop
