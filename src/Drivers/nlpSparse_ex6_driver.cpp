@@ -168,7 +168,6 @@ int main(int argc, char **argv)
   nlp.options->SetStringValue("compute_mode", "cpu");
   nlp.options->SetStringValue("KKTLinsys", "xdycyd");
   nlp.options->SetStringValue("write_kkt", "yes");
-  nlp.options->SetStringValue("fact_acceptor", "inertia_free"); // <~ Temporary hack
 
   nlp.options->SetNumericValue("mu0", 0.1);
   nlp.options->SetStringValue("options_file_fr_prob", "hiop_fr_ci.options");
@@ -177,8 +176,10 @@ int main(int argc, char **argv)
     nlp.options->SetStringValue("linear_solver_sparse", "pardiso");
   }
   if(use_cusolver) {
-    nlp.options->SetStringValue("linear_solver_sparse", "cusolver");
+    nlp.options->SetStringValue("linear_solver_sparse", "cusolver-lu");
     nlp.options->SetStringValue("compute_mode", "hybrid");
+    // LU solver needs to use inertia free approach
+    nlp.options->SetStringValue("fact_acceptor", "inertia_free");
   }
   if(force_fr) {
     nlp.options->SetStringValue("force_resto", "yes");

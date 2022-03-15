@@ -65,12 +65,12 @@
 
 namespace hiop
 {
-  class hiopLinSolverIndefSparseCUSOLVER: public hiopLinSolverSymSparse
+  class hiopLinSolverSymSparseCUSOLVER: public hiopLinSolverSymSparse
   {
     public:
       //constructor
-      hiopLinSolverIndefSparseCUSOLVER(const int& n, const int& nnz, hiopNlpFormulation* nlp);
-      virtual ~hiopLinSolverIndefSparseCUSOLVER();
+      hiopLinSolverSymSparseCUSOLVER(const int& n, const int& nnz, hiopNlpFormulation* nlp);
+      virtual ~hiopLinSolverSymSparseCUSOLVER();
 
       /** Triggers a refactorization of the matrix, if necessary.
        * Overload from base class. 
@@ -103,7 +103,6 @@ namespace hiop
       int* index_covert_CSR2Triplet_;
       int* index_covert_extra_Diag2CSR_;
 
-      // int nFakeNegEigs_;
       /** needed for cuSolver **/
 
       cusolverStatus_t sp_status_;
@@ -199,8 +198,6 @@ namespace hiop
       int* index_covert_extra_Diag2CSR_;
       std::unordered_map<int,int> extra_dia_g_nnz_map;
 
-      // int nFakeNegEigs_;
-
       /** needed for CUSOLVER and KLU */
 
       cusolverStatus_t sp_status_;
@@ -255,7 +252,7 @@ namespace hiop
       /** called the very first time a matrix is factored. */
       void firstCall();
 
-      friend class hiopLinSolverIndefSparseCUSOLVER;
+      friend class hiopLinSolverSymSparseCUSOLVER;
   };
 
 } //namespace hiop

@@ -63,7 +63,7 @@
 
 namespace hiop
 {
-  hiopLinSolverIndefSparseCUSOLVER::hiopLinSolverIndefSparseCUSOLVER(const int& n, const int& nnz, hiopNlpFormulation* nlp)
+  hiopLinSolverSymSparseCUSOLVER::hiopLinSolverSymSparseCUSOLVER(const int& n, const int& nnz, hiopNlpFormulation* nlp)
     : hiopLinSolverSymSparse(n, nnz, nlp),
       kRowPtr_{nullptr},
       jCol_{nullptr},
@@ -75,7 +75,7 @@ namespace hiop
   {
   }
 
-  hiopLinSolverIndefSparseCUSOLVER::~hiopLinSolverIndefSparseCUSOLVER()
+  hiopLinSolverSymSparseCUSOLVER::~hiopLinSolverSymSparseCUSOLVER()
   {
     delete [] kRowPtr_;
     delete [] jCol_;
@@ -108,7 +108,7 @@ namespace hiop
   //KS: might later become part of src/Utils, putting it here for now
 
   template <typename T>
-  void hiopLinSolverIndefSparseCUSOLVER::hiopCheckCudaError(T result,
+  void hiopLinSolverSymSparseCUSOLVER::hiopCheckCudaError(T result,
                                                             const char *const file,
                                                             int const line)
   {
@@ -118,7 +118,7 @@ namespace hiop
     }
   }
 
-  void hiopLinSolverIndefSparseCUSOLVER::firstCall()
+  void hiopLinSolverSymSparseCUSOLVER::firstCall()
   {
 
     assert(n_ == M_->n() && M_->n() == M_->m());
@@ -273,7 +273,7 @@ namespace hiop
 
   //helper private function needed for format conversion
 
-  int hiopLinSolverIndefSparseCUSOLVER::createM(const int n, 
+  int hiopLinSolverSymSparseCUSOLVER::createM(const int n, 
                                                 const int /* nnzL */, 
                                                 const int* Lp, 
                                                 const int* Li,
@@ -328,7 +328,7 @@ namespace hiop
 
 
   // call if both the matrix and the nnz structure changed or if convergence is poor while using refactorization.
-  int hiopLinSolverIndefSparseCUSOLVER::newKLUfactorization()
+  int hiopLinSolverSymSparseCUSOLVER::newKLUfactorization()
   {
     klu_free_symbolic(&Symbolic_, &Common_) ;
     klu_free_numeric(&Numeric_, &Common_) ;
@@ -432,7 +432,7 @@ namespace hiop
     return 0;
   }
 
-  int hiopLinSolverIndefSparseCUSOLVER::matrixChanged()
+  int hiopLinSolverSymSparseCUSOLVER::matrixChanged()
   {
     assert(n_ == M_->n() && M_->n() == M_->m());
     assert(n_>0);
@@ -476,7 +476,7 @@ namespace hiop
     return 0;
   }
 
-  bool hiopLinSolverIndefSparseCUSOLVER::solve ( hiopVector& x )
+  bool hiopLinSolverSymSparseCUSOLVER::solve ( hiopVector& x )
   {
     assert(n_ == M_->n() && M_->n() == M_->m());
     assert(n_>0);

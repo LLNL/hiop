@@ -419,10 +419,10 @@ else {
       // we're on device
       //
 #ifdef HIOP_USE_CUSOLVER // This is our first choice on the device!
-        assert((linear_solver == "cusolver" || linear_solver == "auto") &&
+        assert((linear_solver == "cusolver-lu" || linear_solver == "auto") &&
                "the value for duals_init_linear_solver_sparse is invalid and should have been corrected during "
                "options processing");
-               hiopLinSolverIndefSparseCUSOLVER *p = new hiopLinSolverIndefSparseCUSOLVER(n, nnz, nlp_);
+               hiopLinSolverSymSparseCUSOLVER *p = new hiopLinSolverSymSparseCUSOLVER(n, nnz, nlp_);
         nlp_->log->printf(hovSummary,
                           "LSQ Dual Initialization --- KKT_SPARSE_XDYcYd linsys: using CUSOLVER on device as an "
                           "indefinite solver, size %d (%d cons)\n",

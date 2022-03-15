@@ -300,7 +300,7 @@ namespace hiop
         // on device
 #ifdef HIOP_USE_CUSOLVER
 
-        hiopLinSolverIndefSparseCUSOLVER *p = new hiopLinSolverIndefSparseCUSOLVER(n, nnz, nlp_);
+        hiopLinSolverSymSparseCUSOLVER *p = new hiopLinSolverSymSparseCUSOLVER(n, nnz, nlp_);
 
         //print it as a warning if safe mode is on
         auto verbosity = hovScalars;
@@ -578,7 +578,7 @@ namespace hiop
       } else {
       //we are on the GPU. Our first choice is always cuSolver
 #if  defined(HIOP_USE_CUSOLVER)        
-        hiopLinSolverIndefSparseCUSOLVER *p = new hiopLinSolverIndefSparseCUSOLVER(n, nnz, nlp_);
+        hiopLinSolverSymSparseCUSOLVER *p = new hiopLinSolverSymSparseCUSOLVER(n, nnz, nlp_);
         auto verbosity = hovScalars;
         nlp_->log->printf(verbosity,
                           "KKT_SPARSE_XDYcYd linsys: alloc CUSOLVER size %d (%d cons) (safe_mode=%d)\n",

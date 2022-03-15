@@ -90,6 +90,12 @@ static bool parse_arguments(int argc,
     return false; // 4 or more arguments
   }
 
+  if(use_cusolver && !(inertia_free)) {
+    inertia_free = true;
+    printf("LU solver from cuSOLVER library requires inertia free approach. ");
+    printf("Enabling now ...\n");
+  }
+
 #ifndef HIOP_USE_CUDA
   if(use_cusolver) {
     printf("HiOp built without CUDA support. ");
@@ -156,7 +162,7 @@ int main(int argc, char **argv)
       nlp.options->SetStringValue("fact_acceptor", "inertia_free");
     }
     if(use_cusolver) {
-      nlp.options->SetStringValue("linear_solver_sparse", "cusolver");
+      nlp.options->SetStringValue("linear_solver_sparse", "cusolver-lu");
       nlp.options->SetStringValue("compute_mode", "hybrid");
     }
     hiopAlgFilterIPMNewton solver(&nlp);

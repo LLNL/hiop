@@ -799,7 +799,7 @@ void hiopOptionsNLP::register_options()
   // for the other KKTLinsys (which are all symmetric), MA57 is chosen 'auto'matically for all compute
   // modes, unless the user overwrites this
   {
-    vector<string> range {"auto", "ma57", "pardiso", "strumpack", "cusolver"};
+    vector<string> range {"auto", "ma57", "pardiso", "strumpack", "cusolver-lu"};
 
     register_str_option("linear_solver_sparse",
                         "auto",
@@ -812,7 +812,7 @@ void hiopOptionsNLP::register_options()
   //  - when GPU mode is on, STRUMPACK is chosen by 'auto' if available
   //  - choosing option ma57 or pardiso with GPU being on, it results in no device being used in the linear solve!
   {
-    vector<string> range {"auto", "ma57", "pardiso", "cusolver", "strumpack"};
+    vector<string> range {"auto", "ma57", "pardiso", "cusolver-lu", "strumpack"};
 
     register_str_option("duals_init_linear_solver_sparse",
                         "auto",
@@ -1058,7 +1058,7 @@ void hiopOptionsNLP::ensure_consistence()
   }
 
 #ifndef HIOP_USE_CUDA
-  if(GetString("linear_solver_sparse") == "cusolver") {
+  if(GetString("linear_solver_sparse") == "cusolver-lu") {
     if(is_user_defined("linear_solver_sparse")) {
         log_printf(hovWarning,
                    "The option 'linear_solver_sparse=%s' is not valid without CUDA support enabled."
