@@ -55,32 +55,22 @@
 #include "hiopPDPerturbation.hpp"
 #include "hiopLinSolver.hpp"
 #include "hiopFactAcceptor.hpp"
+#include "hiopKrylovSolver.hpp"
 
 #include "hiopCppStdUtils.hpp"
 
 namespace hiop
 {
+  
+class hiopFullKKTOpr;
+class hiopCompressPrecondOpr;
 
 class hiopKKTLinSys
 {
 public:
-  hiopKKTLinSys(hiopNlpFormulation* nlp)
-    : nlp_(nlp),
-      iter_(NULL),
-      grad_f_(NULL),
-      Jac_c_(NULL),
-      Jac_d_(NULL),
-      Hess_(NULL),
-      perturb_calc_(NULL),
-      safe_mode_(true)
-  {
-    perf_report_ = "on"==hiop::tolower(nlp_->options->GetString("time_kkt"));
-    mu_ = nlp_->options->GetNumeric("mu0");
-  }
-  virtual ~hiopKKTLinSys()
-  {
-  }
-  
+  hiopKKTLinSys(hiopNlpFormulation* nlp);
+  virtual ~hiopKKTLinSys();
+
   /**
    * Updates the parts in KKT system that are dependent on the iterate.
    * It may trigger a refactorization for direct linear systems, or it may not do
@@ -95,6 +85,8 @@ public:
    * computed by `update` to compute the "reduced-space" (i.e., compressed, condensed, etc.) 
    * search directions by solving with the factors, then computes the "full-space" directions */
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction) = 0;
+  virtual bool compute_directions_w_IR(const hiopResidual* resid, hiopIterate* direction) = 0;
+
   virtual bool compute_directions_for_full_space(const hiopResidual* resid, hiopIterate* direction);
 
   virtual bool factorize_inertia_free() = 0;
@@ -161,6 +153,7 @@ public:
    */
   virtual double errorKKT(const hiopResidual* resid, const hiopIterate* sol);
   
+  inline hiopPDPerturbation* get_perturb_calc() const {return perturb_calc_;}
 protected:
   /** 
    * @brief y=beta*y+alpha*H*x
@@ -187,6 +180,22 @@ protected:
   bool perf_report_;
   bool safe_mode_;
   double mu_;
+
+  /// Matrix operator performing mat-vec with given kkt linear system
+  hiopFullKKTOpr *kkt_opr_;
+
+  /// Preconditioner operator that solves with the given (usually compressed) KKT system
+  hiopCompressPrecondOpr *prec_opr_;
+
+  /// Temporary vector to be used in the iterative refinement solve;
+  hiopVector* ir_rhs_;
+  hiopVector* ir_x0_;
+
+  /// iterative refinement from BiCGStab solver
+  hiopBiCGStabSolver* bicgIR_;
+  
+  friend class hiopFullKKTOpr;
+  friend class hiopCompressPrecondOpr;
 };
 
 class hiopKKTLinSysCurvCheck : public hiopKKTLinSys
@@ -209,6 +218,7 @@ public:
                       hiopMatrix* Hess) = 0;
 
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction) = 0;
+  virtual bool compute_directions_w_IR(const hiopResidual* resid, hiopIterate* direction) = 0;
 
   virtual bool factorize();
   
@@ -270,6 +280,7 @@ public:
   virtual bool test_direction(const hiopIterate* dir, hiopMatrix* Hess);
 
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction) = 0;
+  virtual bool compute_directions_w_IR(const hiopResidual* resid, hiopIterate* direction);
 
   virtual bool build_kkt_matrix(const double& delta_wx,
                                 const double& delta_wd,
@@ -305,6 +316,11 @@ public:
 
 
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction);
+//  virtual bool compute_directions_w_IR(const hiopResidual* resid, hiopIterate* direction)
+//  {
+//    assert(false && "not yet implemented");
+//    return false;
+//  }
 
   virtual bool build_kkt_matrix(const double& delta_wx,
                                 const double& delta_wd,
@@ -351,6 +367,7 @@ public:
                       const hiopMatrix* Jac_c, const hiopMatrix* Jac_d, hiopMatrix* Hess);
 
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction);
+//  virtual bool compute_directions_w_IR(const hiopResidual* resid, hiopIterate* direction);
 
   virtual bool build_kkt_matrix(const double& delta_wx,
                                 const double& delta_wd,
@@ -486,6 +503,21 @@ private:
  *  - Jc and Jd present the sparse Jacobians for equalities and inequalities
  *  - H is a sparse Hessian matrix
  *
+ * TODO: use the following sys:
+ * [   H    0   Jc^T  Jd^T |  -I  I   0   0   |  0   0   0   0  ] [  dx]   [    rx    ]
+ * [  0     0     0    -I  |  0   0  -I   I   |  0   0   0   0  ] [  dd]   [    rd    ]
+ * [  Jc    0     0     0  |  0   0   0   0   |  0   0   0   0  ] [ dyc] = [   ryc    ]
+ * [  Jd    -I    0     0  |  0   0   0   0   |  0   0   0   0  ] [ dyd]   [   ryd    ]
+ * -----------------------------------------------------------------------------------
+ * [ -I     0     0     0  |  0   0   0   0   |  I   0   0   0  ] [ dzl]   [   rxl    ]
+ * [  I     0     0     0  |  0   0   0   0   |  0   I   0   0  ] [ dzu]   [   rxu    ]
+ * [  0     -I    0     0  |  0   0   0   0   |  0   0   I   0  ] [ dvl]   [   rdl    ]
+ * [  0     I     0     0  |  0   0   0   0   |  0   0   0   I  ] [ dvu]   [   rdu    ]
+ * -----------------------------------------------------------------------------------
+ * [  0     0     0     0  | Sl^x 0   0   0   | Zl   0   0   0  ] [dsxl]   [  rszl    ]
+ * [  0     0     0     0  |  0  Su^x 0   0   |  0  Zu   0   0  ] [dsxu]   [  rszu    ]
+ * [  0     0     0     0  |  0   0  Sl^d 0   |  0   0  Vl   0  ] [dsdl]   [  rsvl    ]
+ * [  0     0     0     0  |  0   0   0  Su^d |  0   0   0  Vu  ] [dsdu]   [  rsvu    ]
  */
 class hiopKKTLinSysFull: public hiopKKTLinSysCurvCheck
 {
@@ -508,6 +540,11 @@ public:
   }
 
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction);
+  virtual bool compute_directions_w_IR(const hiopResidual* resid, hiopIterate* direction)
+  {
+    assert(false && "not yet implemented");
+    return false;
+  }
 
   virtual bool build_kkt_matrix(const double& delta_wx,
                                 const double& delta_wd,
@@ -522,6 +559,254 @@ public:
                       hiopVector& dsdl, hiopVector& dsdu, hiopVector& dsxl, hiopVector& dsxu)=0;
 protected:
 
+};
+
+
+
+/** 
+ * operators for KKT mat-vec operations
+ */
+class hiopFullKKTOpr : public hiopLinearOperator
+{
+public:
+  hiopFullKKTOpr(hiopKKTLinSys* kkt, const hiopIterate* iter, const hiopResidual* resid, const hiopIterate* dir)
+    : kkt_(kkt),
+      iter_(iter),
+      resid_(nullptr),
+      dir_(nullptr)
+  {
+    resid_ = new hiopResidual(kkt_->nlp_);
+    dir_ = new hiopIterate(kkt_->nlp_);
+    dx_ = dir_->get_x(); 
+    dx_->setToZero();
+    dd_ = dir_->get_d();
+    dd_->setToZero();
+    dyc_ = dir_->get_yc();
+    dyc_->setToZero();
+    dyd_ = dir_->get_yd();
+    dyd_->setToZero();
+    dsxl_ = dir_->get_sxl();
+    dsxl_->setToZero();
+    dsxu_ = dir_->get_sxu();
+    dsxu_->setToZero();
+    dsdl_ = dir_->get_sdl();
+    dsdl_->setToZero();
+    dsdu_ = dir_->get_sdu();
+    dsdu_->setToZero();
+    dzl_ = dir_->get_zl();
+    dzl_->setToZero();
+    dzu_ = dir_->get_zu();
+    dzu_->setToZero();
+    dvl_ = dir_->get_vl();
+    dvl_->setToZero();
+    dvu_ = dir_->get_vu();
+    dvu_->setToZero();
+
+    yrx_ = resid_->get_rx();
+    yrx_->setToZero();
+    yrd_ = resid_->get_rd();
+    yrd_->setToZero();
+    yryc_ = resid_->get_ryc();
+    yryc_->setToZero();
+    yryd_ = resid_->get_ryd();
+    yryd_->setToZero();
+    yrsxl_ = resid_->get_rxl();
+    yrsxl_->setToZero();
+    yrsxu_ = resid_->get_rxu();
+    yrsxu_->setToZero();
+    yrsdl_ = resid_->get_rdl();
+    yrsdl_->setToZero();
+    yrsdu_ = resid_->get_rdu();
+    yrsdu_->setToZero();
+    yrzl_ = resid_->get_rszl();
+    yrzl_->setToZero();
+    yrzu_ = resid_->get_rszu();
+    yrzu_->setToZero();
+    yrvl_ = resid_->get_rsvl();
+    yrvl_->setToZero();
+    yrvu_ = resid_->get_rsvu();
+    yrvu_->setToZero();
+  }
+
+  virtual ~hiopFullKKTOpr()
+  {
+    delete resid_;  
+    delete dir_;  
+  };
+
+  /** y = KKT * x */
+  virtual bool times_vec(hiopVector& y, const hiopVector& x);
+
+  /** y = KKT' * x */
+  virtual bool trans_times_vec(hiopVector& y, const hiopVector& x);
+
+  inline void reset_curr_iter(const hiopIterate* iter) {iter_ = iter;}
+
+private:
+  hiopKKTLinSys* kkt_;
+  const hiopIterate* iter_;
+  hiopResidual* resid_;
+  hiopIterate* dir_;
+
+  hiopFullKKTOpr()
+    : kkt_(nullptr),
+      resid_(nullptr),
+      dir_(nullptr)
+  {
+    assert(false && "this constructor should not be used");
+  }
+  
+  bool split_x_to_build_it(const hiopVector& x);
+  bool combine_res_to_build_y(hiopVector& y);
+
+  hiopVector* dx_;
+  hiopVector* dd_;
+  hiopVector* dyc_;
+  hiopVector* dyd_;
+  hiopVector* dsxl_;
+  hiopVector* dsxu_;
+  hiopVector* dsdl_;
+  hiopVector* dsdu_;
+  hiopVector* dzl_;
+  hiopVector* dzu_;
+  hiopVector* dvl_;
+  hiopVector* dvu_;
+  
+  hiopVector* yrx_;
+  hiopVector* yrd_;
+  hiopVector* yryc_;
+  hiopVector* yryd_;
+  hiopVector* yrsxl_;
+  hiopVector* yrsxu_;
+  hiopVector* yrsdl_;
+  hiopVector* yrsdu_;
+  hiopVector* yrzl_;
+  hiopVector* yrzu_;
+  hiopVector* yrvl_;
+  hiopVector* yrvu_;
+};
+
+/** 
+ * operators for compressed KKT preconditioner
+ */
+class hiopCompressPrecondOpr : public hiopLinearOperator
+{
+public:
+  hiopCompressPrecondOpr(hiopKKTLinSys* kkt, const hiopIterate* iter, const hiopResidual* resid, const hiopIterate* dir)
+    : kkt_(kkt),
+      iter_(iter),
+      resid_(nullptr),
+      dir_(nullptr)
+  {
+    resid_ = new hiopResidual(kkt_->nlp_);
+    dir_ = new hiopIterate(kkt_->nlp_);
+    dx_ = dir_->get_x();
+    dx_->setToZero();
+    dd_ = dir_->get_d();
+    dd_->setToZero();
+    dyc_ = dir_->get_yc();
+    dyc_->setToZero();
+    dyd_ = dir_->get_yd();
+    dyd_->setToZero();
+    dsxl_ = dir_->get_sxl();
+    dsxl_->setToZero();
+    dsxu_ = dir_->get_sxu();
+    dsxu_->setToZero();
+    dsdl_ = dir_->get_sdl();
+    dsdl_->setToZero();
+    dsdu_ = dir_->get_sdu();
+    dsdu_->setToZero();
+    dzl_ = dir_->get_zl();
+    dzl_->setToZero();
+    dzu_ = dir_->get_zu();
+    dzu_->setToZero();
+    dvl_ = dir_->get_vl();
+    dvl_->setToZero();
+    dvu_ = dir_->get_vu();
+    dvu_->setToZero();
+
+    yrx_ = resid_->get_rx();
+    yrx_->setToZero();
+    yrd_ = resid_->get_rd();
+    yrd_->setToZero();
+    yryc_ = resid_->get_ryc();
+    yryc_->setToZero();
+    yryd_ = resid_->get_ryd();
+    yryd_->setToZero();
+    yrsxl_ = resid_->get_rxl();
+    yrsxl_->setToZero();
+    yrsxu_ = resid_->get_rxu();
+    yrsxu_->setToZero();
+    yrsdl_ = resid_->get_rdl();
+    yrsdl_->setToZero();
+    yrsdu_ = resid_->get_rdu();
+    yrsdu_->setToZero();
+    yrzl_ = resid_->get_rszl();
+    yrzl_->setToZero();
+    yrzu_ = resid_->get_rszu();
+    yrzu_->setToZero();
+    yrvl_ = resid_->get_rsvl();
+    yrvl_->setToZero();
+    yrvu_ = resid_->get_rsvu();
+    yrvu_->setToZero();
+  }
+
+  virtual ~hiopCompressPrecondOpr()
+  {
+    delete resid_;  
+    delete dir_;  
+  };
+
+  /** y = KKT * x */
+  virtual bool times_vec(hiopVector& y, const hiopVector& x);
+
+  /** y = KKT' * x */
+  virtual bool trans_times_vec(hiopVector& y, const hiopVector& x);
+
+private:
+  hiopKKTLinSys* kkt_;
+  const hiopIterate* iter_;
+  hiopResidual* resid_;
+  hiopIterate* dir_;
+
+  hiopCompressPrecondOpr()
+    : kkt_(nullptr),
+      resid_(nullptr),
+      dir_(nullptr)
+  {
+    assert(false && "this constructor should not be used");
+  }
+  
+  bool split_x_to_build_it(const hiopVector& x);
+  bool split_x_to_build_res(const hiopVector& x);
+  bool combine_res_to_build_y(hiopVector& y);
+  bool combine_dir_to_build_y(hiopVector& y);
+
+  hiopVector* dx_;
+  hiopVector* dd_;
+  hiopVector* dyc_;
+  hiopVector* dyd_;
+  hiopVector* dsxl_;
+  hiopVector* dsxu_;
+  hiopVector* dsdl_;
+  hiopVector* dsdu_;
+  hiopVector* dzl_;
+  hiopVector* dzu_;
+  hiopVector* dvl_;
+  hiopVector* dvu_;
+  
+  hiopVector* yrx_;
+  hiopVector* yrd_;
+  hiopVector* yryc_;
+  hiopVector* yryd_;
+  hiopVector* yrsxl_;
+  hiopVector* yrsxu_;
+  hiopVector* yrsdl_;
+  hiopVector* yrsdu_;
+  hiopVector* yrzl_;
+  hiopVector* yrzu_;
+  hiopVector* yrvl_;
+  hiopVector* yrvu_;
 };
 
 };
