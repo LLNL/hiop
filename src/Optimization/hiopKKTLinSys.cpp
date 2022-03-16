@@ -915,7 +915,7 @@ bool hiopKKTLinSysCompressed::compute_directions_w_IR(const hiopResidual* resid,
     prec_opr_ = new hiopCompressPrecondOpr(this, iter_, resid, dir);
     ir_rhs_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), dim_rhs);
     ir_x0_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), dim_rhs);
-    bicgIR_ = new hiopBiCGStabSolver(dim_rhs, "DEFAULT", kkt_opr_, prec_opr_);
+    bicgIR_ = new hiopBiCGStabSolver(dim_rhs, nlp_->options->GetString("mem_space"), kkt_opr_, prec_opr_);
   }
 
   kkt_opr_->reset_curr_iter(iter_);

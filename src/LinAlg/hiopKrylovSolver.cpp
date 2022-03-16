@@ -397,14 +397,15 @@ bool hiopBiCGStabSolver::solve(hiopVector& b)
   }
 
   if(xmin_==nullptr) {
-    xmin_ = b.alloc_clone();  //iterate which has minimal residual so far
-    res_ = b.alloc_clone();   //minimal residual iterate 
-    pk_ = b.alloc_clone();    //work vectors
-    ph_ = b.alloc_clone();    //work vectors
-    v_ = b.alloc_clone();    //work vectors
-    sk_ = b.alloc_clone();    //work vectors
-    t_ = b.alloc_clone();    //work vectors
-    rt_ = b.alloc_clone();    //work vectors
+    xmin_ = b.new_copy();  //iterate which has minimal residual so far
+    xmin_->setToZero();
+    res_ = xmin_->new_copy();   //minimal residual iterate 
+    pk_ = xmin_->new_copy();    //work vectors
+    ph_ = xmin_->new_copy();    //work vectors
+    v_ = xmin_->new_copy();    //work vectors
+    sk_ = xmin_->new_copy();    //work vectors
+    t_ = xmin_->new_copy();    //work vectors
+    rt_ = xmin_->new_copy();    //work vectors
   }
 
   //////////////////////////////////////////////////////////////////

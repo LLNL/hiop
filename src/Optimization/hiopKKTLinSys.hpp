@@ -577,31 +577,55 @@ public:
   {
     resid_ = new hiopResidual(kkt_->nlp_);
     dir_ = new hiopIterate(kkt_->nlp_);
-    dx_ = dir_->get_x();
+    dx_ = dir_->get_x(); 
+    dx_->setToZero();
     dd_ = dir_->get_d();
+    dd_->setToZero();
     dyc_ = dir_->get_yc();
+    dyc_->setToZero();
     dyd_ = dir_->get_yd();
+    dyd_->setToZero();
     dsxl_ = dir_->get_sxl();
+    dsxl_->setToZero();
     dsxu_ = dir_->get_sxu();
+    dsxu_->setToZero();
     dsdl_ = dir_->get_sdl();
+    dsdl_->setToZero();
     dsdu_ = dir_->get_sdu();
+    dsdu_->setToZero();
     dzl_ = dir_->get_zl();
+    dzl_->setToZero();
     dzu_ = dir_->get_zu();
+    dzu_->setToZero();
     dvl_ = dir_->get_vl();
+    dvl_->setToZero();
     dvu_ = dir_->get_vu();
+    dvu_->setToZero();
 
     yrx_ = resid_->get_rx();
+    yrx_->setToZero();
     yrd_ = resid_->get_rd();
+    yrd_->setToZero();
     yryc_ = resid_->get_ryc();
+    yryc_->setToZero();
     yryd_ = resid_->get_ryd();
+    yryd_->setToZero();
     yrsxl_ = resid_->get_rxl();
+    yrsxl_->setToZero();
     yrsxu_ = resid_->get_rxu();
+    yrsxu_->setToZero();
     yrsdl_ = resid_->get_rdl();
+    yrsdl_->setToZero();
     yrsdu_ = resid_->get_rdu();
+    yrsdu_->setToZero();
     yrzl_ = resid_->get_rszl();
+    yrzl_->setToZero();
     yrzu_ = resid_->get_rszu();
+    yrzu_->setToZero();
     yrvl_ = resid_->get_rsvl();
+    yrvl_->setToZero();
     yrvu_ = resid_->get_rsvu();
+    yrvu_->setToZero();
   }
 
   virtual ~hiopFullKKTOpr()
@@ -677,30 +701,54 @@ public:
     resid_ = new hiopResidual(kkt_->nlp_);
     dir_ = new hiopIterate(kkt_->nlp_);
     dx_ = dir_->get_x();
+    dx_->setToZero();
     dd_ = dir_->get_d();
+    dd_->setToZero();
     dyc_ = dir_->get_yc();
+    dyc_->setToZero();
     dyd_ = dir_->get_yd();
+    dyd_->setToZero();
     dsxl_ = dir_->get_sxl();
+    dsxl_->setToZero();
     dsxu_ = dir_->get_sxu();
+    dsxu_->setToZero();
     dsdl_ = dir_->get_sdl();
+    dsdl_->setToZero();
     dsdu_ = dir_->get_sdu();
+    dsdu_->setToZero();
     dzl_ = dir_->get_zl();
+    dzl_->setToZero();
     dzu_ = dir_->get_zu();
+    dzu_->setToZero();
     dvl_ = dir_->get_vl();
+    dvl_->setToZero();
     dvu_ = dir_->get_vu();
+    dvu_->setToZero();
 
     yrx_ = resid_->get_rx();
+    yrx_->setToZero();
     yrd_ = resid_->get_rd();
+    yrd_->setToZero();
     yryc_ = resid_->get_ryc();
+    yryc_->setToZero();
     yryd_ = resid_->get_ryd();
+    yryd_->setToZero();
     yrsxl_ = resid_->get_rxl();
+    yrsxl_->setToZero();
     yrsxu_ = resid_->get_rxu();
+    yrsxu_->setToZero();
     yrsdl_ = resid_->get_rdl();
+    yrsdl_->setToZero();
     yrsdu_ = resid_->get_rdu();
+    yrsdu_->setToZero();
     yrzl_ = resid_->get_rszl();
+    yrzl_->setToZero();
     yrzu_ = resid_->get_rszu();
+    yrzu_->setToZero();
     yrvl_ = resid_->get_rsvl();
+    yrvl_->setToZero();
     yrvu_ = resid_->get_rsvu();
+    yrvu_->setToZero();
   }
 
   virtual ~hiopCompressPrecondOpr()
