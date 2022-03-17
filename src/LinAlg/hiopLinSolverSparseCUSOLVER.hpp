@@ -90,6 +90,20 @@ namespace hiop
       }
 
       int newKLUfactorization();
+      int refactorizationSetupCusolverGLU();
+      int refactorizationSetupCusolverRf();
+      
+      int initializeKLU(); 
+      int initializeCusolverGLU();
+      int initializeCusolverRf();
+       
+      
+      void setFactorizationType(std::string newFact_);
+      void setRefactorizationType(std::string newRefact_);
+
+      std::string getFactorizationType();
+      std::string getRefactorizationType();
+      //KS: can consider one global function to set all the options but thats TBA in the future.
     private:
 
       int      m_;   // number of rows of the whole matrix
@@ -103,6 +117,17 @@ namespace hiop
       int* index_covert_CSR2Triplet_;
       int* index_covert_extra_Diag2CSR_;
 
+
+      /** options **/
+      //TODO: KS need options for: 
+      //(1) factorization (cusolver-glu, cusolver-rf, klu)
+      //(2) refactorization: if factorization is klu, it can be followed either by cusolver-glu or cusolver-rf factorization
+      //(3) iterative refinement: fgmres, bicgstab
+      //(4) if ir is fgmres, there are different gram-schmidt options: MGS, CGS2, MGS-2 synch, MGS-1 synch/
+
+      std::string fact_;
+      std::string refact_;
+
       /** needed for cuSolver **/
 
       cusolverStatus_t sp_status_;
@@ -113,6 +138,7 @@ namespace hiop
       cusparseMatDescr_t descr_A_, descr_M_;
       csrluInfoHost_t info_lu_ = nullptr;
       csrgluInfo_t info_M_ = nullptr;
+      cusolverRfHandle_t handle_rf_=nullptr;
 
       size_t buffer_size_;
       size_t size_M_;
@@ -137,20 +163,25 @@ namespace hiop
       double* devx_;
       double* devr_;
       double* drhs_;
+
+/* needed for cuSolverRf */
+   int *d_P;
+   int  *d_Q; //permutation matrices
+double *d_T;
       /* private function: creates a cuSolver data structure from KLU data structures. */
 
       int createM(const int n, 
-                  const int nnzL, 
-                  const int* Lp, 
-                  const int* Li,
-                  const int nnzU, 
-                  const int* Up, 
-                  const int* Ui);
+          const int nnzL, 
+          const int* Lp, 
+          const int* Li,
+          const int nnzU, 
+          const int* Up, 
+          const int* Ui);
 
       template <typename T>
-      void hiopCheckCudaError(T result,
-                              const char *const file,
-                              int const line);
+        void hiopCheckCudaError(T result,
+            const char *const file,
+            int const line);
     public:
 
       /** called the very first time a matrix is factored. Perform KLU factorization, allocate all aux variables */
@@ -183,7 +214,18 @@ namespace hiop
       }
 
       int newKLUfactorization();
+      int refactorizationSetupCusolverGLU();
+      int refactorizationSetupCusolverRf();
 
+      int initializeKLU(); 
+      int initializeCusolverGLU();
+      int initializeCusolverRf();
+
+      void setFactorizationType(std::string newFact_);
+      void setRefactorizationType(std::string newRefact_);
+
+      std::string getFactorizationType();
+      std::string getRefactorizationType();
     private:
 
       int      m_;                         // number of rows of the whole matrix
@@ -198,6 +240,8 @@ namespace hiop
       int* index_covert_extra_Diag2CSR_;
       std::unordered_map<int,int> extra_dia_g_nnz_map;
 
+      std::string fact_;
+      std::string refact_;
       /** needed for CUSOLVER and KLU */
 
       cusolverStatus_t sp_status_;
@@ -209,6 +253,7 @@ namespace hiop
       csrluInfoHost_t info_lu_ = nullptr;
       csrgluInfo_t info_M_ = nullptr;
 
+      cusolverRfHandle_t handle_rf_=nullptr;
       size_t buffer_size_;
       size_t size_M_;
       double* d_work_;
@@ -232,20 +277,24 @@ namespace hiop
       double* devx_;
       double* devr_;
       double* drhs_;
+/* needed for cuSolverRf */
+   int *d_P;
+   int  *d_Q; //permutation matrices
+double *d_T;
       /* private function: creates a cuSolver data structure from KLU data structures. */
 
       int createM(const int n, 
-                  const int nnzL, 
-                  const int* Lp, 
-                  const int* Li,
-                  const int nnzU, 
-                  const int* Up, 
-                  const int* Ui);
+          const int nnzL, 
+          const int* Lp, 
+          const int* Li,
+          const int nnzU, 
+          const int* Up, 
+          const int* Ui);
 
       template <typename T>
-      void hiopCheckCudaError(T result,
-                              const char *const file,
-                              int const line);
+        void hiopCheckCudaError(T result,
+            const char *const file,
+            int const line);
 
     public:
 

@@ -65,13 +65,15 @@ namespace hiop
 {
   hiopLinSolverSymSparseCUSOLVER::hiopLinSolverSymSparseCUSOLVER(const int& n, const int& nnz, hiopNlpFormulation* nlp)
     : hiopLinSolverSymSparse(n, nnz, nlp),
-      kRowPtr_{nullptr},
-      jCol_{nullptr},
-      kVal_{nullptr},
-      index_covert_CSR2Triplet_{nullptr},
-      index_covert_extra_Diag2CSR_{nullptr},
-      n_{n},
-      nnz_{0}
+    kRowPtr_{nullptr},
+    jCol_{nullptr},
+    kVal_{nullptr},
+    index_covert_CSR2Triplet_{nullptr},
+    index_covert_extra_Diag2CSR_{nullptr},
+    n_{n},
+    nnz_{0}, 
+    fact_{"KLU"},//default
+    refact_{"rf"} //default
   {
   }
 
@@ -103,20 +105,33 @@ namespace hiop
     free(mia_);
     free(mja_);
   }
+  void hiopLinSolverSymSparseCUSOLVER::setFactorizationType(std::string newFact_){
+    this->fact_ = newFact_;
+  } 
+  void hiopLinSolverSymSparseCUSOLVER::setRefactorizationType(std::string newRefact_){
+    this->refact_ = newRefact_;
+  } 
+
+  std::string hiopLinSolverSymSparseCUSOLVER::getFactorizationType(){
+    return this->fact_;
+  }
+  std::string hiopLinSolverSymSparseCUSOLVER::getRefactorizationType(){
+    return this->refact_;
+  }
 
   // Error checking utility for CUDA
   //KS: might later become part of src/Utils, putting it here for now
 
   template <typename T>
-  void hiopLinSolverSymSparseCUSOLVER::hiopCheckCudaError(T result,
-                                                            const char *const file,
-                                                            int const line)
-  {
-    if (result) {
-      nlp_->log->printf(hovError, "CUDA error at %s:%d, error# %d\n", file, line, result);
-      exit(EXIT_FAILURE);
+    void hiopLinSolverSymSparseCUSOLVER::hiopCheckCudaError(T result,
+        const char *const file,
+        int const line)
+    {
+      if (result) {
+        nlp_->log->printf(hovError, "CUDA error at %s:%d, error# %d\n", file, line, result);
+        exit(EXIT_FAILURE);
+      }
     }
-  }
 
   void hiopLinSolverSymSparseCUSOLVER::firstCall()
   {
@@ -221,7 +236,20 @@ namespace hiop
       }
       delete [] nnz_each_row_tmp;
     }
+    /* this has to be done no matter what */
 
+    //make sure the space is allocated for A on the GPU (but dont copy)
+    cudaFree(da_); 
+    cudaFree(da_);
+    cudaFree(dia_);
+    checkCudaErrors(cudaMalloc(&da_, nnz_ * sizeof(double)));
+    checkCudaErrors(cudaMalloc(&dja_, nnz_ * sizeof(int)));
+    checkCudaErrors(cudaMalloc(&dia_, (n_ +1)* sizeof(int)));
+    //copy    
+
+    checkCudaErrors(cudaMemcpy(da_, kVal_, sizeof(double) * nnz_, cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(dia_, kRowPtr_, sizeof(int) * (n_ + 1), cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(dja_, jCol_, sizeof(int) * nnz_, cudaMemcpyHostToDevice));
 
     /*
      * initialize KLU and cuSolver parameters
@@ -237,6 +265,53 @@ namespace hiop
     cusparseSetMatType(descr_A_, CUSPARSE_MATRIX_TYPE_GENERAL);
     cusparseSetMatIndexBase(descr_A_, CUSPARSE_INDEX_BASE_ZERO);
 
+
+    if (fact_ == "KLU") {// KS: yes I know this is horrible practice to compare strings like integers but I am too lazy
+      this->initializeKLU();    
+      this->newKLUfactorization();}
+    else {//for future
+      this->initializeKLU();    
+      this->newKLUfactorization();
+    }
+
+    if (refact_ == "glu"){
+      this->initializeCusolverGLU();
+      this->refactorizationSetupCusolverGLU();
+    }
+    else {
+      if (refact_== "rf"){
+        this->initializeCusolverRf();
+        this->refactorizationSetupCusolverRf();
+      }
+      else {//for future - 
+        this->initializeCusolverGLU();
+        this->refactorizationSetupCusolverGLU();
+      }
+    }
+
+    //allocate gpu data
+    cudaFree(devx_);
+    cudaFree(devr_);
+    devx_ = nullptr;
+    devr_ = nullptr;
+    checkCudaErrors(cudaMalloc(&devx_, n_ * sizeof(double)));
+    checkCudaErrors(cudaMalloc(&devr_, n_ * sizeof(double)));
+  }
+
+  int hiopLinSolverSymSparseCUSOLVER::initializeKLU(){
+    //KLU  
+    klu_defaults(&Common_) ;
+
+    // TODO: consider making this a part of setup options so that user can
+    // set up these values. For now, we keep them hard-wired. 
+    Common_.btf = 0;
+    Common_.ordering = 1; //COLAMD; use 0 for AMD
+    Common_.tol = 0.1;
+    Common_.scale = -1;
+    Common_.halt_if_singular=0;
+  }
+
+  int hiopLinSolverSymSparseCUSOLVER::initializeCusolverGLU(){
     cusparseCreateMatDescr(&descr_M_);
     cusparseSetMatType(descr_M_, CUSPARSE_MATRIX_TYPE_GENERAL);
     cusparseSetMatIndexBase(descr_M_, CUSPARSE_INDEX_BASE_ZERO);
@@ -247,39 +322,36 @@ namespace hiop
     cusolverSpCreateCsrluInfoHost(&info_lu_);
     cusolverSpCreateGluInfo(&info_M_);
 
-    //KLU 
-    klu_defaults(&Common_) ;
-
-    // TODO: consider making this a part of setup options so that user can
-    // set up these values. For now, we keep them hard-wired. 
-    Common_.btf = 0;
-    Common_.ordering = 1; //COLAMD; use 0 for AMD
-    Common_.tol = 0.1;
-    Common_.scale = -1;
-    Common_.halt_if_singular=0;
-    //allocate gpu data
     free(mia_); 
     free(mja_);
     mia_ = nullptr; 
     mja_ = nullptr;
-    cudaFree(devx_);
-    cudaFree(devr_);
-    devx_ = nullptr;
-    devr_ = nullptr;
-    checkCudaErrors(cudaMalloc(&devx_, n_ * sizeof(double)));
-    checkCudaErrors(cudaMalloc(&devr_, n_ * sizeof(double)));
-    this->newKLUfactorization();
   }
+  int hiopLinSolverSymSparseCUSOLVER::initializeCusolverRf(){
 
+    cusolverRfCreate(&handle_rf_);
+
+    checkCudaErrors(cusolverRfSetAlgs(handle_rf_, 
+          CUSOLVERRF_FACTORIZATION_ALG2,
+          CUSOLVERRF_TRIANGULAR_SOLVE_ALG2));
+
+    checkCudaErrors(cusolverRfSetMatrixFormat(handle_rf_, 
+          CUSOLVERRF_MATRIX_FORMAT_CSR,
+          CUSOLVERRF_UNIT_DIAGONAL_STORED_L));
+
+    cusolverRfSetResetValuesFastMode(handle_rf_,CUSOLVERRF_RESET_VALUES_FAST_MODE_ON);
+
+    return 0;
+  }
   //helper private function needed for format conversion
 
   int hiopLinSolverSymSparseCUSOLVER::createM(const int n, 
-                                                const int /* nnzL */, 
-                                                const int* Lp, 
-                                                const int* Li,
-                                                const int /* nnzU */, 
-                                                const int* Up, 
-                                                const int* Ui){
+      const int /* nnzL */, 
+      const int* Lp, 
+      const int* Li,
+      const int /* nnzU */, 
+      const int* Up, 
+      const int* Ui){
 
     int row;
     for(int i = 0;i<n;++i) {
@@ -343,6 +415,13 @@ namespace hiop
       nlp_->log->printf(hovError, "printf matrix size: %d numeric nullptr \n", n_);
       return -1;
     }
+    return 0;
+  }
+  //KS: this should end here!!!
+  int hiopLinSolverSymSparseCUSOLVER::refactorizationSetupCusolverGLU() {
+    //for now this ONLY WORKS if proceeded by KLU. Might be worth decoupling later
+
+
     // get sizes
     const int nnzL = Numeric_->lnz;
     const int nnzU = Numeric_->unz;
@@ -364,9 +443,9 @@ namespace hiop
     int* Ui = new int[nnzU];
     double* Ux = new double[nnzU];
     int ok = klu_extract(Numeric_, Symbolic_, Lp, Li, Lx, Up, Ui, Ux, 
-                         nullptr, nullptr, nullptr, 
-                         nullptr, nullptr, 
-                         nullptr, nullptr, &Common_);
+        nullptr, nullptr, nullptr, 
+        nullptr, nullptr, 
+        nullptr, nullptr, &Common_);
     createM(n_, nnzL, Lp, Li,nnzU, Up, Ui);
     delete[] Lp;
     delete[] Li;
@@ -377,58 +456,198 @@ namespace hiop
 
     /* setup GLU */ 
     sp_status_ = cusolverSpDgluSetup(handle_cusolver_,
-                                     n_,
-                                     nnz_,
-                                     descr_A_,
-                                     kRowPtr_,
-                                     jCol_,
-                                     Numeric_->Pnum, /* base-0 */
-                                     Symbolic_->Q, /* base-0 */
-                                     nnzM, /* nnzM */
-                                     descr_M_,
-                                     mia_,
-                                     mja_,
-                                     info_M_);
+        n_,
+        nnz_,
+        descr_A_,
+        kRowPtr_,
+        jCol_,
+        Numeric_->Pnum, /* base-0 */
+        Symbolic_->Q, /* base-0 */
+        nnzM, /* nnzM */
+        descr_M_,
+        mia_,
+        mja_,
+        info_M_);
 
     sp_status_ = cusolverSpDgluBufferSize(handle_cusolver_,
-                                          info_M_,
-                                          &size_M_);
+        info_M_,
+        &size_M_);
     assert(CUSOLVER_STATUS_SUCCESS == sp_status_);
     buffer_size_ = size_M_;
     cudaFree(d_work_);
     cudaMalloc((void **)&d_work_, buffer_size_);
     sp_status_ = cusolverSpDgluAnalysis(handle_cusolver_,
-                                        info_M_,
-                                        d_work_);
+        info_M_,
+        d_work_);
     assert(CUSOLVER_STATUS_SUCCESS == sp_status_);
 
-    //now make sure the space is allocated for A on the GPU (but dont copy)
-    cudaFree(da_); 
-    cudaFree(da_);
-    cudaFree(dia_);
-    checkCudaErrors(cudaMalloc(&da_, nnz_ * sizeof(double)));
-    checkCudaErrors(cudaMalloc(&dja_, nnz_ * sizeof(int)));
-    checkCudaErrors(cudaMalloc(&dia_, (n_ +1)* sizeof(int)));
-    //copy    
-
-    checkCudaErrors(cudaMemcpy(da_, kVal_, sizeof(double) * nnz_, cudaMemcpyHostToDevice));
-    checkCudaErrors(cudaMemcpy(dia_, kRowPtr_, sizeof(int) * (n_ + 1), cudaMemcpyHostToDevice));
-    checkCudaErrors(cudaMemcpy(dja_, jCol_, sizeof(int) * nnz_, cudaMemcpyHostToDevice));
     //reset and refactor so factors are ON THE GPU
 
     sp_status_ = cusolverSpDgluReset(handle_cusolver_,
-                                     n_,
-                                     /* A is original matrix */
-                                     nnz_,
-                                     descr_A_,
-                                     da_,
-                                     dia_,
-                                     dja_,
-                                     info_M_);
+        n_,
+        /* A is original matrix */
+        nnz_,
+        descr_A_,
+        da_,
+        dia_,
+        dja_,
+        info_M_);
     assert(CUSOLVER_STATUS_SUCCESS == sp_status_);
     sp_status_ = cusolverSpDgluFactor(handle_cusolver_,
-                                      info_M_,
-                                      d_work_);
+        info_M_,
+        d_work_);
+    return 0;
+  }
+
+
+  int hiopLinSolverSymSparseCUSOLVER::refactorizationSetupCusolverRf() {
+
+    //for now this ONLY WORKS if proceeded by KLU. Might be worth decoupling later
+    const int nnzL = Numeric_->lnz;
+    const int nnzU = Numeric_->unz;
+    checkCudaErrors(cudaMalloc(&d_P, (n_) * sizeof(int)));
+    checkCudaErrors(cudaMalloc(&d_Q, (n_) * sizeof(int)));
+    checkCudaErrors(cudaMalloc(&d_T, (n_) * sizeof(double)));
+    checkCudaErrors(cudaMemcpy(d_P, Numeric_->Pnum, sizeof(int) * (n_), cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(d_Q, Symbolic_->Q, sizeof(int) * (n_), cudaMemcpyHostToDevice));
+    int* Lp = new int[n_+1];
+    int* Li = new int[nnzL];
+    double* Lx = new double[nnzL];
+    int* Up = new int[n_+1];
+    int* Ui = new int[nnzU];
+    double* Ux = new double[nnzU];
+
+    int ok = klu_extract(Numeric_, Symbolic_, Lp, Li, Lx, Up, Ui, Ux, 
+        nullptr, nullptr, nullptr, 
+        nullptr, nullptr, 
+        nullptr, nullptr, &Common_);
+    /* CSC */
+    int * d_Lp, *d_Li, *d_Up, *d_Ui;
+    double * d_Lx, *d_Ux;
+
+    /* CSR */
+    int * d_Lp_csr, *d_Li_csr, *d_Up_csr, *d_Ui_csr;
+    double * d_Lx_csr, *d_Ux_csr;
+    /* allocate CSC */
+    cudaMalloc(&d_Lp,(n_)*sizeof(int));
+    cudaMalloc(&d_Li,nnzL*sizeof(int));
+    cudaMalloc(&d_Lx, nnzL*sizeof(double));
+    cudaMalloc(&d_Up,(n_)*sizeof(int));
+    cudaMalloc(&d_Ui,nnzU*sizeof(int));
+    cudaMalloc(&d_Ux, nnzU*sizeof(double));
+    /* allocate CSR */         
+    cudaMalloc(&d_Lp_csr,(n_)*sizeof(int));
+    cudaMalloc(&d_Li_csr,nnzL*sizeof(int));
+    cudaMalloc(&d_Lx_csr, nnzL*sizeof(double));
+    cudaMalloc(&d_Up_csr,(n_)*sizeof(int));
+    cudaMalloc(&d_Ui_csr,nnzU*sizeof(int));
+    cudaMalloc(&d_Ux_csr, nnzU*sizeof(double));
+    /* copy CSC to the GPU */          
+    checkCudaErrors(cudaMemcpy(d_Lp, Lp, sizeof(int) * (n_), cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(d_Li, Li, sizeof(int) * (nnzL), cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(d_Lx, Lx, sizeof(double) * (nnzL), cudaMemcpyHostToDevice));
+
+    checkCudaErrors(cudaMemcpy(d_Up, Up, sizeof(int) * (n_), cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(d_Ui, Ui, sizeof(int) * (nnzU), cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(d_Ux, Ux, sizeof(double) * (nnzU), cudaMemcpyHostToDevice));
+    /* we dont need these any more */
+    delete[] Lp;
+    delete[] Li;
+    delete[] Lx;
+    delete[] Up;
+    delete[] Ui;
+    delete[] Ux;
+    /* now CSC to CSR using the new cuda 11 awkward way */
+
+    size_t bufferSizeL, bufferSizeU;
+    cusparseCsr2cscEx2_bufferSize(handle_,
+        n_,
+        n_,
+        nnzL,
+        d_Lx,
+        d_Lp,
+        d_Li,
+        d_Lx_csr,
+        d_Lp_csr,
+        d_Li_csr,
+        CUDA_R_64F,
+        CUSPARSE_ACTION_NUMERIC,
+        CUSPARSE_INDEX_BASE_ZERO,
+        CUSPARSE_CSR2CSC_ALG1,
+        &bufferSizeL);
+
+
+    cusparseCsr2cscEx2_bufferSize(handle_,
+        n_,
+        n_,
+        nnzU,
+        d_Ux,
+        d_Up,
+        d_Ui,
+        d_Ux_csr,
+        d_Up_csr,
+        d_Ui_csr,
+        CUDA_R_64F,
+        CUSPARSE_ACTION_NUMERIC,
+        CUSPARSE_INDEX_BASE_ZERO,
+        CUSPARSE_CSR2CSC_ALG1,
+        &bufferSizeU);
+    /* allocate buffers */
+
+    double *d_workL, *d_workU;
+    cudaMalloc((void **)&d_workL, bufferSizeL);
+    cudaMalloc((void **)&d_workU, bufferSizeU);
+    /* actual CSC to CSR */       
+    cusparseCsr2cscEx2(handle_,
+        n_,
+        n_,
+        nnzL,
+        d_Lx,
+        d_Lp,
+        d_Li,
+        d_Lx_csr,
+        d_Lp_csr,
+        d_Li_csr,
+        CUDA_R_64F,
+        CUSPARSE_ACTION_NUMERIC,
+        CUSPARSE_INDEX_BASE_ZERO,
+        CUSPARSE_CSR2CSC_ALG1,
+        d_workL);
+
+    cusparseCsr2cscEx2(handle_,
+        n_,
+        n_,
+        nnzU,
+        d_Ux,
+        d_Up,
+        d_Ui,
+        d_Ux_csr,
+        d_Up_csr,
+        d_Ui_csr,
+        CUDA_R_64F,
+        CUSPARSE_ACTION_NUMERIC,
+        CUSPARSE_INDEX_BASE_ZERO,
+        CUSPARSE_CSR2CSC_ALG1,
+        d_workU);
+
+    /* CSC no longer needed, nor the work arrays! */
+
+    cudaFree(d_Lp);
+    cudaFree(d_Li);
+    cudaFree(d_Lx);
+
+    cudaFree(d_Up);
+    cudaFree(d_Ui);
+    cudaFree(d_Ux);
+    cudaFree(d_workU);
+    cudaFree(d_workL);
+
+    /* actual setup */
+
+    cusolverRfSetupDevice(n_, nnz_,dia_, dja_,da_, 
+        nnzL, d_Lp_csr, d_Li_csr, d_Lx_csr, nnzU, d_Up_csr, d_Ui_csr, d_Ux_csr, d_P, d_Q, handle_rf_);
+    cudaDeviceSynchronize();
+    cusolverRfAnalyze(handle_rf_);
     return 0;
   }
 
@@ -457,20 +676,28 @@ namespace hiop
 
       checkCudaErrors(cudaMemcpy(da_, kVal_, sizeof(double) * nnz_, cudaMemcpyHostToDevice));
       //re-factor here
+      if (refact_ == "glu"){ 
+        sp_status_ = cusolverSpDgluReset(handle_cusolver_,
+            n_,
+            /* A is original matrix */
+            nnz_,
+            descr_A_,
+            da_,
+            dia_,
+            dja_,
+            info_M_);
 
-      sp_status_ = cusolverSpDgluReset(handle_cusolver_,
-                                       n_,
-                                       /* A is original matrix */
-                                       nnz_,
-                                       descr_A_,
-                                       da_,
-                                       dia_,
-                                       dja_,
-                                       info_M_);
-
-      sp_status_ = cusolverSpDgluFactor(handle_cusolver_,
-                                        info_M_,
-                                        d_work_);
+        sp_status_ = cusolverSpDgluFactor(handle_cusolver_,
+            info_M_,
+            d_work_);
+      }
+      else {
+        if (refact_ == "rf"){
+          sp_status_ = cusolverRfResetValues(n_,nnz_,dia_,dja_,da_,d_P,d_Q,handle_rf_);
+          cudaDeviceSynchronize();
+          sp_status_ = cusolverRfRefactor(handle_rf_);
+        }
+      }
       //end of factor
     }    
     return 0;
@@ -487,33 +714,43 @@ namespace hiop
     hiopVector* rhs = x.new_copy();
     double* dx = x.local_data();
     double* drhs = rhs->local_data();
-
+printf("refact type 1 %s \n",this->getRefactorizationType() );
     checkCudaErrors(cudaMemcpy(devr_, drhs, sizeof(double) * n_, cudaMemcpyHostToDevice));
 
     //solve HERE
-
-    sp_status_ = cusolverSpDgluSolve(handle_cusolver_,
-                                     n_,
-                                     /* A is original matrix */
-                                     nnz_,
-                                     descr_A_,
-                                     da_,
-                                     dia_,
-                                     dja_,
-                                     devr_, /* right hand side */
-                                     devx_,   /* left hand side */
-                                     &ite_refine_succ_,
-                                     &r_nrminf_,
-                                     info_M_,
-                                     d_work_);
-    //copy the solutuion back: dx = devx_
-    if(sp_status_ == 0){
-      checkCudaErrors(cudaMemcpy(dx, devx_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
+    if (refact_ == "glu") {
+      sp_status_ = cusolverSpDgluSolve(handle_cusolver_,
+          n_,
+          /* A is original matrix */
+          nnz_,
+          descr_A_,
+          da_,
+          dia_,
+          dja_,
+          devr_, /* right hand side */
+          devx_,   /* left hand side */
+          &ite_refine_succ_,
+          &r_nrminf_,
+          info_M_,
+          d_work_);
+      if(sp_status_ == 0){
+        checkCudaErrors(cudaMemcpy(dx, devx_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
+      }
     }
-    nlp_->runStats.linsolv.tmTriuSolves.stop();
+    else {
+      if (refact_ == "rf"){
 
-    delete rhs; rhs = nullptr;
-    return 1;
+        sp_status_ = cusolverRfSolve(handle_rf_, d_P, d_Q, 1, d_T, n_, devr_, n_);
+        if(sp_status_ == 0){
+          checkCudaErrors(cudaMemcpy(dx, devx_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
+        }
+      }
+      //copy the solutuion back: dx = devx_
+      nlp_->runStats.linsolv.tmTriuSolves.stop();
+
+      delete rhs; rhs = nullptr;
+      return 1;
+    }
   }
 
   //
@@ -522,13 +759,15 @@ namespace hiop
 
   hiopLinSolverNonSymSparseCUSOLVER::hiopLinSolverNonSymSparseCUSOLVER(const int& n, const int& nnz, hiopNlpFormulation* nlp)
     : hiopLinSolverNonSymSparse(n, nnz, nlp),
-      kRowPtr_{nullptr},
-      jCol_{nullptr},
-      kVal_{nullptr},
-      index_covert_CSR2Triplet_{nullptr},
-      index_covert_extra_Diag2CSR_{nullptr},
-      n_{n},
-      nnz_{0}
+    kRowPtr_{nullptr},
+    jCol_{nullptr},
+    kVal_{nullptr},
+    index_covert_CSR2Triplet_{nullptr},
+    index_covert_extra_Diag2CSR_{nullptr},
+    n_{n},
+    nnz_{0},
+    fact_{"KLU"},//default
+    refact_{"glu"} //default
   {}
 
   hiopLinSolverNonSymSparseCUSOLVER::~hiopLinSolverNonSymSparseCUSOLVER()
@@ -560,13 +799,26 @@ namespace hiop
     free(mja_);
   }
 
+  void hiopLinSolverNonSymSparseCUSOLVER::setFactorizationType(std::string newFact_){
+    this->fact_ = newFact_;
+  } 
+  void hiopLinSolverNonSymSparseCUSOLVER::setRefactorizationType(std::string newRefact_){
+    this->refact_ = newRefact_;
+  } 
+
+  std::string hiopLinSolverNonSymSparseCUSOLVER::getFactorizationType(){
+    return this->fact_;
+  }
+  std::string hiopLinSolverNonSymSparseCUSOLVER::getRefactorizationType(){
+    return this->refact_;
+  }
   int hiopLinSolverNonSymSparseCUSOLVER::createM(const int n, 
-                                                 const int /* nnzL */, 
-                                                 const int* Lp, 
-                                                 const int* Li,
-                                                 const int /* nnzU */, 
-                                                 const int* Up, 
-                                                 const int* Ui)
+      const int /* nnzL */, 
+      const int* Lp, 
+      const int* Li,
+      const int /* nnzU */, 
+      const int* Up, 
+      const int* Ui)
   {
     int row;
     for(int i = 0; i<n; ++i) {
@@ -592,7 +844,6 @@ namespace hiop
 
     int* Mshifts = (int*) calloc (n, sizeof(int));
     for(int i = 0; i < n; ++i) {
-
       //go through EACH COLUMN OF L first
       for(int j = Lp[i]; j < Lp[i+1]; ++j) {
         row = Li[j];
@@ -614,15 +865,15 @@ namespace hiop
   }
 
   template <typename T>
-  void hiopLinSolverNonSymSparseCUSOLVER::hiopCheckCudaError(T result,
-                                                             const char *const file,
-                                                             int const line)
-  {
-    if (result) {
-      nlp_->log->printf(hovError, "CUDA error at %s:%d, error# %d\n", file, line, result);
-      exit(EXIT_FAILURE);
+    void hiopLinSolverNonSymSparseCUSOLVER::hiopCheckCudaError(T result,
+        const char *const file,
+        int const line)
+    {
+      if (result) {
+        nlp_->log->printf(hovError, "CUDA error at %s:%d, error# %d\n", file, line, result);
+        exit(EXIT_FAILURE);
+      }
     }
-  }
 
   void hiopLinSolverNonSymSparseCUSOLVER::firstCall()
   {
@@ -654,13 +905,39 @@ namespace hiop
     cusparseSetMatType(descr_A_, CUSPARSE_MATRIX_TYPE_GENERAL);
     cusparseSetMatIndexBase(descr_A_, CUSPARSE_INDEX_BASE_ZERO);
 
-    cusparseCreateMatDescr(&descr_M_);
-    cusparseSetMatType(descr_M_, CUSPARSE_MATRIX_TYPE_GENERAL);
-    cusparseSetMatIndexBase(descr_M_, CUSPARSE_INDEX_BASE_ZERO);
+    if (fact_ == "KLU") {// KS: yes I know this is horrible practice to compare strings like integers but I am too lazy
+      this->initializeKLU();    
+      this->newKLUfactorization();}
+    else {//for future
+      this->initializeKLU();    
+      this->newKLUfactorization();
+    }
 
-    //info (data structure where factorization is stored)
-    cusolverSpCreateCsrluInfoHost(&info_lu_);
-    cusolverSpCreateGluInfo(&info_M_);
+    if (refact_ == "glu"){
+      this->initializeCusolverGLU();
+      this->refactorizationSetupCusolverGLU();
+    }
+    else {
+      if (refact_== "rf"){
+        this->initializeCusolverRf();
+        this->refactorizationSetupCusolverRf();
+      }
+      else {//for future - 
+        this->initializeCusolverGLU();
+        this->refactorizationSetupCusolverGLU();
+      }
+    }
+
+    //allocate gpu data
+    cudaFree(devx_);
+    cudaFree(devr_);
+    devx_ = nullptr;
+    devr_ = nullptr;
+    checkCudaErrors(cudaMalloc(&devx_, n_ * sizeof(double)));
+    checkCudaErrors(cudaMalloc(&devr_, n_ * sizeof(double)));
+  }
+
+  int hiopLinSolverNonSymSparseCUSOLVER::initializeKLU(){
 
     //KLU 
 
@@ -673,22 +950,27 @@ namespace hiop
     Common_.tol = 0.1;
     Common_.scale = -1;
     Common_.halt_if_singular=0;
+  } 
+
+  int hiopLinSolverNonSymSparseCUSOLVER::initializeCusolverGLU(){
+
+    cusparseCreateMatDescr(&descr_M_);
+    cusparseSetMatType(descr_M_, CUSPARSE_MATRIX_TYPE_GENERAL);
+    cusparseSetMatIndexBase(descr_M_, CUSPARSE_INDEX_BASE_ZERO);
+
+    //info (data structure where factorization is stored)
+    cusolverSpCreateCsrluInfoHost(&info_lu_);
+    cusolverSpCreateGluInfo(&info_M_);
 
     free(mia_); 
     free(mja_);
     mia_ = nullptr;
     mja_ = nullptr;
-    //allocate gpu data
-    cudaFree(devx_);
-    cudaFree(devr_);
-    devx_ = nullptr;
-    devr_ = nullptr;
-    checkCudaErrors(cudaMalloc(&devx_, n_ * sizeof(double)));
-    checkCudaErrors(cudaMalloc(&devr_, n_ * sizeof(double)));
-    this->newKLUfactorization();
   }
 
-
+  int hiopLinSolverNonSymSparseCUSOLVER::initializeCusolverRf(){
+    return 0;
+  }
   int hiopLinSolverNonSymSparseCUSOLVER::newKLUfactorization()
   {
 
@@ -705,7 +987,10 @@ namespace hiop
       return -1;
     }
 
+    return 0;
+  }
 
+  int hiopLinSolverNonSymSparseCUSOLVER::refactorizationSetupCusolverGLU(){
     // get sizes
 
     const int nnzL = Numeric_->lnz;
@@ -728,21 +1013,21 @@ namespace hiop
     int* Ui = new int[nnzU];
     double* Ux = new double[nnzU];
     int ok = klu_extract(Numeric_, 
-                         Symbolic_,
-                         Lp,
-                         Li,
-                         Lx,
-                         Up,
-                         Ui,
-                         Ux, 
-                         nullptr,
-                         nullptr,
-                         nullptr, 
-                         nullptr,
-                         nullptr, 
-                         nullptr,
-                         nullptr,
-                         &Common_);
+        Symbolic_,
+        Lp,
+        Li,
+        Lx,
+        Up,
+        Ui,
+        Ux, 
+        nullptr,
+        nullptr,
+        nullptr, 
+        nullptr,
+        nullptr, 
+        nullptr,
+        nullptr,
+        &Common_);
     createM(n_, nnzL, Lp, Li, nnzU, Up, Ui);
     delete[] Lp;
     delete[] Li;
@@ -753,30 +1038,30 @@ namespace hiop
 
     /* setup GLU */ 
     sp_status_ = cusolverSpDgluSetup(handle_cusolver_,
-                                     n_,
-                                     nnz_,
-                                     descr_A_,
-                                     kRowPtr_,
-                                     jCol_,
-                                     Numeric_->Pnum, /* base-0 */
-                                     Symbolic_->Q, /* base-0 */
-                                     nnzM, /* nnzM */
-                                     descr_M_,
-                                     mia_,
-                                     mja_,
-                                     info_M_);
+        n_,
+        nnz_,
+        descr_A_,
+        kRowPtr_,
+        jCol_,
+        Numeric_->Pnum, /* base-0 */
+        Symbolic_->Q, /* base-0 */
+        nnzM, /* nnzM */
+        descr_M_,
+        mia_,
+        mja_,
+        info_M_);
 
     sp_status_ = cusolverSpDgluBufferSize(handle_cusolver_,
-                                          info_M_,
-                                          &size_M_);
+        info_M_,
+        &size_M_);
 
     assert(CUSOLVER_STATUS_SUCCESS == sp_status_);
     buffer_size_ = size_M_;
     cudaFree(d_work_);
     checkCudaErrors(cudaMalloc((void **)&d_work_, buffer_size_));
     sp_status_ = cusolverSpDgluAnalysis(handle_cusolver_,
-                                        info_M_,
-                                        d_work_);
+        info_M_,
+        d_work_);
     assert(CUSOLVER_STATUS_SUCCESS == sp_status_);
 
     //now make sure the space is allocated for A on the GPU (but dont copy)
@@ -798,18 +1083,23 @@ namespace hiop
     //reset and refactor so factors are ON THE GPU
 
     sp_status_ = cusolverSpDgluReset(handle_cusolver_,
-                                     n_,
-                                     /* A is original matrix */
-                                     nnz_,
-                                     descr_A_,
-                                     da_,
-                                     dia_,
-                                     dja_,
-                                     info_M_);
+        n_,
+        /* A is original matrix */
+        nnz_,
+        descr_A_,
+        da_,
+        dia_,
+        dja_,
+        info_M_);
     assert(CUSOLVER_STATUS_SUCCESS == sp_status_);
 
     return 0;
 
+  }
+
+  int hiopLinSolverNonSymSparseCUSOLVER::refactorizationSetupCusolverRf(){
+
+    return 0;
   }
 
   int hiopLinSolverNonSymSparseCUSOLVER::matrixChanged()
@@ -837,14 +1127,14 @@ namespace hiop
       //re-factor here
 
       sp_status_ = cusolverSpDgluReset(handle_cusolver_,
-                                       n_,
-                                       /* A is original matrix */
-                                       nnz_,
-                                       descr_A_,
-                                       da_,
-                                       dia_,
-                                       dja_,
-                                       info_M_);
+          n_,
+          /* A is original matrix */
+          nnz_,
+          descr_A_,
+          da_,
+          dia_,
+          dja_,
+          info_M_);
       //end of factor
     }
 
@@ -866,25 +1156,26 @@ namespace hiop
     double* dx = x->local_data();
     //rhs->copyToDev();
     double* drhs = rhs->local_data();
+printf("refact type 2 %s \n",this->getRefactorizationType() );
     // double* devr_ = rhs->local_data();
     checkCudaErrors(cudaMemcpy(devr_, drhs, sizeof(double) * n_, cudaMemcpyHostToDevice));
 
     //solve HERE
 
     sp_status_ = cusolverSpDgluSolve(handle_cusolver_,
-                                     n_,
-                                     /* A is original matrix */
-                                     nnz_,
-                                     descr_A_,
-                                     da_,
-                                     dia_,
-                                     dja_,
-                                     devr_, /* right hand side */
-                                     devx_,   /* left hand side */
-                                     &ite_refine_succ_,
-                                     &r_nrminf_,
-                                     info_M_,
-                                     d_work_);
+        n_,
+        /* A is original matrix */
+        nnz_,
+        descr_A_,
+        da_,
+        dia_,
+        dja_,
+        devr_, /* right hand side */
+        devx_,   /* left hand side */
+        &ite_refine_succ_,
+        &r_nrminf_,
+        info_M_,
+        d_work_);
     //copy the solutuion back
 
     checkCudaErrors(cudaMemcpy(dx, devx_, sizeof(double) * n_, cudaMemcpyDeviceToHost));

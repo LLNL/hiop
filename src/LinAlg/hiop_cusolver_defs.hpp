@@ -62,6 +62,7 @@
 #include <cuda_runtime.h>
 #include "cusolverSp_LOWLEVEL_PREVIEW.h"
 
+#include "cusolverRf.h"
 
 extern "C" {
   /*
