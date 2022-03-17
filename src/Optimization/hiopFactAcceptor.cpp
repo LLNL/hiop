@@ -140,8 +140,7 @@ int hiopFactAcceptorInertiaFreeDWD::requireReFactorization(const hiopNlpFormulat
   } else {
     if(n_neg_eig < 0) {
       // Cholesky solver failes due to the lack of positive definiteness
-      nlp.log->printf(hovScalars,  "Cholesky solver: factoriz "
-                      "ret code %d\n.", n_neg_eig);
+      nlp.log->printf(hovScalars,  "Cholesky solver: factoriz ret code %d\n.", n_neg_eig);
       if(!perturb_calc_->compute_perturb_wrong_inertia(delta_wx, delta_wd, delta_cc, delta_cd)) {
         nlp.log->printf(hovWarning, "linsys: computing inertia perturbation failed (2).\n");
         continue_re_fact = -1;

@@ -1,4 +1,4 @@
-// Copyrightf (c) 2017, Lawrence Livermore National Security, LLC.
+// Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
 // LLNL-CODE-742473. All rights reserved.
 //
@@ -773,7 +773,8 @@ bool hiopKKTLinSysCondensedSparse::solveCompressed(hiopVector& rx,
 
   
   if(perf_report_) {
-    nlp_->log->printf(hovSummary, "(summary for linear solver from KKT_SPARSE_Condensed(direct))\n%s",
+    nlp_->log->printf(hovSummary,
+                      "(summary for linear solver from KKT_SPARSE_Condensed(direct))\n%s",
                       nlp_->runStats.linsolv.get_summary_last_solve().c_str());
   }
 
