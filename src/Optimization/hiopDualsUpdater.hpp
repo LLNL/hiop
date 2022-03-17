@@ -117,6 +117,16 @@ public:
                   const hiopIterate& search_dir, const double& alpha_primal, const double& alpha_dual,
                   const double& mu, const double& kappa_sigma, const double& infeas_nrm_trial);
 
+  /** LSQ update of the constraints duals (yc and yd). Source file describe the math. */
+  virtual bool go(hiopIterate& it_ini,
+                  const hiopVector& grad_f,
+                  const hiopMatrix& jac_c,
+                  const hiopMatrix& jac_d)
+  {
+    bool bret = do_lsq_update(it_ini,grad_f,jac_c,jac_d);
+    return bret;
+  }
+
   /** LSQ-based initialization of the  constraints duals (yc and yd). Source file describes the math. */
   virtual inline bool computeInitialDualsEq(hiopIterate& it_ini,
                                             const hiopVector& grad_f,

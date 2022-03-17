@@ -206,6 +206,7 @@ private:
 
   double zeta_;
   double theta_ref_;
+  double nrmInf_feas_ref_;
   double mu_;
   double rho_;
   double obj_base_;
@@ -382,6 +383,7 @@ private:
 
   double zeta_;
   double theta_ref_;
+  double nrmInf_feas_ref_;
   double mu_;
   double rho_;
   double obj_base_;
