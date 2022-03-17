@@ -280,7 +280,9 @@ namespace hiop
     }
     else {
       if (refact_== "rf"){
+        std::cout<<"RF refactorization initializing"<<std::endl;
         this->initializeCusolverRf();
+        std::cout<<"RF refactorization: setting up"<<std::endl;
         this->refactorizationSetupCusolverRf();
       }
       else {//for future - 
@@ -524,30 +526,30 @@ namespace hiop
     /* CSC */
     int * d_Lp, *d_Li, *d_Up, *d_Ui;
     double * d_Lx, *d_Ux;
-
+    std::cout<<"n: "<<n_<<" nnz: "<<nnz_<<" nnzL "<<nnzL<<" nnzU "<<nnzU<<std::endl;
     /* CSR */
     int * d_Lp_csr, *d_Li_csr, *d_Up_csr, *d_Ui_csr;
     double * d_Lx_csr, *d_Ux_csr;
     /* allocate CSC */
-    cudaMalloc(&d_Lp,(n_)*sizeof(int));
-    cudaMalloc(&d_Li,nnzL*sizeof(int));
-    cudaMalloc(&d_Lx, nnzL*sizeof(double));
-    cudaMalloc(&d_Up,(n_)*sizeof(int));
-    cudaMalloc(&d_Ui,nnzU*sizeof(int));
-    cudaMalloc(&d_Ux, nnzU*sizeof(double));
+    checkCudaErrors(cudaMalloc(&d_Lp,(n_+1)*sizeof(int)));
+    checkCudaErrors(cudaMalloc(&d_Li,nnzL*sizeof(int)));
+    checkCudaErrors(cudaMalloc(&d_Lx, nnzL*sizeof(double)));
+    checkCudaErrors(cudaMalloc(&d_Up,(n_+1)*sizeof(int)));
+    checkCudaErrors(cudaMalloc(&d_Ui,nnzU*sizeof(int)));
+    checkCudaErrors(cudaMalloc(&d_Ux, nnzU*sizeof(double)));
     /* allocate CSR */         
-    cudaMalloc(&d_Lp_csr,(n_)*sizeof(int));
-    cudaMalloc(&d_Li_csr,nnzL*sizeof(int));
-    cudaMalloc(&d_Lx_csr, nnzL*sizeof(double));
-    cudaMalloc(&d_Up_csr,(n_)*sizeof(int));
-    cudaMalloc(&d_Ui_csr,nnzU*sizeof(int));
-    cudaMalloc(&d_Ux_csr, nnzU*sizeof(double));
+    checkCudaErrors(cudaMalloc(&d_Lp_csr,(n_+1)*sizeof(int)));
+    checkCudaErrors(cudaMalloc(&d_Li_csr,nnzL*sizeof(int)));
+    checkCudaErrors(cudaMalloc(&d_Lx_csr, nnzL*sizeof(double)));
+    checkCudaErrors(cudaMalloc(&d_Up_csr,(n_+1)*sizeof(int)));
+    checkCudaErrors(cudaMalloc(&d_Ui_csr,nnzU*sizeof(int)));
+    checkCudaErrors(cudaMalloc(&d_Ux_csr, nnzU*sizeof(double)));
     /* copy CSC to the GPU */          
-    checkCudaErrors(cudaMemcpy(d_Lp, Lp, sizeof(int) * (n_), cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(d_Lp, Lp, sizeof(int) * (n_+1), cudaMemcpyHostToDevice));
     checkCudaErrors(cudaMemcpy(d_Li, Li, sizeof(int) * (nnzL), cudaMemcpyHostToDevice));
     checkCudaErrors(cudaMemcpy(d_Lx, Lx, sizeof(double) * (nnzL), cudaMemcpyHostToDevice));
 
-    checkCudaErrors(cudaMemcpy(d_Up, Up, sizeof(int) * (n_), cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(d_Up, Up, sizeof(int) * (n_+1), cudaMemcpyHostToDevice));
     checkCudaErrors(cudaMemcpy(d_Ui, Ui, sizeof(int) * (nnzU), cudaMemcpyHostToDevice));
     checkCudaErrors(cudaMemcpy(d_Ux, Ux, sizeof(double) * (nnzU), cudaMemcpyHostToDevice));
     /* we dont need these any more */
@@ -560,7 +562,7 @@ namespace hiop
     /* now CSC to CSR using the new cuda 11 awkward way */
 
     size_t bufferSizeL, bufferSizeU;
-    cusparseCsr2cscEx2_bufferSize(handle_,
+    cusparseStatus_t csp = cusparseCsr2cscEx2_bufferSize(handle_,
         n_,
         n_,
         nnzL,
@@ -576,8 +578,7 @@ namespace hiop
         CUSPARSE_CSR2CSC_ALG1,
         &bufferSizeL);
 
-
-    cusparseCsr2cscEx2_bufferSize(handle_,
+    csp =cusparseCsr2cscEx2_bufferSize(handle_,
         n_,
         n_,
         nnzU,
@@ -595,10 +596,11 @@ namespace hiop
     /* allocate buffers */
 
     double *d_workL, *d_workU;
-    cudaMalloc((void **)&d_workL, bufferSizeL);
-    cudaMalloc((void **)&d_workU, bufferSizeU);
+    checkCudaErrors(cudaMalloc((void **)&d_workL, bufferSizeL));
+    checkCudaErrors(cudaMalloc((void **)&d_workU, bufferSizeU));
     /* actual CSC to CSR */       
-    cusparseCsr2cscEx2(handle_,
+
+    csp = cusparseCsr2cscEx2(handle_,
         n_,
         n_,
         nnzL,
@@ -613,8 +615,7 @@ namespace hiop
         CUSPARSE_INDEX_BASE_ZERO,
         CUSPARSE_CSR2CSC_ALG1,
         d_workL);
-
-    cusparseCsr2cscEx2(handle_,
+    csp = cusparseCsr2cscEx2(handle_,
         n_,
         n_,
         nnzU,
@@ -644,10 +645,11 @@ namespace hiop
 
     /* actual setup */
 
-    cusolverRfSetupDevice(n_, nnz_,dia_, dja_,da_, 
+    sp_status_ =    cusolverRfSetupDevice(n_, nnz_,dia_, dja_,da_, 
         nnzL, d_Lp_csr, d_Li_csr, d_Lx_csr, nnzU, d_Up_csr, d_Ui_csr, d_Ux_csr, d_P, d_Q, handle_rf_);
     cudaDeviceSynchronize();
-    cusolverRfAnalyze(handle_rf_);
+    sp_status_ =   cusolverRfAnalyze(handle_rf_);
+    //7 is  CUSOLVER_STATUS_EXECUTION_FAILED
     return 0;
   }
 
@@ -714,11 +716,11 @@ namespace hiop
     hiopVector* rhs = x.new_copy();
     double* dx = x.local_data();
     double* drhs = rhs->local_data();
-printf("refact type 1 %s \n",this->getRefactorizationType() );
     checkCudaErrors(cudaMemcpy(devr_, drhs, sizeof(double) * n_, cudaMemcpyHostToDevice));
 
     //solve HERE
     if (refact_ == "glu") {
+      std::cout<<"GLU: solving!"<<std::endl;
       sp_status_ = cusolverSpDgluSolve(handle_cusolver_,
           n_,
           /* A is original matrix */
@@ -734,23 +736,34 @@ printf("refact type 1 %s \n",this->getRefactorizationType() );
           info_M_,
           d_work_);
       if(sp_status_ == 0){
+
         checkCudaErrors(cudaMemcpy(dx, devx_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
       }
     }
     else {
       if (refact_ == "rf"){
-
-        sp_status_ = cusolverRfSolve(handle_rf_, d_P, d_Q, 1, d_T, n_, devr_, n_);
-        if(sp_status_ == 0){
-          checkCudaErrors(cudaMemcpy(dx, devx_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
+        if (Numeric_ == nullptr){
+          sp_status_ = cusolverRfSolve(handle_rf_, d_P, d_Q, 1, d_T, n_, devr_, n_);
+          if(sp_status_ == 0){
+            checkCudaErrors(cudaMemcpy(dx, devr_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
+          }
+        }
+        else{
+          memcpy(dx, drhs, sizeof(double)*n_);  
+int ok =          klu_solve(Symbolic_, Numeric_, n_, 1, dx, &Common_);
+printf("performing KLU SOLVE, ok? %d \n", ok);
+          klu_free_numeric(&Numeric_, &Common_) ;
         }
       }
       //copy the solutuion back: dx = devx_
-      nlp_->runStats.linsolv.tmTriuSolves.stop();
+      else {
 
-      delete rhs; rhs = nullptr;
-      return 1;
+        std::cout<<"not recognized: NOT solving!"<<std::endl;
+      }
     }
+    nlp_->runStats.linsolv.tmTriuSolves.stop();
+    delete rhs; rhs = nullptr;
+    return 1;
   }
 
   //
@@ -983,7 +996,7 @@ printf("refact type 1 %s \n",this->getRefactorizationType() );
 
     Numeric_ = klu_factor(kRowPtr_, jCol_, kVal_, Symbolic_, &Common_);
     if(Numeric_ == nullptr){
-      nlp_->log->printf(hovError, "numeric  nullptr");
+      nlp_->log->printf(hovError, "numeric nullptr");
       return -1;
     }
 
@@ -1156,7 +1169,7 @@ printf("refact type 1 %s \n",this->getRefactorizationType() );
     double* dx = x->local_data();
     //rhs->copyToDev();
     double* drhs = rhs->local_data();
-printf("refact type 2 %s \n",this->getRefactorizationType() );
+    printf("refact type 2 %s \n",this->getRefactorizationType() );
     // double* devr_ = rhs->local_data();
     checkCudaErrors(cudaMemcpy(devr_, drhs, sizeof(double) * n_, cudaMemcpyHostToDevice));
 
