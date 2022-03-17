@@ -15,6 +15,7 @@ static bool parse_arguments(int argc,
                             double &scal,
                             bool& self_check,
                             bool& use_pardiso,
+                            bool& use_cusolver,
                             bool& force_fr)
 {
   self_check = false;
@@ -40,10 +41,10 @@ static bool parse_arguments(int argc,
       } else if(std::string(argv[4]) == "-selfcheck") {
         self_check = true;
       } else if(std::string(argv[4]) == "-pardiso") {
-#ifndef HIOP_USE_PARDISO
         use_pardiso = true;
-#endif
-      }   
+      } else if(std::string(argv[4]) == "-cusolver") {
+        use_cusolver = true;
+      }
     }
   case 4: //3 arguments
     {
@@ -52,10 +53,10 @@ static bool parse_arguments(int argc,
       } else if(std::string(argv[3]) == "-selfcheck") {
         self_check = true;
       } else if(std::string(argv[3]) == "-pardiso") {
-#ifndef HIOP_USE_PARDISO
         use_pardiso = true;
-#endif
-      } 
+      } else if(std::string(argv[3]) == "-cusolver") {
+        use_cusolver = true;
+      }
     }
   case 3: //2 arguments
     {
@@ -65,6 +66,8 @@ static bool parse_arguments(int argc,
         self_check = true;
       } else if(std::string(argv[2]) == "-pardiso") {
         use_pardiso = true;
+      } else if(std::string(argv[2]) == "-cusolver") {
+        use_cusolver = true;
       } else {
         scal = std::atof(argv[2]); 
       }
@@ -72,7 +75,7 @@ static bool parse_arguments(int argc,
   case 2: //1 argument
     {
       n = std::atoi(argv[1]);
-      if(n<=0) {
+      if(n <= 0) {
         return false;
       }
     }
@@ -83,6 +86,29 @@ static bool parse_arguments(int argc,
   if(self_check) {
     scal = 1.0;
   }
+
+  if(use_cusolver && use_pardiso) {
+    printf("Selected both, cuSOLVER and Pardiso. ");
+    printf("You can select only one linear solver.\n\n");
+    return false;
+  }
+
+// If Pardiso is not available de-select it.
+#ifndef HIOP_USE_PARDISO
+  if(use_pardiso) {
+    printf("HiOp not built with Pardiso, using default linear solver ...\n");
+    use_pardiso = false;
+  }
+#endif
+
+// If HiOp is built without CUDA de-select cuSOLVER.
+#ifndef HIOP_USE_CUDA
+  if(use_cusolver) {
+    printf("HiOp not built with CUDA support, using CPU linear solver ...\n");
+    use_cusolver = false;
+  }
+#endif
+
   return true;
 };
 
@@ -95,7 +121,9 @@ static void usage(const char* exeName)
   printf("  'problem_size': number of decision variables [optional, default is 50]\n");
   printf("  'scal_fact': scaling factor used for objective function and constraints [optional, "
          "default is 1.0]\n");
-  printf("  '-pardiso': use pardiso as the linear solver [optional]\n");
+  printf("  '-pardiso' or '-cusolver': use Pardiso or cuSOLVER "
+         "as the linear solver [optional]\n");
+  printf("  '-cusolver': use cuSOLVER as the linear solver [optional]\n");
   printf("  '-fr': force to reset feasibility in the 1st iteration [optional]\n");
   printf("  '-selfcheck': compares the optimal objective with a previously saved value for the "
          "problem specified by 'problem_size'. [optional]\n");
@@ -111,20 +139,23 @@ int main(int argc, char **argv)
   int ierr = MPI_Comm_size(MPI_COMM_WORLD, &comm_size); assert(MPI_SUCCESS==ierr);
   if(comm_size != 1) {
     printf("[error] driver detected more than one rank but the driver should be run "
-	   "in serial only; will exit\n");
+           "in serial only; will exit\n");
     MPI_Finalize();
     return 1;
   }
 #endif
-  bool selfCheck;
-  bool use_pardiso;
-  bool force_fr;
+  bool selfCheck = false;
+  bool use_pardiso = false;
+  bool use_cusolver = false;
+  bool force_fr = false;
   size_type n;
   double scal;
 
-  if(!parse_arguments(argc, argv, n, scal, selfCheck, use_pardiso, force_fr))
-  {
+  if(!parse_arguments(argc, argv, n, scal, selfCheck, use_pardiso, use_cusolver, force_fr)) {
     usage(argv[0]);
+#ifdef HIOP_USE_MPI
+    MPI_Finalize();
+#endif
     return 1;
   }
 
@@ -132,26 +163,26 @@ int main(int argc, char **argv)
   hiopNlpSparse nlp(nlp_interface); 
   nlp.options->SetStringValue("Hessian", "analytical_exact");
   
-  // "lsq" or "linear" 
   nlp.options->SetStringValue("duals_update_type", "linear"); 
-  //nlp.options->SetStringValue("duals_init", "zero"); // "lsq" or "zero"
   
   nlp.options->SetStringValue("compute_mode", "cpu");
-  //nlp.options->SetStringValue("compute_mode", "hybrid");
   nlp.options->SetStringValue("KKTLinsys", "xdycyd");
-  //nlp.options->SetStringValue("KKTLinsys", "full");
-  //nlp.options->SetStringValue("write_kkt", "yes");
+  nlp.options->SetStringValue("write_kkt", "yes");
 
   nlp.options->SetNumericValue("mu0", 0.1);
-  //nlp.options->SetStringValue("scaling_type", "none");
   nlp.options->SetStringValue("options_file_fr_prob", "hiop_fr_ci.options");
 
   if(use_pardiso) {
     nlp.options->SetStringValue("linear_solver_sparse", "pardiso");
   }
+  if(use_cusolver) {
+    nlp.options->SetStringValue("linear_solver_sparse", "cusolver");
+    nlp.options->SetStringValue("compute_mode", "hybrid");
+  }
   if(force_fr) {
     nlp.options->SetStringValue("force_resto", "yes");
-  }  
+  }
+
   hiopAlgFilterIPMNewton solver(&nlp);
   hiopSolveStatus status = solver.run();
 
@@ -162,13 +193,20 @@ int main(int argc, char **argv)
              status,
              obj_value);
     }
+#ifdef HIOP_USE_MPI
+    MPI_Finalize();
+#endif
     return -1;
   }
 
   //this is used for "regression" testing when the driver is called with -selfcheck
   if(selfCheck) {
-    if(!self_check(n, obj_value))
+    if(!self_check(n, obj_value)) {
+#ifdef HIOP_USE_MPI
+      MPI_Finalize();
+#endif
       return -1;
+    }
   } else {
     if(rank==0) {
       printf("Optimal objective: %22.14e. Solver status: %d\n", obj_value, status);
@@ -196,11 +234,11 @@ static bool self_check(size_type n, double objval)
     if(n_saved[it]==n) {
       found=true;
       if(fabs( (objval_saved[it]-objval)/(1+objval_saved[it])) > relerr) {
-	printf("selfcheck failure. Objective (%18.12e) does not agree (%d digits) with the saved value (%18.12e) for n=%d.\n",
-	       objval, -(int)log10(relerr), objval_saved[it], n);
-	return false;
+        printf("selfcheck failure. Objective (%18.12e) does not agree (%d digits) with the saved value (%18.12e) for n=%d.\n",
+               objval, -(int)log10(relerr), objval_saved[it], n);
+        return false;
       } else {
-	printf("selfcheck success (%d digits)\n",  -(int)log10(relerr));
+        printf("selfcheck success (%d digits)\n",  -(int)log10(relerr));
       }
       break;
     }

@@ -57,6 +57,7 @@
  * Implementation of Krylov solvers 
  */
    
+#include <limits>
 #include "hiopKrylovSolver.hpp"
 
 #include "hiopVector.hpp"

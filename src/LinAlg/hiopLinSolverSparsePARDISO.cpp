@@ -63,7 +63,7 @@ namespace hiop
   *  PARDISO for symmetric indefinite sparse matrix
   */
   hiopLinSolverIndefSparsePARDISO::hiopLinSolverIndefSparsePARDISO(const int& n, const int& nnz, hiopNlpFormulation* nlp)
-    : hiopLinSolverIndefSparse(n, nnz, nlp),
+    : hiopLinSolverSymSparse(n, nnz, nlp),
     kRowPtr_{nullptr}, jCol_{nullptr}, kVal_{nullptr},
     rhs_{nullptr},
     n_{n}, nnz_{-1}, is_initialized_{false}

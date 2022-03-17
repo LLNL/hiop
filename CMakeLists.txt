@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 if (POLICY CMP0074)
   cmake_policy(SET CMP0074 NEW)
@@ -34,12 +35,14 @@ option(HIOP_BUILD_SHARED "Build shared library" OFF)
 option(HIOP_BUILD_STATIC "Build static library" ON)
 option(HIOP_SPARSE "Build with sparse linear algebra" ON)
 option(HIOP_USE_COINHSL "Build with sparse linear algebra" ON)
-option(HIOP_USE_STRUMPACK "Build with STRUMPACK backend for sparse linear algebra" OFF)
 option(HIOP_USE_PARDISO "Build with PARDISO backend for sparse linear algebra" OFF)
+option(HIOP_USE_STRUMPACK "Build with STRUMPACK backend for sparse linear algebra" OFF)
 option(HIOP_WITH_VALGRIND_TESTS "Run valgrind on certain integration tests" OFF)
 option(HIOP_BUILD_DOCUMENTATION "Build HiOp documentation via Doxygen" ON)
 
 set(HIOP_CTEST_LAUNCH_COMMAND "" CACHE STRING "Manually override launch commands used when running CTest")
+set(HIOP_CTEST_OUTPUT_DIR ${PROJECT_BINARY_DIR} CACHE PATH "Directory where CTest outputs are saved")
+mark_as_advanced(HIOP_CTEST_OUTPUT_DIR) # Hide this var as the default will be overriden rarely
 set(HIOP_EXTRA_LINK_FLAGS "" CACHE STRING "Manually pass extra flags to linker")
 
 # Ensure at least one library type is being built!
@@ -80,6 +83,9 @@ cmake_dependent_option(
 )
 cmake_dependent_option(
   HIOP_USE_MAGMA "Use Magma linear algebra" ON "HIOP_USE_GPU" OFF
+)
+cmake_dependent_option(
+  HIOP_USE_CUSOLVER "Build with cuSolver linear algebra" ON "HIOP_USE_CUDA" OFF
 )
 
 add_library(hiop_tpl INTERFACE)
@@ -181,9 +187,9 @@ target_link_libraries(hiop_tpl INTERFACE ${LAPACK_LIBRARIES})
 message(STATUS "Using LAPACK libraries: ${LAPACK_LIBRARIES}")
 
 if(HIOP_USE_GPU)
+  include(CheckLanguage)
   set(HIOP_MAGMA_DIR CACHE PATH "Path to Magma directory")
   if(HIOP_USE_CUDA)
-    include(CheckLanguage)
     enable_language(CUDA)
     check_language(CUDA)
 
@@ -228,6 +234,14 @@ if(HIOP_USE_RAJA)
     REQUIRED)
   target_link_libraries(hiop_tpl INTERFACE umpire RAJA)
 endif()
+
+# KLU needed with cuSolver. TODO: make this an optional dependency
+if (HIOP_USE_CUSOLVER)
+  set(HIOP_KLU_DIR CACHE PATH "Path to KLU directory")
+  include(FindKLU)
+  target_link_libraries(hiop_tpl INTERFACE KLU)
+endif()
+
 
 if(HIOP_WITH_KRON_REDUCTION)
   set(HIOP_UMFPACK_DIR CACHE PATH "Path to UMFPACK directory")
@@ -432,20 +446,20 @@ if (HIOP_WITH_MAKETEST)
 
   add_test(NAME NlpMixedDenseSparse4_1 COMMAND ${RUNCMD} bash -c "$<TARGET_FILE:nlpMDS_ex4.exe> 400 100 0 -selfcheck \
     | ${STRIP_TABLE_CMD} \
-    | tee ${PROJECT_BINARY_DIR}/mds4_1.out")
+    | tee ${HIOP_CTEST_OUTPUT_DIR}/mds4_1.out")
   add_test(NAME NlpMixedDenseSparse4_2 COMMAND ${RUNCMD} bash -c "$<TARGET_FILE:nlpMDS_ex4.exe> 400 100 1 -selfcheck \
     | ${STRIP_TABLE_CMD} \
-    | tee ${PROJECT_BINARY_DIR}/mds4_2.out")
+    | tee ${HIOP_CTEST_OUTPUT_DIR}/mds4_2.out")
   
   add_test(NAME NlpMixedDenseSparse4_3 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpMDS_ex4.exe>" "400" "100" "0" "-empty_sp_row" "-selfcheck")
 
   if(HIOP_USE_RAJA)
     add_test(NAME NlpMixedDenseSparseRaja4_1 COMMAND ${RUNCMD} bash -c "$<TARGET_FILE:nlpMDS_ex4_raja.exe> 400 100 0 -selfcheck \
       | ${STRIP_TABLE_CMD} \
-      | tee ${PROJECT_BINARY_DIR}/mds4_raja_1.out")
+      | tee ${HIOP_CTEST_OUTPUT_DIR}/mds4_raja_1.out")
     add_test(NAME NlpMixedDenseSparseRaja4_2 COMMAND ${RUNCMD} bash -c "$<TARGET_FILE:nlpMDS_ex4_raja.exe> 400 100 1 -selfcheck \
       | ${STRIP_TABLE_CMD} \
-      | tee ${PROJECT_BINARY_DIR}/mds4_raja_2.out")
+      | tee ${HIOP_CTEST_OUTPUT_DIR}/mds4_raja_2.out")
     add_test(NAME NlpMixedDenseSparseRaja4_3 COMMAND ${RUNCMD} bash -c "$<TARGET_FILE:nlpMDS_ex4_raja.exe> 400 100 0 -empty_sp_row -selfcheck")
     
     if(HIOP_DEEPCHECKS)
@@ -453,7 +467,7 @@ if (HIOP_WITH_MAKETEST)
         add_test(
           NAME "CompareExample4_NumIterations_${iter}" 
           COMMAND bash -c "\
-          if [[ $(wc -l ${PROJECT_BINARY_DIR}/mds4_${iter}.out|cut -f1 -d' ') == $(wc -l ${PROJECT_BINARY_DIR}/mds4_raja_${iter}.out|cut -f1 -d' ') ]]
+          if [[ $(wc -l ${HIOP_CTEST_OUTPUT_DIR}/mds4_${iter}.out|cut -f1 -d' ') == $(wc -l ${HIOP_CTEST_OUTPUT_DIR}/mds4_raja_${iter}.out|cut -f1 -d' ') ]]
           then
           echo 'Output tables have the same number of iterations.'
           exit 0
@@ -464,7 +478,7 @@ if (HIOP_WITH_MAKETEST)
         add_test(
           NAME "CompareExample4_ElementWise_${iter}"
           COMMAND bash -c "\
-          join ${PROJECT_BINARY_DIR}/mds4_${iter}.out ${PROJECT_BINARY_DIR}/mds4_raja_${iter}.out \
+          join ${HIOP_CTEST_OUTPUT_DIR}/mds4_${iter}.out ${HIOP_CTEST_OUTPUT_DIR}/mds4_raja_${iter}.out \
           | ${PROJECT_SOURCE_DIR}/tests/testEx4CompareIterations.awk")
       endforeach()
     endif(HIOP_DEEPCHECKS)
@@ -475,11 +489,17 @@ if (HIOP_WITH_MAKETEST)
   if(HIOP_SPARSE)
     add_test(NAME NlpSparse6_1 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex6.exe>" "500" "-selfcheck")
     add_test(NAME NlpSparse6_2 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex6.exe>" "500" "-fr" "-selfcheck")
+    if(HIOP_USE_CUDA)
+      add_test(NAME NlpSparse6_3 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex6.exe>" "500" "-cusolver" "-selfcheck")
+    endif(HIOP_USE_CUDA)
     if(HIOP_USE_PARDISO)
-      add_test(NAME NlpSparse6_3 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex6.exe>" "500" "-pardiso" "-selfcheck")
+      add_test(NAME NlpSparse6_4 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex6.exe>" "500" "-pardiso" "-selfcheck")
     endif(HIOP_USE_PARDISO)
     add_test(NAME NlpSparse7_1 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex7.exe>" "500" "-selfcheck")
     add_test(NAME NlpSparse7_2 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex7.exe>" "500" "-inertiafree" "-selfcheck")
+    if(HIOP_USE_CUDA)
+      add_test(NAME NlpSparse7_3 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex7.exe>" "500" "-cusolver" "-selfcheck")
+    endif(HIOP_USE_CUDA)
   endif(HIOP_SPARSE)
 
   if(HIOP_USE_MPI)
