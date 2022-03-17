@@ -1068,7 +1068,6 @@ void hiopMatrixSparseCSR::add_matrix_symbolic(hiopMatrixSparseCSR& M, const hiop
   index_type* irowptrM = M.i_row();
   index_type* jcolindM = M.j_col();
 
-
   // counter for nz in M 
   index_type itnnzM = 0;
   
@@ -1091,13 +1090,11 @@ void hiopMatrixSparseCSR::add_matrix_symbolic(hiopMatrixSparseCSR& M, const hiop
       if(jX<jY) {
         jcolindM[itnnzM] = jX;
         ptX++;
-
       } else {
         if(jX==jY) {
           jcolindM[itnnzM] = jX;
           ptX++;
           ptY++;
-          
         } else {
           // jX>jY
           jcolindM[itnnzM] = jY;        
@@ -1152,7 +1149,6 @@ void hiopMatrixSparseCSR::hiopMatrixSparseCSR::add_matrix_numeric(double gamma,
   index_type* jcolindM = M.j_col();
 #endif
   double* valuesM = M.M();
-
   
   int nnzM = M.numberOfNonzeros();
   if(gamma==0.0) {
@@ -1187,8 +1183,7 @@ void hiopMatrixSparseCSR::hiopMatrixSparseCSR::add_matrix_numeric(double gamma,
 
       assert(itnnzM<M.numberOfNonzeros());
       
-      if(jX<jY) {
-        
+      if(jX<jY) {        
 #ifdef HIOP_DEEPCHECKS
         assert(jX==jcolindM[itnnzM]);
 #endif        
@@ -1277,7 +1272,6 @@ bool hiopMatrixSparseCSR::check_csr_is_ordered()
         return false;
       }
     }
-    
   }
   return true;
 }
