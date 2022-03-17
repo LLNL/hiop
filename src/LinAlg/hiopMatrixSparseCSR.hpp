@@ -260,7 +260,6 @@ public:
     assert(false && "not yet implemented");
   }
 
-
   /// @brief extend base problem Hess to the Hess in feasibility problem
   virtual void set_Hess_FR(const hiopMatrixSparse& Hess,
                            index_type* iHSS,
@@ -286,7 +285,6 @@ public:
   {
     return values_;
   }
-
   inline const index_type* i_row() const
   {
     return irowptr_;
@@ -312,14 +310,6 @@ public:
   }
 #endif
 
-  
-  //////////////////////////////////////////////////////////////////////
-  // new methods that are needed by CSR
-  /////////////////////////////////////////////////////////////////////
-  // 1. should these be made available to the parent hiopMatrixSparse?
-  // 2. 3-calls functionality?
-  // 3. Use __all, __symb, __num suffixes?
-
   /**
    * @brief Extracts the diagonal entries of `this` matrix into the vector passed as argument
    *
@@ -337,14 +327,6 @@ public:
    * @pre  `this` is expected to store the diagonal entries as nonzero elements.
    */
   virtual void set_diagonal(const double& val);
-
-  /// Notes:
-  /// cusparseSpGEMM_workEstimation  cusparseSpGEMM_compute
-  /// cusparseSpGEMM_copy
-  /// cusparseSpGEMMreuse
-  ///
-  /// rocsparse_spgemm() 3 phases
-  ///
 
   /**
    * Allocates a CSR matrix capable of storing the multiplication result of M = X*Y, where X 

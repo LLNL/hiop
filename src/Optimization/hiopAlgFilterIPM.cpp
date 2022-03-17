@@ -881,8 +881,9 @@ void hiopAlgFilterIPMBase::displayTerminationMsg()
   case Steplength_Too_Small:
     {
       nlp->log->printf(hovSummary, "Couldn't solve the problem.\n");
-      nlp->log->printf(hovSummary, "Linesearch returned unsuccessfully (small step). Probable cause: "
-		       "inaccurate gradients/Jacobians or locally infeasible problem.\n");
+      nlp->log->printf(hovSummary,
+                       "Linesearch returned unsuccessfully (small step). Probable cause: "
+                       "inaccurate gradients/Jacobians or locally infeasible problem.\n");
       nlp->log->printf(hovSummary, "%s\n", strStatsReport.c_str());
       break;
     }
@@ -1068,7 +1069,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
         break;
       }
       nlp->log->printf(hovScalars, "Iter[%d] barrier params reduced: mu=%g tau=%g\n", iter_num, _mu, _tau);
-      
+
       //update only logbar problem  and residual (the NLP didn't change)
       logbar->updateWithNlpInfo(*it_curr, _mu, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d);
       
@@ -1087,7 +1088,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
       nlp->log->printf(hovScalars,
                        "  LogBar errs: pr-infeas:%23.17e   dual-infeas:%23.17e  comp:%23.17e  overall:%23.17e\n",
                        _err_log_feas, _err_log_optim, _err_log_complem, _err_log);
-      
+
       filter.reinitialize(theta_max);
 
       if(elastic_mode_on) {
@@ -1157,7 +1158,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
       //evaluate the problem at the trial iterate (functions only)
       if(!this->evalNlp_funcOnly(*it_trial, _f_nlp_trial, *_c_trial, *_d_trial)) {
         solver_status_ = Error_In_User_Function;
-	nlp->runStats.tmOptimizTotal.stop();
+        nlp->runStats.tmOptimizTotal.stop();
         return Error_In_User_Function;
       }
 
@@ -1257,9 +1258,10 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
       assert(false && "unrecognized value for lsStatus");
 
       nlp->log->printf(hovScalars, "Iter[%d] -> accepted step primal=[%17.11e] dual=[%17.11e]\n", iter_num, _alpha_primal, _alpha_dual);
-      iter_num++; nlp->runStats.nIter=iter_num;
+      iter_num++;
+      nlp->runStats.nIter=iter_num;
       //evaluate derivatives at the trial (and to be accepted) trial point
-      if(!this->evalNlp_derivOnly(*it_trial, *_grad_f, *_Jac_c, *_Jac_d, *_Hess_Lagr)){
+      if(!this->evalNlp_derivOnly(*it_trial, *_grad_f, *_Jac_c, *_Jac_d, *_Hess_Lagr)) {
         solver_status_ = Error_In_User_Function;
         nlp->runStats.tmOptimizTotal.stop();
         return Error_In_User_Function;
@@ -1649,9 +1651,17 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
   solver_status_ = NlpSolve_Pending;
   while(true) {
 
-    bret = evalNlpAndLogErrors(*it_curr, *resid, _mu,
-			       _err_nlp_optim, _err_nlp_feas, _err_nlp_complem, _err_nlp,
-			       _err_log_optim, _err_log_feas, _err_log_complem, _err_log);
+    bret = evalNlpAndLogErrors(*it_curr,
+                               *resid,
+                               _mu,
+                               _err_nlp_optim,
+                               _err_nlp_feas,
+                               _err_nlp_complem,
+                               _err_nlp,
+                               _err_log_optim,
+                               _err_log_feas,
+                               _err_log_complem,
+                               _err_log);
     if(!bret) {
       solver_status_ = Error_In_User_Function;
       nlp->runStats.tmOptimizTotal.stop();
