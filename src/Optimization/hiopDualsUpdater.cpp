@@ -372,7 +372,7 @@ bool hiopDualsLsqUpdateLinsysAugSparse::do_lsq_update(hiopIterate& iter,
       if(linear_solver == "ma57" || linear_solver == "auto") {
 #ifdef HIOP_USE_COINHSL
         nlp_->log->printf(hovSummary,
-                          "LSQ Dual Initialization --- KKT_SPARSE_XYcYd linsys: MA57 size %d (%d cons)\n",
+                          "LSQ Dual Updater --- KKT_SPARSE_XDYcYd linsys: MA57 size %d (%d cons)\n",
                           n, neq+nineq);
 
         ss_log << "LSQ with MA57: create ";
@@ -437,7 +437,7 @@ else {
       if(linear_solver == "strumpack" || linear_solver == "auto") {
         hiopLinSolverIndefSparseSTRUMPACK *p = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
         nlp_->log->printf(hovSummary,
-                          "LSQ Dual Initialization --- KKT_SPARSE_XDYcYd linsys: using STRUMPACK on device as an "
+                          "LSQ Dual Updater --- KKT_SPARSE_XDYcYd linsys: using STRUMPACK on device as an "
                           "indefinite solver, size %d (%d cons)\n",
                           n,
                           neq+nineq);    
@@ -455,7 +455,7 @@ else {
                "the value for duals_init_linear_solver_sparse is invalid and should have been corrected during "
                "options processing");
         nlp_->log->printf(hovSummary,
-                          "LSQ Dual Initialization --- KKT_SPARSE_XDYcYd linsys: using MA57 on CPU(!!!) size "
+                          "LSQ Dual Updater --- KKT_SPARSE_XDYcYd linsys: using MA57 on CPU(!!!) size "
                           "%d (%d cons)\n",
                           n, neq+nineq);
         ss_log << "LSQ with MA57 (dev): create ";
@@ -470,7 +470,7 @@ else {
                "the value for duals_init_linear_solver_sparse is invalid and should have been corrected during "
                "options processing");
         nlp_->log->printf(hovSummary,
-                          "LSQ Dual Initialization --- KKT_SPARSE_XDYcYd linsys: using PARDISO on CPU(!!!) size "
+                          "LSQ Dual Updater --- KKT_SPARSE_XDYcYd linsys: using PARDISO on CPU(!!!) size "
                           "%d (%d cons)\n",
                           n, neq+nineq);
         ss_log << "LSQ with PARDISO (dev): create ";
@@ -517,7 +517,7 @@ else {
     * [    Jc   0     0     0     ] [dyc] = [   ryc    ]
     * [    Jd   -I    0     0     ] [dyd]   [   ryd    ]
     */
-    nlp_->log->write("LSQ Dual Initialization --- KKT_SPARSE_XDYcYd linsys:", Msys, hovMatrices);
+    nlp_->log->write("LSQ Dual Updater --- KKT_SPARSE_XDYcYd linsys:", Msys, hovMatrices);
   }
   t.stop();
   ss_log << "   update linsys " << t.getElapsedTime() << " sec\n";

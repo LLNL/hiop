@@ -500,6 +500,7 @@ if (HIOP_WITH_MAKETEST)
     if(HIOP_USE_CUDA)
       add_test(NAME NlpSparse7_3 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex7.exe>" "500" "-cusolver" "-selfcheck")
     endif(HIOP_USE_CUDA)
+    add_test(NAME NlpSparse10_1 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex10.exe>" "500" "-selfcheck")
   endif(HIOP_SPARSE)
 
   if(HIOP_USE_MPI)
