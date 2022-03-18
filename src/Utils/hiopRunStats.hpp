@@ -78,29 +78,78 @@ public:
   // at each optimization iteration
   //
 
+  /// Records total time spent in KKT at the current iteration.
   hiopTimer tmTotalPerIter;
 
-  // time of the initial boilerplate, before any expensive matrix update or factorization
+  /// Records time of the initial boilerplate, before any expensive matrix update or factorization (at current iteration)
   hiopTimer tmUpdateInit;
-  // time in the update of the linsys to be sent to lower level linear solver; multiple updates can happen
-  // if the inertia correction kicks in
+  
+  /**
+   * Records time in the update of the linsys at current iteration. Multiple updates can occur if the inertia correction or
+   * regularization procedures kick in.
+   */
   hiopTimer tmUpdateLinsys;
-  // time spent in lower level factorizations; can time multiple factorizations if the inertia correction kicks in 
+  
+  /**
+   * Records time spent in lower level factorizations at current iteration. Multiple factorizations can occur if the inertia
+   * correction or regularization procedures kick in.
+   */
   hiopTimer tmUpdateInnerFact;
-  // number of inertia corrections
+  
+  /// Number of inertia corrections or regularizations
   int nUpdateICCorr;
 
-  // time spent in compressing or decompressing rhs (or in other words, pre- and post-triangular solve)
+  /** 
+   * Records time spent in compressing or decompressing rhs (or in other words, pre- and post-inner solve). Should
+   * not include rhs manipulations done in the inner solve, which are recorded by `tmSolveInner`.
+   */
   hiopTimer tmSolveRhsManip;
-  // the actual triangular solve within the inner solver
-  hiopTimer tmSolveTriangular;
 
-  // total time 
+  /**
+   * Records time spent in (outer) residual norm evaluation. Should not include residual norm evaluations performed
+   * in the inner solve, which are recorded by `tmSolveInner`.
+   */
+  hiopTimer tmResid;
+  
+  /**
+   * Records the time spent in the inner solve. The inner solve is generally the call from `solveCompressed` to the
+   * linear solver, such as to Magma, MA57, BiCGStab, etc.
+   *
+   * The inner solve can be the triangular solves when a direct solver is used without iterative refinement or can 
+   * be the Krylov-based iterative refinement (IR) solve, which can consist of the  triangular solves, matrix applies 
+   * and residual computations needed in the IR, iterative refinement updates, and preconditioner applies, if any.
+   */
+  hiopTimer tmSolveInner;
+
+  /**
+   * Records the number of inner iterative refinement solve iterations. Can be a fractional number for BiCGStab.
+   * Should be zero if a direct linear solvers is used without IR done explicitly by HiOp.
+   */
+  double nIterRefinInner;
+
+  /// (TODO) Records the number of outer IR steps (on the full KKT system)
+  //double nIterRefinOuter;
+  
+  /// Records total time in KKT-related computations over the life of the algorithm
   double tmTotal;
-  //constituents of total -> map into timers used to time each optimization iteration
-  double tmTotalUpdateInit, tmTotalUpdateLinsys, tmTotalUpdateInnerFact;
-  double tmTotalSolveRhsManip, tmTotalSolveTriangular; 
-
+  //
+  //constituents of total time from `tmTotal`-> map into timers used to time each optimization iteration
+  //
+  /// Total time recorded by `tmUpdateInit`
+  double tmTotalUpdateInit;
+  /// Total time recorded by `tmUpdateLinsys`
+  double tmTotalUpdateLinsys;
+  /// Total time recorded by `tmUpdateInnerFact`
+  double tmTotalUpdateInnerFact;
+  /// Total time recorded by `tmSolveRhsManip`
+  double tmTotalSolveRhsManip;
+  /// Total time recorded by `tmSolveInner`
+  double tmTotalSolveInner;
+  /// Total time recorded by `tmResid`
+  double tmTotalResid;
+  /// Total number of inner IR steps
+  double nTotalIterRefinInner;
+  
   inline void initialize() {
     tmTotalPerIter.reset();
     tmUpdateInit.reset();
@@ -108,14 +157,18 @@ public:
     tmUpdateInnerFact.reset();
     nUpdateICCorr = 0;
     tmSolveRhsManip.reset();
-    tmSolveTriangular.reset();
+    tmSolveInner.reset();
+    tmResid.reset();
+    nIterRefinInner = 0.;
     
     tmTotal = 0.;
-    tmTotalUpdateInit = 0;
-    tmTotalUpdateLinsys = 0;
-    tmTotalUpdateInnerFact = 0;
-    tmTotalSolveRhsManip = 0; 
-    tmTotalSolveTriangular = 0;
+    tmTotalUpdateInit = 0.;
+    tmTotalUpdateLinsys = 0.;
+    tmTotalUpdateInnerFact = 0.;
+    tmTotalSolveRhsManip = 0.; 
+    tmTotalSolveInner = 0.;
+    tmTotalResid = 0.;
+    nTotalIterRefinInner = 0.;
   }
 
   inline void start_optimiz_iteration()
@@ -128,48 +181,54 @@ public:
     tmUpdateInnerFact.reset();
     nUpdateICCorr = 0;
     tmSolveRhsManip.reset();
-    tmSolveTriangular.reset();
+    tmSolveInner.reset();
+    tmResid.reset();
+    nIterRefinInner = 0.;
   } 
   inline void end_optimiz_iteration()
   {
     tmTotalPerIter.stop();
     tmTotal += tmTotalPerIter.getElapsedTime();
-      
+
     tmTotalUpdateInit += tmUpdateInit.getElapsedTime();
     tmTotalUpdateLinsys += tmUpdateLinsys.getElapsedTime();
     tmTotalUpdateInnerFact += tmUpdateInnerFact.getElapsedTime();
     tmTotalSolveRhsManip += tmSolveRhsManip.getElapsedTime(); 
-    tmTotalSolveTriangular += tmSolveTriangular.getElapsedTime();
-    
+    tmTotalSolveInner += tmSolveInner.getElapsedTime();
+    tmTotalResid += tmResid.getElapsedTime();
+    nTotalIterRefinInner += nIterRefinInner;
   }
   inline std::string get_summary_last_iter() {
     std::stringstream ss;
 
     ss << std::fixed << std::setprecision(3);
-    ss << "Iteration KKT time=" << tmTotalPerIter.getElapsedTime() << "sec " << std::endl;
+    ss << "Iteration KKT time " << tmTotalPerIter.getElapsedTime() << " sec " << std::endl;
 
-    ss << "\tupdate init=" << std::setprecision(3) << tmUpdateInit.getElapsedTime() << "sec "
-       << "update linsys=" << tmUpdateLinsys.getElapsedTime() << "sec " 
-       << "fact=" << tmUpdateInnerFact.getElapsedTime() << "sec " 
-       << "inertia corrections=" << nUpdateICCorr << std::endl;
+    ss << "\tupdate init " << std::setprecision(3) << tmUpdateInit.getElapsedTime() << " sec "
+       << "update linsys " << tmUpdateLinsys.getElapsedTime() << " sec " 
+       << "fact " << tmUpdateInnerFact.getElapsedTime() << " sec " 
+       << "inertia corrections " << nUpdateICCorr << std::endl;
 
-    ss << "\tsolve rhs-manip=" <<tmSolveRhsManip.getElapsedTime() << "sec "
-       << "triangular solve=" << tmSolveTriangular.getElapsedTime() << "sec " << std::endl; 
+    ss << "\tsolve rhs-manip " <<tmSolveRhsManip.getElapsedTime() << " sec "
+       << "inner solve " << tmSolveInner.getElapsedTime() << " sec "
+       << "resid " << tmResid.getElapsedTime() << " sec "
+       << "IR " << nIterRefinInner << " iter " << std::endl; 
 
     return ss.str();
   }
 
   inline std::string get_summary_total() {
     std::stringstream ss;
-    ss << "Total KKT time " << std::fixed << std::setprecision(3) << tmTotal << " sec " 
-       << std::endl;
+    ss << "Total KKT time " << std::fixed << std::setprecision(3) << tmTotal << " sec " << std::endl;
 
-    ss << "\tupdate init " << std::setprecision(3) << tmTotalUpdateInit <<  "sec "
-       << "    update linsys " << tmTotalUpdateLinsys << " sec " 
-       << "    fact " << tmTotalUpdateInnerFact << " sec " << std::endl;
+    ss << "\tupdate init " << std::setprecision(3) << tmTotalUpdateInit <<  " sec "
+       << "   update linsys " << tmTotalUpdateLinsys << " sec " 
+       << "   fact " << tmTotalUpdateInnerFact << " sec " << std::endl;
 
     ss << "\tsolve rhs-manip " <<tmTotalSolveRhsManip << " sec "
-       << "    triangular solve " << tmTotalSolveTriangular << " sec " << std::endl; 
+       << "  inner solve " << tmTotalSolveInner << " sec "
+       << "  resid " << tmTotalResid << " sec "
+       << "  IR " << nTotalIterRefinInner << " iter " << std::endl; 
 
     return ss.str();
   }

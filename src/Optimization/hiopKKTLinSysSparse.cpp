@@ -112,8 +112,8 @@ namespace hiop
     
     if(perf_report_) {
       nlp_->log->printf(hovSummary,
-			"KKT_Sparse_XYcYd linsys: Low-level linear system size: %d\n",
-			Msys->n());
+                        "KKT_Sparse_XYcYd linsys: Low-level linear system size: %d\n",
+                        Msys->n());
     }
 
     // update linSys system matrix, including IC perturbations
@@ -182,7 +182,6 @@ namespace hiop
       csr_writer_.writeMatToFile(*Msys, write_linsys_counter_, nx, neq, nineq);
     }
 
-    nlp_->runStats.tmSolverInternal.stop();
     return true;
   }
 
@@ -221,12 +220,12 @@ namespace hiop
     }
     nlp_->runStats.kkt.tmSolveRhsManip.stop();
 
-    nlp_->runStats.kkt.tmSolveTriangular.start();
+    nlp_->runStats.kkt.tmSolveInner.start();
     //
     // solve
     //
     bool linsol_ok = linSys_->solve(*rhs_);
-    nlp_->runStats.kkt.tmSolveTriangular.stop();
+    nlp_->runStats.kkt.tmSolveInner.stop();
     nlp_->runStats.linsolv.end_linsolve();
 
     if(perf_report_) {
@@ -392,8 +391,8 @@ namespace hiop
     assert(Msys);
     if(perf_report_) {
       nlp_->log->printf(hovSummary,
-			"KKT_SPARSE_XDYcYd linsys: Low-level linear system size: %d\n",
-			Msys->n());
+                        "KKT_SPARSE_XDYcYd linsys: Low-level linear system size: %d\n",
+                        Msys->n());
     }
 
     // update linSys system matrix, including IC perturbations
@@ -505,13 +504,12 @@ namespace hiop
     }
     nlp_->runStats.kkt.tmSolveRhsManip.stop();
 
-    nlp_->runStats.kkt.tmSolveTriangular.start();
-
+    nlp_->runStats.kkt.tmSolveInner.start();
     //
     // solve
     //
     bool linsol_ok = linSys_->solve(*rhs_);
-    nlp_->runStats.kkt.tmSolveTriangular.stop();
+    nlp_->runStats.kkt.tmSolveInner.stop();
     nlp_->runStats.linsolv.end_linsolve();
 
     if(perf_report_) {
@@ -578,8 +576,8 @@ namespace hiop
 #endif  // HIOP_USE_STRUMPACK        
         }
       } else {
-      //we are on the GPU. Our first choice is always cuSolver
-#if  defined(HIOP_USE_CUSOLVER)        
+        //we are on the GPU. Our first choice is always cuSolver
+#if defined(HIOP_USE_CUSOLVER)        
         hiopLinSolverIndefSparseCUSOLVER *p = new hiopLinSolverIndefSparseCUSOLVER(n, nnz, nlp_);
         auto verbosity = hovScalars;
         nlp_->log->printf(verbosity,
@@ -587,7 +585,9 @@ namespace hiop
                           n,
                           neq+nineq,
                           safe_mode_);
-        if(safe_mode_) verbosity  = hovWarning;
+        if(safe_mode_) {
+          verbosity  = hovWarning;
+        }
 
         p->setFakeInertia(neq + nineq);
         linSys_ = p;
@@ -596,10 +596,13 @@ namespace hiop
         hiopLinSolverIndefSparseSTRUMPACK *p = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
         auto verbosity = hovScalars;
         nlp_->log->printf(verbosity,
-            "KKT_SPARSE_XDYcYd linsys: alloc STRUMPACK size %d (%d cons) (safe_mode=%d)\n",
-            n, neq+nineq, safe_mode_);
-        if(safe_mode_) verbosity  = hovWarning;
-
+                          "KKT_SPARSE_XDYcYd linsys: alloc STRUMPACK size %d (%d cons) (safe_mode=%d)\n",
+                          n,
+                          neq+nineq,
+                          safe_mode_);
+        if(safe_mode_) {
+          verbosity  = hovWarning;
+        }
         p->setFakeInertia(neq + nineq);
         linSys_ = p;
 #else
@@ -748,8 +751,8 @@ namespace hiop
     assert(Msys);
     if(perf_report_) {
       nlp_->log->printf(hovSummary,
-			"KKT_SPARSE_FULL linsys: Low-level linear system size: %d\n",
-			Msys->n());
+                        "KKT_SPARSE_FULL linsys: Low-level linear system size: %d\n",
+                        Msys->n());
     }
 
     // update linSys system matrix, including IC perturbations
@@ -956,11 +959,11 @@ namespace hiop
 
     nlp_->runStats.kkt.tmSolveRhsManip.stop();
 
-    nlp_->runStats.kkt.tmSolveTriangular.start();
+    nlp_->runStats.kkt.tmSolveInner.start();
 
     // solve
     bool linsol_ok = linSys_->solve(*rhs_);
-    nlp_->runStats.kkt.tmSolveTriangular.stop();
+    nlp_->runStats.kkt.tmSolveInner.stop();
     nlp_->runStats.linsolv.end_linsolve();
 
     if(perf_report_) {
