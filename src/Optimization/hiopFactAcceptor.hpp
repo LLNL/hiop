@@ -133,7 +133,8 @@ public:
    * Check inertia condition to determine if a factorization is acceptable or not
    */
   hiopFactAcceptorInertiaFreeDWD(hiopPDPerturbation* p, const size_type n_required_neg_eig)
-    : hiopFactAcceptor(p)
+    : hiopFactAcceptor(p),
+      n_required_neg_eig_(n_required_neg_eig)
   {}
 
   virtual ~hiopFactAcceptorInertiaFreeDWD() 

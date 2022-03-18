@@ -68,9 +68,9 @@ class hiopMatrixSparse : public hiopMatrix
 {
 public:
   hiopMatrixSparse(int rows, int cols, int nnz)
-      : nrows_(rows)
-      , ncols_(cols)
-      , nnz_(nnz)
+    : nrows_(rows),
+      ncols_(cols),
+      nnz_(nnz)
   {
   }
   virtual ~hiopMatrixSparse()
@@ -82,7 +82,9 @@ public:
   virtual void copyFrom(const hiopMatrixSparse& dm) = 0;
   
   /* @brief copy the nonzeros into 3 arrays, in their triplet form. 
-   * This function is not used right now. Unit test is missing.
+   * This function is not used right now. 
+   * 
+   * TODO: Unit test is missing.
    */
   virtual void copy_to(int* irow, int* jcol, double* val) = 0;
 
@@ -91,9 +93,11 @@ public:
    */
   virtual void copy_to(hiopMatrixDense& W) = 0;
 
-  /* @brief copy `n_rows` rows from `src` into `this`, i.e., the ith row of this is copied from the rows_idx[i]_th row in `src`
-  *  @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
-  */
+  /* @brief copy `n_rows` rows from `src` into `this`, i.e., the ith row of this is copied from 
+   * the rows_idx[i]_th row in `src`.
+   * 
+   *  @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
+   */
   virtual void copyRowsFrom(const hiopMatrix& src, const index_type* rows_idxs, size_type n_rows) = 0;
 
   virtual void timesVec(double beta, hiopVector& y, double alpha, const hiopVector& x) const = 0;
@@ -108,9 +112,17 @@ public:
 
   virtual void timesMatTrans(double beta, hiopMatrix& W, double alpha, const hiopMatrix& X) const = 0;
 
-  virtual void addDiagonal(const double& alpha, const hiopVector& d_) = 0;
+  /**
+   * Adds alpha times the i-th entry of `D` to the i-th diagonal of `this`. 
+   * 
+   * @pre Sparse matrices should have the diagonal entries allocated as nonzeros.
+   * @pre `this` is expected to be symmetric.
+   * @pre Size of `D` should match the size(s) of `M`.
+   *
+   */
+  virtual void addDiagonal(const double& alpha, const hiopVector& D) = 0;
   virtual void addDiagonal(const double& value) = 0;
-  virtual void addSubDiagonal(const double& alpha, index_type start, const hiopVector& d_) = 0;
+  virtual void addSubDiagonal(const double& alpha, index_type start, const hiopVector& D) = 0;
   /* add to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements of
    * 'd_' (source) starting at index 'start_on_src_vec'. The number of elements added is 'num_elems'
    * when num_elems>=0, or the remaining elems on 'd_' starting at 'start_on_src_vec'. */
@@ -145,6 +157,7 @@ public:
                                 const double& c,
                                 const index_type& start_on_nnz_idx) = 0;
 
+  /// @brief this += alpha*X
   virtual void addMatrix(double alpha, const hiopMatrix& X) = 0;
 
   /* block of W += alpha*transpose(this) */
@@ -263,7 +276,8 @@ public:
                                                        const hiopVector& ix) = 0;
 
   /**
-  * @brief Copy a diagonal matrix to destination.
+  * @brief Sets the diagonal of a subblock of `this` to a constant times identity matrix.
+  * 
   * This diagonal matrix is 'src_val'*identity matrix with size 'nnz_to_copy'x'nnz_to_copy'.
   * The destination is updated from the start row 'row_dest_st' and start column 'col_dest_st'.
   * At the destination, 'nnz_to_copy` nonzeros starting from index `dest_nnz_st` will be replased.
@@ -315,7 +329,7 @@ public:
                                                     hiopVector& vec_dest, 
                                                     int vec_start, 
                                                     int num_elems=-1) const = 0;
-
+  
 
   virtual hiopMatrixSparse* alloc_clone() const = 0;
   virtual hiopMatrixSparse* new_copy() const = 0;

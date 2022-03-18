@@ -55,7 +55,6 @@
 namespace hiop
 {
 
-#ifdef HIOP_DEEPCHECKS
 //computes the solve error for the KKT Linear system; used only for correctness checking
 double hiopKKTLinSys::errorKKT(const hiopResidual* resid, const hiopIterate* sol)
 {
@@ -182,11 +181,10 @@ double hiopKKTLinSys::errorKKT(const hiopResidual* resid, const hiopIterate* sol
   return derr;
 }
 
-#endif
-
 bool hiopKKTLinSys::compute_directions_for_full_space(const hiopResidual* resid,
                                                       hiopIterate* dir)
 {
+  nlp_->runStats.kkt.tmSolveRhsManip.start();
   const hiopResidual &r=*resid;
 
   /***********************************************************************
@@ -255,8 +253,10 @@ bool hiopKKTLinSys::compute_directions_for_full_space(const hiopResidual* resid,
     dir->sdu->setToZero();
     dir->vu->setToZero();
   }
-
+  nlp_->runStats.kkt.tmSolveRhsManip.stop();
+  
 #ifdef HIOP_DEEPCHECKS
+  nlp_->runStats.kkt.tmResid.start();
   assert(dir->sxl->matchesPattern(nlp_->get_ixl()));
   assert(dir->sxu->matchesPattern(nlp_->get_ixu()));
   assert(dir->sdl->matchesPattern(nlp_->get_idl()));
@@ -268,6 +268,7 @@ bool hiopKKTLinSys::compute_directions_for_full_space(const hiopResidual* resid,
 
   //CHECK THE SOLUTION
   errorKKT(resid,dir);
+  nlp_->runStats.kkt.tmResid.stop();
 #endif
 
   return true;
@@ -285,8 +286,8 @@ bool hiopKKTLinSysCurvCheck::factorize()
   assert(nlp_);
 
   // factorization + inertia correction if needed
-  const size_t max_refactorizaion = 10;
-  size_t num_refactorizaion = 0;
+  const size_t max_refactorization = 10;
+  size_t num_refactorization = 0;
   int continue_re_fact;
 
   double delta_wx, delta_wd, delta_cc, delta_cd;
@@ -295,11 +296,11 @@ bool hiopKKTLinSysCurvCheck::factorize()
     return false;
   }
 
-  while(num_refactorizaion<=max_refactorizaion) {
+  while(num_refactorization <= max_refactorization) {
     assert(delta_wx == delta_wd && "something went wrong with IC");
     assert(delta_cc == delta_cd && "something went wrong with IC");
     nlp_->log->printf(hovScalars, "linsys: delta_w=%12.5e delta_c=%12.5e (ic %d)\n",
-            delta_wx, delta_cc, num_refactorizaion);
+            delta_wx, delta_cc, num_refactorization);
 
     // the update of the linear system, including IC perturbations
     this->build_kkt_matrix(delta_wx, delta_wd, delta_cc, delta_cd);
@@ -320,14 +321,14 @@ bool hiopKKTLinSysCurvCheck::factorize()
     }
 
     // will do an inertia correction
-    num_refactorizaion++;
+    num_refactorization++;
     nlp_->runStats.kkt.nUpdateICCorr++;
   } // end of IC loop
 
-  if(num_refactorizaion>max_refactorizaion) {
+  if(num_refactorization>max_refactorization) {
     nlp_->log->printf(hovError,
         "Reached max number (%d) of refactorization within an outer iteration.\n",
-              max_refactorizaion);
+              max_refactorization);
     return false;
   }
   return true;
@@ -343,11 +344,6 @@ bool hiopKKTLinSysCurvCheck::factorize_inertia_free()
   double delta_wx, delta_wd, delta_cc, delta_cd;
   perturb_calc_->get_curr_perturbations(delta_wx, delta_wd, delta_cc, delta_cd);
 
-#ifdef HIOP_DEEPCHECKS
-    this->build_kkt_matrix(delta_wx, delta_wd, delta_cc, delta_cd);
-    non_singular_mat = factorizeWithCurvCheck();
-    assert(non_singular_mat>=0);
-#endif
   continue_re_fact = fact_acceptor_->requireReFactorization(*nlp_, non_singular_mat, delta_wx, delta_wd, delta_cc, delta_cd, true);
 
   assert(delta_wx == delta_wd && "something went wrong with IC");
@@ -360,7 +356,42 @@ bool hiopKKTLinSysCurvCheck::factorize_inertia_free()
   nlp_->runStats.kkt.tmUpdateInnerFact.start();
 
   // factorization
-  int n_neg_eig = factorizeWithCurvCheck();
+  int solver_flag = factorizeWithCurvCheck();
+  
+  // if solver_flag<0, matrix becomes singular, or not pd (in condensed system) after adding regularization
+  // this should not happen, but some linear solver may have numerical difficulty.
+  // adding more regularization till it succeeds
+  const size_t max_refactorization = 10;
+  size_t num_refactorization = 0;
+
+  while(num_refactorization<=max_refactorization && solver_flag < 0) {
+    nlp_->log->printf(hovWarning, "linsys: matrix becomes singular after adding primal regularization!\n");
+
+    continue_re_fact = fact_acceptor_->requireReFactorization(*nlp_, solver_flag, delta_wx, delta_wd, delta_cc, delta_cd);
+    
+    if(-1==continue_re_fact) {
+      return false;
+    } else {
+      // this while loop is used to correct singularity
+      assert(1==continue_re_fact);
+    }
+      
+    nlp_->log->printf(hovScalars, "linsys: delta_w=%12.5e delta_c=%12.5e \n", delta_wx, delta_cc);
+  
+    // the update of the linear system, including IC perturbations
+    this->build_kkt_matrix(delta_wx, delta_wd, delta_cc, delta_cd);
+
+    nlp_->runStats.kkt.tmUpdateInnerFact.start();
+
+    // factorization
+    solver_flag = factorizeWithCurvCheck();
+
+    nlp_->runStats.kkt.tmUpdateInnerFact.stop();
+
+    // will do an inertia correction
+    num_refactorization++;
+    nlp_->runStats.kkt.nUpdateICCorr++;
+  } // end of IC loop
 
   nlp_->runStats.kkt.tmUpdateInnerFact.stop();
 
@@ -461,7 +492,8 @@ hiopKKTLinSysCompressedXYcYd::~hiopKKTLinSysCompressedXYcYd()
 
 bool hiopKKTLinSysCompressedXYcYd::update(const hiopIterate* iter,
                                           const hiopVector* grad_f,
-                                          const hiopMatrix* Jac_c, const hiopMatrix* Jac_d,
+                                          const hiopMatrix* Jac_c,
+                                          const hiopMatrix* Jac_d,
                                           hiopMatrix* Hess)
 {
   nlp_->runStats.linsolv.start_linsolve();
@@ -503,7 +535,7 @@ bool hiopKKTLinSysCompressedXYcYd::update(const hiopIterate* iter,
 
 bool hiopKKTLinSysCompressedXYcYd::computeDirections(const hiopResidual* resid,
                                                      hiopIterate* dir)
-{
+{ 
   nlp_->runStats.tmSolverInternal.start();
   nlp_->runStats.kkt.tmSolveRhsManip.start();
 
@@ -565,42 +597,46 @@ bool hiopKKTLinSysCompressedXYcYd::computeDirections(const hiopResidual* resid,
 
   //now the final ryd_tilde += Dd^{-1}*ryd2
   ryd_tilde_->axzpy(1.0, ryd2, *Dd_inv_);
-
+  
+  nlp_->runStats.kkt.tmSolveRhsManip.stop();
+  
 #ifdef HIOP_DEEPCHECKS
+  nlp_->runStats.kkt.tmResid.start();
   hiopVector* rx_tilde_save=rx_tilde_->new_copy();
   hiopVector* ryc_save=r.ryc->new_copy();
   hiopVector* ryd_tilde_save=ryd_tilde_->new_copy();
+  nlp_->runStats.kkt.tmResid.stop();
 #endif
 
-  nlp_->runStats.kkt.tmSolveRhsManip.stop();
   /***********************************************************************
    * solve the compressed system
    * (be aware that rx_tilde is reused/modified inside this function)
    ***********************************************************************/
   bool sol_ok = solveCompressed(*rx_tilde_, *r.ryc, *ryd_tilde_, *dir->x, *dir->yc, *dir->yd);
-
+  
   nlp_->runStats.kkt.tmSolveRhsManip.start();
   //recover dir->d = (D)^{-1}*(dir->yd + ryd2)
   dir->d->copyFrom(ryd2);
   dir->d->axpy(1.0,*dir->yd);
   dir->d->componentMult(*Dd_inv_);
-
+  nlp_->runStats.kkt.tmSolveRhsManip.stop();
   //dir->d->print();
 
 #ifdef HIOP_DEEPCHECKS
+  nlp_->runStats.kkt.tmResid.start();
   errorCompressedLinsys(*rx_tilde_save,*ryc_save,*ryd_tilde_save, *dir->x, *dir->yc, *dir->yd);
   delete rx_tilde_save;
   delete ryc_save;
   delete ryd_tilde_save;
+  nlp_->runStats.kkt.tmResid.stop();
 #endif
 
   if(false==sol_ok) {
     return false;
   }
 
-  bool bret = compute_directions_for_full_space(resid, dir);
+  bool bret = compute_directions_for_full_space(resid, dir);  
 
-  nlp_->runStats.kkt.tmSolveRhsManip.stop();
   nlp_->runStats.tmSolverInternal.stop();
   nlp_->runStats.linsolv.end_linsolve();
   return true;
@@ -691,12 +727,14 @@ hiopKKTLinSysCompressedXDYcYd::~hiopKKTLinSysCompressedXDYcYd()
 
 bool hiopKKTLinSysCompressedXDYcYd::update( const hiopIterate* iter,
                                             const hiopVector* grad_f,
-                                            const hiopMatrix* Jac_c, const hiopMatrix* Jac_d,
+                                            const hiopMatrix* Jac_c,
+                                            const hiopMatrix* Jac_d,
                                             hiopMatrix* Hess)
 {
   nlp_->runStats.linsolv.start_linsolve();
   nlp_->runStats.tmSolverInternal.start();
-
+  nlp_->runStats.kkt.tmUpdateInit.start();
+  
   iter_ = iter;
   grad_f_ = dynamic_cast<const hiopVectorPar*>(grad_f);
   Jac_c_ = Jac_c; Jac_d_ = Jac_d;
@@ -719,9 +757,10 @@ bool hiopKKTLinSysCompressedXDYcYd::update( const hiopIterate* iter,
   Dd_->axdzpy_w_pattern(1.0, *iter_->vu, *iter_->sdu, nlp_->get_idu());
   nlp_->log->write("Dd in KKT", *Dd_, hovMatrices);
 #ifdef HIOP_DEEPCHECKS
-    assert(true==Dd_->allPositive());
+  assert(true==Dd_->allPositive());
 #endif
-
+  nlp_->runStats.kkt.tmUpdateInit.stop();
+  
   //factorization + inertia correction if needed
   bool retval = factorize();
 
@@ -782,23 +821,26 @@ bool hiopKKTLinSysCompressedXDYcYd::computeDirections(const hiopResidual* resid,
     rd_tilde_->axdzpy_w_pattern(-1.0, rd2, *iter_->sdu, nlp_->get_idu());
   }
   nlp_->log->write("Dd (in computeDirections)", *Dd_, hovMatrices);
-
+  
+  nlp_->runStats.kkt.tmSolveRhsManip.stop();
+  
 #ifdef HIOP_DEEPCHECKS
+  nlp_->runStats.kkt.tmResid.start();
   hiopVector* rx_tilde_save = rx_tilde_->new_copy();
   hiopVector* rd_tilde_save = rd_tilde_->new_copy();
   hiopVector* ryc_save = r.ryc->new_copy();
   hiopVector* ryd_save = r.ryd->new_copy();
+  nlp_->runStats.kkt.tmResid.stop();
 #endif
-
-  nlp_->runStats.kkt.tmSolveRhsManip.stop();
-
+  
   /***********************************************************************
    * solve the compressed system
    * (be aware that rx_tilde is reused/modified inside this function)
    ***********************************************************************/
   bool sol_ok = solveCompressed(*rx_tilde_, *rd_tilde_, *r.ryc, *r.ryd, *dir->x, *dir->d, *dir->yc, *dir->yd);
-
+  
 #ifdef HIOP_DEEPCHECKS
+  nlp_->runStats.kkt.tmResid.start();
   double derr =
     errorCompressedLinsys(*rx_tilde_save, *rd_tilde_save, *ryc_save, *ryd_save,
 			  *dir->x, *dir->d, *dir->yc, *dir->yd);
@@ -808,15 +850,17 @@ bool hiopKKTLinSysCompressedXDYcYd::computeDirections(const hiopResidual* resid,
   delete ryc_save;
   delete rd_tilde_save;
   delete ryd_save;
+  nlp_->runStats.kkt.tmResid.stop();
 #endif
 
-  nlp_->runStats.kkt.tmSolveRhsManip.start();
-
-  if(false==sol_ok) return sol_ok;
-
+  if(false == sol_ok) {
+    nlp_->runStats.tmSolverInternal.stop();
+    nlp_->runStats.linsolv.end_linsolve();
+    return false;
+  }
+  
   bool bret = compute_directions_for_full_space(resid, dir);
-
-  nlp_->runStats.kkt.tmSolveRhsManip.stop();
+  
   nlp_->runStats.tmSolverInternal.stop();
   nlp_->runStats.linsolv.end_linsolve();
   return true;
@@ -1382,10 +1426,11 @@ double hiopKKTLinSysLowRank::solveError(const hiopMatrixDense& M,  const hiopVec
 // hiopKKTLinSysFull
 ////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
-bool hiopKKTLinSysFull::update( const hiopIterate* iter,
-                                const hiopVector* grad_f,
-                                const hiopMatrix* Jac_c, const hiopMatrix* Jac_d,
-                                hiopMatrix* Hess)
+bool hiopKKTLinSysFull::update(const hiopIterate* iter,
+                               const hiopVector* grad_f,
+                               const hiopMatrix* Jac_c,
+                               const hiopMatrix* Jac_d,
+                               hiopMatrix* Hess)
 {
   
   iter_ = iter;
