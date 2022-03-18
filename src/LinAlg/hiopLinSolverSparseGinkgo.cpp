@@ -224,7 +224,7 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
 
   hiopLinSolverIndefSparseGinkgo::hiopLinSolverIndefSparseGinkgo(const int& n, const int& nnz, hiopNlpFormulation* nlp)
     : hiopLinSolverSymSparse(n, nnz, nlp),
-      kRowPtr_{nullptr},jCol_{nullptr},kVal_{nullptr},index_covert_CSR2Triplet_{nullptr},index_covert_extra_Diag2CSR_{nullptr},
+      index_covert_CSR2Triplet_{nullptr},index_covert_extra_Diag2CSR_{nullptr},
       n_{n}, nnz_{0}
   {}
 
@@ -300,7 +300,7 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
 
   hiopLinSolverNonSymSparseGinkgo::hiopLinSolverNonSymSparseGinkgo(const int& n, const int& nnz, hiopNlpFormulation* nlp)
     : hiopLinSolverNonSymSparse(n, nnz, nlp),
-      kRowPtr_{nullptr},jCol_{nullptr},kVal_{nullptr},index_covert_CSR2Triplet_{nullptr},index_covert_extra_Diag2CSR_{nullptr},
+      index_covert_CSR2Triplet_{nullptr},index_covert_extra_Diag2CSR_{nullptr},
       n_{n}, nnz_{0}
   {}
 
