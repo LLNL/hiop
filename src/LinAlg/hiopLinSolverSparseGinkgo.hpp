@@ -99,10 +99,6 @@ private:
   int      n_;                         // number of cols of the whole matrix
   int      nnz_;                       // number of nonzeros in the matrix
 
-  int     *kRowPtr_;                   // row pointer for nonzeros
-  int     *jCol_;                      // column indexes for nonzeros
-  double  *kVal_;                      // storage for sparse matrix
-
   int *index_covert_CSR2Triplet_;
   int *index_covert_extra_Diag2CSR_;
 
@@ -146,8 +142,6 @@ public:
    * exit is contains the solution(s).  */
   bool solve ( hiopVector& x_ );
   
-  void setup_ginkgo_data();
-
 //protected:
 //  int* ipiv;
 //  hiopVector* dwork;
@@ -157,10 +151,6 @@ private:
   int      m_;                         // number of rows of the whole matrix
   int      n_;                         // number of cols of the whole matrix
   int      nnz_;                       // number of nonzeros in the matrix
-
-  int     *kRowPtr_;                   // row pointer for nonzeros
-  int     *jCol_;                      // column indexes for nonzeros
-  double  *kVal_;                      // storage for sparse matrix
 
   int *index_covert_CSR2Triplet_;
   int *index_covert_extra_Diag2CSR_;
