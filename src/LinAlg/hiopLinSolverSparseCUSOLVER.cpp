@@ -60,7 +60,7 @@
 
 
 #define checkCudaErrors(val) hiopCheckCudaError((val), __FILE__, __LINE__)
-
+static int tt=0;
 namespace hiop
 {
   hiopLinSolverSymSparseCUSOLVER::hiopLinSolverSymSparseCUSOLVER(const int& n, const int& nnz, hiopNlpFormulation* nlp)
@@ -448,6 +448,17 @@ namespace hiop
         nullptr, nullptr, nullptr, 
         nullptr, nullptr, 
         nullptr, nullptr, &Common_);
+#if 0
+    for (int ii=0; ii<n_; ++ii)
+    {
+      printf("this is L, row %d \n", ii);
+      for (int jj=Up[ii]; jj<Up[ii+1]; ++jj){
+        printf(" (%d, %f) ",Ui[jj], Ux[jj] );
+      } 
+      printf("\n");
+
+    }
+#endif
     createM(n_, nnzL, Lp, Li,nnzU, Up, Ui);
     delete[] Lp;
     delete[] Li;
@@ -523,6 +534,18 @@ namespace hiop
         nullptr, nullptr, nullptr, 
         nullptr, nullptr, 
         nullptr, nullptr, &Common_);
+#if 1
+    for (int ii=0; ii<n_; ++ii)
+    {
+
+      printf("this is U, row %d \n", ii);
+      for (int jj=Up[ii]; jj<Up[ii+1]; ++jj){
+        printf(" (%d, %f) ",Ui[jj], Ux[jj] );
+      } 
+      printf("\n");
+
+    }
+#endif
     /* CSC */
     int * d_Lp, *d_Li, *d_Up, *d_Ui;
     double * d_Lx, *d_Ux;
@@ -649,7 +672,6 @@ namespace hiop
         nnzL, d_Lp_csr, d_Li_csr, d_Lx_csr, nnzU, d_Up_csr, d_Ui_csr, d_Ux_csr, d_P, d_Q, handle_rf_);
     cudaDeviceSynchronize();
     sp_status_ =   cusolverRfAnalyze(handle_rf_);
-    //7 is  CUSOLVER_STATUS_EXECUTION_FAILED
     return 0;
   }
 
@@ -742,22 +764,25 @@ namespace hiop
     }
     else {
       if (refact_ == "rf"){
+        std::cout<<"Rf: solving!"<<std::endl;
         if (Numeric_ == nullptr){
           sp_status_ = cusolverRfSolve(handle_rf_, d_P, d_Q, 1, d_T, n_, devr_, n_);
           if(sp_status_ == 0){
             checkCudaErrors(cudaMemcpy(dx, devr_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
           }
+          else{
+            printf("alert sp_status is %d \n", sp_status_);
+          }
         }
         else{
           memcpy(dx, drhs, sizeof(double)*n_);  
-int ok =          klu_solve(Symbolic_, Numeric_, n_, 1, dx, &Common_);
-printf("performing KLU SOLVE, ok? %d \n", ok);
+          int ok = klu_solve(Symbolic_, Numeric_, n_, 1, dx, &Common_);
           klu_free_numeric(&Numeric_, &Common_) ;
+          klu_free_symbolic(&Symbolic_, &Common_) ;
         }
       }
       //copy the solutuion back: dx = devx_
       else {
-
         std::cout<<"not recognized: NOT solving!"<<std::endl;
       }
     }
@@ -960,7 +985,7 @@ printf("performing KLU SOLVE, ok? %d \n", ok);
     // For now, keeping these options hard-wired
     Common_.btf = 0;
     Common_.ordering = 1;//COLAMD; use 0 for AMD
-    Common_.tol = 0.1;
+    Common_.tol = 0.01;
     Common_.scale = -1;
     Common_.halt_if_singular=0;
   } 
