@@ -224,10 +224,6 @@ if(HIOP_USE_GPU)
 endif(HIOP_USE_GPU)
 
 if(HIOP_USE_RAJA)
-  # CAMP is always needed when RAJA is enabled
-  message("${RAJA_DIR}")
-  # need to include the "tpl" folder for camp; folder from the installation doesn't work, e.g., ${RAJA_DIR}/include or ${RAJA_DIR}/include/camp"
-  include_directories(${RAJA_DIR}/../../tpl/camp/include)
   # Look for CMake configuration file in RAJA installation
   find_package(RAJA CONFIG
     PATHS ${RAJA_DIR} ${RAJA_DIR}/share/raja/cmake
@@ -237,6 +233,8 @@ if(HIOP_USE_RAJA)
     PATHS ${umpire_DIR} ${umpire_DIR}/share/umpire/cmake
     REQUIRED)
   target_link_libraries(hiop_tpl INTERFACE umpire RAJA)
+  message(STATUS "Found RAJA pkg-config: ${RAJA_CONFIG}")
+  message(STATUS "Found umpire pkg-config: ${umpire_CONFIG}")
 endif()
 
 # KLU needed with cuSolver. TODO: make this an optional dependency
