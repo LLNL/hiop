@@ -1,6 +1,5 @@
 // Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
-// Written by Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp
@@ -74,11 +73,11 @@
 
 namespace hiop {
 
-class hiopLinSolverIndefSparseGinkgo: public hiopLinSolverSymSparse
+class hiopLinSolverSymSparseGinkgo: public hiopLinSolverSymSparse
 {
 public:
-  hiopLinSolverIndefSparseGinkgo(const int& n, const int& nnz, hiopNlpFormulation* nlp);
-  virtual ~hiopLinSolverIndefSparseGinkgo();
+  hiopLinSolverSymSparseGinkgo(const int& n, const int& nnz, hiopNlpFormulation* nlp);
+  virtual ~hiopLinSolverSymSparseGinkgo();
 
   /** Triggers a refactorization of the matrix, if necessary.
    * Overload from base class. */
@@ -104,10 +103,10 @@ private:
 
   int nFakeNegEigs_;
 
-  std::shared_ptr<gko::Executor> exec;
-  std::shared_ptr<gko::matrix::Csr<double, int>> mtx;
-  std::shared_ptr<gko::LinOpFactory> reusable_factory;
-  std::shared_ptr<gko::LinOp> gko_solver;
+  std::shared_ptr<gko::Executor> exec_;
+  std::shared_ptr<gko::matrix::Csr<double, int>> mtx_;
+  std::shared_ptr<gko::LinOpFactory> reusable_factory_;
+  std::shared_ptr<gko::LinOp> gko_solver_;
 
 
 public:
@@ -116,11 +115,6 @@ public:
    * for the factorization and performs ordering */
   virtual void firstCall();
 //  virtual void diagonalChanged( int idiag, int extent );
-
-  void inline setFakeInertia(int nNegEigs)
-  {
-    nFakeNegEigs_ = nNegEigs;
-  }
 
 friend class hiopLinSolverNonSymSparseGinkgo;
 
@@ -154,14 +148,14 @@ private:
 
   int *index_covert_CSR2Triplet_;
   int *index_covert_extra_Diag2CSR_;
-  std::unordered_map<int,int> extra_diag_nnz_map;
+  std::unordered_map<int,int> extra_diag_nnz_map_;
 
   int nFakeNegEigs_;
  
-  std::shared_ptr<gko::Executor> exec;
-  std::shared_ptr<gko::matrix::Csr<double, int>> mtx;
-  std::shared_ptr<gko::LinOpFactory> reusable_factory;
-  std::shared_ptr<gko::LinOp> gko_solver;
+  std::shared_ptr<gko::Executor> exec_;
+  std::shared_ptr<gko::matrix::Csr<double, int>> mtx_;
+  std::shared_ptr<gko::LinOpFactory> reusable_factory_;
+  std::shared_ptr<gko::LinOp> gko_solver_;
 
 public:
 
@@ -170,12 +164,7 @@ public:
   void firstCall();
 //  virtual void diagonalChanged( int idiag, int extent );
 
-  void inline setFakeInertia(int nNegEigs)
-  {
-    nFakeNegEigs_ = nNegEigs;
-  }
-
-friend class hiopLinSolverIndefSparseGinkgo;
+friend class hiopLinSolverSymSparseGinkgo;
 
 };
 

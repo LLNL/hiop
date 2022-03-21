@@ -402,7 +402,7 @@ instantiate_linear_solver(const char* linsol_opt,
         //ma57 and pardiso are not available or user requested ginkgo
 #ifdef HIOP_USE_GINKGO
         ss_log << "LSQ with GINKGO: create ";
-        hiopLinSolverIndefSparseGinkgo *p = new hiopLinSolverIndefSparseGinkgo(n, nnz, nlp_);
+        hiopLinSolverSymSparseGinkgo *p = new hiopLinSolverSymSparseGinkgo(n, nnz, nlp_);
         
         nlp_->log->printf(hovSummary,
                           "LSQ Duals Initialization --- KKT_SPARSE_XDYcYd linsys: using GINKGO on CPU as an "
@@ -416,7 +416,7 @@ instantiate_linear_solver(const char* linsol_opt,
         //ma57 and pardiso are not available or user requested ginkgo
 #ifdef HIOP_USE_GINKGO
         ss_log << "LSQ with GINKGO: create ";
-        hiopLinSolverIndefSparseGinkgo *p = new hiopLinSolverIndefSparseGinkgo(n, nnz, nlp_);
+        hiopLinSolverSymSparseGinkgo *p = new hiopLinSolverSymSparseGinkgo(n, nnz, nlp_);
         
         nlp_->log->printf(hovSummary,
                           "LSQ Duals Initialization --- KKT_SPARSE_XDYcYd linsys: using GINKGO on CPU as an "
@@ -522,7 +522,7 @@ instantiate_linear_solver(const char* linsol_opt,
         //set to be ginkgo
 #ifdef HIOP_USE_GINKGO
         ss_log << "LSQ with GINKGO: create ";
-        hiopLinSolverIndefSparseGinkgo *p = new hiopLinSolverIndefSparseGinkgo(n, nnz, nlp_);
+        hiopLinSolverSymSparseGinkgo *p = new hiopLinSolverSymSparseGinkgo(n, nnz, nlp_);
         
         nlp_->log->printf(hovSummary,
                           "LSQ Duals Initialization --- KKT_SPARSE_XDYcYd linsys: using GINKGO on CPU as an "

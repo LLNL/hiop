@@ -46,9 +46,9 @@
 // product endorsement purposes.
 
 /**
- * @file hiopLinSolverSparseSTRUMPACK.cpp
+ * @file hiopLinSolverSparseGinkgo.cpp
  *
- * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
+ * @author Fritz Goebel <fritz.goebel@kit.edu>, KIT
  *
  */
 
@@ -178,11 +178,11 @@ void update_matrix(hiopMatrixSparse* M_, std::shared_ptr<gko::matrix::Csr<double
     auto values = mtx->get_values();
     int rowID_tmp{0};
     for(int k=0;k<nnz_;k++){
-    values[k] = M_->M()[index_covert_CSR2Triplet_[k]];
+        values[k] = M_->M()[index_covert_CSR2Triplet_[k]];
     }
     for(int i=0;i<n_;i++){
-    if(index_covert_extra_Diag2CSR_[i] != -1)
-        values[index_covert_extra_Diag2CSR_[i]] += M_->M()[M_->numberOfNonzeros()-n_+i];
+        if(index_covert_extra_Diag2CSR_[i] != -1)
+            values[index_covert_extra_Diag2CSR_[i]] += M_->M()[M_->numberOfNonzeros()-n_+i];
     }
 }
 
@@ -222,54 +222,52 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
 }
 
 
-  hiopLinSolverIndefSparseGinkgo::hiopLinSolverIndefSparseGinkgo(const int& n, const int& nnz, hiopNlpFormulation* nlp)
+  hiopLinSolverSymSparseGinkgo::hiopLinSolverSymSparseGinkgo(const int& n, const int& nnz, hiopNlpFormulation* nlp)
     : hiopLinSolverSymSparse(n, nnz, nlp),
       index_covert_CSR2Triplet_{nullptr},index_covert_extra_Diag2CSR_{nullptr},
       n_{n}, nnz_{0}
   {}
 
-  hiopLinSolverIndefSparseGinkgo::~hiopLinSolverIndefSparseGinkgo()
+  hiopLinSolverSymSparseGinkgo::~hiopLinSolverSymSparseGinkgo()
   {
-    if(index_covert_CSR2Triplet_)
-      delete [] index_covert_CSR2Triplet_;
-    if(index_covert_extra_Diag2CSR_)
-      delete [] index_covert_extra_Diag2CSR_;
+    delete [] index_covert_CSR2Triplet_;
+    delete [] index_covert_extra_Diag2CSR_;
   }
 
-  void hiopLinSolverIndefSparseGinkgo::firstCall()
+  void hiopLinSolverSymSparseGinkgo::firstCall()
   {
     assert(n_==M_->n() && M_->n()==M_->m());
     assert(n_>0);
 
-    exec = gko::ReferenceExecutor::create(); //gko::CudaExecutor::create(0, gko::OmpExecutor::create());
+    exec_ = gko::ReferenceExecutor::create(); //gko::CudaExecutor::create(0, gko::OmpExecutor::create());
 
-    mtx = transferTripletToCSR(exec, n_, M_, &index_covert_CSR2Triplet_, &index_covert_extra_Diag2CSR_);
-    nnz_ = mtx->get_num_stored_elements();
+    mtx_ = transferTripletToCSR(exec_, n_, M_, &index_covert_CSR2Triplet_, &index_covert_extra_Diag2CSR_);
+    nnz_ = mtx_->get_num_stored_elements();
 
-    reusable_factory = setup_solver_factory(exec, mtx);
+    reusable_factory_ = setup_solver_factory(exec_, mtx_);
   }
 
-  int hiopLinSolverIndefSparseGinkgo::matrixChanged()
+  int hiopLinSolverSymSparseGinkgo::matrixChanged()
   {
     assert(n_==M_->n() && M_->n()==M_->m());
     assert(n_>0);
 
     nlp_->runStats.linsolv.tmFactTime.start();
 
-    if( !mtx ){
+    if( !mtx_ ){
       this->firstCall();
     }else{
-      update_matrix(M_, mtx, index_covert_CSR2Triplet_, index_covert_extra_Diag2CSR_);
+      update_matrix(M_, mtx_, index_covert_CSR2Triplet_, index_covert_extra_Diag2CSR_);
     }
 
-    gko_solver = gko::share(reusable_factory->generate(mtx));
+    gko_solver_ = gko::share(reusable_factory_->generate(mtx_));
     nlp_->runStats.linsolv.tmInertiaComp.start();
     int negEigVal = nFakeNegEigs_;
     nlp_->runStats.linsolv.tmInertiaComp.stop();
     return negEigVal;
   }
 
-  bool hiopLinSolverIndefSparseGinkgo::solve ( hiopVector& x_ )
+  bool hiopLinSolverSymSparseGinkgo::solve ( hiopVector& x_ )
   {
     assert(n_==M_->n() && M_->n()==M_->m());
     assert(n_>0);
@@ -282,12 +280,12 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
     hiopVectorPar* rhs = dynamic_cast<hiopVectorPar*>(x->new_copy());
     double* dx = x->local_data();
     double* drhs = rhs->local_data();
-    auto x_array = gko::Array<double>::view(exec, n_, dx);
-    auto b_array = gko::Array<double>::view(exec, n_, drhs);
-    auto dense_x = gko::matrix::Dense<double>::create(exec, gko::dim<2>{n_, 1}, gko::Array<double>::view(exec, n_, dx), 1);
-    auto dense_b = gko::matrix::Dense<double>::create(exec, gko::dim<2>{n_, 1}, b_array, 1);
+    auto x_array = gko::Array<double>::view(exec_, n_, dx);
+    auto b_array = gko::Array<double>::view(exec_, n_, drhs);
+    auto dense_x = gko::matrix::Dense<double>::create(exec_, gko::dim<2>{n_, 1}, gko::Array<double>::view(exec_, n_, dx), 1);
+    auto dense_b = gko::matrix::Dense<double>::create(exec_, gko::dim<2>{n_, 1}, b_array, 1);
 
-    gko_solver->apply(dense_b.get(), dense_x.get());
+    gko_solver_->apply(dense_b.get(), dense_x.get());
 
     nlp_->runStats.linsolv.tmTriuSolves.stop();
     
@@ -317,12 +315,12 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
     assert(n_==M_->n() && M_->n()==M_->m());
     assert(n_>0);
 
-    exec = gko::ReferenceExecutor::create(); //gko::CudaExecutor::create(0, gko::OmpExecutor::create());
+    exec_= gko::ReferenceExecutor::create(); //gko::CudaExecutor::create(0, gko::OmpExecutor::create());
 
-    mtx = transferTripletToCSR(exec, n_, M_, &index_covert_CSR2Triplet_, &index_covert_extra_Diag2CSR_);
-    nnz_ = mtx->get_num_stored_elements();
+    mtx_ = transferTripletToCSR(exec_, n_, M_, &index_covert_CSR2Triplet_, &index_covert_extra_Diag2CSR_);
+    nnz_ = mtx_->get_num_stored_elements();
 
-    reusable_factory = setup_solver_factory(exec, mtx);
+    reusable_factory_ = setup_solver_factory(exec_, mtx_);
   }
 
   int hiopLinSolverNonSymSparseGinkgo::matrixChanged()
@@ -332,13 +330,13 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
 
     nlp_->runStats.linsolv.tmFactTime.start();
 
-    if( !mtx ){
+    if( !mtx_ ){
       this->firstCall();
     }else{
-      update_matrix(M_, mtx, index_covert_CSR2Triplet_, index_covert_extra_Diag2CSR_);
+      update_matrix(M_, mtx_, index_covert_CSR2Triplet_, index_covert_extra_Diag2CSR_);
     }
 
-    gko_solver = gko::share(reusable_factory->generate(mtx));
+    gko_solver_ = gko::share(reusable_factory_->generate(mtx_));
 
     nlp_->runStats.linsolv.tmInertiaComp.start();
     int negEigVal = nFakeNegEigs_;
@@ -359,12 +357,12 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
     hiopVectorPar* rhs = dynamic_cast<hiopVectorPar*>(x->new_copy());
     double* dx = x->local_data();
     double* drhs = rhs->local_data();
-    auto x_array = gko::Array<double>::view(exec, n_, dx);
-    auto b_array = gko::Array<double>::view(exec, n_, drhs);
-    auto dense_x = gko::matrix::Dense<double>::create(exec, gko::dim<2>{n_, 1}, x_array, 1);
-    auto dense_b = gko::matrix::Dense<double>::create(exec, gko::dim<2>{n_, 1}, b_array, 1);
+    auto x_array = gko::Array<double>::view(exec_, n_, dx);
+    auto b_array = gko::Array<double>::view(exec_, n_, drhs);
+    auto dense_x = gko::matrix::Dense<double>::create(exec_, gko::dim<2>{n_, 1}, x_array, 1);
+    auto dense_b = gko::matrix::Dense<double>::create(exec_, gko::dim<2>{n_, 1}, b_array, 1);
 
-    gko_solver->apply(dense_b.get(), dense_x.get());
+    gko_solver_->apply(dense_b.get(), dense_x.get());
 
     nlp_->runStats.linsolv.tmTriuSolves.stop();
     
