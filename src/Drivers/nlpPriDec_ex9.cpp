@@ -3,7 +3,7 @@
 #include "hiopAlgFilterIPM.hpp"
 
 /*
-  todo:
+  Further work:
   - generate S vectors \xi (each of size nS) from U[-0.25, 0.25]
 */
 using namespace hiop;
@@ -48,9 +48,8 @@ PriDecMasterProblemEx9::solve_master(hiopVector& x,
   
   hiopNlpSparse nlp(*basecase_, master_options_file);
 
-  //
   // any of the options below can be overwritten by specifying them in the 'hiop_pridec_master.options' file
-  //
+  
   //nlp.options->SetStringValue("compute_mode", "hybrid");
   //nlp.options->SetStringValue("dualsUpdateType", "linear");
 
@@ -78,23 +77,21 @@ PriDecMasterProblemEx9::solve_master(hiopVector& x,
     return status;
   }
   
-  // print x
-  // for(int i=0;i<nx_;i++) printf(" %d %18.12e ",i,x[i]);
+  // for(int i=0;i<nx_;i++) printf(" %d %18.12e ",i,x[i]); // print x for debugging purpose
     
   if(sol_==NULL) {
     sol_ = new double[nx_];
   }
   memcpy(sol_,x_vec, nx_*sizeof(double));
   
-  //compute the recourse estimate
+  // compute the recourse estimate
   if(include_r) {
     double rec_appx = 0.;
     basecase_->get_rec_obj(nx_, x_vec, rec_appx);
-    //printf("recourse estimate: is %18.12e\n", rec_appx); 
   }
   
   return Solve_Success;
-  //return hiop::SolverInternal_Error;
+  // return hiop::SolverInternal_Error;
 }
 
 bool PriDecMasterProblemEx9::
@@ -127,7 +124,7 @@ bool PriDecMasterProblemEx9::eval_f_rterm(size_t idx, const int& n, const double
 
   ex9_recourse = new PriDecRecourseProblemEx9(nc_, nS_,S_,x,xi);
   
-  // set a few contingencies to have different sparse structure
+  // set a few contingencies to have different sparse structure to created unbalanced load
   /*
   if(idx%30==0) {  
     ex9_recourse->set_sparse(0.3);
@@ -173,7 +170,7 @@ bool PriDecMasterProblemEx9::eval_f_rterm(size_t idx, const int& n, const double
   return true;
 };
 
-//returns the gradient computed in eval_f_rterm
+// returns the gradient computed in eval_f_rterm
 bool PriDecMasterProblemEx9::eval_grad_rterm(size_t idx, const int& n, double* x, hiopVector& grad)
 {
   assert(nx_==n);

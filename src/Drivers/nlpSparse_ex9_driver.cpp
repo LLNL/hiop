@@ -13,9 +13,9 @@ using namespace hiop;
 #include <string>
 
 /**
- * Driver for example 8 that illustrates the use of hiop::hiopAlgPrimalDecomposition 
+ * Driver for example 9 that is for test purpose only, uses HiOp Sparse class to set up the problem. 
  * 
- * @note This example is built only when HIOP_USE_MPI is enabled during cmake build
+ * @note This example is built only when HIOP_USE_MPI and HIOP_SPARSE are enabled during cmake build
  * and require at least two MPI ranks in MPI_COMM_WORLD.
  *
  */

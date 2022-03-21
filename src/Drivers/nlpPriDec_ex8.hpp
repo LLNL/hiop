@@ -13,23 +13,30 @@
 #include <cmath>
 #include <chrono>
 
-/** This class provide an example of what a user of hiop::hiopInterfacePriDecProblem 
+/** This file provide an example of what a user of hiop::hiopInterfacePriDecProblem 
  * should implement in order to provide both the base and recourse problem to 
  * hiop::hiopAlgPrimalDecomposition solver
  * 
  * Base case problem f
  * sum 0.5 {(x_i-1)*(x_i-1) : i=1,...,ns} 
  *           x_i >=0
- * Contingency problems r_i
+ * Contingency/recourse problems r
  * r = 1/S * \sum{i=1^S} 0.5*|x+Se_i|^2
  * where {Se_i}_j = S  j=i
  *                = 0  otherwise,  i=1,2,....S
  * For i>ns, Se_i = 0
  *
- * This should produce the analytical solution of x* = 0
  */
 
 using namespace hiop;
+
+/** Ex8 is the class for the base case problem. It is also 
+ *  a building block for the master problem. 
+ *  @param include_r is a boolean that determines whether a recourse objective is present
+ *  @param evaluator_ contains the information for the recourse objective approximation
+ *  If include_r is true, the objective of this class will contain the extra recourse term.
+ *  This can be observed in the .cpp file.
+ */
 class Ex8 : public hiop::hiopInterfaceDenseConstraints
 {
 public:
@@ -64,7 +71,7 @@ public:
                          bool new_x,
                          double* cons);
   
-  //sum 0.5 {(x_i-1)*(x_{i}-1) : i=1,...,ns} 
+  // sum 0.5 {(x_i-1)*(x_{i}-1) : i=1,...,ns} 
   virtual bool eval_grad_f(const size_type& n, const double* x, bool new_x, double* gradf);
   
   // Implementation of the primal starting point specification //
@@ -81,12 +88,14 @@ public:
   virtual bool eval_Jac_cons(const size_type& n, const size_type& m,
                              const size_type& num_cons, const index_type* idx_cons,  
                              const double* x, bool new_x, double* Jac); 
-  
+ 
+  // Test to see if the quadratic approxmation is defined. 
   virtual bool quad_is_defined();
   
+  /** Set up the recourse approximation: evaluator_. */
   virtual bool set_quadratic_terms(const int& n, 
                                    hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator);
-  
+  // Set the include_r boolean. 
   virtual bool set_include(bool include);
   
 protected:
@@ -97,7 +106,10 @@ protected:
   
 };
 
-
+/**
+ * Master problem class based on the base case problem, which is a Ex8 class.
+ *
+ */ 
 class PriDecMasterProblemEx8 : public hiopInterfacePriDecProblem
 {
 public:
@@ -132,20 +144,28 @@ public:
                                        const double* hess = 0,
                                        const char* master_options_file=nullptr);
   
-  // The recourse solution is 0.5*(x+Se_i)(x+Se_i)
+  /**
+   * This function returns the recourse objective, which is 0.5*(x+Se_i)(x+Se_i).
+   */
   virtual bool eval_f_rterm(size_t idx, const int& n,const  double* x, double& rval);
   
+  /**
+   * This function returns the recourse gradient.
+   */
   virtual bool eval_grad_rterm(size_t idx, const int& n, double* x, hiopVector& grad);
   
-  // Implement with alpha = 1 for now only
-  // This function should only be used if quadratic regularization is included
+  /**
+   * This function sets up the approximation of the recourse objective based on the function value and gradient 
+   * returned by eval_f_rterm and eval_grad_rterm.
+   * Implemented with alpha = 1 for now only. 
+   * This function is called only if quadratic regularization is included.
+   */
   virtual bool set_recourse_approx_evaluator(const int n, 
                                              hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator);
-  /** 
-   * Returns the number S of recourse terms
-   */
+  // Returns the number S of recourse terms.
   size_t get_num_rterms() const {return S_;}
   size_t get_num_vars() const {return n_;}
+  // Returns the solution.
   void get_solution(double* x) const 
   {
     for(int i=0; i<n_; i++)

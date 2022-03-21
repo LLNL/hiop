@@ -1,6 +1,11 @@
 #include "nlpSparse_ex6.hpp"
 #include "hiopInterfacePrimalDecomp.hpp"
 
+/** This class is the basecase problem for Ex9. 
+ *  To work for the master problem, it has a boolean include_rec_ to determine
+ *  whether a recourse approximation is in the objective.
+ *  There is no corresponding .cpp file. 
+ */
 using namespace hiop;
 class PriDecBasecaseProblemEx9 : public Ex6
 {
@@ -23,7 +28,7 @@ public:
       assert(rec_evaluator_->get_rgrad()!=NULL);
       rec_evaluator_->eval_f(n, x, new_x, obj_value);
     } 
-    //add regularization to the objective based on rec_evaluator_
+    // add regularization to the objective based on rec_evaluator_
     return true;
   }
 
@@ -53,7 +58,7 @@ public:
     // The indices are already added through the parent 
 
     if(MHSS!=nullptr) {
-      //use rec_evaluator_ to add diagonal entries in the Hessian
+      // use rec_evaluator_ to add diagonal entries in the Hessian
       assert(nnzHSS == n);
       if(include_rec_) {
         for(int i=0; i<n; i++) {

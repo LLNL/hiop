@@ -73,8 +73,9 @@ public:
    * via the 'add_' methods below. (this does not appear to be case anymore Frank TODO)
    *
    * @param x : output, will contain the primal optimal solution of the master
-   * TO DO: document the rest of the parameters, even though it appears that no calls with non-default 
-   * 3rd, 4th, and 5th parameters are made. 
+   * @param include_r: boolean that determines whether the (approximated) recourse objective should be added to the basecase
+   * @param rval/grad/hess: optional input that updates the function value, gradient and hessian of the recourse,
+   * respectively. NOT implemented currently.
    *
    * @param master_options_file : input string specifying the name of the options file the NLP solver
    * should use when solving the master problem. A null value indicates that the NLP solver should use
@@ -107,7 +108,7 @@ public:
 
   /** 
    * Define the evaluator class called by the base case problem class to add the quadratic 
-   * recourse approximation
+   * recourse approximation.
    * This class is intened for internal use of hiopInterfacePriDecProblem class only
    * In the cases where only RecourseApproxEvaluator is needed, a shell hiopInterfacePriDecProblem
    * is still required to be created.
@@ -116,10 +117,6 @@ public:
   // Notes:
   // since this class allocates vectors, it (as well as hiopInterfacePriDecProblem) needs to be aware of the memory space
   //
-  // Solutions
-  //1. pass the mem space to hiopInterfacePriDecProblem's constructors (kinda complicates user code)
-  //2. rely only on alloc_clone and new_copy of the hiopVector objects passed in the methods -- need to delete some of the constructors
-  //3. move this to the algorithm class and delay its creation until the master problem's mem space is clear 
   class RecourseApproxEvaluator
   {
   public:

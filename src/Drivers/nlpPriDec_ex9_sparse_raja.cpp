@@ -52,9 +52,7 @@ PriDecMasterProblemEx9Sparse::solve_master(hiopVector& x,
   
   hiopNlpSparse nlp(*basecase_, master_options_file);
 
-  //
   // any of the options below can be overwritten by specifying them in the 'hiop_pridec_master.options' file
-  //
 
   //nlp.options->SetStringValue("fixed_var", "relax");
   nlp.options->SetStringValue("Hessian", "analytical_exact");
@@ -91,7 +89,6 @@ PriDecMasterProblemEx9Sparse::solve_master(hiopVector& x,
   if(include_r) {
     double rec_appx = 0.;
     basecase_->get_rec_obj(nx_, x_vec, rec_appx);
-    //printf("recourse estimate: is %18.12e\n", rec_appx); 
   }
   
   return Solve_Success;
@@ -128,12 +125,10 @@ bool PriDecMasterProblemEx9Sparse::eval_f_rterm(size_t idx, const int& n, const 
   //xi[ny_-1] = double(idx/100.0+1.);
 
   PriDecRecourseProblemEx9Sparse* ex9_recourse;
-  //printf("Constructor of recourse\n");
 
   ex9_recourse = new PriDecRecourseProblemEx9Sparse(nc_, nS_, S_, x, xi, mem_space_);
   
-  //printf("Constructor of recourse complete\n");
-  // set a few contingencies to have different sparse structure
+  // set a few contingencies to have different sparse structure to created unbalanced load
   /*
   if(idx%30==0) {  
     ex9_recourse->set_sparse(0.3);
@@ -182,7 +177,7 @@ bool PriDecMasterProblemEx9Sparse::eval_f_rterm(size_t idx, const int& n, const 
   return true;
 };
 
-//returns the gradient computed in eval_f_rterm
+// returns the gradient computed in eval_f_rterm
 bool PriDecMasterProblemEx9Sparse::eval_grad_rterm(size_t idx, const int& n, double* x, hiopVector& grad)
 {
   assert(nx_==n);

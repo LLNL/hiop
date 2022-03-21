@@ -1,12 +1,12 @@
 #ifndef EX9_RECOURSE
 #define EX9_RECOURSE
 
-#include <cstring> //for memcpy
+#include <cstring> 
 #include <cstdio>
 
 /** This class provide an example of what a user of hiop::hiopInterfacePriDecProblem 
  * should implement in order to provide the recourse problem to 
- * hiop::hiopAlgPrimalDecomposition solver
+ * hiop::hiopAlgPrimalDecomposition solver.
  * 
  * For a given vector x\in R^n and \xi \in R^{n_S}, this example class implements
  *
@@ -20,7 +20,8 @@
  *
  *                   y_1 >=0
  *
- * Coding of the problem in MDS HiOp input: order of variables need to be [ysparse,ydense] 
+ * Coding of the problem in MDS HiOp input: order of variables need to be [ysparse,ydense]. 
+ * This is distinguished from the Sparse HiOp class.
  */
 
 class PriDecRecourseProblemEx9 : public hiop::hiopInterfaceMDS
@@ -29,7 +30,7 @@ public:
   PriDecRecourseProblemEx9(int n, int nS, int S): nx_(n), nS_(nS),S_(S),x_(nullptr),xi_(nullptr)
   {
     assert(nS_>=1);
-    assert(nx_>=nS_);  // ny=nx=n
+    assert(nx_>=nS_);  // ny = nx = n
     assert(S_>=1);
     ny_ = nx_;
     nsparse_ = nx_*sparse_ratio;
@@ -42,7 +43,7 @@ public:
                            const double* xi): nx_(n), nS_(nS), S_(S)
   {
     assert(nS_>=1);
-    assert(nx_>=nS_);  // ny=nx=n
+    assert(nx_>=nS_);  // ny = nx = n
     assert(S_>=1);
 
     ny_ = nx_;
@@ -159,7 +160,7 @@ public:
     } else {
       nnz_sparse_Jaci = nsparse_+(nsparse_-1)*2;
     }
-    nnz_sparse_Hess_Lagr_SS = nsparse_;  //Lagrangian?
+    nnz_sparse_Hess_Lagr_SS = nsparse_;  // Lagrangian
     nnz_sparse_Hess_Lagr_SD = 0;
     return true;
   }
@@ -209,7 +210,7 @@ public:
     return true; 
   }
   
-  //  r_i(x;\xi^i) = 1/S *  min_y 0.5 || y - x ||^2 such that 
+  // r_i(x;\xi^i) = 1/S *  min_y 0.5 || y - x ||^2 such that 
   bool eval_grad_f(const size_type& n, const double* x, bool new_x, double* gradf)
   {
     assert(ny_==n);    
@@ -234,7 +235,7 @@ public:
                              double* JacD)
   {
     assert(num_cons==nx_||num_cons==0);
-    //indexes for sparse part
+    // indexes for sparse part
     if(num_cons==0) {
       return true;
     }
@@ -244,13 +245,13 @@ public:
       for(int itrow=0; itrow<num_cons; itrow++) {
         const int con_idx = (int) idx_cons[itrow];
         if(con_idx<nsparse_-1) {
-          //sparse Jacobian eq w.r.t. x and s
-          //yk
+          // sparse Jacobian eq w.r.t. x and s
+          // y_k
           iJacS[nnzit] = con_idx;
           jJacS[nnzit] = con_idx; //-1
           nnzit++;
 
-          //yk+1
+          // y_{k+1}
           iJacS[nnzit] = con_idx;
           jJacS[nnzit] = con_idx+1; //1
           nnzit++;
@@ -284,23 +285,23 @@ public:
               //cons[m-1] += x[i]*x[i];
             }
           }
-          //sparse Jacobian ineq w.r.t x and s
+          // sparse Jacobian ineq w.r.t x and s
         }
       }
       assert(nnzit==nnzJacS);
     }
-    //values for sparse Jacobian if requested by the solver
+    // values for sparse Jacobian if requested by the solver
     if(MJacS!=NULL) {
       int nnzit=0;
       for(int itrow=0; itrow<num_cons; itrow++) {
         const int con_idx = (int) idx_cons[itrow];
         if(con_idx<nsparse_-1) {
-          //sparse Jacobian eq w.r.t. x and s
-          //yk+1
+          // sparse Jacobian eq w.r.t. x and s
+          // y_{k+1}
           MJacS[nnzit] = -1.;
           nnzit++;
 
-          //yk
+          // y_k
           MJacS[nnzit] = 1.;
           nnzit++;
         } else if (con_idx==nsparse_-1) {
@@ -328,13 +329,11 @@ public:
               //cons[m-1] += x[i]*x[i];
             }
           }
-          //sparse Jacobian ineq w.r.t x and s
         }
       }
       assert(nnzit==nnzJacS);
     }
-    //dense Jacobian w.r.t ydense
-    //it has row number of m
+    // dense Jacobian w.r.t ydense with a row number of m
     if(JacD!=NULL) {
       for(int itrow=0; itrow<num_cons; itrow++) {
         const int con_idx = (int) idx_cons[itrow];
@@ -385,16 +384,16 @@ public:
   {
     assert(nnzHSS==nsparse_);
     assert(nnzHSD==0);
-    //    r_i(x;\xi^i) = 1/S *  min_y 0.5 || y - x ||^2 such that 
+    
     if(iHSS!=NULL && jHSS!=NULL) {
       for(int i=0;i<nsparse_;i++) iHSS[i] = jHSS[i] = i;     
     }
-    // need lambda
+    
     if(MHSS!=NULL) {
-      for(int i=0;i<nsparse_;i++) MHSS[i] =  obj_factor; //what is this?     
+      for(int i=0;i<nsparse_;i++) MHSS[i] =  obj_factor;  // a parameter in HiOp
       MHSS[0] += 2*lambda[m-1];
       for(int i=1;i<nsparse_;i++) {
-        MHSS[i] += lambda[m-1]* 2.; //what is this?     
+        MHSS[i] += lambda[m-1]* 2.; 
       } 
     }
     if(HDD!=NULL){
@@ -407,7 +406,7 @@ public:
     return true;
   }
 
-  /* Implementation of the primal starting point specification */
+  // Implementation of the primal starting point specification 
   bool get_starting_point(const size_type& global_n, double* x0)
   {    
     assert(global_n==nx_);
@@ -428,10 +427,10 @@ public:
   }
 
 
-  /*
-   * computing the derivative of the recourse function with respect to x in the problem description
+  /**
+   * This function computes the derivative of the recourse function with respect to x in the problem description,
    * which is the x_ in the protected variable, while x in the function implementation
-   * represents y in the problem description
+   * represents y in the problem description.
    */
   bool compute_gradx(const int n, const double* y, double*  gradx)
   {
@@ -453,7 +452,7 @@ public:
 protected:
   double* x_;
   double* xi_;
-  int nx_; //n_==nx==ny
+  int nx_; // In this example, n_ = nx_ = ny_.
   int ny_;
   int nS_;
   int S_;

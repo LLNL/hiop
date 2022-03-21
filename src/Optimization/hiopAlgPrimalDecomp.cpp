@@ -65,10 +65,10 @@ using namespace std;
 namespace hiop
 {
 #ifdef HIOP_USE_MPI
-  /* This struct provides the info necessary for the recourse approximation function
-   * buffer[n+1] contains both the function value and gradient w.r.t x
-   * buffer[0] is the function value and buffer[1:n] the gradient
-   * Contains send and receive functionalities for the values in buffer
+  /** This struct provides the info necessary for the recourse approximation function
+   * buffer[n+1] contains both the function value and gradient w.r.t x.
+   * buffer[0] is the function value and buffer[1:n] the gradient.
+   * Contains send and receive functionalities for the values in buffer.
    */
   struct ReqRecourseApprox
   {
@@ -116,7 +116,7 @@ namespace hiop
     hiopVector* buffer;
   };
 
-  /* This struct is used to post receive and request for contingency
+  /** This struct is used to post receive and request for contingency
    * index that is to be solved by the solver ranks.
    */
   struct ReqContingencyIdx
@@ -205,7 +205,6 @@ HessianApprox(const int& n,
 
 hiopAlgPrimalDecomposition::HessianApprox::~HessianApprox()
 {
-  //delete[] xkm1;
   delete log_;
   delete xkm1;
   delete skm1;
@@ -213,12 +212,11 @@ hiopAlgPrimalDecomposition::HessianApprox::~HessianApprox()
   delete gkm1;    
 }
 
-/* n_ is the dimension of x, hence the dimension of g_k, skm1, etc */
+/** n_ is the dimension of x, hence the dimension of g_k, skm1, etc */
 void hiopAlgPrimalDecomposition::HessianApprox::set_n(const int n)
 {
   n_ = n;
 }
-
 
 void hiopAlgPrimalDecomposition::HessianApprox::
 set_xkm1(const hiopVector& xk)
@@ -230,7 +228,6 @@ set_xkm1(const hiopVector& xk)
     xkm1->copyFromStarting(0, xk.local_data_const(), n_);
   }
 }
-
 
 void hiopAlgPrimalDecomposition::HessianApprox::
 set_gkm1(const hiopVector& grad)
@@ -250,10 +247,8 @@ initialize(const double f_val, const hiopVector& xk, const hiopVector& grad)
   if(xkm1==NULL) {
     assert(n_!=-1);
     xkm1 = LinearAlgebraFactory::create_vector(options_->GetString("mem_space"), n_);
-    //xkm1 = new double[n_];
   } else {
     xkm1->copyFromStarting(0, xk.local_data_const(), n_);
-    //memcpy(xkm1, xk, n_*sizeof(double));
   }
   if(gkm1==NULL) {
     assert(n_!=-1);
@@ -273,7 +268,6 @@ initialize(const double f_val, const hiopVector& xk, const hiopVector& grad)
   }
 }
     
-/* updating variables for the current iteration */
 void hiopAlgPrimalDecomposition::HessianApprox::
 update_hess_coeff(const hiopVector& xk, 
                   const hiopVector& gk, 
@@ -298,53 +292,33 @@ update_hess_coeff(const hiopVector& xk,
   //update_ratio(); //update ratio relies on gk not gkm1
 }
  
-/** 
- * updating ratio_ used to compute alpha i
- * Using trust-region notations,
- * rhok = (f_{k-1}-f_k)/(m(0)-m(p_k)), where m(p)=f_{k-1}+g_{k-1}^Tp+0.5 alpha_{k-1} pTp.
- * Therefore, m(0) = f_{k-1}. rhok is the ratio of real change in recourse function value
- * and the estimate change. Trust-region algorithms use a set heuristics to update alpha_k
- * based on rhok
- * rk: m(p_k)
- * The condition |x-x_{k-1}| = \Delatk is replaced by measuring the ratio of quadratic
- * objective and linear objective. 
- * User can provide a global maximum and minimum for alpha
- */
- 
 void hiopAlgPrimalDecomposition::HessianApprox::update_ratio()
 {
   double rk = fkm1+fkm1_lin;
 
   rk += 0.5*alpha_*(skm1->twonorm())*(skm1->twonorm()); 
-  //printf("recourse estimate inside HessianApprox %18.12e\n",rk);
+  // printf("recourse estimate inside HessianApprox %18.12e\n",rk);
   double rho_k = (fkm1-fk)/(fkm1-rk);
-  
   
   log_->printf(hovSummary, " previous val  %18.12e,", fkm1);
   log_->printf(hovSummary, " real val %18.12e,", fk);
   log_->printf(hovSummary, " predicted val %18.12e,", rk);
   log_->printf(hovSummary, " rho_k %18.12e\n", rho_k);
   
-  //a measure for when alpha should be decreasing (in addition to being good approximation)
+  // a measure for when alpha should be decreasing (in addition to being good approximation)
   double quanorm = 0.; double gradnorm=0.;
   quanorm += skm1->dotProductWith(*skm1);
-  //gradnorm += gkm1->dotProductWith(*skm1);
-  gradnorm += fkm1_lin;
+  gradnorm += fkm1_lin; // equivalent to gradnorm += gkm1->dotProductWith(*skm1);
   quanorm = alpha_*quanorm;
 
   double alpha_g_ratio = quanorm/fabs(gradnorm);
   if(ver_ >=outlevel2) {
-
     printf("alpha norm ratio  %18.12e",alpha_g_ratio);
   }
   //using a trust region criteria for adjusting ratio
   update_ratio_tr(rho_k,fkm1, fk, alpha_g_ratio, ratio_);
 } 
 
-/* a trust region way of updating alpha ratio
- * rkm1: true recourse value at {k-1}
- * rk: true recourse value at k
- */
 void hiopAlgPrimalDecomposition::HessianApprox::
 update_ratio_tr(const double rhok,
                 const double rkm1, 
@@ -369,7 +343,7 @@ update_ratio_tr(const double rhok,
   }
   if((rhok>0 &&rhok<1/8. && (rkm1-rk>0) ) || (rhok<0 && rkm1-rk<0 ) ) {
     log_->printf(hovWarning, "This step is rejected.\n");
-    //sol_base = solm1;
+    //sol_base = solm1; // when rejected, return to the previous iteration point. this mechanism has yet to be implemented.
     //f = fm1;
     //gradf = gkm1;
   }
@@ -377,13 +351,12 @@ update_ratio_tr(const double rhok,
   alpha_ratio = std::min(ratio_max,alpha_ratio); 
 }
 
-// update ratio rho_k with both base case and recourse function
 void hiopAlgPrimalDecomposition::HessianApprox::
 update_ratio(const double base_v, const double base_vm1)
 {
   double rk = fkm1+fkm1_lin;
 
-  rk += 0.5*alpha_*(skm1->twonorm())*(skm1->twonorm()); 
+  rk += 0.5*alpha_*(skm1->twonorm())*(skm1->twonorm()); // include basecase objective 
   //printf("recourse estimate inside HessianApprox %18.12e\n",rk);
   double rho_k = (base_vm1+fkm1-fk-base_v)/(fkm1+base_vm1-rk-base_v);
    
@@ -394,7 +367,7 @@ update_ratio(const double base_v, const double base_vm1)
   log_->printf(hovSummary, " predicted val %18.12e,", rk);
   log_->printf(hovSummary, " rho_k %18.12e\n", rho_k);
   
-  //using a trust region criteria for adjusting ratio
+  // using a trust region criteria for adjusting ratio
   update_ratio_tr(rho_k, ratio_);
 
   //TODO: give choice of two update rules
@@ -420,18 +393,12 @@ update_ratio_tr(const double rhok,
     log_->printf(hovSummary,"This step needs to be rejected.\n");
     //sol_base = solm1;
     //f = fm1;
-    //gradf = gkm1;
+    //gradf = gkm1;  // rejection mechanism to be implemented
   }
   alpha_ratio = std::max(ratio_min,alpha_ratio); 
   alpha_ratio = std::min(ratio_max,alpha_ratio); 
 }
 
-
-
-
-/* currently provides multiple ways to compute alpha, one is to the BB alpha
- * or the alpha computed through the BarzilaiBorwein gradient method, a quasi-Newton method.
- */
 double hiopAlgPrimalDecomposition::HessianApprox::get_alpha_BB()
 {
   double temp1 = 0.;
@@ -443,26 +410,19 @@ double hiopAlgPrimalDecomposition::HessianApprox::get_alpha_BB()
   alpha_ = temp2/temp1;
   alpha_ = std::max(alpha_min,alpha_);
   alpha_ = std::min(alpha_max,alpha_);
-  //printf("alpha max %18.12e\n",alpha_max);
+  // printf("alpha max %18.12e\n",alpha_max);
   return alpha_;
 }
-
-/* Computing alpha through alpha = alpha_f*ratio_
- * alpha_f is computed through
- * min{f_k+g_k^T(x-x_k)+0.5 alpha_k|x-x_k|^2 >= beta_k f}
- * So alpha_f is based on the constraint on the minimum of recourse
- * approximition. This is to ensure good approximation.
- */ 
 
 double hiopAlgPrimalDecomposition::HessianApprox::get_alpha_f(const hiopVector& gk)
 {
   double temp3 = 0.;
 
-  //call update first, gkm1 is already gk
+  // call update first, gkm1 is already gk
   temp3 = gk.twonorm()*gk.twonorm();
 
   alpha_ = temp3/2.0/fk; 
-  //printf("alpha check %18.12e\n",temp3/2.0);
+  // printf("alpha check %18.12e\n",temp3/2.0);
   alpha_ *= ratio_;
   alpha_ = std::max(alpha_min,alpha_);
   alpha_ = std::min(alpha_max,alpha_);
@@ -472,8 +432,6 @@ double hiopAlgPrimalDecomposition::HessianApprox::get_alpha_f(const hiopVector& 
 
 double hiopAlgPrimalDecomposition::HessianApprox::get_alpha_tr()
 {
-
-  //printf("alpha check %18.12e\n",temp3/2.0);
   alpha_ *= tr_ratio_;
   alpha_ = std::max(alpha_min,alpha_);
   alpha_ = std::min(alpha_max,alpha_);
@@ -502,7 +460,6 @@ double hiopAlgPrimalDecomposition::HessianApprox::check_convergence_grad(const h
   temp2 = gk.twonorm();
 
   double convg = temp1/temp2;
-  //ykm1->print();
   log_->printf(hovScalars, "alpha  %18.12e \n",alpha_);
   log_->printf(hovScalars, "temp1  %18.12e,", temp1);
   log_->printf(hovScalars, " temp2 %18.12e,", temp2);
@@ -513,12 +470,11 @@ double hiopAlgPrimalDecomposition::HessianApprox::check_convergence_grad(const h
   return convg;
 }
 
-// stopping criteria based on function value change of both base case and recourse
+// stopping criteria based on function value change of both basecase and recourse
 double hiopAlgPrimalDecomposition::HessianApprox::
 check_convergence_fcn(const double base_v, const double base_vm1)
 {
   double predicted_decrease = fkm1_lin;
-
   assert(n_==gkm1->get_local_size());
   predicted_decrease += 0.5*alpha_*(skm1->twonorm())*(skm1->twonorm()); 
 
@@ -529,17 +485,11 @@ check_convergence_fcn(const double base_v, const double base_vm1)
   return predicted_decrease;
 }
 
-// Compute the base case value at the kth step by subtracting
-// recourse approximation value from the objective. rval is the real
-// recourse function value at x_{k-1}, val is the master problem 
-// objective which is the sum of the base case value and the recourse function value.
-// This requires the previous steps to compute, hence in the HessianApprox class.
 double hiopAlgPrimalDecomposition::HessianApprox::
 compute_base(const double val)
 {
   double rec_appx = fkm1+fkm1_lin;
   rec_appx += 0.5*alpha_*(skm1->twonorm())*(skm1->twonorm()); 
-  //delete temp;
   return val-rec_appx;
 }
 
@@ -584,8 +534,8 @@ hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
   // if no coupling indices are specified, assume the entire x is coupled
   nc_ = n_;
 
-  //determine rank and rank type
-  //only two rank types for now, master and evaluator/worker
+  // determine rank and rank type
+  // only two rank types for now, master and evaluator/worker
 
   #ifdef HIOP_USE_MPI
     int ierr = MPI_Comm_rank(comm_world_, &my_rank_); assert(ierr == MPI_SUCCESS);
@@ -598,7 +548,7 @@ hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
     request_ = new MPI_Request[4];   
   #endif
   
-  //use "hiop_pridec.options" - if the file does not exist, built-in default options will be used
+  // use "hiop_pridec.options" - if the file does not exist, built-in default options will be used
   options_ = new hiopOptionsPriDec(hiopOptions::default_filename_pridec_solver);
 
   set_tolerance(options_->GetNumeric("tolerance"));
@@ -617,7 +567,7 @@ hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
 
   set_verbosity(options_->GetInteger("verbosity_level"));
 
-  //logger will be created with stdout, outputing on rank 0 of the 'comm_world' MPI communicator
+  // logger will be created with stdout, outputing on rank 0 of the 'comm_world' MPI communicator
   log_ = new hiopLogger(options_, stdout, 0, comm_world);
 
   x_ = LinearAlgebraFactory::create_vector(options_->GetString("mem_space"), n_);
@@ -638,8 +588,7 @@ hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
   S_ = master_prob_->get_num_rterms();
   n_ = master_prob_->get_num_vars();
 
-  //determine rank and rank type
-  //only two rank types for now, master and evaluator/worker
+  // only two rank types for now, master and evaluator/worker
 
 #ifdef HIOP_USE_MPI
   int ierr = MPI_Comm_rank(comm_world_, &my_rank_); assert(ierr == MPI_SUCCESS);
@@ -669,7 +618,6 @@ hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
   assert(alpha_max_ > alpha_min_);
 
   set_verbosity(options_->GetInteger("verbosity_level"));
-  //logger will be created with stdout, outputing on rank 0 of the 'comm_world' MPI communicator
   log_ = new hiopLogger(options_, stdout, 0, comm_world);
 
   x_ = LinearAlgebraFactory::create_vector(options_->GetString("mem_space"), n_);
@@ -717,17 +665,18 @@ int hiopAlgPrimalDecomposition::getNumIterations() const
   
 bool hiopAlgPrimalDecomposition::stopping_criteria(const int it, const double convg, const int accp_count)
 {
-  //gradient based stopping criteria
+  // gradient based stopping criteria
   if(convg<tol_) {
     log_->printf(hovSummary,"reaching error tolerance, successfully found solution\n"); 
     return true;
   }
-  //stopping criteria based on the change in objective function
+  // stopping criteria based on the change in objective function
   if(it == max_iter_-1) {
     log_->printf(hovSummary, "reached maximum iterations, optimization stops.\n");
 
     return true;
   }
+  // stopping criteria based on acceptable tolerance and consecutive count
   if(accp_count == accp_count_) {
     log_->printf(hovSummary, "reached acceptable tolerance of %18.12e", accp_count_);
     log_->printf(hovSummary, " for %d iterations, optimization stops.\n", accp_tol_);
@@ -743,7 +692,7 @@ step_size_inf(const int nc, const hiopVectorInt& idx, const hiopVector& x, const
   hiopVector* temp = LinearAlgebraFactory::create_vector(options_->GetString("mem_space"), x0.get_local_size()); 
   temp->copy_from_indexes(x, idx); 
   temp->axpy(-1.0, x0); 
-  //step = temp->infnorm();
+  //step = temp->infnorm(); // using infinity norm
   step = temp->twonorm();
   delete temp;
   return step;
@@ -791,7 +740,7 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
   alpha_max_ = alp_max;
 }
 
-/* MPI engine for parallel solver
+/** MPI engine for pridec solver
  */
 
 #ifdef HIOP_USE_MPI
@@ -808,14 +757,14 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
       printf("total number of recourse problems  %lu\n", S_);
       printf("total ranks %d\n",comm_size_);
     }
-    //initial point for now set to all zero
+    // initial point set to all zero, for now
     x_->setToConstant(0.0);
       
     bool bret;
-    int rank_master=0; //master rank is also the solver rank
-    //Define the values and gradients as needed in the master rank
+    int rank_master=0; // master rank is also the rank that solves the master problem
+    // Define the values and gradients as needed in the master rank
     double rval = 0.;
-    //double grad_r[nc_];
+    // double grad_r[nc_];
 
     hiopVector* grad_r;
     grad_r = LinearAlgebraFactory::create_vector(options_->GetString("mem_space"), nc_) ; 
@@ -829,31 +778,27 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
     x0->setToZero(); 
     double* x0_vec=x0->local_data();
     
-    //local recourse terms for each evaluator, defined accross all processors
+    // local recourse terms for each evaluator, defined accross all processors
     double rec_val = 0.;
     hiopVector* grad_acc = grad_r->alloc_clone();
     grad_acc->setToZero(); 
     double* grad_acc_vec = grad_acc->local_data();
-
-    //double grad_acc[nc_];
-    //for(int i=0; i<nc_; i++) grad_acc[i] = 0.;
 
     //hess_appx_2 is declared by all ranks while only rank 0 uses it
     HessianApprox* hess_appx_2 = new HessianApprox(nc_, alpha_ratio_, master_prob_, options_);
     hess_appx_2->set_alpha_min(alpha_min_);
     hess_appx_2->set_alpha_max(alpha_max_);
 
-
     if(ver_ >= hovSummary) {
       hess_appx_2->set_verbosity(ver_);
     }
 
-    double base_val = 0.; // base case objective value
-    double base_valm1 = 0.; // base case objective value from the previous step 
+    double base_val = 0.; // basecase objective value
+    double base_valm1 = 0.; // basecase objective value from the previous step 
     double recourse_val = 0.;  // recourse objective value
     double dinf = 0.; // step size 
 
-    double convg = 1e20;
+    double convg = 1e20;  // convergence measure
     double convg_g = 1e20;
     double convg_f = 1e20;
     int accp_count = 0;
@@ -875,17 +820,17 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
         t1 = MPI_Wtime(); 
       }
       it_ = it;
-      // solve the base case
+      // solve the basecase first
       if(my_rank_ == 0 && it==0) {//initial solve 
-        // printf("my rank for solver  %d\n", my_rank_);
-        // solve master problem base case on master and iteration 0
+        // log_->printf(hovIteration, "my rank for solver  %d\n", my_rank_); 
+        // solve master problem basecase on master and iteration 0
 
         options_file_master_prob = options_->GetString("options_file_master_prob");
         
         solver_status_ = master_prob_->solve_master(*x_, false, 0, 0, 0, options_file_master_prob.c_str());
-        // to do, what if solve fails?
-        if(solver_status_){     
 
+        if(solver_status_){     
+          // to do, what if solve fails?
         }
        
         log_->write(nullptr, *x_, hovFcnEval);
@@ -894,15 +839,12 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
         base_valm1 = master_prob_->get_objective();
       }
 
-      // send base case solutions to all ranks
-      // todo error control
+      // send basecase solutions to all ranks
 
       int ierr = MPI_Bcast(x_vec, n_, MPI_DOUBLE, rank_master, comm_world_);
       assert(ierr == MPI_SUCCESS);
 
-      //
       // set up recourse problem send/recv interface
-      //
       std::vector<ReqRecourseApprox* > rec_prob;
       for(int r=0; r<comm_size_;r++) {
         rec_prob.push_back(new ReqRecourseApprox(nc_));
@@ -913,7 +855,6 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
       // master rank communication
       if(my_rank_ == 0) {
         // array for number of indices, currently the indices are in [0,S_] 
-        // this is subjected to change
         rval = 0.;
         grad_r->setToZero();
         
@@ -921,8 +862,7 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
         for(int i=0; i<S_; i++) {
           cont_idx[i] = i;
         }
-        // The number of contigencies should be larger than the number of processors
-        // Otherwise not implemented yet
+        // The number of contigencies/recourse problems should be larger than the number of processors
         assert(S_>=comm_size_-1);
         // idx is the next contingency to be sent out from the master
         int idx = 0;
@@ -932,10 +872,7 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
           int cur_idx = cont_idx[idx];
           int ierr = MPI_Send(&cur_idx, 1, MPI_INT, r, 1,comm_world_);
           assert(MPI_SUCCESS == ierr);  
-          //printf("rank %d to get contingency index  %d\n", r,cur_idx);
-          //TODO: Frank
-          // you can enable the above printf above a certain "verbosity" level
-          // log_->printf(hovIteration, "rank %d to get contingency index  %d\n", r, cur_idx);
+          // log_->printf(hovIteration, "rank %d to get contingency index  %d\n", r, cur_idx); //verbosity level 10
           idx += 1;
         }
         int mpi_test_flag; // for testing if the send/recv is completed
@@ -943,18 +880,18 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
         for(int r=1; r<comm_size_; r++) {
           //int cur_idx = cont_idx[idx];
           rec_prob[r]->post_recv(2,r,comm_world_);// 2 is the tag, r is the rank source 
-          //printf("receive flag for contingency value %d)\n", mpi_test_flag);
+          // log_->printf(hovIteration, "receive flag for contingency value %d\n", mpi_test_flag); 
         }
-        // Both finish_flag and last_loop are used to deal with the final round remaining contingencies.
+        // Both finish_flag and last_loop are used to deal with the final round remaining contingencies/recourse problems.
         // Some ranks are finished while others are not. The loop needs to continue to fetch the results. 
-        //hiopVectorInt* finish_flag = LinearAlgebraFactory::createVectorInt(comm_size_);
-        //finish_flag->setToZero();
-        std::vector<int> finish_flag(comm_size_);
+        // hiopVectorInt* finish_flag = LinearAlgebraFactory::createVectorInt(comm_size_);
+        // finish_flag->setToZero();
+        std::vector<int> finish_flag(comm_size_); // standard vector will be replaced by hiopVectorInt
         for(int i=0;i<comm_size_;i++) {
           finish_flag[i]=0;
         }
         int last_loop = 0;
-        //printf("total idx %d\n", S_);
+        // log_->printf(hovIteration, "total idx %d\n", S_); 
         t2 = MPI_Wtime(); 
         
         log_->printf(hovFcnEval, "Elapsed time for entire iteration %d is %f\n",it, t2 - t1);
@@ -981,7 +918,7 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
                 req_cont_idx->set_idx(cont_idx[idx]);
                 req_cont_idx->post_send(1,r,comm_world_);
                 rec_prob[r]->post_recv(2,r,comm_world_);// 2 is the tag, r is the rank source 
-                //printf("recourse value: is %18.12e)\n", rec_prob[r]->value());
+                // log_->printf(hovFcnEval, "recourse value: is %18.12e)\n", rec_prob[r]->value());
               } else {
                 finish_flag[r] = 1;
                 last_loop = 1; 
@@ -1016,18 +953,17 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
         /* old sychronous implementation of contingencies
          * int cpr = S_/(comm_size_-1); //contingency per rank
          * int cr = S_%(comm_size_-1); //contingency remained
-         * printf("my rank start evaluating work %d)\n",my_rank_);
+         * log_->printf(hovIteration, "my rank start evaluating work %d)\n", my_rank_); 
          */
         std::vector<int> cont_idx(1); // currently sending/receiving one contingency index at a time
         int cont_i = 0;
         cont_idx[0] = 0;
-        // int cur_idx = 0;
         // Receive the index of the contingency to evaluate
         int mpi_test_flag = 0;
         int ierr = MPI_Recv(&cont_i, 1, MPI_INT, rank_master, 1, comm_world_, &status_);
         assert(MPI_SUCCESS == ierr);  
         cont_idx[0] = cont_i;
-        // printf("contingency index %d, rank %d)\n",cont_idx[0],my_rank_);
+        // log_->printf(hovIteration, "contingency index %d, rank %d)\n", cont_idx[0],my_rank_); 
         // compute the recourse function values and gradients
         rec_val = 0.;
 
@@ -1050,7 +986,7 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
           }
           rec_val += aux;
         }
-        //printf("recourse value: is %18.12e)\n", rec_val);
+        // log_->printf(hovFcnEval, "recourse value: is %18.12e)\n", rec_val);
         hiopVector* grad_aux = x0->alloc_clone();
         grad_aux->setToZero(); 
 
@@ -1076,7 +1012,7 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
            * sychronous implmentation of contingencist
           */
           if(mpi_test_flag) {
-            //printf("contingency index %d, rank %d)\n",cont_idx[0],my_rank_);
+            // log_->printf(hovIteration, "contingency index %d, rank %d)\n", cont_idx[0],my_rank_); 
             for(int ri=0; ri<cont_idx.size(); ri++) {
               cont_idx[ri] = req_cont_idx->value();
             }
@@ -1103,7 +1039,7 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
               }
               rec_val += aux;
             }
-            //printf("recourse value: is %18.12e)\n", rec_val);
+            // log_->printf(hovFcnEval, "recourse value: is %18.12e)\n", rec_val);
             hiopVector* grad_aux = x0->alloc_clone();
             grad_aux->setToZero(); 
 
@@ -1114,22 +1050,18 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
                 //todo
               }
               grad_acc->axpy(1.0, *grad_aux);
-              //for(int i=0; i<nc_; i++) {
-              //  grad_acc[i] += grad_aux[i];
-              //}
             }
 
             rec_prob[my_rank_]->set_value(rec_val);
 
             rec_prob[my_rank_]->set_grad(grad_acc_vec);
             rec_prob[my_rank_]->post_send(2, rank_master, comm_world_);
-            //do something with the func eval and gradient to determine the quadratic regularization  
-            //printf("send recourse value flag for test %d \n", mpi_test_flag);
+            // do something with the func eval and gradient to determine the quadratic regularization  
+            // log_->printf(hovIteration, "send recourse value flag for test %d \n", mpi_test_flag); 
         
-            //post recv for new index
+            // post recv for new index
             req_cont_idx->post_recv(1, rank_master, comm_world_);
-            //ierr = MPI_Irecv(&cont_idx[0], 1, MPI_INT, rank_master, 1, comm_world_, &request_[0]);
-
+            // ierr = MPI_Irecv(&cont_idx[0], 1, MPI_INT, rank_master, 1, comm_world_, &request_[0]);
             delete grad_aux;
           }
         }
@@ -1160,20 +1092,17 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
         }
 
         if(it==0) {
-          //grad_r->print();
           hess_appx_2->initialize(rval, *x0, *grad_r);
           double alp_temp = hess_appx_2->get_alpha_f(*grad_r);
-          //double alp_temp = hess_appx_2->get_alpha_tr();
+          // double alp_temp = hess_appx_2->get_alpha_tr(); // alternative update rule for alpha
           log_->printf(hovSummary, "alpd %18.12e\n", alp_temp);
           
           for(int i=0; i<nc_; i++) {
             hess_appx_vec[i] = alp_temp;
           }
         } else {
-          //grad_r->print();
-
           hess_appx_2->update_hess_coeff(*x0, *grad_r, rval);
-          //update base case objective, this requires updated skm1 and ykm1
+          //update basecase objective, this requires updated skm1 and ykm1
           base_valm1 = base_val;
           base_val = hess_appx_2->compute_base(master_prob_->get_objective());
 
@@ -1185,7 +1114,7 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
           
           //double alp_temp2 = hess_appx_2->get_alpha_BB();
           log_->printf(hovSummary, "alpd %18.12e\n", alp_temp);
-          //printf("alpd BB %18.12e\n",alp_temp2);
+          // log_->printf(hovSummary, "alpd BB %18.12e\n", alp_temp2);
           convg_g = hess_appx_2->check_convergence_grad(*grad_r);
           log_->printf(hovSummary,"gradient convergence measure %18.12e\n", convg_g);
           convg_f = hess_appx_2->check_convergence_fcn(base_val, base_valm1);
@@ -1198,7 +1127,6 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
         }
 
         // wait for the sending/receiving to finish
-        
         // for debugging purpose print out the recourse gradient
         log_->write(nullptr, *grad_r, hovFcnEval);
        
@@ -1212,7 +1140,7 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
           fflush(stdout);
         }
 
-        assert(evaluator->get_rgrad()!=NULL);// should be defined
+        assert(evaluator->get_rgrad()!=NULL);// evaluator should be defined
         evaluator->set_rval(rval);
         evaluator->set_rgrad(nc_,*grad_r);
         evaluator->set_rhess(nc_,*hess_appx);
@@ -1225,7 +1153,7 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
         
         options_file_master_prob = options_->GetString("options_file_master_prob");
         
-        //printf("solving full problem starts, iteration %d \n",it);
+        // log_->printf(hovIteration, "solving full problem starts, iteration %d \n", it); 
         solver_status_ = master_prob_->solve_master(*x_, true, 0, 0, 0, options_file_master_prob.c_str());
 
         log_->printf(hovSummary, "solved full problem with objective %18.12e\n", master_prob_->get_objective());
@@ -1235,8 +1163,6 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
         t2 = MPI_Wtime(); 
         log_->printf(hovFcnEval, "Elapsed time for entire iteration %d is %f\n",it, t2 - t1);
         
-        // print out the iteration from the master rank
-
         dinf = step_size_inf(nc_, *xc_idx_, *x_, *x0);
         
       } else {
@@ -1285,7 +1211,7 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run()
   if(options_->GetString("print_options") == "yes") {
     log_->write(nullptr, *options_, hovSummary);
   }
-  return run_single();//call the serial solver
+  return run_single(); // call the serial solver
 }
 #endif
 
@@ -1300,9 +1226,9 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
       
   bool bret;
   int rank_master=0; //master rank is also the solver rank
-  //Define the values and gradients as needed in the master rank
+  // Define the values and gradients as needed in the master rank
   double rval = 0.;
-  //double grad_r[nc_];
+  // double grad_r[nc_];
   hiopVector* grad_r;
   grad_r = LinearAlgebraFactory::create_vector(options_->GetString("mem_space"), nc_) ; 
   double* grad_r_vec = grad_r->local_data_host();
@@ -1316,7 +1242,7 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
 
   grad_r->setToZero();
 
-  //hess_appx_2 has to be declared by all ranks while only rank 0 uses it
+  // hess_appx_2 has to be declared by all ranks while only rank 0 uses it
   HessianApprox* hess_appx_2 = new HessianApprox(nc_, alpha_ratio_, master_prob_, options_);
   hess_appx_2->set_alpha_min(alpha_min_);
   hess_appx_2->set_alpha_max(alpha_max_);
@@ -1324,8 +1250,8 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
   hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator =
     new hiopInterfacePriDecProblem::RecourseApproxEvaluator(nc_, S_, xc_idx_->local_data(), options_->GetString("mem_space"));
 
-  double base_val = 0.; // base case objective value 
-  double base_valm1 = 0.; // base case objective value from previous iteration
+  double base_val = 0.; // basecase objective value 
+  double base_valm1 = 0.; // basecase objective value from previous iteration
   double recourse_val = 0.;  // recourse objective value
   double dinf = 0.; // step size 
   double convg = 1e20;
@@ -1338,15 +1264,15 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
 
   // Outer loop starts
   for(int it=0; it<max_iter_;it++) {
-    //printf("iteration  %d\n", it);
-    // solve the base case
+    // log_->printf(hovIteration, "iteration  %d\n", it); 
+    // solve the basecase
     it_ = it;
     if(it==0) {
       options_file_master_prob = options_->GetString("options_file_master_prob");
-      //solve master problem base case(solver rank supposed to do it)        
+      // solve master problem basecase (solver rank supposed to do it)        
       solver_status_ = master_prob_->solve_master(*x_, false, 0, 0, 0, options_file_master_prob.c_str());
-      // to do, what if solve fails?
       if(solver_status_) {     
+      
       }
       base_val = master_prob_->get_objective();
       base_valm1 = base_val;
@@ -1378,20 +1304,17 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
         //todo
       }
       rval += aux;
-      //assert("for debugging" && false); //for debugging purpose
+      // assert("for debugging" && false); //for debugging purpose
 
-      //TODO: allocate this outside the loop
+      // TODO: allocate this outside the loop
       hiopVector* grad_aux = grad_r->alloc_clone();
       grad_aux->setToZero(); 
-      //double grad_aux[nc_];
+      // double grad_aux[nc_];
       bret = master_prob_->eval_grad_rterm(idx_temp, nc_, x0_vec, *grad_aux);
       if(!bret) {
           //todo
       }
       grad_r->axpy(1.0,*grad_aux);
-      //for(int i=0; i<nc_; i++) {
-      //  grad_r_vec[i] += grad_aux[i];
-      //}
       delete grad_aux;
     }     
 
@@ -1409,7 +1332,7 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
     if(it==0) {
       hess_appx_2->initialize(rval, *x0, *grad_r);
       double alp_temp = hess_appx_2->get_alpha_f(*grad_r);
-      //double alp_temp = hess_appx_2->get_alpha_tr();
+      // double alp_temp = hess_appx_2->get_alpha_tr(); // alternative update rule for alpha
       log_->printf(hovSummary, "alpd %18.12e\n", alp_temp);
       
       for(int i=0; i<nc_; i++) {
@@ -1421,11 +1344,11 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
       base_valm1 = base_val;
       base_val = hess_appx_2->compute_base(master_prob_->get_objective());
       
-      //hess_appx_2->update_ratio();
+      // hess_appx_2->update_ratio();
       hess_appx_2->update_ratio(base_val, base_valm1);
       
       double alp_temp = hess_appx_2->get_alpha_f(*grad_r);
-      //double alp_temp = hess_appx_2->get_alpha_tr();
+      // double alp_temp = hess_appx_2->get_alpha_tr();
       log_->printf(hovSummary, "alpd %18.12e\n", alp_temp);
       
       convg_g = hess_appx_2->check_convergence_grad(*grad_r);
@@ -1450,7 +1373,6 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
     if(it>0) {
       log_->printf(hovSummary, "iteration           objective                   residual                   "   
              "step_size                   convg\n");
-      //printf("iteration         sub_obj              res               step_size          convg\n");
       log_->printf(hovSummary, "%d              %18.12e            %18.12e           %18.12e         " 
              "%18.12e\n", it, base_val+recourse_val, convg_f, dinf, convg_g);
       fflush(stdout);
@@ -1468,7 +1390,7 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
       //todo
     }
     options_file_master_prob = options_->GetString("options_file_master_prob");
-    //printf("solving full problem starts, iteration %d \n",it);
+    log_->printf(hovSummary, "solving full problem starts, iteration %d \n", it); 
     solver_status_ = master_prob_->solve_master(*x_, true, 0, 0, 0, options_file_master_prob.c_str());
     
     dinf = step_size_inf(nc_, *xc_idx_, *x_, *x0); 
@@ -1476,13 +1398,13 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
     // print solution x at the end of a full solve
     log_->write(nullptr, *x_, hovFcnEval);
     
-    //assert("for debugging" && false); //for debugging purpose
+    // assert("for debugging" && false); //for debugging purpose
     if(convg <= accp_tol_) {
       accp_count += 1;
     } else {
       accp_count = 0;
     }
-    //printf("count  %d \n", accp_count);
+    log_->printf(hovIteration, "count  %d \n", accp_count); 
     if(stopping_criteria(it, convg, accp_count)){break;}
   }
 
