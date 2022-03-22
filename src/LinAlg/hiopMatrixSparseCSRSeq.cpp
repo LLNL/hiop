@@ -265,9 +265,9 @@ void hiopMatrixSparseCSRSeq::copySubDiagonalFrom(const index_type& start_on_dest
 }
 
 void hiopMatrixSparseCSRSeq::setSubDiagonalTo(const index_type& start_on_dest_diag,
-                                           const size_type& num_elems,
-                                           const double& c,
-                                           const index_type& start_on_nnz_idx)
+                                              const size_type& num_elems,
+                                              const double& c,
+                                              const index_type& start_on_nnz_idx)
 {
   assert(start_on_dest_diag>=0 && start_on_dest_diag+num_elems<=this->nrows_);
   assert(false && "not implemented");
@@ -386,8 +386,8 @@ addMDinvNtransToSymDeMatUTri(index_type row_dest_start,
 }
 
 void hiopMatrixSparseCSRSeq::copyRowsFrom(const hiopMatrix& src_gen,
-                                       const index_type* rows_idxs,
-                                       size_type n_rows)
+                                          const index_type* rows_idxs,
+                                          size_type n_rows)
 {
   const hiopMatrixSparseCSRSeq& src = dynamic_cast<const hiopMatrixSparseCSRSeq&>(src_gen);
   assert(this->m() == n_rows);
@@ -406,8 +406,8 @@ void hiopMatrixSparseCSRSeq::copyRowsFrom(const hiopMatrix& src_gen,
  * @pre 'this' must have exactly, or more cols than 'src'
  */
 void hiopMatrixSparseCSRSeq::copyRowsBlockFrom(const hiopMatrix& src_gen,
-                                         const index_type& rows_src_idx_st, const size_type& n_rows,
-                                         const index_type& rows_dest_idx_st, const size_type& dest_nnz_st)
+                                               const index_type& rows_src_idx_st, const size_type& n_rows,
+                                               const index_type& rows_dest_idx_st, const size_type& dest_nnz_st)
 {
   const hiopMatrixSparseCSRSeq& src = dynamic_cast<const hiopMatrixSparseCSRSeq&>(src_gen);
   assert(this->numberOfNonzeros() >= src.numberOfNonzeros());
@@ -419,10 +419,10 @@ void hiopMatrixSparseCSRSeq::copyRowsBlockFrom(const hiopMatrix& src_gen,
 }
 
 void hiopMatrixSparseCSRSeq::copySubmatrixFrom(const hiopMatrix& src_gen,
-                                            const index_type& dest_row_st,
-                                            const index_type& dest_col_st,
-                                            const size_type& dest_nnz_st,
-                                            const bool offdiag_only)
+                                               const index_type& dest_row_st,
+                                               const index_type& dest_col_st,
+                                               const size_type& dest_nnz_st,
+                                               const bool offdiag_only)
 {
   const hiopMatrixSparseCSRSeq& src = dynamic_cast<const hiopMatrixSparseCSRSeq&>(src_gen);
   auto m_rows = src.m();
@@ -437,10 +437,10 @@ void hiopMatrixSparseCSRSeq::copySubmatrixFrom(const hiopMatrix& src_gen,
 }
 
 void hiopMatrixSparseCSRSeq::copySubmatrixFromTrans(const hiopMatrix& src_gen,
-                                                 const index_type& dest_row_st,
-                                                 const index_type& dest_col_st,
-                                                 const size_type& dest_nnz_st,
-                                                 const bool offdiag_only)
+                                                    const index_type& dest_row_st,
+                                                    const index_type& dest_col_st,
+                                                    const size_type& dest_nnz_st,
+                                                    const bool offdiag_only)
 {
   const auto& src = dynamic_cast<const hiopMatrixSparseCSRSeq&>(src_gen);
   auto m_rows = src.n();
@@ -516,8 +516,8 @@ copyDiagMatrixToSubblock_w_pattern(const hiopVector& dx,
 }
 
 void hiopMatrixSparseCSRSeq::print(FILE* file, const char* msg/*=nullptr*/,
-                                    int maxRows/*=-1*/, int maxCols/*=-1*/,
-                                    int rank/*=-1*/) const
+                                   int maxRows/*=-1*/, int maxCols/*=-1*/,
+                                   int rank/*=-1*/) const
 {
   int myrank_=0, numranks=1; //this is a local object => always print
 
@@ -635,9 +635,11 @@ hiopMatrixSparseCSR* hiopMatrixSparseCSRSeq::times_mat_alloc(const hiopMatrixSpa
  *  2. for each such k we j-iterate over the nonzeros (k,j) in the k-th row of Y and 
  *  3. count (i,j) as nonzero of M 
  */
-void hiopMatrixSparseCSRSeq::times_mat_symbolic(hiopMatrixSparseCSR& M,
-                                             const hiopMatrixSparseCSR& Y) const
+void hiopMatrixSparseCSRSeq::times_mat_symbolic(hiopMatrixSparseCSR& M_in,
+                                                const hiopMatrixSparseCSR& Y_in) const
 {
+  auto& M = dynamic_cast<hiopMatrixSparseCSRSeq&>(M_in);
+  auto& Y = dynamic_cast<const hiopMatrixSparseCSRSeq&>(Y_in);
   const index_type* irowptrY = Y.i_row();
   const index_type* jcolindY = Y.j_col();
   const double* valuesY = Y.M();
@@ -1111,8 +1113,12 @@ hiopMatrixSparseCSR* hiopMatrixSparseCSRSeq::add_matrix_alloc(const hiopMatrixSp
  * column indexes arrays) of `M`.
  *
  */
-void hiopMatrixSparseCSRSeq::add_matrix_symbolic(hiopMatrixSparseCSR& M, const hiopMatrixSparseCSR& Y) const
+void hiopMatrixSparseCSRSeq::
+add_matrix_symbolic(hiopMatrixSparseCSR& M_in, const hiopMatrixSparseCSR& Y_in) const
 {
+  auto& M = dynamic_cast<hiopMatrixSparseCSRSeq&>(M_in);
+  auto& Y = dynamic_cast<const hiopMatrixSparseCSRSeq&>(Y_in);
+
   assert(nrows_ == Y.m());
   assert(ncols_ == Y.n());
   const index_type* irowptrY = Y.i_row();
@@ -1186,11 +1192,14 @@ void hiopMatrixSparseCSRSeq::add_matrix_symbolic(hiopMatrixSparseCSR& M, const h
  * Performs matrix addition M = gamma*M + alpha*X + beta*Y numerically
  */
 void hiopMatrixSparseCSRSeq::add_matrix_numeric(double gamma,
-                                                hiopMatrixSparseCSR& M,
+                                                hiopMatrixSparseCSR& M_in,
                                                 double alpha,
-                                                const hiopMatrixSparseCSR& Y,
+                                                const hiopMatrixSparseCSR& Y_in,
                                                 double beta) const
 {
+  auto& M = dynamic_cast<hiopMatrixSparseCSRSeq&>(M_in);
+  auto& Y = dynamic_cast<const hiopMatrixSparseCSRSeq&>(Y_in);
+
   assert(nrows_ == Y.m());
   assert(ncols_ == Y.n());
   const index_type* irowptrY = Y.i_row();
