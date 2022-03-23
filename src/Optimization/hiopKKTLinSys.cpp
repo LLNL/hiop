@@ -937,25 +937,9 @@ bool hiopKKTLinSys::compute_directions_w_IR(const hiopResidual* resid, hiopItera
   resid->rsvu->copyToStarting(*ir_rhs_, nx+nd+nyc+nyd+nx+nx+nd+nd+nx+nx+nd);
   nlp_->runStats.kkt.tmSolveRhsManip.stop();
   
-  // build x0
-  iter_->x->copyToStarting(*ir_x0_,   0);
-  iter_->d->copyToStarting(*ir_x0_,   nx);
-  iter_->yc->copyToStarting(*ir_x0_,  nx+nd);
-  iter_->yd->copyToStarting(*ir_x0_,  nx+nd+nyc);
-  iter_->sxl->copyToStarting(*ir_x0_,  nx+nd+nyc+nyd);
-  iter_->sxu->copyToStarting(*ir_x0_,  nx+nd+nyc+nyd+nx);
-  iter_->sdl->copyToStarting(*ir_x0_,  nx+nd+nyc+nyd+nx+nx);
-  iter_->sdu->copyToStarting(*ir_x0_,  nx+nd+nyc+nyd+nx+nx+nd);
-  iter_->zl->copyToStarting(*ir_x0_, nx+nd+nyc+nyd+nx+nx+nd+nd);
-  iter_->zu->copyToStarting(*ir_x0_, nx+nd+nyc+nyd+nx+nx+nd+nd+nx);
-  iter_->vl->copyToStarting(*ir_x0_, nx+nd+nyc+nyd+nx+nx+nd+nd+nx+nx);
-  iter_->vu->copyToStarting(*ir_x0_, nx+nd+nyc+nyd+nx+nx+nd+nd+nx+nx+nd);
-  
-  
   const double tol_mu = 1e-2;
   double tol = std::min(mu_*tol_mu, 1e-6);
   bicgIR_->set_tol(tol);
-  bicgIR_->set_x0(*ir_x0_);
   bicgIR_->set_x0(0.0);
 
   bool bret = bicgIR_->solve(*ir_rhs_);

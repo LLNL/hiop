@@ -77,7 +77,7 @@ namespace hiop {
                                      hiopLinearOperator* Mleft_opr,
                                      hiopLinearOperator* Mright_opr,
                                      const hiopVector* x0)
-    : tol_{1e-19},
+    : tol_{1e-9},
       maxit_{8},
       iter_{-1.},
       flag_{-1},
