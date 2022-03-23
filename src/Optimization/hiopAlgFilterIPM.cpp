@@ -2609,7 +2609,7 @@ bool hiopAlgFilterIPMBase::solve_soft_feasibility_restoration(hiopKKTLinSys* kkt
         solver_status_ = Error_In_User_Function;
         return Error_In_User_Function;
       }
-      // compute rhs for soc. Use resid_trial since it hasn't been used
+      // compute rhs for soft feasibility restoration. Use resid_trial since it hasn't been used
       resid_trial->update(*it_trial, _f_nlp_trial, *_c_trial, *_d_trial, *_grad_f,*_Jac_c,*_Jac_d, *logbar);      
       bret = kkt->computeDirections(resid_trial, soft_dir); 
     }    
@@ -2689,11 +2689,11 @@ bool hiopAlgFilterIPMNewton::compute_search_direction(hiopKKTLinSys* kkt,
                       "at iteration %d (safe mode ON) [3]\n",
                        iter_num);
 
-      // return false and use safe mode to repeat linear solve (kkt->update(...) and kkt->computeDirections(...)
+      // return false and use safe mode to repeat linear solve (kkt->update(...) and kkt->compute_directions_w_IR(...)
       // (meaning additional accuracy and stability is requested, possibly from a new kkt class)
       return false;
     }
-  } // end of if(!kkt->computeDirections(resid, dir))
+  } // end of if(!kkt->compute_directions_w_IR(resid, dir))
 
   //at this point all is good in terms of searchDirections computations as far as the linear solve
   //is concerned; the search direction can be of ascent because some fast factorizations do not
@@ -2715,7 +2715,7 @@ bool hiopAlgFilterIPMNewton::compute_search_direction_inertia_free(hiopKKTLinSys
     //
     // solve for search directions
     //
-    if(!kkt->computeDirections(resid, dir)) {
+    if(!kkt->compute_directions_w_IR(resid, dir)) {
 
       if(linsol_safe_mode_on) {
         nlp->log->write("Unrecoverable error in step computation (solve)[1]. Will exit here.", hovError);
@@ -2732,11 +2732,11 @@ bool hiopAlgFilterIPMNewton::compute_search_direction_inertia_free(hiopKKTLinSys
                         "at iteration %d (safe mode ON)[4]\n",
                          iter_num);
 
-        // return false and use safe mode to repeat linear solve (kkt->update(...) and kkt->computeDirections(...)
+        // return false and use safe mode to repeat linear solve (kkt->update(...) and kkt->compute_directions_w_IR(...)
         // (meaning additional accuracy and stability is requested, possibly from a new kkt class)
         return false;
       }
-    } // end of if(!kkt->computeDirections(resid, dir))
+    } // end of if(!kkt->compute_directions_w_IR(resid, dir))
     
     //at this point all is good in terms of searchDirections computations as far as the linear solve
     //is concerned; the search direction can be of ascent because some fast factorizations do not
