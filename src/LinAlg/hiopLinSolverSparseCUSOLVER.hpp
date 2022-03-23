@@ -164,6 +164,8 @@ namespace hiop
       double* devr_;
       double* drhs_;
 
+int singularMatrix_;
+int factorizationSetupSucc_;
 /* needed for cuSolverRf */
    int *d_P;
    int  *d_Q; //permutation matrices
