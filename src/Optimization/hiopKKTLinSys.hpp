@@ -55,32 +55,22 @@
 #include "hiopPDPerturbation.hpp"
 #include "hiopLinSolver.hpp"
 #include "hiopFactAcceptor.hpp"
+#include "hiopKrylovSolver.hpp"
 
 #include "hiopCppStdUtils.hpp"
 
 namespace hiop
 {
+  
+class hiopMatVecKKTFullOpr;
+class hiopPrecondKKTOpr;
 
 class hiopKKTLinSys
 {
 public:
-  hiopKKTLinSys(hiopNlpFormulation* nlp)
-    : nlp_(nlp),
-      iter_(NULL),
-      grad_f_(NULL),
-      Jac_c_(NULL),
-      Jac_d_(NULL),
-      Hess_(NULL),
-      perturb_calc_(NULL),
-      safe_mode_(true)
-  {
-    perf_report_ = "on"==hiop::tolower(nlp_->options->GetString("time_kkt"));
-    mu_ = nlp_->options->GetNumeric("mu0");
-  }
-  virtual ~hiopKKTLinSys()
-  {
-  }
-  
+  hiopKKTLinSys(hiopNlpFormulation* nlp);
+  virtual ~hiopKKTLinSys();
+
   /**
    * Updates the parts in KKT system that are dependent on the iterate.
    * It may trigger a refactorization for direct linear systems, or it may not do
@@ -95,6 +85,8 @@ public:
    * computed by `update` to compute the "reduced-space" (i.e., compressed, condensed, etc.) 
    * search directions by solving with the factors, then computes the "full-space" directions */
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction) = 0;
+  virtual bool compute_directions_w_IR(const hiopResidual* resid, hiopIterate* direction);
+
   virtual bool compute_directions_for_full_space(const hiopResidual* resid, hiopIterate* direction);
 
   virtual bool factorize_inertia_free() = 0;
@@ -161,6 +153,7 @@ public:
    */
   virtual double errorKKT(const hiopResidual* resid, const hiopIterate* sol);
   
+  inline hiopPDPerturbation* get_perturb_calc() const {return perturb_calc_;}
 protected:
   /** 
    * @brief y=beta*y+alpha*H*x
@@ -187,6 +180,22 @@ protected:
   bool perf_report_;
   bool safe_mode_;
   double mu_;
+
+  /// Matrix operator performing mat-vec with given kkt linear system
+  hiopMatVecKKTFullOpr *kkt_opr_;
+
+  /// Preconditioner operator that solves with the given (usually compressed) KKT system
+  hiopPrecondKKTOpr *prec_opr_;
+
+  /// Temporary vector to be used in the iterative refinement solve;
+  hiopVector* ir_rhs_;
+  hiopVector* ir_x0_;
+
+  /// iterative refinement from BiCGStab solver
+  hiopBiCGStabSolver* bicgIR_;
+  
+  friend class hiopMatVecKKTFullOpr;
+  friend class hiopPrecondKKTOpr;
 };
 
 class hiopKKTLinSysCurvCheck : public hiopKKTLinSys
@@ -464,7 +473,7 @@ private:
 
 
 /*
- * Solves KKTLinSysCompressedXYcYd by exploiting the sparse structure
+ * Solves hiopKKTLinSysFull by exploiting the sparse structure
  *
  * In general, the so-called XYcYd system has the form
  * [   H   Jc^T  Jd^T | 0 |  0   0  -I   I   |  0   0   0   0  ] [  dx]   [    rx    ]
@@ -486,6 +495,21 @@ private:
  *  - Jc and Jd present the sparse Jacobians for equalities and inequalities
  *  - H is a sparse Hessian matrix
  *
+ * TODO: use the following sys:
+ * [   H    0   Jc^T  Jd^T |  -I  I   0   0   |  0   0   0   0  ] [  dx]   [    rx    ]
+ * [  0     0     0    -I  |  0   0  -I   I   |  0   0   0   0  ] [  dd]   [    rd    ]
+ * [  Jc    0     0     0  |  0   0   0   0   |  0   0   0   0  ] [ dyc] = [   ryc    ]
+ * [  Jd    -I    0     0  |  0   0   0   0   |  0   0   0   0  ] [ dyd]   [   ryd    ]
+ * -----------------------------------------------------------------------------------
+ * [ -I     0     0     0  |  0   0   0   0   |  I   0   0   0  ] [ dzl]   [   rxl    ]
+ * [  I     0     0     0  |  0   0   0   0   |  0   I   0   0  ] [ dzu]   [   rxu    ]
+ * [  0     -I    0     0  |  0   0   0   0   |  0   0   I   0  ] [ dvl]   [   rdl    ]
+ * [  0     I     0     0  |  0   0   0   0   |  0   0   0   I  ] [ dvu]   [   rdu    ]
+ * -----------------------------------------------------------------------------------
+ * [  0     0     0     0  | Sl^x 0   0   0   | Zl   0   0   0  ] [dsxl]   [  rszl    ]
+ * [  0     0     0     0  |  0  Su^x 0   0   |  0  Zu   0   0  ] [dsxu]   [  rszu    ]
+ * [  0     0     0     0  |  0   0  Sl^d 0   |  0   0  Vl   0  ] [dsdl]   [  rsvl    ]
+ * [  0     0     0     0  |  0   0   0  Su^d |  0   0   0  Vu  ] [dsdu]   [  rsvu    ]
  */
 class hiopKKTLinSysFull: public hiopKKTLinSysCurvCheck
 {
@@ -522,6 +546,173 @@ public:
                       hiopVector& dsdl, hiopVector& dsdu, hiopVector& dsxl, hiopVector& dsxu)=0;
 protected:
 
+};
+
+
+/** 
+ * operators for KKT mat-vec operations
+ * 
+ * Full KKT matrix is
+ * [   H    0   Jc^T  Jd^T |  -I  I   0   0   |  0   0   0   0  ] [  dx]   [    rx    ]
+ * [  0     0     0    -I  |  0   0  -I   I   |  0   0   0   0  ] [  dd]   [    rd    ]
+ * [  Jc    0     0     0  |  0   0   0   0   |  0   0   0   0  ] [ dyc] = [   ryc    ]
+ * [  Jd    -I    0     0  |  0   0   0   0   |  0   0   0   0  ] [ dyd]   [   ryd    ]
+ * -----------------------------------------------------------------------------------
+ * [ -I     0     0     0  |  0   0   0   0   |  I   0   0   0  ] [ dzl]   [   rxl    ]
+ * [  I     0     0     0  |  0   0   0   0   |  0   I   0   0  ] [ dzu]   [   rxu    ]
+ * [  0     -I    0     0  |  0   0   0   0   |  0   0   I   0  ] [ dvl]   [   rdl    ]
+ * [  0     I     0     0  |  0   0   0   0   |  0   0   0   I  ] [ dvu]   [   rdu    ]
+ * -----------------------------------------------------------------------------------
+ * [  0     0     0     0  | Sl^x 0   0   0   | Zl   0   0   0  ] [dsxl]   [  rszl    ]
+ * [  0     0     0     0  |  0  Su^x 0   0   |  0  Zu   0   0  ] [dsxu]   [  rszu    ]
+ * [  0     0     0     0  |  0   0  Sl^d 0   |  0   0  Vl   0  ] [dsdl]   [  rsvl    ]
+ * [  0     0     0     0  |  0   0   0  Su^d |  0   0   0  Vu  ] [dsdu]   [  rsvu    ]
+ *
+ */
+class hiopMatVecKKTFullOpr : public hiopLinearOperator
+{
+public:
+  hiopMatVecKKTFullOpr(hiopKKTLinSys* kkt, const hiopIterate* iter, const hiopResidual* resid, const hiopIterate* dir);
+
+  virtual ~hiopMatVecKKTFullOpr()
+  {
+    delete resid_;  
+    delete dir_;  
+  };
+
+  /** y = KKT * x */
+  virtual bool times_vec(hiopVector& y, const hiopVector& x);
+
+  /** y = KKT' * x */
+  virtual bool trans_times_vec(hiopVector& y, const hiopVector& x);
+
+  /* need to reset the pointer to the current iter, since the outer loop keeps swtiching between curr_iter and trial_iter */
+  inline void reset_curr_iter(const hiopIterate* iter) {iter_ = iter;}
+
+private:
+  hiopKKTLinSys* kkt_;
+  const hiopIterate* iter_;
+  hiopResidual* resid_;
+  hiopIterate* dir_;
+
+  hiopMatVecKKTFullOpr()
+    : kkt_(nullptr),
+      resid_(nullptr),
+      dir_(nullptr)
+  {
+    assert(false && "this constructor should not be used");
+  }
+
+  /** @brief split a large vector to build a hiopIterate object. 
+   *  Note that the size of vector is equal to the size of full KKT.
+   *  TODO: revisit this function after we implement compound vector
+   */
+  bool split_vec_to_build_it(const hiopVector& vec);
+
+  /** @brief combine vectors from a hiopResidual object into a large vector. 
+   *  Note that the size of vector is equal to the size of full KKT.
+   *  TODO: revisit this function after we implement compound vector
+   */
+  bool combine_res_to_build_vec(hiopVector& vec);
+
+  hiopVector* dx_;
+  hiopVector* dd_;
+  hiopVector* dyc_;
+  hiopVector* dyd_;
+  hiopVector* dsxl_;
+  hiopVector* dsxu_;
+  hiopVector* dsdl_;
+  hiopVector* dsdu_;
+  hiopVector* dzl_;
+  hiopVector* dzu_;
+  hiopVector* dvl_;
+  hiopVector* dvu_;
+  
+  hiopVector* yrx_;
+  hiopVector* yrd_;
+  hiopVector* yryc_;
+  hiopVector* yryd_;
+  hiopVector* yrsxl_;
+  hiopVector* yrsxu_;
+  hiopVector* yrsdl_;
+  hiopVector* yrsdu_;
+  hiopVector* yrzl_;
+  hiopVector* yrzu_;
+  hiopVector* yrvl_;
+  hiopVector* yrvu_;
+};
+
+/** 
+ * operators for KKT preconditioner
+ */
+class hiopPrecondKKTOpr : public hiopLinearOperator
+{
+public:
+  hiopPrecondKKTOpr(hiopKKTLinSys* kkt, const hiopIterate* iter, const hiopResidual* resid, const hiopIterate* dir);
+
+  virtual ~hiopPrecondKKTOpr()
+  {
+    delete resid_;  
+    delete dir_;  
+  };
+
+  /** y = inv(Preconditioner) * x = Preconditioner/x */
+  virtual bool times_vec(hiopVector& y, const hiopVector& x);
+
+  /** y = inv(Preconditioner)' * x = Preconditioner'/x */
+  virtual bool trans_times_vec(hiopVector& y, const hiopVector& x);
+
+protected:
+  hiopKKTLinSys* kkt_;
+  const hiopIterate* iter_;
+  hiopResidual* resid_;
+  hiopIterate* dir_;
+
+  hiopPrecondKKTOpr()
+    : kkt_(nullptr),
+      resid_(nullptr),
+      dir_(nullptr)
+  {
+    assert(false && "this constructor should not be used");
+  }
+  
+  /** @brief split a large vector to build a hiopResidual object. 
+   *  Note that the size of vector is equal to the size of full KKT.
+   *  TODO: revisit this function after we implement compound vector
+   */
+  virtual bool split_vec_to_build_res(const hiopVector& vec);
+
+  /** @brief combine vectors from a hiopIterate object into a large vector. 
+   *  Note that the size of vector is equal to the size of full KKT.
+   *  TODO: revisit this function after we implement compound vector
+   */
+  virtual bool combine_dir_to_build_vec(hiopVector& vec);
+
+  hiopVector* dx_;
+  hiopVector* dd_;
+  hiopVector* dyc_;
+  hiopVector* dyd_;
+  hiopVector* dsxl_;
+  hiopVector* dsxu_;
+  hiopVector* dsdl_;
+  hiopVector* dsdu_;
+  hiopVector* dzl_;
+  hiopVector* dzu_;
+  hiopVector* dvl_;
+  hiopVector* dvu_;
+  
+  hiopVector* yrx_;
+  hiopVector* yrd_;
+  hiopVector* yryc_;
+  hiopVector* yryd_;
+  hiopVector* yrsxl_;
+  hiopVector* yrsxu_;
+  hiopVector* yrsdl_;
+  hiopVector* yrsdu_;
+  hiopVector* yrzl_;
+  hiopVector* yrzu_;
+  hiopVector* yrvl_;
+  hiopVector* yrvu_;
 };
 
 };

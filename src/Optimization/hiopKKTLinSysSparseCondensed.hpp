@@ -204,7 +204,7 @@ protected:
 
 // forward decls
 class hiopKKTMatVecOpr;
-class hiopKKTPrecondOpr;
+class hiopMatVecKKTCondensedOpr;
   
 class hiopKKTLinSysCondensedSparse : public hiopKKTLinSysCompressedSparseXDYcYd
 {
@@ -327,7 +327,7 @@ protected:
 
   /// Preconditioner operator that solves with the factors of the condensed system via the
   /// solve_compressed_direct method
-  hiopKKTPrecondOpr* krylov_prec_opr_;
+  hiopMatVecKKTCondensedOpr* krylov_prec_opr_;
 
   /// Temporary vector to be used in the Krylov solve;
   hiopVector* krylov_rhs_xdycyd_;
@@ -339,7 +339,7 @@ private:
   hiopLinSolverSymSparse* determine_and_create_linsys(size_type nxd, size_type nineq, size_type nnz);
 
   friend class hiopKKTMatVecOpr;
-  friend class hiopKKTPrecondOpr;
+  friend class hiopMatVecKKTCondensedOpr;
 };
 
 /** 
@@ -442,10 +442,10 @@ private:
   hiopVector* yryd_;  
 };
 
-class hiopKKTPrecondOpr : public hiopLinearOperator
+class hiopMatVecKKTCondensedOpr : public hiopLinearOperator
 {
 public:
-  hiopKKTPrecondOpr(hiopKKTLinSysCondensedSparse* kkt)
+  hiopMatVecKKTCondensedOpr(hiopKKTLinSysCondensedSparse* kkt)
     : kkt_(kkt),
       xyc_(nullptr),
       xdx_(nullptr),
@@ -472,7 +472,7 @@ public:
     yrd_ = xdd_->alloc_clone();
     yryd_ = xdyd_->alloc_clone();
   }
-  virtual ~hiopKKTPrecondOpr()
+  virtual ~hiopMatVecKKTCondensedOpr()
   {
     delete xyc_;
     delete xdx_;
@@ -517,7 +517,7 @@ public:
   }
 private:
   hiopKKTLinSysCondensedSparse* kkt_;
-  hiopKKTPrecondOpr()
+  hiopMatVecKKTCondensedOpr()
     : kkt_(nullptr)
   {
     assert(false);
