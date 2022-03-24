@@ -75,13 +75,6 @@
 #include <cassert>
 // #include <numeric> //std::inclusive_scan is only available after C++17
 
-#define MY_RAJA_GPU_BLOCK_SIZE 128
-
-using my_raja_exec   = RAJA::cuda_exec<MY_RAJA_GPU_BLOCK_SIZE>;
-
-#define RAJA_LAMBDA [=] __device__
-
-
 namespace hiop
 {
 
@@ -1011,31 +1004,11 @@ void hiopMatrixRajaSparseTriplet::copyRowsFrom(const hiopMatrix& src_gen,
   if(row_starts_ == nullptr) {
     row_starts_ = new RowStartsInfo(nrows_, mem_space_);
     assert(row_starts_);
-
-#if 0 // cpu code due to the RAJA::scan bug
-    index_type* src_row_st_host = src.row_starts_->idx_start_host_;
-    index_type* dst_row_start_host = row_starts_->idx_start_host_;
-
-    dst_row_start_host[0] = 0;
-    auto& resmgr = umpire::ResourceManager::getInstance();
-    umpire::Allocator hostalloc = resmgr.getAllocator("HOST");
-    index_type* row_src_host = static_cast<index_type*>(hostalloc.allocate(1 * sizeof(index_type)));
-
-    for(index_type row_dst=0; row_dst<nrows_; row_dst++) {
-      // comput nnz in each row from source
-      //const index_type row_src = rows_idxs[row_dst];
-      resmgr.copy(row_src_host, const_cast<index_type*>(rows_idxs+row_dst), 1*sizeof(index_type));
-      dst_row_start_host[row_dst+1] = src_row_st_host[row_src_host[0]+1] - src_row_st_host[row_src_host[0]];            
-    }
-
-    hostalloc.deallocate(row_src_host);
-
-    // std::inclusive_scan is only available after C++17
-    for(index_type row_dst = 1; row_dst < nrows_+1; row_dst++) {
-      dst_row_start_host[row_dst] += dst_row_start_host[row_dst-1];
-    }
-    row_starts_->copy_to_dev();
-#else // use RAJA::inclusive_scan
+    
+    //
+    // The latest CPU code can be found in 342eb99ec16d45f57a492be1bf1e39cce73995a5
+    // It is replaced by RAJA::inclusive_scan after that commit
+    //
     index_type* src_row_st = src.row_starts_->idx_start_;
     index_type* dst_row_st_init = row_starts_->idx_start_;
 
@@ -1057,7 +1030,6 @@ void hiopMatrixRajaSparseTriplet::copyRowsFrom(const hiopMatrix& src_gen,
       }
     );
     RAJA::inclusive_scan_inplace<hiop_raja_exec>(RAJA::make_span(dst_row_st_init, n_rows+1), RAJA::operators::plus<index_type>());
-#endif
   }
 
   index_type* dst_row_st = row_starts_->idx_start_;
@@ -1123,38 +1095,10 @@ void hiopMatrixRajaSparseTriplet::copyRowsBlockFrom(const hiopMatrix& src_gen,
   }
   assert(src.row_starts_);
 
-#if 0 // cpu code due to the RAJA::scan bug
-  index_type* src_row_st_host = src.row_starts_->idx_start_host_;
-  // this function only set up sparsity in the first run. Sparsity won't change after the first run.
-  if(row_starts_ == nullptr) {
-    row_starts_ = new RowStartsInfo(n_rows_dst, mem_space_);
-    assert(row_starts_);
-    index_type* dst_row_st_init_host = row_starts_->idx_start_host_;
-
-    for(index_type row_dst = 0; row_dst < n_rows_dst+1; row_dst++) {
-      dst_row_st_init_host[row_dst] = 0;
-    }
-    row_starts_->copy_to_dev();
-  }
-
-  index_type* dst_row_st_host = row_starts_->idx_start_host_;
-  size_type next_row_nnz = dst_row_st_host[rows_dst_idx_st+1];
-
-  if(next_row_nnz == 0) {  
-    // compute nnz in each row from source
-    for(index_type row_add = 0; row_add < n_rows; row_add++) {
-      const index_type row_src = rows_src_idx_st + row_add;
-      const index_type row_dst = rows_dst_idx_st + row_add;
-      dst_row_st_host[row_dst+1] = src_row_st_host[row_src+1] - src_row_st_host[row_src];      
-    }
-    
-    // std::inclusive_scan is only available after C++17
-    for(index_type row_dst = 1; row_dst < nrows_+1; row_dst++) {
-      dst_row_st_host[row_dst] += dst_row_st_host[row_dst-1];
-    }
-    row_starts_->copy_to_dev();
-  }
-#else // use RAJA::inclusive_scan
+  //
+  // The latest CPU code can be found in 342eb99ec16d45f57a492be1bf1e39cce73995a5
+  // It is replaced by RAJA::inclusive_scan after that commit
+  //
   if(row_starts_ == nullptr) {
     row_starts_ = new RowStartsInfo(n_rows_dst, mem_space_);
     assert(row_starts_);
@@ -1189,7 +1133,6 @@ void hiopMatrixRajaSparseTriplet::copyRowsBlockFrom(const hiopMatrix& src_gen,
     );
     RAJA::inclusive_scan_inplace<hiop_raja_exec>(RAJA::make_span(dst_row_st_dev, n_rows+1), RAJA::operators::plus<index_type>());
   }
-#endif
 
   index_type* dst_row_st = row_starts_->idx_start_;
   
@@ -1615,7 +1558,10 @@ void hiopMatrixRajaSparseTriplet::setSubmatrixToConstantDiag_w_colpattern(const 
   assert(nrm == nnz_to_copy);
 #endif
 
-#if 1 // implemenation that requires a RAJA new version released in Nov.2021
+  //
+  // The latest CPU code can be found in 342eb99ec16d45f57a492be1bf1e39cce73995a5
+  // It is replaced by RAJA::inclusive_scan after that commit
+  //
   auto& resmgr = umpire::ResourceManager::getInstance();
   umpire::Allocator devalloc = resmgr.getAllocator(mem_space_);
   index_type* row_start_dev = static_cast<index_type*>(devalloc.allocate((n+1)*sizeof(index_type)));
@@ -1637,23 +1583,6 @@ void hiopMatrixRajaSparseTriplet::setSubmatrixToConstantDiag_w_colpattern(const 
     }
   );
   RAJA::inclusive_scan_inplace<hiop_raja_exec>(RAJA::make_span(row_start_dev,n+1), RAJA::operators::plus<index_type>());
-#else // cpu code
-  const double* pattern_host = selected.local_data_host_const();
-
-  hiopVectorInt* vec_row_start = LinearAlgebraFactory::create_vector_int(mem_space_, n+1);
-  index_type* row_start_host = vec_row_start->local_data_host();
-  index_type* row_start_dev = vec_row_start->local_data();
-
-  row_start_host[0] = 0;
-  for(index_type row_idx = 1; row_idx < n+1; row_idx++) {
-    if(pattern_host[row_idx-1]!=0.0) {
-      row_start_host[row_idx] = row_start_host[row_idx-1] + 1;
-    } else {
-      row_start_host[row_idx] = row_start_host[row_idx-1];
-    }
-  }
-  vec_row_start->copy_to_dev();
-#endif
 
   RAJA::forall<hiop_raja_exec>(
     RAJA::RangeSegment(1, n+1),
@@ -1671,7 +1600,6 @@ void hiopMatrixRajaSparseTriplet::setSubmatrixToConstantDiag_w_colpattern(const 
   );
 
   devalloc.deallocate(row_start_dev);
-//  delete vec_row_start;
 }
 
 /**
@@ -1716,7 +1644,10 @@ void hiopMatrixRajaSparseTriplet::setSubmatrixToConstantDiag_w_rowpattern(const 
   assert(nrm == nnz_to_copy);
 #endif
 
-#if 1 // implemenation that requires a RAJA new version released in Nov.2021
+  //
+  // The latest CPU code can be found in 342eb99ec16d45f57a492be1bf1e39cce73995a5
+  // It is replaced by RAJA::inclusive_scan after that commit
+  //
   auto& resmgr = umpire::ResourceManager::getInstance();
   umpire::Allocator devalloc = resmgr.getAllocator(mem_space_);
   index_type* row_start_dev = static_cast<index_type*>(devalloc.allocate((n+1)*sizeof(index_type)));
@@ -1738,23 +1669,6 @@ void hiopMatrixRajaSparseTriplet::setSubmatrixToConstantDiag_w_rowpattern(const 
     }
   );
   RAJA::inclusive_scan_inplace<hiop_raja_exec>(RAJA::make_span(row_start_dev,n+1), RAJA::operators::plus<index_type>());
-#else // cpu code
-  const double* pattern_host = selected.local_data_host_const();
-
-  hiopVectorInt* vec_row_start = LinearAlgebraFactory::create_vector_int(mem_space_, n+1);
-  index_type* row_start_host = vec_row_start->local_data_host();
-  index_type* row_start_dev = vec_row_start->local_data();
-
-  row_start_host[0] = 0;
-  for(index_type row_idx = 1; row_idx < n+1; row_idx++) {
-    if(pattern_host[row_idx-1]!=0.0) {
-      row_start_host[row_idx] = row_start_host[row_idx-1] + 1;
-    } else {
-      row_start_host[row_idx] = row_start_host[row_idx-1];
-    }
-  }
-  vec_row_start->copy_to_dev();
-#endif
 
   RAJA::forall<hiop_raja_exec>(
     RAJA::RangeSegment(1, n+1),
@@ -1772,7 +1686,6 @@ void hiopMatrixRajaSparseTriplet::setSubmatrixToConstantDiag_w_rowpattern(const 
   );
 
   devalloc.deallocate(row_start_dev);
-//  delete vec_row_start;
 }
 
 /**
@@ -1857,7 +1770,10 @@ void hiopMatrixRajaSparseTriplet::copyDiagMatrixToSubblock_w_pattern(const hiopV
   assert(nrm == nnz_to_copy);
 #endif
 
-#if 1 // implemenation that requires a RAJA new version released in Nov.2021
+  //
+  // The latest CPU code can be found in 342eb99ec16d45f57a492be1bf1e39cce73995a5
+  // It is replaced by RAJA::inclusive_scan after that commit
+  //
   auto& resmgr = umpire::ResourceManager::getInstance();
   umpire::Allocator devalloc = resmgr.getAllocator(mem_space_);
   index_type* row_start_dev = static_cast<index_type*>(devalloc.allocate((n+1)*sizeof(index_type)));
@@ -1879,23 +1795,6 @@ void hiopMatrixRajaSparseTriplet::copyDiagMatrixToSubblock_w_pattern(const hiopV
     }
   );
   RAJA::inclusive_scan_inplace<hiop_raja_exec>(RAJA::make_span(row_start_dev,n+1), RAJA::operators::plus<index_type>());
-#else // cpu code
-  const double* pattern_host = selected.local_data_host_const();
-
-  hiopVectorInt* vec_row_start = LinearAlgebraFactory::create_vector_int(mem_space_, n+1);
-  index_type* row_start_host = vec_row_start->local_data_host();
-  index_type* row_start_dev = vec_row_start->local_data();
-
-  row_start_host[0] = 0;
-  for(index_type row_idx = 1; row_idx < n+1; row_idx++) {
-    if(pattern_host[row_idx-1]!=0.0) {
-      row_start_host[row_idx] = row_start_host[row_idx-1] + 1;
-    } else {
-      row_start_host[row_idx] = row_start_host[row_idx-1];
-    }
-  }
-  vec_row_start->copy_to_dev();
-#endif
 
   RAJA::forall<hiop_raja_exec>(
     RAJA::RangeSegment(1, n+1),
@@ -1913,7 +1812,6 @@ void hiopMatrixRajaSparseTriplet::copyDiagMatrixToSubblock_w_pattern(const hiopV
   );
 
   devalloc.deallocate(row_start_dev);
-//  delete vec_row_start;
 }
 
 /**********************************************************************************
@@ -2162,40 +2060,10 @@ void hiopMatrixRajaSymSparseTriplet::set_Hess_FR(const hiopMatrixSparse& Hess,
 
         M1_row_start = M1.row_starts_->idx_start_;       
 
-#if 0 // cpu code due to the RAJA::scan bug
-        index_type* M2_row_start_host = M2.row_starts_->idx_start_host_;
-        index_type* M1_row_start_host = M1.row_starts_->idx_start_host_;
-
-        for(index_type i=0; i< m1+1; i++) {
-          M1_row_start_host[i] = 0;
-          
-          if(i>0 && i< m2+1) {
-            // nonzeros from the new obj term zeta*DR^2.*(x-x_ref)
-            M1_row_start_host[i] += 1;
-            
-            { // nonzeros from the base Hessian
-              index_type k_base = M2_row_start_host[i-1];
-              index_type nnz_in_row_base = M2_row_start_host[i] - k_base;
-              
-              if(nnz_in_row_base > 0 && M2iRow_host[k_base] == M2jCol_host[k_base]) {
-                // first nonzero in this row is a diagonal term (Hess is in upper triangular form)
-                // skip it since we will defined the diagonal nonezero
-                M1_row_start_host[i] += nnz_in_row_base-1;
-              } else {
-                M1_row_start_host[i] += nnz_in_row_base;
-              }
-            }  
-          }
-        }
-
-        // std::inclusive_scan is only available after C++17
-        // std::inclusive_scan(m1_row_nnz,m1_row_nnz+m1+1,M1.row_starts_->idx_start_host_);
-        for(int i=1; i< m1+1; i++) {
-          M1_row_start_host[i] += M1_row_start_host[i-1];
-        }
-        
-        M1.row_starts_->copy_to_dev();
-#else // RAJA code
+        //
+        // The latest CPU code can be found in 342eb99ec16d45f57a492be1bf1e39cce73995a5
+        // It is replaced by RAJA::inclusive_scan after that commit
+        //
         RAJA::forall<hiop_raja_exec>(
           RAJA::RangeSegment(0, m1+1),
           RAJA_LAMBDA(RAJA::Index_type i)
@@ -2225,8 +2093,7 @@ void hiopMatrixRajaSymSparseTriplet::set_Hess_FR(const hiopMatrixSparse& Hess,
           }
         );
 
-      RAJA::inclusive_scan_inplace<hiop_raja_exec>(RAJA::make_span(M1_row_start,m1+1), RAJA::operators::plus<index_type>());
-#endif
+        RAJA::inclusive_scan_inplace<hiop_raja_exec>(RAJA::make_span(M1_row_start,m1+1), RAJA::operators::plus<index_type>());
       }
 
       RAJA::forall<hiop_raja_exec>(
