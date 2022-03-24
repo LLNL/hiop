@@ -728,7 +728,7 @@ bool hiopKKTLinSysCondensedSparse::solveCompressed(hiopVector& rx,
   
   if(nullptr == krylov_mat_opr_) {
     krylov_mat_opr_ = new hiopKKTMatVecOpr(this);
-    krylov_prec_opr_ = new hiopKKTPrecondOpr(this);
+    krylov_prec_opr_ = new hiopMatVecKKTCondensedOpr(this);
     krylov_rhs_xdycyd_ = new hiopVectorPar(nx+nd+nyd);
     //TODO: memory space device
     bicgstab_ = new hiopBiCGStabSolver(nx+nd+nyd, "DEFAULT", krylov_mat_opr_, krylov_prec_opr_);
