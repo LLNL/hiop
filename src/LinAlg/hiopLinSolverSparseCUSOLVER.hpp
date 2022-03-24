@@ -96,7 +96,6 @@ namespace hiop
       return false;
     }
 
-    int newKLUfactorization();
     int refactorizationSetupCusolverGLU();
     int refactorizationSetupCusolverRf();
 
@@ -171,7 +170,6 @@ namespace hiop
     double* devr_;
     double* drhs_;
 
-    int singularMatrix_;
     int factorizationSetupSucc_;
     /* needed for cuSolverRf */
     int* d_P;
@@ -219,7 +217,6 @@ namespace hiop
       return false;
     }
 
-    int newKLUfactorization();
     int refactorizationSetupCusolverGLU();
     int refactorizationSetupCusolverRf();
 
@@ -248,6 +245,7 @@ namespace hiop
 
     std::string fact_;
     std::string refact_;
+    int factorizationSetupSucc_;
     /** needed for CUSOLVER and KLU */
 
     cusolverStatus_t sp_status_;
