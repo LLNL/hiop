@@ -582,16 +582,7 @@ protected:
   index_type* row_starts_;
   
 private:
-  hiopMatrixSparseCSRCUDA(const hiopMatrixSparseCSRCUDA&)
-    : hiopMatrixSparseCSR(0, 0, 0),
-      irowptr_(nullptr),
-      jcolind_(nullptr),
-      values_(nullptr),
-      buf_col_(nullptr),
-      row_starts_(nullptr)
-  {
-    assert(false && "copy constructor disabled");
-  }
+  hiopMatrixSparseCSRCUDA(const hiopMatrixSparseCSRCUDA&) = delete;
 };
 
 

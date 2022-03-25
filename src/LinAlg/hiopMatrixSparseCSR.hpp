@@ -277,10 +277,7 @@ protected:
   //// inherits nrows_, ncols_, and nnz_ from parent hiopSparseMatrix
     
 private:
-  hiopMatrixSparseCSR(const hiopMatrixSparseCSR&)
-    : hiopMatrixSparse(0, 0, 0)
-  {
-  }
+  hiopMatrixSparseCSR(const hiopMatrixSparseCSR&) = delete;
 };
 
 
