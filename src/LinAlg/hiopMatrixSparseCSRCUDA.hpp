@@ -54,7 +54,7 @@
 #ifdef HIOP_SPARSE_MATRIX_CSRCUDA
 #define HIOP_SPARSE_MATRIX_CSRCUDA
 
-#ifndef HIOP_USE_CUDAaaa
+#ifdef HIOP_USE_CUDA
 
 #include "hiopVector.hpp"
 #include "hiopMatrixDense.hpp"
@@ -68,7 +68,7 @@ namespace hiop
 {
 
 /**
- * @brief Sparse matrix of doubles in compressed row format for use on CPU/host. Data
+ * @brief Sparse matrix of doubles in compressed row format for use on CUDA GPUs. Data
  * is not (memory, MPI) distributed.
  *
  * @note The methods of this class expect and maintains unique and ordered column indexes 
