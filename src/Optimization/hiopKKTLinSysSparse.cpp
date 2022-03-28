@@ -554,17 +554,18 @@ namespace hiop
       // safe mode
       /////////////////////////////////////////////////////////////////////////////////////////////
       if(safe_mode_) {
-        assert( (compute_mode == "hybrid" || compute_mode == "cpu") &&
-                "safe mode not currently supported with gpu compute mode");
+        assert( (compute_mode == "hybrid" || compute_mode == "cpu" || compute_mode == "auto") &&
+                "KKT_SPARSE_XDYcYd linsys: safe mode not currently supported with gpu compute mode.");
 
         //for now we can only rely on MA57 as the safe mode linear solver 
 #if defined(HIOP_USE_COINHSL)
-        nlp_->log->printf(hovScalars,
+        linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
+        nlp_->log->printf(hovWarning,
                           "KKT_SPARSE_XDYcYd linsys: alloc MA57 on CPU size %d (%d cons) (safe_mode=%d)\n",
                           n,
                           neq+nineq,
                           safe_mode_);                             
-        linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
+        return dynamic_cast<hiopLinSolverSymSparse*> (linSys_);
 #else // end of if defined(HIOP_USE_COINHSL)
         assert(false &&
                "HiOp was not built with the safe(r) sparse linear solver MA57 and cannot switch to "
