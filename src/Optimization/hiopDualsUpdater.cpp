@@ -443,7 +443,7 @@ bool hiopDualsLsqUpdateLinsysAugSparse::do_lsq_update(hiopIterate& iter,
       //under compute mode gpu, at this point we don't have a sparse linear solver 
       if(compute_mode == "gpu") {
         if(linear_solver == "auto") {
-          assert("HiOp was not build with a sparse GPU and cannot fullfil the requirement of the option "
+          assert("HiOp was not built with a sparse GPU and cannot fullfil the requirement of the option "
                  "'duals_init_linear_solver_sparse'. Either build with a supported GPU sparse solver or "
                  "change compute mode to hybrid, which will allow using a CPU sparse solver.");
         } else {
@@ -453,7 +453,8 @@ bool hiopDualsLsqUpdateLinsysAugSparse::do_lsq_update(hiopIterate& iter,
         }
       }
 #endif
-      
+
+      assert(compute_mode == "hybrid");
 #if defined(HIOP_USE_STRUMPACK)
       if(NULL == lin_sys_) {
         if(linear_solver == "strumpack" || linear_solver == "auto") {
