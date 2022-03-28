@@ -159,6 +159,7 @@ int main(int argc, char **argv)
       nlp.options->SetStringValue("fact_acceptor", "inertia_free");
     }
     if(use_cusolver) {
+      nlp.options->SetStringValue("fact_acceptor", "inertia_free");
       nlp.options->SetStringValue("linsol_mode", "speculative");
       nlp.options->SetStringValue("linear_solver_sparse", "cusolver");
       nlp.options->SetStringValue("compute_mode", "hybrid");

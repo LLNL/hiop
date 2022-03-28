@@ -615,7 +615,7 @@ namespace hiop
         }
 
         if(linSys_) {
-          nlp_->log->printf(hovWarning,
+          nlp_->log->printf(hovScalars,
                             "KKT_SPARSE_XDYcYd linsys: alloc [%s] size %d (%d cons)(cpu)\n",
                             actual_lin_solver.c_str(),
                             n,
