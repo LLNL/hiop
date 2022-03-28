@@ -419,16 +419,17 @@ bool hiopDualsLsqUpdateLinsysAugSparse::do_lsq_update(hiopIterate& iter,
       // We're on device
       //
       // Under hybrid compute_mode, LSQ-based initialization can be done using CPU sparse linear solvers.
-      // Under gpu compute_mode, the initialization is allowed to be done only using GPU sparse linear solvers.
+      // Under gpu compute_mode, which is work in progress, the initialization should be done only using
+      // GPU sparse linear solvers.
       
 #ifdef HIOP_USE_CUSOLVER 
-      // This is our first choice on the device. 
       if(compute_mode == "gpu") {
         assert((linear_solver == "cusolver" || linear_solver == "auto") &&
                "the value for duals_init_linear_solver_sparse is invalid and should have been corrected during "
                "options processing");
       }
-      
+
+      // This is our first choice on the device.
       if(linear_solver == "cusolver" || linear_solver == "auto") {
         hiopLinSolverIndefSparseCUSOLVER *p = new hiopLinSolverIndefSparseCUSOLVER(n, nnz, nlp_);
         nlp_->log->printf(hovSummary,
@@ -454,7 +455,7 @@ bool hiopDualsLsqUpdateLinsysAugSparse::do_lsq_update(hiopIterate& iter,
       }
 #endif
 
-      assert(compute_mode == "hybrid");
+      assert(compute_mode == "hybrid" || compute_mode == "auto");
 #if defined(HIOP_USE_STRUMPACK)
       if(NULL == lin_sys_) {
         if(linear_solver == "strumpack" || linear_solver == "auto") {
