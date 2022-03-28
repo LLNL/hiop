@@ -152,6 +152,9 @@ int main(int argc, char **argv)
     hiopNlpSparse nlp(nlp_interface);
     nlp.options->SetStringValue("compute_mode", "cpu");
     nlp.options->SetStringValue("KKTLinsys", "xdycyd");
+    //lsq initialization of the duals fails for this example since the Jacobian is rank deficient
+    //use zero initialization
+    nlp.options->SetStringValue("duals_init", "zero");
     if(inertia_free) {
       nlp.options->SetStringValue("fact_acceptor", "inertia_free");
     }
@@ -200,10 +203,13 @@ int main(int argc, char **argv)
     //compute mode cpu will use MA57 by default
     nlp.options->SetStringValue("KKTLinsys", "condensed");
     nlp.options->SetStringValue("linsol_mode", "speculative");
-    nlp.options->SetStringValue("duals_init_linear_solver_sparse", "MA57");
-#ifdef HIOP_USE_CUDA   
-    nlp.options->SetStringValue("compute_mode", "hybrid");
-#endif
+    //lsq initialization of the duals fails for this example since the Jacobian is rank deficient
+    //use zero initialization
+    nlp.options->SetStringValue("duals_init", "zero");
+    if(use_cusolver) {
+      nlp.options->SetStringValue("compute_mode", "hybrid");
+    }
+
     hiopAlgFilterIPMNewton solver(&nlp);
     hiopSolveStatus status = solver.run();
 
