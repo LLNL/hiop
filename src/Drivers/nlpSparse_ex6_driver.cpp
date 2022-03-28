@@ -167,7 +167,7 @@ int main(int argc, char **argv)
   
   nlp.options->SetStringValue("compute_mode", "cpu");
   nlp.options->SetStringValue("KKTLinsys", "xdycyd");
-  nlp.options->SetStringValue("write_kkt", "yes");
+  //nlp.options->SetStringValue("write_kkt", "yes");
 
   nlp.options->SetNumericValue("mu0", 0.1);
   nlp.options->SetStringValue("options_file_fr_prob", "hiop_fr_ci.options");
@@ -176,6 +176,7 @@ int main(int argc, char **argv)
     nlp.options->SetStringValue("linear_solver_sparse", "pardiso");
   }
   if(use_cusolver) {
+    nlp.options->SetStringValue("linsol_mode", "speculative");
     nlp.options->SetStringValue("linear_solver_sparse", "cusolver");
     nlp.options->SetStringValue("compute_mode", "hybrid");
   }

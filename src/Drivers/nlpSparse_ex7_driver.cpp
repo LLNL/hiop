@@ -156,6 +156,7 @@ int main(int argc, char **argv)
       nlp.options->SetStringValue("fact_acceptor", "inertia_free");
     }
     if(use_cusolver) {
+      nlp.options->SetStringValue("linsol_mode", "speculative");
       nlp.options->SetStringValue("linear_solver_sparse", "cusolver");
       nlp.options->SetStringValue("compute_mode", "hybrid");
     }
@@ -198,11 +199,11 @@ int main(int argc, char **argv)
     hiopNlpSparseIneq nlp(nlp_interface);
     //compute mode cpu will use MA57 by default
     nlp.options->SetStringValue("KKTLinsys", "condensed");
-    nlp.options->SetStringValue("compute_mode", "cpu");
-    if(use_cusolver) {
-      nlp.options->SetStringValue("compute_mode", "hybrid");
-    }
-
+    nlp.options->SetStringValue("linsol_mode", "speculative");
+    nlp.options->SetStringValue("duals_init_linear_solver_sparse", "MA57");
+#ifdef HIOP_USE_CUDA   
+    nlp.options->SetStringValue("compute_mode", "hybrid");
+#endif
     hiopAlgFilterIPMNewton solver(&nlp);
     hiopSolveStatus status = solver.run();
 
