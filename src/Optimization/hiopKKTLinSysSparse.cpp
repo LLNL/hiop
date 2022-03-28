@@ -261,6 +261,8 @@ namespace hiop
     if(nullptr==linSys_) {
       int n = nx + neq + nineq;
 
+      assert(false == safe_mode_ && "KKT_SPARSE_XYcYd linsys does not support safe mode.");
+      
       if(nlp_->options->GetString("compute_mode") == "cpu")
       {
         auto linear_solver = nlp_->options->GetString("linear_solver_sparse");
@@ -297,7 +299,7 @@ namespace hiop
         }
       } else {
         // on device, either hybrid or gpu mode
-        assert(false == safe_mode_ && "safe mode not supported by this class");
+
         
 #ifdef HIOP_USE_CUSOLVER
         hiopLinSolverIndefSparseCUSOLVER *p = new hiopLinSolverIndefSparseCUSOLVER(n, nnz, nlp_);
@@ -563,7 +565,7 @@ namespace hiop
                           neq+nineq,
                           safe_mode_);                             
         linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
-#else // of if defined(HIOP_USE_COINHSL)
+#else // end of if defined(HIOP_USE_COINHSL)
         assert(false &&
                "HiOp was not built with the safe(r) sparse linear solver MA57 and cannot switch to "
                "safe mode as requested. ");
@@ -695,7 +697,7 @@ namespace hiop
           linSys_ = p;
 #endif
         } //end cusolver
-      }
+      } // end of compute mode gpu
     }
     assert(linSys_&& "KKT_SPARSE_XDYcYd linsys: cannot instantiate backend linear solver");
     return dynamic_cast<hiopLinSolverSymSparse*> (linSys_);
@@ -727,21 +729,30 @@ namespace hiop
   hiopKKTLinSysSparseFull::determineAndCreateLinsys(const int &n, const int &n_con, const int &nnz)
   {
     if(NULL==linSys_) {
+
+      if(safe_mode_) {
+        nlp_->log->printf(hovError, "Safe mode is not supported KKT_SPARSE_FULL_KKT linsys\n");
+        assert(false);
+        return nullptr;
+      }
+
+      auto compute_mode = nlp_->options->GetString("compute_mode");
+      assert( (compute_mode == "hybrid" || compute_mode == "cpu") &&
+                "KKT_SPARSE_FULL_KKT linsys does not currently support gpu compute mode");
+      
 #ifdef HIOP_USE_CUSOLVER
       nlp_->log->printf(hovWarning,
-                        "KKT_SPARSE_FULL_KKT linsys: alloc CUSOLVER size %d (%d cons) (safe_mode=%d)\n",
+                        "KKT_SPARSE_FULL_KKT linsys: alloc nonsym CUSOLVER size %d (%d cons)\n",
                         n,
-                        n_con,
-                        safe_mode_);
+                        n_con);
       hiopLinSolverNonSymSparseCUSOLVER *p = new hiopLinSolverNonSymSparseCUSOLVER(n, nnz, nlp_);
       p->setFakeInertia(n_con);
       linSys_ = p;
 #elif HIOP_USE_PARDISO
       nlp_->log->printf(hovWarning,
-                        "KKT_SPARSE_FULL_KKT linsys: alloc PARDISO size %d (%d cons) (safe_mode=%d)\n",
+                        "KKT_SPARSE_FULL_KKT linsys: alloc PARDISO size %d (%d cons)\n",
                         n,
-                        n_con,
-                        safe_mode_);
+                        n_con);
       hiopLinSolverNonSymSparsePARDISO *p = new hiopLinSolverNonSymSparsePARDISO(n, nnz, nlp_);
       p->setFakeInertia(n_con);
       linSys_ = p;
@@ -749,17 +760,16 @@ namespace hiop
 
       hiopLinSolverNonSymSparseSTRUMPACK *p = new hiopLinSolverNonSymSparseSTRUMPACK(n, nnz, nlp_);
       nlp_->log->printf(hovWarning,
-                        "KKT_SPARSE_FULL_KKT linsys: alloc STRUMPACK size %d (%d cons) (safe_mode=%d)\n",
+                        "KKT_SPARSE_FULL_KKT linsys: alloc STRUMPACK size %d (%d cons)\n",
                         n,
-                        n_con,
-                        safe_mode_);
+                        n_con);
       p->setFakeInertia(n_con);
       linSys_ = p;
 #endif // CUSOLVER
       if(NULL==linSys_) {
         nlp_->log->printf(hovError,
                           "KKT_SPARSE_FULL_KKT linsys: cannot instantiate backend linear solver "
-                          "because HIOP was not built with STRUMPACK or PARDISO.\n");
+                          "because HIOP was not built with CUSOLVER, STRUMPACK, or PARDISO.\n");
         assert(false);
         return nullptr;
       }
