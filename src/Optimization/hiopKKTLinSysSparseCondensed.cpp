@@ -61,6 +61,8 @@
 #endif
 
 #include "hiopMatrixSparseTripletStorage.hpp"
+#include "hiopMatrixSparseCSRSeq.hpp"
+
 namespace hiop
 {
 
@@ -200,12 +202,12 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   // symbolic conversion from triplet to CSR
   if(nullptr == JacD_) {
     t.reset(); t.start();
-    JacD_ = new hiopMatrixSparseCSR();
+    JacD_ = new hiopMatrixSparseCSRSeq();
     JacD_->form_from_symbolic(*Jac_triplet);
     //JacD_.print();
 
     assert(nullptr == JacDt_);
-    JacDt_ = new hiopMatrixSparseCSR();
+    JacDt_ = new hiopMatrixSparseCSRSeq();
     JacDt_->form_transpose_from_symbolic(*Jac_triplet);
     //t.stop(); printf("JacD JacDt-symb    took %.5f\n", t.getElapsedTime());
   }
@@ -246,11 +248,11 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   
   if(nullptr == M_condensed_) {
     assert(nullptr == Hess_upper_csr_);
-    Hess_upper_csr_ = new hiopMatrixSparseCSR();
+    Hess_upper_csr_ = new hiopMatrixSparseCSRSeq();
     Hess_upper_csr_->form_from_symbolic(*Hess_triplet);
 
     assert(nullptr == Hess_lower_csr_);
-    Hess_lower_csr_ = new hiopMatrixSparseCSR();;
+    Hess_lower_csr_ = new hiopMatrixSparseCSRSeq();
     Hess_lower_csr_->form_transpose_from_symbolic(*Hess_triplet);
 
     assert(Hess_lower_csr_->numberOfNonzeros() == Hess_upper_csr_->numberOfNonzeros());
@@ -266,7 +268,7 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
     
     //ensure storage for nonzeros diagonal is allocated by adding (symbolically)
     //a diagonal matrix
-    hiopMatrixSparseCSR Diag;
+    hiopMatrixSparseCSRSeq Diag;
     Diag.form_diag_from_symbolic(*Dx_);
 
     M_condensed_ = M_condensed_tmp->add_matrix_alloc(Diag);

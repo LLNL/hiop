@@ -133,9 +133,6 @@ public:
                                             const hiopMatrix& jac_c,
                                             const hiopMatrix& jac_d)
   {
-    //nlp_->log->printf(hovSummary,
-    //                  "LSQ Dual Initialization --- Dense linsys: size %d (%d eq-cons)\n",
-    //                  nlp_->m_eq()+nlp_->m_ineq(), nlp_->m_eq());  
     bool bret = do_lsq_update(it_ini,grad_f,jac_c,jac_d);
     
     double ycnrm = it_ini.get_yc()->infnorm();
@@ -154,8 +151,6 @@ public:
                           ynrm, lsq_dual_init_max);
       }
     }
-    //nlp_->log->write("yc ini", *iter.get_yc(), hovSummary);
-    //nlp_->log->write("yd ini", *iter.get_yd(), hovSummary);
     return bret;
   }
 protected:

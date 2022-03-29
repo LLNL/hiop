@@ -25,6 +25,7 @@ set(hiopLinAlg_INTERFACE_HEADERS
   hiopMatrixSparseTriplet.hpp
   hiopMatrixSparseTripletStorage.hpp
   hiopMatrixSparseCSR.hpp
+  hiopMatrixSparseCSRSeq.hpp
   hiopVector.hpp
   hiopVectorInt.hpp
   hiopVectorIntRaja.hpp
@@ -47,7 +48,7 @@ set(hiopLinAlg_SRC
   hiopMatrixSparseTripletStorage.cpp
   hiopMatrixSparseTriplet.cpp
   hiopMatrixComplexSparseTriplet.cpp
-  hiopMatrixSparseCSR.cpp
+  hiopMatrixSparseCSRSeq.cpp
   hiopLinearOperator.cpp
   hiopKrylovSolver.cpp
 )

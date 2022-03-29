@@ -152,10 +152,15 @@ int main(int argc, char **argv)
     hiopNlpSparse nlp(nlp_interface);
     nlp.options->SetStringValue("compute_mode", "cpu");
     nlp.options->SetStringValue("KKTLinsys", "xdycyd");
+    //lsq initialization of the duals fails for this example since the Jacobian is rank deficient
+    //use zero initialization
+    nlp.options->SetStringValue("duals_init", "zero");
     if(inertia_free) {
       nlp.options->SetStringValue("fact_acceptor", "inertia_free");
     }
     if(use_cusolver) {
+      nlp.options->SetStringValue("fact_acceptor", "inertia_free");
+      nlp.options->SetStringValue("linsol_mode", "speculative");
       nlp.options->SetStringValue("linear_solver_sparse", "cusolver");
       nlp.options->SetStringValue("compute_mode", "hybrid");
     }
@@ -198,7 +203,10 @@ int main(int argc, char **argv)
     hiopNlpSparseIneq nlp(nlp_interface);
     //compute mode cpu will use MA57 by default
     nlp.options->SetStringValue("KKTLinsys", "condensed");
-    nlp.options->SetStringValue("compute_mode", "cpu");
+    nlp.options->SetStringValue("linsol_mode", "speculative");
+    //lsq initialization of the duals fails for this example since the Jacobian is rank deficient
+    //use zero initialization
+    nlp.options->SetStringValue("duals_init", "zero");
     if(use_cusolver) {
       nlp.options->SetStringValue("compute_mode", "hybrid");
     }
