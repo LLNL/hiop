@@ -90,6 +90,12 @@ static bool parse_arguments(int argc,
     return false; // 4 or more arguments
   }
 
+  if(use_cusolver && !(inertia_free)) {
+    inertia_free = true;
+    printf("LU solver from cuSOLVER library requires inertia free approach. ");
+    printf("Enabling now ...\n");
+  }
+
 #ifndef HIOP_USE_CUDA
   if(use_cusolver) {
     printf("HiOp built without CUDA support. ");
@@ -159,9 +165,9 @@ int main(int argc, char **argv)
       nlp.options->SetStringValue("fact_acceptor", "inertia_free");
     }
     if(use_cusolver) {
-      nlp.options->SetStringValue("fact_acceptor", "inertia_free");
+      nlp.options->SetStringValue("duals_init", "zero");
       nlp.options->SetStringValue("linsol_mode", "speculative");
-      nlp.options->SetStringValue("linear_solver_sparse", "cusolver");
+      nlp.options->SetStringValue("linear_solver_sparse", "cusolver-lu");
       nlp.options->SetStringValue("compute_mode", "hybrid");
     }
     hiopAlgFilterIPMNewton solver(&nlp);
@@ -203,9 +209,8 @@ int main(int argc, char **argv)
     hiopNlpSparseIneq nlp(nlp_interface);
     //compute mode cpu will use MA57 by default
     nlp.options->SetStringValue("KKTLinsys", "condensed");
+    nlp.options->SetStringValue("compute_mode", "cpu");
     nlp.options->SetStringValue("linsol_mode", "speculative");
-    //lsq initialization of the duals fails for this example since the Jacobian is rank deficient
-    //use zero initialization
     nlp.options->SetStringValue("duals_init", "zero");
     if(use_cusolver) {
       nlp.options->SetStringValue("compute_mode", "hybrid");

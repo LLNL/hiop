@@ -426,20 +426,19 @@ bool hiopDualsLsqUpdateLinsysAugSparse::do_lsq_update(hiopIterate& iter,
       
 #ifdef HIOP_USE_CUSOLVER 
       if(compute_mode == "gpu") {
-        assert((linear_solver == "cusolver" || linear_solver == "auto") &&
+        assert((linear_solver == "cusolver-lu" || linear_solver == "auto") &&
                "the value for duals_init_linear_solver_sparse is invalid and should have been corrected during "
                "options processing");
       }
 
       // This is our first choice on the device.
-      if(linear_solver == "cusolver" || linear_solver == "auto") {
-        hiopLinSolverIndefSparseCUSOLVER *p = new hiopLinSolverIndefSparseCUSOLVER(n, nnz, nlp_);
+      if(linear_solver == "cusolver-lu" || linear_solver == "auto") {
+        hiopLinSolverSymSparseCUSOLVER *p = new hiopLinSolverSymSparseCUSOLVER(n, nnz, nlp_);
         nlp_->log->printf(hovSummary,
                           "LSQ Dual Initialization --- KKT_SPARSE_XDYcYd linsys: using CUSOLVER on device as an "
                           "indefinite solver, size %d (%d cons)\n",
                           n,
                           neq+nineq);
-        // p->setFakeInertia(neq + nineq);
         lin_sys_ = p;
       }
 #else // of #ifdef HIOP_USE_CUSOLVER 
