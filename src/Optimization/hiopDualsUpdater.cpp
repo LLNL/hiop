@@ -328,12 +328,12 @@ hiopDualsLsqUpdateLinsysAugSparse::hiopDualsLsqUpdateLinsysAugSparse(hiopNlpForm
   assert(0 && "should not reach here!");
 #endif // HIOP_SPARSE
   rhs_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"),
-                                            nlp_->n() + nlp_->m_ineq() + nlp_->m());
+                                             nlp_->n() + nlp_->m_ineq() + nlp_->m());
 }
 
 hiopDualsLsqUpdateLinsysAugSparse::~hiopDualsLsqUpdateLinsysAugSparse()
 {
-  if(lin_sys_) delete lin_sys_;
+  delete lin_sys_;
 }
 
 bool hiopDualsLsqUpdateLinsysAugSparse::do_lsq_update(hiopIterate& iter,
@@ -360,7 +360,7 @@ bool hiopDualsLsqUpdateLinsysAugSparse::do_lsq_update(hiopIterate& iter,
   
   auto compute_mode = nlp_->options->GetString("compute_mode");
 #ifndef HIOP_USE_GPU
-  assert(compute_mode == "cpu" &&
+  assert( (compute_mode == "cpu" || compute_mode == "auto") &&
          "the value for compute_mode is invalid and should have been corrected during user options processing");
 #endif
   
@@ -368,7 +368,9 @@ bool hiopDualsLsqUpdateLinsysAugSparse::do_lsq_update(hiopIterate& iter,
     auto linear_solver = nlp_->options->GetString("duals_init_linear_solver_sparse");
     
     if(compute_mode == "cpu") {
-
+      /////////////////////////////////////////////////////////////////////////////////////////
+      // compute mode CPU
+      /////////////////////////////////////////////////////////////////////////////////////////
       if(linear_solver == "ma57" || linear_solver == "auto") {
 #ifdef HIOP_USE_COINHSL
         nlp_->log->printf(hovSummary,
@@ -381,7 +383,7 @@ bool hiopDualsLsqUpdateLinsysAugSparse::do_lsq_update(hiopIterate& iter,
 #endif // HIOP_USE_COINHSL
       }
 
-      if( (NULL == lin_sys_ && linear_solver == "auto") || linear_solver == "pardiso") {
+      if( (nullptr == lin_sys_ && linear_solver == "auto") || linear_solver == "pardiso") {
         //ma57 is not available or user requested pardiso
 #ifdef HIOP_USE_PARDISO
         ss_log << "LSQ with PARDISO: create ";
@@ -395,7 +397,7 @@ bool hiopDualsLsqUpdateLinsysAugSparse::do_lsq_update(hiopIterate& iter,
 #endif  // HIOP_USE_PARDISO
       }
 
-      if(NULL == lin_sys_) {
+      if(nullptr == lin_sys_) {
         //ma57 not available or user requested strumpack
 #if defined(HIOP_USE_STRUMPACK)
         assert((linear_solver == "strumpack" || linear_solver == "auto") &&
@@ -452,12 +454,13 @@ bool hiopDualsLsqUpdateLinsysAugSparse::do_lsq_update(hiopIterate& iter,
                  "'duals_init_linear_solver_sparse' under gpu compute mode. Either build with a supported "
                  "GPU sparse solver or change compute mode to hybrid, which will allow using CPU sparse solvers.");
         }
+        return false;
       }
 #endif
 
       assert(compute_mode == "hybrid" || compute_mode == "auto");
 #if defined(HIOP_USE_STRUMPACK)
-      if(NULL == lin_sys_) {
+      if(nullptr == lin_sys_) {
         if(linear_solver == "strumpack" || linear_solver == "auto") {
           hiopLinSolverIndefSparseSTRUMPACK *p = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
           nlp_->log->printf(hovSummary,
@@ -472,7 +475,7 @@ bool hiopDualsLsqUpdateLinsysAugSparse::do_lsq_update(hiopIterate& iter,
       }
 #endif  // HIOP_USE_STRUMPACK
 #ifdef HIOP_USE_COINHSL
-      if(NULL == lin_sys_) {
+      if(nullptr == lin_sys_) {
         // we get here if strumpack is not available or is available but the duals_init_linear_solver_sparse was
         //set to be ma57
         assert((linear_solver == "ma57" || linear_solver == "auto") &&
@@ -487,7 +490,7 @@ bool hiopDualsLsqUpdateLinsysAugSparse::do_lsq_update(hiopIterate& iter,
       }
 #endif // HIOP_USE_COINHSL
 #ifdef HIOP_USE_PARDISO
-      if(NULL == lin_sys_) {
+      if(nullptr == lin_sys_) {
         // we get here if strumpack and ma57 are not available or is available but the duals_init_linear_solver_sparse was
         //set to be pardiso
         assert((linear_solver == "pardiso" || linear_solver == "auto") &&
@@ -504,6 +507,9 @@ bool hiopDualsLsqUpdateLinsysAugSparse::do_lsq_update(hiopIterate& iter,
     } // end of else  compute_mode=='cpu'
   } //end of else if(!linsys)
   assert(lin_sys_ && "no sparse linear solver is available");
+  if(nullptr == lin_sys_) {
+    return false;
+  }
   hiopLinSolverSymSparse* linSys = dynamic_cast<hiopLinSolverSymSparse*> (lin_sys_);
   assert(linSys);
 
