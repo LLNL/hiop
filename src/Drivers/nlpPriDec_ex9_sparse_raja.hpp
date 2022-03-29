@@ -59,7 +59,8 @@
  * @f[ 
  * \min_x \sum_{i=1}^n f(x_i)
  * @f] 
- * 
+ *
+ * This implementation uses HiOp Sparse Raja recourse problems. 
  */
 
 using namespace hiop;
@@ -81,16 +82,16 @@ public:
 		                             hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator);
   
   /**
-   * solving the idxth recourse optimization subproblem
-   * n is the number of coupled x, not the entire dimension of x
-   * rval is the return value of the recourse solution function evaluation
+   * This function solves the idxth recourse optimization subproblem and returns the objective.
+   * n is the number of coupled x, not the entire dimension of x, and might be denoted as nc_ elsewhere.
+   * rval is the return value of the recourse solution function evaluation.
    */
   bool eval_f_rterm(size_t idx, const int& n, const double* x, double& rval);
   
   /**
-   * compute the gradient of the recourse solution function w.r.t x
-   * n is the number of coupled x, not the entire dimension of x
-   * grad is the output
+   * This function computes the gradient of the recourse solution function w.r.t x.
+   * n is the number of coupled x, not the entire dimension of x, and 
+   * grad is the output.
    */
   bool eval_grad_rterm(size_t idx, const int& n, double* x, hiopVector& grad);
   

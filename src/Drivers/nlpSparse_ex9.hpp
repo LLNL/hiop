@@ -8,7 +8,7 @@
 #ifndef HIOP_EXAMPLE_EX9
 #define  HIOP_EXAMPLE_EX9
 
-/* This is the full problem defined directly in hiopSparse to test the result of hiopAlgPriDecomp
+/** This is the full problem defined directly in hiopSparse to test the result of hiopAlgPriDecomp
  * Base case from Ex6. 
  *  min   sum 1/4* { (x_{i}-1)^4 : i=1,...,n} + sum_{i=1^S} 1/S *  min_y 0.5 || y - x ||^2
  *  s.t.

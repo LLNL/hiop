@@ -81,10 +81,9 @@ enum MPIout {
   outlevel4=4  //print details about the algorithm
 }; 
 
-/* The main MPI solver for solving a class of problems with primal decomposition. 
+/** This class defines the main serial/MPI solver for solving a class of problems with primal decomposition. 
  * The master problem is the user defined class that should be able to solve both
- * the base case and full problem depending whether a recourse approximation is 
- * included. 
+ * the basecase and full problem depending whether a recourse approximation is included. 
  * Available options to be set in hiop_pridec.options file:
  * mem_space, alpha_max, alpha_min, tolerance, acceptable_tolerance, acceptable_iterations, 
  * max_iter, verbosity_level, print_options.
@@ -110,7 +109,7 @@ public:
    *
    * @param prob_in the primal decomposable problem
    * @param nc the number of coupling variables
-   * @param xc_index array on the device  with the the indexes of the coupling variables 
+   * @param xc_index array with the the indexes of the coupling variables 
    * in the full vector (primal) variables for the basecase/master problem within the primal 
    * decomposable problem prob_in.
    * @param comm_world the communicator whose ranks should be used to schedule the tasks
@@ -123,47 +122,69 @@ public:
 
   virtual ~hiopAlgPrimalDecomposition();
 
-  //we should make the public methods to look like hiopAlgFilterIPMBase
-  /* Main function to run the optimization in parallel */
+  /** Main function to run the optimization in parallel */
   hiopSolveStatus run();
-  /* Main function to run the optimization in serial */
+  /** Main function to run the optimization in serial */
   hiopSolveStatus run_single();
 
+  /** returns the objective of the master problem */
   double getObjective() const;
   
+  /** returns the solution to the master problem */
   void getSolution(hiopVector& x) const;
-  
+ 
+  /** not implemented */ 
   void getDualSolutions(double* zl, double* zu, double* lambda);
   
-  /* returns the status of the solver */
+  /** returns the status of the solver */
   inline hiopSolveStatus getSolveStatus() const;
   
-  /* returns the number of iterations, meaning how many times the master was solved */
+  /** returns the number of iterations, meaning how many times the master was solved */
   int getNumIterations() const;
 
+  /** returns whether stopping criteria have been met
+   *  Currently, any of the following three criteria being reached would get a true return value
+   *  1. convg reaches error tolerance
+   *  2. maximum number of iterations have been reached
+   *  3. the number of iterations that reached accpetable tolerance consecutively has reached accpetable account
+   *
+   *  @param it the number of iterations 
+   *  @param convg current error value, equivalent to the predicted decrease by the (approximation) objective model
+   *  @param accp_count number of consecutive iterations that have reached acceptable tolerance (smaller than tol_)
+   */
   bool stopping_criteria(const int it, const double convg, const int accp_count);
 
+  /** setting up the output level of the pridec solver */
   void set_verbosity(const int i);
 
+  /** set up the initial alpha update ratio, a parameter of the algorithm */
   void set_initial_alpha_ratio(const double ratio);
-    
+   
+  /** set up the lower bound of the quadratic coefficient alpha */ 
   void set_alpha_min(const double alp_min); 
    
+  /** set up the upper bound of the quadratic coefficient alpha */ 
   void set_alpha_max(const double alp_max);
   
+  /** set the maximum number of iterations allowed before termination */ 
   void set_max_iteration(const int max_it); 
   
+  /** set the error tolerance */ 
   void set_tolerance(const double tol);
   
+  /** set the acceptable tolerance, smaller than error tolerance */ 
   void set_acceptable_tolerance(const double tol);
   
+  /** set the number of iterations that consecutively reach acceptable tolerance before convergence is considered obtained */ 
   void set_acceptable_count(const int count);
  
+  /** compute the step size of the coupled variable, nc components of x */
   double step_size_inf(const int nc, const hiopVectorInt& idx, const hiopVector& x, const hiopVector& x0);
   
-  /* Contains information of a previous solution step including function value 
+  /** Contains information of a previous solution step including function value 
    * and gradient. Used for storing the solution for the previous iteration
-   * This struct is intended for internal use of hiopAlgPrimalDecomposition class only
+   * This struct is intended for internal use of hiopAlgPrimalDecomposition class only.
+   * Further, it is not implemented yet in the current version of the algorithm.
    */
   struct Prevsol{
     Prevsol(const int n, const double f, const double* grad, const double* x)
@@ -193,15 +214,22 @@ public:
     double* x_;
   };
 
-  /* Struct for the quadratic coefficient alpha in the recourse approximation
+  /** Struct to update the quadratic coefficient alpha in the recourse approximation
    * function. It contains quantities such as s_{k-1} = x_k-x_{k-1} that is 
    * otherwise not computed but useful for certian update rules for alpha,
    * as well as the convergence measure. The update function is called
    * every iteration to ensure the values are up to date.
-   * The xk here should only be the coupled x.
-   * This struct is intened for internal use of hiopAlgPrimalDecomposition class only
+   * The x_k here should only be the coupled x.
+   * This struct is intened for internal use of hiopAlgPrimalDecomposition class only.
+   * It is emphasized that it is used for the coupled variable between basecase and recourse problems. 
    */
   struct HessianApprox {
+    /** Constructor
+     * @param priDecProb the primal decomposable problem
+     * @param options_pridec options for pridec solver 
+     * @param comm_world the communicator whose ranks should be used to schedule the tasks
+     * (subproblems of the primal decomposable problem priDecProb)
+     */
     HessianApprox(hiopInterfacePriDecProblem* priDecProb, 
                   hiopOptions* options_pridec,
                   MPI_Comm comm_world=MPI_COMM_WORLD);
@@ -210,7 +238,7 @@ public:
                   hiopOptions* options_pridec,
                   MPI_Comm comm_world=MPI_COMM_WORLD);
     
-    /* ratio is used to compute alpha in alpha_f */
+    /** ratio is used to compute alpha in alpha_f */
     HessianApprox(const int& n,
                   const double ratio,
                   hiopInterfacePriDecProblem* priDecProb,
@@ -219,7 +247,10 @@ public:
 
     ~HessianApprox();
 
-    /* n_ is the dimension of x, hence the dimension of g_k, skm1, etc */
+    /** n_ is the dimension of COUPLED x, hence the dimension of g_k, skm1, etc.
+     *  Not to be confused with the full length of the basecase or recourse optimization variable. 
+     *  It is often hiopAlgPrimalDecomposition->nc_, NOT hiopAlgPrimalDecomposition->n_.
+     */
     void set_n(const int n);
 
     void set_xkm1(const hiopVector& xk);
@@ -231,70 +262,98 @@ public:
     /* updating variables for the current iteration */
     void update_hess_coeff(const hiopVector& xk, const hiopVector& gk, const double& f_val);
  
-    /* updating ratio_ used to compute alpha i
+    /** updating ratio_ used to compute alpha 
      * Using trust-region notations,
-     * rhok = (f_{k-1}-f_k)/(m(0)-m(p_k)), where m(p)=f_{k-1}+g_{k-1}^Tp+0.5 alpha_{k-1} pTp.
-     * Therefore, m(0) = f_{k-1}. rhok is the ratio of real change in recourse function value
+     * rhok = (f_{k-1}-f_k)/(m(0)-m(p_k)), where m(p)=f_{k-1}+g_{k-1}^Tp+0.5 alpha_{k-1} p^Tp.
+     * Therefore, m(0) = f_{k-1}. rhok is the ratio between real change in recourse function value
      * and the estimate change. Trust-region algorithms use a set heuristics to update alpha_k
-     * based on rhok
+     * based on rhok.
      * rk: m(p_k)
-     * The condition |x-x_{k-1}| = \Deltak is replaced by measuring the ratio of quadratic
-     * objective and linear objective. 
-     * User can provide a global maximum and minimum for alpha
+     * The ratio of quadratic objective and linear objective is also used in the heuristics. 
+     * User can provide a global maximum and minimum for alpha through options_pridec.
+     * This function does not use basecase objective in this update. OUTDATED.
      */
     void update_ratio();
 
     /** A trust-region way of updating alpha ratio
      *  rkm1: true recourse value at {k-1}
      *  rk: true recourse value at k
+     *  @param rhok trust-region ratio on the true and predicted objective of recourse only
+     *  @param rkm1 recourse objective iteration k-1
+     *  @param rk recourse objective iteration k
+     *  @param alpha_g_ratio the ratio of quadratic part of the recourse objective versus the linear part of the recourse objective.
+     *  Used as a supplement to rhok to determine how alpha_ratio is updated. Again heuristics. 
+     *  @param alpha_ratio the value to be updated
      */
     void update_ratio_tr(const double rhok, const double rkm1, const double rk, 
                          const double alpha_g_ratio, double& alpha_ratio);
 
-    // updating ratio_ using both base case and recourse objective function
+    /** Updating ratio_  using both basecase and recourse objective function
+     *  @param base_v basecase objective value at iteration k 
+     *  @param base_vm1 basecase objective at iteration k-1
+     */
     void update_ratio(const double base_v, const double base_vm1);
 
+    /** Classic trust region update rule for alpha_ratio/ratio_
+     *  Only rhok is needed. Much simplier heuristics than the other update_ratio_tr(...) function. 
+     *  Current workhorse as its rhok takes into account basecase objective.
+     *  @param rhok trust-region type of ratio between predicted full objective and true full objective
+     *  @alpha_ratio the output variable to be updated, typically ratio_ that is then used to update alpha
+     */
     void update_ratio_tr(const double rhok, double& alpha_ratio);
 
 
-    /* currently provides multiple ways to compute alpha, one is to the BB alpha
-     * or the alpha computed through the BarzilaiBorwein gradient method, a quasi-Newton method.
+    /** One of the multiple ways to compute alpha, one is to use the Barzilai-Borwein rule.
+     *  Using skm1, ykm1 interal variables, similar to quasi-Newton method.
      */
     double get_alpha_BB();
 
-    /* Computing alpha through alpha = alpha_f*ratio_
+    /** Computing alpha through alpha = alpha_f*ratio_
      * alpha_f is computed through
      * min{f_k+g_k^T(x-x_k)+0.5 alpha_k|x-x_k|^2 >= beta_k f}
      * So alpha_f is based on the constraint on the minimum of recourse
-     * approximition. This is to ensure good approximation.
+     * approximition. This is one way to ensure good approximation. Works for some functions.
      */ 
     double get_alpha_f(const hiopVector& gk);
 
-    /* Computing alpha through alpha = alpha_*ratio_
-     * Not based on function information
+    /** Computing alpha through alpha = alpha_*ratio_
+     * Not based on function information, purely on trust-region update of ratio_.
+     * Notice alpha is not updated directly through trust-region method. A feature that could be added.
      */ 
     double get_alpha_tr();
     
-    /* Function to check convergence based gradient 
-     */
+    /** Function to check convergence based on gradient */
     double check_convergence_grad(const hiopVector& gk);
+   
+    /** Function to check convergence based on function value  */
     double check_convergence_fcn(const double base_v, const double base_vm1);
+    
+    /** Compute the basecase objective at the kth step by subtracting
+     * recourse approximation value from the full objective. rval is the real
+     * recourse function value at x_{k-1}, val is the master problem 
+     * objective which is the sum of the basecase value and the recourse function value.
+     * This requires the info from previous steps to compute, hence in the HessianApprox class.
+     */
     double compute_base(const double val);
 
     // setting the output level for the Hessian approximation 
     void set_verbosity(const int i); 
 
+    // setting the lower bound alpha_ratio. Notice this is not on alpha directly. 
     void set_alpha_ratio_min(const double alp_ratio_min); 
     
+    // setting the upper bound alpha_ratio.  
     void set_alpha_ratio_max(const double alp_ratio_max);
-
+    
+    // setting the lower bound on alpha. These bounds should be the same and passed by the outer hiopAlgPrimalDecomposition class 
     void set_alpha_min(const double alp_min); 
    
+    // setting the upper bound on alpha. 
     void set_alpha_max(const double alp_max);
 
   private:
     int n_;
-    double alpha_ = 1e6;  
+    double alpha_ = 1e6; // this parameter is the quadratic coefficient alpha in the pridec paper, see user manual for details 
     double ratio_ = 1.0;
     double tr_ratio_ = 1.0;
     double ratio_min = 0.5;  
@@ -302,16 +361,17 @@ public:
     double alpha_min = 1e-5;  
     double alpha_max = 1e6;  
 
-    double fk; 
-    double fkm1;
-    double fkm1_lin;
-    hiopVector* xkm1;
-    hiopVector* gkm1;
-    hiopVector* skm1;
-    hiopVector* ykm1;
-    size_t ver_ = 2; //output level for HessianApprox class
+    double fk; /// current RECOURSE objective value at k. Due to initial design, this is not the full objective, 
+               /// meaning it does not contain the basecase objective.
+    double fkm1; /// recourse objective at k-1
+    double fkm1_lin; /// linear part of the recourse objective at k-1
+    hiopVector* xkm1;  /// coupled part of the solution at k-1
+    hiopVector* gkm1;  /// coupled part of the gradient at k-1
+    hiopVector* skm1;  /// xk-xkm1 
+    hiopVector* ykm1;   /// gk-gkm1
+    size_t ver_ = 2; //output level for HessianApprox class, being phased out.
     hiopInterfacePriDecProblem* priDecProb_;
-    hiopOptions* options_;  // options is dependent on pridec options, no user set up yet
+    hiopOptions* options_;  /// options is given by on pridec options.
     hiopLogger* log_;
     MPI_Comm comm_world_;
   };
@@ -326,47 +386,47 @@ private:
   MPI_Comm comm_world_;
   //master/solver(0), or worker(1:total rank)
 
-  //maximum number of outer iterations, user specified
+  /// maximum number of outer iterations, can be user specified
   int max_iter_ = 200;
   int it_ = -1;
 
-  //pointer to the problem to be solved (passed as argument)
+  /// pointer to the master problem to be solved (passed as argument)
   hiopInterfacePriDecProblem* master_prob_;
   hiopSolveStatus solver_status_;
   
-  //current primal iterate
+  /// current primal iterate
   hiopVector* x_;
 
-  //dimension of x_
+  /// dimension of x_
   size_t n_;
 
-  //dimension of coupled x_
+  /// dimension of coupled x_
   size_t nc_;
 
-  //number of recourse terms
+  /// number of recourse terms
   size_t S_;
 
-  //level of output through the MPI engine
+  /// level of output through the MPI engine
   size_t ver_ = 1;
 
   /// Indices of the coupled x in the full x of the basecase/master problem
   hiopVectorInt* xc_idx_;
   
-  //tolerance of the convergence stopping criteria. User options from options file via hiop_pridec.options
+  /// tolerance of the convergence stopping criteria. User options from options file via hiop_pridec.options
   double tol_ = 1e-8;
 
-  //acceptable tolerance is used to terminate hiop if NLP residuals are below the 
-  //default value for 10 consecutive iterations
+  /// acceptable tolerance is used to terminate hiop if NLP residuals are below the 
+  /// default value for 10 consecutive iterations
   double accp_tol_ = 1e-6;
-  //consecutive iteration count where NLP residual is lower than acceptable tolerance
+  /// consecutive iteration count where NLP residual is lower than acceptable tolerance
   int accp_count_ = 10;
-  //initial alpha_ratio if used
+  /// initial alpha_ratio if used
   double alpha_ratio_ = 1.0;
   
   double alpha_min_ = 1e-5;  
   double alpha_max_ = 1e6;  
   
-  //real decrease over expected decrease ratio
+  /// real decrease over expected decrease ratio
   double rhok_ = 0.;
 
 protected:

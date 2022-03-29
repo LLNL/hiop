@@ -9,7 +9,7 @@
 Ex8::Ex8(int ns_)
     : Ex8(ns_, ns_)
 {
-}  //ns = nx, nd=S
+}  // ns = nx, nd=S
 
 Ex8::Ex8(int ns_, int S_)
     : ns(ns_), evaluator_(nullptr) 
@@ -75,7 +75,7 @@ bool Ex8::get_vars_info(const size_type& n, double *xlow, double* xupp, Nonlinea
 {
   //assert(n>=4 && "number of variables should be greater than 4 for this example");
   assert(n==ns);
-  //x
+  //define x bounds
   for(int i=0; i<ns; ++i) xlow[i] = 0.;
   for(int i=0; i<ns; ++i) xupp[i] = +1e+20;
   for(int i=0; i<ns; ++i) type[i]=hiopNonlinear;
@@ -98,7 +98,7 @@ bool Ex8::get_cons_info(const size_type& m, double* clow, double* cupp, Nonlinea
 
 bool Ex8::eval_f(const size_type& n, const double* x, bool new_x, double& obj_value)
 {
-  obj_value=0.;//x[0]*(x[0]-1.);
+  obj_value=0.;// x[0]*(x[0]-1.);
   //sum 0.5 {(x_i-1)*(x_{i}-1) : i=1,...,ns} 
   for(int i=0; i<n; i++) obj_value += (x[i]-1.)*(x[i]-1.);
   obj_value *= 0.5;
@@ -213,12 +213,11 @@ solve_master(hiopVector& x,
     assert(my_nlp->quad_is_defined());
   }
   // check to see if the resource value and gradient are correct
-  //printf("recourse value: is %18.12e)\n", rval_);
+  // printf("recourse value: is %18.12e)\n", rval_);
   hiopNlpDenseConstraints nlp(*my_nlp, master_options_file);
 
-  //
   // any of the options below can be overwritten by specifying them in the 'hiop_pridec_master.options' file
-  //
+  
   nlp.options->SetStringValue("duals_update_type", "linear"); 
   nlp.options->SetStringValue("duals_init", "zero"); // "lsq" or "zero"
   nlp.options->SetStringValue("compute_mode", "cpu");
@@ -229,7 +228,6 @@ solve_master(hiopVector& x,
   nlp.options->SetStringValue("Hessian", "analytical_exact");
   nlp.options->SetStringValue("KKTLinsys", "xdycyd");
   nlp.options->SetStringValue("compute_mode", "hybrid");
-
   nlp.options->SetNumericValue("mu0", 1e-1);
   nlp.options->SetNumericValue("tolerance", 1e-5);
   */
