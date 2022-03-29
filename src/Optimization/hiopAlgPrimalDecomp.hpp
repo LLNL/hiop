@@ -353,7 +353,7 @@ public:
 
   private:
     int n_;
-    double alpha_ = 1e6;  
+    double alpha_ = 1e6; // this parameter is the quadratic coefficient alpha in the pridec paper, see user manual for details 
     double ratio_ = 1.0;
     double tr_ratio_ = 1.0;
     double ratio_min = 0.5;  
