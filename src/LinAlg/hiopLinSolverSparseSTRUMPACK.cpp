@@ -60,13 +60,13 @@ using namespace strumpack;
 
 namespace hiop
 {
-  hiopLinSolverIndefSparseSTRUMPACK::hiopLinSolverIndefSparseSTRUMPACK(const int& n, const int& nnz, hiopNlpFormulation* nlp)
+  hiopLinSolverSymSparseSTRUMPACK::hiopLinSolverSymSparseSTRUMPACK(const int& n, const int& nnz, hiopNlpFormulation* nlp)
     : hiopLinSolverSymSparse(n, nnz, nlp),
       kRowPtr_{nullptr},jCol_{nullptr},kVal_{nullptr},index_covert_CSR2Triplet_{nullptr},index_covert_extra_Diag2CSR_{nullptr},
       n_{n}, nnz_{0}
   {}
 
-  hiopLinSolverIndefSparseSTRUMPACK::~hiopLinSolverIndefSparseSTRUMPACK()
+  hiopLinSolverSymSparseSTRUMPACK::~hiopLinSolverSymSparseSTRUMPACK()
   {
     if(kRowPtr_)
       delete [] kRowPtr_;
@@ -80,7 +80,7 @@ namespace hiop
       delete [] index_covert_extra_Diag2CSR_;
   }
 
-  void hiopLinSolverIndefSparseSTRUMPACK::firstCall()
+  void hiopLinSolverSymSparseSTRUMPACK::firstCall()
   {
     assert(n_==M_->n() && M_->n()==M_->m());
     assert(n_>0);
@@ -217,7 +217,7 @@ namespace hiop
 //    spss.reorder(n_, n_);
   }
 
-  int hiopLinSolverIndefSparseSTRUMPACK::matrixChanged()
+  int hiopLinSolverSymSparseSTRUMPACK::matrixChanged()
   {
     assert(n_==M_->n() && M_->n()==M_->m());
     assert(n_>0);
@@ -248,7 +248,7 @@ namespace hiop
     return negEigVal;
   }
 
-  bool hiopLinSolverIndefSparseSTRUMPACK::solve ( hiopVector& x_ )
+  bool hiopLinSolverSymSparseSTRUMPACK::solve ( hiopVector& x_ )
   {
     assert(n_==M_->n() && M_->n()==M_->m());
     assert(n_>0);

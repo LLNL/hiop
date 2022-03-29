@@ -283,7 +283,7 @@ namespace hiop
           //ma57 is not available or user requested pardiso
 #ifdef HIOP_USE_PARDISO
           linsol_actual = "PARDISO";
-          linSys_ = new hiopLinSolverIndefSparsePARDISO(n, nnz, nlp_);
+          linSys_ = new hiopLinSolverSymSparsePARDISO(n, nnz, nlp_);
 #endif  // HIOP_USE_PARDISO          
         }
 
@@ -291,7 +291,7 @@ namespace hiop
           //ma57 and pardiso are not available or user requested strumpack
 #ifdef HIOP_USE_STRUMPACK
           linsol_actual = "STRUMPACK";
-          linSys_ = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
+          linSys_ = new hiopLinSolverSymSparseSTRUMPACK(n, nnz, nlp_);
 #endif  // HIOP_USE_STRUMPACK        
         }
 
@@ -606,7 +606,7 @@ namespace hiop
         if( (nullptr == linSys_ && linear_solver == "auto") || linear_solver == "pardiso") {
           //ma57 is not available or user requested pardiso
 #ifdef HIOP_USE_PARDISO
-          linSys_ = new hiopLinSolverIndefSparsePARDISO(n, nnz, nlp_);
+          linSys_ = new hiopLinSolverSymSparsePARDISO(n, nnz, nlp_);
           actual_lin_solver = "PARDISO";
 #endif  // HIOP_USE_PARDISO          
         }
@@ -614,7 +614,7 @@ namespace hiop
         if( (nullptr == linSys_ && linear_solver == "auto") || linear_solver == "strumpack") {
           //ma57 is not available or user requested strumpack
 #ifdef HIOP_USE_STRUMPACK              
-          linSys_ = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
+          linSys_ = new hiopLinSolverSymSparseSTRUMPACK(n, nnz, nlp_);
           actual_lin_solver = "STRUMPACK";
 #endif  // HIOP_USE_STRUMPACK        
         }
@@ -646,7 +646,7 @@ namespace hiop
         if(nullptr == linSys_ && (linear_solver == "strumpack" || linear_solver == "auto")) {
 #if defined(HIOP_USE_STRUMPACK)
           actual_lin_solver = "STRUMPACK";
-          linSys_ = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
+          linSys_ = new hiopLinSolverSymSparseSTRUMPACK(n, nnz, nlp_);
 #endif
         } //end strumpack
         

@@ -62,7 +62,7 @@ namespace hiop
   /*
   *  PARDISO for symmetric indefinite sparse matrix
   */
-  hiopLinSolverIndefSparsePARDISO::hiopLinSolverIndefSparsePARDISO(const int& n, const int& nnz, hiopNlpFormulation* nlp)
+  hiopLinSolverSymSparsePARDISO::hiopLinSolverSymSparsePARDISO(const int& n, const int& nnz, hiopNlpFormulation* nlp)
     : hiopLinSolverSymSparse(n, nnz, nlp),
     kRowPtr_{nullptr}, jCol_{nullptr}, kVal_{nullptr},
     rhs_{nullptr},
@@ -75,7 +75,7 @@ namespace hiop
     solver_ = 0; //sparse direct solver
   }
 
-  hiopLinSolverIndefSparsePARDISO::~hiopLinSolverIndefSparsePARDISO()
+  hiopLinSolverSymSparsePARDISO::~hiopLinSolverSymSparsePARDISO()
   {
     /* Termination and release of memory */
     int phase = -1; /* Release internal memory . */
@@ -101,9 +101,9 @@ namespace hiop
     
   }
 
-  void hiopLinSolverIndefSparsePARDISO::firstCall()
+  void hiopLinSolverSymSparsePARDISO::firstCall()
   {
-    assert(n_==M.n() && M.n()==M.m());
+    assert(n_==M_->n() && M_->n()==M_->m());
     assert(n_>0);
 
     kRowPtr_ = new int[n_+1]{0};
@@ -118,9 +118,9 @@ namespace hiop
       //
       // off-diagonal part
       kRowPtr_[0]=0;
-      for(int k=0;k<M.numberOfNonzeros()-n_;k++){
-        if(M.i_row()[k]!=M.j_col()[k]){
-          kRowPtr_[M.j_col()[k]+1]++;
+      for(int k=0;k<M_->numberOfNonzeros()-n_;k++){
+        if(M_->i_row()[k]!=M_->j_col()[k]){
+          kRowPtr_[M_->j_col()[k]+1]++;
           nnz_ += 1;
         }
       }
@@ -154,16 +154,16 @@ namespace hiop
         index_covert_extra_Diag2CSR_[k]=-1;
       }
 
-      for(int k=0;k<M.numberOfNonzeros()-n_;k++) {
-        rowID_tmp = M.i_row()[k];
-        colID_tmp = M.j_col()[k];
+      for(int k=0;k<M_->numberOfNonzeros()-n_;k++) {
+        rowID_tmp = M_->i_row()[k];
+        colID_tmp = M_->j_col()[k];
         if(rowID_tmp==colID_tmp){
           nnz_tmp = nnz_each_row_tmp[rowID_tmp] + kRowPtr_[rowID_tmp];
           jCol_[nnz_tmp] = colID_tmp;
-          kVal_[nnz_tmp] = M.M()[k];
+          kVal_[nnz_tmp] = M_->M()[k];
           index_covert_CSR2Triplet_[nnz_tmp] = k;
 
-          kVal_[nnz_tmp] += M.M()[M.numberOfNonzeros()-n_+rowID_tmp];
+          kVal_[nnz_tmp] += M_->M()[M_->numberOfNonzeros()-n_+rowID_tmp];
           index_covert_extra_Diag2CSR_[rowID_tmp] = nnz_tmp;
 
           nnz_each_row_tmp[rowID_tmp]++;
@@ -171,7 +171,7 @@ namespace hiop
         }else{
           nnz_tmp = nnz_each_row_tmp[colID_tmp] + kRowPtr_[colID_tmp];
           jCol_[nnz_tmp] = rowID_tmp;
-          kVal_[nnz_tmp] = M.M()[k];
+          kVal_[nnz_tmp] = M_->M()[k];
           index_covert_CSR2Triplet_[nnz_tmp] = k;
 
           nnz_each_row_tmp[colID_tmp]++;
@@ -185,8 +185,8 @@ namespace hiop
           assert(nnz_each_row_tmp[i] == kRowPtr_[i+1]-kRowPtr_[i]-1);
           nnz_tmp = nnz_each_row_tmp[i] + kRowPtr_[i];
           jCol_[nnz_tmp] = i;
-          kVal_[nnz_tmp] = M.M()[M.numberOfNonzeros()-n_+i];
-          index_covert_CSR2Triplet_[nnz_tmp] = M.numberOfNonzeros()-n_+i;
+          kVal_[nnz_tmp] = M_->M()[M_->numberOfNonzeros()-n_+i];
+          index_covert_CSR2Triplet_[nnz_tmp] = M_->numberOfNonzeros()-n_+i;
           total_nnz_tmp += 1;
 
           std::vector<int> ind_temp(kRowPtr_[i+1]-kRowPtr_[i]);
@@ -249,9 +249,9 @@ namespace hiop
   
   }
 
-  int hiopLinSolverIndefSparsePARDISO::matrixChanged()
+  int hiopLinSolverSymSparsePARDISO::matrixChanged()
   {
-    assert(n_==M.n() && M.n()==M.m());
+    assert(n_==M_->n() && M_->n()==M_->m());
     assert(n_>0);
 
     nlp_->runStats.linsolv.tmFactTime.start();
@@ -263,11 +263,11 @@ namespace hiop
       // update matrix
       int rowID_tmp{0};
       for(int k=0;k<nnz_;k++){
-        kVal_[k] = M.M()[index_covert_CSR2Triplet_[k]];
+        kVal_[k] = M_->M()[index_covert_CSR2Triplet_[k]];
       }
       for(int i=0;i<n_;i++){
         if(index_covert_extra_Diag2CSR_[i] != -1)
-          kVal_[index_covert_extra_Diag2CSR_[i]] += M.M()[M.numberOfNonzeros()-n_+i];
+          kVal_[index_covert_extra_Diag2CSR_[i]] += M_->M()[M_->numberOfNonzeros()-n_+i];
       }
     }
 
@@ -298,11 +298,11 @@ namespace hiop
     return negEigVal;
   }
 
-  bool hiopLinSolverIndefSparsePARDISO::solve(hiopVector& b)
+  bool hiopLinSolverSymSparsePARDISO::solve(hiopVector& b)
   {
-    assert(n_==M.n() && M.n()==M.m());
+    assert(n_==M_->n() && M_->n()==M_->m());
     assert(n_>0);
-    assert(b.get_size()==M.n());
+    assert(b.get_size()==M_->n());
 
     nlp_->runStats.linsolv.tmTriuSolves.start();
 
@@ -381,14 +381,14 @@ namespace hiop
 
   void hiopLinSolverNonSymSparsePARDISO::firstCall()
   {
-    assert(n_==M.n() && M.n()==M.m());
+    assert(n_==M_->n() && M_->n()==M_->m());
     assert(n_>0);
 
     // transfer triplet form to CSR form
     // note that input is in lower triangular triplet form. First part is the sparse matrix, and the 2nd part are the additional diagonal elememts
     // the 1st part is sorted by row
 
-    M.convertToCSR(nnz_, &kRowPtr_, &jCol_, &kVal_, &index_covert_CSR2Triplet_, &index_covert_extra_Diag2CSR_, extra_diag_nnz_map);
+    M_->convertToCSR(nnz_, &kRowPtr_, &jCol_, &kVal_, &index_covert_CSR2Triplet_, &index_covert_extra_Diag2CSR_, extra_diag_nnz_map);
 
     // need Fortran indexes
     for( int i = 0; i < n_+1; i++) {
@@ -439,7 +439,7 @@ namespace hiop
 
   int hiopLinSolverNonSymSparsePARDISO::matrixChanged()
   {
-    assert(n_==M.n() && M.n()==M.m());
+    assert(n_==M_->n() && M_->n()==M_->m());
     assert(n_>0);
 
     nlp_->runStats.linsolv.tmFactTime.start();
@@ -451,10 +451,10 @@ namespace hiop
       // update matrix
       int rowID_tmp{0};
       for(int k=0;k<nnz_;k++) {
-        kVal_[k] = M.M()[index_covert_CSR2Triplet_[k]];
+        kVal_[k] = M_->M()[index_covert_CSR2Triplet_[k]];
       }
       for(auto p: extra_diag_nnz_map) {
-        kVal_[p.first] += M.M()[p.second];
+        kVal_[p.first] += M_->M()[p.second];
       }
     }
 
@@ -481,9 +481,9 @@ namespace hiop
 
   bool hiopLinSolverNonSymSparsePARDISO::solve(hiopVector& b)
   {
-    assert(n_==M.n() && M.n()==M.m());
+    assert(n_==M_->n() && M_->n()==M_->m());
     assert(n_>0);
-    assert(b.get_size()==M.n());
+    assert(b.get_size()==M_->n());
 
     nlp_->runStats.linsolv.tmTriuSolves.start();
 
