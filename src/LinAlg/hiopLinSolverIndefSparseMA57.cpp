@@ -26,7 +26,7 @@ namespace hiop
       pivot_max_{1e-4},
       pivot_changed_{false}
   {
-    FNAME(ma57id)( cntl_, icntl_ );
+    MA57ID( cntl_, icntl_ );
 
     /*
     * initialize MA57 parameters
@@ -86,7 +86,7 @@ namespace hiop
     dwork_ = new double[n_];
     
 
-    FNAME(ma57ad)( &n_, &nnz_, irowM_, jcolM_, &lkeep_, keep_, iwork_, icntl_, info_, rinfo_ );
+    MA57AD( &n_, &nnz_, irowM_, jcolM_, &lkeep_, keep_, iwork_, icntl_, info_, rinfo_ );
         
     lfact_ = (int) (rpessimism_ * info_[8]);
     fact_  = new double[lfact_];
@@ -111,7 +111,7 @@ namespace hiop
     int num_tries{0};
 
     do {
-      FNAME(ma57bd)( &n_, &nnz_, M_->M(), fact_, &lfact_, ifact_,
+      MA57BD( &n_, &nnz_, M_->M(), fact_, &lfact_, ifact_,
 	     &lifact_, &lkeep_, keep_, iwork_, icntl_, cntl_, info_, rinfo_ );
 
       switch( info_[0] ) {
@@ -124,7 +124,7 @@ namespace hiop
           int lnfact = (int) (info_[16] * rpessimism_);
           double * newfact = new double[lnfact];
 
-          FNAME(ma57ed)( &n_, &ic, keep_,
+          MA57ED( &n_, &ic, keep_,
                 fact_, &info_[1], newfact, &lnfact,
                 ifact_, &info_[1], &intTemp, &lifact_,
                 info_ );
@@ -139,7 +139,7 @@ namespace hiop
           int ic = 1;
           int lnifact = (int) (info_[17] * ipessimism_);
           int * nifact = new int[ lnifact ];
-          FNAME(ma57ed)( &n_, &ic, keep_, 
+          MA57ED( &n_, &ic, keep_, 
                 fact_, &lfact_, fact_, &lfact_,
                ifact_, &lifact_, nifact, &lnifact,
                info_ );
@@ -207,11 +207,11 @@ namespace hiop
     double* drhs = rhs_->local_data();
     double* dresid = resid_->local_data();
 
-//    FNAME(ma57cd)( &job, &n_, fact_, &lfact_, ifact_, &lifact_,
+//    MA57CD( &job, &n_, fact_, &lfact_, ifact_, &lifact_,
 //                   &one, drhs, &n_, dwork_, &n_, iwork_, icntl_, info_ );
 //    x->copyFrom(*rhs_);
 
-    FNAME(ma57dd)( &job, &n_, &nnz_, M_->M(), irowM_, jcolM_,
+    MA57DD( &job, &n_, &nnz_, M_->M(), irowM_, jcolM_,
         fact_, &lfact_, ifact_, &lifact_, drhs, dx,
         dresid, dwork_, iwork_, icntl_, cntl_, info_, rinfo_ );
 

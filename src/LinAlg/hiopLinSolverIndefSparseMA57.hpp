@@ -51,7 +51,14 @@
 
 #include "hiopLinSolver.hpp"
 #include "hiopMatrixSparseTriplet.hpp"
+#include "FortranCInterface.hpp"
 
+#define MA57ID    FC_GLOBAL(ma57id, MA57ID)
+#define MA57AD    FC_GLOBAL(ma57ad, MA57AD)
+#define MA57BD    FC_GLOBAL(ma57bd, MA57BD)
+#define MA57CD    FC_GLOBAL(ma57cd, MA57CD)
+#define MA57DD    FC_GLOBAL(ma57dd, MA57DD)
+#define MA57ED    FC_GLOBAL(ma57ed, MA57ED)
 
 /** implements the linear solver class using the HSL MA57 solver
  *
@@ -61,31 +68,31 @@
 namespace hiop {
 
 extern "C" {
-  void FNAME(ma57id)( double cntl[],  int icntl[] );
+  void MA57ID( double cntl[],  int icntl[] );
 
-  void FNAME(ma57ad)( int * n,        int * ne,       int irn[],
+  void MA57AD( int * n,        int * ne,       int irn[],
 		int jcn[],      int * lkeep,    int keep[],
 		int iwork[],    int icntl[],    int info[],
 		double rinfo[] );
 
-  void FNAME(ma57bd)( int * n,        int * ne,       double a[],
+  void MA57BD( int * n,        int * ne,       double a[],
 		double fact[],  int * lfact,    int ifact[],
 		int * lifact,   int * lkeep,    int keep[],
 		int ppos[],     int * icntl,    double cntl[],
 		int info[],     double rinfo[] );
-  void FNAME(ma57cd)( int * job,      int * n,        double fact[],
+  void MA57CD( int * job,      int * n,        double fact[],
 		int * lfact,    int ifact[],    int * lifact,
 		int * nrhs,     double rhs[],   int * lrhs,
 		double w[],     int * lw,       int iw1[],
 		int icntl[],    int info[]);
-  void FNAME(ma57dd)( int * job,      int * n,        int * ne,
+  void MA57DD( int * job,      int * n,        int * ne,
 		double a[],     int irn[],      int jcn[],
 		double fact[],  int * lfact,    int ifact[],
 		int * lifact,   double rhs[],   double x[],
 		double resid[], double w[],     int iw[],
 		int icntl[],    double cntl[],  int info[],
 		double rinfo[] );
-  void FNAME(ma57ed)( int * n,        int * ic,       int keep[],
+  void MA57ED( int * n,        int * ic,       int keep[],
 		double fact[],  int * lfact,    double * newfac,
 		int * lnew,     int  ifact[],   int * lifact,
 		int newifc[],   int * linew,    int * info );
