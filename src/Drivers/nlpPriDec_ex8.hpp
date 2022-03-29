@@ -13,7 +13,7 @@
 #include <cmath>
 #include <chrono>
 
-/** This file provide an example of what a user of hiop::hiopInterfacePriDecProblem 
+/** This file provides an example of what a user of hiop::hiopInterfacePriDecProblem 
  * should implement in order to provide both the base and recourse problem to 
  * hiop::hiopAlgPrimalDecomposition solver
  * 

@@ -207,11 +207,11 @@ public:
     double get_f(){return f_;}
     double* get_grad(){return grad_;}
     double* get_x(){return x_;}
-    private:
-      int n_;
-      double f_;
-      double* grad_;
-      double* x_;
+  private:
+    int n_;
+    double f_;
+    double* grad_;
+    double* x_;
   };
 
   /** Struct to update the quadratic coefficient alpha in the recourse approximation

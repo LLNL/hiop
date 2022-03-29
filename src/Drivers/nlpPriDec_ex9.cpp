@@ -3,7 +3,7 @@
 #include "hiopAlgFilterIPM.hpp"
 
 /*
-  Further work:
+  TODO:
   - generate S vectors \xi (each of size nS) from U[-0.25, 0.25]
 */
 using namespace hiop;
@@ -124,7 +124,7 @@ bool PriDecMasterProblemEx9::eval_f_rterm(size_t idx, const int& n, const double
 
   ex9_recourse = new PriDecRecourseProblemEx9(nc_, nS_,S_,x,xi);
   
-  // set a few contingencies to have different sparse structure to created unbalanced load
+  // set a few contingencies to have different sparse structure to create unbalanced load
   /*
   if(idx%30==0) {  
     ex9_recourse->set_sparse(0.3);

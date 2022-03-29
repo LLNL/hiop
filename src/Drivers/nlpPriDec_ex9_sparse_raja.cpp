@@ -128,7 +128,7 @@ bool PriDecMasterProblemEx9Sparse::eval_f_rterm(size_t idx, const int& n, const 
 
   ex9_recourse = new PriDecRecourseProblemEx9Sparse(nc_, nS_, S_, x, xi, mem_space_);
   
-  // set a few contingencies to have different sparse structure to created unbalanced load
+  // set a few contingencies to have different sparse structures to create unbalanced load
   /*
   if(idx%30==0) {  
     ex9_recourse->set_sparse(0.3);

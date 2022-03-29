@@ -21,7 +21,7 @@ using namespace hiop;
  */
 
 //
-//todo: add -selfcheck option (see other drivers) and add the driver to cmake tests
+//TODO: add -selfcheck option (see other drivers) and add the driver to cmake tests
 //
 
 using namespace hiop;

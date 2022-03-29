@@ -982,7 +982,7 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
 
           bret = master_prob_->eval_f_rterm(idx_temp, nc_, x0_vec, aux); // solving the recourse problem
           if(!bret) {
-              //todo
+              //TODO
           }
           rec_val += aux;
         }
@@ -994,7 +994,7 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
           int idx_temp = cont_idx[ri];
           bret = master_prob_->eval_grad_rterm(idx_temp, nc_, x0_vec, *grad_aux);
           if(!bret) {
-            //todo
+            //TODO
           }
           grad_acc->axpy(1.0, *grad_aux);
         }
@@ -1035,7 +1035,7 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
               
               bret = master_prob_->eval_f_rterm(idx_temp, nc_, x0_vec, aux); //need to add extra time here
               if(!bret) {
-              //todo
+              //TODO
               }
               rec_val += aux;
             }
@@ -1047,7 +1047,7 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
               int idx_temp = cont_idx[ri];
               bret = master_prob_->eval_grad_rterm(idx_temp, nc_, x0_vec, *grad_aux);
               if(!bret) {
-                //todo
+                //TODO
               }
               grad_acc->axpy(1.0, *grad_aux);
             }
@@ -1148,7 +1148,7 @@ void hiopAlgPrimalDecomposition::set_alpha_max(const double alp_max)
 
         bret = master_prob_->set_recourse_approx_evaluator(nc_, evaluator);
         if(!bret) {
-          //todo
+          //TODO
         }
         
         options_file_master_prob = options_->GetString("options_file_master_prob");
@@ -1301,7 +1301,7 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
       double aux=0.;
       bret = master_prob_->eval_f_rterm(idx_temp, nc_, x0_vec, aux); //need to add extra time here
       if(!bret) {
-        //todo
+        //TODO
       }
       rval += aux;
       // assert("for debugging" && false); //for debugging purpose
@@ -1312,7 +1312,7 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
       // double grad_aux[nc_];
       bret = master_prob_->eval_grad_rterm(idx_temp, nc_, x0_vec, *grad_aux);
       if(!bret) {
-          //todo
+          //TODO
       }
       grad_r->axpy(1.0,*grad_aux);
       delete grad_aux;
@@ -1387,7 +1387,7 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
 
     bret = master_prob_->set_recourse_approx_evaluator(nc_, evaluator);
     if(!bret) {
-      //todo
+      //TODO
     }
     options_file_master_prob = options_->GetString("options_file_master_prob");
     log_->printf(hovSummary, "solving full problem starts, iteration %d \n", it); 
