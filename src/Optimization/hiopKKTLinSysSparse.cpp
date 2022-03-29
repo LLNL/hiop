@@ -635,7 +635,7 @@ namespace hiop
 #if defined(HIOP_USE_CUSOLVER)
           actual_lin_solver = "STRUMPACK-LU";
           linSys_ = new hiopLinSolverIndefSparseCUSOLVER(n, nnz, nlp_);
-          (dynamic_cast<hiopLinSolverIndefSparseCUSOLVER*>(linSys_))->setFakeInertia(neq + nineq);
+          // (dynamic_cast<hiopLinSolverIndefSparseCUSOLVER*>(linSys_))->setFakeInertia(neq + nineq);
 #endif
         } //end cusolver
 
@@ -746,7 +746,7 @@ namespace hiop
                         n,
                         n_con);
       hiopLinSolverNonSymSparseCUSOLVER *p = new hiopLinSolverNonSymSparseCUSOLVER(n, nnz, nlp_);
-      p->setFakeInertia(n_con);
+      // p->setFakeInertia(n_con);
       linSys_ = p;
 #elif HIOP_USE_PARDISO
       nlp_->log->printf(hovWarning,

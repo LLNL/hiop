@@ -179,6 +179,7 @@ int main(int argc, char **argv)
     nlp.options->SetStringValue("linsol_mode", "speculative");
     nlp.options->SetStringValue("linear_solver_sparse", "cusolver");
     nlp.options->SetStringValue("compute_mode", "hybrid");
+    nlp.options->SetStringValue("fact_acceptor", "inertia_free");
   }
   if(force_fr) {
     nlp.options->SetStringValue("force_resto", "yes");
