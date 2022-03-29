@@ -74,8 +74,7 @@ namespace hiop
   {
   public:
     // constructor
-    hiopLinSolverSymSparseCUSOLVER(const int& n, const int& nnz,
-                                   hiopNlpFormulation* nlp);
+    hiopLinSolverSymSparseCUSOLVER(const int& n, const int& nnz, hiopNlpFormulation* nlp);
     virtual ~hiopLinSolverSymSparseCUSOLVER();
 
     /** Triggers a refactorization of the matrix, if necessary.
@@ -89,8 +88,7 @@ namespace hiop
     bool solve(hiopVector& x_);
 
     /** Multiple rhs not supported yet */
-    virtual bool
-    solve(hiopMatrix& /* x */)
+    virtual bool solve(hiopMatrix& /* x */)
     {
       assert(false && "not yet supported");
       return false;
@@ -178,8 +176,13 @@ namespace hiop
     /* private function: creates a cuSolver data structure from KLU data
      * structures. */
 
-    int createM(const int n, const int nnzL, const int* Lp, const int* Li,
-                const int nnzU, const int* Up, const int* Ui);
+    int createM(const int n, 
+                const int nnzL, 
+                const int* Lp, 
+                const int* Li, 
+                const int nnzU, 
+                const int* Up, 
+                const int* Ui);
 
     template <typename T>
     void hiopCheckCudaError(T result, const char* const file, int const line);
@@ -195,8 +198,7 @@ namespace hiop
   class hiopLinSolverNonSymSparseCUSOLVER : public hiopLinSolverNonSymSparse
   {
   public:
-    hiopLinSolverNonSymSparseCUSOLVER(const int& n, const int& nnz,
-                                      hiopNlpFormulation* nlp);
+    hiopLinSolverNonSymSparseCUSOLVER(const int& n, const int& nnz, hiopNlpFormulation* nlp);
 
     virtual ~hiopLinSolverNonSymSparseCUSOLVER();
 
@@ -210,8 +212,7 @@ namespace hiop
     bool solve(hiopVector& x);
 
     /** Multiple rhs not supported yet */
-    virtual bool
-    solve(hiopMatrix& /* x */)
+    virtual bool solve(hiopMatrix& /* x */)
     {
       assert(false && "not yet supported");
       return false;
@@ -287,11 +288,15 @@ namespace hiop
     /* private function: creates a cuSolver data structure from KLU data
      * structures. */
 
-    int createM(const int n, const int nnzL, const int* Lp, const int* Li,
-                const int nnzU, const int* Up, const int* Ui);
+    int createM(const int n, 
+                const int nnzL, 
+                const int* Lp, 
+                const int* Li,
+                const int nnzU, 
+                const int* Up, 
+                const int* Ui);
 
-    template <typename T>
-    void hiopCheckCudaError(T result, const char* const file, int const line);
+    template <typename T> void hiopCheckCudaError(T result, const char* const file, int const line);
 
   public:
     /** called the very first time a matrix is factored. */
