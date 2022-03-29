@@ -439,7 +439,7 @@ bool hiopDualsLsqUpdateLinsysAugSparse::do_lsq_update(hiopIterate& iter,
                           "indefinite solver, size %d (%d cons)\n",
                           n,
                           neq+nineq);
-        p->setFakeInertia(neq + nineq);
+        // p->setFakeInertia(neq + nineq);
         lin_sys_ = p;
       }
 #else // of #ifdef HIOP_USE_CUSOLVER 
