@@ -1,5 +1,4 @@
 #include "nlpPriDec_ex9_sparse_raja.hpp"
-//the solver
 #include "hiopAlgPrimalDecomp.hpp"
 
 #ifdef HIOP_USE_GPU
@@ -30,9 +29,10 @@
 /**
  * Driver for example 9 that illustrates the use of hiop::hiopAlgPrimalDecomposition 
  * 
- * @note This example is built only when HIOP_USE_MPI and HIOP_SPARSE is enabled during cmake build
+ * @note This example is built only when HIOP_USE_MPI, HIOP_SPARSE and HIOP_USE_RAJA are enabled during cmake build
  * and require at least two MPI ranks in MPI_COMM_WORLD.
  *
+ * The recourse problems are implemented with HIOP Sparse class and RAJA.
  */
 
 

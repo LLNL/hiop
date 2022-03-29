@@ -719,7 +719,7 @@ double obj_value = solver.getObjective();  //get objective
 \end{lstlisting}
 
 
-\subsection{Structured NLPs suitable to primal decomposition (PriDe) schemes}\label{sec:pride}
+\subsection{Structured NLPs suitable to primal decomposition (PriDec) schemes}\label{sec:pridec}
 
 Starting v0.5, \Hi also offers parallel computing capabilities via the PriDec solver for NLPs with separable objective terms in the form of:
 \begin{align}
@@ -728,29 +728,38 @@ Starting v0.5, \Hi also offers parallel computing capabilities via the PriDec so
 &&[v_l]&&& \hspace{0.5cm} d_l \leq d(x) \leq d_u,  &[v_u]&&&\label{prideineq} \\
 &&[z_u]&&& \hspace{0.5cm} x_l \leq x \leq x_u. & [z_u] &&&\label{pridebounds}
 \end{align}
-Mathematically, the above problem is identical (and has the same specification as the NLP~\eqref{obj}-\eqref{bounds}), with the exception of the so-called ``recourse`` terms $r_i(x)$ appearing in the objective. Each of these functions are real-valued, $r_i:\mathbb{R}^n\rightarrow \mathbb{R}$, for all $i\in\{1,2,\ldots, K\}$, and can be of various order of differentiability. As of now, the recourse functions $r_i(x)$ need to be continuous and differentiable (but can have discontinuous first derivative). It is possible that the more general case in which $r_i(x)$ is only Lipschitz continuous can be still handled (with convergence guarantees). The users are encouraged to contact \Hi developers for the latest developements in this area. A compact description of the algorithm implemented by PriDec can be found in~\cite{pridec_impl} (the technical report version is available \texttt{doc/} directory).
+Mathematically, the above problem is identical (and has the same specification) to the NLP~\eqref{obj}-\eqref{bounds}, with the exception of the so-called ``recourse'' terms $r_i(x)$ appearing in the objective. Each of these functions are real-valued, $r_i:\mathbb{R}^n\rightarrow \mathbb{R}$, for all $i\in\{1,2,\ldots, K\}$, and can be of various order of differentiability. As of now, the recourse functions $r_i(x)$ need to be Lipschitz continuous and continuously differentiable.
+It is also possible for $r_i(x)$ to be Lipschitz and only weakly concave (with convergence guarantees). The users are encouraged to contact \Hi developers for the latest developements in this area. A compact description of the algorithm implemented by PriDec can be found in~\cite{pridec_impl} (the technical report version is available \texttt{doc/} directory).
 
-The input in which \Hi expects for this class of problems is a bit different than for NLPs of the form~\eqref{obj}-\eqref{bounds} and MDS NLPs introduced in the previous sections. This is mainly caused by the specifics of the primal decomposition algorithm/solver that was purposedly develop to solve to solve~\eqref{prideobj}-\eqref{pridebounds} for large $K$ ($K=O(10^6)$) efficiently on a massively parallel computing platform. Nevertheless, for smaller $K$, problems of form~\eqref{prideobj}-\eqref{pridebounds} can be solved with \Hi using the sparse and MDS input interfaces.
+The input in which \Hi expects for this class of problems is a bit different than for NLPs of the form~\eqref{obj}-\eqref{bounds} and MDS NLPs introduced in the previous sections. This is mainly caused by the specifics of the primal decomposition algorithm/solver that was purposedly developed to solve~\eqref{prideobj}-\eqref{pridebounds} for large $K$ (\textit{e.g.}, $K=O(10^6)$) efficiently on a massively parallel computing platform. Nevertheless, for smaller $K$, problems of form~\eqref{prideobj}-\eqref{pridebounds} can be solved with \Hi using the sparse and MDS input interfaces.
 
-The primal decomposition algorithm requires a separation or breakdown of the evaluation of~\eqref{prideobj}-\eqref{pridebounds} into the following computational ``units``
+The primal decomposition algorithm requires a separation or breakdown of the evaluation of~\eqref{prideobj}-\eqref{pridebounds} into the following computational ``units''.
 \begin{itemize}
-\item[1.] solving the so-called ``master problem`` of the form
+\item[1.] solving the so-called ``master problem'' of the form
   \begin{align}
 &&&&\min_{x\in\mathbb{R}^n} & \hspace{0.5cm} f(x) + q(x) &&&& \label{pridemobj}\\
 &&&&\textnormal{s.t.} &\hspace{0.5cm}  c(x)=c_E &[y_c]&&&\\
 &&[v_l]&&& \hspace{0.5cm} d_l \leq d(x) \leq d_u  &[v_u]&&&\label{pridemineq} \\
 &&[z_u]&&& \hspace{0.5cm} x_l \leq x \leq x_u & [z_u] &&&\label{pridembounds}
   \end{align}
-for a given real function $q(x)$ whose evaluation together with its gradient and sparse Hessian evaluations are provided by \Hi PriDec solver;
-\item[2.] evaluating the recourse functions $r_i(x)$ and their gradients $\nabla r_i(x)$, for all $i\in\{1,2,\ldots, K\}$.
+for a real function $q(x)$ constructed by \Hi PriDec solver, which serves as an approximation to $\sum_{i=1}^K r_i(x)$. The evaluation of $q(x)$, its gradient and sparse Hessian are provided by \Hi PriDec solver based on the function values and graidents of $r_i(x)$; 
+The master problem is implemented based on the basecase problem
+  \begin{align}
+&&&&\min_{x\in\mathbb{R}^n} & \hspace{0.5cm} f(x) &&&& \label{pridembaseobj}\\
+&&&&\textnormal{s.t.} &\hspace{0.5cm}  c(x)=c_E &[y_c]&&&\\
+&&[v_l]&&& \hspace{0.5cm} d_l \leq d(x) \leq d_u  &[v_u]&&&\label{pridembaseineq} \\
+&&[z_u]&&& \hspace{0.5cm} x_l \leq x \leq x_u & [z_u] &&&\label{pridembasebounds}
+  \end{align}
+		where no recourse functions exist. To determine whether $q(x)$ is included in the objective, a boolean variable is used. The basecase problem class also contains a hiopInterfacePriDecProblem::RecourseApproxEvaluator object, that stores and updates the function $q(x)$. The PriDec solver constructs $q(x)$ at each iteration and then passes it on to the basecase problem so that the full problem~\eqref{pridemobj}-\eqref{pridembounds} can be solved. In other words, the user does not need to provide $q(x)$ in their objective, but needs to write the basecase problem~\eqref{pridembaseobj}-\eqref{pridembasebounds} such that its objective (or potentially constraint in the future) can be extended. 
+	\item[2.] evaluating the recourse functions $r_i(x)$ and their (sub)gradients $\nabla r_i(x)$, for all $i\in\{1,2,\ldots, K\}$. If there is no analytical form for $r_i(x)$, as in the case of two-stage problems, the user might need to implement and solve a second-stage optimization problem. Nevertheless, \Hi PriDec solver expects to be returned a function value and a (sub)gradient at a given $x$.
 \end{itemize}
-We stress that it is the user's responsibility to perform the steps 1 and 2 above. In regards to 1, the function $q(x)$ (and its first and second order derivatives) will be provided by \Hi as explained below. The funtion $q(x)$ is an approximation of the recourse $R(x):=\sum_{i=1}^K r_i(x)$ from~\eqref{pridemobj}-\eqref{pridembounds}, which is built based on the function and gradient evaluations performed at 2.
+To streamline steps 1 and 2 above, the master problem is implemented with the class hiopInterfacePriDecProblem, which has methods for solving the master problem and evaluating recourse functions. We stress that it is the user's responsibility to implement steps 1 and 2 above. In regards to 1, the function  $q(x)$ is an approximation to the recourse $R(x):=\sum_{i=1}^K r_i(x)$ from~\eqref{pridemobj}-\eqref{pridembounds}, which is built based on the function and gradient evaluations of $r_i(x)$, computed at step 2.  
 
-The user can safely assume that $q(x)$ is a strictly  convex quadratic function (however the function may be only convex and nonquadratic in a future version of \Hi). \Hi assumes that the user can solve the master problem~\eqref{pridemobj}-\eqref{pridembounds} in some efficient way and that the user can return the optimal solution vector.
+The user can safely assume that $q(x)$ is a strictly  convex quadratic function (however the function may be only convex and nonquadratic in a future version of \Hi). \Hi assumes that the user can solve the master problem~\eqref{pridemobj}-\eqref{pridembounds} in some efficient way and that the user can return the optimal solution vector. In the examples given, the master problem is setup and solved with \Hi.
 
 \bigskip
 
-The PriDec solver is part of v0.5 as a release candidate. The next major release of \Hi will address a couple of limitations related to switching between memory spaces, profile and tune the memory-distributed parallel performance at extreme scales, and improve documentation. The users interested in \Hi's PriDec solver should use consult \texttt{nlpPriDec\_ex8} and \texttt{nlpPriDec\_ex9} examples under the \texttt{Drivers} directory and should also feel free to contact the developers.
+The PriDec solver is part of v0.5 as a release candidate. The next major release of \Hi will address a couple of limitations related to switching between memory spaces, profile and tune the memory-distributed parallel performance at extreme scales, and improve documentation. The users interested in \Hi's PriDec solver should consult \texttt{nlpPriDec\_ex8} and \texttt{nlpPriDec\_ex9} examples under the \texttt{Drivers} directory and should also feel free to contact the developers.
 
 %[[to do:]] describe C++ interface 
 %
@@ -1045,15 +1054,14 @@ This option takes double values in $[0, 10^{20}]$ and has a default value $10^{-
 Here we list the options that are recognized by the \Hi's PriDec solver.
  \subsubsection{Termination criteria and output}
 
- \noindent \textbf{tolerance}: maximum (absolute) error measured by the decrease (predicted by the quadratic model) of objective value. Double values in $[10^{-14},0.1]$. Default value: $10^{-5}$.
-
-  \medskip
-
-  \noindent \textbf{acceptable\_tolerance}: PriDec solver will terminate if the inf-norm of the decrease in objective value is below this value for \texttt{acceptable\_iterations} many consecutive iterations. Double values in $[10^{-14},0.1]$. Default value $10^{-3}$.
+ \noindent \textbf{tolerance}: maximum (absolute) error allowed. This value is compared against the decrease of the objective predicted by the solution to the subproblem with the approximation model ($q(x)$ in~\eqref{pridemobj}). Double values in $[10^{-14},0.1]$. Default value: $10^{-5}$.
 
   \medskip
 
   \noindent \textbf{max\_iter}: maximum number of iterations. Integer values between $1$ to $10^6$. Default value: $3\,000$.
+  \medskip
+  
+  \noindent \textbf{acceptable\_tolerance}: PriDec solver will terminate if the inf-norm of the decrease in objective value is below this value for \texttt{acceptable\_iterations} many consecutive iterations. Double values in $[10^{-14},0.1]$. Default value $10^{-3}$.
 
   \medskip
 
@@ -1061,7 +1069,7 @@ Here we list the options that are recognized by the \Hi's PriDec solver.
 
   \medskip
 
- \noindent \textbf{verbosity\_level}: integer between $0$ and $12$ specifying the verbosity of \Hi's output. A value of $0$ disables any output (but still outputs fatal errors). A value of $1$ also outputs warnings. The value of $2$ is reserved for future use. A value of $3$ will also output a table with PriDec solver's convergence metrics and trust-region type of measure of the quality of the approximation model at each iteration. A value of $4$ and higher will display additional info related to the internals of the algorithm and is generally used only for debugging/development purposes. The higher the value the more verbose the output will be.
+ \noindent \textbf{verbosity\_level}: integer between $0$ and $12$ specifying the verbosity of \Hi's output. A value of $0$ disables any output (but still outputs fatal errors). A value of $1$ outputs warnings. The value of $2$ is reserved for future use. A value of $3$ will also output a table with PriDec solver's convergence metrics and trust-region type of measure of the quality of the approximation model at each iteration. A value of $4$ and higher will display additional info related to the internals of the algorithm and is generally used only for debugging/development purposes. The higher the value the more verbose the output will be.
 
 
 \subsubsection{Algorithm selection and parameters}
@@ -1069,7 +1077,7 @@ Here we list the options that are recognized by the \Hi's PriDec solver.
 
   \medskip
 
-  \noindent \textbf{alpha\_max}: upper bound for the scalar quadratic coefficient in the approximation model of the objective. It is a global value and has higher priority than the update rule of alpha. Double values in $[1,10^14]$. Default value: $10^6$. An assert error will be reported if \textbf{alpha\_min} is bigger than \textbf{alpha\_max}.
+  \noindent \textbf{alpha\_max}: upper bound for the scalar quadratic coefficient in the approximation model of the objective. It is a global value and has higher priority than the update rule of alpha. Double values in $[1,10^{14}]$. Default value: $10^6$. An assert error will be reported if \textbf{alpha\_min} is bigger than \textbf{alpha\_max}.
 %
 %-- to follow --
 
@@ -1089,7 +1097,7 @@ Here we list the options that are recognized by the \Hi's PriDec solver.
 
 \medskip
 
-\noindent \textbf{print\_options}: string option with ``yes`` or ``no`` values deciding whether the options should be printed on the output before solver (re)starts. Default value ``no''.
+\noindent \textbf{print\_options}: string option with ``yes'' or ``no'' values deciding whether the options should be printed on the output before solver (re)starts. Default value ``no''.
 
 %\input{old_stuff}
 

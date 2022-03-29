@@ -1,5 +1,4 @@
 #include "nlpPriDec_ex9.hpp"
-//the solver
 #include "hiopAlgPrimalDecomp.hpp"
 
 #ifdef HIOP_USE_GPU
@@ -29,8 +28,8 @@
  * @note This example is built only when HIOP_USE_MPI and HIOP_SPARSE is enabled during cmake build
  * and require at least two MPI ranks in MPI_COMM_WORLD.
  *
+ * The recourse problems are implemented with HIOP MDS class.
  */
-
 
 using namespace hiop;
 
@@ -86,7 +85,7 @@ static bool parse_arguments(int argc, char **argv,
     }
     break;
   default: 
-    return false; //4 or more arguments
+    return false; // 4 or more arguments
   }
 
   if(self_check && nx!=20 && S!=5) {
@@ -127,8 +126,8 @@ int main(int argc, char **argv)
   magma_init();
 #endif
 
-  int nx = 20; //nx == ny for this problem
-  int nS = 5; // number of \xi
+  int nx = 20; // nx = ny for this problem
+  int nS = 5;  // dimension of \xi
   int S = 5;
   
   bool selfCheck;
@@ -137,7 +136,6 @@ int main(int argc, char **argv)
     usage(argv[0]);
     return 1;
   }
-  
   
   PriDecMasterProblemEx9 pridec_problem(nx, nx, nS, S);
   hiop::hiopAlgPrimalDecomposition pridec_solver(&pridec_problem, MPI_COMM_WORLD);

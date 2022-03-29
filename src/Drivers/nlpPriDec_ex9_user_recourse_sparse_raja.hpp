@@ -31,7 +31,7 @@ using namespace hiop;
  *
  *                   y_1 >=0
  *
- * Coding of the problem in MDS HiOp input: order of variables need to be [ysparse,ydense] 
+ * The recourse problems are implemented in hiop sparse class with Raja to work in memory space. 
  */
 
 class PriDecRecourseProblemEx9Sparse : public hiop::hiopInterfaceSparse
@@ -49,11 +49,11 @@ public:
 
     auto& resmgr = umpire::ResourceManager::getInstance();
     umpire::Allocator allocator = resmgr.getAllocator(mem_space_);
-    //umpire::Allocator allocator 
+    // umpire::Allocator allocator 
     //  = resmgr.getAllocator(mem_space_ == "DEFAULT" ? "HOST" : mem_space_);
 
     assert(nS_>=1);
-    assert(nx_>=nS_);  // ny=nx=n
+    assert(nx_>=nS_);  // ny = nx = n
     assert(S_>=1);
     ny_ = nx_;
   }
@@ -70,7 +70,7 @@ public:
       mem_space_(mem_space)
   {
     assert(nS_>=1);
-    assert(nx_>=nS_);  // ny=nx=n
+    assert(nx_>=nS_);  
     assert(S_>=1);
 
     ny_ = nx_;
@@ -279,7 +279,7 @@ public:
                  bool new_x,
                  double* cons)
   {
-    //return false so that HiOp will rely on the constraint evaluator defined above
+    // return false so that HiOp will rely on the constraint evaluator defined above
     return false;
   }
   bool eval_cons(const size_type& n, 
@@ -315,8 +315,9 @@ public:
         assert(con_idx==m-1);
         cons[m-1] = (1-x[0]+d_xi[0])*(1-x[0]+d_xi[0]);
      //   RAJA::forall<ex9_raja_exec>(RAJA::RangeSegment(1, nS_),
-     //     RAJA_LAMBDA(RAJA::Index_type i)
-     //	{
+     //     RAJA_LAMBDA(RAJA::Index_type i) 
+     //	{   
+     //	Using a for loop inside a RAJA loop:
         for (int i=1; i< d_nS; i++) {
           cons[m-1] += (x[i] + d_xi[i])*(x[i] + d_xi[i]);
         }
@@ -333,7 +334,7 @@ public:
     return true; 
   }
   
-  //  r_i(x;\xi^i) = 1/S *  min_y 0.5 || y - x ||^2 such that 
+  // r_i(x;\xi^i) = 1/S *  min_y 0.5 || y - x ||^2 such that 
   bool eval_grad_f(const size_type& n, const double* x, bool new_x, double* gradf)
   {
     assert(ny_==n);    
@@ -370,15 +371,15 @@ public:
                      double* MJacS) 
   {
     assert(num_cons==nx_||num_cons==0);
-    //indexes for sparse part
+    // indexes for sparse part
     if(num_cons==0) {
       return true;
     }
 
-    //auto& resmgr = umpire::ResourceManager::getInstance();
-    //umpire::Allocator allocator = resmgr.getAllocator(mem_space_);
-    //index_type*  nnzit = static_cast<index_type*>(allocator.allocate(1 * sizeof(index_type)));
-    //resmgr.memset(nnzit, 0);
+    // auto& resmgr = umpire::ResourceManager::getInstance();
+    // umpire::Allocator allocator = resmgr.getAllocator(mem_space_);
+    // index_type*  nnzit = static_cast<index_type*>(allocator.allocate(1 * sizeof(index_type)));
+    // resmgr.memset(nnzit, 0);
     
     if(iJacS!=NULL && jJacS!=NULL) {
       const auto d_ny = ny_;
@@ -387,24 +388,24 @@ public:
       {
         const int con_idx = (int) idx_cons[itrow];
         if(con_idx<d_ny-1) {
-          //sparse Jacobian eq w.r.t. x and s
-          //yk
+          // sparse Jacobian eq w.r.t. x and s
+          // y_k
           iJacS[2*itrow] = con_idx;
           jJacS[2*itrow] = con_idx; //-1
           //nnzit[0] = nnzit[0] + 1;
 
-          //yk+1
+          // y_{k+1}
           iJacS[2*itrow+1] = con_idx;
           jJacS[2*itrow+1] = con_idx+1; //1
-          //nnzit[0] += 1;
+          // nnzit[0] += 1;    // nnzit does nto work inside RAJA loop
         } else if (con_idx==m-1) { 
 	  assert(itrow==m-1);
           iJacS[2*(m-1)] = m-1;
           jJacS[2*(m-1)] = 0;
-          //nnzit[0] += 1;
-          //cons[m-1] = (1-x[0]+xi_[0]);
+          // nnzit[0] += 1;
+          // cons[m-1] = (1-x[0]+xi_[0]);
           
-          //RAJA::forall<ex9_raja_exec>(RAJA::RangeSegment(1, m),
+          // RAJA::forall<ex9_raja_exec>(RAJA::RangeSegment(1, m),
           //  [=] __device__ (RAJA::Index_type i)
 	  //{
 	  for (int i=1; i<m; i++) {
@@ -412,12 +413,12 @@ public:
             jJacS[2*(m-1)+i] = i;
 	    //nnzit[0] += 1;
           }
-              //cons[m-1] += x[i]*x[i];
-          //sparse Jacobian ineq w.r.t x and s
+          // cons[m-1] += x[i]*x[i];
+          // sparse Jacobian ineq w.r.t x and s
         }
       });
-      assert(2*(m-1)+m==nnzJacS);
-      //assert(nnzit[0]==nnzJacS);
+      assert(2*(m-1)+m==nnzJacS); // utilizing the structure of the nonzeros directly
+      // assert(nnzit[0]==nnzJacS);
     }
     //values for sparse Jacobian if requested by the solver
     if(MJacS!=NULL) {
@@ -454,14 +455,13 @@ public:
             //nnzit[0] += 1;
             //cons[m-1] += x[i]*x[i];
           }
-          //sparse Jacobian ineq w.r.t x and s
+          // sparse Jacobian ineq w.r.t x and s
         }
       });
       assert(2*(m-1)+m==nnzJacS);
-      //assert(nnzit[0]==nnzJacS);
     }
-    //allocator.deallocate(nnzit);
-    //assert("for debugging" && false); //for debugging purpose
+    // allocator.deallocate(nnzit);
+    // assert("for debugging" && false); //for debugging purpose
     return true;
   }
   
@@ -478,7 +478,6 @@ public:
                       double* MHSS) 
   {
     assert(nnzHSS==m);
-    //    r_i(x;\xi^i) = 1/S *  min_y 0.5 || y - x ||^2 such that 
     if(iHSS!=NULL && jHSS!=NULL) {
       RAJA::forall<ex9_raja_exec>(RAJA::RangeSegment(0, m),
         RAJA_LAMBDA(RAJA::Index_type i)
@@ -486,18 +485,17 @@ public:
         iHSS[i] = jHSS[i] = i;    
       }); 
     }
-    // need lambda
     if(MHSS!=NULL) {
       RAJA::forall<ex9_raja_exec>(RAJA::RangeSegment(0, m),
         RAJA_LAMBDA(RAJA::Index_type i)
       {
-        MHSS[i] =  obj_factor; //what is this?     
+        MHSS[i] =  obj_factor;  
       });
       MHSS[0] += 2*lambda[m-1];
       RAJA::forall<ex9_raja_exec>(RAJA::RangeSegment(1, m),
         RAJA_LAMBDA(RAJA::Index_type i)
       {
-        MHSS[i] += lambda[m-1]* 2.; //what is this?     
+        MHSS[i] += lambda[m-1]* 2.; 
       }); 
     }
     return true;
@@ -543,9 +541,9 @@ public:
   }
 
   /*
-   * computing the derivative of the recourse function with respect to x in the problem description
+   * This function computes the derivative of the recourse function with respect to x in the problem description,
    * which is the x_ in the protected variable, while x in the function implementation
-   * represents y in the problem description
+   * represents y in the problem description.
    */
   bool compute_gradx(const int n, const double* y, double*  gradx)
   {
@@ -572,7 +570,7 @@ public:
 protected:
   double* x_;
   double* xi_;
-  int nx_; //n_==nx==ny
+  int nx_; // n_ = nx = ny
   int ny_;
   int nS_;
   int S_;

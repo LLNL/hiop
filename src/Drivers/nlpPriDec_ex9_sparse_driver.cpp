@@ -1,5 +1,4 @@
 #include "nlpPriDec_ex9_sparse.hpp"
-//the solver
 #include "hiopAlgPrimalDecomp.hpp"
 
 #ifdef HIOP_USE_GPU
@@ -29,6 +28,7 @@
  * @note This example is built only when HIOP_USE_MPI and HIOP_SPARSE is enabled during cmake build
  * and require at least two MPI ranks in MPI_COMM_WORLD.
  *
+ * The recourse problems are implemented with HIOP Sparse class.
  */
 
 
@@ -47,7 +47,7 @@ static bool parse_arguments(int argc, char **argv,
 
   switch(argc) {
   case 1:
-    //no arguments
+    // no arguments
     return true;
     break;
   case 4: // 3 arguments
@@ -66,14 +66,14 @@ static bool parse_arguments(int argc, char **argv,
         return false;
       }
     }
-  case 3: //2 arguments
+  case 3: // 2 arguments
     {
       nx = atoi(argv[1]);
       if(nx<=0) return false;
       S = atoi(argv[2]);
       if(S<3) S = 4;
     }
-  case 2: //1 argument
+  case 2: // 1 argument
     {
       if(std::string(argv[1]) == "-selfcheck") {
         self_check=true;
@@ -86,7 +86,7 @@ static bool parse_arguments(int argc, char **argv,
     }
     break;
   default: 
-    return false; //4 or more arguments
+    return false; // 4 or more arguments not supported
   }
 
   if(self_check && nx!=20 && S!=5) {
