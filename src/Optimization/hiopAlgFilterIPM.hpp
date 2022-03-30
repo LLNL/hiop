@@ -188,7 +188,7 @@ protected:
 
   void resetSolverStatus();
   virtual void reInitializeNlpObjects();
-  virtual void reloadOptions();
+  virtual void reload_options();
 
 private:
   void destructorPart();
@@ -356,6 +356,9 @@ protected:
                                                      bool& linsol_safe_mode_on,
                                                      const bool linsol_forcequick,
                                                      const int iter_num);
+
+  /// Overridden method from base class that does some preprocessing specific to Newton solver
+  void reload_options();
 protected:
   hiopPDPerturbation pd_perturb_;
   hiopFactAcceptor* fact_acceptor_;

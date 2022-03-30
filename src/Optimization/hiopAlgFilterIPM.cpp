@@ -65,58 +65,16 @@
 namespace hiop
 {
 
-hiopAlgFilterIPMBase::hiopAlgFilterIPMBase(hiopNlpFormulation* nlp_, const bool within_FR)
- : c_soc(nullptr), d_soc(nullptr), soc_dir(nullptr), within_FR_{within_FR}, onenorm_pr_curr_{0.0}
+hiopAlgFilterIPMBase::hiopAlgFilterIPMBase(hiopNlpFormulation* nlp_in, const bool within_FR)
+ : c_soc(nullptr),
+   d_soc(nullptr),
+   soc_dir(nullptr),
+   within_FR_{within_FR},
+   onenorm_pr_curr_{0.0}
 {
-  nlp = nlp_;
+  nlp = nlp_in;
   //force completion of the nlp's initialization
   nlp->finalizeInitialization();
-  reloadOptions();
-
-  it_curr = new hiopIterate(nlp);
-  it_trial= it_curr->alloc_clone();
-  dir     = it_curr->alloc_clone();
-
-  if(nlp->options->GetString("KKTLinsys")=="full")
-  {
-    it_curr->selectPattern();
-    it_trial->selectPattern();
-    dir->selectPattern();
-  }
-
-  logbar = new hiopLogBarProblem(nlp);
-
-  _f_nlp = _f_log = 0;
-  _c = nlp->alloc_dual_eq_vec();
-  _d = nlp->alloc_dual_ineq_vec();
-
-  _grad_f  = nlp->alloc_primal_vec();
-  _Jac_c   = nlp->alloc_Jac_c();
-  _Jac_d   = nlp->alloc_Jac_d();
-
-  _f_nlp_trial = _f_log_trial = 0;
-  _c_trial = nlp->alloc_dual_eq_vec();
-  _d_trial = nlp->alloc_dual_ineq_vec();
-
-  _grad_f_trial  = nlp->alloc_primal_vec();
-  _Jac_c_trial   = nlp->alloc_Jac_c();
-  _Jac_d_trial   = nlp->alloc_Jac_d();
-
-  _Hess_Lagr = nlp->alloc_Hess_Lagr();
-
-  resid = new hiopResidual(nlp);
-  resid_trial = new hiopResidual(nlp);
-
-  //parameter based initialization
-  if(duals_update_type==0) {
-    dualsUpdate_ = nlp->alloc_duals_lsq_updater();
-  } else if(duals_update_type==1) {
-    dualsUpdate_ = new hiopDualsNewtonLinearUpdate(nlp);
-  } else {
-    assert(false && "duals_update_type has an unrecognized value");
-  }
-
-  resetSolverStatus();
 }
 void hiopAlgFilterIPMBase::destructorPart()
 {
@@ -258,7 +216,7 @@ void hiopAlgFilterIPMBase::reInitializeNlpObjects()
   }
 }
 
-void hiopAlgFilterIPMBase::reloadOptions()
+void hiopAlgFilterIPMBase::reload_options()
 {
   //algorithm parameters parameters
   mu0=_mu  = nlp->options->GetNumeric("mu0");
@@ -928,12 +886,56 @@ void hiopAlgFilterIPMBase::displayTerminationMsg()
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // hiopAlgFilterIPMQuasiNewton
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-hiopAlgFilterIPMQuasiNewton::hiopAlgFilterIPMQuasiNewton(hiopNlpDenseConstraints* nlp_,
+hiopAlgFilterIPMQuasiNewton::hiopAlgFilterIPMQuasiNewton(hiopNlpDenseConstraints* nlp_in,
                                                          const bool within_FR)
-  : hiopAlgFilterIPMBase(nlp_, within_FR)
+  : hiopAlgFilterIPMBase(nlp_in, within_FR)
 {
-  nlpdc = nlp_;
-  //_Hess = new hiopHessianLowRank(nlpdc, nlpdc->options->GetInteger("secant_memory_len"));
+  nlpdc = nlp_in;
+  reload_options();
+
+  it_curr = new hiopIterate(nlp);
+  it_trial= it_curr->alloc_clone();
+  dir     = it_curr->alloc_clone();
+
+  if(nlp->options->GetString("KKTLinsys")=="full") {
+    it_curr->selectPattern();
+    it_trial->selectPattern();
+    dir->selectPattern();
+  }
+
+  logbar = new hiopLogBarProblem(nlp);
+
+  _f_nlp = _f_log = 0;
+  _c = nlp->alloc_dual_eq_vec();
+  _d = nlp->alloc_dual_ineq_vec();
+
+  _grad_f  = nlp->alloc_primal_vec();
+  _Jac_c   = nlp->alloc_Jac_c();
+  _Jac_d   = nlp->alloc_Jac_d();
+
+  _f_nlp_trial = _f_log_trial = 0;
+  _c_trial = nlp->alloc_dual_eq_vec();
+  _d_trial = nlp->alloc_dual_ineq_vec();
+
+  _grad_f_trial  = nlp->alloc_primal_vec();
+  _Jac_c_trial   = nlp->alloc_Jac_c();
+  _Jac_d_trial   = nlp->alloc_Jac_d();
+
+  _Hess_Lagr = nlp->alloc_Hess_Lagr();
+
+  resid = new hiopResidual(nlp);
+  resid_trial = new hiopResidual(nlp);
+
+  //parameter based initialization
+  if(duals_update_type==0) {
+    dualsUpdate_ = nlp->alloc_duals_lsq_updater();
+  } else if(duals_update_type==1) {
+    dualsUpdate_ = new hiopDualsNewtonLinearUpdate(nlp);
+  } else {
+    assert(false && "duals_update_type has an unrecognized value");
+  }
+
+  resetSolverStatus();
 }
 
 hiopAlgFilterIPMQuasiNewton::~hiopAlgFilterIPMQuasiNewton()
@@ -944,10 +946,10 @@ hiopAlgFilterIPMQuasiNewton::~hiopAlgFilterIPMQuasiNewton()
 hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
 {
   //hiopNlpFormulation nlp may need an update since user may have changed options and
-  //reruning with the same hiopAlgFilterIPMNewton instance
+  //reruning with the same hiopAlgFilterIPMQuasiNewton instance
   nlp->finalizeInitialization();
   //also reload options
-  reloadOptions();
+  reload_options();
 
   //if nlp changed internally, we need to reinitialize 'this'
   if(it_curr->get_x()->get_size()!=nlp->n() ||
@@ -1345,15 +1347,95 @@ void hiopAlgFilterIPMQuasiNewton::outputIteration(int lsStatus, int lsNum, int u
 /******************************************************************************************************
  * FULL NEWTON IPM
  *****************************************************************************************************/
-hiopAlgFilterIPMNewton::hiopAlgFilterIPMNewton(hiopNlpFormulation* nlp_, const bool within_FR)
-  : hiopAlgFilterIPMBase(nlp_, within_FR),
+hiopAlgFilterIPMNewton::hiopAlgFilterIPMNewton(hiopNlpFormulation* nlp_in, const bool within_FR)
+  : hiopAlgFilterIPMBase(nlp_in, within_FR),
     fact_acceptor_{nullptr}
 {
+  reload_options();
+
+  it_curr = new hiopIterate(nlp);
+  it_trial= it_curr->alloc_clone();
+  dir     = it_curr->alloc_clone();
+
+  if(nlp->options->GetString("KKTLinsys")=="full")
+  {
+    it_curr->selectPattern();
+    it_trial->selectPattern();
+    dir->selectPattern();
+  }
+
+  logbar = new hiopLogBarProblem(nlp);
+
+  _f_nlp = _f_log = 0;
+  _c = nlp->alloc_dual_eq_vec();
+  _d = nlp->alloc_dual_ineq_vec();
+
+  _grad_f  = nlp->alloc_primal_vec();
+  _Jac_c   = nlp->alloc_Jac_c();
+  _Jac_d   = nlp->alloc_Jac_d();
+
+  _f_nlp_trial = _f_log_trial = 0;
+  _c_trial = nlp->alloc_dual_eq_vec();
+  _d_trial = nlp->alloc_dual_ineq_vec();
+
+  _grad_f_trial  = nlp->alloc_primal_vec();
+  _Jac_c_trial   = nlp->alloc_Jac_c();
+  _Jac_d_trial   = nlp->alloc_Jac_d();
+
+  _Hess_Lagr = nlp->alloc_Hess_Lagr();
+
+  resid = new hiopResidual(nlp);
+  resid_trial = new hiopResidual(nlp);
+
+  //parameter based initialization
+  if(duals_update_type==0) {
+    dualsUpdate_ = nlp->alloc_duals_lsq_updater();
+  } else if(duals_update_type==1) {
+    dualsUpdate_ = new hiopDualsNewtonLinearUpdate(nlp);
+  } else {
+    assert(false && "duals_update_type has an unrecognized value");
+  }
+
+  resetSolverStatus();  
 }
 
 hiopAlgFilterIPMNewton::~hiopAlgFilterIPMNewton()
 {
   delete fact_acceptor_;
+}
+
+void hiopAlgFilterIPMNewton::reload_options()
+{
+
+  auto hess_opt_val = nlp->options->GetString("Hessian");
+  if(hess_opt_val != "analytical_exact") {
+    //it can occur since "analytical_exact" is not the default value
+    nlp->options->set_val("Hessian", "analytical_exact");
+    if(nlp->options->is_user_defined("Hessian")) {
+      
+      nlp->log->printf(hovWarning,
+		       "Option Hessian=%s not compatible with the requested NLP formulation and will "
+		       "be set to 'analytical_exact'\n",
+                       hess_opt_val.c_str());
+    }
+  }
+
+  auto duals_update_type = nlp->options->GetString("duals_update_type");
+  if("linear" != duals_update_type) {
+    // 'duals_update_type' should be 'lsq' or 'linear' for  'Hessian=quasinewton_approx'
+    // 'duals_update_type' can only be 'linear' for Newton methods 'Hessian=analytical_exact'
+
+    //warn only if these are defined by the user (option file or via SetXXX methods)
+    if(nlp->options->is_user_defined("duals_update_type")) {
+      nlp->log->printf(hovWarning,
+                       "The option 'duals_update_type=%s' is not valid with 'Hessian=analytical_exact'. "
+                       "Will use 'duals_update_type=linear'.[2]\n",
+                       duals_update_type.c_str());
+    }
+    nlp->options->set_val("duals_update_type", "linear");
+  }
+  
+  hiopAlgFilterIPMBase::reload_options();
 }
 
 hiopKKTLinSys* hiopAlgFilterIPMNewton::decideAndCreateLinearSystem(hiopNlpFormulation* nlp)
@@ -1561,7 +1643,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
   nlp->finalizeInitialization();
 
   //also reload options
-  reloadOptions();
+  reload_options();
 
   //if nlp changed internally, we need to reinitialize 'this'
   if(it_curr->get_x()->get_size()!=nlp->n() ||
