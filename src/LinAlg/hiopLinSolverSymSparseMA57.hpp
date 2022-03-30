@@ -100,11 +100,11 @@ extern "C" {
 
 
 /** Wrapper for MA57 */
-class hiopLinSolverIndefSparseMA57: public hiopLinSolverSymSparse
+class hiopLinSolverSymSparseMA57: public hiopLinSolverSymSparse
 {
 public:
-  hiopLinSolverIndefSparseMA57(const int& n, const int& nnz, hiopNlpFormulation* nlp);
-  virtual ~hiopLinSolverIndefSparseMA57();
+  hiopLinSolverSymSparseMA57(const int& n, const int& nnz, hiopNlpFormulation* nlp);
+  virtual ~hiopLinSolverSymSparseMA57();
 
   /** Triggers a refactorization of the matrix, if necessary.
    * Overload from base class. */

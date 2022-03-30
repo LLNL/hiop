@@ -49,7 +49,7 @@
 
 #ifdef HIOP_SPARSE
 #ifdef HIOP_USE_COINHSL
-#include "hiopLinSolverIndefSparseMA57.hpp"
+#include "hiopLinSolverSymSparseMA57.hpp"
 #endif
 #ifdef HIOP_USE_STRUMPACK
 #include "hiopLinSolverSparseSTRUMPACK.hpp"
@@ -275,7 +275,7 @@ namespace hiop
         if(linear_solver == "ma57" || linear_solver == "auto") {
 #ifdef HIOP_USE_COINHSL
           linsol_actual = "MA57";
-          linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
+          linSys_ = new hiopLinSolverSymSparseMA57(n, nnz, nlp_);
 #endif // HIOP_USE_COINHSL
         }
 
@@ -322,7 +322,7 @@ namespace hiop
 
         if( (nullptr == linSys_ && linear_solver == "auto") || linear_solver == "strumpack") {
 #if defined(HIOP_USE_STRUMPACK)        
-          linSys_ = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
+          linSys_ = new hiopLinSolverSymSparseSTRUMPACK(n, nnz, nlp_);
           linsol_actual = "STRUMPACK";
 #endif //HIOP_USE_STRUMPACK
         }
@@ -330,14 +330,14 @@ namespace hiop
         if( (nullptr == linSys_ && linear_solver == "auto") || linear_solver == "ma57") {
 #if defined(HIOP_USE_COINHSL)
           linsol_actual = "MA57";
-          linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
+          linSys_ = new hiopLinSolverSymSparseMA57(n, nnz, nlp_);
 #endif //HIOP_USE_COINHSL
         }
         
         if( (nullptr == linSys_&& linear_solver == "auto") || linear_solver == "pardiso") {
 #if defined(HIOP_USE_PARDISO)
           linsol_actual = "PARDISO";
-          linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
+          linSys_ = new hiopLinSolverSymSparsePARDISO(n, nnz, nlp_);
 #endif // HIOP_USE_PARDISO
         }
 
@@ -573,7 +573,7 @@ namespace hiop
 
         //for now we can only rely on MA57 as the safe mode linear solver 
 #if defined(HIOP_USE_COINHSL)
-        linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
+        linSys_ = new hiopLinSolverSymSparseMA57(n, nnz, nlp_);
         nlp_->log->printf(hovWarning,
                           "KKT_SPARSE_XDYcYd linsys: alloc MA57 on CPU size %d (%d cons) (safe_mode=%d)\n",
                           n,
@@ -598,7 +598,7 @@ namespace hiop
         
         if(linear_solver == "ma57" || linear_solver == "auto") {
 #ifdef HIOP_USE_COINHSL
-          linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
+          linSys_ = new hiopLinSolverSymSparseMA57(n, nnz, nlp_);
           actual_lin_solver = "MA57";
 #endif // HIOP_USE_COINHSL
         }
@@ -664,14 +664,14 @@ namespace hiop
         if(nullptr == linSys_ && linear_solver == "ma57") {
 #ifdef HIOP_USE_COINHSL
           actual_lin_solver = "MA57";
-          linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
+          linSys_ = new hiopLinSolverSymSparseMA57(n, nnz, nlp_);
 #endif // HIOP_USE_COINHSL
         }
         
         if(nullptr == linSys_&& linear_solver == "pardiso") {
 #ifdef HIOP_USE_PARDISO
           actual_lin_solver = "PARDISO";
-          linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
+          linSys_ = new hiopLinSolverSymSparseMA57(n, nnz, nlp_);
 #endif // HIOP_USE_PARDISO          
         }
 

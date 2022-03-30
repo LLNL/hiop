@@ -1,10 +1,10 @@
-#include "hiopLinSolverIndefSparseMA57.hpp"
+#include "hiopLinSolverSymSparseMA57.hpp"
 
 #include "hiop_blasdefs.hpp"
 
 namespace hiop
 {
-  hiopLinSolverIndefSparseMA57::hiopLinSolverIndefSparseMA57(const int& n, const int& nnz, hiopNlpFormulation* nlp)
+  hiopLinSolverSymSparseMA57::hiopLinSolverSymSparseMA57(const int& n, const int& nnz, hiopNlpFormulation* nlp)
     : hiopLinSolverSymSparse(n, nnz, nlp),
       irowM_{nullptr},
       jcolM_{nullptr},
@@ -49,7 +49,7 @@ namespace hiop
     cntl_[1-1] = pivot_tol_;     // pivot tolerance
 
   }
-  hiopLinSolverIndefSparseMA57::~hiopLinSolverIndefSparseMA57()
+  hiopLinSolverSymSparseMA57::~hiopLinSolverSymSparseMA57()
   {
     delete [] irowM_;
     delete [] jcolM_;
@@ -64,7 +64,7 @@ namespace hiop
   }
 
 
-  void hiopLinSolverIndefSparseMA57::firstCall()
+  void hiopLinSolverSymSparseMA57::firstCall()
   {
     assert(n_==M_->n() && M_->n()==M_->m());
     assert(nnz_==M_->numberOfNonzeros());
@@ -96,7 +96,7 @@ namespace hiop
   }
 
 
-  int hiopLinSolverIndefSparseMA57::matrixChanged()
+  int hiopLinSolverSymSparseMA57::matrixChanged()
   {
     assert(n_==M_->n() && M_->n()==M_->m());
     assert(nnz_==M_->numberOfNonzeros());
@@ -176,7 +176,7 @@ namespace hiop
     return negEigVal;
   }
 
-  bool hiopLinSolverIndefSparseMA57::solve ( hiopVector& x_in )
+  bool hiopLinSolverSymSparseMA57::solve ( hiopVector& x_in )
   {
     assert(n_==M_->n() && M_->n()==M_->m());
     assert(nnz_==M_->numberOfNonzeros());
@@ -216,9 +216,9 @@ namespace hiop
         dresid, dwork_, iwork_, icntl_, cntl_, info_, rinfo_ );
 
     if (info_[0]<0){
-      nlp_->log->printf(hovError, "hiopLinSolverIndefSparseMA57: MA57 returned error %d\n", info_[0]);
+      nlp_->log->printf(hovError, "hiopLinSolverSymSparseMA57: MA57 returned error %d\n", info_[0]);
     } else if(info_[0]>0) {
-      nlp_->log->printf(hovError, "hiopLinSolverIndefSparseMA57: MA57 returned warning %d\n", info_[0]);
+      nlp_->log->printf(hovError, "hiopLinSolverSymSparseMA57: MA57 returned warning %d\n", info_[0]);
     }
 
     nlp_->runStats.linsolv.tmTriuSolves.stop();
@@ -226,7 +226,7 @@ namespace hiop
     return info_[0]==0;
   }
 
-  bool hiopLinSolverIndefSparseMA57::increase_pivot_tol()
+  bool hiopLinSolverSymSparseMA57::increase_pivot_tol()
   {
     pivot_changed_ = false;
     if(pivot_tol_ < pivot_max_) {

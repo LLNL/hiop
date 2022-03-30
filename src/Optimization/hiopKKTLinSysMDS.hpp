@@ -145,7 +145,7 @@ protected:
 
 private:
   //placeholder for the code that decides which linear solver to used based on safe_mode_
-  hiopLinSolverIndefDense* determineAndCreateLinsys(int nxd, int neq, int nineq);
+  hiopLinSolverSymDense* determineAndCreateLinsys(int nxd, int neq, int nineq);
 };
 
 } // end of namespace
