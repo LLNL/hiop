@@ -1357,8 +1357,7 @@ hiopAlgFilterIPMNewton::hiopAlgFilterIPMNewton(hiopNlpFormulation* nlp_in, const
   it_trial= it_curr->alloc_clone();
   dir     = it_curr->alloc_clone();
 
-  if(nlp->options->GetString("KKTLinsys")=="full")
-  {
+  if(nlp->options->GetString("KKTLinsys")=="full") {
     it_curr->selectPattern();
     it_trial->selectPattern();
     dir->selectPattern();
@@ -1406,7 +1405,6 @@ hiopAlgFilterIPMNewton::~hiopAlgFilterIPMNewton()
 
 void hiopAlgFilterIPMNewton::reload_options()
 {
-
   auto hess_opt_val = nlp->options->GetString("Hessian");
   if(hess_opt_val != "analytical_exact") {
     //it can occur since "analytical_exact" is not the default value
@@ -1645,7 +1643,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
   //also reload options
   reload_options();
 
-  //if nlp changed internally, we need to reinitialize 'this'
+  //if nlp changed internally, we need to reinitialize `this`
   if(it_curr->get_x()->get_size()!=nlp->n() ||
      //Jac_c->get_local_size_n()!=nlpdc->n_local()) { <- this is prone to racing conditions
      _Jac_c->n()!=nlp->n()) {

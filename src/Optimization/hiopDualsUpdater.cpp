@@ -455,7 +455,7 @@ instantiate_linear_solver(const char* linsol_opt,
 
       assert(compute_mode == "hybrid" || compute_mode == "auto");
 #if defined(HIOP_USE_STRUMPACK)
-      if( (nullptr == lin_sys_) && (linear_solver == "strumpack" || linear_solver == "auto")) {
+      if( (nullptr == lin_sys_) && (linear_solver == "strumpack" || linear_solver == "auto") ) {
         ss_log << "LSQ linear solver --- KKT_SPARSE_XDYcYd linsys: STRUMPACK size " << n
                << " cons " << (neq+nineq) << " nnz " << nnz;                  
         lin_sys_ = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
