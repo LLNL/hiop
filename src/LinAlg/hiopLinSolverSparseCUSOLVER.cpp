@@ -323,7 +323,7 @@ namespace hiop
 
   int hiopLinSolverSymSparseCUSOLVER::initializeCusolverGLU()
   {
-    nlp_->log->printf(hovSummary, "CUSOLVER: Glu \n");
+    nlp_->log->printf(hovScalars, "CUSOLVER: Glu \n");
     cusparseCreateMatDescr(&descr_M_);
     cusparseSetMatType(descr_M_, CUSPARSE_MATRIX_TYPE_GENERAL);
     cusparseSetMatIndexBase(descr_M_, CUSPARSE_INDEX_BASE_ZERO);
@@ -339,7 +339,7 @@ namespace hiop
 
   int hiopLinSolverSymSparseCUSOLVER::initializeCusolverRf()
   {
-    nlp_->log->printf(hovSummary, "CUSOLVER: Rf \n");
+    nlp_->log->printf(hovScalars, "CUSOLVER: Rf \n");
     cusolverRfCreate(&handle_rf_);
 
     checkCudaErrors(cusolverRfSetAlgs(handle_rf_,
@@ -732,13 +732,13 @@ namespace hiop
     if((Numeric_ == nullptr) && (factorizationSetupSucc_ == 0)) {
       Numeric_ = klu_factor(kRowPtr_, jCol_, kVal_, Symbolic_, &Common_);
       if(Numeric_ == nullptr) {
-        nlp_->log->printf(hovSummary, "Numeric factorization failed. Regularizing ...\n");
+        nlp_->log->printf(hovWarning, "Numeric klu factorization failed. Regularizing ...\n");
         // This is not a catastrophic failure
         // The matrix is singular so return -1 to regularaize!
         return -1;
       } else { // Numeric was succesfull so now can set up
         factorizationSetupSucc_ = 1;
-        nlp_->log->printf(hovSummary, "Numeric factorization succesful! \n");
+        nlp_->log->printf(hovScalars, "Numeric klu factorization succesful! \n");
         if(refact_ == "glu") {
           this->initializeCusolverGLU();
           this->refactorizationSetupCusolverGLU();
@@ -1100,7 +1100,7 @@ namespace hiop
   hiopLinSolverNonSymSparseCUSOLVER::initializeCusolverGLU()
   {
 
-    nlp_->log->printf(hovSummary, "CUSOLVER: Glu \n");
+    nlp_->log->printf(hovScalars, "CUSOLVER: Glu \n");
     cusparseCreateMatDescr(&descr_M_);
     cusparseSetMatType(descr_M_, CUSPARSE_MATRIX_TYPE_GENERAL);
     cusparseSetMatIndexBase(descr_M_, CUSPARSE_INDEX_BASE_ZERO);
@@ -1115,7 +1115,7 @@ namespace hiop
   int
   hiopLinSolverNonSymSparseCUSOLVER::initializeCusolverRf()
   {
-    nlp_->log->printf(hovSummary, "CUSOLVER: Rf \n");
+    nlp_->log->printf(hovScalars, "CUSOLVER: Rf \n");
     cusolverRfCreate(&handle_rf_);
 
     checkCudaErrors(cusolverRfSetAlgs(handle_rf_,
@@ -1445,19 +1445,19 @@ namespace hiop
     if((Numeric_ == nullptr) && (factorizationSetupSucc_ == 0)) {
       Numeric_ = klu_factor(kRowPtr_, jCol_, kVal_, Symbolic_, &Common_);
       if(Numeric_ == nullptr) {
-        nlp_->log->printf(hovSummary, "Numeric factorization failed. Regularizing ...\n");
+        nlp_->log->printf(hovWarning, "Numeric klu factorization failed. Regularizing ...\n");
         // This is not a catastrophic failure
         // The matrix is singular so return -1 to regularaize!
         return -1;
       } else { // Numeric was succesfull so now can set up
         factorizationSetupSucc_ = 1;
-        nlp_->log->printf(hovSummary, "Numeric factorization succesful! \n");
+        nlp_->log->printf(hovScalars, "Numeric klu factorization succesful! \n");
         if(refact_ == "glu") {
           this->initializeCusolverGLU();
           this->refactorizationSetupCusolverGLU();
         } else if(refact_ == "rf") {
-            this->initializeCusolverRf();
-            this->refactorizationSetupCusolverRf();
+          this->initializeCusolverRf();
+          this->refactorizationSetupCusolverRf();
         } else { // for future -
           assert(0 && "Only glu and rf refactorizations available.\n");
         }
