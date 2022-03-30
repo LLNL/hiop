@@ -151,10 +151,10 @@ public:
   }
 
   /** LSQ-based initialization of the  constraints duals (yc and yd). Source file describes the math. */
-  virtual inline bool computeInitialDualsEq(hiopIterate& it_ini,
-                                            const hiopVector& grad_f,
-                                            const hiopMatrix& jac_c,
-                                            const hiopMatrix& jac_d)
+  virtual inline bool compute_initial_duals_eq(hiopIterate& it_ini,
+                                               const hiopVector& grad_f,
+                                               const hiopMatrix& jac_c,
+                                               const hiopMatrix& jac_d)
   {
     bool bret = init_for_ini_duals_comp(it_ini, grad_f, jac_c, jac_d);
     if(!bret) {
@@ -176,7 +176,7 @@ public:
       it_ini.get_yd()->setToZero();
       if(bret) {
         nlp_->log->printf(hovScalars,
-                          "will not use lsq dual initial point since its norm (%g) is larger than "
+                          "Will not use lsq dual initial point since its norm (%g) is larger than "
                           "the tolerance duals_lsq_ini_max=%g.\n",
                           ynrm,
                           lsq_dual_init_max);
@@ -185,7 +185,7 @@ public:
     return bret;
   }
 protected:
-  /// Helper method doing the work for both `go` and `computeInitialDualsEq`
+  /// Helper method doing the work for both `go` and `compute_initial_duals_eq`
   virtual bool do_lsq_update(hiopIterate& it,
                              const hiopVector& grad_f,
                              const hiopMatrix& jac_c,

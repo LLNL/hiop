@@ -427,7 +427,7 @@ instantiate_linear_solver(const char* linsol_opt,
       if(linear_solver == "cusolver-lu" || linear_solver == "auto") {
         ss_log << "LSQ linear solver --- KKT_SPARSE_XDYcYd linsys: CUSOLVER-LU size " << n
                << " cons " << (neq+nineq) << " nnz " << nnz;
-        lin_sys_ = new hiopLinSolverIndefSparseCUSOLVER(n, nnz, nlp_);
+        lin_sys_ = new hiopLinSolverSymSparseCUSOLVER(n, nnz, nlp_);
       }
 #else // of #ifdef HIOP_USE_CUSOLVER 
       //under compute mode gpu, at this point we don't have a sparse linear solver 

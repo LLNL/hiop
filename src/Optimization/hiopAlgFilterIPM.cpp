@@ -436,7 +436,7 @@ startingProcedure(hiopIterate& it_ini,
       }
 
       //this will update yc and yd in it_ini
-      updater->computeInitialDualsEq(it_ini, gradf, Jac_c, Jac_d);
+      updater->compute_initial_duals_eq(it_ini, gradf, Jac_c, Jac_d);
 
       if(deleteUpdater) delete updater;
     } else {
