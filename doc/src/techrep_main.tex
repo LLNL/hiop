@@ -132,7 +132,7 @@ backgroundcolor=\color{lbcolor},
 \vspace{3cm}
 
   {\huge\bfseries \Hi\ -- User Guide} \\[14pt]
-  {\large\bfseries version 0.5}
+  {\large\bfseries version 0.6}
 
 \vspace{3cm}
 
@@ -140,7 +140,7 @@ backgroundcolor=\color{lbcolor},
 
 \vspace{1.25cm}
 
- {\Large\bfseries Cosmin G. Petra} and {\Large\bfseries Nai-Yuan Chiang}
+ {\Large\bfseries Cosmin G. Petra}, {\Large\bfseries Nai-Yuan Chiang}, and {\Large\bfseries Jingyi Wang}
  
 \vspace{1.1cm}
 
@@ -154,7 +154,7 @@ Lawrence Livermore National Laboratory}}}\\[10pt]
 \vspace{4.75cm}
 
  \textcolor{violet}{{\large\bfseries Oct 15, 2017} \\
-{\large\bfseries Updated  Sept 28, 2021}}
+{\large\bfseries Updated  March 31, 2022}}
 
 \vspace{0.75cm}
 
@@ -757,9 +757,9 @@ To streamline steps 1 and 2 above, the master problem is implemented with the cl
 
 The user can safely assume that $q(x)$ is a strictly  convex quadratic function (however the function may be only convex and nonquadratic in a future version of \Hi). \Hi assumes that the user can solve the master problem~\eqref{pridemobj}-\eqref{pridembounds} in some efficient way and that the user can return the optimal solution vector. In the examples given, the master problem is setup and solved with \Hi.
 
-\bigskip
+\medskip
 
-The PriDec solver is part of v0.5 as a release candidate. The next major release of \Hi will address a couple of limitations related to switching between memory spaces, profile and tune the memory-distributed parallel performance at extreme scales, and improve documentation. The users interested in \Hi's PriDec solver should consult \texttt{nlpPriDec\_ex8} and \texttt{nlpPriDec\_ex9} examples under the \texttt{Drivers} directory and should also feel free to contact the developers.
+Self-contained examples of the use of \Hi's PriDec solver are present in  \texttt{nlpPriDec\_ex8} and \texttt{nlpPriDec\_ex9} examples under the \texttt{Drivers} directory. 
 
 %[[to do:]] describe C++ interface 
 %
