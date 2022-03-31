@@ -1,6 +1,5 @@
 // Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
-// Written by Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp
@@ -46,6 +45,14 @@
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or
 // product endorsement purposes.
 
+/**
+ * @file hiopAlgFilterIPM.hpp
+ *
+ * @author Cosmin G. Petra <petra1@llnl.gov>,  LLNL
+ * @author Nai-Yuan Chiang <chiang7@llnl.gov>,  LLNL
+ *
+ */
+
 #ifndef HIOP_ALGFilterIPM
 #define HIOP_ALGFilterIPM
 
@@ -75,8 +82,12 @@ public:
 
   /** computes primal-dual point and returns the evaluation of the problem at this point */
   virtual int startingProcedure(hiopIterate& it_ini,
-	       double &f, hiopVector& c_, hiopVector& d_,
-	       hiopVector& grad_,  hiopMatrix& Jac_c,  hiopMatrix& Jac_d);
+                                double &f,
+                                hiopVector& c_,
+                                hiopVector& d_,
+                                hiopVector& grad_,
+                                hiopMatrix& Jac_c,
+                                hiopMatrix& Jac_d);
   /* returns the objective value; valid only after 'run' method has been called */
   double getObjective() const;
   /* returns the primal vector x; valid only after 'run' method has been called */
@@ -110,21 +121,26 @@ public:
 
 protected:
   bool evalNlp(hiopIterate& iter,
-	       double &f, hiopVector& c_, hiopVector& d_,
-	       hiopVector& grad_,  hiopMatrix& Jac_c,  hiopMatrix& Jac_d,
-	       hiopMatrix& Hess_L);
-  bool evalNlp_funcOnly(hiopIterate& iter,
-			double& f, hiopVector& c_, hiopVector& d_);
-  bool evalNlp_derivOnly(hiopIterate& iter,
-			 hiopVector& gradf_,  hiopMatrix& Jac_c,  hiopMatrix& Jac_d,
-			 hiopMatrix& Hess_L);
+               double &f,
+               hiopVector& c_,
+               hiopVector& d_,
+               hiopVector& grad_,
+               hiopMatrix& Jac_c,
+               hiopMatrix& Jac_d,
+               hiopMatrix& Hess_L);
+  bool evalNlp_funcOnly(hiopIterate& iter, double& f, hiopVector& c_, hiopVector& d_);
+  bool evalNlp_derivOnly(hiopIterate& iter, hiopVector& gradf_, hiopMatrix& Jac_c, hiopMatrix& Jac_d, hiopMatrix& Hess_L);
 
   /* Evaluates all the functions and derivatives, excepting the Hessian, which is supposed
    * to be evaluated at a later time.
    */
   bool evalNlp_noHess(hiopIterate& iter,
-		      double &f, hiopVector& c_, hiopVector& d_,
-		      hiopVector& grad_,  hiopMatrix& Jac_c,  hiopMatrix& Jac_d);
+                      double &f,
+                      hiopVector& c_,
+                      hiopVector& d_,
+                      hiopVector& grad_,
+                      hiopMatrix& Jac_c,
+                      hiopMatrix& Jac_d);
   /* Evaluates the Hessian
    *
    * Assumes that @evalNlp_noHess has just been called, so the user provided Hessian callback
@@ -141,9 +157,17 @@ protected:
    * The 'true' infeasibility (also used by Ipopt) would be the max of the inf norm of the
    * violation of d_l <= d(x) <= d_u and the inf norm of the residual of c(x)-c=0.
    */
-  virtual bool evalNlpAndLogErrors(const hiopIterate& it, const hiopResidual& resid, const double& mu,
-				   double& nlpoptim, double& nlpfeas, double& nlpcomplem, double& nlpoverall,
-				   double& logoptim, double& logfeas, double& logcomplem, double& logoverall);
+  virtual bool evalNlpAndLogErrors(const hiopIterate& it,
+                                   const hiopResidual& resid,
+                                   const double& mu,
+                                   double& nlpoptim,
+                                   double& nlpfeas,
+                                   double& nlpcomplem,
+                                   double& nlpoverall,
+                                   double& logoptim,
+                                   double& logfeas,
+                                   double& logcomplem,
+                                   double& logoverall);
 
   virtual double thetaLogBarrier(const hiopIterate& it, const hiopResidual& resid, const double& mu);
 
@@ -188,10 +212,17 @@ protected:
 
   void resetSolverStatus();
   virtual void reInitializeNlpObjects();
-  virtual void reloadOptions();
+  virtual void reload_options();
 
-private:
-  void destructorPart();
+protected:
+  /* Helper method containing all the allocations done by the base algorithm class.
+   *
+   * @note: Should not be virtual nor be overridden since it is called in the constructor.
+   */  
+  void alloc_alg_objects();
+
+  /// Helper method containing all the deallocations done by the base algorithm class. Avoid overidding it. 
+  void dealloc_alg_objects();
 protected:
   hiopNlpFormulation* nlp;
   hiopFilter filter;
@@ -356,6 +387,9 @@ protected:
                                                      bool& linsol_safe_mode_on,
                                                      const bool linsol_forcequick,
                                                      const int iter_num);
+
+  /// Overridden method from base class that does some preprocessing specific to Newton solver
+  void reload_options();
 protected:
   hiopPDPerturbation pd_perturb_;
   hiopFactAcceptor* fact_acceptor_;
