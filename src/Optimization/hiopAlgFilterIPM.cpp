@@ -76,7 +76,8 @@ hiopAlgFilterIPMBase::hiopAlgFilterIPMBase(hiopNlpFormulation* nlp_in, const boo
   //force completion of the nlp's initialization
   nlp->finalizeInitialization();
 }
-void hiopAlgFilterIPMBase::destructorPart()
+
+void hiopAlgFilterIPMBase::dealloc_alg_objects()
 {
   if(it_curr)  delete it_curr;
   if(it_trial) delete it_trial;
@@ -116,51 +117,21 @@ void hiopAlgFilterIPMBase::destructorPart()
 }
 hiopAlgFilterIPMBase::~hiopAlgFilterIPMBase()
 {
-  if(it_curr)  delete it_curr;
-  if(it_trial) delete it_trial;
-  if(dir)      delete dir;
-
-  if(_c)       delete _c;
-  if(_d)       delete _d;
-  if(_grad_f)  delete _grad_f;
-  if(_Jac_c)   delete _Jac_c;
-  if(_Jac_d)   delete _Jac_d;
-
-  if(_Hess_Lagr) delete _Hess_Lagr;
-
-  if(resid)    delete resid;
-
-  if(_c_trial)       delete _c_trial;
-  if(_d_trial)       delete _d_trial;
-  if(_grad_f_trial)  delete _grad_f_trial;
-  if(_Jac_c_trial)   delete _Jac_c_trial;
-  if(_Jac_d_trial)   delete _Jac_d_trial;
-
-  if(resid_trial)    delete resid_trial;
-
-  if(logbar) delete logbar;
-
-  if(dualsUpdate_) delete dualsUpdate_;
-
-  if(c_soc) {
-    delete c_soc;
-  }
-  if(d_soc) {
-    delete d_soc;
-  }
-  if(soc_dir) {
-    delete soc_dir;
-  }
+  dealloc_alg_objects();
 }
 
-void hiopAlgFilterIPMBase::reInitializeNlpObjects()
+void hiopAlgFilterIPMBase::alloc_alg_objects()
 {
-  destructorPart();
-
   it_curr = new hiopIterate(nlp);
   it_trial= it_curr->alloc_clone();
   dir     = it_curr->alloc_clone();
 
+  if(nlp->options->GetString("KKTLinsys")=="full") {
+    it_curr->selectPattern();
+    it_trial->selectPattern();
+    dir->selectPattern();
+  }
+  
   logbar = new hiopLogBarProblem(nlp);
 
   _f_nlp = _f_log = 0;
@@ -187,6 +158,13 @@ void hiopAlgFilterIPMBase::reInitializeNlpObjects()
   c_soc = nlp->alloc_dual_eq_vec();
   d_soc = nlp->alloc_dual_ineq_vec();
   soc_dir = it_curr->alloc_clone();
+}
+  
+void hiopAlgFilterIPMBase::reInitializeNlpObjects()
+{
+  dealloc_alg_objects();
+
+  alloc_alg_objects();
 
   //0 LSQ (default), 1 linear update (more stable)
   duals_update_type = nlp->options->GetString("duals_update_type")=="lsq"?0:1;
@@ -893,38 +871,7 @@ hiopAlgFilterIPMQuasiNewton::hiopAlgFilterIPMQuasiNewton(hiopNlpDenseConstraints
   nlpdc = nlp_in;
   reload_options();
 
-  it_curr = new hiopIterate(nlp);
-  it_trial= it_curr->alloc_clone();
-  dir     = it_curr->alloc_clone();
-
-  if(nlp->options->GetString("KKTLinsys")=="full") {
-    it_curr->selectPattern();
-    it_trial->selectPattern();
-    dir->selectPattern();
-  }
-
-  logbar = new hiopLogBarProblem(nlp);
-
-  _f_nlp = _f_log = 0;
-  _c = nlp->alloc_dual_eq_vec();
-  _d = nlp->alloc_dual_ineq_vec();
-
-  _grad_f  = nlp->alloc_primal_vec();
-  _Jac_c   = nlp->alloc_Jac_c();
-  _Jac_d   = nlp->alloc_Jac_d();
-
-  _f_nlp_trial = _f_log_trial = 0;
-  _c_trial = nlp->alloc_dual_eq_vec();
-  _d_trial = nlp->alloc_dual_ineq_vec();
-
-  _grad_f_trial  = nlp->alloc_primal_vec();
-  _Jac_c_trial   = nlp->alloc_Jac_c();
-  _Jac_d_trial   = nlp->alloc_Jac_d();
-
-  _Hess_Lagr = nlp->alloc_Hess_Lagr();
-
-  resid = new hiopResidual(nlp);
-  resid_trial = new hiopResidual(nlp);
+  alloc_alg_objects();
 
   //parameter based initialization
   if(duals_update_type==0) {
@@ -940,7 +887,6 @@ hiopAlgFilterIPMQuasiNewton::hiopAlgFilterIPMQuasiNewton(hiopNlpDenseConstraints
 
 hiopAlgFilterIPMQuasiNewton::~hiopAlgFilterIPMQuasiNewton()
 {
-  //if(_Hess) delete _Hess;
 }
 
 hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
@@ -1353,38 +1299,7 @@ hiopAlgFilterIPMNewton::hiopAlgFilterIPMNewton(hiopNlpFormulation* nlp_in, const
 {
   reload_options();
 
-  it_curr = new hiopIterate(nlp);
-  it_trial= it_curr->alloc_clone();
-  dir     = it_curr->alloc_clone();
-
-  if(nlp->options->GetString("KKTLinsys")=="full") {
-    it_curr->selectPattern();
-    it_trial->selectPattern();
-    dir->selectPattern();
-  }
-
-  logbar = new hiopLogBarProblem(nlp);
-
-  _f_nlp = _f_log = 0;
-  _c = nlp->alloc_dual_eq_vec();
-  _d = nlp->alloc_dual_ineq_vec();
-
-  _grad_f  = nlp->alloc_primal_vec();
-  _Jac_c   = nlp->alloc_Jac_c();
-  _Jac_d   = nlp->alloc_Jac_d();
-
-  _f_nlp_trial = _f_log_trial = 0;
-  _c_trial = nlp->alloc_dual_eq_vec();
-  _d_trial = nlp->alloc_dual_ineq_vec();
-
-  _grad_f_trial  = nlp->alloc_primal_vec();
-  _Jac_c_trial   = nlp->alloc_Jac_c();
-  _Jac_d_trial   = nlp->alloc_Jac_d();
-
-  _Hess_Lagr = nlp->alloc_Hess_Lagr();
-
-  resid = new hiopResidual(nlp);
-  resid_trial = new hiopResidual(nlp);
+  alloc_alg_objects();
 
   //parameter based initialization
   if(duals_update_type==0) {

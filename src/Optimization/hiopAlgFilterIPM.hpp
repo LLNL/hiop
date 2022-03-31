@@ -190,8 +190,15 @@ protected:
   virtual void reInitializeNlpObjects();
   virtual void reload_options();
 
-private:
-  void destructorPart();
+protected:
+  /* Helper method containing all the allocations done by the base algorithm class.
+   *
+   * @note: Should not be virtual nor be overridden since it is called in the constructor.
+   */  
+  void alloc_alg_objects();
+
+  /// Helper method containing all the deallocations done by the base algorithm class. Avoid overidding it. 
+  void dealloc_alg_objects();
 protected:
   hiopNlpFormulation* nlp;
   hiopFilter filter;
