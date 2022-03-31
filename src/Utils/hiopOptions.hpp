@@ -139,15 +139,18 @@ protected:
 
   virtual void ensure_consistence() = 0;
 
-  //internal setter methods used to ensure consistence -- do not alter 'specifiedInFile' and 'specifiedAtRuntime'
+public:
+  // Setter method used to ensure consistence. Does not alter 'specifiedInFile' and 'specifiedAtRuntime'
   virtual bool set_val(const char* name, const double& value);
+  // Setter method used to ensure consistence. Does not alter 'specifiedInFile' and 'specifiedAtRuntime'
   virtual bool set_val(const char* name, const int& value);
+    // Setter method used to ensure consistence. Does not alter 'specifiedInFile' and 'specifiedAtRuntime'
   virtual bool set_val(const char* name, const char* value);
 
-  //Returns true if an option was set or not by the user (via file or at runtime)
-  //or false if the option was not or cannot be found
+  //Returns true if an option was set by the user (via options file or at runtime) or false if the option was not set
+  //by the user or cannot be found
   virtual bool is_user_defined(const char* option_name);
-  
+protected:
   void log_printf(hiopOutVerbosity v, const char* format, ...);
 
   struct Option { // option entry
