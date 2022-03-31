@@ -1,6 +1,12 @@
 # Change Log
 All notable changes to HiOp will be documented in this file.
 
+## Version 0.6.0: Release of the PriDec optimization and improved GPU computations (March 31, 2022)
+	The salient features of this version are (i) the release of the primal decomposition (PriDec) solver for structured two-stage problems is released and (ii) improved support for (NVIDIA) GPUs for solving sparse optimization problems via NVIDIA's cuSOLVER API and newly developed condensed linear algebra kernels.
+	Other notable developements include
+	- improved accuracy in search direction computations via Krylov-based iterative refinement
+	- design of matrix interface for sparse matrices in compressed sparse row format and (capable) CPU reference implementation
+
 ## Version 0.5.4: Elastic mode, Krylov solvers, and misc bug fixes (March 2, 2022)
 New algorithmic features related to the NLP solver(s) and associated linear algebra KKT systems
 
