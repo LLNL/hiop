@@ -87,41 +87,35 @@ hiopAlgFilterIPMBase::hiopAlgFilterIPMBase(hiopNlpFormulation* nlp_in, const boo
 
 void hiopAlgFilterIPMBase::dealloc_alg_objects()
 {
-  if(it_curr)  delete it_curr;
-  if(it_trial) delete it_trial;
-  if(dir)      delete dir;
+  delete it_curr;
+  delete it_trial;
+  delete dir;
 
-  if(_c)       delete _c;
-  if(_d)       delete _d;
-  if(_grad_f)  delete _grad_f;
-  if(_Jac_c)   delete _Jac_c;
-  if(_Jac_d)   delete _Jac_d;
+  delete _c;
+  delete _d;
+  delete _grad_f;
+  delete _Jac_c;
+  delete _Jac_d;
 
-  if(_Hess_Lagr) delete _Hess_Lagr;
+  delete _Hess_Lagr;
 
-  if(resid)    delete resid;
+  delete resid;
 
-  if(_c_trial)       delete _c_trial;
-  if(_d_trial)       delete _d_trial;
-  if(_grad_f_trial)  delete _grad_f_trial;
-  if(_Jac_c_trial)   delete _Jac_c_trial;
-  if(_Jac_d_trial)   delete _Jac_d_trial;
+  delete _c_trial;
+  delete _d_trial;
+  delete _grad_f_trial;
+  delete _Jac_c_trial;
+  delete _Jac_d_trial;
 
-  if(resid_trial)    delete resid_trial;
+  delete resid_trial;
 
-  if(logbar) delete logbar;
+  delete logbar;
 
-  if(dualsUpdate_) delete dualsUpdate_;
+  delete dualsUpdate_;
 
-  if(c_soc) {
-    delete c_soc;
-  }
-  if(d_soc) {
-    delete d_soc;
-  }
-  if(soc_dir) {
-    delete soc_dir;
-  }
+  delete c_soc;
+  delete d_soc;
+  delete soc_dir;
 }
 hiopAlgFilterIPMBase::~hiopAlgFilterIPMBase()
 {
@@ -1027,7 +1021,8 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
                                    *it_curr->get_zl(),
                                    *it_curr->get_zu(),
                                    *it_curr->get_d(),
-                                   *_c,*_d,
+                                   *_c,
+                                   *_d,
                                    *it_curr->get_yc(),
                                    *it_curr->get_yd(), //lambda,
                                    _err_nlp_feas,
@@ -1750,7 +1745,8 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
                                    *it_curr->get_zl(),
                                    *it_curr->get_zu(),
                                    *it_curr->get_d(),
-                                   *_c,*_d,
+                                   *_c,
+                                   *_d,
                                    *it_curr->get_yc(),
                                    *it_curr->get_yd(), //lambda,
                                    _err_nlp_feas,
@@ -2239,8 +2235,10 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
                               *it_curr->get_x(),
                               *it_curr->get_zl(),
                               *it_curr->get_zu(),
-                              *_c,*_d,
-                              *it_curr->get_yc(), *it_curr->get_yd(),
+                              *_c,
+                              *_d,
+                              *it_curr->get_yc(),
+                              *it_curr->get_yd(),
                               _f_nlp);
   delete kkt;
 
