@@ -1496,10 +1496,8 @@ bool hiopMatrixRajaDense::symmetrize()
     {
       double ij = Mview(i, j);
       double ji = Mview(j, i);
-      double relerr= fabs(ij - ji) /  (1 + fabs(ij));
-      assert(relerr < tol);
       if(i < j) {
-        Mview(i, j) = ji;
+        Mview(j, i) = ij;
       }
     });
   return true;

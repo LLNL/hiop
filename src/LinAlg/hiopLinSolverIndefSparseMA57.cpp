@@ -35,7 +35,7 @@ namespace hiop
     icntl_[2-1] = 0;       // no Warning messages
     icntl_[4-1] = 1;       // no statistics messages
     icntl_[5-1] = 0;       // no Print messages.
-    icntl_[6-1] = 5;       // 2 use MC47;
+    icntl_[6-1] = 2;       // 2 use MC47;
                            // 3 min degree ordering as in MA27;
                            // 4 use Metis;
                            // 5 automatic choice(MA47 or Metis);
