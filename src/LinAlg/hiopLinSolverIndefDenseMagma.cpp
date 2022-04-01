@@ -80,6 +80,13 @@ namespace hiop
 
     magma_uplo_t uplo=MagmaLower; // M is upper in C++ so it's lower in fortran
 
+#ifdef HIOP_USE_HIP
+    uplo = MagmaUpper; // M is upper in C++ so it's lower in fortran
+
+    M_
+#endif
+
+
     std::string mem_space = nlp_->options->GetString("mem_space");
     if(mem_space == "default" || mem_space == "host") {
       nlp_->runStats.linsolv.tmDeviceTransfer.start();

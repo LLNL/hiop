@@ -871,5 +871,27 @@ bool hiopMatrixDenseRowMajor::assertSymmetry(double tol) const
   return true;
 }
 #endif
+
+bool hiopMatrixDenseRowMajor::symmetrize() 
+{
+  if(n_local_!=n_global_) {
+    assert(false && "should be used only for local matrices");
+    return false;
+  }
+  //must be square
+  if(m_local_!=n_global_) {
+    assert(false);
+    return false;
+  }
+
+  //symmetrize --- copy the upper triangular part to lower tirangular part
+  for(index_type i=0; i<n_local_; i++) {
+    for(index_type j=i+1; j<n_local_; j++) {
+      M_[j][i] = M_[i][j];
+    }
+  }
+  return true;
+}
+
 };
 

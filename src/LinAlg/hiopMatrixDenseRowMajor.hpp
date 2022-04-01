@@ -235,6 +235,8 @@ public:
 #ifdef HIOP_DEEPCHECKS
   virtual bool assertSymmetry(double tol=1e-16) const;
 #endif
+  virtual bool symmetrize();
+
 private:
   double** M_; //local storage
   int n_local_; //local number of rows and cols, respectively
