@@ -78,20 +78,12 @@ hiopKKTLinSysCondensedSparse::hiopKKTLinSysCondensedSparse(hiopNlpFormulation* n
     Hess_csr_(nullptr),
     M_condensedsto_(nullptr),
     M_condensed_(nullptr),
-    delta_wx_(0.),
-    krylov_mat_opr_(nullptr),
-    krylov_prec_opr_(nullptr),
-    krylov_rhs_xdycyd_(nullptr),
-    bicgstab_(nullptr)
+    delta_wx_(0.)
 {
 }
 
 hiopKKTLinSysCondensedSparse::~hiopKKTLinSysCondensedSparse()
 {
-  delete bicgstab_;
-  delete krylov_rhs_xdycyd_;
-  delete krylov_prec_opr_;
-  delete krylov_mat_opr_;
   delete M_condensedsto_;
   delete M_condensed_;
   delete JtDiagJsto_;
@@ -723,55 +715,14 @@ bool hiopKKTLinSysCondensedSparse::solveCompressed(hiopVector& rx,
   nlp_->log->write("RHS KKT_SPARSE_Condensed rd: ", rd,  hovIteration);
   nlp_->log->write("RHS KKT_SPARSE_Condensed ryc:", ryc, hovIteration);
   nlp_->log->write("RHS KKT_SPARSE_Condensed ryd:", ryd, hovIteration);
-#if 0
+
   bret = solve_compressed_direct(rx, rd, ryc, ryd, dx, dd, dyc, dyd);
   nlp_->runStats.kkt.tmSolveInner.stop();
-#else
-  
-  if(nullptr == krylov_mat_opr_) {
-    krylov_mat_opr_ = new hiopKKTMatVecOpr(this);
-    krylov_prec_opr_ = new hiopMatVecKKTCondensedOpr(this);
-    krylov_rhs_xdycyd_ = new hiopVectorPar(nx+nd+nyd);
-    //TODO: memory space device
-    bicgstab_ = new hiopBiCGStabSolver(nx+nd+nyd, "DEFAULT", krylov_mat_opr_, krylov_prec_opr_);
-  }
-  
-  rx.copyToStarting(*krylov_rhs_xdycyd_, 0);
-  rd.copyToStarting(*krylov_rhs_xdycyd_, nx);
-  ryd.copyToStarting(*krylov_rhs_xdycyd_, nx+nd);
-  
-  const double tol_mu = 1e-2;
-  double tol = std::min(mu_*tol_mu, 1e-6);
-  bicgstab_->set_tol(tol);
-  bicgstab_->set_x0(0.0);
-  
-  bret = bicgstab_->solve(*krylov_rhs_xdycyd_);
-  nlp_->runStats.kkt.nIterRefinInner += bicgstab_->get_sol_num_iter();
-  nlp_->runStats.kkt.tmSolveInner.stop();
-  if(!bret) {
-    nlp_->log->printf(hovWarning, "%s", bicgstab_->get_convergence_info().c_str());
 
-    double tola = 10*mu_;
-    double tolr = mu_*1e-1;
-    
-    if(bicgstab_->get_sol_rel_resid()>tolr || bicgstab_->get_sol_abs_resid()>tola) {
-      return false;
-    }
-
-    //error out if one of the residuals is large
-    if(bicgstab_->get_sol_abs_resid()>1e-2 || bicgstab_->get_sol_rel_resid()>1e-2) {
-      return false;
-    }
-    bret = true;
-  }
-
-  nlp_->runStats.kkt.tmSolveRhsManip.start();
-  dx.startingAtCopyFromStartingAt(0, *krylov_rhs_xdycyd_, 0);
-  dd.startingAtCopyFromStartingAt(0, *krylov_rhs_xdycyd_, nx);
-  dyd.startingAtCopyFromStartingAt(0, *krylov_rhs_xdycyd_, nx+nd);
-  nlp_->runStats.kkt.tmSolveRhsManip.stop();
-  
-#endif
+  // Code for iterative refinement of the XDYcYd KKT system was removed since the parent
+  // KKT class performs this now. Old code residing in this class can be found at
+  // header file: https://github.com/LLNL/hiop/blob/fa61c1993128afd65a3cb21301c1f131922ceef8/src/Optimization/hiopKKTLinSysSparseCondensed.hpp#L209
+  // implementation file: https://github.com/LLNL/hiop/blob/fa61c1993128afd65a3cb21301c1f131922ceef8/src/Optimization/hiopKKTLinSysSparseCondensed.cpp#L731
 
   
   if(perf_report_) {

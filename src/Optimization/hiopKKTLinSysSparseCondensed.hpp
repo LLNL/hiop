@@ -322,18 +322,6 @@ protected:
   /// Inertia correction perturbations used in the (last) factorization
   double delta_wx_;
 
-  /// Matrix operator performing mat-vec with the XDYcYd KKT linear system matrix
-  hiopKKTMatVecOpr* krylov_mat_opr_;
-
-  /// Preconditioner operator that solves with the factors of the condensed system via the
-  /// solve_compressed_direct method
-  hiopMatVecKKTCondensedOpr* krylov_prec_opr_;
-
-  /// Temporary vector to be used in the Krylov solve;
-  hiopVector* krylov_rhs_xdycyd_;
-
-  /// BiCGStab solver
-  hiopBiCGStabSolver* bicgstab_;
 private:
   //placeholder for the code that decides which linear solver to used based on safe_mode_
   hiopLinSolverSymSparse* determine_and_create_linsys(size_type nxd, size_type nineq, size_type nnz);
