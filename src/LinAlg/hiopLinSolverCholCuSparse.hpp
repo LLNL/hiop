@@ -64,6 +64,7 @@
 #include <cusolverSp.h>
 #include <cusolverSp_LOWLEVEL_PREVIEW.h> 
 
+#include "hiopMatrixSparseCSRSeq.hpp"
 #include "hiopKKTLinSysSparseCondensed.hpp"
 namespace hiop
 {
@@ -90,7 +91,7 @@ public:
    */
   bool solve(hiopVector& x_in);
 
-  inline void set_linsys_mat(hiopMatrixSparseCSRStorage* mat)
+  inline void set_linsys_mat(hiopMatrixSparseCSRSeq* mat)
   {
     mat_csr_ = mat;
   }
@@ -150,12 +151,12 @@ protected:
   /// Permutation map for nonzeros (on device)
   int* map_nnz_perm_;
   //TODO: temporary -> use the member matrix obj from the parent class
-  hiopMatrixSparseCSRStorage* mat_csr_;
+  hiopMatrixSparseCSRSeq* mat_csr_;
   /// internal buffers in the size of the linear system (on device)
   double* rhs_buf1_;
   double* rhs_buf2_;
 private:
-  hiopLinSolverCholCuSparse() { assert(false); }
+  hiopLinSolverCholCuSparse() = delete; 
 };
 
 

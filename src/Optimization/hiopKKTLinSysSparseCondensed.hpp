@@ -63,106 +63,6 @@ namespace hiop
 {
 
 /**
- * Wrapper class for CSR (to be moved and "upgraded" to hiopMatrixSparseCSR)
- */
-class hiopMatrixSparseCSRStorage
-{
-public:
-  hiopMatrixSparseCSRStorage();
-  hiopMatrixSparseCSRStorage(size_type m, size_type n, size_type nnz);
-  virtual ~hiopMatrixSparseCSRStorage();
-
-  /**
-   * Forms a CSR matrix from a sparse matrix in triplet format. Assumes input is ordered by
-   * rows then by columns.
-   */
-  bool form_from(const hiopMatrixSparseTriplet& M);
-
-  /// Same as above but does not updates values
-  bool form_from(const size_type m,
-                 const size_type n,
-                 const size_type nnz,
-                 const index_type* irow,
-                 const index_type* jcol);
-  /**
-   * Forms a CSR matrix representing the transpose of the input sparse matrix in triplet 
-   * format passed as argument. Assumes triplet input is ordered by rows then by columns.
-   */
-  bool form_transpose_from(const hiopMatrixSparseTriplet& M);
-
-  /**
-   * Computes M = X*D*Y, where X is the calling matrix class and D is a diagonal specified by 
-   * a vector.
-   */
-  void times_diag_times_mat(const hiopVector& diag,
-                            const hiopMatrixSparseCSRStorage& Y,
-                            hiopMatrixSparseCSRStorage& M);
-//protected:
-  hiopMatrixSparseCSRStorage* times_diag_times_mat_init(const hiopMatrixSparseCSRStorage& Y);
-
-  void times_diag_times_mat_numeric(const hiopVector& diag,
-                                    const hiopMatrixSparseCSRStorage& Y,
-                                    hiopMatrixSparseCSRStorage& M);
-
-  /// Extract the diagonal 
-  void get_diagonal(hiopVector& diag) const;
-public:
-
-  inline index_type* irowptr() 
-  {
-    return irowptr_;
-  }
-  inline index_type* jcolind()
-  {
-    return jcolind_;
-  }
-  inline double* values()
-  {
-    return values_;
-  }
-
-  inline index_type* irowptr() const
-  {
-    return irowptr_;
-  }
-  inline index_type* jcolind() const
-  {
-    return jcolind_;
-  }
-  inline double* values() const
-  {
-    return values_;
-  }
-  inline size_type m() const
-  {
-    return nrows_;
-  }
-  inline size_type n() const
-  {
-    return ncols_;
-  }
-  inline size_type nnz() const
-  {
-    return nnz_;
-  }
-  void print(FILE* file,
-             const char* msg=NULL,
-             int maxRows=-1,
-             int maxCols=-1,
-             int rank=-1) const;
-protected:
-  void alloc();
-  void dealloc();
-protected:
-  size_type nrows_;
-  size_type ncols_;
-  size_type nnz_;
-  index_type* irowptr_;
-  index_type* jcolind_;
-  double* values_;
-};
-
-/**
  * Solves a sparse KKT linear system by exploiting the sparse structure, namely reduces 
  * the so-called XDYcYd KKT system 
  * [  H  +  Dx    0    Jd^T ] [ dx]   [ rx_tilde ]
@@ -201,15 +101,12 @@ protected:
  *
  * (H+Dx+delta_wx*I + Jd^T * Dd3 * Jd) dx = rx_tilde + Jd^T*Dd3*ryd +  Jd^T*Dd2*rd_tilde
  */
-
-// forward decls
-class hiopKKTMatVecOpr;
-class hiopMatVecKKTCondensedOpr;
   
 class hiopKKTLinSysCondensedSparse : public hiopKKTLinSysCompressedSparseXDYcYd
 {
 public:
   hiopKKTLinSysCondensedSparse(hiopNlpFormulation* nlp);
+  hiopKKTLinSysCondensedSparse() = delete;
   virtual ~hiopKKTLinSysCondensedSparse();
 
   virtual bool build_kkt_matrix(const double& delta_wx,
@@ -242,17 +139,6 @@ protected:
                                        hiopVector& dyc,
                                        hiopVector& dyd);
   
-  /// Helper method for allocating and precomputing symbolically JacD'*Dd*JacD + H + Dx + delta_wx*I
-  hiopMatrixSparseCSRStorage* add_matrices_init(hiopMatrixSparseCSRStorage& JtDiagJ,
-                                                hiopMatrixSymSparseTriplet& HessSp,
-                                                hiopVector& Dx,
-                                                double delta_wx);
-  /// Helper method for fast computation of JacD'*Dd*JacD + H + Dx + delta_wx*I
-  void add_matrices(hiopMatrixSparseCSRStorage& JtDiagJ,
-                    hiopMatrixSymSparseTriplet& HessSp,
-                    hiopVector& Dx,
-                    double delta_wx,
-                    hiopMatrixSparseCSRStorage& M);
 protected:
   ////
   ////from the parent class and its parents we also use
@@ -297,11 +183,9 @@ protected:
   hiopMatrixSparseCSR* Hess_csr_;
   
   /// Member for JacD'*Dd*JacD
-  hiopMatrixSparseCSRStorage* JtDiagJsto_;
   hiopMatrixSparseCSR* JtDiagJ_;
 
   /// Member for JacD'*Dd*JacD + H + Dx + delta_wx*I
-  hiopMatrixSparseCSRStorage* M_condensedsto_;
   hiopMatrixSparseCSR* M_condensed_;
 
   /**
@@ -325,199 +209,7 @@ protected:
 private:
   //placeholder for the code that decides which linear solver to used based on safe_mode_
   hiopLinSolverSymSparse* determine_and_create_linsys(size_type nxd, size_type nineq, size_type nnz);
-
-  friend class hiopKKTMatVecOpr;
-  friend class hiopMatVecKKTCondensedOpr;
 };
-
-/** 
- * Krylov linear operator and preconditioner for the condensed KKT linsys
- */
-
-class hiopKKTMatVecOpr : public hiopLinearOperator
-{
-public:
-  hiopKKTMatVecOpr(hiopKKTLinSysCondensedSparse* kkt)
-    : kkt_(kkt)
-  {
-    const hiopMatrixSparse* Jac_d = kkt_->Jac_dSp_;
-    const hiopMatrixSparse* Hess = kkt_->HessSp_;
-    const hiopVector* Dd_pert = kkt_->Hd_;
-    const hiopVector* Dx = kkt_->Dx_;
-    
-    xdx_ = Dx->alloc_clone();
-    xdd_ = Dd_pert->alloc_clone();
-    xdyd_ = Dd_pert->alloc_clone();
-
-    yrx_ = xdx_->alloc_clone();
-    yrd_ = xdd_->alloc_clone();
-    yryd_ = xdyd_->alloc_clone();
-  }
-  virtual ~hiopKKTMatVecOpr()
-  {
-    delete xdx_;
-    delete xdd_;
-    delete xdyd_;
-    delete yrx_;
-    delete yrd_;
-    delete yryd_;
-  }
-  /** y = KKT * x */
-  virtual bool times_vec(hiopVector& y, const hiopVector& x)
-  {
-    const hiopMatrixSparse* Jac_d = kkt_->Jac_dSp_;
-    const hiopMatrixSparse* Hess = kkt_->HessSp_;
-    const hiopVector* Dd_pert = kkt_->Hd_;
-    const hiopVector* Dx = kkt_->Dx_;
-    const double& delta_wx = kkt_->delta_wx_;
-
-    const size_type nx = Hess->n();
-    const size_type nineq = Jac_d->m();
-
-    assert(x.get_size() == y.get_size());
-    assert(nx+2*nineq == x.get_size());
-    
-    xdx_->startingAtCopyFromStartingAt(0, x, 0);
-    xdd_->startingAtCopyFromStartingAt(0, x, nx);
-    xdyd_->startingAtCopyFromStartingAt(0, x, nx+nineq);
-
-    // yrx = (H+Dx+delta_wx*I)*xdx + Jd^T*xdyd
-    yrx_->copyFrom(*xdx_);
-    yrx_->componentMult(*Dx);
-    yrx_->axpy(delta_wx, *xdx_);
-    Hess->timesVec(1.0, *yrx_, 1.0, *xdx_);
-    Jac_d->transTimesVec(1.0, *yrx_, 1.0, *xdyd_);
-    yrx_->copyToStarting(y, 0);
-
-    // yrd = (Dd+delta_wd*I)*xdd - dyd
-    yrd_->copyFrom(*xdd_);
-    yrd_->componentMult(*Dd_pert);
-    yrd_->axpy(-1.0, *xdyd_);
-    yrd_->copyToStarting(y, nx);
-
-    // yryd = Jd*xdx - xdd 
-    yryd_->copyFrom(*xdd_);
-    Jac_d->timesVec(-1.0, *yryd_, 1.0, *xdx_);
-    yryd_->copyToStarting(y, nx+nineq);
-
-    return true;
-  }
-
-  /** y = KKT' * x */
-  virtual bool trans_times_vec(hiopVector& y, const hiopVector& x)
-  {
-    //KKT has a symmetric linear system matrix
-    return times_vec(y, x);
-  }
-private:
-  hiopKKTLinSysCondensedSparse* kkt_;
-  hiopKKTMatVecOpr()
-    : kkt_(nullptr),
-      xdx_(nullptr),
-      xdd_(nullptr),
-      xdyd_(nullptr),
-      yrx_(nullptr),
-      yrd_(nullptr),
-      yryd_(nullptr)
-  {
-    assert(false && "this constructor should not be used");
-  }
-  hiopVector* xdx_;
-  hiopVector* xdd_;
-  hiopVector* xdyd_;
-  hiopVector* yrx_;
-  hiopVector* yrd_;
-  hiopVector* yryd_;  
-};
-
-class hiopMatVecKKTCondensedOpr : public hiopLinearOperator
-{
-public:
-  hiopMatVecKKTCondensedOpr(hiopKKTLinSysCondensedSparse* kkt)
-    : kkt_(kkt),
-      xyc_(nullptr),
-      xdx_(nullptr),
-      xdd_(nullptr),
-      xdyd_(nullptr),
-      yrx_(nullptr),
-      yrd_(nullptr),
-      yryd_(nullptr)
-  {
-    const hiopMatrixSparse* Jac_d = kkt_->Jac_dSp_;
-    const hiopMatrixSparse* Hess = kkt_->HessSp_;
-    const hiopVector* Dd_pert = kkt_->Hd_;
-    const hiopVector* Dx = kkt_->Dx_;
-    const size_type nx = Hess->n();
-    const size_type nineq = Jac_d->m();
-
-    xdx_ = Dx->alloc_clone();
-    //dummy xyc (also used for ryc)
-    xyc_ = new hiopVectorPar(0);
-    xdd_ = Dd_pert->alloc_clone();
-    xdyd_ = Dd_pert->alloc_clone();
-
-    yrx_ = xdx_->alloc_clone();
-    yrd_ = xdd_->alloc_clone();
-    yryd_ = xdyd_->alloc_clone();
-  }
-  virtual ~hiopMatVecKKTCondensedOpr()
-  {
-    delete xyc_;
-    delete xdx_;
-    delete xdd_;
-    delete xdyd_;
-    delete yrx_;
-    delete yrd_;
-    delete yryd_;
-  }
-  /** y = KKT * x */
-  virtual bool times_vec(hiopVector& y, const hiopVector& x)
-  {
-    bool bret;
-    const hiopMatrixSparse* Jac_d = kkt_->Jac_dSp_;
-    const hiopMatrixSparse* Hess = kkt_->HessSp_;
-    const hiopVector* Dd_pert = kkt_->Hd_;
-    const hiopVector* Dx = kkt_->Dx_;
-    const size_type nx = Hess->n();
-    const size_type nineq = Jac_d->m();
-
-    assert(x.get_size() == y.get_size());
-    assert(nx+2*nineq == x.get_size());
-    
-    xdx_->startingAtCopyFromStartingAt(0, x, 0);
-    xdd_->startingAtCopyFromStartingAt(0, x, nx);
-    xdyd_->startingAtCopyFromStartingAt(0, x, nx+nineq);
-
-    bret = kkt_->solve_compressed_direct(*xdx_, *xdd_, *xyc_, *xdyd_, *yrx_, *yrd_, *xyc_, *yryd_); 
-    
-    yrx_->copyToStarting(y, 0);
-    yrd_->copyToStarting(y, nx);
-    yryd_->copyToStarting(y, nx+nineq);
-
-    return bret;
-  }
-
-  /** y = KKT' * x */
-  virtual bool trans_times_vec(hiopVector& y, const hiopVector& x)
-  {
-    //KKT has a symmetric linear system matrix
-    return times_vec(y, x);
-  }
-private:
-  hiopKKTLinSysCondensedSparse* kkt_;
-  hiopMatVecKKTCondensedOpr()
-    : kkt_(nullptr)
-  {
-    assert(false);
-  }
-  hiopVector* xdx_;
-  hiopVector* xdd_;
-  hiopVector* xyc_;
-  hiopVector* xdyd_;
-  hiopVector* yrx_;
-  hiopVector* yrd_;
-  hiopVector* yryd_;
-};  
   
 } // end of namespace
 
