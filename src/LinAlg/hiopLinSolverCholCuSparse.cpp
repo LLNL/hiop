@@ -180,7 +180,7 @@ bool hiopLinSolverCholCuSparse::initial_setup()
   assert(nullptr == buf_fact_);
   size_type m = mat_csr_->m();
   assert(m == mat_csr_->n());
-  assert(nnz_ == mat_csr_->nnz());
+  assert(nnz_ == mat_csr_->numberOfNonzeros());
 
   //
   // allocate device CSR arrays; then 
@@ -216,10 +216,10 @@ bool hiopLinSolverCholCuSparse::initial_setup()
     auto* P_h = new index_type[m];
 #ifndef HIOP_USE_EIGEN
     do_symb_analysis(mat_csr_->m(),
-                     mat_csr_->nnz(),
-                     mat_csr_->irowptr(),
-                     mat_csr_->jcolind(),
-                     mat_csr_->values(),
+                     mat_csr_->numberOfNonzeros(),
+                     mat_csr_->i_row(),
+                     mat_csr_->j_col(),
+                     mat_csr_->M(),
                      P_h);
     ss_log << "\tOrdering: CUDA '" << nlp_->options->GetString("linear_solver_sparse_ordering") << "': ";
     
@@ -227,10 +227,10 @@ bool hiopLinSolverCholCuSparse::initial_setup()
     // old code that uses Eigen to compute AMD
     Eigen::Map<SparseMatrixCSR> M(mat_csr_->m(),
                                   mat_csr_->m(),
-                                  mat_csr_->nnz(),
-                                  mat_csr_->irowptr(),
-                                  mat_csr_->jcolind(),
-                                  mat_csr_->values());
+                                  mat_csr_->numberOfNonzeros(),
+                                  mat_csr_->i_row(),
+                                  mat_csr_->j_col(),
+                                  mat_csr_->M());
     
     PermutationMatrix P;
     Ordering ordering;
@@ -264,8 +264,8 @@ bool hiopLinSolverCholCuSparse::initial_setup()
                                             m,
                                             nnz_,
                                             mat_descr_,
-                                            mat_csr_->irowptr(),
-                                            mat_csr_->jcolind(),
+                                            mat_csr_->i_row(),
+                                            mat_csr_->j_col(),
                                             P_h,
                                             P_h,
                                             &buf_size);
@@ -279,8 +279,8 @@ bool hiopLinSolverCholCuSparse::initial_setup()
     int* colind_perm_h = new int[nnz_];
     assert(rowptr_perm_h);
     assert(colind_perm_h);
-    memcpy(rowptr_perm_h, mat_csr_->irowptr(), (m+1)*sizeof(int));
-    memcpy(colind_perm_h, mat_csr_->jcolind(), nnz_*sizeof(int));
+    memcpy(rowptr_perm_h, mat_csr_->i_row(), (m+1)*sizeof(int));
+    memcpy(colind_perm_h, mat_csr_->j_col(), nnz_*sizeof(int));
     
     //mapping (on host)
     int* map_h = new int[nnz_];
@@ -315,8 +315,6 @@ bool hiopLinSolverCholCuSparse::initial_setup()
     // transfer the CSR index arrays on device
     //
     //values_ not needed here and will be updated in matrixChanged()
-    //cudaMemcpy(rowptr_, MMM_->outerIndexPtr(), (m+1)*sizeof(int), cudaMemcpyHostToDevice);
-    //cudaMemcpy(colind_, MMM_->innerIndexPtr(), nnz_*sizeof(int), cudaMemcpyHostToDevice);
     cudaMemcpy(rowptr_, rowptr_perm_h, (m+1)*sizeof(int), cudaMemcpyHostToDevice);
     cudaMemcpy(colind_, colind_perm_h, nnz_*sizeof(int), cudaMemcpyHostToDevice);
 
@@ -324,10 +322,8 @@ bool hiopLinSolverCholCuSparse::initial_setup()
     delete[] rowptr_perm_h;
 
   } else {
-    //cudaMemcpy(rowptr_, MMM_->outerIndexPtr(), (m+1)*sizeof(int), cudaMemcpyHostToDevice);
-    //cudaMemcpy(colind_, MMM_->innerIndexPtr(), nnz_*sizeof(int), cudaMemcpyHostToDevice);
-    cudaMemcpy(rowptr_, mat_csr_->irowptr(), (m+1)*sizeof(int), cudaMemcpyHostToDevice);
-    cudaMemcpy(colind_, mat_csr_->jcolind(), nnz_*sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy(rowptr_, mat_csr_->i_row(), (m+1)*sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy(colind_, mat_csr_->j_col(), nnz_*sizeof(int), cudaMemcpyHostToDevice);
     
     int map_h[nnz_];
     for(int i=0; i<nnz_; i++) {
@@ -366,7 +362,7 @@ bool hiopLinSolverCholCuSparse::initial_setup()
 
   // TODO: this call as well as values_buf_ storage will be removed when the matrix is
   //going to reside on the device
-  cudaMemcpy(values_buf_, mat_csr_->values(), nnz_*sizeof(double), cudaMemcpyHostToDevice);
+  cudaMemcpy(values_buf_, mat_csr_->M(), nnz_*sizeof(double), cudaMemcpyHostToDevice);
 
   // buffer size
   size_t internalData; // in BYTEs
@@ -397,7 +393,7 @@ int hiopLinSolverCholCuSparse::matrixChanged()
 {
   size_type m = mat_csr_->m();
   assert(m == mat_csr_->n());
-  assert(nnz_ == mat_csr_->nnz());
+  assert(nnz_ == mat_csr_->numberOfNonzeros());
   cusolverStatus_t ret;
 
   hiopTimer t;
@@ -426,7 +422,7 @@ int hiopLinSolverCholCuSparse::matrixChanged()
   // TODO: this call as well as values_buf_ storage will be removed when the matrix is
   //going to reside on the device
   nlp_->runStats.linsolv.tmDeviceTransfer.start();
-  cudaMemcpy(values_buf_, mat_csr_->values(), nnz_*sizeof(double), cudaMemcpyHostToDevice);
+  cudaMemcpy(values_buf_, mat_csr_->M(), nnz_*sizeof(double), cudaMemcpyHostToDevice);
   nlp_->runStats.linsolv.tmDeviceTransfer.stop();
  
   nlp_->runStats.linsolv.tmFactTime.start();
