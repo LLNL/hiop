@@ -76,7 +76,7 @@ struct hiopVersion
 #endif
 
   static constexpr bool useGINKGO =
-#ifded HIOP_USE_GINKGO
+#ifdef HIOP_USE_GINKGO
       true;
 #else
       false;

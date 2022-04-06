@@ -116,6 +116,11 @@ public:
   virtual void firstCall();
 //  virtual void diagonalChanged( int idiag, int extent );
 
+  void inline setFakeInertia(int nFakeNegEigs)
+  {
+    nFakeNegEigs_ = nFakeNegEigs;
+  }
+
 friend class hiopLinSolverNonSymSparseGinkgo;
 
 };
