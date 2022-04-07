@@ -77,8 +77,13 @@ namespace hiop
       n_{ n }, 
       nnz_{ 0 },
       fact_{ "KLU" },   // default
-      refact_{ "glu" }, // default
-      factorizationSetupSucc_{ 0 }
+      refact_{ "rf" }, // default
+      factorizationSetupSucc_{ 0 },
+      useIR_{1},
+      restart_{0},
+      maxIt_{0},
+      tol_{0.0f},
+      gsType_{"mgs"}
   {
     // handles
     cusparseCreate(&handle_);
@@ -129,13 +134,23 @@ namespace hiop
     delete [] mia_;
     delete [] mja_;
   }
-  
+
   void
   hiopLinSolverSymSparseCUSOLVER::setFactorizationType(std::string newFact_)
   {
     this->fact_ = newFact_;
   }
-  
+
+  void
+  hiopLinSolverSymSparseCUSOLVER::setIRParameters(int restart, int maxit, double tol, std::string gsType)
+  {
+    this->restart_ = restart;
+    this->maxIt_ = maxit;
+    this->tol_ = tol;
+    this->gsType_ = gsType;
+    assert((this->gsType_ == "mgs") || (this->gsType_ == "mgsls") || (this->gsType_ == "cgs2"));
+  }
+
   void
   hiopLinSolverSymSparseCUSOLVER::setRefactorizationType(std::string newRefact_)
   {
@@ -745,6 +760,18 @@ namespace hiop
         } else if(refact_ == "rf") {
           this->initializeCusolverRf();
           this->refactorizationSetupCusolverRf();
+          if(useIR_ != 0) {
+            if(restart_ == 0) {
+              // parameters not set before so set to something reasonable
+              setIRParameters(50, 100, 1e-14, "mgs");
+            }
+            // now allocate all the memory for the solver.
+
+            checkCudaErrors(cudaMalloc(&d_V_, n_ * (restart_ + 1) * sizeof(double)));
+            checkCudaErrors(cudaMalloc(&d_Z_, n_ * (restart_ + 1) * sizeof(double)));
+            checkCudaErrors(cudaMalloc(&d_w_, 2 * (restart_ + 1) * sizeof(double)));
+            checkCudaErrors(cudaMalloc(&d_LH_, 2 * (restart_ + 1) * (restart_ + 1) * sizeof(double)));
+          }
         } else { // for future -
           assert(0 && "Only glu and rf refactorizations available.\n");
         }
@@ -827,6 +854,12 @@ namespace hiop
                                        devr_,
                                        n_);
           if(sp_status_ == 0) {
+            if(useIR_ != 0) {
+              checkCudaErrors(cudaMemcpy(devx_, drhs, sizeof(double) * n_, cudaMemcpyHostToDevice));
+              // fgmres(b, init_guess);
+              fgmres(devx_, devr_);
+            }
+
             checkCudaErrors(cudaMemcpy(dx, devr_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
           } else {
             nlp_->log->printf(hovError,  // catastrophic failure
@@ -852,6 +885,172 @@ namespace hiop
     return 1;
   }
 
+  int hiopLinSolverSymSparseCUSOLVER::GramSchmidt(i, h_H, h_L)
+  {
+    int orth;
+    if(gsOption == "mgs") {
+      orth = 0;
+    } else {
+      if(gsOption == "cgs2") {
+        orth = 1;
+      } else {
+        if(gsOption == "mgsls") {
+          orth = 2;
+        } else {
+          // catastrophic error
+        }
+      }
+    }
+
+    double t;
+    double one = 1.0f;
+    double zero = 0.0f;
+    double minusone = -1.0f;
+
+    switch(orth_option) {
+    case 0: // mgs
+      for (int j=0; j<=i; ++j){
+        //dot product
+        t=0.0f;
+        cublasDdot(handle_cublas_,  
+                   n_, 
+                   &d_V_[j*n_], 
+                   1, 
+                   &d_V_[(i+1)*n_], 
+                   1, 
+                   &t);
+
+        h_H[i*(restart_+1)+j]=t; 
+        t *= -1.0f;
+
+        cublasDaxpy(handle_cublas_, 
+                    n_, 
+                    &t,
+                    &d_V_[j*n_], 
+                    1,
+                    &d_V_[(i+1)*n_],
+                    1);
+      } // for
+      // last entry in the column of H
+      t = 0.0f;
+      cublasDdot(handle_cublas_,  
+                 n_, 
+                 &d_V_[(i+1)*n_], 
+                 1, 
+                 &d_V_[(i+1)*n_], 
+                 1, 
+                 &t);
+
+      //set the last entry in Hessenberg matrix
+      t=sqrt(t);
+      h_H[i*(restart_+1)+i+1] = t;    
+      if (t != 0.0f){
+        t = 1.0f/t;
+        cublasDscal(handle_cublas_,
+                    n_,
+                    &t,
+                    &d_V_[(i+1)*n_], 
+                    1);
+      } else {
+        // catastrophic failure of IR
+      }
+      break;
+    case 1: // cgs2
+      //Hcol = V(:,1:i)^T *V(:,i+1);
+      cublasDgemv(handle_cublas_,
+                  CUBLAS_OP_T,
+                  n_,
+                  i+1,
+                  &one,
+                  d_V_,
+                  n_,
+                  &d_V_[(i+1)*n_],
+                  1,
+                  &zero,
+                  d_H_col,
+                  1);
+      //V(:,i+1) = V(:, i+1) -  V(:,1:i)*Hcol
+      cublasDgemv(handle_cublas_,
+                  CUBLAS_OP_N,
+                  n_,
+                  i+1,
+                  &minusone,
+                  d_V_,
+                  n_,
+                  d_H_col,
+                  1,
+                  &one,
+                  &d_V_[n_*(i+1)],
+                  1);
+      //copy H_col to aux, we will need it later
+
+      checkCudaErrors(cudaMemcpy(h_aux, d_H_col, sizeof(double) * (i + 1), cudaMemcpyDeviceToHost));
+      // round2 (second projection)
+
+      // Hcol = V(:,1:i)*V(:,i+1);
+      cublasDgemv(handle_cublas_,
+                  CUBLAS_OP_T,
+                  n_,
+                  i+1,
+                  &one,
+                  d_V_,
+                  n_,
+                  &d_V_[(i+1)*n_],
+                  1,
+                  &zero,
+                  d_H_col,1);
+      //V(:,i+1) = V(:, i+1) -  V(:,1:i)*Hcol
+      cublasDgemv(handle_cublas_,
+                  CUBLAS_OP_N,
+                  n_,
+                  i+1,
+                  &minusone,
+                  d_V_,
+                  n_,
+                  d_H_col,
+                  1,
+                  &one,
+                  &d_V_[n_*(i+1)],
+                  1);
+      //copy H_col to H
+
+      checkCudaErrors(cudaMemcpy(&h_H[i * (restart_ + 1)], d_H_col, sizeof(double) * (i + 1), cudaMemcpyDeviceToHost));
+      // add both pieces together (unstable otherwise, careful here!!)
+      for(int j = 0; j <= i; ++j) {
+        h_H[i * (restart_ + 1) + j] += h_aux[j];
+      }
+      t = 0.0f;
+      cublasDdot (handle_cublas_,  
+                  n_, 
+                  &d_V_[(i+1)*n_], 
+                  1, 
+                  &d_V_[(i+1)*n_], 
+                  1, 
+                  &t);
+
+      //set the last entry in Hessenberg matrix
+      t=sqrt(t);
+      h_H[i*(restart_+1)+i+1] = t;    
+      if (t != 0.0f){
+        t = 1.0f/t;
+        cublasDscal(handle_cublas_,
+                    n_,
+                    &t,
+                    &d_V_[(i+1)*n_], 
+                    1);
+      } else {
+        // catastrophic failure of IR
+      }
+      break;
+    case 2: // mgs low synch
+      break
+    }
+  }
+  int hiopLinSolverSymSparseCUSOLVER::fgmres(double *b, double *x)
+{
+
+
+}
   //
   // The Solver for Nonsymmetric KKT System
   //
@@ -942,6 +1141,8 @@ namespace hiop
   {
     return this->refact_;
   }
+
+
 
   int hiopLinSolverNonSymSparseCUSOLVER::createM(const int n, 
                                                  const int /* nnzL */,

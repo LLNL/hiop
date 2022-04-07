@@ -107,7 +107,9 @@ namespace hiop
     std::string getFactorizationType();
     std::string getRefactorizationType();
     // KS: can consider one global function to set all the options but thats
-    // TBA in the future.
+    // TBA in the future.    
+
+    void setIRParameters(int restart, int maxit, double tol,  std::string gsType);
   private:
     //
     int m_;   // number of rows of the whole matrix
@@ -169,6 +171,7 @@ namespace hiop
     double* drhs_;
 
     int factorizationSetupSucc_;
+
     /* needed for cuSolverRf */
     int* d_P;
     int* d_Q; // permutation matrices
@@ -186,6 +189,25 @@ namespace hiop
 
     template <typename T>
     void hiopCheckCudaError(T result, const char* const file, int const line);
+
+
+    /** KS: needed for FGMRES_IR */
+    int useIR_;
+    double* d_V_;
+    double* d_Z_;
+    double* d_LH_;
+    double* d_w_;
+    double* computeResidual(double* x);
+    /** KS: experimental feature; needed if cuSolverRfSolve() fails with code 6*/
+    void boostAndRefactorize();
+    /** for Gram-Schmidt */
+    void GramSchmidt();
+    /** actual IR */
+    void fgmres(double* b, double* x);
+    int restart_;
+    int maxIt_;
+    double tol_;
+    std::string gsType_; 
 
   public:
     /** called the very first time a matrix is factored. Perform KLU
