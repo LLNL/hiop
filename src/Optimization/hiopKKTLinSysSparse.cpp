@@ -331,8 +331,8 @@ namespace hiop
 #if defined(HIOP_USE_COINHSL)
           linsol_actual = "MA57";
           linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
-        }
 #endif //HIOP_USE_COINHSL
+        }
         
         if( (nullptr == linSys_&& linear_solver == "auto") || linear_solver == "pardiso") {
 #if defined(HIOP_USE_PARDISO)
