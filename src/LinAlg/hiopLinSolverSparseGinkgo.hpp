@@ -61,16 +61,6 @@
  *
  * @ingroup LinearSolvers
  */
-
-#ifndef FNAME
-#ifndef __bg__
-#define FNAME(f) f ## _
-#else
-#define FNAME(f) f
-#endif
-#endif
-
-
 namespace hiop {
 
 class hiopLinSolverSymSparseGinkgo: public hiopLinSolverSymSparse
