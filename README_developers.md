@@ -337,6 +337,13 @@ void print_str(std::string_view val);
 void print(double val);
 void print(std::string_view val);
 ```
+### File names
+
+Should use only upper and lower cases, 
+no underscore, i.e., Pascal convention.  When the name is composed of multiple words, each word 
+starts with a capital letter. If one of the "words" is an acronym use same capitalization 
+(first capital and other letters lowercase). The `hiop` prefix should be used only to ensure naming
+consistency (within the folder or module) with existing files.
 
 ## Declarations
 
