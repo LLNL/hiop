@@ -62,7 +62,7 @@
 #include <cusolverSp_LOWLEVEL_PREVIEW.h>
 
 //this is for testing purposes only - will be removed once we have a better solution for ordering
-#define HIOP_USE_EIGEN
+//#define HIOP_USE_EIGEN
 
 #ifdef HIOP_USE_EIGEN
 #include "/home/petra1/work/installs/eigen-3.3.9/_install/include/eigen3/Eigen/Core"
