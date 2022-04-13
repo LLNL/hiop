@@ -1495,7 +1495,6 @@ bool hiopMatrixRajaDense::symmetrize()
     RAJA_LAMBDA(int j, int i)
     {
       double ij = Mview(i, j);
-      double ji = Mview(j, i);
       if(i < j) {
         Mview(j, i) = ij;
       }
