@@ -51,9 +51,9 @@
 &&&&& \hspace{0.5cm}  0.5 \leq x_i, \ \forall i=4,...,n               &&& \label{ex6:varb4}
 \end{align}
 
-Here $n\geq3$ and $a>0$ are parameters that can be modified via SparseEX1 driver's command arguments. Their default values are $n=3$ and $a=1.0$.
+Here $n\geq3$ and $a>0$ are parameters that can be modified via SparseEx1 driver's command arguments. Their default values are $n=3$ and $a=1.0$.
 
-The analytical optimal solution is  $x_1=1.75$, $x_2=x_3=1.5$, and $x_i=1$ for $i\in \{4,5,\ldots,n\}$. The objective value is $0.110352$. The file nlpSparse\_EX1\_driver.cpp provides more details about how to use HiOp to solve instances of this example/test problem.
+The analytical optimal solution is  $x_1=1.75$, $x_2=x_3=1.5$, and $x_i=1$ for $i\in \{4,5,\ldots,n\}$. The objective value is $0.110352$. The file NlpSparseEx1Driver.cpp provides more details about how to use HiOp to solve instances of this example/test problem.
 
 \section{Sparse Example 2 --- A Nonconvex Sparse Example}
 \begin{align}
@@ -69,7 +69,7 @@ The analytical optimal solution is  $x_1=1.75$, $x_2=x_3=1.5$, and $x_i=1$ for $
     &&&&& \hspace{0.5cm}  0.5 \leq x_i, \ \forall i=4,...,n    &&& \label{ex7:varb4}
 \end{align}
 
-Here $n\geq3$ and $a>0$ are parameters which can be tuned via SparseEX1 driver's command arguments. Their default values are  $n=3$ and $a=0.1$. Note that the equality constraints \eqref{ex7:eq1} and \eqref{ex7:defeq} are duplicate. This is done on purpose to make the constraint Jacobian matrix rank deficient and to stress test HiOp on this numerically difficult, nonconvex problem. The file nlpSparse\_EX2\_driver.cpp provides more details about how to use HiOp in various configurations to solve instances of this example/test problem.
+Here $n\geq3$ and $a>0$ are parameters which can be tuned via SparseEx1 driver's command arguments. Their default values are  $n=3$ and $a=0.1$. Note that the equality constraints \eqref{ex7:eq1} and \eqref{ex7:defeq} are duplicate. This is done on purpose to make the constraint Jacobian matrix rank deficient and to stress test HiOp on this numerically difficult, nonconvex problem. The file NlpSparseEx2Driver.cpp provides more details about how to use HiOp in various configurations to solve instances of this example/test problem.
 
 
 %\section{Example 8 --- A Primal Decomposition Example}

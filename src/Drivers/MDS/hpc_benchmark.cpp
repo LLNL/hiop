@@ -61,7 +61,7 @@ void net_benchmark(const size_type baseDim)
       
       double tm_start = MPI_Wtime();
       for(int i=0; i<NUM_REDUCES; i++) {
-	err = MPI_Allreduce(bufSend, bufRecv, loc_size, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);  assert(MPI_SUCCESS==err);
+        err = MPI_Allreduce(bufSend, bufRecv, loc_size, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);  assert(MPI_SUCCESS==err);
       }
       double tm_end = MPI_Wtime();
       if(0==my_rank ) printf("  buffer size %10lu reduced in %.10f seconds\n", loc_size, tm_end-tm_start);
@@ -77,7 +77,7 @@ void net_benchmark(const size_type baseDim)
   //outputing
   if(0==my_rank ) {
     printf("\nSummary: MPI ranks=%d baseDim=%lu X_size=%d TESTS=%d REDUCES=%d REPETITIONS=%d\n", 
-	   nranks, baseDim, TEST_X_SIZE, NUM_TESTS, NUM_REDUCES, NUM_REPETES);
+           nranks, baseDim, TEST_X_SIZE, NUM_TESTS, NUM_REDUCES, NUM_REPETES);
     size_type loc_size = baseDim/nranks;
     for(int t=0; t<NUM_TESTS; t++) {
       double mean=0.; for(int r=0; r<NUM_REPETES; r++) mean += results[t][r]; 

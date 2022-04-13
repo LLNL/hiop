@@ -1,6 +1,6 @@
 /* Adapter that converts  HiOP interface to IPOPT TNLP interface.
  * Can be easily used with existing IPOPT drivers (to solve problems in HiOP's input), for example
- *    Ex2 hiop_interface(7);
+ *    DenseConsEx2 hiop_interface(7);
  *    // create a new instance of your nlp by using the adapter offered by hiOP.
  *    SmartPtr<TNLP> mynlp = new hiop2IpoptTNLP(&hiop_interface);
  *    // from now on everything is compatible with Ipopt
@@ -38,8 +38,11 @@ public:
 
   /* Overloads from TNLP */
   /** Method to return some info about the nlp */
-  virtual bool get_nlp_info(Index& n, Index& m, Index& nnz_jac_g,
-                            Index& nnz_h_lag, IndexStyleEnum& index_style) 
+  virtual bool get_nlp_info(Index& n,
+                            Index& m,
+                            Index& nnz_jac_g,
+                            Index& nnz_h_lag,
+                            IndexStyleEnum& index_style) 
   {
     size_type nvars, ncons;
     if(false==hiopNLP->get_prob_sizes(nvars, ncons))
@@ -52,8 +55,12 @@ public:
   }
 
   /** Method to return the bounds for my problem */
-  virtual bool get_bounds_info(Index n, Number* x_l, Number* x_u,
-                               Index m, Number* g_l, Number* g_u) 
+  virtual bool get_bounds_info(Index n,
+                               Number* x_l,
+                               Number* x_u,
+                               Index m,
+                               Number* g_l,
+                               Number* g_u) 
   {
     bool bSuccess=true;
     size_type nll=n, mll=m;
@@ -71,9 +78,14 @@ public:
 
 
   /** Method to return the starting point for the algorithm */
-  virtual bool get_starting_point(Index n, bool init_x, Number* x,
-                                  bool init_z, Number* z_L, Number* z_U,
-                                  Index m, bool init_lambda,
+  virtual bool get_starting_point(Index n,
+                                  bool init_x,
+                                  Number* x,
+                                  bool init_z,
+                                  Number* z_L,
+                                  Number* z_U,
+                                  Index m,
+                                  bool init_lambda,
                                   Number* lambda) 
   {
     assert(false==init_z);
@@ -115,8 +127,13 @@ public:
    *   1) The structure of the jacobian (if "values" is NULL)
    *   2) The values of the jacobian (if "values" is not NULL)
    */
-  virtual bool eval_jac_g(Index n, const Number* x, bool new_x,
-                          Index m, Index nele_jac, Index* iRow, Index *jCol,
+  virtual bool eval_jac_g(Index n,
+                          const Number* x,
+                          bool new_x,
+                          Index m,
+                          Index nele_jac,
+                          Index* iRow,
+                          Index *jCol,
                           Number* values) 
   {
     bool bret=true; size_type nll=n, mll=m, onell=1;
@@ -125,18 +142,18 @@ public:
     for(size_type i=0; i<m && bret; i++) {
 
       if(values) {
-	bret=hiopNLP->eval_Jac_cons(nll, mll, onell, &i, x, new_x, constraint);
-	if(!bret) break;
+        bret=hiopNLP->eval_Jac_cons(nll, mll, onell, &i, x, new_x, constraint);
+        if(!bret) break;
 
-	memcpy(values+i*n, constraint, ((size_t)n)*sizeof(double));
+        memcpy(values+i*n, constraint, ((size_t)n)*sizeof(double));
 
       } else { //this is only for iRow and jCol
 
-	for(size_type j=0; j<n; j++) {
-	  iRow[nz]=(int) i; 
-	  jCol[nz]=(int) j;
-	  nz++;
-	}
+        for(size_type j=0; j<n; j++) {
+          iRow[nz]=(int) i; 
+          jCol[nz]=(int) j;
+          nz++;
+        }
       }
 
     }
@@ -149,18 +166,28 @@ public:
    *   1) The structure of the hessian of the lagrangian (if "values" is NULL)
    *   2) The values of the hessian of the lagrangian (if "values" is not NULL)
    */
-  virtual bool eval_h(Index n, const Number* x, bool new_x,
-                      Number obj_factor, Index m, const Number* lambda,
-                      bool new_lambda, Index nele_hess, Index* iRow,
-                      Index* jCol, Number* values) { return false; }
+  virtual bool eval_h(Index n,
+                      const Number* x,
+                      bool new_x,
+                      Number obj_factor,
+                      Index m,
+                      const Number* lambda,
+                      bool new_lambda,
+                      Index nele_hess,
+                      Index* iRow,
+                      Index* jCol,
+                      Number* values)
+  { 
+    return false;
+  }
 
   /* This method is called when the algorithm is complete so the TNLP can store/write the solution */
   virtual void finalize_solution(SolverReturn status,
                                  Index n, const Number* x, const Number* z_L, const Number* z_U,
                                  Index m, const Number* g, const Number* lambda,
                                  Number obj_value,
-				 const IpoptData* ip_data,
-				 IpoptCalculatedQuantities* ip_cq) { };
+                                 const IpoptData* ip_data,
+                                 IpoptCalculatedQuantities* ip_cq) { };
   
 private:
   hiopInterfaceDenseConstraints* hiopNLP;
@@ -212,18 +239,17 @@ public:
 
   /* Overloads from TNLP */
   /** Method to return some info about the nlp */
-  bool get_nlp_info(Index& n, Index& m, Index& nnz_jac_g,
-		    Index& nnz_h_lag, IndexStyleEnum& index_style) 
+  bool get_nlp_info(Index& n, Index& m, Index& nnz_jac_g, Index& nnz_h_lag, IndexStyleEnum& index_style)
   {
     size_type nvars, ncons;
     if(false==hiopNLP->get_prob_sizes(nvars, ncons))
       return false;
 
     if(false==hiopNLP->get_sparse_dense_blocks_info(nx_sparse, nx_dense,
-						    nnz_sparse_Jaceq, 
-						    nnz_sparse_Jacineq, 
-						    nnz_sparse_Hess_Lagr_SS, 
-						    nnz_sparse_Hess_Lagr_SD)) {
+                                                    nnz_sparse_Jaceq, 
+                                                    nnz_sparse_Jacineq, 
+                                                    nnz_sparse_Hess_Lagr_SS, 
+                                                    nnz_sparse_Hess_Lagr_SD)) {
       return false;
     }
     
@@ -241,8 +267,7 @@ public:
   }
 
   /** Method to return the bounds for my problem */
-  bool get_bounds_info(Index n, Number* x_l, Number* x_u,
-		       Index m, Number* g_l, Number* g_u) 
+  bool get_bounds_info(Index n, Number* x_l, Number* x_u, Index m, Number* g_l, Number* g_u) 
   {
     bool bSuccess=true;
     size_type nll=n, mll=m;
@@ -322,10 +347,10 @@ public:
       size_type num_cons = n_eq;
       bret = hiopNLP->eval_cons(nll, mll, num_cons, cons_eq_idxs, x, new_x,g_eq);
       if(bret) {
-	for(int i=0; i<n_eq; i++)
-	  g[cons_eq_idxs[i]] = g_eq[i];
+        for(int i=0; i<n_eq; i++)
+          g[cons_eq_idxs[i]] = g_eq[i];
       } else {
-	eq_call_failed = true;
+        eq_call_failed = true;
       }
     }
     {
@@ -333,13 +358,13 @@ public:
       size_type num_cons = n_ineq;
       bret = hiopNLP->eval_cons(nll, mll, num_cons, cons_ineq_idxs, x, new_x,g_ineq);
       if(bret) {
-	for(int i=0; i<n_ineq; i++)
-	  g[cons_ineq_idxs[i]] = g_ineq[i];
+        for(int i=0; i<n_ineq; i++)
+          g[cons_ineq_idxs[i]] = g_ineq[i];
       } else {
-	if(!eq_call_failed)
-	  return false;
-	else
-	  try_onecall_Jac = true;
+        if(!eq_call_failed)
+          return false;
+        else
+          try_onecall_Jac = true;
       }
     }
 
@@ -358,8 +383,8 @@ public:
    *   2) The values of the jacobian (if "values" is not NULL)
    */
   bool eval_jac_g(Index n, const Number* x, bool new_x,
-		  Index m, Index nele_jac, Index* iRow, Index *jCol,
-		  Number* values) 
+                  Index m, Index nele_jac, Index* iRow, Index *jCol,
+                  Number* values) 
   {
     bool bret = true;
     size_type nll = n, mll = m;
@@ -369,76 +394,76 @@ public:
       int nnzit = 0;
       //Sparse Jac for Eq
       {
-	size_type num_cons = n_eq;
-	bret = hiopNLP->eval_Jac_cons(nll, mll, num_cons, cons_eq_idxs, 
-				      x, new_x, nx_sparse, nx_dense, 
-				      nnz_sparse_Jaceq, iRow, jCol, NULL,
-				      NULL);
-	if(bret) {
-	  nnzit += nnz_sparse_Jaceq;
-	  for(int i=0; i<n_eq; i++) {
-	    for(int j=0; j<nx_dense; j++) {
-	      assert(nnzit<nele_jac);
-	      iRow[nnzit] = (int)cons_eq_idxs[i];
-	      jCol[nnzit] = j+nx_sparse;
-	      nnzit++;
-	    }
-	  }
-	} else {
-	  eq_call_failed = true;
-	}
+        size_type num_cons = n_eq;
+        bret = hiopNLP->eval_Jac_cons(nll, mll, num_cons, cons_eq_idxs, 
+                                      x, new_x, nx_sparse, nx_dense, 
+                                      nnz_sparse_Jaceq, iRow, jCol, NULL,
+                                      NULL);
+        if(bret) {
+          nnzit += nnz_sparse_Jaceq;
+          for(int i=0; i<n_eq; i++) {
+            for(int j=0; j<nx_dense; j++) {
+              assert(nnzit<nele_jac);
+              iRow[nnzit] = (int)cons_eq_idxs[i];
+              jCol[nnzit] = j+nx_sparse;
+              nnzit++;
+            }
+          }
+        } else {
+          eq_call_failed = true;
+        }
       }
 
       //Sparse Jac for Ineq
       {
-	size_type num_cons = n_ineq;
-	bret = hiopNLP->eval_Jac_cons(nll, mll, num_cons, cons_ineq_idxs, 
-				      x, new_x, nx_sparse, nx_dense, 
-				      nnz_sparse_Jacineq, iRow+nnzit, jCol+nnzit, NULL,
-				      NULL);
-	if(bret) {
-	  //in-place shift of iRow and jCol for Jacineq
-	  for(int it=nnzit; it<nnzit+nnz_sparse_Jacineq; it++) 
-	    iRow[it] += n_eq;	
-	  
-	  nnzit += nnz_sparse_Jacineq;
-	  assert(nnzit<=nele_jac);
-	  
-	  for(int i=0; i<n_ineq; i++) {
-	    for(int j=0; j<nx_dense; j++) {
-	      assert(nnzit<nele_jac);
-	      iRow[nnzit] = (int)cons_ineq_idxs[i];
-	      jCol[nnzit] = j+nx_sparse;
-	      nnzit++;
-	    }
-	  }
-	} else {
-	  if(eq_call_failed)
-	    try_onecall_Jac = true;
-	  else
-	    return false;
-	}
+        size_type num_cons = n_ineq;
+        bret = hiopNLP->eval_Jac_cons(nll, mll, num_cons, cons_ineq_idxs, 
+                                      x, new_x, nx_sparse, nx_dense, 
+                                      nnz_sparse_Jacineq, iRow+nnzit, jCol+nnzit, NULL,
+                                      NULL);
+        if(bret) {
+          //in-place shift of iRow and jCol for Jacineq
+          for(int it=nnzit; it<nnzit+nnz_sparse_Jacineq; it++) 
+            iRow[it] += n_eq;        
+          
+          nnzit += nnz_sparse_Jacineq;
+          assert(nnzit<=nele_jac);
+          
+          for(int i=0; i<n_ineq; i++) {
+            for(int j=0; j<nx_dense; j++) {
+              assert(nnzit<nele_jac);
+              iRow[nnzit] = (int)cons_ineq_idxs[i];
+              jCol[nnzit] = j+nx_sparse;
+              nnzit++;
+            }
+          }
+        } else {
+          if(eq_call_failed)
+            try_onecall_Jac = true;
+          else
+            return false;
+        }
       }
       assert(try_onecall_Jac || nnzit==nele_jac);
 
       if(try_onecall_Jac) {
-	bret = hiopNLP->eval_Jac_cons(nll, mll, x, new_x, nx_sparse, nx_dense,
-				      nnz_sparse_Jaceq+nnz_sparse_Jacineq, iRow, jCol, values,
-				      NULL);
-	if(!bret)
-	  return false;
+        bret = hiopNLP->eval_Jac_cons(nll, mll, x, new_x, nx_sparse, nx_dense,
+                                      nnz_sparse_Jaceq+nnz_sparse_Jacineq, iRow, jCol, values,
+                                      NULL);
+        if(!bret)
+          return false;
 
-	nnzit = nnz_sparse_Jaceq+nnz_sparse_Jacineq;
-	//put the dense part of the MDS in the Ipopt sparse Jac matrix
-	for(int i=0; i<m; i++) {
-	  for(int j=0; j<nx_dense; j++) {
-	    assert(nnzit<nele_jac);
-	    iRow[nnzit] = i;
-	    jCol[nnzit] = j+nx_sparse;
-	    nnzit++;
-	  }
-	}
-	assert(nnzit == nele_jac);
+        nnzit = nnz_sparse_Jaceq+nnz_sparse_Jacineq;
+        //put the dense part of the MDS in the Ipopt sparse Jac matrix
+        for(int i=0; i<m; i++) {
+          for(int j=0; j<nx_dense; j++) {
+            assert(nnzit<nele_jac);
+            iRow[nnzit] = i;
+            jCol[nnzit] = j+nx_sparse;
+            nnzit++;
+          }
+        }
+        assert(nnzit == nele_jac);
       }
       
     } else {
@@ -446,99 +471,99 @@ public:
 
       //avoid unnecessary reallocations when one-call constraints/Jacobian is active
       if(false == onecall_Jac_detected_) {
-	if(JacDeq == NULL) {
-	  JacDeq = new hiopMatrixDenseRowMajor(n_eq, nx_dense);
-	  assert(JacDineq == NULL);
-	} else {
-	  //this for the case when the problem (constraints) sizes changed
-	  if(JacDeq->m() != n_eq || JacDeq->n() != nx_dense) {
-	    delete JacDeq;
-	    JacDeq = new hiopMatrixDenseRowMajor(n_eq, nx_dense);
-	  }
-	}
-	if(JacDineq == NULL) {
-	  JacDineq = new hiopMatrixDenseRowMajor(n_ineq, nx_dense);
-	} else {
-	  //this for the case when the problem (constraints) sizes changed
-	  if(JacDineq->m() != n_ineq || JacDineq->n() != nx_dense) {
-	    delete JacDineq;
-	    JacDineq = new hiopMatrixDenseRowMajor(n_ineq, nx_dense);
-	  }
-	}
+        if(JacDeq == NULL) {
+          JacDeq = new hiopMatrixDenseRowMajor(n_eq, nx_dense);
+          assert(JacDineq == NULL);
+        } else {
+          //this for the case when the problem (constraints) sizes changed
+          if(JacDeq->m() != n_eq || JacDeq->n() != nx_dense) {
+            delete JacDeq;
+            JacDeq = new hiopMatrixDenseRowMajor(n_eq, nx_dense);
+          }
+        }
+        if(JacDineq == NULL) {
+          JacDineq = new hiopMatrixDenseRowMajor(n_ineq, nx_dense);
+        } else {
+          //this for the case when the problem (constraints) sizes changed
+          if(JacDineq->m() != n_ineq || JacDineq->n() != nx_dense) {
+            delete JacDineq;
+            JacDineq = new hiopMatrixDenseRowMajor(n_ineq, nx_dense);
+          }
+        }
 
-	int nnzit = 0;
-	//sparse Jac Eq
-	{
-	  size_type num_cons = n_eq;
-	  bret = hiopNLP->eval_Jac_cons(nll, mll, num_cons, cons_eq_idxs, 
-					x, new_x, nx_sparse, nx_dense, 
-					nnz_sparse_Jaceq, NULL, NULL, values,
-					JacDeq->local_data());
-	  if(bret) {
-	    nnzit += nnz_sparse_Jaceq; assert(nnzit<=nele_jac);
-	    
-	    //the dense part
-	    const size_t len = (size_t)(n_eq*nx_dense);
-	    memcpy(values+nnzit, JacDeq->local_data(), len*sizeof(double));
-	    
-	    nnzit += n_eq*nx_dense; assert(nnzit<=nele_jac);
-	  } else {
-	    eq_call_failed = true;
-	    delete JacDeq;
-	    JacDeq = NULL;
-	  }
-	}
-	
-	//sparse Jac Ineq
-	{
-	  size_type num_cons = n_ineq;
-	  bret = hiopNLP->eval_Jac_cons(nll, mll, num_cons, cons_ineq_idxs, 
-					x, new_x, nx_sparse, nx_dense, 
-					nnz_sparse_Jacineq, NULL, NULL, values+nnzit,
-					JacDineq->local_data());
-	  if(bret) {
-	    nnzit += nnz_sparse_Jacineq; assert(nnzit<=nele_jac);
-	    
-	    const size_t len = (size_t)(n_ineq*nx_dense);
-	    //the dense part
-	    memcpy(values+nnzit, JacDineq->local_data(), len*sizeof(double));
-	    nnzit += n_ineq*nx_dense;
-	    assert(nnzit==nele_jac);
-	  } else {
-	    delete JacDineq;
-	    JacDineq = NULL;
-	    if(!eq_call_failed) {
-	      return false;
-	    } else {
-	      onecall_Jac_detected_ = true;
-	      try_onecall_Jac = true;
-	    }
-	  }
-	}
+        int nnzit = 0;
+        //sparse Jac Eq
+        {
+          size_type num_cons = n_eq;
+          bret = hiopNLP->eval_Jac_cons(nll, mll, num_cons, cons_eq_idxs, 
+                                        x, new_x, nx_sparse, nx_dense, 
+                                        nnz_sparse_Jaceq, NULL, NULL, values,
+                                        JacDeq->local_data());
+          if(bret) {
+            nnzit += nnz_sparse_Jaceq; assert(nnzit<=nele_jac);
+            
+            //the dense part
+            const size_t len = (size_t)(n_eq*nx_dense);
+            memcpy(values+nnzit, JacDeq->local_data(), len*sizeof(double));
+            
+            nnzit += n_eq*nx_dense; assert(nnzit<=nele_jac);
+          } else {
+            eq_call_failed = true;
+            delete JacDeq;
+            JacDeq = NULL;
+          }
+        }
+        
+        //sparse Jac Ineq
+        {
+          size_type num_cons = n_ineq;
+          bret = hiopNLP->eval_Jac_cons(nll, mll, num_cons, cons_ineq_idxs, 
+                                        x, new_x, nx_sparse, nx_dense, 
+                                        nnz_sparse_Jacineq, NULL, NULL, values+nnzit,
+                                        JacDineq->local_data());
+          if(bret) {
+            nnzit += nnz_sparse_Jacineq; assert(nnzit<=nele_jac);
+            
+            const size_t len = (size_t)(n_ineq*nx_dense);
+            //the dense part
+            memcpy(values+nnzit, JacDineq->local_data(), len*sizeof(double));
+            nnzit += n_ineq*nx_dense;
+            assert(nnzit==nele_jac);
+          } else {
+            delete JacDineq;
+            JacDineq = NULL;
+            if(!eq_call_failed) {
+              return false;
+            } else {
+              onecall_Jac_detected_ = true;
+              try_onecall_Jac = true;
+            }
+          }
+        }
       } else {  // if(true == onecall_Jac_detected_) {
-	try_onecall_Jac = true;
+        try_onecall_Jac = true;
       }
       
       //try one call Jacobian
       if(try_onecall_Jac) {
-	if(JacDeqineq == NULL) {
-	  JacDeqineq = new hiopMatrixDenseRowMajor(m, nx_dense);
-	  assert(JacDeq == NULL);
-	  assert(JacDineq == NULL);
-	}
-	
-	bret = hiopNLP->eval_Jac_cons(nll, mll, x, new_x, nx_sparse, nx_dense,
-				      nnz_sparse_Jaceq+nnz_sparse_Jacineq, NULL, NULL, values,
-				      JacDeqineq->local_data());
-	if(!bret)
-	  return false; 
+        if(JacDeqineq == NULL) {
+          JacDeqineq = new hiopMatrixDenseRowMajor(m, nx_dense);
+          assert(JacDeq == NULL);
+          assert(JacDineq == NULL);
+        }
+        
+        bret = hiopNLP->eval_Jac_cons(nll, mll, x, new_x, nx_sparse, nx_dense,
+                                      nnz_sparse_Jaceq+nnz_sparse_Jacineq, NULL, NULL, values,
+                                      JacDeqineq->local_data());
+        if(!bret)
+          return false; 
 
-	int nnzit = nnz_sparse_Jaceq+nnz_sparse_Jacineq;
-	//put the dense part of the MDS in the Ipopt sparse Jac matrix
-	memcpy(values+nnzit, JacDeqineq->local_data(), ((size_t)m*nx_dense)*sizeof(double));
-	nnzit += m*nx_dense;
-	
-	assert(nnzit == nele_jac);
+        int nnzit = nnz_sparse_Jaceq+nnz_sparse_Jacineq;
+        //put the dense part of the MDS in the Ipopt sparse Jac matrix
+        memcpy(values+nnzit, JacDeqineq->local_data(), ((size_t)m*nx_dense)*sizeof(double));
+        nnzit += m*nx_dense;
+        
+        assert(nnzit == nele_jac);
       }
     }
     return true;
@@ -556,21 +581,21 @@ public:
       int nnzit = 0;
 
       bret = hiopNLP->eval_Hess_Lagr(nll, mll, x, new_x, obj_factor, lambda, new_lambda,
-			    nx_sparse, nx_dense,
-			    nnz_sparse_Hess_Lagr_SS, iRow, jCol, NULL,
-			    NULL,
-			    nnz_sparse_Hess_Lagr_SD,  NULL, NULL, NULL);
+                                     nx_sparse, nx_dense,
+                                     nnz_sparse_Hess_Lagr_SS, iRow, jCol, NULL,
+                                     NULL,
+                                     nnz_sparse_Hess_Lagr_SD,  NULL, NULL, NULL);
       if(!bret) return false;
       nnzit += nnz_sparse_Hess_Lagr_SS;
       
       //dense part
       for(int i=0; i<nx_dense; i++) {
-	const int row = nx_sparse+i;
-	for(int j=i; j<nx_dense; j++) {
-	  iRow[nnzit] = row;
-	  jCol[nnzit] = nx_sparse+j;
-	  nnzit++;
-	}
+        const int row = nx_sparse+i;
+        for(int j=i; j<nx_dense; j++) {
+          iRow[nnzit] = row;
+          jCol[nnzit] = nx_sparse+j;
+          nnzit++;
+        }
       }
 #ifndef NDEBUG
       //nnzit += nx_dense*nx_dense;
@@ -582,30 +607,30 @@ public:
 
       int nnzit = 0;
       if(HessDL==NULL) {
-	HessDL = new hiopMatrixDenseRowMajor(nx_dense, nx_dense);
+        HessDL = new hiopMatrixDenseRowMajor(nx_dense, nx_dense);
       } else {
-	//this for the case when the problem (constraints) sizes changed
-	if(HessDL->m() != nx_dense) {
-	  delete HessDL;
-	  HessDL = new hiopMatrixDenseRowMajor(nx_dense, nx_dense);
-	}
+        //this for the case when the problem (constraints) sizes changed
+        if(HessDL->m() != nx_dense) {
+          delete HessDL;
+          HessDL = new hiopMatrixDenseRowMajor(nx_dense, nx_dense);
+        }
       }
       double* HessMat = HessDL->local_data();
 
       bret = hiopNLP->eval_Hess_Lagr(nll, mll, x, new_x, obj_factor, lambda, new_lambda,
-				     nx_sparse, nx_dense,
-				     nnz_sparse_Hess_Lagr_SS, NULL, NULL, values,
-				     HessMat,
-				     nnz_sparse_Hess_Lagr_SD,  NULL, NULL, NULL);
+                                     nx_sparse, nx_dense,
+                                     nnz_sparse_Hess_Lagr_SS, NULL, NULL, values,
+                                     HessMat,
+                                     nnz_sparse_Hess_Lagr_SD,  NULL, NULL, NULL);
       if(!bret) return false;
       nnzit += nnz_sparse_Hess_Lagr_SS;
       
       //dense part
       for(int i=0; i<nx_dense; ++i) {
-	for(int j=i; j<nx_dense; ++j) {
-	  values[nnzit] = HessMat[i*nx_dense+j];
-	  nnzit++;
-	}
+        for(int j=i; j<nx_dense; ++j) {
+          values[nnzit] = HessMat[i*nx_dense+j];
+          nnzit++;
+        }
       }
 #ifndef NDEBUG
       //nnzit += nx_dense*nx_dense;
@@ -619,11 +644,11 @@ public:
 
   /* This method is called when the algorithm terminates. */
   void finalize_solution(SolverReturn status,
-			 Index n, const Number* x, const Number* z_L, const Number* z_U,
-			 Index m, const Number* g, const Number* lambda,
-			 Number obj_value,
-			 const IpoptData* ip_data,
-			 IpoptCalculatedQuantities* ip_cq)
+                         Index n, const Number* x, const Number* z_L, const Number* z_U,
+                         Index m, const Number* g, const Number* lambda,
+                         Number obj_value,
+                         const IpoptData* ip_data,
+                         IpoptCalculatedQuantities* ip_cq)
   {
     //! we use hiop::Solve_Success -> //! TODO: convert between IPOPT and HiOp err codes
     hiopNLP->solution_callback(hiop::Solve_Success, n, x, z_L, z_U, m, g, lambda, obj_value);
@@ -694,15 +719,15 @@ public:
   /* Overloads from TNLP */
   /** Method to return some info about the nlp */
   bool get_nlp_info(Index& n, Index& m, Index& nnz_jac_g,
-		    Index& nnz_h_lag, IndexStyleEnum& index_style)
+                    Index& nnz_h_lag, IndexStyleEnum& index_style)
   {
     size_type nvars, ncons;
     if(false==hiopNLP->get_prob_sizes(nvars, ncons))
       return false;
 
     if(false==hiopNLP->get_sparse_blocks_info(m_nx,
-						    m_nnz_sparse_Jaceq, m_nnz_sparse_Jacineq,
-						    m_nnz_sparse_Hess_Lagr))
+                                              m_nnz_sparse_Jaceq, m_nnz_sparse_Jacineq,
+                                              m_nnz_sparse_Hess_Lagr))
     {
       return false;
     }
@@ -717,8 +742,7 @@ public:
   }
 
   /** Method to return the bounds for my problem */
-  bool get_bounds_info(Index n, Number* x_l, Number* x_u,
-		       Index m, Number* g_l, Number* g_u)
+  bool get_bounds_info(Index n, Number* x_l, Number* x_u, Index m, Number* g_l, Number* g_u)
   {
     bool bSuccess=true;
     size_type nll=n, mll=m;
@@ -811,13 +835,13 @@ public:
     size_type num_cons = m_n_ineq;
     bret = hiopNLP->eval_cons(nll, mll, num_cons, m_cons_ineq_idxs, x, new_x,g_ineq);
     if(bret) {
-	  for(int i=0; i<m_n_ineq; i++)
-	    g[m_cons_ineq_idxs[i]] = g_ineq[i];
+      for(int i=0; i<m_n_ineq; i++)
+        g[m_cons_ineq_idxs[i]] = g_ineq[i];
     } else {
-	  if(!eq_call_failed)
-	    return false;
-	  else
-	    try_onecall_Jac = true;
+      if(!eq_call_failed)
+        return false;
+      else
+        try_onecall_Jac = true;
     }
     }
 
@@ -833,9 +857,14 @@ public:
    *   1) The structure of the jacobian (if "values" is NULL)
    *   2) The values of the jacobian (if "values" is not NULL)
    */
-  bool eval_jac_g(Index n, const Number* x, bool new_x,
-		  Index m, Index nele_jac, Index* iRow, Index *jCol,
-		  Number* values)
+  bool eval_jac_g(Index n,
+                  const Number* x,
+                  bool new_x,
+                  Index m,
+                  Index nele_jac,
+                  Index* iRow,
+                  Index *jCol,
+                  Number* values)
   {
     bool bret = true;
     size_type nll = n, mll = m;
@@ -847,8 +876,8 @@ public:
       {
         size_type num_cons = m_n_eq;
         bret = hiopNLP->eval_Jac_cons(nll, mll, num_cons, m_cons_eq_idxs,
-				      x, new_x,
-				      m_nnz_sparse_Jaceq, iRow, jCol, NULL);
+                                      x, new_x,
+                                      m_nnz_sparse_Jaceq, iRow, jCol, NULL);
 
         if(bret) {
           nnzit += m_nnz_sparse_Jaceq;
@@ -861,8 +890,8 @@ public:
       {
         size_type num_cons = m_n_ineq;
         bret = hiopNLP->eval_Jac_cons(nll, mll, num_cons, m_cons_ineq_idxs,
-                          x, new_x,
-                          m_nnz_sparse_Jacineq, iRow+nnzit, jCol+nnzit, NULL);
+                                    x, new_x,
+                                    m_nnz_sparse_Jacineq, iRow+nnzit, jCol+nnzit, NULL);
         if(bret) {
           //in-place shift of iRow and jCol for Jacineq
           for(int it=nnzit; it<nnzit+m_nnz_sparse_Jacineq; it++)
@@ -880,11 +909,10 @@ public:
       assert(try_onecall_Jac || nnzit==nele_jac);
 
       if(try_onecall_Jac) {
-        bret = hiopNLP->eval_Jac_cons(nll, mll, x, new_x,
-				      m_nnz_sparse_Jaceq+m_nnz_sparse_Jacineq, iRow, jCol, values);
-        if(!bret)
-	      return false;
-
+        bret = hiopNLP->eval_Jac_cons(nll, mll, x, new_x, m_nnz_sparse_Jaceq+m_nnz_sparse_Jacineq, iRow, jCol, values);
+        if(!bret) {
+          return false;
+        }
         nnzit = m_nnz_sparse_Jaceq+m_nnz_sparse_Jacineq;
         assert(nnzit == nele_jac);
       }
@@ -895,38 +923,38 @@ public:
       //avoid unnecessary reallocations when one-call constraints/Jacobian is active
 
       if(false == m_onecall_Jac_detected_) {
-	int nnzit = 0;
-	//sparse Jac Eq
-	{
-	  size_type num_cons = m_n_eq;
-	  bret = hiopNLP->eval_Jac_cons(nll, mll, num_cons, m_cons_eq_idxs,
-					x, new_x,
-					m_nnz_sparse_Jaceq, NULL, NULL, values);
+        int nnzit = 0;
+        //sparse Jac Eq
+        {
+          size_type num_cons = m_n_eq;
+          bret = hiopNLP->eval_Jac_cons(nll, mll, num_cons, m_cons_eq_idxs,
+                                        x, new_x,
+                                        m_nnz_sparse_Jaceq, NULL, NULL, values);
           if(bret) {
-	    nnzit += m_nnz_sparse_Jaceq; assert(nnzit<=nele_jac);
-	  } else {
-	    eq_call_failed = true;
+            nnzit += m_nnz_sparse_Jaceq; assert(nnzit<=nele_jac);
+          } else {
+            eq_call_failed = true;
           }
-	}
+        }
 
-	//sparse Jac Ineq
-	{
-	  size_type num_cons = m_n_ineq;
+        //sparse Jac Ineq
+        {
+          size_type num_cons = m_n_ineq;
           bret = hiopNLP->eval_Jac_cons(nll, mll, num_cons, m_cons_ineq_idxs,
-		x, new_x,
-		m_nnz_sparse_Jacineq, NULL, NULL, values+nnzit);
-	  if(bret) {
+                                        x, new_x,
+                                        m_nnz_sparse_Jacineq, NULL, NULL, values+nnzit);
+          if(bret) {
             nnzit += m_nnz_sparse_Jacineq; assert(nnzit<=nele_jac);
             assert(nnzit==nele_jac);
-	  } else {
-	    if(!eq_call_failed) {
-	      return false;
-	    } else {
-	      m_onecall_Jac_detected_ = true;
-	      try_onecall_Jac = true;
-	    }
-	  }
-	}
+          } else {
+            if(!eq_call_failed) {
+              return false;
+            } else {
+              m_onecall_Jac_detected_ = true;
+              try_onecall_Jac = true;
+            }
+          }
+        }
       } else {  // if(true == onecall_Jac_detected_) {
         try_onecall_Jac = true;
       }
@@ -934,7 +962,7 @@ public:
       //try one call Jacobian
       if(try_onecall_Jac) {
         bret = hiopNLP->eval_Jac_cons(nll, mll, x, new_x,
-				      m_nnz_sparse_Jaceq+m_nnz_sparse_Jacineq, NULL, NULL, values);
+                                      m_nnz_sparse_Jaceq+m_nnz_sparse_Jacineq, NULL, NULL, values);
         if(!bret)
           return false;
 
@@ -956,7 +984,7 @@ public:
       int nnzit = 0;
 
       bret = hiopNLP->eval_Hess_Lagr(nll, mll, x, new_x, obj_factor, lambda, new_lambda,
-			    m_nnz_sparse_Hess_Lagr, iRow, jCol, NULL);
+                                     m_nnz_sparse_Hess_Lagr, iRow, jCol, NULL);
       if(!bret) return false;
       nnzit += m_nnz_sparse_Hess_Lagr;
 
@@ -971,7 +999,7 @@ public:
       int nnzit = 0;
 
       bret = hiopNLP->eval_Hess_Lagr(nll, mll, x, new_x, obj_factor, lambda, new_lambda,
-			    m_nnz_sparse_Hess_Lagr, iRow, jCol, values);
+                                     m_nnz_sparse_Hess_Lagr, iRow, jCol, values);
       if(!bret) return false;
       nnzit += m_nnz_sparse_Hess_Lagr;
 
@@ -985,11 +1013,16 @@ public:
 
   /* This method is called when the algorithm terminates. */
   void finalize_solution(SolverReturn status,
-			 Index n, const Number* x, const Number* z_L, const Number* z_U,
-			 Index m, const Number* g, const Number* lambda,
-			 Number obj_value,
-			 const IpoptData* ip_data,
-			 IpoptCalculatedQuantities* ip_cq)
+                         Index n,
+                         const Number* x,
+                         const Number* z_L,
+                         const Number* z_U,
+                         Index m,
+                         const Number* g,
+                         const Number* lambda,
+                         Number obj_value,
+                         const IpoptData* ip_data,
+                         IpoptCalculatedQuantities* ip_cq)
   {
     //! we use hiop::Solve_Success -> //! TODO: convert between IPOPT and HiOp err codes
     hiopNLP->solution_callback(hiop::Solve_Success, n, x, z_L, z_U, m, g, lambda, obj_value);
