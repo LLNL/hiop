@@ -76,7 +76,7 @@ namespace hiop
 class hiopLinSolverCholCuSparse: public hiopLinSolverSymSparse
 {
 public:
-  hiopLinSolverCholCuSparse(const size_type& n, const size_type& nnz, hiopNlpFormulation* nlp);
+  hiopLinSolverCholCuSparse(hiopMatrixSparseCSR* M, hiopNlpFormulation* nlp);
   virtual ~hiopLinSolverCholCuSparse();
 
   /**
@@ -91,10 +91,6 @@ public:
    */
   bool solve(hiopVector& x_in);
 
-  inline void set_linsys_mat(hiopMatrixSparseCSRSeq* mat)
-  {
-    mat_csr_ = mat;
-  }
 protected:
   /// performs initial analysis, sparsity permutation, and rescaling
   bool initial_setup();
@@ -150,11 +146,15 @@ protected:
   int* PT_;
   /// Permutation map for nonzeros (on device)
   int* map_nnz_perm_;
-  //TODO: temporary -> use the member matrix obj from the parent class
-  hiopMatrixSparseCSRSeq* mat_csr_;
   /// internal buffers in the size of the linear system (on device)
   double* rhs_buf1_;
   double* rhs_buf2_;
+  
+protected:
+  inline hiopMatrixSparseCSR* sys_mat_csr()
+  {
+    return dynamic_cast<hiopMatrixSparseCSR*>(M_);
+  }
 private:
   hiopLinSolverCholCuSparse() = delete; 
 };
