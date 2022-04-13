@@ -9,7 +9,7 @@
 #include "NlpPriDecEx2UserBasecase.hpp"
 
 //recourse Sparse NLP
-#include "NlpPriDecEx2UserRecourseSparse_raja.hpp"
+#include "NlpPriDecEx2UserRecourseSparseRaja.hpp"
 
 /**
  *

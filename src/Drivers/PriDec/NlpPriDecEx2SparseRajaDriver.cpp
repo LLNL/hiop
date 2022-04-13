@@ -1,4 +1,4 @@
-#include "NlpPriDecEx2Sparse_raja.hpp"
+#include "NlpPriDecEx2SparseRaja.hpp"
 #include "hiopAlgPrimalDecomp.hpp"
 
 #ifdef HIOP_USE_GPU

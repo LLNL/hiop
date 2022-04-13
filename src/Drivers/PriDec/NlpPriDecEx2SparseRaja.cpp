@@ -1,4 +1,4 @@
-#include "NlpPriDecEx2Sparse_raja.hpp"
+#include "NlpPriDecEx2SparseRaja.hpp"
 #include "hiopNlpFormulation.hpp"
 #include "hiopAlgFilterIPM.hpp"
 
