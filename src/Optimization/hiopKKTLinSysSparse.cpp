@@ -107,7 +107,7 @@ namespace hiop
     auto* linSys = dynamic_cast<hiopLinSolverSymSparse*> (linSys_);
     assert(linSys);
 
-    auto* Msys = dynamic_cast<hiopMatrixSparseTriplet*>(linSys->sysMatrix());
+    auto* Msys = dynamic_cast<hiopMatrixSparseTriplet*>(linSys->sys_matrix());
     assert(Msys);
     
     if(perf_report_) {
@@ -404,7 +404,7 @@ namespace hiop
     auto* linSys = dynamic_cast<hiopLinSolverSymSparse*> (linSys_);
     assert(linSys);
 
-    auto* Msys = dynamic_cast<hiopMatrixSparseTriplet*>(linSys->sysMatrix());
+    auto* Msys = dynamic_cast<hiopMatrixSparseTriplet*>(linSys->sys_matrix());
     assert(Msys);
     if(perf_report_) {
       nlp_->log->printf(hovSummary,
@@ -821,7 +821,7 @@ namespace hiop
     auto* linSys = dynamic_cast<hiopLinSolverNonSymSparse*> (linSys_);
     assert(linSys);   
 
-    auto* Msys = dynamic_cast<hiopMatrixSparseTriplet*>(linSys->sysMatrix());
+    auto* Msys = dynamic_cast<hiopMatrixSparseTriplet*>(linSys->sys_matrix());
     assert(Msys);
     if(perf_report_) {
       nlp_->log->printf(hovSummary,

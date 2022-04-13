@@ -525,7 +525,7 @@ bool hiopDualsLsqUpdateLinsysAugSparse::do_lsq_update(hiopIterate& iter,
 
   t.reset();
   t.start();
-  hiopMatrixSparse& Msys = *(linSys->sysMatrix());
+  hiopMatrixSparse& Msys = *(linSys->sys_matrix());
   // update linSys system matrix
   {
     Msys.setToZero();
