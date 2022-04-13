@@ -769,7 +769,7 @@ void MDSEX1::set_solution_duals(const double* zl_vec, const double* zu_vec, cons
 }
 
 /** all constraints evaluated in here */
-bool Ex4OneCallCons::eval_cons(const size_type& n, 
+bool MDSEX1OneCallCons::eval_cons(const size_type& n, 
                                const size_type& m, 
                                const double* x, 
                                bool new_x, 
@@ -855,7 +855,7 @@ bool Ex4OneCallCons::eval_cons(const size_type& n,
  * This method runs on GPU.
  * 
  */
-bool Ex4OneCallCons::eval_Jac_cons(const size_type& n, const size_type& m, 
+bool MDSEX1OneCallCons::eval_Jac_cons(const size_type& n, const size_type& m, 
     const double* x, bool new_x,
     const size_type& nsparse, const size_type& ndense, 
     const int& nnzJacS, int* iJacS, int* jJacS, double* MJacS, 

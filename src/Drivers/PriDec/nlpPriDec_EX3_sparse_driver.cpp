@@ -1,4 +1,4 @@
-#include "nlpPriDec_EX3.hpp"
+#include "nlpPriDec_EX3_sparse.hpp"
 #include "hiopNlpFormulation.hpp"
 #include "hiopAlgFilterIPM.hpp"
 
