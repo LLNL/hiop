@@ -22,6 +22,7 @@ enable_language(Fortran)
 include(FortranCInterface)
 FortranCInterface_HEADER(FortranCInterface.hpp MACRO_NAMESPACE "FC_")
 
+option(HIOP_USE_EIGEN "Build with Eigen support" ON)
 option(HIOP_USE_MPI "Build with MPI support" ON)
 option(HIOP_USE_GPU "Build with support for GPUs - Magma and cuda libraries" OFF)
 option(HIOP_TEST_WITH_BSUB "Use `jsrun` instead of `mpirun` commands when running tests" OFF)
@@ -185,6 +186,13 @@ if(NOT DEFINED LAPACK_LIBRARIES)
 endif(NOT DEFINED LAPACK_LIBRARIES)
 target_link_libraries(hiop_tpl INTERFACE ${LAPACK_LIBRARIES})
 message(STATUS "Using LAPACK libraries: ${LAPACK_LIBRARIES}")
+
+include(HiOpCheckGitSubmodules)
+if(HIOP_USE_EIGEN)
+  message(STATUS "Eigen enabled")
+  # We don't want target_include_directories as the headers are not installed
+  include_directories(${PROJECT_SOURCE_DIR}/tpl/eigen)
+endif()
 
 if(HIOP_USE_GPU)
   include(CheckLanguage)
