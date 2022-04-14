@@ -30,7 +30,7 @@ PriDecMasterProbleEx2Sparse::~PriDecMasterProbleEx2Sparse()
   delete[] sol_; 
   delete basecase_;
 };
-	
+
 hiop::hiopSolveStatus
 PriDecMasterProbleEx2Sparse::solve_master(hiopVector& x,
                                            const bool& include_r,
@@ -96,8 +96,8 @@ PriDecMasterProbleEx2Sparse::solve_master(hiopVector& x,
 }
 
 bool PriDecMasterProbleEx2Sparse::
-set_recourse_approx_evaluator(const int n, 
-		                          hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator)
+set_recourse_approx_evaluator(const int n,
+                              hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator)
 {
   assert(n==nc_);
   basecase_->set_quadratic_terms(n, evaluator);

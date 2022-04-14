@@ -8,7 +8,7 @@
 */
 using namespace hiop;
 
-	
+
 PriDecMasterProbleEx2::
 PriDecMasterProbleEx2(size_t nx, size_t ny, size_t nS, size_t S) : nx_(nx), ny_(ny),nS_(nS),S_(S)
 {
@@ -26,7 +26,7 @@ PriDecMasterProbleEx2::~PriDecMasterProbleEx2()
   delete[] sol_; 
   delete basecase_;
 };
-	
+
 hiop::hiopSolveStatus
 PriDecMasterProbleEx2::solve_master(hiopVector& x,
                                      const bool& include_r,
@@ -96,7 +96,7 @@ PriDecMasterProbleEx2::solve_master(hiopVector& x,
 
 bool PriDecMasterProbleEx2::
 set_recourse_approx_evaluator(const int n, 
-		              hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator)
+                              hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator)
 {
   assert(n==nc_);
   basecase_->set_quadratic_terms(n, evaluator);

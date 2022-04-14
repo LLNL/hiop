@@ -14,10 +14,10 @@ using namespace hiop;
 static bool self_check(size_type n, double obj_value);
 
 static bool parse_arguments(int argc, char **argv,
-			    bool& self_check,
-			    size_type& n_sp,
-			    size_type& n_de,
-			    bool& rdJac)
+                            bool& self_check,
+                            size_type& n_sp,
+                            size_type& n_de,
+                            bool& rdJac)
 {
   self_check = rdJac = false;
   n_sp = 400;
@@ -31,15 +31,15 @@ static bool parse_arguments(int argc, char **argv,
   case 5: // 4 arguments
     {
       if(std::string(argv[4]) == "-withrdJ")
-	rdJac = true;
+        rdJac = true;
     }
   case 4: // 3 arguments
     {
       if(std::string(argv[3]) == "-selfcheck")
-	self_check=true;
+        self_check=true;
       else
-	if(std::string(argv[3]) == "-withrdJ")
-	  rdJac = true;
+        if(std::string(argv[3]) == "-withrdJ")
+          rdJac = true;
 
     }
   case 3: //2 arguments
@@ -60,7 +60,7 @@ static bool parse_arguments(int argc, char **argv,
   if(self_check && n_sp!=400 && n_de!=100) {
     if(!rdJac) {
       printf("Error: incorrect input parameters: '-selfcheck' must be used with predefined "
-	     "values for input  parameters, sp_vars_size=400 de_vars_size=100.\n");
+             "values for input  parameters, sp_vars_size=400 de_vars_size=100.\n");
       return false;
     }
   }
@@ -71,19 +71,19 @@ static bool parse_arguments(int argc, char **argv,
 static void usage(const char* exeName)
 {
   printf("HiOp driver %s that solves a nonconvex synthetic problem of variable size in the "
-	 "mixed dense-sparse formulation. In addition, the driver can be instructed to "
-	 "solve additional problems that have rank-deficient Jacobian (use '-withrdJ' option)\n", 
-	 exeName);
+         "mixed dense-sparse formulation. In addition, the driver can be instructed to "
+         "solve additional problems that have rank-deficient Jacobian (use '-withrdJ' option)\n", 
+         exeName);
   printf("Usage: \n");
   printf("  '$ %s sp_vars_size de_vars_size -selfcheck -withrdJ'\n", exeName);
   printf("Arguments, all integers, excepting strings '-selfcheck' and '-withrdJ', should be "
-	 "specified in the order below.\n");
+         "specified in the order below.\n");
   printf("  'sp_vars_size': # of sparse variables [default 400, optional, nonnegative integer].\n");
   printf("  'de_vars_size': # of dense variables [default 100, optional, nonnegative integer].\n");
   printf("  '-selfcheck': compares the optimal objective with sp_vars_size being 400 and "
-	 "de_vars_size being 100 (these two exact values must be passed as arguments). [optional]\n");
+         "de_vars_size being 100 (these two exact values must be passed as arguments). [optional]\n");
   printf("  '-withrdJ': solves additional problems with rank-deficient Jacobians; discards "
-	 "'-selfcheck' option. [optional]\n");
+         "'-selfcheck' option. [optional]\n");
 }
 
 
@@ -97,7 +97,7 @@ int main(int argc, char **argv)
   //int ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank); assert(MPI_SUCCESS==ierr);
   if(comm_size != 1) {
     printf("[error] driver detected more than one rank but the driver should be run "
-	   "in serial only; will exit\n");
+           "in serial only; will exit\n");
     MPI_Finalize();
     return 1;
   }
@@ -154,8 +154,8 @@ int main(int argc, char **argv)
     
     if(status1<0) {
       if(rank==0)
-	printf("solve1 trouble: returned %d (with objective is %18.12e)\n",
-	       status1, obj_value1);
+        printf("solve1 trouble: returned %d (with objective is %18.12e)\n",
+               status1, obj_value1);
       return -1;
     }
   } //end of test 1
@@ -187,8 +187,8 @@ int main(int argc, char **argv)
     
     if(status2<0) {
       if(rank==0)
-	printf("solve2 trouble: returned %d (with objective is %18.12e)\n",
-	       status2, obj_value2);
+        printf("solve2 trouble: returned %d (with objective is %18.12e)\n",
+               status2, obj_value2);
       return -1;
     }
   } //end of test 2
@@ -220,8 +220,8 @@ int main(int argc, char **argv)
     
     if(status3<0) {
       if(rank==0)
-	printf("solve3 trouble: returned %d (with objective is %18.12e)\n",
-	       status3, obj_value3);
+        printf("solve3 trouble: returned %d (with objective is %18.12e)\n",
+               status3, obj_value3);
       return -1;
     }
   } //end of test 3
@@ -253,8 +253,8 @@ int main(int argc, char **argv)
     
     if(status4<0) {
       if(rank==0)
-	printf("solve4 trouble: returned %d (with objective is %18.12e)\n",
-	       status4, obj_value4);
+        printf("solve4 trouble: returned %d (with objective is %18.12e)\n",
+               status4, obj_value4);
       return -1;
     }
   } //end of test 4
@@ -264,22 +264,22 @@ int main(int argc, char **argv)
   if(selfCheck) {
     // if(rdJac && fabs(obj_value1-(-3.160999998751e+03))>1e-6) {
     //   printf("selfcheck1: objective mismatch for MDS Ex2 problem with 400 sparse variables and 100 "
-    // 	     "dense variables did. BTW, obj=%18.12e was returned by HiOp.\n", obj_value1);
+    //          "dense variables did. BTW, obj=%18.12e was returned by HiOp.\n", obj_value1);
     //   selfcheck_ok = false;
     // }
     // if(rdJac && fabs(obj_value2-(-1.24881064633628e+01))>1e-6) {
     //   printf("selfcheck2: objective mismatch for MDS Ex2 problem with 400 sparse variables and 100 "
-    // 	     "dense variables did. BTW, obj=%18.12e was returned by HiOp.\n", obj_value2);
+    //          "dense variables did. BTW, obj=%18.12e was returned by HiOp.\n", obj_value2);
     //   selfcheck_ok = false;
     // }
     if((fabs(obj_value3-(-3.160999998751e+03))/3.160999998751e+03)>1e-6) {
       printf("selfcheck3: objective mismatch for MDS Ex2 problem with 400 sparse variables and 100 "
-	     "dense variables did. BTW, obj=%18.12e was returned by HiOp.\n", obj_value3);
+             "dense variables did. BTW, obj=%18.12e was returned by HiOp.\n", obj_value3);
       selfcheck_ok = false;
     }
     // if(rdJac && fabs(obj_value4-(-1.35649999989221e+03))>1e-6) {
     //   printf("selfcheck4: objective mismatch for MDS Ex2 problem with 400 sparse variables and 100 "
-    // 	     "dense variables did. BTW, obj=%18.12e was returned by HiOp.\n", obj_value4);
+    //              "dense variables did. BTW, obj=%18.12e was returned by HiOp.\n", obj_value4);
     //   selfcheck_ok = false;
     // }
 

@@ -3,7 +3,7 @@
 #include "hiopAlgFilterIPM.hpp"
 
 using namespace hiop;
-	
+        
 PriDecMasterProbleEx2Sparse::
 PriDecMasterProbleEx2Sparse(size_t nx, size_t ny, size_t nS, size_t S) : nx_(nx), ny_(ny),nS_(nS),S_(S)
 {
@@ -21,7 +21,7 @@ PriDecMasterProbleEx2Sparse::~PriDecMasterProbleEx2Sparse()
   delete[] sol_; 
   delete basecase_;
 };
-	
+        
 hiop::hiopSolveStatus
 PriDecMasterProbleEx2Sparse::solve_master(hiopVector& x,
                                            const bool& include_r,

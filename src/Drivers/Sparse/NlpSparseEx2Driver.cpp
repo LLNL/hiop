@@ -130,7 +130,7 @@ int main(int argc, char **argv)
   int ierr = MPI_Comm_size(MPI_COMM_WORLD, &comm_size); assert(MPI_SUCCESS==ierr);
   if(comm_size != 1) {
     printf("[error] driver detected more than one rank but the driver should be run "
-	   "in serial only; will exit\n");
+           "in serial only; will exit\n");
     MPI_Finalize();
     return 1;
   }

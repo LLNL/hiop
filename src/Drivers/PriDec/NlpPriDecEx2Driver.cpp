@@ -52,7 +52,7 @@ static bool parse_arguments(int argc, char **argv,
   case 4: // 3 arguments
     {
       if(std::string(argv[3]) == "-selfcheck") {
-	self_check=true;
+        self_check=true;
         nx = std::atoi(argv[1]);
         S = std::atof(argv[2]);
         if(S<3) {
@@ -79,8 +79,8 @@ static bool parse_arguments(int argc, char **argv,
       } else {
         nx = atoi(argv[1]);
         if(nx<=0) {
-	  return false;
-	}
+          return false;
+        }
       }
     }
     break;
@@ -90,7 +90,7 @@ static bool parse_arguments(int argc, char **argv,
 
   if(self_check && nx!=20 && S!=5) {
       printf("Error: incorrect input parameters: '-selfcheck' must be used with predefined "
-	     "values for input  parameters, nx=20 S=5\n");
+             "values for input  parameters, nx=20 S=5\n");
       return false;
   }
   
@@ -100,15 +100,15 @@ static bool parse_arguments(int argc, char **argv,
 static void usage(const char* exeName)
 {
   printf("HiOp driver %s that solves a nonconvex synthetic problem of variable size in the "
-	 "primal decomposition formulation. )\n", 
-	 exeName);
+         "primal decomposition formulation. )\n", 
+         exeName);
   printf("Usage: \n");
   printf("  '$ %s nx S -selfcheck '\n", exeName);
   printf("Arguments, all integers, except strings '-selfcheck' \n");
   printf("  'nx': # of base case variables [default 20, optional, nonnegative integer].\n");
   printf("  'S': # of recourse/contingency problems [default 5, optional, nonnegative integer].\n");
   printf("  '-selfcheck': compares the optimal objective with nx being 20 and "
-	 "S being 5 (these two exact values must be passed as arguments). [optional]\n");
+         "S being 5 (these two exact values must be passed as arguments). [optional]\n");
 }
 
 
