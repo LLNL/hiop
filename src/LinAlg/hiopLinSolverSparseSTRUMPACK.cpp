@@ -60,10 +60,16 @@ using namespace strumpack;
 
 namespace hiop
 {
-  hiopLinSolverSymSparseSTRUMPACK::hiopLinSolverSymSparseSTRUMPACK(const int& n, const int& nnz, hiopNlpFormulation* nlp)
+  hiopLinSolverSymSparseSTRUMPACK::hiopLinSolverSymSparseSTRUMPACK(const int& n, const int& nnz, hiopNlpFormulation* nlp, int ncons)
     : hiopLinSolverSymSparse(n, nnz, nlp),
-      kRowPtr_{nullptr},jCol_{nullptr},kVal_{nullptr},index_covert_CSR2Triplet_{nullptr},index_covert_extra_Diag2CSR_{nullptr},
-      n_{n}, nnz_{0}
+      kRowPtr_{nullptr},
+      jCol_{nullptr},
+      kVal_{nullptr},
+      index_covert_CSR2Triplet_{nullptr},
+      index_covert_extra_Diag2CSR_{nullptr},
+      n_{n},
+      nnz_{0},
+      nFakeNegEigs_{ncons}
   {}
 
   hiopLinSolverSymSparseSTRUMPACK::~hiopLinSolverSymSparseSTRUMPACK()
@@ -289,10 +295,16 @@ namespace hiop
 
 
 
-  hiopLinSolverNonSymSparseSTRUMPACK::hiopLinSolverNonSymSparseSTRUMPACK(const int& n, const int& nnz, hiopNlpFormulation* nlp)
+  hiopLinSolverNonSymSparseSTRUMPACK::hiopLinSolverNonSymSparseSTRUMPACK(const int& n, const int& nnz, hiopNlpFormulation* nlp, int ncons)
     : hiopLinSolverNonSymSparse(n, nnz, nlp),
-      kRowPtr_{nullptr},jCol_{nullptr},kVal_{nullptr},index_covert_CSR2Triplet_{nullptr},index_covert_extra_Diag2CSR_{nullptr},
-      n_{n}, nnz_{0}
+      kRowPtr_{nullptr},
+      jCol_{nullptr},
+      kVal_{nullptr},
+      index_covert_CSR2Triplet_{nullptr},
+      index_covert_extra_Diag2CSR_{nullptr},
+      n_{n},
+      nnz_{0},
+      nFakeNegEigs_{ncons}
   {}
 
   hiopLinSolverNonSymSparseSTRUMPACK::~hiopLinSolverNonSymSparseSTRUMPACK()

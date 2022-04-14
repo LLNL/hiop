@@ -291,7 +291,7 @@ namespace hiop
           //ma57 and pardiso are not available or user requested strumpack
 #ifdef HIOP_USE_STRUMPACK
           linsol_actual = "STRUMPACK";
-          linSys_ = new hiopLinSolverSymSparseSTRUMPACK(n, nnz, nlp_);
+          linSys_ = new hiopLinSolverSymSparseSTRUMPACK(n, nnz, nlp_, neq + nineq);
 #endif  // HIOP_USE_STRUMPACK        
         }
 
@@ -322,7 +322,7 @@ namespace hiop
 
         if( (nullptr == linSys_ && linear_solver == "auto") || linear_solver == "strumpack") {
 #if defined(HIOP_USE_STRUMPACK)        
-          linSys_ = new hiopLinSolverSymSparseSTRUMPACK(n, nnz, nlp_);
+          linSys_ = new hiopLinSolverSymSparseSTRUMPACK(n, nnz, nlp_, neq + nineq);
           linsol_actual = "STRUMPACK";
 #endif //HIOP_USE_STRUMPACK
         }
@@ -614,7 +614,7 @@ namespace hiop
         if( (nullptr == linSys_ && linear_solver == "auto") || linear_solver == "strumpack") {
           //ma57 is not available or user requested strumpack
 #ifdef HIOP_USE_STRUMPACK              
-          linSys_ = new hiopLinSolverSymSparseSTRUMPACK(n, nnz, nlp_);
+          linSys_ = new hiopLinSolverSymSparseSTRUMPACK(n, nnz, nlp_, neq + nineq;
           actual_lin_solver = "STRUMPACK";
 #endif  // HIOP_USE_STRUMPACK        
         }
@@ -646,7 +646,7 @@ namespace hiop
         if(nullptr == linSys_ && (linear_solver == "strumpack" || linear_solver == "auto")) {
 #if defined(HIOP_USE_STRUMPACK)
           actual_lin_solver = "STRUMPACK";
-          linSys_ = new hiopLinSolverSymSparseSTRUMPACK(n, nnz, nlp_);
+          linSys_ = new hiopLinSolverSymSparseSTRUMPACK(n, nnz, nlp_, neq + nineq);
 #endif
         } //end strumpack
         

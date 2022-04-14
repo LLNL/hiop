@@ -67,7 +67,7 @@ namespace hiop {
 class hiopLinSolverSymSparseSTRUMPACK: public hiopLinSolverSymSparse
 {
 public:
-  hiopLinSolverSymSparseSTRUMPACK(const int& n, const int& nnz, hiopNlpFormulation* nlp);
+  hiopLinSolverSymSparseSTRUMPACK(const int& n, const int& nnz, hiopNlpFormulation* nlp, int ncons = -1);
   virtual ~hiopLinSolverSymSparseSTRUMPACK();
 
   /** Triggers a refactorization of the matrix, if necessary.
@@ -121,7 +121,7 @@ friend class hiopLinSolverNonSymSparseSTRUMPACK;
 class hiopLinSolverNonSymSparseSTRUMPACK: public hiopLinSolverNonSymSparse
 {
 public:
-  hiopLinSolverNonSymSparseSTRUMPACK(const int& n, const int& nnz, hiopNlpFormulation* nlp);
+  hiopLinSolverNonSymSparseSTRUMPACK(const int& n, const int& nnz, hiopNlpFormulation* nlp, int ncons = -1);
 
   virtual ~hiopLinSolverNonSymSparseSTRUMPACK();
 
