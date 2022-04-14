@@ -241,6 +241,8 @@ public:
     return true;
   }
 #endif
+  virtual bool symmetrize() = 0;
+
 protected:
   size_type m_local_;
   size_type n_global_; //total / global number of columns

@@ -76,6 +76,7 @@ namespace hiop
  * addToSymDenseMatrixUpperTriangle
  * addUpperTriangleToSymDenseMatrixUpperTriangle
  * assertSymmetry
+ * symmetrize
  * copyBlockFromMatrix
  * copyFromMatrixBlock
  */
@@ -256,6 +257,7 @@ public:
 #ifdef HIOP_DEEPCHECKS
   virtual bool assertSymmetry(double tol=1e-16) const;
 #endif
+  virtual bool symmetrize();
 
   void copyToDev();
   void copyFromDev();

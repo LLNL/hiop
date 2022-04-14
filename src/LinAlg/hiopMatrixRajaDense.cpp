@@ -1474,6 +1474,34 @@ bool hiopMatrixRajaDense::assertSymmetry(double tol) const
 }
 #endif
 
+bool hiopMatrixRajaDense::symmetrize() 
+{
+  if(n_local_!=n_global_) {
+    assert(false && "should be used only for local matrices");
+    return false;
+  }
+  //must be square
+  if(m_local_!=n_global_) {
+    assert(false);
+    return false;
+  }
+
+  double* data = data_dev_;
+  RAJA::View<double, RAJA::Layout<2>> Mview(data, n_local_, n_local_);
+  RAJA::RangeSegment range(0, n_local_);
+
+  //symmetrize --- copy the upper triangular part to lower tirangular part
+  RAJA::kernel<matrix_exec>(RAJA::make_tuple(range, range),
+    RAJA_LAMBDA(int j, int i)
+    {
+      double ij = Mview(i, j);
+      if(i < j) {
+        Mview(j, i) = ij;
+      }
+    });
+  return true;
+}
+
 /// Copy local host mirror data to the memory space
 void hiopMatrixRajaDense::copyToDev()
 {

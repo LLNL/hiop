@@ -80,6 +80,11 @@ namespace hiop
 
     magma_uplo_t uplo=MagmaLower; // M is upper in C++ so it's lower in fortran
 
+#ifdef HIOP_USE_HIP
+    uplo = MagmaUpper; // M is upper in C++ so it's lower in fortran
+    M_->symmetrize();
+#endif
+
     std::string mem_space = nlp_->options->GetString("mem_space");
     if(mem_space == "default" || mem_space == "host") {
       nlp_->runStats.linsolv.tmDeviceTransfer.start();
@@ -192,6 +197,9 @@ namespace hiop
     nlp_->runStats.linsolv.tmTriuSolves.start();
     
     magma_uplo_t uplo=MagmaLower; // M is upper in C++ so it's lower in fortran
+ #ifdef HIOP_USE_HIP
+    uplo = MagmaUpper; // M is upper in C++ so it's lower in fortran
+#endif
     int info;
     magma_dsytrs_gpu(uplo, N, NRHS, device_M_, ldda_, ipiv_, device_rhs_, lddb_, &info, magma_device_queue_);
 
