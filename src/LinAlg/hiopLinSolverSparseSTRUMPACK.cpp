@@ -188,7 +188,8 @@ namespace hiop
     */
 
     // possible values for MatchingJob (from STRUMPACK's source code)
-    //NONE,                         /*!< Don't do anything                   */
+    //NONE,                         /*!< Don't do anything, but it can provide inertia info 
+    //                                   MC64 provides non-symmetric permutation and hence inertia is inaccurate */
     //MAX_CARDINALITY,              /*!< Maximum cardinality                 */
     //MAX_SMALLEST_DIAGONAL,        /*!< Maximum smallest diagonal value     */
     //MAX_SMALLEST_DIAGONAL_2,      /*!< Same as MAX_SMALLEST_DIAGONAL,
@@ -222,6 +223,10 @@ namespace hiop
     assert(n_==M_->n() && M_->n()==M_->m());
     assert(n_>0);
 
+    int num_neg_eig_val{0};
+    int num_zero_eig_val{0};
+    int num_pos_eig_val{0};
+    
     nlp_->runStats.linsolv.tmFactTime.start();
 
     if( !kRowPtr_ ){
@@ -240,14 +245,25 @@ namespace hiop
       spss.set_csr_matrix(n_, kRowPtr_, jCol_, kVal_, true);
     }
 
-    spss.factor();   // not really necessary, called if needed by solve
-
+    strumpack::ReturnCode retval = spss.factor();   // not really necessary, called if needed by solve
+    
+    if(strumpack::ReturnCode::ZERO_PIVOT==retval) {
+      return -1;
+    } else if(strumpack::ReturnCode::SUCCESS==retval) {
+      retval = spss.inertia(num_neg_eig_val, num_zero_eig_val, num_pos_eig_val);
+      if(strumpack::ReturnCode::SUCCESS != retval) {
+       num_neg_eig_val = nFakeNegEigs_;
+      }
+    } else {
+      // unknown error
+      assert(false && "unknown error from strumpack factor()");
+    }
+ 
     nlp_->runStats.linsolv.tmInertiaComp.start();
-    int negEigVal = nFakeNegEigs_;
     nlp_->runStats.linsolv.tmInertiaComp.stop();
-    return negEigVal;
+    return num_neg_eig_val;
   }
-
+  
   bool hiopLinSolverSymSparseSTRUMPACK::solve ( hiopVector& x_ )
   {
     assert(n_==M_->n() && M_->n()==M_->m());
