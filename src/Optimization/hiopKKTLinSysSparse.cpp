@@ -614,7 +614,7 @@ namespace hiop
         if( (nullptr == linSys_ && linear_solver == "auto") || linear_solver == "strumpack") {
           //ma57 is not available or user requested strumpack
 #ifdef HIOP_USE_STRUMPACK              
-          linSys_ = new hiopLinSolverSymSparseSTRUMPACK(n, nnz, nlp_, neq + nineq;
+          linSys_ = new hiopLinSolverSymSparseSTRUMPACK(n, nnz, nlp_, neq + nineq);
           actual_lin_solver = "STRUMPACK";
 #endif  // HIOP_USE_STRUMPACK        
         }
