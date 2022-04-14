@@ -233,6 +233,8 @@ if(HIOP_USE_RAJA)
     PATHS ${umpire_DIR} ${umpire_DIR}/share/umpire/cmake
     REQUIRED)
   target_link_libraries(hiop_tpl INTERFACE umpire RAJA)
+  message(STATUS "Found RAJA pkg-config: ${RAJA_CONFIG}")
+  message(STATUS "Found umpire pkg-config: ${umpire_CONFIG}")
 endif()
 
 # KLU needed with cuSolver. TODO: make this an optional dependency
