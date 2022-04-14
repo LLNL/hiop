@@ -217,7 +217,7 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
     Diag.form_diag_from_symbolic(*Dx_);
 
     assert(nullptr == M_condensed_);
-    M_condensed_= M_condensed_tmp->add_matrix_alloc(Diag);
+    M_condensed_ = M_condensed_tmp->add_matrix_alloc(Diag);
     M_condensed_tmp->add_matrix_symbolic(*M_condensed_, Diag);
     delete M_condensed_tmp;
 
