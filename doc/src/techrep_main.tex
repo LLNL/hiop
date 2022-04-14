@@ -435,14 +435,14 @@ Examples of how to use these functions can be found in the standalone drivers in
 %\Hi's C++ interface provides methods to retrieve the optimal solution and the intermediate iterates.
 
 \subsubsection{Calling \Hi for a \texttt{hiopInterfaceDenseConstraints} formulation}
-Once an implementation of the \texttt{hiop::hiopInterfaceDenseConstraints} abstract interface class containing the user's NLP representation is available, the  user code needs to create a \Hi problem formulation that encapsulate the NLP representation, instantiate an optimization algorithm class, and start the numerical optimization process. Assuming that the NLP representation is implemented in a class named \texttt{NlpEx1} (deriving \texttt{hiop::hiopInterfaceDenseConstraints}), the aforementioned sequence of steps can be performed by:
+Once an implementation of the \texttt{hiop::hiopInterfaceDenseConstraints} abstract interface class containing the user's NLP representation is available, the  user code needs to create a \Hi problem formulation that encapsulate the NLP representation, instantiate an optimization algorithm class, and start the numerical optimization process. Assuming that the NLP representation is implemented in a class named \texttt{DenseConsEx1} (deriving \texttt{hiop::hiopInterfaceDenseConstraints}), the aforementioned sequence of steps can be performed by:
 \begin{lstlisting}
-#include "NlpEx1.hpp"               //the NLP representation class
+#include "NlpDenseConsEx1.hpp"               //the NLP representation class
 #include "hiopInterface.hpp"   //HiOP encapsulation of the NLP
 #include "hiopAlgFilterIPM.hpp"     //solver class
 using namespace hiop;
 ...
-NlpEx1 nlp_interface();                     //instantiate your NLP representation class
+DenseConsEx1 nlp_interface();                     //instantiate your NLP representation class
 hiopNlpDenseConstraints nlp(nlp_interface); //create HiOP encapsulation
 nlp.options.SetNumericValue("mu0", 0.01);  //set initial value for  barrier parameter
 hiopAlgFilterIPM solver(&nlp);             //create a solver object
@@ -457,7 +457,7 @@ void getSolution(double* x) const;
 hiopSolveStatus getSolveStatus() const;
 int getNumIterations() const;
 \end{lstlisting} 
-The standalone drivers \texttt{nlpDenseCons\_ex1}, \texttt{nlpDenseCons\_ex2}, and \texttt{nlpDenseCons\_ex3} inside directory \texttt{src/Drivers/} under the \Hi's root directory contain more detailed examples of the use of \Hi.
+The standalone drivers \texttt{NlpDenseConsEx1}, \texttt{NlpDenseConsEx2}, and \texttt{NlpDenseConsEx3} inside directory \texttt{src/Drivers/} under the \Hi's root directory contain more detailed examples of the use of \Hi.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -494,7 +494,7 @@ The optimization problem~\eqref{mdsobj}--\eqref{mdsbounds} is transformed intern
 
 \Hi offers support for NVIDIA GPU acceleration. This feature is available only when solving NLPs in the mixed dense-sparse (MDS) form and should be enabled during the build by using \texttt{-DHIOP\_USE\_GPU} option with \texttt{cmake}. \Hi's \texttt{cmake} build system is quite versatile to find the dependencies required to offload computations to the device GPUs since was developed and tested on a few GPU-enabled HPC platforms at Oak Ridge, Lawrence Livermore, and Pacific Northwestern National Laboratories. These dependencies consist of CUDA library and Magma linear solver library.
 %If offloading computations to the device is not desired, the user can switch it off and perform only CPU (host) computations by setting \Hi's option \texttt{compute\_mode} to \texttt{cpu}.
-The Newton interior-point solver for MDS problems offers the possibility to perform the linear algebra and the great majority of the optimization computations on the device; this can be achieved by setting option \texttt{compute\_mode} to \texttt{gpu} and the option \texttt{mem\_space} to \texttt{device}. This combination of the two options will require the problem evaluation functions implemented by the user (see Section~\ref{sec:mds:cpp} below) to run on the device. If the user code does not support this, then \Hi should be used with \texttt{compute\_mode} set to \texttt{hybrid} and the option \texttt{mem\_space} set to \texttt{default}; this combination will offload the majority of linear algebra and optimization computations to the device. The \Hi's RAJA version of Example 4 (see \texttt{src/Drivers/nlpMDS\_ex4\_raja\_driver.cpp}) provides an example of implementing a MDS NLP so that it that can be solved by running \Hi's Newton solver on the device (\textit{i.e.}, \texttt{compute\_mode} set to \texttt{gpu} and with \texttt{mem\_space} set to \texttt{device}).
+The Newton interior-point solver for MDS problems offers the possibility to perform the linear algebra and the great majority of the optimization computations on the device; this can be achieved by setting option \texttt{compute\_mode} to \texttt{gpu} and the option \texttt{mem\_space} to \texttt{device}. This combination of the two options will require the problem evaluation functions implemented by the user (see Section~\ref{sec:mds:cpp} below) to run on the device. If the user code does not support this, then \Hi should be used with \texttt{compute\_mode} set to \texttt{hybrid} and the option \texttt{mem\_space} set to \texttt{default}; this combination will offload the majority of linear algebra and optimization computations to the device. The \Hi's RAJA version of Example 1 (see \texttt{src/Drivers/NlpMdsEx1RajaDriver.cpp}) provides an example of implementing a MDS NLP so that it that can be solved by running \Hi's Newton solver on the device (\textit{i.e.}, \texttt{compute\_mode} set to \texttt{gpu} and with \texttt{mem\_space} set to \texttt{device}).
 
 We note that MDS NLPs have no support for coarse grain (interprocess/internode) parallelism.
 
@@ -696,19 +696,19 @@ bool eval_Hess_Lagr(const size_type& n, const size_type& m,
 
 \warningcp{Note:} The array \texttt{lambda} contains  the multipliers of constraints. These multipliers come have the same order as the constraints in \texttt{eval\_cons} (this is a new behavior introduced in \Hi v0.4).
 
-\warningcp{Device computations:} \Hi supports full device/GPU acceleration for MDS NLPs. To achieve this, the user can use option \texttt{compute\_mode} set to \texttt{gpu} and option \texttt{mem\_space} set to \texttt{device}. However, the user needs to be able to evaluate the model on the device. The rule of thumb is that all the \textit{pointer} arguments of the callback methods of this section will be on the device (with a few exceptions) so that the user can populate the arrays on the device. This is illustrated and discussed in detail in \texttt{src/Drivers/nlpMDS\_raja\_ex4.hpp}, which is part of the RAJA Example 4 (see \texttt{src/Drivers/nlpMDS\_ex4\_raja\_driver.cpp}) that is capable of running completely in the device memory space with minimal host-device transfer.
+\warningcp{Device computations:} \Hi supports full device/GPU acceleration for MDS NLPs. To achieve this, the user can use option \texttt{compute\_mode} set to \texttt{gpu} and option \texttt{mem\_space} set to \texttt{device}. However, the user needs to be able to evaluate the model on the device. The rule of thumb is that all the \textit{pointer} arguments of the callback methods of this section will be on the device (with a few exceptions) so that the user can populate the arrays on the device. This is illustrated and discussed in detail in \texttt{src/Drivers/NlpMdsRajaEx1.hpp}, which is part of the RAJA Example 1 (see \texttt{src/Drivers/NlpMdsEx1RajaDriver.cpp}) that is capable of running completely in the device memory space with minimal host-device transfer.
 
 \subsubsection{Calling \Hi for a \texttt{hiopInterfaceMDS} formulation}
 Once an implementation of the \texttt{hiop::hiopInterfaceMDS} abstract interface class containing the user's NLP representation is available, the  user code needs to create a \Hi problem formulation that encapsulate the NLP representation, instantiate an optimization algorithm class, and start the numerical optimization process. 
 
-A detailed, self-contained example can be found in \texttt{src/Drivers/} directory in \texttt{nlpMDS\_ex4\_driver.cpp} files for an illustration of aforementioned sequence of steps. A synposis of \Hi code that solves and MDS NLP implemented presumably in a class \texttt{Ex4 } (implemented in \texttt{nlpMDSForm\_ex4.hpp}) derived from \texttt{hiop::hiopInterfaceMDS} is as follows:
+A detailed, self-contained example can be found in \texttt{src/Drivers/} directory in \texttt{NlpMdsEx1Driver.cpp} files for an illustration of aforementioned sequence of steps. A synposis of \Hi code that solves and MDS NLP implemented presumably in a class \texttt{MdsEx1 } (implemented in \texttt{NlpMdsFormEx1.hpp}) derived from \texttt{hiop::hiopInterfaceMDS} is as follows:
 \begin{lstlisting}
-#include "nlpMDSForm_ex4.hpp"               //the NLP representation class
+#include "NlpMdsFormEx1.hpp"               //the NLP representation class
 #include "hiopInterface.hpp"   //HiOP encapsulation of the NLP
 #include "hiopAlgFilterIPM.hpp"     //solver class
 using namespace hiop;
 ...
-Ex4* my_nlp = new Ex4(n_sp, n_de); //instantiate your NLP representation class                    
+MdsEx1* my_nlp = new MdsEx1(n_sp, n_de); //instantiate your NLP representation class                    
 hiopNlpMDS nlp(*my_nlp); //create HiOP encapsulation
 nlp.options->SetStringValue("Hessian", "analytical_exact");
 nlp.options->SetNumericValue("mu0", 0.01);  //set initial value for  barrier parameter
@@ -759,7 +759,7 @@ The user can safely assume that $q(x)$ is a strictly  convex quadratic function 
 
 \medskip
 
-Self-contained examples of the use of \Hi's PriDec solver are present in  \texttt{nlpPriDec\_ex8} and \texttt{nlpPriDec\_ex9} examples under the \texttt{Drivers} directory. 
+Self-contained examples of the use of \Hi's PriDec solver are present in  \texttt{NlpPriDecEx1} and \texttt{NlpPriDecEx2} examples under the \texttt{Drivers} directory. 
 
 %[[to do:]] describe C++ interface 
 %
