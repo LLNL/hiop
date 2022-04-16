@@ -896,6 +896,11 @@ bool hiopKKTLinSysCompressedXDYcYd::computeDirections(const hiopResidual* resid,
 bool hiopKKTLinSys::compute_directions_w_IR(const hiopResidual* resid, hiopIterate* dir)
 {
   nlp_->runStats.tmSolverInternal.start();
+  
+  // skip IR if user set ir_outer_maxit to 0 or negative values
+  if(0 >= nlp_->options->GetInteger("ir_outer_maxit")) {
+    return computeDirections(resid,dir);
+  }
   const hiopResidual &r=*resid;
 
   // in the order of rx, rd, ryc, ryd, rxl, rxu, rdl, rdu, rszl, rszu, rsvl, rsvu
@@ -937,8 +942,8 @@ bool hiopKKTLinSys::compute_directions_w_IR(const hiopResidual* resid, hiopItera
   resid->rsvu->copyToStarting(*ir_rhs_, nx+nd+nyc+nyd+nx+nx+nd+nd+nx+nx+nd);
   nlp_->runStats.kkt.tmSolveRhsManip.stop();
   
-  const double tol_mu = 1e-2;
-  double tol = std::min(mu_*tol_mu, 1e-6);
+  double tol = std::min(mu_*nlp_->options->GetNumeric("ir_outer_tol_factor"), nlp_->options->GetNumeric("ir_outer_tol_min"));
+  bicgIR_->set_max_num_iter(nlp_->options->GetInteger("ir_outer_maxit"));
   bicgIR_->set_tol(tol);
   bicgIR_->set_x0(0.0);
 
