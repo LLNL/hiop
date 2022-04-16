@@ -452,9 +452,9 @@ void hiopVectorRajaPar::startingAtCopyFromStartingAt(
 #ifdef HIOP_DEEPCHECKS
   assert(n_local_ == n_ && "are you sure you want to call this?");
 #endif
-  assert(start_idx_dest >= 0 && start_idx_dest < this->n_local_);
+  assert(start_idx_dest >= 0 && start_idx_dest < this->n_local_ || this->n_local_==0);
   const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(vec_src);
-  assert(start_idx_src >=0 && start_idx_src < v.n_local_);
+  assert(start_idx_src >=0 && start_idx_src < v.n_local_ || v.n_local_==0 || v.n_local_==start_idx_src);
 
   int howManyToCopyDest = this->n_local_ - start_idx_dest;
 
