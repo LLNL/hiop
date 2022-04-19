@@ -409,7 +409,7 @@ endif()
 if(NOT (HIOP_CTEST_LAUNCH_COMMAND STREQUAL ""))
   message(STATUS "Manually overriding launch command for CTest with \"${HIOP_CTEST_LAUNCH_COMMAND}\"")
   string(REPLACE " " ";" TMP_RUNCMD "${HIOP_CTEST_LAUNCH_COMMAND}")
-  set(RUNCMD ${TMP_RUNCMD})
+  set(RUNCMD "${TMP_RUNCMD};-n;1")
   set(MPICMD ${TMP_RUNCMD})
 endif()
 
