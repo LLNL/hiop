@@ -140,9 +140,6 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   nlp_->runStats.kkt.tmUpdateInit.stop();
   nlp_->runStats.kkt.tmUpdateLinsys.start();
   
-#define USE_OLD_CODE 0
-#define USE_NEW_CODE 1  
-  
   //
   // compute condensed linear system J'*D*J + H + Dx + delta_wx*I
   //
@@ -192,8 +189,9 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
 #ifdef HIOP_DEEPCHECKS
   JtDiagJ_->check_csr_is_ordered();
 #endif
-  
-  if(nullptr == M_condensed_) {
+
+  if(nullptr == linSys_) {
+    //first time this is called
     assert(nullptr == Hess_upper_csr_);
     Hess_upper_csr_ = new hiopMatrixSparseCSRSeq();
     Hess_upper_csr_->form_from_symbolic(*Hess_triplet);
@@ -218,13 +216,18 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
     hiopMatrixSparseCSRSeq Diag;
     Diag.form_diag_from_symbolic(*Dx_);
 
+    assert(nullptr == M_condensed_);
     M_condensed_ = M_condensed_tmp->add_matrix_alloc(Diag);
     M_condensed_tmp->add_matrix_symbolic(*M_condensed_, Diag);
     delete M_condensed_tmp;
 
     //t.stop(); printf("ADD-symb  took %.5f\n", t.getElapsedTime());
+  } else {
+    auto* lins_sys_sparse = dynamic_cast<hiopLinSolverSymSparse*>(linSys_);
+    assert(linSys_);
+    assert(M_condensed_);
+    //todo assert(M_condensed_ == linSys_->sys_matrix());
   }
-
 
   t.reset(); t.start();
   Hess_upper_csr_->form_from_numeric(*Hess_triplet);
@@ -238,17 +241,15 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   }
   M_condensed_->addDiagonal(1.0, *Dx_);
 
-  Hess_csr_->add_matrix_numeric(1.0, *M_condensed_, 1.0, *JtDiagJ_, 1.0);  
-  
+  Hess_csr_->add_matrix_numeric(1.0, *M_condensed_, 1.0, *JtDiagJ_, 1.0);
   //t.stop(); printf("ADD-nume  took %.5f\n", t.getElapsedTime());
+  
   int nnz_condensed = M_condensed_->numberOfNonzeros();
 
   //
   // linear system matrix update
   //
 
-  // TODO work directly with
-  // hiopMatrixSparseTriplet& Msys = linSys->sysMatrix();
   // TODO should have same code for different compute modes (remove is_cusolver_on)
   
   bool is_cusolver_on = nlp_->options->GetString("compute_mode") == "cpu" ? false : true;
@@ -262,13 +263,6 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
 #endif  
   if(is_cusolver_on) {
     linSys_ = determine_and_create_linsys(nx, nineq, M_condensed_->numberOfNonzeros());
-
-#ifdef HIOP_USE_CUDA    
-    hiopLinSolverCholCuSparse* linSys_cusolver = dynamic_cast<hiopLinSolverCholCuSparse*>(linSys_);
-    assert(linSys_cusolver);
-    linSys_cusolver->set_linsys_mat(dynamic_cast<hiopMatrixSparseCSRSeq*>(M_condensed_));
-#endif    
-    
   } else {
     //compute mode cpu -> use update MA57 linear solver's matrix
     
@@ -289,7 +283,7 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
 
     assert(linSys_);
     auto* linSys = dynamic_cast<hiopLinSolverSymSparse*> (linSys_);
-    auto* Msys = dynamic_cast<hiopMatrixSparseTriplet*>(linSys->sysMatrix());
+    auto* Msys = dynamic_cast<hiopMatrixSparseTriplet*>(linSys->sys_matrix());
     assert(Msys);
     assert(Msys->m() == M_condensed_->m());
 
@@ -472,8 +466,9 @@ hiopKKTLinSysCondensedSparse::determine_and_create_linsys(size_type nx, size_typ
 #ifdef HIOP_USE_CUDA
     nlp_->log->printf(hovWarning,
                       "KKT_SPARSE_Condensed linsys: alloc cuSOLVER-chol matrix size %d\n", n);
-    
-    linSys_ = new hiopLinSolverCholCuSparse(n, nnz, nlp_);
+    assert(M_condensed_);
+    linSys_ = new hiopLinSolverCholCuSparse(M_condensed_, nlp_);
+
 #endif    
     
     //Return NULL (and assert) if a GPU sparse linear solver is not present

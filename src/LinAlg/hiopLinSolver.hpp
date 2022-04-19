@@ -135,19 +135,35 @@ class hiopLinSolverSparseBase : public hiopLinSolver
 {
 public:
   hiopLinSolverSparseBase()
-    : M_(nullptr)
+    : M_(nullptr),
+      sys_mat_owned_(true)
   {
-  };
+  }
+  
   virtual ~hiopLinSolverSparseBase()
   {
-    delete M_;
-  };
-  inline hiopMatrixSparse* sysMatrix()
+    if(sys_mat_owned_) {
+      delete M_;
+    }
+  }
+  
+  inline hiopMatrixSparse* sys_matrix()
   {
     return M_;
   }
+
+  inline void set_sys_matrix(hiopMatrixSparse* M)
+  {
+    if(sys_mat_owned_) {
+      assert(false && "system matrix should not have been allocated internally when calling set_sys_matrix");
+      delete M_;
+    }
+    sys_mat_owned_ = false;
+    M_ = M;
+  }
 protected:
   hiopMatrixSparse* M_;
+  bool sys_mat_owned_;
 };
 
 /** 
@@ -156,18 +172,31 @@ protected:
 class hiopLinSolverSymSparse : public hiopLinSolverSparseBase
 {
 public:
-  hiopLinSolverSymSparse(int n, int nnz, hiopNlpFormulation* nlp);
+  /// Constructor that creates and owns internal system matrix of size `n` and with `nnz` nonzeros
+  hiopLinSolverSymSparse(size_type n, size_type nnz, hiopNlpFormulation* nlp);
+
+  /**
+   * Constructor that uses the matrix passed as argument as internal system matrix. The system matrix will NOT be 
+   * managed by this class 
+   * 
+   * @note This constructor should set `sys_mat_owned_` to `false`.
+   */
+  hiopLinSolverSymSparse(hiopMatrixSparse* M, hiopNlpFormulation* nlp);
+
+  /**
+   * Barebone constructor that does not create or set internal system matrix. It should be used for cases when
+   * the system matrix is not available upon instantiation of this class. This system matrix should be subsequently 
+   * set by the calling code by invoking `set_sys_matrix`.
+   *
+   * @note This constructor should set `sys_mat_owned_` to false.
+   */
+  hiopLinSolverSymSparse(hiopNlpFormulation* nlp);
+  
   virtual ~hiopLinSolverSymSparse()
   {
   }
 protected:
-  /* Constructor for when the size of the system matrix is to be determined. */
-  hiopLinSolverSymSparse(hiopNlpFormulation* nlp);
-
-  hiopLinSolverSymSparse()
-  {
-    assert(false);
-  }
+  hiopLinSolverSymSparse() = delete;
 };
 
 /** 
@@ -176,16 +205,13 @@ protected:
 class hiopLinSolverNonSymSparse : public hiopLinSolverSparseBase
 {
 public:
-  hiopLinSolverNonSymSparse(int n, int nnz, hiopNlpFormulation* nlp);
+  hiopLinSolverNonSymSparse(size_type n, size_type nnz, hiopNlpFormulation* nlp);
   virtual ~hiopLinSolverNonSymSparse()
   {
   }
   
 protected:
-  hiopLinSolverNonSymSparse()
-  {
-    assert(false);
-  }
+  hiopLinSolverNonSymSparse() = delete;
 };
 
 } //end namespace
