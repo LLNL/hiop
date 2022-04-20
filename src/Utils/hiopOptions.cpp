@@ -745,7 +745,11 @@ void hiopOptionsNLP::register_options()
                         "Apply iterative refinement (IR) if the full KKT residual is larger than "
                         "min(mu*ir_outer_tol_factor,ir_outer_tol_min). (default 1e-6)");
 
-    register_int_option("ir_outer_maxit", 8, 0, 100, "Max number of outer iterative refinement iterations (default 8)."
+    register_int_option("ir_outer_maxit",
+                        8,
+                        0,
+                        100, 
+                        "Max number of outer iterative refinement iterations (default 8)."
                         "Setting it to 0 deactivates the outer iterative refinement");
   }
 
