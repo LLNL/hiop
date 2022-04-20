@@ -1,5 +1,8 @@
 # Change Log
-All notable changes to HiOp will be documented in this file.
+All notable changes to HiOp are documented in this file.
+
+## Version 0.6.1: HIP linear algebra workaround and update for RAJA > v0.14  (March 31, 2022)
+This version/tag provides a workaround for an issue in the HIP BLAS and updates the RAJA code to better operate with the newer versions of RAJA.
 
 ## Version 0.6.0: Release of the PriDec optimization and improved GPU computations (March 31, 2022)
 The salient features of v0.6.0 are 
