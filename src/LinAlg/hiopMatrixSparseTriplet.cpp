@@ -1327,6 +1327,55 @@ void hiopMatrixSparseTriplet::convertToCSR(int &csr_nnz,
 
 }
 
+/*  sort by first row and then col */
+void hiopMatrixSparseTriplet::sort()
+{
+  size_type nnz = numberOfNonzeros();
+
+  // sort the nonzeros
+  std::vector<index_type> ind_temp(nnz);
+  std::iota(ind_temp.begin(), ind_temp.end(), 0);
+  std::sort(ind_temp.begin(), ind_temp.end(),[&](index_type i, index_type j) { 
+                                                 return (iRow_[i] != iRow_[j]) ? iRow_[i]<iRow_[j] : jCol_[i] < jCol_[j];
+                                             });
+  reorder(iRow_,ind_temp,nnz);
+  reorder(jCol_,ind_temp,nnz);
+  reorder(values_,ind_temp,nnz);
+
+}
+
+bool hiopMatrixSparseTriplet::is_diagonal() const
+{
+  bool bret{false};
+  if(nrows_!=ncols_) {
+    bret = false;
+    return bret;
+  }
+  for(index_type itnnz=0; itnnz<nnz_; itnnz++) {
+    if(iRow_[itnnz]!=jCol_[itnnz]) {
+      bret = false;
+      return bret;
+    }
+  }
+  bret = true;
+  return bret;
+}
+
+void hiopMatrixSparseTriplet::extract_diagonal(hiopVector& diag_out) const
+{
+  size_type vec_dim = diag_out.get_local_size();
+  assert( vec_dim == nrows_ && vec_dim == ncols_);
+  
+  hiopVectorPar& vec = dynamic_cast<hiopVectorPar&>(diag_out);
+  double* v_data = vec.local_data();
+  
+  for(index_type itnnz=0; itnnz<nnz_; itnnz++) {
+    if(iRow_[itnnz]==jCol_[itnnz]) {
+      v_data[iRow_[itnnz]] = values_[itnnz];
+    }
+  }
+}
+
 /*
 *  extend original Hess to [Hess+diag_term]
 */

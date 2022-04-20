@@ -807,9 +807,6 @@ bool hiopKKTLinSysCompressedXDYcYd::computeDirections(const hiopResidual* resid,
    * perform the reduction to the compressed linear system
    * rx_tilde = rx+Sxl^{-1}*[rszl-Zl*rxl] - Sxu^{-1}*(rszu-Zu*rxu)
    * rd_tilde = rd + Sdl^{-1}*(rsvl-Vl*rdl)-Sdu^{-1}(rsvu-Vu*rdu)
-   *
-   * rd_tilde = ryd + [(Sdl^{-1}Vl+Sdu^{-1}Vu)]^{-1}*
-   *                     [rd + Sdl^{-1}*(rsvl-Vl*rdl)-Sdu^{-1}(rsvu-Vu*rdu)]
    */
   rx_tilde_->copyFrom(*r.rx);
   if(nlp_->n_low_local()) {
@@ -899,6 +896,7 @@ bool hiopKKTLinSys::compute_directions_w_IR(const hiopResidual* resid, hiopItera
   
   // skip IR if user set ir_outer_maxit to 0 or negative values
   if(0 >= nlp_->options->GetInteger("ir_outer_maxit")) {
+    nlp_->runStats.tmSolverInternal.stop();
     return computeDirections(resid,dir);
   }
   const hiopResidual &r=*resid;
@@ -2031,6 +2029,199 @@ bool hiopPrecondKKTOpr::trans_times_vec(hiopVector& y, const hiopVector& x)
   // compressed preconditioner is symmetric
   return times_vec(y,x);
 }
+
+
+hiopKKTLinSysNormalEquation::hiopKKTLinSysNormalEquation(hiopNlpFormulation* nlp)
+  : hiopKKTLinSysCompressed(nlp),
+    Hess_diag_{nullptr}
+{
+  rd_tilde_  = Dd_->alloc_clone();
+  ryc_tilde_ = nlp->alloc_dual_eq_vec();
+  ryd_tilde_ = Dd_->alloc_clone();
+  
+  Hx_inv_ = Dx_->alloc_clone();
+  Hd_inv_ = Dd_->alloc_clone();
+  x_wrk_ = Dx_->alloc_clone();
+  d_wrk_ = Dd_->alloc_clone();
+}
+
+hiopKKTLinSysNormalEquation::~hiopKKTLinSysNormalEquation()
+{
+  delete rd_tilde_;
+  delete ryc_tilde_;
+  delete ryd_tilde_;
+  delete Hx_inv_;
+  delete Hd_inv_;
+  delete Hess_diag_;
+  delete x_wrk_;
+  delete d_wrk_;
+}
+
+bool hiopKKTLinSysNormalEquation::update(const hiopIterate* iter,
+                                         const hiopVector* grad_f,
+                                         const hiopMatrix* Jac_c,
+                                         const hiopMatrix* Jac_d,
+                                         hiopMatrix* Hess)
+{
+  nlp_->runStats.linsolv.start_linsolve();
+  nlp_->runStats.tmSolverInternal.start();
+  nlp_->runStats.kkt.tmUpdateInit.start();
+  
+  iter_ = iter;
+  grad_f_ = dynamic_cast<const hiopVectorPar*>(grad_f);
+  Jac_c_ = Jac_c;
+  Jac_d_ = Jac_d;
+  Hess_ = Hess;
+
+  size_type nx  = Hess_->m();
+  size_type neq = Jac_c_->m();
+  size_type nineq = Jac_d_->m();
+  assert(nx==Hess_->n());
+  assert(nx==Jac_c_->n());
+  assert(nx==Jac_d_->n());
+
+  // compute barrier diagonals (these change only between outer optimiz iterations)
+  // Dx=(Sxl)^{-1}Zl + (Sxu)^{-1}Zu
+  Dx_->setToZero();
+  Dx_->axdzpy_w_pattern(1.0, *iter_->zl, *iter_->sxl, nlp_->get_ixl());
+  Dx_->axdzpy_w_pattern(1.0, *iter_->zu, *iter_->sxu, nlp_->get_ixu());
+  nlp_->log->write("Dx in KKT", *Dx_, hovMatrices);
+
+  // Dd=(Sdl)^{-1}Vu + (Sdu)^{-1}Vu
+  Dd_->setToZero();
+  Dd_->axdzpy_w_pattern(1.0, *iter_->vl, *iter_->sdl, nlp_->get_idl());
+  Dd_->axdzpy_w_pattern(1.0, *iter_->vu, *iter_->sdu, nlp_->get_idu());
+  nlp_->log->write("Dd in KKT", *Dd_, hovMatrices);
+#ifdef HIOP_DEEPCHECKS
+  assert(true==Dd_->allPositive());
+#endif
+  nlp_->runStats.kkt.tmUpdateInit.stop();
+  
+  //factorization + inertia correction if needed
+  bool retval = factorize();
+
+  nlp_->runStats.tmSolverInternal.stop();
+  return retval;
+}
+
+
+bool hiopKKTLinSysNormalEquation::computeDirections(const hiopResidual* resid, hiopIterate* dir)
+{
+  nlp_->runStats.tmSolverInternal.start();
+  nlp_->runStats.kkt.tmSolveRhsManip.start();
+
+  const hiopResidual &r = *resid;
+
+  /***********************************************************************
+   * perform the reduction to the compressed linear system
+   * rx_tilde = rx + Sxl^{-1}*[rszl-Zl*rxl] - Sxu^{-1}*(rszu-Zu*rxu)
+   * rd_tilde = rd + Sdl^{-1}*(rsvl-Vl*rdl) - Sdu^{-1}*(rsvu-Vu*rdu)
+   */
+  rx_tilde_->copyFrom(*r.rx);
+  if(nlp_->n_low_local()) {
+    // rl:=rszl-Zl*rxl (using dir->x as working buffer)
+    hiopVector &rl=*(dir->x);//temporary working buffer
+    rl.copyFrom(*r.rszl);
+    rl.axzpy(-1.0, *iter_->zl, *r.rxl);
+    //rx_tilde = rx+Sxl^{-1}*rl
+    rx_tilde_->axdzpy_w_pattern( 1.0, rl, *iter_->sxl, nlp_->get_ixl());
+  }
+  if(nlp_->n_upp_local()) {
+    //ru:=rszu-Zu*rxu (using dir->x as working buffer)
+    hiopVector &ru=*(dir->x);//temporary working buffer
+    ru.copyFrom(*r.rszu); ru.axzpy(-1.0,*iter_->zu, *r.rxu);
+    //rx_tilde = rx_tilde - Sxu^{-1}*ru
+    rx_tilde_->axdzpy_w_pattern(-1.0, ru, *iter_->sxu, nlp_->get_ixu());
+  }
+
+  //for rd_tilde = rd + Sdl^{-1}*(rsvl-Vl*rdl)-Sdu^{-1}(rsvu-Vu*rdu)
+  rd_tilde_->copyFrom(*r.rd);
+  if(nlp_->m_ineq_low()) {
+    hiopVector& rd2=*dir->sdu;
+    //rd2=rsvl-Vl*rdl
+    rd2.copyFrom(*r.rsvl);
+    rd2.axzpy(-1.0, *iter_->vl, *r.rdl);
+    //rd_tilde +=  Sdl^{-1}*(rsvl-Vl*rdl)
+    rd_tilde_->axdzpy_w_pattern(1.0, rd2, *iter_->sdl, nlp_->get_idl());
+  }
+  if(nlp_->m_ineq_upp()>0) {
+    hiopVector& rd2=*dir->sdu;
+    //rd2=rsvu-Vu*rdu
+    rd2.copyFrom(*r.rsvu);
+    rd2.axzpy(-1.0, *iter_->vu, *r.rdu);
+    //rd_tilde += -Sdu^{-1}(rsvu-Vu*rdu)
+    rd_tilde_->axdzpy_w_pattern(-1.0, rd2, *iter_->sdu, nlp_->get_idu());
+  }
+
+  /***********************************************************************
+   * perform the reduction to the compressed linear system
+   * [ ryc_tilde ] = [ Jc  0 ] [ H+Dx+delta_wx     0       ]^{-1}  [ rx_tilde ] - [ ryc ] 
+   * [ ryd_tilde ]   [ Jd -I ] [   0           Dd+delta_wd ]       [ rd_tilde ]   [ ryd ]
+   */
+
+  /***********************************************************************
+   * TODO: now we assume H is empty or diagonal
+   * hence we have 
+   * [ ryc_tilde ] = [ Jc ] [H+Dx+delta_wx]^{-1} [ rx_tilde ] - [ ryc ] 
+   * [ ryd_tilde ]   [ Jd ] [H+Dx+delta_wx]^{-1} [ rx_tilde ] - [ Dd+delta_wd ]^{-1} [ rd_tilde ] - [ ryd ]
+   */
+  {
+    /* x_wrk_ = [H+Dx+delta_wx]^{-1} [ rx_tilde ] */
+    x_wrk_->copyFrom(*Hx_inv_);
+    x_wrk_->componentMult(*rx_tilde_);
+
+    ryc_tilde_->copyFrom(*r.ryc);
+    Jac_c_->timesVec(-1.0, *ryc_tilde_, 1.0, *x_wrk_);
+    
+    /* d_wrk_ = [ Dd+delta_wd ]^{-1} [ rd_tilde ] */
+    d_wrk_->copyFrom(*Hd_inv_);
+    d_wrk_->componentMult(*rd_tilde_);
+    ryd_tilde_->copyFrom(*r.ryd);
+    Jac_d_->timesVec(-1.0, *ryd_tilde_, 1.0, *x_wrk_);
+    ryd_tilde_->axpy(-1.0, *d_wrk_);
+  }
+
+  nlp_->runStats.kkt.tmSolveRhsManip.stop();
+
+  /***********************************************************************
+   * solve the compressed system
+   * (be aware that rx_tilde is reused/modified inside this function)
+   ***********************************************************************/
+  bool sol_ok = solveCompressed(*ryc_tilde_, *ryd_tilde_, *dir->yc, *dir->yd);
+
+  nlp_->runStats.kkt.tmSolveRhsManip.start();
+  /***********************************************************************
+  * TODO: now we assume H is empty or diagonal
+  * hence from
+  *   [ H+Dx+delta_wx     0       ] [dx] = [ rx_tilde ] - [ Jc^T  Jd^T] [dyc]
+  *   [   0           Dd+delta_wd ] [dd]   [ rd_tilde ]   [  0     -I ] [dyd]
+  * we can recover
+  *   [dx] = [ H+Dx+delta_wx ]^{-1} ( [ rx_tilde ] - [ Jc^T ] [dyc] - [Jd^T] [dyd] )
+  *   [dd] = [ Dd+delta_wd ]^{-1}   ( [ rd_tilde ] - [dyd] ) 
+  */
+  dir->x->copyFrom(*rx_tilde_);
+  Jac_c_->transTimesVec(1.0, *rx_tilde_, -1.0, *dir->yc);
+  Jac_d_->transTimesVec(1.0, *rx_tilde_, -1.0, *dir->yd);
+  dir->x->componentMult(*Hx_inv_);
+
+  dir->d->copyFrom(*rd_tilde_);
+  dir->d->axpy(-1.0,*r.ryd);
+  dir->d->componentMult(*Hd_inv_);
+  nlp_->runStats.kkt.tmSolveRhsManip.stop();
+  
+  if(false == sol_ok) {
+    nlp_->runStats.tmSolverInternal.stop();
+    nlp_->runStats.linsolv.end_linsolve();
+    return false;
+  }
+  
+  bool bret = compute_directions_for_full_space(resid, dir);
+  
+  nlp_->runStats.tmSolverInternal.stop();
+  nlp_->runStats.linsolv.end_linsolve();
+  return true;
+}
+
 
 };
 

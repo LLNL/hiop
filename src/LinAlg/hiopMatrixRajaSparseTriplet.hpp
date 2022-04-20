@@ -440,18 +440,13 @@ public:
 #ifdef HIOP_DEEPCHECKS
   virtual bool assertSymmetry(double tol=1e-16) const { return true; }
 #endif
-  virtual bool isDiagonal() const 
+  virtual bool is_diagonal() const;
+
+  virtual void extract_diagonal(hiopVector& diag_out) const
   {
-    for(int itnnz = 0; itnnz < nnz_; itnnz++)
-    {
-      if(iRow_[itnnz] != jCol_[itnnz])
-      {
-        return false;
-      }
-    }
-    return true;
+    assert(false && "not yet implemented");
   }
-  
+
   virtual size_type numberOfOffDiagNonzeros() const;
 
   virtual void set_Jac_FR(const hiopMatrixSparse& Jac_c,

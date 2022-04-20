@@ -1814,6 +1814,30 @@ void hiopMatrixRajaSparseTriplet::copyDiagMatrixToSubblock_w_pattern(const hiopV
   devalloc.deallocate(row_start_dev);
 }
 
+bool hiopMatrixRajaSparseTriplet::is_diagonal() const
+{
+  bool bret{false};
+  
+  if(ncols_ != nrows_) {
+    bret = false;
+    return bret;
+  }
+
+  RAJA::ReduceSum<hiop_raja_reduce, int> sum_no_diag(0);
+  RAJA::forall<hiop_raja_exec>(
+    RAJA::RangeSegment(0, nnz_),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      if (irow[i]!=jcol[i]) {
+        sum_no_diag += 1; 
+      }
+    }
+  );
+  bret = ((sum.get())==0);
+  
+  return bret;
+}
+
 /**********************************************************************************
   * Sparse symmetric matrix in triplet format. Only the UPPER triangle is stored
   **********************************************************************************/
