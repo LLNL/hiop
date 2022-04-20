@@ -728,7 +728,31 @@ void hiopOptionsNLP::register_options()
                         "The problem will be rescaled if the inf-norm of the gradient at the starting point is "
                         "larger than the value of this option (default 100)");
   }
-  
+
+  // outer iterative refinement
+  {
+    register_num_option("ir_outer_tol_factor",
+                        1e-2,
+                        1e-20,
+                        1.0,
+                        "Apply iterative refinement (IR) if the full KKT residual is larger than "
+                        "min(mu*ir_outer_tol_factor,ir_outer_tol_min). (default 1e-2)");
+
+    register_num_option("ir_outer_tol_min",
+                        1e-6,
+                        1e-20,
+                        1e+20,
+                        "Apply iterative refinement (IR) if the full KKT residual is larger than "
+                        "min(mu*ir_outer_tol_factor,ir_outer_tol_min). (default 1e-6)");
+
+    register_int_option("ir_outer_maxit",
+                        8,
+                        0,
+                        100, 
+                        "Max number of outer iterative refinement iterations (default 8)."
+                        "Setting it to 0 deactivates the outer iterative refinement");
+  }
+
   // relax bounds
   {
     register_num_option("bound_relax_perturb", 1e-8, 0.0, 1e20,
