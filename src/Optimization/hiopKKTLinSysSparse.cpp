@@ -304,9 +304,7 @@ namespace hiop
           nlp_->log->printf(hovScalars,
                             "KKT_SPARSE_XYcYd linsys: alloc GINKGO with matrix size %d (%d cons)\n",
                             n, neq+nineq);
-          hiopLinSolverSymSparseGinkgo *p = new hiopLinSolverSymSparseGinkgo(n, nnz, nlp_);
-          p->setFakeInertia(neq + nineq);
-          linSys_ = p;        
+          linSys_ = new hiopLinSolverSymSparseGinkgo(n, nnz, nlp_);
 #endif  // HIOP_USE_GINKGO        
         }
 
@@ -628,9 +626,7 @@ namespace hiop
         if( (nullptr == linSys_ && linear_solver == "auto") || linear_solver == "ginkgo") {
           //ma57, pardiso and strumpack are not available or user requested ginkgo
 #ifdef HIOP_USE_GINKGO
-          hiopLinSolverSymSparseGinkgo *p = new hiopLinSolverSymSparseGinkgo(n, nnz, nlp_);
-          p->setFakeInertia(neq + nineq);
-          linSys_ = p;        
+          linSys_ = new hiopLinSolverSymSparseGinkgo(n, nnz, nlp_);
           actual_lin_solver = "GINKGO";        
 #endif  // HIOP_USE_GINKGO        
         }

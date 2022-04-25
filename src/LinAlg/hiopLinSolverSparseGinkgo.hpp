@@ -91,8 +91,6 @@ private:
   int *index_covert_CSR2Triplet_;
   int *index_covert_extra_Diag2CSR_;
 
-  int nFakeNegEigs_;
-
   std::shared_ptr<gko::Executor> exec_;
   std::shared_ptr<gko::matrix::Csr<double, int>> mtx_;
   std::shared_ptr<gko::LinOpFactory> reusable_factory_;
@@ -106,10 +104,6 @@ public:
   virtual void firstCall();
 //  virtual void diagonalChanged( int idiag, int extent );
 
-  void inline setFakeInertia(int nFakeNegEigs)
-  {
-    nFakeNegEigs_ = nFakeNegEigs;
-  }
 
 friend class hiopLinSolverNonSymSparseGinkgo;
 
@@ -145,8 +139,6 @@ private:
   int *index_covert_extra_Diag2CSR_;
   std::unordered_map<int,int> extra_diag_nnz_map_;
 
-  int nFakeNegEigs_;
- 
   std::shared_ptr<gko::Executor> exec_;
   std::shared_ptr<gko::matrix::Csr<double, int>> mtx_;
   std::shared_ptr<gko::LinOpFactory> reusable_factory_;

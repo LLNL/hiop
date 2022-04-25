@@ -261,10 +261,7 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
     }
 
     gko_solver_ = gko::share(reusable_factory_->generate(mtx_));
-    nlp_->runStats.linsolv.tmInertiaComp.start();
-    int negEigVal = nFakeNegEigs_;
-    nlp_->runStats.linsolv.tmInertiaComp.stop();
-    return negEigVal;
+    return 0; // This needs to be changed to return -1 if the matrix is singular - as soon as ginkgo supports this.
   }
 
   bool hiopLinSolverSymSparseGinkgo::solve ( hiopVector& x_ )
@@ -338,10 +335,7 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
 
     gko_solver_ = gko::share(reusable_factory_->generate(mtx_));
 
-    nlp_->runStats.linsolv.tmInertiaComp.start();
-    int negEigVal = nFakeNegEigs_;
-    nlp_->runStats.linsolv.tmInertiaComp.stop();
-    return negEigVal;
+    return 0; // This needs to be changed to return -1 if the matrix is singular - as soon as ginkgo supports this.
   }
 
   bool hiopLinSolverNonSymSparseGinkgo::solve(hiopVector& x_)
