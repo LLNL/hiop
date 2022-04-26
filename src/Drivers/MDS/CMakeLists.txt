@@ -1,5 +1,6 @@
 add_executable(NlpMdsEx1.exe NlpMdsEx1Driver.cpp)
 target_link_libraries(NlpMdsEx1.exe HiOp::HiOp)
+install(TARGETS NlpMdsEx1.exe DESTINATION bin)
 
 if(HIOP_USE_RAJA)
   if(HIOP_USE_GPU AND HIOP_USE_CUDA)
@@ -11,6 +12,7 @@ if(HIOP_USE_RAJA)
   endif()
   add_executable(NlpMdsEx1Raja.exe  NlpMdsEx1RajaDriver.cpp  NlpMdsRajaEx1.cpp)
   target_link_libraries(NlpMdsEx1Raja.exe HiOp::HiOp)
+  install(TARGETS NlpMdsEx1Raja.exe DESTINATION bin)
 endif()
 
 add_executable(NlpMdsEx2.exe  NlpMdsEx2Driver.cpp)
