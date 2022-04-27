@@ -1906,7 +1906,8 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
         }
       } // end of if(!kkt->update(it_curr, _grad_f, _Jac_c, _Jac_d, _Hess_Lagr))
       
-      if(nlp->options->GetString("fact_acceptor") == "inertia_correction"){
+      auto* fact_acceptor_ic = dynamic_cast<hiopFactAcceptorIC*> (fact_acceptor_);
+      if(fact_acceptor_ic) {
         bool linsol_safe_mode_on_before = linsol_safe_mode_on;
         //compute_search_direction call below updates linsol safe mode flag and linsol_safe_mode_lastiter
         if(!compute_search_direction(kkt, linsol_safe_mode_on, linsol_forcequick, iter_num)) {
@@ -1919,6 +1920,8 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
           continue;
         } 
       } else {
+        auto* fact_acceptor_dwd = dynamic_cast<hiopFactAcceptorInertiaFreeDWD*> (fact_acceptor_);
+        assert(fact_acceptor_dwd);
         bool linsol_safe_mode_on_before = linsol_safe_mode_on;
         //compute_search_direction call below updates linsol safe mode flag and linsol_safe_mode_lastiter
         if(!compute_search_direction_inertia_free(kkt, linsol_safe_mode_on, linsol_forcequick, iter_num)) {

@@ -1204,6 +1204,22 @@ void hiopOptionsNLP::ensure_consistence()
     }
   }
 
+  // use inertia-free approach if 1) solver is not MA57 or Pardiso or 2) if linsys is full
+  if(GetString("KKTLinsys")=="full") {
+    if(GetString("fact_acceptor")=="inertia_correction") {
+      log_printf(hovWarning,
+                 "option fact_acceptor=inertia_correction was changed to 'inertia_free' since "
+                 "inertia correction doesen't support the unsymmetric full KKT linear system.\n");
+      set_val("fact_acceptor", "inertia_free");
+    }
+  } else if(GetString("linear_solver_sparse") != "ma57" && GetString("linear_solver_sparse") == "pardiso") {
+    if(GetString("fact_acceptor")=="inertia_correction") {
+      log_printf(hovWarning,
+                 "option fact_acceptor=inertia_correction was changed to 'inertia_free' since "
+                 "the given linear solver cannot provide inertia.\n");
+      set_val("fact_acceptor", "inertia_free");
+    }
+  }
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
