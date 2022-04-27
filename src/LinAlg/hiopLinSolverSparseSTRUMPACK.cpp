@@ -60,7 +60,7 @@ using namespace strumpack;
 
 namespace hiop
 {
-  hiopLinSolverSymSparseSTRUMPACK::hiopLinSolverSymSparseSTRUMPACK(const int& n, const int& nnz, hiopNlpFormulation* nlp, int ncons)
+  hiopLinSolverSymSparseSTRUMPACK::hiopLinSolverSymSparseSTRUMPACK(const int& n, const int& nnz, hiopNlpFormulation* nlp)
     : hiopLinSolverSymSparse(n, nnz, nlp),
       kRowPtr_{nullptr},
       jCol_{nullptr},
@@ -68,8 +68,7 @@ namespace hiop
       index_covert_CSR2Triplet_{nullptr},
       index_covert_extra_Diag2CSR_{nullptr},
       n_{n},
-      nnz_{0},
-      nFakeNegEigs_{ncons}
+      nnz_{0}
   {}
 
   hiopLinSolverSymSparseSTRUMPACK::~hiopLinSolverSymSparseSTRUMPACK()
@@ -257,8 +256,10 @@ namespace hiop
       return -1;
     } else if(strumpack::ReturnCode::SUCCESS==retval) {
       retval = spss.inertia(num_neg_eig_val, num_zero_eig_val, num_pos_eig_val);
-      if(strumpack::ReturnCode::SUCCESS != retval) {
-       num_neg_eig_val = nFakeNegEigs_;
+      if(strumpack::ReturnCode::SUCCESS == retval) {
+        num_neg_eig_val = num_neg_eig_val;
+      } else {
+        assert(false && "strumpack: failed to provide accurate inertia infomation. Please use inertia-free approach.");
       }
     } else {
       // unknown error
@@ -295,7 +296,7 @@ namespace hiop
 
 
 
-  hiopLinSolverNonSymSparseSTRUMPACK::hiopLinSolverNonSymSparseSTRUMPACK(const int& n, const int& nnz, hiopNlpFormulation* nlp, int ncons)
+  hiopLinSolverNonSymSparseSTRUMPACK::hiopLinSolverNonSymSparseSTRUMPACK(const int& n, const int& nnz, hiopNlpFormulation* nlp)
     : hiopLinSolverNonSymSparse(n, nnz, nlp),
       kRowPtr_{nullptr},
       jCol_{nullptr},
@@ -303,8 +304,7 @@ namespace hiop
       index_covert_CSR2Triplet_{nullptr},
       index_covert_extra_Diag2CSR_{nullptr},
       n_{n},
-      nnz_{0},
-      nFakeNegEigs_{ncons}
+      nnz_{0}
   {}
 
   hiopLinSolverNonSymSparseSTRUMPACK::~hiopLinSolverNonSymSparseSTRUMPACK()
@@ -393,9 +393,8 @@ namespace hiop
     spss.factor();   // not really necessary, called if needed by solve
 
     nlp_->runStats.linsolv.tmInertiaComp.start();
-    int negEigVal = nFakeNegEigs_;
     nlp_->runStats.linsolv.tmInertiaComp.stop();
-    return negEigVal;
+    return 0;
   }
 
   bool hiopLinSolverNonSymSparseSTRUMPACK::solve(hiopVector& x_)

@@ -291,7 +291,7 @@ namespace hiop
           //ma57 and pardiso are not available or user requested strumpack
 #ifdef HIOP_USE_STRUMPACK
           linsol_actual = "STRUMPACK";
-          linSys_ = new hiopLinSolverSymSparseSTRUMPACK(n, nnz, nlp_, neq + nineq);
+          linSys_ = new hiopLinSolverSymSparseSTRUMPACK(n, nnz, nlp_);
 #endif  // HIOP_USE_STRUMPACK        
         }
 
@@ -302,7 +302,6 @@ namespace hiop
                             n,
                             neq+nineq);
         }
-
 
       } else { //hybrid / gpu
         ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -322,7 +321,7 @@ namespace hiop
 
         if( (nullptr == linSys_ && linear_solver == "auto") || linear_solver == "strumpack") {
 #if defined(HIOP_USE_STRUMPACK)        
-          linSys_ = new hiopLinSolverSymSparseSTRUMPACK(n, nnz, nlp_, neq + nineq);
+          linSys_ = new hiopLinSolverSymSparseSTRUMPACK(n, nnz, nlp_);
           linsol_actual = "STRUMPACK";
 #endif //HIOP_USE_STRUMPACK
         }
@@ -614,7 +613,7 @@ namespace hiop
         if( (nullptr == linSys_ && linear_solver == "auto") || linear_solver == "strumpack") {
           //ma57 is not available or user requested strumpack
 #ifdef HIOP_USE_STRUMPACK              
-          linSys_ = new hiopLinSolverSymSparseSTRUMPACK(n, nnz, nlp_, neq + nineq);
+          linSys_ = new hiopLinSolverSymSparseSTRUMPACK(n, nnz, nlp_);
           actual_lin_solver = "STRUMPACK";
 #endif  // HIOP_USE_STRUMPACK        
         }
@@ -646,7 +645,7 @@ namespace hiop
         if(nullptr == linSys_ && (linear_solver == "strumpack" || linear_solver == "auto")) {
 #if defined(HIOP_USE_STRUMPACK)
           actual_lin_solver = "STRUMPACK";
-          linSys_ = new hiopLinSolverSymSparseSTRUMPACK(n, nnz, nlp_, neq + nineq);
+          linSys_ = new hiopLinSolverSymSparseSTRUMPACK(n, nnz, nlp_);
 #endif
         } //end strumpack
         
@@ -755,7 +754,6 @@ namespace hiop
                         n,
                         n_con);
       hiopLinSolverNonSymSparsePARDISO *p = new hiopLinSolverNonSymSparsePARDISO(n, nnz, nlp_);
-      p->setFakeInertia(n_con);
       linSys_ = p;
 #elif defined(HIOP_USE_STRUMPACK)
 
@@ -764,7 +762,6 @@ namespace hiop
                         "KKT_SPARSE_FULL_KKT linsys: alloc STRUMPACK size %d (%d cons)\n",
                         n,
                         n_con);
-      p->setFakeInertia(n_con);
       linSys_ = p;
 #endif // CUSOLVER
       if(NULL==linSys_) {

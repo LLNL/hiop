@@ -342,7 +342,6 @@ namespace hiop
   hiopLinSolverNonSymSparsePARDISO::hiopLinSolverNonSymSparsePARDISO(const int& n, const int& nnz, hiopNlpFormulation* nlp)
     : hiopLinSolverNonSymSparse(n, nnz, nlp),
     kRowPtr_{nullptr}, jCol_{nullptr}, kVal_{nullptr},
-    nFakeNegEigs_{-1},
     rhs_{nullptr},
     n_{n}, nnz_{-1}, is_initialized_{false}
   {
@@ -473,10 +472,9 @@ namespace hiop
     }
 
     nlp_->runStats.linsolv.tmInertiaComp.start();
-    int negEigVal = nFakeNegEigs_;
     nlp_->runStats.linsolv.tmInertiaComp.stop();
 
-    return negEigVal;
+    return 0;
   }
 
   bool hiopLinSolverNonSymSparsePARDISO::solve(hiopVector& b)

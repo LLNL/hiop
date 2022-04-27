@@ -96,8 +96,6 @@ private:
   int *index_covert_CSR2Triplet_;
   int *index_covert_extra_Diag2CSR_;
 
-  int nFakeNegEigs_;
-
   // strumpack object
    StrumpackSparseSolver<double,int> spss;
 
@@ -108,11 +106,6 @@ public:
    * for the factorization and performs ordering */
   virtual void firstCall();
 //  virtual void diagonalChanged( int idiag, int extent );
-
-  void inline setFakeInertia(int nNegEigs)
-  {
-    nFakeNegEigs_ = nNegEigs;
-  }
 
 friend class hiopLinSolverNonSymSparseSTRUMPACK;
 
@@ -152,8 +145,6 @@ private:
   int *index_covert_extra_Diag2CSR_;
   std::unordered_map<int,int> extra_diag_nnz_map;
 
-  int nFakeNegEigs_;
-
   // strumpack object
    StrumpackSparseSolver<double,int> spss;
 
@@ -163,11 +154,6 @@ public:
    * for the factorization and performs ordering */
   void firstCall();
 //  virtual void diagonalChanged( int idiag, int extent );
-
-  void inline setFakeInertia(int nNegEigs)
-  {
-    nFakeNegEigs_ = nNegEigs;
-  }
 
 friend class hiopLinSolverSymSparseSTRUMPACK;
 

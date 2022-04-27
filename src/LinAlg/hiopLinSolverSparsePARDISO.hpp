@@ -158,8 +158,6 @@ private:
   int *index_covert_extra_Diag2CSR_;
   std::unordered_map<int,int> extra_diag_nnz_map;
 
-  int nFakeNegEigs_;
-
   // pardiso parameters
   void  *pt_[64]; 
   int iparm_[64];
@@ -186,11 +184,6 @@ public:
   /** called the very first time a matrix is factored. Allocates space
    * for the factorization and performs ordering */
   void firstCall();
-
-  void inline setFakeInertia(int nNegEigs)
-  {
-    nFakeNegEigs_ = nNegEigs;
-  }
 
 //friend class hiopLinSolverSymSparsePARDISO;
 
