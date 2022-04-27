@@ -1204,7 +1204,7 @@ void hiopOptionsNLP::ensure_consistence()
     }
   }
 
-  // use inertia-free approach if 1) solver is not MA57 or Pardiso or 2) if linsys is full
+  // use inertia-free approach if 1) solver is strumpack or cusolver-lu, or 2) if linsys is full
   if(GetString("KKTLinsys")=="full") {
     if(GetString("fact_acceptor")=="inertia_correction") {
       if(is_user_defined("fact_acceptor")) {
@@ -1214,9 +1214,9 @@ void hiopOptionsNLP::ensure_consistence()
       }
       set_val("fact_acceptor", "inertia_free");
     }
-  } else if(GetString("linear_solver_sparse") != "ma57" && GetString("linear_solver_sparse") != "pardiso") {
+  } else if(GetString("linear_solver_sparse") == "strumpack" || GetString("linear_solver_sparse") == "cusolver-lu") {
     if(GetString("fact_acceptor")=="inertia_correction") {
-      if(is_user_defined("fact_acceptor")) {
+      if(is_user_defined("fact_acceptor") && is_user_defined("linear_solver_sparse") ) {
         log_printf(hovWarning,
                    "option fact_acceptor=inertia_correction was changed to 'inertia_free' since "
                    "the given linear solver cannot provide inertia.\n");
