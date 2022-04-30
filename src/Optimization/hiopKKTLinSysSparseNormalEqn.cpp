@@ -54,7 +54,7 @@
 
 #include "hiopKKTLinSysSparseNormalEqn.hpp"
 #ifdef HIOP_USE_COINHSL
-#include "hiopLinSolverIndefSparseMA57.hpp"
+#include "hiopLinSolverSymSparseMA57.hpp"
 #endif
 
 #ifdef HIOP_USE_CUDA
@@ -275,7 +275,7 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const double& delta_wx_in,
   }
 
   {
-    hiopLinSolverIndefSparseMA57* linSolver_ma57 = dynamic_cast<hiopLinSolverIndefSparseMA57*>(linSys_);
+    hiopLinSolverSymSparseMA57* linSolver_ma57 = dynamic_cast<hiopLinSolverSymSparseMA57*>(linSys_);
     if(linSolver_ma57) {
       auto* linSys = dynamic_cast<hiopLinSolverSymSparse*> (linSys_);
       auto* Msys = dynamic_cast<hiopMatrixSparseTriplet*>(linSys->sys_matrix());
@@ -339,7 +339,7 @@ hiopLinSolverSymSparse* hiopKKTLinSysSparseNormalEqn::determine_and_create_linsy
         }
       }
     }
-    linSys_ = new hiopLinSolverIndefSparseMA57(n, itnz, nlp_);
+    linSys_ = new hiopLinSolverSymSparseMA57(n, itnz, nlp_);
 #else
     assert(false && "HiOp was built without a sparse linear solver needed by the condensed KKT approach");
 #endif // HIOP_USE_COINHSL
