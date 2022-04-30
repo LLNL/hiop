@@ -54,17 +54,17 @@
 namespace hiop {
 
 /** Wrapper for LAPACK's DSYTRF */
-class hiopLinSolverIndefDenseLapack : public hiopLinSolverIndefDense
+class hiopLinSolverSymDenseLapack : public hiopLinSolverSymDense
 {
 public:
-  hiopLinSolverIndefDenseLapack(int n, hiopNlpFormulation* nlp)
-    : hiopLinSolverIndefDense(n, nlp)
+  hiopLinSolverSymDenseLapack(int n, hiopNlpFormulation* nlp)
+    : hiopLinSolverSymDense(n, nlp)
   {
     ipiv = new int[n];
     //a "legacy" hiopVector within in the CPU memory space is sufficient 
     dwork = LinearAlgebraFactory::create_vector("DEFAULT", 0);
   }
-  virtual ~hiopLinSolverIndefDenseLapack()
+  virtual ~hiopLinSolverSymDenseLapack()
   {
     delete [] ipiv;
     delete dwork;
@@ -103,13 +103,13 @@ public:
     DSYTRF(&uplo, &N, M_->local_data(), &lda, ipiv, dwork->local_data(), &lwork, &info );
     if(info<0) {
       nlp_->log->printf(hovError,
-		       "hiopLinSolverIndefDense error: %d argument to dsytrf has an illegal value.\n",
+		       "hiopLinSolverSymDense error: %d argument to dsytrf has an illegal value.\n",
 		       -info);
       return -1;
     } else {
       if(info>0) {
 	nlp_->log->printf(hovWarning,
-			 "hiopLinSolverIndefDense error: %d entry in the factorization's diagonal\n"
+			 "hiopLinSolverSymDense error: %d entry in the factorization's diagonal\n"
 			 "is exactly zero. Division by zero will occur if it a solve is attempted.\n",
 			 info);
 	//matrix is singular
@@ -184,9 +184,9 @@ public:
     int NRHS=1, LDB=N;
     DSYTRS(&uplo, &N, &NRHS, M_->local_data(), &LDA, ipiv, x.local_data(), &LDB, &info);
     if(info<0) {
-      nlp_->log->printf(hovError, "hiopLinSolverIndefDenseLapack: DSYTRS returned error %d\n", info);
+      nlp_->log->printf(hovError, "hiopLinSolverSymDenseLapack: DSYTRS returned error %d\n", info);
     } else if(info>0) {
-      nlp_->log->printf(hovError, "hiopLinSolverIndefDenseLapack: DSYTRS returned warning %d\n", info);
+      nlp_->log->printf(hovError, "hiopLinSolverSymDenseLapack: DSYTRS returned warning %d\n", info);
     }
     nlp_->runStats.linsolv.tmTriuSolves.stop();
     return info==0;
@@ -196,7 +196,7 @@ protected:
   int* ipiv;
   hiopVector* dwork;
 private:
-  hiopLinSolverIndefDenseLapack()
+  hiopLinSolverSymDenseLapack()
     : ipiv(NULL), dwork(NULL)
   {
     assert(false);

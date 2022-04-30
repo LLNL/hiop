@@ -4,9 +4,9 @@ set(hiopLinAlg_INTERFACE_HEADERS
   hiop_blasdefs.hpp
   hiopLinAlgFactory.hpp
   hiopLinSolver.hpp
-  hiopLinSolverIndefDenseLapack.hpp
-  hiopLinSolverIndefDenseMagma.hpp
-  hiopLinSolverIndefSparseMA57.hpp
+  hiopLinSolverSymDenseLapack.hpp
+  hiopLinSolverSymDenseMagma.hpp
+  hiopLinSolverSymSparseMA57.hpp
   hiopLinSolverMA86Z.hpp
   hiopLinSolverSparseSTRUMPACK.hpp
   hiopLinSolverSparsePARDISO.hpp
@@ -61,11 +61,11 @@ set(hiopLinAlg_RAJA_SRC
   )
 
 set(hiopLinAlg_GPU_SRC
-  hiopLinSolverIndefDenseMagma.cpp
+  hiopLinSolverSymDenseMagma.cpp
   )
 
 set(hiopLinAlg_MA57_SRC
-  hiopLinSolverIndefSparseMA57.cpp
+  hiopLinSolverSymSparseMA57.cpp
   )
 
 set(hiopLinAlg_STRUMPACK_SRC

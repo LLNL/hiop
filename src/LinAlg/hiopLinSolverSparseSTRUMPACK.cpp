@@ -60,13 +60,18 @@ using namespace strumpack;
 
 namespace hiop
 {
-  hiopLinSolverIndefSparseSTRUMPACK::hiopLinSolverIndefSparseSTRUMPACK(const int& n, const int& nnz, hiopNlpFormulation* nlp)
+  hiopLinSolverSymSparseSTRUMPACK::hiopLinSolverSymSparseSTRUMPACK(const int& n, const int& nnz, hiopNlpFormulation* nlp)
     : hiopLinSolverSymSparse(n, nnz, nlp),
-      kRowPtr_{nullptr},jCol_{nullptr},kVal_{nullptr},index_covert_CSR2Triplet_{nullptr},index_covert_extra_Diag2CSR_{nullptr},
-      n_{n}, nnz_{0}
+      kRowPtr_{nullptr},
+      jCol_{nullptr},
+      kVal_{nullptr},
+      index_covert_CSR2Triplet_{nullptr},
+      index_covert_extra_Diag2CSR_{nullptr},
+      n_{n},
+      nnz_{0}
   {}
 
-  hiopLinSolverIndefSparseSTRUMPACK::~hiopLinSolverIndefSparseSTRUMPACK()
+  hiopLinSolverSymSparseSTRUMPACK::~hiopLinSolverSymSparseSTRUMPACK()
   {
     if(kRowPtr_)
       delete [] kRowPtr_;
@@ -80,9 +85,9 @@ namespace hiop
       delete [] index_covert_extra_Diag2CSR_;
   }
 
-  void hiopLinSolverIndefSparseSTRUMPACK::firstCall()
+  void hiopLinSolverSymSparseSTRUMPACK::firstCall()
   {
-    assert(n_==M.n() && M.n()==M.m());
+    assert(n_==M_->n() && M_->n()==M_->m());
     assert(n_>0);
 
     kRowPtr_ = new int[n_+1]{0};
@@ -97,10 +102,10 @@ namespace hiop
       //
       // off-diagonal part
       kRowPtr_[0]=0;
-      for(int k=0;k<M.numberOfNonzeros()-n_;k++){
-        if(M.i_row()[k]!=M.j_col()[k]){
-          kRowPtr_[M.i_row()[k]+1]++;
-          kRowPtr_[M.j_col()[k]+1]++;
+      for(int k=0;k<M_->numberOfNonzeros()-n_;k++){
+        if(M_->i_row()[k]!=M_->j_col()[k]){
+          kRowPtr_[M_->i_row()[k]+1]++;
+          kRowPtr_[M_->j_col()[k]+1]++;
           nnz_ += 2;
         }
       }
@@ -130,16 +135,16 @@ namespace hiop
       int total_nnz_tmp{0},nnz_tmp{0}, rowID_tmp, colID_tmp;
       for(int k=0;k<n_;k++) index_covert_extra_Diag2CSR_[k]=-1;
 
-      for(int k=0;k<M.numberOfNonzeros()-n_;k++){
-        rowID_tmp = M.i_row()[k];
-        colID_tmp = M.j_col()[k];
+      for(int k=0;k<M_->numberOfNonzeros()-n_;k++){
+        rowID_tmp = M_->i_row()[k];
+        colID_tmp = M_->j_col()[k];
         if(rowID_tmp==colID_tmp){
           nnz_tmp = nnz_each_row_tmp[rowID_tmp] + kRowPtr_[rowID_tmp];
           jCol_[nnz_tmp] = colID_tmp;
-          kVal_[nnz_tmp] = M.M()[k];
+          kVal_[nnz_tmp] = M_->M()[k];
           index_covert_CSR2Triplet_[nnz_tmp] = k;
 
-          kVal_[nnz_tmp] += M.M()[M.numberOfNonzeros()-n_+rowID_tmp];
+          kVal_[nnz_tmp] += M_->M()[M_->numberOfNonzeros()-n_+rowID_tmp];
           index_covert_extra_Diag2CSR_[rowID_tmp] = nnz_tmp;
 
           nnz_each_row_tmp[rowID_tmp]++;
@@ -147,12 +152,12 @@ namespace hiop
         }else{
           nnz_tmp = nnz_each_row_tmp[rowID_tmp] + kRowPtr_[rowID_tmp];
           jCol_[nnz_tmp] = colID_tmp;
-          kVal_[nnz_tmp] = M.M()[k];
+          kVal_[nnz_tmp] = M_->M()[k];
           index_covert_CSR2Triplet_[nnz_tmp] = k;
 
           nnz_tmp = nnz_each_row_tmp[colID_tmp] + kRowPtr_[colID_tmp];
           jCol_[nnz_tmp] = rowID_tmp;
-          kVal_[nnz_tmp] = M.M()[k];
+          kVal_[nnz_tmp] = M_->M()[k];
           index_covert_CSR2Triplet_[nnz_tmp] = k;
 
           nnz_each_row_tmp[rowID_tmp]++;
@@ -166,8 +171,8 @@ namespace hiop
           assert(nnz_each_row_tmp[i] == kRowPtr_[i+1]-kRowPtr_[i]-1);
           nnz_tmp = nnz_each_row_tmp[i] + kRowPtr_[i];
           jCol_[nnz_tmp] = i;
-          kVal_[nnz_tmp] = M.M()[M.numberOfNonzeros()-n_+i];
-          index_covert_CSR2Triplet_[nnz_tmp] = M.numberOfNonzeros()-n_+i;
+          kVal_[nnz_tmp] = M_->M()[M_->numberOfNonzeros()-n_+i];
+          index_covert_CSR2Triplet_[nnz_tmp] = M_->numberOfNonzeros()-n_+i;
           total_nnz_tmp += 1;
 
           std::vector<int> ind_temp(kRowPtr_[i+1]-kRowPtr_[i]);
@@ -188,7 +193,8 @@ namespace hiop
     */
 
     // possible values for MatchingJob (from STRUMPACK's source code)
-    //NONE,                         /*!< Don't do anything                   */
+    //NONE,                         /*!< Don't do anything, but it can provide inertia info 
+    //                                   MC64 provides non-symmetric permutation and hence inertia is inaccurate */
     //MAX_CARDINALITY,              /*!< Maximum cardinality                 */
     //MAX_SMALLEST_DIAGONAL,        /*!< Maximum smallest diagonal value     */
     //MAX_SMALLEST_DIAGONAL_2,      /*!< Same as MAX_SMALLEST_DIAGONAL,
@@ -217,11 +223,15 @@ namespace hiop
 //    spss.reorder(n_, n_);
   }
 
-  int hiopLinSolverIndefSparseSTRUMPACK::matrixChanged()
+  int hiopLinSolverSymSparseSTRUMPACK::matrixChanged()
   {
-    assert(n_==M.n() && M.n()==M.m());
+    assert(n_==M_->n() && M_->n()==M_->m());
     assert(n_>0);
 
+    int num_neg_eig_val{0};
+    int num_zero_eig_val{0};
+    int num_pos_eig_val{0};
+    
     nlp_->runStats.linsolv.tmFactTime.start();
 
     if( !kRowPtr_ ){
@@ -230,29 +240,42 @@ namespace hiop
       // update matrix
       int rowID_tmp{0};
       for(int k=0;k<nnz_;k++){
-        kVal_[k] = M.M()[index_covert_CSR2Triplet_[k]];
+        kVal_[k] = M_->M()[index_covert_CSR2Triplet_[k]];
       }
       for(int i=0;i<n_;i++){
         if(index_covert_extra_Diag2CSR_[i] != -1)
-          kVal_[index_covert_extra_Diag2CSR_[i]] += M.M()[M.numberOfNonzeros()-n_+i];
+          kVal_[index_covert_extra_Diag2CSR_[i]] += M_->M()[M_->numberOfNonzeros()-n_+i];
       }
 
       spss.set_csr_matrix(n_, kRowPtr_, jCol_, kVal_, true);
     }
 
-    spss.factor();   // not really necessary, called if needed by solve
-
+    strumpack::ReturnCode retval = spss.factor();   // not really necessary, called if needed by solve
+    
+    if(strumpack::ReturnCode::ZERO_PIVOT==retval) {
+      return -1;
+    } else if(strumpack::ReturnCode::SUCCESS==retval) {
+      retval = spss.inertia(num_neg_eig_val, num_zero_eig_val, num_pos_eig_val);
+      if(strumpack::ReturnCode::SUCCESS == retval) {
+        num_neg_eig_val = num_neg_eig_val;
+      } else {
+        assert(false && "strumpack: failed to provide accurate inertia infomation. Please use inertia-free approach.");
+      }
+    } else {
+      // unknown error
+      assert(false && "unknown error from strumpack factor()");
+    }
+ 
     nlp_->runStats.linsolv.tmInertiaComp.start();
-    int negEigVal = nFakeNegEigs_;
     nlp_->runStats.linsolv.tmInertiaComp.stop();
-    return negEigVal;
+    return num_neg_eig_val;
   }
-
-  bool hiopLinSolverIndefSparseSTRUMPACK::solve ( hiopVector& x_ )
+  
+  bool hiopLinSolverSymSparseSTRUMPACK::solve ( hiopVector& x_ )
   {
-    assert(n_==M.n() && M.n()==M.m());
+    assert(n_==M_->n() && M_->n()==M_->m());
     assert(n_>0);
-    assert(x_.get_size()==M.n());
+    assert(x_.get_size()==M_->n());
 
     nlp_->runStats.linsolv.tmTriuSolves.start();
 
@@ -275,8 +298,13 @@ namespace hiop
 
   hiopLinSolverNonSymSparseSTRUMPACK::hiopLinSolverNonSymSparseSTRUMPACK(const int& n, const int& nnz, hiopNlpFormulation* nlp)
     : hiopLinSolverNonSymSparse(n, nnz, nlp),
-      kRowPtr_{nullptr},jCol_{nullptr},kVal_{nullptr},index_covert_CSR2Triplet_{nullptr},index_covert_extra_Diag2CSR_{nullptr},
-      n_{n}, nnz_{0}
+      kRowPtr_{nullptr},
+      jCol_{nullptr},
+      kVal_{nullptr},
+      index_covert_CSR2Triplet_{nullptr},
+      index_covert_extra_Diag2CSR_{nullptr},
+      n_{n},
+      nnz_{0}
   {}
 
   hiopLinSolverNonSymSparseSTRUMPACK::~hiopLinSolverNonSymSparseSTRUMPACK()
@@ -295,14 +323,19 @@ namespace hiop
 
   void hiopLinSolverNonSymSparseSTRUMPACK::firstCall()
   {
-    assert(n_==M.n() && M.n()==M.m());
+    assert(n_==M_->n() && M_->n()==M_->m());
     assert(n_>0);
 
     // transfer triplet form to CSR form
     // note that input is in lower triangular triplet form. First part is the sparse matrix, and the 2nd part are the additional diagonal elememts
     // the 1st part is sorted by row
+    hiop::hiopMatrixSparseTriplet* M_triplet = dynamic_cast<hiop::hiopMatrixSparseTriplet*>(M_);
+    if(M_triplet == nullptr) {
+      nlp_->log->printf(hovError, "M_triplet is nullptr");
+      return;
+    }
 
-    M.convertToCSR(nnz_, &kRowPtr_, &jCol_, &kVal_, &index_covert_CSR2Triplet_, &index_covert_extra_Diag2CSR_, extra_diag_nnz_map);
+    M_triplet->convertToCSR(nnz_, &kRowPtr_, &jCol_, &kVal_, &index_covert_CSR2Triplet_, &index_covert_extra_Diag2CSR_, extra_diag_nnz_map);
 
     /*
     * initialize strumpack parameters
@@ -337,7 +370,7 @@ namespace hiop
 
   int hiopLinSolverNonSymSparseSTRUMPACK::matrixChanged()
   {
-    assert(n_==M.n() && M.n()==M.m());
+    assert(n_==M_->n() && M_->n()==M_->m());
     assert(n_>0);
 
     nlp_->runStats.linsolv.tmFactTime.start();
@@ -348,10 +381,10 @@ namespace hiop
       // update matrix
       int rowID_tmp{0};
       for(int k=0;k<nnz_;k++) {
-        kVal_[k] = M.M()[index_covert_CSR2Triplet_[k]];
+        kVal_[k] = M_->M()[index_covert_CSR2Triplet_[k]];
       }
       for(auto p: extra_diag_nnz_map) {
-        kVal_[p.first] += M.M()[p.second];
+        kVal_[p.first] += M_->M()[p.second];
       }
 
       spss.set_csr_matrix(n_, kRowPtr_, jCol_, kVal_, true);
@@ -360,16 +393,15 @@ namespace hiop
     spss.factor();   // not really necessary, called if needed by solve
 
     nlp_->runStats.linsolv.tmInertiaComp.start();
-    int negEigVal = nFakeNegEigs_;
     nlp_->runStats.linsolv.tmInertiaComp.stop();
-    return negEigVal;
+    return 0;
   }
 
   bool hiopLinSolverNonSymSparseSTRUMPACK::solve(hiopVector& x_)
   {
-    assert(n_==M.n() && M.n()==M.m());
+    assert(n_==M_->n() && M_->n()==M_->m());
     assert(n_>0);
-    assert(x_.get_size()==M.n());
+    assert(x_.get_size()==M_->n());
 
     nlp_->runStats.linsolv.tmTriuSolves.start();
 

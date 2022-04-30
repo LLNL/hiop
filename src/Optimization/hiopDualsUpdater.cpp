@@ -56,15 +56,15 @@
 #include "hiopDualsUpdater.hpp"
 #include "hiopLinAlgFactory.hpp"
 
-#include "hiopLinSolverIndefDenseLapack.hpp"
-#include "hiopLinSolverIndefDenseMagma.hpp"
+#include "hiopLinSolverSymDenseLapack.hpp"
+#include "hiopLinSolverSymDenseMagma.hpp"
 
 
 #include "hiop_blasdefs.hpp"
 
 #ifdef HIOP_SPARSE
 #ifdef HIOP_USE_COINHSL
-#include "hiopLinSolverIndefSparseMA57.hpp"
+#include "hiopLinSolverSymSparseMA57.hpp"
 #endif
 #ifdef HIOP_USE_STRUMPACK
 #include "hiopLinSolverSparseSTRUMPACK.hpp"
@@ -381,7 +381,7 @@ instantiate_linear_solver(const char* linsol_opt,
 #ifdef HIOP_USE_COINHSL
         ss_log << "LSQ linear solver --- KKT_SPARSE_XDYcYd linsys: MA57 size " << n
                << " cons " << (neq+nineq) << " nnz " << nnz;
-        lin_sys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);      
+        lin_sys_ = new hiopLinSolverSymSparseMA57(n, nnz, nlp_);      
 #endif // HIOP_USE_COINHSL
       }
 
@@ -390,7 +390,7 @@ instantiate_linear_solver(const char* linsol_opt,
 #ifdef HIOP_USE_PARDISO
         ss_log << "LSQ linear solver --- KKT_SPARSE_XDYcYd linsys: PARDISO size " << n
                << " cons " << (neq+nineq) << " nnz " << nnz;
-        lin_sys_ = new hiopLinSolverIndefSparsePARDISO(n, nnz, nlp_);        
+        lin_sys_ = new hiopLinSolverSymSparsePARDISO(n, nnz, nlp_);        
 #endif  // HIOP_USE_PARDISO
       }
 
@@ -402,7 +402,7 @@ instantiate_linear_solver(const char* linsol_opt,
                "options processing");
         ss_log << "LSQ linear solver --- KKT_SPARSE_XDYcYd linsys: PARDISO size " << n
                << " cons " << (neq+nineq) << " nnz " << nnz;        
-        lin_sys_ = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);  
+        lin_sys_ = new hiopLinSolverSymSparseSTRUMPACK(n, nnz, nlp_);  
 #endif  // HIOP_USE_STRUMPACK
       }
       //KS: /end of CPU mode/ do not put CU SOLVER anywhere above this!!!!!
@@ -458,7 +458,7 @@ instantiate_linear_solver(const char* linsol_opt,
       if( (nullptr == lin_sys_) && (linear_solver == "strumpack" || linear_solver == "auto") ) {
         ss_log << "LSQ linear solver --- KKT_SPARSE_XDYcYd linsys: STRUMPACK size " << n
                << " cons " << (neq+nineq) << " nnz " << nnz;                  
-        lin_sys_ = new hiopLinSolverIndefSparseSTRUMPACK(n, nnz, nlp_);
+        lin_sys_ = new hiopLinSolverSymSparseSTRUMPACK(n, nnz, nlp_);
       }
 #endif  // HIOP_USE_STRUMPACK
       
@@ -470,7 +470,7 @@ instantiate_linear_solver(const char* linsol_opt,
                "options processing");
         ss_log << "LSQ linear solver --- KKT_SPARSE_XDYcYd linsys: MA57 size " << n
                << " cons " << (neq+nineq) << " nnz " << nnz;             
-        lin_sys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
+        lin_sys_ = new hiopLinSolverSymSparseMA57(n, nnz, nlp_);
       }
 #endif // HIOP_USE_COINHSL
 #ifdef HIOP_USE_PARDISO
@@ -481,7 +481,7 @@ instantiate_linear_solver(const char* linsol_opt,
                "options processing");
         ss_log << "LSQ linear solver --- KKT_SPARSE_XDYcYd linsys: MA57 size " << n
                << " cons " << (neq+nineq) << " nnz " << nnz;  
-        lin_sys_ = new hiopLinSolverIndefSparsePARDISO(n, nnz, nlp_);
+        lin_sys_ = new hiopLinSolverSymSparsePARDISO(n, nnz, nlp_);
       }
 #endif // HIOP_USE_PARDISO
     } // end of else  compute_mode=='cpu'
@@ -619,12 +619,12 @@ hiopDualsLsqUpdateLinsysRedDenseSym::hiopDualsLsqUpdateLinsysRedDenseSym(hiopNlp
   : hiopDualsLsqUpdateLinsysRedDense(nlp)
 {
 #ifdef HIOP_USE_MAGMA
-  linsys_ = new hiopLinSolverIndefDenseMagmaBuKa(nlp_->m(), nlp_);
+  linsys_ = new hiopLinSolverSymDenseMagmaBuKa(nlp_->m(), nlp_);
 #else
   assert(false && 
          "hiopDualsLsqUpdateLinsysRedDenseSym is meant to be used with MAGMA, but"
          "MAGMA is not available within HiOp.");
-  linsys_ = new hiopLinSolverIndefDenseLapack(nlp_->m(), nlp_);
+  linsys_ = new hiopLinSolverSymDenseLapack(nlp_->m(), nlp_);
 #endif
 }
 

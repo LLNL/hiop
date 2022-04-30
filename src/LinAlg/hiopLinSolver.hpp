@@ -114,22 +114,22 @@ public:
 };
 
 /** Base class for Indefinite Dense Solvers */
-class hiopLinSolverIndefDense : public hiopLinSolver
+class hiopLinSolverSymDense : public hiopLinSolver
 {
 public:
-  hiopLinSolverIndefDense(int n, hiopNlpFormulation* nlp);
-  virtual ~hiopLinSolverIndefDense();
+  hiopLinSolverSymDense(int n, hiopNlpFormulation* nlp);
+  virtual ~hiopLinSolverSymDense();
 
   hiopMatrixDense& sysMatrix();
 protected:
   hiopMatrixDense* M_;
 protected:
-  hiopLinSolverIndefDense();
+  hiopLinSolverSymDense();
 };
 
 
 /** 
- * Base class for symmetric and non-symmetric linear systems/solvers 
+ * Base class for symmetric and non-symmetric sparse linear systems/solvers 
  */
 class hiopLinSolverSparseBase : public hiopLinSolver
 {

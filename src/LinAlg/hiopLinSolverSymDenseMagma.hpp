@@ -46,7 +46,7 @@
 // product endorsement purposes.
 
 /**
- * @file hiopLinSolverIndefDenseMagma.hpp
+ * @file hiopLinSolverSymDenseMagma.hpp
  *
  * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
  *
@@ -95,11 +95,11 @@ namespace hiop {
  * 
  */
 
-class hiopLinSolverIndefDenseMagmaBuKa : public hiopLinSolverIndefDense
+class hiopLinSolverSymDenseMagmaBuKa : public hiopLinSolverSymDense
 {
 public:
-  hiopLinSolverIndefDenseMagmaBuKa(int n, hiopNlpFormulation* nlp_);
-  virtual ~hiopLinSolverIndefDenseMagmaBuKa();
+  hiopLinSolverSymDenseMagmaBuKa(int n, hiopNlpFormulation* nlp_);
+  virtual ~hiopLinSolverSymDenseMagmaBuKa();
 
   /** Triggers a refactorization of the matrix, if necessary. */
   int matrixChanged();
@@ -131,7 +131,7 @@ protected:
   magmaDouble_ptr device_M_, device_rhs_;
   magma_int_t ldda_, lddb_;
 private:
-  hiopLinSolverIndefDenseMagmaBuKa() { assert(false); }
+  hiopLinSolverSymDenseMagmaBuKa() { assert(false); }
 };
 
 
@@ -142,12 +142,12 @@ private:
  *
  */
 
-class hiopLinSolverIndefDenseMagmaNopiv : public hiopLinSolverIndefDense
+class hiopLinSolverSymDenseMagmaNopiv : public hiopLinSolverSymDense
 {
 public:
-  hiopLinSolverIndefDenseMagmaNopiv(int n, hiopNlpFormulation* nlp);
+  hiopLinSolverSymDenseMagmaNopiv(int n, hiopNlpFormulation* nlp);
 
-  virtual ~hiopLinSolverIndefDenseMagmaNopiv();
+  virtual ~hiopLinSolverSymDenseMagmaNopiv();
 
   /** Triggers a refactorization of the matrix, if necessary. */
   int matrixChanged();
@@ -178,7 +178,7 @@ protected:
   magmaDouble_ptr device_M_, device_rhs_;
   magma_int_t ldda_, lddb_;
 private:
-  hiopLinSolverIndefDenseMagmaNopiv() 
+  hiopLinSolverSymDenseMagmaNopiv() 
   {
     assert(false); 
   }
@@ -193,11 +193,11 @@ private:
  *
  * Superceeded by BuKa solver - code is disabled
  */
-class hiopLinSolverIndefDenseMagmaBuKa_old2 : public hiopLinSolverIndefDense
+class hiopLinSolverSymDenseMagmaBuKa_old2 : public hiopLinSolverSymDense
 {
 public:
-  hiopLinSolverIndefDenseMagmaBuKa_old2(int n, hiopNlpFormulation* nlp_);
-  virtual ~hiopLinSolverIndefDenseMagmaBuKa_old2();
+  hiopLinSolverSymDenseMagmaBuKa_old2(int n, hiopNlpFormulation* nlp_);
+  virtual ~hiopLinSolverSymDenseMagmaBuKa_old2();
 
   /** Triggers a refactorization of the matrix, if necessary. */
   int matrixChanged();
@@ -231,7 +231,7 @@ protected:
 protected:
 
 private:
-  hiopLinSolverIndefDenseMagmaBuKa_old2() { assert(false); }
+  hiopLinSolverSymDenseMagmaBuKa_old2() { assert(false); }
 };
 
 #endif //0

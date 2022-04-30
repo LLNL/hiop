@@ -57,14 +57,6 @@
 #include "hiopLinSolver.hpp"
 #include "hiopMatrixSparseTriplet.hpp"
 
-#ifndef FNAME
-#ifndef __bg__
-#define FNAME(f) f ## _
-#else
-#define FNAME(f) f
-#endif
-#endif
-
 namespace hiop {
 
 /* PARDISO prototpye */
@@ -79,11 +71,11 @@ extern "C" void pardiso_get_schur_d(void*, int*, int*, int*, double*, int*, int*
 
 
 /** Wrapper for PARDISO */
-class hiopLinSolverIndefSparsePARDISO: public hiopLinSolverSymSparse
+class hiopLinSolverSymSparsePARDISO: public hiopLinSolverSymSparse
 {
 public:
-  hiopLinSolverIndefSparsePARDISO(const int& n, const int& nnz, hiopNlpFormulation* nlp);
-  virtual ~hiopLinSolverIndefSparsePARDISO();
+  hiopLinSolverSymSparsePARDISO(const int& n, const int& nnz, hiopNlpFormulation* nlp);
+  virtual ~hiopLinSolverSymSparsePARDISO();
 
   /** Triggers a refactorization of the matrix, if necessary.
    * Overload from base class. */
@@ -166,8 +158,6 @@ private:
   int *index_covert_extra_Diag2CSR_;
   std::unordered_map<int,int> extra_diag_nnz_map;
 
-  int nFakeNegEigs_;
-
   // pardiso parameters
   void  *pt_[64]; 
   int iparm_[64];
@@ -195,12 +185,7 @@ public:
    * for the factorization and performs ordering */
   void firstCall();
 
-  void inline setFakeInertia(int nNegEigs)
-  {
-    nFakeNegEigs_ = nNegEigs;
-  }
-
-//friend class hiopLinSolverIndefSparsePARDISO;
+//friend class hiopLinSolverSymSparsePARDISO;
 
 };
 

@@ -53,7 +53,7 @@
 
 #include "hiopKKTLinSysSparseCondensed.hpp"
 #ifdef HIOP_USE_COINHSL
-#include "hiopLinSolverIndefSparseMA57.hpp"
+#include "hiopLinSolverSymSparseMA57.hpp"
 #endif
 
 #ifdef HIOP_USE_CUDA
@@ -452,7 +452,7 @@ hiopKKTLinSysCondensedSparse::determine_and_create_linsys(size_type nx, size_typ
 #ifdef HIOP_USE_COINHSL
     nlp_->log->printf(hovWarning,
                       "KKT_SPARSE_Condensed linsys: alloc MA57 for matrix of size %d (0 cons)\n", n);
-    linSys_ = new hiopLinSolverIndefSparseMA57(n, nnz, nlp_);
+    linSys_ = new hiopLinSolverSymSparseMA57(n, nnz, nlp_);
 #else
     assert(false && "HiOp was built without a sparse linear solver needed by the condensed KKT approach");
 #endif // HIOP_USE_COINHSL

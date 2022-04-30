@@ -68,7 +68,7 @@ namespace hiop {
   }
 
   /// Constructor allocates dense system matrix
-  hiopLinSolverIndefDense::hiopLinSolverIndefDense(int n, hiopNlpFormulation* nlp)
+  hiopLinSolverSymDense::hiopLinSolverSymDense(int n, hiopNlpFormulation* nlp)
   {
     nlp_ = nlp;
     perf_report_ = "on"==hiop::tolower(nlp_->options->GetString("time_kkt"));
@@ -76,20 +76,20 @@ namespace hiop {
   }
 
   /// Default constructor is protected and should fail when called
-  hiopLinSolverIndefDense::hiopLinSolverIndefDense()
+  hiopLinSolverSymDense::hiopLinSolverSymDense()
     : M_(nullptr)
   {
     assert(false);
   }
 
   /// Destructor deletes the system matrix
-  hiopLinSolverIndefDense::~hiopLinSolverIndefDense()
+  hiopLinSolverSymDense::~hiopLinSolverSymDense()
   {
     delete M_;
   }
 
   /// Method to return reference to the system matrix
-  hiopMatrixDense& hiopLinSolverIndefDense::sysMatrix()
+  hiopMatrixDense& hiopLinSolverSymDense::sysMatrix()
   {
     return *M_;
   }

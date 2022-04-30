@@ -50,10 +50,10 @@
 
 #include "hiopKKTLinSys.hpp"
 #include "hiopLinSolver.hpp"
-#include "hiopLinSolverIndefDenseLapack.hpp"
+#include "hiopLinSolverSymDenseLapack.hpp"
 
 #ifdef HIOP_USE_MAGMA
-#include "hiopLinSolverIndefDenseMagma.hpp"
+#include "hiopLinSolverSymDenseMagma.hpp"
 #endif
 
 #include "hiopCSR_IO.hpp"
@@ -99,25 +99,25 @@ public:
       if(nlp_->options->GetString("compute_mode")=="hybrid" ||
          nlp_->options->GetString("compute_mode")=="gpu") {
 #ifdef HIOP_USE_MAGMA
-	linSys_ = new hiopLinSolverIndefDenseMagmaNopiv(n, nlp_);
+	linSys_ = new hiopLinSolverSymDenseMagmaNopiv(n, nlp_);
 	nlp_->log->printf(hovScalars,
 			  "LinSysDenseXYcYd: instantiating Magma for a matrix of size %d\n",
 			  n);
 #else
-	linSys_ = new hiopLinSolverIndefDenseLapack(n, nlp_);
+	linSys_ = new hiopLinSolverSymDenseLapack(n, nlp_);
 	nlp_->log->printf(hovScalars,
 			  "LinSysDenseXYcYd: instantiating Lapack for a matrix of size %d\n",
 			  n);
 #endif
       } else {
-	linSys_ = new hiopLinSolverIndefDenseLapack(n, nlp_);
+	linSys_ = new hiopLinSolverSymDenseLapack(n, nlp_);
 	nlp_->log->printf(hovScalars,
 			  "LinSysDenseXYcYd: instantiating Lapack for a matrix of size %d\n",
 			  n);
       }
     }
 
-    hiopLinSolverIndefDense* linSys = dynamic_cast<hiopLinSolverIndefDense*> (linSys_);  
+    hiopLinSolverSymDense* linSys = dynamic_cast<hiopLinSolverSymDense*> (linSys_);  
     hiopMatrixDense& Msys = linSys->sysMatrix();
  
     //
@@ -169,7 +169,7 @@ public:
   virtual bool solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
                                hiopVector& dx, hiopVector& dyc, hiopVector& dyd)
   {
-    hiopLinSolverIndefDense* linSys = dynamic_cast<hiopLinSolverIndefDense*> (linSys_);
+    hiopLinSolverSymDense* linSys = dynamic_cast<hiopLinSolverSymDense*> (linSys_);
     assert(linSys && "fail to get an object for correct linear system");
 
     int nx=rx.get_size(), nyc=ryc.get_size(), nyd=ryd.get_size();
@@ -262,18 +262,18 @@ public:
          nlp_->options->GetString("compute_mode")=="gpu") {
 #ifdef HIOP_USE_MAGMA
 	nlp_->log->printf(hovScalars, "LinSysDenseDXYcYd: instantiating Magma for a matrix of size %d\n", n);
-	linSys_ = new hiopLinSolverIndefDenseMagmaNopiv(n, nlp_);
+	linSys_ = new hiopLinSolverSymDenseMagmaNopiv(n, nlp_);
 #else
 	nlp_->log->printf(hovScalars, "LinSysDenseXDYcYd: instantiating Lapack for a matrix of size %d\n", n);
-	linSys_ = new hiopLinSolverIndefDenseLapack(n, nlp_);
+	linSys_ = new hiopLinSolverSymDenseLapack(n, nlp_);
 #endif
       } else {
 	nlp_->log->printf(hovScalars, "LinSysDenseXDYcYd instantiating Lapack for a matrix of size %d\n", n);
-	linSys_ = new hiopLinSolverIndefDenseLapack(n, nlp_);
+	linSys_ = new hiopLinSolverSymDenseLapack(n, nlp_);
       }	
     }
 
-    hiopLinSolverIndefDense* linSys = dynamic_cast<hiopLinSolverIndefDense*> (linSys_);
+    hiopLinSolverSymDense* linSys = dynamic_cast<hiopLinSolverSymDense*> (linSys_);
     hiopMatrixDense& Msys = linSys->sysMatrix();
  
     //
@@ -328,7 +328,7 @@ public:
   virtual bool solveCompressed(hiopVector& rx, hiopVector& rd, hiopVector& ryc, hiopVector& ryd,
                                hiopVector& dx, hiopVector& dd, hiopVector& dyc, hiopVector& dyd)
   {
-    hiopLinSolverIndefDense* linSys = dynamic_cast<hiopLinSolverIndefDense*> (linSys_);
+    hiopLinSolverSymDense* linSys = dynamic_cast<hiopLinSolverSymDense*> (linSys_);
 
     int nx=rx.get_size(), nyc=ryc.get_size(), nyd=ryd.get_size();
     if(rhsXDYcYd == nullptr) {

@@ -308,7 +308,7 @@ protected:
   bool factorize_mat();
   bool solve_with_factors(hiopVector& r);
 protected:
-  hiopLinSolverIndefDense* linsys_;
+  hiopLinSolverSymDense* linsys_;
 };
 
 /** Provides functionality to solve the LSQ system as a symmetric positive definite system on the host

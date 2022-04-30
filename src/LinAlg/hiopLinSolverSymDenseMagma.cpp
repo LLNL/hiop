@@ -1,11 +1,11 @@
-#include "hiopLinSolverIndefDenseMagma.hpp"
+#include "hiopLinSolverSymDenseMagma.hpp"
 
 #include "hiopMatrixRajaDense.hpp"
 
 namespace hiop
 {
-  hiopLinSolverIndefDenseMagmaBuKa::hiopLinSolverIndefDenseMagmaBuKa(int n, hiopNlpFormulation* nlp_)
-    : hiopLinSolverIndefDense(n, nlp_)
+  hiopLinSolverSymDenseMagmaBuKa::hiopLinSolverSymDenseMagmaBuKa(int n, hiopNlpFormulation* nlp_)
+    : hiopLinSolverSymDense(n, nlp_)
   {
     magma_int_t ndevices;
     magma_device_t devices[MagmaMaxGPUs];
@@ -49,7 +49,7 @@ namespace hiop
     }
   }
 
-  hiopLinSolverIndefDenseMagmaBuKa::~hiopLinSolverIndefDenseMagmaBuKa()
+  hiopLinSolverSymDenseMagmaBuKa::~hiopLinSolverSymDenseMagmaBuKa()
   {
     std::string mem_space = nlp_->options->GetString("mem_space");
     if(mem_space == "default" || mem_space == "host") {
@@ -64,7 +64,7 @@ namespace hiop
     magma_device_queue_ = NULL;
   }
   /** Triggers a refactorization of the matrix, if necessary. */
-  int hiopLinSolverIndefDenseMagmaBuKa::matrixChanged()
+  int hiopLinSolverSymDenseMagmaBuKa::matrixChanged()
   {
     assert(M_->n() == M_->m());
     int N=M_->n();
@@ -137,7 +137,7 @@ namespace hiop
     return negEigVal;
   }
 
-  bool hiopLinSolverIndefDenseMagmaBuKa::
+  bool hiopLinSolverSymDenseMagmaBuKa::
   compute_inertia(int N, int* ipiv, int& posEigVal, int& negEigVal, int& nullEigVal)
   {
     int inert[3];
@@ -173,7 +173,7 @@ namespace hiop
     return info==0;
   }
 
-  bool hiopLinSolverIndefDenseMagmaBuKa::solve(hiopVector& x)
+  bool hiopLinSolverSymDenseMagmaBuKa::solve(hiopVector& x)
   {
     assert(M_->n() == M_->m());
     assert(x.get_size() == M_->n());
@@ -224,8 +224,8 @@ namespace hiop
   /*******************************************************************************************************
    * MAGMA indefinite solver without pivoting (fast)
    *******************************************************************************************************/
-  hiopLinSolverIndefDenseMagmaNopiv::hiopLinSolverIndefDenseMagmaNopiv(int n, hiopNlpFormulation* nlp)
-  : hiopLinSolverIndefDense(n, nlp) 
+  hiopLinSolverSymDenseMagmaNopiv::hiopLinSolverSymDenseMagmaNopiv(int n, hiopNlpFormulation* nlp)
+  : hiopLinSolverSymDense(n, nlp) 
   {
     magma_int_t ndevices;
     magma_device_t devices[MagmaMaxGPUs];
@@ -260,7 +260,7 @@ namespace hiop
     }
   }
 
-  hiopLinSolverIndefDenseMagmaNopiv::~hiopLinSolverIndefDenseMagmaNopiv()
+  hiopLinSolverSymDenseMagmaNopiv::~hiopLinSolverSymDenseMagmaNopiv()
   {
     std::string mem_space = nlp_->options->GetString("mem_space");
     if(mem_space == "default" || mem_space == "host") {
@@ -272,7 +272,7 @@ namespace hiop
   }
 
   /** Triggers a refactorization of the matrix, if necessary. */
-  int hiopLinSolverIndefDenseMagmaNopiv::matrixChanged()
+  int hiopLinSolverSymDenseMagmaNopiv::matrixChanged()
   {
     assert(M_->n() == M_->m());
     int N=M_->n();
@@ -314,13 +314,13 @@ namespace hiop
 
     if(info<0) {
       nlp_->log->printf(hovError,
-		       "hiopLinSolverIndefDenseNoPiv error: %d argument to dsytrf has an illegal value.\n",
+		       "hiopLinSolverSymDenseNoPiv error: %d argument to dsytrf has an illegal value.\n",
 		       -info);
       return -1;
     } else {
       if(info>0) {
 	nlp_->log->printf(hovScalars,
-			 "hiopLinSolverIndefDenseNoPiv error: %d entry in the factorization's diagonal\n"
+			 "hiopLinSolverSymDenseNoPiv error: %d entry in the factorization's diagonal\n"
 			 "is exactly zero. Division by zero will occur if it a solve is attempted.\n",
 			 info);
 	//matrix is singular
@@ -338,7 +338,7 @@ namespace hiop
     return negEigVal;
   }
 
-  bool hiopLinSolverIndefDenseMagmaNopiv::compute_inertia(int n, 
+  bool hiopLinSolverSymDenseMagmaNopiv::compute_inertia(int n, 
                                                           int& posEigvals, 
                                                           int& negEigvals, 
                                                           int& zeroEigvals)
@@ -380,7 +380,7 @@ namespace hiop
     return true;
   }
 
-  bool hiopLinSolverIndefDenseMagmaNopiv::solve( hiopVector& x )
+  bool hiopLinSolverSymDenseMagmaNopiv::solve( hiopVector& x )
   {
     assert(M_->n() == M_->m());
     assert(x.get_size()==M_->n());
@@ -437,20 +437,20 @@ namespace hiop
   }
 
 #if 0
-  hiopLinSolverIndefDenseMagmaBuKa_old2::hiopLinSolverIndefDenseMagmaBuKa_old2(int n, hiopNlpFormulation* nlp_)
-    : hiopLinSolverIndefDense(n, nlp_), work_(NULL)
+  hiopLinSolverSymDenseMagmaBuKa_old2::hiopLinSolverSymDenseMagmaBuKa_old2(int n, hiopNlpFormulation* nlp_)
+    : hiopLinSolverSymDense(n, nlp_), work_(NULL)
   {
     ipiv_ = new int[n];
   }
 
-  hiopLinSolverIndefDenseMagmaBuKa_old2::~hiopLinSolverIndefDenseMagmaBuKa_old2()
+  hiopLinSolverSymDenseMagmaBuKa_old2::~hiopLinSolverSymDenseMagmaBuKa_old2()
   {
     delete [] work_;
     delete [] ipiv_;
   }
 
   /** Triggers a refactorization of the matrix, if necessary. */
-  int hiopLinSolverIndefDenseMagmaBuKa_old2::matrixChanged()
+  int hiopLinSolverSymDenseMagmaBuKa_old2::matrixChanged()
   {
     assert(M_->n() == M_->m());
     int N=M_->n();
@@ -499,7 +499,7 @@ namespace hiop
   }
   
 
-  bool hiopLinSolverIndefDenseMagmaBuKa_old2::compute_inertia(int N, 
+  bool hiopLinSolverSymDenseMagmaBuKa_old2::compute_inertia(int N, 
                                                               int *ipiv,
                                                               int& posEigVal, 
                                                               int& negEigVal, 
@@ -541,7 +541,7 @@ namespace hiop
     return info==0;
   }
 
-  bool hiopLinSolverIndefDenseMagmaBuKa_old2::solve(hiopVector& x)
+  bool hiopLinSolverSymDenseMagmaBuKa_old2::solve(hiopVector& x)
   {
     assert(M_->n() == M_->m());
     assert(x.get_size() == M_->n());
