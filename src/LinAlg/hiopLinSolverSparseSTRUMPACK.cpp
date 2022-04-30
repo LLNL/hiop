@@ -259,7 +259,9 @@ namespace hiop
       if(strumpack::ReturnCode::SUCCESS == retval) {
         num_neg_eig_val = num_neg_eig_val;
       } else {
-        assert(false && "strumpack: failed to provide accurate inertia infomation. Please use inertia-free approach.");
+	if(nlp_->options->GetString("fact_acceptor")=="inertia_correction") {
+          nlp_->log->printf(hovError, "strumpack: failed to provide accurate inertia infomation. Please use inertia-free approach.");
+        }
       }
     } else {
       // unknown error
