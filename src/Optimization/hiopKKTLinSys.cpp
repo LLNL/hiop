@@ -2200,8 +2200,8 @@ bool hiopKKTLinSysNormalEquation::computeDirections(const hiopResidual* resid, h
   *   [dd] = [ Dd+delta_wd ]^{-1}   ( [ rd_tilde ] - [dyd] ) 
   */
   dir->x->copyFrom(*rx_tilde_);
-  Jac_c_->transTimesVec(1.0, *rx_tilde_, -1.0, *dir->yc);
-  Jac_d_->transTimesVec(1.0, *rx_tilde_, -1.0, *dir->yd);
+  Jac_c_->transTimesVec(1.0, *dir->x, -1.0, *dir->yc);
+  Jac_d_->transTimesVec(1.0, *dir->x, -1.0, *dir->yd);
   dir->x->componentMult(*Hx_inv_);
 
   dir->d->copyFrom(*rd_tilde_);

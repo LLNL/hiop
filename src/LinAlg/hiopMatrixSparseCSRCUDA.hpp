@@ -305,7 +305,7 @@ public:
     return 0;
   }
 
-  virtual bool is_diagonal() const;
+  virtual bool is_diagonal() const
   {
     assert(false && "not yet implemented");
     return false;

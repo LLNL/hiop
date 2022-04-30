@@ -1823,17 +1823,21 @@ bool hiopMatrixRajaSparseTriplet::is_diagonal() const
     return bret;
   }
 
+  // local copy of member variable/function, for RAJA access
+  index_type* iRow = iRow_;
+  index_type* jCol = jCol_;
+
   RAJA::ReduceSum<hiop_raja_reduce, int> sum_no_diag(0);
   RAJA::forall<hiop_raja_exec>(
     RAJA::RangeSegment(0, nnz_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
-      if (irow[i]!=jcol[i]) {
+      if (iRow[i]!=jCol[i]) {
         sum_no_diag += 1; 
       }
     }
   );
-  bret = ((sum.get())==0);
+  bret = ((sum_no_diag.get())==0);
   
   return bret;
 }

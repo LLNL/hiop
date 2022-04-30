@@ -146,9 +146,10 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const double& delta_wx_in,
   if(nullptr == Hess_diag_) {
     Hess_diag_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), nx);
     assert(Hess_diag_);
-    Hess_triplet->extract_diagonal(*Hess_diag_);
+    Hess_diag_->setToZero();
   }
-  
+  Hess_triplet->extract_diagonal(*Hess_diag_); 
+ 
   //build the diagonal Hx = Dx + delta_wx + diag(Hess)
   if(nullptr == Hx_) {
     Hx_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), nx);
@@ -157,12 +158,16 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const double& delta_wx_in,
   Hx_->copyFrom(*Dx_);
   Hx_->addConstant(delta_wx_in);
   Hx_->axpy(1.0,*Hess_diag_);
-      
+  Hx_inv_->copyFrom(*Hx_);
+  Hx_inv_->invert();  
+    
   if(nullptr == Hd_) {
     Hd_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), nineq);
   }
   Hd_->copyFrom(*Dd_);  
   Hd_->addConstant(delta_wd_in);
+  Hd_inv_->copyFrom(*Hd_);
+  Hd_inv_->invert();
 
   nlp_->runStats.kkt.tmUpdateInit.stop();
   nlp_->runStats.kkt.tmUpdateLinsys.start();
