@@ -75,6 +75,9 @@
 #ifdef HIOP_USE_CUSOLVER
 #include "hiopLinSolverSparseCUSOLVER.hpp"
 #endif
+#ifdef HIOP_USE_GINKGO
+#include "hiopLinSolverSparseGinkgo.hpp"
+#endif
 #endif
 
 namespace hiop
@@ -365,6 +368,7 @@ instantiate_linear_solver(const char* linsol_opt,
 
   auto linear_solver = nlp_->options->GetString(linsol_opt);
   auto compute_mode = nlp_->options->GetString("compute_mode");
+  std::cout << compute_mode << std::endl;
 #ifndef HIOP_USE_GPU
   assert( (compute_mode == "cpu" || compute_mode == "auto") &&
          "the value for compute_mode is invalid and should have been corrected during user options processing");
@@ -394,9 +398,24 @@ instantiate_linear_solver(const char* linsol_opt,
 #endif  // HIOP_USE_PARDISO
       }
 
-      if(nullptr == lin_sys_) {
-        //ma57 not available or user requested strumpack
-#if defined(HIOP_USE_STRUMPACK)
+      if( (NULL == lin_sys_ && linear_solver == "auto") || linear_solver == "ginkgo") {
+        //ma57 and pardiso are not available or user requested ginkgo
+#ifdef HIOP_USE_GINKGO
+        ss_log << "LSQ with GINKGO: create ";
+        hiopLinSolverSymSparseGinkgo *p = new hiopLinSolverSymSparseGinkgo(n, nnz, nlp_);
+        
+        nlp_->log->printf(hovSummary,
+                          "LSQ Duals Initialization --- KKT_SPARSE_XDYcYd linsys: using GINKGO on CPU as an "
+                          "indefinite solver, size %d (%d cons)\n",
+                          n, neq+nineq);        
+        lin_sys_ = p;
+#endif  // HIOP_USE_GINKGO
+      }
+
+
+      if(NULL == lin_sys_) {
+        //ma57, pardiso and ginkgo are not available or user requested strumpack
+#ifdef HIOP_USE_STRUMPACK
         assert((linear_solver == "strumpack" || linear_solver == "auto") &&
                "the value for duals_init_linear_solver_sparse is invalid and should have been corrected during "
                "options processing");
@@ -484,6 +503,20 @@ instantiate_linear_solver(const char* linsol_opt,
         lin_sys_ = new hiopLinSolverSymSparsePARDISO(n, nnz, nlp_);
       }
 #endif // HIOP_USE_PARDISO
+      if(NULL == lin_sys_) {
+        // we get here if strumpack, ma57 and pardiso are not available or is available but the duals_init_linear_solver_sparse was
+        //set to be ginkgo
+#ifdef HIOP_USE_GINKGO
+        ss_log << "LSQ with GINKGO: create ";
+        hiopLinSolverSymSparseGinkgo *p = new hiopLinSolverSymSparseGinkgo(n, nnz, nlp_);
+        
+        nlp_->log->printf(hovSummary,
+                          "LSQ Duals Initialization --- KKT_SPARSE_XDYcYd linsys: using GINKGO on CPU as an "
+                          "indefinite solver, size %d (%d cons)\n",
+                          n, neq+nineq);        
+        lin_sys_ = p;
+#endif  // HIOP_USE_GINKGO
+      }
     } // end of else  compute_mode=='cpu'
   } //end of else if(!linsys)
 

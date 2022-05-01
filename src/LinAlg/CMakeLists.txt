@@ -8,6 +8,7 @@ set(hiopLinAlg_INTERFACE_HEADERS
   hiopLinSolverSymDenseMagma.hpp
   hiopLinSolverSymSparseMA57.hpp
   hiopLinSolverMA86Z.hpp
+  hiopLinSolverSparseGinkgo.hpp
   hiopLinSolverSparseSTRUMPACK.hpp
   hiopLinSolverSparsePARDISO.hpp
   hiopLinSolverSparseCUSOLVER.hpp
@@ -85,6 +86,9 @@ set(hiopLinAlg_KRON_REDUCTION_SRC
   hiopLinSolverUMFPACKZ.cpp
   )
 
+set(hiopLinAlg_Ginkgo_SRC
+  hiopLinSolverSparseGinkgo.cpp)
+
 # Add interfaces for sparse linear solvers when enabled
 if(HIOP_SPARSE)
     if(HIOP_USE_COINHSL)
@@ -103,6 +107,9 @@ if(HIOP_SPARSE)
     if(HIOP_USE_CUDA)
       list(APPEND hiopLinAlg_SRC hiopLinSolverCholCuSparse.cpp)
     endif(HIOP_USE_CUDA)
+    if(HIOP_USE_GINKGO)
+      list(APPEND hiopLinAlg_SRC ${hiopLinAlg_Ginkgo_SRC})
+  endif(HIOP_USE_GINKGO)
 endif()
 
 # Add RAJA/Umpire sources when enabled

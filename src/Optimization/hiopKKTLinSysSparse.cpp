@@ -60,6 +60,9 @@
 #ifdef HIOP_USE_CUSOLVER
 #include "hiopLinSolverSparseCUSOLVER.hpp"
 #endif
+#ifdef HIOP_USE_GINKGO
+#include "hiopLinSolverSparseGinkgo.hpp"
+#endif
 #endif
 
 namespace hiop
@@ -295,12 +298,14 @@ namespace hiop
 #endif  // HIOP_USE_STRUMPACK        
         }
 
-        if(linSys_) {
+        if( (nullptr == linSys_ && linear_solver == "auto") || linear_solver == "ginkgo") {
+          //ma57, pardiso and strumpack are not available or user requested ginkgo
+#ifdef HIOP_USE_GINKGO              
           nlp_->log->printf(hovScalars,
-                            "KKT_SPARSE_XYcYd linsys: alloc [%s] matrix size %d (%d cons)(cpu)\n",
-                            linsol_actual.c_str(),
-                            n,
-                            neq+nineq);
+                            "KKT_SPARSE_XYcYd linsys: alloc GINKGO with matrix size %d (%d cons)\n",
+                            n, neq+nineq);
+          linSys_ = new hiopLinSolverSymSparseGinkgo(n, nnz, nlp_);
+#endif  // HIOP_USE_GINKGO        
         }
 
       } else { //hybrid / gpu
@@ -611,11 +616,19 @@ namespace hiop
         }
 
         if( (nullptr == linSys_ && linear_solver == "auto") || linear_solver == "strumpack") {
-          //ma57 is not available or user requested strumpack
+          //ma57 and pardiso are not available or user requested strumpack
 #ifdef HIOP_USE_STRUMPACK              
           linSys_ = new hiopLinSolverSymSparseSTRUMPACK(n, nnz, nlp_);
           actual_lin_solver = "STRUMPACK";
 #endif  // HIOP_USE_STRUMPACK        
+        }
+
+        if( (nullptr == linSys_ && linear_solver == "auto") || linear_solver == "ginkgo") {
+          //ma57, pardiso and strumpack are not available or user requested ginkgo
+#ifdef HIOP_USE_GINKGO
+          linSys_ = new hiopLinSolverSymSparseGinkgo(n, nnz, nlp_);
+          actual_lin_solver = "GINKGO";        
+#endif  // HIOP_USE_GINKGO        
         }
 
         if(linSys_) {

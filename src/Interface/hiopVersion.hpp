@@ -75,6 +75,13 @@ struct hiopVersion
       false;
 #endif
 
+  static constexpr bool useGINKGO =
+#ifdef HIOP_USE_GINKGO
+      true;
+#else
+      false;
+#endif
+
   static inline void version(int& major, int& minor, int& patch)
   {
     major = std::atoi(HIOP_VERSION_MAJOR);
