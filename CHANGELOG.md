@@ -1,6 +1,9 @@
 # Change Log
 All notable changes to HiOp are documented in this file.
 
+## Version 0.6.2:  Initial ginkgo solver integration and misc fixes
+This tag provides an initial integration with ginko, fixes a couple of issues, and add options for (outer) iterative refinement.
+
 ## Version 0.6.1: HIP linear algebra workaround and update for RAJA > v0.14  (March 31, 2022)
 This version/tag provides a workaround for an issue in the HIP BLAS and updates the RAJA code to better operate with the newer versions of RAJA.
 
