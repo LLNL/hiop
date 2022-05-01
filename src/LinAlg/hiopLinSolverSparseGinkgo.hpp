@@ -88,8 +88,8 @@ private:
   int      n_;                         // number of cols of the whole matrix
   int      nnz_;                       // number of nonzeros in the matrix
 
-  int *index_covert_CSR2Triplet_;
-  int *index_covert_extra_Diag2CSR_;
+  int* index_covert_CSR2Triplet_;
+  int* index_covert_extra_Diag2CSR_;
 
   std::shared_ptr<gko::Executor> exec_;
   std::shared_ptr<gko::matrix::Csr<double, int>> mtx_;

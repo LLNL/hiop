@@ -66,7 +66,11 @@ namespace
 
 
 std::shared_ptr<gko::matrix::Csr<double, int>> transferTripletToCSR(std::shared_ptr<gko::Executor> exec,
-        int n_, hiopMatrixSparse* M_, int** index_covert_CSR2Triplet, int** index_covert_extra_Diag2CSR) {
+                                                                    int n_,
+                                                                    hiopMatrixSparse* M_,
+                                                                    int** index_covert_CSR2Triplet,
+                                                                    int** index_covert_extra_Diag2CSR)
+{
     // transfer triplet form to CSR form
     // note that input is in lower triangular triplet form. First part is the sparse matrix, and the 2nd part are the additional diagonal elememts
     // the 1st part is sorted by row
@@ -78,20 +82,20 @@ std::shared_ptr<gko::matrix::Csr<double, int>> transferTripletToCSR(std::shared_
       //
       // off-diagonal part
       kRowPtr_[0]=0;
-      for(int k=0;k<M_->numberOfNonzeros()-n_;k++){
-        if(M_->i_row()[k]!=M_->j_col()[k]){
+      for(int k=0; k<M_->numberOfNonzeros()-n_; k++) {
+        if(M_->i_row()[k]!=M_->j_col()[k]) {
           kRowPtr_[M_->i_row()[k]+1]++;
           kRowPtr_[M_->j_col()[k]+1]++;
           nnz_ += 2;
         }
       }
       // diagonal part
-      for(int i=0;i<n_;i++){
+      for(int i=0; i<n_; i++) {
         kRowPtr_[i+1]++;
         nnz_ += 1;
       }
       // get correct row ptr index
-      for(int i=1;i<n_+1;i++){
+      for(int i=1; i<n_+1; i++) {
         kRowPtr_[i] += kRowPtr_[i-1];
       }
       assert(nnz_==kRowPtr_[n_]);
@@ -108,13 +112,18 @@ std::shared_ptr<gko::matrix::Csr<double, int>> transferTripletToCSR(std::shared_
       //
 
       int *nnz_each_row_tmp = new int[n_]{0};
-      int total_nnz_tmp{0},nnz_tmp{0}, rowID_tmp, colID_tmp;
-      for(int k=0;k<n_;k++) index_covert_extra_Diag2CSR_[k]=-1;
+      int total_nnz_tmp{0};
+      int nnz_tmp{0};
+      int rowID_tmp;
+      int colID_tmp;
+      for(int k=0; k<n_; k++) {
+        index_covert_extra_Diag2CSR_[k] = -1;
+      }
 
-      for(int k=0;k<M_->numberOfNonzeros()-n_;k++){
+      for(int k=0; k<M_->numberOfNonzeros()-n_; k++) {
         rowID_tmp = M_->i_row()[k];
         colID_tmp = M_->j_col()[k];
-        if(rowID_tmp==colID_tmp){
+        if(rowID_tmp==colID_tmp) {
           nnz_tmp = nnz_each_row_tmp[rowID_tmp] + kRowPtr_[rowID_tmp];
           jCol_[nnz_tmp] = colID_tmp;
           kVal_[nnz_tmp] = M_->M()[k];
@@ -125,7 +134,7 @@ std::shared_ptr<gko::matrix::Csr<double, int>> transferTripletToCSR(std::shared_
 
           nnz_each_row_tmp[rowID_tmp]++;
           total_nnz_tmp++;
-        }else{
+        } else {
           nnz_tmp = nnz_each_row_tmp[rowID_tmp] + kRowPtr_[rowID_tmp];
           jCol_[nnz_tmp] = colID_tmp;
           kVal_[nnz_tmp] = M_->M()[k];
@@ -142,21 +151,21 @@ std::shared_ptr<gko::matrix::Csr<double, int>> transferTripletToCSR(std::shared_
         }
       }
       // correct the missing diagonal term
-      for(int i=0;i<n_;i++){
-        if(nnz_each_row_tmp[i] != kRowPtr_[i+1]-kRowPtr_[i]){
-          assert(nnz_each_row_tmp[i] == kRowPtr_[i+1]-kRowPtr_[i]-1);
+      for(int i=0; i<n_; i++) {
+        if(nnz_each_row_tmp[i] != kRowPtr_[i+1] - kRowPtr_[i]) {
+          assert(nnz_each_row_tmp[i] == kRowPtr_[i+1] - kRowPtr_[i] - 1);
           nnz_tmp = nnz_each_row_tmp[i] + kRowPtr_[i];
           jCol_[nnz_tmp] = i;
-          kVal_[nnz_tmp] = M_->M()[M_->numberOfNonzeros()-n_+i];
-          index_covert_CSR2Triplet_[nnz_tmp] = M_->numberOfNonzeros()-n_+i;
+          kVal_[nnz_tmp] = M_->M()[M_->numberOfNonzeros() - n_ + i];
+          index_covert_CSR2Triplet_[nnz_tmp] = M_->numberOfNonzeros() - n_ + i;
           total_nnz_tmp += 1;
 
-          std::vector<int> ind_temp(kRowPtr_[i+1]-kRowPtr_[i]);
+          std::vector<int> ind_temp(kRowPtr_[i+1] - kRowPtr_[i]);
           std::iota(ind_temp.begin(), ind_temp.end(), 0);
-          std::sort(ind_temp.begin(), ind_temp.end(),[&](int a, int b){ return jCol_[a+kRowPtr_[i]]<jCol_[b+kRowPtr_[i]]; });
+          std::sort(ind_temp.begin(), ind_temp.end(),[&](int a, int b){ return jCol_[a+kRowPtr_[i]] < jCol_[b+kRowPtr_[i]]; });
 
-          reorder(kVal_+kRowPtr_[i],ind_temp,kRowPtr_[i+1]-kRowPtr_[i]);
-          reorder(index_covert_CSR2Triplet_+kRowPtr_[i],ind_temp,kRowPtr_[i+1]-kRowPtr_[i]);
+          reorder(kVal_+kRowPtr_[i],ind_temp,kRowPtr_[i+1] - kRowPtr_[i]);
+          reorder(index_covert_CSR2Triplet_+kRowPtr_[i],ind_temp,kRowPtr_[i+1] - kRowPtr_[i]);
           std::sort(jCol_+kRowPtr_[i],jCol_+kRowPtr_[i+1]);
         }
       }
@@ -172,49 +181,55 @@ std::shared_ptr<gko::matrix::Csr<double, int>> transferTripletToCSR(std::shared_
 }
 
 
-void update_matrix(hiopMatrixSparse* M_, std::shared_ptr<gko::matrix::Csr<double, int>> mtx, int *index_covert_CSR2Triplet_, int * index_covert_extra_Diag2CSR_) {
+void update_matrix(hiopMatrixSparse* M_,
+                   std::shared_ptr<gko::matrix::Csr<double, int>> mtx,
+                   int* index_covert_CSR2Triplet_,
+                   int* index_covert_extra_Diag2CSR_)
+{
     int n_ = mtx->get_size()[0];
     int nnz_= mtx->get_num_stored_elements();
     auto values = mtx->get_values();
     int rowID_tmp{0};
-    for(int k=0;k<nnz_;k++){
+    for(int k=0; k<nnz_; k++) {
         values[k] = M_->M()[index_covert_CSR2Triplet_[k]];
     }
-    for(int i=0;i<n_;i++){
-        if(index_covert_extra_Diag2CSR_[i] != -1)
-            values[index_covert_extra_Diag2CSR_[i]] += M_->M()[M_->numberOfNonzeros()-n_+i];
+    for(int i=0; i<n_; i++) {
+        if(index_covert_extra_Diag2CSR_[i] != -1) {
+            values[index_covert_extra_Diag2CSR_[i]] += M_->M()[M_->numberOfNonzeros() - n_ + i];
+        }
     }
 }
 
 
 std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gko::Executor> exec,
-        std::shared_ptr<gko::matrix::Csr<double, int>> mtx) {
+                                                        std::shared_ptr<gko::matrix::Csr<double, int>> mtx)
+{
 
     auto preprocessing_fact = gko::share(gko::reorder::Mc64<double, int>::build().on(exec));
     auto preprocessing = gko::share(preprocessing_fact->generate(mtx));
 
     auto lu_fact = gko::share(gko::factorization::Glu<double, int>::build_reusable()
-            .on(exec, mtx.get(), preprocessing.get()));
+                              .on(exec, mtx.get(), preprocessing.get()));
     auto inner_solver_fact = gko::share(gko::preconditioner::Ilu<>::build()
-            .with_factorization_factory(lu_fact)
-            .on(exec));
+                                        .with_factorization_factory(lu_fact)
+                                        .on(exec));
     auto solver_fact = gko::share(gko::solver::Gmres<>::build()
-            .with_criteria(
-                gko::stop::Iteration::build()
-                    .with_max_iters(200u)
-                    .on(exec),
-                gko::stop::ResidualNorm<>::build()
-                    .with_baseline(gko::stop::mode::absolute)
-                    .with_reduction_factor(1e-8)
-                    .on(exec))
-            .with_krylov_dim(10u)
-            .with_preconditioner(inner_solver_fact)
-            .on(exec));
+                                  .with_criteria(
+                                    gko::stop::Iteration::build()
+                                      .with_max_iters(200u)
+                                      .on(exec),
+                                    gko::stop::ResidualNorm<>::build()
+                                      .with_baseline(gko::stop::mode::absolute)
+                                      .with_reduction_factor(1e-8)
+                                      .on(exec))
+                                  .with_krylov_dim(10u)
+                                  .with_preconditioner(inner_solver_fact)
+                                  .on(exec));
 
     auto reusable_factory = gko::share(gko::solver::ScaledReordered<>::build()
-            .with_solver(solver_fact)
-            .with_reordering(preprocessing)
-            .on(exec));
+                                       .with_solver(solver_fact)
+                                       .with_reordering(preprocessing)
+                                       .on(exec));
     return reusable_factory;
 }
 
@@ -222,10 +237,14 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
 }
 
 
-  hiopLinSolverSymSparseGinkgo::hiopLinSolverSymSparseGinkgo(const int& n, const int& nnz, hiopNlpFormulation* nlp)
+  hiopLinSolverSymSparseGinkgo::hiopLinSolverSymSparseGinkgo(const int& n, 
+                                                             const int& nnz,
+                                                             hiopNlpFormulation* nlp)
     : hiopLinSolverSymSparse(n, nnz, nlp),
-      index_covert_CSR2Triplet_{nullptr},index_covert_extra_Diag2CSR_{nullptr},
-      n_{n}, nnz_{0}
+      index_covert_CSR2Triplet_{nullptr},
+      index_covert_extra_Diag2CSR_{nullptr},
+      n_{n},
+      nnz_{0}
   {}
 
   hiopLinSolverSymSparseGinkgo::~hiopLinSolverSymSparseGinkgo()
@@ -254,9 +273,9 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
 
     nlp_->runStats.linsolv.tmFactTime.start();
 
-    if( !mtx_ ){
+    if( !mtx_ ) {
       this->firstCall();
-    }else{
+    } else {
       update_matrix(M_, mtx_, index_covert_CSR2Triplet_, index_covert_extra_Diag2CSR_);
     }
 
@@ -291,20 +310,24 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
   }
 
 
-
-
-  hiopLinSolverNonSymSparseGinkgo::hiopLinSolverNonSymSparseGinkgo(const int& n, const int& nnz, hiopNlpFormulation* nlp)
+  hiopLinSolverNonSymSparseGinkgo::hiopLinSolverNonSymSparseGinkgo(const int& n,
+                                                                   const int& nnz,
+                                                                   hiopNlpFormulation* nlp)
     : hiopLinSolverNonSymSparse(n, nnz, nlp),
-      index_covert_CSR2Triplet_{nullptr},index_covert_extra_Diag2CSR_{nullptr},
-      n_{n}, nnz_{0}
+      index_covert_CSR2Triplet_{nullptr},
+      index_covert_extra_Diag2CSR_{nullptr},
+      n_{n},
+      nnz_{0}
   {}
 
   hiopLinSolverNonSymSparseGinkgo::~hiopLinSolverNonSymSparseGinkgo()
   {
-    if(index_covert_CSR2Triplet_)
+    if(index_covert_CSR2Triplet_) {
       delete [] index_covert_CSR2Triplet_;
-    if(index_covert_extra_Diag2CSR_)
+    }
+    if(index_covert_extra_Diag2CSR_) {
       delete [] index_covert_extra_Diag2CSR_;
+    }
   }
   
   void hiopLinSolverNonSymSparseGinkgo::firstCall()
@@ -327,9 +350,9 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
 
     nlp_->runStats.linsolv.tmFactTime.start();
 
-    if( !mtx_ ){
+    if( !mtx_ ) {
       this->firstCall();
-    }else{
+    } else {
       update_matrix(M_, mtx_, index_covert_CSR2Triplet_, index_covert_extra_Diag2CSR_);
     }
 
