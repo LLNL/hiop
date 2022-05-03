@@ -111,8 +111,9 @@ public:
 protected:
   hiopVector *rhs_;  // [ryc_tilde, ryd_tilde]
   hiopVector *Hxd_inv_;  // [H+Dx+delta_wx, Dd+delta_wd ]^-1
-  hiopVector *Hx_;  // [H+Dx+delta_wx]
-  hiopVector *Hd_;  // [Dd+delta_wd ]
+
+  // diagOf(Hess)
+  hiopVector *Hess_diag_;
 
   // -1 when disabled; otherwise acts like a counter, 0,1,... incremented each time
   // 'solveCompressed' is called; activated by the 'write_kkt' option

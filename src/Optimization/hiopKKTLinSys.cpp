@@ -2032,15 +2032,13 @@ bool hiopPrecondKKTOpr::trans_times_vec(hiopVector& y, const hiopVector& x)
 
 
 hiopKKTLinSysNormalEquation::hiopKKTLinSysNormalEquation(hiopNlpFormulation* nlp)
-  : hiopKKTLinSysCompressed(nlp),
-    Hess_diag_{nullptr}
+  : hiopKKTLinSysCompressed(nlp)
 {
   rd_tilde_  = Dd_->alloc_clone();
   ryc_tilde_ = nlp->alloc_dual_eq_vec();
   ryd_tilde_ = Dd_->alloc_clone();
-  
-  Hx_inv_ = Dx_->alloc_clone();
-  Hd_inv_ = Dd_->alloc_clone();
+  Hx_ = Dx_->alloc_clone();
+  Hd_ = Dd_->alloc_clone();
   x_wrk_ = Dx_->alloc_clone();
   d_wrk_ = Dd_->alloc_clone();
 }
@@ -2050,9 +2048,8 @@ hiopKKTLinSysNormalEquation::~hiopKKTLinSysNormalEquation()
   delete rd_tilde_;
   delete ryc_tilde_;
   delete ryd_tilde_;
-  delete Hx_inv_;
-  delete Hd_inv_;
-  delete Hess_diag_;
+  delete Hx_;
+  delete Hd_;
   delete x_wrk_;
   delete d_wrk_;
 }
@@ -2167,15 +2164,16 @@ bool hiopKKTLinSysNormalEquation::computeDirections(const hiopResidual* resid, h
    */
   {
     /* x_wrk_ = [H+Dx+delta_wx]^{-1} [ rx_tilde ] */
-    x_wrk_->copyFrom(*Hx_inv_);
-    x_wrk_->componentMult(*rx_tilde_);
+    x_wrk_->copyFrom(*rx_tilde_);
+    x_wrk_->componentDiv(*Hx_);
 
     ryc_tilde_->copyFrom(*r.ryc);
     Jac_c_->timesVec(-1.0, *ryc_tilde_, 1.0, *x_wrk_);
     
     /* d_wrk_ = [ Dd+delta_wd ]^{-1} [ rd_tilde ] */
-    d_wrk_->copyFrom(*Hd_inv_);
-    d_wrk_->componentMult(*rd_tilde_);
+    d_wrk_->copyFrom(*rd_tilde_);
+    d_wrk_->componentDiv(*Hd_);
+
     ryd_tilde_->copyFrom(*r.ryd);
     Jac_d_->timesVec(-1.0, *ryd_tilde_, 1.0, *x_wrk_);
     ryd_tilde_->axpy(-1.0, *d_wrk_);
@@ -2197,16 +2195,16 @@ bool hiopKKTLinSysNormalEquation::computeDirections(const hiopResidual* resid, h
   *   [   0           Dd+delta_wd ] [dd]   [ rd_tilde ]   [  0     -I ] [dyd]
   * we can recover
   *   [dx] = [ H+Dx+delta_wx ]^{-1} ( [ rx_tilde ] - [ Jc^T ] [dyc] - [Jd^T] [dyd] )
-  *   [dd] = [ Dd+delta_wd ]^{-1}   ( [ rd_tilde ] - [dyd] ) 
+  *   [dd] = [ Dd+delta_wd ]^{-1}   ( [ rd_tilde ] + [dyd] ) 
   */
   dir->x->copyFrom(*rx_tilde_);
   Jac_c_->transTimesVec(1.0, *dir->x, -1.0, *dir->yc);
   Jac_d_->transTimesVec(1.0, *dir->x, -1.0, *dir->yd);
-  dir->x->componentMult(*Hx_inv_);
+  dir->x->componentDiv(*Hx_);
 
   dir->d->copyFrom(*rd_tilde_);
-  dir->d->axpy(-1.0,*r.ryd);
-  dir->d->componentMult(*Hd_inv_);
+  dir->d->axpy(1.0,*dir->yd);
+  dir->d->componentDiv(*Hd_);
   nlp_->runStats.kkt.tmSolveRhsManip.stop();
   
   if(false == sol_ok) {

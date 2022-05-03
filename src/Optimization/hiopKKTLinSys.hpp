@@ -600,15 +600,8 @@ protected:
   hiopVector* ryc_tilde_;
   hiopVector* ryd_tilde_;
 
-  // Keeps Hx = Dx (Dx=log-barrier diagonal for x) + regularization + diagOf(Hess)
-  // Keeps Hd = Dd (Dd=log-barrier diagonal for slack variable) + regularization
-  // Hx_inv_ = (Hx)^{-1}
-  // Hd_inv_ = (Hd)^{-1}
-  hiopVector *Hx_inv_;
-  hiopVector *Hd_inv_;
-  
-  // diagOf(Hess)
-  hiopVector *Hess_diag_;
+  hiopVector* Hx_;  // [diag(H)+Dx+delta_wx]
+  hiopVector* Hd_;  // [Dd+delta_wd ]
 
   hiopVector *x_wrk_;
   hiopVector *d_wrk_;

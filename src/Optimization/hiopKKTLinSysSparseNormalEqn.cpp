@@ -73,9 +73,8 @@ hiopKKTLinSysSparseNormalEqn::hiopKKTLinSysSparseNormalEqn(hiopNlpFormulation* n
     Jac_cSp_{nullptr},
     Jac_dSp_{nullptr},
     rhs_{nullptr},
+    Hess_diag_{nullptr},
     Hxd_inv_{nullptr},
-    Hx_{nullptr},
-    Hd_{nullptr},
     JacD_{nullptr},
     JacDt_{nullptr},
     DiagJt_{nullptr},
@@ -92,9 +91,8 @@ hiopKKTLinSysSparseNormalEqn::hiopKKTLinSysSparseNormalEqn(hiopNlpFormulation* n
 hiopKKTLinSysSparseNormalEqn::~hiopKKTLinSysSparseNormalEqn()
 {
   delete rhs_;
+  delete Hess_diag_;
   delete Hxd_inv_;
-  delete Hx_;
-  delete Hd_;
   delete JacD_;
   delete JacDt_;
   delete DiagJt_;
@@ -158,16 +156,12 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const double& delta_wx_in,
   Hx_->copyFrom(*Dx_);
   Hx_->addConstant(delta_wx_in);
   Hx_->axpy(1.0,*Hess_diag_);
-  Hx_inv_->copyFrom(*Hx_);
-  Hx_inv_->invert();  
     
   if(nullptr == Hd_) {
     Hd_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), nineq);
   }
   Hd_->copyFrom(*Dd_);  
   Hd_->addConstant(delta_wd_in);
-  Hd_inv_->copyFrom(*Hd_);
-  Hd_inv_->invert();
 
   nlp_->runStats.kkt.tmUpdateInit.stop();
   nlp_->runStats.kkt.tmUpdateLinsys.start();
