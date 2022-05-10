@@ -1082,10 +1082,13 @@ void hiopOptionsNLP::ensure_consistence()
     }
   }
 
-  if(GetString("KKTLinsys") == "full") {
-    //if(GetString("linear_solver_sparse") == "ma57" || GetString("linear_solver_sparse") == "pardiso") {
-    auto sol_sp = GetString("linear_solver_sparse");
-    if(sol_sp!="cusolver-lu" && sol_sp!="pardiso" && sol_sp!="strumpack") {
+  //
+  // linear_solver_sparse and KKTLinsys compatibility checks
+  //
+  auto kkt_linsys = GetString("KKTLinsys");
+  auto sol_sp = GetString("linear_solver_sparse");
+  if(kkt_linsys == "full") {
+    if(sol_sp!="cusolver-lu" && sol_sp!="pardiso" && sol_sp!="strumpack" && sol_sp!="auto") {
       if(is_user_defined("linear_solver_sparse")) {
         log_printf(hovWarning,
                    "The option 'linear_solver_sparse=%s' is not valid with option 'KKTLinsys=full'. "
@@ -1094,10 +1097,22 @@ void hiopOptionsNLP::ensure_consistence()
       }
       set_val("linear_solver_sparse", "auto");
     }
+  } else {
+    if(kkt_linsys == "condensed") {
+      if(sol_sp!="cusolver-chol" && sol_sp!="auto") {
+        if(is_user_defined("linear_solver_sparse")) {
+          log_printf(hovWarning,
+                     "The option 'linear_solver_sparse=%s' is not valid with option 'KKTLinsys=condensed'. "
+                     " Will use 'linear_solver_sparse=auto'.\n",
+                     GetString("linear_solver_sparse").c_str());
+        }
+        set_val("linear_solver_sparse", "auto");
+      }
+    }
   }
 
 #ifndef HIOP_USE_CUDA
-  if(GetString("linear_solver_sparse") == "cusolver-lu") {
+  if(sol_sp == "cusolver-lu" || sol_sp == "cusolver-chol") {
     if(is_user_defined("linear_solver_sparse")) {
         log_printf(hovWarning,
                    "The option 'linear_solver_sparse=%s' is not valid without CUDA support enabled."
