@@ -438,16 +438,16 @@ hiopKKTLinSysCondensedSparse::determine_and_create_linsys(size_type nx, size_typ
   if(linSys_) {
     return dynamic_cast<hiopLinSolverSymSparse*> (linSys_);
   }
-  
+ 
   int n = nx;
-
+  auto linsolv = nlp_->options->GetString("linear_solver_sparse");
   if(nlp_->options->GetString("compute_mode") == "cpu") {
-    //auto linear_solver = nlp_->options->GetString("linear_solver_sparse");
 
     //TODO:
     //add support for linear_solver == "cholmod"
     // maybe add pardiso as an option in the future
     //
+    assert((linsolv=="ma57" || linsolv=="auto") && "Only MA57 or auto is supported on cpu.");
     
 #ifdef HIOP_USE_COINHSL
     nlp_->log->printf(hovWarning,
@@ -462,6 +462,8 @@ hiopKKTLinSysCondensedSparse::determine_and_create_linsys(size_type nx, size_typ
     // on device: compute_mode is hybrid, auto, or gpu
     //
     assert(nullptr==linSys_);
+
+    assert((linsolv=="cusolver-chol" || linsolv=="auto") && "Only MA57 or auto is supported on cpu.");
     
 #ifdef HIOP_USE_CUDA
     nlp_->log->printf(hovWarning,
