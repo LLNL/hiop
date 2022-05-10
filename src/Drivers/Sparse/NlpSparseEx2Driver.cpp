@@ -21,7 +21,7 @@ static bool parse_arguments(int argc,
   n = 3;
   inertia_free = false;
   use_cusolver = false;
-  use_ginkgo = true;
+  use_ginkgo = false;
   switch(argc) {
   case 1:
     //no arguments
@@ -180,7 +180,7 @@ int main(int argc, char **argv)
 
   //first test
   {
-    SparseEx2 nlp_interface(n,convex_obj,rankdefic_Jac_eq,rankdefic_Jac_ineq, scal_neg_obj);
+    SparseEx2 nlp_interface(n, convex_obj, rankdefic_Jac_eq, rankdefic_Jac_ineq, scal_neg_obj);
     hiopNlpSparse nlp(nlp_interface);
     nlp.options->SetStringValue("compute_mode", "cpu");
     nlp.options->SetStringValue("KKTLinsys", "xdycyd");
@@ -244,6 +244,7 @@ int main(int argc, char **argv)
     nlp.options->SetStringValue("duals_init", "zero");
     if(use_cusolver) {
       nlp.options->SetStringValue("compute_mode", "hybrid");
+      nlp.options->SetStringValue("linear_solver_sparse", "cusolver-chol");
     }
 
     hiopAlgFilterIPMNewton solver(&nlp);

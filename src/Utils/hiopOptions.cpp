@@ -1,11 +1,10 @@
 // Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
-// Written by Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp
 // is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause).
-// Please also read “Additional BSD Notice” below.
+// Please also read "Additional BSD Notice" below.
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -817,18 +816,32 @@ void hiopOptionsNLP::register_options()
   }
 
   //
-  // choose direct linear solver for sparse linear system on CPU
+  // Choose direct linear solver for sparse KKT linearizations
   //
-  // when KKTLinsys is 'full' only strumpack is available
-  // for the other KKTLinsys (which are all symmetric), MA57 is chosen 'auto'matically for all compute
-  // modes, unless the user overwrites this
+  // Notes:
+  //  - When KKTLinsys is 'full' (unsymmetric), only cusolver-lu, strumpack, and pardiso are available (and will be
+  // selected in this order under 'auto' or incompatible/unsupported value for 'linear_solver_sparse').
+  //  - For KKTLinsys 'xycyd' and 'xdycyd'  (symmetric indefinite),
+  //     - 'cpu' compute mode: ma57, pardiso, strumpack, and ginko are available and will be selected in this
+  //     order under 'auto' or incompatible/unsupported value for 'linear_solver_sparse'
+  //     - 'hybrid' compute mode: cusolver-lu, strumpack, ma57, and pardiso and will be selected in this
+  //     order under 'auto' or incompatible/unsupported value for 'linear_solver_sparse'
+  //     - 'gpu' compute mode: not supported with the above values for 'KKTLinsys'
+  // - For KKTLinsys 'condensed' (symmetric positive definite system), under
+  //     - 'cpu' compute mode only ma57 is supported (not efficient, use only for debugging)
+  //     - 'hybrid' compute mode, cusolve-chol is supported and will be selected under 'auto' or
+  //     incompatible/unsupported value for 'linear_solver_sparse'.
+  //     - 'gpu' compute mode: work in progress
+  // - TODO: normal equations
+
   {
-    vector<string> range {"auto", "ma57", "pardiso", "strumpack", "cusolver-lu", "ginkgo"};
+    vector<string> range {"auto", "ma57", "pardiso", "strumpack", "cusolver-lu", "ginkgo", "cusolver-chol"};
 
     register_str_option("linear_solver_sparse",
                         "auto",
                         range,
-                        "Selects among MA57, PARDISO, STRUMPACK, cuSOLVER and GINKGO for the sparse linear solves.");
+                        "Selects among MA57, PARDISO, STRUMPACK, cuSOLVER's Cholesky or LU, and GINKGO for the "
+                        "sparse linear solves.");
   }
 
   // choose linear solver for duals intializations for sparse NLP problems
@@ -841,7 +854,7 @@ void hiopOptionsNLP::register_options()
     register_str_option("duals_init_linear_solver_sparse",
                         "auto",
                         range,
-                        "Selects among MA57, PARDISO, cuSOLVER, STRUMPACK and GINKGO for the sparse linear solves.");
+                        "Selects among MA57, PARDISO, cuSOLVER, STRUMPACK, and GINKGO for the sparse linear solves.");
   }
 
   // choose sparsity permutation (to reduce nz in the factors). This option is available only when using
@@ -1069,8 +1082,13 @@ void hiopOptionsNLP::ensure_consistence()
     }
   }
 
-  if(GetString("KKTLinsys") == "full") {
-    if(GetString("linear_solver_sparse") == "ma57" || GetString("linear_solver_sparse") == "pardiso") {
+  //
+  // linear_solver_sparse and KKTLinsys compatibility checks
+  //
+  auto kkt_linsys = GetString("KKTLinsys");
+  auto sol_sp = GetString("linear_solver_sparse");
+  if(kkt_linsys == "full") {
+    if(sol_sp!="cusolver-lu" && sol_sp!="pardiso" && sol_sp!="strumpack" && sol_sp!="auto") {
       if(is_user_defined("linear_solver_sparse")) {
         log_printf(hovWarning,
                    "The option 'linear_solver_sparse=%s' is not valid with option 'KKTLinsys=full'. "
@@ -1079,10 +1097,22 @@ void hiopOptionsNLP::ensure_consistence()
       }
       set_val("linear_solver_sparse", "auto");
     }
+  } else {
+    if(kkt_linsys == "condensed") {
+      if(sol_sp!="cusolver-chol" && sol_sp!="auto") {
+        if(is_user_defined("linear_solver_sparse")) {
+          log_printf(hovWarning,
+                     "The option 'linear_solver_sparse=%s' is not valid with option 'KKTLinsys=condensed'. "
+                     " Will use 'linear_solver_sparse=auto'.\n",
+                     GetString("linear_solver_sparse").c_str());
+        }
+        set_val("linear_solver_sparse", "auto");
+      }
+    }
   }
 
 #ifndef HIOP_USE_CUDA
-  if(GetString("linear_solver_sparse") == "cusolver-lu") {
+  if(sol_sp == "cusolver-lu" || sol_sp == "cusolver-chol") {
     if(is_user_defined("linear_solver_sparse")) {
         log_printf(hovWarning,
                    "The option 'linear_solver_sparse=%s' is not valid without CUDA support enabled."
