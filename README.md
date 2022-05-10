@@ -3,6 +3,53 @@
 
 HiOp is an optimization solver for solving certain mathematical optimization problems expressed as nonlinear programming problems. HiOp is a lightweight HPC solver that leverages application's existing data parallelism to parallelize the optimization iterations by using specialized parallel linear algebra kernels.
 
+Please cite the user manual whenever HiOp is used:
+```
+@TECHREPORT{hiop_techrep,
+  title={{HiOp} -- {U}ser {G}uide},
+  author={Petra, Cosmin G. and Chiang, NaiYuan and Jingyi Wang},
+  year={2018},
+  institution = {Center for Applied Scientific Computing, Lawrence Livermore National Laboratory},
+  number = {LLNL-SM-743591}
+}
+```
+In addition, when using the quasi-Newton solver please cite:
+```
+@ARTICLE{Petra_18_hiopdecomp,
+title = {A memory-distributed quasi-Newton solver for nonlinear programming problems with a small number of general constraints},
+journal = {Journal of Parallel and Distributed Computing},
+volume = {133},
+pages = {337-348},
+year = {2019},
+issn = {0743-7315},
+doi = {https://doi.org/10.1016/j.jpdc.2018.10.009},
+url = {https://www.sciencedirect.com/science/article/pii/S0743731518307731},
+author = {Cosmin G. Petra},
+}
+```
+and when using the the PriDec solver please cite:
+```
+@article{wang2022,
+  archivePrefix = {arXiv},
+  eprint = {arXiv:2204.09631},
+  author = {J. Wang and C. G. Petra},
+  title = {An optimization algorithm for nonsmooth nonconvex problems with upper-$C^2$ objective},
+  publisher = {arXiv},
+  year = {2022},
+  journal={ (submitted) },
+}
+@INPROCEEDINGS{wang2021,
+  author={Wang, Jingyi and Chiang, Nai-Yuan and Petra, Cosmin G.},
+  booktitle={2021 20th International Symposium on Parallel and Distributed Computing (ISPDC)}, 
+  title={An asynchronous distributed-memory optimization solver for two-stage stochastic programming problems}, 
+  year={2021},
+  volume={},
+  number={},
+  pages={33-40},
+  doi={10.1109/ISPDC52870.2021.9521613}
+}
+```
+
 ## Build/install instructions
 HiOp uses a CMake-based build system. A standard build can be done by invoking in the 'build' directory the following 
 ```shell 
