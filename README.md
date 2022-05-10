@@ -1,7 +1,7 @@
 # HiOp - HPC solver for optimization
 ![tests](https://github.com/LLNL/hiop/workflows/tests/badge.svg)
 
-HiOp is an optimization solver for solving certain mathematical optimization problems expressed as nonlinear programming problems. HiOp is a lightweight HPC solver that leverages application's existing data parallelism to parallelize the optimization iterations by using specialized linear algebra kernels.
+HiOp is an optimization solver for solving certain mathematical optimization problems expressed as nonlinear programming problems. HiOp is a lightweight HPC solver that leverages application's existing data parallelism to parallelize the optimization iterations by using specialized parallel linear algebra kernels.
 
 ## Build/install instructions
 HiOp uses a CMake-based build system. A standard build can be done by invoking in the 'build' directory the following 
@@ -136,11 +136,12 @@ User can check other issues and their existing status from https://github.com/LL
 HiOp has been developed under the financial support of: 
 - Department of Energy, Office of Advanced Scientific Computing Research (ASCR): Exascale Computing Program (ECP) and Applied Math Program.
 - Department of Energy, Advanced Research Projects Agency-Energy (ARPA‑E)
+- Lawrence Livermore National Laboratory Institutional Scientific Capability Portfolio (ISCP)
 - Lawrence Livermore National Laboratory, through the LDRD program
 
 # Contributors
 
-HiOp is written by Cosmin G. Petra (petra1@llnl.gov) and Nai-Yuan Chiang (chiang7@llnl.gov) from LLNL and has received contributions from Slaven Peles (PNNL), Asher Mancinelli (PNNL), Cameron Rutherford (PNNL), Jake K. Ryan (PNNL), and Michel Schanen (ANL).
+HiOp is written by Cosmin G. Petra (petra1@llnl.gov), Nai-Yuan Chiang (chiang7@llnl.gov), and Jingyi "Frank" Wang (wang125@llnl.gov) from LLNL and has received important contributions from Asher Mancinelli (PNNL), Slaven Peles (ORNL), Cameron Rutherford (PNNL), Jake K. Ryan (PNNL), and Michel Schanen (ANL).
 
 # Copyright
 
