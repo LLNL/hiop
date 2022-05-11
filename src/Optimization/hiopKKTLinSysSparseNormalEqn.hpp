@@ -70,8 +70,8 @@ namespace hiop
  *
  * Relies on the pure virtual 'solveCompressed' to form and solve the compressed
  * linear system
- * ( [ Jc  0 ] [ H+Dx+delta_wx     0       ]^{-1} [ Jc^T  Jd^T ] + [ -delta_cc     0     ] ) [dyc] = [ ryc_tilde ]
- * ( [ Jd -I ] [   0           Dd+delta_wd ]      [  0     -I  ]   [    0      -delta_cd ] ) [dyd]   [ ryd_tilde ]
+ * ( [ Jc  0 ] [ H+Dx+delta_wx     0       ]^{-1} [ Jc^T  Jd^T ] + [ delta_cc     0     ] ) [dyc] = [ ryc_tilde ]
+ * ( [ Jd -I ] [   0           Dd+delta_wd ]      [  0     -I  ]   [    0      delta_cd ] ) [dyd]   [ ryd_tilde ]
  *
  * [ ryc_tilde ] = [ Jc  0 ] [ H+Dx+delta_wx     0       ]^{-1}  [ rx_tilde ] - [ ryc ] 
  * [ ryd_tilde ]   [ Jd -I ] [   0           Dd+delta_wd ]       [ rd_tilde ]   [ ryd ]
@@ -83,8 +83,8 @@ namespace hiop
  *
  * REMARK: This linear system fits LP/QP best, where H is empty and hence only diagonal matrices are inversed.
  * If H is diagonal, the normal equation matrix becomes:
- *   [ Jc(H+Dx+delta_wx)^{-1}Jc^T    Jc(H+Dx+delta_wx)^{-1}Jd^T ]                        + [ -delta_cc     0     ] 
- *   [ Jd(H+Dx+delta_wx)^{-1}Jc^T    Jd(H+Dx+delta_wx)^{-1}Jd^T + ( Dd+delta_wd)^{-1} ]    [    0      -delta_cd ]
+ *   [ Jc(H+Dx+delta_wx)^{-1}Jc^T    Jc(H+Dx+delta_wx)^{-1}Jd^T ]                        + [ delta_cc     0     ] 
+ *   [ Jd(H+Dx+delta_wx)^{-1}Jc^T    Jd(H+Dx+delta_wx)^{-1}Jd^T + ( Dd+delta_wd)^{-1} ]    [    0      delta_cd ]
  *
  */
 class hiopKKTLinSysSparseNormalEqn : public hiopKKTLinSysNormalEquation
@@ -126,8 +126,8 @@ protected:
   const hiopMatrixSparse* Jac_cSp_;
   const hiopMatrixSparse* Jac_dSp_;
 
-  /// Member for ( [ Jc  0 ] [ H+Dx+delta_wx     0       ]^{-1} [ Jc^T  Jd^T ] + [ -delta_cc     0     ] )
-  ///            ( [ Jd -I ] [   0           Dd+delta_wd ]      [  0     -I  ]   [    0      -delta_cd ] )
+  /// Member for ( [ Jc  0 ] [ H+Dx+delta_wx     0       ]^{-1} [ Jc^T  Jd^T ] + [ delta_cc     0     ] )
+  ///            ( [ Jd -I ] [   0           Dd+delta_wd ]      [  0     -I  ]   [    0      delta_cd ] )
   /// let JacD_ = [Jc 0; Jd -I]
   /// TODO: now we assume Jc and Jd won't change, i.e., LP or QP. hence we build JacD_ and JacDt_ once and save them
 

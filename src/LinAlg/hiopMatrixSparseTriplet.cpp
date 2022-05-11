@@ -1369,6 +1369,7 @@ void hiopMatrixSparseTriplet::extract_diagonal(hiopVector& diag_out) const
   hiopVectorPar& vec = dynamic_cast<hiopVectorPar&>(diag_out);
   double* v_data = vec.local_data();
   
+  vec.setToZero();
   for(index_type itnnz=0; itnnz<nnz_; itnnz++) {
     if(iRow_[itnnz]==jCol_[itnnz]) {
       v_data[iRow_[itnnz]] = values_[itnnz];

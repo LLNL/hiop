@@ -144,7 +144,6 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const double& delta_wx_in,
   if(nullptr == Hess_diag_) {
     Hess_diag_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), nx);
     assert(Hess_diag_);
-    Hess_diag_->setToZero();
   }
   Hess_triplet->extract_diagonal(*Hess_diag_); 
  
@@ -168,8 +167,8 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const double& delta_wx_in,
   
   /*
   *  compute condensed linear system
-  * ( [ Jc  0 ] [ H+Dx+delta_wx     0       ]^{-1} [ Jc^T  Jd^T ] + [ -delta_cc     0     ] ) 
-  * ( [ Jd -I ] [   0           Dd+delta_wd ]      [  0     -I  ]   [    0      -delta_cd ] ) 
+  * ( [ Jc  0 ] [ H+Dx+delta_wx     0       ]^{-1} [ Jc^T  Jd^T ] + [ delta_cc     0     ] ) 
+  * ( [ Jd -I ] [   0           Dd+delta_wd ]      [  0     -I  ]   [    0      delta_cd ] ) 
   */
 
   hiopTimer t;
@@ -246,21 +245,16 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const double& delta_wx_in,
     hiopVector* diag_cons = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), neq + nineq);
     Diag_reg_->form_diag_from_symbolic(*diag_cons);
 
-    //form sparsity pattern of M_condensed_ = JacD*Diag*JacDt - delta_cc*I
+    //form sparsity pattern of M_condensed_ = JacD*Diag*JacDt + delta_cc*I
     M_normaleqn_ = Diag_reg_->add_matrix_alloc(*JDiagJt_);
     Diag_reg_->add_matrix_symbolic(*M_normaleqn_, *JDiagJt_);
     delete diag_cons;
   }
 
   t.reset(); t.start();
-  if(delta_cc>0) {
-    Diag_reg_->set_diagonal(delta_cc);
-  } else {
-    Diag_reg_->set_diagonal(0.0);
-  }
-
-  M_normaleqn_->setToZero();
-  Diag_reg_->add_matrix_numeric(1.0, *M_normaleqn_, -1.0, *JDiagJt_, 1.0);
+  assert(delta_cc>=0.0);
+  Diag_reg_->set_diagonal(delta_cc);
+  Diag_reg_->add_matrix_numeric(0.0, *M_normaleqn_, 1.0, *JDiagJt_, 1.0);
 
   // TODO should have same code for different compute modes (remove is_cusolver_on), i.e., remove if(linSolver_ma57)
   // right now we use this if statement to transfer CSR form back to triplet form for ma57
