@@ -255,6 +255,7 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
 
   void hiopLinSolverSymSparseGinkgo::firstCall()
   {
+    nlp_->log->printf(hovSummary, "Setting up Ginkgo solver ... \n");
     assert(n_==M_->n() && M_->n()==M_->m());
     assert(n_>0);
 
@@ -332,6 +333,7 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
   
   void hiopLinSolverNonSymSparseGinkgo::firstCall()
   {
+    nlp_->log->printf(hovSummary, "Setting up Ginkgo solver ... \n");
     assert(n_==M_->n() && M_->n()==M_->m());
     assert(n_>0);
 
