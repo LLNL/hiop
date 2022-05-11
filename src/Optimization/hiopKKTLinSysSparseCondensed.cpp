@@ -233,6 +233,9 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   Hess_upper_csr_->form_from_numeric(*Hess_triplet);
   Hess_upper_csr_->set_diagonal(0.0);
   Hess_lower_csr_->form_transpose_from_numeric(*Hess_triplet);
+  //
+  // Hess_csr_ = Hess_lower_csr_ + Hess_upper_csr_
+  //
   Hess_lower_csr_->add_matrix_numeric(0.0, *Hess_csr_, 1.0, *Hess_upper_csr_, 1.0);
 
   M_condensed_->setToZero();
@@ -241,6 +244,13 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   }
   M_condensed_->addDiagonal(1.0, *Dx_);
 
+  // we need a bit of a different sequence
+  ///https://docs.nvidia.com/cuda/cusparse/index.html
+  
+
+  //
+  // M_condensed_ = M_condensed_ + Hess_csr_ + JtDiagJ_
+  //
   Hess_csr_->add_matrix_numeric(1.0, *M_condensed_, 1.0, *JtDiagJ_, 1.0);
   //t.stop(); printf("ADD-nume  took %.5f\n", t.getElapsedTime());
   
