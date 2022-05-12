@@ -53,6 +53,7 @@
  */
 
 #include "hiopLinSolverCholCuSparse.hpp"
+#include <hiop_defs.hpp>
 
 #ifdef HIOP_USE_CUDA
 
@@ -61,12 +62,9 @@
 #include <cusolverSp.h>
 #include <cusolverSp_LOWLEVEL_PREVIEW.h>
 
-//this is for testing purposes only - will be removed once we have a better solution for ordering
-//#define HIOP_USE_EIGEN
-
 #ifdef HIOP_USE_EIGEN
-#include "/home/petra1/work/installs/eigen-3.3.9/_install/include/eigen3/Eigen/Core"
-#include "/home/petra1/work/installs/eigen-3.3.9/_install/include/eigen3/Eigen/Sparse"
+#include <Eigen/Core>
+#include <Eigen/Sparse>
 
 using Scalar = double;
 //using SparseMatrixCSC = Eigen::SparseMatrix<Scalar, Eigen::StorageOptions::ColMajor>;
