@@ -243,7 +243,7 @@ public:
 
   /**
    * Computes sparsity pattern of M = X+Y (i.e., populates the row pointers and 
-   * column indexes arrays) of `M`.
+   * column indexes arrays) of `M`. `X` is `this`.
    * 
    * @pre `this` and `Y` should hold matrices of identical dimensions.
    *
@@ -251,8 +251,8 @@ public:
   virtual void add_matrix_symbolic(hiopMatrixSparseCSR& M, const hiopMatrixSparseCSR& Y) const = 0;
 
   /**
-   * Performs matrix addition M = gamma*M + alpha*X + beta*Y numerically, where
-   * X is `this` and gamma, alpha, and beta are scalars.
+   * Performs matrix addition M = alpha*X + beta*Y numerically, where
+   * X is `this` and alpha and beta are scalars.
    * 
    * @pre `M`, `this` and `Y` should hold matrices of identical dimensions.
    * 
@@ -260,8 +260,7 @@ public:
    * `add_matrix_symbolic` should have been called previously.
    *
    */
-  virtual void add_matrix_numeric(double gamma,
-                                  hiopMatrixSparseCSR& M,
+  virtual void add_matrix_numeric(hiopMatrixSparseCSR& M,
                                   double alpha,
                                   const hiopMatrixSparseCSR& Y,
                                   double beta) const = 0;

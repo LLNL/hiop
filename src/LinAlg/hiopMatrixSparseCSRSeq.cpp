@@ -248,7 +248,16 @@ void hiopMatrixSparseCSRSeq::addDiagonal(const double& alpha, const hiopVector& 
 
 void hiopMatrixSparseCSRSeq::addDiagonal(const double& value)
 {
-  assert(false && "not needed");
+  assert(irowptr_ && jcolind_ && values_);
+  
+  for(index_type i=0; i<nrows_; ++i) {
+    for(index_type pt=irowptr_[i]; pt<irowptr_[i+1]; ++pt) {
+      if(jcolind_[pt]==i) {
+        values_[pt] += value;
+        break;
+      }
+    }
+  }
 }
 void hiopMatrixSparseCSRSeq::addSubDiagonal(const double& alpha, index_type start, const hiopVector& d_)
 {
@@ -1189,10 +1198,9 @@ add_matrix_symbolic(hiopMatrixSparseCSR& M_in, const hiopMatrixSparseCSR& Y_in) 
 }
 
 /**
- * Performs matrix addition M = gamma*M + alpha*X + beta*Y numerically
+ * Performs matrix addition M = alpha*X + beta*Y numerically
  */
-void hiopMatrixSparseCSRSeq::add_matrix_numeric(double gamma,
-                                                hiopMatrixSparseCSR& M_in,
+void hiopMatrixSparseCSRSeq::add_matrix_numeric(hiopMatrixSparseCSR& M_in,
                                                 double alpha,
                                                 const hiopMatrixSparseCSR& Y_in,
                                                 double beta) const
@@ -1216,13 +1224,8 @@ void hiopMatrixSparseCSRSeq::add_matrix_numeric(double gamma,
   double* valuesM = M.M();
   
   int nnzM = M.numberOfNonzeros();
-  if(gamma==0.0) {
-    for(auto i=0; i<nnzM; i++) {
-      valuesM[i] = 0.0;
-    }
-  } else if(gamma!=1.0) {
-    int inc = 1;
-    DSCAL(&nnzM, &gamma, valuesM, &inc);
+  for(auto i=0; i<nnzM; i++) {
+    valuesM[i] = 0.0;
   }
   
   // counter for nz in M 

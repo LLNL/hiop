@@ -523,18 +523,16 @@ public:
 
   /**
    * Computes sparsity pattern of M = X+Y (i.e., populates the row pointers and 
-   * column indexes arrays) of `M`.
+   * column indexes arrays) of `M`. `X` is this.
    * 
    * @pre `this` and `Y` should hold matrices of identical dimensions.
    *
    */
-
-  //// note cusparseXcsrgeam2
   void add_matrix_symbolic(hiopMatrixSparseCSR& M, const hiopMatrixSparseCSR& Y) const;
 
   /**
    * Performs matrix addition M = gamma*M + alpha*X + beta*Y numerically, where
-   * X is `this` and gamma, alpha, and beta are scalars.
+   * X is `this` and alpha and beta are scalars.
    * 
    * @pre `M`, `this` and `Y` should hold matrices of identical dimensions.
    * 
@@ -542,8 +540,7 @@ public:
    * `add_matrix_symbolic` should have been called previously.
    *
    */
-  void add_matrix_numeric(double gamma,
-                          hiopMatrixSparseCSR& M,
+  void add_matrix_numeric(hiopMatrixSparseCSR& M,
                           double alpha,
                           const hiopMatrixSparseCSR& Y,
                           double beta) const;
