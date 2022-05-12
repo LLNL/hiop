@@ -368,7 +368,7 @@ instantiate_linear_solver(const char* linsol_opt,
 
   auto linear_solver = nlp_->options->GetString(linsol_opt);
   auto compute_mode = nlp_->options->GetString("compute_mode");
-  std::cout << compute_mode << std::endl;
+
 #ifndef HIOP_USE_GPU
   assert( (compute_mode == "cpu" || compute_mode == "auto") &&
          "the value for compute_mode is invalid and should have been corrected during user options processing");
