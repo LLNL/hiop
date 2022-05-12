@@ -81,6 +81,9 @@ stages:
   - default_build
   - test
 
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
+
 # For PNNL CI
 build_on_marianas:
   stage: default_build
