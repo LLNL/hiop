@@ -75,9 +75,16 @@ namespace hiop
 
 hiopNlpFormulation::hiopNlpFormulation(hiopInterfaceBase& interface_, const char* option_file)
 #ifdef HIOP_USE_MPI
-  : mpi_init_called(false), interface_base(interface_), nlp_transformations_(this)
+  : mpi_init_called(false),
+    interface_base(interface_),
+    nlp_transformations_(this),
+    prob_type_(hiopInterfaceBase::hiopNonlinear),
+    nlp_evaluated_(false)
 #else 
-  : interface_base(interface_), nlp_transformations_(this)
+  : interface_base(interface_),
+    nlp_transformations_(this),
+    prob_type_(hiopInterfaceBase::hiopNonlinear),
+    nlp_evaluated_(false)
 #endif
 {
   strFixedVars_ = ""; //uninitialized
@@ -223,6 +230,9 @@ bool hiopNlpFormulation::finalizeInitialization()
   xl_   = LinearAlgebraFactory::create_vector(mem_space, n_vars_);
 #endif  
   xu_ = xl_->alloc_clone();
+
+  bret = interface_base.get_prob_info(prob_type_);
+  assert(bret);
 
   int nlocal=xl_->get_local_size();
 
@@ -689,14 +699,21 @@ bool hiopNlpFormulation::eval_f(hiopVector& x, bool new_x, double& f)
 
 bool hiopNlpFormulation::eval_grad_f(hiopVector& x, bool new_x, hiopVector& gradf)
 {
+  if((prob_type_==hiopInterfaceBase::hiopLinear || prob_type_==hiopInterfaceBase::hiopQuadratic)
+     && nlp_evaluated_) {
+    return true;
+  }
+
   hiopVector* xx = nlp_transformations_.apply_inv_to_x(x, new_x);
   hiopVector* gradff = nlp_transformations_.apply_inv_to_grad_obj(gradf);
-  bool bret; 
+
+  bool bret;
   runStats.tmEvalGrad_f.start();
   bret = interface_base.eval_grad_f(nlp_transformations_.n_pre(), xx->local_data_const(), new_x, gradff->local_data());
   runStats.tmEvalGrad_f.stop(); runStats.nEvalGrad_f++;
 
   gradf = *(nlp_transformations_.apply_to_grad_obj(*gradff));
+
   return bret;
 }
 
@@ -919,7 +936,13 @@ bool hiopNlpFormulation::eval_c_d(hiopVector& x, bool new_x, hiopVector& c, hiop
 
 bool hiopNlpFormulation::eval_Jac_c_d(hiopVector& x, bool new_x, hiopMatrix& Jac_c, hiopMatrix& Jac_d)
 {
+  if((prob_type_==hiopInterfaceBase::hiopLinear || prob_type_==hiopInterfaceBase::hiopQuadratic)
+     && nlp_evaluated_) {
+    return true;
+  }
+
   bool do_eval_Jac_c = true;
+
   if(-1 == cons_eval_type_) {
     assert(cons_body_ == nullptr);
     assert(NULL == cons_Jac_);
@@ -1186,8 +1209,13 @@ hiopDualsLsqUpdate* hiopNlpDenseConstraints::alloc_duals_lsq_updater()
 }
 
 bool hiopNlpDenseConstraints::eval_Jac_c(hiopVector& x, bool new_x, double* Jac_c)
-{
+{  
 #if 0
+  if((prob_type_==hiopInterfaceBase::hiopLinear || prob_type_==hiopInterfaceBase::hiopQuadratic)
+     && nlp_evaluated_) {
+    return true;
+  }
+
   hiopVector* x_user  = nlp_transformations_.apply_inv_to_x(x, new_x);
   double* Jac_c_user = nlp_transformations_.apply_inv_to_jacob_eq(Jac_c, n_cons_eq_);
 
@@ -1206,6 +1234,11 @@ bool hiopNlpDenseConstraints::eval_Jac_c(hiopVector& x, bool new_x, double* Jac_
 bool hiopNlpDenseConstraints::eval_Jac_d(hiopVector& x, bool new_x, double* Jac_d)
 {
 #if 0
+  if((prob_type_==hiopInterfaceBase::hiopLinear || prob_type_==hiopInterfaceBase::hiopQuadratic)
+     && nlp_evaluated_) {
+    return true;
+  }
+
   hiopVector* x_user  = nlp_transformations_.apply_inv_to_x(x, new_x);
   double* Jac_d_user = nlp_transformations_.apply_inv_to_jacob_ineq(Jac_d, n_cons_ineq_);
 
@@ -1275,6 +1308,11 @@ bool hiopNlpDenseConstraints::eval_Jac_c_d_interface_impl(hiopVector& x, bool ne
 
 bool hiopNlpDenseConstraints::eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& Jac_c)
 {
+  if((prob_type_==hiopInterfaceBase::hiopLinear || prob_type_==hiopInterfaceBase::hiopQuadratic)
+     && nlp_evaluated_) {
+    return true;
+  }
+
   hiopMatrixDense* Jac_cde = dynamic_cast<hiopMatrixDense*>(&Jac_c);
   if(Jac_cde==NULL) {
     log->printf(hovError, "[internal error] hiopNlpDenseConstraints NLP works only with dense matrices\n");
@@ -1308,6 +1346,11 @@ bool hiopNlpDenseConstraints::eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& 
 
 bool hiopNlpDenseConstraints::eval_Jac_d(hiopVector& x, bool new_x, hiopMatrix& Jac_d)
 {
+  if((prob_type_==hiopInterfaceBase::hiopLinear || prob_type_==hiopInterfaceBase::hiopQuadratic)
+     && nlp_evaluated_) {
+    return true;
+  }
+
   hiopMatrixDense* Jac_dde = dynamic_cast<hiopMatrixDense*>(&Jac_d);
   if(Jac_dde==NULL) {
     log->printf(hovError, "[internal error] hiopNlpDenseConstraints NLP works only with dense matrices\n");
@@ -1408,6 +1451,11 @@ hiopDualsLsqUpdate* hiopNlpMDS::alloc_duals_lsq_updater()
 
 bool hiopNlpMDS::eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& Jac_c)
 {
+  if((prob_type_==hiopInterfaceBase::hiopLinear || prob_type_==hiopInterfaceBase::hiopQuadratic)
+     && nlp_evaluated_) {
+    return true;
+  }
+
   hiopMatrixMDS* pJac_c = dynamic_cast<hiopMatrixMDS*>(&Jac_c);
   assert(pJac_c);
   if(pJac_c) {
@@ -1440,6 +1488,11 @@ bool hiopNlpMDS::eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& Jac_c)
 
 bool hiopNlpMDS::eval_Jac_d(hiopVector& x, bool new_x, hiopMatrix& Jac_d)
 {
+  if((prob_type_==hiopInterfaceBase::hiopLinear || prob_type_==hiopInterfaceBase::hiopQuadratic)
+     && nlp_evaluated_) {
+    return true;
+  }
+
   hiopMatrixMDS* pJac_d = dynamic_cast<hiopMatrixMDS*>(&Jac_d);
   assert(pJac_d);
   if(pJac_d) {
@@ -1525,6 +1578,10 @@ bool hiopNlpMDS::eval_Hess_Lagr(const hiopVector& x,
                                 bool new_lambdas,
                                 hiopMatrix& Hess_L)
 {
+  if(prob_type_==hiopInterfaceBase::hiopLinear && nlp_evaluated_) {
+    return true;
+  }
+
   hiopMatrixSymBlockDiagMDS* pHessL = dynamic_cast<hiopMatrixSymBlockDiagMDS*>(&Hess_L);
   assert(pHessL);
 
@@ -1592,6 +1649,11 @@ hiopDualsLsqUpdate* hiopNlpSparse::alloc_duals_lsq_updater()
 
 bool hiopNlpSparse::eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& Jac_c)
 {
+  if((prob_type_==hiopInterfaceBase::hiopLinear || prob_type_==hiopInterfaceBase::hiopQuadratic)
+     && nlp_evaluated_) {
+    return true;
+  }
+
   hiopMatrixSparse* pJac_c = dynamic_cast<hiopMatrixSparse*>(&Jac_c);
   assert(pJac_c);
   if(pJac_c) {
@@ -1624,6 +1686,11 @@ bool hiopNlpSparse::eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& Jac_c)
 
 bool hiopNlpSparse::eval_Jac_d(hiopVector& x, bool new_x, hiopMatrix& Jac_d)
 {
+  if((prob_type_==hiopInterfaceBase::hiopLinear || prob_type_==hiopInterfaceBase::hiopQuadratic)
+     && nlp_evaluated_) {
+    return true;
+  }
+
   hiopMatrixSparse* pJac_d = dynamic_cast<hiopMatrixSparse*>(&Jac_d);
   assert(pJac_d);
   if(pJac_d) {
@@ -1725,6 +1792,10 @@ bool hiopNlpSparse::eval_Hess_Lagr(const hiopVector& x,
                                    bool new_lambdas,
                                    hiopMatrix& Hess_L)
 {
+  if(prob_type_==hiopInterfaceBase::hiopLinear && nlp_evaluated_) {
+    return true;
+  }
+
   hiopMatrixSparse* pHessL = dynamic_cast<hiopMatrixSparse*>(&Hess_L);
   assert(pHessL);
   

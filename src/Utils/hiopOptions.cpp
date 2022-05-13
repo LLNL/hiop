@@ -804,14 +804,15 @@ void hiopOptionsNLP::register_options()
   }
   //linear algebra
   {
-    vector<string> range = {"auto", "xycyd", "xdycyd", "full", "condensed"};
+    vector<string> range = {"auto", "xycyd", "xdycyd", "full", "condensed", "normaleqn"};
     register_str_option("KKTLinsys",
                         "auto",
                         range,
                         "Type of KKT linear system used internally: decided by HiOp 'auto' (default), "
                         "the more compact 'XYcYd, the more stable 'XDYcYd', the full-size non-symmetric "
-                        "'full', or the condensed that uses Cholesky (available when no eq. constraints "
-                        "are present). The last four options are available only with "
+                        "'full', the symmetric normal equation 'normaleqn', or the condensed that "
+                        "uses Cholesky (available when no eq. constraints "
+                        "are present). The last five options are available only with "
                         "'Hessian=analyticalExact'.");
   }
 
@@ -1062,7 +1063,7 @@ void hiopOptionsNLP::ensure_consistence()
 
   if(GetString("Hessian")=="quasinewton_approx") {
     string strKKT = GetString("KKTLinsys");
-    if(strKKT=="xycyd" || strKKT=="xdycyd" || strKKT=="full") {
+    if(strKKT=="xycyd" || strKKT=="xdycyd" || strKKT=="full" || strKKT=="normaleqn") {
       if(is_user_defined("Hessian")) {
         log_printf(hovWarning,
                    "The option 'KKTLinsys=%s' is not valid with 'Hessian=quasiNewtonApprox'. "

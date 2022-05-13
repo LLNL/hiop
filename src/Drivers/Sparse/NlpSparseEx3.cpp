@@ -53,6 +53,12 @@ SparseEx3::SparseEx3(int n, double scala_a, bool eq_feas, bool eq_infeas, bool i
 SparseEx3::~SparseEx3()
 {}
 
+bool SparseEx3::get_prob_info(NonlinearityType& type)
+{
+  type = hiopInterfaceBase::hiopLinear;
+  return true;
+}
+
 bool SparseEx3::get_prob_sizes(size_type& n, size_type& m)
 { 
   n = n_vars_;
@@ -66,7 +72,7 @@ bool SparseEx3::get_vars_info(const size_type& n, double *xlow, double* xupp, No
   for(index_type i=0; i<n; i++) {
     xlow[i] = 0.0;
     xupp[i] = 1e20;
-    type[i] = hiopNonlinear; 
+    type[i] = hiopInterfaceBase::hiopLinear; 
   }
   return true;
 }

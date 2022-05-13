@@ -60,6 +60,8 @@
 #include "hiopKKTLinSysMDS.hpp"
 #include "hiopKKTLinSysSparse.hpp"
 #include "hiopKKTLinSysSparseCondensed.hpp"
+#include "hiopKKTLinSysSparseNormalEqn.hpp"
+
 #include "hiopFRProb.hpp"
 
 #include "hiopCppStdUtils.hpp"
@@ -1429,17 +1431,15 @@ hiopKKTLinSys* hiopAlgFilterIPMNewton::decideAndCreateLinearSystem(hiopNlpFormul
       std::string strKKT = nlp->options->GetString("KKTLinsys");
       if(strKKT == "full") {
         return new hiopKKTLinSysSparseFull(nlp);
+      } else if(strKKT == "xdycyd") {
+        return new hiopKKTLinSysCompressedSparseXDYcYd(nlp);
+      } else if(strKKT == "condensed") {
+        return new hiopKKTLinSysCondensedSparse(nlp);
+      } else if(strKKT == "normaleqn") {
+        return new hiopKKTLinSysSparseNormalEqn(nlp);
       } else {
-        if(strKKT == "xdycyd") {
-          return new hiopKKTLinSysCompressedSparseXDYcYd(nlp);
-        } else {
-          if(strKKT == "condensed") {
-            return new hiopKKTLinSysCondensedSparse(nlp);
-          } else {
-            //'auto' or 'XYcYd'
-            return new hiopKKTLinSysCompressedSparseXYcYd(nlp);
-          }
-        }
+        //'auto' or 'XYcYd'
+        return new hiopKKTLinSysCompressedSparseXYcYd(nlp);
       }
 #endif
     }

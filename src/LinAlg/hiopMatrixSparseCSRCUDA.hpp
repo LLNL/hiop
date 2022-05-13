@@ -305,6 +305,12 @@ public:
     return 0;
   }
 
+  virtual bool is_diagonal() const
+  {
+    assert(false && "not yet implemented");
+    return false;
+  }
+
   /// @brief extend base problem Jac to the Jac in feasibility problem
   virtual void set_Jac_FR(const hiopMatrixSparse& Jac_c,
                           const hiopMatrixSparse& Jac_d,
