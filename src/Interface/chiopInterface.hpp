@@ -1,3 +1,59 @@
+// Copyright (c) 2017, Lawrence Livermore National Security, LLC.
+// Produced at the Lawrence Livermore National Laboratory (LLNL).
+// LLNL-CODE-742473. All rights reserved.
+//
+// This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
+// is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause). 
+// Please also read "Additional BSD Notice" below.
+//
+// Redistribution and use in source and binary forms, with or without modification, 
+// are permitted provided that the following conditions are met:
+// i. Redistributions of source code must retain the above copyright notice, this list 
+// of conditions and the disclaimer below.
+// ii. Redistributions in binary form must reproduce the above copyright notice, 
+// this list of conditions and the disclaimer (as noted below) in the documentation and/or 
+// other materials provided with the distribution.
+// iii. Neither the name of the LLNS/LLNL nor the names of its contributors may be used to 
+// endorse or promote products derived from this software without specific prior written 
+// permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY 
+// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES 
+// OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT 
+// SHALL LAWRENCE LIVERMORE NATIONAL SECURITY, LLC, THE U.S. DEPARTMENT OF ENERGY OR 
+// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS 
+// OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED 
+// AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, 
+// EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
+// Additional BSD Notice
+// 1. This notice is required to be provided under our contract with the U.S. Department 
+// of Energy (DOE). This work was produced at Lawrence Livermore National Laboratory under 
+// Contract No. DE-AC52-07NA27344 with the DOE.
+// 2. Neither the United States Government nor Lawrence Livermore National Security, LLC 
+// nor any of their employees, makes any warranty, express or implied, or assumes any 
+// liability or responsibility for the accuracy, completeness, or usefulness of any 
+// information, apparatus, product, or process disclosed, or represents that its use would
+// not infringe privately-owned rights.
+// 3. Also, reference herein to any specific commercial products, process, or services by 
+// trade name, trademark, manufacturer or otherwise does not necessarily constitute or 
+// imply its endorsement, recommendation, or favoring by the United States Government or 
+// Lawrence Livermore National Security, LLC. The views and opinions of authors expressed 
+// herein do not necessarily state or reflect those of the United States Government or 
+// Lawrence Livermore National Security, LLC, and shall not be used for advertising or 
+// product endorsement purposes.
+
+/**
+ * @file chiopInterface.hpp
+ *
+ * @author  <@anl.gov>, ANL
+ * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
+ * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
+ *
+ */
+
 #ifndef CHIOP_INTERFACE_HPP
 #define CHIOP_INTERFACE_HPP
 #include "hiop_defs.hpp"
@@ -10,15 +66,15 @@
  */
 
 using namespace hiop;
-class cppUserProblem;
+class cppUserProblemMDS;
 extern "C" {
   // C struct with HiOp function callbacks
-  typedef struct cHiopProblem {
+  typedef struct cHiopMDSProblem {
     hiopNlpMDS *refcppHiop;
-    cppUserProblem *hiopinterface;
+    cppUserProblemMDS *hiopinterface;
     // user_data similar to the Ipopt interface. In case of Julia pointer to the Julia problem object.
     void *user_data;
-    // Used by hiop_solveProblem() to store the final state. The duals should be added here.
+    // Used by hiop_mds_createProblemsolveProblem() to store the final state. The duals should be added here.
     double *solution;
     double obj_value;
     // HiOp callback function wrappers
@@ -47,20 +103,20 @@ extern "C" {
       hiop_size_type nnzHSS, hiop_index_type* iHSS, hiop_index_type* jHSS, double* MHSS, 
       double* HDD,
       hiop_size_type nnzHSD, hiop_index_type* iHSD, hiop_index_type* jHSD, double* MHSD, void* user_data);
-  } cHiopProblem;
+  } cHiopMDSProblem;
 }
 
 
 // The cpp object used in the C interface
-class cppUserProblem : public hiopInterfaceMDS
+class cppUserProblemMDS : public hiopInterfaceMDS
 {
   public:
-    cppUserProblem(cHiopProblem *cprob_)
+    cppUserProblemMDS(cHiopMDSProblem *cprob_)
       : cprob(cprob_) 
     {
     }
 
-    virtual ~cppUserProblem()
+    virtual ~cppUserProblemMDS()
     {
     }
     // HiOp callbacks calling the C wrappers
@@ -160,13 +216,13 @@ class cppUserProblem : public hiopInterfaceMDS
     };
 private:
   // Storing the C struct in the CPP object
-  cHiopProblem *cprob;
+  cHiopMDSProblem *cprob;
 };
 
 /** The 3 essential function calls to create and destroy a problem object in addition to solve a problem.
  * Some option setters will be added in the future.
  */
-extern "C" int hiop_createProblem(cHiopProblem *problem);
-extern "C" int hiop_solveProblem(cHiopProblem *problem);
-extern "C" int hiop_destroyProblem(cHiopProblem *problem);
+extern "C" int hiop_mds_createProblemcreateProblem(cHiopMDSProblem *problem);
+extern "C" int hiop_mds_createProblemsolveProblem(cHiopMDSProblem *problem);
+extern "C" int hiop_mds_createProblemdestroyProblem(cHiopMDSProblem *problem);
 #endif

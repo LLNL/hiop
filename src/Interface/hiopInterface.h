@@ -3,7 +3,7 @@
 //include hiop index and size types
 #include "hiop_types.h"
 
-typedef struct cHiopProblem {
+typedef struct cHiopMDSProblem {
   void *refcppHiop; // Pointer to the cpp object
   void *hiopinterface;
   // user_data similar to the Ipopt interface. In case of Julia pointer to the Julia problem object.
@@ -35,7 +35,8 @@ typedef struct cHiopProblem {
     hiop_size_type nnzHSS, hiop_index_type* iHSS, hiop_index_type* jHSS, double* MHSS, 
     double* HDD,
     hiop_size_type nnzHSD, hiop_index_type* iHSD, hiop_index_type* jHSD, double* MHSD, void* jprob);
-} cHiopProblem;
-extern int hiop_createProblem(cHiopProblem *problem);
-extern int hiop_solveProblem(cHiopProblem *problem);
-extern int hiop_destroyProblem(cHiopProblem *problem);
+} cHiopMDSProblem;
+extern int hiop_mds_createProblemcreateProblem(cHiopMDSProblem *problem);
+extern int hiop_mds_createProblemsolveProblem(cHiopMDSProblem *problem);
+extern int hiop_mds_createProblemdestroyProblem(cHiopMDSProblem *problem);
+

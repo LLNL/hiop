@@ -4,8 +4,8 @@ extern "C" {
 using namespace hiop;
 
 // These are default options for the C interface for now. Setting options from C will be added in the future.
-int hiop_createProblem(cHiopProblem *prob) {
-  cppUserProblem * cppproblem = new cppUserProblem(prob);
+int hiop_mds_createProblemcreateProblem(cHiopMDSProblem *prob) {
+  cppUserProblemMDS * cppproblem = new cppUserProblemMDS(prob);
   hiopNlpMDS *nlp = new hiopNlpMDS(*cppproblem);
   nlp->options->SetStringValue("duals_update_type", "linear");
   nlp->options->SetStringValue("duals_init", "zero");
@@ -21,7 +21,7 @@ int hiop_createProblem(cHiopProblem *prob) {
   return 0;
 } 
 
-int hiop_solveProblem(cHiopProblem *prob) {
+int hiop_mds_createProblemsolveProblem(cHiopMDSProblem *prob) {
   hiopSolveStatus status;
   hiopAlgFilterIPMNewton solver(prob->refcppHiop);
   status = solver.run();
@@ -30,7 +30,7 @@ int hiop_solveProblem(cHiopProblem *prob) {
   return 0;
 }
 
-int hiop_destroyProblem(cHiopProblem *prob) {
+int hiop_mds_createProblemdestroyProblem(cHiopMDSProblem *prob) {
   delete prob->refcppHiop;
   delete prob->hiopinterface;
   return 0;
