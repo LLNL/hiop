@@ -165,7 +165,7 @@ bool hiopLinSolverCholCuSparse::do_symb_analysis(const size_type n,
     ret = cusolverSpXcsrsymamdHost(h_cusolver_, n, nnz, mat_descr_, rowptr, colind, perm);
     assert(ret == CUSOLVER_STATUS_SUCCESS);
   } else if("symamd-eigen" == ordering) {
-
+#ifdef HIOP_USE_EIGEN
     Eigen::Map<SparseMatrixCSR> M(n,
                                   n,
                                   nnz,
@@ -177,7 +177,11 @@ bool hiopLinSolverCholCuSparse::do_symb_analysis(const size_type n,
     Ordering ordering;
     ordering(M.selfadjointView<Eigen::Upper>(), P);
     memcpy(perm, P.indices().data(), n*sizeof(int));
-
+#else
+    assert(false && "user option linear_solver_sparse_ordering=symamd-eigen is inconsistent (HiOp was not build with EIGEN)");
+    nlp_->log->printf(hovError,
+                      "option linear_solver_sparse_ordering=symamd-eigen is inconsistent (HiOp was not build with EIGEN).\n");
+#endif
   } else {
     assert("symrcm" == ordering && "unrecognized option for sparse solver ordering");
     ret = cusolverSpXcsrsymrcmHost(h_cusolver_, n, nnz, mat_descr_, rowptr, colind, perm);

@@ -588,7 +588,7 @@ void hiopOptionsNLP::register_options()
     // 'duals_update_type' should be 'lsq' or 'linear' for  'Hessian=quasinewton_approx'
     // 'duals_update_type' can only be 'linear' for Newton methods 'Hessian=analytical_exact'
 
-    //here will set the default value to 'lsq' and this will be adjusted later in 'ensureConsistency'
+    //here will set the default value to 'lsq' and this will be adjusted later in 'ensure_consistency'
     //to a valid value depending on the 'Hessian' value
     vector<string> range(2); range[0]="lsq"; range[1]="linear";
     register_str_option("duals_update_type",
@@ -1129,6 +1129,26 @@ void hiopOptionsNLP::ensure_consistence()
       set_val("linear_solver_sparse", "auto");
   }
 #endif // HIOP_USE_CUDA
+
+  //linear_solver_sparse_ordering checks and warnings
+
+#ifndef HIOP_USE_CUDA
+  if(is_user_defined("linear_solver_sparse_ordering")) {
+    log_printf(hovWarning, "option linear_solver_sparse_ordering has not effect since HiOp was not built with CUDA.\n");
+  }
+#else
+#ifndef HIOP_USE_EIGEN
+  if(GetString("linear_solver_sparse_ordering")=="symamd-eigen") {
+    if(is_user_defined("linear_solver_sparse_ordering")) {
+      log_printf(hovWarning,
+                 "option linear_solver_sparse_ordering=symamd-eigen was changed to 'symamd-cuda' since HiOp was "
+                 "built without EIGEN.\n");
+
+    }
+    set_val("linear_solver_sparse_ordering", "symamd-cuda");
+  }
+#endif
+#endif
   
 // When RAJA is not enabled ...
 #ifndef HIOP_USE_RAJA
