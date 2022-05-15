@@ -51,10 +51,15 @@
  * @author Cosmin G. Petra <petra1@llnl.gov>, LNNL
  *
  */
-#ifdef HIOP_SPARSE_MATRIX_CSRCUDA
+#ifndef HIOP_SPARSE_MATRIX_CSRCUDA
 #define HIOP_SPARSE_MATRIX_CSRCUDA
 
-#ifdef HIOP_USE_CUDA
+#include "hiop_defs.hpp"
+
+#ifdef HIOP_USE_CUDA 
+
+#include <cuda_runtime.h>
+#include <cusparse.h>
 
 #include "hiopVector.hpp"
 #include "hiopMatrixDense.hpp"
@@ -464,7 +469,6 @@ public:
    * @pre The input argument should have the nonzeros sorted by row and then by column
    * indexes.
    */
-  //// note: cusparseXcoo2csr + on the device cudamemcpy
   void form_from_symbolic(const hiopMatrixSparseTriplet& M);
 
   /**
@@ -488,6 +492,24 @@ public:
    */
   //// note: cusparseCsr2cscEx2
   void form_transpose_from_symbolic(const hiopMatrixSparseTriplet& M);
+
+    /**
+   * Allocates and populates the sparsity pattern of `this` as the CSR representation 
+   * of transpose of the CSR matrix `M`.
+   * 
+   * @pre The input argument should have the column indexes sorted and unique within a row.
+   */
+  virtual void form_transpose_from_symbolic(const hiopMatrixSparseCSR& M);
+  
+  /**
+   * Copies the numerical values of the transpose of the CSR matrix M into the CSR matrix `this`.
+   *
+   * @pre The sparsity pattern (row pointers and column indexes arrays) of `this` should be 
+   * allocated and populated, possibly by a previous call to `form_transpose_from_symbolic`
+   *
+   * @pre The input argument should have the column indexes sorted and unique within a row.
+   */  
+  virtual void form_transpose_from_numeric(const hiopMatrixSparseCSR& M);
   
   /**
    * Copies the numerical values of the transpose of the triplet matrix M into the 
@@ -574,10 +596,15 @@ protected:
 
   /**
    * Storage for the row starts used by `form_transpose_from_xxx` methods (allocated on 
-   * demand, only the above mentioned methods are called)
+   * demand, only when the above mentioned methods are called)
    */
   index_type* row_starts_;
-  
+
+  /// Internal handle required by cuSPARSE functions
+  cusparseHandle_t h_cusparse_;
+
+  /// Internal cuSPARSE matrix descriptor
+  cusparseMatDescr_t mat_descr_;
 private:
   hiopMatrixSparseCSRCUDA(const hiopMatrixSparseCSRCUDA&) = delete;
 };
