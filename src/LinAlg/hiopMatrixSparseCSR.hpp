@@ -220,6 +220,25 @@ public:
   virtual void form_transpose_from_numeric(const hiopMatrixSparseTriplet& M) = 0;
 
   /**
+   * Allocates and populates the sparsity pattern of `this` as the CSR representation 
+   * of transpose of the CSR matrix `M`.
+   * 
+   * @pre The input argument should have the column indexes sorted and unique within a row.
+   */
+  virtual void form_transpose_from_symbolic(const hiopMatrixSparseCSR& M) = 0;
+  
+  /**
+   * Copies the numerical values of the transpose of the CSR matrix M into the CSR matrix `this`.
+   *
+   * @pre The sparsity pattern (row pointers and column indexes arrays) of `this` should be 
+   * allocated and populated, possibly by a previous call to `form_transpose_from_symbolic`
+   *
+   * @pre The input argument should have the column indexes sorted and unique within a row.
+   */  
+  virtual void form_transpose_from_numeric(const hiopMatrixSparseCSR& M) = 0;
+
+  
+  /**
    * (Re)Initializes `this` to a diagonal matrix with diagonal entries given by D.
    */
   virtual void form_diag_from_symbolic(const hiopVector& D) = 0;

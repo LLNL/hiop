@@ -52,12 +52,14 @@
  */
 
 #include "hiopKKTLinSysSparseCondensed.hpp"
+
 #ifdef HIOP_USE_COINHSL
 #include "hiopLinSolverSymSparseMA57.hpp"
 #endif
 
 #ifdef HIOP_USE_CUDA
 #include "hiopLinSolverCholCuSparse.hpp"
+#include "hiopMatrixSparseCSRCUDA.hpp"
 #endif
 
 #include "hiopMatrixSparseTripletStorage.hpp"
@@ -146,24 +148,25 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
 
   hiopTimer t;
 
+  // test hiopMatrixSparseCSRCUDA JacD_cuda;
+  
   // symbolic conversion from triplet to CSR
   if(nullptr == JacD_) {
     t.reset(); t.start();
     JacD_ = new hiopMatrixSparseCSRSeq();
     JacD_->form_from_symbolic(*Jac_triplet);
-    //JacD_.print();
 
     assert(nullptr == JacDt_);
     JacDt_ = new hiopMatrixSparseCSRSeq();
-    JacDt_->form_transpose_from_symbolic(*Jac_triplet);
-    //t.stop(); printf("JacD JacDt-symb    took %.5f\n", t.getElapsedTime());
+    JacDt_->form_transpose_from_symbolic(*JacD_);
+    //t.stop(); printf("JacD JacDt-symb from csr    took %.5f\n", t.getElapsedTime());
   }
 
   // numeric conversion from triplet to CSR
   t.reset(); t.start();
   JacD_->form_from_numeric(*Jac_triplet);
-  JacDt_->form_transpose_from_numeric(*Jac_triplet);  
-  //t.stop(); printf("JacD JacDt-nume    took %.5f\n", t.getElapsedTime());
+  JacDt_->form_transpose_from_numeric(*JacD_);
+  //t.stop(); printf("JacD JacDt-nume csr    took %.5f\n", t.getElapsedTime());
   
   //symbolic multiplication for JacD'*D*J
   if(nullptr == JtDiagJ_) {
