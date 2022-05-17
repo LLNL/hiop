@@ -106,10 +106,10 @@ static bool parse_arguments(int argc,
     printf("Enabling now ...\n");
   }
 
-#ifndef HIOP_USE_CUDA
+#ifndef HIOP_USE_CUSOLVER_LU
   if(use_cusolver) {
-    printf("HiOp built without CUDA support. ");
-    printf("Using default instead of cuSOLVER ...\n");
+    printf("HiOp built without support for cuSOLVER-LU. ");
+    printf("Using default linear solver ...\n");
     use_cusolver = false;
   }
 #endif

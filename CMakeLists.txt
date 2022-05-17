@@ -87,7 +87,7 @@ cmake_dependent_option(
   HIOP_USE_MAGMA "Use Magma linear algebra" ON "HIOP_USE_GPU" OFF
 )
 cmake_dependent_option(
-  HIOP_USE_CUSOLVER "Build with cuSolver linear algebra" ON "HIOP_USE_CUDA" OFF
+  HIOP_USE_CUSOLVER_LU "Build with cuSolver LU support" ON "HIOP_USE_CUDA" OFF
 )
 
 add_library(hiop_tpl INTERFACE)
@@ -247,10 +247,15 @@ if(HIOP_USE_RAJA)
 endif()
 
 # KLU needed with cuSolver. TODO: make this an optional dependency
-if (HIOP_USE_CUSOLVER)
+if (HIOP_USE_CUSOLVER_LU)
   set(HIOP_KLU_DIR CACHE PATH "Path to KLU directory")
   include(FindKLU)
-  target_link_libraries(hiop_tpl INTERFACE KLU)
+  if(NOT KLU_LIBRARY)
+    message(STATUS "Cannot find KLU, disabling cuSOLVER LU module ...")
+    set(HIOP_USE_CUSOLVER_LU OFF CACHE BOOL "Build without cuSOLVER LU module." FORCE)
+  else()  
+    target_link_libraries(hiop_tpl INTERFACE KLU)
+  endif()  
 endif()
 
 
