@@ -80,8 +80,7 @@ hiopMatrixSparseCSRCUDA::hiopMatrixSparseCSRCUDA(size_type rows, size_type cols,
     irowptr_(nullptr),
     jcolind_(nullptr),
     values_(nullptr),
-    buf_col_(nullptr),
-    row_starts_(nullptr)
+    buffer_csc2csr_(nullptr)
 {
   cusparseStatus_t ret_sp = cusparseCreate(&h_cusparse_);
   assert(ret_sp == CUSPARSE_STATUS_SUCCESS);
@@ -100,8 +99,7 @@ hiopMatrixSparseCSRCUDA::hiopMatrixSparseCSRCUDA()
     irowptr_(nullptr),
     jcolind_(nullptr),
     values_(nullptr),
-    buf_col_(nullptr),
-    row_starts_(nullptr)
+    buffer_csc2csr_(nullptr)
 {
   cusparseStatus_t ret_sp = cusparseCreate(&h_cusparse_);
   assert(ret_sp == CUSPARSE_STATUS_SUCCESS);
@@ -118,6 +116,8 @@ hiopMatrixSparseCSRCUDA::hiopMatrixSparseCSRCUDA()
 hiopMatrixSparseCSRCUDA::~hiopMatrixSparseCSRCUDA()
 {
   dealloc();
+
+  cudaFree(buffer_csc2csr_);
   cusparseDestroy(h_cusparse_);
   //cusolverSpDestroy(h_cusolver_);
 
@@ -687,39 +687,12 @@ void hiopMatrixSparseCSRCUDA::form_from_numeric(const hiopMatrixSparseTriplet& M
 
 void hiopMatrixSparseCSRCUDA::form_transpose_from_symbolic(const hiopMatrixSparseTriplet& M)
 {
-  if(M.m()!=ncols_ || M.n()!=nrows_ || M.numberOfNonzeros()!=nnz_) {
-    dealloc();
-    
-    nrows_ = M.n();
-    ncols_ = M.m();
-    nnz_ = M.numberOfNonzeros();
-
-    alloc();
-  }
-
-  assert(nnz_>=0);
-  if(nnz_<=0) {
-    return;
-  }
-  
-  assert(irowptr_);
-  assert(jcolind_);
-  assert(values_);
-
-  //First create a CUDA CSR matrix from M and then transpose it with cusparseCsr2cscEx2
-  //hiopMatrixSparseCSRCUDA d_M;
-  //d_M.form_from_symbol
-  
+  assert(false && "Method not implemented: more efficient to use overload for CSR CUDA matrices.");
 }
 
 void hiopMatrixSparseCSRCUDA::form_transpose_from_numeric(const hiopMatrixSparseTriplet& M)
 {
-  assert(irowptr_ && jcolind_ && values_ && row_starts_);
-  assert(nrows_ == M.n());
-  assert(ncols_ == M.m());
-  assert(nnz_ == M.numberOfNonzeros());
-
-  assert(false && "work in progress");
+  assert(false && "Method not implemented: more efficient to use overload for CSR CUDA matrices.");
 }
 
 void hiopMatrixSparseCSRCUDA::form_transpose_from_symbolic(const hiopMatrixSparseCSR& M)
@@ -742,17 +715,55 @@ void hiopMatrixSparseCSRCUDA::form_transpose_from_symbolic(const hiopMatrixSpars
   assert(irowptr_);
   assert(jcolind_);
   assert(values_);
-  
+
+  cusparseStatus_t st;
+  size_t buffer_size;
+  st = cusparseCsr2cscEx2_bufferSize(h_cusparse_,
+                                     M.m(),
+                                     M.n(),
+                                     nnz_,
+                                     M.M(),
+                                     M.i_row(),
+                                     M.j_col(),
+                                     values_,
+                                     irowptr_,
+                                     jcolind_,
+                                     CUDA_R_64F,
+                                     CUSPARSE_ACTION_SYMBOLIC, 
+                                     CUSPARSE_INDEX_BASE_ZERO,
+                                     CUSPARSE_CSR2CSC_ALG2,
+                                     &buffer_size);
+  assert(CUSPARSE_STATUS_SUCCESS == st);
+  cudaError_t ret = cudaMalloc(&buffer_csc2csr_, buffer_size);
+  assert(cudaSuccess == ret);
 }
 
 void hiopMatrixSparseCSRCUDA::form_transpose_from_numeric(const hiopMatrixSparseCSR& M)
 {
-  assert(irowptr_ && jcolind_ && values_ && row_starts_);
+  assert(irowptr_ && jcolind_ && values_);
   assert(nrows_ == M.n());
   assert(ncols_ == M.m());
   assert(nnz_ == M.numberOfNonzeros());
 
-  assert(false && "work in progress");
+  assert(buffer_csc2csr_);
+  cusparseStatus_t st;
+  size_t buffer_size;
+  st = cusparseCsr2cscEx2(h_cusparse_,
+                          M.m(),
+                          M.n(),
+                          nnz_,
+                          M.M(),
+                          M.i_row(),
+                          M.j_col(),
+                          values_,
+                          irowptr_,
+                          jcolind_,
+                          CUDA_R_64F,
+                          CUSPARSE_ACTION_NUMERIC,
+                          CUSPARSE_INDEX_BASE_ZERO,
+                          CUSPARSE_CSR2CSC_ALG2,
+                          buffer_csc2csr_);
+  assert(CUSPARSE_STATUS_SUCCESS == st);
 }
 
 

@@ -146,9 +146,12 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   // compute condensed linear system J'*D*J + H + Dx + delta_wx*I
   //
 
+//#define CSRCUDA_TESTING 1
+  
   hiopTimer t;
 
-  // test hiopMatrixSparseCSRCUDA JacD_cuda;
+  hiopMatrixSparseCSRCUDA JacD_cuda;
+  hiopMatrixSparseCSRCUDA JacDt_cuda;
   
   // symbolic conversion from triplet to CSR
   if(nullptr == JacD_) {
@@ -167,6 +170,15 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   JacD_->form_from_numeric(*Jac_triplet);
   JacDt_->form_transpose_from_numeric(*JacD_);
   //t.stop(); printf("JacD JacDt-nume csr    took %.5f\n", t.getElapsedTime());
+
+#ifdef CSRCUDA_TESTING
+  JacD_cuda.form_from_symbolic(*Jac_triplet);
+  JacD_cuda.form_from_numeric(*Jac_triplet);
+  JacD_cuda.print();
+  JacDt_cuda.form_transpose_from_symbolic(JacD_cuda);
+  JacDt_cuda.form_transpose_from_numeric(JacD_cuda);
+  JacDt_cuda.print();
+#endif
   
   //symbolic multiplication for JacD'*D*J
   if(nullptr == JtDiagJ_) {

@@ -591,15 +591,9 @@ protected:
   /// Nonzero values
   double* values_;
 
-  /// Working buffer in the size of columns, allocated on demand and reused by some methods
-  double* buf_col_;
-
-  /**
-   * Storage for the row starts used by `form_transpose_from_xxx` methods (allocated on 
-   * demand, only when the above mentioned methods are called)
-   */
-  index_type* row_starts_;
-
+  ///Internal buffer used by csr2csc (allocated on demand)
+  void* buffer_csc2csr_;
+  
   /// Internal handle required by cuSPARSE functions
   cusparseHandle_t h_cusparse_;
 

@@ -27,6 +27,7 @@ set(hiopLinAlg_INTERFACE_HEADERS
   hiopMatrixSparseTripletStorage.hpp
   hiopMatrixSparseCSR.hpp
   hiopMatrixSparseCSRSeq.hpp
+  hiopMatrixSparseCSRCUDA.hpp
   hiopVector.hpp
   hiopVectorInt.hpp
   hiopVectorIntRaja.hpp
@@ -80,6 +81,7 @@ set(hiopLinAlg_PARDISO_SRC
 set(hiopLinAlg_CUSOLVER_SRC
   hiopLinSolverSparseCUSOLVER.cpp
   hiopLinSolverCholCuSparse.cpp
+  hiopMatrixSparseCSRCUDA.cpp
   )
 
 set(hiopLinAlg_KRON_REDUCTION_SRC
