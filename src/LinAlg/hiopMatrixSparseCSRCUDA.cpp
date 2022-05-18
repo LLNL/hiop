@@ -80,7 +80,8 @@ hiopMatrixSparseCSRCUDA::hiopMatrixSparseCSRCUDA(size_type rows, size_type cols,
     irowptr_(nullptr),
     jcolind_(nullptr),
     values_(nullptr),
-    buffer_csc2csr_(nullptr)
+    buffer_csc2csr_(nullptr),
+    buffer_geam2_(nullptr)
 {
   cusparseStatus_t ret_sp = cusparseCreate(&h_cusparse_);
   assert(ret_sp == CUSPARSE_STATUS_SUCCESS);
@@ -92,6 +93,7 @@ hiopMatrixSparseCSRCUDA::hiopMatrixSparseCSRCUDA(size_type rows, size_type cols,
   cusparseStatus_t st = cusparseCreateMatDescr(&mat_descr_);
   assert(st == CUSPARSE_STATUS_SUCCESS);
 
+  alloc();
 }
 
 hiopMatrixSparseCSRCUDA::hiopMatrixSparseCSRCUDA()
@@ -99,7 +101,8 @@ hiopMatrixSparseCSRCUDA::hiopMatrixSparseCSRCUDA()
     irowptr_(nullptr),
     jcolind_(nullptr),
     values_(nullptr),
-    buffer_csc2csr_(nullptr)
+    buffer_csc2csr_(nullptr),
+    buffer_geam2_(nullptr)
 {
   cusparseStatus_t ret_sp = cusparseCreate(&h_cusparse_);
   assert(ret_sp == CUSPARSE_STATUS_SUCCESS);
@@ -117,6 +120,7 @@ hiopMatrixSparseCSRCUDA::~hiopMatrixSparseCSRCUDA()
 {
   dealloc();
 
+  cudaFree(buffer_geam2_);
   cudaFree(buffer_csc2csr_);
   cusparseDestroy(h_cusparse_);
   //cusolverSpDestroy(h_cusolver_);
@@ -734,7 +738,7 @@ void hiopMatrixSparseCSRCUDA::form_transpose_from_symbolic(const hiopMatrixSpars
                                      CUSPARSE_CSR2CSC_ALG2,
                                      &buffer_size);
   assert(CUSPARSE_STATUS_SUCCESS == st);
-  cudaError_t ret = cudaMalloc(&buffer_csc2csr_, buffer_size);
+  cudaError_t ret = cudaMalloc(&buffer_csc2csr_, sizeof(char)*buffer_size);
   assert(cudaSuccess == ret);
 }
 
@@ -747,7 +751,6 @@ void hiopMatrixSparseCSRCUDA::form_transpose_from_numeric(const hiopMatrixSparse
 
   assert(buffer_csc2csr_);
   cusparseStatus_t st;
-  size_t buffer_size;
   st = cusparseCsr2cscEx2(h_cusparse_,
                           M.m(),
                           M.n(),
@@ -809,13 +812,105 @@ void hiopMatrixSparseCSRCUDA::scale_rows(const hiopVector& D)
 }
 
 // sparsity pattern of M=X+Y, where X is `this`
-hiopMatrixSparseCSR* hiopMatrixSparseCSRCUDA::add_matrix_alloc(const hiopMatrixSparseCSR& Y) const
+hiopMatrixSparseCSR* hiopMatrixSparseCSRCUDA::add_matrix_alloc(const hiopMatrixSparseCSR& Y_in) const
 {
+  auto& Y = dynamic_cast<const hiopMatrixSparseCSRCUDA&>(Y_in);
+  auto& X = *this;
+  
   assert(nrows_ == Y.m());
   assert(ncols_ == Y.n());
-  assert(false && "work in progress");
-  //allocate result M
-  return nullptr; //new hiopMatrixSparseCSRCUDA(nrows_, ncols_, nnzM);
+  
+  cusparseStatus_t st;
+  cudaError_t cret;
+  
+  double alpha = 1.0; //dummy
+  double beta = 1.0;
+  size_t buffer_size;  
+
+  //
+  // create a (dummy) math descriptor
+  //
+  // the call below initializes the fields of mat_descr_ to what we need
+  //  - MatrixType -> CUSPARSE_MATRIX_TYPE_GENERAL
+  //  - IndexBase  -> CUSPARSE_INDEX_BASE_ZERO
+  //  - leaves other fields uninitialized
+  cusparseMatDescr_t mat_descrM;
+  st = cusparseCreateMatDescr(&mat_descrM);
+  assert(st == CUSPARSE_STATUS_SUCCESS);
+  
+  int* irowptrM = nullptr;
+  cret = cudaMalloc((void**)&irowptrM, sizeof(int)*(nrows_+1));
+  assert(cudaSuccess==cret);
+  assert(irowptrM);
+
+  // get size of buffer needed internally
+  st = cusparseDcsrgeam2_bufferSizeExt(h_cusparse_,
+                                       nrows_,
+                                       ncols_,
+                                       &alpha,
+                                       X.mat_descr_,
+                                       X.nnz_,
+                                       X.values_,
+                                       X.irowptr_,
+                                       X.jcolind_,
+                                       &beta,
+                                       Y.mat_descr_,
+                                       Y.nnz_,
+                                       Y.values_,
+                                       Y.irowptr_,
+                                       Y.jcolind_,
+                                       mat_descrM,
+                                       NULL,//valuesM,
+                                       irowptrM,
+                                       NULL,//jcolindM,
+                                       &buffer_size);
+  assert(CUSPARSE_STATUS_SUCCESS == st);
+  
+  //prepare and allocate buffer
+  void* buffer_geam2;
+  cret = cudaMalloc((void**)& buffer_geam2, sizeof(char)*buffer_size);
+  assert(cudaSuccess==cret);
+  assert(buffer_geam2);
+
+  int nnzM;
+  st = cusparseXcsrgeam2Nnz(h_cusparse_,
+                            nrows_,
+                            ncols_,
+                            X.mat_descr_,
+                            X.nnz_,
+                            X.irowptr_,
+                            X.jcolind_,
+                            Y.mat_descr_,
+                            Y.nnz_,
+                            Y.irowptr_,
+                            Y.jcolind_,
+                            mat_descrM,
+                            irowptrM,
+                            &nnzM,
+                            buffer_geam2);
+
+  assert(CUSPARSE_STATUS_SUCCESS == st);
+
+  //mat descriptor not needed anymore
+  st = cusparseDestroyMatDescr(mat_descrM);
+  assert(st == CUSPARSE_STATUS_SUCCESS);
+
+
+  hiopMatrixSparseCSRCUDA* M = new hiopMatrixSparseCSRCUDA(nrows_, ncols_, nnzM);
+
+  //play it safe and copy (instead of switching pointers)
+  cret = cudaMemcpy(M->irowptr_, (void*)irowptrM, (nrows_+1)*sizeof(int), cudaMemcpyDeviceToDevice);
+  assert(cudaSuccess==cret);
+
+  cret = cudaFree(irowptrM);
+  assert(cudaSuccess==cret);
+  
+  //have the buffer_geam2 stay with M
+  assert(nullptr==M->buffer_geam2_);
+  M->buffer_geam2_ = buffer_geam2;
+  buffer_geam2 = nullptr;
+  
+  return M;
 }
 
 /**
@@ -832,7 +927,12 @@ add_matrix_symbolic(hiopMatrixSparseCSR& M_in, const hiopMatrixSparseCSR& Y_in) 
   assert(nrows_ == Y.m());
   assert(ncols_ == Y.n());
 
-  assert(false && "work in progress");
+  assert(M.n() == Y.n());
+  assert(M.m() == Y.m());
+
+  //
+  //nothing to do for this CUDA, geam2-based implementation
+  //
 }
 
 /**
@@ -849,13 +949,40 @@ void hiopMatrixSparseCSRCUDA::add_matrix_numeric(hiopMatrixSparseCSR& M_in,
   assert(nrows_ == Y.m());
   assert(ncols_ == Y.n());
 
-  assert(false && "work in progress");
+  assert(M.n() == Y.n());
+  assert(M.m() == Y.m());
+  auto& X = *this;
+
+  assert(M.buffer_geam2_);
+  
+  cusparseStatus_t st;
+  st = cusparseDcsrgeam2(h_cusparse_,
+                         nrows_,
+                         ncols_,
+                         &alpha,
+                         X.mat_descr_,
+                         X.nnz_,
+                         X.values_,
+                         X.irowptr_,
+                         X.jcolind_,
+                         &beta,
+                         Y.mat_descr_,
+                         Y.nnz_,
+                         Y.values_,
+                         Y.irowptr_,
+                         Y.jcolind_,
+                         M.mat_descr_,
+                         M.values_,
+                         M.irowptr_,
+                         M.jcolind_,
+                         M.buffer_geam2_);
+  assert(CUSPARSE_STATUS_SUCCESS == st);
 }
 
 void hiopMatrixSparseCSRCUDA::set_diagonal(const double& val)
 {
-  assert(false && "work in progress");
   assert(irowptr_ && jcolind_ && values_);
+  assert(false && "work in progress");
 }
 
 bool hiopMatrixSparseCSRCUDA::check_csr_is_ordered()

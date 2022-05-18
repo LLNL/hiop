@@ -490,7 +490,6 @@ public:
    * @pre The input argument should have the nonzeros sorted by row and then by column
    * indexes.
    */
-  //// note: cusparseCsr2cscEx2
   void form_transpose_from_symbolic(const hiopMatrixSparseTriplet& M);
 
     /**
@@ -591,8 +590,11 @@ protected:
   /// Nonzero values
   double* values_;
 
-  ///Internal buffer used by csr2csc (allocated on demand)
+  ///Internal buffer used by transpose/csr2csc (allocated on demand)
   void* buffer_csc2csr_;
+
+  ///Internal buffer used by add_matrix/geam2
+  void* buffer_geam2_;
   
   /// Internal handle required by cuSPARSE functions
   cusparseHandle_t h_cusparse_;

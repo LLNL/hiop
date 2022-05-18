@@ -146,12 +146,9 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   // compute condensed linear system J'*D*J + H + Dx + delta_wx*I
   //
 
-//#define CSRCUDA_TESTING 1
+
   
   hiopTimer t;
-
-  hiopMatrixSparseCSRCUDA JacD_cuda;
-  hiopMatrixSparseCSRCUDA JacDt_cuda;
   
   // symbolic conversion from triplet to CSR
   if(nullptr == JacD_) {
@@ -171,13 +168,18 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   JacDt_->form_transpose_from_numeric(*JacD_);
   //t.stop(); printf("JacD JacDt-nume csr    took %.5f\n", t.getElapsedTime());
 
+#define CSRCUDA_TESTING 0
 #ifdef CSRCUDA_TESTING
+  hiopMatrixSparseCSRCUDA JacD_cuda;
+  hiopMatrixSparseCSRCUDA JacDt_cuda;
+
   JacD_cuda.form_from_symbolic(*Jac_triplet);
   JacD_cuda.form_from_numeric(*Jac_triplet);
   JacD_cuda.print();
   JacDt_cuda.form_transpose_from_symbolic(JacD_cuda);
   JacDt_cuda.form_transpose_from_numeric(JacD_cuda);
   JacDt_cuda.print();
+
 #endif
   
   //symbolic multiplication for JacD'*D*J
@@ -253,6 +255,26 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   //
   Hess_lower_csr_->add_matrix_numeric(*Hess_csr_, 1.0, *Hess_upper_csr_, 1.0);
 
+#ifdef CSRCUDA_TESTING
+  hiopMatrixSparseCSRCUDA* Hess_upper_csr_cuda = new hiopMatrixSparseCSRCUDA();
+  Hess_upper_csr_cuda->form_from_symbolic(*Hess_triplet);
+  Hess_upper_csr_cuda->form_from_numeric(*Hess_triplet);
+
+  hiopMatrixSparseCSRCUDA* Hess_lower_csr_cuda  = new hiopMatrixSparseCSRCUDA();
+  Hess_lower_csr_cuda->form_transpose_from_symbolic(*Hess_upper_csr_cuda);
+  Hess_lower_csr_cuda->form_transpose_from_numeric(*Hess_upper_csr_cuda);
+
+  hiopMatrixSparseCSR* SUM = Hess_lower_csr_cuda->add_matrix_alloc(*Hess_upper_csr_cuda);
+  Hess_lower_csr_cuda->add_matrix_symbolic(*SUM, *Hess_upper_csr_cuda);
+  Hess_lower_csr_cuda->add_matrix_numeric(*SUM, 1.0, *Hess_upper_csr_cuda, 1.0); 
+
+  //SUM->print();
+  delete SUM;
+  delete Hess_lower_csr_cuda;
+  delete Hess_upper_csr_cuda;
+
+#endif
+  
   //
   // M_condensed_ = M_condensed_ + Hess_csr_ + JtDiagJ_ + Dx_ + delta_wx*I
   //
