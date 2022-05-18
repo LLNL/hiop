@@ -424,7 +424,7 @@ instantiate_linear_solver(const char* linsol_opt,
                             "LSQ linear solver with STRUMPACK does not support inertia correction. "
                             "Please set option 'fact_acceptor' to 'inertia_free'.\n");
           assert(false);
-          return nullptr;
+          return false;
         }
         ss_log << "LSQ linear solver --- KKT_SPARSE_XDYcYd linsys: PARDISO size " << n
                << " cons " << (neq+nineq) << " nnz " << nnz;        
