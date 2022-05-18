@@ -515,21 +515,28 @@ class hiopKKTLinSysFull: public hiopKKTLinSysCurvCheck
 {
 public:
   hiopKKTLinSysFull(hiopNlpFormulation* nlp)
-    : hiopKKTLinSysCurvCheck(nlp)
+    : hiopKKTLinSysCurvCheck(nlp),
+      x_wrk_{nullptr},
+      d_wrk_{nullptr}  
   {}
 
   virtual ~hiopKKTLinSysFull()
-  {}
+  {
+    delete x_wrk_;
+    delete d_wrk_; 
+  }
 
   virtual bool update(const hiopIterate* iter,
                       const hiopVector* grad_f,
                       const hiopMatrix* Jac_c, const hiopMatrix* Jac_d, hiopMatrix* Hess);
 
-  virtual bool test_direction(const hiopIterate* dir, hiopMatrix* Hess)
-  {
-    assert(false && "not implemented yet!");
-    return false;
-  }
+  virtual bool test_direction(const hiopIterate* dir, hiopMatrix* Hess);
+ // {
+      
+//      return true	 
+//    assert(false && "not implemented yet!");
+//    return false;
+//  }
 
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction);
 
@@ -545,7 +552,8 @@ public:
                       hiopVector& dvl, hiopVector& dvu, hiopVector& dzl, hiopVector& dzu,
                       hiopVector& dsdl, hiopVector& dsdu, hiopVector& dsxl, hiopVector& dsxu)=0;
 protected:
-
+  hiopVector* x_wrk_;
+  hiopVector* d_wrk_;
 };
 
 /** 

@@ -2221,5 +2221,67 @@ bool hiopKKTLinSysNormalEquation::computeDirections(const hiopResidual* resid, h
 }
 
 
+bool hiopKKTLinSysFull::test_direction(const hiopIterate* dir, hiopMatrix* Hess)
+{
+  bool retval;
+  nlp_->runStats.tmSolverInternal.start();
+
+  if(!x_wrk_) {
+    x_wrk_ = nlp_->alloc_primal_vec();
+    x_wrk_->setToZero();
+  }
+  if(!d_wrk_) {
+    d_wrk_ = nlp_->alloc_dual_ineq_vec();
+    d_wrk_->setToZero();
+  }
+
+  hiopVector* sol_x = dir->get_x();
+  hiopVector* sol_d = dir->get_d();
+  double dWd = 0;
+  double xs_nrmsq = 0.0;
+  double dbl_wrk;
+  double delta_wx, delta_wd, delta_cc, delta_cd;
+  perturb_calc_->get_curr_perturbations(delta_wx, delta_wd, delta_cc, delta_cd);
+
+  /* compute xWx = x(H+Dx_)x (for primal var [x,d] */
+  Hess_->timesVec(0.0, *x_wrk_, 1.0, *sol_x);
+  dWd += x_wrk_->dotProductWith(*sol_x);
+  
+  // Dx=(Sxl)^{-1}Zl + (Sxu)^{-1}Zu
+  x_wrk_->setToZero();
+  x_wrk_->axdzpy_w_pattern(1.0, *iter_->zl, *iter_->sxl, nlp_->get_ixl());
+  x_wrk_->axdzpy_w_pattern(1.0, *iter_->zu, *iter_->sxu, nlp_->get_ixu());
+  x_wrk_->componentMult(*sol_x);
+  x_wrk_->axpy(delta_wx, *sol_x);
+  dWd += x_wrk_->dotProductWith(*sol_x);
+
+  // Dd=(Sdl)^{-1}Vu + (Sdu)^{-1}Vu
+  d_wrk_->setToZero();
+  d_wrk_->axdzpy_w_pattern(1.0, *iter_->vl, *iter_->sdl, nlp_->get_idl());
+  d_wrk_->axdzpy_w_pattern(1.0, *iter_->vu, *iter_->sdu, nlp_->get_idu());
+  d_wrk_->componentMult(*sol_d);
+  d_wrk_->axpy(delta_wd, *sol_d);
+  dWd += d_wrk_->dotProductWith(*sol_d);
+
+  /* compute rhs for the dWd test */
+  dbl_wrk = sol_x->twonorm();
+  xs_nrmsq += dbl_wrk*dbl_wrk;
+  dbl_wrk = sol_d->twonorm();
+  xs_nrmsq += dbl_wrk*dbl_wrk;
+
+  if(dWd < xs_nrmsq * nlp_->options->GetNumeric("neg_curv_test_fact")) {
+    // have negative curvature. Add regularization and re-factorize the matrix
+    retval = false;
+  } else {
+    // have positive curvature. Accept this factoraizaiton and direction.
+    retval = true;
+  }
+  
+  nlp_->runStats.tmSolverInternal.stop();
+  return retval;
+}
+
+
+
 };
 
