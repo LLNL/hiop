@@ -173,6 +173,7 @@ public:
   friend class hiopKKTLinSysCompressedSparseXDYcYd;
   friend class hiopKKTLinSysFull;
   friend class hiopKKTLinSysSparseFull;
+  friend class hiopKKTLinSysNormalEquation;
 
 private:
   /** Primal variables */

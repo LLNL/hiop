@@ -259,6 +259,7 @@ void hiopMatrixSparseCSRSeq::addDiagonal(const double& value)
     }
   }
 }
+
 void hiopMatrixSparseCSRSeq::addSubDiagonal(const double& alpha, index_type start, const hiopVector& d_)
 {
   assert(false && "not needed");
@@ -351,7 +352,12 @@ hiopMatrixSparse* hiopMatrixSparseCSRSeq::new_copy() const
 }
 void hiopMatrixSparseCSRSeq::copyFrom(const hiopMatrixSparse& dm)
 {
-  assert(false && "to be implemented - method def too vague for now");
+  assert(nnz_==dm.numberOfNonzeros() && nrows_==dm.m());
+  const hiopMatrixSparseCSRSeq& src = dynamic_cast<const hiopMatrixSparseCSRSeq&>(dm);
+  
+  memcpy(irowptr_, src.irowptr_, (nrows_+1)*sizeof(index_type));
+  memcpy(jcolind_, src.jcolind_, nnz_*sizeof(index_type));
+  memcpy(values_, src.values_, nnz_*sizeof(double));
 }
 
 /// @brief copy to 3 arrays.

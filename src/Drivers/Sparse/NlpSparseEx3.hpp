@@ -30,6 +30,7 @@ public:
   virtual ~SparseEx3();
 
   virtual bool get_prob_sizes(size_type& n, size_type& m);
+  virtual bool get_prob_info(NonlinearityType& type);
   virtual bool get_vars_info(const size_type& n, double *xlow, double* xupp, NonlinearityType* type);
   virtual bool get_cons_info(const size_type& m, double* clow, double* cupp, NonlinearityType* type);
   

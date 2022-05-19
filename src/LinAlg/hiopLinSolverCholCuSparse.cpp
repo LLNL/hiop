@@ -161,9 +161,27 @@ bool hiopLinSolverCholCuSparse::do_symb_analysis(const size_type n,
     const int64_t *options = nullptr; //use default METIS options
     ret = cusolverSpXcsrmetisndHost(h_cusolver_, n, nnz, mat_descr_, rowptr, colind, options, perm);
     assert(ret == CUSOLVER_STATUS_SUCCESS);
-  } else if ("symamd" == ordering) {
+  } else if("symamd-cuda" == ordering) {
     ret = cusolverSpXcsrsymamdHost(h_cusolver_, n, nnz, mat_descr_, rowptr, colind, perm);
     assert(ret == CUSOLVER_STATUS_SUCCESS);
+  } else if("symamd-eigen" == ordering) {
+#ifdef HIOP_USE_EIGEN
+    Eigen::Map<SparseMatrixCSR> M(n,
+                                  n,
+                                  nnz,
+                                  const_cast<int*>(rowptr),
+                                  const_cast<int*>(colind),
+                                  const_cast<double*>(value));
+
+    PermutationMatrix P;
+    Ordering ordering;
+    ordering(M.selfadjointView<Eigen::Upper>(), P);
+    memcpy(perm, P.indices().data(), n*sizeof(int));
+#else
+    assert(false && "user option linear_solver_sparse_ordering=symamd-eigen is inconsistent (HiOp was not build with EIGEN)");
+    nlp_->log->printf(hovError,
+                      "option linear_solver_sparse_ordering=symamd-eigen is inconsistent (HiOp was not build with EIGEN).\n");
+#endif
   } else {
     assert("symrcm" == ordering && "unrecognized option for sparse solver ordering");
     ret = cusolverSpXcsrsymrcmHost(h_cusolver_, n, nnz, mat_descr_, rowptr, colind, perm);
@@ -212,30 +230,15 @@ bool hiopLinSolverCholCuSparse::initial_setup()
     t.reset(); t.start();
 
     auto* P_h = new index_type[m];
-#ifndef HIOP_USE_EIGEN
+
     do_symb_analysis(mat_csr->m(),
                      mat_csr->numberOfNonzeros(),
                      mat_csr->i_row(),
                      mat_csr->j_col(),
                      mat_csr->M(),
                      P_h);
-    ss_log << "\tOrdering: CUDA '" << nlp_->options->GetString("linear_solver_sparse_ordering") << "': ";
+    ss_log << "\tOrdering: '" << nlp_->options->GetString("linear_solver_sparse_ordering") << "': ";
     
-#else
-    // old code that uses Eigen to compute AMD
-    Eigen::Map<SparseMatrixCSR> M(mat_csr->m(),
-                                  mat_csr->m(),
-                                  mat_csr->numberOfNonzeros(),
-                                  mat_csr->i_row(),
-                                  mat_csr->j_col(),
-                                  mat_csr->M());
-    
-    PermutationMatrix P;
-    Ordering ordering;
-    ordering(M.selfadjointView<Eigen::Upper>(), P);
-    memcpy(P_h, P.indices().data(), m*sizeof(int));
-    ss_log << "\tOrdering: EIGEN AMD: ";
-#endif    
     t.stop();
     ss_log << std::fixed << std::setprecision(4) << t.getElapsedTime() << " sec\n";
 

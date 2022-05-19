@@ -171,6 +171,15 @@ bool hiopFRProbSparse::get_prob_sizes(size_type& n, size_type& m)
   return true;
 }
 
+bool hiopFRProbSparse::get_prob_info(NonlinearityType& type)
+{
+  // the objective of FR problem is quadratic. constraint c(x) depends on the origianl problem
+  if(nlp_base_->get_prob_type() != hiopNonlinear) {
+    type = hiopQuadratic;
+  }
+  return true;
+}
+
 bool hiopFRProbSparse::get_vars_info(const size_type& n, double *xlow, double* xupp, NonlinearityType* type)
 {
   assert(n == n_);
@@ -787,6 +796,15 @@ bool hiopFRProbMDS::get_prob_sizes(size_type& n, size_type& m)
 {
   n = n_;
   m = m_;
+  return true;
+}
+
+bool hiopFRProbMDS::get_prob_info(NonlinearityType& type)
+{
+  // the objective of FR problem is quadratic. constraint c(x) depends on the origianl problem
+  if(nlp_base_->get_prob_type() != hiopNonlinear) {
+    type = hiopQuadratic;
+  }
   return true;
 }
 

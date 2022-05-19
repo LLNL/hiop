@@ -525,7 +525,7 @@ hiopKKTLinSysCondensedSparse::determine_and_create_linsys(size_type nx, size_typ
            "device as instructed by the 'compute_mode' option. Change the 'compute_mode' to 'cpu'");
   }
   
-  assert(linSys_&& "KKT_SPARSE_XYcYd linsys: cannot instantiate backend linear solver");
+  assert(linSys_&& "KKT_SPARSE_Condensed linsys: cannot instantiate backend linear solver");
   return dynamic_cast<hiopLinSolverSymSparse*> (linSys_);
 }
 

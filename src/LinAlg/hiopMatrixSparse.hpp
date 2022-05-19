@@ -369,6 +369,10 @@ public:
     return nnz_;
   }
 
+  virtual bool is_diagonal() const = 0;
+
+  virtual void extract_diagonal(hiopVector& diag_out) const = 0;
+
 #ifdef HIOP_DEEPCHECKS
   virtual bool assertSymmetry(double tol = 1e-16) const
   {

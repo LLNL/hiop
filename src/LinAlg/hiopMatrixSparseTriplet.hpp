@@ -251,6 +251,21 @@ public:
                             int **index_covert_extra_Diag2CSR,
                             std::unordered_map<int,int> &extra_diag_nnz_map);
 
+  /* @brief sort the nonzeros from index `first` to `last`, by row and then by column.
+  *  @pre assuming there is no duplicate nonzero element
+  *  @remark member variables irow_, jcol_ and values_ will be recomputed 
+  */
+  virtual void sort();
+
+  /* @brief check if `this` matrix is a diagonal matrix
+  */
+  virtual bool is_diagonal() const;
+
+  /* @brief extract the diagonals to vector `diag_out`
+  *  @pre assuming `this` matrix is sorted by row and then by column
+  */
+  virtual void extract_diagonal(hiopVector& diag_out) const;
+
   virtual size_type numberOfOffDiagNonzeros() const {assert("not implemented"&&0);return 0;};
 
   /// @brief extend base problem Jac to the Jac in feasibility problem
@@ -277,7 +292,6 @@ public:
   inline const int* i_row() const { return iRow_; }
   inline const int* j_col() const { return jCol_; }
   inline const double* M() const { return values_; }
-
 
 #ifdef HIOP_DEEPCHECKS
   virtual bool assertSymmetry(double tol=1e-16) const { return false; }
@@ -364,11 +378,6 @@ public:
 #ifdef HIOP_DEEPCHECKS
   virtual bool assertSymmetry(double tol=1e-16) const { return true; }
 #endif
-  virtual bool isDiagonal() const
-  {
-    for(int itnnz=0; itnnz<nnz_; itnnz++) if(iRow_[itnnz]!=jCol_[itnnz]) return false;
-    return true;
-  }
 
   virtual size_type numberOfOffDiagNonzeros() const;
 

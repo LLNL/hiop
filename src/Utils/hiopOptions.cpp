@@ -588,7 +588,7 @@ void hiopOptionsNLP::register_options()
     // 'duals_update_type' should be 'lsq' or 'linear' for  'Hessian=quasinewton_approx'
     // 'duals_update_type' can only be 'linear' for Newton methods 'Hessian=analytical_exact'
 
-    //here will set the default value to 'lsq' and this will be adjusted later in 'ensureConsistency'
+    //here will set the default value to 'lsq' and this will be adjusted later in 'ensure_consistency'
     //to a valid value depending on the 'Hessian' value
     vector<string> range(2); range[0]="lsq"; range[1]="linear";
     register_str_option("duals_update_type",
@@ -804,14 +804,15 @@ void hiopOptionsNLP::register_options()
   }
   //linear algebra
   {
-    vector<string> range = {"auto", "xycyd", "xdycyd", "full", "condensed"};
+    vector<string> range = {"auto", "xycyd", "xdycyd", "full", "condensed", "normaleqn"};
     register_str_option("KKTLinsys",
                         "auto",
                         range,
                         "Type of KKT linear system used internally: decided by HiOp 'auto' (default), "
                         "the more compact 'XYcYd, the more stable 'XDYcYd', the full-size non-symmetric "
-                        "'full', or the condensed that uses Cholesky (available when no eq. constraints "
-                        "are present). The last four options are available only with "
+                        "'full', the symmetric normal equation 'normaleqn', or the condensed that "
+                        "uses Cholesky (available when no eq. constraints "
+                        "are present). The last five options are available only with "
                         "'Hessian=analyticalExact'.");
   }
 
@@ -857,21 +858,28 @@ void hiopOptionsNLP::register_options()
                         "Selects among MA57, PARDISO, cuSOLVER, STRUMPACK, and GINKGO for the sparse linear solves.");
   }
 
+
   // choose sparsity permutation (to reduce nz in the factors). This option is available only when using
   // Cholesky linear solvers
   // - metis: use CUDA function csrmetisnd, which is a wrapper of METIS_NodeND; requires linking with
   // libmetis_static.a (64-bit metis-5.1.0) (Host execution)
-  // - symamd: use sym. approx. min. degree algorithm as implemented by CUDA csrsymamd function
+  // - symamd-cuda: use sym. approx. min. degree algorithm as implemented by CUDA csrsymamd function
   // (Host execution)
+  // - symamd-eigen: use sym. approx. min. degree algorithm from EIGEN package (default, Host execution)
   // - symrcm: use symmetric reverse Cuthill-McKee as implemented by CUDA csrsymrcm (Host execution)
-  vector<string> range = { "metis", "symamd", "symrcm"};
-  register_str_option("linear_solver_sparse_ordering",
-                      range[1], //default is AMD since metis seems to crash sometimes
-                      range,
-                      "permutation to promote sparsity in the (Chol) factorization: 'metis' based on a "
-                      "wrapper of METIS_NodeND, 'symamd' (default) and 'symrcm' are the well-known approx. "
-                      "min. degree and reverse Cuthill-McKee orderings in their symmetric form.");
-  
+  {
+    vector<string> range = { "metis", "symamd-cuda", "symamd-eigen", "symrcm"};
+    auto default_value = range[1];
+#ifdef HIOP_USE_EIGEN
+    default_value = range[2];
+#endif
+    register_str_option("linear_solver_sparse_ordering",
+                        default_value, 
+                        range,
+                        "permutation to promote sparsity in the (Chol) factorization: 'metis' based on a wrapper of "
+                        "METIS_NodeND, 'symamd-cuda', 'symamd-eigen' (default), and 'symrcm' are the well-known "
+                        "approx. min. degree and reverse Cuthill-McKee orderings in their symmetric form.");
+  }
   //linsol_mode -> mostly related to magma and MDS linear algebra
   {
     vector<string> range(3); range[0]="stable"; range[1]="speculative"; range[2]="forcequick";
@@ -1055,7 +1063,7 @@ void hiopOptionsNLP::ensure_consistence()
 
   if(GetString("Hessian")=="quasinewton_approx") {
     string strKKT = GetString("KKTLinsys");
-    if(strKKT=="xycyd" || strKKT=="xdycyd" || strKKT=="full") {
+    if(strKKT=="xycyd" || strKKT=="xdycyd" || strKKT=="full" || strKKT=="normaleqn") {
       if(is_user_defined("Hessian")) {
         log_printf(hovWarning,
                    "The option 'KKTLinsys=%s' is not valid with 'Hessian=quasiNewtonApprox'. "
@@ -1122,6 +1130,26 @@ void hiopOptionsNLP::ensure_consistence()
       set_val("linear_solver_sparse", "auto");
   }
 #endif // HIOP_USE_CUDA
+
+  //linear_solver_sparse_ordering checks and warnings
+
+#ifndef HIOP_USE_CUDA
+  if(is_user_defined("linear_solver_sparse_ordering")) {
+    log_printf(hovWarning, "option linear_solver_sparse_ordering has not effect since HiOp was not built with CUDA.\n");
+  }
+#else
+#ifndef HIOP_USE_EIGEN
+  if(GetString("linear_solver_sparse_ordering")=="symamd-eigen") {
+    if(is_user_defined("linear_solver_sparse_ordering")) {
+      log_printf(hovWarning,
+                 "option linear_solver_sparse_ordering=symamd-eigen was changed to 'symamd-cuda' since HiOp was "
+                 "built without EIGEN.\n");
+
+    }
+    set_val("linear_solver_sparse_ordering", "symamd-cuda");
+  }
+#endif
+#endif
   
 // When RAJA is not enabled ...
 #ifndef HIOP_USE_RAJA

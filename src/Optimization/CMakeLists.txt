@@ -17,6 +17,7 @@ set(hiopOptimization_SRC
 set(hiopOptimization_SPARSE_SRC
   hiopKKTLinSysSparse.cpp
   hiopKKTLinSysSparseCondensed.cpp
+  hiopKKTLinSysSparseNormalEqn.cpp
   )
 
 set(hiopOptimization_INTERFACE_HEADERS
@@ -32,6 +33,7 @@ set(hiopOptimization_INTERFACE_HEADERS
   hiopKKTLinSysMDS.hpp
   hiopKKTLinSysSparse.hpp
   hiopKKTLinSysSparseCondensed.hpp
+  hiopKKTLinSysSparseNormalEqn.hpp
   hiopLogBarProblem.hpp
   hiopNlpFormulation.hpp
   hiopNlpTransforms.hpp
