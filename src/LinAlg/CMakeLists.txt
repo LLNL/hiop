@@ -82,7 +82,8 @@ set(hiopLinAlg_CUSOLVER_SRC
   hiopLinSolverSparseCUSOLVER.cpp
   hiopLinSolverCholCuSparse.cpp
   hiopMatrixSparseCSRCUDA.cpp
-  )
+  MatrixSparseCSRCudaKernel.cu
+)
 
 set(hiopLinAlg_KRON_REDUCTION_SRC
   hiopLinSolverUMFPACKZ.cpp

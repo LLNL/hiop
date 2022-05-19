@@ -168,7 +168,7 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   JacDt_->form_transpose_from_numeric(*JacD_);
   //t.stop(); printf("JacD JacDt-nume csr    took %.5f\n", t.getElapsedTime());
 
-#define CSRCUDA_TESTING 0
+//#define CSRCUDA_TESTING 
 #ifdef CSRCUDA_TESTING
   hiopMatrixSparseCSRCUDA JacD_cuda;
   hiopMatrixSparseCSRCUDA JacDt_cuda;
@@ -259,16 +259,19 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   hiopMatrixSparseCSRCUDA* Hess_upper_csr_cuda = new hiopMatrixSparseCSRCUDA();
   Hess_upper_csr_cuda->form_from_symbolic(*Hess_triplet);
   Hess_upper_csr_cuda->form_from_numeric(*Hess_triplet);
-
+  
   hiopMatrixSparseCSRCUDA* Hess_lower_csr_cuda  = new hiopMatrixSparseCSRCUDA();
   Hess_lower_csr_cuda->form_transpose_from_symbolic(*Hess_upper_csr_cuda);
   Hess_lower_csr_cuda->form_transpose_from_numeric(*Hess_upper_csr_cuda);
 
+  Hess_upper_csr_cuda->set_diagonal(0.0);
+  
   hiopMatrixSparseCSR* SUM = Hess_lower_csr_cuda->add_matrix_alloc(*Hess_upper_csr_cuda);
   Hess_lower_csr_cuda->add_matrix_symbolic(*SUM, *Hess_upper_csr_cuda);
   Hess_lower_csr_cuda->add_matrix_numeric(*SUM, 1.0, *Hess_upper_csr_cuda, 1.0); 
 
-  //SUM->print();
+  SUM->print();
+  Hess_csr_->print();
   delete SUM;
   delete Hess_lower_csr_cuda;
   delete Hess_upper_csr_cuda;

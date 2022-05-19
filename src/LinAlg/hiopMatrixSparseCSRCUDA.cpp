@@ -57,6 +57,7 @@
 #ifdef HIOP_USE_CUDA
 
 #include "hiopVectorPar.hpp"
+#include "MatrixSparseCSRCudaKernel.hpp"
 
 #include <algorithm> //for std::min
 #include <cmath> //for std::isfinite
@@ -982,7 +983,7 @@ void hiopMatrixSparseCSRCUDA::add_matrix_numeric(hiopMatrixSparseCSR& M_in,
 void hiopMatrixSparseCSRCUDA::set_diagonal(const double& val)
 {
   assert(irowptr_ && jcolind_ && values_);
-  assert(false && "work in progress");
+  hiop::cuda::csr_set_diag_kernel(nrows_, nnz_, irowptr_, jcolind_, values_, val);
 }
 
 bool hiopMatrixSparseCSRCUDA::check_csr_is_ordered()
