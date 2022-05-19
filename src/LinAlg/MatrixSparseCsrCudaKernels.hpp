@@ -46,7 +46,7 @@
 // product endorsement purposes.
 
 /**
- * @file MatrixSparseCSRCudaKernel.hpp
+ * @file MatrixSparseCSRCudaKernels.hpp
  *
  * @author Cosmin G. Petra <petra1@llnl.gov>, LNNL
  *

@@ -46,7 +46,7 @@
 // product endorsement purposes.
 
 /**
- * @file hiopMatrixSparseCSRCUDA.hpp
+ * @file hiopMatrixSparseCsrCuda.hpp
  *
  * @author Cosmin G. Petra <petra1@llnl.gov>, LNNL
  *

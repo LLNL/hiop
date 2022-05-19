@@ -59,7 +59,7 @@
 
 #ifdef HIOP_USE_CUDA
 #include "hiopLinSolverCholCuSparse.hpp"
-#include "hiopMatrixSparseCSRCUDA.hpp"
+#include "hiopMatrixSparseCsrCuda.hpp"
 #endif
 
 #include "hiopMatrixSparseTripletStorage.hpp"

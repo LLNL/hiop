@@ -46,13 +46,13 @@
 // product endorsement purposes.
 
 /**
- * @file MatrixSparseCSRCudaKernel.cu
+ * @file MatrixSparseCSRCudaKernels.cu
  *
  * @author Cosmin G. Petra <petra1@llnl.gov>, LNNL
  *
  */
 
-#include "MatrixSparseCSRCudaKernel.hpp"
+#include "MatrixSparseCsrCudaKernels.hpp"
 
 #include <stdlib.h>
 #include <assert.h>

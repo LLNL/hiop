@@ -46,18 +46,18 @@
 // product endorsement purposes.
 
 /**
- * @file hiopMatrixSparseCSRCUDA.cpp
+ * @file hiopMatrixSparseCsrCuda.cpp
  *
  * @author Cosmin G. Petra <petra1@llnl.gov>, LNNL
  *
  */
 
-#include "hiopMatrixSparseCSRCUDA.hpp"
+#include "hiopMatrixSparseCsrCuda.hpp"
 
 #ifdef HIOP_USE_CUDA
 
 #include "hiopVectorPar.hpp"
-#include "MatrixSparseCSRCudaKernel.hpp"
+#include "MatrixSparseCsrCudaKernels.hpp"
 
 #include <algorithm> //for std::min
 #include <cmath> //for std::isfinite
