@@ -1209,8 +1209,9 @@ void hiopOptionsNLP::ensure_consistence()
     if(GetString("fact_acceptor")=="inertia_correction") {
       if(is_user_defined("fact_acceptor")) {
         log_printf(hovWarning,
-                   "option fact_acceptor=inertia_correction was changed to 'inertia_free' since "
-                   "inertia correction doesen't support unsymmetric full KKT linear system.\n");
+                   "Option fact_acceptor=inertia_correction was changed to 'inertia_free' since the requested "
+                   "KKTLinsys option 'full' does not have support for inertia computation.\n");
+                   
       }
       set_val("fact_acceptor", "inertia_free");
     }
@@ -1218,8 +1219,9 @@ void hiopOptionsNLP::ensure_consistence()
     if(GetString("fact_acceptor")=="inertia_correction") {
       if(is_user_defined("fact_acceptor") && is_user_defined("linear_solver_sparse") ) {
         log_printf(hovWarning,
-                   "option fact_acceptor=inertia_correction was changed to 'inertia_free' since "
-                   "the given linear solver cannot provide inertia.\n");
+                   "Option fact_acceptor=inertia_correction was changed to 'inertia_free' since the requested "
+                   "linear solver '%s' does not support inertia calculation.\n",
+                   GetString("linear_solver_sparse").c_str());
       }
       set_val("fact_acceptor", "inertia_free");
     }
