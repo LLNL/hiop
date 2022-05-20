@@ -62,9 +62,34 @@ namespace cuda
 /**
  * Set diagonal of the CSR matrix to `val` by performing a binary search on the column indexes
  * for each row. Assumes pointers are on the device and parallelizes over rows.
+ * 
+ * @pre CSR matrix must be square.
+ * @pre Diagonal entries must appear explicitly among the nonzeros.
+ * @pre Column indexes must be sorted for any given row.
  */   
 void csr_set_diag_kernel(int n, int nnz, int* irowptr, int* jcoldind, double* values, double val);
 
+/**
+ * Add the constant `val` to the diagonal of the CSR matrix. Performs a binary search on the column indexes
+ * for each row. Assumes pointers are on the device and parallelizes over rows.
+ * 
+ * @pre CSR matrix must be square.
+ * @pre Diagonal entries must appear explicitly among the nonzeros.
+ * @pre Column indexes must be sorted for any given row.
+ */   
+void csr_add_diag_kernel(int n, int nnz, int* irowptr, int* jcoldind, double* values, double Dval);
+
+/**
+ * Add entries of the array `values`  the diagonal of the CSR matrix. Performs a binary search on the column indexes
+ * for each row. Assumes pointers are on the device and parallelizes over rows.
+ * 
+ * @pre CSR matrix must be square.
+ * @pre Diagonal entries must appear explicitly among the nonzeros.
+ * @pre Column indexes must be sorted for any given row.
+ * @pre 
+ */   
+  void csr_add_diag_kernel(int n, int nnz, int* irowptr, int* jcoldind, double* values, double alpha, const double* Dvalues);
+  
 } //end of namespace cuda
 } //end of namespace hiop
 

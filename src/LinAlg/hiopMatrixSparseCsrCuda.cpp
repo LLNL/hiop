@@ -59,6 +59,8 @@
 #include "hiopVectorPar.hpp"
 #include "MatrixSparseCsrCudaKernels.hpp"
 
+#include "hiopVectorRajaPar.hpp"
+
 #include <algorithm> //for std::min
 #include <cmath> //for std::isfinite
 #include <cstring>
@@ -251,12 +253,15 @@ void hiopMatrixSparseCSRCUDA::timesMatTrans(double beta,
 
 void hiopMatrixSparseCSRCUDA::addDiagonal(const double& alpha, const hiopVector& D)
 {
-  assert(false && "work in progress");
+  assert(nrows_ == D.get_size());
+  assert(nrows_ == ncols_ && "Matrix must be square");
+  //assert(dynamic_cast<const hiopVectorRajaPar*>(&D));
+  hiop::cuda::csr_add_diag_kernel(nrows_, nnz_, irowptr_, jcolind_, values_, alpha, D.local_data_const());
 }
 
 void hiopMatrixSparseCSRCUDA::addDiagonal(const double& value)
 {
-  assert(false && "not needed");
+  assert(nrows_ == ncols_ && "Matrix must be square");
 }
 void hiopMatrixSparseCSRCUDA::addSubDiagonal(const double& alpha, index_type start, const hiopVector& d_)
 {

@@ -63,6 +63,81 @@
 #include <device_launch_parameters.h>
 
 __global__
+void csr_add_vec_to_diag(int n, int nnz, int* irowptr, int* jcolind, double* values, double alpha, const double* diag_values)
+{
+  int tid = blockIdx.x * blockDim.x + threadIdx.x;
+  int stride = blockDim.x * gridDim.x;
+  for(int row=tid; row<n; row+=stride) {
+    int L=irowptr[row];
+    int R=irowptr[row+1]-1;
+    assert(L<nnz);
+    assert(R<nnz);
+    assert(L<=R);
+
+#ifndef NDEBUG
+    int idx_found = -1;
+#endif
+    do { //binary search
+      const int midpoint = (R+L)/2;
+      if(jcolind[midpoint]>row) {
+        R = midpoint-1;
+      } else if(jcolind[midpoint]<row) {
+        L = midpoint+1;
+      } else {
+        assert(idx_found<nnz);
+        values[midpoint] += alpha*diag_values[row];
+#ifndef NDEBUG
+        idx_found = midpoint;
+#endif        
+        break;
+      }
+    } while(L<=R);
+#ifndef NDEBUG
+    assert(idx_found>=0 &&
+           "add_val(vector)_to_diag(cuda): diagonal element not part of the nonzeros or column indexes not sorted");
+#endif    
+  }
+}
+
+
+__global__
+void csr_add_val_to_diag(int n, int nnz, int* irowptr, int* jcolind, double* values, double val)
+{
+  int tid = blockIdx.x * blockDim.x + threadIdx.x;
+  int stride = blockDim.x * gridDim.x;
+  for(int row=tid; row<n; row+=stride) {
+    int L=irowptr[row];
+    int R=irowptr[row+1]-1;
+    assert(L<nnz);
+    assert(R<nnz);
+    assert(L<=R);
+
+#ifndef NDEBUG
+    int idx_found = -1;
+#endif
+    do { //binary search
+      const int midpoint = (R+L)/2;
+      if(jcolind[midpoint]>row) {
+        R = midpoint-1;
+      } else if(jcolind[midpoint]<row) {
+        L = midpoint+1;
+      } else {
+        assert(idx_found<nnz);
+        values[midpoint] += val;
+#ifndef NDEBUG
+        idx_found = midpoint;
+#endif        
+        break;
+      }
+    } while(L<=R);
+#ifndef NDEBUG
+    assert(idx_found>=0 &&
+           "add_val(scalar)_to_diag(cuda): diagonal element not part of the nonzeros or column indexes not sorted");
+#endif    
+  }
+}
+
+__global__
 void csr_set_diag_to_val(int n, int nnz, int* irowptr, int* jcolind, double* values, double val)
 {
   int tid = blockIdx.x * blockDim.x + threadIdx.x;
@@ -74,8 +149,9 @@ void csr_set_diag_to_val(int n, int nnz, int* irowptr, int* jcolind, double* val
     assert(R<nnz);
     assert(L<=R);
 
-    int idx_found=-1;
-
+#ifndef NDEBUG
+    int idx_found = -1;
+#endif
     do { //binary search
       const int midpoint = (R+L)/2;
       if(jcolind[midpoint]>row) {
@@ -83,16 +159,17 @@ void csr_set_diag_to_val(int n, int nnz, int* irowptr, int* jcolind, double* val
       } else if(jcolind[midpoint]<row) {
         L = midpoint+1;
       } else {
+        assert(idx_found<nnz);
+        values[midpoint] = val;
+#ifndef NDEBUG
         idx_found = midpoint;
+#endif        
         break;
       }
     } while(L<=R);
-    if(idx_found>=0) {
-      assert(idx_found<nnz);
-      values[idx_found]=val;
-    } else {
-      assert(false);
-    }
+#ifndef NDEBUG
+    assert(idx_found>=0 && "set_diag(cuda): diagonal element not part of the nonzeros or column indexes not sorted");
+#endif
   }
 }
 
@@ -108,6 +185,22 @@ void csr_set_diag_kernel(int n, int nnz, int* irowptr, int* jcolind, double* val
   int block_size=16;
   int num_blocks = (n+block_size-1)/block_size;
   csr_set_diag_to_val<<<num_blocks,block_size>>>(n, nnz, irowptr, jcolind, values, val);
+}
+
+void csr_add_diag_kernel(int n, int nnz, int* irowptr, int* jcolind, double* values, double val)
+{
+  //block of smaller sizes tend to perform 1.5-2x faster than the usual 256 or 128 blocks
+  int block_size=16;
+  int num_blocks = (n+block_size-1)/block_size;
+  csr_add_val_to_diag<<<num_blocks,block_size>>>(n, nnz, irowptr, jcolind, values, val);
+}
+
+void csr_add_diag_kernel(int n, int nnz, int* irowptr, int* jcolind, double* values, double alpha, const double* Dvalues)
+{
+  //block of smaller sizes tend to perform 1.5-2x faster than the usual 256 or 128 blocks
+  int block_size=16;
+  int num_blocks = (n+block_size-1)/block_size;
+  csr_add_vec_to_diag<<<num_blocks,block_size>>>(n, nnz, irowptr, jcolind, values, alpha, Dvalues);
 }
 
 }  //end of namespace
