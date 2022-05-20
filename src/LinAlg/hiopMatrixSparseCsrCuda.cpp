@@ -779,7 +779,7 @@ void hiopMatrixSparseCSRCUDA::form_transpose_from_numeric(const hiopMatrixSparse
 
 void hiopMatrixSparseCSRCUDA::form_diag_from_symbolic(const hiopVector& D)
 {
-  int m = D.get_size();
+  const int m = D.get_size();
   if(m!=ncols_ || m!=nrows_ || m!=nnz_) {
     dealloc();
     
@@ -793,15 +793,18 @@ void hiopMatrixSparseCSRCUDA::form_diag_from_symbolic(const hiopVector& D)
   assert(irowptr_);
   assert(jcolind_);
   assert(values_);
-
-  assert(false && "work in progress");
 }
 
 void hiopMatrixSparseCSRCUDA::form_diag_from_numeric(const hiopVector& D)
 {
-  assert(false && "work in progress");
   assert(D.get_size()==ncols_ && D.get_size()==nrows_ && D.get_size()==nnz_);
-  //memcpy(values_, D.local_data_const(), nrows_*sizeof(double));
+  assert(irowptr_ && jcolind_ && values_);
+  assert(dynamic_cast<const hiopVectorRajaPar*>(&D) && "input vector must be Raja (and data on the device)");
+  cudaError_t ret = cudaMemcpy(values_,
+                               D.local_data_const(),
+                               nrows_*sizeof(double),
+                               cudaMemcpyDeviceToDevice);
+  assert(cudaSuccess == ret);
 }
 
 ///Column scaling or right multiplication by a diagonal: `this`=`this`*D
@@ -994,6 +997,7 @@ void hiopMatrixSparseCSRCUDA::set_diagonal(const double& val)
 
 void hiopMatrixSparseCSRCUDA::extract_diagonal(hiopVector& diag_out) const
 {
+  assert(dynamic_cast<const hiopVectorRajaPar*>(&diag_out) && "input vector must be Raja (and data on the device)");
   hiop::cuda::csr_get_diag_kernel(nrows_, nnz_, irowptr_, jcolind_, values_, diag_out.local_data());
 }
 

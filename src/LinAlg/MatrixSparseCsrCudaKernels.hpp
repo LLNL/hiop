@@ -94,14 +94,15 @@ void csr_add_diag_kernel(int n, int nnz, int* irowptr, int* jcoldind, double* va
  * Copies the diagonal of a CSR matrix into the array `diag_out`. All pointers are on the device. The
  * output array should be allocated to hold `n` doubles.
  * 
- * 
+ * @pre CSR matrix must be square.
+ * @pre Column indexes must be sorted for any given row.
  */
 void csr_get_diag_kernel(int n,
-                           int nnz,
-                           const int* irowptr,
-                           const int* jcoldind,
-                           const double* values,
-                           double* diag_out);
+                         int nnz,
+                         const int* irowptr,
+                         const int* jcoldind,
+                         const double* values,
+                         double* diag_out);
 } //end of namespace cuda
 } //end of namespace hiop
 
