@@ -295,6 +295,15 @@ namespace hiop
 #ifdef HIOP_USE_STRUMPACK
           linsol_actual = "STRUMPACK";
           linSys_ = new hiopLinSolverSymSparseSTRUMPACK(n, nnz, nlp_);
+          
+          auto* fact_acceptor_ic = dynamic_cast<hiopFactAcceptorIC*> (fact_acceptor_);
+          if(fact_acceptor_ic) {
+            nlp_->log->printf(hovError,
+                              "KKT_SPARSE_XYcYd linsys with STRUMPACK does not support inertia correction. "
+                              "Please set option 'fact_acceptor' to 'inertia_free'.\n");
+            assert(false);
+            return nullptr;
+          }
 #endif  // HIOP_USE_STRUMPACK        
         }
 
@@ -321,6 +330,14 @@ namespace hiop
 #if defined(HIOP_USE_CUSOLVER)
           linSys_ = new hiopLinSolverSymSparseCUSOLVER(n, nnz, nlp_);
           linsol_actual = "CUSOLVER-LU";
+          auto* fact_acceptor_ic = dynamic_cast<hiopFactAcceptorIC*> (fact_acceptor_);
+          if(fact_acceptor_ic) {
+            nlp_->log->printf(hovError,
+                              "KKT_SPARSE_XYcYd linsys with CUSOLVER-LU does not support inertia correction. "
+                              "Please set option 'fact_acceptor' to 'inertia_free'.\n");
+            assert(false);
+            return nullptr;
+          }
 #endif
         }
 
@@ -328,6 +345,14 @@ namespace hiop
 #if defined(HIOP_USE_STRUMPACK)        
           linSys_ = new hiopLinSolverSymSparseSTRUMPACK(n, nnz, nlp_);
           linsol_actual = "STRUMPACK";
+          auto* fact_acceptor_ic = dynamic_cast<hiopFactAcceptorIC*> (fact_acceptor_);
+          if(fact_acceptor_ic) {
+            nlp_->log->printf(hovError,
+                              "KKT_SPARSE_XYcYd linsys with STRUMPACK does not support inertia correction. "
+                              "Please set option 'fact_acceptor' to 'inertia_free'.\n");
+            assert(false);
+            return nullptr;
+          }
 #endif //HIOP_USE_STRUMPACK
         }
 
@@ -620,6 +645,14 @@ namespace hiop
 #ifdef HIOP_USE_STRUMPACK              
           linSys_ = new hiopLinSolverSymSparseSTRUMPACK(n, nnz, nlp_);
           actual_lin_solver = "STRUMPACK";
+          auto* fact_acceptor_ic = dynamic_cast<hiopFactAcceptorIC*> (fact_acceptor_);
+          if(fact_acceptor_ic) {
+            nlp_->log->printf(hovError,
+                              "KKT_SPARSE_XDYcYd linsys with STRUMPACK does not support inertia correction. "
+                              "Please set option 'fact_acceptor' to 'inertia_free'.\n");
+            assert(false);
+            return nullptr;
+          }
 #endif  // HIOP_USE_STRUMPACK        
         }
 
@@ -650,8 +683,16 @@ namespace hiop
         assert(nullptr == linSys_);
         if(linear_solver == "cusolver-lu" || linear_solver == "auto") {
 #if defined(HIOP_USE_CUSOLVER)
-          actual_lin_solver = "STRUMPACK-LU";
+          actual_lin_solver = "CUSOLVER-LU";
           linSys_ = new hiopLinSolverSymSparseCUSOLVER(n, nnz, nlp_);
+          auto* fact_acceptor_ic = dynamic_cast<hiopFactAcceptorIC*> (fact_acceptor_);
+          if(fact_acceptor_ic) {
+            nlp_->log->printf(hovError,
+                              "KKT_SPARSE_XDYcYd linsys with CUSOLVER-LU does not support inertia correction. "
+                              "Please set option 'fact_acceptor' to 'inertia_free'.\n");
+            assert(false);
+            return nullptr;
+          }
 #endif
         } //end cusolver-lu
 
@@ -659,6 +700,14 @@ namespace hiop
 #if defined(HIOP_USE_STRUMPACK)
           actual_lin_solver = "STRUMPACK";
           linSys_ = new hiopLinSolverSymSparseSTRUMPACK(n, nnz, nlp_);
+          auto* fact_acceptor_ic = dynamic_cast<hiopFactAcceptorIC*> (fact_acceptor_);
+          if(fact_acceptor_ic) {
+            nlp_->log->printf(hovError,
+                              "KKT_SPARSE_XDYcYd linsys with STRUMPACK does not support inertia correction. "
+                              "Please set option 'fact_acceptor' to 'inertia_free'.\n");
+            assert(false);
+            return nullptr;
+          }
 #endif
         } //end strumpack
         
@@ -711,6 +760,14 @@ namespace hiop
                             "KKT_SPARSE_XDYcYd linsys: alloc CUSOLVER-LU size %d (%d cons) (gpu)\n",
                             n,
                             neq+nineq);
+          auto* fact_acceptor_ic = dynamic_cast<hiopFactAcceptorIC*> (fact_acceptor_);
+          if(fact_acceptor_ic) {
+            nlp_->log->printf(hovError,
+                              "KKT_SPARSE_XDYcYd linsys with CUSOLVER-LU does not support inertia correction. "
+                              "Please set option 'fact_acceptor' to 'inertia_free'.\n");
+            assert(false);
+            return nullptr;
+          }
 #endif
         } //end cusolver-lu
       } // end of compute mode gpu
@@ -746,6 +803,15 @@ namespace hiop
 
       if(safe_mode_) {
         nlp_->log->printf(hovError, "Safe mode is not supported KKT_SPARSE_FULL_KKT linsys\n");
+        assert(false);
+        return nullptr;
+      }
+
+      auto* fact_acceptor_ic = dynamic_cast<hiopFactAcceptorIC*> (fact_acceptor_);
+      if(fact_acceptor_ic) {
+        nlp_->log->printf(hovError,
+                          "KKT_SPARSE_FULL_KKT linsys does not support inertia correction. "
+                          "Please try setting option 'fact_acceptor' to 'inertia_free'.\n");
         assert(false);
         return nullptr;
       }

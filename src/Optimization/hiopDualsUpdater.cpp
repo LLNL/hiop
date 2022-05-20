@@ -368,7 +368,7 @@ instantiate_linear_solver(const char* linsol_opt,
 
   auto linear_solver = nlp_->options->GetString(linsol_opt);
   auto compute_mode = nlp_->options->GetString("compute_mode");
-
+  auto fact_acceptor = nlp_->options->GetString("fact_acceptor");
 #ifndef HIOP_USE_GPU
   assert( (compute_mode == "cpu" || compute_mode == "auto") &&
          "the value for compute_mode is invalid and should have been corrected during user options processing");
@@ -419,6 +419,13 @@ instantiate_linear_solver(const char* linsol_opt,
         assert((linear_solver == "strumpack" || linear_solver == "auto") &&
                "the value for duals_init_linear_solver_sparse is invalid and should have been corrected during "
                "options processing");
+        if(fact_acceptor == "inertia_correction") {
+          nlp_->log->printf(hovError,
+                            "LSQ linear solver with STRUMPACK does not support inertia correction. "
+                            "Please set option 'fact_acceptor' to 'inertia_free'.\n");
+          assert(false);
+          return false;
+        }
         ss_log << "LSQ linear solver --- KKT_SPARSE_XDYcYd linsys: PARDISO size " << n
                << " cons " << (neq+nineq) << " nnz " << nnz;        
         lin_sys_ = new hiopLinSolverSymSparseSTRUMPACK(n, nnz, nlp_);  
@@ -441,7 +448,13 @@ instantiate_linear_solver(const char* linsol_opt,
                "the value for duals_init_linear_solver_sparse is invalid and should have been corrected during "
                "options processing");
       }
-
+      if(fact_acceptor == "inertia_correction") {
+        nlp_->log->printf(hovError,
+                          "LSQ linear solver with CUSOLVER-LU does not support inertia correction. "
+                          "Please set option 'fact_acceptor' to 'inertia_free'.\n");
+        assert(false);
+        return false;
+      }
       // This is our first choice on the device.
       if(linear_solver == "cusolver-lu" || linear_solver == "auto") {
         ss_log << "LSQ linear solver --- KKT_SPARSE_XDYcYd linsys: CUSOLVER-LU size " << n
