@@ -531,12 +531,6 @@ public:
                       const hiopMatrix* Jac_c, const hiopMatrix* Jac_d, hiopMatrix* Hess);
 
   virtual bool test_direction(const hiopIterate* dir, hiopMatrix* Hess);
- // {
-      
-//      return true	 
-//    assert(false && "not implemented yet!");
-//    return false;
-//  }
 
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction);
 
