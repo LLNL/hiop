@@ -381,10 +381,7 @@ public:
    *
    * @pre `this` matrix needs to be symmetric and of same size(s) as `diag_out`
    */
-  virtual void extract_diagonal(hiopVector& diag_out) const
-  {
-    assert(false && "wip");
-  }
+  virtual void extract_diagonal(hiopVector& diag_out) const;
 
   /**
    * Sets the diagonal of `this` to the constant `val`. If `val` is zero, the sparsity pattern
@@ -529,7 +526,7 @@ public:
   void form_transpose_from_numeric(const hiopMatrixSparseTriplet& M);
 
   /**
-   * (Re)Initializes `this` to a diagonal matrix with diagonal entries given by D.
+   * Forms `this` as a diagonal matrix with diagonal entries given by D.
    */
   void form_diag_from_symbolic(const hiopVector& D);
   

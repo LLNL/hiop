@@ -255,13 +255,14 @@ void hiopMatrixSparseCSRCUDA::addDiagonal(const double& alpha, const hiopVector&
 {
   assert(nrows_ == D.get_size());
   assert(nrows_ == ncols_ && "Matrix must be square");
-  //assert(dynamic_cast<const hiopVectorRajaPar*>(&D));
+  assert(dynamic_cast<const hiopVectorRajaPar*>(&D) && "input vector must be Raja (and data on the device)");
   hiop::cuda::csr_add_diag_kernel(nrows_, nnz_, irowptr_, jcolind_, values_, alpha, D.local_data_const());
 }
 
-void hiopMatrixSparseCSRCUDA::addDiagonal(const double& value)
+void hiopMatrixSparseCSRCUDA::addDiagonal(const double& val)
 {
   assert(nrows_ == ncols_ && "Matrix must be square");
+  hiop::cuda::csr_add_diag_kernel(nrows_, nnz_, irowptr_, jcolind_, values_, val);
 }
 void hiopMatrixSparseCSRCUDA::addSubDiagonal(const double& alpha, index_type start, const hiopVector& d_)
 {
@@ -989,6 +990,11 @@ void hiopMatrixSparseCSRCUDA::set_diagonal(const double& val)
 {
   assert(irowptr_ && jcolind_ && values_);
   hiop::cuda::csr_set_diag_kernel(nrows_, nnz_, irowptr_, jcolind_, values_, val);
+}
+
+void hiopMatrixSparseCSRCUDA::extract_diagonal(hiopVector& diag_out) const
+{
+  hiop::cuda::csr_get_diag_kernel(nrows_, nnz_, irowptr_, jcolind_, values_, diag_out.local_data());
 }
 
 bool hiopMatrixSparseCSRCUDA::check_csr_is_ordered()
