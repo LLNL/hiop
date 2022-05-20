@@ -933,7 +933,7 @@ void hiopMatrixSparseCSRSeq::form_transpose_from_symbolic(const hiopMatrixSparse
   }
   assert(irowptr_[nrows_] = nnz_);
 
-  //populate jcolind_ and values_
+  //populate jcolind_
   for(index_type it=0; it<nnz_; ++it) {
     const index_type row_idx = Mjcol[it];
     
@@ -1010,6 +1010,148 @@ void hiopMatrixSparseCSRSeq::form_transpose_from_numeric(const hiopMatrixSparseT
   row_starts_[0]=0;
 }
 
+void hiopMatrixSparseCSRSeq::form_transpose_from_symbolic(const hiopMatrixSparseCSR& M_in)
+{
+  auto& M = dynamic_cast<const hiopMatrixSparseCSRSeq&>(M_in);
+  if(M.m()!=ncols_ || M.n()!=nrows_ || M.numberOfNonzeros()!=nnz_) {
+    dealloc();
+    
+    nrows_ = M.n();
+    ncols_ = M.m();
+    nnz_ = M.numberOfNonzeros();
+
+    alloc();
+  }
+
+  assert(nnz_>=0);
+  if(nnz_<=0) {
+    return;
+  }
+  
+  assert(irowptr_);
+  assert(jcolind_);
+  assert(values_);
+
+  const index_type* Mirow = M.i_row();
+  const index_type* Mjcol = M.j_col();
+  const double* Mvalues  = M.M();
+
+  assert(nullptr == row_starts_);
+  row_starts_ = new index_type[nrows_];
+
+  //in this method we use the row_starts_ as working buffer to count nz on each row of `this`
+  //at the end of this method row_starts_ keeps row starts, used by the numeric method to
+  //speed up computations
+  {
+    index_type* w = row_starts_;
+    
+    // initialize nz per row to zero
+    for(index_type i=0; i<nrows_; ++i) {
+      w[i] = 0;
+    }
+    // count number of nonzeros in each row
+    for(index_type it=0; it<nnz_; ++it) {
+      assert(Mjcol[it]<nrows_);
+      w[Mjcol[it]]++;
+    }
+  
+    // cum sum in irowptr_ and set w to the row starts
+    irowptr_[0] = 0;
+    for(int i=1; i<=nrows_; ++i) {
+      irowptr_[i] = irowptr_[i-1] + w[i-1];
+      w[i-1] = irowptr_[i-1];
+    }
+    //here row_starts_(==w) contains the row starts
+  }
+  assert(irowptr_[nrows_] = nnz_);
+
+  //iterate over nonzeros of M to populate jcolind_ and update row_starts_
+  for(index_type i=0; i<ncols_; ++i) {
+    assert(i<M.m());
+    for(index_type it=Mirow[i]; it<Mirow[i+1]; ++it) {
+
+      //row index in `this` 
+      const index_type row_idx = Mjcol[it];
+      //col index in `this` is simply i
+      
+      //index in nonzeros of this (transposed operation)
+      const auto nz_idx = row_starts_[row_idx];
+      assert(nz_idx<nnz_);
+      //assign col
+      jcolind_[nz_idx] = i;
+      
+      //increase start for row 'row_idx'
+      row_starts_[row_idx]++;
+      assert(row_starts_[row_idx] <= irowptr_[row_idx+1]);
+    }
+  }
+
+  //rollback row_starts_
+  for(int i=nrows_-1; i>=1; --i) {
+    row_starts_[i] = row_starts_[i-1];
+  }
+  row_starts_[0]=0;
+#ifndef NDEBUG
+  for(int i=0; i<nrows_; i++) {
+    for(int itnz=irowptr_[i]+1; itnz<irowptr_[i+1]; ++itnz) {
+      assert(jcolind_[itnz] > jcolind_[itnz-1] &&
+             "something wrong: col indexes not sorted or not unique");
+    }
+  }
+#endif
+}
+
+void hiopMatrixSparseCSRSeq::form_transpose_from_numeric(const hiopMatrixSparseCSR& M_in)
+{
+  auto& M = dynamic_cast<const hiopMatrixSparseCSRSeq&>(M_in);
+  assert(irowptr_ && jcolind_ && values_ && row_starts_);
+  assert(nrows_ == M.n());
+  assert(ncols_ == M.m());
+  assert(nnz_ == M.numberOfNonzeros());
+  
+#ifndef NDEBUG
+  for(int i=0; i<nrows_; i++) {
+    for(int itnz=irowptr_[i]+1; itnz<irowptr_[i+1]; ++itnz) {
+      assert(jcolind_[itnz] > jcolind_[itnz-1] &&
+             "something wrong: col indexes not sorted or not unique");
+    }
+  }
+#endif
+  const index_type* Mirow = M.i_row();
+  const index_type* Mjcol = M.j_col();
+  const double* Mvalues  = M.M();
+
+  //iterate over nonzeros of M to populate populate values_
+  for(index_type i=0; i<ncols_; ++i) {
+    assert(i<M.m());
+    for(index_type it=Mirow[i]; it<Mirow[i+1]; ++it) {
+      //row index in `this`
+      const index_type row_idx = Mjcol[it];
+      //col index in `this` is simply i
+      
+      //index in nonzeros of this (transposed)
+      const auto nz_idx = row_starts_[row_idx];
+      assert(nz_idx<nnz_);
+    
+      //set value
+      values_[nz_idx] = Mvalues[it];
+
+      //increase start for row 'row_idx'
+      row_starts_[row_idx]++;
+      assert(row_starts_[row_idx] <= irowptr_[row_idx+1]);
+    }
+  }
+  //rollback row_starts_
+  for(int i=nrows_-1; i>=1; --i) {
+    row_starts_[i] = row_starts_[i-1];
+  }
+  row_starts_[0]=0;
+}
+
+
+
+
+
 void hiopMatrixSparseCSRSeq::form_diag_from_symbolic(const hiopVector& D)
 {
   int m = D.get_size();
@@ -1035,6 +1177,12 @@ void hiopMatrixSparseCSRSeq::form_diag_from_symbolic(const hiopVector& D)
   }
   irowptr_[m] = m;
 }
+
+
+
+
+
+
 
 void hiopMatrixSparseCSRSeq::form_diag_from_numeric(const hiopVector& D)
 {
@@ -1204,10 +1352,9 @@ add_matrix_symbolic(hiopMatrixSparseCSR& M_in, const hiopMatrixSparseCSR& Y_in) 
 }
 
 /**
- * Performs matrix addition M = gamma*M + alpha*X + beta*Y numerically
+ * Performs matrix addition M = alpha*X + beta*Y numerically
  */
-void hiopMatrixSparseCSRSeq::add_matrix_numeric(double gamma,
-                                                hiopMatrixSparseCSR& M_in,
+void hiopMatrixSparseCSRSeq::add_matrix_numeric(hiopMatrixSparseCSR& M_in,
                                                 double alpha,
                                                 const hiopMatrixSparseCSR& Y_in,
                                                 double beta) const
@@ -1231,13 +1378,8 @@ void hiopMatrixSparseCSRSeq::add_matrix_numeric(double gamma,
   double* valuesM = M.M();
   
   int nnzM = M.numberOfNonzeros();
-  if(gamma==0.0) {
-    for(auto i=0; i<nnzM; i++) {
-      valuesM[i] = 0.0;
-    }
-  } else if(gamma!=1.0) {
-    int inc = 1;
-    DSCAL(&nnzM, &gamma, valuesM, &inc);
+  for(auto i=0; i<nnzM; i++) {
+    valuesM[i] = 0.0;
   }
   
   // counter for nz in M 

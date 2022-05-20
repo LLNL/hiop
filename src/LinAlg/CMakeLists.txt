@@ -27,6 +27,7 @@ set(hiopLinAlg_INTERFACE_HEADERS
   hiopMatrixSparseTripletStorage.hpp
   hiopMatrixSparseCSR.hpp
   hiopMatrixSparseCSRSeq.hpp
+  hiopMatrixSparseCsrCuda.hpp
   hiopVector.hpp
   hiopVectorInt.hpp
   hiopVectorIntRaja.hpp
@@ -59,19 +60,19 @@ set(hiopLinAlg_RAJA_SRC
   hiopVectorIntRaja.cpp
   hiopMatrixRajaDense.cpp
   hiopMatrixRajaSparseTriplet.cpp
-  )
+)
 
 set(hiopLinAlg_GPU_SRC
   hiopLinSolverSymDenseMagma.cpp
-  )
+)
 
 set(hiopLinAlg_MA57_SRC
   hiopLinSolverSymSparseMA57.cpp
-  )
+)
 
 set(hiopLinAlg_STRUMPACK_SRC
   hiopLinSolverSparseSTRUMPACK.cpp
-  )
+)
 
 set(hiopLinAlg_PARDISO_SRC
   hiopLinSolverSparsePARDISO.cpp
@@ -80,14 +81,23 @@ set(hiopLinAlg_PARDISO_SRC
 set(hiopLinAlg_CUSOLVER_SRC
   hiopLinSolverSparseCUSOLVER.cpp
   hiopLinSolverCholCuSparse.cpp
-  )
+)
+
+set(hiopLinAlg_CUDASPARSEKERNELS_SRC
+  MatrixSparseCsrCudaKernels.cu
+)
+
+set(hiopLinAlg_CUDASPARSE_SRC
+  hiopMatrixSparseCsrCuda.cpp
+)
 
 set(hiopLinAlg_KRON_REDUCTION_SRC
   hiopLinSolverUMFPACKZ.cpp
-  )
+)
 
 set(hiopLinAlg_Ginkgo_SRC
-  hiopLinSolverSparseGinkgo.cpp)
+  hiopLinSolverSparseGinkgo.cpp
+)
 
 # Add interfaces for sparse linear solvers when enabled
 if(HIOP_SPARSE)
@@ -100,13 +110,18 @@ if(HIOP_SPARSE)
     if(HIOP_USE_PARDISO)
       list(APPEND hiopLinAlg_SRC ${hiopLinAlg_PARDISO_SRC})
     endif(HIOP_USE_PARDISO)
+
+    # TODO: Make KLU optional dependency of cuSOLVER LU factorization
     if(HIOP_USE_CUSOLVER)
       list(APPEND hiopLinAlg_SRC ${hiopLinAlg_CUSOLVER_SRC})
     endif(HIOP_USE_CUSOLVER)
-    # TODO: Make KLU optional dependency of cuSOLVER LU factorization
+
     if(HIOP_USE_CUDA)
-      list(APPEND hiopLinAlg_SRC hiopLinSolverCholCuSparse.cpp)
+      list(APPEND hiopLinAlg_SRC ${hiopLinAlg_CUDASPARSE_SRC})
+      set_source_files_properties(${hiopLinAlg_CUDASPARSEKERNELS_SRC} PROPERTIES LANGUAGE CUDA)
+      list(APPEND hiopLinAlg_SRC ${hiopLinAlg_CUDASPARSEKERNELS_SRC})
     endif(HIOP_USE_CUDA)
+    
     if(HIOP_USE_GINKGO)
       list(APPEND hiopLinAlg_SRC ${hiopLinAlg_Ginkgo_SRC})
   endif(HIOP_USE_GINKGO)

@@ -52,12 +52,14 @@
  */
 
 #include "hiopKKTLinSysSparseCondensed.hpp"
+
 #ifdef HIOP_USE_COINHSL
 #include "hiopLinSolverSymSparseMA57.hpp"
 #endif
 
 #ifdef HIOP_USE_CUDA
 #include "hiopLinSolverCholCuSparse.hpp"
+#include "hiopMatrixSparseCsrCuda.hpp"
 #endif
 
 #include "hiopMatrixSparseTripletStorage.hpp"
@@ -144,26 +146,41 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   // compute condensed linear system J'*D*J + H + Dx + delta_wx*I
   //
 
-  hiopTimer t;
 
+  
+  hiopTimer t;
+  
   // symbolic conversion from triplet to CSR
   if(nullptr == JacD_) {
     t.reset(); t.start();
     JacD_ = new hiopMatrixSparseCSRSeq();
     JacD_->form_from_symbolic(*Jac_triplet);
-    //JacD_.print();
 
     assert(nullptr == JacDt_);
     JacDt_ = new hiopMatrixSparseCSRSeq();
-    JacDt_->form_transpose_from_symbolic(*Jac_triplet);
-    //t.stop(); printf("JacD JacDt-symb    took %.5f\n", t.getElapsedTime());
+    JacDt_->form_transpose_from_symbolic(*JacD_);
+    //t.stop(); printf("JacD JacDt-symb from csr    took %.5f\n", t.getElapsedTime());
   }
 
   // numeric conversion from triplet to CSR
   t.reset(); t.start();
   JacD_->form_from_numeric(*Jac_triplet);
-  JacDt_->form_transpose_from_numeric(*Jac_triplet);  
-  //t.stop(); printf("JacD JacDt-nume    took %.5f\n", t.getElapsedTime());
+  JacDt_->form_transpose_from_numeric(*JacD_);
+  //t.stop(); printf("JacD JacDt-nume csr    took %.5f\n", t.getElapsedTime());
+
+//#define CSRCUDA_TESTING 
+#ifdef CSRCUDA_TESTING
+  hiopMatrixSparseCSRCUDA JacD_cuda;
+  hiopMatrixSparseCSRCUDA JacDt_cuda;
+
+  JacD_cuda.form_from_symbolic(*Jac_triplet);
+  JacD_cuda.form_from_numeric(*Jac_triplet);
+  JacD_cuda.print();
+  JacDt_cuda.form_transpose_from_symbolic(JacD_cuda);
+  JacDt_cuda.form_transpose_from_numeric(JacD_cuda);
+  JacDt_cuda.print();
+
+#endif
   
   //symbolic multiplication for JacD'*D*J
   if(nullptr == JtDiagJ_) {
@@ -233,15 +250,44 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   Hess_upper_csr_->form_from_numeric(*Hess_triplet);
   Hess_upper_csr_->set_diagonal(0.0);
   Hess_lower_csr_->form_transpose_from_numeric(*Hess_triplet);
-  Hess_lower_csr_->add_matrix_numeric(0.0, *Hess_csr_, 1.0, *Hess_upper_csr_, 1.0);
+  //
+  // Hess_csr_ = Hess_lower_csr_ + Hess_upper_csr_
+  //
+  Hess_lower_csr_->add_matrix_numeric(*Hess_csr_, 1.0, *Hess_upper_csr_, 1.0);
 
-  M_condensed_->setToZero();
+#ifdef CSRCUDA_TESTING
+  hiopMatrixSparseCSRCUDA* Hess_upper_csr_cuda = new hiopMatrixSparseCSRCUDA();
+  Hess_upper_csr_cuda->form_from_symbolic(*Hess_triplet);
+  Hess_upper_csr_cuda->form_from_numeric(*Hess_triplet);
+  
+  hiopMatrixSparseCSRCUDA* Hess_lower_csr_cuda  = new hiopMatrixSparseCSRCUDA();
+  Hess_lower_csr_cuda->form_transpose_from_symbolic(*Hess_upper_csr_cuda);
+  Hess_lower_csr_cuda->form_transpose_from_numeric(*Hess_upper_csr_cuda);
+
+  Hess_upper_csr_cuda->set_diagonal(0.0);
+  
+  hiopMatrixSparseCSR* SUM = Hess_lower_csr_cuda->add_matrix_alloc(*Hess_upper_csr_cuda);
+  Hess_lower_csr_cuda->add_matrix_symbolic(*SUM, *Hess_upper_csr_cuda);
+  Hess_lower_csr_cuda->add_matrix_numeric(*SUM, 1.0, *Hess_upper_csr_cuda, 1.0); 
+
+  SUM->print();
+  Hess_csr_->print();
+  delete SUM;
+  delete Hess_lower_csr_cuda;
+  delete Hess_upper_csr_cuda;
+
+#endif
+  
+  //
+  // M_condensed_ = M_condensed_ + Hess_csr_ + JtDiagJ_ + Dx_ + delta_wx*I
+  //
+  Hess_csr_->add_matrix_numeric(*M_condensed_, 1.0, *JtDiagJ_, 1.0);
+
   if(delta_wx>0) {
-    M_condensed_->set_diagonal(delta_wx);
+    M_condensed_->addDiagonal(delta_wx);
   }
-  M_condensed_->addDiagonal(1.0, *Dx_);
 
-  Hess_csr_->add_matrix_numeric(1.0, *M_condensed_, 1.0, *JtDiagJ_, 1.0);
+  M_condensed_->addDiagonal(1.0, *Dx_);
   //t.stop(); printf("ADD-nume  took %.5f\n", t.getElapsedTime());
   
   int nnz_condensed = M_condensed_->numberOfNonzeros();

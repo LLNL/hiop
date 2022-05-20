@@ -220,6 +220,25 @@ public:
   virtual void form_transpose_from_numeric(const hiopMatrixSparseTriplet& M) = 0;
 
   /**
+   * Allocates and populates the sparsity pattern of `this` as the CSR representation 
+   * of transpose of the CSR matrix `M`.
+   * 
+   * @pre The input argument should have the column indexes sorted and unique within a row.
+   */
+  virtual void form_transpose_from_symbolic(const hiopMatrixSparseCSR& M) = 0;
+  
+  /**
+   * Copies the numerical values of the transpose of the CSR matrix M into the CSR matrix `this`.
+   *
+   * @pre The sparsity pattern (row pointers and column indexes arrays) of `this` should be 
+   * allocated and populated, possibly by a previous call to `form_transpose_from_symbolic`
+   *
+   * @pre The input argument should have the column indexes sorted and unique within a row.
+   */  
+  virtual void form_transpose_from_numeric(const hiopMatrixSparseCSR& M) = 0;
+
+  
+  /**
    * (Re)Initializes `this` to a diagonal matrix with diagonal entries given by D.
    */
   virtual void form_diag_from_symbolic(const hiopVector& D) = 0;
@@ -243,7 +262,7 @@ public:
 
   /**
    * Computes sparsity pattern of M = X+Y (i.e., populates the row pointers and 
-   * column indexes arrays) of `M`.
+   * column indexes arrays) of `M`. `X` is `this`.
    * 
    * @pre `this` and `Y` should hold matrices of identical dimensions.
    *
@@ -251,8 +270,8 @@ public:
   virtual void add_matrix_symbolic(hiopMatrixSparseCSR& M, const hiopMatrixSparseCSR& Y) const = 0;
 
   /**
-   * Performs matrix addition M = gamma*M + alpha*X + beta*Y numerically, where
-   * X is `this` and gamma, alpha, and beta are scalars.
+   * Performs matrix addition M = alpha*X + beta*Y numerically, where
+   * X is `this` and alpha and beta are scalars.
    * 
    * @pre `M`, `this` and `Y` should hold matrices of identical dimensions.
    * 
@@ -260,8 +279,7 @@ public:
    * `add_matrix_symbolic` should have been called previously.
    *
    */
-  virtual void add_matrix_numeric(double gamma,
-                                  hiopMatrixSparseCSR& M,
+  virtual void add_matrix_numeric(hiopMatrixSparseCSR& M,
                                   double alpha,
                                   const hiopMatrixSparseCSR& Y,
                                   double beta) const = 0;

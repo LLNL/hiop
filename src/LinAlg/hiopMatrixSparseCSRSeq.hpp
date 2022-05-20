@@ -506,6 +506,24 @@ public:
   void form_transpose_from_numeric(const hiopMatrixSparseTriplet& M);
 
   /**
+   * Allocates and populates the sparsity pattern of `this` as the CSR representation 
+   * of transpose of the CSR matrix `M`.
+   * 
+   * @pre The input argument should have the column indexes sorted and unique within a row.
+   */
+  virtual void form_transpose_from_symbolic(const hiopMatrixSparseCSR& M);
+  
+  /**
+   * Copies the numerical values of the transpose of the CSR matrix M into the CSR matrix `this`.
+   *
+   * @pre The sparsity pattern (row pointers and column indexes arrays) of `this` should be 
+   * allocated and populated, possibly by a previous call to `form_transpose_from_symbolic`
+   *
+   * @pre The input argument should have the column indexes sorted and unique within a row.
+   */  
+  virtual void form_transpose_from_numeric(const hiopMatrixSparseCSR& M);
+  
+  /**
    * (Re)Initializes `this` to a diagonal matrix with diagonal entries given by D.
    */
   void form_diag_from_symbolic(const hiopVector& D);
@@ -529,18 +547,16 @@ public:
 
   /**
    * Computes sparsity pattern of M = X+Y (i.e., populates the row pointers and 
-   * column indexes arrays) of `M`.
+   * column indexes arrays) of `M`. `X` is this.
    * 
    * @pre `this` and `Y` should hold matrices of identical dimensions.
    *
    */
-
-  //// note cusparseXcsrgeam2
   void add_matrix_symbolic(hiopMatrixSparseCSR& M, const hiopMatrixSparseCSR& Y) const;
 
   /**
    * Performs matrix addition M = gamma*M + alpha*X + beta*Y numerically, where
-   * X is `this` and gamma, alpha, and beta are scalars.
+   * X is `this` and alpha and beta are scalars.
    * 
    * @pre `M`, `this` and `Y` should hold matrices of identical dimensions.
    * 
@@ -548,8 +564,7 @@ public:
    * `add_matrix_symbolic` should have been called previously.
    *
    */
-  void add_matrix_numeric(double gamma,
-                          hiopMatrixSparseCSR& M,
+  void add_matrix_numeric(hiopMatrixSparseCSR& M,
                           double alpha,
                           const hiopMatrixSparseCSR& Y,
                           double beta) const;
