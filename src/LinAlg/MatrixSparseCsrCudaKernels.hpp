@@ -103,6 +103,12 @@ void csr_get_diag_kernel(int n,
                          const int* jcoldind,
                          const double* values,
                          double* diag_out);
+
+/**
+ * Populates the row pointers and column indexes array to hold a CSR diagonal matrix of size `n`.
+ */
+void csr_form_diag_symbolic_kernel(int n, int* irowptr, int* jcolind);
+
 } //end of namespace cuda
 } //end of namespace hiop
 

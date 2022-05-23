@@ -790,9 +790,9 @@ void hiopMatrixSparseCSRCUDA::form_diag_from_symbolic(const hiopVector& D)
     alloc();
   }
 
-  assert(irowptr_);
-  assert(jcolind_);
-  assert(values_);
+  assert(irowptr_ && jcolind_ && values_);
+
+  hiop::cuda::csr_form_diag_symbolic_kernel(nrows_, irowptr_, jcolind_);
 }
 
 void hiopMatrixSparseCSRCUDA::form_diag_from_numeric(const hiopVector& D)
