@@ -15,12 +15,14 @@ static bool parse_arguments(int argc,
                             bool& self_check,
                             bool& inertia_free,
                             bool& use_cusolver,
+                            bool& use_cusolver_lu,
                             bool& use_ginkgo)
 {
   self_check = false;
   n = 3;
   inertia_free = false;
   use_cusolver = false;
+  use_cusolver_lu = false;
   use_ginkgo = false;
   switch(argc) {
   case 1:
@@ -100,12 +102,7 @@ static bool parse_arguments(int argc,
     return false; // 4 or more arguments
   }
 
-  if(use_cusolver && !(inertia_free)) {
-    inertia_free = true;
-    printf("LU solver from cuSOLVER library requires inertia free approach. ");
-    printf("Enabling now ...\n");
-  }
-
+// If CUDA is not available, de-select cuSOLVER
 #ifndef HIOP_USE_CUDA
   if(use_cusolver) {
     printf("HiOp built without CUDA support. ");
@@ -114,7 +111,21 @@ static bool parse_arguments(int argc,
   }
 #endif
 
-// If Ginkgo is not available de-select it.
+// Use cuSOLVER's LU factorization, if it was configured
+#ifdef HIOP_USE_CUSOLVER_LU
+  if(use_cusolver) {
+    use_cusolver_lu = true;
+  }
+#endif
+
+  // If cuSOLVER was selected, but inertia free approach was not, add inertia-free
+  if(use_cusolver && !(inertia_free)) {
+    inertia_free = true;
+    printf("LU solver from cuSOLVER library requires inertia free approach. ");
+    printf("Enabling now ...\n");
+  }
+
+// If Ginkgo is not available, de-select it.
 #ifndef HIOP_USE_GINKGO
   if(use_ginkgo) {
     printf("HiOp not built with GINKGO support, using default linear solver ...\n");
@@ -122,6 +133,7 @@ static bool parse_arguments(int argc,
   }
 #endif
 
+  // If Ginkgo was selected, but inertia free approach was not, add inertia-free
   if(use_ginkgo && !(inertia_free)) {
     inertia_free = true;
     printf("LU solver from GINKGO library requires inertia free approach. ");
@@ -164,8 +176,9 @@ int main(int argc, char **argv)
   size_type n = 50;
   bool inertia_free = false;
   bool use_cusolver = false;
+  bool use_cusolver_lu = false;
   bool use_ginkgo = false;
-  if(!parse_arguments(argc, argv, n, selfCheck, inertia_free, use_cusolver, use_ginkgo)) { 
+  if(!parse_arguments(argc, argv, n, selfCheck, inertia_free, use_cusolver, use_cusolver_lu, use_ginkgo)) { 
     usage(argv[0]);
 #ifdef HIOP_USE_MPI
     MPI_Finalize();
@@ -190,7 +203,7 @@ int main(int argc, char **argv)
     if(inertia_free) {
       nlp.options->SetStringValue("fact_acceptor", "inertia_free");
     }
-    if(use_cusolver) {
+    if(use_cusolver_lu) {
       nlp.options->SetStringValue("duals_init", "zero");
       nlp.options->SetStringValue("linsol_mode", "speculative");
       nlp.options->SetStringValue("linear_solver_sparse", "cusolver-lu");

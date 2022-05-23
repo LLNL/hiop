@@ -72,7 +72,7 @@
 #ifdef HIOP_USE_PARDISO
 #include "hiopLinSolverSparsePARDISO.hpp"
 #endif
-#ifdef HIOP_USE_CUSOLVER
+#ifdef HIOP_USE_CUSOLVER_LU
 #include "hiopLinSolverSparseCUSOLVER.hpp"
 #endif
 #ifdef HIOP_USE_GINKGO
@@ -442,7 +442,7 @@ instantiate_linear_solver(const char* linsol_opt,
       // Under gpu compute_mode, which is work in progress, the initialization should be done only using
       // GPU sparse linear solvers.
       
-#ifdef HIOP_USE_CUSOLVER 
+#ifdef HIOP_USE_CUSOLVER_LU 
       if(compute_mode == "gpu") {
         assert((linear_solver == "cusolver-lu" || linear_solver == "auto") &&
                "the value for duals_init_linear_solver_sparse is invalid and should have been corrected during "
@@ -461,7 +461,7 @@ instantiate_linear_solver(const char* linsol_opt,
                << " cons " << (neq+nineq) << " nnz " << nnz;
         lin_sys_ = new hiopLinSolverSymSparseCUSOLVER(n, nnz, nlp_);
       }
-#else // of #ifdef HIOP_USE_CUSOLVER 
+#else // of #ifdef HIOP_USE_CUSOLVER_LU 
       //under compute mode gpu, at this point we don't have a sparse linear solver 
       if(compute_mode == "gpu") {
         if(linear_solver == "auto") {

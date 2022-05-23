@@ -78,8 +78,11 @@ set(hiopLinAlg_PARDISO_SRC
   hiopLinSolverSparsePARDISO.cpp
 )
 
-set(hiopLinAlg_CUSOLVER_SRC
+set(hiopLinAlg_CUSOLVER_LU_SRC
   hiopLinSolverSparseCUSOLVER.cpp
+)
+
+set(hiopLinAlg_CUSOLVER_CHOL_SRC
   hiopLinSolverCholCuSparse.cpp
 )
 
@@ -110,13 +113,13 @@ if(HIOP_SPARSE)
     if(HIOP_USE_PARDISO)
       list(APPEND hiopLinAlg_SRC ${hiopLinAlg_PARDISO_SRC})
     endif(HIOP_USE_PARDISO)
-
-    # TODO: Make KLU optional dependency of cuSOLVER LU factorization
-    if(HIOP_USE_CUSOLVER)
-      list(APPEND hiopLinAlg_SRC ${hiopLinAlg_CUSOLVER_SRC})
-    endif(HIOP_USE_CUSOLVER)
-
+    if(HIOP_USE_CUSOLVER_LU)
+      list(APPEND hiopLinAlg_SRC ${hiopLinAlg_CUSOLVER_LU_SRC})
+      set_source_files_properties(${hiopLinAlg_CUSOLVER_LU_SRC} PROPERTIES LANGUAGE CUDA)
+    endif(HIOP_USE_CUSOLVER_LU)
     if(HIOP_USE_CUDA)
+      list(APPEND hiopLinAlg_SRC ${hiopLinAlg_CUSOLVER_CHOL_SRC})
+      set_source_files_properties(${hiopLinAlg_CUSOLVER_CHOL_SRC} PROPERTIES LANGUAGE CUDA)
       list(APPEND hiopLinAlg_SRC ${hiopLinAlg_CUDASPARSE_SRC})
       set_source_files_properties(${hiopLinAlg_CUDASPARSEKERNELS_SRC} PROPERTIES LANGUAGE CUDA)
       list(APPEND hiopLinAlg_SRC ${hiopLinAlg_CUDASPARSEKERNELS_SRC})

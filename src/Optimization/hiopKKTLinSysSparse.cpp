@@ -57,7 +57,7 @@
 #ifdef HIOP_USE_PARDISO
 #include "hiopLinSolverSparsePARDISO.hpp"
 #endif
-#ifdef HIOP_USE_CUSOLVER
+#ifdef HIOP_USE_CUSOLVER_LU
 #include "hiopLinSolverSparseCUSOLVER.hpp"
 #endif
 #ifdef HIOP_USE_GINKGO
@@ -327,7 +327,7 @@ namespace hiop
                "KKT_SPARSE_XYcYd linsys: GPU compute mode not supported at this time.");
 
         if( (nullptr == linSys_ && linear_solver == "auto") || linear_solver == "cusolver-lu") {
-#if defined(HIOP_USE_CUSOLVER)
+#if defined(HIOP_USE_CUSOLVER_LU)
           linSys_ = new hiopLinSolverSymSparseCUSOLVER(n, nnz, nlp_);
           linsol_actual = "CUSOLVER-LU";
           auto* fact_acceptor_ic = dynamic_cast<hiopFactAcceptorIC*> (fact_acceptor_);
@@ -682,7 +682,7 @@ namespace hiop
         //our first choice is cuSolver on hybrid compute mode
         assert(nullptr == linSys_);
         if(linear_solver == "cusolver-lu" || linear_solver == "auto") {
-#if defined(HIOP_USE_CUSOLVER)
+#if defined(HIOP_USE_CUSOLVER_LU)
           actual_lin_solver = "CUSOLVER-LU";
           linSys_ = new hiopLinSolverSymSparseCUSOLVER(n, nnz, nlp_);
           auto* fact_acceptor_ic = dynamic_cast<hiopFactAcceptorIC*> (fact_acceptor_);
@@ -754,7 +754,7 @@ namespace hiop
         assert(nullptr == linSys_);
         
         if(linear_solver == "cusolver-lu" || linear_solver == "auto") {
-#if defined(HIOP_USE_CUSOLVER)        
+#if defined(HIOP_USE_CUSOLVER_LU)        
           linSys_ = new hiopLinSolverSymSparseCUSOLVER(n, nnz, nlp_);
           nlp_->log->printf(hovScalars,
                             "KKT_SPARSE_XDYcYd linsys: alloc CUSOLVER-LU size %d (%d cons) (gpu)\n",
@@ -820,7 +820,7 @@ namespace hiop
       assert( (compute_mode == "hybrid" || compute_mode == "cpu") &&
                 "KKT_SPARSE_FULL_KKT linsys does not currently support gpu compute mode");
       
-#ifdef HIOP_USE_CUSOLVER
+#ifdef HIOP_USE_CUSOLVER_LU
       nlp_->log->printf(hovWarning,
                         "KKT_SPARSE_FULL_KKT linsys: alloc nonsym CUSOLVER size %d (%d cons)\n",
                         n,
