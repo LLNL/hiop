@@ -62,6 +62,95 @@
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 
+/*
+ * Add entries of the array `diag_values` to the diagonals of the CSR matrix (irowptr, jcolind, values).
+ *
+ * @pre The CSR matrix must have diagonals part of its nonzero pattern.
+ */
+__global__
+void csr_add_vec_to_diag(int n, int nnz, int* irowptr, int* jcolind, double* values, double alpha, const double* diag_values)
+{
+  int tid = blockIdx.x * blockDim.x + threadIdx.x;
+  int stride = blockDim.x * gridDim.x;
+  for(int row=tid; row<n; row+=stride) {
+    int L=irowptr[row];
+    int R=irowptr[row+1]-1;
+    assert(L<nnz);
+    assert(R<nnz);
+    assert(L<=R);
+
+#ifndef NDEBUG
+    int idx_found = -1;
+#endif
+    do { //binary search
+      const int midpoint = (R+L)/2;
+      if(jcolind[midpoint]>row) {
+        R = midpoint-1;
+      } else if(jcolind[midpoint]<row) {
+        L = midpoint+1;
+      } else {
+        assert(idx_found<nnz);
+        values[midpoint] += alpha*diag_values[row];
+#ifndef NDEBUG
+        idx_found = midpoint;
+#endif        
+        break;
+      }
+    } while(L<=R);
+#ifndef NDEBUG
+    assert(idx_found>=0 &&
+           "add_val(vector)_to_diag(cuda): diagonal element not part of the nonzeros or column indexes not sorted");
+#endif    
+  }
+}
+
+/*
+ * Add `val` to the diagonals of the CSR matrix (irowptr, jcolind, values).
+ *
+ * @pre The CSR matrix must have diagonals part of its nonzero pattern.
+ */
+__global__
+void csr_add_val_to_diag(int n, int nnz, int* irowptr, int* jcolind, double* values, double val)
+{
+  int tid = blockIdx.x * blockDim.x + threadIdx.x;
+  int stride = blockDim.x * gridDim.x;
+  for(int row=tid; row<n; row+=stride) {
+    int L=irowptr[row];
+    int R=irowptr[row+1]-1;
+    assert(L<nnz);
+    assert(R<nnz);
+    assert(L<=R);
+
+#ifndef NDEBUG
+    int idx_found = -1;
+#endif
+    do { //binary search
+      const int midpoint = (R+L)/2;
+      if(jcolind[midpoint]>row) {
+        R = midpoint-1;
+      } else if(jcolind[midpoint]<row) {
+        L = midpoint+1;
+      } else {
+        assert(idx_found<nnz);
+        values[midpoint] += val;
+#ifndef NDEBUG
+        idx_found = midpoint;
+#endif        
+        break;
+      }
+    } while(L<=R);
+#ifndef NDEBUG
+    assert(idx_found>=0 &&
+           "add_val(scalar)_to_diag(cuda): diagonal element not part of the nonzeros or column indexes not sorted");
+#endif    
+  }
+}
+
+/*
+ * Set the diagonal entries of the CSR matrix (irowptr, jcolind, values) to `val`.
+ *
+ * @pre The CSR matrix must have diagonals part of its nonzero pattern.
+ */
 __global__
 void csr_set_diag_to_val(int n, int nnz, int* irowptr, int* jcolind, double* values, double val)
 {
@@ -74,7 +163,48 @@ void csr_set_diag_to_val(int n, int nnz, int* irowptr, int* jcolind, double* val
     assert(R<nnz);
     assert(L<=R);
 
-    int idx_found=-1;
+#ifndef NDEBUG
+    int idx_found = -1;
+#endif
+    do { //binary search
+      const int midpoint = (R+L)/2;
+      if(jcolind[midpoint]>row) {
+        R = midpoint-1;
+      } else if(jcolind[midpoint]<row) {
+        L = midpoint+1;
+      } else {
+        assert(idx_found<nnz);
+        values[midpoint] = val;
+#ifndef NDEBUG
+        idx_found = midpoint;
+#endif        
+        break;
+      }
+    } while(L<=R);
+#ifndef NDEBUG
+    assert(idx_found>=0 && "set_diag(cuda): diagonal element not part of the nonzeros or column indexes not sorted");
+#endif
+  }
+}
+
+/// Copy diagonals of the CSR matrix to `diag_out` array.
+__global__
+void csr_copy_diag_to_vec(int n,
+                          int nnz,
+                          const int* irowptr,
+                          const int* jcolind,
+                          const double* values,
+                          double* diag_out)
+{
+  int tid = blockIdx.x * blockDim.x + threadIdx.x;
+  int stride = blockDim.x * gridDim.x;
+  for(int row=tid; row<n; row+=stride) {
+    int L=irowptr[row];
+    int R=irowptr[row+1]-1;
+    assert(L<nnz);
+    assert(R<nnz);
+    assert(L<=R);
+    diag_out[row] = 0.0; //in case elem (row,row) is not a nonzero
 
     do { //binary search
       const int midpoint = (R+L)/2;
@@ -83,18 +213,30 @@ void csr_set_diag_to_val(int n, int nnz, int* irowptr, int* jcolind, double* val
       } else if(jcolind[midpoint]<row) {
         L = midpoint+1;
       } else {
-        idx_found = midpoint;
+        assert(midpoint<nnz);
+        diag_out[row] = values[midpoint];
         break;
       }
     } while(L<=R);
-    if(idx_found>=0) {
-      assert(idx_found<nnz);
-      values[idx_found]=val;
-    } else {
-      assert(false);
-    }
+  }//end of for
+}
+
+/// Set row pointers to {0,1,...,n-1, n} and column indexes to {0,1,...,n-1}.
+__global__
+void csr_form_diag_symbolic(int n, int* irowptr, int* jcolind)
+{
+  const int num_threads = blockDim.x * gridDim.x;
+  const int tid = blockIdx.x * blockDim.x + threadIdx.x;
+
+  for(int it=tid; it<n; it+=num_threads) {
+    irowptr[it] = it;
+    jcolind[it] = it;
+  }
+  if(tid==num_threads-1) {
+    irowptr[n]=n;
   }
 }
+
 
 namespace hiop
 {
@@ -110,5 +252,40 @@ void csr_set_diag_kernel(int n, int nnz, int* irowptr, int* jcolind, double* val
   csr_set_diag_to_val<<<num_blocks,block_size>>>(n, nnz, irowptr, jcolind, values, val);
 }
 
+void csr_add_diag_kernel(int n, int nnz, int* irowptr, int* jcolind, double* values, double val)
+{
+  //block of smaller sizes tend to perform 1.5-2x faster than the usual 256 or 128 blocks
+  int block_size=16;
+  int num_blocks = (n+block_size-1)/block_size;
+  csr_add_val_to_diag<<<num_blocks,block_size>>>(n, nnz, irowptr, jcolind, values, val);
+}
+
+void csr_add_diag_kernel(int n, int nnz, int* irowptr, int* jcolind, double* values, double alpha, const double* Dvalues)
+{
+  //block of smaller sizes tend to perform 1.5-2x faster than the usual 256 or 128 blocks
+  int block_size=16;
+  int num_blocks = (n+block_size-1)/block_size;
+  csr_add_vec_to_diag<<<num_blocks,block_size>>>(n, nnz, irowptr, jcolind, values, alpha, Dvalues);
+}
+
+void csr_get_diag_kernel(int n,
+                         int nnz,
+                         const int* irowptr,
+                         const int* jcolind,
+                         const double* values,
+                         double* diag_out)
+{
+  //block of smaller sizes tend to perform 1.5-2x faster than the usual 256 or 128 blocks
+  int block_size=16;
+  int num_blocks = (n+block_size-1)/block_size;
+  csr_copy_diag_to_vec<<<num_blocks,block_size>>>(n, nnz, irowptr, jcolind, values, diag_out);
+}
+
+void csr_form_diag_symbolic_kernel(int n, int* irowptr, int* jcolind)
+{
+  int block_size=256;
+  int num_blocks = (n+block_size-1)/block_size;
+  csr_form_diag_symbolic<<<num_blocks,block_size>>>(n, irowptr, jcolind);
+}
 }  //end of namespace
 } //end of namespace
