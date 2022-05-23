@@ -80,7 +80,7 @@ void csr_set_diag_kernel(int n, int nnz, int* irowptr, int* jcoldind, double* va
 void csr_add_diag_kernel(int n, int nnz, int* irowptr, int* jcoldind, double* values, double Dval);
 
 /**
- * Add entries of the array `values`  the diagonal of the CSR matrix. Performs a binary search on the column indexes
+ * Add entries of the array `values` to the diagonal of the CSR matrix. Performs a binary search on the column indexes
  * for each row. Assumes pointers are on the device and parallelizes over rows.
  * 
  * @pre CSR matrix must be square.
