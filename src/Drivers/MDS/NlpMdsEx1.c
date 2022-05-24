@@ -372,14 +372,14 @@ int main(int argc, char **argv) {
   problem.solution = (double*)malloc(n * sizeof(double));
   for(int i=0; i<n; i++) problem.solution[i] = 0.0;
   
-  hiop_mds_createProblemcreateProblem(&problem);
-  hiop_mds_createProblemsolveProblem(&problem);
+  hiop_mds_create_problem(&problem);
+  hiop_mds_solve_problem(&problem);
   if(fabs(problem.obj_value-(-4.999509728895e+01))>1e-6) {
     printf("objective mismatch for MDS Ex1 C interface problem with 400 sparse variables and 100 "
       "dense variables did. BTW, obj=%18.12e was returned by HiOp.\n", problem.obj_value);
       return -1;
   }
-  hiop_mds_createProblemdestroyProblem(&problem);
+  hiop_mds_destroy_problem(&problem);
   free(problem.solution);
   free(xlow); free(xupp);
   free(clow); free(cupp);
