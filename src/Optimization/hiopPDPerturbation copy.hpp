@@ -46,7 +46,7 @@ public:
    * 'nlp_' object.
    * Returns 'false' if something goes wrong, otherwise 'true'
    */
-  bool initialize(hiopNlpFormulation* nlp);
+  virtual bool initialize(hiopNlpFormulation* nlp);
 
   /** Set log-barrier mu. */
   inline void set_mu(const double& mu)
@@ -166,8 +166,7 @@ public:
   hiopPDPerturbationNormalEqn()
     : hiopPDPerturbation(),
       delta_c_min_bar_(1e-20),
-      delta_c_max_bar_(1e-2),
-      kappa_c_plus_(10.)
+      delta_c_max_bar_(1e-2)
   {
   }
 
@@ -210,7 +209,6 @@ private: //methods
 protected: //variables
   double delta_c_max_bar_;
   double delta_c_min_bar_;
-  double kappa_c_plus_;
 };
 
 } //end of namespace

@@ -420,12 +420,12 @@ int hiopKKTLinSysSparseNormalEqn::factorizeWithCurvCheck()
   //factorization
   size_type n_neg_eig = hiopKKTLinSysCurvCheck::factorizeWithCurvCheck();
 
-  size_type n_neg_eig_11 = 0;
   if(n_neg_eig == -1) {
     nlp_->log->printf(hovWarning,
                 "KKT_SPARSE_NormalEqn linsys: Detected null eigenvalues.\n");
     n_neg_eig = -1;
   } else {
+    // Cholesky factorization succeeds. Matrix is PD and hence the corresponding Augmented system has correct inertia
     n_neg_eig = Jac_c_->m() + Jac_d_->m();;    
   }
 

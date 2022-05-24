@@ -391,7 +391,7 @@ protected:
   /// Overridden method from base class that does some preprocessing specific to Newton solver
   void reload_options();
 protected:
-  hiopPDPerturbation pd_perturb_;
+  hiopPDPerturbation* pd_perturb_;
   hiopFactAcceptor* fact_acceptor_;
 private:
   hiopAlgFilterIPMNewton() : hiopAlgFilterIPMBase(NULL) {};
