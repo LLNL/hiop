@@ -386,7 +386,8 @@ public:
    * @pre  `this` is expected to store the diagonal entries as nonzero elements.
    */
   virtual void set_diagonal(const double& val);
-
+  virtual void set_randomized_diagonal(double sample_range, const double& val);
+ 
   /**
    * Allocates a CSR matrix capable of storing the multiplication result of M = X*Y, where X 
    * is the calling matrix class (`this`) and Y is the `Y` argument of the method.

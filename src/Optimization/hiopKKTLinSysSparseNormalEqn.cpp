@@ -254,6 +254,9 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const double& delta_wx_in,
   t.reset(); t.start();
   assert(delta_cc>=0.0);
   Diag_reg_->set_diagonal(delta_cc);
+  if(delta_cc > 0.0) {
+    Diag_reg_->set_randomized_diagonal(0.1, delta_cc); 
+  }
   Diag_reg_->add_matrix_numeric(*M_normaleqn_, 1.0, *JDiagJt_, 1.0);
 
   // TODO should have same code for different compute modes (remove is_cusolver_on), i.e., remove if(linSolver_ma57)
