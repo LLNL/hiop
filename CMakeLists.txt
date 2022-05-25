@@ -11,7 +11,7 @@ if (POLICY CMP0074)
   cmake_policy(SET CMP0074 NEW)
 endif ()
 
-project (hiop VERSION "0.6.0")
+project (hiop VERSION "0.6.2")
 
 string(TIMESTAMP HIOP_RELEASE_DATE "%Y-%m-%d")
 
@@ -24,7 +24,7 @@ FortranCInterface_HEADER(FortranCInterface.hpp MACRO_NAMESPACE "FC_")
 
 option(HIOP_USE_EIGEN "Build with Eigen support" ON)
 option(HIOP_USE_MPI "Build with MPI support" ON)
-option(HIOP_USE_GPU "Build with support for GPUs - Magma and cuda libraries" OFF)
+option(HIOP_USE_GPU "Build with support for GPUs - CUDA or HIP libraries" OFF)
 option(HIOP_TEST_WITH_BSUB "Use `jsrun` instead of `mpirun` commands when running tests" OFF)
 option(HIOP_USE_RAJA   "Build with portability abstraction library RAJA" OFF)
 option(HIOP_DEEPCHECKS "Extra checks and asserts in the code with a high penalty on performance" OFF)
@@ -197,7 +197,10 @@ endif()
 
 if(HIOP_USE_GPU)
   include(CheckLanguage)
-  set(HIOP_MAGMA_DIR CACHE PATH "Path to Magma directory")
+  if(HIOP_USE_MAGMA)
+    set(HIOP_MAGMA_DIR CACHE PATH "Path to Magma directory")
+  endif()
+
   if(HIOP_USE_CUDA)
     enable_language(CUDA)
     check_language(CUDA)
@@ -211,11 +214,18 @@ if(HIOP_USE_GPU)
       set(CMAKE_CUDA_ARCHITECTURES 35)
     endif()
     set(CMAKE_CUDA_FLAGS "--expt-extended-lambda")
-    set(HIOP_MAGMA_DIR CACHE PATH "Path to Magma directory")
-    include(FindHiopMagma)
+
+    if(HIOP_USE_MAGMA)
+      set(HIOP_MAGMA_DIR CACHE PATH "Path to Magma directory")
+      include(FindHiopMagma)
+    endif()
+
     include(FindHiopCudaLibraries)
     target_link_libraries(hiop_tpl INTERFACE hiop_cuda)
-    target_link_libraries(hiop_cuda INTERFACE Magma)
+
+    if(HIOP_USE_MAGMA)
+      target_link_libraries(hiop_cuda INTERFACE Magma)
+    endif()
   elseif(HIOP_USE_HIP)
     include(FindHiopHipLibraries)
     add_definitions(-DHAVE_HIP) # For hipmagma

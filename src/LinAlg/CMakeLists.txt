@@ -62,7 +62,7 @@ set(hiopLinAlg_RAJA_SRC
   hiopMatrixRajaSparseTriplet.cpp
 )
 
-set(hiopLinAlg_GPU_SRC
+set(hiopLinAlg_MAGMA_SRC
   hiopLinSolverSymDenseMagma.cpp
 )
 
@@ -139,7 +139,9 @@ endif()
 # If GPU support is enabled add Magma interface (CUDA version)
 # Treat RAJA sources as CUDA (temporary, need more flexible solutions)
 if(HIOP_USE_GPU)
-  list(APPEND hiopLinAlg_SRC ${hiopLinAlg_GPU_SRC})
+  if(HIOP_USE_MAGMA)
+    list(APPEND hiopLinAlg_SRC ${hiopLinAlg_MAGMA_SRC})
+  endif()
   if(HIOP_USE_CUDA)
     set_source_files_properties(${hiopLinAlg_RAJA_SRC} ${hiopLinAlg_CUSOLVER_SRC} PROPERTIES LANGUAGE CUDA)
   endif()

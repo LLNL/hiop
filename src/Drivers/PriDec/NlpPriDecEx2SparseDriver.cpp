@@ -1,10 +1,6 @@
 #include "NlpPriDecEx2Sparse.hpp"
 #include "hiopAlgPrimalDecomp.hpp"
 
-#ifdef HIOP_USE_GPU
-#include "magma_v2.h"
-#endif
-
 #include <cstdlib>
 #include <string>
 
@@ -123,10 +119,6 @@ int main(int argc, char **argv)
   ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank); assert(MPI_SUCCESS==ierr);
 #endif
 
-#ifdef HIOP_USE_MAGMA
-  magma_init();
-#endif
-
   int nx = 20; //nx == ny for this problem
   int nS = 5; // number of \xi
   int S = 5;
@@ -136,8 +128,7 @@ int main(int argc, char **argv)
   if(!parse_arguments(argc, argv, selfCheck, nx, S)) {
     usage(argv[0]);
     return 1;
-  }
-  
+  }  
   
   PriDecMasterProbleEx2Sparse pridec_problem(nx, nx, nS, S);
   hiop::hiopAlgPrimalDecomposition pridec_solver(&pridec_problem, MPI_COMM_WORLD);
@@ -167,9 +158,6 @@ int main(int argc, char **argv)
     }
   } 
   
-#ifdef HIOP_USE_MAGMA
-  magma_finalize();
-#endif
 #ifdef HIOP_USE_MPI
   MPI_Finalize();
 #endif
