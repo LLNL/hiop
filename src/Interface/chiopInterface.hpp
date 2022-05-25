@@ -237,6 +237,8 @@ extern "C" {
     // Used by hiop_sparse_createProblemsolveProblem() to store the final state. The duals should be added here.
     double *solution;
     double obj_value;
+    int niters;
+    int status;
     // HiOp callback function wrappers
     int (*get_starting_point)(hiop_size_type n_, double* x0, void* user_data); 
     int (*get_prob_sizes)(hiop_size_type* n_, hiop_size_type* m_, void* user_data);

@@ -111,8 +111,9 @@ int hiop_sparse_create_problem(cHiopSparseProblem *prob) {
 int hiop_sparse_solve_problem(cHiopSparseProblem *prob) {
   hiopSolveStatus status;
   hiopAlgFilterIPMNewton solver(prob->refcppHiop);
-  status = solver.run();
+  prob->status = solver.run();
   prob->obj_value = solver.getObjective();
+  prob->niters = solver.getNumIterations();
   solver.getSolution(prob->solution);
   return 0;
 }

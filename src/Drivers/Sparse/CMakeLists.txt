@@ -7,6 +7,11 @@ target_link_libraries(NlpSparseEx2.exe HiOp::HiOp)
 add_executable(NlpSparseEx3.exe NlpSparseEx3.cpp NlpSparseEx3Driver.cpp)
 target_link_libraries(NlpSparseEx3.exe HiOp::HiOp)
 
+if(HIOP_BUILD_SHARED)
+  add_executable(NlpSparseCEx1.exe NlpSparseCEx1.c)
+  target_link_libraries(NlpSparseCEx1.exe HiOp::HiOp)
+endif()
+
 ##########################################################
 # CMake Tests
 ##########################################################

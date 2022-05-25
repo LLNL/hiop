@@ -103,6 +103,8 @@ typedef struct cHiopSparseProblem {
   void *user_data; 
   double *solution;
   double obj_value;
+  int niters;
+  int status;
   int (*get_starting_point)(hiop_size_type n_, double* x0, void* jprob); 
   int (*get_prob_sizes)(hiop_size_type* n_, hiop_size_type* m_, void* jprob); 
   int (*get_vars_info)(hiop_size_type n, double *xlow_, double* xupp_, void* jprob);
@@ -119,7 +121,6 @@ typedef struct cHiopSparseProblem {
                        hiop_size_type m,
                        double* x,
                        int new_x,
-                       hiop_size_type nsparse,
                        hiop_size_type nnzJacS,
                        hiop_index_type* iJacS,
                        hiop_index_type* jJacS,
