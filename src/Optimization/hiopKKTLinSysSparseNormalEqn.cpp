@@ -159,7 +159,8 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const double& delta_wx_in,
   if(nullptr == Hd_) {
     Hd_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), nineq);
   }
-  Hd_->copyFrom(*Dd_);  
+  Hd_->copyFrom(*Dd_);
+  // TODO: add function add_constant_with_bias()
   Hd_->addConstant(delta_wd_in);
 
   nlp_->runStats.kkt.tmUpdateInit.stop();
@@ -171,6 +172,8 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const double& delta_wx_in,
   * ( [ Jd -I ] [   0           Dd+delta_wd ]      [  0     -I  ]   [    0      delta_cd ] ) 
   */
 
+
+  // TODO: jump to the steps where we add dual regularization, if delta_wx is not changed and this function is called due to refactorization
   hiopTimer t;
 
   if(nullptr == JDiagJt_) {
