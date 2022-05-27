@@ -12,6 +12,11 @@ if(HIOP_BUILD_SHARED)
   target_link_libraries(NlpSparseCEx1.exe HiOp::HiOp)
 endif()
 
+#if(HIOP_BUILD_SHARED)
+add_executable(NlpSparseFEx1.exe hs_ex.f)
+target_link_libraries(NlpSparseFEx1.exe HiOp::HiOp)
+#endif()
+
 ##########################################################
 # CMake Tests
 ##########################################################
