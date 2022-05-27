@@ -58,10 +58,25 @@
 
 //include hiop index and size types
 #include "hiop_types.h"
+#include <assert.h>
+#include <stddef.h>
 #include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
+#include <math.h>
+
+#include "hiopInterface.h"
 #include "hiopFortranInterface.h"
-#include "FortranCInterface.hpp"
+//#include "hiopAlgFilterIPM.hpp"
+
+int get_starting_point_wrapper( hiop_size_type* n_, double* x0, void* user_data)
+{
+   FProb* fprob = (FProb*) user_data;
+  for(int i=0; i<fprob->n; i=i+1) {
+    x0[i] = fprob->x0[i];
+  }
+   return 0;
+}
 
 int get_prob_sizes_wrapper( hiop_size_type* n_, hiop_size_type* m_, void* user_data)
 {
@@ -93,13 +108,14 @@ int get_cons_info_wrapper(hiop_size_type m, double *clow_, double* cupp_, void* 
   return 0;
 }
 
-int get_sparse_blocks_info(hiop_size_type* nx,
+int get_sparse_blocks_info_wrapper(hiop_size_type* nx,
                            hiop_size_type* nnz_sparse_Jaceq,
                            hiop_size_type* nnz_sparse_Jacineq,
                            hiop_size_type* nnz_sparse_Hess_Lagr,
                            void* user_data) 
 {
   FProb* fprob = (FProb*) user_data;
+  *nx = fprob->n;
   *nnz_sparse_Jaceq = fprob->nnz_sparse_Jaceq;
   *nnz_sparse_Jacineq = fprob->nnz_sparse_Jacineq;
   *nnz_sparse_Hess_Lagr = fprob->nnz_sparse_Hess_Lagr;
@@ -117,24 +133,56 @@ int eval_f_wrapper(hiop_size_type n, double* x, int new_x, double* obj, void* us
 
 int eval_c_wrapper(hiop_size_type n, hiop_size_type m, double* x, int new_x, double* cons, void* user_data) 
 {
+  hiop_size_type m_ = m;
+  hiop_size_type new_x_ = new_x;
+  FProb* fprob = (FProb*) user_data;
+  hiop_size_type n_ = fprob->n;
+  fprob->f_eval_c(&n_, &m_, x, &new_x_, cons);
   return 0;
 }
 
 int eval_grad_wrapper(hiop_size_type n, double* x, int new_x, double* gradf, void* user_data) 
 {
+  hiop_size_type n_ = n;
+  hiop_size_type new_x_ = new_x;
+  FProb* fprob = (FProb*) user_data;
+  fprob->f_eval_grad(&n_, x, &new_x_, gradf);
   return 0;
 }
 
 int eval_jac_wrapper(hiop_size_type n,
-                         hiop_size_type m,
-                         double* x,
-                         int new_x,
-                         int nnzJacS,
-                         hiop_index_type* iJacS,
-                         hiop_index_type* jJacS,
-                         double* MJacS,
-                         void *user_data) 
-{
+                     hiop_size_type m,
+                     double* x,
+                     int new_x,
+                     int nnzJacS,
+                     hiop_index_type* iJacS,
+                     hiop_index_type* jJacS,
+                     double* MJacS,
+                     void *user_data) 
+{ 
+  hiop_size_type n_ = n;
+  hiop_size_type m_ = m;
+  hiop_size_type new_x_ = new_x;
+  hiop_size_type nnzJacS_ = nnzJacS;
+  int task = 0;
+  FProb* fprob = (FProb*) user_data;
+  if(iJacS==NULL && jJacS==NULL && MJacS !=NULL) {
+    task = 1;
+  } else if(iJacS!=NULL && jJacS!=NULL && MJacS ==NULL){
+    task = 0;
+  } else {
+    printf("ERROR: cannot reach here!");
+  }
+  fprob->f_eval_jac(&task, &n_, &m_, x, &new_x_, &nnzJacS_, iJacS, jJacS, MJacS);
+
+  // TODO: If we can add a flag in ma57 when a problem comes from fortran?
+  //       Then we don't need to -1 here and +1 when initialize ma57
+  if(task == 0) {
+    for(hiop_index_type k=0; k<nnzJacS_; k++){
+      iJacS[k] -= 1;
+      jJacS[k] -= 1;
+    }
+  }
   return 0;
 }
 
@@ -151,6 +199,32 @@ int eval_hess_wrapper(hiop_size_type n,
                           double* MHSS,
                           void* user_data) 
 {
+  hiop_size_type n_ = n;
+  hiop_size_type m_ = m;
+  hiop_size_type new_x_ = new_x;
+  hiop_size_type new_lambda_ = new_lambda;
+  hiop_size_type nnzHSS_ = nnzHSS;
+  double obj_scal_ = obj_factor;
+  int task = 0;
+
+  FProb* fprob = (FProb*) user_data;
+  if(iHSS==NULL && jHSS==NULL && MHSS !=NULL) {
+    task = 1;
+  } else if(iHSS!=NULL && jHSS!=NULL && MHSS ==NULL){
+    task = 0;
+  } else {
+    printf("ERROR: cannot reach here!");
+  }
+  fprob->f_eval_hess(&task, &n_, &m_, &obj_scal_, x, &new_x_, lambda, &new_lambda_, &nnzHSS_, iHSS, jHSS, MHSS);
+
+  // TODO: If we can add a flag in ma57 when a problem comes from fortran?
+  //       Then we don't need to -1 here and +1 when initialize ma57
+  if(task == 0) {
+    for(hiop_index_type k=0; k<nnzHSS_; k++){
+      iHSS[k] -= 1;
+      jHSS[k] -= 1;
+    }
+  }
   return 0;
 }
 
@@ -163,6 +237,7 @@ void* FC_GLOBAL(hiopsparseprob, HIOPSPARSEPROB) ( hiop_size_type*   n,
                                   double*           xupp,
                                   double*           clow,
                                   double*           cupp,
+                                  double*           x0,
                                   f_eval_f_cb       f_eval_f,
                                   f_eval_c_cb       f_eval_c,
                                   f_eval_grad_cb    f_eval_grad,
@@ -186,8 +261,22 @@ void* FC_GLOBAL(hiopsparseprob, HIOPSPARSEPROB) ( hiop_size_type*   n,
 
   f_prob->xlow = (double*) malloc(f_prob->n*sizeof(double));
   f_prob->xupp = (double*) malloc(f_prob->n*sizeof(double));
+  for(int i=0; i<f_prob->n; i++) {
+    f_prob->xlow[i] = xlow[i];
+    f_prob->xupp[i] = xupp[i];
+  }
   f_prob->clow = (double*) malloc(f_prob->m*sizeof(double));
   f_prob->cupp = (double*) malloc(f_prob->m*sizeof(double));
+  for(int i=0; i<f_prob->m; i++) {
+    f_prob->clow[i] = clow[i];
+    f_prob->cupp[i] = cupp[i];
+  }
+
+  f_prob->x0 = (double*) malloc(f_prob->n*sizeof(double));
+  for(int i=0; i<f_prob->n; i++) {
+    f_prob->x0[i] = x0[i];
+  }
+
   f_prob->f_eval_f = f_eval_f;
   f_prob->f_eval_c = f_eval_c;
   f_prob->f_eval_grad = f_eval_grad;
@@ -199,55 +288,48 @@ void* FC_GLOBAL(hiopsparseprob, HIOPSPARSEPROB) ( hiop_size_type*   n,
   f_prob->c_prob->get_prob_sizes = get_prob_sizes_wrapper;  
   f_prob->c_prob->get_vars_info = get_vars_info_wrapper;
   f_prob->c_prob->get_cons_info = get_cons_info_wrapper;
+  f_prob->c_prob->get_starting_point = get_starting_point_wrapper;
+  f_prob->c_prob->get_sparse_blocks_info = get_sparse_blocks_info_wrapper;
   f_prob->c_prob->eval_f = eval_f_wrapper;
   f_prob->c_prob->eval_cons = eval_c_wrapper;
   f_prob->c_prob->eval_grad_f = eval_grad_wrapper;
   f_prob->c_prob->eval_Jac_cons = eval_jac_wrapper;
   f_prob->c_prob->eval_Hess_Lagr = eval_hess_wrapper;
 
+  f_prob->c_prob->solution = (double*)malloc(f_prob->n * sizeof(double));
+  for(int i=0; i<f_prob->n; i++) {
+    f_prob->c_prob->solution[i] = 0.0;
+  }
 
+  hiop_sparse_create_problem(f_prob->c_prob);
 
-#if 0
-  c_prob.eval_f = eval_f;
-  c_prob.eval_grad_f = eval_grad_f;
-  c_prob.eval_cons = eval_cons;
-  c_prob.get_sparse_blocks_info = get_sparse_blocks_info;
-  c_prob.eval_Jac_cons = eval_Jac_cons;
-  c_prob.eval_Hess_Lagr = eval_Hess_Lagr;
-  c_prob.get_starting_point = get_starting_point_wrapper;
+  printf("Creat HIOP_SPARSE problem from Fortran interface!\n");
+  return (void*) f_prob;
+}
 
-  c_prob.solution = (double*)malloc(n * sizeof(double));
-  c_prob.solution = (double*)malloc(1* sizeof(double));
+void FC_GLOBAL(hiopsparsesolve, HIOPSPARSESOLVE) (void** f_prob_in, double* sol)
+{
+  FProb* f_prob = (FProb*) *f_prob_in;
+  cHiopSparseProblem *prob = f_prob->c_prob;
 
-   /* First create a new IpoptProblem object; if that fails return 0 */
-   f_prob->c_prob = CreateIpoptProblem(n, X_L, X_U, m, G_L, G_U, nele_jac, nele_hess,
-                         index_style, eval_f, eval_g, eval_grad_f, eval_jac_g, eval_h);
-   if( fuser_data->Problem == NULL )
-   {
-      free(fuser_data);
-      return (fptr)NULL;
-   }
+  hiop_sparse_solve_problem(prob);
 
-   /* Store the information for the callback function */
-   fuser_data->eval_f = eval_f;
-   fuser_data->eval_c = eval_c;
-   fuser_data->eva = EVAL_GRAD_F;
-   fuser_data->EVAL_JAC_G = EVAL_JAC_G;
-   fuser_data->EVAL_HESS = EVAL_HESS;
-   fuser_data->INTERMEDIATE_CB = NULL;
-#endif
-    printf("Creat HIOP_SPARSE problem from Fortran interface!\n");
-    return (void*) f_prob;
+  for(int i=0; i<f_prob->n; i++) {
+    sol[i] = prob->solution[i];
+  }
+  printf("Solve HIOP_SPARSE problem from Fortran interface!\n");
 }
 
 void FC_GLOBAL(deletehiopsparseprob, DELETEHIOPSPARSEPROB) (void** f_prob_in)
 {
   FProb* f_prob = (FProb*) *f_prob_in;
+  hiop_sparse_destroy_problem(f_prob->c_prob);
 
   free(f_prob->xlow);
   free(f_prob->xupp);
   free(f_prob->clow);
   free(f_prob->cupp);
+  free(f_prob->c_prob->solution);
   free(f_prob->c_prob);
   free(f_prob);
   *f_prob_in = (void*)NULL;

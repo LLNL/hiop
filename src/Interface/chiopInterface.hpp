@@ -233,9 +233,9 @@ extern "C" {
     hiopNlpSparse *refcppHiop;
     cppUserProblemSparse *hiopinterface;
     // user_data similar to the Ipopt interface. In case of Julia pointer to the Julia problem object.
-    void *user_data;
+    void* user_data;
     // Used by hiop_sparse_createProblemsolveProblem() to store the final state. The duals should be added here.
-    double *solution;
+    double* solution;
     double obj_value;
     int niters;
     int status;
