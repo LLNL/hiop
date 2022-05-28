@@ -94,12 +94,9 @@ namespace hiop
       return false;
     }
 
-    int refactorizationSetupCusolverGLU();
-    int refactorizationSetupCusolverRf();
-
-    int initializeKLU();
-    int initializeCusolverGLU();
-    int initializeCusolverRf();
+    /** called the very first time a matrix is factored. Perform KLU
+     * factorization, allocate all aux variables */
+    virtual void firstCall();
 
     void setFactorizationType(std::string newFact_);
     void setRefactorizationType(std::string newRefact_);
@@ -186,20 +183,23 @@ namespace hiop
 
     template <typename T>
     void hiopCheckCudaError(T result, const char* const file, int const line);
+    /* private functions needed for refactorization setup, no need to make them public */
+   
+    int initializeKLU();
+    int initializeCusolverGLU();
+    int initializeCusolverRf();
 
-  public:
-    /** called the very first time a matrix is factored. Perform KLU
-     * factorization, allocate all aux variables */
-    virtual void firstCall();
-
+    int refactorizationSetupCusolverGLU();
+    int refactorizationSetupCusolverRf();
+    
     friend class hiopLinSolverNonSymSparseCUSOLVER;
   };
 
   class hiopLinSolverNonSymSparseCUSOLVER : public hiopLinSolverNonSymSparse
   {
   public:
+    //construtor
     hiopLinSolverNonSymSparseCUSOLVER(const int& n, const int& nnz, hiopNlpFormulation* nlp);
-
     virtual ~hiopLinSolverNonSymSparseCUSOLVER();
 
     /** Triggers a SuiteSparse KLU refactorization of the matrix, if necessary.
@@ -218,18 +218,16 @@ namespace hiop
       return false;
     }
 
-    int refactorizationSetupCusolverGLU();
-    int refactorizationSetupCusolverRf();
-
-    int initializeKLU();
-    int initializeCusolverGLU();
-    int initializeCusolverRf();
-
+    /** called the very first time a matrix is factored. */
+    void firstCall();
+    
     void setFactorizationType(std::string newFact_);
     void setRefactorizationType(std::string newRefact_);
 
     std::string getFactorizationType();
     std::string getRefactorizationType();
+
+    friend class hiopLinSolverSymSparseCUSOLVER;
 
   private:
     int m_;   // number of rows of the whole matrix
@@ -298,11 +296,12 @@ namespace hiop
 
     template <typename T> void hiopCheckCudaError(T result, const char* const file, int const line);
 
-  public:
-    /** called the very first time a matrix is factored. */
-    void firstCall();
-
-    friend class hiopLinSolverSymSparseCUSOLVER;
+    int initializeKLU();
+    int initializeCusolverGLU();
+    int initializeCusolverRf();
+    
+    int refactorizationSetupCusolverGLU();
+    int refactorizationSetupCusolverRf();
   };
 
 } // namespace hiop
