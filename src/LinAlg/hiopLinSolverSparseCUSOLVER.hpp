@@ -94,6 +94,17 @@ namespace hiop
       return false;
     }
 
+    /** called the very first time a matrix is factored. Perform KLU
+     * factorization, allocate all aux variables */
+    virtual void firstCall();
+
+    void setFactorizationType(std::string newFact_);
+    void setRefactorizationType(std::string newRefact_);
+
+    std::string getFactorizationType();
+    std::string getRefactorizationType();
+    // KS: can consider one global function to set all the options but thats
+    // TBA in the future.
   private:
     //
     int m_;   // number of rows of the whole matrix
@@ -219,6 +230,15 @@ namespace hiop
       return false;
     }
 
+    /** called the very first time a matrix is factored. */
+    void firstCall();
+    
+    void setFactorizationType(std::string newFact_);
+    void setRefactorizationType(std::string newRefact_);
+
+    std::string getFactorizationType();
+    std::string getRefactorizationType();
+
     friend class hiopLinSolverSymSparseCUSOLVER;
 
   private:
@@ -295,8 +315,6 @@ namespace hiop
 
     // void compute_nnz();
     // void set_csr_indices_values();
-
-    template <typename T> void hiopCheckCudaError(T result, const char* const file, int const line);
 
     int initializeKLU();
     int initializeCusolverGLU();
