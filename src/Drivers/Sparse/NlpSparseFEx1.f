@@ -1,33 +1,26 @@
 C =============================================================================
 C
-C     This example is modified from IPOPT hs071_f.f.
+C     This example is modified from NlpSparseEx1.cpp
 C
-C     This is an example for the usage of HIOP in double precision.
-C     It implements problem 71 from the Hock-Schittkowski test suite:
 C
-C     min   x1*x4*(x1 + x2 + x3)  +  x3
-C     s.t.  x1*x2*x3*x4                   >=  25
-C           x1**2 + x2**2 + x3**2 + x4**2  =  40
-C           1 <=  x1,x2,x3,x4  <= 5
-C
-C     Starting point:
-C        x = (1, 5, 5, 1)
-C
-C     Optimal solution:
-C        x = (1.00000000, 4.74299963, 3.82114998, 1.37940829)
-C
-C     gfortran -O2  -c -o hs_ex.o hs_ex.f
-C     gfortran -O2  -c -o hs_ex.o hs_ex.f
-C     gfortran -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.1.sdk -mmacosx-version-min=11.6 -Wl,-search_paths_first -Wl,-headerpad_max_install_names hs_ex.o -o hs_ex.exe -Wl,-rpath,/Users/chiang7/project/hiop/build_fortran/src ../../libhiop.dylib /Users/chiang7/local/lib/libomp.dylib -framework Accelerate -lm -ldl /Users/chiang7/local/lib/libmetis.dylib /Users/chiang7/software/coin-or/lib/libcoinhsl.dylib
+C     min   sum 1/4* { (x_{i}-1)^4 : i=1,...,n}
+C     s.t.     4*x_1 + 2*x_2                   == 10
+C          5<= 2*x_1         + x_3
+C          1<= 2*x_1               + 0.5*x_i   <= 2*n, for i=4,...,n
+C          x_1 free
+C          0.0 <= x_2
+C          1.5 <= x_3 <= 10
+C          x_i >=0.5, i=4,...,n
 C =============================================================================
 
-      program example
+      program example1
       implicit none
 
       integer     N,     M,     NELE_JACEQ,     NELE_JACIN
       integer     NELE_HESS, retv
-      parameter  (N = 4, M = 2, NELE_JACEQ = 4, NELE_JACIN = 4)
-      parameter  (NELE_HESS = 10 )
+      parameter  (N = 500, M = 499)
+      parameter  (NELE_JACEQ = 2, NELE_JACIN = 2+2*(500-3))
+      parameter  (NELE_HESS = 500 )
 
       double precision LAM(M)
       double precision G(M)
@@ -47,13 +40,32 @@ C =============================================================================
       external EVAL_F, EVAL_CON, EVAL_GRAD, EVAL_JAC, EVAL_HESS
 
 C     Set initial point and bounds:
-      data X   / 1d0, 5d0, 5d0, 1d0/
-      data X_L / 1d0, 1d0, 1d0, 1d0 /
-      data X_U / 5d0, 5d0, 5d0, 5d0 /
+      do I = 1, N
+        X(I) = 0d0
+      enddo
+
+      X_L(1) = -1d20
+      X_U(1) =  1d20
+      X_L(2) =  0d0
+      X_U(2) =  1d20
+      X_L(3) =  1.5d0
+      X_U(3) =  10d0
+
+      do I = 4, N
+        X_L(I) = 0.5d0
+        X_U(I) = 1d20
+      enddo
 
 C     Set bounds for the constraints
-      data G_L / 25d0, 40d0 /
-      data G_U / 1d40, 40d0 /
+      G_L(1) =  1d1
+      G_U(1) =  1d1
+      G_L(2) =  5d0
+      G_U(2) =  1d20
+
+      do I = 3, M
+        G_L(I) = 1d0
+        G_U(I) = 2d0*N
+      enddo
 
 C     create hiop sparse problem
       HIOPPROBLEM = hiopsparseprob(N, M, NELE_JACEQ,
@@ -72,12 +84,6 @@ C     hiop solve
       write(*,*)
       write(*,*) 'Optimal Objective = ',OOBJ
       write(*,*)
-      write(*,*) 'The optimal values of X are:'
-      write(*,*)
-      do i = 1, N
-         write(*,*) 'X  (',i,') = ',X(i)
-      enddo
-      write(*,*)
 
 C     Clean up
       call deletehiopsparseprob(HIOPPROBLEM)
@@ -89,9 +95,12 @@ C                    Computation of objective function
 C =============================================================================
       subroutine EVAL_F(N, X, NEW_X, OBJ)
       implicit none
-      integer N, NEW_X
+      integer N, NEW_X, i
       double precision OBJ, X(N)
-      OBJ = X(1)*X(4)*(X(1)+X(2)+X(3)) + X(3)
+      OBJ = 0
+      do i = 1, N
+         OBJ = OBJ + 0.25d0*(X(i)-1d0)**4
+      enddo
       return
       end
 
@@ -100,12 +109,11 @@ C                Computation of gradient of objective function
 C =============================================================================
       subroutine EVAL_GRAD(N, X, NEW_X, GRAD)
       implicit none
-      integer N, NEW_X
+      integer N, NEW_X, i
       double precision GRAD(N), X(N)
-      GRAD(1) = X(4)*(2d0*X(1)+X(2)+X(3))
-      GRAD(2) = X(1)*X(4)
-      GRAD(3) = X(1)*X(4) + 1d0
-      GRAD(4) = X(1)*(X(1)+X(2)+X(3))
+      do i = 1, N
+         GRAD(i) = (X(i)-1d0)**3
+      enddo
       return
       end
 
@@ -114,10 +122,13 @@ C                     Computation of equality constraints
 C =============================================================================
       subroutine EVAL_CON(N, M, X, NEW_X, C)
       implicit none
-      integer N, NEW_X, M
+      integer N, NEW_X, M, i
       double precision C(M), X(N)
-      C(1) = X(1)*X(2)*X(3)*X(4) 
-      C(2) = X(1)**2 + X(2)**2 + X(3)**2 + X(4)**2
+      C(1) = 4d0*X(1) + 2d0*X(2)
+      C(2) = 2d0*X(1) + 1d0*X(3)
+      do i = 3, M
+         C(i) = 2d0*X(1) + 0.5d0*X(i+1)
+      enddo
       return
       end
 
@@ -128,7 +139,7 @@ C =============================================================================
       subroutine EVAL_JAC(TASK, N, M, X, NEW_X, NZ, IROW, JCOL, A)
       integer TASK, N, NEW_X, M, NZ
       double precision X(N), A(NZ)
-      integer IROW(NZ), JCOL(NZ), I
+      integer IROW(NZ), JCOL(NZ), I, conidx, nnzit
 
 C     structure of Jacobian:
       integer AVAR1(8), ACON1(8)
@@ -136,20 +147,51 @@ C     structure of Jacobian:
       data  ACON1 /1, 1, 1, 1, 2, 2, 2, 2/
       save  AVAR1, ACON1
 
+      nnzit = 1
       if( TASK.eq.0 ) then
-        do I = 1, 8
-          JCOL(I) = AVAR1(I)
-          IROW(I) = ACON1(I)
+C     // constraint 1 body --->  4*x_1 + 2*x_2 == 10
+        IROW(nnzit) = 1
+        JCOL(nnzit) = 1
+        nnzit = nnzit + 1
+        IROW(nnzit) = 1
+        JCOL(nnzit) = 2
+        nnzit = nnzit + 1
+C     // constraint 2 body ---> 2*x_1 + x_3
+        IROW(nnzit) = 2
+        JCOL(nnzit) = 1
+        nnzit = nnzit + 1
+        IROW(nnzit) = 2
+        JCOL(nnzit) = 3
+        nnzit = nnzit + 1
+C     // constraint 3 body ---> 2*x_1 + 0.5*x_i, for i>=4
+        conidx = 3
+        do I = 3, M
+          IROW(nnzit) = I
+          JCOL(nnzit) = 1
+          nnzit = nnzit + 1
+          IROW(nnzit) = I
+          JCOL(nnzit) = I + 1
+          nnzit = nnzit + 1
+          conidx = conidx + 1
         enddo
       else
-        A(1) = X(2)*X(3)*X(4)
-        A(2) = X(1)*X(3)*X(4)
-        A(3) = X(1)*X(2)*X(4)
-        A(4) = X(1)*X(2)*X(3)
-        A(5) = 2d0*X(1)
-        A(6) = 2d0*X(2)
-        A(7) = 2d0*X(3)
-        A(8) = 2d0*X(4)
+C     // constraint 1 body --->  4*x_1 + 2*x_2 == 10
+        A(nnzit) = 4d0
+        nnzit = nnzit + 1
+        A(nnzit) = 2d0
+        nnzit = nnzit + 1
+C     // constraint 2 body ---> 2*x_1 + x_3
+        A(nnzit) = 2d0
+        nnzit = nnzit + 1
+        A(nnzit) = 1d0
+        nnzit = nnzit + 1
+C     // constraint 3 body ---> 2*x_1 + 0.5*x_i, for i>=4
+        do I = 3, M
+          A(nnzit) = 2d0
+          nnzit = nnzit + 1
+          A(nnzit) = 0.5d0
+          nnzit = nnzit + 1
+        enddo
       endif
       return
       end
@@ -165,42 +207,15 @@ C =============================================================================
       integer IROW(NNZH), JCOL(NNZH)
 
 C     structure of Hessian:
-      integer IRNH1(10), ICNH1(10)
-      data  IRNH1 /1, 2, 2, 3, 3, 3, 4, 4, 4, 4/
-      data  ICNH1 /1, 1, 2, 1, 2, 3, 1, 2, 3, 4/
-      save  IRNH1, ICNH1
-
       if( TASK.eq.0 ) then
-         do i = 1, 10
-            IROW(i) = IRNH1(i)
-            JCOL(i) = ICNH1(i)
-         enddo
+        do I = 1, N
+          IROW(I) = I
+          JCOL(I) = I
+        enddo
       else
-         do i = 1, 10
-            HESS(i) = 0d0
+         do i = 1, N
+            HESS(i) = OBJFACT * 3d0 * (X(I)-1.0d0)**2
          enddo
-
-C     objective function
-         HESS(1) = OBJFACT * 2d0*X(4)
-         HESS(2) = OBJFACT * X(4)
-         HESS(4) = OBJFACT * X(4)
-         HESS(7) = OBJFACT * (2d0*X(1) + X(2) + X(3))
-         HESS(8) = OBJFACT * X(1)
-         HESS(9) = OBJFACT * X(1)
-
-C     first constraint
-         HESS(2) = HESS(2) + LAM(1) * X(3)*X(4)
-         HESS(4) = HESS(4) + LAM(1) * X(2)*X(4)
-         HESS(5) = HESS(5) + LAM(1) * X(1)*X(4)
-         HESS(7) = HESS(7) + LAM(1) * X(2)*X(3)
-         HESS(8) = HESS(8) + LAM(1) * X(1)*X(3)
-         HESS(9) = HESS(9) + LAM(1) * X(1)*X(2)
-
-C     second constraint
-         HESS(1) = HESS(1) + LAM(2) * 2d0
-         HESS(3) = HESS(3) + LAM(2) * 2d0
-         HESS(6) = HESS(6) + LAM(2) * 2d0
-         HESS(10)= HESS(10)+ LAM(2) * 2d0
       endif
       return
       end

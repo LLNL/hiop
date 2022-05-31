@@ -13,8 +13,10 @@ if(HIOP_BUILD_SHARED)
 endif()
 
 #if(HIOP_BUILD_SHARED)
-add_executable(NlpSparseFEx1.exe hs_ex.f)
+add_executable(NlpSparseFEx1.exe NlpSparseFEx1.f)
 target_link_libraries(NlpSparseFEx1.exe HiOp::HiOp)
+add_executable(NlpSparseHS071.exe hs_ex.f)
+target_link_libraries(NlpSparseHS071.exe HiOp::HiOp)
 #endif()
 
 ##########################################################

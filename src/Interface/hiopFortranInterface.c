@@ -307,7 +307,7 @@ void* FC_GLOBAL(hiopsparseprob, HIOPSPARSEPROB) ( hiop_size_type*   n,
   return (void*) f_prob;
 }
 
-void FC_GLOBAL(hiopsparsesolve, HIOPSPARSESOLVE) (void** f_prob_in, double* sol)
+void FC_GLOBAL(hiopsparsesolve, HIOPSPARSESOLVE) (void** f_prob_in, double* obj, double* sol)
 {
   FProb* f_prob = (FProb*) *f_prob_in;
   cHiopSparseProblem *prob = f_prob->c_prob;
@@ -317,6 +317,8 @@ void FC_GLOBAL(hiopsparsesolve, HIOPSPARSESOLVE) (void** f_prob_in, double* sol)
   for(int i=0; i<f_prob->n; i++) {
     sol[i] = prob->solution[i];
   }
+  
+  *obj = prob->obj_value;
   printf("Solve HIOP_SPARSE problem from Fortran interface!\n");
 }
 

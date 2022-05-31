@@ -133,7 +133,7 @@ void* FC_GLOBAL(hiopsparseprob, HIOPSPARSEPROB) ( hiop_size_type*   n,
                                   f_eval_hess_cb    f_eval_hess);
 
 
-void FC_GLOBAL(hiopsparsesolve, HIOPSPARSESOLVE) (void** f_prob_in, double* sol);
+void FC_GLOBAL(hiopsparsesolve, HIOPSPARSESOLVE) (void** f_prob_in, double* obj, double* sol);
 
 void FC_GLOBAL(deletehiopsparseprob, DELETEHIOPSPARSEPROB) (void** f_prob_in);
 
