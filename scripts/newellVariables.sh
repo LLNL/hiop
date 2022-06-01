@@ -32,8 +32,6 @@ module load mpfr-4.1.0-gcc-7.4.0-tz5esun
 module load ncurses-6.2-gcc-7.4.0-kqhmmpv
 # openblas@0.3.20%gcc@7.4.0~bignuma~consistent_fpcsr~ilp64+locking+pic+shared symbol_suffix=none threads=none arch=linux-rhel7-power9le
 module load openblas-0.3.20-gcc-7.4.0-3zdqw2i
-# openssl@1.1.1n%gcc@7.4.0~docs~shared certs=system arch=linux-rhel7-power9le
-module load openssl-1.1.1n-gcc-7.4.0-mxyibws
 # raja@0.14.0%gcc@7.4.0+cuda~examples~exercises~ipo+openmp~rocm+shared~tests build_type=RelWithDebInfo cuda_arch=70 arch=linux-rhel7-power9le
 module load raja-0.14.0-gcc-7.4.0-sew5thv
 # suite-sparse@5.10.1%gcc@7.4.0~cuda~graphblas~openmp+pic~tbb arch=linux-rhel7-power9le
