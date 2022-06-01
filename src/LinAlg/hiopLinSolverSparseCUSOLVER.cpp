@@ -225,8 +225,8 @@ namespace hiop
                                              dia_,
                                              dja_,
                                              da_,
-                                             d_P,
-                                             d_Q,
+                                             d_P_,
+                                             d_Q_,
                                              handle_rf_);
           cudaDeviceSynchronize();
           sp_status_ = cusolverRfRefactor(handle_rf_);
@@ -278,10 +278,10 @@ namespace hiop
       if(refact_ == "rf") {
         if(Numeric_ == nullptr) {
           sp_status_ = cusolverRfSolve(handle_rf_,
-                                       d_P,
-                                       d_Q,
+                                       d_P_,
+                                       d_Q_,
                                        1,
-                                       d_T,
+                                       d_T_,
                                        n_,
                                        devr_,
                                        n_);
@@ -311,22 +311,64 @@ namespace hiop
     return 1;
   }
 
+
+  //
+  // Private functions for hiopLinSolverSymSparseCUSOLVER class start here
+  //
+
   void hiopLinSolverSymSparseCUSOLVER::firstCall()
   {
     assert(n_ == M_->n() && M_->n() == M_->m());
     assert(n_ > 0);
 
+    // Transfer triplet to CSR form
+    // Allocate row pointers and compute number of nonzeros.
     kRowPtr_ = new int[n_ + 1]{ 0 };
-    //
-    // transfer triplet form to CSR form
-    // note that input is in lower triangular triplet form. First part is the
-    // sparse matrix, and the 2nd part are the additional dia_gonal elememts
-    // the 1st part is sorted by row
-    {
+    compute_nnz();
+    // Set column indices and matrix values.
+    kVal_ = new double[nnz_]{ 0.0 };
+    jCol_ = new int[nnz_]{ 0 };
+    set_csr_indices_values();
+
+    checkCudaErrors(cudaMalloc(&devx_, n_ * sizeof(double)));
+    checkCudaErrors(cudaMalloc(&devr_, n_ * sizeof(double)));
+
+    checkCudaErrors(cudaMalloc(&da_, nnz_ * sizeof(double)));
+    checkCudaErrors(cudaMalloc(&dja_, nnz_ * sizeof(int)));
+    checkCudaErrors(cudaMalloc(&dia_, (n_ + 1) * sizeof(int)));
+
+    checkCudaErrors(cudaMemcpy(da_, kVal_, sizeof(double) * nnz_, cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(dia_, kRowPtr_, sizeof(int) * (n_ + 1), cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(dja_, jCol_, sizeof(int) * nnz_, cudaMemcpyHostToDevice));
+
+    /*
+     * initialize KLU and cuSolver parameters
+     */
+    if(fact_ == "klu") {
+      /* initialize KLU setup parameters, dont factorize yet */
+      this->initializeKLU();
+
+      /*perform KLU but only the symbolic analysis (important)   */
+
+      klu_free_symbolic(&Symbolic_, &Common_);
+      klu_free_numeric(&Numeric_, &Common_);
+      Symbolic_ = klu_analyze(n_, kRowPtr_, jCol_, &Common_);
+
+      if(Symbolic_ == nullptr) {
+        nlp_->log->printf(hovError,  // catastrophic failure
+                          "Symbolic factorization failed!\n");
+      }
+    } else { // for future
+      assert(0 && "Only KLU is available for the first factorization.\n");
+    }
+  }
+  
+  void hiopLinSolverSymSparseCUSOLVER::compute_nnz()
+  {
       //
       // compute nnz in each row
       //
-      // off-dia_gonal part
+      // off-diagonal part
       kRowPtr_[0] = 0;
       for(int k = 0; k < M_->numberOfNonzeros() - n_; k++) {
         if(M_->i_row()[k] != M_->j_col()[k]) {
@@ -335,7 +377,7 @@ namespace hiop
           nnz_ += 2;
         }
       }
-      // dia_gonal part
+      // diagonal part
       for(int i = 0; i < n_; i++) {
         kRowPtr_[i + 1]++;
         nnz_ += 1;
@@ -345,11 +387,10 @@ namespace hiop
         kRowPtr_[i] += kRowPtr_[i - 1];
       }
       assert(nnz_ == kRowPtr_[n_]);
-
-      kVal_ = new double[nnz_]{ 0.0 };
-      jCol_ = new int[nnz_]{ 0 };
-    }
-    {
+  }
+  
+  void hiopLinSolverSymSparseCUSOLVER::set_csr_indices_values()
+  {
       //
       // set correct col index and value
       //
@@ -416,47 +457,8 @@ namespace hiop
         }
       }
       delete[] nnz_each_row_tmp;
-    }
-
-    checkCudaErrors(cudaMalloc(&devx_, n_ * sizeof(double)));
-    checkCudaErrors(cudaMalloc(&devr_, n_ * sizeof(double)));
-
-    checkCudaErrors(cudaMalloc(&da_, nnz_ * sizeof(double)));
-    checkCudaErrors(cudaMalloc(&dja_, nnz_ * sizeof(int)));
-    checkCudaErrors(cudaMalloc(&dia_, (n_ + 1) * sizeof(int)));
-
-    checkCudaErrors(cudaMemcpy(da_, kVal_, sizeof(double) * nnz_, cudaMemcpyHostToDevice));
-    checkCudaErrors(cudaMemcpy(dia_, kRowPtr_, sizeof(int) * (n_ + 1), cudaMemcpyHostToDevice));
-    checkCudaErrors(cudaMemcpy(dja_, jCol_, sizeof(int) * nnz_, cudaMemcpyHostToDevice));
-
-    /*
-     * initialize KLU and cuSolver parameters
-     */
-    if(fact_ == "klu") {
-      /* initialize KLU setup parameters, dont factorize yet */
-      this->initializeKLU();
-
-      /*perform KLU but only the symbolic analysis (important)   */
-
-      klu_free_symbolic(&Symbolic_, &Common_);
-      klu_free_numeric(&Numeric_, &Common_);
-      Symbolic_ = klu_analyze(n_, kRowPtr_, jCol_, &Common_);
-
-      if(Symbolic_ == nullptr) {
-        nlp_->log->printf(hovError,  // catastrophic failure
-                          "Symbolic factorization failed!\n");
-      }
-    } else { // for future
-      assert(0 && "Only KLU is available for the first factorization.\n");
-    }
   }
-  
-  
-
-  //
-  // Private functions start here
-  //
-
+    
   // helper private function needed for format conversion
   int hiopLinSolverSymSparseCUSOLVER::createM(const int n, 
                                               const int /* nnzL */,
@@ -508,7 +510,7 @@ namespace hiop
     }
     return 0;
   }
-  
+
   // Error checking utility for CUDA
   // KS: might later become part of src/Utils, putting it here for now
   template <typename T>
@@ -675,17 +677,17 @@ namespace hiop
   int
   hiopLinSolverSymSparseCUSOLVER::refactorizationSetupCusolverRf()
   {
-    // for now this ONLY WORKS if proceeded by KLU. Might be worth decoupling
+    // for now this ONLY WORKS if preceeded by KLU. Might be worth decoupling
     // later
     const int nnzL = Numeric_->lnz;
     const int nnzU = Numeric_->unz;
     
-    checkCudaErrors(cudaMalloc(&d_P, (n_) * sizeof(int)));
-    checkCudaErrors(cudaMalloc(&d_Q, (n_) * sizeof(int)));
-    checkCudaErrors(cudaMalloc(&d_T, (n_) * sizeof(double)));
+    checkCudaErrors(cudaMalloc(&d_P_, (n_) * sizeof(int)));
+    checkCudaErrors(cudaMalloc(&d_Q_, (n_) * sizeof(int)));
+    checkCudaErrors(cudaMalloc(&d_T_, (n_) * sizeof(double)));
 
-    checkCudaErrors(cudaMemcpy(d_P, Numeric_->Pnum, sizeof(int) * (n_), cudaMemcpyHostToDevice));
-    checkCudaErrors(cudaMemcpy(d_Q, Symbolic_->Q, sizeof(int) * (n_), cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(d_P_, Numeric_->Pnum, sizeof(int) * (n_), cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(d_Q_, Symbolic_->Q, sizeof(int) * (n_), cudaMemcpyHostToDevice));
 
     int* Lp = new int[n_ + 1];
     int* Li = new int[nnzL];
@@ -865,8 +867,8 @@ namespace hiop
                                        d_Up_csr,
                                        d_Ui_csr,
                                        d_Ux_csr,
-                                       d_P,
-                                       d_Q,
+                                       d_P_,
+                                       d_Q_,
                                        handle_rf_);
     cudaDeviceSynchronize();
     sp_status_ = cusolverRfAnalyze(handle_rf_);
@@ -1035,8 +1037,8 @@ namespace hiop
                                              dia_,
                                              dja_,
                                              da_,
-                                             d_P,
-                                             d_Q,
+                                             d_P_,
+                                             d_Q_,
                                              handle_rf_);
           cudaDeviceSynchronize();
           sp_status_ = cusolverRfRefactor(handle_rf_);
@@ -1090,10 +1092,10 @@ namespace hiop
       if(refact_ == "rf") {
         if(Numeric_ == nullptr) {
           sp_status_ = cusolverRfSolve(handle_rf_,
-                                       d_P,
-                                       d_Q,
+                                       d_P_,
+                                       d_Q_,
                                        1,
-                                       d_T,
+                                       d_T_,
                                        n_,
                                        devr_,
                                        n_);
@@ -1416,12 +1418,12 @@ namespace hiop
     const int nnzL = Numeric_->lnz;
     const int nnzU = Numeric_->unz;
     
-    checkCudaErrors(cudaMalloc(&d_P, (n_) * sizeof(int)));
-    checkCudaErrors(cudaMalloc(&d_Q, (n_) * sizeof(int)));
-    checkCudaErrors(cudaMalloc(&d_T, (n_) * sizeof(double)));
+    checkCudaErrors(cudaMalloc(&d_P_, (n_) * sizeof(int)));
+    checkCudaErrors(cudaMalloc(&d_Q_, (n_) * sizeof(int)));
+    checkCudaErrors(cudaMalloc(&d_T_, (n_) * sizeof(double)));
 
-    checkCudaErrors(cudaMemcpy(d_P, Numeric_->Pnum, sizeof(int) * (n_), cudaMemcpyHostToDevice));
-    checkCudaErrors(cudaMemcpy(d_Q, Symbolic_->Q, sizeof(int) * (n_), cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(d_P_, Numeric_->Pnum, sizeof(int) * (n_), cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(d_Q_, Symbolic_->Q, sizeof(int) * (n_), cudaMemcpyHostToDevice));
 
     int* Lp = new int[n_ + 1];
     int* Li = new int[nnzL];
@@ -1598,8 +1600,8 @@ namespace hiop
                                        d_Up_csr,
                                        d_Ui_csr,
                                        d_Ux_csr,
-                                       d_P,
-                                       d_Q,
+                                       d_P_,
+                                       d_Q_,
                                        handle_rf_);
     cudaDeviceSynchronize();
     sp_status_ = cusolverRfAnalyze(handle_rf_);
