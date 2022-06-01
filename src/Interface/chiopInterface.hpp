@@ -110,7 +110,7 @@ extern "C" {
 // The cpp object used in the C interface
 class cppUserProblemMDS : public hiopInterfaceMDS
 {
-  public:
+public:
     cppUserProblemMDS(cHiopMDSProblem *cprob_)
       : cprob(cprob_) 
     {
@@ -433,5 +433,154 @@ extern "C" int hiop_sparse_solve_problem(cHiopSparseProblem *problem);
 extern "C" int hiop_sparse_destroy_problem(cHiopSparseProblem *problem);
 
 #endif //#ifdef HIOP_SPARSE
+
+class cppUserProblemDense;
+extern "C" {
+  // C struct with HiOp function callbacks
+  typedef struct cHiopDenseProblem {
+    hiopNlpDenseConstraints *refcppHiop;
+    cppUserProblemDense *hiopinterface;
+    // user_data similar to the Ipopt interface. In case of Julia pointer to the Julia problem object.
+    void* user_data;
+    // Used by hiop_sparse_createProblemsolveProblem() to store the final state. The duals should be added here.
+    double* solution;
+    double obj_value;
+    int niters;
+    int status;
+    // HiOp callback function wrappers
+    int (*get_starting_point)(hiop_size_type n_, double* x0, void* user_data); 
+    int (*get_prob_sizes)(hiop_size_type* n_, hiop_size_type* m_, void* user_data);
+    int (*get_vars_info)(hiop_size_type n, double *xlow_, double* xupp_, void* user_data);
+    int (*get_cons_info)(hiop_size_type m, double *clow_, double* cupp_, void* user_data);
+    int (*eval_f)(hiop_size_type n, double* x, int new_x, double* obj, void* user_data);
+    int (*eval_grad_f)(hiop_size_type n, double* x, int new_x, double* gradf, void* user_data);
+    int (*eval_cons)(hiop_size_type n, 
+                     hiop_size_type m,
+                     double* x,
+                     int new_x,
+                     double* cons,
+                     void* user_data);
+    int (*eval_Jac_cons)(size_type n,
+                         size_type m,
+                         double* x,
+                         int new_x,
+                         double* Jac,
+                         void *user_data);
+  } cHiopDenseProblem;
+}
+
+
+// The cpp object used in the C interface
+class cppUserProblemDense : public hiopInterfaceDenseConstraints
+{
+public:
+    cppUserProblemDense(cHiopDenseProblem *cprob_)
+      : cprob(cprob_) 
+    {
+    }
+
+    virtual ~cppUserProblemDense()
+    {
+    }
+
+    // HiOp callbacks calling the C wrappers
+    bool get_prob_sizes(size_type& n_, size_type& m_) 
+    {
+      cprob->get_prob_sizes(&n_, &m_, cprob->user_data);
+      return true;
+    };
+
+    bool get_starting_point(const size_type& n, double *x0)
+    {
+      cprob->get_starting_point(n, x0, cprob->user_data);
+      return true;
+    };
+
+    bool get_vars_info(const size_type& n, double *xlow_, double* xupp_, NonlinearityType* type)
+    {
+      for(size_type i=0; i<n; ++i) {
+        type[i] = hiopNonlinear;
+      }
+      cprob->get_vars_info(n, xlow_, xupp_, cprob->user_data);
+      return true;
+    };
+
+    bool get_cons_info(const size_type& m, double* clow, double* cupp, NonlinearityType* type)
+    {
+      for(size_type i=0; i<m; ++i) {
+        type[i]=hiopNonlinear;
+      }
+      cprob->get_cons_info(m, clow, cupp, cprob->user_data);
+      return true;
+    };
+
+    bool eval_f(const size_type& n, const double* x, bool new_x, double& obj_value)
+    {
+      cprob->eval_f(n, (double *) x, 0, &obj_value, cprob->user_data);
+      return true;
+    };
+
+    bool eval_grad_f(const size_type& n, const double* x, bool new_x, double* gradf)
+    {
+      cprob->eval_grad_f(n, (double *) x, 0, gradf, cprob->user_data);
+
+      return true;
+    };
+
+    bool eval_cons(const size_type& n,
+                   const size_type& m,
+                   const size_type& num_cons,
+                   const index_type* idx_cons,
+                   const double* x,
+                   bool new_x,
+                   double* cons)
+    {
+      return false;
+    };
+
+    bool eval_cons(const size_type& n,
+                   const size_type& m,
+                   const double* x,
+                   bool new_x,
+                   double* cons)
+    {
+      cprob->eval_cons(n, m, (double *) x, new_x, cons, cprob->user_data);
+      return true;
+    };
+
+    bool eval_Jac_cons(const size_type& n,
+                       const size_type& m,
+                       const size_type& num_cons,
+                       const index_type* idx_cons,
+                       const double* x,
+                       bool new_x,
+                       double* Jac)
+    {
+      return false;
+    };
+  
+    bool eval_Jac_cons(const size_type& n,
+                       const size_type& m,
+                       const double* x,
+                       bool new_x,
+                       double* Jac)
+    {
+      cprob->eval_Jac_cons(n, m, (double *) x, new_x,
+                           Jac,
+                           cprob->user_data);
+      return true;
+    };
+
+private:
+  // Storing the C struct in the CPP object
+  cHiopDenseProblem *cprob;
+};
+
+/** The 3 essential function calls to create and destroy a problem object in addition to solve a problem.
+ * Some option setters will be added in the future.
+ */
+extern "C" int hiop_dense_create_problem(cHiopDenseProblem *problem);
+extern "C" int hiop_dense_solve_problem(cHiopDenseProblem *problem);
+extern "C" int hiop_dense_destroy_problem(cHiopDenseProblem *problem);
 
 #endif
