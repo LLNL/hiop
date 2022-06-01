@@ -98,11 +98,11 @@ namespace hiop
      * factorization, allocate all aux variables */
     virtual void firstCall();
 
-    void setFactorizationType(std::string newFact_);
-    void setRefactorizationType(std::string newRefact_);
+    // void setFactorizationType(std::string newFact_);
+    // void setRefactorizationType(std::string newRefact_);
 
-    std::string getFactorizationType();
-    std::string getRefactorizationType();
+    // std::string getFactorizationType();
+    // std::string getRefactorizationType();
     // KS: can consider one global function to set all the options but thats
     // TBA in the future.
   private:
@@ -127,6 +127,7 @@ namespace hiop
     // fgmres, bicgstab (4) if ir is fgmres, there are different gram-schmidt
     // options: MGS, CGS2, MGS-2 synch, MGS-1 synch/
 
+    int ordering_;
     std::string fact_;
     std::string refact_;
 
@@ -221,11 +222,11 @@ namespace hiop
     /** called the very first time a matrix is factored. */
     void firstCall();
     
-    void setFactorizationType(std::string newFact_);
-    void setRefactorizationType(std::string newRefact_);
+    // void setFactorizationType(std::string newFact_);
+    // void setRefactorizationType(std::string newRefact_);
 
-    std::string getFactorizationType();
-    std::string getRefactorizationType();
+    // std::string getFactorizationType();
+    // std::string getRefactorizationType();
 
     friend class hiopLinSolverSymSparseCUSOLVER;
 
@@ -242,6 +243,7 @@ namespace hiop
     int* index_covert_extra_Diag2CSR_;
     std::unordered_map<int, int> extra_dia_g_nnz_map;
 
+    int ordering_;
     std::string fact_;
     std::string refact_;
     int factorizationSetupSucc_;
