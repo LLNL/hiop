@@ -182,6 +182,7 @@ namespace hiop
       }
       // somehow update the matrix not sure how
     } // else
+
     if((Numeric_ == nullptr) && (factorizationSetupSucc_ == 0)) {
       Numeric_ = klu_factor(kRowPtr_, jCol_, kVal_, Symbolic_, &Common_);
       if(Numeric_ == nullptr) {
@@ -224,8 +225,8 @@ namespace hiop
                                              dia_,
                                              dja_,
                                              da_,
-                                             d_P,
-                                             d_Q,
+                                             d_P_,
+                                             d_Q_,
                                              handle_rf_);
           cudaDeviceSynchronize();
           sp_status_ = cusolverRfRefactor(handle_rf_);
@@ -267,15 +268,20 @@ namespace hiop
                                        d_work_);
       if(sp_status_ == 0) {
         checkCudaErrors(cudaMemcpy(dx, devx_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
+      } else {
+        nlp_->log->printf(hovError,  // catastrophic failure
+                          "Solve failed with status: %d\n", 
+                          sp_status_);
+        return false;
       }
     } else {
       if(refact_ == "rf") {
         if(Numeric_ == nullptr) {
           sp_status_ = cusolverRfSolve(handle_rf_,
-                                       d_P,
-                                       d_Q,
+                                       d_P_,
+                                       d_Q_,
                                        1,
-                                       d_T,
+                                       d_T_,
                                        n_,
                                        devr_,
                                        n_);
@@ -283,9 +289,9 @@ namespace hiop
             checkCudaErrors(cudaMemcpy(dx, devr_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
           } else {
             nlp_->log->printf(hovError,  // catastrophic failure
-                              "Solve failed with starus: %d\n", 
+                              "Solve failed with status: %d\n", 
                               sp_status_);
-            exit(EXIT_FAILURE);
+            return false;
           }
         } else {
           memcpy(dx, drhs, sizeof(double) * n_);
@@ -296,7 +302,7 @@ namespace hiop
       } else {
         nlp_->log->printf(hovError, // catastrophic failure
                           "Unknown refactorization, exiting\n");
-        exit(EXIT_FAILURE);
+        assert(false && "Only GLU and cuSolverRf are available refactorizations.");
       }
     }
     nlp_->runStats.linsolv.tmTriuSolves.stop();
@@ -517,95 +523,6 @@ namespace hiop
       assert(false);
     }
   }
-  
-  void
-  hiopLinSolverSymSparseCUSOLVER::setFactorizationType(std::string newFact_)
-  {
-    this->fact_ = newFact_;
-  }
-
-  std::string hiopLinSolverSymSparseCUSOLVER::getFactorizationType()
-  {
-    return this->fact_;
-  }
-
-  void
-  hiopLinSolverSymSparseCUSOLVER::setRefactorizationType(std::string newRefact_)
-  {
-    this->refact_ = newRefact_;
-  }
-
-  std::string hiopLinSolverSymSparseCUSOLVER::getRefactorizationType()
-  {
-    return this->refact_;
-  }
-  
-  // Private functions start here
-  
-  // helper private function needed for format conversion
-  int hiopLinSolverSymSparseCUSOLVER::createM(const int n, 
-                                              const int /* nnzL */,
-                                              const int* Lp, 
-                                              const int* Li,
-                                              const int /* nnzU */, 
-                                              const int* Up,
-                                              const int* Ui)
-  {
-    int row;
-    for(int i = 0; i < n; ++i) {
-      // go through EACH COLUMN OF L first
-      for(int j = Lp[i]; j < Lp[i + 1]; ++j) {
-        row = Li[j];
-        // BUT dont count diagonal twice, important
-        if(row != i) {
-          mia_[row + 1]++;
-        }
-      }
-      // then each column of U
-      for(int j = Up[i]; j < Up[i + 1]; ++j) {
-        row = Ui[j];
-        mia_[row + 1]++;
-      }
-    }
-    // then organize mia_;
-    mia_[0] = 0;
-    for(int i = 1; i < n + 1; i++) {
-      mia_[i] += mia_[i - 1];
-    }
-
-    std::vector<int> Mshifts(n, 0);
-    for(int i = 0; i < n; ++i) {
-      // go through EACH COLUMN OF L first
-      for(int j = Lp[i]; j < Lp[i + 1]; ++j) {
-        row = Li[j];
-        if(row != i) {
-          // place (row, i) where it belongs!
-          mja_[mia_[row] + Mshifts[row]] = i;
-          Mshifts[row]++;
-        }
-      }
-      // each column of U next
-      for(int j = Up[i]; j < Up[i + 1]; ++j) {
-        row = Ui[j];
-        mja_[mia_[row] + Mshifts[row]] = i;
-        Mshifts[row]++;
-      }
-    }
-    return 0;
-  }
-  
-  // Error checking utility for CUDA
-  // KS: might later become part of src/Utils, putting it here for now
-  template <typename T>
-  void hiopLinSolverSymSparseCUSOLVER::hiopCheckCudaError(T result,
-                                                          const char* const file,
-                                                          int const line)
-  {
-    if(result) {
-      nlp_->log->printf(hovError, "CUDA error at %s:%d, error# %d\n", file, line, result);
-      exit(EXIT_FAILURE);
-    }
-  }
 
   int hiopLinSolverSymSparseCUSOLVER::initializeKLU()
   {
@@ -615,7 +532,7 @@ namespace hiop
     // TODO: consider making this a part of setup options so that user can
     // set up these values. For now, we keep them hard-wired.
     Common_.btf = 0;
-    Common_.ordering = 1; // COLAMD; use 0 for AMD
+    Common_.ordering = ordering_; // COLAMD=1; AMD=0
     Common_.tol = 0.1;
     Common_.scale = -1;
     Common_.halt_if_singular = 1;
@@ -655,8 +572,8 @@ namespace hiop
     cusolverRfSetResetValuesFastMode(handle_rf_,
                                      CUSOLVERRF_RESET_VALUES_FAST_MODE_ON);
 
-    double boost = 1e-12;
-    double zero = 1e-14;
+    const double boost = 1e-12;
+    const double zero = 1e-14;
 
     cusolverRfSetNumericProperties(handle_rf_, zero, boost);
     return 0;
@@ -958,9 +875,9 @@ namespace hiop
     return 0;
   }
 
-  //
-  // The Solver for Nonsymmetric KKT System
-  //
+  ////////////////////////////////////////////
+  // The Solver for Nonsymmetric KKT System //
+  ////////////////////////////////////////////
 
   hiopLinSolverNonSymSparseCUSOLVER::hiopLinSolverNonSymSparseCUSOLVER(const int& n,
                                                                        const int& nnz,
@@ -973,7 +890,8 @@ namespace hiop
       index_covert_extra_Diag2CSR_{ nullptr }, 
       n_{ n }, 
       nnz_{ 0 },
-      fact_{ "KLU" },       // default
+      ordering_{ 1 },
+      fact_{ "klu" },       // default
       refact_{ "glu" },     // default
       factorizationSetupSucc_{ 0 }
   {
@@ -986,6 +904,37 @@ namespace hiop
     cusparseCreateMatDescr(&descr_A_);
     cusparseSetMatType(descr_A_, CUSPARSE_MATRIX_TYPE_GENERAL);
     cusparseSetMatIndexBase(descr_A_, CUSPARSE_INDEX_BASE_ZERO);
+
+    // Set user selected options
+    std::string ordering = nlp_->options->GetString("linear_solver_sparse_ordering");
+    if(ordering == "amd_ssparse") {
+      ordering_ = 0;
+    }
+    else if(ordering == "colamd_ssparse") {
+      ordering_ = 1;
+    }
+    else {
+      nlp_->log->printf(hovWarning, 
+                        "Ordering %s not compatible with cuSOLVER LU, using default ...\n",
+                        ordering.c_str());
+      ordering_ = 1;
+    }
+
+    fact_ = nlp_->options->GetString("cusolver_lu_factorization");
+    if(fact_ != "klu") {
+      nlp_->log->printf(hovWarning,
+                        "Factorization %s not compatible with cuSOLVER LU, using default ...\n",
+                        fact_.c_str());
+      fact_ = "klu";
+    }
+
+    refact_ = nlp_->options->GetString("cusolver_lu_refactorization");
+    if(refact_ != "glu" && refact_ != "rf") {
+      nlp_->log->printf(hovWarning, 
+                        "Refactorization %s not compatible with cuSOLVER LU, using default ...\n",
+                        refact_.c_str());
+      refact_ = "glu";
+    }
   }
 
   hiopLinSolverNonSymSparseCUSOLVER::~hiopLinSolverNonSymSparseCUSOLVER()
@@ -1230,7 +1179,7 @@ namespace hiop
      * initialize KLU and cuSolver parameters
      */
 
-    if(fact_ == "KLU") {
+    if(fact_ == "klu") {
       /* initialize KLU setup parameters, dont factorize yet */
       this->initializeKLU();
 
@@ -1249,29 +1198,9 @@ namespace hiop
     }
   }
   
-  void
-  hiopLinSolverNonSymSparseCUSOLVER::setFactorizationType(std::string newFact_)
-  {
-    this->fact_ = newFact_;
-  }
-
-  std::string hiopLinSolverNonSymSparseCUSOLVER::getFactorizationType()
-  {
-    return this->fact_;
-  }
-  
-  void 
-  hiopLinSolverNonSymSparseCUSOLVER::setRefactorizationType(std::string newRefact_)
-  {
-    this->refact_ = newRefact_;
-  }
-
-  std::string hiopLinSolverNonSymSparseCUSOLVER::getRefactorizationType()
-  {
-    return this->refact_;
-  }
-  
+  //  
   // Private functions start here
+  //
 
   // helper private function needed for format conversion
   int hiopLinSolverNonSymSparseCUSOLVER::createM(const int n, 
@@ -1678,4 +1607,5 @@ namespace hiop
     sp_status_ = cusolverRfAnalyze(handle_rf_);
     return 0;
   }
+
 } // namespace hiop
