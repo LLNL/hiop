@@ -76,7 +76,8 @@ namespace hiop
       index_covert_extra_Diag2CSR_{ nullptr }, 
       n_{ n }, 
       nnz_{ 0 },
-      fact_{ "KLU" },   // default
+      ordering_{ 1 },
+      fact_{ "klu" },   // default
       refact_{ "glu" }, // default
       factorizationSetupSucc_{ 0 }
   {
@@ -89,6 +90,36 @@ namespace hiop
     cusparseCreateMatDescr(&descr_A_);
     cusparseSetMatType(descr_A_, CUSPARSE_MATRIX_TYPE_GENERAL);
     cusparseSetMatIndexBase(descr_A_, CUSPARSE_INDEX_BASE_ZERO);
+
+    // Set user selected options
+    std::string ordering = nlp_->options->GetString("linear_solver_sparse_ordering");
+    if(ordering == "amd_ssparse") {
+      ordering_ = 0;
+    } else if(ordering == "colamd_ssparse") {
+      ordering_ = 1;
+    } else {
+      nlp_->log->printf(hovWarning, 
+                        "Ordering %s not compatible with cuSOLVER LU, using default ...\n",
+                        ordering.c_str());
+      ordering_ = 1;
+    }
+
+    fact_ = nlp_->options->GetString("cusolver_lu_factorization");
+    if(fact_ != "klu") {
+      nlp_->log->printf(hovWarning,
+                        "Factorization %s not compatible with cuSOLVER LU, using default ...\n",
+                        fact_.c_str());
+      fact_ = "klu";
+    }
+
+    refact_ = nlp_->options->GetString("cusolver_lu_refactorization");
+    if(refact_ != "glu" && refact_ != "rf") {
+      nlp_->log->printf(hovWarning, 
+                        "Refactorization %s not compatible with cuSOLVER LU, using default ...\n",
+                        refact_.c_str());
+      refact_ = "glu";
+    }
+    // std::cout << "Ordering: " << ordering_ << ", Fact: " << fact_ << ", Refatc: " << refact_ << "\n";
   }
 
   hiopLinSolverSymSparseCUSOLVER::~hiopLinSolverSymSparseCUSOLVER()
@@ -151,6 +182,7 @@ namespace hiop
       }
       // somehow update the matrix not sure how
     } // else
+
     if((Numeric_ == nullptr) && (factorizationSetupSucc_ == 0)) {
       Numeric_ = klu_factor(kRowPtr_, jCol_, kVal_, Symbolic_, &Common_);
       if(Numeric_ == nullptr) {
@@ -193,8 +225,8 @@ namespace hiop
                                              dia_,
                                              dja_,
                                              da_,
-                                             d_P,
-                                             d_Q,
+                                             d_P_,
+                                             d_Q_,
                                              handle_rf_);
           cudaDeviceSynchronize();
           sp_status_ = cusolverRfRefactor(handle_rf_);
@@ -236,15 +268,20 @@ namespace hiop
                                        d_work_);
       if(sp_status_ == 0) {
         checkCudaErrors(cudaMemcpy(dx, devx_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
+      } else {
+        nlp_->log->printf(hovError,  // catastrophic failure
+                          "Solve failed with status: %d\n", 
+                          sp_status_);
+        return false;
       }
     } else {
       if(refact_ == "rf") {
         if(Numeric_ == nullptr) {
           sp_status_ = cusolverRfSolve(handle_rf_,
-                                       d_P,
-                                       d_Q,
+                                       d_P_,
+                                       d_Q_,
                                        1,
-                                       d_T,
+                                       d_T_,
                                        n_,
                                        devr_,
                                        n_);
@@ -252,9 +289,9 @@ namespace hiop
             checkCudaErrors(cudaMemcpy(dx, devr_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
           } else {
             nlp_->log->printf(hovError,  // catastrophic failure
-                              "Solve failed with starus: %d\n", 
+                              "Solve failed with status: %d\n", 
                               sp_status_);
-            exit(EXIT_FAILURE);
+            return false;
           }
         } else {
           memcpy(dx, drhs, sizeof(double) * n_);
@@ -265,7 +302,7 @@ namespace hiop
       } else {
         nlp_->log->printf(hovError, // catastrophic failure
                           "Unknown refactorization, exiting\n");
-        exit(EXIT_FAILURE);
+        assert(false && "Only GLU and cuSolverRf are available refactorizations.");
       }
     }
     nlp_->runStats.linsolv.tmTriuSolves.stop();
@@ -274,22 +311,64 @@ namespace hiop
     return 1;
   }
 
+
+  //
+  // Private functions for hiopLinSolverSymSparseCUSOLVER class start here
+  //
+
   void hiopLinSolverSymSparseCUSOLVER::firstCall()
   {
     assert(n_ == M_->n() && M_->n() == M_->m());
     assert(n_ > 0);
 
+    // Transfer triplet to CSR form
+    // Allocate row pointers and compute number of nonzeros.
     kRowPtr_ = new int[n_ + 1]{ 0 };
-    //
-    // transfer triplet form to CSR form
-    // note that input is in lower triangular triplet form. First part is the
-    // sparse matrix, and the 2nd part are the additional dia_gonal elememts
-    // the 1st part is sorted by row
-    {
+    compute_nnz();
+    // Set column indices and matrix values.
+    kVal_ = new double[nnz_]{ 0.0 };
+    jCol_ = new int[nnz_]{ 0 };
+    set_csr_indices_values();
+
+    checkCudaErrors(cudaMalloc(&devx_, n_ * sizeof(double)));
+    checkCudaErrors(cudaMalloc(&devr_, n_ * sizeof(double)));
+
+    checkCudaErrors(cudaMalloc(&da_, nnz_ * sizeof(double)));
+    checkCudaErrors(cudaMalloc(&dja_, nnz_ * sizeof(int)));
+    checkCudaErrors(cudaMalloc(&dia_, (n_ + 1) * sizeof(int)));
+
+    checkCudaErrors(cudaMemcpy(da_, kVal_, sizeof(double) * nnz_, cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(dia_, kRowPtr_, sizeof(int) * (n_ + 1), cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(dja_, jCol_, sizeof(int) * nnz_, cudaMemcpyHostToDevice));
+
+    /*
+     * initialize KLU and cuSolver parameters
+     */
+    if(fact_ == "klu") {
+      /* initialize KLU setup parameters, dont factorize yet */
+      this->initializeKLU();
+
+      /*perform KLU but only the symbolic analysis (important)   */
+
+      klu_free_symbolic(&Symbolic_, &Common_);
+      klu_free_numeric(&Numeric_, &Common_);
+      Symbolic_ = klu_analyze(n_, kRowPtr_, jCol_, &Common_);
+
+      if(Symbolic_ == nullptr) {
+        nlp_->log->printf(hovError,  // catastrophic failure
+                          "Symbolic factorization failed!\n");
+      }
+    } else { // for future
+      assert(0 && "Only KLU is available for the first factorization.\n");
+    }
+  }
+  
+  void hiopLinSolverSymSparseCUSOLVER::compute_nnz()
+  {
       //
       // compute nnz in each row
       //
-      // off-dia_gonal part
+      // off-diagonal part
       kRowPtr_[0] = 0;
       for(int k = 0; k < M_->numberOfNonzeros() - n_; k++) {
         if(M_->i_row()[k] != M_->j_col()[k]) {
@@ -298,7 +377,7 @@ namespace hiop
           nnz_ += 2;
         }
       }
-      // dia_gonal part
+      // diagonal part
       for(int i = 0; i < n_; i++) {
         kRowPtr_[i + 1]++;
         nnz_ += 1;
@@ -308,11 +387,10 @@ namespace hiop
         kRowPtr_[i] += kRowPtr_[i - 1];
       }
       assert(nnz_ == kRowPtr_[n_]);
-
-      kVal_ = new double[nnz_]{ 0.0 };
-      jCol_ = new int[nnz_]{ 0 };
-    }
-    {
+  }
+  
+  void hiopLinSolverSymSparseCUSOLVER::set_csr_indices_values()
+  {
       //
       // set correct col index and value
       //
@@ -379,65 +457,8 @@ namespace hiop
         }
       }
       delete[] nnz_each_row_tmp;
-    }
-
-    checkCudaErrors(cudaMalloc(&devx_, n_ * sizeof(double)));
-    checkCudaErrors(cudaMalloc(&devr_, n_ * sizeof(double)));
-
-    checkCudaErrors(cudaMalloc(&da_, nnz_ * sizeof(double)));
-    checkCudaErrors(cudaMalloc(&dja_, nnz_ * sizeof(int)));
-    checkCudaErrors(cudaMalloc(&dia_, (n_ + 1) * sizeof(int)));
-
-    checkCudaErrors(cudaMemcpy(da_, kVal_, sizeof(double) * nnz_, cudaMemcpyHostToDevice));
-    checkCudaErrors(cudaMemcpy(dia_, kRowPtr_, sizeof(int) * (n_ + 1), cudaMemcpyHostToDevice));
-    checkCudaErrors(cudaMemcpy(dja_, jCol_, sizeof(int) * nnz_, cudaMemcpyHostToDevice));
-    /*
-     * initialize KLU and cuSolver parameters
-     */
-
-    if(fact_ == "KLU") {
-      /* initialize KLU setup parameters, dont factorize yet */
-      this->initializeKLU();
-
-      /*perform KLU but only the symbolic analysis (important)   */
-
-      klu_free_symbolic(&Symbolic_, &Common_);
-      klu_free_numeric(&Numeric_, &Common_);
-      Symbolic_ = klu_analyze(n_, kRowPtr_, jCol_, &Common_);
-
-      if(Symbolic_ == nullptr) {
-        nlp_->log->printf(hovError,  // catastrophic failure
-                          "Symbolic factorization failed!\n");
-      }
-    } else { // for future
-      assert(0 && "Only KLU is available for the first factorization.\n");
-    }
   }
-  
-  void
-  hiopLinSolverSymSparseCUSOLVER::setFactorizationType(std::string newFact_)
-  {
-    this->fact_ = newFact_;
-  }
-
-  std::string hiopLinSolverSymSparseCUSOLVER::getFactorizationType()
-  {
-    return this->fact_;
-  }
-
-  void
-  hiopLinSolverSymSparseCUSOLVER::setRefactorizationType(std::string newRefact_)
-  {
-    this->refact_ = newRefact_;
-  }
-
-  std::string hiopLinSolverSymSparseCUSOLVER::getRefactorizationType()
-  {
-    return this->refact_;
-  }
-  
-  // Private functions start here
-  
+    
   // helper private function needed for format conversion
   int hiopLinSolverSymSparseCUSOLVER::createM(const int n, 
                                               const int /* nnzL */,
@@ -489,7 +510,7 @@ namespace hiop
     }
     return 0;
   }
-  
+
   // Error checking utility for CUDA
   // KS: might later become part of src/Utils, putting it here for now
   template <typename T>
@@ -499,7 +520,7 @@ namespace hiop
   {
     if(result) {
       nlp_->log->printf(hovError, "CUDA error at %s:%d, error# %d\n", file, line, result);
-      exit(EXIT_FAILURE);
+      assert(false);
     }
   }
 
@@ -511,7 +532,7 @@ namespace hiop
     // TODO: consider making this a part of setup options so that user can
     // set up these values. For now, we keep them hard-wired.
     Common_.btf = 0;
-    Common_.ordering = 1; // COLAMD; use 0 for AMD
+    Common_.ordering = ordering_; // COLAMD=1; AMD=0
     Common_.tol = 0.1;
     Common_.scale = -1;
     Common_.halt_if_singular = 1;
@@ -551,8 +572,8 @@ namespace hiop
     cusolverRfSetResetValuesFastMode(handle_rf_,
                                      CUSOLVERRF_RESET_VALUES_FAST_MODE_ON);
 
-    double boost = 1e-12;
-    double zero = 1e-14;
+    const double boost = 1e-12;
+    const double zero = 1e-14;
 
     cusolverRfSetNumericProperties(handle_rf_, zero, boost);
     return 0;
@@ -656,17 +677,17 @@ namespace hiop
   int
   hiopLinSolverSymSparseCUSOLVER::refactorizationSetupCusolverRf()
   {
-    // for now this ONLY WORKS if proceeded by KLU. Might be worth decoupling
+    // for now this ONLY WORKS if preceeded by KLU. Might be worth decoupling
     // later
     const int nnzL = Numeric_->lnz;
     const int nnzU = Numeric_->unz;
     
-    checkCudaErrors(cudaMalloc(&d_P, (n_) * sizeof(int)));
-    checkCudaErrors(cudaMalloc(&d_Q, (n_) * sizeof(int)));
-    checkCudaErrors(cudaMalloc(&d_T, (n_) * sizeof(double)));
+    checkCudaErrors(cudaMalloc(&d_P_, (n_) * sizeof(int)));
+    checkCudaErrors(cudaMalloc(&d_Q_, (n_) * sizeof(int)));
+    checkCudaErrors(cudaMalloc(&d_T_, (n_) * sizeof(double)));
 
-    checkCudaErrors(cudaMemcpy(d_P, Numeric_->Pnum, sizeof(int) * (n_), cudaMemcpyHostToDevice));
-    checkCudaErrors(cudaMemcpy(d_Q, Symbolic_->Q, sizeof(int) * (n_), cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(d_P_, Numeric_->Pnum, sizeof(int) * (n_), cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(d_Q_, Symbolic_->Q, sizeof(int) * (n_), cudaMemcpyHostToDevice));
 
     int* Lp = new int[n_ + 1];
     int* Li = new int[nnzL];
@@ -846,17 +867,17 @@ namespace hiop
                                        d_Up_csr,
                                        d_Ui_csr,
                                        d_Ux_csr,
-                                       d_P,
-                                       d_Q,
+                                       d_P_,
+                                       d_Q_,
                                        handle_rf_);
     cudaDeviceSynchronize();
     sp_status_ = cusolverRfAnalyze(handle_rf_);
     return 0;
   }
 
-  //
-  // The Solver for Nonsymmetric KKT System
-  //
+  ////////////////////////////////////////////
+  // The Solver for Nonsymmetric KKT System //
+  ////////////////////////////////////////////
 
   hiopLinSolverNonSymSparseCUSOLVER::hiopLinSolverNonSymSparseCUSOLVER(const int& n,
                                                                        const int& nnz,
@@ -869,7 +890,8 @@ namespace hiop
       index_covert_extra_Diag2CSR_{ nullptr }, 
       n_{ n }, 
       nnz_{ 0 },
-      fact_{ "KLU" },       // default
+      ordering_{ 1 },
+      fact_{ "klu" },       // default
       refact_{ "glu" },     // default
       factorizationSetupSucc_{ 0 }
   {
@@ -882,6 +904,37 @@ namespace hiop
     cusparseCreateMatDescr(&descr_A_);
     cusparseSetMatType(descr_A_, CUSPARSE_MATRIX_TYPE_GENERAL);
     cusparseSetMatIndexBase(descr_A_, CUSPARSE_INDEX_BASE_ZERO);
+
+    // Set user selected options
+    std::string ordering = nlp_->options->GetString("linear_solver_sparse_ordering");
+    if(ordering == "amd_ssparse") {
+      ordering_ = 0;
+    }
+    else if(ordering == "colamd_ssparse") {
+      ordering_ = 1;
+    }
+    else {
+      nlp_->log->printf(hovWarning, 
+                        "Ordering %s not compatible with cuSOLVER LU, using default ...\n",
+                        ordering.c_str());
+      ordering_ = 1;
+    }
+
+    fact_ = nlp_->options->GetString("cusolver_lu_factorization");
+    if(fact_ != "klu") {
+      nlp_->log->printf(hovWarning,
+                        "Factorization %s not compatible with cuSOLVER LU, using default ...\n",
+                        fact_.c_str());
+      fact_ = "klu";
+    }
+
+    refact_ = nlp_->options->GetString("cusolver_lu_refactorization");
+    if(refact_ != "glu" && refact_ != "rf") {
+      nlp_->log->printf(hovWarning, 
+                        "Refactorization %s not compatible with cuSOLVER LU, using default ...\n",
+                        refact_.c_str());
+      refact_ = "glu";
+    }
   }
 
   hiopLinSolverNonSymSparseCUSOLVER::~hiopLinSolverNonSymSparseCUSOLVER()
@@ -984,8 +1037,8 @@ namespace hiop
                                              dia_,
                                              dja_,
                                              da_,
-                                             d_P,
-                                             d_Q,
+                                             d_P_,
+                                             d_Q_,
                                              handle_rf_);
           cudaDeviceSynchronize();
           sp_status_ = cusolverRfRefactor(handle_rf_);
@@ -1039,10 +1092,10 @@ namespace hiop
       if(refact_ == "rf") {
         if(Numeric_ == nullptr) {
           sp_status_ = cusolverRfSolve(handle_rf_,
-                                       d_P,
-                                       d_Q,
+                                       d_P_,
+                                       d_Q_,
                                        1,
-                                       d_T,
+                                       d_T_,
                                        n_,
                                        devr_,
                                        n_);
@@ -1050,9 +1103,9 @@ namespace hiop
             checkCudaErrors(cudaMemcpy(dx, devr_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
           } else {
             nlp_->log->printf(hovError,  // catastrophic failure
-                              "Solve failed with starus: %d\n", 
+                              "Solve failed with status: %d\n", 
                               sp_status_);
-            exit(EXIT_FAILURE);
+            return false;
           }
         } else {
           memcpy(dx, drhs, sizeof(double) * n_);
@@ -1063,13 +1116,13 @@ namespace hiop
       } else {
         nlp_->log->printf(hovError, // catastrophic failure
                           "Unknown refactorization, exiting\n");
-        exit(EXIT_FAILURE);
+        assert(false && "Only GLU and cuSolverRf are available refactorizations.");
       }
     }
     nlp_->runStats.linsolv.tmTriuSolves.stop();
     delete rhs;
     rhs = nullptr;
-    return 1;
+    return true;
   }
 
   void
@@ -1126,7 +1179,7 @@ namespace hiop
      * initialize KLU and cuSolver parameters
      */
 
-    if(fact_ == "KLU") {
+    if(fact_ == "klu") {
       /* initialize KLU setup parameters, dont factorize yet */
       this->initializeKLU();
 
@@ -1145,29 +1198,9 @@ namespace hiop
     }
   }
   
-  void
-  hiopLinSolverNonSymSparseCUSOLVER::setFactorizationType(std::string newFact_)
-  {
-    this->fact_ = newFact_;
-  }
-
-  std::string hiopLinSolverNonSymSparseCUSOLVER::getFactorizationType()
-  {
-    return this->fact_;
-  }
-  
-  void 
-  hiopLinSolverNonSymSparseCUSOLVER::setRefactorizationType(std::string newRefact_)
-  {
-    this->refact_ = newRefact_;
-  }
-
-  std::string hiopLinSolverNonSymSparseCUSOLVER::getRefactorizationType()
-  {
-    return this->refact_;
-  }
-  
+  //  
   // Private functions start here
+  //
 
   // helper private function needed for format conversion
   int hiopLinSolverNonSymSparseCUSOLVER::createM(const int n, 
@@ -1242,7 +1275,7 @@ namespace hiop
     // TODO: consider making a part of setup options that can be called from a
     // user side For now, keeping these options hard-wired
     Common_.btf = 0;
-    Common_.ordering = 1; // COLAMD; use 0 for AMD
+    Common_.ordering = ordering_; // COLAMD=1; AMD=0
     Common_.tol = 0.01;
     Common_.scale = -1;
     Common_.halt_if_singular = 1;
@@ -1282,8 +1315,8 @@ namespace hiop
     cusolverRfSetResetValuesFastMode(handle_rf_,
                                      CUSOLVERRF_RESET_VALUES_FAST_MODE_ON);
 
-    double boost = 1e-12;
-    double zero = 1e-14;
+    const double boost = 1e-12;
+    const double zero = 1e-14;
 
     cusolverRfSetNumericProperties(handle_rf_, zero, boost);
     return 0;
@@ -1385,12 +1418,12 @@ namespace hiop
     const int nnzL = Numeric_->lnz;
     const int nnzU = Numeric_->unz;
     
-    checkCudaErrors(cudaMalloc(&d_P, (n_) * sizeof(int)));
-    checkCudaErrors(cudaMalloc(&d_Q, (n_) * sizeof(int)));
-    checkCudaErrors(cudaMalloc(&d_T, (n_) * sizeof(double)));
+    checkCudaErrors(cudaMalloc(&d_P_, (n_) * sizeof(int)));
+    checkCudaErrors(cudaMalloc(&d_Q_, (n_) * sizeof(int)));
+    checkCudaErrors(cudaMalloc(&d_T_, (n_) * sizeof(double)));
 
-    checkCudaErrors(cudaMemcpy(d_P, Numeric_->Pnum, sizeof(int) * (n_), cudaMemcpyHostToDevice));
-    checkCudaErrors(cudaMemcpy(d_Q, Symbolic_->Q, sizeof(int) * (n_), cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(d_P_, Numeric_->Pnum, sizeof(int) * (n_), cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(d_Q_, Symbolic_->Q, sizeof(int) * (n_), cudaMemcpyHostToDevice));
 
     int* Lp = new int[n_ + 1];
     int* Li = new int[nnzL];
@@ -1567,11 +1600,12 @@ namespace hiop
                                        d_Up_csr,
                                        d_Ui_csr,
                                        d_Ux_csr,
-                                       d_P,
-                                       d_Q,
+                                       d_P_,
+                                       d_Q_,
                                        handle_rf_);
     cudaDeviceSynchronize();
     sp_status_ = cusolverRfAnalyze(handle_rf_);
     return 0;
   }
+
 } // namespace hiop
