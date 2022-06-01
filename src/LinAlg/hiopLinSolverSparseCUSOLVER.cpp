@@ -270,7 +270,7 @@ namespace hiop
         checkCudaErrors(cudaMemcpy(dx, devx_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
       } else {
         nlp_->log->printf(hovError,  // catastrophic failure
-                          "Solve failed with starus: %d\n", 
+                          "Solve failed with status: %d\n", 
                           sp_status_);
         return false;
       }
@@ -289,7 +289,7 @@ namespace hiop
             checkCudaErrors(cudaMemcpy(dx, devr_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
           } else {
             nlp_->log->printf(hovError,  // catastrophic failure
-                              "Solve failed with starus: %d\n", 
+                              "Solve failed with status: %d\n", 
                               sp_status_);
             return false;
           }
@@ -1103,7 +1103,7 @@ namespace hiop
             checkCudaErrors(cudaMemcpy(dx, devr_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
           } else {
             nlp_->log->printf(hovError,  // catastrophic failure
-                              "Solve failed with starus: %d\n", 
+                              "Solve failed with status: %d\n", 
                               sp_status_);
             return false;
           }
