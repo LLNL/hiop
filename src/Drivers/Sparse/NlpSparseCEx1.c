@@ -262,35 +262,35 @@ int main(int argc, char **argv) {
                         xlow, xupp, clow, cupp};
                         
   cHiopSparseProblem problem;
-  problem.user_data = &user_data;
-  problem.get_starting_point = get_starting_point;
-  problem.get_prob_sizes = get_prob_sizes;  
-  problem.get_vars_info = get_vars_info;
-  problem.get_cons_info = get_cons_info;
-  problem.eval_f = eval_f;
-  problem.eval_grad_f = eval_grad_f;
-  problem.eval_cons = eval_cons;
-  problem.get_sparse_blocks_info = get_sparse_blocks_info;
-  problem.eval_Jac_cons = eval_Jac_cons;
-  problem.eval_Hess_Lagr = eval_Hess_Lagr;
-  problem.solution = (double*)malloc(n * sizeof(double));
+  problem.user_data_ = &user_data;
+  problem.get_starting_point_ = get_starting_point;
+  problem.get_prob_sizes_ = get_prob_sizes;  
+  problem.get_vars_info_ = get_vars_info;
+  problem.get_cons_info_ = get_cons_info;
+  problem.eval_f_ = eval_f;
+  problem.eval_grad_f_ = eval_grad_f;
+  problem.eval_cons_ = eval_cons;
+  problem.get_sparse_blocks_info_ = get_sparse_blocks_info;
+  problem.eval_Jac_cons_ = eval_Jac_cons;
+  problem.eval_Hess_Lagr_ = eval_Hess_Lagr;
+  problem.solution_ = (double*)malloc(n * sizeof(double));
   for(int i=0; i<n; i++) {
-    problem.solution[i] = 0.0;
+    problem.solution_[i] = 0.0;
   }
 
   hiop_sparse_create_problem(&problem);
   hiop_sparse_solve_problem(&problem);
-  if(fabs(problem.obj_value-(1.10351566513480e-01))>1e-6) {
+  if(fabs(problem.obj_value_-(1.10351566513480e-01))>1e-6) {
     printf("objective mismatch for Sparse Ex1 C interface problem with 500 "
-      "variables did. BTW, obj=%18.12e was returned by HiOp.\n", problem.obj_value);
+      "variables did. BTW, obj=%18.12e was returned by HiOp.\n", problem.obj_value_);
       return -1;
   }
   
   printf("Optimal objective: %22.14e. Solver status: %d. Number of iterations: %d\n", 
-             problem.obj_value, problem.status, problem.niters);
+             problem.obj_value_, problem.status_, problem.niters_);
 
   hiop_sparse_destroy_problem(&problem);
-  free(problem.solution);
+  free(problem.solution_);
   free(xlow);
   free(xupp);
   free(clow);

@@ -16,9 +16,6 @@ C
 C     Optimal solution:
 C        x = (1.00000000, 4.74299963, 3.82114998, 1.37940829)
 C
-C     gfortran -O2  -c -o hs_ex.o hs_ex.f
-C     gfortran -O2  -c -o hs_ex.o hs_ex.f
-C     gfortran -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.1.sdk -mmacosx-version-min=11.6 -Wl,-search_paths_first -Wl,-headerpad_max_install_names hs_ex.o -o hs_ex.exe -Wl,-rpath,/Users/chiang7/project/hiop/build_fortran/src ../../libhiop.dylib /Users/chiang7/local/lib/libomp.dylib -framework Accelerate -lm -ldl /Users/chiang7/local/lib/libmetis.dylib /Users/chiang7/software/coin-or/lib/libcoinhsl.dylib
 C =============================================================================
 
       program example

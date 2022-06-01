@@ -93,6 +93,7 @@ int hiop_mds_destroy_problem(cHiopMDSProblem *prob) {
   return 0;
 }
 
+#ifdef HIOP_SPARSE
 int hiop_sparse_create_problem(cHiopSparseProblem *prob) {
   cppUserProblemSparse * cppproblem = new cppUserProblemSparse(prob);
   hiopNlpSparse *nlp = new hiopNlpSparse(*cppproblem);
@@ -102,26 +103,27 @@ int hiop_sparse_create_problem(cHiopSparseProblem *prob) {
   nlp->options->SetStringValue("compute_mode", "cpu");
   nlp->options->SetNumericValue("mu0", 1e-1);
 
-  prob->refcppHiop = nlp;
-  prob->hiopinterface = cppproblem;
+  prob->refcppHiop_ = nlp;
+  prob->hiopinterface_ = cppproblem;
 
   return 0;
 } 
 
 int hiop_sparse_solve_problem(cHiopSparseProblem *prob) {
   hiopSolveStatus status;
-  hiopAlgFilterIPMNewton solver(prob->refcppHiop);
-  prob->status = solver.run();
-  prob->obj_value = solver.getObjective();
-  prob->niters = solver.getNumIterations();
-  solver.getSolution(prob->solution);
+  hiopAlgFilterIPMNewton solver(prob->refcppHiop_);
+  prob->status_ = solver.run();
+  prob->obj_value_ = solver.getObjective();
+  prob->niters_ = solver.getNumIterations();
+  solver.getSolution(prob->solution_);
   return 0;
 }
 
 int hiop_sparse_destroy_problem(cHiopSparseProblem *prob) {
-  delete prob->refcppHiop;
-  delete prob->hiopinterface;
+  delete prob->refcppHiop_;
+  delete prob->hiopinterface_;
   return 0;
 }
+#endif //#ifdef HIOP_SPARSE
 
 } // extern C

@@ -10,14 +10,13 @@ target_link_libraries(NlpSparseEx3.exe HiOp::HiOp)
 if(HIOP_BUILD_SHARED)
   add_executable(NlpSparseCEx1.exe NlpSparseCEx1.c)
   target_link_libraries(NlpSparseCEx1.exe HiOp::HiOp)
+  if(HIOP_BUILD_SHARED)
+    add_executable(NlpSparseFEx1.exe NlpSparseFEx1.f)
+    target_link_libraries(NlpSparseFEx1.exe HiOp::HiOp)
+    add_executable(NlpSparseHS071.exe NlpSparseExHS071.f)
+    target_link_libraries(NlpSparseHS071.exe HiOp::HiOp)
+  endif()
 endif()
-
-#if(HIOP_BUILD_SHARED)
-add_executable(NlpSparseFEx1.exe NlpSparseFEx1.f)
-target_link_libraries(NlpSparseFEx1.exe HiOp::HiOp)
-add_executable(NlpSparseHS071.exe hs_ex.f)
-target_link_libraries(NlpSparseHS071.exe HiOp::HiOp)
-#endif()
 
 ##########################################################
 # CMake Tests

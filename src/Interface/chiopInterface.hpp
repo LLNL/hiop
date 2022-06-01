@@ -226,58 +226,60 @@ extern "C" int hiop_mds_create_problem(cHiopMDSProblem *problem);
 extern "C" int hiop_mds_solve_problem(cHiopMDSProblem *problem);
 extern "C" int hiop_mds_destroy_problem(cHiopMDSProblem *problem);
 
+
+#ifdef HIOP_SPARSE
 class cppUserProblemSparse;
 extern "C" {
   // C struct with HiOp function callbacks
   typedef struct cHiopSparseProblem {
-    hiopNlpSparse *refcppHiop;
-    cppUserProblemSparse *hiopinterface;
+    hiopNlpSparse *refcppHiop_;
+    cppUserProblemSparse *hiopinterface_;
     // user_data similar to the Ipopt interface. In case of Julia pointer to the Julia problem object.
-    void* user_data;
+    void* user_data_;
     // Used by hiop_sparse_createProblemsolveProblem() to store the final state. The duals should be added here.
-    double* solution;
-    double obj_value;
-    int niters;
-    int status;
+    double* solution_;
+    double obj_value_;
+    int niters_;
+    int status_;
     // HiOp callback function wrappers
-    int (*get_starting_point)(hiop_size_type n_, double* x0, void* user_data); 
-    int (*get_prob_sizes)(hiop_size_type* n_, hiop_size_type* m_, void* user_data);
-    int (*get_vars_info)(hiop_size_type n, double *xlow_, double* xupp_, void* user_data);
-    int (*get_cons_info)(hiop_size_type m, double *clow_, double* cupp_, void* user_data);
-    int (*eval_f)(hiop_size_type n, double* x, int new_x, double* obj, void* user_data);
-    int (*eval_grad_f)(hiop_size_type n, double* x, int new_x, double* gradf, void* user_data);
-    int (*eval_cons)(hiop_size_type n, 
-                     hiop_size_type m,
-                     double* x,
-                     int new_x,
-                     double* cons,
-                     void* user_data);
-    int (*get_sparse_blocks_info)(hiop_size_type* nx,
-                                  hiop_size_type* nnz_sparse_Jaceq,
-                                  hiop_size_type* nnz_sparse_Jacineq,
-                                  hiop_size_type* nnz_sparse_Hess_Lagr,
-                                  void* user_data);
-    int (*eval_Jac_cons)(size_type n,
-                         size_type m,
-                         double* x,
-                         int new_x,
-                         int nnzJacS,
-                         hiop_index_type* iJacS,
-                         hiop_index_type* jJacS,
-                         double* MJacS,
-                         void *user_data);
-    int (*eval_Hess_Lagr)(size_type n,
+    int (*get_starting_point_)(hiop_size_type n, double* x0, void* user_data); 
+    int (*get_prob_sizes_)(hiop_size_type* n, hiop_size_type* m, void* user_data);
+    int (*get_vars_info_)(hiop_size_type n, double *xlow, double* xupp, void* user_data);
+    int (*get_cons_info_)(hiop_size_type m, double *clow, double* cupp, void* user_data);
+    int (*eval_f_)(hiop_size_type n, double* x, int new_x, double* obj, void* user_data);
+    int (*eval_grad_f_)(hiop_size_type n, double* x, int new_x, double* gradf, void* user_data);
+    int (*eval_cons_)(hiop_size_type n, 
+                      hiop_size_type m,
+                      double* x,
+                      int new_x,
+                      double* cons,
+                      void* user_data);
+    int (*get_sparse_blocks_info_)(hiop_size_type* nx,
+                                   hiop_size_type* nnz_sparse_Jaceq,
+                                   hiop_size_type* nnz_sparse_Jacineq,
+                                   hiop_size_type* nnz_sparse_Hess_Lagr,
+                                   void* user_data);
+    int (*eval_Jac_cons_)(size_type n,
                           size_type m,
                           double* x,
                           int new_x,
-                          double obj_factor,
-                          double* lambda,
-                          int new_lambda,
-                          hiop_size_type nnzHSS,
-                          hiop_index_type* iHSS,
-                          hiop_index_type* jHSS,
-                          double* MHSS,
-                          void* user_data);
+                          int nnzJacS,
+                          hiop_index_type* iJacS,
+                          hiop_index_type* jJacS,
+                          double* MJacS,
+                          void *user_data);
+    int (*eval_Hess_Lagr_)(size_type n,
+                           size_type m,
+                           double* x,
+                           int new_x,
+                           double obj_factor,
+                           double* lambda,
+                           int new_lambda,
+                           hiop_size_type nnzHSS,
+                           hiop_index_type* iHSS,
+                           hiop_index_type* jHSS,
+                           double* MHSS,
+                           void* user_data);
   } cHiopSparseProblem;
 }
 
@@ -286,8 +288,8 @@ extern "C" {
 class cppUserProblemSparse : public hiopInterfaceSparse
 {
   public:
-    cppUserProblemSparse(cHiopSparseProblem *cprob_)
-      : cprob(cprob_) 
+    cppUserProblemSparse(cHiopSparseProblem *cprob)
+      : cprob_(cprob) 
     {
     }
 
@@ -296,24 +298,25 @@ class cppUserProblemSparse : public hiopInterfaceSparse
     }
 
     // HiOp callbacks calling the C wrappers
-    bool get_prob_sizes(size_type& n_, size_type& m_) 
+    bool get_prob_sizes(size_type& n, size_type& m) 
     {
-      cprob->get_prob_sizes(&n_, &m_, cprob->user_data);
+      cprob_->get_prob_sizes_(&n, &m, cprob_->user_data_);
       return true;
+      
     };
 
     bool get_starting_point(const size_type& n, double *x0)
     {
-      cprob->get_starting_point(n, x0, cprob->user_data);
+      cprob_->get_starting_point_(n, x0, cprob_->user_data_);
       return true;
     };
 
-    bool get_vars_info(const size_type& n, double *xlow_, double* xupp_, NonlinearityType* type)
+    bool get_vars_info(const size_type& n, double *xlow, double* xupp, NonlinearityType* type)
     {
       for(size_type i=0; i<n; ++i) {
         type[i] = hiopNonlinear;
       }
-      cprob->get_vars_info(n, xlow_, xupp_, cprob->user_data);
+      cprob_->get_vars_info_(n, xlow, xupp, cprob_->user_data_);
       return true;
     };
 
@@ -322,19 +325,19 @@ class cppUserProblemSparse : public hiopInterfaceSparse
       for(size_type i=0; i<m; ++i) {
         type[i]=hiopNonlinear;
       }
-      cprob->get_cons_info(m, clow, cupp, cprob->user_data);
+      cprob_->get_cons_info_(m, clow, cupp, cprob_->user_data_);
       return true;
     };
 
     bool eval_f(const size_type& n, const double* x, bool new_x, double& obj_value)
     {
-      cprob->eval_f(n, (double *) x, 0, &obj_value, cprob->user_data);
+      cprob_->eval_f_(n, (double *) x, 0, &obj_value, cprob_->user_data_);
       return true;
     };
 
     bool eval_grad_f(const size_type& n, const double* x, bool new_x, double* gradf)
     {
-      cprob->eval_grad_f(n, (double *) x, 0, gradf, cprob->user_data);
+      cprob_->eval_grad_f_(n, (double *) x, 0, gradf, cprob_->user_data_);
 
       return true;
     };
@@ -356,7 +359,7 @@ class cppUserProblemSparse : public hiopInterfaceSparse
                    bool new_x,
                    double* cons)
     {
-      cprob->eval_cons(n, m, (double *) x, new_x, cons, cprob->user_data);
+      cprob_->eval_cons_(n, m, (double *) x, new_x, cons, cprob_->user_data_);
       return true;
     };
 
@@ -365,7 +368,7 @@ class cppUserProblemSparse : public hiopInterfaceSparse
                                 size_type& nnz_sparse_Jacineq,
                                 size_type& nnz_sparse_Hess_Lagr)
     {
-      cprob->get_sparse_blocks_info(&nx, &nnz_sparse_Jaceq, &nnz_sparse_Jacineq, &nnz_sparse_Hess_Lagr, cprob->user_data);
+      cprob_->get_sparse_blocks_info_(&nx, &nnz_sparse_Jaceq, &nnz_sparse_Jacineq, &nnz_sparse_Hess_Lagr, cprob_->user_data_);
       return true;
     };
 
@@ -392,9 +395,9 @@ class cppUserProblemSparse : public hiopInterfaceSparse
                        index_type* jJacS,
                        double* MJacS)
     {
-      cprob->eval_Jac_cons(n, m, (double *) x, new_x,
-                           nnzJacS, iJacS, jJacS, MJacS,
-                           cprob->user_data);
+      cprob_->eval_Jac_cons_(n, m, (double *) x, new_x,
+                             nnzJacS, iJacS, jJacS, MJacS,
+                             cprob_->user_data_);
       return true;
     };
     bool eval_Hess_Lagr(const size_type& n,
@@ -411,15 +414,15 @@ class cppUserProblemSparse : public hiopInterfaceSparse
     {
       //Note: lambda is not used since all the constraints are linear and, therefore, do 
       //not contribute to the Hessian of the Lagrangian
-      cprob->eval_Hess_Lagr(n, m, (double *) x, new_x, obj_factor,
-                            (double *) lambda, new_lambda,
-                            nnzHSS, iHSS, jHSS, MHSS,
-                            cprob->user_data);
+      cprob_->eval_Hess_Lagr_(n, m, (double *) x, new_x, obj_factor,
+                              (double *) lambda, new_lambda,
+                              nnzHSS, iHSS, jHSS, MHSS,
+                              cprob_->user_data_);
       return true;
     };
 private:
   // Storing the C struct in the CPP object
-  cHiopSparseProblem *cprob;
+  cHiopSparseProblem *cprob_;
 };
 
 /** The 3 essential function calls to create and destroy a problem object in addition to solve a problem.
@@ -429,5 +432,6 @@ extern "C" int hiop_sparse_create_problem(cHiopSparseProblem *problem);
 extern "C" int hiop_sparse_solve_problem(cHiopSparseProblem *problem);
 extern "C" int hiop_sparse_destroy_problem(cHiopSparseProblem *problem);
 
+#endif //#ifdef HIOP_SPARSE
 
 #endif

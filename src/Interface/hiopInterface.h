@@ -58,6 +58,7 @@
 
 //include hiop index and size types
 #include "hiop_types.h"
+#include "hiop_defs.hpp"
 
 typedef struct cHiopMDSProblem {
   void *refcppHiop; // Pointer to the cpp object
@@ -96,50 +97,52 @@ extern int hiop_mds_create_problem(cHiopMDSProblem *problem);
 extern int hiop_mds_solve_problem(cHiopMDSProblem *problem);
 extern int hiop_mds_destroy_problem(cHiopMDSProblem *problem);
 
+#ifdef HIOP_SPARSE
 typedef struct cHiopSparseProblem {
-  void *refcppHiop; // Pointer to the cpp object
-  void *hiopinterface;
+  void *refcppHiop_; // Pointer to the cpp object
+  void *hiopinterface_;
   // user_data similar to the Ipopt interface. In case of Julia pointer to the Julia problem object.
-  void *user_data; 
-  double *solution;
-  double obj_value;
-  int niters;
-  int status;
-  int (*get_starting_point)(hiop_size_type n_, double* x0, void* jprob); 
-  int (*get_prob_sizes)(hiop_size_type* n_, hiop_size_type* m_, void* jprob); 
-  int (*get_vars_info)(hiop_size_type n, double *xlow_, double* xupp_, void* jprob);
-  int (*get_cons_info)(hiop_size_type m, double *clow_, double* cupp_, void* jprob);
-  int (*eval_f)(hiop_size_type n, double* x, int new_x, double* obj, void* jprob);
-  int (*eval_grad_f)(hiop_size_type n, double* x, int new_x, double* gradf, void* jprob);
-  int (*eval_cons)(hiop_size_type n, hiop_size_type m, double* x, int new_x, double* cons, void* jprob);
-  int (*get_sparse_blocks_info)(hiop_size_type* nx_sparse,
-                                hiop_size_type* nnz_sparse_Jaceq,
-                                hiop_size_type* nnz_sparse_Jacineq,
-                                hiop_size_type* nnz_sparse_Hess_Lagr_SS,
-                                void* jprob);
-  int (*eval_Jac_cons)(hiop_size_type n, 
-                       hiop_size_type m,
-                       double* x,
-                       int new_x,
-                       hiop_size_type nnzJacS,
-                       hiop_index_type* iJacS,
-                       hiop_index_type* jJacS,
-                       double* MJacS,
-                       void *jprob);
-  int (*eval_Hess_Lagr)(hiop_size_type n,
+  void *user_data_; 
+  double *solution_;
+  double obj_value_;
+  int niters_;
+  int status_;
+  int (*get_starting_point_)(hiop_size_type n, double* x0, void* jprob); 
+  int (*get_prob_sizes_)(hiop_size_type* n, hiop_size_type* m, void* jprob); 
+  int (*get_vars_info_)(hiop_size_type n, double *xlow, double* xupp, void* jprob);
+  int (*get_cons_info_)(hiop_size_type m, double *clow, double* cupp, void* jprob);
+  int (*eval_f_)(hiop_size_type n, double* x, int new_x, double* obj, void* jprob);
+  int (*eval_grad_f_)(hiop_size_type n, double* x, int new_x, double* gradf, void* jprob);
+  int (*eval_cons_)(hiop_size_type n, hiop_size_type m, double* x, int new_x, double* cons, void* jprob);
+  int (*get_sparse_blocks_info_)(hiop_size_type* nx_sparse,
+                                 hiop_size_type* nnz_sparse_Jaceq,
+                                 hiop_size_type* nnz_sparse_Jacineq,
+                                 hiop_size_type* nnz_sparse_Hess_Lagr_SS,
+                                 void* jprob);
+  int (*eval_Jac_cons_)(hiop_size_type n, 
                         hiop_size_type m,
                         double* x,
                         int new_x,
-                        double obj_factor,
-                        double* lambda,
-                        int new_lambda,
-                        hiop_size_type nnzHSS,
-                        hiop_index_type* iHSS,
-                        hiop_index_type* jHSS,
-                        double* MHSS,
-                        void* jprob);
+                        hiop_size_type nnzJacS,
+                         hiop_index_type* iJacS,
+                        hiop_index_type* jJacS,
+                        double* MJacS,
+                        void *jprob);
+  int (*eval_Hess_Lagr_)(hiop_size_type n,
+                         hiop_size_type m,
+                         double* x,
+                         int new_x,
+                         double obj_factor,
+                         double* lambda,
+                         int new_lambda,
+                         hiop_size_type nnzHSS,
+                         hiop_index_type* iHSS,
+                         hiop_index_type* jHSS,
+                         double* MHSS,
+                         void* jprob);
 } cHiopSparseProblem;
 
 extern int hiop_sparse_create_problem(cHiopSparseProblem *problem);
 extern int hiop_sparse_solve_problem(cHiopSparseProblem *problem);
 extern int hiop_sparse_destroy_problem(cHiopSparseProblem *problem);
+#endif //#ifdef HIOP_SPARSE

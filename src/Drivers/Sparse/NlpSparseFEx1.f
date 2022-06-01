@@ -32,9 +32,6 @@ C =============================================================================
       integer*8 HIOPPROBLEM
       integer*8 hiopsparseprob
 
-      integer IPSOLVE
-
-      double precision F
       integer i
 
       external EVAL_F, EVAL_CON, EVAL_GRAD, EVAL_JAC, EVAL_HESS
