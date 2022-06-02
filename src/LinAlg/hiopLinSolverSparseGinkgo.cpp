@@ -279,9 +279,15 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
     } else {
       update_matrix(M_, mtx_, index_covert_CSR2Triplet_, index_covert_extra_Diag2CSR_);
     }
-
+    
     gko_solver_ = gko::share(reusable_factory_->generate(mtx_));
-    return 0; // This needs to be changed to return -1 if the matrix is singular - as soon as ginkgo supports this.
+    
+    // Temporary solution for the ginkgo GLU integration.
+    auto sol = gko::as<gko::solver::Gmres<>>(gko::as<gko::solver::ScaledReordered<>>(gko_solver_)->get_solver());
+    auto precond = gko::as<gko::preconditioner::Ilu<>>(sol->get_preconditioner());
+    auto status = precond->get_status();
+    
+    return status;
   }
 
   bool hiopLinSolverSymSparseGinkgo::solve ( hiopVector& x_ )
@@ -360,7 +366,12 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
 
     gko_solver_ = gko::share(reusable_factory_->generate(mtx_));
 
-    return 0; // This needs to be changed to return -1 if the matrix is singular - as soon as ginkgo supports this.
+    // Temporary solution for the ginkgo GLU integration.
+    auto sol = gko::as<gko::solver::Gmres<>>(gko::as<gko::solver::ScaledReordered<>>(gko_solver_)->get_solver());
+    auto precond = gko::as<gko::preconditioner::Ilu<>>(sol->get_preconditioner());
+    auto status = precond->get_status();
+    
+    return status;
   }
 
   bool hiopLinSolverNonSymSparseGinkgo::solve(hiopVector& x_)

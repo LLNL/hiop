@@ -5,65 +5,41 @@ module use -a /share/apps/modules/tools
 module use -a /share/apps/modules/compilers
 module use -a /share/apps/modules/mpi
 module use -a /etc/modulefiles
-module use -a /qfs/projects/exasgd/src/spack/share/spack/modules/linux-rhel7-power9le
+module use -a /qfs/projects/exasgd/src/cameron-spack/share/spack/modules/linux-rhel7-power9le
 
 # Load spack-built modules
-# autoconf@2.69%gcc@7.4.0 patches=35c4492,7793209,a49dd5b arch=linux-rhel7-power9le
-module load exasgd-autoconf/2.69/gcc-7.4.0-sdvbavp
-# autoconf-archive@2019.01.06%gcc@7.4.0 arch=linux-rhel7-power9le
-module load exasgd-autoconf-archive/2019.01.06/gcc-7.4.0-nn453cx
-# automake@1.16.5%gcc@7.4.0 arch=linux-rhel7-power9le
-module load exasgd-automake/1.16.5/gcc-7.4.0-j7nijx5
 # blt@0.4.1%gcc@7.4.0 arch=linux-rhel7-power9le
-module load exasgd-blt/0.4.1/gcc-7.4.0-quqlodz
+module load blt-0.4.1-gcc-7.4.0-2th7jgq
 # camp@0.2.2%gcc@7.4.0+cuda~ipo~rocm~tests build_type=RelWithDebInfo cuda_arch=70 arch=linux-rhel7-power9le
-module load exasgd-camp/0.2.2/cuda-10.2.89/gcc-7.4.0-kcqbrqo
+module load camp-0.2.2-gcc-7.4.0-vsu2jwh
 # cmake@3.23.1%gcc@7.4.0~doc+ncurses+ownlibs~qt build_type=Release arch=linux-rhel7-power9le
-module load exasgd-cmake/3.23.1/gcc-7.4.0-tfl7wm4
+module load cmake-3.23.1-gcc-7.4.0-ckfugtf
 # coinhsl@2015.06.23%gcc@7.4.0+blas arch=linux-rhel7-power9le
-module load exasgd-coinhsl/2015.06.23/gcc-7.4.0-ts5vjfq
+module load coinhsl-2015.06.23-gcc-7.4.0-ts5vjfq
 # cub@1.12.0%gcc@7.4.0 arch=linux-rhel7-power9le
-module load exasgd-cub/1.12.0/gcc-7.4.0-4qyvoqn
-# cuda@10.2.89%gcc@7.4.0~allow-unsupported-compilers~dev arch=linux-rhel7-power9le
-module load exasgd-cuda/10.2.89/gcc-7.4.0-doxxhum
+module load cub-1.12.0-gcc-7.4.0-4qyvoqn
 # ginkgo@glu%gcc@7.4.0+cuda~develtools~full_optimizations~hwloc~ipo~oneapi+openmp~rocm+shared build_type=Release cuda_arch=70 arch=linux-rhel7-power9le
-module load exasgd-ginkgo/glu/cuda-10.2.89/gcc-7.4.0-f4fyoqn
+module load ginkgo-glu-gcc-7.4.0-r5wjmju
 # gmp@6.2.1%gcc@7.4.0 libs=shared,static arch=linux-rhel7-power9le
-module load exasgd-gmp/6.2.1/gcc-7.4.0-oea2aet
-# gnuconfig@2021-08-14%gcc@7.4.0 arch=linux-rhel7-power9le
-module load exasgd-gnuconfig/2021-08-14/gcc-7.4.0-qr6nxuq
-# libsigsegv@2.13%gcc@7.4.0 arch=linux-rhel7-power9le
-module load exasgd-libsigsegv/2.13/gcc-7.4.0-cbn4dja
-# libtool@2.4.7%gcc@7.4.0 arch=linux-rhel7-power9le
-module load exasgd-libtool/2.4.7/gcc-7.4.0-p5juddc
-# m4@1.4.19%gcc@7.4.0+sigsegv patches=9dc5fbd,bfdffa7 arch=linux-rhel7-power9le
-module load exasgd-m4/1.4.19/gcc-7.4.0-nrrlksm
+module load gmp-6.2.1-gcc-7.4.0-oea2aet
 # magma@2.6.2%gcc@7.4.0+cuda+fortran~ipo~rocm+shared build_type=RelWithDebInfo cuda_arch=70 arch=linux-rhel7-power9le
-module load exasgd-magma/2.6.2/cuda-10.2.89/gcc-7.4.0-f6uzlaf
+module load magma-2.6.2-gcc-7.4.0-6yuqfpm
 # metis@5.1.0%gcc@7.4.0~gdb~int64~real64+shared build_type=Release patches=4991da9,b1225da arch=linux-rhel7-power9le
-module load exasgd-metis/5.1.0/gcc-7.4.0-shhhyku
+module load metis-5.1.0-gcc-7.4.0-shhhyku
 # mpfr@4.1.0%gcc@7.4.0 libs=shared,static arch=linux-rhel7-power9le
-module load exasgd-mpfr/4.1.0/gcc-7.4.0-tz5esun
+module load mpfr-4.1.0-gcc-7.4.0-tz5esun
 # ncurses@6.2%gcc@7.4.0~symlinks+termlib abi=none arch=linux-rhel7-power9le
-module load exasgd-ncurses/6.2/gcc-7.4.0-kqhmmpv
+module load ncurses-6.2-gcc-7.4.0-kqhmmpv
 # openblas@0.3.20%gcc@7.4.0~bignuma~consistent_fpcsr~ilp64+locking+pic+shared symbol_suffix=none threads=none arch=linux-rhel7-power9le
-module load exasgd-openblas/0.3.20/gcc-7.4.0-3zdqw2i
-# openmpi@3.1.5%gcc@7.4.0~atomics~cuda~cxx~cxx_exceptions~gpfs~internal-hwloc~java~legacylaunchers~lustre~memchecker~pmi~pmix+romio~singularity~sqlite3+static~thread_multiple+vt+wrapper-rpath fabrics=none schedulers=none arch=linux-rhel7-power9le
-module load exasgd-openmpi/3.1.5/gcc-7.4.0-vp37g7m
-# openssl@1.0.2k-fips%gcc@7.4.0~docs~shared certs=system arch=linux-rhel7-power9le
-module load exasgd-openssl/1.0.2k-fips/gcc-7.4.0-5q6g7rp
-# perl@5.32.1%gcc@7.4.0+cpanm+shared+threads arch=linux-rhel7-power9le
-module load exasgd-perl/5.32.1/gcc-7.4.0-uqk33s3
-# pkgconf@1.8.0%gcc@7.4.0 arch=linux-rhel7-power9le
-module load exasgd-pkgconf/1.8.0/gcc-7.4.0-jfmmybn
+module load openblas-0.3.20-gcc-7.4.0-3zdqw2i
 # raja@0.14.0%gcc@7.4.0+cuda~examples~exercises~ipo+openmp~rocm+shared~tests build_type=RelWithDebInfo cuda_arch=70 arch=linux-rhel7-power9le
-module load exasgd-raja/0.14.0/cuda-10.2.89/gcc-7.4.0-a5s47ej
+module load raja-0.14.0-gcc-7.4.0-sew5thv
 # suite-sparse@5.10.1%gcc@7.4.0~cuda~graphblas~openmp+pic~tbb arch=linux-rhel7-power9le
-module load exasgd-suite-sparse/5.10.1/gcc-7.4.0-e5qockg
-# texinfo@6.5%gcc@7.4.0 patches=12f6edb,1732115 arch=linux-rhel7-power9le
-module load exasgd-texinfo/6.5/gcc-7.4.0-2ae5zqm
-# umpire@6.0.0%gcc@7.4.0+c+cuda~deviceconst+examples~fortran~ipo~numa~openmp~rocm~shared build_type=RelWithDebInfo cuda_arch=70 tests=none arch=linux-rhel7-power9le
-module load exasgd-umpire/6.0.0/cuda-10.2.89/gcc-7.4.0-ybatfie
+module load suite-sparse-5.10.1-gcc-7.4.0-e5qockg
+# umpire@6.0.0%gcc@7.4.0+c+cuda~deviceconst~examples~fortran~ipo~numa~openmp~rocm~shared build_type=RelWithDebInfo cuda_arch=70 tests=none arch=linux-rhel7-power9le
+module load umpire-6.0.0-gcc-7.4.0-rpwrj4p
+# zlib@1.2.12%gcc@7.4.0+optimize+pic+shared patches=0d38234 arch=linux-rhel7-power9le
+module load zlib-1.2.12-gcc-7.4.0-d6xlzc6
 
 # Load system modules
 module load gcc/7.4.0

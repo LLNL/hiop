@@ -37,7 +37,7 @@ add_test(NAME NlpSparse2_2 COMMAND ${RUNCMD} "$<TARGET_FILE:NlpSparseEx2.exe>" "
 if(HIOP_USE_CUDA)
   add_test(NAME NlpSparse2_3 COMMAND ${RUNCMD} "$<TARGET_FILE:NlpSparseEx2.exe>" "500" "-cusolver" "-inertiafree" "-selfcheck")
 endif(HIOP_USE_CUDA)
-if(HIOP_USE_GINKGO) # Disable temporarily Ginkgo example 2
-    # add_test(NAME NlpSparse2_4 COMMAND ${RUNCMD} "$<TARGET_FILE:NlpSparseEx2.exe>" "500" "-ginkgo" "-inertiafree" "-selfcheck")
+if(HIOP_USE_GINKGO)
+  add_test(NAME NlpSparse2_4 COMMAND ${RUNCMD} "$<TARGET_FILE:NlpSparseEx2.exe>" "500" "-ginkgo" "-inertiafree" "-selfcheck")
 endif(HIOP_USE_GINKGO)
 add_test(NAME NlpSparse3_1 COMMAND ${RUNCMD} "$<TARGET_FILE:NlpSparseEx3.exe>" "500" "-selfcheck")
