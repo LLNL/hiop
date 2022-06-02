@@ -435,7 +435,7 @@ void FC_GLOBAL(deletehiopsparseprob, DELETEHIOPSPARSEPROB) (void** f_prob_in)
 }
 #endif
 
-void* FC_GLOBAL(hiopdenseeprob, HIOPDENSEPROB) (hiop_size_type*   n,
+void* FC_GLOBAL(hiopdenseprob, HIOPDENSEPROB) (hiop_size_type*   n,
                                                 hiop_size_type*   m,
                                                 double*           xlow,
                                                 double*           xupp,

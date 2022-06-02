@@ -16,7 +16,7 @@ C =============================================================================
       program example1
       implicit none
 
-      integer     N,     M,
+      integer     N,     M
       integer     retv
       parameter  (N = 500, M = 499)
 
@@ -31,7 +31,7 @@ C =============================================================================
       integer*8 hiopdenseprob
 
       double precision F
-      integer i
+      integer I
 
       external EVAL_F, EVAL_CON, EVAL_GRAD, EVAL_JAC
 
@@ -90,11 +90,11 @@ C                    Computation of objective function
 C =============================================================================
       subroutine EVAL_F(N, X, NEW_X, OBJ)
       implicit none
-      integer N, NEW_X, i
+      integer N, NEW_X, I
       double precision OBJ, X(N)
       OBJ = 0
-      do i = 1, N
-         OBJ = OBJ + 0.25d0*(X(i)-1d0)**4
+      do I = 1, N
+         OBJ = OBJ + 0.25d0*(X(I)-1d0)**4
       enddo
       return
       end
@@ -104,10 +104,10 @@ C                Computation of gradient of objective function
 C =============================================================================
       subroutine EVAL_GRAD(N, X, NEW_X, GRAD)
       implicit none
-      integer N, NEW_X, i
+      integer N, NEW_X, I
       double precision GRAD(N), X(N)
-      do i = 1, N
-         GRAD(i) = (X(i)-1d0)**3
+      do I = 1, N
+         GRAD(I) = (X(I)-1d0)**3
       enddo
       return
       end
@@ -117,12 +117,12 @@ C                     Computation of equality constraints
 C =============================================================================
       subroutine EVAL_CON(N, M, X, NEW_X, C)
       implicit none
-      integer N, NEW_X, M, i
+      integer N, NEW_X, M, I
       double precision C(M), X(N)
       C(1) = 4d0*X(1) + 2d0*X(2)
       C(2) = 2d0*X(1) + 1d0*X(3)
-      do i = 3, M
-         C(i) = 2d0*X(1) + 0.5d0*X(i+1)
+      do I = 3, M
+         C(I) = 2d0*X(1) + 0.5d0*X(I+1)
       enddo
       return
       end
@@ -131,94 +131,42 @@ C =============================================================================
 C                Computation of Jacobian of equality constraints
 C =============================================================================
 
-      subroutine EVAL_JAC(N, M, X, NEW_X, NZ, A)
+      subroutine EVAL_JAC(N, M, X, NEW_X, A)
       integer N, NEW_X, M, NZ
-      double precision X(N), A(NZ)
-      integer IROW(NZ), JCOL(NZ), I, conidx
+      double precision X(N), A(N*M)
+      integer I, CONIDX
 
-      conidx = 0
-      do I = 3, M
-        if( conidx.eq.0 ) then
-        
-        endif
-          IROW(nnzit) = I
-          JCOL(nnzit) = 1
-          nnzit = nnzit + 1
-          IROW(nnzit) = I
-          JCOL(nnzit) = I + 1
-          nnzit = nnzit + 1
-          conidx = conidx + 1
+      NZ = N*M
+      do I = 1, NZ
+        A(I) = 0d0
       enddo
-        
-      if( TASK.eq.0 ) then
-C     // constraint 1 body --->  4*x_1 + 2*x_2 == 10
-        IROW(nnzit) = 1
-        JCOL(nnzit) = 1
-        nnzit = nnzit + 1
-        IROW(nnzit) = 1
-        JCOL(nnzit) = 2
-        nnzit = nnzit + 1
+
+      ! fortran is column major
+C     // constraint 1 body ---> 4*x_1 + 2*x_2 == 10
 C     // constraint 2 body ---> 2*x_1 + x_3
-        IROW(nnzit) = 2
-        JCOL(nnzit) = 1
-        nnzit = nnzit + 1
-        IROW(nnzit) = 2
-        JCOL(nnzit) = 3
-        nnzit = nnzit + 1
 C     // constraint 3 body ---> 2*x_1 + 0.5*x_i, for i>=4
-        conidx = 3
-        do I = 3, M
-          IROW(nnzit) = I
-          JCOL(nnzit) = 1
-          nnzit = nnzit + 1
-          IROW(nnzit) = I
-          JCOL(nnzit) = I + 1
-          nnzit = nnzit + 1
-          conidx = conidx + 1
-        enddo
-      else
-C     // constraint 1 body --->  4*x_1 + 2*x_2 == 10
-        A(nnzit) = 4d0
-        nnzit = nnzit + 1
-        A(nnzit) = 2d0
-        nnzit = nnzit + 1
-C     // constraint 2 body ---> 2*x_1 + x_3
-        A(nnzit) = 2d0
-        nnzit = nnzit + 1
-        A(nnzit) = 1d0
-        nnzit = nnzit + 1
-C     // constraint 3 body ---> 2*x_1 + 0.5*x_i, for i>=4
-        do I = 3, M
-          A(nnzit) = 2d0
-          nnzit = nnzit + 1
-          A(nnzit) = 0.5d0
-          nnzit = nnzit + 1
-        enddo
-      endif
+C      A(1) = 4d0
+C      do I = 2, M
+C        A(I) = 2d0
+C      enddo
+C      A(M+1) = 2d0
+C      A(2*M+2) = 1d0
+      
+C      do CONIDX = 3, M
+C        A(CONIDX*M+CONIDX) = 0.5d0
+C      enddo
+
+      A(1) = 4d0
+      A(2) = 2d0
+      A(N+1) = 2d0
+      A(N+3) = 1d0
+
+      do I = 3, M
+        A((I-1)*N+1) = 2d0
+        A((I-1)*N+I+1) = 0.5d0
+      enddo
+
       return
       end
 
-C =============================================================================
-C                Computation of Hessian of Lagrangian
-C =============================================================================
-      subroutine EVAL_HESS(TASK, N, M, OBJFACT, X, NEW_X, LAM, NEW_LAM,
-     1     NNZH, IROW, JCOL, HESS)
-      implicit none
-      integer TASK, N, NEW_X, M, NEW_LAM, NNZH, i
-      double precision X(N), OBJFACT, LAM(M), HESS(NNZH)
-      integer IROW(NNZH), JCOL(NNZH)
-
-C     structure of Hessian:
-      if( TASK.eq.0 ) then
-        do I = 1, N
-          IROW(I) = I
-          JCOL(I) = I
-        enddo
-      else
-         do i = 1, N
-            HESS(i) = OBJFACT * 3d0 * (X(I)-1.0d0)**2
-         enddo
-      endif
-      return
-      end
 

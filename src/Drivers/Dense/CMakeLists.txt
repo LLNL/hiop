@@ -7,6 +7,11 @@ target_link_libraries(NlpDenseConsEx2.exe HiOp::HiOp)
 add_executable(NlpDenseConsEx3.exe NlpDenseConsEx3Driver.cpp)
 target_link_libraries(NlpDenseConsEx3.exe HiOp::HiOp)
 
+if(HIOP_BUILD_SHARED)
+    add_executable(NlpDenseConsFEx1.exe NlpDenseConsFEx1.f)
+    target_link_libraries(NlpDenseConsFEx1.exe HiOp::HiOp)
+endif(HIOP_BUILD_SHARED)
+
 ##########################################################
 # CMake Tests
 ##########################################################
