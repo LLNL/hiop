@@ -130,7 +130,6 @@ void hiopVectorPar::set_to_random_constant(double minv, double maxv)
 {
   std::uniform_real_distribution<double> unif(minv,maxv);
   std::default_random_engine re;
-  double a_random_double;
 
 #ifdef NDEBUG
   re.seed(std::chrono::system_clock::now().time_since_epoch().count());
