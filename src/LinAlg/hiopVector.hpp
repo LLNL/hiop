@@ -66,8 +66,10 @@ public:
   virtual ~hiopVector() {};
   /// @brief Set all elements to zero.
   virtual void setToZero() = 0;
-  /// @brief Set all elements  to  c
+  /// @brief Set all elements to c
   virtual void setToConstant( double c ) = 0;
+  /// @brief Set all elements to random values between `minv` and `maxv`
+  virtual void set_to_random_constant(double minv, double maxv) = 0;
   /// @brief Set all elements that are not zero in ix to  c, and the rest to 0
   virtual void setToConstant_w_patternSelect( double c, const hiopVector& ix)=0;
 

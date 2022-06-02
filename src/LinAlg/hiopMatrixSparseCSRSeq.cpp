@@ -66,7 +66,6 @@
 #include <sstream>
 #include <iostream>     // std::cout, std::fixed
 #include <iomanip>      // std::setprecision
-#include <random>
 
 #include "hiopCppStdUtils.hpp"
 #include <set>
@@ -1468,26 +1467,6 @@ void hiopMatrixSparseCSRSeq::set_diagonal(const double& val)
     for(index_type pt=irowptr_[i]; pt<irowptr_[i+1]; ++pt) {
       if(jcolind_[pt]==i) {
         values_[pt] = val;
-        break;
-      }
-    }
-  }
-}
-
-void hiopMatrixSparseCSRSeq::set_randomized_diagonal(double sample_range, const double& val)
-{
-  double lower_bound = 1.-sample_range;
-  double upper_bound = 1.+sample_range;
-  std::uniform_real_distribution<double> unif(lower_bound,upper_bound);
-  std::default_random_engine re;
-  double a_random_double;
-  
-  assert(irowptr_ && jcolind_ && values_);
-  for(index_type i=0; i<nrows_; ++i) {
-    for(index_type pt=irowptr_[i]; pt<irowptr_[i+1]; ++pt) {
-      if(jcolind_[pt]==i) {
-        a_random_double = unif(re);
-        values_[pt] = a_random_double*val;
         break;
       }
     }
