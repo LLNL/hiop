@@ -141,21 +141,9 @@ C =============================================================================
         A(I) = 0d0
       enddo
 
-      ! fortran is column major
 C     // constraint 1 body ---> 4*x_1 + 2*x_2 == 10
 C     // constraint 2 body ---> 2*x_1 + x_3
 C     // constraint 3 body ---> 2*x_1 + 0.5*x_i, for i>=4
-C      A(1) = 4d0
-C      do I = 2, M
-C        A(I) = 2d0
-C      enddo
-C      A(M+1) = 2d0
-C      A(2*M+2) = 1d0
-      
-C      do CONIDX = 3, M
-C        A(CONIDX*M+CONIDX) = 0.5d0
-C      enddo
-
       A(1) = 4d0
       A(2) = 2d0
       A(N+1) = 2d0
