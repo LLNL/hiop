@@ -1,6 +1,8 @@
 #  NOTE: The following is required when running from Gitlab CI via slurm job
 source /etc/profile.d/modules.sh
 module use -a /qfs/projects/exasgd/src/cameron-spack/share/spack/modules/linux-centos7-haswell
+module use -a /qfs/projects/exasgd/src/cameron-spack/share/spack/modules/linux-centos7-broadwell
+
 
 # Load spack-built modules
 # blt@0.4.1%gcc@7.3.0 arch=linux-centos7-broadwell
