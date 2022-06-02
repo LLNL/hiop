@@ -152,8 +152,8 @@ void* FC_GLOBAL(hiopsparseprob, HIOPSPARSEPROB) (hiop_size_type*   n,
                                                  f_eval_f_cb       f_eval_f,
                                                  f_eval_c_cb       f_eval_c,
                                                  f_eval_grad_cb    f_eval_grad,
-                                                 f_eval_jac_cb     f_eval_jac,
-                                                 f_eval_hess_cb    f_eval_hess);
+                                                 f_eval_jac_sparse_cb     f_eval_jac,
+                                                 f_eval_hess_sparse_cb    f_eval_hess);
 void FC_GLOBAL(hiopsparsesolve, HIOPSPARSESOLVE) (void** f_prob_in, double* obj, double* sol);
 void FC_GLOBAL(deletehiopsparseprob, DELETEHIOPSPARSEPROB) (void** f_prob_in);
 

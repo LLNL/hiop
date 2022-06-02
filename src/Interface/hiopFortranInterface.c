@@ -239,7 +239,7 @@ int eval_hess_sparse_wrapper(hiop_size_type n,
   return 0;
 }
 
-int get_starting_point_dense_wrapper( hiop_size_type* n_, double* x0, void* user_data)
+int get_starting_point_dense_wrapper(hiop_size_type n_, double* x0, void* user_data)
 {
    FDenseProb* fprob = (FDenseProb*) user_data;
    for(int i=0; i<fprob->n; i=i+1) {
@@ -248,7 +248,7 @@ int get_starting_point_dense_wrapper( hiop_size_type* n_, double* x0, void* user
    return 0;
 }
 
-int get_prob_sizes_dense_wrapper( hiop_size_type* n_, hiop_size_type* m_, void* user_data)
+int get_prob_sizes_dense_wrapper(hiop_size_type* n_, hiop_size_type* m_, void* user_data)
 {
    FDenseProb* fprob = (FDenseProb*) user_data;
    *n_ = fprob->n;
@@ -319,7 +319,7 @@ int eval_jac_dense_wrapper(hiop_size_type n,
   int task = 0;
   FDenseProb* fprob = (FDenseProb*) user_data;
 
-  fprob->f_eval_jac(&task, &n_, &m_, x, &new_x_, MJac);
+  fprob->f_eval_jac(&n_, &m_, x, &new_x_, MJac);
 
   return 0;
 }
@@ -337,8 +337,8 @@ void* FC_GLOBAL(hiopsparseprob, HIOPSPARSEPROB) (hiop_size_type*   n,
                                                  f_eval_f_cb       f_eval_f,
                                                  f_eval_c_cb       f_eval_c,
                                                  f_eval_grad_cb    f_eval_grad,
-                                                 f_eval_jac_cb     f_eval_jac,
-                                                 f_eval_hess_cb    f_eval_hess)
+                                                 f_eval_jac_sparse_cb     f_eval_jac,
+                                                 f_eval_hess_sparse_cb    f_eval_hess)
 {
   FSparseProb* f_prob = (FSparseProb*) malloc(sizeof(FSparseProb));
   f_prob->n_ = *n;
@@ -498,7 +498,7 @@ void* FC_GLOBAL(hiopdenseeprob, HIOPDENSEPROB) (hiop_size_type*   n,
     f_prob->c_prob->solution[i] = 0.0;
   }
 
-  hiop_sparse_create_problem(f_prob->c_prob);
+  hiop_dense_create_problem(f_prob->c_prob);
 
   printf("Creat HIOP_DENSE problem from Fortran interface!\n");
   return (void*) f_prob;
