@@ -163,11 +163,14 @@ public:
 
   virtual
   void user_callback_solution(hiopSolveStatus status,
-			      const hiopVector& x,
-			      const hiopVector& z_L, const hiopVector& z_U,
-			      hiopVector& c, hiopVector& d,
-			      const hiopVector& yc, const hiopVector& yd,
-			      double obj_value);
+                              const hiopVector& x,
+                              hiopVector& z_L,
+                              hiopVector& z_U,
+                              hiopVector& c,
+                              hiopVector& d,
+                              hiopVector& y_c,
+                              hiopVector& y_d,
+                              double obj_value);
 
   virtual
   bool user_callback_iterate(int iter,
@@ -388,6 +391,13 @@ protected:
    * ineq. into and to return it to the user via @user_callback_solution and @user_callback_iterate
    */
   hiopVector* cons_lambdas_;
+
+  /** 
+   * Internal buffers. These vectors are used in unscaling the corresponding values.
+   */
+  hiopVector* temp_eq_;
+  hiopVector* temp_ineq_;
+  hiopVector* temp_x_;
 
 private:
   hiopNlpFormulation(const hiopNlpFormulation& s)

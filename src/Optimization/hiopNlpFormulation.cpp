@@ -142,6 +142,9 @@ hiopNlpFormulation::hiopNlpFormulation(hiopInterfaceBase& interface_, const char
   cons_body_ = nullptr;
   cons_Jac_ =  nullptr;
   cons_lambdas_ = nullptr;
+  temp_eq_ = nullptr;
+  temp_ineq_ = nullptr;
+  temp_x_ = nullptr;
   nlp_scaling_ = nullptr;
   relax_bounds_ = nullptr;
 }
@@ -181,6 +184,9 @@ hiopNlpFormulation::~hiopNlpFormulation()
   delete cons_body_;
   delete cons_Jac_;
   delete cons_lambdas_;
+  delete temp_eq_;
+  delete temp_ineq_;
+  delete temp_x_;  
   /// nlp_scaling_ and relax_bounds_ are deleted inside nlp_transformations_
 }
 
@@ -435,6 +441,15 @@ bool hiopNlpFormulation::finalizeInitialization()
 
   delete cons_lambdas_;
   cons_lambdas_ = nullptr;
+
+  delete temp_eq_;
+  temp_eq_ = nullptr;
+
+  delete temp_ineq_;
+  temp_ineq_ = nullptr;
+
+  delete temp_x_;
+  temp_x_ = nullptr;
 
   return bret;
 }
@@ -985,34 +1000,75 @@ bool hiopNlpFormulation::eval_Jac_c_d(hiopVector& x, bool new_x, hiopMatrix& Jac
 void hiopNlpFormulation::
 get_dual_solutions(const hiopIterate& it, double* zl_a, double* zu_a, double* lambda_a)
 {
-  const hiopVector& zl = *it.get_zl();
-  const hiopVector& zu = *it.get_zu();
-  zl.copyTo(zl_a);
-  zu.copyTo(zu_a);
-  
-  if(cons_lambdas_ == nullptr) {
-    cons_lambdas_ = this->alloc_dual_vec();
+  if(nullptr==nlp_scaling_) {
+    const hiopVector& zl = *it.get_zl();
+    const hiopVector& zu = *it.get_zu();
+    zl.copyTo(zl_a);
+    zu.copyTo(zu_a);
+    
+    if(cons_lambdas_ == nullptr) {
+      cons_lambdas_ = this->alloc_dual_vec();
+    }
+    cons_lambdas_->copy_from_two_vec_w_pattern(*it.get_yc(), *cons_eq_mapping_, *it.get_yd(), *cons_ineq_mapping_);
+    cons_lambdas_->copyTo(lambda_a);  
+  } else {
+    double inv_obj_scale = this->get_obj_scale();
+    if(temp_x_ == nullptr) {
+      temp_x_ = this->alloc_primal_vec();
+    }
+    temp_x_->copyFrom(*it.get_zl());
+    temp_x_->scale(inv_obj_scale);
+    temp_x_->copyTo(zl_a);
+    temp_x_->copyFrom(*it.get_zu());
+    temp_x_->scale(inv_obj_scale);
+    temp_x_->copyTo(zu_a);
+
+    if(temp_eq_ == nullptr) {
+      temp_eq_ = this->alloc_dual_eq_vec();
+    }
+    if(temp_ineq_ == nullptr) {
+      temp_ineq_ = this->alloc_dual_ineq_vec();
+    }
+    if(cons_lambdas_ == nullptr) {
+      cons_lambdas_ = this->alloc_dual_vec();
+    }
+    temp_eq_   = nlp_transformations_.apply_to_cons_eq(*temp_eq_, n_cons_eq_);
+    temp_ineq_ = nlp_transformations_.apply_to_cons_ineq(*temp_ineq_, n_cons_ineq_);
+    cons_lambdas_->copy_from_two_vec_w_pattern(*temp_eq_, *cons_eq_mapping_, *temp_ineq_, *cons_ineq_mapping_);
+    cons_lambdas_->scale(inv_obj_scale);
+    cons_lambdas_->copyTo(lambda_a);
   }
-  cons_lambdas_->copy_from_two_vec_w_pattern(*it.get_yc(), *cons_eq_mapping_, *it.get_yd(), *cons_ineq_mapping_);
-  cons_lambdas_->copyTo(lambda_a);
+
 }
 
 void hiopNlpFormulation::user_callback_solution(hiopSolveStatus status,
                                                 const hiopVector& x,
-                                                const hiopVector& z_L,
-                                                const hiopVector& z_U,
+                                                hiopVector& z_L,
+                                                hiopVector& z_U,
                                                 hiopVector& c,
                                                 hiopVector& d,
-                                                const hiopVector& y_c,
-                                                const hiopVector& y_d,
+                                                hiopVector& y_c,
+                                                hiopVector& y_d,
                                                 double obj_value) 
 {
   assert(x.get_size()==n_vars_);
   assert(y_c.get_size() == n_cons_eq_);
   assert(y_d.get_size() == n_cons_ineq_);
 
+  double inv_obj_scale = this->get_obj_scale();
   if(cons_lambdas_ == nullptr) {
     cons_lambdas_ = this->alloc_dual_vec();
+  }
+  if(nlp_scaling_) {
+    // return unscaled values. 
+    // it's safe to modify these values since this function is called in the end
+    // y_unscaled = y_scale*y_scaled/obj_scale, z_unscaled = z_scaled/obj_scale
+    y_c = *(nlp_transformations_.apply_to_cons_eq(y_c, n_cons_eq_));
+    y_d = *(nlp_transformations_.apply_to_cons_ineq(y_d, n_cons_ineq_));
+    y_c.scale(inv_obj_scale);
+    y_d.scale(inv_obj_scale);
+    z_L.scale(inv_obj_scale);
+    z_U.scale(inv_obj_scale);
   }
   cons_lambdas_->copy_from_two_vec_w_pattern(y_c, *cons_eq_mapping_, y_d, *cons_ineq_mapping_);
 
@@ -1021,8 +1077,9 @@ void hiopNlpFormulation::user_callback_solution(hiopSolveStatus status,
     cons_body_ = cons_lambdas_->alloc_clone();
   }
   if(nlp_scaling_) {
-    c = *(nlp_transformations_.apply_to_cons_eq(c, n_cons_eq_));
-    d = *(nlp_transformations_.apply_to_cons_ineq(d, n_cons_ineq_));
+    // return unscaled values 
+    c = *(nlp_transformations_.apply_inv_to_cons_eq(c, n_cons_eq_));
+    d = *(nlp_transformations_.apply_inv_to_cons_ineq(d, n_cons_ineq_));
   }
   cons_body_->copy_from_two_vec_w_pattern(c, *cons_eq_mapping_, d, *cons_ineq_mapping_);
 
@@ -1037,7 +1094,9 @@ void hiopNlpFormulation::user_callback_solution(hiopSolveStatus status,
                                    (int)n_cons_,
                                    cons_body_->local_data_const(),
                                    cons_lambdas_->local_data_const(),
-                                   obj_value/this->get_obj_scale());
+                                   inv_obj_scale*obj_value);
+                                   
+
 }
 
 bool hiopNlpFormulation::user_callback_iterate(int iter,
