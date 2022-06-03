@@ -239,91 +239,6 @@ int eval_hess_sparse_wrapper(hiop_size_type n,
   return 0;
 }
 
-int get_starting_point_dense_wrapper(hiop_size_type n_, double* x0, void* user_data)
-{
-   FDenseProb* fprob = (FDenseProb*) user_data;
-   for(int i=0; i<fprob->n; i=i+1) {
-     x0[i] = fprob->x0[i];
-   }
-   return 0;
-}
-
-int get_prob_sizes_dense_wrapper(hiop_size_type* n_, hiop_size_type* m_, void* user_data)
-{
-   FDenseProb* fprob = (FDenseProb*) user_data;
-   *n_ = fprob->n;
-   *m_ = fprob->m;
-   return 0;
-}
-
-int get_vars_info_dense_wrapper(hiop_size_type n, double *xlow_, double* xupp_, void* user_data) 
-{
-  FDenseProb* fprob = (FDenseProb*) user_data;
-  hiop_size_type i = 0;
-  for(i=0; i<fprob->n; i=i+1) {
-    xlow_[i] = fprob->xlow[i];
-    xupp_[i] = fprob->xupp[i];
-  }
-  return 0;
-}
-
-int get_cons_info_dense_wrapper(hiop_size_type m, double *clow_, double* cupp_, void* user_data) 
-{
-  FDenseProb* fprob = (FDenseProb*) user_data;
-  hiop_size_type i = 0;
-  for(i=0; i<fprob->m; i=i+1) {
-    clow_[i] = fprob->clow[i];
-    cupp_[i] = fprob->cupp[i];
-  }
-  return 0;
-}
-
-int eval_f_dense_wrapper(hiop_size_type n, double* x, int new_x, double* obj, void* user_data) 
-{
-  hiop_size_type n_ = n;
-  hiop_size_type new_x_ = new_x;
-  FDenseProb* fprob = (FDenseProb*) user_data;
-  fprob->f_eval_f(&n_, x, &new_x_, obj);
-  return 0;
-}
-
-int eval_c_dense_wrapper(hiop_size_type n, hiop_size_type m, double* x, int new_x, double* cons, void* user_data) 
-{
-  hiop_size_type m_ = m;
-  hiop_size_type new_x_ = new_x;
-  FDenseProb* fprob = (FDenseProb*) user_data;
-  hiop_size_type n_ = fprob->n;
-  fprob->f_eval_c(&n_, &m_, x, &new_x_, cons);
-  return 0;
-}
-
-int eval_grad_dense_wrapper(hiop_size_type n, double* x, int new_x, double* gradf, void* user_data) 
-{
-  hiop_size_type n_ = n;
-  hiop_size_type new_x_ = new_x;
-  FDenseProb* fprob = (FDenseProb*) user_data;
-  fprob->f_eval_grad(&n_, x, &new_x_, gradf);
-  return 0;
-}
-
-int eval_jac_dense_wrapper(hiop_size_type n,
-                           hiop_size_type m,
-                           double* x,
-                           int new_x,
-                           double* MJac,
-                           void *user_data) 
-{ 
-  hiop_size_type n_ = n;
-  hiop_size_type m_ = m;
-  hiop_size_type new_x_ = new_x;
-  int task = 0;
-  FDenseProb* fprob = (FDenseProb*) user_data;
-
-  fprob->f_eval_jac(&n_, &m_, x, &new_x_, MJac);
-
-  return 0;
-}
-
 void* FC_GLOBAL(hiopsparseprob, HIOPSPARSEPROB) (hiop_size_type*   n,
                                                  hiop_size_type*   m,
                                                  hiop_size_type*   nnz_sparse_Jaceq,
@@ -434,6 +349,91 @@ void FC_GLOBAL(deletehiopsparseprob, DELETEHIOPSPARSEPROB) (void** f_prob_in)
   printf("Delete HIOP_SPARSE problem from Fortran interface!\n");
 }
 #endif
+
+int get_starting_point_dense_wrapper(hiop_size_type n_, double* x0, void* user_data)
+{
+   FDenseProb* fprob = (FDenseProb*) user_data;
+   for(int i=0; i<fprob->n; i=i+1) {
+     x0[i] = fprob->x0[i];
+   }
+   return 0;
+}
+
+int get_prob_sizes_dense_wrapper(hiop_size_type* n_, hiop_size_type* m_, void* user_data)
+{
+   FDenseProb* fprob = (FDenseProb*) user_data;
+   *n_ = fprob->n;
+   *m_ = fprob->m;
+   return 0;
+}
+
+int get_vars_info_dense_wrapper(hiop_size_type n, double *xlow_, double* xupp_, void* user_data) 
+{
+  FDenseProb* fprob = (FDenseProb*) user_data;
+  hiop_size_type i = 0;
+  for(i=0; i<fprob->n; i=i+1) {
+    xlow_[i] = fprob->xlow[i];
+    xupp_[i] = fprob->xupp[i];
+  }
+  return 0;
+}
+
+int get_cons_info_dense_wrapper(hiop_size_type m, double *clow_, double* cupp_, void* user_data) 
+{
+  FDenseProb* fprob = (FDenseProb*) user_data;
+  hiop_size_type i = 0;
+  for(i=0; i<fprob->m; i=i+1) {
+    clow_[i] = fprob->clow[i];
+    cupp_[i] = fprob->cupp[i];
+  }
+  return 0;
+}
+
+int eval_f_dense_wrapper(hiop_size_type n, double* x, int new_x, double* obj, void* user_data) 
+{
+  hiop_size_type n_ = n;
+  hiop_size_type new_x_ = new_x;
+  FDenseProb* fprob = (FDenseProb*) user_data;
+  fprob->f_eval_f(&n_, x, &new_x_, obj);
+  return 0;
+}
+
+int eval_c_dense_wrapper(hiop_size_type n, hiop_size_type m, double* x, int new_x, double* cons, void* user_data) 
+{
+  hiop_size_type m_ = m;
+  hiop_size_type new_x_ = new_x;
+  FDenseProb* fprob = (FDenseProb*) user_data;
+  hiop_size_type n_ = fprob->n;
+  fprob->f_eval_c(&n_, &m_, x, &new_x_, cons);
+  return 0;
+}
+
+int eval_grad_dense_wrapper(hiop_size_type n, double* x, int new_x, double* gradf, void* user_data) 
+{
+  hiop_size_type n_ = n;
+  hiop_size_type new_x_ = new_x;
+  FDenseProb* fprob = (FDenseProb*) user_data;
+  fprob->f_eval_grad(&n_, x, &new_x_, gradf);
+  return 0;
+}
+
+int eval_jac_dense_wrapper(hiop_size_type n,
+                           hiop_size_type m,
+                           double* x,
+                           int new_x,
+                           double* MJac,
+                           void *user_data) 
+{ 
+  hiop_size_type n_ = n;
+  hiop_size_type m_ = m;
+  hiop_size_type new_x_ = new_x;
+  int task = 0;
+  FDenseProb* fprob = (FDenseProb*) user_data;
+
+  fprob->f_eval_jac(&n_, &m_, x, &new_x_, MJac);
+
+  return 0;
+}
 
 void* FC_GLOBAL(hiopdenseprob, HIOPDENSEPROB) (hiop_size_type*   n,
                                                 hiop_size_type*   m,
