@@ -161,17 +161,17 @@ int get_prob_sizes_dense_wrapper(hiop_size_type* n, hiop_size_type* m, void* use
 int get_vars_info_dense_wrapper(hiop_size_type n, double *xlow, double* xupp, void* user_data);
 int get_cons_info_dense_wrapper(hiop_size_type m, double *clow, double* cupp, void* user_data);
 
-void* FC_GLOBAL(hiopdenseprob, HIOPDENSEPROB) ( hiop_size_type*   n,
-                                                hiop_size_type*   m,
-                                                double*           xlow,
-                                                double*           xupp,
-                                                double*           clow,
-                                                double*           cupp,
-                                                double*           x0,
-                                                f_eval_f_cb       f_eval_f,
-                                                f_eval_c_cb       f_eval_c,
-                                                f_eval_grad_cb    f_eval_grad,
-                                                f_eval_jac_dense_cb     f_eval_jac);
+void* FC_GLOBAL(hiopdenseprob, HIOPDENSEPROB) (hiop_size_type*      n,
+                                               hiop_size_type*      m,
+                                               double*              xlow,
+                                               double*              xupp,
+                                               double*              clow,
+                                               double*              cupp,
+                                               double*              x0,
+                                               f_eval_f_cb          f_eval_f,
+                                               f_eval_c_cb          f_eval_c,
+                                               f_eval_grad_cb       f_eval_grad,
+                                               f_eval_jac_dense_cb  f_eval_jac);
 void FC_GLOBAL(hiopdensesolve, HIOPDENSESOLVE) (void** f_prob_in, double* obj, double* sol);
 void FC_GLOBAL(deletehiopdenseprob, DELETEHIOPDENSEPROB) (void** f_prob_in);
 
