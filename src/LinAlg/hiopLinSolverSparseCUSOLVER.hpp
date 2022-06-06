@@ -94,20 +94,6 @@ namespace hiop
       return false;
     }
 
-    int refactorizationSetupCusolverGLU();
-    int refactorizationSetupCusolverRf();
-
-    int initializeKLU();
-    int initializeCusolverGLU();
-    int initializeCusolverRf();
-
-    void setFactorizationType(std::string newFact_);
-    void setRefactorizationType(std::string newRefact_);
-
-    std::string getFactorizationType();
-    std::string getRefactorizationType();
-    // KS: can consider one global function to set all the options but thats
-    // TBA in the future.
   private:
     //
     int m_;   // number of rows of the whole matrix
@@ -123,13 +109,11 @@ namespace hiop
 
     /** options **/
     // TODO: KS need options for:
-    //(1) factorization (cusolver-glu, cusolver-rf, klu)
-    //(2) refactorization: if factorization is klu, it can be followed either
-    // by
-    // cusolver-glu or cusolver-rf factorization (3) iterative refinement:
-    // fgmres, bicgstab (4) if ir is fgmres, there are different gram-schmidt
+    // (3) iterative refinement: fgmres, bicgstab 
+    // (4) if ir is fgmres, there are different gram-schmidt
     // options: MGS, CGS2, MGS-2 synch, MGS-1 synch/
 
+    int ordering_;
     std::string fact_;
     std::string refact_;
 
@@ -170,11 +154,24 @@ namespace hiop
 
     int factorizationSetupSucc_;
     /* needed for cuSolverRf */
-    int* d_P;
-    int* d_Q; // permutation matrices
-    double* d_T;
+    int* d_P_;
+    int* d_Q_; // permutation matrices
+    double* d_T_;
+
     /* private function: creates a cuSolver data structure from KLU data
      * structures. */
+
+    /** called the very first time a matrix is factored. Perform KLU
+     * factorization, allocate all aux variables 
+     *  
+     * @note Converts HiOp triplet matrix to CSR format.
+     */
+    virtual void firstCall();
+
+    /** Function to compute nnz and set row pointers */
+    void compute_nnz();
+    /** Function to compute column indices and matrix values arrays */
+    void set_csr_indices_values();
 
     int createM(const int n, 
                 const int nnzL, 
@@ -184,22 +181,26 @@ namespace hiop
                 const int* Up, 
                 const int* Ui);
 
+
     template <typename T>
     void hiopCheckCudaError(T result, const char* const file, int const line);
+    /* private functions needed for refactorization setup, no need to make them public */
+   
+    int initializeKLU();
+    int initializeCusolverGLU();
+    int initializeCusolverRf();
 
-  public:
-    /** called the very first time a matrix is factored. Perform KLU
-     * factorization, allocate all aux variables */
-    virtual void firstCall();
-
+    int refactorizationSetupCusolverGLU();
+    int refactorizationSetupCusolverRf();
+    
     friend class hiopLinSolverNonSymSparseCUSOLVER;
   };
 
   class hiopLinSolverNonSymSparseCUSOLVER : public hiopLinSolverNonSymSparse
   {
   public:
+    //construtor
     hiopLinSolverNonSymSparseCUSOLVER(const int& n, const int& nnz, hiopNlpFormulation* nlp);
-
     virtual ~hiopLinSolverNonSymSparseCUSOLVER();
 
     /** Triggers a SuiteSparse KLU refactorization of the matrix, if necessary.
@@ -218,18 +219,7 @@ namespace hiop
       return false;
     }
 
-    int refactorizationSetupCusolverGLU();
-    int refactorizationSetupCusolverRf();
-
-    int initializeKLU();
-    int initializeCusolverGLU();
-    int initializeCusolverRf();
-
-    void setFactorizationType(std::string newFact_);
-    void setRefactorizationType(std::string newRefact_);
-
-    std::string getFactorizationType();
-    std::string getRefactorizationType();
+    friend class hiopLinSolverSymSparseCUSOLVER;
 
   private:
     int m_;   // number of rows of the whole matrix
@@ -244,10 +234,12 @@ namespace hiop
     int* index_covert_extra_Diag2CSR_;
     std::unordered_map<int, int> extra_dia_g_nnz_map;
 
+    int ordering_;
     std::string fact_;
     std::string refact_;
     int factorizationSetupSucc_;
-    /** needed for CUSOLVER and KLU */
+
+    /** Data structures needed for CUSOLVER and KLU */
 
     cusolverStatus_t sp_status_;
     cusparseHandle_t handle_ = 0;
@@ -282,12 +274,17 @@ namespace hiop
     double* devr_;
     double* drhs_;
     /* needed for cuSolverRf */
-    int* d_P;
-    int* d_Q; // permutation matrices
-    double* d_T;
-    /* private function: creates a cuSolver data structure from KLU data
-     * structures. */
+    int* d_P_;
+    int* d_Q_; // permutation matrices
+    double* d_T_;
 
+    /* private function: creates a cuSolver data structure from KLU data
+     * structures. 
+     */
+
+    /** called the very first time a matrix is factored. */
+    void firstCall();
+    
     int createM(const int n, 
                 const int nnzL, 
                 const int* Lp, 
@@ -296,13 +293,17 @@ namespace hiop
                 const int* Up, 
                 const int* Ui);
 
+    // void compute_nnz();
+    // void set_csr_indices_values();
+
     template <typename T> void hiopCheckCudaError(T result, const char* const file, int const line);
 
-  public:
-    /** called the very first time a matrix is factored. */
-    void firstCall();
-
-    friend class hiopLinSolverSymSparseCUSOLVER;
+    int initializeKLU();
+    int initializeCusolverGLU();
+    int initializeCusolverRf();
+    
+    int refactorizationSetupCusolverGLU();
+    int refactorizationSetupCusolverRf();
   };
 
 } // namespace hiop

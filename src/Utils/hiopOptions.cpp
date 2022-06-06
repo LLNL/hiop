@@ -868,7 +868,7 @@ void hiopOptionsNLP::register_options()
   // - symamd-eigen: use sym. approx. min. degree algorithm from EIGEN package (default, Host execution)
   // - symrcm: use symmetric reverse Cuthill-McKee as implemented by CUDA csrsymrcm (Host execution)
   {
-    vector<string> range = { "metis", "symamd-cuda", "symamd-eigen", "symrcm"};
+    vector<string> range = { "metis", "symamd-cuda", "symamd-eigen", "symrcm", "amd-ssparse", "colamd-ssparse"};
     auto default_value = range[1];
 #ifdef HIOP_USE_EIGEN
     default_value = range[2];
@@ -878,8 +878,31 @@ void hiopOptionsNLP::register_options()
                         range,
                         "permutation to promote sparsity in the (Chol) factorization: 'metis' based on a wrapper of "
                         "METIS_NodeND, 'symamd-cuda', 'symamd-eigen' (default), and 'symrcm' are the well-known "
-                        "approx. min. degree and reverse Cuthill-McKee orderings in their symmetric form.");
+                        "approx. min. degree (AMD) and reverse Cuthill-McKee orderings in their symmetric form. "
+                        "`amd-ssparse` and `colamd-ssparse` AMD and column AMD from Suite Sparse library. ");
   }
+
+  // cusolver_lu factorization options
+  {
+    vector<std::string> range = {"klu"};
+    auto default_value = range[0];
+    register_str_option("cusolver_lu_factorization",
+                        default_value,
+                        range,
+                        "So far, only 'klu' option is available. ");
+  }
+
+  // cusolver_lu refactorization options
+  {
+    vector<std::string> range = {"glu", "rf"};
+    auto default_value = range[0];
+    register_str_option("cusolver_lu_refactorization",
+                        default_value,
+                        range,
+                        "Numerical refactorization function after sparsity pattern of factors is computed. "
+                        "'glu' is experimental and 'rf' is NVIDIA's stable refactorization. ");
+  }
+
   //linsol_mode -> mostly related to magma and MDS linear algebra
   {
     vector<string> range(3); range[0]="stable"; range[1]="speculative"; range[2]="forcequick";

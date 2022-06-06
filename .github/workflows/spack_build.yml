@@ -33,8 +33,8 @@ jobs:
         run: |
           ls && pwd && \
           . /opt/spack/share/spack/setup-env.sh && \
-          spack mirror add e4s https://cache.e4s.io && \
-          spack buildcache keys -it && \
+          spack mirror add binary_mirror https://binaries.spack.io/develop && \
+          spack buildcache keys --install --trust && \
           spack spec $SPACK_SPEC target=x86_64 && \
           spack install --fail-fast $SPACK_SPEC target=x86_64
 
