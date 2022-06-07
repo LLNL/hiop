@@ -7,6 +7,17 @@ target_link_libraries(NlpSparseEx2.exe HiOp::HiOp)
 add_executable(NlpSparseEx3.exe NlpSparseEx3.cpp NlpSparseEx3Driver.cpp)
 target_link_libraries(NlpSparseEx3.exe HiOp::HiOp)
 
+if(HIOP_BUILD_SHARED)
+  add_executable(NlpSparseCEx1.exe NlpSparseCEx1.c)
+  target_link_libraries(NlpSparseCEx1.exe HiOp::HiOp)
+  if(HIOP_BUILD_SHARED)
+    add_executable(NlpSparseFEx1.exe NlpSparseFEx1.f)
+    target_link_libraries(NlpSparseFEx1.exe HiOp::HiOp)
+    add_executable(NlpSparseHS071.exe NlpSparseExHS071.f)
+    target_link_libraries(NlpSparseHS071.exe HiOp::HiOp)
+  endif()
+endif()
+
 ##########################################################
 # CMake Tests
 ##########################################################
@@ -26,7 +37,7 @@ add_test(NAME NlpSparse2_2 COMMAND ${RUNCMD} "$<TARGET_FILE:NlpSparseEx2.exe>" "
 if(HIOP_USE_CUDA)
   add_test(NAME NlpSparse2_3 COMMAND ${RUNCMD} "$<TARGET_FILE:NlpSparseEx2.exe>" "500" "-cusolver" "-inertiafree" "-selfcheck")
 endif(HIOP_USE_CUDA)
-if(HIOP_USE_GINKGO) # Disable temporarily Ginkgo example 2
-    # add_test(NAME NlpSparse2_4 COMMAND ${RUNCMD} "$<TARGET_FILE:NlpSparseEx2.exe>" "500" "-ginkgo" "-inertiafree" "-selfcheck")
+if(HIOP_USE_GINKGO)
+  add_test(NAME NlpSparse2_4 COMMAND ${RUNCMD} "$<TARGET_FILE:NlpSparseEx2.exe>" "500" "-ginkgo" "-inertiafree" "-selfcheck")
 endif(HIOP_USE_GINKGO)
 add_test(NAME NlpSparse3_1 COMMAND ${RUNCMD} "$<TARGET_FILE:NlpSparseEx3.exe>" "500" "-selfcheck")
