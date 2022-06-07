@@ -5,12 +5,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 if (POLICY CMP0074)
   cmake_policy(SET CMP0074 NEW)
 endif ()
 
-project (hiop VERSION "0.5.0")
+project (hiop VERSION "0.6.2")
 
 string(TIMESTAMP HIOP_RELEASE_DATE "%Y-%m-%d")
 
@@ -21,8 +22,9 @@ enable_language(Fortran)
 include(FortranCInterface)
 FortranCInterface_HEADER(FortranCInterface.hpp MACRO_NAMESPACE "FC_")
 
+option(HIOP_USE_EIGEN "Build with Eigen support" ON)
 option(HIOP_USE_MPI "Build with MPI support" ON)
-option(HIOP_USE_GPU "Build with support for GPUs - Magma and cuda libraries" OFF)
+option(HIOP_USE_GPU "Build with support for GPUs - CUDA or HIP libraries" OFF)
 option(HIOP_TEST_WITH_BSUB "Use `jsrun` instead of `mpirun` commands when running tests" OFF)
 option(HIOP_USE_RAJA   "Build with portability abstraction library RAJA" OFF)
 option(HIOP_DEEPCHECKS "Extra checks and asserts in the code with a high penalty on performance" OFF)
@@ -34,12 +36,15 @@ option(HIOP_BUILD_SHARED "Build shared library" OFF)
 option(HIOP_BUILD_STATIC "Build static library" ON)
 option(HIOP_SPARSE "Build with sparse linear algebra" ON)
 option(HIOP_USE_COINHSL "Build with sparse linear algebra" ON)
-option(HIOP_USE_STRUMPACK "Build with STRUMPACK backend for sparse linear algebra" OFF)
+option(HIOP_USE_GINKGO "Build with Ginkgo backend for sparse linear algebra" OFF)
 option(HIOP_USE_PARDISO "Build with PARDISO backend for sparse linear algebra" OFF)
+option(HIOP_USE_STRUMPACK "Build with STRUMPACK backend for sparse linear algebra" OFF)
 option(HIOP_WITH_VALGRIND_TESTS "Run valgrind on certain integration tests" OFF)
 option(HIOP_BUILD_DOCUMENTATION "Build HiOp documentation via Doxygen" ON)
 
 set(HIOP_CTEST_LAUNCH_COMMAND "" CACHE STRING "Manually override launch commands used when running CTest")
+set(HIOP_CTEST_OUTPUT_DIR ${PROJECT_BINARY_DIR} CACHE PATH "Directory where CTest outputs are saved")
+mark_as_advanced(HIOP_CTEST_OUTPUT_DIR) # Hide this var as the default will be overriden rarely
 set(HIOP_EXTRA_LINK_FLAGS "" CACHE STRING "Manually pass extra flags to linker")
 
 # Ensure at least one library type is being built!
@@ -80,6 +85,9 @@ cmake_dependent_option(
 )
 cmake_dependent_option(
   HIOP_USE_MAGMA "Use Magma linear algebra" ON "HIOP_USE_GPU" OFF
+)
+cmake_dependent_option(
+  HIOP_USE_CUSOLVER_LU "Build with cuSolver LU support" ON "HIOP_USE_CUDA" OFF
 )
 
 add_library(hiop_tpl INTERFACE)
@@ -140,6 +148,7 @@ target_compile_options(hiop_warnings
   -Wnull-dereference
   -Wdouble-promotion  # Warn on implicit conversion from
                       # float to double
+  -Wconversion
   )
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
@@ -158,6 +167,7 @@ endif()
 
 if(HIOP_DEVELOPER_MODE)
   target_link_libraries(hiop_tpl INTERFACE hiop_options hiop_warnings)
+  install(TARGETS hiop_options hiop_warnings EXPORT hiop-targets)
 endif()
 
 if(NOT (HIOP_USE_GPU AND HIOP_USE_HIP))
@@ -178,10 +188,20 @@ endif(NOT DEFINED LAPACK_LIBRARIES)
 target_link_libraries(hiop_tpl INTERFACE ${LAPACK_LIBRARIES})
 message(STATUS "Using LAPACK libraries: ${LAPACK_LIBRARIES}")
 
+include(HiOpCheckGitSubmodules)
+if(HIOP_USE_EIGEN)
+  message(STATUS "Eigen enabled")
+  # We don't want target_include_directories as the headers are not installed
+  include_directories(${PROJECT_SOURCE_DIR}/tpl/eigen)
+endif()
+
 if(HIOP_USE_GPU)
-  set(HIOP_MAGMA_DIR CACHE PATH "Path to Magma directory")
+  include(CheckLanguage)
+  if(HIOP_USE_MAGMA)
+    set(HIOP_MAGMA_DIR CACHE PATH "Path to Magma directory")
+  endif()
+
   if(HIOP_USE_CUDA)
-    include(CheckLanguage)
     enable_language(CUDA)
     check_language(CUDA)
 
@@ -194,11 +214,18 @@ if(HIOP_USE_GPU)
       set(CMAKE_CUDA_ARCHITECTURES 35)
     endif()
     set(CMAKE_CUDA_FLAGS "--expt-extended-lambda")
-    set(HIOP_MAGMA_DIR CACHE PATH "Path to Magma directory")
-    include(FindHiopMagma)
+
+    if(HIOP_USE_MAGMA)
+      set(HIOP_MAGMA_DIR CACHE PATH "Path to Magma directory")
+      include(FindHiopMagma)
+    endif()
+
     include(FindHiopCudaLibraries)
     target_link_libraries(hiop_tpl INTERFACE hiop_cuda)
-    target_link_libraries(hiop_cuda INTERFACE Magma)
+
+    if(HIOP_USE_MAGMA)
+      target_link_libraries(hiop_cuda INTERFACE Magma)
+    endif()
   elseif(HIOP_USE_HIP)
     include(FindHiopHipLibraries)
     add_definitions(-DHAVE_HIP) # For hipmagma
@@ -225,7 +252,22 @@ if(HIOP_USE_RAJA)
     PATHS ${umpire_DIR} ${umpire_DIR}/share/umpire/cmake
     REQUIRED)
   target_link_libraries(hiop_tpl INTERFACE umpire RAJA)
+  message(STATUS "Found RAJA pkg-config: ${RAJA_CONFIG}")
+  message(STATUS "Found umpire pkg-config: ${umpire_CONFIG}")
 endif()
+
+# KLU needed with cuSolver. TODO: make this an optional dependency
+if (HIOP_USE_CUSOLVER_LU)
+  set(HIOP_KLU_DIR CACHE PATH "Path to KLU directory")
+  include(FindKLU)
+  if(NOT KLU_LIBRARY)
+    message(STATUS "Cannot find KLU, disabling cuSOLVER LU module ...")
+    set(HIOP_USE_CUSOLVER_LU OFF CACHE BOOL "Build without cuSOLVER LU module." FORCE)
+  else()  
+    target_link_libraries(hiop_tpl INTERFACE KLU)
+  endif()  
+endif()
+
 
 if(HIOP_WITH_KRON_REDUCTION)
   set(HIOP_UMFPACK_DIR CACHE PATH "Path to UMFPACK directory")
@@ -287,14 +329,27 @@ if(HIOP_SPARSE)
     endif()
   endif(HIOP_USE_PARDISO)
 
-  if(NOT HIOP_USE_COINHSL AND NOT HIOP_USE_STRUMPACK AND NOT HIOP_USE_PARDISO)
+  if(HIOP_USE_GINKGO)
+    set(HIOP_GINKGO_DIR CACHE PATH "Path to GINKGO directory")
+    include(FindHiopGINKGO)
+    target_link_libraries(hiop_tpl INTERFACE Ginkgo::ginkgo)
+    
+    if(METIS_LIBRARY)
+      target_link_libraries(hiop_tpl INTERFACE METIS)
+    else()
+      set(HIOP_USE_GINKGO OFF CACHE BOOL "Build without GINKGO" FORCE)
+    endif()
+  endif(HIOP_USE_GINKGO)
+
+  if(NOT HIOP_USE_COINHSL AND NOT HIOP_USE_STRUMPACK AND NOT HIOP_USE_PARDISO AND NOT HIOP_USE_GINKGO)
     set(HIOP_SPARSE OFF CACHE BOOL "Build without sparse linear algebra" FORCE)
-    message(STATUS "Cannot find COINHSL, STRUMPACK nor PARDISO for sparse linear algebra, and the option HIOP_SPARSE will be disabled")
-  endif(NOT HIOP_USE_COINHSL AND NOT HIOP_USE_STRUMPACK AND NOT HIOP_USE_PARDISO)
+    message(STATUS "Cannot find COINHSL, STRUMPACK, PARDISO nor GINKGO for sparse linear algebra, and the option HIOP_SPARSE will be disabled")
+endif(NOT HIOP_USE_COINHSL AND NOT HIOP_USE_STRUMPACK AND NOT HIOP_USE_PARDISO AND NOT HIOP_USE_GINKGO)
 else(HIOP_SPARSE)
   set(HIOP_USE_COINHSL OFF CACHE BOOL "Build without COINHSL" FORCE)
   set(HIOP_USE_STRUMPACK OFF CACHE BOOL "Build without STRUMPACK" FORCE)
   set(HIOP_USE_PARDISO OFF CACHE BOOL "Build without PARDISO" FORCE)
+  set(HIOP_USE_GINKGO OFF CACHE BOOL "Build without GINKGO" FORCE)
 endif(HIOP_SPARSE)
 
 # It simplifies linking against metis to set an internal variable
@@ -368,7 +423,6 @@ install(FILES
 
 add_subdirectory(tests)
 
-set(STRIP_TABLE_CMD "awk '/Problem Summary/ { while (!match($0, /termination/)){ if(match($0, /^[ ]+[0-9]/)) { print $0; } getline } }'")
 # If running in a BSUB allocaation, use jrun commands and make sure we are
 # requesting the correct resources.
 if(HIOP_TEST_WITH_BSUB)
@@ -392,7 +446,7 @@ endif()
 if(NOT (HIOP_CTEST_LAUNCH_COMMAND STREQUAL ""))
   message(STATUS "Manually overriding launch command for CTest with \"${HIOP_CTEST_LAUNCH_COMMAND}\"")
   string(REPLACE " " ";" TMP_RUNCMD "${HIOP_CTEST_LAUNCH_COMMAND}")
-  set(RUNCMD ${TMP_RUNCMD})
+  set(RUNCMD "${TMP_RUNCMD};-n;1")
   set(MPICMD ${TMP_RUNCMD})
 endif()
 
@@ -402,106 +456,17 @@ endif()
 if (HIOP_WITH_MAKETEST)
   include(cmake/FindValgrind.cmake)
   enable_testing()
-  add_test(NAME VectorTest        COMMAND ${RUNCMD} "$<TARGET_FILE:testVector>")
+  add_test(NAME VectorTest       COMMAND ${RUNCMD} "$<TARGET_FILE:testVector>")
   if(HIOP_USE_MPI)
     add_test(NAME VectorTest_mpi COMMAND ${MPICMD} -n 2 "$<TARGET_FILE:testVector>")
   endif(HIOP_USE_MPI)
-  add_test(NAME MatrixTest        COMMAND ${RUNCMD} "$<TARGET_FILE:testMatrixDense>")
+  add_test(NAME MatrixTest       COMMAND ${RUNCMD} "$<TARGET_FILE:testMatrixDense>")
   if(HIOP_USE_MPI)
     add_test(NAME MatrixTest_mpi COMMAND ${MPICMD} -n 2 "$<TARGET_FILE:testMatrixDense>")
   endif(HIOP_USE_MPI)
-  add_test(NAME SparseMatrixTest  COMMAND ${RUNCMD} "$<TARGET_FILE:testMatrixSparse>")
+  add_test(NAME SparseMatrixTest COMMAND ${RUNCMD} "$<TARGET_FILE:testMatrixSparse>")
   add_test(NAME SymmetricSparseMatrixTest COMMAND ${RUNCMD} "$<TARGET_FILE:testMatrixSymSparse>")
-  add_test(NAME NlpDenseCons1_5H  COMMAND ${RUNCMD} "$<TARGET_FILE:nlpDenseCons_ex1.exe>"  "500" "1.0" "-selfcheck")
-  add_test(NAME NlpDenseCons1_5K  COMMAND ${RUNCMD} "$<TARGET_FILE:nlpDenseCons_ex1.exe>" "5000" "1.0" "-selfcheck")
-  add_test(NAME NlpDenseCons1_50K COMMAND ${RUNCMD} "$<TARGET_FILE:nlpDenseCons_ex1.exe>" "50000" "1.0" "-selfcheck")
-  if(HIOP_USE_MPI)
-    add_test(NAME NlpDenseCons1_50K_mpi COMMAND ${MPICMD} -n 2 "$<TARGET_FILE:nlpDenseCons_ex1.exe>" "50000" "1.0" "-selfcheck")
-  endif(HIOP_USE_MPI)
-  add_test(NAME NlpDenseCons2_5H    COMMAND  ${RUNCMD} "$<TARGET_FILE:nlpDenseCons_ex2.exe>"   "500" "-selfcheck")
-  add_test(NAME NlpDenseCons2_5K    COMMAND  ${RUNCMD} "$<TARGET_FILE:nlpDenseCons_ex2.exe>"  "5000" "-selfcheck")
-  add_test(NAME NlpDenseCons2_UN_5K COMMAND  ${RUNCMD} "$<TARGET_FILE:nlpDenseCons_ex2.exe>"  "5000" "-unconstrained" "-selfcheck")
-  add_test(NAME NlpDenseCons3_5H    COMMAND  ${RUNCMD} "$<TARGET_FILE:nlpDenseCons_ex3.exe>"   "500" "-selfcheck")
-  add_test(NAME NlpDenseCons3_5K    COMMAND  ${RUNCMD} "$<TARGET_FILE:nlpDenseCons_ex3.exe>"  "5000" "-selfcheck")
-  add_test(NAME NlpDenseCons3_50K   COMMAND  ${RUNCMD} "$<TARGET_FILE:nlpDenseCons_ex3.exe>" "50000" "-selfcheck")
-  if(HIOP_USE_MPI)
-    add_test(NAME NlpDenseCons3_50K_mpi COMMAND ${MPICMD} -n 2 "$<TARGET_FILE:nlpDenseCons_ex3.exe>" "50000" "-selfcheck")
-  endif(HIOP_USE_MPI)
 
-  add_test(NAME NlpMixedDenseSparse4_1 COMMAND ${RUNCMD} bash -c "$<TARGET_FILE:nlpMDS_ex4.exe> 400 100 0 -selfcheck \
-    | ${STRIP_TABLE_CMD} \
-    | tee ${PROJECT_BINARY_DIR}/mds4_1.out")
-  add_test(NAME NlpMixedDenseSparse4_2 COMMAND ${RUNCMD} bash -c "$<TARGET_FILE:nlpMDS_ex4.exe> 400 100 1 -selfcheck \
-    | ${STRIP_TABLE_CMD} \
-    | tee ${PROJECT_BINARY_DIR}/mds4_2.out")
-  
-  add_test(NAME NlpMixedDenseSparse4_3 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpMDS_ex4.exe>" "400" "100" "0" "-empty_sp_row" "-selfcheck")
-
-  if(HIOP_USE_RAJA)
-    add_test(NAME NlpMixedDenseSparseRaja4_1 COMMAND ${RUNCMD} bash -c "$<TARGET_FILE:nlpMDS_ex4_raja.exe> 400 100 0 -selfcheck \
-      | ${STRIP_TABLE_CMD} \
-      | tee ${PROJECT_BINARY_DIR}/mds4_raja_1.out")
-    add_test(NAME NlpMixedDenseSparseRaja4_2 COMMAND ${RUNCMD} bash -c "$<TARGET_FILE:nlpMDS_ex4_raja.exe> 400 100 1 -selfcheck \
-      | ${STRIP_TABLE_CMD} \
-      | tee ${PROJECT_BINARY_DIR}/mds4_raja_2.out")
-    add_test(NAME NlpMixedDenseSparseRaja4_3 COMMAND ${RUNCMD} bash -c "$<TARGET_FILE:nlpMDS_ex4_raja.exe> 400 100 0 -empty_sp_row -selfcheck")
-    
-    if(HIOP_DEEPCHECKS)
-      foreach(iter 1 2)
-        add_test(
-          NAME "CompareExample4_NumIterations_${iter}" 
-          COMMAND bash -c "\
-          if [[ $(wc -l ${PROJECT_BINARY_DIR}/mds4_${iter}.out|cut -f1 -d' ') == $(wc -l ${PROJECT_BINARY_DIR}/mds4_raja_${iter}.out|cut -f1 -d' ') ]]
-          then
-          echo 'Output tables have the same number of iterations.'
-          exit 0
-          else
-          echo 'Output tables have a different number of iterations!'
-          exit 1
-          fi")
-        add_test(
-          NAME "CompareExample4_ElementWise_${iter}"
-          COMMAND bash -c "\
-          join ${PROJECT_BINARY_DIR}/mds4_${iter}.out ${PROJECT_BINARY_DIR}/mds4_raja_${iter}.out \
-          | ${PROJECT_SOURCE_DIR}/tests/testEx4CompareIterations.awk")
-      endforeach()
-    endif(HIOP_DEEPCHECKS)
-  endif()
-
-  add_test(NAME NlpMixedDenseSparse5_1 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpMDS_ex5.exe>" "400" "100" "-selfcheck")
-
-  if(HIOP_SPARSE)
-    add_test(NAME NlpSparse6_1 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex6.exe>" "500" "-selfcheck")
-    add_test(NAME NlpSparse6_2 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex6.exe>" "500" "-fr" "-selfcheck")
-    if(HIOP_USE_PARDISO)
-      add_test(NAME NlpSparse6_3 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex6.exe>" "500" "-pardiso" "-selfcheck")
-    endif(HIOP_USE_PARDISO)
-    add_test(NAME NlpSparse7_1 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex7.exe>" "500" "-selfcheck")
-    add_test(NAME NlpSparse7_2 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpSparse_ex7.exe>" "500" "-inertiafree" "-selfcheck")
-  endif(HIOP_SPARSE)
-
-  if(HIOP_USE_MPI)
-    add_test(NAME NlpPriDec8_1 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpPriDec_ex8.exe>" "-selfcheck")
-    add_test(NAME NlpPriDec8_mpi COMMAND ${MPICMD} -n 2 "$<TARGET_FILE:nlpPriDec_ex8.exe>" "-selfcheck")
-    if(HIOP_SPARSE)
-      add_test(NAME NlpPriDec9_1 COMMAND ${RUNCMD} "$<TARGET_FILE:nlpPriDec_ex9.exe>" "-selfcheck")    
-      add_test(NAME NlpPriDec9_mpi COMMAND ${MPICMD} -n 2 "$<TARGET_FILE:nlpPriDec_ex9.exe>" "-selfcheck")
-    endif(HIOP_SPARSE)
-  endif(HIOP_USE_MPI)
-
-  if(HIOP_WITH_VALGRIND_TESTS)
-    string(REPLACE ";" " " runcmd_str "${RUNCMD}")
-    add_test(
-      NAME NlpDenseCons1_5H_Valgrind
-      COMMAND bash -c "${runcmd_str} ${HIOP_VALGRIND_CMD} $<TARGET_FILE:nlpDenseCons_ex1.exe> 500 1.0 -selfcheck"
-      )
-    add_test(
-      NAME NlpMixedDenseSparse4_1_Valgrind
-      COMMAND bash -c "${runcmd_str} ${HIOP_VALGRIND_CMD} $<TARGET_FILE:nlpMDS_ex4.exe> 400 100 0 -selfcheck"
-      )
-  endif()
-
-  if(HIOP_BUILD_SHARED AND NOT HIOP_USE_GPU)
-    add_test(NAME NlpMixedDenseSparseCinterface COMMAND ${RUNCMD} "$<TARGET_FILE:nlpMDS_cex4.exe>")
-  endif()
+  # Test drivers in the form of user applications
+  add_subdirectory(src/Drivers)
 endif(HIOP_WITH_MAKETEST)

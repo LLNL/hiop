@@ -1101,6 +1101,42 @@ public:
     return reduceReturn(fail, &A);
   }
 
+  int matrix_symmetrize(
+      hiop::hiopMatrixDense& A,
+      const int rank=0)
+  {
+    const local_ordinal_type M = getNumLocRows(&A);
+    const local_ordinal_type N = getNumLocCols(&A);
+    int fail = 0;
+    const real_type upper_val = one;
+    const real_type diag_val = zero;
+
+    assert(A.m() == A.n());
+    A.setToZero();
+
+    // Set the upper triangular part to one
+    for(int i=0; i<N; i++) {
+      for(int j=i+1; j<M; j++) {
+        if(rank == 0) {
+          setLocalElement(&A, i, j, upper_val);
+        }
+      }
+    }
+
+    // copy the upper triangular part to the lower triangylar part
+    A.symmetrize();
+
+    fail += verifyAnswer(&A,
+      [=] (local_ordinal_type i, local_ordinal_type j) -> real_type
+      {
+        bool is_diagonal = ( j==i );
+        return is_diagonal ? diag_val : upper_val;
+      });
+
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &A);
+  }
+
 #ifdef HIOP_DEEPCHECKS
   int matrixAssertSymmetry(
       hiop::hiopMatrixDense& A,

@@ -146,7 +146,15 @@ public:
    * @param m number of constraints
    */
   virtual bool get_prob_sizes(size_type& n, size_type& m)=0;
-  
+
+  /** Specifies the type of optimization problem
+   * @param[out] type indicating whether the optimization problem is
+   *                  linearily, quadratically, or general nonlinearily.
+   * TODO: need to `deepcheck` is this return value matches the returned type array from 
+   * `get_vars_info` and `get_cons_info`
+   */
+  virtual bool get_prob_info(NonlinearityType& type) { type = hiopInterfaceBase::hiopNonlinear; return true;}
+
   /** Specifies bounds on the variables.
    *    
    * @param[in] n global number of constraints

@@ -68,6 +68,20 @@ struct hiopVersion
       false;
 #endif
 
+  static constexpr bool useCUSOLVERLU =
+#ifdef HIOP_USE_CUSOLVER_LU
+      true;
+#else
+      false;
+#endif
+
+  static constexpr bool useGINKGO =
+#ifdef HIOP_USE_GINKGO
+      true;
+#else
+      false;
+#endif
+
   static inline void version(int& major, int& minor, int& patch)
   {
     major = std::atoi(HIOP_VERSION_MAJOR);
@@ -94,6 +108,7 @@ struct hiopVersion
       << "\nCOINHSL: " << fmt(useCOINHSL)
       << "\nSTRUMPACK: " << fmt(useSTRUMPACK)
       << "\nPARDISO: " << fmt(usePARDISO)
+      << "\nCUSOLVER-LU: " << fmt(useCUSOLVERLU)
       << "\n";
     return ss.str();
   }

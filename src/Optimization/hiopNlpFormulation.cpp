@@ -75,9 +75,16 @@ namespace hiop
 
 hiopNlpFormulation::hiopNlpFormulation(hiopInterfaceBase& interface_, const char* option_file)
 #ifdef HIOP_USE_MPI
-  : mpi_init_called(false), interface_base(interface_), nlp_transformations_(this)
+  : mpi_init_called(false),
+    interface_base(interface_),
+    nlp_transformations_(this),
+    prob_type_(hiopInterfaceBase::hiopNonlinear),
+    nlp_evaluated_(false)
 #else 
-  : interface_base(interface_), nlp_transformations_(this)
+  : interface_base(interface_),
+    nlp_transformations_(this),
+    prob_type_(hiopInterfaceBase::hiopNonlinear),
+    nlp_evaluated_(false)
 #endif
 {
   strFixedVars_ = ""; //uninitialized
@@ -136,6 +143,7 @@ hiopNlpFormulation::hiopNlpFormulation(hiopInterfaceBase& interface_, const char
   cons_Jac_ =  nullptr;
   cons_lambdas_ = nullptr;
   nlp_scaling_ = nullptr;
+  relax_bounds_ = nullptr;
 }
 
 hiopNlpFormulation::~hiopNlpFormulation()
@@ -173,7 +181,7 @@ hiopNlpFormulation::~hiopNlpFormulation()
   delete cons_body_;
   delete cons_Jac_;
   delete cons_lambdas_;
-//  if(nlp_scaling_) delete nlp_scaling_;  // deleted inside nlp_transformations_
+  /// nlp_scaling_ and relax_bounds_ are deleted inside nlp_transformations_
 }
 
 bool hiopNlpFormulation::finalizeInitialization()
@@ -222,6 +230,9 @@ bool hiopNlpFormulation::finalizeInitialization()
   xl_   = LinearAlgebraFactory::create_vector(mem_space, n_vars_);
 #endif  
   xu_ = xl_->alloc_clone();
+
+  bret = interface_base.get_prob_info(prob_type_);
+  assert(bret);
 
   int nlocal=xl_->get_local_size();
 
@@ -335,10 +346,14 @@ bool hiopNlpFormulation::finalizeInitialization()
       
       nlp_transformations_.append(fixedVarsRemover);
     } else {
+      /*
+      * Relax fixed variables according to 2 conditions:
+      * 1. bound_relax_perturb==0.0: Relax fixed variables according to fixed_var_perturb and fixed_var_tolerance.
+      *    Other variables are not relaxed. hiopFixedVarsRelaxer is used to relax fixed var
+      * 2. bound_relax_perturb!=0.0: Later we will use hiopBoundsRelaxer to relax the variable and inequlity bounds, 
+      *    according to bound_relax_perturb. It will also relax the fixed variables, hence we can skip relax fixed var here.
+      */
       if(options->GetString("fixed_var")=="relax" && options->GetNumeric("bound_relax_perturb") == 0.0) {
-        //
-        // Relax fixed variables
-        //
         log->printf(hovWarning, "Fixed variables will be relaxed internally.\n");
         auto* fixedVarsRelaxer =
           new hiopFixedVarsRelaxer(this, *xl_, *xu_, nfixed_vars, nfixed_vars_local);
@@ -390,10 +405,14 @@ bool hiopNlpFormulation::finalizeInitialization()
   // relax bounds for simple bounds and constraints)
   //
   if(options->GetNumeric("bound_relax_perturb") > 0.0) {
-    auto* relax_bounds = new hiopBoundsRelaxer(this, *xl_, *xu_, *dl_, *du_);
-    relax_bounds->setup();
-    relax_bounds->relax(options->GetNumeric("bound_relax_perturb"), *xl_, *xu_, *dl_, *du_);
-    nlp_transformations_.append(relax_bounds);
+    relax_bounds_ = new hiopBoundsRelaxer(this, *xl_, *xu_, *dl_, *du_);
+    relax_bounds_->setup();
+    if(options->GetString("elastic_mode") == "none") {
+      relax_bounds_->relax(options->GetNumeric("bound_relax_perturb"), *xl_, *xu_, *dl_, *du_);
+    } else {
+      relax_bounds_->relax(options->GetNumeric("elastic_mode_bound_relax_initial"), *xl_, *xu_, *dl_, *du_);    
+    }
+    nlp_transformations_.append(relax_bounds_);
   }
 
   // Copy data from host mirror to the device memory space
@@ -680,14 +699,21 @@ bool hiopNlpFormulation::eval_f(hiopVector& x, bool new_x, double& f)
 
 bool hiopNlpFormulation::eval_grad_f(hiopVector& x, bool new_x, hiopVector& gradf)
 {
+  if((prob_type_==hiopInterfaceBase::hiopLinear || prob_type_==hiopInterfaceBase::hiopQuadratic)
+     && nlp_evaluated_) {
+    return true;
+  }
+
   hiopVector* xx = nlp_transformations_.apply_inv_to_x(x, new_x);
   hiopVector* gradff = nlp_transformations_.apply_inv_to_grad_obj(gradf);
-  bool bret; 
+
+  bool bret;
   runStats.tmEvalGrad_f.start();
   bret = interface_base.eval_grad_f(nlp_transformations_.n_pre(), xx->local_data_const(), new_x, gradff->local_data());
   runStats.tmEvalGrad_f.stop(); runStats.nEvalGrad_f++;
 
   gradf = *(nlp_transformations_.apply_to_grad_obj(*gradff));
+
   return bret;
 }
 
@@ -910,7 +936,13 @@ bool hiopNlpFormulation::eval_c_d(hiopVector& x, bool new_x, hiopVector& c, hiop
 
 bool hiopNlpFormulation::eval_Jac_c_d(hiopVector& x, bool new_x, hiopMatrix& Jac_c, hiopMatrix& Jac_d)
 {
+  if((prob_type_==hiopInterfaceBase::hiopLinear || prob_type_==hiopInterfaceBase::hiopQuadratic)
+     && nlp_evaluated_) {
+    return true;
+  }
+
   bool do_eval_Jac_c = true;
+
   if(-1 == cons_eval_type_) {
     assert(cons_body_ == nullptr);
     assert(NULL == cons_Jac_);
@@ -1131,6 +1163,26 @@ double hiopNlpFormulation::get_obj_scale() const
   return 1.0;
 }
 
+void hiopNlpFormulation::adjust_bounds(const hiopIterate& it)
+{
+  xl_->copyFrom(*it.get_x());
+  xl_->axpy(-1.0, *it.get_sxl());
+
+  xu_->copyFrom(*it.get_x());
+  xu_->axpy(1.0, *it.get_sxu());
+
+  dl_->copyFrom(*it.get_d());
+  dl_->axpy(-1.0, *it.get_sdl());
+
+  du_->copyFrom(*it.get_d());
+  du_->axpy(1.0, *it.get_sdu());
+}
+
+void hiopNlpFormulation::reset_bounds(double bound_relax_perturb)
+{
+  relax_bounds_->relax_from_ori(bound_relax_perturb, *xl_, *xu_, *dl_, *du_);
+}
+
 /* ***********************************************************************************
  *    hiopNlpDenseConstraints class implementation 
  * ***********************************************************************************
@@ -1157,8 +1209,13 @@ hiopDualsLsqUpdate* hiopNlpDenseConstraints::alloc_duals_lsq_updater()
 }
 
 bool hiopNlpDenseConstraints::eval_Jac_c(hiopVector& x, bool new_x, double* Jac_c)
-{
+{  
 #if 0
+  if((prob_type_==hiopInterfaceBase::hiopLinear || prob_type_==hiopInterfaceBase::hiopQuadratic)
+     && nlp_evaluated_) {
+    return true;
+  }
+
   hiopVector* x_user  = nlp_transformations_.apply_inv_to_x(x, new_x);
   double* Jac_c_user = nlp_transformations_.apply_inv_to_jacob_eq(Jac_c, n_cons_eq_);
 
@@ -1177,6 +1234,11 @@ bool hiopNlpDenseConstraints::eval_Jac_c(hiopVector& x, bool new_x, double* Jac_
 bool hiopNlpDenseConstraints::eval_Jac_d(hiopVector& x, bool new_x, double* Jac_d)
 {
 #if 0
+  if((prob_type_==hiopInterfaceBase::hiopLinear || prob_type_==hiopInterfaceBase::hiopQuadratic)
+     && nlp_evaluated_) {
+    return true;
+  }
+
   hiopVector* x_user  = nlp_transformations_.apply_inv_to_x(x, new_x);
   double* Jac_d_user = nlp_transformations_.apply_inv_to_jacob_ineq(Jac_d, n_cons_ineq_);
 
@@ -1246,6 +1308,11 @@ bool hiopNlpDenseConstraints::eval_Jac_c_d_interface_impl(hiopVector& x, bool ne
 
 bool hiopNlpDenseConstraints::eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& Jac_c)
 {
+  if((prob_type_==hiopInterfaceBase::hiopLinear || prob_type_==hiopInterfaceBase::hiopQuadratic)
+     && nlp_evaluated_) {
+    return true;
+  }
+
   hiopMatrixDense* Jac_cde = dynamic_cast<hiopMatrixDense*>(&Jac_c);
   if(Jac_cde==NULL) {
     log->printf(hovError, "[internal error] hiopNlpDenseConstraints NLP works only with dense matrices\n");
@@ -1279,6 +1346,11 @@ bool hiopNlpDenseConstraints::eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& 
 
 bool hiopNlpDenseConstraints::eval_Jac_d(hiopVector& x, bool new_x, hiopMatrix& Jac_d)
 {
+  if((prob_type_==hiopInterfaceBase::hiopLinear || prob_type_==hiopInterfaceBase::hiopQuadratic)
+     && nlp_evaluated_) {
+    return true;
+  }
+
   hiopMatrixDense* Jac_dde = dynamic_cast<hiopMatrixDense*>(&Jac_d);
   if(Jac_dde==NULL) {
     log->printf(hovError, "[internal error] hiopNlpDenseConstraints NLP works only with dense matrices\n");
@@ -1378,6 +1450,11 @@ hiopDualsLsqUpdate* hiopNlpMDS::alloc_duals_lsq_updater()
 
 bool hiopNlpMDS::eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& Jac_c)
 {
+  if((prob_type_==hiopInterfaceBase::hiopLinear || prob_type_==hiopInterfaceBase::hiopQuadratic)
+     && nlp_evaluated_) {
+    return true;
+  }
+
   hiopMatrixMDS* pJac_c = dynamic_cast<hiopMatrixMDS*>(&Jac_c);
   assert(pJac_c);
   if(pJac_c) {
@@ -1410,6 +1487,11 @@ bool hiopNlpMDS::eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& Jac_c)
 
 bool hiopNlpMDS::eval_Jac_d(hiopVector& x, bool new_x, hiopMatrix& Jac_d)
 {
+  if((prob_type_==hiopInterfaceBase::hiopLinear || prob_type_==hiopInterfaceBase::hiopQuadratic)
+     && nlp_evaluated_) {
+    return true;
+  }
+
   hiopMatrixMDS* pJac_d = dynamic_cast<hiopMatrixMDS*>(&Jac_d);
   assert(pJac_d);
   if(pJac_d) {
@@ -1495,6 +1577,10 @@ bool hiopNlpMDS::eval_Hess_Lagr(const hiopVector& x,
                                 bool new_lambdas,
                                 hiopMatrix& Hess_L)
 {
+  if(prob_type_==hiopInterfaceBase::hiopLinear && nlp_evaluated_) {
+    return true;
+  }
+
   hiopMatrixSymBlockDiagMDS* pHessL = dynamic_cast<hiopMatrixSymBlockDiagMDS*>(&Hess_L);
   assert(pHessL);
 
@@ -1562,6 +1648,11 @@ hiopDualsLsqUpdate* hiopNlpSparse::alloc_duals_lsq_updater()
 
 bool hiopNlpSparse::eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& Jac_c)
 {
+  if((prob_type_==hiopInterfaceBase::hiopLinear || prob_type_==hiopInterfaceBase::hiopQuadratic)
+     && nlp_evaluated_) {
+    return true;
+  }
+
   hiopMatrixSparse* pJac_c = dynamic_cast<hiopMatrixSparse*>(&Jac_c);
   assert(pJac_c);
   if(pJac_c) {
@@ -1594,6 +1685,11 @@ bool hiopNlpSparse::eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& Jac_c)
 
 bool hiopNlpSparse::eval_Jac_d(hiopVector& x, bool new_x, hiopMatrix& Jac_d)
 {
+  if((prob_type_==hiopInterfaceBase::hiopLinear || prob_type_==hiopInterfaceBase::hiopQuadratic)
+     && nlp_evaluated_) {
+    return true;
+  }
+
   hiopMatrixSparse* pJac_d = dynamic_cast<hiopMatrixSparse*>(&Jac_d);
   assert(pJac_d);
   if(pJac_d) {
@@ -1695,6 +1791,10 @@ bool hiopNlpSparse::eval_Hess_Lagr(const hiopVector& x,
                                    bool new_lambdas,
                                    hiopMatrix& Hess_L)
 {
+  if(prob_type_==hiopInterfaceBase::hiopLinear && nlp_evaluated_) {
+    return true;
+  }
+
   hiopMatrixSparse* pHessL = dynamic_cast<hiopMatrixSparse*>(&Hess_L);
   assert(pHessL);
   

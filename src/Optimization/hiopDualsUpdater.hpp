@@ -89,11 +89,20 @@ public:
    * - alpha_dual: max step for the duals based on the fraction-to-the-boundary rule (not used
    * by lsq update)
    */
-  virtual bool go(const hiopIterate& iter,  hiopIterate& iter_plus,
-                  const double& f, const hiopVector& c, const hiopVector& d,
-                  const hiopVector& grad_f, const hiopMatrix& jac_c, const hiopMatrix& jac_d,
-                  const hiopIterate& search_dir, const double& alpha_primal, const double& alpha_dual,
-                  const double& mu, const double& kappa_sigma, const double& infeas_nrm_trial)=0;
+  virtual bool go(const hiopIterate& iter,
+                  hiopIterate& iter_plus,
+                  const double& f,
+                  const hiopVector& c,
+                  const hiopVector& d,
+                  const hiopVector& grad_f,
+                  const hiopMatrix& jac_c,
+                  const hiopMatrix& jac_d,
+                  const hiopIterate& search_dir,
+                  const double& alpha_primal,
+                  const double& alpha_dual,
+                  const double& mu,
+                  const double& kappa_sigma,
+                  const double& infeas_nrm_trial)=0;
 protected:
   hiopNlpFormulation* nlp_;
 protected: 
@@ -111,22 +120,50 @@ public:
   virtual ~hiopDualsLsqUpdate();
 
   /** LSQ update of the constraints duals (yc and yd). Source file describe the math. */
-  virtual bool go(const hiopIterate& iter,  hiopIterate& iter_plus,
-                  const double& f, const hiopVector& c, const hiopVector& d,
-                  const hiopVector& grad_f, const hiopMatrix& jac_c, const hiopMatrix& jac_d,
-                  const hiopIterate& search_dir, const double& alpha_primal, const double& alpha_dual,
-                  const double& mu, const double& kappa_sigma, const double& infeas_nrm_trial);
+  virtual bool go(const hiopIterate& iter,
+                  hiopIterate& iter_plus,
+                  const double& f,
+                  const hiopVector& c,
+                  const hiopVector& d,
+                  const hiopVector& grad_f,
+                  const hiopMatrix& jac_c,
+                  const hiopMatrix& jac_d,
+                  const hiopIterate& search_dir,
+                  const double& alpha_primal,
+                  const double& alpha_dual,
+                  const double& mu,
+                  const double& kappa_sigma,
+                  const double& infeas_nrm_trial);
+
+  /** LSQ update of the constraints duals (yc and yd). Source file describe the math. */
+  virtual bool go(hiopIterate& it_ini,
+                  const hiopVector& grad_f,
+                  const hiopMatrix& jac_c,
+                  const hiopMatrix& jac_d)
+  {
+    bool bret = init_for_duals_update(it_ini, grad_f, jac_c, jac_d);
+    if(!bret) {
+      //non-fatal
+      nlp_->log->printf(hovScalars, "LSQ Duals update error in initialization.\n");
+    }
+    bret = do_lsq_update(it_ini, grad_f, jac_c, jac_d);
+    return bret;
+  }
 
   /** LSQ-based initialization of the  constraints duals (yc and yd). Source file describes the math. */
-  virtual inline bool computeInitialDualsEq(hiopIterate& it_ini,
-                                            const hiopVector& grad_f,
-                                            const hiopMatrix& jac_c,
-                                            const hiopMatrix& jac_d)
+  virtual inline bool compute_initial_duals_eq(hiopIterate& it_ini,
+                                               const hiopVector& grad_f,
+                                               const hiopMatrix& jac_c,
+                                               const hiopMatrix& jac_d)
   {
-    //nlp_->log->printf(hovSummary,
-    //                  "LSQ Dual Initialization --- Dense linsys: size %d (%d eq-cons)\n",
-    //                  nlp_->m_eq()+nlp_->m_ineq(), nlp_->m_eq());  
-    bool bret = do_lsq_update(it_ini,grad_f,jac_c,jac_d);
+    bool bret = init_for_ini_duals_comp(it_ini, grad_f, jac_c, jac_d);
+    if(!bret) {
+      //non-fatal
+      nlp_->log->printf(hovScalars, "Initial Duals error in initialization.\n");
+      return false;
+    }
+    
+    bret = do_lsq_update(it_ini, grad_f, jac_c, jac_d);
     
     double ycnrm = it_ini.get_yc()->infnorm();
     double ydnrm = it_ini.get_yd()->infnorm();
@@ -139,22 +176,38 @@ public:
       it_ini.get_yd()->setToZero();
       if(bret) {
         nlp_->log->printf(hovScalars,
-                          "will not use lsq dual initial point since its norm (%g) is larger than "
+                          "Will not use lsq dual initial point since its norm (%g) is larger than "
                           "the tolerance duals_lsq_ini_max=%g.\n",
-                          ynrm, lsq_dual_init_max);
+                          ynrm,
+                          lsq_dual_init_max);
       }
     }
-    //nlp_->log->write("yc ini", *iter.get_yc(), hovSummary);
-    //nlp_->log->write("yd ini", *iter.get_yd(), hovSummary);
     return bret;
   }
 protected:
-  //method called by both 'go' and 'computeInitialDualsEq'
+  /// Helper method doing the work for both `go` and `compute_initial_duals_eq`
   virtual bool do_lsq_update(hiopIterate& it,
                              const hiopVector& grad_f,
                              const hiopMatrix& jac_c,
                              const hiopMatrix& jac_d) = 0;
-
+  
+  /// Performs internal (re)initializations related to computations of initial duals that are needed by `do_lsq_update`
+  virtual bool init_for_ini_duals_comp(hiopIterate& it,
+                                       const hiopVector& grad_f,
+                                       const hiopMatrix& jac_c,
+                                       const hiopMatrix& jac_d)
+  {
+    return true;
+  }
+  
+  /// Performs internal (re)initializations related to computations LSQ-based duals that are needed by `do_lsq_update`
+  virtual bool init_for_duals_update(hiopIterate& it,
+                                     const hiopVector& grad_f,
+                                     const hiopMatrix& jac_c,
+                                     const hiopMatrix& jac_d)
+  {
+    return true;
+  }
 protected:
   hiopVector *rhs_, *rhsc_, *rhsd_;
   hiopVector *vec_n_, *vec_mi_;
@@ -255,7 +308,7 @@ protected:
   bool factorize_mat();
   bool solve_with_factors(hiopVector& r);
 protected:
-  hiopLinSolverIndefDense* linsys_;
+  hiopLinSolverSymDense* linsys_;
 };
 
 /** Provides functionality to solve the LSQ system as a symmetric positive definite system on the host
@@ -284,7 +337,7 @@ protected:
   bool factorize_mat();
   bool solve_with_factors(hiopVector& r);
 protected:
-  hiopMatrixDense *M_;
+  hiopMatrixDense* M_;
 };
 
 /**
@@ -311,6 +364,31 @@ private:
                              const hiopVector& grad_f,
                              const hiopMatrix& jac_c,
                              const hiopMatrix& jac_d);
+  
+  /// Performs internal (re)initializations related to computations of initial duals that are needed by `do_lsq_update`
+  virtual bool init_for_ini_duals_comp(hiopIterate& iter,
+                                       const hiopVector& grad_f,
+                                       const hiopMatrix& jac_c,
+                                       const hiopMatrix& jac_d)
+  {
+    return instantiate_linear_solver("duals_init_linear_solver_sparse", iter, grad_f, jac_c, jac_d);
+  }
+  
+  /// Performs internal (re)initializations related to computations LSQ-based duals that are needed by `do_lsq_update`
+  virtual bool init_for_duals_update(hiopIterate& iter,
+                                     const hiopVector& grad_f,
+                                     const hiopMatrix& jac_c,
+                                     const hiopMatrix& jac_d)
+  {
+    return instantiate_linear_solver("linear_solver_sparse", iter, grad_f, jac_c, jac_d);
+  }
+
+  /// Internal helper that instantiates the linear solver based on user options
+  bool instantiate_linear_solver(const char* lin_solver_option_name,
+                                 hiopIterate& iter,
+                                 const hiopVector& grad_f,
+                                 const hiopMatrix& jac_c,
+                                 const hiopMatrix& jac_d);
 private:
   hiopLinSolver* lin_sys_;
 };
@@ -328,13 +406,22 @@ public:
 
   /* Linear update of step length alpha_primal in eq. duals yc and yd and step length
    * alpha_dual in the (signed or bounds) duals zl, zu, vl, and vu.
-   * This is standard in (full) Newton IPMs. Very cheap!
+   * This is standard in (full) Newton IPMs that is very low cost.
    */
-  virtual bool go(const hiopIterate& iter, hiopIterate& iter_plus,
-                  const double& f, const hiopVector& c, const hiopVector& d,
-                  const hiopVector& grad_f, const hiopMatrix& jac_c, const hiopMatrix& jac_d,
-                  const hiopIterate& search_dir, const double& alpha_primal, const double& alpha_dual,
-                  const double& mu, const double& kappa_sigma, const double& infeas_nrm_trial)
+  virtual bool go(const hiopIterate& iter,
+                  hiopIterate& iter_plus,
+                  const double& f,
+                  const hiopVector& c,
+                  const hiopVector& d,
+                  const hiopVector& grad_f,
+                  const hiopMatrix& jac_c,
+                  const hiopMatrix& jac_d,
+                  const hiopIterate& search_dir,
+                  const double& alpha_primal,
+                  const double& alpha_dual,
+                  const double& mu,
+                  const double& kappa_sigma,
+                  const double& infeas_nrm_trial)
   { 
     if(!iter_plus.takeStep_duals(iter, search_dir, alpha_primal, alpha_dual)) {
       nlp_->log->printf(hovError, "dual Newton updater: error in standard update of the duals");

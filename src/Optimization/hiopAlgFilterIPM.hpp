@@ -1,6 +1,5 @@
 // Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
-// Written by Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp
@@ -46,6 +45,14 @@
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or
 // product endorsement purposes.
 
+/**
+ * @file hiopAlgFilterIPM.hpp
+ *
+ * @author Cosmin G. Petra <petra1@llnl.gov>,  LLNL
+ * @author Nai-Yuan Chiang <chiang7@llnl.gov>,  LLNL
+ *
+ */
+
 #ifndef HIOP_ALGFilterIPM
 #define HIOP_ALGFilterIPM
 
@@ -75,8 +82,12 @@ public:
 
   /** computes primal-dual point and returns the evaluation of the problem at this point */
   virtual int startingProcedure(hiopIterate& it_ini,
-	       double &f, hiopVector& c_, hiopVector& d_,
-	       hiopVector& grad_,  hiopMatrix& Jac_c,  hiopMatrix& Jac_d);
+                                double &f,
+                                hiopVector& c_,
+                                hiopVector& d_,
+                                hiopVector& grad_,
+                                hiopMatrix& Jac_c,
+                                hiopMatrix& Jac_d);
   /* returns the objective value; valid only after 'run' method has been called */
   double getObjective() const;
   /* returns the primal vector x; valid only after 'run' method has been called */
@@ -87,10 +98,13 @@ public:
   inline hiopSolveStatus getSolveStatus() const { return solver_status_; }
   /* returns the number of iterations */
   int getNumIterations() const;
+  /* returns the logbar object */
+  hiopLogBarProblem* get_logbar(){return logbar;}
   
   inline hiopNlpFormulation* get_nlp() const { return nlp; }
   inline hiopIterate* get_it_curr() const { return it_curr; }
   inline hiopIterate* get_it_trial() const { return it_trial; }
+  inline hiopIterate* get_it_trial_nonconst() { return it_trial; }
   inline hiopIterate* get_dir() const { return dir; }
   inline double get_mu() const { return _mu; }
   inline hiopMatrix* get_Jac_c() const { return _Jac_c; }
@@ -107,21 +121,26 @@ public:
 
 protected:
   bool evalNlp(hiopIterate& iter,
-	       double &f, hiopVector& c_, hiopVector& d_,
-	       hiopVector& grad_,  hiopMatrix& Jac_c,  hiopMatrix& Jac_d,
-	       hiopMatrix& Hess_L);
-  bool evalNlp_funcOnly(hiopIterate& iter,
-			double& f, hiopVector& c_, hiopVector& d_);
-  bool evalNlp_derivOnly(hiopIterate& iter,
-			 hiopVector& gradf_,  hiopMatrix& Jac_c,  hiopMatrix& Jac_d,
-			 hiopMatrix& Hess_L);
+               double &f,
+               hiopVector& c_,
+               hiopVector& d_,
+               hiopVector& grad_,
+               hiopMatrix& Jac_c,
+               hiopMatrix& Jac_d,
+               hiopMatrix& Hess_L);
+  bool evalNlp_funcOnly(hiopIterate& iter, double& f, hiopVector& c_, hiopVector& d_);
+  bool evalNlp_derivOnly(hiopIterate& iter, hiopVector& gradf_, hiopMatrix& Jac_c, hiopMatrix& Jac_d, hiopMatrix& Hess_L);
 
   /* Evaluates all the functions and derivatives, excepting the Hessian, which is supposed
    * to be evaluated at a later time.
    */
   bool evalNlp_noHess(hiopIterate& iter,
-		      double &f, hiopVector& c_, hiopVector& d_,
-		      hiopVector& grad_,  hiopMatrix& Jac_c,  hiopMatrix& Jac_d);
+                      double &f,
+                      hiopVector& c_,
+                      hiopVector& d_,
+                      hiopVector& grad_,
+                      hiopMatrix& Jac_c,
+                      hiopMatrix& Jac_d);
   /* Evaluates the Hessian
    *
    * Assumes that @evalNlp_noHess has just been called, so the user provided Hessian callback
@@ -138,14 +157,31 @@ protected:
    * The 'true' infeasibility (also used by Ipopt) would be the max of the inf norm of the
    * violation of d_l <= d(x) <= d_u and the inf norm of the residual of c(x)-c=0.
    */
-  virtual bool evalNlpAndLogErrors(const hiopIterate& it, const hiopResidual& resid, const double& mu,
-				   double& nlpoptim, double& nlpfeas, double& nlpcomplem, double& nlpoverall,
-				   double& logoptim, double& logfeas, double& logcomplem, double& logoverall);
+  virtual bool evalNlpAndLogErrors(const hiopIterate& it,
+                                   const hiopResidual& resid,
+                                   const double& mu,
+                                   double& nlpoptim,
+                                   double& nlpfeas,
+                                   double& nlpcomplem,
+                                   double& nlpoverall,
+                                   double& logoptim,
+                                   double& logfeas,
+                                   double& logcomplem,
+                                   double& logoverall);
 
   virtual double thetaLogBarrier(const hiopIterate& it, const hiopResidual& resid, const double& mu);
 
-  bool updateLogBarrierParameters(const hiopIterate& it, const double& mu_curr, const double& tau_curr,
-				  double& mu_new, double& tau_new);
+  /**
+   * Reduces log barrier parameters `mu` and `tau`  and returns true if it was possible to reduce them. The
+   * parameter `mu` may reach its min value and may not be reduced (same for `tau`), in which case the 
+   * method returns false.
+   */
+  bool update_log_barrier_params(hiopIterate& it,
+                                 const double& mu_curr,
+                                 const double& tau_curr,
+                                 const bool& elastic_mode_on,
+                                 double& mu_new,
+                                 double& tau_new);
 
   // second order correction
   virtual int apply_second_order_correction(hiopKKTLinSys* kkt,
@@ -153,7 +189,7 @@ protected:
                                             const double theta_trial0,
                                             bool &grad_phi_dx_computed,
                                             double &grad_phi_dx,
-                                            int &num_adjusted_bounds);
+                                            int &num_adjusted_slacks);
 
   // check if all the line search conditions are accepted or not
   virtual int accept_line_search_conditions(const double theta_curr,
@@ -176,10 +212,17 @@ protected:
 
   void resetSolverStatus();
   virtual void reInitializeNlpObjects();
-  virtual void reloadOptions();
+  virtual void reload_options();
 
-private:
-  void destructorPart();
+protected:
+  /* Helper method containing all the allocations done by the base algorithm class.
+   *
+   * @note: Should not be virtual nor be overridden since it is called in the constructor.
+   */  
+  void alloc_alg_objects();
+
+  /// Helper method containing all the deallocations done by the base algorithm class. Avoid overidding it. 
+  void dealloc_alg_objects();
 protected:
   hiopNlpFormulation* nlp;
   hiopFilter filter;
@@ -202,7 +245,7 @@ protected:
   double onenorm_pr_curr_; //one norm of the constraint infeasibility
 
   //class for updating the duals multipliers
-  hiopDualsUpdater* dualsUpdate;
+  hiopDualsUpdater* dualsUpdate_;
 
   /* Log-barrier problem data
    *  The algorithm manages these and updates them by calling the
@@ -298,6 +341,37 @@ protected:
 
   /// @brief Decides and creates the KKT linear system based on user options and NLP formulation.
   virtual hiopKKTLinSys* decideAndCreateLinearSystem(hiopNlpFormulation* nlp);
+
+  /**
+   * Switch to the safer (more stable) KKT formulation and linear solver. 
+   * 
+   * This is currently done only for `hiopNlpSparseIneq` NLP formulation. In this case 
+   * `hiopKKTLinSysCondensedSparse` is the quick KKT formulation and `hiopKKTLinSysCompressedSparseXDYcYd`
+   * is the safe KKT formulation. For other combinations of NLP and KKT formulations the method
+   * returns the KKT passed as argument.
+   */
+  virtual hiopKKTLinSys* switch_to_safer_KKT(hiopKKTLinSys* kkt_curr,
+                                            const double& mu,
+                                            const int& iter_num,
+                                            const bool& linsol_safe_mode_on,
+                                            const int& linsol_safe_mode_max_iters,
+                                            int& linsol_safe_mode_last_iter_switched_on,
+                                            double& theta_mu,
+                                            double& kappa_mu,
+                                            bool& switched);
+
+  /**
+   * Switch to the quick KKT formulation and linear solver is switching conditions are met. 
+   */
+  virtual hiopKKTLinSys* switch_to_fast_KKT(hiopKKTLinSys* kkt_curr,
+                                            const double& mu,
+                                            const int& iter_num,
+                                            bool& linsol_safe_mode_on,
+                                            int& linsol_safe_mode_max_iters,
+                                            int& linsol_safe_mode_last_iter_switched_on,
+                                            double& theta_mu,
+                                            double& kappa_mu,
+                                            bool& switched);
   
   /// @brief Decides and creates regularization objects based on user options and NLP formulation.
   virtual hiopFactAcceptor* decideAndCreateFactAcceptor(hiopPDPerturbation* p,
@@ -306,16 +380,17 @@ protected:
 
   virtual bool compute_search_direction(hiopKKTLinSys* kkt,
                                         bool& linsol_safe_mode_on,
-                                        int& linsol_safe_mode_lastiter,
                                         const bool linsol_forcequick,
                                         const int iter_num);
 
   virtual bool compute_search_direction_inertia_free(hiopKKTLinSys* kkt,
                                                      bool& linsol_safe_mode_on,
-                                                     int& linsol_safe_mode_lastiter,
                                                      const bool linsol_forcequick,
                                                      const int iter_num);
 
+  /// Overridden method from base class that does some preprocessing specific to Newton solver
+  void reload_options();
+protected:
   hiopPDPerturbation pd_perturb_;
   hiopFactAcceptor* fact_acceptor_;
 private:

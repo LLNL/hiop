@@ -1,6 +1,5 @@
 // Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
-// Written by Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp
@@ -69,7 +68,7 @@ namespace hiop {
   }
 
   /// Constructor allocates dense system matrix
-  hiopLinSolverIndefDense::hiopLinSolverIndefDense(int n, hiopNlpFormulation* nlp)
+  hiopLinSolverSymDense::hiopLinSolverSymDense(int n, hiopNlpFormulation* nlp)
   {
     nlp_ = nlp;
     perf_report_ = "on"==hiop::tolower(nlp_->options->GetString("time_kkt"));
@@ -77,20 +76,20 @@ namespace hiop {
   }
 
   /// Default constructor is protected and should fail when called
-  hiopLinSolverIndefDense::hiopLinSolverIndefDense()
+  hiopLinSolverSymDense::hiopLinSolverSymDense()
     : M_(nullptr)
   {
     assert(false);
   }
 
   /// Destructor deletes the system matrix
-  hiopLinSolverIndefDense::~hiopLinSolverIndefDense()
+  hiopLinSolverSymDense::~hiopLinSolverSymDense()
   {
     delete M_;
   }
 
   /// Method to return reference to the system matrix
-  hiopMatrixDense& hiopLinSolverIndefDense::sysMatrix()
+  hiopMatrixDense& hiopLinSolverSymDense::sysMatrix()
   {
     return *M_;
   }
@@ -101,6 +100,8 @@ namespace hiop {
     //this constructor (will call the 1-parameter constructor below) so they avoid creating
     //the triplet matrix
     M_ = new hiopMatrixSparseTriplet(n, n, nnz);
+    //this class will own `M_`
+    sys_mat_owned_ = true;
     nlp_ = nlp;
     perf_report_ = "on"==hiop::tolower(nlp->options->GetString("time_kkt"));
   }
@@ -108,6 +109,15 @@ namespace hiop {
   hiopLinSolverSymSparse::hiopLinSolverSymSparse(hiopNlpFormulation* nlp)
   {
     M_ = nullptr;
+    sys_mat_owned_ = false;
+    nlp_ = nlp;
+    perf_report_ = "on"==hiop::tolower(nlp->options->GetString("time_kkt"));
+  }
+
+  hiopLinSolverSymSparse::hiopLinSolverSymSparse(hiopMatrixSparse* M, hiopNlpFormulation* nlp)
+  {
+    M_ = M;
+    sys_mat_owned_ = false;
     nlp_ = nlp;
     perf_report_ = "on"==hiop::tolower(nlp->options->GetString("time_kkt"));
   }
@@ -115,6 +125,7 @@ namespace hiop {
   hiopLinSolverNonSymSparse::hiopLinSolverNonSymSparse(int n, int nnz, hiopNlpFormulation* nlp)
   {
     M_ = new hiopMatrixSparseTriplet(n, n, nnz);
+    sys_mat_owned_ = false;
     nlp_ = nlp;
     perf_report_ = "on"==hiop::tolower(nlp->options->GetString("time_kkt"));
   }

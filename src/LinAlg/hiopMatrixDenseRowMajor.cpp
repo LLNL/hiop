@@ -237,10 +237,10 @@ void hiopMatrixDenseRowMajor::copyFromMatrixBlock(const hiopMatrixDense& srcmat,
 void hiopMatrixDenseRowMajor::shiftRows(size_type shift)
 {
   if(shift==0) return;
-  if(abs(shift)==m_local_) return; //nothing to shift
+  if(std::abs(shift)==m_local_) return; //nothing to shift
   if(m_local_<=1) return; //nothing to shift
   
-  assert(abs(shift)<m_local_); 
+  assert(std::abs(shift)<m_local_);
 
   //at this point m_local_ should be >=2
   assert(m_local_>=2);
@@ -871,5 +871,27 @@ bool hiopMatrixDenseRowMajor::assertSymmetry(double tol) const
   return true;
 }
 #endif
+
+bool hiopMatrixDenseRowMajor::symmetrize() 
+{
+  if(n_local_!=n_global_) {
+    assert(false && "should be used only for local matrices");
+    return false;
+  }
+  //must be square
+  if(m_local_!=n_global_) {
+    assert(false);
+    return false;
+  }
+
+  //symmetrize --- copy the upper triangular part to lower tirangular part
+  for(index_type i=0; i<n_local_; i++) {
+    for(index_type j=i+1; j<n_local_; j++) {
+      M_[j][i] = M_[i][j];
+    }
+  }
+  return true;
+}
+
 };
 

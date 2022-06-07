@@ -1,11 +1,10 @@
 // Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
-// Written by Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp
 // is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause).
-// Please also read “Additional BSD Notice” below.
+// Please also read "Additional BSD Notice" below.
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -160,7 +159,6 @@ void hiopOptions::load_from_file(const char* filename)
   }
 
   ifstream input( filename );
-
   if(input.fail()) {
     if(strcmp(default_filename, filename)) {
       log_printf(hovWarning,
@@ -590,7 +588,7 @@ void hiopOptionsNLP::register_options()
     // 'duals_update_type' should be 'lsq' or 'linear' for  'Hessian=quasinewton_approx'
     // 'duals_update_type' can only be 'linear' for Newton methods 'Hessian=analytical_exact'
 
-    //here will set the default value to 'lsq' and this will be adjusted later in 'ensureConsistency'
+    //here will set the default value to 'lsq' and this will be adjusted later in 'ensure_consistency'
     //to a valid value depending on the 'Hessian' value
     vector<string> range(2); range[0]="lsq"; range[1]="linear";
     register_str_option("duals_update_type",
@@ -729,7 +727,31 @@ void hiopOptionsNLP::register_options()
                         "The problem will be rescaled if the inf-norm of the gradient at the starting point is "
                         "larger than the value of this option (default 100)");
   }
-  
+
+  // outer iterative refinement
+  {
+    register_num_option("ir_outer_tol_factor",
+                        1e-2,
+                        1e-20,
+                        1.0,
+                        "Apply iterative refinement (IR) if the full KKT residual is larger than "
+                        "min(mu*ir_outer_tol_factor,ir_outer_tol_min). (default 1e-2)");
+
+    register_num_option("ir_outer_tol_min",
+                        1e-6,
+                        1e-20,
+                        1e+20,
+                        "Apply iterative refinement (IR) if the full KKT residual is larger than "
+                        "min(mu*ir_outer_tol_factor,ir_outer_tol_min). (default 1e-6)");
+
+    register_int_option("ir_outer_maxit",
+                        8,
+                        0,
+                        100, 
+                        "Max number of outer iterative refinement iterations (default 8)."
+                        "Setting it to 0 deactivates the outer iterative refinement");
+  }
+
   // relax bounds
   {
     register_num_option("bound_relax_perturb", 1e-8, 0.0, 1e20,
@@ -782,29 +804,45 @@ void hiopOptionsNLP::register_options()
   }
   //linear algebra
   {
-    vector<string> range = {"auto", "xycyd", "xdycyd", "full", "condensed"};
+    vector<string> range = {"auto", "xycyd", "xdycyd", "full", "condensed", "normaleqn"};
     register_str_option("KKTLinsys",
                         "auto",
                         range,
                         "Type of KKT linear system used internally: decided by HiOp 'auto' (default), "
                         "the more compact 'XYcYd, the more stable 'XDYcYd', the full-size non-symmetric "
-                        "'full', or the condensed that uses Cholesky (available when no eq. constraints "
-                        "are present). The last four options are available only with "
+                        "'full', the symmetric normal equation 'normaleqn', or the condensed that "
+                        "uses Cholesky (available when no eq. constraints "
+                        "are present). The last five options are available only with "
                         "'Hessian=analyticalExact'.");
   }
 
   //
-  // choose direct linear solver for sparse linear system on CPU
+  // Choose direct linear solver for sparse KKT linearizations
   //
-  // when KKTLinsys is 'full' only strumpack is available
-  // for the other KKTLinsys (which are all symmetric), MA57 is chosen 'auto'matically for all compute
-  // modes, unless the user overwrites this
+  // Notes:
+  //  - When KKTLinsys is 'full' (unsymmetric), only cusolver-lu, strumpack, and pardiso are available (and will be
+  // selected in this order under 'auto' or incompatible/unsupported value for 'linear_solver_sparse').
+  //  - For KKTLinsys 'xycyd' and 'xdycyd'  (symmetric indefinite),
+  //     - 'cpu' compute mode: ma57, pardiso, strumpack, and ginko are available and will be selected in this
+  //     order under 'auto' or incompatible/unsupported value for 'linear_solver_sparse'
+  //     - 'hybrid' compute mode: cusolver-lu, strumpack, ma57, and pardiso and will be selected in this
+  //     order under 'auto' or incompatible/unsupported value for 'linear_solver_sparse'
+  //     - 'gpu' compute mode: not supported with the above values for 'KKTLinsys'
+  // - For KKTLinsys 'condensed' (symmetric positive definite system), under
+  //     - 'cpu' compute mode only ma57 is supported (not efficient, use only for debugging)
+  //     - 'hybrid' compute mode, cusolve-chol is supported and will be selected under 'auto' or
+  //     incompatible/unsupported value for 'linear_solver_sparse'.
+  //     - 'gpu' compute mode: work in progress
+  // - TODO: normal equations
+
   {
-    vector<string> range(4); range[0] = "auto"; range[1]="ma57"; range[2]="pardiso"; range[3]="strumpack";
+    vector<string> range {"auto", "ma57", "pardiso", "strumpack", "cusolver-lu", "ginkgo", "cusolver-chol"};
+
     register_str_option("linear_solver_sparse",
                         "auto",
                         range,
-                        "Selects among MA57, PARDISO and STRUMPACK for the sparse linear solves.");
+                        "Selects among MA57, PARDISO, STRUMPACK, cuSOLVER's Cholesky or LU, and GINKGO for the "
+                        "sparse linear solves.");
   }
 
   // choose linear solver for duals intializations for sparse NLP problems
@@ -812,28 +850,59 @@ void hiopOptionsNLP::register_options()
   //  - when GPU mode is on, STRUMPACK is chosen by 'auto' if available
   //  - choosing option ma57 or pardiso with GPU being on, it results in no device being used in the linear solve!
   {
-    vector<string> range(4); range[0] = "auto"; range[1]="ma57"; range[2]="pardiso"; range[3]="strumpack";
+    vector<string> range {"auto", "ma57", "pardiso", "cusolver-lu", "strumpack", "ginkgo"};
+
     register_str_option("duals_init_linear_solver_sparse",
                         "auto",
                         range,
-                        "Selects among MA57, PARDISO and STRUMPACK for the sparse linear solves.");
+                        "Selects among MA57, PARDISO, cuSOLVER, STRUMPACK, and GINKGO for the sparse linear solves.");
   }
+
 
   // choose sparsity permutation (to reduce nz in the factors). This option is available only when using
   // Cholesky linear solvers
   // - metis: use CUDA function csrmetisnd, which is a wrapper of METIS_NodeND; requires linking with
   // libmetis_static.a (64-bit metis-5.1.0) (Host execution)
-  // - symamd: use sym. approx. min. degree algorithm as implemented by CUDA csrsymamd function
+  // - symamd-cuda: use sym. approx. min. degree algorithm as implemented by CUDA csrsymamd function
   // (Host execution)
+  // - symamd-eigen: use sym. approx. min. degree algorithm from EIGEN package (default, Host execution)
   // - symrcm: use symmetric reverse Cuthill-McKee as implemented by CUDA csrsymrcm (Host execution)
-  vector<string> range = { "metis", "symamd", "symrcm"};
-  register_str_option("linear_solver_sparse_ordering",
-                      range[1], //default is AMD since metis seems to crash sometimes
-                      range,
-                      "permutation to promote sparsity in the (Chol) factorization: 'metis' based on a "
-                      "wrapper of METIS_NodeND, 'symamd' (default) and 'symrcm' are the well-known approx. "
-                      "min. degree and reverse Cuthill-McKee orderings in their symmetric form.");
-  
+  {
+    vector<string> range = { "metis", "symamd-cuda", "symamd-eigen", "symrcm", "amd-ssparse", "colamd-ssparse"};
+    auto default_value = range[1];
+#ifdef HIOP_USE_EIGEN
+    default_value = range[2];
+#endif
+    register_str_option("linear_solver_sparse_ordering",
+                        default_value, 
+                        range,
+                        "permutation to promote sparsity in the (Chol) factorization: 'metis' based on a wrapper of "
+                        "METIS_NodeND, 'symamd-cuda', 'symamd-eigen' (default), and 'symrcm' are the well-known "
+                        "approx. min. degree (AMD) and reverse Cuthill-McKee orderings in their symmetric form. "
+                        "`amd-ssparse` and `colamd-ssparse` AMD and column AMD from Suite Sparse library. ");
+  }
+
+  // cusolver_lu factorization options
+  {
+    vector<std::string> range = {"klu"};
+    auto default_value = range[0];
+    register_str_option("cusolver_lu_factorization",
+                        default_value,
+                        range,
+                        "So far, only 'klu' option is available. ");
+  }
+
+  // cusolver_lu refactorization options
+  {
+    vector<std::string> range = {"glu", "rf"};
+    auto default_value = range[0];
+    register_str_option("cusolver_lu_refactorization",
+                        default_value,
+                        range,
+                        "Numerical refactorization function after sparsity pattern of factors is computed. "
+                        "'glu' is experimental and 'rf' is NVIDIA's stable refactorization. ");
+  }
+
   //linsol_mode -> mostly related to magma and MDS linear algebra
   {
     vector<string> range(3); range[0]="stable"; range[1]="speculative"; range[2]="forcequick";
@@ -927,7 +996,47 @@ void hiopOptionsNLP::register_options()
                         "turn on/off performance timers and reporting of the computational constituents of the "
                         "KKT solve process");
   }
-  
+
+  // elastic mode
+  {
+    vector<string> range = { "none", "tighten_bound", "correct_it", "correct_it_adjust_bound"};
+    register_str_option("elastic_mode",
+                        "none",
+                        range,
+                        "Type of elastic mode used with the HiOp: 'none' does not use elastic mode (default option); "
+                        "'tighten_bound' tightens the bounds when `mu` changes; "
+                        "'correct_it' tightens the bounds and corrects the slacks and slack duals when `mu` changes; "
+                        "'correct_it_adjust_bound' tightens the bounds, corrects the slacks and slack duals, "
+                        "and adjusts the bounds again from the modified iterate");
+
+    range = {"mu_projected", "mu_scaled"};
+    register_str_option("elastic_bound_strategy",
+                        "mu_projected",
+                        range,
+                        "Strategy used to tighen the bounds, when `mu` changes. "
+                        "'mu_projected' sets the new bound relax factor to `(new_mu-target_mu) / (init_mu-target_mu) "
+                        "* (bound_relax_perturb_init-bound_relax_perturb_final) + bound_relax_perturb_min; "
+                        "'mu_scaled' sets the new bound relax factor to `0.995*new_mu`.");
+
+    register_num_option("elastic_mode_bound_relax_initial",
+                        1e-2,
+                        1e-8,
+                        1e-1,
+                        "Initial bound relaxation factor in the elastic mode (default: 1e-2). "
+                        "This value must be less or equal to elastic_mode_bound_relax_initial. "
+                        "If user provides elastic_mode_bound_relax_initial > elastic_mode_bound_relax_last, "
+                        "HiOp will use the default values for both parameters.");
+
+    register_num_option("elastic_mode_bound_relax_final",
+                        1e-12,
+                        1e-16,
+                        1e-1,
+                        "Final/minimum bound relaxation factor in the elastic mode (default: 1e-12). "
+                        "This value must be less or equal to elastic_mode_bound_relax_final. "
+                        "If user provides elastic_mode_bound_relax_final > elastic_mode_bound_relax_last, "
+                        "HiOp will use the default values for both parameters.");
+  }
+
   //other options
   {
     vector<string> range(2); range[0]="no"; range[1]="yes";
@@ -977,7 +1086,7 @@ void hiopOptionsNLP::ensure_consistence()
 
   if(GetString("Hessian")=="quasinewton_approx") {
     string strKKT = GetString("KKTLinsys");
-    if(strKKT=="xycyd" || strKKT=="xdycyd" || strKKT=="full") {
+    if(strKKT=="xycyd" || strKKT=="xdycyd" || strKKT=="full" || strKKT=="normaleqn") {
       if(is_user_defined("Hessian")) {
         log_printf(hovWarning,
                    "The option 'KKTLinsys=%s' is not valid with 'Hessian=quasiNewtonApprox'. "
@@ -1004,8 +1113,13 @@ void hiopOptionsNLP::ensure_consistence()
     }
   }
 
-  if(GetString("KKTLinsys") == "full") {
-    if(GetString("linear_solver_sparse") == "ma57" || GetString("linear_solver_sparse") == "pardiso") {
+  //
+  // linear_solver_sparse and KKTLinsys compatibility checks
+  //
+  auto kkt_linsys = GetString("KKTLinsys");
+  auto sol_sp = GetString("linear_solver_sparse");
+  if(kkt_linsys == "full") {
+    if(sol_sp!="cusolver-lu" && sol_sp!="pardiso" && sol_sp!="strumpack" && sol_sp!="auto") {
       if(is_user_defined("linear_solver_sparse")) {
         log_printf(hovWarning,
                    "The option 'linear_solver_sparse=%s' is not valid with option 'KKTLinsys=full'. "
@@ -1014,7 +1128,51 @@ void hiopOptionsNLP::ensure_consistence()
       }
       set_val("linear_solver_sparse", "auto");
     }
+  } else {
+    if(kkt_linsys == "condensed") {
+      if(sol_sp!="cusolver-chol" && sol_sp!="auto") {
+        if(is_user_defined("linear_solver_sparse")) {
+          log_printf(hovWarning,
+                     "The option 'linear_solver_sparse=%s' is not valid with option 'KKTLinsys=condensed'. "
+                     " Will use 'linear_solver_sparse=auto'.\n",
+                     GetString("linear_solver_sparse").c_str());
+        }
+        set_val("linear_solver_sparse", "auto");
+      }
+    }
   }
+
+#ifndef HIOP_USE_CUDA
+  if(sol_sp == "cusolver-lu" || sol_sp == "cusolver-chol") {
+    if(is_user_defined("linear_solver_sparse")) {
+        log_printf(hovWarning,
+                   "The option 'linear_solver_sparse=%s' is not valid without CUDA support enabled."
+                   " Will use 'linear_solver_sparse=auto'.\n",
+                   GetString("linear_solver_sparse").c_str());
+    }
+      set_val("linear_solver_sparse", "auto");
+  }
+#endif // HIOP_USE_CUDA
+
+  //linear_solver_sparse_ordering checks and warnings
+
+#ifndef HIOP_USE_CUDA
+  if(is_user_defined("linear_solver_sparse_ordering")) {
+    log_printf(hovWarning, "option linear_solver_sparse_ordering has not effect since HiOp was not built with CUDA.\n");
+  }
+#else
+#ifndef HIOP_USE_EIGEN
+  if(GetString("linear_solver_sparse_ordering")=="symamd-eigen") {
+    if(is_user_defined("linear_solver_sparse_ordering")) {
+      log_printf(hovWarning,
+                 "option linear_solver_sparse_ordering=symamd-eigen was changed to 'symamd-cuda' since HiOp was "
+                 "built without EIGEN.\n");
+
+    }
+    set_val("linear_solver_sparse_ordering", "symamd-cuda");
+  }
+#endif
+#endif
   
 // When RAJA is not enabled ...
 #ifndef HIOP_USE_RAJA
@@ -1069,6 +1227,28 @@ void hiopOptionsNLP::ensure_consistence()
     }
   }
 
+  // use inertia-free approach if 1) solver is strumpack or cusolver-lu, or 2) if linsys is full
+  if(GetString("KKTLinsys")=="full") {
+    if(GetString("fact_acceptor")=="inertia_correction") {
+      if(is_user_defined("fact_acceptor")) {
+        log_printf(hovWarning,
+                   "Option fact_acceptor=inertia_correction was changed to 'inertia_free' since the requested "
+                   "KKTLinsys option 'full' does not have support for inertia computation.\n");
+                   
+      }
+      set_val("fact_acceptor", "inertia_free");
+    }
+  } else if(GetString("linear_solver_sparse") == "strumpack" || GetString("linear_solver_sparse") == "cusolver-lu") {
+    if(GetString("fact_acceptor")=="inertia_correction") {
+      if(is_user_defined("fact_acceptor") && is_user_defined("linear_solver_sparse") ) {
+        log_printf(hovWarning,
+                   "Option fact_acceptor=inertia_correction was changed to 'inertia_free' since the requested "
+                   "linear solver '%s' does not support inertia calculation.\n",
+                   GetString("linear_solver_sparse").c_str());
+      }
+      set_val("fact_acceptor", "inertia_free");
+    }
+  }
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

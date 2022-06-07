@@ -337,6 +337,13 @@ void print_str(std::string_view val);
 void print(double val);
 void print(std::string_view val);
 ```
+### File names
+
+Should use only upper and lower cases, 
+no underscore, i.e., Pascal convention.  When the name is composed of multiple words, each word 
+starts with a capital letter. If one of the "words" is an acronym use same capitalization 
+(first capital and other letters lowercase). The `hiop` prefix should be used only to ensure naming
+consistency (within the folder or module) with existing files.
 
 ## Declarations
 
@@ -524,16 +531,16 @@ $> make -j4; make install; make test
 ```shell
 $> rm -rf *; cmake -DHIOP_USE_MPI=ON -DHIOP_DEEPCHECKS=ON -DCMAKE_BUILD_TYPE=DEBUG ..
 $> make -j4
-$> mpiexec -np 2 valgrind ./src/Drivers/nlpDenseCons_ex1.exe 
-$> mpiexec -np 2 valgrind ./src/Drivers/nlpDenseCons_ex2.exe 
-$> mpiexec -np 2 valgrind ./src/Drivers/nlpDenseCons_ex3.exe 
+$> mpiexec -np 2 valgrind ./src/Drivers/NlpDenseConsEx1.exe
+$> mpiexec -np 2 valgrind ./src/Drivers/NlpDenseConsEx2.exe
+$> mpiexec -np 2 valgrind ./src/Drivers/NlpDenseConsEx3.exe
 ```
 
 ## 3. clang with fsanitize group checks reports no warning and no errors. MacOS only (Optional).
 ```shell
 $> rm -rf *; CC=clang CXX=clang++ cmake -DCMAKE_CXX_FLAGS="-fsanitize=nullability,undefined,integer,alignment" -DHIOP_USE_MPI=ON -DHIOP_DEEPCHECKS=ON -DCMAKE_BUILD_TYPE=DEBUG ..
 $> make -j4 
-$> mpiexec -np 2 ./src/Drivers/nlpDenseCons_ex1.exe 
-$> mpiexec -np 2 ./src/Drivers/nlpDenseCons_ex2.exe 
-$> mpiexec -np 2 ./src/Drivers/nlpDenseCons_ex3.exe 
+$> mpiexec -np 2 ./src/Drivers/NlpDenseConsEx1.exe
+$> mpiexec -np 2 ./src/Drivers/NlpDenseConsEx2.exe
+$> mpiexec -np 2 ./src/Drivers/NlpDenseConsEx3.exe
 ```

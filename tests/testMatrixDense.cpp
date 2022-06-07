@@ -241,6 +241,7 @@ static int runTests(const char* mem_space, MPI_Comm comm)
     fail += test.matrixAddSubDiagonal(*A_nxn_nodist, *x_m_nodist);
     fail += test.matrixTransAddToSymDenseMatrixUpperTriangle(*A_nxn_nodist, *A_kxm_nodist);
     fail += test.matrixAddUpperTriangleToSymDenseMatrixUpperTriangle(*A_nxn_nodist, *A_mxm_nodist);
+    fail += test.matrix_symmetrize(*A_nxn_nodist);
 #ifdef HIOP_DEEPCHECKS
     fail += test.matrixAssertSymmetry(*A_nxn_nodist);
     fail += test.matrixOverwriteUpperTriangleWithLower(*A_nxn_nodist);

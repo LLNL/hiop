@@ -437,17 +437,17 @@ void hiopMatrixRajaDense::shiftRows(size_type shift)
 {
   if(shift == 0)
     return;
-  if(fabs(shift) == m_local_)
+  if(abs(shift) == m_local_)
     return; //nothing to shift
   if(m_local_ <= 1)
     return; //nothing to shift
   
-  assert(fabs(shift) < m_local_);
+  assert(abs(shift) < m_local_);
 
   //at this point m_local_ should be >=2
   assert(m_local_ >= 2);
   //and
-  assert(m_local_ - fabs(shift) >= 1);
+  assert(m_local_ - abs(shift) >= 1);
 #if defined(HIOP_DEEPCHECKS) && !defined(NDEBUG)
   copyFromDev();
   double test1 = 8.3, test2 = -98.3;
@@ -1473,6 +1473,34 @@ bool hiopMatrixRajaDense::assertSymmetry(double tol) const
   return any.get() == 0;
 }
 #endif
+
+bool hiopMatrixRajaDense::symmetrize() 
+{
+  if(n_local_!=n_global_) {
+    assert(false && "should be used only for local matrices");
+    return false;
+  }
+  //must be square
+  if(m_local_!=n_global_) {
+    assert(false);
+    return false;
+  }
+
+  double* data = data_dev_;
+  RAJA::View<double, RAJA::Layout<2>> Mview(data, n_local_, n_local_);
+  RAJA::RangeSegment range(0, n_local_);
+
+  //symmetrize --- copy the upper triangular part to lower tirangular part
+  RAJA::kernel<matrix_exec>(RAJA::make_tuple(range, range),
+    RAJA_LAMBDA(int j, int i)
+    {
+      double ij = Mview(i, j);
+      if(i < j) {
+        Mview(j, i) = ij;
+      }
+    });
+  return true;
+}
 
 /// Copy local host mirror data to the memory space
 void hiopMatrixRajaDense::copyToDev()

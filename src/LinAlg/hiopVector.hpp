@@ -288,7 +288,7 @@ public:
   
   /// @brief prints up to max_elems (by default all), on rank 'rank' (by default on all)
   virtual void print(FILE*, const char* message=NULL,int max_elems=-1, int rank=-1) const = 0;
-  virtual void print(){assert(0);} 
+  virtual void print() const {assert(0);} 
   /// @brief allocates a vector that mirrors this, but doesn't copy the values
   virtual hiopVector* alloc_clone() const = 0;
   /// @brief allocates a vector that mirrors this, and copies the values

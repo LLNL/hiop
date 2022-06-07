@@ -59,25 +59,16 @@
  * @ingroup LinearSolvers
  */
 
-#ifndef FNAME
-#ifndef __bg__
-#define FNAME(f) f ## _
-#else
-#define FNAME(f) f
-#endif
-#endif
-
 using namespace strumpack;
-
 
 namespace hiop {
 
 /** Wrapper for STRUMPACK */
-class hiopLinSolverIndefSparseSTRUMPACK: public hiopLinSolverIndefSparse
+class hiopLinSolverSymSparseSTRUMPACK: public hiopLinSolverSymSparse
 {
 public:
-  hiopLinSolverIndefSparseSTRUMPACK(const int& n, const int& nnz, hiopNlpFormulation* nlp);
-  virtual ~hiopLinSolverIndefSparseSTRUMPACK();
+  hiopLinSolverSymSparseSTRUMPACK(const int& n, const int& nnz, hiopNlpFormulation* nlp);
+  virtual ~hiopLinSolverSymSparseSTRUMPACK();
 
   /** Triggers a refactorization of the matrix, if necessary.
    * Overload from base class. */
@@ -105,8 +96,6 @@ private:
   int *index_covert_CSR2Triplet_;
   int *index_covert_extra_Diag2CSR_;
 
-  int nFakeNegEigs_;
-
   // strumpack object
    StrumpackSparseSolver<double,int> spss;
 
@@ -117,11 +106,6 @@ public:
    * for the factorization and performs ordering */
   virtual void firstCall();
 //  virtual void diagonalChanged( int idiag, int extent );
-
-  void inline setFakeInertia(int nNegEigs)
-  {
-    nFakeNegEigs_ = nNegEigs;
-  }
 
 friend class hiopLinSolverNonSymSparseSTRUMPACK;
 
@@ -161,8 +145,6 @@ private:
   int *index_covert_extra_Diag2CSR_;
   std::unordered_map<int,int> extra_diag_nnz_map;
 
-  int nFakeNegEigs_;
-
   // strumpack object
    StrumpackSparseSolver<double,int> spss;
 
@@ -173,12 +155,7 @@ public:
   void firstCall();
 //  virtual void diagonalChanged( int idiag, int extent );
 
-  void inline setFakeInertia(int nNegEigs)
-  {
-    nFakeNegEigs_ = nNegEigs;
-  }
-
-friend class hiopLinSolverIndefSparseSTRUMPACK;
+friend class hiopLinSolverSymSparseSTRUMPACK;
 
 };
 

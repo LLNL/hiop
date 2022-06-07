@@ -81,8 +81,8 @@ private:
   virtual real_type getLocalElement(const hiop::hiopMatrix *a, local_ordinal_type i, local_ordinal_type j) override;
   virtual real_type getLocalElement(const hiop::hiopVector *x, local_ordinal_type i) override;
   virtual real_type* getMatrixData(hiop::hiopMatrixSparse* a) override;
-  virtual const local_ordinal_type* getRowIndices(const hiop::hiopMatrixSparse* a);
-  virtual const local_ordinal_type* getColumnIndices(const hiop::hiopMatrixSparse* a);
+  virtual const local_ordinal_type* getRowIndices(const hiop::hiopMatrixSparse* a) override;
+  virtual const local_ordinal_type* getColumnIndices(const hiop::hiopMatrixSparse* a) override;
   virtual local_ordinal_type getLocalSize(const hiop::hiopVector *x) override;
   virtual int verifyAnswer(
       hiop::hiopMatrixDense* A,
@@ -90,8 +90,8 @@ private:
   virtual int verifyAnswer(
       hiop::hiopVector *x,
       std::function<real_type(local_ordinal_type)> expect) override;
-  virtual local_ordinal_type* numNonzerosPerRow(hiop::hiopMatrixSparse* mat);
-  virtual local_ordinal_type* numNonzerosPerCol(hiop::hiopMatrixSparse* mat);
+  virtual local_ordinal_type* numNonzerosPerRow(hiop::hiopMatrixSparse* mat) override;
+  virtual local_ordinal_type* numNonzerosPerCol(hiop::hiopMatrixSparse* mat) override;
 };
 
 }} // namespace hiop::tests

@@ -1,0 +1,187 @@
+\subsection{General sparse NLPs requiring \textit{up to second-order} derivative information}
+The sparse NLP formulation supports sparse optimization problems and requires Hessians of the objective and constraints in addition to gradients/Jacobian of the objective/constraints.
+\begin{align}
+&&&&\min_{x\in\mathbb{R}^n} & \hspace{0.5cm} f(x) &&&& \label{spobj}\\
+&&&&\textnormal{s.t.} &\hspace{0.5cm}  c(x)=c_E &[y_c]&&&\\
+&&[v_l]&&& \hspace{0.5cm} d_l \leq d(x) \leq d_u  &[v_u]&&&\label{spineq} \\
+&&[z_l]&&& \hspace{0.5cm} x_l \leq x \leq x_u & [z_u] &&&\label{spbounds}
+\end{align}
+Here $f:\mathbb{R}^n\rightarrow\mathbb{R}$, $c:\mathbb{R}^n\rightarrow\mathbb{R}^{m_E}$, $d:\mathbb{R}^n\rightarrow\mathbb{R}^{m_I}$. The bounds appearing in the inequality constraints~\eqref{ineq} are assumed to be $d^l\in\mathbb{R}^{m_I}\cup\{-\infty\}$, $d^u\in\mathbb{R}^{m_I}\cup\{+\infty\}$, $d_i^l < d_i^u$, and at least of one of $d_i^l$ and $d_i^u$ are finite for all $i\in\{1,\ldots,m_I\}$. The bounds in~\eqref{bounds} are such that $x^l\in\mathbb{R}^{n}\cup\{-\infty\}$, $x^u\in\mathbb{R}^{n}\cup\{+\infty\}$, and $x_i^l < x_i^u$, $i\in\{1,\ldots,n\}$. The quantities insides brackets are the Lagrange multipliers of the constraints. Whenever a bound is infinite, the corresponding multiplier is by convention zero.
+Internally, a slack variable $s$ is introduced and the inequality constraints~\eqref{spineq} are replaced by additional equality constraints and boundary constraints:
+\begin{align}
+&&&&& \hspace{0.5cm} d(x) = s &[y_d]&&& \\
+&&[v_l]&&& \hspace{0.5cm} d_l \leq s \leq d_u  &[v_u]&&&\label{spineq_s} 
+\end{align}
+
+As a result, \Hi requires the user to provide the following quantities:
+\begin{itemize}
+\item[D1] objective and constraint functions $f(x)$, $c(x)$, $d(x)$;
+\item[D2] the first-order derivatives of the above: $\nabla f(x)$, $Jc(x)$, $Jd(x)$;
+\item[D3] The Hessian of the Lagrangian
+  \begin{align}
+\nabla^2 L(x)& = \nabla^2 f(x) + \sum_{i=1}^{m_E} y_{c,i} \nabla^2 c_i(x) + \sum_{i=1}^{m_I} y_{d,i} \nabla^2 d_i(x).\label{spHess}
+\end{align}
+\item[D4] the simple bounds $x_l$ and $x_u$, the inequalities bounds: $d_l$ and $d_u$, and the right-hand size of the equality constraints $c_E$.
+\end{itemize}
+
+\subsubsection{C++ interface to solve sparse NLPs}
+The above optimization problem~\eqref{spobj}-\eqref{spbounds} can be specified by using the C++ interface, namely by deriving and providing an implementation for the \texttt{hiop::hiopInterfaceSparse} abstract class.
+
+ We present next the methods of this abstract class that needs to be implemented in order to specify the parts D1-D4 required to solve a sparse NLP  problem. 
+
+\warningcp{Note:} All the functions that have a \texttt{bool} return type should return \texttt{false} when an error occurs, otherwise should return \texttt{true}.
+
+\warningcp{Note:} \texttt{hiop::hiopInterfaceSparse} runs only in non-distributed/non-MPI mode. Intraprocess acceleration can be obtained using OpenMP or CUDA.
+
+\subsubsection{Specifying the optimization problem}
+
+All the methods of this section are ``pure'' virtual in \texttt{hiop::hiopInterfaceSparse} abstract class  and need to be provided by the user implementation.
+
+\begin{lstlisting} 
+bool get_prob_sizes(size_type& n, size_type& m);
+\end{lstlisting} 
+\noindent Provides the number of decision variables and the number of constraints ($m=m_E+m_I$).
+
+
+\begin{lstlisting} 
+bool get_vars_info(const size_type& n, double *xlow, double* xupp, 
+                   NonlinearityType* type);
+\end{lstlisting} 
+
+\noindent Provides the lower and upper bounds $x_l$ and $x_u$ on the decision variables. When a variable (let us say the $i^{th}$) has no lower or/and upper bounds, the  $i^{th}$ entry of xlow and/or xupp should be less than $-1^{20}$ or/and larger than $1^{20}$, respectively. The last argument is not used and can set to any value of the enum \texttt{hiop::hiopInterface::NonlinearityType}.
+
+\begin{lstlisting} 
+bool get_cons_info(const size_type& m, double* clow, double* cupp, 
+                   NonlinearityType* type);
+\end{lstlisting}
+\noindent Similar to the above, but for the inequality bounds $d_l$ and $d_u$. For equalities, set the corresponding entries in clow and cupp equal to the desired value (from $c_E$).
+
+
+\begin{lstlisting} 
+bool eval_f(const size_type& n, 
+            const double* x, bool new_x, 
+            double& obj_value);
+\end{lstlisting} 
+
+\noindent Implement this method to compute the function value $f(x)$ in \texttt{obj\_value} for the provided decision variables $x$. The input argument \texttt{new\_x} specifies whether the variables $x$ have been changed since the previous call of one of the \texttt{eval\_} methods. Use this argument to ``buffer'' the objective and gradients function and derivative evaluations when this is possible.
+
+\begin{lstlisting} 
+bool eval_grad_f(const size_type& n, 
+                 const double* x, bool new_x, 
+                 double* gradf);
+\end{lstlisting} 
+
+\noindent Same as above but for $\nabla f(x)$.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{lstlisting} 
+ bool eval_cons(const size_type& n, const size_type& m, 
+                const size_type& num_cons,
+				    const index_type* idx_cons, const double* x, 
+			       bool new_x, double* cons);
+\end{lstlisting} 
+
+\noindent Implement this method to provide the value of the constraints $c(x)$ and/or $d(x)$. The input parameter \texttt{num\_cons} specifies how many constraints (out of \texttt{m}) needs to evaluated; \texttt{idx\_cons} array specifies the indexes, which are zero-based, of the constraints  and is of size \texttt{num\_cons}. These values should be provided in \texttt{cons}, which is also an array of size \texttt{num\_cons}.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+\begin{lstlisting} 
+bool 
+eval_Jac_cons(const size_type& n, const size_type& m, 
+              const size_type& num_cons, const index_type* idx_cons,  
+              const double* x, bool new_x,
+              const size_type& nnzJacS, index_type* iJacS, index_type* jJacS,
+              double* MJacS);
+\end{lstlisting} 
+
+\noindent Implement this method to provide the Jacobian of a subset of the  constraints $c(x)$ and/or $d(x)$ in \texttt{Jac}; this subset is specified by the array \texttt{idx\_cons}. The last three arguments should be used to specify the Jacobian information in sparse triplet format.  \texttt{iJacS} and \texttt{jJacS} needs to be jointly sorted: by indexes in \texttt{iJacS} and, for equal (row) indexes in \texttt{iJacS}, by indexes in \texttt{jJacS}.
+
+Notes for implementer of this method: 
+\begin{itemize}
+\item[2.] When \texttt{iJacS} and \texttt{jJacS} are non-null, the implementer should provide the $(i,j)$   indexes in these arrays. 
+\item[3.] When \texttt{MJacS} is non-null, the implementer should provide the values corresponding to    entries specified by \texttt{iJacS} and \texttt{jJacS}.
+\item[4.] \texttt{iJacS} and \texttt{jJacS} are both either non-null or null during the same call.
+\item[5.] The pair (\texttt{iJacS}, \texttt{jJacS}) and \texttt{MJacS} can be both non-null during the same call or only one of them  non-null; but they will not be both null.
+\end{itemize}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{lstlisting}
+bool
+eval_Jac_cons(const size_type& n, const size_type& m, 
+              const double* x, bool new_x,
+              const size_type& nnzJacS, index_type* iJacS, index_type* jJacS,
+              double* MJacS);
+\end{lstlisting} 
+
+\noindent Evaluates the Jacobian of equality and inequality constraints \textit{in one call}. 
+   
+\warningcp{Note:}   HiOp will call this method whenever the implementer/user returns \texttt{false} from the previous, ``two-calls'' \texttt{eval\_Jac\_cons}. We remark that the two-calls method should return  \texttt{false} during both calls (for equalities and inequalities) made to it by \Hi in order to let \Hi know that the Jacobian should be evaluated using the one-call callback listed above.
+   
+   
+   
+The main difference from the above \texttt{eval\_Jac\_cons} is that the implementer/user of this 
+    method does not have to split the constraints into equalities and inequalities; instead,
+    HiOp does this internally.
+   
+ 
+   Parameters:
+    \begin{itemize}
+    \item  first four: number of variables, number of constraints, (primal) variables at which the
+    Jacobian should be evaluated, and boolean flag indicating whether the variables \texttt{x} have
+    changed since a previous call to any of the function and derivative evaluations.
+     \item   \texttt{nnzJacS}, \texttt{iJacS}, \texttt{jJacS}, \texttt{MJacS}: number of nonzeros, $(i,j)$ indexes, and nonzero values of 
+   the sparse Jacobian matrix.  \texttt{iJacS} and \texttt{jJacS} needs to be jointly sorted: by indexes in \texttt{iJacS} and, for equal (row) indexes in \texttt{iJacS}, by indexes in \texttt{jJacS}.
+    \end{itemize}
+   
+\warningcp{Note:} Notes 1-5 from the previous, two-call \texttt{eval\_Jac\_cons} applies here as well.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{lstlisting} 
+bool
+eval_Hess_Lagr(const size_type& n, const size_type& m, 
+               const double* x, bool new_x, const double& obj_factor,
+               const double* lambda, bool new_lambda,
+               const size_type& nsparse, const size_type& ndense, 
+               const size_type& nnzHSS, index_type* iHSS, index_type* jHSS,
+               double* MHSS)
+\end{lstlisting} 
+
+\noindent Evaluates the Hessian of the Lagrangian function as a sparse matrix in triplet format. 
+
+ 
+ 
+\warningcp{Note:} Notes 1-5 from \texttt{eval\_Jac\_cons} apply to arrays \texttt{iHSS}, \texttt{jHSS}, and \texttt{MHSS} that stores the sparse part of the Hessian.
+
+\warningcp{Note:} The array \texttt{lambda} contains first the multipliers of the equality constraints followed by the multipliers of the inequalities.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsubsection{Calling \Hi for a \texttt{hiopInterfaceSparse} formulation}
+Once the sparse NLP is coded,  the  user code needs to create a \Hi problem formulation that encapsulate the NLP representation, instantiate an optimization algorithm class, and start the numerical optimization process. Assuming that the NLP representation is implemented in a class named \texttt{NlpEx6} (that derives from \texttt{hiop::hiopInterfaceSparse}), the aforementioned sequence of steps can be performed by:
+\begin{lstlisting}
+#include "NlpEx6.hpp"               //the NLP representation class
+#include "hiopInterface.hpp"   //HiOP encapsulation of the NLP
+#include "hiopAlgFilterIPM.hpp"     //solver class
+using namespace hiop;
+...
+NlpEx6 nlp_interface();                     //instantiate your NLP representation class
+hiopNlpDenseConstraints nlp(nlp_interface); //create HiOP encapsulation
+nlp.options.SetNumericValue("mu0", 0.01);  //set a non-default initial value for  barrier parameter
+hiopAlgFilterIPM solver(&nlp);             //create a solver object
+hiopSolveStatus status = solver.run();     //numerical optimization
+double obj_value = solver.getObjective();  //get objective
+...
+\end{lstlisting}
+Various output quantities of the numerical optimization phase (\textit{e.g.}, the optimal objective value and (primal) solution, status of the numerical optimization process, and solve statistics) can be retrieved from \Hi's \texttt{hiopAlgFilterIPM} solver object. Most commonly used such methods are: 
+\begin{lstlisting}
+double getObjective() const;
+void getSolution(double* x) const;
+hiopSolveStatus getSolveStatus() const;
+int getNumIterations() const;
+\end{lstlisting} 
+The standalone drivers \texttt{NlpSparseEx1} and \texttt{NlpSparseEx2} inside directory \texttt{src/Drivers/} under the \Hi's root directory contain more detailed examples of the use of the sparse NLP interface of \Hi.

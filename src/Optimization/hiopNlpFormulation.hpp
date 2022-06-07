@@ -217,7 +217,8 @@ public:
   inline hiopInterfaceBase::NonlinearityType* get_var_type() const {return vars_type_;}
   inline hiopInterfaceBase::NonlinearityType* get_cons_eq_type() const {return cons_eq_type_;}
   inline hiopInterfaceBase::NonlinearityType* get_cons_ineq_type() const {return cons_ineq_type_;}
-  
+  inline hiopInterfaceBase::NonlinearityType  get_prob_type() const {return prob_type_;}
+
   /** const accessors */
   inline size_type n() const      {return n_vars_;}
   inline size_type m() const      {return n_cons_;}
@@ -257,7 +258,13 @@ public:
 
   /// @brief return the scaling fact for objective
   double get_obj_scale() const;
-  
+
+  /// @brief adjust variable/constraint bounds according to the given iteration.
+  void adjust_bounds(const hiopIterate& it);
+
+  /// @brief reset variable/constraint bounds in the elastic_mode
+  void reset_bounds(double bound_relax_perturb);
+
   /* outputing and debug-related functionality*/
   hiopLogger* log;
   hiopRunStats runStats;
@@ -318,7 +325,15 @@ protected:
 
   hiopVector *dl_, *du_,  *idl_, *idu_; //these will be local
   hiopInterfaceBase::NonlinearityType* cons_ineq_type_;
-  
+
+  /**
+   * Flag to indicate whether problem is LP, QP or NLP
+   */
+  hiopInterfaceBase::NonlinearityType prob_type_;
+
+  // flag to indicate whether f/grad/con/Jac/Hes has been evaluated once
+  bool nlp_evaluated_;
+
   // keep track of the constraints indexes in the original, user's formulation
   hiopVectorInt *cons_eq_mapping_, *cons_ineq_mapping_; 
 
@@ -333,7 +348,11 @@ protected:
   hiopNlpTransformations nlp_transformations_;
   
   //internal NLP transformations (currently gradient scaling implemented)
-  hiopNLPObjGradScaling *nlp_scaling_;
+  hiopNLPObjGradScaling* nlp_scaling_;
+
+  /// @brief internal NLP transformations that relaxes the bounds
+  hiopBoundsRelaxer* relax_bounds_;
+  
 
 #ifdef HIOP_USE_MPI
   //inter-process distribution of vectors
@@ -369,6 +388,7 @@ protected:
    * ineq. into and to return it to the user via @user_callback_solution and @user_callback_iterate
    */
   hiopVector* cons_lambdas_;
+
 private:
   hiopNlpFormulation(const hiopNlpFormulation& s)
     : interface_base(s.interface_base),
@@ -560,7 +580,7 @@ public:
   virtual hiopMatrix* alloc_Jac_d()
   {
     return LinearAlgebraFactory::create_matrix_sparse(options->GetString("mem_space"), n_cons_ineq_, n_vars_, nnz_sparse_Jacineq_);
-//	  return new hiopMatrixSparseTriplet(n_cons_ineq_, n_vars_, nnz_sparse_Jacineq_);
+	  //return new hiopMatrixSparseTriplet(n_cons_ineq_, n_vars_, nnz_sparse_Jacineq_);
   }
   virtual hiopMatrix* alloc_Jac_cons()
   {

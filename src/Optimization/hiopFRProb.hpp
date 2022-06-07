@@ -85,6 +85,7 @@ public:
   virtual bool get_MPI_comm(MPI_Comm& comm_out);
 
   virtual bool get_prob_sizes(size_type& n, size_type& m);
+  virtual bool get_prob_info(NonlinearityType& type);
   virtual bool get_vars_info(const size_type& n, double *xlow, double* xupp, NonlinearityType* type);
   virtual bool get_cons_info(const size_type& m, double* clow, double* cupp, NonlinearityType* type);
   virtual bool get_sparse_blocks_info(int& nx,
@@ -206,6 +207,7 @@ private:
 
   double zeta_;
   double theta_ref_;
+  double nrmInf_feas_ref_;
   double mu_;
   double rho_;
   double obj_base_;
@@ -286,6 +288,7 @@ public:
                               double* MHSD);
 
   virtual bool get_prob_sizes(size_type& n, size_type& m);
+  virtual bool get_prob_info(NonlinearityType& type);
   virtual bool get_vars_info(const size_type& n, double *xlow, double* xupp, NonlinearityType* type);
   virtual bool get_cons_info(const size_type& m, double* clow, double* cupp, NonlinearityType* type);
 
@@ -382,6 +385,7 @@ private:
 
   double zeta_;
   double theta_ref_;
+  double nrmInf_feas_ref_;
   double mu_;
   double rho_;
   double obj_base_;

@@ -203,7 +203,7 @@ void hiopVectorPar::startingAtCopyFromStartingAt(int start_idx_dest,
 #endif
   assert((start_idx_dest>=0 && start_idx_dest<this->n_local_) || this->n_local_==0);
   const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_in);
-  assert((start_idx_src>=0 && start_idx_src<v.n_local_) || v.n_local_==0);
+  assert((start_idx_src>=0 && start_idx_src<v.n_local_) || v.n_local_==0 || v.n_local_==start_idx_src);
 
   int howManyToCopy = this->n_local_ - start_idx_dest;
   const int howManyToCopySrc = v.n_local_-start_idx_src;
@@ -1027,14 +1027,18 @@ void hiopVectorPar::adjustDuals_plh(const hiopVector& x_,
   for(size_type i=0; i<n_local_; i++) {
     if(ix[i]==1.) {
       a=mu/x[i]; b=a/kappa; a=a*kappa;
-      if(*z<b) 
-	*z=b;
-      else //z[i]>=b
-	if(a<=b) 
-	  *z=b;
-	else //a>b
-	  if(a<*z) *z=a;
+      if(*z<b) {
+        *z=b;
+      } else { //z[i]>=b
+        if(a<=b) {
+          *z=b;
+        } else { //a>b
+          if(a<*z) {
+            *z=a;
+          }
           //else a>=z[i] then *z=*z (z[i] does not need adjustment)
+        }
+      }
     }
     z++;
   }
@@ -1058,7 +1062,7 @@ bool hiopVectorPar::isfinite_local() const
   return true;
 }
 
-void hiopVectorPar::print()
+void hiopVectorPar::print() const
 {
   int max_elems = n_local_;
   for(int it=0; it<max_elems; it++) {
