@@ -105,9 +105,14 @@ double hiopKKTLinSys::errorKKT(const hiopResidual* resid, const hiopIterate* sol
 {
   nlp_->log->printf(hovLinAlgScalars, "KKT LinSys::errorKKT KKT_large residuals norm:\n");
 
-//  delta_wx_ = delta_wd_ = delta_cc_ = delta_cd_ = 0.;
-  assert(perturb_calc_);
-  perturb_calc_->get_curr_perturbations(*delta_wx_, *delta_wd_, *delta_cc_, *delta_cd_);
+  if(perturb_calc_) {
+    perturb_calc_->get_curr_perturbations(*delta_wx_, *delta_wd_, *delta_cc_, *delta_cd_);  
+  } else {
+    delta_wx_->setToZero();
+    delta_wd_->setToZero();
+    delta_cc_->setToZero();
+    delta_cd_->setToZero();
+  }
 
   double derr=1e20, aux;
   hiopVector *RX=resid->rx->new_copy();
@@ -699,8 +704,14 @@ errorCompressedLinsys(const hiopVector& rx, const hiopVector& ryc, const hiopVec
 {
   nlp_->log->printf(hovLinAlgScalars, "hiopKKTLinSysDenseXYcYd::errorCompressedLinsys residuals norm:\n");
 
-  assert(perturb_calc_);
-  perturb_calc_->get_curr_perturbations(*delta_wx_, *delta_wd_, *delta_cc_, *delta_cd_);
+  if(perturb_calc_) {
+    perturb_calc_->get_curr_perturbations(*delta_wx_, *delta_wd_, *delta_cc_, *delta_cd_);  
+  } else {
+    delta_wx_->setToZero();
+    delta_wd_->setToZero();
+    delta_cc_->setToZero();
+    delta_cd_->setToZero();
+  }
 
   double derr=1e20, aux;
   hiopVector *RX=rx.new_copy();
@@ -1007,8 +1018,14 @@ errorCompressedLinsys(const hiopVector& rx, const hiopVector& rd,
 {
   nlp_->log->printf(hovLinAlgScalars, "hiopKKTLinSysDenseXDYcYd::errorCompressedLinsys residuals norm:\n");
 
-  assert(perturb_calc_);
-  perturb_calc_->get_curr_perturbations(*delta_wx_, *delta_wd_, *delta_cc_, *delta_cd_);
+  if(perturb_calc_) {
+    perturb_calc_->get_curr_perturbations(*delta_wx_, *delta_wd_, *delta_cc_, *delta_cd_);  
+  } else {
+    delta_wx_->setToZero();
+    delta_wd_->setToZero();
+    delta_cc_->setToZero();
+    delta_cd_->setToZero();
+  }
 
   double derr=-1., aux;
   hiopVector *RX=rx.new_copy();
@@ -1742,7 +1759,14 @@ bool hiopMatVecKKTFullOpr::times_vec(hiopVector& y, const hiopVector& x)
   hiopVector* delta_wd = kkt_->delta_wd_;
   hiopVector* delta_cc = kkt_->delta_cc_;
   hiopVector* delta_cd = kkt_->delta_cd_;
-  kkt_->get_perturb_calc()->get_curr_perturbations(*delta_wx, *delta_wd, *delta_cc, *delta_cd);  
+  if(kkt_->get_perturb_calc()) {
+    kkt_->get_perturb_calc()->get_curr_perturbations(*delta_wx, *delta_wd, *delta_cc, *delta_cd);
+  } else {
+    delta_wx->setToZero();
+    delta_wd->setToZero();
+    delta_cc->setToZero();
+    delta_cd->setToZero();
+  }
 
   bool bret = split_vec_to_build_it(x);
 
@@ -1845,7 +1869,14 @@ bool hiopMatVecKKTFullOpr::trans_times_vec(hiopVector& y, const hiopVector& x)
   hiopVector* delta_wd = kkt_->delta_wd_;
   hiopVector* delta_cc = kkt_->delta_cc_;
   hiopVector* delta_cd = kkt_->delta_cd_;
-  kkt_->get_perturb_calc()->get_curr_perturbations(*delta_wx, *delta_wd, *delta_cc, *delta_cd);  
+  if(kkt_->get_perturb_calc()) {
+    kkt_->get_perturb_calc()->get_curr_perturbations(*delta_wx, *delta_wd, *delta_cc, *delta_cd);
+  } else {
+    delta_wx->setToZero();
+    delta_wd->setToZero();
+    delta_cc->setToZero();
+    delta_cd->setToZero();
+  }
 
   bool bret = split_vec_to_build_it(x);
 
