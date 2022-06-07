@@ -1352,6 +1352,7 @@ void hiopAlgFilterIPMQuasiNewton::outputIteration(int lsStatus, int lsNum, int u
  *****************************************************************************************************/
 hiopAlgFilterIPMNewton::hiopAlgFilterIPMNewton(hiopNlpFormulation* nlp_in, const bool within_FR)
   : hiopAlgFilterIPMBase(nlp_in, within_FR),
+    pd_perturb_{nullptr},
     fact_acceptor_{nullptr}
 {
   reload_options();
@@ -1373,6 +1374,7 @@ hiopAlgFilterIPMNewton::hiopAlgFilterIPMNewton(hiopNlpFormulation* nlp_in, const
 hiopAlgFilterIPMNewton::~hiopAlgFilterIPMNewton()
 {
   delete fact_acceptor_;
+  delete pd_perturb_;
 }
 
 void hiopAlgFilterIPMNewton::reload_options()
@@ -1483,14 +1485,14 @@ hiopAlgFilterIPMNewton::switch_to_safer_KKT(hiopKKTLinSys* kkt_curr,
       
       kkt->set_safe_mode(linsol_safe_mode_on);
       
-      pd_perturb_.initialize(nlp);
-      pd_perturb_.set_mu(_mu);
-      kkt->set_PD_perturb_calc(&pd_perturb_);
+      pd_perturb_->initialize(nlp);        
+      pd_perturb_->set_mu(_mu);
+      kkt->set_PD_perturb_calc(pd_perturb_);
       
       delete fact_acceptor_;      
       //use inertia correction just be safe
-      fact_acceptor_ = new hiopFactAcceptorIC(&pd_perturb_, nlp->m_eq()+nlp->m_ineq());
-      //fact_acceptor_ = decideAndCreateFactAcceptor(&pd_perturb_, nlp, kkt);
+      fact_acceptor_ = new hiopFactAcceptorIC(pd_perturb_, nlp->m_eq()+nlp->m_ineq());
+      //fact_acceptor_ = decideAndCreateFactAcceptor(pd_perturb_, nlp, kkt);
       kkt->set_fact_acceptor(fact_acceptor_);
       
       linsol_safe_mode_last_iter_switched_on = iter_num;
@@ -1545,13 +1547,13 @@ hiopAlgFilterIPMNewton::switch_to_fast_KKT(hiopKKTLinSys* kkt_curr,
       theta_mu=1.05;
       kappa_mu=0.8;
       
-      pd_perturb_.initialize(nlp);
-      pd_perturb_.set_mu(mu);
-      kkt->set_PD_perturb_calc(&pd_perturb_);
+      pd_perturb_->initialize(nlp);
+      pd_perturb_->set_mu(mu);
+      kkt->set_PD_perturb_calc(pd_perturb_);
       
       delete fact_acceptor_;
       //use options passed by the user for the IC acceptor
-      fact_acceptor_ = decideAndCreateFactAcceptor(&pd_perturb_, nlp, kkt);
+      fact_acceptor_ = decideAndCreateFactAcceptor(pd_perturb_, nlp, kkt);
       kkt->set_fact_acceptor(fact_acceptor_);
 
       return kkt;
@@ -1625,10 +1627,6 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
   nlp->runStats.initialize();
   nlp->runStats.kkt.initialize();
 
-  if(!pd_perturb_.initialize(nlp)) {
-    return SolveInitializationError;
-  }
-
   //todo: have this as option maybe
   //number of safe mode iteration to run once linsol mode is switched to on
   //double every time linsol mode is switched on
@@ -1668,14 +1666,25 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 
   hiopKKTLinSys* kkt = decideAndCreateLinearSystem(nlp);
   assert(kkt != NULL);
-  kkt->set_PD_perturb_calc(&pd_perturb_);
+  
+  auto* kkt_normaleqn = dynamic_cast<hiopKKTLinSysNormalEquation*>(kkt);
+  if(kkt_normaleqn) {
+    pd_perturb_ = new hiopPDPerturbationNormalEqn();
+  } else {
+    pd_perturb_ = new hiopPDPerturbation();
+  }
+  if(!pd_perturb_->initialize(nlp)) {
+    return SolveInitializationError;
+  }
+  
+  kkt->set_PD_perturb_calc(pd_perturb_);
   kkt->set_logbar_mu(_mu);
   
   if(fact_acceptor_) {
     delete fact_acceptor_;
     fact_acceptor_ = nullptr;
   }
-  fact_acceptor_ = decideAndCreateFactAcceptor(&pd_perturb_, nlp, kkt);
+  fact_acceptor_ = decideAndCreateFactAcceptor(pd_perturb_, nlp, kkt);
   kkt->set_fact_acceptor(fact_acceptor_);
   
   _alpha_primal = _alpha_dual = 0;
@@ -1813,7 +1822,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
      * Search direction calculation
      ***************************************************/
     kkt->set_logbar_mu(_mu);
-    pd_perturb_.set_mu(_mu);
+    pd_perturb_->set_mu(_mu);
 
     //this will cache the primal infeasibility norm for (re)use in the dual updating
     double infeas_nrm_trial;

@@ -74,6 +74,7 @@ hiopKKTLinSysSparseNormalEqn::hiopKKTLinSysSparseNormalEqn(hiopNlpFormulation* n
     Jac_dSp_{nullptr},
     rhs_{nullptr},
     Hess_diag_{nullptr},
+    dual_reg_{nullptr},
     Hxd_inv_{nullptr},
     JacD_{nullptr},
     JacDt_{nullptr},
@@ -92,6 +93,7 @@ hiopKKTLinSysSparseNormalEqn::~hiopKKTLinSysSparseNormalEqn()
 {
   delete rhs_;
   delete Hess_diag_;
+  delete dual_reg_;
   delete Hxd_inv_;
   delete JacD_;
   delete JacDt_;
@@ -155,11 +157,13 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const double& delta_wx_in,
   Hx_->copyFrom(*Dx_);
   Hx_->addConstant(delta_wx_in);
   Hx_->axpy(1.0,*Hess_diag_);
-    
+  
+  // HD = Dd_ + delta_wd
   if(nullptr == Hd_) {
     Hd_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), nineq);
   }
-  Hd_->copyFrom(*Dd_);  
+  Hd_->copyFrom(*Dd_);
+  // TODO: add function add_constant_with_bias()
   Hd_->addConstant(delta_wd_in);
 
   nlp_->runStats.kkt.tmUpdateInit.stop();
@@ -171,6 +175,7 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const double& delta_wx_in,
   * ( [ Jd -I ] [   0           Dd+delta_wd ]      [  0     -I  ]   [    0      delta_cd ] ) 
   */
 
+  // TODO: jump to the steps where we add dual regularization, if delta_wx is not changed and this function is called due to refactorization
   hiopTimer t;
 
   if(nullptr == JDiagJt_) {
@@ -239,21 +244,32 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const double& delta_wx_in,
 #endif
 
   if(nullptr == M_normaleqn_) {
-    //ensure storage for nonzeros diagonal is allocated by adding (symbolically)
-    //a diagonal matrix
+    //ensure storage for nonzeros diagonal is allocated by adding (symbolically) a diagonal matrix
     Diag_reg_ = new hiopMatrixSparseCSRSeq();
-    hiopVector* diag_cons = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), neq + nineq);
-    Diag_reg_->form_diag_from_symbolic(*diag_cons);
+    
+    // HD = Dd_ + delta_wd
+    if(nullptr == dual_reg_) {
+      dual_reg_ =LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), neq + nineq);
+    }    
+    Diag_reg_->form_diag_from_symbolic(*dual_reg_);
 
     //form sparsity pattern of M_condensed_ = JacD*Diag*JacDt + delta_cc*I
     M_normaleqn_ = Diag_reg_->add_matrix_alloc(*JDiagJt_);
     Diag_reg_->add_matrix_symbolic(*M_normaleqn_, *JDiagJt_);
-    delete diag_cons;
   }
 
   t.reset(); t.start();
   assert(delta_cc>=0.0);
-  Diag_reg_->set_diagonal(delta_cc);
+  Diag_reg_->setToZero();
+  if(delta_cc > 0.0) {
+    if(nlp_->options->GetString("dual_reg_method") == "unified") {
+      dual_reg_->setToConstant(delta_cc);
+    } else if(nlp_->options->GetString("dual_reg_method") == "randomized") {
+      dual_reg_->set_to_random_constant(0.9*delta_cc, 1.1*delta_cc);
+    }
+    
+    Diag_reg_->addDiagonal(1.0,*dual_reg_);
+  }
   Diag_reg_->add_matrix_numeric(*M_normaleqn_, 1.0, *JDiagJt_, 1.0);
 
   // TODO should have same code for different compute modes (remove is_cusolver_on), i.e., remove if(linSolver_ma57)
@@ -420,12 +436,12 @@ int hiopKKTLinSysSparseNormalEqn::factorizeWithCurvCheck()
   //factorization
   size_type n_neg_eig = hiopKKTLinSysCurvCheck::factorizeWithCurvCheck();
 
-  size_type n_neg_eig_11 = 0;
   if(n_neg_eig == -1) {
     nlp_->log->printf(hovWarning,
                 "KKT_SPARSE_NormalEqn linsys: Detected null eigenvalues.\n");
     n_neg_eig = -1;
   } else {
+    // Cholesky factorization succeeds. Matrix is PD and hence the corresponding Augmented system has correct inertia
     n_neg_eig = Jac_c_->m() + Jac_d_->m();;    
   }
 

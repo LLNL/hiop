@@ -70,6 +70,7 @@ public:
 
   virtual void setToZero();
   virtual void setToConstant( double c );
+  virtual void set_to_random_constant(double minv, double maxv);
   virtual void setToConstant_w_patternSelect(double c, const hiopVector& select);
 
   virtual void copyFrom(const hiopVector& v );
