@@ -1090,6 +1090,23 @@ void hiopVectorPar::adjustDuals_plh(const hiopVector& x_,
   }
 }
 
+bool hiopVectorPar::is_zero() const
+{
+  int all_zero = true;
+  int i{0};
+  while(i<n_local_ && all_zero) {
+    if(data_[i++]!=0.0) {
+      all_zero = false;
+    }
+  }
+#ifdef HIOP_USE_MPI
+  int all_zero_G;
+  int ierr=MPI_Allreduce(&all_zero, &all_zero_G, 1, MPI_INT, MPI_MIN, comm_); assert(MPI_SUCCESS==ierr);
+  return all_zero_G;
+#endif
+  return all_zero;
+}
+
 bool hiopVectorPar::isnan_local() const
 {
   for(size_type i=0; i<n_local_; i++) if(std::isnan(data_[i])) return true;

@@ -68,10 +68,23 @@ hiopKKTLinSys::hiopKKTLinSys(hiopNlpFormulation* nlp)
     prec_opr_(nullptr),
     ir_rhs_(nullptr),
     ir_x0_(nullptr),
-    bicgIR_(nullptr)      
+    bicgIR_(nullptr),
+    delta_wx_(nullptr),
+    delta_wd_(nullptr),
+    delta_cc_(nullptr),
+    delta_cd_(nullptr)
+    
 {
   perf_report_ = "on"==hiop::tolower(nlp_->options->GetString("time_kkt"));
   mu_ = nlp_->options->GetNumeric("mu0");
+  delta_wx_ = nlp_->alloc_primal_vec();
+  delta_wd_ = nlp_->alloc_dual_ineq_vec();
+  delta_cc_ = nlp_->alloc_dual_eq_vec();
+  delta_cd_ = nlp_->alloc_dual_ineq_vec();
+  delta_wx_->setToZero();
+  delta_wd_->setToZero();
+  delta_cc_->setToZero();
+  delta_cd_->setToZero();
 }
 
 hiopKKTLinSys::~hiopKKTLinSys()
@@ -81,6 +94,10 @@ hiopKKTLinSys::~hiopKKTLinSys()
   delete ir_rhs_;
   delete ir_x0_;
   delete bicgIR_;
+  delete delta_wx_;
+  delete delta_wd_;
+  delete delta_cc_;
+  delete delta_cd_;
 }
 
 //computes the solve error for the KKT Linear system; used only for correctness checking
@@ -88,18 +105,16 @@ double hiopKKTLinSys::errorKKT(const hiopResidual* resid, const hiopIterate* sol
 {
   nlp_->log->printf(hovLinAlgScalars, "KKT LinSys::errorKKT KKT_large residuals norm:\n");
 
-  double delta_wx, delta_wd, delta_cc, delta_cd;
-  delta_wx = delta_wd = delta_cc = delta_cd = 0.;
-  if(perturb_calc_) {
-    perturb_calc_->get_curr_perturbations(delta_wx, delta_wd, delta_cc, delta_cd);
-  }
+//  delta_wx_ = delta_wd_ = delta_cc_ = delta_cd_ = 0.;
+  assert(perturb_calc_);
+  perturb_calc_->get_curr_perturbations(*delta_wx_, *delta_wd_, *delta_cc_, *delta_cd_);
 
   double derr=1e20, aux;
   hiopVector *RX=resid->rx->new_copy();
 
   //RX = rx-H*dx-J'c*dyc-J'*dyd +dzl-dzu
   HessianTimesVec_noLogBarrierTerm(1.0, *RX, -1.0, *sol->x);
-  RX->axpy(-delta_wx, *sol->x);
+  RX->axzpy(-1., *delta_wx_, *sol->x);
 
   Jac_c_->transTimesVec(1.0, *RX, -1.0, *sol->yc);
   Jac_d_->transTimesVec(1.0, *RX, -1.0, *sol->yd);
@@ -110,30 +125,30 @@ double hiopKKTLinSys::errorKKT(const hiopResidual* resid, const hiopIterate* sol
   nlp_->log->printf(hovLinAlgScalars, "  --- rx=%g\n", aux);
 
 
-  //RD = rd - (dyd + dvl - dvu - delta_wd*dd)    TODO: should this be rd - (-dyd - dvl + dvu + delta_wd*dd)
+  //RD = rd - (dyd + dvl - dvu - delta_wd_*dd)    TODO: should this be rd - (-dyd - dvl + dvu + delta_wd_*dd)
   hiopVector* RD = resid->rd->new_copy();
   RD->axpy(+1., *sol->yd);
   RD->axpy(+1., *sol->vl);
   RD->axpy(-1., *sol->vu);
-  RD->axpy(-delta_wd, *sol->d);
+  RD->axzpy(-1., *delta_wd_, *sol->d);
   aux=RD->twonorm();
   derr=fmax(aux,derr);
   nlp_->log->printf(hovLinAlgScalars, "  --- rd=%g\n", aux);
 
-  //RYC = ryc - Jc*dx + delta_cc*dyc
+  //RYC = ryc - Jc*dx + delta_cc_*dyc
   hiopVector* RYC=resid->ryc->new_copy();
   Jac_c_->timesVec(1.0, *RYC, -1.0, *sol->x);
-  RYC->axpy(delta_cc, *sol->yc);
+  RYC->axzpy(1., *delta_cc_, *sol->yc);
   aux=RYC->twonorm();
   derr=fmax(aux,derr);
   nlp_->log->printf(hovLinAlgScalars, "  --- ryc=%g\n", aux);
   delete RYC;
 
-  //RYD=ryd - Jd*dx + dd + delta_cd*dyd
+  //RYD=ryd - Jd*dx + dd + delta_cd_*dyd
   hiopVector* RYD=resid->ryd->new_copy();
   Jac_d_->timesVec(1.0, *RYD, -1.0, *sol->x);
   RYD->axpy(1.0, *sol->d);
-  RYD->axpy(delta_cd, *sol->yd);
+  RYD->axzpy(1., *delta_cd_, *sol->yd);
   aux=RYD->infnorm();
   derr=fmax(aux,derr);
   nlp_->log->printf(hovLinAlgScalars, "  --- ryd=%g\n", aux);
@@ -316,20 +331,23 @@ bool hiopKKTLinSysCurvCheck::factorize()
   size_t num_refactorization = 0;
   int continue_re_fact;
 
-  double delta_wx, delta_wd, delta_cc, delta_cd;
-  if(!perturb_calc_->compute_initial_deltas(delta_wx, delta_wd, delta_cc, delta_cd)) {
+  if(!perturb_calc_->compute_initial_deltas(*delta_wx_, *delta_wd_, *delta_cc_, *delta_cd_)) {
     nlp_->log->printf(hovWarning, "linsys: Regularization perturbation on new linsys failed.\n");
     return false;
   }
 
   while(num_refactorization <= max_refactorization) {
-    assert(delta_wx == delta_wd && "something went wrong with IC");
-    assert(delta_cc == delta_cd && "something went wrong with IC");
-    nlp_->log->printf(hovScalars, "linsys: delta_w=%12.5e delta_c=%12.5e (ic %d)\n",
-            delta_wx, delta_cc, num_refactorization);
+    // TODO add is_equal
+//    assert(delta_wx_ == delta_wd_ && "something went wrong with IC");
+//    assert(delta_cc_ == delta_cd_ && "something went wrong with IC");
+      if(delta_wx_->get_size() == 1 && delta_cc_->get_size() == 1) {
+        nlp_->log->printf(hovScalars, "linsys: delta_w=%12.5e delta_c=%12.5e (ic %d)\n",
+                          delta_wx_->local_data_host()[0], delta_cc_->local_data_host()[0], num_refactorization);  
+      }
+
 
     // the update of the linear system, including IC perturbations
-    this->build_kkt_matrix(delta_wx, delta_wd, delta_cc, delta_cd);
+    this->build_kkt_matrix(*delta_wx_, *delta_wd_, *delta_cc_, *delta_cd_);
 
     nlp_->runStats.kkt.tmUpdateInnerFact.start();
 
@@ -338,7 +356,7 @@ bool hiopKKTLinSysCurvCheck::factorize()
 
     nlp_->runStats.kkt.tmUpdateInnerFact.stop();
 
-    continue_re_fact = fact_acceptor_->requireReFactorization(*nlp_, n_neg_eig, delta_wx, delta_wd, delta_cc, delta_cd);
+    continue_re_fact = fact_acceptor_->requireReFactorization(*nlp_, n_neg_eig, *delta_wx_, *delta_wd_, *delta_cc_, *delta_cd_);
     
     if(-1==continue_re_fact) {
       return false;
@@ -367,17 +385,20 @@ bool hiopKKTLinSysCurvCheck::factorize_inertia_free()
   int non_singular_mat = 1;
   int continue_re_fact;
 
-  double delta_wx, delta_wd, delta_cc, delta_cd;
-  perturb_calc_->get_curr_perturbations(delta_wx, delta_wd, delta_cc, delta_cd);
+  perturb_calc_->get_curr_perturbations(*delta_wx_, *delta_wd_, *delta_cc_, *delta_cd_);
 
-  continue_re_fact = fact_acceptor_->requireReFactorization(*nlp_, non_singular_mat, delta_wx, delta_wd, delta_cc, delta_cd, true);
+  continue_re_fact = fact_acceptor_->requireReFactorization(*nlp_, non_singular_mat, *delta_wx_, *delta_wd_, *delta_cc_, *delta_cd_, true);
 
-  assert(delta_wx == delta_wd && "something went wrong with IC");
-  assert(delta_cc == delta_cd && "something went wrong with IC");
-  nlp_->log->printf(hovScalars, "linsys: delta_w=%12.5e delta_c=%12.5e \n", delta_wx, delta_cc);
-
+  // TODO: add is_equal
+//  assert(delta_wx_ == delta_wd_ && "something went wrong with IC");
+//  assert(delta_cc_ == delta_cd_ && "something went wrong with IC");
+  if(delta_wx_->get_size() == 1 && delta_cc_->get_size() == 1) {
+    nlp_->log->printf(hovScalars, "linsys: delta_w=%12.5e delta_c=%12.5e \n",
+                      delta_wx_->local_data_host()[0], delta_cc_->local_data_host()[0]);  
+  }
+      
   // the update of the linear system, including IC perturbations
-  this->build_kkt_matrix(delta_wx, delta_wd, delta_cc, delta_cd);
+  this->build_kkt_matrix(*delta_wx_, *delta_wd_, *delta_cc_, *delta_cd_);
 
   nlp_->runStats.kkt.tmUpdateInnerFact.start();
 
@@ -393,7 +414,7 @@ bool hiopKKTLinSysCurvCheck::factorize_inertia_free()
   while(num_refactorization<=max_refactorization && solver_flag < 0) {
     nlp_->log->printf(hovWarning, "linsys: matrix becomes singular after adding primal regularization!\n");
 
-    continue_re_fact = fact_acceptor_->requireReFactorization(*nlp_, solver_flag, delta_wx, delta_wd, delta_cc, delta_cd);
+    continue_re_fact = fact_acceptor_->requireReFactorization(*nlp_, solver_flag, *delta_wx_, *delta_wd_, *delta_cc_, *delta_cd_);
     
     if(-1==continue_re_fact) {
       return false;
@@ -402,10 +423,13 @@ bool hiopKKTLinSysCurvCheck::factorize_inertia_free()
       assert(1==continue_re_fact);
     }
       
-    nlp_->log->printf(hovScalars, "linsys: delta_w=%12.5e delta_c=%12.5e \n", delta_wx, delta_cc);
+    
+    if(delta_wx_->get_size() == 1 && delta_cc_->get_size() == 1) {
+      nlp_->log->printf(hovScalars, "linsys: delta_w=%12.5e delta_c=%12.5e \n", delta_wx_->local_data_host()[0], delta_cc_->local_data_host()[0]);  
+    }
   
     // the update of the linear system, including IC perturbations
-    this->build_kkt_matrix(delta_wx, delta_wd, delta_cc, delta_cd);
+    this->build_kkt_matrix(*delta_wx_, *delta_wd_, *delta_cc_, *delta_cd_);
 
     nlp_->runStats.kkt.tmUpdateInnerFact.start();
 
@@ -449,8 +473,7 @@ bool hiopKKTLinSysCompressed::test_direction(const hiopIterate* dir, hiopMatrix*
   double dWd = 0;
   double xs_nrmsq = 0.0;
   double dbl_wrk;
-  double delta_wx, delta_wd, delta_cc, delta_cd;
-  perturb_calc_->get_curr_perturbations(delta_wx, delta_wd, delta_cc, delta_cd);
+  perturb_calc_->get_curr_perturbations(*delta_wx_, *delta_wd_, *delta_cc_, *delta_cd_);
 
   /* compute xWx = x(H+Dx_)x (for primal var [x,d] */
   Hess_->timesVec(0.0, *x_wrk_, 1.0, *sol_x);
@@ -458,12 +481,12 @@ bool hiopKKTLinSysCompressed::test_direction(const hiopIterate* dir, hiopMatrix*
   
   x_wrk_->copyFrom(*sol_x);
   x_wrk_->componentMult(*Dx_);
-  x_wrk_->axpy(delta_wx, *sol_x);
+  x_wrk_->axzpy(1., *delta_wx_, *sol_x);
   dWd += x_wrk_->dotProductWith(*sol_x);
 
   d_wrk_->copyFrom(*sol_d);
   d_wrk_->componentMult(*Dd_);
-  d_wrk_->axpy(delta_wd, *sol_d);
+  d_wrk_->axzpy(1., *delta_wd_, *sol_d);
   dWd += d_wrk_->dotProductWith(*sol_d);
 
   /* compute rhs for the dWd test */
@@ -676,18 +699,15 @@ errorCompressedLinsys(const hiopVector& rx, const hiopVector& ryc, const hiopVec
 {
   nlp_->log->printf(hovLinAlgScalars, "hiopKKTLinSysDenseXYcYd::errorCompressedLinsys residuals norm:\n");
 
-  double delta_wx, delta_wd, delta_cc, delta_cd;
-  delta_wx = delta_wd = delta_cc = delta_cd = 0.;
-  if(perturb_calc_) {
-    perturb_calc_->get_curr_perturbations(delta_wx, delta_wd, delta_cc, delta_cd);
-  }
+  assert(perturb_calc_);
+  perturb_calc_->get_curr_perturbations(*delta_wx_, *delta_wd_, *delta_cc_, *delta_cd_);
 
   double derr=1e20, aux;
   hiopVector *RX=rx.new_copy();
   //RX=rx-H*dx-J'c*dyc-J'*dyd
   Hess_->timesVec(1.0, *RX, -1.0, dx);
   RX->axzpy(-1.0, *Dx_, dx);
-  RX->axpy(-delta_wx, dx);
+  RX->axzpy(-1., *delta_wx_, dx);
 
   Jac_c_->transTimesVec(1.0, *RX, -1.0, dyc);
   Jac_d_->transTimesVec(1.0, *RX, -1.0, dyd);
@@ -698,7 +718,7 @@ errorCompressedLinsys(const hiopVector& rx, const hiopVector& ryc, const hiopVec
 
   hiopVector* RC=ryc.new_copy();
   Jac_c_->timesVec(1.0, *RC, -1.0, dx);
-  RC->axpy(delta_cc, dyc);
+  RC->axzpy(1., *delta_cc_, dyc);
   aux = RC->twonorm();
   derr=fmax(derr,aux);
   nlp_->log->printf(hovLinAlgScalars, " >> ryc=%g\n", aux);
@@ -708,7 +728,7 @@ errorCompressedLinsys(const hiopVector& rx, const hiopVector& ryc, const hiopVec
   Jac_d_->timesVec(1.0, *RD, -1.0, dx);
 
   RD->axzpy(1.0, *Dd_inv_, dyd);
-  RD->axpy(delta_cd, dyd);
+  RD->axzpy(1., *delta_cd_, dyd);
   aux = RD->twonorm();
   derr=fmax(derr,aux);
   nlp_->log->printf(hovLinAlgScalars, " >> ryd=%g\n", aux);
@@ -987,18 +1007,15 @@ errorCompressedLinsys(const hiopVector& rx, const hiopVector& rd,
 {
   nlp_->log->printf(hovLinAlgScalars, "hiopKKTLinSysDenseXDYcYd::errorCompressedLinsys residuals norm:\n");
 
-  double delta_wx, delta_wd, delta_cc, delta_cd;
-  delta_wx = delta_wd = delta_cc = delta_cd = 0.;
-  if(perturb_calc_) {
-    perturb_calc_->get_curr_perturbations(delta_wx, delta_wd, delta_cc, delta_cd);
-  }
+  assert(perturb_calc_);
+  perturb_calc_->get_curr_perturbations(*delta_wx_, *delta_wd_, *delta_cc_, *delta_cd_);
 
   double derr=-1., aux;
   hiopVector *RX=rx.new_copy();
   //RX=rx-H*dx-J'c*dyc-J'*dyd
   Hess_->timesVec(1.0, *RX, -1.0, dx);
   RX->axzpy(-1.0, *Dx_, dx);
-  RX->axpy(-delta_wx, dx);
+  RX->axzpy(-1,*delta_wx_, dx);
   Jac_c_->transTimesVec(1.0, *RX, -1.0, dyc);
   Jac_d_->transTimesVec(1.0, *RX, -1.0, dyd);
   aux=RX->twonorm();
@@ -1010,7 +1027,7 @@ errorCompressedLinsys(const hiopVector& rx, const hiopVector& rd,
   hiopVector* RD=rd.new_copy();
   RD->axpy( 1., dyd);
   RD->axzpy(-1., *Dd_, dd);
-  RD->axpy(-delta_wd, dd);
+  RD->axzpy(-1.,*delta_wd_, dd);
   aux=RD->twonorm();
   derr=fmax(derr,aux);
   nlp_->log->printf(hovLinAlgScalars, " >>  rd=%g\n", aux);
@@ -1018,7 +1035,7 @@ errorCompressedLinsys(const hiopVector& rx, const hiopVector& rd,
 
   hiopVector* RC=ryc.new_copy();
   Jac_c_->timesVec(1.0, *RC, -1.0, dx);
-  RC->axpy(delta_cc, dyc);
+  RC->axxpy(1., *delta_cc_, dyc);
   aux = RC->twonorm();
   derr=fmax(derr,aux);
   nlp_->log->printf(hovLinAlgScalars, " >> ryc=%g\n", aux);
@@ -1028,7 +1045,7 @@ errorCompressedLinsys(const hiopVector& rx, const hiopVector& rd,
   hiopVector* RYD=ryd.new_copy();
   Jac_d_->timesVec(1.0, *RYD, -1.0, dx);
   RYD->axpy(1.0, dd);
-  RYD->axpy(delta_cd, dyd);
+  RYD->axzpy(1., *delta_cd_, dyd);
   aux = RYD->twonorm();
   derr=fmax(derr,aux);
   nlp_->log->printf(hovLinAlgScalars, " >> ryd=%g\n", aux);
@@ -1720,39 +1737,38 @@ bool hiopMatVecKKTFullOpr::times_vec(hiopVector& y, const hiopVector& x)
   const hiopMatrix* Jac_d = kkt_->Jac_d_;
   const hiopMatrix* Hess = kkt_->Hess_;
 
-  double delta_wx = 0.;
-  double delta_wd = 0.;
-  double delta_cc = 0.;
-  double delta_cd = 0.;
-  if(kkt_->get_perturb_calc()) {
-    kkt_->get_perturb_calc()->get_curr_perturbations(delta_wx, delta_wd, delta_cc, delta_cd);
-  }
+  assert(kkt_->get_perturb_calc());
+  hiopVector* delta_wx = kkt_->delta_wx_;
+  hiopVector* delta_wd = kkt_->delta_wd_;
+  hiopVector* delta_cc = kkt_->delta_cc_;
+  hiopVector* delta_cd = kkt_->delta_cd_;
+  kkt_->get_perturb_calc()->get_curr_perturbations(*delta_wx, *delta_wd, *delta_cc, *delta_cd);  
 
   bool bret = split_vec_to_build_it(x);
 
   //rx = H*dx + delta_wx*I*dx + Jc'*dyc + Jd'*dyd - dzl + dzu
   Hess->timesVec(0.0, *yrx_, +1.0, *dx_);
-  yrx_->axpy(delta_wx, *dx_);
+  yrx_->axzpy(1., *delta_wx, *dx_);
   Jac_c->transTimesVec(1.0, *yrx_, 1.0, *dyc_);
   Jac_d->transTimesVec(1.0, *yrx_, 1.0, *dyd_);
   yrx_->axpy(-1.0, *dzl_);
   yrx_->axpy( 1.0, *dzu_);
 
-  //RD = delta_wd*dd - dyd - dvl + dvu
+  //RD = delta_wd_*dd - dyd - dvl + dvu
   yrd_->setToZero();
   yrd_->axpy(-1., *dyd_);
   yrd_->axpy(-1., *dvl_);
   yrd_->axpy(+1., *dvu_);
-  yrd_->axpy(+delta_wd, *dd_);
+  yrd_->axzpy(1., *delta_wd, *dd_);
 
-  //RYC = Jc*dx - delta_cc*dyc
+  //RYC = Jc*dx - delta_cc_*dyc
   Jac_c->timesVec(0.0, *yryc_, 1.0, *dx_);
-  yryc_->axpy(-delta_cc, *dyc_);
+  yryc_->axzpy(-1., *delta_cc, *dyc_);
 
-  //RYD = Jd*dx - dd - delta_cd*dyd
+  //RYD = Jd*dx - dd - delta_cd_*dyd
   Jac_d->timesVec(0.0, *yryd_, 1.0, *dx_);
   yryd_->axpy(-1.0, *dd_);
-  yryd_->axpy(-delta_cd, *dyd_);
+  yryd_->axzpy(-1., *delta_cd, *dyd_);
 
   //RXL = -dx + dsxl
   yrsxl_->copyFrom(*dsxl_);
@@ -1824,39 +1840,38 @@ bool hiopMatVecKKTFullOpr::trans_times_vec(hiopVector& y, const hiopVector& x)
   const hiopMatrix* Jac_d = kkt_->Jac_d_;
   const hiopMatrix* Hess = kkt_->Hess_;
 
-  double delta_wx = 0.;
-  double delta_wd = 0.;
-  double delta_cc = 0.;
-  double delta_cd = 0.;
-  if(kkt_->get_perturb_calc()) {
-    kkt_->get_perturb_calc()->get_curr_perturbations(delta_wx, delta_wd, delta_cc, delta_cd);
-  }
+  assert(kkt_->get_perturb_calc());
+  hiopVector* delta_wx = kkt_->delta_wx_;
+  hiopVector* delta_wd = kkt_->delta_wd_;
+  hiopVector* delta_cc = kkt_->delta_cc_;
+  hiopVector* delta_cd = kkt_->delta_cd_;
+  kkt_->get_perturb_calc()->get_curr_perturbations(*delta_wx, *delta_wd, *delta_cc, *delta_cd);  
 
   bool bret = split_vec_to_build_it(x);
 
-  //rx = H*dx + delta_wx*I*dx + Jc'*dyc + Jd'*dyd - dzl + dzu
+  //rx = H*dx + delta_wx_*I*dx + Jc'*dyc + Jd'*dyd - dzl + dzu
   Hess->timesVec(0.0, *yrx_, +1.0, *dx_);
-  yrx_->axpy(delta_wx, *dx_);
+  yrx_->axzpy(1., *delta_wx, *dx_);
   Jac_c->transTimesVec(1.0, *yrx_, 1.0, *dyc_);
   Jac_d->transTimesVec(1.0, *yrx_, 1.0, *dyd_);
   yrx_->axpy(-1.0, *dzl_);
   yrx_->axpy( 1.0, *dzu_);
 
-  //RD = delta_wd*dd - dyd - dvl + dvu
+  //RD = delta_wd_*dd - dyd - dvl + dvu
   yrd_->setToZero();
   yrd_->axpy(-1., *dyd_);
   yrd_->axpy(-1., *dvl_);
   yrd_->axpy(+1., *dvu_);
-  yrd_->axpy(+delta_wd, *dd_);
+  yrd_->axzpy(1., *delta_wd, *dd_);
 
-  //RYC = Jc*dx - delta_cc*dyc
+  //RYC = Jc*dx - delta_cc_*dyc
   Jac_c->timesVec(0.0, *yryc_, 1.0, *dx_);
-  yryc_->axpy(-delta_cc, *dyc_);
+  yryc_->axzpy(-1., *delta_cc, *dyc_);
 
-  //RYD = Jd*dx - dd - delta_cd*dyd
+  //RYD = Jd*dx - dd - delta_cd_*dyd
   Jac_d->timesVec(0.0, *yryd_, 1.0, *dx_);
   yryd_->axpy(-1.0, *dd_);
-  yryd_->axpy(-delta_cd, *dyd_);
+  yryd_->axzpy(-1., *delta_cd, *dyd_);
 
   //RXL = -dx + Sxl*dsxl
   yrsxl_->setToZero();
@@ -2152,25 +2167,25 @@ bool hiopKKTLinSysNormalEquation::computeDirections(const hiopResidual* resid, h
 
   /***********************************************************************
    * perform the reduction to the compressed linear system
-   * [ ryc_tilde ] = [ Jc  0 ] [ H+Dx+delta_wx     0       ]^{-1}  [ rx_tilde ] - [ ryc ] 
-   * [ ryd_tilde ]   [ Jd -I ] [   0           Dd+delta_wd ]       [ rd_tilde ]   [ ryd ]
+   * [ ryc_tilde ] = [ Jc  0 ] [ H+Dx+delta_wx_     0       ]^{-1}  [ rx_tilde ] - [ ryc ] 
+   * [ ryd_tilde ]   [ Jd -I ] [   0           Dd+delta_wd_ ]       [ rd_tilde ]   [ ryd ]
    */
 
   /***********************************************************************
    * TODO: now we assume H is empty or diagonal
    * hence we have 
-   * [ ryc_tilde ] = [ Jc ] [H+Dx+delta_wx]^{-1} [ rx_tilde ] - [ ryc ] 
-   * [ ryd_tilde ]   [ Jd ] [H+Dx+delta_wx]^{-1} [ rx_tilde ] - [ Dd+delta_wd ]^{-1} [ rd_tilde ] - [ ryd ]
+   * [ ryc_tilde ] = [ Jc ] [H+Dx+delta_wx_]^{-1} [ rx_tilde ] - [ ryc ] 
+   * [ ryd_tilde ]   [ Jd ] [H+Dx+delta_wx_]^{-1} [ rx_tilde ] - [ Dd+delta_wd_ ]^{-1} [ rd_tilde ] - [ ryd ]
    */
   {
-    /* x_wrk_ = [H+Dx+delta_wx]^{-1} [ rx_tilde ] */
+    /* x_wrk_ = [H+Dx+delta_wx_]^{-1} [ rx_tilde ] */
     x_wrk_->copyFrom(*rx_tilde_);
     x_wrk_->componentDiv(*Hx_);
 
     ryc_tilde_->copyFrom(*r.ryc);
     Jac_c_->timesVec(-1.0, *ryc_tilde_, 1.0, *x_wrk_);
     
-    /* d_wrk_ = [ Dd+delta_wd ]^{-1} [ rd_tilde ] */
+    /* d_wrk_ = [ Dd+delta_wd_ ]^{-1} [ rd_tilde ] */
     d_wrk_->copyFrom(*rd_tilde_);
     d_wrk_->componentDiv(*Hd_);
 
@@ -2191,11 +2206,11 @@ bool hiopKKTLinSysNormalEquation::computeDirections(const hiopResidual* resid, h
   /***********************************************************************
   * TODO: now we assume H is empty or diagonal
   * hence from
-  *   [ H+Dx+delta_wx     0       ] [dx] = [ rx_tilde ] - [ Jc^T  Jd^T] [dyc]
-  *   [   0           Dd+delta_wd ] [dd]   [ rd_tilde ]   [  0     -I ] [dyd]
+  *   [ H+Dx+delta_wx_     0       ] [dx] = [ rx_tilde ] - [ Jc^T  Jd^T] [dyc]
+  *   [   0           Dd+delta_wd_ ] [dd]   [ rd_tilde ]   [  0     -I ] [dyd]
   * we can recover
-  *   [dx] = [ H+Dx+delta_wx ]^{-1} ( [ rx_tilde ] - [ Jc^T ] [dyc] - [Jd^T] [dyd] )
-  *   [dd] = [ Dd+delta_wd ]^{-1}   ( [ rd_tilde ] + [dyd] ) 
+  *   [dx] = [ H+Dx+delta_wx_ ]^{-1} ( [ rx_tilde ] - [ Jc^T ] [dyc] - [Jd^T] [dyd] )
+  *   [dd] = [ Dd+delta_wd_ ]^{-1}   ( [ rd_tilde ] + [dyd] ) 
   */
   dir->x->copyFrom(*rx_tilde_);
   Jac_c_->transTimesVec(1.0, *dir->x, -1.0, *dir->yc);
@@ -2240,8 +2255,8 @@ bool hiopKKTLinSysFull::test_direction(const hiopIterate* dir, hiopMatrix* Hess)
   double dWd = 0;
   double xs_nrmsq = 0.0;
   double dbl_wrk;
-  double delta_wx, delta_wd, delta_cc, delta_cd;
-  perturb_calc_->get_curr_perturbations(delta_wx, delta_wd, delta_cc, delta_cd);
+
+  perturb_calc_->get_curr_perturbations(*delta_wx_, *delta_wd_, *delta_cc_, *delta_cd_);  
 
   /* compute xWx = x(H+Dx_)x (for primal var [x,d] */
   Hess_->timesVec(0.0, *x_wrk_, 1.0, *sol_x);
@@ -2252,7 +2267,7 @@ bool hiopKKTLinSysFull::test_direction(const hiopIterate* dir, hiopMatrix* Hess)
   x_wrk_->axdzpy_w_pattern(1.0, *iter_->zl, *iter_->sxl, nlp_->get_ixl());
   x_wrk_->axdzpy_w_pattern(1.0, *iter_->zu, *iter_->sxu, nlp_->get_ixu());
   x_wrk_->componentMult(*sol_x);
-  x_wrk_->axpy(delta_wx, *sol_x);
+  x_wrk_->axzpy(1., *delta_wx_, *sol_x);
   dWd += x_wrk_->dotProductWith(*sol_x);
 
   // Dd=(Sdl)^{-1}Vu + (Sdu)^{-1}Vu
@@ -2260,7 +2275,7 @@ bool hiopKKTLinSysFull::test_direction(const hiopIterate* dir, hiopMatrix* Hess)
   d_wrk_->axdzpy_w_pattern(1.0, *iter_->vl, *iter_->sdl, nlp_->get_idl());
   d_wrk_->axdzpy_w_pattern(1.0, *iter_->vu, *iter_->sdu, nlp_->get_idu());
   d_wrk_->componentMult(*sol_d);
-  d_wrk_->axpy(delta_wd, *sol_d);
+  d_wrk_->axzpy(1., *delta_wd_, *sol_d);
   dWd += d_wrk_->dotProductWith(*sol_d);
 
   /* compute rhs for the dWd test */

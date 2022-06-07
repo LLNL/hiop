@@ -245,6 +245,7 @@ public:
 			       const double& mu,
 			       const double& kappa);
 
+  virtual bool is_zero() const;
   virtual bool isnan_local() const;
   virtual bool isinf_local() const;
   virtual bool isfinite_local() const;

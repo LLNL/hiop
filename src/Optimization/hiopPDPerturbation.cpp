@@ -66,8 +66,9 @@ namespace hiop
    * 'nlp_' object.
    * Returns 'false' if something goes wrong, otherwise 'true'
    */
-  bool hiopPDPerturbation::initialize(hiopNlpFormulation* nlp)
+  bool hiopPDPerturbationBase::initialize(hiopNlpFormulation* nlp)
   {
+    nlp_ = nlp;
     delta_w_min_bar_ = nlp->options->GetNumeric("delta_w_min_bar");
     delta_w_max_bar_ = nlp->options->GetNumeric("delta_w_max_bar");
     delta_w_0_bar_   = nlp->options->GetNumeric("delta_0_bar");
@@ -77,11 +78,23 @@ namespace hiop
     delta_c_bar_     = nlp->options->GetNumeric("delta_c_bar");
     kappa_c_         = nlp->options->GetNumeric("kappa_c");
 
-    delta_wx_curr_ = delta_wd_curr_ = 0.;
-    delta_cc_curr_ = delta_cd_curr_ = 0.;
+    delta_wx_curr_ = nlp_->alloc_primal_vec();
+    delta_wd_curr_ = nlp_->alloc_dual_ineq_vec();
+    delta_cc_curr_ = nlp_->alloc_dual_eq_vec();
+    delta_cd_curr_ = nlp_->alloc_dual_ineq_vec();
+    delta_wx_last_ = nlp_->alloc_primal_vec();
+    delta_wd_last_ = nlp_->alloc_dual_ineq_vec();
+    delta_cc_last_ = nlp_->alloc_dual_eq_vec();
+    delta_cd_last_ = nlp_->alloc_dual_ineq_vec();
 
-    delta_wx_last_ = delta_wd_last_ = 0.;
-    delta_cc_last_ = delta_cd_last_;
+    delta_wx_curr_->setToZero();
+    delta_wd_curr_->setToZero();
+    delta_cc_curr_->setToZero();
+    delta_cd_curr_->setToZero();
+    delta_wx_last_->setToZero();
+    delta_wd_last_->setToZero();
+    delta_cc_last_->setToZero();
+    delta_cd_last_->setToZero();
 
     num_degen_iters_ = 0;
 
@@ -89,164 +102,10 @@ namespace hiop
     return true;
   }
 
-  /** Called when a new linear system is attempted to be factorized 
-   */
-  bool hiopPDPerturbation::compute_initial_deltas(double& delta_wx,
-                                                  double& delta_wd,
-                                                  double& delta_cc,
-                                                  double& delta_cd)
-  {
-    update_degeneracy_type();
-      
-    if(delta_wx_curr_>0.)
-      delta_wx_last_ = delta_wx_curr_;
-    if(delta_wd_curr_>0.)
-      delta_wd_last_ = delta_wd_curr_;
-
-    if(delta_cc_curr_>0.)
-      delta_cc_last_ = delta_cc_curr_;
-    if(delta_cd_curr_>0.)
-      delta_cd_last_ = delta_cd_curr_;
-
-    if(hess_degenerate_ == dtNotEstablished || jac_degenerate_ == dtNotEstablished) {
-      deltas_test_type_ = dttDeltac0Deltaw0;
-    } else {
-      deltas_test_type_ = dttNoTest;
-    }
-
-    if(jac_degenerate_ == dtDegenerate) {
-      delta_cc = delta_cd = compute_delta_c(mu_);
-    } else {
-      delta_cc = delta_cd = 0.;
-    }
-    delta_cc_curr_ = delta_cc;
-    delta_cd_curr_ = delta_cd;
-
-    
-    if(hess_degenerate_ == dtDegenerate) {
-      delta_wx_curr_ = delta_wd_curr_ = 0.;
-      if(!guts_of_compute_perturb_wrong_inertia(delta_wx, delta_wd)) {
-	return false;
-      }
-    } else {
-      delta_wx = delta_wd = 0.;
-    }
-
-    delta_wx_curr_ = delta_wx;
-    delta_wd_curr_ = delta_wd;
-    return true;
-  }
-
-  /** Method for correcting inertia */
-  bool hiopPDPerturbation::compute_perturb_wrong_inertia(double& delta_wx,
-                                                         double& delta_wd,
-                                                         double& delta_cc,
-                                                         double& delta_cd)
-  {    
-    update_degeneracy_type();
-
-    assert(delta_wx_curr_ == delta_wd_curr_);
-    assert(delta_cc_curr_ == delta_cd_curr_);
-    
-    delta_cc = delta_cc_curr_;
-    delta_cd = delta_cd_curr_;
-
-    bool ret = guts_of_compute_perturb_wrong_inertia(delta_wx, delta_wd);
-    if(!ret && delta_cc==0.) {
-      delta_wx_curr_ = delta_wd_curr_ = 0.;
-      delta_cc_curr_ = delta_cd_curr_ = compute_delta_c(mu_);
-      deltas_test_type_ = dttNoTest;
-      if(hess_degenerate_ == dtDegenerate) {
-        hess_degenerate_ = dtNotEstablished;
-      }
-      
-      delta_cc = delta_cc_curr_;
-      delta_cd = delta_cd_curr_;
-      ret = guts_of_compute_perturb_wrong_inertia(delta_wx, delta_wd);
-    }
-    return ret;
-  }
-
-  /** Method for correcting singular Jacobian 
-   *  (follows Ipopt closely since the paper seems to be outdated)
-   */
-  bool hiopPDPerturbation::compute_perturb_singularity(double& delta_wx, 
-                                                       double& delta_wd,
-                                                       double& delta_cc,
-                                                       double& delta_cd)
-  {    
-    assert(delta_wx_curr_ == delta_wd_curr_);
-    assert(delta_cc_curr_ == delta_cd_curr_);
-    
-    if (hess_degenerate_ == dtNotEstablished ||
-        jac_degenerate_ == dtNotEstablished) {
-      switch (deltas_test_type_) {
-      case dttDeltac0Deltaw0:
-	//this is the first call
-        if (jac_degenerate_ == dtNotEstablished) {
-          delta_cc_curr_ = delta_cd_curr_ = compute_delta_c(mu_);
-          deltas_test_type_ = dttDeltacposDeltaw0;
-        }
-        else {
-          assert(hess_degenerate_ == dtNotEstablished);
-          if(!guts_of_compute_perturb_wrong_inertia(delta_wx, delta_wd))
-            return false;
-
-          assert(delta_cc == 0. && delta_cd == 0.);
-          deltas_test_type_ = dttDeltac0Deltawpos;
-        }
-        break;
-      case dttDeltacposDeltaw0:
-        assert(delta_wx_curr_ == 0. && delta_cc_curr_ > 0.);
-        assert(jac_degenerate_ == dtNotEstablished);
-        delta_cd_curr_ = delta_cc_curr_ = 0.;
-        if(!guts_of_compute_perturb_wrong_inertia(delta_wx, delta_wd)) {
-          return false;
-        }
-        deltas_test_type_ = dttDeltac0Deltawpos;
-        break;
-      case dttDeltac0Deltawpos:
-        assert(delta_wx_curr_ > 0. && delta_cc_curr_ == 0.);
-        delta_cc_curr_ = delta_cd_curr_ = compute_delta_c(mu_);
-        if(!guts_of_compute_perturb_wrong_inertia(delta_wx, delta_wd)) {
-          return false;
-        }
-        deltas_test_type_ = dttDeltacposDeltawpos;
-        break;
-      case dttDeltacposDeltawpos:
-        if(!guts_of_compute_perturb_wrong_inertia(delta_wx, delta_wd))
-          return false;
-        break;
-      case dttNoTest:
-        assert(false && "something went wrong - should not get here");
-      }
-    } else {
-      if(delta_cc_curr_ > 0.) { 
-        // If we already used a perturbation for the constraints, we do
-        // the same thing as if we were encountering negative curvature
-        if(!guts_of_compute_perturb_wrong_inertia(delta_wx, delta_wd)) {
-          //todo: need some error message (so that we know what and more important
-          //where something went wrong)
-          return false;
-        }
-      } else {
-        // Otherwise we now perturb the Jacobian part 
-        delta_cd_curr_ = delta_cc_curr_ = compute_delta_c(mu_);
-      }
-    }
-
-    delta_wx = delta_wx_curr_;
-    delta_wd = delta_wd_curr_;
-    delta_cc = delta_cc_curr_;
-    delta_cd = delta_cd_curr_;
-    
-    return true;
-  }
-
   /** Decides degeneracy @hess_degenerate_ and @jac_degenerate_ based on @deltas_test_type_ 
    *  when the @num_degen_iters_ > @num_degen_max_iters_
    */
-  void hiopPDPerturbation::update_degeneracy_type()
+  void hiopPDPerturbationBase::update_degeneracy_type()
   {
    switch (deltas_test_type_) {
    case dttNoTest:
@@ -282,7 +141,7 @@ namespace hiop
      if(hess_degenerate_ == dtNotEstablished) {
        num_degen_iters_++;
        if(num_degen_iters_ >= num_degen_max_iters_) {
-	 hess_degenerate_ = dtDegenerate;
+         hess_degenerate_ = dtDegenerate;
        }
      }
      break;
@@ -296,37 +155,233 @@ namespace hiop
    }
   }
 
+  hiopPDPerturbation::hiopPDPerturbation()
+    : hiopPDPerturbationBase(),
+      delta_wx_curr_db_{0.},
+      delta_wd_curr_db_{0.},
+      delta_cc_curr_db_{0.},
+      delta_cd_curr_db_{0.},
+      delta_wx_last_db_{0.},
+      delta_wd_last_db_{0.},
+      delta_cc_last_db_{0.},
+      delta_cd_last_db_{0.}
+  {
+  }
+
+  hiopPDPerturbation::~hiopPDPerturbation()
+  {
+  }
+
+  /** Called when a new linear system is attempted to be factorized 
+   */
+  bool hiopPDPerturbation::compute_initial_deltas(hiopVector& delta_wx,
+                                                  hiopVector& delta_wd,
+                                                  hiopVector& delta_cc,
+                                                  hiopVector& delta_cd)
+  {
+    double delta_temp;
+    double delta_temp2;
+    update_degeneracy_type();
+
+    if(delta_wx_curr_db_>0.) {
+      delta_wx_last_db_ = delta_wx_curr_db_;      
+    }
+    if(delta_wd_curr_db_>0.) {
+      delta_wd_last_db_ = delta_wd_curr_db_;
+    }
+    if(delta_cc_curr_db_>0.) {
+      delta_cc_last_db_ = delta_cc_curr_db_;      
+    }
+    if(delta_cd_curr_db_>0.) {
+      delta_cd_last_db_= delta_cd_curr_db_;
+    }
+
+    set_delta_last_vec();
+
+    if(hess_degenerate_ == dtNotEstablished || jac_degenerate_ == dtNotEstablished) {
+      deltas_test_type_ = dttDeltac0Deltaw0;
+    } else {
+      deltas_test_type_ = dttNoTest;
+    }
+
+    if(jac_degenerate_ == dtDegenerate) {
+      delta_temp = compute_delta_c(mu_);
+    } else {
+      delta_temp = 0.0;
+    }
+    delta_cc.setToConstant(delta_temp);
+    delta_cd.setToConstant(delta_temp);
+    delta_cc_curr_db_ = delta_temp;
+    delta_cd_curr_db_ = delta_temp;
+
+    if(hess_degenerate_ == dtDegenerate) {
+      delta_wx_curr_db_ = 0.;
+      delta_wd_curr_db_ = 0.;
+      if(!guts_of_compute_perturb_wrong_inertia(delta_temp, delta_temp2)) {
+        return false;
+      }
+    } else {
+      delta_temp = delta_temp2 = 0.;
+    }
+    delta_wx.setToConstant(delta_temp);
+    delta_wd.setToConstant(delta_temp2);
+    delta_wx_curr_db_ = delta_temp;
+    delta_wd_curr_db_ = delta_temp2;
+
+    set_delta_curr_vec();
+
+    return true;
+  }
+
+  /** Method for correcting inertia */
+  bool hiopPDPerturbation::compute_perturb_wrong_inertia(hiopVector& delta_wx,
+                                                         hiopVector& delta_wd,
+                                                         hiopVector& delta_cc,
+                                                         hiopVector& delta_cd)
+  {    
+    update_degeneracy_type();
+
+    assert(delta_wx_curr_db_ == delta_wd_curr_db_);
+    assert(delta_cc_curr_db_ == delta_cd_curr_db_);
+    
+    double delta_wx_temp{0.0};
+    double delta_wd_temp{0.0};
+    
+    bool ret = guts_of_compute_perturb_wrong_inertia(delta_wx_temp, delta_wd_temp);
+    if(!ret && delta_cc_curr_db_ == 0.) {
+      delta_wx_curr_db_ = delta_wd_curr_db_ = 0.;
+      delta_cc_curr_db_ = delta_cd_curr_db_ = compute_delta_c(mu_);      
+      deltas_test_type_ = dttNoTest;
+      if(hess_degenerate_ == dtDegenerate) {
+        hess_degenerate_ = dtNotEstablished;
+      }
+
+      ret = guts_of_compute_perturb_wrong_inertia(delta_wx_temp, delta_wd_temp);
+    }
+
+    delta_cc.setToConstant(delta_cc_curr_db_);
+    delta_cd.setToConstant(delta_cd_curr_db_);
+    delta_wx.setToConstant(delta_wx_temp);
+    delta_wd.setToConstant(delta_wd_temp);
+    set_delta_curr_vec();
+    return ret;
+  }
+
+  /** Method for correcting singular Jacobian 
+   *  (follows Ipopt closely since the paper seems to be outdated)
+   */
+  bool hiopPDPerturbation::compute_perturb_singularity(hiopVector& delta_wx, 
+                                                       hiopVector& delta_wd,
+                                                       hiopVector& delta_cc,
+                                                       hiopVector& delta_cd)
+  {    
+    assert(delta_wx_curr_db_ == delta_wd_curr_db_);
+    assert(delta_cc_curr_db_ == delta_cd_curr_db_);
+    double delta_wx_temp{0.0};
+    double delta_wd_temp{0.0};
+    
+    if (hess_degenerate_ == dtNotEstablished ||
+        jac_degenerate_ == dtNotEstablished) {
+      switch (deltas_test_type_) {
+      case dttDeltac0Deltaw0:
+        //this is the first call
+        if (jac_degenerate_ == dtNotEstablished) {
+          delta_cc_curr_db_ = delta_cd_curr_db_ = compute_delta_c(mu_);
+          deltas_test_type_ = dttDeltacposDeltaw0;
+        }
+        else {
+          assert(hess_degenerate_ == dtNotEstablished);
+          if(!guts_of_compute_perturb_wrong_inertia(delta_wx_temp, delta_wd_temp)) {
+            return false;            
+          }
+          assert(delta_cc.is_zero() && delta_cd.is_zero());
+          deltas_test_type_ = dttDeltac0Deltawpos;
+        }
+        break;
+      case dttDeltacposDeltaw0:
+        assert(delta_wx_curr_db_ == 0. && delta_cc_curr_db_ > 0.);
+        assert(jac_degenerate_ == dtNotEstablished);
+        delta_cd_curr_db_ = delta_cc_curr_db_ = 0.;
+        if(!guts_of_compute_perturb_wrong_inertia(delta_wx_temp, delta_wd_temp)) {
+          return false;
+        }
+        deltas_test_type_ = dttDeltac0Deltawpos;
+        break;
+      case dttDeltac0Deltawpos:
+        assert(delta_wx_curr_db_ > 0. && delta_cc_curr_db_ == 0.);
+        delta_cc_curr_db_ = delta_cd_curr_db_ = compute_delta_c(mu_);
+        if(!guts_of_compute_perturb_wrong_inertia(delta_wx_temp, delta_wd_temp)) {
+          return false;
+        }
+        deltas_test_type_ = dttDeltacposDeltawpos;
+        break;
+      case dttDeltacposDeltawpos:
+        if(!guts_of_compute_perturb_wrong_inertia(delta_wx_temp, delta_wd_temp))
+          return false;
+        break;
+      case dttNoTest:
+        assert(false && "something went wrong - should not get here");
+      }
+    } else {
+      if(delta_cc_curr_db_ > 0.) { 
+        // If we already used a perturbation for the constraints, we do
+        // the same thing as if we were encountering negative curvature
+        if(!guts_of_compute_perturb_wrong_inertia(delta_wx_temp, delta_wd_temp)) {
+          //todo: need some error message (so that we know what and more important
+          //where something went wrong)
+          return false;
+        }
+      } else {
+        // Otherwise we now perturb the Jacobian part 
+        delta_cd_curr_db_ = delta_cc_curr_db_ = compute_delta_c(mu_);
+      }
+    }
+  
+    delta_wx.setToConstant(delta_wx_curr_db_);
+    delta_wd.setToConstant(delta_wd_curr_db_);
+    delta_cc.setToConstant(delta_cc_curr_db_);
+    delta_cd.setToConstant(delta_cd_curr_db_);
+  
+    set_delta_curr_vec();
+
+    return true;
+  }
+
   /** 
    * Internal method implementing the computation of delta_w's to correct wrong inertia
    */
   bool hiopPDPerturbation::guts_of_compute_perturb_wrong_inertia(double& delta_wx, double& delta_wd)
   {
-    assert(delta_wx_curr_ == delta_wd_curr_ && "these should be equal");
-    assert(delta_wx_last_ == delta_wd_last_ && "these should be equal");
-    if(delta_wx_curr_ == 0.) {
-      if(delta_wx_last_ == 0.) {
-        delta_wx_curr_ = delta_w_0_bar_;
+    assert(delta_wx_curr_db_ == delta_wd_curr_db_ && "these should be equal");
+    assert(delta_wx_last_db_ == delta_wd_last_db_ && "these should be equal");
+    if(delta_wx_curr_db_ == 0.) {
+      if(delta_wx_last_db_ == 0.) {
+        delta_wx_curr_db_ = delta_w_0_bar_;
       } else {
-        delta_wx_curr_ = std::fmax(delta_w_min_bar_, delta_wx_last_*kappa_w_minus_);
+        delta_wx_curr_db_ = std::fmax(delta_w_min_bar_, delta_wx_last_db_*kappa_w_minus_);
       }
     } else { //delta_wx_curr_ != 0.
-      if(delta_wx_last_==0. || 1e5*delta_wx_last_<delta_wx_curr_) {
-        delta_wx_curr_ = kappa_w_plus_bar_ * delta_wx_curr_;
+      if(delta_wx_last_db_==0. || 1e5*delta_wx_last_db_<delta_wx_curr_db_) {
+        delta_wx_curr_db_ = kappa_w_plus_bar_ * delta_wx_curr_db_;
       } else {
-        delta_wx_curr_ = kappa_w_plus_ * delta_wx_curr_;
+        delta_wx_curr_db_ = kappa_w_plus_ * delta_wx_curr_db_;
       }
     }
+    delta_wx_curr_->setToConstant(delta_wx_curr_db_);
 
-    if(delta_wx_curr_ > delta_w_max_bar_) {
+    if(delta_wx_curr_db_ > delta_w_max_bar_) {
       //Hessian perturbation becoming too large
-      delta_wx_last_ = delta_wd_last_ = 0.;
+      delta_wx_last_db_ = delta_wd_last_db_ = 0.;
+      delta_wx_last_->setToConstant(delta_wx_last_db_);
+      delta_wd_last_->setToConstant(delta_wd_last_db_);
       return false;
     }
 
-    delta_wd_curr_ = delta_wx_curr_ ;
+    delta_wd_curr_db_ = delta_wx_curr_db_;
+    delta_wd_curr_->setToConstant(delta_wd_curr_db_);
 
-    delta_wx = delta_wx_curr_;
-    delta_wd = delta_wd_curr_;
+    delta_wx = delta_wx_curr_db_;
+    delta_wd = delta_wd_curr_db_;
 
     return true;
   }
@@ -336,6 +391,7 @@ namespace hiop
     return delta_c_bar_ * std::pow(mu, kappa_c_);
   }
 
+#if 0
   /** Called when a new linear system is attempted to be factorized 
    */
   bool hiopPDPerturbationNormalEqn::compute_initial_deltas(double& delta_wx,
@@ -513,4 +569,20 @@ namespace hiop
 
     return true;
   }
+  
+    {
+       // TODO move set_to_random_constant to PD pertub
+    if(nlp_->options->GetString("dual_reg_method") == "unified") {
+      dual_reg_->startingAtCopyFromStartingAt(0, delta_cc, 0);
+      dual_reg_->startingAtCopyFromStartingAt(neq, delta_cd, 0);
+    } else if(nlp_->options->GetString("dual_reg_method") == "randomized") {
+      // TODO fix this
+      delta_cc
+      dual_reg_->set_to_random_constant(0.9*delta_cc, 1.1*delta_cc);
+      dual_reg_->startingAtCopyFromStartingAt(0, delta_cc, 0);
+      dual_reg_->startingAtCopyFromStartingAt(neq, delta_cd, 0);
+    }
+#endif
+
 }
+

@@ -1904,6 +1904,31 @@ void hiopVectorRajaPar::adjustDuals_plh(
 }
 
 /**
+ * @brief Check if all elements of the vector are zero
+ * 
+ * @post `this` is not modified
+ */
+int hiopVectorRajaPar::is_zero() const
+{
+  double* data = data_dev_;
+  RAJA::ReduceSum< hiop_raja_reduce, int > sum(0);
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      if(data[i] != 0.0))
+        any += 1;
+    });
+  int all_zero = (sum.get() == 0) ? 1 : 0;
+
+#ifdef HIOP_USE_MPI
+  int all_zero_G;
+  int ierr=MPI_Allreduce(&all_zero, &all_zero_G, 1, MPI_INT, MPI_MIN, comm_); assert(MPI_SUCCESS==ierr);
+  return all_zero_G;
+#endif
+  return all_zero;
+}
+
+/**
  * @brief Returns true if any element of `this` is NaN.
  * 
  * @post `this` is not modified

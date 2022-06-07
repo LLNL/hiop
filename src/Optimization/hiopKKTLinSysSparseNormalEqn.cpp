@@ -103,13 +103,14 @@ hiopKKTLinSysSparseNormalEqn::~hiopKKTLinSysSparseNormalEqn()
   delete M_normaleqn_;
 }
 
-bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const double& delta_wx_in,
-                                                    const double& delta_wd_in,
-                                                    const double& delta_cc_in,
-                                                    const double& delta_cd_in)
+bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const hiopVector& delta_wx_in,
+                                                    const hiopVector& delta_wd_in,
+                                                    const hiopVector& delta_cc_in,
+                                                    const hiopVector& delta_cd_in)
 {
-  assert(delta_cc_in == delta_cd_in);
-  auto delta_cc = delta_cc_in;
+  // TODO add is_equal
+//  assert(delta_cc_in == delta_cd_in);
+//  auto delta_cc = delta_cc_in;
    
   HessSp_ = dynamic_cast<hiopMatrixSparse*>(Hess_);
   if(!HessSp_) { assert(false); return false; }
@@ -155,8 +156,8 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const double& delta_wx_in,
     assert(Hx_);
   }
   Hx_->copyFrom(*Dx_);
-  Hx_->addConstant(delta_wx_in);
-  Hx_->axpy(1.0,*Hess_diag_);
+  Hx_->axpy(1., delta_wx_in);
+  Hx_->axpy(1., *Hess_diag_);
   
   // HD = Dd_ + delta_wd
   if(nullptr == Hd_) {
@@ -164,7 +165,7 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const double& delta_wx_in,
   }
   Hd_->copyFrom(*Dd_);
   // TODO: add function add_constant_with_bias()
-  Hd_->addConstant(delta_wd_in);
+  Hd_->axpy(1., delta_wd_in);
 
   nlp_->runStats.kkt.tmUpdateInit.stop();
   nlp_->runStats.kkt.tmUpdateLinsys.start();
@@ -259,14 +260,11 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const double& delta_wx_in,
   }
 
   t.reset(); t.start();
-  assert(delta_cc>=0.0);
+  
   Diag_reg_->setToZero();
-  if(delta_cc > 0.0) {
-    if(nlp_->options->GetString("dual_reg_method") == "unified") {
-      dual_reg_->setToConstant(delta_cc);
-    } else if(nlp_->options->GetString("dual_reg_method") == "randomized") {
-      dual_reg_->set_to_random_uniform(0.9*delta_cc, 1.1*delta_cc);
-    }
+  if(!delta_cc_in.is_zero()) {
+    dual_reg_->startingAtCopyFromStartingAt(0, delta_cc_in, 0);
+    dual_reg_->startingAtCopyFromStartingAt(neq, delta_cd_in, 0);
     
     Diag_reg_->addDiagonal(1.0,*dual_reg_);
   }

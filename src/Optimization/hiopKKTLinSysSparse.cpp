@@ -87,10 +87,10 @@ namespace hiop
     delete Hx_;
   }
 
-  bool hiopKKTLinSysCompressedSparseXYcYd::build_kkt_matrix(const double& delta_wx,
-                                                            const double& delta_wd,
-                                                            const double& delta_cc,
-                                                            const double& delta_cd)
+  bool hiopKKTLinSysCompressedSparseXYcYd::build_kkt_matrix(const hiopVector& delta_wx,
+                                                            const hiopVector& delta_wd,
+                                                            const hiopVector& delta_cc,
+                                                            const hiopVector& delta_cd)
   {
     HessSp_ = dynamic_cast<hiopMatrixSparse*>(Hess_);
     if(!HessSp_) { assert(false); return false; }
@@ -142,12 +142,12 @@ namespace hiop
       Hx_->startingAtCopyFromStartingAt(0, *Dx_, 0);
 
       //a good time to add the IC 'delta_wx' perturbation
-      Hx_->addConstant(delta_wx);
+      Hx_->axpy(1., delta_wx);
 
       Msys->copySubDiagonalFrom(0, nx, *Hx_, dest_nnz_st); dest_nnz_st += nx;
 
       //add -delta_cc to diagonal block linSys starting at (nx, nx)
-      Msys->setSubDiagonalTo(nx, neq, -delta_cc, dest_nnz_st); dest_nnz_st += neq;
+      Msys->copySubDiagonalFrom(nx, neq, delta_cc, dest_nnz_st, -1.); dest_nnz_st += neq;
 
       /* we've just done above the (1,1) and (2,2) blocks of
        *
@@ -160,7 +160,7 @@ namespace hiop
        */
 
       // Dd = (Sdl)^{-1}Vu + (Sdu)^{-1}Vu + delta_wd * I
-      Dd_inv_->setToConstant(delta_wd);
+      Dd_inv_->axpy(1., delta_wd);
       Dd_inv_->axdzpy_w_pattern(1.0, *iter_->vl, *iter_->sdl, nlp_->get_idl());
       Dd_inv_->axdzpy_w_pattern(1.0, *iter_->vu, *iter_->sdu, nlp_->get_idu());
 
@@ -168,7 +168,7 @@ namespace hiop
       assert(true==Dd_inv_->allPositive());
 #endif
       Dd_inv_->invert();
-      Dd_inv_->addConstant(delta_cd);
+      Dd_inv_->axpy(1., delta_cd);
 
       Msys->copySubDiagonalFrom(nx+neq, nineq, *Dd_inv_, dest_nnz_st, -1); dest_nnz_st += nineq;
 
@@ -411,10 +411,10 @@ namespace hiop
     delete Hd_;
   }
 
-  bool hiopKKTLinSysCompressedSparseXDYcYd::build_kkt_matrix(const double& delta_wx,
-                                                             const double& delta_wd,
-                                                             const double& delta_cc,
-                                                             const double& delta_cd)
+  bool hiopKKTLinSysCompressedSparseXDYcYd::build_kkt_matrix(const hiopVector& delta_wx,
+                                                             const hiopVector& delta_wd,
+                                                             const hiopVector& delta_cc,
+                                                             const hiopVector& delta_cd)
   {    
     HessSp_ = dynamic_cast<hiopMatrixSymSparseTriplet*>(Hess_);
     if(!HessSp_) { assert(false); return false; }
@@ -468,7 +468,7 @@ namespace hiop
       Hx_->startingAtCopyFromStartingAt(0, *Dx_, 0);
 
       //a good time to add the IC 'delta_wx' perturbation
-      Hx_->addConstant(delta_wx);
+      Hx_->axpy(1., delta_wx);
 
       Msys->copySubDiagonalFrom(0, nx, *Hx_, dest_nnz_st);
       dest_nnz_st += nx;
@@ -479,16 +479,16 @@ namespace hiop
         assert(Hd_);
       }
       Hd_->startingAtCopyFromStartingAt(0, *Dd_, 0);
-      Hd_->addConstant(delta_wd);
+      Hd_->axpy(1., delta_wd);
       Msys->copySubDiagonalFrom(nx, nd, *Hd_, dest_nnz_st);
       dest_nnz_st += nd;
 
       //add -delta_cc to diagonal block linSys starting at (nx+nd, nx+nd)
-      Msys->setSubDiagonalTo(nx+nd, neq, -delta_cc, dest_nnz_st);
+      Msys->copySubDiagonalFrom(nx+nd, neq, delta_cc, dest_nnz_st, -1.);
       dest_nnz_st += neq;
 
       //add -delta_cd to diagonal block linSys starting at (nx+nd+neq, nx+nd+neq)
-      Msys->setSubDiagonalTo(nx+nd+neq, nineq, -delta_cd, dest_nnz_st);
+      Msys->copySubDiagonalFrom(nx+nd+neq, nineq, delta_cd, dest_nnz_st, -1.);
       dest_nnz_st += nineq;
 
       /* we've just done
@@ -853,10 +853,10 @@ namespace hiop
     return dynamic_cast<hiopLinSolverNonSymSparse*> (linSys_);
   }
 
-  bool hiopKKTLinSysSparseFull::build_kkt_matrix(const double& delta_wx,
-                                                 const double& delta_wd,
-                                                 const double& delta_cc,
-                                                 const double& delta_cd)
+  bool hiopKKTLinSysSparseFull::build_kkt_matrix(const hiopVector& delta_wx,
+                                                 const hiopVector& delta_wd,
+                                                 const hiopVector& delta_cc,
+                                                 const hiopVector& delta_cd)
   {
     HessSp_ = dynamic_cast<hiopMatrixSymSparseTriplet*>(Hess_);
     if(!HessSp_) { assert(false); return false; }
@@ -1012,7 +1012,7 @@ namespace hiop
         Hx_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), nx);
         assert(Hx_);
       }
-      Hx_->setToConstant(delta_wx);
+      Hx_->axpy(1., delta_wx);
       Msys->copySubDiagonalFrom(0, nx, *Hx_, dest_nnz_st); dest_nnz_st += nx;
 
       //build the diagonal Hd = delta_wd
@@ -1021,16 +1021,16 @@ namespace hiop
         assert(Hd_);
       }
 
-      Hd_->setToConstant(delta_wd);
+      Hd_->axpy(1., delta_wd);
       Msys->copySubDiagonalFrom(n2st, nd, *Hd_, dest_nnz_st);
       dest_nnz_st += nd;
 
       //add -delta_cc to diagonal block linSys starting at (nx, nx)
-      Msys->setSubDiagonalTo(nx, neq, -delta_cc, dest_nnz_st);
+      Msys->copySubDiagonalFrom(nx, neq, delta_cc, dest_nnz_st, -1.);
       dest_nnz_st += neq;
 
       //add -delta_cd to diagonal block linSys starting at (nx+neq, nx+neq)
-      Msys->setSubDiagonalTo(nx+neq, nineq, -delta_cd, dest_nnz_st);
+      Msys->copySubDiagonalFrom(nx+neq, nineq, delta_cd, dest_nnz_st, -1.);
       dest_nnz_st += nineq;
 
       assert(dest_nnz_st==nnz);

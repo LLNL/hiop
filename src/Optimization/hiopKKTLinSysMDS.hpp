@@ -107,10 +107,10 @@ public:
 		      const hiopMatrix* Jac_c, const hiopMatrix* Jac_d,
 		      hiopMatrix* Hess);
 
-  virtual bool build_kkt_matrix(const double& delta_wx,
-                                const double& delta_wd,
-                                const double& delta_cc,
-                                const double& delta_cd);
+  virtual bool build_kkt_matrix(const hiopVector& delta_wx,
+                                const hiopVector& delta_wd,
+                                const hiopVector& delta_cc,
+                                const hiopVector& delta_cd);
 
   virtual bool solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
                                hiopVector& dx, hiopVector& dyc, hiopVector& dyd);
@@ -131,6 +131,7 @@ protected:
 
   // Keeps Hxs = HessMDS->sp_mat() + Dxs (Dx=log-barrier diagonal for xs)
   hiopVector *Hxs_; 
+  hiopVector *Hxs_wrk_; 
 
   //just dynamic_cast-ed pointers
   hiopNlpMDS* nlpMDS_;

@@ -106,13 +106,14 @@ hiopKKTLinSysCondensedSparse::~hiopKKTLinSysCondensedSparse()
   delete Hess_lower_csr_;
 }
 
-bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
-                                                    const double& delta_wd_in,
-                                                    const double& dcc,
-                                                    const double& dcd)
+bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const hiopVector& delta_wx_in,
+                                                    const hiopVector& delta_wd_in,
+                                                    const hiopVector& dcc,
+                                                    const hiopVector& dcd)
 {
   nlp_->runStats.kkt.tmUpdateInit.start();
-  
+/*
+  // TODO  delta_wx + delta_cc ?   add is_equal
   auto delta_wx = delta_wx_in;
   auto delta_wd = delta_wd_in;
   if(dcc!=0) {
@@ -121,6 +122,7 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
     delta_wx += fabs(dcc);
     delta_wd += fabs(dcc);
   }
+*/
 
   hiopMatrixSymSparseTriplet* Hess_triplet = dynamic_cast<hiopMatrixSymSparseTriplet*>(Hess_);
   HessSp_ = Hess_triplet; //dynamic_cast<hiopMatrixSymSparseTriplet*>(Hess_);
@@ -170,14 +172,8 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
     //allocate this internal vector on the device if hybrid compute mode
     Dx_plus_deltawx_ = LinearAlgebraFactory::create_vector(mem_space_internal, Dx_->get_size());
   }
-
-  //
-  // compute diagonals
-  //
-
-  //Hd_
-  Hd_->copyFrom(*Dd_);
-  Hd_->addConstant(delta_wd);
+  Hd_->copyFrom(*Dd_);  
+  Hd_->axpy(1., delta_wd_in);
 
   //temporary code, see above note
   {
@@ -311,6 +307,7 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
     //todo assert(M_condensed_ == linSys_->sys_matrix());
   
     t.reset(); t.start();
+    // compute M_condensed_ = M_condensed_ + Hess_csr_ + JtDiagJ_ + Dx_ + delta_wx*I
     //form lower and upper
     Hess_upper_csr_->form_from_numeric(*Hess_triplet);
     Hess_lower_csr_->form_transpose_from_numeric(*Hess_upper_csr_);

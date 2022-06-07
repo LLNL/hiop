@@ -1699,7 +1699,9 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
   
   auto* kkt_normaleqn = dynamic_cast<hiopKKTLinSysNormalEquation*>(kkt);
   if(kkt_normaleqn) {
-    pd_perturb_ = new hiopPDPerturbationNormalEqn();
+    // FIXME TODO use pd_perturb_ = new hiopPDPerturbationNormalEqn();
+//    pd_perturb_ = new hiopPDPerturbationNormalEqn();
+    pd_perturb_ = new hiopPDPerturbation();
   } else {
     pd_perturb_ = new hiopPDPerturbation();
   }
