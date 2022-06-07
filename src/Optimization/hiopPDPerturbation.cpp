@@ -391,25 +391,42 @@ namespace hiop
     return delta_c_bar_ * std::pow(mu, kappa_c_);
   }
 
-#if 0
+  /*
+  *  class hiopPDPerturbationNormalEqn
+  */
+  hiopPDPerturbationNormalEqn::hiopPDPerturbationNormalEqn()
+    : hiopPDPerturbation(),
+      delta_c_min_bar_(1e-20),
+      delta_c_max_bar_(1e-2),
+      kappa_c_plus_(10.)
+  {
+  }
+
+  hiopPDPerturbationNormalEqn::~hiopPDPerturbationNormalEqn()
+  {
+  }
+
   /** Called when a new linear system is attempted to be factorized 
    */
-  bool hiopPDPerturbationNormalEqn::compute_initial_deltas(double& delta_wx,
-                                                           double& delta_wd,
-                                                           double& delta_cc,
-                                                           double& delta_cd)            
+  bool hiopPDPerturbationNormalEqn::compute_initial_deltas(hiopVector& delta_wx,
+                                                           hiopVector& delta_wd,
+                                                           hiopVector& delta_cc,
+                                                           hiopVector& delta_cd)            
   {
     update_degeneracy_type();
       
-    if(delta_wx_curr_>0.)
-      delta_wx_last_ = delta_wx_curr_;
-    if(delta_wd_curr_>0.)
-      delta_wd_last_ = delta_wd_curr_;
-
-    if(delta_cc_curr_>0.)
-      delta_cc_last_ = delta_cc_curr_;
-    if(delta_cd_curr_>0.)
-      delta_cd_last_ = delta_cd_curr_;
+    if(delta_wx_curr_db_>0.) {
+      delta_wx_last_db_ = delta_wx_curr_db_;      
+    }
+    if(delta_wd_curr_db_>0.) {
+      delta_wd_last_db_ = delta_wd_curr_db_;
+    }
+    if(delta_cc_curr_db_>0.) {
+      delta_cc_last_db_ = delta_cc_curr_db_;      
+    }
+    if(delta_cd_curr_db_>0.) {
+      delta_cd_last_db_= delta_cd_curr_db_;
+    }
 
     if(hess_degenerate_ == dtNotEstablished || jac_degenerate_ == dtNotEstablished) {
       deltas_test_type_ = dttDeltac0Deltaw0;
@@ -417,37 +434,35 @@ namespace hiop
       deltas_test_type_ = dttNoTest;
     }
 
+    delta_cc_curr_db_ = delta_cd_curr_db_ = 0.;
     if(jac_degenerate_ == dtDegenerate) {
-      delta_cc_curr_ = delta_cd_curr_ = 0.;
-      if(!compute_dual_perturb_impl(mu_, delta_cc, delta_cd)) {
+      if(!compute_dual_perturb_impl(mu_)) {
         return false;
       }
-    } else {
-      delta_cc = delta_cd = 0.;
     }
-    delta_cc_curr_ = delta_cc;
-    delta_cd_curr_ = delta_cd;
-
-
+    delta_cc.setToConstant(delta_cc_curr_db_);
+    delta_cd.setToConstant(delta_cd_curr_db_);
+    
+    delta_wx_curr_db_ = delta_wd_curr_db_ = 0.;
     if(hess_degenerate_ == dtDegenerate) {
-      delta_wx_curr_ = delta_wd_curr_ = 0.;
-      if(!compute_primal_perturb_impl(delta_wx, delta_wd)) {
+      if(!compute_primal_perturb_impl()) {
 	      return false;
       }
-    } else {
-      delta_wx = delta_wd = 0.;
     }
+    delta_wx.setToConstant(delta_wx_curr_db_);
+    delta_wd.setToConstant(delta_wd_curr_db_);
 
-    delta_wx_curr_ = delta_wx;
-    delta_wd_curr_ = delta_wd;
+    set_delta_curr_vec();
+    set_delta_last_vec();
+
     return true;
   }
 
   /** Method for correcting inertia */
-  bool hiopPDPerturbationNormalEqn::compute_perturb_wrong_inertia(double& delta_wx,
-                                                                  double& delta_wd,
-                                                                  double& delta_cc,
-                                                                  double& delta_cd)  
+  bool hiopPDPerturbationNormalEqn::compute_perturb_wrong_inertia(hiopVector& delta_wx,
+                                                                  hiopVector& delta_wd,
+                                                                  hiopVector& delta_cc,
+                                                                  hiopVector& delta_cd)  
   {    
     /** 
     * for normal equation, wrong inertia means the KKT 1x1 matrix is not PD 
@@ -455,16 +470,13 @@ namespace hiop
     * */
     update_degeneracy_type();
 
-    assert(delta_wx_curr_ == delta_wd_curr_);
-    assert(delta_cc_curr_ == delta_cd_curr_);
-    
-    delta_wx = delta_wx_curr_;
-    delta_wd = delta_wd_curr_;
+    assert(delta_wx_curr_db_ == delta_wd_curr_db_);
+    assert(delta_cc_curr_db_ == delta_cd_curr_db_);
 
-    bool ret = compute_dual_perturb_impl(mu_, delta_cc, delta_cd);
-    if(!ret && delta_wx==0.) {
-      delta_cc_curr_ = delta_cd_curr_ = 0.;
-      ret = compute_primal_perturb_impl(delta_wx_curr_, delta_wd_curr_);
+    bool ret = compute_dual_perturb_impl(mu_);
+    if(!ret && delta_wx_curr_db_==0.) {
+      delta_cc_curr_db_ = delta_cd_curr_db_ = 0.;
+      ret = compute_primal_perturb_impl();
       if(!ret) {
         return ret;
       }
@@ -472,21 +484,25 @@ namespace hiop
       if(jac_degenerate_ == dtDegenerate) {
         jac_degenerate_ = dtNotEstablished;
       }
-
-      delta_wx = delta_cc_curr_;
-      delta_wd = delta_cd_curr_;
-      ret = compute_dual_perturb_impl(mu_, delta_cc, delta_cd);
+      ret = compute_dual_perturb_impl(mu_);
     }
+
+    delta_wx.setToConstant(delta_wx_curr_db_);
+    delta_wd.setToConstant(delta_wd_curr_db_);
+    delta_cc.setToConstant(delta_cc_curr_db_);
+    delta_cd.setToConstant(delta_cd_curr_db_);
+
+    set_delta_curr_vec();
     return ret;
   }
 
   /** Method for correcting singular Jacobian 
    *  (follows Ipopt closely since the paper seems to be outdated)
    */
-  bool hiopPDPerturbationNormalEqn::compute_perturb_singularity(double& delta_wx,
-                                                                double& delta_wd,
-                                                                double& delta_cc,
-                                                                double& delta_cd)
+  bool hiopPDPerturbationNormalEqn::compute_perturb_singularity(hiopVector& delta_wx,
+                                                                hiopVector& delta_wd,
+                                                                hiopVector& delta_cc,
+                                                                hiopVector& delta_cd)
   {
     /**
      * we try to corret the dual regularization first, and then primal regularizaion
@@ -499,36 +515,37 @@ namespace hiop
   /** 
    * Internal method implementing the computation of delta_c
    */
-  bool hiopPDPerturbationNormalEqn::compute_dual_perturb_impl(const double& mu, double& delta_cc, double& delta_cd)
+  bool hiopPDPerturbationNormalEqn::compute_dual_perturb_impl(const double& mu)
   {
-    assert(delta_cc_curr_ == delta_cd_curr_ && "these should be equal");
-    assert(delta_cc_last_ == delta_cd_last_ && "these should be equal");
-    if(delta_cc_curr_ == 0.) {
-      if(delta_cc_last_ == 0.) {
-        delta_cc_curr_ = std::fmax(delta_c_min_bar_, delta_c_bar_ * std::pow(mu, kappa_c_));
+    assert(delta_cc_curr_db_ == delta_cd_curr_db_ && "these should be equal");
+    assert(delta_cc_last_db_ == delta_cd_last_db_ && "these should be equal");
+  
+    if(delta_cc_curr_db_ == 0.) {
+      if(delta_cc_last_db_ == 0.) {
+        delta_cc_curr_db_ = std::fmax(delta_c_min_bar_, delta_c_bar_ * std::pow(mu, kappa_c_));
       } else {
-        delta_cc_curr_ = std::fmax(delta_c_min_bar_, delta_cc_last_*kappa_w_minus_);
+        delta_cc_curr_db_ = std::fmax(delta_c_min_bar_, delta_cc_last_db_*kappa_w_minus_);
       }
-    } else { //delta_cc_curr_ != 0.
-      if(delta_cc_last_==0. || 1e5*delta_cc_last_<delta_cc_curr_) {
-        delta_cc_curr_ = kappa_w_plus_bar_ * delta_cc_curr_;
+    } else { //delta_cc_curr_db_ != 0.
+      if(delta_cc_last_db_==0. || 1e5*delta_cc_last_db_<delta_cc_curr_db_) {
+        delta_cc_curr_db_ = kappa_w_plus_bar_ * delta_cc_curr_db_;
       } else {
-        delta_cc_curr_ = kappa_c_plus_ * delta_cc_curr_;
+        delta_cc_curr_db_ = kappa_c_plus_ * delta_cc_curr_db_;
       }
     }
+    delta_cc_curr_->setToConstant(delta_cc_curr_db_);
 
-    if(delta_cc_curr_ > delta_w_max_bar_) {
+    if(delta_cc_curr_db_ > delta_w_max_bar_) {
       //dual perturbation becoming too large
-      delta_cc_last_ = delta_cd_last_ = 0.;
+      delta_cc_last_db_ = delta_cd_last_db_ = 0.;
+      delta_cc_last_->setToConstant(delta_cc_last_db_);
+      delta_cd_last_->setToConstant(delta_cd_last_db_);
       return false;
     }
+    delta_cd_curr_db_ = delta_cc_curr_db_;
+    delta_cd_curr_->setToConstant(delta_cd_curr_db_);
 
-    delta_cd_curr_ = delta_cc_curr_ ;
-
-    delta_cc = delta_cc_curr_;
-    delta_cd = delta_cd_curr_;
-
-    std::cout << "correct dual: " << delta_cc << std::endl;
+    std::cout << "correct dual (mean): " << delta_cc_curr_db_ << std::endl;
 
     return true;
   }
@@ -536,40 +553,42 @@ namespace hiop
   /** 
    * Internal method implementing the computation of delta_w
    */
-  bool hiopPDPerturbationNormalEqn::compute_primal_perturb_impl(double& delta_wx, double& delta_wd)
+  bool hiopPDPerturbationNormalEqn::compute_primal_perturb_impl()
   {
-    assert(delta_wx_curr_ == delta_wd_curr_ && "these should be equal");
-    assert(delta_wx_last_ == delta_wd_last_ && "these should be equal");
-    if(delta_wx_curr_ == 0.) {
-      if(delta_wx_last_ == 0.) {
-        delta_wx_curr_ = delta_w_0_bar_;
+    assert(delta_wx_curr_db_ == delta_wd_curr_db_ && "these should be equal");
+    assert(delta_wx_last_db_ == delta_wd_last_db_ && "these should be equal");
+    if(delta_wx_curr_db_ == 0.) {
+      if(delta_wx_last_db_ == 0.) {
+        delta_wx_curr_db_ = delta_w_0_bar_;
       } else {
-        delta_wx_curr_ = std::fmax(delta_w_min_bar_, delta_wx_last_*kappa_w_minus_);
+        delta_wx_curr_db_ = std::fmax(delta_w_min_bar_, delta_wx_last_db_*kappa_w_minus_);
       }
     } else { //delta_wx_curr_ != 0.
-      if(delta_wx_last_==0. || 1e5*delta_wx_last_<delta_wx_curr_) {
-        delta_wx_curr_ = kappa_w_plus_bar_ * delta_wx_curr_;
+      if(delta_wx_last_db_==0. || 1e5*delta_wx_last_db_<delta_wx_curr_db_) {
+        delta_wx_curr_db_ = kappa_w_plus_bar_ * delta_wx_curr_db_;
       } else {
-        delta_wx_curr_ = kappa_w_plus_ * delta_wx_curr_;
+        delta_wx_curr_db_ = kappa_w_plus_ * delta_wx_curr_db_;
       }
     }
+    delta_wx_curr_->setToConstant(delta_wx_curr_db_);
 
-    if(delta_wx_curr_ > delta_w_max_bar_) {
+    if(delta_wx_curr_db_ > delta_w_max_bar_) {
       //Hessian perturbation becoming too large
-      delta_wx_last_ = delta_wd_last_ = 0.;
+      delta_wx_last_db_ = delta_wd_last_db_ = 0.;
+      delta_wx_last_->setToConstant(delta_wx_last_db_);
+      delta_wd_last_->setToConstant(delta_wd_last_db_);
       return false;
     }
 
-    delta_wd_curr_ = delta_wx_curr_ ;
+    delta_wd_curr_db_ = delta_wx_curr_db_;
+    delta_wd_curr_->setToConstant(delta_wd_curr_db_);
 
-    delta_wx = delta_wx_curr_;
-    delta_wd = delta_wd_curr_;
-
-    std::cout << "correct primal: " << delta_wx << std::endl;
+    std::cout << "correct primal (mean): " << delta_wx_curr_db_ << std::endl;
 
     return true;
   }
-  
+
+#if 0
     {
        // TODO move set_to_random_constant to PD pertub
     if(nlp_->options->GetString("dual_reg_method") == "unified") {
@@ -583,6 +602,5 @@ namespace hiop
       dual_reg_->startingAtCopyFromStartingAt(neq, delta_cd, 0);
     }
 #endif
-
 }
 

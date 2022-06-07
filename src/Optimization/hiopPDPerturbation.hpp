@@ -209,7 +209,6 @@ public:
                                            hiopVector& delta_cc,
                                            hiopVector& delta_cd);
                                            
-
 protected:
   /** Current and last perturbations, primal is split in x and d, dual in c and d. */
   double delta_wx_curr_db_;
@@ -222,14 +221,7 @@ protected:
   double delta_cc_last_db_;
   double delta_cd_last_db_;
 
-private: //methods
-  /** Internal method implementing the computation of delta_w's to correct wrong inertia
-   * 
-   */
-  bool guts_of_compute_perturb_wrong_inertia(double& delta_wx, double& delta_wd);
-
-  double compute_delta_c(const double& mu) const;
-  
+protected: // methods
   void set_delta_curr_vec() 
   {
     delta_wx_curr_->setToConstant(delta_wx_curr_db_);
@@ -246,62 +238,61 @@ private: //methods
     delta_cd_last_->setToConstant(delta_cd_last_db_);
   }
 
+private: //methods
+  /** Internal method implementing the computation of delta_w's to correct wrong inertia
+   * 
+   */
+  bool guts_of_compute_perturb_wrong_inertia(double& delta_wx, double& delta_wd);
+
+  double compute_delta_c(const double& mu) const;  
+
 };
 
-#if 0
 class hiopPDPerturbationNormalEqn : public hiopPDPerturbation
 {
 public:
-  hiopPDPerturbationNormalEqn()
-    : hiopPDPerturbation(),
-      delta_c_min_bar_(1e-20),
-      delta_c_max_bar_(1e-2),
-      kappa_c_plus_(10.)
-  {
-  }
+  hiopPDPerturbationNormalEqn();
 
-  ~hiopPDPerturbationNormalEqn()
-  {
-  }
+  virtual ~hiopPDPerturbationNormalEqn();
 
   /** Called when a new linear system is attempted to be factorized 
    */
-  bool compute_initial_deltas(double& delta_wx,
-                              double& delta_wd,
-                              double& delta_cc,
-                              double& delta_cd);
+  bool compute_initial_deltas(hiopVector& delta_wx,
+                              hiopVector& delta_wd,
+                              hiopVector& delta_cc,
+                              hiopVector& delta_cd);
 
   /** Method for correcting inertia */
-  bool compute_perturb_wrong_inertia(double& delta_wx, 
-                                     double& delta_wd,
-                                     double& delta_cc,
-                                     double& delta_cd);
+  bool compute_perturb_wrong_inertia(hiopVector& delta_wx, 
+                                     hiopVector& delta_wd,
+                                     hiopVector& delta_cc,
+                                     hiopVector& delta_cd);
                             
   /** Method for correcting singular Jacobian 
    *  (follows Ipopt closely since the paper seems to be outdated)
    */  
-  bool compute_perturb_singularity(double& delta_wx,
-                                   double& delta_wd,
-                                   double& delta_cc,
-                                   double& delta_cd);
+  bool compute_perturb_singularity(hiopVector& delta_wx,
+                                   hiopVector& delta_wd,
+                                   hiopVector& delta_cc,
+                                   hiopVector& delta_cd);
 
 private: //methods
   /** 
    * Internal method implementing the computation of delta_w's to correct wrong inertia
    */
-  bool compute_primal_perturb_impl(double& delta_wx, double& delta_wd);
+  bool compute_primal_perturb_impl();
                                       
   /** 
    * Internal method implementing the computation of delta_c's to correct wrong inertia
    */
-  bool compute_dual_perturb_impl(const double& mu, double& delta_cc, double& delta_cd);
+  bool compute_dual_perturb_impl(const double& mu);
 
 protected: //variables
   double delta_c_max_bar_;
   double delta_c_min_bar_;
   double kappa_c_plus_;
+
 };
-#endif
 
 } //end of namespace
 #endif

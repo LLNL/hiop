@@ -492,23 +492,23 @@ void hiopVectorRajaPar::startingAtCopyFromStartingAt(
   const hiopVector& vec_src,
   int start_idx_src)
 {
+  size_type howManyToCopyDest = this->n_local_ - start_idx_dest;
+  if(howManyToCopyDest == 0) {
+    return;
+  }
+
 #ifdef HIOP_DEEPCHECKS
   assert(n_local_ == n_ && "are you sure you want to call this?");
 #endif
+
   assert((start_idx_dest >= 0 && start_idx_dest < this->n_local_) || this->n_local_==0);
   const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(vec_src);
   assert((start_idx_src >=0 && start_idx_src < v.n_local_) || v.n_local_==0 || v.n_local_==start_idx_src);
-
-  size_type howManyToCopyDest = this->n_local_ - start_idx_dest;
 
 #ifndef NDEBUG
   const size_type howManyToCopySrc = v.n_local_-start_idx_src;
   assert(howManyToCopyDest <= howManyToCopySrc);
 #endif
-
-  if(howManyToCopyDest == 0) {
-    return;
-  }
 
   auto& rm = umpire::ResourceManager::getInstance();
   rm.copy(this->data_dev_ + start_idx_dest, 
