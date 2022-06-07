@@ -1908,15 +1908,16 @@ void hiopVectorRajaPar::adjustDuals_plh(
  * 
  * @post `this` is not modified
  */
-int hiopVectorRajaPar::is_zero() const
+bool hiopVectorRajaPar::is_zero() const
 {
   double* data = data_dev_;
   RAJA::ReduceSum< hiop_raja_reduce, int > sum(0);
   RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
-      if(data[i] != 0.0))
-        any += 1;
+      if(data[i] != 0.0) {
+        sum += 1;
+      }
     });
   int all_zero = (sum.get() == 0) ? 1 : 0;
 

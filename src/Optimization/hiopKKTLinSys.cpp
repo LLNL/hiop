@@ -1035,7 +1035,7 @@ errorCompressedLinsys(const hiopVector& rx, const hiopVector& rd,
 
   hiopVector* RC=ryc.new_copy();
   Jac_c_->timesVec(1.0, *RC, -1.0, dx);
-  RC->axxpy(1., *delta_cc_, dyc);
+  RC->axzpy(1., *delta_cc_, dyc);
   aux = RC->twonorm();
   derr=fmax(derr,aux);
   nlp_->log->printf(hovLinAlgScalars, " >> ryc=%g\n", aux);
