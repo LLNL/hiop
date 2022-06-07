@@ -38,3 +38,7 @@ if(HIOP_WITH_VALGRIND_TESTS)
     COMMAND bash -c "${runcmd_str} ${HIOP_VALGRIND_CMD} $<TARGET_FILE:NlpDenseConsEx1.exe> 500 1.0 -selfcheck"
     )
 endif()
+
+if(HIOP_BUILD_SHARED AND NOT HIOP_USE_GPU)
+  add_test(NAME NlpDenseFinterface COMMAND ${RUNCMD} "$<TARGET_FILE:NlpDenseConsFEx1.exe>")
+endif()
