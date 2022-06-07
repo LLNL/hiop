@@ -126,4 +126,37 @@ int hiop_sparse_destroy_problem(cHiopSparseProblem *prob) {
 }
 #endif //#ifdef HIOP_SPARSE
 
+int hiop_dense_create_problem(cHiopDenseProblem *prob) {
+  cppUserProblemDense * cppproblem = new cppUserProblemDense(prob);
+  hiopNlpDenseConstraints *nlp = new hiopNlpDenseConstraints(*cppproblem);
+
+  nlp->options->SetStringValue("Hessian", "quasinewton_approx");
+  nlp->options->SetStringValue("duals_update_type", "linear"); 
+  nlp->options->SetStringValue("duals_init", "zero"); // "lsq" or "zero"
+  nlp->options->SetStringValue("compute_mode", "cpu");
+  nlp->options->SetStringValue("KKTLinsys", "xdycyd");
+  nlp->options->SetStringValue("fixed_var", "relax");
+
+  prob->refcppHiop = nlp;
+  prob->hiopinterface = cppproblem;
+
+  return 0;
+} 
+
+int hiop_dense_solve_problem(cHiopDenseProblem *prob) {
+  hiopSolveStatus status;
+  hiopAlgFilterIPMQuasiNewton solver(prob->refcppHiop);
+  prob->status = solver.run();
+  prob->obj_value = solver.getObjective();
+  prob->niters = solver.getNumIterations();
+  solver.getSolution(prob->solution);
+  return 0;
+}
+
+int hiop_dense_destroy_problem(cHiopDenseProblem *prob) {
+  delete prob->refcppHiop;
+  delete prob->hiopinterface;
+  return 0;
+}
+
 } // extern C
