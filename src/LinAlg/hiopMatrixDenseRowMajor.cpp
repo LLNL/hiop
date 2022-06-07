@@ -245,7 +245,7 @@ void hiopMatrixDenseRowMajor::shiftRows(size_type shift)
   //at this point m_local_ should be >=2
   assert(m_local_>=2);
   //and
-  assert(m_local_-abs(shift)>=1);
+  assert(m_local_-std::abs(shift)>=1);
 #ifdef HIOP_DEEPCHECKS
   double test1=8.3, test2=-98.3;
   if(n_local_>0) {
@@ -862,7 +862,7 @@ bool hiopMatrixDenseRowMajor::assertSymmetry(double tol) const
   for(int i=0; i<n_local_; i++)
     for(int j=0; j<n_local_; j++) {
       double ij=M_[i][j], ji=M_[j][i];
-      double relerr= abs(ij-ji)/(1+abs(ij));
+      double relerr= std::abs(ij-ji)/(1+std::abs(ij));
       assert(relerr<tol);
       if(relerr>=tol) {
 	return false;
