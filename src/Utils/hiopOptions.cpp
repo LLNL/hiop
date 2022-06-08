@@ -902,6 +902,48 @@ void hiopOptionsNLP::register_options()
                         "Numerical refactorization function after sparsity pattern of factors is computed. "
                         "'glu' is experimental and 'rf' is NVIDIA's stable refactorization. ");
   }
+  // cusolver_lu inner iterative refinement options
+
+  {
+    vector<std::string> range = {"no", "yes"};
+    auto default_value = range[0];
+    register_str_option("ir_inner_cusolver",
+                        default_value,
+                        range,
+                        "Follow cusolver_lu  with FGMRES iterive refinement. "
+                        "By default, no iterative refinement is performaed. ");
+  }
+
+
+    register_int_option("ir_inner_cusolver_restart",
+                        20,
+                        1,
+                        100,
+                        "FGMRES restart value (default is 20). ");
+
+    register_num_option("ir_inner_cusolver_tol",
+                        1e-12,
+                        1e-16,
+                        1e-1,
+                        "FGMRES tolerance (default is 1e-12). ");
+
+    register_int_option("ir_inner_cusolver_maxit",
+                        50,
+                        1,
+                        1000,
+                        "FGMRES maximum number of iterations (default is 50). ");
+{
+    vector<std::string> range = {"MGS", "CGS2", "MGS_two_synch", "MGS_pm"};
+    auto default_value = range[0];
+    register_str_option("ir_inner_cusolver_gs_scheme",
+                        default_value,
+                        range,
+                        "Gram-Schmidt orthogonalization version for FMGRES. "
+                        "MGS: modified Gram-Schmidt (textbooki, default). "
+                        "CGS2: reorthogonalized classical Gram-Schmidt (three synchs). "
+                        "MGS_two_synch: two synch (stable) MGS. "
+                        "MGS_pm: post-modern MGS, two synchs. ");
+  }
 
   //linsol_mode -> mostly related to magma and MDS linear algebra
   {
