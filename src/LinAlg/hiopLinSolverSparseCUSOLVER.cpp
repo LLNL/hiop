@@ -119,6 +119,7 @@ namespace hiop
                         refact_.c_str());
       refact_ = "glu";
     }
+use_ir_ = "no";
     use_ir_ = nlp_->options->GetString("ir_inner_cusolver");
     if(use_ir_ != "yes" && use_ir_ != "no") {
       nlp_->log->printf(hovWarning, 
@@ -126,21 +127,22 @@ namespace hiop
                         use_ir_.c_str());
       use_ir_ = "no";
     }
+
     if (use_ir_ == "yes"){
       if (refact_ == "rf"){
         ir_ = new  hiopLinSolverSymSparseCUSOLVERInnerIR;
 
-        std::string input = nlp_->options->GetString("ir_inner_cusolver_restart");
-        ir_->restart_ = std::stoi(input);
+      //  std::string input =
+        ir_->restart_ =  nlp_->options->GetInteger("ir_inner_cusolver_restart");
         if ((ir_->restart_ <0) || (ir_->restart_ >100)){
 
           nlp_->log->printf(hovWarning, 
                             "Wrong restart value: %s. Use int restart value between 1 and 100. Setting default (20)  ...\n",
-                            input.c_str());
+                            ir_->restart_);
           ir_->restart_ = 20;
 
         }
-
+#if 0 
         input = nlp_->options->GetString("ir_inner_cusolver_maxit");
         ir_->maxit_ = std::stoi(input);
         if ((ir_->maxit_ <0) || (ir_->maxit_ >1000)){
@@ -162,9 +164,10 @@ namespace hiop
           ir_->tol_ = 1e-12;
 
         }
+#endif
       } else {
         nlp_->log->printf(hovWarning, 
-                          "Currently, inner iterative refinement works ONLY with cuSolverRf");
+                          "Currently, inner iterative refinement works ONLY with cuSolverRf ... \n");
         use_ir_ = "no";
       }
     }
