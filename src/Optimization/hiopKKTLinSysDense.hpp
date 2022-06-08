@@ -148,10 +148,9 @@ public:
     alpha=-1.;
     Msys.addSubDiagonal(alpha, nx+neq, *Dd_inv_);
 
-    // TODO: add is_equal
-//    assert(delta_cc == delta_cd);
-    //Msys.addSubDiagonal(nx+nineq, neq, -delta_cc);
-    //Msys.addSubDiagonal(nx+nineq+neq, nineq, -delta_cd);
+#ifdef HIOP_DEEPCHECKS
+      assert(delta_cc.is_equal(delta_cd));
+#endif
     Msys.addSubDiagonal(alpha, nx, delta_cd);
 
     nlp_->log->write("KKT Linsys:", Msys, hovMatrices);
@@ -295,22 +294,21 @@ public:
     Msys.addSubDiagonal(alpha, nx, *Dd_);
     Msys.addSubDiagonal(alpha, nx, delta_wd);
 	
-	//add -I (of size nineq) starting at index (nx, nx+nineq+neq)
-	int col_start = nx+nineq+neq;
-	double* MsysM = Msys.local_data();
-        int m_Msys = Msys.m();
-        assert(m_Msys == Msys.n());
-	for(int i=nx; i<nx+nineq; i++) {
-          //MsysM[i][col_start++] -= 1.;
-          assert(i*m_Msys+col_start < m_Msys*m_Msys);
-          MsysM[i*m_Msys+col_start] -= 1.;
-          col_start++;
-        }
+    //add -I (of size nineq) starting at index (nx, nx+nineq+neq)
+    int col_start = nx+nineq+neq;
+    double* MsysM = Msys.local_data();
+    int m_Msys = Msys.m();
+    assert(m_Msys == Msys.n());
+    for(int i=nx; i<nx+nineq; i++) {
+      //MsysM[i][col_start++] -= 1.;
+      assert(i*m_Msys+col_start < m_Msys*m_Msys);
+      MsysM[i*m_Msys+col_start] -= 1.;
+      col_start++;
+    }
 
-    // TODO: add is_equal    
-//    assert(delta_cc == delta_cd);
-    //Msys.addSubDiagonal(nx+nineq, neq, -delta_cc);
-    //Msys.addSubDiagonal(nx+nineq+neq, nineq, -delta_cd);
+#ifdef HIOP_DEEPCHECKS
+      assert(delta_cc.is_equal(delta_cd));
+#endif
     Msys.addSubDiagonal(-alpha, nx+nineq, delta_cd);
 
     nlp_->log->write("KKT Linsys:", Msys, hovMatrices);

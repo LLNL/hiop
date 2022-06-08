@@ -130,7 +130,7 @@ double hiopKKTLinSys::errorKKT(const hiopResidual* resid, const hiopIterate* sol
   nlp_->log->printf(hovLinAlgScalars, "  --- rx=%g\n", aux);
 
 
-  //RD = rd - (dyd + dvl - dvu - delta_wd_*dd)    TODO: should this be rd - (-dyd - dvl + dvu + delta_wd_*dd)
+  //RD = rd - (-dyd - dvl + dvu + delta_wd_*dd)
   hiopVector* RD = resid->rd->new_copy();
   RD->axpy(+1., *sol->yd);
   RD->axpy(+1., *sol->vl);
@@ -342,9 +342,10 @@ bool hiopKKTLinSysCurvCheck::factorize()
   }
 
   while(num_refactorization <= max_refactorization) {
-    // TODO add is_equal
-//    assert(delta_wx_ == delta_wd_ && "something went wrong with IC");
-//    assert(delta_cc_ == delta_cd_ && "something went wrong with IC");
+#ifdef HIOP_DEEPCHECKS
+    assert(delta_wx_->is_equal(*delta_wd_) && "something went wrong with IC");
+    assert(delta_cc_->is_equal(*delta_cd_) && "something went wrong with IC");
+#endif
       if(delta_wx_->get_size() == 1 && delta_cc_->get_size() == 1) {
         nlp_->log->printf(hovScalars, "linsys: delta_w=%12.5e delta_c=%12.5e (ic %d)\n",
                           delta_wx_->local_data_host()[0], delta_cc_->local_data_host()[0], num_refactorization);  
@@ -394,9 +395,10 @@ bool hiopKKTLinSysCurvCheck::factorize_inertia_free()
 
   continue_re_fact = fact_acceptor_->requireReFactorization(*nlp_, non_singular_mat, *delta_wx_, *delta_wd_, *delta_cc_, *delta_cd_, true);
 
-  // TODO: add is_equal
-//  assert(delta_wx_ == delta_wd_ && "something went wrong with IC");
-//  assert(delta_cc_ == delta_cd_ && "something went wrong with IC");
+#ifdef HIOP_DEEPCHECKS
+    assert(delta_wx_->is_equal(*delta_wd_) && "something went wrong with IC");
+    assert(delta_cc_->is_equal(*delta_cd_) && "something went wrong with IC");
+#endif
   if(delta_wx_->get_size() == 1 && delta_cc_->get_size() == 1) {
     nlp_->log->printf(hovScalars, "linsys: delta_w=%12.5e delta_c=%12.5e \n",
                       delta_wx_->local_data_host()[0], delta_cc_->local_data_host()[0]);  

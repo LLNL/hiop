@@ -108,10 +108,11 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const hiopVector& delta_wx_i
                                                     const hiopVector& delta_cc_in,
                                                     const hiopVector& delta_cd_in)
 {
-  // TODO add is_equal
-//  assert(delta_cc_in == delta_cd_in);
-//  auto delta_cc = delta_cc_in;
-   
+
+#ifdef HIOP_DEEPCHECKS
+      assert(delta_cc_in.is_equal(delta_cd_in));
+#endif
+
   HessSp_ = dynamic_cast<hiopMatrixSparse*>(Hess_);
   if(!HessSp_) { assert(false); return false; }
 
@@ -143,7 +144,6 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const hiopVector& delta_wx_i
   assert(nineq == Dd_->get_size());
   assert(nx == Dx_->get_size());
 
-  /* TODO: here we assume Hess is diagonal!*/
   if(nullptr == Hess_diag_) {
     Hess_diag_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), nx);
     assert(Hess_diag_);
@@ -164,7 +164,6 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const hiopVector& delta_wx_i
     Hd_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), nineq);
   }
   Hd_->copyFrom(*Dd_);
-  // TODO: add function add_constant_with_bias()
   Hd_->axpy(1., delta_wd_in);
 
   nlp_->runStats.kkt.tmUpdateInit.stop();
