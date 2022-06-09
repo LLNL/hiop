@@ -2069,7 +2069,8 @@ void hiopVectorRajaPar::set_array_from_to(hiopInterfaceBase::NonlinearityType* a
 bool hiopVectorRajaPar::is_equal(const hiopVector& vec) const
 {
 #ifdef HIOP_DEEPCHECKS
-  assert(vec.n_local_ == n_local_);
+  const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(vec);
+  assert(v.n_local_ == n_local_);
 #endif 
 
   const double* data_v = vec.local_data_const();
