@@ -2,7 +2,7 @@
 # Environment variables shared between scripts for all ORNL CI stages
 .llnl_environment_template: &llnl_script_setenv
   variables:
-    WORKDIR: "/usr/workspace/chiang7/gitlab-runner/${CI_PIPELINE_ID}"
+    CUSTOM_CI_BUILDS_DIR: "/usr/workspace/chiang7/gitlab-runner/${CI_PIPELINE_ID}"
 
 .llnl_script_template: &llnl_script_build
   script:
@@ -10,22 +10,22 @@
       # Don't clean up this working directory - we need some of these files for
       # testing
       set -xv
-      mkdir -p "$WORKDIR"
-      cp -R ./* "$WORKDIR"
-      cd "$WORKDIR"
+      mkdir -p "$CUSTOM_CI_BUILDS_DIR"
+      cp -R ./* "$CUSTOM_CI_BUILDS_DIR"
+      cd "$CUSTOM_CI_BUILDS_DIR"
       MY_CLUSTER="quartz" ./BUILD.sh --build-only || exit 1
 
 .llnl_test_script_template: &llnl_script_test
   script:
     - |
       set -xv
-      cd "$WORKDIR"
+      cd "$CUSTOM_CI_BUILDS_DIR"
       MY_CLUSTER="ascent" ./BUILD.sh --test-only
       res=$?
       exit $res
   after_script:
     - |
-      cd "$WORKDIR/.."
+      cd "$CUSTOM_CI_BUILDS_DIR/.."
 
 .ornl_environment_template: &ornl_environment_variables
   variables:
