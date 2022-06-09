@@ -20,7 +20,7 @@
     - |
       set -xv
       cd "$CUSTOM_CI_BUILDS_DIR"
-      MY_CLUSTER="ascent" ./BUILD.sh --test-only
+      MY_CLUSTER="quartz" ./BUILD.sh --test-only
       res=$?
       exit $res
   after_script:
