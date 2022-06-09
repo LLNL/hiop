@@ -1975,6 +1975,25 @@ public:
     return reduceReturn(fail, &x);
   }
 
+  /**
+   * @brief Test:
+   * x[i] == y[i] 
+   */
+  bool vector_is_equal(hiop::hiopVector& x, hiop::hiopVector& y, const int rank)
+  {
+    const local_ordinal_type Nx = getLocalSize(&x);
+    int fail = 0;
+    x.setToConstant(one);
+    y.setToConstant(one);
+    fail += (int) (!(x.is_equal(y))); // x.is_equal(y) should returns true (1).
+
+    y.setToConstant(two);
+    fail += (int) ((x.is_equal(y)));  // x.is_equal(y) should returns false (0).
+
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &x);
+  }
+
   /// Returns element _i_ of vector _x_.
   real_type getLocalElement(const hiop::hiopVector* x, local_ordinal_type i)
   {

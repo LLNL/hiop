@@ -126,7 +126,7 @@ void hiopVectorPar::setToConstant(double c)
   for(int i=0; i<n_local_; i++) data_[i]=c;
 }
 
-void hiopVectorPar::set_to_random_constant(double minv, double maxv)
+void hiopVectorPar::set_to_random_uniform(double minv, double maxv)
 {
   std::uniform_real_distribution<double> unif(minv,maxv);
   std::default_random_engine re;
@@ -1184,6 +1184,27 @@ void hiopVectorPar::set_array_from_to(hiopInterfaceBase::NonlinearityType* arr,
   }
 }
 
+bool hiopVectorPar::is_equal(const hiopVector& vec) const
+{
+  if(n_local_ != vec.get_local_size()) {
+    return false;
+  }
+  int all_equal = true;
+  const double* data_v = vec.local_data_const();
+  for(auto i=0; i<n_local_; ++i) {
+    if(data_[i]!=data_v[i]) {
+      all_equal = false;
+      break;
+    }
+  }
+
+#ifdef HIOP_USE_MPI
+  int all_equalG;
+  int ierr=MPI_Allreduce(&all_equal, &all_equalG, 1, MPI_INT, MPI_MIN, comm_); assert(MPI_SUCCESS==ierr);
+  return all_equalG;
+#endif
+  return all_equal;
+}
 
 
 

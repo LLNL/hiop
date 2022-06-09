@@ -77,7 +77,7 @@ public:
 
   virtual void setToZero();
   virtual void setToConstant( double c );
-  virtual void set_to_random_constant(double minv, double maxv) {assert(false&&"not implemented yet!");}
+  virtual void set_to_random_uniform(double minv, double maxv) {assert(false&&"not implemented yet!");}
   virtual void setToConstant_w_patternSelect(double c, const hiopVector& select);
   virtual void copyFrom(const hiopVector& v );
   virtual void copyFrom(const double* v_local_data); //v should be of length at least n_local
@@ -284,6 +284,8 @@ public:
                                  const int end, 
                                  const hiopInterfaceBase::NonlinearityType arr_src) const;
 
+  virtual bool is_equal(const hiopVector& vec) const;
+  
 private:
   std::string mem_space_;
   MPI_Comm comm_;

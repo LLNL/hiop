@@ -265,7 +265,7 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const double& delta_wx_in,
     if(nlp_->options->GetString("dual_reg_method") == "unified") {
       dual_reg_->setToConstant(delta_cc);
     } else if(nlp_->options->GetString("dual_reg_method") == "randomized") {
-      dual_reg_->set_to_random_constant(0.9*delta_cc, 1.1*delta_cc);
+      dual_reg_->set_to_random_uniform(0.9*delta_cc, 1.1*delta_cc);
     }
     
     Diag_reg_->addDiagonal(1.0,*dual_reg_);
