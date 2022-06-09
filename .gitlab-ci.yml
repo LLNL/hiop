@@ -2,7 +2,7 @@
 # Environment variables shared between scripts for all ORNL CI stages
 .llnl_environment_template: &llnl_script_setenv
   variables:
-    WORKDIR: "/usr/workspace/mfem/gitlab-runner/${CI_PIPELINE_ID}"
+    WORKDIR: "/usr/workspace/chiang7/gitlab-runner/${CI_PIPELINE_ID}"
 
 .llnl_script_template: &llnl_script_build
   script:
@@ -14,6 +14,18 @@
       cp -R ./* "$WORKDIR"
       cd "$WORKDIR"
       MY_CLUSTER="quartz" ./BUILD.sh --build-only || exit 1
+
+.llnl_test_script_template: &llnl_script_test
+  script:
+    - |
+      set -xv
+      cd "$WORKDIR"
+      MY_CLUSTER="ascent" ./BUILD.sh --test-only
+      res=$?
+      exit $res
+  after_script:
+    - |
+      cd "$WORKDIR/.."
 
 .ornl_environment_template: &ornl_environment_variables
   variables:
@@ -164,9 +176,22 @@ test_on_compute_node:
 build_on_quartz:
   stage: build
   tags:
-    - nobatch
+    - shell
+    - quartz
   rules:
-    - if: '$LLNL_HIOP_CI_PATH == "ecpcitest/exasgd/hiop"'
+    - if: '$LC_ZONE == "CZ"'
   <<: *llnl_script_setenv
   <<: *llnl_script_build
 
+# For LLNL/quartz CI
+test_on_quartz:
+  stage: test
+  dependencies:
+    - build_on_quartz
+  tags:
+    - shell
+    - quartz
+  rules:
+    - if: '$LC_ZONE == "CZ"'
+  <<: *llnl_script_setenv
+  <<: *llnl_script_test
