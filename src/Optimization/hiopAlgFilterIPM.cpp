@@ -1704,6 +1704,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
     pd_perturb_ = new hiopPDPerturbation();
   }
   if(!pd_perturb_->initialize(nlp)) {
+    delete kkt;
     return SolveInitializationError;
   }
   
@@ -1754,6 +1755,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
     if(!bret) {
       solver_status_ = Error_In_User_Function;
       nlp->runStats.tmOptimizTotal.stop();
+      delete kkt;
       return Error_In_User_Function;
     }
 
@@ -1828,6 +1830,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
                                  _err_log_optim, _err_log_feas, _err_log_complem, _err_log);
       if(!bret) {
         solver_status_ = Error_In_User_Function;
+        delete kkt;
         return Error_In_User_Function;
       }
       nlp->log->
@@ -1922,6 +1925,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
         if(linsol_safe_mode_on) {
           nlp->log->write("Unrecoverable error in step computation (factorization) [1]. Will exit here.",
                           hovError);
+          delete kkt;
           return solver_status_ = Err_Step_Computation;
         } else {
 
@@ -1930,6 +1934,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 
             nlp->log->write("Unrecoverable error in step computation (factorization) [2]. Will exit here.",
                             hovError);
+            delete kkt;
             return solver_status_ = Err_Step_Computation;
           }
 
@@ -1954,6 +1959,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 
           if(linsol_safe_mode_on_before || linsol_forcequick) {
             //it fails under safe mode, this is fatal
+            delete kkt;
             return solver_status_ = Err_Step_Computation;
           }
           // safe mode was turned on in the above call because kkt->computeDirections(...) failed 
@@ -1967,6 +1973,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
         if(!compute_search_direction_inertia_free(kkt, linsol_safe_mode_on, linsol_forcequick, iter_num)) {
           if(linsol_safe_mode_on_before || linsol_forcequick) {
             //it failed under safe mode
+            delete kkt;
             return solver_status_ = Err_Step_Computation;
           }
           // safe mode was turned on in the above call because kkt->computeDirections(...) failed or the number
@@ -2038,6 +2045,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
         if(!this->evalNlp_funcOnly(*it_trial, _f_nlp_trial, *_c_trial, *_d_trial)) {
           solver_status_ = Error_In_User_Function;
           nlp->runStats.tmOptimizTotal.stop();
+          delete kkt;
           return Error_In_User_Function;
         }
 
@@ -2239,6 +2247,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
       if(!this->evalNlp_derivOnly(*it_trial, *_grad_f, *_Jac_c, *_Jac_d, *_Hess_Lagr)) {
         solver_status_ = Error_In_User_Function;
         nlp->runStats.tmOptimizTotal.stop();
+        delete kkt;
         return Error_In_User_Function;
       }
     }
