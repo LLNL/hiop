@@ -149,7 +149,7 @@ public:
     Msys.addSubDiagonal(alpha, nx+neq, *Dd_inv_);
 
 #ifdef HIOP_DEEPCHECKS
-      assert(delta_cc.is_equal(delta_cd));
+    assert(perturb_calc_->check_consistency() && "something went wrong with IC");
 #endif
     Msys.addSubDiagonal(alpha, nx, delta_cd);
 

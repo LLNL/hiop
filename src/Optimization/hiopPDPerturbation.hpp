@@ -208,7 +208,12 @@ public:
                                            hiopVector& delta_wd,
                                            hiopVector& delta_cc,
                                            hiopVector& delta_cd);
-                                           
+                  
+  inline bool check_consistency() 
+  {
+    return (delta_wx_curr_db_ == delta_wd_curr_db_) && (delta_cc_curr_db_ == delta_cd_curr_db_);
+  }
+                         
 protected:
   /** Current and last perturbations, primal is split in x and d, dual in c and d. */
   double delta_wx_curr_db_;

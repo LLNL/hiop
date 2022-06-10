@@ -110,7 +110,7 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const hiopVector& delta_wx_i
 {
 
 #ifdef HIOP_DEEPCHECKS
-      assert(delta_cc_in.is_equal(delta_cd_in));
+    assert(perturb_calc_->check_consistency() && "something went wrong with IC");
 #endif
 
   HessSp_ = dynamic_cast<hiopMatrixSparse*>(Hess_);
@@ -261,12 +261,13 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const hiopVector& delta_wx_i
   t.reset(); t.start();
   
   Diag_reg_->setToZero();
-  if(!delta_cc_in.is_zero()) {
+  if(!delta_cc_in.is_zero() || !delta_cd_in.is_zero()) {
     dual_reg_->startingAtCopyFromStartingAt(0, delta_cc_in, 0);
     dual_reg_->startingAtCopyFromStartingAt(neq, delta_cd_in, 0);
     
     Diag_reg_->addDiagonal(1.0,*dual_reg_);
   }
+
   Diag_reg_->add_matrix_numeric(*M_normaleqn_, 1.0, *JDiagJt_, 1.0);
 
   // TODO should have same code for different compute modes (remove is_cusolver_on), i.e., remove if(linSolver_ma57)
