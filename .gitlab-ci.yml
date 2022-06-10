@@ -26,6 +26,7 @@
   after_script:
     - |
       cd "$CUSTOM_CI_BUILDS_DIR/.."
+      rm -rf "$CUSTOM_CI_BUILDS_DIR" "scripts"
 
 .ornl_environment_template: &ornl_environment_variables
   variables:
