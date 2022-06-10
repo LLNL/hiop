@@ -253,12 +253,12 @@ private: //methods
 
 };
 
-class hiopPDPerturbationNormalEqn : public hiopPDPerturbation
+class hiopPDPerturbationDualFirst : public hiopPDPerturbation
 {
 public:
-  hiopPDPerturbationNormalEqn();
+  hiopPDPerturbationDualFirst();
 
-  virtual ~hiopPDPerturbationNormalEqn();
+  virtual ~hiopPDPerturbationDualFirst();
 
   /** Called when a new linear system is attempted to be factorized 
    */

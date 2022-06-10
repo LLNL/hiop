@@ -392,9 +392,9 @@ namespace hiop
   }
 
   /*
-  *  class hiopPDPerturbationNormalEqn
+  *  class hiopPDPerturbationDualFirst
   */
-  hiopPDPerturbationNormalEqn::hiopPDPerturbationNormalEqn()
+  hiopPDPerturbationDualFirst::hiopPDPerturbationDualFirst()
     : hiopPDPerturbation(),
       delta_c_min_bar_(1e-20),
       delta_c_max_bar_(1e-2),
@@ -402,13 +402,13 @@ namespace hiop
   {
   }
 
-  hiopPDPerturbationNormalEqn::~hiopPDPerturbationNormalEqn()
+  hiopPDPerturbationDualFirst::~hiopPDPerturbationDualFirst()
   {
   }
 
   /** Called when a new linear system is attempted to be factorized 
    */
-  bool hiopPDPerturbationNormalEqn::compute_initial_deltas(hiopVector& delta_wx,
+  bool hiopPDPerturbationDualFirst::compute_initial_deltas(hiopVector& delta_wx,
                                                            hiopVector& delta_wd,
                                                            hiopVector& delta_cc,
                                                            hiopVector& delta_cd)            
@@ -459,7 +459,7 @@ namespace hiop
   }
 
   /** Method for correcting inertia */
-  bool hiopPDPerturbationNormalEqn::compute_perturb_wrong_inertia(hiopVector& delta_wx,
+  bool hiopPDPerturbationDualFirst::compute_perturb_wrong_inertia(hiopVector& delta_wx,
                                                                   hiopVector& delta_wd,
                                                                   hiopVector& delta_cc,
                                                                   hiopVector& delta_cd)  
@@ -499,14 +499,14 @@ namespace hiop
   /** Method for correcting singular Jacobian 
    *  (follows Ipopt closely since the paper seems to be outdated)
    */
-  bool hiopPDPerturbationNormalEqn::compute_perturb_singularity(hiopVector& delta_wx,
+  bool hiopPDPerturbationDualFirst::compute_perturb_singularity(hiopVector& delta_wx,
                                                                 hiopVector& delta_wd,
                                                                 hiopVector& delta_cc,
                                                                 hiopVector& delta_cd)
   {
     /**
      * we try to corret the dual regularization first, and then primal regularizaion
-     * same implementation as  hiopPDPerturbationNormalEqn::compute_perturb_wrong_inertia
+     * same implementation as  hiopPDPerturbationDualFirst::compute_perturb_wrong_inertia
      */
     return compute_perturb_wrong_inertia(delta_wx, delta_wd, delta_cc, delta_cd);
   }
@@ -515,7 +515,7 @@ namespace hiop
   /** 
    * Internal method implementing the computation of delta_c
    */
-  bool hiopPDPerturbationNormalEqn::compute_dual_perturb_impl(const double& mu)
+  bool hiopPDPerturbationDualFirst::compute_dual_perturb_impl(const double& mu)
   {
     assert(delta_cc_curr_db_ == delta_cd_curr_db_ && "these should be equal");
     assert(delta_cc_last_db_ == delta_cd_last_db_ && "these should be equal");
@@ -553,7 +553,7 @@ namespace hiop
   /** 
    * Internal method implementing the computation of delta_w
    */
-  bool hiopPDPerturbationNormalEqn::compute_primal_perturb_impl()
+  bool hiopPDPerturbationDualFirst::compute_primal_perturb_impl()
   {
     assert(delta_wx_curr_db_ == delta_wd_curr_db_ && "these should be equal");
     assert(delta_wx_last_db_ == delta_wd_last_db_ && "these should be equal");
@@ -591,10 +591,10 @@ namespace hiop
 #if 0
     {
        // TODO move set_to_random_constant to PD pertub
-    if(nlp_->options->GetString("dual_reg_method") == "unified") {
+    if(nlp_->options->GetString("reg_method") == "standard") {
       dual_reg_->startingAtCopyFromStartingAt(0, delta_cc, 0);
       dual_reg_->startingAtCopyFromStartingAt(neq, delta_cd, 0);
-    } else if(nlp_->options->GetString("dual_reg_method") == "randomized") {
+    } else if(nlp_->options->GetString("reg_method") == "randomized") {
       // TODO fix this
       delta_cc
       dual_reg_->set_to_random_constant(0.9*delta_cc, 1.1*delta_cc);
