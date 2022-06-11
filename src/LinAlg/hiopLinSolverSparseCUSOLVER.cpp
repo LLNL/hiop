@@ -55,6 +55,7 @@
 #include "hiopLinSolverSparseCUSOLVER.hpp"
 
 #include "hiop_blasdefs.hpp"
+#include "hiop_cusolver_ir_custom_kernels.cu"
 
 #include "cusparse_v2.h"
 #include "klu.h"
@@ -119,7 +120,7 @@ namespace hiop
                         refact_.c_str());
       refact_ = "glu";
     }
-use_ir_ = "no";
+    use_ir_ = "no";
     use_ir_ = nlp_->options->GetString("ir_inner_cusolver");
     if(use_ir_ != "yes" && use_ir_ != "no") {
       nlp_->log->printf(hovWarning, 
@@ -132,39 +133,46 @@ use_ir_ = "no";
       if (refact_ == "rf"){
         ir_ = new  hiopLinSolverSymSparseCUSOLVERInnerIR;
 
-      //  std::string input =
+        //  std::string input =
         ir_->restart_ =  nlp_->options->GetInteger("ir_inner_cusolver_restart");
         if ((ir_->restart_ <0) || (ir_->restart_ >100)){
 
           nlp_->log->printf(hovWarning, 
-                            "Wrong restart value: %s. Use int restart value between 1 and 100. Setting default (20)  ...\n",
+                            "Wrong restart value: %d. Use int restart value between 1 and 100. Setting default (20)  ...\n",
                             ir_->restart_);
           ir_->restart_ = 20;
 
         }
-#if 0 
-        input = nlp_->options->GetString("ir_inner_cusolver_maxit");
-        ir_->maxit_ = std::stoi(input);
+
+        ir_->maxit_ = nlp_->options->GetInteger("ir_inner_cusolver_maxit");
+
         if ((ir_->maxit_ <0) || (ir_->maxit_ >1000)){
 
           nlp_->log->printf(hovWarning, 
-                            "Wrong maxit value: %s. Use int maxit value between 1 and 1000. Setting default (50)  ...\n",
-                            input.c_str());
-          ir_->restart_ = 50;
+                            "Wrong maxit value: %d. Use int maxit value between 1 and 1000. Setting default (50)  ...\n",
+                            ir_->maxit_);
+          ir_->maxit_ = 50;
 
         }
 
-        input = nlp_->options->GetString("ir_inner_cusolver_tol");
-        ir_->tol_ = std::stod(input);
+        ir_->tol_  = nlp_->options->GetNumeric("ir_inner_cusolver_tol");
         if ((ir_->tol_ <0) || (ir_->tol_ >1)){
 
           nlp_->log->printf(hovWarning, 
-                            "Wrong tol value: %s. Use double tol value between 0 and 1. Setting default (1e-12)  ...\n",
-                            input.c_str());
+                            "Wrong tol value: %e. Use double tol value between 0 and 1. Setting default (1e-12)  ...\n",
+                            ir_->tol_);
           ir_->tol_ = 1e-12;
 
         }
-#endif
+
+        ir_->orth_option_ = nlp_->options->GetString("ir_inner_cusolver_gs_scheme");
+        if(ir_->orth_option_ != "MGS" && ir_->orth_option_ != "GS2" && ir_->orth_option_ != "MGS_two_synch" &&ir_->orth_option_ != "MGS_pm") {
+          nlp_->log->printf(hovWarning, 
+                            "MGS option : %s is wrong. Use 'MGS', 'CGS2', 'MGS_two_synch' or 'MGS_pm'. Switching to default (MGS) ...\n",
+                            use_ir_.c_str());
+          ir_->orth_option_ = "MGS";
+        }
+
       } else {
         nlp_->log->printf(hovWarning, 
                           "Currently, inner iterative refinement works ONLY with cuSolverRf ... \n");
@@ -213,7 +221,7 @@ use_ir_ = "no";
     delete [] mja_;
     if (use_ir_ == "yes"){
       //invoke the ir_ destructor
-    delete ir_;
+      delete ir_;
     } 
 
   }
@@ -256,6 +264,10 @@ use_ir_ = "no";
         } else if(refact_ == "rf") {
           this->initializeCusolverRf();
           this->refactorizationSetupCusolverRf();
+
+          if(use_ir_ == "yes") {
+            this->IRsetup();
+          }
         } else { // for future -
           assert(0 && "Only glu and rf refactorizations available.\n");
         }
@@ -277,7 +289,24 @@ use_ir_ = "no";
         sp_status_ = cusolverSpDgluFactor(handle_cusolver_, info_M_, d_work_);
       } else {
         if(refact_ == "rf") {
-          sp_status_ = cusolverRfResetValues(n_, 
+#if 0        
+if (use_ir_ == "yes"){
+            cusparseDestroySpMat(ir_->mat_A_);
+
+            cusparseCreateCsr(&(ir_->mat_A_), 
+                              n_, 
+                              n_, 
+                              nnz_,
+                              dia_, 
+                              dja_, 
+                              da_,
+                              CUSPARSE_INDEX_32I, 
+                              CUSPARSE_INDEX_32I,
+                              CUSPARSE_INDEX_BASE_ZERO,
+                              CUDA_R_64F);
+          } 
+#endif     
+    sp_status_ = cusolverRfResetValues(n_, 
                                              nnz_, 
                                              dia_,
                                              dja_,
@@ -342,7 +371,15 @@ use_ir_ = "no";
                                        n_,
                                        devr_,
                                        n_);
+
           if(sp_status_ == 0) {
+
+            if(use_ir_ == "yes") {
+
+              checkCudaErrors(cudaMemcpy(devx_, drhs, sizeof(double) * n_, cudaMemcpyHostToDevice));
+              ir_->fgmres(devr_, devx_);             
+              nlp_->log->printf(hovWarning, "\t fgmres: init residual norm  %e final residual norm %e number of iterations %d\n", ir_->getInitialResidalNorm(), ir_->getFinalResidalNorm(), ir_->getFinalNumberOfIterations());
+            }
             checkCudaErrors(cudaMemcpy(dx, devr_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
           } else {
             nlp_->log->printf(hovError,  // catastrophic failure
@@ -398,7 +435,6 @@ use_ir_ = "no";
     checkCudaErrors(cudaMemcpy(dia_, kRowPtr_, sizeof(int) * (n_ + 1), cudaMemcpyHostToDevice));
     checkCudaErrors(cudaMemcpy(dja_, jCol_, sizeof(int) * nnz_, cudaMemcpyHostToDevice));
     if (use_ir_ == "yes"){
-
       cusparseCreateCsr(&(ir_->mat_A_), 
                         n_, 
                         n_, 
@@ -410,6 +446,8 @@ use_ir_ = "no";
                         CUSPARSE_INDEX_32I,
                         CUSPARSE_INDEX_BASE_ZERO,
                         CUDA_R_64F);
+
+
     }
     /*
      * initialize KLU and cuSolver parameters
@@ -1691,5 +1729,518 @@ use_ir_ = "no";
   hiopLinSolverSymSparseCUSOLVERInnerIR::~hiopLinSolverSymSparseCUSOLVERInnerIR()
   {
     cusparseDestroySpMat(mat_A_);
+  }
+
+  void hiopLinSolverSymSparseCUSOLVER::IRsetup()
+  {
+    ir_->cusparse_handle_ = handle_;
+    ir_->cublas_handle_ = handle_cublas_;
+    ir_->cusolverrf_handle_ = handle_rf_;
+    ir_->n_ = n_;
+    //only set pointers
+    ir_->d_T_ = d_T_;
+    ir_->d_P_ = d_P_;
+    ir_->d_Q_ = d_Q_;
+
+    //setup matvec
+
+    cusparseCreateDnVec(&ir_->vec_x_, n_, devx_, CUDA_R_64F);
+    cusparseCreateDnVec(&ir_->vec_Ax_, n_, devr_, CUDA_R_64F);
+    size_t buffer_size;
+printf("mv buffer starting\n");
+    checkCudaErrors(cusparseSpMV_bufferSize(ir_->cusparse_handle_, 
+                                            CUSPARSE_OPERATION_NON_TRANSPOSE,
+                                            &(ir_->minusone_),
+                                            ir_->mat_A_,
+                                            ir_->vec_x_,
+                                            &(ir_->one_),
+                                            ir_->vec_Ax_,
+                                            CUDA_R_64F,
+                                            CUSPARSE_MV_ALG_DEFAULT, 
+                                            &buffer_size));
+
+
+    cudaDeviceSynchronize();
+    checkCudaErrors(cudaMalloc(&ir_->mv_buffer_, buffer_size));
+    
+//allocate space for the GPU
+
+    checkCudaErrors(cudaMalloc(&(ir_->d_V_), n_ * (ir_->restart_+1) * sizeof(double)));
+    checkCudaErrors(cudaMalloc(&(ir_->d_Z_), n_ * (ir_->restart_+1) * sizeof(double)));
+    checkCudaErrors(cudaMalloc(&(ir_->d_rvGPU_), 2*(ir_->restart_+1)* sizeof(double)));
+    checkCudaErrors(cudaMalloc(&(ir_->d_Hcolumn_), 2*(ir_->restart_+1) * (ir_->restart_ +1) * sizeof(double)));
+
+    //and for the CPU
+    //kRowPtr_ = new int[n_ + 1]{ 0 };
+    ir_->h_H_ = new double [ir_->restart_ * (ir_->restart_ + 1) ];
+    ir_->h_c_ = new double [ir_->restart_];//needed for givens
+    ir_->h_s_ = new double [ir_->restart_];//same
+    ir_->h_rs_ = new double[ir_->restart_ + 1 ];// for residual norm history
+
+    if (ir_->orth_option_ == "MGS_two_synch" && ir_->orth_option_ == "MGS_pm") {
+      ir_->h_L_ = new double [ir_->restart_ * (ir_->restart_ + 1)];
+      ir_->h_rv_ = new double [ir_->restart_ + 1];
+    }  
+    if (ir_->orth_option_ == "CGS2"){
+      ir_->h_aux_ = new double [ir_->restart_ + 1];
+      checkCudaErrors(cudaMalloc(&(ir_->d_H_col_), (ir_->restart_+1) * sizeof(double)));
+    }
+    if (ir_->orth_option_ == "MGS_pm"){
+      ir_->h_aux_ = new double [ir_->restart_ + 1];
+    }
+
+  }
+
+  double hiopLinSolverSymSparseCUSOLVERInnerIR::getFinalResidalNorm(){
+    return final_residual_norm_;
+  }
+  double hiopLinSolverSymSparseCUSOLVERInnerIR::getInitialResidalNorm(){
+    return initial_residual_norm_;
+  }
+  
+  int hiopLinSolverSymSparseCUSOLVERInnerIR::getFinalNumberOfIterations(){
+    return fgmres_iters_;
+  }
+  void hiopLinSolverSymSparseCUSOLVERInnerIR::fgmres(double *d_x, double *d_b)
+  {
+
+    int outer_flag = 1;
+    int notconv = 1; 
+    int i=0;
+    int it=0;
+    int j;
+    int k;
+    int k1;
+
+    double t;
+    double rnorm;
+    double rnorm_aux;
+    double tolrel;
+    //V[0] = b-A*x_0
+     cudaMemcpy(&(d_V_[0]), d_b, sizeof(double) * n_, cudaMemcpyDeviceToDevice);
+    cudaMatvec(d_x, d_V_, "residual");
+
+    rnorm = 0.0;
+    cublasDdot (cublas_handle_,  n_, d_V_, 1, d_V_, 1, &rnorm);
+    //rnorm = ||V_1||
+    rnorm = sqrt(rnorm);
+    
+//gmres outer loop
+#if 1   
+    while(outer_flag) {
+      // check if maybe residual is already small enough?
+      if(fabs(rnorm - ZERO) <= EPSILON) {
+        outer_flag = 0;
+        //printf("\t fgmres: initial residual norm: %e, no iterative refinement needed \n", rnorm);
+        final_residual_norm_ = rnorm;
+        initial_residual_norm_ = rnorm;
+        fgmres_iters_ = 0;
+        break;
+      }
+
+      if(it == 0) {
+        tolrel = tol_ * rnorm;
+        if(fabs(tolrel) < 1e-16){
+          tolrel = 1e-16;
+        }
+      }
+      // normalize first vector
+      t = 1.0 / rnorm;
+      cublasDscal(cublas_handle_, n_, &t, d_V_, 1);
+
+      // initialize norm history
+
+      h_rs_[0] = rnorm;
+      initial_residual_norm_ = rnorm;
+      i = -1;
+      notconv = 1;
+      while((notconv) && (it < maxit_)) {
+        i++;
+        it++;
+        // Z_i = (LU)^{-1}*V_i
+        cudaMemcpy(&d_Z_[i * n_], &d_V_[i * n_], sizeof(double) * n_, cudaMemcpyDeviceToDevice);
+        cusolverRfSolve(cusolverrf_handle_, d_P_, d_Q_, 1, d_T_, n_, &d_Z_[i * n_], n_);
+        cudaDeviceSynchronize();
+        // V_{i+1}=A*Z_i
+        cudaMatvec(&d_Z_[i * n_], &d_V_[(i + 1) * n_], "matvec");
+        // orthogonalize V[i+1], form a column of h_L
+        GramSchmidt(i);
+
+        if(i != 0) {
+          for(int k = 1; k <= i; k++) {
+            k1 = k - 1;
+
+            t = h_H_[i * (restart_ + 1) + k1];
+            h_H_[i * (restart_ + 1) + k1] = h_c_[k1] * t + h_s_[k1] * h_H_[i * (restart_ + 1) + k];
+            h_H_[i * (restart_ + 1) + k] = -h_s_[k1] * t + h_c_[k1] * h_H_[i * (restart_ + 1) + k];
+          }
+        } // if i!=0
+
+        double Hii = h_H_[i * (restart_ + 1) + i];
+        double Hii1 = h_H_[(i) * (restart_ + 1) + i + 1];
+        double gam = sqrt(Hii * Hii + Hii1 * Hii1);
+        if(fabs(gam - ZERO) <= EPSILON)
+          gam = EPSMAC;
+
+        /* next Given's rotation */
+        h_c_[i] = Hii / gam;
+        h_s_[i] = Hii1 / gam;
+        h_rs_[i + 1] = -h_s_[i] * h_rs_[i];
+        h_rs_[i] = h_c_[i] * h_rs_[i];
+
+        h_H_[(i) * (restart_ + 1) + (i)] = h_c_[i] * Hii + h_s_[i] * Hii1;
+        h_H_[(i) * (restart_ + 1) + (i + 1)] = h_c_[i] * Hii1 - h_s_[i] * Hii;
+        // residual norm estimate
+        rnorm = fabs(h_rs_[i + 1]);
+        // check convergence
+        if(i + 1 >= restart_ || rnorm <= tolrel || it >= maxit_) {
+          notconv = 0;
+        }
+      } // inner while
+
+      // solve tri system
+      /*-------------------------------*
+        | Solve upper triangular system  |
+       *-------------------------------*/
+      h_rs_[i] = h_rs_[i] / h_H_[i * (restart_ + 1) + i];
+      for(int ii = 2; ii <= i + 1; ii++) {
+        k = i - ii + 1;
+        k1 = k + 1;
+        t = h_rs_[k];
+        for(j = k1; j <= i; j++) {
+          t -= h_H_[j * (restart_ + 1) + k] * h_rs_[j];
+        }
+        h_rs_[k] = t / h_H_[k * (restart_ + 1) + k];
+      }
+
+      /*---------------*
+        |  Get solution
+       *---------------*/
+      for(j = 0; j <= i; j++) {
+        cublasDaxpy(cublas_handle_, n_, &h_rs_[j], &d_Z_[j * n_], 1, d_x, 1);
+      }
+
+      /* test solution */
+      // should check for conv HERE
+
+      if(rnorm <= tolrel || it >= maxit_) {
+        rnorm_aux = rnorm;
+        outer_flag = 0;
+      }
+
+      cudaMemcpy(&d_V_[0], d_b, sizeof(double)*n_, cudaMemcpyDeviceToDevice);
+      cudaMatvec(d_x, d_V_, "residual");
+      rnorm = 0.0;
+      cublasDdot(cublas_handle_, n_, d_V_, 1, d_V_, 1, &rnorm);
+      // rnorm = ||V_1||
+      rnorm = sqrt(rnorm);
+
+      //  printf("End of cycle, iter %d : true  ro = %e, tolrel = %16.16g\n", it, rnorm, tolrel);
+      //*total_it = it;
+      if(!outer_flag) {
+        //    printf("\t fgmres: converged in %d iterations. Eucleadean norm: initial %e estimated at exit %e true at exit %e  \n",it, rnorm_init, rnorm_aux, rnorm);
+        final_residual_norm_ = rnorm;
+        fgmres_iters_ = it;     
+      }
+
+    } // outer while
+#endif 
+ }
+  //b-Ax
+  void hiopLinSolverSymSparseCUSOLVERInnerIR::cudaMatvec(double *d_x, double * d_b, std::string option)
+  {
+
+    cusparseCreateDnVec(&vec_x_, n_, d_x, CUDA_R_64F);
+    cusparseCreateDnVec(&vec_Ax_, n_, d_b, CUDA_R_64F);
+    if (option == "residual"){
+      //b = b-Ax
+     cusparseSpMV(cusparse_handle_, 
+                   CUSPARSE_OPERATION_NON_TRANSPOSE,       
+                   &minusone_,
+                   mat_A_,
+                   vec_x_, 
+                   &one_, 
+                   vec_Ax_, 
+                   CUDA_R_64F,
+                   CUSPARSE_MV_ALG_DEFAULT,
+                   mv_buffer_);
+    } else {
+      // just b = A*x
+
+      cusparseSpMV(cusparse_handle_, 
+                   CUSPARSE_OPERATION_NON_TRANSPOSE, 
+                   &one_, 
+                   mat_A_, 
+                   vec_x_, 
+                   &zero_, 
+                   vec_Ax_, 
+                   CUDA_R_64F,
+                   CUSPARSE_MV_ALG_DEFAULT, mv_buffer_);
+    }
+    cusparseDestroyDnVec(vec_x_);
+    cusparseDestroyDnVec(vec_Ax_);
+  }
+
+  void hiopLinSolverSymSparseCUSOLVERInnerIR::GramSchmidt(int i)
+  {
+    double t;
+    int sw = 0;
+    if(orth_option_ == "MGS") {
+      sw = 0;
+    } else {
+      if(orth_option_ == "CGS2") {
+        sw = 1;
+      } else {
+        if(orth_option_ == "MGS_two_synch") {
+          sw = 2;
+        } else {
+          if(orth_option_ == "MGS_pm") {
+            sw = 3;
+          } else {
+            // display error message and set sw = 0;
+          }
+        }
+      }
+    }
+
+    switch (sw){
+      case 0: //mgs
+
+        for (int j=0; j<=i; ++j){
+          t=0.0;
+          cublasDdot (cublas_handle_,  n_, &d_V_[j*n_], 1, &d_V_[(i+1)*n_], 1, &t);
+
+          h_H_[i*(restart_+1)+j]=t; 
+          t *= -1.0;
+
+          cublasDaxpy(cublas_handle_, 
+                      n_, 
+                      &t,
+                      &d_V_[j*n_], 1,
+                      &d_V_[(i+1)*n_],1);
+
+        }
+        t = 0.0;
+        cublasDdot (cublas_handle_,  n_, &d_V_[(i+1)*n_], 1, &d_V_[(i+1)*n_], 1, &t);
+
+        //set the last entry in Hessenberg matrix
+        t=sqrt(t);
+        h_H_[(i)*(restart_+1)+i+1] = t;    
+        if (t != 0.0){
+          t = 1.0/t;
+          cublasDscal(cublas_handle_,n_,&t,&d_V_[(i+1)*n_], 1); 
+        }
+        else{
+          //error message
+          //    printf("oups new vectoir has norm ZERO! \n");
+        }
+
+      break;
+    case 1://CGS2 
+      //Hcol = V(:,1:i)^T *V(:,i+1);
+        cublasDgemv(cublas_handle_,
+                    CUBLAS_OP_T,
+                    n_,
+                    i+1,
+                    &one_,
+                    d_V_,
+                    n_,
+                    &d_V_[(i+1)*n_],1,
+                    &zero_,d_H_col_,
+                    1);
+        //V(:,i+1) = V(:, i+1) -  V(:,1:i)*Hcol
+        cublasDgemv(cublas_handle_,
+                    CUBLAS_OP_N,
+                    n_,
+                    i+1,
+                    &minusone_,
+                    d_V_,
+                    n_,
+                    d_H_col_,
+                    1,
+                    &one_,
+                    &d_V_[n_*(i+1)],
+                    1);
+      //copy H_col to aux, we will need it later
+
+      cudaMemcpy(h_aux_, d_H_col_, sizeof(double) * (i+1), cudaMemcpyDeviceToHost);
+      //Hcol = V(:,1:i)*V(:,i+1);
+      cublasDgemv(cublas_handle_,
+                  CUBLAS_OP_T,
+                  n_,
+                  i+1,
+                  &one_,
+                  d_V_,
+                  n_,
+                  &d_V_[(i+1)*n_],
+                  1,
+                  &zero_,
+                  d_H_col_,
+                  1);
+      //V(:,i+1) = V(:, i+1) -  V(:,1:i)*Hcol
+      cublasDgemv(cublas_handle_,
+                  CUBLAS_OP_N,
+                  n_,
+                  i+1,
+                  &minusone_,
+                  d_V_,
+                  n_,
+                  d_H_col_,
+                  1,
+                  &one_,
+                  &d_V_[n_*(i+1)],
+                  1);
+      //copy H_col to H
+
+      cudaMemcpy(&h_H_[i*(restart_+1)], d_H_col_, sizeof(double) * (i+1), cudaMemcpyDeviceToHost);
+      //add both pieces together (unstable otherwise, careful here!!)
+      for (int j=0; j<=i; ++j){
+        h_H_[i*(restart_+1)+j]+=h_aux_[j]; 
+      }
+      t = 0.0;
+      cublasDdot (cublas_handle_,  n_, &d_V_[(i+1)*n_], 1, &d_V_[(i+1)*n_], 1, &t);
+
+      //set the last entry in Hessenberg matrix
+      t=sqrt(t);
+      h_H_[(i)*(restart_+1)+i+1] = t;    
+      if (t != 0.0){
+        t = 1.0/t;
+        cublasDscal(cublas_handle_,n_,&t,&d_V_[(i+1)*n_], 1); 
+      }
+      else{
+//error message
+        //printf("oups new vectoir has norm ZERO! \n");
+      }
+        break;
+//the two low synch schemes
+    case 2:
+      //MassIPTwoVec<<<i + 1, 1024> > >(&d_V_[i * n_], &d_V_[(i + 1) * n_], d_V_, d_rvGPU_, i + 1, n_);
+      massInnerProductTwoVectors(n_, i, &d_V_[i * n_],&d_V_[(i+1) * n_], d_V_, d_rvGPU_);
+      
+//copy rvGPU to L
+
+      cudaMemcpy(&h_L_[(i) * (restart_ + 1)], 
+                 d_rvGPU_, 
+                 (i + 1) * sizeof(double),
+                 cudaMemcpyDeviceToHost);
+
+      cudaMemcpy(h_rv_, 
+                 &d_rvGPU_[i + 1], 
+                 (i + 1) * sizeof(double), 
+                 cudaMemcpyDeviceToHost);
+
+      for (int j=0; j<=i; ++j){
+        h_H_[(i)*(restart_+1)+j] = 0.0;
+      }
+      //triangular solve
+      for(int j = 0; j <= i; ++j) {
+        h_H_[(i) * (restart_ + 1) + j] = h_rv_[j];
+        for(int k = 0; k < j; ++k) {
+          h_H_[(i) * (restart_ + 1) + j] -= h_L_[j * (restart_ + 1) + k] * h_H_[(i) * (restart_ + 1) + k];
+        } // for k
+      }   // for j
+
+      cudaMemcpy(d_Hcolumn_, 
+                 &h_H_[(i) * (restart_ + 1)], 
+                 (i + 1) * sizeof(double), 
+                 cudaMemcpyHostToDevice);
+
+      //massAxpy3<<<(n_ + 384-1)/384, 384>>>( n_,
+      //                                 i + 1,
+      //                               d_V_,
+      //                             &d_V_[(i+1) * n_],
+      //                           d_Hcolumn_);
+      massAxpy(n_, i, d_V_, &d_V_[(i+1) * n_],d_Hcolumn_);
+      //normalize (second synch)
+      t=0.0;
+      cublasDdot(cublas_handle_, n_, &d_V_[(i + 1) * n_], 1, &d_V_[(i + 1) * n_], 1, &t);
+
+      //set the last entry in Hessenberg matrix
+      t=sqrt(t);
+      h_H_[(i) * (restart_ + 1) + i + 1] = t;
+      if (t != 0.0){
+        t = 1.0/t;
+        cublasDscal(cublas_handle_, n_, &t, &d_V_[(i + 1) * n_], 1);
+      }
+      else{
+//        printf("oups new vectoir has norm ZERO! \n");
+      }
+
+    case 3: //two synch Gauss-Seidel MGS, SUPER STABLE
+      //according to unpublisjed work by ST
+      //L is where we keep the triangular matrix(L is ON THE CPU)
+      massInnerProductTwoVectors(n_, i, &d_V_[i * n_],&d_V_[(i+1) * n_], d_V_, d_rvGPU_);
+      //copy rvGPU to L
+
+      cudaMemcpy(&h_L_[(i) * (restart_ + 1)], 
+                 d_rvGPU_, 
+                 (i + 1) * sizeof(double),
+                 cudaMemcpyDeviceToHost);
+
+      cudaMemcpy(h_rv_, 
+                 &d_rvGPU_[i + 1], 
+                 (i + 1) * sizeof(double), 
+                 cudaMemcpyDeviceToHost);
+
+      for(int j = 0; j <= i; ++j) {
+        h_H_[(i) * (restart_ + 1) + j] = 0.0;
+      }
+      //triangular solve
+      for(int j = 0; j <= i; ++j) {
+        h_H_[(i) * (restart_ + 1) + j] = h_rv_[j];
+        for(int k = 0; k < j; ++k) {
+          h_H_[(i) * (restart_ + 1) + j] -= h_L_[j * (restart_ + 1) + k] * h_H_[(i) * (restart_ + 1) + k];
+        } // for k
+      }   // for j
+      // now compute h_rv = L^T h_H
+      double h;
+      for (int j=0; j<=i; ++j){
+        //go through COLUMN OF L
+        h_rv_[j] = 0.0;
+        for (int k=j+1; k<=i; ++k){
+          if (j==k) h = 0.0;
+          else h = h_L_[k*(restart_+1)+j]; 
+          h_rv_[j] += h_H_[(i)*(restart_+1)+k]*h;
+        }
+      }
+      // and do one more tri solve with L^T: h_aux = (I-L)^{-1}h_rv
+      for(int j = 0; j <= i; ++j) {
+        h_aux_[j] = h_rv_[j];
+        for(int k = 0; k < j; ++k) {
+          h_aux_[j] -= h_L_[j * (restart_ + 1) + k] * h_aux_[k];
+        } // for k
+      }   // for j
+      // and now subtract that from h_H
+      for (int j=0; j<=i; ++j){
+        h_H_[(i)*(restart_+1)+j] -= h_aux_[j];
+      }
+      cudaMemcpy(d_Hcolumn_,
+                 &h_H_[(i) * (restart_ + 1)], 
+                 (i + 1) * sizeof(double), 
+                 cudaMemcpyHostToDevice);
+
+
+      massAxpy(n_, i, d_V_, &d_V_[(i+1) * n_],d_Hcolumn_);
+      //normalize (second synch)
+      t=0.0;
+      cublasDdot(cublas_handle_, n_, &d_V_[(i + 1) * n_], 1, &d_V_[(i + 1) * n_], 1, &t);
+
+      //set the last entry in Hessenberg matrix
+      t = sqrt(t);
+      h_H_[(i) * (restart_ + 1) + i + 1] = t;
+      if (t != 0.0){
+        t = 1.0/t;
+        cublasDscal(cublas_handle_, n_, &t, &d_V_[(i + 1) * n_], 1);
+      }
+      else{
+        //printf("oups new vectoir has norm ZERO! \n");
+      }
+
+      break;
+    default:
+      printf("Wrong orthogonalization option, exiting \n");
+      exit(0);
+      break;
+    }//switch
   }
 } // namespace hiop
