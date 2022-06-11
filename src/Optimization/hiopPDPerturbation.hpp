@@ -30,6 +30,8 @@ public:
       num_degen_max_iters_(3),
       deltas_test_type_(dttNoTest),
       mu_(1e-8),
+      max_uniform_ratio_{1.0},
+      min_uniform_ratio_{0.9},
       delta_wx_curr_(nullptr),
       delta_wd_curr_(nullptr),
       delta_cc_curr_(nullptr),
@@ -131,6 +133,9 @@ protected:
   /** Exponent of mu when computing regularization for Jacobian. */
   double kappa_c_;
   
+  double min_uniform_ratio_;
+  double max_uniform_ratio_;
+  
   /** Degeneracy is handled as in Ipopt*/
   
   /** Type for degeneracy flags */
@@ -159,6 +164,13 @@ protected:
     dttDeltacposDeltaw0,
     dttDeltac0Deltawpos,
     dttDeltacposDeltawpos
+  };
+
+  enum DeltasUpdateType
+  {
+    DualUpdate = -1,
+    PrimalUpdate = 0,
+    PDUpdate
   };
 
   /** Current status */
@@ -227,21 +239,8 @@ protected:
   double delta_cd_last_db_;
 
 protected: // methods
-  void set_delta_curr_vec() 
-  {
-    delta_wx_curr_->setToConstant(delta_wx_curr_db_);
-    delta_wd_curr_->setToConstant(delta_wd_curr_db_);
-    delta_cc_curr_->setToConstant(delta_cc_curr_db_);
-    delta_cd_curr_->setToConstant(delta_cd_curr_db_);
-  }
-
-  void set_delta_last_vec() 
-  {
-    delta_wx_last_->setToConstant(delta_wx_last_db_);
-    delta_wd_last_->setToConstant(delta_wd_last_db_);
-    delta_cc_last_->setToConstant(delta_cc_last_db_);
-    delta_cd_last_->setToConstant(delta_cd_last_db_);
-  }
+  void set_delta_curr_vec(DeltasUpdateType taskid); 
+  void set_delta_last_vec(DeltasUpdateType taskid);
 
 private: //methods
   /** Internal method implementing the computation of delta_w's to correct wrong inertia
@@ -262,24 +261,24 @@ public:
 
   /** Called when a new linear system is attempted to be factorized 
    */
-  bool compute_initial_deltas(hiopVector& delta_wx,
-                              hiopVector& delta_wd,
-                              hiopVector& delta_cc,
-                              hiopVector& delta_cd);
+  virtual bool compute_initial_deltas(hiopVector& delta_wx,
+                                      hiopVector& delta_wd,
+                                      hiopVector& delta_cc,
+                                      hiopVector& delta_cd);
 
   /** Method for correcting inertia */
-  bool compute_perturb_wrong_inertia(hiopVector& delta_wx, 
-                                     hiopVector& delta_wd,
-                                     hiopVector& delta_cc,
-                                     hiopVector& delta_cd);
+  virtual bool compute_perturb_wrong_inertia(hiopVector& delta_wx, 
+                                             hiopVector& delta_wd,
+                                             hiopVector& delta_cc,
+                                             hiopVector& delta_cd);
                             
   /** Method for correcting singular Jacobian 
    *  (follows Ipopt closely since the paper seems to be outdated)
    */  
-  bool compute_perturb_singularity(hiopVector& delta_wx,
-                                   hiopVector& delta_wd,
-                                   hiopVector& delta_cc,
-                                   hiopVector& delta_cd);
+  virtual bool compute_perturb_singularity(hiopVector& delta_wx,
+                                           hiopVector& delta_wd,
+                                           hiopVector& delta_cc,
+                                           hiopVector& delta_cd);
 
 private: //methods
   /** 

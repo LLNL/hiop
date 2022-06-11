@@ -984,7 +984,13 @@ void hiopOptionsNLP::register_options()
                         "Exponent of mu when computing regularization for potentially rank-deficient "
                         "Jacobian (delta_c=delta_c_bar*mu^kappa_c)");
 
-    vector<string> range(2); range[0]="standard"; range[1]="dual_first";
+    vector<string> range(2); range[0]="primal_first"; range[1]="dual_first";
+    register_str_option("reg_priority",
+                        "primal_first",
+                        range,
+                        "The method used to compute dual regularization. (TODO)");
+
+    range[0]="standard"; range[1]="randomized";
     register_str_option("reg_method",
                         "standard",
                         range,

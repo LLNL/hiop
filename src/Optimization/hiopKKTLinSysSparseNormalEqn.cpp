@@ -262,8 +262,8 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const hiopVector& delta_wx_i
   
   Diag_reg_->setToZero();
   if(!delta_cc_in.is_zero() || !delta_cd_in.is_zero()) {
-    dual_reg_->startingAtCopyFromStartingAt(0, delta_cc_in, 0);
-    dual_reg_->startingAtCopyFromStartingAt(neq, delta_cd_in, 0);
+    delta_cc_in.copyToStarting(*dual_reg_,0);
+    delta_cd_in.copyToStarting(*dual_reg_,neq);
     
     Diag_reg_->addDiagonal(1.0,*dual_reg_);
   }
