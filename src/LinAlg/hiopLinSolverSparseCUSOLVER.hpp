@@ -72,6 +72,9 @@ namespace hiop
 {
 //declare here but do not define
 
+#define ZERO 0.0
+#define EPSILON   1.0e-18
+#define EPSMAC    1.0e-16
   class hiopLinSolverSymSparseCUSOLVERInnerIR;
   class hiopLinSolverSymSparseCUSOLVER : public hiopLinSolverSymSparse
   {
@@ -120,11 +123,6 @@ namespace hiop
       std::string fact_;
       std::string refact_;
       std::string use_ir_;
-      //basic options for inner IR
-      std::string ir_restart_;
-      std::string ir_maxit_;
-      std::string ir_tol_;
-      std::string ir_gs_; /* gram-schmidt version */
 
       /** needed for cuSolver **/
 
@@ -201,6 +199,7 @@ namespace hiop
 
       int refactorizationSetupCusolverGLU();
       int refactorizationSetupCusolverRf();
+      void IRsetup();   
       hiopLinSolverSymSparseCUSOLVERInnerIR* ir_;
       friend class hiopLinSolverNonSymSparseCUSOLVER;
   };
@@ -328,31 +327,35 @@ namespace hiop
       hiopLinSolverSymSparseCUSOLVERInnerIR();
       hiopLinSolverSymSparseCUSOLVERInnerIR(int restart, double tol, int maxit);
       ~hiopLinSolverSymSparseCUSOLVERInnerIR();
-      void iterate();
       int getFinalNumberOfIterations();
-      double* getSolution();
-      double* getFinalResidual();
       double getFinalResidalNorm();
+      double getInitialResidalNorm();
+//this is public on purpose, can be used internally or outside, to compute the residual.
+      void cudaMatvec(double *d_x, double *d_b, std::string option);
 
+      void fgmres(double *d_x, double *d_b);
     private:
       // Krylov vectors
-      double* V_;
-      double* Z_;
+      double* d_V_;
+      double* d_Z_;
       double final_residual_norm_;
-      //solution
-      double* x_;
+      int fgmres_iters_;
+      double initial_residual_norm_;
+       //solution
       //rhs
-      double* b_;
       //aux vector   
-      double* w_;
+      double* d_w_;
       
       int restart_;
       int maxit_;
       double tol_;
-      int orth_option_;
+      std::string orth_option_;
       //the matrix in question
       cusparseSpMatDescr_t mat_A_;
-      double current_res_nrm_;
+      //needed for matvec
+      cusparseDnVecDescr_t vec_x_ = NULL;
+      cusparseDnVecDescr_t vec_Ax_ = NULL;
+      int n_;
       // handles - MUST BE SET AT INIT
       cusparseHandle_t cusparse_handle_;
       cublasHandle_t cublas_handle_;
@@ -362,12 +365,17 @@ namespace hiop
 
       // GPU:
       double* d_T_;
+      int* d_P_;
+      int* d_Q_;
+
       double* d_rvGPU_;
       double* d_Hcolumn_;
+      double* d_H_col_;
       void *mv_buffer_; /* SpMV buffer */
       
       // CPU:
       double* h_L_;
+      double* h_H_;
       double* h_rv_;
       // for givens roations
       double* h_c_;
@@ -378,7 +386,10 @@ namespace hiop
       const double minusone_ = -1.0;
       const double one_ = 1.0;
       const double zero_ = 0.0;
-      hiopLinSolverSymSparseCUSOLVERLU* LU_data;
+//private function needed for fgmres: orthogonalize i+1 vector against i vectors already orthogonal
+void GramSchmidt(int i);   
+
+   hiopLinSolverSymSparseCUSOLVERLU* LU_data;
       friend class hiopLinSolverSymSparseCUSOLVER;
       friend class hiopLinSolverNonSymSparseCUSOLVER;
   };
