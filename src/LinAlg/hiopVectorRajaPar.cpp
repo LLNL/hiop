@@ -2066,4 +2066,32 @@ void hiopVectorRajaPar::set_array_from_to(hiopInterfaceBase::NonlinearityType* a
   );      
 }
 
+bool hiopVectorRajaPar::is_equal(const hiopVector& vec) const
+{
+#ifdef HIOP_DEEPCHECKS
+  const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(vec);
+  assert(v.n_local_ == n_local_);
+#endif 
+
+  const double* data_v = vec.local_data_const();
+  const double* data = data_dev_;
+  RAJA::ReduceSum< hiop_raja_reduce, int > sum(0);
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
+    RAJA_LAMBDA(RAJA::Index_type i) 
+    {
+      if(data[i]!=data_v[i]) {
+        sum += 1;        
+      }
+    });
+  int all_equal = (sum.get() == 0);
+  
+#ifdef HIOP_USE_MPI
+  int all_equalG;
+  int ierr = MPI_Allreduce(&all_equal, &all_equalG, 1, MPI_INT, MPI_MIN, comm_);
+  assert(MPI_SUCCESS==ierr);
+  return all_equalG;
+#endif  
+  return all_equal;
+}
+
 } // namespace hiop

@@ -70,7 +70,7 @@ public:
 
   virtual void setToZero();
   virtual void setToConstant( double c );
-  virtual void set_to_random_constant(double minv, double maxv);
+  virtual void set_to_random_uniform(double minv, double maxv);
   virtual void setToConstant_w_patternSelect(double c, const hiopVector& select);
 
   virtual void copyFrom(const hiopVector& v );
@@ -275,7 +275,9 @@ public:
                                  const int start, 
                                  const int end, 
                                  const hiopInterfaceBase::NonlinearityType arr_src) const;
- 
+
+  virtual bool is_equal(const hiopVector& vec) const;
+
 protected:
   MPI_Comm comm_;
   double* data_;

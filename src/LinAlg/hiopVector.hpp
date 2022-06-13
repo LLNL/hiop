@@ -68,8 +68,8 @@ public:
   virtual void setToZero() = 0;
   /// @brief Set all elements to c
   virtual void setToConstant( double c ) = 0;
-  /// @brief Set all elements to random values between `minv` and `maxv`
-  virtual void set_to_random_constant(double minv, double maxv) = 0;
+  /// @brief Set all elements to random values uniformly distributed between `minv` and `maxv`.  TODO: add unit test
+  virtual void set_to_random_uniform(double minv, double maxv) = 0;
   /// @brief Set all elements that are not zero in ix to  c, and the rest to 0
   virtual void setToConstant_w_patternSelect( double c, const hiopVector& ix)=0;
 
@@ -307,12 +307,13 @@ public:
   virtual void copyToDev() const = 0;
   virtual void copyFromDev() const = 0;
   
-  /// @brief get number of values that are less than the given value 'val'
+  /// @brief get number of values that are less than the given value 'val'. TODO: add unit test
   virtual size_type numOfElemsLessThan(const double &val) const = 0;
-  /// @brief get number of values whose absolute value are less than the given value 'val'
+  /// @brief get number of values whose absolute value are less than the given value 'val'. TODO: add unit test
   virtual size_type numOfElemsAbsLessThan(const double &val) const = 0;  
 
   /// @brief set int array 'arr', starting at `start` and ending at `end`, to the values in `arr_src` from 'start_src`
+  /// TODO: add unit test
   virtual void set_array_from_to(hiopInterfaceBase::NonlinearityType* arr, 
                                  const int start, 
                                  const int end, 
@@ -322,6 +323,10 @@ public:
                                  const int start, 
                                  const int end, 
                                  const hiopInterfaceBase::NonlinearityType arr_src) const = 0;
+
+  /// @brief check if `this` vector is identical to `vec`
+  virtual bool is_equal(const hiopVector& vec) const = 0;
+
 protected:
   size_type n_; //we assume sequential data
 protected:
