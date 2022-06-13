@@ -284,15 +284,28 @@ void hiopIterate::determineSlacks()
   sdu->copyFrom(nlp->get_du());
   sdu->axpy(-1., *d); 
   sdu->selectPattern(nlp->get_idu());
+}
 
-#if 0
+size_type hiopIterate::compute_safe_slacks(const hiopIterate& iter_curr, const double& mu)
+{
+#if 1
+  determineSlacks();
+#else
+  sxl->copyFrom(*iter.sxl); sxl->axpy(alphaprimal,*dir.sxl);
+  sxu->copyFrom(*iter.sxu); sxu->axpy(alphaprimal,*dir.sxu);
+  sdl->copyFrom(*iter.sdl); sdl->axpy(alphaprimal,*dir.sdl);
+  sdu->copyFrom(*iter.sdu); sdu->axpy(alphaprimal,*dir.sdu);
+#endif // 1
+  
+  size_type retval = adjust_small_slacks(iter_curr, mu);
+
 #ifdef HIOP_DEEPCHECKS
   assert(sxl->allPositive_w_patternSelect(nlp->get_ixl()));
   assert(sxu->allPositive_w_patternSelect(nlp->get_ixu()));
   assert(sdl->allPositive_w_patternSelect(nlp->get_idl()));
   assert(sdu->allPositive_w_patternSelect(nlp->get_idu()));
 #endif
-#endif
+  return retval;
 }
 
 void hiopIterate::determineDualsBounds_d(const double& mu)
@@ -352,23 +365,9 @@ bool hiopIterate::takeStep_primals(const hiopIterate& iter, const hiopIterate& d
   x->copyFrom(*iter.x); x->axpy(alphaprimal, *dir.x);
   d->copyFrom(*iter.d); d->axpy(alphaprimal, *dir.d);
 
-#if 1
-  determineSlacks();
-#else
-  sxl->copyFrom(*iter.sxl); sxl->axpy(alphaprimal,*dir.sxl);
-  sxu->copyFrom(*iter.sxu); sxu->axpy(alphaprimal,*dir.sxu);
-  sdl->copyFrom(*iter.sdl); sdl->axpy(alphaprimal,*dir.sdl);
-  sdu->copyFrom(*iter.sdu); sdu->axpy(alphaprimal,*dir.sdu);
-#endif // 1
-
-#ifdef HIOP_DEEPCHECKS
-  assert(sxl->matchesPattern(nlp->get_ixl()));
-  assert(sxu->matchesPattern(nlp->get_ixu()));
-  assert(sdl->matchesPattern(nlp->get_idl()));
-  assert(sdu->matchesPattern(nlp->get_idu()));
-#endif
   return true;
 }
+
 bool hiopIterate::takeStep_duals(const hiopIterate& iter, const hiopIterate& dir, const double& alphaprimal, const double& alphadual)
 {
   yd->copyFrom(*iter.yd); yd->axpy(alphaprimal, *dir.yd);
@@ -533,11 +532,11 @@ double hiopIterate::evalLogBarrier() const
   return barrier;
 }
 
-double hiopIterate::evalLogBarrier(const hiopVector& xref)
+double hiopIterate::evalLogBarrier(const hiopVector& xref, const double& mu)
 {
   double barrier;
   x->copyFrom(xref);
-  determineSlacks();
+  size_type n_adjusted_slacks = compute_safe_slacks(*this, mu);
 
   barrier = sxl->logBarrier_local(nlp->get_ixl());
   barrier+= sxu->logBarrier_local(nlp->get_ixu());

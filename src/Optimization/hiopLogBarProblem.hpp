@@ -139,7 +139,7 @@ public:
   {
     nlp->runStats.tmSolverInternal.start();
 
-    double retval_f_logbar_trial = f - mu * iter_trial.evalLogBarrier(xref);
+    double retval_f_logbar_trial = f - mu * iter_trial.evalLogBarrier(xref,mu);
     if(kappa_d>0.) {
       retval_f_logbar_trial += iter_trial.linearDampingTerm(mu,kappa_d);
     }

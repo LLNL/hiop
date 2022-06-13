@@ -352,7 +352,7 @@ int hiopAlgFilterIPMBase::startingProcedure(hiopIterate& it_ini,
   if(!warmstart_avail) {
     it_ini.projectPrimalsDIntoBounds(kappa1, kappa2);
   }
-  it_ini.determineSlacks();
+  it_ini.compute_safe_slacks(it_ini, mu0);
 
   if(!duals_avail) {
     // initialization for zl, zu, vl, vu
@@ -565,10 +565,9 @@ bool hiopAlgFilterIPMBase::update_log_barrier_params(hiopIterate& it,
       assert(nlp->options->GetString("elastic_mode")=="correct_it" || 
              nlp->options->GetString("elastic_mode")=="correct_it_adjust_bound");
       // recompute slacks according to the new bounds
-      it.determineSlacks();
+      int num_adjusted_slacks = it.compute_safe_slacks(it, mu_new);
 
       // adjust small/negative slacks
-      int num_adjusted_slacks = it.adjust_small_slacks(it, mu_new);
       if(num_adjusted_slacks > 0) {    
         nlp->log->printf(hovLinAlgScalars,
                          "update_log_barrier_params: %d slacks are too small after tightening the bounds. "
@@ -1138,7 +1137,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
         break;
       }
       bret = it_trial->takeStep_primals(*it_curr, *dir, _alpha_primal, _alpha_dual); assert(bret);
-      num_adjusted_slacks = it_trial->adjust_small_slacks(*it_curr, _mu);
+      num_adjusted_slacks = it_trial->compute_safe_slacks(*it_curr, _mu);
       nlp->runStats.tmSolverInternal.stop(); //---
 
       //evaluate the problem at the trial iterate (functions only)
@@ -2000,7 +1999,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
           break;
         }
         bret = it_trial->takeStep_primals(*it_curr, *dir, _alpha_primal, _alpha_dual); assert(bret);
-        num_adjusted_slacks = it_trial->adjust_small_slacks(*it_curr, _mu);
+        num_adjusted_slacks = it_trial->compute_safe_slacks(*it_curr, _mu);
         nlp->runStats.tmSolverInternal.stop(); //---
 
         //evaluate the problem at the trial iterate (functions only)
@@ -2450,7 +2449,7 @@ int hiopAlgFilterIPMBase::apply_second_order_correction(hiopKKTLinSys* kkt,
     // Compute trial point
     bret = it_trial->takeStep_primals(*it_curr, *soc_dir, alpha_primal_soc, alpha_dual_soc); 
     assert(bret);
-    num_adjusted_slacks = it_trial->adjust_small_slacks(*it_curr, _mu);
+    num_adjusted_slacks = it_trial->compute_safe_slacks(*it_curr, _mu);
 
     //evaluate the problem at the trial iterate (functions only)
     if(!this->evalNlp_funcOnly(*it_trial, _f_nlp_trial, *_c_trial, *_d_trial)) {
@@ -2596,7 +2595,7 @@ bool hiopAlgFilterIPMBase::reset_var_from_fr_sol(hiopKKTLinSys* kkt, bool reset_
     nlp->log->printf(hovScalars, "FR: Update slacks and duals from the modified primals.\n");
   }
   // determine other slacks
-  it_trial->determineSlacks();
+  it_trial->determineSlacks();  // TODO: adjust small slacks after hard FR?
 
   // compute dx = x_{k+1} - x_k
   dir->get_x()->copyFrom(*it_trial->get_x());
@@ -2696,7 +2695,8 @@ bool hiopAlgFilterIPMBase::solve_soft_feasibility_restoration(hiopKKTLinSys* kkt
     // Compute trial point
     bret = it_trial->takeStep_primals(*it_curr, *soft_dir, alpha_primal_soft, alpha_dual_soft); 
     assert(bret);
-
+    it_trial->determineSlacks(); // TODO: adjust small slacks in soft FR?
+    
     //evaluate the problem at the trial iterate (functions only)
     if(!this->evalNlp_funcOnly(*it_trial, _f_nlp_trial, *_c_trial, *_d_trial)) {
       solver_status_ = Error_In_User_Function;
