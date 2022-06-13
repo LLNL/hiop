@@ -1,5 +1,5 @@
 
-# Environment variables shared between scripts for all ORNL CI stages
+# Environment variables shared between scripts for all LLNL CI stages
 .llnl_environment_template: &llnl_script_setenv
   variables:
     CUSTOM_CI_BUILDS_DIR: "/usr/workspace/chiang7/gitlab-runner/${CI_PIPELINE_ID}"
@@ -28,6 +28,7 @@
       cd "$CUSTOM_CI_BUILDS_DIR/.."
       rm -rf "$CUSTOM_CI_BUILDS_DIR" "scripts"
 
+# Environment variables shared between scripts for all ORNL CI stages
 .ornl_environment_template: &ornl_environment_variables
   variables:
     SCHEDULER_PARAMETERS: "-P CSC359 -nnodes 1 -W 30"
