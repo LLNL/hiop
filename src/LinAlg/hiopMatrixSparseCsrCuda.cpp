@@ -84,7 +84,11 @@ hiopMatrixSparseCSRCUDA::hiopMatrixSparseCSRCUDA(size_type rows, size_type cols,
     jcolind_(nullptr),
     values_(nullptr),
     buffer_csc2csr_(nullptr),
-    buffer_geam2_(nullptr)
+    buffer_geam2_(nullptr),
+    buffer_gemm3_(nullptr),
+    buffer_gemm4_(nullptr),
+    buffer_gemm5_(nullptr),
+    mat_sp_descr_(nullptr)
 {
   cusparseStatus_t ret_sp = cusparseCreate(&h_cusparse_);
   assert(ret_sp == CUSPARSE_STATUS_SUCCESS);
@@ -97,6 +101,9 @@ hiopMatrixSparseCSRCUDA::hiopMatrixSparseCSRCUDA(size_type rows, size_type cols,
   assert(st == CUSPARSE_STATUS_SUCCESS);
 
   alloc();
+
+  st = cusparseSpGEMM_createDescr(&gemm_sp_descr_);
+  assert(st == CUSPARSE_STATUS_SUCCESS);
 }
 
 hiopMatrixSparseCSRCUDA::hiopMatrixSparseCSRCUDA()
@@ -105,7 +112,11 @@ hiopMatrixSparseCSRCUDA::hiopMatrixSparseCSRCUDA()
     jcolind_(nullptr),
     values_(nullptr),
     buffer_csc2csr_(nullptr),
-    buffer_geam2_(nullptr)
+    buffer_geam2_(nullptr),
+    buffer_gemm3_(nullptr),
+    buffer_gemm4_(nullptr),
+    buffer_gemm5_(nullptr),
+    mat_sp_descr_(nullptr)
 {
   cusparseStatus_t ret_sp = cusparseCreate(&h_cusparse_);
   assert(ret_sp == CUSPARSE_STATUS_SUCCESS);
@@ -116,19 +127,34 @@ hiopMatrixSparseCSRCUDA::hiopMatrixSparseCSRCUDA()
   //  - leaves other fields uninitialized
   cusparseStatus_t st = cusparseCreateMatDescr(&mat_descr_);
   assert(st == CUSPARSE_STATUS_SUCCESS);
-}
 
+  st = cusparseSpGEMM_createDescr(&gemm_sp_descr_);
+  assert(st == CUSPARSE_STATUS_SUCCESS);
+}
   
 hiopMatrixSparseCSRCUDA::~hiopMatrixSparseCSRCUDA()
 {
   dealloc();
 
-  cudaFree(buffer_geam2_);
-  cudaFree(buffer_csc2csr_);
+  auto cret = cudaFree(buffer_gemm5_);
+  assert(cudaSuccess == cret);
+  cret = cudaFree(buffer_gemm4_);
+  assert(cudaSuccess == cret);
+  cret = cudaFree(buffer_gemm3_);
+  assert(cudaSuccess == cret);
+  
+  cret = cudaFree(buffer_geam2_);
+  assert(cudaSuccess == cret);
+  cret = cudaFree(buffer_csc2csr_);
+  assert(cudaSuccess == cret);
+  
   cusparseDestroy(h_cusparse_);
   //cusolverSpDestroy(h_cusolver_);
 
   cusparseStatus_t st = cusparseDestroyMatDescr(mat_descr_);
+  assert(st == CUSPARSE_STATUS_SUCCESS);
+
+  st == cusparseSpGEMM_destroyDescr(gemm_sp_descr_);
   assert(st == CUSPARSE_STATUS_SUCCESS);
 }
 
@@ -143,11 +169,28 @@ void hiopMatrixSparseCSRCUDA::alloc()
   
   err = cudaMalloc(&values_, nnz_*sizeof(double));
   assert(cudaSuccess == err && values_);
-}
 
+  assert(nullptr == mat_sp_descr_);
+  auto st = cusparseCreateCsr(&mat_sp_descr_,
+                              nrows_,
+                              ncols_,
+                              nnz_,
+                              irowptr_,
+                              jcolind_,
+                              values_,
+                              CUSPARSE_INDEX_32I,
+                              CUSPARSE_INDEX_32I,
+                              CUSPARSE_INDEX_BASE_ZERO,
+                              CUDA_R_64F);
+  assert(st == CUSPARSE_STATUS_SUCCESS);
+}
 
 void hiopMatrixSparseCSRCUDA::dealloc()
 {  
+  auto st = cusparseDestroySpMat(mat_sp_descr_);
+  assert(st == CUSPARSE_STATUS_SUCCESS);
+  mat_sp_descr_ = nullptr;
+
   cudaError_t err;
   err = cudaFree(values_);
   assert(cudaSuccess == err);
@@ -161,7 +204,7 @@ void hiopMatrixSparseCSRCUDA::dealloc()
   assert(cudaSuccess == err);
   irowptr_ = nullptr;
 }
-  
+
 void hiopMatrixSparseCSRCUDA::setToZero()
 {
   assert(false && "work in progress");
@@ -604,36 +647,192 @@ void hiopMatrixSparseCSRCUDA::print(FILE* file,
 }
 
 
-//M = X*D*Y -> computes nnz in M and allocates M 
-//By convention, M is mxn, X is mxK and Y is Kxn
-hiopMatrixSparseCSR* hiopMatrixSparseCSRCUDA::times_mat_alloc(const hiopMatrixSparseCSR& Y) const
+// M = X*Y, where X is `this`. M is mxn, X is mxK and Y is Kxn
+hiopMatrixSparseCSR* hiopMatrixSparseCSRCUDA::times_mat_alloc(const hiopMatrixSparseCSR& Y_in) const
 {
-  assert(false && "work in progress");
-  //allocate result M
-  return nullptr; //new hiopMatrixSparseCSRCUDA(m, n, nnzM);
+  auto& Y = dynamic_cast<const hiopMatrixSparseCSRCUDA&>(Y_in);
+  auto& X = *this;
+  
+  assert(ncols_ == Y.m());
+  
+  cusparseStatus_t st;
+  cudaError_t cret;
+  
+  //
+  // create a temporary matrix descriptor for M
+  cusparseSpMatDescr_t mat_descrM;
+  st = cusparseCreateCsr(&mat_descrM,
+                         X.m(),
+                         Y.n(),
+                         0,
+                         nullptr,
+                         nullptr,
+                         nullptr,
+                         CUSPARSE_INDEX_32I,
+                         CUSPARSE_INDEX_32I,
+                         CUSPARSE_INDEX_BASE_ZERO,
+                         CUDA_R_64F);
+  assert(st == CUSPARSE_STATUS_SUCCESS);
+  
+  cusparseSpGEMMDescr_t spgemmDesc;
+  st = cusparseSpGEMM_createDescr(&spgemmDesc);
+  assert(st == CUSPARSE_STATUS_SUCCESS);
+  
+  cusparseOperation_t opX = CUSPARSE_OPERATION_NON_TRANSPOSE;
+  cusparseOperation_t opY = CUSPARSE_OPERATION_NON_TRANSPOSE;
+  
+  //inquire buffer size
+  size_t buff_size = 0;
+  st = cusparseSpGEMMreuse_workEstimation(h_cusparse_,
+                                          opX,
+                                          opY,
+                                          X.mat_sp_descr_,
+                                          Y.mat_sp_descr_,
+                                          mat_descrM,
+                                          CUSPARSE_SPGEMM_DEFAULT,
+                                          spgemmDesc,
+                                          &buff_size,
+                                          nullptr);
+  assert(st == CUSPARSE_STATUS_SUCCESS);
+  
+  //allocate buffer
+  void* buff_gemm1 = nullptr;
+  cret = cudaMalloc((void**)&buff_gemm1, buff_size);
+  assert(cret == cudaSuccess);
+
+  //inspect input matrices to determine memory requirements for the next steps
+  st = cusparseSpGEMMreuse_workEstimation(h_cusparse_,
+                                          opX,
+                                          opY,
+                                          X.mat_sp_descr_,
+                                          Y.mat_sp_descr_,
+                                          mat_descrM,
+                                          CUSPARSE_SPGEMM_DEFAULT,
+                                          spgemmDesc,
+                                          &buff_size,
+                                          buff_gemm1);
+  assert(st == CUSPARSE_STATUS_SUCCESS);
+  
+  //inquire buffer size for nnz call
+  size_t buff_size2 = 0;
+  size_t buff_size3 = 0;
+  size_t buff_size4 = 0;
+  st = cusparseSpGEMMreuse_nnz(h_cusparse_,
+                               opX,
+                               opY,
+                               X.mat_sp_descr_,
+                               Y.mat_sp_descr_,
+                               mat_descrM,
+                               CUSPARSE_SPGEMM_DEFAULT,
+                               spgemmDesc,
+                               &buff_size2,
+                               nullptr,
+                               &buff_size3,
+                               nullptr,
+                               &buff_size4,
+                               nullptr);
+  assert(st == CUSPARSE_STATUS_SUCCESS);
+
+  void* buff_gemm2 = nullptr;
+  void* buff_gemm3 = nullptr;
+  void* buff_gemm4 = nullptr;
+
+  cret = cudaMalloc((void**)&buff_gemm2, buff_size2);
+  assert(cret == cudaSuccess);
+  cret = cudaMalloc((void**)&buff_gemm3, buff_size3);
+  assert(cret == cudaSuccess);
+  cret = cudaMalloc((void**)&buff_gemm4, buff_size4);
+  assert(cret == cudaSuccess);
+
+  
+  st = cusparseSpGEMMreuse_nnz(h_cusparse_,
+                               opX,
+                               opY,
+                               X.mat_sp_descr_,
+                               Y.mat_sp_descr_,
+                               mat_descrM,
+                               CUSPARSE_SPGEMM_DEFAULT,
+                               spgemmDesc,
+                               &buff_size2,
+                               buff_gemm2,
+                               &buff_size3,
+                               buff_gemm3,
+                               &buff_size4,
+                               buff_gemm4 );
+  assert(st == CUSPARSE_STATUS_SUCCESS);
+
+  cret = cudaFree(buff_gemm1);
+  assert(cret == cudaSuccess);
+
+  cret = cudaFree(buff_gemm2);
+  assert(cret == cudaSuccess);
+
+  //get sizes of M
+  int64_t M_m, M_n, M_nnz;
+  st = cusparseSpMatGetSize(mat_descrM, &M_m, &M_n, &M_nnz);
+  assert(st == CUSPARSE_STATUS_SUCCESS);
+  assert(M_n == Y.n());
+  assert(M_m == nrows_);
+
+  hiopMatrixSparseCSRCUDA* M = new hiopMatrixSparseCSRCUDA(nrows_, Y.n(), M_nnz);
+
+  M->set_gemm_buffer3(buff_gemm3);
+  M->set_gemm_buffer4(buff_gemm4);
+  M->use_sparse_gemm_descriptor(spgemmDesc);
+  M->use_sparse_mat_descriptor(mat_descrM);
+
+  return M;
 } 
 
-/**
- *  M = X*D*Y -> computes nnz in M and allocates M 
- * By convention, M is mxn, X is mxK, Y is Kxn, and D is size K.
- * 
- * The algorithm uses the fact that the sparsity pattern of the i-th row of M is
- *           K
- * M_{i*} = sum x_{ik} Y_{k*}   (see Tim Davis book p.17)
- *          k=1
- * Therefore, to get sparsity pattern of the i-th row of M:
- *  1. we k-iterate over nonzeros (i,k) in the i-th row of X
- *  2. for each such k we j-iterate over the nonzeros (k,j) in the k-th row of Y and 
- *  3. count (i,j) as nonzero of M 
- */
+// M = X*D*Y, where X is `this`. M is mxn, X is mxK and Y is Kxn
 void hiopMatrixSparseCSRCUDA::times_mat_symbolic(hiopMatrixSparseCSR& M_in,
                                                  const hiopMatrixSparseCSR& Y_in) const
 {
   auto& M = dynamic_cast<hiopMatrixSparseCSRCUDA&>(M_in);
   auto& Y = dynamic_cast<const hiopMatrixSparseCSRCUDA&>(Y_in);
-  assert(false && "work in progress");
+  auto& X = *this;
+
+  auto cret = cudaMemset(M.values_, 0x0, M.nnz_*sizeof(double));
+  assert(cudaSuccess == cret);
+  
+  cusparseOperation_t opX = CUSPARSE_OPERATION_NON_TRANSPOSE;
+  cusparseOperation_t opY = CUSPARSE_OPERATION_NON_TRANSPOSE;
+
+  //inquire size
+  size_t buff_size5 = 0;
+  auto st = cusparseSpGEMMreuse_copy(h_cusparse_,
+                                     opX,
+                                     opY,
+                                     X.mat_sp_descr_,
+                                     Y.mat_sp_descr_,
+                                     M.mat_sp_descr_,
+                                     CUSPARSE_SPGEMM_DEFAULT,
+                                     M.gemm_sp_descr_,
+                                     &buff_size5,
+                                     nullptr);
+  assert(st == CUSPARSE_STATUS_SUCCESS);
+
+  //allocate buffer5
+  auto* buffer_gemm5 = M.alloc_gemm_buffer5(buff_size5);
+  
+  //the actual call
+  st = cusparseSpGEMMreuse_copy(h_cusparse_,
+                                opX,
+                                opY,
+                                X.mat_sp_descr_,
+                                Y.mat_sp_descr_,
+                                M.mat_sp_descr_,
+                                CUSPARSE_SPGEMM_DEFAULT,
+                                M.gemm_sp_descr_,
+                                &buff_size5,
+                                buffer_gemm5);
+  assert(st == CUSPARSE_STATUS_SUCCESS);
+
+  //buffer3 not needed anymore
+  M.dealloc_gemm_buffer3();
 }
 
+// M = beta*M + alpha*X*Y, where X is `this`. M is mxn, X is mxK and Y is Kxn
 void hiopMatrixSparseCSRCUDA::times_mat_numeric(double beta,
                                                 hiopMatrixSparseCSR& M_in,
                                                 double alpha,
@@ -641,7 +840,29 @@ void hiopMatrixSparseCSRCUDA::times_mat_numeric(double beta,
 {
   auto& M = dynamic_cast<hiopMatrixSparseCSRCUDA&>(M_in);
   auto& Y = dynamic_cast<const hiopMatrixSparseCSRCUDA&>(Y_in);
-  assert(false && "work in progress");
+  auto& X = *this;
+
+  if(beta==0.0) {
+    auto cret = cudaMemset(M.values_, 0x0, M.nnz_*sizeof(double));
+    assert(cudaSuccess == cret);
+  }
+  
+  cusparseOperation_t opX = CUSPARSE_OPERATION_NON_TRANSPOSE;
+  cusparseOperation_t opY = CUSPARSE_OPERATION_NON_TRANSPOSE;
+  cudaDataType compute_type = CUDA_R_64F;
+
+  auto st = cusparseSpGEMMreuse_compute(h_cusparse_,
+                                        opX,
+                                        opY,
+                                        &alpha,
+                                        X.mat_sp_descr_,
+                                        Y.mat_sp_descr_,
+                                        &beta,
+                                        M.mat_sp_descr_,
+                                        compute_type,
+                                        CUSPARSE_SPGEMM_DEFAULT,
+                                        M.gemm_sp_descr_);
+  assert(st == CUSPARSE_STATUS_SUCCESS);
 }
 
 void hiopMatrixSparseCSRCUDA::form_from_symbolic(const hiopMatrixSparseTriplet& M)

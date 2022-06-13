@@ -168,7 +168,7 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   JacDt_->form_transpose_from_numeric(*JacD_);
   //t.stop(); printf("JacD JacDt-nume csr    took %.5f\n", t.getElapsedTime());
 
-//#define CSRCUDA_TESTING 
+//#define CSRCUDA_TESTING
 #ifdef CSRCUDA_TESTING
   hiopMatrixSparseCSRCUDA JacD_cuda;
   hiopMatrixSparseCSRCUDA JacDt_cuda;
@@ -180,6 +180,7 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   JacDt_cuda.form_transpose_from_numeric(JacD_cuda);
   JacDt_cuda.print();
 
+  hiopMatrixSparseCSR* JtDiagJ_cuda = nullptr;
 #endif
   
   //symbolic multiplication for JacD'*D*J
@@ -194,6 +195,16 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
     JacDt_->times_mat_symbolic(*JtDiagJ_, *JacD_);
     //t.stop(); printf("J*D*J'-symb  took %.5f\n", t.getElapsedTime());
   }
+
+#ifdef CSRCUDA_TESTING
+  JtDiagJ_cuda = JacDt_cuda.times_mat_alloc(JacD_cuda);
+  JacDt_cuda.times_mat_symbolic(*JtDiagJ_cuda, JacD_cuda);
+  JacDt_cuda.times_mat_numeric(0.0, *JtDiagJ_cuda, 1.0, JacD_cuda);
+  JtDiagJ_cuda->print();
+  fflush(stdout);
+
+#endif     
+
   
   //numeric multiplication for JacD'*D*J
   t.reset(); t.start();
@@ -270,12 +281,12 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   Hess_lower_csr_cuda->add_matrix_symbolic(*SUM, *Hess_upper_csr_cuda);
   Hess_lower_csr_cuda->add_matrix_numeric(*SUM, 1.0, *Hess_upper_csr_cuda, 1.0); 
 
-  SUM->print();
-  Hess_csr_->print();
+  //SUM->print();
+  //Hess_csr_->print();
   delete SUM;
   delete Hess_lower_csr_cuda;
   delete Hess_upper_csr_cuda;
-
+  delete JtDiagJ_cuda;
 #endif
   
   //
