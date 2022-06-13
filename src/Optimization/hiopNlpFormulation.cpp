@@ -1377,8 +1377,7 @@ bool hiopNlpDenseConstraints::eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& 
     log->printf(hovError, "[internal error] hiopNlpDenseConstraints NLP works only with dense matrices\n");
     return false;
   } else {
-    // old code
-//    return this->eval_Jac_c(x, new_x, Jac_cde->local_data());
+
     hiopVector* x_user = nlp_transformations_.apply_inv_to_x(x, new_x);
     hiopMatrix* Jac_c_user = nlp_transformations_.apply_inv_to_jacob_eq(Jac_c, n_cons_eq_);
     if(Jac_c_user==nullptr) {
@@ -1394,11 +1393,12 @@ bool hiopNlpDenseConstraints::eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& 
                                         x_user->local_data_const(), new_x, Jac_c_user_de->local_data());
     runStats.tmEvalJac_con.stop(); runStats.nEvalJac_con_eq++;
 
-    Jac_c = *(nlp_transformations_.apply_to_jacob_eq(*Jac_c_user, n_cons_eq_));
-    if(&Jac_c==nullptr) {
+    auto* Jac_c_p = nlp_transformations_.apply_to_jacob_eq(*Jac_c_user, n_cons_eq_);
+    if(Jac_c_p==nullptr) {
       log->printf(hovError, "[internal error] hiopFixedVarsRemover works only with dense matrices\n");
       return false;
-    }    
+    }  
+    Jac_c = *Jac_c_p;
     return bret;
   }
 }
@@ -1415,8 +1415,6 @@ bool hiopNlpDenseConstraints::eval_Jac_d(hiopVector& x, bool new_x, hiopMatrix& 
     log->printf(hovError, "[internal error] hiopNlpDenseConstraints NLP works only with dense matrices\n");
     return false;
   } else {
-    // old code
-//    return this->eval_Jac_d(x, new_x, Jac_dde->local_data());
 
     hiopVector* x_user = nlp_transformations_.apply_inv_to_x(x, new_x);
     hiopMatrix* Jac_d_user = nlp_transformations_.apply_inv_to_jacob_ineq(Jac_d, n_cons_ineq_);
@@ -1433,11 +1431,12 @@ bool hiopNlpDenseConstraints::eval_Jac_d(hiopVector& x, bool new_x, hiopMatrix& 
                                         x_user->local_data_const(), new_x,Jac_d_user_de->local_data());
     runStats.tmEvalJac_con.stop(); runStats.nEvalJac_con_ineq++;
 
-    Jac_d = *(nlp_transformations_.apply_to_jacob_ineq(*Jac_d_user, n_cons_ineq_));
-    if(&Jac_d==nullptr) {
+    auto* Jac_d_p = nlp_transformations_.apply_to_jacob_ineq(*Jac_d_user, n_cons_ineq_);
+    if(Jac_d_p==nullptr) {
       log->printf(hovError, "[internal error] hiopFixedVarsRemover works only with dense matrices\n");
       return false;
-    }  
+    }
+    Jac_d = *Jac_d_p;
     return bret;
   }
 }

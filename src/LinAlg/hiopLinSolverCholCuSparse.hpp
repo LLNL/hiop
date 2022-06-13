@@ -85,6 +85,8 @@ public:
    */
   int matrixChanged();
 
+  using hiopLinSolverSymSparse::solve;
+  
   /** Solves a linear system.
    * param 'x' is on entry the right hand side(s) of the system to be solved. On
    * exit is contains the solution(s).  
