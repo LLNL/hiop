@@ -134,8 +134,8 @@ namespace hiop
       cusparseMatDescr_t descr_A_, descr_M_;
       csrluInfoHost_t info_lu_ = nullptr;
       csrgluInfo_t info_M_ = nullptr;
-      cusolverRfHandle_t handle_rf_ = nullptr;
 
+      cusolverRfHandle_t handle_rf_ = nullptr;
       size_t buffer_size_;
       size_t size_M_;
       double* d_work_;
@@ -165,6 +165,10 @@ namespace hiop
       int* d_Q_; // permutation matrices
       double* d_T_;
 
+      // iterative refinement
+
+      hiopLinSolverSymSparseCUSOLVERInnerIR* ir_;
+      
       /* private function: creates a cuSolver data structure from KLU data
        * structures. */
 
@@ -190,7 +194,9 @@ namespace hiop
 
 
       template <typename T>
-        void hiopCheckCudaError(T result, const char* const file, int const line);
+        void hiopCheckCudaError(T result, 
+                                const char* const file, 
+                                int const line);
       /* private functions needed for refactorization setup, no need to make them public */
 
       int initializeKLU();
@@ -199,8 +205,8 @@ namespace hiop
 
       int refactorizationSetupCusolverGLU();
       int refactorizationSetupCusolverRf();
+      
       void IRsetup();   
-      hiopLinSolverSymSparseCUSOLVERInnerIR* ir_;
       friend class hiopLinSolverNonSymSparseCUSOLVER;
   };
 
@@ -245,7 +251,7 @@ namespace hiop
       int ordering_;
       std::string fact_;
       std::string refact_;
-      int factorizationSetupSucc_;
+      std::string use_ir_;
 
       /** Data structures needed for CUSOLVER and KLU */
 
@@ -281,11 +287,17 @@ namespace hiop
       double* devx_;
       double* devr_;
       double* drhs_;
+      
+      int factorizationSetupSucc_;
       /* needed for cuSolverRf */
       int* d_P_;
       int* d_Q_; // permutation matrices
       double* d_T_;
+      
+      // iterative refinement
 
+      hiopLinSolverSymSparseCUSOLVERInnerIR* ir_;
+      
       /* private function: creates a cuSolver data structure from KLU data
        * structures. 
        */
@@ -304,7 +316,9 @@ namespace hiop
       // void compute_nnz();
       // void set_csr_indices_values();
 
-      template <typename T> void hiopCheckCudaError(T result, const char* const file, int const line);
+      template <typename T> void hiopCheckCudaError(T result, 
+                                                    const char* const file, 
+                                                    int const line);
 
       int initializeKLU();
       int initializeCusolverGLU();
@@ -313,7 +327,7 @@ namespace hiop
       int refactorizationSetupCusolverGLU();
       int refactorizationSetupCusolverRf();
       
-      hiopLinSolverSymSparseCUSOLVERInnerIR* ir_;
+      void IRsetup();   
   };
 
 
@@ -331,8 +345,6 @@ namespace hiop
       double getFinalResidalNorm();
       double getInitialResidalNorm();
 //this is public on purpose, can be used internally or outside, to compute the residual.
-      void cudaMatvec(double *d_x, double *d_b, std::string option);
-
       void fgmres(double *d_x, double *d_b);
     private:
       // Krylov vectors
@@ -340,12 +352,7 @@ namespace hiop
       double* d_Z_;
       double final_residual_norm_;
       int fgmres_iters_;
-      double initial_residual_norm_;
-       //solution
-      //rhs
-      //aux vector   
-      double* d_w_;
-      
+      double initial_residual_norm_; 
       int restart_;
       int maxit_;
       double tol_;
@@ -372,30 +379,37 @@ namespace hiop
       double* d_Hcolumn_;
       double* d_H_col_;
       void *mv_buffer_; /* SpMV buffer */
-      
+
       // CPU:
       double* h_L_;
       double* h_H_;
       double* h_rv_;
-      // for givens roations
+      // for givens rotations
       double* h_c_;
       double* h_s_;
+      // for Hessenberg system
       double* h_rs_;
+      // neded in some of the orthogonalization methods
       double* h_aux_;
 
       const double minusone_ = -1.0;
       const double one_ = 1.0;
       const double zero_ = 0.0;
-//private function needed for fgmres: orthogonalize i+1 vector against i vectors already orthogonal
-void GramSchmidt(int i);   
+      // private function needed for fgmres: orthogonalize i+1 vector against i vectors already orthogonal
+      void GramSchmidt(int i);
+     
+      // matvec black-box: b = b - A*d_x if option is "residual" and b=A*x if option is "matvec"
+      void cudaMatvec(double *d_x, double *d_b, std::string option);
+      
+      //not used (yet)
 
-   hiopLinSolverSymSparseCUSOLVERLU* LU_data;
+      hiopLinSolverSymSparseCUSOLVERLU* LU_data;
       friend class hiopLinSolverSymSparseCUSOLVER;
       friend class hiopLinSolverNonSymSparseCUSOLVER;
   };
 
 
-  //class to store and operatate on LU data
+  //class to store and operatate on LU data: will be needed in the future
   class hiopLinSolverSymSparseCUSOLVERLU
   {
   public:
