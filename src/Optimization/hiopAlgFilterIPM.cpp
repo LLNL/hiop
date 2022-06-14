@@ -352,7 +352,13 @@ int hiopAlgFilterIPMBase::startingProcedure(hiopIterate& it_ini,
   if(!warmstart_avail) {
     it_ini.projectPrimalsDIntoBounds(kappa1, kappa2);
   }
-  it_ini.compute_safe_slacks(it_ini, mu0);
+  int num_adjusted_slacks = it_ini.compute_safe_slacks(it_ini, mu0);
+
+  // adjust small/negative slacks
+  if(num_adjusted_slacks > 0) {    
+    nlp->log->printf(hovWarning, "%d slacks are too small. Adjust corresponding variable slacks!\n", num_adjusted_slacks);
+    nlp->adjust_bounds(it_ini);
+  }
 
   if(!duals_avail) {
     // initialization for zl, zu, vl, vu
@@ -2595,9 +2601,17 @@ bool hiopAlgFilterIPMBase::reset_var_from_fr_sol(hiopKKTLinSys* kkt, bool reset_
     nlp->log->printf(hovScalars, "FR: Update slacks and duals from the modified primals.\n");
   }
   // determine other slacks
-  it_trial->determineSlacks();  // TODO: adjust small slacks after hard FR?
+//  it_trial->determineSlacks();  // TODO: adjust small slacks after hard FR?
 
-  // compute dx = x_{k+1} - x_k
+  int num_adjusted_slacks = it_trial->compute_safe_slacks(*it_curr, mu0);
+
+  // adjust small/negative slacks
+  if(num_adjusted_slacks > 0) {    
+    nlp->log->printf(hovWarning, "%d slacks are too small. Adjust corresponding variable slacks!\n", num_adjusted_slacks);
+    nlp->adjust_bounds(*it_trial);
+  }
+
+  // compute dx = x_{k+1} - x_k, assuming all the fr iterations contrubute one step
   dir->get_x()->copyFrom(*it_trial->get_x());
   dir->get_x()->axpy(-1.0, *it_curr->get_x());
   dir->get_d()->copyFrom(*it_trial->get_d());
@@ -2606,6 +2620,14 @@ bool hiopAlgFilterIPMBase::reset_var_from_fr_sol(hiopKKTLinSys* kkt, bool reset_
   if(reset_dual) {
     // compute directions for bound duals (zl, zu, vl, vu)
     kkt->compute_directions_for_full_space(resid, dir);
+
+    // compute bound duals (zl, zu, vl, vu) for trial point
+    double alpha_primal_temp = 1.0;
+    double alpha_dual_temp = 1.0;
+    bool bret = it_curr->fractionToTheBdry(*dir, _tau, alpha_primal_temp, alpha_dual_temp);
+    assert(bret);
+
+    it_trial->takeStep_duals(*it_curr, *dir, alpha_primal_temp, alpha_dual_temp);
 
     // TODO: set this as a user option. Now we set duals to 0.0 as the default option
     bool reset_dual_from_lsq_after_FR = false;
