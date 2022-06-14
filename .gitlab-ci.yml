@@ -1,4 +1,33 @@
 
+# Environment variables shared between scripts for all LLNL CI stages
+.llnl_environment_template: &llnl_script_setenv
+  variables:
+    CUSTOM_CI_BUILDS_DIR: "/usr/workspace/chiang7/gitlab-runner/${CI_PIPELINE_ID}"
+
+.llnl_script_template: &llnl_script_build
+  script:
+    - |
+      # Don't clean up this working directory - we need some of these files for
+      # testing
+      set -xv
+      mkdir -p "$CUSTOM_CI_BUILDS_DIR"
+      cp -R ./* "$CUSTOM_CI_BUILDS_DIR"
+      cd "$CUSTOM_CI_BUILDS_DIR"
+      MY_CLUSTER="quartz" ./BUILD.sh --build-only || exit 1
+
+.llnl_test_script_template: &llnl_script_test
+  script:
+    - |
+      set -xv
+      cd "$CUSTOM_CI_BUILDS_DIR"
+      MY_CLUSTER="quartz" ./BUILD.sh --test-only
+      res=$?
+      exit $res
+  after_script:
+    - |
+      cd "$CUSTOM_CI_BUILDS_DIR/.."
+      rm -rf "$CUSTOM_CI_BUILDS_DIR" "scripts"
+
 # Environment variables shared between scripts for all ORNL CI stages
 .ornl_environment_template: &ornl_environment_variables
   variables:
@@ -144,3 +173,27 @@ test_on_compute_node:
   <<: *ornl_test_script_definition
   <<: *ornl_environment_variables
 # ---
+
+# For LLNL/quartz CI
+build_on_quartz:
+  stage: build
+  tags:
+    - shell
+    - quartz
+  rules:
+    - if: '$LC_ZONE == "CZ"'
+  <<: *llnl_script_setenv
+  <<: *llnl_script_build
+
+# For LLNL/quartz CI
+test_on_quartz:
+  stage: test
+  dependencies:
+    - build_on_quartz
+  tags:
+    - shell
+    - quartz
+  rules:
+    - if: '$LC_ZONE == "CZ"'
+  <<: *llnl_script_setenv
+  <<: *llnl_script_test
