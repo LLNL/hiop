@@ -1,17 +1,28 @@
 
 # Environment variables shared between scripts for all LLNL CI stages
-.llnl_environment_template: &llnl_script_setenv
+.quartz: &llnl_setenv_quartz
+  tags:
+    - shell
+    - quartz
   variables:
-    CUSTOM_CI_BUILDS_DIR: "/usr/workspace/chiang7/gitlab-runner/${MY_CLUSTER}/${CI_PIPELINE_ID}"
+    CUSTOM_CI_BUILDS_DIR: "/usr/WS1/opt_llnl/gitlab-runner/quartz/${CI_PIPELINE_ID}"
+
+.lassen: &llnl_setenv_lassen
+  tags:
+    - shell
+    - lassen
+  variables:
+    CUSTOM_CI_BUILDS_DIR: "/usr/WS1/opt_llnl/gitlab-runner/lassen/${CI_PIPELINE_ID}"
+
 
 .llnl_script_template: &llnl_script_build
   script:
     - |
       # Don't clean up this working directory - we need some of these files for
       # testing
-      echo "MY_CLUSTER = ${MY_CLUSTER}"
       echo "CI_PIPELINE_ID = ${CI_PIPELINE_ID}"
       echo "CI_JOB_ID = ${CI_JOB_ID}"
+      echo "CUSTOM_CI_BUILDS_DIR = ${CUSTOM_CI_BUILDS_DIR}"
       set -xv
       mkdir -p "$CUSTOM_CI_BUILDS_DIR"
       cp -R ./* "$CUSTOM_CI_BUILDS_DIR"
@@ -21,9 +32,9 @@
 .llnl_test_script_template: &llnl_script_test
   script:
     - |
-      echo "MY_CLUSTER = ${MY_CLUSTER}"
       echo "CI_PIPELINE_ID = ${CI_PIPELINE_ID}"
       echo "CI_JOB_ID = ${CI_JOB_ID}"
+      echo "CUSTOM_CI_BUILDS_DIR = ${CUSTOM_CI_BUILDS_DIR}"
       set -xv
       cd "$CUSTOM_CI_BUILDS_DIR"
       ./BUILD.sh --test-only
@@ -33,9 +44,7 @@
     - |
       cd "$CUSTOM_CI_BUILDS_DIR/.."
       rm -rf "$CUSTOM_CI_BUILDS_DIR"
-      cd "scripts"
-      rm -rf "$CI_JOB_ID"
-#      find * -maxdepth 0 ! -name "$CI_JOB_ID" -exec rm -rf {} \;
+      rm -rf "scripts/$CI_RUNNER_SHORT_TOKEN"
 
 # Environment variables shared between scripts for all ORNL CI stages
 .ornl_environment_template: &ornl_environment_variables
@@ -188,12 +197,9 @@ build_on_quartz:
   stage: build
   variables:
     MY_CLUSTER: quartz
-  tags:
-    - shell
-    - quartz
   rules:
     - if: '$LC_ZONE == "CZ"'
-  <<: *llnl_script_setenv
+  <<: *llnl_setenv_quartz
   <<: *llnl_script_build
 
 # For LLNL/quartz CI
@@ -203,12 +209,9 @@ test_on_quartz:
     MY_CLUSTER: quartz
   dependencies:
     - build_on_quartz
-  tags:
-    - shell
-    - quartz
   rules:
     - if: '$LC_ZONE == "CZ"'
-  <<: *llnl_script_setenv
+  <<: *llnl_setenv_quartz
   <<: *llnl_script_test
 
 # For LLNL/lassen CI
@@ -216,12 +219,9 @@ build_on_lassen:
   stage: build
   variables:
     MY_CLUSTER: lassen
-  tags:
-    - shell
-    - lassen
   rules:
     - if: '$LC_ZONE == "CZ"'
-  <<: *llnl_script_setenv
+  <<: *llnl_setenv_lassen
   <<: *llnl_script_build
 
 # For LLNL/lassen CI
@@ -231,10 +231,7 @@ test_on_lassen:
     MY_CLUSTER: lassen
   dependencies:
     - build_on_lassen
-  tags:
-    - shell
-    - lassen
   rules:
     - if: '$LC_ZONE == "CZ"'
-  <<: *llnl_script_setenv
+  <<: *llnl_setenv_lassen
   <<: *llnl_script_test
