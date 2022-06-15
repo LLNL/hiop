@@ -2,13 +2,16 @@
 # Environment variables shared between scripts for all LLNL CI stages
 .llnl_environment_template: &llnl_script_setenv
   variables:
-    CUSTOM_CI_BUILDS_DIR: "/usr/workspace/chiang7/gitlab-runner/${CI_PIPELINE_ID}"
+    CUSTOM_CI_BUILDS_DIR: "/usr/workspace/chiang7/gitlab-runner/${MY_CLUSTER}/${CI_PIPELINE_ID}"
 
 .llnl_script_template: &llnl_script_build
   script:
     - |
       # Don't clean up this working directory - we need some of these files for
       # testing
+      echo "MY_CLUSTER = ${MY_CLUSTER}"
+      echo "CI_PIPELINE_ID = ${CI_PIPELINE_ID}"
+      echo "CI_JOB_ID = ${CI_JOB_ID}"
       set -xv
       mkdir -p "$CUSTOM_CI_BUILDS_DIR"
       cp -R ./* "$CUSTOM_CI_BUILDS_DIR"
@@ -18,6 +21,9 @@
 .llnl_test_script_template: &llnl_script_test
   script:
     - |
+      echo "MY_CLUSTER = ${MY_CLUSTER}"
+      echo "CI_PIPELINE_ID = ${CI_PIPELINE_ID}"
+      echo "CI_JOB_ID = ${CI_JOB_ID}"
       set -xv
       cd "$CUSTOM_CI_BUILDS_DIR"
       ./BUILD.sh --test-only
