@@ -54,6 +54,7 @@
 #include <cassert>
 #include <iostream>
 #include <random>
+#include <chrono>
 
 #include "hiop_blasdefs.hpp"
 
