@@ -26,7 +26,8 @@
   after_script:
     - |
       cd "$CUSTOM_CI_BUILDS_DIR/.."
-      rm -rf "$CUSTOM_CI_BUILDS_DIR" "scripts"
+      rm -rf "$CUSTOM_CI_BUILDS_DIR"
+      rm -rf "scripts"
 
 # Environment variables shared between scripts for all ORNL CI stages
 .ornl_environment_template: &ornl_environment_variables
