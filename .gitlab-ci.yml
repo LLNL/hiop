@@ -29,7 +29,7 @@
       cd "$CUSTOM_CI_BUILDS_DIR"
       ./BUILD.sh --build-only || exit 1
 
-.llnl_test_script_template: &llnl_script_test
+.llnl_test_script_template: &llnl_serial_test
   script:
     - |
       echo "CI_PIPELINE_ID = ${CI_PIPELINE_ID}"
@@ -45,6 +45,25 @@
       cd "$CUSTOM_CI_BUILDS_DIR/.."
       rm -rf "$CUSTOM_CI_BUILDS_DIR"
       rm -rf "scripts/$CI_RUNNER_SHORT_TOKEN"
+
+.llnl_test_jsrun_script: &llnl_jsrun_test
+  script:
+    - |
+      echo "CI_PIPELINE_ID = ${CI_PIPELINE_ID}"
+      echo "CI_JOB_ID = ${CI_JOB_ID}"
+      echo "CUSTOM_CI_BUILDS_DIR = ${CUSTOM_CI_BUILDS_DIR}"
+      set -xv
+      cd "$CUSTOM_CI_BUILDS_DIR"
+      lalloc 1 -W 5 -q pdebug lrun -N 1 -n 4 -g 1 ./BUILD.sh --test-only
+      res=$?
+      exit $res
+  after_script:
+    - |
+      cd "$CUSTOM_CI_BUILDS_DIR/.."
+      rm -rf "$CUSTOM_CI_BUILDS_DIR"
+      rm -rf "scripts/$CI_RUNNER_SHORT_TOKEN"
+      
+
 
 # Environment variables shared between scripts for all ORNL CI stages
 .ornl_environment_template: &ornl_environment_variables
@@ -212,7 +231,7 @@ test_on_quartz:
   rules:
     - if: '$LC_ZONE == "CZ"'
   <<: *llnl_setenv_quartz
-  <<: *llnl_script_test
+  <<: *llnl_serial_test
 
 # For LLNL/lassen CI
 build_on_lassen:
@@ -234,4 +253,4 @@ test_on_lassen:
   rules:
     - if: '$LC_ZONE == "CZ"'
   <<: *llnl_setenv_lassen
-  <<: *llnl_script_test
+  <<: *llnl_jsrun_test
