@@ -54,7 +54,7 @@
       echo "CUSTOM_CI_BUILDS_DIR = ${CUSTOM_CI_BUILDS_DIR}"
       set -xv
       cd "$CUSTOM_CI_BUILDS_DIR"
-      lalloc 1 -W 30 -q pdebug lrun -N 1 -n 4 -g 1 ./BUILD.sh --test-only
+      lalloc 1 -W 35 -q pdebug ./BUILD.sh --test-only
       res=$?
       exit $res
   after_script:
