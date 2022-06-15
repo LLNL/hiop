@@ -197,9 +197,17 @@ int main(int argc, char **argv)
     nlp.options->SetStringValue("duals_init", "zero");
     nlp.options->SetStringValue("linsol_mode", "speculative");
     nlp.options->SetStringValue("linear_solver_sparse", "cusolver-lu");
+    nlp.options->SetStringValue("cusolver_lu_refactorization", "rf");
+    nlp.options->SetStringValue("ir_inner_cusolver", "yes");
+    nlp.options->SetIntegerValue("ir_inner_cusolver_maxit", 100);
+    nlp.options->SetNumericValue("ir_inner_cusolver_tol", 1e-16);
+    nlp.options->SetIntegerValue("ir_inner_cusolver_restart", 20);
+    nlp.options->SetStringValue("ir_inner_cusolver_gs_scheme", "mgs_pm");
     nlp.options->SetStringValue("compute_mode", "hybrid");
     // LU solver needs to use inertia free approach
     nlp.options->SetStringValue("fact_acceptor", "inertia_free");
+    nlp.options->SetIntegerValue("ir_outer_maxit", 0);
+    nlp.options->SetIntegerValue("verbosity_level", 4);
   }
   if(use_ginkgo) {
     nlp.options->SetStringValue("linsol_mode", "speculative");

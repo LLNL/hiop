@@ -376,7 +376,7 @@ namespace hiop
             if(use_ir_ == "yes") {
               checkCudaErrors(cudaMemcpy(devx_, drhs, sizeof(double) * n_, cudaMemcpyHostToDevice));
               ir_->fgmres(devr_, devx_);             
-              nlp_->log->printf( hovWarning, "\t fgmres: init residual norm  %e final residual norm %e number of iterations %d\n", ir_->getInitialResidalNorm(), ir_->getFinalResidalNorm(), ir_->getFinalNumberOfIterations());
+              nlp_->log->printf( hovScalars, "\t fgmres: init residual norm  %e final residual norm %e number of iterations %d\n", ir_->getInitialResidalNorm(), ir_->getFinalResidalNorm(), ir_->getFinalNumberOfIterations());
             }
             checkCudaErrors(cudaMemcpy(dx, devr_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
           } else {
