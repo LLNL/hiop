@@ -166,11 +166,11 @@ namespace hiop
         }
 
         ir_->orth_option_ = nlp_->options->GetString("ir_inner_cusolver_gs_scheme");
-        if(ir_->orth_option_ != "MGS" && ir_->orth_option_ != "GS2" && ir_->orth_option_ != "MGS_two_synch" &&ir_->orth_option_ != "MGS_pm") {
+        if(ir_->orth_option_ != "mgs" && ir_->orth_option_ != "cgs2" && ir_->orth_option_ != "mgs_two_synch" &&ir_->orth_option_ != "mgs_pm") {
           nlp_->log->printf(hovWarning, 
-                            "MGS option : %s is wrong. Use 'MGS', 'CGS2', 'MGS_two_synch' or 'MGS_pm'. Switching to default (MGS) ...\n",
+                            "mgs option : %s is wrong. Use 'mgs', 'cgs2', 'mgs_two_synch' or 'mgs_pm'. Switching to default (mgs) ...\n",
                             use_ir_.c_str());
-          ir_->orth_option_ = "MGS";
+          ir_->orth_option_ = "mgs";
         }
 
       } else {
@@ -376,7 +376,7 @@ namespace hiop
             if(use_ir_ == "yes") {
               checkCudaErrors(cudaMemcpy(devx_, drhs, sizeof(double) * n_, cudaMemcpyHostToDevice));
               ir_->fgmres(devr_, devx_);             
-              nlp_->log->printf(hovWarning, "\t fgmres: init residual norm  %e final residual norm %e number of iterations %d\n", ir_->getInitialResidalNorm(), ir_->getFinalResidalNorm(), ir_->getFinalNumberOfIterations());
+              nlp_->log->printf( hovWarning, "\t fgmres: init residual norm  %e final residual norm %e number of iterations %d\n", ir_->getInitialResidalNorm(), ir_->getFinalResidalNorm(), ir_->getFinalNumberOfIterations());
             }
             checkCudaErrors(cudaMemcpy(dx, devr_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
           } else {
@@ -1020,15 +1020,15 @@ namespace hiop
       ir_->h_s_ = new double[ir_->restart_];      // same
       ir_->h_rs_ = new double[ir_->restart_ + 1]; // for residual norm history
 
-      if(ir_->orth_option_ == "MGS_two_synch" || ir_->orth_option_ == "MGS_pm") {
+      if(ir_->orth_option_ == "mgs_two_synch" || ir_->orth_option_ == "mgs_pm") {
         ir_->h_L_ = new double[ir_->restart_ * (ir_->restart_ + 1)];
         ir_->h_rv_ = new double[ir_->restart_ + 1];
       }
-      if(ir_->orth_option_ == "CGS2") {
+      if(ir_->orth_option_ == "cgs2") {
         ir_->h_aux_ = new double[ir_->restart_ + 1];
         checkCudaErrors(cudaMalloc(&(ir_->d_H_col_), (ir_->restart_ + 1) * sizeof(double)));
       }
-      if(ir_->orth_option_ == "MGS_pm") {
+      if(ir_->orth_option_ == "mgs_pm") {
         ir_->h_aux_ = new double[ir_->restart_ + 1];
       }
     }
@@ -1134,13 +1134,13 @@ namespace hiop
         }
 
         ir_->orth_option_ = nlp_->options->GetString("ir_inner_cusolver_gs_scheme");
-        if(ir_->orth_option_ != "MGS" && ir_->orth_option_ != "GS2" && ir_->orth_option_ != "MGS_two_synch"
-           && ir_->orth_option_ != "MGS_pm") {
+        if(ir_->orth_option_ != "mgs" && ir_->orth_option_ != "cgs2" && ir_->orth_option_ != "mgs_two_synch"
+           && ir_->orth_option_ != "mgs_pm") {
           nlp_->log->printf(
               hovWarning,
-              "MGS option : %s is wrong. Use 'MGS', 'CGS2', 'MGS_two_synch' or 'MGS_pm'. Switching to default (MGS) ...\n",
+              "mgs option : %s is wrong. Use 'mgs', 'cgs2', 'mgs_two_synch' or 'mgs_pm'. Switching to default (mgs) ...\n",
               use_ir_.c_str());
-          ir_->orth_option_ = "MGS";
+          ir_->orth_option_ = "mgs";
         }
 
       } else {
@@ -1894,15 +1894,15 @@ namespace hiop
       ir_->h_s_ = new double[ir_->restart_];      // same
       ir_->h_rs_ = new double[ir_->restart_ + 1]; // for residual norm history
 
-      if(ir_->orth_option_ == "MGS_two_synch" || ir_->orth_option_ == "MGS_pm") {
+      if(ir_->orth_option_ == "mgs_two_synch" || ir_->orth_option_ == "mgs_pm") {
         ir_->h_L_ = new double[ir_->restart_ * (ir_->restart_ + 1)];
         ir_->h_rv_ = new double[ir_->restart_ + 1];
       }
-      if(ir_->orth_option_ == "CGS2") {
+      if(ir_->orth_option_ == "cgs2") {
         ir_->h_aux_ = new double[ir_->restart_ + 1];
         checkCudaErrors(cudaMalloc(&(ir_->d_H_col_), (ir_->restart_ + 1) * sizeof(double)));
       }
-      if(ir_->orth_option_ == "MGS_pm") {
+      if(ir_->orth_option_ == "mgs_pm") {
         ir_->h_aux_ = new double[ir_->restart_ + 1];
       }
     }
@@ -1928,7 +1928,7 @@ namespace hiop
     // delete all CPU GMRES variables
     delete[] h_H_;
 
-    if (orth_option_ == "MGS_two_synch" || orth_option_ == "MGS_pm") {
+    if (orth_option_ == "mgs_two_synch" || orth_option_ == "mgs_pm") {
       delete[] h_L_;
       delete[] h_rv_;
     }
@@ -1936,7 +1936,7 @@ namespace hiop
     delete[] h_s_;
     delete[] h_rs_;
 
-    if(orth_option_ == "MGS_pm" || orth_option_ == "CGS2") {
+    if(orth_option_ == "mgs_pm" || orth_option_ == "cgs2") {
       delete[] h_aux_;
     }
   }
@@ -2086,10 +2086,10 @@ namespace hiop
       // rnorm = ||V_1||
       rnorm = sqrt(rnorm);
 
-      //  printf("End of cycle, iter %d : true  ro = %e, tolrel = %16.16g\n", it, rnorm, tolrel);
+       // printf("End of cycle, iter %d : true  ro = %e, tolrel = %16.16g\n", it, rnorm, tolrel);
       //*total_it = it;
       if(!outer_flag) {
-        //    printf("\t fgmres: converged in %d iterations. Eucleadean norm: initial %e estimated at exit %e true at exit %e  \n",it, rnorm_init, rnorm_aux, rnorm);
+        // printf("\t tolrel: %16.16e maxit %dfgmres: converged in %d iterations. Eucleadean norm: initial %e estimated at exit %e true at exit %e  \n",tolrel, maxit_, it, initial_residual_norm_, rnorm_aux, rnorm);
         final_residual_norm_ = rnorm;
         fgmres_iters_ = it;     
       }
@@ -2136,16 +2136,16 @@ namespace hiop
   {
     double t;
     int sw = 0;
-    if(orth_option_ == "MGS") {
+    if(orth_option_ == "mgs") {
       sw = 0;
     } else {
-      if(orth_option_ == "CGS2") {
+      if(orth_option_ == "cgs2") {
         sw = 1;
       } else {
-        if(orth_option_ == "MGS_two_synch") {
+        if(orth_option_ == "mgs_two_synch") {
           sw = 2;
         } else {
-          if(orth_option_ == "MGS_pm") {
+          if(orth_option_ == "mgs_pm") {
             sw = 3;
           } else {
             // display error message and set sw = 0;
@@ -2187,7 +2187,7 @@ namespace hiop
         }
 
         break;
-      case 1://CGS2 
+      case 1://cgs2 
         //Hcol = V(:,1:i)^T *V(:,i+1);
         cublasDgemv(cublas_handle_,
                     CUBLAS_OP_T,
@@ -2268,7 +2268,6 @@ namespace hiop
         massInnerProductTwoVectors(n_, i, &d_V_[i * n_],&d_V_[(i+1) * n_], d_V_, d_rvGPU_);
 
         //copy rvGPU to L
-
         cudaMemcpy(&h_L_[(i) * (restart_ + 1)], 
                    d_rvGPU_, 
                    (i + 1) * sizeof(double),
@@ -2315,8 +2314,8 @@ namespace hiop
         else{
           assert(0 && "Iterative refinement failed, Krylov vector with zero norm\n");
         }
-
-      case 3: //two synch Gauss-Seidel MGS, SUPER STABLE
+        break;
+      case 3: //two synch Gauss-Seidel mgs, SUPER STABLE
         //according to unpublisjed work by ST
         //L is where we keep the triangular matrix(L is ON THE CPU)
         massInnerProductTwoVectors(n_, i, &d_V_[i * n_],&d_V_[(i+1) * n_], d_V_, d_rvGPU_);
