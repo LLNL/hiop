@@ -13,21 +13,23 @@
       mkdir -p "$CUSTOM_CI_BUILDS_DIR"
       cp -R ./* "$CUSTOM_CI_BUILDS_DIR"
       cd "$CUSTOM_CI_BUILDS_DIR"
-      MY_CLUSTER="quartz" ./BUILD.sh --build-only || exit 1
+      ./BUILD.sh --build-only || exit 1
 
 .llnl_test_script_template: &llnl_script_test
   script:
     - |
       set -xv
       cd "$CUSTOM_CI_BUILDS_DIR"
-      MY_CLUSTER="quartz" ./BUILD.sh --test-only
+      ./BUILD.sh --test-only
       res=$?
       exit $res
   after_script:
     - |
       cd "$CUSTOM_CI_BUILDS_DIR/.."
       rm -rf "$CUSTOM_CI_BUILDS_DIR"
-      rm -rf "scripts"
+      cd "scripts"
+      rm -rf "$CI_JOB_ID"
+#      find * -maxdepth 0 ! -name "$CI_JOB_ID" -exec rm -rf {} \;
 
 # Environment variables shared between scripts for all ORNL CI stages
 .ornl_environment_template: &ornl_environment_variables
@@ -178,6 +180,8 @@ test_on_compute_node:
 # For LLNL/quartz CI
 build_on_quartz:
   stage: build
+  variables:
+    MY_CLUSTER: quartz
   tags:
     - shell
     - quartz
@@ -189,11 +193,41 @@ build_on_quartz:
 # For LLNL/quartz CI
 test_on_quartz:
   stage: test
+  variables:
+    MY_CLUSTER: quartz
   dependencies:
     - build_on_quartz
   tags:
     - shell
     - quartz
+  rules:
+    - if: '$LC_ZONE == "CZ"'
+  <<: *llnl_script_setenv
+  <<: *llnl_script_test
+
+# For LLNL/lassen CI
+build_on_lassen:
+  stage: build
+  variables:
+    MY_CLUSTER: lassen
+  tags:
+    - shell
+    - lassen
+  rules:
+    - if: '$LC_ZONE == "CZ"'
+  <<: *llnl_script_setenv
+  <<: *llnl_script_build
+
+# For LLNL/lassen CI
+test_on_lassen:
+  stage: test
+  variables:
+    MY_CLUSTER: lassen
+  dependencies:
+    - build_on_lassen
+  tags:
+    - shell
+    - lassen
   rules:
     - if: '$LC_ZONE == "CZ"'
   <<: *llnl_script_setenv
