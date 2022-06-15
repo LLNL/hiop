@@ -933,16 +933,16 @@ void hiopOptionsNLP::register_options()
                         1000,
                         "FGMRES maximum number of iterations (default is 50). ");
 {
-    vector<std::string> range = {"MGS", "CGS2", "MGS_two_synch", "MGS_pm"};
+    vector<std::string> range = {"mgs", "cgs2", "mgs_two_synch", "mgs_pm"};
     auto default_value = range[0];
     register_str_option("ir_inner_cusolver_gs_scheme",
                         default_value,
                         range,
                         "Gram-Schmidt orthogonalization version for FMGRES. "
-                        "MGS: modified Gram-Schmidt (textbooki, default). "
-                        "CGS2: reorthogonalized classical Gram-Schmidt (three synchs). "
-                        "MGS_two_synch: two synch (stable) MGS. "
-                        "MGS_pm: post-modern MGS, two synchs. ");
+                        "mgs: modified Gram-Schmidt (textbooki, default). "
+                        "cgs2: reorthogonalized classical Gram-Schmidt (three synchs). "
+                        "mgs_two_synch: two synch (stable) MGS. "
+                        "mgs_pm: post-modern MGS, two synchs. ");
   }
 
   //linsol_mode -> mostly related to magma and MDS linear algebra
