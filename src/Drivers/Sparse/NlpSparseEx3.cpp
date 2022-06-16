@@ -107,7 +107,7 @@ bool SparseEx3::get_cons_info(const size_type& m, double* clow, double* cupp, No
   }
   if(ineq_feas_) {
     for(index_type i=0; i<n_vars_-2; i++) {
-      clow[conidx] = 10.0 + scala_a_; // change this to 10 + scala_a will introduce numerical problems
+      clow[conidx] = 10.0 - scala_a_; // change this to 10 + scala_a will introduce numerical problems
       cupp[conidx] = 15.0 + scala_a_;
       type[conidx++] = hiopInterfaceBase::hiopLinear;
     }
