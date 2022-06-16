@@ -1234,23 +1234,13 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
       return Solve_Success;    
     }
   }
-#else
-hiopSolveStatus hiopAlgPrimalDecomposition::run()
-{
-  log_->printf(hovSummary, "===============\nHiop Primal Decomposition SOLVER\n===============\n");
-  if(options_->GetString("print_options") == "yes") {
-    log_->write(nullptr, *options_, hovSummary);
-  }
-  return run_single(); // call the serial solver
-}
-#endif
 
-/**
- * A different asynchronous communication scheme where evaluator ranks 
- * transfer data only once with the master rank
- *
- */
-hiopSolveStatus hiopAlgPrimalDecomposition::run_local()
+  /**
+   * A different asynchronous communication scheme where evaluator ranks 
+   * transfer data only once with the master rank
+   *
+   */
+  hiopSolveStatus hiopAlgPrimalDecomposition::run_local()
   {
     log_->printf(hovSummary, "===============\nHiop Primal Decomposition SOLVER\n===============\n");
     log_->printf(hovSummary, "===============\nUsing local accumulation OPTION\n===============\n");
@@ -1759,6 +1749,17 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_local()
       return Solve_Success;    
     }
   }
+
+#else
+hiopSolveStatus hiopAlgPrimalDecomposition::run()
+{
+  log_->printf(hovSummary, "===============\nHiop Primal Decomposition SOLVER\n===============\n");
+  if(options_->GetString("print_options") == "yes") {
+    log_->write(nullptr, *options_, hovSummary);
+  }
+  return run_single(); // call the serial solver
+}
+#endif
 
 
 
