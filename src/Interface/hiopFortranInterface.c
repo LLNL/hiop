@@ -228,8 +228,6 @@ int eval_hess_sparse_wrapper(hiop_size_type n,
   }
   fprob->f_eval_hess_(&task, &n_, &m_, &obj_scal_, x, &new_x_, lambda, &new_lambda_, &nnzHSS_, iHSS, jHSS, MHSS);
 
-  // TODO: If we can add a flag in ma57 when a problem comes from fortran?
-  //       Then we don't need to -1 here and +1 when initialize ma57
   if(task == 0) {
     for(hiop_index_type k=0; k<nnzHSS_; k++){
       iHSS[k] -= 1;
