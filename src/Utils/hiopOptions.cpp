@@ -1305,6 +1305,14 @@ void hiopOptionsPriDec::register_options()
                         "the memory space in which the master solve is going to be done.");
   }
   
+  // option for local accumulation of function value and subgradient on evaluator ranks, then reduce
+  {
+    register_str_option("accum_local",
+                        "false", // default value for the option
+                        vector<string>({"yes", "no"}), // range
+                        "Accumulates recourse problem solutions locally on evaluator ranks (default 'false')");
+  }
+
   //
   // convergence and stopping criteria
   //
