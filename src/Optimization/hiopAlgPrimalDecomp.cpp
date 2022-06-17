@@ -92,14 +92,14 @@ namespace hiop
     }
 
     // only receive signal (that computation is finished), no actual functional information
-    void post_recv_sign(int tag, int rank_from, MPI_Comm comm)
+    void post_recv_end_signal(int tag, int rank_from, MPI_Comm comm)
     {
       int recv_sign = 0;
       int ierr = MPI_Irecv(&recv_sign, 1, MPI_INT, rank_from, tag, comm, &request_);
       assert(MPI_SUCCESS == ierr);
     }
     // only sende signal (that computation is finished), no actual functional information
-    void post_send_sign(int tag, int rank_to, MPI_Comm comm)
+    void post_send_end_signal(int tag, int rank_to, MPI_Comm comm)
     {
       int send_sign = 0;
       int ierr = MPI_Isend(&send_sign, 1, MPI_INT, rank_to, tag, comm, &request_);
@@ -174,9 +174,9 @@ HessianApprox(hiopInterfacePriDecProblem* priDecProb,
               hiopOptions* options_pridec,
               MPI_Comm comm_world)
   : HessianApprox(-1, 
-		  priDecProb, 
-		  options_pridec, 
-		  comm_world)
+                  priDecProb, 
+                  options_pridec, 
+                  comm_world)
 {
   comm_world_ = comm_world;
   log_ = new hiopLogger(options_, stdout, 0, comm_world);
@@ -357,7 +357,7 @@ update_ratio_tr(const double rhok,
       log_->printf(hovSummary, "recourse increasing and increased more in real contingency, so increasing alpha\n");
     }
   }
-  if((rhok>0 &&rhok<1/8. && (rkm1-rk>0) ) || (rhok<0 && rkm1-rk<0 ) ) {
+  if((rhok>0 &&rhok<1/8. && (rkm1-rk>0)) || (rhok<0 && rkm1-rk<0 )) {
     log_->printf(hovWarning, "This step is rejected.\n");
     //sol_base = solm1; // when rejected, return to the previous iteration point. this mechanism has yet to be implemented.
     //f = fm1;
@@ -858,7 +858,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
         
         solver_status_ = master_prob_->solve_master(*x_, false, 0, 0, 0, options_file_master_prob.c_str());
 
-        if(solver_status_){     
+        if(solver_status_) {     
           // to do, what if solve fails?
         }
        
@@ -960,7 +960,9 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
           if(last_loop) {
             last_loop=0;
             for(int r=1; r< comm_size_;r++) {
-              if(finish_flag[r]==0){last_loop=1;}
+              if(finish_flag[r]==0) {
+                last_loop=1;
+              }
             }
           }
 
@@ -1331,7 +1333,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
         options_file_master_prob = options_->GetString("options_file_master_prob");
         solver_status_ = master_prob_->solve_master(*x_, false, 0, 0, 0, options_file_master_prob.c_str());
 
-        if(solver_status_){     
+        if(solver_status_) {     
           // to do, what if solve fails?
         }
        
@@ -1346,7 +1348,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
 
       // set up recourse problem send/recv interface
       std::vector<ReqRecourseApprox* > rec_prob;
-      for(int r=0; r<comm_size_;r++) {
+      for(int r=0; r<comm_size_; r++) {
         rec_prob.push_back(new ReqRecourseApprox(nc_));
       }
       
@@ -1384,8 +1386,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
         // Posting initial receive of recourse solutions from evaluators
         for(int r=1; r<comm_size_; r++) {
           // rec_prob[r]->post_recv(2,r,comm_world_);// 2 is the tag, r is the rank source 
-          
-	  rec_prob[r]->post_recv_sign(2,r,comm_world_);// 2 is the tag, r is the rank source 
+          rec_prob[r]->post_recv_end_signal(2,r,comm_world_);// 2 is the tag, r is the rank source 
           // log_->printf(hovIteration, "receive flag for contingency value %d\n", mpi_test_flag); 
         }
         // Both finish_flag and last_loop are used to deal with the final round remaining contingencies/recourse problems.
@@ -1412,15 +1413,15 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
                 log_->printf(hovLinesearch, "last loop for rank %d\n", r );
               }
               
-	      // no need to add to the master rank variables
-	      /*
-	      rval += rec_prob[r]->value();
+              // no need to add to the master rank variables
+              /*
+              rval += rec_prob[r]->value();
               for(int i=0;i<nc_;i++) {
                 grad_r_vec[i] += rec_prob[r]->grad(i);
               }
               */
-	      
-	      if(last_loop) {
+              
+              if(last_loop) {
                 finish_flag[r]=1;
               }
               // this is for dealing with the end of contingencies where some ranks have already finished
@@ -1428,8 +1429,8 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
                 req_cont_idx->set_idx(cont_idx[idx]);
                 req_cont_idx->post_send(1,r,comm_world_);
                 
-	        rec_prob[r]->post_recv_sign(2,r,comm_world_);// 2 is the tag, r is the rank source 
-		// rec_prob[r]->post_recv(2,r,comm_world_);// 2 is the tag, r is the rank source 
+                rec_prob[r]->post_recv_end_signal(2,r,comm_world_);// 2 is the tag, r is the rank source 
+                // rec_prob[r]->post_recv(2,r,comm_world_);// 2 is the tag, r is the rank source 
                 // log_->printf(hovFcnEval, "recourse value: is %18.12e)\n", rec_prob[r]->value());
               } else {
                 finish_flag[r] = 1;
@@ -1443,7 +1444,9 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
           if(last_loop) {
             last_loop=0;
             for(int r=1; r< comm_size_;r++) {
-              if(finish_flag[r]==0){last_loop=1;}
+              if(finish_flag[r]==0) {
+                last_loop=1;
+              }
             }
           }
 
@@ -1478,11 +1481,11 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
         // log_->printf(hovIteration, "contingency index %d, rank %d)\n", cont_idx[0],my_rank_); 
         // compute the recourse function values and gradients
         
-	// accumulate locally so cannot set to zero
-	//rec_val = 0.;
+        // accumulate locally so cannot set to zero
+        //rec_val = 0.;
         //grad_acc->setToZero();
         
-	double aux=0.;
+        double aux=0.;
 
         if(nc_<n_) {
           x0->copy_from_indexes(*x_, *xc_idx_);
@@ -1521,11 +1524,11 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
         //rec_prob[my_rank_]->set_value(rec_val);
         //rec_prob[my_rank_]->set_grad(grad_acc_vec);
         
-	//rec_prob[my_rank_]->post_send(2, rank_master, comm_world_);
-	// send signal that subproblem has been solved
-        rec_prob[my_rank_]->post_send_sign(2, rank_master, comm_world_);
+        //rec_prob[my_rank_]->post_send(2, rank_master, comm_world_);
+        // send signal that subproblem has been solved
+        rec_prob[my_rank_]->post_send_end_signal(2, rank_master, comm_world_);
 
-	// request the next subproblem index 
+        // request the next subproblem index 
         req_cont_idx->post_recv(1, rank_master, comm_world_);
         while(cont_idx[0]!=-1) {//loop until end signal received
           mpi_test_flag = req_cont_idx->test();
@@ -1541,8 +1544,8 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
               break;
             }
             
-	    // accumulate locally so cannot set to zero
-	    //rec_val = 0.;
+            // accumulate locally so cannot set to zero
+            //rec_val = 0.;
             //grad_acc->setToZero();
 
             double aux=0.;
@@ -1580,9 +1583,9 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
             //rec_prob[my_rank_]->set_value(rec_val);
             //rec_prob[my_rank_]->set_grad(grad_acc_vec);
            
-	    // send signal that the subproblem has been solved 
-            rec_prob[my_rank_]->post_send_sign(2, rank_master, comm_world_);
-	    //rec_prob[my_rank_]->post_send(2, rank_master, comm_world_);
+            // send signal that the subproblem has been solved 
+            rec_prob[my_rank_]->post_send_end_signal(2, rank_master, comm_world_);
+            //rec_prob[my_rank_]->post_send(2, rank_master, comm_world_);
             // log_->printf(hovIteration, "send recourse value flag for test %d \n", mpi_test_flag); 
         
             // post recv for new index
@@ -1591,17 +1594,17 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
             delete grad_aux;
           }
         }
-	//rval = rec_val;
-	//grad_r->copyFrom(grad_acc_vec);
+        //rval = rec_val;
+        //grad_r->copyFrom(grad_acc_vec);
       }
 
       if(my_rank_==0) {
         assert(rval == 0);
-	for (int i=0; i<nc_; i++ ) {
+        for(int i=0; i<nc_; i++ ) {
           assert(grad_r_vec[i] == 0.);
         }
-	int mpi_test_flag = 0;
-        for(int r=1; r<comm_size_;r++) {
+        int mpi_test_flag = 0;
+        for(int r=1; r<comm_size_; r++) {
           MPI_Wait(&(rec_prob[r]->request_), &status_);
           MPI_Wait(&req_cont_idx->request_, &status_);
         }
@@ -1615,7 +1618,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
         
         //std::cout<<"real rval %18.12e\n "<< rval_main<<std::endl;
         rval = rval_main;
-	grad_r->copyFrom(grad_r_main_vec);
+        grad_r->copyFrom(grad_r_main_vec);
 
         rval /= S_;
         grad_r->scale(1.0/S_);
@@ -1811,7 +1814,7 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
   std::string options_file_master_prob;
 
   // Outer loop starts
-  for(int it=0; it<max_iter_;it++) {
+  for(int it=0; it<max_iter_; it++) {
     // log_->printf(hovIteration, "iteration  %d\n", it); 
     // solve the basecase
     it_ = it;
@@ -1953,7 +1956,9 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
       accp_count = 0;
     }
     log_->printf(hovIteration, "count  %d \n", accp_count); 
-    if(stopping_criteria(it, convg, accp_count)){break;}
+    if(stopping_criteria(it, convg, accp_count)) {
+      break;
+    }
   }
 
   delete grad_r;
