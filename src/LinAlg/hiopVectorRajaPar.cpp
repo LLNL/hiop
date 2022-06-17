@@ -296,7 +296,7 @@ void hiopVectorRajaPar::copy_from(const hiopVector& vec, const hiopVectorInt& in
 }
 
 /// @brief Copy from vec the elements specified by the indices in index_in_src. 
-void hiopVectorRajaPar::copy_from(const hiopVector& vec, const hiopVector& select)
+void hiopVectorRajaPar::copy_from_w_pattern(const hiopVector& vec, const hiopVector& select)
 {
   const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(vec);
   const hiopVectorRajaPar& ix = dynamic_cast<const hiopVectorRajaPar&>(select);
@@ -1185,7 +1185,7 @@ void hiopVectorRajaPar::axpy(double alpha, const hiopVector& xvec, const hiopVec
 }
 
 /// @brief Performs axpy, this += alpha*x, for selected entries
-void hiopVectorRajaPar::axpy_w_pattern(double alpha, const hiopVector& x, const hiopVector& select)
+void hiopVectorRajaPar::axpy_w_pattern(double alpha, const hiopVector& xvec, const hiopVector& select)
 {
   const hiopVectorRajaPar& x = dynamic_cast<const hiopVectorRajaPar&>(xvec);
   const hiopVectorRajaPar& sel = dynamic_cast<const hiopVectorRajaPar&>(select);
