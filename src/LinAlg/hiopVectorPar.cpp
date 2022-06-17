@@ -640,11 +640,11 @@ void hiopVectorPar::axpy(double alpha, const hiopVector& x, const hiopVectorInt&
 
 }
 
-/// @brief Performs axpy, this += alpha*x, on the indexes in this specified by i.
-void hiopVectorPar::axpy(double alpha, const hiopVector& x, const hiopVector& i)
+/// @brief Performs axpy, this += alpha*x, for selected entries
+void hiopVectorPar::axpy_w_pattern(double alpha, const hiopVector& x, const hiopVector& select)
 {
   const hiopVectorPar& xx = dynamic_cast<const hiopVectorPar&>(x);
-  const hiopVectorPar& idxs = dynamic_cast<const hiopVectorPar&>(i);
+  const hiopVectorPar& idxs = dynamic_cast<const hiopVectorPar&>(select);
 
   assert(x.get_local_size() == idxs.get_local_size());
   assert(n_local_ == idxs.get_local_size());
@@ -657,7 +657,6 @@ void hiopVectorPar::axpy(double alpha, const hiopVector& x, const hiopVector& i)
       data_[j] += alpha*xd[j];
     }
   }
-
 }
 
 void hiopVectorPar::axzpy(double alpha, const hiopVector& x_, const hiopVector& z_)

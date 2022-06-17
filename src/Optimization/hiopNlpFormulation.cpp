@@ -1225,16 +1225,16 @@ double hiopNlpFormulation::get_obj_scale() const
 void hiopNlpFormulation::adjust_bounds(const hiopIterate& it)
 {  
   xl_->copy_from_w_pattern(*it.get_x(), *ixl_);
-  xl_->axpy(-1.0, *it.get_sxl(), *ixl_);
+  xl_->axpy_w_pattern(-1.0, *it.get_sxl(), *ixl_);
 
   xu_->copy_from_w_pattern(*it.get_x(), *ixu_);
-  xu_->axpy(1.0, *it.get_sxu(), *ixu_);
+  xu_->axpy_w_pattern(1.0, *it.get_sxu(), *ixu_);
 
   dl_->copy_from_w_pattern(*it.get_d(), *idl_);
-  dl_->axpy(-1.0, *it.get_sdl(), *idl_);
+  dl_->axpy_w_pattern(-1.0, *it.get_sdl(), *idl_);
 
   du_->copy_from_w_pattern(*it.get_d(), *idu_);
-  du_->axpy(1.0, *it.get_sdu(), *idu_);
+  du_->axpy_w_pattern(1.0, *it.get_sdu(), *idu_);
 }
 
 void hiopNlpFormulation::reset_bounds(double bound_relax_perturb)

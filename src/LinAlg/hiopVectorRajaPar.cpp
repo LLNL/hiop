@@ -1184,8 +1184,8 @@ void hiopVectorRajaPar::axpy(double alpha, const hiopVector& xvec, const hiopVec
     });
 }
 
-/// @brief Performs axpy, this += alpha*x, where select == 1
-void hiopVectorRajaPar::axpy(double alpha, const hiopVector& xvec, const hiopVector& select)
+/// @brief Performs axpy, this += alpha*x, for selected entries
+void hiopVectorRajaPar::axpy_w_pattern(double alpha, const hiopVector& x, const hiopVector& select)
 {
   const hiopVectorRajaPar& x = dynamic_cast<const hiopVectorRajaPar&>(xvec);
   const hiopVectorRajaPar& sel = dynamic_cast<const hiopVectorRajaPar&>(select);
@@ -1199,9 +1199,7 @@ void hiopVectorRajaPar::axpy(double alpha, const hiopVector& xvec, const hiopVec
   RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
-      if(id[i] == one) {
-        dd[i] += alpha * xd[i];        
-      }
+      dd[i] += alpha * xd[i] * id[i];        
     });
 }
 

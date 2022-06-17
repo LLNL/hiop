@@ -100,8 +100,6 @@ public:
   virtual bool adjustDuals_primalLogHessian(const double& mu, const double& kappa_Sigma);
   /* compute the log-barrier term for the primal signed variables */
   virtual double evalLogBarrier() const;
-  /* compute the log-barrier term from the given primal variable x */
-  virtual double evalLogBarrier(const hiopVector& xref, const double& mu);
   /* add the derivative of the log-barier terms*/
   virtual void addLogBarGrad_x(const double& mu, hiopVector& gradx) const;
   virtual void addLogBarGrad_d(const double& mu, hiopVector& gradd) const;

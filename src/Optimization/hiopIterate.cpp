@@ -532,25 +532,6 @@ double hiopIterate::evalLogBarrier() const
   return barrier;
 }
 
-double hiopIterate::evalLogBarrier(const hiopVector& xref, const double& mu)
-{
-  double barrier;
-  x->copyFrom(xref);
-  size_type n_adjusted_slacks = compute_safe_slacks(*this, mu);
-
-  barrier = sxl->logBarrier_local(nlp->get_ixl());
-  barrier+= sxu->logBarrier_local(nlp->get_ixu());
-#ifdef HIOP_USE_MPI
-  double res;
-  int ierr = MPI_Allreduce(&barrier, &res, 1, MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(ierr==MPI_SUCCESS);
-  barrier=res;
-#endif
-  barrier+= sdl->logBarrier_local(nlp->get_idl());
-  barrier+= sdu->logBarrier_local(nlp->get_idu());
-
-  return barrier;
-}
-
 void  hiopIterate::addLogBarGrad_x(const double& mu, hiopVector& gradx) const
 {
   // gradx = grad - mu / sxl = grad - mu * select/sxl

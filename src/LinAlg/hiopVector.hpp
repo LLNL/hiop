@@ -194,6 +194,8 @@ public:
   virtual void scale(double alpha) = 0;
   /// @brief this += alpha * x
   virtual void axpy(double alpha, const hiopVector& x) = 0;
+  /// @brief this += alpha * x, for the entries in 'this' where corresponding 'select' is nonzero.
+  virtual void axpy_w_pattern(double alpha, const hiopVector& x, const hiopVector& select) = 0;
 
   /**
    * @brief Performs axpy, this += alpha*x, on the indexes in this specified by i.
@@ -207,7 +209,6 @@ public:
    *
    */
   virtual void axpy(double alpha, const hiopVector& x, const hiopVectorInt& i) = 0;
-  virtual void axpy(double alpha, const hiopVector& x, const hiopVector& z) = 0;
   
   /// @brief this += alpha * x * z
   virtual void axzpy ( double alpha, const hiopVector& x, const hiopVector& z ) = 0;
