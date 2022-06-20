@@ -1,4 +1,4 @@
-module use -a /usr/workspack/hiop/software/spack/spack_modules/linux-rhel7-power9le
+module use -a /usr/workspace/hiop/software/spack/spack_modules/linux-rhel7-power9le
 
 module purge
 
