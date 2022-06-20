@@ -1,4 +1,4 @@
-module use -a /usr/WS1/opt_llnl/nai/software/spack/share/spack/modules/linux-rhel7-power9le
+module use -a /usr/workspace/hiop/lassen/software/spack_modules/linux-rhel7-power9le
 
 module purge
 
@@ -31,3 +31,4 @@ echo "Generated $PWD/nvblas.conf"
 export EXTRA_CMAKE_ARGS="$EXTRA_CMAKE_ARGS -DHIOP_USE_GINKGO=OFF -DHIOP_TEST_WITH_BSUB=ON -DCMAKE_CUDA_ARCHITECTURES=70"
 export EXTRA_CMAKE_ARGS="$EXTRA_CMAKE_ARGS -DHIOP_CTEST_LAUNCH_COMMAND:STRING='jsrun -n 2 -a 1 -c 1 -g 1'"
 export CMAKE_CACHE_SCRIPT=gcc-cuda.cmake
+
