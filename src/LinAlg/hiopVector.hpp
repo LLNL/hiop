@@ -78,6 +78,7 @@ public:
   /// @brief Copy the elements of v
   virtual void copyFrom(const hiopVector& v ) = 0;
   virtual void copyFrom(const double* v_local_data) = 0; //v should be of length at least n_local_
+  virtual void copy_from_w_pattern(const hiopVector& src, const hiopVector& select) = 0;
   /// @brief Copy the 'n' elements of v starting at 'start_index_in_this' in 'this'
   virtual void copyFromStarting(int start_index_in_this, const double* v, int n) = 0;
   /// @brief Copy v in 'this' starting at start_index_in_src in  'this'. */
@@ -193,6 +194,8 @@ public:
   virtual void scale(double alpha) = 0;
   /// @brief this += alpha * x
   virtual void axpy(double alpha, const hiopVector& x) = 0;
+  /// @brief this += alpha * x, for the entries in 'this' where corresponding 'select' is nonzero.
+  virtual void axpy_w_pattern(double alpha, const hiopVector& x, const hiopVector& select) = 0;
 
   /**
    * @brief Performs axpy, this += alpha*x, on the indexes in this specified by i.

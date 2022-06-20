@@ -81,7 +81,8 @@ public:
   virtual void setToConstant_w_patternSelect(double c, const hiopVector& select);
   virtual void copyFrom(const hiopVector& v );
   virtual void copyFrom(const double* v_local_data); //v should be of length at least n_local
-  virtual void copy_from(const hiopVector& src, const hiopVectorInt& index_in_src);
+  virtual void copy_from(const hiopVector& src, const hiopVectorInt& index_in_src); 
+  virtual void copy_from_w_pattern(const hiopVector& src, const hiopVector& select);
   
   /**
    * @brief Copy from src the elements specified by the indices in index_in_src. 
@@ -184,6 +185,8 @@ public:
   virtual void scale( double alpha );
   /** this += alpha * x */
   virtual void axpy  ( double alpha, const hiopVector& x );
+  /// @brief this += alpha * x, for the entries in 'this' where corresponding 'select' is nonzero.
+  virtual void axpy_w_pattern(double alpha, const hiopVector& x, const hiopVector& select);
 
   /**
    * @brief Performs axpy, this += alpha*x, on the indexes in this specified by i.
