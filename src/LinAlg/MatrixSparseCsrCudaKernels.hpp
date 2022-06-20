@@ -109,6 +109,13 @@ void csr_get_diag_kernel(int n,
  */
 void csr_form_diag_symbolic_kernel(int n, int* irowptr, int* jcolind);
 
+/**
+ * Scales rows of the sparse CSR matrix with the diagonal matrix given by array `D`
+ * 
+ * @pre All pointers should be on the device. 
+ * @pre Column indexes must be sorted for any given row.
+ */
+void csr_scalerows_kernel(int nrows, int ncols, int nnz, int* irowptr, int* jcoldind, double* values, const double* D); 
 } //end of namespace cuda
 } //end of namespace hiop
 

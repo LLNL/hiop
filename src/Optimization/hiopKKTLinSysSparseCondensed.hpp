@@ -192,8 +192,22 @@ protected:
   double delta_wx_;
 
 private:
-  //placeholder for the code that decides which linear solver to used based on safe_mode_
+  /// Placeholder for the code that decides which linear solver to used based on safe_mode_
   hiopLinSolverSymSparse* determine_and_create_linsys(size_type nxd, size_type nineq, size_type nnz);
+
+  /// Determines memory space used internally based on the "mem_space" and "compute_mode" options. This is temporary
+  /// functionality and will be removed later on when all the objects will be in the same memory space.
+  inline std::string determine_memory_space_internal()
+  {
+    auto opt_compute_mode = nlp_->options->GetString("compute_mode");
+    if(opt_compute_mode == "cpu") {
+      return "DEFAULT";
+    } else {
+      //(opt_compute_mode == "auto" || opt_compute_mode == "hybrid" || opt_compute_mode == "gpu") {
+      assert(opt_compute_mode != "gpu" && "When code is GPU-ready, remove this method");
+      return "DEVICE";
+    }
+  }
 };
   
 } // end of namespace
