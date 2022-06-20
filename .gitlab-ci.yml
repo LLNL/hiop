@@ -5,14 +5,14 @@
     - shell
     - quartz
   variables:
-    CUSTOM_CI_BUILDS_DIR: "/usr/workspace/hiop/gitlab-ci/quartz/${CI_PIPELINE_ID}"
+    CUSTOM_CI_BUILDS_DIR: "/usr/workspace/hiop/gitlab_ci/quartz/${CI_PIPELINE_ID}"
 
 .lassen: &llnl_setenv_lassen
   tags:
     - shell
     - lassen
   variables:
-    CUSTOM_CI_BUILDS_DIR: "/usr/workspace/hiop/gitlab-ci/lassen/${CI_PIPELINE_ID}"
+    CUSTOM_CI_BUILDS_DIR: "/usr/workspace/hiop/gitlab_ci/lassen/${CI_PIPELINE_ID}"
 
 
 .llnl_script_template: &llnl_script_build
@@ -44,7 +44,7 @@
     - |
       cd "$CUSTOM_CI_BUILDS_DIR/.."
       rm -rf "$CUSTOM_CI_BUILDS_DIR"
-      rm -rf "/usr/workspace/hiop/gitlab-ci/scripts/$CI_RUNNER_SHORT_TOKEN"
+      rm -rf "/usr/workspace/hiop/gitlab_ci/scripts/$CI_RUNNER_SHORT_TOKEN"
 
 .llnl_test_jsrun_script: &llnl_jsrun_test
   script:
