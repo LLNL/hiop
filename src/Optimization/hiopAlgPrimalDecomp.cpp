@@ -173,10 +173,7 @@ hiopAlgPrimalDecomposition::HessianApprox::
 HessianApprox(hiopInterfacePriDecProblem* priDecProb, 
               hiopOptions* options_pridec,
               MPI_Comm comm_world)
-  : HessianApprox(-1, 
-                  priDecProb, 
-                  options_pridec, 
-                  comm_world)
+  : HessianApprox(-1, priDecProb, options_pridec, comm_world)
 {
   comm_world_ = comm_world;
   log_ = new hiopLogger(options_, stdout, 0, comm_world);
@@ -187,9 +184,7 @@ HessianApprox(const int& n,
               hiopInterfacePriDecProblem* priDecProb,
               hiopOptions* options_pridec,
               MPI_Comm comm_world)
-    : priDecProb_(priDecProb), 
-      options_(options_pridec), 
-      comm_world_(comm_world)
+    : priDecProb_(priDecProb), options_(options_pridec), comm_world_(comm_world)
 {
   n_=n;
   fkm1 = 1e20;
@@ -783,8 +778,8 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
       return run_single();//call the serial solver
     }
     if(my_rank_==0) {
-      printf("total number of recourse problems  %lu\n", S_);
-      printf("total ranks %d\n",comm_size_);
+      log_->printf(hovSummary, "total number of recourse problems  %lu\n", S_);
+      log_->printf(hovSummary, "total ranks %d\n",comm_size_);
     }
     // initial point set to all zero, for now
     x_->setToConstant(0.0);
@@ -807,6 +802,8 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
     x0->setToZero(); 
     double* x0_vec=x0->local_data();
     
+    hiopVector* grad_aux = x0->alloc_clone();
+    grad_aux->setToZero();
     // local recourse terms for each evaluator, defined accross all processors
     double rec_val = 0.;
     hiopVector* grad_acc = grad_r->alloc_clone();
@@ -1018,7 +1015,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
           rec_val += aux;
         }
         // log_->printf(hovFcnEval, "recourse value: is %18.12e)\n", rec_val);
-        hiopVector* grad_aux = x0->alloc_clone();
+
         grad_aux->setToZero(); 
 
         for(int ri=0; ri<cont_idx.size(); ri++) {
@@ -1030,8 +1027,6 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
           grad_acc->axpy(1.0, *grad_aux);
         }
         rec_prob[my_rank_]->set_value(rec_val);
-
-        delete grad_aux;
 
         rec_prob[my_rank_]->set_grad(grad_acc_vec);
         rec_prob[my_rank_]->post_send(2, rank_master, comm_world_);
@@ -1071,7 +1066,6 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
               rec_val += aux;
             }
             // log_->printf(hovFcnEval, "recourse value: is %18.12e)\n", rec_val);
-            hiopVector* grad_aux = x0->alloc_clone();
             grad_aux->setToZero(); 
 
             for(int ri=0; ri<cont_idx.size(); ri++) {
@@ -1093,7 +1087,6 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
             // post recv for new index
             req_cont_idx->post_recv(1, rank_master, comm_world_);
             // ierr = MPI_Irecv(&cont_idx[0], 1, MPI_INT, rank_master, 1, comm_world_, &request_[0]);
-            delete grad_aux;
           }
         }
       }
@@ -1108,13 +1101,9 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
         recourse_val = rval;
 
         log_->printf(hovSummary, "real rval %18.12e\n", rval);
-        
-        std::cout<<"my rank "<<my_rank_<< " grad "<< grad_r_vec[0]<< " "<<grad_r_vec[1]<<std::endl;
         MPI_Status mpi_status; 
 
-        for(int i=0; i<nc_; i++) {
-          hess_appx_vec[i] = 1.0;
-        }
+        hess_appx->setToConstant(1.0);
 
         if(nc_<n_) {
           x0->copy_from_indexes(*x_, *xc_idx_);
@@ -1128,10 +1117,8 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
           double alp_temp = hess_appx_2->get_alpha_f(*grad_r);
           // double alp_temp = hess_appx_2->get_alpha_tr(); // alternative update rule for alpha
           log_->printf(hovSummary, "alpd %18.12e\n", alp_temp);
-          
-          for(int i=0; i<nc_; i++) {
-            hess_appx_vec[i] = alp_temp;
-          }
+ 
+          hess_appx->setToConstant(alp_temp);
         } else {
           hess_appx_2->update_hess_coeff(*x0, *grad_r, rval);
           //update basecase objective, this requires updated skm1 and ykm1
@@ -1152,9 +1139,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
           convg_f = hess_appx_2->check_convergence_fcn(base_val, base_valm1);
           log_->printf(hovSummary,"function val convergence measure %18.12e\n", convg_f);
           convg = std::min(convg_f,convg_g);
-          for(int i=0; i<nc_; i++) {
-            hess_appx_vec[i] = alp_temp;
-          }
+          hess_appx->setToConstant(alp_temp);
 
         }
 
@@ -1226,6 +1211,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
     delete grad_r;
     delete hess_appx;
     delete x0;
+    delete grad_aux;
     delete grad_acc;
     delete hess_appx_2;
     delete evaluator;
@@ -1253,8 +1239,8 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
       return run_single();//call the serial solver
     }
     if(my_rank_==0) {
-      printf("total number of recourse problems  %lu\n", S_);
-      printf("total ranks %d\n",comm_size_);
+      log_->printf(hovSummary, "total number of recourse problems  %lu\n", S_);
+      log_->printf(hovSummary, "total ranks %d\n",comm_size_);
     }
     // initial point set to all zero, for now
     x_->setToConstant(0.0);
@@ -1284,6 +1270,9 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
     x0->setToZero(); 
     double* x0_vec=x0->local_data();
     
+    hiopVector* grad_aux = x0->alloc_clone();
+    grad_aux->setToZero();
+
     // local recourse terms for each evaluator, defined accross all processors
     // it is only necessary if a batch of recourse indices are sent at the same time 
     // therefore in run_local() no longer defined 
@@ -1394,7 +1383,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
         // hiopVectorInt* finish_flag = LinearAlgebraFactory::createVectorInt(comm_size_);
         // finish_flag->setToZero();
         std::vector<int> finish_flag(comm_size_); // standard vector will be replaced by hiopVectorInt
-        for(int i=0;i<comm_size_;i++) {
+        for(int i=0; i<comm_size_; i++) {
           finish_flag[i]=0;
         }
         int last_loop = 0;
@@ -1404,7 +1393,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
         log_->printf(hovFcnEval, "Elapsed time for entire iteration %d is %f\n",it, t2 - t1);
         
         while(idx<=S_ || last_loop) { 
-          for(int r=1; r< comm_size_;r++) {
+          for(int r=1; r< comm_size_; r++) {
             int mpi_test_flag = rec_prob[r]->test();
             if(mpi_test_flag && (finish_flag[r]==0)) {// receive completed
               if(!last_loop && idx<S_) {
@@ -1506,7 +1495,6 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
         }
 
         // log_->printf(hovFcnEval, "recourse value: is %18.12e)\n", rec_val);
-        hiopVector* grad_aux = x0->alloc_clone();
         grad_aux->setToZero(); 
 
         for(int ri=0; ri<cont_idx.size(); ri++) {
@@ -1518,7 +1506,6 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
           //grad_acc->axpy(1.0, *grad_aux);
           grad_r->axpy(1.0, *grad_aux);
         }
-        delete grad_aux;
 
         // no need to set values for rec_prob anymore
         //rec_prob[my_rank_]->set_value(rec_val);
@@ -1567,7 +1554,6 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
               rval += aux;
             }
             // log_->printf(hovFcnEval, "recourse value: is %18.12e)\n", rec_val);
-            hiopVector* grad_aux = x0->alloc_clone();
             grad_aux->setToZero(); 
 
             for(int ri=0; ri<cont_idx.size(); ri++) {
@@ -1591,7 +1577,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
             // post recv for new index
             req_cont_idx->post_recv(1, rank_master, comm_world_);
             // ierr = MPI_Irecv(&cont_idx[0], 1, MPI_INT, rank_master, 1, comm_world_, &request_[0]);
-            delete grad_aux;
+
           }
         }
         //rval = rec_val;
@@ -1627,9 +1613,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
         
         MPI_Status mpi_status; 
 
-        for(int i=0; i<nc_; i++) {
-          hess_appx_vec[i] = 1.0;
-        }
+        hess_appx->setToConstant(1.0);
 
         if(nc_<n_) {
           x0->copy_from_indexes(*x_, *xc_idx_);
@@ -1643,10 +1627,8 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
           double alp_temp = hess_appx_2->get_alpha_f(*grad_r);
           // double alp_temp = hess_appx_2->get_alpha_tr(); // alternative update rule for alpha
           log_->printf(hovSummary, "alpd %18.12e\n", alp_temp);
-          
-          for(int i=0; i<nc_; i++) {
-            hess_appx_vec[i] = alp_temp;
-          }
+         
+          hess_appx->setToConstant(alp_temp); 
         } else {
           hess_appx_2->update_hess_coeff(*x0, *grad_r, rval);
           //update basecase objective, this requires updated skm1 and ykm1
@@ -1667,9 +1649,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
           convg_f = hess_appx_2->check_convergence_fcn(base_val, base_valm1);
           log_->printf(hovSummary,"function val convergence measure %18.12e\n", convg_f);
           convg = std::min(convg_f,convg_g);
-          for(int i=0; i<nc_; i++) {
-            hess_appx_vec[i] = alp_temp;
-          }
+          hess_appx->setToConstant(alp_temp); 
 
         }
 
@@ -1742,6 +1722,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
     delete grad_r_main;
     delete hess_appx;
     delete x0;
+    delete grad_aux;
     //delete grad_acc;
     delete hess_appx_2;
     delete evaluator;
@@ -1876,9 +1857,7 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
     
     recourse_val = rval;
 
-    for(int i=0; i<nc_; i++) {
-      hess_appx_vec[i] = 1e6;
-    }
+    hess_appx->setToConstant(1e6);
  
     if(it==0) {
       hess_appx_2->initialize(rval, *x0, *grad_r);
@@ -1886,9 +1865,7 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
       // double alp_temp = hess_appx_2->get_alpha_tr(); // alternative update rule for alpha
       log_->printf(hovSummary, "alpd %18.12e\n", alp_temp);
       
-      for(int i=0; i<nc_; i++) {
-        hess_appx_vec[i] = alp_temp;
-      }
+      hess_appx->setToConstant(alp_temp);
     } else {
       hess_appx_2->update_hess_coeff(*x0, *grad_r, rval);
       
@@ -1911,9 +1888,7 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
       log_->printf(hovSummary, "function val convergence measure %18.12e\n", convg_f);
      
       convg = std::min(convg_f,convg_g);
-      for(int i=0; i<nc_; i++) {
-        hess_appx_vec[i] = alp_temp;
-      }
+      hess_appx->setToConstant(alp_temp);
     }
 
     // for debugging purpose print out the recourse gradient
