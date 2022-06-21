@@ -71,14 +71,14 @@
  * @pre The CSR matrix must have diagonals part of its nonzero pattern.
  */
 __global__
-void array_random_uniform_cuda(int n, double* d_array, unsigned long seed)
+void array_random_uniform_cuda(int n, double* d_array, unsigned long seed, double minv, double maxv)
 {
     int id = threadIdx.x;
     curandState state;
     curand_init( seed, id, 0, &state);
     double ranv = curand_uniform_double( &state );
     printf("tid %d : %f\n", id,ranv );
-    d_array[id] = ranv;	
+    d_array[id] = ranv * (maxv - minv) + minv;	
 //return 1;
 }
 
@@ -87,12 +87,12 @@ namespace hiop
 namespace cuda
 {
 
-int array_random_uniform_kernel(int n, double* d_array)
+int array_random_uniform_kernel(int n, double* d_array, double minv, double maxv)
 {
   //block of smaller sizes tend to perform 1.5-2x faster than the usual 256 or 128 blocks
   int block_size=16;
   unsigned long seed = generate_seed();
-  array_random_uniform_cuda<<<1,block_size>>>(n, d_array, seed);
+  array_random_uniform_cuda<<<1,block_size>>>(n, d_array, seed, minv, maxv);
 
   return 1;
 }

@@ -225,7 +225,7 @@ void hiopVectorRajaPar::set_to_random_uniform(double minv, double maxv)
 {
   double* data = data_dev_;
 #ifdef HIOP_USE_CUDA
-  hiop::cuda::array_random_uniform_kernel(n_local_, data);
+  hiop::cuda::array_random_uniform_kernel(n_local_, data, minv, maxv);
 #else
   assert(0&&"not yet");
 #endif

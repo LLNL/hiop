@@ -61,7 +61,7 @@ namespace hiop
 {
 namespace cuda
 {
-  int array_random_uniform_kernel(int n, double* d_array);
+  int array_random_uniform_kernel(int n, double* d_array, double minv, double maxv);
 
 } //end of namespace cuda
 } //end of namespace hiop
