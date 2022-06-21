@@ -73,13 +73,15 @@
 __global__
 void array_random_uniform_cuda(int n, double* d_array, unsigned long seed, double minv, double maxv)
 {
-    int id = threadIdx.x;
+    const int num_threads = blockDim.x * gridDim.x;
+    const int tid = blockIdx.x * blockDim.x + threadIdx.x;    
+    double ranv;
     curandState state;
-    curand_init( seed, id, 0, &state);
-    double ranv = curand_uniform_double( &state );
-    printf("tid %d : %f\n", id,ranv );
-    d_array[id] = ranv * (maxv - minv) + minv;	
-//return 1;
+    curand_init( seed, tid, 0, &state);
+    for (int i = tid; i < n; i += num_threads) {
+      ranv = curand_uniform_double( &state ); // from 0 to 1
+      d_array[i] = ranv * (maxv - minv) + minv;	
+    }
 }
 
 namespace hiop
@@ -90,9 +92,11 @@ namespace cuda
 int array_random_uniform_kernel(int n, double* d_array, double minv, double maxv)
 {
   //block of smaller sizes tend to perform 1.5-2x faster than the usual 256 or 128 blocks
-  int block_size=16;
+  int block_size=256;
+  int grid_size = (n+block_size-1)/block_size;
+  
   unsigned long seed = generate_seed();
-  array_random_uniform_cuda<<<1,block_size>>>(n, d_array, seed, minv, maxv);
+  array_random_uniform_cuda<<<grid_size,block_size>>>(n, d_array, seed, minv, maxv);
 
   return 1;
 }
