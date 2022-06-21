@@ -12,7 +12,7 @@
  *        x_1 + x_n   == 10,   i=3,...,n, if eq_feas == true
  *        x_1 + x_n   == 15,   i=3,...,n, if eq_infeas == true
  *        10-a <= x_1 + x_n  <= 10+a,           , if ineq_feas == true or ineq_infeas == true 
- *        10+a <= x_1 + x_n  <= 15+a, i=3,...,n , if ineq_feas == true
+ *        10-a <= x_1 + x_n  <= 15+a, i=3,...,n , if ineq_feas == true
  *         3-a <= x_1 + x_n  <= 5-a,  i=3,...,n,   if ineq_infeas == true
  *        x_i >= 0, i=1,...,n
  * 
@@ -107,7 +107,7 @@ bool SparseEx3::get_cons_info(const size_type& m, double* clow, double* cupp, No
   }
   if(ineq_feas_) {
     for(index_type i=0; i<n_vars_-2; i++) {
-      clow[conidx] = 10.0 + scala_a_;
+      clow[conidx] = 10.0 - scala_a_; // change this to 10 + scala_a will introduce numerical problems
       cupp[conidx] = 15.0 + scala_a_;
       type[conidx++] = hiopInterfaceBase::hiopLinear;
     }

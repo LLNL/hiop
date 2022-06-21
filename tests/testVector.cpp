@@ -310,6 +310,8 @@ int runTests(const char* mem_space, MPI_Comm comm)
     fail += test.vectorIsfinite(*v);
   }
 
+  fail += test.vector_is_equal(*x, *y, rank);
+
   delete a;
   delete b;
   delete v;

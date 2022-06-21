@@ -234,7 +234,7 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
 
 #ifdef CSRCUDA_TESTING
   JacD_cuda.scale_rows(*Hd_cuda);
-  
+
   JtDiagJ_cuda = JacDt_cuda.times_mat_alloc(JacD_cuda);
   JacDt_cuda.times_mat_symbolic(*JtDiagJ_cuda, JacD_cuda);
   JacDt_cuda.times_mat_numeric(0.0, *JtDiagJ_cuda, 1.0, JacD_cuda);
@@ -355,7 +355,6 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   // M_condensed_ = M_condensed_ + Hess_csr_ + JtDiagJ_ + Dx_ + delta_wx*I
   //
   Hess_csr_->add_matrix_numeric(*M_condensed_, 1.0, *JtDiagJ_, 1.0);
-
   
   if(delta_wx>0) {
     M_condensed_->addDiagonal(delta_wx);
@@ -366,9 +365,8 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   //t.stop(); printf("ADD-nume  took %.5f\n", t.getElapsedTime());
 
 
-  printf("CPU-----------------------------------\n");
-  M_condensed_->print();
-  fflush(stdout); //!
+  //printf("CPU-----------------------------------\n");
+  //M_condensed_->print();
   
   int nnz_condensed = M_condensed_->numberOfNonzeros();
 

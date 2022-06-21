@@ -295,6 +295,27 @@ void hiopVectorRajaPar::copy_from(const hiopVector& vec, const hiopVectorInt& in
     });
 }
 
+/// @brief Copy from vec the elements specified by the indices in index_in_src. 
+void hiopVectorRajaPar::copy_from_w_pattern(const hiopVector& vec, const hiopVector& select)
+{
+  const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(vec);
+  const hiopVectorRajaPar& ix = dynamic_cast<const hiopVectorRajaPar&>(select);
+
+  assert(n_local_ == ix.n_local_);
+  
+  double* dd = data_dev_;
+  double* vd = v.data_dev_;
+  double* id = ix.data_dev_;
+
+  RAJA::forall< hiop_raja_exec >(RAJA::RangeSegment(0, n_local_),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+       if(id[i] == one) {
+         dd[i] = vd[i];
+       }      
+    });
+}
+
 /// @brief Copy from vec the elements specified by the indices in index_in_src
 void hiopVectorRajaPar::copy_from(const double* vec, const hiopVectorInt& index_in_src)
 {
@@ -1160,6 +1181,25 @@ void hiopVectorRajaPar::axpy(double alpha, const hiopVector& xvec, const hiopVec
       assert(id[i]<tmp_n_local);
       // y := a * x + y
       dd[id[i]] = alpha * xd[i] + dd[id[i]];
+    });
+}
+
+/// @brief Performs axpy, this += alpha*x, for selected entries
+void hiopVectorRajaPar::axpy_w_pattern(double alpha, const hiopVector& xvec, const hiopVector& select)
+{
+  const hiopVectorRajaPar& x = dynamic_cast<const hiopVectorRajaPar&>(xvec);
+  const hiopVectorRajaPar& sel = dynamic_cast<const hiopVectorRajaPar&>(select);
+#ifdef HIOP_DEEPCHECKS
+  assert(x.n_local_ == sel.n_local_);
+  assert(  n_local_ == sel.n_local_);
+#endif  
+  double *dd       = data_dev_;
+  const double *xd = x.local_data_const();
+  const double *id = sel.local_data_const();
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      dd[i] += alpha * xd[i] * id[i];        
     });
 }
 
@@ -2064,6 +2104,34 @@ void hiopVectorRajaPar::set_array_from_to(hiopInterfaceBase::NonlinearityType* a
       arr[i] = arr_src;
     }
   );      
+}
+
+bool hiopVectorRajaPar::is_equal(const hiopVector& vec) const
+{
+#ifdef HIOP_DEEPCHECKS
+  const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(vec);
+  assert(v.n_local_ == n_local_);
+#endif 
+
+  const double* data_v = vec.local_data_const();
+  const double* data = data_dev_;
+  RAJA::ReduceSum< hiop_raja_reduce, int > sum(0);
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
+    RAJA_LAMBDA(RAJA::Index_type i) 
+    {
+      if(data[i]!=data_v[i]) {
+        sum += 1;        
+      }
+    });
+  int all_equal = (sum.get() == 0);
+  
+#ifdef HIOP_USE_MPI
+  int all_equalG;
+  int ierr = MPI_Allreduce(&all_equal, &all_equalG, 1, MPI_INT, MPI_MIN, comm_);
+  assert(MPI_SUCCESS==ierr);
+  return all_equalG;
+#endif  
+  return all_equal;
 }
 
 } // namespace hiop

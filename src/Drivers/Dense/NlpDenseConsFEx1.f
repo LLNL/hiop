@@ -18,7 +18,7 @@ C =============================================================================
 
       integer     N,     M
       integer     retv
-      parameter  (N = 500, M = 499)
+      parameter  (N = 50, M = 49)
 
       double precision LAM(M)
       double precision G(M)
@@ -26,6 +26,8 @@ C =============================================================================
       double precision X_L(N), X_U(N), Z_L(N), Z_U(N)
       double precision G_L(M), G_U(M)
       double precision OOBJ
+      double precision OBJ_SAVED
+      parameter (OBJ_SAVED = 1.10351564683176d-1)
 
       integer*8 HIOPPROBLEM
       integer*8 hiopdenseprob
@@ -79,6 +81,12 @@ C     hiop solve
       write(*,*)
       write(*,*) 'Optimal Objective = ',OOBJ
       write(*,*)
+
+      if (ABS(OOBJ-OBJ_SAVED) > 1e-6) then
+         write(*,*) 'Obj mismatches SparseEx1 with 50 variables.'
+         write(*,*) 'Saved Obj = ', OBJ_SAVED 
+         stop -1
+      endif
 
 C     Clean up
       call deletehiopdenseprob(HIOPPROBLEM)
