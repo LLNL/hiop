@@ -47,6 +47,7 @@
 
 #include "hiopVectorPar.hpp"
 #include "hiopVectorIntSeq.hpp"
+#include "hiopCppStdUtils.hpp"
 
 #include <cmath>
 #include <cstring> //for memcpy
@@ -132,9 +133,7 @@ void hiopVectorPar::set_to_random_uniform(double minv, double maxv)
   std::uniform_real_distribution<double> unif(minv,maxv);
   std::default_random_engine re;
 
-#ifdef NDEBUG
-  re.seed(std::chrono::system_clock::now().time_since_epoch().count());
-#endif
+  re.seed(generate_seed());
 
   for(index_type i=0; i<n_local_; ++i) {
     data_[i] = unif(re);

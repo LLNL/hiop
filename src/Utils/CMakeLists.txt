@@ -27,5 +27,14 @@ install(
   DESTINATION include
   )
 
+set(hiopUtils_CUDA_SRC
+  hiopUtilsCUDA.cu
+)
+
+if(HIOP_USE_CUDA)
+  set_source_files_properties(${hiopUtils_CUDA_SRC} PROPERTIES LANGUAGE CUDA)
+  list(APPEND hiopUtils_SRC ${hiopUtils_CUDA_SRC})
+endif(HIOP_USE_CUDA)
+
 add_library(hiopUtils OBJECT ${hiopUtils_SRC})
 target_link_libraries(hiopUtils PRIVATE hiop_tpl)

@@ -80,7 +80,7 @@ public:
 
   virtual void setToZero();
   virtual void setToConstant( double c );
-  virtual void set_to_random_uniform(double minv, double maxv) {assert(false&&"not implemented yet!");}
+  virtual void set_to_random_uniform(double minv, double maxv);
   virtual void setToConstant_w_patternSelect(double c, const hiopVector& select);
   virtual void copyFrom(const hiopVector& v );
   virtual void copyFrom(const double* v_local_data); //v should be of length at least n_local

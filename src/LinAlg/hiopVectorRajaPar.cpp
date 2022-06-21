@@ -57,6 +57,9 @@
  */
 #include "hiopVectorRajaPar.hpp"
 #include "hiopVectorIntRaja.hpp"
+#ifdef HIOP_USE_CUDA
+#include "hiopUtilsCUDA.hpp"
+#endif
 
 #include <cmath>
 #include <cstring> //for memcpy
@@ -216,6 +219,16 @@ void hiopVectorRajaPar::setToConstant(double c)
     {
       data[i] = c;
     });
+}
+
+void hiopVectorRajaPar::set_to_random_uniform(double minv, double maxv)
+{
+  double* data = data_dev_;
+#ifdef HIOP_USE_CUDA
+  hiop::cuda::array_random_uniform_kernel(n_local_, data);
+#else
+  assert(0&&"not yet");
+#endif
 }
 
 /// Set selected elements to constant, zero otherwise
