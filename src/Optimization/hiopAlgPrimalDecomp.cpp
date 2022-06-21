@@ -796,6 +796,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
     double* grad_r_vec=grad_r->local_data();
   
     hiopVector* hess_appx = grad_r->alloc_clone();
+    hess_appx->setToZero();
     double* hess_appx_vec = hess_appx->local_data();
    
     hiopVector* x0 = grad_r->alloc_clone();
@@ -1265,7 +1266,8 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
 
     hiopVector* hess_appx = grad_r->alloc_clone();
     double* hess_appx_vec = hess_appx->local_data();
-   
+    hess_appx->setToZero();
+
     hiopVector* x0 = grad_r->alloc_clone();
     x0->setToZero(); 
     double* x0_vec=x0->local_data();
