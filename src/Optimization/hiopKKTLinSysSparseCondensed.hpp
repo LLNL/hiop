@@ -188,8 +188,8 @@ protected:
   /// Member for JacD'*Dd*JacD + H + Dx + delta_wx*I
   hiopMatrixSparseCSR* M_condensed_;
 
-  /// Inertia correction perturbations used in the (last) factorization
-  double delta_wx_;
+  /// Stores Dx plus delta_wx for more efficient updates of the condensed system matrix
+  hiopVector* Dx_plus_deltawx_;
 
 private:
   /// Placeholder for the code that decides which linear solver to used based on safe_mode_
