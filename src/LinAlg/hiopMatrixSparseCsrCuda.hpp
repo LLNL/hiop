@@ -573,10 +573,71 @@ public:
 
   /// @brief Performs a quick check and returns false if the CSR indexes are not ordered
   bool check_csr_is_ordered();
+  
   /////////////////////////////////////////////////////////////////////
   // end of new CSR-specific methods
   /////////////////////////////////////////////////////////////////////
 
+  //(re)setters for internals
+protected:
+
+  /** Set the sparse gemm descriptor that was used before the instantiation of this class. This class
+   * takes ownership of the input descriptor/pointer.
+   */
+  inline void use_sparse_gemm_descriptor(cusparseSpGEMMDescr_t gemm_sp_descr_in)
+  {
+    auto st = cusparseSpGEMM_destroyDescr(gemm_sp_descr_);
+    assert(st == CUSPARSE_STATUS_SUCCESS);
+    gemm_sp_descr_ = gemm_sp_descr_in;
+  }
+
+  /** Set the sparse matrix descriptor that was used before the instantiation of this class. This class
+   * takes ownership of input descriptor/pointer.
+   */
+  inline void use_sparse_mat_descriptor(cusparseSpMatDescr_t sp_mat_descr)
+  {
+    auto st = cusparseDestroySpMat(mat_sp_descr_);
+    assert(st == CUSPARSE_STATUS_SUCCESS);
+    mat_sp_descr_ = sp_mat_descr;
+
+    //set pointers since the input descriptor does not have the values_ pointer
+    st = cusparseCsrSetPointers(mat_sp_descr_, irowptr_, jcolind_, values_);
+    assert(st == CUSPARSE_STATUS_SUCCESS);
+  }
+
+  ///@brief Set and take ownwership of the buffer
+  inline void set_gemm_buffer3(void* buff_in)
+  {
+    //should not be previously allocated
+    assert(buffer_gemm3_==nullptr);
+    //`this` takes ownership of the pointer
+    buffer_gemm3_ = buff_in;
+  }
+
+  inline void dealloc_gemm_buffer3()
+  {
+    auto ret = cudaFree(buffer_gemm3_);
+    assert(cudaSuccess == ret);
+    buffer_gemm3_ = nullptr;
+  }
+
+  ///@brief Set and take ownwership of the buffer
+  inline void set_gemm_buffer4(void* buff_in)
+  {
+    //should not be previously allocated
+    assert(buffer_gemm4_==nullptr);
+    //`this` takes ownership of the pointer
+    buffer_gemm4_ = buff_in;
+  }
+
+  ///@ Allocate internal gemm buffer5
+  inline void* alloc_gemm_buffer5(size_t buff_size)
+  {
+    assert(buffer_gemm5_ == nullptr);
+    auto cret = cudaMalloc((void**)&(buffer_gemm5_), buff_size);
+    assert(cudaSuccess == cret);
+    return buffer_gemm5_;
+  }
 private:
   void alloc();
   void dealloc();
@@ -598,12 +659,27 @@ protected:
 
   ///Internal buffer used by add_matrix/geam2
   void* buffer_geam2_;
+
+  ///Internal buffer used by times_mat/SpGEMMreuse
+  void* buffer_gemm3_;
+
+  ///Internal buffer used by times_mat/SpGEMMreuse
+  void* buffer_gemm4_;
+
+  ///Internal buffer used by times_mat/SpGEMMreuse
+  void* buffer_gemm5_;
   
   /// Internal handle required by cuSPARSE functions
   cusparseHandle_t h_cusparse_;
 
-  /// Internal cuSPARSE matrix descriptor
+  /// Internal cuSPARSE matrix descriptor (used by add API)
   cusparseMatDescr_t mat_descr_;
+
+  /// Internal cuSPARSE sparse matrix descriptor (used by the mult API)
+  cusparseSpMatDescr_t mat_sp_descr_;
+
+  /// Internal cuSPARSE gemm descriptor
+  cusparseSpGEMMDescr_t gemm_sp_descr_;
 private:
   hiopMatrixSparseCSRCUDA(const hiopMatrixSparseCSRCUDA&) = delete;
 };
