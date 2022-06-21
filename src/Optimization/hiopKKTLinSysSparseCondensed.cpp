@@ -145,7 +145,7 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
     Dx_plus_deltawx_ = LinearAlgebraFactory::create_vector(mem_space_internal, Dx_->get_size());
   }
 
-#define CSRCUDA_TESTING
+//#define CSRCUDA_TESTING
 #ifdef CSRCUDA_TESTING
   //temporary: put copy of Hd on device, unless compute mode is cpu
   hiopVector* Hd_cuda = LinearAlgebraFactory::create_vector(mem_space_internal, nineq);
