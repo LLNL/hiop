@@ -188,22 +188,29 @@ protected:
   /// Member for JacD'*Dd*JacD + H + Dx + delta_wx*I
   hiopMatrixSparseCSR* M_condensed_;
 
+  /// Member for storing auxiliary sum of upper triangle of H + Dx + delta_wx*I
+  hiopMatrixSparseCSR* Hess_upper_plus_diag_;
+
+  /// Member for storing the auxiliary sum of Dx + delta_wx*I
+  hiopMatrixSparseCSR* Diag_Dx_deltawx_;
+  
   /// Stores Dx plus delta_wx for more efficient updates of the condensed system matrix
   hiopVector* Dx_plus_deltawx_;
 
+  /// Stores a copy of Hd_ on the device (to be later removed)
+  hiopVector* Hd_copy_;
 private:
   /// Placeholder for the code that decides which linear solver to used based on safe_mode_
   hiopLinSolverSymSparse* determine_and_create_linsys(size_type nxd, size_type nineq, size_type nnz);
 
   /// Determines memory space used internally based on the "mem_space" and "compute_mode" options. This is temporary
   /// functionality and will be removed later on when all the objects will be in the same memory space.
-  inline std::string determine_memory_space_internal()
+  inline std::string determine_memory_space_internal(const std::string& opt_compute_mode)
   {
-    auto opt_compute_mode = nlp_->options->GetString("compute_mode");
-    if(opt_compute_mode == "cpu") {
+    if(opt_compute_mode == "cpu" || opt_compute_mode == "auto") {
       return "DEFAULT";
     } else {
-      //(opt_compute_mode == "auto" || opt_compute_mode == "hybrid" || opt_compute_mode == "gpu") {
+      //(opt_compute_mode == "hybrid" || opt_compute_mode == "gpu") {
       assert(opt_compute_mode != "gpu" && "When code is GPU-ready, remove this method");
       return "DEVICE";
     }

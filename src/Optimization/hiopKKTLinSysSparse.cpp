@@ -624,7 +624,7 @@ namespace hiop
         /////////////////////////////////////////////////////////////////////////////////////////////
         // CPU compute mode
         /////////////////////////////////////////////////////////////////////////////////////////////
-        
+        printf("aaaaaaaaaaaaaaa %s \n", linear_solver.c_str()); fflush(stdout);
         if(linear_solver == "ma57" || linear_solver == "auto") {
 #ifdef HIOP_USE_COINHSL
           linSys_ = new hiopLinSolverSymSparseMA57(n, nnz, nlp_);
