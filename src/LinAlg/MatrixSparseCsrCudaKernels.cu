@@ -237,7 +237,18 @@ void csr_form_diag_symbolic(int n, int* irowptr, int* jcolind)
   }
 }
 
+__global__
+void csr_scalerows(int nrows, int ncols, int nnz, int* irowptr, int* jcolind, double* values, const double* D)
+{
+  const int num_threads = blockDim.x * gridDim.x;
+  const int tid = blockIdx.x * blockDim.x + threadIdx.x;
 
+  for(int i=tid; i<nrows; i+=num_threads) {
+    for(int itnz=irowptr[i]; itnz<irowptr[i+1]; ++itnz) {
+      values[itnz] *= D[i];
+    }
+  }
+}
 namespace hiop
 {
 namespace cuda
@@ -286,6 +297,13 @@ void csr_form_diag_symbolic_kernel(int n, int* irowptr, int* jcolind)
   int block_size=256;
   int num_blocks = (n+block_size-1)/block_size;
   csr_form_diag_symbolic<<<num_blocks,block_size>>>(n, irowptr, jcolind);
+}
+
+void csr_scalerows_kernel(int nrows, int ncols, int nnz, int* irowptr, int* jcolind, double* values, const double* D)
+{
+  int block_size=256;
+  int num_blocks = (nrows+block_size-1)/block_size;
+  csr_scalerows<<<num_blocks,block_size>>>(nrows, ncols, nnz, irowptr, jcolind, values, D);
 }
 }  //end of namespace
 } //end of namespace

@@ -65,6 +65,8 @@
 #include "hiopMatrixSparseTripletStorage.hpp"
 #include "hiopMatrixSparseCSRSeq.hpp"
 
+#include "hiopVectorRajaPar.hpp"
+
 namespace hiop
 {
 
@@ -78,12 +80,13 @@ hiopKKTLinSysCondensedSparse::hiopKKTLinSysCondensedSparse(hiopNlpFormulation* n
     Hess_upper_csr_(nullptr),
     Hess_csr_(nullptr),
     M_condensed_(nullptr),
-    delta_wx_(0.)
+    Dx_plus_deltawx_(nullptr)
 {
 }
 
 hiopKKTLinSysCondensedSparse::~hiopKKTLinSysCondensedSparse()
 {
+  delete Dx_plus_deltawx_;
   delete M_condensed_;
   delete JtDiagJ_;
   delete JacDt_;
@@ -108,7 +111,6 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
     delta_wx += fabs(dcc);
     delta_wd += fabs(dcc);
   }
-  delta_wx_ = delta_wx;
 
   hiopMatrixSymSparseTriplet* Hess_triplet = dynamic_cast<hiopMatrixSymSparseTriplet*>(Hess_);
   HessSp_ = Hess_triplet; //dynamic_cast<hiopMatrixSymSparseTriplet*>(Hess_);
@@ -133,20 +135,54 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   assert(nineq == Dd_->get_size());
   assert(nx == Dx_->get_size());
 
+
+  //allocate on the first call
+  auto mem_space_internal = determine_memory_space_internal(); 
   if(nullptr == Hd_) {
     Hd_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), nineq);
+    assert(nullptr == Dx_plus_deltawx_); //should be also not allocated
+    //allocate this internal vector on the device if hybrid compute mode
+    Dx_plus_deltawx_ = LinearAlgebraFactory::create_vector(mem_space_internal, Dx_->get_size());
   }
-  Hd_->copyFrom(*Dd_);  
+
+//#define CSRCUDA_TESTING
+#ifdef CSRCUDA_TESTING
+  //temporary: put copy of Hd on device, unless compute mode is cpu
+  hiopVector* Hd_cuda = LinearAlgebraFactory::create_vector(mem_space_internal, nineq);
+#endif
+  Hd_->copyFrom(*Dd_);
   Hd_->addConstant(delta_wd);
 
+#ifdef CSRCUDA_TESTING
+  //temporary code that will not be needed when all the objects will be allocated in the correct memory space
+  {
+    if(mem_space_internal == "DEVICE") {
+      auto Hd_raja = dynamic_cast<hiopVectorRajaPar*>(Hd_cuda);
+      auto Hd_par =  dynamic_cast<hiopVectorPar*>(Hd_);
+      assert(Hd_raja && "incorrect type for vector class");
+      assert(Hd_par && "incorrect type for vector class");      
+      Hd_raja->copy_from_host_vec(*Hd_par);
+
+      auto Dx_raja = dynamic_cast<hiopVectorRajaPar*>(Dx_plus_deltawx_);
+      auto Dx_par = dynamic_cast<hiopVectorPar*>(Dx_);
+      assert(Dx_raja && Dx_par && "incorrect type for vector class");
+      Dx_raja->copy_from_host_vec(*Dx_par);
+    } else {
+      assert(dynamic_cast<hiopVectorPar*>(Hd_) && "incorrect type for vector class");
+      Hd_cuda->copyFrom(*Hd_);
+      Dx_plus_deltawx_->copyFrom(*Dx_);
+    }
+  }
+#endif
+
+  Dx_plus_deltawx_->addConstant(delta_wx);
+  
   nlp_->runStats.kkt.tmUpdateInit.stop();
   nlp_->runStats.kkt.tmUpdateLinsys.start();
   
   //
   // compute condensed linear system J'*D*J + H + Dx + delta_wx*I
   //
-
-
   
   hiopTimer t;
   
@@ -168,19 +204,19 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   JacDt_->form_transpose_from_numeric(*JacD_);
   //t.stop(); printf("JacD JacDt-nume csr    took %.5f\n", t.getElapsedTime());
 
-//#define CSRCUDA_TESTING
 #ifdef CSRCUDA_TESTING
   hiopMatrixSparseCSRCUDA JacD_cuda;
   hiopMatrixSparseCSRCUDA JacDt_cuda;
 
   JacD_cuda.form_from_symbolic(*Jac_triplet);
   JacD_cuda.form_from_numeric(*Jac_triplet);
-  JacD_cuda.print();
+  //JacD_cuda.print();
   JacDt_cuda.form_transpose_from_symbolic(JacD_cuda);
   JacDt_cuda.form_transpose_from_numeric(JacD_cuda);
-  JacDt_cuda.print();
+  //JacDt_cuda.print();
 
   hiopMatrixSparseCSR* JtDiagJ_cuda = nullptr;
+  hiopMatrixSparseCSR* M_condensed_cuda =  nullptr;
 #endif
   
   //symbolic multiplication for JacD'*D*J
@@ -197,6 +233,8 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   }
 
 #ifdef CSRCUDA_TESTING
+  JacD_cuda.scale_rows(*Hd_cuda);
+
   JtDiagJ_cuda = JacDt_cuda.times_mat_alloc(JacD_cuda);
   JacDt_cuda.times_mat_symbolic(*JtDiagJ_cuda, JacD_cuda);
   JacDt_cuda.times_mat_numeric(0.0, *JtDiagJ_cuda, 1.0, JacD_cuda);
@@ -213,7 +251,7 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   // (Jt*D) * J
   JacDt_->times_mat_numeric(0.0, *JtDiagJ_, 1.0, *JacD_);
   //t.stop(); printf("J*D*J'-nume  took %.5f\n", t.getElapsedTime());
-  
+
 #ifdef HIOP_DEEPCHECKS
   JtDiagJ_->check_csr_is_ordered();
 #endif
@@ -265,7 +303,10 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   // Hess_csr_ = Hess_lower_csr_ + Hess_upper_csr_
   //
   Hess_lower_csr_->add_matrix_numeric(*Hess_csr_, 1.0, *Hess_upper_csr_, 1.0);
+  Hess_csr_->print();
+  fflush(stdout);
 
+  
 #ifdef CSRCUDA_TESTING
   hiopMatrixSparseCSRCUDA* Hess_upper_csr_cuda = new hiopMatrixSparseCSRCUDA();
   Hess_upper_csr_cuda->form_from_symbolic(*Hess_triplet);
@@ -274,32 +315,58 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   hiopMatrixSparseCSRCUDA* Hess_lower_csr_cuda  = new hiopMatrixSparseCSRCUDA();
   Hess_lower_csr_cuda->form_transpose_from_symbolic(*Hess_upper_csr_cuda);
   Hess_lower_csr_cuda->form_transpose_from_numeric(*Hess_upper_csr_cuda);
-
+  //set diagonal entries to zero (if any present) to avoid adding it the sum twice
   Hess_upper_csr_cuda->set_diagonal(0.0);
-  
-  hiopMatrixSparseCSR* SUM = Hess_lower_csr_cuda->add_matrix_alloc(*Hess_upper_csr_cuda);
-  Hess_lower_csr_cuda->add_matrix_symbolic(*SUM, *Hess_upper_csr_cuda);
-  Hess_lower_csr_cuda->add_matrix_numeric(*SUM, 1.0, *Hess_upper_csr_cuda, 1.0); 
 
-  //SUM->print();
-  //Hess_csr_->print();
-  delete SUM;
+  //
+  // Hess_upper = Hess_upper + Dx_plus_deltawx
+  //
+  hiopMatrixSparseCSRCUDA Diag_Dx_deltawx_cuda;
+  Diag_Dx_deltawx_cuda.form_diag_from_symbolic(*Dx_plus_deltawx_);  
+  Diag_Dx_deltawx_cuda.form_diag_from_numeric(*Dx_plus_deltawx_);
+  
+  hiopMatrixSparseCSR* Hess_upper_plus_diag_cuda = Hess_upper_csr_cuda->add_matrix_alloc(Diag_Dx_deltawx_cuda);
+  Hess_upper_csr_cuda->add_matrix_symbolic(*Hess_upper_plus_diag_cuda, Diag_Dx_deltawx_cuda);
+  Hess_upper_csr_cuda->add_matrix_numeric(*Hess_upper_plus_diag_cuda, 1.0, Diag_Dx_deltawx_cuda, 1.0);
+
+  hiopMatrixSparseCSR* Hess_csr_cuda = Hess_lower_csr_cuda->add_matrix_alloc(*Hess_upper_plus_diag_cuda);
+  Hess_lower_csr_cuda->add_matrix_symbolic(*Hess_csr_cuda, *Hess_upper_plus_diag_cuda);
+  Hess_lower_csr_cuda->add_matrix_numeric(*Hess_csr_cuda, 1.0, *Hess_upper_plus_diag_cuda, 1.0); 
+
+  Hess_csr_cuda->print();
+  fflush(stdout);
+  
+  M_condensed_cuda = Hess_csr_cuda->add_matrix_alloc(*JtDiagJ_cuda);
+  Hess_csr_cuda->add_matrix_symbolic(*M_condensed_cuda, *JtDiagJ_cuda);
+  Hess_csr_cuda->add_matrix_numeric(*M_condensed_cuda, 1.0, *JtDiagJ_cuda, 1.0);
+  
+  printf("GPU-----------------------------------\n");
+  M_condensed_cuda->print();
+  
   delete Hess_lower_csr_cuda;
   delete Hess_upper_csr_cuda;
   delete JtDiagJ_cuda;
+  delete Hd_cuda;
+  delete M_condensed_cuda;
+  delete Hess_upper_plus_diag_cuda;
 #endif
   
   //
   // M_condensed_ = M_condensed_ + Hess_csr_ + JtDiagJ_ + Dx_ + delta_wx*I
   //
   Hess_csr_->add_matrix_numeric(*M_condensed_, 1.0, *JtDiagJ_, 1.0);
-
+  
   if(delta_wx>0) {
     M_condensed_->addDiagonal(delta_wx);
   }
 
+  //M_condensed_->addDiagonal(1.0, *Dx_plus_deltawx_);
   M_condensed_->addDiagonal(1.0, *Dx_);
   //t.stop(); printf("ADD-nume  took %.5f\n", t.getElapsedTime());
+
+
+  //printf("CPU-----------------------------------\n");
+  //M_condensed_->print();
   
   int nnz_condensed = M_condensed_->numberOfNonzeros();
 
