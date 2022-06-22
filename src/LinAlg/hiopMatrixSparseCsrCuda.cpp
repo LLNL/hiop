@@ -1039,7 +1039,6 @@ void hiopMatrixSparseCSRCUDA::scale_cols(const hiopVector& D)
 void hiopMatrixSparseCSRCUDA::scale_rows(const hiopVector& D)
 {
   assert(nrows_ == D.get_size());
-  //assert(dynamic_cast<const hiopVectorRajaPar*>(&D) && "input vector must be Raja (and data on the device)");
   assert(dynamic_cast<const hiopVectorRajaPar*>(&D) && "input vector must have data on the device)");
   hiop::cuda::csr_scalerows_kernel(nrows_, ncols_, nnz_, irowptr_, jcolind_, values_, D.local_data_const());
 }
