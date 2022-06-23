@@ -291,12 +291,14 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
     Hess_upper_csr_ = LinearAlgebraFactory::create_matrix_sparse_csr(mem_space_internal);
     Hess_upper_csr_->form_from_symbolic(*Hess_triplet);
     Hess_upper_csr_->form_from_numeric(*Hess_triplet);
-    Hess_upper_csr_->set_diagonal(0.0);
     
     assert(nullptr == Hess_lower_csr_);
     Hess_lower_csr_ = LinearAlgebraFactory::create_matrix_sparse_csr(mem_space_internal);
     Hess_lower_csr_->form_transpose_from_symbolic(*Hess_upper_csr_);
     Hess_lower_csr_->form_transpose_from_numeric(*Hess_upper_csr_);
+
+    //zero out diagonal of the upper triangle to avoid adding it twice
+    Hess_upper_csr_->set_diagonal(0.0);
     
     assert(Hess_lower_csr_->numberOfNonzeros() == Hess_upper_csr_->numberOfNonzeros());
 
@@ -332,8 +334,9 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
     t.reset(); t.start();
     //form lower and upper
     Hess_upper_csr_->form_from_numeric(*Hess_triplet);
-    Hess_upper_csr_->set_diagonal(0.0);
     Hess_lower_csr_->form_transpose_from_numeric(*Hess_upper_csr_);
+    //zero out diagonal of the upper triangle to avoid adding it twice
+    Hess_upper_csr_->set_diagonal(0.0);
     Diag_Dx_deltawx_->form_diag_from_numeric(*Dx_plus_deltawx_);
     Hess_upper_csr_->add_matrix_numeric(*Hess_upper_plus_diag_, 1.0, *Diag_Dx_deltawx_, 1.0);
     Hess_lower_csr_->add_matrix_numeric(*Hess_csr_, 1.0, *Hess_upper_plus_diag_, 1.0);
@@ -347,8 +350,9 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   //}
   //M_condensed_->addDiagonal(1.0, *Dx_);
 
-  Hess_csr_->print();
-  M_condensed_->print();
+  Dx_->print(stdout, "\n----  Dx\n");
+  Hess_csr_->print(stdout, "\nHess_csr_\n");
+  M_condensed_->print(stdout, "\n-----M_condensed_\n");
 
   fflush(stdout);
 
