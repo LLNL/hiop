@@ -275,7 +275,8 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   // (Jt*D) * J
   JacDt_->times_mat_numeric(0.0, *JtDiagJ_, 1.0, *JacD_);
   //t.stop(); printf("J*D*J'-nume  took %.5f\n", t.getElapsedTime());
-  
+
+  JtDiagJ_->print(stdout, "----\nJtDiagJ_\n");
 #ifdef HIOP_DEEPCHECKS
   JtDiagJ_->check_csr_is_ordered();
 #endif
