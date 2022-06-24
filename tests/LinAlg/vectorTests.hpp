@@ -134,6 +134,25 @@ public:
     return reduceReturn(fail, &x);
   }
 
+  /// Test set_to_random_uniform method of hiop vector implementation
+  bool vector_set_to_random_uniform(hiop::hiopVector& x, const int rank)
+  {
+    int fail = 0;
+    local_ordinal_type N = getLocalSize(&x);
+
+    for(local_ordinal_type i=0; i<N; ++i)
+    {
+      setLocalElement(&x, i, zero);
+    }
+
+    x.set_to_random_uniform(one,two);
+
+    fail = verifyAnswer(&x, one);
+    printMessage(fail, __func__, rank);
+
+    return reduceReturn(fail, &x);
+  }
+
   /**
    * @brief Test method: 
    * forall n in n_local if (pattern[n] != 0.0) this[n] = x_val
@@ -2017,6 +2036,25 @@ public:
     for(local_ordinal_type i = 0; i < N; ++i)
     {
       if(!isEqual(xdata[i], answer))
+      {
+        ++local_fail;
+      }
+    }
+
+    return local_fail;
+  }
+
+  /// Checks if _local_ vector elements are set to `answer`.
+  int verifyAnswer(hiop::hiopVector* x, real_type min_val, real_type max_val)
+  {
+    const local_ordinal_type N = getLocalSize(x);
+    const real_type* xdata = getLocalDataConst(x);
+    
+    int local_fail = 0;
+
+    for(local_ordinal_type i = 0; i < N; ++i)
+    {
+      if(xdata[i] > max_val || xdata[i]<min_val)
       {
         ++local_fail;
       }

@@ -224,8 +224,10 @@ void hiopVectorRajaPar::setToConstant(double c)
 void hiopVectorRajaPar::set_to_random_uniform(double minv, double maxv)
 {
   double* data = data_dev_;
-#ifdef HIOP_USE_CUDA
-  hiop::cuda::array_random_uniform_kernel(n_local_, data, minv, maxv);
+#ifdef HIOP_USE_GPU
+  hiop::device::array_random_uniform_kernel(n_local_, data);
+  scale(maxv-minv);
+  addConstant(minv);
 #else
   assert(0&&"not yet");
 #endif

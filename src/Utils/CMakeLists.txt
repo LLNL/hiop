@@ -27,13 +27,22 @@ install(
   DESTINATION include
   )
 
-set(hiopUtils_CUDA_SRC
-  hiopUtilsCUDA.cu
-)
-
 if(HIOP_USE_CUDA)
+  set(hiopUtils_CUDA_SRC
+    MathCudaKernels.cu
+  )
   set_source_files_properties(${hiopUtils_CUDA_SRC} PROPERTIES LANGUAGE CUDA)
   list(APPEND hiopUtils_SRC ${hiopUtils_CUDA_SRC})
+elseif(HIOP_USE_HIP)
+  set(hiopUtils_HIP_SRC
+    MathHipKernels.cpp
+  )
+# Mark source files as HIP. I guess in the future just a
+# LANGUAGE HIP property will suffice. For now do it via compile flags
+#  set_source_files_properties(${hiopUtils_HIP_SRC} PROPERTIES LANGUAGE HIP)
+  set_source_files_properties( ${hiopUtils_HIP_SRC} PROPERTIES LANGUAGE CXX)
+  set_source_files_properties( ${hiopUtils_HIP_SRC} PROPERTIES COMPILE_FLAGS "-x hip")
+  list(APPEND hiopUtils_SRC ${hiopUtils_HIP_SRC})
 endif(HIOP_USE_CUDA)
 
 add_library(hiopUtils OBJECT ${hiopUtils_SRC})

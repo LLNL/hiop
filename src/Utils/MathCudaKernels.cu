@@ -46,24 +46,70 @@
 // product endorsement purposes.
 
 /**
- * @file hiopUtilsCUDA.hpp
+ * @file MathCudaKernels.cu
  *
  * @author Cosmin G. Petra <petra1@llnl.gov>, LNNL
  * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LNNL
  *
  */
 
-#ifndef HIOP_UTILS_CUDA
-#define HIOP_UTILS_CUDA
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <cuda.h>
+#include <curand_kernel.h>
+#include <curand.h>
+
+#include <cuda_runtime.h>
+#include <device_launch_parameters.h>
+#include "hiopCppStdUtils.hpp"
+#include "MathDeviceKernels.hpp"
+
+__global__
+void array_random_uniform_cuda(int n, double* d_array, unsigned long seed, double minv, double maxv)
+{
+    const int num_threads = blockDim.x * gridDim.x;
+    const int tid = blockIdx.x * blockDim.x + threadIdx.x;    
+    double ranv;
+    curandState state;
+    curand_init( seed, tid, 0, &state);
+    for (int i = tid; i < n; i += num_threads) {
+      ranv = curand_uniform_double( &state ); // from 0 to 1
+      d_array[i] = ranv * (maxv - minv) + minv;	
+    }
+}
 
 namespace hiop
 {
-namespace cuda
+namespace device
 {
-  int array_random_uniform_kernel(int n, double* d_array, double minv, double maxv);
 
-} //end of namespace cuda
-} //end of namespace hiop
+int array_random_uniform_kernel(int n, double* d_array, double minv, double maxv)
+{
+  int block_size=256;
+  int grid_size = (n+block_size-1)/block_size;
+  
+  unsigned long seed = generate_seed();
+  array_random_uniform_cuda<<<grid_size,block_size>>>(n, d_array, seed, minv, maxv);
 
-#endif
+  return 1;
+}
+
+int array_random_uniform_kernel(int n, double* d_array)
+{
+  unsigned long seed = generate_seed();
+
+  curandGenerator_t generator;
+  curandCreateGenerator(&generator, CURAND_RNG_PSEUDO_DEFAULT);
+  curandSetPseudoRandomGeneratorSeed(generator, seed);
+
+  // generate random val from 0 to 1
+  curandGenerateUniformDouble(generator, d_array, n);
+
+  curandDestroyGenerator(generator);
+  return 1;
+}
+
+}  //end of namespace
+} //end of namespace
+
