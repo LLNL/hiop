@@ -64,7 +64,7 @@
 #include <cusolverSp.h>
 #include <cusolverSp_LOWLEVEL_PREVIEW.h> 
 
-#include "hiopMatrixSparseCSRSeq.hpp"
+#include "hiopMatrixSparseCsrCuda.hpp"
 #include "hiopKKTLinSysSparseCondensed.hpp"
 namespace hiop
 {
@@ -153,9 +153,9 @@ protected:
   double* rhs_buf2_;
   
 protected:
-  inline hiopMatrixSparseCSR* sys_mat_csr()
+  inline hiopMatrixSparseCSRCUDA* sys_mat_csr()
   {
-    return dynamic_cast<hiopMatrixSparseCSR*>(M_);
+    return dynamic_cast<hiopMatrixSparseCSRCUDA*>(M_);
   }
 private:
   hiopLinSolverCholCuSparse() = delete; 

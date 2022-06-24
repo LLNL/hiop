@@ -62,6 +62,8 @@
 #include <cusolverSp.h>
 #include <cusolverSp_LOWLEVEL_PREVIEW.h>
 
+#include "hiopMatrixSparseCSRSeq.hpp"
+
 #ifdef HIOP_USE_EIGEN
 #include <Eigen/Core>
 #include <Eigen/Sparse>
@@ -231,11 +233,15 @@ bool hiopLinSolverCholCuSparse::initial_setup()
 
     auto* P_h = new index_type[m];
 
-    do_symb_analysis(mat_csr->m(),
-                     mat_csr->numberOfNonzeros(),
-                     mat_csr->i_row(),
-                     mat_csr->j_col(),
-                     mat_csr->M(),
+    hiopMatrixSparseCSRSeq mat_csr_h(mat_csr->m(), mat_csr->m(), mat_csr->numberOfNonzeros());
+    mat_csr->copy_to(mat_csr_h);
+    
+    
+    do_symb_analysis(mat_csr_h.m(),
+                     mat_csr_h.numberOfNonzeros(),
+                     mat_csr_h.i_row(),
+                     mat_csr_h.j_col(),
+                     mat_csr_h.M(),
                      P_h);
     ss_log << "\tOrdering: '" << nlp_->options->GetString("linear_solver_sparse_ordering") << "': ";
     
@@ -265,8 +271,8 @@ bool hiopLinSolverCholCuSparse::initial_setup()
                                             m,
                                             nnz_,
                                             mat_descr_,
-                                            mat_csr->i_row(),
-                                            mat_csr->j_col(),
+                                            mat_csr_h.i_row(),
+                                            mat_csr_h.j_col(),
                                             P_h,
                                             P_h,
                                             &buf_size);
@@ -280,8 +286,8 @@ bool hiopLinSolverCholCuSparse::initial_setup()
     int* colind_perm_h = new int[nnz_];
     assert(rowptr_perm_h);
     assert(colind_perm_h);
-    memcpy(rowptr_perm_h, mat_csr->i_row(), (m+1)*sizeof(int));
-    memcpy(colind_perm_h, mat_csr->j_col(), nnz_*sizeof(int));
+    memcpy(rowptr_perm_h, mat_csr_h.i_row(), (m+1)*sizeof(int));
+    memcpy(colind_perm_h, mat_csr_h.j_col(), nnz_*sizeof(int));
     
     //mapping (on host)
     int* map_h = new int[nnz_];
@@ -311,7 +317,7 @@ bool hiopLinSolverCholCuSparse::initial_setup()
     assert(nullptr == map_nnz_perm_);
     cudaMalloc(&map_nnz_perm_, nnz_*sizeof(int));
     //transfer the permutation map for nonzeros on device
-    cudaMemcpy(map_nnz_perm_, map_h, nnz_*sizeof(int),  cudaMemcpyHostToDevice);
+    cudaMemcpy(map_nnz_perm_, map_h, nnz_*sizeof(int), cudaMemcpyHostToDevice);
     delete[] map_h;
     // transfer the CSR index arrays on device
     //
@@ -323,8 +329,8 @@ bool hiopLinSolverCholCuSparse::initial_setup()
     delete[] rowptr_perm_h;
 
   } else {
-    cudaMemcpy(rowptr_, mat_csr->i_row(), (m+1)*sizeof(int), cudaMemcpyHostToDevice);
-    cudaMemcpy(colind_, mat_csr->j_col(), nnz_*sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy(rowptr_, mat_csr->i_row(), (m+1)*sizeof(int), cudaMemcpyDeviceToDevice);
+    cudaMemcpy(colind_, mat_csr->j_col(), nnz_*sizeof(int), cudaMemcpyDeviceToDevice);
     
     int map_h[nnz_];
     for(int i=0; i<nnz_; i++) {
@@ -332,7 +338,7 @@ bool hiopLinSolverCholCuSparse::initial_setup()
     }
     assert(nullptr == map_nnz_perm_);
     cudaMalloc(&map_nnz_perm_, nnz_*sizeof(int));
-    cudaMemcpy(map_nnz_perm_, map_h, nnz_*sizeof(int),  cudaMemcpyHostToDevice);
+    cudaMemcpy(map_nnz_perm_, map_h, nnz_*sizeof(int), cudaMemcpyHostToDevice);
 
 
     int PT_h[m];
@@ -363,7 +369,7 @@ bool hiopLinSolverCholCuSparse::initial_setup()
 
   // TODO: this call as well as values_buf_ storage will be removed when the matrix is
   //going to reside on the device
-  cudaMemcpy(values_buf_, mat_csr->M(), nnz_*sizeof(double), cudaMemcpyHostToDevice);
+  cudaMemcpy(values_buf_, mat_csr->M(), nnz_*sizeof(double), cudaMemcpyDeviceToDevice);
 
   // buffer size
   size_t internalData; // in BYTEs
@@ -424,7 +430,7 @@ int hiopLinSolverCholCuSparse::matrixChanged()
   // TODO: this call as well as values_buf_ storage will be removed when the matrix is
   //going to reside on the device
   nlp_->runStats.linsolv.tmDeviceTransfer.start();
-  cudaMemcpy(values_buf_, mat_csr->M(), nnz_*sizeof(double), cudaMemcpyHostToDevice);
+  cudaMemcpy(values_buf_, mat_csr->M(), nnz_*sizeof(double), cudaMemcpyDeviceToDevice);
   nlp_->runStats.linsolv.tmDeviceTransfer.stop();
  
   nlp_->runStats.linsolv.tmFactTime.start();

@@ -70,7 +70,6 @@
 namespace hiop
 {
 
- 
 hiopKKTLinSysCondensedSparse::hiopKKTLinSysCondensedSparse(hiopNlpFormulation* nlp)
   : hiopKKTLinSysCompressedSparseXDYcYd(nlp),
     JacD_(nullptr),
@@ -204,10 +203,6 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   //
   // compute condensed linear system J'*D*J + H + Dx + delta_wx*I
   //
-
-  printf("internal mem space: %s\n", mem_space_internal.c_str());fflush(stdout);
-  printf("compute mode: %s\n", nlp_->options->GetString("compute_mode").c_str());fflush(stdout);
-  
   hiopTimer t;
   
   // symbolic conversion from triplet to CSR
@@ -228,20 +223,6 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   JacDt_->form_transpose_from_numeric(*JacD_);
   //t.stop(); printf("JacD JacDt-nume csr    took %.5f\n", t.getElapsedTime());
 
-#ifdef CSRCUDA_TESTING
-  hiopMatrixSparseCSRCUDA JacD_cuda;
-  hiopMatrixSparseCSRCUDA JacDt_cuda;
-
-  JacD_cuda.form_from_symbolic(*Jac_triplet);
-  JacD_cuda.form_from_numeric(*Jac_triplet);
-  //JacD_cuda.print();
-  JacDt_cuda.form_transpose_from_symbolic(JacD_cuda);
-  JacDt_cuda.form_transpose_from_numeric(JacD_cuda);
-  //JacDt_cuda.print();
-
-  hiopMatrixSparseCSR* JtDiagJ_cuda = nullptr;
-  hiopMatrixSparseCSR* M_condensed_cuda =  nullptr;
-#endif
   
   //symbolic multiplication for JacD'*D*J
   if(nullptr == JtDiagJ_) {
@@ -255,18 +236,6 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
     JacDt_->times_mat_symbolic(*JtDiagJ_, *JacD_);
     //t.stop(); printf("J*D*J'-symb  took %.5f\n", t.getElapsedTime());
   }
-
-#ifdef CSRCUDA_TESTING
-  JacD_cuda.scale_rows(*Hd_copy_);
-
-  JtDiagJ_cuda = JacDt_cuda.times_mat_alloc(JacD_cuda);
-  JacDt_cuda.times_mat_symbolic(*JtDiagJ_cuda, JacD_cuda);
-  JacDt_cuda.times_mat_numeric(0.0, *JtDiagJ_cuda, 1.0, JacD_cuda);
-  JtDiagJ_cuda->print();
-  fflush(stdout);
-
-#endif     
-
   
   //numeric multiplication for JacD'*D*J
   t.reset(); t.start();
@@ -276,7 +245,6 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   JacDt_->times_mat_numeric(0.0, *JtDiagJ_, 1.0, *JacD_);
   //t.stop(); printf("J*D*J'-nume  took %.5f\n", t.getElapsedTime());
 
-  JtDiagJ_->print(stdout, "----\nJtDiagJ_\n");
 #ifdef HIOP_DEEPCHECKS
   JtDiagJ_->check_csr_is_ordered();
 #endif
@@ -344,62 +312,7 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
     //t.stop(); printf("ADD-nume  took %.5f\n", t.getElapsedTime());
   }
 
-  
-  //if(delta_wx>0) {
-   //  M_condensed_->addDiagonal(delta_wx);
-  //}
-  //M_condensed_->addDiagonal(1.0, *Dx_);
-
-  Dx_->print(stdout, "\n----  Dx\n");
-  Hess_csr_->print(stdout, "\nHess_csr_\n");
-  M_condensed_->print(stdout, "\n-----M_condensed_\n");
-
   fflush(stdout);
-
-#ifdef CSRCUDA_TESTING
-  hiopMatrixSparseCSRCUDA* Hess_upper_csr_cuda = new hiopMatrixSparseCSRCUDA();
-  Hess_upper_csr_cuda->form_from_symbolic(*Hess_triplet);
-  Hess_upper_csr_cuda->form_from_numeric(*Hess_triplet);
-  
-  hiopMatrixSparseCSRCUDA* Hess_lower_csr_cuda  = new hiopMatrixSparseCSRCUDA();
-  Hess_lower_csr_cuda->form_transpose_from_symbolic(*Hess_upper_csr_cuda);
-  Hess_lower_csr_cuda->form_transpose_from_numeric(*Hess_upper_csr_cuda);
-
-  //set diagonal entries to zero (if any present) to avoid adding it the sum twice
-  Hess_upper_csr_cuda->set_diagonal(0.0);
-
-  //
-  // Hess_upper = Hess_upper + Dx_plus_deltawx
-  //
-  hiopMatrixSparseCSRCUDA Diag_Dx_deltawx_cuda;
-  Diag_Dx_deltawx_cuda.form_diag_from_symbolic(*Dx_plus_deltawx_);  
-  Diag_Dx_deltawx_cuda.form_diag_from_numeric(*Dx_plus_deltawx_);
-  
-  hiopMatrixSparseCSR* Hess_upper_plus_diag_cuda = Hess_upper_csr_cuda->add_matrix_alloc(Diag_Dx_deltawx_cuda);
-  Hess_upper_csr_cuda->add_matrix_symbolic(*Hess_upper_plus_diag_cuda, Diag_Dx_deltawx_cuda);
-  Hess_upper_csr_cuda->add_matrix_numeric(*Hess_upper_plus_diag_cuda, 1.0, Diag_Dx_deltawx_cuda, 1.0);
-
-  hiopMatrixSparseCSR* Hess_csr_cuda = Hess_lower_csr_cuda->add_matrix_alloc(*Hess_upper_plus_diag_cuda);
-  Hess_lower_csr_cuda->add_matrix_symbolic(*Hess_csr_cuda, *Hess_upper_plus_diag_cuda);
-  Hess_lower_csr_cuda->add_matrix_numeric(*Hess_csr_cuda, 1.0, *Hess_upper_plus_diag_cuda, 1.0); 
-
-  Hess_csr_cuda->print();
-  fflush(stdout);
-  
-  M_condensed_cuda = Hess_csr_cuda->add_matrix_alloc(*JtDiagJ_cuda);
-  Hess_csr_cuda->add_matrix_symbolic(*M_condensed_cuda, *JtDiagJ_cuda);
-  Hess_csr_cuda->add_matrix_numeric(*M_condensed_cuda, 1.0, *JtDiagJ_cuda, 1.0);
-  
-  printf("GPU-----------------------------------\n");
-  M_condensed_cuda->print();
-  
-  delete Hess_lower_csr_cuda;
-  delete Hess_upper_csr_cuda;
-  delete JtDiagJ_cuda;
-  delete M_condensed_cuda;
-  delete Hess_upper_plus_diag_cuda;
-#endif
-  
   
   int nnz_condensed = M_condensed_->numberOfNonzeros();
 
@@ -595,8 +508,6 @@ hiopKKTLinSysCondensedSparse::determine_and_create_linsys(size_type nx, size_typ
   if(linSys_) {
     return dynamic_cast<hiopLinSolverSymSparse*> (linSys_);
   }
-
-  printf("---------------- determine_and_create_linsys\n"); fflush(stdout);
   
   int n = nx;
   auto linsolv = nlp_->options->GetString("linear_solver_sparse");
@@ -622,7 +533,7 @@ hiopKKTLinSysCondensedSparse::determine_and_create_linsys(size_type nx, size_typ
     //
     assert(nullptr==linSys_);
 
-    assert((linsolv=="cusolver-chol" || linsolv=="auto") && "Only MA57 or auto is supported on cpu.");
+    assert((linsolv=="cusolver-chol" || linsolv=="auto") && "Only cusolver-chol or auto is supported on gpu.");
     
 #ifdef HIOP_USE_CUDA
     nlp_->log->printf(hovWarning,
@@ -640,7 +551,6 @@ hiopKKTLinSysCondensedSparse::determine_and_create_linsys(size_type nx, size_typ
   
   assert(linSys_&& "KKT_SPARSE_Condensed linsys: cannot instantiate backend linear solver");
 
-  printf("---------------- determine_and_create_linsys D O N E\n"); fflush(stdout);
   return dynamic_cast<hiopLinSolverSymSparse*> (linSys_);
 }
 
