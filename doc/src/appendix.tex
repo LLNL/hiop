@@ -1,0 +1,127 @@
+\clearpage
+\appendix
+\section{Appendix}
+
+\subsubsection{Condensed Linear System}
+
+The condensed approach supports sparse NLPs with no equality constraints.
+\begin{align}
+&&&&\min_{x\in\mathbb{R}^n} & \hspace{0.5cm} f(x) &&&& \label{spobj_condensed}\\
+&&[v_l]&&& \hspace{0.5cm} d_l \leq d(x) \leq d_u  &[v_u]&&&\label{spineq_condensed} \\
+&&[z_l]&&& \hspace{0.5cm} x_l \leq x \leq x_u & [z_u] &&&\label{spbounds_condensed}
+\end{align}
+Here $f:\mathbb{R}^n\rightarrow\mathbb{R}$, $d:\mathbb{R}^n\rightarrow\mathbb{R}^{m_I}$. The bounds appearing in the inequality constraints~\eqref{spineq_condensed} are assumed to be $d^l\in\mathbb{R}^{m_I}\cup\{-\infty\}$, $d^u\in\mathbb{R}^{m_I}\cup\{+\infty\}$, $d_i^l < d_i^u$, and at least of one of $d_i^l$ and $d_i^u$ are finite for all $i\in\{1,\ldots,m_I\}$. The bounds in~\eqref{spbounds_condensed} are such that $x^l\in\mathbb{R}^{n}\cup\{-\infty\}$, $x^u\in\mathbb{R}^{n}\cup\{+\infty\}$, and $x_i^l < x_i^u$, $i\in\{1,\ldots,n\}$. The quantities insides brackets are the Lagrange multipliers of the constraints. Whenever a bound is infinite, the corresponding multiplier is by convention zero.
+Internally, a slack variable $s$ is introduced and the inequality constraints~\eqref{spineq_condensed} are replaced by additional equality constraints and boundary constraints:
+\begin{align}
+&&&&& \hspace{0.5cm} d(x) = s &[y_d]&&& \\
+&&[v_l]&&& \hspace{0.5cm} d_l \leq s \leq d_u  &[v_u]&&&\label{spineq_s} 
+\end{align}
+
+\warningcp{Note:} If equality constraints $c(x)=c_E$ are presented, they will be slightly relaxed to inequalities $c_E - C_1\leq c(x)\leq c_E+C_1$, where $C_1$ is a small positive perturbation that will be updated by \Hi internally. Concequently, \Hi still treats the problem with form \eqref{spobj_condensed}-\eqref{spbounds_condensed}.\\
+
+Internally, condensed linear system sloves the most stable `xdycyd' KKT linear system 
+\begin{equation} \label{KKT_xdycyd_condensed}
+  \begin{bmatrix} 
+  H+D_x+\delta_{w}I & 0  & J_d^T\\
+  0  & D_d + \delta_{w}I &  -I\\
+  J_d & -I & 0 
+  \end{bmatrix}
+  \begin{bmatrix} \Delta x \\ \Delta d \\ \Delta y_d  \end{bmatrix} = 
+  \begin{bmatrix} r_x \\ r_d \\ r_{y_d}\end{bmatrix} 
+\end{equation}
+by solving the following sequence of linear systems
+\begin{align}
+  Q & := H+D_x+\delta_wI + J_d^T(D_d+\delta_w I)J_d   \\
+  Q\Delta x & = r_x + J_d^T(D_d+\delta_w I)r_{y_d} + J_d^T r_d \label{KKT_condensed} \\
+  \Delta d & = J_d \Delta x- r_{y_d} \\
+  \Delta y_d   & = D_d \Delta d - r_d 
+\end{align}
+Equation \eqref{KKT_condensed} is defined as the condensed linear system, where matrix $Q$ is positive definite, guaranteed by the algorithmic mechanism. Therefore, \Hi is able to solve \eqref{KKT_condensed} by a sparse Cholesky solver. 
+
+Since the development of an efficient and robust Cholesky solver is much more mature than the development of an indefinite linear solver for the `xdycyd' linear system on GPU, this condensed linear system can achieve GPU accelaration more naturally by using vendor's standard libraries, e.g., cuSolver inside the CUDA Tookit.
+
+
+
+\subsubsection{Normal Equation}
+
+The normal equation approach supports sparse LP or QP with the form \eqref{spobj}-\eqref{spbounds}, where $f:\mathbb{R}^n\rightarrow\mathbb{R}$ is a linear or quadratic function; $c:\mathbb{R}^n\rightarrow\mathbb{R}^{m_E}$ and $d:\mathbb{R}^n\rightarrow\mathbb{R}^{m_I}$ are linear functions.
+
+\warningcp{Note:} If equality constraints $c(x)=c_E$ are presented, they will be slightly relaxed to inequalities $c_E - C_1\leq c(x)\leq c_E+C_1$, where $C_1$ is a small positive perturbation that will be updated by \Hi internally. Concequently, \Hi still treats the problem with form \eqref{spobj_condensed}-\eqref{spbounds_condensed}.\\
+
+Internally, normal equation sloves the most stable `xdycyd' KKT linear system 
+\begin{equation} \label{KKT_xdycyd_normaleqn}
+  \begin{bmatrix}
+    H+D_x+\delta_{w}I & 0 & J_c^T & J_d^T\\
+    0  & D_d + \delta_{w}I &  0    &  -I\\
+    J_c & 0 & 0 & 0\\
+    J_d & -I & 0 & 0
+  \end{bmatrix}
+  \begin{bmatrix} \Delta x \\ \Delta d \\ \Delta y_c \\ \Delta y_d  \end{bmatrix} = 
+  \begin{bmatrix} r_x \\ r_d \\ r_{y_c} \\ r_{y_d}\end{bmatrix}
+\end{equation}
+by firstly solving the following condensed linear systems
+\begin{equation} \label{KKT_normaleqn}
+  K
+  \begin{bmatrix} \Delta y_c \\ \Delta y_d  \end{bmatrix} 
+  = 
+  \begin{bmatrix} \tilde{r}_{y_c} \\ \tilde{r}_{y_d}\end{bmatrix}, \\
+\end{equation}
+where
+\begin{equation} \label{KKT_normaleqn_mat}
+  K = 
+  \begin{bmatrix}
+    J_c & 0 \\
+    J_d & -I 
+  \end{bmatrix}
+  \begin{bmatrix}
+    H+D_x+\delta_{w}I & 0 \\
+    0  & D_d + \delta_{w}I
+  \end{bmatrix}^{-1}
+  \begin{bmatrix}
+    J_c & 0 \\
+    J_d & -I 
+  \end{bmatrix}^T
+\end{equation}
+and
+\begin{equation} \label{KKT_normaleqn_rhs}
+  \begin{bmatrix} \tilde{r}_{y_c} \\ \tilde{r}_{y_d}\end{bmatrix}
+  = 
+  \begin{bmatrix}
+    J_c & 0 \\
+    J_d & -I 
+  \end{bmatrix} 
+  \begin{bmatrix}
+    H+D_x+\delta_{w}I & 0 \\
+    0  & D_d + \delta_{w}I
+  \end{bmatrix}^{-1}
+  \begin{bmatrix} {r}_{x} \\ {r}_{d}\end{bmatrix}
+  -
+  \begin{bmatrix} r_{y_c} \\ r_{y_d}\end{bmatrix}.
+\end{equation}
+
+Since matrix $K$ \eqref{KKT_normaleqn_mat} is forced to be positive definite by the algorithmic mechanism, the normal equaltion system \eqref{KKT_normaleqn} can be solved by a Cholesky solver. Once $\Delta y_c$ and $\Delta y_d$ have been calculated, \Hi uses the following equations to retrieve $\Delta x$ and $\Delta d$: 
+\begin{equation} \label{KKT_normaleqn_step_xd}
+  \begin{bmatrix} \Delta x \\ \Delta d  \end{bmatrix} 
+  = 
+  \begin{bmatrix}
+    H+D_x+\delta_{w}I & 0 \\
+    0  & D_d + \delta_{w}I
+  \end{bmatrix}^{-1}
+  ( \begin{bmatrix} {r}_{x} \\ {r}_{d}\end{bmatrix}
+    -
+    \begin{bmatrix}
+      J_c^{T} & J_d{T} \\
+      0 & -I 
+    \end{bmatrix}
+    \begin{bmatrix} \Delta y_c \\ \Delta y_d  \end{bmatrix} 
+  )
+\end{equation}
+
+
+\ignore{
+\subsubsection{Krylov-Subspace Iterative Method}
+
+
+}
+
+
