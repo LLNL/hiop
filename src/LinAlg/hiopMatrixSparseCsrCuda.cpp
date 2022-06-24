@@ -1235,8 +1235,9 @@ void hiopMatrixSparseCSRCUDA::extract_diagonal(hiopVector& diag_out) const
 
 bool hiopMatrixSparseCSRCUDA::check_csr_is_ordered()
 {
-  assert(false && "work in progress");
-  return true;
+  hiopMatrixSparseCSRSeq mat_h(nrows_, ncols_, nnz_);
+  this->copy_to(mat_h);
+  return mat_h.check_csr_is_ordered();
 }
 
 } //end of namespace

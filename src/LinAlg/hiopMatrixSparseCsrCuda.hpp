@@ -579,7 +579,12 @@ public:
                           const hiopMatrixSparseCSR& Y,
                           double beta) const;
 
-  /// @brief Performs a quick check and returns false if the CSR indexes are not ordered
+  /** Performs a quick check and returns false if the CSR indexes are not ordered. 
+   * 
+   * Should be used with caution, for example only under HIOP_DEEPCHECKS or for debugging purposes
+   * because it is a computationally intensive method for GPU implementations as transfers the 
+   * matrix data from device to host. 
+   */
   bool check_csr_is_ordered();
   
   /////////////////////////////////////////////////////////////////////
