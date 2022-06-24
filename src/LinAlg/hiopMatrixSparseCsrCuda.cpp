@@ -421,6 +421,16 @@ void hiopMatrixSparseCSRCUDA::copy_to(hiopMatrixDense& W)
   assert(W.n() == ncols_);
 }
 
+void hiopMatrixSparseCSRCUDA::copy_to(hiopMatrixSparseCSRSeq& W)
+{
+  assert(W.m() == nrows_);
+  assert(W.n() == ncols_);
+  assert(W.numberOfNonzeros() == nnz_);
+  cudaMemcpy(W.i_row(), this->i_row(), sizeof(index_type)*(1+nrows_), cudaMemcpyDeviceToHost);
+  cudaMemcpy(W.j_col(), this->j_col(), sizeof(index_type)*nnz_, cudaMemcpyDeviceToHost);
+  cudaMemcpy(W.M(), this->M(), sizeof(double)*nnz_, cudaMemcpyDeviceToHost);
+}
+
 void hiopMatrixSparseCSRCUDA::
 addMDinvMtransToDiagBlockOfSymDeMatUTri(index_type rowAndCol_dest_start,
                                         const double& alpha,

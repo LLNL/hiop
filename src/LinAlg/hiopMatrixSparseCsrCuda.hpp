@@ -64,6 +64,7 @@
 #include "hiopVector.hpp"
 #include "hiopMatrixDense.hpp"
 #include "hiopMatrixSparseCSR.hpp"
+#include "hiopMatrixSparseCSRSeq.hpp"
 #include "hiopMatrixSparseTriplet.hpp"
 
 #include <cassert>
@@ -92,6 +93,13 @@ public:
   virtual void setToConstant(double c);
   virtual void copyFrom(const hiopMatrixSparse& dm);
   virtual void copy_to(index_type* irow, index_type* jcol, double* val);
+
+  /**
+   * Copy to a CSR matrix allocated on host. Device to host transfer occurs. This is temporary
+   * code that will be removed in the future.
+   */
+  void copy_to(hiopMatrixSparseCSRSeq& src);
+  
   virtual void copy_to(hiopMatrixDense& W);
 
   virtual void copyRowsFrom(const hiopMatrix& src, const index_type* rows_idxs, size_type n_rows);
