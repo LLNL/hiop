@@ -46,14 +46,14 @@
 // product endorsement purposes.
 
 /**
- * @file hiopUtilsCUDA.hpp
+ * @file MathDeviceKernels.hpp
  *
  * @author Cosmin G. Petra <petra1@llnl.gov>, LNNL
  * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LNNL
  *
  */
 
-#ifdef HIOP_UTILS_DEVICE
+#ifndef HIOP_UTILS_DEVICE
 #define HIOP_UTILS_DEVICE
 
 namespace hiop

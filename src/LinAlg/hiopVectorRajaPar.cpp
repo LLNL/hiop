@@ -57,8 +57,8 @@
  */
 #include "hiopVectorRajaPar.hpp"
 #include "hiopVectorIntRaja.hpp"
-#ifdef HIOP_USE_CUDA
-#include "hiopUtilsCUDA.hpp"
+#ifdef HIOP_USE_GPU
+#include "MathDeviceKernels.hpp"
 #endif
 
 #include <cmath>

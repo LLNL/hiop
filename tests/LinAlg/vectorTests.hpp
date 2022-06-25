@@ -147,7 +147,7 @@ public:
 
     x.set_to_random_uniform(one,two);
 
-    fail = verifyAnswer(&x, one);
+    fail = verifyAnswer(&x, one, two);
     printMessage(fail, __func__, rank);
 
     return reduceReturn(fail, &x);
