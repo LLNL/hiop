@@ -60,6 +60,8 @@
 #include <cstdio>
 #include <string>
 #include <cassert>
+#include <cstring>
+#include <random>
 
 #include <hiopMPI.hpp>
 #include "hiopVector.hpp"

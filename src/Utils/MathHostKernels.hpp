@@ -46,26 +46,26 @@
 // product endorsement purposes.
 
 /**
- * @file MathDeviceKernels.hpp
+ * @file MathHostKernels.hpp
  *
  * @author Cosmin G. Petra <petra1@llnl.gov>, LNNL
  * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LNNL
  *
  */
 
-#ifndef HIOP_MATH_DEVICE
-#define HIOP_MATH_DEVICE
+#ifndef HIOP_MATH_HOST
+#define HIOP_MATH_HOST
 
 namespace hiop
 {
-namespace device
+namespace host
 {
   int array_random_uniform_kernel(int n, double* d_array, double minv, double maxv);
 
   // Generates uniformly distributed double-precision floating-point values, from 0.0 to 1.0
   int array_random_uniform_kernel(int n, double* d_array);
 
-} //end of namespace device
+} //end of namespace host
 } //end of namespace hiop
 
 #endif

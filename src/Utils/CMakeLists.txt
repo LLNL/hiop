@@ -1,6 +1,7 @@
 set(hiopUtils_SRC
   hiopLogger.cpp
   hiopOptions.cpp
+  MathHostKernels.cpp
   )
 
 set(hiopUtils_KRON_REDUCTION_SRC
@@ -16,7 +17,9 @@ set(hiopUtils_INTERFACE_HEADERS
   hiopOptions.hpp
   hiopRunStats.hpp
   hiopTimer.hpp
+  MathHostKernels.hpp
   )
+
 
 if(HIOP_WITH_KRON_REDUCTION)
   list(APPEND hiopUtils_SRC ${hiopUtils_KRON_REDUCTION_SRC})

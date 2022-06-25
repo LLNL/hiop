@@ -57,8 +57,11 @@
  */
 #include "hiopVectorRajaPar.hpp"
 #include "hiopVectorIntRaja.hpp"
+
 #ifdef HIOP_USE_GPU
 #include "MathDeviceKernels.hpp"
+#else
+#include "hiopCppStdUtils.hpp"
 #endif
 
 #include <cmath>
@@ -229,7 +232,7 @@ void hiopVectorRajaPar::set_to_random_uniform(double minv, double maxv)
   scale(maxv-minv);
   addConstant(minv);
 #else
-  assert(0&&"not yet");
+  hiop::host::array_random_uniform_kernel(n_local_, data, maxv, minv);
 #endif
 }
 
