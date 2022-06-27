@@ -57,8 +57,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <hip/hip_runtime.h>
-#include <hip/hiprand_kernel.h>
-#include <device_launch_parameters.h>
+#include <hiprand_kernel.h>
 #include "hiopCppStdUtils.hpp"
 #include "MathDeviceKernels.hpp"
 
@@ -68,11 +67,11 @@ void array_random_uniform_hip(int n, double* d_array, unsigned long seed, double
 {
     const int num_threads = blockDim.x * gridDim.x;
     const int tid = blockIdx.x * blockDim.x + threadIdx.x;    
-    const delta = maxv - minv;
-    curandState state;
-    curand_init(seed, tid, 0, &state);
+    const double delta = maxv - minv;
+    hiprandState state;
+    hiprand_init(seed, tid, 0, &state);
     for (int i = tid; i < n; i += num_threads) {
-      const double ranv = curand_uniform_double( &state ); // from 0 to 1
+      const double ranv = hiprand_uniform_double( &state ); // from 0 to 1
       d_array[i] = ranv * delta + minv;	
     }
 }
@@ -93,7 +92,7 @@ int array_random_uniform_kernel(int n, double* d_array, double minv, double maxv
   return 1;
 }
 
-int array_random_uniform_kernel(int n, double* d_array, double minv, double maxv)
+int array_random_uniform_kernel(int n, double* d_array)
 {  
   unsigned long seed = generate_seed();
 
