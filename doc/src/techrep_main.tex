@@ -234,11 +234,11 @@ This work performed under the auspices of the U.S. Department of Energy by Lawre
 
 This document describes the \Hi suite of HPC optimization solvers for some large-scale nonconvex nonlinear programming problems (NLPs). Four main classes of optimization problems are supported by \Hi. 
 \begin{itemize}
-  \item \texttt{HiOp-Dense} supports NLPs with billions of variables with and without bounds but only limited number of
+  \item \texttt{HiOp-Dense} supports NLPs with billions of variables with or without bounds but only limited number of
   constraints. This solver is a memory-distributed, MPI-based quasi-Newton interior-point solver using limited-memory approximations for the Hessians.
-  \item \texttt{HiOp-Sparse} supports general sparse and large-scale NLPs that only have sparse blocks in the first and second order information.This functionality is similar to that of the state-of-the-art Ipopt~\cite{waecther_05_ipopt0}, but with additional features such as the inertia-free approach~\cite{Chiang2016}. Acceleration for this class of optimization solver can be achieved via OpenMP, CUDA or HIP, using RAJA portability abstraction layer for GPU acceleration.
-  \item \texttt{HiOp-MDS} supports NLPs that have dense and sparse blocks, for which a ``Newton'' interior-point solver is available toghether with a specialized, so called mixed dense-sparse (MDS) linear algebra capable of achieving good performance on host-device, \textit{i.e.}, CPU-GPU, computing hardware. 
-  \item \texttt{HiOp-PriDec} is an asynchronous distributed-memory optimization solver for two-stage stochastic programming problems. It implements a master-worker asynchronous computational pattern via MPI, to reduce the parallelization bottleneck. GPU accelaration can be achieved in solving each subproblem by \texttt{HiOp-MDS} or \texttt{HiOp-Sparse}.
+  \item \texttt{HiOp-Sparse} supports general sparse and large-scale NLPs sparse second-order derivatives. This functionality is similar to that of the state-of-the-art Ipopt~\cite{waecther_05_ipopt0}, but with additional features such as the inertia-free approach~\cite{Chiang2016}. The solver offers GPU acceleration via CUDA Toolkit (and in the future via rocSPARSE) and requires RAJA portability abstraction layer when GPU acceleration is enabled.
+  \item \texttt{HiOp-MDS} supports NLPs that have dense and sparse blocks, for which a ``Newton'' interior-point solver is available together with a specialized, so-called mixed dense-sparse (MDS) linear algebra capable of achieving good performance on GPUs via Magma dense linear solver.
+  \item \texttt{HiOp-PriDec} is an asynchronous memory-distributed optimization solver for two-stage stochastic programming problems. It implements a master-worker asynchronous scheduler based on MPI to improve load balancing. GPU acceleration can be achieved in solving each subproblem by \texttt{HiOp-MDS} or \texttt{HiOp-Sparse}.
 \end{itemize}
 
 This document includes instructions on how to obtain and
@@ -966,9 +966,9 @@ Double values in $[10^{-14},0.1]$. Default value $10^{-6}$.
 \item ``auto'' (default): decided by \Hi based on the type of interface/NLP solved and ``compute\_mode'' and ``Hessian'' options;
 \item ``xycyd'': symmetric indefinite (less stable but smaller size);
 \item ``xdycyd'': symmetric indefinite (more stable but  larger size);
-\item  ``full'': unsymetric suitable for LU solvers (experimental).
-\item  ``condensed'': symmetric condensed linear system that is suitable for sparse Cholesky solvers (available when no eq. constraints are present)
-\item  ``normaleqn'': symmetric normal equation system that is suitable for sparse Cholesky solvers (available when problem is LP or QP)
+\item  ``full'': unsymmetric suitable for LU solvers (experimental).
+\item  ``condensed'': symmetric condensed linear system that is suitable for sparse Cholesky solvers (available when no eq. constraints are present). See Section~\ref{kkt:condensed} for more information
+\item  ``normaleqn'': symmetric normal equation system that is suitable for sparse Cholesky solvers (available when problem is LP or QP). See Section~\ref{kkt:normaeqn} for more information
 \end{itemize}
 
 \medskip
@@ -999,7 +999,7 @@ Double values in $[10^{-14},0.1]$. Default value $10^{-6}$.
 \item ``default'' (default): allocations are done by \Hi in the cpu's memory space;
 \item ``host'':  allocations via Umpire in Umpire's ``HOST'' memory space, typically CPU memory;
 \item ``device'': allocations via Umpire in Umpire's ``DEVICE'' device memory space; the option is supported only for MDS NLPs and requires the user's model evaluation on the device;
-\item ``um'': allocations via Umpire's unified memory model, know as ``UM''.
+\item ``um'': allocations via Umpire's unified memory model, known as ``UM''.
 \end{itemize}
 
 \medskip
