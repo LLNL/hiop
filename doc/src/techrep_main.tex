@@ -119,6 +119,7 @@ backgroundcolor=\color{lbcolor},
 \algnewcommand\Output{\item[\algorithmicoutput]}
 
 \newcommand{\Hi}{\texttt{HiOp}\xspace}
+\newcommand{\ignore}[1]{}
 
 \begin{document}
 %\title{}
@@ -154,7 +155,7 @@ Lawrence Livermore National Laboratory}}}\\[10pt]
 \vspace{4.75cm}
 
  \textcolor{violet}{{\large\bfseries Oct 15, 2017} \\
-{\large\bfseries Updated  March 31, 2022}}
+{\large\bfseries Updated  June 30, 2022}}
 
 \vspace{0.75cm}
 
@@ -231,7 +232,14 @@ This work performed under the auspices of the U.S. Department of Energy by Lawre
 
 \section{Introduction}
 
-This document describes the \Hi suite of HPC optimization solvers for some large-scale nonconvex nonlinear programming problems (NLPs). Two main classes of optimization problems are supported. First class consists of NLPs with extremely large number of variables  but with a relatively small number of general constraints; the solver for these problems is a  memory-distributed, MPI-based quasi-Newton interior-point solver using limited-memory approximations for the Hessians. The second class of problems consists of NLPs that have dense and sparse blocks, for which a ``Newton'' interior-point solver is available toghether with a specialized, so called mixed dense-sparse (MDS) linear algebra capable of achieving good performance on host-device, \textit{i.e.}, CPU-GPU, computing hardware. 
+This document describes the \Hi suite of HPC optimization solvers for some large-scale nonconvex nonlinear programming problems (NLPs). Four main classes of optimization problems are supported by \Hi. 
+\begin{itemize}
+  \item \texttt{HiOp-Dense} supports NLPs with billions of variables with or without bounds but only limited number of
+  constraints. This solver is a memory-distributed, MPI-based quasi-Newton interior-point solver using limited-memory approximations for the Hessians.
+  \item \texttt{HiOp-Sparse} supports general sparse and large-scale NLPs sparse second-order derivatives. This functionality is similar to that of the state-of-the-art Ipopt~\cite{waecther_05_ipopt0}, but with additional features such as the inertia-free approach~\cite{Chiang2016}. The solver offers GPU acceleration via CUDA Toolkit (and in the future via rocSPARSE) and requires RAJA portability abstraction layer when GPU acceleration is enabled.
+  \item \texttt{HiOp-MDS} supports NLPs that have dense and sparse blocks, for which a ``Newton'' interior-point solver is available together with a specialized, so-called mixed dense-sparse (MDS) linear algebra capable of achieving good performance on GPUs via Magma dense linear solver.
+  \item \texttt{HiOp-PriDec} is an asynchronous memory-distributed optimization solver for two-stage stochastic programming problems. It implements a master-worker asynchronous scheduler based on MPI to improve load balancing. GPU acceleration can be achieved in solving each subproblem by \texttt{HiOp-MDS} or \texttt{HiOp-Sparse}.
+\end{itemize}
 
 This document includes instructions on how to obtain and
 build \Hi and a description of its interface, user options, and use as an optimization library. Guidelines on how is best to use the solver for parallel computations are also provided. The document generally targets users of \Hi, but also contains information relevant to potential developers or advanced users; these are strongly encouraged to also read the paper on the computational approach implemented in \Hi~\cite{petra_hiop}.
@@ -958,7 +966,9 @@ Double values in $[10^{-14},0.1]$. Default value $10^{-6}$.
 \item ``auto'' (default): decided by \Hi based on the type of interface/NLP solved and ``compute\_mode'' and ``Hessian'' options;
 \item ``xycyd'': symmetric indefinite (less stable but smaller size);
 \item ``xdycyd'': symmetric indefinite (more stable but  larger size);
-\item  ``full'': unsymetric suitable for LU solvers (experimental).
+\item  ``full'': unsymmetric suitable for LU solvers (experimental).
+\item  ``condensed'': symmetric condensed linear system that is suitable for sparse Cholesky solvers (available when no eq. constraints are present). See Section~\ref{kkt:condensed} for more information
+\item  ``normaleqn'': symmetric normal equation system that is suitable for sparse Cholesky solvers (available when problem is LP or QP). See Section~\ref{kkt:normaeqn} for more information
 \end{itemize}
 
 \medskip
@@ -989,7 +999,7 @@ Double values in $[10^{-14},0.1]$. Default value $10^{-6}$.
 \item ``default'' (default): allocations are done by \Hi in the cpu's memory space;
 \item ``host'':  allocations via Umpire in Umpire's ``HOST'' memory space, typically CPU memory;
 \item ``device'': allocations via Umpire in Umpire's ``DEVICE'' device memory space; the option is supported only for MDS NLPs and requires the user's model evaluation on the device;
-\item ``um'': allocations via Umpire's unified memory model, know as ``UM''.
+\item ``um'': allocations via Umpire's unified memory model, known as ``UM''.
 \end{itemize}
 
 \medskip
@@ -1170,12 +1180,6 @@ product endorsement purposes.
 This work performed under the auspices of the U.S. Department of Energy by Lawrence Livermore National Laboratory under Contract DE-AC52-07NA27344. The author also acknowledges the support from the LDRD Program of Lawrence Livermore National Laboratory under the projects 16-ERD-025 and 17-SI-005.
 
 
-
-
-
-
-
-
 %\section{Implementation details}
 
 %\section{Solver API}
@@ -1183,6 +1187,13 @@ This work performed under the auspices of the U.S. Department of Energy by Lawre
 \bibliographystyle{abbrv}
 \bibliography{petra,hiop}
 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Appendix
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{appendix}
 
 
 \end{document}

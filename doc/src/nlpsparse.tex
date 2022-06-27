@@ -6,7 +6,7 @@ The sparse NLP formulation supports sparse optimization problems and requires He
 &&[v_l]&&& \hspace{0.5cm} d_l \leq d(x) \leq d_u  &[v_u]&&&\label{spineq} \\
 &&[z_l]&&& \hspace{0.5cm} x_l \leq x \leq x_u & [z_u] &&&\label{spbounds}
 \end{align}
-Here $f:\mathbb{R}^n\rightarrow\mathbb{R}$, $c:\mathbb{R}^n\rightarrow\mathbb{R}^{m_E}$, $d:\mathbb{R}^n\rightarrow\mathbb{R}^{m_I}$. The bounds appearing in the inequality constraints~\eqref{ineq} are assumed to be $d^l\in\mathbb{R}^{m_I}\cup\{-\infty\}$, $d^u\in\mathbb{R}^{m_I}\cup\{+\infty\}$, $d_i^l < d_i^u$, and at least of one of $d_i^l$ and $d_i^u$ are finite for all $i\in\{1,\ldots,m_I\}$. The bounds in~\eqref{bounds} are such that $x^l\in\mathbb{R}^{n}\cup\{-\infty\}$, $x^u\in\mathbb{R}^{n}\cup\{+\infty\}$, and $x_i^l < x_i^u$, $i\in\{1,\ldots,n\}$. The quantities insides brackets are the Lagrange multipliers of the constraints. Whenever a bound is infinite, the corresponding multiplier is by convention zero.
+Here $f:\mathbb{R}^n\rightarrow\mathbb{R}$, $c:\mathbb{R}^n\rightarrow\mathbb{R}^{m_E}$, $d:\mathbb{R}^n\rightarrow\mathbb{R}^{m_I}$. The bounds appearing in the inequality constraints~\eqref{spineq} are assumed to be $d^l\in\mathbb{R}^{m_I}\cup\{-\infty\}$, $d^u\in\mathbb{R}^{m_I}\cup\{+\infty\}$, $d_i^l < d_i^u$, and at least of one of $d_i^l$ and $d_i^u$ are finite for all $i\in\{1,\ldots,m_I\}$. The bounds in~\eqref{spbounds} are such that $x^l\in\mathbb{R}^{n}\cup\{-\infty\}$, $x^u\in\mathbb{R}^{n}\cup\{+\infty\}$, and $x_i^l < x_i^u$, $i\in\{1,\ldots,n\}$. The quantities insides brackets are the Lagrange multipliers of the constraints. Whenever a bound is infinite, the corresponding multiplier is by convention zero.
 Internally, a slack variable $s$ is introduced and the inequality constraints~\eqref{spineq} are replaced by additional equality constraints and boundary constraints:
 \begin{align}
 &&&&& \hspace{0.5cm} d(x) = s &[y_d]&&& \\
@@ -164,17 +164,17 @@ eval_Hess_Lagr(const size_type& n, const size_type& m,
 \subsubsection{Calling \Hi for a \texttt{hiopInterfaceSparse} formulation}
 Once the sparse NLP is coded,  the  user code needs to create a \Hi problem formulation that encapsulate the NLP representation, instantiate an optimization algorithm class, and start the numerical optimization process. Assuming that the NLP representation is implemented in a class named \texttt{NlpEx6} (that derives from \texttt{hiop::hiopInterfaceSparse}), the aforementioned sequence of steps can be performed by:
 \begin{lstlisting}
-#include "NlpEx6.hpp"               //the NLP representation class
-#include "hiopInterface.hpp"   //HiOP encapsulation of the NLP
-#include "hiopAlgFilterIPM.hpp"     //solver class
+#include "NlpSparseEx1.hpp"       //the NLP representation class
+#include "hiopInterface.hpp"      //HiOP encapsulation of the NLP
+#include "hiopAlgFilterIPM.hpp"   //solver class
 using namespace hiop;
 ...
-NlpEx6 nlp_interface();                     //instantiate your NLP representation class
+NlpSparseEx1 nlp_interface();               //instantiate your NLP representation class
 hiopNlpDenseConstraints nlp(nlp_interface); //create HiOP encapsulation
-nlp.options.SetNumericValue("mu0", 0.01);  //set a non-default initial value for  barrier parameter
-hiopAlgFilterIPM solver(&nlp);             //create a solver object
-hiopSolveStatus status = solver.run();     //numerical optimization
-double obj_value = solver.getObjective();  //get objective
+nlp.options.SetNumericValue("mu0", 0.01);   //set a non-default initial value for  barrier parameter
+hiopAlgFilterIPM solver(&nlp);              //create a solver object
+hiopSolveStatus status = solver.run();      //numerical optimization
+double obj_value = solver.getObjective();   //get objective
 ...
 \end{lstlisting}
 Various output quantities of the numerical optimization phase (\textit{e.g.}, the optimal objective value and (primal) solution, status of the numerical optimization process, and solve statistics) can be retrieved from \Hi's \texttt{hiopAlgFilterIPM} solver object. Most commonly used such methods are: 
