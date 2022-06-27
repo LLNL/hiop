@@ -228,10 +228,9 @@ void hiopVectorRajaPar::set_to_random_uniform(double minv, double maxv)
 {
   double* data = data_dev_;
 #ifdef HIOP_USE_GPU
-  hiop::device::array_random_uniform_kernel(n_local_, data);
-  scale(maxv-minv);
-  addConstant(minv);
+  hiop::device::array_random_uniform_kernel(n_local_, data, maxv, minv);
 #else
+  // TODO: add function for openmp polocy
   hiop::host::array_random_uniform_kernel(n_local_, data, maxv, minv);
 #endif
 }

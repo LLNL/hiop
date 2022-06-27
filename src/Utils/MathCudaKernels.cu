@@ -59,7 +59,6 @@
 #include <cuda.h>
 #include <curand_kernel.h>
 #include <curand.h>
-
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 #include "hiopCppStdUtils.hpp"
@@ -70,12 +69,12 @@ void array_random_uniform_cuda(int n, double* d_array, unsigned long seed, doubl
 {
     const int num_threads = blockDim.x * gridDim.x;
     const int tid = blockIdx.x * blockDim.x + threadIdx.x;    
-    double ranv;
+    const delta = maxv - minv;
     curandState state;
-    curand_init( seed, tid, 0, &state);
+    curand_init(seed, tid, 0, &state);
     for (int i = tid; i < n; i += num_threads) {
-      ranv = curand_uniform_double( &state ); // from 0 to 1
-      d_array[i] = ranv * (maxv - minv) + minv;	
+      const double ranv = curand_uniform_double( &state ); // from 0 to 1
+      d_array[i] = ranv * delta + minv;	
     }
 }
 
@@ -110,6 +109,6 @@ int array_random_uniform_kernel(int n, double* d_array)
   return 1;
 }
 
-}  //end of namespace
-} //end of namespace
+} //end of namespace device
+} //end of namespace hiop
 
