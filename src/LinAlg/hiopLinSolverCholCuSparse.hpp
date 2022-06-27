@@ -126,13 +126,11 @@ protected:
   /// Number of nonzeros in the matrix sent to cuSOLVER
   size_type nnz_;
 
-  /// Array with row pointers of the matrix to be factorized (on device)
+  /// Array with row pointers of the matrix (permuted based on ordering) to be factorized (on device)
   int* rowptr_;
-  /// Array with column indexes of the matrix to be factorized (on device)
+  /// Array with column indexes of the matrix (permuted based on ordering) to be factorized (on device)
   int* colind_;
-  /// Array with matrix original values (on device)
-  double* values_buf_;
-  /// Array with values of the matrix to be factorized (on device)
+  /// Array with values of the matrix (permuted based on ordering) to be factorized (on device)
   double* values_;
   /// cuSPARSE matrix descriptor
   cusparseMatDescr_t mat_descr_;

@@ -84,7 +84,6 @@ hiopLinSolverCholCuSparse::hiopLinSolverCholCuSparse(hiopMatrixSparseCSR* M, hio
     buf_fact_(nullptr),
     rowptr_(nullptr),
     colind_(nullptr),
-    values_buf_(nullptr),
     values_(nullptr),
     P_(nullptr),
     PT_(nullptr),
@@ -138,7 +137,6 @@ hiopLinSolverCholCuSparse::~hiopLinSolverCholCuSparse()
   
   cudaFree(rowptr_);
   cudaFree(colind_);
-  cudaFree(values_buf_);
   cudaFree(values_);
   
   cusparseDestroyMatDescr(mat_descr_);
@@ -210,15 +208,11 @@ bool hiopLinSolverCholCuSparse::initial_setup()
   assert(nullptr == colind_);
   cudaMalloc(&colind_, nnz_*sizeof(int));
   
-  assert(nullptr == values_buf_);
-  cudaMalloc(&values_buf_, nnz_*sizeof(double));
-
   assert(nullptr == values_);
   cudaMalloc(&values_, nnz_*sizeof(double));
   
   assert(rowptr_);
   assert(colind_);
-  assert(values_buf_);
   assert(values_);
  
   hiopTimer t;
@@ -367,9 +361,6 @@ bool hiopLinSolverCholCuSparse::initial_setup()
   t.stop();
   ss_log << "\tcsrcholAnalysis: " << t.getElapsedTime() << " sec" << std::endl;
 
-  // TODO: this call as well as values_buf_ storage will be removed when the matrix is
-  //going to reside on the device
-  cudaMemcpy(values_buf_, mat_csr->M(), nnz_*sizeof(double), cudaMemcpyDeviceToDevice);
 
   // buffer size
   size_t internalData; // in BYTEs
@@ -377,7 +368,7 @@ bool hiopLinSolverCholCuSparse::initial_setup()
                                      m, 
                                      nnz_, 
                                      mat_descr_, 
-                                     values_buf_, 
+                                     mat_csr->M(), //! don't we need to pass the permuted values?
                                      rowptr_, 
                                      colind_, 
                                      info_, 
@@ -423,21 +414,12 @@ int hiopLinSolverCholCuSparse::matrixChanged()
                         t.getElapsedTime());
     }
   }
-
-  // copy the nonzeros to the device
-  // row pointers and col indexes do not change and need not be copied to device
-  //
-  // TODO: this call as well as values_buf_ storage will be removed when the matrix is
-  //going to reside on the device
-  nlp_->runStats.linsolv.tmDeviceTransfer.start();
-  cudaMemcpy(values_buf_, mat_csr->M(), nnz_*sizeof(double), cudaMemcpyDeviceToDevice);
-  nlp_->runStats.linsolv.tmDeviceTransfer.stop();
  
   nlp_->runStats.linsolv.tmFactTime.start();
   //
   //permute nonzeros in values_buf_ into values_ accordingly to map_nnz_perm_
   //
-  permute_vec(nnz_, values_buf_, map_nnz_perm_, values_);
+  permute_vec(nnz_, mat_csr->M(), map_nnz_perm_, values_);
   
   //
   //cuSOLVER factorization
