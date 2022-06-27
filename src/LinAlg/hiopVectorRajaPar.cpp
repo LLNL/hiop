@@ -60,8 +60,9 @@
 
 #ifdef HIOP_USE_GPU
 #include "MathDeviceKernels.hpp"
+#include "MathHostKernels.hpp"
 #else
-#include "hiopCppStdUtils.hpp"
+#include "MathHostKernels.hpp"
 #endif
 
 #include <cmath>
@@ -228,10 +229,22 @@ void hiopVectorRajaPar::set_to_random_uniform(double minv, double maxv)
 {
   double* data = data_dev_;
 #ifdef HIOP_USE_GPU
-  hiop::device::array_random_uniform_kernel(n_local_, data, maxv, minv);
+  if(mem_space_ == "DEVICE") {
+    hiop::device::array_random_uniform_kernel(n_local_, data, minv, maxv);
+  } else {
+    // TODO: unified memory needs to use host implementation or cuda api. Why? 
+    hiop::device::array_random_uniform_kernel(n_local_, data, minv, maxv);  // this fails
+
+//    hiop::host::array_random_uniform_kernel(n_local_, data, minv, maxv);  // this works
+
+    // this 3-line method from cuda api also works
+//  hiop::device::array_random_uniform_kernel(n_local_, data);
+//  scale(maxv-minv);
+//  addConstant(minv);
+  }
 #else
   // TODO: add function for openmp polocy
-  hiop::host::array_random_uniform_kernel(n_local_, data, maxv, minv);
+  hiop::host::array_random_uniform_kernel(n_local_, data, minv, maxv);
 #endif
 }
 
@@ -2000,6 +2013,15 @@ void hiopVectorRajaPar::print(FILE* file, const char* msg/*=NULL*/, int max_elem
       fprintf(file, "%22.16e ; ", data_host_[it]);
     fprintf(file, "];\n");
   }
+}
+
+void hiopVectorRajaPar::print() const
+{
+  copyFromDev();
+  for(index_type it=0; it<n_local_; it++) {
+    printf("vec [%d] = %1.16e\n",it+1,data_host_[it]);
+  }
+  printf("\n");
 }
 
 void hiopVectorRajaPar::copyToDev()

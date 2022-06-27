@@ -69,7 +69,7 @@ void array_random_uniform_cuda(int n, double* d_array, unsigned long seed, doubl
 {
     const int num_threads = blockDim.x * gridDim.x;
     const int tid = blockIdx.x * blockDim.x + threadIdx.x;    
-    const delta = maxv - minv;
+    const double delta = maxv - minv;
     curandState state;
     curand_init(seed, tid, 0, &state);
     for (int i = tid; i < n; i += num_threads) {

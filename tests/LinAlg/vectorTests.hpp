@@ -148,6 +148,10 @@ public:
     x.set_to_random_uniform(one,two);
 
     fail = verifyAnswer(&x, one, two);
+    if(fail >0){
+      std::cout << "num fails = " << fail << std::endl;
+    }
+	
     printMessage(fail, __func__, rank);
 
     return reduceReturn(fail, &x);
@@ -2056,6 +2060,7 @@ public:
     {
       if(xdata[i] > max_val || xdata[i]<min_val)
       {
+        std::cout << "minv: " << min_val << ", maxv: " << max_val << ", x:[" << i << "]:" << xdata[i] << std::endl;
         ++local_fail;
       }
     }
