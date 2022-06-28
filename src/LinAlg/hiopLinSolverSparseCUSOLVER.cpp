@@ -1142,13 +1142,13 @@ namespace hiop
       return;
     }
 
-    M_triplet->convertToCSR(nnz_,
-                            &kRowPtr_,
-                            &jCol_,
-                            &kVal_,
-                            &index_covert_CSR2Triplet_,
-                            &index_covert_extra_Diag2CSR_,
-                            extra_dia_g_nnz_map);
+    M_triplet->convert_to_csr_arrays(nnz_,
+                                     &kRowPtr_,
+                                     &jCol_,
+                                     &kVal_,
+                                     &index_covert_CSR2Triplet_,
+                                     &index_covert_extra_Diag2CSR_,
+                                     extra_dia_g_nnz_map);
 
     /*
      * initialize cusolver parameters

@@ -1189,15 +1189,15 @@ size_type hiopMatrixSymSparseTriplet::numberOfOffDiagNonzeros() const
 
 
 // Generate the three vectors A, IA, JA
-void hiopMatrixSparseTriplet::convertToCSR(int &csr_nnz,
-                                           int **csr_kRowPtr_in,
-                                           int **csr_jCol_in,
-                                           double **csr_kVal_in,
-                                           int **index_covert_CSR2Triplet_in,
-                                           int **index_covert_extra_Diag2CSR_in,
-                                           std::unordered_map<int,int> &extra_diag_nnz_map)
+void hiopMatrixSparseTriplet::convert_to_csr_arrays(int &csr_nnz,
+                                                    int **csr_kRowPtr_in,
+                                                    int **csr_jCol_in,
+                                                    double **csr_kVal_in,
+                                                    int **index_convert_CSR2Triplet_in,
+                                                    int **index_convert_extra_Diag2CSR_in,
+                                                    std::unordered_map<int,int>& extra_diag_nnz_map)
 {
-  assert(*csr_kRowPtr_in==nullptr && *index_covert_CSR2Triplet_in==nullptr);
+  assert(*csr_kRowPtr_in==nullptr && *index_convert_CSR2Triplet_in==nullptr);
   int m = this->m();
   int n = this->n();
   int nnz = numberOfNonzeros();
@@ -1207,8 +1207,10 @@ void hiopMatrixSparseTriplet::convertToCSR(int &csr_nnz,
   int *csr_kRowPtr = *csr_kRowPtr_in;
 
   csr_nnz = 0;
-  /* transfer triplet form to CSR form
-  * note that input is in lower triangular triplet form. First part is the sparse matrix, and the 2nd part are the additional diagonal elememts
+  /* Transfer triplet form to CSR form
+   * 
+   * Note that input is in lower triangular triplet form. First part is the sparse matrix, and the 2nd part containts additional 
+   * diagonal elements.
   */
   int n_diag_val=0;
   std::unordered_map<int,int> extra_diag_nnz_map_temp;
@@ -1247,23 +1249,25 @@ void hiopMatrixSparseTriplet::convertToCSR(int &csr_nnz,
   double *csr_kVal = *csr_kVal_in;
   int *csr_jCol = *csr_jCol_in;
 
-  int *index_covert_extra_Diag2CSR_temp = new int[n];
+  int *index_convert_extra_Diag2CSR_temp = new int[n];
   int *nnz_each_row_tmp = new int[n]{};
 
   // set correct col index and value
   {
-    *index_covert_CSR2Triplet_in = new int[csr_nnz];
-    *index_covert_extra_Diag2CSR_in = new int[n];
+    *index_convert_CSR2Triplet_in = new int[csr_nnz];
+    *index_convert_extra_Diag2CSR_in = new int[n];
 
-    int *index_covert_CSR2Triplet = *index_covert_CSR2Triplet_in;
-    int *index_covert_extra_Diag2CSR = *index_covert_extra_Diag2CSR_in;
+    int *index_convert_CSR2Triplet = *index_convert_CSR2Triplet_in;
+    int *index_convert_extra_Diag2CSR = *index_convert_extra_Diag2CSR_in;
 
-    for(int i=0;i<n;i++) diag_defined[i]=-1;
+    for(int i=0;i<n;i++) {
+      diag_defined[i] = -1;
+    }
 
     int total_nnz_tmp{0},nnz_tmp{0}, rowID_tmp, colID_tmp;
     for(int k=0;k<n;k++){
-        index_covert_extra_Diag2CSR_temp[k]=-1;
-        index_covert_extra_Diag2CSR[k]=-1;
+        index_convert_extra_Diag2CSR_temp[k]=-1;
+        index_convert_extra_Diag2CSR[k]=-1;
     }
 
     for(int k=0;k<nnz;k++){
@@ -1278,9 +1282,9 @@ void hiopMatrixSparseTriplet::convertToCSR(int &csr_nnz,
           auto p = extra_diag_nnz_map_temp.find (rowID_tmp);
           if( p != extra_diag_nnz_map_temp.end() ){
             csr_kVal[nnz_tmp] += values_[p->second];
-            index_covert_extra_Diag2CSR_temp[p->first] = nnz_tmp;
+            index_convert_extra_Diag2CSR_temp[p->first] = nnz_tmp;
           }
-          index_covert_CSR2Triplet[nnz_tmp] = k;
+          index_convert_CSR2Triplet[nnz_tmp] = k;
 
           nnz_each_row_tmp[rowID_tmp]++;
           total_nnz_tmp++;
@@ -1289,7 +1293,7 @@ void hiopMatrixSparseTriplet::convertToCSR(int &csr_nnz,
         nnz_tmp = nnz_each_row_tmp[rowID_tmp] + csr_kRowPtr[rowID_tmp];
         csr_jCol[nnz_tmp] = colID_tmp;
         csr_kVal[nnz_tmp] = values_[k];
-        index_covert_CSR2Triplet[nnz_tmp] = k;
+        index_convert_CSR2Triplet[nnz_tmp] = k;
 
         nnz_each_row_tmp[rowID_tmp]++;
         total_nnz_tmp++;
@@ -1297,34 +1301,33 @@ void hiopMatrixSparseTriplet::convertToCSR(int &csr_nnz,
     }
 
     // correct the missing diagonal term and sort the nonzeros
-    for(int i=0;i<n;i++){
+    for(int i=0; i<n; i++){
       // sort the nonzeros
       std::vector<int> ind_temp(csr_kRowPtr[i+1]-csr_kRowPtr[i]);
       std::iota(ind_temp.begin(), ind_temp.end(), 0);
       std::sort(ind_temp.begin(), ind_temp.end(),[&](int a, int b){ return csr_jCol[a+csr_kRowPtr[i]]<csr_jCol[b+csr_kRowPtr[i]]; });
       
       reorder(csr_kVal+csr_kRowPtr[i],ind_temp,csr_kRowPtr[i+1]-csr_kRowPtr[i]);
-      reorder(index_covert_CSR2Triplet+csr_kRowPtr[i],ind_temp,csr_kRowPtr[i+1]-csr_kRowPtr[i]);
+      reorder(index_convert_CSR2Triplet+csr_kRowPtr[i],ind_temp,csr_kRowPtr[i+1]-csr_kRowPtr[i]);
       std::sort(csr_jCol+csr_kRowPtr[i],csr_jCol+csr_kRowPtr[i+1]);
       
       
-      int old_nnz_idx = index_covert_extra_Diag2CSR_temp[i];
+      int old_nnz_idx = index_convert_extra_Diag2CSR_temp[i];
       if(old_nnz_idx!=-1){
         int old_nnz_in_row = ind_temp[old_nnz_idx - csr_kRowPtr[i]];
         std::vector<int>::iterator p = std::find(ind_temp.begin(),ind_temp.end(),old_nnz_in_row);
         assert(p != ind_temp.end());        
         int new_nnz_idx = (int) std::distance (ind_temp.begin(), p) + csr_kRowPtr[i];
         assert(new_nnz_idx>=0);
-        index_covert_extra_Diag2CSR[i] = new_nnz_idx;
+        index_convert_extra_Diag2CSR[i] = new_nnz_idx;
         extra_diag_nnz_map[new_nnz_idx] = extra_diag_nnz_map_temp[i];
       }
     } 
   }
 
-  delete [] nnz_each_row_tmp; nnz_each_row_tmp = nullptr;
-  delete [] diag_defined; diag_defined = nullptr;
-  delete [] index_covert_extra_Diag2CSR_temp; index_covert_extra_Diag2CSR_temp = nullptr;
-
+  delete [] nnz_each_row_tmp; 
+  delete [] diag_defined; 
+  delete [] index_convert_extra_Diag2CSR_temp; 
 }
 
 /*  sort by first row and then col */
