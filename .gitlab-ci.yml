@@ -163,17 +163,17 @@ build_on_marianas:
   rules:
     - if: '$CI_PROJECT_ROOT_NAMESPACE == "exasgd"'
 
-build_on_newell:
-  stage: default_build
-  variables:
-    SLURM_Q: "newell_shared"
-    MY_CLUSTER: "newell"
-    TIMELIMIT: '1:00:00'
-    SLURM_ARGS: --gres=gpu:1 --exclusive
-  <<: *pnnl_tags_definition
-  <<: *pnnl_script_definition
-  rules:
-    - if: '$CI_PROJECT_ROOT_NAMESPACE == "exasgd"'
+# build_on_newell:
+#   stage: default_build
+#   variables:
+#     SLURM_Q: "newell_shared"
+#     MY_CLUSTER: "newell"
+#     TIMELIMIT: '1:00:00'
+#     SLURM_ARGS: --gres=gpu:1 --exclusive
+#   <<: *pnnl_tags_definition
+#   <<: *pnnl_script_definition
+#   rules:
+#     - if: '$CI_PROJECT_ROOT_NAMESPACE == "exasgd"'
 
 build_on_incline:
   allow_failure: true
