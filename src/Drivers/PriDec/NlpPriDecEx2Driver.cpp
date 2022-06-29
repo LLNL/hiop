@@ -141,6 +141,7 @@ int main(int argc, char **argv)
   hiop::hiopAlgPrimalDecomposition pridec_solver(&pridec_problem, MPI_COMM_WORLD);
   pridec_solver.set_initial_alpha_ratio(0.5);
   pridec_solver.set_alpha_min(0.3);
+  //pridec_solver.set_local_accum("true");
   //pridec_solver.set_tolerance(1e-6);
   //pridec_solver.set_max_iteration(5);
   auto status = pridec_solver.run();
