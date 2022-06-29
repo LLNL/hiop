@@ -4,28 +4,58 @@
 
 namespace hiop
 {
-  hiopLinSolverSymSparseMA57::hiopLinSolverSymSparseMA57(const int& n, const int& nnz, hiopNlpFormulation* nlp)
-    : hiopLinSolverSymSparse(n, nnz, nlp),
-      irowM_{nullptr},
-      jcolM_{nullptr},
-      lifact_{0},
-      ifact_{nullptr},
-      lfact_{0},
-      fact_{nullptr},
-      lkeep_{0},
-      keep_{nullptr},
-      iwork_{nullptr},
-      dwork_{nullptr},
-      ipessimism_{1.05},
-      rpessimism_{1.05},
-      n_{n},
-      nnz_{nnz},
-      rhs_{nullptr},
-      resid_{nullptr},
-      pivot_tol_{1e-8},
-      pivot_max_{1e-4},
-      pivot_changed_{false}
+  hiopLinSolverSymSparseMA57::hiopLinSolverSymSparseMA57()
   {
+    constructor_part();
+  }
+  hiopLinSolverSymSparseMA57::hiopLinSolverSymSparseMA57(const int& n, const int& nnz, hiopNlpFormulation* nlp)
+    : hiopLinSolverSymSparse(n, nnz, nlp)
+  {
+    constructor_part();
+    n_ = n;
+    nnz_ = nnz;
+  }
+
+  hiopLinSolverSymSparseMA57::hiopLinSolverSymSparseMA57(hiopMatrixSparse* M, hiopNlpFormulation* nlp)
+    : hiopLinSolverSymSparse(M, nlp)
+  {
+    constructor_part();
+  }
+  hiopLinSolverSymSparseMA57::~hiopLinSolverSymSparseMA57()
+  {
+    delete [] irowM_;
+    delete [] jcolM_;
+    delete [] ifact_;
+    delete [] fact_;
+    delete [] keep_;
+    delete [] iwork_;
+    delete [] dwork_;
+    delete resid_;
+    delete rhs_;
+  }
+
+  void hiopLinSolverSymSparseMA57::constructor_part()
+  {
+    irowM_ = nullptr;
+    jcolM_ = nullptr;
+    lifact_ = 0;
+    ifact_ = nullptr;
+    lfact_ = 0;
+    fact_ = nullptr;
+    lkeep_ = 0;
+    keep_ = nullptr;
+    iwork_ = nullptr;
+    dwork_ = nullptr;
+    ipessimism_ = 1.05;
+    rpessimism_ = 1.05;
+    n_ = 0;
+    nnz_ = 0;
+    rhs_ = nullptr;
+    resid_ = nullptr;
+    pivot_tol_ = 1e-8;
+    pivot_max_ = 1e-4;
+    pivot_changed_ = false;
+
     MA57ID( cntl_, icntl_ );
 
     /*
@@ -47,22 +77,7 @@ namespace hiop
     icntl_[16-1] = 0;
 
     cntl_[1-1] = pivot_tol_;     // pivot tolerance
-
   }
-  hiopLinSolverSymSparseMA57::~hiopLinSolverSymSparseMA57()
-  {
-    delete [] irowM_;
-    delete [] jcolM_;
-    delete [] ifact_;
-    delete [] fact_;
-    delete [] keep_;
-    delete [] iwork_;
-    delete [] dwork_;
-    delete resid_;
-    delete rhs_;
-
-  }
-
 
   void hiopLinSolverSymSparseMA57::firstCall()
   {
@@ -74,18 +89,15 @@ namespace hiop
     
     irowM_ = new int[nnz_];
     jcolM_ = new int[nnz_];
-    for(int k=0; k<nnz_; k++){
-      irowM_[k] = M_->i_row()[k]+1;
-      jcolM_[k] = M_->j_col()[k]+1;
-    }
 
+    fill_triplet_index_arrays();
+    
     lkeep_ = ( nnz_ > n_ ) ? (5 * n_ + 2 * nnz_ + 42) : (6 * n_ + nnz_ + 42);
     keep_ = new int[lkeep_]{0}; // Initialize to 0 as otherwise MA57ED can sometimes fail
 
     iwork_ = new int[5 * n_];
     dwork_ = new double[n_];
     
-
     MA57AD( &n_, &nnz_, irowM_, jcolM_, &lkeep_, keep_, iwork_, icntl_, info_, rinfo_ );
         
     lfact_ = (int) (rpessimism_ * info_[8]);
@@ -104,15 +116,20 @@ namespace hiop
 
     nlp_->runStats.linsolv.tmFactTime.start();
 
-    if( !keep_ ) this->firstCall();
+    if(!keep_) {
+      this->firstCall();
+    }
 
     bool done{false};
     bool is_singular{false};
     int num_tries{0};
 
+    //get the triplet values array and copy the entries into it (different behavior for triplet and csr implementations)
+    double* Mvals = get_triplet_values_array();
+    fill_triplet_values_array(Mvals);
+    
     do {
-      MA57BD( &n_, &nnz_, M_->M(), fact_, &lfact_, ifact_,
-	     &lifact_, &lkeep_, keep_, iwork_, icntl_, cntl_, info_, rinfo_ );
+      MA57BD(&n_, &nnz_, Mvals, fact_, &lfact_, ifact_, &lifact_, &lkeep_, keep_, iwork_, icntl_, cntl_, info_, rinfo_ );
 
       switch( info_[0] ) {
         case 0:
@@ -124,10 +141,7 @@ namespace hiop
           int lnfact = (int) (info_[16] * rpessimism_);
           double * newfact = new double[lnfact];
 
-          MA57ED( &n_, &ic, keep_,
-                fact_, &info_[1], newfact, &lnfact,
-                ifact_, &info_[1], &intTemp, &lifact_,
-                info_ );
+          MA57ED(&n_, &ic, keep_, fact_, &info_[1], newfact, &lnfact, ifact_, &info_[1], &intTemp, &lifact_, info_ );
 
           delete [] fact_;
           fact_ = newfact;
@@ -139,10 +153,7 @@ namespace hiop
           int ic = 1;
           int lnifact = (int) (info_[17] * ipessimism_);
           int * nifact = new int[ lnifact ];
-          MA57ED( &n_, &ic, keep_, 
-                fact_, &lfact_, fact_, &lfact_,
-               ifact_, &lifact_, nifact, &lnifact,
-               info_ );
+          MA57ED(&n_, &ic, keep_, fact_, &lfact_, fact_, &lfact_, ifact_, &lifact_, nifact, &lnifact, info_ );
           delete [] ifact_;
           ifact_ = nifact;
           lifact_ = lnifact;
@@ -176,7 +187,7 @@ namespace hiop
     return negEigVal;
   }
 
-  bool hiopLinSolverSymSparseMA57::solve ( hiopVector& x_in )
+  bool hiopLinSolverSymSparseMA57::solve(hiopVector& x_in)
   {
     assert(n_==M_->n() && M_->n()==M_->m());
     assert(nnz_==M_->numberOfNonzeros());
@@ -210,10 +221,29 @@ namespace hiop
 //    MA57CD( &job, &n_, fact_, &lfact_, ifact_, &lifact_,
 //                   &one, drhs, &n_, dwork_, &n_, iwork_, icntl_, info_ );
 //    x->copyFrom(*rhs_);
+    
+    // M_->M() for triplet or internal triplet values (values_) for CSR
+    double* Mvals = get_triplet_values_array();
 
-    MA57DD( &job, &n_, &nnz_, M_->M(), irowM_, jcolM_,
-        fact_, &lfact_, ifact_, &lifact_, drhs, dx,
-        dresid, dwork_, iwork_, icntl_, cntl_, info_, rinfo_ );
+    MA57DD(&job,
+           &n_,
+           &nnz_,
+           Mvals,
+           irowM_,
+           jcolM_,
+           fact_,
+           &lfact_,
+           ifact_,
+           &lifact_,
+           drhs,
+           dx,
+           dresid,
+           dwork_,
+           iwork_,
+           icntl_,
+           cntl_,
+           info_,
+           rinfo_ );
 
     if (info_[0]<0){
       nlp_->log->printf(hovError, "hiopLinSolverSymSparseMA57: MA57 returned error %d\n", info_[0]);
