@@ -78,7 +78,7 @@ namespace hiop
   void hiopLinSolverSymSparseMA57::firstCall()
   {
     assert(n_==M_->n() && M_->n()==M_->m());
-    assert(nnz_==M_->numberOfNonzeros());
+    assert(nnz_<=M_->numberOfNonzeros());
     assert(n_>0);
 
     assert(nullptr==irowM_);
@@ -107,7 +107,7 @@ namespace hiop
   int hiopLinSolverSymSparseMA57::matrixChanged()
   {
     assert(n_==M_->n() && M_->n()==M_->m());
-    assert(nnz_==M_->numberOfNonzeros());
+    assert(nnz_<=M_->numberOfNonzeros());
     assert(n_>0);
 
     nlp_->runStats.linsolv.tmFactTime.start();
@@ -186,7 +186,7 @@ namespace hiop
   bool hiopLinSolverSymSparseMA57::solve(hiopVector& x_in)
   {
     assert(n_==M_->n() && M_->n()==M_->m());
-    assert(nnz_==M_->numberOfNonzeros());
+    assert(nnz_<=M_->numberOfNonzeros());
     assert(n_>0);
     assert(x_in.get_size()==M_->n());
 
