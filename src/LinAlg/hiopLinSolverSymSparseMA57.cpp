@@ -4,10 +4,6 @@
 
 namespace hiop
 {
-  hiopLinSolverSymSparseMA57::hiopLinSolverSymSparseMA57()
-  {
-    constructor_part();
-  }
   hiopLinSolverSymSparseMA57::hiopLinSolverSymSparseMA57(const int& n, const int& nnz, hiopNlpFormulation* nlp)
     : hiopLinSolverSymSparse(n, nnz, nlp)
   {

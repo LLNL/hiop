@@ -119,7 +119,7 @@ public:
   hiopLinSolverSymSparseMA57(hiopMatrixSparse* M, hiopNlpFormulation* nlp);
   virtual ~hiopLinSolverSymSparseMA57();
 protected:
-  hiopLinSolverSymSparseMA57();
+  hiopLinSolverSymSparseMA57()=delete;
 
   /// Method holding the code common to the constructors. Initializes MA57 global parameters
   void constructor_part();
@@ -207,10 +207,11 @@ protected:
 
 public:
 
-  /** called the very first time a matrix is factored. Allocates space
-   * for the factorization and performs ordering */
+  /** 
+   * Called the very first time a matrix is factorized, this method allocates space for the 
+   * factorization and performs ordering. 
+   */
   virtual void firstCall();
-//  virtual void diagonalChanged( int idiag, int extent );
 
   // increase pivot tolarence
   virtual bool increase_pivot_tol();
