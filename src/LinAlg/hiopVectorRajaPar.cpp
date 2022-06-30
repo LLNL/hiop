@@ -232,15 +232,7 @@ void hiopVectorRajaPar::set_to_random_uniform(double minv, double maxv)
   if(mem_space_ == "DEVICE") {
     hiop::device::array_random_uniform_kernel(n_local_, data, minv, maxv);
   } else {
-    // TODO: unified memory needs to use host implementation or cuda api. Why? 
-    hiop::device::array_random_uniform_kernel(n_local_, data, minv, maxv);  // this fails
-
-//    hiop::host::array_random_uniform_kernel(n_local_, data, minv, maxv);  // this works
-
-    // this 3-line method from cuda api also works
-//  hiop::device::array_random_uniform_kernel(n_local_, data);
-//  scale(maxv-minv);
-//  addConstant(minv);
+    hiop::device::array_random_uniform_kernel(n_local_, data, minv, maxv);
   }
 #else
   // TODO: add function for openmp polocy

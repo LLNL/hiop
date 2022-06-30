@@ -88,6 +88,7 @@ int array_random_uniform_kernel(int n, double* d_array, double minv, double maxv
   
   unsigned long seed = generate_seed();
   array_random_uniform_hip<<<grid_size,block_size>>>(n, d_array, seed, minv, maxv);
+  hipDeviceSynchronize();
 
   return 1;
 }
