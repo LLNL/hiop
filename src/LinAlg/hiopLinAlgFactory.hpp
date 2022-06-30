@@ -53,6 +53,7 @@
 #include <hiopVector.hpp>
 #include <hiopMatrixDense.hpp>
 #include <hiopMatrixSparse.hpp>
+#include <hiopMatrixSparseCSR.hpp>
 #include <hiopVectorInt.hpp>
 
 namespace hiop {
@@ -91,12 +92,27 @@ public:
                                               MPI_Comm comm = MPI_COMM_SELF,
                                               const size_type& m_max_alloc = -1);
   /**
-   * @brief Static method to create a sparse matrix
+   * @brief Static method to create the default, triplet sparse matrix
    */
   static hiopMatrixSparse* create_matrix_sparse(const std::string& mem_space,
                                                 size_type rows,
                                                 size_type cols,
                                                 size_type nnz);
+
+  /**
+   * @brief Static method to create an empty CSR sparse matrix of the type that supports the
+   * memory space passed as argument.
+   */
+  static hiopMatrixSparseCSR* create_matrix_sparse_csr(const std::string& mem_space);
+  
+  /**
+   * @brief Static method to create a CSR sparse matrix of the type that supports the
+   * memory space passed as argument.
+   */
+  static hiopMatrixSparseCSR* create_matrix_sparse_csr(const std::string& mem_space,
+                                                       size_type rows,
+                                                       size_type cols,
+                                                       size_type nnz);
 
   /**
    * @brief Static method to create a symmetric sparse matrix

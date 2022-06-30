@@ -66,13 +66,14 @@
 #include <hiopVectorRajaPar.hpp>
 #include <hiopMatrixRajaDense.hpp>
 #include <hiopMatrixRajaSparseTriplet.hpp>
+#include <hiopMatrixSparseCsrCuda.hpp>
 #endif // HIOP_USE_RAJA
 
 #include <hiopVectorIntSeq.hpp>
 #include <hiopVectorPar.hpp>
 #include <hiopMatrixDenseRowMajor.hpp>
 #include <hiopMatrixSparseTriplet.hpp>
-
+#include <hiopMatrixSparseCSRSeq.hpp>
 #include "hiopLinAlgFactory.hpp"
 
 #include "hiopCppStdUtils.hpp"
@@ -177,6 +178,47 @@ hiopMatrixSparse* LinearAlgebraFactory::create_matrix_sparse(const std::string& 
 #endif
   }
 }
+
+hiopMatrixSparseCSR* LinearAlgebraFactory::create_matrix_sparse_csr(const std::string& mem_space)
+{
+  const std::string mem_space_upper = toupper(mem_space);
+  if(mem_space_upper == "DEFAULT") {
+    return new hiopMatrixSparseCSRSeq();
+  } else {
+#ifdef HIOP_USE_GPU
+#ifndef HIOP_USE_RAJA
+#error "(HIOP_USE_)RAJA is needed by the sparse linear algebra (HIOP_SPARSE) under HIOP_USE_GPU"
+#endif
+    return new hiopMatrixSparseCSRCUDA();
+#else
+    assert(false && "requested memory space not available because Hiop was not built with RAJA support");
+    return new hiopMatrixSparseCSRSeq();
+#endif
+  }
+}
+  
+hiopMatrixSparseCSR*  LinearAlgebraFactory::create_matrix_sparse_csr(const std::string& mem_space,
+                                                                     size_type rows,
+                                                                     size_type cols,
+                                                                     size_type nnz)
+{
+  const std::string mem_space_upper = toupper(mem_space);
+  if(mem_space_upper == "DEFAULT") {
+    return new hiopMatrixSparseCSRSeq(rows, cols, nnz);
+  } else {
+#ifdef HIOP_USE_GPU
+#ifndef HIOP_USE_RAJA
+#error "(HIOP_USE_)RAJA is needed by the sparse linear algebra (HIOP_SPARSE) under HIOP_USE_GPU"
+#endif
+    return new hiopMatrixSparseCSRCUDA(rows, cols, nnz);
+#else
+    assert(false && "requested memory space not available because Hiop was not built with RAJA support");
+    return new hiopMatrixSparseCSRSeq(rows, cols, nnz);
+#endif
+  }
+
+}
+
 
 /**
  * @brief Creates an instance of a symmetric sparse matrix of the appropriate
