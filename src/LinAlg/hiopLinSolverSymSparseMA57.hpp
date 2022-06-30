@@ -272,6 +272,22 @@ protected:
     index_type* i_rowptr = M_->i_row();
     index_type* j_colidx = M_->j_col();
 
+#ifdef HIOP_DEEPCHECKS
+    bool is_upper_tri = true;
+    for(index_type r=0; r<n_ && is_upper_tri; ++r) {
+      for(index_type itnz=i_rowptr[r]; itnz<i_rowptr[r+1]; ++itnz) {
+        if(r>j_colidx[itnz]) {
+          is_upper_tri = false;
+          break;
+        }
+      }
+    }
+    if(is_upper_tri) {
+      nlp_->log->printf(hovWarning,
+                        "MA57 expects full or lower triangular CSR KKT matrix. Input CSR is detected "
+                        "to be upper triangular. [hiopLinSolverSparseCsrMa57 HIOP_DEEPCHECKS]\n");
+    }
+#endif
     index_type nnz_triplet = 0;
     
     for(index_type r=0; r<n_; ++r) {
