@@ -471,11 +471,7 @@ hiopKKTLinSysCondensedSparse::determine_and_create_linsys()
     return dynamic_cast<hiopLinSolverSymSparse*> (linSys_);
   }
   
-<<<<<<< HEAD
   int n = M_condensed_->m();
-=======
-  int n = nx;
->>>>>>> develop
   auto linsolv = nlp_->options->GetString("linear_solver_sparse");
   if(nlp_->options->GetString("compute_mode") == "cpu") {
 
