@@ -65,10 +65,6 @@
 #include <stdlib.h>     /* exit, EXIT_FAILURE */
 #include <cassert>
 
-#ifdef HIOP_USE_RAJA
-#include "hiopRajaUmpireUtils.hpp"
-#endif
-
 using namespace std;
 namespace hiop
 {
