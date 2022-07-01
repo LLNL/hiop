@@ -116,7 +116,7 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
 target_compile_features(hiop_options
   INTERFACE
-  cxx_std_11
+  cxx_std_14
   cxx_alignas
   cxx_alignof
   cxx_attributes
@@ -206,7 +206,7 @@ if(HIOP_USE_GPU)
     check_language(CUDA)
 
     if(NOT DEFINED CMAKE_CUDA_STANDARD)
-      set(CMAKE_CUDA_STANDARD 11)
+      set(CMAKE_CUDA_STANDARD 14)
       set(CMAKE_CUDA_STANDARD_REQUIRED ON)
     endif()
 
@@ -214,6 +214,9 @@ if(HIOP_USE_GPU)
       set(CMAKE_CUDA_ARCHITECTURES 35)
     endif()
     set(CMAKE_CUDA_FLAGS "--expt-extended-lambda")
+    if(HIOP_USE_EIGEN)
+      string(APPEND CMAKE_CUDA_FLAGS " --expt-relaxed-constexpr")
+    endif()
 
     if(HIOP_USE_MAGMA)
       set(HIOP_MAGMA_DIR CACHE PATH "Path to Magma directory")
