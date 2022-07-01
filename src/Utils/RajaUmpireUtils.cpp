@@ -47,29 +47,43 @@
 // product endorsement purposes.
 
 /**
- * @file hiopRajaUmpireUtils.hpp
+ * @file RajaUmpireUtils.cpp
  * 
  * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
  *
  */
 
-#ifndef HIOP_RAJA_UMPIRE_UTILS
-#define HIOP_RAJA_UMPIRE_UTILS
+#include "hiop_defs.hpp"
+#include "hiopRajaUmpireUtils.hpp"
 
-#pragma once
+#if defined(HIOP_USE_RAJA)
+#include <umpire/Allocator.hpp>
+#include <umpire/ResourceManager.hpp>
 
-#include <string>
-#include <sstream>  
+#include <RAJA/RAJA.hpp>
+#endif
 
 namespace hiop {
-  /** 
-   * Returns a string with memory space Umpire keeps about the address passed as the argument, 
-   * "__not_managed_by_umpire__" if Umpire does not have a record of the address, or 
-   * "__info_not_available__HiOp_not_built_with_Umpire__" if HiOp was not built with Umpire.
-   * 
-   * The function should be used for debugging purposes only. 
-   */
-  std::string get_umpire_mem_address_info(void* address);
 
-} // namespace hiop
-#endif // HIOP_RAJA_UMPIRE_UTILS
+std::string get_umpire_mem_address_info(void* address)
+{
+#ifdef HIOP_USE_RAJA
+  auto& rm = umpire::ResourceManager::getInstance();
+  if(rm.hasAllocator(address)) {
+    auto found_allocator = rm.getAllocator(address);
+    std::stringstream ss;
+    ss << "Allocated on '" << found_allocator.getName() << "'   ";
+    ss << "Platform " << static_cast<int>(found_allocator.getPlatform()) << "   "; 
+    ss << "Size [" << found_allocator.getSize(address) << "]";
+    return ss.str();
+  } else {
+    return std::string("__not_managed_by_Umpire__");
+  }
+#else
+  return std::string("__info_not_available__HiOp_not_built_with_Umpire__");
+#endif
+}
+
+
+
+} //end namespace
