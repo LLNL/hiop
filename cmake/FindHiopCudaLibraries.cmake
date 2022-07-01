@@ -15,6 +15,7 @@ if(HIOP_BUILD_SHARED)
     CUDA::cusparse
     CUDA::cudart
     CUDA::cublasLt
+    CUDA::curand
     )
 endif()
 if(HIOP_BUILD_STATIC)
@@ -23,6 +24,7 @@ if(HIOP_BUILD_STATIC)
     CUDA::cusparse_static
     CUDA::cudart_static
     CUDA::cublasLt_static
+    CUDA::curand_static
     )
 endif()
 

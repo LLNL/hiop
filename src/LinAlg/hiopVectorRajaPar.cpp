@@ -58,6 +58,13 @@
 #include "hiopVectorRajaPar.hpp"
 #include "hiopVectorIntRaja.hpp"
 
+#ifdef HIOP_USE_GPU
+#include "MathDeviceKernels.hpp"
+#include "MathHostKernels.hpp"
+#else
+#include "MathHostKernels.hpp"
+#endif
+
 #include <cmath>
 #include <cstring> //for memcpy
 #include <sstream>
@@ -216,6 +223,21 @@ void hiopVectorRajaPar::setToConstant(double c)
     {
       data[i] = c;
     });
+}
+
+void hiopVectorRajaPar::set_to_random_uniform(double minv, double maxv)
+{
+  double* data = data_dev_;
+#ifdef HIOP_USE_GPU
+  if(mem_space_ == "DEVICE") {
+    hiop::device::array_random_uniform_kernel(n_local_, data, minv, maxv);
+  } else {
+    hiop::device::array_random_uniform_kernel(n_local_, data, minv, maxv);
+  }
+#else
+  // TODO: add function for openmp polocy
+  hiop::host::array_random_uniform_kernel(n_local_, data, minv, maxv);
+#endif
 }
 
 /// Set selected elements to constant, zero otherwise
@@ -1983,6 +2005,15 @@ void hiopVectorRajaPar::print(FILE* file, const char* msg/*=NULL*/, int max_elem
       fprintf(file, "%22.16e ; ", data_host_[it]);
     fprintf(file, "];\n");
   }
+}
+
+void hiopVectorRajaPar::print() const
+{
+  copyFromDev();
+  for(index_type it=0; it<n_local_; it++) {
+    printf("vec [%d] = %1.16e\n",it+1,data_host_[it]);
+  }
+  printf("\n");
 }
 
 void hiopVectorRajaPar::copyToDev()
