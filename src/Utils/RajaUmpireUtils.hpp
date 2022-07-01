@@ -47,7 +47,7 @@
 // product endorsement purposes.
 
 /**
- * @file hiopRajaUmpireUtils.hpp
+ * @file RajaUmpireUtils.hpp
  * 
  * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
  *
@@ -55,8 +55,6 @@
 
 #ifndef HIOP_RAJA_UMPIRE_UTILS
 #define HIOP_RAJA_UMPIRE_UTILS
-
-#pragma once
 
 #include <string>
 #include <sstream>  

@@ -54,7 +54,7 @@
  */
 
 #include "hiop_defs.hpp"
-#include "hiopRajaUmpireUtils.hpp"
+#include "RajaUmpireUtils.hpp"
 
 #if defined(HIOP_USE_RAJA)
 #include <umpire/Allocator.hpp>

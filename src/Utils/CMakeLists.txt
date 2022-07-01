@@ -23,7 +23,7 @@ set(hiopUtils_INTERFACE_HEADERS
 )
 
 if(HIOP_USE_RAJA)
-  list(APPEND hiopUtils_INTERFACE_HEADERS hiopRajaUmpireUtils.hpp)
+  list(APPEND hiopUtils_INTERFACE_HEADERS RajaUmpireUtils.hpp)
   list(APPEND hiopUtils_SRC ${hiopUtils_RAJA_SRC})
 endif()
 
