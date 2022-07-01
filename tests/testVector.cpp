@@ -244,6 +244,7 @@ int runTests(const char* mem_space, MPI_Comm comm)
   fail += test.vectorGetSize(*x, Nglobal, rank);
   fail += test.vectorSetToZero(*x, rank);
   fail += test.vectorSetToConstant(*x, rank);
+  fail += test.vector_set_to_random_uniform(*x, rank);
   fail += test.vectorSetToConstant_w_patternSelect(*x, *y, rank);
   fail += test.vectorCopyFrom(*x, *y, rank);
   fail += test.vectorCopyTo(*x, *y, rank);
