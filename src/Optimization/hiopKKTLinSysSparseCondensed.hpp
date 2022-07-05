@@ -200,8 +200,8 @@ protected:
   /// Stores a copy of Hd_ on the device (to be later removed)
   hiopVector* Hd_copy_;
 private:
-  /// Placeholder for the code that decides which linear solver to used based on safe_mode_
-  hiopLinSolverSymSparse* determine_and_create_linsys(size_type nxd, size_type nineq, size_type nnz);
+  /// Decides which linear solver to be used. Call only after `M_condended_` has been computed.
+  hiopLinSolverSymSparse* determine_and_create_linsys();
 
   /// Determines memory space used internally based on the "mem_space" and "compute_mode" options. This is temporary
   /// functionality and will be removed later on when all the objects will be in the same memory space.

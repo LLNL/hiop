@@ -328,59 +328,10 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   int nnz_condensed = M_condensed_->numberOfNonzeros();
 
   //
-  // linear system matrix update
+  // instantiate linear solver class based on values of compute_mode, safe mode, and other options
   //
+  linSys_ = determine_and_create_linsys();
 
-  // TODO should have same code for different compute modes (remove is_cusolver_on)
-  
-  bool is_cusolver_on = nlp_->options->GetString("compute_mode") == "cpu" ? false : true;
-#ifndef HIOP_USE_CUDA
-  if(is_cusolver_on) {
-    nlp_->log->printf(hovWarning,
-                      "hiopKKTLinSysCondensedSparse: HiOp was built without CUDA and will use a CPU "
-                      "linear solver (MA57)\n");
-    is_cusolver_on = false;
-  }
-#endif  
-  if(is_cusolver_on) {
-    linSys_ = determine_and_create_linsys(nx, nineq, M_condensed_->numberOfNonzeros());
-  } else {
-    //compute mode cpu -> use update MA57 linear solver's matrix
-
-    if(nullptr == linSys_) {
-      
-      index_type itnz = 0;
-      for(index_type i=0; i<M_condensed_->m(); ++i) {
-
-        for(index_type p=M_condensed_->i_row()[i]; p<M_condensed_->i_row()[i+1]; ++p) {
-          const index_type j = M_condensed_->j_col()[p];
-          if(i<=j) {
-            itnz++; 
-          }
-        }
-      }
-      linSys_ = determine_and_create_linsys(nx, nineq, itnz);
-    }
-
-    assert(linSys_);
-    auto* linSys = dynamic_cast<hiopLinSolverSymSparse*> (linSys_);
-    auto* Msys = dynamic_cast<hiopMatrixSparseTriplet*>(linSys->sys_matrix());
-    assert(Msys);
-    assert(Msys->m() == M_condensed_->m());
-
-    index_type itnz=0;
-    for(index_type i=0; i<Msys->m(); ++i) {
-      for(index_type p=M_condensed_->i_row()[i]; p<M_condensed_->i_row()[i+1]; ++p) {
-        const index_type j = M_condensed_->j_col()[p];
-        if(i<=j) {
-          Msys->i_row()[itnz] = i;
-          Msys->j_col()[itnz] = j;
-          Msys->M()[itnz] = M_condensed_->M()[p];
-          itnz++; 
-        }
-      }
-    }
-  }
   nlp_->runStats.kkt.tmUpdateLinsys.stop();
   
   if(perf_report_) {
@@ -514,13 +465,13 @@ bool hiopKKTLinSysCondensedSparse::solveCompressed(hiopVector& rx,
 
 
 hiopLinSolverSymSparse*
-hiopKKTLinSysCondensedSparse::determine_and_create_linsys(size_type nx, size_type nineq, size_type nnz)
+hiopKKTLinSysCondensedSparse::determine_and_create_linsys()
 {   
   if(linSys_) {
     return dynamic_cast<hiopLinSolverSymSparse*> (linSys_);
   }
   
-  int n = nx;
+  int n = M_condensed_->m();
   auto linsolv = nlp_->options->GetString("linear_solver_sparse");
   if(nlp_->options->GetString("compute_mode") == "cpu") {
 
@@ -533,7 +484,11 @@ hiopKKTLinSysCondensedSparse::determine_and_create_linsys(size_type nx, size_typ
 #ifdef HIOP_USE_COINHSL
     nlp_->log->printf(hovWarning,
                       "KKT_SPARSE_Condensed linsys: alloc MA57 for matrix of size %d (0 cons)\n", n);
-    linSys_ = new hiopLinSolverSymSparseMA57(n, nnz, nlp_);
+
+    //we need to get CPU CSR matrix
+    auto* M_csr = dynamic_cast<hiopMatrixSparseCSRSeq*>(M_condensed_);
+    assert(M_csr);
+    linSys_ = new hiopLinSolverSparseCsrMa57(M_csr, nlp_);
 #else
     assert(false && "HiOp was built without a sparse linear solver needed by the condensed KKT approach");
 #endif // HIOP_USE_COINHSL
