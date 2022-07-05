@@ -25,11 +25,7 @@ if(HIOP_USE_RAJA)
 endif()
 
 if(HIOP_USE_GPU AND HIOP_USE_CUDA)
-  set(cuda_sources testVector.cpp LinAlg/vectorTestsRajaPar.cpp
-      testVector.cpp LinAlg/vectorTestsIntRaja.cpp
-      testMatrixDense.cpp LinAlg/matrixTestsRajaDense.cpp
-      testMatrixSparse.cpp LinAlg/matrixTestsRajaSparseTriplet.cpp
-      testMatrixSymSparse.cpp LinAlg/matrixTestsRajaSymSparseTriplet.cpp)
+  set(cuda_sources ${testVector_SRC} ${testMatrix_SRC} ${testMatrixSparse_SRC} ${testMatrixSymSparse_SRC})
   set_source_files_properties(${cuda_sources} PROPERTIES LANGUAGE CUDA)
 endif()
 
