@@ -185,3 +185,26 @@ hiopSolveStatus getSolveStatus() const;
 int getNumIterations() const;
 \end{lstlisting} 
 The standalone drivers \texttt{NlpSparseEx1} and \texttt{NlpSparseEx2} inside directory \texttt{src/Drivers/} under the \Hi's root directory contain more detailed examples of the use of the sparse NLP interface of \Hi.
+
+\subsubsection{Solvers options  for \texttt{hiopInterfaceSparse} NLP formulations}
+
+The optimization solver and linear algebra strategy within is controlled via the option  \textbf{KKTLinsys}. For sparse NLPs, the default value (under ``auto'') is ``xdycyd''. Individual linear solvers can be selected via the option \textbf{linear\_solver\_sparse}.  GPU-capable linear solvers are available, namely, cuSOLVER sparse LU and Ginkgo, when option ``compute\_mode'' is set to ``hybrid''. We recommend setting ``KKTLinsys'' to ``auto'', ``linear\_solver\_sparse`` to `'auto'', and choosing CPU or GPU linear algebra backend by setting ``compute\_mode'' to ``cpu`` or ``hybrid'', respectively. 
+
+A so-called condensed sparse optimization solver is currently under development with the goal of increasing adoption of GPUs. It uses a so-called condensed linear algebra KKT formulation (see Section~\ref{kkt:condensed}), specialized sparse matrix device and host kernels, Cholesky-based linear solves on the device, and a variation of the filter line-search interior-point algorithm currently implemented by HiOp. The variation of the algorithm is choosen to improve the numerical conditioning of the linear systems. As a result, the following options need to be used with the condensed sparse optimization solver:
+\begin{lstlisting}
+KKTLinsys condensed
+compute_mode hybrid
+linsol_mode speculative 
+fixed_var relax
+
+tau_min 0.9
+theta_mu 1.1
+kappa_mu 0.8
+
+elastic_mode correct_it_adjust_bound 
+elastic_mode_bound_relax_final 1e-10
+elastic_mode_bound_relax_initial 0.01
+elastic_bound_strategy  mu_projected 
+
+fact_acceptor inertia_free 
+\end{lstlisting} 
