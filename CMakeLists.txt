@@ -165,6 +165,13 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     )
 endif()
 
+if(HIOP_USE_GPU AND HIOP_USE_HIP)
+  # Flang is required to link with ROCm bitcode library
+  if(NOT (CMAKE_Fortran_COMPILER_ID STREQUAL "Flang"))
+    message(SEND_ERROR "Flang is required to link with ROCm bitcode library.")
+  endif()
+endif()
+
 if(HIOP_DEVELOPER_MODE)
   target_link_libraries(hiop_tpl INTERFACE hiop_options hiop_warnings)
   install(TARGETS hiop_options hiop_warnings EXPORT hiop-targets)

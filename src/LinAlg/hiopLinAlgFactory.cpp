@@ -185,13 +185,10 @@ hiopMatrixSparseCSR* LinearAlgebraFactory::create_matrix_sparse_csr(const std::s
   if(mem_space_upper == "DEFAULT") {
     return new hiopMatrixSparseCSRSeq();
   } else {
-#ifdef HIOP_USE_GPU
-#ifndef HIOP_USE_RAJA
-#error "(HIOP_USE_)RAJA is needed by the sparse linear algebra (HIOP_SPARSE) under HIOP_USE_GPU"
-#endif
+#ifdef HIOP_USE_CUDA
     return new hiopMatrixSparseCSRCUDA();
 #else
-    assert(false && "requested memory space not available because Hiop was not built with RAJA support");
+    assert(false && "requested memory space not available because Hiop was not built with CUDA support");
     return new hiopMatrixSparseCSRSeq();
 #endif
   }
@@ -206,13 +203,10 @@ hiopMatrixSparseCSR*  LinearAlgebraFactory::create_matrix_sparse_csr(const std::
   if(mem_space_upper == "DEFAULT") {
     return new hiopMatrixSparseCSRSeq(rows, cols, nnz);
   } else {
-#ifdef HIOP_USE_GPU
-#ifndef HIOP_USE_RAJA
-#error "(HIOP_USE_)RAJA is needed by the sparse linear algebra (HIOP_SPARSE) under HIOP_USE_GPU"
-#endif
+#ifdef HIOP_USE_CUDA
     return new hiopMatrixSparseCSRCUDA(rows, cols, nnz);
 #else
-    assert(false && "requested memory space not available because Hiop was not built with RAJA support");
+    assert(false && "requested memory space not available because Hiop was not built with CUDA support");
     return new hiopMatrixSparseCSRSeq(rows, cols, nnz);
 #endif
   }
