@@ -1569,15 +1569,23 @@ hiopAlgFilterIPMNewton::switch_to_fast_KKT(hiopKKTLinSys* kkt_curr,
   //safe mode is on for the first three iterations for MDS under speculative linsol mode
         
   //TODO: maybe the newly developed adjust slacks and push bounds features make the MDS probles less
-  //challenging and we don't need safe mode in the first three iterations for MDS.
+  //challenging and we don't need safe mode in the first three iterations for MDS under 'speculative'
+  // IR should also make this robust.
 
   if(nullptr!=dynamic_cast<hiopNlpMDS*>(nlp)) {
     if(iter_num<=2) {
       linsol_safe_mode_on=true;
+      switched = false;
+    } else {
+      if(linsol_safe_mode_on==true) {
+        switched = true;
+        linsol_safe_mode_on=false;
+      } else {
+        assert(false == linsol_safe_mode_on);
+        switched = false;
+      }
     }
   }  
-  
-  switched = false;
   return kkt_curr;
 }
 
@@ -1863,6 +1871,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
                                    switched);
           if(switched) {
             nlp->log->printf(hovWarning, "Switched to the fast KKT linsys\n");
+            assert(false==linsol_safe_mode_on);
           }
           
         } else {
@@ -1871,7 +1880,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
         }
       }
     }
-    
+
     for(int linsolve=1; linsolve<=2; ++linsolve) {
 
       bool switched;
