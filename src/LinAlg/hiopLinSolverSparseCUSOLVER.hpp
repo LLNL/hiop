@@ -73,400 +73,395 @@ namespace hiop
 //declare here but do not define
 
 #define ZERO 0.0
-#define EPSILON   1.0e-18
-#define EPSMAC    1.0e-16
-  class hiopLinSolverSymSparseCUSOLVERInnerIR;
-  class hiopLinSolverSymSparseCUSOLVER : public hiopLinSolverSymSparse
+#define EPSILON 1.0e-18
+#define EPSMAC 1.0e-16
+class hiopLinSolverSymSparseCUSOLVERInnerIR;
+class hiopLinSolverSymSparseCUSOLVER : public hiopLinSolverSymSparse
+{
+public:
+  // constructor
+  hiopLinSolverSymSparseCUSOLVER(const int& n, const int& nnz, hiopNlpFormulation* nlp);
+  virtual ~hiopLinSolverSymSparseCUSOLVER();
+
+  /** Triggers a refactorization of the matrix, if necessary.
+   * Overload from base class.
+   * In this case, KLU (SuiteSparse) is used to refactor*/
+  int matrixChanged();
+
+  /** solves a linear system.
+   * param 'x' is on entry the right hand side(s) of the system to be solved.
+   * On exit is contains the solution(s).  */
+  bool solve(hiopVector& x_);
+
+  /** Multiple rhs not supported yet */
+  virtual bool
+  solve(hiopMatrix& /* x */)
   {
-    public:
-      // constructor
-      hiopLinSolverSymSparseCUSOLVER(const int& n, const int& nnz, hiopNlpFormulation* nlp);
-      virtual ~hiopLinSolverSymSparseCUSOLVER();
+    assert(false && "not yet supported");
+    return false;
+  }
 
-      /** Triggers a refactorization of the matrix, if necessary.
-       * Overload from base class.
-       * In this case, KLU (SuiteSparse) is used to refactor*/
-      int matrixChanged();
-
-      /** solves a linear system.
-       * param 'x' is on entry the right hand side(s) of the system to be solved.
-       * On exit is contains the solution(s).  */
-      bool solve(hiopVector& x_);
-
-      /** Multiple rhs not supported yet */
-      virtual bool solve(hiopMatrix& /* x */)
-      {
-        assert(false && "not yet supported");
-        return false;
-      }
-
-    private:
-      //
-      int m_;   // number of rows of the whole matrix
-      int n_;   // number of cols of the whole matrix
-      int nnz_; // number of nonzeros in the matrix
-
-      int* kRowPtr_; // row pointer for nonzeros
-      int* jCol_;    // column indexes for nonzeros
-      double* kVal_; // storage for sparse matrix
-
-      int* index_covert_CSR2Triplet_;
-      int* index_covert_extra_Diag2CSR_;
-
-      /** options **/
-      // TODO: KS need options for:
-      // (3) iterative refinement: fgmres, bicgstab 
-      // (4) if ir is fgmres, there are different gram-schmidt
-      // options: MGS, CGS2, MGS-2 synch, MGS-1 synch/
-
-      int ordering_;
-      std::string fact_;
-      std::string refact_;
-      std::string use_ir_;
-
-      /** needed for cuSolver **/
-
-      cusolverStatus_t sp_status_;
-      cusparseHandle_t handle_ = 0;
-      cusolverSpHandle_t handle_cusolver_ = nullptr;
-      cublasHandle_t handle_cublas_;
-
-      cusparseMatDescr_t descr_A_, descr_M_;
-      csrluInfoHost_t info_lu_ = nullptr;
-      csrgluInfo_t info_M_ = nullptr;
-
-      cusolverRfHandle_t handle_rf_ = nullptr;
-      size_t buffer_size_;
-      size_t size_M_;
-      double* d_work_;
-      int ite_refine_succ_ = 0;
-      double r_nrminf_;
-
-      // KLU stuff
-      int klu_status_;
-      klu_common Common_;
-      klu_symbolic* Symbolic_ = nullptr;
-      klu_numeric* Numeric_ = nullptr;
-      /*pieces of M */
-      int* mia_ = nullptr;
-      int* mja_ = nullptr;
-
-      /* for GPU data */
-      double* da_;
-      int* dia_;
-      int* dja_;
-      double* devx_;
-      double* devr_;
-      double* drhs_;
-
-      int factorizationSetupSucc_;
-      /* needed for cuSolverRf */
-      int* d_P_;
-      int* d_Q_; // permutation matrices
-      double* d_T_;
-
-      // iterative refinement
-
-      hiopLinSolverSymSparseCUSOLVERInnerIR* ir_;
-      
-      /* private function: creates a cuSolver data structure from KLU data
-       * structures. */
-
-      /** called the very first time a matrix is factored. Perform KLU
-       * factorization, allocate all aux variables 
-       *  
-       * @note Converts HiOp triplet matrix to CSR format.
-       */
-      virtual void firstCall();
-
-      /** Function to compute nnz and set row pointers */
-      void compute_nnz();
-      /** Function to compute column indices and matrix values arrays */
-      void set_csr_indices_values();
-
-      int createM(const int n, 
-                  const int nnzL, 
-                  const int* Lp, 
-                  const int* Li, 
-                  const int nnzU, 
-                  const int* Up, 
-                  const int* Ui);
-
-
-      template <typename T>
-        void hiopCheckCudaError(T result, 
-                                const char* const file, 
-                                int const line);
-      /* private functions needed for refactorization setup, no need to make them public */
-
-      int initializeKLU();
-      int initializeCusolverGLU();
-      int initializeCusolverRf();
-
-      int refactorizationSetupCusolverGLU();
-      int refactorizationSetupCusolverRf();
-      
-      void IRsetup();   
-      friend class hiopLinSolverNonSymSparseCUSOLVER;
-  };
-
-  class hiopLinSolverNonSymSparseCUSOLVER : public hiopLinSolverNonSymSparse
-  {
-    public:
-      //construtor
-      hiopLinSolverNonSymSparseCUSOLVER(const int& n, const int& nnz, hiopNlpFormulation* nlp);
-      virtual ~hiopLinSolverNonSymSparseCUSOLVER();
-
-      /** Triggers a SuiteSparse KLU refactorization of the matrix, if necessary.
-       * Overload from base class. */
-      int matrixChanged();
-
-      /** solves a linear system.
-       * param 'x' is on entry the right hand side(s) of the system to be solved.
-       * On exit is contains the solution(s).  */
-      bool solve(hiopVector& x);
-
-      /** Multiple rhs not supported yet */
-      virtual bool solve(hiopMatrix& /* x */)
-      {
-        assert(false && "not yet supported");
-        return false;
-      }
-
-      friend class hiopLinSolverSymSparseCUSOLVER;
-
-    private:
-      int m_;   // number of rows of the whole matrix
-      int n_;   // number of cols of the whole matrix
-      int nnz_; // number of nonzeros in the matrix
-
-      int* kRowPtr_; // row pointer for nonzeros
-      int* jCol_;    // column indexes for nonzeros
-      double* kVal_; // storage for sparse matrix
-
-      int* index_covert_CSR2Triplet_;
-      int* index_covert_extra_Diag2CSR_;
-      std::unordered_map<int, int> extra_dia_g_nnz_map;
-
-      int ordering_;
-      std::string fact_;
-      std::string refact_;
-      std::string use_ir_;
-
-      /** Data structures needed for CUSOLVER and KLU */
-
-      cusolverStatus_t sp_status_;
-      cusparseHandle_t handle_ = 0;
-      cusolverSpHandle_t handle_cusolver_ = nullptr;
-      cublasHandle_t handle_cublas_;
-
-      cusparseMatDescr_t descr_A_, descr_M_;
-      csrluInfoHost_t info_lu_ = nullptr;
-      csrgluInfo_t info_M_ = nullptr;
-
-      cusolverRfHandle_t handle_rf_ = nullptr;
-      size_t buffer_size_;
-      size_t size_M_;
-      double* d_work_;
-      int ite_refine_succ_ = 0;
-      double r_nrminf_;
-
-      // KLU stuff
-      int klu_status_;
-      klu_common Common_;
-      klu_symbolic* Symbolic_ = nullptr;
-      klu_numeric* Numeric_ = nullptr;
-      int Atype;
-      /*pieces of M */
-      int* mia_ = nullptr;
-      int* mja_ = nullptr;
-      /*GPU vatiables */
-      double* da_;
-      int* dia_;
-      int* dja_;
-      double* devx_;
-      double* devr_;
-      double* drhs_;
-      
-      int factorizationSetupSucc_;
-      /* needed for cuSolverRf */
-      int* d_P_;
-      int* d_Q_; // permutation matrices
-      double* d_T_;
-      
-      // iterative refinement
-
-      hiopLinSolverSymSparseCUSOLVERInnerIR* ir_;
-      
-      /* private function: creates a cuSolver data structure from KLU data
-       * structures. 
-       */
-
-      /** called the very first time a matrix is factored. */
-      void firstCall();
-
-      int createM(const int n, 
-                  const int nnzL, 
-                  const int* Lp, 
-                  const int* Li,
-                  const int nnzU, 
-                  const int* Up, 
-                  const int* Ui);
-
-      // void compute_nnz();
-      // void set_csr_indices_values();
-
-      template <typename T> void hiopCheckCudaError(T result, 
-                                                    const char* const file, 
-                                                    int const line);
-
-      int initializeKLU();
-      int initializeCusolverGLU();
-      int initializeCusolverRf();
-
-      int refactorizationSetupCusolverGLU();
-      int refactorizationSetupCusolverRf();
-      
-      void IRsetup();   
-  };
-
-
+private:
   //
-//declare here but dont define yet
-  class hiopLinSolverSymSparseCUSOLVERLU;
-  class hiopLinSolverSymSparseCUSOLVERInnerIR
-  {    
+  int m_;   // number of rows of the whole matrix
+  int n_;   // number of cols of the whole matrix
+  int nnz_; // number of nonzeros in the matrix
 
-    public:
-      hiopLinSolverSymSparseCUSOLVERInnerIR();
-      hiopLinSolverSymSparseCUSOLVERInnerIR(int restart, double tol, int maxit);
-      ~hiopLinSolverSymSparseCUSOLVERInnerIR();
-      int getFinalNumberOfIterations();
-      double getFinalResidalNorm();
-      double getInitialResidalNorm();
-//this is public on purpose, can be used internally or outside, to compute the residual.
-      void fgmres(double *d_x, double *d_b);
-    private:
-      // Krylov vectors
-      double* d_V_;
-      double* d_Z_;
-      double final_residual_norm_;
-      int fgmres_iters_;
-      double initial_residual_norm_; 
-      int restart_;
-      int maxit_;
-      double tol_;
-      std::string orth_option_;
-      //the matrix in question
-      cusparseSpMatDescr_t mat_A_;
-      //needed for matvec
-      cusparseDnVecDescr_t vec_x_ = NULL;
-      cusparseDnVecDescr_t vec_Ax_ = NULL;
-      int n_;
-      // handles - MUST BE SET AT INIT
-      cusparseHandle_t cusparse_handle_;
-      cublasHandle_t cublas_handle_;
-      cusolverRfHandle_t cusolverrf_handle_;
+  int* kRowPtr_; // row pointer for nonzeros
+  int* jCol_;    // column indexes for nonzeros
+  double* kVal_; // storage for sparse matrix
 
-      // aux cariables, avoid multiple allocs at all costs
+  int* index_covert_CSR2Triplet_;
+  int* index_covert_extra_Diag2CSR_;
 
-      // GPU:
-      double* d_T_;
-      int* d_P_;
-      int* d_Q_;
+  /** options **/
+  // TODO: KS need options for:
+  // (3) iterative refinement: fgmres, bicgstab
+  // (4) if ir is fgmres, there are different gram-schmidt
+  // options: MGS, CGS2, MGS-2 synch, MGS-1 synch/
 
-      double* d_rvGPU_;
-      double* d_Hcolumn_;
-      double* d_H_col_;
-      void *mv_buffer_; /* SpMV buffer */
+  int ordering_;
+  std::string fact_;
+  std::string refact_;
+  std::string use_ir_;
 
-      // CPU:
-      double* h_L_;
-      double* h_H_;
-      double* h_rv_;
-      // for givens rotations
-      double* h_c_;
-      double* h_s_;
-      // for Hessenberg system
-      double* h_rs_;
-      // neded in some of the orthogonalization methods
-      double* h_aux_;
+  /** needed for cuSolver **/
 
-      const double minusone_ = -1.0;
-      const double one_ = 1.0;
-      const double zero_ = 0.0;
-      // private function needed for fgmres: orthogonalize i+1 vector against i vectors already orthogonal
-      void GramSchmidt(int i);
-     
-      // matvec black-box: b = b - A*d_x if option is "residual" and b=A*x if option is "matvec"
-      void cudaMatvec(double *d_x, double *d_b, std::string option);
-      
-      //not used (yet)
+  cusolverStatus_t sp_status_;
+  cusparseHandle_t handle_ = 0;
+  cusolverSpHandle_t handle_cusolver_ = nullptr;
+  cublasHandle_t handle_cublas_;
 
-      hiopLinSolverSymSparseCUSOLVERLU* LU_data;
-      friend class hiopLinSolverSymSparseCUSOLVER;
-      friend class hiopLinSolverNonSymSparseCUSOLVER;
-  };
+  cusparseMatDescr_t descr_A_, descr_M_;
+  csrluInfoHost_t info_lu_ = nullptr;
+  csrgluInfo_t info_M_ = nullptr;
 
+  cusolverRfHandle_t handle_rf_ = nullptr;
+  size_t buffer_size_;
+  size_t size_M_;
+  double* d_work_;
+  int ite_refine_succ_ = 0;
+  double r_nrminf_;
 
-  //class to store and operatate on LU data: will be needed in the future
-  class hiopLinSolverSymSparseCUSOLVERLU
+  // KLU stuff
+  int klu_status_;
+  klu_common Common_;
+  klu_symbolic* Symbolic_ = nullptr;
+  klu_numeric* Numeric_ = nullptr;
+  /*pieces of M */
+  int* mia_ = nullptr;
+  int* mja_ = nullptr;
+
+  /* for GPU data */
+  double* da_;
+  int* dia_;
+  int* dja_;
+  double* devx_;
+  double* devr_;
+  double* drhs_;
+
+  int factorizationSetupSucc_;
+  /* needed for cuSolverRf */
+  int* d_P_;
+  int* d_Q_; // permutation matrices
+  double* d_T_;
+
+  // iterative refinement
+
+  hiopLinSolverSymSparseCUSOLVERInnerIR* ir_;
+
+  /* private function: creates a cuSolver data structure from KLU data
+   * structures. */
+
+  /** called the very first time a matrix is factored. Perform KLU
+   * factorization, allocate all aux variables
+   *
+   * @note Converts HiOp triplet matrix to CSR format.
+   */
+  virtual void firstCall();
+
+  /** Function to compute nnz and set row pointers */
+  void compute_nnz();
+  /** Function to compute column indices and matrix values arrays */
+  void set_csr_indices_values();
+
+  int createM(const int n, 
+              const int nnzL, 
+              const int* Lp, 
+              const int* Li, 
+              const int nnzU, 
+              const int* Up, 
+              const int* Ui);
+
+  template <typename T> void hiopCheckCudaError(T result, const char* const file, int const line);
+  /* private functions needed for refactorization setup, no need to make them public */
+
+  int initializeKLU();
+  int initializeCusolverGLU();
+  int initializeCusolverRf();
+
+  int refactorizationSetupCusolverGLU();
+  int refactorizationSetupCusolverRf();
+
+  void IRsetup();
+  friend class hiopLinSolverNonSymSparseCUSOLVER;
+};
+
+class hiopLinSolverNonSymSparseCUSOLVER : public hiopLinSolverNonSymSparse
+{
+public:
+  // construtor
+  hiopLinSolverNonSymSparseCUSOLVER(const int& n, const int& nnz, hiopNlpFormulation* nlp);
+  virtual ~hiopLinSolverNonSymSparseCUSOLVER();
+
+  /** Triggers a SuiteSparse KLU refactorization of the matrix, if necessary.
+   * Overload from base class. */
+  int matrixChanged();
+
+  /** solves a linear system.
+   * param 'x' is on entry the right hand side(s) of the system to be solved.
+   * On exit is contains the solution(s).  */
+  bool solve(hiopVector& x);
+
+  /** Multiple rhs not supported yet */
+  virtual bool
+  solve(hiopMatrix& /* x */)
   {
-  public:
-    // constructor
-    hiopLinSolverSymSparseCUSOLVERLU();
-    ~hiopLinSolverSymSparseCUSOLVERLU();
-    void solve();
-    void extractFromKLU();
-    void extractFromRf();
-    // to clear but not free the memory
-    void intermediateCleanup();
+    assert(false && "not yet supported");
+    return false;
+  }
 
-  private:
-    // buffers needed for tri solves
-    void* LBuffer_;
-    void* UBuffer_;
-    // needed for triangular solves
-    cusparseMatDescr_t descrL_;
-    cusparseMatDescr_t descrU_;
-    csrsv2Info_t infoL_;
-    csrsv2Info_t infoU_;
-    cusparseSolvePolicy_t policy_;
+  friend class hiopLinSolverSymSparseCUSOLVER;
 
-    // matrix data of L and U factors
-    double* d_Lx_;
-    int* d_Lp_;
-    int* d_Li_;
+private:
+  int m_;   // number of rows of the whole matrix
+  int n_;   // number of cols of the whole matrix
+  int nnz_; // number of nonzeros in the matrix
 
-    double* d_Ux_;
-    int* d_Up_;
-    int* d_Ui_;
+  int* kRowPtr_; // row pointer for nonzeros
+  int* jCol_;    // column indexes for nonzeros
+  double* kVal_; // storage for sparse matrix
 
-    // matrix CPU data - this is needed to avoid allocing over and over and over
+  int* index_covert_CSR2Triplet_;
+  int* index_covert_extra_Diag2CSR_;
+  std::unordered_map<int, int> extra_dia_g_nnz_map;
 
-    double* Lx_;
-    int* Lp_;
-    int* Li_;
+  int ordering_;
+  std::string fact_;
+  std::string refact_;
+  std::string use_ir_;
 
-    double* Ux_;
-    int* Up_;
-    int* Ui_;
+  /** Data structures needed for CUSOLVER and KLU */
 
-    // permutation vectors
-    int* d_P_ = NULL;
-    int* d_Q_ = NULL;
+  cusolverStatus_t sp_status_;
+  cusparseHandle_t handle_ = 0;
+  cusolverSpHandle_t handle_cusolver_ = nullptr;
+  cublasHandle_t handle_cublas_;
 
-    // aux vectors;
-    double* d_x3_;
-    double* d_xtemp_;
-    // solve or not using this data
-    // if manual is 0, then RfSolve() is used
-    int manual_ = 1;
+  cusparseMatDescr_t descr_A_, descr_M_;
+  csrluInfoHost_t info_lu_ = nullptr;
+  csrgluInfo_t info_M_ = nullptr;
 
-    int analysis_done_ = 0;
-    friend class hiopLinSolverSymSparseCUSOLVER;
-    friend class hiopLinSolverNonSymSparseCUSOLVER;
-  };
+  cusolverRfHandle_t handle_rf_ = nullptr;
+  size_t buffer_size_;
+  size_t size_M_;
+  double* d_work_;
+  int ite_refine_succ_ = 0;
+  double r_nrminf_;
+
+  // KLU stuff
+  int klu_status_;
+  klu_common Common_;
+  klu_symbolic* Symbolic_ = nullptr;
+  klu_numeric* Numeric_ = nullptr;
+  int Atype;
+  /*pieces of M */
+  int* mia_ = nullptr;
+  int* mja_ = nullptr;
+  /*GPU vatiables */
+  double* da_;
+  int* dia_;
+  int* dja_;
+  double* devx_;
+  double* devr_;
+  double* drhs_;
+
+  int factorizationSetupSucc_;
+  /* needed for cuSolverRf */
+  int* d_P_;
+  int* d_Q_; // permutation matrices
+  double* d_T_;
+
+  // iterative refinement
+
+  hiopLinSolverSymSparseCUSOLVERInnerIR* ir_;
+
+  /* private function: creates a cuSolver data structure from KLU data
+   * structures.
+   */
+
+  /** called the very first time a matrix is factored. */
+  void firstCall();
+
+  int createM(const int n, 
+              const int nnzL, 
+              const int* Lp, 
+              const int* Li, 
+              const int nnzU, 
+              const int* Up, 
+              const int* Ui);
+
+  // void compute_nnz();
+  // void set_csr_indices_values();
+
+  template <typename T> void hiopCheckCudaError(T result, const char* const file, int const line);
+
+  int initializeKLU();
+  int initializeCusolverGLU();
+  int initializeCusolverRf();
+
+  int refactorizationSetupCusolverGLU();
+  int refactorizationSetupCusolverRf();
+
+  void IRsetup();
+};
+
+//
+// declare here but dont define yet
+class hiopLinSolverSymSparseCUSOLVERLU;
+class hiopLinSolverSymSparseCUSOLVERInnerIR
+{
+
+public:
+  hiopLinSolverSymSparseCUSOLVERInnerIR();
+  hiopLinSolverSymSparseCUSOLVERInnerIR(int restart, double tol, int maxit);
+  ~hiopLinSolverSymSparseCUSOLVERInnerIR();
+  int getFinalNumberOfIterations();
+  double getFinalResidalNorm();
+  double getInitialResidalNorm();
+  // this is public on purpose, can be used internally or outside, to compute the residual.
+  void fgmres(double* d_x, double* d_b);
+
+private:
+  // Krylov vectors
+  double* d_V_;
+  double* d_Z_;
+  double final_residual_norm_;
+  int fgmres_iters_;
+  double initial_residual_norm_;
+  int restart_;
+  int maxit_;
+  double tol_;
+  std::string orth_option_;
+  // the matrix in question
+  cusparseSpMatDescr_t mat_A_;
+  // needed for matvec
+  cusparseDnVecDescr_t vec_x_ = NULL;
+  cusparseDnVecDescr_t vec_Ax_ = NULL;
+  int n_;
+  // handles - MUST BE SET AT INIT
+  cusparseHandle_t cusparse_handle_;
+  cublasHandle_t cublas_handle_;
+  cusolverRfHandle_t cusolverrf_handle_;
+
+  // aux cariables, avoid multiple allocs at all costs
+
+  // GPU:
+  double* d_T_;
+  int* d_P_;
+  int* d_Q_;
+
+  double* d_rvGPU_;
+  double* d_Hcolumn_;
+  double* d_H_col_;
+  void* mv_buffer_; /* SpMV buffer */
+
+  // CPU:
+  double* h_L_;
+  double* h_H_;
+  double* h_rv_;
+  // for givens rotations
+  double* h_c_;
+  double* h_s_;
+  // for Hessenberg system
+  double* h_rs_;
+  // neded in some of the orthogonalization methods
+  double* h_aux_;
+
+  const double minusone_ = -1.0;
+  const double one_ = 1.0;
+  const double zero_ = 0.0;
+  // private function needed for fgmres: orthogonalize i+1 vector against i vectors already orthogonal
+  void GramSchmidt(int i);
+
+  // matvec black-box: b = b - A*d_x if option is "residual" and b=A*x if option is "matvec"
+  void cudaMatvec(double* d_x, double* d_b, std::string option);
+
+  // not used (yet)
+
+  hiopLinSolverSymSparseCUSOLVERLU* LU_data;
+  friend class hiopLinSolverSymSparseCUSOLVER;
+  friend class hiopLinSolverNonSymSparseCUSOLVER;
+};
+
+// class to store and operatate on LU data: will be needed in the future
+class hiopLinSolverSymSparseCUSOLVERLU
+{
+public:
+  // constructor
+  hiopLinSolverSymSparseCUSOLVERLU();
+  ~hiopLinSolverSymSparseCUSOLVERLU();
+  void solve();
+  void extractFromKLU();
+  void extractFromRf();
+  // to clear but not free the memory
+  void intermediateCleanup();
+
+private:
+  // buffers needed for tri solves
+  void* LBuffer_;
+  void* UBuffer_;
+  // needed for triangular solves
+  cusparseMatDescr_t descrL_;
+  cusparseMatDescr_t descrU_;
+  csrsv2Info_t infoL_;
+  csrsv2Info_t infoU_;
+  cusparseSolvePolicy_t policy_;
+
+  // matrix data of L and U factors
+  double* d_Lx_;
+  int* d_Lp_;
+  int* d_Li_;
+
+  double* d_Ux_;
+  int* d_Up_;
+  int* d_Ui_;
+
+  // matrix CPU data - this is needed to avoid allocing over and over and over
+
+  double* Lx_;
+  int* Lp_;
+  int* Li_;
+
+  double* Ux_;
+  int* Up_;
+  int* Ui_;
+
+  // permutation vectors
+  int* d_P_ = NULL;
+  int* d_Q_ = NULL;
+
+  // aux vectors;
+  double* d_x3_;
+  double* d_xtemp_;
+  // solve or not using this data
+  // if manual is 0, then RfSolve() is used
+  int manual_ = 1;
+
+  int analysis_done_ = 0;
+  friend class hiopLinSolverSymSparseCUSOLVER;
+  friend class hiopLinSolverNonSymSparseCUSOLVER;
+};
 } // namespace hiop
 
 #endif
