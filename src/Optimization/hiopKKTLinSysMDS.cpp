@@ -362,7 +362,6 @@ namespace hiop
     // solve
     bool linsol_ok = linSys->solve(*rhs_);
     nlp_->runStats.kkt.tmSolveInner.stop();
-    nlp_->runStats.linsolv.end_linsolve();
 
     if(perf_report_) {
       nlp_->log->printf(hovSummary, "(summary for linear solver from KKT_MDS_XYcYd)\n%s", 

@@ -238,27 +238,40 @@ public:
   }
 };
 
-
+/**
+ * Records and reports timing and FLOPS for the linear solver at each optimization iteration. 
+ */
 class hiopLinSolStats
 {
 public:
   hiopLinSolStats()
   {
-    flopsFact = flopsTriuSolves = -1.;
+    flopsFact = 0.0;
+    flopsTriuSolves = 0.0;
   }
   hiopTimer tmFactTime;
   hiopTimer tmInertiaComp;
   hiopTimer tmTriuSolves;
 
   hiopTimer tmDeviceTransfer;
-  
-  //hiopTimer tmWholeLinSolve;
 
-  double flopsFact, flopsTriuSolves;
+  /**
+   * Total number of TFLOPS (not the TFLOPS/sec rate) in the factorization(s). It is provided or can 
+   * be estimated accurately only for some linear solvers and/or KKT solve strategies.
+   */
+
+  double flopsFact;
+
+  /**
+   * Total number of TFLOPS (not the TFLOPS/sec rate) in the triangular solves. It is provided or can 
+   * be estimated accurately only for some linear solvers and/or KKT solve strategies.
+   */
+  double flopsTriuSolves;
   
   inline void start_linsolve()
   {
-    flopsFact = flopsTriuSolves = -1.;
+    flopsFact = 0.0;
+    flopsTriuSolves = 0.0;
 
     tmFactTime.reset();
     tmInertiaComp.reset();
@@ -268,21 +281,21 @@ public:
     std::cout << "\n---start_linsolve\n";
   }
   
-  inline void end_linsolve()
-  {
-    std::cout << "\n---stop_linsolve\n";
-  }
   inline std::string get_summary_last_solve() const
   {
     std::stringstream ss;
-    ss <<  std::fixed << std::setprecision(6);
+    ss <<  std::fixed << std::setprecision(4);
 
-    ss << "(Last) Lin Solve: fact " << tmFactTime.getElapsedTime() << "s" 
-       << " at " << flopsFact << "TFlops" 
-       << "   inertia " << tmInertiaComp.getElapsedTime() << "s" 
-       << "   triu. solves " << tmTriuSolves.getElapsedTime() << "s"
-       << " at " << flopsTriuSolves << "TFlops"
-       << "   device transfer " << tmDeviceTransfer.getElapsedTime() << "s"
+    ss << "(Last) Lin Solve: fact " << tmFactTime.getElapsedTime() << "s";
+    if(flopsFact>0) {
+      ss << " at " << flopsFact/tmFactTime.getElapsedTime() << "TFlops/s" ;
+    }
+    ss << "   inertia " << tmInertiaComp.getElapsedTime() << "s" 
+       << "   triu. solves " << tmTriuSolves.getElapsedTime() << "s";
+    if(flopsTriuSolves>0) {
+      ss << " at " << flopsTriuSolves/tmTriuSolves.getElapsedTime() << "TFlops/s";
+    }
+    ss << "   device transfer " << tmDeviceTransfer.getElapsedTime() << "s"
        << std::endl;
 
     return ss.str();

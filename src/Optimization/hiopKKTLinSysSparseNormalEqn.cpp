@@ -405,8 +405,6 @@ bool hiopKKTLinSysSparseNormalEqn::solveCompressed(hiopVector& ryc,
   bret = linSys_->solve(*rhs_);
   nlp_->runStats.kkt.tmSolveInner.stop();
 
-  nlp_->runStats.linsolv.end_linsolve();
- 
   if(perf_report_) {
     nlp_->log->printf(hovSummary,
                       "(summary for linear solver from KKT_SPARSE_NormalEqn(direct))\n%s",
