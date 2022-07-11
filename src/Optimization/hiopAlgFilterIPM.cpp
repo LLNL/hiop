@@ -1583,10 +1583,7 @@ hiopAlgFilterIPMNewton::switch_to_fast_KKT(hiopKKTLinSys* kkt_curr,
   if(nullptr!=dynamic_cast<hiopNlpMDS*>(nlp)) {
 
     //first two iteration are safe-mode : TODO: this likely can be relaxed
-    if(iter_num<=2) {
-      //we expect linsol mode is 'safe'
-      assert(linsol_safe_mode_on==true);
-      
+    if(iter_num<=2) {   
       linsol_safe_mode_on=true;
       switched = false;
     } else {
