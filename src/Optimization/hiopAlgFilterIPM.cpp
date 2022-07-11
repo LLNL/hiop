@@ -1506,6 +1506,9 @@ hiopAlgFilterIPMNewton::switch_to_safer_KKT(hiopKKTLinSys* kkt_curr,
     } // end of if(kkt)
   }
 #endif
+  //
+  // all other KKT formulations -> never switch back to safe mode
+  //
   switched = false;
   return kkt_curr;
 }
@@ -1523,7 +1526,11 @@ hiopAlgFilterIPMNewton::switch_to_fast_KKT(hiopKKTLinSys* kkt_curr,
 
 {
   assert("speculative"==hiop::tolower(nlp->options->GetString("linsol_mode")));
+  
 #ifdef HIOP_SPARSE
+  //
+  // Switch to quick mode for condensed
+  //
   auto* kkt = dynamic_cast<hiopKKTLinSysCondensedSparse*>(kkt_curr);
   //KKT should not be a condensed KKT (this is what we switch to) and we should be under
   //the condensed KKT user option
@@ -1548,7 +1555,7 @@ hiopAlgFilterIPMNewton::switch_to_fast_KKT(hiopKKTLinSys* kkt_curr,
       //reset last iter safe mode was switched on
       linsol_safe_mode_last_iter_switched_on = 100000;
       
-      //decrease mu reduction strategies since they stresses the Cholesky solve less
+      //decrease mu reduction strategies since they are numerically friendlier with the Cholesky solve
       theta_mu=1.05;
       kappa_mu=0.8;
       
@@ -1566,17 +1573,35 @@ hiopAlgFilterIPMNewton::switch_to_fast_KKT(hiopKKTLinSys* kkt_curr,
   }
 #endif
 
-  //safe mode is on for the first three iterations for MDS under speculative linsol mode
-        
+  //
+  // MDS safe mode is on for the first three iterations for MDS under speculative linsol mode
+  //        
   //TODO: maybe the newly developed adjust slacks and push bounds features make the MDS probles less
-  //challenging and we don't need safe mode in the first three iterations for MDS.
+  //challenging and we don't need safe mode in the first three iterations for MDS under 'speculative'
+  // IR should also make this robust.
 
   if(nullptr!=dynamic_cast<hiopNlpMDS*>(nlp)) {
-    if(iter_num<=2) {
+
+    //first two iteration are safe-mode : TODO: this likely can be relaxed
+    if(iter_num<=2) {   
       linsol_safe_mode_on=true;
+      switched = false;
+    } else {
+      if(linsol_safe_mode_on==true) {
+        switched = true;
+        linsol_safe_mode_on = false;
+      } else {
+        assert(false==linsol_safe_mode_on);
+        switched = false;
+      }
     }
-  }  
-  
+    kkt_curr->set_safe_mode(linsol_safe_mode_on);
+    return kkt_curr;
+  }
+
+  //
+  // all other KKT formulations -> do nothing (and return switched=false)
+  //
   switched = false;
   return kkt_curr;
 }
@@ -1863,6 +1888,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
                                    switched);
           if(switched) {
             nlp->log->printf(hovWarning, "Switched to the fast KKT linsys\n");
+            assert(false==linsol_safe_mode_on);
           }
           
         } else {
@@ -1871,7 +1897,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
         }
       }
     }
-    
+
     for(int linsolve=1; linsolve<=2; ++linsolve) {
 
       bool switched;
