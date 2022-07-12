@@ -202,7 +202,7 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const hiopVector& delta_wx_i
   }
 
   // Dd_ + delta_wx*I
-  Dx_plus_deltawx_->addConstant(delta_wx);
+  Dx_plus_deltawx_->axpy(1.0, delta_wx_in);
   
   nlp_->runStats.kkt.tmUpdateInit.stop();
   nlp_->runStats.kkt.tmUpdateLinsys.start();
