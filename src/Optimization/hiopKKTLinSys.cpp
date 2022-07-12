@@ -522,7 +522,7 @@ bool hiopKKTLinSysCompressedXYcYd::update(const hiopIterate* iter,
                                           const hiopMatrix* Jac_d,
                                           hiopMatrix* Hess)
 {
-  nlp_->runStats.linsolv.start_linsolve();
+  nlp_->runStats.linsolv.reset();
   nlp_->runStats.tmSolverInternal.start();
   nlp_->runStats.kkt.tmUpdateInit.start();
 
@@ -756,7 +756,7 @@ bool hiopKKTLinSysCompressedXDYcYd::update( const hiopIterate* iter,
                                             const hiopMatrix* Jac_d,
                                             hiopMatrix* Hess)
 {
-  nlp_->runStats.linsolv.start_linsolve();
+  nlp_->runStats.linsolv.reset();
   nlp_->runStats.tmSolverInternal.start();
   nlp_->runStats.kkt.tmUpdateInit.start();
   
@@ -1545,7 +1545,7 @@ bool hiopKKTLinSysFull::update(const hiopIterate* iter,
   Jac_c_ = Jac_c; 
   Jac_d_ = Jac_d;
   Hess_=Hess;
-  nlp_->runStats.linsolv.start_linsolve();
+  nlp_->runStats.linsolv.reset();
   nlp_->runStats.tmSolverInternal.start();
 
   // factorization + inertia correction if needed
@@ -2054,7 +2054,7 @@ bool hiopKKTLinSysNormalEquation::update(const hiopIterate* iter,
                                          const hiopMatrix* Jac_d,
                                          hiopMatrix* Hess)
 {
-  nlp_->runStats.linsolv.start_linsolve();
+  nlp_->runStats.linsolv.reset();
   nlp_->runStats.tmSolverInternal.start();
   nlp_->runStats.kkt.tmUpdateInit.start();
   

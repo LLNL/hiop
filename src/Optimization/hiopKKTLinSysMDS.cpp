@@ -117,7 +117,7 @@ namespace hiop
   {
     if(!nlpMDS_) { assert(false); return false; }
 
-    nlp_->runStats.linsolv.start_linsolve();
+    nlp_->runStats.linsolv.reset();
     nlp_->runStats.tmSolverInternal.start();
     nlp_->runStats.kkt.tmUpdateInit.start();
 

@@ -268,7 +268,7 @@ public:
    */
   double flopsTriuSolves;
   
-  inline void start_linsolve()
+  inline void reset()
   {
     flopsFact = 0.0;
     flopsTriuSolves = 0.0;
@@ -277,8 +277,6 @@ public:
     tmInertiaComp.reset();
     tmTriuSolves.reset();
     tmDeviceTransfer.reset();
-
-    std::cout << "\n---start_linsolve\n";
   }
   
   inline std::string get_summary_last_solve() const
