@@ -199,10 +199,10 @@ void massInnerProductTwoVectors(int n,
                                 double* mvec, 
                                 double* result)
 {
-  MassIPTwoVec<<<i + 1, 1024> > >(vec1, vec2, mvec, result, i + 1, n);
+  MassIPTwoVec<<<i + 1, 1024>>>(vec1, vec2, mvec, result, i + 1, n);
 }
 void massAxpy(int n, int i, double* x, double* y, double* alpha)
 {
-  massAxpy3<<<(n + 384 - 1) / 384, 384> > >(n, i + 1, x, y, alpha);
+  massAxpy3<<<(n + 384 - 1) / 384, 384>>>(n, i + 1, x, y, alpha);
 }
 

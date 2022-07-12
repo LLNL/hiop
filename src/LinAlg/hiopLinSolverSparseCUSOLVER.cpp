@@ -66,20 +66,20 @@
 
 namespace hiop
 {
-  hiopLinSolverSymSparseCUSOLVER::hiopLinSolverSymSparseCUSOLVER(const int& n, 
-                                                                 const int& nnz, 
+  hiopLinSolverSymSparseCUSOLVER::hiopLinSolverSymSparseCUSOLVER(const int& n,
+                                                                 const int& nnz,
                                                                  hiopNlpFormulation* nlp)
     : hiopLinSolverSymSparse(n, nnz, nlp), 
-    kRowPtr_{ nullptr }, 
-    jCol_{ nullptr }, 
-    kVal_{ nullptr },
-    index_covert_CSR2Triplet_{ nullptr },
-    index_covert_extra_Diag2CSR_{ nullptr }, 
-    n_{ n },
-    nnz_{ 0 },
-    ordering_{ 1 }, fact_{ "klu" }, // default
-    refact_{ "glu" },                                                                            // default
-    factorizationSetupSucc_{ 0 }
+      kRowPtr_{ nullptr }, 
+      jCol_{ nullptr }, 
+      kVal_{ nullptr },
+      index_covert_CSR2Triplet_{ nullptr },
+      index_covert_extra_Diag2CSR_{ nullptr }, 
+      n_{ n },
+      nnz_{ 0 },
+      ordering_{ 1 }, fact_{ "klu" }, // default
+      refact_{ "glu" },                                                                            // default
+      factorizationSetupSucc_{ 0 }
   {
     // handles
     cusparseCreate(&handle_);
@@ -594,19 +594,19 @@ namespace hiop
   // Error checking utility for CUDA
   // KS: might later become part of src/Utils, putting it here for now
   template <typename T>
-    void hiopLinSolverSymSparseCUSOLVER::hiopCheckCudaError(T result,
-                                                            const char* const file,
-                                                            int const line)
-    {
-      if(result) {
-        nlp_->log->printf(hovError, 
-                          "CUDA error at %s:%d, error# %d\n", 
-                          file, 
-                          line, 
-                          result);
-        assert(false);
-      }
+  void hiopLinSolverSymSparseCUSOLVER::hiopCheckCudaError(T result,
+                                                          const char* const file,
+                                                          int const line)
+  {
+    if(result) {
+      nlp_->log->printf(hovError, 
+                        "CUDA error at %s:%d, error# %d\n", 
+                        file, 
+                        line, 
+                        result);
+      assert(false);
     }
+  }
 
   int hiopLinSolverSymSparseCUSOLVER::initializeKLU()
   {
@@ -793,7 +793,8 @@ namespace hiop
                          nullptr, 
                          nullptr,
                          nullptr,
-                         nullptr, &Common_);
+                         nullptr,
+                         &Common_);
 
     /* CSC */
     int* d_Lp;
@@ -1282,7 +1283,7 @@ namespace hiop
                                        dia_, 
                                        dja_, 
                                        devr_, /* right hand side */
-                                       devx_,                                  /* left hand side */
+                                       devx_, /* left hand side */
                                        &ite_refine_succ_,
                                        &r_nrminf_,
                                        info_M_,
@@ -1876,15 +1877,21 @@ namespace hiop
     }
   }
 
+  ////////////////////////////////////////////////////////
+  // Inner iterative refinement class methods
+  ////////////////////////////////////////////////////////
+
+  // Default constructor
   hiopLinSolverSymSparseCUSOLVERInnerIR::hiopLinSolverSymSparseCUSOLVERInnerIR()
   {}
 
+  // Parametrized constructor
   hiopLinSolverSymSparseCUSOLVERInnerIR::hiopLinSolverSymSparseCUSOLVERInnerIR(int restart, 
                                                                                double tol, 
                                                                                int maxit)
     : restart_{restart}, 
-    maxit_{maxit},
-    tol_{tol}
+      maxit_{maxit},
+      tol_{tol}
   {}
 
   hiopLinSolverSymSparseCUSOLVERInnerIR::~hiopLinSolverSymSparseCUSOLVERInnerIR()
@@ -1939,7 +1946,7 @@ namespace hiop
 
     double t;
     double rnorm;
-    double rnorm_aux;
+    // double rnorm_aux;
     double tolrel;
     //V[0] = b-A*x_0
     cudaMemcpy(&(d_V_[0]), d_b, sizeof(double) * n_, cudaMemcpyDeviceToDevice);
@@ -2044,7 +2051,7 @@ namespace hiop
       /* test solution */
 
       if(rnorm <= tolrel || it >= maxit_) {
-        rnorm_aux = rnorm;
+        // rnorm_aux = rnorm;
         outer_flag = 0;
       }
 
@@ -2061,6 +2068,7 @@ namespace hiop
       }
     } // outer while
   }
+
   //b-Ax
   void hiopLinSolverSymSparseCUSOLVERInnerIR::cudaMatvec(double *d_x, double * d_b, std::string option)
   {
@@ -2121,30 +2129,31 @@ namespace hiop
     switch (sw){
       case 0: //mgs
 
-        for (int j=0; j<=i; ++j){
+        for(int j=0; j<=i; ++j) {
           t=0.0;
           cublasDdot (cublas_handle_,  n_, &d_V_[j*n_], 1, &d_V_[(i+1)*n_], 1, &t);
 
           h_H_[i*(restart_+1)+j]=t; 
           t *= -1.0;
 
-          cublasDaxpy(cublas_handle_, 
-                      n_, 
+          cublasDaxpy(cublas_handle_,
+                      n_,
                       &t,
-                      &d_V_[j*n_], 1,
-                      &d_V_[(i+1)*n_],1);
+                      &d_V_[j*n_],
+                      1,
+                      &d_V_[(i+1)*n_],
+                      1);
         }
         t = 0.0;
-        cublasDdot (cublas_handle_,  n_, &d_V_[(i+1)*n_], 1, &d_V_[(i+1)*n_], 1, &t);
+        cublasDdot(cublas_handle_,  n_, &d_V_[(i+1)*n_], 1, &d_V_[(i+1)*n_], 1, &t);
 
         //set the last entry in Hessenberg matrix
         t=sqrt(t);
         h_H_[(i)*(restart_+1)+i+1] = t;    
-        if (t != 0.0){
+        if(t != 0.0) {
           t = 1.0/t;
           cublasDscal(cublas_handle_,n_,&t,&d_V_[(i+1)*n_], 1); 
-        }
-        else{
+        } else {
           assert(0 && "Iterative refinement failed, Krylov vector with zero norm\n");
         }
         break;
@@ -2210,8 +2219,8 @@ namespace hiop
 
         cudaMemcpy(&h_H_[i*(restart_+1)], d_H_col_, sizeof(double) * (i+1), cudaMemcpyDeviceToHost);
         // add both pieces together (unstable otherwise, careful here!!)
-        for (int j=0; j<=i; ++j){
-          h_H_[i*(restart_+1)+j]+=h_aux_[j]; 
+        for(int j=0; j<=i; ++j) {
+          h_H_[i*(restart_+1)+j] += h_aux_[j]; 
         }
         t = 0.0;
         cublasDdot (cublas_handle_,  n_, &d_V_[(i+1)*n_], 1, &d_V_[(i+1)*n_], 1, &t);
@@ -2219,11 +2228,10 @@ namespace hiop
         //set the last entry in Hessenberg matrix
         t=sqrt(t);
         h_H_[(i)*(restart_+1)+i+1] = t;    
-        if (t != 0.0){
+        if(t != 0.0) {
           t = 1.0/t;
           cublasDscal(cublas_handle_,n_,&t,&d_V_[(i+1)*n_], 1); 
-        }
-        else{
+        } else {
           assert(0 && "Iterative refinement failed, Krylov vector with zero norm\n");
         }
         break;
@@ -2243,7 +2251,7 @@ namespace hiop
                    (i + 1) * sizeof(double), 
                    cudaMemcpyDeviceToHost);
 
-        for (int j=0; j<=i; ++j){
+        for(int j=0; j<=i; ++j) {
           h_H_[(i)*(restart_+1)+j] = 0.0;
         }
         // triangular solve
@@ -2267,11 +2275,10 @@ namespace hiop
         // set the last entry in Hessenberg matrix
         t=sqrt(t);
         h_H_[(i) * (restart_ + 1) + i + 1] = t;
-        if (t != 0.0){
+        if(t != 0.0) {
           t = 1.0/t;
           cublasDscal(cublas_handle_, n_, &t, &d_V_[(i + 1) * n_], 1);
-        }
-        else{
+        } else {
           assert(0 && "Iterative refinement failed, Krylov vector with zero norm\n");
         }
         break;
@@ -2327,7 +2334,7 @@ namespace hiop
         }   // for j
 
         // and now subtract that from h_H
-        for (int j=0; j<=i; ++j){
+        for(int j=0; j<=i; ++j) {
           h_H_[(i)*(restart_+1)+j] -= h_aux_[j];
         }
         cudaMemcpy(d_Hcolumn_,
@@ -2348,8 +2355,7 @@ namespace hiop
         if (t != 0.0){
           t = 1.0/t;
           cublasDscal(cublas_handle_, n_, &t, &d_V_[(i + 1) * n_], 1);
-        }
-        else{
+        } else {
           assert(0 && "Iterative refinement failed, Krylov vector with zero norm\n");
         }
         break;
@@ -2357,6 +2363,6 @@ namespace hiop
       default:
           assert(0 && "Iterative refinement failed, wrong orthogonalization.\n");
         break;
-    }//switch
-  }
+    } // switch
+  } // GramSchmidt
 } // namespace hiop

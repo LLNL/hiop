@@ -70,12 +70,14 @@
 
 namespace hiop
 {
-//declare here but do not define
 
-#define ZERO 0.0
-#define EPSILON 1.0e-18
-#define EPSMAC 1.0e-16
+constexpr double ZERO = 0.0;
+constexpr double EPSILON = 1.0e-18;
+constexpr double EPSMAC  = 1.0e-16;
+
+// Forward declaration of inner IR class
 class hiopLinSolverSymSparseCUSOLVERInnerIR;
+
 class hiopLinSolverSymSparseCUSOLVER : public hiopLinSolverSymSparse
 {
 public:
