@@ -387,7 +387,7 @@ namespace hiop
     // note that input is in lower triangular triplet form. First part is the sparse matrix, and the 2nd part are the additional diagonal elememts
     // the 1st part is sorted by row
 
-    M_->convertToCSR(nnz_, &kRowPtr_, &jCol_, &kVal_, &index_covert_CSR2Triplet_, &index_covert_extra_Diag2CSR_, extra_diag_nnz_map);
+    M_->convert_to_csr_arrays(nnz_, &kRowPtr_, &jCol_, &kVal_, &index_covert_CSR2Triplet_, &index_covert_extra_Diag2CSR_, extra_diag_nnz_map);
 
     // need Fortran indexes
     for( int i = 0; i < n_+1; i++) {

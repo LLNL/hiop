@@ -297,12 +297,12 @@ public:
     assert(0 && "This method should be used only for symmetric matrices.\n");
   }
 
-  virtual void convertToCSR(int &csr_nnz,
-                            int **csr_kRowPtr,
-                            int **csr_jCol,
-                            double **csr_kVal,
-                            int **index_covert_CSR2Triplet,
-                            int **index_covert_extra_Diag2CSR) {assert(0 && "not implemented");}
+  virtual void convert_to_csr_arrays(int &csr_nnz,
+                                     int **csr_kRowPtr,
+                                     int **csr_jCol,
+                                     double **csr_kVal,
+                                     int **index_covert_CSR2Triplet,
+                                     int **index_covert_extra_Diag2CSR) {assert(0 && "not implemented");}
 
   virtual bool is_diagonal() const;
 
