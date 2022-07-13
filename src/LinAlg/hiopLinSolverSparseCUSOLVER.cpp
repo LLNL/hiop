@@ -718,7 +718,8 @@ namespace hiop
 
     /* setup GLU */
     sp_status_ = cusolverSpDgluSetup(handle_cusolver_, 
-                                     n_, nnz_, 
+                                     n_,
+                                     nnz_, 
                                      descr_A_, 
                                      kRowPtr_,
                                      jCol_, 
