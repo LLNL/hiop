@@ -85,6 +85,7 @@ hiopKKTLinSysCondensedSparse::hiopKKTLinSysCondensedSparse(hiopNlpFormulation* n
     Hess_csr_(nullptr),
     M_condensed_(nullptr),
     Hess_upper_plus_diag_(nullptr),
+    deltawx_(nullptr),
     Dx_plus_deltawx_(nullptr),
     Diag_Dx_deltawx_(nullptr),
     Hd_copy_(nullptr)
@@ -94,7 +95,8 @@ hiopKKTLinSysCondensedSparse::hiopKKTLinSysCondensedSparse(hiopNlpFormulation* n
 hiopKKTLinSysCondensedSparse::~hiopKKTLinSysCondensedSparse()
 {
   delete Hd_copy_;
-  delete Diag_Dx_deltawx_;  
+  delete deltawx_;
+  delete Diag_Dx_deltawx_;
   delete Dx_plus_deltawx_;
   delete Hess_upper_plus_diag_;
   delete M_condensed_;
@@ -169,8 +171,10 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const hiopVector& delta_wx_i
     Hd_copy_ = LinearAlgebraFactory::create_vector(mem_space_internal, nineq);
 
     assert(nullptr == Dx_plus_deltawx_); //should be also not allocated
+    assert(nullptr == deltawx_); //should be also not allocated
     //allocate this internal vector on the device if hybrid compute mode
     Dx_plus_deltawx_ = LinearAlgebraFactory::create_vector(mem_space_internal, Dx_->get_size());
+    deltawx_ = LinearAlgebraFactory::create_vector(mem_space_internal, Dx_->get_size());
   }
   Hd_->copyFrom(*Dd_);  
   Hd_->axpy(1., delta_wd_in);
@@ -185,24 +189,29 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const hiopVector& delta_wx_i
       assert(Hd_par && "incorrect type for vector class");      
       Hd_raja->copy_from_host_vec(*Hd_par);
 
-      auto Dx_raja = dynamic_cast<hiopVectorRajaPar*>(Dx_plus_deltawx_);
+      auto Dx_delta_raja = dynamic_cast<hiopVectorRajaPar*>(Dx_plus_deltawx_);
+      auto deltawx_raja = dynamic_cast<hiopVectorRajaPar*>(deltawx_);
       auto Dx_par = dynamic_cast<hiopVectorPar*>(Dx_);
-      assert(Dx_raja && Dx_par && "incorrect type for vector class");
-      Dx_raja->copy_from_host_vec(*Dx_par);
+      assert(Dx_delta_raja && Dx_par && "incorrect type for vector class");
+      
+      Dx_delta_raja->copy_from_host_vec(*Dx_par);
+      deltawx_raja->copy_from_host_vec(delta_wx_in);
 #else
       assert(false && "compute mode not available under current build. Enable CUDA and RAJA.");
       Hd_copy_->copyFrom(*Hd_);
       Dx_plus_deltawx_->copyFrom(*Dx_);
+      deltawx_->copyFrom(delta_wx_in);
 #endif 
     } else {
       assert(dynamic_cast<hiopVectorPar*>(Hd_) && "incorrect type for vector class");
       Hd_copy_->copyFrom(*Hd_);
       Dx_plus_deltawx_->copyFrom(*Dx_);
+      deltawx_->copyFrom(delta_wx_in);
     }
   }
 
-  // Dd_ + delta_wx*I
-  Dx_plus_deltawx_->axpy(1.0, delta_wx_in);
+  // Dx_ + delta_wx*I
+  Dx_plus_deltawx_->axpy(1.0, *deltawx_);
   
   nlp_->runStats.kkt.tmUpdateInit.stop();
   nlp_->runStats.kkt.tmUpdateLinsys.start();

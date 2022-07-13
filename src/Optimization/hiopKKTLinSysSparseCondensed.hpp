@@ -196,6 +196,7 @@ protected:
   
   /// Stores Dx plus delta_wx for more efficient updates of the condensed system matrix
   hiopVector* Dx_plus_deltawx_;
+  hiopVector* deltawx_;
 
   /// Stores a copy of Hd_ on the device (to be later removed)
   hiopVector* Hd_copy_;
