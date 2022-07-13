@@ -910,8 +910,8 @@ void hiopOptionsNLP::register_options()
     register_str_option("ir_inner_cusolver",
                         default_value,
                         range,
-                        "Follow cusolver_lu  with FGMRES iterive refinement. "
-                        "By default, no iterative refinement is performaed. ");
+                        "Follow cusolver_lu  with FGMRES iterative refinement. "
+                        "By default, no iterative refinement is performed. ");
   }
 
 
@@ -939,7 +939,7 @@ void hiopOptionsNLP::register_options()
                         default_value,
                         range,
                         "Gram-Schmidt orthogonalization version for FMGRES. "
-                        "mgs: modified Gram-Schmidt (textbooki, default). "
+                        "mgs: modified Gram-Schmidt (textbook, default). "
                         "cgs2: reorthogonalized classical Gram-Schmidt (three synchs). "
                         "mgs_two_synch: two synch (stable) MGS. "
                         "mgs_pm: post-modern MGS, two synchs. ");
