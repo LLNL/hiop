@@ -623,6 +623,7 @@ namespace hiop
                         result);
       assert(false);
     }
+  }
 
   int hiopLinSolverSymSparseCUSOLVER::initializeKLU()
   {
