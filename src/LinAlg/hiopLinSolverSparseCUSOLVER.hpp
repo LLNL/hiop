@@ -321,7 +321,7 @@ private:
   int* d_Up_;
   int* d_Ui_;
 
-  // matrix CPU data - this is needed to avoid allocing over and over and over
+  // matrix CPU data - this is needed to avoid allocating over and over and over
 
   double* Lx_;
   int* Lp_;
