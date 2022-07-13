@@ -192,10 +192,11 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const hiopVector& delta_wx_i
       auto Dx_delta_raja = dynamic_cast<hiopVectorRajaPar*>(Dx_plus_deltawx_);
       auto deltawx_raja = dynamic_cast<hiopVectorRajaPar*>(deltawx_);
       auto Dx_par = dynamic_cast<hiopVectorPar*>(Dx_);
+      const hiopVectorPar& deltawx_host = dynamic_cast<const hiopVectorPar&>(delta_wx_in);
       assert(Dx_delta_raja && Dx_par && "incorrect type for vector class");
       
       Dx_delta_raja->copy_from_host_vec(*Dx_par);
-      deltawx_raja->copy_from_host_vec(delta_wx_in);
+      deltawx_raja->copy_from_host_vec(deltawx_host);
 #else
       assert(false && "compute mode not available under current build. Enable CUDA and RAJA.");
       Hd_copy_->copyFrom(*Hd_);

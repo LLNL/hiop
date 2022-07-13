@@ -281,6 +281,7 @@ public:
 
   virtual bool is_equal(const hiopVector& vec) const;
 
+  friend class hiopVectorRajaPar;
 protected:
   MPI_Comm comm_;
   double* data_;
