@@ -114,7 +114,8 @@ protected:
 
   // diagOf(Hess)
   hiopVector *Hess_diag_;
-
+  hiopVector *dual_reg_;  // a vector for dual regularizations
+    
   // -1 when disabled; otherwise acts like a counter, 0,1,... incremented each time
   // 'solveCompressed' is called; activated by the 'write_kkt' option
   int write_linsys_counter_;

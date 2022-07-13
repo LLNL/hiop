@@ -46,77 +46,27 @@
 // product endorsement purposes.
 
 /**
- * @file MatrixSparseCSRCudaKernels.hpp
+ * @file MathDeviceKernels.hpp
  *
  * @author Cosmin G. Petra <petra1@llnl.gov>, LNNL
+ * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LNNL
  *
  */
-#ifndef HIOP_SPARSE_MATRIX_CSRCUDA_KER
-#define HIOP_SPARSE_MATRIX_CSRCUDA_KER
+
+#ifndef MATH_KERNEL_DEVICE
+#define MATH_KERNEL_DEVICE
 
 namespace hiop
 {
-namespace cuda
+namespace device
 {
+  // Generates uniformly distributed double-precision floating-point values, from minv to maxv
+  int array_random_uniform_kernel(int n, double* d_array, double minv, double maxv);
 
-/**
- * Set diagonal of the CSR matrix to `val` by performing a binary search on the column indexes
- * for each row. Assumes pointers are on the device and parallelizes over rows.
- * 
- * @pre CSR matrix must be square.
- * @pre Diagonal entries must appear explicitly among the nonzeros.
- * @pre Column indexes must be sorted for any given row.
- */   
-void csr_set_diag_kernel(int n, int nnz, int* irowptr, int* jcoldind, double* values, double val);
+  // Generates uniformly distributed double-precision floating-point values, from 0.0 to 1.0
+  int array_random_uniform_kernel(int n, double* d_array);
 
-/**
- * Add the constant `val` to the diagonal of the CSR matrix. Performs a binary search on the column indexes
- * for each row. Assumes pointers are on the device and parallelizes over rows.
- * 
- * @pre CSR matrix must be square.
- * @pre Diagonal entries must appear explicitly among the nonzeros.
- * @pre Column indexes must be sorted for any given row.
- */   
-void csr_add_diag_kernel(int n, int nnz, int* irowptr, int* jcoldind, double* values, double Dval);
-
-/**
- * Add entries of the array `values` to the diagonal of the CSR matrix. Performs a binary search on the column indexes
- * for each row. Assumes pointers are on the device and parallelizes over rows.
- * 
- * @pre CSR matrix must be square.
- * @pre Diagonal entries must appear explicitly among the nonzeros.
- * @pre Column indexes must be sorted for any given row.
- * @pre 
- */   
-void csr_add_diag_kernel(int n, int nnz, int* irowptr, int* jcoldind, double* values, double alpha, const double* Dvalues);
-
-/**
- * Copies the diagonal of a CSR matrix into the array `diag_out`. All pointers are on the device. The
- * output array should be allocated to hold `n` doubles.
- * 
- * @pre CSR matrix must be square.
- * @pre Column indexes must be sorted for any given row.
- */
-void csr_get_diag_kernel(int n,
-                         int nnz,
-                         const int* irowptr,
-                         const int* jcoldind,
-                         const double* values,
-                         double* diag_out);
-
-/**
- * Populates the row pointers and column indexes array to hold a CSR diagonal matrix of size `n`.
- */
-void csr_form_diag_symbolic_kernel(int n, int* irowptr, int* jcolind);
-
-/**
- * Scales rows of the sparse CSR matrix with the diagonal matrix given by array `D`
- * 
- * @pre All pointers should be on the device. 
- * @pre Column indexes must be sorted for any given row.
- */
-void csr_scalerows_kernel(int nrows, int ncols, int nnz, int* irowptr, int* jcoldind, double* values, const double* D); 
-} //end of namespace cuda
+} //end of namespace device
 } //end of namespace hiop
 
 #endif

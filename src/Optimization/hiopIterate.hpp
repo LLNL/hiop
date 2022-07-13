@@ -67,9 +67,12 @@ public:
   virtual void setEqualityDualsToConstant(const double& v);
   /**
    * Computes the slacks given the primals: sxl=x-xl, sxu=xu-x, and similar
-   *  for sdl and sdu.
+   * for sdl and sdu. This function will adjust the variable bounds 
+   * if the corresponding slack is too small.
+   * return the number of adjusted variables on exit
    */
   virtual void determineSlacks();
+  virtual size_type compute_safe_slacks(const hiopIterate& iter_curr, const double& mu);
 
   /**
    * Computes duals for bounds on d, namely vl and vu from vl=mu e/sdl and vu = mu e/sdu.
@@ -97,8 +100,6 @@ public:
   virtual bool adjustDuals_primalLogHessian(const double& mu, const double& kappa_Sigma);
   /* compute the log-barrier term for the primal signed variables */
   virtual double evalLogBarrier() const;
-  /* compute the log-barrier term from the given primal variable x */
-  virtual double evalLogBarrier(const hiopVector& xref);
   /* add the derivative of the log-barier terms*/
   virtual void addLogBarGrad_x(const double& mu, hiopVector& gradx) const;
   virtual void addLogBarGrad_d(const double& mu, hiopVector& gradd) const;

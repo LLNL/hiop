@@ -47,6 +47,8 @@
 
 #include "hiopVectorPar.hpp"
 #include "hiopVectorIntSeq.hpp"
+#include "hiopCppStdUtils.hpp"
+#include "MathHostKernels.hpp"
 
 #include <cmath>
 #include <cstring> //for memcpy
@@ -124,6 +126,12 @@ void hiopVectorPar::setToConstant(double c)
 {
   for(int i=0; i<n_local_; i++) data_[i]=c;
 }
+
+void hiopVectorPar::set_to_random_uniform(double minv, double maxv)
+{
+  hiop::host::array_random_uniform_kernel(n_local_, data_, minv, maxv);
+}
+
 void hiopVectorPar::setToConstant_w_patternSelect(double c, const hiopVector& select)
 {
   const hiopVectorPar& s = dynamic_cast<const hiopVectorPar&>(select);
@@ -142,6 +150,24 @@ void hiopVectorPar::copyFrom(const double* v_local_data )
 {
   if(v_local_data)
     memcpy(this->data_, v_local_data, n_local_*sizeof(double));
+}
+
+/// @brief Copy from vec the elements specified by the indices in index_in_src
+void hiopVectorPar::copy_from_w_pattern(const hiopVector& vv, const hiopVector& select)
+{
+  const hiopVectorPar& ix = dynamic_cast<const hiopVectorPar&>(select);
+  const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(vv);
+
+  assert(n_local_ == ix.n_local_);
+  const double* ix_vec = ix.data_;
+  const double* v_vec = v.data_;
+  
+  size_type nv = v.get_local_size();
+  for(index_type i=0; i<n_local_; i++) {
+    if(ix_vec[i] == 1.) {
+      data_[i] = v_vec[i];    
+    } 
+  }
 }
 
 /// @brief Copy from vec the elements specified by the indices in index_in_src
@@ -604,6 +630,26 @@ void hiopVectorPar::axpy(double alpha, const hiopVector& x, const hiopVectorInt&
   }
 
 }
+
+/// @brief Performs axpy, this += alpha*x, for selected entries
+void hiopVectorPar::axpy_w_pattern(double alpha, const hiopVector& x, const hiopVector& select)
+{
+  const hiopVectorPar& xx = dynamic_cast<const hiopVectorPar&>(x);
+  const hiopVectorPar& idxs = dynamic_cast<const hiopVectorPar&>(select);
+
+  assert(x.get_local_size() == idxs.get_local_size());
+  assert(n_local_ == idxs.get_local_size());
+
+  const double* xd = xx.local_data_const();
+  const double* z = idxs.local_data_const();
+  
+  for(index_type j=0; j<n_local_; ++j) {
+    if(z[j]==1.0) {
+      data_[j] += alpha*xd[j];
+    }
+  }
+}
+
 void hiopVectorPar::axzpy(double alpha, const hiopVector& x_, const hiopVector& z_)
 {
   const hiopVectorPar& vx = dynamic_cast<const hiopVectorPar&>(x_);
@@ -1168,6 +1214,27 @@ void hiopVectorPar::set_array_from_to(hiopInterfaceBase::NonlinearityType* arr,
   }
 }
 
+bool hiopVectorPar::is_equal(const hiopVector& vec) const
+{
+  if(n_local_ != vec.get_local_size()) {
+    return false;
+  }
+  int all_equal = true;
+  const double* data_v = vec.local_data_const();
+  for(auto i=0; i<n_local_; ++i) {
+    if(data_[i]!=data_v[i]) {
+      all_equal = false;
+      break;
+    }
+  }
+
+#ifdef HIOP_USE_MPI
+  int all_equalG;
+  int ierr=MPI_Allreduce(&all_equal, &all_equalG, 1, MPI_INT, MPI_MIN, comm_); assert(MPI_SUCCESS==ierr);
+  return all_equalG;
+#endif
+  return all_equal;
+}
 
 
 

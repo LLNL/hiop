@@ -118,7 +118,7 @@ if [ -z "$SLURM_SUBMIT_DIR" ]; then
 fi
 
 # Fail fast if we can't find NVBLAS_CONFIG_FILE since it's needed for all CUDA GPU builds
-if [[ ! $MY_CLUSTER =~ incline ]] && [[ ! $MY_CLUSTER =~ spock ]]; then
+if [[ ! $MY_CLUSTER =~ incline ]] && [[ ! $MY_CLUSTER =~ spock ]] && [[ ! $MY_CLUSTER =~ quartz ]]; then
   if [[ ! -v NVBLAS_CONFIG_FILE ]] || [[ ! -f "$NVBLAS_CONFIG_FILE" ]]
   then
     echo "Please provide file 'nvblas.conf' or set variable to desired location."

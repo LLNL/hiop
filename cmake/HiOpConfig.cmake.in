@@ -27,6 +27,10 @@ endif()
 
 set(HiOp::SPARSE @HIOP_SPARSE@ CACHE BOOL "indicates if hiop sparse is enabled")
 
+if(@HIOP_USE_GINKGO@ AND NOT TARGET Ginkgo)
+  find_package(Ginkgo PATHS @Ginkgo_DIR@)
+endif()
+
 if(@HIOP_USE_GPU@)
   if(@HIOP_USE_CUDA@)
     include(CheckLanguage)

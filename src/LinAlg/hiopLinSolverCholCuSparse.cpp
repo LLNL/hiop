@@ -62,6 +62,8 @@
 #include <cusolverSp.h>
 #include <cusolverSp_LOWLEVEL_PREVIEW.h>
 
+#include "hiopMatrixSparseCSRSeq.hpp"
+
 #ifdef HIOP_USE_EIGEN
 #include <Eigen/Core>
 #include <Eigen/Sparse>
@@ -82,7 +84,6 @@ hiopLinSolverCholCuSparse::hiopLinSolverCholCuSparse(hiopMatrixSparseCSR* M, hio
     buf_fact_(nullptr),
     rowptr_(nullptr),
     colind_(nullptr),
-    values_buf_(nullptr),
     values_(nullptr),
     P_(nullptr),
     PT_(nullptr),
@@ -136,7 +137,6 @@ hiopLinSolverCholCuSparse::~hiopLinSolverCholCuSparse()
   
   cudaFree(rowptr_);
   cudaFree(colind_);
-  cudaFree(values_buf_);
   cudaFree(values_);
   
   cusparseDestroyMatDescr(mat_descr_);
@@ -208,136 +208,140 @@ bool hiopLinSolverCholCuSparse::initial_setup()
   assert(nullptr == colind_);
   cudaMalloc(&colind_, nnz_*sizeof(int));
   
-  assert(nullptr == values_buf_);
-  cudaMalloc(&values_buf_, nnz_*sizeof(double));
-
   assert(nullptr == values_);
   cudaMalloc(&values_, nnz_*sizeof(double));
   
   assert(rowptr_);
   assert(colind_);
-  assert(values_buf_);
   assert(values_);
  
   hiopTimer t;
   std::stringstream ss_log;
 
   //
-  // compute permutation to promote sparsity in the factors
+  // compute permutation to promote sparsity in the factors (on CPU/host)
   //
-  const bool dopermutation = true;
-  if(dopermutation) {
-    t.reset(); t.start();
-
-    auto* P_h = new index_type[m];
-
-    do_symb_analysis(mat_csr->m(),
-                     mat_csr->numberOfNonzeros(),
-                     mat_csr->i_row(),
-                     mat_csr->j_col(),
-                     mat_csr->M(),
-                     P_h);
-    ss_log << "\tOrdering: '" << nlp_->options->GetString("linear_solver_sparse_ordering") << "': ";
+  t.reset(); t.start();
+  
+  auto* P_h = new index_type[m];
+  
+  hiopMatrixSparseCSRSeq mat_csr_h(mat_csr->m(), mat_csr->m(), mat_csr->numberOfNonzeros());
+  mat_csr->copy_to(mat_csr_h);
     
-    t.stop();
-    ss_log << std::fixed << std::setprecision(4) << t.getElapsedTime() << " sec\n";
-
-    //compute transpose/inverse permutation
-    index_type* PT_h = new index_type[m];
-    for(int i=0; i<m; i++) {
-      PT_h[P_h[i]] = i;
-    }
-
-    //transfer permutation and its transpose to the device
-    assert(nullptr == P_);
-    cudaMalloc(&P_, m*sizeof(index_type));
-    cudaMemcpy(P_, P_h, m*sizeof(index_type), cudaMemcpyHostToDevice);
+  
+  do_symb_analysis(mat_csr_h.m(),
+                   mat_csr_h.numberOfNonzeros(),
+                   mat_csr_h.i_row(),
+                   mat_csr_h.j_col(),
+                   mat_csr_h.M(),
+                   P_h);
+  ss_log << "\tOrdering: '" << nlp_->options->GetString("linear_solver_sparse_ordering") << "': ";
     
-    assert(nullptr == PT_);
-    cudaMalloc(&PT_, m*sizeof(index_type));
-    cudaMemcpy(PT_, PT_h, m*sizeof(index_type), cudaMemcpyHostToDevice);
-    delete[] PT_h;
-
-    // get permutation buffer size
-    size_t buf_size;
-    ret = cusolverSpXcsrperm_bufferSizeHost(h_cusolver_,
-                                            m,
-                                            m,
-                                            nnz_,
-                                            mat_descr_,
-                                            mat_csr->i_row(),
-                                            mat_csr->j_col(),
-                                            P_h,
-                                            P_h,
-                                            &buf_size);
-    assert(ret == CUSOLVER_STATUS_SUCCESS);
+  t.stop();
+  ss_log << std::fixed << std::setprecision(4) << t.getElapsedTime() << " sec\n";
+  
+  //compute transpose/inverse permutation
+  index_type* PT_h = new index_type[m];
+  for(index_type i=0; i<m; i++) {
+    PT_h[P_h[i]] = i;
+  }
+  
+  //transfer permutation and its transpose to the device
+  assert(nullptr == P_);
+  cudaMalloc(&P_, m*sizeof(index_type));
+  cudaMemcpy(P_, P_h, m*sizeof(index_type), cudaMemcpyHostToDevice);
+  
+  assert(nullptr == PT_);
+  cudaMalloc(&PT_, m*sizeof(index_type));
+  cudaMemcpy(PT_, PT_h, m*sizeof(index_type), cudaMemcpyHostToDevice);
+  delete[] PT_h;
+  
+  // get permutation buffer size
+  size_t buf_size;
+  ret = cusolverSpXcsrperm_bufferSizeHost(h_cusolver_,
+                                          m,
+                                          m,
+                                          nnz_,
+                                          mat_descr_,
+                                          mat_csr_h.i_row(),
+                                          mat_csr_h.j_col(),
+                                          P_h,
+                                          P_h,
+                                          &buf_size);
+  assert(ret == CUSOLVER_STATUS_SUCCESS);
+  
+  // temporary buffer needed for permutation purposes (on host)
+  unsigned char* buf_perm_h = new unsigned char[buf_size];
+  
+  //compute permuted CSR arrays (on host)
+  int* rowptr_perm_h = new int[m+1];
+  int* colind_perm_h = new int[nnz_];
+  assert(rowptr_perm_h);
+  assert(colind_perm_h);
+  memcpy(rowptr_perm_h, mat_csr_h.i_row(), (m+1)*sizeof(int));
+  memcpy(colind_perm_h, mat_csr_h.j_col(), nnz_*sizeof(int));
     
-    // temporary buffer needed for permutation purposes (on host)
-    unsigned char* buf_perm_h = new unsigned char[buf_size];
+  //mapping (on host)
+  int* map_h = new int[nnz_];
+  for(index_type i=0; i<nnz_; i++) {
+    map_h[i] = i;
+  }
+  
+  t.reset();
+  t.start();
+  ret = cusolverSpXcsrpermHost(h_cusolver_,
+                               m,
+                               m,
+                               nnz_,
+                               mat_descr_,
+                               rowptr_perm_h,
+                               colind_perm_h,
+                               P_h,
+                               P_h,
+                               map_h,
+                               buf_perm_h);
+  assert(ret == CUSOLVER_STATUS_SUCCESS);
+  t.stop();
+  ss_log << "\tcsrpermHost: " << t.getElapsedTime() << " sec" << std::endl;
+  delete[] P_h;
+  delete[] buf_perm_h;
+  
+  assert(nullptr == map_nnz_perm_);
+  cudaMalloc(&map_nnz_perm_, nnz_*sizeof(int));
+  //transfer the permutation map for nonzeros on device
+  cudaMemcpy(map_nnz_perm_, map_h, nnz_*sizeof(int), cudaMemcpyHostToDevice);
+  delete[] map_h;
+  // transfer the CSR index arrays on device
+  //
+  //values_ not needed here and will be updated in matrixChanged()
+  cudaMemcpy(rowptr_, rowptr_perm_h, (m+1)*sizeof(int), cudaMemcpyHostToDevice);
+  cudaMemcpy(colind_, colind_perm_h, nnz_*sizeof(int), cudaMemcpyHostToDevice);
+  
+  delete[] colind_perm_h;
+  delete[] rowptr_perm_h;
+  //end of ordering permutation to promote sparsity in the factors
+   
+#if 0
+  // the code below skips ordering permutation computation that is computed above. It uses
+  // the trivial permuation/no factor sparsity promoting permutation. It results in poor
+  // sparsity pattern and hence, in very long factorization times. It is intended for debugging
+  // purposes only
+  {
+    cudaMemcpy(rowptr_, mat_csr->i_row(), (m+1)*sizeof(int), cudaMemcpyDeviceToDevice);
+    cudaMemcpy(colind_, mat_csr->j_col(), nnz_*sizeof(int), cudaMemcpyDeviceToDevice);
     
-    //compute permuted CSR arrays (on host)
-    int* rowptr_perm_h = new int[m+1];
-    int* colind_perm_h = new int[nnz_];
-    assert(rowptr_perm_h);
-    assert(colind_perm_h);
-    memcpy(rowptr_perm_h, mat_csr->i_row(), (m+1)*sizeof(int));
-    memcpy(colind_perm_h, mat_csr->j_col(), nnz_*sizeof(int));
-    
-    //mapping (on host)
-    int* map_h = new int[nnz_];
-    for(int i=0; i<nnz_; i++) {
+    index_type map_h[nnz_];
+    for(index_type i=0; i<nnz_; i++) {
       map_h[i] = i;
     }
-
-    t.reset();
-    t.start();
-    ret = cusolverSpXcsrpermHost(h_cusolver_,
-                                 m,
-                                 m,
-                                 nnz_,
-                                 mat_descr_,
-                                 rowptr_perm_h,
-                                 colind_perm_h,
-                                 P_h,
-                                 P_h,
-                                 map_h,
-                                 buf_perm_h);
-    assert(ret == CUSOLVER_STATUS_SUCCESS);
-    t.stop();
-    ss_log << "\tcsrpermHost: " << t.getElapsedTime() << " sec" << std::endl;
-    delete[] P_h;
-    delete[] buf_perm_h;
-    
     assert(nullptr == map_nnz_perm_);
     cudaMalloc(&map_nnz_perm_, nnz_*sizeof(int));
-    //transfer the permutation map for nonzeros on device
-    cudaMemcpy(map_nnz_perm_, map_h, nnz_*sizeof(int),  cudaMemcpyHostToDevice);
-    delete[] map_h;
-    // transfer the CSR index arrays on device
-    //
-    //values_ not needed here and will be updated in matrixChanged()
-    cudaMemcpy(rowptr_, rowptr_perm_h, (m+1)*sizeof(int), cudaMemcpyHostToDevice);
-    cudaMemcpy(colind_, colind_perm_h, nnz_*sizeof(int), cudaMemcpyHostToDevice);
-
-    delete[] colind_perm_h;
-    delete[] rowptr_perm_h;
-
-  } else {
-    cudaMemcpy(rowptr_, mat_csr->i_row(), (m+1)*sizeof(int), cudaMemcpyHostToDevice);
-    cudaMemcpy(colind_, mat_csr->j_col(), nnz_*sizeof(int), cudaMemcpyHostToDevice);
-    
-    int map_h[nnz_];
-    for(int i=0; i<nnz_; i++) {
-      map_h[i] = i;
-    }
-    assert(nullptr == map_nnz_perm_);
-    cudaMalloc(&map_nnz_perm_, nnz_*sizeof(int));
-    cudaMemcpy(map_nnz_perm_, map_h, nnz_*sizeof(int),  cudaMemcpyHostToDevice);
+    cudaMemcpy(map_nnz_perm_, map_h, nnz_*sizeof(int), cudaMemcpyHostToDevice);
 
 
-    int PT_h[m];
-    int P_h[m];
-    for(int i=0; i<m; i++) {
+    index_type PT_h[m];
+    index_type P_h[m];
+    for(index_type i=0; i<m; i++) {
       PT_h[i] = i;
       P_h[i] = i;
     }
@@ -349,7 +353,7 @@ bool hiopLinSolverCholCuSparse::initial_setup()
     assert(nullptr == PT_);
     cudaMalloc(&PT_, m*sizeof(index_type));
     cudaMemcpy(PT_, PT_h, m*sizeof(index_type), cudaMemcpyHostToDevice);
-  }
+#endif //end of trivial permutation 
 
   t.reset();
   t.start();
@@ -361,9 +365,6 @@ bool hiopLinSolverCholCuSparse::initial_setup()
   t.stop();
   ss_log << "\tcsrcholAnalysis: " << t.getElapsedTime() << " sec" << std::endl;
 
-  // TODO: this call as well as values_buf_ storage will be removed when the matrix is
-  //going to reside on the device
-  cudaMemcpy(values_buf_, mat_csr->M(), nnz_*sizeof(double), cudaMemcpyHostToDevice);
 
   // buffer size
   size_t internalData; // in BYTEs
@@ -371,7 +372,7 @@ bool hiopLinSolverCholCuSparse::initial_setup()
                                      m, 
                                      nnz_, 
                                      mat_descr_, 
-                                     values_buf_, 
+                                     mat_csr->M(), //! don't we need to pass the permuted values?
                                      rowptr_, 
                                      colind_, 
                                      info_, 
@@ -417,21 +418,12 @@ int hiopLinSolverCholCuSparse::matrixChanged()
                         t.getElapsedTime());
     }
   }
-
-  // copy the nonzeros to the device
-  // row pointers and col indexes do not change and need not be copied to device
-  //
-  // TODO: this call as well as values_buf_ storage will be removed when the matrix is
-  //going to reside on the device
-  nlp_->runStats.linsolv.tmDeviceTransfer.start();
-  cudaMemcpy(values_buf_, mat_csr->M(), nnz_*sizeof(double), cudaMemcpyHostToDevice);
-  nlp_->runStats.linsolv.tmDeviceTransfer.stop();
  
   nlp_->runStats.linsolv.tmFactTime.start();
   //
   //permute nonzeros in values_buf_ into values_ accordingly to map_nnz_perm_
   //
-  permute_vec(nnz_, values_buf_, map_nnz_perm_, values_);
+  permute_vec(nnz_, mat_csr->M(), map_nnz_perm_, values_);
   
   //
   //cuSOLVER factorization
@@ -478,7 +470,7 @@ bool hiopLinSolverCholCuSparse::solve(hiopVector& x_in)
   hiopTimer t;
   cusolverStatus_t ret;
   
-  int m = M_->m();
+  size_type m = M_->m();
   assert(m == x_in.get_size());
 
   if(!rhs_buf1_) {
@@ -523,7 +515,7 @@ bool hiopLinSolverCholCuSparse::solve(hiopVector& x_in)
 bool hiopLinSolverCholCuSparse::permute_vec(int n, double* vec_in, index_type* perm, double* vec_out)
 {
   cusparseStatus_t ret;
-#if CUSPARSE_VERSION >= 11700
+#if CUSPARSE_VERSION >= 11400
   //the descr of the array going to be permuted
   cusparseSpVecDescr_t v_out;
   //original nonzeros
@@ -550,7 +542,7 @@ bool hiopLinSolverCholCuSparse::permute_vec(int n, double* vec_in, index_type* p
   cusparseDestroySpVec(v_out);
   cusparseDestroyDnVec(v_in);
   
-#else //CUSPARSE_VERSION < 11700
+#else //CUSPARSE_VERSION < 11400
   
   ret = cusparseDgthr(h_cusparse_, n, vec_in, vec_out, perm, CUSPARSE_INDEX_BASE_ZERO);
   assert(CUSPARSE_STATUS_SUCCESS == ret);

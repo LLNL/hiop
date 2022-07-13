@@ -12,6 +12,7 @@
 #include <numeric>
 #include <cassert>
 #include <math.h>
+#include <chrono>
 
 namespace hiop {
   template<class T> inline void printvec(const std::vector<T>& v, const std::string& msg="")
@@ -88,6 +89,14 @@ namespace hiop {
        arr[i]   = temp[i];
 //       index[i] = i;
     }
+  }
+
+  static inline unsigned long generate_seed() {
+#ifdef NDEBUG
+    return std::chrono::system_clock::now().time_since_epoch().count();
+#else
+    return 0;
+#endif
   }
 
 } // end of namespace

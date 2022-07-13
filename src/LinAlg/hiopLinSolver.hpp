@@ -196,7 +196,7 @@ public:
   {
   }
 protected:
-  hiopLinSolverSymSparse() = delete;
+  hiopLinSolverSymSparse() {}
 };
 
 /** 

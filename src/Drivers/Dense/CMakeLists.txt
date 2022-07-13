@@ -7,6 +7,11 @@ target_link_libraries(NlpDenseConsEx2.exe HiOp::HiOp)
 add_executable(NlpDenseConsEx3.exe NlpDenseConsEx3Driver.cpp)
 target_link_libraries(NlpDenseConsEx3.exe HiOp::HiOp)
 
+if(HIOP_BUILD_SHARED)
+    add_executable(NlpDenseConsFEx1.exe NlpDenseConsFEx1.f)
+    target_link_libraries(NlpDenseConsFEx1.exe HiOp::HiOp)
+endif(HIOP_BUILD_SHARED)
+
 ##########################################################
 # CMake Tests
 ##########################################################
@@ -32,4 +37,8 @@ if(HIOP_WITH_VALGRIND_TESTS)
     NAME NlpDenseCons1_5H_Valgrind
     COMMAND bash -c "${runcmd_str} ${HIOP_VALGRIND_CMD} $<TARGET_FILE:NlpDenseConsEx1.exe> 500 1.0 -selfcheck"
     )
+endif()
+
+if(HIOP_BUILD_SHARED AND NOT HIOP_USE_GPU)
+  add_test(NAME NlpDenseFinterface COMMAND ${RUNCMD} "$<TARGET_FILE:NlpDenseConsFEx1.exe>")
 endif()

@@ -60,10 +60,15 @@
 #include <cstdio>
 #include <string>
 #include <cassert>
+#include <cstring>
+#include <random>
 
 #include <hiopMPI.hpp>
 #include "hiopVector.hpp"
 #include "hiopVectorInt.hpp"
+
+//temporary
+#include "hiopVectorPar.hpp"
 
 namespace hiop
 {
@@ -77,11 +82,22 @@ public:
 
   virtual void setToZero();
   virtual void setToConstant( double c );
+  virtual void set_to_random_uniform(double minv, double maxv);
   virtual void setToConstant_w_patternSelect(double c, const hiopVector& select);
   virtual void copyFrom(const hiopVector& v );
   virtual void copyFrom(const double* v_local_data); //v should be of length at least n_local
-  virtual void copy_from(const hiopVector& src, const hiopVectorInt& index_in_src);
-  
+  virtual void copy_from(const hiopVector& src, const hiopVectorInt& index_in_src); 
+  virtual void copy_from_w_pattern(const hiopVector& src, const hiopVector& select);
+
+  //temporary
+  /// copy from a host vector
+  inline void copy_from_host_vec(const hiopVectorPar& src)
+  {
+    assert(src.get_local_size() == n_local_);
+    memcpy(data_host_, src.local_data_const(), n_local_*sizeof(double));
+    this->copyToDev();
+  }
+
   /**
    * @brief Copy from src the elements specified by the indices in index_in_src. 
    *
@@ -183,6 +199,8 @@ public:
   virtual void scale( double alpha );
   /** this += alpha * x */
   virtual void axpy  ( double alpha, const hiopVector& x );
+  /// @brief this += alpha * x, for the entries in 'this' where corresponding 'select' is nonzero.
+  virtual void axpy_w_pattern(double alpha, const hiopVector& x, const hiopVector& select);
 
   /**
    * @brief Performs axpy, this += alpha*x, on the indexes in this specified by i.
@@ -255,7 +273,7 @@ public:
   virtual bool isfinite_local() const;
   
   virtual void print(FILE*, const char* withMessage=NULL, int max_elems=-1, int rank=-1) const;
-  virtual void print() const{} ///< @todo Temporary to surpress warnings, will be removed.
+  virtual void print() const;
 
   /* more accessers */
   inline size_type get_local_size() const { return n_local_; }
@@ -283,6 +301,8 @@ public:
                                  const int end, 
                                  const hiopInterfaceBase::NonlinearityType arr_src) const;
 
+  virtual bool is_equal(const hiopVector& vec) const;
+  
 private:
   std::string mem_space_;
   MPI_Comm comm_;

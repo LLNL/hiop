@@ -594,7 +594,20 @@ bool hiopFRProbSparse::iterate_callback(int iter,
 
     // compute the original logbar objective from the trial point given by the FR problem
     // Note that this function will updates the slack and dual variables
-    double trial_bar_obj_ori = solver_base_.get_logbar()->compute_trial_logbar(*wrk_x_, obj_base_, *(solver_base_.get_it_trial_nonconst()));
+    
+    // set original trial (x,d) to the soltion from FR problem 
+    hiopIterate* it_base_trial = solver_base_.get_it_trial_nonconst();
+    const hiopIterate* it_base_curr  = solver_base_.get_it_curr();
+    it_base_trial->get_x()->copyFrom(*wrk_x_);
+    it_base_trial->get_d()->copyFrom(*wrk_d_);
+
+    // compute other slacks in the base problem
+    size_type n_adjusted_slacks = it_base_trial->compute_safe_slacks(*it_base_curr, solver_base_.get_mu());
+
+    // evaluate base problem log barr     
+    solver_base_.get_logbar()->updateWithNlpInfo_trial_funcOnly(*it_base_trial, obj_base_, *wrk_cbody_, *wrk_dbody_);
+	  
+    double trial_bar_obj_ori = solver_base_.get_logbar()->f_logbar_trial;
 
     if(!solver_base_.filter_contains(theta_ori, trial_bar_obj_ori)) {
       // terminate FR
@@ -1214,7 +1227,20 @@ bool hiopFRProbMDS::iterate_callback(int iter,
 
     // compute the original logbar objective from the trial point given by the FR problem
     // Note that this function will updates the slack and dual variables
-    double trial_bar_obj_ori = solver_base_.get_logbar()->compute_trial_logbar(*wrk_x_, obj_base_, *(solver_base_.get_it_trial_nonconst()));
+    
+    // set original trial (x,d) to the soltion from FR problem 
+    hiopIterate* it_base_trial = solver_base_.get_it_trial_nonconst();
+    const hiopIterate* it_base_curr  = solver_base_.get_it_curr();
+    it_base_trial->get_x()->copyFrom(*wrk_x_);
+    it_base_trial->get_d()->copyFrom(*wrk_d_);
+
+    // compute other slacks in the base problem
+    size_type n_adjusted_slacks = it_base_trial->compute_safe_slacks(*it_base_curr, solver_base_.get_mu());
+
+    // evaluate base problem log barr     
+    solver_base_.get_logbar()->updateWithNlpInfo_trial_funcOnly(*it_base_trial, obj_base_, *wrk_cbody_, *wrk_dbody_);
+	  
+    double trial_bar_obj_ori = solver_base_.get_logbar()->f_logbar_trial;
 
     if(!solver_base_.filter_contains(theta_ori, trial_bar_obj_ori)) {
       // terminate FR

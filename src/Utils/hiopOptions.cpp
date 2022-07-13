@@ -910,8 +910,8 @@ void hiopOptionsNLP::register_options()
     register_str_option("ir_inner_cusolver",
                         default_value,
                         range,
-                        "Follow cusolver_lu  with FGMRES iterive refinement. "
-                        "By default, no iterative refinement is performaed. ");
+                        "Follow cusolver_lu  with FGMRES iterative refinement. "
+                        "By default, no iterative refinement is performed. ");
   }
 
 
@@ -939,7 +939,7 @@ void hiopOptionsNLP::register_options()
                         default_value,
                         range,
                         "Gram-Schmidt orthogonalization version for FMGRES. "
-                        "mgs: modified Gram-Schmidt (textbooki, default). "
+                        "mgs: modified Gram-Schmidt (textbook, default). "
                         "cgs2: reorthogonalized classical Gram-Schmidt (three synchs). "
                         "mgs_two_synch: two synch (stable) MGS. "
                         "mgs_pm: post-modern MGS, two synchs. ");
@@ -1026,6 +1026,12 @@ void hiopOptionsNLP::register_options()
                         "Exponent of mu when computing regularization for potentially rank-deficient "
                         "Jacobian (delta_c=delta_c_bar*mu^kappa_c)");
 
+    vector<string> range(2); range[0]="unified"; range[1]="randomized";
+    register_str_option("dual_reg_method",
+                        "unified",
+                        range,
+                        "The method used to compute dual regularization. (TODO)");
+    
   }
   // performance profiling
   {
@@ -1341,6 +1347,14 @@ void hiopOptionsPriDec::register_options()
                         "the memory space in which the master solve is going to be done.");
   }
   
+  // option for local accumulation of function value and subgradient on evaluator ranks, then reduce
+  {
+    register_str_option("accum_local",
+                        "false", // default value for the option
+                        vector<string>({"yes", "no"}), // range
+                        "Accumulates recourse problem solutions locally on evaluator ranks (default 'false')");
+  }
+
   //
   // convergence and stopping criteria
   //

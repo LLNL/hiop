@@ -624,7 +624,6 @@ namespace hiop
         /////////////////////////////////////////////////////////////////////////////////////////////
         // CPU compute mode
         /////////////////////////////////////////////////////////////////////////////////////////////
-        
         if(linear_solver == "ma57" || linear_solver == "auto") {
 #ifdef HIOP_USE_COINHSL
           linSys_ = new hiopLinSolverSymSparseMA57(n, nnz, nlp_);
@@ -820,14 +819,7 @@ namespace hiop
       assert( (compute_mode == "hybrid" || compute_mode == "cpu") &&
                 "KKT_SPARSE_FULL_KKT linsys does not currently support gpu compute mode");
       
-#ifdef HIOP_USE_CUSOLVER_LU
-      nlp_->log->printf(hovWarning,
-                        "KKT_SPARSE_FULL_KKT linsys: alloc nonsym CUSOLVER size %d (%d cons)\n",
-                        n,
-                        n_con);
-      hiopLinSolverNonSymSparseCUSOLVER *p = new hiopLinSolverNonSymSparseCUSOLVER(n, nnz, nlp_);
-      linSys_ = p;
-#elif HIOP_USE_PARDISO
+#ifdef HIOP_USE_PARDISO
       nlp_->log->printf(hovWarning,
                         "KKT_SPARSE_FULL_KKT linsys: alloc PARDISO size %d (%d cons)\n",
                         n,

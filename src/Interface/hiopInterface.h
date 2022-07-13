@@ -145,4 +145,32 @@ typedef struct cHiopSparseProblem {
 extern int hiop_sparse_create_problem(cHiopSparseProblem *problem);
 extern int hiop_sparse_solve_problem(cHiopSparseProblem *problem);
 extern int hiop_sparse_destroy_problem(cHiopSparseProblem *problem);
-#endif //#ifdef HIOP_SPARSE
+#endif
+
+typedef struct cHiopDenseProblem {
+  void *refcppHiop; // Pointer to the cpp object
+  void *hiopinterface;
+  // user_data similar to the Ipopt interface. In case of Julia pointer to the Julia problem object.
+  void *user_data; 
+  double *solution;
+  double obj_value;
+  int niters;
+  int status;
+  int (*get_starting_point)(hiop_size_type n_, double* x0, void* jprob); 
+  int (*get_prob_sizes)(hiop_size_type* n_, hiop_size_type* m_, void* jprob); 
+  int (*get_vars_info)(hiop_size_type n, double *xlow_, double* xupp_, void* jprob);
+  int (*get_cons_info)(hiop_size_type m, double *clow_, double* cupp_, void* jprob);
+  int (*eval_f)(hiop_size_type n, double* x, int new_x, double* obj, void* jprob);
+  int (*eval_grad_f)(hiop_size_type n, double* x, int new_x, double* gradf, void* jprob);
+  int (*eval_cons)(hiop_size_type n, hiop_size_type m, double* x, int new_x, double* cons, void* jprob);
+  int (*eval_Jac_cons)(hiop_size_type n, 
+                       hiop_size_type m,
+                       double* x,
+                       int new_x,
+                       double* MJac,
+                       void *jprob);
+} cHiopDenseProblem;
+
+extern int hiop_dense_create_problem(cHiopDenseProblem *problem);
+extern int hiop_dense_solve_problem(cHiopDenseProblem *problem);
+extern int hiop_dense_destroy_problem(cHiopDenseProblem *problem);

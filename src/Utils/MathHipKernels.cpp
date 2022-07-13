@@ -46,77 +46,69 @@
 // product endorsement purposes.
 
 /**
- * @file MatrixSparseCSRCudaKernels.hpp
+ * @file MathHipKernels.cpp
  *
  * @author Cosmin G. Petra <petra1@llnl.gov>, LNNL
+ * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LNNL
  *
  */
-#ifndef HIOP_SPARSE_MATRIX_CSRCUDA_KER
-#define HIOP_SPARSE_MATRIX_CSRCUDA_KER
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <hip/hip_runtime.h>
+#include <hiprand_kernel.h>
+#include "hiopCppStdUtils.hpp"
+#include "MathDeviceKernels.hpp"
+
+
+__global__
+void array_random_uniform_hip(int n, double* d_array, unsigned long seed, double minv, double maxv)
+{
+    const int num_threads = blockDim.x * gridDim.x;
+    const int tid = blockIdx.x * blockDim.x + threadIdx.x;    
+    const double delta = maxv - minv;
+    hiprandState state;
+    hiprand_init(seed, tid, 0, &state);
+    for (int i = tid; i < n; i += num_threads) {
+      const double ranv = hiprand_uniform_double( &state ); // from 0 to 1
+      d_array[i] = ranv * delta + minv;	
+    }
+}
 
 namespace hiop
 {
-namespace cuda
+namespace device
 {
 
-/**
- * Set diagonal of the CSR matrix to `val` by performing a binary search on the column indexes
- * for each row. Assumes pointers are on the device and parallelizes over rows.
- * 
- * @pre CSR matrix must be square.
- * @pre Diagonal entries must appear explicitly among the nonzeros.
- * @pre Column indexes must be sorted for any given row.
- */   
-void csr_set_diag_kernel(int n, int nnz, int* irowptr, int* jcoldind, double* values, double val);
+int array_random_uniform_kernel(int n, double* d_array, double minv, double maxv)
+{
+  int block_size=256;
+  int grid_size = (n+block_size-1)/block_size;
+  
+  unsigned long seed = generate_seed();
+  array_random_uniform_hip<<<grid_size,block_size>>>(n, d_array, seed, minv, maxv);
+  hipDeviceSynchronize();
 
-/**
- * Add the constant `val` to the diagonal of the CSR matrix. Performs a binary search on the column indexes
- * for each row. Assumes pointers are on the device and parallelizes over rows.
- * 
- * @pre CSR matrix must be square.
- * @pre Diagonal entries must appear explicitly among the nonzeros.
- * @pre Column indexes must be sorted for any given row.
- */   
-void csr_add_diag_kernel(int n, int nnz, int* irowptr, int* jcoldind, double* values, double Dval);
+  return 1;
+}
 
-/**
- * Add entries of the array `values` to the diagonal of the CSR matrix. Performs a binary search on the column indexes
- * for each row. Assumes pointers are on the device and parallelizes over rows.
- * 
- * @pre CSR matrix must be square.
- * @pre Diagonal entries must appear explicitly among the nonzeros.
- * @pre Column indexes must be sorted for any given row.
- * @pre 
- */   
-void csr_add_diag_kernel(int n, int nnz, int* irowptr, int* jcoldind, double* values, double alpha, const double* Dvalues);
+int array_random_uniform_kernel(int n, double* d_array)
+{  
+  unsigned long seed = generate_seed();
 
-/**
- * Copies the diagonal of a CSR matrix into the array `diag_out`. All pointers are on the device. The
- * output array should be allocated to hold `n` doubles.
- * 
- * @pre CSR matrix must be square.
- * @pre Column indexes must be sorted for any given row.
- */
-void csr_get_diag_kernel(int n,
-                         int nnz,
-                         const int* irowptr,
-                         const int* jcoldind,
-                         const double* values,
-                         double* diag_out);
+  hiprandGenerator_t generator;
+  hiprandCreateGenerator(&generator, HIPRAND_RNG_PSEUDO_DEFAULT);
+  hiprandSetPseudoRandomGeneratorSeed(generator, seed);
+  
+  // generate random val from 0 to 1
+  hiprandGenerateUniformDouble(generator, d_array, n);
 
-/**
- * Populates the row pointers and column indexes array to hold a CSR diagonal matrix of size `n`.
- */
-void csr_form_diag_symbolic_kernel(int n, int* irowptr, int* jcolind);
+  hiprandDestroyGenerator(generator);
 
-/**
- * Scales rows of the sparse CSR matrix with the diagonal matrix given by array `D`
- * 
- * @pre All pointers should be on the device. 
- * @pre Column indexes must be sorted for any given row.
- */
-void csr_scalerows_kernel(int nrows, int ncols, int nnz, int* irowptr, int* jcoldind, double* values, const double* D); 
-} //end of namespace cuda
+  return 1;
+}
+
+} //end of namespace device
 } //end of namespace hiop
 
-#endif

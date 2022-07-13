@@ -216,7 +216,7 @@ static bool self_check(size_type n, double objval, hiopSolveStatus status)
 {
 #define num_n_saved 3 //keep this is sync with n_saved and objval_saved
   const size_type n_saved[] = {50, 500, 5000};
-  const double objval_saved[] = {7.56537851801013e+00, 8.28428402098675e+01, 7.19392250597535e+02};
+  const double objval_saved[] = {7.565566821330e+00, 8.284201575839e+01, 8.066106777964e+02};
 
 #define relerr 1e-6
   if(status != hiopSolveStatus::Infeasible_Problem) {

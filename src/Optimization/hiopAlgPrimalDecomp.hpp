@@ -124,6 +124,9 @@ public:
 
   /** Main function to run the optimization in parallel */
   hiopSolveStatus run();
+  /** Main function to run the optimization in parallel with local accumulation of recourse function (and subgradient) */
+  hiopSolveStatus run_local();
+  
   /** Main function to run the optimization in serial */
   hiopSolveStatus run_single();
 
@@ -178,9 +181,15 @@ public:
   /** set the number of iterations that consecutively reach acceptable tolerance before convergence is considered obtained */ 
   void set_acceptable_count(const int count);
  
-  /** compute the step size of the coupled variable, nc components of x */
+  /** compute the step size of the coupled variable, nc components of x 
+   * default is two-norm, not inf norm. Naming due to older version. 
+   */ 
   double step_size_inf(const int nc, const hiopVectorInt& idx, const hiopVector& x, const hiopVector& x0);
-  
+ 
+  /** set the variable local_accum_ */ 
+  void set_local_accum(const std::string local_accum);
+
+
   /** Contains information of a previous solution step including function value 
    * and gradient. Used for storing the solution for the previous iteration
    * This struct is intended for internal use of hiopAlgPrimalDecomposition class only.
@@ -385,6 +394,10 @@ private:
 
   MPI_Comm comm_world_;
   //master/solver(0), or worker(1:total rank)
+
+  // communication strategy; if true, worker ranks accumulate information locally
+  // no effect if only one rank
+  std::string local_accum_ = "no"; 
 
   /// maximum number of outer iterations, can be user specified
   int max_iter_ = 200;

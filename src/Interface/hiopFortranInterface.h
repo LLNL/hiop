@@ -63,34 +63,41 @@
 #include "FortranCInterface.hpp"
 #include <hiop_defs.hpp>
 
-#ifdef HIOP_SPARSE
+
 /* Function pointer types for the Fortran callback functions */
 typedef void (*f_eval_f_cb)(hiop_size_type* n, double* x, int* new_x, double* obj); 
 typedef void (*f_eval_grad_cb)(hiop_size_type* n, double* x, int* new_x, double* gradf); 
 typedef void (*f_eval_c_cb)(hiop_size_type* n, hiop_size_type* m, double* x, int* new_x, double* cons); 
-typedef void (*f_eval_jac_cb)(int* task, 
-                              hiop_size_type* n, 
-                              hiop_size_type* m,
-                              double* x,
-                              int* new_x,
-                              hiop_size_type* nnz_jac,
-                              hiop_index_type* irow,
-                              hiop_index_type* jcol,
-                              double* mjac); 
-typedef void (*f_eval_hess_cb)(int* task, 
-                               hiop_size_type* n, 
-                               hiop_size_type* m,
-                               double* obj_scal,
-                               double* x,
-                               int* new_x,
-                               double* lambda,
-                               int* new_lam,
-                               hiop_size_type* nnz_hes,
-                               hiop_index_type* irow,
-                               hiop_index_type* jcol,
-                               double* mhes);
+typedef void (*f_eval_jac_dense_cb)(hiop_size_type* n,
+                                    hiop_size_type* m,
+                                    double* x,
+                                    int* new_x,
+                                    double* mjac);
 
-typedef struct FProb
+#ifdef HIOP_SPARSE
+typedef void (*f_eval_jac_sparse_cb)(int* task, 
+                                     hiop_size_type* n, 
+                                     hiop_size_type* m,
+                                     double* x,
+                                     int* new_x,
+                                     hiop_size_type* nnz_jac,
+                                     hiop_index_type* irow,
+                                     hiop_index_type* jcol,
+                                     double* mjac); 
+typedef void (*f_eval_hess_sparse_cb)(int* task, 
+                                      hiop_size_type* n,
+                                      hiop_size_type* m,
+                                      double* obj_scal,
+                                      double* x,
+                                      int* new_x,
+                                      double* lambda,
+                                      int* new_lam,
+                                      hiop_size_type* nnz_hes,
+                                      hiop_index_type* irow,
+                                      hiop_index_type* jcol,
+                                      double* mhes);
+
+typedef struct FSparseProb
 {
   hiop_size_type n_;
   hiop_size_type m_;
@@ -106,15 +113,13 @@ typedef struct FProb
   f_eval_f_cb     f_eval_f_;
   f_eval_c_cb     f_eval_c_;
   f_eval_grad_cb  f_eval_grad_;
-  f_eval_jac_cb   f_eval_jac_;
-  f_eval_hess_cb  f_eval_hess_;
-} FProb;
+  f_eval_jac_sparse_cb   f_eval_jac_;
+  f_eval_hess_sparse_cb  f_eval_hess_;
+} FSparseProb;
 
-int get_prob_sizes_wrapper(hiop_size_type* n, hiop_size_type* m, void* user_data);
-
-int get_vars_info_wrapper(hiop_size_type n, double *xlow, double* xupp, void* user_data);
-
-int get_cons_info_wrapper(hiop_size_type m, double *clow, double* cupp, void* user_data);
+int get_prob_sizes_sparse_wrapper(hiop_size_type* n, hiop_size_type* m, void* user_data);
+int get_vars_info_sparse_wrapper(hiop_size_type n, double *xlow, double* xupp, void* user_data);
+int get_cons_info_sparse_wrapper(hiop_size_type m, double *clow, double* cupp, void* user_data);
 
 void* FC_GLOBAL(hiopsparseprob, HIOPSPARSEPROB) (hiop_size_type*   n,
                                                  hiop_size_type*   m,
@@ -129,13 +134,45 @@ void* FC_GLOBAL(hiopsparseprob, HIOPSPARSEPROB) (hiop_size_type*   n,
                                                  f_eval_f_cb       f_eval_f,
                                                  f_eval_c_cb       f_eval_c,
                                                  f_eval_grad_cb    f_eval_grad,
-                                                 f_eval_jac_cb     f_eval_jac,
-                                                 f_eval_hess_cb    f_eval_hess);
-
-
+                                                 f_eval_jac_sparse_cb     f_eval_jac,
+                                                 f_eval_hess_sparse_cb    f_eval_hess);
 void FC_GLOBAL(hiopsparsesolve, HIOPSPARSESOLVE) (void** f_prob_in, double* obj, double* sol);
-
 void FC_GLOBAL(deletehiopsparseprob, DELETEHIOPSPARSEPROB) (void** f_prob_in);
 
 #endif
+
+typedef struct FDenseProb
+{
+  hiop_size_type n;
+  hiop_size_type m;
+  double* xlow;
+  double* xupp;
+  double* clow;
+  double* cupp;
+  double* x0;
+  cHiopDenseProblem*   c_prob; 
+  f_eval_f_cb          f_eval_f;
+  f_eval_c_cb          f_eval_c;
+  f_eval_grad_cb       f_eval_grad;
+  f_eval_jac_dense_cb  f_eval_jac;
+} FDenseProb;
+
+int get_prob_sizes_dense_wrapper(hiop_size_type* n, hiop_size_type* m, void* user_data);
+int get_vars_info_dense_wrapper(hiop_size_type n, double *xlow, double* xupp, void* user_data);
+int get_cons_info_dense_wrapper(hiop_size_type m, double *clow, double* cupp, void* user_data);
+
+void* FC_GLOBAL(hiopdenseprob, HIOPDENSEPROB) (hiop_size_type*      n,
+                                               hiop_size_type*      m,
+                                               double*              xlow,
+                                               double*              xupp,
+                                               double*              clow,
+                                               double*              cupp,
+                                               double*              x0,
+                                               f_eval_f_cb          f_eval_f,
+                                               f_eval_c_cb          f_eval_c,
+                                               f_eval_grad_cb       f_eval_grad,
+                                               f_eval_jac_dense_cb  f_eval_jac);
+void FC_GLOBAL(hiopdensesolve, HIOPDENSESOLVE) (void** f_prob_in, double* obj, double* sol);
+void FC_GLOBAL(deletehiopdenseprob, DELETEHIOPDENSEPROB) (void** f_prob_in);
+
 #endif

@@ -116,7 +116,7 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
 target_compile_features(hiop_options
   INTERFACE
-  cxx_std_11
+  cxx_std_14
   cxx_alignas
   cxx_alignof
   cxx_attributes
@@ -165,6 +165,13 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     )
 endif()
 
+if(HIOP_USE_GPU AND HIOP_USE_HIP)
+  # Flang is required to link with ROCm bitcode library
+  if(NOT (CMAKE_Fortran_COMPILER_ID STREQUAL "Flang"))
+    message(SEND_ERROR "Flang is required to link with ROCm bitcode library.")
+  endif()
+endif()
+
 if(HIOP_DEVELOPER_MODE)
   target_link_libraries(hiop_tpl INTERFACE hiop_options hiop_warnings)
   install(TARGETS hiop_options hiop_warnings EXPORT hiop-targets)
@@ -206,7 +213,7 @@ if(HIOP_USE_GPU)
     check_language(CUDA)
 
     if(NOT DEFINED CMAKE_CUDA_STANDARD)
-      set(CMAKE_CUDA_STANDARD 11)
+      set(CMAKE_CUDA_STANDARD 14)
       set(CMAKE_CUDA_STANDARD_REQUIRED ON)
     endif()
 
@@ -214,6 +221,9 @@ if(HIOP_USE_GPU)
       set(CMAKE_CUDA_ARCHITECTURES 35)
     endif()
     set(CMAKE_CUDA_FLAGS "--expt-extended-lambda")
+    if(HIOP_USE_EIGEN)
+      string(APPEND CMAKE_CUDA_FLAGS " --expt-relaxed-constexpr")
+    endif()
 
     if(HIOP_USE_MAGMA)
       set(HIOP_MAGMA_DIR CACHE PATH "Path to Magma directory")
@@ -254,6 +264,10 @@ if(HIOP_USE_RAJA)
   target_link_libraries(hiop_tpl INTERFACE umpire RAJA)
   message(STATUS "Found RAJA pkg-config: ${RAJA_CONFIG}")
   message(STATUS "Found umpire pkg-config: ${umpire_CONFIG}")
+else()
+  if(HIOP_USE_CUDA)
+    message(FATAL_ERROR "Momentarily RAJA is needed for building with HIOP_USE_CUDA=ON.")
+  endif()
 endif()
 
 # KLU needed with cuSolver. TODO: make this an optional dependency

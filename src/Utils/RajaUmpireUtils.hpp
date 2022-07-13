@@ -5,7 +5,7 @@
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
 // is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause). 
-// Please also read “Additional BSD Notice” below.
+// Please also read "Additional BSD Notice" below.
 //
 // Redistribution and use in source and binary forms, with or without modification, 
 // are permitted provided that the following conditions are met:
@@ -45,91 +45,29 @@
 // herein do not necessarily state or reflect those of the United States Government or 
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or 
 // product endorsement purposes.
-#pragma once
-
-#include <string>
-#include <iostream>
-#include <hiopMPI.hpp>
-#include <hiopVector.hpp>
-#include <hiopMatrixDense.hpp>
-#include <hiopMatrixSparse.hpp>
-#include <hiopMatrixSparseCSR.hpp>
-#include <hiopVectorInt.hpp>
-
-namespace hiop {
 
 /**
- * @brief Factory for HiOp's linear algebra objects
+ * @file RajaUmpireUtils.hpp
  * 
+ * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
+ *
  */
-class LinearAlgebraFactory
-{
-public:
-  LinearAlgebraFactory()  = delete; 
-  ~LinearAlgebraFactory() = delete;
 
-  /**
-   * @brief Static method to create vector
-   */
-  static hiopVector* create_vector(const std::string& mem_space,
-                                   const size_type& glob_n,
-                                   index_type* col_part = nullptr,
-                                   MPI_Comm comm = MPI_COMM_SELF);
-  /**
-   * @brief Static method to create local int vector.
-   */
-  static hiopVectorInt* create_vector_int(const std::string& mem_space,
-                                          size_type size);
+#ifndef HIOP_RAJA_UMPIRE_UTILS
+#define HIOP_RAJA_UMPIRE_UTILS
 
-  /**
-   * @brief Static method to create a dense matrix.
+#include <string>
+#include <sstream>  
+
+namespace hiop {
+  /** 
+   * Returns a string with memory space Umpire keeps about the address passed as the argument, 
+   * "__not_managed_by_umpire__" if Umpire does not have a record of the address, or 
+   * "__info_not_available__HiOp_not_built_with_Umpire__" if HiOp was not built with Umpire.
    * 
+   * The function should be used for debugging purposes only. 
    */
-  static hiopMatrixDense* create_matrix_dense(const std::string& mem_space,                                              
-                                              const size_type& m,
-                                              const size_type& glob_n,
-                                              index_type* col_part = NULL,
-                                              MPI_Comm comm = MPI_COMM_SELF,
-                                              const size_type& m_max_alloc = -1);
-  /**
-   * @brief Static method to create the default, triplet sparse matrix
-   */
-  static hiopMatrixSparse* create_matrix_sparse(const std::string& mem_space,
-                                                size_type rows,
-                                                size_type cols,
-                                                size_type nnz);
-
-  /**
-   * @brief Static method to create an empty CSR sparse matrix of the type that supports the
-   * memory space passed as argument.
-   */
-  static hiopMatrixSparseCSR* create_matrix_sparse_csr(const std::string& mem_space);
-  
-  /**
-   * @brief Static method to create a CSR sparse matrix of the type that supports the
-   * memory space passed as argument.
-   */
-  static hiopMatrixSparseCSR* create_matrix_sparse_csr(const std::string& mem_space,
-                                                       size_type rows,
-                                                       size_type cols,
-                                                       size_type nnz);
-
-  /**
-   * @brief Static method to create a symmetric sparse matrix
-   */
-  static hiopMatrixSparse* create_matrix_sym_sparse(const std::string& mem_space,
-                                                    size_type size,
-                                                    size_type nnz);
-  
-  /**
-   * @brief Static method to create a raw C array
-   */
-  static double* create_raw_array(const std::string& mem_space, size_type n);
-
-  /**
-   * @brief Static method to delete a raw C array
-   */
-  static void delete_raw_array(const std::string& mem_space, double* a);
-};
+  std::string get_umpire_mem_address_info(void* address);
 
 } // namespace hiop
+#endif // HIOP_RAJA_UMPIRE_UTILS

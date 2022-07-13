@@ -207,7 +207,7 @@ int main(int argc, char **argv)
     // LU solver needs to use inertia free approach
     nlp.options->SetStringValue("fact_acceptor", "inertia_free");
     nlp.options->SetIntegerValue("ir_outer_maxit", 0);
-    nlp.options->SetIntegerValue("verbosity_level", 4);
+    nlp.options->SetIntegerValue("verbosity_level", 3);
   }
   if(use_ginkgo) {
     nlp.options->SetStringValue("linsol_mode", "speculative");

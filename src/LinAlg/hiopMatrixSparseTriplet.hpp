@@ -243,13 +243,38 @@ public:
     assert(0 && "This method should be used only for symmetric matrices.\n");
   }
 
-  virtual void convertToCSR(int &csr_nnz,
-                            int **csr_kRowPtr,
-                            int **csr_jCol,
-                            double **csr_kVal,
-                            int **index_covert_CSR2Triplet,
-                            int **index_covert_extra_Diag2CSR,
-                            std::unordered_map<int,int> &extra_diag_nnz_map);
+  /** 
+   * Converts `this` to CSR sparse matrix 3-array representation. This method is intended for VERY specific uses and 
+   * should NOT be used to convert general triplet matrices to general CSR matrices. 
+   *
+   * `this` stores a KKT matrix with the diagonal nonzeros added at the end of the nonzeros array(s) (hence, the 
+   * indexes may not be sorted). These diagonal entries may end up being duplicated. Upon conversion, on output, the
+   * CSR arrays are ordered, first by row indexes and, for a given row index, by column indexes. 
+   * 
+   * @pre `this` contains only the lower triangular part.
+   * @pre The  double (**) pointers should be null on entry.
+   * 
+   * @param `csr_nnz` output nnz for CSR
+   * @param `csr_kRowPtr` output row pointers
+   * @param `csr_jCol` output column pointers
+   * @param `csr_vals` output array with nonzero values
+   * @param `indexes_CSR2Triplet` output array maps from the nonzero triplet index into the nonzero CSR index
+   * @param `indexes_extra_Diag2CSR` output array with mapping from the index on the diagonal into the nonzero CSR index
+   * @param `extra_diag_nnz_map` output, maps from the CSR indexes of the diagonals into the triplet indexes of the
+   * the diagonals.
+   * 
+   * @note Indexes of the sparse triplet representation of `this` are usually NOT ordered.
+   * 
+   * @note All double (**) pointers are allocated internally and should be deallocated by the calling code.
+   *
+   */
+  virtual void convert_to_csr_arrays(int &csr_nnz,
+                                     int **csr_kRowPtr,
+                                     int **csr_jCol,
+                                     double **csr_vals,
+                                     int **indexes_CSR2Triplet,
+                                     int **indexes_extra_Diag2CSR,
+                                     std::unordered_map<int,int>& extra_diag_nnz_map);
 
   /* @brief sort the nonzeros from index `first` to `last`, by row and then by column.
   *  @pre assuming there is no duplicate nonzero element

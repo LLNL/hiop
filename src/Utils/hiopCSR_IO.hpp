@@ -187,7 +187,7 @@ namespace hiop
       double *csr_kVal{nullptr};
       std::unordered_map<int,int> extra_diag_nnz_map;
       
-      Msys.convertToCSR(csr_nnz, &csr_kRowPtr, &csr_jCol, &csr_kVal, &index_covert_CSR2Triplet, &index_covert_extra_Diag2CSR, extra_diag_nnz_map);
+      Msys.convert_to_csr_arrays(csr_nnz, &csr_kRowPtr, &csr_jCol, &csr_kVal, &index_covert_CSR2Triplet, &index_covert_extra_Diag2CSR, extra_diag_nnz_map);
       
       if(index_covert_CSR2Triplet) delete [] index_covert_CSR2Triplet; index_covert_CSR2Triplet = nullptr;
       if(index_covert_extra_Diag2CSR) delete [] index_covert_extra_Diag2CSR; index_covert_extra_Diag2CSR = nullptr;

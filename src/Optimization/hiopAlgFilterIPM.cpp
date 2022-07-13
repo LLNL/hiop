@@ -352,7 +352,13 @@ int hiopAlgFilterIPMBase::startingProcedure(hiopIterate& it_ini,
   if(!warmstart_avail) {
     it_ini.projectPrimalsDIntoBounds(kappa1, kappa2);
   }
-  it_ini.determineSlacks();
+  int num_adjusted_slacks = it_ini.compute_safe_slacks(it_ini, mu0);
+
+  // adjust small/negative slacks
+  if(num_adjusted_slacks > 0) {    
+    nlp->log->printf(hovWarning, "%d slacks are too small. Adjust corresponding variable slacks!\n", num_adjusted_slacks);
+    nlp->adjust_bounds(it_ini);
+  }
 
   if(!duals_avail) {
     // initialization for zl, zu, vl, vu
@@ -565,10 +571,9 @@ bool hiopAlgFilterIPMBase::update_log_barrier_params(hiopIterate& it,
       assert(nlp->options->GetString("elastic_mode")=="correct_it" || 
              nlp->options->GetString("elastic_mode")=="correct_it_adjust_bound");
       // recompute slacks according to the new bounds
-      it.determineSlacks();
+      int num_adjusted_slacks = it.compute_safe_slacks(it, mu_new);
 
       // adjust small/negative slacks
-      int num_adjusted_slacks = it.adjust_small_slacks(it, mu_new);
       if(num_adjusted_slacks > 0) {    
         nlp->log->printf(hovLinAlgScalars,
                          "update_log_barrier_params: %d slacks are too small after tightening the bounds. "
@@ -1138,7 +1143,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
         break;
       }
       bret = it_trial->takeStep_primals(*it_curr, *dir, _alpha_primal, _alpha_dual); assert(bret);
-      num_adjusted_slacks = it_trial->adjust_small_slacks(*it_curr, _mu);
+      num_adjusted_slacks = it_trial->compute_safe_slacks(*it_curr, _mu);
       nlp->runStats.tmSolverInternal.stop(); //---
 
       //evaluate the problem at the trial iterate (functions only)
@@ -1352,6 +1357,7 @@ void hiopAlgFilterIPMQuasiNewton::outputIteration(int lsStatus, int lsNum, int u
  *****************************************************************************************************/
 hiopAlgFilterIPMNewton::hiopAlgFilterIPMNewton(hiopNlpFormulation* nlp_in, const bool within_FR)
   : hiopAlgFilterIPMBase(nlp_in, within_FR),
+    pd_perturb_{nullptr},
     fact_acceptor_{nullptr}
 {
   reload_options();
@@ -1373,6 +1379,7 @@ hiopAlgFilterIPMNewton::hiopAlgFilterIPMNewton(hiopNlpFormulation* nlp_in, const
 hiopAlgFilterIPMNewton::~hiopAlgFilterIPMNewton()
 {
   delete fact_acceptor_;
+  delete pd_perturb_;
 }
 
 void hiopAlgFilterIPMNewton::reload_options()
@@ -1483,14 +1490,14 @@ hiopAlgFilterIPMNewton::switch_to_safer_KKT(hiopKKTLinSys* kkt_curr,
       
       kkt->set_safe_mode(linsol_safe_mode_on);
       
-      pd_perturb_.initialize(nlp);
-      pd_perturb_.set_mu(_mu);
-      kkt->set_PD_perturb_calc(&pd_perturb_);
+      pd_perturb_->initialize(nlp);        
+      pd_perturb_->set_mu(_mu);
+      kkt->set_PD_perturb_calc(pd_perturb_);
       
       delete fact_acceptor_;      
       //use inertia correction just be safe
-      fact_acceptor_ = new hiopFactAcceptorIC(&pd_perturb_, nlp->m_eq()+nlp->m_ineq());
-      //fact_acceptor_ = decideAndCreateFactAcceptor(&pd_perturb_, nlp, kkt);
+      fact_acceptor_ = new hiopFactAcceptorIC(pd_perturb_, nlp->m_eq()+nlp->m_ineq());
+      //fact_acceptor_ = decideAndCreateFactAcceptor(pd_perturb_, nlp, kkt);
       kkt->set_fact_acceptor(fact_acceptor_);
       
       linsol_safe_mode_last_iter_switched_on = iter_num;
@@ -1499,6 +1506,9 @@ hiopAlgFilterIPMNewton::switch_to_safer_KKT(hiopKKTLinSys* kkt_curr,
     } // end of if(kkt)
   }
 #endif
+  //
+  // all other KKT formulations -> never switch back to safe mode
+  //
   switched = false;
   return kkt_curr;
 }
@@ -1516,7 +1526,11 @@ hiopAlgFilterIPMNewton::switch_to_fast_KKT(hiopKKTLinSys* kkt_curr,
 
 {
   assert("speculative"==hiop::tolower(nlp->options->GetString("linsol_mode")));
+  
 #ifdef HIOP_SPARSE
+  //
+  // Switch to quick mode for condensed
+  //
   auto* kkt = dynamic_cast<hiopKKTLinSysCondensedSparse*>(kkt_curr);
   //KKT should not be a condensed KKT (this is what we switch to) and we should be under
   //the condensed KKT user option
@@ -1541,17 +1555,17 @@ hiopAlgFilterIPMNewton::switch_to_fast_KKT(hiopKKTLinSys* kkt_curr,
       //reset last iter safe mode was switched on
       linsol_safe_mode_last_iter_switched_on = 100000;
       
-      //decrease mu reduction strategies since they stresses the Cholesky solve less
+      //decrease mu reduction strategies since they are numerically friendlier with the Cholesky solve
       theta_mu=1.05;
       kappa_mu=0.8;
       
-      pd_perturb_.initialize(nlp);
-      pd_perturb_.set_mu(mu);
-      kkt->set_PD_perturb_calc(&pd_perturb_);
+      pd_perturb_->initialize(nlp);
+      pd_perturb_->set_mu(mu);
+      kkt->set_PD_perturb_calc(pd_perturb_);
       
       delete fact_acceptor_;
       //use options passed by the user for the IC acceptor
-      fact_acceptor_ = decideAndCreateFactAcceptor(&pd_perturb_, nlp, kkt);
+      fact_acceptor_ = decideAndCreateFactAcceptor(pd_perturb_, nlp, kkt);
       kkt->set_fact_acceptor(fact_acceptor_);
 
       return kkt;
@@ -1559,17 +1573,35 @@ hiopAlgFilterIPMNewton::switch_to_fast_KKT(hiopKKTLinSys* kkt_curr,
   }
 #endif
 
-  //safe mode is on for the first three iterations for MDS under speculative linsol mode
-        
+  //
+  // MDS safe mode is on for the first three iterations for MDS under speculative linsol mode
+  //        
   //TODO: maybe the newly developed adjust slacks and push bounds features make the MDS probles less
-  //challenging and we don't need safe mode in the first three iterations for MDS.
+  //challenging and we don't need safe mode in the first three iterations for MDS under 'speculative'
+  // IR should also make this robust.
 
   if(nullptr!=dynamic_cast<hiopNlpMDS*>(nlp)) {
-    if(iter_num<=2) {
+
+    //first two iteration are safe-mode : TODO: this likely can be relaxed
+    if(iter_num<=2) {   
       linsol_safe_mode_on=true;
+      switched = false;
+    } else {
+      if(linsol_safe_mode_on==true) {
+        switched = true;
+        linsol_safe_mode_on = false;
+      } else {
+        assert(false==linsol_safe_mode_on);
+        switched = false;
+      }
     }
-  }  
-  
+    kkt_curr->set_safe_mode(linsol_safe_mode_on);
+    return kkt_curr;
+  }
+
+  //
+  // all other KKT formulations -> do nothing (and return switched=false)
+  //
   switched = false;
   return kkt_curr;
 }
@@ -1625,10 +1657,6 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
   nlp->runStats.initialize();
   nlp->runStats.kkt.initialize();
 
-  if(!pd_perturb_.initialize(nlp)) {
-    return SolveInitializationError;
-  }
-
   //todo: have this as option maybe
   //number of safe mode iteration to run once linsol mode is switched to on
   //double every time linsol mode is switched on
@@ -1668,14 +1696,25 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 
   hiopKKTLinSys* kkt = decideAndCreateLinearSystem(nlp);
   assert(kkt != NULL);
-  kkt->set_PD_perturb_calc(&pd_perturb_);
+  
+  auto* kkt_normaleqn = dynamic_cast<hiopKKTLinSysNormalEquation*>(kkt);
+  if(kkt_normaleqn) {
+    pd_perturb_ = new hiopPDPerturbationNormalEqn();
+  } else {
+    pd_perturb_ = new hiopPDPerturbation();
+  }
+  if(!pd_perturb_->initialize(nlp)) {
+    return SolveInitializationError;
+  }
+  
+  kkt->set_PD_perturb_calc(pd_perturb_);
   kkt->set_logbar_mu(_mu);
   
   if(fact_acceptor_) {
     delete fact_acceptor_;
     fact_acceptor_ = nullptr;
   }
-  fact_acceptor_ = decideAndCreateFactAcceptor(&pd_perturb_, nlp, kkt);
+  fact_acceptor_ = decideAndCreateFactAcceptor(pd_perturb_, nlp, kkt);
   kkt->set_fact_acceptor(fact_acceptor_);
   
   _alpha_primal = _alpha_dual = 0;
@@ -1813,7 +1852,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
      * Search direction calculation
      ***************************************************/
     kkt->set_logbar_mu(_mu);
-    pd_perturb_.set_mu(_mu);
+    pd_perturb_->set_mu(_mu);
 
     //this will cache the primal infeasibility norm for (re)use in the dual updating
     double infeas_nrm_trial;
@@ -1849,6 +1888,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
                                    switched);
           if(switched) {
             nlp->log->printf(hovWarning, "Switched to the fast KKT linsys\n");
+            assert(false==linsol_safe_mode_on);
           }
           
         } else {
@@ -1857,7 +1897,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
         }
       }
     }
-    
+
     for(int linsolve=1; linsolve<=2; ++linsolve) {
 
       bool switched;
@@ -1991,7 +2031,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
           break;
         }
         bret = it_trial->takeStep_primals(*it_curr, *dir, _alpha_primal, _alpha_dual); assert(bret);
-        num_adjusted_slacks = it_trial->adjust_small_slacks(*it_curr, _mu);
+        num_adjusted_slacks = it_trial->compute_safe_slacks(*it_curr, _mu);
         nlp->runStats.tmSolverInternal.stop(); //---
 
         //evaluate the problem at the trial iterate (functions only)
@@ -2441,7 +2481,7 @@ int hiopAlgFilterIPMBase::apply_second_order_correction(hiopKKTLinSys* kkt,
     // Compute trial point
     bret = it_trial->takeStep_primals(*it_curr, *soc_dir, alpha_primal_soc, alpha_dual_soc); 
     assert(bret);
-    num_adjusted_slacks = it_trial->adjust_small_slacks(*it_curr, _mu);
+    num_adjusted_slacks = it_trial->compute_safe_slacks(*it_curr, _mu);
 
     //evaluate the problem at the trial iterate (functions only)
     if(!this->evalNlp_funcOnly(*it_trial, _f_nlp_trial, *_c_trial, *_d_trial)) {
@@ -2587,9 +2627,17 @@ bool hiopAlgFilterIPMBase::reset_var_from_fr_sol(hiopKKTLinSys* kkt, bool reset_
     nlp->log->printf(hovScalars, "FR: Update slacks and duals from the modified primals.\n");
   }
   // determine other slacks
-  it_trial->determineSlacks();
+//  it_trial->determineSlacks();  // TODO: adjust small slacks after hard FR?
 
-  // compute dx = x_{k+1} - x_k
+  int num_adjusted_slacks = it_trial->compute_safe_slacks(*it_curr, mu0);
+
+  // adjust small/negative slacks
+  if(num_adjusted_slacks > 0) {    
+    nlp->log->printf(hovWarning, "%d slacks are too small. Adjust corresponding variable slacks!\n", num_adjusted_slacks);
+    nlp->adjust_bounds(*it_trial);
+  }
+
+  // compute dx = x_{k+1} - x_k, assuming all the fr iterations contrubute one step
   dir->get_x()->copyFrom(*it_trial->get_x());
   dir->get_x()->axpy(-1.0, *it_curr->get_x());
   dir->get_d()->copyFrom(*it_trial->get_d());
@@ -2598,6 +2646,14 @@ bool hiopAlgFilterIPMBase::reset_var_from_fr_sol(hiopKKTLinSys* kkt, bool reset_
   if(reset_dual) {
     // compute directions for bound duals (zl, zu, vl, vu)
     kkt->compute_directions_for_full_space(resid, dir);
+
+    // compute bound duals (zl, zu, vl, vu) for trial point
+    double alpha_primal_temp = 1.0;
+    double alpha_dual_temp = 1.0;
+    bool bret = it_curr->fractionToTheBdry(*dir, _tau, alpha_primal_temp, alpha_dual_temp);
+    assert(bret);
+
+    it_trial->takeStep_duals(*it_curr, *dir, alpha_primal_temp, alpha_dual_temp);
 
     // TODO: set this as a user option. Now we set duals to 0.0 as the default option
     bool reset_dual_from_lsq_after_FR = false;
@@ -2687,7 +2743,8 @@ bool hiopAlgFilterIPMBase::solve_soft_feasibility_restoration(hiopKKTLinSys* kkt
     // Compute trial point
     bret = it_trial->takeStep_primals(*it_curr, *soft_dir, alpha_primal_soft, alpha_dual_soft); 
     assert(bret);
-
+    it_trial->determineSlacks(); // TODO: adjust small slacks in soft FR?
+    
     //evaluate the problem at the trial iterate (functions only)
     if(!this->evalNlp_funcOnly(*it_trial, _f_nlp_trial, *_c_trial, *_d_trial)) {
       solver_status_ = Error_In_User_Function;

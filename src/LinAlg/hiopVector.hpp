@@ -66,8 +66,10 @@ public:
   virtual ~hiopVector() {};
   /// @brief Set all elements to zero.
   virtual void setToZero() = 0;
-  /// @brief Set all elements  to  c
+  /// @brief Set all elements to c
   virtual void setToConstant( double c ) = 0;
+  /// @brief Set all elements to random values uniformly distributed between `minv` and `maxv`.  TODO: add unit test
+  virtual void set_to_random_uniform(double minv, double maxv) = 0;
   /// @brief Set all elements that are not zero in ix to  c, and the rest to 0
   virtual void setToConstant_w_patternSelect( double c, const hiopVector& ix)=0;
 
@@ -76,6 +78,7 @@ public:
   /// @brief Copy the elements of v
   virtual void copyFrom(const hiopVector& v ) = 0;
   virtual void copyFrom(const double* v_local_data) = 0; //v should be of length at least n_local_
+  virtual void copy_from_w_pattern(const hiopVector& src, const hiopVector& select) = 0;
   /// @brief Copy the 'n' elements of v starting at 'start_index_in_this' in 'this'
   virtual void copyFromStarting(int start_index_in_this, const double* v, int n) = 0;
   /// @brief Copy v in 'this' starting at start_index_in_src in  'this'. */
@@ -191,6 +194,8 @@ public:
   virtual void scale(double alpha) = 0;
   /// @brief this += alpha * x
   virtual void axpy(double alpha, const hiopVector& x) = 0;
+  /// @brief this += alpha * x, for the entries in 'this' where corresponding 'select' is nonzero.
+  virtual void axpy_w_pattern(double alpha, const hiopVector& x, const hiopVector& select) = 0;
 
   /**
    * @brief Performs axpy, this += alpha*x, on the indexes in this specified by i.
@@ -305,12 +310,13 @@ public:
   virtual void copyToDev() const = 0;
   virtual void copyFromDev() const = 0;
   
-  /// @brief get number of values that are less than the given value 'val'
+  /// @brief get number of values that are less than the given value 'val'. TODO: add unit test
   virtual size_type numOfElemsLessThan(const double &val) const = 0;
-  /// @brief get number of values whose absolute value are less than the given value 'val'
+  /// @brief get number of values whose absolute value are less than the given value 'val'. TODO: add unit test
   virtual size_type numOfElemsAbsLessThan(const double &val) const = 0;  
 
   /// @brief set int array 'arr', starting at `start` and ending at `end`, to the values in `arr_src` from 'start_src`
+  /// TODO: add unit test
   virtual void set_array_from_to(hiopInterfaceBase::NonlinearityType* arr, 
                                  const int start, 
                                  const int end, 
@@ -320,6 +326,10 @@ public:
                                  const int start, 
                                  const int end, 
                                  const hiopInterfaceBase::NonlinearityType arr_src) const = 0;
+
+  /// @brief check if `this` vector is identical to `vec`
+  virtual bool is_equal(const hiopVector& vec) const = 0;
+
 protected:
   size_type n_; //we assume sequential data
 protected:

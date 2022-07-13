@@ -134,6 +134,29 @@ public:
     return reduceReturn(fail, &x);
   }
 
+  /// Test set_to_random_uniform method of hiop vector implementation
+  bool vector_set_to_random_uniform(hiop::hiopVector& x, const int rank)
+  {
+    int fail = 0;
+    local_ordinal_type N = getLocalSize(&x);
+
+    for(local_ordinal_type i=0; i<N; ++i)
+    {
+      setLocalElement(&x, i, zero);
+    }
+
+    x.set_to_random_uniform(one,two);
+
+    fail = verifyAnswer(&x, one, two);
+    if(fail >0){
+      std::cout << "num fails = " << fail << std::endl;
+    }
+	
+    printMessage(fail, __func__, rank);
+
+    return reduceReturn(fail, &x);
+  }
+
   /**
    * @brief Test method: 
    * forall n in n_local if (pattern[n] != 0.0) this[n] = x_val
@@ -1975,6 +1998,25 @@ public:
     return reduceReturn(fail, &x);
   }
 
+  /**
+   * @brief Test:
+   * x[i] == y[i] 
+   */
+  bool vector_is_equal(hiop::hiopVector& x, hiop::hiopVector& y, const int rank)
+  {
+    const local_ordinal_type Nx = getLocalSize(&x);
+    int fail = 0;
+    x.setToConstant(one);
+    y.setToConstant(one);
+    fail += (int) (!(x.is_equal(y))); // x.is_equal(y) should returns true (1).
+
+    y.setToConstant(two);
+    fail += (int) ((x.is_equal(y)));  // x.is_equal(y) should returns false (0).
+
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &x);
+  }
+
   /// Returns element _i_ of vector _x_.
   real_type getLocalElement(const hiop::hiopVector* x, local_ordinal_type i)
   {
@@ -1999,6 +2041,26 @@ public:
     {
       if(!isEqual(xdata[i], answer))
       {
+        ++local_fail;
+      }
+    }
+
+    return local_fail;
+  }
+
+  /// Checks if _local_ vector elements are set to `answer`.
+  int verifyAnswer(hiop::hiopVector* x, real_type min_val, real_type max_val)
+  {
+    const local_ordinal_type N = getLocalSize(x);
+    const real_type* xdata = getLocalDataConst(x);
+    
+    int local_fail = 0;
+
+    for(local_ordinal_type i = 0; i < N; ++i)
+    {
+      if(xdata[i] > max_val || xdata[i]<min_val)
+      {
+        std::cout << "minv: " << min_val << ", maxv: " << max_val << ", x:[" << i << "]:" << xdata[i] << std::endl;
         ++local_fail;
       }
     }
