@@ -985,13 +985,13 @@ void hiopOptionsNLP::register_options()
                         "Jacobian (delta_c=delta_c_bar*mu^kappa_c)");
 
     vector<string> range(2); range[0]="primal_first"; range[1]="dual_first";
-    register_str_option("reg_priority",
+    register_str_option("regularization_priority",
                         "primal_first",
                         range,
                         "The method used to compute dual regularization. (TODO)");
 
     range[0]="standard"; range[1]="randomized";
-    register_str_option("reg_method",
+    register_str_option("regularization_method",
                         "standard",
                         range,
                         "The method used to compute dual regularization. (TODO)");

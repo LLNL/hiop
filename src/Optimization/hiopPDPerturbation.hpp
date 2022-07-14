@@ -7,7 +7,7 @@
 namespace hiop
 {
 
-class hiopPDPerturbationBase
+class hiopPDPerturbation
 {
 public:
   /** Default constructor 
@@ -15,7 +15,7 @@ public:
    * implementation paper. \ref initialize(hiopNlpFormulation*) should be used to initialize
    * this class based on HiOp option file or HiOp user-supplied runtime options.
    */
-  hiopPDPerturbationBase()
+  hiopPDPerturbation()
     : delta_w_min_bar_(1e-20),
       delta_w_max_bar_(1e+40),
       delta_w_0_bar_(1e-4),
@@ -40,11 +40,19 @@ public:
       delta_wd_last_(nullptr),
       delta_cc_last_(nullptr),
       delta_cd_last_(nullptr),
-      nlp_(nullptr)
+      nlp_(nullptr),
+      delta_wx_curr_db_{0.},
+      delta_wd_curr_db_{0.},
+      delta_cc_curr_db_{0.},
+      delta_cd_curr_db_{0.},
+      delta_wx_last_db_{0.},
+      delta_wd_last_db_{0.},
+      delta_cc_last_db_{0.},
+      delta_cd_last_db_{0.}
   {
   }
 
-  virtual ~hiopPDPerturbationBase()
+  virtual ~hiopPDPerturbation()
   {
     delete delta_wx_curr_;
     delete delta_wd_curr_;
@@ -101,6 +109,8 @@ public:
     return true;
   }
 
+  virtual bool check_consistency() = 0;
+
 protected:
   /** Current and last perturbations, primal is split in x and d, dual in c and d. */
   hiopVector* delta_wx_curr_;
@@ -113,6 +123,16 @@ protected:
   hiopVector* delta_cc_last_;
   hiopVector* delta_cd_last_;
 
+  double delta_wx_curr_db_;
+  double delta_wd_curr_db_;
+  double delta_cc_curr_db_;
+  double delta_cd_curr_db_;
+
+  double delta_wx_last_db_;
+  double delta_wd_last_db_;
+  double delta_cc_last_db_;
+  double delta_cd_last_db_;
+  
   /** Algorithmic parameters */
 
   /** Smallest possible perturbation for Hessian (for primal 'x' and 's' variables). */
@@ -186,10 +206,11 @@ protected: //methods
    *  when the @num_degen_iters_ > @num_degen_max_iters_
    */
   virtual void update_degeneracy_type();
-
+  virtual void set_delta_curr_vec(DeltasUpdateType taskid) = 0;
+  virtual void set_delta_last_vec(DeltasUpdateType taskid) = 0;
 };
 
-class hiopPDPerturbation : public hiopPDPerturbationBase
+class hiopPDPerturbationPrimalFirstScala : public hiopPDPerturbation
 {
 public:
   /** Default constructor 
@@ -197,8 +218,8 @@ public:
    * implementation paper. \ref initialize(hiopNlpFormulation*) should be used to initialize
    * this class based on HiOp option file or HiOp user-supplied runtime options.
    */
-  hiopPDPerturbation();
-  virtual ~hiopPDPerturbation();
+  hiopPDPerturbationPrimalFirstScala() : hiopPDPerturbation() {}
+  virtual ~hiopPDPerturbationPrimalFirstScala() {}
 
   /** Called when a new linear system is attempted to be factorized 
    */
@@ -221,43 +242,43 @@ public:
                                            hiopVector& delta_cc,
                                            hiopVector& delta_cd);
                   
-  inline bool check_consistency() 
-  {
-    return (delta_wx_curr_db_ == delta_wd_curr_db_) && (delta_cc_curr_db_ == delta_cd_curr_db_);
-  }
+  virtual bool check_consistency();
                          
 protected:
-  /** Current and last perturbations, primal is split in x and d, dual in c and d. */
-  double delta_wx_curr_db_;
-  double delta_wd_curr_db_;
-  double delta_cc_curr_db_;
-  double delta_cd_curr_db_;
 
-  double delta_wx_last_db_;
-  double delta_wd_last_db_;
-  double delta_cc_last_db_;
-  double delta_cd_last_db_;
 
 protected: // methods
-  void set_delta_curr_vec(DeltasUpdateType taskid); 
-  void set_delta_last_vec(DeltasUpdateType taskid);
+  virtual void set_delta_curr_vec(DeltasUpdateType taskid); 
+  virtual void set_delta_last_vec(DeltasUpdateType taskid);
 
-private: //methods
   /** Internal method implementing the computation of delta_w's to correct wrong inertia
    * 
    */
-  bool guts_of_compute_perturb_wrong_inertia(double& delta_wx, double& delta_wd);
+  virtual bool guts_of_compute_perturb_wrong_inertia(double& delta_wx, double& delta_wd);
 
-  double compute_delta_c(const double& mu) const;  
+  virtual double compute_delta_c(const double& mu) const;  
 
 };
 
-class hiopPDPerturbationDualFirst : public hiopPDPerturbation
+class hiopPDPerturbationPrimalFirstRand : public hiopPDPerturbationPrimalFirstScala
 {
 public:
-  hiopPDPerturbationDualFirst();
+  hiopPDPerturbationPrimalFirstRand() : hiopPDPerturbationPrimalFirstScala() {}
 
-  virtual ~hiopPDPerturbationDualFirst();
+  virtual ~hiopPDPerturbationPrimalFirstRand() {}
+
+protected: // methods
+  virtual void set_delta_curr_vec(DeltasUpdateType taskid); 
+  virtual void set_delta_last_vec(DeltasUpdateType taskid);  
+};
+
+
+class hiopPDPerturbationDualFirstScala : public hiopPDPerturbation
+{
+public:
+  hiopPDPerturbationDualFirstScala();
+
+  virtual ~hiopPDPerturbationDualFirstScala();
 
   /** Called when a new linear system is attempted to be factorized 
    */
@@ -280,22 +301,38 @@ public:
                                            hiopVector& delta_cc,
                                            hiopVector& delta_cd);
 
-private: //methods
+  virtual bool check_consistency();
+                         
+protected: //variables
+  double delta_c_min_bar_;
+  double kappa_c_plus_;
+
+protected: // methods
+  virtual void set_delta_curr_vec(DeltasUpdateType taskid); 
+  virtual void set_delta_last_vec(DeltasUpdateType taskid);
+
   /** 
    * Internal method implementing the computation of delta_w's to correct wrong inertia
    */
-  bool compute_primal_perturb_impl();
+  virtual bool compute_primal_perturb_impl();
                                       
   /** 
    * Internal method implementing the computation of delta_c's to correct wrong inertia
    */
-  bool compute_dual_perturb_impl(const double& mu);
+  virtual bool compute_dual_perturb_impl(const double& mu);
 
-protected: //variables
-  double delta_c_max_bar_;
-  double delta_c_min_bar_;
-  double kappa_c_plus_;
+};
 
+class hiopPDPerturbationDualFirstRand : public hiopPDPerturbationDualFirstScala
+{
+public:
+  hiopPDPerturbationDualFirstRand() : hiopPDPerturbationDualFirstScala() {}
+
+  virtual ~hiopPDPerturbationDualFirstRand() {}
+
+protected: // methods
+  virtual void set_delta_curr_vec(DeltasUpdateType taskid); 
+  virtual void set_delta_last_vec(DeltasUpdateType taskid);  
 };
 
 } //end of namespace

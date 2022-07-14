@@ -66,7 +66,7 @@ namespace hiop
    * 'nlp_' object.
    * Returns 'false' if something goes wrong, otherwise 'true'
    */
-  bool hiopPDPerturbationBase::initialize(hiopNlpFormulation* nlp)
+  bool hiopPDPerturbation::initialize(hiopNlpFormulation* nlp)
   {
     nlp_ = nlp;
     delta_w_min_bar_ = nlp->options->GetNumeric("delta_w_min_bar");
@@ -105,7 +105,7 @@ namespace hiop
   /** Decides degeneracy @hess_degenerate_ and @jac_degenerate_ based on @deltas_test_type_ 
    *  when the @num_degen_iters_ > @num_degen_max_iters_
    */
-  void hiopPDPerturbationBase::update_degeneracy_type()
+  void hiopPDPerturbation::update_degeneracy_type()
   {
    switch (deltas_test_type_) {
    case dttNoTest:
@@ -155,26 +155,9 @@ namespace hiop
    }
   }
 
-  hiopPDPerturbation::hiopPDPerturbation()
-    : hiopPDPerturbationBase(),
-      delta_wx_curr_db_{0.},
-      delta_wd_curr_db_{0.},
-      delta_cc_curr_db_{0.},
-      delta_cd_curr_db_{0.},
-      delta_wx_last_db_{0.},
-      delta_wd_last_db_{0.},
-      delta_cc_last_db_{0.},
-      delta_cd_last_db_{0.}
-  {
-  }
-
-  hiopPDPerturbation::~hiopPDPerturbation()
-  {
-  }
-
   /** Called when a new linear system is attempted to be factorized 
    */
-  bool hiopPDPerturbation::compute_initial_deltas(hiopVector& delta_wx,
+  bool hiopPDPerturbationPrimalFirstScala::compute_initial_deltas(hiopVector& delta_wx,
                                                   hiopVector& delta_wd,
                                                   hiopVector& delta_cc,
                                                   hiopVector& delta_cd)
@@ -235,7 +218,7 @@ namespace hiop
   }
 
   /** Method for correcting inertia */
-  bool hiopPDPerturbation::compute_perturb_wrong_inertia(hiopVector& delta_wx,
+  bool hiopPDPerturbationPrimalFirstScala::compute_perturb_wrong_inertia(hiopVector& delta_wx,
                                                          hiopVector& delta_wd,
                                                          hiopVector& delta_cc,
                                                          hiopVector& delta_cd)
@@ -267,15 +250,16 @@ namespace hiop
     delta_cc.copyFrom(*delta_cc_curr_);
     delta_cd.copyFrom(*delta_cd_curr_);
 
-    std::cout << "correct primal (mean): " << delta_wx_curr_db_ << std::endl;
-    std::cout << "correct dual (mean): " << delta_cc_curr_db_ << std::endl;
+    nlp_->log->printf(hovScalars, 
+                      "primal regularization: %12.5e, dual regularization: %12.5e \n", 
+                      delta_wx_curr_db_,delta_cc_curr_db_);
     return ret;
   }
 
   /** Method for correcting singular Jacobian 
    *  (follows Ipopt closely since the paper seems to be outdated)
    */
-  bool hiopPDPerturbation::compute_perturb_singularity(hiopVector& delta_wx, 
+  bool hiopPDPerturbationPrimalFirstScala::compute_perturb_singularity(hiopVector& delta_wx, 
                                                        hiopVector& delta_wd,
                                                        hiopVector& delta_cc,
                                                        hiopVector& delta_cd)
@@ -354,8 +338,9 @@ namespace hiop
     delta_cc.copyFrom(*delta_cc_curr_);
     delta_cd.copyFrom(*delta_cd_curr_);
 
-    std::cout << "correct primal (mean): " << delta_wx_curr_db_ << std::endl;
-    std::cout << "correct dual (mean): " << delta_cc_curr_db_ << std::endl;
+    nlp_->log->printf(hovScalars, 
+                      "primal regularization: %12.5e, dual regularization: %12.5e \n", 
+                      delta_wx_curr_db_,delta_cc_curr_db_);
 
     return bret;
   }
@@ -363,7 +348,7 @@ namespace hiop
   /** 
    * Internal method implementing the computation of delta_w's to correct wrong inertia
    */
-  bool hiopPDPerturbation::guts_of_compute_perturb_wrong_inertia(double& delta_wx, double& delta_wd)
+  bool hiopPDPerturbationPrimalFirstScala::guts_of_compute_perturb_wrong_inertia(double& delta_wx, double& delta_wd)
   {
     assert(delta_wx_curr_db_ == delta_wd_curr_db_ && "these should be equal");
     assert(delta_wx_last_db_ == delta_wd_last_db_ && "these should be equal");
@@ -396,107 +381,117 @@ namespace hiop
     return true;
   }
 
-  double hiopPDPerturbation::compute_delta_c(const double& mu) const
+  double hiopPDPerturbationPrimalFirstScala::compute_delta_c(const double& mu) const
   {
     return delta_c_bar_ * std::pow(mu, kappa_c_);
   }
 
-  void hiopPDPerturbation::set_delta_curr_vec(DeltasUpdateType taskid)
+  bool hiopPDPerturbationPrimalFirstScala::check_consistency() 
   {
-    if(nlp_->options->GetString("reg_method") == "randomized") {
-      if(DualUpdate == taskid) {
-        // only update dual deltas
-        delta_cc_curr_->set_to_random_uniform(min_uniform_ratio_*delta_cc_curr_db_, max_uniform_ratio_*delta_cc_curr_db_);
-        delta_cd_curr_->set_to_random_uniform(min_uniform_ratio_*delta_cd_curr_db_, max_uniform_ratio_*delta_cd_curr_db_);
-      } else if(PrimalUpdate == taskid) {
-        // only update primal deltas
-        delta_wx_curr_->set_to_random_uniform(min_uniform_ratio_*delta_wx_curr_db_, max_uniform_ratio_*delta_wx_curr_db_);
-        delta_wd_curr_->set_to_random_uniform(min_uniform_ratio_*delta_wd_curr_db_, max_uniform_ratio_*delta_wd_curr_db_);
-      } else {
-        // update all deltas      
-        delta_wx_curr_->set_to_random_uniform(min_uniform_ratio_*delta_wx_curr_db_, max_uniform_ratio_*delta_wx_curr_db_);
-        delta_wd_curr_->set_to_random_uniform(min_uniform_ratio_*delta_wd_curr_db_, max_uniform_ratio_*delta_wd_curr_db_);
-        delta_cc_curr_->set_to_random_uniform(min_uniform_ratio_*delta_cc_curr_db_, max_uniform_ratio_*delta_cc_curr_db_);
-        delta_cd_curr_->set_to_random_uniform(min_uniform_ratio_*delta_cd_curr_db_, max_uniform_ratio_*delta_cd_curr_db_);
-      }
+    return (delta_wx_curr_db_ == delta_wd_curr_db_) && (delta_cc_curr_db_ == delta_cd_curr_db_);
+  }
+
+  void hiopPDPerturbationPrimalFirstScala::set_delta_curr_vec(DeltasUpdateType taskid)
+  {
+    if(DualUpdate == taskid) {
+      // only update dual deltas
+      delta_cc_curr_->setToConstant(delta_cc_curr_db_);
+      delta_cd_curr_->setToConstant(delta_cd_curr_db_);
+    } else if(PrimalUpdate == taskid) {
+      // only update primal deltas
+      delta_wx_curr_->setToConstant(delta_wx_curr_db_);
+      delta_wd_curr_->setToConstant(delta_wd_curr_db_);
     } else {
-      if(DualUpdate == taskid) {
-        // only update dual deltas
-        delta_cc_curr_->setToConstant(delta_cc_curr_db_);
-        delta_cd_curr_->setToConstant(delta_cd_curr_db_);
-      } else if(PrimalUpdate == taskid) {
-        // only update primal deltas
-        delta_wx_curr_->setToConstant(delta_wx_curr_db_);
-        delta_wd_curr_->setToConstant(delta_wd_curr_db_);
-      } else {
-        // update all deltas      
-        delta_cc_curr_->setToConstant(delta_cc_curr_db_);
-        delta_cd_curr_->setToConstant(delta_cd_curr_db_);
-        delta_wx_curr_->setToConstant(delta_wx_curr_db_);
-        delta_wd_curr_->setToConstant(delta_wd_curr_db_); 
-      }
+      // update all deltas      
+      delta_cc_curr_->setToConstant(delta_cc_curr_db_);
+      delta_cd_curr_->setToConstant(delta_cd_curr_db_);
+      delta_wx_curr_->setToConstant(delta_wx_curr_db_);
+      delta_wd_curr_->setToConstant(delta_wd_curr_db_); 
     }
   }
 
-  void hiopPDPerturbation::set_delta_last_vec(DeltasUpdateType taskid)
+  void hiopPDPerturbationPrimalFirstScala::set_delta_last_vec(DeltasUpdateType taskid)
   {
-    if(nlp_->options->GetString("reg_method") == "randomized") {
-      if(DualUpdate == taskid) {
-        // only update dual deltas
-        delta_cc_last_->set_to_random_uniform(min_uniform_ratio_*delta_cc_last_db_, max_uniform_ratio_*delta_cc_last_db_);
-        delta_cd_last_->set_to_random_uniform(min_uniform_ratio_*delta_cd_last_db_, max_uniform_ratio_*delta_cd_last_db_);
-      } else if(PrimalUpdate == taskid) {
-        // only update primal deltas
-        delta_wx_last_->set_to_random_uniform(min_uniform_ratio_*delta_wx_last_db_, max_uniform_ratio_*delta_wx_last_db_);
-        delta_wd_last_->set_to_random_uniform(min_uniform_ratio_*delta_wd_last_db_, max_uniform_ratio_*delta_wd_last_db_);
-      } else {
-        // update all deltas      
-        delta_wx_last_->set_to_random_uniform(min_uniform_ratio_*delta_wx_last_db_, max_uniform_ratio_*delta_wx_last_db_);
-        delta_wd_last_->set_to_random_uniform(min_uniform_ratio_*delta_wd_last_db_, max_uniform_ratio_*delta_wd_last_db_);
-        delta_cc_last_->set_to_random_uniform(min_uniform_ratio_*delta_cc_last_db_, max_uniform_ratio_*delta_cc_last_db_);
-        delta_cd_last_->set_to_random_uniform(min_uniform_ratio_*delta_cd_last_db_, max_uniform_ratio_*delta_cd_last_db_);
-      }
+    if(DualUpdate) {
+      // only update dual deltas
+      delta_cc_last_->setToConstant(delta_cc_last_db_);
+      delta_cd_last_->setToConstant(delta_cd_last_db_);
+    } else if(PrimalUpdate == 0) {
+      // only update primal deltas
+      delta_wx_last_->setToConstant(delta_wx_last_db_);
+      delta_wd_last_->setToConstant(delta_wd_last_db_);
     } else {
-      if(DualUpdate) {
-        // only update dual deltas
-        delta_cc_last_->setToConstant(delta_cc_last_db_);
-        delta_cd_last_->setToConstant(delta_cd_last_db_);
-      } else if(PrimalUpdate == 0) {
-        // only update primal deltas
-        delta_wx_last_->setToConstant(delta_wx_last_db_);
-        delta_wd_last_->setToConstant(delta_wd_last_db_);
-      } else {
-        // update all deltas      
-        delta_cc_last_->setToConstant(delta_cc_last_db_);
-        delta_cd_last_->setToConstant(delta_cd_last_db_);
-        delta_wx_last_->setToConstant(delta_wx_last_db_);
-        delta_wd_last_->setToConstant(delta_wd_last_db_); 
-      }
+      // update all deltas      
+      delta_cc_last_->setToConstant(delta_cc_last_db_);
+      delta_cd_last_->setToConstant(delta_cd_last_db_);
+      delta_wx_last_->setToConstant(delta_wx_last_db_);
+      delta_wd_last_->setToConstant(delta_wd_last_db_); 
     }
   }
 
 
   /*
-  *  class hiopPDPerturbationDualFirst
+  *  class hiopPDPerturbationPrimalFirstRand
   */
-  hiopPDPerturbationDualFirst::hiopPDPerturbationDualFirst()
+  void hiopPDPerturbationPrimalFirstRand::set_delta_last_vec(DeltasUpdateType taskid)
+  {
+    if(DualUpdate == taskid) {
+      // only update dual deltas
+      delta_cc_last_->set_to_random_uniform(min_uniform_ratio_*delta_cc_last_db_, max_uniform_ratio_*delta_cc_last_db_);
+      delta_cd_last_->set_to_random_uniform(min_uniform_ratio_*delta_cd_last_db_, max_uniform_ratio_*delta_cd_last_db_);
+    } else if(PrimalUpdate == taskid) {
+      // only update primal deltas
+      delta_wx_last_->set_to_random_uniform(min_uniform_ratio_*delta_wx_last_db_, max_uniform_ratio_*delta_wx_last_db_);
+      delta_wd_last_->set_to_random_uniform(min_uniform_ratio_*delta_wd_last_db_, max_uniform_ratio_*delta_wd_last_db_);
+    } else {
+      // update all deltas      
+      delta_wx_last_->set_to_random_uniform(min_uniform_ratio_*delta_wx_last_db_, max_uniform_ratio_*delta_wx_last_db_);
+      delta_wd_last_->set_to_random_uniform(min_uniform_ratio_*delta_wd_last_db_, max_uniform_ratio_*delta_wd_last_db_);
+      delta_cc_last_->set_to_random_uniform(min_uniform_ratio_*delta_cc_last_db_, max_uniform_ratio_*delta_cc_last_db_);
+      delta_cd_last_->set_to_random_uniform(min_uniform_ratio_*delta_cd_last_db_, max_uniform_ratio_*delta_cd_last_db_);
+    }
+  }
+
+  void hiopPDPerturbationPrimalFirstRand::set_delta_curr_vec(DeltasUpdateType taskid)
+  {
+    if(DualUpdate == taskid) {
+      // only update dual deltas
+      delta_cc_curr_->set_to_random_uniform(min_uniform_ratio_*delta_cc_curr_db_, max_uniform_ratio_*delta_cc_curr_db_);
+      delta_cd_curr_->set_to_random_uniform(min_uniform_ratio_*delta_cd_curr_db_, max_uniform_ratio_*delta_cd_curr_db_);
+    } else if(PrimalUpdate == taskid) {
+      // only update primal deltas
+      delta_wx_curr_->set_to_random_uniform(min_uniform_ratio_*delta_wx_curr_db_, max_uniform_ratio_*delta_wx_curr_db_);
+      delta_wd_curr_->set_to_random_uniform(min_uniform_ratio_*delta_wd_curr_db_, max_uniform_ratio_*delta_wd_curr_db_);
+    } else {
+      // update all deltas      
+      delta_wx_curr_->set_to_random_uniform(min_uniform_ratio_*delta_wx_curr_db_, max_uniform_ratio_*delta_wx_curr_db_);
+      delta_wd_curr_->set_to_random_uniform(min_uniform_ratio_*delta_wd_curr_db_, max_uniform_ratio_*delta_wd_curr_db_);
+      delta_cc_curr_->set_to_random_uniform(min_uniform_ratio_*delta_cc_curr_db_, max_uniform_ratio_*delta_cc_curr_db_);
+      delta_cd_curr_->set_to_random_uniform(min_uniform_ratio_*delta_cd_curr_db_, max_uniform_ratio_*delta_cd_curr_db_);
+    }
+  }
+
+
+
+
+  /*
+  *  class hiopPDPerturbationDualFirstScala
+  */
+  hiopPDPerturbationDualFirstScala::hiopPDPerturbationDualFirstScala()
     : hiopPDPerturbation(),
       delta_c_min_bar_(1e-20),
-      delta_c_max_bar_(1e-2),
       kappa_c_plus_(10.)
   {
   }
 
-  hiopPDPerturbationDualFirst::~hiopPDPerturbationDualFirst()
+  hiopPDPerturbationDualFirstScala::~hiopPDPerturbationDualFirstScala()
   {
   }
 
-  /** Called when a new linear system is attempted to be factorized 
-   */
-  bool hiopPDPerturbationDualFirst::compute_initial_deltas(hiopVector& delta_wx,
-                                                           hiopVector& delta_wd,
-                                                           hiopVector& delta_cc,
-                                                           hiopVector& delta_cd)            
+  bool hiopPDPerturbationDualFirstScala::compute_initial_deltas(hiopVector& delta_wx,
+                                                                hiopVector& delta_wd,
+                                                                hiopVector& delta_cc,
+                                                                hiopVector& delta_cd)            
   {
     update_degeneracy_type();
       
@@ -544,11 +539,10 @@ namespace hiop
     return true;
   }
 
-  /** Method for correcting inertia */
-  bool hiopPDPerturbationDualFirst::compute_perturb_wrong_inertia(hiopVector& delta_wx,
-                                                                  hiopVector& delta_wd,
-                                                                  hiopVector& delta_cc,
-                                                                  hiopVector& delta_cd)  
+  bool hiopPDPerturbationDualFirstScala::compute_perturb_wrong_inertia(hiopVector& delta_wx,
+                                                                       hiopVector& delta_wd,
+                                                                       hiopVector& delta_cc,
+                                                                       hiopVector& delta_cd)  
   {    
     /** 
     * for normal equation, wrong inertia means the KKT 1x1 matrix is not PD 
@@ -581,29 +575,25 @@ namespace hiop
     delta_cc.copyFrom(*delta_cc_curr_);
     delta_cd.copyFrom(*delta_cd_curr_);
 
+    nlp_->log->printf(hovScalars, 
+                      "primal regularization (mean): %12.5e, dual regularization (mean): %12.5e \n", 
+                      delta_wx_curr_db_,delta_cc_curr_db_);
     return ret;
   }
 
-  /** Method for correcting singular Jacobian 
-   *  (follows Ipopt closely since the paper seems to be outdated)
-   */
-  bool hiopPDPerturbationDualFirst::compute_perturb_singularity(hiopVector& delta_wx,
-                                                                hiopVector& delta_wd,
-                                                                hiopVector& delta_cc,
-                                                                hiopVector& delta_cd)
+  bool hiopPDPerturbationDualFirstScala::compute_perturb_singularity(hiopVector& delta_wx,
+                                                                     hiopVector& delta_wd,
+                                                                     hiopVector& delta_cc,
+                                                                     hiopVector& delta_cd)
   {
     /**
      * we try to corret the dual regularization first, and then primal regularizaion
-     * same implementation as  hiopPDPerturbationDualFirst::compute_perturb_wrong_inertia
+     * same implementation as  hiopPDPerturbationDualFirstScala::compute_perturb_wrong_inertia
      */
     return compute_perturb_wrong_inertia(delta_wx, delta_wd, delta_cc, delta_cd);
   }
 
-
-  /** 
-   * Internal method implementing the computation of delta_c
-   */
-  bool hiopPDPerturbationDualFirst::compute_dual_perturb_impl(const double& mu)
+  bool hiopPDPerturbationDualFirstScala::compute_dual_perturb_impl(const double& mu)
   {
     assert(delta_cc_curr_db_ == delta_cd_curr_db_ && "these should be equal");
     assert(delta_cc_last_db_ == delta_cd_last_db_ && "these should be equal");
@@ -631,15 +621,10 @@ namespace hiop
       return false;
     }
 
-    std::cout << "correct dual (mean): " << delta_cc_curr_db_ << std::endl;
-
     return true;
   }
 
-  /** 
-   * Internal method implementing the computation of delta_w
-   */
-  bool hiopPDPerturbationDualFirst::compute_primal_perturb_impl()
+  bool hiopPDPerturbationDualFirstScala::compute_primal_perturb_impl()
   {
     assert(delta_wx_curr_db_ == delta_wd_curr_db_ && "these should be equal");
     assert(delta_wx_last_db_ == delta_wd_last_db_ && "these should be equal");
@@ -668,10 +653,95 @@ namespace hiop
       bval = false;
     }
 
-    std::cout << "correct primal (mean): " << delta_wx_curr_db_ << std::endl;
-
     return bval;
   }
+
+  bool hiopPDPerturbationDualFirstScala::check_consistency() 
+  {
+    return (delta_wx_curr_db_ == delta_wd_curr_db_) && (delta_cc_curr_db_ == delta_cd_curr_db_);
+  }
+
+  void hiopPDPerturbationDualFirstScala::set_delta_curr_vec(DeltasUpdateType taskid)
+  {
+    if(DualUpdate == taskid) {
+      // only update dual deltas
+      delta_cc_curr_->setToConstant(delta_cc_curr_db_);
+      delta_cd_curr_->setToConstant(delta_cd_curr_db_);
+    } else if(PrimalUpdate == taskid) {
+      // only update primal deltas
+      delta_wx_curr_->setToConstant(delta_wx_curr_db_);
+      delta_wd_curr_->setToConstant(delta_wd_curr_db_);
+    } else {
+      // update all deltas      
+      delta_cc_curr_->setToConstant(delta_cc_curr_db_);
+      delta_cd_curr_->setToConstant(delta_cd_curr_db_);
+      delta_wx_curr_->setToConstant(delta_wx_curr_db_);
+      delta_wd_curr_->setToConstant(delta_wd_curr_db_); 
+    }
+  }
+
+  void hiopPDPerturbationDualFirstScala::set_delta_last_vec(DeltasUpdateType taskid)
+  {
+    if(DualUpdate) {
+      // only update dual deltas
+      delta_cc_last_->setToConstant(delta_cc_last_db_);
+      delta_cd_last_->setToConstant(delta_cd_last_db_);
+    } else if(PrimalUpdate == 0) {
+      // only update primal deltas
+      delta_wx_last_->setToConstant(delta_wx_last_db_);
+      delta_wd_last_->setToConstant(delta_wd_last_db_);
+    } else {
+      // update all deltas      
+      delta_cc_last_->setToConstant(delta_cc_last_db_);
+      delta_cd_last_->setToConstant(delta_cd_last_db_);
+      delta_wx_last_->setToConstant(delta_wx_last_db_);
+      delta_wd_last_->setToConstant(delta_wd_last_db_); 
+    }
+  }
+
+
+  /*
+  *  class hiopPDPerturbationDualFirstRand
+  */
+  void hiopPDPerturbationDualFirstRand::set_delta_last_vec(DeltasUpdateType taskid)
+  {
+    if(DualUpdate == taskid) {
+      // only update dual deltas
+      delta_cc_last_->set_to_random_uniform(min_uniform_ratio_*delta_cc_last_db_, max_uniform_ratio_*delta_cc_last_db_);
+      delta_cd_last_->set_to_random_uniform(min_uniform_ratio_*delta_cd_last_db_, max_uniform_ratio_*delta_cd_last_db_);
+    } else if(PrimalUpdate == taskid) {
+      // only update primal deltas
+      delta_wx_last_->set_to_random_uniform(min_uniform_ratio_*delta_wx_last_db_, max_uniform_ratio_*delta_wx_last_db_);
+      delta_wd_last_->set_to_random_uniform(min_uniform_ratio_*delta_wd_last_db_, max_uniform_ratio_*delta_wd_last_db_);
+    } else {
+      // update all deltas      
+      delta_wx_last_->set_to_random_uniform(min_uniform_ratio_*delta_wx_last_db_, max_uniform_ratio_*delta_wx_last_db_);
+      delta_wd_last_->set_to_random_uniform(min_uniform_ratio_*delta_wd_last_db_, max_uniform_ratio_*delta_wd_last_db_);
+      delta_cc_last_->set_to_random_uniform(min_uniform_ratio_*delta_cc_last_db_, max_uniform_ratio_*delta_cc_last_db_);
+      delta_cd_last_->set_to_random_uniform(min_uniform_ratio_*delta_cd_last_db_, max_uniform_ratio_*delta_cd_last_db_);
+    }
+  }
+
+  void hiopPDPerturbationDualFirstRand::set_delta_curr_vec(DeltasUpdateType taskid)
+  {
+    if(DualUpdate == taskid) {
+      // only update dual deltas
+      delta_cc_curr_->set_to_random_uniform(min_uniform_ratio_*delta_cc_curr_db_, max_uniform_ratio_*delta_cc_curr_db_);
+      delta_cd_curr_->set_to_random_uniform(min_uniform_ratio_*delta_cd_curr_db_, max_uniform_ratio_*delta_cd_curr_db_);
+    } else if(PrimalUpdate == taskid) {
+      // only update primal deltas
+      delta_wx_curr_->set_to_random_uniform(min_uniform_ratio_*delta_wx_curr_db_, max_uniform_ratio_*delta_wx_curr_db_);
+      delta_wd_curr_->set_to_random_uniform(min_uniform_ratio_*delta_wd_curr_db_, max_uniform_ratio_*delta_wd_curr_db_);
+    } else {
+      // update all deltas      
+      delta_wx_curr_->set_to_random_uniform(min_uniform_ratio_*delta_wx_curr_db_, max_uniform_ratio_*delta_wx_curr_db_);
+      delta_wd_curr_->set_to_random_uniform(min_uniform_ratio_*delta_wd_curr_db_, max_uniform_ratio_*delta_wd_curr_db_);
+      delta_cc_curr_->set_to_random_uniform(min_uniform_ratio_*delta_cc_curr_db_, max_uniform_ratio_*delta_cc_curr_db_);
+      delta_cd_curr_->set_to_random_uniform(min_uniform_ratio_*delta_cd_curr_db_, max_uniform_ratio_*delta_cd_curr_db_);
+    }
+  }
+
+
 
 }
 
