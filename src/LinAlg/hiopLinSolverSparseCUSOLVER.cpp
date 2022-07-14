@@ -66,8 +66,8 @@
 
 namespace hiop
 {
-  hiopLinSolverSymSparseCUSOLVER::hiopLinSolverSymSparseCUSOLVER(const int& n,
-                                                                 const int& nnz,
+  hiopLinSolverSymSparseCUSOLVER::hiopLinSolverSymSparseCUSOLVER(const int& n, 
+                                                                 const int& nnz, 
                                                                  hiopNlpFormulation* nlp)
     : hiopLinSolverSymSparse(n, nnz, nlp), 
       kRowPtr_{ nullptr }, 
@@ -155,7 +155,24 @@ namespace hiop
                             ir_->tol_);
           ir_->tol_ = 1e-12;
         }
-
+        /* 0) "Standard" GMRES and FGMRES (Saad and Schulz, 1986, Saad, 1992)  use Modified Gram-Schmidt ("mgs") to keep the Krylov vectors orthogonal. 
+         * Modified Gram-Schmidt requires k synchronization (due to inner products) in iteration k and this becomes a scaling bottleneck for 
+         * GPU-accelerated implementation and it becomes even more pronouced for MPI+GPU-acceleration.
+         * Modified Gram-Schidt can be replaced by a different scheme.
+         *
+         * 1) One can use Classical Gram-Schmidt ("cgs") which is numerically unstable or reorthogonalized Classical Gram-Schmidt ("cgs2"), which
+         * is numerically stable and requires 3 synchrnozations and each iteration. Reorthogonalized Classical Gram-Schmidt makes two passes of
+         * Classical Gram-Schmidt. And two passes are enough to get vectors orthogonal to machine precision (Bjorck 1967).
+         * 
+         * 2) An alternative is a low-sych version (Swirydowicz and Thomas, 2020), which reformulates Modified Gram-Schmidt to be a (very small) triangular solve.
+         * It requires extra storage for the matrix used in triangular solve (kxk at iteration k), but only two sycnhronizations are needed per iteration.
+         * The inner producats are performed in bulk, which quarantees better GPU utilization. The second synchronization comes from normalizing the vector and 
+         * can be eliminated if the norm is postponed to the next iteration, but also makes code more complicated. This is why we use two-synch method ("mgs_two_synch")
+         * 
+         * 3) A recently submitted paper by Stephen Thomas (Thomas 202*) takes the triangular solve idea further and uses a different approximation for 
+         * the inverse of a triangular matrix. It requires two (very small) triangular solves and two sychroniztions (if the norm is NOT delayed). It also guarantees 
+         * that the vectors are orthogonal to the machine epsilon, as in cgs2. Since Stephe's paper is named "post modern GMRES", we call this Gram-Schmidt scheme "mgs_pm".
+         */ 
         ir_->orth_option_ = nlp_->options->GetString("ir_inner_cusolver_gs_scheme");
 
         /* 0) "Standard" GMRES and FGMRES (Saad and Schultz, 1986, Saad, 1992) use Modified Gram-Schmidt ("mgs") to keep the Krylov vectors orthogonal. 
@@ -1076,6 +1093,59 @@ namespace hiop
 
     if(orth_option_ == "mgs_pm" || orth_option_ == "cgs2") {
       delete[] h_aux_;
+    }
+
+    // Experimental code
+    use_ir_ = "no";
+    use_ir_ = nlp_->options->GetString("ir_inner_cusolver");
+    if(use_ir_ != "yes" && use_ir_ != "no") {
+      nlp_->log->printf(hovWarning, "Inner iterative refinement: %s is wrong. Use yes/no. Switching to default (no) ...\n",
+                        use_ir_.c_str());
+      use_ir_ = "no";
+    }
+
+    if(use_ir_ == "yes") {
+      if(refact_ == "rf") {
+        ir_ = new hiopLinSolverSymSparseCUSOLVERInnerIR;
+        ir_->restart_ = nlp_->options->GetInteger("ir_inner_cusolver_restart");
+        if((ir_->restart_ < 0) || (ir_->restart_ > 100)) {
+          nlp_->log->printf(hovWarning,
+                            "Wrong restart value: %d. Use int restart value between 1 and 100. Setting default (20)  ...\n",
+                            ir_->restart_);
+          ir_->restart_ = 20;
+        }
+
+        ir_->maxit_ = nlp_->options->GetInteger("ir_inner_cusolver_maxit");
+
+        if((ir_->maxit_ < 0) || (ir_->maxit_ > 1000)) {
+          nlp_->log->printf(hovWarning,
+                            "Wrong maxit value: %d. Use int maxit value between 1 and 1000. Setting default (50)  ...\n",
+                            ir_->maxit_);
+          ir_->maxit_ = 50;
+        }
+
+        ir_->tol_ = nlp_->options->GetNumeric("ir_inner_cusolver_tol");
+        if((ir_->tol_ < 0) || (ir_->tol_ > 1)) {
+          nlp_->log->printf(hovWarning,
+                            "Wrong tol value: %e. Use double tol value between 0 and 1. Setting default (1e-12)  ...\n",
+                            ir_->tol_);
+          ir_->tol_ = 1e-12;
+        }
+
+        ir_->orth_option_ = nlp_->options->GetString("ir_inner_cusolver_gs_scheme");
+        if(ir_->orth_option_ != "mgs" && ir_->orth_option_ != "cgs2" && ir_->orth_option_ != "mgs_two_synch"
+           && ir_->orth_option_ != "mgs_pm") {
+          nlp_->log->printf(
+              hovWarning,
+              "mgs option : %s is wrong. Use 'mgs', 'cgs2', 'mgs_two_synch' or 'mgs_pm'. Switching to default (mgs) ...\n",
+              use_ir_.c_str());
+          ir_->orth_option_ = "mgs";
+        }
+
+      } else {
+        nlp_->log->printf(hovWarning, "Currently, inner iterative refinement works ONLY with cuSolverRf ... \n");
+        use_ir_ = "no";
+      }
     }
   }
 
