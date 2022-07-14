@@ -55,7 +55,7 @@
 #include "hiopLinSolverSparseCUSOLVER.hpp"
 
 #include "hiop_blasdefs.hpp"
-#include "hiop_cusolver_ir_custom_kernels.cu"
+#include "KrylovSolverKernels.h"
 
 #include "cusparse_v2.h"
 #include "klu.h"
@@ -77,8 +77,9 @@ namespace hiop
       index_covert_extra_Diag2CSR_{ nullptr }, 
       n_{ n },
       nnz_{ 0 },
-      ordering_{ 1 }, fact_{ "klu" }, // default
-      refact_{ "glu" },                                                                            // default
+      ordering_{ 1 }, 
+      fact_{ "klu" }, // default
+      refact_{ "glu" }, // default
       factorizationSetupSucc_{ 0 }
   {
     // handles
@@ -120,19 +121,23 @@ namespace hiop
       refact_ = "glu";
     }
     // by default, dont use iterative refinement
-    use_ir_ = "no";
-    use_ir_ = nlp_->options->GetString("ir_inner_cusolver");
-    if(use_ir_ != "yes" && use_ir_ != "no") {
-      nlp_->log->printf(hovWarning, 
-                        "Inner iterative refinement: %s is wrong. Use yes/no. Switching to default (no) ...\n",
-                        use_ir_.c_str());
-      use_ir_ = "no";
-    }
+    int maxit_test  = nlp_->options->GetInteger("ir_inner_cusolver_maxit");
 
+    if ((maxit_test < 0) || (maxit_test > 1000)){
+      nlp_->log->printf(hovWarning, 
+                        "Wrong maxit value: %d. Use int maxit value between 0 and 1000. Setting default (50)  ...\n",
+                        ir_->maxit_);
+      maxit_test = 50;
+    }
+    use_ir_ = "no";
+    if(maxit_test > 0){
+      use_ir_ = "yes";
+      ir_ = new hiopLinSolverSymSparseCUSOLVERInnerIR;
+      ir_->maxit_ = maxit_test;
+    } 
     if(use_ir_ == "yes") {
       if(refact_ == "rf") {
 
-        ir_ = new hiopLinSolverSymSparseCUSOLVERInnerIR;
         ir_->restart_ =  nlp_->options->GetInteger("ir_inner_cusolver_restart");
 
         if ((ir_->restart_ <0) || (ir_->restart_ >100)){
@@ -142,14 +147,6 @@ namespace hiop
           ir_->restart_ = 20;
         }
 
-        ir_->maxit_ = nlp_->options->GetInteger("ir_inner_cusolver_maxit");
-
-        if ((ir_->maxit_ <0) || (ir_->maxit_ >1000)){
-          nlp_->log->printf(hovWarning, 
-                            "Wrong maxit value: %d. Use int maxit value between 1 and 1000. Setting default (50)  ...\n",
-                            ir_->maxit_);
-          ir_->maxit_ = 50;
-        }
 
         ir_->tol_  = nlp_->options->GetNumeric("ir_inner_cusolver_tol");
         if ((ir_->tol_ <0) || (ir_->tol_ >1)){
@@ -161,6 +158,24 @@ namespace hiop
 
         ir_->orth_option_ = nlp_->options->GetString("ir_inner_cusolver_gs_scheme");
 
+        /* 0) "Standard" GMRES and FGMRES (Saad and Schultz, 1986, Saad, 1992) use Modified Gram-Schmidt ("mgs") to keep the Krylov vectors orthogonal. 
+         * Modified Gram-Schmidt requires k synchronization (due to inner products) in iteration k and this becomes a scaling bottleneck for 
+         * GPU-accelerated implementation and it becomes even more pronouced for MPI+GPU-acceleration.
+         * Modified Gram-Schidt can be replaced by a different scheme.
+         *
+         * 1) One can use Classical Gram-Schmidt ("cgs") which is numerically unstable or reorthogonalized Classical Gram-Schmidt ("cgs2"), which
+         * is numerically stable and requires 3 synchrnozations and each iteration. Reorthogonalized Classical Gram-Schmidt makes two passes of
+         * Classical Gram-Schmidt. And two passes are enough to get vectors orthogonal to machine precision (Bjorck 1967).
+         * 
+         * 2) An alternative is a low-sych version (Swirydowicz and Thomas, 2020), which reformulates Modified Gram-Schmidt to be a (very small) triangular solve.
+         * It requires extra storage for the matrix used in triangular solve (kxk at iteration k), but only two sycnhronizations are needed per iteration.
+         * The inner producats are performed in bulk, which quarantees better GPU utilization. The second synchronization comes from normalizing the vector and 
+         * can be eliminated if the norm is postponed to the next iteration, but also makes code more complicated. This is why we use two-synch method ("mgs_two_synch")
+         * 
+         * 3) A recently submitted paper by Stephen Thomas (Thomas 202*) takes the triangular solve idea further and uses a different approximation for 
+         * the inverse of a triangular matrix. It requires two (very small) triangular solves and two sychroniztions (if the norm is NOT delayed). It also guarantees 
+         * that the vectors are orthogonal to the machine epsilon, as in cgs2. Since Stephe's paper is named "post modern GMRES", we call this Gram-Schmidt scheme "mgs_pm".
+         */ 
         if(ir_->orth_option_ != "mgs" && ir_->orth_option_ != "cgs2" && ir_->orth_option_ != "mgs_two_synch" && ir_->orth_option_ != "mgs_pm") {
           nlp_->log->printf(hovWarning, 
                             "mgs option : %s is wrong. Use 'mgs', 'cgs2', 'mgs_two_synch' or 'mgs_pm'. Switching to default (mgs) ...\n",
@@ -1265,6 +1280,10 @@ namespace hiop
             sw = 3;
           } else {
             // display error message and set sw = 0;
+            /*
+             nlp_->log->printf(hovWarning, 
+                              "Wrong Gram-Schmidt option. Setting default (modified Gram-Schmidt, mgs) ...\n");
+            */
             sw = 0;
           }
         }
@@ -1383,7 +1402,7 @@ namespace hiop
         // the two low synch schemes
       case 2:
         // V[1:i]^T[V[i] w]
-        massInnerProductTwoVectors(n_, i, &d_V_[i * n_],&d_V_[(i+1) * n_], d_V_, d_rvGPU_);
+        mass_inner_product_two_vectors(n_, i, &d_V_[i * n_],&d_V_[(i+1) * n_], d_V_, d_rvGPU_);
 
         // copy rvGPU to L
         cudaMemcpy(&h_L_[(i) * (restart_ + 1)], 
@@ -1412,7 +1431,7 @@ namespace hiop
                    (i + 1) * sizeof(double), 
                    cudaMemcpyHostToDevice);
 
-        massAxpy(n_, i, d_V_, &d_V_[(i+1) * n_],d_Hcolumn_);
+        mass_axpy(n_, i, d_V_, &d_V_[(i+1) * n_],d_Hcolumn_);
         // normalize (second synch)
         t=0.0;
         cublasDdot(cublas_handle_, n_, &d_V_[(i + 1) * n_], 1, &d_V_[(i + 1) * n_], 1, &t);
@@ -1431,7 +1450,7 @@ namespace hiop
       case 3: //two synch Gauss-Seidel mgs, SUPER STABLE
         // according to unpublisjed work by ST
         // L is where we keep the triangular matrix(L is ON THE CPU)
-        massInnerProductTwoVectors(n_, i, &d_V_[i * n_],&d_V_[(i+1) * n_], d_V_, d_rvGPU_);
+        mass_inner_product_two_vectors(n_, i, &d_V_[i * n_],&d_V_[(i+1) * n_], d_V_, d_rvGPU_);
 
         // copy rvGPU to L
         cudaMemcpy(&h_L_[(i) * (restart_ + 1)], 
@@ -1488,7 +1507,7 @@ namespace hiop
                    cudaMemcpyHostToDevice);
 
 
-        massAxpy(n_, i, d_V_, &d_V_[(i+1) * n_],d_Hcolumn_);
+        mass_axpy(n_, i, d_V_, &d_V_[(i+1) * n_],d_Hcolumn_);
 
         // normalize (second synch)
         t=0.0;

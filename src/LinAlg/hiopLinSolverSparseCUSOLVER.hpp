@@ -117,10 +117,6 @@ private:
   int* index_covert_extra_Diag2CSR_;
 
   /** options **/
-  // TODO: KS need options for:
-  // (3) iterative refinement: fgmres, bicgstab
-  // (4) if ir is fgmres, there are different gram-schmidt
-  // options: MGS, CGS2, MGS-2 synch, MGS-1 synch/
 
   int ordering_;
   std::string fact_;
@@ -206,7 +202,6 @@ private:
   int refactorizationSetupCusolverRf();
 
   void IRsetup();
-  friend class hiopLinSolverNonSymSparseCUSOLVER;
 };
 
 
@@ -285,7 +280,6 @@ private:
 
   hiopLinSolverSymSparseCUSOLVERLU* LU_data;
   friend class hiopLinSolverSymSparseCUSOLVER;
-  friend class hiopLinSolverNonSymSparseCUSOLVER;
 };
 
 // class to store and operatate on LU data: will be needed in the future
@@ -321,7 +315,7 @@ private:
   int* d_Up_;
   int* d_Ui_;
 
-  // matrix CPU data - this is needed to avoid allocing over and over and over
+  // matrix CPU data - this is needed to avoid allocating over and over and over
 
   double* Lx_;
   int* Lp_;
@@ -344,7 +338,6 @@ private:
 
   int analysis_done_ = 0;
   friend class hiopLinSolverSymSparseCUSOLVER;
-  friend class hiopLinSolverNonSymSparseCUSOLVER;
 };
 } // namespace hiop
 

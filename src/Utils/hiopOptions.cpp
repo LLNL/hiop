@@ -902,17 +902,6 @@ void hiopOptionsNLP::register_options()
                         "Numerical refactorization function after sparsity pattern of factors is computed. "
                         "'glu' is experimental and 'rf' is NVIDIA's stable refactorization. ");
   }
-  // cusolver_lu inner iterative refinement options
-
-  {
-    vector<std::string> range = {"no", "yes"};
-    auto default_value = range[0];
-    register_str_option("ir_inner_cusolver",
-                        default_value,
-                        range,
-                        "Follow cusolver_lu  with FGMRES iterative refinement. "
-                        "By default, no iterative refinement is performed. ");
-  }
 
 
     register_int_option("ir_inner_cusolver_restart",
@@ -929,7 +918,7 @@ void hiopOptionsNLP::register_options()
 
     register_int_option("ir_inner_cusolver_maxit",
                         50,
-                        1,
+                        0,
                         1000,
                         "FGMRES maximum number of iterations (default is 50). ");
 {

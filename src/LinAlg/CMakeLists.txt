@@ -89,7 +89,9 @@ set(hiopLinAlg_CUSOLVER_CHOL_SRC
 set(hiopLinAlg_CUDASPARSEKERNELS_SRC
   MatrixSparseCsrCudaKernels.cu
 )
-
+set(hiopLinAlg_FGMRESKERNELS_SRC
+  KrylovSolverKernels.cu
+)
 set(hiopLinAlg_CUDASPARSE_SRC
   hiopMatrixSparseCsrCuda.cpp
 )
@@ -123,6 +125,8 @@ if(HIOP_SPARSE)
       list(APPEND hiopLinAlg_SRC ${hiopLinAlg_CUDASPARSE_SRC})
       set_source_files_properties(${hiopLinAlg_CUDASPARSEKERNELS_SRC} PROPERTIES LANGUAGE CUDA)
       list(APPEND hiopLinAlg_SRC ${hiopLinAlg_CUDASPARSEKERNELS_SRC})
+      set_source_files_properties(${hiopLinAlg_FGMRESKERNELS_SRC} PROPERTIES LANGUAGE CUDA)
+      list(APPEND hiopLinAlg_SRC ${hiopLinAlg_FGMRESKERNELS_SRC})
     endif(HIOP_USE_CUDA)
     
     if(HIOP_USE_GINKGO)
