@@ -1094,59 +1094,6 @@ namespace hiop
     if(orth_option_ == "mgs_pm" || orth_option_ == "cgs2") {
       delete[] h_aux_;
     }
-
-    // Experimental code
-    use_ir_ = "no";
-    use_ir_ = nlp_->options->GetString("ir_inner_cusolver");
-    if(use_ir_ != "yes" && use_ir_ != "no") {
-      nlp_->log->printf(hovWarning, "Inner iterative refinement: %s is wrong. Use yes/no. Switching to default (no) ...\n",
-                        use_ir_.c_str());
-      use_ir_ = "no";
-    }
-
-    if(use_ir_ == "yes") {
-      if(refact_ == "rf") {
-        ir_ = new hiopLinSolverSymSparseCUSOLVERInnerIR;
-        ir_->restart_ = nlp_->options->GetInteger("ir_inner_cusolver_restart");
-        if((ir_->restart_ < 0) || (ir_->restart_ > 100)) {
-          nlp_->log->printf(hovWarning,
-                            "Wrong restart value: %d. Use int restart value between 1 and 100. Setting default (20)  ...\n",
-                            ir_->restart_);
-          ir_->restart_ = 20;
-        }
-
-        ir_->maxit_ = nlp_->options->GetInteger("ir_inner_cusolver_maxit");
-
-        if((ir_->maxit_ < 0) || (ir_->maxit_ > 1000)) {
-          nlp_->log->printf(hovWarning,
-                            "Wrong maxit value: %d. Use int maxit value between 1 and 1000. Setting default (50)  ...\n",
-                            ir_->maxit_);
-          ir_->maxit_ = 50;
-        }
-
-        ir_->tol_ = nlp_->options->GetNumeric("ir_inner_cusolver_tol");
-        if((ir_->tol_ < 0) || (ir_->tol_ > 1)) {
-          nlp_->log->printf(hovWarning,
-                            "Wrong tol value: %e. Use double tol value between 0 and 1. Setting default (1e-12)  ...\n",
-                            ir_->tol_);
-          ir_->tol_ = 1e-12;
-        }
-
-        ir_->orth_option_ = nlp_->options->GetString("ir_inner_cusolver_gs_scheme");
-        if(ir_->orth_option_ != "mgs" && ir_->orth_option_ != "cgs2" && ir_->orth_option_ != "mgs_two_synch"
-           && ir_->orth_option_ != "mgs_pm") {
-          nlp_->log->printf(
-              hovWarning,
-              "mgs option : %s is wrong. Use 'mgs', 'cgs2', 'mgs_two_synch' or 'mgs_pm'. Switching to default (mgs) ...\n",
-              use_ir_.c_str());
-          ir_->orth_option_ = "mgs";
-        }
-
-      } else {
-        nlp_->log->printf(hovWarning, "Currently, inner iterative refinement works ONLY with cuSolverRf ... \n");
-        use_ir_ = "no";
-      }
-    }
   }
 
   double hiopLinSolverSymSparseCUSOLVERInnerIR::getFinalResidalNorm()
