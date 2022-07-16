@@ -903,6 +903,37 @@ void hiopOptionsNLP::register_options()
                         "'glu' is experimental and 'rf' is NVIDIA's stable refactorization. ");
   }
 
+
+    register_int_option("ir_inner_cusolver_restart",
+                        20,
+                        1,
+                        100,
+                        "FGMRES restart value (default is 20). ");
+
+    register_num_option("ir_inner_cusolver_tol",
+                        1e-12,
+                        1e-16,
+                        1e-1,
+                        "FGMRES tolerance (default is 1e-12). ");
+
+    register_int_option("ir_inner_cusolver_maxit",
+                        50,
+                        0,
+                        1000,
+                        "FGMRES maximum number of iterations (default is 50). ");
+{
+    vector<std::string> range = {"mgs", "cgs2", "mgs_two_synch", "mgs_pm"};
+    auto default_value = range[0];
+    register_str_option("ir_inner_cusolver_gs_scheme",
+                        default_value,
+                        range,
+                        "Gram-Schmidt orthogonalization version for FMGRES. "
+                        "mgs: modified Gram-Schmidt (textbook, default). "
+                        "cgs2: reorthogonalized classical Gram-Schmidt (three synchs). "
+                        "mgs_two_synch: two synch (stable) MGS. "
+                        "mgs_pm: post-modern MGS, two synchs. ");
+  }
+
   //linsol_mode -> mostly related to magma and MDS linear algebra
   {
     vector<string> range(3); range[0]="stable"; range[1]="speculative"; range[2]="forcequick";
