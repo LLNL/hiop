@@ -129,6 +129,10 @@ public:
 
   /// (TODO) Records the number of outer IR steps (on the full KKT system)
   //double nIterRefinOuter;
+
+  //
+  // total
+  // 
   
   /// Records total time in KKT-related computations over the life of the algorithm
   double tmTotal;
@@ -202,59 +206,72 @@ public:
     std::stringstream ss;
 
     ss << std::fixed << std::setprecision(3);
-    ss << "Iteration KKT time " << tmTotalPerIter.getElapsedTime() << " sec " << std::endl;
+    ss << "Iteration KKT time " << tmTotalPerIter.getElapsedTime() << "s  " << std::endl;
 
-    ss << "\tupdate init " << std::setprecision(3) << tmUpdateInit.getElapsedTime() << " sec "
-       << "update linsys " << tmUpdateLinsys.getElapsedTime() << " sec " 
-       << "fact " << tmUpdateInnerFact.getElapsedTime() << " sec " 
+    ss << "\tupdate init " << std::setprecision(3) << tmUpdateInit.getElapsedTime() << "s  "
+       << "update linsys " << tmUpdateLinsys.getElapsedTime() << "s  " 
+       << "fact " << tmUpdateInnerFact.getElapsedTime() << "s  " 
        << "inertia corrections " << nUpdateICCorr << std::endl;
 
-    ss << "\tsolve rhs-manip " <<tmSolveRhsManip.getElapsedTime() << " sec "
-       << "inner solve " << tmSolveInner.getElapsedTime() << " sec "
-       << "resid " << tmResid.getElapsedTime() << " sec "
-       << "IR " << nIterRefinInner << " iter " << std::endl; 
+    ss << "\tsolve rhs-manip " <<tmSolveRhsManip.getElapsedTime() << "s  "
+       << "inner solve " << tmSolveInner.getElapsedTime() << "s  "
+       << "resid " << tmResid.getElapsedTime() << "s  "
+       << "IR " << nIterRefinInner << "iters  " << std::endl; 
 
     return ss.str();
   }
 
   inline std::string get_summary_total() {
     std::stringstream ss;
-    ss << "Total KKT time " << std::fixed << std::setprecision(3) << tmTotal << " sec " << std::endl;
+    ss << "Total KKT time " << std::fixed << std::setprecision(3) << tmTotal << "s  " << std::endl;
 
-    ss << "\tupdate init " << std::setprecision(3) << tmTotalUpdateInit <<  " sec "
-       << "   update linsys " << tmTotalUpdateLinsys << " sec " 
-       << "   fact " << tmTotalUpdateInnerFact << " sec " << std::endl;
+    ss << "\tupdate init " << std::setprecision(3) << tmTotalUpdateInit <<  "s  "
+       << "   update linsys " << tmTotalUpdateLinsys << "s  " 
+       << "   fact " << tmTotalUpdateInnerFact << "s  " << std::endl;
 
-    ss << "\tsolve rhs-manip " <<tmTotalSolveRhsManip << " sec "
-       << "  inner solve " << tmTotalSolveInner << " sec "
-       << "  resid " << tmTotalResid << " sec "
-       << "  IR " << nTotalIterRefinInner << " iter " << std::endl; 
+    ss << "\tsolve rhs-manip " <<tmTotalSolveRhsManip << "s  "
+       << "  inner solve " << tmTotalSolveInner << "s  "
+       << "  resid " << tmTotalResid << "s  "
+       << "  IR " << nTotalIterRefinInner << "iters  " << std::endl; 
 
     return ss.str();
   }
 };
 
-
+/**
+ * Records and reports timing and FLOPS for the linear solver at each optimization iteration. 
+ */
 class hiopLinSolStats
 {
 public:
   hiopLinSolStats()
   {
-    flopsFact = flopsTriuSolves = -1.;
+    flopsFact = 0.0;
+    flopsTriuSolves = 0.0;
   }
   hiopTimer tmFactTime;
   hiopTimer tmInertiaComp;
   hiopTimer tmTriuSolves;
 
   hiopTimer tmDeviceTransfer;
-  
-  //hiopTimer tmWholeLinSolve;
 
-  double flopsFact, flopsTriuSolves;
+  /**
+   * Total number of TFLOPS (not the TFLOPS/sec rate) in the factorization(s). It is provided or can 
+   * be estimated accurately only for some linear solvers and/or KKT solve strategies.
+   */
+
+  double flopsFact;
+
+  /**
+   * Total number of TFLOPS (not the TFLOPS/sec rate) in the triangular solves. It is provided or can 
+   * be estimated accurately only for some linear solvers and/or KKT solve strategies.
+   */
+  double flopsTriuSolves;
   
-  inline void start_linsolve()
+  inline void reset()
   {
-    flopsFact = flopsTriuSolves = -1.;
+    flopsFact = 0.0;
+    flopsTriuSolves = 0.0;
 
     tmFactTime.reset();
     tmInertiaComp.reset();
@@ -262,22 +279,21 @@ public:
     tmDeviceTransfer.reset();
   }
   
-  inline void end_linsolve()
-  {
-  }
   inline std::string get_summary_last_solve() const
   {
     std::stringstream ss;
-    ss <<  std::fixed << std::setprecision(6);
-      //<< "Total LinSolve time=" << tmWholeLinSolve.getElapsedTime() << " sec " 
-    //<< std::endl;
+    ss <<  std::fixed << std::setprecision(4);
 
-    ss << "(Last) Lin Solve: fact " << tmFactTime.getElapsedTime() << "s" 
-       << " at " << flopsFact << "TFlops" 
-       << "   inertia " << tmInertiaComp.getElapsedTime() << "s" 
-       << "   triu. solves " << tmTriuSolves.getElapsedTime() << "s"
-       << " at " << flopsTriuSolves << "TFlops"
-       << "   device transfer " << tmDeviceTransfer.getElapsedTime() << "s"
+    ss << "(Last) Lin Solve: fact " << tmFactTime.getElapsedTime() << "s";
+    if(flopsFact>0) {
+      ss << " at " << flopsFact/tmFactTime.getElapsedTime() << "TFlops/s" ;
+    }
+    ss << "   inertia " << tmInertiaComp.getElapsedTime() << "s" 
+       << "   triu. solves " << tmTriuSolves.getElapsedTime() << "s";
+    if(flopsTriuSolves>0) {
+      ss << " at " << flopsTriuSolves/tmTriuSolves.getElapsedTime() << "TFlops/s";
+    }
+    ss << "   device transfer " << tmDeviceTransfer.getElapsedTime() << "s"
        << std::endl;
 
     return ss.str();
@@ -320,11 +336,11 @@ public:
   inline std::string get_summary(int masterRank=0) {
     std::stringstream ss;
     ss << "Total time " << std::fixed << std::setprecision(3)
-       << tmOptimizTotal.getElapsedTime() << " sec " << std::endl;
+       << tmOptimizTotal.getElapsedTime() << "s  " << std::endl;
 
     ss << "Hiop internal time: " << std::setprecision(3) 
-       << "    total " << std::setprecision(3) << tmSolverInternal.getElapsedTime() << " sec "
-       << "    avg iter " << (tmSolverInternal.getElapsedTime()/nIter) << " sec " << std::endl;
+       << "    total " << std::setprecision(3) << tmSolverInternal.getElapsedTime() << "s  "
+       << "    avg iter " << (tmSolverInternal.getElapsedTime()/nIter) << "s  " << std::endl;
 #ifdef HIOP_USE_MPI
     int nranks;
     int ierr = MPI_Comm_size(comm, &nranks); assert(MPI_SUCCESS==ierr);
@@ -340,24 +356,18 @@ public:
     ss << "    internal total std dev across ranks " << (stddev/mean*100) << " percent"  << std::endl;
 #endif
 
-    // <<<<<<< HEAD
-    //     ss << "Fcn/deriv time:     total " << std::setprecision(3) 
-    //        << (tmEvalObj.getElapsedTime() + tmEvalGrad_f.getElapsedTime() + tmEvalCons.getElapsedTime() + tmEvalJac_con.getElapsedTime()) 
-    //        << " sec  ( obj " << tmEvalObj.getElapsedTime() << " grad " << tmEvalGrad_f.getElapsedTime() 
-    //        << " cons " << tmEvalCons.getElapsedTime() << " Jac " << tmEvalJac_con.getElapsedTime() << " ) " << std::endl;
-    // =======
     ss << std::setprecision(3)
        << "Fcn/deriv time:     total=" << (tmEvalObj.getElapsedTime() +
 					   tmEvalGrad_f.getElapsedTime() +
 					   tmEvalCons.getElapsedTime() +
 					   tmEvalJac_con.getElapsedTime() +
-					   tmEvalHessL.getElapsedTime()) << " sec  "
+					   tmEvalHessL.getElapsedTime()) << "s  "
        << "( obj=" << tmEvalObj.getElapsedTime()
        << " grad=" << tmEvalGrad_f.getElapsedTime() 
        << " cons=" << tmEvalCons.getElapsedTime()
        << " Jac=" << tmEvalJac_con.getElapsedTime()
        << " Hess=" << tmEvalHessL.getElapsedTime() << ") " << std::endl;
-    // >>>>>>> 3e36fcc7eaf63ab1307c58f0beb79dce7ac4c928
+
 #ifdef HIOP_USE_MPI
     loc=tmEvalObj.getElapsedTime() + tmEvalGrad_f.getElapsedTime() + tmEvalCons.getElapsedTime() + tmEvalJac_con.getElapsedTime();
 

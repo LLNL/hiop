@@ -116,7 +116,8 @@ namespace hiop
                                                hiopMatrix* Hess)
   {
     if(!nlpMDS_) { assert(false); return false; }
-   
+
+    nlp_->runStats.linsolv.reset();
     nlp_->runStats.tmSolverInternal.start();
     nlp_->runStats.kkt.tmUpdateInit.start();
 
@@ -361,7 +362,6 @@ namespace hiop
     // solve
     bool linsol_ok = linSys->solve(*rhs_);
     nlp_->runStats.kkt.tmSolveInner.stop();
-    nlp_->runStats.linsolv.end_linsolve();
 
     if(perf_report_) {
       nlp_->log->printf(hovSummary, "(summary for linear solver from KKT_MDS_XYcYd)\n%s", 

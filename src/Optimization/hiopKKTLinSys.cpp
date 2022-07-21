@@ -522,7 +522,7 @@ bool hiopKKTLinSysCompressedXYcYd::update(const hiopIterate* iter,
                                           const hiopMatrix* Jac_d,
                                           hiopMatrix* Hess)
 {
-  nlp_->runStats.linsolv.start_linsolve();
+  nlp_->runStats.linsolv.reset();
   nlp_->runStats.tmSolverInternal.start();
   nlp_->runStats.kkt.tmUpdateInit.start();
 
@@ -664,7 +664,6 @@ bool hiopKKTLinSysCompressedXYcYd::computeDirections(const hiopResidual* resid,
   bool bret = compute_directions_for_full_space(resid, dir);  
 
   nlp_->runStats.tmSolverInternal.stop();
-  nlp_->runStats.linsolv.end_linsolve();
   return true;
 }
 
@@ -757,7 +756,7 @@ bool hiopKKTLinSysCompressedXDYcYd::update( const hiopIterate* iter,
                                             const hiopMatrix* Jac_d,
                                             hiopMatrix* Hess)
 {
-  nlp_->runStats.linsolv.start_linsolve();
+  nlp_->runStats.linsolv.reset();
   nlp_->runStats.tmSolverInternal.start();
   nlp_->runStats.kkt.tmUpdateInit.start();
   
@@ -878,14 +877,12 @@ bool hiopKKTLinSysCompressedXDYcYd::computeDirections(const hiopResidual* resid,
 
   if(false == sol_ok) {
     nlp_->runStats.tmSolverInternal.stop();
-    nlp_->runStats.linsolv.end_linsolve();
     return false;
   }
   
   bool bret = compute_directions_for_full_space(resid, dir);
   
   nlp_->runStats.tmSolverInternal.stop();
-  nlp_->runStats.linsolv.end_linsolve();
   return true;
 }
 
@@ -971,8 +968,6 @@ bool hiopKKTLinSys::compute_directions_w_IR(const hiopResidual* resid, hiopItera
   }
 
   nlp_->runStats.tmSolverInternal.stop();
-  nlp_->runStats.linsolv.end_linsolve();
-  
   return bret;
 }
 
@@ -1550,7 +1545,7 @@ bool hiopKKTLinSysFull::update(const hiopIterate* iter,
   Jac_c_ = Jac_c; 
   Jac_d_ = Jac_d;
   Hess_=Hess;
-  nlp_->runStats.linsolv.start_linsolve();
+  nlp_->runStats.linsolv.reset();
   nlp_->runStats.tmSolverInternal.start();
 
   // factorization + inertia correction if needed
@@ -1580,7 +1575,6 @@ bool hiopKKTLinSysFull::computeDirections(const hiopResidual* resid,
                       *dir->vl, *dir->vu, *dir->zl, *dir->zu,
                       *dir->sdl, *dir->sdu, *dir->sxl, *dir->sxu);
 
-  nlp_->runStats.linsolv.end_linsolve();
   nlp_->runStats.tmSolverInternal.stop();
   return sol_ok;
 }
@@ -2060,7 +2054,7 @@ bool hiopKKTLinSysNormalEquation::update(const hiopIterate* iter,
                                          const hiopMatrix* Jac_d,
                                          hiopMatrix* Hess)
 {
-  nlp_->runStats.linsolv.start_linsolve();
+  nlp_->runStats.linsolv.reset();
   nlp_->runStats.tmSolverInternal.start();
   nlp_->runStats.kkt.tmUpdateInit.start();
   
@@ -2209,14 +2203,12 @@ bool hiopKKTLinSysNormalEquation::computeDirections(const hiopResidual* resid, h
   
   if(false == sol_ok) {
     nlp_->runStats.tmSolverInternal.stop();
-    nlp_->runStats.linsolv.end_linsolve();
     return false;
   }
   
   bool bret = compute_directions_for_full_space(resid, dir);
   
   nlp_->runStats.tmSolverInternal.stop();
-  nlp_->runStats.linsolv.end_linsolve();
   return true;
 }
 

@@ -229,7 +229,6 @@ namespace hiop
     //
     bool linsol_ok = linSys_->solve(*rhs_);
     nlp_->runStats.kkt.tmSolveInner.stop();
-    nlp_->runStats.linsolv.end_linsolve();
 
     if(perf_report_) {
       nlp_->log->printf(hovSummary, "(summary for linear solver from KKT_SPARSE_XYcYd)\n%s",
@@ -556,7 +555,6 @@ namespace hiop
     //
     bool linsol_ok = linSys_->solve(*rhs_);
     nlp_->runStats.kkt.tmSolveInner.stop();
-    nlp_->runStats.linsolv.end_linsolve();
 
     if(perf_report_) {
       nlp_->log->printf(hovSummary, "(summary for linear solver from KKT_SPARSE_XDYcYd)\n%s",
@@ -1106,7 +1104,6 @@ namespace hiop
     // solve
     bool linsol_ok = linSys_->solve(*rhs_);
     nlp_->runStats.kkt.tmSolveInner.stop();
-    nlp_->runStats.linsolv.end_linsolve();
 
     if(perf_report_) {
       nlp_->log->printf(hovSummary, "(summary for linear solver from KKT_SPARSE_XDYcYd)\n%s",

@@ -76,8 +76,6 @@ namespace hiop
 
     nlp_->runStats.linsolv.tmFactTime.start();
 
-    double gflops = FLOPS_DPOTRF( N )  / 1e9;
-
     magma_uplo_t uplo=MagmaLower; // M is upper in C++ so it's lower in fortran
 
 #ifdef HIOP_USE_HIP
@@ -107,7 +105,9 @@ namespace hiop
     magma_dsytrf_gpu(uplo, N, device_M_, ldda_, ipiv_, &info );
 
     nlp_->runStats.linsolv.tmFactTime.stop();
-    nlp_->runStats.linsolv.flopsFact = gflops / nlp_->runStats.linsolv.tmFactTime.getElapsedTime() / 1000.;
+
+    const double tflops = FLOPS_DPOTRF( N )  / 1e12;
+    nlp_->runStats.linsolv.flopsFact += tflops;
 
     if(info<0) {
       nlp_->log->printf(hovError,
@@ -211,6 +211,9 @@ namespace hiop
     }
     nlp_->runStats.linsolv.tmTriuSolves.stop();
 
+    const double tflops = FLOPS_DPOTRS(N, NRHS) / 1e12;
+    nlp_->runStats.linsolv.flopsTriuSolves += tflops;
+
     if(mem_space == "default" || mem_space == "host") {
       nlp_->runStats.linsolv.tmDeviceTransfer.start();
       magma_dgetmatrix(N, NRHS, device_rhs_, lddb_, x.local_data(), LDB, magma_device_queue_);
@@ -285,8 +288,6 @@ namespace hiop
     magma_int_t info; 
     magma_uplo_t uplo=MagmaLower; // M is upper in C++ so it's lower in fortran
 
-    double gflops = FLOPS_DPOTRF( N ) / 1e9;
-
     std::string mem_space = nlp_->options->GetString("mem_space");
     if(mem_space == "default" || mem_space == "host") {
       nlp_->runStats.linsolv.tmDeviceTransfer.start();
@@ -310,7 +311,9 @@ namespace hiop
     magma_dsytrf_nopiv_gpu(uplo, N, device_M_, ldda_, &info);
 
     nlp_->runStats.linsolv.tmFactTime.stop();
-    nlp_->runStats.linsolv.flopsFact = gflops / nlp_->runStats.linsolv.tmFactTime.getElapsedTime() / 1000.;
+
+    const double tflops = FLOPS_DPOTRF( N ) / 1e12;
+    nlp_->runStats.linsolv.flopsFact += tflops;
 
     if(info<0) {
       nlp_->log->printf(hovError,
@@ -395,8 +398,6 @@ namespace hiop
     magma_uplo_t uplo=MagmaLower; // M is upper in C++ so it's lower in fortran
     magma_int_t NRHS=1;
 
-    double gflops = FLOPS_DPOTRS(N, NRHS) / 1e9;
-
     std::string mem_space = nlp_->options->GetString("mem_space");
     if(mem_space == "default" || mem_space == "host") {
       nlp_->runStats.linsolv.tmDeviceTransfer.start();
@@ -417,8 +418,9 @@ namespace hiop
     magma_dsytrs_nopiv_gpu(uplo, N, NRHS, device_M_, ldda_, device_rhs_, lddb_, &info);
 
     nlp_->runStats.linsolv.tmTriuSolves.stop();
-    nlp_->runStats.linsolv.flopsTriuSolves = 
-      gflops / nlp_->runStats.linsolv.tmTriuSolves.getElapsedTime()/1000.;
+
+    const double tflops = FLOPS_DPOTRS(N, NRHS) / 1e12;
+    nlp_->runStats.linsolv.flopsTriuSolves += tflops;
     
     if(info != 0) {
       nlp_->log->printf(hovError, 
@@ -460,8 +462,6 @@ namespace hiop
     }
     nlp_->runStats.linsolv.tmFactTime.start();
 
-    double gflops = FLOPS_DPOTRF( N )  / 1e9;
-
     magma_uplo_t uplo=MagmaLower; // M is upper in C++ so it's lower in fortran
 
     //
@@ -470,7 +470,9 @@ namespace hiop
     magma_dsytrf(uplo, N, M_->local_data(), lda, ipiv_, &info );
 
     nlp_->runStats.linsolv.tmFactTime.stop();
-    nlp_->runStats.linsolv.flopsFact = gflops / nlp_->runStats.linsolv.tmFactTime.getElapsedTime() / 1000.;
+
+    const double tflops = FLOPS_DPOTRF( N )  / 1e12;
+    nlp_->runStats.linsolv.flopsFact += tflops;
 
     if(info<0) {
       nlp_->log->printf(hovError,
