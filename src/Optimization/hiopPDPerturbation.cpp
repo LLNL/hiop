@@ -412,11 +412,11 @@ namespace hiop
 
   void hiopPDPerturbationPrimalFirstScala::set_delta_last_vec(DeltasUpdateType taskid)
   {
-    if(DualUpdate) {
+    if(DualUpdate == taskid) {
       // only update dual deltas
       delta_cc_last_->setToConstant(delta_cc_last_db_);
       delta_cd_last_->setToConstant(delta_cd_last_db_);
-    } else if(PrimalUpdate == 0) {
+    } else if(PrimalUpdate == taskid) {
       // only update primal deltas
       delta_wx_last_->setToConstant(delta_wx_last_db_);
       delta_wd_last_->setToConstant(delta_wd_last_db_);
@@ -682,11 +682,11 @@ namespace hiop
 
   void hiopPDPerturbationDualFirstScala::set_delta_last_vec(DeltasUpdateType taskid)
   {
-    if(DualUpdate) {
+    if(DualUpdate == taskid) {
       // only update dual deltas
       delta_cc_last_->setToConstant(delta_cc_last_db_);
       delta_cd_last_->setToConstant(delta_cd_last_db_);
-    } else if(PrimalUpdate == 0) {
+    } else if(PrimalUpdate == taskid) {
       // only update primal deltas
       delta_wx_last_->setToConstant(delta_wx_last_db_);
       delta_wd_last_->setToConstant(delta_wd_last_db_);
