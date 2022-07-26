@@ -114,17 +114,6 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const hiopVector& delta_wx_i
                                                     const hiopVector& dcd)
 {
   nlp_->runStats.kkt.tmUpdateInit.start();
-/*
-  // TODO  delta_wx + delta_cc ?   add is_equal
-  auto delta_wx = delta_wx_in;
-  auto delta_wd = delta_wd_in;
-  if(dcc!=0) {
-    //nlp_->log->printf(hovWarning, "LinSysCondensed: dual reg. %.6e primal %.6e %.6e\n", dcc, delta_wx, delta_wd);
-    assert(dcc == dcd);
-    delta_wx += fabs(dcc);
-    delta_wd += fabs(dcc);
-  }
-*/
 
   hiopMatrixSymSparseTriplet* Hess_triplet = dynamic_cast<hiopMatrixSymSparseTriplet*>(Hess_);
   HessSp_ = Hess_triplet; //dynamic_cast<hiopMatrixSymSparseTriplet*>(Hess_);
