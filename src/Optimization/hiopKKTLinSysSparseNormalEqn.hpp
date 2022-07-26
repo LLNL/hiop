@@ -109,13 +109,24 @@ public:
   virtual int factorizeWithCurvCheck();
 
 protected:
-  hiopVector *rhs_;  // [ryc_tilde, ryd_tilde]
-  hiopVector *Hxd_inv_;  // [H+Dx+delta_wx, Dd+delta_wd ]^-1
+  hiopVector* rhs_;  // [ryc_tilde, ryd_tilde]
 
   // diagOf(Hess)
-  hiopVector *Hess_diag_;
-  hiopVector *dual_reg_;  // a vector for dual regularizations
-    
+  hiopVector* Hess_diag_;
+
+  /// Stores Dx plus delta_wx for more efficient updates of the condensed system matrix
+  hiopVector* deltawx_;
+  hiopVector* deltawd_;
+  hiopVector* deltacc_;
+  hiopVector* deltacd_;
+  hiopVector* dual_reg_copy_;  // a vector for dual regularizations
+
+  /// Stores some copies on the device (to be later removed)
+  hiopVector* Hess_diag_copy_;
+  hiopVector* Hx_copy_;
+  hiopVector* Hd_copy_;
+  hiopVector* Hxd_inv_copy_;  // [H+Dx+delta_wx, Dd+delta_wd ]^-1
+
   // -1 when disabled; otherwise acts like a counter, 0,1,... incremented each time
   // 'solveCompressed' is called; activated by the 'write_kkt' option
   int write_linsys_counter_;
@@ -147,14 +158,35 @@ protected:
   hiopMatrixSparseCSR* JDiagJt_;
 
   /// Member for delta_cc*I
-  hiopMatrixSparseCSR* Diag_reg_;
+  hiopMatrixSparseCSR* Diag_dualreg_;
 
   /// Member forJacD*Dd*JacD' - delta_cc*I
   hiopMatrixSparseCSR* M_normaleqn_;
 
 private:
   //placeholder for the code that decides which linear solver to used based on safe_mode_
-  hiopLinSolverSymSparse* determine_and_create_linsys(size_type n, size_type nnz);
+  hiopLinSolverSymSparse* determine_and_create_linsys();
+
+  /// Determines memory space used internally based on the "mem_space" and "compute_mode" options. This is temporary
+  /// functionality and will be removed later on when all the objects will be in the same memory space.
+  inline std::string determine_memory_space_internal(const std::string& opt_compute_mode)
+  {
+    if(opt_compute_mode == "cpu" || opt_compute_mode == "auto") {
+      return "DEFAULT";
+    } else {
+      //(opt_compute_mode == "hybrid" || opt_compute_mode == "gpu") {
+#ifdef HIOP_USE_CUDA
+#ifndef HIOP_USE_RAJA
+#error "RAJA build (HIOP_USE_RAJA) should be enabled when HIOP_USE_CUDA is")
+#endif      
+      assert(opt_compute_mode != "gpu" && "When code is GPU-ready, remove this method");
+      return "DEVICE";
+#else
+      assert(false && "compute mode not supported without HIOP_USE_CUDA build");
+      return "DEFAULT";
+#endif // HIOP_USE_CUDA
+    }
+  }
 };
 
 } // end of namespace

@@ -320,8 +320,6 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const hiopVector& delta_wx_i
   }
 
   fflush(stdout);
-  
-  int nnz_condensed = M_condensed_->numberOfNonzeros();
 
   //
   // instantiate linear solver class based on values of compute_mode, safe mode, and other options
