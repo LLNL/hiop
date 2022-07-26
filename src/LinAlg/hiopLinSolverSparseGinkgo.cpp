@@ -56,7 +56,6 @@
 
 #include "hiop_blasdefs.hpp"
 
-
 namespace hiop
 {
 
@@ -177,7 +176,6 @@ std::shared_ptr<gko::matrix::Csr<double, int>> transferTripletToCSR(std::shared_
     auto row_ptrs = gko::Array<int>::view(exec, n_ + 1, kRowPtr_);
     auto col_idxs = gko::Array<int>::view(exec, nnz_, jCol_);
     auto mtx = gko::share(gko::matrix::Csr<double, int>::create(exec, gko::dim<2>{n_, n_}, val_array, col_idxs, row_ptrs));
-    mtx->set_strategy(std::make_shared<gko::matrix::Csr<double, int>::sparselib>());
     return mtx;
 }
 
@@ -205,10 +203,8 @@ void update_matrix(hiopMatrixSparse* M_,
 std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gko::Executor> exec,
                                                         std::shared_ptr<gko::matrix::Csr<double, int>> mtx)
 {
-
     auto preprocessing_fact = gko::share(gko::reorder::Mc64<double, int>::build().on(exec));
     auto preprocessing = gko::share(preprocessing_fact->generate(mtx));
-
     auto lu_fact = gko::share(gko::experimental::factorization::Glu<double, int>::build_reusable()
                               .on(exec, mtx.get(), preprocessing.get()));
     auto inner_solver_fact = gko::share(gko::experimental::solver::Direct<double, int>::build()
@@ -260,7 +256,7 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
     assert(n_==M_->n() && M_->n()==M_->m());
     assert(n_>0);
 
-    exec_ = gko::HipExecutor::create(0, gko::OmpExecutor::create());
+    exec_ = gko::HipExecutor::create(0, gko::ReferenceExecutor::create());
 
     mtx_ = transferTripletToCSR(exec_, n_, M_, &index_covert_CSR2Triplet_, &index_covert_extra_Diag2CSR_);
     nnz_ = mtx_->get_num_stored_elements();
@@ -346,7 +342,7 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
     assert(n_==M_->n() && M_->n()==M_->m());
     assert(n_>0);
 
-    exec_= gko::HipExecutor::create(0, gko::OmpExecutor::create());
+    exec_= gko::HipExecutor::create(0, gko::ReferenceExecutor::create());
 
     mtx_ = transferTripletToCSR(exec_, n_, M_, &index_covert_CSR2Triplet_, &index_covert_extra_Diag2CSR_);
     nnz_ = mtx_->get_num_stored_elements();
