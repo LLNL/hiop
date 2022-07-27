@@ -59,6 +59,12 @@
 
 #ifdef HIOP_USE_CUDA
 #include "hiopLinSolverCholCuSparse.hpp"
+
+#ifdef HIOP_USE_RAJA
+#include "hiopVectorRajaPar.hpp"
+#else
+#error "RAJA (HIOP_USE_RAJA) build needed with HIOP_USE_CUDA"
+#endif // HIOP_USE_RAJA
 #endif
 
 #include "hiopMatrixSparseCSRSeq.hpp"
@@ -85,7 +91,6 @@ hiopKKTLinSysSparseNormalEqn::hiopKKTLinSysSparseNormalEqn(hiopNlpFormulation* n
     Hxd_inv_copy_{nullptr},
     JacD_{nullptr},
     JacDt_{nullptr},
-    DiagJt_{nullptr},
     JDiagJt_{nullptr},
     Diag_dualreg_{nullptr},
     M_normaleqn_{nullptr},
@@ -111,7 +116,6 @@ hiopKKTLinSysSparseNormalEqn::~hiopKKTLinSysSparseNormalEqn()
   delete Hxd_inv_copy_;
   delete JacD_;
   delete JacDt_;
-  delete DiagJt_;
   delete JDiagJt_;
   delete Diag_dualreg_;
   delete M_normaleqn_;
@@ -236,8 +240,7 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const hiopVector& delta_wx_i
       const hiopVectorPar& deltawd_host = dynamic_cast<const hiopVectorPar&>(delta_wd_in);
       const hiopVectorPar& deltacc_host = dynamic_cast<const hiopVectorPar&>(delta_cc_in);
       const hiopVectorPar& deltacd_host = dynamic_cast<const hiopVectorPar&>(delta_cd_in);
-      assert(Dx_delta_raja && Dx_par && "incorrect type for vector class");
-      
+
       deltawx_raja->copy_from_host_vec(deltawx_host);
       deltawd_raja->copy_from_host_vec(deltawd_host);
       deltacc_raja->copy_from_host_vec(deltacc_host);
@@ -293,25 +296,21 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const hiopVector& delta_wx_i
     /// TODO: now we assume Jc and Jd won't change, i.e., LP or QP. hence we build JacD_ and JacDt_ once and save them
     Jac_triplet_tmp->sort();
 
-    assert(   nullptr == JacD_    && nullptr == JacDt_   && nullptr == DiagJt_ 
-           && nullptr == JDiagJt_ );
+    assert(   nullptr == JacD_    && nullptr == JacDt_ && nullptr == JDiagJt_ );
 
     JacD_ = LinearAlgebraFactory::create_matrix_sparse_csr(mem_space_internal);
     JacD_->form_from_symbolic(*Jac_triplet_tmp);
     JacD_->form_from_numeric(*Jac_triplet_tmp);
 
     JacDt_ = LinearAlgebraFactory::create_matrix_sparse_csr(mem_space_internal);
-    JacDt_->form_transpose_from_symbolic(*Jac_triplet_tmp);
-    JacDt_->form_transpose_from_numeric(*Jac_triplet_tmp);
-
-    DiagJt_ = LinearAlgebraFactory::create_matrix_sparse_csr(mem_space_internal);
-    DiagJt_->form_transpose_from_symbolic(*Jac_triplet_tmp);
+    JacDt_->form_transpose_from_symbolic(*JacD_);
+    JacDt_->form_transpose_from_numeric(*JacD_); // need this line before calling JacD_->times_mat_alloc(*JacDt_) 
 
     //symbolic multiplication for JacD*Diag*JacDt
     // J * (D*Jt)  (D is not used since it does not change the sparsity pattern)
     JDiagJt_ = JacD_->times_mat_alloc(*JacDt_);
     JacD_->times_mat_symbolic(*JDiagJt_, *JacDt_);
-    
+
     delete Jac_triplet_tmp;
   }
 
@@ -321,11 +320,10 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const hiopVector& delta_wx_i
   Hx_copy_->copyToStarting(*Hxd_inv_copy_, 0);
   Hd_copy_->copyToStarting(*Hxd_inv_copy_, nx);
   Hxd_inv_copy_->invert();
-
   // J * D * Jt
-  DiagJt_->copyFrom(*JacDt_);
-  DiagJt_->scale_rows(*Hxd_inv_copy_);
-  JacD_->times_mat_numeric(0.0, *JDiagJt_, 1.0, *DiagJt_);
+  JacDt_->form_transpose_from_numeric(*JacD_);
+  JacDt_->scale_rows(*Hxd_inv_copy_);
+  JacD_->times_mat_numeric(0.0, *JDiagJt_, 1.0, *JacDt_);
 
 #ifdef HIOP_DEEPCHECKS
   JDiagJt_->check_csr_is_ordered();
@@ -342,12 +340,12 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const hiopVector& delta_wx_i
   }
 
   t.reset(); t.start();
-  Diag_dualreg_->setToZero();
+  Diag_dualreg_->set_diagonal(0.0);
   //if(!delta_cc_in.is_zero() || !delta_cd_in.is_zero()) // TODO: for efficiency?
   {
     deltacc_->copyToStarting(*dual_reg_copy_, 0);
     deltacd_->copyToStarting(*dual_reg_copy_, neq);
-    Diag_dualreg_->addDiagonal(1.0, *dual_reg_copy_);
+    Diag_dualreg_->form_diag_from_numeric(*dual_reg_copy_);
   }
 
   Diag_dualreg_->add_matrix_numeric(*M_normaleqn_, 1.0, *JDiagJt_, 1.0);

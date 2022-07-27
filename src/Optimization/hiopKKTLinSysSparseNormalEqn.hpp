@@ -151,9 +151,6 @@ protected:
   /// Member for JacD' in CSR format
   hiopMatrixSparseCSR* JacDt_;
 
-  /// Hxd_ * JacDt_
-  hiopMatrixSparseCSR* DiagJt_;
-
   /// Member for JacD*Dd*JacD'
   hiopMatrixSparseCSR* JDiagJt_;
 
