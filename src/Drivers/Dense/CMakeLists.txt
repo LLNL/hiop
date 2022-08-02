@@ -7,12 +7,10 @@ target_link_libraries(NlpDenseConsEx2.exe HiOp::HiOp)
 add_executable(NlpDenseConsEx3.exe NlpDenseConsEx3Driver.cpp)
 target_link_libraries(NlpDenseConsEx3.exe HiOp::HiOp)
 
-if(HIOP_BUILD_SHARED)
-  if(HIOP_BUILD_FORTRAN_EXAMPLE)
-    add_executable(NlpDenseConsFEx1.exe NlpDenseConsFEx1.f)
-    target_link_libraries(NlpDenseConsFEx1.exe HiOp::HiOp)
-  endif()
-endif(HIOP_BUILD_SHARED)
+if(HIOP_BUILD_FORTRAN_EXAMPLE)
+  add_executable(NlpDenseConsFEx1.exe NlpDenseConsFEx1.f)
+  target_link_libraries(NlpDenseConsFEx1.exe HiOp::HiOp)
+endif()
 
 ##########################################################
 # CMake Tests
@@ -41,9 +39,7 @@ if(HIOP_WITH_VALGRIND_TESTS)
     )
 endif()
 
-if(HIOP_BUILD_SHARED AND NOT HIOP_USE_GPU)
-  if(HIOP_BUILD_FORTRAN_EXAMPLE)
-      	add_test(NAME NlpDenseFinterface COMMAND ${RUNCMD} "$<TARGET_FILE:NlpDenseConsFEx1.exe>")
-  endif()
+if(HIOP_BUILD_FORTRAN_EXAMPLE)
+  add_test(NAME NlpDenseFinterface COMMAND ${RUNCMD} "$<TARGET_FILE:NlpDenseConsFEx1.exe>")
 endif()
 

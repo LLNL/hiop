@@ -170,7 +170,9 @@ endif()
 if(HIOP_USE_GPU AND HIOP_USE_HIP AND HIOP_BUILD_FORTRAN_EXAMPLE)
   # Flang is required to link with ROCm bitcode library
   if(NOT (CMAKE_Fortran_COMPILER_ID STREQUAL "Flang"))
-    message(SEND_ERROR "Flang is required to link with ROCm bitcode library.")
+    message(STATUS "Cannot find Flang, which is required to link with ROCm bitcode library.")
+    message(STATUS "Will NOT build Fortran examples.")
+    set(HIOP_BUILD_FORTRAN_EXAMPLE "OFF")
   endif()
 endif()
 
