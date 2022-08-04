@@ -200,6 +200,33 @@ void update_matrix(hiopMatrixSparse* M_,
 }
 
 
+std::shared_ptr<gko::Executor> create_exec(std::string executor_string)
+{
+    // The omp and dpcpp currently do not support LU factorization. 
+    std::map<std::string, std::function<std::shared_ptr<gko::Executor>()>>
+        exec_map{
+            {"omp", [] { return gko::OmpExecutor::create(); }},
+            {"cuda",
+             [] {
+                 return gko::CudaExecutor::create(0, gko::ReferenceExecutor::create(),
+                                                  true);
+             }},
+            {"hip",
+             [] {
+                 return gko::HipExecutor::create(0, gko::ReferenceExecutor::create(),
+                                                 true);
+             }},
+            {"dpcpp",
+             [] {
+                 return gko::DpcppExecutor::create(0,
+                                                   gko::ReferenceExecutor::create());
+             }},
+            {"reference", [] { return gko::ReferenceExecutor::create(); }}};
+
+    return exec_map.at(executor_string)();
+}
+
+
 std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gko::Executor> exec,
                                                         std::shared_ptr<gko::matrix::Csr<double, int>> mtx)
 {
@@ -256,7 +283,7 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
     assert(n_==M_->n() && M_->n()==M_->m());
     assert(n_>0);
 
-    exec_ = gko::HipExecutor::create(0, gko::ReferenceExecutor::create());
+    exec_ = create_exec(nlp_->options->GetString("ginkgo_exec"));//gko::HipExecutor::create(0, gko::ReferenceExecutor::create());
 
     mtx_ = transferTripletToCSR(exec_, n_, M_, &index_covert_CSR2Triplet_, &index_covert_extra_Diag2CSR_);
     nnz_ = mtx_->get_num_stored_elements();
@@ -342,7 +369,7 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
     assert(n_==M_->n() && M_->n()==M_->m());
     assert(n_>0);
 
-    exec_= gko::HipExecutor::create(0, gko::ReferenceExecutor::create());
+    exec_ = create_exec(nlp_->options->GetString("ginkgo_exec"));//gko::HipExecutor::create(0, gko::ReferenceExecutor::create());
 
     mtx_ = transferTripletToCSR(exec_, n_, M_, &index_covert_CSR2Triplet_, &index_covert_extra_Diag2CSR_);
     nnz_ = mtx_->get_num_stored_elements();
