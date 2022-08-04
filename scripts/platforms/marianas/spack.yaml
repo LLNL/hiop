@@ -1,0 +1,82 @@
+spack:
+  specs:
+  - hiop%gcc@10.2.0@develop+cuda+deepchecking+sparse+kron+cusolver+ginkgo+raja cuda_arch=60
+  - raja@0.14.0
+  - umpire@6.0.0
+  - coinhsl@2019.05.21
+  view: false
+  concretizer:
+    unify: true
+  packages:
+    ipopt:
+      version:
+      - 3.12.10
+      variants:
+      - +debug
+      - +coinhsl
+      - ~mumps
+    raja:
+      variants:
+      - ~examples
+      - ~exercises
+    umpire:
+      variants:
+      - ~openmp
+      - ~examples
+    python:
+      externals:
+      - spec: python@3.7.0
+        prefix: /share/apps/python/3.7.0
+        modules:
+        - python/3.7.0
+    all:
+      providers:
+        mpi:
+        - openmpi
+    openmpi:
+      externals:
+      - spec: openmpi@4.1.0%gcc@10.2.0
+        modules:
+        - openmpi/4.1.0
+        prefix: /share/apps/openmpi/4.1.0/gcc/10.2.0
+      buildable: false
+    cuda:
+      externals:
+      - spec: cuda@11.4
+        modules:
+        - cuda/11.4
+      buildable: false
+    perl:
+      externals:
+      - spec: perl@5.26.0
+        modules:
+        - perl/5.26.0
+  compilers:
+  - compiler:
+      spec: gcc@4.8.5
+      paths:
+        cc: /usr/bin/gcc
+        cxx: /usr/bin/g++
+        f77: /usr/bin/gfortran
+        fc: /usr/bin/gfortran
+      operating_system: centos7
+      target: x86_64
+      modules:
+      - gcc/4.8.5
+  - compiler:
+      spec: gcc@10.2.0
+      paths:
+        cc: /share/apps/gcc/10.2.0/bin/gcc
+        cxx: /share/apps/gcc/10.2.0/bin/g++
+        f77: /share/apps/gcc/10.2.0/bin/gfortran
+        fc: /share/apps/gcc/10.2.0/bin/gfortran
+      flags: {}
+      operating_system: centos7
+      target: x86_64
+      modules: []
+      environment: {}
+      extra_rpaths: []
+  develop:
+    hiop:
+      path: /qfs/projects/exasgd/src/cameron/hiop-git
+      spec: hiop@develop
