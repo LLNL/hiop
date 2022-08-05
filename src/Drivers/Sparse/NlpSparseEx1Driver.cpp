@@ -17,11 +17,15 @@ static bool parse_arguments(int argc,
                             bool& use_pardiso,
                             bool& use_cusolver,
                             bool& use_ginkgo,
+                            bool& use_ginkgo_cuda,
+                            bool& use_ginkgo_hip,
                             bool& force_fr)
 {
   self_check = false;
   use_pardiso = false;
   use_ginkgo = false;
+  use_ginkgo_cuda = false;
+  use_ginkgo_cuda = false;
   force_fr = false;
   n = 3;
   scal = 1.0;
@@ -48,6 +52,12 @@ static bool parse_arguments(int argc,
         use_cusolver = true;
       } else if(std::string(argv[4]) == "-ginkgo"){
         use_ginkgo = true;
+      } else if(std::string(argv[4]) == "-ginkgo_cuda"){
+        use_ginkgo = true;
+        use_ginkgo_cuda = true;
+      } else if(std::string(argv[4]) == "-ginkgo_hip"){
+        use_ginkgo = true;
+        use_ginkgo_hip = true;
       }
     }
   case 4: //3 arguments
@@ -62,6 +72,12 @@ static bool parse_arguments(int argc,
         use_cusolver = true;
       } else if(std::string(argv[3]) == "-ginkgo"){
         use_ginkgo = true;
+      } else if(std::string(argv[3]) == "-ginkgo_cuda"){
+        use_ginkgo = true;
+        use_ginkgo_cuda = true;
+      } else if(std::string(argv[3]) == "-ginkgo_hip"){
+        use_ginkgo = true;
+        use_ginkgo_hip = true;
       }
     }
   case 3: //2 arguments
@@ -76,6 +92,12 @@ static bool parse_arguments(int argc,
         use_cusolver = true;
       } else if(std::string(argv[2]) == "-ginkgo"){
         use_ginkgo = true;
+      } else if(std::string(argv[2]) == "-ginkgo_cuda"){
+        use_ginkgo = true;
+        use_ginkgo_cuda = true;
+      } else if(std::string(argv[2]) == "-ginkgo_hip"){
+        use_ginkgo = true;
+        use_ginkgo_hip = true;
       } else {
         scal = std::atof(argv[2]); 
       }
@@ -165,11 +187,13 @@ int main(int argc, char **argv)
   bool use_pardiso = false;
   bool use_cusolver = false;
   bool use_ginkgo = false;
+  bool use_ginkgo_cuda = false;
+  bool use_ginkgo_hip = false;
   bool force_fr = false;
   size_type n;
   double scal;
 
-  if(!parse_arguments(argc, argv, n, scal, selfCheck, use_pardiso, use_cusolver, use_ginkgo, force_fr)) {
+  if(!parse_arguments(argc, argv, n, scal, selfCheck, use_pardiso, use_cusolver, use_ginkgo, use_ginkgo_cuda, use_ginkgo_hip, force_fr)) {
     usage(argv[0]);
 #ifdef HIOP_USE_MPI
     MPI_Finalize();
@@ -212,6 +236,13 @@ int main(int argc, char **argv)
     nlp.options->SetStringValue("linsol_mode", "speculative");
     nlp.options->SetStringValue("linear_solver_sparse", "ginkgo");
     nlp.options->SetStringValue("fact_acceptor", "inertia_free");
+    if (use_ginkgo_cuda) {
+        nlp.options->SetStringValue("ginkgo_exec", "cuda");
+    } else if (use_ginkgo_hip) {
+        nlp.options->SetStringValue("ginkgo_exec", "hip");
+    } else {
+        nlp.options->SetStringValue("ginkgo_exec", "reference");
+    }
   }
   if(force_fr) {
     nlp.options->SetStringValue("force_resto", "yes");

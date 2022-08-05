@@ -16,7 +16,9 @@ static bool parse_arguments(int argc,
                             bool& inertia_free,
                             bool& use_cusolver,
                             bool& use_cusolver_lu,
-                            bool& use_ginkgo)
+                            bool& use_ginkgo,
+                            bool& use_ginkgo_cuda,
+                            bool& use_ginkgo_hip)
 {
   self_check = false;
   n = 3;
@@ -24,6 +26,8 @@ static bool parse_arguments(int argc,
   use_cusolver = false;
   use_cusolver_lu = false;
   use_ginkgo = false;
+  use_ginkgo_cuda = false;
+  use_ginkgo_cuda = false;
   switch(argc) {
   case 1:
     //no arguments
@@ -39,6 +43,12 @@ static bool parse_arguments(int argc,
         use_cusolver = true;
       } else if(std::string(argv[4]) == "-ginkgo"){
         use_ginkgo = true;
+      } else if(std::string(argv[4]) == "-ginkgo_cuda"){
+        use_ginkgo = true;
+        use_ginkgo_cuda = true;
+      } else if(std::string(argv[4]) == "-ginkgo_hip"){
+        use_ginkgo = true;
+        use_ginkgo_hip = true;
       } else {
         n = std::atoi(argv[4]);
         if(n<=0) {
@@ -56,6 +66,12 @@ static bool parse_arguments(int argc,
         use_cusolver = true;
       } else if(std::string(argv[3]) == "-ginkgo"){
         use_ginkgo = true;
+      } else if(std::string(argv[3]) == "-ginkgo_cuda"){
+        use_ginkgo = true;
+        use_ginkgo_cuda = true;
+      } else if(std::string(argv[3]) == "-ginkgo_hip"){
+        use_ginkgo = true;
+        use_ginkgo_hip = true;
       } else {
         n = std::atoi(argv[3]);
         if(n<=0) {
@@ -73,6 +89,12 @@ static bool parse_arguments(int argc,
         use_cusolver = true;
       } else if(std::string(argv[2]) == "-ginkgo"){
         use_ginkgo = true;
+      } else if(std::string(argv[2]) == "-ginkgo_cuda"){
+        use_ginkgo = true;
+        use_ginkgo_cuda = true;
+      } else if(std::string(argv[2]) == "-ginkgo_hip"){
+        use_ginkgo = true;
+        use_ginkgo_hip = true;
       } else {
         n = std::atoi(argv[2]);
         if(n<=0) {
@@ -90,6 +112,12 @@ static bool parse_arguments(int argc,
         use_cusolver = true;
       } else if(std::string(argv[1]) == "-ginkgo"){
         use_ginkgo = true;
+      } else if(std::string(argv[1]) == "-ginkgo_cuda"){
+        use_ginkgo = true;
+        use_ginkgo_cuda = true;
+      } else if(std::string(argv[1]) == "-ginkgo_hip"){
+        use_ginkgo = true;
+        use_ginkgo_hip = true;
       } else {
         n = std::atoi(argv[1]);
         if(n<=0) {
@@ -178,7 +206,9 @@ int main(int argc, char **argv)
   bool use_cusolver = false;
   bool use_cusolver_lu = false;
   bool use_ginkgo = false;
-  if(!parse_arguments(argc, argv, n, selfCheck, inertia_free, use_cusolver, use_cusolver_lu, use_ginkgo)) { 
+  bool use_ginkgo_cuda = false;
+  bool use_ginkgo_hip = false;
+  if(!parse_arguments(argc, argv, n, selfCheck, inertia_free, use_cusolver, use_cusolver_lu, use_ginkgo, use_ginkgo_cuda, use_ginkgo_hip)) { 
     usage(argv[0]);
 #ifdef HIOP_USE_MPI
     MPI_Finalize();
@@ -212,6 +242,13 @@ int main(int argc, char **argv)
     if(use_ginkgo) {
       nlp.options->SetStringValue("linsol_mode", "speculative");
       nlp.options->SetStringValue("linear_solver_sparse", "ginkgo");
+      if (use_ginkgo_cuda) {
+          nlp.options->SetStringValue("ginkgo_exec", "cuda");
+      } else if (use_ginkgo_hip) {
+          nlp.options->SetStringValue("ginkgo_exec", "hip");
+      } else {
+          nlp.options->SetStringValue("ginkgo_exec", "reference");
+      }
     }
     hiopAlgFilterIPMNewton solver(&nlp);
     hiopSolveStatus status = solver.run();
