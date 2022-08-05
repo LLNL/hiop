@@ -1,11 +1,12 @@
 #  NOTE: The following is required when running from Gitlab CI via slurm job
 source /etc/profile.d/modules.sh
+module purge
 module use -a /usr/share/Modules/modulefiles
 module use -a /share/apps/modules/tools
 module use -a /share/apps/modules/compilers
 module use -a /share/apps/modules/mpi
 module use -a /etc/modulefiles
-module use -a /qfs/projects/exasgd/src/spack/share/spack/modules/linux-centos8-power9le/
+module use -a /qfs/projects/exasgd/src/cameron/spack/share/spack/modules/linux-centos8-power9le/
 
 # Load spack-built modules
 # autoconf@2.69%gcc@8.5.0 patches=35c4492,7793209,a49dd5b arch=linux-centos8-power9le
@@ -60,8 +61,6 @@ module load mpfr-4.1.0-gcc-8.5.0-esdxmf2
 module load ncurses-6.2-gcc-8.5.0-v24hmxo
 # openblas@0.3.20%gcc@8.5.0~bignuma~consistent_fpcsr~ilp64+locking+pic+shared symbol_suffix=none threads=none arch=linux-centos8-power9le
 module load openblas-0.3.20-gcc-8.5.0-rwstn2s
-# openssl@1.1.1q%gcc@8.5.0~docs~shared certs=mozilla patches=3fdcf2d arch=linux-centos8-power9le
-module load openssl-1.1.1q-gcc-8.5.0-hmzteup
 # perl@5.34.1%gcc@8.5.0+cpanm+shared+threads arch=linux-centos8-power9le
 module load perl-5.34.1-gcc-8.5.0-fn534xj
 # pkgconf@1.8.0%gcc@8.5.0 arch=linux-centos8-power9le
@@ -82,7 +81,7 @@ module load zlib-1.2.12-gcc-8.5.0-spb5k73
 # Load system modules
 module load gcc/8.5.0
 module load cuda/11.4
-module load openmpi/4.1.0
+module load openmpi/4.1.4
 
 [ -f $PWD/nvblas.conf ] && rm $PWD/nvblas.conf
 cat > $PWD/nvblas.conf <<-EOD
