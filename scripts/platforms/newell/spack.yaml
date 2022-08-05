@@ -1,0 +1,65 @@
+spack:
+  specs:
+  - hiop@develop+kron+mpi+raja+sparse+cuda+ginkgo+deepchecking+cusolver cuda_arch=70
+  - raja@0.14.0
+  - umpire@6.0.0
+  - coinhsl@2019.05.21
+  view: false
+  concretizer:
+    unify: true
+    reuse: false
+  packages:
+    coinhsl:
+      variants: +blas
+    openmpi:
+      externals:
+      - spec: openmpi@4.1.4%gcc@8.5.0
+        prefix: /share/apps/openmpi/4.1.4/gcc/8.5.0
+        modules:
+        - openmpi/4.1.4
+      buildable: false
+      variants: +cuda
+    python:
+      externals:
+      - spec: python@3.8.5
+        modules: [python/miniconda3.8]
+      - spec: python@2.7.5-system
+        prefix: /usr
+      buildable: false
+    cuda:
+      externals:
+      - spec: cuda@11.4
+        modules:
+        - cuda/11.4
+      buildable: false
+  compilers:
+  - compiler:
+      spec: gcc@11.2.0
+      paths:
+        cc: /share/apps/gcc/11.2.0/bin/gcc
+        cxx: /share/apps/gcc/11.2.0/bin/g++
+        f77: /share/apps/gcc/11.2.0/bin/gfortran
+        fc: /share/apps/gcc/11.2.0/bin/gfortran
+      flags: {}
+      operating_system: centos8
+      target: ppc64le
+      modules: []
+      environment: {}
+      extra_rpaths: []
+  - compiler:
+      spec: gcc@8.5.0
+      paths:
+        cc: /usr/bin/gcc
+        cxx: /usr/bin/g++
+        f77: /usr/bin/gfortran
+        fc: /usr/bin/gfortran
+      flags: {}
+      operating_system: centos8
+      target: ppc64le
+      modules: []
+      environment: {}
+      extra_rpaths: []
+  develop:
+    hiop:
+      path: /qfs/projects/exasgd/src/cameron/hiop-git
+      spec: hiop@develop

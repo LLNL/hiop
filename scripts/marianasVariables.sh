@@ -1,68 +1,71 @@
 #  NOTE: The following is required when running from Gitlab CI via slurm job
 source /etc/profile.d/modules.sh
-module use -a /qfs/projects/exasgd/src/cameron-spack/share/spack/modules/linux-centos7-x86_64_v3
-
+module use -a /qfs/projects/exasgd/src/cameron/spack/share/spack/modules/linux-centos7-zen2
 
 # Load spack-built modules
-# autoconf@2.69%gcc@7.3.0 patches=35c4492,7793209,a49dd5b arch=linux-centos7-x86_64_v3
-module load autoconf-2.69-gcc-7.3.0-gvh7nxv
-# autoconf-archive@2022.02.11%gcc@7.3.0 patches=130cd48 arch=linux-centos7-x86_64_v3
-module load autoconf-archive-2022.02.11-gcc-7.3.0-lrajcp3
-# automake@1.16.5%gcc@7.3.0 arch=linux-centos7-x86_64_v3
-module load automake-1.16.5-gcc-7.3.0-la5kvuy
-# blt@0.4.1%gcc@7.3.0 arch=linux-centos7-x86_64_v3
-module load blt-0.4.1-gcc-7.3.0-qeolwyb
-# ca-certificates-mozilla@2022-03-29%gcc@7.3.0 arch=linux-centos7-x86_64_v3
-module load ca-certificates-mozilla-2022-03-29-gcc-7.3.0-fjb4zc5
-# camp@0.2.2%gcc@7.3.0+cuda~ipo~rocm~tests build_type=RelWithDebInfo cuda_arch=60 arch=linux-centos7-x86_64_v3
-module load camp-0.2.2-gcc-7.3.0-ifdwyok
-# cmake@3.23.2%gcc@7.3.0~doc+ncurses+ownlibs~qt build_type=Release arch=linux-centos7-x86_64_v3
-module load cmake-3.23.2-gcc-7.3.0-riu7fla
-# coinhsl@2015.06.23%gcc@7.3.0+blas arch=linux-centos7-x86_64_v3
-module load coinhsl-2015.06.23-gcc-7.3.0-r42slsl
-# cub@1.16.0%gcc@7.3.0 arch=linux-centos7-x86_64_v3
-module load cub-1.16.0-gcc-7.3.0-4zaltzb
-# ginkgo@glu%gcc@7.3.0+cuda~develtools~full_optimizations~hwloc~ipo~oneapi+openmp~rocm+shared build_type=Release cuda_arch=60 arch=linux-centos7-x86_64_v3
-module load ginkgo-glu-gcc-7.3.0-63ouzce
-# gmp@6.2.1%gcc@7.3.0 libs=shared,static arch=linux-centos7-x86_64_v3
-module load gmp-6.2.1-gcc-7.3.0-if7iflm
-# libsigsegv@2.13%gcc@7.3.0 arch=linux-centos7-x86_64_v3
-module load libsigsegv-2.13-gcc-7.3.0-n653jc7
-# libtool@2.4.7%gcc@7.3.0 arch=linux-centos7-x86_64_v3
-module load libtool-2.4.7-gcc-7.3.0-atzgxc2
-# m4@1.4.19%gcc@7.3.0+sigsegv patches=9dc5fbd,bfdffa7 arch=linux-centos7-x86_64_v3
-module load m4-1.4.19-gcc-7.3.0-lcthdqt
-# magma@2.6.2%gcc@7.3.0+cuda+fortran~ipo~rocm+shared build_type=RelWithDebInfo cuda_arch=60 arch=linux-centos7-x86_64_v3
-module load magma-2.6.2-gcc-7.3.0-kqvdxay
-# metis@5.1.0%gcc@7.3.0~gdb~int64~real64+shared build_type=Release patches=4991da9,b1225da arch=linux-centos7-x86_64_v3
-module load metis-5.1.0-gcc-7.3.0-xfajh3x
-# mpfr@4.1.0%gcc@7.3.0 libs=shared,static arch=linux-centos7-x86_64_v3
-module load mpfr-4.1.0-gcc-7.3.0-zcatq2v
-# ncurses@6.2%gcc@7.3.0~symlinks+termlib abi=none arch=linux-centos7-x86_64_v3
-module load ncurses-6.2-gcc-7.3.0-sqnhgdg
-# openblas@0.3.20%gcc@4.8.5~bignuma~consistent_fpcsr~ilp64+locking+pic+shared symbol_suffix=none threads=none arch=linux-centos7-x86_64_v3
-module load openblas-0.3.20-gcc-4.8.5-rpolrqa
-# openmpi@3.1.3%gcc@7.3.0~atomics~cuda~cxx~cxx_exceptions~gpfs~internal-hwloc~java~legacylaunchers~lustre~memchecker~pmi+romio+rsh~singularity+static+vt+wrapper-rpath fabrics=none schedulers=none arch=linux-centos7-x86_64_v3
-module load openmpi-3.1.3-gcc-7.3.0-2ocdjy4
-# openssl@1.1.1p%gcc@7.3.0~docs~shared certs=mozilla arch=linux-centos7-x86_64_v3
-module load openssl-1.1.1p-gcc-7.3.0-tz3ln5w
-# perl@5.26.0%gcc@7.3.0+cpanm+shared+threads patches=0eac10e,8cf4302 arch=linux-centos7-x86_64_v3
-module load perl-5.26.0-gcc-7.3.0-f7w3oxq
-# pkgconf@1.8.0%gcc@7.3.0 arch=linux-centos7-x86_64_v3
-module load pkgconf-1.8.0-gcc-7.3.0-gxowfdy
-# raja@0.14.0%gcc@7.3.0+cuda~examples~exercises~ipo+openmp~rocm+shared~tests build_type=RelWithDebInfo cuda_arch=60 arch=linux-centos7-x86_64_v3
-module load raja-0.14.0-gcc-7.3.0-vtbmo6k
-# suite-sparse@5.10.1%gcc@7.3.0~cuda~graphblas~openmp+pic~tbb arch=linux-centos7-x86_64_v3
-module load suite-sparse-5.10.1-gcc-7.3.0-thhoxwy
-# texinfo@6.5%gcc@7.3.0 patches=12f6edb,1732115 arch=linux-centos7-x86_64_v3
-module load texinfo-6.5-gcc-7.3.0-crm3bgr
-# umpire@6.0.0%gcc@7.3.0+c+cuda~device_alloc~deviceconst~examples~fortran~ipo~numa~openmp~rocm~shared build_type=RelWithDebInfo cuda_arch=60 tests=none arch=linux-centos7-x86_64_v3
-module load umpire-6.0.0-gcc-7.3.0-z22n3zy
-# zlib@1.2.12%gcc@7.3.0+optimize+pic+shared patches=0d38234 arch=linux-centos7-x86_64_v3
-module load zlib-1.2.12-gcc-7.3.0-hq7ha7b
+# autoconf@2.69%gcc@10.2.0 patches=35c4492,7793209,a49dd5b arch=linux-centos7-zen2
+module load autoconf-2.69-gcc-10.2.0-r677m42
+# autoconf-archive@2022.02.11%gcc@10.2.0 patches=130cd48 arch=linux-centos7-zen2
+module load autoconf-archive-2022.02.11-gcc-10.2.0-pbrbzut
+# automake@1.16.5%gcc@10.2.0 arch=linux-centos7-zen2
+module load automake-1.16.5-gcc-10.2.0-j4bwm4o
+# blt@0.4.1%gcc@10.2.0 arch=linux-centos7-zen2
+module load blt-0.4.1-gcc-10.2.0-tanugdw
+# ca-certificates-mozilla@2022-07-19%gcc@10.2.0 arch=linux-centos7-zen2
+module load ca-certificates-mozilla-2022-07-19-gcc-10.2.0-h2opehw
+# camp@0.2.3%gcc@10.2.0+cuda~ipo~rocm~tests build_type=RelWithDebInfo cuda_arch=60 arch=linux-centos7-zen2
+module load camp-0.2.3-gcc-10.2.0-vpkkybx
+# cmake@3.23.2%gcc@10.2.0~doc+ncurses+ownlibs~qt build_type=Release arch=linux-centos7-zen2
+module load cmake-3.23.2-gcc-10.2.0-i24avzq
+# coinhsl@2019.05.21%gcc@10.2.0+blas arch=linux-centos7-zen2
+module load coinhsl-2019.05.21-gcc-10.2.0-j7hsujd
+# cub@1.16.0%gcc@10.2.0 arch=linux-centos7-zen2
+module load cub-1.16.0-gcc-10.2.0-ovgrtom
+# diffutils@3.8%gcc@10.2.0 arch=linux-centos7-zen2
+module load diffutils-3.8-gcc-10.2.0-mjfwces
+# ginkgo@glu_experimental%gcc@10.2.0+cuda~develtools~full_optimizations~hwloc~ipo~oneapi+openmp~rocm+shared build_type=Release cuda_arch=60 arch=linux-centos7-zen2
+module load ginkgo-glu_experimental-gcc-10.2.0-dbmokiq
+# gmp@6.2.1%gcc@10.2.0 libs=shared,static arch=linux-centos7-zen2
+module load gmp-6.2.1-gcc-10.2.0-ac4z3oa
+# libiconv@1.16%gcc@10.2.0 libs=shared,static arch=linux-centos7-zen2
+module load libiconv-1.16-gcc-10.2.0-gbg7l5p
+# libsigsegv@2.13%gcc@10.2.0 arch=linux-centos7-zen2
+module load libsigsegv-2.13-gcc-10.2.0-aj5goyi
+# libtool@2.4.7%gcc@10.2.0 arch=linux-centos7-zen2
+module load libtool-2.4.7-gcc-10.2.0-mzc2mvw
+# m4@1.4.19%gcc@10.2.0+sigsegv patches=9dc5fbd,bfdffa7 arch=linux-centos7-zen2
+module load m4-1.4.19-gcc-10.2.0-k5kkyx6
+# magma@2.6.2%gcc@10.2.0+cuda+fortran~ipo~rocm+shared build_type=RelWithDebInfocuda_arch=60 arch=linux-centos7-zen2
+module load magma-2.6.2-gcc-10.2.0-o7gg2nj
+# metis@5.1.0%gcc@10.2.0~gdb~int64~real64+shared build_type=Release patches=4991da9,b1225da arch=linux-centos7-zen2
+module load metis-5.1.0-gcc-10.2.0-h2r63pj
+# mpfr@4.1.0%gcc@10.2.0 libs=shared,static arch=linux-centos7-zen2
+module load mpfr-4.1.0-gcc-10.2.0-ixeo4lu
+# ncurses@6.2%gcc@10.2.0~symlinks+termlib abi=none arch=linux-centos7-zen2
+module load ncurses-6.2-gcc-10.2.0-3b2uqgl
+# openblas@0.3.20%gcc@10.2.0~bignuma~consistent_fpcsr~ilp64+locking+pic+shared symbol_suffix=none threads=none arch=linux-centos7-zen2
+module load openblas-0.3.20-gcc-10.2.0-qhcutll
+# openmpi@4.1.0%gcc@10.2.0~atomics~cuda~cxx~cxx_exceptions~gpfs~internal-hwloc~java~legacylaunchers~lustre~memchecker+romio+rsh~singularity+static+vt+wrapper-rpath fabrics=none patches=60ce20b schedulers=none arch=linux-centos7-zen2
+module load openmpi-4.1.0-gcc-10.2.0-wnndpcg
+# openssl@1.1.1q%gcc@10.2.0~docs~shared certs=mozilla patches=3fdcf2d arch=linux-centos7-zen2
+module load openssl-1.1.1q-gcc-10.2.0-t5hsb3s
+# perl@5.26.0%gcc@10.2.0+cpanm+shared+threads patches=0eac10e,8cf4302 arch=linux-centos7-zen2
+module load perl-5.26.0-gcc-10.2.0-l2yiybo
+# pkgconf@1.8.0%gcc@10.2.0 arch=linux-centos7-zen2
+module load pkgconf-1.8.0-gcc-10.2.0-fuflwbl
+# raja@0.14.0%gcc@10.2.0+cuda~examples~exercises~ipo+openmp~rocm+shared~tests build_type=RelWithDebInfo cuda_arch=60 arch=linux-centos7-zen2
+module load raja-0.14.0-gcc-10.2.0-pc2ckhw
+# suite-sparse@5.10.1%gcc@10.2.0~cuda~graphblas~openmp+pic~tbb arch=linux-centos7-zen2
+module load suite-sparse-5.10.1-gcc-10.2.0-jkighdn
+# texinfo@6.5%gcc@10.2.0 patches=12f6edb,1732115 arch=linux-centos7-zen2
+module load texinfo-6.5-gcc-10.2.0-mzqgqla
+# umpire@6.0.0%gcc@10.2.0+c+cuda~device_alloc~deviceconst~examples~fortran~ipo~numa~openmp~rocm~shared build_type=RelWithDebInfo cuda_arch=60 tests=none arch=linux-centos7-zen2
+module load umpire-6.0.0-gcc-10.2.0-eunwzka
+# zlib@1.2.12%gcc@10.2.0+optimize+pic+shared patches=0d38234 arch=linux-centos7-zen2
+module load zlib-1.2.12-gcc-10.2.0-gnkqokp
 
 # Load system modules
-module load gcc/7.3.0
+module load gcc/10.2.0
 module load cuda/11.4
 
 [ -f $PWD/nvblas.conf ] && rm $PWD/nvblas.conf
