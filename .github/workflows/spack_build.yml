@@ -30,11 +30,12 @@ jobs:
         # cached for ubuntu 18.04 with target x86, the lowest common denominator
         # for x86 systems. This allows us to use far more prebuilt packages,
         # which should speed up the builds by quite a bit.
-        run: |
-          ls && pwd && \
-          . /opt/spack/share/spack/setup-env.sh && \
-          spack mirror add binary_mirror https://binaries.spack.io/develop && \
-          spack buildcache keys --install --trust && \
-          spack spec $SPACK_SPEC target=x86_64 && \
-          spack install --fail-fast $SPACK_SPEC target=x86_64
+        run:
+          - ls && pwd
+          - . /opt/spack/share/spack/setup-env.sh
+          - spack -d debug report
+          - spack -d mirror add binary_mirror https://binaries.spack.io/develop
+          - spack -d buildcache keys --install --trust
+          - spack -d spec $SPACK_SPEC target=x86_64
+          - spack -d --stacktrace install --fail-fast $SPACK_SPEC target=x86_64
 
