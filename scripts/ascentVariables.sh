@@ -22,7 +22,7 @@ module load exasgd-cub/1.16.0/gcc-9.1.0-o5zdbep
 # cuda@11.4.2%gcc@9.1.0~allow-unsupported-compilers~dev arch=linux-rhel8-power9le
 module load exasgd-cuda/11.4.2/gcc-9.1.0-4676kh5
 # ginkgo@glu%gcc@9.1.0+cuda~develtools~full_optimizations~hwloc~ipo~oneapi+openmp~rocm+shared build_type=Release cuda_arch=70 dev_path=/gpfs/wolf/proj-shared/csc359/src/ginkgo arch=linux-rhel8-power9le
-module load exasgd-ginkgo/glu/cuda-11.4.2/gcc-9.1.0-4ole5wn
+module load exasgd-ginkgo/glu/cuda-11.4.2/gcc-9.1.0-fpuykyc
 # gmp@6.2.1%gcc@9.1.0 libs=shared,static arch=linux-rhel8-power9le
 module load exasgd-gmp/6.2.1/gcc-9.1.0-umqilrg
 # gnuconfig@2021-08-14%gcc@9.1.0 arch=linux-rhel8-power9le

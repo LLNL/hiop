@@ -279,6 +279,7 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const double& delta_wx_in,
   }
 
   {
+#ifdef HIOP_USE_COINHSL
     hiopLinSolverSymSparseMA57* linSolver_ma57 = dynamic_cast<hiopLinSolverSymSparseMA57*>(linSys_);
     if(linSolver_ma57) {
       auto* linSys = dynamic_cast<hiopLinSolverSymSparse*> (linSys_);
@@ -300,6 +301,7 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const double& delta_wx_in,
       }
       assert(itnz == Msys->numberOfNonzeros());
     }
+#endif
   }
 
   t.stop();

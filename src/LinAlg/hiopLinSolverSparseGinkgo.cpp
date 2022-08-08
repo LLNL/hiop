@@ -56,7 +56,6 @@
 
 #include "hiop_blasdefs.hpp"
 
-
 namespace hiop
 {
 
@@ -201,17 +200,42 @@ void update_matrix(hiopMatrixSparse* M_,
 }
 
 
+std::shared_ptr<gko::Executor> create_exec(std::string executor_string)
+{
+    // The omp and dpcpp currently do not support LU factorization. 
+    std::map<std::string, std::function<std::shared_ptr<gko::Executor>()>>
+        exec_map{
+            {"omp", [] { return gko::OmpExecutor::create(); }},
+            {"cuda",
+             [] {
+                 return gko::CudaExecutor::create(0, gko::ReferenceExecutor::create(),
+                                                  true);
+             }},
+            {"hip",
+             [] {
+                 return gko::HipExecutor::create(0, gko::ReferenceExecutor::create(),
+                                                 true);
+             }},
+            {"dpcpp",
+             [] {
+                 return gko::DpcppExecutor::create(0,
+                                                   gko::ReferenceExecutor::create());
+             }},
+            {"reference", [] { return gko::ReferenceExecutor::create(); }}};
+
+    return exec_map.at(executor_string)();
+}
+
+
 std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gko::Executor> exec,
                                                         std::shared_ptr<gko::matrix::Csr<double, int>> mtx)
 {
-
     auto preprocessing_fact = gko::share(gko::reorder::Mc64<double, int>::build().on(exec));
     auto preprocessing = gko::share(preprocessing_fact->generate(mtx));
-
-    auto lu_fact = gko::share(gko::factorization::Glu<double, int>::build_reusable()
+    auto lu_fact = gko::share(gko::experimental::factorization::Glu<double, int>::build_reusable()
                               .on(exec, mtx.get(), preprocessing.get()));
-    auto inner_solver_fact = gko::share(gko::preconditioner::Ilu<>::build()
-                                        .with_factorization_factory(lu_fact)
+    auto inner_solver_fact = gko::share(gko::experimental::solver::Direct<double, int>::build()
+                                        .with_factorization(lu_fact)
                                         .on(exec));
     auto solver_fact = gko::share(gko::solver::Gmres<>::build()
                                   .with_criteria(
@@ -259,7 +283,7 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
     assert(n_==M_->n() && M_->n()==M_->m());
     assert(n_>0);
 
-    exec_ = gko::ReferenceExecutor::create(); //gko::CudaExecutor::create(0, gko::OmpExecutor::create());
+    exec_ = create_exec(nlp_->options->GetString("ginkgo_exec"));//gko::HipExecutor::create(0, gko::ReferenceExecutor::create());
 
     mtx_ = transferTripletToCSR(exec_, n_, M_, &index_covert_CSR2Triplet_, &index_covert_extra_Diag2CSR_);
     nnz_ = mtx_->get_num_stored_elements();
@@ -284,10 +308,10 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
     
     // Temporary solution for the ginkgo GLU integration.
     auto sol = gko::as<gko::solver::Gmres<>>(gko::as<gko::solver::ScaledReordered<>>(gko_solver_)->get_solver());
-    auto precond = gko::as<gko::preconditioner::Ilu<>>(sol->get_preconditioner());
-    auto status = precond->get_status();
+    auto precond = gko::as<gko::experimental::solver::Direct<double, int>>(sol->get_preconditioner());
+    auto status = precond->get_factorization_status();
     
-    return status;
+    return status == gko::experimental::factorization::status::success ? 0 : -1;
   }
 
   bool hiopLinSolverSymSparseGinkgo::solve ( hiopVector& x_ )
@@ -303,15 +327,17 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
     hiopVectorPar* rhs = dynamic_cast<hiopVectorPar*>(x->new_copy());
     double* dx = x->local_data();
     double* drhs = rhs->local_data();
-    auto x_array = gko::Array<double>::view(exec_, n_, dx);
+    auto x_array = gko::Array<double>::view(exec_->get_master(), n_, dx);
     auto b_array = gko::Array<double>::view(exec_, n_, drhs);
-    auto dense_x = gko::matrix::Dense<double>::create(exec_, gko::dim<2>{n_, 1}, gko::Array<double>::view(exec_, n_, dx), 1);
+    auto dense_x_host = gko::matrix::Dense<double>::create(exec_->get_master(), gko::dim<2>{n_, 1}, gko::Array<double>::view(exec_->get_master(), n_, dx), 1);
+    auto dense_x= gko::matrix::Dense<double>::create(exec_, gko::dim<2>{n_, 1});
+    dense_x->copy_from(dense_x_host.get());
     auto dense_b = gko::matrix::Dense<double>::create(exec_, gko::dim<2>{n_, 1}, b_array, 1);
 
     gko_solver_->apply(dense_b.get(), dense_x.get());
-
     nlp_->runStats.linsolv.tmTriuSolves.stop();
     
+    dense_x_host->copy_from(dense_x.get());
     delete rhs; rhs=nullptr;
     return 1;
   }
@@ -343,7 +369,7 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
     assert(n_==M_->n() && M_->n()==M_->m());
     assert(n_>0);
 
-    exec_= gko::ReferenceExecutor::create(); //gko::CudaExecutor::create(0, gko::OmpExecutor::create());
+    exec_ = create_exec(nlp_->options->GetString("ginkgo_exec"));//gko::HipExecutor::create(0, gko::ReferenceExecutor::create());
 
     mtx_ = transferTripletToCSR(exec_, n_, M_, &index_covert_CSR2Triplet_, &index_covert_extra_Diag2CSR_);
     nnz_ = mtx_->get_num_stored_elements();
@@ -368,10 +394,10 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
 
     // Temporary solution for the ginkgo GLU integration.
     auto sol = gko::as<gko::solver::Gmres<>>(gko::as<gko::solver::ScaledReordered<>>(gko_solver_)->get_solver());
-    auto precond = gko::as<gko::preconditioner::Ilu<>>(sol->get_preconditioner());
-    auto status = precond->get_status();
+    auto precond = gko::as<gko::experimental::solver::Direct<double, int>>(sol->get_preconditioner());
+    auto status = precond->get_factorization_status();
     
-    return status;
+    return status == gko::experimental::factorization::status::success ? 0 : -1;
   }
 
   bool hiopLinSolverNonSymSparseGinkgo::solve(hiopVector& x_)
