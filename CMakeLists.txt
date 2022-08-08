@@ -41,6 +41,7 @@ option(HIOP_USE_PARDISO "Build with PARDISO backend for sparse linear algebra" O
 option(HIOP_USE_STRUMPACK "Build with STRUMPACK backend for sparse linear algebra" OFF)
 option(HIOP_WITH_VALGRIND_TESTS "Run valgrind on certain integration tests" OFF)
 option(HIOP_BUILD_DOCUMENTATION "Build HiOp documentation via Doxygen" ON)
+option(HIOP_BUILD_FORTRAN_EXAMPLE "Build Fortran examples" ON)
 
 set(HIOP_CTEST_LAUNCH_COMMAND "" CACHE STRING "Manually override launch commands used when running CTest")
 set(HIOP_CTEST_OUTPUT_DIR ${PROJECT_BINARY_DIR} CACHE PATH "Directory where CTest outputs are saved")
@@ -59,6 +60,7 @@ endif()
 set(hiop_default_library_type "SHARED")
 if(NOT HIOP_BUILD_SHARED)
   set(hiop_default_library_type "STATIC")
+  set(HIOP_BUILD_FORTRAN_EXAMPLE "OFF")
 endif()
 string(TOLOWER
   ${hiop_default_library_type}
@@ -165,7 +167,7 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     )
 endif()
 
-if(HIOP_USE_GPU AND HIOP_USE_HIP)
+if(HIOP_USE_GPU AND HIOP_USE_HIP AND HIOP_BUILD_FORTRAN_EXAMPLE)
   # Flang is required to link with ROCm bitcode library
   if(NOT (CMAKE_Fortran_COMPILER_ID STREQUAL "Flang"))
     message(SEND_ERROR "Flang is required to link with ROCm bitcode library.")
