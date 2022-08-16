@@ -1970,7 +1970,12 @@ bool hiopVectorRajaPar::isfinite_local() const
  */
 void hiopVectorRajaPar::print(FILE* file, const char* msg/*=NULL*/, int max_elems/*=-1*/, int rank/*=-1*/) const
 {
-  int myrank=0, numranks=1; 
+  int myrank=0, numranks=1;
+
+  if(nullptr == file) {
+    file = stdout;
+  }
+
 #ifdef HIOP_USE_MPI
   if(rank >= 0) {
     int err = MPI_Comm_rank(comm_, &myrank); assert(err==MPI_SUCCESS);
@@ -1982,7 +1987,7 @@ void hiopVectorRajaPar::print(FILE* file, const char* msg/*=NULL*/, int max_elem
     if(max_elems>n_local_)
       max_elems=n_local_;
 
-    if(NULL==msg)
+    if(nullptr==msg)
     {
       std::stringstream ss;
       ss << "vector of size " << n_ << ", printing " << max_elems << " elems ";
@@ -2001,8 +2006,9 @@ void hiopVectorRajaPar::print(FILE* file, const char* msg/*=NULL*/, int max_elem
     }    
     fprintf(file, "=[");
     max_elems = max_elems >= 0 ? max_elems : n_local_;
-    for(int it=0; it<max_elems; it++)
+    for(int it=0; it<max_elems; it++) {
       fprintf(file, "%22.16e ; ", data_host_[it]);
+    }
     fprintf(file, "];\n");
   }
 }
