@@ -1056,11 +1056,14 @@ void hiopOptionsNLP::register_options()
                         "try to update primal regularizations, while the default option `dual_first` always tries to "
                         "update dual regularization first.");
 
-    range[0]="standard"; range[1]="randomized";
+    range = {"scala", "randomized", "dynamic"};
     register_str_option("regularization_method",
-                        "standard",
+                        "scala",
                         range,
-                        "The method used to compute regularizations. (TODO)");
+                        "The method used to compute regularizations. By default, `scala` sets all the primal "
+                        "regularzations to a constant computed by HiOp. `randomized` approach sets regularization "
+                        "to a randomized vector around a constant. `dynamic` exploits the KKT numerical values and "
+                        "sets the regularization dynamically.");
     
   }
   // performance profiling

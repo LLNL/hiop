@@ -345,11 +345,15 @@ bool hiopKKTLinSysCurvCheck::factorize()
 #ifdef HIOP_DEEPCHECKS
     assert(perturb_calc_->check_consistency() && "something went wrong with IC");
 #endif
-      if(delta_wx_->get_size() == 1 && delta_cc_->get_size() == 1) {
+      if(nlp_->options->GetString("regularization_method")=="scala")) {
         nlp_->log->printf(hovScalars, "linsys: delta_w=%12.5e delta_c=%12.5e (ic %d)\n",
                           delta_wx_->local_data_host()[0], delta_cc_->local_data_host()[0], num_refactorization);  
+      } else {
+#ifndef NDEBUG
+        delta_wx_->print(nullptr, "delta_wx_");
+        delta_cc_->print(nullptr, "delta_cc_");
+#endif
       }
-
 
     // the update of the linear system, including IC perturbations
     this->build_kkt_matrix(*delta_wx_, *delta_wd_, *delta_cc_, *delta_cd_);
@@ -397,11 +401,16 @@ bool hiopKKTLinSysCurvCheck::factorize_inertia_free()
 #ifdef HIOP_DEEPCHECKS
     assert(perturb_calc_->check_consistency() && "something went wrong with IC");
 #endif
-  if(delta_wx_->get_size() == 1 && delta_cc_->get_size() == 1) {
+  if(nlp_->options->GetString("regularization_method")=="scala")) {
     nlp_->log->printf(hovScalars, "linsys: delta_w=%12.5e delta_c=%12.5e \n",
                       delta_wx_->local_data_host()[0], delta_cc_->local_data_host()[0]);  
+  } else {
+#ifndef NDEBUG
+    delta_wx_->print(nullptr, "delta_wx_");
+    delta_cc_->print(nullptr, "delta_cc_");
+#endif
   }
-      
+
   // the update of the linear system, including IC perturbations
   this->build_kkt_matrix(*delta_wx_, *delta_wd_, *delta_cc_, *delta_cd_);
 
@@ -427,12 +436,16 @@ bool hiopKKTLinSysCurvCheck::factorize_inertia_free()
       // this while loop is used to correct singularity
       assert(1==continue_re_fact);
     }
-      
-    
-    if(delta_wx_->get_size() == 1 && delta_cc_->get_size() == 1) {
+
+    if(nlp_->options->GetString("regularization_method")=="scala")) {
       nlp_->log->printf(hovScalars, "linsys: delta_w=%12.5e delta_c=%12.5e \n", delta_wx_->local_data_host()[0], delta_cc_->local_data_host()[0]);  
+    }  else {
+#ifndef NDEBUG
+      delta_wx_->print(nullptr, "delta_wx_");
+      delta_cc_->print(nullptr, "delta_cc_");
+#endif
     }
-  
+
     // the update of the linear system, including IC perturbations
     this->build_kkt_matrix(*delta_wx_, *delta_wd_, *delta_cc_, *delta_cd_);
 

@@ -335,5 +335,17 @@ protected: // methods
   virtual void set_delta_last_vec(DeltasUpdateType taskid);  
 };
 
+class hiopPDPerturbationDualFirstDynamic : public hiopPDPerturbationDualFirstScala
+{
+public:
+  hiopPDPerturbationDualFirstDynamic() : hiopPDPerturbationDualFirstScala() {}
+
+  virtual ~hiopPDPerturbationDualFirstDynamic() {}
+
+protected: // methods
+  virtual void set_delta_curr_vec(DeltasUpdateType taskid); 
+  virtual void set_delta_last_vec(DeltasUpdateType taskid);  
+};
+
 } //end of namespace
 #endif
