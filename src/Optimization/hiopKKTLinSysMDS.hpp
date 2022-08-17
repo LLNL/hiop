@@ -110,7 +110,8 @@ public:
   virtual bool build_kkt_matrix(const hiopVector& delta_wx,
                                 const hiopVector& delta_wd,
                                 const hiopVector& delta_cc,
-                                const hiopVector& delta_cd);
+                                const hiopVector& delta_cd,
+                                const DeltasUpdateType delta_update_type);
 
   virtual bool solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
                                hiopVector& dx, hiopVector& dyc, hiopVector& dyd);

@@ -7,6 +7,15 @@
 namespace hiop
 {
 
+enum DeltasUpdateType
+{
+  None  = -1,
+  Initialized  = -1,
+  DualUpdate   =  0,
+  PrimalUpdate =  1,
+  PDUpdate     =  2
+};
+
 class hiopPDPerturbation
 {
 public:
@@ -186,15 +195,9 @@ protected:
     dttDeltacposDeltawpos
   };
 
-  enum DeltasUpdateType
-  {
-    DualUpdate = -1,
-    PrimalUpdate = 0,
-    PDUpdate
-  };
-
   /** Current status */
   DeltasTestType deltas_test_type_;
+  DeltasUpdateType deltas_curr_update_;
   
   /** Log barrier mu in the outer loop. */
   double mu_;

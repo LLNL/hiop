@@ -174,7 +174,8 @@ namespace hiop
   bool hiopKKTLinSysCompressedMDSXYcYd::build_kkt_matrix(const hiopVector& delta_wx, 
                                                          const hiopVector& delta_wd,
                                                          const hiopVector& delta_cc,
-                                                         const hiopVector& delta_cd)
+                                                         const hiopVector& delta_cd,
+                                                         const DeltasUpdateType delta_update_type)
   {
     assert(linSys_);
     hiopLinSolverSymDense* linSys = dynamic_cast<hiopLinSolverSymDense*> (linSys_);

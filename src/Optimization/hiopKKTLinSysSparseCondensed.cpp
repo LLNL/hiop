@@ -111,7 +111,8 @@ hiopKKTLinSysCondensedSparse::~hiopKKTLinSysCondensedSparse()
 bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const hiopVector& delta_wx_in,
                                                     const hiopVector& delta_wd_in,
                                                     const hiopVector& dcc,
-                                                    const hiopVector& dcd)
+                                                    const hiopVector& dcd,
+                                                    const DeltasUpdateType delta_update_type)
 {
   nlp_->runStats.kkt.tmUpdateInit.start();
 

@@ -90,7 +90,8 @@ namespace hiop
   bool hiopKKTLinSysCompressedSparseXYcYd::build_kkt_matrix(const hiopVector& delta_wx,
                                                             const hiopVector& delta_wd,
                                                             const hiopVector& delta_cc,
-                                                            const hiopVector& delta_cd)
+                                                            const hiopVector& delta_cd,
+                                                            const DeltasUpdateType delta_update_type)
   {
     HessSp_ = dynamic_cast<hiopMatrixSparse*>(Hess_);
     if(!HessSp_) { assert(false); return false; }
@@ -413,7 +414,8 @@ namespace hiop
   bool hiopKKTLinSysCompressedSparseXDYcYd::build_kkt_matrix(const hiopVector& delta_wx,
                                                              const hiopVector& delta_wd,
                                                              const hiopVector& delta_cc,
-                                                             const hiopVector& delta_cd)
+                                                             const hiopVector& delta_cd,
+                                                             const DeltasUpdateType delta_update_type)
   {    
     HessSp_ = dynamic_cast<hiopMatrixSymSparseTriplet*>(Hess_);
     if(!HessSp_) { assert(false); return false; }
@@ -847,7 +849,8 @@ namespace hiop
   bool hiopKKTLinSysSparseFull::build_kkt_matrix(const hiopVector& delta_wx,
                                                  const hiopVector& delta_wd,
                                                  const hiopVector& delta_cc,
-                                                 const hiopVector& delta_cd)
+                                                 const hiopVector& delta_cd,
+                                                 const DeltasUpdateType delta_update_type)
   {
     HessSp_ = dynamic_cast<hiopMatrixSymSparseTriplet*>(Hess_);
     if(!HessSp_) { assert(false); return false; }

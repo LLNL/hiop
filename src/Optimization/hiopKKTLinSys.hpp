@@ -243,7 +243,8 @@ public:
   virtual bool build_kkt_matrix(const hiopVector& delta_wx,
                                 const hiopVector& delta_wd,
                                 const hiopVector& delta_cc,
-                                const hiopVector& delta_cd) = 0;
+                                const hiopVector& delta_cd,
+                                const DeltasUpdateType delta_update_type = DeltasUpdateType::None) = 0;
 
   hiopLinSolver* linSys_;
 
@@ -289,7 +290,8 @@ public:
   virtual bool build_kkt_matrix(const hiopVector& delta_wx,
                                 const hiopVector& delta_wd,
                                 const hiopVector& delta_cc,
-                                const hiopVector& delta_cd) = 0;
+                                const hiopVector& delta_cd,
+                                const DeltasUpdateType delta_update_type = DeltasUpdateType::None) = 0;
 protected:
   hiopVector* Dx_;
   hiopVector* Dd_;
@@ -324,7 +326,8 @@ public:
   virtual bool build_kkt_matrix(const hiopVector& delta_wx,
                                 const hiopVector& delta_wd,
                                 const hiopVector& delta_cc,
-                                const hiopVector& delta_cd) = 0;
+                                const hiopVector& delta_cd,
+                                const DeltasUpdateType delta_update_type = DeltasUpdateType::None) = 0;
 
   virtual bool solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
                                hiopVector& dx, hiopVector& dyc, hiopVector& dyd) = 0;
@@ -370,7 +373,8 @@ public:
   virtual bool build_kkt_matrix(const hiopVector& delta_wx,
                                 const hiopVector& delta_wd,
                                 const hiopVector& delta_cc,
-                                const hiopVector& delta_cd) = 0;
+                                const hiopVector& delta_cd,
+                                const DeltasUpdateType delta_update_type = DeltasUpdateType::None) = 0;
 
   virtual bool solveCompressed(hiopVector& rx, hiopVector& rd, 
                                hiopVector& ryc, hiopVector& ryd,
@@ -426,7 +430,8 @@ public:
   virtual bool build_kkt_matrix(const hiopVector& delta_wx,
                                 const hiopVector& delta_wd,
                                 const hiopVector& delta_cc,
-                                const hiopVector& delta_cd) 
+                                const hiopVector& delta_cd,
+                                const DeltasUpdateType delta_update_type = DeltasUpdateType::None)
   {
     assert(false && "not yet implemented");
     return false;
@@ -543,7 +548,8 @@ public:
   virtual bool build_kkt_matrix(const hiopVector& delta_wx,
                                 const hiopVector& delta_wd,
                                 const hiopVector& delta_cc,
-                                const hiopVector& delta_cd) = 0;
+                                const hiopVector& delta_cd,
+                                const DeltasUpdateType delta_update_type = DeltasUpdateType::None) = 0;
   
   virtual bool solve( hiopVector& rx, hiopVector& ryc, hiopVector& ryd, hiopVector& rd,
                       hiopVector& rdl, hiopVector& rdu, hiopVector& rxl, hiopVector& rxu,
@@ -591,7 +597,8 @@ public:
   virtual bool build_kkt_matrix(const hiopVector& delta_wx,
                                 const hiopVector& delta_wd,
                                 const hiopVector& delta_cc,
-                                const hiopVector& delta_cd) = 0;
+                                const hiopVector& delta_cd,
+                                const DeltasUpdateType delta_update_type = DeltasUpdateType::None) = 0;
 
   virtual bool solveCompressed(hiopVector& ryc_tilde,
                                hiopVector& ryd_tilde,

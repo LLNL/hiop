@@ -99,6 +99,7 @@ namespace hiop
     num_degen_iters_ = 0;
 
     deltas_test_type_ = dttNoTest;
+    deltas_curr_update_ = None;
     return true;
   }
 
@@ -214,6 +215,7 @@ namespace hiop
     delta_cc.copyFrom(*delta_cc_curr_);
     delta_cd.copyFrom(*delta_cd_curr_);
 
+    deltas_curr_update_ = Initialized;
     return true;
   }
 
@@ -393,6 +395,7 @@ namespace hiop
 
   void hiopPDPerturbationPrimalFirstScala::set_delta_curr_vec(DeltasUpdateType taskid)
   {
+    deltas_curr_update_ = taskid;
     if(DualUpdate == taskid) {
       // only update dual deltas
       delta_cc_curr_->setToConstant(delta_cc_curr_db_);
@@ -454,6 +457,7 @@ namespace hiop
 
   void hiopPDPerturbationPrimalFirstRand::set_delta_curr_vec(DeltasUpdateType taskid)
   {
+    deltas_curr_update_ = taskid;
     if(DualUpdate == taskid) {
       // only update dual deltas
       delta_cc_curr_->set_to_random_uniform(min_uniform_ratio_*delta_cc_curr_db_, max_uniform_ratio_*delta_cc_curr_db_);
@@ -663,6 +667,7 @@ namespace hiop
 
   void hiopPDPerturbationDualFirstScala::set_delta_curr_vec(DeltasUpdateType taskid)
   {
+    deltas_curr_update_ = taskid;
     if(DualUpdate == taskid) {
       // only update dual deltas
       delta_cc_curr_->setToConstant(delta_cc_curr_db_);
@@ -724,6 +729,7 @@ namespace hiop
 
   void hiopPDPerturbationDualFirstRand::set_delta_curr_vec(DeltasUpdateType taskid)
   {
+    deltas_curr_update_ = taskid;
     if(DualUpdate == taskid) {
       // only update dual deltas
       delta_cc_curr_->set_to_random_uniform(min_uniform_ratio_*delta_cc_curr_db_, max_uniform_ratio_*delta_cc_curr_db_);

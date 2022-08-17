@@ -124,7 +124,8 @@ hiopKKTLinSysSparseNormalEqn::~hiopKKTLinSysSparseNormalEqn()
 bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const hiopVector& delta_wx_in,
                                                     const hiopVector& delta_wd_in,
                                                     const hiopVector& delta_cc_in,
-                                                    const hiopVector& delta_cd_in)
+                                                    const hiopVector& delta_cd_in,
+                                                    const DeltasUpdateType delta_update_type)
 {
 
 #ifdef HIOP_DEEPCHECKS
