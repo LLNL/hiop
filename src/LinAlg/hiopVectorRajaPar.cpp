@@ -1968,7 +1968,7 @@ bool hiopVectorRajaPar::isfinite_local() const
  * 
  * @pre Vector data was moved from the memory space to the host mirror.
  */
-void hiopVectorRajaPar::print(FILE* file, const char* msg/*=NULL*/, int max_elems/*=-1*/, int rank/*=-1*/) const
+void hiopVectorRajaPar::print(FILE* file/*=nullptr*/, const char* msg/*=nullptr*/, int max_elems/*=-1*/, int rank/*=-1*/) const
 {
   int myrank=0, numranks=1;
 
@@ -2011,15 +2011,6 @@ void hiopVectorRajaPar::print(FILE* file, const char* msg/*=NULL*/, int max_elem
     }
     fprintf(file, "];\n");
   }
-}
-
-void hiopVectorRajaPar::print() const
-{
-  copyFromDev();
-  for(index_type it=0; it<n_local_; it++) {
-    printf("vec [%d] = %1.16e\n",it+1,data_host_[it]);
-  }
-  printf("\n");
 }
 
 void hiopVectorRajaPar::copyToDev()

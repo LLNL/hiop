@@ -1108,15 +1108,6 @@ bool hiopVectorPar::isfinite_local() const
   return true;
 }
 
-void hiopVectorPar::print() const
-{
-  int max_elems = n_local_;
-  for(int it=0; it<max_elems; it++) {
-    printf("vec [%d] = %1.16e\n",it+1,data_[it]);
-  }
-  printf("\n");
-}
-
 void hiopVectorPar::print(FILE* file/*=nullptr*/, const char* msg/*=nullptr*/, int max_elems/*=-1*/, int rank/*=-1*/) const 
 {
   int myrank_=0, numranks=1; 

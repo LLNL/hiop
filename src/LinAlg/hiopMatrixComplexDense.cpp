@@ -192,8 +192,9 @@ namespace hiop
       if(msg) {
         fprintf(f, "%s (local_dims=[%d,%d])\n", msg, m_local_,n_local_);
       } else { 
-        fprintf(f, "hiopMatrixComplexDense::printing max=[%d,%d] (local_dims=[%d,%d], on rank=%d)\n", 
-                maxRows, maxCols, m_local_,n_local_,myrank_);
+        fprintf(f,
+                "hiopMatrixComplexDense::printing max=[%d,%d] (local_dims=[%d,%d], on rank=%d)\n",
+                maxRows, maxCols, m_local_, n_local_, myrank_);
       }
       maxRows = maxRows>=0?maxRows:m_local_;
       maxCols = maxCols>=0?maxCols:n_local_;
