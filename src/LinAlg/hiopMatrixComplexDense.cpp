@@ -152,7 +152,7 @@ namespace hiop
 #ifdef HIOP_USE_MPI
     assert(n_local_ == n_global_ && "timesVec for distributed matrices not supported/not needed");
 #endif
-    
+
     if( MM != 0 && NN != 0 ) {
       // the arguments seem reversed but so is trans='T' 
       // required since we keep the matrix row-wise, while the Fortran/BLAS expects them column-wise
@@ -160,14 +160,13 @@ namespace hiop
 	     xa, &incx_y, &beta, ya, &incx_y );
     } else {
       if( MM != 0 ) {
-	int one=1; 
-	ZSCAL(&NN, &beta, ya, &one);
-	
+        int one=1; 
+        ZSCAL(&NN, &beta, ya, &one);
       } else {
-	assert(MM==0);
-	return;
+        assert(MM==0);
+        return;
       }
-    }    
+    } 
   }
   
   bool hiopMatrixComplexDense::isfinite() const
@@ -190,25 +189,27 @@ namespace hiop
       if(maxRows>m_local_) maxRows=m_local_;
       if(maxCols>n_local_) maxCols=n_local_;
       
-      if(f==NULL) f=stdout;
-      
       if(msg) {
-	fprintf(f, "%s (local_dims=[%d,%d])\n", msg, m_local_,n_local_);
+        fprintf(f, "%s (local_dims=[%d,%d])\n", msg, m_local_,n_local_);
       } else { 
-	fprintf(f, "hiopMatrixComplexDense::printing max=[%d,%d] (local_dims=[%d,%d], on rank=%d)\n", 
-		maxRows, maxCols, m_local_,n_local_,myrank_);
+        fprintf(f, "hiopMatrixComplexDense::printing max=[%d,%d] (local_dims=[%d,%d], on rank=%d)\n", 
+                maxRows, maxCols, m_local_,n_local_,myrank_);
       }
       maxRows = maxRows>=0?maxRows:m_local_;
       maxCols = maxCols>=0?maxCols:n_local_;
       fprintf(f, "[");
       for(int i=0; i<maxRows; i++) {
-	if(i>0) fprintf(f, " ");
-	for(int j=0; j<maxCols; j++) 
-	  fprintf(f, "%8.5e+%8.5ei; ", M[i][j].real(), M[i][j].imag());
-	if(i<maxRows-1)
-	  fprintf(f, "; ...\n");
-	else
-	  fprintf(f, "];\n");
+        if(i>0) {
+          fprintf(f, " ");
+        }
+        for(int j=0; j<maxCols; j++) {
+          fprintf(f, "%8.5e+%8.5ei; ", M[i][j].real(), M[i][j].imag());
+        }
+        if(i<maxRows-1) {
+      	  fprintf(f, "; ...\n");
+        } else {
+      	  fprintf(f, "];\n");          
+        }
       }
     }
   }
