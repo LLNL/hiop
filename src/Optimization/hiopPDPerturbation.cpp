@@ -158,9 +158,9 @@ namespace hiop
   /** Called when a new linear system is attempted to be factorized 
    */
   bool hiopPDPerturbationPrimalFirstScala::compute_initial_deltas(hiopVector& delta_wx,
-                                                  hiopVector& delta_wd,
-                                                  hiopVector& delta_cc,
-                                                  hiopVector& delta_cd)
+                                                                  hiopVector& delta_wd,
+                                                                  hiopVector& delta_cc,
+                                                                  hiopVector& delta_cd)
   {
     double delta_temp;
     double delta_temp2;
@@ -219,9 +219,9 @@ namespace hiop
 
   /** Method for correcting inertia */
   bool hiopPDPerturbationPrimalFirstScala::compute_perturb_wrong_inertia(hiopVector& delta_wx,
-                                                         hiopVector& delta_wd,
-                                                         hiopVector& delta_cc,
-                                                         hiopVector& delta_cd)
+                                                                         hiopVector& delta_wd,
+                                                                         hiopVector& delta_cc,
+                                                                         hiopVector& delta_cd)
   {    
     update_degeneracy_type();
 

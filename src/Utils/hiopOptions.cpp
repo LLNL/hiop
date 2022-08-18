@@ -989,7 +989,7 @@ void hiopOptionsNLP::register_options()
                         "dual_first",
                         range,
                         "When normal equation is used and the iterate matrix is not p.d., updating dual regularization "
-                        "is more efficient thatn updateing the primal ones. Setting this option to `primal_first` will "
+                        "is more efficient than updating the primal ones. Setting this option to `primal_first` will "
                         "try to update primal regularizations, while the default option `dual_first` always tries to "
                         "update dual regularization first.");
 

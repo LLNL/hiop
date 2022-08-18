@@ -261,12 +261,9 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const hiopVector& delta_wx_i
   t.reset(); t.start();
   
   Diag_reg_->setToZero();
-  if(!delta_cc_in.is_zero() || !delta_cd_in.is_zero()) {
-    delta_cc_in.copyToStarting(*dual_reg_,0);
-    delta_cd_in.copyToStarting(*dual_reg_,neq);
-    
-    Diag_reg_->addDiagonal(1.0,*dual_reg_);
-  }
+  delta_cc_in.copyToStarting(*dual_reg_,0);
+  delta_cd_in.copyToStarting(*dual_reg_,neq);    
+  Diag_reg_->addDiagonal(1.0,*dual_reg_);
 
   Diag_reg_->add_matrix_numeric(*M_normaleqn_, 1.0, *JDiagJt_, 1.0);
 

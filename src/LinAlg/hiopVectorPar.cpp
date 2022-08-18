@@ -238,9 +238,7 @@ void hiopVectorPar::startingAtCopyFromStartingAt(int start_idx_dest,
     return;
   }
 
-#ifndef NDEBUG
   assert(howManyToCopyDest <= howManyToCopySrc);
-#endif
 
   //just to be safe when not NDEBUG
   if(howManyToCopyDest > howManyToCopySrc) howManyToCopyDest = howManyToCopySrc;

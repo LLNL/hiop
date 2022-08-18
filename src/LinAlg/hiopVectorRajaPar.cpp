@@ -507,9 +507,7 @@ void hiopVectorRajaPar::startingAtCopyFromStartingAt(
     return;
   }
 
-#ifndef NDEBUG
   assert(howManyToCopyDest <= howManyToCopySrc);
-#endif
 
   auto& rm = umpire::ResourceManager::getInstance();
   rm.copy(this->data_dev_ + start_idx_dest, 
