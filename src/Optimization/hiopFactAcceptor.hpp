@@ -87,10 +87,10 @@ public:
    */
   virtual int requireReFactorization(const hiopNlpFormulation& nlp,
                                      const int& n_neg_eig,
-                                     double& delta_wx,
-                                     double& delta_wd,
-                                     double& delta_cc,
-                                     double& delta_cd,
+                                     hiopVector& delta_wx,
+                                     hiopVector& delta_wd,
+                                     hiopVector& delta_cc,
+                                     hiopVector& delta_cd,
                                      const bool force_reg=false) = 0;
       
 protected:  
@@ -115,10 +115,10 @@ public:
    
   virtual int requireReFactorization(const hiopNlpFormulation& nlp,
                                      const int& n_neg_eig, 
-                                     double& delta_wx,
-                                     double& delta_wd,
-                                     double& delta_cc,
-                                     double& delta_cd,
+                                     hiopVector& delta_wx,
+                                     hiopVector& delta_wd,
+                                     hiopVector& delta_cc,
+                                     hiopVector& delta_cd,
                                      const bool force_reg=false);
  
 protected:
@@ -142,10 +142,10 @@ public:
    
   virtual int requireReFactorization(const hiopNlpFormulation& nlp,
                                      const int& n_neg_eig, 
-                                     double& delta_wx,
-                                     double& delta_wd,
-                                     double& delta_cc,
-                                     double& delta_cd,
+                                     hiopVector& delta_wx,
+                                     hiopVector& delta_wd,
+                                     hiopVector& delta_cc,
+                                     hiopVector& delta_cd,
                                      const bool force_reg=false);
  
 protected:

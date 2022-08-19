@@ -82,10 +82,10 @@ public:
     delete rhsXYcYd;
   }
 
-  virtual bool build_kkt_matrix(const double& delta_wx,
-                                const double& delta_wd,
-                                const double& delta_cc,
-                                const double& delta_cd)
+  virtual bool build_kkt_matrix(const hiopVector& delta_wx,
+                                const hiopVector& delta_wd,
+                                const hiopVector& delta_cc,
+                                const hiopVector& delta_cd)
   {
     assert(nlp_);
 
@@ -134,10 +134,10 @@ public:
     Jac_d_->transAddToSymDenseMatrixUpperTriangle(0, nx+neq, alpha, Msys);
       
     Msys.addSubDiagonal(alpha, 0, *Dx_);
-    Msys.addSubDiagonal(0, nx, delta_wx);
+    Msys.addSubDiagonal(alpha, 0, delta_wx);
 
     //Dd=(Sdl)^{-1}Vu + (Sdu)^{-1}Vu + delta_wd*I
-    Dd_inv_->setToConstant(delta_wd);
+    Dd_inv_->copyFrom(delta_wd);
     Dd_inv_->axdzpy_w_pattern(1.0, *iter_->vl, *iter_->sdl, nlp_->get_idl());
     Dd_inv_->axdzpy_w_pattern(1.0, *iter_->vu, *iter_->sdu, nlp_->get_idu());
 #ifdef HIOP_DEEPCHECKS
@@ -148,10 +148,10 @@ public:
     alpha=-1.;
     Msys.addSubDiagonal(alpha, nx+neq, *Dd_inv_);
 
-    assert(delta_cc == delta_cd);
-    //Msys.addSubDiagonal(nx+nineq, neq, -delta_cc);
-    //Msys.addSubDiagonal(nx+nineq+neq, nineq, -delta_cd);
-    Msys.addSubDiagonal(nx, neq+nineq, -delta_cd);
+#ifdef HIOP_DEEPCHECKS
+    assert(perturb_calc_->check_consistency() && "something went wrong with IC");
+#endif
+    Msys.addSubDiagonal(alpha, nx, delta_cd);
 
     nlp_->log->write("KKT Linsys:", Msys, hovMatrices);
 
@@ -244,10 +244,10 @@ public:
   * [    Jc        0     0      0    ] [dyc] = [   ryc    ]
   * [    Jd       -I     0      0    ] [dyd]   [   ryd    ]
   */
-  virtual bool build_kkt_matrix(const double& delta_wx,
-                                const double& delta_wd,
-                                const double& delta_cc,
-                                const double& delta_cd)
+  virtual bool build_kkt_matrix(const hiopVector& delta_wx,
+                                const hiopVector& delta_wd,
+                                const hiopVector& delta_cc,
+                                const hiopVector& delta_cd)
   {
     assert(nlp_);
    
@@ -289,27 +289,27 @@ public:
 	
     //add diagonals and IC perturbations
     Msys.addSubDiagonal(alpha, 0, *Dx_);
-    Msys.addSubDiagonal(0, nx, delta_wx);
+    Msys.addSubDiagonal(alpha, 0, delta_wx);
 
     Msys.addSubDiagonal(alpha, nx, *Dd_);
-    Msys.addSubDiagonal(nx, nineq, delta_wd);
+    Msys.addSubDiagonal(alpha, nx, delta_wd);
 	
-	//add -I (of size nineq) starting at index (nx, nx+nineq+neq)
-	int col_start = nx+nineq+neq;
-	double* MsysM = Msys.local_data();
-        int m_Msys = Msys.m();
-        assert(m_Msys == Msys.n());
-	for(int i=nx; i<nx+nineq; i++) {
-          //MsysM[i][col_start++] -= 1.;
-          assert(i*m_Msys+col_start < m_Msys*m_Msys);
-          MsysM[i*m_Msys+col_start] -= 1.;
-          col_start++;
-        }
-    
-    assert(delta_cc == delta_cd);
-    //Msys.addSubDiagonal(nx+nineq, neq, -delta_cc);
-    //Msys.addSubDiagonal(nx+nineq+neq, nineq, -delta_cd);
-    Msys.addSubDiagonal(nx+nineq, neq+nineq, -delta_cd);
+    //add -I (of size nineq) starting at index (nx, nx+nineq+neq)
+    int col_start = nx+nineq+neq;
+    double* MsysM = Msys.local_data();
+    int m_Msys = Msys.m();
+    assert(m_Msys == Msys.n());
+    for(int i=nx; i<nx+nineq; i++) {
+      //MsysM[i][col_start++] -= 1.;
+      assert(i*m_Msys+col_start < m_Msys*m_Msys);
+      MsysM[i*m_Msys+col_start] -= 1.;
+      col_start++;
+    }
+
+#ifdef HIOP_DEEPCHECKS
+      assert(delta_cc.is_equal(delta_cd));
+#endif
+    Msys.addSubDiagonal(-alpha, nx+nineq, delta_cd);
 
     nlp_->log->write("KKT Linsys:", Msys, hovMatrices);
 

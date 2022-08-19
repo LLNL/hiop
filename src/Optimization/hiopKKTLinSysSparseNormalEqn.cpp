@@ -103,14 +103,16 @@ hiopKKTLinSysSparseNormalEqn::~hiopKKTLinSysSparseNormalEqn()
   delete M_normaleqn_;
 }
 
-bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const double& delta_wx_in,
-                                                    const double& delta_wd_in,
-                                                    const double& delta_cc_in,
-                                                    const double& delta_cd_in)
+bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const hiopVector& delta_wx_in,
+                                                    const hiopVector& delta_wd_in,
+                                                    const hiopVector& delta_cc_in,
+                                                    const hiopVector& delta_cd_in)
 {
-  assert(delta_cc_in == delta_cd_in);
-  auto delta_cc = delta_cc_in;
-   
+
+#ifdef HIOP_DEEPCHECKS
+    assert(perturb_calc_->check_consistency() && "something went wrong with IC");
+#endif
+
   HessSp_ = dynamic_cast<hiopMatrixSparse*>(Hess_);
   if(!HessSp_) { assert(false); return false; }
 
@@ -142,7 +144,6 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const double& delta_wx_in,
   assert(nineq == Dd_->get_size());
   assert(nx == Dx_->get_size());
 
-  /* TODO: here we assume Hess is diagonal!*/
   if(nullptr == Hess_diag_) {
     Hess_diag_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), nx);
     assert(Hess_diag_);
@@ -155,16 +156,15 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const double& delta_wx_in,
     assert(Hx_);
   }
   Hx_->copyFrom(*Dx_);
-  Hx_->addConstant(delta_wx_in);
-  Hx_->axpy(1.0,*Hess_diag_);
+  Hx_->axpy(1., delta_wx_in);
+  Hx_->axpy(1., *Hess_diag_);
   
   // HD = Dd_ + delta_wd
   if(nullptr == Hd_) {
     Hd_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), nineq);
   }
   Hd_->copyFrom(*Dd_);
-  // TODO: add function add_constant_with_bias()
-  Hd_->addConstant(delta_wd_in);
+  Hd_->axpy(1., delta_wd_in);
 
   nlp_->runStats.kkt.tmUpdateInit.stop();
   nlp_->runStats.kkt.tmUpdateLinsys.start();
@@ -259,17 +259,12 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const double& delta_wx_in,
   }
 
   t.reset(); t.start();
-  assert(delta_cc>=0.0);
+  
   Diag_reg_->setToZero();
-  if(delta_cc > 0.0) {
-    if(nlp_->options->GetString("dual_reg_method") == "unified") {
-      dual_reg_->setToConstant(delta_cc);
-    } else if(nlp_->options->GetString("dual_reg_method") == "randomized") {
-      dual_reg_->set_to_random_uniform(0.9*delta_cc, 1.1*delta_cc);
-    }
-    
-    Diag_reg_->addDiagonal(1.0,*dual_reg_);
-  }
+  delta_cc_in.copyToStarting(*dual_reg_,0);
+  delta_cd_in.copyToStarting(*dual_reg_,neq);    
+  Diag_reg_->addDiagonal(1.0,*dual_reg_);
+
   Diag_reg_->add_matrix_numeric(*M_normaleqn_, 1.0, *JDiagJt_, 1.0);
 
   // TODO should have same code for different compute modes (remove is_cusolver_on), i.e., remove if(linSolver_ma57)

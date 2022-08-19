@@ -1026,9 +1026,18 @@ void hiopOptionsNLP::register_options()
                         "Exponent of mu when computing regularization for potentially rank-deficient "
                         "Jacobian (delta_c=delta_c_bar*mu^kappa_c)");
 
-    vector<string> range(2); range[0]="unified"; range[1]="randomized";
-    register_str_option("dual_reg_method",
-                        "unified",
+    vector<string> range = {"primal_first", "dual_first"};    
+    register_str_option("normaleqn_regularization_priority",
+                        "dual_first",
+                        range,
+                        "When normal equation is used and the iterate matrix is not p.d., updating dual regularization "
+                        "is more efficient than updating the primal ones. Setting this option to `primal_first` will "
+                        "try to update primal regularizations, while the default option `dual_first` always tries to "
+                        "update dual regularization first.");
+
+    range[0]="standard"; range[1]="randomized";
+    register_str_option("regularization_method",
+                        "standard",
                         range,
                         "The method used to compute dual regularization. (TODO)");
     

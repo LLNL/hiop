@@ -284,6 +284,8 @@ public:
   virtual void adjustDuals_plh(const hiopVector& x, const hiopVector& ix,
 			       const double& mu, const double& kappa)=0;
 
+  /// @brief True if all elements of this are zero. TODO: add unit test
+  virtual bool is_zero() const = 0;
   /// @brief check for nans in the local vector
   virtual bool isnan_local() const = 0;
   /// @brief check for infs in the local vector

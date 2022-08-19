@@ -492,23 +492,22 @@ void hiopVectorRajaPar::startingAtCopyFromStartingAt(
   const hiopVector& vec_src,
   int start_idx_src)
 {
+  size_type howManyToCopyDest = this->n_local_ - start_idx_dest;
+
 #ifdef HIOP_DEEPCHECKS
   assert(n_local_ == n_ && "are you sure you want to call this?");
 #endif
+
   assert((start_idx_dest >= 0 && start_idx_dest < this->n_local_) || this->n_local_==0);
   const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(vec_src);
   assert((start_idx_src >=0 && start_idx_src < v.n_local_) || v.n_local_==0 || v.n_local_==start_idx_src);
+  const size_type howManyToCopySrc = v.n_local_-start_idx_src;  
 
-  size_type howManyToCopyDest = this->n_local_ - start_idx_dest;
-
-#ifndef NDEBUG
-  const size_type howManyToCopySrc = v.n_local_-start_idx_src;
-  assert(howManyToCopyDest <= howManyToCopySrc);
-#endif
-
-  if(howManyToCopyDest == 0) {
+  if(howManyToCopyDest == 0 || howManyToCopySrc == 0) {
     return;
   }
+
+  assert(howManyToCopyDest <= howManyToCopySrc);
 
   auto& rm = umpire::ResourceManager::getInstance();
   rm.copy(this->data_dev_ + start_idx_dest, 
@@ -1901,6 +1900,32 @@ void hiopVectorRajaPar::adjustDuals_plh(
           //else a>=z[i] then *z=*z (z[i] does not need adjustment)
       }
     });
+}
+
+/**
+ * @brief Check if all elements of the vector are zero
+ * 
+ * @post `this` is not modified
+ */
+bool hiopVectorRajaPar::is_zero() const
+{
+  double* data = data_dev_;
+  RAJA::ReduceSum< hiop_raja_reduce, int > sum(0);
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      if(data[i] != 0.0) {
+        sum += 1;
+      }
+    });
+  int all_zero = (sum.get() == 0) ? 1 : 0;
+
+#ifdef HIOP_USE_MPI
+  int all_zero_G;
+  int ierr=MPI_Allreduce(&all_zero, &all_zero_G, 1, MPI_INT, MPI_MIN, comm_); assert(MPI_SUCCESS==ierr);
+  return all_zero_G;
+#endif
+  return all_zero;
 }
 
 /**

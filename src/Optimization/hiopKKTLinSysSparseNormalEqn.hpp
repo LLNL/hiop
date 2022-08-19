@@ -93,10 +93,10 @@ public:
   hiopKKTLinSysSparseNormalEqn(hiopNlpFormulation* nlp);
   virtual ~hiopKKTLinSysSparseNormalEqn();
 
-  virtual bool build_kkt_matrix(const double& delta_wx,
-                                const double& delta_wd,
-                                const double& delta_cc,
-                                const double& delta_cd);
+  virtual bool build_kkt_matrix(const hiopVector& delta_wx,
+                                const hiopVector& delta_wd,
+                                const hiopVector& delta_cc,
+                                const hiopVector& delta_cd);
 
   virtual bool solveCompressed(hiopVector& ryc_tilde,
                                hiopVector& ryd_tilde,
@@ -127,10 +127,12 @@ protected:
   const hiopMatrixSparse* Jac_cSp_;
   const hiopMatrixSparse* Jac_dSp_;
 
-  /// Member for ( [ Jc  0 ] [ H+Dx+delta_wx     0       ]^{-1} [ Jc^T  Jd^T ] + [ delta_cc     0     ] )
-  ///            ( [ Jd -I ] [   0           Dd+delta_wd ]      [  0     -I  ]   [    0      delta_cd ] )
-  /// let JacD_ = [Jc 0; Jd -I]
-  /// TODO: now we assume Jc and Jd won't change, i.e., LP or QP. hence we build JacD_ and JacDt_ once and save them
+  /**
+  * Member for ( [ Jc  0 ] [ H+Dx+delta_wx     0       ]^{-1} [ Jc^T  Jd^T ] + [ delta_cc     0     ] )
+  *            ( [ Jd -I ] [   0           Dd+delta_wd ]      [  0     -I  ]   [    0      delta_cd ] )
+  * let JacD_ = [Jc 0; Jd -I]
+  * @pre: now we assume Jc and Jd won't change, i.e., LP or QP. hence we build JacD_ and JacDt_ once and save them
+  */ 
 
   /// Member for JacD in CSR format
   hiopMatrixSparseCSR* JacD_;
