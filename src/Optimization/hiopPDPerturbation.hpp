@@ -87,34 +87,42 @@ public:
 
   /** Called when a new linear system is attempted to be factorized 
    */
-  virtual bool compute_initial_deltas(hiopVector& delta_wx, 
-                                      hiopVector& delta_wd,
-                                      hiopVector& delta_cc,
-                                      hiopVector& delta_cd) = 0;
+  virtual bool compute_initial_deltas() = 0;
 
   /** Method for correcting inertia */
-  virtual bool compute_perturb_wrong_inertia(hiopVector& delta_wx, 
-                                             hiopVector& delta_wd,
-                                             hiopVector& delta_cc,
-                                             hiopVector& delta_cd) = 0;
+  virtual bool compute_perturb_wrong_inertia() = 0;
 
   /** Method for correcting singular Jacobian 
    *  (follows Ipopt closely since the paper seems to be outdated)
    */
-  virtual bool compute_perturb_singularity(hiopVector& delta_wx, 
+  virtual bool compute_perturb_singularity() = 0;
+
+  inline bool copy_from_curr_perturbations(hiopVector& delta_wx, 
                                            hiopVector& delta_wd,
                                            hiopVector& delta_cc,
-                                           hiopVector& delta_cd) = 0;
-
-  inline bool get_curr_perturbations(hiopVector& delta_wx, 
-                                     hiopVector& delta_wd,
-                                     hiopVector& delta_cc,
-                                     hiopVector& delta_cd)
+                                           hiopVector& delta_cd)
   {
     delta_wx.copyFrom(*delta_wx_curr_);
     delta_wd.copyFrom(*delta_wd_curr_);
     delta_cc.copyFrom(*delta_cc_curr_);
     delta_cd.copyFrom(*delta_cd_curr_);
+    return true;
+  }
+
+  inline hiopVector* get_curr_delta_wx() const {return delta_wx_curr_;}
+  inline hiopVector* get_curr_delta_wd() const {return delta_wd_curr_;}
+  inline hiopVector* get_curr_delta_cc() const {return delta_cc_curr_;}
+  inline hiopVector* get_curr_delta_cd() const {return delta_cd_curr_;}
+
+  inline bool get_curr_perturbations_const(hiopVector* delta_wx, 
+                                     hiopVector* delta_wd,
+                                     hiopVector* delta_cc,
+                                     hiopVector* delta_cd) const
+  {
+    delta_wx = get_curr_delta_wx();
+    delta_wd = get_curr_delta_wd();
+    delta_cc = get_curr_delta_cc();
+    delta_cd = get_curr_delta_cd();
     return true;
   }
 
@@ -213,6 +221,38 @@ protected: //methods
   virtual void set_delta_last_vec(DeltasUpdateType taskid) = 0;
 };
 
+/* method used for quasi newton's method */
+class hiopPDPerturbationDummy : public hiopPDPerturbation
+{
+public:
+  /** Default constructor 
+   * Provides complete initialization, but uses algorithmic parameters from the Ipopt
+   * implementation paper. \ref initialize(hiopNlpFormulation*) should be used to initialize
+   * this class based on HiOp option file or HiOp user-supplied runtime options.
+   */
+  hiopPDPerturbationDummy() : hiopPDPerturbation() {}
+  virtual ~hiopPDPerturbationDummy() {}
+
+  /** Called when a new linear system is attempted to be factorized 
+   */
+  virtual bool compute_initial_deltas() {return true;}
+
+  /** Method for correcting inertia */
+  virtual bool compute_perturb_wrong_inertia() {return true;}
+
+  /** Method for correcting singular Jacobian 
+   *  (follows Ipopt closely since the paper seems to be outdated)
+   */
+  virtual bool compute_perturb_singularity() {return true;}
+                  
+  virtual bool check_consistency() {return true;}
+
+protected: //methods
+  virtual void set_delta_curr_vec(DeltasUpdateType taskid) {}
+  virtual void set_delta_last_vec(DeltasUpdateType taskid) {}              
+};
+
+
 class hiopPDPerturbationPrimalFirstScala : public hiopPDPerturbation
 {
 public:
@@ -226,24 +266,15 @@ public:
 
   /** Called when a new linear system is attempted to be factorized 
    */
-  virtual bool compute_initial_deltas(hiopVector& delta_wx, 
-                                      hiopVector& delta_wd,
-                                      hiopVector& delta_cc,
-                                      hiopVector& delta_cd);
+  virtual bool compute_initial_deltas();
 
   /** Method for correcting inertia */
-  virtual bool compute_perturb_wrong_inertia(hiopVector& delta_wx, 
-                                             hiopVector& delta_wd,
-                                             hiopVector& delta_cc,
-                                             hiopVector& delta_cd);
+  virtual bool compute_perturb_wrong_inertia();
 
   /** Method for correcting singular Jacobian 
    *  (follows Ipopt closely since the paper seems to be outdated)
    */
-  virtual bool compute_perturb_singularity(hiopVector& delta_wx, 
-                                           hiopVector& delta_wd,
-                                           hiopVector& delta_cc,
-                                           hiopVector& delta_cd);
+  virtual bool compute_perturb_singularity();
                   
   virtual bool check_consistency();
                          
@@ -285,24 +316,15 @@ public:
 
   /** Called when a new linear system is attempted to be factorized 
    */
-  virtual bool compute_initial_deltas(hiopVector& delta_wx,
-                                      hiopVector& delta_wd,
-                                      hiopVector& delta_cc,
-                                      hiopVector& delta_cd);
+  virtual bool compute_initial_deltas();
 
   /** Method for correcting inertia */
-  virtual bool compute_perturb_wrong_inertia(hiopVector& delta_wx, 
-                                             hiopVector& delta_wd,
-                                             hiopVector& delta_cc,
-                                             hiopVector& delta_cd);
+  virtual bool compute_perturb_wrong_inertia();
                             
   /** Method for correcting singular Jacobian 
    *  (follows Ipopt closely since the paper seems to be outdated)
    */  
-  virtual bool compute_perturb_singularity(hiopVector& delta_wx,
-                                           hiopVector& delta_wd,
-                                           hiopVector& delta_cc,
-                                           hiopVector& delta_cd);
+  virtual bool compute_perturb_singularity();
 
   virtual bool check_consistency();
                          

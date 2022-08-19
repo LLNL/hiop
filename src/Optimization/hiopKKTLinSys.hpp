@@ -240,7 +240,8 @@ public:
   /** 
    * @brief updates the iterate matrix, given regularizations 'delta_wx', 'delta_wd', 'delta_cc' and 'delta_cd'.
    */
-  virtual bool build_kkt_matrix(const hiopVector& delta_wx,
+  virtual bool build_kkt_matrix(const hiopPDPerturbation& pdreg, 
+                                const hiopVector& delta_wx,
                                 const hiopVector& delta_wd,
                                 const hiopVector& delta_cc,
                                 const hiopVector& delta_cd,
@@ -287,7 +288,8 @@ public:
 
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction) = 0;
 
-  virtual bool build_kkt_matrix(const hiopVector& delta_wx,
+  virtual bool build_kkt_matrix(const hiopPDPerturbation& pdreg, 
+                                const hiopVector& delta_wx,
                                 const hiopVector& delta_wd,
                                 const hiopVector& delta_cc,
                                 const hiopVector& delta_cd,
@@ -323,7 +325,8 @@ public:
 
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction);
 
-  virtual bool build_kkt_matrix(const hiopVector& delta_wx,
+  virtual bool build_kkt_matrix(const hiopPDPerturbation& pdreg, 
+                                const hiopVector& delta_wx,
                                 const hiopVector& delta_wd,
                                 const hiopVector& delta_cc,
                                 const hiopVector& delta_cd,
@@ -370,7 +373,8 @@ public:
 
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction);
 
-  virtual bool build_kkt_matrix(const hiopVector& delta_wx,
+  virtual bool build_kkt_matrix(const hiopPDPerturbation& pdreg, 
+                                const hiopVector& delta_wx,
                                 const hiopVector& delta_wd,
                                 const hiopVector& delta_cc,
                                 const hiopVector& delta_cd,
@@ -427,7 +431,8 @@ public:
 		      const hiopMatrixDense* Jac_c, const hiopMatrixDense* Jac_d,
 		      hiopHessianLowRank* Hess);
 
-  virtual bool build_kkt_matrix(const hiopVector& delta_wx,
+  virtual bool build_kkt_matrix(const hiopPDPerturbation& pdreg, 
+                                const hiopVector& delta_wx,
                                 const hiopVector& delta_wd,
                                 const hiopVector& delta_cc,
                                 const hiopVector& delta_cd,
@@ -545,7 +550,8 @@ public:
 
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction);
 
-  virtual bool build_kkt_matrix(const hiopVector& delta_wx,
+  virtual bool build_kkt_matrix(const hiopPDPerturbation& pdreg, 
+                                const hiopVector& delta_wx,
                                 const hiopVector& delta_wd,
                                 const hiopVector& delta_cc,
                                 const hiopVector& delta_cd,
@@ -594,7 +600,8 @@ public:
 
   virtual bool computeDirections(const hiopResidual* resid, hiopIterate* direction);
 
-  virtual bool build_kkt_matrix(const hiopVector& delta_wx,
+  virtual bool build_kkt_matrix(const hiopPDPerturbation& pdreg, 
+                                const hiopVector& delta_wx,
                                 const hiopVector& delta_wd,
                                 const hiopVector& delta_cc,
                                 const hiopVector& delta_cd,

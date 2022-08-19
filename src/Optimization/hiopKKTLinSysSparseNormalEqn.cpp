@@ -121,7 +121,8 @@ hiopKKTLinSysSparseNormalEqn::~hiopKKTLinSysSparseNormalEqn()
   delete M_normaleqn_;
 }
 
-bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const hiopVector& delta_wx_in,
+bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const hiopPDPerturbation& pdreg, 
+                                                    const hiopVector& delta_wx_in,
                                                     const hiopVector& delta_wd_in,
                                                     const hiopVector& delta_cc_in,
                                                     const hiopVector& delta_cd_in,

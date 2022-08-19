@@ -892,7 +892,8 @@ void hiopAlgFilterIPMBase::displayTerminationMsg()
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 hiopAlgFilterIPMQuasiNewton::hiopAlgFilterIPMQuasiNewton(hiopNlpDenseConstraints* nlp_in,
                                                          const bool within_FR)
-  : hiopAlgFilterIPMBase(nlp_in, within_FR)
+  : hiopAlgFilterIPMBase(nlp_in, within_FR),
+    pd_perturb_{nullptr}
 {
   nlpdc = nlp_in;
   reload_options();
@@ -913,6 +914,7 @@ hiopAlgFilterIPMQuasiNewton::hiopAlgFilterIPMQuasiNewton(hiopNlpDenseConstraints
 
 hiopAlgFilterIPMQuasiNewton::~hiopAlgFilterIPMQuasiNewton()
 {
+  delete pd_perturb_;
 }
 
 hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
@@ -971,6 +973,14 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
   theta_min = theta_min_fact_*fmax(1.0,resid->get_theta());
 
   hiopKKTLinSysLowRank* kkt=new hiopKKTLinSysLowRank(nlp);
+
+  // assign an dummy pd_perturb, i.e., all the deltas = 0.0
+  pd_perturb_ = new hiopPDPerturbationDummy();
+  if(!pd_perturb_->initialize(nlp)) {
+    delete kkt;
+    return SolveInitializationError;
+  }
+  kkt->set_PD_perturb_calc(pd_perturb_);
 
   _alpha_primal = _alpha_dual = 0;
 

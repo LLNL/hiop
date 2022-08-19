@@ -108,7 +108,8 @@ hiopKKTLinSysCondensedSparse::~hiopKKTLinSysCondensedSparse()
   delete Hess_lower_csr_;
 }
 
-bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const hiopVector& delta_wx_in,
+bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const hiopPDPerturbation& pdreg, 
+                                                    const hiopVector& delta_wx_in,
                                                     const hiopVector& delta_wd_in,
                                                     const hiopVector& dcc,
                                                     const hiopVector& dcd,
