@@ -175,7 +175,7 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const hiopVector& delta_wx_i
   // hybrid compute mode -> linear algebra objects used internally by the class will be allocated on the device. Most of the inputs
   // to this class will be however on HOST under hybrid mode, so some objects are copied/replicated/transfered to device
   // gpu copute mode -> not yet supported
-  // cpu compute mode -> all objects on HOST, however, some objects will still be copied (e.g., Hd_) to ensure code homogeinity
+  // cpu compute mode -> all objects on HOST, however, some objects will still be copied (e.g., Hd_) to ensure code homogeneity
   //
   // REMARK: The objects that are copied/replicated are temporary and will be removed later on as the remaining sparse KKT computations
   // will be ported to device
@@ -349,8 +349,6 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const hiopVector& delta_wx_i
   }
 
   Diag_dualreg_->add_matrix_numeric(*M_normaleqn_, 1.0, *JDiagJt_, 1.0);
-
-  fflush(stdout);
 
   //
   // instantiate linear solver class based on values of compute_mode, safe mode, and other options
