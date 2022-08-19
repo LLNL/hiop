@@ -349,7 +349,7 @@ bool hiopKKTLinSysCurvCheck::factorize()
       }
 
     // the update of the linear system, including IC perturbations
-    this->build_kkt_matrix(*perturb_calc_, *delta_wx_, *delta_wd_, *delta_cc_, *delta_cd_);
+    this->build_kkt_matrix(*perturb_calc_);
 
     nlp_->runStats.kkt.tmUpdateInnerFact.start();
 
@@ -358,7 +358,7 @@ bool hiopKKTLinSysCurvCheck::factorize()
 
     nlp_->runStats.kkt.tmUpdateInnerFact.stop();
 
-    continue_re_fact = fact_acceptor_->requireReFactorization(*nlp_, n_neg_eig, *delta_wx_, *delta_wd_, *delta_cc_, *delta_cd_);
+    continue_re_fact = fact_acceptor_->requireReFactorization(*nlp_, n_neg_eig);
     
     if(-1==continue_re_fact) {
       return false;
@@ -392,7 +392,7 @@ bool hiopKKTLinSysCurvCheck::factorize_inertia_free()
   delta_cc_ = perturb_calc_->get_curr_delta_cc();
   delta_cd_ = perturb_calc_->get_curr_delta_cd();
 
-  continue_re_fact = fact_acceptor_->requireReFactorization(*nlp_, non_singular_mat, *delta_wx_, *delta_wd_, *delta_cc_, *delta_cd_, true);
+  continue_re_fact = fact_acceptor_->requireReFactorization(*nlp_, non_singular_mat, true);
 
 #ifdef HIOP_DEEPCHECKS
     assert(perturb_calc_->check_consistency() && "something went wrong with IC");
@@ -406,7 +406,7 @@ bool hiopKKTLinSysCurvCheck::factorize_inertia_free()
   }
 
   // the update of the linear system, including IC perturbations
-  this->build_kkt_matrix(*perturb_calc_, *delta_wx_, *delta_wd_, *delta_cc_, *delta_cd_);
+  this->build_kkt_matrix(*perturb_calc_);
 
   nlp_->runStats.kkt.tmUpdateInnerFact.start();
 
@@ -422,7 +422,7 @@ bool hiopKKTLinSysCurvCheck::factorize_inertia_free()
   while(num_refactorization<=max_refactorization && solver_flag < 0) {
     nlp_->log->printf(hovWarning, "linsys: matrix becomes singular after adding primal regularization!\n");
 
-    continue_re_fact = fact_acceptor_->requireReFactorization(*nlp_, solver_flag, *delta_wx_, *delta_wd_, *delta_cc_, *delta_cd_);
+    continue_re_fact = fact_acceptor_->requireReFactorization(*nlp_, solver_flag);
     
     if(-1==continue_re_fact) {
       return false;
@@ -439,7 +439,7 @@ bool hiopKKTLinSysCurvCheck::factorize_inertia_free()
     }
 
     // the update of the linear system, including IC perturbations
-    this->build_kkt_matrix(*perturb_calc_, *delta_wx_, *delta_wd_, *delta_cc_, *delta_cd_);
+    this->build_kkt_matrix(*perturb_calc_);
 
     nlp_->runStats.kkt.tmUpdateInnerFact.start();
 
@@ -1756,8 +1756,12 @@ bool hiopMatVecKKTFullOpr::times_vec(hiopVector& y, const hiopVector& x)
   hiopVector* delta_cc = kkt_->delta_cc_;
   hiopVector* delta_cd = kkt_->delta_cd_;
   assert(kkt_->get_perturb_calc());
-  kkt_->get_perturb_calc()->get_curr_perturbations_const(delta_wx, delta_wd, delta_cc, delta_cd);
 
+  delta_wx = kkt_->perturb_calc_->get_curr_delta_wx();
+  delta_wd = kkt_->perturb_calc_->get_curr_delta_wd();
+  delta_cc = kkt_->perturb_calc_->get_curr_delta_cc();
+  delta_cd = kkt_->perturb_calc_->get_curr_delta_cd();
+  
   bool bret = split_vec_to_build_it(x);
 
   //rx = H*dx + delta_wx*I*dx + Jc'*dyc + Jd'*dyd - dzl + dzu
@@ -1860,7 +1864,11 @@ bool hiopMatVecKKTFullOpr::trans_times_vec(hiopVector& y, const hiopVector& x)
   hiopVector* delta_cc = kkt_->delta_cc_;
   hiopVector* delta_cd = kkt_->delta_cd_;
   assert(kkt_->get_perturb_calc());
-  kkt_->get_perturb_calc()->get_curr_perturbations_const(delta_wx, delta_wd, delta_cc, delta_cd);
+
+  delta_wx = kkt_->perturb_calc_->get_curr_delta_wx();
+  delta_wd = kkt_->perturb_calc_->get_curr_delta_wd();
+  delta_cc = kkt_->perturb_calc_->get_curr_delta_cc();
+  delta_cd = kkt_->perturb_calc_->get_curr_delta_cd();
 
   bool bret = split_vec_to_build_it(x);
 

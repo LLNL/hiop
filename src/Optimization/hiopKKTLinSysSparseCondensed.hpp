@@ -109,12 +109,7 @@ public:
   hiopKKTLinSysCondensedSparse() = delete;
   virtual ~hiopKKTLinSysCondensedSparse();
 
-  virtual bool build_kkt_matrix(const hiopPDPerturbation& pdreg, 
-                                const hiopVector& delta_wx,
-                                const hiopVector& delta_wd,
-                                const hiopVector& delta_cc,
-                                const hiopVector& delta_cd,
-                                const DeltasUpdateType delta_update_type);
+  virtual bool build_kkt_matrix(const hiopPDPerturbation& pdreg);
 
   virtual bool solveCompressed(hiopVector& rx,
                                hiopVector& rd,

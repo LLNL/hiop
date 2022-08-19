@@ -63,10 +63,6 @@ namespace hiop
 
 int hiopFactAcceptorIC::requireReFactorization(const hiopNlpFormulation& nlp,
                                                const int& n_neg_eig,
-                                               hiopVector& delta_wx,
-                                               hiopVector& delta_wd,
-                                               hiopVector& delta_cc,
-                                               hiopVector& delta_cd,
                                                const bool force_reg)
 {
   int continue_re_fact{1};
@@ -104,16 +100,11 @@ int hiopFactAcceptorIC::requireReFactorization(const hiopNlpFormulation& nlp,
       //all is good
       continue_re_fact = 0;
   }
-  perturb_calc_->copy_from_curr_perturbations(delta_wx, delta_wd, delta_cc, delta_cd);
   return continue_re_fact;
 }
 
 int hiopFactAcceptorInertiaFreeDWD::requireReFactorization(const hiopNlpFormulation& nlp,
                                                            const int& n_neg_eig,
-                                                           hiopVector& delta_wx,
-                                                           hiopVector& delta_wd,
-                                                           hiopVector& delta_cc,
-                                                           hiopVector& delta_cd,
                                                            const bool force_reg)
 {
   int continue_re_fact{1};
@@ -161,7 +152,6 @@ int hiopFactAcceptorInertiaFreeDWD::requireReFactorization(const hiopNlpFormulat
     }
   }
 
-  perturb_calc_->copy_from_curr_perturbations(delta_wx, delta_wd, delta_cc, delta_cd);
   return continue_re_fact;
 }
   

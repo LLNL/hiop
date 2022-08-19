@@ -114,18 +114,6 @@ public:
   inline hiopVector* get_curr_delta_cc() const {return delta_cc_curr_;}
   inline hiopVector* get_curr_delta_cd() const {return delta_cd_curr_;}
 
-  inline bool get_curr_perturbations_const(hiopVector* delta_wx, 
-                                     hiopVector* delta_wd,
-                                     hiopVector* delta_cc,
-                                     hiopVector* delta_cd) const
-  {
-    delta_wx = get_curr_delta_wx();
-    delta_wd = get_curr_delta_wd();
-    delta_cc = get_curr_delta_cc();
-    delta_cd = get_curr_delta_cd();
-    return true;
-  }
-
   virtual bool check_consistency() = 0;
 
 protected:

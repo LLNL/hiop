@@ -121,17 +121,17 @@ hiopKKTLinSysSparseNormalEqn::~hiopKKTLinSysSparseNormalEqn()
   delete M_normaleqn_;
 }
 
-bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const hiopPDPerturbation& pdreg, 
-                                                    const hiopVector& delta_wx_in,
-                                                    const hiopVector& delta_wd_in,
-                                                    const hiopVector& delta_cc_in,
-                                                    const hiopVector& delta_cd_in,
-                                                    const DeltasUpdateType delta_update_type)
+bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const hiopPDPerturbation& pdreg)
 {
 
 #ifdef HIOP_DEEPCHECKS
     assert(perturb_calc_->check_consistency() && "something went wrong with IC");
 #endif
+
+  delta_wx_ = perturb_calc_->get_curr_delta_wx();
+  delta_wd_ = perturb_calc_->get_curr_delta_wd();
+  delta_cc_ = perturb_calc_->get_curr_delta_cc();
+  delta_cd_ = perturb_calc_->get_curr_delta_cd();
 
   HessSp_ = dynamic_cast<hiopMatrixSparse*>(Hess_);
   if(!HessSp_) { 
@@ -211,12 +211,12 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const hiopPDPerturbation& pd
   }
   //build the diagonal Hx = Dx + delta_wx + diag(Hess)
   Hx_->copyFrom(*Dx_);
-  Hx_->axpy(1., delta_wx_in);
+  Hx_->axpy(1., *delta_wx_);
   Hx_->axpy(1., *Hess_diag_);
 
   // HD = Dd_ + delta_wd
   Hd_->copyFrom(*Dd_);
-  Hd_->axpy(1., delta_wd_in);
+  Hd_->axpy(1., *delta_wd_);
 
   //temporary code, see above note
   {
@@ -255,10 +255,10 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const hiopPDPerturbation& pd
       Hess_diag_copy_->copyFrom(*Hess_diag_);
       Hx_copy_->copyFrom(*Hx_);
       Hd_copy_->copyFrom(*Hd_);
-      deltawx_->copyFrom(delta_wx_in);
-      deltawd_->copyFrom(delta_wd_in);
-      deltacc_->copyFrom(delta_cc_in);
-      deltacd_->copyFrom(delta_cd_in);
+      deltawx_->copyFrom(*delta_wx_);
+      deltawd_->copyFrom(*delta_wd_);
+      deltacc_->copyFrom(*delta_cc_);
+      deltacd_->copyFrom(*delta_cd_);
     }
   }
 
