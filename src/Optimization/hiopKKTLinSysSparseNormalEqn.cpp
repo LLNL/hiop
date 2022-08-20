@@ -318,18 +318,20 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const hiopPDPerturbation& pd
 
   t.reset(); t.start();
 
-  // build the diagonal Hxd_inv_copy_ = [H+Dx+delta_wx, Dd+delta_wd ]^{-1}
-  Hx_copy_->copyToStarting(*Hxd_inv_copy_, 0);
-  Hd_copy_->copyToStarting(*Hxd_inv_copy_, nx);
-  Hxd_inv_copy_->invert();
-  // J * D * Jt
-  JacDt_->form_transpose_from_numeric(*JacD_);
-  JacDt_->scale_rows(*Hxd_inv_copy_);
-  JacD_->times_mat_numeric(0.0, *JDiagJt_, 1.0, *JacDt_);
+  if(pdreg.get_curr_delta_type() != DeltasUpdateType::DualUpdate) {
+    // build the diagonal Hxd_inv_copy_ = [H+Dx+delta_wx, Dd+delta_wd ]^{-1}
+    Hx_copy_->copyToStarting(*Hxd_inv_copy_, 0);
+    Hd_copy_->copyToStarting(*Hxd_inv_copy_, nx);
+    Hxd_inv_copy_->invert();
+    // J * D * Jt
+    JacDt_->form_transpose_from_numeric(*JacD_);
+    JacDt_->scale_rows(*Hxd_inv_copy_);
+    JacD_->times_mat_numeric(0.0, *JDiagJt_, 1.0, *JacDt_);
 
 #ifdef HIOP_DEEPCHECKS
-  JDiagJt_->check_csr_is_ordered();
+    JDiagJt_->check_csr_is_ordered();
 #endif
+  }
 
   if(nullptr == M_normaleqn_) {
     t.reset(); t.start();

@@ -9,7 +9,7 @@ namespace hiop
 
 enum DeltasUpdateType
 {
-  None  = -1,
+  None  = -2,
   Initialized  = -1,
   DualUpdate   =  0,
   PrimalUpdate =  1,
@@ -113,6 +113,8 @@ public:
   inline hiopVector* get_curr_delta_wd() const {return delta_wd_curr_;}
   inline hiopVector* get_curr_delta_cc() const {return delta_cc_curr_;}
   inline hiopVector* get_curr_delta_cd() const {return delta_cd_curr_;}
+
+  inline DeltasUpdateType get_curr_delta_type() const {return deltas_curr_update_;}
 
   virtual bool check_consistency() = 0;
 
