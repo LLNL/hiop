@@ -1,4 +1,7 @@
 #  NOTE: The following is required when running from Gitlab CI via slurm job
+
+module purge
+
 source /etc/profile.d/modules.sh
 module use -a /usr/share/Modules/modulefiles
 module use -a /share/apps/modules/tools
@@ -8,6 +11,7 @@ module use -a /etc/modulefiles
 module use -a /qfs/projects/exasgd/src/jaelyn-spack/spack/share/spack/modules/linux-centos8-power9le
 
 # Load spack-built modules
+
 # autoconf@2.69%gcc@8.5.0 patches=35c4492,7793209,a49dd5b arch=linux-centos8-power9le
 module load autoconf-2.69-gcc-8.5.0-2mzbyqj
 # autoconf-archive@2022.02.11%gcc@8.5.0 patches=130cd48 arch=linux-centos8-power9le
@@ -16,14 +20,14 @@ module load autoconf-archive-2022.02.11-gcc-8.5.0-nolgalj
 module load automake-1.16.5-gcc-8.5.0-pnnvoal
 # berkeley-db@18.1.40%gcc@8.5.0+cxx~docs+stl patches=b231fcc arch=linux-centos8-power9le
 module load berkeley-db-18.1.40-gcc-8.5.0-cuzn6qn
-# blt@0.5.1%gcc@8.5.0 arch=linux-centos8-power9le
-module load blt-0.5.1-gcc-8.5.0-efxzffy
+# blt@0.4.1%gcc@8.5.0 arch=linux-centos8-power9le
+module load blt-0.4.1-gcc-8.5.0-likpa4a
 # bzip2@1.0.8%gcc@8.5.0~debug~pic+shared arch=linux-centos8-power9le
 module load bzip2-1.0.8-gcc-8.5.0-tsweuon
 # ca-certificates-mozilla@2022-03-29%gcc@8.5.0 arch=linux-centos8-power9le
 module load ca-certificates-mozilla-2022-03-29-gcc-8.5.0-zyzfhdf
-# camp@2022.03.0%gcc@8.5.0+cuda~ipo~rocm~tests build_type=RelWithDebInfo cuda_arch=70 arch=linux-centos8-power9le
-module load camp-2022.03.0-gcc-8.5.0-ijcsmol
+# camp@0.2.2%gcc@8.5.0+cuda~ipo~rocm~tests build_type=RelWithDebInfo cuda_arch=70 arch=linux-centos8-power9le
+module load camp-0.2.2-gcc-8.5.0-5po5zoy
 # cmake@3.23.2%gcc@8.5.0~doc+ncurses+ownlibs~qt build_type=Release arch=linux-centos8-power9le
 module load cmake-3.23.2-gcc-8.5.0-pr3l2mn
 # coinhsl@2015.06.23%gcc@8.5.0+blas arch=linux-centos8-power9le
@@ -34,8 +38,8 @@ module load cub-1.16.0-gcc-8.5.0-p3cnthb
 module load diffutils-3.8-gcc-8.5.0-ppyuisg
 # gdbm@1.19%gcc@8.5.0 arch=linux-centos8-power9le
 module load gdbm-1.19-gcc-8.5.0-unfo3x4
-# ginkgo@glu%gcc@8.5.0+cuda~develtools~full_optimizations~hwloc~ipo~oneapi+openmp~rocm+shared build_type=Release cuda_arch=70 arch=linux-centos8-power9le
-module load ginkgo-glu-gcc-8.5.0-xqxxanf
+# ginkgo@glu_experimental%gcc@8.5.0+cuda~develtools~full_optimizations~hwloc~ipo~oneapi+openmp~rocm+shared build_type=Release cuda_arch=70 arch=linux-centos8-power9le
+module load ginkgo-glu_experimental-gcc-8.5.0-tq3ravg
 # gmp@6.2.1%gcc@8.5.0 libs=shared,static arch=linux-centos8-power9le
 module load gmp-6.2.1-gcc-8.5.0-xlcuuht
 # gnuconfig@2021-08-14%gcc@8.5.0 arch=linux-centos8-power9le
@@ -58,20 +62,22 @@ module load mpfr-4.1.0-gcc-8.5.0-esdxmf2
 module load ncurses-6.2-gcc-8.5.0-v24hmxo
 # openblas@0.3.20%gcc@8.5.0~bignuma~consistent_fpcsr~ilp64+locking+pic+shared symbol_suffix=none threads=none arch=linux-centos8-power9le
 module load openblas-0.3.20-gcc-8.5.0-rwstn2s
+# openssl@1.1.1q%gcc@8.5.0~docs~shared certs=mozilla patches=3fdcf2d arch=linux-centos8-power9le
+module load openssl-1.1.1q-gcc-8.5.0-xlfn3bw
 # perl@5.34.1%gcc@8.5.0+cpanm+shared+threads arch=linux-centos8-power9le
 module load perl-5.34.1-gcc-8.5.0-fn534xj
 # pkgconf@1.8.0%gcc@8.5.0 arch=linux-centos8-power9le
 module load pkgconf-1.8.0-gcc-8.5.0-imrnro2
-# raja@2022.03.0%gcc@8.5.0+cuda+disable_blt_export+examples+exercises~ipo+openmp~rocm+shared~tests build_type=RelWithDebInfo cuda_arch=70 arch=linux-centos8-power9le
-module load raja-2022.03.0-gcc-8.5.0-f6ruftz
+# raja@0.14.0%gcc@8.5.0+odule load raja-0.14.0-gcc-8.5.0-qsgckji
+module load raja-0.14.0-gcc-8.5.0-qsgckji
 # readline@8.1.2%gcc@8.5.0 arch=linux-centos8-power9le
 module load readline-8.1.2-gcc-8.5.0-l4hzlyf
 # suite-sparse@5.10.1%gcc@8.5.0~cuda~graphblas~openmp+pic~tbb arch=linux-centos8-power9le
 module load suite-sparse-5.10.1-gcc-8.5.0-ykffgpl
 # texinfo@6.5%gcc@8.5.0 patches=12f6edb,1732115 arch=linux-centos8-power9le
 module load texinfo-6.5-gcc-8.5.0-fvxyl2q
-# umpire@2022.03.1%gcc@8.5.0+c+cuda+device_alloc~deviceconst+examples~fortran~ipo~numa~openmp~rocm~shared build_type=RelWithDebInfo cuda_arch=70 tests=none arch=linux-centos8-power9le
-module load umpire-2022.03.1-gcc-8.5.0-aef4vlb
+# umpire@6.0.0%gcc@8.5.0+c+cuda~device_alloc~deviceconst+examples~fortran~ipo~numa~openmp~rocm~shared build_type=RelWithDebInfo cuda_arch=70 tests=none arch=linux-centos8-power9le
+module load umpire-6.0.0-gcc-8.5.0-xar7dg5
 # zlib@1.2.12%gcc@8.5.0+optimize+pic+shared patches=0d38234 arch=linux-centos8-power9le
 module load zlib-1.2.12-gcc-8.5.0-spb5k73
 
