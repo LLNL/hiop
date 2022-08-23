@@ -169,7 +169,7 @@ build_on_marianas:
     - if: '$CI_PROJECT_ROOT_NAMESPACE == "exasgd"'
 
 build_on_newell:
-  allow_failure: true
+  allow_failure: false 
   stage: default_build
   variables:
     SLURM_Q: "newell_shared"
