@@ -492,23 +492,22 @@ void hiopVectorRajaPar::startingAtCopyFromStartingAt(
   const hiopVector& vec_src,
   int start_idx_src)
 {
+  size_type howManyToCopyDest = this->n_local_ - start_idx_dest;
+
 #ifdef HIOP_DEEPCHECKS
   assert(n_local_ == n_ && "are you sure you want to call this?");
 #endif
+
   assert((start_idx_dest >= 0 && start_idx_dest < this->n_local_) || this->n_local_==0);
   const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(vec_src);
   assert((start_idx_src >=0 && start_idx_src < v.n_local_) || v.n_local_==0 || v.n_local_==start_idx_src);
+  const size_type howManyToCopySrc = v.n_local_-start_idx_src;  
 
-  size_type howManyToCopyDest = this->n_local_ - start_idx_dest;
-
-#ifndef NDEBUG
-  const size_type howManyToCopySrc = v.n_local_-start_idx_src;
-  assert(howManyToCopyDest <= howManyToCopySrc);
-#endif
-
-  if(howManyToCopyDest == 0) {
+  if(howManyToCopyDest == 0 || howManyToCopySrc == 0) {
     return;
   }
+
+  assert(howManyToCopyDest <= howManyToCopySrc);
 
   auto& rm = umpire::ResourceManager::getInstance();
   rm.copy(this->data_dev_ + start_idx_dest, 
@@ -1904,6 +1903,32 @@ void hiopVectorRajaPar::adjustDuals_plh(
 }
 
 /**
+ * @brief Check if all elements of the vector are zero
+ * 
+ * @post `this` is not modified
+ */
+bool hiopVectorRajaPar::is_zero() const
+{
+  double* data = data_dev_;
+  RAJA::ReduceSum< hiop_raja_reduce, int > sum(0);
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      if(data[i] != 0.0) {
+        sum += 1;
+      }
+    });
+  int all_zero = (sum.get() == 0) ? 1 : 0;
+
+#ifdef HIOP_USE_MPI
+  int all_zero_G;
+  int ierr=MPI_Allreduce(&all_zero, &all_zero_G, 1, MPI_INT, MPI_MIN, comm_); assert(MPI_SUCCESS==ierr);
+  return all_zero_G;
+#endif
+  return all_zero;
+}
+
+/**
  * @brief Returns true if any element of `this` is NaN.
  * 
  * @post `this` is not modified
@@ -1968,9 +1993,14 @@ bool hiopVectorRajaPar::isfinite_local() const
  * 
  * @pre Vector data was moved from the memory space to the host mirror.
  */
-void hiopVectorRajaPar::print(FILE* file, const char* msg/*=NULL*/, int max_elems/*=-1*/, int rank/*=-1*/) const
+void hiopVectorRajaPar::print(FILE* file/*=nullptr*/, const char* msg/*=nullptr*/, int max_elems/*=-1*/, int rank/*=-1*/) const
 {
-  int myrank=0, numranks=1; 
+  int myrank=0, numranks=1;
+
+  if(nullptr == file) {
+    file = stdout;
+  }
+
 #ifdef HIOP_USE_MPI
   if(rank >= 0) {
     int err = MPI_Comm_rank(comm_, &myrank); assert(err==MPI_SUCCESS);
@@ -1982,7 +2012,7 @@ void hiopVectorRajaPar::print(FILE* file, const char* msg/*=NULL*/, int max_elem
     if(max_elems>n_local_)
       max_elems=n_local_;
 
-    if(NULL==msg)
+    if(nullptr==msg)
     {
       std::stringstream ss;
       ss << "vector of size " << n_ << ", printing " << max_elems << " elems ";
@@ -2001,19 +2031,11 @@ void hiopVectorRajaPar::print(FILE* file, const char* msg/*=NULL*/, int max_elem
     }    
     fprintf(file, "=[");
     max_elems = max_elems >= 0 ? max_elems : n_local_;
-    for(int it=0; it<max_elems; it++)
+    for(int it=0; it<max_elems; it++) {
       fprintf(file, "%22.16e ; ", data_host_[it]);
+    }
     fprintf(file, "];\n");
   }
-}
-
-void hiopVectorRajaPar::print() const
-{
-  copyFromDev();
-  for(index_type it=0; it<n_local_; it++) {
-    printf("vec [%d] = %1.16e\n",it+1,data_host_[it]);
-  }
-  printf("\n");
 }
 
 void hiopVectorRajaPar::copyToDev()

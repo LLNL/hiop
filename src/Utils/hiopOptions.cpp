@@ -858,6 +858,17 @@ void hiopOptionsNLP::register_options()
                         "Selects among MA57, PARDISO, cuSOLVER, STRUMPACK, and GINKGO for the sparse linear solves.");
   }
 
+  // choose hardware backend for the Ginkgo solver to run on.
+  // - Default is 'reference' which uses sequential CPU implementations
+  // - 'cuda' uses NVIDIA, 'hip' uses AMD GPUs (if available)
+  {
+    vector<string> range {"cuda", "hip", "reference"};
+
+    register_str_option("ginkgo_exec",
+                        "reference",
+                        range,
+                        "Selects the hardware architecture to run the Ginkgo linear solver on.");
+  }
 
   // choose sparsity permutation (to reduce nz in the factors). This option is available only when using
   // Cholesky linear solvers
@@ -1015,9 +1026,18 @@ void hiopOptionsNLP::register_options()
                         "Exponent of mu when computing regularization for potentially rank-deficient "
                         "Jacobian (delta_c=delta_c_bar*mu^kappa_c)");
 
-    vector<string> range(2); range[0]="unified"; range[1]="randomized";
-    register_str_option("dual_reg_method",
-                        "unified",
+    vector<string> range = {"primal_first", "dual_first"};    
+    register_str_option("normaleqn_regularization_priority",
+                        "dual_first",
+                        range,
+                        "When normal equation is used and the iterate matrix is not p.d., updating dual regularization "
+                        "is more efficient than updating the primal ones. Setting this option to `primal_first` will "
+                        "try to update primal regularizations, while the default option `dual_first` always tries to "
+                        "update dual regularization first.");
+
+    range[0]="standard"; range[1]="randomized";
+    register_str_option("regularization_method",
+                        "standard",
                         range,
                         "The method used to compute dual regularization. (TODO)");
     
@@ -1190,6 +1210,32 @@ void hiopOptionsNLP::ensure_consistence()
       set_val("linear_solver_sparse", "auto");
   }
 #endif // HIOP_USE_CUDA
+
+#ifdef HIOP_USE_GINKGO
+  auto exec_string = GetString("ginkgo_exec");
+#ifndef HIOP_USE_CUDA
+  if(sol_sp == "ginkgo" && exec_string == "cuda") {
+    if(is_user_defined("linear_solver_sparse")) {
+      log_printf(hovWarning,
+                 "The option 'ginkgo_exec=%s' is not valid without CUDA support enabled."
+                 " Will use 'ginkgo_exec=reference'.\n",
+                 GetString("ginkgo_exec").c_str());
+    }
+    set_val("ginkgo_exec", "reference");
+  }
+#endif // HIOP_USE_CUDA
+#ifndef HIOP_USE_HIP
+  if(sol_sp == "ginkgo" && exec_string == "hip") {
+    if(is_user_defined("linear_solver_sparse")) {
+      log_printf(hovWarning,
+                 "The option 'ginkgo_exec=%s' is not valid without HIP support enabled."
+                 " Will use 'ginkgo_exec=reference'.\n",
+                 GetString("ginkgo_exec").c_str());
+    }
+    set_val("ginkgo_exec", "reference");
+  }
+#endif // HIOP_USE_HIP
+#endif // HIOP_USE_GINKGO
 
   //linear_solver_sparse_ordering checks and warnings
 

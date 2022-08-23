@@ -224,22 +224,27 @@ void hiopVectorPar::startingAtCopyFromStartingAt(int start_idx_dest,
 						 const hiopVector& v_in, 
 						 int start_idx_src)
 {
+  size_type howManyToCopyDest = this->n_local_ - start_idx_dest;
+  
 #ifdef HIOP_DEEPCHECKS
   assert(n_local_==n_ && "only for local/non-distributed vectors");
 #endif
   assert((start_idx_dest>=0 && start_idx_dest<this->n_local_) || this->n_local_==0);
   const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_in);
   assert((start_idx_src>=0 && start_idx_src<v.n_local_) || v.n_local_==0 || v.n_local_==start_idx_src);
+  size_type howManyToCopySrc = v.n_local_-start_idx_src;
 
-  int howManyToCopy = this->n_local_ - start_idx_dest;
-  const int howManyToCopySrc = v.n_local_-start_idx_src;
-  assert(howManyToCopy <= howManyToCopySrc);
+  if(howManyToCopyDest == 0 || howManyToCopySrc == 0) {
+    return;
+  }
+
+  assert(howManyToCopyDest <= howManyToCopySrc);
 
   //just to be safe when not NDEBUG
-  if(howManyToCopy > howManyToCopySrc) howManyToCopy = howManyToCopySrc;
+  if(howManyToCopyDest > howManyToCopySrc) howManyToCopyDest = howManyToCopySrc;
 
-  assert(howManyToCopy>=0);
-  memcpy(data_+start_idx_dest, v.data_+start_idx_src, howManyToCopy*sizeof(double));
+  assert(howManyToCopyDest>=0);
+  memcpy(data_+start_idx_dest, v.data_+start_idx_src, howManyToCopyDest*sizeof(double));
 }
 
 void hiopVectorPar::copyToStarting(int start_index, hiopVector& v_) const
@@ -1090,6 +1095,23 @@ void hiopVectorPar::adjustDuals_plh(const hiopVector& x_,
   }
 }
 
+bool hiopVectorPar::is_zero() const
+{
+  int all_zero = true;
+  int i{0};
+  while(i<n_local_ && all_zero) {
+    if(data_[i++]!=0.0) {
+      all_zero = false;
+    }
+  }
+#ifdef HIOP_USE_MPI
+  int all_zero_G;
+  int ierr=MPI_Allreduce(&all_zero, &all_zero_G, 1, MPI_INT, MPI_MIN, comm_); assert(MPI_SUCCESS==ierr);
+  return all_zero_G;
+#endif
+  return all_zero;
+}
+
 bool hiopVectorPar::isnan_local() const
 {
   for(size_type i=0; i<n_local_; i++) if(std::isnan(data_[i])) return true;
@@ -1108,18 +1130,14 @@ bool hiopVectorPar::isfinite_local() const
   return true;
 }
 
-void hiopVectorPar::print() const
-{
-  int max_elems = n_local_;
-  for(int it=0; it<max_elems; it++) {
-    printf("vec [%d] = %1.16e\n",it+1,data_[it]);
-  }
-  printf("\n");
-}
-
-void hiopVectorPar::print(FILE* file, const char* msg/*=NULL*/, int max_elems/*=-1*/, int rank/*=-1*/) const 
+void hiopVectorPar::print(FILE* file/*=nullptr*/, const char* msg/*=nullptr*/, int max_elems/*=-1*/, int rank/*=-1*/) const 
 {
   int myrank_=0, numranks=1; 
+
+  if(nullptr == file) {
+    file = stdout;
+  }
+
 #ifdef HIOP_USE_MPI
   if(rank>=0) {
     int err = MPI_Comm_rank(comm_, &myrank_); assert(err==MPI_SUCCESS);
@@ -1129,17 +1147,21 @@ void hiopVectorPar::print(FILE* file, const char* msg/*=NULL*/, int max_elems/*=
   if(myrank_==rank || rank==-1) {
     if(max_elems>n_local_) max_elems=n_local_;
 
-    if(NULL==msg) {
-      if(numranks>1)
-	fprintf(file, "vector of size %d, printing %d elems (on rank=%d)\n", n_, max_elems, myrank_);
-      else
-	fprintf(file, "vector of size %d, printing %d elems (serial)\n", n_, max_elems);
+    if(nullptr==msg) {
+      if(numranks>1){
+        fprintf(file, "vector of size %d, printing %d elems (on rank=%d)\n", n_, max_elems, myrank_);
+      }
+      else{
+        fprintf(file, "vector of size %d, printing %d elems (serial)\n", n_, max_elems);
+      }
     } else {
       fprintf(file, "%s ", msg);
     }    
     fprintf(file, "=[");
     max_elems = max_elems>=0?max_elems:n_local_;
-    for(int it=0; it<max_elems; it++)  fprintf(file, "%24.18e ; ", data_[it]);
+    for(int it=0; it<max_elems; it++) {
+      fprintf(file, "%24.18e ; ", data_[it]);
+    }
     fprintf(file, "];\n");
   }
 }

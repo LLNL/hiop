@@ -109,10 +109,10 @@ public:
   hiopKKTLinSysCondensedSparse() = delete;
   virtual ~hiopKKTLinSysCondensedSparse();
 
-  virtual bool build_kkt_matrix(const double& delta_wx,
-                                const double& delta_wd,
-                                const double& delta_cc,
-                                const double& delta_cd);
+  virtual bool build_kkt_matrix(const hiopVector& delta_wx,
+                                const hiopVector& delta_wd,
+                                const hiopVector& delta_cc,
+                                const hiopVector& delta_cd);
 
   virtual bool solveCompressed(hiopVector& rx,
                                hiopVector& rd,
@@ -196,6 +196,7 @@ protected:
   
   /// Stores Dx plus delta_wx for more efficient updates of the condensed system matrix
   hiopVector* Dx_plus_deltawx_;
+  hiopVector* deltawx_;
 
   /// Stores a copy of Hd_ on the device (to be later removed)
   hiopVector* Hd_copy_;

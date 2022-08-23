@@ -3,6 +3,7 @@
 module purge
 
 source /etc/profile.d/modules.sh
+module purge
 module use -a /usr/share/Modules/modulefiles
 module use -a /share/apps/modules/tools
 module use -a /share/apps/modules/compilers
