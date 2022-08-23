@@ -250,8 +250,7 @@ public:
   virtual bool isinf_local() const;
   virtual bool isfinite_local() const;
   
-  virtual void print(FILE*, const char* withMessage=NULL, int max_elems=-1, int rank=-1) const;
-  virtual void print() const;
+  virtual void print(FILE* file=nullptr, const char* message=nullptr,int max_elems=-1, int rank=-1) const;
 
   /* more accessers */
   virtual size_type get_local_size() const { return n_local_; }

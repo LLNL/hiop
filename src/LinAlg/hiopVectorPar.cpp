@@ -1130,18 +1130,14 @@ bool hiopVectorPar::isfinite_local() const
   return true;
 }
 
-void hiopVectorPar::print() const
-{
-  int max_elems = n_local_;
-  for(int it=0; it<max_elems; it++) {
-    printf("vec [%d] = %1.16e\n",it+1,data_[it]);
-  }
-  printf("\n");
-}
-
-void hiopVectorPar::print(FILE* file, const char* msg/*=NULL*/, int max_elems/*=-1*/, int rank/*=-1*/) const 
+void hiopVectorPar::print(FILE* file/*=nullptr*/, const char* msg/*=nullptr*/, int max_elems/*=-1*/, int rank/*=-1*/) const 
 {
   int myrank_=0, numranks=1; 
+
+  if(nullptr == file) {
+    file = stdout;
+  }
+
 #ifdef HIOP_USE_MPI
   if(rank>=0) {
     int err = MPI_Comm_rank(comm_, &myrank_); assert(err==MPI_SUCCESS);
@@ -1151,17 +1147,21 @@ void hiopVectorPar::print(FILE* file, const char* msg/*=NULL*/, int max_elems/*=
   if(myrank_==rank || rank==-1) {
     if(max_elems>n_local_) max_elems=n_local_;
 
-    if(NULL==msg) {
-      if(numranks>1)
-	fprintf(file, "vector of size %d, printing %d elems (on rank=%d)\n", n_, max_elems, myrank_);
-      else
-	fprintf(file, "vector of size %d, printing %d elems (serial)\n", n_, max_elems);
+    if(nullptr==msg) {
+      if(numranks>1){
+        fprintf(file, "vector of size %d, printing %d elems (on rank=%d)\n", n_, max_elems, myrank_);
+      }
+      else{
+        fprintf(file, "vector of size %d, printing %d elems (serial)\n", n_, max_elems);
+      }
     } else {
       fprintf(file, "%s ", msg);
     }    
     fprintf(file, "=[");
     max_elems = max_elems>=0?max_elems:n_local_;
-    for(int it=0; it<max_elems; it++)  fprintf(file, "%24.18e ; ", data_[it]);
+    for(int it=0; it<max_elems; it++) {
+      fprintf(file, "%24.18e ; ", data_[it]);
+    }
     fprintf(file, "];\n");
   }
 }
