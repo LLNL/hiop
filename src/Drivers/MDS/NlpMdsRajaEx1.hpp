@@ -373,7 +373,7 @@ public:
 
   void set_solution_duals(const double* zl_vec, const double* zu_vec, const double* lambda_vec);
 
-  void solution_callback_host(hiopSolveStatus status,
+  void solution_callback_host(hiop::hiopSolveStatus status,
                               size_type n,
                               const double* x,
                               const double* z_L,

@@ -1092,6 +1092,12 @@ void hiopNlpFormulation::user_callback_solution(hiopSolveStatus status,
                                    cons_lambdas_->local_data_const(),
                                    inv_obj_scale*obj_value);
 
+  x.copyFromDev();
+  z_L.copyFromDev();
+  z_U.copyFromDev();
+  cons_body_->copyFromDev();
+  cons_lambdas_->copyFromDev();
+
   interface_base.solution_callback_host(status,
                                         (int)n_vars_,
                                         x.local_data_host_const(),

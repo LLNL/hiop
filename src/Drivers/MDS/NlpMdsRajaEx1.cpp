@@ -797,7 +797,7 @@ void MdsEx1::solution_callback_host(hiopSolveStatus status,
   
   for(auto i = 0; i < n; ++i) {
     x_host[i] = x[i];
-    printf("x_host[i]: %10.6f\n", x_host[i]");
+    printf("x_host[i]: %10.6f\n", x_host[i]);
   }
 
   delete x_host;
