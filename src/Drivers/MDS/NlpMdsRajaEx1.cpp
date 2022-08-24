@@ -782,6 +782,28 @@ void MdsEx1::set_solution_duals(const double* zl_vec, const double* zu_vec, cons
   resmgr.copy(sol_lambda_, lambda);
 }
 
+void MdsEx1::solution_callback_host(hiopSolveStatus status,
+                                    size_type n,
+                                    const double* x,
+                                    const double* z_L,
+                                    const double* z_U,
+                                    size_type m,
+                                    const double* g,
+                                    const double* lambda,
+                                    double obj_value)
+{
+#ifdef HIOP_DEEPCHECKS
+  double* x_host = new double[n];
+  
+  for(auto i = 0; i < n; ++i) {
+    x_host[i] = x[i];
+    printf("x_host[i]: %10.6f\n", x_host[i]");
+  }
+
+  delete x_host;
+#endif
+}
+
 /** all constraints evaluated in here */
 bool MdsEx1OneCallCons::eval_cons(const size_type& n, 
                                const size_type& m, 

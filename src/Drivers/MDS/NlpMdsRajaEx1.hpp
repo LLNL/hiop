@@ -373,8 +373,18 @@ public:
 
   void set_solution_duals(const double* zl_vec, const double* zu_vec, const double* lambda_vec);
 
+  void solution_callback_host(hiopSolveStatus status,
+                              size_type n,
+                              const double* x,
+                              const double* z_L,
+                              const double* z_U,
+                              size_type m,
+                              const double* g,
+                              const double* lambda,
+                              double obj_value);
+
   void initialize();
-  
+
 protected:
   int ns_, nd_;
   hiop::hiopMatrixDense* Q_;

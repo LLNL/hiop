@@ -60,7 +60,7 @@ public:
   virtual bool get_starting_point(const size_type&n, double* x0);
 
 /*
-  void solution_callback(hiop::hiopSolveStatus status,
+  bool solution_callback(hiop::hiopSolveStatus status,
                          int n, const double* x,
                          const double* z_L,
                          const double* z_U,
@@ -69,6 +69,7 @@ public:
                          double obj_value)
   { 
     printf("solution_callback with optimal value: %g. Also x[1]=%22.14f\n", obj_value, x[1]);
+    return true;
   };
   
 

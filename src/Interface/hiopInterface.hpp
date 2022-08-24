@@ -376,6 +376,32 @@ public:
   }
 
   /** 
+   * Callback method called by HiOp when the optimal solution is reached. User should use it
+   * to retrieve primal-dual optimal solution. 
+   *
+   * @param status status of the solution process
+   * @param n global number of variables
+   * @param x array of (local) entries of the primal variable
+   * @param z_L array of (local) entries of the dual variables for lower bounds
+   * @param z_U array of (local) entries of the dual variables for upper bounds
+   * @param g array of the values of the constraints body
+   * @param lambda array of (local) entries of the dual variables for constraints
+   * @param obj_value objective value
+   *
+   */
+  virtual void solution_callback_host(hiopSolveStatus status,
+                                      size_type n,
+                                      const double* x,
+                                      const double* z_L,
+                                      const double* z_U,
+                                      size_type m,
+                                      const double* g,
+                                      const double* lambda,
+                                      double obj_value)
+  {
+  }
+  
+  /** 
    * Callback for the (end of) iteration. This method is not called during the line-searche
    * procedure. @see solution_callback() for an explanation of the parameters.
    *

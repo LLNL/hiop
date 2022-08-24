@@ -1091,8 +1091,16 @@ void hiopNlpFormulation::user_callback_solution(hiopSolveStatus status,
                                    cons_body_->local_data_const(),
                                    cons_lambdas_->local_data_const(),
                                    inv_obj_scale*obj_value);
-                                   
 
+  interface_base.solution_callback_host(status,
+                                        (int)n_vars_,
+                                        x.local_data_host_const(),
+                                        z_L.local_data_host_const(),
+                                        z_U.local_data_host_const(),
+                                        (int)n_cons_,
+                                        cons_body_->local_data_host_const(),
+                                        cons_lambdas_->local_data_host_const(),
+                                        inv_obj_scale*obj_value);
 }
 
 bool hiopNlpFormulation::user_callback_iterate(int iter,
