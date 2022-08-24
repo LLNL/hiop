@@ -74,6 +74,7 @@ public:
    * Overload from base class. */
   int matrixChanged()
   {
+    nvtxRangePush(__FUNCTION__);
     assert(M_->n() == M_->m());
     int N=M_->n(), lda = N, info;
     if(N==0) return 0;
@@ -165,6 +166,7 @@ public:
     nlp_->runStats.linsolv.tmInertiaComp.stop();
     
     if(nullEigVal>0) return -1;
+    nvtxRangePop();
     return negEigVal;
   }
     
@@ -173,6 +175,7 @@ public:
    * exit is contains the solution(s).  */
   bool solve ( hiopVector& x )
   {
+    nvtxRangePush(__FUNCTION__);
     assert(M_->n() == M_->m());
     assert(x.get_size()==M_->n());
     int N=M_->n(), LDA = N, info;
@@ -189,6 +192,7 @@ public:
       nlp_->log->printf(hovError, "hiopLinSolverSymDenseLapack: DSYTRS returned warning %d\n", info);
     }
     nlp_->runStats.linsolv.tmTriuSolves.stop();
+    nvtxRangePop();
     return info==0;
   }
 

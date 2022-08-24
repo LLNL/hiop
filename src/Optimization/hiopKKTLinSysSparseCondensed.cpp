@@ -111,6 +111,7 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
                                                     const double& dcc,
                                                     const double& dcd)
 {
+  nvtxRangePush(__FUNCTION__);
   nlp_->runStats.kkt.tmUpdateInit.start();
   
   auto delta_wx = delta_wx_in;
@@ -348,6 +349,7 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   if(write_linsys_counter_>=0) {
     // TODO csr_writer_.writeMatToFile(Msys, write_linsys_counter_, nx, 0, nineq);
   }
+  nvtxRangePop();
   return true; 
 }
 
@@ -416,6 +418,7 @@ bool hiopKKTLinSysCondensedSparse::solveCompressed(hiopVector& rx,
                                                    hiopVector& dyc,
                                                    hiopVector& dyd)
 {
+  nvtxRangePush(__FUNCTION__);
   assert(nlpSp_);
   assert(HessSp_);
   assert(Jac_dSp_);
@@ -460,6 +463,7 @@ bool hiopKKTLinSysCondensedSparse::solveCompressed(hiopVector& rx,
   nlp_->log->write("SOL KKT_SPARSE_Condensed dd: ", dd,  hovMatrices);
   nlp_->log->write("SOL KKT_SPARSE_Condensed dyc:", dyc, hovMatrices);
   nlp_->log->write("SOL KKT_SPARSE_Condensed dyd:", dyd, hovMatrices);
+  nvtxRangePop();
   return bret;
 }
 

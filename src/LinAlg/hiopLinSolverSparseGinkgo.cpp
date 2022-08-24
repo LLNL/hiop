@@ -293,6 +293,7 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
 
   int hiopLinSolverSymSparseGinkgo::matrixChanged()
   {
+    nvtxRangePush(__FUNCTION__);
     assert(n_==M_->n() && M_->n()==M_->m());
     assert(n_>0);
 
@@ -311,11 +312,13 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
     auto precond = gko::as<gko::experimental::solver::Direct<double, int>>(sol->get_preconditioner());
     auto status = precond->get_factorization_status();
     
+    nvtxRangePop();
     return status == gko::experimental::factorization::status::success ? 0 : -1;
   }
 
   bool hiopLinSolverSymSparseGinkgo::solve ( hiopVector& x_ )
   {
+    nvtxRangePush(__FUNCTION__);
     assert(n_==M_->n() && M_->n()==M_->m());
     assert(n_>0);
     assert(x_.get_size()==M_->n());
@@ -338,6 +341,7 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
     nlp_->runStats.linsolv.tmTriuSolves.stop();
     
     dense_x_host->copy_from(dense_x.get());
+    nvtxRangePop();
     delete rhs; rhs=nullptr;
     return 1;
   }
@@ -379,6 +383,7 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
 
   int hiopLinSolverNonSymSparseGinkgo::matrixChanged()
   {
+    nvtxRangePush(__FUNCTION__);
     assert(n_==M_->n() && M_->n()==M_->m());
     assert(n_>0);
 
@@ -397,11 +402,13 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
     auto precond = gko::as<gko::experimental::solver::Direct<double, int>>(sol->get_preconditioner());
     auto status = precond->get_factorization_status();
     
+    nvtxRangePop();
     return status == gko::experimental::factorization::status::success ? 0 : -1;
   }
 
   bool hiopLinSolverNonSymSparseGinkgo::solve(hiopVector& x_)
   {
+    nvtxRangePush(__FUNCTION__);
     assert(n_==M_->n() && M_->n()==M_->m());
     assert(n_>0);
     assert(x_.get_size()==M_->n());
@@ -422,6 +429,7 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
 
     nlp_->runStats.linsolv.tmTriuSolves.stop();
     
+    nvtxRangePop();
     delete rhs; rhs=nullptr;
     return 1;
   }

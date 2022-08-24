@@ -212,6 +212,7 @@ double hiopKKTLinSys::errorKKT(const hiopResidual* resid, const hiopIterate* sol
 bool hiopKKTLinSys::compute_directions_for_full_space(const hiopResidual* resid,
                                                       hiopIterate* dir)
 {
+  nvtxRangePush(__FUNCTION__);
   nlp_->runStats.kkt.tmSolveRhsManip.start();
   const hiopResidual &r=*resid;
 
@@ -299,6 +300,7 @@ bool hiopKKTLinSys::compute_directions_for_full_space(const hiopResidual* resid,
   nlp_->runStats.kkt.tmResid.stop();
 #endif
 
+  nvtxRangePop();
   return true;
 }
 
@@ -309,6 +311,7 @@ int hiopKKTLinSysCurvCheck::factorizeWithCurvCheck()
 
 bool hiopKKTLinSysCurvCheck::factorize()
 {
+  nvtxRangePush(__FUNCTION__);
   assert(nlp_);
 
   // factorization + inertia correction if needed
@@ -357,11 +360,13 @@ bool hiopKKTLinSysCurvCheck::factorize()
               max_refactorization);
     return false;
   }
+  nvtxRangePop();
   return true;
 }
 
 bool hiopKKTLinSysCurvCheck::factorize_inertia_free()
 {
+  nvtxRangePush(__FUNCTION__);
   assert(nlp_);
 
   int non_singular_mat = 1;
@@ -421,6 +426,7 @@ bool hiopKKTLinSysCurvCheck::factorize_inertia_free()
 
   nlp_->runStats.kkt.tmUpdateInnerFact.stop();
 
+  nvtxRangePop();
   return true;
 }
 
@@ -432,6 +438,7 @@ bool hiopKKTLinSysCurvCheck::factorize_inertia_free()
 ////////////////////////////////////////////////////////////////////////
 bool hiopKKTLinSysCompressed::test_direction(const hiopIterate* dir, hiopMatrix* Hess)
 {
+  nvtxRangePush(__FUNCTION__);
   bool retval;
   nlp_->runStats.tmSolverInternal.start();
 
@@ -481,6 +488,7 @@ bool hiopKKTLinSysCompressed::test_direction(const hiopIterate* dir, hiopMatrix*
   }
 
   nlp_->runStats.tmSolverInternal.stop();
+  nvtxRangePop();
   return retval;
 }
 
@@ -522,6 +530,7 @@ bool hiopKKTLinSysCompressedXYcYd::update(const hiopIterate* iter,
                                           const hiopMatrix* Jac_d,
                                           hiopMatrix* Hess)
 {
+  nvtxRangePush(__FUNCTION__);
   nlp_->runStats.linsolv.reset();
   nlp_->runStats.tmSolverInternal.start();
   nlp_->runStats.kkt.tmUpdateInit.start();
@@ -556,12 +565,14 @@ bool hiopKKTLinSysCompressedXYcYd::update(const hiopIterate* iter,
   bool retval = factorize();
 
   nlp_->runStats.tmSolverInternal.stop();
+  nvtxRangePop();
   return retval;
 }
 
 bool hiopKKTLinSysCompressedXYcYd::computeDirections(const hiopResidual* resid,
                                                      hiopIterate* dir)
 { 
+  nvtxRangePush(__FUNCTION__);
   nlp_->runStats.tmSolverInternal.start();
   nlp_->runStats.kkt.tmSolveRhsManip.start();
 
@@ -664,6 +675,7 @@ bool hiopKKTLinSysCompressedXYcYd::computeDirections(const hiopResidual* resid,
   bool bret = compute_directions_for_full_space(resid, dir);  
 
   nlp_->runStats.tmSolverInternal.stop();
+  nvtxRangePop();
   return true;
 }
 
@@ -756,6 +768,7 @@ bool hiopKKTLinSysCompressedXDYcYd::update( const hiopIterate* iter,
                                             const hiopMatrix* Jac_d,
                                             hiopMatrix* Hess)
 {
+  nvtxRangePush(__FUNCTION__);
   nlp_->runStats.linsolv.reset();
   nlp_->runStats.tmSolverInternal.start();
   nlp_->runStats.kkt.tmUpdateInit.start();
@@ -790,6 +803,7 @@ bool hiopKKTLinSysCompressedXDYcYd::update( const hiopIterate* iter,
   bool retval = factorize();
 
   nlp_->runStats.tmSolverInternal.stop();
+  nvtxRangePop();
   return retval;
 }
 
@@ -797,6 +811,7 @@ bool hiopKKTLinSysCompressedXDYcYd::update( const hiopIterate* iter,
 bool hiopKKTLinSysCompressedXDYcYd::computeDirections(const hiopResidual* resid, 
 						      hiopIterate* dir)
 {
+  nvtxRangePush(__FUNCTION__);
   nlp_->runStats.tmSolverInternal.start();
   nlp_->runStats.kkt.tmSolveRhsManip.start();
 
@@ -883,12 +898,14 @@ bool hiopKKTLinSysCompressedXDYcYd::computeDirections(const hiopResidual* resid,
   bool bret = compute_directions_for_full_space(resid, dir);
   
   nlp_->runStats.tmSolverInternal.stop();
+  nvtxRangePop();
   return true;
 }
 
 
 bool hiopKKTLinSys::compute_directions_w_IR(const hiopResidual* resid, hiopIterate* dir)
 {
+  nvtxRangePush(__FUNCTION__);
   nlp_->runStats.tmSolverInternal.start();
   
   // skip IR if user set ir_outer_maxit to 0 or negative values
@@ -968,6 +985,7 @@ bool hiopKKTLinSys::compute_directions_w_IR(const hiopResidual* resid, hiopItera
   }
 
   nlp_->runStats.tmSolverInternal.stop();
+  nvtxRangePop();
   return bret;
 }
 
@@ -1072,6 +1090,7 @@ update(const hiopIterate* iter,
        const hiopMatrixDense* Jac_c, const hiopMatrixDense* Jac_d,
        hiopHessianLowRank* Hess)
 {
+  nvtxRangePush(__FUNCTION__);
   nlp_->runStats.tmSolverInternal.start();
 
   iter_=iter;
@@ -1102,6 +1121,7 @@ update(const hiopIterate* iter,
   nlp_->runStats.tmSolverInternal.stop();
 
   nlp_->log->write("Dd_inv in KKT", *Dd_inv_, hovMatrices);
+  nvtxRangePop();
   return true;
 }
 
@@ -1540,6 +1560,7 @@ bool hiopKKTLinSysFull::update(const hiopIterate* iter,
                                hiopMatrix* Hess)
 {
   
+  nvtxRangePush(__FUNCTION__);
   iter_ = iter;
   grad_f_ = dynamic_cast<const hiopVectorPar*>(grad_f);
   Jac_c_ = Jac_c; 
@@ -1552,6 +1573,7 @@ bool hiopKKTLinSysFull::update(const hiopIterate* iter,
   bool retval = factorize();
 
   nlp_->runStats.tmSolverInternal.stop();
+  nvtxRangePop();
   return retval;
 }
 
@@ -1560,6 +1582,7 @@ bool hiopKKTLinSysFull::update(const hiopIterate* iter,
 bool hiopKKTLinSysFull::computeDirections(const hiopResidual* resid,
 						      hiopIterate* dir)
 {
+  nvtxRangePush(__FUNCTION__);
   nlp_->runStats.tmSolverInternal.start();
 
   const hiopResidual &r=*resid;
@@ -1576,6 +1599,7 @@ bool hiopKKTLinSysFull::computeDirections(const hiopResidual* resid,
                       *dir->sdl, *dir->sdu, *dir->sxl, *dir->sxu);
 
   nlp_->runStats.tmSolverInternal.stop();
+  nvtxRangePop();
   return sol_ok;
 }
 
@@ -2054,6 +2078,7 @@ bool hiopKKTLinSysNormalEquation::update(const hiopIterate* iter,
                                          const hiopMatrix* Jac_d,
                                          hiopMatrix* Hess)
 {
+  nvtxRangePop();
   nlp_->runStats.linsolv.reset();
   nlp_->runStats.tmSolverInternal.start();
   nlp_->runStats.kkt.tmUpdateInit.start();
@@ -2092,12 +2117,14 @@ bool hiopKKTLinSysNormalEquation::update(const hiopIterate* iter,
   bool retval = factorize();
 
   nlp_->runStats.tmSolverInternal.stop();
+  nvtxRangePop();
   return retval;
 }
 
 
 bool hiopKKTLinSysNormalEquation::computeDirections(const hiopResidual* resid, hiopIterate* dir)
 {
+  nvtxRangePush(__FUNCTION__);
   nlp_->runStats.tmSolverInternal.start();
   nlp_->runStats.kkt.tmSolveRhsManip.start();
 
@@ -2209,12 +2236,14 @@ bool hiopKKTLinSysNormalEquation::computeDirections(const hiopResidual* resid, h
   bool bret = compute_directions_for_full_space(resid, dir);
   
   nlp_->runStats.tmSolverInternal.stop();
+  nvtxRangePop();
   return true;
 }
 
 
 bool hiopKKTLinSysFull::test_direction(const hiopIterate* dir, hiopMatrix* Hess)
 {
+  nvtxRangePush(__FUNCTION__);
   bool retval;
   nlp_->runStats.tmSolverInternal.start();
 
@@ -2270,6 +2299,7 @@ bool hiopKKTLinSysFull::test_direction(const hiopIterate* dir, hiopMatrix* Hess)
   }
   
   nlp_->runStats.tmSolverInternal.stop();
+  nvtxRangePop();
   return retval;
 }
 

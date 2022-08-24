@@ -66,6 +66,7 @@ namespace hiop
   /** Triggers a refactorization of the matrix, if necessary. */
   int hiopLinSolverSymDenseMagmaBuKa::matrixChanged()
   {
+    nvtxRangePush(__FUNCTION__);
     assert(M_->n() == M_->m());
     int N=M_->n();
     int lda = N;
@@ -134,12 +135,14 @@ namespace hiop
     if(nullEigVal>0) {
       return -1;
     }
+    nvtxRangePop();
     return negEigVal;
   }
 
   bool hiopLinSolverSymDenseMagmaBuKa::
   compute_inertia(int N, int* ipiv, int& posEigVal, int& negEigVal, int& nullEigVal)
   {
+    nvtxRangePush(__FUNCTION__);
     int inert[3];
     int info;
     int retcode;
@@ -170,11 +173,13 @@ namespace hiop
                       nullEigVal);
     fflush(stdout);
     nlp_->runStats.linsolv.tmInertiaComp.stop();
+    nvtxRangePop();
     return info==0;
   }
 
   bool hiopLinSolverSymDenseMagmaBuKa::solve(hiopVector& x)
   {
+    nvtxRangePush(__FUNCTION__);
     assert(M_->n() == M_->m());
     assert(x.get_size() == M_->n());
     int N = M_->n();
@@ -220,6 +225,7 @@ namespace hiop
       nlp_->runStats.linsolv.tmDeviceTransfer.stop();
     }
 
+    nvtxRangePop();
     return info==0;
   }
 
@@ -277,6 +283,7 @@ namespace hiop
   /** Triggers a refactorization of the matrix, if necessary. */
   int hiopLinSolverSymDenseMagmaNopiv::matrixChanged()
   {
+    nvtxRangePush(__FUNCTION__);
     assert(M_->n() == M_->m());
     int N=M_->n();
     int LDA = N;
@@ -338,6 +345,7 @@ namespace hiop
     }
 
     if(nullEigVal>0) return -1;
+    nvtxRangePop();
     return negEigVal;
   }
 
@@ -385,6 +393,7 @@ namespace hiop
 
   bool hiopLinSolverSymDenseMagmaNopiv::solve( hiopVector& x )
   {
+    nvtxRangePush(__FUNCTION__);
     assert(M_->n() == M_->m());
     assert(x.get_size()==M_->n());
     int N=M_->n();
@@ -435,6 +444,7 @@ namespace hiop
       nlp_->runStats.linsolv.tmDeviceTransfer.stop();
     }
 
+    nvtxRangePop();
     return true;
   }
 

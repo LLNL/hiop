@@ -106,6 +106,7 @@ namespace hiop
 
   int hiopLinSolverSymSparseMA57::matrixChanged()
   {
+    nvtxRangePush(__FUNCTION__);
     assert(n_==M_->n() && M_->n()==M_->m());
     assert(nnz_<=M_->numberOfNonzeros());
     assert(n_>0);
@@ -180,11 +181,13 @@ namespace hiop
 
     nlp_->runStats.linsolv.tmInertiaComp.stop();
 
+    nvtxRangePop();
     return negEigVal;
   }
 
   bool hiopLinSolverSymSparseMA57::solve(hiopVector& x_in)
   {
+    nvtxRangePush(__FUNCTION__);
     assert(n_==M_->n() && M_->n()==M_->m());
     assert(nnz_<=M_->numberOfNonzeros());
     assert(n_>0);
@@ -249,6 +252,7 @@ namespace hiop
 
     nlp_->runStats.linsolv.tmTriuSolves.stop();
 
+    nvtxRangePop();
     return info_[0]==0;
   }
 

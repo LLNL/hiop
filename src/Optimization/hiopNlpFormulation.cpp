@@ -698,6 +698,7 @@ hiopVector* hiopNlpFormulation::alloc_dual_vec() const
 
 bool hiopNlpFormulation::eval_f(hiopVector& x, bool new_x, double& f)
 {
+  nvtxRangePush(__FUNCTION__);
   hiopVector* xx = nlp_transformations_.apply_inv_to_x(x, new_x);
 
   runStats.tmEvalObj.start();
@@ -705,11 +706,13 @@ bool hiopNlpFormulation::eval_f(hiopVector& x, bool new_x, double& f)
   runStats.tmEvalObj.stop(); runStats.nEvalObj++;
 
   f = nlp_transformations_.apply_to_obj(f);
+  nvtxRangePop();
   return bret;
 }
 
 bool hiopNlpFormulation::eval_grad_f(hiopVector& x, bool new_x, hiopVector& gradf)
 {
+  nvtxRangePush(__FUNCTION__);
   if((prob_type_==hiopInterfaceBase::hiopLinear || prob_type_==hiopInterfaceBase::hiopQuadratic)
      && nlp_evaluated_) {
     return true;
@@ -725,6 +728,7 @@ bool hiopNlpFormulation::eval_grad_f(hiopVector& x, bool new_x, hiopVector& grad
 
   gradf = *(nlp_transformations_.apply_to_grad_obj(*gradff));
 
+  nvtxRangePop();
   return bret;
 }
 
@@ -843,11 +847,11 @@ bool hiopNlpFormulation::get_starting_point(hiopVector& x0_for_hiop,
 
 bool hiopNlpFormulation::eval_c(hiopVector& x, bool new_x, hiopVector& c)
 {
+  nvtxRangePush(__FUNCTION__);
   hiopVector* xx = nlp_transformations_.apply_inv_to_x(x, new_x);
   hiopVector* cc = &c;
   // nlp_transformations_.apply_inv_to_cons_eq(c, n_cons_eq_);  // NOT required
   
-
   runStats.tmEvalCons.start();
   bool bret = interface_base.eval_cons(nlp_transformations_.n_pre(),
                                        n_cons_,
@@ -860,10 +864,12 @@ bool hiopNlpFormulation::eval_c(hiopVector& x, bool new_x, hiopVector& c)
 
   // scale the constraint
   c = *(nlp_transformations_.apply_to_cons_eq(c, n_cons_eq_));
+  nvtxRangePop();
   return bret;
 }
 bool hiopNlpFormulation::eval_d(hiopVector& x, bool new_x, hiopVector& d)
 {
+  nvtxRangePush(__FUNCTION__);
   hiopVector* xx = nlp_transformations_.apply_inv_to_x(x, new_x);
   hiopVector* dd = &d;
   // nlp_transformations_.apply_inv_to_cons_ineq(d, n_cons_ineq_);  // NOT required for now
@@ -880,11 +886,13 @@ bool hiopNlpFormulation::eval_d(hiopVector& x, bool new_x, hiopVector& d)
 
   // scale the constraint
   d = *(nlp_transformations_.apply_to_cons_ineq(d, n_cons_ineq_));
+  nvtxRangePop();
   return bret;
 }
 
 bool hiopNlpFormulation::eval_c_d(hiopVector& x, bool new_x, hiopVector& c, hiopVector& d)
 {
+  nvtxRangePush(__FUNCTION__);
   bool do_eval_c = true;
   if(-1 == cons_eval_type_) {
     assert(cons_body_ == nullptr);
@@ -940,6 +948,7 @@ bool hiopNlpFormulation::eval_c_d(hiopVector& x, bool new_x, hiopVector& c, hiop
     runStats.tmEvalCons.stop();
     runStats.nEvalCons_eq++;
     runStats.nEvalCons_ineq++;
+    nvtxRangePop();
     
     return bret;
   }
@@ -1314,6 +1323,7 @@ bool hiopNlpDenseConstraints::eval_Jac_c_d_interface_impl(hiopVector& x, bool ne
                                                           hiopMatrix& Jac_c,
                                                           hiopMatrix& Jac_d)
 {
+  nvtxRangePush(__FUNCTION__);
   hiopMatrixDense* cons_Jac_de = dynamic_cast<hiopMatrixDense*>(cons_Jac_);
   if(cons_Jac_de == NULL) {
     log->printf(hovError, "[internal error] hiopNlpDenseConstraints NLP received an unexpected matrix\n");
@@ -1357,12 +1367,14 @@ bool hiopNlpDenseConstraints::eval_Jac_c_d_interface_impl(hiopVector& x, bool ne
   runStats.tmEvalJac_con.stop();
   runStats.nEvalJac_con_eq++;
   runStats.nEvalJac_con_ineq++;
+  nvtxRangePop();
 
   return bret;
 }
 
 bool hiopNlpDenseConstraints::eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& Jac_c)
 {
+  nvtxRangePush(__FUNCTION__);
   if((prob_type_==hiopInterfaceBase::hiopLinear || prob_type_==hiopInterfaceBase::hiopQuadratic)
      && nlp_evaluated_) {
     return true;
@@ -1395,12 +1407,14 @@ bool hiopNlpDenseConstraints::eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& 
       return false;
     }  
     Jac_c = *Jac_c_p;
+    nvtxRangePop();
     return bret;
   }
 }
 
 bool hiopNlpDenseConstraints::eval_Jac_d(hiopVector& x, bool new_x, hiopMatrix& Jac_d)
 {
+  nvtxRangePush(__FUNCTION__);
   if((prob_type_==hiopInterfaceBase::hiopLinear || prob_type_==hiopInterfaceBase::hiopQuadratic)
      && nlp_evaluated_) {
     return true;
@@ -1433,6 +1447,7 @@ bool hiopNlpDenseConstraints::eval_Jac_d(hiopVector& x, bool new_x, hiopMatrix& 
       return false;
     }
     Jac_d = *Jac_d_p;
+    nvtxRangePop();
     return bret;
   }
 }
@@ -1505,6 +1520,7 @@ hiopDualsLsqUpdate* hiopNlpMDS::alloc_duals_lsq_updater()
 
 bool hiopNlpMDS::eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& Jac_c)
 {
+  nvtxRangePush(__FUNCTION__);
   if((prob_type_==hiopInterfaceBase::hiopLinear || prob_type_==hiopInterfaceBase::hiopQuadratic)
      && nlp_evaluated_) {
     return true;
@@ -1534,6 +1550,7 @@ bool hiopNlpMDS::eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& Jac_c)
 
     runStats.tmEvalJac_con.stop();
     runStats.nEvalJac_con_eq++;
+    nvtxRangePop();
     return bret;
   } else {
     return false;
@@ -1542,6 +1559,7 @@ bool hiopNlpMDS::eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& Jac_c)
 
 bool hiopNlpMDS::eval_Jac_d(hiopVector& x, bool new_x, hiopMatrix& Jac_d)
 {
+  nvtxRangePush(__FUNCTION__);
   if((prob_type_==hiopInterfaceBase::hiopLinear || prob_type_==hiopInterfaceBase::hiopQuadratic)
      && nlp_evaluated_) {
     return true;
@@ -1570,6 +1588,7 @@ bool hiopNlpMDS::eval_Jac_d(hiopVector& x, bool new_x, hiopMatrix& Jac_d)
 
     runStats.tmEvalJac_con.stop();
     runStats.nEvalJac_con_ineq++;
+    nvtxRangePop();
     return bret;
   } else {
     return false;
@@ -1581,6 +1600,7 @@ bool hiopNlpMDS::eval_Jac_c_d_interface_impl(hiopVector& x,
                                              hiopMatrix& Jac_c,
                                              hiopMatrix& Jac_d)
 {
+  nvtxRangePush(__FUNCTION__);
   hiopMatrixMDS* pJac_c = dynamic_cast<hiopMatrixMDS*>(&Jac_c);
   hiopMatrixMDS* pJac_d = dynamic_cast<hiopMatrixMDS*>(&Jac_d);
   hiopMatrixMDS* cons_Jac = dynamic_cast<hiopMatrixMDS*>(cons_Jac_);
@@ -1617,6 +1637,7 @@ bool hiopNlpMDS::eval_Jac_c_d_interface_impl(hiopVector& x,
     runStats.nEvalJac_con_eq++;
     runStats.nEvalJac_con_ineq++;
     
+    nvtxRangePop();
     return bret;
   } else {
     return false;
@@ -1632,6 +1653,7 @@ bool hiopNlpMDS::eval_Hess_Lagr(const hiopVector& x,
                                 bool new_lambdas,
                                 hiopMatrix& Hess_L)
 {
+  nvtxRangePush(__FUNCTION__);
   if(prob_type_==hiopInterfaceBase::hiopLinear && nlp_evaluated_) {
     return true;
   }
@@ -1676,6 +1698,7 @@ bool hiopNlpMDS::eval_Hess_Lagr(const hiopVector& x,
 
   runStats.tmEvalHessL.stop();
   runStats.nEvalHessL++;
+  nvtxRangePop();
   
   return bret;
 }
@@ -1703,6 +1726,7 @@ hiopDualsLsqUpdate* hiopNlpSparse::alloc_duals_lsq_updater()
 
 bool hiopNlpSparse::eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& Jac_c)
 {
+  nvtxRangePush(__FUNCTION__);
   if((prob_type_==hiopInterfaceBase::hiopLinear || prob_type_==hiopInterfaceBase::hiopQuadratic)
      && nlp_evaluated_) {
     return true;
@@ -1732,6 +1756,7 @@ bool hiopNlpSparse::eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& Jac_c)
 
     runStats.tmEvalJac_con.stop();
     runStats.nEvalJac_con_eq++;
+    nvtxRangePop();
     return bret;
   } else {
     return false;
@@ -1740,6 +1765,7 @@ bool hiopNlpSparse::eval_Jac_c(hiopVector& x, bool new_x, hiopMatrix& Jac_c)
 
 bool hiopNlpSparse::eval_Jac_d(hiopVector& x, bool new_x, hiopMatrix& Jac_d)
 {
+  nvtxRangePush(__FUNCTION__);
   if((prob_type_==hiopInterfaceBase::hiopLinear || prob_type_==hiopInterfaceBase::hiopQuadratic)
      && nlp_evaluated_) {
     return true;
@@ -1770,6 +1796,7 @@ bool hiopNlpSparse::eval_Jac_d(hiopVector& x, bool new_x, hiopMatrix& Jac_d)
 
     runStats.tmEvalJac_con.stop();
     runStats.nEvalJac_con_ineq++;
+    nvtxRangePop();
     return bret;
   } else {
     return false;
@@ -1781,6 +1808,7 @@ bool hiopNlpSparse::eval_Jac_c_d_interface_impl(hiopVector& x,
                                                 hiopMatrix& Jac_c,
                                                 hiopMatrix& Jac_d)
 {
+  nvtxRangePush(__FUNCTION__);
   hiopMatrixSparse* pJac_c = dynamic_cast<hiopMatrixSparse*>(&Jac_c);
   hiopMatrixSparse* pJac_d = dynamic_cast<hiopMatrixSparse*>(&Jac_d);
   hiopMatrixSparse* cons_Jac = dynamic_cast<hiopMatrixSparse*>(cons_Jac_);
@@ -1830,6 +1858,7 @@ bool hiopNlpSparse::eval_Jac_c_d_interface_impl(hiopVector& x,
     runStats.tmEvalJac_con.stop();
     runStats.nEvalJac_con_eq++;
     runStats.nEvalJac_con_ineq++;
+    nvtxRangePop();
 
     return bret;
   } else {
@@ -1846,6 +1875,7 @@ bool hiopNlpSparse::eval_Hess_Lagr(const hiopVector& x,
                                    bool new_lambdas,
                                    hiopMatrix& Hess_L)
 {
+  nvtxRangePush(__FUNCTION__);
   if(prob_type_==hiopInterfaceBase::hiopLinear && nlp_evaluated_) {
     return true;
   }
@@ -1914,6 +1944,7 @@ bool hiopNlpSparse::eval_Hess_Lagr(const hiopVector& x,
 
   runStats.tmEvalHessL.stop();
   runStats.nEvalHessL++;
+  nvtxRangePop();
 
   return bret;
 }

@@ -251,6 +251,7 @@ namespace hiop
 
   int hiopLinSolverSymSparsePARDISO::matrixChanged()
   {
+    nvtxRangePush(__FUNCTION__);
     assert(n_==M_->n() && M_->n()==M_->m());
     assert(n_>0);
 
@@ -295,11 +296,13 @@ namespace hiop
 
     nlp_->runStats.linsolv.tmInertiaComp.stop();
 
+    nvtxRangePop();
     return negEigVal;
   }
 
   bool hiopLinSolverSymSparsePARDISO::solve(hiopVector& b)
   {
+    nvtxRangePush(__FUNCTION__);
     assert(n_==M_->n() && M_->n()==M_->m());
     assert(n_>0);
     assert(b.get_size()==M_->n());
@@ -332,6 +335,7 @@ namespace hiop
     }
 
     nlp_->runStats.linsolv.tmTriuSolves.stop();
+    nvtxRangePop();
     return 1;
   }
 
@@ -438,6 +442,7 @@ namespace hiop
 
   int hiopLinSolverNonSymSparsePARDISO::matrixChanged()
   {
+    nvtxRangePush(__FUNCTION__);
     assert(n_==M_->n() && M_->n()==M_->m());
     assert(n_>0);
 
@@ -474,11 +479,13 @@ namespace hiop
     nlp_->runStats.linsolv.tmInertiaComp.start();
     nlp_->runStats.linsolv.tmInertiaComp.stop();
 
+    nvtxRangePop();
     return 0;
   }
 
   bool hiopLinSolverNonSymSparsePARDISO::solve(hiopVector& b)
   {
+    nvtxRangePush(__FUNCTION__);
     assert(n_==M_->n() && M_->n()==M_->m());
     assert(n_>0);
     assert(b.get_size()==M_->n());
@@ -511,6 +518,7 @@ namespace hiop
     }
 
     nlp_->runStats.linsolv.tmTriuSolves.stop();
+    nvtxRangePop();
     return true;
   }
 

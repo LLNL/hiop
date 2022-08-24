@@ -50,6 +50,7 @@
 #define HIOP_RUNSTATS
 
 #include "hiopTimer.hpp"
+#include <nvToolsExt.h>
 
 #include <sstream>
 #include <iomanip>

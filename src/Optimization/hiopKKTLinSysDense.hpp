@@ -87,6 +87,7 @@ public:
                                 const double& delta_cc,
                                 const double& delta_cd)
   {
+    nvtxRangePush(__FUNCTION__);
     assert(nlp_);
 
     int nx  = Hess_->m();
@@ -163,6 +164,7 @@ public:
       csr_writer.writeMatToFile(Msys, write_linsys_counter, nx, neq, nineq);
     }
     
+    nvtxRangePop();
     return true;
   }
 
