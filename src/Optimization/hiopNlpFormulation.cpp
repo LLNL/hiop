@@ -1153,7 +1153,7 @@ bool hiopNlpFormulation::user_callback_iterate(int iter,
 
   bool bret{false};
 
-  if(options->GetString("callback_mem_space")=="device") {
+  if(options->GetString("callback_mem_space")=="host" && options->GetString("mem_space")=="device") {
     x.copyFromDev();
     s.copyFromDev();
     z_L.copyFromDev();
