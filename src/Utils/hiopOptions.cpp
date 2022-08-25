@@ -1285,8 +1285,10 @@ void hiopOptionsNLP::ensure_consistence()
   if(GetString("mem_space") != GetString("callback_mem_space")) {
     if(is_user_defined("callback_mem_space") && GetString("mem_space")!="device") {
       log_printf(hovWarning,
-                "option callback_mem_space was changed to the value of `mem_space` since the given combination "
-                "is not supported by HiOp.\n");
+                "option 'callback_mem_space' was changed to the value '%s' of 'mem_space' options since the provided "
+                "value '%s' is not supported by HiOp with the provided values of 'mem_space'.\n",
+                GetString("mem_space").c_str(),
+                GetString("callback_mem_space").c_str());
       set_val("callback_mem_space", GetString("mem_space").c_str());
     }
   }
