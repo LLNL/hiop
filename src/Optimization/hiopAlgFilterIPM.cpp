@@ -938,7 +938,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
   ////////////////////////////////////////////////////////////////////////////////////
 
   nlp->log->printf(hovSummary, "===============\nHiop SOLVER\n===============\n");
-  if(nlp->options->GetString("print_options") == "yes") {
+  if(nlp->options->GetString("print_options") != "no") {
     nlp->log->write(nullptr, *nlp->options, hovSummary);
   }
 
@@ -1666,7 +1666,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
   ////////////////////////////////////////////////////////////////////////////////////
 
   nlp->log->printf(hovSummary, "===============\nHiop SOLVER\n===============\n");
-  if(nlp->options->GetString("print_options") == "yes") {
+  if(nlp->options->GetString("print_options") != "no") {
     nlp->log->write(nullptr, *nlp->options, hovSummary);
   }
 
