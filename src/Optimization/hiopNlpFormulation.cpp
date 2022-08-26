@@ -1082,7 +1082,7 @@ void hiopNlpFormulation::user_callback_solution(hiopSolveStatus status,
   //! todo -> test this when fixed variables are removed -> the internal
   //! zl and zu may have different sizes than what user expects since HiOp removes
   //! variables internally
-  if(options->GetString("callback_mem_space")=="device") {
+  if(options->GetString("callback_mem_space")=="host" && options->GetString("mem_space")=="device") {
     x.copyFromDev();
     z_L.copyFromDev();
     z_U.copyFromDev();
@@ -1179,6 +1179,12 @@ bool hiopNlpFormulation::user_callback_iterate(int iter,
                                            alpha_du,
                                            alpha_pr,
                                            ls_trials);
+    x.copyToDev();
+    s.copyToDev();
+    z_L.copyToDev();
+    z_U.copyToDev();
+    cons_body_->copyToDev();
+    cons_lambdas_->copyToDev();
   } else {
     bret = interface_base.iterate_callback(iter,
                                            obj_value/this->get_obj_scale(),
