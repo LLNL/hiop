@@ -1179,12 +1179,6 @@ bool hiopNlpFormulation::user_callback_iterate(int iter,
                                            alpha_du,
                                            alpha_pr,
                                            ls_trials);
-    x.copyToDev();
-    s.copyToDev();
-    z_L.copyToDev();
-    z_U.copyToDev();
-    cons_body_->copyToDev();
-    cons_lambdas_->copyToDev();
   } else {
     bret = interface_base.iterate_callback(iter,
                                            obj_value/this->get_obj_scale(),
