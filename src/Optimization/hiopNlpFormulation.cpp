@@ -782,14 +782,14 @@ bool hiopNlpFormulation::get_starting_point(hiopVector& x0_for_hiop,
   return bret;
 }
 
-bool hiopNlpFormulation::get_starting_point(hiopVector& x0_for_hiop,
-                                            hiopVector& zL0_for_hiop,
-                                            hiopVector& zU0_for_hiop,
-                                            hiopVector& yc0_for_hiop,
-                                            hiopVector& yd0_for_hiop,
-                                            hiopVector& d0,
-                                            hiopVector& vl0,
-                                            hiopVector& vu0)
+bool hiopNlpFormulation::get_warmstart_point(hiopVector& x0_for_hiop,
+                                             hiopVector& zL0_for_hiop,
+                                             hiopVector& zU0_for_hiop,
+                                             hiopVector& yc0_for_hiop,
+                                             hiopVector& yd0_for_hiop,
+                                             hiopVector& d0,
+                                             hiopVector& vl0,
+                                             hiopVector& vu0)
 {
   bool bret; 
 
@@ -804,15 +804,15 @@ bool hiopNlpFormulation::get_starting_point(hiopVector& x0_for_hiop,
   double* vl_for_user = vl0.local_data();
   double* vu_for_user = vu0.local_data();
   
-  bret = interface_base.get_starting_point(nlp_transformations_.n_pre(),
-                                           n_cons_,
-                                           x0_for_user->local_data(),
-                                           zL0_for_user,
-                                           zU0_for_user,
-                                           lambda_for_user,
-                                           d_for_user,
-                                           vl_for_user,
-                                           vu_for_user);
+  bret = interface_base.get_warmstart_point(nlp_transformations_.n_pre(),
+                                            n_cons_,
+                                            x0_for_user->local_data(),
+                                            zL0_for_user,
+                                            zU0_for_user,
+                                            lambda_for_user,
+                                            d_for_user,
+                                            vl_for_user,
+                                            vu_for_user);
   {
     double* yc0d = yc0_for_hiop.local_data();
     double* yd0d = yd0_for_hiop.local_data();

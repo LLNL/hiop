@@ -95,15 +95,15 @@ public:
                                   double*)
   { return false; }
 
-  virtual bool get_starting_point(const size_type&,
-                                  const size_type&,
-                                  double*,
-                                  double*, 
-                                  double*,
-                                  double*,
-                                  double*,
-                                  double*,
-                                  double*)
+  virtual bool get_warmstart_point(const size_type&,
+                                   const size_type&,
+                                   double*,
+                                   double*, 
+                                   double*,
+                                   double*,
+                                   double*,
+                                   double*,
+                                   double*)
   { return false; }
 
 private:

@@ -281,17 +281,22 @@ int hiopAlgFilterIPMBase::startingProcedure(hiopIterate& it_ini,
   bool ret_bool = false;
   
   if(nlp->options->GetString("warm_start")=="yes") {
-    ret_bool = nlp->get_starting_point(*it_ini.get_x(),
-                                       *it_ini.get_zl(), *it_ini.get_zu(),
-                                       *it_ini.get_yc(), *it_ini.get_yd(),
-                                       *it_ini.get_d(),
-                                       *it_ini.get_vl(), *it_ini.get_vu());
+    ret_bool = nlp->get_warmstart_point(*it_ini.get_x(),
+                                        *it_ini.get_zl(),
+                                        *it_ini.get_zu(),
+                                        *it_ini.get_yc(),
+                                        *it_ini.get_yd(),
+                                        *it_ini.get_d(),
+                                        *it_ini.get_vl(),
+                                        *it_ini.get_vu());
     warmstart_avail = duals_avail = slacks_avail = true;
   } else {
     ret_bool = nlp->get_starting_point(*it_ini.get_x(),
                                        duals_avail,
-                                       *it_ini.get_zl(), *it_ini.get_zu(),
-                                       *it_ini.get_yc(), *it_ini.get_yd(),
+                                       *it_ini.get_zl(),
+                                       *it_ini.get_zu(),
+                                       *it_ini.get_yc(), 
+                                       *it_ini.get_yd(),
                                        slacks_avail,
                                        *it_ini.get_d());
     
