@@ -1082,16 +1082,32 @@ void hiopNlpFormulation::user_callback_solution(hiopSolveStatus status,
   //! todo -> test this when fixed variables are removed -> the internal
   //! zl and zu may have different sizes than what user expects since HiOp removes
   //! variables internally
-  interface_base.solution_callback(status, 
-                                   (int)n_vars_,
-                                   x.local_data_const(),
-                                   z_L.local_data_const(),
-                                   z_U.local_data_const(),
-                                   (int)n_cons_,
-                                   cons_body_->local_data_const(),
-                                   cons_lambdas_->local_data_const(),
-                                   inv_obj_scale*obj_value);
-                                   
+  if(options->GetString("callback_mem_space")=="host" && options->GetString("mem_space")=="device") {
+    x.copyFromDev();
+    z_L.copyFromDev();
+    z_U.copyFromDev();
+    cons_body_->copyFromDev();
+    cons_lambdas_->copyFromDev();
+    interface_base.solution_callback(status,
+                                    (int)n_vars_,
+                                    x.local_data_host_const(),
+                                    z_L.local_data_host_const(),
+                                    z_U.local_data_host_const(),
+                                    (int)n_cons_,
+                                    cons_body_->local_data_host_const(),
+                                    cons_lambdas_->local_data_host_const(),
+                                    inv_obj_scale*obj_value); 
+  } else {
+    interface_base.solution_callback(status,
+                                    (int)n_vars_,
+                                    x.local_data_const(),
+                                    z_L.local_data_const(),
+                                    z_U.local_data_const(),
+                                    (int)n_cons_,
+                                    cons_body_->local_data_const(),
+                                    cons_lambdas_->local_data_const(),
+                                    inv_obj_scale*obj_value);
+  }                         
 
 }
 
@@ -1135,25 +1151,56 @@ bool hiopNlpFormulation::user_callback_iterate(int iter,
   //! zl and zu may have different sizes than what user expects since HiOp removes
   //! variables internally
 
-  return interface_base.iterate_callback(iter,
-                                         obj_value/this->get_obj_scale(),
-                                         logbar_obj_value,
-                                         (int)n_vars_,
-                                         x.local_data_const(),
-                                         z_L.local_data_const(),
-                                         z_U.local_data_const(),
-                                         (int)n_cons_ineq_,
-                                         s.local_data_const(),
-                                         (int)n_cons_,
-                                         cons_body_->local_data_const(),
-                                         cons_lambdas_->local_data_const(),
-                                         inf_pr,
-                                         inf_du,
-                                         onenorm_pr,
-                                         mu,
-                                         alpha_du,
-                                         alpha_pr,
-                                         ls_trials);
+  bool bret{false};
+
+  if(options->GetString("callback_mem_space")=="host" && options->GetString("mem_space")=="device") {
+    x.copyFromDev();
+    s.copyFromDev();
+    z_L.copyFromDev();
+    z_U.copyFromDev();
+    cons_body_->copyFromDev();
+    cons_lambdas_->copyFromDev();
+    bret = interface_base.iterate_callback(iter,
+                                           obj_value/this->get_obj_scale(),
+                                           logbar_obj_value,
+                                           (int)n_vars_,
+                                           x.local_data_host_const(),
+                                           z_L.local_data_host_const(),
+                                           z_U.local_data_host_const(),
+                                           (int)n_cons_ineq_,
+                                           s.local_data_host_const(),
+                                           (int)n_cons_,
+                                           cons_body_->local_data_host_const(),
+                                           cons_lambdas_->local_data_host_const(),
+                                           inf_pr,
+                                           inf_du,
+                                           onenorm_pr,
+                                           mu,
+                                           alpha_du,
+                                           alpha_pr,
+                                           ls_trials);
+  } else {
+    bret = interface_base.iterate_callback(iter,
+                                           obj_value/this->get_obj_scale(),
+                                           logbar_obj_value,
+                                           (int)n_vars_,
+                                           x.local_data_const(),
+                                           z_L.local_data_const(),
+                                           z_U.local_data_const(),
+                                           (int)n_cons_ineq_,
+                                           s.local_data_const(),
+                                           (int)n_cons_,
+                                           cons_body_->local_data_const(),
+                                           cons_lambdas_->local_data_const(),
+                                           inf_pr,
+                                           inf_du,
+                                           onenorm_pr,
+                                           mu,
+                                           alpha_du,
+                                           alpha_pr,
+                                           ls_trials);
+  }   
+  return bret; 
 }
 
 bool hiopNlpFormulation::user_force_update(int iter,

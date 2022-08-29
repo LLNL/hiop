@@ -1123,6 +1123,10 @@ void hiopOptionsNLP::register_options()
                         range[0],
                         range,
                         "Determines the memory space in which future linear algebra objects will be created");
+    register_str_option("callback_mem_space",
+                        range[0],
+                        range,
+                        "Determines the memory space to which HiOp will return the solutions.");
   }
 }
 
@@ -1277,6 +1281,17 @@ void hiopOptionsNLP::ensure_consistence()
     set_val("mem_space", "default");
   }
 #endif
+
+  if(GetString("mem_space") != GetString("callback_mem_space")) {
+    if(is_user_defined("callback_mem_space") && GetString("mem_space")!="device") {
+      log_printf(hovWarning,
+                "option 'callback_mem_space' was changed to the value '%s' of 'mem_space' options since the provided "
+                "value '%s' is not supported by HiOp with the provided values of 'mem_space'.\n",
+                GetString("mem_space").c_str(),
+                GetString("callback_mem_space").c_str());
+      set_val("callback_mem_space", GetString("mem_space").c_str());
+    }
+  }
 
   // No hybrid or GPU compute mode if HiOp is built without GPU linear solvers
 #ifndef HIOP_USE_GPU
