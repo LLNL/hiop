@@ -77,11 +77,15 @@ public:
   // Implementation of the primal starting point specification //
   virtual bool get_starting_point(const size_type& global_n, double* x0_);
   
-  virtual bool get_starting_point(const size_type& n, const size_type& m,
+  virtual bool get_starting_point(const size_type& n,
+                                  const size_type& m,
                                   double* x0_,
                                   bool& duals_avail,
-                                  double* z_bndL0, double* z_bndU0,
-                                  double* lambda0);
+                                  double* z_bndL0, 
+                                  double* z_bndU0,
+                                  double* lambda0,
+                                  bool& slacks_avail,
+                                  double* ineq_slack);
   
   // pass the COMM_SELF communicator since this example is only intended to run inside 1 MPI process //
   virtual bool get_MPI_comm(MPI_Comm& comm_out);

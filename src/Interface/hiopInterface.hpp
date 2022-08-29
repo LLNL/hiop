@@ -118,7 +118,7 @@ enum hiopSolveStatus {
  *
  * @note Please take notice of the following notes regarding the implementation of 
  * hiop::hiopInterfaceMDS on the device. All pointers marked as "managed by Umpire" 
- * are allocated by HiOp using the Umpire's API. They all are addresses in the 
+ * are allocated by HiOp using the Umpire's API. They all are addressed in the 
  * same memory space; however, the memory space can be host (typically CPU), 
  * device (typically GPU), or unified memory (um) spaces as per Umpire 
  * specification. The selection of the memory space is done via the option 
@@ -211,13 +211,13 @@ public:
    *  iteration separately for the equality constraints subset and for the inequality constraints subset.
    *  This is done for performance considerations, to avoid auxiliary/temporary storage and copying.
    *
-   *   @param[in] n the global number of variables
-   *   @param[in] m the number of constraints
-   *   @param[in] num_cons the number constraints/size of subset to be evaluated
-   *   @param[in] idx_cons: indexes in {1,2,...,m} of the constraints to be evaluated  (managed by Umpire)
-   *   @param[in] x the point where the constraints need to be evaluated  (managed by Umpire)
-   *   @param[in] new_x whether x has been changed from the previous call to f, grad_f, or Jac
-   *   @param[out] cons array of size num_cons containing the value of the  constraints indicated by 
+   * @param[in] n the global number of variables
+   * @param[in] m the number of constraints
+   * @param[in] num_cons the number constraints/size of subset to be evaluated
+   * @param[in] idx_cons: indexes in {1,2,...,m} of the constraints to be evaluated  (managed by Umpire)
+   * @param[in] x the point where the constraints need to be evaluated  (managed by Umpire)
+   * @param[in] new_x whether x has been changed from the previous call to f, grad_f, or Jac
+   * @param[out] cons array of size num_cons containing the value of the  constraints indicated by 
    *                    @p idx_cons  (managed by Umpire)
    *  
    *  @note When MPI is enabled, every rank populates @p cons since the constraints are not distributed.
@@ -232,11 +232,11 @@ public:
   
   /** Evaluates the constraints body @p cons(@p x), both equalities and inequalities, in one call. 
    *
-   *   @param[in] n the global number of variables
-   *   @param[in] m the number of constraints
-   *   @param[in] x the point where the constraints need to be evaluated  (managed by Umpire)
-   *   @param[in] new_x whether x has been changed from the previous call to f, grad_f, or Jac
-   *   @param[out] cons array of size num_cons containing the value of the  constraints indicated by 
+   * @param[in] n the global number of variables
+   * @param[in] m the number of constraints
+   * @param[in] x the point where the constraints need to be evaluated  (managed by Umpire)
+   * @param[in] new_x whether x has been changed from the previous call to f, grad_f, or Jac
+   * @param[out] cons array of size num_cons containing the value of the  constraints indicated by 
    *                     @p idx_cons  (managed by Umpire)
    *
    * HiOp will first call the other hiopInterfaceBase::eval_cons() twice. If the implementer/user wants the 
@@ -282,9 +282,12 @@ public:
    * internally set @p x0 to all zero (still subject to internal adjustements).
    *
    * By default, HiOp first calls the overloaded primal-dual starting point specification
-   * (overloaded) method get_starting_point(). If the above returns false, HiOp will then call 
+   * (overloaded) method get_starting_point() (see below). If the above returns false, HiOp will then call 
    * this method.
    *
+   * @param[in] n the global number of variables
+   * @param[out] x0 the user-defined initial values for the primal variablers (managed by Umpire)
+   * 
    */
   virtual bool get_starting_point(const size_type&n, double* x0)
   {
@@ -310,9 +313,21 @@ public:
    * return false (see note below).
    *
    * @note When this method returns false, HiOp will call the overload 
-   * get_starting_point(). This behaviour is for backward compatibility and 
+   * get_starting_point() for only primal variables (see the above function). This behaviour is for backward compatibility and 
    * will be removed in a future release.
-   * 
+   *
+   * @param[in] n the global number of variables
+   * @param[in] m the number of constraints
+   * @param[out] x0 the user-defined initial values for the primal variablers (managed by Umpire)
+   * @param[out] duals_avail a boolean argument which indicates whether the initial values of duals are given by the user
+   * @param[out] z_bndL0 the user-defined initial values for the duals of the variable lower bounds (managed by Umpire)
+   * @param[out] z_bndU0 the user-defined initial values for the duals of the variable upper bounds (managed by Umpire)
+   * @param[out] lambda0 the user-defined initial values for the duals of the constraints (managed by Umpire)
+   * @param[out] slacks_avail a boolean argument which indicates whether the initial values for the inequality slacks 
+   *                            (added by HiOp internally) are given by the user
+   * @param[out] ineq_slack the user-defined initial values for the slacks added to transfer inequalities to equalities 
+   *                          (managed by Umpire)
+   *  
    */
   virtual bool get_starting_point(const size_type& n,
                                   const size_type& m,
@@ -334,17 +349,29 @@ public:
    * to internal adjustments in HiOp.
    *
    * User provides starting point for all the iterate variable used in HiOp.
-   * 
+   * This method is for advanced users, as it will skip all the other safeguard in HiOp, e.g., project x into bounds.
+   *
+   * @param[in] n the global number of variables
+   * @param[in] m the number of constraints
+   * @param[out] x0 the user-defined initial values for the primal variablers (managed by Umpire)
+   * @param[out] z_bndL0 the user-defined initial values for the duals of the variable lower bounds (managed by Umpire)
+   * @param[out] z_bndU0 the user-defined initial values for the duals of the variable upper bounds (managed by Umpire)
+   * @param[out] lambda0 the user-defined initial values for the duals of the constraints (managed by Umpire)
+   * @param[out] ineq_slack the user-defined initial values for the slacks added to transfer inequalities to equalities 
+   *                          (managed by Umpire)
+   * @param[out] vl0 the user-defined initial values for the duals of the constraint lower bounds (managed by Umpire)
+   * @param[out] vu0 the user-defined initial values for the duals of the constraint upper bounds (managed by Umpire)
+   *
    */
-  virtual bool get_starting_point(const size_type& n,
-                                  const size_type& m,
-                                  double* x0,
-                                  double* z_bndL0, 
-                                  double* z_bndU0,
-                                  double* lambda0,
-                                  double* ineq_slack,
-                                  double* vl0,
-                                  double* vu0)
+  virtual bool get_warmstart_point(const size_type& n,
+                                   const size_type& m,
+                                   double* x0,
+                                   double* z_bndL0, 
+                                   double* z_bndU0,
+                                   double* lambda0,
+                                   double* ineq_slack,
+                                   double* vl0,
+                                   double* vu0)
   {
     return false;
   }
@@ -353,15 +380,20 @@ public:
    * Callback method called by HiOp when the optimal solution is reached. User should use it
    * to retrieve primal-dual optimal solution. 
    *
-   * @param status status of the solution process
-   * @param n global number of variables
-   * @param x array of (local) entries of the primal variable
-   * @param z_L array of (local) entries of the dual variables for lower bounds
-   * @param z_U array of (local) entries of the dual variables for upper bounds
-   * @param g array of the values of the constraints body
-   * @param lambda array of (local) entries of the dual variables for constraints
-   * @param obj_value objective value
+   * @param[in] status status of the solution process
+   * @param[in] n global number of variables
+   * @param[in] x array of (local) entries of the primal variables at solution (managed by Umpire)
+   * @param[in] z_L array of (local) entries of the dual variables for lower bounds at solution (managed by Umpire)
+   * @param[in] z_U array of (local) entries of the dual variables for upper bounds at solution (managed by Umpire)
+   * @param[in] g array of the values of the constraints body at solution (managed by Umpire)
+   * @param[in] lambda array of (local) entries of the dual variables for constraints at solution (managed by Umpire)
+   * @param[in] obj_value objective value at solution 
    *
+   * @note this callback function passed the Umpire-managed arrays to users. By default, if data is on device/host,
+   * this function will pass the Umpire-managed arrays on devic/host to users, respectively. If data is on deivice 
+   * and HiOp option `callback_mem_space` is set to `host`, HiOp transfers the data from device to host first, and then 
+   * passes the Umpire-managed arrays on host to user.
+   * 
    */
   virtual void solution_callback(hiopSolveStatus status,
                                  size_type n,
@@ -381,6 +413,32 @@ public:
    *
    * @note If the user (implementer) of this methods returns false, HiOp will stop the 
    * the optimization with hiop::hiopSolveStatus ::User_Stopped return code.
+   * 
+   * @param[in] int the current iteration number
+   * @param[in] obj_value objective value
+   * @param[in] logbar_obj_value log barrier objective value
+   * @param[in] n global number of variables
+   * @param[in] x array of (local) entries of the primal variables (managed by Umpire)
+   * @param[in] z_L array of (local) entries of the dual variables for lower bounds (managed by Umpire)
+   * @param[in] z_U array of (local) entries of the dual variables for upper bounds (managed by Umpire)
+   * @param[in] m_ineq the number of inequality constraints
+   * @param[in] s array of the slacks added to transfer inequalities to equalities (managed by Umpire)
+   * @param[in] m the number of constraints
+   * @param[in] g array of the values of the constraints body (managed by Umpire)
+   * @param[in] lambda array of (local) entries of the dual variables for constraints (managed by Umpire)
+   * @param[in] inf_pr inf norm of the primal infeasibilities
+   * @param[in] inf_du inf norm of the dual infeasibilities
+   * @param[in] onenorm_pr_ one norm of the primal infeasibilities
+   * @param[in] mu the log barrier parameter
+   * @param[in] alpha_du dual step size
+   * @param[in] alpha_pr primal step size
+   * @param[in] ls_trials the number of line search iterations
+   * 
+   * @note this callback function passed the Umpire-managed arrays to users. By default, if data is on device/host,
+   * this function will pass the Umpire-managed arrays on devic/host to users, respectively. If data is on deivice 
+   * and HiOp option `callback_mem_space` is set to `host`, HiOp transfers the data from device to host first, and then 
+   * passes the Umpire-managed arrays on host to user.
+   * 
    */
   virtual bool iterate_callback(int iter,
                                 double obj_value,

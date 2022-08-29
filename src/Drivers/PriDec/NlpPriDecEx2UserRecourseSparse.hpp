@@ -353,7 +353,9 @@ public:
                           bool& duals_avail,
                           double* z_bndL0, 
                           double* z_bndU0,
-                          double* lambda0)
+                          double* lambda0,
+                          bool& slacks_avail,
+                          double* ineq_slack)
   {
     return false;
   }

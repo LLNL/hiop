@@ -1143,11 +1143,14 @@ void hiopOptionsNLP::register_options()
     register_str_option("mem_space",
                         range[0],
                         range,
-                        "Determines the memory space in which future internal linear algebra objects will be created");
+                        "Determines the memory space in which future internal linear algebra objects will be created. "
+                        "When HiOp is built with RAJA/Umpire, user can set this option to either `default`, `host`, "
+                        "`device` or `um`, and internally the data of HiOp vectors/matrices will be managed by Umpire. "
+                        "If HiOp was built without RAJA/Umpire support, only `default` is available for this option.");
     register_str_option("callback_mem_space",
                         range[0],
                         range,
-                        "Determines the memory space to which HiOp will return the solutions.");
+                        "Determines the memory space to which HiOp will return the solutions. By default,");
   }
 }
 
@@ -1310,6 +1313,9 @@ void hiopOptionsNLP::ensure_consistence()
                 "value '%s' is not supported by HiOp with the provided values of 'mem_space'.\n",
                 GetString("mem_space").c_str(),
                 GetString("callback_mem_space").c_str());
+      set_val("callback_mem_space", GetString("mem_space").c_str());
+    } else if(GetString("callback_mem_space") == "default") {
+      // user didn't specify this option, set it to the value of `mem_space`
       set_val("callback_mem_space", GetString("mem_space").c_str());
     }
   }
