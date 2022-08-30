@@ -382,17 +382,20 @@ public:
    *
    * @param[in] status status of the solution process
    * @param[in] n global number of variables
-   * @param[in] x array of (local) entries of the primal variables at solution (managed by Umpire)
-   * @param[in] z_L array of (local) entries of the dual variables for lower bounds at solution (managed by Umpire)
-   * @param[in] z_U array of (local) entries of the dual variables for upper bounds at solution (managed by Umpire)
-   * @param[in] g array of the values of the constraints body at solution (managed by Umpire)
-   * @param[in] lambda array of (local) entries of the dual variables for constraints at solution (managed by Umpire)
+   * @param[in] x array of (local) entries of the primal variables at solution (managed by Umpire, see note below)
+   * @param[in] z_L array of (local) entries of the dual variables for lower bounds at solution (managed by Umpire,
+   * see note below)
+   * @param[in] z_U array of (local) entries of the dual variables for upper bounds at solution (managed by Umpire,
+   * see note below)
+   * @param[in] g array of the values of the constraints body at solution (managed by Umpire, see note below)
+   * @param[in] lambda array of (local) entries of the dual variables for constraints at solution (managed by Umpire,
+   * see note below)
    * @param[in] obj_value objective value at solution 
    *
-   * @note this callback function passed the Umpire-managed arrays to users. By default, if data is on device/host,
-   * this function will pass the Umpire-managed arrays on devic/host to users, respectively. If data is on deivice 
-   * and HiOp option `callback_mem_space` is set to `host`, HiOp transfers the data from device to host first, and then 
-   * passes the Umpire-managed arrays on host to user.
+   * @note HiOp's option `callback_mem_space` can be used to change the memory location of array parameters managaged by Umpire. 
+   * More specifically, when `callback_mem_space` is set to `host` (and `mem_space` is `device`), HiOp transfers the 
+   * arrays from device to host first, and then passes/returns pointers on host for the arrays managed by Umpire. These pointers
+   * can be then used in host memory space (without the need to rely on or use Umpire).
    * 
    */
   virtual void solution_callback(hiopSolveStatus status,
@@ -418,14 +421,14 @@ public:
    * @param[in] obj_value objective value
    * @param[in] logbar_obj_value log barrier objective value
    * @param[in] n global number of variables
-   * @param[in] x array of (local) entries of the primal variables (managed by Umpire)
-   * @param[in] z_L array of (local) entries of the dual variables for lower bounds (managed by Umpire)
-   * @param[in] z_U array of (local) entries of the dual variables for upper bounds (managed by Umpire)
+   * @param[in] x array of (local) entries of the primal variables (managed by Umpire, see note below)
+   * @param[in] z_L array of (local) entries of the dual variables for lower bounds (managed by Umpire, see note below)
+   * @param[in] z_U array of (local) entries of the dual variables for upper bounds (managed by Umpire, see note below)
    * @param[in] m_ineq the number of inequality constraints
-   * @param[in] s array of the slacks added to transfer inequalities to equalities (managed by Umpire)
+   * @param[in] s array of the slacks added to transfer inequalities to equalities (managed by Umpire, see note below)
    * @param[in] m the number of constraints
-   * @param[in] g array of the values of the constraints body (managed by Umpire)
-   * @param[in] lambda array of (local) entries of the dual variables for constraints (managed by Umpire)
+   * @param[in] g array of the values of the constraints body (managed by Umpire, see note below)
+   * @param[in] lambda array of (local) entries of the dual variables for constraints (managed by Umpire, see note below)
    * @param[in] inf_pr inf norm of the primal infeasibilities
    * @param[in] inf_du inf norm of the dual infeasibilities
    * @param[in] onenorm_pr_ one norm of the primal infeasibilities
@@ -434,10 +437,10 @@ public:
    * @param[in] alpha_pr primal step size
    * @param[in] ls_trials the number of line search iterations
    * 
-   * @note this callback function passed the Umpire-managed arrays to users. By default, if data is on device/host,
-   * this function will pass the Umpire-managed arrays on devic/host to users, respectively. If data is on deivice 
-   * and HiOp option `callback_mem_space` is set to `host`, HiOp transfers the data from device to host first, and then 
-   * passes the Umpire-managed arrays on host to user.
+   * @note HiOp's option `callback_mem_space` can be used to change the memory location of array parameters managaged by Umpire. 
+   * More specifically, when `callback_mem_space` is set to `host` (and `mem_space` is `device`), HiOp transfers the 
+   * arrays from device to host first, and then passes/returns pointers on host for the arrays managed by Umpire. These pointers
+   * can be then used in host memory space (without the need to rely on or use Umpire).
    * 
    */
   virtual bool iterate_callback(int iter,
@@ -464,7 +467,7 @@ public:
   }
   
   /**
-   * A wildcard function used to change the primal variables
+   * A wildcard function used to change the primal variables.
    *
    * @note If the user (implementer) of this methods returns false, HiOp will stop the
    * the optimization with hiop::hiopSolveStatus::User_Stopped return code.
