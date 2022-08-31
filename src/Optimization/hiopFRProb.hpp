@@ -125,15 +125,15 @@ public:
                              int* jJacS,
                              double* MJacS);
 
-  virtual bool get_starting_point(const size_type& n,
-                                  const size_type& m,
-                                  double* x0,
-                                  double* z_bndL0, 
-                                  double* z_bndU0,
-                                  double* lambda0,
-                                  double* ineq_slack,
-                                  double* vl0,
-                                  double* vu0);
+  virtual bool get_warmstart_point(const size_type& n,
+                                   const size_type& m,
+                                   double* x0,
+                                   double* z_bndL0, 
+                                   double* z_bndU0,
+                                   double* lambda0,
+                                   double* ineq_slack,
+                                   double* vl0,
+                                   double* vu0);
 
   virtual bool eval_Hess_Lagr(const size_type& n,
                               const size_type& m,
@@ -307,15 +307,15 @@ public:
                          double* cons);
   virtual bool eval_grad_f(const size_type& n, const double* x, bool new_x, double* gradf);
 
-  virtual bool get_starting_point(const size_type& n,
-                                  const size_type& m,
-                                  double* x0,
-                                  double* z_bndL0, 
-                                  double* z_bndU0,
-                                  double* lambda0,
-                                  double* ineq_slack,
-                                  double* vl0,
-                                  double* vu0);
+  virtual bool get_warmstart_point(const size_type& n,
+                                   const size_type& m,
+                                   double* x0,
+                                   double* z_bndL0, 
+                                   double* z_bndU0,
+                                   double* lambda0,
+                                   double* ineq_slack,
+                                   double* vl0,
+                                   double* vu0);
 
   virtual bool iterate_callback(int iter,
                                 double obj_value,

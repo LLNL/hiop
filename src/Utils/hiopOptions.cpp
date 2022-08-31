@@ -493,35 +493,56 @@ void hiopOptions::print(FILE* file, const char* msg) const
   if(nullptr==msg) fprintf(file, "#\n# Hiop options\n#\n");
   else          fprintf(file, "%s ", msg);
 
+  bool short_ver{false};
+  if(GetString("print_options") == "short"){
+    short_ver = true;
+  }
+
   map<string,Option*>::const_iterator it = mOptions_.begin();
   for(; it!=mOptions_.end(); it++) {
     fprintf(file, "%s ", it->first.c_str());
-    it->second->print(file);
+    it->second->print(file, short_ver);
     fprintf(file, "\n");
   }
   fprintf(file, "# end of Hiop options\n\n");
 }
 
-void hiopOptions::OptionNum::print(FILE* f) const
+void hiopOptions::OptionNum::print(FILE* f, bool short_ver) const
 {
-  fprintf(f, "%.3e \t# (numeric) %g to %g [%s]", val, lb, ub, descr.c_str());
+  if(!short_ver) {
+    fprintf(f, "%.3e \t# (numeric) %g to %g [%s]", val, lb, ub, descr.c_str());
+  } else {
+    fprintf(f, "%.3e", val);
+  }
 }
-void hiopOptions::OptionInt::print(FILE* f) const
+void hiopOptions::OptionInt::print(FILE* f, bool short_ver) const
 {
-  fprintf(f, "%d \t# (integer)  %d to %d [%s]", val, lb, ub, descr.c_str());
+  if(!short_ver) {
+    fprintf(f, "%d \t# (integer)  %d to %d [%s]", val, lb, ub, descr.c_str());
+  } else {
+    fprintf(f, "%d", val);
+  }
 }
 
-void hiopOptions::OptionStr::print(FILE* f) const
+void hiopOptions::OptionStr::print(FILE* f, bool short_ver) const
 {
   //empty range means the string option is not bound to a range of values
   if(range.empty()) {
-    fprintf(f, "%s \t# (string) [%s]", val.c_str(), descr.c_str());
-  } else {
-    stringstream ssRange; ssRange << " ";
-    for(int i=0; i<range.size(); i++) {
-      ssRange << range[i] << " ";
+    if(!short_ver) {
+      fprintf(f, "%s \t# (string) [%s]", val.c_str(), descr.c_str());
+    } else {
+      fprintf(f, "%s", val.c_str());
     }
-    fprintf(f, "%s \t# (string) one of [%s] [%s]", val.c_str(), ssRange.str().c_str(), descr.c_str());
+  } else {
+    if(!short_ver) {
+      stringstream ssRange; ssRange << " ";
+      for(int i=0; i<range.size(); i++) {
+        ssRange << range[i] << " ";
+      }
+      fprintf(f, "%s \t# (string) one of [%s] [%s]", val.c_str(), ssRange.str().c_str(), descr.c_str());
+    } else {
+      fprintf(f, "%s", val.c_str());
+    }
   }
 }
 
@@ -1103,7 +1124,7 @@ void hiopOptionsNLP::register_options()
                         "write internal KKT linear system (matrix, rhs, sol) to file (default 'no')");
     register_str_option("print_options",
                         "no", // default value for the option
-                        vector<string>({"yes", "no"}), // range
+                        vector<string>({"yes", "no", "short"}), // range
                         "prints options before algorithm starts (default 'no')");
   }
   
@@ -1122,11 +1143,14 @@ void hiopOptionsNLP::register_options()
     register_str_option("mem_space",
                         range[0],
                         range,
-                        "Determines the memory space in which future linear algebra objects will be created");
+                        "Determines the memory space in which future internal linear algebra objects will be created. "
+                        "When HiOp is built with RAJA/Umpire, user can set this option to either `default`, `host`, "
+                        "`device` or `um`, and internally the data of HiOp vectors/matrices will be managed by Umpire. "
+                        "If HiOp was built without RAJA/Umpire support, only `default` is available for this option.");
     register_str_option("callback_mem_space",
                         range[0],
                         range,
-                        "Determines the memory space to which HiOp will return the solutions.");
+                        "Determines the memory space to which HiOp will return the solutions. By default,");
   }
 }
 
@@ -1289,6 +1313,9 @@ void hiopOptionsNLP::ensure_consistence()
                 "value '%s' is not supported by HiOp with the provided values of 'mem_space'.\n",
                 GetString("mem_space").c_str(),
                 GetString("callback_mem_space").c_str());
+      set_val("callback_mem_space", GetString("mem_space").c_str());
+    } else if(GetString("callback_mem_space") == "default") {
+      // user didn't specify this option, set it to the value of `mem_space`
       set_val("callback_mem_space", GetString("mem_space").c_str());
     }
   }
