@@ -848,7 +848,7 @@ A third method to initialize the point is offered to advanced users, as it will 
   \item \texttt{vl0} and  \texttt{vu0} starting points for the duals of the (inequality) constraints lower and upper bounds.
   \end{itemize}
     
-  This method should only be implemented when user wants to use a warmstart point, and it to be used with caution.
+  This method should only be implemented when user wants to use a warmstart point and should be used with caution.
 
   \warningcp{Note:} Arrays \texttt{x0}, \texttt{z\_bndL0}, \texttt{z\_bndU0}, \texttt{lambda0}, \texttt{ineq\_slack}, \texttt{vl0} and  \texttt{vu0} are managed by Umpire.
   
@@ -865,7 +865,7 @@ A third method to initialize the point is offered to advanced users, as it will 
                          const double* lambda,
                          double obj_value);
 \end{lstlisting} 
-Callback method called by HiOp when the optimal solution is reached. User should use it to retrieve primal-dual optimal solution.
+Callback method called by HiOp when the optimal solution is reached. User can use it to retrieve primal-dual optimal solution.
 
 Parameters:
 \begin{itemize}
@@ -903,7 +903,7 @@ Parameters:
                         double alpha_pr,
                         int ls_trials);
 \end{lstlisting} 
-Intermediate callback method called by HiOp in the end of each iteration. User can use this method to obtain information about the optimization status while \Hi solves the problem. If the user (implementer) of this methods returns false, HiOp will stop the optimization with \texttt{hiop::hiopSolveStatus::User\_Stopped} return code.
+Intermediate callback method called by HiOp at the end of each iteration. User can obtain information about the optimization status while \Hi solves the problem. If the user (implementer) of this methods returns false, HiOp will stop the optimization with \texttt{hiop::hiopSolveStatus::User\_Stopped} return code.
 Parameters:
 \begin{itemize}
 \item \texttt{iter} the current iteration number
