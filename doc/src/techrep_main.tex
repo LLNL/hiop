@@ -236,7 +236,7 @@ This document describes the \Hi suite of HPC optimization solvers for some large
 \begin{itemize}
   \item \texttt{HiOp-Dense} supports NLPs with billions of variables with or without bounds but only limited number of
   constraints. This solver is a memory-distributed, MPI-based quasi-Newton interior-point solver using limited-memory approximations for the Hessians.
-  \item \texttt{HiOp-Sparse} supports general sparse and large-scale NLPs sparse second-order derivatives. This functionality is similar to that of the state-of-the-art Ipopt~\cite{waecther_05_ipopt0}, but with additional features such as the inertia-free approach~\cite{Chiang2016}. The solver offers GPU acceleration via CUDA Toolkit (and in the future via rocSPARSE) and requires RAJA portability abstraction layer when GPU acceleration is enabled.
+  \item \texttt{HiOp-Sparse} supports general sparse and large-scale NLPs sparse second-order derivatives. This functionality is similar to that of the state-of-the-art Ipopt~\cite{waecther_05_ipopt0}, but with additional features such as the inertia-free approach~\cite{Chiang2016}. The solver offers GPU acceleration via Nvidia CUDA Toolkit or AMD HIP Toolkit, and requires RAJA portability abstraction layer when GPU acceleration is enabled.
   \item \texttt{HiOp-MDS} supports NLPs that have dense and sparse blocks, for which a ``Newton'' interior-point solver is available together with a specialized, so-called mixed dense-sparse (MDS) linear algebra capable of achieving good performance on GPUs via Magma dense linear solver.
   \item \texttt{HiOp-PriDec} is an asynchronous memory-distributed optimization solver for two-stage stochastic programming problems. It implements a master-worker asynchronous scheduler based on MPI to improve load balancing. GPU acceleration can be achieved in solving each subproblem by \texttt{HiOp-MDS} or \texttt{HiOp-Sparse}.
 \end{itemize}
@@ -248,7 +248,7 @@ build \Hi and a description of its interface, user options, and use as an optimi
 While the MPI quasi-Newton solver of \texttt{Hiop} targets DAE- and PDE-constrained optimization problems formulated in a ``reduced-space'' approach, it can be used for general nonconvex nonlinear optimization as well. For efficiency considerations, it is recommended to \textit{use quasi-Newton \texttt{Hiop} for NLPs that have a relatively small number of general constraints}, say less than $100$; note that there are no restrictions on the number of bounds constraints, \textit{e.g.}, one can specify simple bounds on any, and potentially all the decision variables without affecting the computational efficiency. The minimizers computed by \Hi satisfies \textit{local} first-order optimality conditions.
 
 The goal of quasi-Newton solver of \Hi is to remove the parallelization limitations of existing state-of-the-art solvers for nonlinear programming (NLP) and match/surpass the parallel scalability of the underlying PDE or DAE solver. Such limitation occurs whenever the dimensionality of the optimization space  is as large as the dimensionality of the discretization of the differential systems of equations governing the optimization. In these cases, the use of existing NLP solvers  results in i. considerable long time spent in optimization, which affects the parallel scalability, and/or ii. memory requirements beyond the memory capacity of the computational node that runs the optimization. \Hi removes these scalability/parallelization bottlenecks (for certain optimization problems described above) by offering interface for a \textit{memory-distributed} specification of the problem and parallelizing the optimization search using specialized parallel linear algebra technique.
-
+z
 The general computational approach in \Hi is to use existing state-of-the-art NLP algorithms and develop linear algebra kernels tailored to the specific of this
 class of problems. \Hi is based on an interior-point line search filter method~\cite{waecther_05_ipopt2,waecther_05_ipopt} and follows the implementation details from~\cite{waecther_05_ipopt0}, which is the implementation paper for IPOPT open-source NLP solver. The quasi-Newton approach is based on limited-memory secant approximations of the Hessian~\cite{ByrdNocedalSchnabel_94_quasiNewtonRepres}, which is generalized as required by the specific of interior-point methods for constrained optimization problems~\cite{petra_hiop}. The specialized linear algebra decomposition is obtained by using a Schur-complement reduction that
 leverages the fact that the quasi-Newton Hessian matrix has a small number of
@@ -271,7 +271,7 @@ By using multithreadead BLAS and LAPACK libraries, \textit{e.g.}, INTEL MKL, Got
 \end{verbatim}
 
 \subsection{Prerequisites} 
-\Hi is written in C++11. At minimum, \Hi  requires BLAS and LAPACK, however, the more advanced solvers require additional dependencies (MPI, RAJA and Umpire, CUDA, MAGMA, CoinHSL, PARDISO, STRUMPACK, etc.). The CMake-based build system of \Hi generally detects these prerequisites automatically and warns the user when such prerequisites are missing.
+\Hi is written in C++11. At minimum, \Hi  requires BLAS and LAPACK, however, the more advanced solvers require additional dependencies (MPI, RAJA and Umpire, CUDA, HIP, MAGMA, CoinHSL, PARDISO, STRUMPACK, etc.). The CMake-based build system of \Hi generally detects these prerequisites automatically and warns the user when such prerequisites are missing.
 
 At this point the build system only supports macOS and Linux operating systems. On the other hand, other than the build system, \Hi's code is  platform independent and should run fine on Windows as well.
 
@@ -288,13 +288,15 @@ A quick way to build and code is run the following commands in the `build\//' di
 \end{verbatim}
 This will compile, build the static library and example executables, perform a couple of tests to detect potential issues during the installation, and will install \Hi's header and the static library in the root directory under `\_build\_defaultDist\//'
 
-\subsection{Support of host-device computations using (generic)CPU-(NVIDIA)GPU hardware}
+\subsection{Support of host-device computations using (generic)CPU-(NVIDIA/AMD)GPU hardware}
 
-Starting version 0.3, \Hi offers support for offloading computations to NVIDIA GPU accelerators when solving NLPs in the mixed dense-sparse (MDS) form. Support for GPUs should be enabled during the build by using \texttt{-DHIOP\_USE\_GPU} option with \texttt{cmake}, which will result in using the GPU accelerators for the internal linear solves; in addition, the options \texttt{-DHIOP\_USE\_RAJA} will employ RAJA portability abstraction to perform the remaining linear algebra computations on the GPU device or on the host (with OpenMP acceleration). When RAJA is enabled, \Hi can be instructed to use Umpire as memory manager (see option \texttt{mem\_space}). As of v0.5, the combination of RAJA and Umpire enables \Hi to perform iterations of the Newton IPM solver solely on the device by setting option \texttt{mem\_space} to \texttt{device} and option \texttt{compute\_mode} to \texttt{gpu}. 
+Starting version 0.3, \Hi offers support for offloading computations to NVIDIA GPU accelerators when solving NLPs in the mixed dense-sparse (MDS) form. Support for CUDA should be enabled during the build by using \texttt{cmake} options \texttt{-DHIOP\_USE\_GPU}  and \texttt{-DHIOP\_USE\_CUDA}, which will result in using the CUDA accelerators for the internal linear solves; in addition, the options \texttt{-DHIOP\_USE\_RAJA} will employ RAJA portability abstraction to perform the remaining linear algebra computations on the GPU device or on the host (with OpenMP acceleration). When RAJA is enabled, \Hi can be instructed to use Umpire as memory manager (see option \texttt{mem\_space}). As of v0.5, the combination of RAJA and Umpire enables \Hi to perform iterations of the Newton IPM solver solely on the device by setting option \texttt{mem\_space} to \texttt{device} and option \texttt{compute\_mode} to \texttt{gpu}.
 
-\Hi's \texttt{cmake} build system is quite versatile to find the dependencies required to offload computations to the device GPUs since was developed and tested on a few GPU-enabled HPC platforms at Oak Ridge, Lawrence Livermore, and Pacific Northwest National Laboratories. These dependencies consist of CUDA library version 10.1 or later and a recent Magma linear solver library (as well as a physical NVIDIA GPU device). \Hi offers an extensive build support for using customized NVIDIA libraries and/or Magma solver as well as for advanced troubleshooting. The user is referred to \texttt{cmake/FindHiopCudaLibraries.cmake} and \texttt{cmake/FindMagma.cmake} scripts.
+Starting version 0.6, \Hi offers support for offloading computations to AMD GPU accelerators when solving NLPs in the mixed dense-sparse (MDS) form. Support for HIP should be enabled during the build by using \texttt{cmake} options \texttt{-DHIOP\_USE\_GPU}  and \texttt{-DHIOP\_USE\_HIP}, which will result in using the HIP accelerators for the internal linear solves.
 
-\warningcp{Note: } Installing NVIDIA CUDA (and likely the NVIDIA driver) and/or building Magma can be quite challenging. The user is encouraged to rely on preinstalled versions of these, as they are available via \texttt{module} utility on virtually all high-performance computing machines. An example of how to satisfy all the GPU dependencies on Summit supercomputer at Oak Ridge National Lab with a one commands are available at \url{https://github.com/LLNL/hiop/blob/master/README_summit.md}.
+\Hi's \texttt{cmake} build system is quite versatile to find the dependencies required to offload computations to the device GPUs since was developed and tested on a few GPU-enabled HPC platforms at Oak Ridge, Lawrence Livermore, and Pacific Northwest National Laboratories. These dependencies consist of CUDA library version 10.1 or later, rocm library version 4.5.0 or later and a recent Magma linear solver library (as well as a physical NVIDIA/AMD GPU device). \Hi offers an extensive build support for using customized NVIDIA libraries, AMD libraries and/or Magma solver as well as for advanced troubleshooting. The user is referred to \texttt{cmake/FindHiopCudaLibraries.cmake}, \texttt{cmake/FindHiopHipLibraries.cmake} and \texttt{cmake/FindHiOpMagma.cmake} scripts.
+
+\warningcp{Note: } Installing NVIDIA CUDA, AMD HIP, and/or building Magma can be quite challenging. The user is encouraged to rely on preinstalled versions of these, as they are available via \texttt{module} utility on virtually all high-performance computing machines. An example of how to satisfy all the GPU dependencies on Summit supercomputer at Oak Ridge National Lab with a one commands are available at \url{https://github.com/LLNL/hiop/blob/master/README_summit.md}.
 
 \subsection{Building extra features}
 
@@ -555,6 +557,8 @@ The above optimization problem~\eqref{mdsobj}--\eqref{mdsbounds} can be specifie
 
 \warningcp{Note:} Unless stated otherwise, all the functions that return \texttt{bool} should return \texttt{false} when an error occurs, otherwise should return \texttt{true}.
 
+\warningcp{Note:} Regarding the implementation of hiop::hiopInterfaceMDS on the device, all pointers marked as ``managed by Umpire" are allocated by HiOp using the Umpire's API. They all are addressed in the same memory space; however, the memory space can be host (typically CPU), device (typically GPU), or unified memory (um) spaces as per Umpire specification. The selection of the memory space is done via the option ``mem\_space" of HiOp. It is the responsibility of the implementers of the HiOp's interfaces to work with the ``managed by Umpire" pointers in the same memory space as the one specified by the ``mem\_space" option. 
+
 \begin{lstlisting} 
 bool get_prob_sizes(size_type& n, size_type& m);
 \end{lstlisting} 
@@ -566,14 +570,14 @@ bool get_vars_info(const size_type& n, double *xlow, double* xupp,
                    NonlinearityType* type);
 \end{lstlisting} 
 
-\noindent Provides the lower and upper bounds $x_l$ and $x_u$ on the decision variables. When a variable (let us say the $i^{th}$) has no lower or/and upper bounds, the  $i^{th}$ entry of xlow and/or xupp should be less than $-1^{20}$ or/and larger than $1^{20}$, respectively. The last argument is not used and can set to any value of the enum \texttt{hiop::hiopInterfaceDenseConstraints::NonlinearityType}.
+\noindent Provides the lower and upper bounds $x_l$ and $x_u$ on the decision variables. When a variable (let us say the $i^{th}$) has no lower or/and upper bounds, the  $i^{th}$ entry of xlow and/or xupp should be less than $-1^{20}$ or/and larger than $1^{20}$, respectively. The last argument is not used and can set to any value of the enum \texttt{hiop::hiopInterfaceDenseConstraints::NonlinearityType}. While array \texttt{type} is allocated on host, arrays \texttt{xlow} and \texttt{xupp} are managed by Umpire.
 
 
 \begin{lstlisting} 
 bool get_cons_info(const size_type& m, double* clow, double* cupp, 
                    NonlinearityType* type);
 \end{lstlisting}
-\noindent Similar to the above, but for the inequality bounds $d_l$ and $d_u$. For equalities, set the corresponding entries in clow and cupp equal to the desired value (from $c_E$).
+\noindent Similar to the above, but for the inequality bounds $d_l$ and $d_u$. For equalities, set the corresponding entries in clow and cupp equal to the desired value (from $c_E$). While array \texttt{type} is allocated on host, arrays \texttt{clow} and \texttt{cupp} are managed by Umpire.
 
 \begin{lstlisting} 
 bool get_sparse_dense_blocks_info(int& nx_sparse, int& nx_dense,
@@ -590,7 +594,7 @@ bool eval_f(const size_type& n,
             double& obj_value);
 \end{lstlisting} 
 
-\noindent Implement this method to compute the function value $f(x)$ in \texttt{obj\_value} for the provided decision variables $x$. The input argument \texttt{new\_x} specifies whether the variables $x$ have been changed since the previous call of one of the \texttt{eval\_} methods. Use this argument to ``buffer'' the objective and gradients function and derivative evaluations when this is possible.
+\noindent Implement this method to compute the function value $f(x)$ in \texttt{obj\_value} for the provided decision variables $x$. The input argument \texttt{new\_x} specifies whether the variables $x$ have been changed since the previous call of one of the \texttt{eval\_} methods. Use this argument to ``buffer'' the objective and gradients function and derivative evaluations when this is possible. Array \texttt{x} is managed by Umpire.
 
 \begin{lstlisting} 
 bool eval_grad_f(const size_type& n, 
@@ -598,7 +602,7 @@ bool eval_grad_f(const size_type& n,
                  double* gradf);
 \end{lstlisting} 
 
-\noindent Same as above but for $\nabla f(x)$.
+\noindent Same as above but for $\nabla f(x)$. Arrays $x$ and $gradf$ are managed by Umpire.
 
 \begin{lstlisting} 
  bool eval_cons(const size_type& n, const size_type& m, 
@@ -607,7 +611,7 @@ bool eval_grad_f(const size_type& n,
 		bool new_x, double* cons);
 \end{lstlisting} 
 
-\noindent Implement this method to provide the value of the constraints $c(x)$ and/or $d(x)$. The input parameter \texttt{num\_cons} specifies how many constraints (out of \texttt{m}) needs to evaluated; \texttt{idx\_cons} array specifies the indexes, which are zero-based, of the constraints  and is of size \texttt{num\_cons}. These values should be provided in \texttt{cons}, which is also an array of size \texttt{num\_cons}.
+\noindent Implement this method to provide the value of the constraints $c(x)$ and/or $d(x)$. The input parameter \texttt{num\_cons} specifies how many constraints (out of \texttt{m}) needs to evaluated; \texttt{idx\_cons} array specifies the indexes, which are zero-based, of the constraints  and is of size \texttt{num\_cons}. These values should be provided in \texttt{cons}, which is also an array of size \texttt{num\_cons}. Arrays \texttt{idx\_cons}, \texttt{x} and \texttt{cons} are managed by Umpire.
 
 \begin{lstlisting} 
 eval_Jac_cons(const size_type& n, const size_type& m, 
@@ -633,6 +637,8 @@ Parameters:
 \item \texttt{nnzJacS}, \texttt{iJacS}, \texttt{jJacS}, \texttt{MJacS} are for number of nonzeros, $(i,j)$ indexes, and nonzero values of   the sparse Jacobian.
 \item \texttt{JacD} should contain the Jacobian with respect to the dense variables of the MDS problem. The array should store this Jacobian submatrix row-wise, meaning that the each row of the Jacobian is contiguous in memory and starts right after the previous row.
 \end{itemize}
+
+\warningcp{Note:} Arrays \texttt{idx\_cons}, \texttt{x}, \texttt{iJacS}, \texttt{jJacS}, \texttt{MJacS} and \texttt{JacD} are managed by Umpire.
 
 \warningcp{Note:} When implementing this method one should be aware that:
 \begin{itemize}
@@ -675,7 +681,9 @@ The main difference from the above \texttt{eval\_Jac\_cons} is that the implemen
     the entire Jacobian).
      \item  \texttt{JacD}: dense Jacobian block as a contiguous array storing the matrix by rows.
     \end{itemize}
-   
+
+\warningcp{Note:} Arrays \texttt{x}, \texttt{iJacS}, \texttt{jJacS}, \texttt{MJacS} and \texttt{JacD} are managed by Umpire.
+
 \warningcp{Note:} Notes 1-5 from the previous, two-call \texttt{eval\_Jac\_cons} applies here as well.
     
 \begin{lstlisting} 
@@ -703,6 +711,8 @@ bool eval_Hess_Lagr(const size_type& n, const size_type& m,
 %that sparse symmOnly upper triangular nonzero entries should be specified, accessed, and maintained. The Hessian and the symmetric KKT systems are implemented as symmetric matrices. Users only need to provide the upper triangle nonzero entries to Hessian. 
 
 \warningcp{Note:} The array \texttt{lambda} contains  the multipliers of constraints. These multipliers come have the same order as the constraints in \texttt{eval\_cons} (this is a new behavior introduced in \Hi v0.4).
+
+\warningcp{Note:} Arrays \texttt{x}, \texttt{lambda}, \texttt{iHSS}, \texttt{jHSS}, \texttt{MHSS}, \texttt{HDD}, \texttt{iHSD}, \texttt{jHSD} and \texttt{MHSD} are managed by Umpire.
 
 \warningcp{Device computations:} \Hi supports full device/GPU acceleration for MDS NLPs. To achieve this, the user can use option \texttt{compute\_mode} set to \texttt{gpu} and option \texttt{mem\_space} set to \texttt{device}. However, the user needs to be able to evaluate the model on the device. The rule of thumb is that all the \textit{pointer} arguments of the callback methods of this section will be on the device (with a few exceptions) so that the user can populate the arrays on the device. This is illustrated and discussed in detail in \texttt{src/Drivers/NlpMdsRajaEx1.hpp}, which is part of the RAJA Example 1 (see \texttt{src/Drivers/NlpMdsEx1RajaDriver.cpp}) that is capable of running completely in the device memory space with minimal host-device transfer.
 
@@ -785,7 +795,9 @@ bool get_starting_point(const size_type& n, const size_type& m,
                         double* x0,
                         bool& duals_avail,
                         double* z_bndL0, double* z_bndU0,
-                        double* lambda0);
+                        double* lambda0,
+                        bool& slacks_avail,
+                        double* ineq\_slack);
 \end{lstlisting} 
 
 A second method is offered to user to provide an initial primal starting point. This method will be soon deprecated as its functionality is a subset of the method above and should be avoided.
@@ -801,10 +813,13 @@ Parameters:
 \item \texttt{duals\_avail} boolean flag expressing whether the user wishes to specifiy the a starting point for dual variables.
 \item \texttt{z\_bndL0} and  \texttt{z\_bndU0} starting points for the duals of the lower and upper bounds.
 \item \texttt{lambda0} is an array containing the starting point for the duals of the constraints. It is allocated to have the dimension of the constraints body and the entries in \texttt{lambda0} should have the same order as the constraints body (that is equalities may be mixed with inequalities), see \texttt{eval\_cons} methods; \Hi keeps track internally whether each value in \texttt{lambda0} is a multiplier for an equality or for an inequlity constraint.
+\item \texttt{slacks\_avail} boolean flag expressing whether the initial values for the inequality slacks (added by HiOp internally) are given by the user.
+\item \texttt{ineq\_slack} is an array containing the starting point for the slacks added by \Hi to transfer inequalities to equalities internally.
 \end{itemize}
   
 These methods should return \texttt{true} if the user successfully provided starting values for the primal or for the primal and dual variables. If the first method above returns \texttt{false},  then \Hi will attempt calling the second method above. This behavior is for backward compatibility. If a starting point cannot be set by the user, both methods should return \texttt{false}. Also, we remark that the  methods do not need to be implemented since  default implementations returning \texttt{false} are provided by the base class; in this case, \Hi will use a starting point of all zeros (which is subjected to internal adjustments, see below).
 
+\warningcp{Note:} Arrays \texttt{x0}, \texttt{z\_bndL0}, \texttt{z\_bndU0}, \texttt{lambda0} and \texttt{ineq\_slack} are managed by Umpire.
 
 \warningcp{Note:} The starting point returned by the user in \texttt{x0} using the methods above is subject to internal adjustments in \Hi and may differ from \texttt{x0} with which the methods of the previous section are first called.
 
@@ -812,6 +827,109 @@ These methods should return \texttt{true} if the user successfully provided star
 %   * The method returns true (and populate x0) or return false, in which case hiOP will use set 
 %   * x0 to all zero (still subject to internal adjustement).
 
+
+A third method to initialize the point is offered to advanced users, as it will skip all the safeguards in \Hi, e.g., checking if it is `nullptr` or project x into variable bounds. 
+\begin{lstlisting} 
+  bool get_warmstart_point(const size_type& n, const size_type& m,
+                          double* x0,
+                          double* z_bndL0, double* z_bndU0,
+                          double* lambda0,
+                          double* ineq\_slack,
+                          double* vl0, double* vu0);
+  \end{lstlisting} 
+
+  Parameters:
+  \begin{itemize}
+  \item \texttt{n} and \texttt{m} are the number of variables and the number of constraints.
+  \item \texttt{x0} array of values for the initial primal variables/starting point.
+  \item \texttt{z\_bndL0} and  \texttt{z\_bndU0} starting points for the duals of the lower and upper bounds.
+  \item \texttt{lambda0} is an array containing the starting point for the duals of the constraints. It is allocated to have the dimension of the constraints body and the entries in \texttt{lambda0} should have the same order as the constraints body (that is equalities may be mixed with inequalities), see \texttt{eval\_cons} methods; \Hi keeps track internally whether each value in \texttt{lambda0} is a multiplier for an equality or for an inequlity constraint.
+  \item \texttt{ineq\_slack} is an array containing the starting point for the slacks added by \Hi to transfer inequalities to equalities internally.
+  \item \texttt{vl0} and  \texttt{vu0} starting points for the duals of the (inequality) constraints lower and upper bounds.
+  \end{itemize}
+    
+  This method should only be implemented when user wants to use a warmstart point, and it to be used with caution.
+
+  \warningcp{Note:} Arrays \texttt{x0}, \texttt{z\_bndL0}, \texttt{z\_bndU0}, \texttt{lambda0}, \texttt{ineq\_slack}, \texttt{vl0} and  \texttt{vu0} are managed by Umpire.
+  
+\subsection{Obtain information from \Hi}
+\Hi provides two callback functions for the user to obtain information about the optimization status. 
+\begin{lstlisting} 
+  void solution_callback(hiopSolveStatus status,
+                         size_type n,
+                         const double* x,
+                         const double* z_L,
+                         const double* z_U,
+                         size_type m,
+                         const double* g,
+                         const double* lambda,
+                         double obj_value);
+\end{lstlisting} 
+Callback method called by HiOp when the optimal solution is reached. User should use it to retrieve primal-dual optimal solution.
+
+Parameters:
+\begin{itemize}
+\item \texttt{status} status of the solution process.
+\item \texttt{n} global number of variables.
+\item \texttt{x} array of (local) entries of the primal variables at solution.
+\item \texttt{z\_L} array of (local) entries of the dual variables for lower bounds at solution.
+\item \texttt{z\_U} array of (local) entries of the dual variables for upper bounds at solution.
+\item \texttt{g} array of the values of the constraints body at solution.
+\item \texttt{lambda} array of (local) entries of the dual variables for constraints at solution.
+\item \texttt{obj\_value} objective value at solution 
+\end{itemize}
+
+\warningcp{Note:} Arrays \texttt{x}, \texttt{z\_L}, \texttt{z\_U}, \texttt{g} and \texttt{lambda} are managed by Umpire.
+
+
+\begin{lstlisting} 
+  bool iterate_callback(int iter,
+                        double obj_value,
+                        double logbar_obj_value,
+                        int n,
+                        const double* x,
+                        const double* z_L,
+                        const double* z_U,
+                        int m_ineq,
+                        const double* s,
+                        int m,
+                        const double* g,
+                        const double* lambda,
+                        double inf_pr,
+                        double inf_du,
+                        double onenorm_pr,
+                        double mu,
+                        double alpha_du,
+                        double alpha_pr,
+                        int ls_trials);
+\end{lstlisting} 
+Intermediate callback method called by HiOp in the end of each iteration. User can use this method to obtain information about the optimization status while \Hi solves the problem. If the user (implementer) of this methods returns false, HiOp will stop the optimization with \texttt{hiop::hiopSolveStatus::User\_Stopped} return code.
+Parameters:
+\begin{itemize}
+\item \texttt{iter} the current iteration number
+\item \texttt{obj\_value} objective value
+\item \texttt{logbar\_obj\_value} log barrier objective value
+\item \texttt{n} global number of variables
+\item \texttt{x} array of (local) entries of the primal variables (managed by Umpire, see note below)
+\item \texttt{z\_L} array of (local) entries of the dual variables for lower bounds (managed by Umpire, see note below)
+\item \texttt{z\_U} array of (local) entries of the dual variables for upper bounds (managed by Umpire, see note below)
+\item \texttt{m\_ineq} the number of inequality constraints
+\item \texttt{s} array of the slacks added to transfer inequalities to equalities (managed by Umpire, see note below)
+\item \texttt{m} the number of constraints
+\item \texttt{g} array of the values of the constraints body (managed by Umpire, see note below)
+\item \texttt{lambda} array of (local) entries of the dual variables for constraints (managed by Umpire, see note below)
+\item \texttt{inf\_pr} inf norm of the primal infeasibilities
+\item \texttt{inf\_du} inf norm of the dual infeasibilities
+\item \texttt{onenorm\_pr} one norm of the primal infeasibilities
+\item \texttt{mu} the log barrier parameter
+\item \texttt{alpha\_du} dual step size
+\item \texttt{alpha\_pr} primal step size
+\item \texttt{ls\_trials} the number of line search iterations
+\end{itemize}
+
+\warningcp{Note:} Arrays \texttt{x}, \texttt{z\_L}, \texttt{z\_U}, \texttt{s}, \texttt{g} and \texttt{lambda} are managed by Umpire.
+
+\warningcp{Note:} HiOp's option \texttt{callback\_mem\_space} can be used to change the memory location of array parameters managaged by Umpire. More specifically, when \texttt{callback\_mem\_space} is set to `host` (and \texttt{mem\_space} is `device`), HiOp transfers the arrays from device to host first, and then returns pointers on host whose data is managed by Umpire. These pointers can be then used in host memory space (without the need to rely on or use Umpire).
 
 \subsection{Compiling and linking your project with the \Hi library}
 \Hi's build system offers \Hi as a static library. For a straightforward integration of \Hi in the user's project, one needs  to

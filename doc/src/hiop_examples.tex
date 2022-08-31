@@ -39,39 +39,51 @@
 %\section{Example 4 --- A MDS Example}
 %\section{Example 5 --- A MDS Example}
 
-\section{Sparse Example 1 --- A Convex Sparse Example}
+\section{Sparse Example 1 --- A Convex Case}
 \begin{align}
-&&&&\min_{x\in\mathbb{R}^n} & \hspace{0.5cm} \frac{a}{4}\sum_{i=1}^{n} (x_i-1)^4 &&&& \label{ex6:obj}\\
-&&&&\textnormal{s.t.} &\hspace{0.5cm}  4ax_1+2ax_2 = 10a &&&& \label{ex6:eq1}\\
-&&&&& \hspace{0.5cm} 5a \leq  2ax_1 + ax_3                 &&&& \label{ex6:ineq1}\\
-&&&&& \hspace{0.5cm}  a \leq  2ax_1       + 0.5ax_i \leq 2an &&&& \label{ex6:ineq2}\\
-&&&&& \hspace{0.5cm}  x_1~\textnormal{free}, &&&& \label{ex6:varb1}\\
-&&&&& \hspace{0.5cm}  0.0 \leq x_2, &&&& \label{ex6:varb2}\\
-&&&&& \hspace{0.5cm}  1.5 \leq x_3 \leq 10  &&&& \label{ex6:varb3}\\
-&&&&& \hspace{0.5cm}  0.5 \leq x_i, \ \forall i=4,...,n               &&& \label{ex6:varb4}
+&&&&\min_{x\in\mathbb{R}^n} & \hspace{0.5cm} \frac{a}{4}\sum_{i=1}^{n} (x_i-1)^4 &&&& \label{sp_ex1:obj}\\
+&&&&\textnormal{s.t.} &\hspace{0.5cm}  4ax_1+2ax_2 = 10a &&&& \label{sp_ex1:eq1}\\
+&&&&& \hspace{0.5cm} 5a \leq  2ax_1 + ax_3                 &&&& \label{sp_ex1:ineq1}\\
+&&&&& \hspace{0.5cm}  a \leq  2ax_1       + 0.5ax_i \leq 2an &&&& \label{sp_ex1:ineq2}\\
+&&&&& \hspace{0.5cm}  x_1~\textnormal{free}, &&&& \label{sp_ex1:varb1}\\
+&&&&& \hspace{0.5cm}  0.0 \leq x_2, &&&& \label{sp_ex1:varb2}\\
+&&&&& \hspace{0.5cm}  1.5 \leq x_3 \leq 10  &&&& \label{sp_ex1:varb3}\\
+&&&&& \hspace{0.5cm}  0.5 \leq x_i, \ \forall i=4,...,n               &&& \label{sp_ex1:varb4}
 \end{align}
 
 Here $n\geq3$ and $a>0$ are parameters that can be modified via SparseEx1 driver's command arguments. Their default values are $n=3$ and $a=1.0$.
 
 The analytical optimal solution is  $x_1=1.75$, $x_2=x_3=1.5$, and $x_i=1$ for $i\in \{4,5,\ldots,n\}$. The objective value is $0.110352$. The file NlpSparseEx1Driver.cpp provides more details about how to use HiOp to solve instances of this example/test problem.
 
-\section{Sparse Example 2 --- A Nonconvex Sparse Example}
+\section{Sparse Example 2 --- A Nonconvex Case}
 \begin{align}
-    &&&&\min_{x\in\mathbb{R}^n} & \hspace{0.5cm} -\frac{a}{4}\sum_{i=1}^{n} (x_i-1)^4 + 0.5\sum_{i=1}^{n} x_i^2&&&& \label{ex7:obj}\\
-    &&&&\textnormal{s.t.} &\hspace{0.5cm}  4x_1+2x_2 = 10 &&&& \label{ex7:eq1}\\
-    &&&&& \hspace{0.5cm}  4x_1+2x_2 = 10 &&&& \label{ex7:defeq}\\
-    &&&&& \hspace{0.5cm}  5 \leq  2x_1 + x_3                 &&&& \label{ex7:ineq1}\\
-    &&&&& \hspace{0.5cm}          4x_1      + 2x_3   \leq 19 &&&& \label{ex7:defineq}\\
-    &&&&& \hspace{0.5cm}  1 \leq  2x_1      + 0.5x_i \leq 2n &&&& \label{ex7:ineq2}\\
-    &&&&& \hspace{0.5cm}  x_1~\textnormal{free}, &&&& \label{ex7:varb1}\\
-    &&&&& \hspace{0.5cm}  0.0 \leq x_2, &&&& \label{ex7:varb2}\\
-    &&&&& \hspace{0.5cm}  1.5 \leq x_3 \leq 10  &&&& \label{ex7:varb3}\\
-    &&&&& \hspace{0.5cm}  0.5 \leq x_i, \ \forall i=4,...,n    &&& \label{ex7:varb4}
+    &&&&\min_{x\in\mathbb{R}^n} & \hspace{0.5cm} -\frac{a}{4}\sum_{i=1}^{n} (x_i-1)^4 + 0.5\sum_{i=1}^{n} x_i^2&&&& \label{sp_ex2:obj}\\
+    &&&&\textnormal{s.t.} &\hspace{0.5cm}  4x_1+2x_2 = 10 &&&& \label{sp_ex2:eq1}\\
+    &&&&& \hspace{0.5cm}  4x_1+2x_2 = 10 &&&& \label{sp_ex2:defeq}\\
+    &&&&& \hspace{0.5cm}  5 \leq  2x_1 + x_3                 &&&& \label{sp_ex2:ineq1}\\
+    &&&&& \hspace{0.5cm}          4x_1      + 2x_3   \leq 19 &&&& \label{sp_ex2:defineq}\\
+    &&&&& \hspace{0.5cm}  1 \leq  2x_1      + 0.5x_i \leq 2n &&&& \label{sp_ex2:ineq2}\\
+    &&&&& \hspace{0.5cm}  x_1~\textnormal{free}, &&&& \label{sp_ex2:varb1}\\
+    &&&&& \hspace{0.5cm}  0.0 \leq x_2, &&&& \label{sp_ex2:varb2}\\
+    &&&&& \hspace{0.5cm}  1.5 \leq x_3 \leq 10  &&&& \label{sp_ex2:varb3}\\
+    &&&&& \hspace{0.5cm}  0.5 \leq x_i, \ \forall i=4,...,n    &&& \label{sp_ex2:varb4}
 \end{align}
 
-Here $n\geq3$ and $a>0$ are parameters which can be tuned via SparseEx1 driver's command arguments. Their default values are  $n=3$ and $a=0.1$. Note that the equality constraints \eqref{ex7:eq1} and \eqref{ex7:defeq} are duplicate. This is done on purpose to make the constraint Jacobian matrix rank deficient and to stress test HiOp on this numerically difficult, nonconvex problem. The file NlpSparseEx2Driver.cpp provides more details about how to use HiOp in various configurations to solve instances of this example/test problem.
+Here $n\geq3$ and $a>0$ are parameters which can be tuned via SparseEx1 driver's command arguments. Their default values are  $n=3$ and $a=0.1$. Note that the equality constraints \eqref{sp_ex2:eq1} and \eqref{sp_ex2:defeq} are duplicate. This is done on purpose to make the constraint Jacobian matrix rank deficient and to stress test HiOp on this numerically difficult, nonconvex problem. The file NlpSparseEx2Driver.cpp provides more details about how to use HiOp in various configurations to solve instances of this example/test problem.
 
-
+\section{Sparse Example 3 --- A Rank-deficient Case}
+\begin{align}
+    &&\min_{x\in\mathbb{R}^n}&& & \hspace{0.2cm} \sum_{i=1}^{n} x_i &&&& \label{sp_ex3:obj}\\
+    &&\textnormal{s.t.}&& &\hspace{0.2cm}  x_1 + x_n = 10 \textnormal{, if eq\_feas or eq\_infeas = true} &&&&&& \label{sp_ex3:eq1}\\
+    &&&&& \hspace{0.2cm}  x_1 + x_n = 10 \textnormal{, }\forall i =\{3,\dots,n\}\textnormal{, if eq\_feas = true} &&&&&& \label{sp_ex2:eq2}\\
+    &&&&& \hspace{0.2cm}  x_1 + x_n = 15 \textnormal{, }\forall i =\{3,\dots,n\}\textnormal{, if eq\_infeas = true} &&&&&& \label{sp_ex3:eq3}\\
+    &&&&& \hspace{0.2cm}  10-a \leq x_1 + x_n  \leq 10+a \textnormal{, if ineq\_feas or ineq\_infeas = true} &&&&&& \label{sp_ex3:ineq1}\\
+    &&&&& \hspace{0.2cm}  10-a \leq x_1 + x_n  \leq 15+a \textnormal{, }\forall i =\{3,\dots,n\}\textnormal{, if ineq\_feas = true} &&&&&& \label{sp_ex3:ineq2}\\
+    &&&&& \hspace{0.2cm}  3-a \leq x_1 + x_n  \leq 5-a \textnormal{, }\forall i =\{3,\dots,n\}\textnormal{, if ineq\_infeas = true} &&&&&& \label{sp_ex3:ineq3}\\
+    &&&&& \hspace{0.2cm}  0 \leq x_i  \textnormal{, }\forall i =\{1,\dots,n\} &&&&&& \label{sp_ex3:bound}
+\end{align}
+where constant $a>0$; $eq\_feas$, $eq\_infeas$, $ineq\_feas$ and $ineq\_infeas$ are some command line parameters passed to the executable file `NlpSparseEx3.exe'. These parameters takes value `true' or `false' (by default), and are used to control which constraints are added into the optimization model. Equations \eqref{sp_ex3:eq1} - \eqref{sp_ex3:eq3} imply that the equality constraint Jacobian has a row rank of one, and the larger `n' is, the more redundent constaints are instroduced into the model. Similarly, the constraint Jacobian is rank deficinet for the inequalities \eqref{sp_ex3:ineq1} - \eqref{sp_ex3:ineq3}. 
+The default problem used in the HiOp pipeline test sets `n = 500', `a = 1e-6' and `ineq\_infeas = true'.
 %\section{Example 8 --- A Primal Decomposition Example}
 %\section{Example 9 --- A Primal Decomposition Example}
 

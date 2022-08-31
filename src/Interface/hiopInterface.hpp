@@ -417,7 +417,7 @@ public:
    * @note If the user (implementer) of this methods returns false, HiOp will stop the 
    * the optimization with hiop::hiopSolveStatus ::User_Stopped return code.
    * 
-   * @param[in] int the current iteration number
+   * @param[in] iter the current iteration number
    * @param[in] obj_value objective value
    * @param[in] logbar_obj_value log barrier objective value
    * @param[in] n global number of variables
@@ -431,7 +431,7 @@ public:
    * @param[in] lambda array of (local) entries of the dual variables for constraints (managed by Umpire, see note below)
    * @param[in] inf_pr inf norm of the primal infeasibilities
    * @param[in] inf_du inf norm of the dual infeasibilities
-   * @param[in] onenorm_pr_ one norm of the primal infeasibilities
+   * @param[in] onenorm_pr one norm of the primal infeasibilities
    * @param[in] mu the log barrier parameter
    * @param[in] alpha_du dual step size
    * @param[in] alpha_pr primal step size
@@ -457,7 +457,7 @@ public:
                                 const double* lambda,
                                 double inf_pr,
                                 double inf_du,
-                                double onenorm_pr_,
+                                double onenorm_pr,
                                 double mu,
                                 double alpha_du,
                                 double alpha_pr,
