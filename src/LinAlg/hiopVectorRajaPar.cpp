@@ -94,6 +94,7 @@ using global_index_type = index_type;
 static constexpr real_type zero = 0.0;
 static constexpr real_type one  = 1.0;
 
+  
 hiopVectorRajaPar::hiopVectorRajaPar(
   const size_type& glob_n,
   std::string mem_space /* = "HOST" */,
@@ -131,14 +132,14 @@ hiopVectorRajaPar::hiopVectorRajaPar(
   mem_space_ = "HOST"; // If no GPU support, fall back to host!
 #endif
 
-  auto& resmgr = umpire::ResourceManager::getInstance();
-  umpire::Allocator devalloc  = resmgr.getAllocator(mem_space_);
-  data_dev_ = static_cast<double*>(devalloc.allocate(n_local_*sizeof(double)));
-  if(mem_space_ == "DEVICE")
+  hw_backend_= HWBackend<MemBackendUmpire>(MemBackendUmpire(mem_space_));
+  hw_backend_host_ = HWBackend<MemBackendHost>(MemBackendHost::new_backend_host());
+
+  data_dev_ = hw_backend_.alloc_array<double>(n_local_);
+  if(hw_backend_.mem_backend().is_device())
   {
     // Create host mirror if the memory space is on device
-    umpire::Allocator hostalloc = resmgr.getAllocator("HOST");
-    data_host_ = static_cast<double*>(hostalloc.allocate(n_local_*sizeof(double)));
+    data_host_ = hw_backend_host_.alloc_array<double>(n_local_);    
   }
   else
   {
@@ -148,7 +149,9 @@ hiopVectorRajaPar::hiopVectorRajaPar(
 }
 
 hiopVectorRajaPar::hiopVectorRajaPar(const hiopVectorRajaPar& v)
-  : hiopVector()
+  : hiopVector(),
+    hw_backend_(v.hw_backend_),
+    hw_backend_host_(v.hw_backend_host_)
 {
   n_local_ = v.n_local_;
   n_ = v.n_;
@@ -161,15 +164,14 @@ hiopVectorRajaPar::hiopVectorRajaPar(const hiopVectorRajaPar& v)
   mem_space_ = "HOST"; // If no GPU support, fall back to host!
 #endif
 
-  // std::cout << "Memory space: " << mem_space_ << "\n";
-  auto& resmgr = umpire::ResourceManager::getInstance();
-  umpire::Allocator devalloc  = resmgr.getAllocator(mem_space_);
-  data_dev_ = static_cast<double*>(devalloc.allocate(n_local_*sizeof(double)));
-  if(mem_space_ == "DEVICE")
+  hw_backend_= HWBackend<MemBackendUmpire>(MemBackendUmpire(mem_space_));
+  hw_backend_host_ = HWBackend<MemBackendHost>(MemBackendHost::new_backend_host());
+
+  data_dev_ = hw_backend_.alloc_array<double>(n_local_);
+  if(hw_backend_.mem_backend().is_device())
   {
     // Create host mirror if the memory space is on device
-    umpire::Allocator hostalloc = resmgr.getAllocator("HOST");
-    data_host_ = static_cast<double*>(hostalloc.allocate(n_local_*sizeof(double)));
+    data_host_ = hw_backend_host_.alloc_array<double>(n_local_);    
   }
   else
   {

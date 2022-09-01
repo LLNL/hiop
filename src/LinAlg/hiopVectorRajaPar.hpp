@@ -70,6 +70,8 @@
 //temporary
 #include "hiopVectorPar.hpp"
 
+#include "HardwareBackends.hpp"
+
 namespace hiop
 {
 
@@ -78,6 +80,7 @@ class hiopVectorRajaPar : public hiopVector
 {
 public:
   hiopVectorRajaPar(const size_type& glob_n, std::string mem_space, index_type* col_part=NULL, MPI_Comm comm=MPI_COMM_SELF);
+  hiopVectorRajaPar() = delete;
   virtual ~hiopVectorRajaPar();
 
   virtual void setToZero();
@@ -305,13 +308,16 @@ public:
   virtual bool is_equal(const hiopVector& vec) const;
   
 private:
+  HWBackend<MemBackendUmpire> hw_backend_;
+  using MemBackendHost = MemBackendUmpire;
+  HWBackend<MemBackendHost> hw_backend_host_;
   std::string mem_space_;
   MPI_Comm comm_;
   double* data_host_;
   double* data_dev_;
   size_type glob_il_, glob_iu_;
   size_type n_local_;
-  /** copy constructor, for internal/private use only (it doesn't copy the elements.) */
+  /// Copy constructor, for internal/private use only (it doesn't copy the elements.) */
   hiopVectorRajaPar(const hiopVectorRajaPar&);
 
 };

@@ -58,7 +58,7 @@ namespace hiop {
 template<class MEMBACKEND, typename T> struct AllocImpl;
 template<class MEMBACKENDSRC, class MEMBACKENDDEST, typename T> struct TransferImpl;
 template<class FEATURE> struct FeatureIsPresent;
-
+template<class MEMBACKEND> struct SupportsHostMemSpace;
 
 //
 // Concrete data structures for supported memory backends. 
@@ -67,40 +67,82 @@ template<class FEATURE> struct FeatureIsPresent;
 /// Standard C++ memory backend on host implemented `new` and `delete[]` operators.
 struct MemBackendCpp
 {
+  /// Always on host memory space
+  static bool is_host() { return true; }
+
+  /// No host memory space is supported.
+  static bool is_device() { return false; }
+
+  /// Returns a backend set up for host memory space
+  static MemBackendCpp new_backend_host()
+  {
+    return MemBackendCpp();
+  };
 };
 
 /// Cuda memory backend for device memory space that is implemented using  Cuda API
 struct MemBackendCuda
 {
+  /// For now does not support memory space (but can/will be implemented).
+  static bool is_host() { return false; }
+
+  static bool is_device() { return true; }
 };
 
 /**
  * Umpire-based memory backend that supports "HOST", "UM" (unified memory), and "DEVICE"
  * memory spaces.
  */
+#include <string>
 struct MemBackendUmpire
 {
-  enum MemLocation
+  
+  MemBackendUmpire(const std::string& l)
+    : mem_space_(l)
   {
-    mlHost,
-    mlDevice,
-    mlUm
+  }
+  MemBackendUmpire() //todo = delete;
+  {
+    mem_space_ = "HOST";
+  }
+
+  std::string mem_space() const
+  {
+    return mem_space_;
+  }
+
+  inline bool is_host() const
+  {
+    return mem_space_ == "HOST";
+  }
+  inline bool is_device() const
+  {
+    return mem_space_ == "DEVICE";
+  }
+
+  /// Returns a backend set up for host memory space
+  static MemBackendUmpire new_backend_host()
+  {
+    return MemBackendUmpire("HOST");
   };
 
-  MemBackendUmpire(const MemLocation& l)
-    : loc_(l)
-  {
-  }
-  MemBackendUmpire() = delete;
-
-  MemLocation location() const
-  {
-    return loc_;
-  }
 private:
-  MemLocation loc_;
+  std::string mem_space_;
 };
 
+  
+//
+// Execution policies
+//
+
+struct ExePoliciesCuda
+{
+
+};
+struct ExePoliciesRaja
+{
+
+};
 
 } // end namespace hiop
 
@@ -128,13 +170,16 @@ public:
     static_assert("HiOp was not built with the requested hardware backend/memory space." &&
                   FeatureIsPresent<MEMBACKEND>::value);
   }
-  HWBackend(MEMBACKEND& mb)
+  HWBackend(const MEMBACKEND& mb)
     : mb_(mb)
   {
     static_assert("HiOp was not built with the requested hardware backend/memory space." &&
                   FeatureIsPresent<MEMBACKEND>::value);
   }
-  MEMBACKEND mb_;
+  MEMBACKEND& mem_backend()
+  {
+    return mb_;
+  }
 
   template<typename T>
   inline T* alloc_array(const size_t& n)
@@ -153,6 +198,8 @@ public:
   {
     return TransferImpl<MEMBACKEND,MEMDEST,T>::do_it(p_src, *this, p_dest, md, n);
   }
+private:
+  MEMBACKEND mb_;
 };
 
 //
@@ -197,7 +244,13 @@ template<class Feature> struct FeatureIsPresent
   static constexpr bool value = false; 
 };
 
-  
+/// Concrete memory backends that supports Host memory space should specialize this to be true.
+template<class MEMBACKEND>
+struct SupportsHostMemSpace
+{
+  static constexpr bool value = false;
+};
+
 } // end namespace
 
 #endif
