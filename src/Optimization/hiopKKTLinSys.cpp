@@ -996,6 +996,8 @@ bool hiopKKTLinSys::compute_directions_w_IR(const hiopResidual* resid, hiopItera
 
     // accept the stpe since this is IR
     bret = true;
+  } else {
+    nlp_->log->printf(hovScalars, "%s", bicgIR_->get_convergence_info().c_str());
   }
 
   nlp_->runStats.tmSolverInternal.stop();
