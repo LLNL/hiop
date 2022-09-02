@@ -52,11 +52,12 @@
 
 namespace hiop {
 
+template<class MEMBACKEND> class HWBackend;
 //
 // Forward declarations of implementation internals
 //
 template<class MEMBACKEND, typename T> struct AllocImpl;
-template<class MEMBACKENDSRC, class MEMBACKENDDEST, typename T> struct TransferImpl;
+template<class MEMBACKENDDEST, class MEMBACKENDSRC, typename T> struct TransferImpl;
 template<class FEATURE> struct FeatureIsPresent;
 template<class MEMBACKEND> struct SupportsHostMemSpace;
 
@@ -193,11 +194,33 @@ public:
     AllocImpl<MEMBACKEND,T>::dealloc(mb_, p);
   }
 
-  template<class MEMDEST, typename T>
-  inline bool copy(T* p_src, T* p_dest, const size_t& n, HWBackend<MEMDEST>& md)
+  /**
+   * Copy `n` elements of the array `p_src` to the `p_dest` array.
+   * 
+   * @pre `p_src` and `p_dest` should be allocated so that they can hold at least 
+   * `n` elements
+   * @pre `p_dest` should be managed by the memory backend of `this`
+   * @pre `p_src` should be managed by the memory backend of `md`
+   */
+  template<class MEMSRC, typename T>
+  inline bool copy(T* p_dest, const T* p_src, const size_t& n, const HWBackend<MEMSRC>& md)
   {
-    return TransferImpl<MEMBACKEND,MEMDEST,T>::do_it(p_src, *this, p_dest, md, n);
+    return TransferImpl<MEMBACKEND,MEMSRC,T>::do_it(p_dest, *this, p_src, md, n);
   }
+
+  /**
+   * Copy `n` elements of the array `p_src` to the `p_dest` array.
+   * 
+   * @pre `p_src` and `p_dest` should be allocated so that they can hold at least 
+   * `n` elements
+   * @pre Both `p_dest` and `p_src` should be managed by the memory backend of `this`
+   */  
+  template<typename T>
+  inline bool copy(T* p_dest, const T* p_src, const size_t& n)
+  {
+    return TransferImpl<MEMBACKEND,MEMBACKEND,T>::do_it(p_dest, *this, p_src, *this, n);
+  }
+
 private:
   MEMBACKEND mb_;
 };
@@ -225,14 +248,14 @@ struct AllocImpl
  * Transfers between memory backends and memory spaces should be provided by specializations
  * of `TransferImpl` class.
  */
-template<class MEMSRC, class MEMDEST, typename T>
+template<class MEMDEST, class MEMSRC, typename T>
 struct TransferImpl
 {
-  inline static bool do_it(T* p_src,
-                           HWBackend<MEMSRC>& hwb_src,
-                           T* p_dest,
+  inline static bool do_it(T* p_dest,
                            HWBackend<MEMDEST>& hwb_dest,
-                           const size_t& size)
+                           const T* p_src,
+                           const HWBackend<MEMSRC>& hwb_src,
+                           const size_t& n)
   {
     return false;
   }

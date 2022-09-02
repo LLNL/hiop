@@ -32,6 +32,25 @@ struct AllocImpl<MemBackendUmpire, T>
   }  
 };
 
+template<typename T>
+struct TransferImpl<MemBackendUmpire, MemBackendUmpire, T>
+{
+  inline static bool do_it(T* p_dest,
+                           HWBackend<MemBackendUmpire>& hwb_dest,
+                           const T* p_src,
+                           const HWBackend<MemBackendUmpire>& hwb_src,
+                           const size_t& n)
+  {
+    auto& rm = umpire::ResourceManager::getInstance();
+
+    if(n>0) {
+      double* src = const_cast<double*>(p_src);
+      rm.copy(p_dest, src, n*sizeof(T));
+    }
+    return true;
+  }
+};
+
 }  // end namespace
 #endif
 

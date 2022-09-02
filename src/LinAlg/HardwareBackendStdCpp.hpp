@@ -7,8 +7,8 @@ struct FeatureIsPresent<MemBackendCpp>
  static constexpr bool value = true;
 };
 
-template<class MemBackendCpp>
-struct SupportsHostMemSpace
+template<>
+struct SupportsHostMemSpace<MemBackendCpp>
 {
   static constexpr bool value = true;
 };
