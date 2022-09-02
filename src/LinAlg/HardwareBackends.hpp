@@ -52,18 +52,9 @@
 
 namespace hiop {
 
-template<class MEMBACKEND> class HWBackend;
-//
-// Forward declarations of implementation internals
-//
-template<class MEMBACKEND, typename T> struct AllocImpl;
-template<class MEMBACKENDDEST, class MEMBACKENDSRC, typename T> struct TransferImpl;
-template<class FEATURE> struct FeatureIsPresent;
-template<class MEMBACKEND> struct SupportsHostMemSpace;
-
-//
-// Concrete data structures for supported memory backends. 
-//
+///////////////////////////////////////////////////////////////////////////////////////
+// The memory backends classes
+///////////////////////////////////////////////////////////////////////////////////////
 
 /// Standard C++ memory backend on host implemented `new` and `delete[]` operators.
 struct MemBackendCpp
@@ -97,7 +88,6 @@ struct MemBackendCuda
 #include <string>
 struct MemBackendUmpire
 {
-  
   MemBackendUmpire(const std::string& l)
     : mem_space_(l)
   {
@@ -132,9 +122,9 @@ private:
 };
 
   
-//
+///////////////////////////////////////////////////////////////////////////////////////
 // Execution policies
-//
+///////////////////////////////////////////////////////////////////////////////////////
 
 struct ExePoliciesCuda
 {
@@ -145,14 +135,17 @@ struct ExePoliciesRaja
 
 };
 
-} // end namespace hiop
+///////////////////////////////////////////////////////////////////////////////////////
+// The hardware backend class
+///////////////////////////////////////////////////////////////////////////////////////
 
-// concrete implementations
-#include <HardwareBackendStdCpp.hpp>
-#include <HardwareBackendCuda.hpp>
-#include <HardwareBackendUmpire.hpp>
-
-namespace hiop {
+//
+// Forward declarations of implementation internals of class HWBackend
+//
+template<class MEMBACKEND, typename T> struct AllocImpl;
+template<class MEMBACKENDDEST, class MEMBACKENDSRC, typename T> struct TransferImpl;
+template<class FEATURE> struct FeatureIsPresent;
+template<class MEMBACKEND> struct SupportsHostMemSpace;
 
 /** 
  * Hardware backend wrapping a concrete memory backend and a concrete set of execution policies.
@@ -177,11 +170,12 @@ public:
     static_assert("HiOp was not built with the requested hardware backend/memory space." &&
                   FeatureIsPresent<MEMBACKEND>::value);
   }
-  MEMBACKEND& mem_backend()
+
+  const MEMBACKEND& mem_backend() const
   {
     return mb_;
   }
-
+  
   template<typename T>
   inline T* alloc_array(const size_t& n)
   {
@@ -198,9 +192,9 @@ public:
    * Copy `n` elements of the array `p_src` to the `p_dest` array.
    * 
    * @pre `p_src` and `p_dest` should be allocated so that they can hold at least 
-   * `n` elements
-   * @pre `p_dest` should be managed by the memory backend of `this`
-   * @pre `p_src` should be managed by the memory backend of `md`
+   * `n` elements.
+   * @pre `p_dest` should be managed by the memory backend of `this`.
+   * @pre `p_src` should be managed by the memory backend of `md`.
    */
   template<class MEMSRC, typename T>
   inline bool copy(T* p_dest, const T* p_src, const size_t& n, const HWBackend<MEMSRC>& md)
@@ -212,8 +206,8 @@ public:
    * Copy `n` elements of the array `p_src` to the `p_dest` array.
    * 
    * @pre `p_src` and `p_dest` should be allocated so that they can hold at least 
-   * `n` elements
-   * @pre Both `p_dest` and `p_src` should be managed by the memory backend of `this`
+   * `n` elements.
+   * @pre Both `p_dest` and `p_src` should be managed by the memory backend of `this`.
    */  
   template<typename T>
   inline bool copy(T* p_dest, const T* p_src, const size_t& n)
@@ -261,13 +255,13 @@ struct TransferImpl
   }
 };
 
-/// Struct is specialized (`value` is `true`) for concrete backends that are available in HiOp's build.
+/// Generic trait: concrete types that are supported should specialize `value` to true.
 template<class Feature> struct FeatureIsPresent
 {
   static constexpr bool value = false; 
 };
 
-/// Concrete memory backends that supports Host memory space should specialize this to be true.
+/// Generic trait: concrete memory backends that supports Host memory space should specialize this to be true.
 template<class MEMBACKEND>
 struct SupportsHostMemSpace
 {
@@ -275,5 +269,10 @@ struct SupportsHostMemSpace
 };
 
 } // end namespace
+
+// concrete implementations
+#include <HardwareBackendStdCpp.hpp>
+#include <HardwareBackendCuda.hpp>
+#include <HardwareBackendUmpire.hpp>
 
 #endif
