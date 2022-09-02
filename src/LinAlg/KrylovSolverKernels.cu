@@ -51,7 +51,7 @@
  * @author Kasia Swirydowicz <kasia.Swirydowicz@pnnl.gov>, PNNL
  */
 #include "KrylovSolverKernels.h"
-#define maxk 80
+#define maxk 1024
 #define Tv5 1024
 //computes V^T[u1 u2] where v is n x k and u1 and u2 are nx1
 __global__ void MassIPTwoVec_kernel(const double* __restrict__ u1, 
