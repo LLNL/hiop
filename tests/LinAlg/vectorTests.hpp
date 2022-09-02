@@ -2018,7 +2018,7 @@ public:
   }
 
   /// Returns element _i_ of vector _x_.
-  real_type getLocalElement(const hiop::hiopVector* x, local_ordinal_type i)
+  real_type getLocalElement(hiop::hiopVector* x, local_ordinal_type i)
   {
     return getLocalDataConst(x)[i];
   }
@@ -2095,7 +2095,7 @@ public:
 
 protected:
   // Interface to methods specific to vector implementation
-  virtual const real_type* getLocalDataConst(const hiop::hiopVector* x) = 0;
+  virtual const real_type* getLocalDataConst(hiop::hiopVector* x) = 0;
   virtual void setLocalElement(hiop::hiopVector* x, local_ordinal_type i, real_type val) = 0;
   virtual real_type* createLocalBuffer(local_ordinal_type N, real_type val) = 0;
   virtual local_ordinal_type* createIdxBuffer(local_ordinal_type N, local_ordinal_type val) = 0;
