@@ -8,6 +8,30 @@ struct FeatureIsPresent<MemBackendCuda>
  static constexpr bool value = true;
 };
 
+
+//
+// Allocator
+//
+template<typename T>
+struct AllocImpl<MemBackendCuda, T>
+{
+  inline static T* alloc(MemBackendCuda& mb, const size_t& n)
+  {
+    T* p;
+    auto err = cudaMalloc((void**)&p, n*sizeof(T));
+    assert(cudaSuccess==err);
+    return p;
+  }
+  inline static void dealloc(MemBackendCuda& mb, T* p)
+  {
+    auto err = cudaFree((void*)p);
+    assert(cudaSuccess==err);
+  }  
+};
+
+//
+// Transfers
+//
 template<typename T>
 struct TransferImpl<MemBackendCuda, MemBackendCuda, T>
 {

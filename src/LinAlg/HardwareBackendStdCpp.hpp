@@ -13,6 +13,25 @@ struct SupportsHostMemSpace<MemBackendCpp>
   static constexpr bool value = true;
 };
 
+//
+// Allocator
+//
+template<typename T>
+struct AllocImpl<MemBackendCpp, T>
+{
+  inline static T* alloc(MemBackendCpp& mb, const size_t& n)
+  {
+    return new T[n];
+  }
+  inline static void dealloc(MemBackendCpp& mb, T* p)
+  {
+    delete[] p;
+  }  
+};
+
+//
+// Transfers
+//
 template<typename T>
 struct TransferImpl<MemBackendCpp, MemBackendCpp, T>
 {
