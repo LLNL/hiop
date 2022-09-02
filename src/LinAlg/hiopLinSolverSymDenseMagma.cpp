@@ -144,7 +144,9 @@ namespace hiop
     int info;
     int retcode;
     magma_uplo_t uplo=MagmaLower; // M is upper in C++ so it's lower in fortran
-
+#ifdef HIOP_USE_HIP
+    uplo = MagmaUpper; // M is upper in C++ so it's lower in fortran
+#endif
     nlp_->runStats.linsolv.tmInertiaComp.start();
 
     info = magmablas_dsiinertia(uplo, N, device_M_, ldda_, ipiv, dinert_, magma_device_queue_);
@@ -197,7 +199,7 @@ namespace hiop
     nlp_->runStats.linsolv.tmTriuSolves.start();
     
     magma_uplo_t uplo=MagmaLower; // M is upper in C++ so it's lower in fortran
- #ifdef HIOP_USE_HIP
+#ifdef HIOP_USE_HIP
     uplo = MagmaUpper; // M is upper in C++ so it's lower in fortran
 #endif
     int info;
