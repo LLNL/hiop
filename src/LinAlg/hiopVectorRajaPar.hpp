@@ -289,8 +289,6 @@ public:
 
   void copyToDev();
   void copyFromDev();
-  void copyToDev() const;
-  void copyFromDev() const;
   
   virtual size_type numOfElemsLessThan(const double &val) const;
   virtual size_type numOfElemsAbsLessThan(const double &val) const;      
@@ -308,7 +306,8 @@ public:
   virtual bool is_equal(const hiopVector& vec) const;
   
 private:
-  HWBackend<MemBackendUmpire> hw_backend_;
+  using MemBackend = MemBackendUmpire;
+  HWBackend<MemBackend> hw_backend_;
   using MemBackendHost = MemBackendUmpire;
   HWBackend<MemBackendHost> hw_backend_host_;
   std::string mem_space_;

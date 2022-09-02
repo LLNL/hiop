@@ -76,12 +76,8 @@
 #include <limits>
 #include <cstddef>
 
-#include <umpire/Allocator.hpp>
-#include <umpire/ResourceManager.hpp>
-
 #include <RAJA/RAJA.hpp>
 #include "hiop_raja_defs.hpp"
-
 
 namespace hiop
 {
@@ -101,6 +97,8 @@ hiopVectorRajaPar::hiopVectorRajaPar(
   index_type* col_part /* = NULL */,
   MPI_Comm comm /* = MPI_COMM_NULL */)
   : hiopVector(),
+    hw_backend_(HWBackend<MemBackend>(MemBackendUmpire(mem_space))),
+    hw_backend_host_(HWBackend<MemBackendHost>(MemBackendHost::new_backend_host())),
     mem_space_(mem_space),
     comm_(comm)
 {
@@ -129,11 +127,8 @@ hiopVectorRajaPar::hiopVectorRajaPar(
   n_local_ = glob_iu_ - glob_il_;
 
 #ifndef HIOP_USE_GPU
-  mem_space_ = "HOST"; // If no GPU support, fall back to host!
+  assert(mem_space_ == "HOST"); 
 #endif
-
-  hw_backend_= HWBackend<MemBackendUmpire>(MemBackendUmpire(mem_space_));
-  hw_backend_host_ = HWBackend<MemBackendHost>(MemBackendHost::new_backend_host());
 
   data_dev_ = hw_backend_.alloc_array<double>(n_local_);
   if(hw_backend_.mem_backend().is_device())
@@ -161,11 +156,8 @@ hiopVectorRajaPar::hiopVectorRajaPar(const hiopVectorRajaPar& v)
   mem_space_ = v.mem_space_;
 
 #ifndef HIOP_USE_GPU
-  mem_space_ = "HOST"; // If no GPU support, fall back to host!
+  assert(mem_space_ == "HOST"); 
 #endif
-
-  hw_backend_= HWBackend<MemBackendUmpire>(MemBackendUmpire(mem_space_));
-  hw_backend_host_ = HWBackend<MemBackendHost>(MemBackendHost::new_backend_host());
 
   data_dev_ = hw_backend_.alloc_array<double>(n_local_);
   if(hw_backend_.mem_backend().is_device())
@@ -272,7 +264,8 @@ void hiopVectorRajaPar::copyFrom(const hiopVector& vec)
  * 
  * @param[in] local_array - A raw array from which to copy into `this`
  * 
- * @pre `local_array` is allocated by Umpire on device
+ * @pre `local_array` is allocated by same memory backend and in the same 
+ * memory space used by `this`.
  * @pre `local_array` must be of same size as the data block of `this`.
  * @post Elements of `this` are overwritten with elements of `local_array`.
  * 
@@ -286,9 +279,7 @@ void hiopVectorRajaPar::copyFrom(const hiopVector& vec)
 void hiopVectorRajaPar::copyFrom(const double* local_array)
 {
   if(local_array) {
-    auto& rm = umpire::ResourceManager::getInstance();
-    double* data = const_cast<double*>(local_array);
-    hw_backend_.copy(data_dev_, data, n_local_);
+    hw_backend_.copy(data_dev_, local_array, n_local_);
   }
 }
 
@@ -503,7 +494,7 @@ void hiopVectorRajaPar::startingAtCopyFromStartingAt(int start_idx_dest,
 
   assert(howManyToCopyDest <= howManyToCopySrc);
 
-  //TODO: this is also looks like is not portable
+  //TODO: this also looks like is not portable
   hw_backend_.copy(data_dev_+start_idx_dest,
                    v.data_dev_+start_idx_src,
                    howManyToCopyDest,
@@ -714,7 +705,7 @@ void hiopVectorRajaPar::startingAtCopyToStartingAt(
   assert(n_local_==n_ && "only for local/non-distributed vectors");
 #endif  
 
-  const hiopVectorRajaPar& dest = dynamic_cast<hiopVectorRajaPar&>(destination);
+  hiopVectorRajaPar& dest = dynamic_cast<hiopVectorRajaPar&>(destination);
 
   assert(start_idx_in_src >= 0 && start_idx_in_src <= this->n_local_);
   assert(start_idx_dest   >= 0 && start_idx_dest   <= dest.n_local_);
@@ -738,8 +729,10 @@ void hiopVectorRajaPar::startingAtCopyToStartingAt(
 
   if(num_elems == 0)
     return;
-  auto& rm = umpire::ResourceManager::getInstance();
-  rm.copy(dest.data_dev_ + start_idx_dest, this->data_dev_ + start_idx_in_src, num_elems*sizeof(double));
+
+  //rm.copy(dest.data_dev_ + start_idx_dest, this->data_dev_ + start_idx_in_src, num_elems*sizeof(double));
+  //TODO: fix pointer arithmetic on host
+  dest.hw_backend_.copy(dest.data_dev_+start_idx_dest, data_dev_+start_idx_in_src, num_elems, hw_backend_);
 }
 
 void hiopVectorRajaPar::startingAtCopyToStartingAt_w_pattern(index_type start_idx_in_src,
@@ -791,12 +784,14 @@ void hiopVectorRajaPar::startingAtCopyToStartingAt_w_pattern(index_type start_id
  * @param[out] dest - destination buffer where to copy vector data
  * 
  * @pre Size of `dest` must be >= n_local_
+ * @pre `dest` should be on the same memory space/backend as `this`
+ *
  * @post `this` is not modified
  */
 void hiopVectorRajaPar::copyTo(double* dest) const
 {
-  auto& rm = umpire::ResourceManager::getInstance();
-  rm.copy(dest, this->data_dev_, n_local_*sizeof(double));
+  assert(nullptr != const_cast<hiopVectorRajaPar*>(this));
+  (const_cast<hiopVectorRajaPar*>(this))->hw_backend_.copy(dest, data_dev_, n_local_);
 }
 
 /**
@@ -2029,7 +2024,8 @@ void hiopVectorRajaPar::print(FILE* file, const char* msg/*=NULL*/, int max_elem
 
 void hiopVectorRajaPar::print() const
 {
-  copyFromDev();
+  assert(nullptr != const_cast<hiopVectorRajaPar*>(this));
+  (const_cast<hiopVectorRajaPar*>(this))->copyFromDev();
   for(index_type it=0; it<n_local_; it++) {
     printf("vec [%d] = %1.16e\n",it+1,data_host_[it]);
   }
@@ -2040,35 +2036,34 @@ void hiopVectorRajaPar::copyToDev()
 {
   if(data_dev_ == data_host_)
     return;
-  auto& resmgr = umpire::ResourceManager::getInstance();
-  resmgr.copy(data_dev_, data_host_);
+  assert(hw_backend_.mem_backend().is_device() && "should have data_dev_==data_host_");
+  hw_backend_.copy(data_dev_, data_host_, n_local_, hw_backend_host_);
 }
 
 void hiopVectorRajaPar::copyFromDev()
 {
   if(data_dev_ == data_host_)
     return;
-  auto& resmgr = umpire::ResourceManager::getInstance();
-  resmgr.copy(data_host_, data_dev_);
+  hw_backend_host_.copy(data_host_, data_dev_, n_local_, hw_backend_);
 }
 
-void hiopVectorRajaPar::copyToDev() const
-{
-  if(data_dev_ == data_host_)
-    return;
-  auto& resmgr = umpire::ResourceManager::getInstance();
-  double* data_dev = const_cast<double*>(data_dev_);
-  resmgr.copy(data_dev, data_host_);
-}
+// void hiopVectorRajaPar::copyToDev() const
+// {
+//   if(data_dev_ == data_host_)
+//     return;
+//   auto& resmgr = umpire::ResourceManager::getInstance();
+//   double* data_dev = const_cast<double*>(data_dev_);
+//   resmgr.copy(data_dev, data_host_);
+// }
 
-void hiopVectorRajaPar::copyFromDev() const
-{
-  if(data_dev_ == data_host_)
-    return;
-  auto& resmgr = umpire::ResourceManager::getInstance();
-  double* data_host = const_cast<double*>(data_host_);
-  resmgr.copy(data_host, data_dev_);
-}
+// void hiopVectorRajaPar::copyFromDev() const
+// {
+//   if(data_dev_ == data_host_)
+//     return;
+//   auto& resmgr = umpire::ResourceManager::getInstance();
+//   double* data_host = const_cast<double*>(data_host_);
+//   resmgr.copy(data_host, data_dev_);
+// }
 
 size_type hiopVectorRajaPar::numOfElemsLessThan(const double &val) const
 {  
@@ -2147,7 +2142,6 @@ void hiopVectorRajaPar::set_array_from_to(hiopInterfaceBase::NonlinearityType* a
   if(end - start == 0)
     return;
 
-  auto& rm = umpire::ResourceManager::getInstance();
   RAJA::forall< hiop_raja_exec >(
     RAJA::RangeSegment(start, end),
     RAJA_LAMBDA(RAJA::Index_type i)
